@@ -41,6 +41,11 @@ func (u *UserTypeExpr) Attribute() *AttributeExpr {
 	return u.AttributeExpr
 }
 
+// SetAttribute sets the embedded attribute.
+func (u *UserTypeExpr) SetAttribute(att *AttributeExpr) {
+	u.AttributeExpr = att
+}
+
 // Dup creates a deep copy of the user type given a deep copy of its attribute.
 func (u *UserTypeExpr) Dup(att *AttributeExpr) UserType {
 	return &UserTypeExpr{
@@ -78,5 +83,17 @@ func (u *UserTypeExpr) Finalize() {
 // Example produces an example for the user type which is JSON serialization
 // compatible.
 func (u *UserTypeExpr) Example(r *Random) interface{} {
-	return u.AttributeExpr.Type.Example(r)
+	if ex, ok := r.Seen[u.Name()]; ok {
+		return ex
+	}
+	ex := make(map[string]interface{})
+	if r.Seen == nil {
+		r.Seen = make(map[string]map[string]interface{})
+	}
+	r.Seen[u.Name()] = ex
+	nex := u.AttributeExpr.Type.Example(r)
+	for k, v := range nex.(map[string]interface{}) {
+		ex[k] = v
+	}
+	return ex
 }

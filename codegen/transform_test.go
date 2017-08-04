@@ -317,10 +317,7 @@ const objMapCode = `func transform() {
 const userTypeCode = `func transform() {
 	target := &TargetType{}
 	if source.Ut != nil {
-		target.Ut = &User{
-			A: source.Ut.A,
-			B: source.Ut.B,
-		}
+		target.Ut = userToUserNoDefault(source.Ut)
 	}
 }
 `

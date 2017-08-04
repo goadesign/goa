@@ -2154,3 +2154,26 @@ var PayloadBodyInlineMapUserDSL = func() {
 		})
 	})
 }
+
+var PayloadBodyInlineRecursiveUserDSL = func() {
+	var PayloadType = Type("PayloadType", func() {
+		Attribute("a", String, func() {
+			Pattern("patterna")
+		})
+		Attribute("b", String, func() {
+			Pattern("patternb")
+		})
+		Attribute("c", "PayloadType")
+		Required("a", "c")
+	})
+
+	Service("ServiceBodyInlineRecursiveUser", func() {
+		Method("MethodBodyInlineRecursiveUser", func() {
+			Payload(PayloadType)
+			HTTP(func() {
+				POST("/{a}")
+				Param("b")
+			})
+		})
+	})
+}

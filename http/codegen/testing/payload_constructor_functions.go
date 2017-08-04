@@ -841,10 +841,7 @@ var PayloadBodyUserInnerConstructorCode = `// NewMethodBodyUserInnerPayloadType 
 func NewMethodBodyUserInnerPayloadType(body *MethodBodyUserInnerRequestBody) *servicebodyuserinner.PayloadType {
 	v := &servicebodyuserinner.PayloadType{}
 	if body.Inner != nil {
-		v.Inner = &servicebodyuserinner.InnerType{
-			A: *body.Inner.A,
-			B: body.Inner.B,
-		}
+		v.Inner = innerTypeRequestBodyToInnerTypeSrcPtr(body.Inner)
 	}
 
 	return v
@@ -857,18 +854,7 @@ var PayloadBodyUserInnerDefaultConstructorCode = `// NewMethodBodyUserInnerDefau
 func NewMethodBodyUserInnerDefaultPayloadType(body *MethodBodyUserInnerDefaultRequestBody) *servicebodyuserinnerdefault.PayloadType {
 	v := &servicebodyuserinnerdefault.PayloadType{}
 	if body.Inner != nil {
-		v.Inner = &servicebodyuserinnerdefault.InnerType{
-			A: body.Inner.A,
-			B: body.Inner.B,
-		}
-		if body.Inner.A == nil {
-			tmp := "defaulta"
-			v.Inner.A = &tmp
-		}
-		if body.Inner.B == nil {
-			tmp := "defaultb"
-			v.Inner.B = &tmp
-		}
+		v.Inner = innerTypeRequestBodyToInnerTypeSrcPtr(body.Inner)
 	}
 
 	return v
@@ -905,6 +891,19 @@ func NewMethodBodyInlineMapUserMapKeyTypeElemType(body map[*KeyTypeRequestBody]*
 		}
 		v[tk] = tv
 	}
+
+	return v
+}
+`
+
+var PayloadBodyInlineRecursiveUserConstructorCode = `// NewMethodBodyInlineRecursiveUserPayloadType builds a
+// ServiceBodyInlineRecursiveUser service MethodBodyInlineRecursiveUser
+// endpoint payload.
+func NewMethodBodyInlineRecursiveUserPayloadType(body *MethodBodyInlineRecursiveUserRequestBody, a string, b *string) *servicebodyinlinerecursiveuser.PayloadType {
+	v := &servicebodyinlinerecursiveuser.PayloadType{}
+	v.C = payloadTypeRequestBodyToPayloadTypeSrcPtr(body.C)
+	v.A = a
+	v.B = b
 
 	return v
 }

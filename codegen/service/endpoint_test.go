@@ -151,6 +151,7 @@ func NewEndpoints(s Service) *Endpoints {
 		buf := new(bytes.Buffer)
 		Services = make(ServicesData)
 		design.Root.Services = []*design.ServiceExpr{tc.Service}
+		design.Root.API = &design.APIExpr{Name: "test"}
 		s := File(tc.Service) // to initialize ServiceScope
 		s.Sections("")
 		file := EndpointFile(tc.Service)

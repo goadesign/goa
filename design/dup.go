@@ -73,7 +73,11 @@ func (d *dupper) DupType(t DataType) DataType {
 		if u, ok := d.uts[actual.Name()]; ok {
 			return u
 		}
-		return actual.Dup(d.DupAttribute(actual.Attribute()))
+		dp := actual.Dup(nil)
+		d.uts[actual.Name()] = dp
+		dupAtt := d.DupAttribute(actual.Attribute())
+		dp.SetAttribute(dupAtt)
+		return dp
 	}
 	panic("unknown type " + t.Name())
 }

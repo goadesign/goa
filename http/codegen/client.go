@@ -22,11 +22,11 @@ func ClientFiles(root *httpdesign.RootExpr) []codegen.File {
 }
 
 // client returns the client HTTP transport file
-func client(r *httpdesign.ServiceExpr) codegen.File {
-	path := filepath.Join("http", codegen.SnakeCase(r.Name()), "client", "client.go")
-	data := HTTPServices.Get(r.Name())
+func client(svc *httpdesign.ServiceExpr) codegen.File {
+	path := filepath.Join("http", codegen.SnakeCase(svc.Name()), "client", "client.go")
+	data := HTTPServices.Get(svc.Name())
 	sections := func(genPkg string) []*codegen.Section {
-		title := fmt.Sprintf("%s client HTTP transport", r.Name())
+		title := fmt.Sprintf("%s client HTTP transport", svc.Name())
 		s := []*codegen.Section{
 			codegen.Header(title, "client", []*codegen.ImportSpec{
 				{Path: "context"},
@@ -37,13 +37,16 @@ func client(r *httpdesign.ServiceExpr) codegen.File {
 				{Path: "strings"},
 				{Path: "goa.design/goa.v2", Name: "goa"},
 				{Path: "goa.design/goa.v2/http", Name: "goahttp"},
-				{Path: genPkg + "/" + codegen.Goify(r.Name(), false)},
+				{Path: genPkg + "/" + codegen.Goify(svc.Name(), false)},
 			}),
-			{Template: clientStructTmpl(r), Data: data},
-			{Template: clientInitTmpl(r), Data: data},
+			{Template: clientStructTmpl(svc), Data: data},
+			{Template: clientInitTmpl(svc), Data: data},
 		}
 		for _, e := range data.Endpoints {
-			s = append(s, &codegen.Section{Template: endpointInitTmpl(r), Data: e})
+			s = append(s, &codegen.Section{Template: endpointInitTmpl(svc), Data: e})
+		}
+		for _, h := range data.TransformHelpers {
+			s = append(s, &codegen.Section{Template: transformHelperTmpl(svc), Data: h})
 		}
 
 		return s

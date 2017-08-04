@@ -116,10 +116,8 @@ func ResultType(identifier string, fn func()) *design.ResultTypeExpr {
 // name must be a valid Go identifier.
 func TypeName(name string) {
 	switch expr := eval.Current().(type) {
-	case *design.ResultTypeExpr:
-		expr.TypeName = name
-	case *design.UserTypeExpr:
-		expr.TypeName = name
+	case design.UserType:
+		expr.Rename(name)
 	default:
 		eval.IncompatibleDSL()
 	}

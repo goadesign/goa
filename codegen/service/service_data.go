@@ -50,20 +50,24 @@ type (
 		VarName string
 		// Payload is the name of the payload type if any,
 		Payload string
+		// PayloadDef is the payload type definition if any.
+		PayloadDef string
 		// PayloadRef is a reference to the payload type if any,
 		PayloadRef string
 		// PayloadDesc is the payload type description if any.
 		PayloadDesc string
-		// PayloadDef is the payload type definition if any.
-		PayloadDef string
+		// PayloadEx is an example of a valid payload value.
+		PayloadEx interface{}
 		// Result is the name of the result type if any.
 		Result string
-		// ResultDesc is the result type description if any.
-		ResultDesc string
 		// ResultDef is the result type definition if any.
 		ResultDef string
 		// ResultRef is the reference to the result type if any.
 		ResultRef string
+		// ResultDesc is the result type description if any.
+		ResultDesc string
+		// ResultEx is an example of a valid result value.
+		ResultEx interface{}
 	}
 
 	// UserTypeData contains the data describing a data type.
@@ -281,13 +285,15 @@ func buildMethodData(m *design.MethodExpr, svcPkgName string, scope *codegen.Nam
 		varName     string
 		desc        string
 		payloadName string
-		payloadDesc string
 		payloadDef  string
 		payloadRef  string
+		payloadDesc string
+		payloadEx   interface{}
 		resultName  string
-		resultDesc  string
 		resultDef   string
 		resultRef   string
+		resultDesc  string
+		resultEx    interface{}
 	)
 	{
 		varName = codegen.Goify(m.Name, true)
@@ -295,7 +301,7 @@ func buildMethodData(m *design.MethodExpr, svcPkgName string, scope *codegen.Nam
 		if desc == "" {
 			desc = codegen.Goify(m.Name, true) + " implements " + m.Name + "."
 		}
-		if m.Payload != nil && m.Payload.Type != design.Empty {
+		if m.Payload.Type != design.Empty {
 			payloadName = scope.GoTypeName(m.Payload)
 			payloadRef = scope.GoTypeRef(m.Payload)
 			if dt, ok := m.Payload.Type.(design.UserType); ok {
@@ -306,8 +312,9 @@ func buildMethodData(m *design.MethodExpr, svcPkgName string, scope *codegen.Nam
 				payloadDesc = fmt.Sprintf("%s is the payload type of the %s service %s method.",
 					payloadName, m.Service.Name, m.Name)
 			}
+			payloadEx = m.Payload.Example(design.Root.API.Random())
 		}
-		if m.Result != nil && m.Result.Type != design.Empty {
+		if m.Result.Type != design.Empty {
 			resultName = scope.GoTypeName(m.Result)
 			resultRef = scope.GoTypeRef(m.Result)
 			if dt, ok := m.Result.Type.(design.UserType); ok {
@@ -318,6 +325,7 @@ func buildMethodData(m *design.MethodExpr, svcPkgName string, scope *codegen.Nam
 				resultDesc = fmt.Sprintf("%s is the result type of the %s service %s method.",
 					resultName, m.Service.Name, m.Name)
 			}
+			resultEx = m.Result.Example(design.Root.API.Random())
 		}
 	}
 	return &MethodData{
@@ -325,12 +333,14 @@ func buildMethodData(m *design.MethodExpr, svcPkgName string, scope *codegen.Nam
 		VarName:     varName,
 		Description: desc,
 		Payload:     payloadName,
-		PayloadDesc: payloadDesc,
 		PayloadDef:  payloadDef,
 		PayloadRef:  payloadRef,
+		PayloadDesc: payloadDesc,
+		PayloadEx:   payloadEx,
 		Result:      resultName,
-		ResultDesc:  resultDesc,
 		ResultDef:   resultDef,
 		ResultRef:   resultRef,
+		ResultDesc:  resultDesc,
+		ResultEx:    resultEx,
 	}
 }

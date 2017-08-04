@@ -73,10 +73,7 @@ const BodyUserInnerInitCode = `// NewMethodBodyUserInnerRequestBody builds the S
 func NewMethodBodyUserInnerRequestBody(p *servicebodyuserinner.PayloadType) *MethodBodyUserInnerRequestBody {
 	body := &MethodBodyUserInnerRequestBody{}
 	if p.Inner != nil {
-		body.Inner = &InnerTypeRequestBody{
-			A: p.Inner.A,
-			B: p.Inner.B,
-		}
+		body.Inner = innerTypeToInnerTypeRequestBodyNoDefault(p.Inner)
 	}
 
 	return body

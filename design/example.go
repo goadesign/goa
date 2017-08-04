@@ -94,7 +94,7 @@ func NewLength(a *AttributeExpr, r *Random) int {
 		}
 		return count
 	}
-	return r.Int()%3 + 1
+	return r.Int()%3 + 2
 }
 
 func hasLengthValidation(a *AttributeExpr) bool {
@@ -126,14 +126,28 @@ func hasMinMaxValidation(a *AttributeExpr) bool {
 // byLength generates a random size array of examples based on what's given.
 func byLength(a *AttributeExpr, r *Random) interface{} {
 	count := NewLength(a, r)
-	if a.Type.Kind() == StringKind {
+	switch a.Type.Kind() {
+	case StringKind:
 		return r.faker.Characters(count)
+	case BytesKind:
+		return []byte(r.faker.Characters(count))
+	case MapKind:
+		raw := make(map[interface{}]interface{})
+		m := a.Type.(*Map)
+		for i := 0; i < count; i++ {
+			raw[m.KeyType.Example(r)] = m.ElemType.Example(r)
+		}
+		return m.MakeMap(raw)
+	case ArrayKind:
+		raw := make([]interface{}, count)
+		ar := a.Type.(*Array)
+		for i := 0; i < count; i++ {
+			raw[i] = ar.ElemType.Example(r)
+		}
+		return ar.MakeSlice(raw)
+	default:
+		panic("invalid type for length validation: " + a.Type.Name())
 	}
-	res := make([]interface{}, count)
-	for i := 0; i < count; i++ {
-		res[i] = a.Type.(*Array).Example(r)
-	}
-	return res
 }
 
 // byEnum returns a random selected enum value.

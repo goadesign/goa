@@ -245,11 +245,7 @@ func renameType(dt design.DataType, name, suffix string) design.DataType {
 	switch dt.(type) {
 	case design.UserType:
 		rt := design.Dup(dt)
-		if urt, ok := rt.(*design.UserTypeExpr); ok {
-			urt.TypeName = name
-		} else {
-			rt.(*design.ResultTypeExpr).TypeName = name
-		}
+		rt.(design.UserType).Rename(name)
 		appendSuffix(rt.(design.UserType).Attribute().Type, suffix)
 		return rt
 	case *design.Object:
@@ -268,25 +264,30 @@ func renameType(dt design.DataType, name, suffix string) design.DataType {
 	return dt
 }
 
-func appendSuffix(dt design.DataType, suffix string) {
+func appendSuffix(dt design.DataType, suffix string, seen ...map[string]struct{}) {
 	switch actual := dt.(type) {
 	case design.UserType:
-		if ut, ok := actual.(*design.UserTypeExpr); ok {
-			ut.TypeName = ut.TypeName + suffix
+		var s map[string]struct{}
+		if len(seen) > 0 {
+			s = seen[0]
 		} else {
-			rt := actual.(*design.ResultTypeExpr)
-			rt.TypeName = rt.TypeName + suffix
+			s = make(map[string]struct{})
 		}
-		appendSuffix(actual.Attribute().Type, suffix)
+		if _, ok := s[actual.Name()]; ok {
+			return
+		}
+		actual.Rename(actual.Name() + suffix)
+		s[actual.Name()] = struct{}{}
+		appendSuffix(actual.Attribute().Type, suffix, s)
 	case *design.Object:
 		for _, nat := range *actual {
-			appendSuffix(nat.Attribute.Type, suffix)
+			appendSuffix(nat.Attribute.Type, suffix, seen...)
 		}
 	case *design.Array:
-		appendSuffix(actual.ElemType.Type, suffix)
+		appendSuffix(actual.ElemType.Type, suffix, seen...)
 	case *design.Map:
-		appendSuffix(actual.KeyType.Type, suffix)
-		appendSuffix(actual.ElemType.Type, suffix)
+		appendSuffix(actual.KeyType.Type, suffix, seen...)
+		appendSuffix(actual.ElemType.Type, suffix, seen...)
 	}
 }
 
