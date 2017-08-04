@@ -223,11 +223,20 @@ func (g *Generator) Cleanup() {
 	g.genfiles = nil
 }
 
-func (g *Generator) generateClient(clientFile string, clientPkg string, funcs template.FuncMap) error {
-	file, err := codegen.SourceFileFor(clientFile)
-	if err != nil {
-		return err
+func (g *Generator) generateClient(clientFile string, clientPkg string, funcs template.FuncMap) (err error) {
+	var file *codegen.SourceFile
+	{
+		file, err = codegen.SourceFileFor(clientFile)
+		if err != nil {
+			return
+		}
 	}
+	defer func() {
+		file.Close()
+		if err == nil {
+			err = file.Format()
+		}
+	}()
 	clientTmpl := template.Must(template.New("client").Funcs(funcs).Parse(clientTmpl))
 
 	// Compute list of encoders and decoders
@@ -265,7 +274,7 @@ func (g *Generator) generateClient(clientFile string, clientPkg string, funcs te
 		imports = append(imports, codegen.SimpleImport(packagePath))
 	}
 	title := fmt.Sprintf("%s: Client", g.API.Context())
-	if err := file.WriteHeader(title, g.Target, imports); err != nil {
+	if err = file.WriteHeader(title, g.Target, imports); err != nil {
 		return err
 	}
 	g.genfiles = append(g.genfiles, clientFile)
@@ -280,11 +289,8 @@ func (g *Generator) generateClient(clientFile string, clientPkg string, funcs te
 		Encoders: encoders,
 		Decoders: decoders,
 	}
-	if err := clientTmpl.Execute(file, data); err != nil {
-		return err
-	}
-
-	return file.FormatCode()
+	err = clientTmpl.Execute(file, data)
+	return
 }
 
 func (g *Generator) generateClientResources(pkgDir, clientPkg string, funcs template.FuncMap) error {
@@ -301,7 +307,7 @@ func (g *Generator) generateClientResources(pkgDir, clientPkg string, funcs temp
 	return g.generateMediaTypes(pkgDir, funcs)
 }
 
-func (g *Generator) generateResourceClient(pkgDir string, res *design.ResourceDefinition, funcs template.FuncMap) error {
+func (g *Generator) generateResourceClient(pkgDir string, res *design.ResourceDefinition, funcs template.FuncMap) (err error) {
 	payloadTmpl := template.Must(template.New("payload").Funcs(funcs).Parse(payloadTmpl))
 	pathTmpl := template.Must(template.New("pathTemplate").Funcs(funcs).Parse(pathTmpl))
 
@@ -311,10 +317,18 @@ func (g *Generator) generateResourceClient(pkgDir string, res *design.ResourceDe
 		resFilename += "_client"
 	}
 	filename := filepath.Join(pkgDir, resFilename+".go")
-	file, err := codegen.SourceFileFor(filename)
+
+	var file *codegen.SourceFile
+	file, err = codegen.SourceFileFor(filename)
 	if err != nil {
 		return err
 	}
+	defer func() {
+		file.Close()
+		if err == nil {
+			err = file.Format()
+		}
+	}()
 	imports := []*codegen.ImportSpec{
 		codegen.SimpleImport("bytes"),
 		codegen.SimpleImport("encoding/json"),
@@ -333,7 +347,7 @@ func (g *Generator) generateResourceClient(pkgDir string, res *design.ResourceDe
 		codegen.NewImport("uuid", "github.com/goadesign/goa/uuid"),
 	}
 	title := fmt.Sprintf("%s: %s Resource Client", g.API.Context(), res.Name)
-	if err := file.WriteHeader(title, g.Target, imports); err != nil {
+	if err = file.WriteHeader(title, g.Target, imports); err != nil {
 		return err
 	}
 	g.genfiles = append(g.genfiles, filename)
@@ -341,6 +355,9 @@ func (g *Generator) generateResourceClient(pkgDir string, res *design.ResourceDe
 	err = res.IterateFileServers(func(fs *design.FileServerDefinition) error {
 		return g.generateFileServer(file, fs, funcs)
 	})
+	if err != nil {
+		return err
+	}
 
 	err = res.IterateActions(func(action *design.ActionDefinition) error {
 		if action.Payload != nil {
@@ -389,11 +406,7 @@ func (g *Generator) generateResourceClient(pkgDir string, res *design.ResourceDe
 		}
 		return g.generateActionClient(action, file, funcs)
 	})
-	if err != nil {
-		return err
-	}
-
-	return file.FormatCode()
+	return
 }
 
 func (g *Generator) generateFileServer(file *codegen.SourceFile, fs *design.FileServerDefinition, funcs template.FuncMap) error {
@@ -547,15 +560,27 @@ func (g *Generator) fileServerMethod(fs *design.FileServerDefinition) string {
 
 // generateMediaTypes iterates through the media types and generate the data structures and
 // marshaling code.
-func (g *Generator) generateMediaTypes(pkgDir string, funcs template.FuncMap) error {
+func (g *Generator) generateMediaTypes(pkgDir string, funcs template.FuncMap) (err error) {
 	funcs["decodegotyperef"] = decodeGoTypeRef
 	funcs["decodegotypename"] = decodeGoTypeName
 	typeDecodeTmpl := template.Must(template.New("typeDecode").Funcs(funcs).Parse(typeDecodeTmpl))
-	mtFile := filepath.Join(pkgDir, "media_types.go")
-	mtWr, err := genapp.NewMediaTypesWriter(mtFile)
-	if err != nil {
-		panic(err) // bug
+	var (
+		mtFile string
+		mtWr   *genapp.MediaTypesWriter
+	)
+	{
+		mtFile = filepath.Join(pkgDir, "media_types.go")
+		mtWr, err = genapp.NewMediaTypesWriter(mtFile)
+		if err != nil {
+			return
+		}
 	}
+	defer func() {
+		mtWr.Close()
+		if err == nil {
+			err = mtWr.Format()
+		}
+	}()
 	title := fmt.Sprintf("%s: Application Media Types", g.API.Context())
 	imports := []*codegen.ImportSpec{
 		codegen.SimpleImport("github.com/goadesign/goa"),
@@ -568,7 +593,10 @@ func (g *Generator) generateMediaTypes(pkgDir string, funcs template.FuncMap) er
 	for _, v := range g.API.MediaTypes {
 		imports = codegen.AttributeImports(v.AttributeDefinition, imports, nil)
 	}
-	mtWr.WriteHeader(title, g.Target, imports)
+	if err = mtWr.WriteHeader(title, g.Target, imports); err != nil {
+		return err
+	}
+	g.genfiles = append(g.genfiles, mtFile)
 	err = g.API.IterateMediaTypes(func(mt *design.MediaTypeDefinition) error {
 		if (mt.Type.IsObject() || mt.Type.IsArray()) && !mt.IsError() {
 			if err := mtWr.Execute(mt); err != nil {
@@ -587,21 +615,29 @@ func (g *Generator) generateMediaTypes(pkgDir string, funcs template.FuncMap) er
 		})
 		return err
 	})
-	g.genfiles = append(g.genfiles, mtFile)
-	if err != nil {
-		return err
-	}
-	return mtWr.FormatCode()
+	return
 }
 
 // generateUserTypes iterates through the user types and generates the data structures and
 // marshaling code.
-func (g *Generator) generateUserTypes(pkgDir string) error {
-	utFile := filepath.Join(pkgDir, "user_types.go")
-	utWr, err := genapp.NewUserTypesWriter(utFile)
-	if err != nil {
-		panic(err) // bug
+func (g *Generator) generateUserTypes(pkgDir string) (err error) {
+	var (
+		utFile string
+		utWr   *genapp.UserTypesWriter
+	)
+	{
+		utFile = filepath.Join(pkgDir, "user_types.go")
+		utWr, err = genapp.NewUserTypesWriter(utFile)
+		if err != nil {
+			return
+		}
 	}
+	defer func() {
+		utWr.Close()
+		if err == nil {
+			err = utWr.Format()
+		}
+	}()
 	title := fmt.Sprintf("%s: Application User Types", g.API.Context())
 	imports := []*codegen.ImportSpec{
 		codegen.SimpleImport("github.com/goadesign/goa"),
@@ -613,15 +649,14 @@ func (g *Generator) generateUserTypes(pkgDir string) error {
 	for _, v := range g.API.Types {
 		imports = codegen.AttributeImports(v.AttributeDefinition, imports, nil)
 	}
-	utWr.WriteHeader(title, g.Target, imports)
+	if err = utWr.WriteHeader(title, g.Target, imports); err != nil {
+		return err
+	}
+	g.genfiles = append(g.genfiles, utFile)
 	err = g.API.IterateUserTypes(func(t *design.UserTypeDefinition) error {
 		return utWr.Execute(t)
 	})
-	g.genfiles = append(g.genfiles, utFile)
-	if err != nil {
-		return err
-	}
-	return utWr.FormatCode()
+	return
 }
 
 // join is a code generation helper function that generates a function signature built from

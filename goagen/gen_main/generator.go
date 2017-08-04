@@ -117,12 +117,11 @@ func extractControllerBody(filename string) (map[string]string, []*ast.ImportSpe
 
 // GenerateController generates the controller corresponding to the given
 // resource and returns the generated filename.
-func GenerateController(force, regen bool, appPkg, outDir, pkg, name string, r *design.ResourceDefinition) (string, error) {
-	filename := filepath.Join(outDir, codegen.SnakeCase(name)+".go")
+func GenerateController(force, regen bool, appPkg, outDir, pkg, name string, r *design.ResourceDefinition) (filename string, err error) {
+	filename = filepath.Join(outDir, codegen.SnakeCase(name)+".go")
 	var (
 		actionImpls      map[string]string
 		extractedImports []*ast.ImportSpec
-		err              error
 	)
 	if regen {
 		actionImpls, extractedImports, err = extractControllerBody(filename)
@@ -137,13 +136,21 @@ func GenerateController(force, regen bool, appPkg, outDir, pkg, name string, r *
 	if _, e := os.Stat(filename); e == nil {
 		return "", nil
 	}
-	if err := os.MkdirAll(outDir, 0755); err != nil {
+	if err = os.MkdirAll(outDir, 0755); err != nil {
 		return "", err
 	}
-	file, err := codegen.SourceFileFor(filename)
+
+	var file *codegen.SourceFile
+	file, err = codegen.SourceFileFor(filename)
 	if err != nil {
 		return "", err
 	}
+	defer func() {
+		file.Close()
+		if err == nil {
+			err = file.Format()
+		}
+	}()
 
 	elems := strings.Split(appPkg, "/")
 	pkgName := elems[len(elems)-1]
@@ -165,8 +172,8 @@ func GenerateController(force, regen bool, appPkg, outDir, pkg, name string, r *
 		codegen.SimpleImport("golang.org/x/net/websocket"),
 	}
 	for _, imp := range extractedImports {
-		// This may introduce duplicate imports of the defaults, but that'll
-		// get worked out by FormatCode later
+		// This may introduce duplicate imports of the defaults, but
+		// that'll get worked out by Format later.
 		var cgimp *codegen.ImportSpec
 		path := strings.Trim(imp.Path.Value, `"`)
 		if imp.Name != nil {
@@ -178,7 +185,9 @@ func GenerateController(force, regen bool, appPkg, outDir, pkg, name string, r *
 	}
 
 	funcs := funcMap(pkgName, actionImpls)
-	file.WriteHeader("", pkg, imports)
+	if err = file.WriteHeader("", pkg, imports); err != nil {
+		return "", err
+	}
 	if err = file.ExecuteTemplate("controller", ctrlT, funcs, r); err != nil {
 		return "", err
 	}
@@ -191,11 +200,7 @@ func GenerateController(force, regen bool, appPkg, outDir, pkg, name string, r *
 	if err != nil {
 		return "", err
 	}
-	if err = file.FormatCode(); err != nil {
-		return "", err
-	}
-
-	return filename, nil
+	return
 }
 
 // Generate produces the skeleton main.
@@ -225,7 +230,7 @@ func (g *Generator) Generate() (_ []string, err error) {
 	_, err = os.Stat(mainFile)
 	if err != nil {
 		// ensure that the output directory exists before creating a new main
-		if err := os.MkdirAll(g.OutDir, 0755); err != nil {
+		if err = os.MkdirAll(g.OutDir, 0755); err != nil {
 			return nil, err
 		}
 		if err = g.createMainFile(mainFile, funcMap(g.Target, nil)); err != nil {
@@ -257,12 +262,19 @@ func (g *Generator) Cleanup() {
 	g.genfiles = nil
 }
 
-func (g *Generator) createMainFile(mainFile string, funcs template.FuncMap) error {
-	g.genfiles = append(g.genfiles, mainFile)
-	file, err := codegen.SourceFileFor(mainFile)
+func (g *Generator) createMainFile(mainFile string, funcs template.FuncMap) (err error) {
+	var file *codegen.SourceFile
+	file, err = codegen.SourceFileFor(mainFile)
 	if err != nil {
 		return err
 	}
+	defer func() {
+		file.Close()
+		if err == nil {
+			err = file.Format()
+		}
+	}()
+	g.genfiles = append(g.genfiles, mainFile)
 	funcs["getPort"] = func(hostport string) string {
 		_, port, err := net.SplitHostPort(hostport)
 		if err != nil {
@@ -282,7 +294,9 @@ func (g *Generator) createMainFile(mainFile string, funcs template.FuncMap) erro
 		codegen.SimpleImport(appPkg),
 	}
 	file.Write([]byte("//go:generate goagen bootstrap -d " + g.DesignPkg + "\n\n"))
-	file.WriteHeader("", "main", imports)
+	if err = file.WriteHeader("", "main", imports); err != nil {
+		return err
+	}
 	tls := false
 	for _, scheme := range g.API.Schemes {
 		if scheme == "https" {
@@ -294,10 +308,8 @@ func (g *Generator) createMainFile(mainFile string, funcs template.FuncMap) erro
 		"API":  g.API,
 		"TLS":  tls,
 	}
-	if err = file.ExecuteTemplate("main", mainT, funcs, data); err != nil {
-		return err
-	}
-	return file.FormatCode()
+	err = file.ExecuteTemplate("main", mainT, funcs, data)
+	return
 }
 
 // tempCount is the counter used to create unique temporary variable names.
