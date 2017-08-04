@@ -172,6 +172,7 @@ func (m *Generator) generateToolSourceCode(pkg *codegen.Package) {
 	if err != nil {
 		panic(err) // bug
 	}
+	file.Close()
 }
 
 // spawn runs the compiled generator using the arguments initialized by Kingpin
