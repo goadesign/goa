@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"fmt"
 	"html/template"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 
@@ -15,52 +14,71 @@ import (
 )
 
 var _ = Describe("Run", func() {
-	var compiledFiles []string
-	var compileError error
-	var outputWorkspace *codegen.Workspace
-	var designWorkspace *codegen.Workspace
 
-	var genfunc string
-	var outputDir string
-	var designPkgPath, setDesignPkgPath string
-	var designPackageSource string
-	var customFlags []string
+	const invalidPkgPath = "foobar"
 
-	var m *meta.Generator
+	var (
+		compiledFiles   []string
+		compileError    error
+		outputWorkspace *codegen.Workspace
+		designWorkspace *codegen.Workspace
+		genWorkspace    *codegen.Workspace
+
+		outputDir     string
+		designPkgPath string
+		genPkgSource  string
+		customFlags   []string
+
+		m *meta.Generator
+	)
 
 	BeforeEach(func() {
-		genfunc = ""
 		designPkgPath = "design"
-		setDesignPkgPath = designPkgPath
-		designPackageSource = "package design"
+		genPkgSource = "package gen\nfunc Generate() ([]string, error) { return nil, nil }"
+
 		var err error
+
 		outputWorkspace, err = codegen.NewWorkspace("output")
 		p, err := outputWorkspace.NewPackage("testOutput")
 		Ω(err).ShouldNot(HaveOccurred())
 		outputDir = p.Abs()
+
 		designWorkspace, err = codegen.NewWorkspace("test")
 		Ω(err).ShouldNot(HaveOccurred())
+
+		genWorkspace, err = codegen.NewWorkspace("gen")
+		Ω(err).ShouldNot(HaveOccurred())
+
 		compiledFiles = nil
 		compileError = nil
 		customFlags = []string{"--custom=arg"}
 	})
 
 	JustBeforeEach(func() {
-		if designPkgPath != "" {
+		if designPkgPath != "" && designPkgPath != invalidPkgPath {
 			designPackage, err := designWorkspace.NewPackage(designPkgPath)
 			Ω(err).ShouldNot(HaveOccurred())
-			if designPackageSource != "" {
-				file := designPackage.CreateSourceFile("design.go")
-				err = ioutil.WriteFile(file.Abs(), []byte(designPackageSource), 0655)
-				Ω(err).ShouldNot(HaveOccurred())
-			}
+			file, err := designPackage.CreateSourceFile("design.go")
+			Ω(err).ShouldNot(HaveOccurred())
+			_, err = file.Write([]byte("package design"))
+			Ω(err).ShouldNot(HaveOccurred())
+			file.Close()
 		}
+
+		genPackage, err := genWorkspace.NewPackage("gen")
+		Ω(err).ShouldNot(HaveOccurred())
+		file, err := genPackage.CreateSourceFile("gen.go")
+		Ω(err).ShouldNot(HaveOccurred())
+		_, err = file.Write([]byte(genPkgSource))
+		Ω(err).ShouldNot(HaveOccurred())
+		file.Close()
+
 		m = &meta.Generator{
-			Genfunc:       genfunc,
-			Imports:       []*codegen.ImportSpec{codegen.SimpleImport(designPkgPath)},
+			Genfunc:       "gen.Generate",
+			Imports:       []*codegen.ImportSpec{codegen.SimpleImport("gen")},
 			OutDir:        outputDir,
 			CustomFlags:   customFlags,
-			DesignPkgPath: setDesignPkgPath,
+			DesignPkgPath: designPkgPath,
 		}
 		compiledFiles, compileError = m.Generate()
 	})
@@ -68,6 +86,7 @@ var _ = Describe("Run", func() {
 	AfterEach(func() {
 		designWorkspace.Delete()
 		outputWorkspace.Delete()
+		genWorkspace.Delete()
 	})
 
 	Context("with no GOPATH environment variable", func() {
@@ -108,15 +127,13 @@ var _ = Describe("Run", func() {
 	})
 
 	Context("with an invalid design package path", func() {
-		const invalidDesignPackage = "foobar"
-
 		BeforeEach(func() {
-			setDesignPkgPath = invalidDesignPackage
+			designPkgPath = invalidPkgPath
 		})
 
 		It("fails with a useful error message", func() {
 			Ω(compileError).Should(MatchError(HavePrefix("invalid design package import path: cannot find package")))
-			Ω(compileError).Should(MatchError(ContainSubstring(invalidDesignPackage)))
+			Ω(compileError).Should(MatchError(ContainSubstring(invalidPkgPath)))
 		})
 	})
 
@@ -125,7 +142,6 @@ var _ = Describe("Run", func() {
 		const invalidPath = "/foobar"
 
 		BeforeEach(func() {
-			genfunc = "foo.Generate"
 			pathEnv = os.Getenv("PATH")
 			os.Setenv("PATH", invalidPath)
 		})
@@ -141,7 +157,6 @@ var _ = Describe("Run", func() {
 
 	Context("with no output directory specified", func() {
 		BeforeEach(func() {
-			genfunc = "foo.Generate"
 			outputDir = ""
 		})
 
@@ -152,20 +167,7 @@ var _ = Describe("Run", func() {
 
 	Context("with no design package path specified", func() {
 		BeforeEach(func() {
-			genfunc = "foo.Generate"
-			outputDir = ""
-		})
-
-		It("fails with a useful error message", func() {
-			Ω(compileError).Should(MatchError("missing output directory flag"))
-		})
-	})
-
-	Context("with no design package path specified", func() {
-		BeforeEach(func() {
-			genfunc = "foo.Generate"
 			designPkgPath = ""
-			setDesignPkgPath = ""
 		})
 
 		It("fails with a useful error message", func() {
@@ -173,16 +175,15 @@ var _ = Describe("Run", func() {
 		})
 	})
 
-	Context("with design package content", func() {
+	Context("with gen package content", func() {
 
 		BeforeEach(func() {
-			genfunc = "foo.Generate"
 			outputDir = os.TempDir()
 		})
 
 		Context("that is not valid Go code", func() {
 			BeforeEach(func() {
-				designPackageSource = invalidSource
+				genPkgSource = invalidSource
 			})
 
 			It("fails with a useful error message", func() {
@@ -192,7 +193,7 @@ var _ = Describe("Run", func() {
 
 		Context("whose code blows up", func() {
 			BeforeEach(func() {
-				designPackageSource = panickySource
+				genPkgSource = panickySource
 			})
 
 			It("fails with a useful error message", func() {
@@ -202,7 +203,7 @@ var _ = Describe("Run", func() {
 
 		Context("with valid code", func() {
 			BeforeEach(func() {
-				designPackageSource = validSource
+				genPkgSource = validSource
 			})
 
 			It("successfully runs", func() {
@@ -235,7 +236,7 @@ var _ = Describe("Run", func() {
 				Ω(err).ShouldNot(HaveOccurred())
 				err = tmpl.Execute(&b, filePaths)
 				Ω(err).ShouldNot(HaveOccurred())
-				designPackageSource = b.String()
+				genPkgSource = b.String()
 			})
 
 			It("returns the paths", func() {
@@ -243,6 +244,7 @@ var _ = Describe("Run", func() {
 				Ω(compiledFiles).Should(Equal(filePaths))
 			})
 		})
+
 		Context("with code that uses custom flags", func() {
 			BeforeEach(func() {
 				var b bytes.Buffer
@@ -250,7 +252,7 @@ var _ = Describe("Run", func() {
 				Ω(err).ShouldNot(HaveOccurred())
 				err = tmpl.Execute(&b, "--custom=arg")
 				Ω(err).ShouldNot(HaveOccurred())
-				designPackageSource = b.String()
+				genPkgSource = b.String()
 
 			})
 
@@ -262,11 +264,11 @@ var _ = Describe("Run", func() {
 })
 
 const (
-	invalidSource = `package foo
+	invalidSource = `package gen
 invalid go code
 `
 
-	panickySource = `package foo
+	panickySource = `package gen
 func Generate() ([]string, error) {
 	return nil, nil
 }
@@ -274,13 +276,13 @@ func Generate() ([]string, error) {
 func init() { panic("kaboom") }
 `
 
-	validSource = `package foo
+	validSource = `package gen
 func Generate() ([]string, error) {
 	return nil, nil
 }
 `
 
-	validSourceTmpl = `package foo
+	validSourceTmpl = `package gen
 import "fmt"
 func Generate() ([]string, error) {
 	{{range .}}fmt.Println("{{.}}")
@@ -289,7 +291,7 @@ func Generate() ([]string, error) {
 }
 `
 
-	validSourceTmplWithCustomFlags = `package foo
+	validSourceTmplWithCustomFlags = `package gen
 import "fmt"
 import "os"
 

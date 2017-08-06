@@ -45,6 +45,8 @@ type (
 		Name string
 		// Package containing source file
 		Package *Package
+		// osFile is the underlying OS file.
+		osFile *os.File
 	}
 )
 
@@ -174,11 +176,23 @@ func (p *Package) Abs() string {
 	return filepath.Join(p.Workspace.Path, "src", p.Path)
 }
 
-// CreateSourceFile creates a Go source file in the given package.
-func (p *Package) CreateSourceFile(name string) *SourceFile {
-	path := filepath.Join(p.Abs(), name)
-	os.Remove(filepath.Join(path, name))
-	return &SourceFile{Name: name, Package: p}
+// CreateSourceFile creates a Go source file in the given package. If the file
+// already exists it is overwritten.
+func (p *Package) CreateSourceFile(name string) (*SourceFile, error) {
+	os.RemoveAll(filepath.Join(p.Abs(), name))
+	return p.OpenSourceFile(name)
+}
+
+// OpenSourceFile opens an existing file to append to it. If the file does not
+// exist OpenSourceFile creates it.
+func (p *Package) OpenSourceFile(name string) (*SourceFile, error) {
+	f := &SourceFile{Name: name, Package: p}
+	file, err := os.OpenFile(f.Abs(), os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0644)
+	if err != nil {
+		return nil, err
+	}
+	f.osFile = file
+	return f, nil
 }
 
 // Compile compiles a package and returns the path to the compiled binary.
@@ -215,10 +229,7 @@ func SourceFileFor(path string) (*SourceFile, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &SourceFile{
-		Package: p,
-		Name:    filepath.Base(absPath),
-	}, nil
+	return p.OpenSourceFile(filepath.Base(absPath))
 }
 
 // WriteHeader writes the generic generated code header.
@@ -238,16 +249,18 @@ func (f *SourceFile) WriteHeader(title, pack string, imports []*ImportSpec) erro
 // Write implements io.Writer so that variables of type *SourceFile can be
 // used in template.Execute.
 func (f *SourceFile) Write(b []byte) (int, error) {
-	file, err := os.OpenFile(f.Abs(), os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0644)
-	if err != nil {
-		return 0, err
-	}
-	defer file.Close()
-	return file.Write(b)
+	return f.osFile.Write(b)
 }
 
-// FormatCode runs "goimports -w" on the source file.
-func (f *SourceFile) FormatCode() error {
+// Close closes the underlying OS file.
+func (f *SourceFile) Close() {
+	if err := f.osFile.Close(); err != nil {
+		panic(err) // bug
+	}
+}
+
+// Format performs the equivalent of "goimports -w" on the source file.
+func (f *SourceFile) Format() error {
 	// Parse file into AST
 	fset := token.NewFileSet()
 	file, err := parser.ParseFile(fset, f.Abs(), nil, parser.ParseComments)
