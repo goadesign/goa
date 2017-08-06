@@ -14,7 +14,18 @@ import (
 	"github.com/goadesign/goa/goagen/codegen"
 )
 
-func (g *Generator) generateMain(mainFile string, clientPkg, cliPkg string, funcs template.FuncMap) error {
+func (g *Generator) generateMain(mainFile string, clientPkg, cliPkg string, funcs template.FuncMap) (err error) {
+	var file *codegen.SourceFile
+	file, err = codegen.SourceFileFor(mainFile)
+	if err != nil {
+		return err
+	}
+	defer func() {
+		file.Close()
+		if err == nil {
+			err = file.Format()
+		}
+	}()
 	imports := []*codegen.ImportSpec{
 		codegen.SimpleImport("encoding/json"),
 		codegen.SimpleImport("fmt"),
@@ -28,6 +39,9 @@ func (g *Generator) generateMain(mainFile string, clientPkg, cliPkg string, func
 		codegen.NewImport("goaclient", "github.com/goadesign/goa/client"),
 		codegen.NewImport("uuid", "github.com/goadesign/goa/uuid"),
 	}
+	if err = file.WriteHeader("", "main", imports); err != nil {
+		return err
+	}
 
 	funcs["defaultRouteParams"] = defaultRouteParams
 	funcs["defaultRouteTemplate"] = defaultRouteTemplate
@@ -35,13 +49,6 @@ func (g *Generator) generateMain(mainFile string, clientPkg, cliPkg string, func
 	funcs["signerSignature"] = signerSignature
 	funcs["signerArgs"] = signerArgs
 
-	file, err := codegen.SourceFileFor(mainFile)
-	if err != nil {
-		return err
-	}
-	if err := file.WriteHeader("", "main", imports); err != nil {
-		return err
-	}
 	g.genfiles = append(g.genfiles, mainFile)
 	version := design.Design.Version
 	if version == "" {
@@ -83,18 +90,22 @@ func (g *Generator) generateMain(mainFile string, clientPkg, cliPkg string, func
 		HasAPIKeySigners:    hasAPIKeySigners,
 		HasTokenSigners:     hasTokenSigners,
 	}
-	if err := file.ExecuteTemplate("main", mainTmpl, funcs, data); err != nil {
-		return err
-	}
-
-	return file.FormatCode()
+	err = file.ExecuteTemplate("main", mainTmpl, funcs, data)
+	return
 }
 
-func (g *Generator) generateCommands(commandsFile string, clientPkg string, funcs template.FuncMap) error {
-	file, err := codegen.SourceFileFor(commandsFile)
+func (g *Generator) generateCommands(commandsFile string, clientPkg string, funcs template.FuncMap) (err error) {
+	var file *codegen.SourceFile
+	file, err = codegen.SourceFileFor(commandsFile)
 	if err != nil {
 		return err
 	}
+	defer func() {
+		file.Close()
+		if err == nil {
+			err = file.Format()
+		}
+	}()
 
 	funcs["defaultRouteParams"] = defaultRouteParams
 	funcs["defaultRouteTemplate"] = defaultRouteTemplate
@@ -135,14 +146,14 @@ func (g *Generator) generateCommands(commandsFile string, clientPkg string, func
 		imports = append(imports, codegen.NewImport("goaclient", "github.com/goadesign/goa/client"))
 	}
 	title := fmt.Sprintf("%s: CLI Commands", g.API.Context())
-	if err := file.WriteHeader(title, "cli", imports); err != nil {
+	if err = file.WriteHeader(title, "cli", imports); err != nil {
 		return err
 	}
 	g.genfiles = append(g.genfiles, commandsFile)
 
 	file.Write([]byte("type (\n"))
 	var fs []*design.FileServerDefinition
-	if err := g.API.IterateResources(func(res *design.ResourceDefinition) error {
+	if err = g.API.IterateResources(func(res *design.ResourceDefinition) error {
 		fs = append(fs, res.FileServers...)
 		return res.IterateActions(func(action *design.ActionDefinition) error {
 			return commandTypesTmpl.Execute(file, action)
@@ -180,7 +191,7 @@ func (g *Generator) generateCommands(commandsFile string, clientPkg string, func
 		Package:      g.Target,
 		HasDownloads: hasDownloads,
 	}
-	if err := file.ExecuteTemplate("registerCmds", registerCmdsT, funcs, data); err != nil {
+	if err = file.ExecuteTemplate("registerCmds", registerCmdsT, funcs, data); err != nil {
 		return err
 	}
 
@@ -217,7 +228,7 @@ func (g *Generator) generateCommands(commandsFile string, clientPkg string, func
 			Package:     g.Target,
 			FileServers: fsdata,
 		}
-		if err := downloadCommandTmpl.Execute(file, data); err != nil {
+		if err = downloadCommandTmpl.Execute(file, data); err != nil {
 			return err
 		}
 	}
@@ -243,11 +254,7 @@ func (g *Generator) generateCommands(commandsFile string, clientPkg string, func
 			return err
 		})
 	})
-	if err != nil {
-		return err
-	}
-
-	return file.FormatCode()
+	return
 }
 
 // defaultRouteParams returns the parameters needed to build the first route of the given action.
