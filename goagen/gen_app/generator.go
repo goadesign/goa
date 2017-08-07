@@ -138,7 +138,7 @@ func (g *Generator) generateContexts() (err error) {
 	defer func() {
 		ctxWr.Close()
 		if err == nil {
-			err = ctxWr.Format()
+			err = ctxWr.FormatCode()
 		}
 	}()
 	title := fmt.Sprintf("%s: Application Contexts", g.API.Context())
@@ -230,7 +230,7 @@ func (g *Generator) generateControllers() (err error) {
 	defer func() {
 		ctlWr.Close()
 		if err == nil {
-			err = ctlWr.Format()
+			err = ctlWr.FormatCode()
 		}
 	}()
 	title := fmt.Sprintf("%s: Application Controllers", g.API.Context())
@@ -349,7 +349,7 @@ func (g *Generator) generateSecurity() (err error) {
 	defer func() {
 		secWr.Close()
 		if err == nil {
-			err = secWr.Format()
+			err = secWr.FormatCode()
 		}
 	}()
 	title := fmt.Sprintf("%s: Application Security", g.API.Context())
@@ -384,7 +384,7 @@ func (g *Generator) generateHrefs() (err error) {
 	defer func() {
 		resWr.Close()
 		if err == nil {
-			err = resWr.Format()
+			err = resWr.FormatCode()
 		}
 	}()
 	title := fmt.Sprintf("%s: Application Resource Href Factories", g.API.Context())
@@ -434,7 +434,7 @@ func (g *Generator) generateMediaTypes() (err error) {
 	defer func() {
 		mtWr.Close()
 		if err == nil {
-			err = mtWr.Format()
+			err = mtWr.FormatCode()
 		}
 	}()
 	title := fmt.Sprintf("%s: Application Media Types", g.API.Context())
@@ -481,7 +481,7 @@ func (g *Generator) generateUserTypes() (err error) {
 	defer func() {
 		utWr.Close()
 		if err == nil {
-			err = utWr.Format()
+			err = utWr.FormatCode()
 		}
 	}()
 	title := fmt.Sprintf("%s: Application User Types", g.API.Context())
