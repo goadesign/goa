@@ -1,6 +1,7 @@
 package codegen_test
 
 import (
+	"math"
 	"strings"
 
 	"github.com/goadesign/goa/design"
@@ -69,6 +70,34 @@ var _ = Describe("validation code generation", func() {
 
 				It("produces the validation go code", func() {
 					Ω(code).Should(Equal(minValCode))
+				})
+			})
+
+			Context("of max value math.MaxInt64", func() {
+				BeforeEach(func() {
+					attType = design.Integer
+					max := float64(math.MaxInt64)
+					validation = &dslengine.ValidationDefinition{
+						Maximum: &max,
+					}
+				})
+
+				It("produces the validation go code", func() {
+					Ω(code).Should(Equal(maxValCode))
+				})
+			})
+
+			Context("of min value math.MinInt64", func() {
+				BeforeEach(func() {
+					attType = design.Integer
+					min := float64(math.MinInt64)
+					validation = &dslengine.ValidationDefinition{
+						Minimum: &min,
+					}
+				})
+
+				It("produces the validation go code", func() {
+					Ω(code).Should(Equal(minminValCode))
 				})
 			})
 
@@ -340,6 +369,18 @@ const (
 	minValCode = `	if val != nil {
 		if *val < 0 {
 			err = goa.MergeErrors(err, goa.InvalidRangeError(` + "`" + `context` + "`" + `, *val, 0, true))
+		}
+	}`
+
+	maxValCode = `	if val != nil {
+		if *val > 9223372036854775807 {
+			err = goa.MergeErrors(err, goa.InvalidRangeError(` + "`" + `context` + "`" + `, *val, 9223372036854775807, false))
+		}
+	}`
+
+	minminValCode = `	if val != nil {
+		if *val < -9223372036854775808 {
+			err = goa.MergeErrors(err, goa.InvalidRangeError(` + "`" + `context` + "`" + `, *val, -9223372036854775808, true))
 		}
 	}`
 
