@@ -259,8 +259,8 @@ func (f *SourceFile) Close() {
 	}
 }
 
-// Format performs the equivalent of "goimports -w" on the source file.
-func (f *SourceFile) Format() error {
+// FormatCode performs the equivalent of "goimports -w" on the source file.
+func (f *SourceFile) FormatCode() error {
 	// Parse file into AST
 	fset := token.NewFileSet()
 	file, err := parser.ParseFile(fset, f.Abs(), nil, parser.ParseComments)
