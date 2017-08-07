@@ -1,12 +1,10 @@
 package cli
 
 import (
-	"encoding/json"
 	"flag"
 	"fmt"
 	"net/http"
 	"os"
-	"strconv"
 
 	"goa.design/goa.v2"
 	goahttp "goa.design/goa.v2/http"
@@ -140,7 +138,7 @@ func ParseEndpoint(scheme, host string, doer goahttp.Doer, enc func(*http.Reques
 			switch epn {
 			case "add":
 				endpoint = c.Add()
-				data, err = buildStorageAddPayload(*storageAddNameFlag, *storageAddWineryFlag, *storageAddVintageFlag, *storageAddCompositionFlag, *storageAddDescriptionFlag, *storageAddRatingFlag)
+				data, err = storagec.BuildAddPayloadFromFlags(*storageAddNameFlag, *storageAddWineryFlag, *storageAddVintageFlag, *storageAddCompositionFlag, *storageAddDescriptionFlag, *storageAddRatingFlag)
 			case "list":
 				endpoint = c.List()
 				data = nil
@@ -156,7 +154,7 @@ func ParseEndpoint(scheme, host string, doer goahttp.Doer, enc func(*http.Reques
 			switch epn {
 			case "pick":
 				endpoint = c.Pick()
-				data, err = buildSommelierPickPayload(*sommelierPickNameFlag, *sommelierPickWineryFlag, *sommelierPickVarietalFlag)
+				data, err = sommelierc.BuildPickPayloadFromFlags(*sommelierPickNameFlag, *sommelierPickWineryFlag, *sommelierPickVarietalFlag)
 			}
 		}
 	}
@@ -165,89 +163,6 @@ func ParseEndpoint(scheme, host string, doer goahttp.Doer, enc func(*http.Reques
 	}
 
 	return endpoint, data, nil
-}
-
-func buildStorageAddPayload(nameFlag, wineryFlag, vintageFlag, compositionFlag, descriptionFlag, ratingFlag string) (*storagec.AddRequestBody, error) {
-	var winery storagec.WineryRequestBody
-	{
-		err := json.Unmarshal([]byte(wineryFlag), &winery)
-		if err != nil {
-			ex := storagec.WineryRequestBody{} // ...
-			js, _ := json.Marshal(ex)
-			return nil, fmt.Errorf("invalid JSON for winery, example of valid JSON:\n%s", js)
-		}
-	}
-
-	var composition []*storagec.ComponentRequestBody
-	if compositionFlag != "" {
-		err := json.Unmarshal([]byte(compositionFlag), &composition)
-		if err != nil {
-			ex := []*storagec.ComponentRequestBody{} // ...
-			js, _ := json.Marshal(ex)
-			return nil, fmt.Errorf("invalid JSON for composition, example of valid JSON:\n%s", string(js))
-		}
-	}
-
-	var vintage uint32
-	{
-		if v, err := strconv.ParseUint(ratingFlag, 10, 32); err == nil {
-			vintage = uint32(v)
-		}
-	}
-
-	var rating *uint32
-	if ratingFlag != "" {
-		if v, err := strconv.ParseUint(ratingFlag, 10, 32); err == nil {
-			val := uint32(v)
-			rating = &val
-		}
-	}
-
-	var description *string
-	if descriptionFlag != "" {
-		description = &descriptionFlag
-	}
-
-	body := &storagec.AddRequestBody{
-		Name:        nameFlag,
-		Winery:      &winery,
-		Vintage:     vintage,
-		Composition: composition,
-		Description: description,
-		Rating:      rating,
-	}
-
-	return body, nil
-}
-
-func buildSommelierPickPayload(nameFlag, wineryFlag, varietalFlag string) (*sommelierc.PickRequestBody, error) {
-	var name *string
-	if nameFlag != "" {
-		name = &nameFlag
-	}
-
-	var winery *string
-	if wineryFlag != "" {
-		winery = &wineryFlag
-	}
-
-	var varietal []string
-	if varietalFlag != "" {
-		err := json.Unmarshal([]byte(varietalFlag), &varietal)
-		if err != nil {
-			ex := []string{"pinot noir"}
-			js, _ := json.Marshal(ex)
-			return nil, fmt.Errorf("invalid JSON for varietal, example of valid JSON:\n%s", js)
-		}
-	}
-
-	body := &sommelierc.PickRequestBody{
-		Name:     name,
-		Winery:   winery,
-		Varietal: varietal,
-	}
-
-	return body, nil
 }
 
 func storageUsage() {
