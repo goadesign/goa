@@ -45,20 +45,13 @@ func NewNoOpSink() metrics.MetricSink {
 // NoOpSink default NOOP metrics recorder
 type NoOpSink struct{}
 
-// SetGauge method
-func (md *NoOpSink) SetGauge(key []string, val float32) {}
-
-// EmitKey method
-func (md *NoOpSink) EmitKey(key []string, val float32) {}
-
-// IncrCounter method
-func (md *NoOpSink) IncrCounter(key []string, val float32) {}
-
-// AddSample method
-func (md *NoOpSink) AddSample(key []string, val float32) {}
-
-// MeasureSince method
-func (md *NoOpSink) MeasureSince(key []string, start time.Time) {}
+func (*NoOpSink) SetGauge(key []string, val float32)                                      {}
+func (*NoOpSink) SetGaugeWithLabels(key []string, val float32, labels []metrics.Label)    {}
+func (*NoOpSink) EmitKey(key []string, val float32)                                       {}
+func (*NoOpSink) IncrCounter(key []string, val float32)                                   {}
+func (*NoOpSink) IncrCounterWithLabels(key []string, val float32, labels []metrics.Label) {}
+func (*NoOpSink) AddSample(key []string, val float32)                                     {}
+func (*NoOpSink) AddSampleWithLabels(key []string, val float32, labels []metrics.Label)   {}
 
 // NewMetrics initializes goa's metrics instance with the supplied
 // configuration and metrics sink
