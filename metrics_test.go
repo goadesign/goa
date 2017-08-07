@@ -11,22 +11,13 @@ import (
 	"github.com/armon/go-metrics"
 )
 
-// mock metrics
-type mockSink struct{}
-
-func (m *mockSink) SetGauge(key []string, val float32)         {}
-func (m *mockSink) EmitKey(key []string, val float32)          {}
-func (m *mockSink) IncrCounter(key []string, val float32)      {}
-func (m *mockSink) AddSample(key []string, val float32)        {}
-func (m *mockSink) MeasureSince(key []string, start time.Time) {}
-
 var _ = Describe("Metrics", func() {
 	var keys = [6]string{}
 	var metriks *metrics.Metrics
-	var sink *mockSink
+	var sink *goa.NoOpSink
 
 	BeforeEach(func() {
-		sink = &mockSink{}
+		sink = &goa.NoOpSink{}
 
 		var err error
 		metriks, err = metrics.New(metrics.DefaultConfig("UnitTest Service"), sink)
