@@ -109,7 +109,7 @@ func (g *Generator) generateResourceTest() error {
 		defer func() {
 			file.Close()
 			if err == nil {
-				err = file.Format()
+				err = file.FormatCode()
 			}
 		}()
 		title := fmt.Sprintf("%s: %s TestHelpers", g.API.Context(), res.Name)

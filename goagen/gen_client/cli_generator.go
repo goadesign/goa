@@ -23,7 +23,7 @@ func (g *Generator) generateMain(mainFile string, clientPkg, cliPkg string, func
 	defer func() {
 		file.Close()
 		if err == nil {
-			err = file.Format()
+			err = file.FormatCode()
 		}
 	}()
 	imports := []*codegen.ImportSpec{
@@ -103,7 +103,7 @@ func (g *Generator) generateCommands(commandsFile string, clientPkg string, func
 	defer func() {
 		file.Close()
 		if err == nil {
-			err = file.Format()
+			err = file.FormatCode()
 		}
 	}()
 

@@ -148,7 +148,7 @@ func GenerateController(force, regen bool, appPkg, outDir, pkg, name string, r *
 	defer func() {
 		file.Close()
 		if err == nil {
-			err = file.Format()
+			err = file.FormatCode()
 		}
 	}()
 
@@ -271,7 +271,7 @@ func (g *Generator) createMainFile(mainFile string, funcs template.FuncMap) (err
 	defer func() {
 		file.Close()
 		if err == nil {
-			err = file.Format()
+			err = file.FormatCode()
 		}
 	}()
 	g.genfiles = append(g.genfiles, mainFile)

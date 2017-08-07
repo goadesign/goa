@@ -234,7 +234,7 @@ func (g *Generator) generateClient(clientFile string, clientPkg string, funcs te
 	defer func() {
 		file.Close()
 		if err == nil {
-			err = file.Format()
+			err = file.FormatCode()
 		}
 	}()
 	clientTmpl := template.Must(template.New("client").Funcs(funcs).Parse(clientTmpl))
@@ -326,7 +326,7 @@ func (g *Generator) generateResourceClient(pkgDir string, res *design.ResourceDe
 	defer func() {
 		file.Close()
 		if err == nil {
-			err = file.Format()
+			err = file.FormatCode()
 		}
 	}()
 	imports := []*codegen.ImportSpec{
@@ -578,7 +578,7 @@ func (g *Generator) generateMediaTypes(pkgDir string, funcs template.FuncMap) (e
 	defer func() {
 		mtWr.Close()
 		if err == nil {
-			err = mtWr.Format()
+			err = mtWr.FormatCode()
 		}
 	}()
 	title := fmt.Sprintf("%s: Application Media Types", g.API.Context())
@@ -635,7 +635,7 @@ func (g *Generator) generateUserTypes(pkgDir string) (err error) {
 	defer func() {
 		utWr.Close()
 		if err == nil {
-			err = utWr.Format()
+			err = utWr.FormatCode()
 		}
 	}()
 	title := fmt.Sprintf("%s: Application User Types", g.API.Context())
