@@ -4,11 +4,11 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"math"
 	"strings"
 	"text/template"
 
 	"github.com/goadesign/goa/design"
-	"github.com/goadesign/goa/dslengine"
 )
 
 var (
@@ -324,6 +324,9 @@ func (v *Validator) recurseAttribute(att, catt *design.AttributeDefinition, n, t
 // error. It initializes that variable in case a validation fails.
 // Note: we do not want to recurse here, recursion is done by the marshaler/unmarshaler code.
 func ValidationChecker(att *design.AttributeDefinition, nonzero, required, hasDefault bool, target, context string, depth int, private bool) string {
+	if att.Validation == nil {
+		return ""
+	}
 	t := target
 	isPointer := private || (!required && !hasDefault && !nonzero)
 	if isPointer && att.Type.IsPrimitive() {
@@ -342,14 +345,12 @@ func ValidationChecker(att *design.AttributeDefinition, nonzero, required, hasDe
 		"depth":     depth,
 		"private":   private,
 	}
-	res := validationsCode(att.Validation, data)
+	res := validationsCode(att, data)
 	return strings.Join(res, "\n")
 }
 
-func validationsCode(validation *dslengine.ValidationDefinition, data map[string]interface{}) (res []string) {
-	if validation == nil {
-		return nil
-	}
+func validationsCode(att *design.AttributeDefinition, data map[string]interface{}) (res []string) {
+	validation := att.Validation
 	if values := validation.Values; values != nil {
 		data["values"] = values
 		if val := RunTemplate(enumValT, data); val != "" {
@@ -369,7 +370,11 @@ func validationsCode(validation *dslengine.ValidationDefinition, data map[string
 		}
 	}
 	if min := validation.Minimum; min != nil {
-		data["min"] = *min
+		if att.Type == design.Integer {
+			data["min"] = renderInteger(*min)
+		} else {
+			data["min"] = fmt.Sprintf("%f", *min)
+		}
 		data["isMin"] = true
 		delete(data, "max")
 		if val := RunTemplate(minMaxValT, data); val != "" {
@@ -377,7 +382,11 @@ func validationsCode(validation *dslengine.ValidationDefinition, data map[string
 		}
 	}
 	if max := validation.Maximum; max != nil {
-		data["max"] = *max
+		if att.Type == design.Integer {
+			data["max"] = renderInteger(*max)
+		} else {
+			data["max"] = fmt.Sprintf("%f", *max)
+		}
 		data["isMin"] = false
 		delete(data, "min")
 		if val := RunTemplate(minMaxValT, data); val != "" {
@@ -412,6 +421,18 @@ func validationsCode(validation *dslengine.ValidationDefinition, data map[string
 		res = append(res, val)
 	}
 	return
+}
+
+// renderInteger renders a max or min value properly, taking into account
+// overflows due to casting from a float value.
+func renderInteger(f float64) string {
+	if f > math.Nextafter(float64(math.MaxInt64), 0) {
+		return fmt.Sprintf("%d", int64(math.MaxInt64))
+	}
+	if f < math.Nextafter(float64(math.MinInt64), 0) {
+		return fmt.Sprintf("%d", int64(math.MinInt64))
+	}
+	return fmt.Sprintf("%d", int64(f))
 }
 
 // oneof produces code that compares target with each element of vals and ORs
