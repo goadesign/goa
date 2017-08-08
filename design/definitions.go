@@ -1204,13 +1204,13 @@ func (a *AttributeDefinition) Merge(other *AttributeDefinition) *AttributeDefini
 
 // Inherit merges the properties of existing target type attributes with the argument's.
 // The algorithm is recursive so that child attributes are also merged.
-func (a *AttributeDefinition) Inherit(parent *AttributeDefinition) {
+func (a *AttributeDefinition) Inherit(parent *AttributeDefinition, seen ...map[*AttributeDefinition]struct{}) {
 	if !a.shouldInherit(parent) {
 		return
 	}
 
 	a.inheritValidations(parent)
-	a.inheritRecursive(parent)
+	a.inheritRecursive(parent, seen...)
 }
 
 // DSL returns the initialization DSL.
@@ -1218,7 +1218,19 @@ func (a *AttributeDefinition) DSL() func() {
 	return a.DSLFunc
 }
 
-func (a *AttributeDefinition) inheritRecursive(parent *AttributeDefinition) {
+func (a *AttributeDefinition) inheritRecursive(parent *AttributeDefinition, seen ...map[*AttributeDefinition]struct{}) {
+	// prevent infinite recursions
+	var s map[*AttributeDefinition]struct{}
+	if len(seen) > 0 {
+		s = seen[0]
+		if _, ok := s[parent]; ok {
+			return
+		}
+	} else {
+		s = make(map[*AttributeDefinition]struct{})
+	}
+	s[parent] = struct{}{}
+
 	if !a.shouldInherit(parent) {
 		return
 	}
@@ -1239,7 +1251,7 @@ func (a *AttributeDefinition) inheritRecursive(parent *AttributeDefinition) {
 				att.Type = patt.Type
 			} else if att.shouldInherit(patt) {
 				for _, att := range att.Type.ToObject() {
-					att.Inherit(patt.Type.ToObject()[n])
+					att.Inherit(patt.Type.ToObject()[n], s)
 				}
 			}
 			if att.Example == nil {
