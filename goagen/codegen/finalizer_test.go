@@ -54,6 +54,24 @@ var _ = Describe("Struct finalize code generation", func() {
 		})
 	})
 
+	Context("given an object with a primitive Number field with a int default value", func() {
+		BeforeEach(func() {
+			att = &design.AttributeDefinition{
+				Type: &design.Object{
+					"foo": &design.AttributeDefinition{
+						Type:         design.Number,
+						DefaultValue: 50,
+					},
+				},
+			}
+			target = "ut"
+		})
+		It("finalizes the fields", func() {
+			code := finalizer.Code(att, target, 0)
+			Ω(code).Should(Equal(numberAssignmentCodeIntDefault))
+		})
+	})
+
 	Context("given an array field", func() {
 		BeforeEach(func() {
 			att = &design.AttributeDefinition{
@@ -169,6 +187,11 @@ var _ = Describe("Struct finalize code generation", func() {
 
 const (
 	primitiveAssignmentCode = `var defaultFoo = "bar"
+if ut.Foo == nil {
+	ut.Foo = &defaultFoo
+}`
+
+	numberAssignmentCodeIntDefault = `var defaultFoo = 50.000000
 if ut.Foo == nil {
 	ut.Foo = &defaultFoo
 }`

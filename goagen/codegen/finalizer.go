@@ -116,7 +116,11 @@ func PrintVal(t design.DataType, val interface{}) string {
 		s := fmt.Sprintf("%#v", val)
 		switch t {
 		case design.Number:
-			s = fmt.Sprintf("%f", val)
+			v := val
+			if i, ok := val.(int); ok {
+				v = float64(i)
+			}
+			s = fmt.Sprintf("%f", v)
 		case design.DateTime:
 			s = fmt.Sprintf("time.Parse(time.RFC3339, %s)", s)
 		}
