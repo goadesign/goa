@@ -9,6 +9,82 @@ import (
 	. "github.com/onsi/gomega"
 )
 
+var _ = Describe("Inherit", func() {
+	var child, parent *design.AttributeDefinition
+
+	BeforeEach(func() {
+		parent = &design.AttributeDefinition{Type: design.Object{}}
+		child = &design.AttributeDefinition{Type: design.Object{}}
+	})
+
+	JustBeforeEach(func() {
+		child.Inherit(parent)
+	})
+
+	Context("with a empty parent", func() {
+		const attName = "c"
+		BeforeEach(func() {
+			child.Type.(design.Object)[attName] = &design.AttributeDefinition{Type: design.String}
+		})
+
+		It("does not change", func() {
+			obj := child.Type.(design.Object)
+			Ω(obj).Should(HaveLen(1))
+			Ω(obj).Should(HaveKey(attName))
+		})
+	})
+
+	Context("with a parent that defines no inherited attribute", func() {
+		const (
+			attName = "c"
+			def     = "default"
+		)
+
+		BeforeEach(func() {
+			child.Type.(design.Object)[attName] = &design.AttributeDefinition{Type: design.String}
+			parent.Type.(design.Object)["other"] = &design.AttributeDefinition{Type: design.String, DefaultValue: def}
+		})
+
+		It("does not change", func() {
+			obj := child.Type.(design.Object)
+			Ω(obj).Should(HaveLen(1))
+			Ω(obj).Should(HaveKey(attName))
+			Ω(obj[attName].DefaultValue).Should(BeNil())
+		})
+	})
+
+	Context("with a parent that defines an inherited attribute", func() {
+		const (
+			attName = "c"
+			def     = "default"
+		)
+
+		BeforeEach(func() {
+			child.Type.(design.Object)[attName] = &design.AttributeDefinition{Type: design.String}
+			parent.Type.(design.Object)[attName] = &design.AttributeDefinition{Type: design.String, DefaultValue: def}
+		})
+
+		It("inherits the default value", func() {
+			obj := child.Type.(design.Object)
+			Ω(obj).Should(HaveLen(1))
+			Ω(obj).Should(HaveKey(attName))
+			Ω(obj[attName].DefaultValue).Should(Equal(def))
+		})
+	})
+
+	Context("with recursive type definitions", func() {
+		BeforeEach(func() {
+			po := design.Object{}
+			parent = &design.AttributeDefinition{Type: po}
+			child = &design.AttributeDefinition{Type: &design.UserTypeDefinition{AttributeDefinition: parent}}
+			po["recurse"] = child
+		})
+
+		It("does not recurse infinitely", func() {})
+	})
+
+})
+
 var _ = Describe("IsRequired", func() {
 	var required string
 	var attName string
