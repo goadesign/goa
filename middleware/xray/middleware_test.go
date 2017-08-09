@@ -181,11 +181,8 @@ func TestMiddleware(t *testing.T) {
 		if s.Name != "service" {
 			t.Errorf("%s: unexpected segment name, expected service - got %s", k, s.Name)
 		}
-		if c.Trace.ParentID == "" && s.Type != "" {
+		if s.Type != "" {
 			t.Errorf("%s: expected Type to be empty but got %s", k, s.Type)
-		}
-		if c.Trace.ParentID != "" && s.Type != "subsegment" {
-			t.Errorf("%s: expected Type to subsegment but got %s", k, s.Type)
 		}
 		if s.ID != c.Trace.SpanID {
 			t.Errorf("%s: unexpected segment ID, expected %s - got %s", k, c.Trace.SpanID, s.ID)
