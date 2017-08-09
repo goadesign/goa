@@ -92,12 +92,7 @@ func NewPickResponseBody(res sommelier.StoredBottleCollection) PickResponseBody 
 			Description: val.Description,
 			Rating:      val.Rating,
 		}
-		body[i].Winery = &WineryResponseBody{
-			Name:    val.Winery.Name,
-			Region:  val.Winery.Region,
-			Country: val.Winery.Country,
-			URL:     val.Winery.URL,
-		}
+		body[i].Winery = wineryToWineryResponseBodyNoDefault(val.Winery)
 		if val.Composition != nil {
 			body[i].Composition = make([]*ComponentResponseBody, len(val.Composition))
 			for i, val := range val.Composition {

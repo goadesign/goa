@@ -1,8 +1,14 @@
 package testing
 
-var MultiNoPayloadCode = `// ParseEndpoint returns the endpoint and payload as specified on the command
+var MultiNoPayloadParseCode = `// ParseEndpoint returns the endpoint and payload as specified on the command
 // line.
-func ParseEndpoint(scheme, host string, doer goahttp.Doer, enc func(*http.Request) goahttp.Encoder, dec func(*http.Response) goahttp.Decoder) (goa.Endpoint, interface{}, error) {
+func ParseEndpoint(
+	scheme, host string,
+	doer goahttp.Doer,
+	enc func(*http.Request) goahttp.Encoder,
+	dec func(*http.Response) goahttp.Decoder,
+	restore bool,
+) (goa.Endpoint, interface{}, error) {
 	var (
 		serviceMultiNoPayload1Flags = flag.NewFlagSet("serviceMultiNoPayload1", flag.ContinueOnError)
 
@@ -17,12 +23,12 @@ func ParseEndpoint(scheme, host string, doer goahttp.Doer, enc func(*http.Reques
 		serviceMultiNoPayload2MethodServiceNoPayload22Flags = flag.NewFlagSet("methodServiceNoPayload22", flag.ExitOnError)
 	)
 	serviceMultiNoPayload1Flags.Usage = serviceMultiNoPayload1Usage
-	methodServiceNoPayload11Flags.Usage = serviceMultiNoPayload1MethodServiceNoPayload11Usage
-	methodServiceNoPayload12Flags.Usage = serviceMultiNoPayload1MethodServiceNoPayload12Usage
+	serviceMultiNoPayload1MethodServiceNoPayload11Flags.Usage = serviceMultiNoPayload1MethodServiceNoPayload11Usage
+	serviceMultiNoPayload1MethodServiceNoPayload12Flags.Usage = serviceMultiNoPayload1MethodServiceNoPayload12Usage
 
 	serviceMultiNoPayload2Flags.Usage = serviceMultiNoPayload2Usage
-	methodServiceNoPayload21Flags.Usage = serviceMultiNoPayload2MethodServiceNoPayload21Usage
-	methodServiceNoPayload22Flags.Usage = serviceMultiNoPayload2MethodServiceNoPayload22Usage
+	serviceMultiNoPayload2MethodServiceNoPayload21Flags.Usage = serviceMultiNoPayload2MethodServiceNoPayload21Usage
+	serviceMultiNoPayload2MethodServiceNoPayload22Flags.Usage = serviceMultiNoPayload2MethodServiceNoPayload22Usage
 
 	if err := flag.CommandLine.Parse(os.Args[1:]); err != nil {
 		return nil, nil, err
@@ -99,7 +105,7 @@ func ParseEndpoint(scheme, host string, doer goahttp.Doer, enc func(*http.Reques
 	{
 		switch svcn {
 		case "serviceMultiNoPayload1":
-			c := storagec.NewClient(scheme, host, doer, enc, dec)
+			c := servicemultinopayload1c.NewClient(scheme, host, doer, enc, dec, restore)
 			switch epn {
 			case "methodServiceNoPayload11":
 				endpoint = c.MethodServiceNoPayload11()
@@ -109,7 +115,7 @@ func ParseEndpoint(scheme, host string, doer goahttp.Doer, enc func(*http.Reques
 				data = nil
 			}
 		case "serviceMultiNoPayload2":
-			c := storagec.NewClient(scheme, host, doer, enc, dec)
+			c := servicemultinopayload2c.NewClient(scheme, host, doer, enc, dec, restore)
 			switch epn {
 			case "methodServiceNoPayload21":
 				endpoint = c.MethodServiceNoPayload21()
@@ -128,31 +134,37 @@ func ParseEndpoint(scheme, host string, doer goahttp.Doer, enc func(*http.Reques
 }
 `
 
-var MultiSimpleCode = `// ParseEndpoint returns the endpoint and payload as specified on the command
+var MultiSimpleParseCode = `// ParseEndpoint returns the endpoint and payload as specified on the command
 // line.
-func ParseEndpoint(scheme, host string, doer goahttp.Doer, enc func(*http.Request) goahttp.Encoder, dec func(*http.Response) goahttp.Decoder) (goa.Endpoint, interface{}, error) {
+func ParseEndpoint(
+	scheme, host string,
+	doer goahttp.Doer,
+	enc func(*http.Request) goahttp.Encoder,
+	dec func(*http.Response) goahttp.Decoder,
+	restore bool,
+) (goa.Endpoint, interface{}, error) {
 	var (
 		serviceMultiSimple1Flags = flag.NewFlagSet("serviceMultiSimple1", flag.ContinueOnError)
 
 		serviceMultiSimple1MethodMultiSimpleNoPayloadFlags = flag.NewFlagSet("methodMultiSimpleNoPayload", flag.ExitOnError)
 
 		serviceMultiSimple1MethodMultiSimplePayloadFlags    = flag.NewFlagSet("methodMultiSimplePayload", flag.ExitOnError)
-		serviceMultiSimple1MethodMultiSimplePayloadBodyFlag = serviceMultiSimple1MethodMultiSimplePayloadFlags.String("body", "", "")
+		serviceMultiSimple1MethodMultiSimplePayloadBodyFlag = serviceMultiSimple1MethodMultiSimplePayloadFlags.String("body", "REQUIRED", "")
 
 		serviceMultiSimple2Flags = flag.NewFlagSet("serviceMultiSimple2", flag.ContinueOnError)
 
 		serviceMultiSimple2MethodMultiSimpleNoPayloadFlags = flag.NewFlagSet("methodMultiSimpleNoPayload", flag.ExitOnError)
 
 		serviceMultiSimple2MethodMultiSimplePayloadFlags    = flag.NewFlagSet("methodMultiSimplePayload", flag.ExitOnError)
-		serviceMultiSimple2MethodMultiSimplePayloadBodyFlag = serviceMultiSimple2MethodMultiSimplePayloadFlags.String("body", "", "")
+		serviceMultiSimple2MethodMultiSimplePayloadBodyFlag = serviceMultiSimple2MethodMultiSimplePayloadFlags.String("body", "REQUIRED", "")
 	)
 	serviceMultiSimple1Flags.Usage = serviceMultiSimple1Usage
-	methodMultiSimpleNoPayloadFlags.Usage = serviceMultiSimple1MethodMultiSimpleNoPayloadUsage
-	methodMultiSimplePayloadFlags.Usage = serviceMultiSimple1MethodMultiSimplePayloadUsage
+	serviceMultiSimple1MethodMultiSimpleNoPayloadFlags.Usage = serviceMultiSimple1MethodMultiSimpleNoPayloadUsage
+	serviceMultiSimple1MethodMultiSimplePayloadFlags.Usage = serviceMultiSimple1MethodMultiSimplePayloadUsage
 
 	serviceMultiSimple2Flags.Usage = serviceMultiSimple2Usage
-	methodMultiSimpleNoPayloadFlags.Usage = serviceMultiSimple2MethodMultiSimpleNoPayloadUsage
-	methodMultiSimplePayloadFlags.Usage = serviceMultiSimple2MethodMultiSimplePayloadUsage
+	serviceMultiSimple2MethodMultiSimpleNoPayloadFlags.Usage = serviceMultiSimple2MethodMultiSimpleNoPayloadUsage
+	serviceMultiSimple2MethodMultiSimplePayloadFlags.Usage = serviceMultiSimple2MethodMultiSimplePayloadUsage
 
 	if err := flag.CommandLine.Parse(os.Args[1:]); err != nil {
 		return nil, nil, err
@@ -229,24 +241,24 @@ func ParseEndpoint(scheme, host string, doer goahttp.Doer, enc func(*http.Reques
 	{
 		switch svcn {
 		case "serviceMultiSimple1":
-			c := storagec.NewClient(scheme, host, doer, enc, dec)
+			c := servicemultisimple1c.NewClient(scheme, host, doer, enc, dec, restore)
 			switch epn {
 			case "methodMultiSimpleNoPayload":
 				endpoint = c.MethodMultiSimpleNoPayload()
 				data = nil
 			case "methodMultiSimplePayload":
 				endpoint = c.MethodMultiSimplePayload()
-				data, err = buildMethodMultiSimplePayloadPayload(*serviceMultiSimple1MethodMultiSimplePayloadBodyFlag)
+				data, err = servicemultisimple1c.BuildMethodMultiSimplePayloadPayload(*serviceMultiSimple1MethodMultiSimplePayloadBodyFlag)
 			}
 		case "serviceMultiSimple2":
-			c := storagec.NewClient(scheme, host, doer, enc, dec)
+			c := servicemultisimple2c.NewClient(scheme, host, doer, enc, dec, restore)
 			switch epn {
 			case "methodMultiSimpleNoPayload":
 				endpoint = c.MethodMultiSimpleNoPayload()
 				data = nil
 			case "methodMultiSimplePayload":
 				endpoint = c.MethodMultiSimplePayload()
-				data, err = buildMethodMultiSimplePayloadPayload(*serviceMultiSimple2MethodMultiSimplePayloadBodyFlag)
+				data, err = servicemultisimple2c.BuildMethodMultiSimplePayloadPayload(*serviceMultiSimple2MethodMultiSimplePayloadBodyFlag)
 			}
 		}
 	}
@@ -258,22 +270,28 @@ func ParseEndpoint(scheme, host string, doer goahttp.Doer, enc func(*http.Reques
 }
 `
 
-var MultiCode = `// ParseEndpoint returns the endpoint and payload as specified on the command
+var MultiParseCode = `// ParseEndpoint returns the endpoint and payload as specified on the command
 // line.
-func ParseEndpoint(scheme, host string, doer goahttp.Doer, enc func(*http.Request) goahttp.Encoder, dec func(*http.Response) goahttp.Decoder) (goa.Endpoint, interface{}, error) {
+func ParseEndpoint(
+	scheme, host string,
+	doer goahttp.Doer,
+	enc func(*http.Request) goahttp.Encoder,
+	dec func(*http.Response) goahttp.Decoder,
+	restore bool,
+) (goa.Endpoint, interface{}, error) {
 	var (
 		serviceMultiFlags = flag.NewFlagSet("serviceMulti", flag.ContinueOnError)
 
 		serviceMultiMethodMultiNoPayloadFlags = flag.NewFlagSet("methodMultiNoPayload", flag.ExitOnError)
 
 		serviceMultiMethodMultiPayloadFlags    = flag.NewFlagSet("methodMultiPayload", flag.ExitOnError)
-		serviceMultiMethodMultiPayloadBodyFlag = serviceMultiMethodMultiPayloadFlags.String("body", "", "")
+		serviceMultiMethodMultiPayloadBodyFlag = serviceMultiMethodMultiPayloadFlags.String("body", "REQUIRED", "")
 		serviceMultiMethodMultiPayloadBFlag    = serviceMultiMethodMultiPayloadFlags.String("b", "", "")
 		serviceMultiMethodMultiPayloadAFlag    = serviceMultiMethodMultiPayloadFlags.String("a", "", "")
 	)
 	serviceMultiFlags.Usage = serviceMultiUsage
-	methodMultiNoPayloadFlags.Usage = serviceMultiMethodMultiNoPayloadUsage
-	methodMultiPayloadFlags.Usage = serviceMultiMethodMultiPayloadUsage
+	serviceMultiMethodMultiNoPayloadFlags.Usage = serviceMultiMethodMultiNoPayloadUsage
+	serviceMultiMethodMultiPayloadFlags.Usage = serviceMultiMethodMultiPayloadUsage
 
 	if err := flag.CommandLine.Parse(os.Args[1:]); err != nil {
 		return nil, nil, err
@@ -338,14 +356,14 @@ func ParseEndpoint(scheme, host string, doer goahttp.Doer, enc func(*http.Reques
 	{
 		switch svcn {
 		case "serviceMulti":
-			c := storagec.NewClient(scheme, host, doer, enc, dec)
+			c := servicemultic.NewClient(scheme, host, doer, enc, dec, restore)
 			switch epn {
 			case "methodMultiNoPayload":
 				endpoint = c.MethodMultiNoPayload()
 				data = nil
 			case "methodMultiPayload":
 				endpoint = c.MethodMultiPayload()
-				data, err = buildMethodMultiPayloadPayload(*serviceMultiMethodMultiPayloadBodyFlag, *serviceMultiMethodMultiPayloadBFlag, *serviceMultiMethodMultiPayloadAFlag)
+				data, err = servicemultic.BuildMethodMultiPayloadPayload(*serviceMultiMethodMultiPayloadBodyFlag, *serviceMultiMethodMultiPayloadBFlag, *serviceMultiMethodMultiPayloadAFlag)
 			}
 		}
 	}
@@ -354,5 +372,60 @@ func ParseEndpoint(scheme, host string, doer goahttp.Doer, enc func(*http.Reques
 	}
 
 	return endpoint, data, nil
+}
+`
+
+var MultiSimpleBuildCode = `// BuildMethodMultiSimplePayloadPayload builds the payload for the
+// ServiceMultiSimple1 MethodMultiSimplePayload endpoint from CLI flags.
+func BuildMethodMultiSimplePayloadPayload(serviceMultiSimple1MethodMultiSimplePayloadBody string) (*servicemultisimple1.MethodMultiSimplePayloadPayload, error) {
+	var body MethodMultiSimplePayloadRequestBody
+	{
+		err := json.Unmarshal([]byte(serviceMultiSimple1MethodMultiSimplePayloadBody), &body)
+		if err != nil {
+			return nil, fmt.Errorf("invalid JSON for body, example of valid JSON:\n%s", "{\"a\":false}")
+		}
+	}
+	v := &servicemultisimple1.MethodMultiSimplePayloadPayload{
+		A: body.A,
+	}
+
+	return v, nil
+}
+`
+
+var MultiBuildCode = `// BuildMethodMultiPayloadPayload builds the payload for the ServiceMulti
+// MethodMultiPayload endpoint from CLI flags.
+func BuildMethodMultiPayloadPayload(serviceMultiMethodMultiPayloadBody string, serviceMultiMethodMultiPayloadB string, serviceMultiMethodMultiPayloadA string) (*servicemulti.MethodMultiPayloadPayload, error) {
+	var body MethodMultiPayloadRequestBody
+	{
+		err := json.Unmarshal([]byte(serviceMultiMethodMultiPayloadBody), &body)
+		if err != nil {
+			return nil, fmt.Errorf("invalid JSON for body, example of valid JSON:\n%s", "{\"c\":{\"att\":false,\"att10\":\"Aspernatur quo error explicabo pariatur.\",\"att11\":\"Q3VtcXVlIHZvbHVwdGF0ZW0u\",\"att12\":\"Distinctio aliquam nihil blanditiis ut.\",\"att13\":[\"Nihil excepturi deserunt quasi omnis sed.\",\"Sit maiores aperiam autem non ea rem.\"],\"att14\":{\"Excepturi totam.\":\"Ut aut facilis vel ipsam.\",\"Minima et aut non sunt consequuntur.\":\"Et consequuntur porro quasi.\",\"Quis voluptates quaerat et temporibus facere.\":\"Ipsam eaque sunt maxime suscipit.\"},\"att15\":{\"inline\":\"Ea alias repellat nobis veritatis.\"},\"att2\":3504438334001971349,\"att3\":2005839040,\"att4\":5845720715558772393,\"att5\":2900634008447043830,\"att6\":1865618013,\"att7\":1484745265794365762,\"att8\":0.11815318,\"att9\":0.30907290919538355}}")
+		}
+	}
+	var b *string
+	{
+		if serviceMultiMethodMultiPayloadB != "" {
+			b = &serviceMultiMethodMultiPayloadB
+		}
+	}
+	var a *bool
+	{
+		if serviceMultiMethodMultiPayloadA != "" {
+			val, err := strconv.ParseBool(serviceMultiMethodMultiPayloadA)
+			if err != nil {
+				return nil, fmt.Errorf("invalid value for a, must be BOOL")
+			}
+			a = &val
+		}
+	}
+	v := &servicemulti.MethodMultiPayloadPayload{}
+	if body.C != nil {
+		v.C = userTypeRequestBodyToUserType(body.C)
+	}
+	v.B = b
+	v.A = a
+
+	return v, nil
 }
 `

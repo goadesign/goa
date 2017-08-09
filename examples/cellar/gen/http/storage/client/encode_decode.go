@@ -160,9 +160,9 @@ func (c *Client) EncodeAddRequest(encoder func(*http.Request) goahttp.Encoder) f
 	}
 }
 
-// DecodeAddResponse returns a decoder for responses returned by the storage add
-// endpoint. restoreBody controls whether the response body should be restored
-// after having been read.
+// DecodeAddResponse returns a decoder for responses returned by the storage
+// add endpoint. restoreBody controls whether the response body should be
+// restored after having been read.
 func (c *Client) DecodeAddResponse(decoder func(*http.Response) goahttp.Decoder, restoreBody bool) func(*http.Response) (interface{}, error) {
 	return func(resp *http.Response) (interface{}, error) {
 		if restoreBody {
@@ -219,7 +219,7 @@ func (c *Client) EncodeRemoveRequest(encoder func(*http.Request) goahttp.Encoder
 
 // DecodeRemoveResponse returns a decoder for responses returned by the storage
 // remove endpoint. restoreBody controls whether the response body should be
-// reset after having been read.
+// restored after having been read.
 func (c *Client) DecodeRemoveResponse(decoder func(*http.Response) goahttp.Decoder, restoreBody bool) func(*http.Response) (interface{}, error) {
 	return func(resp *http.Response) (interface{}, error) {
 		if restoreBody {
@@ -242,4 +242,124 @@ func (c *Client) DecodeRemoveResponse(decoder func(*http.Response) goahttp.Decod
 			return nil, goahttp.ErrInvalidResponse("account", "create", resp.StatusCode, string(body))
 		}
 	}
+}
+
+// storedBottleResponseBodyToStoredBottleSrcPtr builds a value of type
+// *storage.StoredBottle from a value of type *StoredBottleResponseBody.
+func storedBottleResponseBodyToStoredBottleSrcPtr(v *StoredBottleResponseBody) *storage.StoredBottle {
+	res := &storage.StoredBottle{
+		ID:          *v.ID,
+		Name:        *v.Name,
+		Vintage:     *v.Vintage,
+		Description: v.Description,
+		Rating:      v.Rating,
+	}
+	res.Winery = wineryResponseBodyToWinerySrcPtr(v.Winery)
+	if v.Composition != nil {
+		res.Composition = make([]*storage.Component, len(v.Composition))
+		for i, val := range v.Composition {
+			res.Composition[i] = &storage.Component{
+				Varietal:   *val.Varietal,
+				Percentage: val.Percentage,
+			}
+		}
+	}
+
+	return res
+}
+
+// wineryResponseBodyToWinerySrcPtr builds a value of type *storage.Winery from
+// a value of type *WineryResponseBody.
+func wineryResponseBodyToWinerySrcPtr(v *WineryResponseBody) *storage.Winery {
+	res := &storage.Winery{
+		Name:    *v.Name,
+		Region:  *v.Region,
+		Country: *v.Country,
+		URL:     v.URL,
+	}
+
+	return res
+}
+
+// componentResponseBodyToComponentSrcPtr builds a value of type
+// *storage.Component from a value of type *ComponentResponseBody.
+func componentResponseBodyToComponentSrcPtr(v *ComponentResponseBody) *storage.Component {
+	res := &storage.Component{
+		Varietal:   *v.Varietal,
+		Percentage: v.Percentage,
+	}
+
+	return res
+}
+
+// wineryToWinerySrcPtr builds a value of type *storage.Winery from a value of
+// type *Winery.
+func wineryToWinerySrcPtr(v *Winery) *storage.Winery {
+	res := &storage.Winery{
+		Name:    *v.Name,
+		Region:  *v.Region,
+		Country: *v.Country,
+		URL:     v.URL,
+	}
+
+	return res
+}
+
+// componentToComponentSrcPtr builds a value of type *storage.Component from a
+// value of type *Component.
+func componentToComponentSrcPtr(v *Component) *storage.Component {
+	res := &storage.Component{
+		Varietal:   *v.Varietal,
+		Percentage: v.Percentage,
+	}
+
+	return res
+}
+
+// wineryToWineryRequestBodyNoDefault builds a value of type *WineryRequestBody
+// from a value of type *storage.Winery.
+func wineryToWineryRequestBodyNoDefault(v *storage.Winery) *WineryRequestBody {
+	res := &WineryRequestBody{
+		Name:    v.Name,
+		Region:  v.Region,
+		Country: v.Country,
+		URL:     v.URL,
+	}
+
+	return res
+}
+
+// componentToComponentRequestBodyNoDefault builds a value of type
+// *ComponentRequestBody from a value of type *storage.Component.
+func componentToComponentRequestBodyNoDefault(v *storage.Component) *ComponentRequestBody {
+	res := &ComponentRequestBody{
+		Varietal:   v.Varietal,
+		Percentage: v.Percentage,
+	}
+
+	return res
+}
+
+// wineryRequestBodyToWinery builds a value of type *storage.Winery from a
+// value of type *WineryRequestBody.
+func wineryRequestBodyToWinery(v *WineryRequestBody) *storage.Winery {
+	res := &storage.Winery{
+		Name:    v.Name,
+		Region:  v.Region,
+		Country: v.Country,
+		URL:     v.URL,
+	}
+
+	return res
+}
+
+// componentRequestBodyToComponent builds a value of type *storage.Component
+// from a value of type *ComponentRequestBody.
+func componentRequestBodyToComponent(v *ComponentRequestBody) *storage.Component {
+	res := &storage.Component{
+		Varietal:   v.Varietal,
+		Percentage: v.Percentage,
+	}
+
+	return res
 }

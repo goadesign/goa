@@ -38,7 +38,7 @@ func server(svc *httpdesign.ServiceExpr) codegen.File {
 				{Path: "net/http"},
 				{Path: "goa.design/goa.v2", Name: "goa"},
 				{Path: "goa.design/goa.v2/http", Name: "goahttp"},
-				{Path: genPkg + "/" + codegen.Goify(svc.Name(), false)},
+				{Path: genPkg + "/" + data.Service.PkgName},
 			}),
 			{Template: serverStructTmpl(svc), Data: data},
 			{Template: serverInitTmpl(svc), Data: data},
@@ -51,9 +51,6 @@ func server(svc *httpdesign.ServiceExpr) codegen.File {
 				{Template: serverHandlerInitTmpl(svc), Data: e},
 			}
 			s = append(s, es...)
-		}
-		for _, h := range data.TransformHelpers {
-			s = append(s, &codegen.Section{Template: transformHelperTmpl(svc), Data: h})
 		}
 		return s
 	}
@@ -94,6 +91,9 @@ func serverEncodeDecode(svc *httpdesign.ServiceExpr) codegen.File {
 			if len(e.Errors) > 0 {
 				s = append(s, &codegen.Section{Template: errorEncoderTmpl(svc), Data: e})
 			}
+		}
+		for _, h := range data.ServerTransformHelpers {
+			s = append(s, &codegen.Section{Template: transformHelperTmpl(svc), Data: h})
 		}
 		return s
 	}

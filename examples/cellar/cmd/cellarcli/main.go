@@ -88,15 +88,14 @@ func usage() {
 	fmt.Fprintf(os.Stderr, `%s is a command line client for the cellar service.
 
 Usage:
-    %s [-url URL][-timeout TIMEOUT][-verbose] SERVICE ENDPOINT [flags]
+    %s [-url URL][-timeout SECONDS][-verbose] SERVICE ENDPOINT [flags]
 
--url URL: specify service URL (http://localhost:8080)
--timeout: Maximum number of seconds to wait for response (30)
--debug:   print debug details (false)
+    -url URL: specify service URL (http://localhost:8080)
+    -timeout: Maximum number of seconds to wait for response (30)
+    -debug:   print debug details (false)
 
 Commands:
 %s
-
 Example:
 %s
 `, os.Args[0], os.Args[0], indent(cli.UsageCommands()), indent(cli.UsageExamples()))

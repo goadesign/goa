@@ -21,6 +21,7 @@ func Transport(roots ...eval.Root) ([]codegen.File, error) {
 			files = append(files, httpcodegen.ServerTypeFiles(r)...)
 			files = append(files, httpcodegen.ClientTypeFiles(r)...)
 			files = append(files, httpcodegen.PathFiles(r)...)
+			files = append(files, httpcodegen.ClientCLIFiles(r)...)
 			break
 		}
 	}

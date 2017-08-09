@@ -23,6 +23,9 @@ type (
 		// Example is a valid command invocation, starting with the
 		// command name.
 		Example string
+		// PkgName is the service HTTP client package import name,
+		// e.g. "storagec".
+		PkgName string
 	}
 
 	subcommandData struct {
@@ -34,8 +37,8 @@ type (
 		Description string
 		// Flags is the list of flags supported by the subcommand.
 		Flags []*flagData
-		// MethodName is the endpoint method name, e.g. "Add"
-		MethodName string
+		// MethodVarName is the endpoint method name, e.g. "Add"
+		MethodVarName string
 		// BuildFunction contains the data for the payload build
 		// function if any. Exclusive with Conversion.
 		BuildFunction *buildFunctionData
@@ -75,6 +78,9 @@ type (
 		ResultType string
 		// Fields describes the payload fields.
 		Fields []*fieldData
+		// PayloadInit contains the data needed to render the function
+		// body.
+		PayloadInit *InitData
 	}
 
 	fieldData struct {
@@ -83,16 +89,13 @@ type (
 		// VarName is the name of the local variable holding the field
 		// value, e.g. "vintage"
 		VarName string
-		// Ref is the reference to the field type, e.g. "int"
-		Ref string
+		// TypeName is the name of the type.
+		TypeName string
 		// Init is the code initializing the variable.
 		Init string
 		// Deref is true if the variable needs to be derefenced when
 		// assigned to the field.
 		Deref bool
-		// Value is the value being assigned to the field. Can be the
-		// variable or a parameter.
-		Value string
 	}
 )
 
@@ -100,12 +103,27 @@ var (
 	usageTmpl        = template.Must(template.New("cli-usage").Parse(usageT))
 	exampleTmpl      = template.Must(template.New("cli-example").Parse(exampleT))
 	parseTmpl        = template.Must(template.New("cli-parse").Parse(parseT))
-	buildPayloadTmpl = template.Must(template.New("cli-build").Parse(buildPayloadT))
-	commandUsageTmpl = template.Must(template.New("cli-cmd-usage").Parse(commandUsageT))
+	buildPayloadTmpl = template.Must(template.New("cli-build").Funcs(codegen.TemplateFuncs()).Parse(buildPayloadT))
+	commandUsageTmpl = template.Must(template.New("cli-cmd-usage").Funcs(codegen.TemplateFuncs()).Parse(commandUsageT))
 )
 
-// ClientCLIFile returns the client HTTP CLI support file.
-func ClientCLIFile(root *httpdesign.RootExpr) codegen.File {
+// ClientCLIFiles returns the client HTTP CLI support file.
+func ClientCLIFiles(root *httpdesign.RootExpr) []codegen.File {
+	data := make([]*commandData, len(root.HTTPServices))
+	for i, svc := range root.HTTPServices {
+		data[i] = buildCommandData(HTTPServices.Get(svc.Name()))
+	}
+
+	files := []codegen.File{endpointParser(root, data)}
+	for i, svc := range root.HTTPServices {
+		files = append(files, payloadBuilders(svc, data[i]))
+	}
+	return files
+}
+
+// endpointParser returns the file that implements the command line parser that
+// builds the client endpoint and payload necessary to perform a request.
+func endpointParser(root *httpdesign.RootExpr, data []*commandData) codegen.File {
 	path := filepath.Join("http", "cli", "cli.go")
 	sections := func(genPkg string) []*codegen.Section {
 		title := fmt.Sprintf("%s HTTP client CLI support package", root.Design.API.Name)
@@ -119,12 +137,12 @@ func ClientCLIFile(root *httpdesign.RootExpr) codegen.File {
 			{Path: "goa.design/goa.v2", Name: "goa"},
 			{Path: "goa.design/goa.v2/http", Name: "goahttp"},
 		}
-		var data []*commandData
 		for _, svc := range root.HTTPServices {
 			n := codegen.Goify(svc.Name(), false)
-			specs = append(specs, &codegen.ImportSpec{Path: genPkg + "/http/" + n + "/client", Name: n + "c"})
-			s := HTTPServices.Get(svc.Name())
-			data = append(data, buildCommandData(s))
+			specs = append(specs, &codegen.ImportSpec{
+				Path: genPkg + "/http/" + n + "/client",
+				Name: HTTPServices.Get(svc.Name()).Service.Name + "c",
+			})
 		}
 		usages := make([]string, len(data))
 		var examples []string
@@ -151,12 +169,42 @@ func ClientCLIFile(root *httpdesign.RootExpr) codegen.File {
 			{Template: parseTmpl, Data: data},
 		}
 		for _, cmd := range data {
-			for _, sub := range cmd.Subcommands {
-				if sub.BuildFunction != nil {
-					s = append(s, &codegen.Section{Template: buildPayloadTmpl, Data: sub.BuildFunction})
-				}
-			}
 			s = append(s, &codegen.Section{Template: commandUsageTmpl, Data: cmd})
+		}
+
+		return s
+	}
+
+	return codegen.NewSource(path, sections)
+}
+
+// payloadBuilders returns the file that contains the payload constructors that
+// use flag values as arguments.
+func payloadBuilders(svc *httpdesign.ServiceExpr, data *commandData) codegen.File {
+	path := filepath.Join("http", codegen.SnakeCase(svc.Name()), "client", "cli.go")
+	sections := func(genPkg string) []*codegen.Section {
+		title := fmt.Sprintf("%s HTTP client CLI support package", svc.Name())
+		specs := []*codegen.ImportSpec{
+			{Path: "encoding/json"},
+			{Path: "fmt"},
+			{Path: "net/http"},
+			{Path: "os"},
+			{Path: "strconv"},
+			{Path: "unicode/utf8"},
+			{Path: "goa.design/goa.v2", Name: "goa"},
+			{Path: "goa.design/goa.v2/http", Name: "goahttp"},
+			{Path: genPkg + "/" + HTTPServices.Get(svc.Name()).Service.PkgName},
+		}
+		s := []*codegen.Section{
+			codegen.Header(title, "client", specs),
+		}
+		for _, sub := range data.Subcommands {
+			if sub.BuildFunction != nil {
+				s = append(s, &codegen.Section{
+					Template: buildPayloadTmpl,
+					Data:     sub.BuildFunction,
+				})
+			}
 		}
 
 		return s
@@ -191,6 +239,7 @@ func buildCommandData(svc *ServiceData) *commandData {
 		Description: description,
 		Subcommands: subcommands,
 		Example:     example,
+		PkgName:     svc.Service.PkgName + "c",
 	}
 }
 
@@ -200,7 +249,6 @@ func buildSubcommandData(svc *ServiceData, e *EndpointData) *subcommandData {
 		fullName      string
 		description   string
 		flags         []*flagData
-		methodName    string
 		buildFunction *buildFunctionData
 		conversion    string
 	)
@@ -213,33 +261,20 @@ func buildSubcommandData(svc *ServiceData, e *EndpointData) *subcommandData {
 		if description == "" {
 			description = fmt.Sprintf("Make request to the %q endpoint", e.Method.Name)
 		}
-		methodName = en
 		if e.Payload != nil {
 			var actuals []string
 			var args []*InitArgData
 			if e.Payload.Request.PayloadInit != nil {
 				for _, arg := range e.Payload.Request.PayloadInit.Args {
-					b, err := json.MarshalIndent(arg.Example, "   ", "   ")
-					ex := "?"
-					if err != nil {
-						ex = string(b)
-					}
-					fn := goify(svcn, en, arg.Name)
-					flags = append(flags, &flagData{
-						Name:        codegen.KebabCase(arg.Name),
-						Type:        flagType(arg.TypeRef),
-						FullName:    fn,
-						Description: arg.Description,
-						Required:    arg.Required,
-						Example:     ex,
-					})
-					actuals = append(actuals, fn)
+					f := argToFlag(svcn, en, arg)
+					flags = append(flags, f)
+					actuals = append(actuals, f.FullName)
 					args = append(args, arg)
 				}
 			} else if e.Payload.Ref != "" {
 				b, err := json.MarshalIndent(e.Method.PayloadEx, "   ", "   ")
 				ex := "?"
-				if err != nil {
+				if err == nil {
 					ex = string(b)
 				}
 				fn := goify(svcn, en, "p")
@@ -253,6 +288,7 @@ func buildSubcommandData(svc *ServiceData, e *EndpointData) *subcommandData {
 				})
 			}
 			if len(actuals) > 0 {
+				// We need a build function
 				var (
 					fdata   []*fieldData
 					formals []string
@@ -260,30 +296,37 @@ func buildSubcommandData(svc *ServiceData, e *EndpointData) *subcommandData {
 				{
 					fdata = make([]*fieldData, len(actuals))
 					formals = make([]string, len(actuals))
-					for i, a := range actuals {
-						arg := args[i]
-						formals[i] = arg.Name
-						v, code := fieldLoadCode("*"+a, flags[i].Name, flags[i].Type, arg)
+					for i, arg := range args {
+						formals[i] = flags[i].FullName
+						code := fieldLoadCode(formals[i], flags[i].Type, arg)
+						tn := arg.TypeRef
+						if flags[i].Type == "JSON" {
+							// We need to declare the variable without
+							// a pointer to be able to unmarshal the JSON
+							// using its address.
+							tn = arg.TypeName
+						}
 						fdata[i] = &fieldData{
-							Name:    arg.Name,
-							VarName: a,
-							Ref:     arg.Ref,
-							Init:    code,
-							Deref:   flags[i].Type == "JSON",
-							Value:   v,
+							Name:     arg.Name,
+							VarName:  arg.Name,
+							TypeName: tn,
+							Init:     code,
+							Deref:    flags[i].Type == "JSON",
 						}
 					}
 				}
 				buildFunction = &buildFunctionData{
-					Name:         "build" + e.Method.Payload,
+					Name:         "Build" + e.Method.Payload,
 					ActualParams: actuals,
 					FormalParams: formals,
 					ServiceName:  svcn,
 					MethodName:   en,
-					ResultType:   e.Payload.Ref,
+					ResultType:   svc.Service.PkgName + "." + e.Method.Payload,
 					Fields:       fdata,
+					PayloadInit:  e.Payload.Request.PayloadInit,
 				}
 			} else if len(flags) > 0 {
+				// No build function, just convert the arg to the body type
 				conversion = conversionCode(
 					"*p",
 					"data",
@@ -301,7 +344,7 @@ func buildSubcommandData(svc *ServiceData, e *EndpointData) *subcommandData {
 		FullName:      fullName,
 		Description:   description,
 		Flags:         flags,
-		MethodName:    methodName,
+		MethodVarName: e.Method.VarName,
 		BuildFunction: buildFunction,
 		Conversion:    conversion,
 	}
@@ -326,26 +369,35 @@ func goify(terms ...string) string {
 	return res
 }
 
-func fieldLoadCode(actual, flag, flagType string, arg *InitArgData) (string, string) {
+func fieldLoadCode(actual, flagType string, arg *InitArgData) string {
 	var (
-		code           string
-		startIf, endIf string
+		code    string
+		startIf string
+		endIf   string
 	)
 	{
 		if !arg.Required {
-			startIf = fmt.Sprintf(`if %s != "" {`, actual)
-			endIf = "}"
-		} else if arg.TypeRef == stringN {
-			return "", actual
+			startIf = fmt.Sprintf("if %s != \"\" {\n", actual)
+			endIf = "\n}"
 		}
-		ex := "?"
-		if e, err := json.Marshal(arg.Example); err == nil {
-			ex = string(e)
+		if arg.TypeName == stringN {
+			var ref string
+			if !arg.Required {
+				ref = "&"
+			}
+			code = arg.Name + " = " + ref + actual
+		} else {
+			ex := "?"
+			if e, err := json.Marshal(arg.Example); err == nil {
+				ex = string(e)
+			}
+			code = conversionCode(actual, arg.Name, arg.TypeName, arg.Name, flagType, ex, arg.Required)
+			if arg.Validate != "" {
+				code += "\n" + arg.Validate + "\n" + "if err != nil {\n\treturn nil, err\n}"
+			}
 		}
-		code = conversionCode(actual, arg.Name, arg.TypeRef, flag, flagType, ex, arg.Required)
 	}
-	code = fmt.Sprintf("var %s %s\n%s{%s\n}%s", arg.Name, arg.TypeRef, startIf, code, endIf)
-	return code, arg.Name
+	return fmt.Sprintf("%s%s%s", startIf, code, endIf)
 }
 
 var (
@@ -363,42 +415,52 @@ var (
 )
 
 // conversionCode produces the code that converts the string stored in the
-// variable "from" to the value stored in the variable "to" of type typeRef.
+// variable "from" to the value stored in the variable "to" of type typeName.
 // errorVar and errorType are used to display the name and type of the variable
 // that failed to be converted in case of error.
-func conversionCode(from, to, typeRef, errorVar, errorType, ex string, required bool) string {
+func conversionCode(from, to, typeName, errorVar, errorType, ex string, required bool) string {
 	var (
-		parse string
-		cast  string
+		parse    string
+		cast     string
+		checkErr bool
 	)
 	target := to
-	if !required {
+	needCast := !required && typeName != stringN && typeName != bytesN
+	if needCast {
 		target = "val"
 	}
-	switch typeRef {
+	switch typeName {
 	case boolN:
 		parse = fmt.Sprintf("%s, err := strconv.ParseBool(%s)", target, from)
+		checkErr = true
 	case intN:
 		parse = fmt.Sprintf("v, err := strconv.ParseInt(%s, 10, 64)", from)
 		cast = fmt.Sprintf("%s = int(v)", target)
+		checkErr = true
 	case int32N:
 		parse = fmt.Sprintf("v, err := strconv.ParseInt(%s, 10, 32)", from)
 		cast = fmt.Sprintf("%s = int32(v)", target)
+		checkErr = true
 	case int64N:
 		parse = fmt.Sprintf("%s, err := strconv.ParseInt(%s, 10, 64)", target, from)
 	case uintN:
 		parse = fmt.Sprintf("v, err := strconv.ParseUInt(%s, 10, 64)", from)
 		cast = fmt.Sprintf("%s = uint(v)", target)
+		checkErr = true
 	case uint32N:
 		parse = fmt.Sprintf("v, err := strconv.ParseUInt(%s, 10, 32)", from)
 		cast = fmt.Sprintf("%s = uint32(v)", target)
+		checkErr = true
 	case uint64N:
 		parse = fmt.Sprintf("%s, err := strconv.ParseUInt(%s, 10, 64)", target, from)
+		checkErr = true
 	case float32N:
 		parse = fmt.Sprintf("v, err := strconv.ParseFloat(%s, 32)", from)
 		cast = fmt.Sprintf("%s = float32(v)", target)
+		checkErr = true
 	case float64N:
 		parse = fmt.Sprintf("%s, err := strconv.ParseFloat(%s, 64)", target, from)
+		checkErr = true
 	case stringN:
 		parse = fmt.Sprintf("%s = %s", target, from)
 	case bytesN:
@@ -410,26 +472,45 @@ if err != nil {
 }`,
 			from, to, errorVar, ex)
 	}
-	prefix := fmt.Sprintf(`%s
+	prefix := ""
+	if checkErr {
+		prefix = fmt.Sprintf(`%s
 if err != nil {
 	return nil, fmt.Errorf("invalid value for %s, must be %s")
-}
-`,
-		parse, errorVar, errorType)
-	if required {
-		return prefix + cast + "\n"
+}`,
+			parse, errorVar, errorType)
 	}
-	return prefix + cast + fmt.Sprintf("\n%s = &%s\n", to, target)
+	if !needCast {
+		return prefix + cast
+	}
+	return prefix + cast + fmt.Sprintf("\n%s = &%s", to, target)
 }
 
-func flagType(ref string) string {
-	switch ref {
+func flagType(tname string) string {
+	switch tname {
 	case boolN, intN, int32N, int64N, uintN, uint32N, uint64N, float32N, float64N, stringN:
-		return strings.ToUpper(ref)
+		return strings.ToUpper(tname)
 	case bytesN:
 		return "STRING"
 	default: // Any, Array, Map, Object, User
 		return "JSON"
+	}
+}
+
+func argToFlag(svcn, en string, arg *InitArgData) *flagData {
+	b, err := json.MarshalIndent(arg.Example, "   ", "   ")
+	ex := "?"
+	if err == nil {
+		ex = string(b)
+	}
+	fn := goify(svcn, en, arg.Name)
+	return &flagData{
+		Name:        codegen.KebabCase(arg.Name),
+		Type:        flagType(arg.TypeName),
+		FullName:    fn,
+		Description: arg.Description,
+		Required:    arg.Required,
+		Example:     ex,
 	}
 }
 
@@ -440,7 +521,7 @@ const usageT = `// UsageCommands returns the set of commands and sub-commands us
 //
 func UsageCommands() string {
 	return ` + "`" + `{{ range . }}{{ . }}
-	{{ end }}` + "`" + `
+{{ end }}` + "`" + `
 }
 `
 
@@ -455,7 +536,13 @@ func UsageExamples() string {
 // input: []commandData
 const parseT = `// ParseEndpoint returns the endpoint and payload as specified on the command
 // line.
-func ParseEndpoint(scheme, host string, doer goahttp.Doer, enc func(*http.Request) goahttp.Encoder, dec func(*http.Response) goahttp.Decoder) (goa.Endpoint, interface{}, error) {
+func ParseEndpoint(
+	scheme, host string,
+	doer goahttp.Doer,
+	enc func(*http.Request) goahttp.Encoder,
+	dec func(*http.Response) goahttp.Decoder,
+	restore bool,
+) (goa.Endpoint, interface{}, error) {
 	var (
 		{{- range . }}
 		{{ .Name }}Flags = flag.NewFlagSet("{{ .Name }}", flag.ContinueOnError)
@@ -472,7 +559,7 @@ func ParseEndpoint(scheme, host string, doer goahttp.Doer, enc func(*http.Reques
 	{{ $cmd := . -}}
 	{{ .Name }}Flags.Usage = {{ .Name }}Usage
 	{{ range .Subcommands -}}
-	{{ .Name }}Flags.Usage = {{ .FullName }}Usage
+	{{ .FullName }}Flags.Usage = {{ .FullName }}Usage
 	{{ end }}
 	{{ end }}
 	if err := flag.CommandLine.Parse(os.Args[1:]); err != nil {
@@ -540,13 +627,13 @@ func ParseEndpoint(scheme, host string, doer goahttp.Doer, enc func(*http.Reques
 		switch svcn {
 	{{- range . }}
 		case "{{ .Name }}":
-			c := storagec.NewClient(scheme, host, doer, enc, dec)
+			c := {{ .PkgName }}.NewClient(scheme, host, doer, enc, dec, restore)
 			switch epn {
-		{{- range .Subcommands }}
+		{{- $pkgName := .PkgName }}{{ range .Subcommands }}
 			case "{{ .Name }}":
-				endpoint = c.{{ .MethodName }}()
+				endpoint = c.{{ .MethodVarName }}()
 			{{- if .BuildFunction }}
-				data, err = {{ .BuildFunction.Name }}({{ range .BuildFunction.ActualParams }}*{{ . }}Flag, {{ end }})
+				data, err = {{ $pkgName}}.{{ .BuildFunction.Name }}({{ range .BuildFunction.ActualParams }}*{{ . }}Flag, {{ end }})
 			{{- else if .Conversion }}
 				{{ .Conversion }}
 			{{- else }}
@@ -566,29 +653,50 @@ func ParseEndpoint(scheme, host string, doer goahttp.Doer, enc func(*http.Reques
 `
 
 // input: buildFunctionData
-const buildPayloadT = `{{ printf "%s builds the payload for the %s %s endpoint from CLI flags." .Name .ServiceName .MethodName }}
-func {{ .Name }}({{ range .FormalParams }}{{ . }}, {{ end }}) (*{{ .ResultType }}, error) {
+const buildPayloadT = `{{ printf "%s builds the payload for the %s %s endpoint from CLI flags." .Name .ServiceName .MethodName | comment }}
+func {{ .Name }}({{ range .FormalParams }}{{ . }} string, {{ end }}) (*{{ .ResultType }}, error) {
 	{{- range .Fields }}
 	{{- if .VarName }}
-	var {{ .VarName }} {{ .Ref }}
+	var {{ .VarName }} {{ .TypeName }}
 	{
 		{{ .Init }}
 	}
 	{{- end }}
 	{{- end }}
-
-	body := &{{ .ResultType }}{
-	{{- range .Fields  }}
-		{{ .Name }}: {{ .Deref }}{{ .Value }},
-	{{- end }}
+	{{- with .PayloadInit }}
+		{{- if .ClientCode }}
+	{{ .ClientCode }}
+		{{- if .ReturnTypeAttribute }}
+	res := &{{ .ReturnTypeName }}{
+		{{ .ReturnTypeAttribute }}: v,
 	}
-
-	return body, nil
+		{{- end }}
+		{{- if .ReturnIsStruct }}
+			{{- range .Args }}
+				{{- if .FieldName -}}
+	v.{{ .FieldName }} = {{ if .Pointer }}&{{ end }}{{ .Name }}
+				{{ end -}}
+			{{- end }}
+		{{- end }}
+	return {{ if .ReturnTypeAttribute }}res{{ else }}v{{ end }}, nil
+		{{- else }}
+			{{- if .ReturnIsStruct }}
+	payload := &{{ .ReturnTypeName }}{
+				{{- range .Args }}
+					{{- if .FieldName }}
+		{{ .FieldName }}: {{ if .Pointer }}&{{ end }}{{ .Name }},
+					{{- end }}
+				{{- end }}
+	}
+	return payload, nil
+			{{  end -}}
+		{{ end -}}
+	{{ end -}}
 }
 `
 
 // input: commandData
-const commandUsageT = `{{ printf "%sUsage displays the usage of the %s command and its subcommands." .Name .Name }}
+const commandUsageT = `{{ printf "%sUsage displays the usage of the %s command and its subcommands." .Name .Name | comment }}
 func {{ .Name }}Usage() {
 	fmt.Fprintf(os.Stderr, ` + "`" + `{{ .Description }}
 Usage:
@@ -614,6 +722,6 @@ Usage:
 {{ .Name }} {{ .Type }}: {{ .Description }}
 	{{- end }}
 ` + "`" + `, os.Args[0])
-{{ end }}
 }
+{{ end }}
 `

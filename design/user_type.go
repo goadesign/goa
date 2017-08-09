@@ -83,17 +83,23 @@ func (u *UserTypeExpr) Finalize() {
 // Example produces an example for the user type which is JSON serialization
 // compatible.
 func (u *UserTypeExpr) Example(r *Random) interface{} {
+	if ex := u.recExample(r); ex != nil {
+		return *ex
+	}
+	return nil
+}
+
+func (u *UserTypeExpr) recExample(r *Random) *interface{} {
 	if ex, ok := r.Seen[u.Name()]; ok {
 		return ex
 	}
-	ex := make(map[string]interface{})
 	if r.Seen == nil {
-		r.Seen = make(map[string]map[string]interface{})
+		r.Seen = make(map[string]*interface{})
 	}
-	r.Seen[u.Name()] = ex
-	nex := u.AttributeExpr.Type.Example(r)
-	for k, v := range nex.(map[string]interface{}) {
-		ex[k] = v
-	}
-	return ex
+	var ex interface{}
+	pex := &ex
+	r.Seen[u.Name()] = pex
+	actual := u.Type.Example(r)
+	*pex = actual
+	return pex
 }
