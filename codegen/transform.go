@@ -94,7 +94,7 @@ func GoTypeTransform(source, target design.DataType, sourceVar, targetVar, targe
 // transform source into target give the other parameters. See GoTypeTransform
 // for a description of the parameters. See TransformFunctionData for a
 // rationale explaining the need for this function.
-func GoTypeTransformHelpers(source, target design.DataType, targetPkg string, fromPtrs, toPtrs, initDefaults bool, scope *NameScope) ([]*TransformFunctionData, error) {
+func GoTypeTransformHelpers(source, target design.DataType, sPkg, tPkg string, fromPtrs, toPtrs, initDefaults bool, scope *NameScope) ([]*TransformFunctionData, error) {
 	var (
 		satt = &design.AttributeExpr{Type: source}
 		tatt = &design.AttributeExpr{Type: target}
@@ -108,7 +108,7 @@ func GoTypeTransformHelpers(source, target design.DataType, targetPkg string, fr
 		)
 		walkMatches(satt, tatt, func(src, tgt *design.MappedAttributeExpr, srcAtt, tgtAtt *design.AttributeExpr, n string) {
 			var h []*TransformFunctionData
-			h, err = collectHelpers(srcAtt, tgtAtt, targetPkg, fromPtrs, toPtrs, initDefaults, scope)
+			h, err = collectHelpers(srcAtt, tgtAtt, sPkg, tPkg, fromPtrs, toPtrs, initDefaults, scope)
 			if err != nil {
 				return
 			}
@@ -120,7 +120,7 @@ func GoTypeTransformHelpers(source, target design.DataType, targetPkg string, fr
 		return helpers, nil
 	}
 
-	return collectHelpers(satt, tatt, targetPkg, fromPtrs, toPtrs, initDefaults, scope)
+	return collectHelpers(satt, tatt, sPkg, tPkg, fromPtrs, toPtrs, initDefaults, scope)
 }
 
 func transformAttribute(source, target *design.AttributeExpr,
@@ -162,10 +162,10 @@ func transformObject(source, target *design.AttributeExpr, sctx, tctx, targetPkg
 		}
 		srcField := sctx + "." + Goify(src.ElemName(n), true)
 		deref := ""
-		if (fromPtrs || src.IsPrimitivePointer(n, !fromPtrs)) && tgt.IsRequired(n) {
+		if (fromPtrs || source.IsPrimitivePointer(n, !fromPtrs)) && tgt.IsRequired(n) {
 			deref = "*"
 		}
-		if toPtrs && !src.IsPrimitivePointer(n, true) {
+		if toPtrs && !source.IsPrimitivePointer(n, true) {
 			deref = "&"
 		}
 		initCode += fmt.Sprintf("\n%s: %s%s,", Goify(tgt.ElemName(n), true), deref, srcField)
@@ -318,14 +318,14 @@ func isCompatible(a, b design.DataType, actx, bctx string) error {
 
 // collectHelpers recursively traverses the given attributes and return the
 // transform helper functions required to generate the transform code.
-func collectHelpers(source, target *design.AttributeExpr, targetPkg string, fromPtrs, toPtrs, def bool, scope *NameScope, seen ...map[string]*TransformFunctionData) ([]*TransformFunctionData, error) {
+func collectHelpers(source, target *design.AttributeExpr, sourcePkg, targetPkg string, fromPtrs, toPtrs, def bool, scope *NameScope, seen ...map[string]*TransformFunctionData) ([]*TransformFunctionData, error) {
 	var data []*TransformFunctionData
 	switch {
 	case design.IsArray(source.Type):
 		helpers, err := collectHelpers(
 			design.AsArray(source.Type).ElemType,
 			design.AsArray(target.Type).ElemType,
-			targetPkg, fromPtrs, toPtrs, def, scope, seen...)
+			sourcePkg, targetPkg, fromPtrs, toPtrs, def, scope, seen...)
 		if err != nil {
 			return nil, err
 		}
@@ -334,7 +334,7 @@ func collectHelpers(source, target *design.AttributeExpr, targetPkg string, from
 		helpers, err := collectHelpers(
 			design.AsMap(source.Type).KeyType,
 			design.AsMap(target.Type).KeyType,
-			targetPkg, fromPtrs, toPtrs, def, scope, seen...)
+			sourcePkg, targetPkg, fromPtrs, toPtrs, def, scope, seen...)
 		if err != nil {
 			return nil, err
 		}
@@ -342,7 +342,7 @@ func collectHelpers(source, target *design.AttributeExpr, targetPkg string, from
 		helpers, err = collectHelpers(
 			design.AsMap(source.Type).ElemType,
 			design.AsMap(target.Type).ElemType,
-			targetPkg, fromPtrs, toPtrs, def, scope, seen...)
+			sourcePkg, targetPkg, fromPtrs, toPtrs, def, scope, seen...)
 		if err != nil {
 			return nil, err
 		}
@@ -367,7 +367,7 @@ func collectHelpers(source, target *design.AttributeExpr, targetPkg string, from
 			}
 			t := &TransformFunctionData{
 				Name:          name,
-				ParamTypeRef:  scope.GoTypeRef(source),
+				ParamTypeRef:  scope.GoFullTypeRef(source, sourcePkg),
 				ResultTypeRef: scope.GoFullTypeRef(target, targetPkg),
 				Code:          code,
 			}
@@ -380,7 +380,7 @@ func collectHelpers(source, target *design.AttributeExpr, targetPkg string, from
 			helpers, err = collectHelpers(
 				src,
 				tgt,
-				targetPkg, fromPtrs, toPtrs, def, scope, seen...)
+				sourcePkg, targetPkg, fromPtrs, toPtrs, def, scope, seen...)
 			if err != nil {
 				return
 			}

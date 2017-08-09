@@ -2,10 +2,20 @@ package codegen
 
 import (
 	"path/filepath"
+	"text/template"
 
 	"goa.design/goa.v2/codegen"
 	"goa.design/goa.v2/codegen/service"
 	httpdesign "goa.design/goa.v2/http/design"
+)
+
+var (
+	clientTypeInitTmpl = template.Must(
+		template.New("clientTypeInit").Funcs(funcMap).Parse(clientTypeInitT),
+	)
+	clientBodyInitTmpl = template.Must(
+		template.New("clientBodyInit").Funcs(funcMap).Parse(clientBodyInitT),
+	)
 )
 
 // ClientTypeFiles returns the HTTP transport client types files.
@@ -30,8 +40,8 @@ func ClientTypeFiles(root *httpdesign.RootExpr) []codegen.File {
 //   * The payload struct fields (if a struct) hold pointers when not required
 //     and have no default value.
 //
-//   * Request body fields (if the body is a struct) always hold pointers to
-//     allow for explicit validation.
+//   * Request and response body fields (if the body is a struct) always hold
+//     pointers to allow for explicit validation.
 //
 //   * Request header, path and query string parameter variables hold pointers
 //     when not required. Request header, body fields and param variables that
@@ -40,22 +50,22 @@ func ClientTypeFiles(root *httpdesign.RootExpr) []codegen.File {
 //   * The result struct fields (if a struct) hold pointers when not required
 //     or have a default value (so generated code can set when null)
 //
-//   * Response body fields (if the body is a struct) and header variables hold
-//     pointers when not required and have no default value.
+//   * Response header variables hold pointers when not required and have no
+//     default value.
 //
-func clientType(r *httpdesign.ServiceExpr, seen map[string]struct{}) codegen.File {
+func clientType(svc *httpdesign.ServiceExpr, seen map[string]struct{}) codegen.File {
 	var (
 		path     string
 		sections func(string) []*codegen.Section
 
-		rdata = HTTPServices.Get(r.Name())
+		rdata = HTTPServices.Get(svc.Name())
 	)
-	path = filepath.Join("http", codegen.SnakeCase(r.Name()), "client", "types.go")
+	path = filepath.Join("http", codegen.SnakeCase(svc.Name()), "client", "types.go")
 	sections = func(genPkg string) []*codegen.Section {
-		header := codegen.Header(r.Name()+" HTTP client types", "client",
+		header := codegen.Header(svc.Name()+" HTTP client types", "client",
 			[]*codegen.ImportSpec{
 				{Path: "unicode/utf8"},
-				{Path: genPkg + "/" + service.Services.Get(r.Name()).PkgName},
+				{Path: genPkg + "/" + service.Services.Get(svc.Name()).PkgName},
 				{Path: "goa.design/goa.v2", Name: "goa"},
 			},
 		)
@@ -68,7 +78,7 @@ func clientType(r *httpdesign.ServiceExpr, seen map[string]struct{}) codegen.Fil
 		)
 
 		// request body types
-		for _, a := range r.HTTPEndpoints {
+		for _, a := range svc.HTTPEndpoints {
 			adata := rdata.Endpoint(a.Name())
 			if data := adata.Payload.Request.ClientBody; data != nil {
 				if data.Def != "" {
@@ -87,7 +97,7 @@ func clientType(r *httpdesign.ServiceExpr, seen map[string]struct{}) codegen.Fil
 		}
 
 		// response body types
-		for _, a := range r.HTTPEndpoints {
+		for _, a := range svc.HTTPEndpoints {
 			adata := rdata.Endpoint(a.Name())
 			for _, resp := range adata.Result.Responses {
 				if data := resp.ClientBody; data != nil {
@@ -105,7 +115,7 @@ func clientType(r *httpdesign.ServiceExpr, seen map[string]struct{}) codegen.Fil
 		}
 
 		// error body types
-		for _, a := range r.HTTPEndpoints {
+		for _, a := range svc.HTTPEndpoints {
 			adata := rdata.Endpoint(a.Name())
 			for _, herr := range adata.Errors {
 				if data := herr.Response.ClientBody; data != nil {
@@ -139,7 +149,7 @@ func clientType(r *httpdesign.ServiceExpr, seen map[string]struct{}) codegen.Fil
 		// body constructors
 		for _, init := range initData {
 			secs = append(secs, &codegen.Section{
-				Template: bodyInitTmpl,
+				Template: clientBodyInitTmpl,
 				Data:     init,
 			})
 		}
@@ -149,7 +159,7 @@ func clientType(r *httpdesign.ServiceExpr, seen map[string]struct{}) codegen.Fil
 			for _, resp := range adata.Result.Responses {
 				if init := resp.ResultInit; init != nil {
 					secs = append(secs, &codegen.Section{
-						Template: typeInitTmpl,
+						Template: clientTypeInitTmpl,
 						Data:     init,
 					})
 				}
@@ -159,7 +169,7 @@ func clientType(r *httpdesign.ServiceExpr, seen map[string]struct{}) codegen.Fil
 			for _, herr := range adata.Errors {
 				if init := herr.Response.ResultInit; init != nil {
 					secs = append(secs, &codegen.Section{
-						Template: typeInitTmpl,
+						Template: clientTypeInitTmpl,
 						Data:     init,
 					})
 				}
@@ -178,3 +188,43 @@ func clientType(r *httpdesign.ServiceExpr, seen map[string]struct{}) codegen.Fil
 	}
 	return codegen.NewSource(path, sections)
 }
+
+// input: InitData
+const clientBodyInitT = `{{ comment .Description }}
+func {{ .Name }}({{ range .Args }}{{ .Name }} {{.TypeRef }}, {{ end }}) {{ .ReturnTypeRef }} {
+	{{ .ClientCode }}
+	return body
+}
+`
+
+// input: InitData
+const clientTypeInitT = `{{ comment .Description }}
+func {{ .Name }}({{- range .Args }}{{ .Name }} {{ .TypeRef }}, {{ end }}) {{ .ReturnTypeRef }} {
+	{{- if .ClientCode }}
+		{{ .ClientCode }}
+		{{- if .ReturnTypeAttribute }}
+		res := &{{ .ReturnTypeName }}{
+			{{ .ReturnTypeAttribute }}: v,
+		}
+		{{- end }}
+		{{- if .ReturnIsStruct }}
+			{{- range .Args }}
+				{{- if .FieldName -}}
+			v.{{ .FieldName }} = {{ if .Pointer }}&{{ end }}{{ .Name }}
+				{{ end }}
+			{{- end }}
+		{{- end }}
+		return {{ if .ReturnTypeAttribute }}res{{ else }}v{{ end }}
+	{{- else }}
+		{{- if .ReturnIsStruct }}
+			return &{{ .ReturnTypeName }}{
+			{{- range .Args }}
+				{{- if .FieldName }}
+				{{ .FieldName }}: {{ if .Pointer }}&{{ end }}{{ .Name }},
+				{{- end }}
+			{{- end }}
+			}
+		{{- end }}
+	{{ end -}}
+}
+`

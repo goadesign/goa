@@ -1,3 +1,10 @@
+// Code generated with goa v2.0.0-wip, DO NOT EDIT.
+//
+// cellar HTTP client CLI support package
+//
+// Command:
+// $ goa gen goa.design/goa.v2/examples/cellar/design
+
 package cli
 
 import (
@@ -6,11 +13,10 @@ import (
 	"net/http"
 	"os"
 
-	"goa.design/goa.v2"
-	goahttp "goa.design/goa.v2/http"
-
+	goa "goa.design/goa.v2"
 	sommelierc "goa.design/goa.v2/examples/cellar/gen/http/sommelier/client"
 	storagec "goa.design/goa.v2/examples/cellar/gen/http/storage/client"
+	goahttp "goa.design/goa.v2/http"
 )
 
 // UsageCommands returns the set of commands and sub-commands using the format
@@ -18,49 +24,62 @@ import (
 //    command (subcommand1|subcommand2|...)
 //
 func UsageCommands() string {
-	return `storage (list|show|add|remove)
-sommelier pick`
+	return `sommelier pick
+storage (list|show|add|remove)
+`
 }
 
 // UsageExamples produces an example of a valid invocation of the CLI tool.
 func UsageExamples() string {
-	return os.Args[0] + ` --addr http://localhost:8080 storage list` + "\n" +
-		os.Args[0] + ` --addr http://localhost:8080 storage show --id 1` + "\n"
+	return os.Args[0] + ` sommelier pick --body {
+      "name": "Corrupti qui enim repellendus laboriosam accusamus.",
+      "varietal": [
+         "Aut reiciendis ea architecto magni tempora fugiat.",
+         "Delectus vel earum doloribus.",
+         "Consequuntur recusandae.",
+         "Nemo omnis quae suscipit laudantium quis sapiente."
+      ],
+      "winery": "Sunt dolorem."
+   }` + "\n" +
+		os.Args[0] + ` storage list` + "\n" +
+		""
 }
 
 // ParseEndpoint returns the endpoint and payload as specified on the command
 // line.
-func ParseEndpoint(scheme, host string, doer goahttp.Doer, enc func(*http.Request) goahttp.Encoder, dec func(*http.Response) goahttp.Decoder, restoreBody bool) (goa.Endpoint, interface{}, error) {
+func ParseEndpoint(
+	scheme, host string,
+	doer goahttp.Doer,
+	enc func(*http.Request) goahttp.Encoder,
+	dec func(*http.Response) goahttp.Decoder,
+	restore bool,
+) (goa.Endpoint, interface{}, error) {
 	var (
-		storageFlags = flag.NewFlagSet("storage", flag.ContinueOnError)
-
-		storageListFlags = flag.NewFlagSet("storage-list", flag.ExitOnError)
-
-		storageShowFlags  = flag.NewFlagSet("storage-show", flag.ExitOnError)
-		storageShowIDFlag = storageShowFlags.String("id", "REQUIRED", "ID of bottle")
-
-		storageAddFlags           = flag.NewFlagSet("storage-add", flag.ExitOnError)
-		storageAddNameFlag        = storageAddFlags.String("name", "REQUIRED", "Name of bottle")
-		storageAddWineryFlag      = storageAddFlags.String("winery", "REQUIRED", "Winery that produces wine (as JSON string)")
-		storageAddVintageFlag     = storageAddFlags.String("vintage", "REQUIRED", "Vintage of bottle")
-		storageAddCompositionFlag = storageAddFlags.String("composition", "", "Composition is the list of grape varietals and associated percentage.)")
-		storageAddDescriptionFlag = storageAddFlags.String("description", "", "Description of bottle")
-		storageAddRatingFlag      = storageAddFlags.String("rating", "", "Rating of bottle from 1 (worst) to 5 (best)")
-
-		storageRemoveFlags  = flag.NewFlagSet("storage-remove", flag.ExitOnError)
-		storageRemoveIDFlag = storageRemoveFlags.String("id", "REQUIRED", "ID of bottle")
-
 		sommelierFlags = flag.NewFlagSet("sommelier", flag.ContinueOnError)
 
-		sommelierPickFlags        = flag.NewFlagSet("sommelier-pick", flag.ExitOnError)
-		sommelierPickNameFlag     = sommelierPickFlags.String("name", "", "Name of bottle")
-		sommelierPickVarietalFlag = sommelierPickFlags.String("varietal", "", "Varietal is the list of grape varietals and associated percentage.)")
-		sommelierPickWineryFlag   = sommelierPickFlags.String("winery", "", "Winery of bottle to pick")
+		sommelierPickFlags    = flag.NewFlagSet("pick", flag.ExitOnError)
+		sommelierPickBodyFlag = sommelierPickFlags.String("body", "REQUIRED", "")
+
+		storageFlags = flag.NewFlagSet("storage", flag.ContinueOnError)
+
+		storageListFlags = flag.NewFlagSet("list", flag.ExitOnError)
+
+		storageShowFlags  = flag.NewFlagSet("show", flag.ExitOnError)
+		storageShowIDFlag = storageShowFlags.String("id", "REQUIRED", "ID of bottle to show")
+
+		storageAddFlags    = flag.NewFlagSet("add", flag.ExitOnError)
+		storageAddBodyFlag = storageAddFlags.String("body", "REQUIRED", "")
+
+		storageRemoveFlags  = flag.NewFlagSet("remove", flag.ExitOnError)
+		storageRemoveIDFlag = storageRemoveFlags.String("id", "REQUIRED", "ID of bottle to remove")
 	)
+	sommelierFlags.Usage = sommelierUsage
+	sommelierPickFlags.Usage = sommelierPickUsage
+
 	storageFlags.Usage = storageUsage
-	storageAddFlags.Usage = storageAddUsage
 	storageListFlags.Usage = storageListUsage
 	storageShowFlags.Usage = storageShowUsage
+	storageAddFlags.Usage = storageAddUsage
 	storageRemoveFlags.Usage = storageRemoveUsage
 
 	if err := flag.CommandLine.Parse(os.Args[1:]); err != nil {
@@ -78,10 +97,10 @@ func ParseEndpoint(scheme, host string, doer goahttp.Doer, enc func(*http.Reques
 	{
 		svcn = os.Args[1+flag.NFlag()]
 		switch svcn {
-		case "storage":
-			svcf = storageFlags
 		case "sommelier":
 			svcf = sommelierFlags
+		case "storage":
+			svcf = storageFlags
 		default:
 			return nil, nil, fmt.Errorf("unknown service %q", svcn)
 		}
@@ -97,22 +116,29 @@ func ParseEndpoint(scheme, host string, doer goahttp.Doer, enc func(*http.Reques
 	{
 		epn = os.Args[2+flag.NFlag()+svcf.NFlag()]
 		switch svcn {
-		case "storage":
-			switch epn {
-			case "add":
-				epf = storageAddFlags
-			case "list":
-				epf = storageListFlags
-			case "show":
-				epf = storageShowFlags
-			case "remove":
-				epf = storageRemoveFlags
-			}
 		case "sommelier":
 			switch epn {
 			case "pick":
 				epf = sommelierPickFlags
+
 			}
+
+		case "storage":
+			switch epn {
+			case "list":
+				epf = storageListFlags
+
+			case "show":
+				epf = storageShowFlags
+
+			case "add":
+				epf = storageAddFlags
+
+			case "remove":
+				epf = storageRemoveFlags
+
+			}
+
 		}
 	}
 	if epf == nil {
@@ -133,28 +159,28 @@ func ParseEndpoint(scheme, host string, doer goahttp.Doer, enc func(*http.Reques
 	)
 	{
 		switch svcn {
-		case "storage":
-			c := storagec.NewClient(scheme, host, doer, enc, dec, restoreBody)
+		case "sommelier":
+			c := sommelierc.NewClient(scheme, host, doer, enc, dec, restore)
 			switch epn {
-			case "add":
-				endpoint = c.Add()
-				data, err = storagec.BuildAddPayloadFromFlags(*storageAddNameFlag, *storageAddWineryFlag, *storageAddVintageFlag, *storageAddCompositionFlag, *storageAddDescriptionFlag, *storageAddRatingFlag)
+			case "pick":
+				endpoint = c.Pick()
+				data, err = sommelierc.BuildCriteria(*sommelierPickBodyFlag)
+			}
+		case "storage":
+			c := storagec.NewClient(scheme, host, doer, enc, dec, restore)
+			switch epn {
 			case "list":
 				endpoint = c.List()
 				data = nil
 			case "show":
 				endpoint = c.Show()
-				data = *storageShowIDFlag
+				data, err = storagec.BuildShowPayload(*storageShowIDFlag)
+			case "add":
+				endpoint = c.Add()
+				data, err = storagec.BuildBottle(*storageAddBodyFlag)
 			case "remove":
 				endpoint = c.Remove()
-				data = *storageRemoveIDFlag
-			}
-		case "sommelier":
-			c := sommelierc.NewClient(scheme, host, doer, enc, dec, restoreBody)
-			switch epn {
-			case "pick":
-				endpoint = c.Pick()
-				data, err = sommelierc.BuildPickPayloadFromFlags(*sommelierPickNameFlag, *sommelierPickWineryFlag, *sommelierPickVarietalFlag)
+				data, err = storagec.BuildRemovePayload(*storageRemoveIDFlag)
 			}
 		}
 	}
@@ -165,55 +191,71 @@ func ParseEndpoint(scheme, host string, doer goahttp.Doer, enc func(*http.Reques
 	return endpoint, data, nil
 }
 
+// sommelierUsage displays the usage of the sommelier command and its
+// subcommands.
+func sommelierUsage() {
+	fmt.Fprintf(os.Stderr, `The sommelier service retrieves bottles given a set of criteria.
+Usage:
+    %s [globalflags] sommelier COMMAND [flags]
+
+COMMAND:
+    pick: Pick implements pick.
+
+Additional help:
+    %s sommelier COMMAND --help
+`, os.Args[0], os.Args[0])
+}
+func sommelierPickUsage() {
+	fmt.Fprintf(os.Stderr, `Pick implements pick.
+Usage:
+    %s [flags] sommelier pick --body JSON
+body JSON: 
+`, os.Args[0])
+}
+
+// storageUsage displays the usage of the storage command and its subcommands.
 func storageUsage() {
-	fmt.Fprintf(os.Stderr, `Manage storages
+	fmt.Fprintf(os.Stderr, `The storage service makes it possible to view, add or remove wine bottles.
 Usage:
     %s [globalflags] storage COMMAND [flags]
 
 COMMAND:
-    add: Add new storage
-    list: List all storages
-    show: Show storage by ID
-    remove: Remove storage by ID
+    list: List all stored bottles
+    show: Show bottle by ID
+    add: Add new bottle and return its ID.
+    remove: Remove bottle from storage
 
 Additional help:
     %s storage COMMAND --help
 `, os.Args[0], os.Args[0])
 }
-
-func storageAddUsage() {
-	fmt.Fprintf(os.Stderr, `Add new storage
-Usage:
-    %s [flags] storage add --org-id INT --name STRING
-
---org-id INT: ID of organization that owns newly addd storage
---name STRING: Name of new storage
-`, os.Args[0])
-}
-
 func storageListUsage() {
-	fmt.Fprintf(os.Stderr, `List all storages
+	fmt.Fprintf(os.Stderr, `List all stored bottles
 Usage:
-    %s [flags] storage list --filter STRING
-
---filter STRING: Filter is the storage name prefix filter
+    %s [flags] storage list
 `, os.Args[0])
 }
 
 func storageShowUsage() {
-	fmt.Fprintf(os.Stderr, `Show storage by ID
+	fmt.Fprintf(os.Stderr, `Show bottle by ID
 Usage:
     %s [flags] storage show --id STRING
+id STRING: ID of bottle to show
+`, os.Args[0])
+}
 
---id STRING: ID of storage
+func storageAddUsage() {
+	fmt.Fprintf(os.Stderr, `Add new bottle and return its ID.
+Usage:
+    %s [flags] storage add --body JSON
+body JSON: 
 `, os.Args[0])
 }
 
 func storageRemoveUsage() {
-	fmt.Fprintf(os.Stderr, `Remove storage by ID
+	fmt.Fprintf(os.Stderr, `Remove bottle from storage
 Usage:
     %s [flags] storage remove --id STRING
-
---id STRING: ID of storage
+id STRING: ID of bottle to remove
 `, os.Args[0])
 }

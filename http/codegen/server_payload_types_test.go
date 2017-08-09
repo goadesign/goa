@@ -120,7 +120,7 @@ func TestPayloadConstructor(t *testing.T) {
 			sections := fs.Sections("")
 			var section *codegen.Section
 			for _, s := range sections {
-				if s.Template == typeInitTmpl {
+				if s.Template == serverTypeInitTmpl {
 					section = s
 				}
 			}

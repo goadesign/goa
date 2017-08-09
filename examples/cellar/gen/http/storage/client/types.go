@@ -147,12 +147,7 @@ func NewAddRequestBody(p *storage.Bottle) *AddRequestBody {
 		Description: p.Description,
 		Rating:      p.Rating,
 	}
-	body.Winery = &WineryRequestBody{
-		Name:    p.Winery.Name,
-		Region:  p.Winery.Region,
-		Country: p.Winery.Country,
-		URL:     p.Winery.URL,
-	}
+	body.Winery = wineryToWineryRequestBodyNoDefault(p.Winery)
 	if p.Composition != nil {
 		body.Composition = make([]*ComponentRequestBody, len(p.Composition))
 		for i, val := range p.Composition {
@@ -178,12 +173,7 @@ func NewListStoredBottleCollectionOK(body ListResponseBody) storage.StoredBottle
 			Description: val.Description,
 			Rating:      val.Rating,
 		}
-		v[i].Winery = &storage.Winery{
-			Name:    *val.Winery.Name,
-			Region:  *val.Winery.Region,
-			Country: *val.Winery.Country,
-			URL:     val.Winery.URL,
-		}
+		v[i].Winery = wineryResponseBodyToWinerySrcPtr(val.Winery)
 		if val.Composition != nil {
 			v[i].Composition = make([]*storage.Component, len(val.Composition))
 			for i, val := range val.Composition {
@@ -207,12 +197,7 @@ func NewShowStoredBottleOK(body *ShowResponseBody) *storage.StoredBottle {
 		Description: body.Description,
 		Rating:      body.Rating,
 	}
-	v.Winery = &storage.Winery{
-		Name:    *body.Winery.Name,
-		Region:  *body.Winery.Region,
-		Country: *body.Winery.Country,
-		URL:     body.Winery.URL,
-	}
+	v.Winery = wineryToWinerySrcPtr(body.Winery)
 	if body.Composition != nil {
 		v.Composition = make([]*storage.Component, len(body.Composition))
 		for i, val := range body.Composition {

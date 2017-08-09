@@ -16,7 +16,7 @@ import (
 // type.
 type Random struct {
 	Seed  string
-	Seen  map[string]map[string]interface{}
+	Seen  map[string]*interface{}
 	faker *faker.Faker
 	rand  *rand.Rand
 }

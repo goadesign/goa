@@ -158,8 +158,8 @@ func TestDecode(t *testing.T) {
 				t.Fatalf("got %d files, expected two", len(fs))
 			}
 			sections := fs[1].Sections("")
-			if len(sections) != 3 {
-				t.Fatalf("got %d sections, expected 3", len(sections))
+			if len(sections) < 3 {
+				t.Fatalf("got %d sections, expected at least 3", len(sections))
 			}
 			code := codegen.SectionCode(t, sections[2])
 			if code != c.Code {

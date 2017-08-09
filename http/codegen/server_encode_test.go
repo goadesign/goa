@@ -74,8 +74,8 @@ func TestEncode(t *testing.T) {
 				t.Fatalf("got %d files, expected two", len(fs))
 			}
 			sections := fs[1].Sections("")
-			if len(sections) != 2 {
-				t.Fatalf("got %d sections, expected 2", len(sections))
+			if len(sections) < 2 {
+				t.Fatalf("got %d sections, expected at least 2", len(sections))
 			}
 			code := codegen.SectionCode(t, sections[1])
 			if code != c.Code {

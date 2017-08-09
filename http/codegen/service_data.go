@@ -55,9 +55,12 @@ type (
 		// ClientTypeNames records the user type names used to define
 		// the endpoint request and response bodies for client code.
 		ClientTypeNames map[string]struct{}
-		// TransformHelpers is the list of transform functions required
-		// by the various constructors.
-		TransformHelpers []*codegen.TransformFunctionData
+		// ServerTransformHelpers is the list of transform functions
+		// required by the various server side constructors.
+		ServerTransformHelpers []*codegen.TransformFunctionData
+		// ClientTransformHelpers is the list of transform functions
+		// required by the various client side constructors.
+		ClientTransformHelpers []*codegen.TransformFunctionData
 	}
 
 	// EndpointData contains the data used to render the code related to a
@@ -218,9 +221,13 @@ type (
 		ReturnTypeAttribute string
 		// ReturnIStruct is true if the return type is a struct.
 		ReturnIsStruct bool
-		// Code is the code that builds the payload or result type from
-		// the request or response state when it contains user types.
-		Code string
+		// ServerCode is the code that builds the payload from the
+		// request on the server when it contains user types.
+		ServerCode string
+		// ClientCode is the code that builds the payload or result type
+		// from the request or response state on the client when it
+		// contains user types.
+		ClientCode string
 	}
 
 	// InitArgData represents a single constructor argument.
@@ -234,12 +241,17 @@ type (
 		// FieldName is the name of the data structure field that should
 		// be initialized with the argument if any.
 		FieldName string
+		// TypeName is the argument type name.
+		TypeName string
 		// TypeRef is the argument type reference.
 		TypeRef string
 		// Pointer is true if a pointer to the arg should be used.
 		Pointer bool
 		// Required is true if the arg is required to build the payload.
 		Required bool
+		// Validate contains the validation code for the argument
+		// value if any.
+		Validate string
 		// Example is a example value
 		Example interface{}
 	}
@@ -269,6 +281,8 @@ type (
 		VarName string
 		// Type is the datatype of the variable.
 		Type design.DataType
+		// TypeName is the name of the type.
+		TypeName string
 		// TypeRef is the reference to the type.
 		TypeRef string
 		// Required is true if the param is required.
@@ -306,6 +320,8 @@ type (
 		// VarName is the name of the Go variable used to read or
 		// convert the header value.
 		VarName string
+		// TypeName is the name of the type.
+		TypeName string
 		// TypeRef is the reference to the type.
 		TypeRef string
 		// Required is true if the header is required.
@@ -424,15 +440,21 @@ func (d ServicesData) analyze(hs *httpdesign.ServiceExpr) *ServiceData {
 					att := pathParamsObj.Attribute(arg)
 					name := codegen.Goify(arg, false)
 					pointer := pathParams.IsPrimitivePointer(arg, false)
+					var vcode string
+					if att.Validation != nil {
+						vcode = codegen.RecursiveValidationCode(att, true, false, name)
+					}
 					initArgs[j] = &InitArgData{
 						Name:        name,
 						Description: att.Description,
 						Ref:         name,
 						FieldName:   codegen.Goify(pathParams.ElemName(arg), true),
+						TypeName:    svc.Scope.GoTypeName(att),
 						TypeRef:     svc.Scope.GoTypeRef(att),
 						Pointer:     pointer,
 						Required:    true,
 						Example:     att.Example(design.Root.API.Random()),
+						Validate:    vcode,
 					}
 				}
 
@@ -452,7 +474,8 @@ func (d ServicesData) analyze(hs *httpdesign.ServiceExpr) *ServiceData {
 					Args:           initArgs,
 					ReturnTypeName: "string",
 					ReturnTypeRef:  "string",
-					Code:           buffer.String(),
+					ServerCode:     buffer.String(),
+					ClientCode:     buffer.String(),
 				}
 			}
 
@@ -606,7 +629,21 @@ func buildPayloadData(svc *service.Data, s *httpdesign.ServiceExpr, e *httpdesig
 			if design.IsObject(body) {
 				ref = "&body"
 			}
-			args = []*InitArgData{{Name: "body", Ref: ref, TypeRef: svc.Scope.GoTypeRef(&design.AttributeExpr{Type: body})}}
+			var vcode string
+			if ut, ok := body.(design.UserType); ok {
+				if val := ut.Attribute().Validation; val != nil {
+					vcode = codegen.RecursiveValidationCode(ut.Attribute(), true, false, "body")
+				}
+			}
+			args = []*InitArgData{{
+				Name:     "body",
+				Ref:      ref,
+				TypeName: svc.Scope.GoTypeName(&design.AttributeExpr{Type: body}),
+				TypeRef:  svc.Scope.GoTypeRef(&design.AttributeExpr{Type: body}),
+				Required: true,
+				Example:  body.Example(design.Root.API.Random()),
+				Validate: vcode,
+			}}
 		}
 		for _, p := range request.PathParams {
 			args = append(args, &InitArgData{
@@ -614,12 +651,15 @@ func buildPayloadData(svc *service.Data, s *httpdesign.ServiceExpr, e *httpdesig
 				Description: p.Description,
 				Ref:         p.VarName,
 				FieldName:   p.FieldName,
+				TypeName:    p.TypeName,
 				TypeRef:     p.TypeRef,
 				// special case for path params that are not
 				// pointers (because path params never are) but
 				// assigned to fields that are.
 				Pointer:  !p.Required && !p.Pointer && payload.IsPrimitivePointer(p.Name, true),
 				Required: p.Required,
+				Validate: p.Validate,
+				Example:  p.Example,
 			})
 		}
 		for _, p := range request.QueryParams {
@@ -627,7 +667,10 @@ func buildPayloadData(svc *service.Data, s *httpdesign.ServiceExpr, e *httpdesig
 				Name:      p.VarName,
 				Ref:       p.VarName,
 				FieldName: p.FieldName,
+				TypeName:  p.TypeName,
 				TypeRef:   p.TypeRef,
+				Validate:  p.Validate,
+				Example:   p.Example,
 			})
 		}
 		for _, h := range request.Headers {
@@ -635,17 +678,19 @@ func buildPayloadData(svc *service.Data, s *httpdesign.ServiceExpr, e *httpdesig
 				Name:      h.VarName,
 				Ref:       h.VarName,
 				FieldName: h.FieldName,
+				TypeName:  h.TypeName,
 				TypeRef:   h.TypeRef,
+				Validate:  h.Validate,
+				Example:   h.Example,
 			})
 		}
 
 		var (
-			code   string
-			err    error
-			origin string
+			serverCode, clientCode string
+			err                    error
+			origin                 string
 		)
 		if body != design.Empty {
-
 			// If design uses Body("name") syntax then need to use payload
 			// attribute to transform.
 			ptype := payload.Type
@@ -654,20 +699,38 @@ func buildPayloadData(svc *service.Data, s *httpdesign.ServiceExpr, e *httpdesig
 				ptype = design.AsObject(ptype).Attribute(origin).Type
 			}
 
-			code, err = codegen.GoTypeTransform(body, ptype, "body", "v", svc.PkgName, true, false, true, svc.Scope)
+			serverCode, err = codegen.GoTypeTransform(body, ptype, "body", "v", svc.PkgName, true, false, true, svc.Scope)
 			if err == nil {
 				var helpers []*codegen.TransformFunctionData
-				helpers, err = codegen.GoTypeTransformHelpers(body, ptype, svc.PkgName, true, false, true, svc.Scope)
-				sd.TransformHelpers = codegen.AppendHelpers(sd.TransformHelpers, helpers)
+				helpers, err = codegen.GoTypeTransformHelpers(body, ptype, "", svc.PkgName, true, false, true, svc.Scope)
+				sd.ServerTransformHelpers = codegen.AppendHelpers(sd.ServerTransformHelpers, helpers)
+			}
+			// The client code for building the method payload from
+			// a request body is used by the CLI tool to build the
+			// payload given to the client endpoint. It differs
+			// because the body type there does not use pointers for
+			// all fields (no need to validate).
+			clientCode, err = codegen.GoTypeTransform(body, ptype, "body", "v", svc.PkgName, false, false, true, svc.Scope)
+			if err == nil {
+				var helpers []*codegen.TransformFunctionData
+				helpers, err = codegen.GoTypeTransformHelpers(body, ptype, "", svc.PkgName, false, false, true, svc.Scope)
+				sd.ClientTransformHelpers = codegen.AppendHelpers(sd.ClientTransformHelpers, helpers)
 			}
 		} else if design.IsArray(payload.Type) || design.IsMap(payload.Type) {
 			if params := design.AsObject(e.QueryParams().Type); len(*params) > 0 {
-				code, err = codegen.GoTypeTransform((*params)[0].Attribute.Type, payload.Type,
+				serverCode, err = codegen.GoTypeTransform((*params)[0].Attribute.Type, payload.Type,
 					codegen.Goify((*params)[0].Name, false), "v", svc.PkgName, true, false, true, svc.Scope)
 				if err == nil {
 					var helpers []*codegen.TransformFunctionData
-					helpers, err = codegen.GoTypeTransformHelpers((*params)[0].Attribute.Type, payload.Type, svc.PkgName, true, false, true, svc.Scope)
-					sd.TransformHelpers = codegen.AppendHelpers(sd.TransformHelpers, helpers)
+					helpers, err = codegen.GoTypeTransformHelpers((*params)[0].Attribute.Type, payload.Type, "", svc.PkgName, true, false, true, svc.Scope)
+					sd.ServerTransformHelpers = codegen.AppendHelpers(sd.ServerTransformHelpers, helpers)
+				}
+				clientCode, err = codegen.GoTypeTransform((*params)[0].Attribute.Type, payload.Type,
+					codegen.Goify((*params)[0].Name, false), "v", svc.PkgName, false, false, true, svc.Scope)
+				if err == nil {
+					var helpers []*codegen.TransformFunctionData
+					helpers, err = codegen.GoTypeTransformHelpers((*params)[0].Attribute.Type, payload.Type, "", svc.PkgName, false, false, true, svc.Scope)
+					sd.ClientTransformHelpers = codegen.AppendHelpers(sd.ClientTransformHelpers, helpers)
 				}
 			}
 		}
@@ -682,7 +745,8 @@ func buildPayloadData(svc *service.Data, s *httpdesign.ServiceExpr, e *httpdesig
 			ReturnTypeRef:       svc.Scope.GoFullTypeRef(payload, svc.PkgName),
 			ReturnIsStruct:      isObject,
 			ReturnTypeAttribute: codegen.Goify(origin, true),
-			Code:                code,
+			ServerCode:          serverCode,
+			ClientCode:          clientCode,
 		}
 	}
 	request.PayloadInit = init
@@ -762,6 +826,8 @@ func buildResultData(svc *service.Data, s *httpdesign.ServiceExpr, e *httpdesign
 							Ref:       h.VarName,
 							FieldName: h.FieldName,
 							TypeRef:   h.TypeRef,
+							Validate:  h.Validate,
+							Example:   h.Example,
 						})
 					}
 				}
@@ -785,16 +851,16 @@ func buildResultData(svc *service.Data, s *httpdesign.ServiceExpr, e *httpdesign
 						code, err = codegen.GoTypeTransform(body, result.Type, "body", "v", svc.PkgName, true, false, true, svc.Scope)
 						if err == nil {
 							var helpers []*codegen.TransformFunctionData
-							helpers, err = codegen.GoTypeTransformHelpers(body, result.Type, svc.PkgName, true, false, true, svc.Scope)
-							sd.TransformHelpers = codegen.AppendHelpers(sd.TransformHelpers, helpers)
+							helpers, err = codegen.GoTypeTransformHelpers(body, result.Type, "", svc.PkgName, true, false, true, svc.Scope)
+							sd.ClientTransformHelpers = codegen.AppendHelpers(sd.ClientTransformHelpers, helpers)
 						}
 					} else if design.IsArray(result.Type) || design.IsMap(result.Type) {
 						if params := design.AsObject(e.QueryParams().Type); len(*params) > 0 {
 							code, err = codegen.GoTypeTransform((*params)[0].Attribute.Type, result.Type, codegen.Goify((*params)[0].Name, false), "v", svc.PkgName, true, false, true, svc.Scope)
 							if err == nil {
 								var helpers []*codegen.TransformFunctionData
-								helpers, err = codegen.GoTypeTransformHelpers((*params)[0].Attribute.Type, result.Type, svc.PkgName, true, false, true, svc.Scope)
-								sd.TransformHelpers = codegen.AppendHelpers(sd.TransformHelpers, helpers)
+								helpers, err = codegen.GoTypeTransformHelpers((*params)[0].Attribute.Type, result.Type, "", svc.PkgName, true, false, true, svc.Scope)
+								sd.ClientTransformHelpers = codegen.AppendHelpers(sd.ClientTransformHelpers, helpers)
 							}
 						}
 					}
@@ -811,7 +877,7 @@ func buildResultData(svc *service.Data, s *httpdesign.ServiceExpr, e *httpdesign
 					ReturnTypeRef:       svc.Scope.GoFullTypeRef(result, svc.PkgName),
 					ReturnIsStruct:      isObject,
 					ReturnTypeAttribute: codegen.Goify(origin, true),
-					Code:                code,
+					ClientCode:          code,
 				}
 			}
 
@@ -820,8 +886,8 @@ func buildResultData(svc *service.Data, s *httpdesign.ServiceExpr, e *httpdesign
 			)
 			{
 				var (
-					serverBodyData = buildBodyType(svc, s, e, v.Body, result, false, false, sd)
-					clientBodyData = buildBodyType(svc, s, e, v.Body, result, false, true, sd)
+					serverBodyData = buildBodyType(svc, s, e, v.Body, result, false, true, sd)
+					clientBodyData = buildBodyType(svc, s, e, v.Body, result, false, false, sd)
 					headersData    = extractHeaders(v.MappedHeaders(), false, svc.Scope)
 
 					mustValidate bool
@@ -906,6 +972,8 @@ func buildErrorsData(svc *service.Data, s *httpdesign.ServiceExpr, e *httpdesign
 						Ref:       h.VarName,
 						FieldName: h.FieldName,
 						TypeRef:   h.TypeRef,
+						Validate:  h.Validate,
+						Example:   h.Example,
 					})
 				}
 			}
@@ -930,16 +998,16 @@ func buildErrorsData(svc *service.Data, s *httpdesign.ServiceExpr, e *httpdesign
 					code, err = codegen.GoTypeTransform(body, etype, "body", "v", svc.PkgName, true, false, true, svc.Scope)
 					if err == nil {
 						var helpers []*codegen.TransformFunctionData
-						helpers, err = codegen.GoTypeTransformHelpers(body, etype, svc.PkgName, true, false, true, svc.Scope)
-						sd.TransformHelpers = codegen.AppendHelpers(sd.TransformHelpers, helpers)
+						helpers, err = codegen.GoTypeTransformHelpers(body, etype, "", svc.PkgName, true, false, true, svc.Scope)
+						sd.ClientTransformHelpers = codegen.AppendHelpers(sd.ClientTransformHelpers, helpers)
 					}
 				} else if design.IsArray(herr.Type) || design.IsMap(herr.Type) {
 					if params := design.AsObject(e.QueryParams().Type); len(*params) > 0 {
 						code, err = codegen.GoTypeTransform((*params)[0].Attribute.Type, herr.Type, codegen.Goify((*params)[0].Name, false), "v", svc.PkgName, true, false, true, svc.Scope)
 						if err == nil {
 							var helpers []*codegen.TransformFunctionData
-							helpers, err = codegen.GoTypeTransformHelpers((*params)[0].Attribute.Type, herr.Type, svc.PkgName, true, false, true, svc.Scope)
-							sd.TransformHelpers = codegen.AppendHelpers(sd.TransformHelpers, helpers)
+							helpers, err = codegen.GoTypeTransformHelpers((*params)[0].Attribute.Type, herr.Type, "", svc.PkgName, true, false, true, svc.Scope)
+							sd.ClientTransformHelpers = codegen.AppendHelpers(sd.ClientTransformHelpers, helpers)
 						}
 					}
 				}
@@ -956,7 +1024,7 @@ func buildErrorsData(svc *service.Data, s *httpdesign.ServiceExpr, e *httpdesign
 				ReturnTypeRef:       svc.Scope.GoFullTypeRef(v.ErrorExpr.AttributeExpr, svc.PkgName),
 				ReturnIsStruct:      isObject,
 				ReturnTypeAttribute: codegen.Goify(origin, true),
-				Code:                code,
+				ClientCode:          code,
 			}
 		}
 
@@ -970,8 +1038,8 @@ func buildErrorsData(svc *service.Data, s *httpdesign.ServiceExpr, e *httpdesign
 			)
 			{
 				att := v.ErrorExpr.AttributeExpr
-				serverBodyData = buildBodyType(svc, s, e, v.Response.Body, att, false, false, sd)
-				clientBodyData = buildBodyType(svc, s, e, v.Response.Body, att, false, true, sd)
+				serverBodyData = buildBodyType(svc, s, e, v.Response.Body, att, false, true, sd)
+				clientBodyData = buildBodyType(svc, s, e, v.Response.Body, att, false, false, sd)
 				if clientBodyData != nil {
 					sd.ClientTypeNames[clientBodyData.Name] = struct{}{}
 					sd.ServerTypeNames[clientBodyData.Name] = struct{}{}
@@ -1002,13 +1070,25 @@ func buildErrorsData(svc *service.Data, s *httpdesign.ServiceExpr, e *httpdesign
 	return data
 }
 
-// buildBodyType builds the TypeData for a request or response body.
+// buildBodyType builds the TypeData for a request or response body. The data
+// makes it possible to generate a function that creates the body from the
+// service method payload or result.
+
+// This is used:
+//
+//     - server side to create the response body from the service method result
+//     - client side to create the request body from the service method payload
+//     - client side to create the request body from CLI flags
 //
 // att is the payload, result or error body attribute.
 //
 // req indicates whether the type is for a request body (true) or a response
 // body (false).
-func buildBodyType(svc *service.Data, s *httpdesign.ServiceExpr, e *httpdesign.EndpointExpr, body, att *design.AttributeExpr, req, ptr bool, sd *ServiceData) *TypeData {
+//
+// svr is true if the function is generated for server side code.
+func buildBodyType(svc *service.Data, s *httpdesign.ServiceExpr, e *httpdesign.EndpointExpr,
+	body, att *design.AttributeExpr, req, svr bool, sd *ServiceData) *TypeData {
+
 	if body.Type == design.Empty {
 		return nil
 	}
@@ -1026,7 +1106,7 @@ func buildBodyType(svc *service.Data, s *httpdesign.ServiceExpr, e *httpdesign.E
 		ref = svc.Scope.GoTypeRef(body)
 		if ut, ok := body.Type.(design.UserType); ok {
 			varname = codegen.Goify(ut.Name(), true)
-			def = goTypeDef(svc.Scope, ut.Attribute(), ptr, false)
+			def = goTypeDef(svc.Scope, ut.Attribute(), svr && req || !svr && !req, false)
 			ctx := "request"
 			if !req {
 				ctx = "response"
@@ -1034,14 +1114,14 @@ func buildBodyType(svc *service.Data, s *httpdesign.ServiceExpr, e *httpdesign.E
 			desc = fmt.Sprintf("%s is the type of the %s %s HTTP endpoint %s body.", varname, svc.Name, e.Name(), ctx)
 			if req {
 				// only validate incoming request bodies
-				validateDef = codegen.RecursiveValidationCode(body, true, ptr, "body")
+				validateDef = codegen.RecursiveValidationCode(body, true, svr && req || !svr && !req, "body")
 				if validateDef != "" {
 					validateRef = "err = goa.MergeErrors(err, body.Validate())"
 				}
 			}
 		} else {
 			varname = svc.Scope.GoTypeRef(body)
-			validateRef = codegen.RecursiveValidationCode(body, true, ptr, "body")
+			validateRef = codegen.RecursiveValidationCode(body, true, svr && req || !svr && !req, "body")
 			desc = body.Description
 		}
 	}
@@ -1049,7 +1129,8 @@ func buildBodyType(svc *service.Data, s *httpdesign.ServiceExpr, e *httpdesign.E
 	var (
 		init *InitData
 	)
-	if needInit(body.Type) {
+	isNeeded := svr && !req || !svr && req
+	if isNeeded && needInit(body.Type) {
 		var (
 			name   string
 			desc   string
@@ -1077,22 +1158,37 @@ func buildBodyType(svc *service.Data, s *httpdesign.ServiceExpr, e *httpdesign.E
 			sourceVar = sourceVar + "." + codegen.Goify(origin, true)
 		}
 
-		code, err = codegen.GoTypeTransform(att.Type, body.Type, sourceVar, "body", "", false, ptr, false, svc.Scope)
+		code, err = codegen.GoTypeTransform(att.Type, body.Type, sourceVar, "body", "", false, false, false, svc.Scope)
 		if err == nil {
 			var helpers []*codegen.TransformFunctionData
-			helpers, err = codegen.GoTypeTransformHelpers(att.Type, body.Type, "", false, ptr, ptr, svc.Scope)
-			sd.TransformHelpers = codegen.AppendHelpers(sd.TransformHelpers, helpers)
+			helpers, err = codegen.GoTypeTransformHelpers(att.Type, body.Type, svc.PkgName, "", false, false, false, svc.Scope)
+			if svr {
+				sd.ServerTransformHelpers = codegen.AppendHelpers(sd.ServerTransformHelpers, helpers)
+			} else {
+				sd.ClientTransformHelpers = codegen.AppendHelpers(sd.ClientTransformHelpers, helpers)
+			}
 		}
 		if err != nil {
 			fmt.Println(err.Error()) // TBD validate DSL so errors are not possible
 		}
+
 		init = &InitData{
 			Name:                name,
 			Description:         desc,
 			ReturnTypeRef:       svc.Scope.GoTypeRef(body),
 			ReturnTypeAttribute: codegen.Goify(origin, true),
-			Args:                []*InitArgData{{Name: sourceVar, Ref: sourceVar, TypeRef: svc.Scope.GoFullTypeRef(att, svc.PkgName)}},
-			Code:                code,
+			Args: []*InitArgData{{
+				Name:     sourceVar,
+				Ref:      sourceVar,
+				TypeRef:  svc.Scope.GoFullTypeRef(att, svc.PkgName),
+				Validate: validateDef,
+				Example:  att.Example(design.Root.API.Random()),
+			}},
+		}
+		if svr {
+			init.ServerCode = code
+		} else {
+			init.ClientCode = code
 		}
 	}
 	return &TypeData{
@@ -1123,6 +1219,7 @@ func extractPathParams(a *design.MappedAttributeExpr, scope *codegen.NameScope) 
 			VarName:        varn,
 			Required:       required,
 			Type:           c.Type,
+			TypeName:       scope.GoTypeName(c),
 			TypeRef:        scope.GoTypeRef(c),
 			Pointer:        false,
 			Slice:          arr != nil,
@@ -1159,6 +1256,7 @@ func extractQueryParams(a *design.MappedAttributeExpr, scope *codegen.NameScope)
 			VarName:     varn,
 			Required:    required,
 			Type:        c.Type,
+			TypeName:    scope.GoTypeName(c),
 			TypeRef:     typeRef,
 			Pointer:     a.IsPrimitivePointer(name, true),
 			Slice:       arr != nil,
@@ -1195,6 +1293,7 @@ func extractHeaders(a *design.MappedAttributeExpr, req bool, scope *codegen.Name
 			CanonicalName: http.CanonicalHeaderKey(elem),
 			FieldName:     codegen.Goify(name, true),
 			VarName:       varn,
+			TypeName:      scope.GoTypeName(c),
 			TypeRef:       typeRef,
 			Required:      required,
 			Pointer:       a.IsPrimitivePointer(name, req),
@@ -1272,7 +1371,7 @@ func attributeTypeData(ut design.UserType, req, ptr, server bool, scope *codegen
 		}
 		desc = name + " is used to define fields on " + ctx + " body types."
 		def = goTypeDef(scope, ut.Attribute(), ptr, false)
-		validate = codegen.RecursiveValidationCode(ut.Attribute(), true, ptr, "body") //
+		validate = codegen.RecursiveValidationCode(ut.Attribute(), true, ptr, "body")
 		if validate != "" {
 			validateRef = "err = goa.MergeErrors(err, v.Validate())"
 		}

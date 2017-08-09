@@ -1,62 +1,114 @@
+// Code generated with goa v2.0.0-wip, DO NOT EDIT.
+//
+// storage HTTP client CLI support package
+//
+// Command:
+// $ goa gen goa.design/goa.v2/examples/cellar/design
+
 package client
 
 import (
 	"encoding/json"
 	"fmt"
-	"strconv"
+	"unicode/utf8"
+
+	goa "goa.design/goa.v2"
+	"goa.design/goa.v2/examples/cellar/gen/storage"
 )
 
-// BuildAddPayloadFromFlags constructs a "add" endpoint payload from command
-// line flag values.
-func BuildAddPayloadFromFlags(nameFlag, wineryFlag, vintageFlag, compositionFlag, descriptionFlag, ratingFlag string) (*AddRequestBody, error) {
-	var winery WineryRequestBody
+// BuildShowPayload builds the payload for the storage show endpoint from CLI
+// flags.
+func BuildShowPayload(storageShowID string) (*storage.ShowPayload, error) {
+	var id string
 	{
-		err := json.Unmarshal([]byte(wineryFlag), &winery)
-		if err != nil {
-			ex := WineryRequestBody{} // ...
-			js, _ := json.Marshal(ex)
-			return nil, fmt.Errorf("invalid JSON for winery, example of valid JSON:\n%s", js)
-		}
+		id = storageShowID
 	}
-
-	var composition []*ComponentRequestBody
-	if compositionFlag != "" {
-		err := json.Unmarshal([]byte(compositionFlag), &composition)
-		if err != nil {
-			ex := []*ComponentRequestBody{} // ...
-			js, _ := json.Marshal(ex)
-			return nil, fmt.Errorf("invalid JSON for composition, example of valid JSON:\n%s", string(js))
-		}
+	payload := &storage.ShowPayload{
+		ID: id,
 	}
+	return payload, nil
+}
 
-	var vintage uint32
+// BuildBottle builds the payload for the storage add endpoint from CLI flags.
+func BuildBottle(storageAddBody string) (*storage.Bottle, error) {
+	var body AddRequestBody
 	{
-		if v, err := strconv.ParseUint(ratingFlag, 10, 32); err == nil {
-			vintage = uint32(v)
+		err := json.Unmarshal([]byte(storageAddBody), &body)
+		if err != nil {
+			return nil, fmt.Errorf("invalid JSON for body, example of valid JSON:\n%s", "{\"composition\":[{\"percentage\":65,\"varietal\":\"f5t\"},{\"percentage\":65,\"varietal\":\"f5t\"},{\"percentage\":65,\"varietal\":\"f5t\"},{\"percentage\":65,\"varietal\":\"f5t\"}],\"description\":\"h2w\",\"name\":\"37h\",\"rating\":3,\"vintage\":2016,\"winery\":{\"country\":\"Davonte Fahey\",\"name\":\"Alias est dolores.\",\"region\":\"Alba Satterfield\",\"url\":\"Frances Stracke DVM\"}}")
+		}
+		if body.Winery == nil {
+			err = goa.MergeErrors(err, goa.MissingFieldError("winery", "body"))
+		}
+		if utf8.RuneCountInString(body.Name) > 100 {
+			err = goa.MergeErrors(err, goa.InvalidLengthError("body.name", body.Name, utf8.RuneCountInString(body.Name), 100, false))
+		}
+		if body.Winery != nil {
+			if err2 := body.Winery.Validate(); err2 != nil {
+				err = goa.MergeErrors(err, err2)
+			}
+		}
+		if body.Vintage < 1900 {
+			err = goa.MergeErrors(err, goa.InvalidRangeError("body.vintage", body.Vintage, 1900, true))
+		}
+		if body.Vintage > 2020 {
+			err = goa.MergeErrors(err, goa.InvalidRangeError("body.vintage", body.Vintage, 2020, false))
+		}
+		for _, e := range body.Composition {
+			if e != nil {
+				if err2 := e.Validate(); err2 != nil {
+					err = goa.MergeErrors(err, err2)
+				}
+			}
+		}
+		if body.Description != nil {
+			if utf8.RuneCountInString(*body.Description) > 2000 {
+				err = goa.MergeErrors(err, goa.InvalidLengthError("body.description", *body.Description, utf8.RuneCountInString(*body.Description), 2000, false))
+			}
+		}
+		if body.Rating != nil {
+			if *body.Rating < 1 {
+				err = goa.MergeErrors(err, goa.InvalidRangeError("body.rating", *body.Rating, 1, true))
+			}
+		}
+		if body.Rating != nil {
+			if *body.Rating > 5 {
+				err = goa.MergeErrors(err, goa.InvalidRangeError("body.rating", *body.Rating, 5, false))
+			}
+		}
+		if err != nil {
+			return nil, err
+		}
+	}
+	v := &storage.Bottle{
+		Name:        body.Name,
+		Vintage:     body.Vintage,
+		Description: body.Description,
+		Rating:      body.Rating,
+	}
+	v.Winery = wineryRequestBodyToWinery(body.Winery)
+	if body.Composition != nil {
+		v.Composition = make([]*storage.Component, len(body.Composition))
+		for i, val := range body.Composition {
+			v.Composition[i] = &storage.Component{
+				Varietal:   val.Varietal,
+				Percentage: val.Percentage,
+			}
 		}
 	}
 
-	var rating *uint32
-	if ratingFlag != "" {
-		if v, err := strconv.ParseUint(ratingFlag, 10, 32); err == nil {
-			val := uint32(v)
-			rating = &val
-		}
-	}
+	return v, nil
+}
 
-	var description *string
-	if descriptionFlag != "" {
-		description = &descriptionFlag
+// BuildRemovePayload builds the payload for the storage remove endpoint from
+// CLI flags.
+func BuildRemovePayload(storageRemoveID string) (*storage.RemovePayload, error) {
+	var id string
+	{
+		id = storageRemoveID
 	}
-
-	body := &AddRequestBody{
-		Name:        nameFlag,
-		Winery:      &winery,
-		Vintage:     vintage,
-		Composition: composition,
-		Description: description,
-		Rating:      rating,
+	payload := &storage.RemovePayload{
+		ID: id,
 	}
-
-	return body, nil
+	return payload, nil
 }

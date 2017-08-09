@@ -1,38 +1,39 @@
+// Code generated with goa v2.0.0-wip, DO NOT EDIT.
+//
+// sommelier HTTP client CLI support package
+//
+// Command:
+// $ goa gen goa.design/goa.v2/examples/cellar/design
+
 package client
 
 import (
 	"encoding/json"
 	"fmt"
+
+	"goa.design/goa.v2/examples/cellar/gen/sommelier"
 )
 
-// BuildPickPayloadFromFlags constructs a "add" endpoint payload from command
-// line flag values.
-func BuildPickPayloadFromFlags(nameFlag, wineryFlag, varietalFlag string) (*PickRequestBody, error) {
-	var name *string
-	if nameFlag != "" {
-		name = &nameFlag
-	}
-
-	var winery *string
-	if wineryFlag != "" {
-		winery = &wineryFlag
-	}
-
-	var varietal []string
-	if varietalFlag != "" {
-		err := json.Unmarshal([]byte(varietalFlag), &varietal)
+// BuildCriteria builds the payload for the sommelier pick endpoint from CLI
+// flags.
+func BuildCriteria(sommelierPickBody string) (*sommelier.Criteria, error) {
+	var body PickRequestBody
+	{
+		err := json.Unmarshal([]byte(sommelierPickBody), &body)
 		if err != nil {
-			ex := []string{"pinot noir"}
-			js, _ := json.Marshal(ex)
-			return nil, fmt.Errorf("invalid JSON for varietal, example of valid JSON:\n%s", js)
+			return nil, fmt.Errorf("invalid JSON for body, example of valid JSON:\n%s", "{\"name\":\"Corrupti qui enim repellendus laboriosam accusamus.\",\"varietal\":[\"Aut reiciendis ea architecto magni tempora fugiat.\",\"Delectus vel earum doloribus.\",\"Consequuntur recusandae.\",\"Nemo omnis quae suscipit laudantium quis sapiente.\"],\"winery\":\"Sunt dolorem.\"}")
+		}
+	}
+	v := &sommelier.Criteria{
+		Name:   body.Name,
+		Winery: body.Winery,
+	}
+	if body.Varietal != nil {
+		v.Varietal = make([]string, len(body.Varietal))
+		for i, val := range body.Varietal {
+			v.Varietal[i] = val
 		}
 	}
 
-	body := &PickRequestBody{
-		Name:     name,
-		Winery:   winery,
-		Varietal: varietal,
-	}
-
-	return body, nil
+	return v, nil
 }

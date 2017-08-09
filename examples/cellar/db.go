@@ -22,7 +22,7 @@ type Bolt struct {
 // NewBoltDB creates a Bolt DB database driver given an underlying client.
 func NewBoltDB(client *bolt.DB) (*Bolt, error) {
 	err := client.Update(func(tx *bolt.Tx) error {
-		_, err := tx.CreateBucketIfNotExists([]byte("ACCOUNTS"))
+		_, err := tx.CreateBucketIfNotExists([]byte("CELLAR"))
 		return err
 	})
 	if err != nil {
@@ -94,7 +94,7 @@ func (b *Bolt) LoadAll(bucket string, data interface{}) error {
 				buf.WriteByte(',')
 				return nil
 			})
-			buf.Truncate(buf.Len() - 1)
+			// buf.Truncate(buf.Len() - 1)
 		}
 		buf.WriteByte(']')
 		return nil

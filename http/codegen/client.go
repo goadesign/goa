@@ -45,9 +45,6 @@ func client(svc *httpdesign.ServiceExpr) codegen.File {
 		for _, e := range data.Endpoints {
 			s = append(s, &codegen.Section{Template: endpointInitTmpl(svc), Data: e})
 		}
-		for _, h := range data.TransformHelpers {
-			s = append(s, &codegen.Section{Template: transformHelperTmpl(svc), Data: h})
-		}
 
 		return s
 	}
@@ -74,7 +71,7 @@ func clientEncodeDecode(svc *httpdesign.ServiceExpr) codegen.File {
 				{Path: "strings"},
 				{Path: "goa.design/goa.v2", Name: "goa"},
 				{Path: "goa.design/goa.v2/http", Name: "goahttp"},
-				{Path: genPkg + "/" + codegen.Goify(svc.Name(), false)},
+				{Path: genPkg + "/" + data.Service.PkgName},
 			}),
 		}
 
@@ -83,6 +80,9 @@ func clientEncodeDecode(svc *httpdesign.ServiceExpr) codegen.File {
 			if e.Result != nil || len(e.Errors) > 0 {
 				s = append(s, &codegen.Section{Template: responseDecoderTmpl(svc), Data: e})
 			}
+		}
+		for _, h := range data.ClientTransformHelpers {
+			s = append(s, &codegen.Section{Template: transformHelperTmpl(svc), Data: h})
 		}
 		return s
 	}

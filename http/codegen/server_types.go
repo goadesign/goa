@@ -15,11 +15,11 @@ var (
 	typeDeclTmpl = template.Must(
 		template.New("typeDecl").Funcs(funcMap).Parse(typeDeclT),
 	)
-	typeInitTmpl = template.Must(
-		template.New("typeInit").Funcs(funcMap).Parse(typeInitT),
+	serverTypeInitTmpl = template.Must(
+		template.New("serverTypeInit").Funcs(funcMap).Parse(serverTypeInitT),
 	)
-	bodyInitTmpl = template.Must(
-		template.New("bodyInit").Funcs(funcMap).Parse(bodyInitT),
+	serverBodyInitTmpl = template.Must(
+		template.New("serverBodyInit").Funcs(funcMap).Parse(serverBodyInitT),
 	)
 	validateTmpl = template.Must(
 		template.New("validate").Funcs(funcMap).Parse(validateT),
@@ -160,7 +160,7 @@ func serverType(r *httpdesign.ServiceExpr, seen map[string]struct{}) codegen.Fil
 		// body constructors
 		for _, init := range initData {
 			secs = append(secs, &codegen.Section{
-				Template: bodyInitTmpl,
+				Template: serverBodyInitTmpl,
 				Data:     init,
 			})
 		}
@@ -169,7 +169,7 @@ func serverType(r *httpdesign.ServiceExpr, seen map[string]struct{}) codegen.Fil
 			// request to method payload
 			if init := adata.Payload.Request.PayloadInit; init != nil {
 				secs = append(secs, &codegen.Section{
-					Template: typeInitTmpl,
+					Template: serverTypeInitTmpl,
 					Data:     init,
 				})
 			}
@@ -194,10 +194,10 @@ type {{ .VarName }} {{ .Def }}
 `
 
 // input: InitData
-const typeInitT = `{{ comment .Description }}
+const serverTypeInitT = `{{ comment .Description }}
 func {{ .Name }}({{- range .Args }}{{ .Name }} {{ .TypeRef }}, {{ end }}) {{ .ReturnTypeRef }} {
-	{{- if .Code }}
-		{{ .Code }}
+	{{- if .ServerCode }}
+		{{ .ServerCode }}
 		{{- if .ReturnTypeAttribute }}
 		res := &{{ .ReturnTypeName }}{
 			{{ .ReturnTypeAttribute }}: v,
@@ -226,9 +226,9 @@ func {{ .Name }}({{- range .Args }}{{ .Name }} {{ .TypeRef }}, {{ end }}) {{ .Re
 `
 
 // input: InitData
-const bodyInitT = `{{ comment .Description }}
+const serverBodyInitT = `{{ comment .Description }}
 func {{ .Name }}({{ range .Args }}{{ .Name }} {{.TypeRef }}, {{ end }}) {{ .ReturnTypeRef }} {
-	{{ .Code }}
+	{{ .ServerCode }}
 	return body
 }
 `

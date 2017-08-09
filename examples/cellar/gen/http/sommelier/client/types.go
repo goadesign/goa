@@ -109,12 +109,7 @@ func NewPickStoredBottleCollectionOK(body PickResponseBody) sommelier.StoredBott
 			Description: val.Description,
 			Rating:      val.Rating,
 		}
-		v[i].Winery = &sommelier.Winery{
-			Name:    *val.Winery.Name,
-			Region:  *val.Winery.Region,
-			Country: *val.Winery.Country,
-			URL:     val.Winery.URL,
-		}
+		v[i].Winery = wineryResponseBodyToWinerySrcPtr(val.Winery)
 		if val.Composition != nil {
 			v[i].Composition = make([]*sommelier.Component, len(val.Composition))
 			for i, val := range val.Composition {

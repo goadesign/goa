@@ -22,3 +22,4 @@ cmd/goagen/goagen
 /examples/account/account
 /examples/cellar/cmd/cellarsvc/cellarsvc
 /examples/cellar/cmd/cellarsvc/cellar.db
+/examples/cellar/cmd/cellarcli/cellarcli

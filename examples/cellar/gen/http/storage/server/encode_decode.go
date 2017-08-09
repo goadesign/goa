@@ -138,3 +138,99 @@ func DecodeRemoveRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.
 		return NewRemoveRemovePayload(id), nil
 	}
 }
+
+// storedBottleToStoredBottleResponseBodyNoDefault builds a value of type
+// *StoredBottleResponseBody from a value of type *storage.StoredBottle.
+func storedBottleToStoredBottleResponseBodyNoDefault(v *storage.StoredBottle) *StoredBottleResponseBody {
+	res := &StoredBottleResponseBody{
+		ID:          v.ID,
+		Name:        v.Name,
+		Vintage:     v.Vintage,
+		Description: v.Description,
+		Rating:      v.Rating,
+	}
+	res.Winery = wineryToWineryResponseBodyNoDefault(v.Winery)
+	if v.Composition != nil {
+		res.Composition = make([]*ComponentResponseBody, len(v.Composition))
+		for i, val := range v.Composition {
+			res.Composition[i] = &ComponentResponseBody{
+				Varietal:   val.Varietal,
+				Percentage: val.Percentage,
+			}
+		}
+	}
+
+	return res
+}
+
+// wineryToWineryResponseBodyNoDefault builds a value of type
+// *WineryResponseBody from a value of type *storage.Winery.
+func wineryToWineryResponseBodyNoDefault(v *storage.Winery) *WineryResponseBody {
+	res := &WineryResponseBody{
+		Name:    v.Name,
+		Region:  v.Region,
+		Country: v.Country,
+		URL:     v.URL,
+	}
+
+	return res
+}
+
+// componentToComponentResponseBodyNoDefault builds a value of type
+// *ComponentResponseBody from a value of type *storage.Component.
+func componentToComponentResponseBodyNoDefault(v *storage.Component) *ComponentResponseBody {
+	res := &ComponentResponseBody{
+		Varietal:   v.Varietal,
+		Percentage: v.Percentage,
+	}
+
+	return res
+}
+
+// wineryToWineryNoDefault builds a value of type *Winery from a value of type
+// *storage.Winery.
+func wineryToWineryNoDefault(v *storage.Winery) *Winery {
+	res := &Winery{
+		Name:    v.Name,
+		Region:  v.Region,
+		Country: v.Country,
+		URL:     v.URL,
+	}
+
+	return res
+}
+
+// componentToComponentNoDefault builds a value of type *Component from a value
+// of type *storage.Component.
+func componentToComponentNoDefault(v *storage.Component) *Component {
+	res := &Component{
+		Varietal:   v.Varietal,
+		Percentage: v.Percentage,
+	}
+
+	return res
+}
+
+// wineryRequestBodyToWinerySrcPtr builds a value of type *storage.Winery from
+// a value of type *WineryRequestBody.
+func wineryRequestBodyToWinerySrcPtr(v *WineryRequestBody) *storage.Winery {
+	res := &storage.Winery{
+		Name:    *v.Name,
+		Region:  *v.Region,
+		Country: *v.Country,
+		URL:     v.URL,
+	}
+
+	return res
+}
+
+// componentRequestBodyToComponentSrcPtr builds a value of type
+// *storage.Component from a value of type *ComponentRequestBody.
+func componentRequestBodyToComponentSrcPtr(v *ComponentRequestBody) *storage.Component {
+	res := &storage.Component{
+		Varietal:   *v.Varietal,
+		Percentage: v.Percentage,
+	}
+
+	return res
+}
