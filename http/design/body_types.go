@@ -34,6 +34,7 @@ func RequestBody(a *EndpointExpr) *design.AttributeExpr {
 	// encoded in request body).
 	if !design.IsObject(payload.Type) {
 		if bodyOnly {
+			payload = design.DupAtt(payload)
 			renameType(payload, name, "RequestBody")
 			return payload
 		}
