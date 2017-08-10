@@ -139,30 +139,6 @@ func DecodeRemoveRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.
 	}
 }
 
-// storedBottleToStoredBottleResponseBodyNoDefault builds a value of type
-// *StoredBottleResponseBody from a value of type *storage.StoredBottle.
-func storedBottleToStoredBottleResponseBodyNoDefault(v *storage.StoredBottle) *StoredBottleResponseBody {
-	res := &StoredBottleResponseBody{
-		ID:          v.ID,
-		Name:        v.Name,
-		Vintage:     v.Vintage,
-		Description: v.Description,
-		Rating:      v.Rating,
-	}
-	res.Winery = wineryToWineryResponseBodyNoDefault(v.Winery)
-	if v.Composition != nil {
-		res.Composition = make([]*ComponentResponseBody, len(v.Composition))
-		for i, val := range v.Composition {
-			res.Composition[i] = &ComponentResponseBody{
-				Varietal:   val.Varietal,
-				Percentage: val.Percentage,
-			}
-		}
-	}
-
-	return res
-}
-
 // wineryToWineryResponseBodyNoDefault builds a value of type
 // *WineryResponseBody from a value of type *storage.Winery.
 func wineryToWineryResponseBodyNoDefault(v *storage.Winery) *WineryResponseBody {

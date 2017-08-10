@@ -99,30 +99,6 @@ func (c *Client) DecodePickResponse(decoder func(*http.Response) goahttp.Decoder
 	}
 }
 
-// storedBottleResponseBodyToStoredBottleSrcPtr builds a value of type
-// *sommelier.StoredBottle from a value of type *StoredBottleResponseBody.
-func storedBottleResponseBodyToStoredBottleSrcPtr(v *StoredBottleResponseBody) *sommelier.StoredBottle {
-	res := &sommelier.StoredBottle{
-		ID:          *v.ID,
-		Name:        *v.Name,
-		Vintage:     *v.Vintage,
-		Description: v.Description,
-		Rating:      v.Rating,
-	}
-	res.Winery = wineryResponseBodyToWinerySrcPtr(v.Winery)
-	if v.Composition != nil {
-		res.Composition = make([]*sommelier.Component, len(v.Composition))
-		for i, val := range v.Composition {
-			res.Composition[i] = &sommelier.Component{
-				Varietal:   *val.Varietal,
-				Percentage: val.Percentage,
-			}
-		}
-	}
-
-	return res
-}
-
 // wineryResponseBodyToWinerySrcPtr builds a value of type *sommelier.Winery
 // from a value of type *WineryResponseBody.
 func wineryResponseBodyToWinerySrcPtr(v *WineryResponseBody) *sommelier.Winery {

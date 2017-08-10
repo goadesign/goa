@@ -77,30 +77,6 @@ func EncodePickError(encoder func(http.ResponseWriter, *http.Request) (goahttp.E
 	}
 }
 
-// storedBottleToStoredBottleResponseBodyNoDefault builds a value of type
-// *StoredBottleResponseBody from a value of type *sommelier.StoredBottle.
-func storedBottleToStoredBottleResponseBodyNoDefault(v *sommelier.StoredBottle) *StoredBottleResponseBody {
-	res := &StoredBottleResponseBody{
-		ID:          v.ID,
-		Name:        v.Name,
-		Vintage:     v.Vintage,
-		Description: v.Description,
-		Rating:      v.Rating,
-	}
-	res.Winery = wineryToWineryResponseBodyNoDefault(v.Winery)
-	if v.Composition != nil {
-		res.Composition = make([]*ComponentResponseBody, len(v.Composition))
-		for i, val := range v.Composition {
-			res.Composition[i] = &ComponentResponseBody{
-				Varietal:   val.Varietal,
-				Percentage: val.Percentage,
-			}
-		}
-	}
-
-	return res
-}
-
 // wineryToWineryResponseBodyNoDefault builds a value of type
 // *WineryResponseBody from a value of type *sommelier.Winery.
 func wineryToWineryResponseBodyNoDefault(v *sommelier.Winery) *WineryResponseBody {

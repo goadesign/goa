@@ -95,32 +95,64 @@ func GoTypeTransform(source, target design.DataType, sourceVar, targetVar, targe
 // for a description of the parameters. See TransformFunctionData for a
 // rationale explaining the need for this function.
 func GoTypeTransformHelpers(source, target design.DataType, sPkg, tPkg string, fromPtrs, toPtrs, initDefaults bool, scope *NameScope) ([]*TransformFunctionData, error) {
+	return transformAttributeHelpers(source, target, sPkg, tPkg, fromPtrs, toPtrs, initDefaults, scope)
+}
+
+func transformAttributeHelpers(source, target design.DataType, sPkg, tPkg string, fromPtrs, toPtrs, initDefaults bool, scope *NameScope) ([]*TransformFunctionData, error) {
 	var (
+		helpers []*TransformFunctionData
+		err     error
+	)
+	// Do not generate a transform function for the top most user type.
+	switch {
+	case design.IsArray(source):
+		helpers, err = transformAttributeHelpers(
+			design.AsArray(source).ElemType.Type,
+			design.AsArray(target).ElemType.Type,
+			sPkg, tPkg, fromPtrs, toPtrs, initDefaults, scope)
+	case design.IsMap(source):
+		sm := design.AsMap(source)
+		tm := design.AsMap(target)
+		helpers, err = transformAttributeHelpers(sm.ElemType.Type, tm.ElemType.Type,
+			sPkg, tPkg, fromPtrs, toPtrs, initDefaults, scope)
+		if err == nil {
+			var other []*TransformFunctionData
+			other, err = transformAttributeHelpers(sm.KeyType.Type, tm.KeyType.Type,
+				sPkg, tPkg, fromPtrs, toPtrs, initDefaults, scope)
+			helpers = append(helpers, other...)
+		}
+	case design.IsObject(source):
+		helpers, err = transformObjectHelpers(source, target, sPkg, tPkg, fromPtrs, toPtrs, initDefaults, scope)
+	}
+	if err != nil {
+		return nil, err
+	}
+	return helpers, nil
+}
+
+func transformObjectHelpers(source, target design.DataType, sPkg, tPkg string, fromPtrs, toPtrs, initDefaults bool, scope *NameScope) ([]*TransformFunctionData, error) {
+	var (
+		helpers []*TransformFunctionData
+		err     error
+
 		satt = &design.AttributeExpr{Type: source}
 		tatt = &design.AttributeExpr{Type: target}
 	)
-	if design.IsObject(source) {
-		// Do not generate a transform function for the top most user
-		// type.
-		var (
-			helpers []*TransformFunctionData
-			err     error
-		)
-		walkMatches(satt, tatt, func(src, tgt *design.MappedAttributeExpr, srcAtt, tgtAtt *design.AttributeExpr, n string) {
-			var h []*TransformFunctionData
-			h, err = collectHelpers(srcAtt, tgtAtt, sPkg, tPkg, fromPtrs, toPtrs, initDefaults, scope)
-			if err != nil {
-				return
-			}
-			helpers = AppendHelpers(helpers, h)
-		})
+	walkMatches(satt, tatt, func(src, tgt *design.MappedAttributeExpr, srcAtt, tgtAtt *design.AttributeExpr, n string) {
 		if err != nil {
-			return nil, err
+			return
 		}
-		return helpers, nil
+		h, err2 := collectHelpers(srcAtt, tgtAtt, sPkg, tPkg, fromPtrs, toPtrs, initDefaults, scope)
+		if err2 != nil {
+			err = err2
+			return
+		}
+		helpers = append(helpers, h...)
+	})
+	if err != nil {
+		return nil, err
 	}
-
-	return collectHelpers(satt, tatt, sPkg, tPkg, fromPtrs, toPtrs, initDefaults, scope)
+	return helpers, nil
 }
 
 func transformAttribute(source, target *design.AttributeExpr,
