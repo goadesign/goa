@@ -221,7 +221,7 @@ func NewShowNotFound(body *ShowNotFoundResponseBody) *storage.NotFound {
 	return v
 }
 
-// AddRequestBody is the type of the storage add HTTP endpoint request body.
+// Validate runs the validations defined on AddRequestBody
 func (body *AddRequestBody) Validate() (err error) {
 	if body.Winery == nil {
 		err = goa.MergeErrors(err, goa.MissingFieldError("winery", "body"))
@@ -265,7 +265,7 @@ func (body *AddRequestBody) Validate() (err error) {
 	return
 }
 
-// StoredBottleResponseBody is used to define fields on response body types.
+// Validate runs the validations defined on StoredBottleResponseBody
 func (body *StoredBottleResponseBody) Validate() (err error) {
 	if body.ID == nil {
 		err = goa.MergeErrors(err, goa.MissingFieldError("id", "body"))
@@ -324,7 +324,7 @@ func (body *StoredBottleResponseBody) Validate() (err error) {
 	return
 }
 
-// WineryResponseBody is used to define fields on response body types.
+// Validate runs the validations defined on WineryResponseBody
 func (body *WineryResponseBody) Validate() (err error) {
 	if body.Name == nil {
 		err = goa.MergeErrors(err, goa.MissingFieldError("name", "body"))
@@ -347,7 +347,7 @@ func (body *WineryResponseBody) Validate() (err error) {
 	return
 }
 
-// ComponentResponseBody is used to define fields on response body types.
+// Validate runs the validations defined on ComponentResponseBody
 func (body *ComponentResponseBody) Validate() (err error) {
 	if body.Varietal == nil {
 		err = goa.MergeErrors(err, goa.MissingFieldError("varietal", "body"))
@@ -373,7 +373,7 @@ func (body *ComponentResponseBody) Validate() (err error) {
 	return
 }
 
-// Winery is used to define fields on response body types.
+// Validate runs the validations defined on Winery
 func (body *Winery) Validate() (err error) {
 	if body.Name == nil {
 		err = goa.MergeErrors(err, goa.MissingFieldError("name", "body"))
@@ -396,7 +396,7 @@ func (body *Winery) Validate() (err error) {
 	return
 }
 
-// Component is used to define fields on response body types.
+// Validate runs the validations defined on Component
 func (body *Component) Validate() (err error) {
 	if body.Varietal == nil {
 		err = goa.MergeErrors(err, goa.MissingFieldError("varietal", "body"))
@@ -422,7 +422,7 @@ func (body *Component) Validate() (err error) {
 	return
 }
 
-// WineryRequestBody is used to define fields on request body types.
+// Validate runs the validations defined on WineryRequestBody
 func (body *WineryRequestBody) Validate() (err error) {
 	err = goa.MergeErrors(err, goa.ValidatePattern("body.region", body.Region, "(?i)[a-z '\\.]+"))
 	err = goa.MergeErrors(err, goa.ValidatePattern("body.country", body.Country, "(?i)[a-z '\\.]+"))
@@ -432,7 +432,7 @@ func (body *WineryRequestBody) Validate() (err error) {
 	return
 }
 
-// ComponentRequestBody is used to define fields on request body types.
+// Validate runs the validations defined on ComponentRequestBody
 func (body *ComponentRequestBody) Validate() (err error) {
 	err = goa.MergeErrors(err, goa.ValidatePattern("body.varietal", body.Varietal, "[A-Za-z' ]+"))
 	if utf8.RuneCountInString(body.Varietal) > 100 {

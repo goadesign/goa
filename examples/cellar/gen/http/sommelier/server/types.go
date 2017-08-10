@@ -143,7 +143,7 @@ func NewPickCriteria(body *PickRequestBody) *sommelier.Criteria {
 	return v
 }
 
-// StoredBottleResponseBody is used to define fields on response body types.
+// Validate runs the validations defined on StoredBottleResponseBody
 func (body *StoredBottleResponseBody) Validate() (err error) {
 	if body.Winery == nil {
 		err = goa.MergeErrors(err, goa.MissingFieldError("winery", "body"))
@@ -187,7 +187,7 @@ func (body *StoredBottleResponseBody) Validate() (err error) {
 	return
 }
 
-// WineryResponseBody is used to define fields on response body types.
+// Validate runs the validations defined on WineryResponseBody
 func (body *WineryResponseBody) Validate() (err error) {
 	err = goa.MergeErrors(err, goa.ValidatePattern("body.region", body.Region, "(?i)[a-z '\\.]+"))
 	err = goa.MergeErrors(err, goa.ValidatePattern("body.country", body.Country, "(?i)[a-z '\\.]+"))
@@ -197,7 +197,7 @@ func (body *WineryResponseBody) Validate() (err error) {
 	return
 }
 
-// ComponentResponseBody is used to define fields on response body types.
+// Validate runs the validations defined on ComponentResponseBody
 func (body *ComponentResponseBody) Validate() (err error) {
 	err = goa.MergeErrors(err, goa.ValidatePattern("body.varietal", body.Varietal, "[A-Za-z' ]+"))
 	if utf8.RuneCountInString(body.Varietal) > 100 {

@@ -142,7 +142,7 @@ func NewPickNoMatch(body *PickNoMatchResponseBody) *sommelier.NoMatch {
 	return v
 }
 
-// StoredBottleResponseBody is used to define fields on response body types.
+// Validate runs the validations defined on StoredBottleResponseBody
 func (body *StoredBottleResponseBody) Validate() (err error) {
 	if body.ID == nil {
 		err = goa.MergeErrors(err, goa.MissingFieldError("id", "body"))
@@ -201,7 +201,7 @@ func (body *StoredBottleResponseBody) Validate() (err error) {
 	return
 }
 
-// WineryResponseBody is used to define fields on response body types.
+// Validate runs the validations defined on WineryResponseBody
 func (body *WineryResponseBody) Validate() (err error) {
 	if body.Name == nil {
 		err = goa.MergeErrors(err, goa.MissingFieldError("name", "body"))
@@ -224,7 +224,7 @@ func (body *WineryResponseBody) Validate() (err error) {
 	return
 }
 
-// ComponentResponseBody is used to define fields on response body types.
+// Validate runs the validations defined on ComponentResponseBody
 func (body *ComponentResponseBody) Validate() (err error) {
 	if body.Varietal == nil {
 		err = goa.MergeErrors(err, goa.MissingFieldError("varietal", "body"))
