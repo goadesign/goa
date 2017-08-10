@@ -21,7 +21,7 @@ func BuildCriteria(sommelierPickBody string) (*sommelier.Criteria, error) {
 	{
 		err := json.Unmarshal([]byte(sommelierPickBody), &body)
 		if err != nil {
-			return nil, fmt.Errorf("invalid JSON for body, example of valid JSON:\n%s", "{\"name\":\"Corrupti qui enim repellendus laboriosam accusamus.\",\"varietal\":[\"Aut reiciendis ea architecto magni tempora fugiat.\",\"Delectus vel earum doloribus.\",\"Consequuntur recusandae.\",\"Nemo omnis quae suscipit laudantium quis sapiente.\"],\"winery\":\"Sunt dolorem.\"}")
+			return nil, fmt.Errorf("invalid JSON for body, example of valid JSON:\n%s", "{\"name\":\"Blue's Cuvee\",\"varietal\":[\"pinot noir\",\"merlot\",\"cabernet franc\"],\"winery\":\"longoria\"}")
 		}
 	}
 	v := &sommelier.Criteria{

@@ -641,7 +641,7 @@ func buildPayloadData(svc *service.Data, s *httpdesign.ServiceExpr, e *httpdesig
 				TypeName: svc.Scope.GoTypeName(&design.AttributeExpr{Type: body}),
 				TypeRef:  svc.Scope.GoTypeRef(&design.AttributeExpr{Type: body}),
 				Required: true,
-				Example:  body.Example(design.Root.API.Random()),
+				Example:  e.Body.Example(design.Root.API.Random()),
 				Validate: vcode,
 			}}
 		}

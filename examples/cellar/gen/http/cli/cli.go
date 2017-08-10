@@ -32,14 +32,13 @@ storage (list|show|add|remove)
 // UsageExamples produces an example of a valid invocation of the CLI tool.
 func UsageExamples() string {
 	return os.Args[0] + ` sommelier pick --body {
-      "name": "Corrupti qui enim repellendus laboriosam accusamus.",
+      "name": "Blue's Cuvee",
       "varietal": [
-         "Aut reiciendis ea architecto magni tempora fugiat.",
-         "Delectus vel earum doloribus.",
-         "Consequuntur recusandae.",
-         "Nemo omnis quae suscipit laudantium quis sapiente."
+         "pinot noir",
+         "merlot",
+         "cabernet franc"
       ],
-      "winery": "Sunt dolorem."
+      "winery": "longoria"
    }` + "\n" +
 		os.Args[0] + ` storage list` + "\n" +
 		""

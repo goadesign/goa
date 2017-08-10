@@ -7,18 +7,18 @@ import (
 	"goa.design/goa.v2/design"
 )
 
-// RequestBodyType returns the type of the request body given an endpoint. If
-// the DSL defines a body explicitly via the Body function then the
-// corresponding type is used instead of the payload type. Otherwise the type is
-// computed by removing the attributes of the method payload used to define
-// headers and parameters.
-func RequestBodyType(a *EndpointExpr) design.DataType {
+// RequestBody returns an attribute describing the request body of the given
+// endpoint. If the DSL defines a body explicitly via the Body function then the
+// corresponding attribute is used. Otherwise the attribute is computed by
+// removing the attributes of the method payload used to define headers and
+// parameters.
+func RequestBody(a *EndpointExpr) *design.AttributeExpr {
 	if a.Body != nil {
-		return a.Body.Type
+		return a.Body
 	}
 
 	var (
-		dt      = a.MethodExpr.Payload.Type
+		payload = a.MethodExpr.Payload
 		headers = a.MappedHeaders()
 		params  = a.AllParams()
 		suffix  = "RequestBody"
@@ -32,48 +32,52 @@ func RequestBodyType(a *EndpointExpr) design.DataType {
 	// headers defined and if so return empty type (payload encoded in
 	// request params or headers) otherwise return payload type (payload
 	// encoded in request body).
-	if !design.IsObject(dt) {
+	if !design.IsObject(payload.Type) {
 		if bodyOnly {
-			return renameType(dt, name, "RequestBody")
+			renameType(payload, name, "RequestBody")
+			return payload
 		}
-		return design.Empty
+		return &design.AttributeExpr{Type: design.Empty}
 	}
 
 	// 2. Remove header and param attributes
-	body := design.NewMappedAttributeExpr(a.MethodExpr.Payload)
+	body := design.NewMappedAttributeExpr(payload)
 	removeAttributes(body, headers)
 	removeAttributes(body, params)
 
 	// 3. Return empty type if no attribute left
 	if len(*design.AsObject(body.Type)) == 0 {
-		return design.Empty
+		return &design.AttributeExpr{Type: design.Empty}
 	}
 
 	// 4. Build computed user type
+	att := body.Attribute()
 	ut := &design.UserTypeExpr{
-		AttributeExpr: body.Attribute(),
+		AttributeExpr: att,
 		TypeName:      name,
 	}
 	appendSuffix(ut.Attribute().Type, "RequestBody")
 
-	return ut
+	return &design.AttributeExpr{
+		Type:         ut,
+		Validation:   att.Validation,
+		UserExamples: att.UserExamples,
+	}
 }
 
-// ResponseBodyType returns the type of the response body given a response and
-// the corresponding service attribute (either a result or an error attribute).
-// and result attribute. If the DSL defines a body explicitly via the Body
-// function then the corresponding type is used instead of the attribute type.
-// Otherwise the type is computed by removing the attributes of the method
-// payload used to define headers and parameters. Also if the response defines a
-// view then the response result type is projected first. suffix is appended to
-// the created type name if any.
-func ResponseBodyType(a *EndpointExpr, resp *HTTPResponseExpr) design.DataType {
+// ResponseBody returns an attribute representing the response body for the
+// given endpoint and response. If the DSL defines a body explicitly via the
+// Body function then the corresponding attribute is used. Otherwise the
+// attribute is computed by removing the attributes of the method payload used
+// to define headers and parameters. Also if the response defines a view then
+// the response result type is projected first.
+func ResponseBody(a *EndpointExpr, resp *HTTPResponseExpr) *design.AttributeExpr {
 	result := a.MethodExpr.Result
 	if result == nil || result.Type == design.Empty {
-		return design.Empty
+		return &design.AttributeExpr{Type: design.Empty}
 	}
 	if resp.Body != nil {
-		return resp.Body.Type
+		return resp.Body
 	}
 
 	var suffix string
@@ -82,7 +86,6 @@ func ResponseBodyType(a *EndpointExpr, resp *HTTPResponseExpr) design.DataType {
 	}
 
 	var (
-		dt      = result.Type
 		headers = resp.MappedHeaders()
 		name    = codegen.Goify(a.Name(), true) + suffix + "ResponseBody"
 	)
@@ -91,15 +94,17 @@ func ResponseBodyType(a *EndpointExpr, resp *HTTPResponseExpr) design.DataType {
 	// defined and if so return empty type (result encoded in response
 	// headers) otherwise return renamed result type (result encoded in
 	// response body).
-	if !design.IsObject(dt) {
+	if !design.IsObject(result.Type) {
 		if len(*design.AsObject(resp.Headers().Type)) == 0 {
-			return renameType(dt, name, "ResponseBody")
+			result = design.DupAtt(result)
+			renameType(result, name, "ResponseBody")
+			return result
 		}
-		return design.Empty
+		return &design.AttributeExpr{Type: design.Empty}
 	}
 
 	// 2. Project if response type is result type and attribute has a view.
-	rt, isrt := dt.(*design.ResultTypeExpr)
+	rt, isrt := result.Type.(*design.ResultTypeExpr)
 	if isrt {
 		if v := result.Metadata["view"]; len(v) > 0 {
 			dt, err := design.Project(rt, v[0])
@@ -117,7 +122,7 @@ func ResponseBodyType(a *EndpointExpr, resp *HTTPResponseExpr) design.DataType {
 
 	// 4. Return empty type if no attribute left
 	if len(*design.AsObject(body.Type)) == 0 {
-		return design.Empty
+		return &design.AttributeExpr{Type: design.Empty}
 	}
 
 	// 5. Build computed user type
@@ -145,31 +150,30 @@ func ResponseBodyType(a *EndpointExpr, resp *HTTPResponseExpr) design.DataType {
 		for _, v := range views {
 			v.Parent = nmt
 		}
-		return nmt
+		return &design.AttributeExpr{Type: nmt, Validation: userType.Validation}
 	}
 	appendSuffix(userType.Attribute().Type, "ResponseBody")
 
-	return userType
+	return &design.AttributeExpr{Type: userType, Validation: userType.Validation}
 }
 
-// ErrorResponseBodyType returns the type of the response body given a error. If
-// the DSL defines a body explicitly via the Body function then the
-// corresponding type is used instead of the attribute type. Otherwise the type
-// is computed by removing the attributes of the error used to define headers
-// and parameters. Also if the error response defines a view then the result
-// type is projected first. suffix is appended to the created type name if any.
-func ErrorResponseBodyType(a *EndpointExpr, v *ErrorExpr) design.DataType {
+// ErrorResponseBody returns an attribute describing the response body of a
+// given error. If the DSL defines a body explicitly via the Body function then
+// the corresponding attribute is returned. Otherwise the attribute is computed
+// by removing the attributes of the error used to define headers and
+// parameters. Also if the error response defines a view then the result type is
+// projected first.
+func ErrorResponseBody(a *EndpointExpr, v *ErrorExpr) *design.AttributeExpr {
 	result := v.ErrorExpr.AttributeExpr
 	if result == nil || result.Type == design.Empty {
-		return design.Empty
+		return &design.AttributeExpr{Type: design.Empty}
 	}
 	resp := v.Response
 	if resp.Body != nil {
-		return resp.Body.Type
+		return resp.Body
 	}
 
 	var (
-		dt      = result.Type
 		headers = resp.MappedHeaders()
 		suffix  = codegen.Goify(v.ErrorExpr.Name, true) + "ResponseBody"
 		name    = codegen.Goify(a.Name(), true) + suffix
@@ -179,15 +183,16 @@ func ErrorResponseBodyType(a *EndpointExpr, v *ErrorExpr) design.DataType {
 	// defined and if so return empty type (result encoded in response
 	// headers) otherwise return renamed result type (result encoded in
 	// response body).
-	if !design.IsObject(dt) {
+	if !design.IsObject(result.Type) {
 		if len(*design.AsObject(resp.Headers().Type)) == 0 {
-			return renameType(dt, name, suffix)
+			renameType(result, name, suffix)
+			return result
 		}
-		return design.Empty
+		return &design.AttributeExpr{Type: design.Empty}
 	}
 
 	// 2. Project if errorResponse type is result type and attribute has a view.
-	rt, isrt := dt.(*design.ResultTypeExpr)
+	rt, isrt := v.ErrorExpr.AttributeExpr.Type.(*design.ResultTypeExpr)
 	if isrt {
 		if v := result.Metadata["view"]; len(v) > 0 {
 			dt, err := design.Project(rt, v[0])
@@ -205,7 +210,7 @@ func ErrorResponseBodyType(a *EndpointExpr, v *ErrorExpr) design.DataType {
 
 	// 4. Return empty type if no attribute left
 	if len(*design.AsObject(body.Type)) == 0 {
-		return design.Empty
+		return &design.AttributeExpr{Type: design.Empty}
 	}
 
 	// 5. Build computed user type
@@ -216,7 +221,7 @@ func ErrorResponseBodyType(a *EndpointExpr, v *ErrorExpr) design.DataType {
 	appendSuffix(userType.Attribute().Type, suffix)
 
 	if !isrt {
-		return userType
+		return &design.AttributeExpr{Type: userType, Validation: userType.Validation}
 	}
 
 	views := make([]*design.ViewExpr, len(rt.Views))
@@ -238,30 +243,27 @@ func ErrorResponseBodyType(a *EndpointExpr, v *ErrorExpr) design.DataType {
 	for _, v := range views {
 		v.Parent = nmt
 	}
-	return nmt
+	return &design.AttributeExpr{Type: nmt, Validation: userType.Validation}
 }
 
-func renameType(dt design.DataType, name, suffix string) design.DataType {
-	switch dt.(type) {
+func renameType(att *design.AttributeExpr, name, suffix string) {
+	rt := att.Type
+	switch rt.(type) {
 	case design.UserType:
-		rt := design.Dup(dt)
+		rt = design.Dup(rt)
 		rt.(design.UserType).Rename(name)
 		appendSuffix(rt.(design.UserType).Attribute().Type, suffix)
-		return rt
 	case *design.Object:
-		rt := design.Dup(dt)
+		rt = design.Dup(rt)
 		appendSuffix(rt, suffix)
-		return rt
 	case *design.Array:
-		rt := design.Dup(dt)
+		rt = design.Dup(rt)
 		appendSuffix(rt, suffix)
-		return rt
 	case *design.Map:
-		rt := design.Dup(dt)
+		rt = design.Dup(rt)
 		appendSuffix(rt, suffix)
-		return rt
 	}
-	return dt
+	att.Type = rt
 }
 
 func appendSuffix(dt design.DataType, suffix string, seen ...map[string]struct{}) {
@@ -296,6 +298,11 @@ func removeAttributes(attr, sub *design.MappedAttributeExpr) {
 		attr.Delete(name)
 		if attr.Validation != nil {
 			attr.Validation.RemoveRequired(name)
+		}
+		for _, ex := range attr.UserExamples {
+			if m, ok := ex.Value.(map[string]interface{}); ok {
+				delete(m, name)
+			}
 		}
 		return nil
 	})

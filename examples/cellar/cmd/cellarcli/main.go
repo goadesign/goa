@@ -64,6 +64,7 @@ func main() {
 			os.Exit(0)
 		}
 		fmt.Fprintln(os.Stderr, err.Error())
+		fmt.Fprintln(os.Stderr, "run '"+os.Args[0]+" --help' for detailed usage.")
 		os.Exit(1)
 	}
 
@@ -96,9 +97,12 @@ Usage:
 
 Commands:
 %s
+Additional help:
+    %s SERVICE [ENDPOINT] --help
+
 Example:
 %s
-`, os.Args[0], os.Args[0], indent(cli.UsageCommands()), indent(cli.UsageExamples()))
+`, os.Args[0], os.Args[0], indent(cli.UsageCommands()), os.Args[0], indent(cli.UsageExamples()))
 }
 
 func indent(s string) string {

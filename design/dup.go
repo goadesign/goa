@@ -46,6 +46,7 @@ func (d *dupper) DupAttribute(att *AttributeExpr) *AttributeExpr {
 		Metadata:     att.Metadata,
 		DefaultValue: att.DefaultValue,
 		DSLFunc:      att.DSLFunc,
+		UserExamples: att.UserExamples,
 	}
 	d.ats[&dup] = struct{}{}
 	return &dup
