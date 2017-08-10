@@ -424,15 +424,7 @@ func (e *EndpointExpr) Finalize() {
 		}
 	} else {
 		// No explicit body, compute it
-		bt := RequestBodyType(e)
-		e.Body = &design.AttributeExpr{Type: bt}
-		if e.MethodExpr.Payload.Validation != nil {
-			e.Body.Validation = e.MethodExpr.Payload.Validation.Dup()
-		} else if ut, ok := bt.(design.UserType); ok {
-			if ut.Attribute().Validation != nil {
-				e.Body.Validation = ut.Attribute().Validation.Dup()
-			}
-		}
+		e.Body = RequestBody(e)
 	}
 
 	// Make sure there's a default response if none define explicitly
@@ -448,15 +440,7 @@ func (e *EndpointExpr) Finalize() {
 	for _, r := range e.Responses {
 		r.Finalize(e, e.MethodExpr.Result)
 		if r.Body == nil {
-			rt := ResponseBodyType(e, r)
-			r.Body = &design.AttributeExpr{Type: rt}
-			if val := e.MethodExpr.Result.Validation; val != nil {
-				r.Body.Validation = val.Dup()
-			} else if ut, ok := rt.(design.UserType); ok {
-				if ut.Attribute().Validation != nil {
-					r.Body.Validation = ut.Attribute().Validation.Dup()
-				}
-			}
+			r.Body = ResponseBody(e, r)
 		}
 
 		// Initialize response content type if result is media type.

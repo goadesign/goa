@@ -35,7 +35,7 @@ func BuildBottle(storageAddBody string) (*storage.Bottle, error) {
 	{
 		err := json.Unmarshal([]byte(storageAddBody), &body)
 		if err != nil {
-			return nil, fmt.Errorf("invalid JSON for body, example of valid JSON:\n%s", "{\"composition\":[{\"percentage\":65,\"varietal\":\"f5t\"},{\"percentage\":65,\"varietal\":\"f5t\"},{\"percentage\":65,\"varietal\":\"f5t\"},{\"percentage\":65,\"varietal\":\"f5t\"}],\"description\":\"h2w\",\"name\":\"37h\",\"rating\":3,\"vintage\":2016,\"winery\":{\"country\":\"Davonte Fahey\",\"name\":\"Alias est dolores.\",\"region\":\"Alba Satterfield\",\"url\":\"Frances Stracke DVM\"}}")
+			return nil, fmt.Errorf("invalid JSON for body, example of valid JSON:\n%s", "{\"composition\":[{\"percentage\":67,\"varietal\":\"Syrah\"},{\"percentage\":67,\"varietal\":\"Syrah\"},{\"percentage\":67,\"varietal\":\"Syrah\"}],\"description\":\"Red wine blend with an emphasis on the Cabernet Franc grape and including other Bordeaux grape varietals and some Syrah\",\"name\":\"Blue's Cuvee\",\"rating\":3,\"vintage\":1905,\"winery\":{\"country\":\"USA\",\"name\":\"Longoria\",\"region\":\"Central Coast, California\",\"url\":\"http://www.longoriawine.com/\"}}")
 		}
 		if body.Winery == nil {
 			err = goa.MergeErrors(err, goa.MissingFieldError("winery", "body"))

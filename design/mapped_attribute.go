@@ -45,8 +45,14 @@ func NewMappedAttributeExpr(att *AttributeExpr) *MappedAttributeExpr {
 	}
 	return &MappedAttributeExpr{
 		AttributeExpr: &AttributeExpr{
-			Type:       n,
-			Validation: validation,
+			Type:         n,
+			Reference:    att.Reference,
+			Description:  att.Description,
+			Docs:         att.Docs,
+			Metadata:     att.Metadata,
+			DefaultValue: att.DefaultValue,
+			UserExamples: att.UserExamples,
+			Validation:   validation,
 		},
 		nameMap:    nameMap,
 		reverseMap: reverseMap,
