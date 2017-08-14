@@ -51,6 +51,13 @@ generators.
 
 > Note: v2 is work in progress, it is not ready for production usage yet.
 
+Install the code generation tool:
+
+```bash
+cd cmd/goa
+go install
+```
+
 * The code generation for OpenAPI and HTTP servers is implemented. It can be invoked using:
 
 ```bash
@@ -64,6 +71,12 @@ go install goa.design/goa.v2/cmd/goa
 ```
 
 and `IMPORT` is the Go import path to the design package.
+
+* An example server can be generated using:
+
+```bash
+goa example [IMPORT]
+```
 
 * The core and HTTP DSLs are stable, see:
   - The [core API DSL spec](https://github.com/goadesign/goa/blob/v2/dsl/_spec/dsl_spec_test.go)
