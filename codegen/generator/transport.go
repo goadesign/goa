@@ -26,7 +26,7 @@ func Transport(roots ...eval.Root) ([]codegen.File, error) {
 		}
 	}
 	if len(files) == 0 {
-		return nil, fmt.Errorf("transport: could not find transport design in DSL roots")
+		return nil, fmt.Errorf("transport: no HTTP design found")
 	}
 	return files, nil
 }

@@ -45,6 +45,9 @@ type (
 		// Conversion contains the flag value to payload conversion
 		// function if any. Exclusive with BuildFunction.
 		Conversion string
+		// Example is a valid command invocation, starting with the
+		// command name.
+		Example string
 	}
 
 	flagData struct {
@@ -124,7 +127,7 @@ func ClientCLIFiles(root *httpdesign.RootExpr) []codegen.File {
 // endpointParser returns the file that implements the command line parser that
 // builds the client endpoint and payload necessary to perform a request.
 func endpointParser(root *httpdesign.RootExpr, data []*commandData) codegen.File {
-	path := filepath.Join("http", "cli", "cli.go")
+	path := filepath.Join(codegen.Gendir, "http", "cli", "cli.go")
 	sections := func(genPkg string) []*codegen.Section {
 		title := fmt.Sprintf("%s HTTP client CLI support package", root.Design.API.Name)
 		specs := []*codegen.ImportSpec{
@@ -181,7 +184,7 @@ func endpointParser(root *httpdesign.RootExpr, data []*commandData) codegen.File
 // payloadBuilders returns the file that contains the payload constructors that
 // use flag values as arguments.
 func payloadBuilders(svc *httpdesign.ServiceExpr, data *commandData) codegen.File {
-	path := filepath.Join("http", codegen.SnakeCase(svc.Name()), "client", "cli.go")
+	path := filepath.Join(codegen.Gendir, "http", codegen.SnakeCase(svc.Name()), "client", "cli.go")
 	sections := func(genPkg string) []*codegen.Section {
 		title := fmt.Sprintf("%s HTTP client CLI support package", svc.Name())
 		specs := []*codegen.ImportSpec{
@@ -232,7 +235,7 @@ func buildCommandData(svc *ServiceData) *commandData {
 		for i, e := range svc.Endpoints {
 			subcommands[i] = buildSubcommandData(svc, e)
 		}
-		example = buildExample(name, subcommands[0])
+		example = subcommands[0].Example
 	}
 	return &commandData{
 		Name:        name,
@@ -272,11 +275,7 @@ func buildSubcommandData(svc *ServiceData, e *EndpointData) *subcommandData {
 					args = append(args, arg)
 				}
 			} else if e.Payload.Ref != "" {
-				b, err := json.MarshalIndent(e.Method.PayloadEx, "   ", "   ")
-				ex := "?"
-				if err == nil {
-					ex = string(b)
-				}
+				ex := jsonExample(e.Method.PayloadEx)
 				fn := goify(svcn, en, "p")
 				flags = append(flags, &flagData{
 					Name:        "p",
@@ -339,7 +338,7 @@ func buildSubcommandData(svc *ServiceData, e *EndpointData) *subcommandData {
 			}
 		}
 	}
-	return &subcommandData{
+	sub := &subcommandData{
 		Name:          name,
 		FullName:      fullName,
 		Description:   description,
@@ -348,14 +347,27 @@ func buildSubcommandData(svc *ServiceData, e *EndpointData) *subcommandData {
 		BuildFunction: buildFunction,
 		Conversion:    conversion,
 	}
+	ex := codegen.Goify(svc.Service.Name, false) +
+		" " +
+		codegen.KebabCase(sub.Name)
+	for _, f := range sub.Flags {
+		ex += " --" + f.Name + " " + f.Example
+	}
+	sub.Example = ex
+
+	return sub
 }
 
-func buildExample(cmd string, sub *subcommandData) string {
-	res := codegen.KebabCase(cmd) + " " + codegen.KebabCase(sub.Name)
-	for _, f := range sub.Flags {
-		res += " --" + f.Name + " " + f.Example
+func jsonExample(v interface{}) string {
+	b, err := json.MarshalIndent(v, "   ", "   ")
+	ex := "?"
+	if err == nil {
+		ex = string(b)
 	}
-	return res
+	if strings.Contains(ex, "\n") {
+		ex = "'" + strings.Replace(ex, "'", "\\'", -1) + "'"
+	}
+	return ex
 }
 
 func goify(terms ...string) string {
@@ -387,10 +399,7 @@ func fieldLoadCode(actual, flagType string, arg *InitArgData) string {
 			}
 			code = arg.Name + " = " + ref + actual
 		} else {
-			ex := "?"
-			if e, err := json.Marshal(arg.Example); err == nil {
-				ex = string(e)
-			}
+			ex := jsonExample(arg.Example)
 			code = conversionCode(actual, arg.Name, arg.TypeName, arg.Name, flagType, ex, arg.Required)
 			if arg.Validate != "" {
 				code += "\n" + arg.Validate + "\n" + "if err != nil {\n\treturn nil, err\n}"
@@ -498,11 +507,7 @@ func flagType(tname string) string {
 }
 
 func argToFlag(svcn, en string, arg *InitArgData) *flagData {
-	b, err := json.MarshalIndent(arg.Example, "   ", "   ")
-	ex := "?"
-	if err == nil {
-		ex = string(b)
-	}
+	ex := jsonExample(arg.Example)
 	fn := goify(svcn, en, arg.Name)
 	return &flagData{
 		Name:        codegen.KebabCase(arg.Name),
@@ -714,13 +719,15 @@ Additional help:
 
 {{- range .Subcommands }}
 func {{ .FullName }}Usage() {
-	fmt.Fprintf(os.Stderr, ` + "`" + `{{ .Description}}
-Usage:
-    %s [flags] {{ $.Name }} {{ .Name }}{{range .Flags }} --{{ .Name }} {{ .Type }}{{ end }}
+	fmt.Fprintf(os.Stderr, ` + "`" + `%s [flags] {{ $.Name }} {{ .Name }}{{range .Flags }} -{{ .Name }} {{ .Type }}{{ end }}
 
-	{{- range .Flags}}
-{{ .Name }} {{ .Type }}: {{ .Description }}
+{{ .Description}}
+	{{- range .Flags }}
+    -{{ .Name }} {{ .Type }}: {{ .Description }}
 	{{- end }}
+
+Example:
+    ` + "`+os.Args[0]+" + "`" + ` [globalflags] {{ .Example }}
 ` + "`" + `, os.Args[0])
 }
 {{ end }}

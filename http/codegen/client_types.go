@@ -60,7 +60,7 @@ func clientType(svc *httpdesign.ServiceExpr, seen map[string]struct{}) codegen.F
 
 		rdata = HTTPServices.Get(svc.Name())
 	)
-	path = filepath.Join("http", codegen.SnakeCase(svc.Name()), "client", "types.go")
+	path = filepath.Join(codegen.Gendir, "http", codegen.SnakeCase(svc.Name()), "client", "types.go")
 	sections = func(genPkg string) []*codegen.Section {
 		header := codegen.Header(svc.Name()+" HTTP client types", "client",
 			[]*codegen.ImportSpec{

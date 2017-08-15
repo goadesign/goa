@@ -31,15 +31,15 @@ storage (list|show|add|remove)
 
 // UsageExamples produces an example of a valid invocation of the CLI tool.
 func UsageExamples() string {
-	return os.Args[0] + ` sommelier pick --body {
-      "name": "Blue's Cuvee",
+	return os.Args[0] + ` sommelier pick --body '{
+      "name": "Blue\'s Cuvee",
       "varietal": [
          "pinot noir",
          "merlot",
          "cabernet franc"
       ],
       "winery": "longoria"
-   }` + "\n" +
+   }'` + "\n" +
 		os.Args[0] + ` storage list` + "\n" +
 		""
 }
@@ -205,10 +205,21 @@ Additional help:
 `, os.Args[0], os.Args[0])
 }
 func sommelierPickUsage() {
-	fmt.Fprintf(os.Stderr, `Pick implements pick.
-Usage:
-    %s [flags] sommelier pick --body JSON
-body JSON: 
+	fmt.Fprintf(os.Stderr, `%s [flags] sommelier pick -body JSON
+
+Pick implements pick.
+    -body JSON: 
+
+Example:
+    `+os.Args[0]+` [globalflags] sommelier pick --body '{
+      "name": "Blue\'s Cuvee",
+      "varietal": [
+         "pinot noir",
+         "merlot",
+         "cabernet franc"
+      ],
+      "winery": "longoria"
+   }'
 `, os.Args[0])
 }
 
@@ -229,32 +240,69 @@ Additional help:
 `, os.Args[0], os.Args[0])
 }
 func storageListUsage() {
-	fmt.Fprintf(os.Stderr, `List all stored bottles
-Usage:
-    %s [flags] storage list
+	fmt.Fprintf(os.Stderr, `%s [flags] storage list
+
+List all stored bottles
+
+Example:
+    `+os.Args[0]+` [globalflags] storage list
 `, os.Args[0])
 }
 
 func storageShowUsage() {
-	fmt.Fprintf(os.Stderr, `Show bottle by ID
-Usage:
-    %s [flags] storage show --id STRING
-id STRING: ID of bottle to show
+	fmt.Fprintf(os.Stderr, `%s [flags] storage show -id STRING
+
+Show bottle by ID
+    -id STRING: ID of bottle to show
+
+Example:
+    `+os.Args[0]+` [globalflags] storage show --id "Est explicabo eveniet dolore."
 `, os.Args[0])
 }
 
 func storageAddUsage() {
-	fmt.Fprintf(os.Stderr, `Add new bottle and return its ID.
-Usage:
-    %s [flags] storage add --body JSON
-body JSON: 
+	fmt.Fprintf(os.Stderr, `%s [flags] storage add -body JSON
+
+Add new bottle and return its ID.
+    -body JSON: 
+
+Example:
+    `+os.Args[0]+` [globalflags] storage add --body '{
+      "composition": [
+         {
+            "percentage": 67,
+            "varietal": "Syrah"
+         },
+         {
+            "percentage": 67,
+            "varietal": "Syrah"
+         },
+         {
+            "percentage": 67,
+            "varietal": "Syrah"
+         }
+      ],
+      "description": "Red wine blend with an emphasis on the Cabernet Franc grape and including other Bordeaux grape varietals and some Syrah",
+      "name": "Blue\'s Cuvee",
+      "rating": 3,
+      "vintage": 1905,
+      "winery": {
+         "country": "USA",
+         "name": "Longoria",
+         "region": "Central Coast, California",
+         "url": "http://www.longoriawine.com/"
+      }
+   }'
 `, os.Args[0])
 }
 
 func storageRemoveUsage() {
-	fmt.Fprintf(os.Stderr, `Remove bottle from storage
-Usage:
-    %s [flags] storage remove --id STRING
-id STRING: ID of bottle to remove
+	fmt.Fprintf(os.Stderr, `%s [flags] storage remove -id STRING
+
+Remove bottle from storage
+    -id STRING: ID of bottle to remove
+
+Example:
+    `+os.Args[0]+` [globalflags] storage remove --id "Consequuntur recusandae."
 `, os.Args[0])
 }

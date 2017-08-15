@@ -12,10 +12,10 @@ import (
 
 	"github.com/boltdb/bolt"
 
-	"goa.design/goa.v2"
-	"goa.design/goa.v2/examples/cellar"
-	somsvr "goa.design/goa.v2/examples/cellar/gen/http/sommelier/server"
-	stgsvr "goa.design/goa.v2/examples/cellar/gen/http/storage/server"
+	goa "goa.design/goa.v2"
+	cellar "goa.design/goa.v2/examples/cellar"
+	sommeliersvr "goa.design/goa.v2/examples/cellar/gen/http/sommelier/server"
+	storagesvr "goa.design/goa.v2/examples/cellar/gen/http/storage/server"
 	"goa.design/goa.v2/examples/cellar/gen/sommelier"
 	"goa.design/goa.v2/examples/cellar/gen/storage"
 	goahttp "goa.design/goa.v2/http"
@@ -60,27 +60,28 @@ func main() {
 
 	// Create the structs that implement the services.
 	var (
-		stg storage.Service
-		som sommelier.Service
+		sommeliers sommelier.Service
+		storages   storage.Service
 	)
 	{
+
 		var err error
-		stg, err = service.NewStorage(db, logger)
+		storages, err = cellar.NewStorage(db, logger)
 		if err != nil {
 			logger.Fatalf("error creating database: %s", err)
 		}
-		som = service.NewSommelier(logger)
+		sommeliers = cellar.NewSommelier(logger)
 	}
 
 	// Wrap the services in endpoints that can be invoked from other
 	// services potentially running in different processes.
 	var (
-		stge *storage.Endpoints
-		some *sommelier.Endpoints
+		sommeliere *sommelier.Endpoints
+		storagee   *storage.Endpoints
 	)
 	{
-		stge = storage.NewEndpoints(stg)
-		some = sommelier.NewEndpoints(som)
+		sommeliere = sommelier.NewEndpoints(sommeliers)
+		storagee = storage.NewEndpoints(storages)
 	}
 
 	// Provide the transport specific request decoder and response encoder.
@@ -104,17 +105,17 @@ func main() {
 	// the service input and output data structures to HTTP requests and
 	// responses.
 	var (
-		stgs *stgsvr.Server
-		soms *somsvr.Server
+		sommeliersv *sommeliersvr.Server
+		storagesv   *storagesvr.Server
 	)
 	{
-		stgs = stgsvr.New(stge, mux, dec, enc)
-		soms = somsvr.New(some, mux, dec, enc)
+		sommeliersv = sommeliersvr.New(sommeliere, mux, dec, enc)
+		storagesv = storagesvr.New(storagee, mux, dec, enc)
 	}
 
 	// Configure the mux.
-	stgsvr.Mount(mux, stgs)
-	somsvr.Mount(mux, soms)
+	sommeliersvr.Mount(mux, sommeliersv)
+	storagesvr.Mount(mux, storagesv)
 
 	// Wrap the multiplexer with additional middlewares. Middlewares mounted
 	// here apply to all the service endpoints.
@@ -149,8 +150,8 @@ func main() {
 	// Wait for signal.
 	logger.Print("exiting", <-errc)
 
-	// Shutdown gracefully, but wait no longer than 5 seconds before halting.
-	ctx, _ := context.WithTimeout(context.Background(), 5*time.Second)
+	// Shutdown gracefully with a 30s timeout.
+	ctx, _ := context.WithTimeout(context.Background(), 30*time.Second)
 	srv.Shutdown(ctx)
 
 	logger.Println("exited")

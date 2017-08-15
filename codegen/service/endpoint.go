@@ -41,7 +41,7 @@ var endpointTmpl = template.Must(template.New("endpoint").Parse(endpointT))
 
 // EndpointFile returns the endpoint file for the given service.
 func EndpointFile(service *design.ServiceExpr) codegen.File {
-	path := filepath.Join(codegen.KebabCase(service.Name), "endpoints.go")
+	path := filepath.Join(codegen.Gendir, codegen.KebabCase(service.Name), "endpoints.go")
 	sections := func(genPkg string) []*codegen.Section {
 		var (
 			data *EndpointData
