@@ -35,7 +35,7 @@ func BuildBottle(storageAddBody string) (*storage.Bottle, error) {
 	{
 		err := json.Unmarshal([]byte(storageAddBody), &body)
 		if err != nil {
-			return nil, fmt.Errorf("invalid JSON for body, example of valid JSON:\n%s", "{\"composition\":[{\"percentage\":67,\"varietal\":\"Syrah\"},{\"percentage\":67,\"varietal\":\"Syrah\"},{\"percentage\":67,\"varietal\":\"Syrah\"}],\"description\":\"Red wine blend with an emphasis on the Cabernet Franc grape and including other Bordeaux grape varietals and some Syrah\",\"name\":\"Blue's Cuvee\",\"rating\":3,\"vintage\":1905,\"winery\":{\"country\":\"USA\",\"name\":\"Longoria\",\"region\":\"Central Coast, California\",\"url\":\"http://www.longoriawine.com/\"}}")
+			return nil, fmt.Errorf("invalid JSON for body, example of valid JSON:\n%s", "'{\n      \"composition\": [\n         {\n            \"percentage\": 67,\n            \"varietal\": \"Syrah\"\n         },\n         {\n            \"percentage\": 67,\n            \"varietal\": \"Syrah\"\n         },\n         {\n            \"percentage\": 67,\n            \"varietal\": \"Syrah\"\n         }\n      ],\n      \"description\": \"Red wine blend with an emphasis on the Cabernet Franc grape and including other Bordeaux grape varietals and some Syrah\",\n      \"name\": \"Blue\\'s Cuvee\",\n      \"rating\": 3,\n      \"vintage\": 1905,\n      \"winery\": {\n         \"country\": \"USA\",\n         \"name\": \"Longoria\",\n         \"region\": \"Central Coast, California\",\n         \"url\": \"http://www.longoriawine.com/\"\n      }\n   }'")
 		}
 		if body.Winery == nil {
 			err = goa.MergeErrors(err, goa.MissingFieldError("winery", "body"))

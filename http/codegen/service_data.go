@@ -73,6 +73,8 @@ type (
 		// ServiceVarName is the goified name of the service exposing
 		// the endpoint.
 		ServiceVarName string
+		// ServicePkgName is the name of the service package.
+		ServicePkgName string
 		// Payload describes the method payload transport.
 		Payload *PayloadData
 		// Result describes the method result transport.
@@ -490,6 +492,7 @@ func (d ServicesData) analyze(hs *httpdesign.ServiceExpr) *ServiceData {
 			Method:          ep,
 			ServiceName:     svc.Name,
 			ServiceVarName:  codegen.Goify(svc.Name, true),
+			ServicePkgName:  svc.PkgName,
 			Payload:         buildPayloadData(svc, hs, a, rd),
 			Result:          buildResultData(svc, hs, a, rd),
 			Errors:          buildErrorsData(svc, hs, a, rd),

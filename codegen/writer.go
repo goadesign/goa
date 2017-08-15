@@ -42,8 +42,8 @@ type (
 )
 
 // Write generates the file produced by the given file writer.
-func (w *Writer) Write(dir string, file File) error {
-	base, err := filepath.Abs(filepath.Join(w.Dir, dir))
+func (w *Writer) Write(file File) error {
+	base, err := filepath.Abs(w.Dir)
 	if err != nil {
 		return err
 	}
@@ -64,7 +64,7 @@ func (w *Writer) Write(dir string, file File) error {
 	if err := os.MkdirAll(filepath.Dir(path), 0755); err != nil {
 		return err
 	}
-	genPkg, err := build.ImportDir(base, build.FindOnly)
+	genPkg, err := build.ImportDir(filepath.Join(base, "gen"), build.FindOnly)
 	if err != nil {
 		return err
 	}

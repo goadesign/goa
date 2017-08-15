@@ -16,6 +16,11 @@ import (
 	"golang.org/x/tools/imports"
 )
 
+// Gendir is the name of the subdirectory of the output directory that contains
+// the generated files. This directory is wiped and re-written each time goa is
+// run.
+const Gendir = "gen"
+
 type (
 	// SourceFile represents a single Go source file. It implements File.
 	SourceFile struct {

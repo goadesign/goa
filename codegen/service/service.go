@@ -19,14 +19,14 @@ var (
 
 // File returns the service file for the given service.
 func File(service *design.ServiceExpr) codegen.File {
-	path := filepath.Join(codegen.KebabCase(service.Name), "service.go")
+	path := filepath.Join(codegen.Gendir, codegen.KebabCase(service.Name), "service.go")
 	sections := func(genPkg string) []*codegen.Section {
-
-		header := codegen.Header(service.Name+" service", codegen.Goify(service.Name, false),
+		header := codegen.Header(
+			service.Name+" service",
+			codegen.Goify(service.Name, false),
 			[]*codegen.ImportSpec{
 				{Path: "context"},
 			})
-
 		svc := Services.Get(service.Name)
 		def := &codegen.Section{
 			Template: serviceTmpl,

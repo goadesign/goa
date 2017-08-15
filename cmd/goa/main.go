@@ -26,11 +26,11 @@ func main() {
 		case "version":
 			fmt.Println("goa version " + pkg.Version())
 			os.Exit(0)
-		case "gen":
+		case "gen", "example":
 			if len(os.Args) == 2 {
 				usage()
 			}
-			cmds = []string{"gen"}
+			cmds = []string{os.Args[1]}
 			path = os.Args[2]
 			offset = 2
 		default:
@@ -112,11 +112,14 @@ Learn more at https://goa.design.
 
 Usage:
   goa gen PACKAGE [--out DIRECTORY] [--debug]
+  goa example PACKAGE [--out DIRECTORY] [--debug]
   goa version
 
 Commands:
   gen
         Generate service interfaces, endpoints, transport code and OpenAPI spec.
+  example
+        Generate example server and client tool.
   version
         Print version information (exclusive with other flags and commands).
 

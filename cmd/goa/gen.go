@@ -65,7 +65,8 @@ func (g *Generator) Write(debug bool) error {
 	var sections []*codegen.Section
 	{
 		data := map[string]interface{}{
-			"Generators": generators(g.Commands),
+			"Generators":  generators(g.Commands),
+			"CleanupDirs": g.cleanupDirs(g.Commands),
 		}
 		imports := []*codegen.ImportSpec{
 			codegen.SimpleImport("flag"),
@@ -105,7 +106,7 @@ func (g *Generator) Write(debug bool) error {
 		}
 	}
 
-	return w.Write(".", s)
+	return w.Write(s)
 }
 
 // Compile compiles the generator.
@@ -148,8 +149,7 @@ func (g *Generator) Run() ([]string, error) {
 		}
 		cmdl = " " + strings.Join(args, " ")
 		rawcmd := filepath.Base(os.Args[0])
-		// Remove possible .exe suffix to not create different ouptut just because
-		// you ran goa on Windows.
+		// Remove .exe suffix to avoid different output on Windows.
 		rawcmd = strings.TrimSuffix(rawcmd, ".exe")
 
 		cmdl = fmt.Sprintf("$ %s%s", rawcmd, cmdl)
@@ -176,6 +176,19 @@ func (g *Generator) Remove() {
 	}
 }
 
+// cleanupDirs returns the names of the directories to delete before generating
+// code.
+func (g *Generator) cleanupDirs(commands []string) []string {
+	var dirs []string
+	for _, c := range commands {
+		switch c {
+		case "gen":
+			dirs = []string{filepath.Join(g.Output, "gen")}
+		}
+	}
+	return dirs
+}
+
 // generators returns the names of the generator functions exposed by the
 // generator package for the given commands.
 func generators(commands []string) []string {
@@ -184,6 +197,8 @@ func generators(commands []string) []string {
 		switch c {
 		case "gen":
 			gens = append(gens, "Service", "Transport", "OpenAPI")
+		case "example":
+			gens = append(gens, "Example")
 		default:
 			panic("unknown command " + c) // bug
 		}
@@ -238,21 +253,8 @@ const mainTmpl = `func main() {
 			fail(err.Error())
 		}
 		genfiles = append(genfiles, fs...)
-
-		// Delete previously generated directories
-		dirs := make(map[string]bool)
-		for _, f := range genfiles {
-			dirs[filepath.Dir(filepath.Join("gen", f.OutputPath()))] = true
-		}
-		for d := range dirs {
-			if _, err := os.Stat(d); err == nil {
-				if err := os.RemoveAll(d); err != nil {
-					fail(err.Error())	
-				}
-			}
-		}
 	}
-{{ end }}
+{{- end }}
 
 	var w *codegen.Writer
 	{
@@ -261,8 +263,13 @@ const mainTmpl = `func main() {
 			Files: make(map[string]bool),
 		}
 	}
+{{- range .CleanupDirs }}
+	if err := os.RemoveAll({{ printf "%q" . }}); err != nil {
+		fail(err.Error())
+	}
+{{- end }}
 	for _, f := range genfiles {
-		if err := w.Write("gen", f); err != nil {
+		if err := w.Write(f); err != nil {
 			fail(err.Error())
 		}
 	}
