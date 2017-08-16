@@ -16,7 +16,7 @@ func Example(roots ...eval.Root) ([]codegen.File, error) {
 	for _, root := range roots {
 		if r, ok := root.(*httpdesign.RootExpr); ok {
 			files = httpcodegen.ExampleServerFiles(r)
-			// files = append(files, httpcodegen.ExampleCLI(r))
+			files = append(files, httpcodegen.ExampleCLI(r))
 			break
 		}
 	}

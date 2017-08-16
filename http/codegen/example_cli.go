@@ -1,25 +1,49 @@
-package main
+package codegen
 
 import (
-	"context"
-	"encoding/json"
-	"flag"
-	"fmt"
-	"net/http"
-	"net/url"
-	"os"
-	"strings"
-	"time"
+	"path/filepath"
+	"text/template"
 
-	"goa.design/goa.v2/examples/cellar/gen/http/cli"
-	goahttp "goa.design/goa.v2/http"
+	"goa.design/goa.v2/codegen"
+	httpdesign "goa.design/goa.v2/http/design"
 )
 
-func main() {
+// ExampleCLI returns an example client tool main implementation.
+func ExampleCLI(root *httpdesign.RootExpr) codegen.File {
+	path := filepath.Join("cmd", codegen.SnakeCase(root.Design.API.Name)+"cli", "main.go")
+	sections := func(genPkg string) []*codegen.Section {
+		specs := []*codegen.ImportSpec{
+			{Path: "context"},
+			{Path: "encoding/json"},
+			{Path: "flag"},
+			{Path: "fmt"},
+			{Path: "net/http"},
+			{Path: "net/url"},
+			{Path: "os"},
+			{Path: "strings"},
+			{Path: "time"},
+			{Path: "goa.design/goa.v2/http", Name: "goahttp"},
+			{Path: genPkg + "/http/cli"},
+		}
+		s := []*codegen.Section{
+			codegen.Header("", "main", specs),
+			&codegen.Section{Template: mainCLITmpl, Data: root},
+		}
+
+		return s
+	}
+
+	return codegen.NewSource(path, sections)
+}
+
+var mainCLITmpl = template.Must(template.New("cli-main").Parse(mainCLIT))
+
+// input: map[string]interface{}{"Services":[]ServiceData, "APIPkg": string}
+const mainCLIT = `func main() {
 	var (
-		addr    = flag.String("url", "http://localhost:8080", "`URL` to service host")
+		addr    = flag.String("url", "http://localhost:8080", "` + "`" + `URL` + "`" + ` to service host")
 		verbose = flag.Bool("verbose", false, "Print request and response details")
-		timeout = flag.Int("timeout", 30, "Maximum number of `seconds` to wait for response")
+		timeout = flag.Int("timeout", 30, "Maximum number of ` + "`" + `seconds` + "`" + ` to wait for response")
 	)
 	flag.Usage = usage
 	flag.Parse()
@@ -86,7 +110,7 @@ func main() {
 }
 
 func usage() {
-	fmt.Fprintf(os.Stderr, `%s is a command line client for the cellar API.
+	fmt.Fprintf(os.Stderr, ` + "`" + `%s is a command line client for the {{ .Design.API.Name }} API.
 
 Usage:
     %s [-url URL][-timeout SECONDS][-verbose] SERVICE ENDPOINT [flags]
@@ -102,7 +126,7 @@ Additional help:
 
 Example:
 %s
-`, os.Args[0], os.Args[0], indent(cli.UsageCommands()), os.Args[0], indent(cli.UsageExamples()))
+` + "`" + `, os.Args[0], os.Args[0], indent(cli.UsageCommands()), os.Args[0], indent(cli.UsageExamples()))
 }
 
 func indent(s string) string {
@@ -111,3 +135,4 @@ func indent(s string) string {
 	}
 	return "    " + strings.Replace(s, "\n", "\n    ", -1)
 }
+`
