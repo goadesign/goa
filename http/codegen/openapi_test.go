@@ -99,7 +99,7 @@ func TestOutputPath(t *testing.T) {
 	if err != nil {
 		t.Fatalf("OpenAPI failed with %s", err)
 	}
-	if o.OutputPath() != "http/openapi.json" {
+	if o.OutputPath() != "gen/http/openapi.json" {
 		t.Errorf("invalid output path %#v", o.OutputPath())
 	}
 }

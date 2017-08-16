@@ -382,7 +382,7 @@ func BuildMethodMultiSimplePayloadPayload(serviceMultiSimple1MethodMultiSimplePa
 	{
 		err := json.Unmarshal([]byte(serviceMultiSimple1MethodMultiSimplePayloadBody), &body)
 		if err != nil {
-			return nil, fmt.Errorf("invalid JSON for body, example of valid JSON:\n%s", "{\"a\":false}")
+			return nil, fmt.Errorf("invalid JSON for body, example of valid JSON:\n%s", "'{\n      \"a\": false\n   }'")
 		}
 	}
 	v := &servicemultisimple1.MethodMultiSimplePayloadPayload{
@@ -400,7 +400,7 @@ func BuildMethodMultiPayloadPayload(serviceMultiMethodMultiPayloadBody string, s
 	{
 		err := json.Unmarshal([]byte(serviceMultiMethodMultiPayloadBody), &body)
 		if err != nil {
-			return nil, fmt.Errorf("invalid JSON for body, example of valid JSON:\n%s", "{\"c\":{\"att\":false,\"att10\":\"Aspernatur quo error explicabo pariatur.\",\"att11\":\"Q3VtcXVlIHZvbHVwdGF0ZW0u\",\"att12\":\"Distinctio aliquam nihil blanditiis ut.\",\"att13\":[\"Nihil excepturi deserunt quasi omnis sed.\",\"Sit maiores aperiam autem non ea rem.\"],\"att14\":{\"Excepturi totam.\":\"Ut aut facilis vel ipsam.\",\"Minima et aut non sunt consequuntur.\":\"Et consequuntur porro quasi.\",\"Quis voluptates quaerat et temporibus facere.\":\"Ipsam eaque sunt maxime suscipit.\"},\"att15\":{\"inline\":\"Ea alias repellat nobis veritatis.\"},\"att2\":3504438334001971349,\"att3\":2005839040,\"att4\":5845720715558772393,\"att5\":2900634008447043830,\"att6\":1865618013,\"att7\":1484745265794365762,\"att8\":0.11815318,\"att9\":0.30907290919538355}}")
+			return nil, fmt.Errorf("invalid JSON for body, example of valid JSON:\n%s", "'{\n      \"c\": {\n         \"att\": false,\n         \"att10\": \"Aspernatur quo error explicabo pariatur.\",\n         \"att11\": \"Q3VtcXVlIHZvbHVwdGF0ZW0u\",\n         \"att12\": \"Distinctio aliquam nihil blanditiis ut.\",\n         \"att13\": [\n            \"Nihil excepturi deserunt quasi omnis sed.\",\n            \"Sit maiores aperiam autem non ea rem.\"\n         ],\n         \"att14\": {\n            \"Excepturi totam.\": \"Ut aut facilis vel ipsam.\",\n            \"Minima et aut non sunt consequuntur.\": \"Et consequuntur porro quasi.\",\n            \"Quis voluptates quaerat et temporibus facere.\": \"Ipsam eaque sunt maxime suscipit.\"\n         },\n         \"att15\": {\n            \"inline\": \"Ea alias repellat nobis veritatis.\"\n         },\n         \"att2\": 3504438334001971349,\n         \"att3\": 2005839040,\n         \"att4\": 5845720715558772393,\n         \"att5\": 2900634008447043830,\n         \"att6\": 1865618013,\n         \"att7\": 1484745265794365762,\n         \"att8\": 0.11815318,\n         \"att9\": 0.30907290919538355\n      }\n   }'")
 		}
 	}
 	var b *string
