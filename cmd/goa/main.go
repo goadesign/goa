@@ -13,7 +13,7 @@ import (
 
 func main() {
 	var (
-		cmds   []string
+		cmd    string
 		path   string
 		offset int
 	)
@@ -30,7 +30,7 @@ func main() {
 			if len(os.Args) == 2 {
 				usage()
 			}
-			cmds = []string{os.Args[1]}
+			cmd = os.Args[1]
 			path = os.Args[2]
 			offset = 2
 		default:
@@ -59,7 +59,7 @@ func main() {
 		}
 	}
 
-	gen(cmds, path, output, debug)
+	gen(cmd, path, output, debug)
 }
 
 // help with tests
@@ -68,7 +68,7 @@ var (
 	gen   = generate
 )
 
-func generate(cmds []string, path, output string, debug bool) {
+func generate(cmd, path, output string, debug bool) {
 	var (
 		files []string
 		err   error
@@ -79,7 +79,7 @@ func generate(cmds []string, path, output string, debug bool) {
 		goto fail
 	}
 
-	tmp = NewGenerator(cmds, path, output)
+	tmp = NewGenerator(cmd, path, output)
 	if !debug {
 		defer tmp.Remove()
 	}

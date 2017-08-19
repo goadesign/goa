@@ -65,8 +65,9 @@ type (
 	// Note: not a map because order matters.
 	Object []*NamedAttributeExpr
 
-	// UserType is the interface implemented by all user type implementations.
-	// Plugins may leverage this interface to introduce their own types.
+	// UserType is the interface implemented by all user type
+	// implementations. Plugins may leverage this interface to introduce
+	// their own types.
 	UserType interface {
 		DataType
 		// Rename changes the type name to the given value.
@@ -120,7 +121,8 @@ const (
 	ArrayKind
 	// ObjectKind represents a JSON object.
 	ObjectKind
-	// MapKind represents a JSON object where the keys are not known in advance.
+	// MapKind represents a JSON object where the keys are not known in
+	// advance.
 	MapKind
 	// UserTypeKind represents a user type.
 	UserTypeKind
@@ -246,6 +248,84 @@ func IsPrimitive(dt DataType) bool {
 	}
 }
 
+// Equal compares the types recursively and returns true if they are equal. Two
+// types are equal if:
+//
+//    - both types have the same kind
+//    - array types have elements whose types are equal
+//    - map types have keys and elements whose types are equal
+//    - objects have the same attribute names and the attribute types are equal
+//
+// Note: calling Equal is not equivalent to evaluation dt.Hash() == dt2.Hash()
+// as the former may return true for two user types with different names and
+// thus with different hash values.
+func Equal(dt, dt2 DataType) bool {
+	bs := *equal(dt, dt2)
+	for _, b := range bs {
+		if !*b {
+			return false
+		}
+	}
+	return true
+}
+
+// Support recursive types by doing lazy evaluation.
+func equal(dt, dt2 DataType, seen ...map[string]*[]*bool) *[]*bool {
+	f := false
+	fs := []*bool{&f}
+	if dt.Kind() != dt2.Kind() {
+		return &fs
+	}
+	var s map[string]*[]*bool
+	if len(seen) > 0 {
+		s = seen[0]
+	} else {
+		s = make(map[string]*[]*bool)
+	}
+	switch actual := dt.(type) {
+	case *Array:
+		return equal(actual.ElemType.Type, AsArray(dt2).ElemType.Type, s)
+	case *Map:
+		s1 := equal(actual.ElemType.Type, AsMap(dt2).ElemType.Type, s)
+		s2 := equal(actual.KeyType.Type, AsMap(dt2).KeyType.Type, s)
+		s3 := append(*s1, *s2...)
+		return &s3
+	case *Object:
+		if len(*actual) != len(*AsObject(dt2)) {
+			return &fs
+		}
+		var bs []*bool
+		for _, nat := range *actual {
+			obj := AsObject(dt2)
+			at := obj.Attribute(nat.Name)
+			if at == nil {
+				return &fs
+			}
+			bs = append(bs, (*equal(nat.Attribute.Type, at.Type, s))...)
+		}
+		return &bs
+	case UserType:
+		key := actual.Name() + "=" + dt2.Name()
+		if v, ok := s[key]; ok {
+			return v
+		}
+		var res []*bool
+		pres := &res
+		s[key] = pres
+		if IsObject(actual) {
+			*pres = *equal(AsObject(dt), AsObject(dt2), s)
+		} else {
+			// User types can also be arrays (CollectionOf)
+			*pres = *equal(AsArray(dt), AsArray(dt2), s)
+		}
+		return pres
+	}
+
+	t := true
+	ts := []*bool{&t}
+	return &ts
+}
+
 // DataType implementation
 
 // Kind implements DataKind.
@@ -366,7 +446,8 @@ func (a *Array) IsCompatible(val interface{}) bool {
 	return true
 }
 
-// Example generates a pseudo-random array value using the given random generator.
+// Example generates a pseudo-random array value using the given random
+// generator.
 func (a *Array) Example(r *Random) interface{} {
 	count := r.Int()%3 + 2
 	res := make([]interface{}, count)
@@ -376,8 +457,9 @@ func (a *Array) Example(r *Random) interface{} {
 	return a.MakeSlice(res)
 }
 
-// MakeSlice examines the key type from the Array and create a slice with builtin type if possible.
-// The idea is to avoid generating []interface{} and produce more precise types.
+// MakeSlice examines the key type from the Array and create a slice with
+// builtin type if possible. The idea is to avoid generating []interface{} and
+// produce more precise types.
 func (a *Array) MakeSlice(s []interface{}) interface{} {
 	slice := reflect.MakeSlice(toReflectType(a), 0, len(s))
 	for _, item := range s {
@@ -541,9 +623,9 @@ func (m *Map) Example(r *Random) interface{} {
 	return m.MakeMap(pair)
 }
 
-// MakeMap examines the key type from a Map and create a map with builtin type if possible.
-// The idea is to avoid generating map[interface{}]interface{}, which cannot be handled by
-// json.Marshal.
+// MakeMap examines the key type from a Map and create a map with builtin type
+// if possible. The idea is to avoid generating map[interface{}]interface{},
+// which cannot be handled by json.Marshal.
 func (m *Map) MakeMap(raw map[interface{}]interface{}) interface{} {
 	ma := reflect.MakeMap(toReflectType(m))
 	for key, value := range raw {
@@ -568,13 +650,14 @@ func (m MapVal) ToMap() map[interface{}]interface{} {
 	return mp
 }
 
-// QualifiedTypeName returns the qualified type name for the given data type. The qualified type
-// name includes the name of the type of the elements of array or map types.
-// This is useful in reporting types in error messages, examples of qualified type names:
+// QualifiedTypeName returns the qualified type name for the given data type.
+// The qualified type name includes the name of the type of the elements of
+// array or map types. This is useful in reporting types in error messages,
+// examples of qualified type names:
 //
-//     array<string>
-//     map<string, string>
-//     map<string, array<int32>>
+//     "array<string>"
+//     "map<string, string>"
+//     "map<string, array<int32>>"
 //
 func QualifiedTypeName(t DataType) string {
 	switch t.Kind() {

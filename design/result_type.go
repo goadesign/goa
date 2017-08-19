@@ -268,26 +268,11 @@ func projectSingle(m *ResultTypeExpr, view string) (*ResultTypeExpr, error) {
 	mtObj := m.Type.(*Object)
 	for _, nat := range *viewObj {
 		if at := mtObj.Attribute(nat.Name); at != nil {
-			at = DupAtt(at)
-			if mt, ok := at.Type.(*ResultTypeExpr); ok {
-				vatt := viewObj.Attribute(nat.Name)
-				var view string
-				if len(vatt.Metadata["view"]) > 0 {
-					view = vatt.Metadata["view"][0]
-				}
-				if view == "" && len(at.Metadata["view"]) > 0 {
-					view = at.Metadata["view"][0]
-				}
-				if view == "" {
-					view = DefaultView
-				}
-				pr, err := Project(mt, view)
-				if err != nil {
-					return nil, fmt.Errorf("view %#v on field %#v cannot be computed: %s", view, nat.Name, err)
-				}
-				at.Type = pr
+			pat, err := projectRecursive(at, nat, view)
+			if err != nil {
+				return nil, err
 			}
-			projectedObj.Set(nat.Name, at)
+			projectedObj.Set(nat.Name, pat)
 		}
 	}
 	return projected, nil
@@ -328,6 +313,61 @@ func projectCollection(m *ResultTypeExpr, view string) (*ResultTypeExpr, error) 
 	}
 
 	return proj, nil
+}
+
+func projectRecursive(at *AttributeExpr, vat *NamedAttributeExpr, view string) (*AttributeExpr, error) {
+	at = DupAtt(at)
+	if rt, ok := at.Type.(*ResultTypeExpr); ok {
+		vatt := vat.Attribute
+		var view string
+		if len(vatt.Metadata["view"]) > 0 {
+			view = vatt.Metadata["view"][0]
+		}
+		if view == "" && len(at.Metadata["view"]) > 0 {
+			view = at.Metadata["view"][0]
+		}
+		if view == "" {
+			view = DefaultView
+		}
+		pr, err := Project(rt, view)
+		if err != nil {
+			return nil, fmt.Errorf("view %#v on field %#v cannot be computed: %s", view, vat.Name, err)
+		}
+		at.Type = pr
+		return at, nil
+	}
+	if obj := AsObject(at.Type); obj != nil {
+		vobj := AsObject(vat.Attribute.Type)
+		if vobj == nil {
+			return at, nil
+		}
+		for _, cnat := range *obj {
+			var cvnat *NamedAttributeExpr
+			for _, nnat := range *vobj {
+				if nnat.Name == cnat.Name {
+					cvnat = nnat
+					break
+				}
+			}
+			if cvnat == nil {
+				continue
+			}
+			pat, err := projectRecursive(cnat.Attribute, cvnat, view)
+			if err != nil {
+				return nil, err
+			}
+			cnat.Attribute = pat
+		}
+		return at, nil
+	}
+	if ar := AsArray(at.Type); ar != nil {
+		pat, err := projectRecursive(ar.ElemType, vat, view)
+		if err != nil {
+			return nil, err
+		}
+		ar.ElemType = pat
+	}
+	return at, nil
 }
 
 // projectIdentifier computes the projected result type identifier by adding the

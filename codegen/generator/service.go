@@ -12,7 +12,7 @@ import (
 // Service iterates through the roots and returns the files needed to render the
 // service code. It returns an error if the roots slice does not include a goa
 // design.
-func Service(roots ...eval.Root) ([]codegen.File, error) {
+func Service(roots []eval.Root) ([]codegen.File, error) {
 	var files []codegen.File
 	for _, root := range roots {
 		switch r := root.(type) {
