@@ -11,7 +11,7 @@ import (
 
 // Example iterates through the roots and returns files that implement an
 // example service and client.
-func Example(roots ...eval.Root) ([]codegen.File, error) {
+func Example(roots []eval.Root) ([]codegen.File, error) {
 	var files []codegen.File
 	for _, root := range roots {
 		if r, ok := root.(*httpdesign.RootExpr); ok {

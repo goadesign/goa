@@ -16,8 +16,8 @@ import (
 
 // Generator is the code generation management data structure.
 type Generator struct {
-	// Commands is the set of generators to execute.
-	Commands []string
+	// Command is the name of the command to run.
+	Command string
 
 	// DesignPath is the Go import path to the design package.
 	DesignPath string
@@ -33,13 +33,13 @@ type Generator struct {
 }
 
 // NewGenerator creates a Generator.
-func NewGenerator(cmds []string, path, output string) *Generator {
+func NewGenerator(cmd string, path, output string) *Generator {
 	bin := "goa"
 	if runtime.GOOS == "windows" {
 		bin += ".exe"
 	}
 	return &Generator{
-		Commands:   cmds,
+		Command:    cmd,
 		DesignPath: path,
 		Output:     output,
 		bin:        bin,
@@ -65,8 +65,8 @@ func (g *Generator) Write(debug bool) error {
 	var sections []*codegen.Section
 	{
 		data := map[string]interface{}{
-			"Generators":  generators(g.Commands),
-			"CleanupDirs": g.cleanupDirs(g.Commands),
+			"Command":     g.Command,
+			"CleanupDirs": cleanupDirs(g.Command, g.Output),
 		}
 		imports := []*codegen.ImportSpec{
 			codegen.SimpleImport("flag"),
@@ -178,32 +178,11 @@ func (g *Generator) Remove() {
 
 // cleanupDirs returns the names of the directories to delete before generating
 // code.
-func (g *Generator) cleanupDirs(commands []string) []string {
-	var dirs []string
-	for _, c := range commands {
-		switch c {
-		case "gen":
-			dirs = []string{filepath.Join(g.Output, "gen")}
-		}
+func cleanupDirs(cmd, output string) []string {
+	if cmd == "gen" {
+		return []string{filepath.Join(output, "gen")}
 	}
-	return dirs
-}
-
-// generators returns the names of the generator functions exposed by the
-// generator package for the given commands.
-func generators(commands []string) []string {
-	var gens []string
-	for _, c := range commands {
-		switch c {
-		case "gen":
-			gens = append(gens, "Service", "Transport", "OpenAPI")
-		case "example":
-			gens = append(gens, "Example")
-		default:
-			panic("unknown command " + c) // bug
-		}
-	}
-	return gens
+	return nil
 }
 
 // mainTmpl is the template for the generator main.
@@ -245,16 +224,23 @@ const mainTmpl = `func main() {
 		roots = rs
 	}
 
-	var genfiles []codegen.File
-{{- range .Generators }}
+	var gens []generator.Genfunc
 	{
-		fs, err := generator.{{ . }}(roots...)
+		gs, err := generator.Generators({{ printf "%q" .Command }})
+		if err != nil {
+			fail(err.Error())
+		}
+		gens = gs
+	}
+
+	var genfiles []codegen.File
+	for _, gen := range gens {
+		fs, err := gen(roots)
 		if err != nil {
 			fail(err.Error())
 		}
 		genfiles = append(genfiles, fs...)
 	}
-{{- end }}
 
 	var w *codegen.Writer
 	{

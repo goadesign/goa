@@ -13,36 +13,36 @@ func TestCmdLine(t *testing.T) {
 	)
 	var (
 		usageCalled  bool
-		cmds         []string
+		cmd          string
 		path, output string
 		debug        bool
 	)
 
 	usage = func() { usageCalled = true }
-	gen = func(c []string, p, o string, d bool) { cmds, path, output, debug = c, p, o, d }
+	gen = func(c string, p, o string, d bool) { cmd, path, output, debug = c, p, o, d }
 	defer func() {
 		usage = help
 		gen = generate
 	}()
 
 	cases := map[string]struct {
-		CmdLine          string
-		ExpectedUsage    bool
-		ExpectedCommands []string
-		ExpectedPath     string
-		ExpectedOutput   string
-		ExpectedDebug    bool
+		CmdLine         string
+		ExpectedUsage   bool
+		ExpectedCommand string
+		ExpectedPath    string
+		ExpectedOutput  string
+		ExpectedDebug   bool
 	}{
-		"gen": {"gen " + testPkg, false, []string{"gen"}, testPkg, ".", false},
+		"gen": {"gen " + testPkg, false, "gen", testPkg, ".", false},
 
-		"invalid":     {"invalid " + testPkg, true, nil, "", ".", false},
-		"empty":       {"", true, nil, "", ".", false},
-		"invalid gen": {"invalid gen" + testPkg, true, nil, "", ".", false},
+		"invalid":     {"invalid " + testPkg, true, "", "", ".", false},
+		"empty":       {"", true, "", "", ".", false},
+		"invalid gen": {"invalid gen" + testPkg, true, "", "", ".", false},
 
-		"output":       {"gen " + testPkg + " -output " + testOutput, false, []string{"gen"}, testPkg, testOutput, false},
-		"output short": {"gen " + testPkg + " -o " + testOutput, false, []string{"gen"}, testPkg, testOutput, false},
+		"output":       {"gen " + testPkg + " -output " + testOutput, false, "gen", testPkg, testOutput, false},
+		"output short": {"gen " + testPkg + " -o " + testOutput, false, "gen", testPkg, testOutput, false},
 
-		"debug": {"gen " + testPkg + " -debug", false, []string{"gen"}, testPkg, ".", true},
+		"debug": {"gen " + testPkg + " -debug", false, "gen", testPkg, ".", true},
 	}
 
 	for k, c := range cases {
@@ -50,7 +50,7 @@ func TestCmdLine(t *testing.T) {
 			args := strings.Split(c.CmdLine, " ")
 			os.Args = append([]string{"goa"}, args...)
 			usageCalled = false
-			cmds = nil
+			cmd = ""
 			path = ""
 			output = ""
 			debug = false
@@ -61,14 +61,8 @@ func TestCmdLine(t *testing.T) {
 		if usageCalled != c.ExpectedUsage {
 			t.Errorf("%s: Expected usage to be %v but got %v", k, c.ExpectedUsage, usageCalled)
 		}
-		if len(cmds) != len(c.ExpectedCommands) {
-			t.Errorf("%s: Expected %d commands but got %d: %s", k, len(c.ExpectedCommands), len(cmds), strings.Join(cmds, ", "))
-		} else {
-			for i, cmd := range cmds {
-				if cmd != c.ExpectedCommands[i] {
-					t.Errorf("%s: Expected command at index %d to be %s but got %s", k, i, c.ExpectedCommands[i], cmds[i])
-				}
-			}
+		if cmd != c.ExpectedCommand {
+			t.Errorf("%s: Expected command to be %s but got %s", k, c.ExpectedCommand, cmd)
 		}
 		if path != c.ExpectedPath {
 			t.Errorf("%s: Expected path to be %s but got %s", k, c.ExpectedPath, path)
