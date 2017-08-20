@@ -40,12 +40,17 @@ import (
 // You can define an optional function to do additional validations on the token once the signature
 // and the claims requirements are proven to be valid.  Example:
 //
-//    validationHandler, _ := goa.NewMiddleware(func(ctx context.Context, w http.ResponseWriter, r *http.Request) error {
-//        token := jwt.ContextJWT(ctx)
-//        if val, ok := token.Claims["is_uncle"].(string); !ok || val != "ben" {
-//            return jwt.ErrJWTError("you are not uncle ben's")
-//        }
-//    })
+//	validationHandler, _ := goa.NewMiddleware(func(ctx context.Context, w http.ResponseWriter, r *http.Request) error {
+//		token := jwt.ContextJWT(ctx)
+//		claims, ok := token.Claims.(jwtgo.MapClaims)
+//		if !ok {
+//			return jwt.ErrJWTError("unsupported claims shape")
+//		}
+//		if val, ok := claims["is_uncle"].(string); !ok || val != "ben" {
+//			return jwt.ErrJWTError("you are not uncle ben's")
+//		}
+//		return nil
+//	})
 //
 // Mount the middleware with the generated UseXX function where XX is the name of the scheme as
 // defined in the design, e.g.:
