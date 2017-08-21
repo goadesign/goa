@@ -727,7 +727,7 @@ func {{ .FullName }}Usage() {
 	{{- end }}
 
 Example:
-    ` + "`+os.Args[0]+" + "`" + ` [globalflags] {{ .Example }}
+    ` + "`+os.Args[0]+" + "`" + ` {{ .Example }}
 ` + "`" + `, os.Args[0])
 }
 {{ end }}

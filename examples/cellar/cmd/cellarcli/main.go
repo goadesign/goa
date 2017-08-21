@@ -19,6 +19,7 @@ func main() {
 	var (
 		addr    = flag.String("url", "http://localhost:8080", "`URL` to service host")
 		verbose = flag.Bool("verbose", false, "Print request and response details")
+		v       = flag.Bool("v", false, "Print request and response details")
 		timeout = flag.Int("timeout", 30, "Maximum number of `seconds` to wait for response")
 	)
 	flag.Usage = usage
@@ -46,7 +47,7 @@ func main() {
 	)
 	{
 		doer = &http.Client{Timeout: time.Duration(*timeout) * time.Second}
-		if *verbose {
+		if *verbose || *v {
 			doer = goahttp.NewDebugDoer(doer)
 		}
 	}
@@ -70,7 +71,7 @@ func main() {
 
 	data, err := endpoint(context.Background(), payload)
 
-	if *verbose {
+	if *verbose || *v {
 		doer.(goahttp.DebugDoer).Fprint(os.Stderr)
 	}
 
@@ -91,9 +92,9 @@ func usage() {
 Usage:
     %s [-url URL][-timeout SECONDS][-verbose] SERVICE ENDPOINT [flags]
 
-    -url URL: specify service URL (http://localhost:8080)
-    -timeout: Maximum number of seconds to wait for response (30)
-    -debug:   print debug details (false)
+    -url URL:    service URL (http://localhost:8080)
+    -timeout:    request timeout in seconds (30)
+    -verbose|-v: print debug details (false)
 
 Commands:
 %s

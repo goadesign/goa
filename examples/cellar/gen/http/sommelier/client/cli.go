@@ -30,8 +30,8 @@ func BuildCriteria(sommelierPickBody string) (*sommelier.Criteria, error) {
 	}
 	if body.Varietal != nil {
 		v.Varietal = make([]string, len(body.Varietal))
-		for i, val := range body.Varietal {
-			v.Varietal[i] = val
+		for j, val := range body.Varietal {
+			v.Varietal[j] = val
 		}
 	}
 

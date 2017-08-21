@@ -150,8 +150,8 @@ func NewAddRequestBody(p *storage.Bottle) *AddRequestBody {
 	body.Winery = wineryToWineryRequestBodyNoDefault(p.Winery)
 	if p.Composition != nil {
 		body.Composition = make([]*ComponentRequestBody, len(p.Composition))
-		for i, val := range p.Composition {
-			body.Composition[i] = &ComponentRequestBody{
+		for j, val := range p.Composition {
+			body.Composition[j] = &ComponentRequestBody{
 				Varietal:   val.Varietal,
 				Percentage: val.Percentage,
 			}
@@ -176,8 +176,8 @@ func NewListStoredBottleCollectionOK(body ListResponseBody) storage.StoredBottle
 		v[i].Winery = wineryResponseBodyToWinerySrcPtr(val.Winery)
 		if val.Composition != nil {
 			v[i].Composition = make([]*storage.Component, len(val.Composition))
-			for i, val := range val.Composition {
-				v[i].Composition[i] = &storage.Component{
+			for j, val := range val.Composition {
+				v[i].Composition[j] = &storage.Component{
 					Varietal:   *val.Varietal,
 					Percentage: val.Percentage,
 				}
@@ -200,8 +200,8 @@ func NewShowStoredBottleOK(body *ShowResponseBody) *storage.StoredBottle {
 	v.Winery = wineryToWinerySrcPtr(body.Winery)
 	if body.Composition != nil {
 		v.Composition = make([]*storage.Component, len(body.Composition))
-		for i, val := range body.Composition {
-			v.Composition[i] = &storage.Component{
+		for j, val := range body.Composition {
+			v.Composition[j] = &storage.Component{
 				Varietal:   *val.Varietal,
 				Percentage: val.Percentage,
 			}

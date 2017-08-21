@@ -125,6 +125,7 @@ func (dd *debugDoer) Fprint(w io.Writer) {
 		buf.Write(rb)
 	}
 	w.Write(buf.Bytes())
+	w.Write([]byte{'\n'})
 }
 
 // Error builds an error message.
