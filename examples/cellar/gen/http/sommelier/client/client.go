@@ -57,7 +57,11 @@ func (c *Client) Pick() goa.Endpoint {
 		decodeResponse = c.DecodePickResponse(c.decoder, c.RestoreResponseBody)
 	)
 	return func(ctx context.Context, v interface{}) (interface{}, error) {
-		req, err := encodeRequest(v)
+		req, err := c.BuildPickRequest()
+		if err != nil {
+			return nil, err
+		}
+		err = encodeRequest(req, v)
 		if err != nil {
 			return nil, err
 		}

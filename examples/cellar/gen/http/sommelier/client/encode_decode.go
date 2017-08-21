@@ -17,27 +17,31 @@ import (
 	goahttp "goa.design/goa.v2/http"
 )
 
+// BuildPickRequest instantiates a HTTP request object with method and path set
+// to call the sommelier pick endpoint.
+func (c *Client) BuildPickRequest() (*http.Request, error) {
+	u := &url.URL{Scheme: c.scheme, Host: c.host, Path: PickSommelierPath()}
+	req, err := http.NewRequest("POST", u.String(), nil)
+	if err != nil {
+		return nil, goahttp.ErrInvalidURL("sommelier", "pick", u.String(), err)
+	}
+
+	return req, nil
+}
+
 // EncodePickRequest returns an encoder for requests sent to the sommelier pick
 // server.
-func (c *Client) EncodePickRequest(encoder func(*http.Request) goahttp.Encoder) func(interface{}) (*http.Request, error) {
-	return func(v interface{}) (*http.Request, error) {
+func (c *Client) EncodePickRequest(encoder func(*http.Request) goahttp.Encoder) func(*http.Request, interface{}) error {
+	return func(req *http.Request, v interface{}) error {
 		p, ok := v.(*sommelier.Criteria)
 		if !ok {
-			return nil, goahttp.ErrInvalidType("sommelier", "pick", "*sommelier.Criteria", v)
-		}
-		// Build request
-		u := &url.URL{Scheme: c.scheme, Host: c.host, Path: PickSommelierPath()}
-		req, err := http.NewRequest("POST", u.String(), nil)
-		if err != nil {
-			return nil, goahttp.ErrInvalidURL("sommelier", "pick", u.String(), err)
+			return goahttp.ErrInvalidType("sommelier", "pick", "*sommelier.Criteria", v)
 		}
 		body := NewPickRequestBody(p)
-		err = encoder(req).Encode(&body)
-		if err != nil {
-			return nil, goahttp.ErrEncodingError("sommelier", "pick", err)
+		if err := encoder(req).Encode(&body); err != nil {
+			return goahttp.ErrEncodingError("sommelier", "pick", err)
 		}
-
-		return req, nil
+		return nil
 	}
 }
 
