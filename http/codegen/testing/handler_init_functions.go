@@ -7,21 +7,23 @@ func NewMethodNoPayloadNoResultHandler(
 	endpoint goa.Endpoint,
 	mux goahttp.Muxer,
 	dec func(*http.Request) goahttp.Decoder,
-	enc func(http.ResponseWriter, *http.Request) (goahttp.Encoder, string),
+	enc func(context.Context, http.ResponseWriter) goahttp.Encoder,
 ) http.Handler {
 	var (
 		encodeResponse = EncodeMethodNoPayloadNoResultResponse(enc)
-		encodeError    = goahttp.EncodeError(enc)
+		encodeError    = goahttp.ErrorEncoder(enc)
 	)
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		res, err := endpoint(r.Context(), nil)
+		accept := r.Header.Get("Accept")
+		ctx := context.WithValue(r.Context(), goahttp.ContextKeyAcceptType, accept)
+		res, err := endpoint(ctx, nil)
 
 		if err != nil {
-			encodeError(w, r, err)
+			encodeError(ctx, w, err)
 			return
 		}
-		if err := encodeResponse(w, r, res); err != nil {
-			encodeError(w, r, err)
+		if err := encodeResponse(ctx, w, res); err != nil {
+			encodeError(ctx, w, err)
 		}
 	})
 }
@@ -34,28 +36,30 @@ func NewMethodPayloadNoResultHandler(
 	endpoint goa.Endpoint,
 	mux goahttp.Muxer,
 	dec func(*http.Request) goahttp.Decoder,
-	enc func(http.ResponseWriter, *http.Request) (goahttp.Encoder, string),
+	enc func(context.Context, http.ResponseWriter) goahttp.Encoder,
 ) http.Handler {
 	var (
 		decodeRequest  = DecodeMethodPayloadNoResultRequest(mux, dec)
 		encodeResponse = EncodeMethodPayloadNoResultResponse(enc)
-		encodeError    = goahttp.EncodeError(enc)
+		encodeError    = goahttp.ErrorEncoder(enc)
 	)
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		accept := r.Header.Get("Accept")
+		ctx := context.WithValue(r.Context(), goahttp.ContextKeyAcceptType, accept)
 		payload, err := decodeRequest(r)
 		if err != nil {
-			encodeError(w, r, err)
+			encodeError(ctx, w, err)
 			return
 		}
 
-		res, err := endpoint(r.Context(), payload)
+		res, err := endpoint(ctx, payload)
 
 		if err != nil {
-			encodeError(w, r, err)
+			encodeError(ctx, w, err)
 			return
 		}
-		if err := encodeResponse(w, r, res); err != nil {
-			encodeError(w, r, err)
+		if err := encodeResponse(ctx, w, res); err != nil {
+			encodeError(ctx, w, err)
 		}
 	})
 }
@@ -68,21 +72,23 @@ func NewMethodNoPayloadResultHandler(
 	endpoint goa.Endpoint,
 	mux goahttp.Muxer,
 	dec func(*http.Request) goahttp.Decoder,
-	enc func(http.ResponseWriter, *http.Request) (goahttp.Encoder, string),
+	enc func(context.Context, http.ResponseWriter) goahttp.Encoder,
 ) http.Handler {
 	var (
 		encodeResponse = EncodeMethodNoPayloadResultResponse(enc)
-		encodeError    = goahttp.EncodeError(enc)
+		encodeError    = goahttp.ErrorEncoder(enc)
 	)
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		res, err := endpoint(r.Context(), nil)
+		accept := r.Header.Get("Accept")
+		ctx := context.WithValue(r.Context(), goahttp.ContextKeyAcceptType, accept)
+		res, err := endpoint(ctx, nil)
 
 		if err != nil {
-			encodeError(w, r, err)
+			encodeError(ctx, w, err)
 			return
 		}
-		if err := encodeResponse(w, r, res); err != nil {
-			encodeError(w, r, err)
+		if err := encodeResponse(ctx, w, res); err != nil {
+			encodeError(ctx, w, err)
 		}
 	})
 }
@@ -95,28 +101,30 @@ func NewMethodPayloadResultHandler(
 	endpoint goa.Endpoint,
 	mux goahttp.Muxer,
 	dec func(*http.Request) goahttp.Decoder,
-	enc func(http.ResponseWriter, *http.Request) (goahttp.Encoder, string),
+	enc func(context.Context, http.ResponseWriter) goahttp.Encoder,
 ) http.Handler {
 	var (
 		decodeRequest  = DecodeMethodPayloadResultRequest(mux, dec)
 		encodeResponse = EncodeMethodPayloadResultResponse(enc)
-		encodeError    = goahttp.EncodeError(enc)
+		encodeError    = goahttp.ErrorEncoder(enc)
 	)
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		accept := r.Header.Get("Accept")
+		ctx := context.WithValue(r.Context(), goahttp.ContextKeyAcceptType, accept)
 		payload, err := decodeRequest(r)
 		if err != nil {
-			encodeError(w, r, err)
+			encodeError(ctx, w, err)
 			return
 		}
 
-		res, err := endpoint(r.Context(), payload)
+		res, err := endpoint(ctx, payload)
 
 		if err != nil {
-			encodeError(w, r, err)
+			encodeError(ctx, w, err)
 			return
 		}
-		if err := encodeResponse(w, r, res); err != nil {
-			encodeError(w, r, err)
+		if err := encodeResponse(ctx, w, res); err != nil {
+			encodeError(ctx, w, err)
 		}
 	})
 }
@@ -129,7 +137,7 @@ func NewMethodPayloadResultErrorHandler(
 	endpoint goa.Endpoint,
 	mux goahttp.Muxer,
 	dec func(*http.Request) goahttp.Decoder,
-	enc func(http.ResponseWriter, *http.Request) (goahttp.Encoder, string),
+	enc func(context.Context, http.ResponseWriter) goahttp.Encoder,
 ) http.Handler {
 	var (
 		decodeRequest  = DecodeMethodPayloadResultErrorRequest(mux, dec)
@@ -137,20 +145,22 @@ func NewMethodPayloadResultErrorHandler(
 		encodeError    = EncodeMethodPayloadResultErrorError(enc)
 	)
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		accept := r.Header.Get("Accept")
+		ctx := context.WithValue(r.Context(), goahttp.ContextKeyAcceptType, accept)
 		payload, err := decodeRequest(r)
 		if err != nil {
-			encodeError(w, r, err)
+			encodeError(ctx, w, err)
 			return
 		}
 
-		res, err := endpoint(r.Context(), payload)
+		res, err := endpoint(ctx, payload)
 
 		if err != nil {
-			encodeError(w, r, err)
+			encodeError(ctx, w, err)
 			return
 		}
-		if err := encodeResponse(w, r, res); err != nil {
-			encodeError(w, r, err)
+		if err := encodeResponse(ctx, w, res); err != nil {
+			encodeError(ctx, w, err)
 		}
 	})
 }

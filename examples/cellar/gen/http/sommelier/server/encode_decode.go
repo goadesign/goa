@@ -8,6 +8,7 @@
 package server
 
 import (
+	"context"
 	"io"
 	"net/http"
 
@@ -18,11 +19,10 @@ import (
 
 // EncodePickResponse returns an encoder for responses returned by the
 // sommelier pick endpoint.
-func EncodePickResponse(encoder func(http.ResponseWriter, *http.Request) (goahttp.Encoder, string)) func(http.ResponseWriter, *http.Request, interface{}) error {
-	return func(w http.ResponseWriter, r *http.Request, v interface{}) error {
+func EncodePickResponse(encoder func(context.Context, http.ResponseWriter) goahttp.Encoder) func(context.Context, http.ResponseWriter, interface{}) error {
+	return func(ctx context.Context, w http.ResponseWriter, v interface{}) error {
 		res := v.(sommelier.StoredBottleCollection)
-		enc, ct := encoder(w, r)
-		goahttp.SetContentType(w, ct)
+		enc := encoder(ctx, w)
 		body := NewPickResponseBody(res)
 		w.WriteHeader(http.StatusOK)
 		return enc.Encode(body)
@@ -51,28 +51,26 @@ func DecodePickRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.De
 
 // EncodePickError returns an encoder for errors returned by the pick sommelier
 // endpoint.
-func EncodePickError(encoder func(http.ResponseWriter, *http.Request) (goahttp.Encoder, string)) func(http.ResponseWriter, *http.Request, error) {
-	encodeError := goahttp.EncodeError(encoder)
-	return func(w http.ResponseWriter, r *http.Request, v error) {
+func EncodePickError(encoder func(context.Context, http.ResponseWriter) goahttp.Encoder) func(context.Context, http.ResponseWriter, error) {
+	encodeError := goahttp.ErrorEncoder(encoder)
+	return func(ctx context.Context, w http.ResponseWriter, v error) {
 		switch res := v.(type) {
 		case *sommelier.NoCriteria:
-			enc, ct := encoder(w, r)
-			goahttp.SetContentType(w, ct)
+			enc := encoder(ctx, w)
 			body := NewPickNoCriteriaResponseBody(res)
 			w.WriteHeader(http.StatusBadRequest)
 			if err := enc.Encode(body); err != nil {
-				encodeError(w, r, err)
+				encodeError(ctx, w, err)
 			}
 		case *sommelier.NoMatch:
-			enc, ct := encoder(w, r)
-			goahttp.SetContentType(w, ct)
+			enc := encoder(ctx, w)
 			body := NewPickNoMatchResponseBody(res)
 			w.WriteHeader(http.StatusNotFound)
 			if err := enc.Encode(body); err != nil {
-				encodeError(w, r, err)
+				encodeError(ctx, w, err)
 			}
 		default:
-			encodeError(w, r, v)
+			encodeError(ctx, w, v)
 		}
 	}
 }

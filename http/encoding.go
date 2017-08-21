@@ -2,6 +2,7 @@ package http
 
 import (
 	"bytes"
+	"context"
 	"crypto/rand"
 	"encoding/base64"
 	"encoding/gob"
@@ -14,6 +15,12 @@ import (
 	"strings"
 
 	goa "goa.design/goa.v2"
+)
+
+const (
+	// ContextKeyAcceptType is the context key associated with the request
+	// Accept-Type header value used by the goa response encoder.
+	ContextKeyAcceptType contextKey = iota
 )
 
 type (
@@ -30,6 +37,9 @@ type (
 		// Encode encodes v.
 		Encode(v interface{}) error
 	}
+
+	// private type used to define context keys.
+	contextKey int
 )
 
 // RequestDecoder returns a HTTP request body decoder suitable for the given
@@ -75,9 +85,8 @@ func RequestDecoder(r *http.Request) Decoder {
 //
 // ResponseEncoder defaults to the JSON encoder if the request "Accept" header
 // does not match any of the supported mime types or is missing altogether.
-func ResponseEncoder(w http.ResponseWriter, r *http.Request) (enc Encoder, mt string) {
-	accept := r.Header.Get("Accept")
-	builtin := func(a string) (Encoder, string) {
+func ResponseEncoder(ctx context.Context, w http.ResponseWriter) Encoder {
+	negotiate := func(a string) (Encoder, string) {
 		switch a {
 		case "", "application/json":
 			// default to JSON
@@ -89,16 +98,25 @@ func ResponseEncoder(w http.ResponseWriter, r *http.Request) (enc Encoder, mt st
 		}
 		return nil, ""
 	}
-	if enc, mt = builtin(accept); enc == nil {
+	var accept string
+	if a := ctx.Value(ContextKeyAcceptType); a != nil {
+		accept = a.(string)
+	}
+	var (
+		enc Encoder
+		mt  string
+	)
+	if enc, mt = negotiate(accept); enc == nil {
 		// attempt to normalize
 		if mt, _, err := mime.ParseMediaType(accept); err == nil {
-			enc, mt = builtin(mt)
+			enc, mt = negotiate(mt)
 		}
 	}
 	if enc == nil {
-		enc, mt = builtin("")
+		enc, mt = negotiate("")
 	}
-	return
+	SetContentType(w, mt)
+	return enc
 }
 
 // RequestEncoder returns a HTTP request encoder.
@@ -112,9 +130,10 @@ func RequestEncoder(r *http.Request) Encoder {
 // ResponseDecoder returns a HTTP response decoder.
 // The decoder handles the following content types:
 //
-// * application/json using package encoding/json (default)
-// * application/xml using package encoding/xml
-// * application/gob using package encoding/gob
+//   * application/json using package encoding/json (default)
+//   * application/xml using package encoding/xml
+//   * application/gob using package encoding/gob
+//
 func ResponseDecoder(resp *http.Response) Decoder {
 	ct := resp.Header.Get("Content-Type")
 	if ct == "" {
@@ -135,18 +154,17 @@ func ResponseDecoder(resp *http.Response) Decoder {
 	}
 }
 
-// EncodeError returns an encoder that checks whether the error is a goa Error
+// ErrorEncoder returns an encoder that checks whether the error is a goa Error
 // and if so sets the response status code using the error status and encodes
 // the corresponding ErrorResponse struct to the response body. If the error is
-// not a goa.Error then it sets the response status code to 500 and writes the
-// error message to the response body.
-func EncodeError(encoder func(http.ResponseWriter, *http.Request) (Encoder, string)) func(http.ResponseWriter, *http.Request, error) {
-	return func(w http.ResponseWriter, r *http.Request, v error) {
+// not a goa.Error then it sets the response status code to InternalServerError
+// (500) and writes the error message to the response body.
+func ErrorEncoder(encoder func(context.Context, http.ResponseWriter) Encoder) func(context.Context, http.ResponseWriter, error) {
+	return func(ctx context.Context, w http.ResponseWriter, v error) {
 		switch t := v.(type) {
 
 		case goa.Error:
-			enc, ct := encoder(w, r)
-			SetContentType(w, ct)
+			enc := encoder(ctx, w)
 			w.WriteHeader(Status(t.Status()))
 			enc.Encode(NewErrorResponse(t))
 

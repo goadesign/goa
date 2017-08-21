@@ -8,6 +8,7 @@
 package server
 
 import (
+	"context"
 	"net/http"
 
 	goa "goa.design/goa.v2"
@@ -28,7 +29,7 @@ func New(
 	e *storage.Endpoints,
 	mux goahttp.Muxer,
 	dec func(*http.Request) goahttp.Decoder,
-	enc func(http.ResponseWriter, *http.Request) (goahttp.Encoder, string),
+	enc func(context.Context, http.ResponseWriter) goahttp.Encoder,
 ) *Server {
 	return &Server{
 		List:   NewListHandler(e.List, mux, dec, enc),
@@ -64,21 +65,23 @@ func NewListHandler(
 	endpoint goa.Endpoint,
 	mux goahttp.Muxer,
 	dec func(*http.Request) goahttp.Decoder,
-	enc func(http.ResponseWriter, *http.Request) (goahttp.Encoder, string),
+	enc func(context.Context, http.ResponseWriter) goahttp.Encoder,
 ) http.Handler {
 	var (
 		encodeResponse = EncodeListResponse(enc)
-		encodeError    = goahttp.EncodeError(enc)
+		encodeError    = goahttp.ErrorEncoder(enc)
 	)
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		res, err := endpoint(r.Context(), nil)
+		accept := r.Header.Get("Accept")
+		ctx := context.WithValue(r.Context(), goahttp.ContextKeyAcceptType, accept)
+		res, err := endpoint(ctx, nil)
 
 		if err != nil {
-			encodeError(w, r, err)
+			encodeError(ctx, w, err)
 			return
 		}
-		if err := encodeResponse(w, r, res); err != nil {
-			encodeError(w, r, err)
+		if err := encodeResponse(ctx, w, res); err != nil {
+			encodeError(ctx, w, err)
 		}
 	})
 }
@@ -101,7 +104,7 @@ func NewShowHandler(
 	endpoint goa.Endpoint,
 	mux goahttp.Muxer,
 	dec func(*http.Request) goahttp.Decoder,
-	enc func(http.ResponseWriter, *http.Request) (goahttp.Encoder, string),
+	enc func(context.Context, http.ResponseWriter) goahttp.Encoder,
 ) http.Handler {
 	var (
 		decodeRequest  = DecodeShowRequest(mux, dec)
@@ -109,20 +112,22 @@ func NewShowHandler(
 		encodeError    = EncodeShowError(enc)
 	)
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		accept := r.Header.Get("Accept")
+		ctx := context.WithValue(r.Context(), goahttp.ContextKeyAcceptType, accept)
 		payload, err := decodeRequest(r)
 		if err != nil {
-			encodeError(w, r, err)
+			encodeError(ctx, w, err)
 			return
 		}
 
-		res, err := endpoint(r.Context(), payload)
+		res, err := endpoint(ctx, payload)
 
 		if err != nil {
-			encodeError(w, r, err)
+			encodeError(ctx, w, err)
 			return
 		}
-		if err := encodeResponse(w, r, res); err != nil {
-			encodeError(w, r, err)
+		if err := encodeResponse(ctx, w, res); err != nil {
+			encodeError(ctx, w, err)
 		}
 	})
 }
@@ -145,28 +150,30 @@ func NewAddHandler(
 	endpoint goa.Endpoint,
 	mux goahttp.Muxer,
 	dec func(*http.Request) goahttp.Decoder,
-	enc func(http.ResponseWriter, *http.Request) (goahttp.Encoder, string),
+	enc func(context.Context, http.ResponseWriter) goahttp.Encoder,
 ) http.Handler {
 	var (
 		decodeRequest  = DecodeAddRequest(mux, dec)
 		encodeResponse = EncodeAddResponse(enc)
-		encodeError    = goahttp.EncodeError(enc)
+		encodeError    = goahttp.ErrorEncoder(enc)
 	)
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		accept := r.Header.Get("Accept")
+		ctx := context.WithValue(r.Context(), goahttp.ContextKeyAcceptType, accept)
 		payload, err := decodeRequest(r)
 		if err != nil {
-			encodeError(w, r, err)
+			encodeError(ctx, w, err)
 			return
 		}
 
-		res, err := endpoint(r.Context(), payload)
+		res, err := endpoint(ctx, payload)
 
 		if err != nil {
-			encodeError(w, r, err)
+			encodeError(ctx, w, err)
 			return
 		}
-		if err := encodeResponse(w, r, res); err != nil {
-			encodeError(w, r, err)
+		if err := encodeResponse(ctx, w, res); err != nil {
+			encodeError(ctx, w, err)
 		}
 	})
 }
@@ -189,28 +196,30 @@ func NewRemoveHandler(
 	endpoint goa.Endpoint,
 	mux goahttp.Muxer,
 	dec func(*http.Request) goahttp.Decoder,
-	enc func(http.ResponseWriter, *http.Request) (goahttp.Encoder, string),
+	enc func(context.Context, http.ResponseWriter) goahttp.Encoder,
 ) http.Handler {
 	var (
 		decodeRequest  = DecodeRemoveRequest(mux, dec)
 		encodeResponse = EncodeRemoveResponse(enc)
-		encodeError    = goahttp.EncodeError(enc)
+		encodeError    = goahttp.ErrorEncoder(enc)
 	)
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		accept := r.Header.Get("Accept")
+		ctx := context.WithValue(r.Context(), goahttp.ContextKeyAcceptType, accept)
 		payload, err := decodeRequest(r)
 		if err != nil {
-			encodeError(w, r, err)
+			encodeError(ctx, w, err)
 			return
 		}
 
-		res, err := endpoint(r.Context(), payload)
+		res, err := endpoint(ctx, payload)
 
 		if err != nil {
-			encodeError(w, r, err)
+			encodeError(ctx, w, err)
 			return
 		}
-		if err := encodeResponse(w, r, res); err != nil {
-			encodeError(w, r, err)
+		if err := encodeResponse(ctx, w, res); err != nil {
+			encodeError(ctx, w, err)
 		}
 	})
 }
