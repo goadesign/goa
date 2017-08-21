@@ -105,6 +105,11 @@ type (
 		// EndpointInit is the name of the constructor function for the
 		// client endpoint.
 		EndpointInit string
+		// RequestBuilder is the name of the request builder function.
+		RequestBuilder string
+		// HasBuilderParam is true if the request builder function
+		// accepts a parameter.
+		HasBuilderParam bool
 		// RequestEncoder is the name of the request encoder function.
 		RequestEncoder string
 		// ResponseDecoder is the name of the response decoder function.
@@ -488,12 +493,20 @@ func (d ServicesData) analyze(hs *httpdesign.ServiceExpr) *ServiceData {
 			}
 		}
 
+		payload := buildPayloadData(svc, hs, a, rd)
+		var requestEncoder string
+		{
+			if payload.Request.ClientBody != nil || len(payload.Request.Headers) > 0 {
+				requestEncoder = fmt.Sprintf("Encode%sRequest", ep.VarName)
+			}
+		}
+
 		ad := &EndpointData{
 			Method:          ep,
 			ServiceName:     svc.Name,
 			ServiceVarName:  codegen.Goify(svc.Name, true),
 			ServicePkgName:  svc.PkgName,
-			Payload:         buildPayloadData(svc, hs, a, rd),
+			Payload:         payload,
 			Result:          buildResultData(svc, hs, a, rd),
 			Errors:          buildErrorsData(svc, hs, a, rd),
 			Routes:          routes,
@@ -504,7 +517,9 @@ func (d ServicesData) analyze(hs *httpdesign.ServiceExpr) *ServiceData {
 			ErrorEncoder:    fmt.Sprintf("Encode%sError", ep.VarName),
 			ClientStruct:    "Client",
 			EndpointInit:    ep.VarName,
-			RequestEncoder:  fmt.Sprintf("Encode%sRequest", ep.VarName),
+			RequestBuilder:  fmt.Sprintf("Build%sRequest", ep.VarName),
+			HasBuilderParam: len(routes[0].PathInit.Args) > 0,
+			RequestEncoder:  requestEncoder,
 			ResponseDecoder: fmt.Sprintf("Decode%sResponse", ep.VarName),
 		}
 

@@ -17,19 +17,16 @@ import (
 	goahttp "goa.design/goa.v2/http"
 )
 
-// EncodeListRequest returns an encoder for requests sent to the storage list
-// server.
-func (c *Client) EncodeListRequest(encoder func(*http.Request) goahttp.Encoder) func(interface{}) (*http.Request, error) {
-	return func(v interface{}) (*http.Request, error) {
-		// Build request
-		u := &url.URL{Scheme: c.scheme, Host: c.host, Path: ListStoragePath()}
-		req, err := http.NewRequest("GET", u.String(), nil)
-		if err != nil {
-			return nil, goahttp.ErrInvalidURL("storage", "list", u.String(), err)
-		}
-
-		return req, nil
+// BuildListRequest instantiates a HTTP request object with method and path set
+// to call the storage list endpoint.
+func (c *Client) BuildListRequest() (*http.Request, error) {
+	u := &url.URL{Scheme: c.scheme, Host: c.host, Path: ListStoragePath()}
+	req, err := http.NewRequest("GET", u.String(), nil)
+	if err != nil {
+		return nil, goahttp.ErrInvalidURL("storage", "list", u.String(), err)
 	}
+
+	return req, nil
 }
 
 // DecodeListResponse returns a decoder for responses returned by the storage
@@ -68,25 +65,22 @@ func (c *Client) DecodeListResponse(decoder func(*http.Response) goahttp.Decoder
 	}
 }
 
-// EncodeShowRequest returns an encoder for requests sent to the storage show
-// server.
-func (c *Client) EncodeShowRequest(encoder func(*http.Request) goahttp.Encoder) func(interface{}) (*http.Request, error) {
-	return func(v interface{}) (*http.Request, error) {
-		p, ok := v.(*storage.ShowPayload)
-		if !ok {
-			return nil, goahttp.ErrInvalidType("storage", "show", "*storage.ShowPayload", v)
-		}
-		// Build request
-		var id string
-		id = p.ID
-		u := &url.URL{Scheme: c.scheme, Host: c.host, Path: ShowStoragePath(id)}
-		req, err := http.NewRequest("GET", u.String(), nil)
-		if err != nil {
-			return nil, goahttp.ErrInvalidURL("storage", "show", u.String(), err)
-		}
-
-		return req, nil
+// BuildShowRequest instantiates a HTTP request object with method and path set
+// to call the storage show endpoint.
+func (c *Client) BuildShowRequest(v interface{}) (*http.Request, error) {
+	p, ok := v.(*storage.ShowPayload)
+	if !ok {
+		return nil, goahttp.ErrInvalidType("storage", "show", "*storage.ShowPayload", v)
 	}
+	var id string
+	id = p.ID
+	u := &url.URL{Scheme: c.scheme, Host: c.host, Path: ShowStoragePath(id)}
+	req, err := http.NewRequest("GET", u.String(), nil)
+	if err != nil {
+		return nil, goahttp.ErrInvalidURL("storage", "show", u.String(), err)
+	}
+
+	return req, nil
 }
 
 // DecodeShowResponse returns a decoder for responses returned by the storage
@@ -136,27 +130,31 @@ func (c *Client) DecodeShowResponse(decoder func(*http.Response) goahttp.Decoder
 	}
 }
 
+// BuildAddRequest instantiates a HTTP request object with method and path set
+// to call the storage add endpoint.
+func (c *Client) BuildAddRequest() (*http.Request, error) {
+	u := &url.URL{Scheme: c.scheme, Host: c.host, Path: AddStoragePath()}
+	req, err := http.NewRequest("POST", u.String(), nil)
+	if err != nil {
+		return nil, goahttp.ErrInvalidURL("storage", "add", u.String(), err)
+	}
+
+	return req, nil
+}
+
 // EncodeAddRequest returns an encoder for requests sent to the storage add
 // server.
-func (c *Client) EncodeAddRequest(encoder func(*http.Request) goahttp.Encoder) func(interface{}) (*http.Request, error) {
-	return func(v interface{}) (*http.Request, error) {
+func (c *Client) EncodeAddRequest(encoder func(*http.Request) goahttp.Encoder) func(*http.Request, interface{}) error {
+	return func(req *http.Request, v interface{}) error {
 		p, ok := v.(*storage.Bottle)
 		if !ok {
-			return nil, goahttp.ErrInvalidType("storage", "add", "*storage.Bottle", v)
-		}
-		// Build request
-		u := &url.URL{Scheme: c.scheme, Host: c.host, Path: AddStoragePath()}
-		req, err := http.NewRequest("POST", u.String(), nil)
-		if err != nil {
-			return nil, goahttp.ErrInvalidURL("storage", "add", u.String(), err)
+			return goahttp.ErrInvalidType("storage", "add", "*storage.Bottle", v)
 		}
 		body := NewAddRequestBody(p)
-		err = encoder(req).Encode(&body)
-		if err != nil {
-			return nil, goahttp.ErrEncodingError("storage", "add", err)
+		if err := encoder(req).Encode(&body); err != nil {
+			return goahttp.ErrEncodingError("storage", "add", err)
 		}
-
-		return req, nil
+		return nil
 	}
 }
 
@@ -196,25 +194,22 @@ func (c *Client) DecodeAddResponse(decoder func(*http.Response) goahttp.Decoder,
 	}
 }
 
-// EncodeRemoveRequest returns an encoder for requests sent to the storage
-// remove server.
-func (c *Client) EncodeRemoveRequest(encoder func(*http.Request) goahttp.Encoder) func(interface{}) (*http.Request, error) {
-	return func(v interface{}) (*http.Request, error) {
-		p, ok := v.(*storage.RemovePayload)
-		if !ok {
-			return nil, goahttp.ErrInvalidType("storage", "remove", "*storage.RemovePayload", v)
-		}
-		// Build request
-		var id string
-		id = p.ID
-		u := &url.URL{Scheme: c.scheme, Host: c.host, Path: RemoveStoragePath(id)}
-		req, err := http.NewRequest("DELETE", u.String(), nil)
-		if err != nil {
-			return nil, goahttp.ErrInvalidURL("storage", "remove", u.String(), err)
-		}
-
-		return req, nil
+// BuildRemoveRequest instantiates a HTTP request object with method and path
+// set to call the storage remove endpoint.
+func (c *Client) BuildRemoveRequest(v interface{}) (*http.Request, error) {
+	p, ok := v.(*storage.RemovePayload)
+	if !ok {
+		return nil, goahttp.ErrInvalidType("storage", "remove", "*storage.RemovePayload", v)
 	}
+	var id string
+	id = p.ID
+	u := &url.URL{Scheme: c.scheme, Host: c.host, Path: RemoveStoragePath(id)}
+	req, err := http.NewRequest("DELETE", u.String(), nil)
+	if err != nil {
+		return nil, goahttp.ErrInvalidURL("storage", "remove", u.String(), err)
+	}
+
+	return req, nil
 }
 
 // DecodeRemoveResponse returns a decoder for responses returned by the storage

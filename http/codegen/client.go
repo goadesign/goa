@@ -76,7 +76,10 @@ func clientEncodeDecode(svc *httpdesign.ServiceExpr) codegen.File {
 		}
 
 		for _, e := range data.Endpoints {
-			s = append(s, &codegen.Section{Template: requestEncoderTmpl(svc), Data: e})
+			s = append(s, &codegen.Section{Template: requestBuilderTmpl(svc), Data: e})
+			if e.RequestEncoder != "" {
+				s = append(s, &codegen.Section{Template: requestEncoderTmpl(svc), Data: e})
+			}
 			if e.Result != nil || len(e.Errors) > 0 {
 				s = append(s, &codegen.Section{
 					Template: responseDecoderTmpl(svc),
@@ -110,6 +113,10 @@ func endpointInitTmpl(r *httpdesign.ServiceExpr) *template.Template {
 
 func requestEncoderTmpl(r *httpdesign.ServiceExpr) *template.Template {
 	return template.Must(transTmpl(r).New("request-encoder").Parse(requestEncoderT))
+}
+
+func requestBuilderTmpl(r *httpdesign.ServiceExpr) *template.Template {
+	return template.Must(transTmpl(r).New("request-builder").Parse(requestBuilderT))
 }
 
 func responseDecoderTmpl(r *httpdesign.ServiceExpr) *template.Template {
@@ -161,14 +168,22 @@ func New{{ .ClientStruct }}(
 const endpointInitT = `{{ printf "%s returns a endpoint that makes HTTP requests to the %s service %s server." .EndpointInit .ServiceName .Method.Name | comment }}
 func (c *{{ .ClientStruct }}) {{ .EndpointInit }}() goa.Endpoint {
 	var (
+		{{- if .RequestEncoder }}
 		encodeRequest  = c.{{ .RequestEncoder }}(c.encoder)
+		{{- end }}
 		decodeResponse = c.{{ .ResponseDecoder }}(c.decoder, c.RestoreResponseBody)
 	)
 	return func(ctx context.Context, v interface{}) (interface{}, error) {
-		req, err := encodeRequest(v)
+		req, err := c.{{ .RequestBuilder }}({{ if .HasBuilderParam }}v{{ end }})
 		if err != nil {
 			return nil, err
 		}
+		{{- if .RequestEncoder }}
+		err = encodeRequest(req, v)
+		if err != nil {
+			return nil, err
+		}
+		{{- end }}
 
 		resp, err := c.{{ .Method.VarName }}Doer.Do(req)
 
@@ -181,49 +196,54 @@ func (c *{{ .ClientStruct }}) {{ .EndpointInit }}() goa.Endpoint {
 `
 
 // input: EndpointData
-const requestEncoderT = `{{ printf "%s returns an encoder for requests sent to the %s %s server." .RequestEncoder .ServiceName .Method.Name | comment }}
-func (c *{{ .ClientStruct }}) {{ .RequestEncoder }}(encoder func(*http.Request) goahttp.Encoder) func(interface{}) (*http.Request, error) {
-	return func(v interface{}) (*http.Request, error) {
-	{{- if .Payload.Ref }}
-		p, ok := v.({{ .Payload.Ref }})
-		if !ok {
-			return nil, goahttp.ErrInvalidType("{{ .ServiceName }}", "{{ .Method.Name }}", "{{ .Payload.Ref }}", v)
-		}
-	{{- end }}
-
+const requestBuilderT = `{{ printf "%s instantiates a HTTP request object with method and path set to call the %s %s endpoint." .RequestBuilder .ServiceName .Method.Name | comment }}
+func (c *{{ .ClientStruct }}) {{ .RequestBuilder }}({{ if .HasBuilderParam }}v interface{}{{ end }}) (*http.Request, error) {
 	{{- with (index .Routes 0) }}
-		// Build request
+		{{- if $.HasBuilderParam }}
+	p, ok := v.({{ $.Payload.Ref }})
+	if !ok {
+		return nil, goahttp.ErrInvalidType("{{ $.ServiceName }}", "{{ $.Method.Name }}", "{{ $.Payload.Ref }}", v)
+	}
+		{{- end }}
 		{{- range $i, $arg := .PathInit.Args }}
-		var {{ .Name }} {{ .TypeRef }}
+	var {{ .Name }} {{ .TypeRef }}
 			{{ if .Pointer -}}
-		if p.{{ .FieldName }} != nil {
+	if p.{{ .FieldName }} != nil {
 			{{- end }}
-			{{- .Name }} = {{ if .Pointer }}*{{ end }}p.{{ .FieldName }}
+		{{- .Name }} = {{ if .Pointer }}*{{ end }}p.{{ .FieldName }}
 			{{- if .Pointer }}
-		}
+	}
 			{{- end }}
 		{{- end }}
-		u := &url.URL{Scheme: c.scheme, Host: c.host, Path: {{ .PathInit.Name }}({{ range .PathInit.Args }}{{ .Ref }}, {{ end }})}
-		req, err := http.NewRequest("{{ .Verb }}", u.String(), nil)
-		if err != nil {
-			return nil, goahttp.ErrInvalidURL("{{ $.ServiceName }}", "{{ $.Method.Name }}", u.String(), err)
-		}
+	u := &url.URL{Scheme: c.scheme, Host: c.host, Path: {{ .PathInit.Name }}({{ range .PathInit.Args }}{{ .Ref }}, {{ end }})}
+	req, err := http.NewRequest("{{ .Verb }}", u.String(), nil)
+	if err != nil {
+		return nil, goahttp.ErrInvalidURL("{{ $.ServiceName }}", "{{ $.Method.Name }}", u.String(), err)
+	}
 	{{- end }}
 
-	{{- if .Payload.Ref }}
-	{{- if .Payload.Request.ClientBody }}
-		body := {{ .Payload.Request.ClientBody.Init.Name }}({{ range .Payload.Request.ClientBody.Init.Args }}{{ if .Pointer }}&{{ end }}{{ .Name }}, {{ end }})
-		err = encoder(req).Encode(&body)
-		if err != nil {
-			return nil, goahttp.ErrEncodingError("{{ .ServiceName }}", "{{ .Method.Name }}", err)
+	return req, nil
+}
+`
+
+// input: EndpointData
+const requestEncoderT = `{{ printf "%s returns an encoder for requests sent to the %s %s server." .RequestEncoder .ServiceName .Method.Name | comment }}
+func (c *{{ .ClientStruct }}) {{ .RequestEncoder }}(encoder func(*http.Request) goahttp.Encoder) func(*http.Request, interface{}) error {
+	return func(req *http.Request, v interface{}) error {
+		p, ok := v.({{ .Payload.Ref }})
+		if !ok {
+			return goahttp.ErrInvalidType("{{ .ServiceName }}", "{{ .Method.Name }}", "{{ .Payload.Ref }}", v)
 		}
-	{{- end }}
 	{{- range .Payload.Request.Headers }}
 		req.Header.Set("{{ .Name }}", p.{{ .FieldName }})
 	{{- end }}
+	{{- if .Payload.Request.ClientBody }}
+		body := {{ .Payload.Request.ClientBody.Init.Name }}({{ range .Payload.Request.ClientBody.Init.Args }}{{ if .Pointer }}&{{ end }}{{ .Name }}, {{ end }})
+		if err := encoder(req).Encode(&body); err != nil {
+			return goahttp.ErrEncodingError("{{ .ServiceName }}", "{{ .Method.Name }}", err)
+		}
 	{{- end }}
-
-		return req, nil
+		return nil
 	}
 }
 `
