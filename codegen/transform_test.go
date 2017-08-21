@@ -197,8 +197,8 @@ const arrayObjCode = `func transform() {
 	}
 	if source.B != nil {
 		target.B = make([]string, len(source.B))
-		for i, val := range source.B {
-			target.B[i] = val
+		for j, val := range source.B {
+			target.B[j] = val
 		}
 	}
 }
