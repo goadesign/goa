@@ -8,6 +8,7 @@
 package server
 
 import (
+	"context"
 	"net/http"
 
 	goa "goa.design/goa.v2"
@@ -25,7 +26,7 @@ func New(
 	e *sommelier.Endpoints,
 	mux goahttp.Muxer,
 	dec func(*http.Request) goahttp.Decoder,
-	enc func(http.ResponseWriter, *http.Request) (goahttp.Encoder, string),
+	enc func(context.Context, http.ResponseWriter) goahttp.Encoder,
 ) *Server {
 	return &Server{
 		Pick: NewPickHandler(e.Pick, mux, dec, enc),
@@ -55,7 +56,7 @@ func NewPickHandler(
 	endpoint goa.Endpoint,
 	mux goahttp.Muxer,
 	dec func(*http.Request) goahttp.Decoder,
-	enc func(http.ResponseWriter, *http.Request) (goahttp.Encoder, string),
+	enc func(context.Context, http.ResponseWriter) goahttp.Encoder,
 ) http.Handler {
 	var (
 		decodeRequest  = DecodePickRequest(mux, dec)
@@ -63,20 +64,22 @@ func NewPickHandler(
 		encodeError    = EncodePickError(enc)
 	)
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		accept := r.Header.Get("Accept")
+		ctx := context.WithValue(r.Context(), goahttp.ContextKeyAcceptType, accept)
 		payload, err := decodeRequest(r)
 		if err != nil {
-			encodeError(w, r, err)
+			encodeError(ctx, w, err)
 			return
 		}
 
-		res, err := endpoint(r.Context(), payload)
+		res, err := endpoint(ctx, payload)
 
 		if err != nil {
-			encodeError(w, r, err)
+			encodeError(ctx, w, err)
 			return
 		}
-		if err := encodeResponse(w, r, res); err != nil {
-			encodeError(w, r, err)
+		if err := encodeResponse(ctx, w, res); err != nil {
+			encodeError(ctx, w, err)
 		}
 	})
 }
