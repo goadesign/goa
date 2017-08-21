@@ -282,6 +282,7 @@ func transformArray(source, target *design.Array, sctx, tctx, targetPkg string, 
 		"ToPtrs":       toPtrs,
 		"InitDefaults": def,
 		"Scope":        scope,
+		"LoopVar":      string(105 + strings.Count(sctx, ".")),
 	}
 	var buf bytes.Buffer
 	if err := transformArrayT.Execute(&buf, data); err != nil {
@@ -491,8 +492,8 @@ func transformHelperName(satt, tatt *design.AttributeExpr, fromPtrs, toPtrs, def
 }
 
 const transformArrayTmpl = `{{ .Target}} {{ if .NewVar }}:{{ end }}= make([]{{ .ElemTypeRef }}, len({{ .Source }}))
-for i, val := range {{ .Source }} {
-	{{ transformAttribute .SourceElem .TargetElem "val" (printf "%s[i]" .Target) .TargetPkg .FromPtrs .ToPtrs .InitDefaults false .Scope -}}
+for {{ .LoopVar }}, val := range {{ .Source }} {
+	{{ transformAttribute .SourceElem .TargetElem "val" (printf "%s[%s]" .Target .LoopVar) .TargetPkg .FromPtrs .ToPtrs .InitDefaults false .Scope -}}
 }
 `
 

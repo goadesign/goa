@@ -95,8 +95,8 @@ func NewPickResponseBody(res sommelier.StoredBottleCollection) PickResponseBody 
 		body[i].Winery = wineryToWineryResponseBodyNoDefault(val.Winery)
 		if val.Composition != nil {
 			body[i].Composition = make([]*ComponentResponseBody, len(val.Composition))
-			for i, val := range val.Composition {
-				body[i].Composition[i] = &ComponentResponseBody{
+			for j, val := range val.Composition {
+				body[i].Composition[j] = &ComponentResponseBody{
 					Varietal:   val.Varietal,
 					Percentage: val.Percentage,
 				}
@@ -135,8 +135,8 @@ func NewPickCriteria(body *PickRequestBody) *sommelier.Criteria {
 	}
 	if body.Varietal != nil {
 		v.Varietal = make([]string, len(body.Varietal))
-		for i, val := range body.Varietal {
-			v.Varietal[i] = val
+		for j, val := range body.Varietal {
+			v.Varietal[j] = val
 		}
 	}
 

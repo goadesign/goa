@@ -211,7 +211,7 @@ Pick implements pick.
     -body JSON: 
 
 Example:
-    `+os.Args[0]+` [globalflags] sommelier pick --body '{
+    `+os.Args[0]+` sommelier pick --body '{
       "name": "Blue\'s Cuvee",
       "varietal": [
          "pinot noir",
@@ -245,7 +245,7 @@ func storageListUsage() {
 List all stored bottles
 
 Example:
-    `+os.Args[0]+` [globalflags] storage list
+    `+os.Args[0]+` storage list
 `, os.Args[0])
 }
 
@@ -256,7 +256,7 @@ Show bottle by ID
     -id STRING: ID of bottle to show
 
 Example:
-    `+os.Args[0]+` [globalflags] storage show --id "Est explicabo eveniet dolore."
+    `+os.Args[0]+` storage show --id "Est explicabo eveniet dolore."
 `, os.Args[0])
 }
 
@@ -267,7 +267,7 @@ Add new bottle and return its ID.
     -body JSON: 
 
 Example:
-    `+os.Args[0]+` [globalflags] storage add --body '{
+    `+os.Args[0]+` storage add --body '{
       "composition": [
          {
             "percentage": 67,
@@ -303,6 +303,6 @@ Remove bottle from storage
     -id STRING: ID of bottle to remove
 
 Example:
-    `+os.Args[0]+` [globalflags] storage remove --id "Consequuntur recusandae."
+    `+os.Args[0]+` storage remove --id "Consequuntur recusandae."
 `, os.Args[0])
 }

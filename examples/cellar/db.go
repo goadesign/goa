@@ -91,10 +91,18 @@ func (b *Bolt) LoadAll(bucket string, data interface{}) error {
 		if bkt != nil {
 			bkt.ForEach(func(_, v []byte) error {
 				buf.Write(v)
+				return fmt.Errorf("done")
+			})
+			first := true
+			bkt.ForEach(func(_, v []byte) error {
+				if first {
+					first = false
+					return nil
+				}
 				buf.WriteByte(',')
+				buf.Write(v)
 				return nil
 			})
-			// buf.Truncate(buf.Len() - 1)
 		}
 		buf.WriteByte(']')
 		return nil

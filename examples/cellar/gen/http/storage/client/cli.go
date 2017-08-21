@@ -89,8 +89,8 @@ func BuildBottle(storageAddBody string) (*storage.Bottle, error) {
 	v.Winery = wineryRequestBodyToWinery(body.Winery)
 	if body.Composition != nil {
 		v.Composition = make([]*storage.Component, len(body.Composition))
-		for i, val := range body.Composition {
-			v.Composition[i] = &storage.Component{
+		for j, val := range body.Composition {
+			v.Composition[j] = &storage.Component{
 				Varietal:   val.Varietal,
 				Percentage: val.Percentage,
 			}

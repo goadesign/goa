@@ -53,9 +53,24 @@ func (s *storagesvc) Show(ctx context.Context, p *storage.ShowPayload) (*storage
 
 // Add new bottle and return its ID.
 func (s *storagesvc) Add(ctx context.Context, p *storage.Bottle) (string, error) {
-	var res string
-	s.logger.Print("storage.add")
-	return res, nil
+	id, err := s.db.NewID("CELLAR")
+	if err != nil {
+		return "", err // internal error
+	}
+	sb := storage.StoredBottle{
+		ID:          id,
+		Name:        p.Name,
+		Winery:      p.Winery,
+		Vintage:     p.Vintage,
+		Composition: p.Composition,
+		Description: p.Description,
+		Rating:      p.Rating,
+	}
+	if err = s.db.Save("CELLAR", id, &sb); err != nil {
+		return "", err // internal error
+	}
+
+	return id, nil
 }
 
 // Remove bottle from storage
