@@ -16,14 +16,14 @@ import (
 func ExampleServerFiles(root *httpdesign.RootExpr) []codegen.File {
 	fw := make([]codegen.File, len(root.HTTPServices)+1)
 	for i, svc := range root.HTTPServices {
-		fw[i] = dummyImpl(svc)
+		fw[i] = dummyServiceFile(svc)
 	}
 	fw[len(root.HTTPServices)] = exampleMain(root)
 	return fw
 }
 
-// dummyImpl returns a dummy implementation of the given service.
-func dummyImpl(svc *httpdesign.ServiceExpr) codegen.File {
+// dummyServiceFile returns a dummy implementation of the given service.
+func dummyServiceFile(svc *httpdesign.ServiceExpr) codegen.File {
 	path := codegen.SnakeCase(svc.Name()) + ".go"
 	data := HTTPServices.Get(svc.Name())
 	sections := func(genPkg string) []*codegen.Section {
@@ -109,19 +109,19 @@ var mainTmpl = template.Must(template.New("server-main").Parse(mainT))
 
 // input: ServiceData
 const dummyServiceStructT = `{{ printf "%s service example implementation.\nThe example methods log the requests and return zero values." .Service.Name | comment }}
-type {{ .Service.PkgName }}svc struct {
+type {{ .Service.PkgName }}Svc struct {
 	logger *log.Logger
 }
 
 {{ printf "New%s returns the %s service implementation." .Service.VarName .Service.Name | comment }}
 func New{{ .Service.VarName }}(logger *log.Logger) {{ .Service.PkgName }}.Service {
-	return &{{ .Service.PkgName }}svc{logger}
+	return &{{ .Service.PkgName }}Svc{logger}
 }
 `
 
 // input: EndpointData
 const dummyEndpointImplT = `{{ comment .Method.Description }}
-func (s *{{ .ServicePkgName }}svc) {{ .Method.VarName }}(ctx context.Context{{ if .Payload.Ref }}, p {{ .Payload.Ref }}{{ end }}) ({{ if .Result.Ref }}{{ .Result.Ref }}, {{ end }}error) {
+func (s *{{ .ServicePkgName }}Svc) {{ .Method.VarName }}(ctx context.Context{{ if .Payload.Ref }}, p {{ .Payload.Ref }}{{ end }}) ({{ if .Result.Ref }}{{ .Result.Ref }}, {{ end }}error) {
 {{- if .Result.Ref }}
 	var res {{ .Result.Ref }}
 {{- end }}
@@ -156,12 +156,12 @@ const mainT = `func main() {
 	// Create the structs that implement the services.
 	var (
 	{{- range .Services }}
-		{{ .Service.PkgName }}s {{.Service.PkgName}}.Service
+		{{ .Service.PkgName }}Svc {{.Service.PkgName}}.Service
 	{{- end }}
 	)
 	{
 	{{- range .Services }}
-		{{ .Service.PkgName }}s = {{ $.APIPkg }}.New{{ .Service.VarName }}(logger)
+		{{ .Service.PkgName }}Svc = {{ $.APIPkg }}.New{{ .Service.VarName }}(logger)
 	{{- end }}
 	}
 
@@ -169,12 +169,12 @@ const mainT = `func main() {
 	// services potentially running in different processes.
 	var (
 	{{- range .Services }}
-		{{ .Service.PkgName }}e *{{.Service.PkgName}}.Endpoints
+		{{ .Service.PkgName }}Endpoints *{{.Service.PkgName}}.Endpoints
 	{{- end }}
 	)
 	{
 	{{- range .Services }}
-		{{ .Service.PkgName }}e = {{ .Service.PkgName }}.NewEndpoints({{ .Service.PkgName }}s)
+		{{ .Service.PkgName }}Endpoints = {{ .Service.PkgName }}.NewEndpoints({{ .Service.PkgName }}Svc)
 	{{- end }}
 	}
 
@@ -200,18 +200,18 @@ const mainT = `func main() {
 	// responses.
 	var (
 	{{- range .Services }}
-		{{ .Service.PkgName }}sv *{{.Service.PkgName}}svr.Server
+		{{ .Service.PkgName }}Server *{{.Service.PkgName}}svr.Server
 	{{- end }}
 	)
 	{
 	{{- range .Services }}
-		{{ .Service.PkgName }}sv = {{ .Service.PkgName }}svr.New({{ .Service.PkgName }}e, mux, dec, enc)
+		{{ .Service.PkgName }}Server = {{ .Service.PkgName }}svr.New({{ .Service.PkgName }}Endpoints, mux, dec, enc)
 	{{- end }}
 	}
 
 	// Configure the mux.
 	{{- range .Services }}
-	{{ .Service.PkgName }}svr.Mount(mux, {{ .Service.PkgName }}sv)
+	{{ .Service.PkgName }}svr.Mount(mux, {{ .Service.PkgName }}Server)
 	{{- end }}
 
 	// Wrap the multiplexer with additional middlewares. Middlewares mounted
@@ -245,7 +245,7 @@ const mainT = `func main() {
 	}()
 
 	// Wait for signal.
-	logger.Print("exiting", <-errc)
+	logger.Printf("exiting (%v)", <-errc)
 
 	// Shutdown gracefully with a 30s timeout.
 	ctx, _ := context.WithTimeout(context.Background(), 30*time.Second)

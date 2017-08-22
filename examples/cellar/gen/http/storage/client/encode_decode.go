@@ -32,7 +32,7 @@ func (c *Client) BuildListRequest() (*http.Request, error) {
 // DecodeListResponse returns a decoder for responses returned by the storage
 // list endpoint. restoreBody controls whether the response body should be
 // restored after having been read.
-func (c *Client) DecodeListResponse(decoder func(*http.Response) goahttp.Decoder, restoreBody bool) func(*http.Response) (interface{}, error) {
+func DecodeListResponse(decoder func(*http.Response) goahttp.Decoder, restoreBody bool) func(*http.Response) (interface{}, error) {
 	return func(resp *http.Response) (interface{}, error) {
 		if restoreBody {
 			b, err := ioutil.ReadAll(resp.Body)
@@ -86,7 +86,7 @@ func (c *Client) BuildShowRequest(v interface{}) (*http.Request, error) {
 // DecodeShowResponse returns a decoder for responses returned by the storage
 // show endpoint. restoreBody controls whether the response body should be
 // restored after having been read.
-func (c *Client) DecodeShowResponse(decoder func(*http.Response) goahttp.Decoder, restoreBody bool) func(*http.Response) (interface{}, error) {
+func DecodeShowResponse(decoder func(*http.Response) goahttp.Decoder, restoreBody bool) func(*http.Response) (interface{}, error) {
 	return func(resp *http.Response) (interface{}, error) {
 		if restoreBody {
 			b, err := ioutil.ReadAll(resp.Body)
@@ -144,7 +144,7 @@ func (c *Client) BuildAddRequest() (*http.Request, error) {
 
 // EncodeAddRequest returns an encoder for requests sent to the storage add
 // server.
-func (c *Client) EncodeAddRequest(encoder func(*http.Request) goahttp.Encoder) func(*http.Request, interface{}) error {
+func EncodeAddRequest(encoder func(*http.Request) goahttp.Encoder) func(*http.Request, interface{}) error {
 	return func(req *http.Request, v interface{}) error {
 		p, ok := v.(*storage.Bottle)
 		if !ok {
@@ -161,7 +161,7 @@ func (c *Client) EncodeAddRequest(encoder func(*http.Request) goahttp.Encoder) f
 // DecodeAddResponse returns a decoder for responses returned by the storage
 // add endpoint. restoreBody controls whether the response body should be
 // restored after having been read.
-func (c *Client) DecodeAddResponse(decoder func(*http.Response) goahttp.Decoder, restoreBody bool) func(*http.Response) (interface{}, error) {
+func DecodeAddResponse(decoder func(*http.Response) goahttp.Decoder, restoreBody bool) func(*http.Response) (interface{}, error) {
 	return func(resp *http.Response) (interface{}, error) {
 		if restoreBody {
 			b, err := ioutil.ReadAll(resp.Body)
@@ -215,7 +215,7 @@ func (c *Client) BuildRemoveRequest(v interface{}) (*http.Request, error) {
 // DecodeRemoveResponse returns a decoder for responses returned by the storage
 // remove endpoint. restoreBody controls whether the response body should be
 // restored after having been read.
-func (c *Client) DecodeRemoveResponse(decoder func(*http.Response) goahttp.Decoder, restoreBody bool) func(*http.Response) (interface{}, error) {
+func DecodeRemoveResponse(decoder func(*http.Response) goahttp.Decoder, restoreBody bool) func(*http.Response) (interface{}, error) {
 	return func(resp *http.Response) (interface{}, error) {
 		if restoreBody {
 			b, err := ioutil.ReadAll(resp.Body)

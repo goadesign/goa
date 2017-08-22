@@ -169,9 +169,9 @@ const endpointInitT = `{{ printf "%s returns a endpoint that makes HTTP requests
 func (c *{{ .ClientStruct }}) {{ .EndpointInit }}() goa.Endpoint {
 	var (
 		{{- if .RequestEncoder }}
-		encodeRequest  = c.{{ .RequestEncoder }}(c.encoder)
+		encodeRequest  = {{ .RequestEncoder }}(c.encoder)
 		{{- end }}
-		decodeResponse = c.{{ .ResponseDecoder }}(c.decoder, c.RestoreResponseBody)
+		decodeResponse = {{ .ResponseDecoder }}(c.decoder, c.RestoreResponseBody)
 	)
 	return func(ctx context.Context, v interface{}) (interface{}, error) {
 		req, err := c.{{ .RequestBuilder }}({{ if .HasBuilderParam }}v{{ end }})
@@ -228,7 +228,7 @@ func (c *{{ .ClientStruct }}) {{ .RequestBuilder }}({{ if .HasBuilderParam }}v i
 
 // input: EndpointData
 const requestEncoderT = `{{ printf "%s returns an encoder for requests sent to the %s %s server." .RequestEncoder .ServiceName .Method.Name | comment }}
-func (c *{{ .ClientStruct }}) {{ .RequestEncoder }}(encoder func(*http.Request) goahttp.Encoder) func(*http.Request, interface{}) error {
+func {{ .RequestEncoder }}(encoder func(*http.Request) goahttp.Encoder) func(*http.Request, interface{}) error {
 	return func(req *http.Request, v interface{}) error {
 		p, ok := v.({{ .Payload.Ref }})
 		if !ok {
@@ -250,7 +250,7 @@ func (c *{{ .ClientStruct }}) {{ .RequestEncoder }}(encoder func(*http.Request) 
 
 // input: EndpointData
 const responseDecoderT = `{{ printf "%s returns a decoder for responses returned by the %s %s endpoint. restoreBody controls whether the response body should be restored after having been read." .ResponseDecoder .ServiceName .Method.Name | comment }}
-func (c *{{ .ClientStruct }}) {{ .ResponseDecoder }}(decoder func(*http.Response) goahttp.Decoder, restoreBody bool) func(*http.Response) (interface{}, error) {
+func {{ .ResponseDecoder }}(decoder func(*http.Response) goahttp.Decoder, restoreBody bool) func(*http.Response) (interface{}, error) {
 	return func(resp *http.Response) (interface{}, error) {
 		if restoreBody {
 			b, err := ioutil.ReadAll(resp.Body)
