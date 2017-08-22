@@ -5,8 +5,8 @@ import (
 	"mime"
 	"strings"
 
-	"goa.design/goa.v2/design"
-	"goa.design/goa.v2/eval"
+	"goa.design/goa/design"
+	"goa.design/goa/eval"
 )
 
 // Counter used to create unique result type names for identifier-less result

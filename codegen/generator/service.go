@@ -3,10 +3,10 @@ package generator
 import (
 	"fmt"
 
-	"goa.design/goa.v2/codegen"
-	"goa.design/goa.v2/codegen/service"
-	"goa.design/goa.v2/design"
-	"goa.design/goa.v2/eval"
+	"goa.design/goa/codegen"
+	"goa.design/goa/codegen/service"
+	"goa.design/goa/design"
+	"goa.design/goa/eval"
 )
 
 // Service iterates through the roots and returns the files needed to render the

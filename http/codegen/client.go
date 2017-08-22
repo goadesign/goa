@@ -5,8 +5,8 @@ import (
 	"path/filepath"
 	"text/template"
 
-	"goa.design/goa.v2/codegen"
-	httpdesign "goa.design/goa.v2/http/design"
+	"goa.design/goa/codegen"
+	httpdesign "goa.design/goa/http/design"
 )
 
 // ClientFiles returns the client HTTP transport files.
@@ -35,8 +35,8 @@ func client(svc *httpdesign.ServiceExpr) codegen.File {
 				{Path: "net/http"},
 				{Path: "strconv"},
 				{Path: "strings"},
-				{Path: "goa.design/goa.v2", Name: "goa"},
-				{Path: "goa.design/goa.v2/http", Name: "goahttp"},
+				{Path: "goa.design/goa", Name: "goa"},
+				{Path: "goa.design/goa/http", Name: "goahttp"},
 				{Path: genPkg + "/" + data.Service.PkgName},
 			}),
 			{Template: clientStructTmpl(svc), Data: data},
@@ -69,8 +69,8 @@ func clientEncodeDecode(svc *httpdesign.ServiceExpr) codegen.File {
 				{Path: "net/url"},
 				{Path: "strconv"},
 				{Path: "strings"},
-				{Path: "goa.design/goa.v2", Name: "goa"},
-				{Path: "goa.design/goa.v2/http", Name: "goahttp"},
+				{Path: "goa.design/goa", Name: "goa"},
+				{Path: "goa.design/goa/http", Name: "goahttp"},
 				{Path: genPkg + "/" + data.Service.PkgName},
 			}),
 		}

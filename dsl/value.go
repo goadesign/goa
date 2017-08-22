@@ -1,7 +1,7 @@
 package dsl
 
-import "goa.design/goa.v2/design"
-import "goa.design/goa.v2/eval"
+import "goa.design/goa/design"
+import "goa.design/goa/eval"
 
 // Value sets the example value.
 //

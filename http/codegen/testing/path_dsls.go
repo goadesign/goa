@@ -1,8 +1,8 @@
 package testing
 
 import (
-	. "goa.design/goa.v2/design"
-	. "goa.design/goa.v2/http/dsl"
+	. "goa.design/goa/design"
+	. "goa.design/goa/http/dsl"
 )
 
 var PathNoParamDSL = func() {

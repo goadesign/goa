@@ -3,10 +3,10 @@ package generator
 import (
 	"fmt"
 
-	"goa.design/goa.v2/codegen"
-	"goa.design/goa.v2/eval"
-	httpcodegen "goa.design/goa.v2/http/codegen"
-	httpdesign "goa.design/goa.v2/http/design"
+	"goa.design/goa/codegen"
+	"goa.design/goa/eval"
+	httpcodegen "goa.design/goa/http/codegen"
+	httpdesign "goa.design/goa/http/design"
 )
 
 // Example iterates through the roots and returns files that implement an

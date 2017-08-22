@@ -3,7 +3,7 @@
 // sommelier HTTP client CLI support package
 //
 // Command:
-// $ goa gen goa.design/goa.v2/examples/cellar/design
+// $ goa gen goa.design/goa/examples/cellar/design
 
 package client
 
@@ -11,7 +11,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"goa.design/goa.v2/examples/cellar/gen/sommelier"
+	"goa.design/goa/examples/cellar/gen/sommelier"
 )
 
 // BuildCriteria builds the payload for the sommelier pick endpoint from CLI

@@ -7,7 +7,7 @@ import (
 	"io"
 	"net/http"
 
-	"goa.design/goa.v2"
+	"goa.design/goa"
 )
 
 // middlewareKey is the private type used for goa middlewares to store values in

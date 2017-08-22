@@ -14,7 +14,7 @@ import (
 	"net/http"
 	"strings"
 
-	goa "goa.design/goa.v2"
+	goa "goa.design/goa"
 )
 
 const (

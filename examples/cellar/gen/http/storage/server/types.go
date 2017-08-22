@@ -3,15 +3,15 @@
 // storage HTTP server types
 //
 // Command:
-// $ goa gen goa.design/goa.v2/examples/cellar/design
+// $ goa gen goa.design/goa/examples/cellar/design
 
 package server
 
 import (
 	"unicode/utf8"
 
-	goa "goa.design/goa.v2"
-	"goa.design/goa.v2/examples/cellar/gen/storage"
+	goa "goa.design/goa"
+	"goa.design/goa/examples/cellar/gen/storage"
 )
 
 // AddRequestBody is the type of the storage add HTTP endpoint request body.

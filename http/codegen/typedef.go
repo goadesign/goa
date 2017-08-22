@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"strings"
 
-	"goa.design/goa.v2/codegen"
-	"goa.design/goa.v2/design"
+	"goa.design/goa/codegen"
+	"goa.design/goa/design"
 )
 
 // goTypeDef returns the Go code that defines the struct corresponding to ma.

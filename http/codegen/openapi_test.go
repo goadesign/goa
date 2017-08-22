@@ -7,8 +7,8 @@ import (
 
 	"github.com/go-openapi/loads"
 
-	"goa.design/goa.v2/design"
-	httpdesign "goa.design/goa.v2/http/design"
+	"goa.design/goa/design"
+	httpdesign "goa.design/goa/http/design"
 )
 
 func newDesign(t *testing.T, httpSvcs ...*httpdesign.ServiceExpr) *httpdesign.RootExpr {
@@ -106,7 +106,7 @@ func TestOutputPath(t *testing.T) {
 
 func TestSections(t *testing.T) {
 	const (
-		genPkg = "goa.design/goa.v2"
+		genPkg = "goa.design/goa"
 	)
 	var (
 		empty  = newDesign(t)

@@ -3,7 +3,7 @@
 // sommelier service
 //
 // Command:
-// $ goa gen goa.design/goa.v2/examples/cellar/design
+// $ goa gen goa.design/goa/examples/cellar/design
 
 package sommelier
 

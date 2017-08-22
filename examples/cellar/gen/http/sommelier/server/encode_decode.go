@@ -3,7 +3,7 @@
 // sommelier HTTP server encoders and decoders
 //
 // Command:
-// $ goa gen goa.design/goa.v2/examples/cellar/design
+// $ goa gen goa.design/goa/examples/cellar/design
 
 package server
 
@@ -12,9 +12,9 @@ import (
 	"io"
 	"net/http"
 
-	goa "goa.design/goa.v2"
-	"goa.design/goa.v2/examples/cellar/gen/sommelier"
-	goahttp "goa.design/goa.v2/http"
+	goa "goa.design/goa"
+	"goa.design/goa/examples/cellar/gen/sommelier"
+	goahttp "goa.design/goa/http"
 )
 
 // EncodePickResponse returns an encoder for responses returned by the

@@ -3,7 +3,7 @@ package design
 import (
 	"fmt"
 
-	"goa.design/goa.v2/eval"
+	"goa.design/goa/eval"
 )
 
 type (

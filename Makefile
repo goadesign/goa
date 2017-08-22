@@ -11,7 +11,7 @@
 # Meta targets:
 # - "all" is the default target, it runs all the targets in the order above.
 #
-DIRS=$(shell go list -f {{.Dir}} goa.design/goa.v2/design/...)
+DIRS=$(shell go list -f {{.Dir}} goa.design/goa/design/...)
 
 # Only list test and build dependencies
 # Standard dependencies are installed via go get

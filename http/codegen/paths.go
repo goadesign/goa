@@ -5,8 +5,8 @@ import (
 	"path/filepath"
 	"text/template"
 
-	"goa.design/goa.v2/codegen"
-	httpdesign "goa.design/goa.v2/http/design"
+	"goa.design/goa/codegen"
+	httpdesign "goa.design/goa/http/design"
 )
 
 var (

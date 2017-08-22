@@ -10,8 +10,8 @@ import (
 	"strings"
 	"text/template"
 
-	"goa.design/goa.v2/codegen"
-	"goa.design/goa.v2/pkg"
+	"goa.design/goa/codegen"
+	"goa.design/goa/pkg"
 )
 
 // Generator is the code generation management data structure.
@@ -75,10 +75,10 @@ func (g *Generator) Write(debug bool) error {
 			codegen.SimpleImport("path/filepath"),
 			codegen.SimpleImport("sort"),
 			codegen.SimpleImport("strings"),
-			codegen.SimpleImport("goa.design/goa.v2/codegen"),
-			codegen.SimpleImport("goa.design/goa.v2/codegen/generator"),
-			codegen.SimpleImport("goa.design/goa.v2/eval"),
-			codegen.SimpleImport("goa.design/goa.v2/pkg"),
+			codegen.SimpleImport("goa.design/goa/codegen"),
+			codegen.SimpleImport("goa.design/goa/codegen/generator"),
+			codegen.SimpleImport("goa.design/goa/eval"),
+			codegen.SimpleImport("goa.design/goa/pkg"),
 			codegen.NewImport("_", g.DesignPath),
 		}
 		sections = []*codegen.Section{

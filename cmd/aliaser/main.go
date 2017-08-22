@@ -12,9 +12,9 @@ import (
 )
 
 const (
-	goaDSL  = "goa.design/goa.v2/dsl"
-	httpDSL = "goa.design/goa.v2/http/dsl"
-	//rpcDSL    = "goa.design/goa.v2/dsl/rpc"
+	goaDSL  = "goa.design/goa/dsl"
+	httpDSL = "goa.design/goa/http/dsl"
+	//rpcDSL    = "goa.design/goa/dsl/rpc"
 	aliasFile = "aliases.go"
 )
 
@@ -128,8 +128,8 @@ const (
 package dsl
 
 import (
-	"goa.design/goa.v2/design"
-	"goa.design/goa.v2/dsl"
+	"goa.design/goa/design"
+	"goa.design/goa/dsl"
 )
 
 `

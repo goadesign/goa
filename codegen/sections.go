@@ -3,7 +3,7 @@ package codegen
 import (
 	"text/template"
 
-	"goa.design/goa.v2/pkg"
+	"goa.design/goa/pkg"
 )
 
 var (

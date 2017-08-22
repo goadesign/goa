@@ -7,8 +7,8 @@ import (
 	"strings"
 	"testing"
 
-	"goa.design/goa.v2/codegen"
-	"goa.design/goa.v2/design"
+	"goa.design/goa/codegen"
+	"goa.design/goa/design"
 )
 
 func TestService(t *testing.T) {
@@ -134,7 +134,7 @@ type AResult struct {
 }
 `
 
-		genPkg = "goa.design/goa.v2/example"
+		genPkg = "goa.design/goa/example"
 	)
 	var (
 		child = &design.UserTypeExpr{

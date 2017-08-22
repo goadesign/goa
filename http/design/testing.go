@@ -3,8 +3,8 @@ package design
 import (
 	"testing"
 
-	"goa.design/goa.v2/design"
-	"goa.design/goa.v2/eval"
+	"goa.design/goa/design"
+	"goa.design/goa/eval"
 )
 
 // RunHTTPDSL returns the http DSL root resulting from running the given DSL.

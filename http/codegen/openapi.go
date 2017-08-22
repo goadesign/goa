@@ -5,9 +5,9 @@ import (
 	"path/filepath"
 	"text/template"
 
-	"goa.design/goa.v2/codegen"
-	"goa.design/goa.v2/http/codegen/openapi"
-	httpdesign "goa.design/goa.v2/http/design"
+	"goa.design/goa/codegen"
+	"goa.design/goa/http/codegen/openapi"
+	httpdesign "goa.design/goa/http/design"
 )
 
 type (

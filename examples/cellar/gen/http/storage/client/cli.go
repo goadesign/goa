@@ -3,7 +3,7 @@
 // storage HTTP client CLI support package
 //
 // Command:
-// $ goa gen goa.design/goa.v2/examples/cellar/design
+// $ goa gen goa.design/goa/examples/cellar/design
 
 package client
 
@@ -12,8 +12,8 @@ import (
 	"fmt"
 	"unicode/utf8"
 
-	goa "goa.design/goa.v2"
-	"goa.design/goa.v2/examples/cellar/gen/storage"
+	goa "goa.design/goa"
+	"goa.design/goa/examples/cellar/gen/storage"
 )
 
 // BuildShowPayload builds the payload for the storage show endpoint from CLI

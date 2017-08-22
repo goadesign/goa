@@ -8,8 +8,8 @@ import (
 	"strings"
 
 	"github.com/dimfeld/httppath"
-	"goa.design/goa.v2/design"
-	"goa.design/goa.v2/eval"
+	"goa.design/goa/design"
+	"goa.design/goa/eval"
 )
 
 type (

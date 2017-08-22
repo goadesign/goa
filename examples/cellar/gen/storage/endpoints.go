@@ -3,14 +3,14 @@
 // storage endpoints
 //
 // Command:
-// $ goa gen goa.design/goa.v2/examples/cellar/design
+// $ goa gen goa.design/goa/examples/cellar/design
 
 package storage
 
 import (
 	"context"
 
-	goa "goa.design/goa.v2"
+	goa "goa.design/goa"
 )
 
 type (

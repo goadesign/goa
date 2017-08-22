@@ -1,8 +1,8 @@
 package dsl
 
 import (
-	"goa.design/goa.v2/eval"
-	httpdesign "goa.design/goa.v2/http/design"
+	"goa.design/goa/eval"
+	httpdesign "goa.design/goa/http/design"
 )
 
 // Response describes a single HTTP response. Response describes both success and

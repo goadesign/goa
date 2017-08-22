@@ -1,6 +1,6 @@
 package design
 
-import "goa.design/goa.v2/eval"
+import "goa.design/goa/eval"
 
 type (
 	// GeneratedRoot records the generated result types and is a DSL root
@@ -35,7 +35,7 @@ func (r *GeneratedRoot) DependsOn() []eval.Root {
 // Packages returns the Go import path to this and the dsl packages.
 func (r *GeneratedRoot) Packages() []string {
 	return []string{
-		"goa.design/goa.v2/design",
-		"goa.design/goa.v2/dsl",
+		"goa.design/goa/design",
+		"goa.design/goa/dsl",
 	}
 }

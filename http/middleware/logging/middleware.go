@@ -8,8 +8,8 @@ import (
 	"net/http"
 	"time"
 
-	"goa.design/goa.v2"
-	"goa.design/goa.v2/http/middleware/tracing"
+	"goa.design/goa"
+	"goa.design/goa/http/middleware/tracing"
 )
 
 // New returns a middleware that logs short messages for incoming requests and

@@ -3,7 +3,7 @@
 // sommelier HTTP client encoders and decoders
 //
 // Command:
-// $ goa gen goa.design/goa.v2/examples/cellar/design
+// $ goa gen goa.design/goa/examples/cellar/design
 
 package client
 
@@ -13,8 +13,8 @@ import (
 	"net/http"
 	"net/url"
 
-	"goa.design/goa.v2/examples/cellar/gen/sommelier"
-	goahttp "goa.design/goa.v2/http"
+	"goa.design/goa/examples/cellar/gen/sommelier"
+	goahttp "goa.design/goa/http"
 )
 
 // BuildPickRequest instantiates a HTTP request object with method and path set

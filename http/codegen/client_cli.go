@@ -7,9 +7,9 @@ import (
 	"strings"
 	"text/template"
 
-	"goa.design/goa.v2/codegen"
-	"goa.design/goa.v2/design"
-	httpdesign "goa.design/goa.v2/http/design"
+	"goa.design/goa/codegen"
+	"goa.design/goa/design"
+	httpdesign "goa.design/goa/http/design"
 )
 
 type (
@@ -137,8 +137,8 @@ func endpointParser(root *httpdesign.RootExpr, data []*commandData) codegen.File
 			{Path: "net/http"},
 			{Path: "os"},
 			{Path: "strconv"},
-			{Path: "goa.design/goa.v2", Name: "goa"},
-			{Path: "goa.design/goa.v2/http", Name: "goahttp"},
+			{Path: "goa.design/goa", Name: "goa"},
+			{Path: "goa.design/goa/http", Name: "goahttp"},
 		}
 		for _, svc := range root.HTTPServices {
 			n := codegen.Goify(svc.Name(), false)
@@ -194,8 +194,8 @@ func payloadBuilders(svc *httpdesign.ServiceExpr, data *commandData) codegen.Fil
 			{Path: "os"},
 			{Path: "strconv"},
 			{Path: "unicode/utf8"},
-			{Path: "goa.design/goa.v2", Name: "goa"},
-			{Path: "goa.design/goa.v2/http", Name: "goahttp"},
+			{Path: "goa.design/goa", Name: "goa"},
+			{Path: "goa.design/goa/http", Name: "goahttp"},
 			{Path: genPkg + "/" + HTTPServices.Get(svc.Name()).Service.PkgName},
 		}
 		s := []*codegen.Section{
