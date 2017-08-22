@@ -1,6 +1,6 @@
 package codegen
 
-import "goa.design/goa.v2/design"
+import "goa.design/goa/design"
 
 // MappedAttributeWalker is the type of functions given to WalkMappedAttr. name
 // is the name of the attribute, elem the name of the corresponding transport

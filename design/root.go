@@ -1,6 +1,6 @@
 package design
 
-import "goa.design/goa.v2/eval"
+import "goa.design/goa/eval"
 
 // Root is the root object built by the DSL.
 var Root = &RootExpr{GeneratedTypes: &GeneratedRoot{}}
@@ -80,8 +80,8 @@ func (r *RootExpr) DependsOn() []eval.Root { return nil }
 // Packages returns the Go import path to this and the dsl packages.
 func (r *RootExpr) Packages() []string {
 	return []string{
-		"goa.design/goa.v2/design",
-		"goa.design/goa.v2/dsl",
+		"goa.design/goa/design",
+		"goa.design/goa/dsl",
 	}
 }
 

@@ -16,7 +16,7 @@ import (
 	"fmt"
 	"reflect"
 
-	"goa.design/goa.v2/eval"
+	"goa.design/goa/eval"
 )
 
 type (

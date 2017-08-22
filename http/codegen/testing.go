@@ -3,8 +3,8 @@ package codegen
 import (
 	"testing"
 
-	"goa.design/goa.v2/codegen/service"
-	httpdesign "goa.design/goa.v2/http/design"
+	"goa.design/goa/codegen/service"
+	httpdesign "goa.design/goa/http/design"
 )
 
 // RunHTTPDSL returns the HTTP DSL root resulting from running the given DSL.

@@ -6,8 +6,8 @@ import (
 	"sort"
 	"strings"
 
-	"goa.design/goa.v2/design"
-	"goa.design/goa.v2/eval"
+	"goa.design/goa/design"
+	"goa.design/goa/eval"
 )
 
 var (
@@ -227,8 +227,8 @@ func (r *RootExpr) DependsOn() []eval.Root { return nil }
 // Packages returns the Go import path to this and the dsl packages.
 func (r *RootExpr) Packages() []string {
 	return []string{
-		"goa.design/goa.v2/http/design",
-		"goa.design/goa.v2/http/dsl",
+		"goa.design/goa/http/design",
+		"goa.design/goa/http/dsl",
 	}
 }
 

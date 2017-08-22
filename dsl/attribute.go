@@ -3,8 +3,8 @@ package dsl
 import (
 	"fmt"
 
-	"goa.design/goa.v2/design"
-	"goa.design/goa.v2/eval"
+	"goa.design/goa/design"
+	"goa.design/goa/eval"
 )
 
 // Attribute describes a field of an object.

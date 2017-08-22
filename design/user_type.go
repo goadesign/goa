@@ -1,6 +1,6 @@
 package design
 
-import "goa.design/goa.v2/eval"
+import "goa.design/goa/eval"
 
 type (
 	// UserTypeExpr is the struct used to describe user defined types.

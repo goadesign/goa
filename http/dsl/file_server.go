@@ -3,9 +3,9 @@ package dsl
 import (
 	"strings"
 
-	"goa.design/goa.v2/design"
-	"goa.design/goa.v2/eval"
-	httpdesign "goa.design/goa.v2/http/design"
+	"goa.design/goa/design"
+	"goa.design/goa/eval"
+	httpdesign "goa.design/goa/http/design"
 )
 
 // Files defines a endpoint that serves static assets. The logic for what to do

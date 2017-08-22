@@ -1,8 +1,8 @@
 package dsl
 
 import (
-	"goa.design/goa.v2/design"
-	"goa.design/goa.v2/dsl"
+	"goa.design/goa/design"
+	"goa.design/goa/dsl"
 )
 
 // Value sets the example value.

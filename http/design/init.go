@@ -1,7 +1,7 @@
 package design
 
 import (
-	"goa.design/goa.v2/eval"
+	"goa.design/goa/eval"
 )
 
 // Register DSL roots.

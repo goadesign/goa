@@ -5,7 +5,7 @@ os: Windows Server 2012 R2
 environment:
   GOPATH: C:\gopath
 
-clone_folder: c:\gopath\src\goa.design\goa.v2
+clone_folder: c:\gopath\src\goa.design\goa
 
 install:
   - go version

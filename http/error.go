@@ -14,7 +14,7 @@ package http
 import (
 	"net/http"
 
-	"goa.design/goa.v2"
+	"goa.design/goa"
 )
 
 type (

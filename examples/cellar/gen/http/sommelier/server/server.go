@@ -3,7 +3,7 @@
 // sommelier HTTP server
 //
 // Command:
-// $ goa gen goa.design/goa.v2/examples/cellar/design
+// $ goa gen goa.design/goa/examples/cellar/design
 
 package server
 
@@ -11,9 +11,9 @@ import (
 	"context"
 	"net/http"
 
-	goa "goa.design/goa.v2"
-	"goa.design/goa.v2/examples/cellar/gen/sommelier"
-	goahttp "goa.design/goa.v2/http"
+	goa "goa.design/goa"
+	"goa.design/goa/examples/cellar/gen/sommelier"
+	goahttp "goa.design/goa/http"
 )
 
 // Server lists the sommelier service endpoint HTTP handlers.

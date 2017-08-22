@@ -3,15 +3,15 @@
 // sommelier HTTP client types
 //
 // Command:
-// $ goa gen goa.design/goa.v2/examples/cellar/design
+// $ goa gen goa.design/goa/examples/cellar/design
 
 package client
 
 import (
 	"unicode/utf8"
 
-	goa "goa.design/goa.v2"
-	"goa.design/goa.v2/examples/cellar/gen/sommelier"
+	goa "goa.design/goa"
+	"goa.design/goa/examples/cellar/gen/sommelier"
 )
 
 // PickRequestBody is the type of the sommelier pick HTTP endpoint request body.

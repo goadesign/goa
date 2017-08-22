@@ -8,10 +8,10 @@ import (
 	"strings"
 	"text/template"
 
-	"goa.design/goa.v2/codegen"
-	"goa.design/goa.v2/codegen/service"
-	"goa.design/goa.v2/design"
-	httpdesign "goa.design/goa.v2/http/design"
+	"goa.design/goa/codegen"
+	"goa.design/goa/codegen/service"
+	"goa.design/goa/design"
+	httpdesign "goa.design/goa/http/design"
 )
 
 // HTTPServices holds the data computed from the design needed to generate the

@@ -6,8 +6,8 @@ import (
 	"reflect"
 	"strconv"
 
-	"goa.design/goa.v2/design"
-	httpdesign "goa.design/goa.v2/http/design"
+	"goa.design/goa/design"
+	httpdesign "goa.design/goa/http/design"
 )
 
 type (

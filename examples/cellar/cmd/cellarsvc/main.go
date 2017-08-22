@@ -12,15 +12,15 @@ import (
 
 	"github.com/boltdb/bolt"
 
-	goa "goa.design/goa.v2"
-	cellar "goa.design/goa.v2/examples/cellar"
-	sommeliersvr "goa.design/goa.v2/examples/cellar/gen/http/sommelier/server"
-	storagesvr "goa.design/goa.v2/examples/cellar/gen/http/storage/server"
-	"goa.design/goa.v2/examples/cellar/gen/sommelier"
-	"goa.design/goa.v2/examples/cellar/gen/storage"
-	goahttp "goa.design/goa.v2/http"
-	"goa.design/goa.v2/http/middleware/debugging"
-	"goa.design/goa.v2/http/middleware/logging"
+	goa "goa.design/goa"
+	cellar "goa.design/goa/examples/cellar"
+	sommeliersvr "goa.design/goa/examples/cellar/gen/http/sommelier/server"
+	storagesvr "goa.design/goa/examples/cellar/gen/http/storage/server"
+	"goa.design/goa/examples/cellar/gen/sommelier"
+	"goa.design/goa/examples/cellar/gen/storage"
+	goahttp "goa.design/goa/http"
+	"goa.design/goa/http/middleware/debugging"
+	"goa.design/goa/http/middleware/logging"
 )
 
 func main() {

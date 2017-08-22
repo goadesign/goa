@@ -9,9 +9,9 @@ import (
 	"net/http"
 	"strings"
 
-	goa "goa.design/goa.v2"
-	goahttp "goa.design/goa.v2/http"
-	"goa.design/goa.v2/http/middleware/tracing"
+	goa "goa.design/goa"
+	goahttp "goa.design/goa/http"
+	"goa.design/goa/http/middleware/tracing"
 )
 
 // responseDupper tees the response to a buffer and a response writer.

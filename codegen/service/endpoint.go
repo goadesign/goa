@@ -5,8 +5,8 @@ import (
 	"path/filepath"
 	"text/template"
 
-	"goa.design/goa.v2/codegen"
-	"goa.design/goa.v2/design"
+	"goa.design/goa/codegen"
+	"goa.design/goa/design"
 )
 
 type (
@@ -75,7 +75,7 @@ func EndpointFile(service *design.ServiceExpr) codegen.File {
 			header = codegen.Header(service.Name+" endpoints", codegen.Goify(service.Name, false),
 				[]*codegen.ImportSpec{
 					&codegen.ImportSpec{Path: "context"},
-					&codegen.ImportSpec{Name: "goa", Path: "goa.design/goa.v2"},
+					&codegen.ImportSpec{Name: "goa", Path: "goa.design/goa"},
 				})
 			body = &codegen.Section{
 				Template: endpointTmpl,

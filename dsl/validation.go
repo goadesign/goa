@@ -5,8 +5,8 @@ import (
 	"regexp"
 	"strconv"
 
-	"goa.design/goa.v2/design"
-	"goa.design/goa.v2/eval"
+	"goa.design/goa/design"
+	"goa.design/goa/eval"
 )
 
 // Enum adds a "enum" validation to the attribute.

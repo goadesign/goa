@@ -5,8 +5,8 @@ import (
 	"strings"
 	"testing"
 
-	"goa.design/goa.v2/codegen"
-	"goa.design/goa.v2/design"
+	"goa.design/goa/codegen"
+	"goa.design/goa/design"
 )
 
 func TestEndpoint(t *testing.T) {
@@ -73,7 +73,7 @@ func NewEndpoints(s Service) *Endpoints {
 	return ep
 }`
 
-		genPkg = "goa.design/goa.v2/example"
+		genPkg = "goa.design/goa/example"
 	)
 	var (
 		a = design.MethodExpr{

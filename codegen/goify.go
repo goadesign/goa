@@ -4,7 +4,7 @@ import (
 	"strings"
 	"unicode"
 
-	"goa.design/goa.v2/design"
+	"goa.design/goa/design"
 )
 
 // Goify makes a valid Go identifier out of any string. It does that by removing

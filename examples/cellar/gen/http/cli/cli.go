@@ -3,7 +3,7 @@
 // cellar HTTP client CLI support package
 //
 // Command:
-// $ goa gen goa.design/goa.v2/examples/cellar/design
+// $ goa gen goa.design/goa/examples/cellar/design
 
 package cli
 
@@ -13,10 +13,10 @@ import (
 	"net/http"
 	"os"
 
-	goa "goa.design/goa.v2"
-	sommelierc "goa.design/goa.v2/examples/cellar/gen/http/sommelier/client"
-	storagec "goa.design/goa.v2/examples/cellar/gen/http/storage/client"
-	goahttp "goa.design/goa.v2/http"
+	goa "goa.design/goa"
+	sommelierc "goa.design/goa/examples/cellar/gen/http/sommelier/client"
+	storagec "goa.design/goa/examples/cellar/gen/http/storage/client"
+	goahttp "goa.design/goa/http"
 )
 
 // UsageCommands returns the set of commands and sub-commands using the format

@@ -9,7 +9,7 @@ goa v2 brings a host of fixes and has a cleaner more composable overall design:
   service implementation is isolated from the transport code.
 
 The import path for goa v2 has changed from `github.com/goadesign/goa` to
-`goa.design/goa.v2`.
+`goa.design/goa`.
 
 ## Separation of Concerns
 
@@ -67,7 +67,7 @@ goa gen [IMPORT]
 where `goa` is the code generation tool for goa v2 installed by doing:
 
 ```bash
-go install goa.design/goa.v2/cmd/goa
+go install goa.design/goa/cmd/goa
 ```
 
 and `IMPORT` is the Go import path to the design package.
@@ -93,7 +93,7 @@ goa example [IMPORT]
     [sommelier](https://github.com/goadesign/goa/blob/v2/examples/cellar/gen/sommelier/http/server)
   - The generated HTTP clients: [storage](https://github.com/goadesign/goa/tree/v2/examples/cellar/gen/storage/http/client) and
     [sommelier](https://github.com/goadesign/goa/blob/v2/examples/cellar/gen/sommelier/http/client)
-  - The generated [OpenAPIv2 spec](https://github.com/goadesign/goa.v2/tree/v2/examples/cellar/gen/openapi.json)
+  - The generated [OpenAPIv2 spec](https://github.com/goadesign/goa/tree/v2/examples/cellar/gen/openapi.json)
 
 ## Design Docs
 

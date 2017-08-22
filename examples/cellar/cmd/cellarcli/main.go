@@ -11,8 +11,8 @@ import (
 	"strings"
 	"time"
 
-	"goa.design/goa.v2/examples/cellar/gen/http/cli"
-	goahttp "goa.design/goa.v2/http"
+	"goa.design/goa/examples/cellar/gen/http/cli"
+	goahttp "goa.design/goa/http"
 )
 
 func main() {

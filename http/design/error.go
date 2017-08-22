@@ -1,8 +1,8 @@
 package design
 
 import (
-	"goa.design/goa.v2/design"
-	"goa.design/goa.v2/eval"
+	"goa.design/goa/design"
+	"goa.design/goa/eval"
 )
 
 type (

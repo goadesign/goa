@@ -6,9 +6,9 @@ import (
 	"strings"
 	"text/template"
 
-	"goa.design/goa.v2/codegen"
-	"goa.design/goa.v2/design"
-	httpdesign "goa.design/goa.v2/http/design"
+	"goa.design/goa/codegen"
+	"goa.design/goa/design"
+	httpdesign "goa.design/goa/http/design"
 )
 
 // ExampleServerFiles returns and example main and dummy service
@@ -62,10 +62,10 @@ func exampleMain(root *httpdesign.RootExpr) codegen.File {
 			{Path: "os"},
 			{Path: "os/signal"},
 			{Path: "time"},
-			{Path: "goa.design/goa.v2", Name: "goa"},
-			{Path: "goa.design/goa.v2/http", Name: "goahttp"},
-			{Path: "goa.design/goa.v2/http/middleware/debugging"},
-			{Path: "goa.design/goa.v2/http/middleware/logging"},
+			{Path: "goa.design/goa", Name: "goa"},
+			{Path: "goa.design/goa/http", Name: "goahttp"},
+			{Path: "goa.design/goa/http/middleware/debugging"},
+			{Path: "goa.design/goa/http/middleware/logging"},
 			{Path: rootPath, Name: codegen.KebabCase(root.Design.API.Name)},
 		}
 		for _, svc := range root.HTTPServices {

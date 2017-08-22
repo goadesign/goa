@@ -3,7 +3,7 @@ package openapi
 import (
 	"encoding/json"
 
-	"goa.design/goa.v2/design"
+	"goa.design/goa/design"
 )
 
 type (

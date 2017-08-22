@@ -3,7 +3,7 @@
 // storage client HTTP transport
 //
 // Command:
-// $ goa gen goa.design/goa.v2/examples/cellar/design
+// $ goa gen goa.design/goa/examples/cellar/design
 
 package client
 
@@ -11,8 +11,8 @@ import (
 	"context"
 	"net/http"
 
-	goa "goa.design/goa.v2"
-	goahttp "goa.design/goa.v2/http"
+	goa "goa.design/goa"
+	goahttp "goa.design/goa/http"
 )
 
 // Client lists the storage service endpoint HTTP clients.

@@ -3,9 +3,9 @@ package codegen
 import (
 	"testing"
 
-	"goa.design/goa.v2/codegen"
-	. "goa.design/goa.v2/http/codegen/testing"
-	httpdesign "goa.design/goa.v2/http/design"
+	"goa.design/goa/codegen"
+	. "goa.design/goa/http/codegen/testing"
+	httpdesign "goa.design/goa/http/design"
 )
 
 func TestPayloadConstructor(t *testing.T) {

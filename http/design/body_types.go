@@ -3,8 +3,8 @@ package design
 import (
 	"net/http"
 
-	"goa.design/goa.v2/codegen"
-	"goa.design/goa.v2/design"
+	"goa.design/goa/codegen"
+	"goa.design/goa/design"
 )
 
 // RequestBody returns an attribute describing the request body of the given

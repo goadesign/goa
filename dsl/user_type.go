@@ -1,8 +1,8 @@
 package dsl
 
 import (
-	"goa.design/goa.v2/design"
-	"goa.design/goa.v2/eval"
+	"goa.design/goa/design"
+	"goa.design/goa/eval"
 )
 
 // Type defines a user type. A user type has a unique name and may be an alias

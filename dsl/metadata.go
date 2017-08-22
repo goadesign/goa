@@ -1,8 +1,8 @@
 package dsl
 
 import (
-	"goa.design/goa.v2/design"
-	"goa.design/goa.v2/eval"
+	"goa.design/goa/design"
+	"goa.design/goa/eval"
 )
 
 // Metadata is a set of key/value pairs that can be assigned to an object. Each

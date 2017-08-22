@@ -8,7 +8,7 @@ import (
 	"text/template"
 	"unicode"
 
-	"goa.design/goa.v2/pkg"
+	"goa.design/goa/pkg"
 )
 
 // TemplateFuncs returns all the common helper functions.

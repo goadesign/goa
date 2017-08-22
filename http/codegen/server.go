@@ -7,10 +7,10 @@ import (
 	"strings"
 	"text/template"
 
-	"goa.design/goa.v2/codegen"
-	"goa.design/goa.v2/codegen/service"
-	"goa.design/goa.v2/design"
-	httpdesign "goa.design/goa.v2/http/design"
+	"goa.design/goa/codegen"
+	"goa.design/goa/codegen/service"
+	"goa.design/goa/design"
+	httpdesign "goa.design/goa/http/design"
 )
 
 // ServerFiles returns all the server HTTP transport files.
@@ -37,8 +37,8 @@ func server(svc *httpdesign.ServiceExpr) codegen.File {
 				{Path: "fmt"},
 				{Path: "io"},
 				{Path: "net/http"},
-				{Path: "goa.design/goa.v2", Name: "goa"},
-				{Path: "goa.design/goa.v2/http", Name: "goahttp"},
+				{Path: "goa.design/goa", Name: "goa"},
+				{Path: "goa.design/goa/http", Name: "goahttp"},
 				{Path: genPkg + "/" + data.Service.PkgName},
 			}),
 			{Template: serverStructTmpl(svc), Data: data},
@@ -74,8 +74,8 @@ func serverEncodeDecode(svc *httpdesign.ServiceExpr) codegen.File {
 				{Path: "net/http"},
 				{Path: "strconv"},
 				{Path: "strings"},
-				{Path: "goa.design/goa.v2", Name: "goa"},
-				{Path: "goa.design/goa.v2/http", Name: "goahttp"},
+				{Path: "goa.design/goa", Name: "goa"},
+				{Path: "goa.design/goa/http", Name: "goahttp"},
 				{Path: genPkg + "/" + data.Service.PkgName},
 			}),
 		}

@@ -4,9 +4,9 @@ import (
 	"path/filepath"
 	"text/template"
 
-	"goa.design/goa.v2/codegen"
-	"goa.design/goa.v2/codegen/service"
-	httpdesign "goa.design/goa.v2/http/design"
+	"goa.design/goa/codegen"
+	"goa.design/goa/codegen/service"
+	httpdesign "goa.design/goa/http/design"
 )
 
 var (
@@ -74,7 +74,7 @@ func serverType(r *httpdesign.ServiceExpr, seen map[string]struct{}) codegen.Fil
 			[]*codegen.ImportSpec{
 				{Path: "unicode/utf8"},
 				{Path: genPkg + "/" + service.Services.Get(r.Name()).PkgName},
-				{Path: "goa.design/goa.v2", Name: "goa"},
+				{Path: "goa.design/goa", Name: "goa"},
 			},
 		)
 

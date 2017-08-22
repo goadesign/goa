@@ -5,10 +5,10 @@ import (
 
 	"reflect"
 
-	"goa.design/goa.v2/design"
-	"goa.design/goa.v2/dsl"
-	"goa.design/goa.v2/eval"
-	httpdesign "goa.design/goa.v2/http/design"
+	"goa.design/goa/design"
+	"goa.design/goa/dsl"
+	"goa.design/goa/eval"
+	httpdesign "goa.design/goa/http/design"
 )
 
 // HTTP defines HTTP transport specific properties on a API, a service or a

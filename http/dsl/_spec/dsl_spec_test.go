@@ -5,8 +5,8 @@
 package dsl_test
 
 import (
-	. "goa.design/goa.v2/http/design"
-	. "goa.design/goa.v2/http/dsl"
+	. "goa.design/goa/http/design"
+	. "goa.design/goa/http/dsl"
 )
 
 // The API expression defines the global API properties of tbe design. There can
