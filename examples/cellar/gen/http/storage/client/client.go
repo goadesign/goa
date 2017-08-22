@@ -65,7 +65,7 @@ func NewClient(
 // server.
 func (c *Client) List() goa.Endpoint {
 	var (
-		decodeResponse = c.DecodeListResponse(c.decoder, c.RestoreResponseBody)
+		decodeResponse = DecodeListResponse(c.decoder, c.RestoreResponseBody)
 	)
 	return func(ctx context.Context, v interface{}) (interface{}, error) {
 		req, err := c.BuildListRequest()
@@ -86,7 +86,7 @@ func (c *Client) List() goa.Endpoint {
 // server.
 func (c *Client) Show() goa.Endpoint {
 	var (
-		decodeResponse = c.DecodeShowResponse(c.decoder, c.RestoreResponseBody)
+		decodeResponse = DecodeShowResponse(c.decoder, c.RestoreResponseBody)
 	)
 	return func(ctx context.Context, v interface{}) (interface{}, error) {
 		req, err := c.BuildShowRequest(v)
@@ -107,8 +107,8 @@ func (c *Client) Show() goa.Endpoint {
 // server.
 func (c *Client) Add() goa.Endpoint {
 	var (
-		encodeRequest  = c.EncodeAddRequest(c.encoder)
-		decodeResponse = c.DecodeAddResponse(c.decoder, c.RestoreResponseBody)
+		encodeRequest  = EncodeAddRequest(c.encoder)
+		decodeResponse = DecodeAddResponse(c.decoder, c.RestoreResponseBody)
 	)
 	return func(ctx context.Context, v interface{}) (interface{}, error) {
 		req, err := c.BuildAddRequest()
@@ -133,7 +133,7 @@ func (c *Client) Add() goa.Endpoint {
 // remove server.
 func (c *Client) Remove() goa.Endpoint {
 	var (
-		decodeResponse = c.DecodeRemoveResponse(c.decoder, c.RestoreResponseBody)
+		decodeResponse = DecodeRemoveResponse(c.decoder, c.RestoreResponseBody)
 	)
 	return func(ctx context.Context, v interface{}) (interface{}, error) {
 		req, err := c.BuildRemoveRequest(v)

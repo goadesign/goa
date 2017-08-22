@@ -53,8 +53,8 @@ func NewClient(
 // pick server.
 func (c *Client) Pick() goa.Endpoint {
 	var (
-		encodeRequest  = c.EncodePickRequest(c.encoder)
-		decodeResponse = c.DecodePickResponse(c.decoder, c.RestoreResponseBody)
+		encodeRequest  = EncodePickRequest(c.encoder)
+		decodeResponse = DecodePickResponse(c.decoder, c.RestoreResponseBody)
 	)
 	return func(ctx context.Context, v interface{}) (interface{}, error) {
 		req, err := c.BuildPickRequest()

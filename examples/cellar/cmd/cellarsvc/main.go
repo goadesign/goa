@@ -60,28 +60,27 @@ func main() {
 
 	// Create the structs that implement the services.
 	var (
-		sommeliers sommelier.Service
-		storages   storage.Service
+		sommelierSvc sommelier.Service
+		storageSvc   storage.Service
 	)
 	{
-
+		sommelierSvc = cellar.NewSommelier(logger)
 		var err error
-		storages, err = cellar.NewStorage(db, logger)
+		storageSvc, err = cellar.NewStorage(db, logger)
 		if err != nil {
 			logger.Fatalf("error creating database: %s", err)
 		}
-		sommeliers = cellar.NewSommelier(logger)
 	}
 
 	// Wrap the services in endpoints that can be invoked from other
 	// services potentially running in different processes.
 	var (
-		sommeliere *sommelier.Endpoints
-		storagee   *storage.Endpoints
+		sommelierEndpoints *sommelier.Endpoints
+		storageEndpoints   *storage.Endpoints
 	)
 	{
-		sommeliere = sommelier.NewEndpoints(sommeliers)
-		storagee = storage.NewEndpoints(storages)
+		sommelierEndpoints = sommelier.NewEndpoints(sommelierSvc)
+		storageEndpoints = storage.NewEndpoints(storageSvc)
 	}
 
 	// Provide the transport specific request decoder and response encoder.
@@ -105,17 +104,17 @@ func main() {
 	// the service input and output data structures to HTTP requests and
 	// responses.
 	var (
-		sommeliersv *sommeliersvr.Server
-		storagesv   *storagesvr.Server
+		sommelierServer *sommeliersvr.Server
+		storageServer   *storagesvr.Server
 	)
 	{
-		sommeliersv = sommeliersvr.New(sommeliere, mux, dec, enc)
-		storagesv = storagesvr.New(storagee, mux, dec, enc)
+		sommelierServer = sommeliersvr.New(sommelierEndpoints, mux, dec, enc)
+		storageServer = storagesvr.New(storageEndpoints, mux, dec, enc)
 	}
 
 	// Configure the mux.
-	sommeliersvr.Mount(mux, sommeliersv)
-	storagesvr.Mount(mux, storagesv)
+	sommeliersvr.Mount(mux, sommelierServer)
+	storagesvr.Mount(mux, storageServer)
 
 	// Wrap the multiplexer with additional middlewares. Middlewares mounted
 	// here apply to all the service endpoints.
@@ -148,7 +147,7 @@ func main() {
 	}()
 
 	// Wait for signal.
-	logger.Print("exiting", <-errc)
+	logger.Printf("exiting (%v)", <-errc)
 
 	// Shutdown gracefully with a 30s timeout.
 	ctx, _ := context.WithTimeout(context.Background(), 30*time.Second)

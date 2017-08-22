@@ -31,7 +31,7 @@ func (c *Client) BuildPickRequest() (*http.Request, error) {
 
 // EncodePickRequest returns an encoder for requests sent to the sommelier pick
 // server.
-func (c *Client) EncodePickRequest(encoder func(*http.Request) goahttp.Encoder) func(*http.Request, interface{}) error {
+func EncodePickRequest(encoder func(*http.Request) goahttp.Encoder) func(*http.Request, interface{}) error {
 	return func(req *http.Request, v interface{}) error {
 		p, ok := v.(*sommelier.Criteria)
 		if !ok {
@@ -48,7 +48,7 @@ func (c *Client) EncodePickRequest(encoder func(*http.Request) goahttp.Encoder) 
 // DecodePickResponse returns a decoder for responses returned by the sommelier
 // pick endpoint. restoreBody controls whether the response body should be
 // restored after having been read.
-func (c *Client) DecodePickResponse(decoder func(*http.Response) goahttp.Decoder, restoreBody bool) func(*http.Response) (interface{}, error) {
+func DecodePickResponse(decoder func(*http.Response) goahttp.Decoder, restoreBody bool) func(*http.Response) (interface{}, error) {
 	return func(resp *http.Response) (interface{}, error) {
 		if restoreBody {
 			b, err := ioutil.ReadAll(resp.Body)
