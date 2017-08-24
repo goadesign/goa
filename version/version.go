@@ -20,7 +20,7 @@ var (
 
 func init() {
 	if Build == "" { // Not set by link flags
-		Build = "0"
+		Build = "1"
 	}
 }
 
