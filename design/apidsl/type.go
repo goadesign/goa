@@ -60,21 +60,24 @@ func Type(name string, dsl func()) *design.UserTypeDefinition {
 //		Attribute("name")
 //	})
 //
-//	var Bottles = ArrayOf(Bottle)
-//
 //	Action("update", func() {
 //		Params(func() {
 //			Param("ids", ArrayOf(Integer))
 //		})
-//		Payload(ArrayOf(Bottle))  // Equivalent to Payload(Bottles)
+//		Payload(ArrayOf(Bottle))
 //	})
 //
 // ArrayOf accepts an optional DSL as second argument which allows providing
 // validations for the elements of the array:
 //
-//      var Names = ArrayOf(String, func() {
-//          Pattern("[a-zA-Z]+")
-//      })
+//	Action("update", func() {
+//		Params(func() {
+//			Param("ids", ArrayOf(Integer, func() {
+//				Minimum(1)
+//			}))
+//		})
+//		Payload(ArrayOf(Bottle))
+//	})
 //
 // If you are looking to return a collection of elements in a Response clause,
 // refer to CollectionOf. ArrayOf creates a type, where CollectionOf creates a
