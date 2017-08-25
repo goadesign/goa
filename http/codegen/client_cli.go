@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"path/filepath"
 	"strings"
-	"text/template"
 
 	"goa.design/goa/codegen"
 	"goa.design/goa/design"
@@ -102,14 +101,6 @@ type (
 	}
 )
 
-var (
-	usageTmpl        = template.Must(template.New("cli-usage").Parse(usageT))
-	exampleTmpl      = template.Must(template.New("cli-example").Parse(exampleT))
-	parseTmpl        = template.Must(template.New("cli-parse").Parse(parseT))
-	buildPayloadTmpl = template.Must(template.New("cli-build").Funcs(codegen.TemplateFuncs()).Parse(buildPayloadT))
-	commandUsageTmpl = template.Must(template.New("cli-cmd-usage").Funcs(codegen.TemplateFuncs()).Parse(commandUsageT))
-)
-
 // ClientCLIFiles returns the client HTTP CLI support file.
 func ClientCLIFiles(genpkg string, root *httpdesign.RootExpr) []*codegen.File {
 	data := make([]*commandData, len(root.HTTPServices))
@@ -164,17 +155,21 @@ func endpointParser(genpkg string, root *httpdesign.RootExpr, data []*commandDat
 		}
 	}
 
-	sections := []*codegen.Section{
+	sections := []*codegen.SectionTemplate{
 		codegen.Header(title, "cli", specs),
-		{Template: usageTmpl, Data: usages},
-		{Template: exampleTmpl, Data: examples},
-		{Template: parseTmpl, Data: data},
+		{Source: usageT, Data: usages},
+		{Source: exampleT, Data: examples},
+		{Source: parseT, Data: data},
 	}
 	for _, cmd := range data {
-		sections = append(sections, &codegen.Section{Template: commandUsageTmpl, Data: cmd})
+		sections = append(sections, &codegen.SectionTemplate{
+			Name:   "command-usage",
+			Source: commandUsageT,
+			Data:   cmd,
+		})
 	}
 
-	return &codegen.File{Path: path, Sections: sections}
+	return &codegen.File{Path: path, SectionTemplates: sections}
 }
 
 // payloadBuilders returns the file that contains the payload constructors that
@@ -193,19 +188,20 @@ func payloadBuilders(genpkg string, svc *httpdesign.ServiceExpr, data *commandDa
 		{Path: "goa.design/goa/http", Name: "goahttp"},
 		{Path: genpkg + "/" + HTTPServices.Get(svc.Name()).Service.PkgName},
 	}
-	sections := []*codegen.Section{
+	sections := []*codegen.SectionTemplate{
 		codegen.Header(title, "client", specs),
 	}
 	for _, sub := range data.Subcommands {
 		if sub.BuildFunction != nil {
-			sections = append(sections, &codegen.Section{
-				Template: buildPayloadTmpl,
-				Data:     sub.BuildFunction,
+			sections = append(sections, &codegen.SectionTemplate{
+				Name:   "command-usage",
+				Source: buildPayloadT,
+				Data:   sub.BuildFunction,
 			})
 		}
 	}
 
-	return &codegen.File{Path: path, Sections: sections}
+	return &codegen.File{Path: path, SectionTemplates: sections}
 }
 
 // buildCommandData builds the data needed by the templates to render the CLI

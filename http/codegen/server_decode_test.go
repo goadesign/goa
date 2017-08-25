@@ -157,7 +157,7 @@ func TestDecode(t *testing.T) {
 			if len(fs) != 2 {
 				t.Fatalf("got %d files, expected two", len(fs))
 			}
-			sections := fs[1].Sections
+			sections := fs[1].SectionTemplates
 			if len(sections) < 3 {
 				t.Fatalf("got %d sections, expected at least 3", len(sections))
 			}

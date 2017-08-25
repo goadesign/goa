@@ -3,7 +3,6 @@ package codegen
 import (
 	"fmt"
 	"path/filepath"
-	"text/template"
 
 	"goa.design/goa/codegen"
 	httpdesign "goa.design/goa/http/design"
@@ -26,7 +25,7 @@ func client(genpkg string, svc *httpdesign.ServiceExpr) *codegen.File {
 	path := filepath.Join(codegen.Gendir, "http", codegen.SnakeCase(svc.Name()), "client", "client.go")
 	data := HTTPServices.Get(svc.Name())
 	title := fmt.Sprintf("%s client HTTP transport", svc.Name())
-	sections := []*codegen.Section{
+	sections := []*codegen.SectionTemplate{
 		codegen.Header(title, "client", []*codegen.ImportSpec{
 			{Path: "context"},
 			{Path: "fmt"},
@@ -38,14 +37,18 @@ func client(genpkg string, svc *httpdesign.ServiceExpr) *codegen.File {
 			{Path: "goa.design/goa/http", Name: "goahttp"},
 			{Path: genpkg + "/" + data.Service.PkgName},
 		}),
-		{Template: clientStructTmpl(svc), Data: data},
-		{Template: clientInitTmpl(svc), Data: data},
+		{Name: "client-struct", Source: clientStructT, Data: data},
+		{Name: "client-init", Source: clientInitT, Data: data},
 	}
 	for _, e := range data.Endpoints {
-		sections = append(sections, &codegen.Section{Template: endpointInitTmpl(svc), Data: e})
+		sections = append(sections, &codegen.SectionTemplate{
+			Name:   "client-endpoint-init",
+			Source: endpointInitT,
+			Data:   e,
+		})
 	}
 
-	return &codegen.File{Path: path, Sections: sections}
+	return &codegen.File{Path: path, SectionTemplates: sections}
 }
 
 // clientEncodeDecode returns the file containing the HTTP client encoding and
@@ -54,7 +57,7 @@ func clientEncodeDecode(genpkg string, svc *httpdesign.ServiceExpr) *codegen.Fil
 	path := filepath.Join(codegen.Gendir, "http", codegen.SnakeCase(svc.Name()), "client", "encode_decode.go")
 	data := HTTPServices.Get(svc.Name())
 	title := fmt.Sprintf("%s HTTP client encoders and decoders", svc.Name())
-	sections := []*codegen.Section{
+	sections := []*codegen.SectionTemplate{
 		codegen.Header(title, "client", []*codegen.ImportSpec{
 			{Path: "bytes"},
 			{Path: "fmt"},
@@ -71,49 +74,35 @@ func clientEncodeDecode(genpkg string, svc *httpdesign.ServiceExpr) *codegen.Fil
 	}
 
 	for _, e := range data.Endpoints {
-		sections = append(sections, &codegen.Section{Template: requestBuilderTmpl(svc), Data: e})
+		sections = append(sections, &codegen.SectionTemplate{
+			Name:   "request-builder",
+			Source: requestBuilderT,
+			Data:   e,
+		})
 		if e.RequestEncoder != "" {
-			sections = append(sections, &codegen.Section{Template: requestEncoderTmpl(svc), Data: e})
+			sections = append(sections, &codegen.SectionTemplate{
+				Name:   "request-encoder",
+				Source: requestEncoderT,
+				Data:   e,
+			})
 		}
 		if e.Result != nil || len(e.Errors) > 0 {
-			sections = append(sections, &codegen.Section{
-				Template: responseDecoderTmpl(svc),
-				Data:     e,
+			sections = append(sections, &codegen.SectionTemplate{
+				Name:   "response-decoder",
+				Source: responseDecoderT,
+				Data:   e,
 			})
 		}
 	}
 	for _, h := range data.ClientTransformHelpers {
-		sections = append(sections, &codegen.Section{
-			Template: transformHelperTmpl(svc),
-			Data:     h,
+		sections = append(sections, &codegen.SectionTemplate{
+			Name:   "client-transform-helper",
+			Source: transformHelperT,
+			Data:   h,
 		})
 	}
 
-	return &codegen.File{Path: path, Sections: sections}
-}
-
-func clientStructTmpl(r *httpdesign.ServiceExpr) *template.Template {
-	return template.Must(transTmpl(r).New("client-struct").Parse(clientStructT))
-}
-
-func clientInitTmpl(r *httpdesign.ServiceExpr) *template.Template {
-	return template.Must(transTmpl(r).New("client-constructor").Parse(clientInitT))
-}
-
-func endpointInitTmpl(r *httpdesign.ServiceExpr) *template.Template {
-	return template.Must(transTmpl(r).New("client-endpoint").Parse(endpointInitT))
-}
-
-func requestEncoderTmpl(r *httpdesign.ServiceExpr) *template.Template {
-	return template.Must(transTmpl(r).New("request-encoder").Parse(requestEncoderT))
-}
-
-func requestBuilderTmpl(r *httpdesign.ServiceExpr) *template.Template {
-	return template.Must(transTmpl(r).New("request-builder").Parse(requestBuilderT))
-}
-
-func responseDecoderTmpl(r *httpdesign.ServiceExpr) *template.Template {
-	return template.Must(transTmpl(r).New("response-decoder").Parse(responseDecoderT))
+	return &codegen.File{Path: path, SectionTemplates: sections}
 }
 
 // input: ServiceData

@@ -5,7 +5,6 @@ import (
 	"path/filepath"
 	"reflect"
 	"strings"
-	"text/template"
 
 	"goa.design/goa/codegen"
 	"goa.design/goa/codegen/service"
@@ -30,7 +29,7 @@ func server(genpkg string, svc *httpdesign.ServiceExpr) *codegen.File {
 	path := filepath.Join(codegen.Gendir, "http", codegen.SnakeCase(svc.Name()), "server", "server.go")
 	data := HTTPServices.Get(svc.Name())
 	title := fmt.Sprintf("%s HTTP server", svc.Name())
-	sections := []*codegen.Section{
+	sections := []*codegen.SectionTemplate{
 		codegen.Header(title, "server", []*codegen.ImportSpec{
 			{Path: "context"},
 			{Path: "fmt"},
@@ -40,17 +39,17 @@ func server(genpkg string, svc *httpdesign.ServiceExpr) *codegen.File {
 			{Path: "goa.design/goa/http", Name: "goahttp"},
 			{Path: genpkg + "/" + data.Service.PkgName},
 		}),
-		{Template: serverStructTmpl(svc), Data: data},
-		{Template: serverInitTmpl(svc), Data: data},
-		{Template: serverMountTmpl(svc), Data: data},
+		{Name: "server-struct", Source: serverStructT, Data: data},
+		{Name: "server-init", Source: serverInitT, Data: data},
+		{Name: "server-mount", Source: serverMountT, Data: data},
 	}
 
 	for _, e := range data.Endpoints {
-		sections = append(sections, &codegen.Section{Template: serverHandlerTmpl(svc), Data: e})
-		sections = append(sections, &codegen.Section{Template: serverHandlerInitTmpl(svc), Data: e})
+		sections = append(sections, &codegen.SectionTemplate{Name: "server-handler", Source: serverHandlerT, Data: e})
+		sections = append(sections, &codegen.SectionTemplate{Name: "server-handler-init", Source: serverHandlerInitT, Data: e})
 	}
 
-	return &codegen.File{Path: path, Sections: sections}
+	return &codegen.File{Path: path, SectionTemplates: sections}
 }
 
 // serverEncodeDecode returns the file defining the HTTP server encoding and
@@ -59,7 +58,7 @@ func serverEncodeDecode(genpkg string, svc *httpdesign.ServiceExpr) *codegen.Fil
 	path := filepath.Join(codegen.Gendir, "http", codegen.SnakeCase(svc.Name()), "server", "encode_decode.go")
 	data := HTTPServices.Get(svc.Name())
 	title := fmt.Sprintf("%s HTTP server encoders and decoders", svc.Name())
-	sections := []*codegen.Section{
+	sections := []*codegen.SectionTemplate{
 		codegen.Header(title, "server", []*codegen.ImportSpec{
 			{Path: "context"},
 			{Path: "fmt"},
@@ -74,69 +73,50 @@ func serverEncodeDecode(genpkg string, svc *httpdesign.ServiceExpr) *codegen.Fil
 	}
 
 	for _, e := range data.Endpoints {
-		sections = append(sections, &codegen.Section{Template: responseEncoderTmpl(svc), Data: e})
+		sections = append(sections, &codegen.SectionTemplate{
+			Name:    "response-encoder",
+			FuncMap: transTmplFuncs(svc),
+			Source:  responseEncoderT,
+			Data:    e,
+		})
 		if e.Payload.Ref != "" {
-			sections = append(sections, &codegen.Section{Template: requestDecoderTmpl(svc), Data: e})
+			sections = append(sections, &codegen.SectionTemplate{
+				Name:    "request-decoder",
+				Source:  requestDecoderT,
+				FuncMap: transTmplFuncs(svc),
+				Data:    e,
+			})
 		}
 
 		if len(e.Errors) > 0 {
-			sections = append(sections, &codegen.Section{Template: errorEncoderTmpl(svc), Data: e})
+			sections = append(sections, &codegen.SectionTemplate{
+				Name:    "error-encoder",
+				Source:  errorEncoderT,
+				FuncMap: transTmplFuncs(svc),
+				Data:    e,
+			})
 		}
 	}
 	for _, h := range data.ServerTransformHelpers {
-		sections = append(sections, &codegen.Section{Template: transformHelperTmpl(svc), Data: h})
+		sections = append(sections, &codegen.SectionTemplate{
+			Name:   "server-transform-helper",
+			Source: transformHelperT,
+			Data:   h,
+		})
 	}
 
-	return &codegen.File{Path: path, Sections: sections}
+	return &codegen.File{Path: path, SectionTemplates: sections}
 }
 
-func serverStructTmpl(s *httpdesign.ServiceExpr) *template.Template {
-	return template.Must(transTmpl(s).New("server-struct").Parse(serverStructT))
-}
-
-func serverInitTmpl(s *httpdesign.ServiceExpr) *template.Template {
-	return template.Must(transTmpl(s).New("server-constructor").Parse(serverInitT))
-}
-
-func serverMountTmpl(s *httpdesign.ServiceExpr) *template.Template {
-	return template.Must(transTmpl(s).New("mount").Parse(serverMountT))
-}
-
-func serverHandlerTmpl(s *httpdesign.ServiceExpr) *template.Template {
-	return template.Must(transTmpl(s).New("handler").Parse(serverHandlerT))
-}
-
-func serverHandlerInitTmpl(s *httpdesign.ServiceExpr) *template.Template {
-	return template.Must(transTmpl(s).New("handler-constructor").Parse(serverHandlerInitT))
-}
-
-func transformHelperTmpl(s *httpdesign.ServiceExpr) *template.Template {
-	return template.Must(transTmpl(s).New("transform-helper").Parse(transformHelperT))
-}
-
-func requestDecoderTmpl(s *httpdesign.ServiceExpr) *template.Template {
-	return template.Must(transTmpl(s).New("request-decoder").Parse(requestDecoderT))
-}
-
-func responseEncoderTmpl(s *httpdesign.ServiceExpr) *template.Template {
-	return template.Must(transTmpl(s).New("response-encoder").Parse(responseEncoderT))
-}
-
-func errorEncoderTmpl(s *httpdesign.ServiceExpr) *template.Template {
-	return template.Must(transTmpl(s).New("error-encoder").Parse(errorEncoderT))
-}
-
-func transTmpl(s *httpdesign.ServiceExpr) *template.Template {
-	return template.New("client-server").
-		Funcs(template.FuncMap{
-			"goTypeRef": func(dt design.DataType) string {
-				return service.Services.Get(s.Name()).Scope.GoTypeRef(&design.AttributeExpr{Type: dt})
-			},
-			"conversionData":       conversionData,
-			"headerConversionData": headerConversionData,
-			"printValue":           printValue,
-		}).
-		Funcs(codegen.TemplateFuncs())
+func transTmplFuncs(s *httpdesign.ServiceExpr) map[string]interface{} {
+	return map[string]interface{}{
+		"goTypeRef": func(dt design.DataType) string {
+			return service.Services.Get(s.Name()).Scope.GoTypeRef(&design.AttributeExpr{Type: dt})
+		},
+		"conversionData":       conversionData,
+		"headerConversionData": headerConversionData,
+		"printValue":           printValue,
+	}
 }
 
 // conversionData creates a template context suitable for executing the

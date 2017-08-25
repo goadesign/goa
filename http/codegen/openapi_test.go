@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"testing"
+	"text/template"
 
 	"github.com/go-openapi/loads"
 
@@ -123,18 +124,19 @@ func TestSections(t *testing.T) {
 		if err != nil {
 			t.Fatalf("%s: OpenAPI failed with %s", k, err)
 		}
-		s := o.Sections
+		s := o.SectionTemplates
 		if len(s) != 1 {
 			t.Fatalf("%s: expected 1 section, got %d", k, len(s))
 		}
-		if s[0].Template == nil {
-			t.Fatalf("%s: nil section template", k)
+		if s[0].Source == "" {
+			t.Fatalf("%s: empty section template", k)
 		}
 		if s[0].Data == nil {
 			t.Fatalf("%s: nil data", k)
 		}
 		var buf bytes.Buffer
-		err = s[0].Template.Execute(&buf, s[0].Data)
+		tmpl := template.Must(template.New("openapi").Funcs(s[0].FuncMap).Parse(s[0].Source))
+		err = tmpl.Execute(&buf, s[0].Data)
 		if err != nil {
 			t.Fatalf("%s: failed to render template: %s", k, err)
 		}

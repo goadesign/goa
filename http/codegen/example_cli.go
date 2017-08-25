@@ -2,7 +2,6 @@ package codegen
 
 import (
 	"path/filepath"
-	"text/template"
 
 	"goa.design/goa/codegen"
 	httpdesign "goa.design/goa/http/design"
@@ -24,14 +23,16 @@ func ExampleCLI(genpkg string, root *httpdesign.RootExpr) *codegen.File {
 		{Path: "goa.design/goa/http", Name: "goahttp"},
 		{Path: genpkg + "/http/cli"},
 	}
-	sections := []*codegen.Section{
+	sections := []*codegen.SectionTemplate{
 		codegen.Header("", "main", specs),
-		&codegen.Section{Template: mainCLITmpl, Data: root},
+		&codegen.SectionTemplate{
+			Name:   "cli-main",
+			Source: mainCLIT,
+			Data:   root,
+		},
 	}
-	return &codegen.File{Path: path, Sections: sections}
+	return &codegen.File{Path: path, SectionTemplates: sections}
 }
-
-var mainCLITmpl = template.Must(template.New("cli-main").Parse(mainCLIT))
 
 // input: map[string]interface{}{"Services":[]ServiceData, "APIPkg": string}
 const mainCLIT = `func main() {

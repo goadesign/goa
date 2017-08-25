@@ -23,7 +23,7 @@ func TestBodyTypeDecl(t *testing.T) {
 		t.Run(c.Name, func(t *testing.T) {
 			httpdesign.RunHTTPDSL(t, c.DSL)
 			fs := clientType(genpkg, httpdesign.Root.HTTPServices[0], make(map[string]struct{}))
-			section := fs.Sections[1]
+			section := fs.SectionTemplates[1]
 			code := codegen.SectionCode(t, section)
 			if code != c.Code {
 				t.Errorf("invalid code, got:\n%s\ngot vs. expected:\n%s", code, codegen.Diff(t, code, c.Code))
@@ -47,7 +47,7 @@ func TestBodyTypeInit(t *testing.T) {
 		t.Run(c.Name, func(t *testing.T) {
 			RunHTTPDSL(t, c.DSL)
 			fs := clientType(genpkg, httpdesign.Root.HTTPServices[0], make(map[string]struct{}))
-			section := fs.Sections[c.SectionIndex]
+			section := fs.SectionTemplates[c.SectionIndex]
 			code := codegen.SectionCode(t, section)
 			if code != c.Code {
 				t.Errorf("invalid code, got:\n%s\ngot vs. expected:\n%s", code, codegen.Diff(t, code, c.Code))

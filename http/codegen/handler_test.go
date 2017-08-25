@@ -28,7 +28,7 @@ func TestHandlerInit(t *testing.T) {
 			if len(fs) != 2 {
 				t.Fatalf("got %d files, expected two", len(fs))
 			}
-			sections := fs[0].Sections
+			sections := fs[0].SectionTemplates
 			if len(sections) < 6 {
 				t.Fatalf("got %d sections, expected a least 6", len(sections))
 			}

@@ -154,7 +154,7 @@ func NewEndpoints(s Service) *Endpoints {
 		design.Root.API = &design.APIExpr{Name: "test"}
 		File(tc.Service) // to initialize ServiceScope
 		ef := EndpointFile(tc.Service)
-		for _, s := range ef.Sections {
+		for _, s := range ef.SectionTemplates {
 			if err := s.Write(buf); err != nil {
 				t.Fatal(err)
 			}

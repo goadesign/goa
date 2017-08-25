@@ -3,7 +3,6 @@ package service
 import (
 	"fmt"
 	"path/filepath"
-	"text/template"
 
 	"goa.design/goa/codegen"
 	"goa.design/goa/design"
@@ -36,9 +35,6 @@ type (
 	}
 )
 
-// endpointTmpl is the template used to render the body of the endpoint file.
-var endpointTmpl = template.Must(template.New("endpoint").Parse(endpointT))
-
 // EndpointFile returns the endpoint file for the given service.
 func EndpointFile(service *design.ServiceExpr) *codegen.File {
 	path := filepath.Join(codegen.Gendir, codegen.KebabCase(service.Name), "endpoints.go")
@@ -68,7 +64,7 @@ func EndpointFile(service *design.ServiceExpr) *codegen.File {
 	}
 
 	var (
-		header, body *codegen.Section
+		header, body *codegen.SectionTemplate
 	)
 	{
 		header = codegen.Header(service.Name+" endpoints", codegen.Goify(service.Name, false),
@@ -76,13 +72,14 @@ func EndpointFile(service *design.ServiceExpr) *codegen.File {
 				&codegen.ImportSpec{Path: "context"},
 				&codegen.ImportSpec{Name: "goa", Path: "goa.design/goa"},
 			})
-		body = &codegen.Section{
-			Template: endpointTmpl,
-			Data:     data,
+		body = &codegen.SectionTemplate{
+			Name:   "endpoint",
+			Source: endpointT,
+			Data:   data,
 		}
 	}
 
-	return &codegen.File{Path: path, Sections: []*codegen.Section{header, body}}
+	return &codegen.File{Path: path, SectionTemplates: []*codegen.SectionTemplate{header, body}}
 }
 
 // endpointT is the template used to write an endpoint definition.

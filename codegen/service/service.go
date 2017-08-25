@@ -2,19 +2,9 @@ package service
 
 import (
 	"path/filepath"
-	"text/template"
 
 	"goa.design/goa/codegen"
 	"goa.design/goa/design"
-)
-
-var (
-	fns          = template.FuncMap{"comment": codegen.Comment}
-	serviceTmpl  = template.Must(template.New("service").Funcs(fns).Parse(serviceT))
-	payloadTmpl  = template.Must(template.New("payload").Funcs(fns).Parse(payloadT))
-	resultTmpl   = template.Must(template.New("result").Funcs(fns).Parse(resultT))
-	userTypeTmpl = template.Must(template.New("userType").Funcs(fns).Parse(userTypeT))
-	errorTmpl    = template.Must(template.New("error").Funcs(fns).Parse(errorT))
 )
 
 // File returns the service file for the given service.
@@ -27,30 +17,29 @@ func File(service *design.ServiceExpr) *codegen.File {
 			{Path: "context"},
 		})
 	svc := Services.Get(service.Name)
-	def := &codegen.Section{
-		Template: serviceTmpl,
-		Data:     svc,
-	}
+	def := &codegen.SectionTemplate{Name: "service", Source: serviceT, Data: svc}
 
-	sections := []*codegen.Section{header, def}
+	sections := []*codegen.SectionTemplate{header, def}
 	seen := make(map[string]struct{})
 
 	for _, m := range svc.Methods {
 		if m.PayloadDef != "" {
 			if _, ok := seen[m.Payload]; !ok {
 				seen[m.Payload] = struct{}{}
-				sections = append(sections, &codegen.Section{
-					Template: payloadTmpl,
-					Data:     m,
+				sections = append(sections, &codegen.SectionTemplate{
+					Name:   "service-payload",
+					Source: payloadT,
+					Data:   m,
 				})
 			}
 		}
 		if m.ResultDef != "" {
 			if _, ok := seen[m.Result]; !ok {
 				seen[m.Result] = struct{}{}
-				sections = append(sections, &codegen.Section{
-					Template: resultTmpl,
-					Data:     m,
+				sections = append(sections, &codegen.SectionTemplate{
+					Name:   "result-payload",
+					Source: resultT,
+					Data:   m,
 				})
 			}
 		}
@@ -58,9 +47,10 @@ func File(service *design.ServiceExpr) *codegen.File {
 
 	for _, ut := range svc.UserTypes {
 		if _, ok := seen[ut.Name]; !ok {
-			sections = append(sections, &codegen.Section{
-				Template: userTypeTmpl,
-				Data:     ut,
+			sections = append(sections, &codegen.SectionTemplate{
+				Name:   "service-user-type",
+				Source: userTypeT,
+				Data:   ut,
 			})
 		}
 	}
@@ -68,22 +58,24 @@ func File(service *design.ServiceExpr) *codegen.File {
 	var newErrorTypes []*UserTypeData
 	for _, et := range svc.ErrorTypes {
 		if _, ok := seen[et.Name]; !ok {
-			sections = append(sections, &codegen.Section{
-				Template: userTypeTmpl,
-				Data:     et,
+			sections = append(sections, &codegen.SectionTemplate{
+				Name:   "error-user-type",
+				Source: userTypeT,
+				Data:   et,
 			})
 			newErrorTypes = append(newErrorTypes, et)
 		}
 	}
 
 	for _, et := range newErrorTypes {
-		sections = append(sections, &codegen.Section{
-			Template: errorTmpl,
-			Data:     et,
+		sections = append(sections, &codegen.SectionTemplate{
+			Name:   "service-error",
+			Source: errorT,
+			Data:   et,
 		})
 	}
 
-	return &codegen.File{Path: path, Sections: sections}
+	return &codegen.File{Path: path, SectionTemplates: sections}
 }
 
 // serviceT is the template used to write an service definition.
