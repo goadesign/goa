@@ -10,37 +10,14 @@ import (
 
 var _ = Describe("version", func() {
 	var ver string
-	var build, oldBuild string
-
-	BeforeEach(func() {
-		build = ""
-	})
 
 	JustBeforeEach(func() {
-		oldBuild = version.Build
-		if build != "" {
-			version.Build = build
-		}
 		ver = version.String()
-		version.Build = oldBuild
 	})
 
 	Context("with the default build number", func() {
 		It("should be properly formatted", func() {
 			Ω(ver).Should(HavePrefix("v"))
-		})
-
-		It("returns the default version", func() {
-			Ω(ver).Should(HaveSuffix(".0"))
-		})
-	})
-
-	Context("with an overridden build number", func() {
-		BeforeEach(func() {
-			build = "custom"
-		})
-		It("returns the overridden version", func() {
-			Ω(ver).Should(HaveSuffix("." + build))
 		})
 	})
 
