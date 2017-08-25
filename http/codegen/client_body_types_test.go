@@ -9,6 +9,8 @@ import (
 )
 
 func TestBodyTypeDecl(t *testing.T) {
+	const genpkg = "gen"
+
 	cases := []struct {
 		Name string
 		DSL  func()
@@ -20,8 +22,8 @@ func TestBodyTypeDecl(t *testing.T) {
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
 			httpdesign.RunHTTPDSL(t, c.DSL)
-			fs := clientType(httpdesign.Root.HTTPServices[0], make(map[string]struct{}))
-			section := fs.Sections("")[1]
+			fs := clientType(genpkg, httpdesign.Root.HTTPServices[0], make(map[string]struct{}))
+			section := fs.Sections[1]
 			code := codegen.SectionCode(t, section)
 			if code != c.Code {
 				t.Errorf("invalid code, got:\n%s\ngot vs. expected:\n%s", code, codegen.Diff(t, code, c.Code))
@@ -31,6 +33,7 @@ func TestBodyTypeDecl(t *testing.T) {
 }
 
 func TestBodyTypeInit(t *testing.T) {
+	const genpkg = "gen"
 	cases := []struct {
 		Name         string
 		DSL          func()
@@ -43,8 +46,8 @@ func TestBodyTypeInit(t *testing.T) {
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
 			RunHTTPDSL(t, c.DSL)
-			fs := clientType(httpdesign.Root.HTTPServices[0], make(map[string]struct{}))
-			section := fs.Sections("")[c.SectionIndex]
+			fs := clientType(genpkg, httpdesign.Root.HTTPServices[0], make(map[string]struct{}))
+			section := fs.Sections[c.SectionIndex]
 			code := codegen.SectionCode(t, section)
 			if code != c.Code {
 				t.Errorf("invalid code, got:\n%s\ngot vs. expected:\n%s", code, codegen.Diff(t, code, c.Code))

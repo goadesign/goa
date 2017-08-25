@@ -8,7 +8,7 @@ import (
 )
 
 // Genfunc is the type of the functions invoked to generate code.
-type Genfunc func(roots []eval.Root) ([]codegen.File, error)
+type Genfunc func(genpkg string, roots []eval.Root) ([]*codegen.File, error)
 
 // Generators returns the qualified paths (including the package name) to the
 // code generator functions for the given command, an error if the command is

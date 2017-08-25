@@ -90,12 +90,9 @@ func (g *Generator) Write(debug bool) error {
 		}
 	}
 
-	var s codegen.File
+	var f *codegen.File
 	{
-		sectionsFunc := func(_ string) []*codegen.Section {
-			return sections
-		}
-		s = codegen.NewSource("main.go", sectionsFunc)
+		f = &codegen.File{Path: "main.go", Sections: sections}
 	}
 
 	var w *codegen.Writer
@@ -106,7 +103,7 @@ func (g *Generator) Write(debug bool) error {
 		}
 	}
 
-	return w.Write(s)
+	return w.Write(f)
 }
 
 // Compile compiles the generator.
@@ -180,7 +177,7 @@ func (g *Generator) Remove() {
 // code.
 func cleanupDirs(cmd, output string) []string {
 	if cmd == "gen" {
-		return []string{filepath.Join(output, "gen")}
+		return []string{filepath.Join(output, codegen.Gendir)}
 	}
 	return nil
 }
@@ -233,9 +230,18 @@ const mainTmpl = `func main() {
 		gens = gs
 	}
 
+	var genpkg string
+	{
+		pkg, err := build.ImportDir(filepath.Join(base, codegen.Gendir), build.FindOnly)
+		if err != nil {
+			fail(err.Error())
+		}
+		genpkg = pkg
+	}
+
 	var genfiles []codegen.File
 	for _, gen := range gens {
-		fs, err := gen(roots)
+		fs, err := gen(genpkg, roots)
 		if err != nil {
 			fail(err.Error())
 		}

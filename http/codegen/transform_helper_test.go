@@ -23,8 +23,8 @@ func TestTransformHelper(t *testing.T) {
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
 			RunHTTPDSL(t, c.DSL)
-			f := clientEncodeDecode(httpdesign.Root.HTTPServices[0])
-			sections := f.Sections("")
+			f := clientEncodeDecode("", httpdesign.Root.HTTPServices[0])
+			sections := f.Sections
 			code := codegen.SectionCode(t, sections[len(sections)-c.Offset])
 			if code != c.Code {
 				t.Errorf("invalid code, got:\n%s\ngot vs. expected:\n%s", code, codegen.Diff(t, code, c.Code))

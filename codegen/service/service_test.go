@@ -311,7 +311,7 @@ type AResult struct {
 		design.Root.API = &design.APIExpr{Name: "test"}
 		design.Root.Services = []*design.ServiceExpr{tc.Service}
 		file := File(tc.Service)
-		for _, s := range file.Sections(genPkg) {
+		for _, s := range file.Sections {
 			if err := s.Write(buf); err != nil {
 				t.Fatal(err)
 			}

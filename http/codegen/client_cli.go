@@ -111,109 +111,101 @@ var (
 )
 
 // ClientCLIFiles returns the client HTTP CLI support file.
-func ClientCLIFiles(root *httpdesign.RootExpr) []codegen.File {
+func ClientCLIFiles(genpkg string, root *httpdesign.RootExpr) []*codegen.File {
 	data := make([]*commandData, len(root.HTTPServices))
 	for i, svc := range root.HTTPServices {
 		data[i] = buildCommandData(HTTPServices.Get(svc.Name()))
 	}
 
-	files := []codegen.File{endpointParser(root, data)}
+	files := []*codegen.File{endpointParser(genpkg, root, data)}
 	for i, svc := range root.HTTPServices {
-		files = append(files, payloadBuilders(svc, data[i]))
+		files = append(files, payloadBuilders(genpkg, svc, data[i]))
 	}
 	return files
 }
 
 // endpointParser returns the file that implements the command line parser that
 // builds the client endpoint and payload necessary to perform a request.
-func endpointParser(root *httpdesign.RootExpr, data []*commandData) codegen.File {
+func endpointParser(genpkg string, root *httpdesign.RootExpr, data []*commandData) *codegen.File {
 	path := filepath.Join(codegen.Gendir, "http", "cli", "cli.go")
-	sections := func(genPkg string) []*codegen.Section {
-		title := fmt.Sprintf("%s HTTP client CLI support package", root.Design.API.Name)
-		specs := []*codegen.ImportSpec{
-			{Path: "encoding/json"},
-			{Path: "flag"},
-			{Path: "fmt"},
-			{Path: "net/http"},
-			{Path: "os"},
-			{Path: "strconv"},
-			{Path: "goa.design/goa", Name: "goa"},
-			{Path: "goa.design/goa/http", Name: "goahttp"},
+	title := fmt.Sprintf("%s HTTP client CLI support package", root.Design.API.Name)
+	specs := []*codegen.ImportSpec{
+		{Path: "encoding/json"},
+		{Path: "flag"},
+		{Path: "fmt"},
+		{Path: "net/http"},
+		{Path: "os"},
+		{Path: "strconv"},
+		{Path: "goa.design/goa", Name: "goa"},
+		{Path: "goa.design/goa/http", Name: "goahttp"},
+	}
+	for _, svc := range root.HTTPServices {
+		n := codegen.Goify(svc.Name(), false)
+		specs = append(specs, &codegen.ImportSpec{
+			Path: genpkg + "/http/" + n + "/client",
+			Name: HTTPServices.Get(svc.Name()).Service.Name + "c",
+		})
+	}
+	usages := make([]string, len(data))
+	var examples []string
+	for i, cmd := range data {
+		subs := make([]string, len(cmd.Subcommands))
+		for i, s := range cmd.Subcommands {
+			subs[i] = s.Name
 		}
-		for _, svc := range root.HTTPServices {
-			n := codegen.Goify(svc.Name(), false)
-			specs = append(specs, &codegen.ImportSpec{
-				Path: genPkg + "/http/" + n + "/client",
-				Name: HTTPServices.Get(svc.Name()).Service.Name + "c",
-			})
+		var lp, rp string
+		if len(subs) > 1 {
+			lp = "("
+			rp = ")"
 		}
-		usages := make([]string, len(data))
-		var examples []string
-		for i, cmd := range data {
-			subs := make([]string, len(cmd.Subcommands))
-			for i, s := range cmd.Subcommands {
-				subs[i] = s.Name
-			}
-			var lp, rp string
-			if len(subs) > 1 {
-				lp = "("
-				rp = ")"
-			}
-			usages[i] = fmt.Sprintf("%s %s%s%s", cmd.Name, lp, strings.Join(subs, "|"), rp)
-			if i < 5 {
-				examples = append(examples, cmd.Example)
-			}
+		usages[i] = fmt.Sprintf("%s %s%s%s", cmd.Name, lp, strings.Join(subs, "|"), rp)
+		if i < 5 {
+			examples = append(examples, cmd.Example)
 		}
-
-		s := []*codegen.Section{
-			codegen.Header(title, "cli", specs),
-			{Template: usageTmpl, Data: usages},
-			{Template: exampleTmpl, Data: examples},
-			{Template: parseTmpl, Data: data},
-		}
-		for _, cmd := range data {
-			s = append(s, &codegen.Section{Template: commandUsageTmpl, Data: cmd})
-		}
-
-		return s
 	}
 
-	return codegen.NewSource(path, sections)
+	sections := []*codegen.Section{
+		codegen.Header(title, "cli", specs),
+		{Template: usageTmpl, Data: usages},
+		{Template: exampleTmpl, Data: examples},
+		{Template: parseTmpl, Data: data},
+	}
+	for _, cmd := range data {
+		sections = append(sections, &codegen.Section{Template: commandUsageTmpl, Data: cmd})
+	}
+
+	return &codegen.File{Path: path, Sections: sections}
 }
 
 // payloadBuilders returns the file that contains the payload constructors that
 // use flag values as arguments.
-func payloadBuilders(svc *httpdesign.ServiceExpr, data *commandData) codegen.File {
+func payloadBuilders(genpkg string, svc *httpdesign.ServiceExpr, data *commandData) *codegen.File {
 	path := filepath.Join(codegen.Gendir, "http", codegen.SnakeCase(svc.Name()), "client", "cli.go")
-	sections := func(genPkg string) []*codegen.Section {
-		title := fmt.Sprintf("%s HTTP client CLI support package", svc.Name())
-		specs := []*codegen.ImportSpec{
-			{Path: "encoding/json"},
-			{Path: "fmt"},
-			{Path: "net/http"},
-			{Path: "os"},
-			{Path: "strconv"},
-			{Path: "unicode/utf8"},
-			{Path: "goa.design/goa", Name: "goa"},
-			{Path: "goa.design/goa/http", Name: "goahttp"},
-			{Path: genPkg + "/" + HTTPServices.Get(svc.Name()).Service.PkgName},
+	title := fmt.Sprintf("%s HTTP client CLI support package", svc.Name())
+	specs := []*codegen.ImportSpec{
+		{Path: "encoding/json"},
+		{Path: "fmt"},
+		{Path: "net/http"},
+		{Path: "os"},
+		{Path: "strconv"},
+		{Path: "unicode/utf8"},
+		{Path: "goa.design/goa", Name: "goa"},
+		{Path: "goa.design/goa/http", Name: "goahttp"},
+		{Path: genpkg + "/" + HTTPServices.Get(svc.Name()).Service.PkgName},
+	}
+	sections := []*codegen.Section{
+		codegen.Header(title, "client", specs),
+	}
+	for _, sub := range data.Subcommands {
+		if sub.BuildFunction != nil {
+			sections = append(sections, &codegen.Section{
+				Template: buildPayloadTmpl,
+				Data:     sub.BuildFunction,
+			})
 		}
-		s := []*codegen.Section{
-			codegen.Header(title, "client", specs),
-		}
-		for _, sub := range data.Subcommands {
-			if sub.BuildFunction != nil {
-				s = append(s, &codegen.Section{
-					Template: buildPayloadTmpl,
-					Data:     sub.BuildFunction,
-				})
-			}
-		}
-
-		return s
 	}
 
-	return codegen.NewSource(path, sections)
+	return &codegen.File{Path: path, Sections: sections}
 }
 
 // buildCommandData builds the data needed by the templates to render the CLI

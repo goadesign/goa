@@ -18,31 +18,24 @@ type (
 )
 
 // OpenAPIFile returns the file for the OpenAPIFile spec of the given HTTP API.
-func OpenAPIFile(root *httpdesign.RootExpr) (codegen.File, error) {
-	spec, err := openapi.NewV2(root)
-	if err != nil {
-		return nil, err
+func OpenAPIFile(root *httpdesign.RootExpr) (*codegen.File, error) {
+	path := filepath.Join(codegen.Gendir, "http", "openapi.json")
+	var section *codegen.Section
+	{
+		spec, err := openapi.NewV2(root)
+		if err != nil {
+			return nil, err
+		}
+		funcs := template.FuncMap{"toJSON": toJSON}
+		tmpl := template.Must(template.New("openapiV2").Funcs(funcs).Parse("{{ toJSON . }}"))
+		section = &codegen.Section{Template: tmpl, Data: spec}
 	}
-	return &openAPI{spec}, nil
-}
 
-// Sections is the list of file sections.
-func (w *openAPI) Sections(_ string) []*codegen.Section {
-	funcs := template.FuncMap{"toJSON": toJSON}
-	tmpl := template.Must(template.New("openapiV2").Funcs(funcs).Parse(openapiTmpl))
-	return []*codegen.Section{&codegen.Section{
-		Template: tmpl,
-		Data:     w.spec,
-	}}
+	return &codegen.File{
+		Path:     path,
+		Sections: []*codegen.Section{section},
+	}, nil
 }
-
-// OutputPath is the relative path to the output file.
-func (w *openAPI) OutputPath() string {
-	return filepath.Join(codegen.Gendir, "http", "openapi.json")
-}
-
-// Finalize is a no-op for this file.
-func (w *openAPI) Finalize(_ string) error { return nil }
 
 func toJSON(d interface{}) string {
 	b, err := json.Marshal(d)
@@ -51,6 +44,3 @@ func toJSON(d interface{}) string {
 	}
 	return string(b)
 }
-
-// Dummy template
-const openapiTmpl = `{{ toJSON . }}`

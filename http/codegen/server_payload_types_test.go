@@ -116,8 +116,8 @@ func TestPayloadConstructor(t *testing.T) {
 			if len(httpdesign.Root.HTTPServices) != 1 {
 				t.Fatalf("got %d file(s), expected 1", len(httpdesign.Root.HTTPServices))
 			}
-			fs := serverType(httpdesign.Root.HTTPServices[0], make(map[string]struct{}))
-			sections := fs.Sections("")
+			fs := serverType("", httpdesign.Root.HTTPServices[0], make(map[string]struct{}))
+			sections := fs.Sections
 			var section *codegen.Section
 			for _, s := range sections {
 				if s.Template == serverTypeInitTmpl {

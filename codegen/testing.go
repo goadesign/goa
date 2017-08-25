@@ -46,7 +46,7 @@ func SectionCode(t *testing.T, section *Section) string {
 func FormatTestCode(t *testing.T, code string) string {
 	tmp := createTempFile(t, code)
 	defer os.Remove(tmp)
-	if err := Format(tmp); err != nil {
+	if err := finalizeGoSource(tmp); err != nil {
 		t.Fatal(err)
 	}
 	content, err := ioutil.ReadFile(tmp)

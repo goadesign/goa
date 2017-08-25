@@ -9,31 +9,26 @@ import (
 )
 
 // ExampleCLI returns an example client tool main implementation.
-func ExampleCLI(root *httpdesign.RootExpr) codegen.File {
+func ExampleCLI(genpkg string, root *httpdesign.RootExpr) *codegen.File {
 	path := filepath.Join("cmd", codegen.SnakeCase(root.Design.API.Name)+"cli", "main.go")
-	sections := func(genPkg string) []*codegen.Section {
-		specs := []*codegen.ImportSpec{
-			{Path: "context"},
-			{Path: "encoding/json"},
-			{Path: "flag"},
-			{Path: "fmt"},
-			{Path: "net/http"},
-			{Path: "net/url"},
-			{Path: "os"},
-			{Path: "strings"},
-			{Path: "time"},
-			{Path: "goa.design/goa/http", Name: "goahttp"},
-			{Path: genPkg + "/http/cli"},
-		}
-		s := []*codegen.Section{
-			codegen.Header("", "main", specs),
-			&codegen.Section{Template: mainCLITmpl, Data: root},
-		}
-
-		return s
+	specs := []*codegen.ImportSpec{
+		{Path: "context"},
+		{Path: "encoding/json"},
+		{Path: "flag"},
+		{Path: "fmt"},
+		{Path: "net/http"},
+		{Path: "net/url"},
+		{Path: "os"},
+		{Path: "strings"},
+		{Path: "time"},
+		{Path: "goa.design/goa/http", Name: "goahttp"},
+		{Path: genpkg + "/http/cli"},
 	}
-
-	return codegen.NewSource(path, sections)
+	sections := []*codegen.Section{
+		codegen.Header("", "main", specs),
+		&codegen.Section{Template: mainCLITmpl, Data: root},
+	}
+	return &codegen.File{Path: path, Sections: sections}
 }
 
 var mainCLITmpl = template.Must(template.New("cli-main").Parse(mainCLIT))

@@ -12,9 +12,9 @@ import (
 // OpenAPI iterates through the roots and returns the file needed to render
 // the service OpenAPI spec. It returns an error if the roots slice does not
 // include a HTTP root.
-func OpenAPI(roots []eval.Root) ([]codegen.File, error) {
+func OpenAPI(_ string, roots []eval.Root) ([]*codegen.File, error) {
 	var (
-		file codegen.File
+		file *codegen.File
 		err  error
 	)
 	for _, root := range roots {
@@ -29,5 +29,5 @@ func OpenAPI(roots []eval.Root) ([]codegen.File, error) {
 	if file == nil {
 		return nil, fmt.Errorf("openapi: could not find HTTP design in DSL roots")
 	}
-	return []codegen.File{file}, nil
+	return []*codegen.File{file}, nil
 }
