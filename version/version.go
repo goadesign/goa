@@ -10,9 +10,9 @@ const (
 	// Major version number
 	Major = 1
 	// Minor version number
-	Minor = 2
+	Minor = 3
 	// Build version number
-	Build = 1
+	Build = 0
 )
 
 // String returns the complete version number.
