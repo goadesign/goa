@@ -69,11 +69,11 @@ func TestEncode(t *testing.T) {
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
 			RunHTTPDSL(t, c.DSL)
-			fs := ServerFiles(httpdesign.Root)
+			fs := ServerFiles("", httpdesign.Root)
 			if len(fs) != 2 {
 				t.Fatalf("got %d files, expected two", len(fs))
 			}
-			sections := fs[1].Sections("")
+			sections := fs[1].Sections
 			if len(sections) < 2 {
 				t.Fatalf("got %d sections, expected at least 2", len(sections))
 			}

@@ -14,93 +14,80 @@ import (
 )
 
 // ServerFiles returns all the server HTTP transport files.
-func ServerFiles(root *httpdesign.RootExpr) []codegen.File {
-	fw := make([]codegen.File, 2*len(root.HTTPServices))
+func ServerFiles(genpkg string, root *httpdesign.RootExpr) []*codegen.File {
+	fw := make([]*codegen.File, 2*len(root.HTTPServices))
 	for i, r := range root.HTTPServices {
-		fw[i] = server(r)
+		fw[i] = server(genpkg, r)
 	}
 	for i, r := range root.HTTPServices {
-		fw[i+len(root.HTTPServices)] = serverEncodeDecode(r)
+		fw[i+len(root.HTTPServices)] = serverEncodeDecode(genpkg, r)
 	}
 	return fw
 }
 
 // server returns the files defining the HTTP server.
-func server(svc *httpdesign.ServiceExpr) codegen.File {
+func server(genpkg string, svc *httpdesign.ServiceExpr) *codegen.File {
 	path := filepath.Join(codegen.Gendir, "http", codegen.SnakeCase(svc.Name()), "server", "server.go")
 	data := HTTPServices.Get(svc.Name())
-	sections := func(genPkg string) []*codegen.Section {
-		title := fmt.Sprintf("%s HTTP server", svc.Name())
-		s := []*codegen.Section{
-			codegen.Header(title, "server", []*codegen.ImportSpec{
-				{Path: "context"},
-				{Path: "fmt"},
-				{Path: "io"},
-				{Path: "net/http"},
-				{Path: "goa.design/goa", Name: "goa"},
-				{Path: "goa.design/goa/http", Name: "goahttp"},
-				{Path: genPkg + "/" + data.Service.PkgName},
-			}),
-			{Template: serverStructTmpl(svc), Data: data},
-			{Template: serverInitTmpl(svc), Data: data},
-			{Template: serverMountTmpl(svc), Data: data},
-		}
-
-		for _, e := range data.Endpoints {
-			es := []*codegen.Section{
-				{Template: serverHandlerTmpl(svc), Data: e},
-				{Template: serverHandlerInitTmpl(svc), Data: e},
-			}
-			s = append(s, es...)
-		}
-		return s
+	title := fmt.Sprintf("%s HTTP server", svc.Name())
+	sections := []*codegen.Section{
+		codegen.Header(title, "server", []*codegen.ImportSpec{
+			{Path: "context"},
+			{Path: "fmt"},
+			{Path: "io"},
+			{Path: "net/http"},
+			{Path: "goa.design/goa", Name: "goa"},
+			{Path: "goa.design/goa/http", Name: "goahttp"},
+			{Path: genpkg + "/" + data.Service.PkgName},
+		}),
+		{Template: serverStructTmpl(svc), Data: data},
+		{Template: serverInitTmpl(svc), Data: data},
+		{Template: serverMountTmpl(svc), Data: data},
 	}
 
-	return codegen.NewSource(path, sections)
+	for _, e := range data.Endpoints {
+		sections = append(sections, &codegen.Section{Template: serverHandlerTmpl(svc), Data: e})
+		sections = append(sections, &codegen.Section{Template: serverHandlerInitTmpl(svc), Data: e})
+	}
+
+	return &codegen.File{Path: path, Sections: sections}
 }
 
 // serverEncodeDecode returns the file defining the HTTP server encoding and
 // decoding logic.
-func serverEncodeDecode(svc *httpdesign.ServiceExpr) codegen.File {
+func serverEncodeDecode(genpkg string, svc *httpdesign.ServiceExpr) *codegen.File {
 	path := filepath.Join(codegen.Gendir, "http", codegen.SnakeCase(svc.Name()), "server", "encode_decode.go")
 	data := HTTPServices.Get(svc.Name())
-	sections := func(genPkg string) []*codegen.Section {
-		title := fmt.Sprintf("%s HTTP server encoders and decoders", svc.Name())
-		s := []*codegen.Section{
-			codegen.Header(title, "server", []*codegen.ImportSpec{
-				{Path: "context"},
-				{Path: "fmt"},
-				{Path: "io"},
-				{Path: "net/http"},
-				{Path: "strconv"},
-				{Path: "strings"},
-				{Path: "goa.design/goa", Name: "goa"},
-				{Path: "goa.design/goa/http", Name: "goahttp"},
-				{Path: genPkg + "/" + data.Service.PkgName},
-			}),
-		}
-
-		for _, e := range data.Endpoints {
-			es := []*codegen.Section{
-				{Template: responseEncoderTmpl(svc), Data: e},
-			}
-			s = append(s, es...)
-
-			if e.Payload.Ref != "" {
-				s = append(s, &codegen.Section{Template: requestDecoderTmpl(svc), Data: e})
-			}
-
-			if len(e.Errors) > 0 {
-				s = append(s, &codegen.Section{Template: errorEncoderTmpl(svc), Data: e})
-			}
-		}
-		for _, h := range data.ServerTransformHelpers {
-			s = append(s, &codegen.Section{Template: transformHelperTmpl(svc), Data: h})
-		}
-		return s
+	title := fmt.Sprintf("%s HTTP server encoders and decoders", svc.Name())
+	sections := []*codegen.Section{
+		codegen.Header(title, "server", []*codegen.ImportSpec{
+			{Path: "context"},
+			{Path: "fmt"},
+			{Path: "io"},
+			{Path: "net/http"},
+			{Path: "strconv"},
+			{Path: "strings"},
+			{Path: "goa.design/goa", Name: "goa"},
+			{Path: "goa.design/goa/http", Name: "goahttp"},
+			{Path: genpkg + "/" + data.Service.PkgName},
+		}),
 	}
 
-	return codegen.NewSource(path, sections)
+	for _, e := range data.Endpoints {
+		sections = append(sections, &codegen.Section{Template: responseEncoderTmpl(svc), Data: e})
+		if e.Payload.Ref != "" {
+			sections = append(sections, &codegen.Section{Template: requestDecoderTmpl(svc), Data: e})
+		}
+
+		if len(e.Errors) > 0 {
+			sections = append(sections, &codegen.Section{Template: errorEncoderTmpl(svc), Data: e})
+		}
+	}
+	for _, h := range data.ServerTransformHelpers {
+		sections = append(sections, &codegen.Section{Template: transformHelperTmpl(svc), Data: h})
+	}
+
+	return &codegen.File{Path: path, Sections: sections}
 }
 
 func serverStructTmpl(s *httpdesign.ServiceExpr) *template.Template {

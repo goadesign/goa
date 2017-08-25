@@ -11,12 +11,12 @@ import (
 
 // Example iterates through the roots and returns files that implement an
 // example service and client.
-func Example(roots []eval.Root) ([]codegen.File, error) {
-	var files []codegen.File
+func Example(genpkg string, roots []eval.Root) ([]*codegen.File, error) {
+	var files []*codegen.File
 	for _, root := range roots {
 		if r, ok := root.(*httpdesign.RootExpr); ok {
-			files = httpcodegen.ExampleServerFiles(r)
-			files = append(files, httpcodegen.ExampleCLI(r))
+			files = httpcodegen.ExampleServerFiles(genpkg, r)
+			files = append(files, httpcodegen.ExampleCLI(genpkg, r))
 			break
 		}
 	}

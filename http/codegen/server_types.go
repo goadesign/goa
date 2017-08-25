@@ -27,11 +27,11 @@ var (
 )
 
 // ServerTypeFiles returns the HTTP transport type files.
-func ServerTypeFiles(root *httpdesign.RootExpr) []codegen.File {
-	fw := make([]codegen.File, len(root.HTTPServices))
+func ServerTypeFiles(genpkg string, root *httpdesign.RootExpr) []*codegen.File {
+	fw := make([]*codegen.File, len(root.HTTPServices))
 	seen := make(map[string]struct{})
 	for i, r := range root.HTTPServices {
-		fw[i] = serverType(r, seen)
+		fw[i] = serverType(genpkg, r, seen)
 	}
 	return fw
 }
@@ -61,131 +61,126 @@ func ServerTypeFiles(root *httpdesign.RootExpr) []codegen.File {
 //   * Response body fields (if the body is a struct) and header variables hold
 //     pointers when not required and have no default value.
 //
-func serverType(r *httpdesign.ServiceExpr, seen map[string]struct{}) codegen.File {
+func serverType(genpkg string, r *httpdesign.ServiceExpr, seen map[string]struct{}) *codegen.File {
 	var (
-		path     string
-		sections func(string) []*codegen.Section
-
+		path  string
 		rdata = HTTPServices.Get(r.Name())
 	)
 	path = filepath.Join(codegen.Gendir, "http", codegen.SnakeCase(r.Name()), "server", "types.go")
-	sections = func(genPkg string) []*codegen.Section {
-		header := codegen.Header(r.Name()+" HTTP server types", "server",
-			[]*codegen.ImportSpec{
-				{Path: "unicode/utf8"},
-				{Path: genPkg + "/" + service.Services.Get(r.Name()).PkgName},
-				{Path: "goa.design/goa", Name: "goa"},
-			},
-		)
+	header := codegen.Header(r.Name()+" HTTP server types", "server",
+		[]*codegen.ImportSpec{
+			{Path: "unicode/utf8"},
+			{Path: genpkg + "/" + service.Services.Get(r.Name()).PkgName},
+			{Path: "goa.design/goa", Name: "goa"},
+		},
+	)
 
-		var (
-			initData       []*InitData
-			validatedTypes []*TypeData
+	var (
+		initData       []*InitData
+		validatedTypes []*TypeData
 
-			secs = []*codegen.Section{header}
-		)
+		sections = []*codegen.Section{header}
+	)
 
-		// request body types
-		for _, a := range r.HTTPEndpoints {
-			adata := rdata.Endpoint(a.Name())
-			if data := adata.Payload.Request.ServerBody; data != nil {
+	// request body types
+	for _, a := range r.HTTPEndpoints {
+		adata := rdata.Endpoint(a.Name())
+		if data := adata.Payload.Request.ServerBody; data != nil {
+			if data.Def != "" {
+				sections = append(sections, &codegen.Section{
+					Template: typeDeclTmpl,
+					Data:     data,
+				})
+			}
+			if data.ValidateDef != "" {
+				validatedTypes = append(validatedTypes, data)
+			}
+		}
+	}
+
+	// response body types
+	for _, a := range r.HTTPEndpoints {
+		adata := rdata.Endpoint(a.Name())
+		for _, resp := range adata.Result.Responses {
+			if data := resp.ServerBody; data != nil {
 				if data.Def != "" {
-					secs = append(secs, &codegen.Section{
+					sections = append(sections, &codegen.Section{
 						Template: typeDeclTmpl,
 						Data:     data,
 					})
+				}
+				if data.Init != nil {
+					initData = append(initData, data.Init)
 				}
 				if data.ValidateDef != "" {
 					validatedTypes = append(validatedTypes, data)
 				}
 			}
 		}
+	}
 
-		// response body types
-		for _, a := range r.HTTPEndpoints {
-			adata := rdata.Endpoint(a.Name())
-			for _, resp := range adata.Result.Responses {
-				if data := resp.ServerBody; data != nil {
-					if data.Def != "" {
-						secs = append(secs, &codegen.Section{
-							Template: typeDeclTmpl,
-							Data:     data,
-						})
-					}
-					if data.Init != nil {
-						initData = append(initData, data.Init)
-					}
-					if data.ValidateDef != "" {
-						validatedTypes = append(validatedTypes, data)
-					}
+	// error body types
+	for _, a := range r.HTTPEndpoints {
+		adata := rdata.Endpoint(a.Name())
+		for _, herr := range adata.Errors {
+			if data := herr.Response.ServerBody; data != nil {
+				if data.Def != "" {
+					sections = append(sections, &codegen.Section{
+						Template: typeDeclTmpl,
+						Data:     data,
+					})
+				}
+				if data.Init != nil {
+					initData = append(initData, data.Init)
+				}
+				if data.ValidateDef != "" {
+					validatedTypes = append(validatedTypes, data)
 				}
 			}
 		}
+	}
 
-		// error body types
-		for _, a := range r.HTTPEndpoints {
-			adata := rdata.Endpoint(a.Name())
-			for _, herr := range adata.Errors {
-				if data := herr.Response.ServerBody; data != nil {
-					if data.Def != "" {
-						secs = append(secs, &codegen.Section{
-							Template: typeDeclTmpl,
-							Data:     data,
-						})
-					}
-					if data.Init != nil {
-						initData = append(initData, data.Init)
-					}
-					if data.ValidateDef != "" {
-						validatedTypes = append(validatedTypes, data)
-					}
-				}
-			}
-		}
-
-		// body attribute types
-		for _, data := range rdata.ServerBodyAttributeTypes {
-			if data.Def != "" {
-				secs = append(secs, &codegen.Section{
-					Template: typeDeclTmpl,
-					Data:     data,
-				})
-			}
-
-			if data.ValidateDef != "" {
-				validatedTypes = append(validatedTypes, data)
-			}
-		}
-
-		// body constructors
-		for _, init := range initData {
-			secs = append(secs, &codegen.Section{
-				Template: serverBodyInitTmpl,
-				Data:     init,
-			})
-		}
-
-		for _, adata := range rdata.Endpoints {
-			// request to method payload
-			if init := adata.Payload.Request.PayloadInit; init != nil {
-				secs = append(secs, &codegen.Section{
-					Template: serverTypeInitTmpl,
-					Data:     init,
-				})
-			}
-		}
-
-		// validate methods
-		for _, data := range validatedTypes {
-			secs = append(secs, &codegen.Section{
-				Template: validateTmpl,
+	// body attribute types
+	for _, data := range rdata.ServerBodyAttributeTypes {
+		if data.Def != "" {
+			sections = append(sections, &codegen.Section{
+				Template: typeDeclTmpl,
 				Data:     data,
 			})
 		}
 
-		return secs
+		if data.ValidateDef != "" {
+			validatedTypes = append(validatedTypes, data)
+		}
 	}
-	return codegen.NewSource(path, sections)
+
+	// body constructors
+	for _, init := range initData {
+		sections = append(sections, &codegen.Section{
+			Template: serverBodyInitTmpl,
+			Data:     init,
+		})
+	}
+
+	for _, adata := range rdata.Endpoints {
+		// request to method payload
+		if init := adata.Payload.Request.PayloadInit; init != nil {
+			sections = append(sections, &codegen.Section{
+				Template: serverTypeInitTmpl,
+				Data:     init,
+			})
+		}
+	}
+
+	// validate methods
+	for _, data := range validatedTypes {
+		sections = append(sections, &codegen.Section{
+			Template: validateTmpl,
+			Data:     data,
+		})
+	}
+
+	return &codegen.File{Path: path, Sections: sections}
 }
 
 // input: TypeData

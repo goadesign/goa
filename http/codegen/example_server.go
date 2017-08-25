@@ -13,88 +13,83 @@ import (
 
 // ExampleServerFiles returns and example main and dummy service
 // implementations.
-func ExampleServerFiles(root *httpdesign.RootExpr) []codegen.File {
-	fw := make([]codegen.File, len(root.HTTPServices)+1)
+func ExampleServerFiles(genpkg string, root *httpdesign.RootExpr) []*codegen.File {
+	fw := make([]*codegen.File, len(root.HTTPServices)+1)
 	for i, svc := range root.HTTPServices {
-		fw[i] = dummyServiceFile(svc)
+		fw[i] = dummyServiceFile(genpkg, svc)
 	}
-	fw[len(root.HTTPServices)] = exampleMain(root)
+	fw[len(root.HTTPServices)] = exampleMain(genpkg, root)
 	return fw
 }
 
 // dummyServiceFile returns a dummy implementation of the given service.
-func dummyServiceFile(svc *httpdesign.ServiceExpr) codegen.File {
-	path := codegen.SnakeCase(svc.Name()) + ".go"
+func dummyServiceFile(genpkg string, svc *httpdesign.ServiceExpr) *codegen.File {
 	data := HTTPServices.Get(svc.Name())
-	sections := func(genPkg string) []*codegen.Section {
-		s := []*codegen.Section{
-			codegen.Header("", codegen.KebabCase(design.Root.API.Name), []*codegen.ImportSpec{
-				{Path: "context"},
-				{Path: "log"},
-				{Path: genPkg + "/" + codegen.Goify(svc.Name(), false)},
-			}),
-			{Template: dummyServiceStructTmpl(svc), Data: data},
-		}
-		for _, e := range data.Endpoints {
-			s = append(s, &codegen.Section{Template: dummyEndpointImplTmpl(svc), Data: e})
-		}
-
-		return s
+	sections := []*codegen.Section{
+		codegen.Header("", codegen.KebabCase(design.Root.API.Name), []*codegen.ImportSpec{
+			{Path: "context"},
+			{Path: "log"},
+			{Path: genpkg + "/" + codegen.Goify(svc.Name(), false)},
+		}),
+		{Template: dummyServiceStructTmpl(svc), Data: data},
+	}
+	for _, e := range data.Endpoints {
+		sections = append(sections, &codegen.Section{
+			Template: dummyEndpointImplTmpl(svc),
+			Data:     e,
+		})
 	}
 
-	return codegen.NewSource(path, sections)
+	return &codegen.File{
+		Path:     codegen.SnakeCase(svc.Name()) + ".go",
+		Sections: sections,
+	}
 }
 
-func exampleMain(root *httpdesign.RootExpr) codegen.File {
-	path := filepath.Join("cmd", codegen.SnakeCase(root.Design.API.Name)+"svc", "main.go")
-	sections := func(genPkg string) []*codegen.Section {
-		idx := strings.LastIndex(genPkg, string(os.PathSeparator))
-		rootPath := "."
-		if idx > 0 {
-			rootPath = genPkg[:idx]
-		}
-		specs := []*codegen.ImportSpec{
-			{Path: "context"},
-			{Path: "flag"},
-			{Path: "fmt"},
-			{Path: "log"},
-			{Path: "net/http"},
-			{Path: "os"},
-			{Path: "os/signal"},
-			{Path: "time"},
-			{Path: "goa.design/goa", Name: "goa"},
-			{Path: "goa.design/goa/http", Name: "goahttp"},
-			{Path: "goa.design/goa/http/middleware/debugging"},
-			{Path: "goa.design/goa/http/middleware/logging"},
-			{Path: rootPath, Name: codegen.KebabCase(root.Design.API.Name)},
-		}
-		for _, svc := range root.HTTPServices {
-			pkgName := HTTPServices.Get(svc.Name()).Service.PkgName
-			specs = append(specs, &codegen.ImportSpec{
-				Path: filepath.Join(genPkg, "http", pkgName, "server"),
-				Name: pkgName + "svr",
-			})
-			specs = append(specs, &codegen.ImportSpec{
-				Path: filepath.Join(genPkg, pkgName),
-			})
-		}
-		s := []*codegen.Section{
-			codegen.Header("", "main", specs),
-		}
-		var svcdata []*ServiceData
-		for _, svc := range root.HTTPServices {
-			svcdata = append(svcdata, HTTPServices.Get(svc.Name()))
-		}
-		data := map[string]interface{}{
-			"Services": svcdata,
-			"APIPkg":   codegen.KebabCase(root.Design.API.Name),
-		}
-		s = append(s, &codegen.Section{Template: mainTmpl, Data: data})
-
-		return s
+func exampleMain(genpkg string, root *httpdesign.RootExpr) *codegen.File {
+	idx := strings.LastIndex(genpkg, string(os.PathSeparator))
+	rootPath := "."
+	if idx > 0 {
+		rootPath = genpkg[:idx]
 	}
+	specs := []*codegen.ImportSpec{
+		{Path: "context"},
+		{Path: "flag"},
+		{Path: "fmt"},
+		{Path: "log"},
+		{Path: "net/http"},
+		{Path: "os"},
+		{Path: "os/signal"},
+		{Path: "time"},
+		{Path: "goa.design/goa", Name: "goa"},
+		{Path: "goa.design/goa/http", Name: "goahttp"},
+		{Path: "goa.design/goa/http/middleware/debugging"},
+		{Path: "goa.design/goa/http/middleware/logging"},
+		{Path: rootPath, Name: codegen.KebabCase(root.Design.API.Name)},
+	}
+	for _, svc := range root.HTTPServices {
+		pkgName := HTTPServices.Get(svc.Name()).Service.PkgName
+		specs = append(specs, &codegen.ImportSpec{
+			Path: filepath.Join(genpkg, "http", pkgName, "server"),
+			Name: pkgName + "svr",
+		})
+		specs = append(specs, &codegen.ImportSpec{
+			Path: filepath.Join(genpkg, pkgName),
+		})
+	}
+	sections := []*codegen.Section{codegen.Header("", "main", specs)}
+	var svcdata []*ServiceData
+	for _, svc := range root.HTTPServices {
+		svcdata = append(svcdata, HTTPServices.Get(svc.Name()))
+	}
+	data := map[string]interface{}{
+		"Services": svcdata,
+		"APIPkg":   codegen.KebabCase(root.Design.API.Name),
+	}
+	sections = append(sections, &codegen.Section{Template: mainTmpl, Data: data})
+	path := filepath.Join("cmd", codegen.SnakeCase(root.Design.API.Name)+"svc", "main.go")
 
-	return codegen.NewSource(path, sections)
+	return &codegen.File{Path: path, Sections: sections}
 }
 
 func dummyServiceStructTmpl(r *httpdesign.ServiceExpr) *template.Template {

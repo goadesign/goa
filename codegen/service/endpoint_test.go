@@ -152,10 +152,9 @@ func NewEndpoints(s Service) *Endpoints {
 		Services = make(ServicesData)
 		design.Root.Services = []*design.ServiceExpr{tc.Service}
 		design.Root.API = &design.APIExpr{Name: "test"}
-		s := File(tc.Service) // to initialize ServiceScope
-		s.Sections("")
-		file := EndpointFile(tc.Service)
-		for _, s := range file.Sections(genPkg) {
+		File(tc.Service) // to initialize ServiceScope
+		ef := EndpointFile(tc.Service)
+		for _, s := range ef.Sections {
 			if err := s.Write(buf); err != nil {
 				t.Fatal(err)
 			}

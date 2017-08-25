@@ -99,8 +99,8 @@ func TestOutputPath(t *testing.T) {
 	if err != nil {
 		t.Fatalf("OpenAPI failed with %s", err)
 	}
-	if o.OutputPath() != "gen/http/openapi.json" {
-		t.Errorf("invalid output path %#v", o.OutputPath())
+	if o.Path != "gen/http/openapi.json" {
+		t.Errorf("invalid output path %#v", o.Path)
 	}
 }
 
@@ -123,7 +123,7 @@ func TestSections(t *testing.T) {
 		if err != nil {
 			t.Fatalf("%s: OpenAPI failed with %s", k, err)
 		}
-		s := o.Sections(genPkg)
+		s := o.Sections
 		if len(s) != 1 {
 			t.Fatalf("%s: expected 1 section, got %d", k, len(s))
 		}
