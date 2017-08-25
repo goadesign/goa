@@ -3,15 +3,9 @@ package codegen
 import (
 	"fmt"
 	"path/filepath"
-	"text/template"
 
 	"goa.design/goa/codegen"
 	httpdesign "goa.design/goa/http/design"
-)
-
-var (
-	pathFuncMap = template.FuncMap{"add": codegen.Add}
-	pathTmpl    = template.Must(template.New("path").Funcs(pathFuncMap).Parse(pathT))
 )
 
 // PathFiles returns the service path files.
@@ -28,21 +22,21 @@ func PathFiles(root *httpdesign.RootExpr) []*codegen.File {
 // for the given service.
 func serverPath(svc *httpdesign.ServiceExpr) *codegen.File {
 	path := filepath.Join(codegen.Gendir, "http", codegen.SnakeCase(svc.Name()), "server", "paths.go")
-	return &codegen.File{Path: path, Sections: pathSections(svc, "server")}
+	return &codegen.File{Path: path, SectionTemplates: pathSections(svc, "server")}
 }
 
 // clientPath returns the client file containing the request path constructors
 // for the given service.
 func clientPath(svc *httpdesign.ServiceExpr) *codegen.File {
 	path := filepath.Join(codegen.Gendir, "http", codegen.SnakeCase(svc.Name()), "client", "paths.go")
-	return &codegen.File{Path: path, Sections: pathSections(svc, "client")}
+	return &codegen.File{Path: path, SectionTemplates: pathSections(svc, "client")}
 }
 
 // pathSections returns the sections of the file of the pkg package that
 // contains the request path constructors for the given service.
-func pathSections(svc *httpdesign.ServiceExpr, pkg string) []*codegen.Section {
+func pathSections(svc *httpdesign.ServiceExpr, pkg string) []*codegen.SectionTemplate {
 	title := fmt.Sprintf("HTTP request path constructors for the %s service.", svc.Name())
-	sections := []*codegen.Section{
+	sections := []*codegen.SectionTemplate{
 		codegen.Header(title, pkg, []*codegen.ImportSpec{
 			{Path: "fmt"},
 			{Path: "net/url"},
@@ -52,9 +46,10 @@ func pathSections(svc *httpdesign.ServiceExpr, pkg string) []*codegen.Section {
 	}
 	sdata := HTTPServices.Get(svc.Name())
 	for _, e := range svc.HTTPEndpoints {
-		sections = append(sections, &codegen.Section{
-			Template: pathTmpl,
-			Data:     sdata.Endpoint(e.Name()),
+		sections = append(sections, &codegen.SectionTemplate{
+			Name:   "path",
+			Source: pathT,
+			Data:   sdata.Endpoint(e.Name()),
 		})
 	}
 

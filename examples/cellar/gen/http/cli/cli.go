@@ -256,7 +256,7 @@ Show bottle by ID
     -id STRING: ID of bottle to show
 
 Example:
-    `+os.Args[0]+` storage show --id "Est explicabo eveniet dolore."
+    `+os.Args[0]+` storage show --id "Ex enim suscipit est explicabo eveniet dolore."
 `, os.Args[0])
 }
 

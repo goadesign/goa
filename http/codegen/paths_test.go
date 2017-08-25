@@ -38,7 +38,7 @@ func TestPaths(t *testing.T) {
 				t.Fatalf("got %d file(s), expected 1", len(httpdesign.Root.HTTPServices))
 			}
 			fs := serverPath(httpdesign.Root.HTTPServices[0])
-			sections := fs.Sections
+			sections := fs.SectionTemplates
 			code := codegen.SectionCode(t, sections[1])
 			if code != c.Code {
 				t.Errorf("invalid code, got:\n%s\ngot vs. expected:\n%s", code, codegen.Diff(t, code, c.Code))

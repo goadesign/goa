@@ -37,16 +37,22 @@ type (
 
 	// A File contains the logic to generate a complete file.
 	File struct {
-		// Sections is the list of file sections.
-		Sections []*Section
+		// SectionTemplates is the list of file section templates in
+		// order of rendering.
+		SectionTemplates []*SectionTemplate
 		// Path returns the file path relative to the output directory.
 		Path string
 	}
 
-	// A Section consists of a template and accompanying render data.
-	Section struct {
-		// Template used to render section text.
-		Template *template.Template
+	// A SectionTemplate is a template and accompanying render data.
+	SectionTemplate struct {
+		// Name is the name reported when parsing the source fails.
+		Name string
+		// Source is used to create the template that renders the
+		// section text.
+		Source string
+		// FuncMap lists the functions used by Source during rendering.
+		FuncMap map[string]interface{}
 		// Data used as input of template.
 		Data interface{}
 	}
@@ -86,7 +92,7 @@ func (w *Writer) Write(file *File) error {
 	if err != nil {
 		return err
 	}
-	for _, s := range file.Sections {
+	for _, s := range file.SectionTemplates {
 		if err := s.Write(f); err != nil {
 			return err
 		}
@@ -107,8 +113,13 @@ func (w *Writer) Write(file *File) error {
 }
 
 // Write writes the section to the given writer.
-func (s *Section) Write(w io.Writer) error {
-	return s.Template.Execute(w, s.Data)
+func (s *SectionTemplate) Write(w io.Writer) error {
+	funcs := TemplateFuncs()
+	for k, v := range s.FuncMap {
+		funcs[k] = v
+	}
+	tmpl := template.Must(template.New(s.Name).Funcs(funcs).Parse(s.Source))
+	return tmpl.Execute(w, s.Data)
 }
 
 // finalizeGoSource removes unneeded imports from the given Go source file and runs

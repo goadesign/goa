@@ -8,7 +8,6 @@ import (
 	"path/filepath"
 	"runtime"
 	"strings"
-	"text/template"
 
 	"goa.design/goa/codegen"
 	"goa.design/goa/pkg"
@@ -62,7 +61,7 @@ func (g *Generator) Write(debug bool) error {
 	}
 	g.tmpDir = tmpDir
 
-	var sections []*codegen.Section
+	var sections []*codegen.SectionTemplate
 	{
 		data := map[string]interface{}{
 			"Command":     g.Command,
@@ -71,6 +70,7 @@ func (g *Generator) Write(debug bool) error {
 		imports := []*codegen.ImportSpec{
 			codegen.SimpleImport("flag"),
 			codegen.SimpleImport("fmt"),
+			codegen.SimpleImport("go/build"),
 			codegen.SimpleImport("os"),
 			codegen.SimpleImport("path/filepath"),
 			codegen.SimpleImport("sort"),
@@ -81,18 +81,19 @@ func (g *Generator) Write(debug bool) error {
 			codegen.SimpleImport("goa.design/goa/pkg"),
 			codegen.NewImport("_", g.DesignPath),
 		}
-		sections = []*codegen.Section{
+		sections = []*codegen.SectionTemplate{
 			codegen.Header("Code Generator", "main", imports),
-			&codegen.Section{
-				Template: template.Must(template.New("main").Parse(mainTmpl)),
-				Data:     data,
+			&codegen.SectionTemplate{
+				Name:   "main",
+				Source: mainT,
+				Data:   data,
 			},
 		}
 	}
 
 	var f *codegen.File
 	{
-		f = &codegen.File{Path: "main.go", Sections: sections}
+		f = &codegen.File{Path: "main.go", SectionTemplates: sections}
 	}
 
 	var w *codegen.Writer
@@ -182,8 +183,8 @@ func cleanupDirs(cmd, output string) []string {
 	return nil
 }
 
-// mainTmpl is the template for the generator main.
-const mainTmpl = `func main() {
+// mainT is the template for the generator main.
+const mainT = `func main() {
 	var (
 		out     = flag.String("output", "", "")
 		version = flag.String("version", "", "")
@@ -232,14 +233,18 @@ const mainTmpl = `func main() {
 
 	var genpkg string
 	{
+		base, err := filepath.Abs(*out)
+		if err != nil {
+			fail(err.Error())
+		}
 		pkg, err := build.ImportDir(filepath.Join(base, codegen.Gendir), build.FindOnly)
 		if err != nil {
 			fail(err.Error())
 		}
-		genpkg = pkg
+		genpkg = pkg.ImportPath
 	}
 
-	var genfiles []codegen.File
+	var genfiles []*codegen.File
 	for _, gen := range gens {
 		fs, err := gen(genpkg, roots)
 		if err != nil {

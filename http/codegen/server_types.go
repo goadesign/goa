@@ -2,28 +2,10 @@ package codegen
 
 import (
 	"path/filepath"
-	"text/template"
 
 	"goa.design/goa/codegen"
 	"goa.design/goa/codegen/service"
 	httpdesign "goa.design/goa/http/design"
-)
-
-var (
-	funcMap = template.FuncMap{"comment": codegen.Comment}
-
-	typeDeclTmpl = template.Must(
-		template.New("typeDecl").Funcs(funcMap).Parse(typeDeclT),
-	)
-	serverTypeInitTmpl = template.Must(
-		template.New("serverTypeInit").Funcs(funcMap).Parse(serverTypeInitT),
-	)
-	serverBodyInitTmpl = template.Must(
-		template.New("serverBodyInit").Funcs(funcMap).Parse(serverBodyInitT),
-	)
-	validateTmpl = template.Must(
-		template.New("validate").Funcs(funcMap).Parse(validateT),
-	)
 )
 
 // ServerTypeFiles returns the HTTP transport type files.
@@ -79,7 +61,7 @@ func serverType(genpkg string, r *httpdesign.ServiceExpr, seen map[string]struct
 		initData       []*InitData
 		validatedTypes []*TypeData
 
-		sections = []*codegen.Section{header}
+		sections = []*codegen.SectionTemplate{header}
 	)
 
 	// request body types
@@ -87,9 +69,10 @@ func serverType(genpkg string, r *httpdesign.ServiceExpr, seen map[string]struct
 		adata := rdata.Endpoint(a.Name())
 		if data := adata.Payload.Request.ServerBody; data != nil {
 			if data.Def != "" {
-				sections = append(sections, &codegen.Section{
-					Template: typeDeclTmpl,
-					Data:     data,
+				sections = append(sections, &codegen.SectionTemplate{
+					Name:   "request-body-type-decl",
+					Source: typeDeclT,
+					Data:   data,
 				})
 			}
 			if data.ValidateDef != "" {
@@ -104,9 +87,10 @@ func serverType(genpkg string, r *httpdesign.ServiceExpr, seen map[string]struct
 		for _, resp := range adata.Result.Responses {
 			if data := resp.ServerBody; data != nil {
 				if data.Def != "" {
-					sections = append(sections, &codegen.Section{
-						Template: typeDeclTmpl,
-						Data:     data,
+					sections = append(sections, &codegen.SectionTemplate{
+						Name:   "response-server-body",
+						Source: typeDeclT,
+						Data:   data,
 					})
 				}
 				if data.Init != nil {
@@ -125,9 +109,10 @@ func serverType(genpkg string, r *httpdesign.ServiceExpr, seen map[string]struct
 		for _, herr := range adata.Errors {
 			if data := herr.Response.ServerBody; data != nil {
 				if data.Def != "" {
-					sections = append(sections, &codegen.Section{
-						Template: typeDeclTmpl,
-						Data:     data,
+					sections = append(sections, &codegen.SectionTemplate{
+						Name:   "error-body-type-decl",
+						Source: typeDeclT,
+						Data:   data,
 					})
 				}
 				if data.Init != nil {
@@ -143,9 +128,10 @@ func serverType(genpkg string, r *httpdesign.ServiceExpr, seen map[string]struct
 	// body attribute types
 	for _, data := range rdata.ServerBodyAttributeTypes {
 		if data.Def != "" {
-			sections = append(sections, &codegen.Section{
-				Template: typeDeclTmpl,
-				Data:     data,
+			sections = append(sections, &codegen.SectionTemplate{
+				Name:   "server-body-attributes",
+				Source: typeDeclT,
+				Data:   data,
 			})
 		}
 
@@ -156,31 +142,34 @@ func serverType(genpkg string, r *httpdesign.ServiceExpr, seen map[string]struct
 
 	// body constructors
 	for _, init := range initData {
-		sections = append(sections, &codegen.Section{
-			Template: serverBodyInitTmpl,
-			Data:     init,
+		sections = append(sections, &codegen.SectionTemplate{
+			Name:   "server-body-init",
+			Source: serverBodyInitT,
+			Data:   init,
 		})
 	}
 
 	for _, adata := range rdata.Endpoints {
 		// request to method payload
 		if init := adata.Payload.Request.PayloadInit; init != nil {
-			sections = append(sections, &codegen.Section{
-				Template: serverTypeInitTmpl,
-				Data:     init,
+			sections = append(sections, &codegen.SectionTemplate{
+				Name:   "server-payload-init",
+				Source: serverTypeInitT,
+				Data:   init,
 			})
 		}
 	}
 
 	// validate methods
 	for _, data := range validatedTypes {
-		sections = append(sections, &codegen.Section{
-			Template: validateTmpl,
-			Data:     data,
+		sections = append(sections, &codegen.SectionTemplate{
+			Name:   "server-validate",
+			Source: validateT,
+			Data:   data,
 		})
 	}
 
-	return &codegen.File{Path: path, Sections: sections}
+	return &codegen.File{Path: path, SectionTemplates: sections}
 }
 
 // input: TypeData

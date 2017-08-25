@@ -20,20 +20,23 @@ type (
 // OpenAPIFile returns the file for the OpenAPIFile spec of the given HTTP API.
 func OpenAPIFile(root *httpdesign.RootExpr) (*codegen.File, error) {
 	path := filepath.Join(codegen.Gendir, "http", "openapi.json")
-	var section *codegen.Section
+	var section *codegen.SectionTemplate
 	{
 		spec, err := openapi.NewV2(root)
 		if err != nil {
 			return nil, err
 		}
-		funcs := template.FuncMap{"toJSON": toJSON}
-		tmpl := template.Must(template.New("openapiV2").Funcs(funcs).Parse("{{ toJSON . }}"))
-		section = &codegen.Section{Template: tmpl, Data: spec}
+		section = &codegen.SectionTemplate{
+			Name:    "openapi",
+			FuncMap: template.FuncMap{"toJSON": toJSON},
+			Source:  "{{ toJSON .}}",
+			Data:    spec,
+		}
 	}
 
 	return &codegen.File{
-		Path:     path,
-		Sections: []*codegen.Section{section},
+		Path:             path,
+		SectionTemplates: []*codegen.SectionTemplate{section},
 	}, nil
 }
 

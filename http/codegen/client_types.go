@@ -2,20 +2,10 @@ package codegen
 
 import (
 	"path/filepath"
-	"text/template"
 
 	"goa.design/goa/codegen"
 	"goa.design/goa/codegen/service"
 	httpdesign "goa.design/goa/http/design"
-)
-
-var (
-	clientTypeInitTmpl = template.Must(
-		template.New("clientTypeInit").Funcs(funcMap).Parse(clientTypeInitT),
-	)
-	clientBodyInitTmpl = template.Must(
-		template.New("clientBodyInit").Funcs(funcMap).Parse(clientBodyInitT),
-	)
 )
 
 // ClientTypeFiles returns the HTTP transport client types files.
@@ -71,7 +61,7 @@ func clientType(genpkg string, svc *httpdesign.ServiceExpr, seen map[string]stru
 		initData       []*InitData
 		validatedTypes []*TypeData
 
-		sections = []*codegen.Section{header}
+		sections = []*codegen.SectionTemplate{header}
 	)
 
 	// request body types
@@ -79,9 +69,10 @@ func clientType(genpkg string, svc *httpdesign.ServiceExpr, seen map[string]stru
 		adata := rdata.Endpoint(a.Name())
 		if data := adata.Payload.Request.ClientBody; data != nil {
 			if data.Def != "" {
-				sections = append(sections, &codegen.Section{
-					Template: typeDeclTmpl,
-					Data:     data,
+				sections = append(sections, &codegen.SectionTemplate{
+					Name:   "client-request-body",
+					Source: typeDeclT,
+					Data:   data,
 				})
 			}
 			if data.Init != nil {
@@ -99,9 +90,10 @@ func clientType(genpkg string, svc *httpdesign.ServiceExpr, seen map[string]stru
 		for _, resp := range adata.Result.Responses {
 			if data := resp.ClientBody; data != nil {
 				if data.Def != "" {
-					sections = append(sections, &codegen.Section{
-						Template: typeDeclTmpl,
-						Data:     data,
+					sections = append(sections, &codegen.SectionTemplate{
+						Name:   "client-response-body",
+						Source: typeDeclT,
+						Data:   data,
 					})
 				}
 				if data.ValidateDef != "" {
@@ -117,9 +109,10 @@ func clientType(genpkg string, svc *httpdesign.ServiceExpr, seen map[string]stru
 		for _, herr := range adata.Errors {
 			if data := herr.Response.ClientBody; data != nil {
 				if data.Def != "" {
-					sections = append(sections, &codegen.Section{
-						Template: typeDeclTmpl,
-						Data:     data,
+					sections = append(sections, &codegen.SectionTemplate{
+						Name:   "client-error-body",
+						Source: typeDeclT,
+						Data:   data,
 					})
 				}
 				if data.ValidateDef != "" {
@@ -132,9 +125,10 @@ func clientType(genpkg string, svc *httpdesign.ServiceExpr, seen map[string]stru
 	// body attribute types
 	for _, data := range rdata.ClientBodyAttributeTypes {
 		if data.Def != "" {
-			sections = append(sections, &codegen.Section{
-				Template: typeDeclTmpl,
-				Data:     data,
+			sections = append(sections, &codegen.SectionTemplate{
+				Name:   "client-body-attributes",
+				Source: typeDeclT,
+				Data:   data,
 			})
 		}
 
@@ -145,9 +139,10 @@ func clientType(genpkg string, svc *httpdesign.ServiceExpr, seen map[string]stru
 
 	// body constructors
 	for _, init := range initData {
-		sections = append(sections, &codegen.Section{
-			Template: clientBodyInitTmpl,
-			Data:     init,
+		sections = append(sections, &codegen.SectionTemplate{
+			Name:   "client-body-init",
+			Source: clientBodyInitT,
+			Data:   init,
 		})
 	}
 
@@ -155,9 +150,10 @@ func clientType(genpkg string, svc *httpdesign.ServiceExpr, seen map[string]stru
 		// response to method result (client)
 		for _, resp := range adata.Result.Responses {
 			if init := resp.ResultInit; init != nil {
-				sections = append(sections, &codegen.Section{
-					Template: clientTypeInitTmpl,
-					Data:     init,
+				sections = append(sections, &codegen.SectionTemplate{
+					Name:   "client-result-init",
+					Source: clientTypeInitT,
+					Data:   init,
 				})
 			}
 		}
@@ -165,9 +161,10 @@ func clientType(genpkg string, svc *httpdesign.ServiceExpr, seen map[string]stru
 		// error response to method result (client)
 		for _, herr := range adata.Errors {
 			if init := herr.Response.ResultInit; init != nil {
-				sections = append(sections, &codegen.Section{
-					Template: clientTypeInitTmpl,
-					Data:     init,
+				sections = append(sections, &codegen.SectionTemplate{
+					Name:   "client-error-result-init",
+					Source: clientTypeInitT,
+					Data:   init,
 				})
 			}
 		}
@@ -175,13 +172,14 @@ func clientType(genpkg string, svc *httpdesign.ServiceExpr, seen map[string]stru
 
 	// validate methods
 	for _, data := range validatedTypes {
-		sections = append(sections, &codegen.Section{
-			Template: validateTmpl,
-			Data:     data,
+		sections = append(sections, &codegen.SectionTemplate{
+			Name:   "client-validate",
+			Source: validateT,
+			Data:   data,
 		})
 	}
 
-	return &codegen.File{Path: path, Sections: sections}
+	return &codegen.File{Path: path, SectionTemplates: sections}
 }
 
 // input: InitData

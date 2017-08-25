@@ -4,7 +4,6 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-	"text/template"
 
 	"goa.design/goa/codegen"
 	"goa.design/goa/design"
@@ -25,24 +24,29 @@ func ExampleServerFiles(genpkg string, root *httpdesign.RootExpr) []*codegen.Fil
 // dummyServiceFile returns a dummy implementation of the given service.
 func dummyServiceFile(genpkg string, svc *httpdesign.ServiceExpr) *codegen.File {
 	data := HTTPServices.Get(svc.Name())
-	sections := []*codegen.Section{
+	sections := []*codegen.SectionTemplate{
 		codegen.Header("", codegen.KebabCase(design.Root.API.Name), []*codegen.ImportSpec{
 			{Path: "context"},
 			{Path: "log"},
 			{Path: genpkg + "/" + codegen.Goify(svc.Name(), false)},
 		}),
-		{Template: dummyServiceStructTmpl(svc), Data: data},
+		{
+			Name:   "dummy-service",
+			Source: dummyServiceStructT,
+			Data:   data,
+		},
 	}
 	for _, e := range data.Endpoints {
-		sections = append(sections, &codegen.Section{
-			Template: dummyEndpointImplTmpl(svc),
-			Data:     e,
+		sections = append(sections, &codegen.SectionTemplate{
+			Name:   "dummy-endpoint",
+			Source: dummyEndpointImplT,
+			Data:   e,
 		})
 	}
 
 	return &codegen.File{
-		Path:     codegen.SnakeCase(svc.Name()) + ".go",
-		Sections: sections,
+		Path:             codegen.SnakeCase(svc.Name()) + ".go",
+		SectionTemplates: sections,
 	}
 }
 
@@ -77,7 +81,7 @@ func exampleMain(genpkg string, root *httpdesign.RootExpr) *codegen.File {
 			Path: filepath.Join(genpkg, pkgName),
 		})
 	}
-	sections := []*codegen.Section{codegen.Header("", "main", specs)}
+	sections := []*codegen.SectionTemplate{codegen.Header("", "main", specs)}
 	var svcdata []*ServiceData
 	for _, svc := range root.HTTPServices {
 		svcdata = append(svcdata, HTTPServices.Get(svc.Name()))
@@ -86,21 +90,15 @@ func exampleMain(genpkg string, root *httpdesign.RootExpr) *codegen.File {
 		"Services": svcdata,
 		"APIPkg":   codegen.KebabCase(root.Design.API.Name),
 	}
-	sections = append(sections, &codegen.Section{Template: mainTmpl, Data: data})
+	sections = append(sections, &codegen.SectionTemplate{
+		Name:   "service-main",
+		Source: mainT,
+		Data:   data,
+	})
 	path := filepath.Join("cmd", codegen.SnakeCase(root.Design.API.Name)+"svc", "main.go")
 
-	return &codegen.File{Path: path, Sections: sections}
+	return &codegen.File{Path: path, SectionTemplates: sections}
 }
-
-func dummyServiceStructTmpl(r *httpdesign.ServiceExpr) *template.Template {
-	return template.Must(transTmpl(r).New("dummy-service").Parse(dummyServiceStructT))
-}
-
-func dummyEndpointImplTmpl(r *httpdesign.ServiceExpr) *template.Template {
-	return template.Must(transTmpl(r).New("dummy-endpoint").Parse(dummyEndpointImplT))
-}
-
-var mainTmpl = template.Must(template.New("server-main").Parse(mainT))
 
 // input: ServiceData
 const dummyServiceStructT = `{{ printf "%s service example implementation.\nThe example methods log the requests and return zero values." .Service.Name | comment }}

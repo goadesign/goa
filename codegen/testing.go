@@ -33,7 +33,7 @@ func RunDSL(t *testing.T, dsl func()) *design.RootExpr {
 }
 
 // SectionCode generates and formats the code for the given section.
-func SectionCode(t *testing.T, section *Section) string {
+func SectionCode(t *testing.T, section *SectionTemplate) string {
 	var code bytes.Buffer
 	if err := section.Write(&code); err != nil {
 		t.Fatal(err)

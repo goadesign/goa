@@ -5,14 +5,13 @@ import (
 	"fmt"
 	"os"
 	"strings"
-	"text/template"
 	"unicode"
 
 	"goa.design/goa/pkg"
 )
 
-// TemplateFuncs returns all the common helper functions.
-func TemplateFuncs() template.FuncMap {
+// TemplateFuncs lists common template helper functions.
+func TemplateFuncs() map[string]interface{} {
 	return map[string]interface{}{
 		"commandLine": CommandLine,
 		"comment":     Comment,
