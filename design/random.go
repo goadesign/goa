@@ -55,7 +55,7 @@ func (r *RandomGenerator) DateTime() time.Time {
 	// values get generated for a given API.
 	max := time.Date(2016, time.July, 11, 23, 0, 0, 0, time.UTC).Unix()
 	unix := r.rand.Int63n(max)
-	return time.Unix(unix, 0)
+	return time.Unix(unix, 0).UTC()
 }
 
 // UUID produces a random UUID.
