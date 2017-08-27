@@ -122,8 +122,8 @@ func (s *SectionTemplate) Write(w io.Writer) error {
 	return tmpl.Execute(w, s.Data)
 }
 
-// finalizeGoSource removes unneeded imports from the given Go source file and runs
-// go fmt on it.
+// finalizeGoSource removes unneeded imports from the given Go source file and
+// runs go fmt on it.
 func finalizeGoSource(path string) error {
 	// Make sure file parses and print content if it does not.
 	fset := token.NewFileSet()
