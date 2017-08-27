@@ -5,28 +5,30 @@ import (
 	"goa.design/goa/eval"
 )
 
-// Result describes and method result type.
+// Result defines the data type of a method output.
 //
 // Result may appear in a Method expression.
 //
-// Result accepts a type as first argument. This argument is optional in which
-// case the type must be described inline (see below).
-//
-// Result accepts an optional DSL function as second argument. This function may
-// define the result type inline using Attribute or may further specialize the
-// type passed as first argument e.g. by providing additional validations (e.g.
-// list of required attributes). The DSL may also specify a view when the first
-// argument is a result type corresponding to the view rendered by this method.
-// Note that specifying a view when the result type is a result type is optional
-// and only useful in cases the method renders a single view.
+// Result takes one to three arguments. The first argument is either a type or a
+// DSL function. If the first argument is a type then an optional description
+// may be passed as second argument. Finally a DSL may be passed as last
+// argument that further specializes the type by providing additional
+// validations (e.g. list of required attributes) The DSL may also specify a
+// view when the first argument is a result type corresponding to the view
+// rendered by this method. If no view is specified then the generated code
+// defines response methods for all views.
 //
 // The valid syntax for Result is thus:
 //
-//    Result(dsltype)
+//    Result(Type)
 //
 //    Result(func())
 //
-//    Result(dsltype, func())
+//    Result(Type, "description")
+//
+//    Result(Type, func())
+//
+//    Result(Type, "description", func())
 //
 // Examples:
 //
@@ -35,9 +37,22 @@ import (
 //        Result(Int32)
 //    })
 //
+//    // Define result using primitive type and description
+//    Method("add", func() {
+//        Result(Int32, "Resulting sum")
+//    })
+//
+//    // Define result using primitive type, description and validations.
+//    Method("add", func() {
+//        Result(Int32, "Resulting sum", func() {
+//            Minimum(0)
+//        })
+//    })
+//
 //    // Define result using object defined inline
 //    Method("add", func() {
 //        Result(func() {
+//            Description("Result defines a single field which is the sum.")
 //            Attribute("value", Int32, "Resulting sum")
 //            Required("value")
 //        })
@@ -56,8 +71,8 @@ import (
 //        })
 //    })
 //
-func Result(val interface{}, fns ...func()) {
-	if len(fns) > 1 {
+func Result(val interface{}, args ...interface{}) {
+	if len(args) > 2 {
 		eval.ReportError("too many arguments")
 		return
 	}
@@ -66,5 +81,5 @@ func Result(val interface{}, fns ...func()) {
 		eval.IncompatibleDSL()
 		return
 	}
-	e.Result = methodDSL("Result", val, fns...)
+	e.Result = methodDSL("Result", val, args...)
 }
