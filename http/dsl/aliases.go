@@ -457,41 +457,67 @@ func Pattern(p string) {
 //
 // Payload may appear in a Method expression.
 //
-// Payload takes one or two arguments. The first argument is either a type or a
-// DSL function. If the first argument is a type then an optional DSL may be
-// passed as second argument that further specializes the type by providing
-// additional validations (e.g. list of required attributes)
+// Payload takes one to three arguments. The first argument is either a type or
+// a DSL function. If the first argument is a type then an optional description
+// may be passed as second argument. Finally a DSL may be passed as last
+// argument that further specializes the type by providing additional
+// validations (e.g. list of required attributes)
+//
+// The valid usage for Payload are thus:
+//
+//    Payload(Type)
+//
+//    Payload(func())
+//
+//    Payload(Type, "description")
+//
+//    Payload(Type, func())
+//
+//    Payload(Type, "description", func())
 //
 // Examples:
 //
-// Method("save"), func() {
-//	// Use primitive type.
-//	Payload(String)
-// }
+//    Method("upper"), func() {
+//        // Use primitive type.
+//        Payload(String)
+//    }
 //
-// Method("add", func() {
-//     // Define payload data structure inline.
-//     Payload(func() {
-//         Attribute("left", Int32, "Left operand")
-//         Attribute("right", Int32, "Left operand")
-//         Required("left", "right")
-//     })
-// })
+//    Method("upper"), func() {
+//        // Use primitive type.and description
+//        Payload(String, "string to convert to uppercase")
+//    }
 //
-// Method("add", func() {
-//     // Define payload type by reference to user type.
-//     Payload(Operands)
-// })
+//    Method("upper"), func() {
+//        // Use primitive type, description and validations
+//        Payload(String, "string to convert to uppercase", func() {
+//            Pattern("^[a-z]")
+//        })
+//    }
 //
-// Method("divide", func() {
-//     // Specify additional required attributes on user type.
-//     Payload(Operands, func() {
-//         Required("left", "right")
-//     })
-// })
+//    Method("add", func() {
+//        // Define payload data structure inline
+//        Payload(func() {
+//            Description("Left and right operands to add")
+//            Attribute("left", Int32, "Left operand")
+//            Attribute("right", Int32, "Left operand")
+//            Required("left", "right")
+//        })
+//    })
 //
-func Payload(val interface{}, fns ...func()) {
-	dsl.Payload(val, fns...)
+//    Method("add", func() {
+//        // Define payload type by reference to user type
+//        Payload(Operands)
+//    })
+//
+//    Method("divide", func() {
+//        // Specify additional required attributes on user type.
+//        Payload(Operands, func() {
+//            Required("left", "right")
+//        })
+//    })
+//
+func Payload(val interface{}, args ...interface{}) {
+	dsl.Payload(val, args...)
 }
 
 // Reference sets a type or result type reference. The value itself can be a
@@ -538,28 +564,30 @@ func Required(names ...string) {
 	dsl.Required(names...)
 }
 
-// Result describes and method result type.
+// Result defines the data type of a method output.
 //
 // Result may appear in a Method expression.
 //
-// Result accepts a type as first argument. This argument is optional in which
-// case the type must be described inline (see below).
-//
-// Result accepts an optional DSL function as second argument. This function may
-// define the result type inline using Attribute or may further specialize the
-// type passed as first argument e.g. by providing additional validations (e.g.
-// list of required attributes). The DSL may also specify a view when the first
-// argument is a result type corresponding to the view rendered by this method.
-// Note that specifying a view when the result type is a result type is optional
-// and only useful in cases the method renders a single view.
+// Result takes one to three arguments. The first argument is either a type or a
+// DSL function. If the first argument is a type then an optional description
+// may be passed as second argument. Finally a DSL may be passed as last
+// argument that further specializes the type by providing additional
+// validations (e.g. list of required attributes) The DSL may also specify a
+// view when the first argument is a result type corresponding to the view
+// rendered by this method. If no view is specified then the generated code
+// defines response methods for all views.
 //
 // The valid syntax for Result is thus:
 //
-//    Result(dsltype)
+//    Result(Type)
 //
 //    Result(func())
 //
-//    Result(dsltype, func())
+//    Result(Type, "description")
+//
+//    Result(Type, func())
+//
+//    Result(Type, "description", func())
 //
 // Examples:
 //
@@ -568,9 +596,22 @@ func Required(names ...string) {
 //        Result(Int32)
 //    })
 //
+//    // Define result using primitive type and description
+//    Method("add", func() {
+//        Result(Int32, "Resulting sum")
+//    })
+//
+//    // Define result using primitive type, description and validations.
+//    Method("add", func() {
+//        Result(Int32, "Resulting sum", func() {
+//            Minimum(0)
+//        })
+//    })
+//
 //    // Define result using object defined inline
 //    Method("add", func() {
 //        Result(func() {
+//            Description("Result defines a single field which is the sum.")
 //            Attribute("value", Int32, "Resulting sum")
 //            Required("value")
 //        })
@@ -589,8 +630,8 @@ func Required(names ...string) {
 //        })
 //    })
 //
-func Result(val interface{}, fns ...func()) {
-	dsl.Result(val, fns...)
+func Result(val interface{}, args ...interface{}) {
+	dsl.Result(val, args...)
 }
 
 // ResultType defines a result type used to describe a method response.
