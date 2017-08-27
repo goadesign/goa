@@ -16,6 +16,18 @@ func Header(title, pack string, imports []*ImportSpec) *SectionTemplate {
 	}
 }
 
+// AddImport adds an import to a section template that was generated with
+// Header.
+func AddImport(section *SectionTemplate, imprt *ImportSpec) {
+	var specs []*ImportSpec
+	if data, ok := section.Data.(map[string]interface{}); ok {
+		if imports, ok := data["Imports"]; ok {
+			specs = imports.([]*ImportSpec)
+		}
+		data["Imports"] = append(specs, imprt)
+	}
+}
+
 const (
 	headerT = `{{if .Title}}// Code generated with goa {{.ToolVersion}}, DO NOT EDIT.
 //
