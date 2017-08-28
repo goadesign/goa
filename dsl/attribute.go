@@ -29,7 +29,7 @@ import (
 // * The special type Any to indicate that the attribute may take any of the
 //   types listed above.
 //
-// Attribute may appear in ResultType, Type, Attribute or Attributes.
+// Attribute must appear in ResultType, Type, Attribute or Attributes.
 //
 // Attribute accepts one to four arguments, the valid usages of the function
 // are:
@@ -174,7 +174,8 @@ func Attribute(name string, args ...interface{}) {
 // Field is syntactic sugar to define an attribute with the "rpc:tag" metadata
 // set with the value of the first argument.
 //
-// Field may appear wherever Attribute can.
+// Field must appear wherever Attribute can.
+//
 // Field takes the same arguments as Attribute with the addition of the tag
 // value as first argument.
 //
@@ -220,9 +221,10 @@ func Default(def interface{}) {
 // example is generated unless the "swagger:example" metadata is set to "false".
 // See Metadata.
 //
-// Example may appear in a Attributes or Attribute expression DSL. Example takes
-// one or two arguments: an optional summary and the example value or defining
-// DSL.
+// Example must appear in a Attributes or Attribute expression DSL.
+//
+// Example takes one or two arguments: an optional summary and the example value
+// or defining DSL.
 //
 // Examples:
 //

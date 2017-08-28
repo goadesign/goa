@@ -95,7 +95,7 @@ func ArrayOf(v interface{}, fn ...func()) *design.Array {
 // * The special type Any to indicate that the attribute may take any of the
 //   types listed above.
 //
-// Attribute may appear in ResultType, Type, Attribute or Attributes.
+// Attribute must appear in ResultType, Type, Attribute or Attributes.
 //
 // Attribute accepts one to four arguments, the valid usages of the function
 // are:
@@ -195,9 +195,10 @@ func Attributes(fn func()) {
 // The resulting result type identifier is built from the element result type by
 // appending the result type parameter "type" with value "collection".
 //
+// CollectionOf must appear wherever ResultType can.
+//
 // CollectionOf takes the element result type as first argument and an optional
 // DSL as second argument.
-// CollectionOf may appear wherever ResultType can.
 //
 // Example:
 //
@@ -261,8 +262,9 @@ func Enum(vals ...interface{}) {
 // goa has a few predefined error names for the common cases, see ErrBadRequest
 // for example.
 //
-// Error may appear in the Service (to define error responses that apply to all
+// Error must appear in the Service (to define error responses that apply to all
 // the service methods) or Method expressions.
+//
 // See Attribute for details on the Error arguments.
 //
 // Example:
@@ -292,9 +294,10 @@ func Error(name string, args ...interface{}) {
 // example is generated unless the "swagger:example" metadata is set to "false".
 // See Metadata.
 //
-// Example may appear in a Attributes or Attribute expression DSL. Example takes
-// one or two arguments: an optional summary and the example value or defining
-// DSL.
+// Example must appear in a Attributes or Attribute expression DSL.
+//
+// Example takes one or two arguments: an optional summary and the example value
+// or defining DSL.
 //
 // Examples:
 //
@@ -324,7 +327,8 @@ func Example(args ...interface{}) {
 // Field is syntactic sugar to define an attribute with the "rpc:tag" metadata
 // set with the value of the first argument.
 //
-// Field may appear wherever Attribute can.
+// Field must appear wherever Attribute can.
+//
 // Field takes the same arguments as Attribute with the addition of the tag
 // value as first argument.
 //
@@ -409,7 +413,8 @@ func Maximum(val interface{}) {
 
 // Method defines a single service method.
 //
-// Method may appear in a Service expression.
+// Method must appear in a Service expression.
+//
 // Method takes two arguments: the name of the method and the defining DSL.
 //
 // Example:
@@ -455,7 +460,7 @@ func Pattern(p string) {
 // Payload defines the data type of an method input. Payload also makes the
 // input required.
 //
-// Payload may appear in a Method expression.
+// Payload must appear in a Method expression.
 //
 // Payload takes one to three arguments. The first argument is either a type or
 // a DSL function. If the first argument is a type then an optional description
@@ -566,7 +571,7 @@ func Required(names ...string) {
 
 // Result defines the data type of a method output.
 //
-// Result may appear in a Method expression.
+// Result must appear in a Method expression.
 //
 // Result takes one to three arguments. The first argument is either a type or a
 // DSL function. If the first argument is a type then an optional description
@@ -794,7 +799,8 @@ func TypeName(name string) {
 
 // URL sets the contact, license or external documentation URL.
 //
-// URL may appear in Contact, License or Docs
+// URL must appear in Contact, License or Docs
+//
 // URL accepts a single argument which is the URL.
 //
 // Example:
@@ -818,7 +824,13 @@ func Version(ver string) {
 // names must appear in the result type expression. If an attribute is itself a
 // result type then the view may specify which view to use when rendering the
 // attribute using the View function in the View DSL. If not specified then the
-// view named "default" is used. Examples:
+// view named "default" is used.
+//
+// View must appear in a ResultType expression.
+//
+// View accepts two arguments: the view name and its defining DSL.
+//
+// Examples:
 //
 //	View("default", func() {
 //              // "id" and "name" must be result type attributes

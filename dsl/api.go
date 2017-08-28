@@ -92,7 +92,8 @@ func License(fn func()) {
 
 // Docs provides external documentation pointers.
 //
-// Docs may appear in an API, Service, Method or Attribute expressions.
+// Docs must appear in an API, Service, Method or Attribute expressions.
+//
 // Docs takes a single argument which is the defining DSL.
 //
 // Example:
@@ -187,7 +188,8 @@ func Email(email string) {
 
 // URL sets the contact, license or external documentation URL.
 //
-// URL may appear in Contact, License or Docs
+// URL must appear in Contact, License or Docs
+//
 // URL accepts a single argument which is the URL.
 //
 // Example:

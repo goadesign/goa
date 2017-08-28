@@ -90,7 +90,7 @@ import (
 //         })
 //     })
 //
-// Response may appear in a API or service HTTP expression to define error
+// Response must appear in a API or service HTTP expression to define error
 // responses common to all the API or service methods. Response may also appear
 // in an method HTTP expression to define both the success and error responses
 // specific to the method.
@@ -190,7 +190,8 @@ func Response(val interface{}, args ...interface{}) {
 // one response with no Tag expression, this response is used when no other tag
 // matches.
 //
-// Tag may appear in Response.
+// Tag must appear in Response.
+//
 // Tag accepts two arguments: the name of the field and the (string) value.
 //
 // Example:

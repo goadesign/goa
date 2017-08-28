@@ -8,7 +8,10 @@ import (
 
 // Description sets the expression description.
 //
-// Description may appear in API, Service, Endpoint, Files, Response, Type, ResultType or Attribute.
+// Description must appear in API, Service, Endpoint, Files, Response, Type,
+// ResultType or Attribute.
+//
+// Description accepts a single argument which is the description value.
 //
 // Example:
 //
