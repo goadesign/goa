@@ -5,7 +5,8 @@ import "goa.design/goa/eval"
 
 // Value sets the example value.
 //
-// Value may appear in Example.
+// Value must appear in Example.
+//
 // Value takes one argument: the example value.
 //
 // Example:

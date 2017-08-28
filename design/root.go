@@ -10,8 +10,6 @@ type (
 	RootExpr struct {
 		// API contains the API expression built by the DSL.
 		API *APIExpr
-		// Traits contains the trait expressions built by the DSL.
-		Traits []*TraitExpr
 		// Services contains the list of services exposed by the API.
 		Services []*ServiceExpr
 		// Errors contains the list of errors returned by all the API
@@ -28,14 +26,6 @@ type (
 
 	// MetadataExpr is a set of key/value pairs
 	MetadataExpr map[string][]string
-
-	// TraitExpr defines a set of reusable properties.
-	TraitExpr struct {
-		// Trait name
-		Name string
-		// Trait DSL
-		DSL interface{}
-	}
 )
 
 // WalkSets returns the expressions in order of evaluation.
@@ -83,16 +73,6 @@ func (r *RootExpr) Packages() []string {
 		"goa.design/goa/design",
 		"goa.design/goa/dsl",
 	}
-}
-
-// Trait returns the trait expression with the given name if found, nil otherwise.
-func (r *RootExpr) Trait(name string) *TraitExpr {
-	for _, t := range r.Traits {
-		if t.Name == name {
-			return t
-		}
-	}
-	return nil
 }
 
 // UserType returns the user type expression with the given name if found, nil otherwise.

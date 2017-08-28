@@ -24,7 +24,6 @@ var _ = API("http_dsl_spec", func() {
 	Error("api_error", ErrorResult)
 
 	// HTTP defines the API HTTP specific properties.
-	// HTTP may appear multiple times to enable the use of traits.
 	HTTP(func() {
 
 		// Consumes lists the mime types corresponding to the encodings

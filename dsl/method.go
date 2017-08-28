@@ -7,7 +7,8 @@ import (
 
 // Method defines a single service method.
 //
-// Method may appear in a Service expression.
+// Method must appear in a Service expression.
+//
 // Method takes two arguments: the name of the method and the defining DSL.
 //
 // Example:

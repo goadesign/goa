@@ -15,8 +15,9 @@ import (
 // goa has a few predefined error names for the common cases, see ErrBadRequest
 // for example.
 //
-// Error may appear in the Service (to define error responses that apply to all
+// Error must appear in the Service (to define error responses that apply to all
 // the service methods) or Method expressions.
+//
 // See Attribute for details on the Error arguments.
 //
 // Example:

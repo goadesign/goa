@@ -8,7 +8,7 @@ import (
 // Payload defines the data type of an method input. Payload also makes the
 // input required.
 //
-// Payload may appear in a Method expression.
+// Payload must appear in a Method expression.
 //
 // Payload takes one to three arguments. The first argument is either a type or
 // a DSL function. If the first argument is a type then an optional description

@@ -24,7 +24,7 @@ import (
 // returns the content of the file "/www/data/assets/x/y/z" when requests are
 // sent to "/assets/x/y/z".
 //
-// Files may appear in Service.
+// Files must appear in Service.
 //
 // Files accepts 2 arguments and an optional DSL. The first argument is the
 // request path which may use a wildcard starting with *. The second argument is

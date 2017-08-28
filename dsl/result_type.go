@@ -141,7 +141,13 @@ func ContentType(typ string) {
 // names must appear in the result type expression. If an attribute is itself a
 // result type then the view may specify which view to use when rendering the
 // attribute using the View function in the View DSL. If not specified then the
-// view named "default" is used. Examples:
+// view named "default" is used.
+//
+// View must appear in a ResultType expression.
+//
+// View accepts two arguments: the view name and its defining DSL.
+//
+// Examples:
 //
 //	View("default", func() {
 //              // "id" and "name" must be result type attributes
@@ -214,9 +220,10 @@ func View(name string, adsl ...func()) {
 // The resulting result type identifier is built from the element result type by
 // appending the result type parameter "type" with value "collection".
 //
+// CollectionOf must appear wherever ResultType can.
+//
 // CollectionOf takes the element result type as first argument and an optional
 // DSL as second argument.
-// CollectionOf may appear wherever ResultType can.
 //
 // Example:
 //

@@ -7,7 +7,7 @@ import (
 
 // Result defines the data type of a method output.
 //
-// Result may appear in a Method expression.
+// Result must appear in a Method expression.
 //
 // Result takes one to three arguments. The first argument is either a type or a
 // DSL function. If the first argument is a type then an optional description

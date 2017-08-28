@@ -33,7 +33,7 @@ import (
 // also define new attributes or override the existing request or response type
 // attributes.
 //
-// HTTP may appear in API, a Service or an Method expression.
+// HTTP must appear in API, a Service or an Method expression.
 //
 // HTTP accepts a single argument which is the defining DSL function.
 //
@@ -109,7 +109,7 @@ func HTTP(fn func()) {
 // "application/gob". The service code must provide the decoders for other MIME
 // types.
 //
-// Consumes may appear in the HTTP expression of API.
+// Consumes must appear in the HTTP expression of API.
 //
 // Consumes accepts one or more strings corresponding to the MIME types.
 //
@@ -138,7 +138,7 @@ func Consumes(args ...string) {
 // "application/gob". The service code must provide the encoders for other MIME
 // types.
 //
-// Produces may appear in the HTTP expression of API.
+// Produces must appear in the HTTP expression of API.
 //
 // Produces accepts one or more strings corresponding to the MIME types.
 //
@@ -212,7 +212,8 @@ func Docs(fn func()) {
 // A wildcard that starts with '{*' matches the rest of the path. Such wildcards
 // must terminate the path.
 //
-// GET may appear in a method HTTP function.
+// GET must appear in a method HTTP function.
+//
 // GET accepts one argument which is the request path.
 //
 // Example:
@@ -286,7 +287,7 @@ func route(method, path string) *httpdesign.RouteExpr {
 // Headers groups a set of Header expressions. It makes it possible to list
 // required headers using the Required function.
 //
-// Headers may appear in an API or Service HTTP expression to define request
+// Headers must appear in an API or Service HTTP expression to define request
 // headers common to all the API or service methods. Headers may also appear
 // in a method, response or error HTTP expression to define the HTTP endpoint
 // request and response headers.
@@ -333,7 +334,7 @@ func Headers(args interface{}) {
 // validation etc.) of a header are inherited from the request or response type
 // attribute with the same name by default.
 //
-// Header may appear in the API HTTP expression (to define request headers
+// Header must appear in the API HTTP expression (to define request headers
 // common to all the API endpoints), a specific method HTTP expression (to
 // define request headers), a Result expression (to define the response
 // headers) or an Error expression (to define the error response headers). Header
@@ -376,7 +377,7 @@ func Header(name string, args ...interface{}) {
 // Params groups a set of Param expressions. It makes it possible to list
 // required parameters using the Required function.
 //
-// Params may appear in an API or Service HTTP expression to define the API or
+// Params must appear in an API or Service HTTP expression to define the API or
 // service base path and query string parameters. Params may also appear in an
 // method HTTP expression to define the HTTP endpoint path and query string
 // parameters.
@@ -421,7 +422,7 @@ func Params(args interface{}) {
 
 // Param describes a single HTTP request path or query string parameter.
 //
-// Param may appear in the API HTTP expression (to define request parameters
+// Param must appear in the API HTTP expression (to define request parameters
 // common to all the API endpoints), a service HTTP expression to define common
 // parameters to all the service methods or a specific method HTTP
 // expression. Param may also appear in a Params expression.
@@ -480,7 +481,7 @@ func Param(name string, args ...interface{}) {
 
 // Body describes a HTTP request or response body.
 //
-// Body may appear in a Method HTTP expression to define the request body or in
+// Body must appear in a Method HTTP expression to define the request body or in
 // an Error or Result HTTP expression to define the response body. If Body is
 // absent then the body is built using the HTTP endpoint request or response
 // type attributes not used to describe parameters (request only) or headers.

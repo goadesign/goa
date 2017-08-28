@@ -5,7 +5,9 @@ import "goa.design/goa/eval"
 
 // Description sets the expression description.
 //
-// Description may appear in API, Docs, Type or Attribute.
+// Description must appear in API, Docs, Type or Attribute.
+//
+// Description accepts one arguments: the description string.
 //
 // Example:
 //
