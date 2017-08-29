@@ -98,8 +98,8 @@ func (grw *gzipResponseWriter) WriteHeader(n int) {
 }
 
 type (
-	// option allows to override processing parameters.
-	option func(*options) error
+	// Option allows to override processing parameters.
+	Option func(*options) error
 
 	// options contains final options
 	options struct {
@@ -169,7 +169,7 @@ var defaultStatusCodes = []int{
 
 // AddContentTypes allows to specify specific content types to encode.
 // Adds to previous content types.
-func AddContentTypes(types ...string) option {
+func AddContentTypes(types ...string) Option {
 	return func(c *options) error {
 		dst := make([]string, len(c.contentTypes)+len(types))
 		copy(dst, c.contentTypes)
@@ -182,7 +182,7 @@ func AddContentTypes(types ...string) option {
 // OnlyContentTypes allows to specify specific content types to encode.
 // Overrides previous content types.
 // no types = ignore content types (always compress).
-func OnlyContentTypes(types ...string) option {
+func OnlyContentTypes(types ...string) Option {
 	return func(c *options) error {
 		if len(types) == 0 {
 			c.contentTypes = nil
@@ -195,7 +195,7 @@ func OnlyContentTypes(types ...string) option {
 
 // AddStatusCodes allows to specify specific content types to encode.
 // All content types that has the supplied prefixes are compressed.
-func AddStatusCodes(codes ...int) option {
+func AddStatusCodes(codes ...int) Option {
 	return func(c *options) error {
 		dst := make(map[int]struct{}, len(c.statusCodes)+len(codes))
 		for code := range c.statusCodes {
@@ -211,7 +211,7 @@ func AddStatusCodes(codes ...int) option {
 // OnlyStatusCodes allows to specify specific content types to encode.
 // All content types that has the supplied prefixes are compressed.
 // No codes = ignore content types (always compress).
-func OnlyStatusCodes(codes ...int) option {
+func OnlyStatusCodes(codes ...int) Option {
 	return func(c *options) error {
 		if len(codes) == 0 {
 			c.statusCodes = nil
@@ -226,7 +226,7 @@ func OnlyStatusCodes(codes ...int) option {
 }
 
 // MinSize will set a minimum size for compression.
-func MinSize(n int) option {
+func MinSize(n int) Option {
 	return func(c *options) error {
 		if n <= 0 {
 			c.minSize = 0
@@ -240,7 +240,7 @@ func MinSize(n int) option {
 // Middleware encodes the response using Gzip encoding and sets all the appropriate
 // headers. If the Content-Type is not set, it will be set by calling
 // http.DetectContentType on the data being written.
-func Middleware(level int, o ...option) goa.Middleware {
+func Middleware(level int, o ...Option) goa.Middleware {
 	opts := defaultOptions
 	for _, opt := range o {
 		err := opt(&opts)
