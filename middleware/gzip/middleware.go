@@ -109,18 +109,6 @@ type (
 	}
 )
 
-var defaultOptions = options{
-	minSize:      256,
-	contentTypes: defaultContentTypes,
-}
-
-func init() {
-	defaultOptions.statusCodes = make(map[int]struct{}, len(defaultStatusCodes))
-	for _, v := range defaultStatusCodes {
-		defaultOptions.statusCodes[v] = struct{}{}
-	}
-}
-
 // defaultContentTypes is the default list of content types for which
 // a Handler considers gzip compression. This list originates from the
 // file compression.conf within the Apache configuration found at
@@ -241,7 +229,14 @@ func MinSize(n int) Option {
 // headers. If the Content-Type is not set, it will be set by calling
 // http.DetectContentType on the data being written.
 func Middleware(level int, o ...Option) goa.Middleware {
-	opts := defaultOptions
+	opts := options{
+		minSize:      256,
+		contentTypes: defaultContentTypes,
+	}
+	opts.statusCodes = make(map[int]struct{}, len(defaultStatusCodes))
+	for _, v := range defaultStatusCodes {
+		opts.statusCodes[v] = struct{}{}
+	}
 	for _, opt := range o {
 		err := opt(&opts)
 		if err != nil {
