@@ -98,7 +98,7 @@ func (grw *gzipResponseWriter) WriteHeader(n int) {
 }
 
 type (
-	// Option allows to override processing parameters.
+	// Option allows to override default parameters.
 	Option func(*options) error
 
 	// options contains final options
