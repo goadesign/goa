@@ -258,7 +258,7 @@ func Middleware(level int, o ...Option) goa.Middleware {
 			// requesting a WebSocket or the data is already compressed.
 			if !strings.Contains(req.Header.Get(headerAcceptEncoding), encodingGzip) ||
 				len(req.Header.Get(headerSecWebSocketKey)) > 0 ||
-				req.Header.Get(headerContentEncoding) == encodingGzip {
+				rw.Header().Get(headerContentEncoding) == encodingGzip {
 				return h(ctx, rw, req)
 			}
 

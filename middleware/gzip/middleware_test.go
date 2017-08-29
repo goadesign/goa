@@ -186,6 +186,27 @@ var _ = Describe("NotGzip", func() {
 		goa.ContextRequest(ctx).Payload = payload
 	})
 
+	It("does not encode response (already gzipped)", func() {
+		h := func(ctx context.Context, rw http.ResponseWriter, req *http.Request) error {
+			resp := goa.ContextResponse(ctx)
+			resp.Header().Set("Content-Type", "gzip")
+			resp.WriteHeader(http.StatusOK)
+			resp.Write([]byte("gzip data"))
+			return nil
+		}
+		t := gzm.Middleware(gzip.BestCompression, gzm.MinSize(0))(h)
+		err := t(ctx, rw, req)
+		Ω(err).ShouldNot(HaveOccurred())
+		resp := goa.ContextResponse(ctx)
+		Ω(resp.Status).Should(Equal(http.StatusOK))
+		Ω(resp.Header().Get("Content-Encoding")).ShouldNot(Equal("gzip"))
+
+		buf := bytes.NewBuffer(nil)
+		io.Copy(buf, bytes.NewBuffer(rw.Body))
+		Ω(err).ShouldNot(HaveOccurred())
+		Ω(buf.String()).Should(Equal("gzip data"))
+	})
+
 	It("does not encode response (too small)", func() {
 		h := func(ctx context.Context, rw http.ResponseWriter, req *http.Request) error {
 			resp := goa.ContextResponse(ctx)
