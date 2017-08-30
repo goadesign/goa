@@ -70,12 +70,10 @@ func (g *Generator) Write(debug bool) error {
 		imports := []*codegen.ImportSpec{
 			codegen.SimpleImport("flag"),
 			codegen.SimpleImport("fmt"),
-			codegen.SimpleImport("go/build"),
 			codegen.SimpleImport("os"),
 			codegen.SimpleImport("path/filepath"),
 			codegen.SimpleImport("sort"),
 			codegen.SimpleImport("strings"),
-			codegen.SimpleImport("goa.design/goa/codegen"),
 			codegen.SimpleImport("goa.design/goa/codegen/generator"),
 			codegen.SimpleImport("goa.design/goa/eval"),
 			codegen.SimpleImport("goa.design/goa/pkg"),
@@ -91,20 +89,9 @@ func (g *Generator) Write(debug bool) error {
 		}
 	}
 
-	var f *codegen.File
-	{
-		f = &codegen.File{Path: "main.go", SectionTemplates: sections}
-	}
-
-	var w *codegen.Writer
-	{
-		w = &codegen.Writer{
-			Dir:   tmpDir,
-			Files: make(map[string]bool),
-		}
-	}
-
-	return w.Write(f)
+	f := &codegen.File{Path: "main.go", SectionTemplates: sections}
+	_, err := f.Render(tmpDir)
+	return err
 }
 
 // Compile compiles the generator.
@@ -213,82 +200,17 @@ const mainT = `func main() {
 		fail(err.Error())
 	}
 
-	var roots []eval.Root
-	{
-		rs, err := eval.Context.Roots()
-		if err != nil {
-			fail(err.Error())
-		}
-		roots = rs
-	}
-
-	var gens []generator.Genfunc
-	{
-		gs, err := generator.Generators({{ printf "%q" .Command }})
-		if err != nil {
-			fail(err.Error())
-		}
-		gens = gs
-	}
-
-	var genpkg string
-	{
-		base, err := filepath.Abs(*out)
-		if err != nil {
-			fail(err.Error())
-		}
-		pkg, err := build.ImportDir(filepath.Join(base, codegen.Gendir), build.FindOnly)
-		if err != nil {
-			fail(err.Error())
-		}
-		genpkg = pkg.ImportPath
-	}
-
-	var genfiles []*codegen.File
-	for _, gen := range gens {
-		fs, err := gen(genpkg, roots)
-		if err != nil {
-			fail(err.Error())
-		}
-		genfiles = append(genfiles, fs...)
-	}
-
-	var w *codegen.Writer
-	{
-		w = &codegen.Writer{
-			Dir:   *out,
-			Files: make(map[string]bool),
-		}
-	}
 {{- range .CleanupDirs }}
 	if err := os.RemoveAll({{ printf "%q" . }}); err != nil {
 		fail(err.Error())
 	}
 {{- end }}
-	for _, f := range genfiles {
-		if err := w.Write(f); err != nil {
-			fail(err.Error())
-		}
+
+	outputs, err := generator.Generate(*out, {{ printf "%q" .Command }})
+	if err != nil {
+		fail(err.Error())
 	}
 
-	var outputs []string
-	{
-		outputs = make([]string, len(w.Files))
-		cwd, err := os.Getwd()
-		if err != nil {
-			cwd = "."
-		}	
-		i := 0
-		for o := range w.Files {
-			rel, err := filepath.Rel(cwd, o)
-			if err != nil {
-				rel = o
-			}
-			outputs[i] = rel
-			i++
-		}
-	}
-	sort.Strings(outputs)
 	fmt.Println(strings.Join(outputs, "\n"))
 }
 
