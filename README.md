@@ -29,7 +29,7 @@ specification). Making sure that the document stays up-to-date takes a lot of
 effort and quickly becomes impossible as the number of services and thus APIs
 grows. Starting from the design means a *single source of truth* for the
 implementations of the service and the client as well as for the documentation.
-Write the DSL once and rip the benefits multiple times over.
+Write the DSL once and reap the benefits multiple times over.
 
 Another aspect to consider is the need for designing APIs. The API is the
 interface to your service and as such must be crafted carefully. Consistency is
