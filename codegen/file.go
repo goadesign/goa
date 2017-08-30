@@ -26,15 +26,6 @@ import (
 const Gendir = "gen"
 
 type (
-	// Writer encapsulates the state required to generate multiple files
-	// in the context of a single goa invocation.
-	Writer struct {
-		// Dir is the output directory.
-		Dir string
-		// Files list the relative generated file paths
-		Files map[string]bool
-	}
-
 	// A File contains the logic to generate a complete file.
 	File struct {
 		// SectionTemplates is the list of file section templates in
@@ -44,29 +35,32 @@ type (
 		Path string
 	}
 
-	// A SectionTemplate is a template and accompanying render data.
+	// A SectionTemplate is a template and accompanying render data. The
+	// template format is described in the (stdlib) text/template package.
 	SectionTemplate struct {
 		// Name is the name reported when parsing the source fails.
 		Name string
-		// Source is used to create the template that renders the
-		// section text.
+		// Source is used to create the text/template.Template that
+		// renders the section text.
 		Source string
-		// FuncMap lists the functions used by Source during rendering.
+		// FuncMap lists the functions used to render the templates.
 		FuncMap map[string]interface{}
 		// Data used as input of template.
 		Data interface{}
 	}
 )
 
-// Write generates the file produced by the given file writer. Write never
-// overwrites files that already exist, instead it builds a unique filename by
-// appending an index suffix.
-func (w *Writer) Write(file *File) error {
-	base, err := filepath.Abs(w.Dir)
+// Render executes the file section templates and writes the resulting bytes to
+// an output file. The path of the output file is computed by appending the file
+// path to dir. If a file already exists with the computed path then Render
+// happens the smallest integer value greater than 1 to make it unique. Renders
+// returns the computed path.
+func (f *File) Render(dir string) (string, error) {
+	base, err := filepath.Abs(dir)
 	if err != nil {
-		return err
+		return "", err
 	}
-	path := filepath.Join(base, file.Path)
+	path := filepath.Join(base, f.Path)
 	_, err = os.Stat(path)
 	if err == nil {
 		i := 1
@@ -81,35 +75,34 @@ func (w *Writer) Write(file *File) error {
 	}
 
 	if err := os.MkdirAll(filepath.Dir(path), 0755); err != nil {
-		return err
+		return "", err
 	}
 
-	f, err := os.OpenFile(
+	file, err := os.OpenFile(
 		path,
 		os.O_CREATE|os.O_APPEND|os.O_WRONLY,
 		0644,
 	)
 	if err != nil {
-		return err
+		return "", err
 	}
-	for _, s := range file.SectionTemplates {
-		if err := s.Write(f); err != nil {
-			return err
+	for _, s := range f.SectionTemplates {
+		if err := s.Write(file); err != nil {
+			return "", err
 		}
 	}
-	if err := f.Close(); err != nil {
-		return err
+	if err := file.Close(); err != nil {
+		return "", err
 	}
 
 	// Format Go source files
 	if filepath.Ext(path) == ".go" {
 		if err := finalizeGoSource(path); err != nil {
-			return err
+			return "", err
 		}
 	}
 
-	w.Files[path] = true
-	return nil
+	return path, nil
 }
 
 // Write writes the section to the given writer.
@@ -154,7 +147,9 @@ func finalizeGoSource(path string) error {
 	if err != nil {
 		return err
 	}
-	format.Node(w, fset, file)
+	if err := format.Node(w, fset, file); err != nil {
+		return err
+	}
 	w.Close()
 
 	// Format code using goimport standard
