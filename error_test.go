@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"strings"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -118,6 +119,24 @@ var _ = Describe("MissingHeaderError", func() {
 		Ω(valErr).Should(BeAssignableToTypeOf(&ErrorResponse{}))
 		err := valErr.(*ErrorResponse)
 		Ω(err.Detail).Should(ContainSubstring(name))
+	})
+})
+
+var _ = Describe("MethodNotAllowedError", func() {
+	var valErr error
+	method := "POST"
+	allowed := []string{"OPTIONS", "GET"}
+
+	JustBeforeEach(func() {
+		valErr = MethodNotAllowedError(method, allowed)
+	})
+
+	It("creates a http error", func() {
+		Ω(valErr).ShouldNot(BeNil())
+		Ω(valErr).Should(BeAssignableToTypeOf(&ErrorResponse{}))
+		err := valErr.(*ErrorResponse)
+		Ω(err.Detail).Should(ContainSubstring(method))
+		Ω(err.Detail).Should(ContainSubstring(strings.Join(allowed, ", ")))
 	})
 })
 
