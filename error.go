@@ -69,8 +69,8 @@ var (
 	// ErrNotFound is the error returned to requests that don't match a registered handler.
 	ErrNotFound = NewErrorClass("not_found", 404)
 
-	// ErrMethodNotAllowed is the error returned to requests that have a registered handler
-	// but the used HTTP method does not match.
+	// ErrMethodNotAllowed is the error returned to requests that match the path of a registered
+	// handler but not the HTTP method.
 	ErrMethodNotAllowed = NewErrorClass("method_not_allowed", 405)
 
 	// ErrInternal is the class of error used for uncaught errors.
@@ -249,8 +249,8 @@ func NoAuthMiddleware(schemeName string) error {
 	return ErrNoAuthMiddleware(msg, "scheme", schemeName)
 }
 
-// MethodNotAllowedError is the error produced to requests that have a registered handler
-// but the used HTTP method does not match.
+// MethodNotAllowedError is the error produced to requests that match the path of a registered
+// handler but not the HTTP method.
 func MethodNotAllowedError(method string, allowed []string) error {
 	msg := fmt.Sprintf("Method %s must be one of %s", method, strings.Join(allowed, ", "))
 	return ErrMethodNotAllowed(msg, "method", method, "allowed", strings.Join(allowed, ", "))
