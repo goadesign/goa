@@ -125,10 +125,14 @@ var _ = Describe("MissingHeaderError", func() {
 var _ = Describe("MethodNotAllowedError", func() {
 	var valErr error
 	method := "POST"
-	allowed := []string{"OPTIONS", "GET"}
+	var allowed []string
 
 	JustBeforeEach(func() {
 		valErr = MethodNotAllowedError(method, allowed)
+	})
+
+	BeforeEach(func() {
+		allowed = []string{"OPTIONS", "GET"}
 	})
 
 	It("creates a http error", func() {
@@ -137,6 +141,24 @@ var _ = Describe("MethodNotAllowedError", func() {
 		err := valErr.(*ErrorResponse)
 		Ω(err.Detail).Should(ContainSubstring(method))
 		Ω(err.Detail).Should(ContainSubstring(strings.Join(allowed, ", ")))
+	})
+
+	Context("multiple allowed methods", func() {
+		It("should use plural", func() {
+			err := valErr.(*ErrorResponse)
+			Ω(err.Detail).Should(ContainSubstring("one of"))
+		})
+	})
+
+	Context("single allowed method", func() {
+		BeforeEach(func() {
+			allowed = []string{"GET"}
+		})
+
+		It("should not use plural", func() {
+			err := valErr.(*ErrorResponse)
+			Ω(err.Detail).ShouldNot(ContainSubstring("one of"))
+		})
 	})
 })
 

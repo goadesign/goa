@@ -252,7 +252,11 @@ func NoAuthMiddleware(schemeName string) error {
 // MethodNotAllowedError is the error produced to requests that match the path of a registered
 // handler but not the HTTP method.
 func MethodNotAllowedError(method string, allowed []string) error {
-	msg := fmt.Sprintf("Method %s must be one of %s", method, strings.Join(allowed, ", "))
+	var plural string
+	if len(allowed) > 1 {
+		plural = " one of"
+	}
+	msg := fmt.Sprintf("Method %s must be%s %s", method, plural, strings.Join(allowed, ", "))
 	return ErrMethodNotAllowed(msg, "method", method, "allowed", strings.Join(allowed, ", "))
 }
 
