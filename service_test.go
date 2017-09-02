@@ -85,6 +85,28 @@ var _ = Describe("Service", func() {
 		})
 	})
 
+	Describe("MethodNotAllowed", func() {
+		var rw *TestResponseWriter
+		var req *http.Request
+
+		JustBeforeEach(func() {
+			rw = &TestResponseWriter{ParentHeader: http.Header{}}
+			s.Mux.ServeHTTP(rw, req)
+		})
+
+		BeforeEach(func() {
+			req, _ = http.NewRequest("GET", "/foo", nil)
+			s.Mux.Handle("POST", "/foo", func(rw http.ResponseWriter, req *http.Request, vals url.Values) {})
+			s.Mux.Handle("PUT", "/foo", func(rw http.ResponseWriter, req *http.Request, vals url.Values) {})
+		})
+
+		It("handles requests with wrong method but existing endpoint", func() {
+			Ω(rw.Status).Should(Equal(405))
+			Ω(rw.Header().Get("Allow")).Should(Or(Equal("POST, PUT"), Equal("PUT, POST")))
+			Ω(string(rw.Body)).Should(MatchRegexp(`{"id":".*","code":"method_not_allowed","status":405,"detail":".*","meta":{.*}}` + "\n"))
+		})
+	})
+
 	Describe("MaxRequestBodyLength", func() {
 		var rw *TestResponseWriter
 		var req *http.Request
