@@ -66,4 +66,21 @@ var _ = Describe("Mux", func() {
 		})
 	})
 
+	Context("with registered handlers and wrong method", func() {
+		const handlerMeth = "POST"
+		const reqMeth = "GET"
+		const reqPath = "/foo"
+
+		BeforeEach(func() {
+			var err error
+			req, err = http.NewRequest(reqMeth, reqPath, nil)
+			Ω(err).ShouldNot(HaveOccurred())
+			mux.Handle(handlerMeth, reqPath, func(rw http.ResponseWriter, req *http.Request, vals url.Values) {})
+		})
+
+		It("returns 405 to not allowed method", func() {
+			Ω(rw.Status).Should(Equal(405))
+		})
+	})
+
 })

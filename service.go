@@ -13,6 +13,8 @@ import (
 	"strings"
 
 	"context"
+
+	"github.com/dimfeld/httptreemux"
 )
 
 type (
@@ -100,7 +102,8 @@ func New(name string) *Service {
 
 			cancel: cancel,
 		}
-		notFoundHandler Handler
+		notFoundHandler         Handler
+		methodNotAllowedHandler Handler
 	)
 
 	// Setup default NotFound handler
@@ -124,6 +127,37 @@ func New(name string) *Service {
 		err := notFoundHandler(ctx, ContextResponse(ctx), req)
 		if !ContextResponse(ctx).Written() {
 			service.Send(ctx, 404, err)
+		}
+	})
+
+	// Setup default MethodNotAllowed handler
+	mux.HandleMethodNotAllowed(func(rw http.ResponseWriter, req *http.Request, params url.Values, methods map[string]httptreemux.HandlerFunc) {
+		if resp := ContextResponse(ctx); resp != nil && resp.Written() {
+			return
+		}
+		// Use closure to do lazy computation of middleware chain so all middlewares are
+		// registered.
+		if methodNotAllowedHandler == nil {
+			methodNotAllowedHandler = func(_ context.Context, rw http.ResponseWriter, req *http.Request) error {
+				allowedMethods := make([]string, len(methods))
+				i := 0
+				for k := range methods {
+					allowedMethods[i] = k
+					i++
+				}
+				rw.Header().Set("Allow", strings.Join(allowedMethods, ", "))
+				return MethodNotAllowedError(req.Method, allowedMethods)
+			}
+			chain := service.middleware
+			ml := len(chain)
+			for i := range chain {
+				methodNotAllowedHandler = chain[ml-i-1](methodNotAllowedHandler)
+			}
+		}
+		ctx := NewContext(service.Context, rw, req, params)
+		err := methodNotAllowedHandler(ctx, ContextResponse(ctx), req)
+		if !ContextResponse(ctx).Written() {
+			service.Send(ctx, 405, err)
 		}
 	})
 
