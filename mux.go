@@ -12,6 +12,12 @@ type (
 	// The values argument includes both the querystring and path parameter values.
 	MuxHandler func(http.ResponseWriter, *http.Request, url.Values)
 
+	// MethodNotAllowedHandler provides the implementation for an MethodNotAllowed
+	// handler. The values argument includes both the querystring and path parameter
+	// values. The methods argument includes both the allowed method identifier
+	// and the registered handler.
+	MethodNotAllowedHandler func(http.ResponseWriter, *http.Request, url.Values, map[string]httptreemux.HandlerFunc)
+
 	// ServeMux is the interface implemented by the service request muxes.
 	// It implements http.Handler and makes it possible to register request handlers for
 	// specific HTTP methods and request path via the Handle method.
@@ -23,6 +29,10 @@ type (
 		// handler registered with Handle. The values argument given to the handler is
 		// always nil.
 		HandleNotFound(handle MuxHandler)
+		// HandleMethodNotAllowed sets the MethodNotAllowedHandler invoked for requests
+		// that match the path of a handler but not its HTTP method. The values argument
+		// given to the Handler is always nil.
+		HandleMethodNotAllowed(handle MethodNotAllowedHandler)
 		// Lookup returns the MuxHandler associated with the given HTTP method and path.
 		Lookup(method, path string) MuxHandler
 	}
@@ -69,8 +79,13 @@ func (m *mux) HandleNotFound(handle MuxHandler) {
 		handle(rw, req, nil)
 	}
 	m.router.NotFoundHandler = nfh
+}
+
+// HandleMethodNotAllowed sets the MuxHandler invoked for requests that match
+// the path of a handler but not its HTTP method.
+func (m *mux) HandleMethodNotAllowed(handle MethodNotAllowedHandler) {
 	mna := func(rw http.ResponseWriter, req *http.Request, methods map[string]httptreemux.HandlerFunc) {
-		handle(rw, req, nil)
+		handle(rw, req, nil, methods)
 	}
 	m.router.MethodNotAllowedHandler = mna
 }

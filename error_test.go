@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"strings"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -118,6 +119,46 @@ var _ = Describe("MissingHeaderError", func() {
 		Ω(valErr).Should(BeAssignableToTypeOf(&ErrorResponse{}))
 		err := valErr.(*ErrorResponse)
 		Ω(err.Detail).Should(ContainSubstring(name))
+	})
+})
+
+var _ = Describe("MethodNotAllowedError", func() {
+	var valErr error
+	method := "POST"
+	var allowed []string
+
+	JustBeforeEach(func() {
+		valErr = MethodNotAllowedError(method, allowed)
+	})
+
+	BeforeEach(func() {
+		allowed = []string{"OPTIONS", "GET"}
+	})
+
+	It("creates a http error", func() {
+		Ω(valErr).ShouldNot(BeNil())
+		Ω(valErr).Should(BeAssignableToTypeOf(&ErrorResponse{}))
+		err := valErr.(*ErrorResponse)
+		Ω(err.Detail).Should(ContainSubstring(method))
+		Ω(err.Detail).Should(ContainSubstring(strings.Join(allowed, ", ")))
+	})
+
+	Context("multiple allowed methods", func() {
+		It("should use plural", func() {
+			err := valErr.(*ErrorResponse)
+			Ω(err.Detail).Should(ContainSubstring("one of"))
+		})
+	})
+
+	Context("single allowed method", func() {
+		BeforeEach(func() {
+			allowed = []string{"GET"}
+		})
+
+		It("should not use plural", func() {
+			err := valErr.(*ErrorResponse)
+			Ω(err.Detail).ShouldNot(ContainSubstring("one of"))
+		})
 	})
 })
 
