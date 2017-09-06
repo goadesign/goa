@@ -29,8 +29,11 @@ func Generate(dir, cmd string) ([]string, error) {
 		if err != nil {
 			return nil, err
 		}
-		pkg, err := build.ImportDir(
-			filepath.Join(base, codegen.Gendir), build.FindOnly)
+		path := filepath.Join(base, codegen.Gendir)
+		if err := os.MkdirAll(path, 0777); err != nil {
+			return nil, err
+		}
+		pkg, err := build.ImportDir(path, build.FindOnly)
 		if err != nil {
 			return nil, err
 		}
