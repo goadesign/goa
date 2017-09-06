@@ -61,6 +61,9 @@ func runSet(set ExpressionSet) error {
 		recursed++
 		for _, def := range set[executed:] {
 			executed++
+			if def == nil {
+				continue
+			}
 			if source, ok := def.(Source); ok {
 				Execute(source.DSL(), def)
 			}
@@ -76,6 +79,9 @@ func runSet(set ExpressionSet) error {
 func validateSet(set ExpressionSet) error {
 	errors := &ValidationErrors{}
 	for _, def := range set {
+		if def == nil {
+			continue
+		}
 		if validate, ok := def.(Validator); ok {
 			if err := validate.Validate(); err != nil {
 				errors.AddError(def, err)
@@ -91,6 +97,9 @@ func validateSet(set ExpressionSet) error {
 // finalizeSet runs the validation on all the set expressions that define one.
 func finalizeSet(set ExpressionSet) error {
 	for _, def := range set {
+		if def == nil {
+			continue
+		}
 		if f, ok := def.(Finalizer); ok {
 			f.Finalize()
 		}
