@@ -15,8 +15,8 @@ import (
 // ServerFiles returns all the server HTTP transport files.
 func ServerFiles(genpkg string, root *httpdesign.RootExpr) []*codegen.File {
 	fw := make([]*codegen.File, 2*len(root.HTTPServices))
-	for i, r := range root.HTTPServices {
-		fw[i] = server(genpkg, r)
+	for i, svc := range root.HTTPServices {
+		fw[i] = server(genpkg, svc)
 	}
 	for i, r := range root.HTTPServices {
 		fw[i+len(root.HTTPServices)] = serverEncodeDecode(genpkg, r)

@@ -199,7 +199,6 @@ const mainT = `func main() {
 	if err := eval.RunDSL(); err != nil {
 		fail(err.Error())
 	}
-
 {{- range .CleanupDirs }}
 	if err := os.RemoveAll({{ printf "%q" . }}); err != nil {
 		fail(err.Error())
