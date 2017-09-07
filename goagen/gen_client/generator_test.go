@@ -504,7 +504,9 @@ var _ = Describe("Generate", func() {
 			Ω(files).Should(HaveLen(9))
 			content, err := ioutil.ReadFile(filepath.Join(outDir, "client", "foo.go"))
 			Ω(err).ShouldNot(HaveOccurred())
-			Ω(content).Should(ContainSubstring("c.JWT1Signer.Sign(req)"))
+			Ω(content).Should(ContainSubstring(`		if err := c.JWT1Signer.Sign(req); err != nil {
+			return nil, err
+		}`))
 		})
 	})
 

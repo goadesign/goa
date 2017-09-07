@@ -1098,7 +1098,9 @@ func (c *Client) {{ $funcName }}(ctx context.Context, path string{{ if .Params }
 	header.Set("{{ .Name }}", {{ .ValueName }})
 {{ end }}{{ if .CheckNil }}	}{{ end }}
 {{ end }}{{ end }}{{ if .Signer }}	if c.{{ .Signer }}Signer != nil {
-		c.{{ .Signer }}Signer.Sign(req)
+		if err := c.{{ .Signer }}Signer.Sign(req); err != nil {
+			return nil, err
+		}
 	}
 {{ end }}	return req, nil
 }
