@@ -175,7 +175,7 @@ func endpointParser(genpkg string, root *httpdesign.RootExpr, data []*commandDat
 // payloadBuilders returns the file that contains the payload constructors that
 // use flag values as arguments.
 func payloadBuilders(genpkg string, svc *httpdesign.ServiceExpr, data *commandData) *codegen.File {
-	path := filepath.Join(codegen.Gendir, "http", codegen.SnakeCase(svc.Name()), "client", "cli.go")
+	path := filepath.Join(codegen.Gendir, "http", codegen.KebabCase(svc.Name()), "client", "cli.go")
 	title := fmt.Sprintf("%s HTTP client CLI support package", svc.Name())
 	specs := []*codegen.ImportSpec{
 		{Path: "encoding/json"},

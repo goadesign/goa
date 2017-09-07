@@ -26,7 +26,7 @@ func ServerFiles(genpkg string, root *httpdesign.RootExpr) []*codegen.File {
 
 // server returns the files defining the HTTP server.
 func server(genpkg string, svc *httpdesign.ServiceExpr) *codegen.File {
-	path := filepath.Join(codegen.Gendir, "http", codegen.SnakeCase(svc.Name()), "server", "server.go")
+	path := filepath.Join(codegen.Gendir, "http", codegen.KebabCase(svc.Name()), "server", "server.go")
 	data := HTTPServices.Get(svc.Name())
 	title := fmt.Sprintf("%s HTTP server", svc.Name())
 	sections := []*codegen.SectionTemplate{
@@ -55,7 +55,7 @@ func server(genpkg string, svc *httpdesign.ServiceExpr) *codegen.File {
 // serverEncodeDecode returns the file defining the HTTP server encoding and
 // decoding logic.
 func serverEncodeDecode(genpkg string, svc *httpdesign.ServiceExpr) *codegen.File {
-	path := filepath.Join(codegen.Gendir, "http", codegen.SnakeCase(svc.Name()), "server", "encode_decode.go")
+	path := filepath.Join(codegen.Gendir, "http", codegen.KebabCase(svc.Name()), "server", "encode_decode.go")
 	data := HTTPServices.Get(svc.Name())
 	title := fmt.Sprintf("%s HTTP server encoders and decoders", svc.Name())
 	sections := []*codegen.SectionTemplate{

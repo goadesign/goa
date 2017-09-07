@@ -1,58 +1,92 @@
 package main
 
 import (
+	"bytes"
+	"flag"
 	"fmt"
+	"go/ast"
 	"go/build"
+	"go/format"
+	"go/parser"
+	"go/scanner"
+	"go/token"
 	"io"
+	"io/ioutil"
 	"os"
 	"path/filepath"
 	"sort"
 	"strings"
 	"text/template"
+
+	"golang.org/x/tools/go/ast/astutil"
 )
 
 const (
-	goaDSL  = "goa.design/goa/dsl"
-	httpDSL = "goa.design/goa/http/dsl"
+	srcDSLDefault  = "goa.design/goa/dsl"
+	destDSLDefault = "goa.design/goa/http/dsl"
 	//rpcDSL    = "goa.design/goa/dsl/rpc"
 	aliasFile = "aliases.go"
 )
 
 // aliasTmpl is the template used to render the aliasing functions.
 var aliasTmpl = template.Must(template.New("alias").Parse(aliasT))
+var headerTmpl = template.Must(template.New("header").Parse(headerT))
 
 func main() {
 	var (
-		httpPkg, goaPkg  string
-		httpFuncs, funcs map[string]*ExportedFunc
-		httpAlias        string
-		names, aliases   []string
-		err              error
+		srcDSL  = flag.String("src", srcDSLDefault, "source DSL `package path`")
+		destDSL = flag.String("dest", destDSLDefault, "destination DSL `package path`")
 	)
 	{
-		pkg, err := build.Import(goaDSL, ".", build.FindOnly)
-		if err != nil {
-			fail("could not find %s package: %s", goaDSL, err)
-		}
-		goaPkg = pkg.Dir
+		flag.Parse()
+	}
 
-		pkg, err = build.Import(httpDSL, ".", build.FindOnly)
+	var (
+		srcPkgDir   string
+		srcPkgName  string
+		srcPkgPath  string
+		destPkgDir  string
+		destPkgName string
+	)
+	{
+		pkg, err := build.Import(*srcDSL, ".", 0)
 		if err != nil {
-			fail("could not find %s package: %s", httpDSL, err)
+			fail("could not find %s package: %s", srcDSL, err)
 		}
-		httpPkg = pkg.Dir
-		httpAlias = filepath.Join(httpPkg, aliasFile)
-		os.Remove(httpAlias) // to avoid parsing them
+		srcPkgDir = pkg.Dir
+		srcPkgName = pkg.Name
+		srcPkgPath = pkg.ImportPath
 
-		httpFuncs, err = ParseFuncs(httpPkg, "dsl")
+		pkg, err = build.Import(*destDSL, ".", 0)
 		if err != nil {
-			fail("could not parse functions in %s: %s", httpPkg, err)
+			fail("could not parse %s package: %s", destDSL, err)
+		}
+		destPkgDir = pkg.Dir
+		destPkgName = pkg.Name
+	}
+
+	var (
+		destFuncs map[string]*ExportedFunc
+		funcs     map[string]*ExportedFunc
+		imports   map[string]*PackageDecl
+		path      string
+		names     []string
+		err       error
+	)
+	{
+		path = filepath.Join(destPkgDir, aliasFile)
+		os.Remove(path) // to avoid parsing them
+
+		destFuncs, _, err = ParseFuncs(destPkgDir)
+		if err != nil {
+			fail("could not parse functions in %s: %s", destPkgDir, err)
 		}
 
-		funcs, err = ParseFuncs(goaPkg, "dsl") //
+		funcs, imports, err = ParseFuncs(srcPkgDir)
 		if err != nil {
-			fail("could not parse functions in %s: %s", goaPkg, err)
+			fail("could not parse functions in %s: %s", srcPkgDir, err)
 		}
+		imports[srcPkgName] = &PackageDecl{ImportPath: srcPkgPath, Name: srcPkgName}
 		names = make([]string, len(funcs))
 		i := 0
 		for _, fn := range funcs {
@@ -62,10 +96,11 @@ func main() {
 		sort.Strings(names)
 	}
 
-	if aliases, err = CreateAliases(names, funcs, httpFuncs, httpAlias); err != nil {
-		fail("failed to create http package aliases: %s", err)
+	aliases, err := CreateAliases(names, funcs, destFuncs, destPkgName, imports, path)
+	if err != nil {
+		fail("failed to create package aliases: %s", err)
 	}
-	fmt.Printf("http (%d):\n", len(aliases))
+	fmt.Printf("%s (%d):\n", destPkgDir, len(aliases))
 	fmt.Println("  " + strings.Join(aliases, "\n  "))
 }
 
@@ -75,23 +110,30 @@ func main() {
 // generated.
 // The implementations of the created functions simply call the original
 // functions.
-func CreateAliases(names []string, funcs, existing map[string]*ExportedFunc, dest string) ([]string, error) {
+func CreateAliases(names []string, funcs, existing map[string]*ExportedFunc, destPkgName string, imports map[string]*PackageDecl, path string) ([]string, error) {
 	var (
-		aliases []string
-		w       io.Writer
+		w io.Writer
+		f *os.File
 	)
 	{
-		f, err := os.Create(dest)
+		var err error
+		f, err = os.Create(path)
 		if err != nil {
 			return nil, fmt.Errorf("failed to create file %s: %s",
-				dest, err)
+				path, err)
 		}
 		defer f.Close()
 		w = f
 	}
-	if _, err := w.Write([]byte(header)); err != nil {
+
+	data := map[string]interface{}{"Imports": imports, "PkgName": destPkgName}
+	if err := headerTmpl.Execute(w, data); err != nil {
 		return nil, err
 	}
+
+	var (
+		aliases []string
+	)
 	for i, name := range names {
 		if _, ok := existing[name]; ok {
 			continue
@@ -106,6 +148,39 @@ func CreateAliases(names []string, funcs, existing map[string]*ExportedFunc, des
 		}
 		aliases = append(aliases, name)
 	}
+
+	// Clean unused imports
+	f.Close()
+	fset := token.NewFileSet()
+	file, err := parser.ParseFile(fset, path, nil, parser.ParseComments)
+	if err != nil {
+		content, _ := ioutil.ReadFile(path)
+		var buf bytes.Buffer
+		scanner.PrintError(&buf, err)
+		return nil, fmt.Errorf("%s\n========\nContent:\n%s", buf.String(), content)
+	}
+	all := astutil.Imports(fset, file)
+	for _, group := range all {
+		for _, imp := range group {
+			path := strings.Trim(imp.Path.Value, `"`)
+			if !astutil.UsesImport(file, path) {
+				if imp.Name != nil {
+					astutil.DeleteNamedImport(fset, file, imp.Name.Name, path)
+				} else {
+					astutil.DeleteImport(fset, file, path)
+				}
+			}
+		}
+	}
+	ast.SortImports(fset, file)
+	f, err = os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, os.ModePerm)
+	if err != nil {
+		return nil, err
+	}
+	if err := format.Node(f, fset, file); err != nil {
+		return nil, err
+	}
+
 	return aliases, nil
 }
 
@@ -116,20 +191,21 @@ func fail(msg string, vals ...interface{}) {
 }
 
 const (
-	// header is the generated file header.
-	header = `//************************************************************************//
-// Aliased goa DSL Functions
+	// headerT is the generated file header template.
+	headerT = `//************************************************************************//
+// Aliased DSL Functions
 //
 // Generated with aliaser
 //
 // The content of this file is auto-generated, DO NOT MODIFY
 //************************************************************************//
 
-package dsl
+package {{ .PkgName }}
 
 import (
-	"goa.design/goa/design"
-	"goa.design/goa/dsl"
+	{{- range .Imports }}
+	{{ if .Name }}{{ .Name }} {{ end }}"{{ .ImportPath }}"
+	{{- end }}
 )
 
 `
