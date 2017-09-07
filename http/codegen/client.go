@@ -22,7 +22,7 @@ func ClientFiles(genpkg string, root *httpdesign.RootExpr) []*codegen.File {
 
 // client returns the client HTTP transport file
 func client(genpkg string, svc *httpdesign.ServiceExpr) *codegen.File {
-	path := filepath.Join(codegen.Gendir, "http", codegen.SnakeCase(svc.Name()), "client", "client.go")
+	path := filepath.Join(codegen.Gendir, "http", codegen.KebabCase(svc.Name()), "client", "client.go")
 	data := HTTPServices.Get(svc.Name())
 	title := fmt.Sprintf("%s client HTTP transport", svc.Name())
 	sections := []*codegen.SectionTemplate{
@@ -54,7 +54,7 @@ func client(genpkg string, svc *httpdesign.ServiceExpr) *codegen.File {
 // clientEncodeDecode returns the file containing the HTTP client encoding and
 // decoding logic.
 func clientEncodeDecode(genpkg string, svc *httpdesign.ServiceExpr) *codegen.File {
-	path := filepath.Join(codegen.Gendir, "http", codegen.SnakeCase(svc.Name()), "client", "encode_decode.go")
+	path := filepath.Join(codegen.Gendir, "http", codegen.KebabCase(svc.Name()), "client", "encode_decode.go")
 	data := HTTPServices.Get(svc.Name())
 	title := fmt.Sprintf("%s HTTP client encoders and decoders", svc.Name())
 	sections := []*codegen.SectionTemplate{

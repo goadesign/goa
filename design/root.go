@@ -31,7 +31,7 @@ type (
 // WalkSets returns the expressions in order of evaluation.
 func (r *RootExpr) WalkSets(walk eval.SetWalker) {
 	if r.API == nil {
-		r.API = &APIExpr{Servers: []*ServerExpr{{URL: "http://localhost:8080"}}}
+		r.API = &APIExpr{}
 	}
 
 	// First run the top level API DSL

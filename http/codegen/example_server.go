@@ -95,7 +95,7 @@ func exampleMain(genpkg string, root *httpdesign.RootExpr) *codegen.File {
 		Source: mainT,
 		Data:   data,
 	})
-	path := filepath.Join("cmd", codegen.SnakeCase(root.Design.API.Name)+"svc", "main.go")
+	path := filepath.Join("cmd", codegen.KebabCase(root.Design.API.Name)+"svc", "main.go")
 
 	return &codegen.File{Path: path, SectionTemplates: sections}
 }

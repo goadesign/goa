@@ -43,16 +43,16 @@ func ServerTypeFiles(genpkg string, root *httpdesign.RootExpr) []*codegen.File {
 //   * Response body fields (if the body is a struct) and header variables hold
 //     pointers when not required and have no default value.
 //
-func serverType(genpkg string, r *httpdesign.ServiceExpr, seen map[string]struct{}) *codegen.File {
+func serverType(genpkg string, svc *httpdesign.ServiceExpr, seen map[string]struct{}) *codegen.File {
 	var (
 		path  string
-		rdata = HTTPServices.Get(r.Name())
+		rdata = HTTPServices.Get(svc.Name())
 	)
-	path = filepath.Join(codegen.Gendir, "http", codegen.SnakeCase(r.Name()), "server", "types.go")
-	header := codegen.Header(r.Name()+" HTTP server types", "server",
+	path = filepath.Join(codegen.Gendir, "http", codegen.KebabCase(svc.Name()), "server", "types.go")
+	header := codegen.Header(svc.Name()+" HTTP server types", "server",
 		[]*codegen.ImportSpec{
 			{Path: "unicode/utf8"},
-			{Path: genpkg + "/" + service.Services.Get(r.Name()).PkgName},
+			{Path: genpkg + "/" + service.Services.Get(svc.Name()).PkgName},
 			{Path: "goa.design/goa", Name: "goa"},
 		},
 	)
@@ -65,7 +65,7 @@ func serverType(genpkg string, r *httpdesign.ServiceExpr, seen map[string]struct
 	)
 
 	// request body types
-	for _, a := range r.HTTPEndpoints {
+	for _, a := range svc.HTTPEndpoints {
 		adata := rdata.Endpoint(a.Name())
 		if data := adata.Payload.Request.ServerBody; data != nil {
 			if data.Def != "" {
@@ -82,7 +82,7 @@ func serverType(genpkg string, r *httpdesign.ServiceExpr, seen map[string]struct
 	}
 
 	// response body types
-	for _, a := range r.HTTPEndpoints {
+	for _, a := range svc.HTTPEndpoints {
 		adata := rdata.Endpoint(a.Name())
 		for _, resp := range adata.Result.Responses {
 			if data := resp.ServerBody; data != nil {
@@ -104,7 +104,7 @@ func serverType(genpkg string, r *httpdesign.ServiceExpr, seen map[string]struct
 	}
 
 	// error body types
-	for _, a := range r.HTTPEndpoints {
+	for _, a := range svc.HTTPEndpoints {
 		adata := rdata.Endpoint(a.Name())
 		for _, herr := range adata.Errors {
 			if data := herr.Response.ServerBody; data != nil {

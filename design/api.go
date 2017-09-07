@@ -115,14 +115,11 @@ func (a *APIExpr) Random() *Random {
 // EvalName is the qualified name of the expression.
 func (a *APIExpr) EvalName() string { return "API " + a.Name }
 
-// Validate makes sure there is at least one Server expression.
-func (a *APIExpr) Validate() error {
+// Finalize makes sure there's one server definition.
+func (a *APIExpr) Finalize() {
 	if len(a.Servers) == 0 {
-		verr := new(eval.ValidationErrors)
-		verr.Add(a, "missing Server expression")
-		return verr
+		a.Servers = []*ServerExpr{{URL: "http://localhost:8080"}}
 	}
-	return nil
 }
 
 // EvalName is the qualified name of the expression.
