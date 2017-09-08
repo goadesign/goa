@@ -35,7 +35,7 @@ func client(genpkg string, svc *httpdesign.ServiceExpr) *codegen.File {
 			{Path: "strings"},
 			{Path: "goa.design/goa", Name: "goa"},
 			{Path: "goa.design/goa/http", Name: "goahttp"},
-			{Path: genpkg + "/" + data.Service.PkgName},
+			{Path: genpkg + "/" + codegen.KebabCase(svc.Name())},
 		}),
 		{Name: "client-struct", Source: clientStructT, Data: data},
 		{Name: "client-init", Source: clientInitT, Data: data},
@@ -69,7 +69,7 @@ func clientEncodeDecode(genpkg string, svc *httpdesign.ServiceExpr) *codegen.Fil
 			{Path: "strings"},
 			{Path: "goa.design/goa", Name: "goa"},
 			{Path: "goa.design/goa/http", Name: "goahttp"},
-			{Path: genpkg + "/" + data.Service.PkgName},
+			{Path: genpkg + "/" + codegen.KebabCase(svc.Name())},
 		}),
 	}
 

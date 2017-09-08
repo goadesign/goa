@@ -13,8 +13,11 @@ import (
 
 type (
 	commandData struct {
-		// Name of command e.g. "storage"
+		// Name of command e.g. "cellar-storage"
 		Name string
+		// VarName is the name of the command variable e.g.
+		// "cellarStorage"
+		VarName string
 		// Description is the help text.
 		Description string
 		// Subcommands is the list of endpoint commands.
@@ -50,8 +53,10 @@ type (
 	}
 
 	flagData struct {
-		// Name is the name of the flag, e.g. "vintage"
+		// Name is the name of the flag, e.g. "list-vintage"
 		Name string
+		// VarName is the name of the flag variable, e.g. "listVintage"
+		VarName string
 		// Type is the type of the flag, e.g. INT
 		Type string
 		// FullName is the flag full name e.g. "storageAddVintage"
@@ -103,13 +108,20 @@ type (
 
 // ClientCLIFiles returns the client HTTP CLI support file.
 func ClientCLIFiles(genpkg string, root *httpdesign.RootExpr) []*codegen.File {
-	data := make([]*commandData, len(root.HTTPServices))
-	for i, svc := range root.HTTPServices {
-		data[i] = buildCommandData(HTTPServices.Get(svc.Name()))
+	var (
+		data []*commandData
+		svcs []*httpdesign.ServiceExpr
+	)
+	for _, svc := range root.HTTPServices {
+		sd := HTTPServices.Get(svc.Name())
+		if len(sd.Endpoints) > 0 {
+			data = append(data, buildCommandData(sd))
+			svcs = append(svcs, svc)
+		}
 	}
 
 	files := []*codegen.File{endpointParser(genpkg, root, data)}
-	for i, svc := range root.HTTPServices {
+	for i, svc := range svcs {
 		files = append(files, payloadBuilders(genpkg, svc, data[i]))
 	}
 	return files
@@ -131,10 +143,10 @@ func endpointParser(genpkg string, root *httpdesign.RootExpr, data []*commandDat
 		{Path: "goa.design/goa/http", Name: "goahttp"},
 	}
 	for _, svc := range root.HTTPServices {
-		n := codegen.Goify(svc.Name(), false)
+		sd := HTTPServices.Get(svc.Name())
 		specs = append(specs, &codegen.ImportSpec{
-			Path: genpkg + "/http/" + n + "/client",
-			Name: HTTPServices.Get(svc.Name()).Service.Name + "c",
+			Path: genpkg + "/http/" + codegen.KebabCase(sd.Service.Name) + "/client",
+			Name: sd.Service.PkgName + "c",
 		})
 	}
 	usages := make([]string, len(data))
@@ -163,13 +175,20 @@ func endpointParser(genpkg string, root *httpdesign.RootExpr, data []*commandDat
 	}
 	for _, cmd := range data {
 		sections = append(sections, &codegen.SectionTemplate{
-			Name:   "command-usage",
-			Source: commandUsageT,
-			Data:   cmd,
+			Name:    "command-usage",
+			Source:  commandUsageT,
+			Data:    cmd,
+			FuncMap: map[string]interface{}{"printDescription": printDescription},
 		})
 	}
 
 	return &codegen.File{Path: path, SectionTemplates: sections}
+}
+
+func printDescription(desc string) string {
+	res := strings.Replace(desc, "`", "`+\"`\"+`", -1)
+	res = strings.Replace(res, "\n", "\n\t", -1)
+	return res
 }
 
 // payloadBuilders returns the file that contains the payload constructors that
@@ -186,7 +205,7 @@ func payloadBuilders(genpkg string, svc *httpdesign.ServiceExpr, data *commandDa
 		{Path: "unicode/utf8"},
 		{Path: "goa.design/goa", Name: "goa"},
 		{Path: "goa.design/goa/http", Name: "goahttp"},
-		{Path: genpkg + "/" + HTTPServices.Get(svc.Name()).Service.PkgName},
+		{Path: genpkg + "/" + codegen.KebabCase(svc.Name())},
 	}
 	sections := []*codegen.SectionTemplate{
 		codegen.Header(title, "client", specs),
@@ -214,7 +233,7 @@ func buildCommandData(svc *ServiceData) *commandData {
 		example     string
 	)
 	{
-		name = codegen.Goify(svc.Service.Name, false)
+		name = svc.Service.Name
 		description = svc.Service.Description
 		if description == "" {
 			description = fmt.Sprintf("Make requests to the %q service", name)
@@ -223,10 +242,13 @@ func buildCommandData(svc *ServiceData) *commandData {
 		for i, e := range svc.Endpoints {
 			subcommands[i] = buildSubcommandData(svc, e)
 		}
-		example = subcommands[0].Example
+		if len(subcommands) > 0 {
+			example = subcommands[0].Example
+		}
 	}
 	return &commandData{
 		Name:        name,
+		VarName:     codegen.Goify(name, false),
 		Description: description,
 		Subcommands: subcommands,
 		Example:     example,
@@ -246,7 +268,7 @@ func buildSubcommandData(svc *ServiceData, e *EndpointData) *subcommandData {
 	{
 		svcn := svc.Service.Name
 		en := e.Method.Name
-		name = goify(en)
+		name = en
 		fullName = goify(svcn, en)
 		description = e.Method.Description
 		if description == "" {
@@ -335,9 +357,7 @@ func buildSubcommandData(svc *ServiceData, e *EndpointData) *subcommandData {
 		BuildFunction: buildFunction,
 		Conversion:    conversion,
 	}
-	ex := codegen.Goify(svc.Service.Name, false) +
-		" " +
-		codegen.KebabCase(sub.Name)
+	ex := svc.Service.Name + " " + codegen.KebabCase(sub.Name)
 	for _, f := range sub.Flags {
 		ex += " --" + f.Name + " " + f.Example
 	}
@@ -499,6 +519,7 @@ func argToFlag(svcn, en string, arg *InitArgData) *flagData {
 	fn := goify(svcn, en, arg.Name)
 	return &flagData{
 		Name:        codegen.KebabCase(arg.Name),
+		VarName:     codegen.Goify(arg.Name, false),
 		Type:        flagType(arg.TypeName),
 		FullName:    fn,
 		Description: arg.Description,
@@ -538,7 +559,7 @@ func ParseEndpoint(
 ) (goa.Endpoint, interface{}, error) {
 	var (
 		{{- range . }}
-		{{ .Name }}Flags = flag.NewFlagSet("{{ .Name }}", flag.ContinueOnError)
+		{{ .VarName }}Flags = flag.NewFlagSet("{{ .Name }}", flag.ContinueOnError)
 		{{ range .Subcommands }}
 		{{ .FullName }}Flags = flag.NewFlagSet("{{ .Name }}", flag.ExitOnError)
 		{{- $sub := . }}
@@ -550,7 +571,7 @@ func ParseEndpoint(
 	)
 	{{ range . -}}
 	{{ $cmd := . -}}
-	{{ .Name }}Flags.Usage = {{ .Name }}Usage
+	{{ .VarName }}Flags.Usage = {{ .VarName }}Usage
 	{{ range .Subcommands -}}
 	{{ .FullName }}Flags.Usage = {{ .FullName }}Usage
 	{{ end }}
@@ -690,14 +711,14 @@ func {{ .Name }}({{ range .FormalParams }}{{ . }} string, {{ end }}) (*{{ .Resul
 
 // input: commandData
 const commandUsageT = `{{ printf "%sUsage displays the usage of the %s command and its subcommands." .Name .Name | comment }}
-func {{ .Name }}Usage() {
-	fmt.Fprintf(os.Stderr, ` + "`" + `{{ .Description }}
+func {{ .VarName }}Usage() {
+	fmt.Fprintf(os.Stderr, ` + "`" + `{{ printDescription .Description }}
 Usage:
     %s [globalflags] {{ .Name }} COMMAND [flags]
 
 COMMAND:
     {{- range .Subcommands }}
-    {{ .Name }}: {{ .Description }}
+    {{ .Name }}: {{ printDescription .Description }}
     {{- end }}
 
 Additional help:
@@ -709,7 +730,7 @@ Additional help:
 func {{ .FullName }}Usage() {
 	fmt.Fprintf(os.Stderr, ` + "`" + `%s [flags] {{ $.Name }} {{ .Name }}{{range .Flags }} -{{ .Name }} {{ .Type }}{{ end }}
 
-{{ .Description}}
+{{ printDescription .Description}}
 	{{- range .Flags }}
     -{{ .Name }} {{ .Type }}: {{ .Description }}
 	{{- end }}
