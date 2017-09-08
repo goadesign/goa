@@ -181,7 +181,7 @@ func (c *{{ .ClientStruct }}) {{ .EndpointInit }}() goa.Endpoint {
 const requestBuilderT = `{{ printf "%s instantiates a HTTP request object with method and path set to call the %s %s endpoint." .RequestBuilder .ServiceName .Method.Name | comment }}
 func (c *{{ .ClientStruct }}) {{ .RequestBuilder }}({{ if .HasBuilderParam }}v interface{}{{ end }}) (*http.Request, error) {
 	{{- with (index .Routes 0) }}
-		{{- if $.HasBuilderParam }}
+		{{- if $.Payload.Ref }}
 	p, ok := v.({{ $.Payload.Ref }})
 	if !ok {
 		return nil, goahttp.ErrInvalidType("{{ $.ServiceName }}", "{{ $.Method.Name }}", "{{ $.Payload.Ref }}", v)
@@ -189,7 +189,7 @@ func (c *{{ .ClientStruct }}) {{ .RequestBuilder }}({{ if .HasBuilderParam }}v i
 		{{- end }}
 		{{- range $i, $arg := .PathInit.Args }}
 	var {{ .Name }} {{ .TypeRef }}
-			{{ if .Pointer -}}
+			{{- if .Pointer }}
 	if p.{{ .FieldName }} != nil {
 			{{- end }}
 		{{- .Name }} = {{ if .Pointer }}*{{ end }}p.{{ .FieldName }}

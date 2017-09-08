@@ -1,5 +1,5 @@
 //************************************************************************//
-// Aliased goa DSL Functions
+// Aliased DSL Functions
 //
 // Generated with aliaser
 //
@@ -10,7 +10,7 @@ package dsl
 
 import (
 	"goa.design/goa/design"
-	"goa.design/goa/dsl"
+	dsl "goa.design/goa/dsl"
 )
 
 // API defines a network service API. It provides the API name, description and other global

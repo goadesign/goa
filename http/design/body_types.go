@@ -83,7 +83,7 @@ func ResponseBody(a *EndpointExpr, resp *HTTPResponseExpr) *design.AttributeExpr
 
 	var suffix string
 	if len(a.Responses) > 1 {
-		suffix = http.StatusText(resp.StatusCode)
+		suffix = codegen.Goify(http.StatusText(resp.StatusCode), true)
 	}
 
 	var (

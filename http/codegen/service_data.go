@@ -826,7 +826,7 @@ func buildResultData(svc *service.Data, s *httpdesign.ServiceExpr, e *httpdesign
 				)
 				{
 					ep := svc.Method(e.MethodExpr.Name)
-					status := http.StatusText(v.StatusCode)
+					status := codegen.Goify(http.StatusText(v.StatusCode), true)
 					name = fmt.Sprintf("New%s%s%s", codegen.Goify(ep.Name, true), codegen.Goify(ep.Result, true), status)
 					desc = fmt.Sprintf("%s builds a %s service %s endpoint %s result.",
 						name, s.Name(), e.Name(), status)
