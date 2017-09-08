@@ -4,7 +4,6 @@ import (
 	"path/filepath"
 
 	"goa.design/goa/codegen"
-	"goa.design/goa/codegen/service"
 	httpdesign "goa.design/goa/http/design"
 )
 
@@ -52,7 +51,7 @@ func serverType(genpkg string, svc *httpdesign.ServiceExpr, seen map[string]stru
 	header := codegen.Header(svc.Name()+" HTTP server types", "server",
 		[]*codegen.ImportSpec{
 			{Path: "unicode/utf8"},
-			{Path: genpkg + "/" + service.Services.Get(svc.Name()).PkgName},
+			{Path: genpkg + "/" + codegen.KebabCase(svc.Name())},
 			{Path: "goa.design/goa", Name: "goa"},
 		},
 	)
