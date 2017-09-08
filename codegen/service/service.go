@@ -83,7 +83,7 @@ const serviceT = `
 {{ comment .Description }}
 type Service interface {
 {{- range .Methods }}
-	// {{ .Description }}
+	// {{ comment .Description }}
 	{{ .VarName }}(context.Context{{ if .Payload }}, {{ .PayloadRef }}{{ end }}) {{ if .Result }}({{ .ResultRef }}, error){{ else }}error{{ end }}
 {{- end }}
 }

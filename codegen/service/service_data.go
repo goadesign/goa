@@ -78,9 +78,6 @@ type (
 		VarName string
 		// Description is the type human description.
 		Description string
-		// Fields list the object fields. Only present when describing a
-		// user type.
-		Fields []*FieldData
 		// Def is the type definition Go code.
 		Def string
 		// Ref is the reference to the type.
@@ -223,24 +220,6 @@ func (d ServicesData) analyze(service *design.ServiceExpr) *Data {
 	return data
 }
 
-// buildFieldsData returns a ordered slice of field data representing the given
-// user type attributes.
-func buildFieldsData(ut design.UserType, scope *codegen.NameScope) []*FieldData {
-	obj := design.AsObject(ut.Attribute().Type)
-	fields := make([]*FieldData, len(*obj))
-	for i, nat := range *obj {
-		fields[i] = &FieldData{
-			Name:         nat.Name,
-			VarName:      codegen.Goify(nat.Name, true),
-			TypeRef:      scope.GoTypeRef(nat.Attribute),
-			Required:     ut.Attribute().IsRequired(nat.Name),
-			DefaultValue: nat.Attribute.DefaultValue,
-		}
-	}
-
-	return fields
-}
-
 // collectTypes recurses through the attribute to gather all user types and
 // records them in userTypes.
 func collectTypes(at *design.AttributeExpr, seen map[string]struct{}, scope *codegen.NameScope, req bool) (data []*UserTypeData) {
@@ -253,12 +232,10 @@ func collectTypes(at *design.AttributeExpr, seen map[string]struct{}, scope *cod
 		if _, ok := seen[dt.Name()]; ok {
 			return nil
 		}
-		fields := buildFieldsData(dt, scope)
 		data = append(data, &UserTypeData{
 			Name:        dt.Name(),
 			VarName:     scope.GoTypeName(at),
 			Description: dt.Attribute().Description,
-			Fields:      fields,
 			Def:         scope.GoTypeDef(dt.Attribute(), req),
 			Ref:         scope.GoTypeRef(at),
 			Type:        dt,
