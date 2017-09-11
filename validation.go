@@ -1,6 +1,7 @@
 package goa
 
 import (
+	"bytes"
 	"fmt"
 	"net"
 	"net/mail"
@@ -8,8 +9,6 @@ import (
 	"regexp"
 	"sync"
 	"time"
-
-	uuid "github.com/satori/go.uuid"
 )
 
 // Format defines a validation format.
@@ -51,11 +50,10 @@ const (
 )
 
 var (
-	// Regular expression used to validate RFC1035 hostnames*/
-	hostnameRegex = regexp.MustCompile(`^[[:alnum:]][[:alnum:]\-]{0,61}[[:alnum:]]|[[:alpha:]]$`)
-
-	// Simple regular expression for IPv4 values, more rigorous checking is done via net.ParseIP
-	ipv4Regex = regexp.MustCompile(`^(?:[0-9]{1,3}\.){3}[0-9]{1,3}$`)
+	hostnameRegex  = regexp.MustCompile(`^[[:alnum:]][[:alnum:]\-]{0,61}[[:alnum:]]|[[:alpha:]]$`)
+	ipv4Regex      = regexp.MustCompile(`^(?:[0-9]{1,3}\.){3}[0-9]{1,3}$`)
+	uuidURNPrefix  = []byte("urn:uuid:")
+	uuidByteGroups = []int{8, 4, 4, 4, 12}
 )
 
 // ValidateFormat validates val against f. It returns nil if the string conforms
@@ -79,7 +77,7 @@ func ValidateFormat(name string, val string, f Format) error {
 	case FormatDateTime:
 		_, err = time.Parse(time.RFC3339, val)
 	case FormatUUID:
-		_, err = uuid.FromString(val)
+		err = validateUUID(val)
 	case FormatEmail:
 		_, err = mail.ParseAddress(val)
 	case FormatHostname:
@@ -143,5 +141,41 @@ func ValidatePattern(name, val, p string) error {
 	if !r.MatchString(val) {
 		return InvalidPatternError(name, val, p)
 	}
+	return nil
+}
+
+// The following formats are supported:
+// "6ba7b810-9dad-11d1-80b4-00c04fd430c8",
+// "{6ba7b810-9dad-11d1-80b4-00c04fd430c8}",
+// "urn:uuid:6ba7b810-9dad-11d1-80b4-00c04fd430c8"
+func validateUUID(uuid string) error {
+	if len(uuid) < 32 {
+		return fmt.Errorf("uuid: UUID string too short: %s", uuid)
+	}
+	t := []byte(uuid)
+	braced := false
+	if bytes.Equal(t[:9], uuidURNPrefix) {
+		t = t[9:]
+	} else if t[0] == '{' {
+		t = t[1:]
+		braced = true
+	}
+	for i, byteGroup := range uuidByteGroups {
+		if i > 0 {
+			if t[0] != '-' {
+				return fmt.Errorf("uuid: invalid string format")
+			}
+			t = t[1:]
+		}
+		if len(t) < byteGroup {
+			return fmt.Errorf("uuid: UUID string too short: %s", uuid)
+		}
+		if i == 4 && len(t) > byteGroup &&
+			((braced && t[byteGroup] != '}') || len(t[byteGroup:]) > 1 || !braced) {
+			return fmt.Errorf("uuid: UUID string too long: %s", uuid)
+		}
+		t = t[byteGroup:]
+	}
+
 	return nil
 }
