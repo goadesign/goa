@@ -83,18 +83,7 @@ func Type(name string, dsl func()) *design.UserTypeDefinition {
 // refer to CollectionOf. ArrayOf creates a type, where CollectionOf creates a
 // media type.
 func ArrayOf(v interface{}, dsl ...func()) *design.Array {
-	var t design.DataType
-	var ok bool
-	t, ok = v.(design.DataType)
-	if !ok {
-		if name, ok := v.(string); ok {
-			if ut, ok := design.Design.Types[name]; ok {
-				t = ut
-			} else if mt, ok := design.Design.MediaTypes[name]; ok {
-				t = mt
-			}
-		}
-	}
+	t := resolveType(v)
 	// never return nil to avoid panics, errors are reported after DSL execution
 	res := &design.Array{ElemType: &design.AttributeDefinition{Type: design.String}}
 	if t == nil {
@@ -123,8 +112,9 @@ func ArrayOf(v interface{}, dsl ...func()) *design.Array {
 //
 //	Action("updateRatings", func() {
 //		Payload(func() {
-//			Member("ratings", HashOf(String, Integer))  // Artificial examples...
+//			Member("ratings", HashOf(String, Integer))
 //			Member("bottles", RatedBottles)
+//			// Member("bottles", "RatedBottles") // can use name of user type
 //	})
 //
 // HashOf accepts optional DSLs as third and fourth argument which allows
@@ -144,9 +134,19 @@ func ArrayOf(v interface{}, dsl ...func()) *design.Array {
 //
 //	var Mappings = HashOf(String, String, ValidateKey, TypeValue)
 //
-func HashOf(k, v design.DataType, dsls ...func()) *design.Hash {
-	kat := design.AttributeDefinition{Type: k}
-	vat := design.AttributeDefinition{Type: v}
+func HashOf(k, v interface{}, dsls ...func()) *design.Hash {
+	tk := resolveType(k)
+	tv := resolveType(v)
+	if tk == nil || tv == nil {
+		// never return nil to avoid panics, errors are reported after DSL execution
+		dslengine.ReportError("HashOf: invalid type name")
+		return &design.Hash{
+			KeyType:  &design.AttributeDefinition{Type: design.String},
+			ElemType: &design.AttributeDefinition{Type: design.String},
+		}
+	}
+	kat := design.AttributeDefinition{Type: tk}
+	vat := design.AttributeDefinition{Type: tv}
 	if len(dsls) > 2 {
 		// never return nil to avoid panics, errors are reported after DSL execution
 		dslengine.ReportError("HashOf: too many arguments")
@@ -159,4 +159,19 @@ func HashOf(k, v design.DataType, dsls ...func()) *design.Hash {
 		}
 	}
 	return &design.Hash{KeyType: &kat, ElemType: &vat}
+}
+
+func resolveType(v interface{}) design.DataType {
+	if t, ok := v.(design.DataType); ok {
+		return t
+	}
+	if name, ok := v.(string); ok {
+		if ut, ok := design.Design.Types[name]; ok {
+			return ut
+		}
+		if mt, ok := design.Design.MediaTypes[name]; ok {
+			return mt
+		}
+	}
+	return nil
 }
