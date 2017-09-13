@@ -988,7 +988,8 @@ func (c *Client) {{ $funcName }}(ctx context.Context, path string{{ if .Params }
 
 // NON STRING
 */}}{{ else if .MustToString }}{{ $tmp := tempvar }}	{{ toString .ValueName $tmp .Attribute }}
-	values.Set("{{ .Name }}", {{ $tmp }}){{/*
+	values.Set("{{ .Name }}", {{ $tmp }})
+{{/*
 
 // STRING
 */}}{{ else }}	values.Set("{{ .Name }}", {{ .ValueName }})
