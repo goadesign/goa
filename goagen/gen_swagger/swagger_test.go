@@ -518,7 +518,8 @@ var _ = Describe("New", func() {
 							Media(CollectionOf(BottleMedia), "extended")
 						})
 						Response(NoContent)
-						Response(NotFound)
+						Response(NotFound, ErrorMedia)
+						Response(BadRequest, ErrorMedia)
 					})
 
 					Action("hidden", func() {
@@ -572,7 +573,7 @@ var _ = Describe("New", func() {
 				b := swagger.Paths["/base/bottles/{id}"].(*genswagger.Path)
 				Ω(b.Put).ShouldNot(BeNil())
 				Ω(b.Put.Parameters).Should(HaveLen(14))
-				Ω(b.Put.Produces).Should(Equal([]string{"application/vnd.goa.example.bottle; type=collection"}))
+				Ω(b.Put.Produces).Should(Equal([]string{"application/vnd.goa.error", "application/vnd.goa.example.bottle; type=collection"}))
 			})
 
 			It("should set the inherited tag and the action tag", func() {
@@ -590,7 +591,7 @@ var _ = Describe("New", func() {
 			})
 
 			It("generates the media type collection schema", func() {
-				Ω(swagger.Definitions).Should(HaveLen(6))
+				Ω(swagger.Definitions).Should(HaveLen(7))
 				Ω(swagger.Definitions).Should(HaveKey("GoaExampleBottleExtendedCollection"))
 			})
 
