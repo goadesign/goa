@@ -998,12 +998,10 @@ func buildPathFromDefinition(s *Swagger, api *design.APIDefinition, route *desig
 }
 
 func computeProduces(operation *Operation, s *Swagger, action *design.ActionDefinition) {
-	produces := make(map[string]bool)
-	producesSorted := make([]string, 0)
+	produces := make(map[string]struct{})
 	action.IterateResponses(func(resp *design.ResponseDefinition) error {
 		if resp.MediaType != "" {
-			produces[resp.MediaType] = true
-			producesSorted = append(producesSorted, resp.MediaType)
+			produces[resp.MediaType] = struct{}{}
 		}
 		return nil
 	})
@@ -1022,12 +1020,13 @@ func computeProduces(operation *Operation, s *Swagger, action *design.ActionDefi
 		}
 	}
 	if !subset {
-		operation.Produces = make([]string, len(producesSorted))
+		operation.Produces = make([]string, len(produces))
 		i := 0
-		for _, p := range producesSorted {
+		for p := range produces {
 			operation.Produces[i] = p
 			i++
 		}
+		sort.Strings(operation.Produces)
 	}
 }
 
