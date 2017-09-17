@@ -12,7 +12,6 @@ import (
 
 	"github.com/boltdb/bolt"
 
-	goa "goa.design/goa"
 	cellar "goa.design/goa/examples/cellar"
 	sommeliersvr "goa.design/goa/examples/cellar/gen/http/sommelier/server"
 	storagesvr "goa.design/goa/examples/cellar/gen/http/storage/server"
@@ -38,11 +37,11 @@ func main() {
 	// packages is very simple as well.
 	var (
 		logger  *log.Logger
-		adapter goa.LogAdapter
+		adapter logging.Adapter
 	)
 	{
 		logger = log.New(os.Stderr, "[cellar] ", log.Ltime)
-		adapter = goa.AdaptStdLogger(logger)
+		adapter = logging.Adapt(logger)
 	}
 
 	// Initialize service dependencies such as databases.

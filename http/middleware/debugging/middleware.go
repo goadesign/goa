@@ -9,9 +9,8 @@ import (
 	"net/http"
 	"strings"
 
-	goa "goa.design/goa"
 	goahttp "goa.design/goa/http"
-	"goa.design/goa/http/middleware/tracing"
+	"goa.design/goa/http/middleware/logging"
 )
 
 // responseDupper tees the response to a buffer and a response writer.
@@ -23,14 +22,10 @@ type responseDupper struct {
 
 // New returns a debug middleware which logs all the details about incoming
 // requests and outgoing responses.
-func New(mux goahttp.Muxer, logger goa.LogAdapter) func(http.Handler) http.Handler {
+func New(mux goahttp.Muxer, logger logging.Adapter) func(http.Handler) http.Handler {
 	return func(h http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			requestID := tracing.ContextTraceID(r.Context())
-			if requestID == "" {
-				requestID = shortID()
-			}
-
+			requestID := shortID()
 			if len(r.Header) > 0 {
 				entries := make([]interface{}, 4+2*len(r.Header))
 				entries[0] = "id"

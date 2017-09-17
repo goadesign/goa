@@ -135,16 +135,15 @@ const mainT = `func main() {
 	flag.Parse()
 
 	// Setup logger and goa log adapter. Replace logger with your own using
-	// your log package of choice. The goa.design/logging package defines
-	// log adapters for common log packages. Writing adapters for other log
-	// packages is very simple as well.
+	// your log package of choice. The goa.design/middleware/logging/...
+	// packages define log adapters for common log packages.
 	var (
 		logger  *log.Logger
-		adapter goa.LogAdapter
+		adapter logging.Adapter
 	)
 	{
 		logger = log.New(os.Stderr, "[{{ .APIPkg }}] ", log.Ltime)
-		adapter = goa.AdaptStdLogger(logger)
+		adapter = logging.Adapt(logger)
 	}
 
 	// Create the structs that implement the services.

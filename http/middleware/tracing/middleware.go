@@ -7,18 +7,20 @@ import (
 	"io"
 	"net/http"
 
-	"goa.design/goa"
+	"goa.design/goa/http/middleware/logging"
 )
 
-// middlewareKey is the private type used for goa middlewares to store values in
-// the context. It is private to avoid possible collisions with keys used by
-// other packages.
-type middlewareKey int
-
 const (
-	traceKey middlewareKey = iota + 1
-	spanKey
-	parentSpanKey
+	// TraceIDKey is the request context key used to store its Trace ID if any.
+	TraceIDKey = "TraceIDCtxKey"
+
+	// TraceSpanIDKey is the request context key used to store the current
+	// trace span ID if any.
+	TraceSpanIDKey = "TraceSpanIDCtxKey"
+
+	// TraceParentSpanIDKey is the request context key used to store the current
+	// trace parent span ID if any.
+	TraceParentSpanIDKey = "TraceParentSpanIDCtxKey"
 )
 
 const (
@@ -45,16 +47,16 @@ type (
 	// the middleware.
 	Option func(*options) *options
 
-	// tracedDoer is a client Doer that inserts the tracing headers for
-	// each request it makes.
+	// tracedDoer is a client Doer that inserts the tracing headers for each
+	// request it makes.
 	tracedDoer struct {
 		Doer
 	}
 
-	// tracedLogger is a logger which logs the trace ID with every log
-	// entry when one is present.
+	// tracedLogger is a logger which logs the trace ID with every log entry
+	// when one is present.
 	tracedLogger struct {
-		goa.LogAdapter
+		logging.Adapter
 	}
 
 	// options is the struct storing all the options.
@@ -185,40 +187,13 @@ func WrapDoer(ctx context.Context, doer Doer) Doer {
 
 // WrapLogger returns a logger which logs the trace ID with every message if
 // there is one.
-func WrapLogger(l goa.LogAdapter) goa.LogAdapter {
+func WrapLogger(l logging.Adapter) logging.Adapter {
 	return &tracedLogger{l}
-}
-
-// ContextTraceID returns the trace ID extracted from the given context if any,
-// the empty string otherwise.
-func ContextTraceID(ctx context.Context) string {
-	if t := ctx.Value(traceKey); t != nil {
-		return t.(string)
-	}
-	return ""
-}
-
-// ContextSpanID returns the span ID extracted from the given context if any,
-// the empty string otherwise.
-func ContextSpanID(ctx context.Context) string {
-	if s := ctx.Value(spanKey); s != nil {
-		return s.(string)
-	}
-	return ""
-}
-
-// ContextParentSpanID returns the parent span ID extracted from the given
-// context if any, the empty string otherwise.
-func ContextParentSpanID(ctx context.Context) string {
-	if p := ctx.Value(parentSpanKey); p != nil {
-		return p.(string)
-	}
-	return ""
 }
 
 // WithTrace returns a context containing the given trace ID.
 func WithTrace(ctx context.Context, traceID string) context.Context {
-	ctx = context.WithValue(ctx, traceKey, traceID)
+	ctx = context.WithValue(ctx, TraceIDKey, traceID)
 	return ctx
 }
 
@@ -226,22 +201,22 @@ func WithTrace(ctx context.Context, traceID string) context.Context {
 // IDs.
 func WithSpan(ctx context.Context, traceID, spanID, parentID string) context.Context {
 	if parentID != "" {
-		ctx = context.WithValue(ctx, parentSpanKey, parentID)
+		ctx = context.WithValue(ctx, TraceParentSpanIDKey, parentID)
 	}
-	ctx = context.WithValue(ctx, traceKey, traceID)
-	ctx = context.WithValue(ctx, spanKey, spanID)
+	ctx = context.WithValue(ctx, TraceIDKey, traceID)
+	ctx = context.WithValue(ctx, TraceSpanIDKey, spanID)
 	return ctx
 }
 
 // Do adds the tracing headers to the requests before making it.
 func (d *tracedDoer) Do(r *http.Request) (*http.Response, error) {
 	var (
-		traceID = ContextTraceID(r.Context())
-		spanID  = ContextSpanID(r.Context())
+		traceID = r.Context().Value(TraceIDKey)
+		spanID  = r.Context().Value(TraceSpanIDKey)
 	)
-	if traceID != "" {
-		r.Header.Set(TraceIDHeader, traceID)
-		r.Header.Set(ParentSpanIDHeader, spanID)
+	if traceID != nil {
+		r.Header.Set(TraceIDHeader, traceID.(string))
+		r.Header.Set(ParentSpanIDHeader, spanID.(string))
 	}
 
 	return d.Doer.Do(r)
@@ -249,24 +224,24 @@ func (d *tracedDoer) Do(r *http.Request) (*http.Response, error) {
 
 // Info logs the trace ID when present then the values passed as argument.
 func (l *tracedLogger) Info(ctx context.Context, keyvals ...interface{}) {
-	traceID := ContextTraceID(ctx)
-	if traceID == "" {
-		l.LogAdapter.Info(ctx, keyvals...)
+	traceID := ctx.Value(TraceIDKey)
+	if traceID == nil {
+		l.Adapter.Info(ctx, keyvals...)
 		return
 	}
-	keyvals = append([]interface{}{"trace", traceID}, keyvals...)
-	l.LogAdapter.Info(ctx, keyvals)
+	keyvals = append([]interface{}{"trace", traceID.(string)}, keyvals...)
+	l.Adapter.Info(ctx, keyvals)
 }
 
 // Error logs the trace ID when present then the values passed as argument.
 func (l *tracedLogger) Error(ctx context.Context, keyvals ...interface{}) {
-	traceID := ContextTraceID(ctx)
-	if traceID == "" {
-		l.LogAdapter.Error(ctx, keyvals...)
+	traceID := ctx.Value(TraceIDKey)
+	if traceID == nil {
+		l.Adapter.Error(ctx, keyvals...)
 		return
 	}
-	keyvals = append([]interface{}{"trace", traceID}, keyvals...)
-	l.LogAdapter.Error(ctx, keyvals)
+	keyvals = append([]interface{}{"trace", traceID.(string)}, keyvals...)
+	l.Adapter.Error(ctx, keyvals)
 }
 
 // shortID produces a " unique" 6 bytes long string.
