@@ -6,7 +6,6 @@ import (
 	"strings"
 
 	"goa.design/goa/codegen"
-	"goa.design/goa/design"
 	httpdesign "goa.design/goa/http/design"
 )
 
@@ -15,17 +14,18 @@ import (
 func ExampleServerFiles(genpkg string, root *httpdesign.RootExpr) []*codegen.File {
 	fw := make([]*codegen.File, len(root.HTTPServices)+1)
 	for i, svc := range root.HTTPServices {
-		fw[i] = dummyServiceFile(genpkg, svc)
+		fw[i] = dummyServiceFile(genpkg, root, svc)
 	}
 	fw[len(root.HTTPServices)] = exampleMain(genpkg, root)
 	return fw
 }
 
 // dummyServiceFile returns a dummy implementation of the given service.
-func dummyServiceFile(genpkg string, svc *httpdesign.ServiceExpr) *codegen.File {
+func dummyServiceFile(genpkg string, root *httpdesign.RootExpr, svc *httpdesign.ServiceExpr) *codegen.File {
 	data := HTTPServices.Get(svc.Name())
+	apiPkg := strings.ToLower(codegen.Goify(root.Design.API.Name, false))
 	sections := []*codegen.SectionTemplate{
-		codegen.Header("", codegen.KebabCase(design.Root.API.Name), []*codegen.ImportSpec{
+		codegen.Header("", apiPkg, []*codegen.ImportSpec{
 			{Path: "context"},
 			{Path: "log"},
 			{Path: genpkg + "/" + codegen.Goify(svc.Name(), false)},
@@ -56,6 +56,7 @@ func exampleMain(genpkg string, root *httpdesign.RootExpr) *codegen.File {
 	if idx > 0 {
 		rootPath = genpkg[:idx]
 	}
+	apiPkg := strings.ToLower(codegen.Goify(root.Design.API.Name, false))
 	specs := []*codegen.ImportSpec{
 		{Path: "context"},
 		{Path: "flag"},
@@ -69,7 +70,7 @@ func exampleMain(genpkg string, root *httpdesign.RootExpr) *codegen.File {
 		{Path: "goa.design/goa/http", Name: "goahttp"},
 		{Path: "goa.design/goa/http/middleware/debugging"},
 		{Path: "goa.design/goa/http/middleware/logging"},
-		{Path: rootPath, Name: codegen.KebabCase(root.Design.API.Name)},
+		{Path: rootPath, Name: apiPkg},
 	}
 	for _, svc := range root.HTTPServices {
 		pkgName := HTTPServices.Get(svc.Name()).Service.PkgName
@@ -88,14 +89,14 @@ func exampleMain(genpkg string, root *httpdesign.RootExpr) *codegen.File {
 	}
 	data := map[string]interface{}{
 		"Services": svcdata,
-		"APIPkg":   codegen.KebabCase(root.Design.API.Name),
+		"APIPkg":   apiPkg,
 	}
 	sections = append(sections, &codegen.SectionTemplate{
 		Name:   "service-main",
 		Source: mainT,
 		Data:   data,
 	})
-	path := filepath.Join("cmd", codegen.KebabCase(root.Design.API.Name)+"svc", "main.go")
+	path := filepath.Join("cmd", codegen.SnakeCase(root.Design.API.Name)+"svc", "main.go")
 
 	return &codegen.File{Path: path, SectionTemplates: sections}
 }

@@ -10,17 +10,17 @@ func ParseEndpoint(
 	restore bool,
 ) (goa.Endpoint, interface{}, error) {
 	var (
-		serviceMultiNoPayload1Flags = flag.NewFlagSet("serviceMultiNoPayload1", flag.ContinueOnError)
+		serviceMultiNoPayload1Flags = flag.NewFlagSet("ServiceMultiNoPayload1", flag.ContinueOnError)
 
-		serviceMultiNoPayload1MethodServiceNoPayload11Flags = flag.NewFlagSet("methodServiceNoPayload11", flag.ExitOnError)
+		serviceMultiNoPayload1MethodServiceNoPayload11Flags = flag.NewFlagSet("MethodServiceNoPayload11", flag.ExitOnError)
 
-		serviceMultiNoPayload1MethodServiceNoPayload12Flags = flag.NewFlagSet("methodServiceNoPayload12", flag.ExitOnError)
+		serviceMultiNoPayload1MethodServiceNoPayload12Flags = flag.NewFlagSet("MethodServiceNoPayload12", flag.ExitOnError)
 
-		serviceMultiNoPayload2Flags = flag.NewFlagSet("serviceMultiNoPayload2", flag.ContinueOnError)
+		serviceMultiNoPayload2Flags = flag.NewFlagSet("ServiceMultiNoPayload2", flag.ContinueOnError)
 
-		serviceMultiNoPayload2MethodServiceNoPayload21Flags = flag.NewFlagSet("methodServiceNoPayload21", flag.ExitOnError)
+		serviceMultiNoPayload2MethodServiceNoPayload21Flags = flag.NewFlagSet("MethodServiceNoPayload21", flag.ExitOnError)
 
-		serviceMultiNoPayload2MethodServiceNoPayload22Flags = flag.NewFlagSet("methodServiceNoPayload22", flag.ExitOnError)
+		serviceMultiNoPayload2MethodServiceNoPayload22Flags = flag.NewFlagSet("MethodServiceNoPayload22", flag.ExitOnError)
 	)
 	serviceMultiNoPayload1Flags.Usage = serviceMultiNoPayload1Usage
 	serviceMultiNoPayload1MethodServiceNoPayload11Flags.Usage = serviceMultiNoPayload1MethodServiceNoPayload11Usage
@@ -45,9 +45,9 @@ func ParseEndpoint(
 	{
 		svcn = os.Args[1+flag.NFlag()]
 		switch svcn {
-		case "serviceMultiNoPayload1":
+		case "ServiceMultiNoPayload1":
 			svcf = serviceMultiNoPayload1Flags
-		case "serviceMultiNoPayload2":
+		case "ServiceMultiNoPayload2":
 			svcf = serviceMultiNoPayload2Flags
 		default:
 			return nil, nil, fmt.Errorf("unknown service %q", svcn)
@@ -64,22 +64,22 @@ func ParseEndpoint(
 	{
 		epn = os.Args[2+flag.NFlag()+svcf.NFlag()]
 		switch svcn {
-		case "serviceMultiNoPayload1":
+		case "ServiceMultiNoPayload1":
 			switch epn {
-			case "methodServiceNoPayload11":
+			case "MethodServiceNoPayload11":
 				epf = serviceMultiNoPayload1MethodServiceNoPayload11Flags
 
-			case "methodServiceNoPayload12":
+			case "MethodServiceNoPayload12":
 				epf = serviceMultiNoPayload1MethodServiceNoPayload12Flags
 
 			}
 
-		case "serviceMultiNoPayload2":
+		case "ServiceMultiNoPayload2":
 			switch epn {
-			case "methodServiceNoPayload21":
+			case "MethodServiceNoPayload21":
 				epf = serviceMultiNoPayload2MethodServiceNoPayload21Flags
 
-			case "methodServiceNoPayload22":
+			case "MethodServiceNoPayload22":
 				epf = serviceMultiNoPayload2MethodServiceNoPayload22Flags
 
 			}
@@ -104,23 +104,23 @@ func ParseEndpoint(
 	)
 	{
 		switch svcn {
-		case "serviceMultiNoPayload1":
+		case "ServiceMultiNoPayload1":
 			c := servicemultinopayload1c.NewClient(scheme, host, doer, enc, dec, restore)
 			switch epn {
-			case "methodServiceNoPayload11":
+			case "MethodServiceNoPayload11":
 				endpoint = c.MethodServiceNoPayload11()
 				data = nil
-			case "methodServiceNoPayload12":
+			case "MethodServiceNoPayload12":
 				endpoint = c.MethodServiceNoPayload12()
 				data = nil
 			}
-		case "serviceMultiNoPayload2":
+		case "ServiceMultiNoPayload2":
 			c := servicemultinopayload2c.NewClient(scheme, host, doer, enc, dec, restore)
 			switch epn {
-			case "methodServiceNoPayload21":
+			case "MethodServiceNoPayload21":
 				endpoint = c.MethodServiceNoPayload21()
 				data = nil
-			case "methodServiceNoPayload22":
+			case "MethodServiceNoPayload22":
 				endpoint = c.MethodServiceNoPayload22()
 				data = nil
 			}
@@ -144,18 +144,18 @@ func ParseEndpoint(
 	restore bool,
 ) (goa.Endpoint, interface{}, error) {
 	var (
-		serviceMultiSimple1Flags = flag.NewFlagSet("serviceMultiSimple1", flag.ContinueOnError)
+		serviceMultiSimple1Flags = flag.NewFlagSet("ServiceMultiSimple1", flag.ContinueOnError)
 
-		serviceMultiSimple1MethodMultiSimpleNoPayloadFlags = flag.NewFlagSet("methodMultiSimpleNoPayload", flag.ExitOnError)
+		serviceMultiSimple1MethodMultiSimpleNoPayloadFlags = flag.NewFlagSet("MethodMultiSimpleNoPayload", flag.ExitOnError)
 
-		serviceMultiSimple1MethodMultiSimplePayloadFlags    = flag.NewFlagSet("methodMultiSimplePayload", flag.ExitOnError)
+		serviceMultiSimple1MethodMultiSimplePayloadFlags    = flag.NewFlagSet("MethodMultiSimplePayload", flag.ExitOnError)
 		serviceMultiSimple1MethodMultiSimplePayloadBodyFlag = serviceMultiSimple1MethodMultiSimplePayloadFlags.String("body", "REQUIRED", "")
 
-		serviceMultiSimple2Flags = flag.NewFlagSet("serviceMultiSimple2", flag.ContinueOnError)
+		serviceMultiSimple2Flags = flag.NewFlagSet("ServiceMultiSimple2", flag.ContinueOnError)
 
-		serviceMultiSimple2MethodMultiSimpleNoPayloadFlags = flag.NewFlagSet("methodMultiSimpleNoPayload", flag.ExitOnError)
+		serviceMultiSimple2MethodMultiSimpleNoPayloadFlags = flag.NewFlagSet("MethodMultiSimpleNoPayload", flag.ExitOnError)
 
-		serviceMultiSimple2MethodMultiSimplePayloadFlags    = flag.NewFlagSet("methodMultiSimplePayload", flag.ExitOnError)
+		serviceMultiSimple2MethodMultiSimplePayloadFlags    = flag.NewFlagSet("MethodMultiSimplePayload", flag.ExitOnError)
 		serviceMultiSimple2MethodMultiSimplePayloadBodyFlag = serviceMultiSimple2MethodMultiSimplePayloadFlags.String("body", "REQUIRED", "")
 	)
 	serviceMultiSimple1Flags.Usage = serviceMultiSimple1Usage
@@ -181,9 +181,9 @@ func ParseEndpoint(
 	{
 		svcn = os.Args[1+flag.NFlag()]
 		switch svcn {
-		case "serviceMultiSimple1":
+		case "ServiceMultiSimple1":
 			svcf = serviceMultiSimple1Flags
-		case "serviceMultiSimple2":
+		case "ServiceMultiSimple2":
 			svcf = serviceMultiSimple2Flags
 		default:
 			return nil, nil, fmt.Errorf("unknown service %q", svcn)
@@ -200,22 +200,22 @@ func ParseEndpoint(
 	{
 		epn = os.Args[2+flag.NFlag()+svcf.NFlag()]
 		switch svcn {
-		case "serviceMultiSimple1":
+		case "ServiceMultiSimple1":
 			switch epn {
-			case "methodMultiSimpleNoPayload":
+			case "MethodMultiSimpleNoPayload":
 				epf = serviceMultiSimple1MethodMultiSimpleNoPayloadFlags
 
-			case "methodMultiSimplePayload":
+			case "MethodMultiSimplePayload":
 				epf = serviceMultiSimple1MethodMultiSimplePayloadFlags
 
 			}
 
-		case "serviceMultiSimple2":
+		case "ServiceMultiSimple2":
 			switch epn {
-			case "methodMultiSimpleNoPayload":
+			case "MethodMultiSimpleNoPayload":
 				epf = serviceMultiSimple2MethodMultiSimpleNoPayloadFlags
 
-			case "methodMultiSimplePayload":
+			case "MethodMultiSimplePayload":
 				epf = serviceMultiSimple2MethodMultiSimplePayloadFlags
 
 			}
@@ -240,25 +240,25 @@ func ParseEndpoint(
 	)
 	{
 		switch svcn {
-		case "serviceMultiSimple1":
+		case "ServiceMultiSimple1":
 			c := servicemultisimple1c.NewClient(scheme, host, doer, enc, dec, restore)
 			switch epn {
-			case "methodMultiSimpleNoPayload":
+			case "MethodMultiSimpleNoPayload":
 				endpoint = c.MethodMultiSimpleNoPayload()
 				data = nil
-			case "methodMultiSimplePayload":
+			case "MethodMultiSimplePayload":
 				endpoint = c.MethodMultiSimplePayload()
-				data, err = servicemultisimple1c.BuildMethodMultiSimplePayloadPayload(*serviceMultiSimple1MethodMultiSimplePayloadBodyFlag)
+				data, err = servicemultisimple1c.BuildMethodMultiSimplePayloadMethodMultiSimplePayloadPayload(*serviceMultiSimple1MethodMultiSimplePayloadBodyFlag)
 			}
-		case "serviceMultiSimple2":
+		case "ServiceMultiSimple2":
 			c := servicemultisimple2c.NewClient(scheme, host, doer, enc, dec, restore)
 			switch epn {
-			case "methodMultiSimpleNoPayload":
+			case "MethodMultiSimpleNoPayload":
 				endpoint = c.MethodMultiSimpleNoPayload()
 				data = nil
-			case "methodMultiSimplePayload":
+			case "MethodMultiSimplePayload":
 				endpoint = c.MethodMultiSimplePayload()
-				data, err = servicemultisimple2c.BuildMethodMultiSimplePayloadPayload(*serviceMultiSimple2MethodMultiSimplePayloadBodyFlag)
+				data, err = servicemultisimple2c.BuildMethodMultiSimplePayloadMethodMultiSimplePayloadPayload(*serviceMultiSimple2MethodMultiSimplePayloadBodyFlag)
 			}
 		}
 	}
@@ -280,11 +280,11 @@ func ParseEndpoint(
 	restore bool,
 ) (goa.Endpoint, interface{}, error) {
 	var (
-		serviceMultiFlags = flag.NewFlagSet("serviceMulti", flag.ContinueOnError)
+		serviceMultiFlags = flag.NewFlagSet("ServiceMulti", flag.ContinueOnError)
 
-		serviceMultiMethodMultiNoPayloadFlags = flag.NewFlagSet("methodMultiNoPayload", flag.ExitOnError)
+		serviceMultiMethodMultiNoPayloadFlags = flag.NewFlagSet("MethodMultiNoPayload", flag.ExitOnError)
 
-		serviceMultiMethodMultiPayloadFlags    = flag.NewFlagSet("methodMultiPayload", flag.ExitOnError)
+		serviceMultiMethodMultiPayloadFlags    = flag.NewFlagSet("MethodMultiPayload", flag.ExitOnError)
 		serviceMultiMethodMultiPayloadBodyFlag = serviceMultiMethodMultiPayloadFlags.String("body", "REQUIRED", "")
 		serviceMultiMethodMultiPayloadBFlag    = serviceMultiMethodMultiPayloadFlags.String("b", "", "")
 		serviceMultiMethodMultiPayloadAFlag    = serviceMultiMethodMultiPayloadFlags.String("a", "", "")
@@ -308,7 +308,7 @@ func ParseEndpoint(
 	{
 		svcn = os.Args[1+flag.NFlag()]
 		switch svcn {
-		case "serviceMulti":
+		case "ServiceMulti":
 			svcf = serviceMultiFlags
 		default:
 			return nil, nil, fmt.Errorf("unknown service %q", svcn)
@@ -325,12 +325,12 @@ func ParseEndpoint(
 	{
 		epn = os.Args[2+flag.NFlag()+svcf.NFlag()]
 		switch svcn {
-		case "serviceMulti":
+		case "ServiceMulti":
 			switch epn {
-			case "methodMultiNoPayload":
+			case "MethodMultiNoPayload":
 				epf = serviceMultiMethodMultiNoPayloadFlags
 
-			case "methodMultiPayload":
+			case "MethodMultiPayload":
 				epf = serviceMultiMethodMultiPayloadFlags
 
 			}
@@ -355,15 +355,15 @@ func ParseEndpoint(
 	)
 	{
 		switch svcn {
-		case "serviceMulti":
+		case "ServiceMulti":
 			c := servicemultic.NewClient(scheme, host, doer, enc, dec, restore)
 			switch epn {
-			case "methodMultiNoPayload":
+			case "MethodMultiNoPayload":
 				endpoint = c.MethodMultiNoPayload()
 				data = nil
-			case "methodMultiPayload":
+			case "MethodMultiPayload":
 				endpoint = c.MethodMultiPayload()
-				data, err = servicemultic.BuildMethodMultiPayloadPayload(*serviceMultiMethodMultiPayloadBodyFlag, *serviceMultiMethodMultiPayloadBFlag, *serviceMultiMethodMultiPayloadAFlag)
+				data, err = servicemultic.BuildMethodMultiPayloadMethodMultiPayloadPayload(*serviceMultiMethodMultiPayloadBodyFlag, *serviceMultiMethodMultiPayloadBFlag, *serviceMultiMethodMultiPayloadAFlag)
 			}
 		}
 	}
@@ -375,9 +375,10 @@ func ParseEndpoint(
 }
 `
 
-var MultiSimpleBuildCode = `// BuildMethodMultiSimplePayloadPayload builds the payload for the
-// ServiceMultiSimple1 MethodMultiSimplePayload endpoint from CLI flags.
-func BuildMethodMultiSimplePayloadPayload(serviceMultiSimple1MethodMultiSimplePayloadBody string) (*servicemultisimple1.MethodMultiSimplePayloadPayload, error) {
+var MultiSimpleBuildCode = `// BuildMethodMultiSimplePayloadMethodMultiSimplePayloadPayload builds the
+// payload for the ServiceMultiSimple1 MethodMultiSimplePayload endpoint from
+// CLI flags.
+func BuildMethodMultiSimplePayloadMethodMultiSimplePayloadPayload(serviceMultiSimple1MethodMultiSimplePayloadBody string) (*servicemultisimple1.MethodMultiSimplePayloadPayload, error) {
 	var body MethodMultiSimplePayloadRequestBody
 	{
 		err := json.Unmarshal([]byte(serviceMultiSimple1MethodMultiSimplePayloadBody), &body)
@@ -393,9 +394,9 @@ func BuildMethodMultiSimplePayloadPayload(serviceMultiSimple1MethodMultiSimplePa
 }
 `
 
-var MultiBuildCode = `// BuildMethodMultiPayloadPayload builds the payload for the ServiceMulti
-// MethodMultiPayload endpoint from CLI flags.
-func BuildMethodMultiPayloadPayload(serviceMultiMethodMultiPayloadBody string, serviceMultiMethodMultiPayloadB string, serviceMultiMethodMultiPayloadA string) (*servicemulti.MethodMultiPayloadPayload, error) {
+var MultiBuildCode = `// BuildMethodMultiPayloadMethodMultiPayloadPayload builds the payload for the
+// ServiceMulti MethodMultiPayload endpoint from CLI flags.
+func BuildMethodMultiPayloadMethodMultiPayloadPayload(serviceMultiMethodMultiPayloadBody string, serviceMultiMethodMultiPayloadB string, serviceMultiMethodMultiPayloadA string) (*servicemulti.MethodMultiPayloadPayload, error) {
 	var body MethodMultiPayloadRequestBody
 	{
 		err := json.Unmarshal([]byte(serviceMultiMethodMultiPayloadBody), &body)
@@ -421,7 +422,7 @@ func BuildMethodMultiPayloadPayload(serviceMultiMethodMultiPayloadBody string, s
 	}
 	v := &servicemulti.MethodMultiPayloadPayload{}
 	if body.C != nil {
-		v.C = userTypeRequestBodyToUserType(body.C)
+		v.C = marshalUserTypeRequestBodyToUserType(body.C)
 	}
 	v.B = b
 	v.A = a

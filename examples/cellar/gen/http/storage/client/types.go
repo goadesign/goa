@@ -11,10 +11,11 @@ import (
 	"unicode/utf8"
 
 	goa "goa.design/goa"
-	"goa.design/goa/examples/cellar/gen/storage"
+	storage "goa.design/goa/examples/cellar/gen/storage"
 )
 
-// AddRequestBody is the type of the storage add HTTP endpoint request body.
+// AddRequestBody is the type of the "storage" service "add" endpoint HTTP
+// request body.
 type AddRequestBody struct {
 	// Name of bottle
 	Name string `form:"name" json:"name" xml:"name"`
@@ -30,10 +31,12 @@ type AddRequestBody struct {
 	Rating *uint32 `form:"rating,omitempty" json:"rating,omitempty" xml:"rating,omitempty"`
 }
 
-// ListResponseBody is the type of the storage list HTTP endpoint response body.
+// ListResponseBody is the type of the "storage" service "list" endpoint HTTP
+// response body.
 type ListResponseBody []*StoredBottleResponseBody
 
-// ShowResponseBody is the type of the storage show HTTP endpoint response body.
+// ShowResponseBody is the type of the "storage" service "show" endpoint HTTP
+// response body.
 type ShowResponseBody struct {
 	// ID is the unique id of the bottle.
 	ID *string `form:"id,omitempty" json:"id,omitempty" xml:"id,omitempty"`
@@ -51,8 +54,8 @@ type ShowResponseBody struct {
 	Rating *uint32 `form:"rating,omitempty" json:"rating,omitempty" xml:"rating,omitempty"`
 }
 
-// ShowNotFoundResponseBody is the type of the storage "show" HTTP endpoint
-// not_found error response body.
+// ShowNotFoundResponseBody is the type of the "storage" service "show"
+// endpoint HTTP response body for the "not_found" error.
 type ShowNotFoundResponseBody struct {
 	// Message of error
 	Message *string `form:"message,omitempty" json:"message,omitempty" xml:"message,omitempty"`
@@ -138,8 +141,8 @@ type ComponentRequestBody struct {
 	Percentage *uint32 `form:"percentage,omitempty" json:"percentage,omitempty" xml:"percentage,omitempty"`
 }
 
-// NewAddRequestBody builds the storage service add endpoint request body from
-// a payload.
+// NewAddRequestBody builds the HTTP request body from the payload of the "add"
+// endpoint of the "storage" service.
 func NewAddRequestBody(p *storage.Bottle) *AddRequestBody {
 	body := &AddRequestBody{
 		Name:        p.Name,
@@ -147,7 +150,9 @@ func NewAddRequestBody(p *storage.Bottle) *AddRequestBody {
 		Description: p.Description,
 		Rating:      p.Rating,
 	}
-	body.Winery = wineryToWineryRequestBodyNoDefault(p.Winery)
+	if p.Winery != nil {
+		body.Winery = marshalWineryToWineryRequestBody(p.Winery)
+	}
 	if p.Composition != nil {
 		body.Composition = make([]*ComponentRequestBody, len(p.Composition))
 		for j, val := range p.Composition {
@@ -157,12 +162,11 @@ func NewAddRequestBody(p *storage.Bottle) *AddRequestBody {
 			}
 		}
 	}
-
 	return body
 }
 
-// NewListStoredBottleCollectionOK builds a storage service list endpoint OK
-// result.
+// NewListStoredBottleCollectionOK builds a "storage" service "list" endpoint
+// result from a HTTP "OK" response.
 func NewListStoredBottleCollectionOK(body ListResponseBody) storage.StoredBottleCollection {
 	v := make([]*storage.StoredBottle, len(body))
 	for i, val := range body {
@@ -173,22 +177,20 @@ func NewListStoredBottleCollectionOK(body ListResponseBody) storage.StoredBottle
 			Description: val.Description,
 			Rating:      val.Rating,
 		}
-		v[i].Winery = wineryResponseBodyToWinerySrcPtr(val.Winery)
-		if val.Composition != nil {
-			v[i].Composition = make([]*storage.Component, len(val.Composition))
-			for j, val := range val.Composition {
-				v[i].Composition[j] = &storage.Component{
-					Varietal:   *val.Varietal,
-					Percentage: val.Percentage,
-				}
+		v[i].Winery = unmarshalWineryResponseBodyToWinery(val.Winery)
+		v[i].Composition = make([]*storage.Component, len(val.Composition))
+		for j, val := range val.Composition {
+			v[i].Composition[j] = &storage.Component{
+				Varietal:   *val.Varietal,
+				Percentage: val.Percentage,
 			}
 		}
 	}
-
 	return v
 }
 
-// NewShowStoredBottleOK builds a storage service show endpoint OK result.
+// NewShowStoredBottleOK builds a "storage" service "show" endpoint result from
+// a HTTP "OK" response.
 func NewShowStoredBottleOK(body *ShowResponseBody) *storage.StoredBottle {
 	v := &storage.StoredBottle{
 		ID:          *body.ID,
@@ -197,17 +199,14 @@ func NewShowStoredBottleOK(body *ShowResponseBody) *storage.StoredBottle {
 		Description: body.Description,
 		Rating:      body.Rating,
 	}
-	v.Winery = wineryToWinerySrcPtr(body.Winery)
-	if body.Composition != nil {
-		v.Composition = make([]*storage.Component, len(body.Composition))
-		for j, val := range body.Composition {
-			v.Composition[j] = &storage.Component{
-				Varietal:   *val.Varietal,
-				Percentage: val.Percentage,
-			}
+	v.Winery = unmarshalWineryToWinery(body.Winery)
+	v.Composition = make([]*storage.Component, len(body.Composition))
+	for j, val := range body.Composition {
+		v.Composition[j] = &storage.Component{
+			Varietal:   *val.Varietal,
+			Percentage: val.Percentage,
 		}
 	}
-
 	return v
 }
 
@@ -217,7 +216,6 @@ func NewShowNotFound(body *ShowNotFoundResponseBody) *storage.NotFound {
 		Message: *body.Message,
 		ID:      *body.ID,
 	}
-
 	return v
 }
 

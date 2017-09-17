@@ -12,7 +12,7 @@ import (
 	"net/http"
 
 	goa "goa.design/goa"
-	"goa.design/goa/examples/cellar/gen/sommelier"
+	sommelier "goa.design/goa/examples/cellar/gen/sommelier"
 	goahttp "goa.design/goa/http"
 )
 

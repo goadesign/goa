@@ -115,6 +115,11 @@ func methodDSL(suffix string, p interface{}, args ...interface{}) *design.Attrib
 	}
 	if fn != nil {
 		eval.Execute(fn, att)
+		if obj, ok := att.Type.(*design.Object); ok {
+			if len(*obj) == 0 {
+				att.Type = design.Empty
+			}
+		}
 	}
 	return att
 }

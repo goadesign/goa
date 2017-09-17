@@ -145,7 +145,7 @@ func endpointParser(genpkg string, root *httpdesign.RootExpr, data []*commandDat
 	for _, svc := range root.HTTPServices {
 		sd := HTTPServices.Get(svc.Name())
 		specs = append(specs, &codegen.ImportSpec{
-			Path: genpkg + "/http/" + codegen.KebabCase(sd.Service.Name) + "/client",
+			Path: genpkg + "/http/" + codegen.SnakeCase(sd.Service.Name) + "/client",
 			Name: sd.Service.PkgName + "c",
 		})
 	}
@@ -175,7 +175,7 @@ func endpointParser(genpkg string, root *httpdesign.RootExpr, data []*commandDat
 	}
 	for _, cmd := range data {
 		sections = append(sections, &codegen.SectionTemplate{
-			Name:    "command-usage",
+			Name:    "cli-command-usage",
 			Source:  commandUsageT,
 			Data:    cmd,
 			FuncMap: map[string]interface{}{"printDescription": printDescription},
@@ -194,8 +194,9 @@ func printDescription(desc string) string {
 // payloadBuilders returns the file that contains the payload constructors that
 // use flag values as arguments.
 func payloadBuilders(genpkg string, svc *httpdesign.ServiceExpr, data *commandData) *codegen.File {
-	path := filepath.Join(codegen.Gendir, "http", codegen.KebabCase(svc.Name()), "client", "cli.go")
+	path := filepath.Join(codegen.Gendir, "http", codegen.SnakeCase(svc.Name()), "client", "cli.go")
 	title := fmt.Sprintf("%s HTTP client CLI support package", svc.Name())
+	sd := HTTPServices.Get(svc.Name())
 	specs := []*codegen.ImportSpec{
 		{Path: "encoding/json"},
 		{Path: "fmt"},
@@ -205,7 +206,7 @@ func payloadBuilders(genpkg string, svc *httpdesign.ServiceExpr, data *commandDa
 		{Path: "unicode/utf8"},
 		{Path: "goa.design/goa", Name: "goa"},
 		{Path: "goa.design/goa/http", Name: "goahttp"},
-		{Path: genpkg + "/" + codegen.KebabCase(svc.Name())},
+		{Path: genpkg + "/" + codegen.SnakeCase(svc.Name()), Name: sd.Service.PkgName},
 	}
 	sections := []*codegen.SectionTemplate{
 		codegen.Header(title, "client", specs),
@@ -213,7 +214,7 @@ func payloadBuilders(genpkg string, svc *httpdesign.ServiceExpr, data *commandDa
 	for _, sub := range data.Subcommands {
 		if sub.BuildFunction != nil {
 			sections = append(sections, &codegen.SectionTemplate{
-				Name:   "command-usage",
+				Name:   "cli-build-payload",
 				Source: buildPayloadT,
 				Data:   sub.BuildFunction,
 			})
@@ -278,7 +279,7 @@ func buildSubcommandData(svc *ServiceData, e *EndpointData) *subcommandData {
 			var actuals []string
 			var args []*InitArgData
 			if e.Payload.Request.PayloadInit != nil {
-				for _, arg := range e.Payload.Request.PayloadInit.Args {
+				for _, arg := range e.Payload.Request.PayloadInit.ClientArgs {
 					f := argToFlag(svcn, en, arg)
 					flags = append(flags, f)
 					actuals = append(actuals, f.FullName)
@@ -303,11 +304,13 @@ func buildSubcommandData(svc *ServiceData, e *EndpointData) *subcommandData {
 					formals []string
 				)
 				{
-					fdata = make([]*fieldData, len(actuals))
-					formals = make([]string, len(actuals))
+					formals = make([]string, len(args))
 					for i, arg := range args {
 						formals[i] = flags[i].FullName
-						code := fieldLoadCode(formals[i], flags[i].Type, arg)
+						if arg.FieldName == "" && arg.Name != "body" {
+							continue
+						}
+						code := fieldLoadCode(flags[i].FullName, flags[i].Type, arg)
 						tn := arg.TypeRef
 						if flags[i].Type == "JSON" {
 							// We need to declare the variable without
@@ -315,17 +318,17 @@ func buildSubcommandData(svc *ServiceData, e *EndpointData) *subcommandData {
 							// using its address.
 							tn = arg.TypeName
 						}
-						fdata[i] = &fieldData{
+						fdata = append(fdata, &fieldData{
 							Name:     arg.Name,
 							VarName:  arg.Name,
 							TypeName: tn,
 							Init:     code,
 							Deref:    flags[i].Type == "JSON",
-						}
+						})
 					}
 				}
 				buildFunction = &buildFunctionData{
-					Name:         "Build" + e.Method.Payload,
+					Name:         "Build" + e.Method.VarName + e.Method.Payload,
 					ActualParams: actuals,
 					FormalParams: formals,
 					ServiceName:  svcn,
@@ -593,7 +596,7 @@ func ParseEndpoint(
 		switch svcn {
 	{{- range . }}
 		case "{{ .Name }}":
-			svcf = {{ .Name }}Flags
+			svcf = {{ .VarName }}Flags
 	{{- end }}
 		default:
 			return nil, nil, fmt.Errorf("unknown service %q", svcn)
@@ -680,13 +683,13 @@ func {{ .Name }}({{ range .FormalParams }}{{ . }} string, {{ end }}) (*{{ .Resul
 	{{- with .PayloadInit }}
 		{{- if .ClientCode }}
 	{{ .ClientCode }}
-		{{- if .ReturnTypeAttribute }}
+		{{ if .ReturnTypeAttribute }}
 	res := &{{ .ReturnTypeName }}{
 		{{ .ReturnTypeAttribute }}: v,
 	}
 		{{- end }}
 		{{- if .ReturnIsStruct }}
-			{{- range .Args }}
+			{{- range .ClientArgs }}
 				{{- if .FieldName -}}
 	v.{{ .FieldName }} = {{ if .Pointer }}&{{ end }}{{ .Name }}
 				{{ end -}}
@@ -696,7 +699,7 @@ func {{ .Name }}({{ range .FormalParams }}{{ . }} string, {{ end }}) (*{{ .Resul
 		{{- else }}
 			{{- if .ReturnIsStruct }}
 	payload := &{{ .ReturnTypeName }}{
-				{{- range .Args }}
+				{{- range .ClientArgs }}
 					{{- if .FieldName }}
 		{{ .FieldName }}: {{ if .Pointer }}&{{ end }}{{ .Name }},
 					{{- end }}

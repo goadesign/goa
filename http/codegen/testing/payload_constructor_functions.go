@@ -688,7 +688,6 @@ func NewMethodBodyQueryObjectMethodBodyQueryObjectPayload(body *MethodBodyQueryO
 		A: body.A,
 	}
 	v.B = b
-
 	return v
 }
 `
@@ -701,7 +700,6 @@ func NewMethodBodyQueryObjectValidateMethodBodyQueryObjectValidatePayload(body *
 		A: *body.A,
 	}
 	v.B = b
-
 	return v
 }
 `
@@ -713,7 +711,6 @@ func NewMethodBodyQueryUserPayloadType(body *MethodBodyQueryUserRequestBody, b *
 		A: body.A,
 	}
 	v.B = b
-
 	return v
 }
 `
@@ -726,7 +723,6 @@ func NewMethodBodyQueryUserValidatePayloadType(body *MethodBodyQueryUserValidate
 		A: *body.A,
 	}
 	v.B = b
-
 	return v
 }
 `
@@ -738,7 +734,6 @@ func NewMethodBodyPathObjectMethodBodyPathObjectPayload(body *MethodBodyPathObje
 		A: body.A,
 	}
 	v.B = &b
-
 	return v
 }
 `
@@ -751,7 +746,6 @@ func NewMethodBodyPathObjectValidateMethodBodyPathObjectValidatePayload(body *Me
 		A: *body.A,
 	}
 	v.B = b
-
 	return v
 }
 `
@@ -763,7 +757,6 @@ func NewMethodBodyPathUserPayloadType(body *MethodBodyPathUserRequestBody, b str
 		A: body.A,
 	}
 	v.B = &b
-
 	return v
 }
 `
@@ -776,7 +769,6 @@ func NewMethodUserBodyPathValidatePayloadType(body *MethodUserBodyPathValidateRe
 		A: *body.A,
 	}
 	v.B = b
-
 	return v
 }
 `
@@ -790,7 +782,6 @@ func NewMethodBodyQueryPathObjectMethodBodyQueryPathObjectPayload(body *MethodBo
 	}
 	v.C = &c
 	v.B = b
-
 	return v
 }
 `
@@ -804,7 +795,6 @@ func NewMethodBodyQueryPathObjectValidateMethodBodyQueryPathObjectValidatePayloa
 	}
 	v.C = c
 	v.B = b
-
 	return v
 }
 `
@@ -817,7 +807,6 @@ func NewMethodBodyQueryPathUserPayloadType(body *MethodBodyQueryPathUserRequestB
 	}
 	v.C = &c
 	v.B = b
-
 	return v
 }
 `
@@ -831,7 +820,6 @@ func NewMethodBodyQueryPathUserValidatePayloadType(body *MethodBodyQueryPathUser
 	}
 	v.C = c
 	v.B = b
-
 	return v
 }
 `
@@ -840,10 +828,7 @@ var PayloadBodyUserInnerConstructorCode = `// NewMethodBodyUserInnerPayloadType 
 // MethodBodyUserInner endpoint payload.
 func NewMethodBodyUserInnerPayloadType(body *MethodBodyUserInnerRequestBody) *servicebodyuserinner.PayloadType {
 	v := &servicebodyuserinner.PayloadType{}
-	if body.Inner != nil {
-		v.Inner = innerTypeRequestBodyToInnerTypeSrcPtr(body.Inner)
-	}
-
+	v.Inner = unmarshalInnerTypeRequestBodyToInnerType(body.Inner)
 	return v
 }
 `
@@ -853,10 +838,7 @@ var PayloadBodyUserInnerDefaultConstructorCode = `// NewMethodBodyUserInnerDefau
 // payload.
 func NewMethodBodyUserInnerDefaultPayloadType(body *MethodBodyUserInnerDefaultRequestBody) *servicebodyuserinnerdefault.PayloadType {
 	v := &servicebodyuserinnerdefault.PayloadType{}
-	if body.Inner != nil {
-		v.Inner = innerTypeRequestBodyToInnerTypeSrcPtr(body.Inner)
-	}
-
+	v.Inner = unmarshalInnerTypeRequestBodyToInnerType(body.Inner)
 	return v
 }
 `
@@ -871,7 +853,6 @@ func NewMethodBodyInlineArrayUserElemType(body []*ElemTypeRequestBody) []*servic
 			B: val.B,
 		}
 	}
-
 	return v
 }
 `
@@ -891,7 +872,6 @@ func NewMethodBodyInlineMapUserMapKeyTypeElemType(body map[*KeyTypeRequestBody]*
 		}
 		v[tk] = tv
 	}
-
 	return v
 }
 `
@@ -901,10 +881,9 @@ var PayloadBodyInlineRecursiveUserConstructorCode = `// NewMethodBodyInlineRecur
 // endpoint payload.
 func NewMethodBodyInlineRecursiveUserPayloadType(body *MethodBodyInlineRecursiveUserRequestBody, a string, b *string) *servicebodyinlinerecursiveuser.PayloadType {
 	v := &servicebodyinlinerecursiveuser.PayloadType{}
-	v.C = payloadTypeRequestBodyToPayloadTypeSrcPtr(body.C)
+	v.C = unmarshalPayloadTypeRequestBodyToPayloadType(body.C)
 	v.A = a
 	v.B = b
-
 	return v
 }
 `

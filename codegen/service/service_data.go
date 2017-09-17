@@ -282,7 +282,7 @@ func buildMethodData(m *design.MethodExpr, svcPkgName string, scope *codegen.Nam
 			payloadName = scope.GoTypeName(m.Payload)
 			payloadRef = scope.GoTypeRef(m.Payload)
 			if dt, ok := m.Payload.Type.(design.UserType); ok {
-				payloadDef = scope.GoTypeDef(dt.Attribute(), false)
+				payloadDef = scope.GoTypeDef(dt.Attribute(), true)
 			}
 			payloadDesc = m.Payload.Description
 			if payloadDesc == "" {
@@ -295,7 +295,7 @@ func buildMethodData(m *design.MethodExpr, svcPkgName string, scope *codegen.Nam
 			resultName = scope.GoTypeName(m.Result)
 			resultRef = scope.GoTypeRef(m.Result)
 			if dt, ok := m.Result.Type.(design.UserType); ok {
-				resultDef = scope.GoTypeDef(dt.Attribute(), false)
+				resultDef = scope.GoTypeDef(dt.Attribute(), true)
 			}
 			resultDesc = m.Result.Description
 			if resultDesc == "" {

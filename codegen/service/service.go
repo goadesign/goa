@@ -9,7 +9,7 @@ import (
 
 // File returns the service file for the given service.
 func File(service *design.ServiceExpr) *codegen.File {
-	path := filepath.Join(codegen.Gendir, codegen.KebabCase(service.Name), "service.go")
+	path := filepath.Join(codegen.Gendir, codegen.SnakeCase(service.Name), "service.go")
 	header := codegen.Header(
 		service.Name+" service",
 		codegen.Goify(service.Name, false),
@@ -83,7 +83,7 @@ const serviceT = `
 {{ comment .Description }}
 type Service interface {
 {{- range .Methods }}
-	// {{ comment .Description }}
+	{{ comment .Description }}
 	{{ .VarName }}(context.Context{{ if .Payload }}, {{ .PayloadRef }}{{ end }}) {{ if .Result }}({{ .ResultRef }}, error){{ else }}error{{ end }}
 {{- end }}
 }

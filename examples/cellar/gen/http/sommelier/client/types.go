@@ -11,10 +11,11 @@ import (
 	"unicode/utf8"
 
 	goa "goa.design/goa"
-	"goa.design/goa/examples/cellar/gen/sommelier"
+	sommelier "goa.design/goa/examples/cellar/gen/sommelier"
 )
 
-// PickRequestBody is the type of the sommelier pick HTTP endpoint request body.
+// PickRequestBody is the type of the "sommelier" service "pick" endpoint HTTP
+// request body.
 type PickRequestBody struct {
 	// Name of bottle to pick
 	Name *string `form:"name,omitempty" json:"name,omitempty" xml:"name,omitempty"`
@@ -24,19 +25,19 @@ type PickRequestBody struct {
 	Winery *string `form:"winery,omitempty" json:"winery,omitempty" xml:"winery,omitempty"`
 }
 
-// PickResponseBody is the type of the sommelier pick HTTP endpoint response
-// body.
+// PickResponseBody is the type of the "sommelier" service "pick" endpoint HTTP
+// response body.
 type PickResponseBody []*StoredBottleResponseBody
 
-// PickNoCriteriaResponseBody is the type of the sommelier "pick" HTTP endpoint
-// no_criteria error response body.
+// PickNoCriteriaResponseBody is the type of the "sommelier" service "pick"
+// endpoint HTTP response body for the "no_criteria" error.
 type PickNoCriteriaResponseBody struct {
 	// Missing criteria
 	Value *string `form:"value,omitempty" json:"value,omitempty" xml:"value,omitempty"`
 }
 
-// PickNoMatchResponseBody is the type of the sommelier "pick" HTTP endpoint
-// no_match error response body.
+// PickNoMatchResponseBody is the type of the "sommelier" service "pick"
+// endpoint HTTP response body for the "no_match" error.
 type PickNoMatchResponseBody struct {
 	// No bottle matched given criteria
 	Value *string `form:"value,omitempty" json:"value,omitempty" xml:"value,omitempty"`
@@ -80,8 +81,8 @@ type ComponentResponseBody struct {
 	Percentage *uint32 `form:"percentage,omitempty" json:"percentage,omitempty" xml:"percentage,omitempty"`
 }
 
-// NewPickRequestBody builds the sommelier service pick endpoint request body
-// from a payload.
+// NewPickRequestBody builds the HTTP request body from the payload of the
+// "pick" endpoint of the "sommelier" service.
 func NewPickRequestBody(p *sommelier.Criteria) *PickRequestBody {
 	body := &PickRequestBody{
 		Name:   p.Name,
@@ -93,12 +94,11 @@ func NewPickRequestBody(p *sommelier.Criteria) *PickRequestBody {
 			body.Varietal[j] = val
 		}
 	}
-
 	return body
 }
 
-// NewPickStoredBottleCollectionOK builds a sommelier service pick endpoint OK
-// result.
+// NewPickStoredBottleCollectionOK builds a "sommelier" service "pick" endpoint
+// result from a HTTP "OK" response.
 func NewPickStoredBottleCollectionOK(body PickResponseBody) sommelier.StoredBottleCollection {
 	v := make([]*sommelier.StoredBottle, len(body))
 	for i, val := range body {
@@ -109,18 +109,15 @@ func NewPickStoredBottleCollectionOK(body PickResponseBody) sommelier.StoredBott
 			Description: val.Description,
 			Rating:      val.Rating,
 		}
-		v[i].Winery = wineryResponseBodyToWinerySrcPtr(val.Winery)
-		if val.Composition != nil {
-			v[i].Composition = make([]*sommelier.Component, len(val.Composition))
-			for j, val := range val.Composition {
-				v[i].Composition[j] = &sommelier.Component{
-					Varietal:   *val.Varietal,
-					Percentage: val.Percentage,
-				}
+		v[i].Winery = unmarshalWineryResponseBodyToWinery(val.Winery)
+		v[i].Composition = make([]*sommelier.Component, len(val.Composition))
+		for j, val := range val.Composition {
+			v[i].Composition[j] = &sommelier.Component{
+				Varietal:   *val.Varietal,
+				Percentage: val.Percentage,
 			}
 		}
 	}
-
 	return v
 }
 
@@ -129,7 +126,6 @@ func NewPickNoCriteria(body *PickNoCriteriaResponseBody) *sommelier.NoCriteria {
 	v := &sommelier.NoCriteria{
 		Value: *body.Value,
 	}
-
 	return v
 }
 
@@ -138,7 +134,6 @@ func NewPickNoMatch(body *PickNoMatchResponseBody) *sommelier.NoMatch {
 	v := &sommelier.NoMatch{
 		Value: *body.Value,
 	}
-
 	return v
 }
 

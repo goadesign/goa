@@ -68,7 +68,7 @@ func (c *Client) List() goa.Endpoint {
 		decodeResponse = DecodeListResponse(c.decoder, c.RestoreResponseBody)
 	)
 	return func(ctx context.Context, v interface{}) (interface{}, error) {
-		req, err := c.BuildListRequest()
+		req, err := c.BuildListRequest(v)
 		if err != nil {
 			return nil, err
 		}
@@ -111,7 +111,7 @@ func (c *Client) Add() goa.Endpoint {
 		decodeResponse = DecodeAddResponse(c.decoder, c.RestoreResponseBody)
 	)
 	return func(ctx context.Context, v interface{}) (interface{}, error) {
-		req, err := c.BuildAddRequest()
+		req, err := c.BuildAddRequest(v)
 		if err != nil {
 			return nil, err
 		}

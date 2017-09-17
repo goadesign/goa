@@ -2168,8 +2168,6 @@ func DecodeMethodQueryStringDefaultRequest(mux goahttp.Muxer, decoder func(*http
 		qRaw := r.URL.Query().Get("q")
 		if qRaw != "" {
 			q = qRaw
-		} else {
-			q = "def"
 		}
 
 		return NewMethodQueryStringDefaultMethodQueryStringDefaultPayload(q), nil
@@ -2185,11 +2183,9 @@ func DecodeMethodQueryPrimitiveStringDefaultRequest(mux goahttp.Muxer, decoder f
 		var (
 			q string
 		)
-		qRaw := r.URL.Query().Get("q")
-		if qRaw != "" {
-			q = qRaw
-		} else {
-			q = "def"
+		q = r.URL.Query().Get("q")
+		if q == "" {
+			err = goa.MergeErrors(err, goa.MissingFieldError("q", "query string"))
 		}
 
 		return q, nil
@@ -2623,8 +2619,6 @@ func DecodeMethodHeaderStringDefaultRequest(mux goahttp.Muxer, decoder func(*htt
 		hRaw := r.Header.Get("h")
 		if hRaw != "" {
 			h = hRaw
-		} else {
-			h = "def"
 		}
 
 		return NewMethodHeaderStringDefaultMethodHeaderStringDefaultPayload(h), nil
@@ -2640,11 +2634,9 @@ func DecodeMethodHeaderPrimitiveStringDefaultRequest(mux goahttp.Muxer, decoder 
 		var (
 			h string
 		)
-		hRaw := r.Header.Get("h")
-		if hRaw != "" {
-			h = hRaw
-		} else {
-			h = "def"
+		h = r.Header.Get("h")
+		if h == "" {
+			err = goa.MergeErrors(err, goa.MissingFieldError("h", "header"))
 		}
 
 		return h, nil
