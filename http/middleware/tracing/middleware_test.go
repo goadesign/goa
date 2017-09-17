@@ -132,8 +132,6 @@ func TestMiddleware(t *testing.T) {
 
 	for k, c := range cases {
 		var (
-			ctxTraceID, ctxSpanID, ctxParentID string
-
 			m       = New(SamplingPercent(c.Rate), SpanIDFunc(newID), TraceIDFunc(newTraceID))
 			h       = new(testHandler)
 			headers = make(http.Header)
@@ -149,10 +147,19 @@ func TestMiddleware(t *testing.T) {
 
 		m(h).ServeHTTP(httptest.NewRecorder(), req)
 
-		ctx := h.Context
-		ctxTraceID = ContextTraceID(ctx)
-		ctxSpanID = ContextSpanID(ctx)
-		ctxParentID = ContextParentSpanID(ctx)
+		var ctxTraceID, ctxSpanID, ctxParentID string
+		{
+			ctx := h.Context
+			if traceID := ctx.Value(TraceIDKey); traceID != nil {
+				ctxTraceID = traceID.(string)
+			}
+			if spanID := ctx.Value(TraceSpanIDKey); spanID != nil {
+				ctxSpanID = spanID.(string)
+			}
+			if parentID := ctx.Value(TraceParentSpanIDKey); parentID != nil {
+				ctxParentID = parentID.(string)
+			}
+		}
 		if ctxTraceID != c.CtxTraceID {
 			t.Errorf("%s: invalid TraceID, expected %v - got %v", k, c.CtxTraceID, ctxTraceID)
 		}
