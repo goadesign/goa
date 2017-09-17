@@ -239,9 +239,21 @@ func (a *AttributeExpr) AllRequired() []string {
 }
 
 // IsRequired returns true if the given string matches the name of a required
-// attribute and the attribute has no default value, false otherwise. This
-// method only applies to attributes of type Object.
+// attribute, false otherwise. This method only applies to attributes of type
+// Object.
 func (a *AttributeExpr) IsRequired(attName string) bool {
+	for _, name := range a.AllRequired() {
+		if name == attName {
+			return true
+		}
+	}
+	return false
+}
+
+// IsRequiredNoDefault returns true if the given string matches the name of a
+// required attribute and the attribute has no default value, false otherwise.
+// This method only applies to attributes of type Object.
+func (a *AttributeExpr) IsRequiredNoDefault(attName string) bool {
 	for _, name := range a.AllRequired() {
 		if name == attName {
 			return AsObject(a.Type).Attribute(name).DefaultValue == nil

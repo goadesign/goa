@@ -38,9 +38,11 @@ func NewMappedAttributeExpr(att *AttributeExpr) *MappedAttributeExpr {
 			reverseMap[elems[1]] = elems[0]
 		}
 	}
-	if ut, ok := att.Type.(UserType); ok {
-		if val := ut.Attribute().Validation; val != nil {
-			validation = val.Dup()
+	if validation == nil {
+		if ut, ok := att.Type.(UserType); ok {
+			if val := ut.Attribute().Validation; val != nil {
+				validation = val.Dup()
+			}
 		}
 	}
 	return &MappedAttributeExpr{

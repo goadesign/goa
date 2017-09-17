@@ -153,10 +153,11 @@ func (s *NameScope) GoFullTypeName(att *design.AttributeExpr, pkg string) string
 		return s.GoTypeDef(att, false)
 
 	case design.UserType:
+		n := s.Unique(actual, Goify(actual.Name(), true), "")
 		if pkg == "" {
-			return s.Unique(actual, Goify(actual.Name(), true), "")
+			return n
 		}
-		return pkg + "." + Goify(actual.Name(), true)
+		return pkg + "." + n
 	case design.CompositeExpr:
 		return s.GoFullTypeName(actual.Attribute(), pkg)
 	default:

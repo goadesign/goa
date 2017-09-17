@@ -7,19 +7,18 @@ import (
 )
 
 var (
-	SimpleObj           = require(object("a", design.String, "b", design.Int), "a")
-	RequiredObj         = require(object("a", design.String, "b", design.Int), "a", "b")
-	DefaultObj          = defaulta(require(object("a", design.String, "b", design.Int), "a"), "a", "default", "b", 42)
-	SuperObj            = require(object("a", design.String, "b", design.Int, "c", design.Boolean), "a")
-	SimpleArray         = array(design.String)
-	SimpleMap           = mapa(design.String, design.Int)
-	ArrayObj            = object("a", design.String, "b", SimpleArray.Type)
-	RecursiveObj        = defaulta(require(object("aa", design.String, "bb", SimpleObj.Type), "bb"), "aa", "default")
-	RecursiveDefaultObj = defaulta(require(object("aa", design.String, "bb", SimpleObj.Type), "bb"), "aa", "default")
-	ObjArray            = array(RequiredObj.Type)
-	ObjMap              = mapa(design.String, SimpleObj.Type)
-	UserType            = object("ut", &design.UserTypeExpr{TypeName: "User", AttributeExpr: SimpleObj})
-	ArrayUserType       = array(&design.UserTypeExpr{TypeName: "User", AttributeExpr: RequiredObj})
+	SimpleObj     = require(object("a", design.String, "b", design.Int), "a")
+	RequiredObj   = require(object("a", design.String, "b", design.Int), "a", "b")
+	DefaultObj    = defaulta(require(object("a", SimpleArray.Type, "b", design.Int), "a"), "a", []string{"foo", "bar"}, "b", 42)
+	SuperObj      = require(object("a", design.String, "b", design.Int, "c", design.Boolean), "a")
+	SimpleArray   = array(design.String)
+	SimpleMap     = mapa(design.String, design.Int)
+	ArrayObj      = object("a", design.String, "b", SimpleArray.Type)
+	CompositeObj  = defaulta(require(object("aa", SimpleArray.Type, "bb", SimpleObj.Type), "bb"), "aa", []string{"foo", "bar"})
+	ObjArray      = array(RequiredObj.Type)
+	ObjMap        = mapa(design.String, SimpleObj.Type)
+	UserType      = object("ut", &design.UserTypeExpr{TypeName: "User", AttributeExpr: SimpleObj})
+	ArrayUserType = array(&design.UserTypeExpr{TypeName: "User", AttributeExpr: RequiredObj})
 )
 
 func TestGoTypeTransform(t *testing.T) {
@@ -28,54 +27,60 @@ func TestGoTypeTransform(t *testing.T) {
 		targetVar = "target"
 	)
 	cases := []struct {
-		Name              string
-		Source, Target    *design.AttributeExpr
-		SourceHasPointers bool
-		TargetHasPointers bool
-		InitDefaults      bool
-		TargetPkg         string
+		Name           string
+		Source, Target *design.AttributeExpr
+		Marshal        bool
+		TargetPkg      string
 
 		Code string
 	}{
-		// basic stuff
-		{"simple", SimpleObj, SimpleObj, false, false, false, "", objCode},
-		{"required", SimpleObj, RequiredObj, false, false, false, "", requiredCode},
+		{"simple-unmarshal", SimpleObj, SimpleObj, true, "", objUnmarshalCode},
+		{"required-unmarshal", SimpleObj, RequiredObj, true, "", requiredUnmarshalCode},
+		{"default-unmarshal", DefaultObj, DefaultObj, true, "", defaultUnmarshalCode},
 
-		// sourceHasPointers and initDefaults handling
-		{"has pointers", SimpleObj, SimpleObj, true, false, false, "", objPointersCode},
-		{"default no value", SimpleObj, SimpleObj, false, false, true, "", objCode},
-		{"default no init", SimpleObj, DefaultObj, false, false, false, "", objCode},
-		{"default", SimpleObj, DefaultObj, false, false, true, "", defaultCode},
-		{"default and has pointers", SimpleObj, DefaultObj, true, false, true, "", objDefaultPointersCode},
+		{"simple-marshal", SimpleObj, SimpleObj, false, "", objCode},
+		{"required-marshal", RequiredObj, RequiredObj, false, "", requiredCode},
+		{"default-marshal", DefaultObj, DefaultObj, false, "", defaultCode},
 
 		// non match field ignore
-		{"super", SimpleObj, SuperObj, false, false, false, "", objCode},
+		{"super-unmarshal", SuperObj, SimpleObj, true, "", objUnmarshalCode},
+		{"super-marshal", SuperObj, SimpleObj, false, "", objCode},
+		{"super-unmarshal-r", SimpleObj, SuperObj, true, "", objUnmarshalCode},
+		{"super-marshal-r", SimpleObj, SuperObj, false, "", objCode},
 
 		// simple array and map
-		{"array", SimpleArray, SimpleArray, false, false, false, "", arrayCode},
-		{"map", SimpleMap, SimpleMap, false, false, false, "", mapCode},
-		{"object array", ArrayObj, ArrayObj, false, false, false, "", arrayObjCode},
+		{"array-unmarshal", SimpleArray, SimpleArray, true, "", arrayCode},
+		{"map-unmarshal", SimpleMap, SimpleMap, true, "", mapCode},
+		{"object-array-unmarshal", ArrayObj, ArrayObj, true, "", arrayObjUnmarshalCode},
 
-		// recursive data structures
-		{"recursive", RecursiveObj, RecursiveDefaultObj, false, false, false, "", recCode},
-		{"recursive default", RecursiveObj, RecursiveDefaultObj, false, false, true, "", recDefaultsCode},
-		{"recursive has pointers", RecursiveObj, RecursiveDefaultObj, true, false, false, "", recPointersCode},
-		{"recursive default and has pointers", RecursiveObj, RecursiveDefaultObj, true, false, true, "", recDefaultsPointersCode},
+		{"array-marshal", SimpleArray, SimpleArray, false, "", arrayCode},
+		{"map-marshal", SimpleMap, SimpleMap, false, "", mapCode},
+		{"object-array-marshal", ArrayObj, ArrayObj, false, "", arrayObjCode},
+
+		// composite data structures
+		{"composite-unmarshal", CompositeObj, CompositeObj, true, "", compUnmarshalCode},
+		{"composite-marshal", CompositeObj, CompositeObj, false, "", compCode},
 
 		// object in arrays and maps
-		{"object array", ObjArray, ObjArray, false, false, false, "", objArrayCode},
-		{"object map", ObjMap, ObjMap, false, false, false, "", objMapCode},
-		{"user type", UserType, UserType, false, false, false, "", userTypeCode},
-		{"array user type", ArrayUserType, ArrayUserType, false, false, false, "", arrayUserTypeCode},
+		{"object-array-unmarshal", ObjArray, ObjArray, true, "", objArrayCode},
+		{"object-map-unmarshal", ObjMap, ObjMap, true, "", objMapCode},
+		{"user-type-unmarshal", UserType, UserType, true, "", userTypeUnmarshalCode},
+		{"array-user-type-unmarshal", ArrayUserType, ArrayUserType, true, "", arrayUserTypeUnmarshalCode},
+
+		{"object-array-marshal", ObjArray, ObjArray, false, "", objArrayCode},
+		{"object-map-marshal", ObjMap, ObjMap, false, "", objMapCode},
+		{"user-type-marshal", UserType, UserType, false, "", userTypeCode},
+		{"array-user-type-marshal", ArrayUserType, ArrayUserType, false, "", arrayUserTypeCode},
 
 		// package handling
-		{"target package", ArrayUserType, ArrayUserType, false, false, false, "tpkg", objTargetPkgCode},
+		{"target-package-unmarshal", ArrayUserType, ArrayUserType, true, "tpkg", objTargetPkgUnmarshalCode},
+		{"target-package-marshal", ArrayUserType, ArrayUserType, false, "tpkg", objTargetPkgCode},
 	}
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
 			src := &design.UserTypeExpr{TypeName: "SourceType", AttributeExpr: c.Source}
 			tgt := &design.UserTypeExpr{TypeName: "TargetType", AttributeExpr: c.Target}
-			code, err := GoTypeTransform(src, tgt, sourceVar, targetVar, c.TargetPkg, c.SourceHasPointers, c.TargetHasPointers, c.InitDefaults, NewNameScope())
+			code, _, err := GoTypeTransform(src, tgt, sourceVar, targetVar, "", c.TargetPkg, c.Marshal, NewNameScope())
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -122,6 +127,36 @@ func mapa(keyt, elemt design.DataType) *design.AttributeExpr {
 	return &design.AttributeExpr{Type: &design.Map{KeyType: key, ElemType: elem}}
 }
 
+const objUnmarshalCode = `func transform() {
+	target := &TargetType{
+		A: *source.A,
+		B: source.B,
+	}
+}
+`
+
+const requiredUnmarshalCode = `func transform() {
+	target := &TargetType{
+		A: *source.A,
+	}
+	if source.B != nil {
+		target.B = *source.B
+	}
+}
+`
+
+const defaultUnmarshalCode = `func transform() {
+	target := &TargetType{}
+	if source.B != nil {
+		target.B = *source.B
+	}
+	target.A = make([]string, len(source.A))
+	for j, val := range source.A {
+		target.A[j] = val
+	}
+}
+`
+
 const objCode = `func transform() {
 	target := &TargetType{
 		A: source.A,
@@ -133,52 +168,43 @@ const objCode = `func transform() {
 const requiredCode = `func transform() {
 	target := &TargetType{
 		A: source.A,
-		B: *source.B,
-	}
-	if source.B == nil {
+		B: source.B,
 	}
 }
 `
 
 const defaultCode = `func transform() {
 	target := &TargetType{
-		A: source.A,
 		B: source.B,
 	}
-	if source.B == nil {
-		tmp := 42
-		target.B = &tmp
-	}
-}
-`
-
-const objTargetPkgCode = `func transform() {
-	target := make([]*tpkg.User, len(source))
-	for i, val := range source {
-		target[i] = &tpkg.User{
-			A: val.A,
-			B: val.B,
+	if source.A != nil {
+		target.A = make([]string, len(source.A))
+		for j, val := range source.A {
+			target.A[j] = val
 		}
 	}
-}
-`
-
-const objPointersCode = `func transform() {
-	target := &TargetType{
-		A: *source.A,
-		B: source.B,
+	if target.A == nil {
+		target.A = []string{"foo", "bar"}
 	}
 }
 `
 
 const objDefaultPointersCode = `func transform() {
 	target := &TargetType{
-		A: source.A,
+		A: *source.A,
 		B: source.B,
 	}
 	if source.B == nil {
 		tmp := 42
 		target.B = &tmp
+	}
+}
+`
+
+const arrayUnmarshalCode = `func transform() {
+	target := make([]string, len(source))
+	for i, val := range source {
+		target[i] = val
 	}
 }
 `
@@ -187,6 +213,16 @@ const arrayCode = `func transform() {
 	target := make([]string, len(source))
 	for i, val := range source {
 		target[i] = val
+	}
+}
+`
+const arrayObjUnmarshalCode = `func transform() {
+	target := &TargetType{
+		A: source.A,
+	}
+	target.B = make([]string, len(source.B))
+	for j, val := range source.B {
+		target.B[j] = val
 	}
 }
 `
@@ -214,9 +250,11 @@ const mapCode = `func transform() {
 }
 `
 
-const recCode = `func transform() {
-	target := &TargetType{
-		Aa: source.Aa,
+const compUnmarshalCode = `func transform() {
+	target := &TargetType{}
+	target.Aa = make([]string, len(source.Aa))
+	for j, val := range source.Aa {
+		target.Aa[j] = val
 	}
 	target.Bb = &struct {
 		A *string
@@ -228,45 +266,36 @@ const recCode = `func transform() {
 }
 `
 
-const recDefaultsCode = `func transform() {
-	target := &TargetType{
-		Aa: source.Aa,
+const compCode = `func transform() {
+	target := &TargetType{}
+	if source.Aa != nil {
+		target.Aa = make([]string, len(source.Aa))
+		for j, val := range source.Aa {
+			target.Aa[j] = val
+		}
+	}
+	if target.Aa == nil {
+		target.Aa = []string{"foo", "bar"}
+	}
+	if source.Bb != nil {
+		target.Bb = &struct {
+			A *string
+			B *int
+		}{
+			A: source.Bb.A,
+			B: source.Bb.B,
+		}
+	}
+}
+`
+
+const compDefaultsPointersCode = `func transform() {
+	target := &TargetType{}
+	if source.Aa != nil {
+		target.Aa = *source.Aa
 	}
 	if source.Aa == nil {
-		tmp := "default"
-		target.Aa = &tmp
-	}
-	target.Bb = &struct {
-		A *string
-		B *int
-	}{
-		A: source.Bb.A,
-		B: source.Bb.B,
-	}
-}
-`
-
-const recPointersCode = `func transform() {
-	target := &TargetType{
-		Aa: source.Aa,
-	}
-	target.Bb = &struct {
-		A *string
-		B *int
-	}{
-		A: source.Bb.A,
-		B: source.Bb.B,
-	}
-}
-`
-
-const recDefaultsPointersCode = `func transform() {
-	target := &TargetType{
-		Aa: source.Aa,
-	}
-	if source.Aa == nil {
-		tmp := "default"
-		target.Aa = &tmp
+		target.Aa = "default"
 	}
 	target.Bb = &struct {
 		A *string
@@ -314,10 +343,27 @@ const objMapCode = `func transform() {
 }
 `
 
+const userTypeUnmarshalCode = `func transform() {
+	target := &TargetType{}
+	target.Ut = unmarshalUserToUser(source.Ut)
+}
+`
+
 const userTypeCode = `func transform() {
 	target := &TargetType{}
 	if source.Ut != nil {
-		target.Ut = userToUserNoDefault(source.Ut)
+		target.Ut = marshalUserToUser(source.Ut)
+	}
+}
+`
+
+const arrayUserTypeUnmarshalCode = `func transform() {
+	target := make([]*User, len(source))
+	for i, val := range source {
+		target[i] = &User{
+			A: *val.A,
+			B: *val.B,
+		}
 	}
 }
 `
@@ -326,6 +372,28 @@ const arrayUserTypeCode = `func transform() {
 	target := make([]*User, len(source))
 	for i, val := range source {
 		target[i] = &User{
+			A: val.A,
+			B: val.B,
+		}
+	}
+}
+`
+
+const objTargetPkgUnmarshalCode = `func transform() {
+	target := make([]*tpkg.User, len(source))
+	for i, val := range source {
+		target[i] = &tpkg.User{
+			A: *val.A,
+			B: *val.B,
+		}
+	}
+}
+`
+
+const objTargetPkgCode = `func transform() {
+	target := make([]*tpkg.User, len(source))
+	for i, val := range source {
+		target[i] = &tpkg.User{
 			A: val.A,
 			B: val.B,
 		}

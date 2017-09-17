@@ -13,13 +13,13 @@ import (
 	"net/http"
 	"net/url"
 
-	"goa.design/goa/examples/cellar/gen/sommelier"
+	sommelier "goa.design/goa/examples/cellar/gen/sommelier"
 	goahttp "goa.design/goa/http"
 )
 
 // BuildPickRequest instantiates a HTTP request object with method and path set
-// to call the sommelier pick endpoint.
-func (c *Client) BuildPickRequest() (*http.Request, error) {
+// to call the "sommelier" service "pick" endpoint
+func (c *Client) BuildPickRequest(v interface{}) (*http.Request, error) {
 	u := &url.URL{Scheme: c.scheme, Host: c.host, Path: PickSommelierPath()}
 	req, err := http.NewRequest("POST", u.String(), nil)
 	if err != nil {
@@ -103,9 +103,9 @@ func DecodePickResponse(decoder func(*http.Response) goahttp.Decoder, restoreBod
 	}
 }
 
-// wineryResponseBodyToWinerySrcPtr builds a value of type *sommelier.Winery
+// unmarshalWineryResponseBodyToWinery builds a value of type *sommelier.Winery
 // from a value of type *WineryResponseBody.
-func wineryResponseBodyToWinerySrcPtr(v *WineryResponseBody) *sommelier.Winery {
+func unmarshalWineryResponseBodyToWinery(v *WineryResponseBody) *sommelier.Winery {
 	res := &sommelier.Winery{
 		Name:    *v.Name,
 		Region:  *v.Region,
@@ -116,9 +116,9 @@ func wineryResponseBodyToWinerySrcPtr(v *WineryResponseBody) *sommelier.Winery {
 	return res
 }
 
-// componentResponseBodyToComponentSrcPtr builds a value of type
+// unmarshalComponentResponseBodyToComponent builds a value of type
 // *sommelier.Component from a value of type *ComponentResponseBody.
-func componentResponseBodyToComponentSrcPtr(v *ComponentResponseBody) *sommelier.Component {
+func unmarshalComponentResponseBodyToComponent(v *ComponentResponseBody) *sommelier.Component {
 	res := &sommelier.Component{
 		Varietal:   *v.Varietal,
 		Percentage: v.Percentage,

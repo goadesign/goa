@@ -47,11 +47,12 @@ func serverType(genpkg string, svc *httpdesign.ServiceExpr, seen map[string]stru
 		path  string
 		rdata = HTTPServices.Get(svc.Name())
 	)
-	path = filepath.Join(codegen.Gendir, "http", codegen.KebabCase(svc.Name()), "server", "types.go")
+	path = filepath.Join(codegen.Gendir, "http", codegen.SnakeCase(svc.Name()), "server", "types.go")
+	sd := HTTPServices.Get(svc.Name())
 	header := codegen.Header(svc.Name()+" HTTP server types", "server",
 		[]*codegen.ImportSpec{
 			{Path: "unicode/utf8"},
-			{Path: genpkg + "/" + codegen.KebabCase(svc.Name())},
+			{Path: genpkg + "/" + codegen.SnakeCase(svc.Name()), Name: sd.Service.PkgName},
 			{Path: "goa.design/goa", Name: "goa"},
 		},
 	)
@@ -178,7 +179,7 @@ type {{ .VarName }} {{ .Def }}
 
 // input: InitData
 const serverTypeInitT = `{{ comment .Description }}
-func {{ .Name }}({{- range .Args }}{{ .Name }} {{ .TypeRef }}, {{ end }}) {{ .ReturnTypeRef }} {
+func {{ .Name }}({{- range .ServerArgs }}{{ .Name }} {{ .TypeRef }}, {{ end }}) {{ .ReturnTypeRef }} {
 	{{- if .ServerCode }}
 		{{ .ServerCode }}
 		{{- if .ReturnTypeAttribute }}
@@ -187,17 +188,17 @@ func {{ .Name }}({{- range .Args }}{{ .Name }} {{ .TypeRef }}, {{ end }}) {{ .Re
 		}
 		{{- end }}
 		{{- if .ReturnIsStruct }}
-			{{- range .Args }}
-				{{- if .FieldName -}}
+			{{- range .ServerArgs }}
+				{{- if .FieldName }}
 			v.{{ .FieldName }} = {{ if .Pointer }}&{{ end }}{{ .Name }}
-				{{ end }}
+				{{- end }}
 			{{- end }}
 		{{- end }}
 		return {{ if .ReturnTypeAttribute }}res{{ else }}v{{ end }}
 	{{- else }}
 		{{- if .ReturnIsStruct }}
 			return &{{ .ReturnTypeName }}{
-			{{- range .Args }}
+			{{- range .ServerArgs }}
 				{{- if .FieldName }}
 				{{ .FieldName }}: {{ if .Pointer }}&{{ end }}{{ .Name }},
 				{{- end }}
@@ -210,7 +211,7 @@ func {{ .Name }}({{- range .Args }}{{ .Name }} {{ .TypeRef }}, {{ end }}) {{ .Re
 
 // input: InitData
 const serverBodyInitT = `{{ comment .Description }}
-func {{ .Name }}({{ range .Args }}{{ .Name }} {{.TypeRef }}, {{ end }}) {{ .ReturnTypeRef }} {
+func {{ .Name }}({{ range .ServerArgs }}{{ .Name }} {{.TypeRef }}, {{ end }}) {{ .ReturnTypeRef }} {
 	{{ .ServerCode }}
 	return body
 }
@@ -218,7 +219,7 @@ func {{ .Name }}({{ range .Args }}{{ .Name }} {{.TypeRef }}, {{ end }}) {{ .Retu
 
 // input: TypeData
 const validateT = `{{ printf "Validate runs the validations defined on %s" .Name | comment }}
-func (body *{{ .VarName }}) Validate() (err error) {
+func (body {{ .Ref }}) Validate() (err error) {
 	{{ .ValidateDef }}
 	return
 }

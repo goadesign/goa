@@ -26,7 +26,7 @@ func ServerFiles(genpkg string, root *httpdesign.RootExpr) []*codegen.File {
 
 // server returns the files defining the HTTP server.
 func server(genpkg string, svc *httpdesign.ServiceExpr) *codegen.File {
-	path := filepath.Join(codegen.Gendir, "http", codegen.KebabCase(svc.Name()), "server", "server.go")
+	path := filepath.Join(codegen.Gendir, "http", codegen.SnakeCase(svc.Name()), "server", "server.go")
 	data := HTTPServices.Get(svc.Name())
 	title := fmt.Sprintf("%s HTTP server", svc.Name())
 	sections := []*codegen.SectionTemplate{
@@ -37,7 +37,7 @@ func server(genpkg string, svc *httpdesign.ServiceExpr) *codegen.File {
 			{Path: "net/http"},
 			{Path: "goa.design/goa", Name: "goa"},
 			{Path: "goa.design/goa/http", Name: "goahttp"},
-			{Path: genpkg + "/" + codegen.KebabCase(svc.Name())},
+			{Path: genpkg + "/" + codegen.SnakeCase(svc.Name()), Name: data.Service.PkgName},
 		}),
 		{Name: "server-struct", Source: serverStructT, Data: data},
 		{Name: "server-init", Source: serverInitT, Data: data},
@@ -55,7 +55,7 @@ func server(genpkg string, svc *httpdesign.ServiceExpr) *codegen.File {
 // serverEncodeDecode returns the file defining the HTTP server encoding and
 // decoding logic.
 func serverEncodeDecode(genpkg string, svc *httpdesign.ServiceExpr) *codegen.File {
-	path := filepath.Join(codegen.Gendir, "http", codegen.KebabCase(svc.Name()), "server", "encode_decode.go")
+	path := filepath.Join(codegen.Gendir, "http", codegen.SnakeCase(svc.Name()), "server", "encode_decode.go")
 	data := HTTPServices.Get(svc.Name())
 	title := fmt.Sprintf("%s HTTP server encoders and decoders", svc.Name())
 	sections := []*codegen.SectionTemplate{
@@ -68,7 +68,7 @@ func serverEncodeDecode(genpkg string, svc *httpdesign.ServiceExpr) *codegen.Fil
 			{Path: "strings"},
 			{Path: "goa.design/goa", Name: "goa"},
 			{Path: "goa.design/goa/http", Name: "goahttp"},
-			{Path: genpkg + "/" + codegen.KebabCase(svc.Name())},
+			{Path: genpkg + "/" + codegen.SnakeCase(svc.Name()), Name: data.Service.PkgName},
 		}),
 	}
 
@@ -327,20 +327,12 @@ func {{ .RequestDecoder }}(mux goahttp.Muxer, decoder func(*http.Request) goahtt
 		if {{ .VarName }}Raw != "" {
 			{{ .VarName }} = {{ if and (eq .Type.Name "string") .Pointer }}&{{ end }}{{ .VarName }}Raw
 		}
-		{{- if .DefaultValue }} else {
-			{{ .VarName }} = {{ if eq .Type.Name "string" }}{{ printf "%q" .DefaultValue }}{{ else }}{{ printf "%#v" .DefaultValue }}{{ end }}
-		}
-		{{- end }}
 
 	{{- else if .StringSlice }}
 		{{ .VarName }} = r.URL.Query()["{{ .Name }}"]
 		{{- if .Required }}
 		if {{ .VarName }} == nil {
 			err = goa.MergeErrors(err, goa.MissingFieldError("{{ .Name }}", "query string"))
-		}
-		{{- else if .DefaultValue }}
-		if {{ .VarName }} == nil {
-			{{ .VarName }} = {{ printf "%#v" .DefaultValue }}
 		}
 		{{- end }}
 
@@ -350,18 +342,13 @@ func {{ .RequestDecoder }}(mux goahttp.Muxer, decoder func(*http.Request) goahtt
 		if {{ .VarName }}Raw == nil {
 			return nil, goa.MissingFieldError("{{ .Name }}", "query string")
 		}
-		{{- else if .DefaultValue }}
-		if {{ .VarName }}Raw == nil {
-			{{ .VarName }} = {{ printf "%#v" .DefaultValue }}
-		}
 		{{- end }}
 
-		{{- if .DefaultValue }}else {
-		{{- else if not .Required }}
+		{{- if not .Required }}
 		if {{ .VarName }}Raw != nil {
 		{{- end }}
 		{{- template "slice_conversion" . }}
-		{{- if or .DefaultValue (not .Required) }}
+		{{- if not .Required }}
 		}
 		{{- end }}
 
@@ -371,10 +358,6 @@ func {{ .RequestDecoder }}(mux goahttp.Muxer, decoder func(*http.Request) goahtt
 		if len({{ .VarName }}) == 0 {
 			return nil, goa.MissingFieldError("{{ .Name }}", "query string")
 		}
-		{{- else if .DefaultValue }}
-		if len({{ .VarName }}Raw) == 0 {
-			{{ .VarName }} = {{ printf "%#v" .DefaultValue }}
-		}
 		{{- end }}
 
 	{{- else if .Map }}
@@ -383,14 +366,9 @@ func {{ .RequestDecoder }}(mux goahttp.Muxer, decoder func(*http.Request) goahtt
 		if len({{ .VarName }}Raw) == 0 {
 			return nil, goa.MissingFieldError("{{ .Name }}", "query string")
 		}
-		{{- else if .DefaultValue }}
-		if len({{ .VarName }}Raw) == 0 {
-			{{ .VarName }} = {{ printf "%#v" .DefaultValue }}
-		}
 		{{- end }}
 
-		{{- if .DefaultValue }}else {
-		{{- else if not .Required }}
+		{{- if not .Required }}
 		if len({{ .VarName }}Raw) != 0 {
 		{{- end }}
 		{{- if eq .Type.ElemType.Type.Name "array" }}
@@ -402,7 +380,7 @@ func {{ .RequestDecoder }}(mux goahttp.Muxer, decoder func(*http.Request) goahtt
 		{{- else }}
 			{{- template "map_conversion" . }}
 		{{- end }}
-		{{- if or .DefaultValue (not .Required) }}
+		{{- if not .Required }}
 		}
 		{{- end }}
 
@@ -412,20 +390,15 @@ func {{ .RequestDecoder }}(mux goahttp.Muxer, decoder func(*http.Request) goahtt
 		if {{ .VarName }}Raw == "" {
 			return nil, goa.MissingFieldError("{{ .Name }}", "query string")
 		}
-		{{- else if .DefaultValue }}
-		if {{ .VarName }}Raw == "" {
-			{{ .VarName }} = {{ printf "%#v" .DefaultValue }}
-		}
 		{{- end }}
-		{{- if .DefaultValue }}else {
-		{{- else if not .Required }}
+		{{- if not .Required }}
 		if {{ .VarName }}Raw != "" {
 		{{- end }}
 		{{- template "type_conversion" . }}
-		{{- if or .DefaultValue (not .Required) }}
+		{{- if not .Required }}
 		}
 		{{- end }}
-	
+
 	{{- end }}
 		{{- if .Validate }}
 		{{ .Validate }}
@@ -444,20 +417,12 @@ func {{ .RequestDecoder }}(mux goahttp.Muxer, decoder func(*http.Request) goahtt
 		if {{ .VarName }}Raw != "" {
 			{{ .VarName }} = {{ if and (eq .Type.Name "string") .Pointer }}&{{ end }}{{ .VarName }}Raw
 		}
-		{{- if .DefaultValue }} else {
-			{{ .VarName }} = {{ if eq .Type.Name "string" }}{{ printf "%q" .DefaultValue }}{{ else }}{{ printf "%#v" .DefaultValue }}{{ end }}
-		}
-		{{- end }}
 
 	{{- else if .StringSlice }}
 		{{ .VarName }} = r.Header["{{ .CanonicalName }}"]
 		{{ if .Required }}
 		if {{ .VarName }} == nil {
 			err = goa.MergeErrors(err, goa.MissingFieldError("{{ .Name }}", "header"))
-		}
-		{{- else if .DefaultValue }}
-		if {{ .VarName }} == nil {
-			{{ .VarName }} = {{ printf "%#v" .DefaultValue }}
 		}
 		{{- end }}
 
@@ -466,18 +431,13 @@ func {{ .RequestDecoder }}(mux goahttp.Muxer, decoder func(*http.Request) goahtt
 		{{ if .Required }}if {{ .VarName }}Raw == nil {
 			return nil, goa.MissingFieldError("{{ .Name }}", "header")
 		}
-		{{- else if .DefaultValue }}
-		if {{ .VarName }}Raw == nil {
-			{{ .VarName }} = {{ printf "%#v" .DefaultValue }}
-		}
 		{{- end }}
 
-		{{- if .DefaultValue }}else {
-		{{- else if not .Required }}
+		{{- if not .Required }}
 		if {{ .VarName }}Raw != nil {
 		{{- end }}
 		{{- template "slice_conversion" . }}
-		{{- if or .DefaultValue (not .Required) }}
+		{{- if not .Required }}
 		}
 		{{- end }}
 
@@ -487,18 +447,13 @@ func {{ .RequestDecoder }}(mux goahttp.Muxer, decoder func(*http.Request) goahtt
 		if {{ .VarName }}Raw == "" {
 			return nil, goa.MissingFieldError("{{ .Name }}", "header")
 		}
-		{{- else if .DefaultValue }}
-		if {{ .VarName }}Raw == "" {
-			{{ .VarName }} = {{ printf "%#v" .DefaultValue }}
-		}
 		{{- end }}
 
-		{{- if .DefaultValue }}else {
-		{{- else if not .Required }}
+		{{- if not .Required }}
 		if {{ .VarName }}Raw != "" {
 		{{- end }}
 		{{- template "type_conversion" . }}
-		{{- if or .DefaultValue (not .Required) }}
+		{{- if not .Required }}
 		}
 		{{- end }}
 	{{- end }}
@@ -514,7 +469,7 @@ func {{ .RequestDecoder }}(mux goahttp.Muxer, decoder func(*http.Request) goahtt
 		{{- end }}
 		{{- if .Payload.Request.PayloadInit }}
 
-		return {{ .Payload.Request.PayloadInit.Name }}({{ range .Payload.Request.PayloadInit.Args }}{{ .Ref }},{{ end }}), nil
+		return {{ .Payload.Request.PayloadInit.Name }}({{ range .Payload.Request.PayloadInit.ServerArgs }}{{ .Ref }},{{ end }}), nil
 		{{- else if .Payload.DecoderReturnValue }}
 
 		return {{ .Payload.DecoderReturnValue }}, nil
@@ -828,31 +783,35 @@ const responseT = `{{ define "response" -}}
 	{{- end }}
 	{{- if .ServerBody }}
 		{{- if .ServerBody.Init }}
-	body := {{ .ServerBody.Init.Name }}({{ range .ServerBody.Init.Args }}{{ .Ref }}, {{ end }})
+	body := {{ .ServerBody.Init.Name }}({{ range .ServerBody.Init.ServerArgs }}{{ .Ref }}, {{ end }})
 		{{- else }}
-	body := res 
+	body := res
 		{{- end }}
 	{{- end }}
 	{{- range .Headers }}
-		{{- if and (not .Required) (not $.TagName) }}
+		{{- $initDef := and (or .Pointer .Slice) .DefaultValue (not $.TagName) }}
+		{{- $checkNil := and (or (not .Required) $initDef) (not $.TagName) }}
+		{{- if $checkNil }}
 	if res.{{ .FieldName }} != nil {
 		{{- end }}
 
 		{{- if eq .Type.Name "string" }}
 	w.Header().Set("{{ .Name }}", {{ if not .Required }}*{{ end }}res.{{ .FieldName }})
 		{{- else }}
-	v := res.{{ .FieldName }}
-	{{ template "header_conversion" (headerConversionData .Type .VarName .Required "v") }}
-	w.Header().Set("{{ .Name }}", {{ .VarName }})
+	val := res.{{ .FieldName }}
+	{{ template "header_conversion" (headerConversionData .Type (printf "%ss" .VarName) .Required "val") }}
+	w.Header().Set("{{ .Name }}", {{ .VarName }}s)
 		{{- end }}
 
-		{{- if and (not .Required) (not $.TagName) }}
-			{{- if .DefaultValue }}
-	} else {
+		{{- if $initDef }}
+	{{ if $checkNil }} } else { {{ else }}if res.{{ .FieldName }} == nil { {{ end }}
 		w.Header().Set("{{ .Name }}", "{{ printValue .Type .DefaultValue }}")
-			{{- end }}
+		{{- end }}
+
+		{{- if or $checkNil $initDef }}
 	}
 		{{- end }}
+
 	{{- end }}
 	w.WriteHeader({{ .StatusCode }})
 {{- end }}

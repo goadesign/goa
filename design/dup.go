@@ -54,6 +54,10 @@ func (d *dupper) DupAttribute(att *AttributeExpr) *AttributeExpr {
 
 // DupType creates a copy of the given data type.
 func (d *dupper) DupType(t DataType) DataType {
+	if t == Empty {
+		// Don't dup Empty so that code may check against it.
+		return t
+	}
 	switch actual := t.(type) {
 	case Primitive:
 		return t

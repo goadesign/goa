@@ -37,7 +37,7 @@ type (
 
 // EndpointFile returns the endpoint file for the given service.
 func EndpointFile(service *design.ServiceExpr) *codegen.File {
-	path := filepath.Join(codegen.Gendir, codegen.KebabCase(service.Name), "endpoints.go")
+	path := filepath.Join(codegen.Gendir, codegen.SnakeCase(service.Name), "endpoints.go")
 	var (
 		data *EndpointData
 	)

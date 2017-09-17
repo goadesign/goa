@@ -13,12 +13,12 @@ import (
 	"unicode/utf8"
 
 	goa "goa.design/goa"
-	"goa.design/goa/examples/cellar/gen/storage"
+	storage "goa.design/goa/examples/cellar/gen/storage"
 )
 
-// BuildShowPayload builds the payload for the storage show endpoint from CLI
-// flags.
-func BuildShowPayload(storageShowID string) (*storage.ShowPayload, error) {
+// BuildShowShowPayload builds the payload for the storage show endpoint from
+// CLI flags.
+func BuildShowShowPayload(storageShowID string) (*storage.ShowPayload, error) {
 	var id string
 	{
 		id = storageShowID
@@ -29,8 +29,9 @@ func BuildShowPayload(storageShowID string) (*storage.ShowPayload, error) {
 	return payload, nil
 }
 
-// BuildBottle builds the payload for the storage add endpoint from CLI flags.
-func BuildBottle(storageAddBody string) (*storage.Bottle, error) {
+// BuildAddBottle builds the payload for the storage add endpoint from CLI
+// flags.
+func BuildAddBottle(storageAddBody string) (*storage.Bottle, error) {
 	var body AddRequestBody
 	{
 		err := json.Unmarshal([]byte(storageAddBody), &body)
@@ -86,7 +87,9 @@ func BuildBottle(storageAddBody string) (*storage.Bottle, error) {
 		Description: body.Description,
 		Rating:      body.Rating,
 	}
-	v.Winery = wineryRequestBodyToWinery(body.Winery)
+	if body.Winery != nil {
+		v.Winery = marshalWineryRequestBodyToWinery(body.Winery)
+	}
 	if body.Composition != nil {
 		v.Composition = make([]*storage.Component, len(body.Composition))
 		for j, val := range body.Composition {
@@ -100,9 +103,9 @@ func BuildBottle(storageAddBody string) (*storage.Bottle, error) {
 	return v, nil
 }
 
-// BuildRemovePayload builds the payload for the storage remove endpoint from
-// CLI flags.
-func BuildRemovePayload(storageRemoveID string) (*storage.RemovePayload, error) {
+// BuildRemoveRemovePayload builds the payload for the storage remove endpoint
+// from CLI flags.
+func BuildRemoveRemovePayload(storageRemoveID string) (*storage.RemovePayload, error) {
 	var id string
 	{
 		id = storageRemoveID

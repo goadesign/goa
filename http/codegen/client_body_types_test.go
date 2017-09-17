@@ -56,41 +56,40 @@ func TestBodyTypeInit(t *testing.T) {
 	}
 }
 
-const BodyUserInnerDeclCode = `// MethodBodyUserInnerRequestBody is the type of the ServiceBodyUserInner
-// MethodBodyUserInner HTTP endpoint request body.
+const BodyUserInnerDeclCode = `// MethodBodyUserInnerRequestBody is the type of the "ServiceBodyUserInner"
+// service "MethodBodyUserInner" endpoint HTTP request body.
 type MethodBodyUserInnerRequestBody struct {
 	Inner *InnerTypeRequestBody ` + "`" + `form:"inner,omitempty" json:"inner,omitempty" xml:"inner,omitempty"` + "`" + `
 }
 `
 
 const BodyPathUserValidateDeclCode = `// MethodUserBodyPathValidateRequestBody is the type of the
-// ServiceBodyPathUserValidate MethodUserBodyPathValidate HTTP endpoint request
-// body.
+// "ServiceBodyPathUserValidate" service "MethodUserBodyPathValidate" endpoint
+// HTTP request body.
 type MethodUserBodyPathValidateRequestBody struct {
 	A string ` + "`" + `form:"a" json:"a" xml:"a"` + "`" + `
 }
 `
 
-const BodyUserInnerInitCode = `// NewMethodBodyUserInnerRequestBody builds the ServiceBodyUserInner service
-// MethodBodyUserInner endpoint request body from a payload.
+const BodyUserInnerInitCode = `// NewMethodBodyUserInnerRequestBody builds the HTTP request body from the
+// payload of the "MethodBodyUserInner" endpoint of the "ServiceBodyUserInner"
+// service.
 func NewMethodBodyUserInnerRequestBody(p *servicebodyuserinner.PayloadType) *MethodBodyUserInnerRequestBody {
 	body := &MethodBodyUserInnerRequestBody{}
 	if p.Inner != nil {
-		body.Inner = innerTypeToInnerTypeRequestBodyNoDefault(p.Inner)
+		body.Inner = marshalInnerTypeToInnerTypeRequestBody(p.Inner)
 	}
-
 	return body
 }
 `
 
-const BodyPathUserValidateInitCode = `// NewMethodUserBodyPathValidateRequestBody builds the
-// ServiceBodyPathUserValidate service MethodUserBodyPathValidate endpoint
-// request body from a payload.
+const BodyPathUserValidateInitCode = `// NewMethodUserBodyPathValidateRequestBody builds the HTTP request body from
+// the payload of the "MethodUserBodyPathValidate" endpoint of the
+// "ServiceBodyPathUserValidate" service.
 func NewMethodUserBodyPathValidateRequestBody(p *servicebodypathuservalidate.PayloadType) *MethodUserBodyPathValidateRequestBody {
 	body := &MethodUserBodyPathValidateRequestBody{
 		A: p.A,
 	}
-
 	return body
 }
 `

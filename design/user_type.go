@@ -48,6 +48,10 @@ func (u *UserTypeExpr) SetAttribute(att *AttributeExpr) {
 
 // Dup creates a deep copy of the user type given a deep copy of its attribute.
 func (u *UserTypeExpr) Dup(att *AttributeExpr) UserType {
+	if u == Empty {
+		// Don't dup Empty so that code may check against it.
+		return u
+	}
 	return &UserTypeExpr{
 		AttributeExpr: att,
 		TypeName:      u.TypeName,

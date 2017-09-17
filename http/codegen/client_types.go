@@ -47,11 +47,12 @@ func clientType(genpkg string, svc *httpdesign.ServiceExpr, seen map[string]stru
 		path  string
 		rdata = HTTPServices.Get(svc.Name())
 	)
-	path = filepath.Join(codegen.Gendir, "http", codegen.KebabCase(svc.Name()), "client", "types.go")
+	path = filepath.Join(codegen.Gendir, "http", codegen.SnakeCase(svc.Name()), "client", "types.go")
+	sd := HTTPServices.Get(svc.Name())
 	header := codegen.Header(svc.Name()+" HTTP client types", "client",
 		[]*codegen.ImportSpec{
 			{Path: "unicode/utf8"},
-			{Path: genpkg + "/" + codegen.KebabCase(svc.Name())},
+			{Path: genpkg + "/" + codegen.SnakeCase(svc.Name()), Name: sd.Service.PkgName},
 			{Path: "goa.design/goa", Name: "goa"},
 		},
 	)
@@ -183,7 +184,7 @@ func clientType(genpkg string, svc *httpdesign.ServiceExpr, seen map[string]stru
 
 // input: InitData
 const clientBodyInitT = `{{ comment .Description }}
-func {{ .Name }}({{ range .Args }}{{ .Name }} {{.TypeRef }}, {{ end }}) {{ .ReturnTypeRef }} {
+func {{ .Name }}({{ range .ClientArgs }}{{ .Name }} {{.TypeRef }}, {{ end }}) {{ .ReturnTypeRef }} {
 	{{ .ClientCode }}
 	return body
 }
@@ -191,7 +192,7 @@ func {{ .Name }}({{ range .Args }}{{ .Name }} {{.TypeRef }}, {{ end }}) {{ .Retu
 
 // input: InitData
 const clientTypeInitT = `{{ comment .Description }}
-func {{ .Name }}({{- range .Args }}{{ .Name }} {{ .TypeRef }}, {{ end }}) {{ .ReturnTypeRef }} {
+func {{ .Name }}({{- range .ClientArgs }}{{ .Name }} {{ .TypeRef }}, {{ end }}) {{ .ReturnTypeRef }} {
 	{{- if .ClientCode }}
 		{{ .ClientCode }}
 		{{- if .ReturnTypeAttribute }}
@@ -200,7 +201,7 @@ func {{ .Name }}({{- range .Args }}{{ .Name }} {{ .TypeRef }}, {{ end }}) {{ .Re
 		}
 		{{- end }}
 		{{- if .ReturnIsStruct }}
-			{{- range .Args }}
+			{{- range .ClientArgs }}
 				{{- if .FieldName -}}
 			v.{{ .FieldName }} = {{ if .Pointer }}&{{ end }}{{ .Name }}
 				{{ end }}
@@ -210,7 +211,7 @@ func {{ .Name }}({{- range .Args }}{{ .Name }} {{ .TypeRef }}, {{ end }}) {{ .Re
 	{{- else }}
 		{{- if .ReturnIsStruct }}
 			return &{{ .ReturnTypeName }}{
-			{{- range .Args }}
+			{{- range .ClientArgs }}
 				{{- if .FieldName }}
 				{{ .FieldName }}: {{ if .Pointer }}&{{ end }}{{ .Name }},
 				{{- end }}

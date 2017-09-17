@@ -13,13 +13,13 @@ import (
 	"net/http"
 	"net/url"
 
-	"goa.design/goa/examples/cellar/gen/storage"
+	storage "goa.design/goa/examples/cellar/gen/storage"
 	goahttp "goa.design/goa/http"
 )
 
 // BuildListRequest instantiates a HTTP request object with method and path set
-// to call the storage list endpoint.
-func (c *Client) BuildListRequest() (*http.Request, error) {
+// to call the "storage" service "list" endpoint
+func (c *Client) BuildListRequest(v interface{}) (*http.Request, error) {
 	u := &url.URL{Scheme: c.scheme, Host: c.host, Path: ListStoragePath()}
 	req, err := http.NewRequest("GET", u.String(), nil)
 	if err != nil {
@@ -66,14 +66,18 @@ func DecodeListResponse(decoder func(*http.Response) goahttp.Decoder, restoreBod
 }
 
 // BuildShowRequest instantiates a HTTP request object with method and path set
-// to call the storage show endpoint.
+// to call the "storage" service "show" endpoint
 func (c *Client) BuildShowRequest(v interface{}) (*http.Request, error) {
-	p, ok := v.(*storage.ShowPayload)
-	if !ok {
-		return nil, goahttp.ErrInvalidType("storage", "show", "*storage.ShowPayload", v)
+	var (
+		id string
+	)
+	{
+		p, ok := v.(*storage.ShowPayload)
+		if !ok {
+			return nil, goahttp.ErrInvalidType("storage", "show", "*storage.ShowPayload", v)
+		}
+		id = p.ID
 	}
-	var id string
-	id = p.ID
 	u := &url.URL{Scheme: c.scheme, Host: c.host, Path: ShowStoragePath(id)}
 	req, err := http.NewRequest("GET", u.String(), nil)
 	if err != nil {
@@ -131,8 +135,8 @@ func DecodeShowResponse(decoder func(*http.Response) goahttp.Decoder, restoreBod
 }
 
 // BuildAddRequest instantiates a HTTP request object with method and path set
-// to call the storage add endpoint.
-func (c *Client) BuildAddRequest() (*http.Request, error) {
+// to call the "storage" service "add" endpoint
+func (c *Client) BuildAddRequest(v interface{}) (*http.Request, error) {
 	u := &url.URL{Scheme: c.scheme, Host: c.host, Path: AddStoragePath()}
 	req, err := http.NewRequest("POST", u.String(), nil)
 	if err != nil {
@@ -195,14 +199,18 @@ func DecodeAddResponse(decoder func(*http.Response) goahttp.Decoder, restoreBody
 }
 
 // BuildRemoveRequest instantiates a HTTP request object with method and path
-// set to call the storage remove endpoint.
+// set to call the "storage" service "remove" endpoint
 func (c *Client) BuildRemoveRequest(v interface{}) (*http.Request, error) {
-	p, ok := v.(*storage.RemovePayload)
-	if !ok {
-		return nil, goahttp.ErrInvalidType("storage", "remove", "*storage.RemovePayload", v)
+	var (
+		id string
+	)
+	{
+		p, ok := v.(*storage.RemovePayload)
+		if !ok {
+			return nil, goahttp.ErrInvalidType("storage", "remove", "*storage.RemovePayload", v)
+		}
+		id = p.ID
 	}
-	var id string
-	id = p.ID
 	u := &url.URL{Scheme: c.scheme, Host: c.host, Path: RemoveStoragePath(id)}
 	req, err := http.NewRequest("DELETE", u.String(), nil)
 	if err != nil {
@@ -239,9 +247,9 @@ func DecodeRemoveResponse(decoder func(*http.Response) goahttp.Decoder, restoreB
 	}
 }
 
-// wineryResponseBodyToWinerySrcPtr builds a value of type *storage.Winery from
-// a value of type *WineryResponseBody.
-func wineryResponseBodyToWinerySrcPtr(v *WineryResponseBody) *storage.Winery {
+// unmarshalWineryResponseBodyToWinery builds a value of type *storage.Winery
+// from a value of type *WineryResponseBody.
+func unmarshalWineryResponseBodyToWinery(v *WineryResponseBody) *storage.Winery {
 	res := &storage.Winery{
 		Name:    *v.Name,
 		Region:  *v.Region,
@@ -252,9 +260,9 @@ func wineryResponseBodyToWinerySrcPtr(v *WineryResponseBody) *storage.Winery {
 	return res
 }
 
-// componentResponseBodyToComponentSrcPtr builds a value of type
+// unmarshalComponentResponseBodyToComponent builds a value of type
 // *storage.Component from a value of type *ComponentResponseBody.
-func componentResponseBodyToComponentSrcPtr(v *ComponentResponseBody) *storage.Component {
+func unmarshalComponentResponseBodyToComponent(v *ComponentResponseBody) *storage.Component {
 	res := &storage.Component{
 		Varietal:   *v.Varietal,
 		Percentage: v.Percentage,
@@ -263,9 +271,9 @@ func componentResponseBodyToComponentSrcPtr(v *ComponentResponseBody) *storage.C
 	return res
 }
 
-// wineryToWinerySrcPtr builds a value of type *storage.Winery from a value of
-// type *Winery.
-func wineryToWinerySrcPtr(v *Winery) *storage.Winery {
+// unmarshalWineryToWinery builds a value of type *storage.Winery from a value
+// of type *Winery.
+func unmarshalWineryToWinery(v *Winery) *storage.Winery {
 	res := &storage.Winery{
 		Name:    *v.Name,
 		Region:  *v.Region,
@@ -276,9 +284,9 @@ func wineryToWinerySrcPtr(v *Winery) *storage.Winery {
 	return res
 }
 
-// componentToComponentSrcPtr builds a value of type *storage.Component from a
-// value of type *Component.
-func componentToComponentSrcPtr(v *Component) *storage.Component {
+// unmarshalComponentToComponent builds a value of type *storage.Component from
+// a value of type *Component.
+func unmarshalComponentToComponent(v *Component) *storage.Component {
 	res := &storage.Component{
 		Varietal:   *v.Varietal,
 		Percentage: v.Percentage,
@@ -287,9 +295,9 @@ func componentToComponentSrcPtr(v *Component) *storage.Component {
 	return res
 }
 
-// wineryToWineryRequestBodyNoDefault builds a value of type *WineryRequestBody
+// marshalWineryToWineryRequestBody builds a value of type *WineryRequestBody
 // from a value of type *storage.Winery.
-func wineryToWineryRequestBodyNoDefault(v *storage.Winery) *WineryRequestBody {
+func marshalWineryToWineryRequestBody(v *storage.Winery) *WineryRequestBody {
 	res := &WineryRequestBody{
 		Name:    v.Name,
 		Region:  v.Region,
@@ -300,9 +308,9 @@ func wineryToWineryRequestBodyNoDefault(v *storage.Winery) *WineryRequestBody {
 	return res
 }
 
-// componentToComponentRequestBodyNoDefault builds a value of type
+// marshalComponentToComponentRequestBody builds a value of type
 // *ComponentRequestBody from a value of type *storage.Component.
-func componentToComponentRequestBodyNoDefault(v *storage.Component) *ComponentRequestBody {
+func marshalComponentToComponentRequestBody(v *storage.Component) *ComponentRequestBody {
 	res := &ComponentRequestBody{
 		Varietal:   v.Varietal,
 		Percentage: v.Percentage,
@@ -311,9 +319,9 @@ func componentToComponentRequestBodyNoDefault(v *storage.Component) *ComponentRe
 	return res
 }
 
-// wineryRequestBodyToWinery builds a value of type *storage.Winery from a
-// value of type *WineryRequestBody.
-func wineryRequestBodyToWinery(v *WineryRequestBody) *storage.Winery {
+// marshalWineryRequestBodyToWinery builds a value of type *storage.Winery from
+// a value of type *WineryRequestBody.
+func marshalWineryRequestBodyToWinery(v *WineryRequestBody) *storage.Winery {
 	res := &storage.Winery{
 		Name:    v.Name,
 		Region:  v.Region,
@@ -324,9 +332,9 @@ func wineryRequestBodyToWinery(v *WineryRequestBody) *storage.Winery {
 	return res
 }
 
-// componentRequestBodyToComponent builds a value of type *storage.Component
-// from a value of type *ComponentRequestBody.
-func componentRequestBodyToComponent(v *ComponentRequestBody) *storage.Component {
+// marshalComponentRequestBodyToComponent builds a value of type
+// *storage.Component from a value of type *ComponentRequestBody.
+func marshalComponentRequestBodyToComponent(v *ComponentRequestBody) *storage.Component {
 	res := &storage.Component{
 		Varietal:   v.Varietal,
 		Percentage: v.Percentage,

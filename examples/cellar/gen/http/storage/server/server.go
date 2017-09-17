@@ -12,7 +12,7 @@ import (
 	"net/http"
 
 	goa "goa.design/goa"
-	"goa.design/goa/examples/cellar/gen/storage"
+	storage "goa.design/goa/examples/cellar/gen/storage"
 	goahttp "goa.design/goa/http"
 )
 

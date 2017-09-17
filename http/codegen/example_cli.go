@@ -9,7 +9,7 @@ import (
 
 // ExampleCLI returns an example client tool main implementation.
 func ExampleCLI(genpkg string, root *httpdesign.RootExpr) *codegen.File {
-	path := filepath.Join("cmd", codegen.KebabCase(root.Design.API.Name)+"cli", "main.go")
+	path := filepath.Join("cmd", codegen.SnakeCase(root.Design.API.Name)+"cli", "main.go")
 	specs := []*codegen.ImportSpec{
 		{Path: "context"},
 		{Path: "encoding/json"},

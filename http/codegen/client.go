@@ -22,7 +22,7 @@ func ClientFiles(genpkg string, root *httpdesign.RootExpr) []*codegen.File {
 
 // client returns the client HTTP transport file
 func client(genpkg string, svc *httpdesign.ServiceExpr) *codegen.File {
-	path := filepath.Join(codegen.Gendir, "http", codegen.KebabCase(svc.Name()), "client", "client.go")
+	path := filepath.Join(codegen.Gendir, "http", codegen.SnakeCase(svc.Name()), "client", "client.go")
 	data := HTTPServices.Get(svc.Name())
 	title := fmt.Sprintf("%s client HTTP transport", svc.Name())
 	sections := []*codegen.SectionTemplate{
@@ -35,7 +35,7 @@ func client(genpkg string, svc *httpdesign.ServiceExpr) *codegen.File {
 			{Path: "strings"},
 			{Path: "goa.design/goa", Name: "goa"},
 			{Path: "goa.design/goa/http", Name: "goahttp"},
-			{Path: genpkg + "/" + codegen.KebabCase(svc.Name())},
+			{Path: genpkg + "/" + codegen.SnakeCase(svc.Name()), Name: data.Service.PkgName},
 		}),
 		{Name: "client-struct", Source: clientStructT, Data: data},
 		{Name: "client-init", Source: clientInitT, Data: data},
@@ -54,7 +54,7 @@ func client(genpkg string, svc *httpdesign.ServiceExpr) *codegen.File {
 // clientEncodeDecode returns the file containing the HTTP client encoding and
 // decoding logic.
 func clientEncodeDecode(genpkg string, svc *httpdesign.ServiceExpr) *codegen.File {
-	path := filepath.Join(codegen.Gendir, "http", codegen.KebabCase(svc.Name()), "client", "encode_decode.go")
+	path := filepath.Join(codegen.Gendir, "http", codegen.SnakeCase(svc.Name()), "client", "encode_decode.go")
 	data := HTTPServices.Get(svc.Name())
 	title := fmt.Sprintf("%s HTTP client encoders and decoders", svc.Name())
 	sections := []*codegen.SectionTemplate{
@@ -69,7 +69,7 @@ func clientEncodeDecode(genpkg string, svc *httpdesign.ServiceExpr) *codegen.Fil
 			{Path: "strings"},
 			{Path: "goa.design/goa", Name: "goa"},
 			{Path: "goa.design/goa/http", Name: "goahttp"},
-			{Path: genpkg + "/" + codegen.KebabCase(svc.Name())},
+			{Path: genpkg + "/" + codegen.SnakeCase(svc.Name()), Name: data.Service.PkgName},
 		}),
 	}
 
@@ -156,7 +156,7 @@ func (c *{{ .ClientStruct }}) {{ .EndpointInit }}() goa.Endpoint {
 		decodeResponse = {{ .ResponseDecoder }}(c.decoder, c.RestoreResponseBody)
 	)
 	return func(ctx context.Context, v interface{}) (interface{}, error) {
-		req, err := c.{{ .RequestBuilder }}({{ if .HasBuilderParam }}v{{ end }})
+		req, err := c.{{ .RequestInit.Name }}({{ range .RequestInit.ClientArgs }}{{ .Ref }}{{ end }})
 		if err != nil {
 			return nil, err
 		}
@@ -178,33 +178,9 @@ func (c *{{ .ClientStruct }}) {{ .EndpointInit }}() goa.Endpoint {
 `
 
 // input: EndpointData
-const requestBuilderT = `{{ printf "%s instantiates a HTTP request object with method and path set to call the %s %s endpoint." .RequestBuilder .ServiceName .Method.Name | comment }}
-func (c *{{ .ClientStruct }}) {{ .RequestBuilder }}({{ if .HasBuilderParam }}v interface{}{{ end }}) (*http.Request, error) {
-	{{- with (index .Routes 0) }}
-		{{- if $.Payload.Ref }}
-	p, ok := v.({{ $.Payload.Ref }})
-	if !ok {
-		return nil, goahttp.ErrInvalidType("{{ $.ServiceName }}", "{{ $.Method.Name }}", "{{ $.Payload.Ref }}", v)
-	}
-		{{- end }}
-		{{- range $i, $arg := .PathInit.Args }}
-	var {{ .Name }} {{ .TypeRef }}
-			{{- if .Pointer }}
-	if p.{{ .FieldName }} != nil {
-			{{- end }}
-		{{- .Name }} = {{ if .Pointer }}*{{ end }}p.{{ .FieldName }}
-			{{- if .Pointer }}
-	}
-			{{- end }}
-		{{- end }}
-	u := &url.URL{Scheme: c.scheme, Host: c.host, Path: {{ .PathInit.Name }}({{ range .PathInit.Args }}{{ .Ref }}, {{ end }})}
-	req, err := http.NewRequest("{{ .Verb }}", u.String(), nil)
-	if err != nil {
-		return nil, goahttp.ErrInvalidURL("{{ $.ServiceName }}", "{{ $.Method.Name }}", u.String(), err)
-	}
-	{{- end }}
-
-	return req, nil
+const requestBuilderT = `{{ comment .RequestInit.Description }}
+func (c *{{ .ClientStruct }}) {{ .RequestInit.Name }}({{ range .RequestInit.ClientArgs }}{{ .Name }} {{ .TypeRef }}{{ end }}) (*http.Request, error) {
+	{{- .RequestInit.ClientCode }}
 }
 `
 
@@ -217,11 +193,13 @@ func {{ .RequestEncoder }}(encoder func(*http.Request) goahttp.Encoder) func(*ht
 			return goahttp.ErrInvalidType("{{ .ServiceName }}", "{{ .Method.Name }}", "{{ .Payload.Ref }}", v)
 		}
 	{{- range .Payload.Request.Headers }}
+		{{- if .FieldName }}
 		req.Header.Set("{{ .Name }}", p.{{ .FieldName }})
+		{{- end }}
 	{{- end }}
 	{{- if .Payload.Request.ClientBody }}
 		{{- if .Payload.Request.ClientBody.Init }}
-		body := {{ .Payload.Request.ClientBody.Init.Name }}({{ range .Payload.Request.ClientBody.Init.Args }}{{ if .Pointer }}&{{ end }}{{ .Name }}, {{ end }})
+		body := {{ .Payload.Request.ClientBody.Init.Name }}({{ range .Payload.Request.ClientBody.Init.ClientArgs }}{{ if .Pointer }}&{{ end }}{{ .Name }}, {{ end }})
 		{{- else }}
 		body := p
 		{{- end }}
@@ -254,7 +232,7 @@ func {{ .ResponseDecoder }}(decoder func(*http.Response) goahttp.Decoder, restor
 	{{- range .Result.Responses }}
 ` + singleResponseT + `
 		{{- if .ResultInit }}
-			return {{ .ResultInit.Name }}({{ range .ResultInit.Args }}{{ .Ref }},{{ end }}), nil
+			return {{ .ResultInit.Name }}({{ range .ResultInit.ClientArgs }}{{ .Ref }},{{ end }}), nil
 		{{- else if .ClientBody }}
 			return body, nil
 		{{- else }}
@@ -265,7 +243,7 @@ func {{ .ResponseDecoder }}(decoder func(*http.Response) goahttp.Decoder, restor
 		{{- with .Response }}
 ` + singleResponseT + `
 		{{- if .ResultInit }}
-			return {{ .ResultInit.Name }}({{ range .ResultInit.Args }}{{ .Ref }},{{ end }}), nil
+			return {{ .ResultInit.Name }}({{ range .ResultInit.ClientArgs }}{{ .Ref }},{{ end }}), nil
 		{{- else if .ClientBody }}
 			return body, nil
 		{{- else }}

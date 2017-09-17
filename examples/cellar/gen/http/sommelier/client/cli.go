@@ -11,12 +11,12 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"goa.design/goa/examples/cellar/gen/sommelier"
+	sommelier "goa.design/goa/examples/cellar/gen/sommelier"
 )
 
-// BuildCriteria builds the payload for the sommelier pick endpoint from CLI
-// flags.
-func BuildCriteria(sommelierPickBody string) (*sommelier.Criteria, error) {
+// BuildPickCriteria builds the payload for the sommelier pick endpoint from
+// CLI flags.
+func BuildPickCriteria(sommelierPickBody string) (*sommelier.Criteria, error) {
 	var body PickRequestBody
 	{
 		err := json.Unmarshal([]byte(sommelierPickBody), &body)

@@ -297,7 +297,7 @@ func paramsFromHeaders(endpoint *httpdesign.EndpointExpr) []*Parameter {
 
 	for _, n := range *design.AsObject(merged.Type) {
 		header := n.Attribute
-		required := merged.IsRequired(n.Name)
+		required := merged.IsRequiredNoDefault(n.Name)
 		p := paramFor(header, n.Name, "header", required)
 		params = append(params, p)
 		return nil
