@@ -276,6 +276,9 @@ func {{ .RequestDecoder }}(mux goahttp.Muxer, decoder func(*http.Request) goahtt
 		}
 		{{- if .Payload.Request.ServerBody.ValidateRef }}
 		{{ .Payload.Request.ServerBody.ValidateRef }}
+		if err != nil {
+			return nil, err
+		}
 		{{- end }}
 {{ end }}
 

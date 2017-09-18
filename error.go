@@ -221,7 +221,7 @@ func asError(err error) Error {
 
 // Error returns the error occurrence details.
 func (e *serviceError) Error() string {
-	return fmt.Sprintf("[%s] %d: %s", e.id, e.status, e.message)
+	return e.message
 }
 
 func (e *serviceError) Status() ErrorStatus { return e.status }

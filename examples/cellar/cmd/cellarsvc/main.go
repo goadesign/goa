@@ -32,9 +32,8 @@ func main() {
 	flag.Parse()
 
 	// Setup logger and goa log adapter. Replace logger with your own using
-	// your log package of choice. The goa.design/logging package defines
-	// log adapters for common log packages. Writing adapters for other log
-	// packages is very simple as well.
+	// your log package of choice. The goa.design/middleware/logging/...
+	// packages define log adapters for common log packages.
 	var (
 		logger  *log.Logger
 		adapter logging.Adapter

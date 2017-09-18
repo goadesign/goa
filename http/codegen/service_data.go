@@ -132,8 +132,13 @@ type (
 	// ResultData contains the result information required to generate the
 	// transport decode (client) and encode (server) code.
 	ResultData struct {
+		// Name is the name of the result type.
+		Name string
 		// Ref is the reference to the result type.
 		Ref string
+		// IsStruct is true if the result type is a user type defining
+		// an object.
+		IsStruct bool
 		// Inits contains the data required to render the result
 		// constructors if any.
 		Inits []*InitData
@@ -860,11 +865,12 @@ func buildResultData(svc *service.Data, s *httpdesign.ServiceExpr, e *httpdesign
 	var (
 		result = e.MethodExpr.Result
 
-		ref       string
+		name, ref string
 		responses []*ResponseData
 	)
 	{
 		if result.Type != design.Empty {
+			name = svc.Scope.GoFullTypeName(result, svc.PkgName)
 			ref = svc.Scope.GoFullTypeRef(result, svc.PkgName)
 		}
 		notag := -1
@@ -1025,6 +1031,8 @@ func buildResultData(svc *service.Data, s *httpdesign.ServiceExpr, e *httpdesign
 	}
 
 	return &ResultData{
+		IsStruct:  design.IsObject(result.Type),
+		Name:      name,
 		Ref:       ref,
 		Responses: responses,
 	}
@@ -1209,11 +1217,11 @@ func buildBodyType(svc *service.Data, s *httpdesign.ServiceExpr, e *httpdesign.E
 			}
 			desc = fmt.Sprintf("%s is the type of the %q service %q endpoint HTTP %s body.",
 				varname, svc.Name, e.Name(), ctx)
-			if req {
-				// only validate incoming request bodies
+			if !marshaled {
+				// validate unmarshaled data
 				validateDef = codegen.RecursiveValidationCode(body, true, !marshaled, marshaled, "body")
 				if validateDef != "" {
-					validateRef = "err = goa.MergeErrors(err, body.Validate())"
+					validateRef = "err = body.Validate()"
 				}
 			}
 		} else {
@@ -1466,7 +1474,7 @@ func attributeTypeData(ut design.UserType, req, ptr, server bool, scope *codegen
 		def = goTypeDef(scope, ut.Attribute(), ptr, false)
 		validate = codegen.RecursiveValidationCode(ut.Attribute(), true, ptr, req && !server || !req && server, "body")
 		if validate != "" {
-			validateRef = "err = goa.MergeErrors(err, v.Validate())"
+			validateRef = "err = v.Validate()"
 		}
 	}
 	return &TypeData{

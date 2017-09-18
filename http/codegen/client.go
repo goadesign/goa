@@ -271,6 +271,9 @@ const singleResponseT = `case {{ .StatusCode }}:
 			}
 		{{- if .ClientBody.ValidateRef }}
 			{{ .ClientBody.ValidateRef }}
+			if err != nil {
+				return nil, fmt.Errorf("invalid response: %s", err)
+			}
 		{{- end }}
 	{{ end }}
 
@@ -318,7 +321,7 @@ const singleResponseT = `case {{ .StatusCode }}:
 		{{- else if .Slice }}
 			{{ .VarName }}Raw := resp.Header["{{ .CanonicalName }}"]
 				{{ if .Required }} if {{ .VarName }}Raw == nil {
-				return nil, goa.MissingFieldError("{{ .Name }}", "header")
+				return nil, fmt.Errorf("invalid response: %s", goa.MissingFieldError("{{ .Name }}", "header"))
 			}
 			{{- else if .DefaultValue }}
 			if {{ .VarName }}Raw == nil {
@@ -339,7 +342,7 @@ const singleResponseT = `case {{ .StatusCode }}:
 			{{ .VarName }}Raw := resp.Header.Get("{{ .Name }}")
 			{{- if .Required }}
 			if {{ .VarName }}Raw == "" {
-				return nil, goa.MissingFieldError("{{ .Name }}", "header")
+				return nil, fmt.Errorf("invalid response: %s", goa.MissingFieldError("{{ .Name }}", "header"))
 			}
 			{{- else if .DefaultValue }}
 			if {{ .VarName }}Raw == "" {
@@ -364,7 +367,7 @@ const singleResponseT = `case {{ .StatusCode }}:
 
 	{{- if .MustValidate }}
 			if err != nil {
-				return nil, err
+				return nil, fmt.Errorf("invalid response: %s", err)
 			}
 	{{- end }}
 `
