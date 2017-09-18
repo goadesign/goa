@@ -9,9 +9,9 @@ func DecodeMethodQueryBoolRequest(mux goahttp.Muxer, decoder func(*http.Request)
 		)
 		qRaw := r.URL.Query().Get("q")
 		if qRaw != "" {
-			v, err := strconv.ParseBool(qRaw)
-			if err != nil {
-				return nil, goa.InvalidFieldTypeError("q", qRaw, "boolean")
+			v, err2 := strconv.ParseBool(qRaw)
+			if err2 != nil {
+				err = goa.MergeErrors(err, goa.InvalidFieldTypeError("q", qRaw, "boolean"))
 			}
 			q = &v
 		}
@@ -31,11 +31,11 @@ func DecodeMethodQueryBoolValidateRequest(mux goahttp.Muxer, decoder func(*http.
 		)
 		qRaw := r.URL.Query().Get("q")
 		if qRaw == "" {
-			return nil, goa.MissingFieldError("q", "query string")
+			err = goa.MergeErrors(err, goa.MissingFieldError("q", "query string"))
 		}
-		v, err := strconv.ParseBool(qRaw)
-		if err != nil {
-			return nil, goa.InvalidFieldTypeError("q", qRaw, "boolean")
+		v, err2 := strconv.ParseBool(qRaw)
+		if err2 != nil {
+			err = goa.MergeErrors(err, goa.InvalidFieldTypeError("q", qRaw, "boolean"))
 		}
 		q = v
 		if !(q == true) {
@@ -59,9 +59,9 @@ func DecodeMethodQueryIntRequest(mux goahttp.Muxer, decoder func(*http.Request) 
 		)
 		qRaw := r.URL.Query().Get("q")
 		if qRaw != "" {
-			v, err := strconv.ParseInt(qRaw, 10, strconv.IntSize)
-			if err != nil {
-				return nil, goa.InvalidFieldTypeError("q", qRaw, "integer")
+			v, err2 := strconv.ParseInt(qRaw, 10, strconv.IntSize)
+			if err2 != nil {
+				err = goa.MergeErrors(err, goa.InvalidFieldTypeError("q", qRaw, "integer"))
 			}
 			pv := int(v)
 			q = &pv
@@ -82,11 +82,11 @@ func DecodeMethodQueryIntValidateRequest(mux goahttp.Muxer, decoder func(*http.R
 		)
 		qRaw := r.URL.Query().Get("q")
 		if qRaw == "" {
-			return nil, goa.MissingFieldError("q", "query string")
+			err = goa.MergeErrors(err, goa.MissingFieldError("q", "query string"))
 		}
-		v, err := strconv.ParseInt(qRaw, 10, strconv.IntSize)
-		if err != nil {
-			return nil, goa.InvalidFieldTypeError("q", qRaw, "integer")
+		v, err2 := strconv.ParseInt(qRaw, 10, strconv.IntSize)
+		if err2 != nil {
+			err = goa.MergeErrors(err, goa.InvalidFieldTypeError("q", qRaw, "integer"))
 		}
 		q = int(v)
 		if q < 1 {
@@ -110,9 +110,9 @@ func DecodeMethodQueryInt32Request(mux goahttp.Muxer, decoder func(*http.Request
 		)
 		qRaw := r.URL.Query().Get("q")
 		if qRaw != "" {
-			v, err := strconv.ParseInt(qRaw, 10, 32)
-			if err != nil {
-				return nil, goa.InvalidFieldTypeError("q", qRaw, "integer")
+			v, err2 := strconv.ParseInt(qRaw, 10, 32)
+			if err2 != nil {
+				err = goa.MergeErrors(err, goa.InvalidFieldTypeError("q", qRaw, "integer"))
 			}
 			pv := int32(v)
 			q = &pv
@@ -133,11 +133,11 @@ func DecodeMethodQueryInt32ValidateRequest(mux goahttp.Muxer, decoder func(*http
 		)
 		qRaw := r.URL.Query().Get("q")
 		if qRaw == "" {
-			return nil, goa.MissingFieldError("q", "query string")
+			err = goa.MergeErrors(err, goa.MissingFieldError("q", "query string"))
 		}
-		v, err := strconv.ParseInt(qRaw, 10, 32)
-		if err != nil {
-			return nil, goa.InvalidFieldTypeError("q", qRaw, "integer")
+		v, err2 := strconv.ParseInt(qRaw, 10, 32)
+		if err2 != nil {
+			err = goa.MergeErrors(err, goa.InvalidFieldTypeError("q", qRaw, "integer"))
 		}
 		q = int32(v)
 		if q < 1 {
@@ -161,9 +161,9 @@ func DecodeMethodQueryInt64Request(mux goahttp.Muxer, decoder func(*http.Request
 		)
 		qRaw := r.URL.Query().Get("q")
 		if qRaw != "" {
-			v, err := strconv.ParseInt(qRaw, 10, 64)
-			if err != nil {
-				return nil, goa.InvalidFieldTypeError("q", qRaw, "integer")
+			v, err2 := strconv.ParseInt(qRaw, 10, 64)
+			if err2 != nil {
+				err = goa.MergeErrors(err, goa.InvalidFieldTypeError("q", qRaw, "integer"))
 			}
 			q = &v
 		}
@@ -183,11 +183,11 @@ func DecodeMethodQueryInt64ValidateRequest(mux goahttp.Muxer, decoder func(*http
 		)
 		qRaw := r.URL.Query().Get("q")
 		if qRaw == "" {
-			return nil, goa.MissingFieldError("q", "query string")
+			err = goa.MergeErrors(err, goa.MissingFieldError("q", "query string"))
 		}
-		v, err := strconv.ParseInt(qRaw, 10, 64)
-		if err != nil {
-			return nil, goa.InvalidFieldTypeError("q", qRaw, "integer")
+		v, err2 := strconv.ParseInt(qRaw, 10, 64)
+		if err2 != nil {
+			err = goa.MergeErrors(err, goa.InvalidFieldTypeError("q", qRaw, "integer"))
 		}
 		q = v
 		if q < 1 {
@@ -211,9 +211,9 @@ func DecodeMethodQueryUIntRequest(mux goahttp.Muxer, decoder func(*http.Request)
 		)
 		qRaw := r.URL.Query().Get("q")
 		if qRaw != "" {
-			v, err := strconv.ParseUint(qRaw, 10, strconv.IntSize)
-			if err != nil {
-				return nil, goa.InvalidFieldTypeError("q", qRaw, "unsigned integer")
+			v, err2 := strconv.ParseUint(qRaw, 10, strconv.IntSize)
+			if err2 != nil {
+				err = goa.MergeErrors(err, goa.InvalidFieldTypeError("q", qRaw, "unsigned integer"))
 			}
 			pv := uint(v)
 			q = &pv
@@ -234,11 +234,11 @@ func DecodeMethodQueryUIntValidateRequest(mux goahttp.Muxer, decoder func(*http.
 		)
 		qRaw := r.URL.Query().Get("q")
 		if qRaw == "" {
-			return nil, goa.MissingFieldError("q", "query string")
+			err = goa.MergeErrors(err, goa.MissingFieldError("q", "query string"))
 		}
-		v, err := strconv.ParseUint(qRaw, 10, strconv.IntSize)
-		if err != nil {
-			return nil, goa.InvalidFieldTypeError("q", qRaw, "unsigned integer")
+		v, err2 := strconv.ParseUint(qRaw, 10, strconv.IntSize)
+		if err2 != nil {
+			err = goa.MergeErrors(err, goa.InvalidFieldTypeError("q", qRaw, "unsigned integer"))
 		}
 		q = uint(v)
 		if q < 1 {
@@ -262,9 +262,9 @@ func DecodeMethodQueryUInt32Request(mux goahttp.Muxer, decoder func(*http.Reques
 		)
 		qRaw := r.URL.Query().Get("q")
 		if qRaw != "" {
-			v, err := strconv.ParseUint(qRaw, 10, 32)
-			if err != nil {
-				return nil, goa.InvalidFieldTypeError("q", qRaw, "unsigned integer")
+			v, err2 := strconv.ParseUint(qRaw, 10, 32)
+			if err2 != nil {
+				err = goa.MergeErrors(err, goa.InvalidFieldTypeError("q", qRaw, "unsigned integer"))
 			}
 			pv := uint32(v)
 			q = &pv
@@ -285,11 +285,11 @@ func DecodeMethodQueryUInt32ValidateRequest(mux goahttp.Muxer, decoder func(*htt
 		)
 		qRaw := r.URL.Query().Get("q")
 		if qRaw == "" {
-			return nil, goa.MissingFieldError("q", "query string")
+			err = goa.MergeErrors(err, goa.MissingFieldError("q", "query string"))
 		}
-		v, err := strconv.ParseUint(qRaw, 10, 32)
-		if err != nil {
-			return nil, goa.InvalidFieldTypeError("q", qRaw, "unsigned integer")
+		v, err2 := strconv.ParseUint(qRaw, 10, 32)
+		if err2 != nil {
+			err = goa.MergeErrors(err, goa.InvalidFieldTypeError("q", qRaw, "unsigned integer"))
 		}
 		q = uint32(v)
 		if q < 1 {
@@ -313,9 +313,9 @@ func DecodeMethodQueryUInt64Request(mux goahttp.Muxer, decoder func(*http.Reques
 		)
 		qRaw := r.URL.Query().Get("q")
 		if qRaw != "" {
-			v, err := strconv.ParseUint(qRaw, 10, 64)
-			if err != nil {
-				return nil, goa.InvalidFieldTypeError("q", qRaw, "unsigned integer")
+			v, err2 := strconv.ParseUint(qRaw, 10, 64)
+			if err2 != nil {
+				err = goa.MergeErrors(err, goa.InvalidFieldTypeError("q", qRaw, "unsigned integer"))
 			}
 			q = &v
 		}
@@ -335,11 +335,11 @@ func DecodeMethodQueryUInt64ValidateRequest(mux goahttp.Muxer, decoder func(*htt
 		)
 		qRaw := r.URL.Query().Get("q")
 		if qRaw == "" {
-			return nil, goa.MissingFieldError("q", "query string")
+			err = goa.MergeErrors(err, goa.MissingFieldError("q", "query string"))
 		}
-		v, err := strconv.ParseUint(qRaw, 10, 64)
-		if err != nil {
-			return nil, goa.InvalidFieldTypeError("q", qRaw, "unsigned integer")
+		v, err2 := strconv.ParseUint(qRaw, 10, 64)
+		if err2 != nil {
+			err = goa.MergeErrors(err, goa.InvalidFieldTypeError("q", qRaw, "unsigned integer"))
 		}
 		q = v
 		if q < 1 {
@@ -363,9 +363,9 @@ func DecodeMethodQueryFloat32Request(mux goahttp.Muxer, decoder func(*http.Reque
 		)
 		qRaw := r.URL.Query().Get("q")
 		if qRaw != "" {
-			v, err := strconv.ParseFloat(qRaw, 32)
-			if err != nil {
-				return nil, goa.InvalidFieldTypeError("q", qRaw, "float")
+			v, err2 := strconv.ParseFloat(qRaw, 32)
+			if err2 != nil {
+				err = goa.MergeErrors(err, goa.InvalidFieldTypeError("q", qRaw, "float"))
 			}
 			pv := float32(v)
 			q = &pv
@@ -386,11 +386,11 @@ func DecodeMethodQueryFloat32ValidateRequest(mux goahttp.Muxer, decoder func(*ht
 		)
 		qRaw := r.URL.Query().Get("q")
 		if qRaw == "" {
-			return nil, goa.MissingFieldError("q", "query string")
+			err = goa.MergeErrors(err, goa.MissingFieldError("q", "query string"))
 		}
-		v, err := strconv.ParseFloat(qRaw, 32)
-		if err != nil {
-			return nil, goa.InvalidFieldTypeError("q", qRaw, "float")
+		v, err2 := strconv.ParseFloat(qRaw, 32)
+		if err2 != nil {
+			err = goa.MergeErrors(err, goa.InvalidFieldTypeError("q", qRaw, "float"))
 		}
 		q = float32(v)
 		if q < 1 {
@@ -414,9 +414,9 @@ func DecodeMethodQueryFloat64Request(mux goahttp.Muxer, decoder func(*http.Reque
 		)
 		qRaw := r.URL.Query().Get("q")
 		if qRaw != "" {
-			v, err := strconv.ParseFloat(qRaw, 64)
-			if err != nil {
-				return nil, goa.InvalidFieldTypeError("q", qRaw, "float")
+			v, err2 := strconv.ParseFloat(qRaw, 64)
+			if err2 != nil {
+				err = goa.MergeErrors(err, goa.InvalidFieldTypeError("q", qRaw, "float"))
 			}
 			q = &v
 		}
@@ -436,11 +436,11 @@ func DecodeMethodQueryFloat64ValidateRequest(mux goahttp.Muxer, decoder func(*ht
 		)
 		qRaw := r.URL.Query().Get("q")
 		if qRaw == "" {
-			return nil, goa.MissingFieldError("q", "query string")
+			err = goa.MergeErrors(err, goa.MissingFieldError("q", "query string"))
 		}
-		v, err := strconv.ParseFloat(qRaw, 64)
-		if err != nil {
-			return nil, goa.InvalidFieldTypeError("q", qRaw, "float")
+		v, err2 := strconv.ParseFloat(qRaw, 64)
+		if err2 != nil {
+			err = goa.MergeErrors(err, goa.InvalidFieldTypeError("q", qRaw, "float"))
 		}
 		q = v
 		if q < 1 {
@@ -523,7 +523,7 @@ func DecodeMethodQueryBytesValidateRequest(mux goahttp.Muxer, decoder func(*http
 		)
 		qRaw := r.URL.Query().Get("q")
 		if qRaw == "" {
-			return nil, goa.MissingFieldError("q", "query string")
+			err = goa.MergeErrors(err, goa.MissingFieldError("q", "query string"))
 		}
 		q = []byte(qRaw)
 		if len(q) < 1 {
@@ -590,9 +590,9 @@ func DecodeMethodQueryArrayBoolRequest(mux goahttp.Muxer, decoder func(*http.Req
 		if qRaw != nil {
 			q = make([]bool, len(qRaw))
 			for i, rv := range qRaw {
-				v, err := strconv.ParseBool(rv)
-				if err != nil {
-					return nil, goa.InvalidFieldTypeError("q", qRaw, "array of booleans")
+				v, err2 := strconv.ParseBool(rv)
+				if err2 != nil {
+					err = goa.MergeErrors(err, goa.InvalidFieldTypeError("q", qRaw, "array of booleans"))
 				}
 				q[i] = v
 			}
@@ -614,13 +614,13 @@ func DecodeMethodQueryArrayBoolValidateRequest(mux goahttp.Muxer, decoder func(*
 		)
 		qRaw := r.URL.Query()["q"]
 		if qRaw == nil {
-			return nil, goa.MissingFieldError("q", "query string")
+			return goa.MergeErrors(err, goa.MissingFieldError("q", "query string"))
 		}
 		q = make([]bool, len(qRaw))
 		for i, rv := range qRaw {
-			v, err := strconv.ParseBool(rv)
-			if err != nil {
-				return nil, goa.InvalidFieldTypeError("q", qRaw, "array of booleans")
+			v, err2 := strconv.ParseBool(rv)
+			if err2 != nil {
+				err = goa.MergeErrors(err, goa.InvalidFieldTypeError("q", qRaw, "array of booleans"))
 			}
 			q[i] = v
 		}
@@ -652,9 +652,9 @@ func DecodeMethodQueryArrayIntRequest(mux goahttp.Muxer, decoder func(*http.Requ
 		if qRaw != nil {
 			q = make([]int, len(qRaw))
 			for i, rv := range qRaw {
-				v, err := strconv.ParseInt(rv, 10, strconv.IntSize)
-				if err != nil {
-					return nil, goa.InvalidFieldTypeError("q", qRaw, "array of integers")
+				v, err2 := strconv.ParseInt(rv, 10, strconv.IntSize)
+				if err2 != nil {
+					err = goa.MergeErrors(err, goa.InvalidFieldTypeError("q", qRaw, "array of integers"))
 				}
 				q[i] = int(v)
 			}
@@ -675,13 +675,13 @@ func DecodeMethodQueryArrayIntValidateRequest(mux goahttp.Muxer, decoder func(*h
 		)
 		qRaw := r.URL.Query()["q"]
 		if qRaw == nil {
-			return nil, goa.MissingFieldError("q", "query string")
+			return goa.MergeErrors(err, goa.MissingFieldError("q", "query string"))
 		}
 		q = make([]int, len(qRaw))
 		for i, rv := range qRaw {
-			v, err := strconv.ParseInt(rv, 10, strconv.IntSize)
-			if err != nil {
-				return nil, goa.InvalidFieldTypeError("q", qRaw, "array of integers")
+			v, err2 := strconv.ParseInt(rv, 10, strconv.IntSize)
+			if err2 != nil {
+				err = goa.MergeErrors(err, goa.InvalidFieldTypeError("q", qRaw, "array of integers"))
 			}
 			q[i] = int(v)
 		}
@@ -713,9 +713,9 @@ func DecodeMethodQueryArrayInt32Request(mux goahttp.Muxer, decoder func(*http.Re
 		if qRaw != nil {
 			q = make([]int32, len(qRaw))
 			for i, rv := range qRaw {
-				v, err := strconv.ParseInt(rv, 10, 32)
-				if err != nil {
-					return nil, goa.InvalidFieldTypeError("q", qRaw, "array of integers")
+				v, err2 := strconv.ParseInt(rv, 10, 32)
+				if err2 != nil {
+					err = goa.MergeErrors(err, goa.InvalidFieldTypeError("q", qRaw, "array of integers"))
 				}
 				q[i] = int32(v)
 			}
@@ -737,13 +737,13 @@ func DecodeMethodQueryArrayInt32ValidateRequest(mux goahttp.Muxer, decoder func(
 		)
 		qRaw := r.URL.Query()["q"]
 		if qRaw == nil {
-			return nil, goa.MissingFieldError("q", "query string")
+			return goa.MergeErrors(err, goa.MissingFieldError("q", "query string"))
 		}
 		q = make([]int32, len(qRaw))
 		for i, rv := range qRaw {
-			v, err := strconv.ParseInt(rv, 10, 32)
-			if err != nil {
-				return nil, goa.InvalidFieldTypeError("q", qRaw, "array of integers")
+			v, err2 := strconv.ParseInt(rv, 10, 32)
+			if err2 != nil {
+				err = goa.MergeErrors(err, goa.InvalidFieldTypeError("q", qRaw, "array of integers"))
 			}
 			q[i] = int32(v)
 		}
@@ -775,9 +775,9 @@ func DecodeMethodQueryArrayInt64Request(mux goahttp.Muxer, decoder func(*http.Re
 		if qRaw != nil {
 			q = make([]int64, len(qRaw))
 			for i, rv := range qRaw {
-				v, err := strconv.ParseInt(rv, 10, 64)
-				if err != nil {
-					return nil, goa.InvalidFieldTypeError("q", qRaw, "array of integers")
+				v, err2 := strconv.ParseInt(rv, 10, 64)
+				if err2 != nil {
+					err = goa.MergeErrors(err, goa.InvalidFieldTypeError("q", qRaw, "array of integers"))
 				}
 				q[i] = v
 			}
@@ -799,13 +799,13 @@ func DecodeMethodQueryArrayInt64ValidateRequest(mux goahttp.Muxer, decoder func(
 		)
 		qRaw := r.URL.Query()["q"]
 		if qRaw == nil {
-			return nil, goa.MissingFieldError("q", "query string")
+			return goa.MergeErrors(err, goa.MissingFieldError("q", "query string"))
 		}
 		q = make([]int64, len(qRaw))
 		for i, rv := range qRaw {
-			v, err := strconv.ParseInt(rv, 10, 64)
-			if err != nil {
-				return nil, goa.InvalidFieldTypeError("q", qRaw, "array of integers")
+			v, err2 := strconv.ParseInt(rv, 10, 64)
+			if err2 != nil {
+				err = goa.MergeErrors(err, goa.InvalidFieldTypeError("q", qRaw, "array of integers"))
 			}
 			q[i] = v
 		}
@@ -837,9 +837,9 @@ func DecodeMethodQueryArrayUIntRequest(mux goahttp.Muxer, decoder func(*http.Req
 		if qRaw != nil {
 			q = make([]uint, len(qRaw))
 			for i, rv := range qRaw {
-				v, err := strconv.ParseUint(rv, 10, strconv.IntSize)
-				if err != nil {
-					return nil, goa.InvalidFieldTypeError("q", qRaw, "array of unsigned integers")
+				v, err2 := strconv.ParseUint(rv, 10, strconv.IntSize)
+				if err2 != nil {
+					err = goa.MergeErrors(err, goa.InvalidFieldTypeError("q", qRaw, "array of unsigned integers"))
 				}
 				q[i] = uint(v)
 			}
@@ -861,13 +861,13 @@ func DecodeMethodQueryArrayUIntValidateRequest(mux goahttp.Muxer, decoder func(*
 		)
 		qRaw := r.URL.Query()["q"]
 		if qRaw == nil {
-			return nil, goa.MissingFieldError("q", "query string")
+			return goa.MergeErrors(err, goa.MissingFieldError("q", "query string"))
 		}
 		q = make([]uint, len(qRaw))
 		for i, rv := range qRaw {
-			v, err := strconv.ParseUint(rv, 10, strconv.IntSize)
-			if err != nil {
-				return nil, goa.InvalidFieldTypeError("q", qRaw, "array of unsigned integers")
+			v, err2 := strconv.ParseUint(rv, 10, strconv.IntSize)
+			if err2 != nil {
+				err = goa.MergeErrors(err, goa.InvalidFieldTypeError("q", qRaw, "array of unsigned integers"))
 			}
 			q[i] = uint(v)
 		}
@@ -899,9 +899,9 @@ func DecodeMethodQueryArrayUInt32Request(mux goahttp.Muxer, decoder func(*http.R
 		if qRaw != nil {
 			q = make([]uint32, len(qRaw))
 			for i, rv := range qRaw {
-				v, err := strconv.ParseUint(rv, 10, 32)
-				if err != nil {
-					return nil, goa.InvalidFieldTypeError("q", qRaw, "array of unsigned integers")
+				v, err2 := strconv.ParseUint(rv, 10, 32)
+				if err2 != nil {
+					err = goa.MergeErrors(err, goa.InvalidFieldTypeError("q", qRaw, "array of unsigned integers"))
 				}
 				q[i] = int32(v)
 			}
@@ -923,13 +923,13 @@ func DecodeMethodQueryArrayUInt32ValidateRequest(mux goahttp.Muxer, decoder func
 		)
 		qRaw := r.URL.Query()["q"]
 		if qRaw == nil {
-			return nil, goa.MissingFieldError("q", "query string")
+			return goa.MergeErrors(err, goa.MissingFieldError("q", "query string"))
 		}
 		q = make([]uint32, len(qRaw))
 		for i, rv := range qRaw {
-			v, err := strconv.ParseUint(rv, 10, 32)
-			if err != nil {
-				return nil, goa.InvalidFieldTypeError("q", qRaw, "array of unsigned integers")
+			v, err2 := strconv.ParseUint(rv, 10, 32)
+			if err2 != nil {
+				err = goa.MergeErrors(err, goa.InvalidFieldTypeError("q", qRaw, "array of unsigned integers"))
 			}
 			q[i] = int32(v)
 		}
@@ -961,9 +961,9 @@ func DecodeMethodQueryArrayUInt64Request(mux goahttp.Muxer, decoder func(*http.R
 		if qRaw != nil {
 			q = make([]uint64, len(qRaw))
 			for i, rv := range qRaw {
-				v, err := strconv.ParseUint(rv, 10, 64)
-				if err != nil {
-					return nil, goa.InvalidFieldTypeError("q", qRaw, "array of unsigned integers")
+				v, err2 := strconv.ParseUint(rv, 10, 64)
+				if err2 != nil {
+					err = goa.MergeErrors(err, goa.InvalidFieldTypeError("q", qRaw, "array of unsigned integers"))
 				}
 				q[i] = v
 			}
@@ -985,13 +985,13 @@ func DecodeMethodQueryArrayUInt64ValidateRequest(mux goahttp.Muxer, decoder func
 		)
 		qRaw := r.URL.Query()["q"]
 		if qRaw == nil {
-			return nil, goa.MissingFieldError("q", "query string")
+			return goa.MergeErrors(err, goa.MissingFieldError("q", "query string"))
 		}
 		q = make([]uint64, len(qRaw))
 		for i, rv := range qRaw {
-			v, err := strconv.ParseUint(rv, 10, 64)
-			if err != nil {
-				return nil, goa.InvalidFieldTypeError("q", qRaw, "array of unsigned integers")
+			v, err2 := strconv.ParseUint(rv, 10, 64)
+			if err2 != nil {
+				err = goa.MergeErrors(err, goa.InvalidFieldTypeError("q", qRaw, "array of unsigned integers"))
 			}
 			q[i] = v
 		}
@@ -1023,9 +1023,9 @@ func DecodeMethodQueryArrayFloat32Request(mux goahttp.Muxer, decoder func(*http.
 		if qRaw != nil {
 			q = make([]float32, len(qRaw))
 			for i, rv := range qRaw {
-				v, err := strconv.ParseFloat(rv, 32)
-				if err != nil {
-					return nil, goa.InvalidFieldTypeError("q", qRaw, "array of floats")
+				v, err2 := strconv.ParseFloat(rv, 32)
+				if err2 != nil {
+					err = goa.MergeErrors(err, goa.InvalidFieldTypeError("q", qRaw, "array of floats"))
 				}
 				q[i] = float32(v)
 			}
@@ -1047,13 +1047,13 @@ func DecodeMethodQueryArrayFloat32ValidateRequest(mux goahttp.Muxer, decoder fun
 		)
 		qRaw := r.URL.Query()["q"]
 		if qRaw == nil {
-			return nil, goa.MissingFieldError("q", "query string")
+			return goa.MergeErrors(err, goa.MissingFieldError("q", "query string"))
 		}
 		q = make([]float32, len(qRaw))
 		for i, rv := range qRaw {
-			v, err := strconv.ParseFloat(rv, 32)
-			if err != nil {
-				return nil, goa.InvalidFieldTypeError("q", qRaw, "array of floats")
+			v, err2 := strconv.ParseFloat(rv, 32)
+			if err2 != nil {
+				err = goa.MergeErrors(err, goa.InvalidFieldTypeError("q", qRaw, "array of floats"))
 			}
 			q[i] = float32(v)
 		}
@@ -1085,9 +1085,9 @@ func DecodeMethodQueryArrayFloat64Request(mux goahttp.Muxer, decoder func(*http.
 		if qRaw != nil {
 			q = make([]float64, len(qRaw))
 			for i, rv := range qRaw {
-				v, err := strconv.ParseFloat(rv, 64)
-				if err != nil {
-					return nil, goa.InvalidFieldTypeError("q", qRaw, "array of floats")
+				v, err2 := strconv.ParseFloat(rv, 64)
+				if err2 != nil {
+					err = goa.MergeErrors(err, goa.InvalidFieldTypeError("q", qRaw, "array of floats"))
 				}
 				q[i] = v
 			}
@@ -1109,13 +1109,13 @@ func DecodeMethodQueryArrayFloat64ValidateRequest(mux goahttp.Muxer, decoder fun
 		)
 		qRaw := r.URL.Query()["q"]
 		if qRaw == nil {
-			return nil, goa.MissingFieldError("q", "query string")
+			return goa.MergeErrors(err, goa.MissingFieldError("q", "query string"))
 		}
 		q = make([]float64, len(qRaw))
 		for i, rv := range qRaw {
-			v, err := strconv.ParseFloat(rv, 64)
-			if err != nil {
-				return nil, goa.InvalidFieldTypeError("q", qRaw, "array of floats")
+			v, err2 := strconv.ParseFloat(rv, 64)
+			if err2 != nil {
+				err = goa.MergeErrors(err, goa.InvalidFieldTypeError("q", qRaw, "array of floats"))
 			}
 			q[i] = v
 		}
@@ -1211,7 +1211,7 @@ func DecodeMethodQueryArrayBytesValidateRequest(mux goahttp.Muxer, decoder func(
 		)
 		qRaw := r.URL.Query()["q"]
 		if qRaw == nil {
-			return nil, goa.MissingFieldError("q", "query string")
+			return goa.MergeErrors(err, goa.MissingFieldError("q", "query string"))
 		}
 		q = make([][]byte, len(qRaw))
 		for i, rv := range qRaw {
@@ -1264,7 +1264,7 @@ func DecodeMethodQueryArrayAnyValidateRequest(mux goahttp.Muxer, decoder func(*h
 		)
 		qRaw := r.URL.Query()["q"]
 		if qRaw == nil {
-			return nil, goa.MissingFieldError("q", "query string")
+			return goa.MergeErrors(err, goa.MissingFieldError("q", "query string"))
 		}
 		q = make([]interface{}, len(qRaw))
 		for i, rv := range qRaw {
@@ -1322,7 +1322,7 @@ func DecodeMethodQueryMapStringStringValidateRequest(mux goahttp.Muxer, decoder 
 		)
 		qRaw := r.URL.Query()
 		if len(qRaw) == 0 {
-			return nil, goa.MissingFieldError("q", "query string")
+			err = goa.MergeErrors(err, goa.MissingFieldError("q", "query string"))
 		}
 		q = make(map[string]string, len(qRaw))
 		for key, va := range qRaw {
@@ -1366,9 +1366,9 @@ func DecodeMethodQueryMapStringBoolRequest(mux goahttp.Muxer, decoder func(*http
 				var val bool
 				{
 					valRaw := va[0]
-					v, err := strconv.ParseBool(valRaw)
-					if err != nil {
-						return nil, goa.InvalidFieldTypeError("val", valRaw, "boolean")
+					v, err2 := strconv.ParseBool(valRaw)
+					if err2 != nil {
+						err = goa.MergeErrors(err, goa.InvalidFieldTypeError("val", valRaw, "boolean"))
 					}
 					val = v
 				}
@@ -1392,16 +1392,16 @@ func DecodeMethodQueryMapStringBoolValidateRequest(mux goahttp.Muxer, decoder fu
 		)
 		qRaw := r.URL.Query()
 		if len(qRaw) == 0 {
-			return nil, goa.MissingFieldError("q", "query string")
+			err = goa.MergeErrors(err, goa.MissingFieldError("q", "query string"))
 		}
 		q = make(map[string]bool, len(qRaw))
 		for key, va := range qRaw {
 			var val bool
 			{
 				valRaw := va[0]
-				v, err := strconv.ParseBool(valRaw)
-				if err != nil {
-					return nil, goa.InvalidFieldTypeError("val", valRaw, "boolean")
+				v, err2 := strconv.ParseBool(valRaw)
+				if err2 != nil {
+					err = goa.MergeErrors(err, goa.InvalidFieldTypeError("val", valRaw, "boolean"))
 				}
 				val = v
 			}
@@ -1440,9 +1440,9 @@ func DecodeMethodQueryMapBoolStringRequest(mux goahttp.Muxer, decoder func(*http
 			for keyRaw, va := range qRaw {
 				var key bool
 				{
-					v, err := strconv.ParseBool(keyRaw)
-					if err != nil {
-						return nil, goa.InvalidFieldTypeError("key", keyRaw, "boolean")
+					v, err2 := strconv.ParseBool(keyRaw)
+					if err2 != nil {
+						err = goa.MergeErrors(err, goa.InvalidFieldTypeError("key", keyRaw, "boolean"))
 					}
 					key = v
 				}
@@ -1470,15 +1470,15 @@ func DecodeMethodQueryMapBoolStringValidateRequest(mux goahttp.Muxer, decoder fu
 		)
 		qRaw := r.URL.Query()
 		if len(qRaw) == 0 {
-			return nil, goa.MissingFieldError("q", "query string")
+			err = goa.MergeErrors(err, goa.MissingFieldError("q", "query string"))
 		}
 		q = make(map[bool]string, len(qRaw))
 		for keyRaw, va := range qRaw {
 			var key bool
 			{
-				v, err := strconv.ParseBool(keyRaw)
-				if err != nil {
-					return nil, goa.InvalidFieldTypeError("key", keyRaw, "boolean")
+				v, err2 := strconv.ParseBool(keyRaw)
+				if err2 != nil {
+					err = goa.MergeErrors(err, goa.InvalidFieldTypeError("key", keyRaw, "boolean"))
 				}
 				key = v
 			}
@@ -1521,18 +1521,18 @@ func DecodeMethodQueryMapBoolBoolRequest(mux goahttp.Muxer, decoder func(*http.R
 			for keyRaw, va := range qRaw {
 				var key bool
 				{
-					v, err := strconv.ParseBool(keyRaw)
-					if err != nil {
-						return nil, goa.InvalidFieldTypeError("key", keyRaw, "boolean")
+					v, err2 := strconv.ParseBool(keyRaw)
+					if err2 != nil {
+						err = goa.MergeErrors(err, goa.InvalidFieldTypeError("key", keyRaw, "boolean"))
 					}
 					key = v
 				}
 				var val bool
 				{
 					valRaw := va[0]
-					v, err := strconv.ParseBool(valRaw)
-					if err != nil {
-						return nil, goa.InvalidFieldTypeError("val", valRaw, "boolean")
+					v, err2 := strconv.ParseBool(valRaw)
+					if err2 != nil {
+						err = goa.MergeErrors(err, goa.InvalidFieldTypeError("val", valRaw, "boolean"))
 					}
 					val = v
 				}
@@ -1556,24 +1556,24 @@ func DecodeMethodQueryMapBoolBoolValidateRequest(mux goahttp.Muxer, decoder func
 		)
 		qRaw := r.URL.Query()
 		if len(qRaw) == 0 {
-			return nil, goa.MissingFieldError("q", "query string")
+			err = goa.MergeErrors(err, goa.MissingFieldError("q", "query string"))
 		}
 		q = make(map[bool]bool, len(qRaw))
 		for keyRaw, va := range qRaw {
 			var key bool
 			{
-				v, err := strconv.ParseBool(keyRaw)
-				if err != nil {
-					return nil, goa.InvalidFieldTypeError("key", keyRaw, "boolean")
+				v, err2 := strconv.ParseBool(keyRaw)
+				if err2 != nil {
+					err = goa.MergeErrors(err, goa.InvalidFieldTypeError("key", keyRaw, "boolean"))
 				}
 				key = v
 			}
 			var val bool
 			{
 				valRaw := va[0]
-				v, err := strconv.ParseBool(valRaw)
-				if err != nil {
-					return nil, goa.InvalidFieldTypeError("val", valRaw, "boolean")
+				v, err2 := strconv.ParseBool(valRaw)
+				if err2 != nil {
+					err = goa.MergeErrors(err, goa.InvalidFieldTypeError("val", valRaw, "boolean"))
 				}
 				val = v
 			}
@@ -1625,7 +1625,7 @@ func DecodeMethodQueryMapStringArrayStringValidateRequest(mux goahttp.Muxer, dec
 		)
 		q = r.URL.Query()
 		if len(q) == 0 {
-			return nil, goa.MissingFieldError("q", "query string")
+			err = goa.MergeErrors(err, goa.MissingFieldError("q", "query string"))
 		}
 		if len(q) < 1 {
 			err = goa.MergeErrors(err, goa.InvalidLengthError("q", q, len(q), 1, true))
@@ -1663,9 +1663,9 @@ func DecodeMethodQueryMapStringArrayBoolRequest(mux goahttp.Muxer, decoder func(
 				{
 					val = make([]bool, len(valRaw))
 					for i, rv := range valRaw {
-						v, err := strconv.ParseBool(rv)
-						if err != nil {
-							return nil, goa.InvalidFieldTypeError("val", valRaw, "array of booleans")
+						v, err2 := strconv.ParseBool(rv)
+						if err2 != nil {
+							err = goa.MergeErrors(err, goa.InvalidFieldTypeError("val", valRaw, "array of booleans"))
 						}
 						val[i] = v
 					}
@@ -1690,7 +1690,7 @@ func DecodeMethodQueryMapStringArrayBoolValidateRequest(mux goahttp.Muxer, decod
 		)
 		qRaw := r.URL.Query()
 		if len(qRaw) == 0 {
-			return nil, goa.MissingFieldError("q", "query string")
+			err = goa.MergeErrors(err, goa.MissingFieldError("q", "query string"))
 		}
 		q = make(map[string][]bool, len(qRaw))
 		for key, valRaw := range qRaw {
@@ -1698,9 +1698,9 @@ func DecodeMethodQueryMapStringArrayBoolValidateRequest(mux goahttp.Muxer, decod
 			{
 				val = make([]bool, len(valRaw))
 				for i, rv := range valRaw {
-					v, err := strconv.ParseBool(rv)
-					if err != nil {
-						return nil, goa.InvalidFieldTypeError("val", valRaw, "array of booleans")
+					v, err2 := strconv.ParseBool(rv)
+					if err2 != nil {
+						err = goa.MergeErrors(err, goa.InvalidFieldTypeError("val", valRaw, "array of booleans"))
 					}
 					val[i] = v
 				}
@@ -1741,9 +1741,9 @@ func DecodeMethodQueryMapBoolArrayStringRequest(mux goahttp.Muxer, decoder func(
 			for keyRaw, val := range qRaw {
 				var key bool
 				{
-					v, err := strconv.ParseBool(keyRaw)
-					if err != nil {
-						return nil, goa.InvalidFieldTypeError("key", keyRaw, "boolean")
+					v, err2 := strconv.ParseBool(keyRaw)
+					if err2 != nil {
+						err = goa.MergeErrors(err, goa.InvalidFieldTypeError("key", keyRaw, "boolean"))
 					}
 					key = v
 				}
@@ -1771,9 +1771,9 @@ func DecodeMethodQueryMapBoolArrayStringValidateRequest(mux goahttp.Muxer, decod
 			for keyRaw, val := range qRaw {
 				var key bool
 				{
-					v, err := strconv.ParseBool(keyRaw)
-					if err != nil {
-						return nil, goa.InvalidFieldTypeError("key", keyRaw, "boolean")
+					v, err2 := strconv.ParseBool(keyRaw)
+					if err2 != nil {
+						err = goa.MergeErrors(err, goa.InvalidFieldTypeError("key", keyRaw, "boolean"))
 					}
 					key = v
 				}
@@ -1813,9 +1813,9 @@ func DecodeMethodQueryMapBoolArrayBoolRequest(mux goahttp.Muxer, decoder func(*h
 			for keyRaw, valRaw := range qRaw {
 				var key bool
 				{
-					v, err := strconv.ParseBool(keyRaw)
-					if err != nil {
-						return nil, goa.InvalidFieldTypeError("key", keyRaw, "boolean")
+					v, err2 := strconv.ParseBool(keyRaw)
+					if err2 != nil {
+						err = goa.MergeErrors(err, goa.InvalidFieldTypeError("key", keyRaw, "boolean"))
 					}
 					key = v
 				}
@@ -1823,9 +1823,9 @@ func DecodeMethodQueryMapBoolArrayBoolRequest(mux goahttp.Muxer, decoder func(*h
 				{
 					val = make([]bool, len(valRaw))
 					for i, rv := range valRaw {
-						v, err := strconv.ParseBool(rv)
-						if err != nil {
-							return nil, goa.InvalidFieldTypeError("val", valRaw, "array of booleans")
+						v, err2 := strconv.ParseBool(rv)
+						if err2 != nil {
+							err = goa.MergeErrors(err, goa.InvalidFieldTypeError("val", valRaw, "array of booleans"))
 						}
 						val[i] = v
 					}
@@ -1850,15 +1850,15 @@ func DecodeMethodQueryMapBoolArrayBoolValidateRequest(mux goahttp.Muxer, decoder
 		)
 		qRaw := r.URL.Query()
 		if len(qRaw) == 0 {
-			return nil, goa.MissingFieldError("q", "query string")
+			err = goa.MergeErrors(err, goa.MissingFieldError("q", "query string"))
 		}
 		q = make(map[bool][]bool, len(qRaw))
 		for keyRaw, valRaw := range qRaw {
 			var key bool
 			{
-				v, err := strconv.ParseBool(keyRaw)
-				if err != nil {
-					return nil, goa.InvalidFieldTypeError("key", keyRaw, "boolean")
+				v, err2 := strconv.ParseBool(keyRaw)
+				if err2 != nil {
+					err = goa.MergeErrors(err, goa.InvalidFieldTypeError("key", keyRaw, "boolean"))
 				}
 				key = v
 			}
@@ -1866,9 +1866,9 @@ func DecodeMethodQueryMapBoolArrayBoolValidateRequest(mux goahttp.Muxer, decoder
 			{
 				val = make([]bool, len(valRaw))
 				for i, rv := range valRaw {
-					v, err := strconv.ParseBool(rv)
-					if err != nil {
-						return nil, goa.InvalidFieldTypeError("val", valRaw, "array of booleans")
+					v, err2 := strconv.ParseBool(rv)
+					if err2 != nil {
+						err = goa.MergeErrors(err, goa.InvalidFieldTypeError("val", valRaw, "array of booleans"))
 					}
 					val[i] = v
 				}
@@ -1931,11 +1931,11 @@ func DecodeMethodQueryPrimitiveBoolValidateRequest(mux goahttp.Muxer, decoder fu
 		)
 		qRaw := r.URL.Query().Get("q")
 		if qRaw == "" {
-			return nil, goa.MissingFieldError("q", "query string")
+			err = goa.MergeErrors(err, goa.MissingFieldError("q", "query string"))
 		}
-		v, err := strconv.ParseBool(qRaw)
-		if err != nil {
-			return nil, goa.InvalidFieldTypeError("q", qRaw, "boolean")
+		v, err2 := strconv.ParseBool(qRaw)
+		if err2 != nil {
+			err = goa.MergeErrors(err, goa.InvalidFieldTypeError("q", qRaw, "boolean"))
 		}
 		q = v
 		if !(q == true) {
@@ -1991,13 +1991,13 @@ func DecodeMethodQueryPrimitiveArrayBoolValidateRequest(mux goahttp.Muxer, decod
 		)
 		qRaw := r.URL.Query()["q"]
 		if qRaw == nil {
-			return nil, goa.MissingFieldError("q", "query string")
+			return goa.MergeErrors(err, goa.MissingFieldError("q", "query string"))
 		}
 		q = make([]bool, len(qRaw))
 		for i, rv := range qRaw {
-			v, err := strconv.ParseBool(rv)
-			if err != nil {
-				return nil, goa.InvalidFieldTypeError("q", qRaw, "array of booleans")
+			v, err2 := strconv.ParseBool(rv)
+			if err2 != nil {
+				err = goa.MergeErrors(err, goa.InvalidFieldTypeError("q", qRaw, "array of booleans"))
 			}
 			q[i] = v
 		}
@@ -2030,7 +2030,7 @@ func DecodeMethodQueryPrimitiveMapStringArrayStringValidateRequest(mux goahttp.M
 		)
 		q = r.URL.Query()
 		if len(q) == 0 {
-			return nil, goa.MissingFieldError("q", "query string")
+			err = goa.MergeErrors(err, goa.MissingFieldError("q", "query string"))
 		}
 		if len(q) < 1 {
 			err = goa.MergeErrors(err, goa.InvalidLengthError("q", q, len(q), 1, true))
@@ -2064,16 +2064,16 @@ func DecodeMethodQueryPrimitiveMapStringBoolValidateRequest(mux goahttp.Muxer, d
 		)
 		qRaw := r.URL.Query()
 		if len(qRaw) == 0 {
-			return nil, goa.MissingFieldError("q", "query string")
+			err = goa.MergeErrors(err, goa.MissingFieldError("q", "query string"))
 		}
 		q = make(map[string]bool, len(qRaw))
 		for key, va := range qRaw {
 			var val bool
 			{
 				valRaw := va[0]
-				v, err := strconv.ParseBool(valRaw)
-				if err != nil {
-					return nil, goa.InvalidFieldTypeError("val", valRaw, "boolean")
+				v, err2 := strconv.ParseBool(valRaw)
+				if err2 != nil {
+					err = goa.MergeErrors(err, goa.InvalidFieldTypeError("val", valRaw, "boolean"))
 				}
 				val = v
 			}
@@ -2108,15 +2108,15 @@ func DecodeMethodQueryPrimitiveMapBoolArrayBoolValidateRequest(mux goahttp.Muxer
 		)
 		qRaw := r.URL.Query()
 		if len(qRaw) == 0 {
-			return nil, goa.MissingFieldError("q", "query string")
+			err = goa.MergeErrors(err, goa.MissingFieldError("q", "query string"))
 		}
 		q = make(map[bool][]bool, len(qRaw))
 		for keyRaw, valRaw := range qRaw {
 			var key bool
 			{
-				v, err := strconv.ParseBool(keyRaw)
-				if err != nil {
-					return nil, goa.InvalidFieldTypeError("key", keyRaw, "boolean")
+				v, err2 := strconv.ParseBool(keyRaw)
+				if err2 != nil {
+					err = goa.MergeErrors(err, goa.InvalidFieldTypeError("key", keyRaw, "boolean"))
 				}
 				key = v
 			}
@@ -2124,9 +2124,9 @@ func DecodeMethodQueryPrimitiveMapBoolArrayBoolValidateRequest(mux goahttp.Muxer
 			{
 				val = make([]bool, len(valRaw))
 				for i, rv := range valRaw {
-					v, err := strconv.ParseBool(rv)
-					if err != nil {
-						return nil, goa.InvalidFieldTypeError("val", valRaw, "array of booleans")
+					v, err2 := strconv.ParseBool(rv)
+					if err2 != nil {
+						err = goa.MergeErrors(err, goa.InvalidFieldTypeError("val", valRaw, "array of booleans"))
 					}
 					val[i] = v
 				}
@@ -2181,11 +2181,15 @@ var PayloadQueryPrimitiveStringDefaultDecodeCode = `// DecodeMethodQueryPrimitiv
 func DecodeMethodQueryPrimitiveStringDefaultRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) (interface{}, error) {
 	return func(r *http.Request) (interface{}, error) {
 		var (
-			q string
+			q   string
+			err error
 		)
 		q = r.URL.Query().Get("q")
 		if q == "" {
 			err = goa.MergeErrors(err, goa.MissingFieldError("q", "query string"))
+		}
+		if err != nil {
+			return nil, err
 		}
 
 		return q, nil
@@ -2318,9 +2322,9 @@ func DecodeMethodPathPrimitiveBoolValidateRequest(mux goahttp.Muxer, decoder fun
 			params = mux.Vars(r)
 		)
 		pRaw := params["p"]
-		v, err := strconv.ParseBool(pRaw)
-		if err != nil {
-			return nil, goa.InvalidFieldTypeError("p", pRaw, "boolean")
+		v, err2 := strconv.ParseBool(pRaw)
+		if err2 != nil {
+			err = goa.MergeErrors(err, goa.InvalidFieldTypeError("p", pRaw, "boolean"))
 		}
 		p = v
 		if !(p == true) {
@@ -2384,9 +2388,9 @@ func DecodeMethodPathPrimitiveArrayBoolValidateRequest(mux goahttp.Muxer, decode
 		pRawSlice := strings.Split(pRaw, ",")
 		p = make([]bool, len(pRawSlice))
 		for i, rv := range pRawSlice {
-			v, err := strconv.ParseBool(rv)
-			if err != nil {
-				return nil, goa.InvalidFieldTypeError("p", pRaw, "array of booleans")
+			v, err2 := strconv.ParseBool(rv)
+			if err2 != nil {
+				err = goa.MergeErrors(err, goa.InvalidFieldTypeError("p", pRaw, "array of booleans"))
 			}
 			p[i] = v
 		}
@@ -2523,11 +2527,11 @@ func DecodeMethodHeaderPrimitiveBoolValidateRequest(mux goahttp.Muxer, decoder f
 		)
 		hRaw := r.Header.Get("h")
 		if hRaw == "" {
-			return nil, goa.MissingFieldError("h", "header")
+			err = goa.MergeErrors(err, goa.MissingFieldError("h", "header"))
 		}
-		v, err := strconv.ParseBool(hRaw)
-		if err != nil {
-			return nil, goa.InvalidFieldTypeError("h", hRaw, "boolean")
+		v, err2 := strconv.ParseBool(hRaw)
+		if err2 != nil {
+			err = goa.MergeErrors(err, goa.InvalidFieldTypeError("h", hRaw, "boolean"))
 		}
 		h = v
 		if !(h == true) {
@@ -2582,13 +2586,13 @@ func DecodeMethodHeaderPrimitiveArrayBoolValidateRequest(mux goahttp.Muxer, deco
 		)
 		hRaw := r.Header["H"]
 		if hRaw == nil {
-			return nil, goa.MissingFieldError("h", "header")
+			err = goa.MergeErrors(err, goa.MissingFieldError("h", "header"))
 		}
 		h = make([]bool, len(hRaw))
 		for i, rv := range hRaw {
-			v, err := strconv.ParseBool(rv)
-			if err != nil {
-				return nil, goa.InvalidFieldTypeError("h", hRaw, "array of booleans")
+			v, err2 := strconv.ParseBool(rv)
+			if err2 != nil {
+				err = goa.MergeErrors(err, goa.InvalidFieldTypeError("h", hRaw, "array of booleans"))
 			}
 			h[i] = v
 		}
@@ -2632,11 +2636,15 @@ var PayloadHeaderPrimitiveStringDefaultDecodeCode = `// DecodeMethodHeaderPrimit
 func DecodeMethodHeaderPrimitiveStringDefaultRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) (interface{}, error) {
 	return func(r *http.Request) (interface{}, error) {
 		var (
-			h string
+			h   string
+			err error
 		)
 		h = r.Header.Get("h")
 		if h == "" {
 			err = goa.MergeErrors(err, goa.MissingFieldError("h", "header"))
+		}
+		if err != nil {
+			return nil, err
 		}
 
 		return h, nil
@@ -2680,8 +2688,7 @@ func DecodeMethodBodyStringValidateRequest(mux goahttp.Muxer, decoder func(*http
 			}
 			return nil, goa.DecodePayloadError(err.Error())
 		}
-		err = goa.MergeErrors(err, body.Validate())
-
+		err = body.Validate()
 		if err != nil {
 			return nil, err
 		}
@@ -2727,11 +2734,10 @@ func DecodeMethodBodyObjectValidateRequest(mux goahttp.Muxer, decoder func(*http
 			}
 			return nil, goa.DecodePayloadError(err.Error())
 		}
-		err = goa.MergeErrors(err, body.Validate())
+		err = body.Validate()
 		if err != nil {
 			return nil, err
 		}
-
 		if err != nil {
 			return nil, err
 		}
@@ -2777,8 +2783,7 @@ func DecodeMethodBodyUserValidateRequest(mux goahttp.Muxer, decoder func(*http.R
 			}
 			return nil, goa.DecodePayloadError(err.Error())
 		}
-		err = goa.MergeErrors(err, body.Validate())
-
+		err = body.Validate()
 		if err != nil {
 			return nil, err
 		}
@@ -2825,8 +2830,7 @@ func DecodeMethodBodyArrayStringValidateRequest(mux goahttp.Muxer, decoder func(
 			}
 			return nil, goa.DecodePayloadError(err.Error())
 		}
-		err = goa.MergeErrors(err, body.Validate())
-
+		err = body.Validate()
 		if err != nil {
 			return nil, err
 		}
@@ -2851,8 +2855,7 @@ func DecodeMethodBodyArrayUserRequest(mux goahttp.Muxer, decoder func(*http.Requ
 			}
 			return nil, goa.DecodePayloadError(err.Error())
 		}
-		err = goa.MergeErrors(err, body.Validate())
-
+		err = body.Validate()
 		if err != nil {
 			return nil, err
 		}
@@ -2877,8 +2880,7 @@ func DecodeMethodBodyArrayUserValidateRequest(mux goahttp.Muxer, decoder func(*h
 			}
 			return nil, goa.DecodePayloadError(err.Error())
 		}
-		err = goa.MergeErrors(err, body.Validate())
-
+		err = body.Validate()
 		if err != nil {
 			return nil, err
 		}
@@ -2924,8 +2926,7 @@ func DecodeMethodBodyMapStringValidateRequest(mux goahttp.Muxer, decoder func(*h
 			}
 			return nil, goa.DecodePayloadError(err.Error())
 		}
-		err = goa.MergeErrors(err, body.Validate())
-
+		err = body.Validate()
 		if err != nil {
 			return nil, err
 		}
@@ -2950,8 +2951,7 @@ func DecodeMethodBodyMapUserRequest(mux goahttp.Muxer, decoder func(*http.Reques
 			}
 			return nil, goa.DecodePayloadError(err.Error())
 		}
-		err = goa.MergeErrors(err, body.Validate())
-
+		err = body.Validate()
 		if err != nil {
 			return nil, err
 		}
@@ -2976,8 +2976,7 @@ func DecodeMethodBodyMapUserValidateRequest(mux goahttp.Muxer, decoder func(*htt
 			}
 			return nil, goa.DecodePayloadError(err.Error())
 		}
-		err = goa.MergeErrors(err, body.Validate())
-
+		err = body.Validate()
 		if err != nil {
 			return nil, err
 		}
@@ -3008,7 +3007,6 @@ func DecodeMethodBodyPrimitiveStringValidateRequest(mux goahttp.Muxer, decoder f
 				err = goa.MergeErrors(err, goa.InvalidEnumValueError("body", *body, []interface{}{"val"}))
 			}
 		}
-
 		if err != nil {
 			return nil, err
 		}
@@ -3039,7 +3037,6 @@ func DecodeMethodBodyPrimitiveBoolValidateRequest(mux goahttp.Muxer, decoder fun
 				err = goa.MergeErrors(err, goa.InvalidEnumValueError("body", *body, []interface{}{true}))
 			}
 		}
-
 		if err != nil {
 			return nil, err
 		}
@@ -3073,7 +3070,6 @@ func DecodeMethodBodyPrimitiveArrayStringValidateRequest(mux goahttp.Muxer, deco
 				err = goa.MergeErrors(err, goa.InvalidEnumValueError("body[*]", e, []interface{}{"val"}))
 			}
 		}
-
 		if err != nil {
 			return nil, err
 		}
@@ -3107,7 +3103,6 @@ func DecodeMethodBodyPrimitiveArrayBoolValidateRequest(mux goahttp.Muxer, decode
 				err = goa.MergeErrors(err, goa.InvalidEnumValueError("body[*]", e, []interface{}{true}))
 			}
 		}
-
 		if err != nil {
 			return nil, err
 		}
@@ -3143,7 +3138,6 @@ func DecodeMethodBodyPrimitiveArrayUserValidateRequest(mux goahttp.Muxer, decode
 				}
 			}
 		}
-
 		if err != nil {
 			return nil, err
 		}
@@ -3197,7 +3191,6 @@ func DecodeMethodBodyPrimitiveArrayUserValidateRequest(mux goahttp.Muxer, decode
 		for _, e := range body {
 			err = goa.MergeErrors(err, goa.ValidatePattern("body[*]", e, "pattern"))
 		}
-
 		if err != nil {
 			return nil, err
 		}
@@ -3252,7 +3245,10 @@ func DecodeMethodBodyQueryObjectValidateRequest(mux goahttp.Muxer, decoder func(
 			}
 			return nil, goa.DecodePayloadError(err.Error())
 		}
-		err = goa.MergeErrors(err, body.Validate())
+		err = body.Validate()
+		if err != nil {
+			return nil, err
+		}
 
 		var (
 			b string
@@ -3315,7 +3311,10 @@ func DecodeMethodBodyQueryUserValidateRequest(mux goahttp.Muxer, decoder func(*h
 			}
 			return nil, goa.DecodePayloadError(err.Error())
 		}
-		err = goa.MergeErrors(err, body.Validate())
+		err = body.Validate()
+		if err != nil {
+			return nil, err
+		}
 
 		var (
 			b string
@@ -3378,7 +3377,10 @@ func DecodeMethodBodyPathObjectValidateRequest(mux goahttp.Muxer, decoder func(*
 			}
 			return nil, goa.DecodePayloadError(err.Error())
 		}
-		err = goa.MergeErrors(err, body.Validate())
+		err = body.Validate()
+		if err != nil {
+			return nil, err
+		}
 
 		var (
 			b string
@@ -3439,7 +3441,10 @@ func DecodeMethodUserBodyPathValidateRequest(mux goahttp.Muxer, decoder func(*ht
 			}
 			return nil, goa.DecodePayloadError(err.Error())
 		}
-		err = goa.MergeErrors(err, body.Validate())
+		err = body.Validate()
+		if err != nil {
+			return nil, err
+		}
 
 		var (
 			b string
@@ -3506,7 +3511,10 @@ func DecodeMethodBodyQueryPathObjectValidateRequest(mux goahttp.Muxer, decoder f
 			}
 			return nil, goa.DecodePayloadError(err.Error())
 		}
-		err = goa.MergeErrors(err, body.Validate())
+		err = body.Validate()
+		if err != nil {
+			return nil, err
+		}
 
 		var (
 			c string
@@ -3579,7 +3587,10 @@ func DecodeMethodBodyQueryPathUserValidateRequest(mux goahttp.Muxer, decoder fun
 			}
 			return nil, goa.DecodePayloadError(err.Error())
 		}
-		err = goa.MergeErrors(err, body.Validate())
+		err = body.Validate()
+		if err != nil {
+			return nil, err
+		}
 
 		var (
 			c string

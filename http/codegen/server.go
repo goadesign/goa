@@ -343,7 +343,7 @@ func {{ .RequestDecoder }}(mux goahttp.Muxer, decoder func(*http.Request) goahtt
 		{{ .VarName }}Raw := r.URL.Query()["{{ .Name }}"]
 		{{- if .Required }}
 		if {{ .VarName }}Raw == nil {
-			return nil, goa.MissingFieldError("{{ .Name }}", "query string")
+			return goa.MergeErrors(err, goa.MissingFieldError("{{ .Name }}", "query string"))
 		}
 		{{- end }}
 
@@ -359,7 +359,7 @@ func {{ .RequestDecoder }}(mux goahttp.Muxer, decoder func(*http.Request) goahtt
 		{{ .VarName }} = r.URL.Query()
 		{{- if .Required }}
 		if len({{ .VarName }}) == 0 {
-			return nil, goa.MissingFieldError("{{ .Name }}", "query string")
+			err = goa.MergeErrors(err, goa.MissingFieldError("{{ .Name }}", "query string"))
 		}
 		{{- end }}
 
@@ -367,7 +367,7 @@ func {{ .RequestDecoder }}(mux goahttp.Muxer, decoder func(*http.Request) goahtt
 		{{ .VarName }}Raw := r.URL.Query()
 		{{- if .Required }}
 		if len({{ .VarName }}Raw) == 0 {
-			return nil, goa.MissingFieldError("{{ .Name }}", "query string")
+			err = goa.MergeErrors(err, goa.MissingFieldError("{{ .Name }}", "query string"))
 		}
 		{{- end }}
 
@@ -391,7 +391,7 @@ func {{ .RequestDecoder }}(mux goahttp.Muxer, decoder func(*http.Request) goahtt
 		{{ .VarName }}Raw := r.URL.Query().Get("{{ .Name }}")
 		{{- if .Required }}
 		if {{ .VarName }}Raw == "" {
-			return nil, goa.MissingFieldError("{{ .Name }}", "query string")
+			err = goa.MergeErrors(err, goa.MissingFieldError("{{ .Name }}", "query string"))
 		}
 		{{- end }}
 		{{- if not .Required }}
@@ -432,7 +432,7 @@ func {{ .RequestDecoder }}(mux goahttp.Muxer, decoder func(*http.Request) goahtt
 	{{- else if .Slice }}
 		{{ .VarName }}Raw := r.Header["{{ .CanonicalName }}"]
 		{{ if .Required }}if {{ .VarName }}Raw == nil {
-			return nil, goa.MissingFieldError("{{ .Name }}", "header")
+			err = goa.MergeErrors(err, goa.MissingFieldError("{{ .Name }}", "header"))
 		}
 		{{- end }}
 
@@ -448,7 +448,7 @@ func {{ .RequestDecoder }}(mux goahttp.Muxer, decoder func(*http.Request) goahtt
 		{{ .VarName }}Raw := r.Header.Get("{{ .Name }}")
 		{{- if .Required }}
 		if {{ .VarName }}Raw == "" {
-			return nil, goa.MissingFieldError("{{ .Name }}", "header")
+			err = goa.MergeErrors(err, goa.MissingFieldError("{{ .Name }}", "header"))
 		}
 		{{- end }}
 
@@ -562,9 +562,9 @@ func {{ .RequestDecoder }}(mux goahttp.Muxer, decoder func(*http.Request) goahtt
 	{{- if eq .Type.Name "bytes" }}
 		{{ .VarName }} = []byte({{.VarName}}Raw)
 	{{- else if eq .Type.Name "int" }}
-		v, err := strconv.ParseInt({{ .VarName }}Raw, 10, strconv.IntSize)
-		if err != nil {
-			return nil, goa.InvalidFieldTypeError({{ printf "%q" .VarName }}, {{ .VarName}}Raw, "integer")
+		v, err2 := strconv.ParseInt({{ .VarName }}Raw, 10, strconv.IntSize)
+		if err2 != nil {
+			err = goa.MergeErrors(err, goa.InvalidFieldTypeError({{ printf "%q" .VarName }}, {{ .VarName}}Raw, "integer"))
 		}
 		{{- if .Pointer }}
 		pv := int(v)
@@ -573,9 +573,9 @@ func {{ .RequestDecoder }}(mux goahttp.Muxer, decoder func(*http.Request) goahtt
 		{{ .VarName }} = int(v)
 		{{- end }}
 	{{- else if eq .Type.Name "int32" }}
-		v, err := strconv.ParseInt({{ .VarName }}Raw, 10, 32)
-		if err != nil {
-			return nil, goa.InvalidFieldTypeError({{ printf "%q" .VarName }}, {{ .VarName}}Raw, "integer")
+		v, err2 := strconv.ParseInt({{ .VarName }}Raw, 10, 32)
+		if err2 != nil {
+			err = goa.MergeErrors(err, goa.InvalidFieldTypeError({{ printf "%q" .VarName }}, {{ .VarName}}Raw, "integer"))
 		}
 		{{- if .Pointer }}
 		pv := int32(v)
@@ -584,15 +584,15 @@ func {{ .RequestDecoder }}(mux goahttp.Muxer, decoder func(*http.Request) goahtt
 		{{ .VarName }} = int32(v)
 		{{- end }}
 	{{- else if eq .Type.Name "int64" }}
-		v, err := strconv.ParseInt({{ .VarName }}Raw, 10, 64)
-		if err != nil {
-			return nil, goa.InvalidFieldTypeError({{ printf "%q" .VarName }}, {{ .VarName}}Raw, "integer")
+		v, err2 := strconv.ParseInt({{ .VarName }}Raw, 10, 64)
+		if err2 != nil {
+			err = goa.MergeErrors(err, goa.InvalidFieldTypeError({{ printf "%q" .VarName }}, {{ .VarName}}Raw, "integer"))
 		}
 		{{ .VarName }} = {{ if .Pointer}}&{{ end }}v
 	{{- else if eq .Type.Name "uint" }}
-		v, err := strconv.ParseUint({{ .VarName }}Raw, 10, strconv.IntSize)
-		if err != nil {
-			return nil, goa.InvalidFieldTypeError({{ printf "%q" .VarName }}, {{ .VarName}}Raw, "unsigned integer")
+		v, err2 := strconv.ParseUint({{ .VarName }}Raw, 10, strconv.IntSize)
+		if err2 != nil {
+			err = goa.MergeErrors(err, goa.InvalidFieldTypeError({{ printf "%q" .VarName }}, {{ .VarName}}Raw, "unsigned integer"))
 		}
 		{{- if .Pointer }}
 		pv := uint(v)
@@ -601,9 +601,9 @@ func {{ .RequestDecoder }}(mux goahttp.Muxer, decoder func(*http.Request) goahtt
 		{{ .VarName }} = uint(v)
 		{{- end }}
 	{{- else if eq .Type.Name "uint32" }}
-		v, err := strconv.ParseUint({{ .VarName }}Raw, 10, 32)
-		if err != nil {
-			return nil, goa.InvalidFieldTypeError({{ printf "%q" .VarName }}, {{ .VarName}}Raw, "unsigned integer")
+		v, err2 := strconv.ParseUint({{ .VarName }}Raw, 10, 32)
+		if err2 != nil {
+			err = goa.MergeErrors(err, goa.InvalidFieldTypeError({{ printf "%q" .VarName }}, {{ .VarName}}Raw, "unsigned integer"))
 		}
 		{{- if .Pointer }}
 		pv := uint32(v)
@@ -612,15 +612,15 @@ func {{ .RequestDecoder }}(mux goahttp.Muxer, decoder func(*http.Request) goahtt
 		{{ .VarName }} = uint32(v)
 		{{- end }}
 	{{- else if eq .Type.Name "uint64" }}
-		v, err := strconv.ParseUint({{ .VarName }}Raw, 10, 64)
-		if err != nil {
-			return nil, goa.InvalidFieldTypeError({{ printf "%q" .VarName }}, {{ .VarName}}Raw, "unsigned integer")
+		v, err2 := strconv.ParseUint({{ .VarName }}Raw, 10, 64)
+		if err2 != nil {
+			err = goa.MergeErrors(err, goa.InvalidFieldTypeError({{ printf "%q" .VarName }}, {{ .VarName}}Raw, "unsigned integer"))
 		}
 		{{ .VarName }} = {{ if .Pointer }}&{{ end }}v
 	{{- else if eq .Type.Name "float32" }}
-		v, err := strconv.ParseFloat({{ .VarName }}Raw, 32)
-		if err != nil {
-			return nil, goa.InvalidFieldTypeError({{ printf "%q" .VarName }}, {{ .VarName}}Raw, "float")
+		v, err2 := strconv.ParseFloat({{ .VarName }}Raw, 32)
+		if err2 != nil {
+			err = goa.MergeErrors(err, goa.InvalidFieldTypeError({{ printf "%q" .VarName }}, {{ .VarName}}Raw, "float"))
 		}
 		{{- if .Pointer }}
 		pv := float32(v)
@@ -629,15 +629,15 @@ func {{ .RequestDecoder }}(mux goahttp.Muxer, decoder func(*http.Request) goahtt
 		{{ .VarName }} = float32(v)
 		{{- end }}
 	{{- else if eq .Type.Name "float64" }}
-		v, err := strconv.ParseFloat({{ .VarName }}Raw, 64)
-		if err != nil {
-			return nil, goa.InvalidFieldTypeError({{ printf "%q" .VarName }}, {{ .VarName}}Raw, "float")
+		v, err2 := strconv.ParseFloat({{ .VarName }}Raw, 64)
+		if err2 != nil {
+			err = goa.MergeErrors(err, goa.InvalidFieldTypeError({{ printf "%q" .VarName }}, {{ .VarName}}Raw, "float"))
 		}
 		{{ .VarName }} = {{ if .Pointer }}&{{ end }}v
 	{{- else if eq .Type.Name "boolean" }}
-		v, err := strconv.ParseBool({{ .VarName }}Raw)
-		if err != nil {
-			return nil, goa.InvalidFieldTypeError({{ printf "%q" .VarName }}, {{ .VarName}}Raw, "boolean")
+		v, err2 := strconv.ParseBool({{ .VarName }}Raw)
+		if err2 != nil {
+			err = goa.MergeErrors(err, goa.InvalidFieldTypeError({{ printf "%q" .VarName }}, {{ .VarName}}Raw, "boolean"))
 		}
 		{{ .VarName }} = {{ if .Pointer }}&{{ end }}v
 	{{- else }}
@@ -650,57 +650,57 @@ func {{ .RequestDecoder }}(mux goahttp.Muxer, decoder func(*http.Request) goahtt
 		{{- else if eq .Type.ElemType.Type.Name "bytes" }}
 			{{ .VarName }}[i] = []byte(rv)
 		{{- else if eq .Type.ElemType.Type.Name "int" }}
-			v, err := strconv.ParseInt(rv, 10, strconv.IntSize)
-			if err != nil {
-				return nil, goa.InvalidFieldTypeError({{ printf "%q" .VarName }}, {{ .VarName}}Raw, "array of integers")
+			v, err2 := strconv.ParseInt(rv, 10, strconv.IntSize)
+			if err2 != nil {
+				err = goa.MergeErrors(err, goa.InvalidFieldTypeError({{ printf "%q" .VarName }}, {{ .VarName}}Raw, "array of integers"))
 			}
 			{{ .VarName }}[i] = int(v)
 		{{- else if eq .Type.ElemType.Type.Name "int32" }}
-			v, err := strconv.ParseInt(rv, 10, 32)
-			if err != nil {
-				return nil, goa.InvalidFieldTypeError({{ printf "%q" .VarName }}, {{ .VarName}}Raw, "array of integers")
+			v, err2 := strconv.ParseInt(rv, 10, 32)
+			if err2 != nil {
+				err = goa.MergeErrors(err, goa.InvalidFieldTypeError({{ printf "%q" .VarName }}, {{ .VarName}}Raw, "array of integers"))
 			}
 			{{ .VarName }}[i] = int32(v)
 		{{- else if eq .Type.ElemType.Type.Name "int64" }}
-			v, err := strconv.ParseInt(rv, 10, 64)
-			if err != nil {
-				return nil, goa.InvalidFieldTypeError({{ printf "%q" .VarName }}, {{ .VarName}}Raw, "array of integers")
+			v, err2 := strconv.ParseInt(rv, 10, 64)
+			if err2 != nil {
+				err = goa.MergeErrors(err, goa.InvalidFieldTypeError({{ printf "%q" .VarName }}, {{ .VarName}}Raw, "array of integers"))
 			}
 			{{ .VarName }}[i] = v
 		{{- else if eq .Type.ElemType.Type.Name "uint" }}
-			v, err := strconv.ParseUint(rv, 10, strconv.IntSize)
-			if err != nil {
-				return nil, goa.InvalidFieldTypeError({{ printf "%q" .VarName }}, {{ .VarName}}Raw, "array of unsigned integers")
+			v, err2 := strconv.ParseUint(rv, 10, strconv.IntSize)
+			if err2 != nil {
+				err = goa.MergeErrors(err, goa.InvalidFieldTypeError({{ printf "%q" .VarName }}, {{ .VarName}}Raw, "array of unsigned integers"))
 			}
 			{{ .VarName }}[i] = uint(v)
 		{{- else if eq .Type.ElemType.Type.Name "uint32" }}
-			v, err := strconv.ParseUint(rv, 10, 32)
-			if err != nil {
-				return nil, goa.InvalidFieldTypeError({{ printf "%q" .VarName }}, {{ .VarName}}Raw, "array of unsigned integers")
+			v, err2 := strconv.ParseUint(rv, 10, 32)
+			if err2 != nil {
+				err = goa.MergeErrors(err, goa.InvalidFieldTypeError({{ printf "%q" .VarName }}, {{ .VarName}}Raw, "array of unsigned integers"))
 			}
 			{{ .VarName }}[i] = int32(v)
 		{{- else if eq .Type.ElemType.Type.Name "uint64" }}
-			v, err := strconv.ParseUint(rv, 10, 64)
-			if err != nil {
-				return nil, goa.InvalidFieldTypeError({{ printf "%q" .VarName }}, {{ .VarName}}Raw, "array of unsigned integers")
+			v, err2 := strconv.ParseUint(rv, 10, 64)
+			if err2 != nil {
+				err = goa.MergeErrors(err, goa.InvalidFieldTypeError({{ printf "%q" .VarName }}, {{ .VarName}}Raw, "array of unsigned integers"))
 			}
 			{{ .VarName }}[i] = v
 		{{- else if eq .Type.ElemType.Type.Name "float32" }}
-			v, err := strconv.ParseFloat(rv, 32)
-			if err != nil {
-				return nil, goa.InvalidFieldTypeError({{ printf "%q" .VarName }}, {{ .VarName}}Raw, "array of floats")
+			v, err2 := strconv.ParseFloat(rv, 32)
+			if err2 != nil {
+				err = goa.MergeErrors(err, goa.InvalidFieldTypeError({{ printf "%q" .VarName }}, {{ .VarName}}Raw, "array of floats"))
 			}
 			{{ .VarName }}[i] = float32(v)
 		{{- else if eq .Type.ElemType.Type.Name "float64" }}
-			v, err := strconv.ParseFloat(rv, 64)
-			if err != nil {
-				return nil, goa.InvalidFieldTypeError({{ printf "%q" .VarName }}, {{ .VarName}}Raw, "array of floats")
+			v, err2 := strconv.ParseFloat(rv, 64)
+			if err2 != nil {
+				err = goa.MergeErrors(err, goa.InvalidFieldTypeError({{ printf "%q" .VarName }}, {{ .VarName}}Raw, "array of floats"))
 			}
 			{{ .VarName }}[i] = v
 		{{- else if eq .Type.ElemType.Type.Name "boolean" }}
-			v, err := strconv.ParseBool(rv)
-			if err != nil {
-				return nil, goa.InvalidFieldTypeError({{ printf "%q" .VarName }}, {{ .VarName}}Raw, "array of booleans")
+			v, err2 := strconv.ParseBool(rv)
+			if err2 != nil {
+				err = goa.MergeErrors(err, goa.InvalidFieldTypeError({{ printf "%q" .VarName }}, {{ .VarName}}Raw, "array of booleans"))
 			}
 			{{ .VarName }}[i] = v
 		{{- else if eq .Type.ElemType.Type.Name "any" }}

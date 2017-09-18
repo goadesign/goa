@@ -107,10 +107,6 @@ func DecodeAddRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Dec
 			return nil, err
 		}
 
-		if err != nil {
-			return nil, err
-		}
-
 		return NewAddBottle(&body), nil
 	}
 }
