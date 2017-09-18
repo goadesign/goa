@@ -9,6 +9,7 @@ package client
 
 import (
 	"bytes"
+	"fmt"
 	"io/ioutil"
 	"net/http"
 	"net/url"
@@ -55,6 +56,10 @@ func DecodeListResponse(decoder func(*http.Response) goahttp.Decoder, restoreBod
 			err = decoder(resp).Decode(&body)
 			if err != nil {
 				return nil, goahttp.ErrDecodingError("storage", "list", err)
+			}
+			err = body.Validate()
+			if err != nil {
+				return nil, fmt.Errorf("invalid response: %s", err)
 			}
 
 			return NewListStoredBottleCollectionOK(body), nil
@@ -114,6 +119,10 @@ func DecodeShowResponse(decoder func(*http.Response) goahttp.Decoder, restoreBod
 			if err != nil {
 				return nil, goahttp.ErrDecodingError("storage", "show", err)
 			}
+			err = body.Validate()
+			if err != nil {
+				return nil, fmt.Errorf("invalid response: %s", err)
+			}
 
 			return NewShowStoredBottleOK(&body), nil
 		case http.StatusNotFound:
@@ -124,6 +133,10 @@ func DecodeShowResponse(decoder func(*http.Response) goahttp.Decoder, restoreBod
 			err = decoder(resp).Decode(&body)
 			if err != nil {
 				return nil, goahttp.ErrDecodingError("storage", "show", err)
+			}
+			err = body.Validate()
+			if err != nil {
+				return nil, fmt.Errorf("invalid response: %s", err)
 			}
 
 			return NewShowNotFound(&body), nil

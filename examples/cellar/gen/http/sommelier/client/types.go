@@ -137,6 +137,34 @@ func NewPickNoMatch(body *PickNoMatchResponseBody) *sommelier.NoMatch {
 	return v
 }
 
+// Validate runs the validations defined on PickResponseBody
+func (body PickResponseBody) Validate() (err error) {
+	for _, e := range body {
+		if e != nil {
+			if err2 := e.Validate(); err2 != nil {
+				err = goa.MergeErrors(err, err2)
+			}
+		}
+	}
+	return
+}
+
+// Validate runs the validations defined on PickNoCriteriaResponseBody
+func (body *PickNoCriteriaResponseBody) Validate() (err error) {
+	if body.Value == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("value", "body"))
+	}
+	return
+}
+
+// Validate runs the validations defined on PickNoMatchResponseBody
+func (body *PickNoMatchResponseBody) Validate() (err error) {
+	if body.Value == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("value", "body"))
+	}
+	return
+}
+
 // Validate runs the validations defined on StoredBottleResponseBody
 func (body *StoredBottleResponseBody) Validate() (err error) {
 	if body.ID == nil {

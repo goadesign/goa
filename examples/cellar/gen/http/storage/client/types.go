@@ -219,24 +219,51 @@ func NewShowNotFound(body *ShowNotFoundResponseBody) *storage.NotFound {
 	return v
 }
 
-// Validate runs the validations defined on AddRequestBody
-func (body *AddRequestBody) Validate() (err error) {
+// Validate runs the validations defined on ListResponseBody
+func (body ListResponseBody) Validate() (err error) {
+	for _, e := range body {
+		if e != nil {
+			if err2 := e.Validate(); err2 != nil {
+				err = goa.MergeErrors(err, err2)
+			}
+		}
+	}
+	return
+}
+
+// Validate runs the validations defined on ShowResponseBody
+func (body *ShowResponseBody) Validate() (err error) {
+	if body.ID == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("id", "body"))
+	}
+	if body.Name == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("name", "body"))
+	}
 	if body.Winery == nil {
 		err = goa.MergeErrors(err, goa.MissingFieldError("winery", "body"))
 	}
-	if utf8.RuneCountInString(body.Name) > 100 {
-		err = goa.MergeErrors(err, goa.InvalidLengthError("body.name", body.Name, utf8.RuneCountInString(body.Name), 100, false))
+	if body.Vintage == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("vintage", "body"))
+	}
+	if body.Name != nil {
+		if utf8.RuneCountInString(*body.Name) > 100 {
+			err = goa.MergeErrors(err, goa.InvalidLengthError("body.name", *body.Name, utf8.RuneCountInString(*body.Name), 100, false))
+		}
 	}
 	if body.Winery != nil {
 		if err2 := body.Winery.Validate(); err2 != nil {
 			err = goa.MergeErrors(err, err2)
 		}
 	}
-	if body.Vintage < 1900 {
-		err = goa.MergeErrors(err, goa.InvalidRangeError("body.vintage", body.Vintage, 1900, true))
+	if body.Vintage != nil {
+		if *body.Vintage < 1900 {
+			err = goa.MergeErrors(err, goa.InvalidRangeError("body.vintage", *body.Vintage, 1900, true))
+		}
 	}
-	if body.Vintage > 2020 {
-		err = goa.MergeErrors(err, goa.InvalidRangeError("body.vintage", body.Vintage, 2020, false))
+	if body.Vintage != nil {
+		if *body.Vintage > 2020 {
+			err = goa.MergeErrors(err, goa.InvalidRangeError("body.vintage", *body.Vintage, 2020, false))
+		}
 	}
 	for _, e := range body.Composition {
 		if e != nil {
@@ -259,6 +286,17 @@ func (body *AddRequestBody) Validate() (err error) {
 		if *body.Rating > 5 {
 			err = goa.MergeErrors(err, goa.InvalidRangeError("body.rating", *body.Rating, 5, false))
 		}
+	}
+	return
+}
+
+// Validate runs the validations defined on ShowNotFoundResponseBody
+func (body *ShowNotFoundResponseBody) Validate() (err error) {
+	if body.Message == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("message", "body"))
+	}
+	if body.ID == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("id", "body"))
 	}
 	return
 }

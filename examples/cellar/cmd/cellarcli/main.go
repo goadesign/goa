@@ -28,6 +28,7 @@ func main() {
 	var (
 		scheme string
 		host   string
+		debug  bool
 	)
 	{
 		u, err := url.Parse(*addr)
@@ -40,6 +41,7 @@ func main() {
 		if scheme == "" {
 			scheme = "http"
 		}
+		debug = *verbose || *v
 	}
 
 	var (
@@ -47,7 +49,7 @@ func main() {
 	)
 	{
 		doer = &http.Client{Timeout: time.Duration(*timeout) * time.Second}
-		if *verbose || *v {
+		if debug {
 			doer = goahttp.NewDebugDoer(doer)
 		}
 	}
@@ -58,7 +60,7 @@ func main() {
 		doer,
 		goahttp.RequestEncoder,
 		goahttp.ResponseDecoder,
-		*verbose,
+		debug,
 	)
 	if err != nil {
 		if err == flag.ErrHelp {
@@ -71,7 +73,7 @@ func main() {
 
 	data, err := endpoint(context.Background(), payload)
 
-	if *verbose || *v {
+	if debug {
 		doer.(goahttp.DebugDoer).Fprint(os.Stderr)
 	}
 
@@ -80,7 +82,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	if data != nil && !*verbose {
+	if data != nil && !debug {
 		m, _ := json.MarshalIndent(data, "", "    ")
 		fmt.Println(string(m))
 	}
@@ -90,11 +92,11 @@ func usage() {
 	fmt.Fprintf(os.Stderr, `%s is a command line client for the cellar API.
 
 Usage:
-    %s [-url URL][-timeout SECONDS][-verbose] SERVICE ENDPOINT [flags]
+    %s [-url URL][-timeout SECONDS][-verbose|-v] SERVICE ENDPOINT [flags]
 
-    -url URL:    service URL (http://localhost:8080)
-    -timeout:    request timeout in seconds (30)
-    -verbose|-v: print debug details (false)
+    -url URL:    specify service URL (http://localhost:8080)
+    -timeout:    maximum number of seconds to wait for response (30)
+    -verbose|-v: print request and response details (false)
 
 Commands:
 %s

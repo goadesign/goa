@@ -102,7 +102,10 @@ func DecodeAddRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Dec
 			}
 			return nil, goa.DecodePayloadError(err.Error())
 		}
-		err = goa.MergeErrors(err, body.Validate())
+		err = body.Validate()
+		if err != nil {
+			return nil, err
+		}
 
 		if err != nil {
 			return nil, err
