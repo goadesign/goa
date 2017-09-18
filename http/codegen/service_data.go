@@ -647,18 +647,15 @@ func buildPayloadData(svc *service.Data, s *httpdesign.ServiceExpr, e *httpdesig
 				sd.ServerTypeNames[serverBodyData.Name] = struct{}{}
 				sd.ClientTypeNames[serverBodyData.Name] = struct{}{}
 			}
-			mustValidate = serverBodyData != nil && serverBodyData.ValidateRef != ""
-			if !mustValidate {
-				for _, p := range paramsData {
-					if p.Validate != "" {
-						mustValidate = true
-						break
-					}
+			for _, p := range paramsData {
+				if p.Validate != "" {
+					mustValidate = true
+					break
 				}
 			}
 			if !mustValidate {
 				for _, q := range queryData {
-					if q.Validate != "" {
+					if q.Validate != "" || q.Required {
 						mustValidate = true
 						break
 					}
@@ -666,7 +663,7 @@ func buildPayloadData(svc *service.Data, s *httpdesign.ServiceExpr, e *httpdesig
 			}
 			if !mustValidate {
 				for _, h := range headersData {
-					if h.Validate != "" {
+					if h.Validate != "" || h.Required {
 						mustValidate = true
 						break
 					}
@@ -995,13 +992,9 @@ func buildResultData(svc *service.Data, s *httpdesign.ServiceExpr, e *httpdesign
 						sd.ServerTypeNames[clientBodyData.Name] = struct{}{}
 					}
 
-					mustValidate = serverBodyData != nil && serverBodyData.ValidateRef != ""
-					if !mustValidate {
-						mustValidate = len(v.MappedHeaders().AllRequired()) > 0
-					}
 					if !mustValidate {
 						for _, h := range headersData {
-							if h.Validate != "" {
+							if h.Validate != "" || h.Required {
 								mustValidate = true
 								break
 							}
