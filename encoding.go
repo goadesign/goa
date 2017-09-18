@@ -126,11 +126,7 @@ func (decoder *HTTPDecoder) Decode(v interface{}, body io.Reader, contentType st
 	// the decoderPool will handle whether or not a pool is actually in use
 	d := p.Get(body)
 	defer p.Put(d)
-	if err := d.Decode(v); err != nil {
-		return err
-	}
-
-	return nil
+	return d.Decode(v)
 }
 
 // Register sets a specific decoder to be used for the specified content types. If a decoder is

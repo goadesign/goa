@@ -67,8 +67,8 @@ var _ = Describe("Gzip", func() {
 
 		gzr, err := gzip.NewReader(bytes.NewReader(rw.Body))
 		Ω(err).ShouldNot(HaveOccurred())
-		buf := bytes.NewBuffer(nil)
-		io.Copy(buf, gzr)
+		var buf bytes.Buffer
+		_, err = io.Copy(&buf, gzr)
 		Ω(err).ShouldNot(HaveOccurred())
 		Ω(buf.String()).Should(Equal("gzip me!"))
 	})
@@ -89,8 +89,8 @@ var _ = Describe("Gzip", func() {
 
 		gzr, err := gzip.NewReader(bytes.NewReader(rw.Body))
 		Ω(err).ShouldNot(HaveOccurred())
-		buf := bytes.NewBuffer(nil)
-		io.Copy(buf, gzr)
+		var buf bytes.Buffer
+		_, err = io.Copy(&buf, gzr)
 		Ω(err).ShouldNot(HaveOccurred())
 		Ω(buf.String()).Should(Equal("gzip me!"))
 	})
@@ -111,8 +111,8 @@ var _ = Describe("Gzip", func() {
 
 		gzr, err := gzip.NewReader(bytes.NewReader(rw.Body))
 		Ω(err).ShouldNot(HaveOccurred())
-		buf := bytes.NewBuffer(nil)
-		io.Copy(buf, gzr)
+		var buf bytes.Buffer
+		_, err = io.Copy(&buf, gzr)
 		Ω(err).ShouldNot(HaveOccurred())
 		Ω(buf.String()).Should(Equal("gzip me!"))
 	})
@@ -134,8 +134,8 @@ var _ = Describe("Gzip", func() {
 
 		gzr, err := gzip.NewReader(bytes.NewReader(rw.Body))
 		Ω(err).ShouldNot(HaveOccurred())
-		buf := bytes.NewBuffer(nil)
-		io.Copy(buf, gzr)
+		var buf bytes.Buffer
+		_, err = io.Copy(&buf, gzr)
 		Ω(err).ShouldNot(HaveOccurred())
 		Ω(buf.String()).Should(Equal("gzip me!"))
 	})
@@ -162,8 +162,8 @@ var _ = Describe("Gzip", func() {
 
 		gzr, err := gzip.NewReader(bytes.NewReader(rw.Body))
 		Ω(err).ShouldNot(HaveOccurred())
-		buf := bytes.NewBuffer(nil)
-		io.Copy(buf, gzr)
+		var buf bytes.Buffer
+		_, err = io.Copy(&buf, gzr)
 		Ω(err).ShouldNot(HaveOccurred())
 		Ω(buf.String()).Should(Equal(strings.Repeat("gzip me!", 128)))
 	})
@@ -201,8 +201,8 @@ var _ = Describe("NotGzip", func() {
 		Ω(resp.Status).Should(Equal(http.StatusOK))
 		Ω(resp.Header().Get("Content-Encoding")).ShouldNot(Equal("gzip"))
 
-		buf := bytes.NewBuffer(nil)
-		io.Copy(buf, bytes.NewBuffer(rw.Body))
+		var buf bytes.Buffer
+		_, err = io.Copy(&buf, bytes.NewBuffer(rw.Body))
 		Ω(err).ShouldNot(HaveOccurred())
 		Ω(buf.String()).Should(Equal("gzip data"))
 	})
@@ -221,8 +221,8 @@ var _ = Describe("NotGzip", func() {
 		Ω(resp.Status).Should(Equal(http.StatusOK))
 		Ω(resp.Header().Get("Content-Encoding")).ShouldNot(Equal("gzip"))
 
-		buf := bytes.NewBuffer(nil)
-		io.Copy(buf, bytes.NewBuffer(rw.Body))
+		var buf bytes.Buffer
+		_, err = io.Copy(&buf, bytes.NewBuffer(rw.Body))
 		Ω(err).ShouldNot(HaveOccurred())
 		Ω(buf.String()).Should(Equal("gzip me!"))
 	})
@@ -241,8 +241,8 @@ var _ = Describe("NotGzip", func() {
 		Ω(resp.Status).Should(Equal(http.StatusBadRequest))
 		Ω(resp.Header().Get("Content-Encoding")).ShouldNot(Equal("gzip"))
 
-		buf := bytes.NewBuffer(nil)
-		io.Copy(buf, bytes.NewBuffer(rw.Body))
+		var buf bytes.Buffer
+		_, err = io.Copy(&buf, bytes.NewBuffer(rw.Body))
 		Ω(err).ShouldNot(HaveOccurred())
 		Ω(buf.String()).Should(Equal("gzip me!"))
 	})
@@ -261,8 +261,8 @@ var _ = Describe("NotGzip", func() {
 		Ω(resp.Status).Should(Equal(http.StatusOK))
 		Ω(resp.Header().Get("Content-Encoding")).ShouldNot(Equal("gzip"))
 
-		buf := bytes.NewBuffer(nil)
-		io.Copy(buf, bytes.NewBuffer(rw.Body))
+		var buf bytes.Buffer
+		_, err = io.Copy(&buf, bytes.NewBuffer(rw.Body))
 		Ω(err).ShouldNot(HaveOccurred())
 		Ω(buf.String()).Should(Equal("gzip me!"))
 	})
@@ -282,8 +282,8 @@ var _ = Describe("NotGzip", func() {
 		Ω(resp.Status).Should(Equal(http.StatusOK))
 		Ω(resp.Header().Get("Content-Encoding")).ShouldNot(Equal("gzip"))
 
-		buf := bytes.NewBuffer(nil)
-		io.Copy(buf, bytes.NewBuffer(rw.Body))
+		var buf bytes.Buffer
+		_, err = io.Copy(&buf, bytes.NewBuffer(rw.Body))
 		Ω(err).ShouldNot(HaveOccurred())
 		Ω(buf.String()).Should(Equal("gzip me!"))
 	})
@@ -302,8 +302,8 @@ var _ = Describe("NotGzip", func() {
 		Ω(resp.Status).Should(Equal(http.StatusOK))
 		Ω(resp.Header().Get("Content-Encoding")).ShouldNot(Equal("gzip"))
 
-		buf := bytes.NewBuffer(nil)
-		io.Copy(buf, bytes.NewBuffer(rw.Body))
+		var buf bytes.Buffer
+		_, err = io.Copy(&buf, bytes.NewBuffer(rw.Body))
 		Ω(err).ShouldNot(HaveOccurred())
 		Ω(buf.String()).Should(Equal("gzip me!"))
 	})
@@ -340,8 +340,8 @@ var _ = Describe("NotGzip", func() {
 		Ω(resp.Status).Should(Equal(http.StatusOK))
 		Ω(resp.Header().Get("Content-Encoding")).ShouldNot(Equal("gzip"))
 
-		buf := bytes.NewBuffer(nil)
-		io.Copy(buf, bytes.NewBuffer(rw.Body))
+		var buf bytes.Buffer
+		_, err = io.Copy(&buf, bytes.NewBuffer(rw.Body))
 		Ω(err).ShouldNot(HaveOccurred())
 		Ω(buf.String()).Should(Equal("gzip me!"))
 	})
