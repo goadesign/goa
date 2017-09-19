@@ -3,11 +3,14 @@ package goa_test
 import (
 	"bytes"
 	"fmt"
+	"io"
 	"io/ioutil"
+	"net"
 	"net/http"
 	"net/url"
 	"os"
 	"path/filepath"
+	"time"
 
 	"context"
 
@@ -330,6 +333,81 @@ var _ = Describe("Service", func() {
 					})
 				})
 			})
+		})
+	})
+
+	// inspired from https://golang.org/src/net/http/serve_test.go?#L505
+	Describe("Server", func() {
+		fmt.Println(GinkgoWriter, "Testing Server")
+		const appName = "foo"
+		var s *goa.Service
+		var reqNum int
+		var handler goa.Handler
+		var timeout time.Duration
+
+		BeforeEach(func() {
+			s = goa.New(appName)
+			timeout = 500 * time.Millisecond
+			s.Server.ReadTimeout = timeout
+
+			handler = func(c context.Context, rw http.ResponseWriter, req *http.Request) error {
+				reqNum++
+				rw.WriteHeader(200)
+				rw.Write([]byte(fmt.Sprintf("req=%d", reqNum)))
+				return nil
+			}
+
+			ctrl := s.NewController("test")
+			s.Mux.Handle("GET", "/", ctrl.MuxHandler("get", handler, nil))
+
+			// note: should we be using an httptest / ghttp server, here?
+			go func() {
+				s.ListenAndServe(":8080")
+			}()
+
+			// TODO: how to tell the test suite to wait for the server to start?
+			time.Sleep(2 * time.Second)
+		})
+
+		AfterEach(func() {
+			s.Server.Close()
+		})
+
+		It("should implement ReadTimeout", func() {
+			// Hit the HTTP server successfully.
+			resp, err := http.Get("http://localhost:8080/")
+			Ω(err).ShouldNot(HaveOccurred())
+
+			defer resp.Body.Close()
+			got, err := ioutil.ReadAll(resp.Body)
+			expected := "req=1"
+			Ω(string(got)).Should(Equal(expected))
+
+			// Slow client that should timeout.
+			t1 := time.Now()
+			conn, err := net.Dial("tcp", ":8080")
+			Ω(err).ShouldNot(HaveOccurred())
+
+			buf := make([]byte, 1)
+			n, err := conn.Read(buf)
+			conn.Close()
+			latency := time.Since(t1)
+			Ω(n).Should(Equal(0))
+			Ω(err).Should(Equal(io.EOF))
+
+			minLatency := timeout / 5 * 4
+			Ω(minLatency).Should(BeNumerically("<", latency))
+
+			// Hit the HTTP server successfully again, verifying that the
+			// previous slow connection didn't run our handler.  (that we
+			// get "req=2", not "req=3")
+			resp, err = http.Get("http://localhost:8080/")
+			Ω(err).ShouldNot(HaveOccurred())
+
+			// defer resp.Body.Close() // already called close
+			got, err = ioutil.ReadAll(resp.Body)
+			expected = "req=2"
+			Ω(string(got)).Should(Equal(expected))
 		})
 	})
 
