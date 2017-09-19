@@ -608,10 +608,7 @@ func (g *Generator) generateMediaTypes(pkgDir string, funcs template.FuncMap) (e
 			if err != nil {
 				return err
 			}
-			if err := typeDecodeTmpl.Execute(mtWr.SourceFile, p); err != nil {
-				return err
-			}
-			return nil
+			return typeDecodeTmpl.Execute(mtWr.SourceFile, p)
 		})
 		return err
 	})

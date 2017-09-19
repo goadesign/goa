@@ -6,6 +6,7 @@ import (
 	"context"
 	"io/ioutil"
 	"net/http"
+	"strconv"
 	"strings"
 	"sync"
 
@@ -29,7 +30,7 @@ const (
 type gzipResponseWriter struct {
 	http.ResponseWriter
 	gzw            *gzip.Writer
-	buf            *bytes.Buffer
+	buf, gzbuf     bytes.Buffer
 	pool           *sync.Pool
 	statusCode     int
 	shouldCompress *bool
@@ -74,11 +75,8 @@ func (grw *gzipResponseWriter) Write(b []byte) (int, error) {
 	// Retrieve gzip writer from the pool. Reset it to use the ResponseWriter.
 	// This allows us to re-use an already allocated buffer rather than
 	// allocating a new buffer for every request.
-	grw.Header().Set(headerContentEncoding, encodingGzip)
-	grw.Header().Set(headerVary, headerAcceptEncoding)
-
 	gz := grw.pool.Get().(*gzip.Writer)
-	gz.Reset(grw.ResponseWriter)
+	gz.Reset(&grw.gzbuf)
 	grw.gzw = gz
 
 	// Write buffer
@@ -94,7 +92,6 @@ func (grw *gzipResponseWriter) Write(b []byte) (int, error) {
 
 func (grw *gzipResponseWriter) WriteHeader(n int) {
 	grw.statusCode = n
-	grw.ResponseWriter.WriteHeader(n)
 }
 
 type (
@@ -225,9 +222,9 @@ func MinSize(n int) Option {
 	}
 }
 
-// Middleware encodes the response using Gzip encoding and sets all the appropriate
-// headers. If the Content-Type is not set, it will be set by calling
-// http.DetectContentType on the data being written.
+// Middleware encodes the response using Gzip encoding and sets all the
+// appropriate headers. If the Content-Type is not set, it will be set by
+// calling http.DetectContentType on the data being written.
 func Middleware(level int, o ...Option) goa.Middleware {
 	opts := options{
 		minSize:      256,
@@ -272,7 +269,6 @@ func Middleware(level int, o ...Option) goa.Middleware {
 			grw := &gzipResponseWriter{
 				ResponseWriter: w,
 				pool:           &gzipPool,
-				buf:            bytes.NewBuffer(nil),
 				statusCode:     http.StatusOK,
 				o:              opts,
 			}
@@ -287,23 +283,29 @@ func Middleware(level int, o ...Option) goa.Middleware {
 				return
 			}
 
-			// Delete the content length after we know we have been written to.
-			grw.Header().Del(headerContentLength)
+			// Check for uncompressed data
 			if grw.buf.Len() > 0 {
-				_, err = grw.ResponseWriter.Write(grw.buf.Bytes())
-				if err != nil {
-					return err
-				}
+				w.Header().Set(headerContentLength, strconv.Itoa(grw.buf.Len()))
+				w.WriteHeader(grw.statusCode)
+				_, err = w.Write(grw.buf.Bytes())
+				return
 			}
 
-			// Flush+recycle gzip writer
-			if grw.gzw != nil {
-				err := grw.gzw.Close()
-				if err != nil {
-					return err
-				}
-				gzipPool.Put(grw.gzw)
+			// Check for compressed data
+			if grw.gzbuf.Len() == 0 {
+				return
 			}
+
+			w.Header().Set(headerContentLength, strconv.Itoa(grw.gzbuf.Len()))
+			w.Header().Set(headerContentEncoding, encodingGzip)
+			w.Header().Set(headerVary, headerAcceptEncoding)
+			w.WriteHeader(grw.statusCode)
+			if err = grw.gzw.Close(); err != nil {
+				return
+			}
+			_, err = w.Write(grw.gzbuf.Bytes())
+			gzipPool.Put(grw.gzw)
+
 			return
 		}
 	}
