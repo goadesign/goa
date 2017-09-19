@@ -216,10 +216,7 @@ func (service *Service) ListenAndServeTLS(addr, certFile, keyFile string) error 
 // Serve accepts incoming HTTP connections on the listener l, invoking the service mux handler for each.
 func (service *Service) Serve(l net.Listener) error {
 	service.Server.Handler = service.Mux
-	if err := service.Server.Serve(l); err != nil {
-		return err
-	}
-	return nil
+	return service.Server.Serve(l)
 }
 
 // NewController returns a controller for the given resource. This method is mainly intended for
