@@ -54,10 +54,7 @@ func (dec *ProtoDecoder) Decode(v interface{}) error {
 	}
 	dec.pBuf.SetBuf(dec.bBuf.Bytes())
 
-	if err = dec.pBuf.Unmarshal(msg); err != nil {
-		return err
-	}
-	return nil
+	return dec.pBuf.Unmarshal(msg)
 }
 
 // Reset stores the new reader and resets its bytes.Buffer and proto.Buffer
