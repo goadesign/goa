@@ -29,6 +29,8 @@ type (
 		Name string
 		// Mux is the service request mux
 		Mux ServeMux
+		// Server is the service HTTP server.
+		Server *http.Server
 		// Context is the root context from which all request contexts are derived.
 		// Set values in the root context prior to starting the server to make these values
 		// available to all request handlers.
@@ -97,6 +99,9 @@ func New(name string) *Service {
 			Name:    name,
 			Context: cctx,
 			Mux:     mux,
+			Server: &http.Server{
+				Handler: mux,
+			},
 			Decoder: NewHTTPDecoder(),
 			Encoder: NewHTTPEncoder(),
 
@@ -195,18 +200,23 @@ func (service *Service) LogError(msg string, keyvals ...interface{}) {
 // ListenAndServe starts a HTTP server and sets up a listener on the given host/port.
 func (service *Service) ListenAndServe(addr string) error {
 	service.LogInfo("listen", "transport", "http", "addr", addr)
-	return http.ListenAndServe(addr, service.Mux)
+	service.Server.Addr = addr
+	service.Server.Handler = service.Mux
+	return service.Server.ListenAndServe()
 }
 
 // ListenAndServeTLS starts a HTTPS server and sets up a listener on the given host/port.
 func (service *Service) ListenAndServeTLS(addr, certFile, keyFile string) error {
 	service.LogInfo("listen", "transport", "https", "addr", addr)
-	return http.ListenAndServeTLS(addr, certFile, keyFile, service.Mux)
+	service.Server.Addr = addr
+	service.Server.Handler = service.Mux
+	return service.Server.ListenAndServeTLS(certFile, keyFile)
 }
 
 // Serve accepts incoming HTTP connections on the listener l, invoking the service mux handler for each.
 func (service *Service) Serve(l net.Listener) error {
-	if err := http.Serve(l, service.Mux); err != nil {
+	service.Server.Handler = service.Mux
+	if err := service.Server.Serve(l); err != nil {
 		return err
 	}
 	return nil
