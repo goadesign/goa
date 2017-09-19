@@ -312,10 +312,7 @@ func (w *ControllersWriter) WriteInitService(encoders, decoders []*EncoderTempla
 		"Encoders": encoders,
 		"Decoders": decoders,
 	}
-	if err := w.ExecuteTemplate("service", serviceT, nil, ctx); err != nil {
-		return err
-	}
-	return nil
+	return w.ExecuteTemplate("service", serviceT, nil, ctx)
 }
 
 // Execute writes the handlers GoGenerator
@@ -400,10 +397,7 @@ func (w *MediaTypesWriter) Execute(mt *design.MediaTypeDefinition) error {
 		if err != nil {
 			return err
 		}
-		if err := w.ExecuteTemplate("mediatype", mediaTypeT, fn, p); err != nil {
-			return err
-		}
-		return nil
+		return w.ExecuteTemplate("mediatype", mediaTypeT, fn, p)
 	})
 	if err != nil {
 		return err
