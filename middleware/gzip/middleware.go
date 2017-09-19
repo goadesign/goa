@@ -62,6 +62,7 @@ func (grw *gzipResponseWriter) Write(b []byte) (int, error) {
 		s := grw.o.shouldCompress(grw.Header().Get(headerContentType), grw.statusCode)
 		grw.shouldCompress = &s
 		if !s {
+			grw.ResponseWriter.WriteHeader(grw.statusCode)
 			return grw.ResponseWriter.Write(b)
 		}
 	}
@@ -325,8 +326,8 @@ func Middleware(level int, o ...Option) goa.Middleware {
 				gzipPool.Put(grw.gzw)
 				return
 			}
-			// No writes, set status code if ok.
-			if grw.statusCode != 0 {
+			// No writes, set status code.
+			if grw.shouldCompress == nil {
 				w.WriteHeader(grw.statusCode)
 			}
 			return

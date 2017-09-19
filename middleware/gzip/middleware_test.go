@@ -199,6 +199,35 @@ var _ = Describe("Gzip", func() {
 		Ω(err).ShouldNot(HaveOccurred())
 		Ω(buf.String()).Should(Equal(strings.Repeat("gzip me!", 128)))
 	})
+
+	It("should preserve status code", func() {
+		h := func(ctx context.Context, rw http.ResponseWriter, req *http.Request) error {
+			resp := goa.ContextResponse(ctx)
+			resp.WriteHeader(http.StatusConflict)
+			// Use multiple writes.
+			for i := 0; i < 128; i++ {
+				_, err := resp.Write([]byte("gzip me!"))
+				if err != nil {
+					return err
+				}
+			}
+			return nil
+		}
+		t := gzm.Middleware(gzip.BestCompression, gzm.MinSize(512), gzm.AddStatusCodes(http.StatusConflict))(h)
+		err := t(ctx, rw, req)
+		Ω(err).ShouldNot(HaveOccurred())
+		resp := goa.ContextResponse(ctx)
+		Ω(resp.Status).Should(Equal(http.StatusConflict))
+		Ω(resp.Header().Get("Content-Encoding")).Should(Equal("gzip"))
+		Ω(resp.Header().Get("Accept-Ranges")).Should(Equal(""))
+
+		gzr, err := gzip.NewReader(bytes.NewReader(rw.Body))
+		Ω(err).ShouldNot(HaveOccurred())
+		var buf bytes.Buffer
+		_, err = io.Copy(&buf, gzr)
+		Ω(err).ShouldNot(HaveOccurred())
+		Ω(buf.String()).Should(Equal(strings.Repeat("gzip me!", 128)))
+	})
 })
 
 var _ = Describe("NotGzip", func() {
@@ -362,6 +391,65 @@ var _ = Describe("NotGzip", func() {
 		Ω(err).ShouldNot(HaveOccurred())
 		Ω(buf.String()).Should(Equal("gzip me!"))
 	})
+
+	It("should preserve status code", func() {
+		h := func(ctx context.Context, rw http.ResponseWriter, req *http.Request) error {
+			resp := goa.ContextResponse(ctx)
+			resp.WriteHeader(http.StatusConflict)
+			resp.Write([]byte("gzip me!"))
+			return nil
+		}
+		t := gzm.Middleware(gzip.BestCompression)(h)
+		err := t(ctx, rw, req)
+		Ω(err).ShouldNot(HaveOccurred())
+		resp := goa.ContextResponse(ctx)
+		Ω(resp.Status).Should(Equal(http.StatusConflict))
+		Ω(resp.Header().Get("Content-Encoding")).ShouldNot(Equal("gzip"))
+
+		var buf bytes.Buffer
+		_, err = io.Copy(&buf, bytes.NewBuffer(rw.Body))
+		Ω(err).ShouldNot(HaveOccurred())
+		Ω(buf.String()).Should(Equal("gzip me!"))
+	})
+
+	It("should preserve status code with no body", func() {
+		h := func(ctx context.Context, rw http.ResponseWriter, req *http.Request) error {
+			resp := goa.ContextResponse(ctx)
+			resp.WriteHeader(http.StatusConflict)
+			return nil
+		}
+		t := gzm.Middleware(gzip.BestCompression)(h)
+		err := t(ctx, rw, req)
+		Ω(err).ShouldNot(HaveOccurred())
+		resp := goa.ContextResponse(ctx)
+		Ω(resp.Status).Should(Equal(http.StatusConflict))
+		Ω(resp.Header().Get("Content-Encoding")).ShouldNot(Equal("gzip"))
+
+		var buf bytes.Buffer
+		_, err = io.Copy(&buf, bytes.NewBuffer(rw.Body))
+		Ω(err).ShouldNot(HaveOccurred())
+		Ω(buf.String()).Should(Equal(""))
+	})
+
+	It("should default to OK with no code set", func() {
+		h := func(ctx context.Context, rw http.ResponseWriter, req *http.Request) error {
+			resp := goa.ContextResponse(ctx)
+			resp.Write([]byte("gzip me!"))
+			return nil
+		}
+		t := gzm.Middleware(gzip.BestCompression)(h)
+		err := t(ctx, rw, req)
+		Ω(err).ShouldNot(HaveOccurred())
+		resp := goa.ContextResponse(ctx)
+		Ω(resp.Status).Should(Equal(http.StatusOK))
+		Ω(resp.Header().Get("Content-Encoding")).ShouldNot(Equal("gzip"))
+
+		var buf bytes.Buffer
+		_, err = io.Copy(&buf, bytes.NewBuffer(rw.Body))
+		Ω(err).ShouldNot(HaveOccurred())
+		Ω(buf.String()).Should(Equal("gzip me!"))
+	})
+
 })
 
 var _ = Describe("NotGzip", func() {
