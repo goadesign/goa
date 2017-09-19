@@ -799,9 +799,9 @@ const responseT = `{{ define "response" -}}
 		{{- end }}
 
 		{{- if eq .Type.Name "string" }}
-	w.Header().Set("{{ .Name }}", {{ if not .Required }}*{{ end }}res.{{ .FieldName }})
+	w.Header().Set("{{ .Name }}", {{ if not .Required }}*{{ end }}res{{ if .FieldName }}.{{ .FieldName }}{{ end }})
 		{{- else }}
-	val := res.{{ .FieldName }}
+	val := res{{ if .FieldName }}.{{ .FieldName }}{{ end }}
 	{{ template "header_conversion" (headerConversionData .Type (printf "%ss" .VarName) .Required "val") }}
 	w.Header().Set("{{ .Name }}", {{ .VarName }}s)
 		{{- end }}
