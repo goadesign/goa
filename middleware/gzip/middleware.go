@@ -22,6 +22,8 @@ const (
 	headerContentLength   = "Content-Length"
 	headerContentType     = "Content-Type"
 	headerVary            = "Vary"
+	headerRange           = "Range"
+	headerAcceptRanges    = "Accept-Ranges"
 	headerSecWebSocketKey = "Sec-WebSocket-Key"
 )
 
@@ -30,7 +32,7 @@ const (
 type gzipResponseWriter struct {
 	http.ResponseWriter
 	gzw            *gzip.Writer
-	buf, gzbuf     bytes.Buffer
+	buf            bytes.Buffer
 	pool           *sync.Pool
 	statusCode     int
 	shouldCompress *bool
@@ -76,7 +78,14 @@ func (grw *gzipResponseWriter) Write(b []byte) (int, error) {
 	// This allows us to re-use an already allocated buffer rather than
 	// allocating a new buffer for every request.
 	gz := grw.pool.Get().(*gzip.Writer)
-	gz.Reset(&grw.gzbuf)
+
+	// We must write header now
+	grw.Header().Set(headerContentEncoding, encodingGzip)
+	grw.Header().Set(headerVary, headerAcceptEncoding)
+	grw.Header().Del(headerContentLength)
+	grw.Header().Del(headerAcceptRanges)
+	grw.ResponseWriter.WriteHeader(grw.statusCode)
+	gz.Reset(grw.ResponseWriter)
 	grw.gzw = gz
 
 	// Write buffer
@@ -100,6 +109,7 @@ type (
 
 	// options contains final options
 	options struct {
+		ignoreRange  bool
 		minSize      int
 		contentTypes []string
 		statusCodes  map[int]struct{}
@@ -222,11 +232,23 @@ func MinSize(n int) Option {
 	}
 }
 
+// IgnoreRange will set make the compressor ignore Range requests.
+// Range requests are incompatible with compressed content,
+// so if this is set to true "Range" headers will be ignored.
+// If set to false, compression is disabled for all requests with Range header.
+func IgnoreRange(b bool) Option {
+	return func(c *options) error {
+		c.ignoreRange = b
+		return nil
+	}
+}
+
 // Middleware encodes the response using Gzip encoding and sets all the
 // appropriate headers. If the Content-Type is not set, it will be set by
 // calling http.DetectContentType on the data being written.
 func Middleware(level int, o ...Option) goa.Middleware {
 	opts := options{
+		ignoreRange:  true,
 		minSize:      256,
 		contentTypes: defaultContentTypes,
 	}
@@ -255,7 +277,8 @@ func Middleware(level int, o ...Option) goa.Middleware {
 			// requesting a WebSocket or the data is already compressed.
 			if !strings.Contains(req.Header.Get(headerAcceptEncoding), encodingGzip) ||
 				len(req.Header.Get(headerSecWebSocketKey)) > 0 ||
-				rw.Header().Get(headerContentEncoding) == encodingGzip {
+				rw.Header().Get(headerContentEncoding) == encodingGzip ||
+				(!opts.ignoreRange && req.Header.Get(headerRange) != "") {
 				return h(ctx, rw, req)
 			}
 
@@ -276,6 +299,9 @@ func Middleware(level int, o ...Option) goa.Middleware {
 			// Set the new http.ResponseWriter
 			resp.SwitchWriter(grw)
 
+			// We cannot do ranges, if possibly gzipped responses.
+			req.Header.Del("Range")
+
 			// Call the next handler supplying the gzipResponseWriter instead of
 			// the original.
 			err = h(ctx, rw, req)
@@ -291,21 +317,18 @@ func Middleware(level int, o ...Option) goa.Middleware {
 				return
 			}
 
-			// Check for compressed data
-			if grw.gzbuf.Len() == 0 {
+			// Flush compressor.
+			if grw.gzw != nil {
+				if err = grw.gzw.Close(); err != nil {
+					return
+				}
+				gzipPool.Put(grw.gzw)
 				return
 			}
-
-			w.Header().Set(headerContentLength, strconv.Itoa(grw.gzbuf.Len()))
-			w.Header().Set(headerContentEncoding, encodingGzip)
-			w.Header().Set(headerVary, headerAcceptEncoding)
-			w.WriteHeader(grw.statusCode)
-			if err = grw.gzw.Close(); err != nil {
-				return
+			// No writes, set status code if ok.
+			if grw.statusCode != 0 {
+				w.WriteHeader(grw.statusCode)
 			}
-			_, err = w.Write(grw.gzbuf.Bytes())
-			gzipPool.Put(grw.gzw)
-
 			return
 		}
 	}
