@@ -34,6 +34,7 @@ var _ = Describe("Service", func() {
 		It("initializes the service fields", func() {
 			Ω(s.Name).Should(Equal(appName))
 			Ω(s.Mux).ShouldNot(BeNil())
+			Ω(s.Server).ShouldNot(BeNil())
 		})
 	})
 
