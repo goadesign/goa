@@ -201,7 +201,6 @@ func (service *Service) LogError(msg string, keyvals ...interface{}) {
 func (service *Service) ListenAndServe(addr string) error {
 	service.LogInfo("listen", "transport", "http", "addr", addr)
 	service.Server.Addr = addr
-	service.Server.Handler = service.Mux
 	return service.Server.ListenAndServe()
 }
 
@@ -209,13 +208,11 @@ func (service *Service) ListenAndServe(addr string) error {
 func (service *Service) ListenAndServeTLS(addr, certFile, keyFile string) error {
 	service.LogInfo("listen", "transport", "https", "addr", addr)
 	service.Server.Addr = addr
-	service.Server.Handler = service.Mux
 	return service.Server.ListenAndServeTLS(certFile, keyFile)
 }
 
 // Serve accepts incoming HTTP connections on the listener l, invoking the service mux handler for each.
 func (service *Service) Serve(l net.Listener) error {
-	service.Server.Handler = service.Mux
 	return service.Server.Serve(l)
 }
 

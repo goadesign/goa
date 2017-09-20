@@ -2,9 +2,10 @@ package goa_test
 
 import (
 	"bytes"
+	"crypto/tls"
 	"fmt"
-	"io"
 	"io/ioutil"
+	"log"
 	"net"
 	"net/http"
 	"net/url"
@@ -336,78 +337,51 @@ var _ = Describe("Service", func() {
 		})
 	})
 
-	// inspired from https://golang.org/src/net/http/serve_test.go?#L505
 	Describe("Server", func() {
-		fmt.Println(GinkgoWriter, "Testing Server")
-		const appName = "foo"
 		var s *goa.Service
-		var reqNum int
-		var handler goa.Handler
-		var timeout time.Duration
+		const appName = "Foo"
+		const expectedAddr = "FooAddr"
+		// handler := func(rw http.ResponseWriter, req *http.Request) {
+		// 	fmt.Fprintf(rw, "Hello request ID %s\n", "foo")
+		// }
+		// expectedHandler := http.HandlerFunc(handler)
+		var expectedTLSConfig = &tls.Config{}
+		const expectedReadTimeout = 0 * time.Second
+		const expectedReadHeaderTimeout = 100 * time.Second
+		const expectedWriteTimeout = 10 * time.Second
+		const expectedIdleTimeout = 1 * time.Second
+		const expectedMaxHeaderBytes = 1
+		var expectedTLSNextProto map[string]func(*http.Server, *tls.Conn, http.Handler)
+		var expectedConnState func(net.Conn, http.ConnState)
+		var expectedErrorLog = &log.Logger{}
 
 		BeforeEach(func() {
 			s = goa.New(appName)
-			timeout = 500 * time.Millisecond
-			s.Server.ReadTimeout = timeout
-
-			handler = func(c context.Context, rw http.ResponseWriter, req *http.Request) error {
-				reqNum++
-				rw.WriteHeader(200)
-				rw.Write([]byte(fmt.Sprintf("req=%d", reqNum)))
-				return nil
-			}
-
-			ctrl := s.NewController("test")
-			s.Mux.Handle("GET", "/", ctrl.MuxHandler("get", handler, nil))
-
-			// note: should we be using an httptest / ghttp server, here?
-			go func() {
-				s.ListenAndServe(":8080")
-			}()
-
-			// TODO: how to tell the test suite to wait for the server to start?
-			time.Sleep(2 * time.Second)
+			s.Server.Addr = expectedAddr
+			// s.Server.Handler = expectedHandler
+			s.Server.TLSConfig = expectedTLSConfig
+			s.Server.ReadTimeout = expectedReadTimeout
+			s.Server.ReadHeaderTimeout = expectedReadHeaderTimeout
+			s.Server.WriteTimeout = expectedWriteTimeout
+			s.Server.IdleTimeout = expectedIdleTimeout
+			s.Server.MaxHeaderBytes = expectedMaxHeaderBytes
+			s.Server.TLSNextProto = expectedTLSNextProto
+			s.Server.ConnState = expectedConnState
+			s.Server.ErrorLog = expectedErrorLog
 		})
 
-		AfterEach(func() {
-			s.Server.Close()
-		})
-
-		It("should implement ReadTimeout", func() {
-			// Hit the HTTP server successfully.
-			resp, err := http.Get("http://localhost:8080/")
-			Ω(err).ShouldNot(HaveOccurred())
-
-			defer resp.Body.Close()
-			got, err := ioutil.ReadAll(resp.Body)
-			expected := "req=1"
-			Ω(string(got)).Should(Equal(expected))
-
-			// Slow client that should timeout.
-			t1 := time.Now()
-			conn, err := net.Dial("tcp", ":8080")
-			Ω(err).ShouldNot(HaveOccurred())
-
-			buf := make([]byte, 1)
-			n, err := conn.Read(buf)
-			conn.Close()
-			latency := time.Since(t1)
-			Ω(n).Should(Equal(0))
-			Ω(err).Should(Equal(io.EOF))
-
-			minLatency := timeout / 5 * 4
-			Ω(minLatency).Should(BeNumerically("<", latency))
-
-			// Hit the HTTP server successfully again, verifying that the
-			// previous slow connection didn't run our handler.  (that we
-			// get "req=2", not "req=3")
-			resp, err = http.Get("http://localhost:8080/")
-			Ω(err).ShouldNot(HaveOccurred())
-
-			// defer resp.Body.Close() // already called close
-			got, err = ioutil.ReadAll(resp.Body)
-			expected = "req=2"
-			Ω(string(got)).Should(Equal(expected))
+		It("should take parameters of http.Server", func() {
+			Ω(s.Server.Addr).Should(Equal(expectedAddr))
+			// Ω(&s.Server.Handler).To(PointTo(Equal(expectedHandler)))
+			Ω(s.Server.TLSConfig).Should(Equal(expectedTLSConfig))
+			Ω(s.Server.ReadTimeout).Should(Equal(expectedReadTimeout))
+			Ω(s.Server.ReadHeaderTimeout).Should(Equal(expectedReadHeaderTimeout))
+			Ω(s.Server.WriteTimeout).Should(Equal(expectedWriteTimeout))
+			Ω(s.Server.IdleTimeout).Should(Equal(expectedIdleTimeout))
+			Ω(s.Server.MaxHeaderBytes).Should(Equal(expectedMaxHeaderBytes))
+			Ω(s.Server.TLSNextProto).Should(Equal(expectedTLSNextProto))
+			Ω(s.Server.ConnState).Should(Equal(expectedConnState))
+			Ω(s.Server.ErrorLog).Should(BeIdenticalTo(expectedErrorLog))
 		})
 	})
 
