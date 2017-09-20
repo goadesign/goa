@@ -2,16 +2,12 @@ package goa_test
 
 import (
 	"bytes"
-	"crypto/tls"
 	"fmt"
 	"io/ioutil"
-	"log"
-	"net"
 	"net/http"
 	"net/url"
 	"os"
 	"path/filepath"
-	"time"
 
 	"context"
 
@@ -334,54 +330,6 @@ var _ = Describe("Service", func() {
 					})
 				})
 			})
-		})
-	})
-
-	Describe("Server", func() {
-		var s *goa.Service
-		const appName = "Foo"
-		const expectedAddr = "FooAddr"
-		// handler := func(rw http.ResponseWriter, req *http.Request) {
-		// 	fmt.Fprintf(rw, "Hello request ID %s\n", "foo")
-		// }
-		// expectedHandler := http.HandlerFunc(handler)
-		var expectedTLSConfig = &tls.Config{}
-		const expectedReadTimeout = 0 * time.Second
-		const expectedReadHeaderTimeout = 100 * time.Second
-		const expectedWriteTimeout = 10 * time.Second
-		const expectedIdleTimeout = 1 * time.Second
-		const expectedMaxHeaderBytes = 1
-		var expectedTLSNextProto map[string]func(*http.Server, *tls.Conn, http.Handler)
-		var expectedConnState func(net.Conn, http.ConnState)
-		var expectedErrorLog = &log.Logger{}
-
-		BeforeEach(func() {
-			s = goa.New(appName)
-			s.Server.Addr = expectedAddr
-			// s.Server.Handler = expectedHandler
-			s.Server.TLSConfig = expectedTLSConfig
-			s.Server.ReadTimeout = expectedReadTimeout
-			s.Server.ReadHeaderTimeout = expectedReadHeaderTimeout
-			s.Server.WriteTimeout = expectedWriteTimeout
-			s.Server.IdleTimeout = expectedIdleTimeout
-			s.Server.MaxHeaderBytes = expectedMaxHeaderBytes
-			s.Server.TLSNextProto = expectedTLSNextProto
-			s.Server.ConnState = expectedConnState
-			s.Server.ErrorLog = expectedErrorLog
-		})
-
-		It("should take parameters of http.Server", func() {
-			Ω(s.Server.Addr).Should(Equal(expectedAddr))
-			// Ω(&s.Server.Handler).To(PointTo(Equal(expectedHandler)))
-			Ω(s.Server.TLSConfig).Should(Equal(expectedTLSConfig))
-			Ω(s.Server.ReadTimeout).Should(Equal(expectedReadTimeout))
-			Ω(s.Server.ReadHeaderTimeout).Should(Equal(expectedReadHeaderTimeout))
-			Ω(s.Server.WriteTimeout).Should(Equal(expectedWriteTimeout))
-			Ω(s.Server.IdleTimeout).Should(Equal(expectedIdleTimeout))
-			Ω(s.Server.MaxHeaderBytes).Should(Equal(expectedMaxHeaderBytes))
-			Ω(s.Server.TLSNextProto).Should(Equal(expectedTLSNextProto))
-			Ω(s.Server.ConnState).Should(Equal(expectedConnState))
-			Ω(s.Server.ErrorLog).Should(BeIdenticalTo(expectedErrorLog))
 		})
 	})
 
