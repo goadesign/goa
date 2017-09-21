@@ -88,6 +88,9 @@ type (
 		// PayloadInit contains the data needed to render the function
 		// body.
 		PayloadInit *InitData
+		// CheckErr is true if the payload initialization code requires
+		// an "err error" variable that must be checked.
+		CheckErr bool
 	}
 
 	fieldData struct {
@@ -302,6 +305,7 @@ func buildSubcommandData(svc *ServiceData, e *EndpointData) *subcommandData {
 				var (
 					fdata   []*fieldData
 					formals []string
+					check   bool
 				)
 				{
 					formals = make([]string, len(args))
@@ -310,7 +314,8 @@ func buildSubcommandData(svc *ServiceData, e *EndpointData) *subcommandData {
 						if arg.FieldName == "" && arg.Name != "body" {
 							continue
 						}
-						code := fieldLoadCode(flags[i].FullName, flags[i].Type, arg)
+						code, chek := fieldLoadCode(flags[i].FullName, flags[i].Type, arg)
+						check = check || chek
 						tn := arg.TypeRef
 						if flags[i].Type == "JSON" {
 							// We need to declare the variable without
@@ -336,18 +341,29 @@ func buildSubcommandData(svc *ServiceData, e *EndpointData) *subcommandData {
 					ResultType:   svc.Service.PkgName + "." + e.Method.Payload,
 					Fields:       fdata,
 					PayloadInit:  e.Payload.Request.PayloadInit,
+					CheckErr:     check,
 				}
 			} else if len(flags) > 0 {
 				// No build function, just convert the arg to the body type
-				conversion = conversionCode(
-					"*p",
+				conv, check := conversionCode(
+					"*"+flags[0].FullName+"Flag",
 					"data",
 					e.Method.Payload,
-					"p",
-					flags[0].Type,
-					flags[0].Example,
 					true,
 				)
+				conversion = conv
+				if check {
+					conversion = "var err error\n" + conversion
+					conversion += "\nif err != nil {\n"
+					if flagType(e.Method.Payload) == "JSON" {
+						conversion += fmt.Sprintf(`return nil, nil, fmt.Errorf("invalid JSON for %s, example of valid JSON:\n%%s", %q)`,
+							flags[0].FullName+"Flag", flags[0].Example)
+					} else {
+						conversion += fmt.Sprintf(`return nil, nil, fmt.Errorf("invalid value for %s, must be %s")`,
+							flags[0].FullName+"Flag", flags[0].Type)
+					}
+					conversion += "\n}"
+				}
 			}
 		}
 	}
@@ -392,9 +408,13 @@ func goify(terms ...string) string {
 	return res
 }
 
-func fieldLoadCode(actual, flagType string, arg *InitArgData) string {
+// fieldLoadCode returns the code of the build payload function that initializes
+// one of the payload object fields. It returns the initialization code and a
+// boolean indicating whether the code requires an "err" variable.
+func fieldLoadCode(actual, fType string, arg *InitArgData) (string, bool) {
 	var (
 		code    string
+		check   bool
 		startIf string
 		endIf   string
 	)
@@ -411,13 +431,24 @@ func fieldLoadCode(actual, flagType string, arg *InitArgData) string {
 			code = arg.Name + " = " + ref + actual
 		} else {
 			ex := jsonExample(arg.Example)
-			code = conversionCode(actual, arg.Name, arg.TypeName, arg.Name, flagType, ex, arg.Required)
+			code, check = conversionCode(actual, arg.Name, arg.TypeName, arg.Required)
+			if check {
+				code += "\nif err != nil {\n"
+				if flagType(arg.TypeName) == "JSON" {
+					code += fmt.Sprintf(`return nil, fmt.Errorf("invalid JSON for %s, example of valid JSON:\n%%s", %q)`,
+						arg.Name, ex)
+				} else {
+					code += fmt.Sprintf(`err = fmt.Errorf("invalid value for %s, must be %s")`,
+						arg.Name, fType)
+				}
+				code += "\n}"
+			}
 			if arg.Validate != "" {
 				code += "\n" + arg.Validate + "\n" + "if err != nil {\n\treturn nil, err\n}"
 			}
 		}
 	}
-	return fmt.Sprintf("%s%s%s", startIf, code, endIf)
+	return fmt.Sprintf("%s%s%s", startIf, code, endIf), check
 }
 
 var (
@@ -436,74 +467,66 @@ var (
 
 // conversionCode produces the code that converts the string stored in the
 // variable "from" to the value stored in the variable "to" of type typeName.
-// errorVar and errorType are used to display the name and type of the variable
-// that failed to be converted in case of error.
-func conversionCode(from, to, typeName, errorVar, errorType, ex string, required bool) string {
+// errorVar is used to display the name of the variable that failed to be
+// converted in case of error.
+func conversionCode(from, to, typeName string, required bool) (string, bool) {
 	var (
 		parse    string
 		cast     string
 		checkErr bool
 	)
 	target := to
-	needCast := !required && typeName != stringN && typeName != bytesN
+	needCast := !required && typeName != stringN && typeName != bytesN && flagType(typeName) != "JSON"
 	if needCast {
 		target = "val"
 	}
 	switch typeName {
 	case boolN:
-		parse = fmt.Sprintf("%s, err := strconv.ParseBool(%s)", target, from)
+		parse = fmt.Sprintf("%s, err = strconv.ParseBool(%s)", target, from)
 		checkErr = true
 	case intN:
-		parse = fmt.Sprintf("v, err := strconv.ParseInt(%s, 10, 64)", from)
+		parse = fmt.Sprintf("var v int64\nv, err = strconv.ParseInt(%s, 10, 64)", from)
 		cast = fmt.Sprintf("%s = int(v)", target)
 		checkErr = true
 	case int32N:
-		parse = fmt.Sprintf("v, err := strconv.ParseInt(%s, 10, 32)", from)
+		parse = fmt.Sprintf("var v int64\nv, err = strconv.ParseInt(%s, 10, 32)", from)
 		cast = fmt.Sprintf("%s = int32(v)", target)
 		checkErr = true
 	case int64N:
-		parse = fmt.Sprintf("%s, err := strconv.ParseInt(%s, 10, 64)", target, from)
+		parse = fmt.Sprintf("%s, err = strconv.ParseInt(%s, 10, 64)", target, from)
 	case uintN:
-		parse = fmt.Sprintf("v, err := strconv.ParseUint(%s, 10, 64)", from)
+		parse = fmt.Sprintf("var v unit64\nv, err = strconv.ParseUint(%s, 10, 64)", from)
 		cast = fmt.Sprintf("%s = uint(v)", target)
 		checkErr = true
 	case uint32N:
-		parse = fmt.Sprintf("v, err := strconv.ParseUint(%s, 10, 32)", from)
+		parse = fmt.Sprintf("var v unit64\nv, err = strconv.ParseUint(%s, 10, 32)", from)
 		cast = fmt.Sprintf("%s = uint32(v)", target)
 		checkErr = true
 	case uint64N:
-		parse = fmt.Sprintf("%s, err := strconv.ParseUint(%s, 10, 64)", target, from)
+		parse = fmt.Sprintf("%s, err = strconv.ParseUint(%s, 10, 64)", target, from)
 		checkErr = true
 	case float32N:
-		parse = fmt.Sprintf("v, err := strconv.ParseFloat(%s, 32)", from)
+		parse = fmt.Sprintf("var v float64\nv, err = strconv.ParseFloat(%s, 32)", from)
 		cast = fmt.Sprintf("%s = float32(v)", target)
 		checkErr = true
 	case float64N:
-		parse = fmt.Sprintf("%s, err := strconv.ParseFloat(%s, 64)", target, from)
+		parse = fmt.Sprintf("%s, err = strconv.ParseFloat(%s, 64)", target, from)
 		checkErr = true
 	case stringN:
 		parse = fmt.Sprintf("%s = %s", target, from)
 	case bytesN:
 		parse = fmt.Sprintf("%s = string(%s)", target, from)
 	default:
-		return fmt.Sprintf(`err := json.Unmarshal([]byte(%s), &%s)
-if err != nil {
-	return nil, fmt.Errorf("invalid JSON for %s, example of valid JSON:\n%%s", %q)
-}`,
-			from, to, errorVar, ex)
-	}
-	prefix := ""
-	if checkErr {
-		prefix = fmt.Sprintf(`%s
-if err != nil {
-	return nil, fmt.Errorf("invalid value for %s, must be %s")
-}`,
-			parse, errorVar, errorType)
+		parse = fmt.Sprintf(`err = json.Unmarshal([]byte(%s), &%s)`, from, target)
+		checkErr = true
 	}
 	if !needCast {
-		return prefix + cast
+		return parse, checkErr
 	}
-	return prefix + cast + fmt.Sprintf("\n%s = &%s", to, target)
+	if cast != "" {
+		cast = "\n" + cast
+	}
+	return parse + cast + fmt.Sprintf("\n%s = &%s", to, target), checkErr
 }
 
 func flagType(tname string) string {
@@ -672,13 +695,21 @@ func ParseEndpoint(
 // input: buildFunctionData
 const buildPayloadT = `{{ printf "%s builds the payload for the %s %s endpoint from CLI flags." .Name .ServiceName .MethodName | comment }}
 func {{ .Name }}({{ range .FormalParams }}{{ . }} string, {{ end }}) (*{{ .ResultType }}, error) {
+	{{- if .CheckErr }}
+	var err error
+	{{- end }}
 	{{- range .Fields }}
-	{{- if .VarName }}
+		{{- if .VarName }}
 	var {{ .VarName }} {{ .TypeName }}
 	{
 		{{ .Init }}
 	}
+		{{- end }}
 	{{- end }}
+	{{- if .CheckErr }}
+	if err != nil {
+		return nil, err
+	}
 	{{- end }}
 	{{- with .PayloadInit }}
 		{{- if .ClientCode }}

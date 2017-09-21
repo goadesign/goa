@@ -379,12 +379,16 @@ var MultiSimpleBuildCode = `// BuildMethodMultiSimplePayloadMethodMultiSimplePay
 // payload for the ServiceMultiSimple1 MethodMultiSimplePayload endpoint from
 // CLI flags.
 func BuildMethodMultiSimplePayloadMethodMultiSimplePayloadPayload(serviceMultiSimple1MethodMultiSimplePayloadBody string) (*servicemultisimple1.MethodMultiSimplePayloadPayload, error) {
+	var err error
 	var body MethodMultiSimplePayloadRequestBody
 	{
-		err := json.Unmarshal([]byte(serviceMultiSimple1MethodMultiSimplePayloadBody), &body)
+		err = json.Unmarshal([]byte(serviceMultiSimple1MethodMultiSimplePayloadBody), &body)
 		if err != nil {
 			return nil, fmt.Errorf("invalid JSON for body, example of valid JSON:\n%s", "'{\n      \"a\": false\n   }'")
 		}
+	}
+	if err != nil {
+		return nil, err
 	}
 	v := &servicemultisimple1.MethodMultiSimplePayloadPayload{
 		A: body.A,
@@ -397,9 +401,10 @@ func BuildMethodMultiSimplePayloadMethodMultiSimplePayloadPayload(serviceMultiSi
 var MultiBuildCode = `// BuildMethodMultiPayloadMethodMultiPayloadPayload builds the payload for the
 // ServiceMulti MethodMultiPayload endpoint from CLI flags.
 func BuildMethodMultiPayloadMethodMultiPayloadPayload(serviceMultiMethodMultiPayloadBody string, serviceMultiMethodMultiPayloadB string, serviceMultiMethodMultiPayloadA string) (*servicemulti.MethodMultiPayloadPayload, error) {
+	var err error
 	var body MethodMultiPayloadRequestBody
 	{
-		err := json.Unmarshal([]byte(serviceMultiMethodMultiPayloadBody), &body)
+		err = json.Unmarshal([]byte(serviceMultiMethodMultiPayloadBody), &body)
 		if err != nil {
 			return nil, fmt.Errorf("invalid JSON for body, example of valid JSON:\n%s", "'{\n      \"c\": {\n         \"att\": false,\n         \"att10\": \"Aspernatur quo error explicabo pariatur.\",\n         \"att11\": \"Q3VtcXVlIHZvbHVwdGF0ZW0u\",\n         \"att12\": \"Distinctio aliquam nihil blanditiis ut.\",\n         \"att13\": [\n            \"Nihil excepturi deserunt quasi omnis sed.\",\n            \"Sit maiores aperiam autem non ea rem.\"\n         ],\n         \"att14\": {\n            \"Excepturi totam.\": \"Ut aut facilis vel ipsam.\",\n            \"Minima et aut non sunt consequuntur.\": \"Et consequuntur porro quasi.\",\n            \"Quis voluptates quaerat et temporibus facere.\": \"Ipsam eaque sunt maxime suscipit.\"\n         },\n         \"att15\": {\n            \"inline\": \"Ea alias repellat nobis veritatis.\"\n         },\n         \"att2\": 3504438334001971349,\n         \"att3\": 2005839040,\n         \"att4\": 5845720715558772393,\n         \"att5\": 2900634008447043830,\n         \"att6\": 1865618013,\n         \"att7\": 1484745265794365762,\n         \"att8\": 0.11815318,\n         \"att9\": 0.30907290919538355\n      }\n   }'")
 		}
@@ -413,12 +418,15 @@ func BuildMethodMultiPayloadMethodMultiPayloadPayload(serviceMultiMethodMultiPay
 	var a *bool
 	{
 		if serviceMultiMethodMultiPayloadA != "" {
-			val, err := strconv.ParseBool(serviceMultiMethodMultiPayloadA)
-			if err != nil {
-				return nil, fmt.Errorf("invalid value for a, must be BOOL")
-			}
+			val, err = strconv.ParseBool(serviceMultiMethodMultiPayloadA)
 			a = &val
+			if err != nil {
+				err = fmt.Errorf("invalid value for a, must be BOOL")
+			}
 		}
+	}
+	if err != nil {
+		return nil, err
 	}
 	v := &servicemulti.MethodMultiPayloadPayload{}
 	if body.C != nil {
