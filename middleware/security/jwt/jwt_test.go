@@ -107,15 +107,15 @@ var _ = Describe("Middleware", func() {
 			})
 
 			It("should accept scopes specified using the 'scope' claim", func() {
-				// HS256 {"scopes":"scope1","admin":true}, signed with "keys"
-				request.Header.Set("Authorization", "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzY29wZXMiOiJzY29wZTEiLCJhZG1pbiI6dHJ1ZX0.UCvEfbD_yuS5dCZidxZgogVi2yF0ZVecMsQQbY1HJy0")
+				// HS256 {"scope":"scope1","admin":true}, signed with "keys"
+				request.Header.Set("Authorization", "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzY29wZSI6InNjb3BlMSIsImFkbWluIjp0cnVlfQ.EwMZtpTUPUoKsiCHqH659JQeMLf3-KdboStmQKjv2IU")
 				dispatchResult = middleware(handler)(ctx, respRecord, request)
 				Ω(dispatchResult).ShouldNot(HaveOccurred())
 			})
 
 			It("should accept scopes specified using the 'scopes' claim", func() {
-				// HS256 {"scope":"scope1","admin":true}, signed with "keys"
-				request.Header.Set("Authorization", "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzY29wZSI6InNjb3BlMSIsImFkbWluIjp0cnVlfQ.EwMZtpTUPUoKsiCHqH659JQeMLf3-KdboStmQKjv2IU")
+				// HS256 {"scopes":"scope1","admin":true}, signed with "keys"
+				request.Header.Set("Authorization", "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzY29wZXMiOiJzY29wZTEiLCJhZG1pbiI6dHJ1ZX0.UCvEfbD_yuS5dCZidxZgogVi2yF0ZVecMsQQbY1HJy0")
 				dispatchResult = middleware(handler)(ctx, respRecord, request)
 				Ω(dispatchResult).ShouldNot(HaveOccurred())
 			})
