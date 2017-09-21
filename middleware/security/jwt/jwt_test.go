@@ -93,6 +93,49 @@ var _ = Describe("Middleware", func() {
 			}
 		})
 
+		Context("and valid scopes", func() {
+
+			var ctx context.Context
+
+			BeforeEach(func() {
+				keyResolver, err := jwt.NewResolver(nil, "keyname")
+				Ω(err).ShouldNot(HaveOccurred())
+				err = keyResolver.AddKeys("mykeys", "keys")
+				Ω(err).ShouldNot(HaveOccurred())
+				middleware = jwt.New(keyResolver, nil, securityScheme)
+				ctx = goa.WithRequiredScopes(context.Background(), []string{"scope1"})
+			})
+
+			It("should accept scopes specified using the 'scope' claim", func() {
+				// HS256 {"scopes":"scope1","admin":true}, signed with "keys"
+				request.Header.Set("Authorization", "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzY29wZXMiOiJzY29wZTEiLCJhZG1pbiI6dHJ1ZX0.UCvEfbD_yuS5dCZidxZgogVi2yF0ZVecMsQQbY1HJy0")
+				dispatchResult = middleware(handler)(ctx, respRecord, request)
+				Ω(dispatchResult).ShouldNot(HaveOccurred())
+			})
+
+			It("should accept scopes specified using the 'scopes' claim", func() {
+				// HS256 {"scope":"scope1","admin":true}, signed with "keys"
+				request.Header.Set("Authorization", "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzY29wZSI6InNjb3BlMSIsImFkbWluIjp0cnVlfQ.EwMZtpTUPUoKsiCHqH659JQeMLf3-KdboStmQKjv2IU")
+				dispatchResult = middleware(handler)(ctx, respRecord, request)
+				Ω(dispatchResult).ShouldNot(HaveOccurred())
+			})
+
+			It("should fall back to 'scopes' if 'scope' is null", func() {
+				// HS256 {"scope":null, "scopes":"scope1", "admin":true}, signed with "keys"
+				request.Header.Set("Authorization", "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzY29wZSI6bnVsbCwic2NvcGVzIjoic2NvcGUxIiwiYWRtaW4iOnRydWV9.h8L_MlWWyB0RnwaUBDVu8nGPn5wPSVPMEm42iH8Jxmg")
+				dispatchResult = middleware(handler)(ctx, respRecord, request)
+				Ω(dispatchResult).ShouldNot(HaveOccurred())
+			})
+
+			It("should not fall back to 'scopes' if 'scope' is an empty string", func() {
+				// HS256 {"scope":"", "scopes":"scope1", "admin":true}, signed with "keys"
+				request.Header.Set("Authorization", "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzY29wZSI6IiIsInNjb3BlcyI6InNjb3BlMSIsImFkbWluIjp0cnVlfQ.U5r-gAvk8SWRYBK3Hmj7zqHSQ0lSQO1wAAk0soyHkoU")
+				dispatchResult = middleware(handler)(ctx, respRecord, request)
+				Ω(dispatchResult).Should(HaveOccurred())
+			})
+
+		})
+
 		Context("and a malformed request", func() {
 			BeforeEach(func() {
 				key := []byte("keys")
