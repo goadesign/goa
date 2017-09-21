@@ -21,8 +21,9 @@ import (
 //
 //     1. Validate the "Bearer" token present in the "Authorization" header against the key(s)
 //        given to New
-//     2. If scopes are defined in the design for the action validate them against the "scopes" JWT
-//        claim
+//     2. If scopes are defined in the design for the action, validate them
+//        against the scopes presented by the JWT in the claim "scope", or if
+//        that's not defined, "scopes".
 //
 // The `exp` (expiration) and `nbf` (not before) date checks are validated by the JWT library.
 //
@@ -111,7 +112,7 @@ func New(validationKeys interface{}, validationFunc goa.Middleware, scheme *goa.
 
 			for _, scope := range requiredScopes {
 				if !scopesInClaim[scope] {
-					msg := "authorization failed: required 'scopes' not present in JWT claim"
+					msg := "authorization failed: required 'scope' or 'scopes' not present in JWT claim"
 					return ErrJWTError(msg, "required", requiredScopes, "scopes", scopesInClaimList)
 				}
 			}
@@ -125,11 +126,17 @@ func New(validationKeys interface{}, validationFunc goa.Middleware, scheme *goa.
 	}
 }
 
-// parseClaimScopes parses the "scopes" parameter in the Claims. It supports two formats:
+// validScopeClaimKeys are the claims under which scopes may be found in a token
+var validScopeClaimKeys = []string{"scope", "scopes"}
+
+// parseClaimScopes parses the "scope" or "scopes" parameter in the Claims. It
+// supports two formats:
 //
-// * a list of string
+// * a list of strings
 //
 // * a single string with space-separated scopes (akin to OAuth2's "scope").
+//
+// An empty string is an explicit claim of no scopes.
 func parseClaimScopes(token *jwt.Token) (map[string]bool, []string, error) {
 	scopesInClaim := make(map[string]bool)
 	var scopesInClaimList []string
@@ -137,22 +144,25 @@ func parseClaimScopes(token *jwt.Token) (map[string]bool, []string, error) {
 	if !ok {
 		return nil, nil, fmt.Errorf("unsupport claims shape")
 	}
-	if claims["scopes"] != nil {
-		switch scopes := claims["scopes"].(type) {
-		case string:
-			for _, scope := range strings.Split(scopes, " ") {
-				scopesInClaim[scope] = true
-				scopesInClaimList = append(scopesInClaimList, scope)
-			}
-		case []interface{}:
-			for _, scope := range scopes {
-				if val, ok := scope.(string); ok {
-					scopesInClaim[val] = true
-					scopesInClaimList = append(scopesInClaimList, val)
+	for _, k := range validScopeClaimKeys {
+		if rawscopes, ok := claims[k]; ok && rawscopes != nil {
+			switch scopes := rawscopes.(type) {
+			case string:
+				for _, scope := range strings.Split(scopes, " ") {
+					scopesInClaim[scope] = true
+					scopesInClaimList = append(scopesInClaimList, scope)
 				}
+			case []interface{}:
+				for _, scope := range scopes {
+					if val, ok := scope.(string); ok {
+						scopesInClaim[val] = true
+						scopesInClaimList = append(scopesInClaimList, val)
+					}
+				}
+			default:
+				return nil, nil, fmt.Errorf("unsupported scope format in incoming JWT claim, was type %T", scopes)
 			}
-		default:
-			return nil, nil, fmt.Errorf("unsupported 'scopes' format in incoming JWT claim, was type %T", scopes)
+			break
 		}
 	}
 	sort.Strings(scopesInClaimList)
