@@ -648,14 +648,14 @@ func buildPayloadData(svc *service.Data, s *httpdesign.ServiceExpr, e *httpdesig
 				sd.ClientTypeNames[serverBodyData.Name] = struct{}{}
 			}
 			for _, p := range paramsData {
-				if p.Validate != "" {
+				if p.Validate != "" || needConversion(p.Type) {
 					mustValidate = true
 					break
 				}
 			}
 			if !mustValidate {
 				for _, q := range queryData {
-					if q.Validate != "" || q.Required {
+					if q.Validate != "" || q.Required || needConversion(q.Type) {
 						mustValidate = true
 						break
 					}
@@ -663,7 +663,7 @@ func buildPayloadData(svc *service.Data, s *httpdesign.ServiceExpr, e *httpdesig
 			}
 			if !mustValidate {
 				for _, h := range headersData {
-					if h.Validate != "" || h.Required {
+					if h.Validate != "" || h.Required || needConversion(h.Type) {
 						mustValidate = true
 						break
 					}
@@ -994,7 +994,7 @@ func buildResultData(svc *service.Data, s *httpdesign.ServiceExpr, e *httpdesign
 
 					if !mustValidate {
 						for _, h := range headersData {
-							if h.Validate != "" || h.Required {
+							if h.Validate != "" || h.Required || needConversion(h.Type) {
 								mustValidate = true
 								break
 							}
@@ -1479,6 +1479,29 @@ func attributeTypeData(ut design.UserType, req, ptr, server bool, scope *codegen
 		ValidateDef: validate,
 		ValidateRef: validateRef,
 		Example:     att.Example(design.Root.API.Random()),
+	}
+}
+
+// needConversion returns true if the type needs to be converted from a string.
+func needConversion(dt design.DataType) bool {
+	if dt == design.Empty {
+		return false
+	}
+	switch actual := dt.(type) {
+	case design.Primitive:
+		if actual.Kind() == design.StringKind ||
+			actual.Kind() == design.AnyKind ||
+			actual.Kind() == design.BytesKind {
+			return false
+		}
+		return true
+	case *design.Array:
+		return needConversion(actual.ElemType.Type)
+	case *design.Map:
+		return needConversion(actual.KeyType.Type) ||
+			needConversion(actual.ElemType.Type)
+	default:
+		return true
 	}
 }
 
