@@ -464,15 +464,15 @@ func conversionCode(from, to, typeName, errorVar, errorType, ex string, required
 	case int64N:
 		parse = fmt.Sprintf("%s, err := strconv.ParseInt(%s, 10, 64)", target, from)
 	case uintN:
-		parse = fmt.Sprintf("v, err := strconv.ParseUInt(%s, 10, 64)", from)
+		parse = fmt.Sprintf("v, err := strconv.ParseUint(%s, 10, 64)", from)
 		cast = fmt.Sprintf("%s = uint(v)", target)
 		checkErr = true
 	case uint32N:
-		parse = fmt.Sprintf("v, err := strconv.ParseUInt(%s, 10, 32)", from)
+		parse = fmt.Sprintf("v, err := strconv.ParseUint(%s, 10, 32)", from)
 		cast = fmt.Sprintf("%s = uint32(v)", target)
 		checkErr = true
 	case uint64N:
-		parse = fmt.Sprintf("%s, err := strconv.ParseUInt(%s, 10, 64)", target, from)
+		parse = fmt.Sprintf("%s, err := strconv.ParseUint(%s, 10, 64)", target, from)
 		checkErr = true
 	case float32N:
 		parse = fmt.Sprintf("v, err := strconv.ParseFloat(%s, 32)", from)
