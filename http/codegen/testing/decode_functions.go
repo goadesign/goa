@@ -5,7 +5,8 @@ var PayloadQueryBoolDecodeCode = `// DecodeMethodQueryBoolRequest returns a deco
 func DecodeMethodQueryBoolRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) (interface{}, error) {
 	return func(r *http.Request) (interface{}, error) {
 		var (
-			q *bool
+			q   *bool
+			err error
 		)
 		qRaw := r.URL.Query().Get("q")
 		if qRaw != "" {
@@ -14,6 +15,9 @@ func DecodeMethodQueryBoolRequest(mux goahttp.Muxer, decoder func(*http.Request)
 				err = goa.MergeErrors(err, goa.InvalidFieldTypeError("q", qRaw, "boolean"))
 			}
 			q = &v
+		}
+		if err != nil {
+			return nil, err
 		}
 
 		return NewMethodQueryBoolMethodQueryBoolPayload(q), nil
@@ -55,7 +59,8 @@ var PayloadQueryIntDecodeCode = `// DecodeMethodQueryIntRequest returns a decode
 func DecodeMethodQueryIntRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) (interface{}, error) {
 	return func(r *http.Request) (interface{}, error) {
 		var (
-			q *int
+			q   *int
+			err error
 		)
 		qRaw := r.URL.Query().Get("q")
 		if qRaw != "" {
@@ -65,6 +70,9 @@ func DecodeMethodQueryIntRequest(mux goahttp.Muxer, decoder func(*http.Request) 
 			}
 			pv := int(v)
 			q = &pv
+		}
+		if err != nil {
+			return nil, err
 		}
 
 		return NewMethodQueryIntMethodQueryIntPayload(q), nil
@@ -106,7 +114,8 @@ var PayloadQueryInt32DecodeCode = `// DecodeMethodQueryInt32Request returns a de
 func DecodeMethodQueryInt32Request(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) (interface{}, error) {
 	return func(r *http.Request) (interface{}, error) {
 		var (
-			q *int32
+			q   *int32
+			err error
 		)
 		qRaw := r.URL.Query().Get("q")
 		if qRaw != "" {
@@ -116,6 +125,9 @@ func DecodeMethodQueryInt32Request(mux goahttp.Muxer, decoder func(*http.Request
 			}
 			pv := int32(v)
 			q = &pv
+		}
+		if err != nil {
+			return nil, err
 		}
 
 		return NewMethodQueryInt32MethodQueryInt32Payload(q), nil
@@ -157,7 +169,8 @@ var PayloadQueryInt64DecodeCode = `// DecodeMethodQueryInt64Request returns a de
 func DecodeMethodQueryInt64Request(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) (interface{}, error) {
 	return func(r *http.Request) (interface{}, error) {
 		var (
-			q *int64
+			q   *int64
+			err error
 		)
 		qRaw := r.URL.Query().Get("q")
 		if qRaw != "" {
@@ -166,6 +179,9 @@ func DecodeMethodQueryInt64Request(mux goahttp.Muxer, decoder func(*http.Request
 				err = goa.MergeErrors(err, goa.InvalidFieldTypeError("q", qRaw, "integer"))
 			}
 			q = &v
+		}
+		if err != nil {
+			return nil, err
 		}
 
 		return NewMethodQueryInt64MethodQueryInt64Payload(q), nil
@@ -207,7 +223,8 @@ var PayloadQueryUIntDecodeCode = `// DecodeMethodQueryUIntRequest returns a deco
 func DecodeMethodQueryUIntRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) (interface{}, error) {
 	return func(r *http.Request) (interface{}, error) {
 		var (
-			q *uint
+			q   *uint
+			err error
 		)
 		qRaw := r.URL.Query().Get("q")
 		if qRaw != "" {
@@ -217,6 +234,9 @@ func DecodeMethodQueryUIntRequest(mux goahttp.Muxer, decoder func(*http.Request)
 			}
 			pv := uint(v)
 			q = &pv
+		}
+		if err != nil {
+			return nil, err
 		}
 
 		return NewMethodQueryUIntMethodQueryUIntPayload(q), nil
@@ -258,7 +278,8 @@ var PayloadQueryUInt32DecodeCode = `// DecodeMethodQueryUInt32Request returns a 
 func DecodeMethodQueryUInt32Request(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) (interface{}, error) {
 	return func(r *http.Request) (interface{}, error) {
 		var (
-			q *uint32
+			q   *uint32
+			err error
 		)
 		qRaw := r.URL.Query().Get("q")
 		if qRaw != "" {
@@ -268,6 +289,9 @@ func DecodeMethodQueryUInt32Request(mux goahttp.Muxer, decoder func(*http.Reques
 			}
 			pv := uint32(v)
 			q = &pv
+		}
+		if err != nil {
+			return nil, err
 		}
 
 		return NewMethodQueryUInt32MethodQueryUInt32Payload(q), nil
@@ -309,7 +333,8 @@ var PayloadQueryUInt64DecodeCode = `// DecodeMethodQueryUInt64Request returns a 
 func DecodeMethodQueryUInt64Request(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) (interface{}, error) {
 	return func(r *http.Request) (interface{}, error) {
 		var (
-			q *uint64
+			q   *uint64
+			err error
 		)
 		qRaw := r.URL.Query().Get("q")
 		if qRaw != "" {
@@ -318,6 +343,9 @@ func DecodeMethodQueryUInt64Request(mux goahttp.Muxer, decoder func(*http.Reques
 				err = goa.MergeErrors(err, goa.InvalidFieldTypeError("q", qRaw, "unsigned integer"))
 			}
 			q = &v
+		}
+		if err != nil {
+			return nil, err
 		}
 
 		return NewMethodQueryUInt64MethodQueryUInt64Payload(q), nil
@@ -359,7 +387,8 @@ var PayloadQueryFloat32DecodeCode = `// DecodeMethodQueryFloat32Request returns 
 func DecodeMethodQueryFloat32Request(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) (interface{}, error) {
 	return func(r *http.Request) (interface{}, error) {
 		var (
-			q *float32
+			q   *float32
+			err error
 		)
 		qRaw := r.URL.Query().Get("q")
 		if qRaw != "" {
@@ -369,6 +398,9 @@ func DecodeMethodQueryFloat32Request(mux goahttp.Muxer, decoder func(*http.Reque
 			}
 			pv := float32(v)
 			q = &pv
+		}
+		if err != nil {
+			return nil, err
 		}
 
 		return NewMethodQueryFloat32MethodQueryFloat32Payload(q), nil
@@ -410,7 +442,8 @@ var PayloadQueryFloat64DecodeCode = `// DecodeMethodQueryFloat64Request returns 
 func DecodeMethodQueryFloat64Request(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) (interface{}, error) {
 	return func(r *http.Request) (interface{}, error) {
 		var (
-			q *float64
+			q   *float64
+			err error
 		)
 		qRaw := r.URL.Query().Get("q")
 		if qRaw != "" {
@@ -419,6 +452,9 @@ func DecodeMethodQueryFloat64Request(mux goahttp.Muxer, decoder func(*http.Reque
 				err = goa.MergeErrors(err, goa.InvalidFieldTypeError("q", qRaw, "float"))
 			}
 			q = &v
+		}
+		if err != nil {
+			return nil, err
 		}
 
 		return NewMethodQueryFloat64MethodQueryFloat64Payload(q), nil
@@ -584,7 +620,8 @@ var PayloadQueryArrayBoolDecodeCode = `// DecodeMethodQueryArrayBoolRequest retu
 func DecodeMethodQueryArrayBoolRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) (interface{}, error) {
 	return func(r *http.Request) (interface{}, error) {
 		var (
-			q []bool
+			q   []bool
+			err error
 		)
 		qRaw := r.URL.Query()["q"]
 		if qRaw != nil {
@@ -596,6 +633,9 @@ func DecodeMethodQueryArrayBoolRequest(mux goahttp.Muxer, decoder func(*http.Req
 				}
 				q[i] = v
 			}
+		}
+		if err != nil {
+			return nil, err
 		}
 
 		return NewMethodQueryArrayBoolMethodQueryArrayBoolPayload(q), nil
@@ -646,7 +686,8 @@ var PayloadQueryArrayIntDecodeCode = `// DecodeMethodQueryArrayIntRequest return
 func DecodeMethodQueryArrayIntRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) (interface{}, error) {
 	return func(r *http.Request) (interface{}, error) {
 		var (
-			q []int
+			q   []int
+			err error
 		)
 		qRaw := r.URL.Query()["q"]
 		if qRaw != nil {
@@ -658,6 +699,9 @@ func DecodeMethodQueryArrayIntRequest(mux goahttp.Muxer, decoder func(*http.Requ
 				}
 				q[i] = int(v)
 			}
+		}
+		if err != nil {
+			return nil, err
 		}
 
 		return NewMethodQueryArrayIntMethodQueryArrayIntPayload(q), nil
@@ -707,7 +751,8 @@ var PayloadQueryArrayInt32DecodeCode = `// DecodeMethodQueryArrayInt32Request re
 func DecodeMethodQueryArrayInt32Request(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) (interface{}, error) {
 	return func(r *http.Request) (interface{}, error) {
 		var (
-			q []int32
+			q   []int32
+			err error
 		)
 		qRaw := r.URL.Query()["q"]
 		if qRaw != nil {
@@ -719,6 +764,9 @@ func DecodeMethodQueryArrayInt32Request(mux goahttp.Muxer, decoder func(*http.Re
 				}
 				q[i] = int32(v)
 			}
+		}
+		if err != nil {
+			return nil, err
 		}
 
 		return NewMethodQueryArrayInt32MethodQueryArrayInt32Payload(q), nil
@@ -769,7 +817,8 @@ var PayloadQueryArrayInt64DecodeCode = `// DecodeMethodQueryArrayInt64Request re
 func DecodeMethodQueryArrayInt64Request(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) (interface{}, error) {
 	return func(r *http.Request) (interface{}, error) {
 		var (
-			q []int64
+			q   []int64
+			err error
 		)
 		qRaw := r.URL.Query()["q"]
 		if qRaw != nil {
@@ -781,6 +830,9 @@ func DecodeMethodQueryArrayInt64Request(mux goahttp.Muxer, decoder func(*http.Re
 				}
 				q[i] = v
 			}
+		}
+		if err != nil {
+			return nil, err
 		}
 
 		return NewMethodQueryArrayInt64MethodQueryArrayInt64Payload(q), nil
@@ -831,7 +883,8 @@ var PayloadQueryArrayUIntDecodeCode = `// DecodeMethodQueryArrayUIntRequest retu
 func DecodeMethodQueryArrayUIntRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) (interface{}, error) {
 	return func(r *http.Request) (interface{}, error) {
 		var (
-			q []uint
+			q   []uint
+			err error
 		)
 		qRaw := r.URL.Query()["q"]
 		if qRaw != nil {
@@ -843,6 +896,9 @@ func DecodeMethodQueryArrayUIntRequest(mux goahttp.Muxer, decoder func(*http.Req
 				}
 				q[i] = uint(v)
 			}
+		}
+		if err != nil {
+			return nil, err
 		}
 
 		return NewMethodQueryArrayUIntMethodQueryArrayUIntPayload(q), nil
@@ -893,7 +949,8 @@ var PayloadQueryArrayUInt32DecodeCode = `// DecodeMethodQueryArrayUInt32Request 
 func DecodeMethodQueryArrayUInt32Request(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) (interface{}, error) {
 	return func(r *http.Request) (interface{}, error) {
 		var (
-			q []uint32
+			q   []uint32
+			err error
 		)
 		qRaw := r.URL.Query()["q"]
 		if qRaw != nil {
@@ -905,6 +962,9 @@ func DecodeMethodQueryArrayUInt32Request(mux goahttp.Muxer, decoder func(*http.R
 				}
 				q[i] = int32(v)
 			}
+		}
+		if err != nil {
+			return nil, err
 		}
 
 		return NewMethodQueryArrayUInt32MethodQueryArrayUInt32Payload(q), nil
@@ -955,7 +1015,8 @@ var PayloadQueryArrayUInt64DecodeCode = `// DecodeMethodQueryArrayUInt64Request 
 func DecodeMethodQueryArrayUInt64Request(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) (interface{}, error) {
 	return func(r *http.Request) (interface{}, error) {
 		var (
-			q []uint64
+			q   []uint64
+			err error
 		)
 		qRaw := r.URL.Query()["q"]
 		if qRaw != nil {
@@ -967,6 +1028,9 @@ func DecodeMethodQueryArrayUInt64Request(mux goahttp.Muxer, decoder func(*http.R
 				}
 				q[i] = v
 			}
+		}
+		if err != nil {
+			return nil, err
 		}
 
 		return NewMethodQueryArrayUInt64MethodQueryArrayUInt64Payload(q), nil
@@ -1017,7 +1081,8 @@ var PayloadQueryArrayFloat32DecodeCode = `// DecodeMethodQueryArrayFloat32Reques
 func DecodeMethodQueryArrayFloat32Request(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) (interface{}, error) {
 	return func(r *http.Request) (interface{}, error) {
 		var (
-			q []float32
+			q   []float32
+			err error
 		)
 		qRaw := r.URL.Query()["q"]
 		if qRaw != nil {
@@ -1029,6 +1094,9 @@ func DecodeMethodQueryArrayFloat32Request(mux goahttp.Muxer, decoder func(*http.
 				}
 				q[i] = float32(v)
 			}
+		}
+		if err != nil {
+			return nil, err
 		}
 
 		return NewMethodQueryArrayFloat32MethodQueryArrayFloat32Payload(q), nil
@@ -1079,7 +1147,8 @@ var PayloadQueryArrayFloat64DecodeCode = `// DecodeMethodQueryArrayFloat64Reques
 func DecodeMethodQueryArrayFloat64Request(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) (interface{}, error) {
 	return func(r *http.Request) (interface{}, error) {
 		var (
-			q []float64
+			q   []float64
+			err error
 		)
 		qRaw := r.URL.Query()["q"]
 		if qRaw != nil {
@@ -1091,6 +1160,9 @@ func DecodeMethodQueryArrayFloat64Request(mux goahttp.Muxer, decoder func(*http.
 				}
 				q[i] = v
 			}
+		}
+		if err != nil {
+			return nil, err
 		}
 
 		return NewMethodQueryArrayFloat64MethodQueryArrayFloat64Payload(q), nil
@@ -1357,7 +1429,8 @@ var PayloadQueryMapStringBoolDecodeCode = `// DecodeMethodQueryMapStringBoolRequ
 func DecodeMethodQueryMapStringBoolRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) (interface{}, error) {
 	return func(r *http.Request) (interface{}, error) {
 		var (
-			q map[string]bool
+			q   map[string]bool
+			err error
 		)
 		qRaw := r.URL.Query()
 		if len(qRaw) != 0 {
@@ -1374,6 +1447,9 @@ func DecodeMethodQueryMapStringBoolRequest(mux goahttp.Muxer, decoder func(*http
 				}
 				q[key] = val
 			}
+		}
+		if err != nil {
+			return nil, err
 		}
 
 		return NewMethodQueryMapStringBoolMethodQueryMapStringBoolPayload(q), nil
@@ -1432,7 +1508,8 @@ var PayloadQueryMapBoolStringDecodeCode = `// DecodeMethodQueryMapBoolStringRequ
 func DecodeMethodQueryMapBoolStringRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) (interface{}, error) {
 	return func(r *http.Request) (interface{}, error) {
 		var (
-			q map[bool]string
+			q   map[bool]string
+			err error
 		)
 		qRaw := r.URL.Query()
 		if len(qRaw) != 0 {
@@ -1452,6 +1529,9 @@ func DecodeMethodQueryMapBoolStringRequest(mux goahttp.Muxer, decoder func(*http
 				}
 				q[key] = val
 			}
+		}
+		if err != nil {
+			return nil, err
 		}
 
 		return NewMethodQueryMapBoolStringMethodQueryMapBoolStringPayload(q), nil
@@ -1513,7 +1593,8 @@ var PayloadQueryMapBoolBoolDecodeCode = `// DecodeMethodQueryMapBoolBoolRequest 
 func DecodeMethodQueryMapBoolBoolRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) (interface{}, error) {
 	return func(r *http.Request) (interface{}, error) {
 		var (
-			q map[bool]bool
+			q   map[bool]bool
+			err error
 		)
 		qRaw := r.URL.Query()
 		if len(qRaw) != 0 {
@@ -1538,6 +1619,9 @@ func DecodeMethodQueryMapBoolBoolRequest(mux goahttp.Muxer, decoder func(*http.R
 				}
 				q[key] = val
 			}
+		}
+		if err != nil {
+			return nil, err
 		}
 
 		return NewMethodQueryMapBoolBoolMethodQueryMapBoolBoolPayload(q), nil
@@ -1653,7 +1737,8 @@ var PayloadQueryMapStringArrayBoolDecodeCode = `// DecodeMethodQueryMapStringArr
 func DecodeMethodQueryMapStringArrayBoolRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) (interface{}, error) {
 	return func(r *http.Request) (interface{}, error) {
 		var (
-			q map[string][]bool
+			q   map[string][]bool
+			err error
 		)
 		qRaw := r.URL.Query()
 		if len(qRaw) != 0 {
@@ -1672,6 +1757,9 @@ func DecodeMethodQueryMapStringArrayBoolRequest(mux goahttp.Muxer, decoder func(
 				}
 				q[key] = val
 			}
+		}
+		if err != nil {
+			return nil, err
 		}
 
 		return NewMethodQueryMapStringArrayBoolMethodQueryMapStringArrayBoolPayload(q), nil
@@ -1733,7 +1821,8 @@ var PayloadQueryMapBoolArrayStringDecodeCode = `// DecodeMethodQueryMapBoolArray
 func DecodeMethodQueryMapBoolArrayStringRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) (interface{}, error) {
 	return func(r *http.Request) (interface{}, error) {
 		var (
-			q map[bool][]string
+			q   map[bool][]string
+			err error
 		)
 		qRaw := r.URL.Query()
 		if len(qRaw) != 0 {
@@ -1749,6 +1838,9 @@ func DecodeMethodQueryMapBoolArrayStringRequest(mux goahttp.Muxer, decoder func(
 				}
 				q[key] = val
 			}
+		}
+		if err != nil {
+			return nil, err
 		}
 
 		return NewMethodQueryMapBoolArrayStringMethodQueryMapBoolArrayStringPayload(q), nil
@@ -1805,7 +1897,8 @@ var PayloadQueryMapBoolArrayBoolDecodeCode = `// DecodeMethodQueryMapBoolArrayBo
 func DecodeMethodQueryMapBoolArrayBoolRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) (interface{}, error) {
 	return func(r *http.Request) (interface{}, error) {
 		var (
-			q map[bool][]bool
+			q   map[bool][]bool
+			err error
 		)
 		qRaw := r.URL.Query()
 		if len(qRaw) != 0 {
@@ -1832,6 +1925,9 @@ func DecodeMethodQueryMapBoolArrayBoolRequest(mux goahttp.Muxer, decoder func(*h
 				}
 				q[key] = val
 			}
+		}
+		if err != nil {
+			return nil, err
 		}
 
 		return NewMethodQueryMapBoolArrayBoolMethodQueryMapBoolArrayBoolPayload(q), nil
