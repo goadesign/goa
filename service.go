@@ -1,6 +1,7 @@
 package goa
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"log"
@@ -11,8 +12,7 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
-
-	"context"
+	"sync"
 
 	"github.com/dimfeld/httptreemux"
 )
@@ -299,10 +299,11 @@ func (ctrl *Controller) MuxHandler(name string, hdlr Handler, unm Unmarshaler) M
 	// Use closure to enable late computation of handlers to ensure all middleware has been
 	// registered.
 	var handler Handler
+	var initHandler sync.Once
 
 	return func(rw http.ResponseWriter, req *http.Request, params url.Values) {
 		// Build handler middleware chains on first invocation
-		if handler == nil {
+		initHandler.Do(func() {
 			handler = func(ctx context.Context, rw http.ResponseWriter, req *http.Request) error {
 				if !ContextResponse(ctx).Written() {
 					return hdlr(ctx, rw, req)
@@ -314,7 +315,7 @@ func (ctrl *Controller) MuxHandler(name string, hdlr Handler, unm Unmarshaler) M
 			for i := range chain {
 				handler = chain[ml-i-1](handler)
 			}
-		}
+		})
 
 		// Build context
 		ctx := NewContext(WithAction(ctrl.Context, name), rw, req, params)
