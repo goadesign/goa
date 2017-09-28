@@ -9,9 +9,9 @@ import (
 )
 
 type (
-	// EndpointData contains the data necessary to render the endpoint
-	// template.
-	EndpointData struct {
+	// EndpointsData contains the data necessary to render the
+	// service endpoints struct template.
+	EndpointsData struct {
 		// Name is the service name.
 		Name string
 		// Description is the service description.
@@ -28,6 +28,12 @@ type (
 	EndpointMethodData struct {
 		// Name is the method name.
 		Name string
+		// VarName is the name of the corresponding generated function.
+		VarName string
+		// ServiceName is the name of the owner service.
+		ServiceName string
+		// ServiceVarName is the name of the owner service Go interface.
+		ServiceVarName string
 		// PayloadRef is reference to the payload Go type if any.
 		PayloadRef string
 		// ResultRef is reference to the result Go type if any.
@@ -39,22 +45,25 @@ type (
 func EndpointFile(service *design.ServiceExpr) *codegen.File {
 	path := filepath.Join(codegen.Gendir, codegen.SnakeCase(service.Name), "endpoints.go")
 	var (
-		data *EndpointData
+		data *EndpointsData
 	)
 	{
 		svc := Services.Get(service.Name)
+		serviceVarName := "Service"
 		methods := make([]*EndpointMethodData, len(svc.Methods))
 		for i, m := range svc.Methods {
 			methods[i] = &EndpointMethodData{
-				Name:       m.VarName,
-				PayloadRef: m.PayloadRef,
-				ResultRef:  m.ResultRef,
+				Name:           m.Name,
+				VarName:        m.VarName,
+				ServiceName:    svc.Name,
+				ServiceVarName: serviceVarName,
+				PayloadRef:     m.PayloadRef,
+				ResultRef:      m.ResultRef,
 			}
 		}
-		serviceVarName := "Service"
 		varName := "Endpoints"
 		desc := fmt.Sprintf("%s wraps the %s service endpoints.", varName, service.Name)
-		data = &EndpointData{
+		data = &EndpointsData{
 			Name:           service.Name,
 			Description:    desc,
 			VarName:        varName,
@@ -64,48 +73,71 @@ func EndpointFile(service *design.ServiceExpr) *codegen.File {
 	}
 
 	var (
-		header, body *codegen.SectionTemplate
+		sections []*codegen.SectionTemplate
 	)
 	{
-		header = codegen.Header(service.Name+" endpoints", codegen.Goify(service.Name, false),
+		header := codegen.Header(service.Name+" endpoints", codegen.Goify(service.Name, false),
 			[]*codegen.ImportSpec{
 				&codegen.ImportSpec{Path: "context"},
 				&codegen.ImportSpec{Name: "goa", Path: "goa.design/goa"},
 			})
-		body = &codegen.SectionTemplate{
-			Name:   "endpoint",
-			Source: endpointT,
+		def := &codegen.SectionTemplate{
+			Name:   "endpoints-struct",
+			Source: serviceEndpointsT,
 			Data:   data,
+		}
+		init := &codegen.SectionTemplate{
+			Name:   "endpoints-init",
+			Source: serviceEndpointsInitT,
+			Data:   data,
+		}
+		sections = []*codegen.SectionTemplate{header, def, init}
+		for _, m := range data.Methods {
+			sections = append(sections, &codegen.SectionTemplate{
+				Name:   "endpoint-method",
+				Source: serviceEndpointMethodT,
+				Data:   m,
+			})
 		}
 	}
 
-	return &codegen.File{Path: path, SectionTemplates: []*codegen.SectionTemplate{header, body}}
+	return &codegen.File{Path: path, SectionTemplates: sections}
 }
 
-// endpointT is the template used to write an endpoint definition.
-const endpointT = `type (
+// input: EndpointsData
+const serviceEndpointsT = `type (
 	// {{ .Description }}
 	{{ .VarName }} struct {
 {{- range .Methods}}
-		{{ .Name }} goa.Endpoint
+		{{ .VarName }} goa.Endpoint
 {{- end }}
 	}
 )
+`
 
-// New{{ .VarName }} wraps the methods of a {{ .Name }} service with endpoints.
+// input: EndpointsData
+const serviceEndpointsInitT = `// New{{ .VarName }} wraps the methods of a {{ .Name }} service with endpoints.
 func New{{ .VarName }}(s {{ .ServiceVarName }}) *{{ .VarName }} {
-	ep := new({{ .VarName }})
-{{ range .Methods }}
-	ep.{{ .Name }} = func(ctx context.Context, req interface{}) (interface{}, error) {
+	return &{{ .VarName }}{
+{{- range .Methods }}
+		{{ .VarName }}: New{{ .VarName }}Endpoint(s),
+{{- end }}
+	}
+}
+`
+
+// input: EndpointMethodData
+const serviceEndpointMethodT = `{{ printf "New%sEndpoint returns an endpoint function that calls method %q of service %q." .VarName .Name .ServiceName | comment }}
+func New{{ .VarName }}Endpoint(s {{ .ServiceVarName}}) goa.Endpoint {
+	return func(ctx context.Context, req interface{}) (interface{}, error) {
 {{- if .PayloadRef }}
 		p := req.({{ .PayloadRef }})
 {{- end }}
 {{- if .ResultRef }}
-		return s.{{ .Name }}(ctx{{ if .PayloadRef }} ,p{{ end }})
+		return s.{{ .VarName }}(ctx{{ if .PayloadRef }}, p{{ end }})
 {{- else }}
-		return nil, s.{{ .Name }}(ctx{{ if .PayloadRef }}, p{{ end }})
+		return nil, s.{{ .VarName }}(ctx{{ if .PayloadRef }}, p{{ end }})
 {{- end }}
 	}
-{{ end }}
-	return ep
-}`
+}
+`

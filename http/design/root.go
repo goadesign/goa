@@ -203,22 +203,32 @@ func (r *RootExpr) EvalName() string {
 
 // WalkSets iterates through the service to finalize and validate them.
 func (r *RootExpr) WalkSets(walk eval.SetWalker) {
-	services := make(eval.ExpressionSet, len(r.HTTPServices))
-	var endpoints []eval.Expression
-	sort.SliceStable(r.HTTPServices, func(i, j int) bool {
-		if r.HTTPServices[j].ParentName == r.HTTPServices[i].Name() {
-			return true
-		}
-		return false
-	})
-	for i, svc := range r.HTTPServices {
-		services[i] = svc
-		for _, e := range svc.HTTPEndpoints {
-			endpoints = append(endpoints, e)
+	var (
+		services  eval.ExpressionSet
+		endpoints eval.ExpressionSet
+		servers   eval.ExpressionSet
+	)
+	{
+		services = make(eval.ExpressionSet, len(r.HTTPServices))
+		sort.SliceStable(r.HTTPServices, func(i, j int) bool {
+			if r.HTTPServices[j].ParentName == r.HTTPServices[i].Name() {
+				return true
+			}
+			return false
+		})
+		for i, svc := range r.HTTPServices {
+			services[i] = svc
+			for _, e := range svc.HTTPEndpoints {
+				endpoints = append(endpoints, e)
+			}
+			for _, s := range svc.FileServers {
+				servers = append(servers, s)
+			}
 		}
 	}
 	walk(services)
 	walk(endpoints)
+	walk(servers)
 }
 
 // DependsOn is a no-op as the DSL runs when loaded.

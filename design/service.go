@@ -38,6 +38,17 @@ type (
 	}
 )
 
+// Method returns the method expression with the given name, nil if there isn't
+// one.
+func (s *ServiceExpr) Method(n string) *MethodExpr {
+	for _, m := range s.Methods {
+		if m.Name == n {
+			return m
+		}
+	}
+	return nil
+}
+
 // EvalName returns the generic expression name used in error messages.
 func (s *ServiceExpr) EvalName() string {
 	if s.Name == "" {

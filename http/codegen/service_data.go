@@ -36,6 +36,8 @@ type (
 		Service *service.Data
 		// Endpoints describes the endpoint data for this service.
 		Endpoints []*EndpointData
+		// FileServers lists the file servers for this service.
+		FileServers []*FileServerData
 		// ServerStruct is the name of the HTTP server struct.
 		ServerStruct string
 		// ServerInit is the name of the constructor of the server
@@ -115,6 +117,19 @@ type (
 		RequestEncoder string
 		// ResponseDecoder is the name of the response decoder function.
 		ResponseDecoder string
+	}
+
+	// FileServerData lists the data needed to generate file servers.
+	FileServerData struct {
+		// MountHandler is the name of the mount handler function.
+		MountHandler string
+		// Path is the HTTP path to the server.
+		RequestPath string
+		// Root is the root server file path.
+		FilePath string
+		// Dir is true if the file server servers files under a
+		// directory, false if it serves a single file.
+		IsDir bool
 	}
 
 	// PayloadData contains the payload information required to generate the
@@ -435,6 +450,16 @@ func (d ServicesData) analyze(hs *httpdesign.ServiceExpr) *ServiceData {
 		ClientStruct:    "Client",
 		ServerTypeNames: make(map[string]struct{}),
 		ClientTypeNames: make(map[string]struct{}),
+	}
+
+	for _, s := range hs.FileServers {
+		data := &FileServerData{
+			MountHandler: fmt.Sprintf("Mount%s", codegen.Goify(s.FilePath, true)),
+			RequestPath:  s.RequestPath,
+			FilePath:     s.FilePath,
+			IsDir:        s.IsDir(),
+		}
+		rd.FileServers = append(rd.FileServers, data)
 	}
 
 	for _, a := range hs.HTTPEndpoints {

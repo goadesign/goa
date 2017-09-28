@@ -25,26 +25,45 @@ type (
 
 // NewEndpoints wraps the methods of a storage service with endpoints.
 func NewEndpoints(s Service) *Endpoints {
-	ep := new(Endpoints)
+	return &Endpoints{
+		List:   NewListEndpoint(s),
+		Show:   NewShowEndpoint(s),
+		Add:    NewAddEndpoint(s),
+		Remove: NewRemoveEndpoint(s),
+	}
+}
 
-	ep.List = func(ctx context.Context, req interface{}) (interface{}, error) {
+// NewListEndpoint returns an endpoint function that calls method "list" of
+// service "storage".
+func NewListEndpoint(s Service) goa.Endpoint {
+	return func(ctx context.Context, req interface{}) (interface{}, error) {
 		return s.List(ctx)
 	}
+}
 
-	ep.Show = func(ctx context.Context, req interface{}) (interface{}, error) {
+// NewShowEndpoint returns an endpoint function that calls method "show" of
+// service "storage".
+func NewShowEndpoint(s Service) goa.Endpoint {
+	return func(ctx context.Context, req interface{}) (interface{}, error) {
 		p := req.(*ShowPayload)
 		return s.Show(ctx, p)
 	}
+}
 
-	ep.Add = func(ctx context.Context, req interface{}) (interface{}, error) {
+// NewAddEndpoint returns an endpoint function that calls method "add" of
+// service "storage".
+func NewAddEndpoint(s Service) goa.Endpoint {
+	return func(ctx context.Context, req interface{}) (interface{}, error) {
 		p := req.(*Bottle)
 		return s.Add(ctx, p)
 	}
+}
 
-	ep.Remove = func(ctx context.Context, req interface{}) (interface{}, error) {
+// NewRemoveEndpoint returns an endpoint function that calls method "remove" of
+// service "storage".
+func NewRemoveEndpoint(s Service) goa.Endpoint {
+	return func(ctx context.Context, req interface{}) (interface{}, error) {
 		p := req.(*RemovePayload)
 		return nil, s.Remove(ctx, p)
 	}
-
-	return ep
 }
