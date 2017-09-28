@@ -11,67 +11,83 @@ import (
 
 func TestEndpoint(t *testing.T) {
 	const (
-		singleMethod = `type (
+		singleMethod = `
+type (
 	// Endpoints wraps the Single service endpoints.
 	Endpoints struct {
 		A goa.Endpoint
 	}
 )
-
 // NewEndpoints wraps the methods of a Single service with endpoints.
 func NewEndpoints(s Service) *Endpoints {
-	ep := new(Endpoints)
-
-	ep.A = func(ctx context.Context, req interface{}) (interface{}, error) {
+	return &Endpoints{
+		A: NewAEndpoint(s),
+	}
+}
+// NewAEndpoint returns an endpoint function that calls method "A" of service
+// "Single".
+func NewAEndpoint(s Service) goa.Endpoint {
+	return func(ctx context.Context, req interface{}) (interface{}, error) {
 		p := req.(*AType)
 		return nil, s.A(ctx, p)
 	}
+}
+`
 
-	return ep
-}`
-
-		multipleMethods = `type (
+		multipleMethods = `
+type (
 	// Endpoints wraps the Multiple service endpoints.
 	Endpoints struct {
 		B goa.Endpoint
 		C goa.Endpoint
 	}
 )
-
 // NewEndpoints wraps the methods of a Multiple service with endpoints.
 func NewEndpoints(s Service) *Endpoints {
-	ep := new(Endpoints)
-
-	ep.B = func(ctx context.Context, req interface{}) (interface{}, error) {
+	return &Endpoints{
+		B: NewBEndpoint(s),
+		C: NewCEndpoint(s),
+	}
+}
+// NewBEndpoint returns an endpoint function that calls method "B" of service
+// "Multiple".
+func NewBEndpoint(s Service) goa.Endpoint {
+	return func(ctx context.Context, req interface{}) (interface{}, error) {
 		p := req.(*BType)
 		return nil, s.B(ctx, p)
 	}
-
-	ep.C = func(ctx context.Context, req interface{}) (interface{}, error) {
+}
+// NewCEndpoint returns an endpoint function that calls method "C" of service
+// "Multiple".
+func NewCEndpoint(s Service) goa.Endpoint {
+	return func(ctx context.Context, req interface{}) (interface{}, error) {
 		p := req.(*CType)
 		return nil, s.C(ctx, p)
 	}
+}
+`
 
-	return ep
-}`
-
-		nopayloadMethods = `type (
+		nopayloadMethods = `
+type (
 	// Endpoints wraps the NoPayload service endpoints.
 	Endpoints struct {
 		NoPayload goa.Endpoint
 	}
 )
-
 // NewEndpoints wraps the methods of a NoPayload service with endpoints.
 func NewEndpoints(s Service) *Endpoints {
-	ep := new(Endpoints)
-
-	ep.NoPayload = func(ctx context.Context, req interface{}) (interface{}, error) {
+	return &Endpoints{
+		NoPayload: NewNoPayloadEndpoint(s),
+	}
+}
+// NewNoPayloadEndpoint returns an endpoint function that calls method
+// "NoPayload" of service "NoPayload".
+func NewNoPayloadEndpoint(s Service) goa.Endpoint {
+	return func(ctx context.Context, req interface{}) (interface{}, error) {
 		return nil, s.NoPayload(ctx)
 	}
-
-	return ep
-}`
+}
+`
 
 		genPkg = "goa.design/goa/example"
 	)

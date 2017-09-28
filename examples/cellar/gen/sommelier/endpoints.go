@@ -22,12 +22,16 @@ type (
 
 // NewEndpoints wraps the methods of a sommelier service with endpoints.
 func NewEndpoints(s Service) *Endpoints {
-	ep := new(Endpoints)
+	return &Endpoints{
+		Pick: NewPickEndpoint(s),
+	}
+}
 
-	ep.Pick = func(ctx context.Context, req interface{}) (interface{}, error) {
+// NewPickEndpoint returns an endpoint function that calls method "pick" of
+// service "sommelier".
+func NewPickEndpoint(s Service) goa.Endpoint {
+	return func(ctx context.Context, req interface{}) (interface{}, error) {
 		p := req.(*Criteria)
 		return s.Pick(ctx, p)
 	}
-
-	return ep
 }

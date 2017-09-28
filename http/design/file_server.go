@@ -2,6 +2,7 @@ package design
 
 import (
 	"fmt"
+	"path"
 	"strings"
 
 	"goa.design/goa/design"
@@ -37,6 +38,7 @@ func (f *FileServerExpr) EvalName() string {
 
 // Finalize normalizes the request path.
 func (f *FileServerExpr) Finalize() {
+	f.RequestPath = path.Join(Root.Path, f.Service.Path, f.RequestPath)
 	// Make sure request path starts with a "/" so codegen can rely on it.
 	if !strings.HasPrefix(f.RequestPath, "/") {
 		f.RequestPath = "/" + f.RequestPath

@@ -48,6 +48,9 @@ func server(genpkg string, svc *httpdesign.ServiceExpr) *codegen.File {
 		sections = append(sections, &codegen.SectionTemplate{Name: "server-handler", Source: serverHandlerT, Data: e})
 		sections = append(sections, &codegen.SectionTemplate{Name: "server-handler-init", Source: serverHandlerInitT, Data: e})
 	}
+	for _, s := range data.FileServers {
+		sections = append(sections, &codegen.SectionTemplate{Name: "server-files", Source: fileServerT, Data: s})
+	}
 
 	return &codegen.File{Path: path, SectionTemplates: sections}
 }
@@ -189,11 +192,20 @@ func {{ .MountServer }}(mux goahttp.Muxer, h *{{ .ServerStruct }}) {
 	{{- range .Endpoints }}
 	{{ .MountHandler }}(mux, h.{{ .Method.VarName }})
 	{{- end }}
+	{{- range .FileServers }}
+		{{- if .IsDir }}
+	{{ .MountHandler }}(mux, http.FileServer(http.Dir({{ printf "%q" .FilePath }})))
+		{{- else }}
+	{{ .MountHandler }}(mux, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			http.ServeFile(w, r, {{ printf "%q" .FilePath }})
+		}))
+		{{- end }}
+	{{- end }}
 }
 `
 
 // input: EndpointData
-const serverHandlerT = `{{ printf "%s configures the mux to serve the \"%s\" service \"%s\" endpoint." .MountHandler .ServiceName .Method.Name | comment }}
+const serverHandlerT = `{{ printf "%s configures the mux to serve the %q service %q endpoint." .MountHandler .ServiceName .Method.Name | comment }}
 func {{ .MountHandler }}(mux goahttp.Muxer, h http.Handler) {
 	f, ok := h.(http.HandlerFunc)
 	if !ok {
@@ -208,7 +220,14 @@ func {{ .MountHandler }}(mux goahttp.Muxer, h http.Handler) {
 `
 
 // input: EndpointData
-const serverHandlerInitT = `{{ printf "%s creates a HTTP handler which loads the HTTP request and calls the \"%s\" service \"%s\" endpoint." .HandlerInit .ServiceName .Method.Name | comment }}
+const fileServerT = `{{ printf "%s configures the mux to serve GET request made to %q." .MountHandler .RequestPath | comment }}
+func {{ .MountHandler }}(mux goahttp.Muxer, h http.Handler) {
+	mux.Handle("GET", "{{ .RequestPath }}", h.ServeHTTP)
+}
+`
+
+// input: EndpointData
+const serverHandlerInitT = `{{ printf "%s creates a HTTP handler which loads the HTTP request and calls the %q service %q endpoint." .HandlerInit .ServiceName .Method.Name | comment }}
 func {{ .HandlerInit }}(
 	endpoint goa.Endpoint,
 	mux goahttp.Muxer,
@@ -261,7 +280,6 @@ func {{ .Name }}(v {{ .ParamTypeRef }}) {{ .ResultTypeRef }} {
 const requestDecoderT = `{{ printf "%s returns a decoder for requests sent to the %s %s endpoint." .RequestDecoder .ServiceName .Method.Name | comment }}
 func {{ .RequestDecoder }}(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) (interface{}, error) {
 	return func(r *http.Request) (interface{}, error) {
-
 {{- if .Payload.Request.ServerBody }}
 		var (
 			body {{ .Payload.Request.ServerBody.VarName }}

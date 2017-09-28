@@ -50,6 +50,16 @@ type (
 	}
 )
 
+// Section returns the section template with the given name or nil if not found.
+func (f *File) Section(name string) *SectionTemplate {
+	for _, s := range f.SectionTemplates {
+		if s.Name == name {
+			return s
+		}
+	}
+	return nil
+}
+
 // Render executes the file section templates and writes the resulting bytes to
 // an output file. The path of the output file is computed by appending the file
 // path to dir. If a file already exists with the computed path then Render
