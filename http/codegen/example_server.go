@@ -151,12 +151,16 @@ const mainT = `func main() {
 	// Create the structs that implement the services.
 	var (
 	{{- range .Services }}
+		{{-  if .Endpoints }}
 		{{ .Service.PkgName }}Svc {{.Service.PkgName}}.Service
+		{{-  end }}
 	{{- end }}
 	)
 	{
 	{{- range .Services }}
+		{{-  if .Endpoints }}
 		{{ .Service.PkgName }}Svc = {{ $.APIPkg }}.New{{ .Service.VarName }}(logger)
+		{{-  end }}
 	{{- end }}
 	}
 
@@ -164,12 +168,16 @@ const mainT = `func main() {
 	// services potentially running in different processes.
 	var (
 	{{- range .Services }}
+		{{-  if .Endpoints }}
 		{{ .Service.PkgName }}Endpoints *{{.Service.PkgName}}.Endpoints
+		{{-  end }}
 	{{- end }}
 	)
 	{
 	{{- range .Services }}
+		{{-  if .Endpoints }}
 		{{ .Service.PkgName }}Endpoints = {{ .Service.PkgName }}.NewEndpoints({{ .Service.PkgName }}Svc)
+		{{-  end }}
 	{{- end }}
 	}
 
@@ -195,18 +203,22 @@ const mainT = `func main() {
 	// responses.
 	var (
 	{{- range .Services }}
+		{{-  if .Endpoints }}
 		{{ .Service.PkgName }}Server *{{.Service.PkgName}}svr.Server
+		{{-  end }}
 	{{- end }}
 	)
 	{
 	{{- range .Services }}
+		{{-  if .Endpoints }}
 		{{ .Service.PkgName }}Server = {{ .Service.PkgName }}svr.New({{ .Service.PkgName }}Endpoints, mux, dec, enc)
+		{{-  end }}
 	{{- end }}
 	}
 
 	// Configure the mux.
 	{{- range .Services }}
-	{{ .Service.PkgName }}svr.Mount(mux, {{ .Service.PkgName }}Server)
+	{{ .Service.PkgName }}svr.Mount(mux{{ if .Endpoints }}, {{ .Service.PkgName }}Server{{ end }})
 	{{- end }}
 
 	// Wrap the multiplexer with additional middlewares. Middlewares mounted
