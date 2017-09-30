@@ -15,6 +15,7 @@ import (
 	cellar "goa.design/goa/examples/cellar"
 	sommeliersvr "goa.design/goa/examples/cellar/gen/http/sommelier/server"
 	storagesvr "goa.design/goa/examples/cellar/gen/http/storage/server"
+	swaggersvr "goa.design/goa/examples/cellar/gen/http/swagger/server"
 	"goa.design/goa/examples/cellar/gen/sommelier"
 	"goa.design/goa/examples/cellar/gen/storage"
 	goahttp "goa.design/goa/http"
@@ -113,6 +114,7 @@ func main() {
 	// Configure the mux.
 	sommeliersvr.Mount(mux, sommelierServer)
 	storagesvr.Mount(mux, storageServer)
+	swaggersvr.Mount(mux)
 
 	// Wrap the multiplexer with additional middlewares. Middlewares mounted
 	// here apply to all the service endpoints.

@@ -39,10 +39,15 @@ func server(genpkg string, svc *httpdesign.ServiceExpr) *codegen.File {
 			{Path: "goa.design/goa/http", Name: "goahttp"},
 			{Path: genpkg + "/" + codegen.SnakeCase(svc.Name()), Name: data.Service.PkgName},
 		}),
-		{Name: "server-struct", Source: serverStructT, Data: data},
-		{Name: "server-init", Source: serverInitT, Data: data},
-		{Name: "server-mount", Source: serverMountT, Data: data},
 	}
+
+	if len(data.Endpoints) > 0 {
+		// Service may only have file servers
+		sections = append(sections, &codegen.SectionTemplate{Name: "server-struct", Source: serverStructT, Data: data})
+		sections = append(sections, &codegen.SectionTemplate{Name: "server-init", Source: serverInitT, Data: data})
+	}
+
+	sections = append(sections, &codegen.SectionTemplate{Name: "server-mount", Source: serverMountT, Data: data})
 
 	for _, e := range data.Endpoints {
 		sections = append(sections, &codegen.SectionTemplate{Name: "server-handler", Source: serverHandlerT, Data: e})
@@ -188,7 +193,7 @@ func {{ .ServerInit }}(
 
 // input: ServiceData
 const serverMountT = `{{ printf "%s configures the mux to serve the %s endpoints." .MountServer .Service.Name | comment }}
-func {{ .MountServer }}(mux goahttp.Muxer, h *{{ .ServerStruct }}) {
+func {{ .MountServer }}(mux goahttp.Muxer{{ if .Endpoints }}, h *{{ .ServerStruct }}{{ end }}) {
 	{{- range .Endpoints }}
 	{{ .MountHandler }}(mux, h.{{ .Method.VarName }})
 	{{- end }}
@@ -219,7 +224,7 @@ func {{ .MountHandler }}(mux goahttp.Muxer, h http.Handler) {
 }
 `
 
-// input: EndpointData
+// input: FileServerData
 const fileServerT = `{{ printf "%s configures the mux to serve GET request made to %q." .MountHandler .RequestPath | comment }}
 func {{ .MountHandler }}(mux goahttp.Muxer, h http.Handler) {
 	mux.Handle("GET", "{{ .RequestPath }}", h.ServeHTTP)
