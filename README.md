@@ -9,8 +9,6 @@ unique design-first approach.
 [![Godoc](https://godoc.org/github.com/goadesign/goa?status.svg)](http://godoc.org/github.com/goadesign/goa)
 [![Slack](https://img.shields.io/badge/slack-gophers-orange.svg?style=flat)](https://gophers.slack.com/messages/goa/)
 
-__v1.3.0 is out! Read the [blog post](https://goa.design/blog/006-v_1_3_0/).__
-
 ## Why goa?
 
 goa takes a different approach to building micro-services. Instead of focusing
