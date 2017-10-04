@@ -79,6 +79,8 @@ func TestPayloadConstructor(t *testing.T) {
 		{"query-map-bool-array-bool", PayloadQueryMapBoolArrayBoolDSL, PayloadQueryMapBoolArrayBoolConstructorCode},
 		{"query-map-bool-array-bool-validate", PayloadQueryMapBoolArrayBoolValidateDSL, PayloadQueryMapBoolArrayBoolValidateConstructorCode},
 
+		{"query-string-mapped", PayloadQueryStringMappedDSL, PayloadQueryStringMappedConstructorCode},
+
 		{"path-string", PayloadPathStringDSL, PayloadPathStringConstructorCode},
 		{"path-string-validate", PayloadPathStringValidateDSL, PayloadPathStringValidateConstructorCode},
 		{"path-array-string", PayloadPathArrayStringDSL, PayloadPathArrayStringConstructorCode},
