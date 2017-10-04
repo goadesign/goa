@@ -1214,6 +1214,20 @@ var PayloadQueryPrimitiveMapBoolArrayBoolValidateDSL = func() {
 	})
 }
 
+var PayloadQueryStringMappedDSL = func() {
+	Service("ServiceQueryStringMapped", func() {
+		Method("MethodQueryStringMapped", func() {
+			Payload(func() {
+				Attribute("query")
+			})
+			HTTP(func() {
+				GET("/")
+				Param("query:q")
+			})
+		})
+	})
+}
+
 var PayloadQueryStringDefaultDSL = func() {
 	Service("ServiceQueryStringDefault", func() {
 		Method("MethodQueryStringDefault", func() {

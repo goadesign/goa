@@ -330,7 +330,6 @@ payload type:
 * The `Header` expression defines values loaded from HTTP headers.
 * The `Body` expression defines values loaded from the request body.
 
-
 The next two sections describe the expressions in more details. 
 
 Note that the generated code provides a default decoder implementation that
@@ -423,7 +422,7 @@ Method("list", func() {
 | ---------------- | ------------------- | ------------------ |
 | List(float32)    | GET / [version=1.0] | List(1.0)          |
 
-creation:
+create with body:
 
 ```go
 Method("create", func() {

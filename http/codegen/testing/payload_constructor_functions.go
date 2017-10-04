@@ -606,6 +606,15 @@ func NewMethodQueryMapBoolArrayBoolValidateMethodQueryMapBoolArrayBoolValidatePa
 }
 `
 
+var PayloadQueryStringMappedConstructorCode = `// NewMethodQueryStringMappedMethodQueryStringMappedPayload builds a
+// ServiceQueryStringMapped service MethodQueryStringMapped endpoint payload.
+func NewMethodQueryStringMappedMethodQueryStringMappedPayload(query *string) *servicequerystringmapped.MethodQueryStringMappedPayload {
+	return &servicequerystringmapped.MethodQueryStringMappedPayload{
+		Query: query,
+	}
+}
+`
+
 var PayloadPathStringConstructorCode = `// NewMethodPathStringMethodPathStringPayload builds a ServicePathString
 // service MethodPathString endpoint payload.
 func NewMethodPathStringMethodPathStringPayload(p string) *servicepathstring.MethodPathStringPayload {

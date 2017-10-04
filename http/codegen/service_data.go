@@ -493,7 +493,7 @@ func (d ServicesData) analyze(hs *httpdesign.ServiceExpr) *ServiceData {
 						Name:        name,
 						Description: att.Description,
 						Ref:         name,
-						FieldName:   fieldName(arg, pathParams, a.MethodExpr.Payload),
+						FieldName:   codegen.Goify(arg, true),
 						TypeName:    svc.Scope.GoTypeName(att),
 						TypeRef:     svc.Scope.GoTypeRef(att),
 						Pointer:     pointer,
@@ -1335,7 +1335,7 @@ func extractPathParams(a *design.MappedAttributeExpr, serviceType *design.Attrib
 		params = append(params, &ParamData{
 			Name:           elem,
 			Description:    c.Description,
-			FieldName:      fieldName(name, a, serviceType),
+			FieldName:      codegen.Goify(name, true),
 			VarName:        varn,
 			Required:       required,
 			Type:           c.Type,
@@ -1371,7 +1371,7 @@ func extractQueryParams(a *design.MappedAttributeExpr, serviceType *design.Attri
 		params = append(params, &ParamData{
 			Name:        elem,
 			Description: c.Description,
-			FieldName:   fieldName(name, a, serviceType),
+			FieldName:   codegen.Goify(name, true),
 			VarName:     varn,
 			Required:    required,
 			Type:        c.Type,
@@ -1410,7 +1410,7 @@ func extractHeaders(a *design.MappedAttributeExpr, serviceType *design.Attribute
 			Name:          elem,
 			Description:   c.Description,
 			CanonicalName: http.CanonicalHeaderKey(elem),
-			FieldName:     fieldName(name, a, serviceType),
+			FieldName:     codegen.Goify(name, true),
 			VarName:       varn,
 			TypeName:      scope.GoTypeName(c),
 			TypeRef:       typeRef,
@@ -1556,21 +1556,6 @@ func needInit(dt design.DataType) bool {
 	default:
 		panic(fmt.Sprintf("unknown data type %T", actual)) // bug
 	}
-}
-
-// fieldName returns the generated struct field name for the given payload
-// corresponding to the parameter with the given attribute name. If there isn't
-// a payload attribute corresponding to the parameter then fieldName returns the
-// empty string.
-func fieldName(attName string, params *design.MappedAttributeExpr, payload *design.AttributeExpr) string {
-	if o := design.AsObject(payload.Type); o != nil {
-		if o.Attribute(attName) != nil {
-			return codegen.Goify(params.ElemName(attName), true)
-		}
-	} else if a := design.AsArray(payload.Type); a != nil {
-		return fieldName(attName, params, a.ElemType)
-	}
-	return ""
 }
 
 const (

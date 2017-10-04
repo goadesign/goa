@@ -87,6 +87,8 @@ func TestDecode(t *testing.T) {
 		{"query-primitive-map-string-bool-validate", PayloadQueryPrimitiveMapStringBoolValidateDSL, PayloadQueryPrimitiveMapStringBoolValidateDecodeCode},
 		{"query-primitive-map-bool-array-bool-validate", PayloadQueryPrimitiveMapBoolArrayBoolValidateDSL, PayloadQueryPrimitiveMapBoolArrayBoolValidateDecodeCode},
 
+		{"query-string-mapped", PayloadQueryStringMappedDSL, PayloadQueryStringMappedDecodeCode},
+
 		{"query-string-default", PayloadQueryStringDefaultDSL, PayloadQueryStringDefaultDecodeCode},
 		{"query-primitive-string-default", PayloadQueryPrimitiveStringDefaultDSL, PayloadQueryPrimitiveStringDefaultDecodeCode},
 

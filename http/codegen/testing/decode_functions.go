@@ -2254,6 +2254,23 @@ func DecodeMethodQueryPrimitiveMapBoolArrayBoolValidateRequest(mux goahttp.Muxer
 }
 `
 
+var PayloadQueryStringMappedDecodeCode = `// DecodeMethodQueryStringMappedRequest returns a decoder for requests sent to
+// the ServiceQueryStringMapped MethodQueryStringMapped endpoint.
+func DecodeMethodQueryStringMappedRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) (interface{}, error) {
+	return func(r *http.Request) (interface{}, error) {
+		var (
+			query *string
+		)
+		queryRaw := r.URL.Query().Get("q")
+		if queryRaw != "" {
+			query = &queryRaw
+		}
+
+		return NewMethodQueryStringMappedMethodQueryStringMappedPayload(query), nil
+	}
+}
+`
+
 var PayloadQueryStringDefaultDecodeCode = `// DecodeMethodQueryStringDefaultRequest returns a decoder for requests sent to
 // the ServiceQueryStringDefault MethodQueryStringDefault endpoint.
 func DecodeMethodQueryStringDefaultRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) (interface{}, error) {
