@@ -199,8 +199,8 @@ In the example above the `accountID` HTTP request path parameter is defined by
 the attribute of the `UpdateAccount` type with the same name and so is the body
 attribute `name`.
 
-Any attribute that is no explicitly mapped by the `HTTP` function is implicitly
-mapped to request body attributes. This makes is simple to define mappings where
+Any attribute that is not explicitly mapped by the `HTTP` function is implicitly
+mapped to request body attributes. This makes it simple to define mappings where
 only one of the fields for the payload type is mapped to a HTTP header, and all
 other fields are mapped to the HTTP request body.
 
@@ -311,7 +311,7 @@ The DSL for defining user types and result types is the same as in v1 (using
 
 ### Payload to HTTP request mapping
 
-The payload types describe the shape of the data given as argument to the
+The payload types describe the shape of the data given as an argument to the
 service methods. The HTTP transport specific DSL defines how the data is built
 from the incoming HTTP request state.
 
