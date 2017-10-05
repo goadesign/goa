@@ -75,11 +75,12 @@ func exampleMain(genpkg string, root *httpdesign.RootExpr) *codegen.File {
 	for _, svc := range root.HTTPServices {
 		pkgName := HTTPServices.Get(svc.Name()).Service.PkgName
 		specs = append(specs, &codegen.ImportSpec{
-			Path: filepath.Join(genpkg, "http", pkgName, "server"),
+			Path: filepath.Join(genpkg, "http", codegen.SnakeCase(svc.Name()), "server"),
 			Name: pkgName + "svr",
 		})
 		specs = append(specs, &codegen.ImportSpec{
-			Path: filepath.Join(genpkg, pkgName),
+			Path: filepath.Join(genpkg, codegen.SnakeCase(svc.Name())),
+			Name: pkgName,
 		})
 	}
 	sections := []*codegen.SectionTemplate{codegen.Header("", "main", specs)}
