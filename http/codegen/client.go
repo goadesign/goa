@@ -194,7 +194,13 @@ func {{ .RequestEncoder }}(encoder func(*http.Request) goahttp.Encoder) func(*ht
 		}
 	{{- range .Payload.Request.Headers }}
 		{{- if .FieldName }}
-		req.Header.Set("{{ .Name }}", p.{{ .FieldName }})
+			{{- if .Pointer }}
+		if p.{{ .FieldName }} != nil {
+			{{- end }}
+		req.Header.Set("{{ .Name }}", {{ if .Pointer }}*{{ end }}p.{{ .FieldName }})
+			{{- if .Pointer }}
+		}
+			{{- end }}
 		{{- end }}
 	{{- end }}
 	{{- if .Payload.Request.ClientBody }}

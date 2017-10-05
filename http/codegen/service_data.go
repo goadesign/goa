@@ -1332,10 +1332,14 @@ func extractPathParams(a *design.MappedAttributeExpr, serviceType *design.Attrib
 			varn = codegen.Goify(name, false)
 			arr  = design.AsArray(c.Type)
 		)
+		fieldName := codegen.Goify(name, true)
+		if !design.IsObject(serviceType.Type) {
+			fieldName = ""
+		}
 		params = append(params, &ParamData{
 			Name:           elem,
 			Description:    c.Description,
-			FieldName:      codegen.Goify(name, true),
+			FieldName:      fieldName,
 			VarName:        varn,
 			Required:       required,
 			Type:           c.Type,
@@ -1368,10 +1372,14 @@ func extractQueryParams(a *design.MappedAttributeExpr, serviceType *design.Attri
 		if a.IsPrimitivePointer(name, true) {
 			typeRef = "*" + typeRef
 		}
+		fieldName := codegen.Goify(name, true)
+		if !design.IsObject(serviceType.Type) {
+			fieldName = ""
+		}
 		params = append(params, &ParamData{
 			Name:        elem,
 			Description: c.Description,
-			FieldName:   codegen.Goify(name, true),
+			FieldName:   fieldName,
 			VarName:     varn,
 			Required:    required,
 			Type:        c.Type,
@@ -1406,11 +1414,15 @@ func extractHeaders(a *design.MappedAttributeExpr, serviceType *design.Attribute
 		if a.IsPrimitivePointer(name, true) {
 			typeRef = "*" + typeRef
 		}
+		fieldName := codegen.Goify(name, true)
+		if !design.IsObject(serviceType.Type) {
+			fieldName = "" // result is initialized directly from header
+		}
 		headers = append(headers, &HeaderData{
 			Name:          elem,
 			Description:   c.Description,
 			CanonicalName: http.CanonicalHeaderKey(elem),
-			FieldName:     codegen.Goify(name, true),
+			FieldName:     fieldName,
 			VarName:       varn,
 			TypeName:      scope.GoTypeName(c),
 			TypeRef:       typeRef,
