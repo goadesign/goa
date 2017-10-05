@@ -477,45 +477,47 @@ func conversionCode(from, to, typeName string, required bool) (string, bool) {
 	)
 	target := to
 	needCast := !required && typeName != stringN && typeName != bytesN && flagType(typeName) != "JSON"
+	decl := ""
 	if needCast {
 		target = "val"
+		decl = ":"
 	}
 	switch typeName {
 	case boolN:
-		parse = fmt.Sprintf("%s, err = strconv.ParseBool(%s)", target, from)
+		parse = fmt.Sprintf("%s, err %s= strconv.ParseBool(%s)", target, decl, from)
 		checkErr = true
 	case intN:
 		parse = fmt.Sprintf("var v int64\nv, err = strconv.ParseInt(%s, 10, 64)", from)
-		cast = fmt.Sprintf("%s = int(v)", target)
+		cast = fmt.Sprintf("%s %s= int(v)", target, decl)
 		checkErr = true
 	case int32N:
 		parse = fmt.Sprintf("var v int64\nv, err = strconv.ParseInt(%s, 10, 32)", from)
-		cast = fmt.Sprintf("%s = int32(v)", target)
+		cast = fmt.Sprintf("%s %s= int32(v)", target, decl)
 		checkErr = true
 	case int64N:
-		parse = fmt.Sprintf("%s, err = strconv.ParseInt(%s, 10, 64)", target, from)
+		parse = fmt.Sprintf("%s, err %s= strconv.ParseInt(%s, 10, 64)", target, decl, from)
 	case uintN:
 		parse = fmt.Sprintf("var v unit64\nv, err = strconv.ParseUint(%s, 10, 64)", from)
-		cast = fmt.Sprintf("%s = uint(v)", target)
+		cast = fmt.Sprintf("%s %s= uint(v)", target, decl)
 		checkErr = true
 	case uint32N:
 		parse = fmt.Sprintf("var v unit64\nv, err = strconv.ParseUint(%s, 10, 32)", from)
-		cast = fmt.Sprintf("%s = uint32(v)", target)
+		cast = fmt.Sprintf("%s %s= uint32(v)", target, decl)
 		checkErr = true
 	case uint64N:
-		parse = fmt.Sprintf("%s, err = strconv.ParseUint(%s, 10, 64)", target, from)
+		parse = fmt.Sprintf("%s, err %s= strconv.ParseUint(%s, 10, 64)", target, decl, from)
 		checkErr = true
 	case float32N:
 		parse = fmt.Sprintf("var v float64\nv, err = strconv.ParseFloat(%s, 32)", from)
-		cast = fmt.Sprintf("%s = float32(v)", target)
+		cast = fmt.Sprintf("%s %s= float32(v)", target, decl)
 		checkErr = true
 	case float64N:
-		parse = fmt.Sprintf("%s, err = strconv.ParseFloat(%s, 64)", target, from)
+		parse = fmt.Sprintf("%s, err %s= strconv.ParseFloat(%s, 64)", target, decl, from)
 		checkErr = true
 	case stringN:
-		parse = fmt.Sprintf("%s = %s", target, from)
+		parse = fmt.Sprintf("%s %s= %s", target, decl, from)
 	case bytesN:
-		parse = fmt.Sprintf("%s = string(%s)", target, from)
+		parse = fmt.Sprintf("%s %s= string(%s)", target, decl, from)
 	default:
 		parse = fmt.Sprintf(`err = json.Unmarshal([]byte(%s), &%s)`, from, target)
 		checkErr = true

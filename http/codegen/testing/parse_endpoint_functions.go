@@ -418,7 +418,7 @@ func BuildMethodMultiPayloadMethodMultiPayloadPayload(serviceMultiMethodMultiPay
 	var a *bool
 	{
 		if serviceMultiMethodMultiPayloadA != "" {
-			val, err = strconv.ParseBool(serviceMultiMethodMultiPayloadA)
+			val, err := strconv.ParseBool(serviceMultiMethodMultiPayloadA)
 			a = &val
 			if err != nil {
 				err = fmt.Errorf("invalid value for a, must be BOOL")
