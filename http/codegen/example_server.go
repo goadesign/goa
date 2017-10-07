@@ -116,7 +116,7 @@ func New{{ .Service.VarName }}(logger *log.Logger) {{ .Service.PkgName }}.Servic
 
 // input: EndpointData
 const dummyEndpointImplT = `{{ comment .Method.Description }}
-func (s *{{ .ServicePkgName }}Svc) {{ .Method.VarName }}(ctx context.Context{{ if .Payload.TypeRef }}, p {{ .Payload.TypeRef }}{{ end }}) ({{ if .Result.Ref }}{{ .Result.Ref }}, {{ end }}error) {
+func (s *{{ .ServicePkgName }}Svc) {{ .Method.VarName }}(ctx context.Context{{ if .Payload.Ref }}, p {{ .Payload.Ref }}{{ end }}) ({{ if .Result.Ref }}{{ .Result.Ref }}, {{ end }}error) {
 {{- if and .Result.Ref .Result.IsStruct }}
 	res := &{{ .Result.Name }}{}
 {{- else if .Result.Ref }}
