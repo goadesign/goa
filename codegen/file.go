@@ -50,14 +50,15 @@ type (
 	}
 )
 
-// Section returns the section template with the given name or nil if not found.
-func (f *File) Section(name string) *SectionTemplate {
+// Section returns the section templates with the given name or nil if not found.
+func (f *File) Section(name string) []*SectionTemplate {
+	var sts []*SectionTemplate
 	for _, s := range f.SectionTemplates {
 		if s.Name == name {
-			return s
+			sts = append(sts, s)
 		}
 	}
-	return nil
+	return sts
 }
 
 // Render executes the file section templates and writes the resulting bytes to

@@ -288,7 +288,7 @@ func buildSubcommandData(svc *ServiceData, e *EndpointData) *subcommandData {
 					actuals = append(actuals, f.FullName)
 					args = append(args, arg)
 				}
-			} else if e.Payload.Ref != "" {
+			} else if e.Payload.TypeRef != "" {
 				ex := jsonExample(e.Method.PayloadEx)
 				fn := goify(svcn, en, "p")
 				flags = append(flags, &flagData{

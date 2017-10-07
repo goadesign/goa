@@ -87,7 +87,7 @@ func serverEncodeDecode(genpkg string, svc *httpdesign.ServiceExpr) *codegen.Fil
 			Source:  responseEncoderT,
 			Data:    e,
 		})
-		if e.Payload.Ref != "" {
+		if e.Payload.TypeRef != "" {
 			sections = append(sections, &codegen.SectionTemplate{
 				Name:    "request-decoder",
 				Source:  requestDecoderT,
@@ -240,7 +240,7 @@ func {{ .HandlerInit }}(
 	enc func(context.Context, http.ResponseWriter) goahttp.Encoder,
 ) http.Handler {
 	var (
-		{{- if .Payload.Ref }}
+		{{- if .Payload.TypeRef }}
 		decodeRequest  = {{ .RequestDecoder }}(mux, dec)
 		{{- end }}
 		encodeResponse = {{ .ResponseEncoder }}(enc)
@@ -250,7 +250,7 @@ func {{ .HandlerInit }}(
 		accept := r.Header.Get("Accept")
 		ctx := context.WithValue(r.Context(), goahttp.ContextKeyAcceptType, accept)
 
-		{{- if .Payload.Ref }}
+		{{- if .Payload.TypeRef }}
 		payload, err := decodeRequest(r)
 		if err != nil {
 			encodeError(ctx, w, err)
