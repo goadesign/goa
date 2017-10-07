@@ -188,9 +188,9 @@ func (c *{{ .ClientStruct }}) {{ .RequestInit.Name }}({{ range .RequestInit.Clie
 const requestEncoderT = `{{ printf "%s returns an encoder for requests sent to the %s %s server." .RequestEncoder .ServiceName .Method.Name | comment }}
 func {{ .RequestEncoder }}(encoder func(*http.Request) goahttp.Encoder) func(*http.Request, interface{}) error {
 	return func(req *http.Request, v interface{}) error {
-		p, ok := v.({{ .Payload.TypeRef }})
+		p, ok := v.({{ .Payload.Ref }})
 		if !ok {
-			return goahttp.ErrInvalidType("{{ .ServiceName }}", "{{ .Method.Name }}", "{{ .Payload.TypeRef }}", v)
+			return goahttp.ErrInvalidType("{{ .ServiceName }}", "{{ .Method.Name }}", "{{ .Payload.Ref }}", v)
 		}
 	{{- range .Payload.Request.Headers }}
 		{{- if .FieldName }}

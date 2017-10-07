@@ -135,10 +135,8 @@ type (
 	// PayloadData contains the payload information required to generate the
 	// transport decode (server) and encode (client) code.
 	PayloadData struct {
-		// TypeName is the name of the payload type.
-		TypeName string
-		// TypeRef is the reference to the payload type.
-		TypeRef string
+		// Ref is the fully qualified reference to the payload type.
+		Ref string
 		// Request contains the data for the corresponding HTTP request.
 		Request *RequestData
 		// DecoderReturnValue is a reference to the decoder return value
@@ -863,11 +861,9 @@ func buildPayloadData(svc *service.Data, s *httpdesign.ServiceExpr, e *httpdesig
 
 	var (
 		returnValue string
-		name        string
 		ref         string
 	)
 	if payload.Type != design.Empty {
-		name = svc.Scope.GoFullTypeName(payload, svc.PkgName)
 		ref = svc.Scope.GoFullTypeRef(payload, svc.PkgName)
 	}
 	if init == nil {
@@ -881,8 +877,7 @@ func buildPayloadData(svc *service.Data, s *httpdesign.ServiceExpr, e *httpdesig
 	}
 
 	return &PayloadData{
-		TypeName:           name,
-		TypeRef:            ref,
+		Ref:                ref,
 		Request:            request,
 		DecoderReturnValue: returnValue,
 	}
