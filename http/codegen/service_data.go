@@ -303,6 +303,8 @@ type (
 	ParamData struct {
 		// Name is the name of the mapping to the actual variable name.
 		Name string
+		// AttributeName is the name of the corresponding attribute.
+		AttributeName string
 		// Description is the parameter description
 		Description string
 		// FieldName is the name of the struct field that holds the
@@ -343,8 +345,10 @@ type (
 
 	// HeaderData describes a HTTP request or response header.
 	HeaderData struct {
-		// Name describes the name of the header key.
+		// Name is the name of the header key.
 		Name string
+		// AttributeName is the name of the corresponding attribute.
+		AttributeName string
 		// Description is the header description.
 		Description string
 		// CanonicalName is the canonical header key.
@@ -1338,6 +1342,7 @@ func extractPathParams(a *design.MappedAttributeExpr, serviceType *design.Attrib
 		}
 		params = append(params, &ParamData{
 			Name:           elem,
+			AttributeName:  name,
 			Description:    c.Description,
 			FieldName:      fieldName,
 			VarName:        varn,
@@ -1377,18 +1382,19 @@ func extractQueryParams(a *design.MappedAttributeExpr, serviceType *design.Attri
 			fieldName = ""
 		}
 		params = append(params, &ParamData{
-			Name:        elem,
-			Description: c.Description,
-			FieldName:   fieldName,
-			VarName:     varn,
-			Required:    required,
-			Type:        c.Type,
-			TypeName:    scope.GoTypeName(c),
-			TypeRef:     typeRef,
-			Pointer:     a.IsPrimitivePointer(name, true),
-			Slice:       arr != nil,
-			StringSlice: arr != nil && arr.ElemType.Type.Kind() == design.StringKind,
-			Map:         mp != nil,
+			Name:          elem,
+			AttributeName: name,
+			Description:   c.Description,
+			FieldName:     fieldName,
+			VarName:       varn,
+			Required:      required,
+			Type:          c.Type,
+			TypeName:      scope.GoTypeName(c),
+			TypeRef:       typeRef,
+			Pointer:       a.IsPrimitivePointer(name, true),
+			Slice:         arr != nil,
+			StringSlice:   arr != nil && arr.ElemType.Type.Kind() == design.StringKind,
+			Map:           mp != nil,
 			MapStringSlice: mp != nil &&
 				mp.KeyType.Type.Kind() == design.StringKind &&
 				mp.ElemType.Type.Kind() == design.ArrayKind &&
@@ -1420,6 +1426,7 @@ func extractHeaders(a *design.MappedAttributeExpr, serviceType *design.Attribute
 		}
 		headers = append(headers, &HeaderData{
 			Name:          elem,
+			AttributeName: name,
 			Description:   c.Description,
 			CanonicalName: http.CanonicalHeaderKey(elem),
 			FieldName:     fieldName,
