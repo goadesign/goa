@@ -87,8 +87,8 @@ goa example [IMPORT]
   - The [design](https://github.com/goadesign/goa/blob/v2/examples/cellar/design)
   - The generated services: [storage](https://github.com/goadesign/goa/blob/v2/examples/cellar/gen/storage/service.go) and
     [sommelier](https://github.com/goadesign/goa/blob/v2/examples/cellar/gen/sommelier/service.go)
-  - The generated endpoints: [storage](https://github.com/goadesign/goa/blob/v2/examples/cellar/gen/storage/endpoint.go) and
-    [sommelier](https://github.com/goadesign/goa/blob/v2/examples/cellar/gen/sommelier/endpoint.go)
+  - The generated endpoints: [storage](https://github.com/goadesign/goa/blob/v2/examples/cellar/gen/storage/endpoints.go) and
+    [sommelier](https://github.com/goadesign/goa/blob/v2/examples/cellar/gen/sommelier/endpoints.go)
   - The generated HTTP servers: [storage](https://github.com/goadesign/goa/tree/v2/examples/cellar/gen/storage/http/server) and
     [sommelier](https://github.com/goadesign/goa/blob/v2/examples/cellar/gen/sommelier/http/server)
   - The generated HTTP clients: [storage](https://github.com/goadesign/goa/tree/v2/examples/cellar/gen/storage/http/client) and
