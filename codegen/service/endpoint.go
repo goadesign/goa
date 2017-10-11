@@ -41,33 +41,40 @@ type (
 	}
 )
 
+const (
+	// EndpointsStructName is the name of the generated endpoints data
+	// structure.
+	EndpointsStructName = "Endpoints"
+
+	// ServiceInterfaceName is the name of the generated service interface.
+	ServiceInterfaceName = "Service"
+)
+
 // EndpointFile returns the endpoint file for the given service.
 func EndpointFile(service *design.ServiceExpr) *codegen.File {
 	path := filepath.Join(codegen.Gendir, codegen.SnakeCase(service.Name), "endpoints.go")
+	svc := Services.Get(service.Name)
 	var (
 		data *EndpointsData
 	)
 	{
-		svc := Services.Get(service.Name)
-		serviceVarName := "Service"
 		methods := make([]*EndpointMethodData, len(svc.Methods))
 		for i, m := range svc.Methods {
 			methods[i] = &EndpointMethodData{
 				Name:           m.Name,
 				VarName:        m.VarName,
 				ServiceName:    svc.Name,
-				ServiceVarName: serviceVarName,
+				ServiceVarName: ServiceInterfaceName,
 				PayloadRef:     m.PayloadRef,
 				ResultRef:      m.ResultRef,
 			}
 		}
-		varName := "Endpoints"
-		desc := fmt.Sprintf("%s wraps the %s service endpoints.", varName, service.Name)
+		desc := fmt.Sprintf("%s wraps the %s service endpoints.", EndpointsStructName, service.Name)
 		data = &EndpointsData{
 			Name:           service.Name,
 			Description:    desc,
-			VarName:        varName,
-			ServiceVarName: serviceVarName,
+			VarName:        EndpointsStructName,
+			ServiceVarName: ServiceInterfaceName,
 			Methods:        methods,
 		}
 	}
@@ -76,7 +83,7 @@ func EndpointFile(service *design.ServiceExpr) *codegen.File {
 		sections []*codegen.SectionTemplate
 	)
 	{
-		header := codegen.Header(service.Name+" endpoints", codegen.Goify(service.Name, false),
+		header := codegen.Header(service.Name+" endpoints", svc.PkgName,
 			[]*codegen.ImportSpec{
 				&codegen.ImportSpec{Path: "context"},
 				&codegen.ImportSpec{Name: "goa", Path: "goa.design/goa"},
