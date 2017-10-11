@@ -28,7 +28,7 @@ func dummyServiceFile(genpkg string, root *httpdesign.RootExpr, svc *httpdesign.
 		codegen.Header("", apiPkg, []*codegen.ImportSpec{
 			{Path: "context"},
 			{Path: "log"},
-			{Path: genpkg + "/" + codegen.Goify(svc.Name(), false)},
+			{Path: genpkg + "/" + codegen.SnakeCase(svc.Name()), Name: data.Service.PkgName},
 		}),
 		{
 			Name:   "dummy-service",

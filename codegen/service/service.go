@@ -10,13 +10,13 @@ import (
 // File returns the service file for the given service.
 func File(service *design.ServiceExpr) *codegen.File {
 	path := filepath.Join(codegen.Gendir, codegen.SnakeCase(service.Name), "service.go")
+	svc := Services.Get(service.Name)
 	header := codegen.Header(
 		service.Name+" service",
-		codegen.Goify(service.Name, false),
+		svc.PkgName,
 		[]*codegen.ImportSpec{
 			{Path: "context"},
 		})
-	svc := Services.Get(service.Name)
 	def := &codegen.SectionTemplate{Name: "service", Source: serviceT, Data: svc}
 
 	sections := []*codegen.SectionTemplate{header, def}
