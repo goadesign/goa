@@ -36,7 +36,7 @@ var BasicType = Type("Name", func() {
 // a single value). All result types muse define a default view. The default view
 // is the view named "default".
 //
-// Result type takes a result type identifier (as defined by RFC6 838) as first
+// Result type takes a result type identifier (as defined by RFC 6838) as first
 // argument. This identifier must be unique across all result types in a given
 // package.
 var BasicResultType = ResultType("application/vnd.goa.result", func() {

@@ -539,7 +539,7 @@ func (d ServicesData) analyze(hs *httpdesign.ServiceExpr) *ServiceData {
 		payload := buildPayloadData(svc, hs, a, rd)
 		var requestEncoder string
 		{
-			if payload.Request.ClientBody != nil || len(payload.Request.Headers) > 0 {
+			if payload.Request.ClientBody != nil || len(payload.Request.Headers) > 0 || len(payload.Request.QueryParams) > 0 {
 				requestEncoder = fmt.Sprintf("Encode%sRequest", ep.VarName)
 			}
 		}
