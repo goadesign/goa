@@ -15,8 +15,9 @@ var resultTypeCount int
 
 // ResultType defines a result type used to describe a method response.
 //
-// Result types have a unique identifier as described in RFC6838. The identifier
-// defines the default value for the Content-Type header of HTTP responses.
+// Result types have a unique identifier as described in RFC 6838. The
+// identifier defines the default value for the Content-Type header of HTTP
+// responses.
 //
 // The result type expression includes a listing of all the response attributes.
 // Views specify which of the attributes are actually rendered so that the same
@@ -28,6 +29,7 @@ var resultTypeCount int
 // result type attributes.
 //
 // ResultType is a top level DSL.
+//
 // ResultType accepts two arguments: the result type identifier and the defining
 // DSL.
 //
@@ -126,7 +128,12 @@ func TypeName(name string) {
 // ContentType sets the value of the Content-Type response header. By default
 // the ID of the result type is used.
 //
-//    ContentType("application/json")
+// ContentType may appear in a ResultType expression.
+// ContentType accepts one argument: the mime type as defined by RFC 6838.
+//
+//    var _ = ResultType("application/vnd.myapp.mytype") {
+//        ContentType("application/json")
+//    }
 //
 func ContentType(typ string) {
 	if mt, ok := eval.Current().(*design.ResultTypeExpr); ok {

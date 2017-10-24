@@ -222,15 +222,6 @@ func Contact(fn func()) {
 	dsl.Contact(fn)
 }
 
-// ContentType sets the value of the Content-Type response header. By default
-// the ID of the result type is used.
-//
-//    ContentType("application/json")
-//
-func ContentType(typ string) {
-	dsl.ContentType(typ)
-}
-
 // Default sets the default value for an attribute.
 func Default(def interface{}) {
 	dsl.Default(def)
@@ -641,8 +632,9 @@ func Result(val interface{}, args ...interface{}) {
 
 // ResultType defines a result type used to describe a method response.
 //
-// Result types have a unique identifier as described in RFC6838. The identifier
-// defines the default value for the Content-Type header of HTTP responses.
+// Result types have a unique identifier as described in RFC 6838. The
+// identifier defines the default value for the Content-Type header of HTTP
+// responses.
 //
 // The result type expression includes a listing of all the response attributes.
 // Views specify which of the attributes are actually rendered so that the same
@@ -654,6 +646,7 @@ func Result(val interface{}, args ...interface{}) {
 // result type attributes.
 //
 // ResultType is a top level DSL.
+//
 // ResultType accepts two arguments: the result type identifier and the defining
 // DSL.
 //

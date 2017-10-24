@@ -1,6 +1,7 @@
 package dsl
 
 import (
+	"goa.design/goa/design"
 	"goa.design/goa/eval"
 	httpdesign "goa.design/goa/http/design"
 )
@@ -231,6 +232,35 @@ func Code(code int) {
 		return
 	}
 	res.StatusCode = code
+}
+
+// ContentType sets the value of the Content-Type response header. By default
+// the ID of the result type is used.
+//
+// ContentType may appear in a ResultType or a Response expression.
+// ContentType accepts one argument: the mime type as defined by RFC 6838.
+//
+//    var _ = ResultType("application/vnd.myapp.mytype") {
+//        ContentType("application/json")
+//    }
+//
+//    var _ = Method("add", func() {
+//	  HTTP(func() {
+//            Response(OK, func() {
+//                ContentType("application/json")
+//            })
+//        })
+//    })
+//
+func ContentType(typ string) {
+	switch actual := eval.Current().(type) {
+	case *design.ResultTypeExpr:
+		actual.ContentType = typ
+	case *httpdesign.HTTPResponseExpr:
+		actual.ContentType = typ
+	default:
+		eval.IncompatibleDSL()
+	}
 }
 
 func parseResponseArgs(val interface{}, args ...interface{}) (code int, fn func()) {

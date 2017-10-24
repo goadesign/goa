@@ -203,6 +203,23 @@ func {{ .RequestEncoder }}(encoder func(*http.Request) goahttp.Encoder) func(*ht
 			{{- end }}
 		{{- end }}
 	{{- end }}
+	{{- if .Payload.Request.QueryParams }}
+		values := req.URL.Query()
+	{{- end }}
+	{{- range .Payload.Request.QueryParams }}
+		{{- if .FieldName }}
+			{{- if .Pointer }}
+		if p.{{ .FieldName }} != nil {
+			{{- end }}
+		values.Add("{{ .Name }}", {{ if .Pointer }}*{{ end }}p.{{ .FieldName }})
+			{{- if .Pointer }}
+		}
+			{{- end }}
+		{{- end }}
+	{{- end }}
+	{{- if .Payload.Request.QueryParams }}
+		req.URL.RawQuery = values.Encode()
+	{{- end }}
 	{{- if .Payload.Request.ClientBody }}
 		{{- if .Payload.Request.ClientBody.Init }}
 		body := {{ .Payload.Request.ClientBody.Init.Name }}({{ range .Payload.Request.ClientBody.Init.ClientArgs }}{{ if .Pointer }}&{{ end }}{{ .Name }}, {{ end }})
