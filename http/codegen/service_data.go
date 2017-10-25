@@ -81,12 +81,15 @@ type (
 		ServiceVarName string
 		// ServicePkgName is the name of the service package.
 		ServicePkgName string
-		// Payload describes the method payload transport.
+		// Payload describes the method HTTP payload.
 		Payload *PayloadData
-		// Result describes the method result transport.
+		// Result describes the method HTTP result.
 		Result *ResultData
-		// Errors describes the method errors transport.
-		Errors []*ErrorData
+		// Errors describes the method HTTP errors indexed by
+		// corresponding error type reference. The indexing is needed to
+		// generate code that for each type (e.g. ErrorResult) attempts
+		// to match the field to the defined tags.
+		Errors map[string][]*ErrorData
 		// Routes describes the possible routes for this endpoint.
 		Routes []*RouteData
 
@@ -1060,9 +1063,9 @@ func buildResultData(svc *service.Data, s *httpdesign.ServiceExpr, e *httpdesign
 	}
 }
 
-func buildErrorsData(svc *service.Data, s *httpdesign.ServiceExpr, e *httpdesign.EndpointExpr, sd *ServiceData) []*ErrorData {
-	data := make([]*ErrorData, len(e.HTTPErrors))
-	for i, v := range e.HTTPErrors {
+func buildErrorsData(svc *service.Data, s *httpdesign.ServiceExpr, e *httpdesign.EndpointExpr, sd *ServiceData) map[string][]*ErrorData {
+	data := make(map[string][]*ErrorData)
+	for _, v := range e.HTTPErrors {
 		var (
 			init *InitData
 			body = v.Response.Body.Type
@@ -1182,10 +1185,11 @@ func buildErrorsData(svc *service.Data, s *httpdesign.ServiceExpr, e *httpdesign
 			}
 		}
 
-		data[i] = &ErrorData{
-			Ref:      svc.Scope.GoFullTypeRef(v.ErrorExpr.AttributeExpr, svc.PkgName),
+		ref := svc.Scope.GoFullTypeRef(v.ErrorExpr.AttributeExpr, svc.PkgName)
+		data[ref] = append(data[ref], &ErrorData{
 			Response: responseData,
-		}
+			Ref:      ref,
+		})
 	}
 	return data
 }

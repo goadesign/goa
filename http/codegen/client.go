@@ -263,6 +263,7 @@ func {{ .ResponseDecoder }}(decoder func(*http.Response) goahttp.Decoder, restor
 		{{- end }}
 	{{- end }}
 	{{- range .Errors }}
+	{{- range . }}
 		{{- with .Response }}
 ` + singleResponseT + `
 		{{- if .ResultInit }}
@@ -273,6 +274,7 @@ func {{ .ResponseDecoder }}(decoder func(*http.Response) goahttp.Decoder, restor
 			return nil, nil
 		{{- end }}
 		{{- end }}
+	{{- end }}
 	{{- end }}
 		default:
 			body, _ := ioutil.ReadAll(resp.Body)
