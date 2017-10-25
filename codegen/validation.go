@@ -121,7 +121,6 @@ func ValidationCode(att *design.AttributeExpr, req, ptr, def bool, target, conte
 		var buf bytes.Buffer
 		if err := tmpl.Execute(&buf, data); err != nil {
 			panic(err) // bug
-
 		}
 		return buf.String()
 	}
@@ -133,7 +132,7 @@ func ValidationCode(att *design.AttributeExpr, req, ptr, def bool, target, conte
 		}
 	}
 	if format := validation.Format; format != "" {
-		data["format"] = format
+		data["format"] = string(format)
 		if val := runTemplate(formatValT, data); val != "" {
 			res = append(res, val)
 		}
@@ -448,14 +447,14 @@ const (
 }`
 
 	userValTmpl = `if err2 := {{ .target }}.Validate(); err2 != nil {
-	err = goa.MergeErrors(err, err2)
+        err = goa.MergeErrors(err, err2)
 }`
 
 	enumValTmpl = `{{ if .isPointer -}}
 if {{ .target }} != nil {
 {{ end -}}
 if !({{ oneof .targetVal .values }}) {
-	err = goa.MergeErrors(err, goa.InvalidEnumValueError({{ printf "%q" .context }}, {{ .targetVal }}, {{ slice .values }}))
+        err = goa.MergeErrors(err, goa.InvalidEnumValueError({{ printf "%q" .context }}, {{ .targetVal }}, {{ slice .values }}))
 {{ if .isPointer -}}
 }
 {{ end -}}
@@ -464,7 +463,7 @@ if !({{ oneof .targetVal .values }}) {
 	patternValTmpl = `{{ if .isPointer -}}
 if {{ .target }} != nil {
 {{ end -}}
-	err = goa.MergeErrors(err, goa.ValidatePattern({{ printf "%q" .context }}, {{ .targetVal }}, {{ printf "%q" .pattern }}))
+        err = goa.MergeErrors(err, goa.ValidatePattern({{ printf "%q" .context }}, {{ .targetVal }}, {{ printf "%q" .pattern }}))
 {{- if .isPointer }}
 }
 {{- end }}`
@@ -472,17 +471,16 @@ if {{ .target }} != nil {
 	formatValTmpl = `{{ if .isPointer -}}
 if {{ .target }} != nil {
 {{ end -}}
-	err = goa.MergeErrors(err, goa.ValidateFormat({{ printf "%q" .context }}, {{ .targetVal}}, {{ constant .format }}))
+        err = goa.MergeErrors(err, goa.ValidateFormat({{ printf "%q" .context }}, {{ .targetVal}}, {{ constant .format }}))
 {{ if .isPointer -}}
 }
-{{ end -}}
-}`
+{{- end }}`
 
 	minMaxValTmpl = `{{ if .isPointer -}}
 if {{ .target }} != nil {
 {{ end -}}
-	if {{ .targetVal }} {{ if .isMin }}<{{ else }}>{{ end }} {{ if .isMin }}{{ .min }}{{ else }}{{ .max }}{{ end }} {
-	err = goa.MergeErrors(err, goa.InvalidRangeError({{ printf "%q" .context }}, {{ .targetVal }}, {{ if .isMin }}{{ .min }}, true{{ else }}{{ .max }}, false{{ end }}))
+        if {{ .targetVal }} {{ if .isMin }}<{{ else }}>{{ end }} {{ if .isMin }}{{ .min }}{{ else }}{{ .max }}{{ end }} {
+        err = goa.MergeErrors(err, goa.InvalidRangeError({{ printf "%q" .context }}, {{ .targetVal }}, {{ if .isMin }}{{ .min }}, true{{ else }}{{ .max }}, false{{ end }}))
 {{ if .isPointer -}}
 }
 {{ end -}}
@@ -493,12 +491,12 @@ if {{ .target }} != nil {
 if {{ .target }} != nil {
 {{ end -}}
 if {{ if .string }}utf8.RuneCountInString({{ $target }}){{ else }}len({{ $target }}){{ end }} {{ if .isMinLength }}<{{ else }}>{{ end }} {{ if .isMinLength }}{{ .minLength }}{{ else }}{{ .maxLength }}{{ end }} {
-	err = goa.MergeErrors(err, goa.InvalidLengthError({{ printf "%q" .context }}, {{ $target }}, {{ if .string }}utf8.RuneCountInString({{ $target }}){{ else }}len({{ $target }}){{ end }}, {{ if .isMinLength }}{{ .minLength }}, true{{ else }}{{ .maxLength }}, false{{ end }}))
+        err = goa.MergeErrors(err, goa.InvalidLengthError({{ printf "%q" .context }}, {{ $target }}, {{ if .string }}utf8.RuneCountInString({{ $target }}){{ else }}len({{ $target }}){{ end }}, {{ if .isMinLength }}{{ .minLength }}, true{{ else }}{{ .maxLength }}, false{{ end }}))
 }{{- if and .isPointer .string }}
 }
 {{- end }}`
 
 	requiredValTmpl = `if {{ $.target }}.{{ goifyAtt $.reqAtt .req true }} == nil {
-	err = goa.MergeErrors(err, goa.MissingFieldError("{{ .req }}", {{ printf "%q" $.context }}))
+        err = goa.MergeErrors(err, goa.MissingFieldError("{{ .req }}", {{ printf "%q" $.context }}))
 }`
 )
