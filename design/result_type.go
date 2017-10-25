@@ -67,6 +67,7 @@ var (
 						"meta":   map[string]interface{}{"timestamp": 1458609066},
 					},
 				}},
+				Validation: &ValidationExpr{Required: []string{"id", "code"}},
 			},
 			TypeName: "error",
 		},
