@@ -106,20 +106,22 @@ func serverType(genpkg string, svc *httpdesign.ServiceExpr, seen map[string]stru
 	// error body types
 	for _, a := range svc.HTTPEndpoints {
 		adata := rdata.Endpoint(a.Name())
-		for _, herr := range adata.Errors {
-			if data := herr.Response.ServerBody; data != nil {
-				if data.Def != "" {
-					sections = append(sections, &codegen.SectionTemplate{
-						Name:   "error-body-type-decl",
-						Source: typeDeclT,
-						Data:   data,
-					})
-				}
-				if data.Init != nil {
-					initData = append(initData, data.Init)
-				}
-				if data.ValidateDef != "" {
-					validatedTypes = append(validatedTypes, data)
+		for _, herrs := range adata.Errors {
+			for _, herr := range herrs {
+				if data := herr.Response.ServerBody; data != nil {
+					if data.Def != "" {
+						sections = append(sections, &codegen.SectionTemplate{
+							Name:   "error-body-type-decl",
+							Source: typeDeclT,
+							Data:   data,
+						})
+					}
+					if data.Init != nil {
+						initData = append(initData, data.Init)
+					}
+					if data.ValidateDef != "" {
+						validatedTypes = append(validatedTypes, data)
+					}
 				}
 			}
 		}
