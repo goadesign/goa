@@ -467,8 +467,6 @@ var (
 
 // conversionCode produces the code that converts the string stored in the
 // variable "from" to the value stored in the variable "to" of type typeName.
-// errorVar is used to display the name of the variable that failed to be
-// converted in case of error.
 func conversionCode(from, to, typeName string, required bool) (string, bool) {
 	var (
 		parse    string
@@ -476,9 +474,9 @@ func conversionCode(from, to, typeName string, required bool) (string, bool) {
 		checkErr bool
 	)
 	target := to
-	needCast := !required && typeName != stringN && typeName != bytesN && flagType(typeName) != "JSON"
+	needCast := typeName != stringN && typeName != bytesN && flagType(typeName) != "JSON"
 	decl := ""
-	if needCast {
+	if needCast && !required {
 		target = "val"
 		decl = ":"
 	}
@@ -526,9 +524,16 @@ func conversionCode(from, to, typeName string, required bool) (string, bool) {
 		return parse, checkErr
 	}
 	if cast != "" {
-		cast = "\n" + cast
+		parse = parse + "\n" + cast
 	}
-	return parse + cast + fmt.Sprintf("\n%s = &%s", to, target), checkErr
+	if to != target {
+		ref := ""
+		if !required {
+			ref = "&"
+		}
+		parse = parse + fmt.Sprintf("\n%s = %s%s", to, ref, target)
+	}
+	return parse, checkErr
 }
 
 func flagType(tname string) string {
