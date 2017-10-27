@@ -48,7 +48,8 @@ func NewMappedAttributeExpr(att *AttributeExpr) *MappedAttributeExpr {
 	return &MappedAttributeExpr{
 		AttributeExpr: &AttributeExpr{
 			Type:         n,
-			Reference:    att.Reference,
+			References:   att.References,
+			Bases:        att.Bases,
 			Description:  att.Description,
 			Docs:         att.Docs,
 			Metadata:     att.Metadata,

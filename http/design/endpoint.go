@@ -171,7 +171,7 @@ func (e *EndpointExpr) Params() *design.AttributeExpr {
 	if e.params == nil {
 		e.params = &design.AttributeExpr{Type: &design.Object{}}
 		if pt := e.MethodExpr.Payload.Type; design.IsObject(pt) {
-			e.params.Reference = pt
+			e.params.References = append(e.params.References, pt)
 		}
 	}
 	return e.params
