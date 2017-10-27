@@ -321,7 +321,10 @@ func CollectionOf(v interface{}, adsl ...func()) *design.ResultTypeExpr {
 // type or a result type. The reference type attributes define the default
 // properties for attributes with the same name in the type using the reference.
 //
-// Reference may be used in Type or ResultType.
+// Reference may be used in Type or ResultType, it may appear multiple times in
+// which case attributes are looked up in each reference in order of appearance
+// in the DSL.
+//
 // Reference accepts a single argument: the type or result type containing the
 // attributes that define the default properties of the attributes of the type
 // or result type that uses Reference.
@@ -352,11 +355,52 @@ func CollectionOf(v interface{}, adsl ...func()) *design.ResultTypeExpr {
 //	})
 //
 func Reference(t design.DataType) {
+	if !design.IsObject(t) {
+		eval.ReportError("argument of Reference must be an object, got %s", t.Name())
+		return
+	}
 	switch def := eval.Current().(type) {
 	case *design.ResultTypeExpr:
-		def.Reference = t
+		def.References = append(def.References, t)
 	case *design.AttributeExpr:
-		def.Reference = t
+		def.References = append(def.References, t)
+	default:
+		eval.IncompatibleDSL()
+	}
+}
+
+// Extend adds the parameter type attributes to the type using Extend. The
+// parameter type must be an object.
+//
+// Extend may be used in Type or ResultType. Extend accepts a single argument:
+// the type or result type containing the attributes to be copied.
+//
+// Example:
+//
+//    var CreateBottlePayload = Type("CreateBottlePayload", func() {
+//       Attribute("name", String, func() {
+//          MinLength(3)
+//       })
+//       Attribute("vintage", Int32, func() {
+//          Minimum(1970)
+//       })
+//    })
+//
+//    var UpdateBottlePayload = Type("UpatePayload", func() {
+//        Atribute("id", String, "ID of bottle to update")
+//        Extend(CreateBottlePayload) // Adds attributes "name" and "vintage"
+//    })
+//
+func Extend(t design.DataType) {
+	if !design.IsObject(t) {
+		eval.ReportError("argument of Extend must be an object, got %s", t.Name())
+		return
+	}
+	switch def := eval.Current().(type) {
+	case *design.ResultTypeExpr:
+		def.Bases = append(def.Bases, t)
+	case *design.AttributeExpr:
+		def.Bases = append(def.Bases, t)
 	default:
 		eval.IncompatibleDSL()
 	}

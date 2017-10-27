@@ -138,9 +138,10 @@ func Attribute(name string, args ...interface{}) {
 
 	var attr *design.AttributeExpr
 	{
-		if parent.Reference != nil {
-			if att := design.AsObject(parent.Reference).Attribute(name); att != nil {
+		for _, ref := range parent.References {
+			if att := design.AsObject(ref).Attribute(name); att != nil {
 				attr = design.DupAtt(att)
+				break
 			}
 		}
 
@@ -158,7 +159,8 @@ func Attribute(name string, args ...interface{}) {
 				Description: description,
 			}
 		}
-		attr.Reference = parent.Reference
+		attr.References = parent.References
+		attr.Bases = parent.Bases
 		if fn != nil {
 			eval.Execute(fn, attr)
 		}

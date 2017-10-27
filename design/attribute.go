@@ -14,8 +14,10 @@ type (
 		eval.DSLFunc
 		// Attribute type
 		Type DataType
-		// Attribute reference type if any
-		Reference DataType
+		// Base types if any
+		Bases []DataType
+		// Attribute reference types if any
+		References []DataType
 		// Optional description
 		Description string
 		// Docs points to external documentation
@@ -197,19 +199,20 @@ func (a *AttributeExpr) Merge(other *AttributeExpr) {
 	if other == nil {
 		return
 	}
-	left := a.Type.(*Object)
-	right := other.Type.(*Object)
+	left := AsObject(a.Type)
+	right := AsObject(other.Type)
 	if left == nil || right == nil {
 		panic("cannot merge non object attributes") // bug
 	}
+	if other.Validation != nil {
+		if a.Validation == nil {
+			a.Validation = other.Validation.Dup()
+		} else {
+			a.Validation.Merge(other.Validation)
+		}
+	}
 	for _, nat := range *right {
 		left.Set(nat.Name, nat.Attribute)
-		if other.IsRequired(nat.Name) && !a.IsRequired(nat.Name) {
-			if a.Validation == nil {
-				a.Validation = &ValidationExpr{}
-			}
-			a.Validation.Required = append(a.Validation.Required, nat.Name)
-		}
 	}
 }
 

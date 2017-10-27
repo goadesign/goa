@@ -77,10 +77,19 @@ func (u *UserTypeExpr) Validate(ctx string, parent eval.Expression) *eval.Valida
 
 // Finalize merges base type attributes.
 func (u *UserTypeExpr) Finalize() {
-	if u.Reference != nil {
-		if bat := u.AttributeExpr; bat != nil {
-			u.AttributeExpr.Inherit(bat)
+	for _, ref := range u.References {
+		ru, ok := ref.(UserType)
+		if !ok {
+			continue
 		}
+		u.AttributeExpr.Inherit(ru.Attribute())
+	}
+	for _, base := range u.Bases {
+		ru, ok := base.(UserType)
+		if !ok {
+			continue
+		}
+		u.AttributeExpr.Merge(ru.Attribute())
 	}
 }
 

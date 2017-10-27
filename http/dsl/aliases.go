@@ -315,6 +315,32 @@ func Example(args ...interface{}) {
 	dsl.Example(args...)
 }
 
+// Extend adds the parameter type attributes to the type using Extend. The
+// parameter type must be an object.
+//
+// Extend may be used in Type or ResultType. Extend accepts a single argument:
+// the type or result type containing the attributes to be copied.
+//
+// Example:
+//
+//    var CreateBottlePayload = Type("CreateBottlePayload", func() {
+//       Attribute("name", String, func() {
+//          MinLength(3)
+//       })
+//       Attribute("vintage", Int32, func() {
+//          Minimum(1970)
+//       })
+//    })
+//
+//    var UpdateBottlePayload = Type("UpatePayload", func() {
+//        Atribute("id", String, "ID of bottle to update")
+//        Extend(CreateBottlePayload) // Adds attributes "name" and "vintage"
+//    })
+//
+func Extend(t design.DataType) {
+	dsl.Extend(t)
+}
+
 // Field is syntactic sugar to define an attribute with the "rpc:tag" metadata
 // set with the value of the first argument.
 //
@@ -520,7 +546,10 @@ func Payload(val interface{}, args ...interface{}) {
 // type or a result type. The reference type attributes define the default
 // properties for attributes with the same name in the type using the reference.
 //
-// Reference may be used in Type or ResultType.
+// Reference may be used in Type or ResultType, it may appear multiple times in
+// which case attributes are looked up in each reference in order of appearance
+// in the DSL.
+//
 // Reference accepts a single argument: the type or result type containing the
 // attributes that define the default properties of the attributes of the type
 // or result type that uses Reference.

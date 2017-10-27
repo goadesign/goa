@@ -42,6 +42,8 @@ func (d *dupper) DupAttribute(att *AttributeExpr) *AttributeExpr {
 	dup := AttributeExpr{
 		Type:         d.DupType(att.Type),
 		Description:  att.Description,
+		References:   att.References,
+		Bases:        att.Bases,
 		Validation:   valDup,
 		Metadata:     att.Metadata,
 		DefaultValue: att.DefaultValue,
