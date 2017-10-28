@@ -20,53 +20,10 @@ var (
 
 	// ErrorResult is the built-in result type for error responses.
 	ErrorResult = design.ErrorResult
+
+	// Empty represents empty values.
+	Empty = design.Empty
 )
-
-const (
-	// DefaultView is the name of the default view.
-	DefaultView = "default"
-)
-
-const (
-	// Boolean is the type for a JSON boolean.
-	Boolean = design.Boolean
-
-	// Int is the type for a signed integer.
-	Int = design.Int
-
-	// Int32 is the type for a signed 32-bit integer.
-	Int32 = design.Int32
-
-	// Int64 is the type for a signed 64-bit integer.
-	Int64 = design.Int64
-
-	// UInt is the type for a signed integer.
-	UInt = design.UInt
-
-	// UInt32 is the type for an unsigned 32-bit integer.
-	UInt32 = design.UInt32
-
-	// UInt64 is the type for an unsigned 64-bit integer.
-	UInt64 = design.UInt64
-
-	// Float32 is the type for a 32-bit floating number.
-	Float32 = design.Float32
-
-	// Float64 is the type for a 64-bit floating number.
-	Float64 = design.Float64
-
-	// String is the type for a JSON string.
-	String = design.String
-
-	// Bytes is the type for binary data.
-	Bytes = design.Bytes
-
-	// Any is the type for an arbitrary JSON value (interface{} in Go).
-	Any = design.Any
-)
-
-// Empty represents empty values.
-var Empty = design.Empty
 
 type (
 	// ParamHolder is the interface implemented by the design data structures
