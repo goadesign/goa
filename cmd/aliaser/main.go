@@ -30,6 +30,7 @@ const (
 
 // aliasTmpl is the template used to render the aliasing functions.
 var aliasTmpl = template.Must(template.New("alias").Parse(aliasT))
+var aliasConstTmpl = template.Must(template.New("aliasConst").Parse(aliasConstT))
 var headerTmpl = template.Must(template.New("header").Parse(headerT))
 
 func main() {
@@ -48,6 +49,7 @@ func main() {
 		destDSLPkgDir     string
 		destDSLPkgName    string
 		srcDesignPkgDir   string
+		srcDesignPkgPath  string
 		destDesignPkgDir  string
 		destDesignPkgName string
 	)
@@ -74,6 +76,7 @@ func main() {
 			fail("could not find %s package: %s", srcDesign, err)
 		}
 		srcDesignPkgDir = pkg.Dir
+		srcDesignPkgPath = pkg.ImportPath
 
 		destDesign := (*destDSL)[:strings.LastIndex(*destDSL, "/")] + "/design"
 		pkg, err = build.Import(destDesign, ".", 0)
@@ -145,7 +148,10 @@ func main() {
 		fail("failed to create package function aliases: %s", err)
 	}
 
-	constAliases, err := WriteConstAliases(designF, consts, destDesignPkgName)
+	designImports := map[string]*PackageDecl{
+		"design": &PackageDecl{Name: "design", ImportPath: srcDesignPkgPath},
+	}
+	constAliases, err := WriteConstAliases(designF, consts, destDesignPkgName, designImports)
 	if err != nil {
 		fail("failed to create package const aliases: %s", err)
 	}
@@ -157,7 +163,10 @@ func main() {
 		fail("failed to close aliases file: %s", err)
 	}
 	if err := CleanImports(dslPath); err != nil {
-		fail("failed to clean imports: %s", err)
+		fail("failed to clean DSL aliases imports: %s", err)
+	}
+	if err := CleanImports(designPath); err != nil {
+		fail("failed to clean design aliases imports: %s", err)
 	}
 	fmt.Printf("%s (%d const):\n  ", destDesignPkgDir, len(constAliases))
 	fmt.Println(strings.Join(constAliases, "\n  "))
@@ -166,16 +175,21 @@ func main() {
 }
 
 // WriteConstAliases writes the given constant definitions to w.
-func WriteConstAliases(w io.Writer, consts []*ExportedConsts, destDesignPkgName string) ([]string, error) {
-	data := map[string]interface{}{"PkgName": destDesignPkgName, "Kind": "Constants"}
+func WriteConstAliases(w io.Writer, consts []*ExportedConsts, destDesignPkgName string, imports map[string]*PackageDecl) ([]string, error) {
+	data := map[string]interface{}{"Imports": imports, "PkgName": destDesignPkgName, "Kind": "Constants"}
 	if err := headerTmpl.Execute(w, data); err != nil {
 		return nil, err
 	}
 	var (
 		aliases []string
 	)
-	for _, c := range consts {
-		if _, err := w.Write([]byte(c.Declaration)); err != nil {
+	for i, c := range consts {
+		if i > 0 {
+			if _, err := w.Write([]byte("\n\n")); err != nil {
+				return nil, err
+			}
+		}
+		if err := aliasConstTmpl.Execute(w, c); err != nil {
 			return nil, err
 		}
 		aliases = append(aliases, c.Names...)
@@ -255,11 +269,9 @@ func fail(msg string, vals ...interface{}) {
 const (
 	// headerT is the generated file header template.
 	headerT = `//************************************************************************//
+// Code generated with aliaser, DO NOT EDIT.
+//
 // Aliased DSL {{ .Kind }}
-//
-// Generated with aliaser
-//
-// The content of this file is auto-generated, DO NOT MODIFY
 //************************************************************************//
 
 package {{ .PkgName }}
@@ -278,4 +290,14 @@ import (
 {{ .Declaration }} {
         {{ if .Return }}return {{ end }}dsl.{{ .Call }}
 }`
+
+	// aliasConstT is the source of the text template that renders const
+	// alias implementations.
+	aliasConstT = `const (
+{{- range $i, $n := .Names}}
+{{ index $.Comments $i }}
+{{ $n }} = design.{{ $n }}
+{{- end }}
+)
+`
 )

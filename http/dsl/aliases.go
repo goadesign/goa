@@ -1,9 +1,7 @@
 //************************************************************************//
+// Code generated with aliaser, DO NOT EDIT.
+//
 // Aliased DSL Functions
-//
-// Generated with aliaser
-//
-// The content of this file is auto-generated, DO NOT MODIFY
 //************************************************************************//
 
 package dsl

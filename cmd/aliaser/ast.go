@@ -7,6 +7,7 @@ import (
 	"go/token"
 	"io/ioutil"
 	"os"
+	"sort"
 	"strings"
 )
 
@@ -26,10 +27,10 @@ type ExportedFunc struct {
 
 // ExportedConsts contains the details needed to alias exported constants.
 type ExportedConsts struct {
-	// Declaration is the constants declaration.
-	Declaration string
 	// Names is the set of constant names defined by this declaration.
 	Names []string
+	// Comments is the constant comments in same order as Names.
+	Comments []string
 }
 
 // PackageDecl represents a package import declaration.
@@ -73,7 +74,16 @@ func ParseConsts(pkgPath string) ([]*ExportedConsts, error) {
 	var (
 		consts []*ExportedConsts
 	)
-	for _, file := range p.Files {
+	names := make([]string, len(p.Files))
+	i := 0
+	for n := range p.Files {
+		names[i] = n
+		i++
+	}
+	sort.Strings(names)
+
+	for _, n := range names {
+		file := p.Files[n]
 		if strings.HasSuffix(file.Name.String(), "_test") {
 			continue
 		}
@@ -83,7 +93,7 @@ func ParseConsts(pkgPath string) ([]*ExportedConsts, error) {
 				if err != nil {
 					return nil, err
 				}
-				if c == nil {
+				if c == nil || len(c.Names) == 0 {
 					continue
 				}
 				consts = append(consts, c)
@@ -170,31 +180,37 @@ func ParseFuncs(pkgPath string) (map[string]*ExportedFunc, map[string]*PackageDe
 // analyzeConstant returns the name and value of the constant represented by
 // cdecl if any.
 func analyzeConstant(decl *ast.GenDecl, fset *token.FileSet) (*ExportedConsts, error) {
+	if decl.Tok != token.CONST {
+		return nil, nil
+	}
 	var (
-		names []string
-		dcl   string
-		err   error
+		names    []string
+		comments []string
 	)
 	{
-		v, ok := decl.Specs[0].(*ast.ValueSpec)
-		if !ok {
-			return nil, nil
-		}
-		ns := v.Names
-		for _, n := range ns {
-			if !n.IsExported() {
+		for _, spec := range decl.Specs {
+			v, ok := spec.(*ast.ValueSpec)
+			if !ok {
 				continue
 			}
-			names = append(names, n.String())
-		}
-		if len(names) == 0 {
-			return nil, nil
-		}
-		if dcl, err = text(fset, decl.Pos(), decl.End()); err != nil {
-			return nil, err
+			ns := v.Names
+			for _, n := range ns {
+				if !n.IsExported() {
+					continue
+				}
+				names = append(names, n.String())
+			}
+			if len(names) == 0 {
+				continue
+			}
+			comm, err := text(fset, v.Doc.Pos(), v.Doc.End())
+			if err != nil {
+				return nil, err
+			}
+			comments = append(comments, comm)
 		}
 	}
-	return &ExportedConsts{Declaration: dcl, Names: names}, nil
+	return &ExportedConsts{Names: names, Comments: comments}, nil
 }
 
 // analyzeFunction returns information on the public function represented by
