@@ -42,51 +42,78 @@ func main() {
 	}
 
 	var (
-		srcPkgDir   string
-		srcPkgName  string
-		srcPkgPath  string
-		destPkgDir  string
-		destPkgName string
+		srcDSLPkgDir      string
+		srcDSLPkgName     string
+		srcDSLPkgPath     string
+		destDSLPkgDir     string
+		destDSLPkgName    string
+		srcDesignPkgDir   string
+		destDesignPkgDir  string
+		destDesignPkgName string
 	)
 	{
 		pkg, err := build.Import(*srcDSL, ".", 0)
 		if err != nil {
-			fail("could not find %s package: %s", srcDSL, err)
+			fail("could not find %s package: %s", *srcDSL, err)
 		}
-		srcPkgDir = pkg.Dir
-		srcPkgName = pkg.Name
-		srcPkgPath = pkg.ImportPath
+		srcDSLPkgDir = pkg.Dir
+		srcDSLPkgName = pkg.Name
+		srcDSLPkgPath = pkg.ImportPath
 
 		pkg, err = build.Import(*destDSL, ".", 0)
 		if err != nil {
-			fail("could not parse %s package: %s", destDSL, err)
+			fail("could not parse %s package: %s", *destDSL, err)
 		}
-		destPkgDir = pkg.Dir
-		destPkgName = pkg.Name
+
+		destDSLPkgDir = pkg.Dir
+		destDSLPkgName = pkg.Name
+
+		srcDesign := (*srcDSL)[:strings.LastIndex(*srcDSL, "/")] + "/design"
+		pkg, err = build.Import(srcDesign, ".", 0)
+		if err != nil {
+			fail("could not find %s package: %s", srcDesign, err)
+		}
+		srcDesignPkgDir = pkg.Dir
+
+		destDesign := (*destDSL)[:strings.LastIndex(*destDSL, "/")] + "/design"
+		pkg, err = build.Import(destDesign, ".", 0)
+		if err != nil {
+			fail("could not parse %s package: %s", destDesign, err)
+		}
+		destDesignPkgDir = pkg.Dir
+		destDesignPkgName = pkg.Name
 	}
 
 	var (
-		destFuncs map[string]*ExportedFunc
-		funcs     map[string]*ExportedFunc
-		imports   map[string]*PackageDecl
-		path      string
-		names     []string
-		err       error
+		destFuncs           map[string]*ExportedFunc
+		funcs               map[string]*ExportedFunc
+		consts              []*ExportedConsts
+		imports             map[string]*PackageDecl
+		dslPath, designPath string
+		names               []string
+		err                 error
 	)
 	{
-		path = filepath.Join(destPkgDir, aliasFile)
-		os.Remove(path) // to avoid parsing them
+		dslPath = filepath.Join(destDSLPkgDir, aliasFile)
+		os.Remove(dslPath) // to avoid parsing them
+		designPath = filepath.Join(destDesignPkgDir, aliasFile)
+		os.Remove(designPath) // to avoid parsing them
 
-		destFuncs, _, err = ParseFuncs(destPkgDir)
+		consts, err = ParseConsts(srcDesignPkgDir)
 		if err != nil {
-			fail("could not parse functions in %s: %s", destPkgDir, err)
+			fail("could not parse constants in %s: %s", destDesignPkgDir, err)
 		}
 
-		funcs, imports, err = ParseFuncs(srcPkgDir)
+		destFuncs, _, err = ParseFuncs(destDSLPkgDir)
 		if err != nil {
-			fail("could not parse functions in %s: %s", srcPkgDir, err)
+			fail("could not parse functions in %s: %s", destDSLPkgDir, err)
 		}
-		imports[srcPkgName] = &PackageDecl{ImportPath: srcPkgPath, Name: srcPkgName}
+
+		funcs, imports, err = ParseFuncs(srcDSLPkgDir)
+		if err != nil {
+			fail("could not parse functions in %s: %s", srcDSLPkgDir, err)
+		}
+		imports[srcDSLPkgName] = &PackageDecl{ImportPath: srcDSLPkgPath, Name: srcDSLPkgName}
 		names = make([]string, len(funcs))
 		i := 0
 		for _, fn := range funcs {
@@ -96,37 +123,74 @@ func main() {
 		sort.Strings(names)
 	}
 
-	aliases, err := CreateAliases(names, funcs, destFuncs, destPkgName, imports, path)
-	if err != nil {
-		fail("failed to create package aliases: %s", err)
+	var (
+		dslF, designF *os.File
+	)
+	{
+		var err error
+		dslF, err = os.Create(dslPath)
+		if err != nil {
+			fail("failed to create file %s: %s", dslPath, err)
+		}
+		defer dslF.Close()
+		designF, err = os.Create(designPath)
+		if err != nil {
+			fail("failed to create file %s: %s", designPath, err)
+		}
+		defer designF.Close()
 	}
-	fmt.Printf("%s (%d):\n", destPkgDir, len(aliases))
-	fmt.Println("  " + strings.Join(aliases, "\n  "))
+
+	funcAliases, err := WriteFuncAliases(dslF, names, funcs, destFuncs, destDSLPkgName, imports)
+	if err != nil {
+		fail("failed to create package function aliases: %s", err)
+	}
+
+	constAliases, err := WriteConstAliases(designF, consts, destDesignPkgName)
+	if err != nil {
+		fail("failed to create package const aliases: %s", err)
+	}
+
+	if err := designF.Close(); err != nil {
+		fail("failed to close aliases file: %s", err)
+	}
+	if err := dslF.Close(); err != nil {
+		fail("failed to close aliases file: %s", err)
+	}
+	if err := CleanImports(dslPath); err != nil {
+		fail("failed to clean imports: %s", err)
+	}
+	fmt.Printf("%s (%d const):\n  ", destDesignPkgDir, len(constAliases))
+	fmt.Println(strings.Join(constAliases, "\n  "))
+	fmt.Printf("\n%s (%d func):\n  ", destDSLPkgDir, len(funcAliases))
+	fmt.Println(strings.Join(funcAliases, "\n  "))
 }
 
-// CreateAliases iterates through the funcs functions and for each creates a
+// WriteConstAliases writes the given constant definitions to w.
+func WriteConstAliases(w io.Writer, consts []*ExportedConsts, destDesignPkgName string) ([]string, error) {
+	data := map[string]interface{}{"PkgName": destDesignPkgName, "Kind": "Constants"}
+	if err := headerTmpl.Execute(w, data); err != nil {
+		return nil, err
+	}
+	var (
+		aliases []string
+	)
+	for _, c := range consts {
+		if _, err := w.Write([]byte(c.Declaration)); err != nil {
+			return nil, err
+		}
+		aliases = append(aliases, c.Names...)
+	}
+	return aliases, nil
+}
+
+// WriteFuncAliases iterates through the funcs functions and for each creates a
 // function with identical name in the file dest. existing is the list of public
 // functions that already exist in the destination package and thus should not be
 // generated.
 // The implementations of the created functions simply call the original
 // functions.
-func CreateAliases(names []string, funcs, existing map[string]*ExportedFunc, destPkgName string, imports map[string]*PackageDecl, path string) ([]string, error) {
-	var (
-		w io.Writer
-		f *os.File
-	)
-	{
-		var err error
-		f, err = os.Create(path)
-		if err != nil {
-			return nil, fmt.Errorf("failed to create file %s: %s",
-				path, err)
-		}
-		defer f.Close()
-		w = f
-	}
-
-	data := map[string]interface{}{"Imports": imports, "PkgName": destPkgName}
+func WriteFuncAliases(w io.Writer, names []string, funcs, existing map[string]*ExportedFunc, destDSLPkgName string, imports map[string]*PackageDecl) ([]string, error) {
+	data := map[string]interface{}{"Imports": imports, "PkgName": destDSLPkgName, "Kind": "Functions"}
 	if err := headerTmpl.Execute(w, data); err != nil {
 		return nil, err
 	}
@@ -148,16 +212,18 @@ func CreateAliases(names []string, funcs, existing map[string]*ExportedFunc, des
 		}
 		aliases = append(aliases, name)
 	}
+	return aliases, nil
+}
 
-	// Clean unused imports
-	f.Close()
+// CleanImports removes unused imports.
+func CleanImports(path string) error {
 	fset := token.NewFileSet()
 	file, err := parser.ParseFile(fset, path, nil, parser.ParseComments)
 	if err != nil {
 		content, _ := ioutil.ReadFile(path)
 		var buf bytes.Buffer
 		scanner.PrintError(&buf, err)
-		return nil, fmt.Errorf("%s\n========\nContent:\n%s", buf.String(), content)
+		return fmt.Errorf("%s\n========\nContent:\n%s", buf.String(), content)
 	}
 	all := astutil.Imports(fset, file)
 	for _, group := range all {
@@ -173,15 +239,11 @@ func CreateAliases(names []string, funcs, existing map[string]*ExportedFunc, des
 		}
 	}
 	ast.SortImports(fset, file)
-	f, err = os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, os.ModePerm)
+	f, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, os.ModePerm)
 	if err != nil {
-		return nil, err
+		return err
 	}
-	if err := format.Node(f, fset, file); err != nil {
-		return nil, err
-	}
-
-	return aliases, nil
+	return format.Node(f, fset, file)
 }
 
 // fail prints a message to stderr then exits the process with status 1.
@@ -193,7 +255,7 @@ func fail(msg string, vals ...interface{}) {
 const (
 	// headerT is the generated file header template.
 	headerT = `//************************************************************************//
-// Aliased DSL Functions
+// Aliased DSL {{ .Kind }}
 //
 // Generated with aliaser
 //
@@ -203,9 +265,9 @@ const (
 package {{ .PkgName }}
 
 import (
-	{{- range .Imports }}
-	{{ if .Name }}{{ .Name }} {{ end }}"{{ .ImportPath }}"
-	{{- end }}
+        {{- range .Imports }}
+        {{ if .Name }}{{ .Name }} {{ end }}"{{ .ImportPath }}"
+        {{- end }}
 )
 
 `
@@ -214,6 +276,6 @@ import (
 	// implementations.
 	aliasT = `{{ .Comment }}
 {{ .Declaration }} {
-	{{ if .Return }}return {{ end }}dsl.{{ .Call }}
+        {{ if .Return }}return {{ end }}dsl.{{ .Call }}
 }`
 )
