@@ -36,8 +36,24 @@ type (
 		// ErrorTypes lists the error types definitions that the service
 		// depends on.
 		ErrorTypes []*UserTypeData
+		// Errors list the information required to generate error init
+		// functions.
+		ErrorInits []*ErrorInitData
 		// Scope initialized with all the service types.
 		Scope *codegen.NameScope
+	}
+
+	// ErrorInitData describes an error returned by a service method of type
+	// ErrorResult.
+	ErrorInitData struct {
+		// Name is the name of the init function.
+		Name string
+		// ErrName is the name of the error.
+		ErrName string
+		// TypeName is the error struct type name.
+		TypeName string
+		// TypeRef is the reference to the error type.
+		TypeRef string
 	}
 
 	// MethodData describes a single service method.
@@ -130,18 +146,21 @@ func (s *Data) Method(name string) *MethodData {
 // It records the user types needed by the service definition in userTypes.
 func (d ServicesData) analyze(service *design.ServiceExpr) *Data {
 	var (
-		scope    *codegen.NameScope
-		varName  string
-		pkgName  string
-		types    []*UserTypeData
-		errTypes []*UserTypeData
-		seen     map[string]struct{}
+		scope      *codegen.NameScope
+		varName    string
+		pkgName    string
+		types      []*UserTypeData
+		errTypes   []*UserTypeData
+		errorInits []*ErrorInitData
+		seenErrors map[string]struct{}
+		seen       map[string]struct{}
 	)
 	{
 		scope = codegen.NewNameScope()
 		varName = codegen.Goify(service.Name, true)
 		pkgName = strings.ToLower(codegen.Goify(service.Name, false))
 		seen = make(map[string]struct{})
+		seenErrors = make(map[string]struct{})
 		for _, e := range service.Methods {
 			// Create user type for raw object payloads
 			if _, ok := e.Payload.Type.(*design.Object); ok {
@@ -180,6 +199,18 @@ func (d ServicesData) analyze(service *design.ServiceExpr) *Data {
 			types = append(types, collectTypes(ratt, seen, scope, false)...)
 			for _, er := range e.Errors {
 				errTypes = append(errTypes, collectTypes(er.AttributeExpr, seen, scope, false)...)
+				if er.Type == design.ErrorResult {
+					if _, ok := seenErrors[er.Name]; ok {
+						continue
+					}
+					seenErrors[er.Name] = struct{}{}
+					errorInits = append(errorInits, &ErrorInitData{
+						Name:     fmt.Sprintf("New%s", codegen.Goify(er.Name, true)),
+						ErrName:  er.Name,
+						TypeName: scope.GoTypeName(er.AttributeExpr),
+						TypeRef:  scope.GoTypeRef(er.AttributeExpr),
+					})
+				}
 			}
 		}
 	}
@@ -213,6 +244,7 @@ func (d ServicesData) analyze(service *design.ServiceExpr) *Data {
 		Methods:     methods,
 		UserTypes:   types,
 		ErrorTypes:  errTypes,
+		ErrorInits:  errorInits,
 		Scope:       scope,
 	}
 	d[service.Name] = data

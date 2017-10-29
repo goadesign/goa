@@ -60,13 +60,13 @@ var (
 				UserExamples: []*ExampleExpr{{
 					Summary: "BadRequest",
 					Value: Val{
-						"id":     "3F1FKVRR",
-						"code":   "invalid_value",
-						"detail": "Value of ID must be an integer",
-						"meta":   map[string]interface{}{"timestamp": 1458609066},
+						"id":      "3F1FKVRR",
+						"code":    "invalid_value",
+						"status":  400,
+						"message": "Value of ID must be an integer",
 					},
 				}},
-				Validation: &ValidationExpr{Required: []string{"id", "code", "detail"}},
+				Validation: &ValidationExpr{Required: []string{"id", "code", "status", "message"}},
 			},
 			TypeName: "error",
 		},
@@ -80,23 +80,16 @@ var (
 			Description: "a unique identifier for this particular occurrence of the problem.",
 		}},
 		{"status", &AttributeExpr{
-			Type:        String,
-			Description: "the HTTP status code applicable to this problem, expressed as a string value.",
+			Type:        Int,
+			Description: "the HTTP status code applicable to this problem.",
 		}},
 		{"code", &AttributeExpr{
 			Type:        String,
 			Description: "an application-specific error code, expressed as a string value.",
 		}},
-		{"detail", &AttributeExpr{
+		{"message", &AttributeExpr{
 			Type:        String,
 			Description: "a human-readable explanation specific to this occurrence of the problem.",
-		}},
-		{"meta", &AttributeExpr{
-			Type: &Map{
-				KeyType:  &AttributeExpr{Type: String},
-				ElemType: &AttributeExpr{Type: Any},
-			},
-			Description: "a meta object containing non-standard meta-information about the error.",
 		}},
 	}
 

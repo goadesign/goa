@@ -16,6 +16,7 @@ func File(service *design.ServiceExpr) *codegen.File {
 		svc.PkgName,
 		[]*codegen.ImportSpec{
 			{Path: "context"},
+			{Path: "goa.design/goa"},
 		})
 	def := &codegen.SectionTemplate{Name: "service", Source: serviceT, Data: svc}
 
@@ -74,7 +75,13 @@ func File(service *design.ServiceExpr) *codegen.File {
 			Data:   et,
 		})
 	}
-
+	for _, er := range svc.ErrorInits {
+		sections = append(sections, &codegen.SectionTemplate{
+			Name:   "error-init-func",
+			Source: errorInitT,
+			Data:   er,
+		})
+	}
 	return &codegen.File{Path: path, SectionTemplates: sections}
 }
 
@@ -104,5 +111,17 @@ type {{ .VarName }} {{ .Def }}
 const errorT = `// Error returns {{ printf "%q" .Name }}.
 func (e {{ .Ref }}) Error() string {
 	return {{ printf "%q" .Name }}
+}
+`
+
+// input: map[string]{"Type": TypeData, "Error": ErrorData}
+const errorInitT = `{{ printf "%s initilializes a %s struct reference from a goa.Error" .Name .TypeName |  comment }}
+func {{ .Name }}(err goa.Error) {{ .TypeRef }} {
+	return &{{ .TypeName }}{
+		ID: err.ID(),
+		Status: int(err.Status()),
+		Code: {{ printf "%q" .ErrName }},
+		Message: err.Message(),
+	}
 }
 `
