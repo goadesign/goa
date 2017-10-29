@@ -103,9 +103,9 @@ type (
 		TypeName string
 		// Init is the code initializing the variable.
 		Init string
-		// Deref is true if the variable needs to be derefenced when
-		// assigned to the field.
-		Deref bool
+		// Pointer is true if the variable needs to be declared as a
+		// pointer.
+		Pointer bool
 	}
 )
 
@@ -328,7 +328,7 @@ func buildSubcommandData(svc *ServiceData, e *EndpointData) *subcommandData {
 							VarName:  arg.Name,
 							TypeName: tn,
 							Init:     code,
-							Deref:    flags[i].Type == "JSON",
+							Pointer:  arg.Pointer,
 						})
 					}
 				}
@@ -707,7 +707,7 @@ func {{ .Name }}({{ range .FormalParams }}{{ . }} string, {{ end }}) (*{{ .Resul
 	{{- end }}
 	{{- range .Fields }}
 		{{- if .VarName }}
-	var {{ .VarName }} {{ .TypeName }}
+	var {{ .VarName }} {{ if .Pointer }}*{{ end }}{{ .TypeName }}
 	{
 		{{ .Init }}
 	}
@@ -721,28 +721,28 @@ func {{ .Name }}({{ range .FormalParams }}{{ . }} string, {{ end }}) (*{{ .Resul
 	{{- with .PayloadInit }}
 		{{- if .ClientCode }}
 	{{ .ClientCode }}
-		{{ if .ReturnTypeAttribute }}
+	        	{{ if .ReturnTypeAttribute }}
 	res := &{{ .ReturnTypeName }}{
 		{{ .ReturnTypeAttribute }}: v,
 	}
-		{{- end }}
-		{{- if .ReturnIsStruct }}
-			{{- range .ClientArgs }}
-				{{- if .FieldName -}}
+	        	{{- end }}
+	        	{{- if .ReturnIsStruct }}
+	        		{{- range .ClientArgs }}
+	        			{{- if .FieldName -}}
 	v.{{ .FieldName }} = {{ if .Pointer }}&{{ end }}{{ .Name }}
-				{{ end -}}
-			{{- end }}
-		{{- end }}
+        				{{ end -}}
+        			{{- end }}
+        		{{- end }}
 	return {{ if .ReturnTypeAttribute }}res{{ else }}v{{ end }}, nil
-		{{- else }}
+       		{{- else }}
 			{{- if .ReturnIsStruct }}
 	payload := &{{ .ReturnTypeName }}{
 				{{- range .ClientArgs }}
 					{{- if .FieldName }}
-		{{ .FieldName }}: {{ if .Pointer }}&{{ end }}{{ .Name }},
+		{{ .FieldName }}: {{ .Name }},
 					{{- end }}
 				{{- end }}
-	}
+        }
 	return payload, nil
 			{{  end -}}
 		{{ end -}}

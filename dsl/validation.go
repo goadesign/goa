@@ -84,7 +84,7 @@ func Format(f design.ValidationFormat) {
 			if a.Validation == nil {
 				a.Validation = &design.ValidationExpr{}
 			}
-			a.Validation.Format = f
+			a.Validation.Format = design.ValidationFormat(f)
 		}
 	}
 }

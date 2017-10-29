@@ -168,6 +168,8 @@ type (
 	// ErrorData contains the error information required to generate the
 	// transport decode (client) and encode (server) code.
 	ErrorData struct {
+		// Name is the error name.
+		Name string
 		// Ref is a reference to the error type.
 		Ref string
 		// Response is the error response data.
@@ -1187,6 +1189,7 @@ func buildErrorsData(svc *service.Data, s *httpdesign.ServiceExpr, e *httpdesign
 
 		ref := svc.Scope.GoFullTypeRef(v.ErrorExpr.AttributeExpr, svc.PkgName)
 		data[ref] = append(data[ref], &ErrorData{
+			Name:     v.Name,
 			Response: responseData,
 			Ref:      ref,
 		})
