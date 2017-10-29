@@ -63,8 +63,9 @@ func ParseEndpoint(
 
 		storageListFlags = flag.NewFlagSet("list", flag.ExitOnError)
 
-		storageShowFlags  = flag.NewFlagSet("show", flag.ExitOnError)
-		storageShowIDFlag = storageShowFlags.String("id", "REQUIRED", "ID of bottle to show")
+		storageShowFlags    = flag.NewFlagSet("show", flag.ExitOnError)
+		storageShowIDFlag   = storageShowFlags.String("id", "REQUIRED", "ID of bottle to show")
+		storageShowViewFlag = storageShowFlags.String("view", "", "")
 
 		storageAddFlags    = flag.NewFlagSet("add", flag.ExitOnError)
 		storageAddBodyFlag = storageAddFlags.String("body", "REQUIRED", "")
@@ -173,7 +174,7 @@ func ParseEndpoint(
 				data = nil
 			case "show":
 				endpoint = c.Show()
-				data, err = storagec.BuildShowShowPayload(*storageShowIDFlag)
+				data, err = storagec.BuildShowShowPayload(*storageShowIDFlag, *storageShowViewFlag)
 			case "add":
 				endpoint = c.Add()
 				data, err = storagec.BuildAddBottle(*storageAddBodyFlag)
@@ -250,13 +251,14 @@ Example:
 }
 
 func storageShowUsage() {
-	fmt.Fprintf(os.Stderr, `%s [flags] storage show -id STRING
+	fmt.Fprintf(os.Stderr, `%s [flags] storage show -id STRING -view STRING
 
 Show bottle by ID
     -id STRING: ID of bottle to show
+    -view STRING: 
 
 Example:
-    `+os.Args[0]+` storage show --id "Ex enim suscipit est explicabo eveniet dolore."
+    `+os.Args[0]+` storage show --id "Minima saepe eum." --view "default"
 `, os.Args[0])
 }
 
@@ -270,22 +272,26 @@ Example:
     `+os.Args[0]+` storage add --body '{
       "composition": [
          {
-            "percentage": 67,
+            "percentage": 46,
             "varietal": "Syrah"
          },
          {
-            "percentage": 67,
+            "percentage": 46,
             "varietal": "Syrah"
          },
          {
-            "percentage": 67,
+            "percentage": 46,
+            "varietal": "Syrah"
+         },
+         {
+            "percentage": 46,
             "varietal": "Syrah"
          }
       ],
       "description": "Red wine blend with an emphasis on the Cabernet Franc grape and including other Bordeaux grape varietals and some Syrah",
       "name": "Blue\'s Cuvee",
-      "rating": 3,
-      "vintage": 1905,
+      "rating": 1,
+      "vintage": 1965,
       "winery": {
          "country": "USA",
          "name": "Longoria",

@@ -46,13 +46,27 @@ func EncodeShowResponse(encoder func(context.Context, http.ResponseWriter) goaht
 func DecodeShowRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) (interface{}, error) {
 	return func(r *http.Request) (interface{}, error) {
 		var (
-			id string
+			id   string
+			view *string
+			err  error
 
 			params = mux.Vars(r)
 		)
 		id = params["id"]
+		viewRaw := r.URL.Query().Get("view")
+		if viewRaw != "" {
+			view = &viewRaw
+		}
+		if view != nil {
+			if !(*view == "default" || *view == "tiny") {
+				err = goa.MergeErrors(err, goa.InvalidEnumValueError("view", *view, []interface{}{"default", "tiny"}))
+			}
+		}
+		if err != nil {
+			return nil, err
+		}
 
-		return NewShowShowPayload(id), nil
+		return NewShowShowPayload(id, view), nil
 	}
 }
 

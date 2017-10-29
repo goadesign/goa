@@ -25,12 +25,16 @@ var _ = Service("storage", func() {
 		Description("Show bottle by ID")
 		Payload(func() {
 			Attribute("id", String, "ID of bottle to show")
+			Attribute("view", String, "View to render", func() {
+				Enum("default", "tiny")
+			})
 			Required("id")
 		})
 		Result(StoredBottle)
 		Error("not_found", NotFound, "Bottle not found")
 		HTTP(func() {
 			GET("/{id}")
+			Param("view")
 			Response(StatusOK)
 			Response("not_found", StatusNotFound)
 		})

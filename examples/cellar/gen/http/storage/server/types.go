@@ -205,9 +205,10 @@ func NewShowNotFoundResponseBody(res *storage.NotFound) *ShowNotFoundResponseBod
 }
 
 // NewShowShowPayload builds a storage service show endpoint payload.
-func NewShowShowPayload(id string) *storage.ShowPayload {
+func NewShowShowPayload(id string, view *string) *storage.ShowPayload {
 	return &storage.ShowPayload{
-		ID: id,
+		ID:   id,
+		View: view,
 	}
 }
 

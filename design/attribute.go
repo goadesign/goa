@@ -397,6 +397,16 @@ func (v *ValidationExpr) Context() string {
 	return "validation"
 }
 
+// Validate makes sure the validation format value is valid.
+func (v *ValidationExpr) Validate() error {
+	verr := new(eval.ValidationErrors)
+
+	if v.Format == "" {
+		return nil
+	}
+	return verr
+}
+
 // Merge merges other into v.
 func (v *ValidationExpr) Merge(other *ValidationExpr) {
 	if v.Values == nil {
