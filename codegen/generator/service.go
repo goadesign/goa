@@ -26,7 +26,9 @@ func Service(genpkg string, roots []eval.Root) ([]*codegen.File, error) {
 				if err != nil {
 					return nil, err
 				}
-				files = append(files, f)
+				if f != nil {
+					files = append(files, f)
+				}
 			}
 		}
 	}
