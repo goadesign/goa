@@ -43,17 +43,22 @@ import (
 //    }
 //
 func ConvertTo(obj interface{}) {
-	at, ok := eval.Current().(*design.AttributeExpr)
-	if !ok {
+	var ut design.UserType
+	switch actual := eval.Current().(type) {
+	case *design.AttributeExpr:
+		for _, t := range design.Root.Types {
+			if t.Attribute() == actual {
+				ut = t
+			}
+		}
+	case *design.ResultTypeExpr:
+		ut = actual
+	default:
 		eval.IncompatibleDSL()
 		return
 	}
-	for _, t := range design.Root.Types {
-		if t.Attribute() == at {
-			design.Root.Conversions =
-				append(design.Root.Conversions, &design.TypeMap{User: t, External: obj})
-		}
-	}
+	design.Root.Conversions =
+		append(design.Root.Conversions, &design.TypeMap{User: ut, External: obj})
 }
 
 // CreateFrom specifies an external type that instances of the generated struct
@@ -92,15 +97,20 @@ func ConvertTo(obj interface{}) {
 //    }
 //
 func CreateFrom(obj interface{}) {
-	at, ok := eval.Current().(*design.AttributeExpr)
-	if !ok {
+	var ut design.UserType
+	switch actual := eval.Current().(type) {
+	case *design.AttributeExpr:
+		for _, t := range design.Root.Types {
+			if t.Attribute() == actual {
+				ut = t
+			}
+		}
+	case *design.ResultTypeExpr:
+		ut = actual
+	default:
 		eval.IncompatibleDSL()
 		return
 	}
-	for _, t := range design.Root.Types {
-		if t.Attribute() == at {
-			design.Root.Creations =
-				append(design.Root.Creations, &design.TypeMap{User: t, External: obj})
-		}
-	}
+	design.Root.Creations =
+		append(design.Root.Creations, &design.TypeMap{User: ut, External: obj})
 }

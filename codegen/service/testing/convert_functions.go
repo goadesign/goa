@@ -2,7 +2,6 @@ package testing
 
 var ConvertStringCode = `// ConvertToStringT creates an instance of StringT initialized from t.
 func (t *StringType) ConvertToStringT() *testing.StringT {
-	var v *testing.StringT
 	v := &testing.StringT{}
 	if t.String != nil {
 		v.String = *t.String
@@ -13,7 +12,6 @@ func (t *StringType) ConvertToStringT() *testing.StringT {
 
 var ConvertStringRequiredCode = `// ConvertToStringT creates an instance of StringT initialized from t.
 func (t *StringType) ConvertToStringT() *testing.StringT {
-	var v *testing.StringT
 	v := &testing.StringT{
 		String: t.String,
 	}
@@ -24,7 +22,6 @@ func (t *StringType) ConvertToStringT() *testing.StringT {
 var ConvertStringPointerCode = `// ConvertToStringPointerT creates an instance of StringPointerT initialized
 // from t.
 func (t *StringPointerType) ConvertToStringPointerT() *testing.StringPointerT {
-	var v *testing.StringPointerT
 	v := &testing.StringPointerT{
 		String: t.String,
 	}
@@ -35,7 +32,6 @@ func (t *StringPointerType) ConvertToStringPointerT() *testing.StringPointerT {
 var ConvertStringPointerRequiredCode = `// ConvertToStringPointerT creates an instance of StringPointerT initialized
 // from t.
 func (t *StringPointerType) ConvertToStringPointerT() *testing.StringPointerT {
-	var v *testing.StringPointerT
 	v := &testing.StringPointerT{
 		String: &t.String,
 	}
@@ -45,7 +41,6 @@ func (t *StringPointerType) ConvertToStringPointerT() *testing.StringPointerT {
 
 var ConvertArrayStringCode = `// ConvertToArrayStringT creates an instance of ArrayStringT initialized from t.
 func (t *ArrayStringType) ConvertToArrayStringT() *testing.ArrayStringT {
-	var v *testing.ArrayStringT
 	v := &testing.ArrayStringT{}
 	if t.ArrayString != nil {
 		v.ArrayString = make([]string, len(t.ArrayString))
@@ -59,7 +54,6 @@ func (t *ArrayStringType) ConvertToArrayStringT() *testing.ArrayStringT {
 
 var ConvertArrayStringRequiredCode = `// ConvertToArrayStringT creates an instance of ArrayStringT initialized from t.
 func (t *ArrayStringType) ConvertToArrayStringT() *testing.ArrayStringT {
-	var v *testing.ArrayStringT
 	v := &testing.ArrayStringT{}
 	if t.ArrayString != nil {
 		v.ArrayString = make([]string, len(t.ArrayString))
@@ -73,7 +67,6 @@ func (t *ArrayStringType) ConvertToArrayStringT() *testing.ArrayStringT {
 
 var ConvertObjectCode = `// ConvertToObjectT creates an instance of ObjectT initialized from t.
 func (t *ObjectType) ConvertToObjectT() *testing.ObjectT {
-	var v *testing.ObjectT
 	v := &testing.ObjectT{}
 	if t.Object != nil {
 		v.Object = marshalObjectFieldToObjectFieldT(t.Object)
@@ -84,7 +77,6 @@ func (t *ObjectType) ConvertToObjectT() *testing.ObjectT {
 
 var ConvertObjectRequiredCode = `// ConvertToObjectT creates an instance of ObjectT initialized from t.
 func (t *ObjectType) ConvertToObjectT() *testing.ObjectT {
-	var v *testing.ObjectT
 	v := &testing.ObjectT{}
 	if t.Object != nil {
 		v.Object = marshalObjectFieldToObjectFieldT(t.Object)
