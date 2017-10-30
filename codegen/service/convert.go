@@ -466,7 +466,6 @@ func compatible(from design.DataType, to reflect.Type, path ...string) error {
 // input: ConvertData
 const convertT = `{{ printf "%s creates an instance of %s initialized from t." .Name .TypeName | comment }}
 func (t {{ .ReceiverTypeRef }}) {{ .Name }}() {{ .TypeRef }} {
-    var v {{ .TypeRef }}
     {{ .Code }}
     return v
 }`
