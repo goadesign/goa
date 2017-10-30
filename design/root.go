@@ -22,10 +22,23 @@ type (
 		// GeneratedTypes contains the types generated during DSL
 		// execution.
 		GeneratedTypes *GeneratedRoot
+		// Conversions list the user type to external type mappings.
+		Conversions []*TypeMap
+		// Creations list the external type to user type mappings.
+		Creations []*TypeMap
 	}
 
 	// MetadataExpr is a set of key/value pairs
 	MetadataExpr map[string][]string
+
+	// TypeMap defines a user to external type mapping.
+	TypeMap struct {
+		// User is the user type being converted or created.
+		User UserType
+
+		// External is an instance of the type being converted from or to.
+		External interface{}
+	}
 )
 
 // WalkSets returns the expressions in order of evaluation.

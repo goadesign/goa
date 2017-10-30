@@ -3,6 +3,7 @@ package codegen
 import (
 	"bytes"
 	"encoding/json"
+	"path/filepath"
 	"testing"
 	"text/template"
 
@@ -100,7 +101,7 @@ func TestOutputPath(t *testing.T) {
 	if err != nil {
 		t.Fatalf("OpenAPI failed with %s", err)
 	}
-	if o.Path != "gen/http/openapi.json" {
+	if o.Path != filepath.Join("gen", "http", "openapi.json") {
 		t.Errorf("invalid output path %#v", o.Path)
 	}
 }

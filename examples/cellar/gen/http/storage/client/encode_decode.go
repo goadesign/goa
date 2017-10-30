@@ -92,6 +92,23 @@ func (c *Client) BuildShowRequest(v interface{}) (*http.Request, error) {
 	return req, nil
 }
 
+// EncodeShowRequest returns an encoder for requests sent to the storage show
+// server.
+func EncodeShowRequest(encoder func(*http.Request) goahttp.Encoder) func(*http.Request, interface{}) error {
+	return func(req *http.Request, v interface{}) error {
+		p, ok := v.(*storage.ShowPayload)
+		if !ok {
+			return goahttp.ErrInvalidType("storage", "show", "*storage.ShowPayload", v)
+		}
+		values := req.URL.Query()
+		if p.View != nil {
+			values.Add("view", *p.View)
+		}
+		req.URL.RawQuery = values.Encode()
+		return nil
+	}
+}
+
 // DecodeShowResponse returns a decoder for responses returned by the storage
 // show endpoint. restoreBody controls whether the response body should be
 // restored after having been read.

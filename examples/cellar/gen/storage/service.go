@@ -7,7 +7,9 @@
 
 package storage
 
-import "context"
+import (
+	"context"
+)
 
 // The storage service makes it possible to view, add or remove wine bottles.
 type Service interface {
@@ -28,6 +30,8 @@ type StoredBottleCollection []*StoredBottle
 type ShowPayload struct {
 	// ID of bottle to show
 	ID string
+	// View to render
+	View *string
 }
 
 // StoredBottle is the result type of the storage service show method.

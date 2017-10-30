@@ -18,13 +18,20 @@ import (
 
 // BuildShowShowPayload builds the payload for the storage show endpoint from
 // CLI flags.
-func BuildShowShowPayload(storageShowID string) (*storage.ShowPayload, error) {
+func BuildShowShowPayload(storageShowID string, storageShowView string) (*storage.ShowPayload, error) {
 	var id string
 	{
 		id = storageShowID
 	}
+	var view *string
+	{
+		if storageShowView != "" {
+			view = &storageShowView
+		}
+	}
 	payload := &storage.ShowPayload{
-		ID: id,
+		ID:   id,
+		View: view,
 	}
 	return payload, nil
 }
@@ -37,7 +44,7 @@ func BuildAddBottle(storageAddBody string) (*storage.Bottle, error) {
 	{
 		err = json.Unmarshal([]byte(storageAddBody), &body)
 		if err != nil {
-			return nil, fmt.Errorf("invalid JSON for body, example of valid JSON:\n%s", "'{\n      \"composition\": [\n         {\n            \"percentage\": 67,\n            \"varietal\": \"Syrah\"\n         },\n         {\n            \"percentage\": 67,\n            \"varietal\": \"Syrah\"\n         },\n         {\n            \"percentage\": 67,\n            \"varietal\": \"Syrah\"\n         }\n      ],\n      \"description\": \"Red wine blend with an emphasis on the Cabernet Franc grape and including other Bordeaux grape varietals and some Syrah\",\n      \"name\": \"Blue\\'s Cuvee\",\n      \"rating\": 3,\n      \"vintage\": 1905,\n      \"winery\": {\n         \"country\": \"USA\",\n         \"name\": \"Longoria\",\n         \"region\": \"Central Coast, California\",\n         \"url\": \"http://www.longoriawine.com/\"\n      }\n   }'")
+			return nil, fmt.Errorf("invalid JSON for body, example of valid JSON:\n%s", "'{\n      \"composition\": [\n         {\n            \"percentage\": 46,\n            \"varietal\": \"Syrah\"\n         },\n         {\n            \"percentage\": 46,\n            \"varietal\": \"Syrah\"\n         },\n         {\n            \"percentage\": 46,\n            \"varietal\": \"Syrah\"\n         },\n         {\n            \"percentage\": 46,\n            \"varietal\": \"Syrah\"\n         }\n      ],\n      \"description\": \"Red wine blend with an emphasis on the Cabernet Franc grape and including other Bordeaux grape varietals and some Syrah\",\n      \"name\": \"Blue\\'s Cuvee\",\n      \"rating\": 1,\n      \"vintage\": 1965,\n      \"winery\": {\n         \"country\": \"USA\",\n         \"name\": \"Longoria\",\n         \"region\": \"Central Coast, California\",\n         \"url\": \"http://www.longoriawine.com/\"\n      }\n   }'")
 		}
 		if body.Winery == nil {
 			err = goa.MergeErrors(err, goa.MissingFieldError("winery", "body"))
