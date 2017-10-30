@@ -38,7 +38,7 @@ func File(service *design.ServiceExpr) *codegen.File {
 			if _, ok := seen[m.Result]; !ok {
 				seen[m.Result] = struct{}{}
 				sections = append(sections, &codegen.SectionTemplate{
-					Name:   "result-payload",
+					Name:   "service-result",
 					Source: resultT,
 					Data:   m,
 				})
