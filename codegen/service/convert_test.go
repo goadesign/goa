@@ -42,7 +42,7 @@ func TestDesignType(t *testing.T) {
 	}
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
-			dt, err := designType(reflect.TypeOf(c.From))
+			dt, err := designType(reflect.TypeOf(c.From), nil)
 			if dt != nil {
 				if !design.Equal(dt, c.ExpectedType) {
 					t.Errorf("got %v expected %v", dt, c.ExpectedType)

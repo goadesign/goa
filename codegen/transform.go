@@ -43,7 +43,7 @@ type (
 
 	targs struct {
 		sourceVar, targetVar string
-		targetPkg            string
+		sourcePkg, targetPkg string
 		unmarshal            bool
 		scope                *NameScope
 	}
@@ -102,7 +102,7 @@ func GoTypeTransform(source, target design.DataType, sourceVar, targetVar, sourc
 		tatt = &design.AttributeExpr{Type: target}
 	)
 
-	a := targs{sourceVar, targetVar, targetPkg, unmarshal, scope}
+	a := targs{sourceVar, targetVar, sourcePkg, targetPkg, unmarshal, scope}
 	code, err := transformAttribute(satt, tatt, true, a)
 	if err != nil {
 		return "", nil, err
@@ -301,6 +301,7 @@ func transformArray(source, target *design.Array, a targs) (string, error) {
 		"ElemTypeRef": a.scope.GoFullTypeRef(target.ElemType, a.targetPkg),
 		"SourceElem":  source.ElemType,
 		"TargetElem":  target.ElemType,
+		"SourcePkg":   a.sourcePkg,
 		"TargetPkg":   a.targetPkg,
 		"Unmarshal":   a.unmarshal,
 		"Scope":       a.scope,
@@ -332,6 +333,7 @@ func transformMap(source, target *design.Map, a targs) (string, error) {
 		"TargetKey":   target.KeyType,
 		"SourceElem":  source.ElemType,
 		"TargetElem":  target.ElemType,
+		"SourcePkg":   a.sourcePkg,
 		"TargetPkg":   a.targetPkg,
 		"Unmarshal":   a.unmarshal,
 		"Scope":       a.scope,
@@ -473,7 +475,7 @@ func collectHelpers(source, target *design.AttributeExpr, a thargs, seen ...map[
 			}
 			var code string
 			code, err := transformAttribute(ut.Attribute(), target, true,
-				targs{"v", "res", a.targetPkg, a.unmarshal, a.scope})
+				targs{"v", "res", a.sourcePkg, a.targetPkg, a.unmarshal, a.scope})
 			if err != nil {
 				return nil, err
 			}
@@ -562,20 +564,20 @@ func transformHelperName(satt, tatt *design.AttributeExpr, a targs) string {
 }
 
 // used by template
-func transformAttributeHelper(source, target *design.AttributeExpr, sourceVar, targetVar, targetPkg string, unmarshal, newVar bool, scope *NameScope) (string, error) {
-	return transformAttribute(source, target, newVar, targs{sourceVar, targetVar, targetPkg, unmarshal, scope})
+func transformAttributeHelper(source, target *design.AttributeExpr, sourceVar, targetVar, sourcePkg, targetPkg string, unmarshal, newVar bool, scope *NameScope) (string, error) {
+	return transformAttribute(source, target, newVar, targs{sourceVar, targetVar, sourcePkg, targetPkg, unmarshal, scope})
 }
 
 const transformArrayTmpl = `{{ .Target}} {{ if .NewVar }}:{{ end }}= make([]{{ .ElemTypeRef }}, len({{ .Source }}))
 for {{ .LoopVar }}, val := range {{ .Source }} {
-	{{ transformAttribute .SourceElem .TargetElem "val" (printf "%s[%s]" .Target .LoopVar) .TargetPkg .Unmarshal false .Scope -}}
+	{{ transformAttribute .SourceElem .TargetElem "val" (printf "%s[%s]" .Target .LoopVar) .SourcePkg .TargetPkg .Unmarshal false .Scope -}}
 }
 `
 
 const transformMapTmpl = `{{ .Target }} {{ if .NewVar }}:{{ end }}= make(map[{{ .KeyTypeRef }}]{{ .ElemTypeRef }}, len({{ .Source }}))
 for key, val := range {{ .Source }} {
-	{{ transformAttribute .SourceKey .TargetKey "key" "tk" .TargetPkg  .Unmarshal true .Scope -}}
-	{{ transformAttribute .SourceElem .TargetElem "val" "tv" .TargetPkg .Unmarshal true .Scope -}}
+	{{ transformAttribute .SourceKey .TargetKey "key" "tk" .SourcePkg .TargetPkg  .Unmarshal true .Scope -}}
+	{{ transformAttribute .SourceElem .TargetElem "val" "tv" .SourcePkg .TargetPkg .Unmarshal true .Scope -}}
 	{{ .Target }}[tk] = tv
 }
 `
