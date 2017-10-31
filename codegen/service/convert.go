@@ -116,7 +116,7 @@ func ConvertFile(root *design.RootExpr, service *design.ServiceExpr) (*codegen.F
 
 	// Build conversion sections if any
 	for _, c := range conversions {
-		dt, err := designType(reflect.TypeOf(c.External))
+		dt, err := designType(reflect.TypeOf(c.External), c.User)
 		if err != nil {
 			return nil, err
 		}
@@ -150,7 +150,7 @@ func ConvertFile(root *design.RootExpr, service *design.ServiceExpr) (*codegen.F
 
 	// Build creation sections if any
 	for _, c := range creations {
-		dt, err := designType(reflect.TypeOf(c.External))
+		dt, err := designType(reflect.TypeOf(c.External), c.User)
 		if err != nil {
 			return nil, err
 		}
@@ -210,10 +210,12 @@ func uniquify(base string, taken map[string]struct{}) string {
 	return name
 }
 
-// designType returns a user type that represents the given external type.
-// If val is a slice it must have at least one element.
-// If val is a map it must have at least one key.
-func designType(t reflect.Type, ctxs ...string) (design.DataType, error) {
+// designType returns a user type that represents the given external type. If
+// val is a slice it must have at least one element. If val is a map it must
+// have at least one key. u is the user type the data type returned by this is
+// converted to or created from. It's used to compute the non-generated type
+// field names and can be nil if no matching attribute exists.
+func designType(t reflect.Type, u design.DataType, ctxs ...string) (design.DataType, error) {
 	var ctx string
 	if ctxs == nil {
 		ctx = "<value>"
@@ -257,18 +259,28 @@ func designType(t reflect.Type, ctxs ...string) (design.DataType, error) {
 		if e.Kind() == reflect.Uint8 {
 			return design.Bytes, nil
 		}
-		elem, err := designType(e, ctx+"[0]")
+		var dt design.DataType
+		if u != nil {
+			dt = design.AsArray(u).ElemType.Type
+		}
+		elem, err := designType(e, dt, ctx+"[0]")
 		if err != nil {
 			return nil, err
 		}
 		return &design.Array{ElemType: &design.AttributeExpr{Type: elem}}, nil
 
 	case reflect.Map:
-		kt, err := designType(t.Key(), ctx+".key")
+		var kdt, vdt design.DataType
+		if u != nil {
+			m := design.AsMap(u)
+			kdt = m.KeyType.Type
+			vdt = m.ElemType.Type
+		}
+		kt, err := designType(t.Key(), kdt, ctx+".key")
 		if err != nil {
 			return nil, err
 		}
-		vt, err := designType(t.Elem(), ctx+".value")
+		vt, err := designType(t.Elem(), vdt, ctx+".value")
 		if err != nil {
 			return nil, err
 		}
@@ -277,12 +289,23 @@ func designType(t reflect.Type, ctxs ...string) (design.DataType, error) {
 	case reflect.Struct:
 		obj := make([]*design.NamedAttributeExpr, t.NumField())
 		var required []string
+		var uobj *design.Object
+		if u != nil {
+			uobj = design.AsObject(u)
+		}
 		for i := 0; i < t.NumField(); i++ {
 			f := t.FieldByIndex([]int{i})
+			atn := attributeName(uobj, f.Name)
+			var att design.DataType
+			if uobj != nil {
+				if at := uobj.Attribute(atn); at != nil {
+					att = at.Type
+				}
+			}
 			var fdt design.DataType
 			var err error
 			if f.Type.Kind() == reflect.Ptr {
-				fdt, err = designType(f.Type.Elem(), ctx+"."+f.Name)
+				fdt, err = designType(f.Type.Elem(), att, ctx+"."+f.Name)
 				if err != nil {
 					return nil, err
 				}
@@ -300,15 +323,15 @@ func designType(t reflect.Type, ctxs ...string) (design.DataType, error) {
 				}
 			} else {
 				if isPrimitive(f.Type) {
-					required = append(required, f.Name)
+					required = append(required, atn)
 				}
-				fdt, err = designType(f.Type, ctx+"."+f.Name)
+				fdt, err = designType(f.Type, att, ctx+"."+f.Name)
 				if err != nil {
 					return nil, err
 				}
 			}
 			obj[i] = &design.NamedAttributeExpr{
-				Name:      f.Name,
+				Name:      atn,
 				Attribute: &design.AttributeExpr{Type: fdt},
 			}
 		}
@@ -323,7 +346,7 @@ func designType(t reflect.Type, ctxs ...string) (design.DataType, error) {
 		return ut, nil
 
 	case reflect.Ptr:
-		dt, err := designType(t.Elem(), "(*"+ctx+")")
+		dt, err := designType(t.Elem(), u, "(*"+ctx+")")
 		if err != nil {
 			return nil, err
 		}
@@ -338,6 +361,44 @@ func designType(t reflect.Type, ctxs ...string) (design.DataType, error) {
 		ctx = ctx + ": "
 	}
 	return nil, fmt.Errorf("%stype %s is not compatible with goa design types", ctx, t.Name())
+}
+
+// attributeName computes the name of the attribute for the given field name and
+// object that must contain the matching attribute.
+func attributeName(obj *design.Object, name string) string {
+	if obj == nil {
+		return name
+	}
+	// first look for a "struct.field.external" metadata
+	for _, nat := range *obj {
+		if m := nat.Attribute.Metadata["struct.field.external"]; len(m) > 0 {
+			if m[0] == name {
+				return nat.Name
+			}
+		}
+	}
+	// next look for an exact match
+	for _, nat := range *obj {
+		if nat.Name == name {
+			return name
+		}
+	}
+	// next try to lower case first letter
+	ln := strings.ToLower(name[0:1]) + name[1:]
+	for _, nat := range *obj {
+		if nat.Name == ln {
+			return ln
+		}
+	}
+	// finally look for a snake case representation
+	sn := codegen.SnakeCase(name)
+	for _, nat := range *obj {
+		if nat.Name == sn {
+			return sn
+		}
+	}
+	// no match, return field name
+	return name
 }
 
 // isPrimitive is true if the given kind matches a goa primitive type.
@@ -451,7 +512,7 @@ func compatible(from design.DataType, to reflect.Type, path ...string) error {
 	}
 
 	if isPrimitive(to) {
-		dt, err := designType(to)
+		dt, err := designType(to, nil)
 		if err != nil {
 			return err
 		}
