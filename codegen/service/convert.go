@@ -164,7 +164,7 @@ func ConvertFile(root *design.RootExpr, service *design.ServiceExpr) (*codegen.F
 		transFuncs = append(transFuncs, tf...)
 		base := "CreateFrom" + t.Name()
 		name := uniquify(base, names)
-		ref := t.Name()
+		ref := t.String()
 		if design.IsObject(c.User) {
 			ref = "*" + ref
 		}
@@ -468,14 +468,16 @@ const convertT = `{{ printf "%s creates an instance of %s initialized from t." .
 func (t {{ .ReceiverTypeRef }}) {{ .Name }}() {{ .TypeRef }} {
     {{ .Code }}
     return v
-}`
+}
+`
 
 // input: ConvertData
 const createT = `{{ printf "%s initializes t from the fields of v" .Name | comment }}
 func (t {{ .ReceiverTypeRef }}) {{ .Name }}(v {{ .TypeRef }}) {
 	{{ .Code }}
 	*t = *temp
-}`
+}
+`
 
 // input: TransformFunctionData
 const transformHelperT = `{{ printf "%s builds a value of type %s from a value of type %s." .Name .ResultTypeRef .ParamTypeRef | comment }}
