@@ -42,24 +42,24 @@ func TestDesignType(t *testing.T) {
 	}
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
-			dt, err := designType(reflect.TypeOf(c.From), nil)
-			if dt != nil {
-				if !design.Equal(dt, c.ExpectedType) {
+			var dt design.DataType
+			err := buildDesignType(&dt, reflect.TypeOf(c.From), nil)
+
+			// We didn't expect an error
+			if c.ExpectedErr == "" {
+				if err != nil {
+					// but got one
+					t.Errorf("got error %s, expected none", err)
+				} else if !design.Equal(dt, c.ExpectedType) {
 					t.Errorf("got %v expected %v", dt, c.ExpectedType)
-				}
-			} else {
-				if err == nil {
-					t.Errorf("got nil type and error")
 				}
 			}
 
-			if err == nil {
-				if c.ExpectedErr != "" {
+			// We expected an error
+			if c.ExpectedErr != "" {
+				if err == nil {
+					// but got none
 					t.Errorf("got no error, expected %q", c.ExpectedErr)
-				}
-			} else {
-				if c.ExpectedErr == "" {
-					t.Errorf("got error %q, expected none", err)
 				} else {
 					if err.Error() != c.ExpectedErr {
 						t.Errorf("got error %q, expected %q", err, c.ExpectedErr)
@@ -91,13 +91,14 @@ func TestCompatible(t *testing.T) {
 		{"map", dsl.MapOf(design.String, design.String), map[string]string{}, ""},
 		{"object", obj, objT{}, ""},
 		{"object-mapped", objMapped, objT{}, ""},
+		{"object-recursive", objRecursive(), objRecursiveT{}, ""},
 		{"array-object", dsl.ArrayOf(obj), []objT{objT{}}, ""},
 
 		{"invalid-primitive", design.String, 0, "types don't match: type of <value> is int but type of corresponding attribute is string"},
 		{"invalid-array", dsl.ArrayOf(design.String), []int{0}, "types don't match: type of <value>[0] is int but type of corresponding attribute is string"},
 		{"invalid-map-key", dsl.MapOf(design.String, design.String), map[int]string{0: ""}, "types don't match: type of <value>.key is int but type of corresponding attribute is string"},
 		{"invalid-map-val", dsl.MapOf(design.String, design.String), map[string]int{"": 0}, "types don't match: type of <value>.value is int but type of corresponding attribute is string"},
-		{"invalid-obj", obj, "", "types don't match: <value> is not a struct"},
+		{"invalid-obj", obj, "", "types don't match: <value> is a string, expected a struct"},
 		{"invalid-obj-2", obj, objT2{}, "types don't match: type of <value>.Bar is string but type of corresponding attribute is int"},
 		{"invalid-obj-3", obj, objT3{}, "types don't match: could not find field \"Baz\" of external type objT3 matching attribute \"Baz\" of type \"objT\""},
 		{"invalid-array-object", dsl.ArrayOf(obj), []objT2{objT2{}}, "types don't match: type of <value>[0].Bar is string but type of corresponding attribute is int"},
@@ -222,10 +223,32 @@ var objMapped = &design.UserTypeExpr{
 	TypeName: "objT",
 }
 
+func objRecursive() *design.UserTypeExpr {
+	res := &design.UserTypeExpr{
+		AttributeExpr: &design.AttributeExpr{
+			Type: &design.Object{
+				{"Foo", &design.AttributeExpr{Type: design.String}},
+				{"Bar", &design.AttributeExpr{Type: design.Int}},
+			},
+		},
+		TypeName: "objRecursiveT",
+	}
+	obj := res.AttributeExpr.Type.(*design.Object)
+	*obj = append(*obj, &design.NamedAttributeExpr{"Rec", &design.AttributeExpr{Type: res}})
+
+	return res
+}
+
 type objT struct {
 	Foo string
 	Bar int
 	Baz bool
+}
+
+type objRecursiveT struct {
+	Foo string
+	Bar int
+	Rec *objRecursiveT
 }
 type objT2 struct {
 	Foo string
