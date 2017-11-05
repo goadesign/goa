@@ -35,10 +35,10 @@ func TestDesignType(t *testing.T) {
 		{"object", objT{}, obj, ""},
 		{"array-object", []objT{objT{}}, dsl.ArrayOf(obj), ""},
 
-		{"invalid-bool", &f, nil, "<value>: only pointer to struct can be converted"},
-		{"invalid-array", []*bool{&f}, nil, "<value>[0]: only pointer to struct can be converted"},
-		{"invalid-map-key", map[*bool]string{&f: ""}, nil, "<value>.key: only pointer to struct can be converted"},
-		{"invalid-map-val", map[string]*bool{"": &f}, nil, "<value>.value: only pointer to struct can be converted"},
+		{"invalid-bool", &f, nil, "*(<value>): only pointer to struct can be converted"},
+		{"invalid-array", []*bool{&f}, nil, "*(<value>[0]): only pointer to struct can be converted"},
+		{"invalid-map-key", map[*bool]string{&f: ""}, nil, "*(<value>.key): only pointer to struct can be converted"},
+		{"invalid-map-val", map[string]*bool{"": &f}, nil, "*(<value>.value): only pointer to struct can be converted"},
 	}
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
@@ -95,12 +95,16 @@ func TestCompatible(t *testing.T) {
 		{"array-object", dsl.ArrayOf(obj), []objT{objT{}}, ""},
 
 		{"invalid-primitive", design.String, 0, "types don't match: type of <value> is int but type of corresponding attribute is string"},
+		{"invalid-int", design.Int, 0.0, "types don't match: type of <value> is float64 but type of corresponding attribute is int"},
+		{"invalid-float32", design.Float32, 0, "types don't match: type of <value> is int but type of corresponding attribute is float32"},
 		{"invalid-array", dsl.ArrayOf(design.String), []int{0}, "types don't match: type of <value>[0] is int but type of corresponding attribute is string"},
 		{"invalid-map-key", dsl.MapOf(design.String, design.String), map[int]string{0: ""}, "types don't match: type of <value>.key is int but type of corresponding attribute is string"},
 		{"invalid-map-val", dsl.MapOf(design.String, design.String), map[string]int{"": 0}, "types don't match: type of <value>.value is int but type of corresponding attribute is string"},
 		{"invalid-obj", obj, "", "types don't match: <value> is a string, expected a struct"},
 		{"invalid-obj-2", obj, objT2{}, "types don't match: type of <value>.Bar is string but type of corresponding attribute is int"},
-		{"invalid-obj-3", obj, objT3{}, "types don't match: could not find field \"Baz\" of external type objT3 matching attribute \"Baz\" of type \"objT\""},
+		{"invalid-obj-3", obj, objT3{}, "types don't match: type of <value>.Goo is int but type of corresponding attribute is float32"},
+		{"invalid-obj-4", obj, objT4{}, "types don't match: type of <value>.Goo2 is float32 but type of corresponding attribute is uint"},
+		{"invalid-obj-5", obj, objT5{}, "types don't match: could not find field \"Baz\" of external type objT5 matching attribute \"Baz\" of type \"objT\""},
 		{"invalid-array-object", dsl.ArrayOf(obj), []objT2{objT2{}}, "types don't match: type of <value>[0].Bar is string but type of corresponding attribute is int"},
 	}
 	for _, c := range cases {
@@ -207,6 +211,8 @@ var obj = &design.UserTypeExpr{
 			{"Foo", &design.AttributeExpr{Type: design.String}},
 			{"Bar", &design.AttributeExpr{Type: design.Int}},
 			{"Baz", &design.AttributeExpr{Type: design.Boolean}},
+			{"Goo", &design.AttributeExpr{Type: design.Float32}},
+			{"Goo2", &design.AttributeExpr{Type: design.UInt}},
 		},
 	},
 	TypeName: "objT",
@@ -240,22 +246,47 @@ func objRecursive() *design.UserTypeExpr {
 }
 
 type objT struct {
-	Foo string
-	Bar int
-	Baz bool
+	Foo  string
+	Bar  int
+	Baz  bool
+	Goo  float32
+	Goo2 uint
 }
 
 type objRecursiveT struct {
-	Foo string
-	Bar int
-	Rec *objRecursiveT
+	Foo  string
+	Bar  int
+	Goo  float32
+	Goo2 uint
+	Rec  *objRecursiveT
 }
 type objT2 struct {
-	Foo string
-	Bar string
-	Baz bool
+	Foo  string
+	Bar  string
+	Baz  bool
+	Goo  float32
+	Goo2 uint
 }
+
 type objT3 struct {
-	Foo string
-	Bar int
+	Foo  string
+	Bar  int
+	Baz  bool
+	Goo  int
+	Goo2 uint
+}
+
+type objT4 struct {
+	Foo  string
+	Bar  int
+	Baz  bool
+	Goo  float32
+	Goo2 float32
+}
+
+type objT5 struct {
+	Foo  string
+	Bar  int
+	Goo  float32
+	Goo2 uint
 }

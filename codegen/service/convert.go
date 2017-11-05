@@ -225,6 +225,13 @@ func (r dtRec) append(p string) dtRec {
 // from. It's used to compute the non-generated type field names and can be nil
 // if no matching attribute exists.
 func buildDesignType(dt *design.DataType, t reflect.Type, ref design.DataType, recs ...dtRec) error {
+	// check compatibility
+	if ref != nil {
+		if err := compatible(ref, t); err != nil {
+			return err
+		}
+	}
+
 	// handle recursive data structures
 	var rec dtRec
 	if recs != nil {
@@ -354,7 +361,7 @@ func buildDesignType(dt *design.DataType, t reflect.Type, ref design.DataType, r
 		return nil
 
 	case reflect.Ptr:
-		rec.path = "(*" + rec.path + ")"
+		rec.path = "*(" + rec.path + ")"
 		if err := buildDesignType(dt, t.Elem(), ref, rec); err != nil {
 			return err
 		}
@@ -439,49 +446,68 @@ func isPrimitive(t reflect.Type) bool {
 	}
 }
 
+type compRec struct {
+	path string
+	seen map[string]struct{}
+}
+
+func (r compRec) append(p string) compRec {
+	r.path += p
+	return r
+}
+
 // compatible checks the user and external type definitions map recursively . It
 // returns nil if they do, an error otherwise.
-func compatible(from design.DataType, to reflect.Type, path ...string) error {
-	// build contextual error message
-	if path == nil {
-		path = []string{"<value>"}
+func compatible(from design.DataType, to reflect.Type, recs ...compRec) error {
+	// deference if needed
+	if to.Kind() == reflect.Ptr {
+		return compatible(from, to.Elem(), recs...)
 	}
-	errpath := path[0]
+
+	// handle recursive data structures
+	var rec compRec
+	if recs != nil {
+		rec = recs[0]
+		if _, ok := rec.seen[from.Hash()+"-"+to.Name()]; ok {
+			return nil
+		}
+	} else {
+		rec = compRec{path: "<value>", seen: make(map[string]struct{})}
+	}
+	rec.seen[from.Hash()+"-"+to.Name()] = struct{}{}
 
 	if design.IsArray(from) {
 		if to.Kind() != reflect.Slice {
-			return fmt.Errorf("types don't match: %s is a %s, expected a slice", errpath, to.Name())
+			return fmt.Errorf("types don't match: %s must be a slice", rec.path)
 		}
 		return compatible(
 			design.AsArray(from).ElemType.Type,
 			to.Elem(),
-			path[0]+"[0]",
+			rec.append("[0]"),
 		)
 	}
 
 	if design.IsMap(from) {
 		if to.Kind() != reflect.Map {
-			return fmt.Errorf("types don't match: %s is a %s, expected a map", errpath, to.Name())
+			return fmt.Errorf("types don't match: %s is not a map", rec.path)
 		}
 		if err := compatible(
 			design.AsMap(from).ElemType.Type,
 			to.Elem(),
-			path[0]+".value",
+			rec.append(".value"),
 		); err != nil {
 			return err
 		}
 		return compatible(
 			design.AsMap(from).KeyType.Type,
 			to.Key(),
-			path[0]+".key",
+			rec.append(".key"),
 		)
 	}
 
 	if design.IsObject(from) {
 		if to.Kind() != reflect.Struct {
-			fmt.Printf("%#v\n", path)
-			fmt.Printf("%#v\n", to)
-			return fmt.Errorf("types don't match: %s is a %s, expected a struct", errpath, to.Name())
+			return fmt.Errorf("types don't match: %s is a %s, expected a struct", rec.path, to.Name())
 		}
 		obj := design.AsObject(from)
 		ma := design.NewMappedAttributeExpr(&design.AttributeExpr{Type: obj})
@@ -502,13 +528,13 @@ func compatible(from design.DataType, to reflect.Type, path ...string) error {
 				}
 			}
 			if !ok {
-				return fmt.Errorf("types don't match: could not find field %q of external type %s matching attribute %q of type %q",
+				return fmt.Errorf("types don't match: could not find field %q of external type %q matching attribute %q of type %q",
 					fname, to.Name(), nat.Name, from.Name())
 			}
 			err := compatible(
 				nat.Attribute.Type,
 				field.Type,
-				path[0]+"."+fname,
+				rec.append("."+fname),
 			)
 			if err != nil {
 				return err
@@ -522,12 +548,12 @@ func compatible(from design.DataType, to reflect.Type, path ...string) error {
 		if err := buildDesignType(&dt, to, nil); err != nil {
 			return err
 		}
-		if dt == from {
+		if design.Equal(dt, from) {
 			return nil
 		}
 	}
 
-	return fmt.Errorf("types don't match: type of %s is %s but type of corresponding attribute is %s", errpath, to.Name(), from.Name())
+	return fmt.Errorf("types don't match: type of %s is %s but type of corresponding attribute is %s", rec.path, to.Name(), from.Name())
 }
 
 // input: ConvertData
