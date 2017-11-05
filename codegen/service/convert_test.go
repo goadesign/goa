@@ -104,7 +104,7 @@ func TestCompatible(t *testing.T) {
 		{"invalid-obj-2", obj, objT2{}, "types don't match: type of <value>.Bar is string but type of corresponding attribute is int"},
 		{"invalid-obj-3", obj, objT3{}, "types don't match: type of <value>.Goo is int but type of corresponding attribute is float32"},
 		{"invalid-obj-4", obj, objT4{}, "types don't match: type of <value>.Goo2 is float32 but type of corresponding attribute is uint"},
-		{"invalid-obj-5", obj, objT5{}, "types don't match: could not find field \"Baz\" of external type objT5 matching attribute \"Baz\" of type \"objT\""},
+		{"invalid-obj-5", obj, objT5{}, "types don't match: could not find field \"Baz\" of external type \"objT5\" matching attribute \"Baz\" of type \"objT\""},
 		{"invalid-array-object", dsl.ArrayOf(obj), []objT2{objT2{}}, "types don't match: type of <value>[0].Bar is string but type of corresponding attribute is int"},
 	}
 	for _, c := range cases {
