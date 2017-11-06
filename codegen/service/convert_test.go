@@ -91,6 +91,7 @@ func TestCompatible(t *testing.T) {
 		{"map", dsl.MapOf(design.String, design.String), map[string]string{}, ""},
 		{"object", obj, objT{}, ""},
 		{"object-mapped", objMapped, objT{}, ""},
+		{"object-ignored", objIgnored, objT{}, ""},
 		{"object-recursive", objRecursive(), objRecursiveT{}, ""},
 		{"array-object", dsl.ArrayOf(obj), []objT{objT{}}, ""},
 
@@ -224,6 +225,17 @@ var objMapped = &design.UserTypeExpr{
 			{"Foo", &design.AttributeExpr{Type: design.String}},
 			{"Bar", &design.AttributeExpr{Type: design.Int}},
 			{"mapped", &design.AttributeExpr{Type: design.Boolean, Metadata: design.MetadataExpr{"struct.field.external": []string{"Baz"}}}},
+		},
+	},
+	TypeName: "objT",
+}
+
+var objIgnored = &design.UserTypeExpr{
+	AttributeExpr: &design.AttributeExpr{
+		Type: &design.Object{
+			{"Foo", &design.AttributeExpr{Type: design.String}},
+			{"Bar", &design.AttributeExpr{Type: design.Int}},
+			{"ignored", &design.AttributeExpr{Type: design.Boolean, Metadata: design.MetadataExpr{"struct.field.external": []string{"-"}}}},
 		},
 	},
 	TypeName: "objT",
