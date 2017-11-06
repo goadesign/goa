@@ -520,6 +520,9 @@ func compatible(from design.DataType, to reflect.Type, recs ...compRec) error {
 			{
 				if ef, k := nat.Attribute.Metadata["struct.field.external"]; k {
 					fname = ef[0]
+					if fname == "-" {
+						continue
+					}
 					field, ok = to.FieldByName(ef[0])
 				} else {
 					ef := codegen.Goify(ma.ElemName(nat.Name), true)
