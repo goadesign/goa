@@ -29,17 +29,17 @@ type PickRequestBody struct {
 // response body.
 type PickResponseBody []*StoredBottleResponseBody
 
-// PickNoMatchResponseBody is the type of the "sommelier" service "pick"
-// endpoint HTTP response body for the "no_match" error.
-type PickNoMatchResponseBody struct {
-	// No bottle matched given criteria
-	Value string `form:"value" json:"value" xml:"value"`
-}
-
 // PickNoCriteriaResponseBody is the type of the "sommelier" service "pick"
 // endpoint HTTP response body for the "no_criteria" error.
 type PickNoCriteriaResponseBody struct {
 	// Missing criteria
+	Value string `form:"value" json:"value" xml:"value"`
+}
+
+// PickNoMatchResponseBody is the type of the "sommelier" service "pick"
+// endpoint HTTP response body for the "no_match" error.
+type PickNoMatchResponseBody struct {
+	// No bottle matched given criteria
 	Value string `form:"value" json:"value" xml:"value"`
 }
 
@@ -109,19 +109,19 @@ func NewPickResponseBody(res sommelier.StoredBottleCollection) PickResponseBody 
 	return body
 }
 
-// NewPickNoMatchResponseBody builds the HTTP response body from the result of
-// the "pick" endpoint of the "sommelier" service.
-func NewPickNoMatchResponseBody(res *sommelier.NoMatch) *PickNoMatchResponseBody {
-	body := &PickNoMatchResponseBody{
+// NewPickNoCriteriaResponseBody builds the HTTP response body from the result
+// of the "pick" endpoint of the "sommelier" service.
+func NewPickNoCriteriaResponseBody(res *sommelier.NoCriteria) *PickNoCriteriaResponseBody {
+	body := &PickNoCriteriaResponseBody{
 		Value: res.Value,
 	}
 	return body
 }
 
-// NewPickNoCriteriaResponseBody builds the HTTP response body from the result
-// of the "pick" endpoint of the "sommelier" service.
-func NewPickNoCriteriaResponseBody(res *sommelier.NoCriteria) *PickNoCriteriaResponseBody {
-	body := &PickNoCriteriaResponseBody{
+// NewPickNoMatchResponseBody builds the HTTP response body from the result of
+// the "pick" endpoint of the "sommelier" service.
+func NewPickNoMatchResponseBody(res *sommelier.NoMatch) *PickNoMatchResponseBody {
+	body := &PickNoMatchResponseBody{
 		Value: res.Value,
 	}
 	return body

@@ -121,17 +121,17 @@ func NewPickStoredBottleCollectionOK(body PickResponseBody) sommelier.StoredBott
 	return v
 }
 
-// NewPickNoCriteria builds a sommelier service pick endpoint no_criteria error.
-func NewPickNoCriteria(body *PickNoCriteriaResponseBody) *sommelier.NoCriteria {
-	v := &sommelier.NoCriteria{
+// NewPickNoMatch builds a sommelier service pick endpoint no_match error.
+func NewPickNoMatch(body *PickNoMatchResponseBody) *sommelier.NoMatch {
+	v := &sommelier.NoMatch{
 		Value: *body.Value,
 	}
 	return v
 }
 
-// NewPickNoMatch builds a sommelier service pick endpoint no_match error.
-func NewPickNoMatch(body *PickNoMatchResponseBody) *sommelier.NoMatch {
-	v := &sommelier.NoMatch{
+// NewPickNoCriteria builds a sommelier service pick endpoint no_criteria error.
+func NewPickNoCriteria(body *PickNoCriteriaResponseBody) *sommelier.NoCriteria {
+	v := &sommelier.NoCriteria{
 		Value: *body.Value,
 	}
 	return v
