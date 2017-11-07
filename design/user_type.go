@@ -1,7 +1,5 @@
 package design
 
-import "goa.design/goa/eval"
-
 type (
 	// UserTypeExpr is the struct used to describe user defined types.
 	UserTypeExpr struct {
@@ -62,35 +60,6 @@ func (u *UserTypeExpr) Dup(att *AttributeExpr) UserType {
 // Hash returns a unique hash value for u.
 func (u *UserTypeExpr) Hash() string {
 	return "_type_+" + u.TypeName
-}
-
-// Validate checks that the user type definition is consistent: it has a name
-// and the attribute backing the type is valid.
-func (u *UserTypeExpr) Validate(ctx string, parent eval.Expression) *eval.ValidationErrors {
-	verr := new(eval.ValidationErrors)
-	if u.TypeName == "" {
-		verr.Add(parent, "%s - %s", ctx, "User type must have a name")
-	}
-	verr.Merge(u.AttributeExpr.Validate(ctx, u))
-	return verr
-}
-
-// Finalize merges base type attributes.
-func (u *UserTypeExpr) Finalize() {
-	for _, ref := range u.References {
-		ru, ok := ref.(UserType)
-		if !ok {
-			continue
-		}
-		u.AttributeExpr.Inherit(ru.Attribute())
-	}
-	for _, base := range u.Bases {
-		ru, ok := base.(UserType)
-		if !ok {
-			continue
-		}
-		u.AttributeExpr.Merge(ru.Attribute())
-	}
 }
 
 // Example produces an example for the user type which is JSON serialization

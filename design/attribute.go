@@ -190,6 +190,24 @@ func (a *AttributeExpr) Validate(ctx string, parent eval.Expression) *eval.Valid
 	return verr
 }
 
+// Finalize merges base type attributes.
+func (a *AttributeExpr) Finalize() {
+	for _, ref := range a.References {
+		ru, ok := ref.(UserType)
+		if !ok {
+			continue
+		}
+		a.Inherit(ru.Attribute())
+	}
+	for _, base := range a.Bases {
+		ru, ok := base.(UserType)
+		if !ok {
+			continue
+		}
+		a.Merge(ru.Attribute())
+	}
+}
+
 // Merge merges other's attributes into a overriding attributes of a with
 // attributes of other with identical names.
 //
