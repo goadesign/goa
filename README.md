@@ -137,7 +137,7 @@ This produces the following outputs:
   the API with the given arguments and returns the `http.Response`.
 * a `tool` directory that contains the complete source for a client CLI tool.
 * a `swagger` package with implements the `GET /swagger.json` API endpoint. The response contains
-  the full Swagger specificiation of the API.
+  the full Swagger 2.0 specificiation of the API.
 
 ### 3. Run
 
@@ -234,7 +234,7 @@ design.
 
 ### 4. Document
 
-The `swagger` directory contains the API Swagger (OpenAPI) specification in both
+The `swagger` directory contains the API Swagger (OpenAPI) version 2.0 specification in both
 YAML and JSON format.
 
 For open source projects hosted on
