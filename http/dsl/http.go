@@ -450,7 +450,7 @@ func Params(args interface{}) {
 //            Payload(ShowPayload)
 //            Result(AccountResult)
 //            HTTP(func() {
-//                Routing(GET("/{id}"))  // HTTP request uses ShowPayload "id"
+//                GET("/{id}")           // HTTP request uses ShowPayload "id"
 //                                       // attribute to define "id" parameter.
 //                Params(func() {        // Params makes it possible to group
 //                                       // Param expressions.
