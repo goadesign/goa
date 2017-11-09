@@ -99,7 +99,7 @@ func generate(cmd, path, output string, debug bool) {
 	fmt.Println(strings.Join(files, "\n"))
 	return
 fail:
-	fmt.Fprint(os.Stderr, err.Error())
+	fmt.Fprintln(os.Stderr, err.Error())
 	if !debug && tmp != nil {
 		tmp.Remove()
 	}
