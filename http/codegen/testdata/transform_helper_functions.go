@@ -1,4 +1,4 @@
-package testing
+package testdata
 
 var PayloadBodyUserInnerDefaultTransformCode1 = `// unmarshalInnerTypeRequestBodyToInnerType builds a value of type
 // *servicebodyuserinnerdefault.InnerType from a value of type

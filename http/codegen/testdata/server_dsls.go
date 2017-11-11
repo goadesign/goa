@@ -1,4 +1,4 @@
-package testing
+package testdata
 
 import (
 	. "goa.design/goa/http/design"

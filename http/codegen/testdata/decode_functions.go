@@ -1,4 +1,4 @@
-package testing
+package testdata
 
 var PayloadQueryBoolDecodeCode = `// DecodeMethodQueryBoolRequest returns a decoder for requests sent to the
 // ServiceQueryBool MethodQueryBool endpoint.

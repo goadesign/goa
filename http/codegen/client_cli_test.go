@@ -4,7 +4,7 @@ import (
 	"testing"
 
 	"goa.design/goa/codegen"
-	. "goa.design/goa/http/codegen/testing"
+	"goa.design/goa/http/codegen/testdata"
 	httpdesign "goa.design/goa/http/design"
 )
 
@@ -17,11 +17,11 @@ func TestClientCLIFiles(t *testing.T) {
 		FileIndex    int
 		SectionIndex int
 	}{
-		{"no-payload-parse", MultiNoPayloadDSL, MultiNoPayloadParseCode, 0, 3},
-		{"simple-parse", MultiSimpleDSL, MultiSimpleParseCode, 0, 3},
-		{"multi-parse", MultiDSL, MultiParseCode, 0, 3},
-		{"simple-build", MultiSimpleDSL, MultiSimpleBuildCode, 1, 1},
-		{"multi-build", MultiDSL, MultiBuildCode, 1, 1},
+		{"no-payload-parse", testdata.MultiNoPayloadDSL, testdata.MultiNoPayloadParseCode, 0, 3},
+		{"simple-parse", testdata.MultiSimpleDSL, testdata.MultiSimpleParseCode, 0, 3},
+		{"multi-parse", testdata.MultiDSL, testdata.MultiParseCode, 0, 3},
+		{"simple-build", testdata.MultiSimpleDSL, testdata.MultiSimpleBuildCode, 1, 1},
+		{"multi-build", testdata.MultiDSL, testdata.MultiBuildCode, 1, 1},
 	}
 
 	for _, c := range cases {

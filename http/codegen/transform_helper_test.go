@@ -4,7 +4,7 @@ import (
 	"testing"
 
 	"goa.design/goa/codegen"
-	. "goa.design/goa/http/codegen/testing"
+	"goa.design/goa/http/codegen/testdata"
 	httpdesign "goa.design/goa/http/design"
 )
 
@@ -15,10 +15,10 @@ func TestTransformHelperServer(t *testing.T) {
 		Code   string
 		Offset int
 	}{
-		{"body-user-inner-default-1", PayloadBodyUserInnerDefaultDSL, PayloadBodyUserInnerDefaultTransformCode1, 1},
-		{"body-user-inner-default-2", PayloadBodyUserInnerDefaultDSL, PayloadBodyUserInnerDefaultTransformCode2, 1},
-		{"body-user-recursive-default-1", PayloadBodyInlineRecursiveUserDSL, PayloadBodyInlineRecursiveUserTransformCode1, 1},
-		{"body-user-recursive-default-2", PayloadBodyInlineRecursiveUserDSL, PayloadBodyInlineRecursiveUserTransformCode2, 1},
+		{"body-user-inner-default-1", testdata.PayloadBodyUserInnerDefaultDSL, testdata.PayloadBodyUserInnerDefaultTransformCode1, 1},
+		{"body-user-inner-default-2", testdata.PayloadBodyUserInnerDefaultDSL, testdata.PayloadBodyUserInnerDefaultTransformCode2, 1},
+		{"body-user-recursive-default-1", testdata.PayloadBodyInlineRecursiveUserDSL, testdata.PayloadBodyInlineRecursiveUserTransformCode1, 1},
+		{"body-user-recursive-default-2", testdata.PayloadBodyInlineRecursiveUserDSL, testdata.PayloadBodyInlineRecursiveUserTransformCode2, 1},
 	}
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
@@ -40,10 +40,10 @@ func TestTransformHelperCLI(t *testing.T) {
 		Code   string
 		Offset int
 	}{
-		{"cli-body-user-inner-default-1", PayloadBodyUserInnerDefaultDSL, PayloadBodyUserInnerDefaultTransformCodeCLI1, 1},
-		{"cli-body-user-inner-default-2", PayloadBodyUserInnerDefaultDSL, PayloadBodyUserInnerDefaultTransformCodeCLI2, 2},
-		{"cli-body-user-recursive-default-1", PayloadBodyInlineRecursiveUserDSL, PayloadBodyInlineRecursiveUserTransformCodeCLI1, 1},
-		{"cli-body-user-recursive-default-2", PayloadBodyInlineRecursiveUserDSL, PayloadBodyInlineRecursiveUserTransformCodeCLI2, 2},
+		{"cli-body-user-inner-default-1", testdata.PayloadBodyUserInnerDefaultDSL, testdata.PayloadBodyUserInnerDefaultTransformCodeCLI1, 1},
+		{"cli-body-user-inner-default-2", testdata.PayloadBodyUserInnerDefaultDSL, testdata.PayloadBodyUserInnerDefaultTransformCodeCLI2, 2},
+		{"cli-body-user-recursive-default-1", testdata.PayloadBodyInlineRecursiveUserDSL, testdata.PayloadBodyInlineRecursiveUserTransformCodeCLI1, 1},
+		{"cli-body-user-recursive-default-2", testdata.PayloadBodyInlineRecursiveUserDSL, testdata.PayloadBodyInlineRecursiveUserTransformCodeCLI2, 2},
 	}
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {

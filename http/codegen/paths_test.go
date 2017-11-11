@@ -4,7 +4,7 @@ import (
 	"testing"
 
 	"goa.design/goa/codegen"
-	. "goa.design/goa/http/codegen/testing"
+	"goa.design/goa/http/codegen/testdata"
 	httpdesign "goa.design/goa/http/design"
 )
 
@@ -14,21 +14,21 @@ func TestPaths(t *testing.T) {
 		DSL  func()
 		Code string
 	}{
-		{"single-path-no-param", PathNoParamDSL, PathNoParamCode},
-		{"single-path-one-param", PathOneParamDSL, PathOneParamCode},
-		{"single-path-multiple-params", PathMultipleParamsDSL, PathMultipleParamsCode},
-		{"alternative-paths", PathAlternativesDSL, PathAlternativesCode},
-		{"path-with-string-slice-param", PathStringSliceParamDSL, PathStringSliceParamCode},
-		{"path-with-int-slice-param", PathIntSliceParamDSL, PathIntSliceParamCode},
-		{"path-with-int32-slice-param", PathInt32SliceParamDSL, PathInt32SliceParamCode},
-		{"path-with-int64-slice-param", PathInt64SliceParamDSL, PathInt64SliceParamCode},
-		{"path-with-uint-slice-param", PathUintSliceParamDSL, PathUintSliceParamCode},
-		{"path-with-uint32-slice-param", PathUint32SliceParamDSL, PathUint32SliceParamCode},
-		{"path-with-uint64-slice-param", PathUint64SliceParamDSL, PathUint64SliceParamCode},
-		{"path-with-float33-slice-param", PathFloat32SliceParamDSL, PathFloat32SliceParamCode},
-		{"path-with-float64-slice-param", PathFloat64SliceParamDSL, PathFloat64SliceParamCode},
-		{"path-with-bool-slice-param", PathBoolSliceParamDSL, PathBoolSliceParamCode},
-		{"path-with-interface-slice-param", PathInterfaceSliceParamDSL, PathInterfaceSliceParamCode},
+		{"single-path-no-param", testdata.PathNoParamDSL, testdata.PathNoParamCode},
+		{"single-path-one-param", testdata.PathOneParamDSL, testdata.PathOneParamCode},
+		{"single-path-multiple-params", testdata.PathMultipleParamsDSL, testdata.PathMultipleParamsCode},
+		{"alternative-paths", testdata.PathAlternativesDSL, testdata.PathAlternativesCode},
+		{"path-with-string-slice-param", testdata.PathStringSliceParamDSL, testdata.PathStringSliceParamCode},
+		{"path-with-int-slice-param", testdata.PathIntSliceParamDSL, testdata.PathIntSliceParamCode},
+		{"path-with-int32-slice-param", testdata.PathInt32SliceParamDSL, testdata.PathInt32SliceParamCode},
+		{"path-with-int64-slice-param", testdata.PathInt64SliceParamDSL, testdata.PathInt64SliceParamCode},
+		{"path-with-uint-slice-param", testdata.PathUintSliceParamDSL, testdata.PathUintSliceParamCode},
+		{"path-with-uint32-slice-param", testdata.PathUint32SliceParamDSL, testdata.PathUint32SliceParamCode},
+		{"path-with-uint64-slice-param", testdata.PathUint64SliceParamDSL, testdata.PathUint64SliceParamCode},
+		{"path-with-float33-slice-param", testdata.PathFloat32SliceParamDSL, testdata.PathFloat32SliceParamCode},
+		{"path-with-float64-slice-param", testdata.PathFloat64SliceParamDSL, testdata.PathFloat64SliceParamCode},
+		{"path-with-bool-slice-param", testdata.PathBoolSliceParamDSL, testdata.PathBoolSliceParamCode},
+		{"path-with-interface-slice-param", testdata.PathInterfaceSliceParamDSL, testdata.PathInterfaceSliceParamCode},
 	}
 
 	for _, c := range cases {

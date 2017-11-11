@@ -1,4 +1,4 @@
-package testing
+package testdata
 
 var PathNoParamCode = `// MethodPathNoParamServicePathNoParamPath returns the URL path to the ServicePathNoParam service MethodPathNoParam HTTP endpoint.
 func MethodPathNoParamServicePathNoParamPath() string {

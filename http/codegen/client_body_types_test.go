@@ -4,7 +4,7 @@ import (
 	"testing"
 
 	"goa.design/goa/codegen"
-	. "goa.design/goa/http/codegen/testing"
+	"goa.design/goa/http/codegen/testdata"
 	httpdesign "goa.design/goa/http/design"
 )
 
@@ -16,8 +16,8 @@ func TestBodyTypeDecl(t *testing.T) {
 		DSL  func()
 		Code string
 	}{
-		{"body-user-inner", PayloadBodyUserInnerDSL, BodyUserInnerDeclCode},
-		{"body-path-user-validate", PayloadBodyPathUserValidateDSL, BodyPathUserValidateDeclCode},
+		{"body-user-inner", testdata.PayloadBodyUserInnerDSL, BodyUserInnerDeclCode},
+		{"body-path-user-validate", testdata.PayloadBodyPathUserValidateDSL, BodyPathUserValidateDeclCode},
 	}
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
@@ -40,8 +40,8 @@ func TestBodyTypeInit(t *testing.T) {
 		SectionIndex int
 		Code         string
 	}{
-		{"body-user-inner", PayloadBodyUserInnerDSL, 3, BodyUserInnerInitCode},
-		{"body-path-user-validate", PayloadBodyPathUserValidateDSL, 2, BodyPathUserValidateInitCode},
+		{"body-user-inner", testdata.PayloadBodyUserInnerDSL, 3, BodyUserInnerInitCode},
+		{"body-path-user-validate", testdata.PayloadBodyPathUserValidateDSL, 2, BodyPathUserValidateInitCode},
 	}
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {

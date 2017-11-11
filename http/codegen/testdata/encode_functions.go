@@ -1,4 +1,4 @@
-package testing
+package testdata
 
 var ResultHeaderBoolEncodeCode = `// EncodeMethodHeaderBoolResponse returns an encoder for responses returned by
 // the ServiceHeaderBool MethodHeaderBool endpoint.
