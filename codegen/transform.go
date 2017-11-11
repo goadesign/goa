@@ -75,8 +75,9 @@ func init() {
 // sourceVar and targetVar contain the name of the variables that hold the
 // source and target data structures respectively.
 //
-// targetPkg contain the name of the Go package that defines the target type in
-// case it's not the same package as where the generated code lives.
+// sourcePkg and targetPkg contain the name of the Go package that defines the
+// source or target type respectively in case it's not the same package as where
+// the generated code lives.
 //
 // unmarshal indicates whether the code is being generated to initialize a type
 // from unmarshaled data or to initialize a type that is marshaled:
@@ -88,7 +89,7 @@ func init() {
 //       do not use pointers for primitive fields that have default values even
 //       when not required.
 //
-//     - The generated code initialize marshaled type fields with their default
+//     - The generated code initializes marshaled type fields with their default
 //       values when otherwise nil.
 //
 // scope is used to compute the name of the user types when initializing fields

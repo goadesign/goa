@@ -438,3 +438,64 @@ func BuildMethodMultiPayloadMethodMultiPayloadPayload(serviceMultiMethodMultiPay
 	return v, nil
 }
 `
+
+var QueryBoolBuildCode = `// BuildMethodQueryBoolMethodQueryBoolPayload builds the payload for the
+// ServiceQueryBool MethodQueryBool endpoint from CLI flags.
+func BuildMethodQueryBoolMethodQueryBoolPayload(serviceQueryBoolMethodQueryBoolQ string) (*servicequerybool.MethodQueryBoolPayload, error) {
+	var err error
+	var q *bool
+	{
+		if serviceQueryBoolMethodQueryBoolQ != "" {
+			val, err := strconv.ParseBool(serviceQueryBoolMethodQueryBoolQ)
+			q = &val
+			if err != nil {
+				err = fmt.Errorf("invalid value for q, must be BOOL")
+			}
+		}
+	}
+	if err != nil {
+		return nil, err
+	}
+	payload := &servicequerybool.MethodQueryBoolPayload{
+		Q: q,
+	}
+	return payload, nil
+}
+`
+
+var BodyQueryPathObjectBuildCode = `// BuildMethodBodyQueryPathObjectMethodBodyQueryPathObjectPayload builds the
+// payload for the ServiceBodyQueryPathObject MethodBodyQueryPathObject
+// endpoint from CLI flags.
+func BuildMethodBodyQueryPathObjectMethodBodyQueryPathObjectPayload(serviceBodyQueryPathObjectMethodBodyQueryPathObjectBody string, serviceBodyQueryPathObjectMethodBodyQueryPathObjectC string, serviceBodyQueryPathObjectMethodBodyQueryPathObjectB string) (*servicebodyquerypathobject.MethodBodyQueryPathObjectPayload, error) {
+	var err error
+	var body MethodBodyQueryPathObjectRequestBody
+	{
+		err = json.Unmarshal([]byte(serviceBodyQueryPathObjectMethodBodyQueryPathObjectBody), &body)
+		if err != nil {
+			return nil, fmt.Errorf("invalid JSON for body, example of valid JSON:\n%s", "'{\n      \"a\": \"Ullam aut.\"\n   }'")
+		}
+	}
+	var c *string
+	{
+		if serviceBodyQueryPathObjectMethodBodyQueryPathObjectC != "" {
+			c = &serviceBodyQueryPathObjectMethodBodyQueryPathObjectC
+		}
+	}
+	var b *string
+	{
+		if serviceBodyQueryPathObjectMethodBodyQueryPathObjectB != "" {
+			b = &serviceBodyQueryPathObjectMethodBodyQueryPathObjectB
+		}
+	}
+	if err != nil {
+		return nil, err
+	}
+	v := &servicebodyquerypathobject.MethodBodyQueryPathObjectPayload{
+		A: body.A,
+	}
+	v.C = c
+	v.B = b
+
+	return v, nil
+}
+`

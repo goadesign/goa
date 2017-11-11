@@ -22,6 +22,8 @@ func TestClientCLIFiles(t *testing.T) {
 		{"multi-parse", testdata.MultiDSL, testdata.MultiParseCode, 0, 3},
 		{"simple-build", testdata.MultiSimpleDSL, testdata.MultiSimpleBuildCode, 1, 1},
 		{"multi-build", testdata.MultiDSL, testdata.MultiBuildCode, 1, 1},
+		{"bool-build", testdata.PayloadQueryBoolDSL, testdata.QueryBoolBuildCode, 1, 1},
+		{"body-query-path-object-build", testdata.PayloadBodyQueryPathObjectDSL, testdata.BodyQueryPathObjectBuildCode, 1, 1},
 	}
 
 	for _, c := range cases {
