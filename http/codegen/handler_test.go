@@ -4,7 +4,7 @@ import (
 	"testing"
 
 	"goa.design/goa/codegen"
-	. "goa.design/goa/http/codegen/testing"
+	"goa.design/goa/http/codegen/testdata"
 	httpdesign "goa.design/goa/http/design"
 )
 
@@ -15,11 +15,11 @@ func TestHandlerInit(t *testing.T) {
 		DSL  func()
 		Code string
 	}{
-		{"no payload no result", ServerNoPayloadNoResultDSL, ServerNoPayloadNoResultHandlerConstructorCode},
-		{"payload no result", ServerPayloadNoResultDSL, ServerPayloadNoResultHandlerConstructorCode},
-		{"no payload result", ServerNoPayloadResultDSL, ServerNoPayloadResultHandlerConstructorCode},
-		{"payload result", ServerPayloadResultDSL, ServerPayloadResultHandlerConstructorCode},
-		{"payload result error", ServerPayloadResultErrorDSL, ServerPayloadResultErrorHandlerConstructorCode},
+		{"no payload no result", testdata.ServerNoPayloadNoResultDSL, testdata.ServerNoPayloadNoResultHandlerConstructorCode},
+		{"payload no result", testdata.ServerPayloadNoResultDSL, testdata.ServerPayloadNoResultHandlerConstructorCode},
+		{"no payload result", testdata.ServerNoPayloadResultDSL, testdata.ServerNoPayloadResultHandlerConstructorCode},
+		{"payload result", testdata.ServerPayloadResultDSL, testdata.ServerPayloadResultHandlerConstructorCode},
+		{"payload result error", testdata.ServerPayloadResultErrorDSL, testdata.ServerPayloadResultErrorHandlerConstructorCode},
 	}
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {

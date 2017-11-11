@@ -1,4 +1,4 @@
-package testing
+package testdata
 
 var MultiNoPayloadParseCode = `// ParseEndpoint returns the endpoint and payload as specified on the command
 // line.

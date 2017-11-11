@@ -1,4 +1,4 @@
-package testing
+package testdata
 
 var ServerNoPayloadNoResultHandlerConstructorCode = `// NewMethodNoPayloadNoResultHandler creates a HTTP handler which loads the
 // HTTP request and calls the "ServiceNoPayloadNoResult" service

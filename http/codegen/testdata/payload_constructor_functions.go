@@ -1,4 +1,4 @@
-package testing
+package testdata
 
 var PayloadQueryBoolConstructorCode = `// NewMethodQueryBoolMethodQueryBoolPayload builds a ServiceQueryBool service
 // MethodQueryBool endpoint payload.
