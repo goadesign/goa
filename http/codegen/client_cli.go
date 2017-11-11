@@ -142,6 +142,7 @@ func endpointParser(genpkg string, root *httpdesign.RootExpr, data []*commandDat
 		{Path: "net/http"},
 		{Path: "os"},
 		{Path: "strconv"},
+		{Path: "unicode/utf8"},
 		{Path: "goa.design/goa", Name: "goa"},
 		{Path: "goa.design/goa/http", Name: "goahttp"},
 	}
