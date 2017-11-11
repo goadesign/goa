@@ -78,6 +78,8 @@ func Enum(vals ...interface{}) {
 // FormatCIDR: RFC4632 or RFC4291 CIDR notation IP address
 //
 // FormatRegexp: RE2 regular expression
+//
+// FormatRFC1123: RFC1123 date time
 func Format(f design.ValidationFormat) {
 	if a, ok := eval.Current().(*design.AttributeExpr); ok {
 		if a.Type != nil && a.Type.Kind() != design.StringKind {
