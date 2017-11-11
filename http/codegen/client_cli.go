@@ -719,22 +719,25 @@ func {{ .Name }}({{ range .FormalParams }}{{ . }} string, {{ end }}) (*{{ .Resul
 	}
 	{{- end }}
 	{{- with .PayloadInit }}
+
 		{{- if .ClientCode }}
 	{{ .ClientCode }}
-	        	{{ if .ReturnTypeAttribute }}
+			{{ if .ReturnTypeAttribute }}
 	res := &{{ .ReturnTypeName }}{
 		{{ .ReturnTypeAttribute }}: v,
 	}
-	        	{{- end }}
-	        	{{- if .ReturnIsStruct }}
-	        		{{- range .ClientArgs }}
-	        			{{- if .FieldName -}}
-	v.{{ .FieldName }} = {{ if .Pointer }}&{{ end }}{{ .Name }}
-        				{{ end -}}
-        			{{- end }}
-        		{{- end }}
+			{{- end }}
+			{{- if .ReturnIsStruct }}
+				{{- range .ClientArgs }}
+					{{- if .FieldName -}}
+	v.{{ .FieldName }} = {{ .Name }}
+       				{{ end -}}
+       			{{- end }}
+       		{{- end }}
 	return {{ if .ReturnTypeAttribute }}res{{ else }}v{{ end }}, nil
-       		{{- else }}
+
+		{{- else }}
+
 			{{- if .ReturnIsStruct }}
 	payload := &{{ .ReturnTypeName }}{
 				{{- range .ClientArgs }}
@@ -745,6 +748,7 @@ func {{ .Name }}({{ range .FormalParams }}{{ . }} string, {{ end }}) (*{{ .Resul
         }
 	return payload, nil
 			{{  end -}}
+
 		{{ end -}}
 	{{ end -}}
 }
