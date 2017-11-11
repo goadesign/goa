@@ -1303,7 +1303,7 @@ func buildBodyType(svc *service.Data, s *httpdesign.ServiceExpr, e *httpdesign.E
 		if o, ok := body.Metadata["origin:attribute"]; ok {
 			origin = o[0]
 			att = design.AsObject(att.Type).Attribute(origin)
-			sourceVar = sourceVar + "." + codegen.Goify(origin, true)
+			//sourceVar = sourceVar + "." + codegen.Goify(origin, true)
 		}
 
 		var helpers []*codegen.TransformFunctionData
