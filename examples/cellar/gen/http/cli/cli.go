@@ -3,7 +3,8 @@
 // cellar HTTP client CLI support package
 //
 // Command:
-// $ goa gen goa.design/goa/examples/cellar/design
+// $ goa gen goa.design/goa/examples/cellar/design -o
+// $(GOPATH)/src/goa.design/goa/examples/cellar
 
 package cli
 
