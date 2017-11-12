@@ -43,6 +43,9 @@ func (c *Client) List(ctx context.Context) (res StoredBottleCollection, err erro
 }
 
 // Client calls the "show" endpoint of the "storage" service.
+// Client can return the following error types:
+//	- *NotFound: Bottle not found
+//	- error: generic transport error.
 func (c *Client) Show(ctx context.Context, p *ShowPayload) (res *StoredBottle, err error) {
 	var ires interface{}
 	ires, err = c.ShowEndpoint(ctx, p)
@@ -63,6 +66,9 @@ func (c *Client) Add(ctx context.Context, p *Bottle) (res string, err error) {
 }
 
 // Client calls the "remove" endpoint of the "storage" service.
+// Client can return the following error types:
+//	- *NotFound: Bottle not found
+//	- error: generic transport error.
 func (c *Client) Remove(ctx context.Context, p *RemovePayload) (err error) {
 	_, err = c.RemoveEndpoint(ctx, p)
 	return

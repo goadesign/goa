@@ -27,6 +27,10 @@ func NewClient(pick goa.Endpoint) *Client {
 }
 
 // Client calls the "pick" endpoint of the "sommelier" service.
+// Client can return the following error types:
+//	- *NoCriteria
+//	- *NoMatch
+//	- error: generic transport error.
 func (c *Client) Pick(ctx context.Context, p *Criteria) (res StoredBottleCollection, err error) {
 	var ires interface{}
 	ires, err = c.PickEndpoint(ctx, p)
