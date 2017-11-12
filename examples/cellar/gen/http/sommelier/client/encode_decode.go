@@ -50,6 +50,10 @@ func EncodePickRequest(encoder func(*http.Request) goahttp.Encoder) func(*http.R
 // DecodePickResponse returns a decoder for responses returned by the sommelier
 // pick endpoint. restoreBody controls whether the response body should be
 // restored after having been read.
+// DecodePickResponse may return the following error types:
+//	- *sommelier.NoCriteria: http.StatusBadRequest
+//	- *sommelier.NoMatch: http.StatusNotFound
+//	- error: generic transport error.
 func DecodePickResponse(decoder func(*http.Response) goahttp.Decoder, restoreBody bool) func(*http.Response) (interface{}, error) {
 	return func(resp *http.Response) (interface{}, error) {
 		if restoreBody {
@@ -94,7 +98,7 @@ func DecodePickResponse(decoder func(*http.Response) goahttp.Decoder, restoreBod
 				return nil, fmt.Errorf("invalid response: %s", err)
 			}
 
-			return NewPickNoCriteria(&body), nil
+			return nil, NewPickNoCriteria(&body)
 		case http.StatusNotFound:
 			var (
 				body PickNoMatchResponseBody
@@ -109,7 +113,7 @@ func DecodePickResponse(decoder func(*http.Response) goahttp.Decoder, restoreBod
 				return nil, fmt.Errorf("invalid response: %s", err)
 			}
 
-			return NewPickNoMatch(&body), nil
+			return nil, NewPickNoMatch(&body)
 		default:
 			body, _ := ioutil.ReadAll(resp.Body)
 			return nil, goahttp.ErrInvalidResponse("account", "create", resp.StatusCode, string(body))
