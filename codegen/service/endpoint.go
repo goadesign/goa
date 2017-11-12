@@ -3,6 +3,7 @@ package service
 import (
 	"fmt"
 	"path/filepath"
+	"strings"
 
 	"goa.design/goa/codegen"
 	"goa.design/goa/design"
@@ -18,10 +19,14 @@ type (
 		Description string
 		// VarName is the endpoint struct name.
 		VarName string
+		// ClientVarName is the client struct name.
+		ClientVarName string
 		// ServiceVarName is the service interface name.
 		ServiceVarName string
 		// Methods lists the endpoint struct methods.
 		Methods []*EndpointMethodData
+		// ClientInitArgs lists the arguments needed to instantiate the client.
+		ClientInitArgs string
 	}
 
 	// EndpointMethodData describes a single endpoint method.
@@ -30,6 +35,11 @@ type (
 		Name string
 		// VarName is the name of the corresponding generated function.
 		VarName string
+		// ArgName is the name of the argument used to initialize the client
+		// struct method field.
+		ArgName string
+		// ClientVarName is the corresponding client struct field name.
+		ClientVarName string
 		// ServiceName is the name of the owner service.
 		ServiceName string
 		// ServiceVarName is the name of the owner service Go interface.
@@ -54,31 +64,7 @@ const (
 func EndpointFile(service *design.ServiceExpr) *codegen.File {
 	path := filepath.Join(codegen.Gendir, codegen.SnakeCase(service.Name), "endpoints.go")
 	svc := Services.Get(service.Name)
-	var (
-		data *EndpointsData
-	)
-	{
-		methods := make([]*EndpointMethodData, len(svc.Methods))
-		for i, m := range svc.Methods {
-			methods[i] = &EndpointMethodData{
-				Name:           m.Name,
-				VarName:        m.VarName,
-				ServiceName:    svc.Name,
-				ServiceVarName: ServiceInterfaceName,
-				PayloadRef:     m.PayloadRef,
-				ResultRef:      m.ResultRef,
-			}
-		}
-		desc := fmt.Sprintf("%s wraps the %s service endpoints.", EndpointsStructName, service.Name)
-		data = &EndpointsData{
-			Name:           service.Name,
-			Description:    desc,
-			VarName:        EndpointsStructName,
-			ServiceVarName: ServiceInterfaceName,
-			Methods:        methods,
-		}
-	}
-
+	data := endpointData(service)
 	var (
 		sections []*codegen.SectionTemplate
 	)
@@ -111,19 +97,48 @@ func EndpointFile(service *design.ServiceExpr) *codegen.File {
 	return &codegen.File{Path: path, SectionTemplates: sections}
 }
 
-// input: EndpointsData
-const serviceEndpointsT = `type (
-	// {{ .Description }}
-	{{ .VarName }} struct {
-{{- range .Methods}}
-		{{ .VarName }} goa.Endpoint
-{{- end }}
+func endpointData(service *design.ServiceExpr) *EndpointsData {
+	svc := Services.Get(service.Name)
+	methods := make([]*EndpointMethodData, len(svc.Methods))
+	for i, m := range svc.Methods {
+		methods[i] = &EndpointMethodData{
+			Name:           m.Name,
+			VarName:        m.VarName,
+			ArgName:        codegen.Goify(m.VarName, false),
+			ServiceName:    svc.Name,
+			ServiceVarName: ServiceInterfaceName,
+			ClientVarName:  ClientStructName,
+			PayloadRef:     m.PayloadRef,
+			ResultRef:      m.ResultRef,
+		}
 	}
-)
+	desc := fmt.Sprintf("%s wraps the %q service endpoints.", EndpointsStructName, service.Name)
+	names := make([]string, len(svc.Methods))
+	for i, m := range svc.Methods {
+		names[i] = codegen.Goify(m.VarName, false)
+	}
+	return &EndpointsData{
+		Name:           service.Name,
+		Description:    desc,
+		VarName:        EndpointsStructName,
+		ClientVarName:  ClientStructName,
+		ServiceVarName: ServiceInterfaceName,
+		ClientInitArgs: strings.Join(names, ", "),
+		Methods:        methods,
+	}
+}
+
+// input: EndpointsData
+const serviceEndpointsT = `{{ comment .Description }}
+type {{ .VarName }} struct {
+{{- range .Methods}}
+	{{ .VarName }} goa.Endpoint
+{{- end }}
+}
 `
 
 // input: EndpointsData
-const serviceEndpointsInitT = `// New{{ .VarName }} wraps the methods of a {{ .Name }} service with endpoints.
+const serviceEndpointsInitT = `{{ printf "New%s wraps the methods of the %q service with endpoints." .VarName .Name | comment }}
 func New{{ .VarName }}(s {{ .ServiceVarName }}) *{{ .VarName }} {
 	return &{{ .VarName }}{
 {{- range .Methods }}
@@ -134,7 +149,7 @@ func New{{ .VarName }}(s {{ .ServiceVarName }}) *{{ .VarName }} {
 `
 
 // input: EndpointMethodData
-const serviceEndpointMethodT = `{{ printf "New%sEndpoint returns an endpoint function that calls method %q of service %q." .VarName .Name .ServiceName | comment }}
+const serviceEndpointMethodT = `{{ printf "New%sEndpoint returns an endpoint function that calls the method %q of service %q." .VarName .Name .ServiceName | comment }}
 func New{{ .VarName }}Endpoint(s {{ .ServiceVarName}}) goa.Endpoint {
 	return func(ctx context.Context, req interface{}) (interface{}, error) {
 {{- if .PayloadRef }}

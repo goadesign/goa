@@ -13,15 +13,13 @@ import (
 	goa "goa.design/goa"
 )
 
-type (
-	// Endpoints wraps the storage service endpoints.
-	Endpoints struct {
-		List   goa.Endpoint
-		Show   goa.Endpoint
-		Add    goa.Endpoint
-		Remove goa.Endpoint
-	}
-)
+// Endpoints wraps the "storage" service endpoints.
+type Endpoints struct {
+	List   goa.Endpoint
+	Show   goa.Endpoint
+	Add    goa.Endpoint
+	Remove goa.Endpoint
+}
 
 // NewEndpoints wraps the methods of a storage service with endpoints.
 func NewEndpoints(s Service) *Endpoints {

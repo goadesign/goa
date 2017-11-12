@@ -12,20 +12,18 @@ import (
 func TestEndpoint(t *testing.T) {
 	const (
 		singleMethod = `
-type (
-	// Endpoints wraps the Single service endpoints.
-	Endpoints struct {
-		A goa.Endpoint
-	}
-)
-// NewEndpoints wraps the methods of a Single service with endpoints.
+// Endpoints wraps the "Single" service endpoints.
+type Endpoints struct {
+	A goa.Endpoint
+}
+// NewEndpoints wraps the methods of the "Single" service with endpoints.
 func NewEndpoints(s Service) *Endpoints {
 	return &Endpoints{
 		A: NewAEndpoint(s),
 	}
 }
-// NewAEndpoint returns an endpoint function that calls method "A" of service
-// "Single".
+// NewAEndpoint returns an endpoint function that calls the method "A" of
+// service "Single".
 func NewAEndpoint(s Service) goa.Endpoint {
 	return func(ctx context.Context, req interface{}) (interface{}, error) {
 		p := req.(*AType)
@@ -35,30 +33,28 @@ func NewAEndpoint(s Service) goa.Endpoint {
 `
 
 		multipleMethods = `
-type (
-	// Endpoints wraps the Multiple service endpoints.
-	Endpoints struct {
-		B goa.Endpoint
-		C goa.Endpoint
-	}
-)
-// NewEndpoints wraps the methods of a Multiple service with endpoints.
+// Endpoints wraps the "Multiple" service endpoints.
+type Endpoints struct {
+	B goa.Endpoint
+	C goa.Endpoint
+}
+// NewEndpoints wraps the methods of the "Multiple" service with endpoints.
 func NewEndpoints(s Service) *Endpoints {
 	return &Endpoints{
 		B: NewBEndpoint(s),
 		C: NewCEndpoint(s),
 	}
 }
-// NewBEndpoint returns an endpoint function that calls method "B" of service
-// "Multiple".
+// NewBEndpoint returns an endpoint function that calls the method "B" of
+// service "Multiple".
 func NewBEndpoint(s Service) goa.Endpoint {
 	return func(ctx context.Context, req interface{}) (interface{}, error) {
 		p := req.(*BType)
 		return nil, s.B(ctx, p)
 	}
 }
-// NewCEndpoint returns an endpoint function that calls method "C" of service
-// "Multiple".
+// NewCEndpoint returns an endpoint function that calls the method "C" of
+// service "Multiple".
 func NewCEndpoint(s Service) goa.Endpoint {
 	return func(ctx context.Context, req interface{}) (interface{}, error) {
 		p := req.(*CType)
@@ -68,19 +64,17 @@ func NewCEndpoint(s Service) goa.Endpoint {
 `
 
 		nopayloadMethods = `
-type (
-	// Endpoints wraps the NoPayload service endpoints.
-	Endpoints struct {
-		NoPayload goa.Endpoint
-	}
-)
-// NewEndpoints wraps the methods of a NoPayload service with endpoints.
+// Endpoints wraps the "NoPayload" service endpoints.
+type Endpoints struct {
+	NoPayload goa.Endpoint
+}
+// NewEndpoints wraps the methods of the "NoPayload" service with endpoints.
 func NewEndpoints(s Service) *Endpoints {
 	return &Endpoints{
 		NoPayload: NewNoPayloadEndpoint(s),
 	}
 }
-// NewNoPayloadEndpoint returns an endpoint function that calls method
+// NewNoPayloadEndpoint returns an endpoint function that calls the method
 // "NoPayload" of service "NoPayload".
 func NewNoPayloadEndpoint(s Service) goa.Endpoint {
 	return func(ctx context.Context, req interface{}) (interface{}, error) {
@@ -88,73 +82,7 @@ func NewNoPayloadEndpoint(s Service) goa.Endpoint {
 	}
 }
 `
-
-		genPkg = "goa.design/goa/example"
 	)
-	var (
-		a = design.MethodExpr{
-			Name: "A",
-			Payload: &design.AttributeExpr{
-				Type: &design.UserTypeExpr{
-					AttributeExpr: &design.AttributeExpr{Type: &design.Object{{Name: "a", Attribute: &design.AttributeExpr{Type: design.String}}}},
-					TypeName:      "AType",
-				}},
-			Result: &design.AttributeExpr{Type: design.Empty},
-		}
-
-		b = design.MethodExpr{
-			Name: "B",
-			Payload: &design.AttributeExpr{
-				Type: &design.UserTypeExpr{
-					AttributeExpr: &design.AttributeExpr{Type: &design.Object{{Name: "b", Attribute: &design.AttributeExpr{Type: design.String}}}},
-					TypeName:      "BType",
-				}},
-			Result: &design.AttributeExpr{Type: design.Empty},
-		}
-
-		c = design.MethodExpr{
-			Name: "C",
-			Payload: &design.AttributeExpr{
-				Type: &design.UserTypeExpr{
-					AttributeExpr: &design.AttributeExpr{Type: &design.Object{{Name: "c", Attribute: &design.AttributeExpr{Type: design.String}}}},
-					TypeName:      "CType",
-				}},
-			Result: &design.AttributeExpr{Type: design.Empty},
-		}
-
-		nopayload = design.MethodExpr{
-			Name:    "NoPayload",
-			Payload: &design.AttributeExpr{Type: design.Empty},
-			Result:  &design.AttributeExpr{Type: design.Empty},
-		}
-
-		singleEndpoint = design.ServiceExpr{
-			Name: "Single",
-			Methods: []*design.MethodExpr{
-				&a,
-			},
-		}
-
-		multipleEndpoints = design.ServiceExpr{
-			Name: "Multiple",
-			Methods: []*design.MethodExpr{
-				&b,
-				&c,
-			},
-		}
-
-		nopayloadEndpoint = design.ServiceExpr{
-			Name: "NoPayload",
-			Methods: []*design.MethodExpr{
-				&nopayload,
-			},
-		}
-	)
-	a.Service = &singleEndpoint
-	b.Service = &multipleEndpoints
-	c.Service = &multipleEndpoints
-	nopayload.Service = &nopayloadEndpoint
-
 	cases := map[string]struct {
 		Service  *design.ServiceExpr
 		Expected string
@@ -181,4 +109,73 @@ func NewNoPayloadEndpoint(s Service) goa.Endpoint {
 			t.Errorf("%s: got\n%v\n=============\nexpected to contain\n%v\ndiff\n%v", k, actual, tc.Expected, d)
 		}
 	}
+}
+
+var (
+	a = design.MethodExpr{
+		Name: "A",
+		Payload: &design.AttributeExpr{
+			Type: &design.UserTypeExpr{
+				AttributeExpr: &design.AttributeExpr{Type: &design.Object{{Name: "a", Attribute: &design.AttributeExpr{Type: design.String}}}},
+				TypeName:      "AType",
+			}},
+		Result: &design.AttributeExpr{Type: design.Empty},
+	}
+
+	b = design.MethodExpr{
+		Name: "B",
+		Payload: &design.AttributeExpr{
+			Type: &design.UserTypeExpr{
+				AttributeExpr: &design.AttributeExpr{Type: &design.Object{{Name: "b", Attribute: &design.AttributeExpr{Type: design.String}}}},
+				TypeName:      "BType",
+			}},
+		Result: &design.AttributeExpr{Type: design.Empty},
+	}
+
+	c = design.MethodExpr{
+		Name: "C",
+		Payload: &design.AttributeExpr{
+			Type: &design.UserTypeExpr{
+				AttributeExpr: &design.AttributeExpr{Type: &design.Object{{Name: "c", Attribute: &design.AttributeExpr{Type: design.String}}}},
+				TypeName:      "CType",
+			}},
+		Result: &design.AttributeExpr{Type: design.Empty},
+	}
+
+	nopayload = design.MethodExpr{
+		Name:    "NoPayload",
+		Payload: &design.AttributeExpr{Type: design.Empty},
+		Result:  &design.AttributeExpr{Type: design.Empty},
+	}
+
+	singleEndpoint = design.ServiceExpr{
+		Name: "Single",
+		Methods: []*design.MethodExpr{
+			&a,
+		},
+	}
+
+	multipleEndpoints = design.ServiceExpr{
+		Name: "Multiple",
+		Methods: []*design.MethodExpr{
+			&b,
+			&c,
+		},
+	}
+
+	nopayloadEndpoint = design.ServiceExpr{
+		Name: "NoPayload",
+		Methods: []*design.MethodExpr{
+			&nopayload,
+		},
+	}
+
+	genPkg = "goa.design/goa/example"
+)
+
+func init() {
+	a.Service = &singleEndpoint
+	b.Service = &multipleEndpoints
+	c.Service = &multipleEndpoints
+	nopayload.Service = &nopayloadEndpoint
 }

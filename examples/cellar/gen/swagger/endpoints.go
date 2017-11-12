@@ -7,11 +7,9 @@
 
 package swagger
 
-type (
-	// Endpoints wraps the swagger service endpoints.
-	Endpoints struct {
-	}
-)
+// Endpoints wraps the "swagger" service endpoints.
+type Endpoints struct {
+}
 
 // NewEndpoints wraps the methods of a swagger service with endpoints.
 func NewEndpoints(s Service) *Endpoints {
