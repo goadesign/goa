@@ -594,7 +594,9 @@ func New{{ .Name }}(ctx context.Context, r *http.Request, service *goa.Service) 
 	// template input: map[string]interface{}
 	ctxMTRespT = `// {{ goify .RespName true }} sends a HTTP response with status code {{ .Response.Status }}.
 func (ctx *{{ .Context.Name }}) {{ goify .RespName true }}(r {{ gotyperef .Projected .Projected.AllRequired 0 false }}) error {
-	ctx.ResponseData.Header().Set("Content-Type", "{{ .ContentType }}")
+	if ctx.ResponseData.Header().Get("Content-Type") == "" {
+		ctx.ResponseData.Header().Set("Content-Type", "{{ .ContentType }}")
+	}
 {{ if .Projected.Type.IsArray }}	if r == nil {
 		r = {{ gotyperef .Projected .Projected.AllRequired 0 false }}{}
 	}
@@ -606,7 +608,9 @@ func (ctx *{{ .Context.Name }}) {{ goify .RespName true }}(r {{ gotyperef .Proje
 	// template input: map[string]interface{}
 	ctxTRespT = `// {{ goify .Response.Name true }} sends a HTTP response with status code {{ .Response.Status }}.
 func (ctx *{{ .Context.Name }}) {{ goify .Response.Name true }}(r {{ gotyperef .Type nil 0 false }}) error {
-	ctx.ResponseData.Header().Set("Content-Type", "{{ .ContentType }}")
+	if ctx.ResponseData.Header().Get("Content-Type") == "" {
+		ctx.ResponseData.Header().Set("Content-Type", "{{ .ContentType }}")
+	}
 	return ctx.ResponseData.Service.Send(ctx.Context, {{ .Response.Status }}, r)
 }
 `
@@ -616,7 +620,9 @@ func (ctx *{{ .Context.Name }}) {{ goify .Response.Name true }}(r {{ gotyperef .
 	ctxNoMTRespT = `
 // {{ goify .Response.Name true }} sends a HTTP response with status code {{ .Response.Status }}.
 func (ctx *{{ .Context.Name }}) {{ goify .Response.Name true }}({{ if .Response.MediaType }}resp []byte{{ end }}) error {
-{{ if .Response.MediaType }}	ctx.ResponseData.Header().Set("Content-Type", "{{ .Response.MediaType }}")
+{{ if .Response.MediaType }}	if ctx.ResponseData.Header().Get("Content-Type") == "" {
+		ctx.ResponseData.Header().Set("Content-Type", "{{ .Response.MediaType }}")
+	}
 {{ end }}	ctx.ResponseData.WriteHeader({{ .Response.Status }}){{ if .Response.MediaType }}
 	_, err := ctx.ResponseData.Write(resp)
 	return err{{ else }}
