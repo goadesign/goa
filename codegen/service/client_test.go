@@ -22,7 +22,7 @@ func NewClient(a goa.Endpoint) *Client {
 	}
 }
 
-// Client calls the "A" endpoint of the "Single" service.
+// A calls the "A" endpoint of the "Single" service.
 func (c *Client) A(ctx context.Context, p *AType)(err error) {
 	_, err = c.AEndpoint(ctx, p)
 	return
@@ -42,13 +42,13 @@ func NewClient(b, c goa.Endpoint) *Client {
 	}
 }
 
-// Client calls the "B" endpoint of the "Multiple" service.
+// B calls the "B" endpoint of the "Multiple" service.
 func (c *Client) B(ctx context.Context, p *BType)(err error) {
 	_, err = c.BEndpoint(ctx, p)
 	return
 }
 
-// Client calls the "C" endpoint of the "Multiple" service.
+// C calls the "C" endpoint of the "Multiple" service.
 func (c *Client) C(ctx context.Context, p *CType)(err error) {
 	_, err = c.CEndpoint(ctx, p)
 	return
@@ -66,7 +66,7 @@ func NewClient(noPayload goa.Endpoint) *Client {
 	}
 }
 
-// Client calls the "NoPayload" endpoint of the "NoPayload" service.
+// NoPayload calls the "NoPayload" endpoint of the "NoPayload" service.
 func (c *Client) NoPayload(ctx context.Context, )(err error) {
 	_, err = c.NoPayloadEndpoint(ctx, nil)
 	return

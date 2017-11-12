@@ -26,8 +26,8 @@ func NewClient(pick goa.Endpoint) *Client {
 	}
 }
 
-// Client calls the "pick" endpoint of the "sommelier" service.
-// Client can return the following error types:
+// Pick calls the "pick" endpoint of the "sommelier" service.
+// Pick can return the following error types:
 //	- *NoCriteria
 //	- *NoMatch
 //	- error: generic transport error.

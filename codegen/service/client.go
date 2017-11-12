@@ -71,9 +71,9 @@ func New{{ .ClientVarName }}({{ .ClientInitArgs }} goa.Endpoint) *{{ .ClientVarN
 
 // input: EndpointsData
 const serviceClientMethodT = `
-{{ printf "%s calls the %q endpoint of the %q service." .ClientVarName .Name .ServiceName | comment }}
+{{ printf "%s calls the %q endpoint of the %q service." .VarName .Name .ServiceName | comment }}
 {{- if .Errors }}
-{{ printf "%s can return the following error types:" .ClientVarName | comment }}
+{{ printf "%s can return the following error types:" .VarName | comment }}
 	{{- range .Errors }}
 //	- {{ .TypeRef }}{{ if .Description }}: {{ .Description }}{{ end }}
 	{{- end }}

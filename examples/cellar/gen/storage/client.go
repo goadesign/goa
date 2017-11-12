@@ -32,7 +32,7 @@ func NewClient(list, show, add, remove goa.Endpoint) *Client {
 	}
 }
 
-// Client calls the "list" endpoint of the "storage" service.
+// List calls the "list" endpoint of the "storage" service.
 func (c *Client) List(ctx context.Context) (res StoredBottleCollection, err error) {
 	var ires interface{}
 	ires, err = c.ListEndpoint(ctx, nil)
@@ -42,8 +42,8 @@ func (c *Client) List(ctx context.Context) (res StoredBottleCollection, err erro
 	return ires.(StoredBottleCollection), nil
 }
 
-// Client calls the "show" endpoint of the "storage" service.
-// Client can return the following error types:
+// Show calls the "show" endpoint of the "storage" service.
+// Show can return the following error types:
 //	- *NotFound: Bottle not found
 //	- error: generic transport error.
 func (c *Client) Show(ctx context.Context, p *ShowPayload) (res *StoredBottle, err error) {
@@ -55,7 +55,7 @@ func (c *Client) Show(ctx context.Context, p *ShowPayload) (res *StoredBottle, e
 	return ires.(*StoredBottle), nil
 }
 
-// Client calls the "add" endpoint of the "storage" service.
+// Add calls the "add" endpoint of the "storage" service.
 func (c *Client) Add(ctx context.Context, p *Bottle) (res string, err error) {
 	var ires interface{}
 	ires, err = c.AddEndpoint(ctx, p)
@@ -65,8 +65,8 @@ func (c *Client) Add(ctx context.Context, p *Bottle) (res string, err error) {
 	return ires.(string), nil
 }
 
-// Client calls the "remove" endpoint of the "storage" service.
-// Client can return the following error types:
+// Remove calls the "remove" endpoint of the "storage" service.
+// Remove can return the following error types:
 //	- *NotFound: Bottle not found
 //	- error: generic transport error.
 func (c *Client) Remove(ctx context.Context, p *RemovePayload) (err error) {
