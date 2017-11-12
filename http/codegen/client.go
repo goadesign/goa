@@ -238,6 +238,15 @@ func {{ .RequestEncoder }}(encoder func(*http.Request) goahttp.Encoder) func(*ht
 
 // input: EndpointData
 const responseDecoderT = `{{ printf "%s returns a decoder for responses returned by the %s %s endpoint. restoreBody controls whether the response body should be restored after having been read." .ResponseDecoder .ServiceName .Method.Name | comment }}
+{{- if .Errors }}
+{{ printf "%s may return the following error types:" .ResponseDecoder | comment }}
+	{{- range $name, $errors := .Errors }}
+		{{- range $errors }}
+//	- {{ $name }}: {{ .Response.StatusCode }}{{ if .Response.Description }}, {{ .Response.Description }}{{ end }}
+		{{- end }}
+	{{- end }}
+//	- error: generic transport error.
+{{- end }}
 func {{ .ResponseDecoder }}(decoder func(*http.Response) goahttp.Decoder, restoreBody bool) func(*http.Response) (interface{}, error) {
 	return func(resp *http.Response) (interface{}, error) {
 		if restoreBody {
@@ -268,9 +277,9 @@ func {{ .ResponseDecoder }}(decoder func(*http.Response) goahttp.Decoder, restor
 		{{- with .Response }}
 ` + singleResponseT + `
 		{{- if .ResultInit }}
-			return {{ .ResultInit.Name }}({{ range .ResultInit.ClientArgs }}{{ .Ref }},{{ end }}), nil
+			return nil, {{ .ResultInit.Name }}({{ range .ResultInit.ClientArgs }}{{ .Ref }},{{ end }})
 		{{- else if .ClientBody }}
-			return body, nil
+			return nil, body
 		{{- else }}
 			return nil, nil
 		{{- end }}
