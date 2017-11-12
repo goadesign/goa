@@ -13,12 +13,10 @@ import (
 	goa "goa.design/goa"
 )
 
-type (
-	// Endpoints wraps the sommelier service endpoints.
-	Endpoints struct {
-		Pick goa.Endpoint
-	}
-)
+// Endpoints wraps the "sommelier" service endpoints.
+type Endpoints struct {
+	Pick goa.Endpoint
+}
 
 // NewEndpoints wraps the methods of a sommelier service with endpoints.
 func NewEndpoints(s Service) *Endpoints {
