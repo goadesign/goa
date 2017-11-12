@@ -48,6 +48,8 @@ type (
 		PayloadRef string
 		// ResultRef is reference to the result Go type if any.
 		ResultRef string
+		// Errors list the possible errors defined in the design if any.
+		Errors []*ErrorInitData
 	}
 )
 
@@ -110,6 +112,7 @@ func endpointData(service *design.ServiceExpr) *EndpointsData {
 			ClientVarName:  ClientStructName,
 			PayloadRef:     m.PayloadRef,
 			ResultRef:      m.ResultRef,
+			Errors:         m.Errors,
 		}
 	}
 	desc := fmt.Sprintf("%s wraps the %q service endpoints.", EndpointsStructName, service.Name)

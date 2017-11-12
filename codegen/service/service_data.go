@@ -48,6 +48,8 @@ type (
 	ErrorInitData struct {
 		// Name is the name of the init function.
 		Name string
+		// Description is the error description.
+		Description string
 		// ErrName is the name of the error.
 		ErrName string
 		// TypeName is the error struct type name.
@@ -84,6 +86,8 @@ type (
 		ResultDesc string
 		// ResultEx is an example of a valid result value.
 		ResultEx interface{}
+		// Errors list the possible errors defined in the design if any.
+		Errors []*ErrorInitData
 	}
 
 	// UserTypeData contains the data describing a data type.
@@ -204,12 +208,7 @@ func (d ServicesData) analyze(service *design.ServiceExpr) *Data {
 						continue
 					}
 					seenErrors[er.Name] = struct{}{}
-					errorInits = append(errorInits, &ErrorInitData{
-						Name:     fmt.Sprintf("New%s", codegen.Goify(er.Name, true)),
-						ErrName:  er.Name,
-						TypeName: scope.GoTypeName(er.AttributeExpr),
-						TypeRef:  scope.GoTypeRef(er.AttributeExpr),
-					})
+					errorInits = append(errorInits, buildErrorInitData(er, scope))
 				}
 			}
 		}
@@ -287,6 +286,17 @@ func collectTypes(at *design.AttributeExpr, seen map[string]struct{}, scope *cod
 	return
 }
 
+// buildErrorInitData creates the data needed to generate code around endpoint error return values.
+func buildErrorInitData(er *design.ErrorExpr, scope *codegen.NameScope) *ErrorInitData {
+	return &ErrorInitData{
+		Name:        fmt.Sprintf("New%s", codegen.Goify(er.Name, true)),
+		Description: er.Description,
+		ErrName:     er.Name,
+		TypeName:    scope.GoTypeName(er.AttributeExpr),
+		TypeRef:     scope.GoTypeRef(er.AttributeExpr),
+	}
+}
+
 // buildMethodData creates the data needed to render the given endpoint. It
 // records the user types needed by the service definition in userTypes.
 func buildMethodData(m *design.MethodExpr, svcPkgName string, scope *codegen.NameScope) *MethodData {
@@ -303,6 +313,7 @@ func buildMethodData(m *design.MethodExpr, svcPkgName string, scope *codegen.Nam
 		resultRef   string
 		resultDesc  string
 		resultEx    interface{}
+		errors      []*ErrorInitData
 	)
 	{
 		varName = codegen.Goify(m.Name, true)
@@ -336,6 +347,12 @@ func buildMethodData(m *design.MethodExpr, svcPkgName string, scope *codegen.Nam
 			}
 			resultEx = m.Result.Example(design.Root.API.Random())
 		}
+		if len(m.Errors) > 0 {
+			errors = make([]*ErrorInitData, len(m.Errors))
+			for i, er := range m.Errors {
+				errors[i] = buildErrorInitData(er, scope)
+			}
+		}
 	}
 	return &MethodData{
 		Name:        m.Name,
@@ -351,5 +368,6 @@ func buildMethodData(m *design.MethodExpr, svcPkgName string, scope *codegen.Nam
 		ResultRef:   resultRef,
 		ResultDesc:  resultDesc,
 		ResultEx:    resultEx,
+		Errors:      errors,
 	}
 }
