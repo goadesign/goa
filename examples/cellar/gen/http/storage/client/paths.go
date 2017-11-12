@@ -3,7 +3,8 @@
 // HTTP request path constructors for the storage service.
 //
 // Command:
-// $ goa gen goa.design/goa/examples/cellar/design
+// $ goa gen goa.design/goa/examples/cellar/design -o
+// $(GOPATH)/src/goa.design/goa/examples/cellar
 
 package client
 

@@ -3,7 +3,8 @@
 // storage endpoints
 //
 // Command:
-// $ goa gen goa.design/goa/examples/cellar/design
+// $ goa gen goa.design/goa/examples/cellar/design -o
+// $(GOPATH)/src/goa.design/goa/examples/cellar
 
 package storage
 
@@ -21,7 +22,7 @@ type Endpoints struct {
 	Remove goa.Endpoint
 }
 
-// NewEndpoints wraps the methods of a storage service with endpoints.
+// NewEndpoints wraps the methods of the "storage" service with endpoints.
 func NewEndpoints(s Service) *Endpoints {
 	return &Endpoints{
 		List:   NewListEndpoint(s),
@@ -31,7 +32,7 @@ func NewEndpoints(s Service) *Endpoints {
 	}
 }
 
-// NewListEndpoint returns an endpoint function that calls method "list" of
+// NewListEndpoint returns an endpoint function that calls the method "list" of
 // service "storage".
 func NewListEndpoint(s Service) goa.Endpoint {
 	return func(ctx context.Context, req interface{}) (interface{}, error) {
@@ -39,7 +40,7 @@ func NewListEndpoint(s Service) goa.Endpoint {
 	}
 }
 
-// NewShowEndpoint returns an endpoint function that calls method "show" of
+// NewShowEndpoint returns an endpoint function that calls the method "show" of
 // service "storage".
 func NewShowEndpoint(s Service) goa.Endpoint {
 	return func(ctx context.Context, req interface{}) (interface{}, error) {
@@ -48,7 +49,7 @@ func NewShowEndpoint(s Service) goa.Endpoint {
 	}
 }
 
-// NewAddEndpoint returns an endpoint function that calls method "add" of
+// NewAddEndpoint returns an endpoint function that calls the method "add" of
 // service "storage".
 func NewAddEndpoint(s Service) goa.Endpoint {
 	return func(ctx context.Context, req interface{}) (interface{}, error) {
@@ -57,8 +58,8 @@ func NewAddEndpoint(s Service) goa.Endpoint {
 	}
 }
 
-// NewRemoveEndpoint returns an endpoint function that calls method "remove" of
-// service "storage".
+// NewRemoveEndpoint returns an endpoint function that calls the method
+// "remove" of service "storage".
 func NewRemoveEndpoint(s Service) goa.Endpoint {
 	return func(ctx context.Context, req interface{}) (interface{}, error) {
 		p := req.(*RemovePayload)

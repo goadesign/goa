@@ -3,7 +3,8 @@
 // swagger endpoints
 //
 // Command:
-// $ goa gen goa.design/goa/examples/cellar/design
+// $ goa gen goa.design/goa/examples/cellar/design -o
+// $(GOPATH)/src/goa.design/goa/examples/cellar
 
 package swagger
 
@@ -11,7 +12,7 @@ package swagger
 type Endpoints struct {
 }
 
-// NewEndpoints wraps the methods of a swagger service with endpoints.
+// NewEndpoints wraps the methods of the "swagger" service with endpoints.
 func NewEndpoints(s Service) *Endpoints {
 	return &Endpoints{}
 }
