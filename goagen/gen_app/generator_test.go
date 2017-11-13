@@ -330,7 +330,9 @@ func NewGetWidgetContext(ctx context.Context, r *http.Request, service *goa.Serv
 
 // OK sends a HTTP response with status code 200.
 func (ctx *GetWidgetContext) OK(r ID) error {
-	ctx.ResponseData.Header().Set("Content-Type", "application/vnd.rightscale.codegen.test.widgets")
+	if ctx.ResponseData.Header().Get("Content-Type") == "" {
+		ctx.ResponseData.Header().Set("Content-Type", "application/vnd.rightscale.codegen.test.widgets")
+	}
 	return ctx.ResponseData.Service.Send(ctx.Context, 200, r)
 }
 `
