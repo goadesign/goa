@@ -13,6 +13,7 @@ func TestFormat(t *testing.T) {
 		Format design.ValidationFormat
 	}{
 		"date-time": {design.FormatDateTime},
+		"uuid":      {design.FormatUUID},
 		"email":     {design.FormatEmail},
 		"hostname":  {design.FormatHostname},
 		"ipv4":      {design.FormatIPv4},

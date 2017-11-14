@@ -414,6 +414,8 @@ func constant(formatName string) string {
 	switch formatName {
 	case "date-time":
 		return "goa.FormatDateTime"
+	case "uuid":
+		return "goa.FormatUUID"
 	case "email":
 		return "goa.FormatEmail"
 	case "hostname":
