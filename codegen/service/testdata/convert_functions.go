@@ -1,8 +1,8 @@
-package testing
+package testdata
 
 var ConvertStringCode = `// ConvertToStringT creates an instance of StringT initialized from t.
-func (t *StringType) ConvertToStringT() *testing.StringT {
-	v := &testing.StringT{}
+func (t *StringType) ConvertToStringT() *testdata.StringT {
+	v := &testdata.StringT{}
 	if t.String != nil {
 		v.String = *t.String
 	}
@@ -11,8 +11,8 @@ func (t *StringType) ConvertToStringT() *testing.StringT {
 `
 
 var ConvertStringRequiredCode = `// ConvertToStringT creates an instance of StringT initialized from t.
-func (t *StringType) ConvertToStringT() *testing.StringT {
-	v := &testing.StringT{
+func (t *StringType) ConvertToStringT() *testdata.StringT {
+	v := &testdata.StringT{
 		String: t.String,
 	}
 	return v
@@ -21,8 +21,8 @@ func (t *StringType) ConvertToStringT() *testing.StringT {
 
 var ConvertStringPointerCode = `// ConvertToStringPointerT creates an instance of StringPointerT initialized
 // from t.
-func (t *StringPointerType) ConvertToStringPointerT() *testing.StringPointerT {
-	v := &testing.StringPointerT{
+func (t *StringPointerType) ConvertToStringPointerT() *testdata.StringPointerT {
+	v := &testdata.StringPointerT{
 		String: t.String,
 	}
 	return v
@@ -31,8 +31,8 @@ func (t *StringPointerType) ConvertToStringPointerT() *testing.StringPointerT {
 
 var ConvertStringPointerRequiredCode = `// ConvertToStringPointerT creates an instance of StringPointerT initialized
 // from t.
-func (t *StringPointerType) ConvertToStringPointerT() *testing.StringPointerT {
-	v := &testing.StringPointerT{
+func (t *StringPointerType) ConvertToStringPointerT() *testdata.StringPointerT {
+	v := &testdata.StringPointerT{
 		String: &t.String,
 	}
 	return v
@@ -40,8 +40,8 @@ func (t *StringPointerType) ConvertToStringPointerT() *testing.StringPointerT {
 `
 
 var ConvertArrayStringCode = `// ConvertToArrayStringT creates an instance of ArrayStringT initialized from t.
-func (t *ArrayStringType) ConvertToArrayStringT() *testing.ArrayStringT {
-	v := &testing.ArrayStringT{}
+func (t *ArrayStringType) ConvertToArrayStringT() *testdata.ArrayStringT {
+	v := &testdata.ArrayStringT{}
 	if t.ArrayString != nil {
 		v.ArrayString = make([]string, len(t.ArrayString))
 		for j, val := range t.ArrayString {
@@ -53,8 +53,8 @@ func (t *ArrayStringType) ConvertToArrayStringT() *testing.ArrayStringT {
 `
 
 var ConvertArrayStringRequiredCode = `// ConvertToArrayStringT creates an instance of ArrayStringT initialized from t.
-func (t *ArrayStringType) ConvertToArrayStringT() *testing.ArrayStringT {
-	v := &testing.ArrayStringT{}
+func (t *ArrayStringType) ConvertToArrayStringT() *testdata.ArrayStringT {
+	v := &testdata.ArrayStringT{}
 	if t.ArrayString != nil {
 		v.ArrayString = make([]string, len(t.ArrayString))
 		for j, val := range t.ArrayString {
@@ -66,8 +66,8 @@ func (t *ArrayStringType) ConvertToArrayStringT() *testing.ArrayStringT {
 `
 
 var ConvertObjectCode = `// ConvertToObjectT creates an instance of ObjectT initialized from t.
-func (t *ObjectType) ConvertToObjectT() *testing.ObjectT {
-	v := &testing.ObjectT{}
+func (t *ObjectType) ConvertToObjectT() *testdata.ObjectT {
+	v := &testdata.ObjectT{}
 	if t.Object != nil {
 		v.Object = marshalObjectFieldToObjectFieldT(t.Object)
 	}
@@ -76,8 +76,8 @@ func (t *ObjectType) ConvertToObjectT() *testing.ObjectT {
 `
 
 var ConvertObjectRequiredCode = `// ConvertToObjectT creates an instance of ObjectT initialized from t.
-func (t *ObjectType) ConvertToObjectT() *testing.ObjectT {
-	v := &testing.ObjectT{}
+func (t *ObjectType) ConvertToObjectT() *testdata.ObjectT {
+	v := &testdata.ObjectT{}
 	if t.Object != nil {
 		v.Object = marshalObjectFieldToObjectFieldT(t.Object)
 	}
@@ -86,9 +86,9 @@ func (t *ObjectType) ConvertToObjectT() *testing.ObjectT {
 `
 
 var ConvertObjectHelperCode = `// marshalObjectFieldToObjectFieldT builds a value of type
-// *testing.ObjectFieldT from a value of type *ObjectField.
-func marshalObjectFieldToObjectFieldT(v *ObjectField) *testing.ObjectFieldT {
-	res := &testing.ObjectFieldT{
+// *testdata.ObjectFieldT from a value of type *ObjectField.
+func marshalObjectFieldToObjectFieldT(v *ObjectField) *testdata.ObjectFieldT {
+	res := &testdata.ObjectFieldT{
 		Bytes: v.Bytes,
 	}
 	if v.Bool != nil {
@@ -141,9 +141,9 @@ func marshalObjectFieldToObjectFieldT(v *ObjectField) *testing.ObjectFieldT {
 `
 
 var ConvertObjectRequiredHelperCode = `// marshalObjectFieldToObjectFieldT builds a value of type
-// *testing.ObjectFieldT from a value of type *ObjectField.
-func marshalObjectFieldToObjectFieldT(v *ObjectField) *testing.ObjectFieldT {
-	res := &testing.ObjectFieldT{
+// *testdata.ObjectFieldT from a value of type *ObjectField.
+func marshalObjectFieldToObjectFieldT(v *ObjectField) *testdata.ObjectFieldT {
+	res := &testdata.ObjectFieldT{
 		Bool:    v.Bool,
 		Int:     v.Int,
 		Int32:   v.Int32,

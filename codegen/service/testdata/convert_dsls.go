@@ -1,13 +1,13 @@
-package testing
+package testdata
 
 import (
 	. "goa.design/goa/design"
 	. "goa.design/goa/dsl"
 )
 
-var CreateStringDSL = func() {
+var ConvertStringDSL = func() {
 	var StringType = Type("StringType", func() {
-		CreateFrom(StringT{})
+		ConvertTo(StringT{})
 		Attribute("String", String)
 	})
 	Service("Service", func() {
@@ -17,34 +17,9 @@ var CreateStringDSL = func() {
 	})
 }
 
-var CreateStringRequiredDSL = func() {
+var ConvertStringRequiredDSL = func() {
 	var StringType = Type("StringType", func() {
-		CreateFrom(StringT{})
-		Attribute("String", String)
-		Required("String")
-	})
-	Service("Service", func() {
-		Method("Method", func() {
-			Payload(StringType)
-		})
-	})
-}
-
-var CreateStringPointerDSL = func() {
-	var StringType = Type("StringType", func() {
-		CreateFrom(StringPointerT{})
-		Attribute("String", String)
-	})
-	Service("Service", func() {
-		Method("Method", func() {
-			Payload(StringType)
-		})
-	})
-}
-
-var CreateStringPointerRequiredDSL = func() {
-	var StringType = Type("StringType", func() {
-		CreateFrom(StringPointerT{})
+		ConvertTo(StringT{})
 		Attribute("String", String)
 		Required("String")
 	})
@@ -55,9 +30,34 @@ var CreateStringPointerRequiredDSL = func() {
 	})
 }
 
-var CreateArrayStringDSL = func() {
+var ConvertStringPointerDSL = func() {
+	var StringPointerType = Type("StringPointerType", func() {
+		ConvertTo(StringPointerT{})
+		Attribute("String", String)
+	})
+	Service("Service", func() {
+		Method("Method", func() {
+			Payload(StringPointerType)
+		})
+	})
+}
+
+var ConvertStringPointerRequiredDSL = func() {
+	var StringPointerType = Type("StringPointerType", func() {
+		ConvertTo(StringPointerT{})
+		Attribute("String", String)
+		Required("String")
+	})
+	Service("Service", func() {
+		Method("Method", func() {
+			Payload(StringPointerType)
+		})
+	})
+}
+
+var ConvertArrayStringDSL = func() {
 	var ArrayStringType = Type("ArrayStringType", func() {
-		CreateFrom(ArrayStringT{})
+		ConvertTo(ArrayStringT{})
 		Attribute("ArrayString", ArrayOf(String))
 	})
 	Service("Service", func() {
@@ -67,9 +67,9 @@ var CreateArrayStringDSL = func() {
 	})
 }
 
-var CreateArrayStringRequiredDSL = func() {
+var ConvertArrayStringRequiredDSL = func() {
 	var ArrayStringType = Type("ArrayStringType", func() {
-		CreateFrom(ArrayStringT{})
+		ConvertTo(ArrayStringT{})
 		Attribute("ArrayString", ArrayOf(String))
 		Required("ArrayString")
 	})
@@ -80,7 +80,7 @@ var CreateArrayStringRequiredDSL = func() {
 	})
 }
 
-var CreateObjectDSL = func() {
+var ConvertObjectDSL = func() {
 	var ObjectField = Type("ObjectField", func() {
 		Attribute("Bool", Boolean)
 		Attribute("Int", Int)
@@ -98,7 +98,7 @@ var CreateObjectDSL = func() {
 	})
 
 	var ObjectType = Type("ObjectType", func() {
-		CreateFrom(ObjectT{})
+		ConvertTo(ObjectT{})
 		Attribute("Object", ObjectField)
 		Required("Object")
 	})
@@ -110,7 +110,7 @@ var CreateObjectDSL = func() {
 	})
 }
 
-var CreateObjectRequiredDSL = func() {
+var ConvertObjectRequiredDSL = func() {
 	var ObjectField = Type("ObjectField", func() {
 		Attribute("Bool", Boolean)
 		Attribute("Int", Int)
@@ -130,7 +130,7 @@ var CreateObjectRequiredDSL = func() {
 	})
 
 	var ObjectType = Type("ObjectType", func() {
-		CreateFrom(ObjectT{})
+		ConvertTo(ObjectT{})
 		Attribute("Object", ObjectField)
 		Required("Object")
 	})

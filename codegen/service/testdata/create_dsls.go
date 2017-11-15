@@ -1,13 +1,13 @@
-package testing
+package testdata
 
 import (
 	. "goa.design/goa/design"
 	. "goa.design/goa/dsl"
 )
 
-var ConvertStringDSL = func() {
+var CreateStringDSL = func() {
 	var StringType = Type("StringType", func() {
-		ConvertTo(StringT{})
+		CreateFrom(StringT{})
 		Attribute("String", String)
 	})
 	Service("Service", func() {
@@ -17,9 +17,9 @@ var ConvertStringDSL = func() {
 	})
 }
 
-var ConvertStringRequiredDSL = func() {
+var CreateStringRequiredDSL = func() {
 	var StringType = Type("StringType", func() {
-		ConvertTo(StringT{})
+		CreateFrom(StringT{})
 		Attribute("String", String)
 		Required("String")
 	})
@@ -30,34 +30,34 @@ var ConvertStringRequiredDSL = func() {
 	})
 }
 
-var ConvertStringPointerDSL = func() {
-	var StringPointerType = Type("StringPointerType", func() {
-		ConvertTo(StringPointerT{})
+var CreateStringPointerDSL = func() {
+	var StringType = Type("StringType", func() {
+		CreateFrom(StringPointerT{})
 		Attribute("String", String)
 	})
 	Service("Service", func() {
 		Method("Method", func() {
-			Payload(StringPointerType)
+			Payload(StringType)
 		})
 	})
 }
 
-var ConvertStringPointerRequiredDSL = func() {
-	var StringPointerType = Type("StringPointerType", func() {
-		ConvertTo(StringPointerT{})
+var CreateStringPointerRequiredDSL = func() {
+	var StringType = Type("StringType", func() {
+		CreateFrom(StringPointerT{})
 		Attribute("String", String)
 		Required("String")
 	})
 	Service("Service", func() {
 		Method("Method", func() {
-			Payload(StringPointerType)
+			Payload(StringType)
 		})
 	})
 }
 
-var ConvertArrayStringDSL = func() {
+var CreateArrayStringDSL = func() {
 	var ArrayStringType = Type("ArrayStringType", func() {
-		ConvertTo(ArrayStringT{})
+		CreateFrom(ArrayStringT{})
 		Attribute("ArrayString", ArrayOf(String))
 	})
 	Service("Service", func() {
@@ -67,9 +67,9 @@ var ConvertArrayStringDSL = func() {
 	})
 }
 
-var ConvertArrayStringRequiredDSL = func() {
+var CreateArrayStringRequiredDSL = func() {
 	var ArrayStringType = Type("ArrayStringType", func() {
-		ConvertTo(ArrayStringT{})
+		CreateFrom(ArrayStringT{})
 		Attribute("ArrayString", ArrayOf(String))
 		Required("ArrayString")
 	})
@@ -80,7 +80,7 @@ var ConvertArrayStringRequiredDSL = func() {
 	})
 }
 
-var ConvertObjectDSL = func() {
+var CreateObjectDSL = func() {
 	var ObjectField = Type("ObjectField", func() {
 		Attribute("Bool", Boolean)
 		Attribute("Int", Int)
@@ -98,7 +98,7 @@ var ConvertObjectDSL = func() {
 	})
 
 	var ObjectType = Type("ObjectType", func() {
-		ConvertTo(ObjectT{})
+		CreateFrom(ObjectT{})
 		Attribute("Object", ObjectField)
 		Required("Object")
 	})
@@ -110,7 +110,7 @@ var ConvertObjectDSL = func() {
 	})
 }
 
-var ConvertObjectRequiredDSL = func() {
+var CreateObjectRequiredDSL = func() {
 	var ObjectField = Type("ObjectField", func() {
 		Attribute("Bool", Boolean)
 		Attribute("Int", Int)
@@ -130,7 +130,37 @@ var ConvertObjectRequiredDSL = func() {
 	})
 
 	var ObjectType = Type("ObjectType", func() {
-		ConvertTo(ObjectT{})
+		CreateFrom(ObjectT{})
+		Attribute("Object", ObjectField)
+		Required("Object")
+	})
+
+	Service("Service", func() {
+		Method("Method", func() {
+			Payload(ObjectType)
+		})
+	})
+}
+
+var CreateObjectExtraDSL = func() {
+	var ObjectField = Type("ObjectField", func() {
+		Attribute("Bool", Boolean)
+		Attribute("Int", Int)
+		Attribute("Int32", Int32)
+		Attribute("Int64", Int64)
+		Attribute("UInt", UInt)
+		Attribute("UInt32", UInt32)
+		Attribute("UInt64", UInt64)
+		Attribute("Float32", Float32)
+		Attribute("Float64", Float64)
+		Attribute("Bytes", Bytes)
+		Attribute("String", String)
+		Attribute("Array", ArrayOf(Boolean))
+		Attribute("Map", MapOf(String, Boolean))
+	})
+
+	var ObjectType = Type("ObjectType", func() {
+		CreateFrom(ObjectExtraT{})
 		Attribute("Object", ObjectField)
 		Required("Object")
 	})

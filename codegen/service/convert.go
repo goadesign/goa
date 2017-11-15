@@ -324,7 +324,7 @@ func buildDesignType(dt *design.DataType, t reflect.Type, ref design.DataType, r
 		var required []string
 		for i := 0; i < t.NumField(); i++ {
 			f := t.FieldByIndex([]int{i})
-			atn := attributeName(oref, f.Name)
+			atn, fn := attributeName(oref, f.Name)
 			var aref design.DataType
 			if oref != nil {
 				if at := oref.Attribute(atn); at != nil {
@@ -350,8 +350,12 @@ func buildDesignType(dt *design.DataType, t reflect.Type, ref design.DataType, r
 					return err
 				}
 			}
+			name := atn
+			if fn != "" {
+				name = name + ":" + fn
+			}
 			obj[i] = &design.NamedAttributeExpr{
-				Name:      atn,
+				Name:      name,
 				Attribute: &design.AttributeExpr{Type: fdt},
 			}
 		}
@@ -369,47 +373,47 @@ func buildDesignType(dt *design.DataType, t reflect.Type, ref design.DataType, r
 			return fmt.Errorf("%s: only pointer to struct can be converted", rec.path)
 		}
 	default:
-		return fmt.Errorf("%s: type %s is not compatible with goa design types", rec.path, t.Name())
+		*dt = design.Any
 	}
 	return nil
 }
 
 // attributeName computes the name of the attribute for the given field name and
 // object that must contain the matching attribute.
-func attributeName(obj *design.Object, name string) string {
+func attributeName(obj *design.Object, name string) (string, string) {
 	if obj == nil {
-		return name
+		return name, ""
 	}
 	// first look for a "struct.field.external" metadata
 	for _, nat := range *obj {
 		if m := nat.Attribute.Metadata["struct.field.external"]; len(m) > 0 {
 			if m[0] == name {
-				return nat.Name
+				return nat.Name, name
 			}
 		}
 	}
 	// next look for an exact match
 	for _, nat := range *obj {
 		if nat.Name == name {
-			return name
+			return name, ""
 		}
 	}
 	// next try to lower case first letter
 	ln := strings.ToLower(name[0:1]) + name[1:]
 	for _, nat := range *obj {
 		if nat.Name == ln {
-			return ln
+			return ln, name
 		}
 	}
 	// finally look for a snake case representation
 	sn := codegen.SnakeCase(name)
 	for _, nat := range *obj {
 		if nat.Name == sn {
-			return sn
+			return sn, name
 		}
 	}
 	// no match, return field name
-	return name
+	return name, ""
 }
 
 // isPrimitive is true if the given kind matches a goa primitive type.

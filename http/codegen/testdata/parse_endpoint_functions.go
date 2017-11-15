@@ -393,7 +393,6 @@ func BuildMethodMultiSimplePayloadMethodMultiSimplePayloadPayload(serviceMultiSi
 	v := &servicemultisimple1.MethodMultiSimplePayloadPayload{
 		A: body.A,
 	}
-
 	return v, nil
 }
 `
@@ -434,7 +433,6 @@ func BuildMethodMultiPayloadMethodMultiPayloadPayload(serviceMultiMethodMultiPay
 	}
 	v.B = b
 	v.A = a
-
 	return v, nil
 }
 `
@@ -495,7 +493,6 @@ func BuildMethodBodyQueryPathObjectMethodBodyQueryPathObjectPayload(serviceBodyQ
 	}
 	v.C = c
 	v.B = b
-
 	return v, nil
 }
 `

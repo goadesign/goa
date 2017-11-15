@@ -39,6 +39,5 @@ func BuildPickCriteria(sommelierPickBody string) (*sommelier.Criteria, error) {
 			v.Varietal[j] = val
 		}
 	}
-
 	return v, nil
 }

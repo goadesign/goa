@@ -111,7 +111,6 @@ func BuildAddBottle(storageAddBody string) (*storage.Bottle, error) {
 			}
 		}
 	}
-
 	return v, nil
 }
 
