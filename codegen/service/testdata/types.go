@@ -1,4 +1,6 @@
-package testing
+package testdata
+
+import "time"
 
 type StringT struct {
 	String string
@@ -14,6 +16,11 @@ type ArrayStringT struct {
 
 type ObjectT struct {
 	Object *ObjectFieldT
+}
+
+type ObjectExtraT struct {
+	Object *ObjectFieldT
+	t      time.Time
 }
 
 type ObjectFieldT struct {

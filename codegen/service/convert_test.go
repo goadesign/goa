@@ -3,9 +3,10 @@ package service
 import (
 	"reflect"
 	"testing"
+	"time"
 
 	"goa.design/goa/codegen"
-	. "goa.design/goa/codegen/service/testing"
+	"goa.design/goa/codegen/service/testdata"
 	"goa.design/goa/design"
 	"goa.design/goa/dsl"
 	"goa.design/goa/eval"
@@ -92,6 +93,7 @@ func TestCompatible(t *testing.T) {
 		{"object", obj, objT{}, ""},
 		{"object-mapped", objMapped, objT{}, ""},
 		{"object-ignored", objIgnored, objT{}, ""},
+		{"object-extra", objIgnored, objExtraT{}, ""},
 		{"object-recursive", objRecursive(), objRecursiveT{}, ""},
 		{"array-object", dsl.ArrayOf(obj), []objT{objT{}}, ""},
 
@@ -135,24 +137,25 @@ func TestConvertFile(t *testing.T) {
 		SectionIndex int
 		Code         string
 	}{
-		{"convert-string", ConvertStringDSL, 1, ConvertStringCode},
-		{"convert-string-required", ConvertStringRequiredDSL, 1, ConvertStringRequiredCode},
-		{"convert-string-pointer", ConvertStringPointerDSL, 1, ConvertStringPointerCode},
-		{"convert-string-pointer-required", ConvertStringPointerRequiredDSL, 1, ConvertStringPointerRequiredCode},
-		{"create-string", CreateStringDSL, 1, CreateStringCode},
-		{"create-string-required", CreateStringRequiredDSL, 1, CreateStringRequiredCode},
-		{"create-string-pointer", CreateStringPointerDSL, 1, CreateStringPointerCode},
-		{"create-string-pointer-required", CreateStringPointerRequiredDSL, 1, CreateStringPointerRequiredCode},
-		{"convert-array-string", ConvertArrayStringDSL, 1, ConvertArrayStringCode},
-		{"convert-array-string-required", ConvertArrayStringRequiredDSL, 1, ConvertArrayStringRequiredCode},
-		{"create-array-string", CreateArrayStringDSL, 1, CreateArrayStringCode},
-		{"create-array-string-required", CreateArrayStringRequiredDSL, 1, CreateArrayStringRequiredCode},
-		{"convert-object", ConvertObjectDSL, 1, ConvertObjectCode},
-		{"convert-object-2", ConvertObjectDSL, 2, ConvertObjectHelperCode},
-		{"convert-object-required", ConvertObjectRequiredDSL, 2, ConvertObjectRequiredHelperCode},
-		{"convert-object-2-required", ConvertObjectRequiredDSL, 1, ConvertObjectRequiredCode},
-		{"create-object", CreateObjectDSL, 1, CreateObjectCode},
-		{"create-object-required", CreateObjectRequiredDSL, 1, CreateObjectRequiredCode},
+		{"convert-string", testdata.ConvertStringDSL, 1, testdata.ConvertStringCode},
+		{"convert-string-required", testdata.ConvertStringRequiredDSL, 1, testdata.ConvertStringRequiredCode},
+		{"convert-string-pointer", testdata.ConvertStringPointerDSL, 1, testdata.ConvertStringPointerCode},
+		{"convert-string-pointer-required", testdata.ConvertStringPointerRequiredDSL, 1, testdata.ConvertStringPointerRequiredCode},
+		{"create-string", testdata.CreateStringDSL, 1, testdata.CreateStringCode},
+		{"create-string-required", testdata.CreateStringRequiredDSL, 1, testdata.CreateStringRequiredCode},
+		{"create-string-pointer", testdata.CreateStringPointerDSL, 1, testdata.CreateStringPointerCode},
+		{"create-string-pointer-required", testdata.CreateStringPointerRequiredDSL, 1, testdata.CreateStringPointerRequiredCode},
+		{"convert-array-string", testdata.ConvertArrayStringDSL, 1, testdata.ConvertArrayStringCode},
+		{"convert-array-string-required", testdata.ConvertArrayStringRequiredDSL, 1, testdata.ConvertArrayStringRequiredCode},
+		{"create-array-string", testdata.CreateArrayStringDSL, 1, testdata.CreateArrayStringCode},
+		{"create-array-string-required", testdata.CreateArrayStringRequiredDSL, 1, testdata.CreateArrayStringRequiredCode},
+		{"convert-object", testdata.ConvertObjectDSL, 1, testdata.ConvertObjectCode},
+		{"convert-object-2", testdata.ConvertObjectDSL, 2, testdata.ConvertObjectHelperCode},
+		{"convert-object-required", testdata.ConvertObjectRequiredDSL, 2, testdata.ConvertObjectRequiredHelperCode},
+		{"convert-object-2-required", testdata.ConvertObjectRequiredDSL, 1, testdata.ConvertObjectRequiredCode},
+		{"create-object", testdata.CreateObjectDSL, 1, testdata.CreateObjectCode},
+		{"create-object-required", testdata.CreateObjectRequiredDSL, 1, testdata.CreateObjectRequiredCode},
+		{"create-object-extra", testdata.CreateObjectExtraDSL, 1, testdata.CreateObjectExtraCode},
 	}
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
@@ -263,6 +266,15 @@ type objT struct {
 	Baz  bool
 	Goo  float32
 	Goo2 uint
+}
+
+type objExtraT struct {
+	Foo   string
+	Bar   int
+	Baz   bool
+	Goo   float32
+	Goo2  uint
+	Extra time.Time
 }
 
 type objRecursiveT struct {
