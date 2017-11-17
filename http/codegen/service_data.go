@@ -1638,11 +1638,11 @@ const (
 		if !ok {
 			return nil, goahttp.ErrInvalidType("{{ .ServiceName }}", "{{ .EndpointName }}", "{{ .PayloadRef }}", v)
 		}
-	{{ range .Args }}
+	{{- range .Args }}
 		{{- if .Pointer }}
 		if p.{{ .FieldName }} != nil {
 		{{- end }}
-			{{- .Name }} = {{ if .Pointer }}*{{ end }}p.{{ .FieldName }}
+			{{ .Name }} = {{ if .Pointer }}*{{ end }}p.{{ .FieldName }}
 		{{- if .Pointer }}
 		}
 		{{- end }}
