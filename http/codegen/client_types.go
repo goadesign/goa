@@ -106,19 +106,17 @@ func clientType(genpkg string, svc *httpdesign.ServiceExpr, seen map[string]stru
 	// error body types
 	for _, a := range svc.HTTPEndpoints {
 		adata := rdata.Endpoint(a.Name())
-		for _, herrs := range adata.Errors {
-			for _, herr := range herrs {
-				if data := herr.Response.ClientBody; data != nil {
-					if data.Def != "" {
-						sections = append(sections, &codegen.SectionTemplate{
-							Name:   "client-error-body",
-							Source: typeDeclT,
-							Data:   data,
-						})
-					}
-					if data.ValidateDef != "" {
-						validatedTypes = append(validatedTypes, data)
-					}
+		for _, herr := range adata.Errors {
+			if data := herr.Response.ClientBody; data != nil {
+				if data.Def != "" {
+					sections = append(sections, &codegen.SectionTemplate{
+						Name:   "client-error-body",
+						Source: typeDeclT,
+						Data:   data,
+					})
+				}
+				if data.ValidateDef != "" {
+					validatedTypes = append(validatedTypes, data)
 				}
 			}
 		}
@@ -161,15 +159,13 @@ func clientType(genpkg string, svc *httpdesign.ServiceExpr, seen map[string]stru
 		}
 
 		// error response to method result (client)
-		for _, herrs := range adata.Errors {
-			for _, herr := range herrs {
-				if init := herr.Response.ResultInit; init != nil {
-					sections = append(sections, &codegen.SectionTemplate{
-						Name:   "client-error-result-init",
-						Source: clientTypeInitT,
-						Data:   init,
-					})
-				}
+		for _, herr := range adata.Errors {
+			if init := herr.Response.ResultInit; init != nil {
+				sections = append(sections, &codegen.SectionTemplate{
+					Name:   "client-error-result-init",
+					Source: clientTypeInitT,
+					Data:   init,
+				})
 			}
 		}
 	}
