@@ -44,7 +44,7 @@ func TestValidateFormat(t *testing.T) {
 		"valid uuid":         {"validUUID", validUUID, FormatUUID, nil},
 		"invalid uuid":       {"invalidUUID", invalidUUID, FormatUUID, InvalidFormatError("invalidUUID", invalidUUID, FormatUUID, fmt.Errorf("uuid: UUID string too short: %s", invalidUUID))},
 		"valid email":        {"validEmail", validEmail, FormatEmail, nil},
-		"invalid email":      {"invalidEmail", invalidEmail, FormatEmail, InvalidFormatError("invalidEmail", invalidEmail, FormatEmail, errors.New("mail: missing phrase"))},
+		"invalid email":      {"invalidEmail", invalidEmail, FormatEmail, InvalidFormatError("invalidEmail", invalidEmail, FormatEmail, errors.New("mail: no angle-addr"))},
 		"valid hostname":     {"validHostname", validHostname, FormatHostname, nil},
 		"invalid hostname":   {"invalidHostname", invalidHostname, FormatHostname, InvalidFormatError("invalidHostname", invalidHostname, FormatHostname, fmt.Errorf("hostname value '%s' does not match %s", invalidHostname, `^[[:alnum:]][[:alnum:]\-]{0,61}[[:alnum:]]|[[:alpha:]]$`))},
 		"valid ipv4":         {"validIPv4", validIPv4, FormatIPv4, nil},
