@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"net/http"
+	"sort"
 	"strconv"
 	"strings"
 	"text/template"
@@ -89,7 +90,7 @@ type (
 		// corresponding error type reference. The indexing is needed to
 		// generate code that for each type (e.g. ErrorResult) attempts
 		// to match the field to the defined tags.
-		Errors map[string][]*ErrorData
+		Errors []*ErrorData
 		// Routes describes the possible routes for this endpoint.
 		Routes []*RouteData
 
@@ -1068,7 +1069,7 @@ func buildResultData(svc *service.Data, s *httpdesign.ServiceExpr, e *httpdesign
 	}
 }
 
-func buildErrorsData(svc *service.Data, s *httpdesign.ServiceExpr, e *httpdesign.EndpointExpr, sd *ServiceData) map[string][]*ErrorData {
+func buildErrorsData(svc *service.Data, s *httpdesign.ServiceExpr, e *httpdesign.EndpointExpr, sd *ServiceData) []*ErrorData {
 	data := make(map[string][]*ErrorData)
 	for _, v := range e.HTTPErrors {
 		var (
@@ -1197,7 +1198,18 @@ func buildErrorsData(svc *service.Data, s *httpdesign.ServiceExpr, e *httpdesign
 			Ref:      ref,
 		})
 	}
-	return data
+	keys := make([]string, len(data))
+	i := 0
+	for k := range data {
+		keys[i] = k
+		i++
+	}
+	sort.Strings(keys)
+	var vals []*ErrorData
+	for _, k := range keys {
+		vals = append(vals, data[k]...)
+	}
+	return vals
 }
 
 // buildBodyType builds the TypeData for a request or response body. The data
