@@ -12,16 +12,25 @@ import (
 // ExampleServerFiles returns and example main and dummy service
 // implementations.
 func ExampleServerFiles(genpkg string, root *httpdesign.RootExpr) []*codegen.File {
-	fw := make([]*codegen.File, len(root.HTTPServices)+1)
-	for i, svc := range root.HTTPServices {
-		fw[i] = dummyServiceFile(genpkg, root, svc)
+	var fw []*codegen.File
+	for _, svc := range root.HTTPServices {
+		f := dummyServiceFile(genpkg, root, svc)
+		if f != nil {
+			fw = append(fw, f)
+		}
 	}
-	fw[len(root.HTTPServices)] = exampleMain(genpkg, root)
+	if m := exampleMain(genpkg, root); m != nil {
+		fw = append(fw, m)
+	}
 	return fw
 }
 
 // dummyServiceFile returns a dummy implementation of the given service.
 func dummyServiceFile(genpkg string, root *httpdesign.RootExpr, svc *httpdesign.ServiceExpr) *codegen.File {
+	path := codegen.SnakeCase(svc.Name()) + ".go"
+	if _, err := os.Stat(path); !os.IsNotExist(err) {
+		return nil // file already exists, skip it.
+	}
 	data := HTTPServices.Get(svc.Name())
 	apiPkg := strings.ToLower(codegen.Goify(root.Design.API.Name, false))
 	sections := []*codegen.SectionTemplate{
@@ -45,12 +54,16 @@ func dummyServiceFile(genpkg string, root *httpdesign.RootExpr, svc *httpdesign.
 	}
 
 	return &codegen.File{
-		Path:             codegen.SnakeCase(svc.Name()) + ".go",
+		Path:             path,
 		SectionTemplates: sections,
 	}
 }
 
 func exampleMain(genpkg string, root *httpdesign.RootExpr) *codegen.File {
+	path := filepath.Join("cmd", codegen.SnakeCase(root.Design.API.Name)+"svc", "main.go")
+	if _, err := os.Stat(path); !os.IsNotExist(err) {
+		return nil // file already exists, skip it.
+	}
 	idx := strings.LastIndex(genpkg, string(os.PathSeparator))
 	rootPath := "."
 	if idx > 0 {
@@ -97,7 +110,6 @@ func exampleMain(genpkg string, root *httpdesign.RootExpr) *codegen.File {
 		Source: mainT,
 		Data:   data,
 	})
-	path := filepath.Join("cmd", codegen.SnakeCase(root.Design.API.Name)+"svc", "main.go")
 
 	return &codegen.File{Path: path, SectionTemplates: sections}
 }
