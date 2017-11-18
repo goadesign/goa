@@ -34,7 +34,7 @@ func Service(genpkg string, roots []eval.Root) ([]*codegen.File, error) {
 		}
 	}
 	if len(files) == 0 {
-		return nil, fmt.Errorf("server: could not find goa design in DSL roots, vendoring issue?")
+		return nil, fmt.Errorf("design must define at least one service")
 	}
 	return files, nil
 }
