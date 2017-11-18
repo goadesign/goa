@@ -15,6 +15,8 @@ const (
 	FormatCIDR = design.FormatCIDR
 	// FormatDateTime designates values that follow RFC3339
 	FormatDateTime = design.FormatDateTime
+	// FormatUUID designates values that follow RFC4122
+	FormatUUID = design.FormatUUID
 	// FormatEmail designates values that follow RFC5322
 	FormatEmail = design.FormatEmail
 	// FormatHostname designates

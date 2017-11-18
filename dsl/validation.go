@@ -63,6 +63,8 @@ func Enum(vals ...interface{}) {
 //
 // FormatDateTime: RFC3339 date time
 //
+// FormatUUID: RFC4122 uuid
+//
 // FormatEmail: RFC5322 email address
 //
 // FormatHostname: RFC1035 internet host name
