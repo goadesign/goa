@@ -4,6 +4,7 @@ package openapi
 import (
 	"encoding/json"
 	"fmt"
+	"net/http"
 	"net/url"
 	"sort"
 	"strconv"
@@ -346,8 +347,12 @@ func responseSpecFromExpr(s *V2, root *httpdesign.RootExpr, r *httpdesign.HTTPRe
 	if err != nil {
 		return nil, err
 	}
+	desc := r.Description
+	if desc == "" {
+		desc = fmt.Sprintf("%s response.", http.StatusText(r.StatusCode))
+	}
 	return &Response{
-		Description: r.Description,
+		Description: desc,
 		Schema:      schema,
 		Headers:     headers,
 		Extensions:  extensionsFromExpr(r.Metadata),
@@ -463,28 +468,14 @@ func buildPathFromExpr(s *V2, root *httpdesign.RootExpr, route *httpdesign.Route
 	}
 
 	if endpoint.Body.Type != design.Empty {
-		if o := design.AsObject(endpoint.Body.Type); o != nil {
-			for _, nat := range *o {
-				pp := &Parameter{
-					Name:        nat.Name,
-					In:          "body",
-					Description: nat.Attribute.Description,
-					Required:    endpoint.Body.IsRequired(nat.Name),
-					Schema:      TypeSchema(root.Design.API, nat.Attribute.Type),
-				}
-				params = append(params, pp)
-			}
-		} else {
-			payloadSchema := TypeSchema(root.Design.API, endpoint.Body.Type)
-			pp := &Parameter{
-				Name:        "payload",
-				In:          "body",
-				Description: endpoint.Body.Description,
-				Required:    true,
-				Schema:      payloadSchema,
-			}
-			params = append(params, pp)
+		pp := &Parameter{
+			Name:        endpoint.Body.Type.Name(),
+			In:          "body",
+			Description: endpoint.Body.Description,
+			Required:    true,
+			Schema:      TypeSchema(root.Design.API, endpoint.Body.Type),
 		}
+		params = append(params, pp)
 	}
 
 	operationID := fmt.Sprintf("%s#%s", endpoint.Service.Name(), endpoint.Name())
