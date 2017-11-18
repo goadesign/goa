@@ -1,6 +1,7 @@
 package codegen
 
 import (
+	"os"
 	"path/filepath"
 
 	"goa.design/goa/codegen"
@@ -10,6 +11,9 @@ import (
 // ExampleCLI returns an example client tool main implementation.
 func ExampleCLI(genpkg string, root *httpdesign.RootExpr) *codegen.File {
 	path := filepath.Join("cmd", codegen.SnakeCase(root.Design.API.Name)+"cli", "main.go")
+	if _, err := os.Stat(path); !os.IsNotExist(err) {
+		return nil // file already exists, skip it.
+	}
 	specs := []*codegen.ImportSpec{
 		{Path: "context"},
 		{Path: "encoding/json"},

@@ -1,8 +1,6 @@
 package generator
 
 import (
-	"fmt"
-
 	"goa.design/goa/codegen"
 	"goa.design/goa/eval"
 	httpcodegen "goa.design/goa/http/codegen"
@@ -16,12 +14,11 @@ func Example(genpkg string, roots []eval.Root) ([]*codegen.File, error) {
 	for _, root := range roots {
 		if r, ok := root.(*httpdesign.RootExpr); ok {
 			files = httpcodegen.ExampleServerFiles(genpkg, r)
-			files = append(files, httpcodegen.ExampleCLI(genpkg, r))
+			if cli := httpcodegen.ExampleCLI(genpkg, r); cli != nil {
+				files = append(files, cli)
+			}
 			break
 		}
-	}
-	if len(files) == 0 {
-		return nil, fmt.Errorf("example: no HTTP design found")
 	}
 	return files, nil
 }
