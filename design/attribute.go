@@ -99,6 +99,9 @@ const (
 	// FormatDateTime designates values that follow RFC3339
 	FormatDateTime = "date-time"
 
+	// FormatUUID designates values that follow RFC4122
+	FormatUUID = "uuid"
+
 	// FormatEmail designates values that follow RFC5322
 	FormatEmail = "email"
 
