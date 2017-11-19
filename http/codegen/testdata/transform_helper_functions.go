@@ -4,6 +4,9 @@ var PayloadBodyUserInnerDefaultTransformCode1 = `// unmarshalInnerTypeRequestBod
 // *servicebodyuserinnerdefault.InnerType from a value of type
 // *InnerTypeRequestBody.
 func unmarshalInnerTypeRequestBodyToInnerType(v *InnerTypeRequestBody) *servicebodyuserinnerdefault.InnerType {
+	if v == nil {
+		return nil
+	}
 	res := &servicebodyuserinnerdefault.InnerType{
 		A: *v.A,
 	}
@@ -19,6 +22,9 @@ var PayloadBodyUserInnerDefaultTransformCode2 = `// unmarshalInnerTypeRequestBod
 // *servicebodyuserinnerdefault.InnerType from a value of type
 // *InnerTypeRequestBody.
 func unmarshalInnerTypeRequestBodyToInnerType(v *InnerTypeRequestBody) *servicebodyuserinnerdefault.InnerType {
+	if v == nil {
+		return nil
+	}
 	res := &servicebodyuserinnerdefault.InnerType{
 		A: *v.A,
 	}
@@ -62,6 +68,9 @@ var PayloadBodyUserInnerDefaultTransformCodeCLI1 = `// marshalInnerTypeRequestBo
 // *servicebodyuserinnerdefault.InnerType from a value of type
 // *InnerTypeRequestBody.
 func marshalInnerTypeRequestBodyToInnerType(v *InnerTypeRequestBody) *servicebodyuserinnerdefault.InnerType {
+	if v == nil {
+		return nil
+	}
 	res := &servicebodyuserinnerdefault.InnerType{
 		A: v.A,
 		B: v.B,
@@ -75,6 +84,9 @@ var PayloadBodyUserInnerDefaultTransformCodeCLI2 = `// marshalInnerTypeToInnerTy
 // *InnerTypeRequestBody from a value of type
 // *servicebodyuserinnerdefault.InnerType.
 func marshalInnerTypeToInnerTypeRequestBody(v *servicebodyuserinnerdefault.InnerType) *InnerTypeRequestBody {
+	if v == nil {
+		return nil
+	}
 	res := &InnerTypeRequestBody{
 		A: v.A,
 		B: v.B,
