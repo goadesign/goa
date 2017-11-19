@@ -39,7 +39,7 @@ func Goify(str string, firstUpper bool) string {
 			}
 			copy(runes[i+1:], runes[i+n+1:])
 			runes = runes[:len(runes)-n]
-		} else if unicode.IsLower(runes[i]) && !unicode.IsLower(runes[i+1]) {
+		} else if isLower(runes[i]) && !isLower(runes[i+1]) {
 			// lower->non-lower
 			eow = true
 		}
@@ -86,6 +86,12 @@ func GoifyAtt(att *design.AttributeExpr, name string, upper bool) string {
 		}
 	}
 	return Goify(name, upper)
+}
+
+// isLower returns true if the character is considered a lower case character
+// when transforming word into CamelCase.
+func isLower(r rune) bool {
+	return unicode.IsDigit(r) || unicode.IsLower(r)
 }
 
 // validIdentifier returns true if the rune is a letter or number

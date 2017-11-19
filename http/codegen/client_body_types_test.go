@@ -42,6 +42,7 @@ func TestBodyTypeInit(t *testing.T) {
 	}{
 		{"body-user-inner", testdata.PayloadBodyUserInnerDSL, 3, BodyUserInnerInitCode},
 		{"body-path-user-validate", testdata.PayloadBodyPathUserValidateDSL, 2, BodyPathUserValidateInitCode},
+		{"body-primitive-array-user-validate", testdata.PayloadBodyPrimitiveArrayUserValidateDSL, 2, BodyPrimitiveArrayUserValidateInitCode},
 	}
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
@@ -68,6 +69,20 @@ const BodyPathUserValidateDeclCode = `// MethodUserBodyPathValidateRequestBody i
 // HTTP request body.
 type MethodUserBodyPathValidateRequestBody struct {
 	A string ` + "`" + `form:"a" json:"a" xml:"a"` + "`" + `
+}
+`
+
+const BodyPrimitiveArrayUserValidateInitCode = `// NewPayloadTypeRequestBody builds the HTTP request body from the payload of
+// the "MethodBodyPrimitiveArrayUserValidate" endpoint of the
+// "ServiceBodyPrimitiveArrayUserValidate" service.
+func NewPayloadTypeRequestBody(p []*servicebodyprimitivearrayuservalidate.PayloadType) []*PayloadTypeRequestBody {
+	body := make([]*PayloadTypeRequestBody, len(p))
+	for i, val := range p {
+		body[i] = &PayloadTypeRequestBody{
+			A: val.A,
+		}
+	}
+	return body
 }
 `
 
