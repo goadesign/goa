@@ -133,14 +133,3 @@ func unmarshalWineryResponseBodyToWinery(v *WineryResponseBody) *sommelier.Winer
 
 	return res
 }
-
-// unmarshalComponentResponseBodyToComponent builds a value of type
-// *sommelier.Component from a value of type *ComponentResponseBody.
-func unmarshalComponentResponseBodyToComponent(v *ComponentResponseBody) *sommelier.Component {
-	res := &sommelier.Component{
-		Varietal:   *v.Varietal,
-		Percentage: v.Percentage,
-	}
-
-	return res
-}

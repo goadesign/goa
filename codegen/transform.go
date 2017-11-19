@@ -346,7 +346,7 @@ func transformMap(source, target *design.Map, newVar bool, a targs) (string, err
 	return buf.String(), nil
 }
 
-func transformAttributeHelpers(source, target design.DataType, a thargs) ([]*TransformFunctionData, error) {
+func transformAttributeHelpers(source, target design.DataType, a thargs, seen ...map[string]*TransformFunctionData) ([]*TransformFunctionData, error) {
 	var (
 		helpers []*TransformFunctionData
 		err     error
@@ -356,22 +356,22 @@ func transformAttributeHelpers(source, target design.DataType, a thargs) ([]*Tra
 	case design.IsArray(source):
 		source = design.AsArray(source).ElemType.Type
 		target = design.AsArray(target).ElemType.Type
-		helpers, err = transformAttributeHelpers(source, target, a)
+		helpers, err = transformAttributeHelpers(source, target, a, seen...)
 	case design.IsMap(source):
 		sm := design.AsMap(source)
 		tm := design.AsMap(target)
 		source = sm.ElemType.Type
 		target = tm.ElemType.Type
-		helpers, err = transformAttributeHelpers(source, target, a)
+		helpers, err = transformAttributeHelpers(source, target, a, seen...)
 		if err == nil {
 			var other []*TransformFunctionData
 			source = sm.KeyType.Type
 			target = tm.KeyType.Type
-			other, err = transformAttributeHelpers(source, target, a)
+			other, err = transformAttributeHelpers(source, target, a, seen...)
 			helpers = append(helpers, other...)
 		}
 	case design.IsObject(source):
-		helpers, err = transformObjectHelpers(source, target, a)
+		helpers, err = transformObjectHelpers(source, target, a, seen...)
 	}
 	if err != nil {
 		return nil, err
@@ -379,7 +379,7 @@ func transformAttributeHelpers(source, target design.DataType, a thargs) ([]*Tra
 	return helpers, nil
 }
 
-func transformObjectHelpers(source, target design.DataType, a thargs) ([]*TransformFunctionData, error) {
+func transformObjectHelpers(source, target design.DataType, a thargs, seen ...map[string]*TransformFunctionData) ([]*TransformFunctionData, error) {
 	var (
 		helpers []*TransformFunctionData
 		err     error
@@ -391,7 +391,7 @@ func transformObjectHelpers(source, target design.DataType, a thargs) ([]*Transf
 		if err != nil {
 			return
 		}
-		h, err2 := collectHelpers(srcAtt, tgtAtt, a)
+		h, err2 := collectHelpers(srcAtt, tgtAtt, a, src.IsRequired(n), seen...)
 		if err2 != nil {
 			err = err2
 			return
@@ -432,30 +432,30 @@ func isCompatible(a, b design.DataType, actx, bctx string) error {
 
 // collectHelpers recursively traverses the given attributes and return the
 // transform helper functions required to generate the transform code.
-func collectHelpers(source, target *design.AttributeExpr, a thargs, seen ...map[string]*TransformFunctionData) ([]*TransformFunctionData, error) {
+func collectHelpers(source, target *design.AttributeExpr, a thargs, req bool, seen ...map[string]*TransformFunctionData) ([]*TransformFunctionData, error) {
 	var data []*TransformFunctionData
 	switch {
 	case design.IsArray(source.Type):
-		helpers, err := collectHelpers(
-			design.AsArray(source.Type).ElemType,
-			design.AsArray(target.Type).ElemType,
+		helpers, err := transformAttributeHelpers(
+			design.AsArray(source.Type).ElemType.Type,
+			design.AsArray(target.Type).ElemType.Type,
 			a, seen...)
 		if err != nil {
 			return nil, err
 		}
 		data = append(data, helpers...)
 	case design.IsMap(source.Type):
-		helpers, err := collectHelpers(
-			design.AsMap(source.Type).KeyType,
-			design.AsMap(target.Type).KeyType,
+		helpers, err := transformAttributeHelpers(
+			design.AsMap(source.Type).KeyType.Type,
+			design.AsMap(target.Type).KeyType.Type,
 			a, seen...)
 		if err != nil {
 			return nil, err
 		}
 		data = append(data, helpers...)
-		helpers, err = collectHelpers(
-			design.AsMap(source.Type).ElemType,
-			design.AsMap(target.Type).ElemType,
+		helpers, err = transformAttributeHelpers(
+			design.AsMap(source.Type).ElemType.Type,
+			design.AsMap(target.Type).ElemType.Type,
 			a, seen...)
 		if err != nil {
 			return nil, err
@@ -474,11 +474,13 @@ func collectHelpers(source, target *design.AttributeExpr, a thargs, seen ...map[
 			if _, ok := s[name]; ok {
 				return nil, nil
 			}
-			var code string
 			code, err := transformAttribute(ut.Attribute(), target, true,
 				targs{"v", "res", a.sourcePkg, a.targetPkg, a.unmarshal, a.scope})
 			if err != nil {
 				return nil, err
+			}
+			if !req {
+				code = "if v == nil {\n\treturn nil\n}\n" + code
 			}
 			t := &TransformFunctionData{
 				Name:          name,
@@ -490,9 +492,9 @@ func collectHelpers(source, target *design.AttributeExpr, a thargs, seen ...map[
 			data = append(data, t)
 		}
 		var err error
-		walkMatches(source, target, func(_, _ *design.MappedAttributeExpr, src, tgt *design.AttributeExpr, _ string) {
+		walkMatches(source, target, func(srcm, _ *design.MappedAttributeExpr, src, tgt *design.AttributeExpr, n string) {
 			var helpers []*TransformFunctionData
-			helpers, err = collectHelpers(src, tgt, a, seen...)
+			helpers, err = collectHelpers(src, tgt, a, srcm.IsRequired(n), seen...)
 			if err != nil {
 				return
 			}
