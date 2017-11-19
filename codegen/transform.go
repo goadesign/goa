@@ -128,9 +128,9 @@ func transformAttribute(source, target *design.AttributeExpr, newVar bool, a tar
 	)
 	switch {
 	case design.IsArray(source.Type):
-		code, err = transformArray(design.AsArray(source.Type), design.AsArray(target.Type), a)
+		code, err = transformArray(design.AsArray(source.Type), design.AsArray(target.Type), newVar, a)
 	case design.IsMap(source.Type):
-		code, err = transformMap(design.AsMap(source.Type), design.AsMap(target.Type), a)
+		code, err = transformMap(design.AsMap(source.Type), design.AsMap(target.Type), newVar, a)
 	case design.IsObject(source.Type):
 		code, err = transformObject(source, target, newVar, a)
 	default:
@@ -198,9 +198,9 @@ func transformObject(source, target *design.AttributeExpr, newVar bool, a targs)
 		_, ok := srcAtt.Type.(design.UserType)
 		switch {
 		case design.IsArray(srcAtt.Type):
-			code, err = transformArray(design.AsArray(srcAtt.Type), design.AsArray(tgtAtt.Type), b)
+			code, err = transformArray(design.AsArray(srcAtt.Type), design.AsArray(tgtAtt.Type), false, b)
 		case design.IsMap(srcAtt.Type):
-			code, err = transformMap(design.AsMap(srcAtt.Type), design.AsMap(tgtAtt.Type), b)
+			code, err = transformMap(design.AsMap(srcAtt.Type), design.AsMap(tgtAtt.Type), false, b)
 		case ok:
 			code = fmt.Sprintf("%s = %s(%s)\n", b.targetVar, transformHelperName(srcAtt, tgtAtt, b), b.sourceVar)
 		case design.IsObject(srcAtt.Type):
@@ -291,14 +291,14 @@ func transformObject(source, target *design.AttributeExpr, newVar bool, a targs)
 	return buffer.String(), nil
 }
 
-func transformArray(source, target *design.Array, a targs) (string, error) {
+func transformArray(source, target *design.Array, newVar bool, a targs) (string, error) {
 	if err := isCompatible(source.ElemType.Type, target.ElemType.Type, a.sourceVar+"[0]", a.targetVar+"[0]"); err != nil {
 		return "", err
 	}
 	data := map[string]interface{}{
 		"Source":      a.sourceVar,
 		"Target":      a.targetVar,
-		"NewVar":      !strings.Contains(a.sourceVar, ".") && !strings.Contains(a.targetVar, "["),
+		"NewVar":      newVar,
 		"ElemTypeRef": a.scope.GoFullTypeRef(target.ElemType, a.targetPkg),
 		"SourceElem":  source.ElemType,
 		"TargetElem":  target.ElemType,
@@ -317,7 +317,7 @@ func transformArray(source, target *design.Array, a targs) (string, error) {
 	return code, nil
 }
 
-func transformMap(source, target *design.Map, a targs) (string, error) {
+func transformMap(source, target *design.Map, newVar bool, a targs) (string, error) {
 	if err := isCompatible(source.KeyType.Type, target.KeyType.Type, a.sourceVar+".key", a.targetVar+".key"); err != nil {
 		return "", err
 	}
@@ -327,7 +327,7 @@ func transformMap(source, target *design.Map, a targs) (string, error) {
 	data := map[string]interface{}{
 		"Source":      a.sourceVar,
 		"Target":      a.targetVar,
-		"NewVar":      !strings.Contains(a.sourceVar, ".") && !strings.Contains(a.targetVar, "["),
+		"NewVar":      newVar,
 		"KeyTypeRef":  a.scope.GoFullTypeRef(target.KeyType, a.targetPkg),
 		"ElemTypeRef": a.scope.GoFullTypeRef(target.ElemType, a.targetPkg),
 		"SourceKey":   source.KeyType,

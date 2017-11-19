@@ -1300,14 +1300,16 @@ func buildBodyType(svc *service.Data, s *httpdesign.ServiceExpr, e *httpdesign.E
 
 		// If design uses Body("name") syntax then need to use payload
 		// attribute to transform.
+		srcType := att.Type
+		src := sourceVar
 		if o, ok := body.Metadata["origin:attribute"]; ok {
 			origin = o[0]
-			att = design.AsObject(att.Type).Attribute(origin)
-			sourceVar = sourceVar + "." + codegen.Goify(origin, true)
+			srcType = design.AsObject(att.Type).Attribute(origin).Type
+			src = src + "." + codegen.Goify(origin, true)
 		}
 
 		var helpers []*codegen.TransformFunctionData
-		code, helpers, err = codegen.GoTypeTransform(att.Type, body.Type, sourceVar, "body", svc.PkgName, "", false, svc.Scope)
+		code, helpers, err = codegen.GoTypeTransform(srcType, body.Type, src, "body", svc.PkgName, "", false, svc.Scope)
 		if err != nil {
 			fmt.Println(err.Error()) // TBD validate DSL so errors are not possible
 		}
