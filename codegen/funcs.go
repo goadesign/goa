@@ -121,6 +121,10 @@ func SnakeCase(name string) string {
 // KebabCase produces the kebab-case version of the given CamelCase string.
 func KebabCase(name string) string {
 	name = SnakeCase(name)
+	ln := len(name)
+	if name[ln-1] == '_' {
+		name = name[:ln-1]
+	}
 	return strings.Replace(name, "_", "-", -1)
 }
 
