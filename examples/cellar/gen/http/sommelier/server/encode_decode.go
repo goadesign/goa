@@ -88,14 +88,3 @@ func marshalWineryToWineryResponseBody(v *sommelier.Winery) *WineryResponseBody 
 
 	return res
 }
-
-// marshalComponentToComponentResponseBody builds a value of type
-// *ComponentResponseBody from a value of type *sommelier.Component.
-func marshalComponentToComponentResponseBody(v *sommelier.Component) *ComponentResponseBody {
-	res := &ComponentResponseBody{
-		Varietal:   v.Varietal,
-		Percentage: v.Percentage,
-	}
-
-	return res
-}

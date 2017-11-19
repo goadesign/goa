@@ -163,17 +163,6 @@ func marshalWineryToWineryResponseBody(v *storage.Winery) *WineryResponseBody {
 	return res
 }
 
-// marshalComponentToComponentResponseBody builds a value of type
-// *ComponentResponseBody from a value of type *storage.Component.
-func marshalComponentToComponentResponseBody(v *storage.Component) *ComponentResponseBody {
-	res := &ComponentResponseBody{
-		Varietal:   v.Varietal,
-		Percentage: v.Percentage,
-	}
-
-	return res
-}
-
 // marshalWineryToWinery builds a value of type *Winery from a value of type
 // *storage.Winery.
 func marshalWineryToWinery(v *storage.Winery) *Winery {
@@ -187,17 +176,6 @@ func marshalWineryToWinery(v *storage.Winery) *Winery {
 	return res
 }
 
-// marshalComponentToComponent builds a value of type *Component from a value
-// of type *storage.Component.
-func marshalComponentToComponent(v *storage.Component) *Component {
-	res := &Component{
-		Varietal:   v.Varietal,
-		Percentage: v.Percentage,
-	}
-
-	return res
-}
-
 // unmarshalWineryRequestBodyToWinery builds a value of type *storage.Winery
 // from a value of type *WineryRequestBody.
 func unmarshalWineryRequestBodyToWinery(v *WineryRequestBody) *storage.Winery {
@@ -206,17 +184,6 @@ func unmarshalWineryRequestBodyToWinery(v *WineryRequestBody) *storage.Winery {
 		Region:  *v.Region,
 		Country: *v.Country,
 		URL:     v.URL,
-	}
-
-	return res
-}
-
-// unmarshalComponentRequestBodyToComponent builds a value of type
-// *storage.Component from a value of type *ComponentRequestBody.
-func unmarshalComponentRequestBodyToComponent(v *ComponentRequestBody) *storage.Component {
-	res := &storage.Component{
-		Varietal:   *v.Varietal,
-		Percentage: v.Percentage,
 	}
 
 	return res

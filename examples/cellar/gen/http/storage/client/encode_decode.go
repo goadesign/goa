@@ -294,17 +294,6 @@ func unmarshalWineryResponseBodyToWinery(v *WineryResponseBody) *storage.Winery 
 	return res
 }
 
-// unmarshalComponentResponseBodyToComponent builds a value of type
-// *storage.Component from a value of type *ComponentResponseBody.
-func unmarshalComponentResponseBodyToComponent(v *ComponentResponseBody) *storage.Component {
-	res := &storage.Component{
-		Varietal:   *v.Varietal,
-		Percentage: v.Percentage,
-	}
-
-	return res
-}
-
 // unmarshalWineryToWinery builds a value of type *storage.Winery from a value
 // of type *Winery.
 func unmarshalWineryToWinery(v *Winery) *storage.Winery {
@@ -313,17 +302,6 @@ func unmarshalWineryToWinery(v *Winery) *storage.Winery {
 		Region:  *v.Region,
 		Country: *v.Country,
 		URL:     v.URL,
-	}
-
-	return res
-}
-
-// unmarshalComponentToComponent builds a value of type *storage.Component from
-// a value of type *Component.
-func unmarshalComponentToComponent(v *Component) *storage.Component {
-	res := &storage.Component{
-		Varietal:   *v.Varietal,
-		Percentage: v.Percentage,
 	}
 
 	return res
@@ -342,17 +320,6 @@ func marshalWineryToWineryRequestBody(v *storage.Winery) *WineryRequestBody {
 	return res
 }
 
-// marshalComponentToComponentRequestBody builds a value of type
-// *ComponentRequestBody from a value of type *storage.Component.
-func marshalComponentToComponentRequestBody(v *storage.Component) *ComponentRequestBody {
-	res := &ComponentRequestBody{
-		Varietal:   v.Varietal,
-		Percentage: v.Percentage,
-	}
-
-	return res
-}
-
 // marshalWineryRequestBodyToWinery builds a value of type *storage.Winery from
 // a value of type *WineryRequestBody.
 func marshalWineryRequestBodyToWinery(v *WineryRequestBody) *storage.Winery {
@@ -361,17 +328,6 @@ func marshalWineryRequestBodyToWinery(v *WineryRequestBody) *storage.Winery {
 		Region:  v.Region,
 		Country: v.Country,
 		URL:     v.URL,
-	}
-
-	return res
-}
-
-// marshalComponentRequestBodyToComponent builds a value of type
-// *storage.Component from a value of type *ComponentRequestBody.
-func marshalComponentRequestBodyToComponent(v *ComponentRequestBody) *storage.Component {
-	res := &storage.Component{
-		Varietal:   v.Varietal,
-		Percentage: v.Percentage,
 	}
 
 	return res
