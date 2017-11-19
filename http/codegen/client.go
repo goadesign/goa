@@ -212,7 +212,13 @@ func {{ .RequestEncoder }}(encoder func(*http.Request) goahttp.Encoder) func(*ht
 			{{- if .Pointer }}
 		if p.{{ .FieldName }} != nil {
 			{{- end }}
-		values.Add("{{ .Name }}", {{ if .Pointer }}*{{ end }}p.{{ .FieldName }})
+		values.Add("{{ .Name }}",
+			{{- if eq .Type.Name "bytes" }} string(
+			{{- else if not (eq .Type.Name "string") }} fmt.Sprintf("%v", 
+			{{- end }}
+			{{- if .Pointer }}*{{ end }}p.{{ .FieldName }}
+			{{- if or (eq .Type.Name "bytes") (not (eq .Type.Name "string")) }})
+			{{- end }})
 			{{- if .Pointer }}
 		}
 			{{- end }}
