@@ -125,6 +125,9 @@ const (
 
 	// FormatURI designates
 	FormatURI = "uri"
+
+	// FormatRFC1123 designates values that follow RFC1123
+	FormatRFC1123 = "rfc1123"
 )
 
 // EvalName returns the name used by the DSL evaluation.

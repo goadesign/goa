@@ -23,6 +23,7 @@ func TestFormat(t *testing.T) {
 		"mac":       {design.FormatMAC},
 		"cidr":      {design.FormatCIDR},
 		"regexp":    {design.FormatRegexp},
+		"rfc1123":   {design.FormatRFC1123},
 	}
 
 	for k, tc := range cases {

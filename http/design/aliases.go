@@ -33,6 +33,8 @@ const (
 	FormatRegexp = design.FormatRegexp
 	// FormatURI designates
 	FormatURI = design.FormatURI
+	// FormatRFC1123 designates values that follow RFC1123
+	FormatRFC1123 = design.FormatRFC1123
 )
 
 const (
