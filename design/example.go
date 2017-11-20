@@ -186,8 +186,9 @@ func byFormat(a *AttributeExpr, r *Random) interface{} {
 			}
 			return res
 		}(),
-		FormatCIDR:   "192.168.100.14/24",
-		FormatRegexp: r.faker.Characters(3) + ".*",
+		FormatCIDR:    "192.168.100.14/24",
+		FormatRegexp:  r.faker.Characters(3) + ".*",
+		FormatRFC1123: time.Unix(int64(r.Int())%1454957045, 0).Format(time.RFC1123), // to obtain a "fixed" rand
 	}[format]; ok {
 		return res
 	}

@@ -32,6 +32,8 @@ func TestValidateFormat(t *testing.T) {
 		invalidCIDR     = "foo"
 		validRegexp     = "^goa$"
 		invalidRegexp   = "foo["
+		validRFC1123    = "Mon, 04 Jun 2017 23:52:05 MST"
+		invalidRFC1123  = "Mon 04 Jun 2017 23:52:05 MST"
 	)
 	cases := map[string]struct {
 		name     string
@@ -65,6 +67,8 @@ func TestValidateFormat(t *testing.T) {
 		"invalid cidr":       {"invalidCIDR", invalidCIDR, FormatCIDR, InvalidFormatError("invalidCIDR", invalidCIDR, FormatCIDR, &net.ParseError{Type: "CIDR address", Text: invalidCIDR})},
 		"valid regexp":       {"validRegexp", validRegexp, FormatRegexp, nil},
 		"invalid regexp":     {"invalidRegexp", invalidRegexp, FormatRegexp, InvalidFormatError("invalidRegexp", invalidRegexp, FormatRegexp, &syntax.Error{Code: syntax.ErrMissingBracket, Expr: invalidRegexp[3:4]})},
+		"valid rfc1123":      {"validRFC1123", validRFC1123, FormatRFC1123, nil},
+		"invalid rfc1123":    {"invalidRFC1123", invalidRFC1123, FormatRFC1123, InvalidFormatError("invalidRFC1123", invalidRFC1123, FormatRFC1123, &time.ParseError{time.RFC1123, invalidRFC1123, ", ", invalidRFC1123[3:], ""})},
 	}
 
 	for k, tc := range cases {
