@@ -342,6 +342,8 @@ func responseSpecFromExpr(s *V2, root *httpdesign.RootExpr, r *httpdesign.HTTPRe
 		}
 		schema = NewSchema()
 		schema.Ref = ResultTypeRef(root.Design.API, mt, view)
+	} else if r.Body.Type != design.Empty {
+		schema = TypeSchema(root.Design.API, r.Body.Type)
 	}
 	headers, err := headersFromExpr(r.MappedHeaders())
 	if err != nil {
