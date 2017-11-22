@@ -345,16 +345,15 @@ func recurseAttribute(att, catt *design.AttributeExpr, n, target, context string
 				// where there is validation but no actual
 				// validation code: if the validation is a
 				// required validation that applies to
-				// attributes that cannot be nil or empty string
-				// i.e. primitive types other than string.
+				// attributes that cannot be nil i.e. primitive
+				// types.
 				if !a.Validation.HasRequiredOnly() {
 					hasValidations = true
 					return done
 				}
 				for _, name := range a.Validation.Required {
 					att := design.AsObject(a.Type).Attribute(name)
-					if att != nil &&
-						(!design.IsPrimitive(att.Type) || att.Type.Kind() == design.StringKind) {
+					if att != nil && !design.IsPrimitive(att.Type) {
 						hasValidations = true
 						return done
 					}
