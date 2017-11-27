@@ -13,6 +13,7 @@ cmd/goagen/goagen
 .vscode/
 *~
 *.orig
+*.swp
 
 # OSes cruft
 .DS_Store
