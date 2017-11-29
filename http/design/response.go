@@ -134,10 +134,8 @@ func (r *HTTPResponseExpr) Validate() *eval.ValidationErrors {
 	}
 	if r.StatusCode == 0 {
 		verr.Add(r, "HTTP response status not defined")
-	} else {
-		if !bodyAllowedForStatus(r.StatusCode) && r.bodyExists() {
-			verr.Add(r, "Response body defined for status code %d which does not allow response body.", r.StatusCode)
-		}
+	} else if !bodyAllowedForStatus(r.StatusCode) && r.bodyExists() {
+		verr.Add(r, "Response body defined for status code %d which does not allow response body.", r.StatusCode)
 	}
 	return verr
 }
@@ -237,8 +235,5 @@ func (r *HTTPResponseExpr) bodyExists() bool {
 		return false
 	}
 	ep, ok := r.Parent.(*EndpointExpr)
-	if ok && ep.MethodExpr.Result != nil {
-		return true
-	}
-	return false
+	return ok && ep.MethodExpr.Result != nil
 }
