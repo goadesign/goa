@@ -134,6 +134,10 @@ func (r *HTTPResponseExpr) Validate() *eval.ValidationErrors {
 	}
 	if r.StatusCode == 0 {
 		verr.Add(r, "HTTP response status not defined")
+	} else {
+		if !bodyAllowedForStatus(r.StatusCode) && r.bodyExists() {
+			verr.Add(r, "Response body defined for status code %d which does not allow response body.", r.StatusCode)
+		}
 	}
 	return verr
 }
@@ -209,4 +213,32 @@ func (r *HTTPResponseExpr) Dup() *HTTPResponseExpr {
 		Metadata:    r.Metadata,
 		headers:     design.DupAtt(r.headers),
 	}
+}
+
+// bodyAllowedForStatus reports whether a given response status code
+// permits a body. See RFC 2616, section 4.4.
+// See https://golang.org/src/net/http/transfer.go
+func bodyAllowedForStatus(status int) bool {
+	switch {
+	case status >= 100 && status <= 199:
+		return false
+	case status == 204:
+		return false
+	case status == 304:
+		return false
+	}
+	return true
+}
+
+// bodyExists returns true if a response body is defined in the
+// response expression via Body() or Result() in the method expression.
+func (r *HTTPResponseExpr) bodyExists() bool {
+	if r.Body != nil && r.Body.Type == design.Empty {
+		return false
+	}
+	ep, ok := r.Parent.(*EndpointExpr)
+	if ok && ep.MethodExpr.Result != nil {
+		return true
+	}
+	return false
 }
