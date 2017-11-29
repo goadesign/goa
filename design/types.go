@@ -128,7 +128,7 @@ const (
 	UserTypeKind
 	// ResultTypeKind represents a result type.
 	ResultTypeKind
-	// AnyKind represents a unknown type.
+	// AnyKind represents an unknown type.
 	AnyKind
 )
 
