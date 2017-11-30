@@ -4,7 +4,7 @@ import (
 	"context"
 	"log"
 
-	"goa.design/goa/examples/cellar/gen/storage"
+	storage "goa.design/goa/examples/cellar/gen/storage"
 
 	"github.com/boltdb/bolt"
 )

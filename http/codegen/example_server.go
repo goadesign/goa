@@ -260,6 +260,13 @@ const mainT = `func main() {
 	// configure the server as required by your service.
 	srv := &http.Server{Addr: *addr, Handler: handler}
 	go func() {
+		{{- range .Services }}
+			{{-  if .Endpoints }}
+		for _, m := range {{ .Service.PkgName }}Server.Mounts {
+			 logger.Printf("[INFO] service %q method %q mounted on %s %s", {{ .Service.PkgName }}Server.Service(), m.Method, m.Verb, m.Pattern)
+		}
+			{{-  end }}
+		{{- end }}
 		logger.Printf("[INFO] listening on %s", *addr)
 		errc <- srv.ListenAndServe()
 	}()

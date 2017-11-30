@@ -19,7 +19,19 @@ import (
 
 // Server lists the sommelier service endpoint HTTP handlers.
 type Server struct {
-	Pick http.Handler
+	Mounts []*MountPoint
+	Pick   http.Handler
+}
+
+// MountPoint holds information about the mounted endpoints.
+type MountPoint struct {
+	// Method is the name of the service method served by the mounted HTTP handler.
+	Method string
+	// Verb is the HTTP method used to match requests to the mounted handler.
+	Verb string
+	// Pattern is the HTTP request path pattern used to match requests to the
+	// mounted handler.
+	Pattern string
 }
 
 // New instantiates HTTP handlers for all the sommelier service endpoints.
@@ -30,9 +42,15 @@ func New(
 	enc func(context.Context, http.ResponseWriter) goahttp.Encoder,
 ) *Server {
 	return &Server{
+		Mounts: []*MountPoint{
+			{"Pick", "POST", "/sommelier"},
+		},
 		Pick: NewPickHandler(e.Pick, mux, dec, enc),
 	}
 }
+
+// Service returns the name of the service served.
+func (s *Server) Service() string { return "sommelier" }
 
 // Mount configures the mux to serve the sommelier endpoints.
 func Mount(mux goahttp.Muxer, h *Server) {
