@@ -231,9 +231,6 @@ func bodyAllowedForStatus(status int) bool {
 // bodyExists returns true if a response body is defined in the
 // response expression via Body() or Result() in the method expression.
 func (r *HTTPResponseExpr) bodyExists() bool {
-	if r.Body != nil && r.Body.Type == design.Empty {
-		return false
-	}
 	ep, ok := r.Parent.(*EndpointExpr)
-	return ok && ep.MethodExpr.Result != nil
+	return ok && ResponseBody(ep, r).Type != design.Empty
 }
