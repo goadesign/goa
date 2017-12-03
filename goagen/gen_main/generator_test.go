@@ -90,7 +90,7 @@ var _ = Describe("Generate", func() {
 			content, err := ioutil.ReadFile(filepath.Join(outDir, "first.go"))
 			Ω(err).ShouldNot(HaveOccurred())
 			Ω(content).Should(MatchRegexp("FirstController_Alpha: start_implement"))
-			Ω(content).Should(MatchRegexp(`// FirstController_Alpha: start_implement\s*// Put your logic here\s*// FirstController_Alpha: end_implement`))
+			Ω(content).Should(MatchRegexp(`// FirstController_Alpha: start_implement\s*// Put your logic here\s*return nil\s*// FirstController_Alpha: end_implement`))
 		})
 
 		Context("regenerated with a new resource", func() {
@@ -162,7 +162,7 @@ var _ = Describe("Generate", func() {
 				Ω(string(content)).Should(MatchRegexp(`import \(\s*[^)]*\"fmt\"`))
 
 				// Check the body is in place
-				Ω(content).Should(MatchRegexp(`// FirstController_Alpha: start_implement\s*fmt.Println\("I did it first"\)\s*// FirstController_Alpha: end_implement`))
+				Ω(content).Should(MatchRegexp(`// FirstController_Alpha: start_implement\s*fmt.Println\("I did it first"\)\s*return nil\s*// FirstController_Alpha: end_implement`))
 			})
 		})
 
