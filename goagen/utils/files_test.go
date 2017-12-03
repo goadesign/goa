@@ -7,8 +7,6 @@ import (
 	"time"
 )
 
-var sep = string(os.PathSeparator)
-
 // Test RemoveFiles. Creates new directories and files in temp directory.
 // Expects that RemoveFiles delete only files, and leaving directory structure intact.
 // Files from .svn directory should not be deleted.
@@ -19,20 +17,20 @@ func TestRemoveFiles(t *testing.T) {
 	currentDir := testDir
 	createDir(currentDir, t)
 
-	currentDir = testDir + sep + "app"
+	currentDir = filepath.Join(testDir, "app")
 	createDir(currentDir, t)
 	createFile(currentDir, "app_file.go", t)
 
-	currentDir += sep + "test"
+	currentDir = filepath.Join(currentDir, "test")
 	createDir(currentDir, t)
 	createFile(currentDir, "bookings_testing.go", t)
 
-	currentDir = testDir + sep + "client"
+	currentDir = filepath.Join(testDir, "client")
 	createDir(currentDir, t)
 	createFile(currentDir, "bookings.go", t)
 
 	// Add .svn ignore directory, which is not allowed to be deleted.
-	currentDir = testDir + sep + "client" + sep + ".svn"
+	currentDir = filepath.Join(testDir, "client", ".svn")
 	createDir(currentDir, t)
 	createFile(currentDir, "all-wcprops", t)
 
@@ -42,19 +40,19 @@ func TestRemoveFiles(t *testing.T) {
 	}
 
 	// Check if directories were deleted.
-	if !exists(testDir+sep+"app") || !exists(testDir+sep+"app"+sep+"test") || !exists(testDir+sep+"client") {
+	if !exists(filepath.Join(testDir, "app")) || !exists(filepath.Join(testDir, "app", "test")) || !exists(filepath.Join(testDir, "client")) {
 		t.Fatalf("Directories where deleted, expected to be not deleted.")
 	}
 
 	// Check if files were deleted.
-	if exists(testDir+sep+"app"+sep+"app_file.go") ||
-		exists(testDir+sep+"app"+sep+"test"+sep+"bookings_testing.go") ||
-		exists(testDir+sep+"app"+sep+"test"+sep+"bookings") {
+	if exists(filepath.Join(testDir, "app", "app_file.go")) ||
+		exists(filepath.Join(testDir, "app", "test", "bookings_testing.go")) ||
+		exists(filepath.Join(testDir, "app", "test", "bookings")) {
 		t.Fatalf("Files where not deleted, expected to be deleted.")
 	}
 
 	// Check if .svn directory was deleted.
-	if !exists(testDir + sep + "client" + sep + ".svn" + sep + "all-wcprops") {
+	if !exists(filepath.Join(testDir, "client", ".svn", "all-wcprops")) {
 		t.Fatalf("File in .svn folder was deleted, expected to be not deleted.")
 	}
 
@@ -69,7 +67,7 @@ func createDir(d string, t *testing.T) {
 }
 
 func createFile(d, f string, t *testing.T) {
-	file, err := os.OpenFile(d+sep+f, os.O_RDONLY|os.O_CREATE, 0666)
+	file, err := os.OpenFile(filepath.Join(d, f), os.O_RDONLY|os.O_CREATE, 0666)
 	if err != nil {
 		t.Fatalf("Can't create temp file " + d)
 	}
