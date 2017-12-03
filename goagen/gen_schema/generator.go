@@ -69,7 +69,9 @@ func (g *Generator) Generate() (_ []string, err error) {
 	}
 
 	g.OutDir = filepath.Join(g.OutDir, "schema")
-	os.RemoveAll(g.OutDir)
+	if err := utils.RemoveFiles(g.OutDir); err != nil {
+		return nil, err
+	}
 	os.MkdirAll(g.OutDir, 0755)
 	g.genfiles = append(g.genfiles, g.OutDir)
 	schemaFile := filepath.Join(g.OutDir, "schema.json")
