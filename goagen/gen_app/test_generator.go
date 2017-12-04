@@ -17,7 +17,7 @@ import (
 
 func makeTestDir(g *Generator, apiName string) (outDir string, err error) {
 	outDir = filepath.Join(g.OutDir, "test")
-	if err = utils.RemoveFiles(g.OutDir); err != nil {
+	if err = utils.RemoveFiles(outDir); err != nil {
 		return
 	}
 	if err = os.MkdirAll(outDir, 0755); err != nil {
