@@ -12,12 +12,11 @@ import (
 
 	"github.com/goadesign/goa/design"
 	"github.com/goadesign/goa/goagen/codegen"
-	"github.com/goadesign/goa/goagen/utils"
 )
 
 func makeTestDir(g *Generator, apiName string) (outDir string, err error) {
 	outDir = filepath.Join(g.OutDir, "test")
-	if err = utils.RemoveFiles(outDir); err != nil {
+	if err = os.RemoveAll(outDir); err != nil {
 		return
 	}
 	if err = os.MkdirAll(outDir, 0755); err != nil {
