@@ -105,10 +105,12 @@ func main() {
 	var (
 		sommelierServer *sommeliersvr.Server
 		storageServer   *storagesvr.Server
+		swaggerServer   *swaggersvr.Server
 	)
 	{
 		sommelierServer = sommeliersvr.New(sommelierEndpoints, mux, dec, enc)
 		storageServer = storagesvr.New(storageEndpoints, mux, dec, enc)
+		swaggerServer = swaggersvr.New(nil, mux, dec, enc)
 	}
 
 	// Configure the mux.
@@ -147,6 +149,9 @@ func main() {
 		}
 		for _, m := range storageServer.Mounts {
 			logger.Printf("[INFO] service %q method %q mounted on %s %s", storageServer.Service(), m.Method, m.Verb, m.Pattern)
+		}
+		for _, m := range swaggerServer.Mounts {
+			logger.Printf("[INFO] service %q file %q mounted on %s %s", swaggerServer.Service(), m.Method, m.Verb, m.Pattern)
 		}
 		logger.Printf("[INFO] listening on %s", *addr)
 		errc <- srv.ListenAndServe()

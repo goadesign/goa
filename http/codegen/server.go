@@ -41,14 +41,10 @@ func server(genpkg string, svc *httpdesign.ServiceExpr) *codegen.File {
 		}),
 	}
 
-	if len(data.Endpoints) > 0 {
-		// Service may only have file servers
-		sections = append(sections, &codegen.SectionTemplate{Name: "server-struct", Source: serverStructT, Data: data})
-		sections = append(sections, &codegen.SectionTemplate{Name: "server-mountpoint", Source: mountPointStructT, Data: data})
-		sections = append(sections, &codegen.SectionTemplate{Name: "server-init", Source: serverInitT, Data: data})
-		sections = append(sections, &codegen.SectionTemplate{Name: "server-service", Source: serverServiceT, Data: data})
-	}
-
+	sections = append(sections, &codegen.SectionTemplate{Name: "server-struct", Source: serverStructT, Data: data})
+	sections = append(sections, &codegen.SectionTemplate{Name: "server-mountpoint", Source: mountPointStructT, Data: data})
+	sections = append(sections, &codegen.SectionTemplate{Name: "server-init", Source: serverInitT, Data: data})
+	sections = append(sections, &codegen.SectionTemplate{Name: "server-service", Source: serverServiceT, Data: data})
 	sections = append(sections, &codegen.SectionTemplate{Name: "server-mount", Source: serverMountT, Data: data})
 
 	for _, e := range data.Endpoints {
@@ -205,6 +201,9 @@ func {{ .ServerInit }}(
 				{{ range $e.Routes -}}
 			{"{{ $e.Method.VarName }}", "{{ .Verb }}", "{{ .Path }}"},
 				{{ end -}}
+			{{ end -}}
+			{{ range .FileServers -}}
+			{"{{ .FilePath }}", "GET", "{{ .RequestPath }}"},
 			{{ end -}}
 		},
 		{{- range .Endpoints }}

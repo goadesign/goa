@@ -30,9 +30,9 @@ func TestHandlerInit(t *testing.T) {
 			}
 			sections := fs[0].SectionTemplates
 			if len(sections) < 6 {
-				t.Fatalf("got %d sections, expected a least 6", len(sections))
+				t.Fatalf("got %d sections, expected at least 6", len(sections))
 			}
-			code := codegen.SectionCode(t, sections[5])
+			code := codegen.SectionCode(t, sections[7])
 			if code != c.Code {
 				t.Errorf("invalid code, got:\n%s\ngot vs. expected:\n%s", code, codegen.Diff(t, code, c.Code))
 			}

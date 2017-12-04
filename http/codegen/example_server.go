@@ -216,15 +216,15 @@ const mainT = `func main() {
 	// responses.
 	var (
 	{{- range .Services }}
-		{{-  if .Endpoints }}
 		{{ .Service.PkgName }}Server *{{.Service.PkgName}}svr.Server
-		{{-  end }}
 	{{- end }}
 	)
 	{
 	{{- range .Services }}
 		{{-  if .Endpoints }}
 		{{ .Service.PkgName }}Server = {{ .Service.PkgName }}svr.New({{ .Service.PkgName }}Endpoints, mux, dec, enc)
+		{{-  else }}
+		{{ .Service.PkgName }}Server = {{ .Service.PkgName }}svr.New(nil, mux, dec, enc)
 		{{-  end }}
 	{{- end }}
 	}
@@ -261,11 +261,13 @@ const mainT = `func main() {
 	srv := &http.Server{Addr: *addr, Handler: handler}
 	go func() {
 		{{- range .Services }}
-			{{-  if .Endpoints }}
 		for _, m := range {{ .Service.PkgName }}Server.Mounts {
-			 logger.Printf("[INFO] service %q method %q mounted on %s %s", {{ .Service.PkgName }}Server.Service(), m.Method, m.Verb, m.Pattern)
+			{{- if .FileServers }}
+		  logger.Printf("[INFO] service %q file %q mounted on %s %s", {{ .Service.PkgName }}Server.Service(), m.Method, m.Verb, m.Pattern)
+			{{- else }}
+			logger.Printf("[INFO] service %q method %q mounted on %s %s", {{ .Service.PkgName }}Server.Service(), m.Method, m.Verb, m.Pattern)
+			{{- end }}
 		}
-			{{-  end }}
 		{{- end }}
 		logger.Printf("[INFO] listening on %s", *addr)
 		errc <- srv.ListenAndServe()
