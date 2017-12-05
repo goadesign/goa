@@ -375,9 +375,6 @@ func funcMap(appPkg string, actionImpls map[string]string) template.FuncMap {
 		"okResp":    okResp,
 		"targetPkg": func() string { return appPkg },
 		"actionBody": func(name string) string {
-			if actionImpls == nil {
-				return defaultActionBody
-			}
 			body, ok := actionImpls[name]
 			if !ok {
 				return defaultActionBody
@@ -385,9 +382,6 @@ func funcMap(appPkg string, actionImpls map[string]string) template.FuncMap {
 			return body
 		},
 		"printResp": func(name string) bool {
-			if actionImpls == nil {
-				return true
-			}
 			_, ok := actionImpls[name]
 			if !ok {
 				return true
