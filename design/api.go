@@ -116,7 +116,7 @@ func (a *APIExpr) Random() *Random {
 func (a *APIExpr) EvalName() string { return "API " + a.Name }
 
 // Hash returns a unique hash value for a.
-func (a *APIExpr) Hash() string { return a.Name }
+func (a *APIExpr) Hash() string { return "_api_+" + a.Name }
 
 // Finalize makes sure there's one server definition.
 func (a *APIExpr) Finalize() {

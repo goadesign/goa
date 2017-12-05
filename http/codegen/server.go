@@ -197,14 +197,14 @@ func {{ .ServerInit }}(
 ) *{{ .ServerStruct }} {
 	return &{{ .ServerStruct }}{
 		Mounts: []*{{ .MountPointStruct }}{
-			{{ range $e := .Endpoints -}}
-				{{ range $e.Routes -}}
+			{{- range $e := .Endpoints }}
+				{{- range $e.Routes }}
 			{"{{ $e.Method.VarName }}", "{{ .Verb }}", "{{ .Path }}"},
-				{{ end -}}
-			{{ end -}}
-			{{ range .FileServers -}}
+				{{- end }}
+			{{- end }}
+			{{- range .FileServers }}
 			{"{{ .FilePath }}", "GET", "{{ .RequestPath }}"},
-			{{ end -}}
+			{{- end }}
 		},
 		{{- range .Endpoints }}
 		{{ .Method.VarName }}: {{ .HandlerInit }}(e.{{ .Method.VarName }}, mux, dec, enc),
