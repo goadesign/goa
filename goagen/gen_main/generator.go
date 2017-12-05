@@ -383,10 +383,7 @@ func funcMap(appPkg string, actionImpls map[string]string) template.FuncMap {
 		},
 		"printResp": func(name string) bool {
 			_, ok := actionImpls[name]
-			if !ok {
-				return true
-			}
-			return false
+			return !ok
 		},
 	}
 }
