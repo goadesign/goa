@@ -26,10 +26,14 @@ type (
 
 // NewNameScope creates an empty name scope.
 func NewNameScope() *NameScope {
-	return &NameScope{
+	ns := &NameScope{
 		names:  make(map[string]string),
 		counts: make(map[string]int),
 	}
+	if design.Root.API != nil {
+		ns.Unique(design.Root.API, design.Root.API.Name)
+	}
+	return ns
 }
 
 // Unique builds the unique name for key using name and - if not unique -

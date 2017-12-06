@@ -41,12 +41,10 @@ func server(genpkg string, svc *httpdesign.ServiceExpr) *codegen.File {
 		}),
 	}
 
-	if len(data.Endpoints) > 0 {
-		// Service may only have file servers
-		sections = append(sections, &codegen.SectionTemplate{Name: "server-struct", Source: serverStructT, Data: data})
-		sections = append(sections, &codegen.SectionTemplate{Name: "server-init", Source: serverInitT, Data: data})
-	}
-
+	sections = append(sections, &codegen.SectionTemplate{Name: "server-struct", Source: serverStructT, Data: data})
+	sections = append(sections, &codegen.SectionTemplate{Name: "server-mountpoint", Source: mountPointStructT, Data: data})
+	sections = append(sections, &codegen.SectionTemplate{Name: "server-init", Source: serverInitT, Data: data})
+	sections = append(sections, &codegen.SectionTemplate{Name: "server-service", Source: serverServiceT, Data: data})
 	sections = append(sections, &codegen.SectionTemplate{Name: "server-mount", Source: serverMountT, Data: data})
 
 	for _, e := range data.Endpoints {
@@ -170,9 +168,22 @@ func printValue(dt design.DataType, v interface{}) string {
 // input: ServiceData
 const serverStructT = `{{ printf "%s lists the %s service endpoint HTTP handlers." .ServerStruct .Service.Name | comment }}
 type {{ .ServerStruct }} struct {
+	Mounts []*{{ .MountPointStruct }}
 	{{- range .Endpoints }}
 	{{ .Method.VarName }} http.Handler
 	{{- end }}
+}
+`
+
+// input: ServiceData
+const mountPointStructT = `{{ printf "%s holds information about the mounted endpoints." .MountPointStruct | comment }}
+type {{ .MountPointStruct }} struct {
+	{{ printf "Method is the name of the service method served by the mounted HTTP handler." | comment }}
+	Method string
+	{{ printf "Verb is the HTTP method used to match requests to the mounted handler." | comment }}
+	Verb string
+	{{ printf "Pattern is the HTTP request path pattern used to match requests to the mounted handler." | comment }}
+	Pattern string
 }
 `
 
@@ -185,11 +196,26 @@ func {{ .ServerInit }}(
 	enc func(context.Context, http.ResponseWriter) goahttp.Encoder,
 ) *{{ .ServerStruct }} {
 	return &{{ .ServerStruct }}{
+		Mounts: []*{{ .MountPointStruct }}{
+			{{- range $e := .Endpoints }}
+				{{- range $e.Routes }}
+			{"{{ $e.Method.VarName }}", "{{ .Verb }}", "{{ .Path }}"},
+				{{- end }}
+			{{- end }}
+			{{- range .FileServers }}
+			{"{{ .FilePath }}", "GET", "{{ .RequestPath }}"},
+			{{- end }}
+		},
 		{{- range .Endpoints }}
 		{{ .Method.VarName }}: {{ .HandlerInit }}(e.{{ .Method.VarName }}, mux, dec, enc),
 		{{- end }}
 	}
 }
+`
+
+// input: ServiceData
+const serverServiceT = `{{ printf "%s returns the name of the service served." .ServerService | comment }}
+func (s *{{ .ServerStruct }}) {{ .ServerService }}() string { return "{{ .Service.Name }}" }
 `
 
 // input: ServiceData

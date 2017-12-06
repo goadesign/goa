@@ -16,8 +16,8 @@ import (
 	sommeliersvr "goa.design/goa/examples/cellar/gen/http/sommelier/server"
 	storagesvr "goa.design/goa/examples/cellar/gen/http/storage/server"
 	swaggersvr "goa.design/goa/examples/cellar/gen/http/swagger/server"
-	"goa.design/goa/examples/cellar/gen/sommelier"
-	"goa.design/goa/examples/cellar/gen/storage"
+	sommelier "goa.design/goa/examples/cellar/gen/sommelier"
+	storage "goa.design/goa/examples/cellar/gen/storage"
 	goahttp "goa.design/goa/http"
 	"goa.design/goa/http/middleware/debugging"
 	"goa.design/goa/http/middleware/logging"
@@ -105,10 +105,12 @@ func main() {
 	var (
 		sommelierServer *sommeliersvr.Server
 		storageServer   *storagesvr.Server
+		swaggerServer   *swaggersvr.Server
 	)
 	{
 		sommelierServer = sommeliersvr.New(sommelierEndpoints, mux, dec, enc)
 		storageServer = storagesvr.New(storageEndpoints, mux, dec, enc)
+		swaggerServer = swaggersvr.New(nil, mux, dec, enc)
 	}
 
 	// Configure the mux.
@@ -142,6 +144,15 @@ func main() {
 	// configure the server as required by your service.
 	srv := &http.Server{Addr: *addr, Handler: handler}
 	go func() {
+		for _, m := range sommelierServer.Mounts {
+			logger.Printf("[INFO] service %q method %q mounted on %s %s", sommelierServer.Service(), m.Method, m.Verb, m.Pattern)
+		}
+		for _, m := range storageServer.Mounts {
+			logger.Printf("[INFO] service %q method %q mounted on %s %s", storageServer.Service(), m.Method, m.Verb, m.Pattern)
+		}
+		for _, m := range swaggerServer.Mounts {
+			logger.Printf("[INFO] service %q file %q mounted on %s %s", swaggerServer.Service(), m.Method, m.Verb, m.Pattern)
+		}
 		logger.Printf("[INFO] listening on %s", *addr)
 		errc <- srv.ListenAndServe()
 	}()

@@ -41,11 +41,15 @@ type (
 		FileServers []*FileServerData
 		// ServerStruct is the name of the HTTP server struct.
 		ServerStruct string
+		// MountPointStruct is the name of the mount point struct.
+		MountPointStruct string
 		// ServerInit is the name of the constructor of the server
 		// struct.
 		ServerInit string
-		// MountServer is the name of the name of the mount function.
+		// MountServer is the name of the mount function.
 		MountServer string
+		// ServerService is the name of service function.
+		ServerService string
 		// ClientStruct is the name of the HTTP client struct.
 		ClientStruct string
 		// ServerBodyAttributeTypes is the list of user types used to
@@ -455,13 +459,15 @@ func (d ServicesData) analyze(hs *httpdesign.ServiceExpr) *ServiceData {
 	svc := service.Services.Get(hs.ServiceExpr.Name)
 
 	rd := &ServiceData{
-		Service:         svc,
-		ServerStruct:    "Server",
-		ServerInit:      "New",
-		MountServer:     "Mount",
-		ClientStruct:    "Client",
-		ServerTypeNames: make(map[string]struct{}),
-		ClientTypeNames: make(map[string]struct{}),
+		Service:          svc,
+		ServerStruct:     "Server",
+		MountPointStruct: "MountPoint",
+		ServerInit:       "New",
+		MountServer:      "Mount",
+		ServerService:    "Service",
+		ClientStruct:     "Client",
+		ServerTypeNames:  make(map[string]struct{}),
+		ClientTypeNames:  make(map[string]struct{}),
 	}
 
 	for _, s := range hs.FileServers {

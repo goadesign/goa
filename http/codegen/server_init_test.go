@@ -8,18 +8,16 @@ import (
 	httpdesign "goa.design/goa/http/design"
 )
 
-func TestHandlerInit(t *testing.T) {
+func TestServerInit(t *testing.T) {
 	const genpkg = "gen"
 	cases := []struct {
 		Name string
 		DSL  func()
 		Code string
 	}{
-		{"no payload no result", testdata.ServerNoPayloadNoResultDSL, testdata.ServerNoPayloadNoResultHandlerConstructorCode},
-		{"payload no result", testdata.ServerPayloadNoResultDSL, testdata.ServerPayloadNoResultHandlerConstructorCode},
-		{"no payload result", testdata.ServerNoPayloadResultDSL, testdata.ServerNoPayloadResultHandlerConstructorCode},
-		{"payload result", testdata.ServerPayloadResultDSL, testdata.ServerPayloadResultHandlerConstructorCode},
-		{"payload result error", testdata.ServerPayloadResultErrorDSL, testdata.ServerPayloadResultErrorHandlerConstructorCode},
+		{"multiple endpoints", testdata.ServerMultiEndpointsDSL, testdata.ServerMultiEndpointsConstructorCode},
+		{"file server", testdata.ServerFileServerDSL, testdata.ServerFileServerConstructorCode},
+		{"mixed", testdata.ServerMixedDSL, testdata.ServerMixedConstructorCode},
 	}
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
@@ -32,7 +30,7 @@ func TestHandlerInit(t *testing.T) {
 			if len(sections) < 6 {
 				t.Fatalf("got %d sections, expected at least 6", len(sections))
 			}
-			code := codegen.SectionCode(t, sections[7])
+			code := codegen.SectionCode(t, sections[3])
 			if code != c.Code {
 				t.Errorf("invalid code, got:\n%s\ngot vs. expected:\n%s", code, codegen.Diff(t, code, c.Code))
 			}

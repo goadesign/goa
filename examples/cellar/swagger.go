@@ -3,7 +3,7 @@ package cellar
 import (
 	"log"
 
-	"goa.design/goa/examples/cellar/gen/swagger"
+	swagger "goa.design/goa/examples/cellar/gen/swagger"
 )
 
 // swagger service example implementation.

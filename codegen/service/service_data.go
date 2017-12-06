@@ -162,7 +162,7 @@ func (d ServicesData) analyze(service *design.ServiceExpr) *Data {
 	{
 		scope = codegen.NewNameScope()
 		varName = codegen.Goify(service.Name, true)
-		pkgName = strings.ToLower(codegen.Goify(service.Name, false))
+		pkgName = scope.Unique(service, strings.ToLower(codegen.Goify(service.Name, false)), "svc")
 		seen = make(map[string]struct{})
 		seenErrors = make(map[string]struct{})
 		for _, e := range service.Methods {
