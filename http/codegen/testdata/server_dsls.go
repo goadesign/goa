@@ -81,3 +81,44 @@ var ServerPayloadResultErrorDSL = func() {
 		})
 	})
 }
+
+var ServerMultiEndpointsDSL = func() {
+	Service("ServiceMultiEndpoints", func() {
+		HTTP(func() {
+			Path("/server_multi_endpoints")
+		})
+		Method("MethodMultiEndpoints1", func() {
+			HTTP(func() {
+				GET("/{id}")
+			})
+		})
+		Method("MethodMultiEndpoints2", func() {
+			HTTP(func() {
+				POST("/")
+			})
+		})
+	})
+}
+
+var ServerFileServerDSL = func() {
+	Service("ServiceFileServer", func() {
+		HTTP(func() {
+			Path("/server_file_server")
+		})
+		Files("/file1.json", "/path/to/file1.json")
+		Files("/file2.json", "/path/to/file2.json")
+		Files("/file3.json", "/path/to/file3.json")
+	})
+}
+
+var ServerMixedDSL = func() {
+	Service("ServerMixed", func() {
+		Method("MethodMixed", func() {
+			HTTP(func() {
+				GET("/{id}")
+			})
+		})
+		Files("/file1.json", "/path/to/file1.json")
+		Files("/file2.json", "/path/to/file2.json")
+	})
+}

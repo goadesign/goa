@@ -4,7 +4,7 @@ import (
 	"context"
 	"log"
 
-	"goa.design/goa/examples/cellar/gen/sommelier"
+	sommelier "goa.design/goa/examples/cellar/gen/sommelier"
 )
 
 // sommelier service example implementation.
