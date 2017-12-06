@@ -99,7 +99,7 @@ func Version(ver string) {
 	}
 }
 
-// Description can be used in: API, Resource, Action, or MediaType
+// Description can be used in: API, Resource, Action, MediaType, Attribute, Response or ResponseTemplate
 //
 // Description sets the definition description.
 func Description(d string) {
