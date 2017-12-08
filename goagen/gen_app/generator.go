@@ -79,8 +79,9 @@ func (g *Generator) Generate() (_ []string, err error) {
 
 	codegen.Reserved[g.Target] = true
 
-	os.RemoveAll(g.OutDir)
-
+	if err := utils.RemoveFiles(g.OutDir); err != nil {
+		return nil, err
+	}
 	if err := os.MkdirAll(g.OutDir, 0755); err != nil {
 		return nil, err
 	}

@@ -99,7 +99,7 @@ func (g *Generator) Generate() (_ []string, err error) {
 	}
 
 	g.OutDir = filepath.Join(g.OutDir, "js")
-	if err := os.RemoveAll(g.OutDir); err != nil {
+	if err := utils.RemoveFiles(g.OutDir); err != nil {
 		return nil, err
 	}
 	if err := os.MkdirAll(g.OutDir, 0755); err != nil {

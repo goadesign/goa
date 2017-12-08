@@ -119,7 +119,7 @@ func (g *Generator) Generate() (_ []string, err error) {
 			}
 
 			cliDir = filepath.Join(g.OutDir, g.ToolDirName, "cli")
-			if err = os.RemoveAll(cliDir); err != nil {
+			if err = utils.RemoveFiles(cliDir); err != nil {
 				return
 			}
 			if err = os.MkdirAll(cliDir, 0755); err != nil {
@@ -128,7 +128,7 @@ func (g *Generator) Generate() (_ []string, err error) {
 		}
 
 		pkgDir = filepath.Join(g.OutDir, g.Target)
-		if err = os.RemoveAll(pkgDir); err != nil {
+		if err = utils.RemoveFiles(pkgDir); err != nil {
 			return
 		}
 		if err = os.MkdirAll(pkgDir, 0755); err != nil {

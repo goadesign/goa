@@ -80,7 +80,9 @@ func (g *Generator) Generate() (_ []string, err error) {
 	}
 
 	swaggerDir := filepath.Join(g.OutDir, "swagger")
-	os.RemoveAll(swaggerDir)
+	if err := utils.RemoveFiles(swaggerDir); err != nil {
+		return nil, err
+	}
 	if err = os.MkdirAll(swaggerDir, 0755); err != nil {
 		return nil, err
 	}
