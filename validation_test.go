@@ -81,3 +81,31 @@ func TestValidateFormat(t *testing.T) {
 		}
 	}
 }
+
+func TestValidatePattern(t *testing.T) {
+	var (
+		name      = "foo"
+		pattern   = "^goa$"
+		matched   = "goa"
+		unmatched = "foo["
+	)
+	cases := map[string]struct {
+		name     string
+		val      string
+		pattern  string
+		expected error
+	}{
+		"matched value":   {name, matched, pattern, nil},
+		"unmatched value": {name, unmatched, pattern, InvalidPatternError(name, unmatched, pattern)},
+	}
+
+	for k, tc := range cases {
+		actual := ValidatePattern(tc.name, tc.val, tc.pattern)
+		if actual != tc.expected {
+			// Compare only the messages because the error has always a new error ID.
+			if actual.Error() != tc.expected.Error() {
+				t.Errorf("%s: got %#v, expected %#v", k, actual, tc.expected)
+			}
+		}
+	}
+}
