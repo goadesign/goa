@@ -5,7 +5,7 @@ package goa
 import (
 	"regexp"
 	"strings"
-	"sync/atomic"
+	"sync"
 	"time"
 
 	"github.com/armon/go-metrics"
@@ -18,8 +18,11 @@ const (
 )
 
 var (
-	// metriks atomic value storage
-	metriks atomic.Value
+	// metriks contains current collector
+	metriks Collector
+
+	// metriksMu is mutex for metriks variable
+	metriksMu sync.Mutex
 
 	// invalidCharactersRE is the invert match of validCharactersRE
 	invalidCharactersRE = regexp.MustCompile(`[\*/]`)
@@ -28,13 +31,31 @@ var (
 	validCharactersRE = regexp.MustCompile(`^[a-zA-Z_][a-zA-Z0-9_:]*$`)
 )
 
-func init() {
-	m, err := metrics.New(metrics.DefaultConfig("service"), NewNoOpSink())
-	if err != nil {
-		panic("Unable to instantiate default metrics sink")
-	}
+// Collector is the interface used for collecting metrics.
+type Collector interface {
+	AddSample(key []string, val float32)
+	EmitKey(key []string, val float32)
+	IncrCounter(key []string, val float32)
+	MeasureSince(key []string, start time.Time)
+	SetGauge(key []string, val float32)
+}
 
-	SetMetrics(m)
+func init() {
+	SetMetrics(NewNoOpCollector())
+}
+
+// newNoOpCollecter implements Collector, but provides no collection.
+type noOpCollecter struct{}
+
+func (*noOpCollecter) AddSample(key []string, val float32)        {}
+func (*noOpCollecter) EmitKey(key []string, val float32)          {}
+func (*noOpCollecter) IncrCounter(key []string, val float32)      {}
+func (*noOpCollecter) MeasureSince(key []string, start time.Time) {}
+func (*noOpCollecter) SetGauge(key []string, val float32)         {}
+
+// NewNoOpCollector returns a Collector that does no collection.
+func NewNoOpCollector() Collector {
+	return &noOpCollecter{}
 }
 
 // NewNoOpSink returns a NOOP sink.
@@ -64,8 +85,18 @@ func NewMetrics(conf *metrics.Config, sink metrics.MetricSink) (err error) {
 }
 
 // SetMetrics initializes goa's metrics instance with the supplied metrics adapter interface.
-func SetMetrics(m *metrics.Metrics) {
-	metriks.Store(m)
+func SetMetrics(m Collector) {
+	metriksMu.Lock()
+	metriks = m
+	metriksMu.Unlock()
+}
+
+// GetMetrics returns goa's metrics collector adapter interface.
+func GetMetrics() Collector {
+	metriksMu.Lock()
+	m := metriks
+	metriksMu.Unlock()
+	return m
 }
 
 // AddSample adds a sample to an aggregated metric
@@ -75,7 +106,7 @@ func SetMetrics(m *metrics.Metrics) {
 func AddSample(key []string, val float32) {
 	normalizeKeys(key)
 
-	metriks.Load().(*metrics.Metrics).AddSample(key, val)
+	GetMetrics().AddSample(key, val)
 }
 
 // EmitKey emits a key/value pair
@@ -84,7 +115,7 @@ func AddSample(key []string, val float32) {
 func EmitKey(key []string, val float32) {
 	normalizeKeys(key)
 
-	metriks.Load().(*metrics.Metrics).EmitKey(key, val)
+	GetMetrics().EmitKey(key, val)
 }
 
 // IncrCounter increments the counter named by `key`
@@ -93,7 +124,7 @@ func EmitKey(key []string, val float32) {
 func IncrCounter(key []string, val float32) {
 	normalizeKeys(key)
 
-	metriks.Load().(*metrics.Metrics).IncrCounter(key, val)
+	GetMetrics().IncrCounter(key, val)
 }
 
 // MeasureSince creates a timing metric that records
@@ -105,7 +136,7 @@ func IncrCounter(key []string, val float32) {
 func MeasureSince(key []string, start time.Time) {
 	normalizeKeys(key)
 
-	metriks.Load().(*metrics.Metrics).MeasureSince(key, start)
+	GetMetrics().MeasureSince(key, start)
 }
 
 // SetGauge sets the named gauge to the specified value
@@ -114,7 +145,7 @@ func MeasureSince(key []string, start time.Time) {
 func SetGauge(key []string, val float32) {
 	normalizeKeys(key)
 
-	metriks.Load().(*metrics.Metrics).SetGauge(key, val)
+	GetMetrics().SetGauge(key, val)
 }
 
 // This function is used to make metric names safe for all metric services. Specifically, prometheus does
