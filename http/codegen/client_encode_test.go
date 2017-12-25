@@ -1,7 +1,6 @@
 package codegen
 
 import (
-	"os"
 	"strings"
 	"testing"
 
@@ -154,16 +153,10 @@ func TestClientEncode(t *testing.T) {
 		{"body-query-path-user", testdata.PayloadBodyQueryPathUserDSL, testdata.PayloadBodyQueryPathUserEncodeCode},
 		{"body-query-path-user-validate", testdata.PayloadBodyQueryPathUserValidateDSL, testdata.PayloadBodyQueryPathUserValidateEncodeCode},
 	}
-	var golden *os.File
-	makegolden := os.Getenv("GOLDEN") != ""
-	if makegolden {
-		f, err := os.OpenFile("testdata/payload_encode_functions.go", os.O_CREATE|os.O_WRONLY, 0600)
-		if err != nil {
-			t.Fatal(err)
-		}
-		defer f.Close()
-		f.WriteString("package testdata\n")
-		golden = f
+	golden := makeGolden(t, "testdata/payload_encode_functions.go")
+	if golden != nil {
+		golden.WriteString("package testdata\n")
+		defer golden.Close()
 	}
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
@@ -178,7 +171,7 @@ func TestClientEncode(t *testing.T) {
 			}
 			code := codegen.SectionCode(t, sections[2])
 
-			if makegolden {
+			if golden != nil {
 				name := codegen.Goify(c.Name, true)
 				name = strings.Replace(name, "Uint", "UInt", -1)
 				code = "\nvar Payload" + name + "EncodeCode = `" + code + "`"

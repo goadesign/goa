@@ -1,6 +1,7 @@
 package codegen
 
 import (
+	"strings"
 	"testing"
 
 	"goa.design/goa/codegen"
@@ -118,7 +119,7 @@ func TestDecode(t *testing.T) {
 		{"body-string", testdata.PayloadBodyStringDSL, testdata.PayloadBodyStringDecodeCode},
 		{"body-string-validate", testdata.PayloadBodyStringValidateDSL, testdata.PayloadBodyStringValidateDecodeCode},
 		{"body-user", testdata.PayloadBodyUserDSL, testdata.PayloadBodyUserDecodeCode},
-		{"body-user-validate", testdata.PayloadBodyUserValidateDSL, testdata.PayloadUserBodyValidateDecodeCode},
+		{"body-user-validate", testdata.PayloadBodyUserValidateDSL, testdata.PayloadBodyUserValidateDecodeCode},
 		{"body-array-string", testdata.PayloadBodyArrayStringDSL, testdata.PayloadBodyArrayStringDecodeCode},
 		{"body-array-string-validate", testdata.PayloadBodyArrayStringValidateDSL, testdata.PayloadBodyArrayStringValidateDecodeCode},
 		{"body-array-user", testdata.PayloadBodyArrayUserDSL, testdata.PayloadBodyArrayUserDecodeCode},
@@ -152,6 +153,10 @@ func TestDecode(t *testing.T) {
 		{"body-query-path-user", testdata.PayloadBodyQueryPathUserDSL, testdata.PayloadBodyQueryPathUserDecodeCode},
 		{"body-query-path-user-validate", testdata.PayloadBodyQueryPathUserValidateDSL, testdata.PayloadBodyQueryPathUserValidateDecodeCode},
 	}
+	golden := makeGolden(t, "testdata/payload_decode_functions.go")
+	if golden != nil {
+		golden.WriteString("package testdata\n")
+	}
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
 			RunHTTPDSL(t, c.DSL)
@@ -164,7 +169,12 @@ func TestDecode(t *testing.T) {
 				t.Fatalf("got %d sections, expected at least 3", len(sections))
 			}
 			code := codegen.SectionCode(t, sections[2])
-			if code != c.Code {
+			if golden != nil {
+				name := codegen.Goify(c.Name, true)
+				name = strings.Replace(name, "Uint", "UInt", -1)
+				code = "\nvar Payload" + name + "DecodeCode = `" + code + "`"
+				golden.WriteString(code + "\n")
+			} else if code != c.Code {
 				t.Errorf("invalid code, got:\n%s\ngot vs. expected:\n%s", code, codegen.Diff(t, code, c.Code))
 			}
 		})
