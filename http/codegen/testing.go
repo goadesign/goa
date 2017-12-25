@@ -1,6 +1,7 @@
 package codegen
 
 import (
+	"os"
 	"testing"
 
 	"goa.design/goa/codegen/service"
@@ -13,4 +14,18 @@ func RunHTTPDSL(t *testing.T, dsl func()) *httpdesign.RootExpr {
 	service.Services = make(service.ServicesData)
 	HTTPServices = make(ServicesData)
 	return httpdesign.RunHTTPDSL(t, dsl)
+}
+
+// makeGolden returns a file object used to write test expectations. If
+// makeGolden returns nil then the test should not generate test
+// expectations.
+func makeGolden(t *testing.T, p string) *os.File {
+	if os.Getenv("GOLDEN") == "" {
+		return nil
+	}
+	f, err := os.OpenFile(p, os.O_CREATE|os.O_WRONLY, 0600)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return f
 }

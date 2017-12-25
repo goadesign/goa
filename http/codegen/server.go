@@ -359,8 +359,10 @@ func {{ .RequestDecoder }}(mux goahttp.Muxer, decoder func(*http.Request) goahtt
 		{{ .VarName }} = params["{{ .Name }}"]
 
 	{{- else }}{{/* not string and not any */}}
-		{{ .VarName }}Raw := params["{{ .Name }}"]
-		{{- template "path_conversion" . }}
+		{
+			{{ .VarName }}Raw := params["{{ .Name }}"]
+			{{- template "path_conversion" . }}
+		}
 
 	{{- end }}
 		{{- if .Validate }}
@@ -390,6 +392,7 @@ func {{ .RequestDecoder }}(mux goahttp.Muxer, decoder func(*http.Request) goahtt
 		{{- end }}
 
 	{{- else if .Slice }}
+	{
 		{{ .VarName }}Raw := r.URL.Query()["{{ .Name }}"]
 		{{- if .Required }}
 		if {{ .VarName }}Raw == nil {
@@ -404,6 +407,7 @@ func {{ .RequestDecoder }}(mux goahttp.Muxer, decoder func(*http.Request) goahtt
 		{{- if not .Required }}
 		}
 		{{- end }}
+	}
 
 	{{- else if .MapStringSlice }}
 		{{ .VarName }} = r.URL.Query()
@@ -414,6 +418,7 @@ func {{ .RequestDecoder }}(mux goahttp.Muxer, decoder func(*http.Request) goahtt
 		{{- end }}
 
 	{{- else if .Map }}
+	{
 		{{ .VarName }}Raw := r.URL.Query()
 		{{- if .Required }}
 		if len({{ .VarName }}Raw) == 0 {
@@ -436,8 +441,10 @@ func {{ .RequestDecoder }}(mux goahttp.Muxer, decoder func(*http.Request) goahtt
 		{{- if not .Required }}
 		}
 		{{- end }}
+	}
 
 	{{- else }}{{/* not string, not any, not slice and not map */}}
+	{
 		{{ .VarName }}Raw := r.URL.Query().Get("{{ .Name }}")
 		{{- if .Required }}
 		if {{ .VarName }}Raw == "" {
@@ -451,6 +458,7 @@ func {{ .RequestDecoder }}(mux goahttp.Muxer, decoder func(*http.Request) goahtt
 		{{- if not .Required }}
 		}
 		{{- end }}
+	}
 
 	{{- end }}
 		{{- if .Validate }}
@@ -480,6 +488,7 @@ func {{ .RequestDecoder }}(mux goahttp.Muxer, decoder func(*http.Request) goahtt
 		{{- end }}
 
 	{{- else if .Slice }}
+	{
 		{{ .VarName }}Raw := r.Header["{{ .CanonicalName }}"]
 		{{ if .Required }}if {{ .VarName }}Raw == nil {
 			err = goa.MergeErrors(err, goa.MissingFieldError("{{ .Name }}", "header"))
@@ -493,8 +502,10 @@ func {{ .RequestDecoder }}(mux goahttp.Muxer, decoder func(*http.Request) goahtt
 		{{- if not .Required }}
 		}
 		{{- end }}
+	}
 
 	{{- else }}{{/* not string, not any and not slice */}}
+	{
 		{{ .VarName }}Raw := r.Header.Get("{{ .Name }}")
 		{{- if .Required }}
 		if {{ .VarName }}Raw == "" {
@@ -509,6 +520,7 @@ func {{ .RequestDecoder }}(mux goahttp.Muxer, decoder func(*http.Request) goahtt
 		{{- if not .Required }}
 		}
 		{{- end }}
+	}
 	{{- end }}
 		{{- if .Validate }}
 		{{ .Validate }}
