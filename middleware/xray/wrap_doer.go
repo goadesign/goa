@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"github.com/goadesign/goa/client"
+	"github.com/goadesign/goa/middleware"
 )
 
 // wrapDoer is a client.Doer middleware that will create xray subsegments for traced requests.
@@ -29,6 +30,10 @@ func (r *wrapDoer) Do(ctx context.Context, req *http.Request) (*http.Response, e
 
 	sub := s.NewSubsegment(req.URL.Host)
 	defer sub.Close()
+
+	// update the context with the latest segment
+	ctx = middleware.WithTrace(ctx, sub.TraceID, sub.ID, sub.ParentID)
+	ctx = WithSegment(ctx, sub)
 
 	sub.RecordRequest(req, "remote")
 
