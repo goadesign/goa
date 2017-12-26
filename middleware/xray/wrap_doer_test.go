@@ -52,7 +52,7 @@ func TestWrapDoer(t *testing.T) {
 
 		doer.Expect("Do", func(c context.Context, r *http.Request) (*http.Response, error) {
 			Expect(r).To(Equal(req))
-			Expect(c).To(Equal(ctx))
+			Expect(ContextSegment(c).ParentID).To(Equal(segment.ID))
 			return &http.Response{StatusCode: 123}, nil
 		})
 
@@ -97,7 +97,8 @@ func TestWrapDoer(t *testing.T) {
 		var (
 			requestErr = errors.New("some request error")
 		)
-		doer.Expect("Do", func(context.Context, *http.Request) (*http.Response, error) {
+		doer.Expect("Do", func(c context.Context, r *http.Request) (*http.Response, error) {
+			Expect(ContextSegment(c).ParentID).To(Equal(segment.ID))
 			return nil, requestErr
 		})
 
