@@ -203,11 +203,13 @@ func analyzeConstant(decl *ast.GenDecl, fset *token.FileSet) (*ExportedConsts, e
 			if len(names) == 0 {
 				continue
 			}
-			comm, err := text(fset, v.Doc.Pos(), v.Doc.End())
-			if err != nil {
-				return nil, err
+			if v.Doc != nil {
+				comm, err := text(fset, v.Doc.Pos(), v.Doc.End())
+				if err != nil {
+					return nil, err
+				}
+				comments = append(comments, comm)
 			}
-			comments = append(comments, comm)
 		}
 	}
 	return &ExportedConsts{Names: names, Comments: comments}, nil
@@ -291,7 +293,7 @@ func newExportedFunc(fset *token.FileSet, decl *ast.FuncDecl) (*ExportedFunc, er
 	}, nil
 }
 
-// text extracts the text contained betwee start and end in the fset file set.
+// text extracts the text contained between start and end in the fset file set.
 func text(fset *token.FileSet, start, end token.Pos) (string, error) {
 	var (
 		f           = fset.File(start)
