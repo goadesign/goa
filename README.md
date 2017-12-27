@@ -1,591 +1,339 @@
-# goa v2
+# <img src="http://goa.design/img/goa-logo.svg">
 
-The big theme for goa v2 is composability. The package, code generation
-algorithms and generated code are all more modular and make fewer assumptions
-than goa v1 did. In particular:
+goa is a framework for building micro-services and APIs in Go using a unique
+design-first approach.
 
-* The DSL is layered in a transport agnostic package and an http package making
-  it possible to add other transports in the future (e.g. gRPC).
-* The DSL engine has a clear interface and can run arbitrary DSLs.
-* The generated code follows a strict separation of concern where the actual
-  service implementation is isolated from the transport code.
-* The goa package itself contains a lot less code, the generated code relies
-  mostly on stdlib types making it easier to interface with external code.
+---
+[![Build Status](https://travis-ci.org/goadesign/goa.svg?branch=v2)](https://travis-ci.org/goadesign/goa)
+[![Windows Build status](https://ci.appveyor.com/api/projects/status/vixp37loj5i6qmaf/branch/v2?svg=true)](https://ci.appveyor.com/project/RaphaelSimon/goa-oqtis/branch/master)
+[![Sourcegraph](https://sourcegraph.com/github.com/goadesign/goa/-/badge.svg)](https://sourcegraph.com/github.com/goadesign/goa?badge)
+[![Godoc](https://godoc.org/goa.design/goa?status.svg)](https://godoc.org/goa.design/goa)
+[![Slack](https://img.shields.io/badge/slack-gophers-orange.svg?style=flat)](https://gophers.slack.com/messages/goa/)
 
-The import path for goa v2 has changed from `github.com/goadesign/goa` to
-`goa.design/goa`.
+## Why goa?
 
-## Separation of Concerns
+goa takes a different approach to building services by making it possible to
+describe the *design* of the service API using a simple Go DSL. goa uses the
+description to generate specialized service helper code, client code and
+documentation. goa is extensible via plugins, for example the
+[goakit](https://github.com/goadesign/plugins/tree/master/goakit) plugin
+generates code that leverage the [go-kit](https://github.com/go-kit/kit)
+library.
 
-The DSL in goa v2 makes it possible to describe the services in a transport
-agnostic way. The service methods DSLs each describe the method input and output
-types. Transport specific DSL then describe how the method input is built from
-incoming data and how the output is serialized. For example, a method may specify
-that it accepts an object composed of two fields as input then the HTTP specific
-DSL may specify that one of the attributes is read from the incoming request
-headers while the other from the request body.
+The service design describes the transport independent layer of the services in
+the form of simple methods that accept a context and a payload and return a
+result and an error. The design also describes how the payloads, results and
+errors are serialized in the transport (HTTP or gRPC). For example a service
+method payload may be built from an HTTP request by extracting values from the
+request path, headers and body. This clean separation of layers makes it
+possible to expose the same service using multiple transports. It also promotes
+good design where the service business logic concerns are expressed and
+implemented separately from the transport logic.
 
-This clean decoupling means that the same service implementation can expose
-endpoints accessible via multiple transports (e.g., HTTP and - in the future -
-gRPC). goa takes care of generating all the transport specific code including
-marshaling, unmarshalling, validation, etc. so that user code can focus on the
-actual implementation.
+The goa DSL consists of Go functions so that it may be extended easily to avoid
+repetion and promote standards. The design code itself can easily be shared
+across multiple services by simply importing the corresponding Go package again
+promoting reuse and standardization across service boundaries.
 
-The new `http` directory contains packages implementing the DSL, design objects,
-code generation and runtime support for HTTP/HTTP APIs. The HTTP DSL is built on
-top of the core DSL package and add transport specific keywords to describe
-aspects specific to HTTP requests and responses.
+## Code Generation
 
-## New Data Types
+The goa tool accepts the Go design package import path as input and produces the
+interface as well as the glue that binds the service and client code with the
+underlying transport. The code is specific to the API so that for example there
+is no need to cast or "bind" any data structure prior to using the request
+payload or response result. The design may define validations in which case the
+generated code takes care of validating the incoming request payload prior to
+invoking the service method on the server, and validating the response prior to
+invoking the client code.
 
-The primitive types include `Int`, `Int32`, `Int64`, `UInt` `UInt32`, `UInt64`,
-`Float32`, `Float64` and `Bytes`. This makes it possible to support transports
-such as gRPC but also makes HTTP interface definitions crisper. The v1 types
-`Integer` and `Float` have been removed in favor of these new types.
+## Installation
 
-## Composable Code Generation
-
-Code generation now follows a 2-phase process where the first phase produces a
-set of writers each exposing templates that can be further modified before
-running the last phase which generates the final artifacts. This makes it
-possible for plugins to alter the code generated by the built-in code
-generators.
-
-## Getting Started
-
-Install goa:
-
-```bash
-go get goa.design/goa/...
+Assuming you have a working [Go](https://golang.org) setup:
+```
+go get -u goa.design/goa/...
 ```
 
-Write the service design:
+### Stable Versions
 
-```bash
-cd $GOPATH/src
-mkdir -p adder/design
-echo '
+goa follows [Semantic Versioning](http://semver.org/) which is a fancy way of saying it publishes
+releases with version numbers of the form `vX.Y.Z` and makes sure that your code can upgrade to new
+versions with the same `X` component without having to make changes.
+
+Releases are tagged with the corresponding version number. There is also a branch for each major
+version (`v1` and `v2`). The recommended practice is to vendor the stable branch.
+
+Current Release: `v2.0.0`
+Stable Branch: `v2`
+
+## Teaser
+
+### 1. Design
+
+Create the file `$GOPATH/src/calcsvc/design/design.go` with the following content:
+```go
 package design
 
 import . "goa.design/goa/http/design"
 import . "goa.design/goa/http/dsl"
 
-var _ = API("adder", func() {
-	Server("http://localhost:8080")
+// API describes the global properties of the API server.
+var _ = API("calc", func() {
+	Title("Calculator Service")
+	Description("HTTP service for adding numbers, a goa teaser")
 })
 
-var _ = Service("addersvc", func() {
+// Service describes a service
+var _ = Service("calc", func() {
+	Description("The calc service performs operations on numbers")
+	// Method describes a service method (endpoint)
 	Method("add", func() {
+		// Payload describes the method payload
+		// Here the payload is an object that consists of two fields
 		Payload(func() {
-			Attribute("left", Int, "Left operand")
-			Attribute("right", Int, "Right operand")
+			// Attribute describes an object field
+			Attribute("a", Int, "Left operand")
+      Attribute("b", Int, "Right operand")
+      // Both attributes must be provided when invoking "add"
+      Required("a", "b")
 		})
+		// Result describes the method result
+		// Here the result is a simple integer value
 		Result(Int)
+		// HTTP describes the HTTP transport mapping
 		HTTP(func() {
-			GET("/")
+			// Requests to the service consist of HTTP GET requests
+			// The payload fields are encoded as path parameters
+			GET("/add/{a}/{b}")
+			// Responses use a "200 OK" HTTP status
+			// The result is encoded in the response body
+			Response(StatusOK)
 		})
 	})
 })
-' > adder/design/design.go
 ```
+This file contains the design for a `calc` service which accepts HTTP GET
+requests to `/add/{a}/{b}` where `{a}` and `{b}` are placeholders for integer
+values. The API returns the sum of `a` and `b` in the HTTP response body.
 
-Generate the supporting code:
+### 2. Implement
 
-```bash
-goa gen adder/design
+Now that the design is done, let's run `goa` on the design package:
 ```
-
-Generate an **example** implementation:
-
-```bash
-goa example adder/design
+cd $GOPATH/src/calcsvc
+goa gen calcsvc/design
 ```
+This produces a `gen` directory with the following directory structure:
+```
+gen
+├── calc
+│   ├── client.go
+│   ├── endpoints.go
+│   └── service.go
+└── http
+    ├── calc
+    │   ├── client
+    │   │   ├── client.go
+    │   │   ├── cli.go
+    │   │   ├── encode_decode.go
+    │   │   ├── paths.go
+    │   │   └── types.go
+    │   └── server
+    │       ├── encode_decode.go
+    │       ├── paths.go
+    │       ├── server.go
+    │       └── types.go
+    ├── cli
+    │   └── cli.go
+    └── openapi.json
 
-> Note: the code generated by `goa gen` cannot be edited. This directory is
-> re-generated entirely from scratch each time the command is run (e.g. after
-> the design has changed). This is by design to keep the interface between
-> generated and non generated code clean. The code generated by `goa example`
-> however is *your* code. You should modify it, add tests to it etc. This
-> command generates a starting point for the service to help bootstrap
-> development - in particular it is not meant to be re-run when the design
-> changes.
+6 directories, 14 files
+```
+* `calc` contains the service endpoints and interface as well as a service
+  client.
+* `http` contains the HTTP transport layer. This layer maps the service
+  endpoints to HTTP handlers server side and HTTP client methods client side.
+  The `http` directory also contains a complete OpenAPI 2.0 spec of the service.
 
-## The Design DSL
+The `goa` tool also exposes a `example` command which generates an example
+implementation and provides a good starting point. Let's run it:
+```
+goa example calcsvc/design
+calc.go
+cmd/calccli/main.go
+cmd/calcsvc/main.go
+```
+The tool generated the `main` functions for two tools: one that runs the server
+and one the client. The tool also generated a dummy service implementation that
+prints a log message. Again note that the `example` command is intended to
+generate just that: an *example*, in particular it is not intended to be re-run
+each time the design changes.
 
-The following sections describe how to use the goa DSL to describe services.
-They provide an overview of the key concepts, review the
-[GoDocs](https://godoc.org/goa.design/goa/dsl) for a complete reference.
-### `API` Expression
-
-Like in v1 the top level DSL function in v2 is `API`. The `API` DSL lists the
-global properties of the API such as its hostname, its version number etc.
-One change compared to v1 is the use of `Server` instead of `Host` and `Scheme`
-to define API hosts. This provides a more flexible way to list multiple hosts
-and is inline with the OpenAPI v3 spec.
+Let's implement our service by providing a proper implementation for the `add`
+method. goa generated a payload struct for the `add` method that contains both
+fields. goa also generated the transport layer that takes care of decoding the
+request so all we have to do is to perform the actual sum. Edit the file
+`calc.go` and change the code of the `add` function as follows:
 
 ```go
-var _ = API("cellar", func() {
-    Title("The virtual wine cellar")
-    Version("1.0")
-    Description("An example of an API implemented with goa")
-    Server("https://service.goa.design:443", func() {
-        Description("Production host")
-    })
-    Server("https://service.test.goa.design:443", func() {
-        Description("Integration host")
-    })
-    Docs(func() {
-        Description("goa guide")
-        URL("http://goa.design/getting-started.html")
-    })
-    Contact(func() {
-        Name("goa team")
-        Email("admin@goa.design")
-        URL("http://goa.design")
-                })
-    License(func() {
-        Name("MIT")
-    })
-})
-```
-
-### `Service` Expression
-
-The `Service` DSL defines a group of methods. This maps to a resource in REST or
-a `service` declaration in gRPC. A service may define common error responses to
-all the service methods, more on error responses in the next section.
-
-```go
-// The "account" service.
-var _ = Service("account", func() {
-    // Error which applies to all methods.
-    Error(ErrUnauthorized, Unauthorized)
-    
-    // HTTP transport properties.
-    HTTP(func() {
-        Path("/accounts")
-    })
+// Add returns the sum of attributes a and b of p.
+func (s *calcsvcSvc) Add(ctx context.Context, p *calcsvc.AddPayload) (int, error) {
+	return p.A + p.B, nil
 }
 ```
 
-The `HTTP` function makes it possible to define HTTP specific properties such as
- a common base path to all HTTP requests.
+That's it! we have now a full-fledged HTTP service with a corresponding OpenAPI
+specification and a client tool.
 
-### `Method` Expression
+### 3. Run
 
-The service methods are described using `Method`. This function defines the
-method payload (input) and result (output) types. It may also list an arbitrary
-number of error return values. An error return value has a name and optionally a
-type. Omitting the payload or result type has the same effect as using the
-built-in type `Empty` which maps to an empty body in HTTP and to the `Empty`
-message in gRPC.
+Now let's compile and run the service:
 
-```go
-    Method("update", func() {
-        Description("Change account name")
-        Payload(UpdateAccount)
-        Result(Empty)
-        Error(ErrNotFound)
-        Error(ErrBadRequest, ErrorResult)
+```
+cd $GOPATH/src/calcsvc/cmd/calcsvc
+go build
+./calcsvc
+[calc] 04:27:45 [INFO] service "calc" method "Add" mounted on GET /add/{a}/{b}
+[calc] 04:27:45 [INFO] listening on :8080
 ```
 
-The payload, result and error types define the input and output *independently
-of the transport*.
+Open a new console and compile the generated CLI tool:
 
-The `HTTP` function defines the mapping of the payload and result type
-attributes to the HTTP request path and query string values as well as the HTTP
-request and response and bodies. The `HTTP` function also defines other HTTP
-specific properties such as the request path, the response HTTP status codes
-etc.
-
-```go
-    Method("update", func() {
-        Description("Change account name")
-        Payload(UpdateAccount)
-        Result(Empty)
-        Error(ErrNotFound)
-        Error(ErrBadRequest, ErrorResult)
-
-        // HTTP transport
-        HTTP(func() {
-            PUT("/{accountID}")    // "accountID" UpdateAccount attribute
-            Body(func() {
-                Attribute("name")  // "name" UpdateAccount attribute
-                Required("name")
-            })
-            Response(NoContent)
-            Error(ErrNotFound, NotFound)
-            Error(ErrBadRequest, BadRequest, ErrorResult)
-        })
-    })
+```
+cd $GOPATH/src/calcsvc/cmd/calccli
+go build
 ```
 
-### Method Payload Type
+and run it:
 
-In the example above the `accountID` HTTP request path parameter is defined by
-the attribute of the `UpdateAccount` type with the same name and so is the body
-attribute `name`.
-
-Any attribute that is not explicitly mapped by the `HTTP` function is implicitly
-mapped to request body attributes. This makes it simple to define mappings where
-only one of the fields for the payload type is mapped to a HTTP header, and all
-other fields are mapped to the HTTP request body.
-
-The body attributes may also be listed explicitly using the `Body` function.
-This function accepts either a DSL listing the body attributes or the name of a
-request type attribute whose type defines the body as a whole. The latter makes
-it possible to use any arbitrary type to describe request body and not just
-object, for example, the attribute (and thus the body) could be an array.
-
-Implicit request body definition:
-
-```go
-        HTTP(func() {
-            PUT("/{accountID}")    // "accountID" request attribute
-            Response(NoContent)
-            Error(ErrNotFound, NotFound)
-            Error(ErrBadRequest, BadRequest, ErrorResult)
-        })
+```
+./calccli -a 1 -b 2
+3
 ```
 
-Array body definition:
+The tool includes contextual help:
+```
+./calccli --help
+./calccli is a command line client for the calc API.
 
-```go
-        HTTP(func() {
-            PUT("/")
-            Body("names") // Assumes request type has attribute "names"
-            Response(NoContent)
-            Error(ErrNotFound, NotFound)
-            Error(ErrBadRequest, BadRequest, ErrorResult)
-        })
+Usage:
+    ./calccli [-url URL][-timeout SECONDS][-verbose|-v] SERVICE ENDPOINT [flags]
+
+    -url URL:    specify service URL (http://localhost:8080)
+    -timeout:    maximum number of seconds to wait for response (30)
+    -verbose|-v: print request and response details (false)
+
+Commands:
+    calc add
+    
+Additional help:
+    ./calccli SERVICE [ENDPOINT] --help
+
+Example:
+    ./calccli calc add --a 5952269320165453119 --b 1828520165265779840
 ```
 
-### Method Result Type
+Help is also available on each command:
 
-While a service may only define one result type the `HTTP` function may list
-multiple responses. Each response defines the HTTP status code, response body
-shape (if any) and may also list HTTP headers. The `Tag` DSL function makes it
-possible to define an attribute of the result type that is used to determine
-which HTTP response to send. The function specifies the name of a result type
-attribute and the value the attribute must have for the response in which the
-tag is defined to be used to write the HTTP response.
+```
+./calccli calc add --help
+./calccli [flags] calc add -a INT -b INT
 
-By default, the shape of the body of responses with HTTP status code 200 is
-described by the method result type. The `HTTP` function may optionally use
-result type attributes to define response headers. Any attribute of the result
-type that is not explicitly used to define a response header defines a field of
-the response body implicitly. This alleviates the need to repeat all the result
-type attributes to define the body since in most cases only a few would map to
-headers.
+Add implements add.
+    -a INT: Left operand
+    -b INT: Right operand
 
-The response body may also be explicitly described using the function `Body`.
-The function works identically as when used to describe the request body: it may
-be given a list of result type attributes in which case the body shape is an
-object or the name of a specific attribute in which case the response body shape
-is dictated by the type of the attribute.
-
-```go
-    Method("index", func() {
-        Description("Index all accounts")
-        Payload(ListAccounts)
-        Result(func() {
-            Attribute("marker", String, "Pagination marker")
-            Attribute("accounts", CollectionOf(Account), "list of accounts")
-        })
-        HTTP(func() {
-            GET("")
-            Response(StatusOK, func() {
-                Header("marker")
-                Body("accounts")
-            })
-        })
-    })
+Example:
+    ./calccli calc add --a 5952269320165453119 --b 1828520165265779840
 ```
 
-The example above produces response bodies of the form
-`[{"name"="foo"},{"name"="bar"}]` assuming the type `Account` only has a `name`
-attribute. The same example but with the line defining the response body
-(`Body("accounts")`) removed produces response bodies of the form:
-`{"accounts":[{"name"="foo"},{"name"="bar"}]` since `accounts` isn't used to
-define headers.
+Now let's see how robust our code is and try to use non integer values:
 
-### Data Types
+```
+./calccli calc add -a 1 -b foo
+invalid value for b, must be INT
+run './calccli --help' for detailed usage.
+```
 
-Like in v1, the types supported in the DSL are primitive types, array, map and
-object types (note the change of nomenclature and DSL from `hash` to `map`).
+As you can see the generated tool validated the command line arguments against
+the types defined in the design. The server also validates the types when
+decoding incoming requests so that your code only has to deal with the business
+logic.
 
-The list of primitive types in v2 is:
+### 4. Document
 
-* `Boolean`
-* `Int`, `Int32`, `Int64`, `UInt`, `UInt32`, `UInt64`
-* `Float32`, `Float64`
-* `String`, `Bytes`
-* `Any` (maps to any type, primitive or not)
+The `http` directory contains the OpenAPI 2.0 specification in both YAML and
+JSON format.
 
-Like in v1 arrays can be declared in one of two ways:
-
-* `ArrayOf()` which accepts any type or result type and returns a type
-* `CollectionOf()` which accepts result types only and returns a result type
-
-The result type returned by `CollectionOf` contains the same views as the result
-type given as argument. Each view simply renders an array where each element has
-been projected using the corresponding element view.
-
-Like in v1 the goa DSL makes it possible to define both user and result types
-(called media types in v1). Result types are user types that also define views.
-The DSL for defining user types and result types is the same as in v1 (using
-`Type` and `ResultType` respectively).
-
-### Payload to HTTP request mapping
-
-The payload types describe the shape of the data given as an argument to the
-service methods. The HTTP transport specific DSL defines how the data is built
-from the incoming HTTP request state.
-
-The HTTP request state comprises four different parts:
-
-- The URL path parameters (for example the route `/bottle/{id}` defines the `id` path parameter)
-- The URL query string parameters
-- The HTTP headers
-- And finally the HTTP request body
- 
-The HTTP expressions drive how the generated code decodes the request into the
-payload type:
-
-* The `Param` expression defines values loaded from path or query string
-  parameters.
-* The `Header` expression defines values loaded from HTTP headers.
-* The `Body` expression defines values loaded from the request body.
-
-The next two sections describe the expressions in more details. 
-
-Note that the generated code provides a default decoder implementation that
-ought to be sufficient in most cases however it also makes it possible to plug a
-user provided decoder in the (hopefully rare) cases when that's needed.
- 
-#### Mapping payload with non-object types
-
-When the payload type is a primitive type (i.e. one of String, any of the
-integer of float types, Bool or Bytes), an array or a map then the value is
-loaded from:
-
-- the first URL path parameter defined in the design if any
-- otherwise the first query string parameter defined in the design if any
-- otherwise the first header defined in the design if any
-- otherwise the body
-
-with the following restrictions:
-
-- only primitive or array types may be used to define path parameters or headers
-- only primitive, array and map types may be used to define query string parameters
-- array and map types used to define path parameters, query string parameters or
-  headers must use primitive types to define their elements
-
-Arrays in paths and headers are represented using comma separated values.
-
-Examples:
-
-* simple "get by identifier" where identifiers are integers:
+The specification can easily be served from the service itself using a file
+server. The [Files](http://godoc.org/goa.design/goa/http/dsl/http.go#Files) DSL
+function makes it possible to server static file. Edit the file
+`design/design.go` and add:
 
 ```go
-Method("show", func() {
-    Payload(Int)
-    HTTP(func() {
-        GET("/{id}")
-    })
+var _ = Service("openapi", func() {
+  // Serve the file with relative path ../../gen/http/openapi.json for requests
+  // sent to /swagger.json.
+  Files("/swagger.json", "../../gen/http/openapi.json")
 })
 ```
 
-| Generated method | Example request | Corresponding call |
-| ---------------- | --------------- | ------------------ |
-| Show(int)        | GET /1          | Show(1)            |
+Re-run `goa gen calcsvc/design` and note the new directory `gen/openapi`
+containing the implementation for a HTTP handler that serves the `openapi.json`
+file.
 
-* bulk "delete by identifiers" where identifiers are strings:
-
-```go
-Method("delete", func() {
-    Payload(ArrayOf(String))
-    HTTP(func() {
-        DELETE("/{ids}")
-    })
-})
-```
-
-| Generated method   | Example request | Corresponding call         |
-| ------------------ | --------------- | -------------------------- |
-| Delete([]string)   | DELETE /a,b     | Delete([]string{"a", "b"}) |
-
-
-> Note that in both the previous examples the name of the path parameter is
-> irrelevant.
-
-* array in query string:
+All we need to do is mount the handler on the service mux. Add the corresponding
+import statement:
 
 ```go
-Method("list", func() {
-    Payload(ArrayOf(String))
-    HTTP(func() {
-        GET("")
-        Param("filter")
-    })
-})
+import openapisvr "calcsvc/gen/http/openapi/server"
 ```
 
-| Generated method | Example request         | Corresponding call       |
-| ---------------- | ----------------------- | ------------------------ |
-| List([]string)   | GET /?filter=a&filter=b | List([]string{"a", "b"}) |
-
-* float in header:
+and mount the handler by adding the following line in `cmd/calcsvc/main.go`
+after the mux creation (e.g. one the line after the `// Configure the mux.`
+comment):
 
 ```go
-Method("list", func() {
-    Payload(Float32)
-    HTTP(func() {
-        GET("")
-        Header("version")
-    })
-})
+openapisvr.Mount(mux)
 ```
 
-| Generated method | Example request     | Corresponding call |
-| ---------------- | ------------------- | ------------------ |
-| List(float32)    | GET / [version=1.0] | List(1.0)          |
+That's it, we now have a self-documenting service! Stop the running service
+with CTRL-C. Rebuild and re-run it then make requests to the newly added
+`/swagger.json` endpoint:
 
-* map in body:
-
-```go
-Method("create", func() {
-    Payload(MapOf(String, Int))
-    HTTP(func() {
-        POST("")
-    })
-})
+```
+^C[calc] 05:04:28 exiting (interrupt)
+[calc] 05:04:28 exited
+go build
+./calcsvc
 ```
 
-| Generated method       | Example request         | Corresponding call                     |
-| ---------------------- | ----------------------- | -------------------------------------- |
-| Create(map[string]int) | POST / {"a": 1, "b": 2} | Create(map[string]int{"a": 1, "b": 2}) |
+In a different console:
 
-#### Mapping payload with object types
-
-The HTTP expressions describe how the payload object attributes are loaded from
-the HTTP request state. Different attributes may be loaded from different parts
-of the request: some attributes may be loaded from the request path, some from
-the query string parameters and others from the body for example. The same type
-restrictions apply to the path, query string and header attributes (attributes
-describing path and headers must be primitives or arrays of primitives and
-attributes describing query string parameters must be primitives, arrays or maps
-of primitives).
-
-The `Body` expression makes it possible to define the payload type attribute
-that describes the request body. Alternatively if the `Body` expression is
-omitted then all attributes that make up the payload type and that are not used
-to define a path parameter, a query string parameter or a header implicitly
-describe the body.
-
-For example, given the payload:
-
-```go
-Method("create", func() {
-    Payload(func() {
-        Attribute("id", Int)
-        Attribute("name", String)
-        Attribute("age", Int)
-    })
-})
+```
+curl localhost:8080/swagger.json
+{"swagger":"2.0","info":{"title":"Calculator Service","description":...
 ```
 
-The following HTTP expression causes the `id` attribute to get loaded from the
-path parameter while `name` and `age` are loaded from the request body:
+## Resources
 
-```go 
-Method("create", func() {
-    Payload(func() {
-        Attribute("id", Int)
-        Attribute("name", String)
-        Attribute("age", Int)
-    })
-    HTTP(func() {
-        POST("/{id}")
-    })
-})
-```
+Consult the following resources to learn more about goa.
 
-| Generated method       | Example request                 | Corresponding call                               |
-| ---------------------- | ------------------------------- | ------------------------------------------------ |
-| Create(*CreatePayload) | POST /1 {"name": "a", "age": 2} | Create(&CreatePayload{ID: 1, Name: "a", Age: 2}) |
+### goa.design
 
-`Body` makes it possible to describe request bodies that are not objects such as
-arrays or maps.
+[goa.design](https://goa.design) contains further information on goa including a getting
+started guide, detailed DSL documentation as well as information on how to implement a goa service.
 
-Consider the following payload:
+### Examples
 
-```go 
-Method("rate", func() {
-    Payload(func() {
-        Attribute("id", Int)
-        Attribute("rates", MapOf(String, Float64))
-    })
-})
-```
+The [examples](https://github.com/goadesign/examples) repo contains simple examples illustrating
+basic concepts.
 
-Using the following HTTP expression the rates are loaded from the body:
+The [goa-cellar](https://github.com/goadesign/goa-cellar) repo contains the implementation for a
+goa service which demonstrates many aspects of the design language. It is kept up-to-date and
+provides a reference for testing functionality.
 
-```go 
-Method("rate", func() {
-    Payload(func() {
-        Attribute("id", Int)
-        Attribute("rates", MapOf(String, Float64))
-    })
-    HTTP(func() {
-        PUT("/{id}")
-        Body("rates")
-    })
-})
-```
+## Contributing
 
-| Generated method   | Example request             | Corresponding call                                                       |
-| ------------------ | --------------------------- | ------------------------------------------------------------------------ |
-| Rate(*RatePayload) | PUT /1 {"a": 0.5, "b": 1.0} | Rate(&RatePayload{ID: 1, Rates: map[string]float64{"a": 0.5, "b": 1.0}}) |
-
-Without `Body` the request body shape would be an object with one key `rates`.
-
-#### Mapping HTTP element names to attribute names
-
-The expressions used to describe the HTTP request elements `Param`, `Header` and
-`Body` may provide a mapping between the names of the elements (query string
-key, header name or body field name) and the corresponding payload attribute
-name. The mapping is defined using the syntax `"attribute name:element name"`,
-for example:
-
-```go 
-Header("version:X-Api-Version")
-```
-
-The above causes the `version` attribute value to get loaded from the
-`X-Api-Version` HTTP header.
-
-The `Body` expression supports an alternative syntax where the attributes that
-make up the body can be explicitly listed. This syntax allows for specifying a
-mapping between the incoming data field names and the payload attribute names,
-for example:
-
-```go 
-Method("create", func() {
-    Payload(func() {
-        Attribute("name", String)
-        Attribute("age", Int)
-    })
-    HTTP(func() {
-        POST("")
-        Body(func() {
-            Attribute("name:n")
-            Attribute("age:a")
-        })
-    })
-})
-```
-
-| Generated method       | Example request            | Corresponding call                               |
-| ---------------------- | -------------------------- | ------------------------------------------------ |
-| Create(*CreatePayload) | POST /1 {"n": "a", "a": 2} | Create(&CreatePayload{ID: 1, Name: "a", Age: 2}) |
+Did you fix a bug? write docs or additional tests? or implement some new awesome functionality?
+You're a rock star!! Just make sure that `make` succeeds (or that TravisCI is green) and send a PR
+over.
