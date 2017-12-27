@@ -425,7 +425,12 @@ func {{ $test.Name }}(t goatest.TInterface, ctx context.Context, service *goa.Se
 	{{ $goaCtx := $test.Escape "goaCtx" }}{{ $goaCtx }} := goa.NewContext(goa.WithAction(ctx, "{{ $test.ResourceName }}Test"), {{ $rw }}, {{ $req }}, {{ $prms }})
 	{{ $test.ContextVarName }}, {{ $err := $test.Escape "err" }}{{ $err }} := {{ $test.ContextType }}({{ $goaCtx }}, {{ $req }}, service)
 	if {{ $err }} != nil {
-		panic("invalid test data " + {{ $err }}.Error()) // bug
+		{{ $e := $test.Escape "e" }}{{ $e }}, {{ $ok := $test.Escape "ok" }}{{ $ok }} := {{ $err }}.(goa.ServiceError)
+		if !{{ $ok }} {
+			panic("invalid test data " + {{ $err }}.Error()) // bug
+		}
+{{ if not $test.ReturnsErrorMedia }}		t.Errorf("unexpected parameter validation error: %+v", {{ $e }})
+{{ end }}{{ if $test.ReturnType }}		return nil, {{ if $test.ReturnsErrorMedia }}{{ $e }}{{ else }}nil{{ end }}{{ else }}return nil{{ end }}
 	}
 	{{ if $test.Payload }}{{ $test.ContextVarName }}.Payload = {{ $test.Payload.Name }}{{ end }}
 
