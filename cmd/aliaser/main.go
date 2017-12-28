@@ -295,7 +295,7 @@ import (
 	// alias implementations.
 	aliasConstT = `const (
 {{- range $i, $n := .Names}}
-{{- $commLen := len $.Comments }}{{- if gt $commLen 0 }}
+{{- if $.Comments }}
 {{ index $.Comments $i }}
 {{- end }}
 {{ $n }} = design.{{ $n }}
