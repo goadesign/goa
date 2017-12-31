@@ -46,7 +46,7 @@ type Generator struct {
 func Generate() (files []string, err error) {
 	var (
 		outDir, toolDir, designPkg, target, ver string
-		force, regen                            bool
+		force, notool, regen                    bool
 	)
 
 	set := flag.NewFlagSet("main", flag.PanicOnError)
@@ -55,6 +55,7 @@ func Generate() (files []string, err error) {
 	set.StringVar(&target, "pkg", "app", "")
 	set.StringVar(&ver, "version", "", "")
 	set.StringVar(&toolDir, "tooldir", "tool", "")
+	set.BoolVar(&notool, "notool", false, "")
 	set.BoolVar(&force, "force", false, "")
 	set.BoolVar(&regen, "regen", false, "")
 	set.Bool("notest", false, "")

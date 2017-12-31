@@ -38,7 +38,7 @@ type Generator struct {
 func Generate() (files []string, err error) {
 	var (
 		outDir, toolDir, target, ver string
-		notest, regen                bool
+		notest, notool, regen        bool
 	)
 
 	set := flag.NewFlagSet("app", flag.PanicOnError)
@@ -48,6 +48,7 @@ func Generate() (files []string, err error) {
 	set.StringVar(&ver, "version", "", "")
 	set.StringVar(&toolDir, "tooldir", "tool", "")
 	set.BoolVar(&notest, "notest", false, "")
+	set.BoolVar(&notool, "notool", false, "")
 	set.BoolVar(&regen, "regen", false, "")
 	set.Bool("force", false, "")
 	set.Parse(os.Args[1:])
