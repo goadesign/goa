@@ -40,7 +40,7 @@ func Generate(dir, cmd string) ([]string, error) {
 		genpkg = pkg.ImportPath
 	}
 
-	// 3. Retrieve goa generators for give command.
+	// 3. Retrieve goa generators for given command.
 	var genfuncs []Genfunc
 	{
 		gs, err := Generators(cmd)

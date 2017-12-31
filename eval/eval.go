@@ -94,7 +94,7 @@ func validateSet(set ExpressionSet) error {
 	return Context.Errors
 }
 
-// finalizeSet runs the validation on all the set expressions that define one.
+// finalizeSet runs the finalizer on all the set expressions that define one.
 func finalizeSet(set ExpressionSet) error {
 	for _, def := range set {
 		if def == nil {
