@@ -152,3 +152,16 @@ func (ma *MappedAttributeExpr) Merge(other *MappedAttributeExpr) {
 		}
 	}
 }
+
+// FindKey finds the given key in the mapped attribute expression.
+// If key is found, it returns the transport element name of the key and true.
+// Otherwise, it returns an empty string and false.
+func (ma *MappedAttributeExpr) FindKey(keyName string) (string, bool) {
+	obj := AsObject(ma.Type)
+	for _, nat := range *obj {
+		if nat.Name == keyName {
+			return ma.ElemName(keyName), true
+		}
+	}
+	return "", false
+}

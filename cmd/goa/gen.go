@@ -193,7 +193,7 @@ const mainT = `func main() {
 	if *version != pkg.Version() {
 		fail("cannot run generator produced by goa version %s and compiled with goa version %s\n", *version, pkg.Version())
 	}
-        if err := eval.Context.Errors; err != nil {
+	if err := eval.Context.Errors; err != nil {
 		fail(err.Error())
 	}
 	if err := eval.RunDSL(); err != nil {
