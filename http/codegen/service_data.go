@@ -798,6 +798,7 @@ func buildPayloadData(svc *service.Data, s *httpdesign.ServiceExpr, e *httpdesig
 				FieldName: p.FieldName,
 				TypeName:  p.TypeName,
 				TypeRef:   p.TypeRef,
+				Required:  p.Required,
 				Validate:  p.Validate,
 				Example:   p.Example,
 			})
@@ -809,6 +810,7 @@ func buildPayloadData(svc *service.Data, s *httpdesign.ServiceExpr, e *httpdesig
 				FieldName: h.FieldName,
 				TypeName:  h.TypeName,
 				TypeRef:   h.TypeRef,
+				Required:  h.Required,
 				Validate:  h.Validate,
 				Example:   h.Example,
 			})
