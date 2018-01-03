@@ -15,7 +15,7 @@ func FromString(input string) (UUID, error) {
 
 // NewV4 Wrapper over the real NewV4 method
 func NewV4() UUID {
-	return UUID(uuid.NewV4())
+	return UUID(uuid.Must(uuid.NewV4()))
 }
 
 // String Wrapper over the real String method
