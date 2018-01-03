@@ -65,6 +65,37 @@ var MultiSimpleDSL = func() {
 	})
 }
 
+var MultiRequiredPayloadDSL = func() {
+	Service("ServiceMultiRequired1", func() {
+		Method("MethodMultiRequiredPayload", func() {
+			Payload(func() {
+				Attribute("a", Boolean)
+				Required("a")
+			})
+			HTTP(func() {
+				POST("/")
+			})
+		})
+	})
+	Service("ServiceMultiRequired2", func() {
+		Method("MethodMultiRequiredNoPayload", func() {
+			HTTP(func() {
+				GET("/2")
+			})
+		})
+		Method("MethodMultiRequiredPayload", func() {
+			Payload(func() {
+				Attribute("a", Boolean)
+				Required("a")
+			})
+			HTTP(func() {
+				POST("/2")
+				Param("a")
+			})
+		})
+	})
+}
+
 var MultiDSL = func() {
 	var UserType = Type("UserType", func() {
 		Attribute("att", Boolean)

@@ -20,6 +20,7 @@ func TestClientCLIFiles(t *testing.T) {
 		{"no-payload-parse", testdata.MultiNoPayloadDSL, testdata.MultiNoPayloadParseCode, 0, 3},
 		{"simple-parse", testdata.MultiSimpleDSL, testdata.MultiSimpleParseCode, 0, 3},
 		{"multi-parse", testdata.MultiDSL, testdata.MultiParseCode, 0, 3},
+		{"multi-required-payload", testdata.MultiRequiredPayloadDSL, testdata.MultiRequiredPayloadParseCode, 0, 3},
 		{"simple-build", testdata.MultiSimpleDSL, testdata.MultiSimpleBuildCode, 1, 1},
 		{"multi-build", testdata.MultiDSL, testdata.MultiBuildCode, 1, 1},
 		{"bool-build", testdata.PayloadQueryBoolDSL, testdata.QueryBoolBuildCode, 1, 1},
