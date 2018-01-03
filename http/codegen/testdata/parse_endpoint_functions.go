@@ -270,6 +270,133 @@ func ParseEndpoint(
 }
 `
 
+var MultiRequiredPayloadParseCode = `// ParseEndpoint returns the endpoint and payload as specified on the command
+// line.
+func ParseEndpoint(
+	scheme, host string,
+	doer goahttp.Doer,
+	enc func(*http.Request) goahttp.Encoder,
+	dec func(*http.Response) goahttp.Decoder,
+	restore bool,
+) (goa.Endpoint, interface{}, error) {
+	var (
+		serviceMultiRequired1Flags = flag.NewFlagSet("ServiceMultiRequired1", flag.ContinueOnError)
+
+		serviceMultiRequired1MethodMultiRequiredPayloadFlags    = flag.NewFlagSet("MethodMultiRequiredPayload", flag.ExitOnError)
+		serviceMultiRequired1MethodMultiRequiredPayloadBodyFlag = serviceMultiRequired1MethodMultiRequiredPayloadFlags.String("body", "REQUIRED", "")
+
+		serviceMultiRequired2Flags = flag.NewFlagSet("ServiceMultiRequired2", flag.ContinueOnError)
+
+		serviceMultiRequired2MethodMultiRequiredNoPayloadFlags = flag.NewFlagSet("MethodMultiRequiredNoPayload", flag.ExitOnError)
+
+		serviceMultiRequired2MethodMultiRequiredPayloadFlags = flag.NewFlagSet("MethodMultiRequiredPayload", flag.ExitOnError)
+		serviceMultiRequired2MethodMultiRequiredPayloadAFlag = serviceMultiRequired2MethodMultiRequiredPayloadFlags.String("a", "REQUIRED", "")
+	)
+	serviceMultiRequired1Flags.Usage = serviceMultiRequired1Usage
+	serviceMultiRequired1MethodMultiRequiredPayloadFlags.Usage = serviceMultiRequired1MethodMultiRequiredPayloadUsage
+
+	serviceMultiRequired2Flags.Usage = serviceMultiRequired2Usage
+	serviceMultiRequired2MethodMultiRequiredNoPayloadFlags.Usage = serviceMultiRequired2MethodMultiRequiredNoPayloadUsage
+	serviceMultiRequired2MethodMultiRequiredPayloadFlags.Usage = serviceMultiRequired2MethodMultiRequiredPayloadUsage
+
+	if err := flag.CommandLine.Parse(os.Args[1:]); err != nil {
+		return nil, nil, err
+	}
+
+	if len(os.Args) < flag.NFlag()+3 {
+		return nil, nil, fmt.Errorf("not enough arguments")
+	}
+
+	var (
+		svcn string
+		svcf *flag.FlagSet
+	)
+	{
+		svcn = os.Args[1+flag.NFlag()]
+		switch svcn {
+		case "ServiceMultiRequired1":
+			svcf = serviceMultiRequired1Flags
+		case "ServiceMultiRequired2":
+			svcf = serviceMultiRequired2Flags
+		default:
+			return nil, nil, fmt.Errorf("unknown service %q", svcn)
+		}
+	}
+	if err := svcf.Parse(os.Args[2+flag.NFlag():]); err != nil {
+		return nil, nil, err
+	}
+
+	var (
+		epn string
+		epf *flag.FlagSet
+	)
+	{
+		epn = os.Args[2+flag.NFlag()+svcf.NFlag()]
+		switch svcn {
+		case "ServiceMultiRequired1":
+			switch epn {
+			case "MethodMultiRequiredPayload":
+				epf = serviceMultiRequired1MethodMultiRequiredPayloadFlags
+
+			}
+
+		case "ServiceMultiRequired2":
+			switch epn {
+			case "MethodMultiRequiredNoPayload":
+				epf = serviceMultiRequired2MethodMultiRequiredNoPayloadFlags
+
+			case "MethodMultiRequiredPayload":
+				epf = serviceMultiRequired2MethodMultiRequiredPayloadFlags
+
+			}
+
+		}
+	}
+	if epf == nil {
+		return nil, nil, fmt.Errorf("unknown %q endpoint %q", svcn, epn)
+	}
+
+	// Parse endpoint flags if any
+	if len(os.Args) > 2+flag.NFlag()+svcf.NFlag() {
+		if err := epf.Parse(os.Args[3+flag.NFlag()+svcf.NFlag():]); err != nil {
+			return nil, nil, err
+		}
+	}
+
+	var (
+		data     interface{}
+		endpoint goa.Endpoint
+		err      error
+	)
+	{
+		switch svcn {
+		case "ServiceMultiRequired1":
+			c := servicemultirequired1c.NewClient(scheme, host, doer, enc, dec, restore)
+			switch epn {
+			case "MethodMultiRequiredPayload":
+				endpoint = c.MethodMultiRequiredPayload()
+				data, err = servicemultirequired1c.BuildMethodMultiRequiredPayloadMethodMultiRequiredPayloadPayload(*serviceMultiRequired1MethodMultiRequiredPayloadBodyFlag)
+			}
+		case "ServiceMultiRequired2":
+			c := servicemultirequired2c.NewClient(scheme, host, doer, enc, dec, restore)
+			switch epn {
+			case "MethodMultiRequiredNoPayload":
+				endpoint = c.MethodMultiRequiredNoPayload()
+				data = nil
+			case "MethodMultiRequiredPayload":
+				endpoint = c.MethodMultiRequiredPayload()
+				data, err = servicemultirequired2c.BuildMethodMultiRequiredPayloadMethodMultiRequiredPayloadPayload(*serviceMultiRequired2MethodMultiRequiredPayloadAFlag)
+			}
+		}
+	}
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return endpoint, data, nil
+}
+`
+
 var MultiParseCode = `// ParseEndpoint returns the endpoint and payload as specified on the command
 // line.
 func ParseEndpoint(
