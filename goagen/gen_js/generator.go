@@ -251,7 +251,12 @@ func (g *Generator) generateExample() error {
 	if err != nil {
 		return err
 	}
-	defer file.Close()
+	defer func() {
+		file.Close()
+		if err == nil {
+			err = file.FormatCode()
+		}
+	}()
 	imports := []*codegen.ImportSpec{
 		codegen.SimpleImport("net/http"),
 		codegen.SimpleImport("github.com/dimfeld/httptreemux"),
