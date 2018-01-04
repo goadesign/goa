@@ -37,6 +37,7 @@ func main() {
 	var (
 		srcDSL  = flag.String("src", srcDSLDefault, "source DSL `package path`")
 		destDSL = flag.String("dest", destDSLDefault, "destination DSL `package path`")
+		dslOnly = flag.Bool("dsl", false, "generate DSL aliases only")
 	)
 	{
 		flag.Parse()
@@ -126,9 +127,7 @@ func main() {
 		sort.Strings(names)
 	}
 
-	var (
-		dslF, designF *os.File
-	)
+	var dslF *os.File
 	{
 		var err error
 		dslF, err = os.Create(dslPath)
@@ -136,11 +135,6 @@ func main() {
 			fail("failed to create file %s: %s", dslPath, err)
 		}
 		defer dslF.Close()
-		designF, err = os.Create(designPath)
-		if err != nil {
-			fail("failed to create file %s: %s", designPath, err)
-		}
-		defer designF.Close()
 	}
 
 	funcAliases, err := WriteFuncAliases(dslF, names, funcs, destFuncs, destDSLPkgName, imports)
@@ -148,30 +142,42 @@ func main() {
 		fail("failed to create package function aliases: %s", err)
 	}
 
-	designImports := map[string]*PackageDecl{
-		"design": &PackageDecl{Name: "design", ImportPath: srcDesignPkgPath},
-	}
-	constAliases, err := WriteConstAliases(designF, consts, destDesignPkgName, designImports)
-	if err != nil {
-		fail("failed to create package const aliases: %s", err)
-	}
-
-	if err := designF.Close(); err != nil {
-		fail("failed to close aliases file: %s", err)
-	}
 	if err := dslF.Close(); err != nil {
 		fail("failed to close aliases file: %s", err)
 	}
 	if err := CleanImports(dslPath); err != nil {
 		fail("failed to clean DSL aliases imports: %s", err)
 	}
-	if err := CleanImports(designPath); err != nil {
-		fail("failed to clean design aliases imports: %s", err)
-	}
-	fmt.Printf("%s (%d const):\n  ", destDesignPkgDir, len(constAliases))
-	fmt.Println(strings.Join(constAliases, "\n  "))
 	fmt.Printf("\n%s (%d func):\n  ", destDSLPkgDir, len(funcAliases))
 	fmt.Println(strings.Join(funcAliases, "\n  "))
+
+	if !*dslOnly {
+		var designF *os.File
+		{
+			designF, err = os.Create(designPath)
+			if err != nil {
+				fail("failed to create file %s: %s", designPath, err)
+			}
+			defer designF.Close()
+		}
+
+		designImports := map[string]*PackageDecl{
+			"design": &PackageDecl{Name: "design", ImportPath: srcDesignPkgPath},
+		}
+		constAliases, err := WriteConstAliases(designF, consts, destDesignPkgName, designImports)
+		if err != nil {
+			fail("failed to create package const aliases: %s", err)
+		}
+
+		if err := designF.Close(); err != nil {
+			fail("failed to close aliases file: %s", err)
+		}
+		if err := CleanImports(designPath); err != nil {
+			fail("failed to clean design aliases imports: %s", err)
+		}
+		fmt.Printf("%s (%d const):\n  ", destDesignPkgDir, len(constAliases))
+		fmt.Println(strings.Join(constAliases, "\n  "))
+	}
 }
 
 // WriteConstAliases writes the given constant definitions to w.
