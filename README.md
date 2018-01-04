@@ -80,7 +80,7 @@ versions with the same `X` component without having to make changes.
 Releases are tagged with the corresponding version number. There is also a branch for each major
 version (only `v1` at the moment). The recommended practice is to vendor the stable branch.
 
-Current Release: `v1.3.0`
+Current Release: `v1.3.1`
 Stable Branch: `v1`
 
 ## Teaser
