@@ -72,15 +72,21 @@ func (s *ServiceExpr) Hash() string {
 	return "_service_+" + s.Name
 }
 
-// Validate validates the service method payloads and results.
+// Validate validates the service methods and errors.
 func (s *ServiceExpr) Validate() error {
 	verr := new(eval.ValidationErrors)
 	for _, m := range s.Methods {
-		if m.Payload != nil {
-			verr.Merge(m.Payload.Validate("payload", m))
+		if err := m.Validate(); err != nil {
+			if verrs, ok := err.(*eval.ValidationErrors); ok {
+				verr.Merge(verrs)
+			}
 		}
-		if m.Result != nil {
-			verr.Merge(m.Result.Validate("result", m))
+	}
+	for _, e := range s.Errors {
+		if err := e.Validate(); err != nil {
+			if verrs, ok := err.(*eval.ValidationErrors); ok {
+				verr.Merge(verrs)
+			}
 		}
 	}
 	return verr
@@ -96,11 +102,37 @@ func (s *ServiceExpr) Finalize() {
 	}
 }
 
+// Validate checks that the error name is found in the result metadata for
+// custom error types.
+func (e *ErrorExpr) Validate() error {
+	verr := new(eval.ValidationErrors)
+	rt, ok := e.AttributeExpr.Type.(UserType)
+	if !ok {
+		return verr
+	}
+	if o := AsObject(rt); o != nil {
+		found := false
+		for _, n := range *o {
+			if n.Attribute.Metadata == nil {
+				continue
+			}
+			if _, ok := n.Attribute.Metadata[e.Name]; ok {
+				found = true
+				break
+			}
+		}
+		if !found {
+			verr.Add(e, "Error name %q not found in result metadata", e.Name)
+		}
+	}
+	return verr
+}
+
 // Finalize makes sure the error type is a user type since it has to generate a
 // Go error.
 func (e *ErrorExpr) Finalize() {
-	if _, ok := e.AttributeExpr.Type.(UserType); !ok {
-		att := e.AttributeExpr
+	att := e.AttributeExpr
+	if _, ok := att.Type.(UserType); !ok {
 		if !IsObject(att.Type) {
 			att = &AttributeExpr{
 				Type:       &Object{{"value", att}},

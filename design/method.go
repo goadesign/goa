@@ -55,6 +55,25 @@ func (m *MethodExpr) EvalName() string {
 	return prefix + suffix
 }
 
+// Validate validates the method payloads, results, and errors (if any).
+func (m *MethodExpr) Validate() error {
+	verr := new(eval.ValidationErrors)
+	if m.Payload != nil {
+		verr.Merge(m.Payload.Validate("payload", m))
+	}
+	if m.Result != nil {
+		verr.Merge(m.Result.Validate("result", m))
+	}
+	for _, e := range m.Errors {
+		if err := e.Validate(); err != nil {
+			if verrs, ok := err.(*eval.ValidationErrors); ok {
+				verr.Merge(verrs)
+			}
+		}
+	}
+	return verr
+}
+
 // Finalize makes sure the method payload and result types are set.
 func (m *MethodExpr) Finalize() {
 	if m.Payload == nil {
