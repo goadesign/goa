@@ -1216,7 +1216,7 @@ func buildErrorsData(svc *service.Data, s *httpdesign.ServiceExpr, e *httpdesign
 						if n.Attribute.Metadata == nil {
 							continue
 						}
-						if _, ok := n.Attribute.Metadata[v.Name]; ok {
+						if _, ok := n.Attribute.Metadata["error:field"]; ok {
 							tag = n.Name
 							value = v.Name
 							break

@@ -106,23 +106,23 @@ func (s *ServiceExpr) Finalize() {
 // custom error types.
 func (e *ErrorExpr) Validate() error {
 	verr := new(eval.ValidationErrors)
-	rt, ok := e.AttributeExpr.Type.(UserType)
+	rt, ok := e.AttributeExpr.Type.(*ResultTypeExpr)
 	if !ok {
 		return verr
 	}
 	if o := AsObject(rt); o != nil {
-		found := false
+		var errField string
 		for _, n := range *o {
-			if n.Attribute.Metadata == nil {
-				continue
-			}
-			if _, ok := n.Attribute.Metadata[e.Name]; ok {
-				found = true
-				break
+			if _, ok := n.Attribute.Metadata["error:field"]; ok {
+				if errField != "" {
+					verr.Add(e, "error:field already set for %q attribute in %q result type", errField, rt.Identifier)
+				} else {
+					errField = n.Name
+				}
 			}
 		}
-		if !found {
-			verr.Add(e, "Error name %q not found in result metadata", e.Name)
+		if errField == "" {
+			verr.Add(e, "error:field not set in metadata in %q result type", rt.Identifier)
 		}
 	}
 	return verr
