@@ -113,16 +113,16 @@ func (e *ErrorExpr) Validate() error {
 	if o := AsObject(rt); o != nil {
 		var errField string
 		for _, n := range *o {
-			if _, ok := n.Attribute.Metadata["error:field"]; ok {
+			if _, ok := n.Attribute.Metadata["struct:error:name"]; ok {
 				if errField != "" {
-					verr.Add(e, "error:field already set for %q attribute in %q result type", errField, rt.Identifier)
-				} else {
-					errField = n.Name
+					verr.Add(e, "struct:error:name already set for %q attribute in %q result type", errField, rt.Identifier)
+					continue
 				}
+				errField = n.Name
 			}
 		}
 		if errField == "" {
-			verr.Add(e, "error:field not set in metadata in %q result type", rt.Identifier)
+			verr.Add(e, "struct:error:name not set in metadata in %q result type", rt.Identifier)
 		}
 	}
 	return verr

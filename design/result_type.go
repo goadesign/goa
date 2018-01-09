@@ -86,7 +86,7 @@ var (
 		{"code", &AttributeExpr{
 			Type:        String,
 			Description: "an application-specific error code, expressed as a string value.",
-			Metadata:    MetadataExpr{"error:field": []string{}},
+			Metadata:    MetadataExpr{"struct:error:name": nil},
 		}},
 		{"message", &AttributeExpr{
 			Type:        String,

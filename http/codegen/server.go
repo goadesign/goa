@@ -827,21 +827,21 @@ func {{ .ErrorEncoder }}(encoder func(context.Context, http.ResponseWriter) goah
 		case {{ $ref }}:
 			{{- range $.Errors.Get $ref }}
 
-	      {{- with .Response}}
+				{{- with .Response}}
 					{{- if .TagName }}
 			if res.{{ .TagName }} == {{ printf "%q" .TagValue }} {
 					{{- end }}
-			{{- template "response" . }}
-			{{- if .ServerBody }}
+				{{- template "response" . }}
+				{{- if .ServerBody }}
 			if err := enc.Encode(body); err != nil {
 				encodeError(ctx, w, err)
 			}
-			{{- end }}
-			{{- if .TagName }}
+				{{- end }}
+				{{- if .TagName }}
 			}
+				{{- end }}
+				{{- end }}
 			{{- end }}
-		{{- end }}
-		{{- end }}
 	{{- end }}
 		default:
 			encodeError(ctx, w, v)

@@ -14,13 +14,19 @@ import (
 // While keys can have any value the following names are handled explicitly by
 // goa when set on attributes.
 //
-// `error:field`: maps the attribute name in custom result type to the error
-// name defined in `Error` DSL. There can only be one attribute in a result
-// type that has this value set in the metadata. Applicable to result type only.
+// struct:error:name identifies the attribute of a result type used to select
+// the returned error when multiple errors are defined on the same method.
+// The value of the field corresponding to the attribute with the
+// struct:error:name metadata is matched against the names of the method
+// errors as defined in the design. This makes it possible to define distinct
+// transport mappings for the various errors (for example to return different
+// HTTP status codes). There must be one and exactly one attribute with the
+// struct:error:name metadata defined on result types used to define error
+// results.
 //
 //        var CustomErrorType = ResultType("application/vnd.goa.error", func() {
 //                Attribute("message", String, "Error returned.", func() {
-//                        Metadata("error:field")
+//                        Metadata("struct:error:name")
 //                })
 //                Attribute("occurred_at", DateTime, "Time error occurred.")
 //        })
