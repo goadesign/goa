@@ -823,28 +823,26 @@ func {{ .ErrorEncoder }}(encoder func(context.Context, http.ResponseWriter) goah
 	return func(ctx context.Context, w http.ResponseWriter, v error) {
 		switch res := v.(type) {
 
-		{{- range $errs := .Errors }}
-		case {{ .Ref }}:
+	{{- range $ref := .Errors.Refs }}
+		case {{ $ref }}:
+			{{- range $.Errors.Get $ref }}
 
-	       {{- with .Response}}
-			{{- if .TagName }}
-				{{- if .TagRequired }}
+				{{- with .Response}}
+					{{- if .TagName }}
 			if res.{{ .TagName }} == {{ printf "%q" .TagValue }} {
-				{{- else }}
-			if res.{{ .TagName }} != nil && *res.{{ .TagName }} == {{ printf "%q" .TagValue }} {
-				{{- end }}
-			{{- end -}}
-			{{- template "response" . }}
-			{{- if .ServerBody }}
+					{{- end }}
+				{{- template "response" . }}
+				{{- if .ServerBody }}
 			if err := enc.Encode(body); err != nil {
 				encodeError(ctx, w, err)
 			}
-			{{- end }}
-			{{- if .TagName }}
+				{{- end }}
+				{{- if .TagName }}
 			}
+				{{- end }}
+				{{- end }}
 			{{- end }}
-		{{- end }}
-		{{- end }}
+	{{- end }}
 		default:
 			encodeError(ctx, w, v)
 		}

@@ -30,6 +30,9 @@ type (
 	// ServicesData encapsulates the data computed from the design.
 	ServicesData map[string]*ServiceData
 
+	// ErrorsData refers to the HTTP method errors.
+	ErrorsData []*ErrorData
+
 	// ServiceData contains the data used to render the code related to a
 	// single service.
 	ServiceData struct {
@@ -90,11 +93,8 @@ type (
 		Payload *PayloadData
 		// Result describes the method HTTP result.
 		Result *ResultData
-		// Errors describes the method HTTP errors indexed by
-		// corresponding error type reference. The indexing is needed to
-		// generate code that for each type (e.g. ErrorResult) attempts
-		// to match the field to the defined tags.
-		Errors []*ErrorData
+		// Errors describes the method HTTP errors.
+		Errors ErrorsData
 		// Routes describes the possible routes for this endpoint.
 		Routes []*RouteData
 
@@ -451,6 +451,31 @@ func (svc *ServiceData) Endpoint(name string) *EndpointData {
 		}
 	}
 	return nil
+}
+
+// Refs returns the unique error reference types sorted alphabetically.
+func (ed ErrorsData) Refs() []string {
+	refMap := make(map[string]bool)
+	for _, e := range ed {
+		refMap[e.Ref] = true
+	}
+	refs := make([]string, 0, len(refMap))
+	for k := range refMap {
+		refs = append(refs, k)
+	}
+	sort.Strings(refs)
+	return refs
+}
+
+// Get retrieves the error data of the given reference type.
+func (ed ErrorsData) Get(ref string) []*ErrorData {
+	var errs []*ErrorData
+	for _, e := range ed {
+		if e.Ref == ref {
+			errs = append(errs, e)
+		}
+	}
+	return errs
 }
 
 // analyze creates the data necessary to render the code of the given service.
@@ -1077,7 +1102,7 @@ func buildResultData(svc *service.Data, s *httpdesign.ServiceExpr, e *httpdesign
 	}
 }
 
-func buildErrorsData(svc *service.Data, s *httpdesign.ServiceExpr, e *httpdesign.EndpointExpr, sd *ServiceData) []*ErrorData {
+func buildErrorsData(svc *service.Data, s *httpdesign.ServiceExpr, e *httpdesign.EndpointExpr, sd *ServiceData) ErrorsData {
 	data := make(map[string][]*ErrorData)
 	for _, v := range e.HTTPErrors {
 		var (
@@ -1172,6 +1197,7 @@ func buildErrorsData(svc *service.Data, s *httpdesign.ServiceExpr, e *httpdesign
 			var (
 				serverBodyData *TypeData
 				clientBodyData *TypeData
+				tag, value     string
 			)
 			{
 				att := v.ErrorExpr.AttributeExpr
@@ -1185,17 +1211,28 @@ func buildErrorsData(svc *service.Data, s *httpdesign.ServiceExpr, e *httpdesign
 					serverBodyData.Description = fmt.Sprintf("%s is the type of the %q service %q endpoint HTTP response body for the %q error.",
 						serverBodyData.VarName, s.Name(), e.Name(), v.Name)
 				}
+				if o := design.AsObject(att.Type); o != nil {
+					for _, n := range *o {
+						if n.Attribute.Metadata == nil {
+							continue
+						}
+						if _, ok := n.Attribute.Metadata["struct:error:name"]; ok {
+							tag = n.Name
+							value = v.Name
+							break
+						}
+					}
+				}
 			}
 
 			responseData = &ResponseData{
-				StatusCode:  statusCodeToHTTPConst(v.Response.StatusCode),
-				Headers:     extractHeaders(v.Response.MappedHeaders(), v.ErrorExpr.AttributeExpr, false, svc.Scope),
-				ServerBody:  serverBodyData,
-				ClientBody:  clientBodyData,
-				ResultInit:  init,
-				TagName:     codegen.Goify(v.Response.Tag[0], true),
-				TagValue:    v.Response.Tag[1],
-				TagRequired: v.ErrorExpr.AttributeExpr.IsRequired(v.Response.Tag[0]),
+				StatusCode: statusCodeToHTTPConst(v.Response.StatusCode),
+				Headers:    extractHeaders(v.Response.MappedHeaders(), v.ErrorExpr.AttributeExpr, false, svc.Scope),
+				ServerBody: serverBodyData,
+				ClientBody: clientBodyData,
+				ResultInit: init,
+				TagName:    codegen.Goify(tag, true),
+				TagValue:   value,
 			}
 		}
 
@@ -1213,7 +1250,7 @@ func buildErrorsData(svc *service.Data, s *httpdesign.ServiceExpr, e *httpdesign
 		i++
 	}
 	sort.Strings(keys)
-	var vals []*ErrorData
+	var vals ErrorsData
 	for _, k := range keys {
 		vals = append(vals, data[k]...)
 	}
