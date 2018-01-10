@@ -61,3 +61,8 @@ test-aliaser: aliases
 			echo "Aliaser tool output identical"; \
 		fi \
 	done
+
+test-plugins:
+	@go get -d -v goa.design/plugins/...
+	@cd $(GOPATH)/src/goa.design/plugins && \
+	make
