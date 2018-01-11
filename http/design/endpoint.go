@@ -301,22 +301,15 @@ func (e *EndpointExpr) Validate() error {
 	}
 
 	if e.MethodExpr.Payload != nil && design.IsMap(e.MethodExpr.Payload.Type) {
-		var hasParams bool
 		if ln := len(*design.AsObject(e.QueryParams().Attribute().Type)); ln > 0 {
-			hasParams = true
-			if ln > 1 {
-				verr.Add(e, "Payload type is map but HTTP endpoint defines multiple query string parameters. At most one parameter must be defined and it must be a map.")
-			}
+			verr.Add(e, "Payload type is map but HTTP endpoint defines query string parameters. Map payloads can only be decoded from HTTP request bodies.")
 		}
 		if ln := len(*design.AsObject(e.Headers().Type)); ln > 0 {
-			verr.Add(e, "Payload type is map but HTTP endpoint defines headers. Map payloads can only be decoded from HTTP request bodies or query strings.")
+			verr.Add(e, "Payload type is map but HTTP endpoint defines headers. Map payloads can only be decoded from HTTP request bodies.")
 		}
 		if e.Body != nil && e.Body.Type != design.Empty {
 			if !design.IsMap(e.Body.Type) {
 				verr.Add(e, "Payload type is map but HTTP endpoint body is not.")
-			}
-			if hasParams {
-				verr.Add(e, "Payload type is map but HTTP endpoint defines both a body and query string parameters. At most one of these must be defined and it must be a map.")
 			}
 		}
 	}
@@ -476,20 +469,12 @@ func (e *EndpointExpr) validateParams() *eval.ValidationErrors {
 	for _, r := range e.Routes {
 		routeParams = append(routeParams, r.Params()...)
 	}
-	isRouteParam := func(p string) bool {
-		for _, rp := range routeParams {
-			if rp == p {
-				return true
-			}
-		}
-		return false
-	}
 	for _, nat := range *params {
 		n := nat.Name
 		p := nat.Attribute
 		if design.IsObject(p.Type) {
-			verr.Add(e, "parameter %s cannot be an object, parameter types must be primitive, array or map (query string only)", n)
-		} else if isRouteParam(n) && design.IsMap(p.Type) {
+			verr.Add(e, "parameter %s cannot be an object, parameter types must be primitive or array", n)
+		} else if design.IsMap(p.Type) {
 			verr.Add(e, "parameter %s cannot be a map, parameter types must be primitive or array", n)
 		} else if design.IsArray(p.Type) {
 			if !design.IsPrimitive(design.AsArray(p.Type).ElemType.Type) {
@@ -515,6 +500,8 @@ func (e *EndpointExpr) validateHeaders() *eval.ValidationErrors {
 		p := nat.Attribute
 		if design.IsObject(p.Type) {
 			verr.Add(e, "header %s cannot be an object, header type must be primitive or array", n)
+		} else if design.IsMap(p.Type) {
+			verr.Add(e, "header %s cannot be a map, header type must be primitive or array", n)
 		} else if design.IsArray(p.Type) {
 			if !design.IsPrimitive(design.AsArray(p.Type).ElemType.Type) {
 				verr.Add(e, "elements of array header %s must be primitive", n)
