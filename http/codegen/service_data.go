@@ -353,6 +353,8 @@ type (
 		DefaultValue interface{}
 		// Example is an example value.
 		Example interface{}
+		// MapQueryParams TODO
+		MapQueryParams *string
 	}
 
 	// HeaderData describes a HTTP request or response header.
@@ -696,9 +698,10 @@ func buildPayloadData(svc *service.Data, s *httpdesign.ServiceExpr, e *httpdesig
 	var (
 		payload = e.MethodExpr.Payload
 
-		body    design.DataType
-		request *RequestData
-		ep      *service.MethodData
+		body          design.DataType
+		request       *RequestData
+		ep            *service.MethodData
+		mapQueryParam *ParamData
 	)
 	{
 		ep = svc.Method(e.MethodExpr.Name)
@@ -713,6 +716,39 @@ func buildPayloadData(svc *service.Data, s *httpdesign.ServiceExpr, e *httpdesig
 
 			mustValidate bool
 		)
+
+		if e.MapQueryParams != nil {
+			var (
+				fieldName string
+				name      = "query"
+				required  = false
+				pType     = payload.Type
+				pAtt      = payload
+			)
+			if n := *e.MapQueryParams; n != "" {
+				pAtt = design.AsObject(payload.Type).Attribute(n)
+				pType = pAtt.Type
+				required = payload.IsRequired(n)
+				name = n
+				fieldName = codegen.Goify(name, true)
+			}
+			varn := codegen.Goify(name, false)
+			mapQueryParam = &ParamData{
+				Name:           name,
+				VarName:        varn,
+				FieldName:      fieldName,
+				Required:       required,
+				Type:           pType,
+				TypeName:       svc.Scope.GoTypeName(pAtt),
+				TypeRef:        svc.Scope.GoTypeRef(pAtt),
+				Map:            design.AsMap(payload.Type) != nil,
+				Validate:       codegen.RecursiveValidationCode(payload, required, false, false, varn),
+				DefaultValue:   payload.DefaultValue,
+				Example:        payload.Example(design.Root.API.Random()),
+				MapQueryParams: e.MapQueryParams,
+			}
+			queryData = append(queryData, mapQueryParam)
+		}
 		{
 			if serverBodyData != nil {
 				sd.ServerTypeNames[serverBodyData.Name] = struct{}{}
@@ -921,6 +957,8 @@ func buildPayloadData(svc *service.Data, s *httpdesign.ServiceExpr, e *httpdesig
 			returnValue = codegen.Goify((*o)[0].Name, false)
 		} else if o := design.AsObject(e.MappedHeaders().Type); o != nil && len(*o) > 0 {
 			returnValue = codegen.Goify((*o)[0].Name, false)
+		} else if e.MapQueryParams != nil && *e.MapQueryParams == "" {
+			returnValue = mapQueryParam.Name
 		}
 	}
 

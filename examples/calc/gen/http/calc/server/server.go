@@ -20,6 +20,7 @@ import (
 type Server struct {
 	Mounts []*MountPoint
 	Add    http.Handler
+	Added  http.Handler
 }
 
 // MountPoint holds information about the mounted endpoints.
@@ -43,8 +44,10 @@ func New(
 	return &Server{
 		Mounts: []*MountPoint{
 			{"Add", "GET", "/add/{a}/{b}"},
+			{"Added", "GET", "/add"},
 		},
-		Add: NewAddHandler(e.Add, mux, dec, enc),
+		Add:   NewAddHandler(e.Add, mux, dec, enc),
+		Added: NewAddedHandler(e.Added, mux, dec, enc),
 	}
 }
 
@@ -54,6 +57,7 @@ func (s *Server) Service() string { return "calc" }
 // Mount configures the mux to serve the calc endpoints.
 func Mount(mux goahttp.Muxer, h *Server) {
 	MountAddHandler(mux, h.Add)
+	MountAddedHandler(mux, h.Added)
 }
 
 // MountAddHandler configures the mux to serve the "calc" service "add"
@@ -79,6 +83,52 @@ func NewAddHandler(
 	var (
 		decodeRequest  = DecodeAddRequest(mux, dec)
 		encodeResponse = EncodeAddResponse(enc)
+		encodeError    = goahttp.ErrorEncoder(enc)
+	)
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		accept := r.Header.Get("Accept")
+		ctx := context.WithValue(r.Context(), goahttp.ContextKeyAcceptType, accept)
+		payload, err := decodeRequest(r)
+		if err != nil {
+			encodeError(ctx, w, err)
+			return
+		}
+
+		res, err := endpoint(ctx, payload)
+
+		if err != nil {
+			encodeError(ctx, w, err)
+			return
+		}
+		if err := encodeResponse(ctx, w, res); err != nil {
+			encodeError(ctx, w, err)
+		}
+	})
+}
+
+// MountAddedHandler configures the mux to serve the "calc" service "added"
+// endpoint.
+func MountAddedHandler(mux goahttp.Muxer, h http.Handler) {
+	f, ok := h.(http.HandlerFunc)
+	if !ok {
+		f = func(w http.ResponseWriter, r *http.Request) {
+			h.ServeHTTP(w, r)
+		}
+	}
+	mux.Handle("GET", "/add", f)
+}
+
+// NewAddedHandler creates a HTTP handler which loads the HTTP request and
+// calls the "calc" service "added" endpoint.
+func NewAddedHandler(
+	endpoint goa.Endpoint,
+	mux goahttp.Muxer,
+	dec func(*http.Request) goahttp.Decoder,
+	enc func(context.Context, http.ResponseWriter) goahttp.Encoder,
+) http.Handler {
+	var (
+		decodeRequest  = DecodeAddedRequest(mux, dec)
+		encodeResponse = EncodeAddedResponse(enc)
 		encodeError    = goahttp.ErrorEncoder(enc)
 	)
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

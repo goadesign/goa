@@ -15,13 +15,15 @@ import (
 
 // Endpoints wraps the "calc" service endpoints.
 type Endpoints struct {
-	Add goa.Endpoint
+	Add   goa.Endpoint
+	Added goa.Endpoint
 }
 
 // NewEndpoints wraps the methods of the "calc" service with endpoints.
 func NewEndpoints(s Service) *Endpoints {
 	return &Endpoints{
-		Add: NewAddEndpoint(s),
+		Add:   NewAddEndpoint(s),
+		Added: NewAddedEndpoint(s),
 	}
 }
 
@@ -31,5 +33,14 @@ func NewAddEndpoint(s Service) goa.Endpoint {
 	return func(ctx context.Context, req interface{}) (interface{}, error) {
 		p := req.(*AddPayload)
 		return s.Add(ctx, p)
+	}
+}
+
+// NewAddedEndpoint returns an endpoint function that calls the method "added"
+// of service "calc".
+func NewAddedEndpoint(s Service) goa.Endpoint {
+	return func(ctx context.Context, req interface{}) (interface{}, error) {
+		p := req.(map[string][]int)
+		return s.Added(ctx, p)
 	}
 }

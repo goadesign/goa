@@ -484,6 +484,60 @@ func Param(name string, args ...interface{}) {
 	eval.Execute(func() { dsl.Attribute(name, args...) }, h.Params())
 }
 
+// MapParams describes the query string parameters in a HTTP request.
+//
+// MapParams must appear in a Method HTTP expression to map the query string
+// parameters with the Method's Payload.
+//
+// MapParams accepts one optional argument which specifes the Payload
+// attribute to which the query string parameters must be mapped. This Payload
+// attribute must be a map. If no argument is specified, the query string
+// parameters are mapped with the entire Payload (the Payload must be a map).
+//
+// Example:
+//
+//     var _ = Service("account", func() {
+//         Method("index", func() {
+//             Payload(MapOf(String, Int))
+//             HTTP(func() {
+//                 GET("/")
+//                 MapParams()
+//             })
+//         })
+//    })
+//
+//    var _ = Service("account", func() {
+//        Method("show", func() {
+//            Payload(func() {
+//                Attribute("p", MapOf(String, String))
+//                Attribute("id", String)
+//            })
+//            HTTP(func() {
+//                GET("/{id}")
+//                MapParams("p")
+//            })
+//        })
+//    })
+//
+func MapParams(args ...interface{}) {
+	if len(args) > 1 {
+		eval.ReportError("too many arguments")
+	}
+	e, ok := eval.Current().(*httpdesign.EndpointExpr)
+	if !ok {
+		eval.IncompatibleDSL()
+		return
+	}
+	var mapName string
+	if len(args) > 0 {
+		mapName, ok = args[0].(string)
+		if !ok {
+			eval.ReportError("argument must be a string")
+		}
+	}
+	e.MapQueryParams = &mapName
+}
+
 // Body describes a HTTP request or response body.
 //
 // Body must appear in a Method HTTP expression to define the request body or in

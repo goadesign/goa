@@ -73,6 +73,7 @@ func serverEncodeDecode(genpkg string, svc *httpdesign.ServiceExpr) *codegen.Fil
 			{Path: "net/http"},
 			{Path: "strconv"},
 			{Path: "strings"},
+			{Path: "encoding/json"},
 			{Path: "unicode/utf8"},
 			{Path: "goa.design/goa", Name: "goa"},
 			{Path: "goa.design/goa/http", Name: "goahttp"},
@@ -444,6 +445,27 @@ func {{ .RequestDecoder }}(mux goahttp.Muxer, decoder func(*http.Request) goahtt
 		{{- else }}
 			{{- template "map_conversion" . }}
 		{{- end }}
+		{{- if not .Required }}
+		}
+		{{- end }}
+	}
+
+	{{- else if .MapQueryParams }}
+	{
+		{{ .VarName }}Raw := r.URL.Query().Get("{{ .MapQueryParams }}")
+		{{- if .Required }}
+		if len({{ .VarName }}Raw) == 0 {
+			err = goa.MergeErrors(err, goa.MissingFieldError("{{ .Name }}", "query string"))
+		}
+		{{- end }}
+
+		{{- if not .Required }}
+		if len({{ .VarName }}Raw) != 0 {
+		{{- end }}
+			err2 := json.Unmarshal([]byte({{ .VarName }}Raw), &{{ .VarName }})
+			if err2 != nil {
+				err = goa.MergeErrors(err, goa.InvalidFieldTypeError({{ printf "%q" .VarName }}, {{ .VarName}}Raw, "{{ .TypeRef }}"))
+			}
 		{{- if not .Required }}
 		}
 		{{- end }}

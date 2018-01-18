@@ -36,6 +36,12 @@ type (
 		// Metadata is a set of key/value pairs with semantic that is
 		// specific to each generator.
 		Metadata design.MetadataExpr
+		// MapQueryParams indicates that the query params are mapped to the
+		// payload in the method expression. If the pointer refers
+		// to a non-empty string, the query params are mapped to an attribute
+		// in the payload with the same name. If the pointer empty string,
+		// the query params are mapped to the entire payload.
+		MapQueryParams *string
 		// params defines common request parameters to all the service
 		// HTTP endpoints. The keys may use the "attribute:param" syntax
 		// where "attribute" is the name of the attribute and "param"
@@ -264,59 +270,152 @@ func (e *EndpointExpr) Validate() error {
 		}
 	}
 
-	if e.MethodExpr.Payload != nil && design.IsArray(e.MethodExpr.Payload.Type) {
-		var hasParams, hasHeaders bool
-		queryParams := design.NewMappedAttributeExpr(e.params)
-		for _, r := range e.Routes {
-			for _, p := range r.Params() {
-				queryParams.Delete(p)
-			}
-		}
-		if ln := len(*design.AsObject(queryParams.Type)); ln > 0 {
-			hasParams = true
-			if ln > 1 {
-				verr.Add(e, "Payload type is array but HTTP endpoint defines multiple query string parameters. At most one parameter must be defined and it must be an array.")
-			}
-		}
-		if ln := len(*design.AsObject(e.Headers().Type)); ln > 0 {
-			hasHeaders = true
-			if hasParams {
-				verr.Add(e, "Payload type is array but HTTP endpoint defines both query string parameters and headers. At most one parameter or header must be defined and it must be of type array.")
-			}
-			if ln > 1 {
-				verr.Add(e, "Payload type is array but HTTP endpoint defines multiple headers. At most one header must be defined and it must be an array.")
-			}
-		}
-		if e.Body != nil && e.Body.Type != design.Empty {
-			if !design.IsArray(e.Body.Type) {
-				verr.Add(e, "Payload type is array but HTTP endpoint body is not.")
-			}
-			if hasParams {
-				verr.Add(e, "Payload type is array but HTTP endpoint defines both a body and route or query string parameters. At most one of these must be defined and it must be an array.")
-			}
-			if hasHeaders {
-				verr.Add(e, "Payload type is array but HTTP endpoint defines both a body and headers. At most one of these must be defined and it must be an array.")
+	if e.MapQueryParams != nil && e.MethodExpr.Payload == nil {
+		verr.Add(e, "MapParams is set but Payload is not defined")
+	}
+
+	var routeParams []string
+	// Collect all the parameters in the endpoint.
+	// NOTE: We don't use AllParams() here because path parameters are only added to
+	// e.params during finalize.
+	allParams := &design.Object{}
+	if e.params != nil {
+		allParams = design.AsObject(e.params.Type)
+	}
+	for _, r := range e.Routes {
+		routeParams = append(routeParams, r.Params()...)
+		for _, p := range r.Params() {
+			if att := allParams.Attribute(p); att == nil {
+				allParams.Set(p, &design.AttributeExpr{Type: design.String})
 			}
 		}
 	}
+	if e.MethodExpr.Payload != nil {
+		if design.IsArray(e.MethodExpr.Payload.Type) {
+			if e.MapQueryParams != nil {
+				verr.Add(e, "MapParams is set but Payload type is array. Payload type must be map or an object with a map attribute")
+			}
+			var hasParams, hasHeaders bool
+			if ln := len(*allParams); ln > 0 {
+				hasParams = true
+				if ln > 1 {
+					verr.Add(e, "Payload type is array but HTTP endpoint defines multiple route or query string parameters. At most one of these must be defined and it must be an array.")
+				}
+			}
+			if ln := len(*design.AsObject(e.Headers().Type)); ln > 0 {
+				hasHeaders = true
+				if hasParams {
+					verr.Add(e, "Payload type is array but HTTP endpoint defines both route or query string parameters and headers. At most one parameter or header must be defined and it must be of type array.")
+				}
+				if ln > 1 {
+					verr.Add(e, "Payload type is array but HTTP endpoint defines multiple headers. At most one header must be defined and it must be an array.")
+				}
+			}
+			if e.Body != nil && e.Body.Type != design.Empty {
+				if !design.IsArray(e.Body.Type) {
+					verr.Add(e, "Payload type is array but HTTP endpoint body is not.")
+				}
+				if hasParams {
+					verr.Add(e, "Payload type is array but HTTP endpoint defines both a body and route or query string parameters. At most one of these must be defined and it must be an array.")
+				}
+				if hasHeaders {
+					verr.Add(e, "Payload type is array but HTTP endpoint defines both a body and headers. At most one of these must be defined and it must be an array.")
+				}
+			}
+		}
 
-	if e.MethodExpr.Payload != nil && design.IsMap(e.MethodExpr.Payload.Type) {
-		var hasParams bool
-		if ln := len(*design.AsObject(e.QueryParams().Attribute().Type)); ln > 0 {
-			hasParams = true
-			if ln > 1 {
-				verr.Add(e, "Payload type is map but HTTP endpoint defines multiple query string parameters. At most one parameter must be defined and it must be a map.")
+		if pMap := design.AsMap(e.MethodExpr.Payload.Type); pMap != nil {
+			if e.MapQueryParams != nil {
+				if *e.MapQueryParams != "" {
+					verr.Add(e, "MapParams is set to an attribute in the Payload but Payload is a map. Payload must be an object with an attribute of map type")
+				}
+				if !design.IsPrimitive(pMap.KeyType.Type) {
+					verr.Add(e, "MapParams is set and Payload type is map. But payload key type must be a primitive")
+				}
+				if !design.IsPrimitive(pMap.ElemType.Type) && !design.IsArray(pMap.ElemType.Type) {
+					verr.Add(e, "MapParams is set and Payload type is map. But payload element type must be a primitive or array")
+				}
+				if design.IsArray(pMap.ElemType.Type) && !design.IsPrimitive(design.AsArray(pMap.ElemType.Type).ElemType.Type) {
+					verr.Add(e, "MapParams is set and Payload type is map. But array elements in payload element type must be primitive")
+				}
+			}
+			var hasParams bool
+			if ln := len(*allParams); ln > 0 {
+				hasParams = true
+				if ln > 1 {
+					verr.Add(e, "Payload type is map but HTTP endpoint defines multiple route or query string parameters. At most one query string parameter must be defined and it must be a map.")
+				}
+				if len(routeParams) > 0 {
+					verr.Add(e, "Payload type is map but HTTP endpoint defines route parameters. Route parameters cannot be decoded from the map Payload.")
+				}
+			}
+			if ln := len(*design.AsObject(e.Headers().Type)); ln > 0 {
+				verr.Add(e, "Payload type is map but HTTP endpoint defines headers. Map payloads can only be decoded from HTTP request bodies or query strings.")
+			}
+			if e.Body != nil && e.Body.Type != design.Empty {
+				if !design.IsMap(e.Body.Type) {
+					verr.Add(e, "Payload type is map but HTTP endpoint body is not.")
+				}
+				if hasParams {
+					verr.Add(e, "Payload type is map but HTTP endpoint defines both a body and route or query string parameters. At most one of these must be defined and it must be a map.")
+				}
 			}
 		}
-		if ln := len(*design.AsObject(e.Headers().Type)); ln > 0 {
-			verr.Add(e, "Payload type is map but HTTP endpoint defines headers. Map payloads can only be decoded from HTTP request bodies or query strings.")
-		}
-		if e.Body != nil && e.Body.Type != design.Empty {
-			if !design.IsMap(e.Body.Type) {
-				verr.Add(e, "Payload type is map but HTTP endpoint body is not.")
+
+		if pObj := design.AsObject(e.MethodExpr.Payload.Type); pObj != nil {
+			if e.MapQueryParams != nil {
+				if pAttr := *e.MapQueryParams; pAttr == "" {
+					verr.Add(e, "MapParams is set to map entire payload but payload is an object. Payload must be a map.")
+				} else {
+					found := false
+					for _, nat := range *pObj {
+						if design.IsMap(nat.Attribute.Type) && nat.Name == pAttr {
+							found = true
+							break
+						}
+					}
+					if !found {
+						verr.Add(e, "MapParams is set to an attribute in Payload. But payload has no attribute with type map and name %s", pAttr)
+					}
+				}
 			}
-			if hasParams {
-				verr.Add(e, "Payload type is map but HTTP endpoint defines both a body and query string parameters. At most one of these must be defined and it must be a map.")
+			for _, nat := range *design.AsObject(e.MappedHeaders().Type) {
+				found := false
+				for _, o := range *pObj {
+					if o.Name == nat.Name {
+						found = true
+						break
+					}
+				}
+				if !found {
+					verr.Add(e, "Header %q is not found in Payload.", nat.Name)
+				}
+			}
+			for _, nat := range *allParams {
+				found := false
+				for _, o := range *pObj {
+					if o.Name == nat.Name {
+						found = true
+						break
+					}
+				}
+				if !found {
+					verr.Add(e, "Param %q is not found in Payload.", nat.Name)
+				}
+			}
+			if e.Body != nil {
+				for _, nat := range *design.AsObject(e.Body.Type) {
+					found := false
+					for _, o := range *pObj {
+						if o.Name == nat.Name {
+							found = true
+							break
+						}
+					}
+					if !found {
+						verr.Add(e, "Body %q is not found in Payload.", nat.Name)
+					}
+				}
 			}
 		}
 	}
