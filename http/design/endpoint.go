@@ -556,17 +556,6 @@ func (r *RouteExpr) Params() []string {
 	return res
 }
 
-// ParamsByPath returns the parameters indexed by path. There can be multiple
-// paths for a single route when the service has multiple base paths.
-func (r *RouteExpr) ParamsByPath() map[string][]string {
-	paths := r.FullPaths()
-	params := make(map[string][]string, len(paths))
-	for _, p := range paths {
-		params[p] = ExtractRouteWildcards(p)
-	}
-	return params
-}
-
 // ParamAttributeNames returns the route parameter attribute names. For example
 // for the route "GET /foo/{fooID:foo_id}" ParamAttributes returns
 // []string{"fooID"}. Note that there may be multiple parameter "sets" as the

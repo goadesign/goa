@@ -502,17 +502,16 @@ func toString(val interface{}) string {
 // toSchemaHrefs produces hrefs that replace the path wildcards with JSON
 // schema references when appropriate.
 func toSchemaHrefs(r *httpdesign.RouteExpr) []string {
-	pbr := r.ParamsByPath()
-	res := make([]string, len(pbr))
-	i := 0
-	for path, params := range pbr {
+	paths := r.FullPaths()
+	res := make([]string, len(paths))
+	for i, path := range paths {
+		params := httpdesign.ExtractRouteWildcards(path)
 		args := make([]interface{}, len(params))
 		for j, p := range params {
 			args[j] = fmt.Sprintf("/{%s}", p)
 		}
 		tmpl := httpdesign.WildcardRegex.ReplaceAllLiteralString(path, "%s")
 		res[i] = fmt.Sprintf(tmpl, args...)
-		i++
 	}
 	return res
 }

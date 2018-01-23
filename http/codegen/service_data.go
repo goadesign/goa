@@ -486,7 +486,8 @@ func (d ServicesData) analyze(hs *httpdesign.ServiceExpr) *ServiceData {
 		var routes []*RouteData
 		i := 0
 		for _, r := range a.Routes {
-			for rpath, params := range r.ParamsByPath() {
+			for _, rpath := range r.FullPaths() {
+				params := httpdesign.ExtractRouteWildcards(rpath)
 				var (
 					init *InitData
 				)
