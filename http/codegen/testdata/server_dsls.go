@@ -82,6 +82,20 @@ var ServerPayloadResultErrorDSL = func() {
 	})
 }
 
+var ServerMultiBasesDSL = func() {
+	Service("ServiceMultiBases", func() {
+		HTTP(func() {
+			Path("/base_1")
+			Path("/base_2")
+		})
+		Method("MethodMultiBases", func() {
+			HTTP(func() {
+				GET("/{id}")
+			})
+		})
+	})
+}
+
 var ServerMultiEndpointsDSL = func() {
 	Service("ServiceMultiEndpoints", func() {
 		HTTP(func() {

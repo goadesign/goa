@@ -532,15 +532,46 @@ func (r *RouteExpr) EvalName() string {
 	return fmt.Sprintf(`route %s "%s" of %s`, r.Method, r.Path, r.Endpoint.EvalName())
 }
 
-// Params returns the route parameters. For example for the route
-// "GET /foo/{fooID:foo_id}" Params returns []string{"fooID:foo_id"}.
+// Params returns all the route parameters across all the base paths. For
+// example for the route "GET /foo/{fooID:foo_id}" Params returns
+// []string{"fooID:foo_id"}.
 func (r *RouteExpr) Params() []string {
-	return ExtractRouteWildcards(r.FullPath())
+	paths := r.FullPaths()
+	var res []string
+	for _, p := range paths {
+		ws := ExtractRouteWildcards(p)
+		for _, w := range ws {
+			found := false
+			for _, r := range res {
+				if r == w {
+					found = true
+					break
+				}
+			}
+			if !found {
+				res = append(res, w)
+			}
+		}
+	}
+	return res
+}
+
+// ParamsByPath returns the parameters indexed by path. There can be multiple
+// paths for a single route when the service has multiple base paths.
+func (r *RouteExpr) ParamsByPath() map[string][]string {
+	paths := r.FullPaths()
+	params := make(map[string][]string, len(paths))
+	for _, p := range paths {
+		params[p] = ExtractRouteWildcards(p)
+	}
+	return params
 }
 
 // ParamAttributeNames returns the route parameter attribute names. For example
 // for the route "GET /foo/{fooID:foo_id}" ParamAttributes returns
-// []string{"fooID"}.
+// []string{"fooID"}. Note that there may be multiple parameter "sets" as the
+// service may have multiple base paths, in this case this returns the union of
+// all parameters.
 func (r *RouteExpr) ParamAttributeNames() []string {
 	params := r.Params()
 	res := make([]string, len(params))
@@ -550,17 +581,21 @@ func (r *RouteExpr) ParamAttributeNames() []string {
 	return res
 }
 
-// FullPath returns the endpoint full path computed by concatenating the API and
-// service base paths with the endpoint specific path.
-func (r *RouteExpr) FullPath() string {
+// FullPaths returns the endpoint full paths computed by concatenating the API and
+// service base paths with the endpoint specific paths.
+func (r *RouteExpr) FullPaths() []string {
 	if r.IsAbsolute() {
-		return httppath.Clean(r.Path[1:])
+		return []string{httppath.Clean(r.Path[1:])}
 	}
-	var base string
+	var bases []string
 	if r.Endpoint != nil && r.Endpoint.Service != nil {
-		base = r.Endpoint.Service.FullPath()
+		bases = r.Endpoint.Service.FullPaths()
 	}
-	return httppath.Clean(path.Join(base, r.Path))
+	res := make([]string, len(bases))
+	for i, b := range bases {
+		res[i] = httppath.Clean(path.Join(b, r.Path))
+	}
+	return res
 }
 
 // IsAbsolute returns true if the endpoint path should not be concatenated to

@@ -19,6 +19,24 @@ func New(
 }
 `
 
+var ServerMultiBasesConstructorCode = `// New instantiates HTTP handlers for all the ServiceMultiBases service
+// endpoints.
+func New(
+	e *servicemultibases.Endpoints,
+	mux goahttp.Muxer,
+	dec func(*http.Request) goahttp.Decoder,
+	enc func(context.Context, http.ResponseWriter) goahttp.Encoder,
+) *Server {
+	return &Server{
+		Mounts: []*MountPoint{
+			{"MethodMultiBases", "GET", "/base_1/{id}"},
+			{"MethodMultiBases", "GET", "/base_2/{id}"},
+		},
+		MethodMultiBases: NewMethodMultiBasesHandler(e.MethodMultiBases, mux, dec, enc),
+	}
+}
+`
+
 var ServerFileServerConstructorCode = `// New instantiates HTTP handlers for all the ServiceFileServer service
 // endpoints.
 func New(
