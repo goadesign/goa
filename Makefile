@@ -63,6 +63,12 @@ test-aliaser: aliases
 	done
 
 test-plugins:
-	@go get -d -v goa.design/plugins/...
-	@cd $(GOPATH)/src/goa.design/plugins && \
-	make
+	@if [ -z $(GOA_BRANCH) ]; then\
+		GOA_BRANCH=$$(git rev-parse --abbrev-ref HEAD); \
+	fi
+	@go get -d -v goa.design/plugins/... && \
+	cd $(GOPATH)/src/goa.design/plugins && \
+	git checkout $(GOA_BRANCH) || echo "Using master branch" && \
+	make -k || (echo "Tests in plugin repo (https://github.com/goadesign/plugins) failed" \
+                  "due to changes in goa repo (branch: $(GOA_BRANCH))!" \
+                  "Create a branch with name '$(GOA_BRANCH)' in the plugin repo and fix these errors." && exit 1)

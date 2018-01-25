@@ -9,6 +9,8 @@ script:
 - cd goa.design/goa
 - make
 - make test-aliaser
+# https://graysonkoonce.com/getting-the-current-branch-name-during-a-pull-request-in-travis-ci/
+- export GOA_BRANCH=$(if [ "$TRAVIS_PULL_REQUEST" == "false" ]; then echo $TRAVIS_BRANCH; else echo $TRAVIS_PULL_REQUEST_BRANCH; fi)
 - make test-plugins
 notifications:
   slack:
