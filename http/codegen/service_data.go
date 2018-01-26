@@ -353,7 +353,9 @@ type (
 		DefaultValue interface{}
 		// Example is an example value.
 		Example interface{}
-		// MapQueryParams TODO
+		// MapQueryParams indicates that the query params must be mapped
+		// to the entire payload (empty string) or a payload attribute
+		// (attribute name).
 		MapQueryParams *string
 	}
 
@@ -743,8 +745,8 @@ func buildPayloadData(svc *service.Data, s *httpdesign.ServiceExpr, e *httpdesig
 				TypeRef:        svc.Scope.GoTypeRef(pAtt),
 				Map:            design.AsMap(payload.Type) != nil,
 				Validate:       codegen.RecursiveValidationCode(payload, required, false, false, varn),
-				DefaultValue:   payload.DefaultValue,
-				Example:        payload.Example(design.Root.API.Random()),
+				DefaultValue:   pAtt.DefaultValue,
+				Example:        pAtt.Example(design.Root.API.Random()),
 				MapQueryParams: e.MapQueryParams,
 			}
 			queryData = append(queryData, mapQueryParam)

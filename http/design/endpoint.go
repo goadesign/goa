@@ -39,7 +39,7 @@ type (
 		// MapQueryParams indicates that the query params are mapped to the
 		// payload in the method expression. If the pointer refers
 		// to a non-empty string, the query params are mapped to an attribute
-		// in the payload with the same name. If the pointer empty string,
+		// in the payload with the same name. If the pointer is an empty string,
 		// the query params are mapped to the entire payload.
 		MapQueryParams *string
 		// params defines common request parameters to all the service
@@ -382,7 +382,8 @@ func (e *EndpointExpr) Validate() error {
 			for _, nat := range *design.AsObject(e.MappedHeaders().Type) {
 				found := false
 				for _, o := range *pObj {
-					if o.Name == nat.Name {
+					name := strings.Split(nat.Name, ":")[0]
+					if o.Name == name {
 						found = true
 						break
 					}
@@ -394,7 +395,8 @@ func (e *EndpointExpr) Validate() error {
 			for _, nat := range *allParams {
 				found := false
 				for _, o := range *pObj {
-					if o.Name == nat.Name {
+					name := strings.Split(nat.Name, ":")[0]
+					if o.Name == name {
 						found = true
 						break
 					}
@@ -404,16 +406,18 @@ func (e *EndpointExpr) Validate() error {
 				}
 			}
 			if e.Body != nil {
-				for _, nat := range *design.AsObject(e.Body.Type) {
-					found := false
-					for _, o := range *pObj {
-						if o.Name == nat.Name {
-							found = true
-							break
+				if bObj := design.AsObject(e.Body.Type); bObj != nil {
+					for _, nat := range *bObj {
+						found := false
+						for _, o := range *pObj {
+							if o.Name == nat.Name {
+								found = true
+								break
+							}
 						}
-					}
-					if !found {
-						verr.Add(e, "Body %q is not found in Payload.", nat.Name)
+						if !found {
+							verr.Add(e, "Body %q is not found in Payload.", nat.Name)
+						}
 					}
 				}
 			}

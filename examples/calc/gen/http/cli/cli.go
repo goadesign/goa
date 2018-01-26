@@ -8,7 +8,6 @@
 package cli
 
 import (
-	"encoding/json"
 	"flag"
 	"fmt"
 	"net/http"
@@ -24,13 +23,13 @@ import (
 //    command (subcommand1|subcommand2|...)
 //
 func UsageCommands() string {
-	return `calc (add|added)
+	return `calc add
 `
 }
 
 // UsageExamples produces an example of a valid invocation of the CLI tool.
 func UsageExamples() string {
-	return os.Args[0] + ` calc add --a 686605435966370186 --b 8228676432890045784` + "\n" +
+	return os.Args[0] + ` calc add --a 5952269320165453119 --b 1828520165265779840` + "\n" +
 		""
 }
 
@@ -49,13 +48,9 @@ func ParseEndpoint(
 		calcAddFlags = flag.NewFlagSet("add", flag.ExitOnError)
 		calcAddAFlag = calcAddFlags.String("a", "REQUIRED", "Left operand")
 		calcAddBFlag = calcAddFlags.String("b", "REQUIRED", "Right operand")
-
-		calcAddedFlags = flag.NewFlagSet("added", flag.ExitOnError)
-		calcAddedPFlag = calcAddedFlags.String("p", "REQUIRED", "map[string][]int is the payload type of the calc service added method.")
 	)
 	calcFlags.Usage = calcUsage
 	calcAddFlags.Usage = calcAddUsage
-	calcAddedFlags.Usage = calcAddedUsage
 
 	if err := flag.CommandLine.Parse(os.Args[1:]); err != nil {
 		return nil, nil, err
@@ -94,9 +89,6 @@ func ParseEndpoint(
 			case "add":
 				epf = calcAddFlags
 
-			case "added":
-				epf = calcAddedFlags
-
 			}
 
 		}
@@ -125,15 +117,6 @@ func ParseEndpoint(
 			case "add":
 				endpoint = c.Add()
 				data, err = calcsvcc.BuildAddAddPayload(*calcAddAFlag, *calcAddBFlag)
-			case "added":
-				endpoint = c.Added()
-				var err error
-				var val map[string][]int
-				err = json.Unmarshal([]byte(*calcAddedPFlag), &val)
-				data = val
-				if err != nil {
-					return nil, nil, fmt.Errorf("invalid JSON for calcAddedPFlag, example of valid JSON:\n%s", "'{\n      \"Est ut.\": [\n         3793862871819669726,\n         8399553735696626949\n      ],\n      \"Sed non natus.\": [\n         1918630006328122782,\n         4288748512599820841,\n         4212629202012168060,\n         1698882017578366363\n      ]\n   }'")
-				}
 			}
 		}
 	}
@@ -152,7 +135,6 @@ Usage:
 
 COMMAND:
     add: Add implements add.
-    added: Added implements added.
 
 Additional help:
     %s calc COMMAND --help
@@ -166,28 +148,6 @@ Add implements add.
     -b INT: Right operand
 
 Example:
-    `+os.Args[0]+` calc add --a 686605435966370186 --b 8228676432890045784
-`, os.Args[0])
-}
-
-func calcAddedUsage() {
-	fmt.Fprintf(os.Stderr, `%s [flags] calc added -p JSON
-
-Added implements added.
-    -p JSON: map[string][]int is the payload type of the calc service added method.
-
-Example:
-    `+os.Args[0]+` calc added --p '{
-      "Est ut.": [
-         3793862871819669726,
-         8399553735696626949
-      ],
-      "Sed non natus.": [
-         1918630006328122782,
-         4288748512599820841,
-         4212629202012168060,
-         1698882017578366363
-      ]
-   }'
+    `+os.Args[0]+` calc add --a 5952269320165453119 --b 1828520165265779840
 `, os.Args[0])
 }

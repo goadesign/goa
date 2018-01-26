@@ -15,8 +15,6 @@ import (
 type Service interface {
 	// Add implements add.
 	Add(context.Context, *AddPayload) (int, error)
-	// Added implements added.
-	Added(context.Context, map[string][]int) (int, error)
 }
 
 // AddPayload is the payload type of the calc service add method.

@@ -20,15 +20,17 @@ type Client struct {
 	ShowEndpoint   goa.Endpoint
 	AddEndpoint    goa.Endpoint
 	RemoveEndpoint goa.Endpoint
+	RateEndpoint   goa.Endpoint
 }
 
 // NewClient initializes a "storage" service client given the endpoints.
-func NewClient(list, show, add, remove goa.Endpoint) *Client {
+func NewClient(list, show, add, remove, rate goa.Endpoint) *Client {
 	return &Client{
 		ListEndpoint:   list,
 		ShowEndpoint:   show,
 		AddEndpoint:    add,
 		RemoveEndpoint: remove,
+		RateEndpoint:   rate,
 	}
 }
 
@@ -71,5 +73,11 @@ func (c *Client) Add(ctx context.Context, p *Bottle) (res string, err error) {
 //	- error: generic transport error.
 func (c *Client) Remove(ctx context.Context, p *RemovePayload) (err error) {
 	_, err = c.RemoveEndpoint(ctx, p)
+	return
+}
+
+// Rate calls the "rate" endpoint of the "storage" service.
+func (c *Client) Rate(ctx context.Context, p map[uint32][]string) (err error) {
+	_, err = c.RateEndpoint(ctx, p)
 	return
 }

@@ -452,7 +452,7 @@ func {{ .RequestDecoder }}(mux goahttp.Muxer, decoder func(*http.Request) goahtt
 
 	{{- else if .MapQueryParams }}
 	{
-		{{ .VarName }}Raw := r.URL.Query().Get("{{ .MapQueryParams }}")
+		{{ .VarName }}Raw := r.URL.Query()
 		{{- if .Required }}
 		if len({{ .VarName }}Raw) == 0 {
 			err = goa.MergeErrors(err, goa.MissingFieldError("{{ .Name }}", "query string"))
@@ -462,10 +462,15 @@ func {{ .RequestDecoder }}(mux goahttp.Muxer, decoder func(*http.Request) goahtt
 		{{- if not .Required }}
 		if len({{ .VarName }}Raw) != 0 {
 		{{- end }}
-			err2 := json.Unmarshal([]byte({{ .VarName }}Raw), &{{ .VarName }})
-			if err2 != nil {
-				err = goa.MergeErrors(err, goa.InvalidFieldTypeError({{ printf "%q" .VarName }}, {{ .VarName}}Raw, "{{ .TypeRef }}"))
-			}
+		{{- if eq .Type.ElemType.Type.Name "array" }}
+			{{- if eq .Type.ElemType.Type.ElemType.Type.Name "string" }}
+			{{- template "map_key_conversion" . }}
+			{{- else }}
+			{{- template "map_slice_conversion" . }}
+			{{- end }}
+		{{- else }}
+			{{- template "map_conversion" . }}
+		{{- end }}
 		{{- if not .Required }}
 		}
 		{{- end }}

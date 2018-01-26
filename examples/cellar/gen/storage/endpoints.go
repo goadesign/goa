@@ -20,6 +20,7 @@ type Endpoints struct {
 	Show   goa.Endpoint
 	Add    goa.Endpoint
 	Remove goa.Endpoint
+	Rate   goa.Endpoint
 }
 
 // NewEndpoints wraps the methods of the "storage" service with endpoints.
@@ -29,6 +30,7 @@ func NewEndpoints(s Service) *Endpoints {
 		Show:   NewShowEndpoint(s),
 		Add:    NewAddEndpoint(s),
 		Remove: NewRemoveEndpoint(s),
+		Rate:   NewRateEndpoint(s),
 	}
 }
 
@@ -64,5 +66,14 @@ func NewRemoveEndpoint(s Service) goa.Endpoint {
 	return func(ctx context.Context, req interface{}) (interface{}, error) {
 		p := req.(*RemovePayload)
 		return nil, s.Remove(ctx, p)
+	}
+}
+
+// NewRateEndpoint returns an endpoint function that calls the method "rate" of
+// service "storage".
+func NewRateEndpoint(s Service) goa.Endpoint {
+	return func(ctx context.Context, req interface{}) (interface{}, error) {
+		p := req.(map[uint32][]string)
+		return nil, s.Rate(ctx, p)
 	}
 }

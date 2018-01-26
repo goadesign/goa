@@ -218,11 +218,24 @@ func {{ .RequestEncoder }}(encoder func(*http.Request) goahttp.Encoder) func(*ht
 			{{- end }}
 		{{- end }}
 	{{- end }}
-	{{- if or .Payload.Request.QueryParams }}
+	{{- if .Payload.Request.QueryParams }}
 		values := req.URL.Query()
 	{{- end }}
 	{{- range .Payload.Request.QueryParams }}
-		{{- if .FieldName }}
+		{{- if .MapQueryParams }}
+		for key, value := range p{{ if .FieldName }}.{{ .FieldName }}{{ end }} {
+			{{ template "type_conversion" (typeConversionData .Type.KeyType.Type "keyStr" "key") }}
+			{{- if eq .Type.ElemType.Type.Name "array" }}
+			for _, val := range value {
+				{{ template "type_conversion" (typeConversionData .Type.ElemType.Type.ElemType.Type (printf "%sStr" "val") "val") }}
+				values.Add(keyStr, valStr)
+			}
+			{{- else }}
+			{{ template "type_conversion" (typeConversionData .Type.ElemType.Type (printf "%sStr" "value") "value") }}
+      values.Add(keyStr, valueStr)
+			{{- end }}
+    }
+		{{- else if .FieldName }}
 			{{- if .Pointer }}
 		if p.{{ .FieldName }} != nil {
 			{{- end }}
@@ -237,22 +250,8 @@ func {{ .RequestEncoder }}(encoder func(*http.Request) goahttp.Encoder) func(*ht
 		}
 			{{- end }}
 		{{- end }}
-		{{- if .MapQueryParams }}
-		for key, value := range p {
-			{{ template "type_conversion" (typeConversionData .Type.KeyType.Type (printf "%sStr" "key") "key") }}
-			{{- if eq .Type.ElemType.Type.Name "array" }}
-			for _, val := range value {
-				{{ template "type_conversion" (typeConversionData .Type.ElemType.Type.ElemType.Type (printf "%sStr" "val") "val") }}
-				values.Add(keyStr, valStr)
-			}
-			{{- else }}
-			{{ template "type_conversion" (typeConversionData .Type.ElemType.Type (printf "%sStr" "value") "value") }}
-      values.Add(keyStr, valueStr)
-			{{- end }}
-    }
-		{{- end }}
 	{{- end }}
-	{{- if or .Payload.Request.QueryParams }}
+	{{- if .Payload.Request.QueryParams }}
 		req.URL.RawQuery = values.Encode()
 	{{- end }}
 	{{- if .Payload.Request.ClientBody }}

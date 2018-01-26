@@ -35,19 +35,6 @@ var _ = Service("calc", func() {
 			Response(StatusOK)
 		})
 	})
-	Method("added", func() {
-		/*Payload(func() {
-			Attribute("foo", MapOf(String, ArrayOf(Int)), "Foo Param")
-		})*/
-		Payload(MapOf(String, ArrayOf(Int)))
-		Result(Int)
-		HTTP(func() {
-			GET("/add")
-			//MapParams("foo")
-			MapParams()
-			Response(StatusOK)
-		})
-	})
 })
 
 var _ = Service("openapi", func() {
