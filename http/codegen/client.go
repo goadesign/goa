@@ -232,7 +232,7 @@ func {{ .RequestEncoder }}(encoder func(*http.Request) goahttp.Encoder) func(*ht
 			}
 			{{- else }}
 			{{ template "type_conversion" (typeConversionData .Type.ElemType.Type (printf "%sStr" "value") "value") }}
-      values.Add(keyStr, valueStr)
+			values.Add(keyStr, valueStr)
 			{{- end }}
     }
 		{{- else if .FieldName }}
