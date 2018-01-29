@@ -19,8 +19,8 @@ type (
 		Docs *design.DocsExpr
 		// FilePath is the file path to the static asset(s)
 		FilePath string
-		// RequestPath is the HTTP path that servers the assets.
-		RequestPath string
+		// RequestPaths is the list of HTTP paths that serve the assets.
+		RequestPaths []string
 		// Metadata is a list of key/value pairs
 		Metadata design.MetadataExpr
 	}
@@ -38,14 +38,23 @@ func (f *FileServerExpr) EvalName() string {
 
 // Finalize normalizes the request path.
 func (f *FileServerExpr) Finalize() {
-	f.RequestPath = path.Join(Root.Path, f.Service.Path, f.RequestPath)
-	// Make sure request path starts with a "/" so codegen can rely on it.
-	if !strings.HasPrefix(f.RequestPath, "/") {
-		f.RequestPath = "/" + f.RequestPath
+	current := f.RequestPaths[0]
+	paths := f.Service.Paths
+	if len(paths) == 0 {
+		paths = []string{"/"}
+	}
+	f.RequestPaths = make([]string, len(paths))
+	for i, sp := range paths {
+		p := path.Join(Root.Path, sp, current)
+		// Make sure request path starts with a "/" so codegen can rely on it.
+		if !strings.HasPrefix(p, "/") {
+			p = "/" + p
+		}
+		f.RequestPaths[i] = p
 	}
 }
 
 // IsDir returns true if the file server serves a directory, false otherwise.
 func (f *FileServerExpr) IsDir() bool {
-	return WildcardRegex.MatchString(f.RequestPath)
+	return WildcardRegex.MatchString(f.RequestPaths[0])
 }

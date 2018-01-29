@@ -16,6 +16,7 @@ func TestServerInit(t *testing.T) {
 		Code string
 	}{
 		{"multiple endpoints", testdata.ServerMultiEndpointsDSL, testdata.ServerMultiEndpointsConstructorCode},
+		{"multiple bases", testdata.ServerMultiBasesDSL, testdata.ServerMultiBasesConstructorCode},
 		{"file server", testdata.ServerFileServerDSL, testdata.ServerFileServerConstructorCode},
 		{"mixed", testdata.ServerMixedDSL, testdata.ServerMixedConstructorCode},
 	}

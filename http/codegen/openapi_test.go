@@ -56,7 +56,7 @@ func newService(t *testing.T) *httpdesign.ServiceExpr {
 	route.Endpoint = endpoint
 	res := &httpdesign.ServiceExpr{
 		ServiceExpr:   s,
-		Path:          "/",
+		Paths:         []string{"/"},
 		HTTPEndpoints: []*httpdesign.EndpointExpr{endpoint},
 	}
 	endpoint.Service = res

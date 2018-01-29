@@ -131,8 +131,8 @@ type (
 	FileServerData struct {
 		// MountHandler is the name of the mount handler function.
 		MountHandler string
-		// Path is the HTTP path to the server.
-		RequestPath string
+		// RequestPaths is the set of HTTP paths to the server.
+		RequestPaths []string
 		// Root is the root server file path.
 		FilePath string
 		// Dir is true if the file server servers files under a
@@ -498,7 +498,7 @@ func (d ServicesData) analyze(hs *httpdesign.ServiceExpr) *ServiceData {
 	for _, s := range hs.FileServers {
 		data := &FileServerData{
 			MountHandler: fmt.Sprintf("Mount%s", codegen.Goify(s.FilePath, true)),
-			RequestPath:  s.RequestPath,
+			RequestPaths: s.RequestPaths,
 			FilePath:     s.FilePath,
 			IsDir:        s.IsDir(),
 		}
@@ -508,70 +508,73 @@ func (d ServicesData) analyze(hs *httpdesign.ServiceExpr) *ServiceData {
 	for _, a := range hs.HTTPEndpoints {
 		ep := svc.Method(a.MethodExpr.Name)
 
-		routes := make([]*RouteData, len(a.Routes))
-		for i, r := range a.Routes {
-			params := r.Params()
-
-			var (
-				init *InitData
-			)
-			{
-				initArgs := make([]*InitArgData, len(params))
-				pathParams := a.PathParams()
-				pathParamsObj := design.AsObject(pathParams.Type)
-				suffix := ""
-				if i > 0 {
-					suffix = strconv.Itoa(i + 1)
-				}
-				name := fmt.Sprintf("%s%sPath%s", ep.VarName, svc.VarName, suffix)
-				for j, arg := range params {
-					att := pathParamsObj.Attribute(arg)
-					name := codegen.Goify(arg, false)
-					pointer := pathParams.IsPrimitivePointer(arg, false)
-					var vcode string
-					if att.Validation != nil {
-						vcode = codegen.RecursiveValidationCode(att, true, false, false, name)
+		var routes []*RouteData
+		i := 0
+		for _, r := range a.Routes {
+			for _, rpath := range r.FullPaths() {
+				params := httpdesign.ExtractRouteWildcards(rpath)
+				var (
+					init *InitData
+				)
+				{
+					initArgs := make([]*InitArgData, len(params))
+					pathParams := a.PathParams()
+					pathParamsObj := design.AsObject(pathParams.Type)
+					suffix := ""
+					if i > 0 {
+						suffix = strconv.Itoa(i + 1)
 					}
-					initArgs[j] = &InitArgData{
-						Name:        name,
-						Description: att.Description,
-						Ref:         name,
-						FieldName:   codegen.Goify(arg, true),
-						TypeName:    svc.Scope.GoTypeName(att),
-						TypeRef:     svc.Scope.GoTypeRef(att),
-						Pointer:     pointer,
-						Required:    true,
-						Example:     att.Example(design.Root.API.Random()),
-						Validate:    vcode,
+					i++
+					name := fmt.Sprintf("%s%sPath%s", ep.VarName, svc.VarName, suffix)
+					for j, arg := range params {
+						att := pathParamsObj.Attribute(arg)
+						name := codegen.Goify(arg, false)
+						pointer := pathParams.IsPrimitivePointer(arg, false)
+						var vcode string
+						if att.Validation != nil {
+							vcode = codegen.RecursiveValidationCode(att, true, false, false, name)
+						}
+						initArgs[j] = &InitArgData{
+							Name:        name,
+							Description: att.Description,
+							Ref:         name,
+							FieldName:   codegen.Goify(arg, true),
+							TypeName:    svc.Scope.GoTypeName(att),
+							TypeRef:     svc.Scope.GoTypeRef(att),
+							Pointer:     pointer,
+							Required:    true,
+							Example:     att.Example(design.Root.API.Random()),
+							Validate:    vcode,
+						}
+					}
+
+					var buffer bytes.Buffer
+					pf := httpdesign.WildcardRegex.ReplaceAllString(rpath, "/%v")
+					err := pathInitTmpl.Execute(&buffer, map[string]interface{}{
+						"Args":       initArgs,
+						"PathParams": pathParamsObj,
+						"PathFormat": pf,
+					})
+					if err != nil {
+						panic(err)
+					}
+					init = &InitData{
+						Name:           name,
+						Description:    fmt.Sprintf("%s returns the URL path to the %s service %s HTTP endpoint. ", name, svc.Name, ep.Name),
+						ServerArgs:     initArgs,
+						ClientArgs:     initArgs,
+						ReturnTypeName: "string",
+						ReturnTypeRef:  "string",
+						ServerCode:     buffer.String(),
+						ClientCode:     buffer.String(),
 					}
 				}
 
-				var buffer bytes.Buffer
-				pf := httpdesign.WildcardRegex.ReplaceAllString(r.FullPath(), "/%v")
-				err := pathInitTmpl.Execute(&buffer, map[string]interface{}{
-					"Args":       initArgs,
-					"PathParams": pathParamsObj,
-					"PathFormat": pf,
+				routes = append(routes, &RouteData{
+					Verb:     strings.ToUpper(r.Method),
+					Path:     rpath,
+					PathInit: init,
 				})
-				if err != nil {
-					panic(err)
-				}
-				init = &InitData{
-					Name:           name,
-					Description:    fmt.Sprintf("%s returns the URL path to the %s service %s HTTP endpoint. ", name, svc.Name, ep.Name),
-					ServerArgs:     initArgs,
-					ClientArgs:     initArgs,
-					ReturnTypeName: "string",
-					ReturnTypeRef:  "string",
-					ServerCode:     buffer.String(),
-					ClientCode:     buffer.String(),
-				}
-			}
-
-			routes[i] = &RouteData{
-				Verb:     strings.ToUpper(r.Method),
-				Path:     r.FullPath(),
-				PathInit: init,
 			}
 		}
 
