@@ -22,8 +22,8 @@ type (
 		// ServiceExpr is the service expression that backs this
 		// service.
 		ServiceExpr *design.ServiceExpr
-		// Common URL prefix to all service endpoint HTTP requests
-		Path string
+		// Common URL prefixes to all service endpoint HTTP requests
+		Paths []string
 		// Name of parent service if any
 		ParentName string
 		// Endpoint with canonical service path
@@ -133,29 +133,43 @@ func (svc *ServiceExpr) URITemplate() string {
 	if ca == nil || len(ca.Routes) == 0 {
 		return ""
 	}
-	return ca.Routes[0].FullPath()
+	return ca.Routes[0].FullPaths()[0]
 }
 
-// FullPath computes the base path to the service endpoints concatenating the
+// FullPaths computes the base paths to the service endpoints concatenating the
 // API and parent service base paths as needed.
-func (svc *ServiceExpr) FullPath() string {
-	if strings.HasPrefix(svc.Path, "//") {
-		return httppath.Clean(svc.Path)
+func (svc *ServiceExpr) FullPaths() []string {
+	if len(svc.Paths) == 0 {
+		return []string{path.Join(Root.Path)}
 	}
-	var basePath string
-	if p := svc.Parent(); p != nil {
-		if ca := p.CanonicalEndpoint(); ca != nil {
-			if routes := ca.Routes; len(routes) > 0 {
-				// Note: all these tests should be true at code
-				// generation time as DSL validation makes sure
-				// that parent services have a canonical path.
-				basePath = path.Join(routes[0].FullPath())
-			}
+	var paths []string
+	for _, p := range svc.Paths {
+		if strings.HasPrefix(p, "//") {
+			paths = append(paths, httppath.Clean(p))
+			continue
 		}
-	} else {
-		basePath = Root.Path
+		var basePaths []string
+		if p := svc.Parent(); p != nil {
+			if ca := p.CanonicalEndpoint(); ca != nil {
+				if routes := ca.Routes; len(routes) > 0 {
+					// Note: all these tests should be true at code
+					// generation time as DSL validation makes sure
+					// that parent services have a canonical path.
+					fullPaths := routes[0].FullPaths()
+					basePaths = make([]string, len(fullPaths))
+					for i, p := range fullPaths {
+						basePaths[i] = path.Join(p)
+					}
+				}
+			}
+		} else {
+			basePaths = []string{Root.Path}
+		}
+		for _, base := range basePaths {
+			paths = append(paths, httppath.Clean(path.Join(base, p)))
+		}
 	}
-	return httppath.Clean(path.Join(basePath, svc.Path))
+	return paths
 }
 
 // Parent returns the parent service if any, nil otherwise.

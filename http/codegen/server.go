@@ -29,6 +29,7 @@ func server(genpkg string, svc *httpdesign.ServiceExpr) *codegen.File {
 	path := filepath.Join(codegen.Gendir, "http", codegen.SnakeCase(svc.Name()), "server", "server.go")
 	data := HTTPServices.Get(svc.Name())
 	title := fmt.Sprintf("%s HTTP server", svc.Name())
+	funcs := map[string]interface{}{"join": func(ss []string, s string) string { return strings.Join(ss, s) }}
 	sections := []*codegen.SectionTemplate{
 		codegen.Header(title, "server", []*codegen.ImportSpec{
 			{Path: "context"},
@@ -52,7 +53,7 @@ func server(genpkg string, svc *httpdesign.ServiceExpr) *codegen.File {
 		sections = append(sections, &codegen.SectionTemplate{Name: "server-handler-init", Source: serverHandlerInitT, Data: e})
 	}
 	for _, s := range data.FileServers {
-		sections = append(sections, &codegen.SectionTemplate{Name: "server-files", Source: fileServerT, Data: s})
+		sections = append(sections, &codegen.SectionTemplate{Name: "server-files", Source: fileServerT, FuncMap: funcs, Data: s})
 	}
 
 	return &codegen.File{Path: path, SectionTemplates: sections}
@@ -203,7 +204,10 @@ func {{ .ServerInit }}(
 				{{- end }}
 			{{- end }}
 			{{- range .FileServers }}
-			{"{{ .FilePath }}", "GET", "{{ .RequestPath }}"},
+				{{- $filepath := .FilePath }}
+				{{- range .RequestPaths }}
+			{"{{ $filepath }}", "GET", "{{ . }}"},
+				{{- end }}
 			{{- end }}
 		},
 		{{- range .Endpoints }}
@@ -252,9 +256,11 @@ func {{ .MountHandler }}(mux goahttp.Muxer, h http.Handler) {
 `
 
 // input: FileServerData
-const fileServerT = `{{ printf "%s configures the mux to serve GET request made to %q." .MountHandler .RequestPath | comment }}
+const fileServerT = `{{ printf "%s configures the mux to serve GET request made to %q." .MountHandler (join .RequestPaths ", ") | comment }}
 func {{ .MountHandler }}(mux goahttp.Muxer, h http.Handler) {
-	mux.Handle("GET", "{{ .RequestPath }}", h.ServeHTTP)
+	{{- range .RequestPaths }}
+	mux.Handle("GET", "{{ . }}", h.ServeHTTP)
+	{{- end }}
 }
 `
 

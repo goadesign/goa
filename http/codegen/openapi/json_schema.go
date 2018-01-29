@@ -201,23 +201,25 @@ func GenerateServiceDefinition(api *design.APIExpr, res *httpdesign.ServiceExpr)
 			}
 		}
 		for i, r := range a.Routes {
-			link := Link{
-				Title:        a.Name(),
-				Rel:          a.Name(),
-				Href:         toSchemaHref(r),
-				Method:       r.Method,
-				Schema:       requestSchema,
-				TargetSchema: targetSchema,
-				ResultType:   identifier,
-			}
-			if i == 0 {
-				if ca := a.Service.CanonicalEndpoint(); ca != nil {
-					if ca.Name() == a.Name() {
-						link.Rel = "self"
+			for j, href := range toSchemaHrefs(r) {
+				link := Link{
+					Title:        a.Name(),
+					Rel:          a.Name(),
+					Href:         href,
+					Method:       r.Method,
+					Schema:       requestSchema,
+					TargetSchema: targetSchema,
+					ResultType:   identifier,
+				}
+				if i == 0 && j == 0 {
+					if ca := a.Service.CanonicalEndpoint(); ca != nil {
+						if ca.Name() == a.Name() {
+							link.Rel = "self"
+						}
 					}
 				}
+				s.Links = append(s.Links, &link)
 			}
-			s.Links = append(s.Links, &link)
 		}
 	}
 }
@@ -497,16 +499,21 @@ func toString(val interface{}) string {
 	}
 }
 
-// toSchemaHref produces a href that replaces the path wildcards with JSON
+// toSchemaHrefs produces hrefs that replace the path wildcards with JSON
 // schema references when appropriate.
-func toSchemaHref(r *httpdesign.RouteExpr) string {
-	params := r.Params()
-	args := make([]interface{}, len(params))
-	for i, p := range params {
-		args[i] = fmt.Sprintf("/{%s}", p)
+func toSchemaHrefs(r *httpdesign.RouteExpr) []string {
+	paths := r.FullPaths()
+	res := make([]string, len(paths))
+	for i, path := range paths {
+		params := httpdesign.ExtractRouteWildcards(path)
+		args := make([]interface{}, len(params))
+		for j, p := range params {
+			args[j] = fmt.Sprintf("/{%s}", p)
+		}
+		tmpl := httpdesign.WildcardRegex.ReplaceAllLiteralString(path, "%s")
+		res[i] = fmt.Sprintf(tmpl, args...)
 	}
-	tmpl := httpdesign.WildcardRegex.ReplaceAllLiteralString(r.FullPath(), "%s")
-	return fmt.Sprintf(tmpl, args...)
+	return res
 }
 
 // propertiesFromDefs creates a Properties map referencing the given definitions

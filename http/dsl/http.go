@@ -161,23 +161,28 @@ func Produces(args ...string) {
 	}
 }
 
-// Path defines the API or service base path, i.e. the common path prefix to all
+// Path defines an API or service base path, i.e. a common path prefix to all
 // the API or service methods. The path may define wildcards (see GET for a
 // description of the wildcard syntax). The corresponding parameters must be
-// described using Params.
+// described using Params. Multiple base paths may be defined for services.
 func Path(val string) {
 	switch def := eval.Current().(type) {
 	case *httpdesign.RootExpr:
+		if httpdesign.Root.Path != "" {
+			eval.ReportError(`only one base path may be specified for an API, got base paths %q and %q`, httpdesign.Root.Path, val)
+		}
 		httpdesign.Root.Path = val
 	case *httpdesign.ServiceExpr:
-		def.Path = val
+		def.Paths = append(def.Paths, val)
 		if !strings.HasPrefix(val, "//") {
-			awcs := httpdesign.ExtractWildcards(httpdesign.Root.Path)
-			wcs := httpdesign.ExtractWildcards(val)
-			for _, awc := range awcs {
-				for _, wc := range wcs {
-					if awc == wc {
-						eval.ReportError(`duplicate wildcard "%s" in API and service base paths`, wc)
+			for _, sp := range def.Paths {
+				awcs := httpdesign.ExtractWildcards(sp)
+				wcs := httpdesign.ExtractWildcards(val)
+				for _, awc := range awcs {
+					for _, wc := range wcs {
+						if awc == wc {
+							eval.ReportError(`duplicate wildcard "%s" in API and service base paths`, wc)
+						}
 					}
 				}
 			}

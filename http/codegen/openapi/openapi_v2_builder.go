@@ -387,60 +387,62 @@ func headersFromExpr(headers *design.MappedAttributeExpr) (map[string]*Header, e
 }
 
 func buildPathFromFileServer(s *V2, root *httpdesign.RootExpr, fs *httpdesign.FileServerExpr) error {
-	wcs := httpdesign.ExtractWildcards(fs.RequestPath)
-	var param []*Parameter
-	if len(wcs) > 0 {
-		param = []*Parameter{{
-			In:          "path",
-			Name:        wcs[0],
-			Description: "Relative file path",
-			Required:    true,
-			Type:        "string",
-		}}
-	}
+	for _, path := range fs.RequestPaths {
+		wcs := httpdesign.ExtractWildcards(path)
+		var param []*Parameter
+		if len(wcs) > 0 {
+			param = []*Parameter{{
+				In:          "path",
+				Name:        wcs[0],
+				Description: "Relative file path",
+				Required:    true,
+				Type:        "string",
+			}}
+		}
 
-	responses := map[string]*Response{
-		"200": {
-			Description: "File downloaded",
-			Schema:      &Schema{Type: File},
-		},
-	}
-	if len(wcs) > 0 {
-		schema := TypeSchema(root.Design.API, design.ErrorResult)
-		responses["404"] = &Response{Description: "File not found", Schema: schema}
-	}
+		responses := map[string]*Response{
+			"200": {
+				Description: "File downloaded",
+				Schema:      &Schema{Type: File},
+			},
+		}
+		if len(wcs) > 0 {
+			schema := TypeSchema(root.Design.API, design.ErrorResult)
+			responses["404"] = &Response{Description: "File not found", Schema: schema}
+		}
 
-	operationID := fmt.Sprintf("%s#%s", fs.Service.Name(), fs.RequestPath)
-	schemes := root.Design.API.Schemes()
+		operationID := fmt.Sprintf("%s#%s", fs.Service.Name(), path)
+		schemes := root.Design.API.Schemes()
 
-	operation := &Operation{
-		Description:  fs.Description,
-		Summary:      summaryFromExpr(fmt.Sprintf("Download %s", fs.FilePath), fs.Metadata),
-		ExternalDocs: docsFromExpr(fs.Docs),
-		OperationID:  operationID,
-		Parameters:   param,
-		Responses:    responses,
-		Schemes:      schemes,
-	}
+		operation := &Operation{
+			Description:  fs.Description,
+			Summary:      summaryFromExpr(fmt.Sprintf("Download %s", fs.FilePath), fs.Metadata),
+			ExternalDocs: docsFromExpr(fs.Docs),
+			OperationID:  operationID,
+			Parameters:   param,
+			Responses:    responses,
+			Schemes:      schemes,
+		}
 
-	key := httpdesign.WildcardRegex.ReplaceAllStringFunc(
-		fs.RequestPath,
-		func(w string) string {
-			return fmt.Sprintf("/{%s}", w[2:])
-		},
-	)
-	if key == "" {
-		key = "/"
+		key := httpdesign.WildcardRegex.ReplaceAllStringFunc(
+			path,
+			func(w string) string {
+				return fmt.Sprintf("/{%s}", w[2:])
+			},
+		)
+		if key == "" {
+			key = "/"
+		}
+		var path interface{}
+		var ok bool
+		if path, ok = s.Paths[key]; !ok {
+			path = new(Path)
+			s.Paths[key] = path
+		}
+		p := path.(*Path)
+		p.Get = operation
+		p.Extensions = extensionsFromExpr(fs.Metadata)
 	}
-	var path interface{}
-	var ok bool
-	if path, ok = s.Paths[key]; !ok {
-		path = new(Path)
-		s.Paths[key] = path
-	}
-	p := path.(*Path)
-	p.Get = operation
-	p.Extensions = extensionsFromExpr(fs.Metadata)
 
 	return nil
 }
@@ -453,100 +455,101 @@ func buildPathFromExpr(s *V2, root *httpdesign.RootExpr, route *httpdesign.Route
 		// By default tag with service name
 		tagNames = []string{route.Endpoint.Service.Name()}
 	}
-	params, err := paramsFromExpr(endpoint.AllParams(), route.FullPath())
-	if err != nil {
-		return err
-	}
-
-	params = append(params, paramsFromHeaders(endpoint)...)
-
-	responses := make(map[string]*Response, len(endpoint.Responses))
-	for _, r := range endpoint.Responses {
-		resp, err := responseSpecFromExpr(s, root, r)
+	for _, key := range route.FullPaths() {
+		params, err := paramsFromExpr(endpoint.AllParams(), key)
 		if err != nil {
 			return err
 		}
-		responses[strconv.Itoa(r.StatusCode)] = resp
-	}
 
-	if endpoint.Body.Type != design.Empty {
-		pp := &Parameter{
-			Name:        endpoint.Body.Type.Name(),
-			In:          "body",
-			Description: endpoint.Body.Description,
-			Required:    true,
-			Schema:      TypeSchema(root.Design.API, endpoint.Body.Type),
+		params = append(params, paramsFromHeaders(endpoint)...)
+
+		responses := make(map[string]*Response, len(endpoint.Responses))
+		for _, r := range endpoint.Responses {
+			resp, err := responseSpecFromExpr(s, root, r)
+			if err != nil {
+				return err
+			}
+			responses[strconv.Itoa(r.StatusCode)] = resp
 		}
-		params = append(params, pp)
-	}
 
-	operationID := fmt.Sprintf("%s#%s", endpoint.Service.Name(), endpoint.Name())
-	index := 0
-	for i, rt := range endpoint.Routes {
-		if rt == route {
-			index = i
-			break
+		if endpoint.Body.Type != design.Empty {
+			pp := &Parameter{
+				Name:        endpoint.Body.Type.Name(),
+				In:          "body",
+				Description: endpoint.Body.Description,
+				Required:    true,
+				Schema:      TypeSchema(root.Design.API, endpoint.Body.Type),
+			}
+			params = append(params, pp)
 		}
-	}
-	if index > 0 {
-		operationID = fmt.Sprintf("%s#%d", operationID, index)
-	}
 
-	schemes := endpoint.Service.Schemes()
-	if len(schemes) == 0 {
-		schemes = root.Design.API.Schemes()
-	}
+		operationID := fmt.Sprintf("%s#%s", endpoint.Service.Name(), endpoint.Name())
+		index := 0
+		for i, rt := range endpoint.Routes {
+			if rt == route {
+				index = i
+				break
+			}
+		}
+		if index > 0 {
+			operationID = fmt.Sprintf("%s#%d", operationID, index)
+		}
 
-	operation := &Operation{
-		Tags:         tagNames,
-		Description:  endpoint.Description(),
-		Summary:      summaryFromExpr(endpoint.Name()+" "+endpoint.Service.Name(), endpoint.Metadata),
-		ExternalDocs: docsFromExpr(endpoint.MethodExpr.Docs),
-		OperationID:  operationID,
-		Parameters:   params,
-		Responses:    responses,
-		Schemes:      schemes,
-		Deprecated:   false,
-		Extensions:   extensionsFromExpr(route.Metadata),
-	}
+		schemes := endpoint.Service.Schemes()
+		if len(schemes) == 0 {
+			schemes = root.Design.API.Schemes()
+		}
 
-	key := route.FullPath()
-	if key == "" {
-		key = "/"
+		operation := &Operation{
+			Tags:         tagNames,
+			Description:  endpoint.Description(),
+			Summary:      summaryFromExpr(endpoint.Name()+" "+endpoint.Service.Name(), endpoint.Metadata),
+			ExternalDocs: docsFromExpr(endpoint.MethodExpr.Docs),
+			OperationID:  operationID,
+			Parameters:   params,
+			Responses:    responses,
+			Schemes:      schemes,
+			Deprecated:   false,
+			Extensions:   extensionsFromExpr(route.Metadata),
+		}
+
+		if key == "" {
+			key = "/"
+		}
+		bp := httpdesign.WildcardRegex.ReplaceAllStringFunc(
+			basePath,
+			func(w string) string {
+				return fmt.Sprintf("/{%s}", w[2:])
+			},
+		)
+		if bp != "/" {
+			key = strings.TrimPrefix(key, bp)
+		}
+		var path interface{}
+		var ok bool
+		if path, ok = s.Paths[key]; !ok {
+			path = new(Path)
+			s.Paths[key] = path
+		}
+		p := path.(*Path)
+		switch route.Method {
+		case "GET":
+			p.Get = operation
+		case "PUT":
+			p.Put = operation
+		case "POST":
+			p.Post = operation
+		case "DELETE":
+			p.Delete = operation
+		case "OPTIONS":
+			p.Options = operation
+		case "HEAD":
+			p.Head = operation
+		case "PATCH":
+			p.Patch = operation
+		}
+		p.Extensions = extensionsFromExpr(route.Endpoint.Metadata)
 	}
-	bp := httpdesign.WildcardRegex.ReplaceAllStringFunc(
-		basePath,
-		func(w string) string {
-			return fmt.Sprintf("/{%s}", w[2:])
-		},
-	)
-	if bp != "/" {
-		key = strings.TrimPrefix(key, bp)
-	}
-	var path interface{}
-	var ok bool
-	if path, ok = s.Paths[key]; !ok {
-		path = new(Path)
-		s.Paths[key] = path
-	}
-	p := path.(*Path)
-	switch route.Method {
-	case "GET":
-		p.Get = operation
-	case "PUT":
-		p.Put = operation
-	case "POST":
-		p.Post = operation
-	case "DELETE":
-		p.Delete = operation
-	case "OPTIONS":
-		p.Options = operation
-	case "HEAD":
-		p.Head = operation
-	case "PATCH":
-		p.Patch = operation
-	}
-	p.Extensions = extensionsFromExpr(route.Endpoint.Metadata)
 	return nil
 }
 

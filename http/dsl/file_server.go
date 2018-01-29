@@ -56,9 +56,9 @@ func Files(path, filename string, fns ...func()) {
 	if s, ok := eval.Current().(*design.ServiceExpr); ok {
 		r := httpdesign.Root.ServiceFor(s)
 		server := &httpdesign.FileServerExpr{
-			Service:     r,
-			RequestPath: path,
-			FilePath:    filename,
+			Service:      r,
+			RequestPaths: []string{path},
+			FilePath:     filename,
 		}
 		if len(fns) > 0 {
 			eval.Execute(fns[0], server)
