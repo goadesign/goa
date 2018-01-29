@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 
 	"goa.design/goa/codegen"
+	"goa.design/goa/design"
 	httpdesign "goa.design/goa/http/design"
 )
 
@@ -84,7 +85,10 @@ func clientEncodeDecode(genpkg string, svc *httpdesign.ServiceExpr) *codegen.Fil
 			sections = append(sections, &codegen.SectionTemplate{
 				Name:   "request-encoder",
 				Source: requestEncoderT,
-				Data:   e,
+				FuncMap: map[string]interface{}{
+					"typeConversionData": typeConversionData,
+				},
+				Data: e,
 			})
 		}
 		if e.Result != nil || len(e.Errors) > 0 {
@@ -104,6 +108,16 @@ func clientEncodeDecode(genpkg string, svc *httpdesign.ServiceExpr) *codegen.Fil
 	}
 
 	return &codegen.File{Path: path, SectionTemplates: sections}
+}
+
+// typeConversionData produces the template data suitable for executing the
+// "header_conversion" template.
+func typeConversionData(dt design.DataType, varName string, target string) map[string]interface{} {
+	return map[string]interface{}{
+		"Type":    dt,
+		"VarName": varName,
+		"Target":  target,
+	}
 }
 
 // input: ServiceData
@@ -208,7 +222,20 @@ func {{ .RequestEncoder }}(encoder func(*http.Request) goahttp.Encoder) func(*ht
 		values := req.URL.Query()
 	{{- end }}
 	{{- range .Payload.Request.QueryParams }}
-		{{- if .FieldName }}
+		{{- if .MapQueryParams }}
+		for key, value := range p{{ if .FieldName }}.{{ .FieldName }}{{ end }} {
+			{{ template "type_conversion" (typeConversionData .Type.KeyType.Type "keyStr" "key") }}
+			{{- if eq .Type.ElemType.Type.Name "array" }}
+			for _, val := range value {
+				{{ template "type_conversion" (typeConversionData .Type.ElemType.Type.ElemType.Type (printf "%sStr" "val") "val") }}
+				values.Add(keyStr, valStr)
+			}
+			{{- else }}
+			{{ template "type_conversion" (typeConversionData .Type.ElemType.Type (printf "%sStr" "value") "value") }}
+			values.Add(keyStr, valueStr)
+			{{- end }}
+    }
+		{{- else if .FieldName }}
 			{{- if .Pointer }}
 		if p.{{ .FieldName }} != nil {
 			{{- end }}
@@ -240,6 +267,36 @@ func {{ .RequestEncoder }}(encoder func(*http.Request) goahttp.Encoder) func(*ht
 		return nil
 	}
 }
+
+{{- define "type_conversion" }}
+  {{- if eq .Type.Name "boolean" -}}
+    {{ .VarName }} := strconv.FormatBool({{ .Target }})
+  {{- else if eq .Type.Name "int" -}}
+    {{ .VarName }} := strconv.Itoa({{ .Target }})
+  {{- else if eq .Type.Name "int32" -}}
+    {{ .VarName }} := strconv.FormatInt(int64({{ .Target }}), 10)
+  {{- else if eq .Type.Name "int64" -}}
+    {{ .VarName }} := strconv.FormatInt({{ .Target }}, 10)
+  {{- else if eq .Type.Name "uint" -}}
+    {{ .VarName }} := strconv.FormatUint(uint64({{ .Target }}), 10)
+  {{- else if eq .Type.Name "uint32" -}}
+    {{ .VarName }} := strconv.FormatUint(uint64({{ .Target }}), 10)
+  {{- else if eq .Type.Name "uint64" -}}
+    {{ .VarName }} := strconv.FormatUint({{ .Target }}, 10)
+  {{- else if eq .Type.Name "float32" -}}
+    {{ .VarName }} := strconv.FormatFloat(float64({{ .Target }}), 'f', -1, 32)
+  {{- else if eq .Type.Name "float64" -}}
+    {{ .VarName }} := strconv.FormatFloat({{ .Target }}, 'f', -1, 64)
+	{{- else if eq .Type.Name "string" -}}
+    {{ .VarName }} := {{ .Target }}
+  {{- else if eq .Type.Name "bytes" -}}
+    {{ .VarName }} := string({{ .Target }})
+  {{- else if eq .Type.Name "any" -}}
+    {{ .VarName }} := fmt.Sprintf("%v", {{ .Target }})
+  {{- else }}
+    // unsupported type {{ .Type.Name }} for header field {{ .FieldName }}
+  {{- end }}
+{{- end }}
 `
 
 // input: EndpointData

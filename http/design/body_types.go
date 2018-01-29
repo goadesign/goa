@@ -26,7 +26,8 @@ func RequestBody(a *EndpointExpr) *design.AttributeExpr {
 	)
 
 	bodyOnly := len(*design.AsObject(headers.Type)) == 0 &&
-		len(*design.AsObject(params.Type)) == 0
+		len(*design.AsObject(params.Type)) == 0 &&
+		a.MapQueryParams == nil
 
 	// 1. If Payload is not an object then check whether there are params or
 	// headers defined and if so return empty type (payload encoded in
@@ -45,6 +46,9 @@ func RequestBody(a *EndpointExpr) *design.AttributeExpr {
 	body := design.NewMappedAttributeExpr(payload)
 	removeAttributes(body, headers)
 	removeAttributes(body, params)
+	if a.MapQueryParams != nil && *a.MapQueryParams != "" {
+		removeAttribute(body, *a.MapQueryParams)
+	}
 
 	// 3. Return empty type if no attribute left
 	if len(*design.AsObject(body.Type)) == 0 {
@@ -296,15 +300,19 @@ func appendSuffix(dt design.DataType, suffix string, seen ...map[string]struct{}
 
 func removeAttributes(attr, sub *design.MappedAttributeExpr) {
 	codegen.WalkMappedAttr(sub, func(name, _ string, _ bool, _ *design.AttributeExpr) error {
-		attr.Delete(name)
-		if attr.Validation != nil {
-			attr.Validation.RemoveRequired(name)
-		}
-		for _, ex := range attr.UserExamples {
-			if m, ok := ex.Value.(map[string]interface{}); ok {
-				delete(m, name)
-			}
-		}
+		removeAttribute(attr, name)
 		return nil
 	})
+}
+
+func removeAttribute(attr *design.MappedAttributeExpr, name string) {
+	attr.Delete(name)
+	if attr.Validation != nil {
+		attr.Validation.RemoveRequired(name)
+	}
+	for _, ex := range attr.UserExamples {
+		if m, ok := ex.Value.(map[string]interface{}); ok {
+			delete(m, name)
+		}
+	}
 }

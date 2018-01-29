@@ -73,6 +73,7 @@ func serverEncodeDecode(genpkg string, svc *httpdesign.ServiceExpr) *codegen.Fil
 			{Path: "net/http"},
 			{Path: "strconv"},
 			{Path: "strings"},
+			{Path: "encoding/json"},
 			{Path: "unicode/utf8"},
 			{Path: "goa.design/goa", Name: "goa"},
 			{Path: "goa.design/goa/http", Name: "goahttp"},
@@ -424,6 +425,32 @@ func {{ .RequestDecoder }}(mux goahttp.Muxer, decoder func(*http.Request) goahtt
 		{{- end }}
 
 	{{- else if .Map }}
+	{
+		{{ .VarName }}Raw := r.URL.Query()
+		{{- if .Required }}
+		if len({{ .VarName }}Raw) == 0 {
+			err = goa.MergeErrors(err, goa.MissingFieldError("{{ .Name }}", "query string"))
+		}
+		{{- end }}
+
+		{{- if not .Required }}
+		if len({{ .VarName }}Raw) != 0 {
+		{{- end }}
+		{{- if eq .Type.ElemType.Type.Name "array" }}
+			{{- if eq .Type.ElemType.Type.ElemType.Type.Name "string" }}
+			{{- template "map_key_conversion" . }}
+			{{- else }}
+			{{- template "map_slice_conversion" . }}
+			{{- end }}
+		{{- else }}
+			{{- template "map_conversion" . }}
+		{{- end }}
+		{{- if not .Required }}
+		}
+		{{- end }}
+	}
+
+	{{- else if .MapQueryParams }}
 	{
 		{{ .VarName }}Raw := r.URL.Query()
 		{{- if .Required }}

@@ -62,4 +62,14 @@ var _ = Service("storage", func() {
 			Response(StatusNoContent)
 		})
 	})
+
+	Method("rate", func() {
+		Description("Rate bottles by IDs")
+		Payload(MapOf(UInt32, ArrayOf(String)))
+		HTTP(func() {
+			POST("/rate")
+			MapParams()
+			Response(StatusOK)
+		})
+	})
 })

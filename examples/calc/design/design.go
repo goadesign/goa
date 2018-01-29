@@ -40,5 +40,5 @@ var _ = Service("calc", func() {
 var _ = Service("openapi", func() {
 	// Serve the file with relative path ../../http/openapi.json for requests
 	// sent to /swagger.json.
-	Files("/swagger.json", "../../http/openapi.json")
+	Files("/swagger.json", "../../gen/http/openapi.json")
 })
