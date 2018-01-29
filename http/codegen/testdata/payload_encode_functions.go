@@ -2173,3 +2173,71 @@ func EncodeMethodBodyQueryPathUserValidateRequest(encoder func(*http.Request) go
 	}
 }
 `
+
+var PayloadMapQueryPrimitivePrimitiveEncodeCode = `// EncodeMapQueryPrimitivePrimitiveRequest returns an encoder for requests sent
+// to the ServiceMapQueryPrimitivePrimitive MapQueryPrimitivePrimitive server.
+func EncodeMapQueryPrimitivePrimitiveRequest(encoder func(*http.Request) goahttp.Encoder) func(*http.Request, interface{}) error {
+	return func(req *http.Request, v interface{}) error {
+		p, ok := v.(map[string]string)
+		if !ok {
+			return goahttp.ErrInvalidType("ServiceMapQueryPrimitivePrimitive", "MapQueryPrimitivePrimitive", "map[string]string", v)
+		}
+		values := req.URL.Query()
+		for key, value := range p {
+			keyStr := key
+			valueStr := value
+			values.Add(keyStr, valueStr)
+		}
+		req.URL.RawQuery = values.Encode()
+		return nil
+	}
+}
+`
+
+var PayloadMapQueryPrimitiveArrayEncodeCode = `// EncodeMapQueryPrimitiveArrayRequest returns an encoder for requests sent to
+// the ServiceMapQueryPrimitiveArray MapQueryPrimitiveArray server.
+func EncodeMapQueryPrimitiveArrayRequest(encoder func(*http.Request) goahttp.Encoder) func(*http.Request, interface{}) error {
+	return func(req *http.Request, v interface{}) error {
+		p, ok := v.(map[string][]uint)
+		if !ok {
+			return goahttp.ErrInvalidType("ServiceMapQueryPrimitiveArray", "MapQueryPrimitiveArray", "map[string][]uint", v)
+		}
+		values := req.URL.Query()
+		for key, value := range p {
+			keyStr := key
+			for _, val := range value {
+				valStr := strconv.FormatUint(uint64(val), 10)
+				values.Add(keyStr, valStr)
+			}
+		}
+		req.URL.RawQuery = values.Encode()
+		return nil
+	}
+}
+`
+
+var PayloadMapQueryObjectEncodeCode = `// EncodeMethodMapQueryObjectRequest returns an encoder for requests sent to
+// the ServiceMapQueryObject MethodMapQueryObject server.
+func EncodeMethodMapQueryObjectRequest(encoder func(*http.Request) goahttp.Encoder) func(*http.Request, interface{}) error {
+	return func(req *http.Request, v interface{}) error {
+		p, ok := v.(*servicemapqueryobject.PayloadType)
+		if !ok {
+			return goahttp.ErrInvalidType("ServiceMapQueryObject", "MethodMapQueryObject", "*servicemapqueryobject.PayloadType", v)
+		}
+		values := req.URL.Query()
+		for key, value := range p.C {
+			keyStr := strconv.Itoa(key)
+			for _, val := range value {
+				valStr := val
+				values.Add(keyStr, valStr)
+			}
+		}
+		req.URL.RawQuery = values.Encode()
+		body := NewMethodMapQueryObjectRequestBody(p)
+		if err := encoder(req).Encode(&body); err != nil {
+			return goahttp.ErrEncodingError("ServiceMapQueryObject", "MethodMapQueryObject", err)
+		}
+		return nil
+	}
+}
+`

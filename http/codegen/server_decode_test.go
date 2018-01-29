@@ -152,6 +152,10 @@ func TestDecode(t *testing.T) {
 		{"body-query-path-object-validate", testdata.PayloadBodyQueryPathObjectValidateDSL, testdata.PayloadBodyQueryPathObjectValidateDecodeCode},
 		{"body-query-path-user", testdata.PayloadBodyQueryPathUserDSL, testdata.PayloadBodyQueryPathUserDecodeCode},
 		{"body-query-path-user-validate", testdata.PayloadBodyQueryPathUserValidateDSL, testdata.PayloadBodyQueryPathUserValidateDecodeCode},
+
+		{"map-query-primitive-primitive", testdata.PayloadMapQueryPrimitivePrimitiveDSL, testdata.PayloadMapQueryPrimitivePrimitiveDecodeCode},
+		{"map-query-primitive-array", testdata.PayloadMapQueryPrimitiveArrayDSL, testdata.PayloadMapQueryPrimitiveArrayDecodeCode},
+		{"map-query-object", testdata.PayloadMapQueryObjectDSL, testdata.PayloadMapQueryObjectDecodeCode},
 	}
 	golden := makeGolden(t, "testdata/payload_decode_functions.go")
 	if golden != nil {

@@ -2191,3 +2191,50 @@ var PayloadBodyInlineRecursiveUserDSL = func() {
 		})
 	})
 }
+
+var PayloadMapQueryPrimitivePrimitiveDSL = func() {
+	Service("ServiceMapQueryPrimitivePrimitive", func() {
+		Method("MapQueryPrimitivePrimitive", func() {
+			Payload(MapOf(String, String))
+			HTTP(func() {
+				POST("/")
+				MapParams()
+			})
+		})
+	})
+}
+
+var PayloadMapQueryPrimitiveArrayDSL = func() {
+	Service("ServiceMapQueryPrimitiveArray", func() {
+		Method("MapQueryPrimitiveArray", func() {
+			Payload(MapOf(String, ArrayOf(UInt)))
+			HTTP(func() {
+				POST("/")
+				MapParams()
+			})
+		})
+	})
+}
+
+var PayloadMapQueryObjectDSL = func() {
+	var PayloadType = Type("PayloadType", func() {
+		Attribute("a", String, func() {
+			Pattern("patterna")
+		})
+		Attribute("b", String, func() {
+			Pattern("patternb")
+		})
+		Attribute("c", MapOf(Int, ArrayOf(String)))
+		Required("a", "c")
+	})
+
+	Service("ServiceMapQueryObject", func() {
+		Method("MethodMapQueryObject", func() {
+			Payload(PayloadType)
+			HTTP(func() {
+				POST("/{a}")
+				MapParams("c")
+			})
+		})
+	})
+}
