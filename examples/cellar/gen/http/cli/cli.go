@@ -9,6 +9,7 @@
 package cli
 
 import (
+	"encoding/json"
 	"flag"
 	"fmt"
 	"net/http"
@@ -26,7 +27,7 @@ import (
 //
 func UsageCommands() string {
 	return `sommelier pick
-storage (list|show|add|remove)
+storage (list|show|add|remove|rate)
 `
 }
 
@@ -73,6 +74,9 @@ func ParseEndpoint(
 
 		storageRemoveFlags  = flag.NewFlagSet("remove", flag.ExitOnError)
 		storageRemoveIDFlag = storageRemoveFlags.String("id", "REQUIRED", "ID of bottle to remove")
+
+		storageRateFlags = flag.NewFlagSet("rate", flag.ExitOnError)
+		storageRatePFlag = storageRateFlags.String("p", "REQUIRED", "map[uint32][]string is the payload type of the storage service rate method.")
 	)
 	sommelierFlags.Usage = sommelierUsage
 	sommelierPickFlags.Usage = sommelierPickUsage
@@ -82,6 +86,7 @@ func ParseEndpoint(
 	storageShowFlags.Usage = storageShowUsage
 	storageAddFlags.Usage = storageAddUsage
 	storageRemoveFlags.Usage = storageRemoveUsage
+	storageRateFlags.Usage = storageRateUsage
 
 	if err := flag.CommandLine.Parse(os.Args[1:]); err != nil {
 		return nil, nil, err
@@ -138,6 +143,9 @@ func ParseEndpoint(
 			case "remove":
 				epf = storageRemoveFlags
 
+			case "rate":
+				epf = storageRateFlags
+
 			}
 
 		}
@@ -182,6 +190,15 @@ func ParseEndpoint(
 			case "remove":
 				endpoint = c.Remove()
 				data, err = storagec.BuildRemoveRemovePayload(*storageRemoveIDFlag)
+			case "rate":
+				endpoint = c.Rate()
+				var err error
+				var val map[uint32][]string
+				err = json.Unmarshal([]byte(*storageRatePFlag), &val)
+				data = val
+				if err != nil {
+					return nil, nil, fmt.Errorf("invalid JSON for storageRatePFlag, example of valid JSON:\n%s", "'{\n      \"1619338135\": [\n         \"Laboriosam consequatur delectus doloribus.\",\n         \"Est mollitia.\",\n         \"Voluptas ex enim.\",\n         \"Est explicabo eveniet dolore.\"\n      ],\n      \"1681700938\": [\n         \"Magnam ut consequatur.\",\n         \"Quo rerum et ut omnis praesentium non.\"\n      ]\n   }'")
+				}
 			}
 		}
 	}
@@ -236,6 +253,7 @@ COMMAND:
     show: Show bottle by ID
     add: Add new bottle and return its ID.
     remove: Remove bottle from storage
+    rate: Rate bottles by IDs
 
 Additional help:
     %s storage COMMAND --help
@@ -259,7 +277,7 @@ Show bottle by ID
     -view STRING: 
 
 Example:
-    `+os.Args[0]+` storage show --id "Minima saepe eum." --view "default"
+    `+os.Args[0]+` storage show --id "Distinctio delectus vel earum doloribus." --view "tiny"
 `, os.Args[0])
 }
 
@@ -273,26 +291,26 @@ Example:
     `+os.Args[0]+` storage add --body '{
       "composition": [
          {
-            "percentage": 46,
+            "percentage": 59,
             "varietal": "Syrah"
          },
          {
-            "percentage": 46,
+            "percentage": 59,
             "varietal": "Syrah"
          },
          {
-            "percentage": 46,
+            "percentage": 59,
             "varietal": "Syrah"
          },
          {
-            "percentage": 46,
+            "percentage": 59,
             "varietal": "Syrah"
          }
       ],
       "description": "Red wine blend with an emphasis on the Cabernet Franc grape and including other Bordeaux grape varietals and some Syrah",
       "name": "Blue\'s Cuvee",
-      "rating": 1,
-      "vintage": 1965,
+      "rating": 2,
+      "vintage": 1935,
       "winery": {
          "country": "USA",
          "name": "Longoria",
@@ -310,6 +328,28 @@ Remove bottle from storage
     -id STRING: ID of bottle to remove
 
 Example:
-    `+os.Args[0]+` storage remove --id "Consequuntur recusandae."
+    `+os.Args[0]+` storage remove --id "Dignissimos sunt ut accusamus soluta."
+`, os.Args[0])
+}
+
+func storageRateUsage() {
+	fmt.Fprintf(os.Stderr, `%s [flags] storage rate -p JSON
+
+Rate bottles by IDs
+    -p JSON: map[uint32][]string is the payload type of the storage service rate method.
+
+Example:
+    `+os.Args[0]+` storage rate --p '{
+      "1619338135": [
+         "Laboriosam consequatur delectus doloribus.",
+         "Est mollitia.",
+         "Voluptas ex enim.",
+         "Est explicabo eveniet dolore."
+      ],
+      "1681700938": [
+         "Magnam ut consequatur.",
+         "Quo rerum et ut omnis praesentium non."
+      ]
+   }'
 `, os.Args[0])
 }

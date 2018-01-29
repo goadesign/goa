@@ -78,15 +78,17 @@ func main() {
 	// the service input and output data structures to HTTP requests and
 	// responses.
 	var (
+		openapiServer *openapisvr.Server
 		calcsvcServer *calcsvcsvr.Server
 	)
 	{
+		openapiServer = openapisvr.New(nil, mux, dec, enc)
 		calcsvcServer = calcsvcsvr.New(calcsvcEndpoints, mux, dec, enc)
 	}
 
 	// Configure the mux.
-	calcsvcsvr.Mount(mux, calcsvcServer)
 	openapisvr.Mount(mux)
+	calcsvcsvr.Mount(mux, calcsvcServer)
 
 	// Wrap the multiplexer with additional middlewares. Middlewares mounted
 	// here apply to all the service endpoints.
@@ -114,6 +116,9 @@ func main() {
 	// configure the server as required by your service.
 	srv := &http.Server{Addr: *addr, Handler: handler}
 	go func() {
+		for _, m := range openapiServer.Mounts {
+			logger.Printf("[INFO] service %q file %q mounted on %s %s", openapiServer.Service(), m.Method, m.Verb, m.Pattern)
+		}
 		for _, m := range calcsvcServer.Mounts {
 			logger.Printf("[INFO] service %q method %q mounted on %s %s", calcsvcServer.Service(), m.Method, m.Verb, m.Pattern)
 		}

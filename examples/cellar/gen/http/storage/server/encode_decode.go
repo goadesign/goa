@@ -12,6 +12,7 @@ import (
 	"context"
 	"io"
 	"net/http"
+	"strconv"
 
 	goa "goa.design/goa"
 	storage "goa.design/goa/examples/cellar/gen/storage"
@@ -147,6 +148,48 @@ func DecodeRemoveRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.
 		id = params["id"]
 
 		return NewRemoveRemovePayload(id), nil
+	}
+}
+
+// EncodeRateResponse returns an encoder for responses returned by the storage
+// rate endpoint.
+func EncodeRateResponse(encoder func(context.Context, http.ResponseWriter) goahttp.Encoder) func(context.Context, http.ResponseWriter, interface{}) error {
+	return func(ctx context.Context, w http.ResponseWriter, v interface{}) error {
+		w.WriteHeader(http.StatusOK)
+		return nil
+	}
+}
+
+// DecodeRateRequest returns a decoder for requests sent to the storage rate
+// endpoint.
+func DecodeRateRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) (interface{}, error) {
+	return func(r *http.Request) (interface{}, error) {
+		var (
+			query map[uint32][]string
+			err   error
+		)
+		{
+			queryRaw := r.URL.Query()
+			if len(queryRaw) != 0 {
+				query = make(map[uint32][]string, len(queryRaw))
+				for keyRaw, val := range queryRaw {
+					var key uint32
+					{
+						v, err2 := strconv.ParseUint(keyRaw, 10, 32)
+						if err2 != nil {
+							err = goa.MergeErrors(err, goa.InvalidFieldTypeError("key", keyRaw, "unsigned integer"))
+						}
+						key = uint32(v)
+					}
+					query[key] = val
+				}
+			}
+		}
+		if err != nil {
+			return nil, err
+		}
+
+		return query, nil
 	}
 }
 

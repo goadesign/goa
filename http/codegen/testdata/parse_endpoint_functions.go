@@ -623,3 +623,150 @@ func BuildMethodBodyQueryPathObjectMethodBodyQueryPathObjectPayload(serviceBodyQ
 	return v, nil
 }
 `
+
+var MapQueryParseCode = `// ParseEndpoint returns the endpoint and payload as specified on the command
+// line.
+func ParseEndpoint(
+	scheme, host string,
+	doer goahttp.Doer,
+	enc func(*http.Request) goahttp.Encoder,
+	dec func(*http.Response) goahttp.Decoder,
+	restore bool,
+) (goa.Endpoint, interface{}, error) {
+	var (
+		serviceMapQueryPrimitiveArrayFlags = flag.NewFlagSet("ServiceMapQueryPrimitiveArray", flag.ContinueOnError)
+
+		serviceMapQueryPrimitiveArrayMapQueryPrimitiveArrayFlags = flag.NewFlagSet("MapQueryPrimitiveArray", flag.ExitOnError)
+		serviceMapQueryPrimitiveArrayMapQueryPrimitiveArrayPFlag = serviceMapQueryPrimitiveArrayMapQueryPrimitiveArrayFlags.String("p", "REQUIRED", "map[string][]uint is the payload type of the ServiceMapQueryPrimitiveArray service MapQueryPrimitiveArray method.")
+	)
+	serviceMapQueryPrimitiveArrayFlags.Usage = serviceMapQueryPrimitiveArrayUsage
+	serviceMapQueryPrimitiveArrayMapQueryPrimitiveArrayFlags.Usage = serviceMapQueryPrimitiveArrayMapQueryPrimitiveArrayUsage
+
+	if err := flag.CommandLine.Parse(os.Args[1:]); err != nil {
+		return nil, nil, err
+	}
+
+	if len(os.Args) < flag.NFlag()+3 {
+		return nil, nil, fmt.Errorf("not enough arguments")
+	}
+
+	var (
+		svcn string
+		svcf *flag.FlagSet
+	)
+	{
+		svcn = os.Args[1+flag.NFlag()]
+		switch svcn {
+		case "ServiceMapQueryPrimitiveArray":
+			svcf = serviceMapQueryPrimitiveArrayFlags
+		default:
+			return nil, nil, fmt.Errorf("unknown service %q", svcn)
+		}
+	}
+	if err := svcf.Parse(os.Args[2+flag.NFlag():]); err != nil {
+		return nil, nil, err
+	}
+
+	var (
+		epn string
+		epf *flag.FlagSet
+	)
+	{
+		epn = os.Args[2+flag.NFlag()+svcf.NFlag()]
+		switch svcn {
+		case "ServiceMapQueryPrimitiveArray":
+			switch epn {
+			case "MapQueryPrimitiveArray":
+				epf = serviceMapQueryPrimitiveArrayMapQueryPrimitiveArrayFlags
+
+			}
+
+		}
+	}
+	if epf == nil {
+		return nil, nil, fmt.Errorf("unknown %q endpoint %q", svcn, epn)
+	}
+
+	// Parse endpoint flags if any
+	if len(os.Args) > 2+flag.NFlag()+svcf.NFlag() {
+		if err := epf.Parse(os.Args[3+flag.NFlag()+svcf.NFlag():]); err != nil {
+			return nil, nil, err
+		}
+	}
+
+	var (
+		data     interface{}
+		endpoint goa.Endpoint
+		err      error
+	)
+	{
+		switch svcn {
+		case "ServiceMapQueryPrimitiveArray":
+			c := servicemapqueryprimitivearrayc.NewClient(scheme, host, doer, enc, dec, restore)
+			switch epn {
+			case "MapQueryPrimitiveArray":
+				endpoint = c.MapQueryPrimitiveArray()
+				var err error
+				var val map[string][]uint
+				err = json.Unmarshal([]byte(*serviceMapQueryPrimitiveArrayMapQueryPrimitiveArrayPFlag), &val)
+				data = val
+				if err != nil {
+					return nil, nil, fmt.Errorf("invalid JSON for serviceMapQueryPrimitiveArrayMapQueryPrimitiveArrayPFlag, example of valid JSON:\n%s", "'{\n      \"Iste perspiciatis.\": [\n         567408540461384614,\n         5721637919286150856\n      ],\n      \"Itaque inventore optio.\": [\n         944964629895926327,\n         593430823343775997\n      ],\n      \"Molestias recusandae doloribus qui quia.\": [\n         6921210467234244263,\n         3742304935485895874,\n         4170793618430505438,\n         7388093990298529880\n      ]\n   }'")
+				}
+			}
+		}
+	}
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return endpoint, data, nil
+}
+`
+
+var MapQueryObjectBuildCode = `// BuildMethodMapQueryObjectPayloadType builds the payload for the
+// ServiceMapQueryObject MethodMapQueryObject endpoint from CLI flags.
+func BuildMethodMapQueryObjectPayloadType(serviceMapQueryObjectMethodMapQueryObjectBody string, serviceMapQueryObjectMethodMapQueryObjectA string, serviceMapQueryObjectMethodMapQueryObjectC string) (*servicemapqueryobject.PayloadType, error) {
+	var err error
+	var body MethodMapQueryObjectRequestBody
+	{
+		err = json.Unmarshal([]byte(serviceMapQueryObjectMethodMapQueryObjectBody), &body)
+		if err != nil {
+			return nil, fmt.Errorf("invalid JSON for body, example of valid JSON:\n%s", "'{\n      \"b\": \"patternb\"\n   }'")
+		}
+		if body.B != nil {
+			err = goa.MergeErrors(err, goa.ValidatePattern("body.b", *body.B, "patternb"))
+		}
+		if err != nil {
+			return nil, err
+		}
+	}
+	var a string
+	{
+		a = serviceMapQueryObjectMethodMapQueryObjectA
+	}
+	var c map[int][]string
+	{
+		err = json.Unmarshal([]byte(serviceMapQueryObjectMethodMapQueryObjectC), &c)
+		if err != nil {
+			return nil, fmt.Errorf("invalid JSON for c, example of valid JSON:\n%s", "'{\n      \"1484745265794365762\": [\n         \"Similique aspernatur.\",\n         \"Error explicabo.\",\n         \"Minima cumque voluptatem et distinctio aliquam.\",\n         \"Blanditiis ut eaque.\"\n      ],\n      \"4925854623691091547\": [\n         \"Eos aut ipsam.\",\n         \"Aliquam tempora.\"\n      ],\n      \"7174751143827362498\": [\n         \"Facilis minus explicabo nemo eos vel repellat.\",\n         \"Voluptatum magni aperiam qui.\"\n      ]\n   }'")
+		}
+		err = goa.MergeErrors(err, goa.ValidatePattern("c.a", c.A, "patterna"))
+		if c.B != nil {
+			err = goa.MergeErrors(err, goa.ValidatePattern("c.b", *c.B, "patternb"))
+		}
+		if err != nil {
+			return nil, err
+		}
+	}
+	if err != nil {
+		return nil, err
+	}
+	v := &servicemapqueryobject.PayloadType{
+		B: body.B,
+	}
+	v.A = a
+	v.C = c
+	return v, nil
+}
+`

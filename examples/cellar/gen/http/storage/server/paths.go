@@ -31,3 +31,8 @@ func AddStoragePath() string {
 func RemoveStoragePath(id string) string {
 	return fmt.Sprintf("/storage/%v", id)
 }
+
+// RateStoragePath returns the URL path to the storage service rate HTTP endpoint.
+func RateStoragePath() string {
+	return "/storage/rate"
+}

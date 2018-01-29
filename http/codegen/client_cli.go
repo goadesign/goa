@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"path/filepath"
+	"reflect"
+	"strconv"
 	"strings"
 
 	"goa.design/goa/codegen"
@@ -346,13 +348,20 @@ func buildSubcommandData(svc *ServiceData, e *EndpointData) *subcommandData {
 				}
 			} else if len(flags) > 0 {
 				// No build function, just convert the arg to the body type
+				var convPre, convSuff string
+				target := "data"
+				if flagType(e.Method.Payload) == "JSON" {
+					target = "val"
+					convPre = fmt.Sprintf("var val %s\n", e.Method.Payload)
+					convSuff = "\ndata = val"
+				}
 				conv, check := conversionCode(
 					"*"+flags[0].FullName+"Flag",
-					"data",
+					target,
 					e.Method.Payload,
 					true,
 				)
-				conversion = conv
+				conversion = convPre + conv + convSuff
 				if check {
 					conversion = "var err error\n" + conversion
 					conversion += "\nif err != nil {\n"
@@ -387,6 +396,35 @@ func buildSubcommandData(svc *ServiceData, e *EndpointData) *subcommandData {
 }
 
 func jsonExample(v interface{}) string {
+	// In JSON, keys must be a string. But goa allows map keys to be anything.
+	r := reflect.ValueOf(v)
+	if r.Kind() == reflect.Map {
+		keys := r.MapKeys()
+		if keys[0].Kind() != reflect.String {
+			a := make(map[string]interface{}, len(keys))
+			var kstr string
+			for _, k := range keys {
+				switch t := k.Interface().(type) {
+				case bool:
+					kstr = strconv.FormatBool(t)
+				case int32:
+					kstr = strconv.FormatInt(int64(t), 10)
+				case int64:
+					kstr = strconv.FormatInt(t, 10)
+				case int:
+					kstr = strconv.Itoa(t)
+				case float32:
+					kstr = strconv.FormatFloat(float64(t), 'f', -1, 32)
+				case float64:
+					kstr = strconv.FormatFloat(t, 'f', -1, 64)
+				default:
+					kstr = k.String()
+				}
+				a[kstr] = r.MapIndex(k).Interface()
+			}
+			v = a
+		}
+	}
 	b, err := json.MarshalIndent(v, "   ", "   ")
 	ex := "?"
 	if err == nil {
@@ -518,7 +556,7 @@ func conversionCode(from, to, typeName string, required bool) (string, bool) {
 	case bytesN:
 		parse = fmt.Sprintf("%s %s= string(%s)", target, decl, from)
 	default:
-		parse = fmt.Sprintf(`err = json.Unmarshal([]byte(%s), &%s)`, from, target)
+		parse = fmt.Sprintf("err = json.Unmarshal([]byte(%s), &%s)", from, target)
 		checkErr = true
 	}
 	if !needCast {

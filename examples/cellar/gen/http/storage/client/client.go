@@ -30,6 +30,9 @@ type Client struct {
 	// Remove Doer is the HTTP client used to make requests to the remove endpoint.
 	RemoveDoer goahttp.Doer
 
+	// Rate Doer is the HTTP client used to make requests to the rate endpoint.
+	RateDoer goahttp.Doer
+
 	// RestoreResponseBody controls whether the response bodies are reset after
 	// decoding so they can be read again.
 	RestoreResponseBody bool
@@ -54,6 +57,7 @@ func NewClient(
 		ShowDoer:            doer,
 		AddDoer:             doer,
 		RemoveDoer:          doer,
+		RateDoer:            doer,
 		RestoreResponseBody: restoreBody,
 		scheme:              scheme,
 		host:                host,
@@ -151,6 +155,32 @@ func (c *Client) Remove() goa.Endpoint {
 
 		if err != nil {
 			return nil, goahttp.ErrRequestError("storage", "remove", err)
+		}
+		return decodeResponse(resp)
+	}
+}
+
+// Rate returns a endpoint that makes HTTP requests to the storage service rate
+// server.
+func (c *Client) Rate() goa.Endpoint {
+	var (
+		encodeRequest  = EncodeRateRequest(c.encoder)
+		decodeResponse = DecodeRateResponse(c.decoder, c.RestoreResponseBody)
+	)
+	return func(ctx context.Context, v interface{}) (interface{}, error) {
+		req, err := c.BuildRateRequest(v)
+		if err != nil {
+			return nil, err
+		}
+		err = encodeRequest(req, v)
+		if err != nil {
+			return nil, err
+		}
+
+		resp, err := c.RateDoer.Do(req)
+
+		if err != nil {
+			return nil, goahttp.ErrRequestError("storage", "rate", err)
 		}
 		return decodeResponse(resp)
 	}

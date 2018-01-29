@@ -14,6 +14,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/url"
+	"strconv"
 
 	storage "goa.design/goa/examples/cellar/gen/storage"
 	goahttp "goa.design/goa/http"
@@ -273,6 +274,66 @@ func DecodeRemoveResponse(decoder func(*http.Response) goahttp.Decoder, restoreB
 		}
 		switch resp.StatusCode {
 		case http.StatusNoContent:
+			return nil, nil
+		default:
+			body, _ := ioutil.ReadAll(resp.Body)
+			return nil, goahttp.ErrInvalidResponse("account", "create", resp.StatusCode, string(body))
+		}
+	}
+}
+
+// BuildRateRequest instantiates a HTTP request object with method and path set
+// to call the "storage" service "rate" endpoint
+func (c *Client) BuildRateRequest(v interface{}) (*http.Request, error) {
+	u := &url.URL{Scheme: c.scheme, Host: c.host, Path: RateStoragePath()}
+	req, err := http.NewRequest("POST", u.String(), nil)
+	if err != nil {
+		return nil, goahttp.ErrInvalidURL("storage", "rate", u.String(), err)
+	}
+
+	return req, nil
+}
+
+// EncodeRateRequest returns an encoder for requests sent to the storage rate
+// server.
+func EncodeRateRequest(encoder func(*http.Request) goahttp.Encoder) func(*http.Request, interface{}) error {
+	return func(req *http.Request, v interface{}) error {
+		p, ok := v.(map[uint32][]string)
+		if !ok {
+			return goahttp.ErrInvalidType("storage", "rate", "map[uint32][]string", v)
+		}
+		values := req.URL.Query()
+		for key, value := range p {
+			keyStr := strconv.FormatUint(uint64(key), 10)
+			for _, val := range value {
+				valStr := val
+				values.Add(keyStr, valStr)
+			}
+		}
+		req.URL.RawQuery = values.Encode()
+		return nil
+	}
+}
+
+// DecodeRateResponse returns a decoder for responses returned by the storage
+// rate endpoint. restoreBody controls whether the response body should be
+// restored after having been read.
+func DecodeRateResponse(decoder func(*http.Response) goahttp.Decoder, restoreBody bool) func(*http.Response) (interface{}, error) {
+	return func(resp *http.Response) (interface{}, error) {
+		if restoreBody {
+			b, err := ioutil.ReadAll(resp.Body)
+			if err != nil {
+				return nil, err
+			}
+			resp.Body = ioutil.NopCloser(bytes.NewBuffer(b))
+			defer func() {
+				resp.Body = ioutil.NopCloser(bytes.NewBuffer(b))
+			}()
+		} else {
+			defer resp.Body.Close()
+		}
+		switch resp.StatusCode {
+		case http.StatusOK:
 			return nil, nil
 		default:
 			body, _ := ioutil.ReadAll(resp.Body)

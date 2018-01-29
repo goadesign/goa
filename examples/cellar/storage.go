@@ -76,3 +76,30 @@ func (s *storageSvc) Add(ctx context.Context, p *storage.Bottle) (string, error)
 func (s *storageSvc) Remove(ctx context.Context, p *storage.RemovePayload) error {
 	return s.db.Delete("CELLAR", p.ID) // internal error if not nil
 }
+
+// Rate bottles by IDs
+func (s *storageSvc) Rate(ctx context.Context, p map[uint32][]string) error {
+	for rating, ids := range p {
+		for _, id := range ids {
+			var b storage.StoredBottle
+			if err := s.db.Load("CELLAR", id, &b); err != nil {
+				if err == ErrNotFound {
+					continue
+				}
+			}
+			sb := storage.StoredBottle{
+				ID:          id,
+				Name:        b.Name,
+				Winery:      b.Winery,
+				Vintage:     b.Vintage,
+				Composition: b.Composition,
+				Description: b.Description,
+				Rating:      &rating,
+			}
+			if err := s.db.Save("CELLAR", id, &sb); err != nil {
+				return err // internal error
+			}
+		}
+	}
+	return nil
+}
