@@ -499,7 +499,10 @@ func Field(tag interface{}, name string, args ...interface{}) {
 //
 // FormatRegexp: RE2 regular expression
 //
+// FormatJSON: JSON text
+//
 // FormatRFC1123: RFC1123 date time
+//
 func Format(f design.ValidationFormat) {
 	dsl.Format(f)
 }

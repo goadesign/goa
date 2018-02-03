@@ -23,6 +23,7 @@ func TestFormat(t *testing.T) {
 		"mac":       {design.FormatMAC},
 		"cidr":      {design.FormatCIDR},
 		"regexp":    {design.FormatRegexp},
+		"json":      {design.FormatJSON},
 		"rfc1123":   {design.FormatRFC1123},
 	}
 

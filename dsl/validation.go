@@ -79,7 +79,10 @@ func Enum(vals ...interface{}) {
 //
 // FormatRegexp: RE2 regular expression
 //
+// FormatJSON: JSON text
+//
 // FormatRFC1123: RFC1123 date time
+//
 func Format(f design.ValidationFormat) {
 	if a, ok := eval.Current().(*design.AttributeExpr); ok {
 		if a.Type != nil && a.Type.Kind() != design.StringKind {
