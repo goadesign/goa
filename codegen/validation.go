@@ -433,6 +433,8 @@ func constant(formatName string) string {
 		return "goa.FormatCIDR"
 	case "regexp":
 		return "goa.FormatRegexp"
+	case "json":
+		return "goa.FormatJSON"
 	case "rfc1123":
 		return "goa.FormatRFC1123"
 	}

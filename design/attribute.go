@@ -93,40 +93,43 @@ type (
 )
 
 const (
-	// FormatCIDR designates
-	FormatCIDR ValidationFormat = "cidr"
+	// FormatDateTime describes RFC3339 date time values.
+	FormatDateTime ValidationFormat = "date-time"
 
-	// FormatDateTime designates values that follow RFC3339
-	FormatDateTime = "date-time"
-
-	// FormatUUID designates values that follow RFC4122
+	// FormatUUID describes RFC4122 UUID values.
 	FormatUUID = "uuid"
 
-	// FormatEmail designates values that follow RFC5322
+	// FormatEmail describes RFC5322 email addresses.
 	FormatEmail = "email"
 
-	// FormatHostname designates
+	// FormatHostname describes RFC1035 Internet hostnames.
 	FormatHostname = "hostname"
 
-	// FormatIPv4 designates values that follow RFC2373 IPv4
+	// FormatIPv4 describes RFC2373 IPv4 address values.
 	FormatIPv4 = "ipv4"
 
-	// FormatIPv6 designates values that follow RFC2373 IPv6
+	// FormatIPv6 describes RFC2373 IPv6 address values.
 	FormatIPv6 = "ipv6"
 
-	// FormatIP designates values that follow RFC2373 IPv4 or IPv6
+	// FormatIP describes RFC2373 IPv4 or IPv6 address values.
 	FormatIP = "ip"
 
-	// FormatMAC designates
-	FormatMAC = "mac"
-
-	// FormatRegexp designates
-	FormatRegexp = "regexp"
-
-	// FormatURI designates
+	// FormatURI describes RFC3986 URI values.
 	FormatURI = "uri"
 
-	// FormatRFC1123 designates values that follow RFC1123
+	// FormatMAC describes IEEE 802 MAC-48, EUI-48 or EUI-64 MAC address values.
+	FormatMAC = "mac"
+
+	// FormatCIDR describes RFC4632 and RFC4291 CIDR notation IP address values.
+	FormatCIDR = "cidr"
+
+	// FormatRegexp describes regular expression syntax accepted by RE2.
+	FormatRegexp = "regexp"
+
+	// FormatJSON describes JSON text.
+	FormatJSON = "json"
+
+	// FormatRFC1123 describes RFC1123 date time values.
 	FormatRFC1123 = "rfc1123"
 )
 
