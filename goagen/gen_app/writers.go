@@ -778,7 +778,7 @@ func {{ .Unmarshal }}(ctx context.Context, service *goa.Service, req *http.Reque
 	payload.Finalize(){{ end }}{{ else }}var payload {{ gotypename .Payload nil 1 false }}
 	if err := service.DecodeRequest(req, &payload); err != nil {
 		return err
-	}{{ end }}{{ $validation := validationCode .Payload.AttributeDefinition false false false "payload" "raw" 1 false }}{{ if $validation }}
+	}{{ end }}{{ $validation := validationCode .Payload.AttributeDefinition false false false "payload" "raw" 1 true }}{{ if $validation }}
 	if err := payload.Validate(); err != nil {
 		// Initialize payload with private data structure so it can be logged
 		goa.ContextRequest(ctx).Payload = payload
