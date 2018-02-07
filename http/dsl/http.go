@@ -173,7 +173,6 @@ func Path(val string) {
 		}
 		httpdesign.Root.Path = val
 	case *httpdesign.ServiceExpr:
-		def.Paths = append(def.Paths, val)
 		if !strings.HasPrefix(val, "//") {
 			for _, sp := range def.Paths {
 				awcs := httpdesign.ExtractWildcards(sp)
@@ -187,6 +186,7 @@ func Path(val string) {
 				}
 			}
 		}
+		def.Paths = append(def.Paths, val)
 	default:
 		eval.IncompatibleDSL()
 	}
