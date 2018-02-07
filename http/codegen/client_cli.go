@@ -534,11 +534,11 @@ func conversionCode(from, to, typeName string, required bool) (string, bool) {
 	case int64N:
 		parse = fmt.Sprintf("%s, err %s= strconv.ParseInt(%s, 10, 64)", target, decl, from)
 	case uintN:
-		parse = fmt.Sprintf("var v unit64\nv, err = strconv.ParseUint(%s, 10, 64)", from)
+		parse = fmt.Sprintf("var v uint64\nv, err = strconv.ParseUint(%s, 10, 64)", from)
 		cast = fmt.Sprintf("%s %s= uint(v)", target, decl)
 		checkErr = true
 	case uint32N:
-		parse = fmt.Sprintf("var v unit64\nv, err = strconv.ParseUint(%s, 10, 32)", from)
+		parse = fmt.Sprintf("var v uint64\nv, err = strconv.ParseUint(%s, 10, 32)", from)
 		cast = fmt.Sprintf("%s %s= uint32(v)", target, decl)
 		checkErr = true
 	case uint64N:
