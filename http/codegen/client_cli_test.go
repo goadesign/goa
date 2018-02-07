@@ -24,6 +24,8 @@ func TestClientCLIFiles(t *testing.T) {
 		{"simple-build", testdata.MultiSimpleDSL, testdata.MultiSimpleBuildCode, 1, 1},
 		{"multi-build", testdata.MultiDSL, testdata.MultiBuildCode, 1, 1},
 		{"bool-build", testdata.PayloadQueryBoolDSL, testdata.QueryBoolBuildCode, 1, 1},
+		{"uint32-build", testdata.PayloadQueryUInt32DSL, testdata.QueryUInt32BuildCode, 1, 1},
+		{"uint64-build", testdata.PayloadQueryUIntDSL, testdata.QueryUIntBuildCode, 1, 1},
 		{"body-query-path-object-build", testdata.PayloadBodyQueryPathObjectDSL, testdata.BodyQueryPathObjectBuildCode, 1, 1},
 		{"map-query", testdata.PayloadMapQueryPrimitiveArrayDSL, testdata.MapQueryParseCode, 0, 3},
 		{"map-query-object", testdata.PayloadMapQueryObjectDSL, testdata.MapQueryObjectBuildCode, 1, 1},
