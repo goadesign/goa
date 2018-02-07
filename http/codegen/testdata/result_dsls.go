@@ -569,6 +569,23 @@ var ResultBodyObjectDSL = func() {
 	})
 }
 
+var ResultBodyObjectHeaderDSL = func() {
+	Service("ServiceBodyObjectHeader", func() {
+		Method("MethodBodyObjectHeader", func() {
+			Result(func() {
+				Attribute("a", String)
+				Attribute("b", String)
+			})
+			HTTP(func() {
+				POST("/")
+				Response(StatusOK, func() {
+					Header("b:Authorization")
+				})
+			})
+		})
+	})
+}
+
 var ResultBodyUserDSL = func() {
 	var ResultType = Type("ResultType", func() {
 		Attribute("a", String)
