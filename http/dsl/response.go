@@ -298,7 +298,7 @@ func parseResponseArgs(val interface{}, args ...interface{}) (code int, fn func(
 
 func httpError(n string, p eval.Expression, args ...interface{}) *httpdesign.ErrorExpr {
 	if len(args) == 0 {
-		eval.ReportError("not enough arguments, use Error(name, status), Error(name, status, func()) or Error(name, func())")
+		eval.ReportError("not enough arguments, use Response(name, status), Response(name, status, func()) or Response(name, func())")
 		return nil
 	}
 	var (

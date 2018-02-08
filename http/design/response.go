@@ -147,7 +147,7 @@ func (r *HTTPResponseExpr) Finalize(a *EndpointExpr, svcAtt *design.AttributeExp
 
 	// Initialize the headers with the corresponding result attributes.
 	svcObj := design.AsObject(svcAtt.Type)
-	if r.headers != nil {
+	if r.Headers() != nil {
 		for _, nat := range *design.AsObject(r.headers.Type) {
 			n := nat.Name
 			att := nat.Attribute
