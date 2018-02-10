@@ -202,11 +202,11 @@ func byPattern(a *AttributeExpr, r *Random) interface{} {
 		return false
 	}
 	pattern := a.Validation.Pattern
-	example, err := regen.Generate(pattern)
+	gen, err := regen.NewGenerator(pattern, &regen.GeneratorArgs{MaxUnboundedRepeatCount: 6})
 	if err != nil {
 		return r.faker.Name()
 	}
-	return example
+	return gen.Generate()
 }
 
 func byMinMax(a *AttributeExpr, r *Random) interface{} {
