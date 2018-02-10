@@ -76,21 +76,25 @@ var (
 
 	errorResultType = &Object{
 		{"id", &AttributeExpr{
-			Type:        String,
-			Description: "a unique identifier for this particular occurrence of the problem.",
+			Type:         String,
+			Description:  "a unique identifier for this particular occurrence of the problem.",
+			UserExamples: []*ExampleExpr{{Value: "123abc"}},
 		}},
 		{"status", &AttributeExpr{
-			Type:        Int,
-			Description: "the HTTP status code applicable to this problem.",
+			Type:         Int,
+			Description:  "the HTTP status code applicable to this problem.",
+			UserExamples: []*ExampleExpr{{Value: 400}},
 		}},
 		{"code", &AttributeExpr{
-			Type:        String,
-			Description: "an application-specific error code, expressed as a string value.",
-			Metadata:    MetadataExpr{"struct:error:name": nil},
+			Type:         String,
+			Description:  "an application-specific error code, expressed as a string value.",
+			Metadata:     MetadataExpr{"struct:error:name": nil},
+			UserExamples: []*ExampleExpr{{Value: "bad_request"}},
 		}},
 		{"message", &AttributeExpr{
-			Type:        String,
-			Description: "a human-readable explanation specific to this occurrence of the problem.",
+			Type:         String,
+			Description:  "a human-readable explanation specific to this occurrence of the problem.",
+			UserExamples: []*ExampleExpr{{Value: "parameter 'p' must be an integer"}},
 		}},
 	}
 

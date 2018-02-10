@@ -471,6 +471,13 @@ func buildPathFromExpr(s *V2, root *httpdesign.RootExpr, route *httpdesign.Route
 			}
 			responses[strconv.Itoa(r.StatusCode)] = resp
 		}
+		for _, er := range endpoint.HTTPErrors {
+			resp, err := responseSpecFromExpr(s, root, er.Response)
+			if err != nil {
+				return err
+			}
+			responses[strconv.Itoa(er.Response.StatusCode)] = resp
+		}
 
 		if endpoint.Body.Type != design.Empty {
 			pp := &Parameter{
