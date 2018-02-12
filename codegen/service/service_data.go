@@ -212,6 +212,14 @@ func (d ServicesData) analyze(service *design.ServiceExpr) *Data {
 				}
 			}
 		}
+		for _, er := range service.Errors {
+			errTypes = append(errTypes, collectTypes(er.AttributeExpr, seen, scope, false)...)
+			if _, ok := seenErrors[er.Name]; ok {
+				continue
+			}
+			seenErrors[er.Name] = struct{}{}
+			errorInits = append(errorInits, buildErrorInitData(er, scope))
+		}
 	}
 
 	var (

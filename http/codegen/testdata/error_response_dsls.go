@@ -30,3 +30,19 @@ var PrimitiveErrorResponseDSL = func() {
 		})
 	})
 }
+
+var ServiceErrorResponseDSL = func() {
+	Service("ServiceServiceErrorResponse", func() {
+		Error("bad_request")
+		HTTP(func() {
+			Response("bad_request", StatusBadRequest)
+		})
+		Method("MethodServiceErrorResponse", func() {
+			Error("internal_error")
+			HTTP(func() {
+				GET("/one/two")
+				Response("internal_error", StatusInternalServerError)
+			})
+		})
+	})
+}

@@ -134,6 +134,34 @@ type AResult struct {
 }
 `
 
+		serviceLevelErrorCode = `// Error response result type
+type Error struct {
+	// a unique identifier for this particular occurrence of the problem.
+	ID string
+	// the HTTP status code applicable to this problem.
+	Status int
+	// an application-specific error code, expressed as a string value.
+	Code string
+	// a human-readable explanation specific to this occurrence of the problem.
+	Message string
+}
+
+// Error returns "error".
+func (e *Error) Error() string {
+	return "error"
+}
+
+// NewError initilializes a Error struct reference from a goa.Error
+func NewError(err goa.Error) *Error {
+	return &Error{
+		ID:      err.ID(),
+		Status:  int(err.Status()),
+		Code:    "error",
+		Message: err.Message(),
+	}
+}
+`
+
 		genPkg = "goa.design/goa/example"
 	)
 	var (
@@ -251,6 +279,13 @@ type AResult struct {
 			Result:  &aresult,
 		}
 
+		errorExp = design.ErrorExpr{
+			Name: "error",
+			AttributeExpr: &design.AttributeExpr{
+				Type: design.ErrorResult,
+			},
+		}
+
 		singleMethod = design.ServiceExpr{
 			Name: "Single",
 			Methods: []*design.MethodExpr{
@@ -286,6 +321,16 @@ type AResult struct {
 				&emptyPayload,
 			},
 		}
+
+		serviceError = design.ServiceExpr{
+			Name: "ServiceError",
+			Methods: []*design.MethodExpr{
+				&a1,
+			},
+			Errors: []*design.ErrorExpr{
+				&errorExp,
+			},
+		}
 	)
 	singleMethod.Methods[0].Service = &singleMethod
 	multipleMethods.Methods[0].Service = &multipleMethods
@@ -303,27 +348,30 @@ type AResult struct {
 		"empty payload, empty result":        {Service: &emptyMethod, Expected: emptyMethodsCode},
 		"non empty payload but empty result": {Service: &emptyResultMethod, Expected: emptyResultMethodsCode},
 		"empty payload and non empty result": {Service: &emptyPayloadMethod, Expected: emptyPayloadMethodsCode},
+		"service level error":                {Service: &serviceError, Expected: serviceLevelErrorCode},
 	}
 	for k, tc := range cases {
-		buf := new(bytes.Buffer)
-		Services = make(ServicesData)
-		design.Root = new(design.RootExpr)
-		design.Root.API = &design.APIExpr{Name: "test"}
-		design.Root.Services = []*design.ServiceExpr{tc.Service}
-		file := File(tc.Service)
-		for _, s := range file.SectionTemplates {
-			if err := s.Write(buf); err != nil {
+		t.Run(k, func(t *testing.T) {
+			buf := new(bytes.Buffer)
+			Services = make(ServicesData)
+			design.Root = new(design.RootExpr)
+			design.Root.API = &design.APIExpr{Name: "test"}
+			design.Root.Services = []*design.ServiceExpr{tc.Service}
+			file := File(tc.Service)
+			for _, s := range file.SectionTemplates {
+				if err := s.Write(buf); err != nil {
+					t.Fatal(err)
+				}
+			}
+			bs, err := format.Source(buf.Bytes())
+			if err != nil {
+				fmt.Println(buf.String())
 				t.Fatal(err)
 			}
-		}
-		bs, err := format.Source(buf.Bytes())
-		if err != nil {
-			fmt.Println(buf.String())
-			t.Fatal(err)
-		}
-		actual := string(bs)
-		if !strings.Contains(actual, tc.Expected) {
-			t.Errorf("%s:\ngot:\n%s\ndiff:\n%s", k, actual, codegen.Diff(t, actual, tc.Expected))
-		}
+			actual := string(bs)
+			if !strings.Contains(actual, tc.Expected) {
+				t.Errorf("%s:\ngot:\n%s\ndiff:\n%s", k, actual, codegen.Diff(t, actual, tc.Expected))
+			}
+		})
 	}
 }
