@@ -147,7 +147,7 @@ func (r *HTTPResponseExpr) Finalize(a *EndpointExpr, svcAtt *design.AttributeExp
 
 	// Initialize the headers with the corresponding result attributes.
 	svcObj := design.AsObject(svcAtt.Type)
-	if r.Headers() != nil {
+	if r.headers != nil {
 		for _, nat := range *design.AsObject(r.headers.Type) {
 			n := nat.Name
 			att := nat.Attribute
@@ -202,15 +202,20 @@ func (r *HTTPResponseExpr) Finalize(a *EndpointExpr, svcAtt *design.AttributeExp
 
 // Dup creates a copy of the response expression.
 func (r *HTTPResponseExpr) Dup() *HTTPResponseExpr {
-	return &HTTPResponseExpr{
+	res := HTTPResponseExpr{
 		StatusCode:  r.StatusCode,
 		Description: r.Description,
-		Body:        design.DupAtt(r.Body),
 		ContentType: r.ContentType,
 		Parent:      r.Parent,
 		Metadata:    r.Metadata,
-		headers:     design.DupAtt(r.headers),
 	}
+	if r.Body != nil {
+		res.Body = design.DupAtt(r.Body)
+	}
+	if r.headers != nil {
+		res.headers = design.DupAtt(r.headers)
+	}
+	return &res
 }
 
 // bodyAllowedForStatus reports whether a given response status code

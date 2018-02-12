@@ -554,19 +554,17 @@ func (e *EndpointExpr) Finalize() {
 		}
 	}
 
-	// Make sure error types are user types and have a body.
-	for _, herr := range e.HTTPErrors {
-		herr.Finalize(e)
-	}
-
 	// Inherit HTTP errors from service and root
 	for _, r := range e.Service.HTTPErrors {
-		r.Finalize(e)
 		e.HTTPErrors = append(e.HTTPErrors, r.Dup())
 	}
 	for _, r := range Root.HTTPErrors {
-		r.Finalize(e)
 		e.HTTPErrors = append(e.HTTPErrors, r.Dup())
+	}
+
+	// Make sure all error types are user types and have a body.
+	for _, herr := range e.HTTPErrors {
+		herr.Finalize(e)
 	}
 }
 
