@@ -201,12 +201,18 @@ func (e *EndpointExpr) HasAbsoluteRoutes() bool {
 // Validate validates the endpoint expression.
 func (e *EndpointExpr) Validate() error {
 	verr := new(eval.ValidationErrors)
+
+	// Name cannot be empty
 	if e.Name() == "" {
 		verr.Add(e, "Endpoint name cannot be empty")
 	}
+
+	// Routes cannot be empty
 	if len(e.Routes) == 0 {
 		verr.Add(e, "No route defined for HTTP endpoint")
 	}
+
+	// All responses but one must have tags for the same status code
 	hasTags := false
 	allTagged := true
 	for i, r := range e.Responses {
@@ -228,11 +234,17 @@ func (e *EndpointExpr) Validate() error {
 	if hasTags && !design.IsObject(e.MethodExpr.Result.Type) {
 		verr.Add(e, "Some responses define a Tag but the method Result type is not an object.")
 	}
+
+	// Make sure parameters and headers use compatible types
 	verr.Merge(e.validateParams())
 	verr.Merge(e.validateHeaders())
+
+	// Validate body attribute (required fields exist etc.)
 	if e.Body != nil {
 		verr.Merge(e.Body.Validate("HTTP endpoint payload", e))
 	}
+
+	// Validate responses and errors (have status codes and bodies are valid)
 	for _, r := range e.Responses {
 		verr.Merge(r.Validate())
 	}
@@ -240,6 +252,7 @@ func (e *EndpointExpr) Validate() error {
 		verr.Merge(er.Validate())
 	}
 
+	// Make sure that the same parameters are used in all routes
 	if len(e.Routes) > 1 {
 		params := e.Routes[0].Params()
 		for _, r := range e.Routes[1:] {
@@ -270,6 +283,22 @@ func (e *EndpointExpr) Validate() error {
 		}
 	}
 
+	// Make sure there's no duplicate params in absolute route
+	for _, r := range e.Routes {
+		paths := r.FullPaths()
+		for _, path := range paths {
+			matches := WildcardRegex.FindAllStringSubmatch(path, -1)
+			wcs := make(map[string]struct{}, len(matches))
+			for _, match := range matches {
+				if _, ok := wcs[match[1]]; ok {
+					verr.Add(r, "Wildcard %q appears multiple times in full path %q", match[1], path)
+				}
+				wcs[match[1]] = struct{}{}
+			}
+		}
+	}
+
+	// Validate definitions of params, headers and bodies against definition of payload
 	if e.MapQueryParams != nil && e.MethodExpr.Payload == nil {
 		verr.Add(e, "MapParams is set but Payload is not defined")
 	}
