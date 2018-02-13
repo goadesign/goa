@@ -770,3 +770,55 @@ func BuildMethodMapQueryObjectPayloadType(serviceMapQueryObjectMethodMapQueryObj
 	return v, nil
 }
 `
+
+var QueryUInt32BuildCode = `// BuildMethodQueryUInt32MethodQueryUInt32Payload builds the payload for the
+// ServiceQueryUInt32 MethodQueryUInt32 endpoint from CLI flags.
+func BuildMethodQueryUInt32MethodQueryUInt32Payload(serviceQueryUInt32MethodQueryUInt32Q string) (*servicequeryuint32.MethodQueryUInt32Payload, error) {
+	var err error
+	var q *uint32
+	{
+		if serviceQueryUInt32MethodQueryUInt32Q != "" {
+			var v uint64
+			v, err = strconv.ParseUint(serviceQueryUInt32MethodQueryUInt32Q, 10, 32)
+			val := uint32(v)
+			q = &val
+			if err != nil {
+				err = fmt.Errorf("invalid value for q, must be UINT32")
+			}
+		}
+	}
+	if err != nil {
+		return nil, err
+	}
+	payload := &servicequeryuint32.MethodQueryUInt32Payload{
+		Q: q,
+	}
+	return payload, nil
+}
+`
+
+var QueryUIntBuildCode = `// BuildMethodQueryUIntMethodQueryUIntPayload builds the payload for the
+// ServiceQueryUInt MethodQueryUInt endpoint from CLI flags.
+func BuildMethodQueryUIntMethodQueryUIntPayload(serviceQueryUIntMethodQueryUIntQ string) (*servicequeryuint.MethodQueryUIntPayload, error) {
+	var err error
+	var q *uint
+	{
+		if serviceQueryUIntMethodQueryUIntQ != "" {
+			var v uint64
+			v, err = strconv.ParseUint(serviceQueryUIntMethodQueryUIntQ, 10, 64)
+			val := uint(v)
+			q = &val
+			if err != nil {
+				err = fmt.Errorf("invalid value for q, must be UINT")
+			}
+		}
+	}
+	if err != nil {
+		return nil, err
+	}
+	payload := &servicequeryuint.MethodQueryUIntPayload{
+		Q: q,
+	}
+	return payload, nil
+}
+`

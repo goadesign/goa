@@ -31,7 +31,7 @@ type (
 )
 
 // Error returns the error with the given name. It looks up recursively in the
-// enpoint then the service and finally the root expression.
+// endpoint then the service and finally the root expression.
 func (m *MethodExpr) Error(name string) *ErrorExpr {
 	for _, err := range m.Errors {
 		if err.Name == name {

@@ -43,6 +43,7 @@ func TestBodyTypeInit(t *testing.T) {
 		{"body-user-inner", testdata.PayloadBodyUserInnerDSL, 3, BodyUserInnerInitCode},
 		{"body-path-user-validate", testdata.PayloadBodyPathUserValidateDSL, 2, BodyPathUserValidateInitCode},
 		{"body-primitive-array-user-validate", testdata.PayloadBodyPrimitiveArrayUserValidateDSL, 2, BodyPrimitiveArrayUserValidateInitCode},
+		{"result-body-user", testdata.ResultBodyObjectHeaderDSL, 2, ResultBodyObjectHeaderInitCode},
 	}
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
@@ -106,5 +107,17 @@ func NewMethodUserBodyPathValidateRequestBody(p *servicebodypathuservalidate.Pay
 		A: p.A,
 	}
 	return body
+}
+`
+
+const ResultBodyObjectHeaderInitCode = `// NewMethodBodyObjectHeaderMethodBodyObjectHeaderResultOK builds a
+// "ServiceBodyObjectHeader" service "MethodBodyObjectHeader" endpoint result
+// from a HTTP "OK" response.
+func NewMethodBodyObjectHeaderMethodBodyObjectHeaderResultOK(body *MethodBodyObjectHeaderResponseBody, b *string) *servicebodyobjectheader.MethodBodyObjectHeaderResult {
+	v := &servicebodyobjectheader.MethodBodyObjectHeaderResult{
+		A: body.A,
+	}
+	v.B = b
+	return v
 }
 `

@@ -173,20 +173,19 @@ func Path(val string) {
 		}
 		httpdesign.Root.Path = val
 	case *httpdesign.ServiceExpr:
-		def.Paths = append(def.Paths, val)
 		if !strings.HasPrefix(val, "//") {
-			for _, sp := range def.Paths {
-				awcs := httpdesign.ExtractWildcards(sp)
-				wcs := httpdesign.ExtractWildcards(val)
-				for _, awc := range awcs {
-					for _, wc := range wcs {
-						if awc == wc {
-							eval.ReportError(`duplicate wildcard "%s" in API and service base paths`, wc)
-						}
+			rp := httpdesign.Root.Path
+			awcs := httpdesign.ExtractWildcards(rp)
+			wcs := httpdesign.ExtractWildcards(val)
+			for _, awc := range awcs {
+				for _, wc := range wcs {
+					if awc == wc {
+						eval.ReportError(`duplicate wildcard "%s" in API and service base paths`, wc)
 					}
 				}
 			}
 		}
+		def.Paths = append(def.Paths, val)
 	default:
 		eval.IncompatibleDSL()
 	}
