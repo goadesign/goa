@@ -264,7 +264,7 @@ func CollectionOf(v interface{}, adsl ...func()) *design.ResultTypeExpr {
 		return design.NewResultTypeExpr("InvalidCollection", "text/plain", nil)
 	}
 	id := m.Identifier
-	resulttype, params, err := mime.ParseMediaType(id)
+	rtype, params, err := mime.ParseMediaType(id)
 	if err != nil {
 		eval.ReportError("invalid result type identifier %#v: %s", id, err)
 		// don't return nil to avoid panics, the error will get reported at the end
@@ -280,7 +280,7 @@ func CollectionOf(v interface{}, adsl ...func()) *design.ResultTypeExpr {
 	if !hasType {
 		params["type"] = "collection"
 	}
-	id = mime.FormatMediaType(resulttype, params)
+	id = mime.FormatMediaType(rtype, params)
 	canonical := design.CanonicalIdentifier(id)
 	if mt := design.Root.GeneratedResultType(canonical); mt != nil {
 		// Already have a type for this collection, reuse it.
