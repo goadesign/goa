@@ -140,7 +140,7 @@ const requiredUnmarshalCode = `func transform() {
 		A: *source.A,
 	}
 	if source.B != nil {
-		target.B = *source.B
+		target.B = source.B
 	}
 }
 `
@@ -148,7 +148,7 @@ const requiredUnmarshalCode = `func transform() {
 const defaultUnmarshalCode = `func transform() {
 	target := &TargetType{}
 	if source.B != nil {
-		target.B = *source.B
+		target.B = source.B
 	}
 	target.A = make([]string, len(source.A))
 	for j, val := range source.A {

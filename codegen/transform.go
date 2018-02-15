@@ -163,7 +163,7 @@ func transformObject(source, target *design.AttributeExpr, newVar bool, a targs)
 		if srcPtr && !tgtPtr {
 			if !source.IsRequired(n) {
 				postInitCode += fmt.Sprintf("if %s != nil {\n\t%s.%s = %s\n}\n",
-					srcField, a.targetVar, Goify(tgt.ElemName(n), true), "*"+srcField)
+					srcField, a.targetVar, Goify(tgt.ElemName(n), true), srcField)
 				return
 			}
 			deref = "*"
