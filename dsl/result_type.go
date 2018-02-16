@@ -78,11 +78,13 @@ func ResultType(identifier string, fn func()) *design.ResultTypeExpr {
 	}
 	canonicalID := design.CanonicalIdentifier(identifier)
 	// Validate that result type identifier doesn't clash
-	if m := design.Root.UserType(canonicalID); m != nil {
-		eval.ReportError(
-			"result type %#v with canonical identifier %#v is defined twice",
-			identifier, canonicalID)
-		return nil
+	for _, rt := range design.Root.ResultTypes {
+		if re := rt.(*design.ResultTypeExpr); re.Identifier == canonicalID {
+			eval.ReportError(
+				"result type %#v with canonical identifier %#v is defined twice",
+				identifier, canonicalID)
+			return nil
+		}
 	}
 	identifier = mime.FormatMediaType(identifier, params)
 	lastPart := identifier
