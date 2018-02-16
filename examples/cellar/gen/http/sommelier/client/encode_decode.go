@@ -10,6 +10,7 @@ package client
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -21,11 +22,14 @@ import (
 
 // BuildPickRequest instantiates a HTTP request object with method and path set
 // to call the "sommelier" service "pick" endpoint
-func (c *Client) BuildPickRequest(v interface{}) (*http.Request, error) {
+func (c *Client) BuildPickRequest(ctx context.Context, v interface{}) (*http.Request, error) {
 	u := &url.URL{Scheme: c.scheme, Host: c.host, Path: PickSommelierPath()}
 	req, err := http.NewRequest("POST", u.String(), nil)
 	if err != nil {
 		return nil, goahttp.ErrInvalidURL("sommelier", "pick", u.String(), err)
+	}
+	if ctx != nil {
+		req = req.WithContext(ctx)
 	}
 
 	return req, nil

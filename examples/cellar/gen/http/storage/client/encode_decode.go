@@ -10,6 +10,7 @@ package client
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -22,11 +23,14 @@ import (
 
 // BuildListRequest instantiates a HTTP request object with method and path set
 // to call the "storage" service "list" endpoint
-func (c *Client) BuildListRequest(v interface{}) (*http.Request, error) {
+func (c *Client) BuildListRequest(ctx context.Context, v interface{}) (*http.Request, error) {
 	u := &url.URL{Scheme: c.scheme, Host: c.host, Path: ListStoragePath()}
 	req, err := http.NewRequest("GET", u.String(), nil)
 	if err != nil {
 		return nil, goahttp.ErrInvalidURL("storage", "list", u.String(), err)
+	}
+	if ctx != nil {
+		req = req.WithContext(ctx)
 	}
 
 	return req, nil
@@ -74,7 +78,7 @@ func DecodeListResponse(decoder func(*http.Response) goahttp.Decoder, restoreBod
 
 // BuildShowRequest instantiates a HTTP request object with method and path set
 // to call the "storage" service "show" endpoint
-func (c *Client) BuildShowRequest(v interface{}) (*http.Request, error) {
+func (c *Client) BuildShowRequest(ctx context.Context, v interface{}) (*http.Request, error) {
 	var (
 		id string
 	)
@@ -89,6 +93,9 @@ func (c *Client) BuildShowRequest(v interface{}) (*http.Request, error) {
 	req, err := http.NewRequest("GET", u.String(), nil)
 	if err != nil {
 		return nil, goahttp.ErrInvalidURL("storage", "show", u.String(), err)
+	}
+	if ctx != nil {
+		req = req.WithContext(ctx)
 	}
 
 	return req, nil
@@ -171,11 +178,14 @@ func DecodeShowResponse(decoder func(*http.Response) goahttp.Decoder, restoreBod
 
 // BuildAddRequest instantiates a HTTP request object with method and path set
 // to call the "storage" service "add" endpoint
-func (c *Client) BuildAddRequest(v interface{}) (*http.Request, error) {
+func (c *Client) BuildAddRequest(ctx context.Context, v interface{}) (*http.Request, error) {
 	u := &url.URL{Scheme: c.scheme, Host: c.host, Path: AddStoragePath()}
 	req, err := http.NewRequest("POST", u.String(), nil)
 	if err != nil {
 		return nil, goahttp.ErrInvalidURL("storage", "add", u.String(), err)
+	}
+	if ctx != nil {
+		req = req.WithContext(ctx)
 	}
 
 	return req, nil
@@ -235,7 +245,7 @@ func DecodeAddResponse(decoder func(*http.Response) goahttp.Decoder, restoreBody
 
 // BuildRemoveRequest instantiates a HTTP request object with method and path
 // set to call the "storage" service "remove" endpoint
-func (c *Client) BuildRemoveRequest(v interface{}) (*http.Request, error) {
+func (c *Client) BuildRemoveRequest(ctx context.Context, v interface{}) (*http.Request, error) {
 	var (
 		id string
 	)
@@ -250,6 +260,9 @@ func (c *Client) BuildRemoveRequest(v interface{}) (*http.Request, error) {
 	req, err := http.NewRequest("DELETE", u.String(), nil)
 	if err != nil {
 		return nil, goahttp.ErrInvalidURL("storage", "remove", u.String(), err)
+	}
+	if ctx != nil {
+		req = req.WithContext(ctx)
 	}
 
 	return req, nil
@@ -284,11 +297,14 @@ func DecodeRemoveResponse(decoder func(*http.Response) goahttp.Decoder, restoreB
 
 // BuildRateRequest instantiates a HTTP request object with method and path set
 // to call the "storage" service "rate" endpoint
-func (c *Client) BuildRateRequest(v interface{}) (*http.Request, error) {
+func (c *Client) BuildRateRequest(ctx context.Context, v interface{}) (*http.Request, error) {
 	u := &url.URL{Scheme: c.scheme, Host: c.host, Path: RateStoragePath()}
 	req, err := http.NewRequest("POST", u.String(), nil)
 	if err != nil {
 		return nil, goahttp.ErrInvalidURL("storage", "rate", u.String(), err)
+	}
+	if ctx != nil {
+		req = req.WithContext(ctx)
 	}
 
 	return req, nil
