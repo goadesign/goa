@@ -179,7 +179,8 @@ func (m *ResultTypeExpr) ComputeViews() []*ViewExpr {
 	return nil
 }
 
-// Finalize builds the default view if not explicitly defined.
+// Finalize builds the default view if not explicitly defined and finalizes
+// the underlying UserTypeExpr.
 func (m *ResultTypeExpr) Finalize() {
 	if m.View("default") == nil {
 		v := &ViewExpr{
@@ -189,6 +190,7 @@ func (m *ResultTypeExpr) Finalize() {
 		}
 		m.Views = append(m.Views, v)
 	}
+	m.UserTypeExpr.Finalize()
 }
 
 // Project creates a ResultTypeExpr containing the fields defined in the view
