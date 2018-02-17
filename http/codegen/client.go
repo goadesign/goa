@@ -61,6 +61,7 @@ func clientEncodeDecode(genpkg string, svc *httpdesign.ServiceExpr) *codegen.Fil
 	sections := []*codegen.SectionTemplate{
 		codegen.Header(title, "client", []*codegen.ImportSpec{
 			{Path: "bytes"},
+			{Path: "context"},
 			{Path: "fmt"},
 			{Path: "io"},
 			{Path: "io/ioutil"},
@@ -162,7 +163,7 @@ func New{{ .ClientStruct }}(
 `
 
 // input: EndpointData
-const endpointInitT = `{{ printf "%s returns a endpoint that makes HTTP requests to the %s service %s server." .EndpointInit .ServiceName .Method.Name | comment }}
+const endpointInitT = `{{ printf "%s returns an endpoint that makes HTTP requests to the %s service %s server." .EndpointInit .ServiceName .Method.Name | comment }}
 func (c *{{ .ClientStruct }}) {{ .EndpointInit }}() goa.Endpoint {
 	var (
 		{{- if .RequestEncoder }}
@@ -171,7 +172,7 @@ func (c *{{ .ClientStruct }}) {{ .EndpointInit }}() goa.Endpoint {
 		decodeResponse = {{ .ResponseDecoder }}(c.decoder, c.RestoreResponseBody)
 	)
 	return func(ctx context.Context, v interface{}) (interface{}, error) {
-		req, err := c.{{ .RequestInit.Name }}({{ range .RequestInit.ClientArgs }}{{ .Ref }}{{ end }})
+		req, err := c.{{ .RequestInit.Name }}(ctx, {{ range .RequestInit.ClientArgs }}{{ .Ref }}{{ end }})
 		if err != nil {
 			return nil, err
 		}
@@ -194,7 +195,7 @@ func (c *{{ .ClientStruct }}) {{ .EndpointInit }}() goa.Endpoint {
 
 // input: EndpointData
 const requestBuilderT = `{{ comment .RequestInit.Description }}
-func (c *{{ .ClientStruct }}) {{ .RequestInit.Name }}({{ range .RequestInit.ClientArgs }}{{ .Name }} {{ .TypeRef }}{{ end }}) (*http.Request, error) {
+func (c *{{ .ClientStruct }}) {{ .RequestInit.Name }}(ctx context.Context, {{ range .RequestInit.ClientArgs }}{{ .Name }} {{ .TypeRef }}{{ end }}) (*http.Request, error) {
 	{{- .RequestInit.ClientCode }}
 }
 `

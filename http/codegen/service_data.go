@@ -1762,6 +1762,9 @@ const (
 	if err != nil {
 		return nil, goahttp.ErrInvalidURL("{{ .ServiceName }}", "{{ .EndpointName }}", u.String(), err)
 	}
+	if ctx != nil {
+		req = req.WithContext(ctx)
+	}
 
 	return req, nil`
 )

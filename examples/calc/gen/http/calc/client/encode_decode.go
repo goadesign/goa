@@ -9,6 +9,7 @@ package client
 
 import (
 	"bytes"
+	"context"
 	"io/ioutil"
 	"net/http"
 	"net/url"
@@ -19,7 +20,7 @@ import (
 
 // BuildAddRequest instantiates a HTTP request object with method and path set
 // to call the "calc" service "add" endpoint
-func (c *Client) BuildAddRequest(v interface{}) (*http.Request, error) {
+func (c *Client) BuildAddRequest(ctx context.Context, v interface{}) (*http.Request, error) {
 	var (
 		a int
 		b int
@@ -36,6 +37,9 @@ func (c *Client) BuildAddRequest(v interface{}) (*http.Request, error) {
 	req, err := http.NewRequest("GET", u.String(), nil)
 	if err != nil {
 		return nil, goahttp.ErrInvalidURL("calc", "add", u.String(), err)
+	}
+	if ctx != nil {
+		req = req.WithContext(ctx)
 	}
 
 	return req, nil
