@@ -86,7 +86,7 @@ type (
 func (a *APIExpr) Schemes() []string {
 	schemes := make(map[string]bool)
 	for _, s := range a.Servers {
-		if u, err := url.Parse(s.URL); err != nil {
+		if u, err := url.Parse(s.URL); err == nil && u.Scheme != "" {
 			schemes[u.Scheme] = true
 		}
 	}
