@@ -206,82 +206,61 @@ func transformObject(source, target *design.AttributeExpr, newVar bool, a targs)
 		case design.IsObject(srcAtt.Type):
 			code, err = transformAttribute(srcAtt, tgtAtt, false, b)
 		}
-		// There are 2 main cases: one when generating marshaler code
-		// (a.unmarshal is false) and the other when generating
-		// unmarshaler code (a.unmarshal is true). When generating
-		// marshaler code we want to be lax and not assume that required
-		// fields are set in case they have a default value, instead the
-		// generated code is going to set the fields to their default
-		// value. When generating unmarshaler code we rely on
-		// validations running prior to this code so assume required
-		// fields are set.
-		initDef := tgt.HasDefaultValue(n) && !b.unmarshal
-		srcHasDef := src.HasDefaultValue(n)
-
-		var tgtPointer bool
-		{
-			// primitive fields with default values cannot be nil
-			// when marshaling.
-			tgtPointer = (tgt.IsPrimitivePointer(n, true) || !design.IsPrimitive(tgtAtt.Type)) &&
-				!(!b.unmarshal && srcHasDef && design.IsPrimitive(tgtAtt.Type))
-
-		}
-
-		// srcCheckNil is true if the source variable must be checked
-		// for nil value because it is being dereferenced or it is used
-		// as argument of a transform helper function.
-		//
-		// Note: the code below can be "optimized" by combining the
-		// conditions. Don't do it, keep that complex logic explicit.
-		var srcCheckNil bool
-		{
-			// unmarshal - required fields have been validated
-			unmarshalNotRequired := b.unmarshal && !src.IsRequired(n)
-
-			// marshal - non required primitive fields with default
-			// values are not pointers and thus cannot be nil
-			marshalNotRequiredPointer := !b.unmarshal &&
-				!src.IsRequired(n) && (!srcHasDef || !design.IsPrimitive(srcAtt.Type))
-
-			// marshal - always check whether user type fields are
-			// nil to avoid calling transform helper function with
-			// nil value. Also check for arrays and maps so that
-			// if there is a default value the check of whether the
-			// target variable is nil returns true.
-			marshalUserType := !b.unmarshal && !design.IsPrimitive(srcAtt.Type)
-
-			// marshal - don't assume required fields that have
-			// default values are set
-			marshalRequiredPointerDef := !b.unmarshal &&
-				src.IsRequired(n) && !design.IsPrimitive(srcAtt.Type) && srcHasDef
-
-			srcCheckNil = unmarshalNotRequired || marshalNotRequiredPointer || marshalRequiredPointerDef
-
-			// no need to check if target is a pointer unless
-			// marshaling a user type
-			srcCheckNil = marshalUserType || (srcCheckNil && !tgtPointer)
-		}
-
-		if code != "" && srcCheckNil {
-			code = fmt.Sprintf("if %s != nil {\n\t%s}\n", b.sourceVar, code)
-		}
-		// Initialize default value when marshaling
-		if initDef && (tgtPointer || srcCheckNil) {
-			testv := b.targetVar
-			if !tgtPointer {
-				testv = b.sourceVar
-			}
-			code += fmt.Sprintf("if %s == nil {\n\t", testv)
-			if tgt.IsPrimitivePointer(n, true) {
-				code += fmt.Sprintf("tmp := %#v\n\t%s = &tmp\n", tgtAtt.DefaultValue, b.targetVar)
-			} else {
-				code += fmt.Sprintf("%s = %#v\n", b.targetVar, tgtAtt.DefaultValue)
-			}
-			code += "}\n"
-		}
 		if err != nil {
 			return
 		}
+
+		// Nil check handling.
+		//
+		// We need to check for a nil source if it holds a reference
+		// (pointer to primitive or an object, array or map) and is not
+		// required. We also want to always check when unmarshaling is
+		// the attribute type is not a primitive: either it's a user
+		// type and we want to avoid calling transform helper functions
+		// with nil value (if unmarshaling then requiredness has been
+		// validated) or it's an object, map or array and we need to
+		// check for nil to avoid making empty arrays and maps and to
+		// avoid derefencing nil.
+		var checkNil bool
+		{
+			isRef := !design.IsPrimitive(srcAtt.Type) && !src.IsRequired(n) || src.IsPrimitivePointer(n, !b.unmarshal)
+			marshalNonPrimitive := !b.unmarshal && !design.IsPrimitive(srcAtt.Type)
+			checkNil = isRef || marshalNonPrimitive
+		}
+		if code != "" && checkNil {
+			code = fmt.Sprintf("if %s != nil {\n\t%s}\n", b.sourceVar, code)
+		}
+
+		// Default value handling.
+		//
+		// There are 2 cases: one when generating marshaler code
+		// (a.unmarshal is false) and the other when generating
+		// unmarshaler code (a.unmarshal is true).
+		//
+		// When generating marshaler code we want to be lax and not
+		// assume that required fields are set in case they have a
+		// default value, instead the generated code is going to set the
+		// fields to their default value (only applies to non-primitive
+		// attributes).
+		//
+		// When generating unmarshaler code we rely on validations
+		// running prior to this code so assume required fields are set.
+		if tgt.HasDefaultValue(n) {
+			if b.unmarshal {
+				code += fmt.Sprintf("if %s == nil {\n\t", b.sourceVar)
+				if tgt.IsPrimitivePointer(n, true) {
+					code += fmt.Sprintf("tmp := %#v\n\t%s = &tmp\n", tgtAtt.DefaultValue, b.targetVar)
+				} else {
+					code += fmt.Sprintf("%s = %#v\n", b.targetVar, tgtAtt.DefaultValue)
+				}
+				code += "}\n"
+			} else if src.IsPrimitivePointer(n, true) || !design.IsPrimitive(srcAtt.Type) {
+				code += fmt.Sprintf("if %s == nil {\n\t", b.sourceVar)
+				code += fmt.Sprintf("%s = %#v\n", b.targetVar, tgtAtt.DefaultValue)
+				code += "}\n"
+			}
+		}
+
 		buffer.WriteString(code)
 	})
 	if err != nil {

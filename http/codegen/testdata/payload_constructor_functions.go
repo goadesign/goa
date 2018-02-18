@@ -837,7 +837,9 @@ var PayloadBodyUserInnerConstructorCode = `// NewMethodBodyUserInnerPayloadType 
 // MethodBodyUserInner endpoint payload.
 func NewMethodBodyUserInnerPayloadType(body *MethodBodyUserInnerRequestBody) *servicebodyuserinner.PayloadType {
 	v := &servicebodyuserinner.PayloadType{}
-	v.Inner = unmarshalInnerTypeRequestBodyToInnerType(body.Inner)
+	if body.Inner != nil {
+		v.Inner = unmarshalInnerTypeRequestBodyToInnerType(body.Inner)
+	}
 	return v
 }
 `
@@ -847,7 +849,9 @@ var PayloadBodyUserInnerDefaultConstructorCode = `// NewMethodBodyUserInnerDefau
 // payload.
 func NewMethodBodyUserInnerDefaultPayloadType(body *MethodBodyUserInnerDefaultRequestBody) *servicebodyuserinnerdefault.PayloadType {
 	v := &servicebodyuserinnerdefault.PayloadType{}
-	v.Inner = unmarshalInnerTypeRequestBodyToInnerType(body.Inner)
+	if body.Inner != nil {
+		v.Inner = unmarshalInnerTypeRequestBodyToInnerType(body.Inner)
+	}
 	return v
 }
 `
