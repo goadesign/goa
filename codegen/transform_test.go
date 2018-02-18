@@ -154,6 +154,12 @@ const defaultUnmarshalCode = `func transform() {
 	for j, val := range source.A {
 		target.A[j] = val
 	}
+	if source.A == nil {
+		target.A = []string{"foo", "bar"}
+	}
+	if source.B == nil {
+		target.B = 42
+	}
 }
 `
 
@@ -183,7 +189,7 @@ const defaultCode = `func transform() {
 			target.A[j] = val
 		}
 	}
-	if target.A == nil {
+	if source.A == nil {
 		target.A = []string{"foo", "bar"}
 	}
 }
@@ -220,9 +226,11 @@ const arrayObjUnmarshalCode = `func transform() {
 	target := &TargetType{
 		A: source.A,
 	}
-	target.B = make([]string, len(source.B))
-	for j, val := range source.B {
-		target.B[j] = val
+	if source.B != nil {
+		target.B = make([]string, len(source.B))
+		for j, val := range source.B {
+			target.B[j] = val
+		}
 	}
 }
 `
@@ -252,9 +260,14 @@ const mapCode = `func transform() {
 
 const compUnmarshalCode = `func transform() {
 	target := &TargetType{}
-	target.Aa = make([]string, len(source.Aa))
-	for j, val := range source.Aa {
-		target.Aa[j] = val
+	if source.Aa != nil {
+		target.Aa = make([]string, len(source.Aa))
+		for j, val := range source.Aa {
+			target.Aa[j] = val
+		}
+	}
+	if source.Aa == nil {
+		target.Aa = []string{"foo", "bar"}
 	}
 	target.Bb = &struct {
 		A *string
@@ -274,7 +287,7 @@ const compCode = `func transform() {
 			target.Aa[j] = val
 		}
 	}
-	if target.Aa == nil {
+	if source.Aa == nil {
 		target.Aa = []string{"foo", "bar"}
 	}
 	if source.Bb != nil {
@@ -345,7 +358,9 @@ const objMapCode = `func transform() {
 
 const userTypeUnmarshalCode = `func transform() {
 	target := &TargetType{}
-	target.Ut = unmarshalUserToUser(source.Ut)
+	if source.Ut != nil {
+		target.Ut = unmarshalUserToUser(source.Ut)
+	}
 }
 `
 
