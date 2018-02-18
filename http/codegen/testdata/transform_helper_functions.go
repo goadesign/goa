@@ -13,6 +13,12 @@ func unmarshalInnerTypeRequestBodyToInnerType(v *InnerTypeRequestBody) *serviceb
 	if v.B != nil {
 		res.B = *v.B
 	}
+	if v.A == nil {
+		res.A = "defaulta"
+	}
+	if v.B == nil {
+		res.B = "defaultb"
+	}
 
 	return res
 }
@@ -30,6 +36,12 @@ func unmarshalInnerTypeRequestBodyToInnerType(v *InnerTypeRequestBody) *serviceb
 	}
 	if v.B != nil {
 		res.B = *v.B
+	}
+	if v.A == nil {
+		res.A = "defaulta"
+	}
+	if v.B == nil {
+		res.B = "defaultb"
 	}
 
 	return res

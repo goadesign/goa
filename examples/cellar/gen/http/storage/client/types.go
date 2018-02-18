@@ -179,11 +179,13 @@ func NewListStoredBottleCollectionOK(body ListResponseBody) storage.StoredBottle
 			Rating:      val.Rating,
 		}
 		v[i].Winery = unmarshalWineryResponseBodyToWinery(val.Winery)
-		v[i].Composition = make([]*storage.Component, len(val.Composition))
-		for j, val := range val.Composition {
-			v[i].Composition[j] = &storage.Component{
-				Varietal:   *val.Varietal,
-				Percentage: val.Percentage,
+		if val.Composition != nil {
+			v[i].Composition = make([]*storage.Component, len(val.Composition))
+			for j, val := range val.Composition {
+				v[i].Composition[j] = &storage.Component{
+					Varietal:   *val.Varietal,
+					Percentage: val.Percentage,
+				}
 			}
 		}
 	}
@@ -201,11 +203,13 @@ func NewShowStoredBottleOK(body *ShowResponseBody) *storage.StoredBottle {
 		Rating:      body.Rating,
 	}
 	v.Winery = unmarshalWineryToWinery(body.Winery)
-	v.Composition = make([]*storage.Component, len(body.Composition))
-	for j, val := range body.Composition {
-		v.Composition[j] = &storage.Component{
-			Varietal:   *val.Varietal,
-			Percentage: val.Percentage,
+	if body.Composition != nil {
+		v.Composition = make([]*storage.Component, len(body.Composition))
+		for j, val := range body.Composition {
+			v.Composition[j] = &storage.Component{
+				Varietal:   *val.Varietal,
+				Percentage: val.Percentage,
+			}
 		}
 	}
 	return v

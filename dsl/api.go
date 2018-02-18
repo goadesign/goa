@@ -90,7 +90,7 @@ func License(fn func()) {
 	eval.IncompatibleDSL()
 }
 
-// Docs provides external documentation pointers.
+// Docs provides external documentation URLs.
 //
 // Docs must appear in an API, Service, Method or Attribute expressions.
 //

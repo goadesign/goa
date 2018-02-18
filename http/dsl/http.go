@@ -191,7 +191,7 @@ func Path(val string) {
 	}
 }
 
-// Docs provides external documentation pointers for methods.
+// Docs provides external documentation URLs for methods.
 func Docs(fn func()) {
 	docs := new(design.DocsExpr)
 	if !eval.Execute(fn, docs) {
