@@ -222,11 +222,13 @@ func NewAddBottle(body *AddRequestBody) *storage.Bottle {
 		Rating:      body.Rating,
 	}
 	v.Winery = unmarshalWineryRequestBodyToWinery(body.Winery)
-	v.Composition = make([]*storage.Component, len(body.Composition))
-	for j, val := range body.Composition {
-		v.Composition[j] = &storage.Component{
-			Varietal:   *val.Varietal,
-			Percentage: val.Percentage,
+	if body.Composition != nil {
+		v.Composition = make([]*storage.Component, len(body.Composition))
+		for j, val := range body.Composition {
+			v.Composition[j] = &storage.Component{
+				Varietal:   *val.Varietal,
+				Percentage: val.Percentage,
+			}
 		}
 	}
 	return v
