@@ -26,3 +26,27 @@ func TestAPIExprSchemes(t *testing.T) {
 		}
 	}
 }
+
+func TestURLParams(t *testing.T) {
+	cases := map[string]struct {
+		url      string
+		expected []string
+	}{
+		"empty url":        {url: "", expected: []string{}},
+		"no match":         {url: "http://example.com", expected: []string{}},
+		"single match":     {url: "http://example.com/cellar/accounts/{accountID}", expected: []string{"accountID"}},
+		"multiple matches": {url: "http://example.com/cellar/accounts/{accountID}/bottles/{bottleID}", expected: []string{"accountID", "bottleID"}},
+	}
+
+	for k, tc := range cases {
+		if actual := URLParams(tc.url); len(tc.expected) != len(actual) {
+			t.Errorf("%s: expected the number of param values to match %d got %d ", k, len(tc.expected), len(actual))
+		} else {
+			for i, v := range actual {
+				if v != tc.expected[i] {
+					t.Errorf("%s: got %#v, expected %#v at index %d", k, v, tc.expected[i], i)
+				}
+			}
+		}
+	}
+}
