@@ -115,14 +115,14 @@ func (e *ErrorExpr) Validate() error {
 		for _, n := range *o {
 			if _, ok := n.Attribute.Metadata["struct:error:name"]; ok {
 				if errField != "" {
-					verr.Add(e, "struct:error:name already set for %q attribute in %q result type", errField, rt.Identifier)
+					verr.Add(e, "metadata 'struct:error:name' already set for attribute %q of result type %q", errField, rt.Identifier)
 					continue
 				}
 				errField = n.Name
 			}
 		}
 		if errField == "" {
-			verr.Add(e, "struct:error:name not set in metadata in %q result type", rt.Identifier)
+			verr.Add(e, "metadata 'struct:error:name' is missing in result type %q", rt.Identifier)
 		}
 	}
 	return verr
