@@ -3,3 +3,4 @@ http/design/response.go
 codegen/service/testing/.*
 http/codegen/testing/.*
 http/middleware/tracing/middleware.go
+http/middleware/xray/middleware.go
