@@ -1,6 +1,7 @@
 package xray
 
 import (
+	"context"
 	"net/http"
 
 	goahttp "goa.design/goa/http"
@@ -31,7 +32,7 @@ func (r *xrayDoer) Do(req *http.Request) (*http.Response, error) {
 
 	// update the context with the latest segment
 	ctx = tracing.WithSpan(ctx, sub.TraceID, sub.ID, sub.ParentID)
-	req = req.WithContext(WithSegment(ctx, sub))
+	req = req.WithContext(context.WithValue(ctx, SegKey, sub))
 
 	sub.RecordRequest(req, "remote")
 	resp, err := r.wrapped.Do(req)

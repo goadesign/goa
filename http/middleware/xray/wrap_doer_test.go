@@ -47,7 +47,7 @@ func TestWrapDoer(t *testing.T) {
 		// add an xray segment to the context
 		xrayConn := NewTestNetConn()
 		segment := NewSegment(segmentName, traceID, spanID, xrayConn)
-		req = req.WithContext(WithSegment(ctx, segment))
+		req = req.WithContext(context.WithValue(ctx, SegKey, segment))
 
 		doer.Expect("Do", func(r *http.Request) (*http.Response, error) {
 			if s := r.Context().Value(SegKey); s != nil {
@@ -92,7 +92,7 @@ func TestWrapDoer(t *testing.T) {
 		// add an xray segment to the context
 		xrayConn := NewTestNetConn()
 		segment := NewSegment(segmentName, traceID, spanID, xrayConn)
-		req = req.WithContext(WithSegment(ctx, segment))
+		req = req.WithContext(context.WithValue(ctx, SegKey, segment))
 
 		var (
 			requestErr = errors.New("some request error")

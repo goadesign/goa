@@ -72,7 +72,7 @@ func New(service, daemon string) (func(http.Handler) http.Handler, error) {
 				if parentID != nil {
 					s.ParentID = parentID.(string)
 				}
-				ctx = WithSegment(ctx, s)
+				ctx = context.WithValue(ctx, SegKey, s)
 				h.ServeHTTP(s, r.WithContext(ctx))
 			}
 		})
@@ -93,11 +93,6 @@ func NewTraceID() string {
 	b := make([]byte, 12)
 	rand.Read(b)
 	return fmt.Sprintf("%d-%x-%s", 1, time.Now().Unix(), fmt.Sprintf("%x", b))
-}
-
-// WithSegment creates a context containing the given segment.
-func WithSegment(ctx context.Context, s *Segment) context.Context {
-	return context.WithValue(ctx, SegKey, s)
 }
 
 // periodicallyRedialingConn creates a goroutine to periodically re-dial a

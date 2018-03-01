@@ -177,9 +177,6 @@ func New(opts ...Option) func(http.Handler) http.Handler {
 
 // WrapDoer wraps a goa client Doer and sets the trace headers so that the
 // downstream service may properly retrieve the parent span ID and trace ID.
-//
-// ctx must contain the current request segment as set by the xray middleware or
-// the doer passed as argument is returned.
 func WrapDoer(doer Doer) Doer {
 	return &tracedDoer{doer}
 }
