@@ -22,7 +22,7 @@ func TestAttributeExprValidate(t *testing.T) {
 
 		errAttributeTypeNil      = fmt.Errorf("attribute type is nil")
 		errRequiredFieldNotExist = fmt.Errorf(`%srequired field %q does not exist`, normalizedCtx, "foo")
-		errViewButNotAResultType = fmt.Errorf("%sdefines a view but is not a result type", normalizedCtx)
+		errViewButNotAResultType = fmt.Errorf("%sdefines a view %v but is not a result type", normalizedCtx, metadata["view"])
 		errTypeNotDefineViewe    = fmt.Errorf("%stype does not define view %q", normalizedCtx, "foo")
 	)
 	cases := map[string]struct {
