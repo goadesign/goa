@@ -228,7 +228,7 @@ func buildDesignType(dt *design.DataType, t reflect.Type, ref design.DataType, r
 	// check compatibility
 	if ref != nil {
 		if err := compatible(ref, t); err != nil {
-			return err
+			return fmt.Errorf("%q: %s", t.Name(), err)
 		}
 	}
 
@@ -288,7 +288,7 @@ func buildDesignType(dt *design.DataType, t reflect.Type, ref design.DataType, r
 		}
 		var elem design.DataType
 		if err := buildDesignType(&elem, e, eref, rec.append("[0]")); err != nil {
-			return err
+			return fmt.Errorf("%s", err)
 		}
 		*dt = &design.Array{ElemType: &design.AttributeExpr{Type: elem}}
 
@@ -301,11 +301,11 @@ func buildDesignType(dt *design.DataType, t reflect.Type, ref design.DataType, r
 		}
 		var kt design.DataType
 		if err := buildDesignType(&kt, t.Key(), kref, rec.append(".key")); err != nil {
-			return err
+			return fmt.Errorf("%s", err)
 		}
 		var vt design.DataType
 		if err := buildDesignType(&vt, t.Elem(), vref, rec.append(".value")); err != nil {
-			return err
+			return fmt.Errorf("%s", err)
 		}
 		*dt = &design.Map{KeyType: &design.AttributeExpr{Type: kt}, ElemType: &design.AttributeExpr{Type: vt}}
 
@@ -314,7 +314,26 @@ func buildDesignType(dt *design.DataType, t reflect.Type, ref design.DataType, r
 		if ref != nil {
 			oref = design.AsObject(ref)
 		}
-		obj := design.Object(make([]*design.NamedAttributeExpr, t.NumField()))
+
+		// Build list of fields that should not be ignored.
+		var fields []reflect.StructField
+		for i := 0; i < t.NumField(); i++ {
+			f := t.FieldByIndex([]int{i})
+			atn, _ := attributeName(oref, f.Name)
+			if oref != nil {
+				if at := oref.Attribute(atn); at != nil {
+					if m := at.Metadata["struct.field.external"]; len(m) > 0 {
+						if m[0] == "-" {
+							continue
+						}
+					}
+				}
+			}
+			fields = append(fields, f)
+		}
+
+		// Avoid infinite recursions
+		obj := design.Object(make([]*design.NamedAttributeExpr, len(fields)))
 		ut := &design.UserTypeExpr{
 			AttributeExpr: &design.AttributeExpr{Type: &obj},
 			TypeName:      t.Name(),
@@ -322,8 +341,7 @@ func buildDesignType(dt *design.DataType, t reflect.Type, ref design.DataType, r
 		*dt = ut
 		rec.seen[t.Name()] = ut
 		var required []string
-		for i := 0; i < t.NumField(); i++ {
-			f := t.FieldByIndex([]int{i})
+		for i, f := range fields {
 			atn, fn := attributeName(oref, f.Name)
 			var aref design.DataType
 			if oref != nil {
@@ -334,7 +352,7 @@ func buildDesignType(dt *design.DataType, t reflect.Type, ref design.DataType, r
 			var fdt design.DataType
 			if f.Type.Kind() == reflect.Ptr {
 				if err := buildDesignType(&fdt, f.Type.Elem(), aref, rec.append("."+f.Name)); err != nil {
-					return err
+					return fmt.Errorf("%q.%s: %s", t.Name(), f.Name, err)
 				}
 				if design.IsArray(fdt) {
 					return fmt.Errorf("%s: field of type pointer to slice are not supported, use slice instead", rec.path)
@@ -347,7 +365,7 @@ func buildDesignType(dt *design.DataType, t reflect.Type, ref design.DataType, r
 					required = append(required, atn)
 				}
 				if err := buildDesignType(&fdt, f.Type, aref, rec.append("."+f.Name)); err != nil {
-					return err
+					return fmt.Errorf("%q.%s: %s", t.Name(), f.Name, err)
 				}
 			}
 			name := atn
