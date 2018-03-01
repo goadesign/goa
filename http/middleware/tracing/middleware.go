@@ -127,8 +127,7 @@ func SampleSize(s int) Option {
 }
 
 // New returns a trace middleware that initializes the trace information in the
-// request context. The information can be retrieved using any of the ContextXXX
-// functions.
+// request context.
 //
 // samplingRate must be a value between 0 and 100. It represents the percentage of
 // requests that should be traced. If the incoming request has a Trace ID header
@@ -178,10 +177,7 @@ func New(opts ...Option) func(http.Handler) http.Handler {
 
 // WrapDoer wraps a goa client Doer and sets the trace headers so that the
 // downstream service may properly retrieve the parent span ID and trace ID.
-//
-// ctx must contain the current request segment as set by the xray middleware or
-// the doer passed as argument is returned.
-func WrapDoer(ctx context.Context, doer Doer) Doer {
+func WrapDoer(doer Doer) Doer {
 	return &tracedDoer{doer}
 }
 
