@@ -4,3 +4,5 @@ codegen/service/testing/.*
 http/codegen/testing/.*
 http/middleware/tracing/middleware.go
 http/middleware/xray/middleware.go
+http/middleware/xray/wrap_doer.go
+http/middleware/xray/wrap_doer_test.go
