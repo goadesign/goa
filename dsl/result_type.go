@@ -440,7 +440,9 @@ func buildView(name string, mt *design.ResultTypeExpr, at *design.AttributeExpr)
 			if dup.Metadata == nil {
 				dup.Metadata = make(map[string][]string)
 			}
-			dup.Metadata["view"] = cat.Metadata["view"]
+			if len(cat.Metadata["view"]) > 0 {
+				dup.Metadata["view"] = cat.Metadata["view"]
+			}
 			o.Set(n, dup)
 		} else if n != "links" {
 			return nil, fmt.Errorf("unknown attribute %#v", n)
