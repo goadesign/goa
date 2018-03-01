@@ -288,7 +288,7 @@ func buildDesignType(dt *design.DataType, t reflect.Type, ref design.DataType, r
 		}
 		var elem design.DataType
 		if err := buildDesignType(&elem, e, eref, rec.append("[0]")); err != nil {
-			return fmt.Errorf("%q: %s", t.Name(), err)
+			return fmt.Errorf("%s", err)
 		}
 		*dt = &design.Array{ElemType: &design.AttributeExpr{Type: elem}}
 
@@ -301,11 +301,11 @@ func buildDesignType(dt *design.DataType, t reflect.Type, ref design.DataType, r
 		}
 		var kt design.DataType
 		if err := buildDesignType(&kt, t.Key(), kref, rec.append(".key")); err != nil {
-			return fmt.Errorf("%q: %s", t.Name(), err)
+			return fmt.Errorf("%s", err)
 		}
 		var vt design.DataType
 		if err := buildDesignType(&vt, t.Elem(), vref, rec.append(".value")); err != nil {
-			return fmt.Errorf("%q: %s", t.Name(), err)
+			return fmt.Errorf("%s", err)
 		}
 		*dt = &design.Map{KeyType: &design.AttributeExpr{Type: kt}, ElemType: &design.AttributeExpr{Type: vt}}
 
