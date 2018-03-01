@@ -56,20 +56,20 @@ func New(service, daemon string) (func(http.Handler) http.Handler, error) {
 	}
 	return func(h http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			ctx := r.Context()
 			var (
-				traceID = ctx.Value(tracing.TraceIDKey).(string)
-				spanID  = ctx.Value(tracing.TraceSpanIDKey).(string)
+				ctx      = r.Context()
+				spanID   = ctx.Value(tracing.TraceSpanIDKey)
+				traceID  = ctx.Value(tracing.TraceIDKey)
+				parentID = ctx.Value(tracing.TraceParentSpanIDKey)
 			)
-			if traceID == "" {
+			if traceID == nil || spanID == nil {
 				h.ServeHTTP(w, r)
 			} else {
-				ctx := r.Context()
-				s := NewSegment(service, traceID, spanID, connection())
+				s := NewSegment(service, traceID.(string), spanID.(string), connection())
 				defer s.Close()
 				s.ResponseWriter = w
 				s.RecordRequest(r, "")
-				if parentID := ctx.Value(tracing.TraceParentSpanIDKey); parentID != nil {
+				if parentID != nil {
 					s.ParentID = parentID.(string)
 				}
 				ctx = WithSegment(ctx, s)
