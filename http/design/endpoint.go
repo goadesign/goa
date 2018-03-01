@@ -52,6 +52,9 @@ type (
 		// where "attribute" is the name of the attribute and "header"
 		// the name of the HTTP header.
 		headers *design.AttributeExpr
+		// MultipartRequest indicates that the request content type for
+		// the endpoint is a multipart type.
+		MultipartRequest bool
 	}
 
 	// RouteExpr represents an endpoint route (HTTP endpoint).

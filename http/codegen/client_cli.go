@@ -52,6 +52,9 @@ type (
 		// Example is a valid command invocation, starting with the
 		// command name.
 		Example string
+		// MultipartRequestEncoder is the data necessary to render
+		// multipart request encoder.
+		MultipartRequestEncoder *MultipartData
 	}
 
 	flagData struct {
@@ -386,6 +389,9 @@ func buildSubcommandData(svc *ServiceData, e *EndpointData) *subcommandData {
 		BuildFunction: buildFunction,
 		Conversion:    conversion,
 	}
+	if e.MultipartRequestEncoder != nil {
+		sub.MultipartRequestEncoder = e.MultipartRequestEncoder
+	}
 	ex := svc.Service.Name + " " + codegen.KebabCase(sub.Name)
 	for _, f := range sub.Flags {
 		ex += " --" + f.Name + " " + f.Example
@@ -628,6 +634,13 @@ func ParseEndpoint(
 	enc func(*http.Request) goahttp.Encoder,
 	dec func(*http.Response) goahttp.Decoder,
 	restore bool,
+	{{- range $c := . }}
+	{{- range .Subcommands }}
+		{{- if .MultipartRequestEncoder }}
+	{{ .MultipartRequestEncoder.VarName }} {{ $c.PkgName }}.{{ .MultipartRequestEncoder.FuncName }},
+		{{- end }}
+	{{- end }}
+{{- end }}
 ) (goa.Endpoint, interface{}, error) {
 	var (
 		{{- range . }}
@@ -717,7 +730,7 @@ func ParseEndpoint(
 			switch epn {
 		{{- $pkgName := .PkgName }}{{ range .Subcommands }}
 			case "{{ .Name }}":
-				endpoint = c.{{ .MethodVarName }}()
+				endpoint = c.{{ .MethodVarName }}({{ if .MultipartRequestEncoder }}{{ .MultipartRequestEncoder.VarName }}{{ end }})
 			{{- if .BuildFunction }}
 				data, err = {{ $pkgName}}.{{ .BuildFunction.Name }}({{ range .BuildFunction.ActualParams }}*{{ . }}Flag, {{ end }})
 			{{- else if .Conversion }}

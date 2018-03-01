@@ -2,8 +2,14 @@ package cellar
 
 import (
 	"context"
+	"encoding/json"
+	"fmt"
+	"io"
 	"log"
+	"mime/multipart"
 
+	storagec "goa.design/goa/examples/cellar/gen/http/storage/client"
+	storages "goa.design/goa/examples/cellar/gen/http/storage/server"
 	storage "goa.design/goa/examples/cellar/gen/storage"
 
 	"github.com/boltdb/bolt"
@@ -99,6 +105,70 @@ func (s *storageSvc) Rate(ctx context.Context, p map[uint32][]string) error {
 			if err := s.db.Save("CELLAR", id, &sb); err != nil {
 				return err // internal error
 			}
+		}
+	}
+	return nil
+}
+
+// Add n number of bottles and return their IDs.
+func (s *storageSvc) MultiAdd(ctx context.Context, p []*storage.Bottle) ([]string, error) {
+	newIDs := make([]string, 0, len(p))
+	for _, bottle := range p {
+		id, err := s.db.NewID("CELLAR")
+		if err != nil {
+			return nil, err // internal error
+		}
+		sb := storage.StoredBottle{
+			ID:          id,
+			Name:        bottle.Name,
+			Winery:      bottle.Winery,
+			Vintage:     bottle.Vintage,
+			Composition: bottle.Composition,
+			Description: bottle.Description,
+			Rating:      bottle.Rating,
+		}
+		if err = s.db.Save("CELLAR", id, &sb); err != nil {
+			return nil, err // internal error
+		}
+		newIDs = append(newIDs, id)
+	}
+	return newIDs, nil
+}
+
+// StorageMultiAddDecoderFunc implements the multipart decoder for service
+// "storage" endpoint "multi_add"
+func StorageMultiAddDecoderFunc(mr *multipart.Reader, p *[]*storage.Bottle) error {
+	var bottles []*storages.BottleRequestBody
+	for {
+		part, err := mr.NextPart()
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			return fmt.Errorf("failed to load part: %s", err)
+		}
+		dec := json.NewDecoder(part)
+		var bottle storages.BottleRequestBody
+		if err := dec.Decode(&bottle); err != nil {
+			return fmt.Errorf("failed to decode part: %s", err)
+		}
+		bottles = append(bottles, &bottle)
+	}
+	*p = storages.NewMultiAddBottle(bottles)
+	return nil
+}
+
+// StorageMultiAddEncoderFunc implements the multipart encoder for service
+// "storage" endpoint "multi_add"
+func StorageMultiAddEncoderFunc(mw *multipart.Writer, p *[]*storage.Bottle) error {
+	bottles := storagec.NewBottleRequestBody(*p)
+	for _, bottle := range bottles {
+		b, err := json.Marshal(bottle)
+		if err != nil {
+			return err
+		}
+		if err := mw.WriteField("bottle", string(b)); err != nil {
+			return err
 		}
 	}
 	return nil

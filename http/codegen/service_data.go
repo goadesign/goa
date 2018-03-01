@@ -111,6 +111,8 @@ type (
 		ResponseEncoder string
 		// ErrorEncoder is the name of the error encoder function.
 		ErrorEncoder string
+		// MultipartRequestDecoder indicates the request decoder for multipart content type.
+		MultipartRequestDecoder *MultipartData
 
 		// client
 
@@ -125,6 +127,8 @@ type (
 		RequestEncoder string
 		// ResponseDecoder is the name of the response decoder function.
 		ResponseDecoder string
+		// MultipartRequestEncoder indicates the request encoder for multipart content type.
+		MultipartRequestEncoder *MultipartData
 	}
 
 	// FileServerData lists the data needed to generate file servers.
@@ -429,6 +433,22 @@ type (
 		// FieldName is the mapped name of the Go type field.
 		FieldName string
 	}
+
+	// MultipartData contains the data needed to render multipart encoder/decoder.
+	MultipartData struct {
+		// FuncName is the name used to generate function type.
+		FuncName string
+		// InitName is the name of the constructor.
+		InitName string
+		// VarName is the name of the variable referring to the function.
+		VarName string
+		// ServiceName is the name of the service.
+		ServiceName string
+		// MethodName is the name of the method.
+		MethodName string
+		// PayloadRef is the fully qualified reference to the payload.
+		PayloadRef string
+	}
 )
 
 // Get retrieves the transport data for the service with the given name
@@ -652,6 +672,25 @@ func (d ServicesData) analyze(hs *httpdesign.ServiceExpr) *ServiceData {
 			RequestInit:     requestInit,
 			RequestEncoder:  requestEncoder,
 			ResponseDecoder: fmt.Sprintf("Decode%sResponse", ep.VarName),
+		}
+
+		if a.MultipartRequest {
+			ad.MultipartRequestDecoder = &MultipartData{
+				FuncName:    fmt.Sprintf("%s%sDecoderFunc", svc.VarName, ep.VarName),
+				InitName:    fmt.Sprintf("New%s%sDecoder", svc.VarName, ep.VarName),
+				VarName:     fmt.Sprintf("%s%sDecoderFn", svc.Name, ep.VarName),
+				ServiceName: svc.Name,
+				MethodName:  ep.Name,
+				PayloadRef:  ad.Payload.Ref,
+			}
+			ad.MultipartRequestEncoder = &MultipartData{
+				FuncName:    fmt.Sprintf("%s%sEncoderFunc", svc.VarName, ep.VarName),
+				InitName:    fmt.Sprintf("New%s%sEncoder", svc.VarName, ep.VarName),
+				VarName:     fmt.Sprintf("%s%sEncoderFn", svc.Name, ep.VarName),
+				ServiceName: svc.Name,
+				MethodName:  ep.Name,
+				PayloadRef:  ad.Payload.Ref,
+			}
 		}
 
 		rd.Endpoints = append(rd.Endpoints, ad)

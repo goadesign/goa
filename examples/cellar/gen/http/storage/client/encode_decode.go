@@ -13,6 +13,7 @@ import (
 	"context"
 	"fmt"
 	"io/ioutil"
+	"mime/multipart"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -351,6 +352,90 @@ func DecodeRateResponse(decoder func(*http.Response) goahttp.Decoder, restoreBod
 		switch resp.StatusCode {
 		case http.StatusOK:
 			return nil, nil
+		default:
+			body, _ := ioutil.ReadAll(resp.Body)
+			return nil, goahttp.ErrInvalidResponse("account", "create", resp.StatusCode, string(body))
+		}
+	}
+}
+
+// BuildMultiAddRequest instantiates a HTTP request object with method and path
+// set to call the "storage" service "multi_add" endpoint
+func (c *Client) BuildMultiAddRequest(ctx context.Context, v interface{}) (*http.Request, error) {
+	u := &url.URL{Scheme: c.scheme, Host: c.host, Path: MultiAddStoragePath()}
+	req, err := http.NewRequest("POST", u.String(), nil)
+	if err != nil {
+		return nil, goahttp.ErrInvalidURL("storage", "multi_add", u.String(), err)
+	}
+	if ctx != nil {
+		req = req.WithContext(ctx)
+	}
+
+	return req, nil
+}
+
+// NewStorageMultiAddEncoder returns an encoder to encode the multipart request
+// for the "storage" service "multi_add" endpoint.
+func NewStorageMultiAddEncoder(encoderFn StorageMultiAddEncoderFunc) func(r *http.Request) goahttp.Encoder {
+	return func(r *http.Request) goahttp.Encoder {
+		body := &bytes.Buffer{}
+		mw := multipart.NewWriter(body)
+		return goahttp.EncodingFunc(func(v interface{}) error {
+			p := v.(*[]*storage.Bottle)
+			if err := encoderFn(mw, p); err != nil {
+				return err
+			}
+			r.Body = ioutil.NopCloser(body)
+			r.Header.Set("Content-Type", mw.FormDataContentType())
+			return mw.Close()
+		})
+	}
+}
+
+// EncodeMultiAddRequest returns an encoder for requests sent to the storage
+// multi_add server.
+func EncodeMultiAddRequest(encoder func(*http.Request) goahttp.Encoder) func(*http.Request, interface{}) error {
+	return func(req *http.Request, v interface{}) error {
+		p, ok := v.([]*storage.Bottle)
+		if !ok {
+			return goahttp.ErrInvalidType("storage", "multi_add", "[]*storage.Bottle", v)
+		}
+		if err := encoder(req).Encode(&p); err != nil {
+			return goahttp.ErrEncodingError("storage", "multi_add", err)
+		}
+		return nil
+	}
+}
+
+// DecodeMultiAddResponse returns a decoder for responses returned by the
+// storage multi_add endpoint. restoreBody controls whether the response body
+// should be restored after having been read.
+func DecodeMultiAddResponse(decoder func(*http.Response) goahttp.Decoder, restoreBody bool) func(*http.Response) (interface{}, error) {
+	return func(resp *http.Response) (interface{}, error) {
+		if restoreBody {
+			b, err := ioutil.ReadAll(resp.Body)
+			if err != nil {
+				return nil, err
+			}
+			resp.Body = ioutil.NopCloser(bytes.NewBuffer(b))
+			defer func() {
+				resp.Body = ioutil.NopCloser(bytes.NewBuffer(b))
+			}()
+		} else {
+			defer resp.Body.Close()
+		}
+		switch resp.StatusCode {
+		case http.StatusOK:
+			var (
+				body []string
+				err  error
+			)
+			err = decoder(resp).Decode(&body)
+			if err != nil {
+				return nil, goahttp.ErrDecodingError("storage", "multi_add", err)
+			}
+
+			return body, nil
 		default:
 			body, _ := ioutil.ReadAll(resp.Body)
 			return nil, goahttp.ErrInvalidResponse("account", "create", resp.StatusCode, string(body))

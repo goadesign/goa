@@ -72,4 +72,14 @@ var _ = Service("storage", func() {
 			Response(StatusOK)
 		})
 	})
+
+	Method("multi_add", func() {
+		Description("Add n number of bottles and return their IDs.")
+		Payload(ArrayOf(Bottle))
+		Result(ArrayOf(String))
+		HTTP(func() {
+			POST("/multi_add")
+			MultipartRequest()
+		})
+	})
 })

@@ -142,6 +142,22 @@ type ComponentRequestBody struct {
 	Percentage *uint32 `form:"percentage,omitempty" json:"percentage,omitempty" xml:"percentage,omitempty"`
 }
 
+// BottleRequestBody is used to define fields on request body types.
+type BottleRequestBody struct {
+	// Name of bottle
+	Name *string `form:"name,omitempty" json:"name,omitempty" xml:"name,omitempty"`
+	// Winery that produces wine
+	Winery *WineryRequestBody `form:"winery,omitempty" json:"winery,omitempty" xml:"winery,omitempty"`
+	// Vintage of bottle
+	Vintage *uint32 `form:"vintage,omitempty" json:"vintage,omitempty" xml:"vintage,omitempty"`
+	// Composition is the list of grape varietals and associated percentage.
+	Composition []*ComponentRequestBody `form:"composition,omitempty" json:"composition,omitempty" xml:"composition,omitempty"`
+	// Description of bottle
+	Description *string `form:"description,omitempty" json:"description,omitempty" xml:"description,omitempty"`
+	// Rating of bottle from 1 (worst) to 5 (best)
+	Rating *uint32 `form:"rating,omitempty" json:"rating,omitempty" xml:"rating,omitempty"`
+}
+
 // NewListResponseBody builds the HTTP response body from the result of the
 // "list" endpoint of the "storage" service.
 func NewListResponseBody(res storage.StoredBottleCollection) ListResponseBody {
@@ -239,6 +255,30 @@ func NewRemoveRemovePayload(id string) *storage.RemovePayload {
 	return &storage.RemovePayload{
 		ID: id,
 	}
+}
+
+// NewMultiAddBottle builds a storage service multi_add endpoint payload.
+func NewMultiAddBottle(body []*BottleRequestBody) []*storage.Bottle {
+	v := make([]*storage.Bottle, len(body))
+	for i, val := range body {
+		v[i] = &storage.Bottle{
+			Name:        *val.Name,
+			Vintage:     *val.Vintage,
+			Description: val.Description,
+			Rating:      val.Rating,
+		}
+		v[i].Winery = unmarshalWineryRequestBodyToWinery(val.Winery)
+		if val.Composition != nil {
+			v[i].Composition = make([]*storage.Component, len(val.Composition))
+			for j, val := range val.Composition {
+				v[i].Composition[j] = &storage.Component{
+					Varietal:   *val.Varietal,
+					Percentage: val.Percentage,
+				}
+			}
+		}
+	}
+	return v
 }
 
 // Validate runs the validations defined on AddRequestBody
@@ -443,6 +483,62 @@ func (body *ComponentRequestBody) Validate() (err error) {
 	if body.Percentage != nil {
 		if *body.Percentage > 100 {
 			err = goa.MergeErrors(err, goa.InvalidRangeError("body.percentage", *body.Percentage, 100, false))
+		}
+	}
+	return
+}
+
+// Validate runs the validations defined on BottleRequestBody
+func (body *BottleRequestBody) Validate() (err error) {
+	if body.Name == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("name", "body"))
+	}
+	if body.Winery == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("winery", "body"))
+	}
+	if body.Vintage == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("vintage", "body"))
+	}
+	if body.Name != nil {
+		if utf8.RuneCountInString(*body.Name) > 100 {
+			err = goa.MergeErrors(err, goa.InvalidLengthError("body.name", *body.Name, utf8.RuneCountInString(*body.Name), 100, false))
+		}
+	}
+	if body.Winery != nil {
+		if err2 := body.Winery.Validate(); err2 != nil {
+			err = goa.MergeErrors(err, err2)
+		}
+	}
+	if body.Vintage != nil {
+		if *body.Vintage < 1900 {
+			err = goa.MergeErrors(err, goa.InvalidRangeError("body.vintage", *body.Vintage, 1900, true))
+		}
+	}
+	if body.Vintage != nil {
+		if *body.Vintage > 2020 {
+			err = goa.MergeErrors(err, goa.InvalidRangeError("body.vintage", *body.Vintage, 2020, false))
+		}
+	}
+	for _, e := range body.Composition {
+		if e != nil {
+			if err2 := e.Validate(); err2 != nil {
+				err = goa.MergeErrors(err, err2)
+			}
+		}
+	}
+	if body.Description != nil {
+		if utf8.RuneCountInString(*body.Description) > 2000 {
+			err = goa.MergeErrors(err, goa.InvalidLengthError("body.description", *body.Description, utf8.RuneCountInString(*body.Description), 2000, false))
+		}
+	}
+	if body.Rating != nil {
+		if *body.Rating < 1 {
+			err = goa.MergeErrors(err, goa.InvalidRangeError("body.rating", *body.Rating, 1, true))
+		}
+	}
+	if body.Rating != nil {
+		if *body.Rating > 5 {
+			err = goa.MergeErrors(err, goa.InvalidRangeError("body.rating", *body.Rating, 5, false))
 		}
 	}
 	return
