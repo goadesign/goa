@@ -152,7 +152,7 @@ func TestAttributeExprAllRequired(t *testing.T) {
 		validation *ValidationExpr
 		expected   []string
 	}{
-		"user type": {
+		"some required": {
 			typ: &UserTypeExpr{
 				AttributeExpr: &AttributeExpr{
 					Validation: &ValidationExpr{
@@ -161,13 +161,6 @@ func TestAttributeExprAllRequired(t *testing.T) {
 				},
 			},
 			expected: []string{"foo", "bar"},
-		},
-		"not user type": {
-			typ: Boolean,
-			validation: &ValidationExpr{
-				Required: []string{"baz", "qux"},
-			},
-			expected: []string{"baz", "qux"},
 		},
 		"no required": {
 			typ:        Boolean,
