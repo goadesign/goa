@@ -185,3 +185,34 @@ func TestAttributeExprAllRequired(t *testing.T) {
 		}
 	}
 }
+
+func TestAttributeExprIsRequired(t *testing.T) {
+	cases := map[string]struct {
+		attName  string
+		expected bool
+	}{
+		"required": {
+			attName:  "foo",
+			expected: true,
+		},
+		"not required": {
+			attName:  "bar",
+			expected: false,
+		},
+	}
+
+	for k, tc := range cases {
+		attribute := AttributeExpr{
+			Type: &UserTypeExpr{
+				AttributeExpr: &AttributeExpr{
+					Validation: &ValidationExpr{
+						Required: []string{"foo"},
+					},
+				},
+			},
+		}
+		if actual := attribute.IsRequired(tc.attName); tc.expected != actual {
+			t.Errorf("%s: got %#v, expected %#v", k, actual, tc.expected)
+		}
+	}
+}
