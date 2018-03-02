@@ -145,3 +145,43 @@ func TestAttributeExprValidate(t *testing.T) {
 		}
 	}
 }
+
+func TestAttributeExprAllRequired(t *testing.T) {
+	cases := map[string]struct {
+		typ        DataType
+		validation *ValidationExpr
+		expected   []string
+	}{
+		"some required": {
+			typ: &UserTypeExpr{
+				AttributeExpr: &AttributeExpr{
+					Validation: &ValidationExpr{
+						Required: []string{"foo", "bar"},
+					},
+				},
+			},
+			expected: []string{"foo", "bar"},
+		},
+		"no required": {
+			typ:        Boolean,
+			validation: nil,
+			expected:   nil,
+		},
+	}
+
+	for k, tc := range cases {
+		attribute := AttributeExpr{
+			Type:       tc.typ,
+			Validation: tc.validation,
+		}
+		if actual := attribute.AllRequired(); len(tc.expected) != len(actual) {
+			t.Errorf("%s: expected the number of all required values to match %d got %d ", k, len(tc.expected), len(actual))
+		} else {
+			for i, v := range actual {
+				if v != tc.expected[i] {
+					t.Errorf("%s: got %#v, expected %#v at index %d", k, v, tc.expected[i], i)
+				}
+			}
+		}
+	}
+}
