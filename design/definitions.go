@@ -245,6 +245,8 @@ type (
 		Payload *UserTypeDefinition
 		// PayloadOptional is true if the request payload is optional, false otherwise.
 		PayloadOptional bool
+		// PayloadOptional is true if the request payload is multipart, false otherwise.
+		PayloadMultipart bool
 		// Request headers that need to be made available to action
 		Headers *AttributeDefinition
 		// Metadata is a list of key/value pairs

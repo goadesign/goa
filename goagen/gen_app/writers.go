@@ -333,6 +333,7 @@ func (w *ControllersWriter) Execute(data []*ControllerTemplateData) error {
 			}
 		}
 		fn := template.FuncMap{
+			"newCoerceData":  newCoerceData,
 			"finalizeCode":   w.Finalizer.Code,
 			"validationCode": w.Validator.Code,
 		}
@@ -768,10 +769,17 @@ func handle{{ .Resource }}Origin(h goa.Handler) goa.Handler {
 
 	// unmarshalT generates the code for an action payload unmarshal function.
 	// template input: *ControllerTemplateData
-	unmarshalT = `{{ range .Actions }}{{ if .Payload }}
+	unmarshalT = `{{ define "Coerce" }}` + coerceT + `{{ end }}` + `{{ range .Actions }}{{ if .Payload }}
 // {{ .Unmarshal }} unmarshals the request body into the context request data Payload field.
 func {{ .Unmarshal }}(ctx context.Context, service *goa.Service, req *http.Request) error {
-	{{ if .Payload.IsObject }}payload := &{{ gotypename .Payload nil 1 true }}{}
+	{{ if .PayloadMultipart}}var err error
+	var payload {{ gotypename .Payload nil 1 true }}
+	{{ $o := .Payload.ToObject }}{{ range $name, $att := $o -}}
+	raw{{ goify $name true }} := req.FormValue("{{ $name }}")
+	{{ template "Coerce" (newCoerceData $name $att true (printf "payload.%s" (goifyatt $att $name true)) 0) }}{{ end }}{{/*
+*/}}	if err != nil {
+		return err
+	}{{ else if .Payload.IsObject }}payload := &{{ gotypename .Payload nil 1 true }}{}
 	if err := service.DecodeRequest(req, payload); err != nil {
 		return err
 	}{{ $assignment := finalizeCode .Payload.AttributeDefinition "payload" 1 }}{{ if $assignment }}
