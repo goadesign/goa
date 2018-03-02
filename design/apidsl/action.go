@@ -403,7 +403,7 @@ func Params(dsl func()) {
 //	})
 //
 func Payload(p interface{}, dsls ...func()) {
-	payload(false, p, dsls...)
+	payload(false, false, p, dsls...)
 }
 
 // OptionalPayload can be used in: Action
@@ -415,10 +415,30 @@ func Payload(p interface{}, dsls ...func()) {
 //	OptionalPayload(BottlePayload)		// Request payload is described by the BottlePayload type and is optional
 //
 func OptionalPayload(p interface{}, dsls ...func()) {
-	payload(true, p, dsls...)
+	payload(true, false, p, dsls...)
 }
 
-func payload(isOptional bool, p interface{}, dsls ...func()) {
+// Multipart can be used in: Action
+//
+// Multipart implements the action multipart payload DSL. An action multipart payload describes
+// the HTTP request body data structure. The function accepts either a type or a DSL that describes
+// the payload members using the Member DSL which accepts the same syntax as the Attribute DSL.
+// This function can be called passing in a type, a DSL or both.
+//
+func Multipart(p interface{}, dsls ...func()) {
+	payload(false, true, p, dsls...)
+}
+
+// OptionalMultipart can be used in: Action
+//
+// OptionalMultipart implements the action optional multipart payload DSL. The function works
+// identically to the Payload DSL except it sets a bit in the action definition to denote that
+// the payload is not required.
+func OptionalMultipart(p interface{}, dsls ...func()) {
+	payload(true, true, p, dsls...)
+}
+
+func payload(isOptional, isMultipart bool, p interface{}, dsls ...func()) {
 	if len(dsls) > 1 {
 		dslengine.ReportError("too many arguments given to Payload")
 		return
@@ -437,6 +457,7 @@ func payload(isOptional bool, p interface{}, dsls ...func()) {
 			if len(dsls) == 0 {
 				a.Payload = actual
 				a.PayloadOptional = isOptional
+				a.PayloadMultipart = isMultipart
 				return
 			}
 			att = design.DupAtt(actual.Definition())
@@ -474,6 +495,7 @@ func payload(isOptional bool, p interface{}, dsls ...func()) {
 			TypeName:            fmt.Sprintf("%s%sPayload", an, rn),
 		}
 		a.PayloadOptional = isOptional
+		a.PayloadMultipart = isMultipart
 	}
 }
 
