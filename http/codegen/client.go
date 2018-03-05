@@ -277,7 +277,7 @@ func {{ .RequestEncoder }}(encoder func(*http.Request) goahttp.Encoder) func(*ht
 		req.URL.RawQuery = values.Encode()
 	{{- end }}
 	{{- if .MultipartRequestEncoder }}
-		if err := encoder(req).Encode(&p); err != nil {
+		if err := encoder(req).Encode(p); err != nil {
 			return goahttp.ErrEncodingError("{{ .ServiceName }}", "{{ .Method.Name }}", err)
 		}
 	{{- else if .Payload.Request.ClientBody }}
@@ -494,7 +494,7 @@ const singleResponseT = `case {{ .StatusCode }}:
 
 // input: multipartData
 const multipartRequestEncoderTypeT = `{{ printf "%s is the type to encode multipart request for the %q service %q endpoint." .FuncName .ServiceName .MethodName | comment }}
-type {{ .FuncName }} func(*multipart.Writer, *{{ .PayloadRef }}) error
+type {{ .FuncName }} func(*multipart.Writer, {{ .PayloadRef }}) error
 `
 
 // input: multipartData
@@ -504,7 +504,7 @@ func {{ .InitName }}(encoderFn {{ .FuncName }}) func(r *http.Request) goahttp.En
 		body := &bytes.Buffer{}
 		mw := multipart.NewWriter(body)
 		return goahttp.EncodingFunc(func(v interface{}) error {
-			p := v.(*{{ .PayloadRef }})
+			p := v.({{ .PayloadRef }})
 			if err := encoderFn(mw, p); err != nil {
 				return err
 			}

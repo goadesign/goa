@@ -51,7 +51,7 @@ type Client struct {
 
 // StorageMultiAddEncoderFunc is the type to encode multipart request for the
 // "storage" service "multi_add" endpoint.
-type StorageMultiAddEncoderFunc func(*multipart.Writer, *[]*storage.Bottle) error
+type StorageMultiAddEncoderFunc func(*multipart.Writer, []*storage.Bottle) error
 
 // NewClient instantiates HTTP clients for all the storage service servers.
 func NewClient(

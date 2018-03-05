@@ -136,7 +136,8 @@ func (s *storageSvc) MultiAdd(ctx context.Context, p []*storage.Bottle) ([]strin
 }
 
 // StorageMultiAddDecoderFunc implements the multipart decoder for service
-// "storage" endpoint "multi_add"
+// "storage" endpoint "multi_add". The decoder must populate the argument p
+// after encoding.
 func StorageMultiAddDecoderFunc(mr *multipart.Reader, p *[]*storage.Bottle) error {
 	var bottles []*storages.BottleRequestBody
 	for {
@@ -160,8 +161,8 @@ func StorageMultiAddDecoderFunc(mr *multipart.Reader, p *[]*storage.Bottle) erro
 
 // StorageMultiAddEncoderFunc implements the multipart encoder for service
 // "storage" endpoint "multi_add"
-func StorageMultiAddEncoderFunc(mw *multipart.Writer, p *[]*storage.Bottle) error {
-	bottles := storagec.NewBottleRequestBody(*p)
+func StorageMultiAddEncoderFunc(mw *multipart.Writer, p []*storage.Bottle) error {
+	bottles := storagec.NewBottleRequestBody(p)
 	for _, bottle := range bottles {
 		b, err := json.Marshal(bottle)
 		if err != nil {

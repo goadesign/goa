@@ -381,7 +381,7 @@ func NewStorageMultiAddEncoder(encoderFn StorageMultiAddEncoderFunc) func(r *htt
 		body := &bytes.Buffer{}
 		mw := multipart.NewWriter(body)
 		return goahttp.EncodingFunc(func(v interface{}) error {
-			p := v.(*[]*storage.Bottle)
+			p := v.([]*storage.Bottle)
 			if err := encoderFn(mw, p); err != nil {
 				return err
 			}
@@ -400,7 +400,7 @@ func EncodeMultiAddRequest(encoder func(*http.Request) goahttp.Encoder) func(*ht
 		if !ok {
 			return goahttp.ErrInvalidType("storage", "multi_add", "[]*storage.Bottle", v)
 		}
-		if err := encoder(req).Encode(&p); err != nil {
+		if err := encoder(req).Encode(p); err != nil {
 			return goahttp.ErrEncodingError("storage", "multi_add", err)
 		}
 		return nil
