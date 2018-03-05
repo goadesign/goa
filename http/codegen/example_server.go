@@ -2,6 +2,7 @@ package codegen
 
 import (
 	"os"
+	"path"
 	"path/filepath"
 	"strings"
 
@@ -60,8 +61,8 @@ func dummyServiceFile(genpkg string, root *httpdesign.RootExpr, svc *httpdesign.
 }
 
 func exampleMain(genpkg string, root *httpdesign.RootExpr) *codegen.File {
-	path := filepath.Join("cmd", codegen.SnakeCase(root.Design.API.Name)+"svc", "main.go")
-	if _, err := os.Stat(path); !os.IsNotExist(err) {
+	mainPath := filepath.Join("cmd", codegen.SnakeCase(root.Design.API.Name)+"svc", "main.go")
+	if _, err := os.Stat(mainPath); !os.IsNotExist(err) {
 		return nil // file already exists, skip it.
 	}
 	idx := strings.LastIndex(genpkg, string(os.PathSeparator))
@@ -88,11 +89,11 @@ func exampleMain(genpkg string, root *httpdesign.RootExpr) *codegen.File {
 	for _, svc := range root.HTTPServices {
 		pkgName := HTTPServices.Get(svc.Name()).Service.PkgName
 		specs = append(specs, &codegen.ImportSpec{
-			Path: filepath.Join(genpkg, "http", codegen.SnakeCase(svc.Name()), "server"),
+			Path: path.Join(genpkg, "http", codegen.SnakeCase(svc.Name()), "server"),
 			Name: pkgName + "svr",
 		})
 		specs = append(specs, &codegen.ImportSpec{
-			Path: filepath.Join(genpkg, codegen.SnakeCase(svc.Name())),
+			Path: path.Join(genpkg, codegen.SnakeCase(svc.Name())),
 			Name: pkgName,
 		})
 	}
@@ -111,7 +112,7 @@ func exampleMain(genpkg string, root *httpdesign.RootExpr) *codegen.File {
 		Data:   data,
 	})
 
-	return &codegen.File{Path: path, SectionTemplates: sections}
+	return &codegen.File{Path: mainPath, SectionTemplates: sections}
 }
 
 // input: ServiceData
