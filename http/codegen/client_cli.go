@@ -336,12 +336,12 @@ func buildSubcommandData(svc *ServiceData, e *EndpointData) *subcommandData {
 					}
 				}
 				buildFunction = &buildFunctionData{
-					Name:         "Build" + e.Method.VarName + e.Method.Payload,
+					Name:         "Build" + e.Method.VarName + "Payload",
 					ActualParams: actuals,
 					FormalParams: formals,
 					ServiceName:  svcn,
 					MethodName:   en,
-					ResultType:   svc.Service.PkgName + "." + e.Method.Payload,
+					ResultType:   e.Payload.Ref,
 					Fields:       fdata,
 					PayloadInit:  e.Payload.Request.PayloadInit,
 					CheckErr:     check,
@@ -740,7 +740,7 @@ func ParseEndpoint(
 
 // input: buildFunctionData
 const buildPayloadT = `{{ printf "%s builds the payload for the %s %s endpoint from CLI flags." .Name .ServiceName .MethodName | comment }}
-func {{ .Name }}({{ range .FormalParams }}{{ . }} string, {{ end }}) (*{{ .ResultType }}, error) {
+func {{ .Name }}({{ range .FormalParams }}{{ . }} string, {{ end }}) ({{ .ResultType }}, error) {
 	{{- if .CheckErr }}
 	var err error
 	{{- end }}
