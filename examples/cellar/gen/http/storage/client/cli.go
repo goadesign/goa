@@ -17,9 +17,9 @@ import (
 	storage "goa.design/goa/examples/cellar/gen/storage"
 )
 
-// BuildShowShowPayload builds the payload for the storage show endpoint from
-// CLI flags.
-func BuildShowShowPayload(storageShowID string, storageShowView string) (*storage.ShowPayload, error) {
+// BuildShowPayload builds the payload for the storage show endpoint from CLI
+// flags.
+func BuildShowPayload(storageShowID string, storageShowView string) (*storage.ShowPayload, error) {
 	var id string
 	{
 		id = storageShowID
@@ -37,9 +37,9 @@ func BuildShowShowPayload(storageShowID string, storageShowView string) (*storag
 	return payload, nil
 }
 
-// BuildAddBottle builds the payload for the storage add endpoint from CLI
+// BuildAddPayload builds the payload for the storage add endpoint from CLI
 // flags.
-func BuildAddBottle(storageAddBody string) (*storage.Bottle, error) {
+func BuildAddPayload(storageAddBody string) (*storage.Bottle, error) {
 	var err error
 	var body AddRequestBody
 	{
@@ -114,9 +114,9 @@ func BuildAddBottle(storageAddBody string) (*storage.Bottle, error) {
 	return v, nil
 }
 
-// BuildRemoveRemovePayload builds the payload for the storage remove endpoint
-// from CLI flags.
-func BuildRemoveRemovePayload(storageRemoveID string) (*storage.RemovePayload, error) {
+// BuildRemovePayload builds the payload for the storage remove endpoint from
+// CLI flags.
+func BuildRemovePayload(storageRemoveID string) (*storage.RemovePayload, error) {
 	var id string
 	{
 		id = storageRemoveID

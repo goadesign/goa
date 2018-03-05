@@ -173,7 +173,7 @@ func ParseEndpoint(
 			switch epn {
 			case "pick":
 				endpoint = c.Pick()
-				data, err = sommelierc.BuildPickCriteria(*sommelierPickBodyFlag)
+				data, err = sommelierc.BuildPickPayload(*sommelierPickBodyFlag)
 			}
 		case "storage":
 			c := storagec.NewClient(scheme, host, doer, enc, dec, restore)
@@ -183,13 +183,13 @@ func ParseEndpoint(
 				data = nil
 			case "show":
 				endpoint = c.Show()
-				data, err = storagec.BuildShowShowPayload(*storageShowIDFlag, *storageShowViewFlag)
+				data, err = storagec.BuildShowPayload(*storageShowIDFlag, *storageShowViewFlag)
 			case "add":
 				endpoint = c.Add()
-				data, err = storagec.BuildAddBottle(*storageAddBodyFlag)
+				data, err = storagec.BuildAddPayload(*storageAddBodyFlag)
 			case "remove":
 				endpoint = c.Remove()
-				data, err = storagec.BuildRemoveRemovePayload(*storageRemoveIDFlag)
+				data, err = storagec.BuildRemovePayload(*storageRemoveIDFlag)
 			case "rate":
 				endpoint = c.Rate()
 				var err error
