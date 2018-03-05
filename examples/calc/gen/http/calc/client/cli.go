@@ -14,9 +14,8 @@ import (
 	calcsvc "goa.design/goa/examples/calc/gen/calc"
 )
 
-// BuildAddAddPayload builds the payload for the calc add endpoint from CLI
-// flags.
-func BuildAddAddPayload(calcAddA string, calcAddB string) (*calcsvc.AddPayload, error) {
+// BuildAddPayload builds the payload for the calc add endpoint from CLI flags.
+func BuildAddPayload(calcAddA string, calcAddB string) (*calcsvc.AddPayload, error) {
 	var err error
 	var a int
 	{

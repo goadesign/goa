@@ -15,9 +15,9 @@ import (
 	sommelier "goa.design/goa/examples/cellar/gen/sommelier"
 )
 
-// BuildPickCriteria builds the payload for the sommelier pick endpoint from
-// CLI flags.
-func BuildPickCriteria(sommelierPickBody string) (*sommelier.Criteria, error) {
+// BuildPickPayload builds the payload for the sommelier pick endpoint from CLI
+// flags.
+func BuildPickPayload(sommelierPickBody string) (*sommelier.Criteria, error) {
 	var err error
 	var body PickRequestBody
 	{

@@ -116,7 +116,7 @@ func ParseEndpoint(
 			switch epn {
 			case "add":
 				endpoint = c.Add()
-				data, err = calcsvcc.BuildAddAddPayload(*calcAddAFlag, *calcAddBFlag)
+				data, err = calcsvcc.BuildAddPayload(*calcAddAFlag, *calcAddBFlag)
 			}
 		}
 	}
