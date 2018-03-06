@@ -72,3 +72,21 @@ func New(
 	}
 }
 `
+
+var ServerMultipartConstructorCode = `// New instantiates HTTP handlers for all the ServiceMultipart service
+// endpoints.
+func New(
+	e *servicemultipart.Endpoints,
+	mux goahttp.Muxer,
+	dec func(*http.Request) goahttp.Decoder,
+	enc func(context.Context, http.ResponseWriter) goahttp.Encoder,
+	ServiceMultipartMethodMultiBasesDecoderFn ServiceMultipartMethodMultiBasesDecoderFunc,
+) *Server {
+	return &Server{
+		Mounts: []*MountPoint{
+			{"MethodMultiBases", "GET", "/"},
+		},
+		MethodMultiBases: NewMethodMultiBasesHandler(e.MethodMultiBases, mux, NewServiceMultipartMethodMultiBasesDecoder(ServiceMultipartMethodMultiBasesDecoderFn), enc),
+	}
+}
+`

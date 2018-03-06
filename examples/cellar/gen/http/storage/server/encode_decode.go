@@ -205,21 +205,6 @@ func EncodeMultiAddResponse(encoder func(context.Context, http.ResponseWriter) g
 	}
 }
 
-// NewStorageMultiAddDecoder returns a decoder to decode the multipart request
-// for the "storage" service "multi_add" endpoint.
-func NewStorageMultiAddDecoder(storageMultiAddDecoderFn StorageMultiAddDecoderFunc) func(r *http.Request) goahttp.Decoder {
-	return func(r *http.Request) goahttp.Decoder {
-		return goahttp.EncodingFunc(func(v interface{}) error {
-			mr, err := r.MultipartReader()
-			if err != nil {
-				return err
-			}
-			p := v.(*[]*storage.Bottle)
-			return storageMultiAddDecoderFn(mr, p)
-		})
-	}
-}
-
 // DecodeMultiAddRequest returns a decoder for requests sent to the storage
 // multi_add endpoint.
 func DecodeMultiAddRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) (interface{}, error) {
@@ -233,6 +218,21 @@ func DecodeMultiAddRequest(mux goahttp.Muxer, decoder func(*http.Request) goahtt
 			return nil, goa.DecodePayloadError(err.Error())
 		}
 		return body, nil
+	}
+}
+
+// NewStorageMultiAddDecoder returns a decoder to decode the multipart request
+// for the "storage" service "multi_add" endpoint.
+func NewStorageMultiAddDecoder(storageMultiAddDecoderFn StorageMultiAddDecoderFunc) func(r *http.Request) goahttp.Decoder {
+	return func(r *http.Request) goahttp.Decoder {
+		return goahttp.EncodingFunc(func(v interface{}) error {
+			mr, err := r.MultipartReader()
+			if err != nil {
+				return err
+			}
+			p := v.(*[]*storage.Bottle)
+			return storageMultiAddDecoderFn(mr, p)
+		})
 	}
 }
 

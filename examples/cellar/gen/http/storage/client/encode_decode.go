@@ -374,6 +374,21 @@ func (c *Client) BuildMultiAddRequest(ctx context.Context, v interface{}) (*http
 	return req, nil
 }
 
+// EncodeMultiAddRequest returns an encoder for requests sent to the storage
+// multi_add server.
+func EncodeMultiAddRequest(encoder func(*http.Request) goahttp.Encoder) func(*http.Request, interface{}) error {
+	return func(req *http.Request, v interface{}) error {
+		p, ok := v.([]*storage.Bottle)
+		if !ok {
+			return goahttp.ErrInvalidType("storage", "multi_add", "[]*storage.Bottle", v)
+		}
+		if err := encoder(req).Encode(p); err != nil {
+			return goahttp.ErrEncodingError("storage", "multi_add", err)
+		}
+		return nil
+	}
+}
+
 // NewStorageMultiAddEncoder returns an encoder to encode the multipart request
 // for the "storage" service "multi_add" endpoint.
 func NewStorageMultiAddEncoder(encoderFn StorageMultiAddEncoderFunc) func(r *http.Request) goahttp.Encoder {
@@ -389,21 +404,6 @@ func NewStorageMultiAddEncoder(encoderFn StorageMultiAddEncoderFunc) func(r *htt
 			r.Header.Set("Content-Type", mw.FormDataContentType())
 			return mw.Close()
 		})
-	}
-}
-
-// EncodeMultiAddRequest returns an encoder for requests sent to the storage
-// multi_add server.
-func EncodeMultiAddRequest(encoder func(*http.Request) goahttp.Encoder) func(*http.Request, interface{}) error {
-	return func(req *http.Request, v interface{}) error {
-		p, ok := v.([]*storage.Bottle)
-		if !ok {
-			return goahttp.ErrInvalidType("storage", "multi_add", "[]*storage.Bottle", v)
-		}
-		if err := encoder(req).Encode(p); err != nil {
-			return goahttp.ErrEncodingError("storage", "multi_add", err)
-		}
-		return nil
 	}
 }
 

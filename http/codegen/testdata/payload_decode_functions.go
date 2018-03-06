@@ -3933,3 +3933,71 @@ func DecodeMethodMapQueryObjectRequest(mux goahttp.Muxer, decoder func(*http.Req
 	}
 }
 `
+
+var PayloadMultipartPrimitiveDecodeCode = `// DecodeMethodMultipartPrimitiveRequest returns a decoder for requests sent to
+// the ServiceMultipartPrimitive MethodMultipartPrimitive endpoint.
+func DecodeMethodMultipartPrimitiveRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) (interface{}, error) {
+	return func(r *http.Request) (interface{}, error) {
+		var (
+			body string
+			err  error
+		)
+		err = decoder(r).Decode(&body)
+		if err != nil {
+			return nil, goa.DecodePayloadError(err.Error())
+		}
+		return body, nil
+	}
+}
+`
+
+var PayloadMultipartUserTypeDecodeCode = `// DecodeMethodMultipartUserTypeRequest returns a decoder for requests sent to
+// the ServiceMultipartUserType MethodMultipartUserType endpoint.
+func DecodeMethodMultipartUserTypeRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) (interface{}, error) {
+	return func(r *http.Request) (interface{}, error) {
+		var (
+			body *servicemultipartusertype.MethodMultipartUserTypePayload
+			err  error
+		)
+		err = decoder(r).Decode(&body)
+		if err != nil {
+			return nil, goa.DecodePayloadError(err.Error())
+		}
+		return body, nil
+	}
+}
+`
+
+var PayloadMultipartArrayTypeDecodeCode = `// DecodeMethodMultipartArrayTypeRequest returns a decoder for requests sent to
+// the ServiceMultipartArrayType MethodMultipartArrayType endpoint.
+func DecodeMethodMultipartArrayTypeRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) (interface{}, error) {
+	return func(r *http.Request) (interface{}, error) {
+		var (
+			body []*servicemultipartarraytype.PayloadType
+			err  error
+		)
+		err = decoder(r).Decode(&body)
+		if err != nil {
+			return nil, goa.DecodePayloadError(err.Error())
+		}
+		return body, nil
+	}
+}
+`
+
+var PayloadMultipartMapTypeDecodeCode = `// DecodeMethodMultipartMapTypeRequest returns a decoder for requests sent to
+// the ServiceMultipartMapType MethodMultipartMapType endpoint.
+func DecodeMethodMultipartMapTypeRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) (interface{}, error) {
+	return func(r *http.Request) (interface{}, error) {
+		var (
+			body map[string]int
+			err  error
+		)
+		err = decoder(r).Decode(&body)
+		if err != nil {
+			return nil, goa.DecodePayloadError(err.Error())
+		}
+		return body, nil
+	}
+}
+`

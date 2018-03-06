@@ -136,3 +136,15 @@ var ServerMixedDSL = func() {
 		Files("/file2.json", "/path/to/file2.json")
 	})
 }
+
+var ServerMultipartDSL = func() {
+	Service("ServiceMultipart", func() {
+		Method("MethodMultiBases", func() {
+			Payload(String)
+			HTTP(func() {
+				GET("/")
+				MultipartRequest()
+			})
+		})
+	})
+}

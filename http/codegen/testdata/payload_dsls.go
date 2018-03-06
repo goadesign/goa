@@ -2238,3 +2238,67 @@ var PayloadMapQueryObjectDSL = func() {
 		})
 	})
 }
+
+var PayloadMultipartPrimitiveDSL = func() {
+	Service("ServiceMultipartPrimitive", func() {
+		Method("MethodMultipartPrimitive", func() {
+			Payload(String)
+			HTTP(func() {
+				POST("/")
+				MultipartRequest()
+			})
+		})
+	})
+}
+
+var PayloadMultipartUserTypeDSL = func() {
+	Service("ServiceMultipartUserType", func() {
+		Method("MethodMultipartUserType", func() {
+			Payload(func() {
+				Attribute("b", String, func() {
+					Pattern("patternb")
+				})
+				Attribute("c", MapOf(Int, ArrayOf(String)))
+				Required("b", "c")
+			})
+			HTTP(func() {
+				POST("/")
+				MultipartRequest()
+			})
+		})
+	})
+}
+
+var PayloadMultipartArrayTypeDSL = func() {
+	var PayloadType = Type("PayloadType", func() {
+		Attribute("a", String, func() {
+			Pattern("patterna")
+		})
+		Attribute("b", String, func() {
+			Pattern("patternb")
+		})
+		Attribute("c", MapOf(Int, ArrayOf(String)))
+		Required("a", "c")
+	})
+	Service("ServiceMultipartArrayType", func() {
+		Method("MethodMultipartArrayType", func() {
+			Payload(ArrayOf(PayloadType))
+			HTTP(func() {
+				POST("/")
+				MultipartRequest()
+			})
+		})
+	})
+}
+
+var PayloadMultipartMapTypeDSL = func() {
+	Service("ServiceMultipartMapType", func() {
+		Method("MethodMultipartMapType", func() {
+			Payload(MapOf(String, Int))
+			HTTP(func() {
+				POST("/")
+				MultipartRequest()
+			})
+		})
+	})
+}

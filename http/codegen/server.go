@@ -101,19 +101,19 @@ func serverEncodeDecode(genpkg string, svc *httpdesign.ServiceExpr) *codegen.Fil
 			Source:  responseEncoderT,
 			Data:    e,
 		})
-		if e.MultipartRequestDecoder != nil {
-			sections = append(sections, &codegen.SectionTemplate{
-				Name:   "multipart-request-decoder",
-				Source: multipartRequestDecoderT,
-				Data:   e.MultipartRequestDecoder,
-			})
-		}
 		if e.Payload.Ref != "" {
 			sections = append(sections, &codegen.SectionTemplate{
 				Name:    "request-decoder",
 				Source:  requestDecoderT,
 				FuncMap: transTmplFuncs(svc),
 				Data:    e,
+			})
+		}
+		if e.MultipartRequestDecoder != nil {
+			sections = append(sections, &codegen.SectionTemplate{
+				Name:   "multipart-request-decoder",
+				Source: multipartRequestDecoderT,
+				Data:   e.MultipartRequestDecoder,
 			})
 		}
 
@@ -1003,7 +1003,7 @@ const responseT = `{{ define "response" -}}
 
 // input: multipartData
 const multipartRequestDecoderTypeT = `{{ printf "%s is the type to decode multipart request for the %q service %q endpoint." .FuncName .ServiceName .MethodName | comment }}
-type {{ .FuncName }} func(*multipart.Reader, *{{ .PayloadRef }}) error
+type {{ .FuncName }} func(*multipart.Reader, {{ .PayloadRef }}) error
 `
 
 // input: multipartData
@@ -1015,7 +1015,7 @@ func {{ .InitName }}({{ .VarName }} {{ .FuncName }}) func(r *http.Request) goaht
 			if err != nil {
 				return err
 			}
-			p := v.(*{{ .PayloadRef }})
+			p := v.({{ .PayloadRef }})
 			return {{ .VarName }}(mr, p)
 		})
 	}

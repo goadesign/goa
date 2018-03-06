@@ -156,6 +156,10 @@ func TestClientEncode(t *testing.T) {
 		{"map-query-primitive-primitive", testdata.PayloadMapQueryPrimitivePrimitiveDSL, testdata.PayloadMapQueryPrimitivePrimitiveEncodeCode},
 		{"map-query-primitive-array", testdata.PayloadMapQueryPrimitiveArrayDSL, testdata.PayloadMapQueryPrimitiveArrayEncodeCode},
 		{"map-query-object", testdata.PayloadMapQueryObjectDSL, testdata.PayloadMapQueryObjectEncodeCode},
+		{"multipart-body-primitive", testdata.PayloadMultipartPrimitiveDSL, testdata.PayloadMultipartBodyPrimitiveEncodeCode},
+		{"multipart-body-user-type", testdata.PayloadMultipartUserTypeDSL, testdata.PayloadMultipartBodyUserTypeEncodeCode},
+		{"multipart-body-array-type", testdata.PayloadMultipartArrayTypeDSL, testdata.PayloadMultipartBodyArrayTypeEncodeCode},
+		{"multipart-body-map-type", testdata.PayloadMultipartMapTypeDSL, testdata.PayloadMultipartBodyMapTypeEncodeCode},
 	}
 	golden := makeGolden(t, "testdata/payload_encode_functions.go")
 	if golden != nil {

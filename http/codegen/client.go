@@ -96,13 +96,6 @@ func clientEncodeDecode(genpkg string, svc *httpdesign.ServiceExpr) *codegen.Fil
 			Source: requestBuilderT,
 			Data:   e,
 		})
-		if e.MultipartRequestEncoder != nil {
-			sections = append(sections, &codegen.SectionTemplate{
-				Name:   "multipart-request-encoder",
-				Source: multipartRequestEncoderT,
-				Data:   e.MultipartRequestEncoder,
-			})
-		}
 		if e.RequestEncoder != "" {
 			sections = append(sections, &codegen.SectionTemplate{
 				Name:   "request-encoder",
@@ -111,6 +104,13 @@ func clientEncodeDecode(genpkg string, svc *httpdesign.ServiceExpr) *codegen.Fil
 					"typeConversionData": typeConversionData,
 				},
 				Data: e,
+			})
+		}
+		if e.MultipartRequestEncoder != nil {
+			sections = append(sections, &codegen.SectionTemplate{
+				Name:   "multipart-request-encoder",
+				Source: multipartRequestEncoderT,
+				Data:   e.MultipartRequestEncoder,
 			})
 		}
 		if e.Result != nil || len(e.Errors) > 0 {

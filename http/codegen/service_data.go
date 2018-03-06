@@ -675,13 +675,17 @@ func (d ServicesData) analyze(hs *httpdesign.ServiceExpr) *ServiceData {
 		}
 
 		if a.MultipartRequest {
+			var pointer string
+			if !design.IsObject(a.MethodExpr.Payload.Type) {
+				pointer = "*"
+			}
 			ad.MultipartRequestDecoder = &MultipartData{
 				FuncName:    fmt.Sprintf("%s%sDecoderFunc", svc.VarName, ep.VarName),
 				InitName:    fmt.Sprintf("New%s%sDecoder", svc.VarName, ep.VarName),
 				VarName:     fmt.Sprintf("%s%sDecoderFn", svc.Name, ep.VarName),
 				ServiceName: svc.Name,
 				MethodName:  ep.Name,
-				PayloadRef:  ad.Payload.Ref,
+				PayloadRef:  pointer + ad.Payload.Ref,
 			}
 			ad.MultipartRequestEncoder = &MultipartData{
 				FuncName:    fmt.Sprintf("%s%sEncoderFunc", svc.VarName, ep.VarName),
