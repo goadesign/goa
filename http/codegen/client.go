@@ -31,6 +31,7 @@ func client(genpkg string, svc *httpdesign.ServiceExpr) *codegen.File {
 			{Path: "context"},
 			{Path: "fmt"},
 			{Path: "io"},
+			{Path: "mime/multipart"},
 			{Path: "net/http"},
 			{Path: "strconv"},
 			{Path: "strings"},
@@ -39,8 +40,20 @@ func client(genpkg string, svc *httpdesign.ServiceExpr) *codegen.File {
 			{Path: genpkg + "/" + codegen.SnakeCase(svc.Name()), Name: data.Service.PkgName},
 		}),
 		{Name: "client-struct", Source: clientStructT, Data: data},
-		{Name: "client-init", Source: clientInitT, Data: data},
 	}
+
+	for _, e := range data.Endpoints {
+		if e.MultipartRequestEncoder != nil {
+			sections = append(sections, &codegen.SectionTemplate{
+				Name:   "multipart-request-encoder-type",
+				Source: multipartRequestEncoderTypeT,
+				Data:   e.MultipartRequestEncoder,
+			})
+		}
+	}
+
+	sections = append(sections, &codegen.SectionTemplate{Name: "client-init", Source: clientInitT, Data: data})
+
 	for _, e := range data.Endpoints {
 		sections = append(sections, &codegen.SectionTemplate{
 			Name:   "client-endpoint-init",
@@ -65,6 +78,7 @@ func clientEncodeDecode(genpkg string, svc *httpdesign.ServiceExpr) *codegen.Fil
 			{Path: "fmt"},
 			{Path: "io"},
 			{Path: "io/ioutil"},
+			{Path: "mime/multipart"},
 			{Path: "net/http"},
 			{Path: "net/url"},
 			{Path: "strconv"},
@@ -90,6 +104,13 @@ func clientEncodeDecode(genpkg string, svc *httpdesign.ServiceExpr) *codegen.Fil
 					"typeConversionData": typeConversionData,
 				},
 				Data: e,
+			})
+		}
+		if e.MultipartRequestEncoder != nil {
+			sections = append(sections, &codegen.SectionTemplate{
+				Name:   "multipart-request-encoder",
+				Source: multipartRequestEncoderT,
+				Data:   e.MultipartRequestEncoder,
 			})
 		}
 		if e.Result != nil || len(e.Errors) > 0 {
@@ -164,10 +185,10 @@ func New{{ .ClientStruct }}(
 
 // input: EndpointData
 const endpointInitT = `{{ printf "%s returns an endpoint that makes HTTP requests to the %s service %s server." .EndpointInit .ServiceName .Method.Name | comment }}
-func (c *{{ .ClientStruct }}) {{ .EndpointInit }}() goa.Endpoint {
+func (c *{{ .ClientStruct }}) {{ .EndpointInit }}({{ if .MultipartRequestEncoder }}{{ .MultipartRequestEncoder.VarName }} {{ .MultipartRequestEncoder.FuncName }}{{ end }}) goa.Endpoint {
 	var (
 		{{- if .RequestEncoder }}
-		encodeRequest  = {{ .RequestEncoder }}(c.encoder)
+		encodeRequest  = {{ .RequestEncoder }}({{ if .MultipartRequestEncoder }}{{ .MultipartRequestEncoder.InitName }}({{ .MultipartRequestEncoder.VarName }}){{ else }}c.encoder{{ end }})
 		{{- end }}
 		decodeResponse = {{ .ResponseDecoder }}(c.decoder, c.RestoreResponseBody)
 	)
@@ -255,7 +276,11 @@ func {{ .RequestEncoder }}(encoder func(*http.Request) goahttp.Encoder) func(*ht
 	{{- if .Payload.Request.QueryParams }}
 		req.URL.RawQuery = values.Encode()
 	{{- end }}
-	{{- if .Payload.Request.ClientBody }}
+	{{- if .MultipartRequestEncoder }}
+		if err := encoder(req).Encode(p); err != nil {
+			return goahttp.ErrEncodingError("{{ .ServiceName }}", "{{ .Method.Name }}", err)
+		}
+	{{- else if .Payload.Request.ClientBody }}
 		{{- if .Payload.Request.ClientBody.Init }}
 		body := {{ .Payload.Request.ClientBody.Init.Name }}({{ range .Payload.Request.ClientBody.Init.ClientArgs }}{{ if .Pointer }}&{{ end }}{{ .Name }}, {{ end }})
 		{{- else }}
@@ -465,4 +490,28 @@ const singleResponseT = `case {{ .StatusCode }}:
 				return nil, fmt.Errorf("invalid response: %s", err)
 			}
 	{{- end }}
+`
+
+// input: multipartData
+const multipartRequestEncoderTypeT = `{{ printf "%s is the type to encode multipart request for the %q service %q endpoint." .FuncName .ServiceName .MethodName | comment }}
+type {{ .FuncName }} func(*multipart.Writer, {{ .PayloadRef }}) error
+`
+
+// input: multipartData
+const multipartRequestEncoderT = `{{ printf "%s returns an encoder to encode the multipart request for the %q service %q endpoint." .InitName .ServiceName .MethodName | comment }}
+func {{ .InitName }}(encoderFn {{ .FuncName }}) func(r *http.Request) goahttp.Encoder {
+	return func(r *http.Request) goahttp.Encoder {
+		body := &bytes.Buffer{}
+		mw := multipart.NewWriter(body)
+		return goahttp.EncodingFunc(func(v interface{}) error {
+			p := v.({{ .PayloadRef }})
+			if err := encoderFn(mw, p); err != nil {
+				return err
+			}
+			r.Body = ioutil.NopCloser(body)
+			r.Header.Set("Content-Type", mw.FormDataContentType())
+			return mw.Close()
+		})
+	}
+}
 `

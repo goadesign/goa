@@ -16,21 +16,23 @@ import (
 
 // Endpoints wraps the "storage" service endpoints.
 type Endpoints struct {
-	List   goa.Endpoint
-	Show   goa.Endpoint
-	Add    goa.Endpoint
-	Remove goa.Endpoint
-	Rate   goa.Endpoint
+	List     goa.Endpoint
+	Show     goa.Endpoint
+	Add      goa.Endpoint
+	Remove   goa.Endpoint
+	Rate     goa.Endpoint
+	MultiAdd goa.Endpoint
 }
 
 // NewEndpoints wraps the methods of the "storage" service with endpoints.
 func NewEndpoints(s Service) *Endpoints {
 	return &Endpoints{
-		List:   NewListEndpoint(s),
-		Show:   NewShowEndpoint(s),
-		Add:    NewAddEndpoint(s),
-		Remove: NewRemoveEndpoint(s),
-		Rate:   NewRateEndpoint(s),
+		List:     NewListEndpoint(s),
+		Show:     NewShowEndpoint(s),
+		Add:      NewAddEndpoint(s),
+		Remove:   NewRemoveEndpoint(s),
+		Rate:     NewRateEndpoint(s),
+		MultiAdd: NewMultiAddEndpoint(s),
 	}
 }
 
@@ -75,5 +77,14 @@ func NewRateEndpoint(s Service) goa.Endpoint {
 	return func(ctx context.Context, req interface{}) (interface{}, error) {
 		p := req.(map[uint32][]string)
 		return nil, s.Rate(ctx, p)
+	}
+}
+
+// NewMultiAddEndpoint returns an endpoint function that calls the method
+// "multi_add" of service "storage".
+func NewMultiAddEndpoint(s Service) goa.Endpoint {
+	return func(ctx context.Context, req interface{}) (interface{}, error) {
+		p := req.([]*Bottle)
+		return s.MultiAdd(ctx, p)
 	}
 }

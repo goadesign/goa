@@ -10,9 +10,11 @@ package client
 
 import (
 	"context"
+	"mime/multipart"
 	"net/http"
 
 	goa "goa.design/goa"
+	storage "goa.design/goa/examples/cellar/gen/storage"
 	goahttp "goa.design/goa/http"
 )
 
@@ -33,6 +35,10 @@ type Client struct {
 	// Rate Doer is the HTTP client used to make requests to the rate endpoint.
 	RateDoer goahttp.Doer
 
+	// MultiAdd Doer is the HTTP client used to make requests to the multi_add
+	// endpoint.
+	MultiAddDoer goahttp.Doer
+
 	// RestoreResponseBody controls whether the response bodies are reset after
 	// decoding so they can be read again.
 	RestoreResponseBody bool
@@ -42,6 +48,10 @@ type Client struct {
 	encoder func(*http.Request) goahttp.Encoder
 	decoder func(*http.Response) goahttp.Decoder
 }
+
+// StorageMultiAddEncoderFunc is the type to encode multipart request for the
+// "storage" service "multi_add" endpoint.
+type StorageMultiAddEncoderFunc func(*multipart.Writer, []*storage.Bottle) error
 
 // NewClient instantiates HTTP clients for all the storage service servers.
 func NewClient(
@@ -58,6 +68,7 @@ func NewClient(
 		AddDoer:             doer,
 		RemoveDoer:          doer,
 		RateDoer:            doer,
+		MultiAddDoer:        doer,
 		RestoreResponseBody: restoreBody,
 		scheme:              scheme,
 		host:                host,
@@ -181,6 +192,32 @@ func (c *Client) Rate() goa.Endpoint {
 
 		if err != nil {
 			return nil, goahttp.ErrRequestError("storage", "rate", err)
+		}
+		return decodeResponse(resp)
+	}
+}
+
+// MultiAdd returns an endpoint that makes HTTP requests to the storage service
+// multi_add server.
+func (c *Client) MultiAdd(storageMultiAddEncoderFn StorageMultiAddEncoderFunc) goa.Endpoint {
+	var (
+		encodeRequest  = EncodeMultiAddRequest(NewStorageMultiAddEncoder(storageMultiAddEncoderFn))
+		decodeResponse = DecodeMultiAddResponse(c.decoder, c.RestoreResponseBody)
+	)
+	return func(ctx context.Context, v interface{}) (interface{}, error) {
+		req, err := c.BuildMultiAddRequest(ctx, v)
+		if err != nil {
+			return nil, err
+		}
+		err = encodeRequest(req, v)
+		if err != nil {
+			return nil, err
+		}
+
+		resp, err := c.MultiAddDoer.Do(req)
+
+		if err != nil {
+			return nil, goahttp.ErrRequestError("storage", "multi_add", err)
 		}
 		return decodeResponse(resp)
 	}

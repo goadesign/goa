@@ -38,6 +38,10 @@ type (
 		Encode(v interface{}) error
 	}
 
+	// EncodingFunc type allows a function with appropriate signature to
+	// act as a Decoder/Encoder.
+	EncodingFunc func(v interface{}) error
+
 	// private type used to define context keys.
 	contextKey int
 )
@@ -177,6 +181,16 @@ func ErrorEncoder(encoder func(context.Context, http.ResponseWriter) Encoder) fu
 			w.Write([]byte(id + ": " + t.Error()))
 		}
 	}
+}
+
+// Decode implements the Decoder interface. It simply calls f(v).
+func (f EncodingFunc) Decode(v interface{}) error {
+	return f(v)
+}
+
+// Encode implements the Encoder interface. It simply calls f(v).
+func (f EncodingFunc) Encode(v interface{}) error {
+	return f(v)
 }
 
 // SetContentType initializes the response Content-Type header given a mime type

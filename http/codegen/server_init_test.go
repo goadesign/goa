@@ -11,14 +11,16 @@ import (
 func TestServerInit(t *testing.T) {
 	const genpkg = "gen"
 	cases := []struct {
-		Name string
-		DSL  func()
-		Code string
+		Name       string
+		DSL        func()
+		Code       string
+		SectionNum int
 	}{
-		{"multiple endpoints", testdata.ServerMultiEndpointsDSL, testdata.ServerMultiEndpointsConstructorCode},
-		{"multiple bases", testdata.ServerMultiBasesDSL, testdata.ServerMultiBasesConstructorCode},
-		{"file server", testdata.ServerFileServerDSL, testdata.ServerFileServerConstructorCode},
-		{"mixed", testdata.ServerMixedDSL, testdata.ServerMixedConstructorCode},
+		{"multiple endpoints", testdata.ServerMultiEndpointsDSL, testdata.ServerMultiEndpointsConstructorCode, 3},
+		{"multiple bases", testdata.ServerMultiBasesDSL, testdata.ServerMultiBasesConstructorCode, 3},
+		{"file server", testdata.ServerFileServerDSL, testdata.ServerFileServerConstructorCode, 3},
+		{"mixed", testdata.ServerMixedDSL, testdata.ServerMixedConstructorCode, 3},
+		{"multipart", testdata.ServerMultipartDSL, testdata.ServerMultipartConstructorCode, 4},
 	}
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
@@ -31,7 +33,7 @@ func TestServerInit(t *testing.T) {
 			if len(sections) < 6 {
 				t.Fatalf("got %d sections, expected at least 6", len(sections))
 			}
-			code := codegen.SectionCode(t, sections[3])
+			code := codegen.SectionCode(t, sections[c.SectionNum])
 			if code != c.Code {
 				t.Errorf("invalid code, got:\n%s\ngot vs. expected:\n%s", code, codegen.Diff(t, code, c.Code))
 			}

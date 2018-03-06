@@ -24,6 +24,8 @@ type Service interface {
 	Remove(context.Context, *RemovePayload) error
 	// Rate bottles by IDs
 	Rate(context.Context, map[uint32][]string) error
+	// Add n number of bottles and return their IDs.
+	MultiAdd(context.Context, []*Bottle) ([]string, error)
 }
 
 // StoredBottleCollection is the result type of the storage service list method.

@@ -16,21 +16,23 @@ import (
 
 // Client is the "storage" service client.
 type Client struct {
-	ListEndpoint   goa.Endpoint
-	ShowEndpoint   goa.Endpoint
-	AddEndpoint    goa.Endpoint
-	RemoveEndpoint goa.Endpoint
-	RateEndpoint   goa.Endpoint
+	ListEndpoint     goa.Endpoint
+	ShowEndpoint     goa.Endpoint
+	AddEndpoint      goa.Endpoint
+	RemoveEndpoint   goa.Endpoint
+	RateEndpoint     goa.Endpoint
+	MultiAddEndpoint goa.Endpoint
 }
 
 // NewClient initializes a "storage" service client given the endpoints.
-func NewClient(list, show, add, remove, rate goa.Endpoint) *Client {
+func NewClient(list, show, add, remove, rate, multiAdd goa.Endpoint) *Client {
 	return &Client{
-		ListEndpoint:   list,
-		ShowEndpoint:   show,
-		AddEndpoint:    add,
-		RemoveEndpoint: remove,
-		RateEndpoint:   rate,
+		ListEndpoint:     list,
+		ShowEndpoint:     show,
+		AddEndpoint:      add,
+		RemoveEndpoint:   remove,
+		RateEndpoint:     rate,
+		MultiAddEndpoint: multiAdd,
 	}
 }
 
@@ -80,4 +82,14 @@ func (c *Client) Remove(ctx context.Context, p *RemovePayload) (err error) {
 func (c *Client) Rate(ctx context.Context, p map[uint32][]string) (err error) {
 	_, err = c.RateEndpoint(ctx, p)
 	return
+}
+
+// MultiAdd calls the "multi_add" endpoint of the "storage" service.
+func (c *Client) MultiAdd(ctx context.Context, p []*Bottle) (res []string, err error) {
+	var ires interface{}
+	ires, err = c.MultiAddEndpoint(ctx, p)
+	if err != nil {
+		return
+	}
+	return ires.([]string), nil
 }

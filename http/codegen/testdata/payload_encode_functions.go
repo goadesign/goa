@@ -2241,3 +2241,67 @@ func EncodeMethodMapQueryObjectRequest(encoder func(*http.Request) goahttp.Encod
 	}
 }
 `
+
+var PayloadMultipartBodyPrimitiveEncodeCode = `// EncodeMethodMultipartPrimitiveRequest returns an encoder for requests sent
+// to the ServiceMultipartPrimitive MethodMultipartPrimitive server.
+func EncodeMethodMultipartPrimitiveRequest(encoder func(*http.Request) goahttp.Encoder) func(*http.Request, interface{}) error {
+	return func(req *http.Request, v interface{}) error {
+		p, ok := v.(string)
+		if !ok {
+			return goahttp.ErrInvalidType("ServiceMultipartPrimitive", "MethodMultipartPrimitive", "string", v)
+		}
+		if err := encoder(req).Encode(p); err != nil {
+			return goahttp.ErrEncodingError("ServiceMultipartPrimitive", "MethodMultipartPrimitive", err)
+		}
+		return nil
+	}
+}
+`
+
+var PayloadMultipartBodyUserTypeEncodeCode = `// EncodeMethodMultipartUserTypeRequest returns an encoder for requests sent to
+// the ServiceMultipartUserType MethodMultipartUserType server.
+func EncodeMethodMultipartUserTypeRequest(encoder func(*http.Request) goahttp.Encoder) func(*http.Request, interface{}) error {
+	return func(req *http.Request, v interface{}) error {
+		p, ok := v.(*servicemultipartusertype.MethodMultipartUserTypePayload)
+		if !ok {
+			return goahttp.ErrInvalidType("ServiceMultipartUserType", "MethodMultipartUserType", "*servicemultipartusertype.MethodMultipartUserTypePayload", v)
+		}
+		if err := encoder(req).Encode(p); err != nil {
+			return goahttp.ErrEncodingError("ServiceMultipartUserType", "MethodMultipartUserType", err)
+		}
+		return nil
+	}
+}
+`
+
+var PayloadMultipartBodyArrayTypeEncodeCode = `// EncodeMethodMultipartArrayTypeRequest returns an encoder for requests sent
+// to the ServiceMultipartArrayType MethodMultipartArrayType server.
+func EncodeMethodMultipartArrayTypeRequest(encoder func(*http.Request) goahttp.Encoder) func(*http.Request, interface{}) error {
+	return func(req *http.Request, v interface{}) error {
+		p, ok := v.([]*servicemultipartarraytype.PayloadType)
+		if !ok {
+			return goahttp.ErrInvalidType("ServiceMultipartArrayType", "MethodMultipartArrayType", "[]*servicemultipartarraytype.PayloadType", v)
+		}
+		if err := encoder(req).Encode(p); err != nil {
+			return goahttp.ErrEncodingError("ServiceMultipartArrayType", "MethodMultipartArrayType", err)
+		}
+		return nil
+	}
+}
+`
+
+var PayloadMultipartBodyMapTypeEncodeCode = `// EncodeMethodMultipartMapTypeRequest returns an encoder for requests sent to
+// the ServiceMultipartMapType MethodMultipartMapType server.
+func EncodeMethodMultipartMapTypeRequest(encoder func(*http.Request) goahttp.Encoder) func(*http.Request, interface{}) error {
+	return func(req *http.Request, v interface{}) error {
+		p, ok := v.(map[string]int)
+		if !ok {
+			return goahttp.ErrInvalidType("ServiceMultipartMapType", "MethodMultipartMapType", "map[string]int", v)
+		}
+		if err := encoder(req).Encode(p); err != nil {
+			return goahttp.ErrEncodingError("ServiceMultipartMapType", "MethodMultipartMapType", err)
+		}
+		return nil
+	}
+}
+`
