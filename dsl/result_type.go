@@ -78,11 +78,13 @@ func ResultType(identifier string, fn func()) *design.ResultTypeExpr {
 	}
 	canonicalID := design.CanonicalIdentifier(identifier)
 	// Validate that result type identifier doesn't clash
-	if m := design.Root.UserType(canonicalID); m != nil {
-		eval.ReportError(
-			"result type %#v with canonical identifier %#v is defined twice",
-			identifier, canonicalID)
-		return nil
+	for _, rt := range design.Root.ResultTypes {
+		if re := rt.(*design.ResultTypeExpr); re.Identifier == canonicalID {
+			eval.ReportError(
+				"result type %#v with canonical identifier %#v is defined twice",
+				identifier, canonicalID)
+			return nil
+		}
 	}
 	identifier = mime.FormatMediaType(identifier, params)
 	lastPart := identifier
@@ -264,7 +266,7 @@ func CollectionOf(v interface{}, adsl ...func()) *design.ResultTypeExpr {
 		return design.NewResultTypeExpr("InvalidCollection", "text/plain", nil)
 	}
 	id := m.Identifier
-	resulttype, params, err := mime.ParseMediaType(id)
+	rtype, params, err := mime.ParseMediaType(id)
 	if err != nil {
 		eval.ReportError("invalid result type identifier %#v: %s", id, err)
 		// don't return nil to avoid panics, the error will get reported at the end
@@ -280,7 +282,7 @@ func CollectionOf(v interface{}, adsl ...func()) *design.ResultTypeExpr {
 	if !hasType {
 		params["type"] = "collection"
 	}
-	id = mime.FormatMediaType(resulttype, params)
+	id = mime.FormatMediaType(rtype, params)
 	canonical := design.CanonicalIdentifier(id)
 	if mt := design.Root.GeneratedResultType(canonical); mt != nil {
 		// Already have a type for this collection, reuse it.
@@ -438,7 +440,9 @@ func buildView(name string, mt *design.ResultTypeExpr, at *design.AttributeExpr)
 			if dup.Metadata == nil {
 				dup.Metadata = make(map[string][]string)
 			}
-			dup.Metadata["view"] = cat.Metadata["view"]
+			if len(cat.Metadata["view"]) > 0 {
+				dup.Metadata["view"] = cat.Metadata["view"]
+			}
 			o.Set(n, dup)
 		} else if n != "links" {
 			return nil, fmt.Errorf("unknown attribute %#v", n)

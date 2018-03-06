@@ -364,8 +364,12 @@ func recurseAttribute(att, catt *design.AttributeExpr, n, target, context string
 		if hasValidations {
 			var buf bytes.Buffer
 			tgt := fmt.Sprintf("%s.%s", target, GoifyAtt(catt, n, true))
-			if err := userValT.Execute(&buf, map[string]interface{}{"target": tgt}); err != nil {
-				panic(err) // bug
+			if design.IsArray(catt.Type) {
+				buf.Write(recurseValidationCode(catt, att.IsRequired(n), ptr, def, tgt, context, seen).Bytes())
+			} else {
+				if err := userValT.Execute(&buf, map[string]interface{}{"target": tgt}); err != nil {
+					panic(err) // bug
+				}
 			}
 			validation = buf.String()
 		}

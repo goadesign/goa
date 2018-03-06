@@ -179,7 +179,7 @@ func (a *AttributeExpr) Validate(ctx string, parent eval.Expression) *eval.Valid
 	if views, ok := a.Metadata["view"]; ok {
 		rt, ok := a.Type.(*ResultTypeExpr)
 		if !ok {
-			verr.Add(parent, "%sdefines a view but is not a result type", ctx)
+			verr.Add(parent, "%sdefines a view %v but is not a result type", ctx, views)
 		}
 		if rt != nil {
 			found := false
@@ -293,7 +293,7 @@ func (a *AttributeExpr) IsRequiredNoDefault(attName string) bool {
 }
 
 // IsPrimitivePointer returns true if the field generated for the given
-// attribute should be a pointer to a primitive type. The receiver attribute must
+// attribute should be a pointer to a primitive type. The receiver attribute ules
 // be an object.
 //
 // If useDefault is true and the attribute has a default value then

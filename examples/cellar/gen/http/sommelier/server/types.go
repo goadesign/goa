@@ -134,9 +134,11 @@ func NewPickCriteria(body *PickRequestBody) *sommelier.Criteria {
 		Name:   body.Name,
 		Winery: body.Winery,
 	}
-	v.Varietal = make([]string, len(body.Varietal))
-	for j, val := range body.Varietal {
-		v.Varietal[j] = val
+	if body.Varietal != nil {
+		v.Varietal = make([]string, len(body.Varietal))
+		for j, val := range body.Varietal {
+			v.Varietal[j] = val
+		}
 	}
 	return v
 }

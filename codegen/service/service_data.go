@@ -195,14 +195,14 @@ func (d ServicesData) analyze(service *design.ServiceExpr) *Data {
 			if ut, ok := patt.Type.(design.UserType); ok {
 				patt = ut.Attribute()
 			}
-			types = append(types, collectTypes(patt, seen, scope, true)...)
+			types = append(types, collectTypes(patt, seen, scope)...)
 			ratt := e.Result
 			if ut, ok := ratt.Type.(design.UserType); ok {
 				ratt = ut.Attribute()
 			}
-			types = append(types, collectTypes(ratt, seen, scope, false)...)
+			types = append(types, collectTypes(ratt, seen, scope)...)
 			for _, er := range e.Errors {
-				errTypes = append(errTypes, collectTypes(er.AttributeExpr, seen, scope, false)...)
+				errTypes = append(errTypes, collectTypes(er.AttributeExpr, seen, scope)...)
 				if er.Type == design.ErrorResult {
 					if _, ok := seenErrors[er.Name]; ok {
 						continue
@@ -213,7 +213,7 @@ func (d ServicesData) analyze(service *design.ServiceExpr) *Data {
 			}
 		}
 		for _, er := range service.Errors {
-			errTypes = append(errTypes, collectTypes(er.AttributeExpr, seen, scope, false)...)
+			errTypes = append(errTypes, collectTypes(er.AttributeExpr, seen, scope)...)
 			if _, ok := seenErrors[er.Name]; ok {
 				continue
 			}
@@ -261,11 +261,11 @@ func (d ServicesData) analyze(service *design.ServiceExpr) *Data {
 
 // collectTypes recurses through the attribute to gather all user types and
 // records them in userTypes.
-func collectTypes(at *design.AttributeExpr, seen map[string]struct{}, scope *codegen.NameScope, req bool) (data []*UserTypeData) {
+func collectTypes(at *design.AttributeExpr, seen map[string]struct{}, scope *codegen.NameScope) (data []*UserTypeData) {
 	if at == nil || at.Type == design.Empty {
 		return
 	}
-	collect := func(at *design.AttributeExpr) []*UserTypeData { return collectTypes(at, seen, scope, req) }
+	collect := func(at *design.AttributeExpr) []*UserTypeData { return collectTypes(at, seen, scope) }
 	switch dt := at.Type.(type) {
 	case design.UserType:
 		if _, ok := seen[dt.Name()]; ok {
@@ -275,7 +275,7 @@ func collectTypes(at *design.AttributeExpr, seen map[string]struct{}, scope *cod
 			Name:        dt.Name(),
 			VarName:     scope.GoTypeName(at),
 			Description: dt.Attribute().Description,
-			Def:         scope.GoTypeDef(dt.Attribute(), req),
+			Def:         scope.GoTypeDef(dt.Attribute(), true),
 			Ref:         scope.GoTypeRef(at),
 			Type:        dt,
 		})

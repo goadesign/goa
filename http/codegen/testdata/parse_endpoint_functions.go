@@ -248,7 +248,7 @@ func ParseEndpoint(
 				data = nil
 			case "MethodMultiSimplePayload":
 				endpoint = c.MethodMultiSimplePayload()
-				data, err = servicemultisimple1c.BuildMethodMultiSimplePayloadMethodMultiSimplePayloadPayload(*serviceMultiSimple1MethodMultiSimplePayloadBodyFlag)
+				data, err = servicemultisimple1c.BuildMethodMultiSimplePayloadPayload(*serviceMultiSimple1MethodMultiSimplePayloadBodyFlag)
 			}
 		case "ServiceMultiSimple2":
 			c := servicemultisimple2c.NewClient(scheme, host, doer, enc, dec, restore)
@@ -258,7 +258,7 @@ func ParseEndpoint(
 				data = nil
 			case "MethodMultiSimplePayload":
 				endpoint = c.MethodMultiSimplePayload()
-				data, err = servicemultisimple2c.BuildMethodMultiSimplePayloadMethodMultiSimplePayloadPayload(*serviceMultiSimple2MethodMultiSimplePayloadBodyFlag)
+				data, err = servicemultisimple2c.BuildMethodMultiSimplePayloadPayload(*serviceMultiSimple2MethodMultiSimplePayloadBodyFlag)
 			}
 		}
 	}
@@ -375,7 +375,7 @@ func ParseEndpoint(
 			switch epn {
 			case "MethodMultiRequiredPayload":
 				endpoint = c.MethodMultiRequiredPayload()
-				data, err = servicemultirequired1c.BuildMethodMultiRequiredPayloadMethodMultiRequiredPayloadPayload(*serviceMultiRequired1MethodMultiRequiredPayloadBodyFlag)
+				data, err = servicemultirequired1c.BuildMethodMultiRequiredPayloadPayload(*serviceMultiRequired1MethodMultiRequiredPayloadBodyFlag)
 			}
 		case "ServiceMultiRequired2":
 			c := servicemultirequired2c.NewClient(scheme, host, doer, enc, dec, restore)
@@ -385,7 +385,7 @@ func ParseEndpoint(
 				data = nil
 			case "MethodMultiRequiredPayload":
 				endpoint = c.MethodMultiRequiredPayload()
-				data, err = servicemultirequired2c.BuildMethodMultiRequiredPayloadMethodMultiRequiredPayloadPayload(*serviceMultiRequired2MethodMultiRequiredPayloadAFlag)
+				data, err = servicemultirequired2c.BuildMethodMultiRequiredPayloadPayload(*serviceMultiRequired2MethodMultiRequiredPayloadAFlag)
 			}
 		}
 	}
@@ -490,7 +490,7 @@ func ParseEndpoint(
 				data = nil
 			case "MethodMultiPayload":
 				endpoint = c.MethodMultiPayload()
-				data, err = servicemultic.BuildMethodMultiPayloadMethodMultiPayloadPayload(*serviceMultiMethodMultiPayloadBodyFlag, *serviceMultiMethodMultiPayloadBFlag, *serviceMultiMethodMultiPayloadAFlag)
+				data, err = servicemultic.BuildMethodMultiPayloadPayload(*serviceMultiMethodMultiPayloadBodyFlag, *serviceMultiMethodMultiPayloadBFlag, *serviceMultiMethodMultiPayloadAFlag)
 			}
 		}
 	}
@@ -502,10 +502,9 @@ func ParseEndpoint(
 }
 `
 
-var MultiSimpleBuildCode = `// BuildMethodMultiSimplePayloadMethodMultiSimplePayloadPayload builds the
-// payload for the ServiceMultiSimple1 MethodMultiSimplePayload endpoint from
-// CLI flags.
-func BuildMethodMultiSimplePayloadMethodMultiSimplePayloadPayload(serviceMultiSimple1MethodMultiSimplePayloadBody string) (*servicemultisimple1.MethodMultiSimplePayloadPayload, error) {
+var MultiSimpleBuildCode = `// BuildMethodMultiSimplePayloadPayload builds the payload for the
+// ServiceMultiSimple1 MethodMultiSimplePayload endpoint from CLI flags.
+func BuildMethodMultiSimplePayloadPayload(serviceMultiSimple1MethodMultiSimplePayloadBody string) (*servicemultisimple1.MethodMultiSimplePayloadPayload, error) {
 	var err error
 	var body MethodMultiSimplePayloadRequestBody
 	{
@@ -524,9 +523,9 @@ func BuildMethodMultiSimplePayloadMethodMultiSimplePayloadPayload(serviceMultiSi
 }
 `
 
-var MultiBuildCode = `// BuildMethodMultiPayloadMethodMultiPayloadPayload builds the payload for the
-// ServiceMulti MethodMultiPayload endpoint from CLI flags.
-func BuildMethodMultiPayloadMethodMultiPayloadPayload(serviceMultiMethodMultiPayloadBody string, serviceMultiMethodMultiPayloadB string, serviceMultiMethodMultiPayloadA string) (*servicemulti.MethodMultiPayloadPayload, error) {
+var MultiBuildCode = `// BuildMethodMultiPayloadPayload builds the payload for the ServiceMulti
+// MethodMultiPayload endpoint from CLI flags.
+func BuildMethodMultiPayloadPayload(serviceMultiMethodMultiPayloadBody string, serviceMultiMethodMultiPayloadB string, serviceMultiMethodMultiPayloadA string) (*servicemulti.MethodMultiPayloadPayload, error) {
 	var err error
 	var body MethodMultiPayloadRequestBody
 	{
@@ -564,9 +563,9 @@ func BuildMethodMultiPayloadMethodMultiPayloadPayload(serviceMultiMethodMultiPay
 }
 `
 
-var QueryBoolBuildCode = `// BuildMethodQueryBoolMethodQueryBoolPayload builds the payload for the
-// ServiceQueryBool MethodQueryBool endpoint from CLI flags.
-func BuildMethodQueryBoolMethodQueryBoolPayload(serviceQueryBoolMethodQueryBoolQ string) (*servicequerybool.MethodQueryBoolPayload, error) {
+var QueryBoolBuildCode = `// BuildMethodQueryBoolPayload builds the payload for the ServiceQueryBool
+// MethodQueryBool endpoint from CLI flags.
+func BuildMethodQueryBoolPayload(serviceQueryBoolMethodQueryBoolQ string) (*servicequerybool.MethodQueryBoolPayload, error) {
 	var err error
 	var q *bool
 	{
@@ -588,10 +587,9 @@ func BuildMethodQueryBoolMethodQueryBoolPayload(serviceQueryBoolMethodQueryBoolQ
 }
 `
 
-var BodyQueryPathObjectBuildCode = `// BuildMethodBodyQueryPathObjectMethodBodyQueryPathObjectPayload builds the
-// payload for the ServiceBodyQueryPathObject MethodBodyQueryPathObject
-// endpoint from CLI flags.
-func BuildMethodBodyQueryPathObjectMethodBodyQueryPathObjectPayload(serviceBodyQueryPathObjectMethodBodyQueryPathObjectBody string, serviceBodyQueryPathObjectMethodBodyQueryPathObjectC string, serviceBodyQueryPathObjectMethodBodyQueryPathObjectB string) (*servicebodyquerypathobject.MethodBodyQueryPathObjectPayload, error) {
+var BodyQueryPathObjectBuildCode = `// BuildMethodBodyQueryPathObjectPayload builds the payload for the
+// ServiceBodyQueryPathObject MethodBodyQueryPathObject endpoint from CLI flags.
+func BuildMethodBodyQueryPathObjectPayload(serviceBodyQueryPathObjectMethodBodyQueryPathObjectBody string, serviceBodyQueryPathObjectMethodBodyQueryPathObjectC string, serviceBodyQueryPathObjectMethodBodyQueryPathObjectB string) (*servicebodyquerypathobject.MethodBodyQueryPathObjectPayload, error) {
 	var err error
 	var body MethodBodyQueryPathObjectRequestBody
 	{
@@ -620,6 +618,259 @@ func BuildMethodBodyQueryPathObjectMethodBodyQueryPathObjectPayload(serviceBodyQ
 	}
 	v.C = c
 	v.B = b
+	return v, nil
+}
+`
+
+var PayloadPrimitiveTypeParseCode = `// ParseEndpoint returns the endpoint and payload as specified on the command
+// line.
+func ParseEndpoint(
+	scheme, host string,
+	doer goahttp.Doer,
+	enc func(*http.Request) goahttp.Encoder,
+	dec func(*http.Response) goahttp.Decoder,
+	restore bool,
+) (goa.Endpoint, interface{}, error) {
+	var (
+		serviceBodyPrimitiveBoolValidateFlags = flag.NewFlagSet("ServiceBodyPrimitiveBoolValidate", flag.ContinueOnError)
+
+		serviceBodyPrimitiveBoolValidateMethodBodyPrimitiveBoolValidateFlags = flag.NewFlagSet("MethodBodyPrimitiveBoolValidate", flag.ExitOnError)
+		serviceBodyPrimitiveBoolValidateMethodBodyPrimitiveBoolValidatePFlag = serviceBodyPrimitiveBoolValidateMethodBodyPrimitiveBoolValidateFlags.String("p", "REQUIRED", "bool is the payload type of the ServiceBodyPrimitiveBoolValidate service MethodBodyPrimitiveBoolValidate method.")
+	)
+	serviceBodyPrimitiveBoolValidateFlags.Usage = serviceBodyPrimitiveBoolValidateUsage
+	serviceBodyPrimitiveBoolValidateMethodBodyPrimitiveBoolValidateFlags.Usage = serviceBodyPrimitiveBoolValidateMethodBodyPrimitiveBoolValidateUsage
+
+	if err := flag.CommandLine.Parse(os.Args[1:]); err != nil {
+		return nil, nil, err
+	}
+
+	if len(os.Args) < flag.NFlag()+3 {
+		return nil, nil, fmt.Errorf("not enough arguments")
+	}
+
+	var (
+		svcn string
+		svcf *flag.FlagSet
+	)
+	{
+		svcn = os.Args[1+flag.NFlag()]
+		switch svcn {
+		case "ServiceBodyPrimitiveBoolValidate":
+			svcf = serviceBodyPrimitiveBoolValidateFlags
+		default:
+			return nil, nil, fmt.Errorf("unknown service %q", svcn)
+		}
+	}
+	if err := svcf.Parse(os.Args[2+flag.NFlag():]); err != nil {
+		return nil, nil, err
+	}
+
+	var (
+		epn string
+		epf *flag.FlagSet
+	)
+	{
+		epn = os.Args[2+flag.NFlag()+svcf.NFlag()]
+		switch svcn {
+		case "ServiceBodyPrimitiveBoolValidate":
+			switch epn {
+			case "MethodBodyPrimitiveBoolValidate":
+				epf = serviceBodyPrimitiveBoolValidateMethodBodyPrimitiveBoolValidateFlags
+
+			}
+
+		}
+	}
+	if epf == nil {
+		return nil, nil, fmt.Errorf("unknown %q endpoint %q", svcn, epn)
+	}
+
+	// Parse endpoint flags if any
+	if len(os.Args) > 2+flag.NFlag()+svcf.NFlag() {
+		if err := epf.Parse(os.Args[3+flag.NFlag()+svcf.NFlag():]); err != nil {
+			return nil, nil, err
+		}
+	}
+
+	var (
+		data     interface{}
+		endpoint goa.Endpoint
+		err      error
+	)
+	{
+		switch svcn {
+		case "ServiceBodyPrimitiveBoolValidate":
+			c := servicebodyprimitiveboolvalidatec.NewClient(scheme, host, doer, enc, dec, restore)
+			switch epn {
+			case "MethodBodyPrimitiveBoolValidate":
+				endpoint = c.MethodBodyPrimitiveBoolValidate()
+				var err error
+				data, err = strconv.ParseBool(*serviceBodyPrimitiveBoolValidateMethodBodyPrimitiveBoolValidatePFlag)
+				if err != nil {
+					return nil, nil, fmt.Errorf("invalid value for serviceBodyPrimitiveBoolValidateMethodBodyPrimitiveBoolValidatePFlag, must be BOOL")
+				}
+			}
+		}
+	}
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return endpoint, data, nil
+}
+`
+
+var PayloadArrayPrimitiveTypeParseCode = `// ParseEndpoint returns the endpoint and payload as specified on the command
+// line.
+func ParseEndpoint(
+	scheme, host string,
+	doer goahttp.Doer,
+	enc func(*http.Request) goahttp.Encoder,
+	dec func(*http.Response) goahttp.Decoder,
+	restore bool,
+) (goa.Endpoint, interface{}, error) {
+	var (
+		serviceBodyPrimitiveArrayStringValidateFlags = flag.NewFlagSet("ServiceBodyPrimitiveArrayStringValidate", flag.ContinueOnError)
+
+		serviceBodyPrimitiveArrayStringValidateMethodBodyPrimitiveArrayStringValidateFlags = flag.NewFlagSet("MethodBodyPrimitiveArrayStringValidate", flag.ExitOnError)
+		serviceBodyPrimitiveArrayStringValidateMethodBodyPrimitiveArrayStringValidatePFlag = serviceBodyPrimitiveArrayStringValidateMethodBodyPrimitiveArrayStringValidateFlags.String("p", "REQUIRED", "[]string is the payload type of the ServiceBodyPrimitiveArrayStringValidate service MethodBodyPrimitiveArrayStringValidate method.")
+	)
+	serviceBodyPrimitiveArrayStringValidateFlags.Usage = serviceBodyPrimitiveArrayStringValidateUsage
+	serviceBodyPrimitiveArrayStringValidateMethodBodyPrimitiveArrayStringValidateFlags.Usage = serviceBodyPrimitiveArrayStringValidateMethodBodyPrimitiveArrayStringValidateUsage
+
+	if err := flag.CommandLine.Parse(os.Args[1:]); err != nil {
+		return nil, nil, err
+	}
+
+	if len(os.Args) < flag.NFlag()+3 {
+		return nil, nil, fmt.Errorf("not enough arguments")
+	}
+
+	var (
+		svcn string
+		svcf *flag.FlagSet
+	)
+	{
+		svcn = os.Args[1+flag.NFlag()]
+		switch svcn {
+		case "ServiceBodyPrimitiveArrayStringValidate":
+			svcf = serviceBodyPrimitiveArrayStringValidateFlags
+		default:
+			return nil, nil, fmt.Errorf("unknown service %q", svcn)
+		}
+	}
+	if err := svcf.Parse(os.Args[2+flag.NFlag():]); err != nil {
+		return nil, nil, err
+	}
+
+	var (
+		epn string
+		epf *flag.FlagSet
+	)
+	{
+		epn = os.Args[2+flag.NFlag()+svcf.NFlag()]
+		switch svcn {
+		case "ServiceBodyPrimitiveArrayStringValidate":
+			switch epn {
+			case "MethodBodyPrimitiveArrayStringValidate":
+				epf = serviceBodyPrimitiveArrayStringValidateMethodBodyPrimitiveArrayStringValidateFlags
+
+			}
+
+		}
+	}
+	if epf == nil {
+		return nil, nil, fmt.Errorf("unknown %q endpoint %q", svcn, epn)
+	}
+
+	// Parse endpoint flags if any
+	if len(os.Args) > 2+flag.NFlag()+svcf.NFlag() {
+		if err := epf.Parse(os.Args[3+flag.NFlag()+svcf.NFlag():]); err != nil {
+			return nil, nil, err
+		}
+	}
+
+	var (
+		data     interface{}
+		endpoint goa.Endpoint
+		err      error
+	)
+	{
+		switch svcn {
+		case "ServiceBodyPrimitiveArrayStringValidate":
+			c := servicebodyprimitivearraystringvalidatec.NewClient(scheme, host, doer, enc, dec, restore)
+			switch epn {
+			case "MethodBodyPrimitiveArrayStringValidate":
+				endpoint = c.MethodBodyPrimitiveArrayStringValidate()
+				var err error
+				var val []string
+				err = json.Unmarshal([]byte(*serviceBodyPrimitiveArrayStringValidateMethodBodyPrimitiveArrayStringValidatePFlag), &val)
+				data = val
+				if err != nil {
+					return nil, nil, fmt.Errorf("invalid JSON for serviceBodyPrimitiveArrayStringValidateMethodBodyPrimitiveArrayStringValidatePFlag, example of valid JSON:\n%s", "'[\n      \"val\",\n      \"val\",\n      \"val\"\n   ]'")
+				}
+			}
+		}
+	}
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return endpoint, data, nil
+}
+`
+
+var PayloadArrayUserTypeBuildCode = `// BuildMethodBodyInlineArrayUserPayload builds the payload for the
+// ServiceBodyInlineArrayUser MethodBodyInlineArrayUser endpoint from CLI flags.
+func BuildMethodBodyInlineArrayUserPayload(serviceBodyInlineArrayUserMethodBodyInlineArrayUserBody string) ([]*servicebodyinlinearrayuser.ElemType, error) {
+	var err error
+	var body []*ElemTypeRequestBody
+	{
+		err = json.Unmarshal([]byte(serviceBodyInlineArrayUserMethodBodyInlineArrayUserBody), &body)
+		if err != nil {
+			return nil, fmt.Errorf("invalid JSON for body, example of valid JSON:\n%s", "'[\n      {\n         \"a\": \"patterna\",\n         \"b\": \"patternb\"\n      },\n      {\n         \"a\": \"patterna\",\n         \"b\": \"patternb\"\n      }\n   ]'")
+		}
+	}
+	if err != nil {
+		return nil, err
+	}
+	v := make([]*servicebodyinlinearrayuser.ElemType, len(body))
+	for i, val := range body {
+		v[i] = &servicebodyinlinearrayuser.ElemType{
+			A: val.A,
+			B: val.B,
+		}
+	}
+	return v, nil
+}
+`
+
+var PayloadMapUserTypeBuildCode = `// BuildMethodBodyInlineMapUserPayload builds the payload for the
+// ServiceBodyInlineMapUser MethodBodyInlineMapUser endpoint from CLI flags.
+func BuildMethodBodyInlineMapUserPayload(serviceBodyInlineMapUserMethodBodyInlineMapUserBody string) (map[*servicebodyinlinemapuser.KeyType]*servicebodyinlinemapuser.ElemType, error) {
+	var err error
+	var body map[*KeyTypeRequestBody]*ElemTypeRequestBody
+	{
+		err = json.Unmarshal([]byte(serviceBodyInlineMapUserMethodBodyInlineMapUserBody), &body)
+		if err != nil {
+			return nil, fmt.Errorf("invalid JSON for body, example of valid JSON:\n%s", "null")
+		}
+	}
+	if err != nil {
+		return nil, err
+	}
+	v := make(map[*servicebodyinlinemapuser.KeyType]*servicebodyinlinemapuser.ElemType, len(body))
+	for key, val := range body {
+		tk := &servicebodyinlinemapuser.KeyType{
+			A: key.A,
+			B: key.B,
+		}
+		tv := &servicebodyinlinemapuser.ElemType{
+			A: val.A,
+			B: val.B,
+		}
+		v[tk] = tv
+	}
 	return v, nil
 }
 `
@@ -724,9 +975,9 @@ func ParseEndpoint(
 }
 `
 
-var MapQueryObjectBuildCode = `// BuildMethodMapQueryObjectPayloadType builds the payload for the
+var MapQueryObjectBuildCode = `// BuildMethodMapQueryObjectPayload builds the payload for the
 // ServiceMapQueryObject MethodMapQueryObject endpoint from CLI flags.
-func BuildMethodMapQueryObjectPayloadType(serviceMapQueryObjectMethodMapQueryObjectBody string, serviceMapQueryObjectMethodMapQueryObjectA string, serviceMapQueryObjectMethodMapQueryObjectC string) (*servicemapqueryobject.PayloadType, error) {
+func BuildMethodMapQueryObjectPayload(serviceMapQueryObjectMethodMapQueryObjectBody string, serviceMapQueryObjectMethodMapQueryObjectA string, serviceMapQueryObjectMethodMapQueryObjectC string) (*servicemapqueryobject.PayloadType, error) {
 	var err error
 	var body MethodMapQueryObjectRequestBody
 	{
@@ -771,9 +1022,9 @@ func BuildMethodMapQueryObjectPayloadType(serviceMapQueryObjectMethodMapQueryObj
 }
 `
 
-var QueryUInt32BuildCode = `// BuildMethodQueryUInt32MethodQueryUInt32Payload builds the payload for the
-// ServiceQueryUInt32 MethodQueryUInt32 endpoint from CLI flags.
-func BuildMethodQueryUInt32MethodQueryUInt32Payload(serviceQueryUInt32MethodQueryUInt32Q string) (*servicequeryuint32.MethodQueryUInt32Payload, error) {
+var QueryUInt32BuildCode = `// BuildMethodQueryUInt32Payload builds the payload for the ServiceQueryUInt32
+// MethodQueryUInt32 endpoint from CLI flags.
+func BuildMethodQueryUInt32Payload(serviceQueryUInt32MethodQueryUInt32Q string) (*servicequeryuint32.MethodQueryUInt32Payload, error) {
 	var err error
 	var q *uint32
 	{
@@ -797,9 +1048,9 @@ func BuildMethodQueryUInt32MethodQueryUInt32Payload(serviceQueryUInt32MethodQuer
 }
 `
 
-var QueryUIntBuildCode = `// BuildMethodQueryUIntMethodQueryUIntPayload builds the payload for the
-// ServiceQueryUInt MethodQueryUInt endpoint from CLI flags.
-func BuildMethodQueryUIntMethodQueryUIntPayload(serviceQueryUIntMethodQueryUIntQ string) (*servicequeryuint.MethodQueryUIntPayload, error) {
+var QueryUIntBuildCode = `// BuildMethodQueryUIntPayload builds the payload for the ServiceQueryUInt
+// MethodQueryUInt endpoint from CLI flags.
+func BuildMethodQueryUIntPayload(serviceQueryUIntMethodQueryUIntQ string) (*servicequeryuint.MethodQueryUIntPayload, error) {
 	var err error
 	var q *uint
 	{

@@ -76,7 +76,7 @@ func TestAdaptiveSampler(t *testing.T) {
 
 	// start time should be set to now after rate adjustment.
 	if subject.(*adaptiveSampler).start.Before(now) {
-		t.Errorf("start time was not updated: %v >= $v", subject.(*adaptiveSampler).start, now)
+		t.Errorf("start time was not updated: %v >= %v", subject.(*adaptiveSampler).start, now)
 	}
 
 	// simulate last 100 requests taking 10s.

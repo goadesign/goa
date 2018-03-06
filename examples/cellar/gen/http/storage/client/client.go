@@ -66,14 +66,14 @@ func NewClient(
 	}
 }
 
-// List returns a endpoint that makes HTTP requests to the storage service list
-// server.
+// List returns an endpoint that makes HTTP requests to the storage service
+// list server.
 func (c *Client) List() goa.Endpoint {
 	var (
 		decodeResponse = DecodeListResponse(c.decoder, c.RestoreResponseBody)
 	)
 	return func(ctx context.Context, v interface{}) (interface{}, error) {
-		req, err := c.BuildListRequest(v)
+		req, err := c.BuildListRequest(ctx, v)
 		if err != nil {
 			return nil, err
 		}
@@ -87,15 +87,15 @@ func (c *Client) List() goa.Endpoint {
 	}
 }
 
-// Show returns a endpoint that makes HTTP requests to the storage service show
-// server.
+// Show returns an endpoint that makes HTTP requests to the storage service
+// show server.
 func (c *Client) Show() goa.Endpoint {
 	var (
 		encodeRequest  = EncodeShowRequest(c.encoder)
 		decodeResponse = DecodeShowResponse(c.decoder, c.RestoreResponseBody)
 	)
 	return func(ctx context.Context, v interface{}) (interface{}, error) {
-		req, err := c.BuildShowRequest(v)
+		req, err := c.BuildShowRequest(ctx, v)
 		if err != nil {
 			return nil, err
 		}
@@ -113,7 +113,7 @@ func (c *Client) Show() goa.Endpoint {
 	}
 }
 
-// Add returns a endpoint that makes HTTP requests to the storage service add
+// Add returns an endpoint that makes HTTP requests to the storage service add
 // server.
 func (c *Client) Add() goa.Endpoint {
 	var (
@@ -121,7 +121,7 @@ func (c *Client) Add() goa.Endpoint {
 		decodeResponse = DecodeAddResponse(c.decoder, c.RestoreResponseBody)
 	)
 	return func(ctx context.Context, v interface{}) (interface{}, error) {
-		req, err := c.BuildAddRequest(v)
+		req, err := c.BuildAddRequest(ctx, v)
 		if err != nil {
 			return nil, err
 		}
@@ -139,14 +139,14 @@ func (c *Client) Add() goa.Endpoint {
 	}
 }
 
-// Remove returns a endpoint that makes HTTP requests to the storage service
+// Remove returns an endpoint that makes HTTP requests to the storage service
 // remove server.
 func (c *Client) Remove() goa.Endpoint {
 	var (
 		decodeResponse = DecodeRemoveResponse(c.decoder, c.RestoreResponseBody)
 	)
 	return func(ctx context.Context, v interface{}) (interface{}, error) {
-		req, err := c.BuildRemoveRequest(v)
+		req, err := c.BuildRemoveRequest(ctx, v)
 		if err != nil {
 			return nil, err
 		}
@@ -160,15 +160,15 @@ func (c *Client) Remove() goa.Endpoint {
 	}
 }
 
-// Rate returns a endpoint that makes HTTP requests to the storage service rate
-// server.
+// Rate returns an endpoint that makes HTTP requests to the storage service
+// rate server.
 func (c *Client) Rate() goa.Endpoint {
 	var (
 		encodeRequest  = EncodeRateRequest(c.encoder)
 		decodeResponse = DecodeRateResponse(c.decoder, c.RestoreResponseBody)
 	)
 	return func(ctx context.Context, v interface{}) (interface{}, error) {
-		req, err := c.BuildRateRequest(v)
+		req, err := c.BuildRateRequest(ctx, v)
 		if err != nil {
 			return nil, err
 		}

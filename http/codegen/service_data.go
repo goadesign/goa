@@ -1620,8 +1620,14 @@ func attributeTypeData(ut design.UserType, req, ptr, server bool, scope *codegen
 			ctx = "response"
 		}
 		desc = name + " is used to define fields on " + ctx + " body types."
-		def = goTypeDef(scope, ut.Attribute(), ptr, false)
-		validate = codegen.RecursiveValidationCode(ut.Attribute(), true, ptr, req && !server || !req && server, "body")
+
+		// we want to consider defaults if generating the type for a response server side
+		// or a request client side because generated code initializes default value so
+		// field can never be nil.
+		useDefault := !req && server || req && !server
+
+		def = goTypeDef(scope, ut.Attribute(), ptr, useDefault)
+		validate = codegen.RecursiveValidationCode(ut.Attribute(), true, ptr, useDefault, "body")
 		if validate != "" {
 			validateRef = "err = v.Validate()"
 		}
@@ -1755,6 +1761,9 @@ const (
 	req, err := http.NewRequest("{{ .Verb }}", u.String(), nil)
 	if err != nil {
 		return nil, goahttp.ErrInvalidURL("{{ .ServiceName }}", "{{ .EndpointName }}", u.String(), err)
+	}
+	if ctx != nil {
+		req = req.WithContext(ctx)
 	}
 
 	return req, nil`

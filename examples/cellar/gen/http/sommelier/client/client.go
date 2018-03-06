@@ -50,7 +50,7 @@ func NewClient(
 	}
 }
 
-// Pick returns a endpoint that makes HTTP requests to the sommelier service
+// Pick returns an endpoint that makes HTTP requests to the sommelier service
 // pick server.
 func (c *Client) Pick() goa.Endpoint {
 	var (
@@ -58,7 +58,7 @@ func (c *Client) Pick() goa.Endpoint {
 		decodeResponse = DecodePickResponse(c.decoder, c.RestoreResponseBody)
 	)
 	return func(ctx context.Context, v interface{}) (interface{}, error) {
-		req, err := c.BuildPickRequest(v)
+		req, err := c.BuildPickRequest(ctx, v)
 		if err != nil {
 			return nil, err
 		}
