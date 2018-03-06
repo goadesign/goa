@@ -537,6 +537,34 @@ func MapParams(args ...interface{}) {
 	e.MapQueryParams = &mapName
 }
 
+// MultipartRequest defines the HTTP request for the endpoint to be a
+// multipart content type.
+//
+// MultipartRequest must appear in a HTTP endpoint expression.
+//
+// When an endpoint is defined to have multipart request, the code generator
+// generates the following request decoder and encoder function types in the
+// HTTP server and client files.
+// * <Service><Endpoint>DecoderFunc(*multipart.Reader, *Payload) - users must
+// implement the multipart decoding logic and populate the Payload argument.
+// * <Service><Endpoint>EncoderFunc(*multipart.Writer, *Payload) - users must
+// implement the multipart encoding logic.
+//
+// Goa example generator generates these dummy decoder and encoder functions
+// wired in to the server and client appropriately which the users can
+// implement. Users can also provider their own custom decode and encoder
+// functions satisfying the types above and initializing the server and the
+// client accordingly.
+//
+func MultipartRequest() {
+	e, ok := eval.Current().(*httpdesign.EndpointExpr)
+	if !ok {
+		eval.IncompatibleDSL()
+		return
+	}
+	e.MultipartRequest = true
+}
+
 // Body describes a HTTP request or response body.
 //
 // Body must appear in a Method HTTP expression to define the request body or in
