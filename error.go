@@ -66,7 +66,7 @@ type (
 
 	// ErrorClass is an error generating function.
 	// It accepts a format and values a la fmt.Fprintf.
-	ErrorClass func(format string, v ...interface{}) error
+	ErrorClass func(format string, v ...interface{}) Error
 
 	// Error is the interface implemented by all errors created using a
 	// ErrorClass function.
@@ -92,7 +92,7 @@ type (
 
 // NewErrorClass creates a error class with the given status.
 func NewErrorClass(status ErrorStatus) ErrorClass {
-	return func(format string, v ...interface{}) error {
+	return func(format string, v ...interface{}) Error {
 		return &serviceError{
 			id:      newErrorID(),
 			status:  status,
