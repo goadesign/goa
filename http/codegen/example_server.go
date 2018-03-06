@@ -38,6 +38,7 @@ func dummyServiceFile(genpkg string, root *httpdesign.RootExpr, svc *httpdesign.
 		codegen.Header("", apiPkg, []*codegen.ImportSpec{
 			{Path: "context"},
 			{Path: "log"},
+			{Path: "mime/multipart"},
 			{Path: genpkg + "/" + codegen.SnakeCase(svc.Name()), Name: data.Service.PkgName},
 		}),
 		{
@@ -52,6 +53,20 @@ func dummyServiceFile(genpkg string, root *httpdesign.RootExpr, svc *httpdesign.
 			Source: dummyEndpointImplT,
 			Data:   e,
 		})
+		if e.MultipartRequestDecoder != nil {
+			sections = append(sections, &codegen.SectionTemplate{
+				Name:   "dummy-multipart-request-decoder",
+				Source: dummyMultipartRequestDecoderImplT,
+				Data:   e.MultipartRequestDecoder,
+			})
+		}
+		if e.MultipartRequestEncoder != nil {
+			sections = append(sections, &codegen.SectionTemplate{
+				Name:   "dummy-multipart-request-encoder",
+				Source: dummyMultipartRequestEncoderImplT,
+				Data:   e.MultipartRequestEncoder,
+			})
+		}
 	}
 
 	return &codegen.File{
@@ -98,7 +113,7 @@ func exampleMain(genpkg string, root *httpdesign.RootExpr) *codegen.File {
 		})
 	}
 	sections := []*codegen.SectionTemplate{codegen.Header("", "main", specs)}
-	var svcdata []*ServiceData
+	svcdata := make([]*ServiceData, 0, len(root.HTTPServices))
 	for _, svc := range root.HTTPServices {
 		svcdata = append(svcdata, HTTPServices.Get(svc.Name()))
 	}
@@ -137,6 +152,22 @@ func (s *{{ .ServicePkgName }}Svc) {{ .Method.VarName }}(ctx context.Context{{ i
 {{- end }}
 	s.logger.Print("{{ .ServiceName }}.{{ .Method.Name }}")
 	return {{ if .Result.Ref }}res, {{ end }}nil
+}
+`
+
+// input: MultipartData
+const dummyMultipartRequestDecoderImplT = `{{ printf "%s implements the multipart decoder for service %q endpoint %q. The decoder must populate the argument p after encoding." .FuncName .ServiceName .MethodName | comment }}
+func {{ .FuncName }}(mr *multipart.Reader, p *{{ .PayloadRef }}) error {
+	// Add multipart request decoder logic here
+	return nil
+}
+`
+
+// input: MultipartData
+const dummyMultipartRequestEncoderImplT = `{{ printf "%s implements the multipart encoder for service %q endpoint %q." .FuncName .ServiceName .MethodName | comment }}
+func {{ .FuncName }}(mw *multipart.Writer, p {{ .PayloadRef }}) error {
+	// Add multipart request encoder logic here
+	return nil
 }
 `
 
@@ -223,7 +254,7 @@ const mainT = `func main() {
 	{
 	{{- range .Services }}
 		{{-  if .Endpoints }}
-		{{ .Service.PkgName }}Server = {{ .Service.PkgName }}svr.New({{ .Service.PkgName }}Endpoints, mux, dec, enc)
+		{{ .Service.PkgName }}Server = {{ .Service.PkgName }}svr.New({{ .Service.PkgName }}Endpoints, mux, dec, enc{{ range .Endpoints }}{{ if .MultipartRequestDecoder }}, {{ $.APIPkg }}.{{ .MultipartRequestDecoder.FuncName }}{{ end }}{{ end }})
 		{{-  else }}
 		{{ .Service.PkgName }}Server = {{ .Service.PkgName }}svr.New(nil, mux, dec, enc)
 		{{-  end }}

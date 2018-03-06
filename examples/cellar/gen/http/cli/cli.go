@@ -27,7 +27,7 @@ import (
 //
 func UsageCommands() string {
 	return `sommelier pick
-storage (list|show|add|remove|rate)
+storage (list|show|add|remove|rate|multi_add)
 `
 }
 
@@ -54,6 +54,7 @@ func ParseEndpoint(
 	enc func(*http.Request) goahttp.Encoder,
 	dec func(*http.Response) goahttp.Decoder,
 	restore bool,
+	storageMultiAddEncoderFn storagec.StorageMultiAddEncoderFunc,
 ) (goa.Endpoint, interface{}, error) {
 	var (
 		sommelierFlags = flag.NewFlagSet("sommelier", flag.ContinueOnError)
@@ -77,6 +78,9 @@ func ParseEndpoint(
 
 		storageRateFlags = flag.NewFlagSet("rate", flag.ExitOnError)
 		storageRatePFlag = storageRateFlags.String("p", "REQUIRED", "map[uint32][]string is the payload type of the storage service rate method.")
+
+		storageMultiAddFlags    = flag.NewFlagSet("multi_add", flag.ExitOnError)
+		storageMultiAddBodyFlag = storageMultiAddFlags.String("body", "REQUIRED", "")
 	)
 	sommelierFlags.Usage = sommelierUsage
 	sommelierPickFlags.Usage = sommelierPickUsage
@@ -87,6 +91,7 @@ func ParseEndpoint(
 	storageAddFlags.Usage = storageAddUsage
 	storageRemoveFlags.Usage = storageRemoveUsage
 	storageRateFlags.Usage = storageRateUsage
+	storageMultiAddFlags.Usage = storageMultiAddUsage
 
 	if err := flag.CommandLine.Parse(os.Args[1:]); err != nil {
 		return nil, nil, err
@@ -146,6 +151,9 @@ func ParseEndpoint(
 			case "rate":
 				epf = storageRateFlags
 
+			case "multi_add":
+				epf = storageMultiAddFlags
+
 			}
 
 		}
@@ -199,6 +207,9 @@ func ParseEndpoint(
 				if err != nil {
 					return nil, nil, fmt.Errorf("invalid JSON for storageRatePFlag, example of valid JSON:\n%s", "'{\n      \"1619338135\": [\n         \"Laboriosam consequatur delectus doloribus.\",\n         \"Est mollitia.\",\n         \"Voluptas ex enim.\",\n         \"Est explicabo eveniet dolore.\"\n      ],\n      \"1681700938\": [\n         \"Magnam ut consequatur.\",\n         \"Quo rerum et ut omnis praesentium non.\"\n      ]\n   }'")
 				}
+			case "multi_add":
+				endpoint = c.MultiAdd(storageMultiAddEncoderFn)
+				data, err = storagec.BuildMultiAddPayload(*storageMultiAddBodyFlag)
 			}
 		}
 	}
@@ -254,6 +265,7 @@ COMMAND:
     add: Add new bottle and return its ID.
     remove: Remove bottle from storage
     rate: Rate bottles by IDs
+    multi_add: Add n number of bottles and return their IDs.
 
 Additional help:
     %s storage COMMAND --help
@@ -277,7 +289,7 @@ Show bottle by ID
     -view STRING: 
 
 Example:
-    `+os.Args[0]+` storage show --id "Distinctio delectus vel earum doloribus." --view "tiny"
+    `+os.Args[0]+` storage show --id "Quis sapiente et sunt dolorem culpa." --view "default"
 `, os.Args[0])
 }
 
@@ -291,26 +303,26 @@ Example:
     `+os.Args[0]+` storage add --body '{
       "composition": [
          {
-            "percentage": 59,
+            "percentage": 98,
             "varietal": "Syrah"
          },
          {
-            "percentage": 59,
+            "percentage": 98,
             "varietal": "Syrah"
          },
          {
-            "percentage": 59,
+            "percentage": 98,
             "varietal": "Syrah"
          },
          {
-            "percentage": 59,
+            "percentage": 98,
             "varietal": "Syrah"
          }
       ],
       "description": "Red wine blend with an emphasis on the Cabernet Franc grape and including other Bordeaux grape varietals and some Syrah",
       "name": "Blue\'s Cuvee",
-      "rating": 2,
-      "vintage": 1935,
+      "rating": 4,
+      "vintage": 1914,
       "winery": {
          "country": "USA",
          "name": "Longoria",
@@ -328,7 +340,7 @@ Remove bottle from storage
     -id STRING: ID of bottle to remove
 
 Example:
-    `+os.Args[0]+` storage remove --id "Dignissimos sunt ut accusamus soluta."
+    `+os.Args[0]+` storage remove --id "Aut quaerat id."
 `, os.Args[0])
 }
 
@@ -351,5 +363,61 @@ Example:
          "Quo rerum et ut omnis praesentium non."
       ]
    }'
+`, os.Args[0])
+}
+
+func storageMultiAddUsage() {
+	fmt.Fprintf(os.Stderr, `%s [flags] storage multi_add -body JSON
+
+Add n number of bottles and return their IDs.
+    -body JSON: 
+
+Example:
+    `+os.Args[0]+` storage multi-add --body '[
+      {
+         "composition": [
+            {
+               "percentage": 98,
+               "varietal": "Syrah"
+            },
+            {
+               "percentage": 98,
+               "varietal": "Syrah"
+            }
+         ],
+         "description": "Red wine blend with an emphasis on the Cabernet Franc grape and including other Bordeaux grape varietals and some Syrah",
+         "name": "Blue\'s Cuvee",
+         "rating": 3,
+         "vintage": 1966,
+         "winery": {
+            "country": "USA",
+            "name": "Longoria",
+            "region": "Central Coast, California",
+            "url": "http://www.longoriawine.com/"
+         }
+      },
+      {
+         "composition": [
+            {
+               "percentage": 98,
+               "varietal": "Syrah"
+            },
+            {
+               "percentage": 98,
+               "varietal": "Syrah"
+            }
+         ],
+         "description": "Red wine blend with an emphasis on the Cabernet Franc grape and including other Bordeaux grape varietals and some Syrah",
+         "name": "Blue\'s Cuvee",
+         "rating": 3,
+         "vintage": 1966,
+         "winery": {
+            "country": "USA",
+            "name": "Longoria",
+            "region": "Central Coast, California",
+            "url": "http://www.longoriawine.com/"
+         }
+      }
+   ]'
 `, os.Args[0])
 }

@@ -36,3 +36,8 @@ func RemoveStoragePath(id string) string {
 func RateStoragePath() string {
 	return "/storage/rate"
 }
+
+// MultiAddStoragePath returns the URL path to the storage service multi_add HTTP endpoint.
+func MultiAddStoragePath() string {
+	return "/storage/multi_add"
+}

@@ -52,6 +52,9 @@ type (
 		// where "attribute" is the name of the attribute and "header"
 		// the name of the HTTP header.
 		headers *design.AttributeExpr
+		// MultipartRequest indicates that the request content type for
+		// the endpoint is a multipart type.
+		MultipartRequest bool
 	}
 
 	// RouteExpr represents an endpoint route (HTTP endpoint).
@@ -298,11 +301,6 @@ func (e *EndpointExpr) Validate() error {
 		}
 	}
 
-	// Validate definitions of params, headers and bodies against definition of payload
-	if e.MapQueryParams != nil && e.MethodExpr.Payload == nil {
-		verr.Add(e, "MapParams is set but Payload is not defined")
-	}
-
 	var routeParams []string
 	// Collect all the parameters in the endpoint.
 	// NOTE: We don't use AllParams() here because path parameters are only added to
@@ -319,19 +317,34 @@ func (e *EndpointExpr) Validate() error {
 			}
 		}
 	}
-	if e.MethodExpr.Payload != nil {
+
+	// Validate definitions of params, headers and bodies against definition of payload
+	if e.MethodExpr.Payload == nil {
+		if e.MapQueryParams != nil {
+			verr.Add(e, "MapParams is set but Payload is not defined")
+		}
+		if e.MultipartRequest {
+			verr.Add(e, "MultipartRequest is set but Payload is not defined")
+		}
+	} else {
 		if design.IsArray(e.MethodExpr.Payload.Type) {
 			if e.MapQueryParams != nil {
 				verr.Add(e, "MapParams is set but Payload type is array. Payload type must be map or an object with a map attribute")
 			}
 			var hasParams, hasHeaders bool
 			if ln := len(*allParams); ln > 0 {
+				if e.MultipartRequest {
+					verr.Add(e, "Payload type is array but HTTP endpoint defines MultipartRequest and route/query string parameters. At most one of these must be defined.")
+				}
 				hasParams = true
 				if ln > 1 {
 					verr.Add(e, "Payload type is array but HTTP endpoint defines multiple route or query string parameters. At most one of these must be defined and it must be an array.")
 				}
 			}
 			if ln := len(*design.AsObject(e.Headers().Type)); ln > 0 {
+				if e.MultipartRequest {
+					verr.Add(e, "Payload type is array but HTTP endpoint defines MultipartRequest and headers. At most one of these must be defined.")
+				}
 				hasHeaders = true
 				if hasParams {
 					verr.Add(e, "Payload type is array but HTTP endpoint defines both route or query string parameters and headers. At most one parameter or header must be defined and it must be of type array.")
@@ -341,6 +354,9 @@ func (e *EndpointExpr) Validate() error {
 				}
 			}
 			if e.Body != nil && e.Body.Type != design.Empty {
+				if e.MultipartRequest {
+					verr.Add(e, "Payload type is array but HTTP endpoint defines MultipartRequest and body. At most one of these must be defined.")
+				}
 				if !design.IsArray(e.Body.Type) {
 					verr.Add(e, "Payload type is array but HTTP endpoint body is not.")
 				}
@@ -355,6 +371,9 @@ func (e *EndpointExpr) Validate() error {
 
 		if pMap := design.AsMap(e.MethodExpr.Payload.Type); pMap != nil {
 			if e.MapQueryParams != nil {
+				if e.MultipartRequest {
+					verr.Add(e, "Payload type is map but HTTP endpoint defines MultipartRequest and MapParams. At most one of these must be defined.")
+				}
 				if *e.MapQueryParams != "" {
 					verr.Add(e, "MapParams is set to an attribute in the Payload but Payload is a map. Payload must be an object with an attribute of map type")
 				}
@@ -370,6 +389,9 @@ func (e *EndpointExpr) Validate() error {
 			}
 			var hasParams bool
 			if ln := len(*allParams); ln > 0 {
+				if e.MultipartRequest {
+					verr.Add(e, "Payload type is map but HTTP endpoint defines MultipartRequest and route/query string parameters. At most one of these must be defined.")
+				}
 				hasParams = true
 				if ln > 1 {
 					verr.Add(e, "Payload type is map but HTTP endpoint defines multiple route or query string parameters. At most one query string parameter must be defined and it must be a map.")
@@ -382,6 +404,9 @@ func (e *EndpointExpr) Validate() error {
 				verr.Add(e, "Payload type is map but HTTP endpoint defines headers. Map payloads can only be decoded from HTTP request bodies or query strings.")
 			}
 			if e.Body != nil && e.Body.Type != design.Empty {
+				if e.MultipartRequest {
+					verr.Add(e, "Payload type is map but HTTP endpoint defines MultipartRequest and body. At most one of these must be defined.")
+				}
 				if !design.IsMap(e.Body.Type) {
 					verr.Add(e, "Payload type is map but HTTP endpoint body is not.")
 				}

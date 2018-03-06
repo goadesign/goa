@@ -35,6 +35,7 @@ func server(genpkg string, svc *httpdesign.ServiceExpr) *codegen.File {
 			{Path: "context"},
 			{Path: "fmt"},
 			{Path: "io"},
+			{Path: "mime/multipart"},
 			{Path: "net/http"},
 			{Path: "goa.design/goa", Name: "goa"},
 			{Path: "goa.design/goa/http", Name: "goahttp"},
@@ -44,6 +45,17 @@ func server(genpkg string, svc *httpdesign.ServiceExpr) *codegen.File {
 
 	sections = append(sections, &codegen.SectionTemplate{Name: "server-struct", Source: serverStructT, Data: data})
 	sections = append(sections, &codegen.SectionTemplate{Name: "server-mountpoint", Source: mountPointStructT, Data: data})
+
+	for _, e := range data.Endpoints {
+		if e.MultipartRequestDecoder != nil {
+			sections = append(sections, &codegen.SectionTemplate{
+				Name:   "multipart-request-decoder-type",
+				Source: multipartRequestDecoderTypeT,
+				Data:   e.MultipartRequestDecoder,
+			})
+		}
+	}
+
 	sections = append(sections, &codegen.SectionTemplate{Name: "server-init", Source: serverInitT, Data: data})
 	sections = append(sections, &codegen.SectionTemplate{Name: "server-service", Source: serverServiceT, Data: data})
 	sections = append(sections, &codegen.SectionTemplate{Name: "server-mount", Source: serverMountT, Data: data})
@@ -74,6 +86,7 @@ func serverEncodeDecode(genpkg string, svc *httpdesign.ServiceExpr) *codegen.Fil
 			{Path: "strconv"},
 			{Path: "strings"},
 			{Path: "encoding/json"},
+			{Path: "mime/multipart"},
 			{Path: "unicode/utf8"},
 			{Path: "goa.design/goa", Name: "goa"},
 			{Path: "goa.design/goa/http", Name: "goahttp"},
@@ -94,6 +107,13 @@ func serverEncodeDecode(genpkg string, svc *httpdesign.ServiceExpr) *codegen.Fil
 				Source:  requestDecoderT,
 				FuncMap: transTmplFuncs(svc),
 				Data:    e,
+			})
+		}
+		if e.MultipartRequestDecoder != nil {
+			sections = append(sections, &codegen.SectionTemplate{
+				Name:   "multipart-request-decoder",
+				Source: multipartRequestDecoderT,
+				Data:   e.MultipartRequestDecoder,
 			})
 		}
 
@@ -196,6 +216,11 @@ func {{ .ServerInit }}(
 	mux goahttp.Muxer,
 	dec func(*http.Request) goahttp.Decoder,
 	enc func(context.Context, http.ResponseWriter) goahttp.Encoder,
+	{{- range .Endpoints }}
+		{{- if .MultipartRequestDecoder }}
+	{{ .MultipartRequestDecoder.VarName }} {{ .MultipartRequestDecoder.FuncName }},
+		{{- end }}
+	{{- end }}
 ) *{{ .ServerStruct }} {
 	return &{{ .ServerStruct }}{
 		Mounts: []*{{ .MountPointStruct }}{
@@ -212,7 +237,7 @@ func {{ .ServerInit }}(
 			{{- end }}
 		},
 		{{- range .Endpoints }}
-		{{ .Method.VarName }}: {{ .HandlerInit }}(e.{{ .Method.VarName }}, mux, dec, enc),
+		{{ .Method.VarName }}: {{ .HandlerInit }}(e.{{ .Method.VarName }}, mux, {{ if .MultipartRequestDecoder }}{{ .MultipartRequestDecoder.InitName }}({{ .MultipartRequestDecoder.VarName }}){{ else }}dec{{ end }}, enc),
 		{{- end }}
 	}
 }
@@ -319,7 +344,16 @@ func {{ .Name }}(v {{ .ParamTypeRef }}) {{ .ResultTypeRef }} {
 const requestDecoderT = `{{ printf "%s returns a decoder for requests sent to the %s %s endpoint." .RequestDecoder .ServiceName .Method.Name | comment }}
 func {{ .RequestDecoder }}(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) (interface{}, error) {
 	return func(r *http.Request) (interface{}, error) {
-{{- if .Payload.Request.ServerBody }}
+{{- if .MultipartRequestDecoder }}
+		var (
+			body {{ .Payload.Ref }}
+			err error
+		)
+		err = decoder(r).Decode(&body)
+		if err != nil {
+			return nil, goa.DecodePayloadError(err.Error())
+		}
+{{- else if .Payload.Request.ServerBody }}
 		var (
 			body {{ .Payload.Request.ServerBody.VarName }}
 			err  error
@@ -565,7 +599,9 @@ func {{ .RequestDecoder }}(mux goahttp.Muxer, decoder func(*http.Request) goahtt
 			return nil, err
 		}
 		{{- end }}
-		{{- if .Payload.Request.PayloadInit }}
+		{{- if .MultipartRequestDecoder }}
+			return body, nil
+		{{- else if .Payload.Request.PayloadInit }}
 
 		return {{ .Payload.Request.PayloadInit.Name }}({{ range .Payload.Request.PayloadInit.ServerArgs }}{{ .Ref }},{{ end }}), nil
 		{{- else if .Payload.DecoderReturnValue }}
@@ -963,4 +999,25 @@ const responseT = `{{ define "response" -}}
 		// unsupported type {{ .Type.Name }} for header field {{ .FieldName }}
 	{{- end }}
 {{- end -}}
+`
+
+// input: multipartData
+const multipartRequestDecoderTypeT = `{{ printf "%s is the type to decode multipart request for the %q service %q endpoint." .FuncName .ServiceName .MethodName | comment }}
+type {{ .FuncName }} func(*multipart.Reader, {{ .PayloadRef }}) error
+`
+
+// input: multipartData
+const multipartRequestDecoderT = `{{ printf "%s returns a decoder to decode the multipart request for the %q service %q endpoint." .InitName .ServiceName .MethodName | comment }}
+func {{ .InitName }}({{ .VarName }} {{ .FuncName }}) func(r *http.Request) goahttp.Decoder {
+	return func(r *http.Request) goahttp.Decoder {
+		return goahttp.EncodingFunc(func(v interface{}) error {
+			mr, err := r.MultipartReader()
+			if err != nil {
+				return err
+			}
+			p := v.({{ .PayloadRef }})
+			return {{ .VarName }}(mr, p)
+		})
+	}
+}
 `

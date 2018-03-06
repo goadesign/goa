@@ -142,6 +142,22 @@ type ComponentRequestBody struct {
 	Percentage *uint32 `form:"percentage,omitempty" json:"percentage,omitempty" xml:"percentage,omitempty"`
 }
 
+// BottleRequestBody is used to define fields on request body types.
+type BottleRequestBody struct {
+	// Name of bottle
+	Name string `form:"name" json:"name" xml:"name"`
+	// Winery that produces wine
+	Winery *WineryRequestBody `form:"winery" json:"winery" xml:"winery"`
+	// Vintage of bottle
+	Vintage uint32 `form:"vintage" json:"vintage" xml:"vintage"`
+	// Composition is the list of grape varietals and associated percentage.
+	Composition []*ComponentRequestBody `form:"composition,omitempty" json:"composition,omitempty" xml:"composition,omitempty"`
+	// Description of bottle
+	Description *string `form:"description,omitempty" json:"description,omitempty" xml:"description,omitempty"`
+	// Rating of bottle from 1 (worst) to 5 (best)
+	Rating *uint32 `form:"rating,omitempty" json:"rating,omitempty" xml:"rating,omitempty"`
+}
+
 // NewAddRequestBody builds the HTTP request body from the payload of the "add"
 // endpoint of the "storage" service.
 func NewAddRequestBody(p *storage.Bottle) *AddRequestBody {
@@ -160,6 +176,33 @@ func NewAddRequestBody(p *storage.Bottle) *AddRequestBody {
 			body.Composition[j] = &ComponentRequestBody{
 				Varietal:   val.Varietal,
 				Percentage: val.Percentage,
+			}
+		}
+	}
+	return body
+}
+
+// NewBottleRequestBody builds the HTTP request body from the payload of the
+// "multi_add" endpoint of the "storage" service.
+func NewBottleRequestBody(p []*storage.Bottle) []*BottleRequestBody {
+	body := make([]*BottleRequestBody, len(p))
+	for i, val := range p {
+		body[i] = &BottleRequestBody{
+			Name:        val.Name,
+			Vintage:     val.Vintage,
+			Description: val.Description,
+			Rating:      val.Rating,
+		}
+		if val.Winery != nil {
+			body[i].Winery = marshalWineryToWineryRequestBody(val.Winery)
+		}
+		if val.Composition != nil {
+			body[i].Composition = make([]*ComponentRequestBody, len(val.Composition))
+			for j, val := range val.Composition {
+				body[i].Composition[j] = &ComponentRequestBody{
+					Varietal:   val.Varietal,
+					Percentage: val.Percentage,
+				}
 			}
 		}
 	}
@@ -487,6 +530,50 @@ func (body *ComponentRequestBody) Validate() (err error) {
 	if body.Percentage != nil {
 		if *body.Percentage > 100 {
 			err = goa.MergeErrors(err, goa.InvalidRangeError("body.percentage", *body.Percentage, 100, false))
+		}
+	}
+	return
+}
+
+// Validate runs the validations defined on BottleRequestBody
+func (body *BottleRequestBody) Validate() (err error) {
+	if body.Winery == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("winery", "body"))
+	}
+	if utf8.RuneCountInString(body.Name) > 100 {
+		err = goa.MergeErrors(err, goa.InvalidLengthError("body.name", body.Name, utf8.RuneCountInString(body.Name), 100, false))
+	}
+	if body.Winery != nil {
+		if err2 := body.Winery.Validate(); err2 != nil {
+			err = goa.MergeErrors(err, err2)
+		}
+	}
+	if body.Vintage < 1900 {
+		err = goa.MergeErrors(err, goa.InvalidRangeError("body.vintage", body.Vintage, 1900, true))
+	}
+	if body.Vintage > 2020 {
+		err = goa.MergeErrors(err, goa.InvalidRangeError("body.vintage", body.Vintage, 2020, false))
+	}
+	for _, e := range body.Composition {
+		if e != nil {
+			if err2 := e.Validate(); err2 != nil {
+				err = goa.MergeErrors(err, err2)
+			}
+		}
+	}
+	if body.Description != nil {
+		if utf8.RuneCountInString(*body.Description) > 2000 {
+			err = goa.MergeErrors(err, goa.InvalidLengthError("body.description", *body.Description, utf8.RuneCountInString(*body.Description), 2000, false))
+		}
+	}
+	if body.Rating != nil {
+		if *body.Rating < 1 {
+			err = goa.MergeErrors(err, goa.InvalidRangeError("body.rating", *body.Rating, 1, true))
+		}
+	}
+	if body.Rating != nil {
+		if *body.Rating > 5 {
+			err = goa.MergeErrors(err, goa.InvalidRangeError("body.rating", *body.Rating, 5, false))
 		}
 	}
 	return

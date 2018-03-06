@@ -3,6 +3,7 @@ package codegen
 import (
 	"os"
 	"path/filepath"
+	"strings"
 
 	"goa.design/goa/codegen"
 	httpdesign "goa.design/goa/http/design"
@@ -14,6 +15,12 @@ func ExampleCLI(genpkg string, root *httpdesign.RootExpr) *codegen.File {
 	if _, err := os.Stat(path); !os.IsNotExist(err) {
 		return nil // file already exists, skip it.
 	}
+	idx := strings.LastIndex(genpkg, string(os.PathSeparator))
+	rootPath := "."
+	if idx > 0 {
+		rootPath = genpkg[:idx]
+	}
+	apiPkg := strings.ToLower(codegen.Goify(root.Design.API.Name, false))
 	specs := []*codegen.ImportSpec{
 		{Path: "context"},
 		{Path: "encoding/json"},
@@ -25,20 +32,30 @@ func ExampleCLI(genpkg string, root *httpdesign.RootExpr) *codegen.File {
 		{Path: "strings"},
 		{Path: "time"},
 		{Path: "goa.design/goa/http", Name: "goahttp"},
+		{Path: rootPath, Name: apiPkg},
 		{Path: genpkg + "/http/cli"},
+	}
+	svcdata := make([]*ServiceData, 0, len(root.HTTPServices))
+	for _, svc := range root.HTTPServices {
+		svcdata = append(svcdata, HTTPServices.Get(svc.Name()))
+	}
+	data := map[string]interface{}{
+		"Services": svcdata,
+		"APIPkg":   apiPkg,
+		"APIName":  root.Design.API.Name,
 	}
 	sections := []*codegen.SectionTemplate{
 		codegen.Header("", "main", specs),
 		&codegen.SectionTemplate{
 			Name:   "cli-main",
 			Source: mainCLIT,
-			Data:   root,
+			Data:   data,
 		},
 	}
 	return &codegen.File{Path: path, SectionTemplates: sections}
 }
 
-// input: map[string]interface{}{"Services":[]ServiceData, "APIPkg": string}
+// input: map[string]interface{}{"Services":[]ServiceData, "APIPkg": string, "APIName": string}
 const mainCLIT = `func main() {
 	var (
 		addr    = flag.String("url", "http://localhost:8080", "` + "`" + `URL` + "`" + ` to service host")
@@ -85,6 +102,13 @@ const mainCLIT = `func main() {
 		goahttp.RequestEncoder,
 		goahttp.ResponseDecoder,
 		debug,
+		{{- range .Services }}
+			{{- range .Endpoints }}
+			  {{- if .MultipartRequestDecoder }}
+		{{ $.APIPkg }}.{{ .MultipartRequestEncoder.FuncName }},
+				{{- end }}
+			{{- end }}
+		{{- end }}
 	)
 	if err != nil {
 		if err == flag.ErrHelp {
@@ -113,7 +137,7 @@ const mainCLIT = `func main() {
 }
 
 func usage() {
-	fmt.Fprintf(os.Stderr, ` + "`" + `%s is a command line client for the {{ .Design.API.Name }} API.
+	fmt.Fprintf(os.Stderr, ` + "`" + `%s is a command line client for the {{ .APIName }} API.
 
 Usage:
     %s [-url URL][-timeout SECONDS][-verbose|-v] SERVICE ENDPOINT [flags]
