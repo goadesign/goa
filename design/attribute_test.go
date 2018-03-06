@@ -233,32 +233,32 @@ func TestAttributeExprIsRequiredNoDefault(t *testing.T) {
 		},
 	}
 
-	for k, tc := range cases {
-		attribute := AttributeExpr{
-			Type: &UserTypeExpr{
-				AttributeExpr: &AttributeExpr{
-					Type: &Object{
-						&NamedAttributeExpr{
-							Name:      "foo",
-							Attribute: &AttributeExpr{},
-						},
-						&NamedAttributeExpr{
-							Name: "bar",
-							Attribute: &AttributeExpr{
-								DefaultValue: 1,
-							},
-						},
-						&NamedAttributeExpr{
-							Name:      "baz",
-							Attribute: &AttributeExpr{},
+	attribute := AttributeExpr{
+		Type: &UserTypeExpr{
+			AttributeExpr: &AttributeExpr{
+				Type: &Object{
+					&NamedAttributeExpr{
+						Name:      "foo",
+						Attribute: &AttributeExpr{},
+					},
+					&NamedAttributeExpr{
+						Name: "bar",
+						Attribute: &AttributeExpr{
+							DefaultValue: 1,
 						},
 					},
-					Validation: &ValidationExpr{
-						Required: []string{"foo", "bar"},
+					&NamedAttributeExpr{
+						Name:      "baz",
+						Attribute: &AttributeExpr{},
 					},
 				},
+				Validation: &ValidationExpr{
+					Required: []string{"foo", "bar"},
+				},
 			},
-		}
+		},
+	}
+	for k, tc := range cases {
 		if actual := attribute.IsRequiredNoDefault(tc.attName); tc.expected != actual {
 			t.Errorf("%s: got %#v, expected %#v", k, actual, tc.expected)
 		}
