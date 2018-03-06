@@ -537,24 +537,22 @@ func MapParams(args ...interface{}) {
 	e.MapQueryParams = &mapName
 }
 
-// MultipartRequest defines the HTTP request for the endpoint to be a
-// multipart content type.
+// MultipartRequest indicates that HTTP requests made to the method use
+// MIME multipart encoding as defined in RFC 2046.
 //
 // MultipartRequest must appear in a HTTP endpoint expression.
 //
-// When an endpoint is defined to have multipart request, the code generator
-// generates the following request decoder and encoder function types in the
-// HTTP server and client files.
-// * <Service><Endpoint>DecoderFunc(*multipart.Reader, *Payload) - users must
-// implement the multipart decoding logic and populate the Payload argument.
-// * <Service><Endpoint>EncoderFunc(*multipart.Writer, *Payload) - users must
-// implement the multipart encoding logic.
-//
-// Goa example generator generates these dummy decoder and encoder functions
-// wired in to the server and client appropriately which the users can
-// implement. Users can also provider their own custom decode and encoder
-// functions satisfying the types above and initializing the server and the
-// client accordingly.
+// goa generates a custom encoder that writes the payload for requests made to
+// HTTP endpoints that use MultipartRequest. The generated encoder accept a
+// user provided function that does the actual mapping of the payload to the
+// multipart content. The user provided function accepts a multipart writer
+// and a reference to the payload and is responsible for encoding the payload.
+// goa also generates a custom decoder that reads back the multipart content
+// into the payload struct. The generated decoder also accepts a user provided
+// function that takes a multipart reader and a reference to the payload struct
+// as parameter. The user provided decoder is responsible for decoding the
+// multipart content into the payload. The example command generates a default
+// implementation for the user decoder and encoder.
 //
 func MultipartRequest() {
 	e, ok := eval.Current().(*httpdesign.EndpointExpr)
