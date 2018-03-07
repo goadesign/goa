@@ -161,7 +161,7 @@ func (a *AttributeExpr) Validate(ctx string, parent eval.Expression) *eval.Valid
 	verr.Merge(a.validateEnumDefault(ctx, parent))
 	if o := AsObject(a.Type); o != nil {
 		for _, n := range a.AllRequired() {
-			if o.Attribute(n) == nil {
+			if a.FindRecursive(n) == nil {
 				verr.Add(parent, `%srequired field %q does not exist`, ctx, n)
 			}
 		}
@@ -343,6 +343,27 @@ func (a *AttributeExpr) SetDefault(def interface{}) {
 	default:
 		a.DefaultValue = actual
 	}
+}
+
+// FindRecursive finds an attribute with the given name.
+func (a *AttributeExpr) FindRecursive(name string) *AttributeExpr {
+	o := AsObject(a.Type)
+	if o == nil {
+		panic("recursing through an attribute which is not an object")
+	}
+	if att := o.Attribute(name); att != nil {
+		return att
+	}
+	for _, b := range a.Bases {
+		bObj := AsObject(b)
+		if bAtt := bObj.Attribute(name); bAtt != nil {
+			return bAtt
+		}
+	}
+	if u, ok := a.Type.(UserType); ok {
+		return u.Attribute().FindRecursive(name)
+	}
+	return nil
 }
 
 // validateEnumDefault makes sure that the attribute default value is one of the

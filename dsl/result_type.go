@@ -435,7 +435,7 @@ func buildView(name string, mt *design.ResultTypeExpr, at *design.AttributeExpr)
 	for _, nat := range *o {
 		n := nat.Name
 		cat := nat.Attribute
-		if existing := mto.Attribute(n); existing != nil {
+		if existing := mt.FindRecursive(n); existing != nil {
 			dup := design.DupAtt(existing)
 			if dup.Metadata == nil {
 				dup.Metadata = make(map[string][]string)
