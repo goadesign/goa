@@ -105,6 +105,46 @@ func TestAttributeExprValidate(t *testing.T) {
 			validation: validation,
 			expected:   &eval.ValidationErrors{Errors: []error{errRequiredFieldNotExist}},
 		},
+		"required field exists in extended attribute": {
+			typ: &UserTypeExpr{
+				TypeName: "ExtendedAttr",
+				AttributeExpr: &AttributeExpr{
+					Type: &Object{
+						&NamedAttributeExpr{
+							Name: "bar",
+							Attribute: &AttributeExpr{
+								Type: &Array{
+									ElemType: &AttributeExpr{
+										Type: Boolean,
+									},
+								},
+							},
+						},
+					},
+					Bases: []DataType{
+						&UserTypeExpr{
+							TypeName: "Attr",
+							AttributeExpr: &AttributeExpr{
+								Type: &Object{
+									&NamedAttributeExpr{
+										Name: "foo",
+										Attribute: &AttributeExpr{
+											Type: &Array{
+												ElemType: &AttributeExpr{
+													Type: Boolean,
+												},
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			validation: validation,
+			expected:   &eval.ValidationErrors{Errors: []error{}},
+		},
 		"defines a view but is not a result type": {
 			typ:      Boolean,
 			metadata: metadata,
@@ -135,6 +175,7 @@ func TestAttributeExprValidate(t *testing.T) {
 		if actual := attribute.Validate(ctx, nil); tc.expected != actual {
 			if len(tc.expected.Errors) != len(actual.Errors) {
 				t.Errorf("%s: expected the number of error values to match %d got %d ", k, len(tc.expected.Errors), len(actual.Errors))
+				t.Errorf("%#v", actual.Errors[0])
 			} else {
 				for i, err := range actual.Errors {
 					if err.Error() != tc.expected.Errors[i].Error() {
