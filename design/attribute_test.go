@@ -264,3 +264,101 @@ func TestAttributeExprIsRequiredNoDefault(t *testing.T) {
 		}
 	}
 }
+
+func TestAttributeExprIsPrimitivePointer(t *testing.T) {
+	cases := map[string]struct {
+		attName    string
+		useDefault bool
+		expected   bool
+	}{
+		"primitive pointer": {
+			attName:    "foo",
+			useDefault: false,
+			expected:   true,
+		},
+		"no attribute": {
+			attName:    "zoo",
+			useDefault: false,
+			expected:   false,
+		},
+		"not primitive": {
+			attName:    "bar",
+			useDefault: false,
+			expected:   false,
+		},
+		"primitive but bytes": {
+			attName:    "baz",
+			useDefault: false,
+			expected:   false,
+		},
+		"primitive but any": {
+			attName:    "qux",
+			useDefault: false,
+			expected:   false,
+		},
+		"primitive but required": {
+			attName:    "quux",
+			useDefault: false,
+			expected:   false,
+		},
+		"primitive but default value": {
+			attName:    "corge",
+			useDefault: true,
+			expected:   false,
+		},
+	}
+
+	attribute := AttributeExpr{
+		Type: &Object{
+			&NamedAttributeExpr{
+				Name: "foo",
+				Attribute: &AttributeExpr{
+					Type: String,
+				},
+			},
+			&NamedAttributeExpr{
+				Name: "bar",
+				Attribute: &AttributeExpr{
+					Type: &Array{
+						ElemType: &AttributeExpr{
+							Type: String,
+						},
+					},
+				},
+			},
+			&NamedAttributeExpr{
+				Name: "baz",
+				Attribute: &AttributeExpr{
+					Type: Bytes,
+				},
+			},
+			&NamedAttributeExpr{
+				Name: "qux",
+				Attribute: &AttributeExpr{
+					Type: Any,
+				},
+			},
+			&NamedAttributeExpr{
+				Name: "quux",
+				Attribute: &AttributeExpr{
+					Type: String,
+				},
+			},
+			&NamedAttributeExpr{
+				Name: "corge",
+				Attribute: &AttributeExpr{
+					Type:         String,
+					DefaultValue: "default",
+				},
+			},
+		},
+		Validation: &ValidationExpr{
+			Required: []string{"quux"},
+		},
+	}
+	for k, tc := range cases {
+		if actual := attribute.IsPrimitivePointer(tc.attName, tc.useDefault); tc.expected != actual {
+			t.Errorf("%s: got %#v, expected %#v", k, actual, tc.expected)
+		}
+	}
+}
