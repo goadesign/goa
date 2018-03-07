@@ -511,21 +511,19 @@ func walkMatches(source, target *design.AttributeExpr, walker func(src, tgt *des
 // AppendHelpers takes care of only appending helper functions from newH that
 // are not already in oldH.
 func AppendHelpers(oldH, newH []*TransformFunctionData) []*TransformFunctionData {
-	res := oldH
 	for _, h := range newH {
 		found := false
 		for _, h2 := range oldH {
 			if h.Name == h2.Name {
 				found = true
-				continue
+				break
 			}
 		}
-		if found {
-			continue
+		if !found {
+			oldH = append(oldH, h)
 		}
-		res = append(res, h)
 	}
-	return res
+	return oldH
 }
 
 func transformHelperName(satt, tatt *design.AttributeExpr, a targs) string {
