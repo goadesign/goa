@@ -161,7 +161,7 @@ func (a *AttributeExpr) Validate(ctx string, parent eval.Expression) *eval.Valid
 	verr.Merge(a.validateEnumDefault(ctx, parent))
 	if o := AsObject(a.Type); o != nil {
 		for _, n := range a.AllRequired() {
-			if o.Attribute(n) == nil {
+			if a.Find(n) == nil {
 				verr.Add(parent, `%srequired field %q does not exist`, ctx, n)
 			}
 		}
@@ -343,6 +343,31 @@ func (a *AttributeExpr) SetDefault(def interface{}) {
 	default:
 		a.DefaultValue = actual
 	}
+}
+
+// Find finds an attribute with the given name in the object and any
+// extended attribute expressions. If the attribute is not a user
+// type or object, Find returns nil.
+func (a *AttributeExpr) Find(name string) *AttributeExpr {
+	findAttrFn := func(typ DataType) *AttributeExpr {
+		switch t := typ.(type) {
+		case UserType:
+			return t.Attribute().Find(name)
+		case *Object:
+			if att := AsObject(t).Attribute(name); att != nil {
+				return att
+			}
+		}
+		return nil
+	}
+
+	if att := findAttrFn(a.Type); att != nil {
+		return att
+	}
+	for _, b := range a.Bases {
+		return findAttrFn(b)
+	}
+	return nil
 }
 
 // validateEnumDefault makes sure that the attribute default value is one of the
