@@ -511,3 +511,36 @@ func (v *ValidationExpr) Dup() *ValidationExpr {
 		Required:  req,
 	}
 }
+
+// IsSupportedValidationFormat checks if the validation format is supported by goa.
+func (a *AttributeExpr) IsSupportedValidationFormat(vf ValidationFormat) bool {
+	switch vf {
+	case FormatDateTime:
+		return true
+	case FormatUUID:
+		return true
+	case FormatEmail:
+		return true
+	case FormatHostname:
+		return true
+	case FormatIPv4:
+		return true
+	case FormatIPv6:
+		return true
+	case FormatIP:
+		return true
+	case FormatURI:
+		return true
+	case FormatMAC:
+		return true
+	case FormatCIDR:
+		return true
+	case FormatRegexp:
+		return true
+	case FormatJSON:
+		return true
+	case FormatRFC1123:
+		return true
+	}
+	return false
+}

@@ -85,6 +85,9 @@ func Enum(vals ...interface{}) {
 //
 func Format(f design.ValidationFormat) {
 	if a, ok := eval.Current().(*design.AttributeExpr); ok {
+		if !a.IsSupportedValidationFormat(f) {
+			eval.ReportError("invalid validation format %q", f)
+		}
 		if a.Type != nil && a.Type.Kind() != design.StringKind {
 			incompatibleAttributeType("format", a.Type.Name(), "a string")
 		} else {
