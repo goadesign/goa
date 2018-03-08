@@ -353,14 +353,16 @@ func projectRecursive(at *AttributeExpr, vat *NamedAttributeExpr, view string, s
 			if cvnat == nil {
 				continue
 			}
-			if _, ok := seen[cnat.Name]; !ok {
-				seen[cnat.Name] = struct{}{}
-				pat, err := projectRecursive(cnat.Attribute, cvnat, view, seen)
-				if err != nil {
-					return nil, err
-				}
-				cnat.Attribute = pat
+			if _, ok := seen[cnat.Name]; ok {
+				seen = make(map[string]struct{})
+				return at, nil
 			}
+			seen[cnat.Name] = struct{}{}
+			pat, err := projectRecursive(cnat.Attribute, cvnat, view, seen)
+			if err != nil {
+				return nil, err
+			}
+			cnat.Attribute = pat
 		}
 		return at, nil
 	}
