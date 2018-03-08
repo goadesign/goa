@@ -362,3 +362,49 @@ func TestAttributeExprIsPrimitivePointer(t *testing.T) {
 		}
 	}
 }
+
+func TestAttributeHasDefaultValue(t *testing.T) {
+	var (
+		object = &Object{
+			&NamedAttributeExpr{
+				Name: "foo",
+				Attribute: &AttributeExpr{
+					DefaultValue: 1,
+				},
+			},
+			&NamedAttributeExpr{
+				Name:      "bar",
+				Attribute: &AttributeExpr{},
+			},
+		}
+	)
+	cases := map[string]struct {
+		attName  string
+		typ      DataType
+		expected bool
+	}{
+		"has default value": {
+			attName:  "foo",
+			typ:      object,
+			expected: true,
+		},
+		"no default value": {
+			attName:  "bar",
+			typ:      object,
+			expected: false,
+		},
+		"not object": {
+			typ:      Boolean,
+			expected: false,
+		},
+	}
+
+	for k, tc := range cases {
+		attribute := AttributeExpr{
+			Type: tc.typ,
+		}
+		if actual := attribute.HasDefaultValue(tc.attName); tc.expected != actual {
+			t.Errorf("%s: got %#v, expected %#v", k, actual, tc.expected)
+		}
+	}
+}
