@@ -107,7 +107,7 @@ func TestAttributeExprValidate(t *testing.T) {
 		},
 		"required field exists in extended attribute": {
 			typ: &UserTypeExpr{
-				TypeName: "ExtendedAttr",
+				TypeName: "Extended2Attr",
 				AttributeExpr: &AttributeExpr{
 					Type: &Object{
 						&NamedAttributeExpr{
@@ -123,15 +123,34 @@ func TestAttributeExprValidate(t *testing.T) {
 					},
 					Bases: []DataType{
 						&UserTypeExpr{
-							TypeName: "Attr",
+							TypeName: "Extended1Attr",
 							AttributeExpr: &AttributeExpr{
 								Type: &Object{
 									&NamedAttributeExpr{
-										Name: "foo",
+										Name: "foobar",
 										Attribute: &AttributeExpr{
 											Type: &Array{
 												ElemType: &AttributeExpr{
 													Type: Boolean,
+												},
+											},
+										},
+									},
+								},
+								Bases: []DataType{
+									&UserTypeExpr{
+										TypeName: "Attr",
+										AttributeExpr: &AttributeExpr{
+											Type: &Object{
+												&NamedAttributeExpr{
+													Name: "foo",
+													Attribute: &AttributeExpr{
+														Type: &Array{
+															ElemType: &AttributeExpr{
+																Type: Boolean,
+															},
+														},
+													},
 												},
 											},
 										},

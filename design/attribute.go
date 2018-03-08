@@ -161,7 +161,7 @@ func (a *AttributeExpr) Validate(ctx string, parent eval.Expression) *eval.Valid
 	verr.Merge(a.validateEnumDefault(ctx, parent))
 	if o := AsObject(a.Type); o != nil {
 		for _, n := range a.AllRequired() {
-			if a.FindRecursive(n) == nil {
+			if a.Find(n) == nil {
 				verr.Add(parent, `%srequired field %q does not exist`, ctx, n)
 			}
 		}
@@ -345,23 +345,27 @@ func (a *AttributeExpr) SetDefault(def interface{}) {
 	}
 }
 
-// FindRecursive finds an attribute with the given name.
-func (a *AttributeExpr) FindRecursive(name string) *AttributeExpr {
-	o := AsObject(a.Type)
-	if o == nil {
-		panic("recursing through an attribute which is not an object")
+// Find finds an attribute with the given name in the object and any
+// extended attribute expressions. If the attribute is not a user
+// type or object, Find returns nil.
+func (a *AttributeExpr) Find(name string) *AttributeExpr {
+	findAttrFn := func(typ DataType) *AttributeExpr {
+		switch t := typ.(type) {
+		case UserType:
+			return t.Attribute().Find(name)
+		case *Object:
+			if att := AsObject(t).Attribute(name); att != nil {
+				return att
+			}
+		}
+		return nil
 	}
-	if att := o.Attribute(name); att != nil {
+
+	if att := findAttrFn(a.Type); att != nil {
 		return att
 	}
 	for _, b := range a.Bases {
-		bObj := AsObject(b)
-		if bAtt := bObj.Attribute(name); bAtt != nil {
-			return bAtt
-		}
-	}
-	if u, ok := a.Type.(UserType); ok {
-		return u.Attribute().FindRecursive(name)
+		return findAttrFn(b)
 	}
 	return nil
 }
