@@ -89,8 +89,16 @@ func TestIsPrimitive(t *testing.T) {
 			dt:       notPrimitiveResultType,
 			expected: false,
 		},
-		"not primitive": {
+		"object": {
 			dt:       &Object{},
+			expected: false,
+		},
+		"array": {
+			dt:       &Array{},
+			expected: false,
+		},
+		"map": {
+			dt:       &Map{},
 			expected: false,
 		},
 	}
