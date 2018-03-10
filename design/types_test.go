@@ -112,21 +112,21 @@ func TestIsPrimitive(t *testing.T) {
 
 func TestPrimitiveIsCompatible(t *testing.T) {
 	var (
-		b    bool    = true
-		i    int     = 1
-		i8   int8    = 2
-		i16  int16   = 3
-		i32  int32   = 4
-		ui   uint    = 5
-		ui8  uint8   = 6
-		ui16 uint16  = 7
-		ui32 uint32  = 8
-		i64  int64   = 9
-		ui64 uint64  = 10
-		f32  float32 = 10.1
-		f64  float64 = 20.2
-		s    string  = "string"
-		bs   []byte  = []byte("bytes")
+		b    = bool(true)
+		i    = int(1)
+		i8   = int8(2)
+		i16  = int16(3)
+		i32  = int32(4)
+		ui   = uint(5)
+		ui8  = uint8(6)
+		ui16 = uint16(7)
+		ui32 = uint32(8)
+		i64  = int64(9)
+		ui64 = uint64(10)
+		f32  = float32(10.1)
+		f64  = float64(20.2)
+		s    = string("string")
+		bs   = []byte("bytes")
 	)
 	cases := map[string]struct {
 		p        Primitive
