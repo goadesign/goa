@@ -336,3 +336,52 @@ func TestObjectIsCompatible(t *testing.T) {
 		}
 	}
 }
+
+func TestMapIsCompatible(t *testing.T) {
+	var (
+		b   = true
+		i   = 1
+		ism = map[int]string{
+			1: "foo",
+		}
+		ssm = map[string]string{
+			"bar": "bar",
+		}
+		iim = map[int]int{
+			2: 2,
+		}
+	)
+	cases := map[string]struct {
+		values   []interface{}
+		expected bool
+	}{
+		"compatible": {
+			values:   []interface{}{ism},
+			expected: true,
+		},
+		"not comatible": {
+			values:   []interface{}{b, i},
+			expected: false,
+		},
+		"map but not comatible": {
+			values:   []interface{}{ssm, iim},
+			expected: false,
+		},
+	}
+
+	m := Map{
+		KeyType: &AttributeExpr{
+			Type: Int,
+		},
+		ElemType: &AttributeExpr{
+			Type: String,
+		},
+	}
+	for k, tc := range cases {
+		for _, value := range tc.values {
+			if actual := m.IsCompatible(value); tc.expected != actual {
+				t.Errorf("%s: got %#v, expected %#v", k, actual, tc.expected)
+			}
+		}
+	}
+}
