@@ -133,7 +133,6 @@ func TestPrimitiveIsCompatible(t *testing.T) {
 		values   []interface{}
 		expected bool
 	}{
-		//			values:   []interface{}{b, i, i8, i16, i32, ui, ui8, ui16, ui32, i64, ui64, f32, f64, s, bs},
 		"boolean compatible": {
 			p:        Boolean,
 			values:   []interface{}{b},
