@@ -418,6 +418,24 @@ func (d ServicesData) analyze(service *design.ServiceExpr) *Data {
 		}
 	}
 
+	for _, t := range design.Root.Types {
+		if svcs, ok := t.Attribute().Metadata["type:generate:force"]; ok {
+			att := &design.AttributeExpr{Type: t}
+			if len(svcs) > 0 {
+				// Force generate type only in the specified services
+				for _, svc := range svcs {
+					if svc == service.Name {
+						types = append(types, collectTypes(att, seen, scope)...)
+						break
+					}
+				}
+			} else {
+				// Force generate type in all the services
+				types = append(types, collectTypes(att, seen, scope)...)
+			}
+		}
+	}
+
 	var (
 		methods []*MethodData
 		schemes []*SchemeData
