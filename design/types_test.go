@@ -301,3 +301,38 @@ func TestArrayIsCompatible(t *testing.T) {
 		}
 	}
 }
+
+func TestObjectIsCompatible(t *testing.T) {
+	var (
+		b = true
+		i = 1
+		s = struct {
+			Foo string
+		}{
+			Foo: "foo",
+		}
+		m = map[int]string{}
+	)
+	cases := map[string]struct {
+		values   []interface{}
+		expected bool
+	}{
+		"compatible": {
+			values:   []interface{}{s, m},
+			expected: true,
+		},
+		"not comatible": {
+			values:   []interface{}{b, i},
+			expected: false,
+		},
+	}
+
+	object := Object{}
+	for k, tc := range cases {
+		for _, value := range tc.values {
+			if actual := object.IsCompatible(value); tc.expected != actual {
+				t.Errorf("%s: got %#v, expected %#v", k, actual, tc.expected)
+			}
+		}
+	}
+}
