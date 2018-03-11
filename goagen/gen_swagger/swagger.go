@@ -981,6 +981,44 @@ func buildPathFromDefinition(s *Swagger, api *design.APIDefinition, route *desig
 	computeProduces(operation, s, action)
 	applySecurity(operation, action.Security)
 
+	computePaths(operation, s, route, basePath)
+	return nil
+}
+
+func computeProduces(operation *Operation, s *Swagger, action *design.ActionDefinition) {
+	produces := make(map[string]struct{})
+	action.IterateResponses(func(resp *design.ResponseDefinition) error {
+		if resp.MediaType != "" {
+			produces[resp.MediaType] = struct{}{}
+		}
+		return nil
+	})
+	subset := true
+	for p := range produces {
+		found := false
+		for _, p2 := range s.Produces {
+			if p == p2 {
+				found = true
+				break
+			}
+		}
+		if !found {
+			subset = false
+			break
+		}
+	}
+	if !subset {
+		operation.Produces = make([]string, len(produces))
+		i := 0
+		for p := range produces {
+			operation.Produces[i] = p
+			i++
+		}
+		sort.Strings(operation.Produces)
+	}
+}
+
+func computePaths(operation *Operation, s *Swagger, route *design.RouteDefinition, basePath string) {
 	key := design.WildcardRegex.ReplaceAllStringFunc(
 		route.FullPath(),
 		func(w string) string {
@@ -1023,40 +1061,6 @@ func buildPathFromDefinition(s *Swagger, api *design.APIDefinition, route *desig
 		p.Patch = operation
 	}
 	p.Extensions = extensionsFromDefinition(route.Parent.Metadata)
-	return nil
-}
-
-func computeProduces(operation *Operation, s *Swagger, action *design.ActionDefinition) {
-	produces := make(map[string]struct{})
-	action.IterateResponses(func(resp *design.ResponseDefinition) error {
-		if resp.MediaType != "" {
-			produces[resp.MediaType] = struct{}{}
-		}
-		return nil
-	})
-	subset := true
-	for p := range produces {
-		found := false
-		for _, p2 := range s.Produces {
-			if p == p2 {
-				found = true
-				break
-			}
-		}
-		if !found {
-			subset = false
-			break
-		}
-	}
-	if !subset {
-		operation.Produces = make([]string, len(produces))
-		i := 0
-		for p := range produces {
-			operation.Produces[i] = p
-			i++
-		}
-		sort.Strings(operation.Produces)
-	}
 }
 
 func applySecurity(operation *Operation, security *design.SecurityDefinition) {
