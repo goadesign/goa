@@ -253,3 +253,51 @@ func TestPrimitiveIsCompatible(t *testing.T) {
 		}
 	}
 }
+
+func TestArrayIsCompatible(t *testing.T) {
+	var (
+		b  = true
+		i  = 1
+		ia = [2]int{1, 2}
+		is = []int{3, 4}
+	)
+	cases := map[string]struct {
+		typ      DataType
+		values   []interface{}
+		expected bool
+	}{
+		"compatible": {
+			typ:      Int,
+			values:   []interface{}{ia, is},
+			expected: true,
+		},
+		"not array and slice": {
+			typ:      String,
+			values:   []interface{}{b, i},
+			expected: false,
+		},
+		"array but not compatible": {
+			typ:      String,
+			values:   []interface{}{ia},
+			expected: false,
+		},
+		"slice but not compatible": {
+			typ:      String,
+			values:   []interface{}{is},
+			expected: false,
+		},
+	}
+
+	for k, tc := range cases {
+		array := Array{
+			ElemType: &AttributeExpr{
+				Type: tc.typ,
+			},
+		}
+		for _, value := range tc.values {
+			if actual := array.IsCompatible(value); tc.expected != actual {
+				t.Errorf("%s: got %#v, expected %#v", k, actual, tc.expected)
+			}
+		}
+	}
+}
