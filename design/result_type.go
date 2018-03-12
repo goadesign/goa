@@ -266,9 +266,9 @@ func projectSingle(m *ResultTypeExpr, view string) (*ResultTypeExpr, error) {
 
 	projectedObj := projected.Type.(*Object)
 	mtObj := m.Type.(*Object)
+	seen := make(map[string]*AttributeExpr)
 	for _, nat := range *viewObj {
 		if at := mtObj.Attribute(nat.Name); at != nil {
-			seen := make(map[string]struct{})
 			pat, err := projectRecursive(at, nat, view, seen)
 			if err != nil {
 				return nil, err
@@ -316,7 +316,7 @@ func projectCollection(m *ResultTypeExpr, view string) (*ResultTypeExpr, error) 
 	return proj, nil
 }
 
-func projectRecursive(at *AttributeExpr, vat *NamedAttributeExpr, view string, seen map[string]struct{}) (*AttributeExpr, error) {
+func projectRecursive(at *AttributeExpr, vat *NamedAttributeExpr, view string, seen map[string]*AttributeExpr) (*AttributeExpr, error) {
 	at = DupAtt(at)
 	if rt, ok := at.Type.(*ResultTypeExpr); ok {
 		vatt := vat.Attribute
@@ -338,6 +338,10 @@ func projectRecursive(at *AttributeExpr, vat *NamedAttributeExpr, view string, s
 		return at, nil
 	}
 	if obj := AsObject(at.Type); obj != nil {
+		if att, ok := seen[at.Type.Name()]; ok {
+			return att, nil
+		}
+		seen[at.Type.Name()] = at
 		vobj := AsObject(vat.Attribute.Type)
 		if vobj == nil {
 			return at, nil
@@ -353,11 +357,6 @@ func projectRecursive(at *AttributeExpr, vat *NamedAttributeExpr, view string, s
 			if cvnat == nil {
 				continue
 			}
-			if _, ok := seen[cnat.Name]; ok {
-				seen = make(map[string]struct{})
-				return at, nil
-			}
-			seen[cnat.Name] = struct{}{}
 			pat, err := projectRecursive(cnat.Attribute, cvnat, view, seen)
 			if err != nil {
 				return nil, err
