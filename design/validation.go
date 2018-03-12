@@ -121,6 +121,9 @@ func (a *APIDefinition) Validate() error {
 			if route == other {
 				continue
 			}
+			if route.Route.Verb != other.Route.Verb {
+				continue
+			}
 			if strings.HasPrefix(route.Key, other.Key) {
 				diffs := route.DifferentWildcards(other)
 				if len(diffs) > 0 {
