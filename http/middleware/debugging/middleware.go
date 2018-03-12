@@ -22,7 +22,7 @@ type responseDupper struct {
 
 // New returns a debug middleware which logs all the details about incoming
 // requests and outgoing responses.
-func New(mux goahttp.Muxer, logger logging.Adapter) func(http.Handler) http.Handler {
+func New(mux goahttp.Muxer, logger logging.Logger) func(http.Handler) http.Handler {
 	return func(h http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			requestID := shortID()
@@ -38,7 +38,7 @@ func New(mux goahttp.Muxer, logger logging.Adapter) func(http.Handler) http.Hand
 					entries[i+5] = interface{}(strings.Join(v, ", "))
 					i = i + 2
 				}
-				logger.Info(r.Context(), entries...)
+				logger.Log(r.Context(), entries...)
 			}
 			params := mux.Vars(r)
 			if len(params) > 0 {
@@ -53,7 +53,7 @@ func New(mux goahttp.Muxer, logger logging.Adapter) func(http.Handler) http.Hand
 					entries[i+1] = v
 					i = i + 2
 				}
-				logger.Info(r.Context(), entries...)
+				logger.Log(r.Context(), entries...)
 			}
 			buf, err := ioutil.ReadAll(r.Body)
 			if err != nil {
@@ -63,7 +63,7 @@ func New(mux goahttp.Muxer, logger logging.Adapter) func(http.Handler) http.Hand
 			if len(buf) == 0 {
 				buf = []byte("<empty>")
 			}
-			logger.Info(r.Context(), "id", requestID, "payload", string(buf))
+			logger.Log(r.Context(), "id", requestID, "payload", string(buf))
 
 			dupper := &responseDupper{ResponseWriter: w, Buffer: &bytes.Buffer{}}
 			h.ServeHTTP(dupper, r)
@@ -80,10 +80,10 @@ func New(mux goahttp.Muxer, logger logging.Adapter) func(http.Handler) http.Hand
 					entries[i+5] = interface{}(strings.Join(v, ", "))
 					i = i + 2
 				}
-				logger.Info(r.Context(), entries...)
+				logger.Log(r.Context(), entries...)
 			}
 			if dupper.Buffer.Len() > 0 {
-				logger.Info(r.Context(), "id", requestID, "response body", dupper.Buffer.String())
+				logger.Log(r.Context(), "id", requestID, "response body", dupper.Buffer.String())
 			}
 		})
 	}

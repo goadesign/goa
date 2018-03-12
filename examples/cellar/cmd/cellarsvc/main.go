@@ -37,11 +37,11 @@ func main() {
 	// packages define log adapters for common log packages.
 	var (
 		logger  *log.Logger
-		adapter logging.Adapter
+		adapter logging.Logger
 	)
 	{
 		logger = log.New(os.Stderr, "[cellar] ", log.Ltime)
-		adapter = logging.Adapt(logger)
+		adapter = logging.NewLogger(logger)
 	}
 
 	// Initialize service dependencies such as databases.
@@ -145,15 +145,15 @@ func main() {
 	srv := &http.Server{Addr: *addr, Handler: handler}
 	go func() {
 		for _, m := range sommelierServer.Mounts {
-			logger.Printf("[INFO] service %q method %q mounted on %s %s", sommelierServer.Service(), m.Method, m.Verb, m.Pattern)
+			logger.Printf("[cellar] service %q method %q mounted on %s %s", sommelierServer.Service(), m.Method, m.Verb, m.Pattern)
 		}
 		for _, m := range storageServer.Mounts {
-			logger.Printf("[INFO] service %q method %q mounted on %s %s", storageServer.Service(), m.Method, m.Verb, m.Pattern)
+			logger.Printf("[cellar] service %q method %q mounted on %s %s", storageServer.Service(), m.Method, m.Verb, m.Pattern)
 		}
 		for _, m := range swaggerServer.Mounts {
-			logger.Printf("[INFO] service %q file %q mounted on %s %s", swaggerServer.Service(), m.Method, m.Verb, m.Pattern)
+			logger.Printf("[cellar] service %q file %q mounted on %s %s", swaggerServer.Service(), m.Method, m.Verb, m.Pattern)
 		}
-		logger.Printf("[INFO] listening on %s", *addr)
+		logger.Printf("[cellar] listening on %s", *addr)
 		errc <- srv.ListenAndServe()
 	}()
 

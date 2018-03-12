@@ -36,11 +36,11 @@ func main() {
 	// packages define log adapters for common log packages.
 	var (
 		logger  *log.Logger
-		adapter logging.Adapter
+		adapter logging.Logger
 	)
 	{
 		logger = log.New(os.Stderr, "[calc] ", log.Ltime)
-		adapter = logging.Adapt(logger)
+		adapter = logging.NewLogger(logger)
 	}
 
 	// Create the structs that implement the services.
@@ -127,12 +127,12 @@ func main() {
 	srv := &http.Server{Addr: *addr, Handler: handler}
 	go func() {
 		for _, m := range openapiServer.Mounts {
-			logger.Printf("[INFO] service %q file %q mounted on %s %s", openapiServer.Service(), m.Method, m.Verb, m.Pattern)
+			logger.Printf("[calc] service %q file %q mounted on %s %s", openapiServer.Service(), m.Method, m.Verb, m.Pattern)
 		}
 		for _, m := range calcsvcServer.Mounts {
-			logger.Printf("[INFO] service %q method %q mounted on %s %s", calcsvcServer.Service(), m.Method, m.Verb, m.Pattern)
+			logger.Printf("[calc] service %q method %q mounted on %s %s", calcsvcServer.Service(), m.Method, m.Verb, m.Pattern)
 		}
-		logger.Printf("[INFO] listening on %s", *addr)
+		logger.Printf("[calc] listening on %s", *addr)
 		errc <- srv.ListenAndServe()
 	}()
 
