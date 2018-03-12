@@ -116,8 +116,39 @@ func (a *APIDefinition) Validate() error {
 		})
 		return nil
 	})
-	for _, route := range allRoutes {
-		for _, other := range allRoutes {
+
+	a.validateRoutes(verr, allRoutes)
+
+	a.IterateMediaTypes(func(mt *MediaTypeDefinition) error {
+		verr.Merge(mt.Validate())
+		return nil
+	})
+	a.IterateUserTypes(func(t *UserTypeDefinition) error {
+		verr.Merge(t.Validate("", a))
+		return nil
+	})
+	a.IterateResponses(func(r *ResponseDefinition) error {
+		verr.Merge(r.Validate())
+		return nil
+	})
+	for _, dec := range a.Consumes {
+		verr.Merge(dec.Validate())
+	}
+	for _, enc := range a.Produces {
+		verr.Merge(enc.Validate())
+	}
+
+	err := verr.AsError()
+	if err == nil {
+		// *ValidationErrors(nil) != error(nil)
+		return nil
+	}
+	return err
+}
+
+func (a *APIDefinition) validateRoutes(verr *dslengine.ValidationErrors, routes []*routeInfo) {
+	for _, route := range routes {
+		for _, other := range routes {
 			if route == other {
 				continue
 			}
@@ -145,31 +176,6 @@ func (a *APIDefinition) Validate() error {
 			}
 		}
 	}
-	a.IterateMediaTypes(func(mt *MediaTypeDefinition) error {
-		verr.Merge(mt.Validate())
-		return nil
-	})
-	a.IterateUserTypes(func(t *UserTypeDefinition) error {
-		verr.Merge(t.Validate("", a))
-		return nil
-	})
-	a.IterateResponses(func(r *ResponseDefinition) error {
-		verr.Merge(r.Validate())
-		return nil
-	})
-	for _, dec := range a.Consumes {
-		verr.Merge(dec.Validate())
-	}
-	for _, enc := range a.Produces {
-		verr.Merge(enc.Validate())
-	}
-
-	err := verr.AsError()
-	if err == nil {
-		// *ValidationErrors(nil) != error(nil)
-		return nil
-	}
-	return err
 }
 
 func (a *APIDefinition) validateContact(verr *dslengine.ValidationErrors) {
