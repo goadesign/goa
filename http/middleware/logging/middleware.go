@@ -11,22 +11,20 @@ import (
 
 // New returns a middleware that logs short messages for incoming requests and
 // outgoing responses.
-func New(a Adapter) func(h http.Handler) http.Handler {
+func New(l Logger) func(h http.Handler) http.Handler {
 	return func(h http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			reqID := shortID()
 			started := time.Now()
 
-			a.Info(r.Context(),
-				"id", reqID,
+			l.Log("id", reqID,
 				"req", r.Method+" "+r.URL.String(),
 				"from", from(r))
 
 			rw := CaptureResponse(w)
 			h.ServeHTTP(rw, r)
 
-			a.Info(r.Context(),
-				"id", reqID,
+			l.Log("id", reqID,
 				"status", rw.StatusCode,
 				"bytes", rw.ContentLength,
 				"time", time.Since(started).String())
@@ -47,8 +45,8 @@ func from(req *http.Request) string {
 	return ip
 }
 
-// shortID produces a "unique" 6 bytes long string.
-// Do not use as a reliable way to get unique IDs.
+// shortID does a best effort to produce a "unique" 6 bytes long string
+// efficiently. Do not use as a reliable way to get unique IDs.
 func shortID() string {
 	b := make([]byte, 6)
 	io.ReadFull(rand.Reader, b)
