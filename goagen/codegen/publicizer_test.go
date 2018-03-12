@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/goadesign/goa/design"
+	"github.com/goadesign/goa/dslengine"
 	"github.com/goadesign/goa/goagen/codegen"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -37,6 +38,11 @@ var _ = Describe("Struct publicize code generation", func() {
 				att = &design.AttributeDefinition{
 					Type: design.Object{
 						"foo": &design.AttributeDefinition{Type: design.String},
+						"bar": &design.AttributeDefinition{Type: design.Any},
+						"baz": &design.AttributeDefinition{Type: design.Any},
+					},
+					Validation: &dslengine.ValidationDefinition{
+						Required: []string{"bar"},
 					},
 				}
 				sourceField = "source"
@@ -171,8 +177,16 @@ var _ = Describe("Struct publicize code generation", func() {
 
 const (
 	objectPublicizeCode = `target = &struct {
+	Bar interface{} ` + "`" + `form:"bar" json:"bar" xml:"bar"` + "`" + `
+	Baz interface{} ` + "`" + `form:"baz,omitempty" json:"baz,omitempty" xml:"baz,omitempty"` + "`" + `
 	Foo *string ` + "`" + `form:"foo,omitempty" json:"foo,omitempty" xml:"foo,omitempty"` + "`" + `
 }{}
+if source.Bar != nil {
+	target.Bar = source.Bar
+}
+if source.Baz != nil {
+	target.Baz = source.Baz
+}
 if source.Foo != nil {
 	target.Foo = source.Foo
 }`
