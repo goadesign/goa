@@ -1033,9 +1033,23 @@ func (a *AttributeDefinition) IsPrimitivePointer(attName string) bool {
 		return false
 	}
 	if att.Type.IsPrimitive() {
-		return !a.IsRequired(attName) && !a.HasDefaultValue(attName) && !a.IsNonZero(attName)
+		return !a.IsRequired(attName) && !a.HasDefaultValue(attName) && !a.IsNonZero(attName) && !a.IsInterface(attName)
 	}
 	return false
+}
+
+// IsInterface returns true if the field generated for the given attribute has
+// an interface type that should not be referenced as a "*interface{}" pointer.
+// The target attribute must be an object.
+func (a *AttributeDefinition) IsInterface(attName string) bool {
+	if !a.Type.IsObject() {
+		panic("checking pointer field on non-object") // bug
+	}
+	att := a.Type.ToObject()[attName]
+	if att == nil {
+		return false
+	}
+	return att.Type.Kind() == AnyKind
 }
 
 // SetExample sets the custom example. SetExample also handles the case when the user doesn't
