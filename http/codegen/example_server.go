@@ -185,12 +185,12 @@ const mainT = `func main() {
 	// your log package of choice. The goa.design/middleware/logging/...
 	// packages define log adapters for common log packages.
 	var (
-		logger  *log.Logger
-		adapter logging.Adapter
+		adapter logging.Logger
+		logger *log.Logger
 	)
 	{
 		logger = log.New(os.Stderr, "[{{ .APIPkg }}] ", log.Ltime)
-		adapter = logging.Adapt(logger)
+		adapter = logging.NewLogger(logger)
 	}
 
 	// Create the structs that implement the services.
@@ -295,13 +295,13 @@ const mainT = `func main() {
 		{{- range .Services }}
 		for _, m := range {{ .Service.PkgName }}Server.Mounts {
 			{{- if .FileServers }}
-		  logger.Printf("[INFO] service %q file %q mounted on %s %s", {{ .Service.PkgName }}Server.Service(), m.Method, m.Verb, m.Pattern)
+		  logger.Printf("[{{ $.APIPkg }}] service %q file %q mounted on %s %s", {{ .Service.PkgName }}Server.Service(), m.Method, m.Verb, m.Pattern)
 			{{- else }}
-			logger.Printf("[INFO] service %q method %q mounted on %s %s", {{ .Service.PkgName }}Server.Service(), m.Method, m.Verb, m.Pattern)
+			logger.Printf("[{{ $.APIPkg }}] service %q method %q mounted on %s %s", {{ .Service.PkgName }}Server.Service(), m.Method, m.Verb, m.Pattern)
 			{{- end }}
 		}
 		{{- end }}
-		logger.Printf("[INFO] listening on %s", *addr)
+		logger.Printf("[{{ $.APIPkg }}] listening on %s", *addr)
 		errc <- srv.ListenAndServe()
 	}()
 
