@@ -200,19 +200,19 @@ func (m *ResultTypeExpr) Finalize() {
 // The resulting result type defines a default view. The result type identifier is
 // computed by adding a parameter called "view" to the original identifier. The
 // value of the "view" parameter is the name of the view.
-func Project(m *ResultTypeExpr, view string) (*ResultTypeExpr, error) {
+func Project(m *ResultTypeExpr, view string, seen ...map[string]*AttributeExpr) (*ResultTypeExpr, error) {
 	_, params, _ := mime.ParseMediaType(m.Identifier)
 	if params["view"] == view {
 		// nothing to do
 		return m, nil
 	}
 	if _, ok := m.Type.(*Array); ok {
-		return projectCollection(m, view)
+		return projectCollection(m, view, seen...)
 	}
-	return projectSingle(m, view)
+	return projectSingle(m, view, seen...)
 }
 
-func projectSingle(m *ResultTypeExpr, view string) (*ResultTypeExpr, error) {
+func projectSingle(m *ResultTypeExpr, view string, seen ...map[string]*AttributeExpr) (*ResultTypeExpr, error) {
 	v := m.View(view)
 	if v == nil {
 		return nil, fmt.Errorf("unknown view %#v", view)
@@ -247,16 +247,28 @@ func projectSingle(m *ResultTypeExpr, view string) (*ResultTypeExpr, error) {
 
 	params := map[string]string{"view": view}
 	id := mime.FormatMediaType(m.Identifier, params)
-	projected := &ResultTypeExpr{
-		Identifier: id,
-		UserTypeExpr: &UserTypeExpr{
-			TypeName: typeName,
+	var ut *UserTypeExpr
+	if len(seen) > 0 {
+		s := seen[0]
+		if att, ok := s[m.Identifier]; ok {
+			if rt, ok2 := att.Type.(*ResultTypeExpr); ok2 {
+				ut = rt.UserTypeExpr
+			}
+		}
+	}
+	if ut == nil {
+		ut = &UserTypeExpr{
 			AttributeExpr: &AttributeExpr{
 				Description: desc,
-				Type:        Dup(v.Type),
 				Validation:  val,
 			},
-		},
+		}
+	}
+	ut.TypeName = typeName
+	ut.AttributeExpr.Type = Dup(v.Type)
+	projected := &ResultTypeExpr{
+		Identifier:   id,
+		UserTypeExpr: ut,
 	}
 	projected.Views = []*ViewExpr{&ViewExpr{
 		Name:          "default",
@@ -266,10 +278,9 @@ func projectSingle(m *ResultTypeExpr, view string) (*ResultTypeExpr, error) {
 
 	projectedObj := projected.Type.(*Object)
 	mtObj := m.Type.(*Object)
-	seen := make(map[string]*AttributeExpr)
 	for _, nat := range *viewObj {
 		if at := mtObj.Attribute(nat.Name); at != nil {
-			pat, err := projectRecursive(at, nat, view, seen)
+			pat, err := projectRecursive(at, nat, view, seen...)
 			if err != nil {
 				return nil, err
 			}
@@ -279,10 +290,10 @@ func projectSingle(m *ResultTypeExpr, view string) (*ResultTypeExpr, error) {
 	return projected, nil
 }
 
-func projectCollection(m *ResultTypeExpr, view string) (*ResultTypeExpr, error) {
+func projectCollection(m *ResultTypeExpr, view string, seen ...map[string]*AttributeExpr) (*ResultTypeExpr, error) {
 	// Project the collection element result type
 	e := m.Type.(*Array).ElemType.Type.(*ResultTypeExpr) // validation checked this cast would work
-	pe, err2 := Project(e, view)
+	pe, err2 := Project(e, view, seen...)
 	if err2 != nil {
 		return nil, fmt.Errorf("collection element: %s", err2)
 	}
@@ -316,7 +327,25 @@ func projectCollection(m *ResultTypeExpr, view string) (*ResultTypeExpr, error) 
 	return proj, nil
 }
 
-func projectRecursive(at *AttributeExpr, vat *NamedAttributeExpr, view string, seen map[string]*AttributeExpr) (*AttributeExpr, error) {
+func projectRecursive(at *AttributeExpr, vat *NamedAttributeExpr, view string, seen ...map[string]*AttributeExpr) (*AttributeExpr, error) {
+	rt, isResultType := at.Type.(*ResultTypeExpr)
+	if IsObject(at.Type) || isResultType {
+		var s map[string]*AttributeExpr
+		if len(seen) > 0 {
+			s = seen[0]
+		} else {
+			s = make(map[string]*AttributeExpr)
+			seen = append(seen, s)
+		}
+		key := at.Type.Name()
+		if isResultType {
+			key = rt.Identifier
+		}
+		if att, ok := s[key]; ok {
+			return att, nil
+		}
+		s[key] = at
+	}
 	at = DupAtt(at)
 	if rt, ok := at.Type.(*ResultTypeExpr); ok {
 		vatt := vat.Attribute
@@ -330,7 +359,7 @@ func projectRecursive(at *AttributeExpr, vat *NamedAttributeExpr, view string, s
 		if view == "" {
 			view = DefaultView
 		}
-		pr, err := Project(rt, view)
+		pr, err := Project(rt, view, seen...)
 		if err != nil {
 			return nil, fmt.Errorf("view %#v on field %#v cannot be computed: %s", view, vat.Name, err)
 		}
@@ -338,10 +367,6 @@ func projectRecursive(at *AttributeExpr, vat *NamedAttributeExpr, view string, s
 		return at, nil
 	}
 	if obj := AsObject(at.Type); obj != nil {
-		if att, ok := seen[at.Type.Name()]; ok {
-			return att, nil
-		}
-		seen[at.Type.Name()] = at
 		vobj := AsObject(vat.Attribute.Type)
 		if vobj == nil {
 			return at, nil
@@ -357,7 +382,7 @@ func projectRecursive(at *AttributeExpr, vat *NamedAttributeExpr, view string, s
 			if cvnat == nil {
 				continue
 			}
-			pat, err := projectRecursive(cnat.Attribute, cvnat, view, seen)
+			pat, err := projectRecursive(cnat.Attribute, cvnat, view, seen...)
 			if err != nil {
 				return nil, err
 			}
@@ -366,7 +391,7 @@ func projectRecursive(at *AttributeExpr, vat *NamedAttributeExpr, view string, s
 		return at, nil
 	}
 	if ar := AsArray(at.Type); ar != nil {
-		pat, err := projectRecursive(ar.ElemType, vat, view, seen)
+		pat, err := projectRecursive(ar.ElemType, vat, view, seen...)
 		if err != nil {
 			return nil, err
 		}

@@ -27,8 +27,11 @@ var (
 	compositeResultDefault = resultType("a", object(collectionResultDefault), "b", String)
 	compositeResultLink    = resultType("a", object(collectionResultLink))
 
-	recursiveResult        = resultRecursive("a", String, view("default", "a", String))
-	recursiveResultDefault = resultRecursive("a", String)
+	recursiveResult        = resultRecursive("a", String, "r", simpleResult, view("default", "a", String, "r", AsObject(simpleResult)))
+	recursiveResultDefault = resultRecursive("a", String, "r", simpleResult)
+
+	childResult        = resultType("x", recursiveResult, "y", recursiveResult, view("default", "x", recursiveResult, "y", recursiveResult))
+	childResultDefault = resultType("x", recursiveResult, "y", recursiveResult)
 )
 
 func init() {
@@ -51,6 +54,7 @@ func TestProject(t *testing.T) {
 		{"composite-default", compositeResult, "default", compositeResultDefault},
 		{"composite-link", compositeResult, "link", compositeResultLink},
 		{"recursive", recursiveResult, "default", recursiveResultDefault},
+		{"parent-child-recursive", childResult, "default", childResultDefault},
 	}
 	for _, k := range cases {
 		t.Run(k.Name, func(t *testing.T) {
@@ -155,8 +159,8 @@ func array(dt DataType) *Array {
 
 func resultRecursive(params ...interface{}) *ResultTypeExpr {
 	rt := resultType(params...)
-	recAtt := &NamedAttributeExpr{"Rec", &AttributeExpr{Type: rt.UserTypeExpr}}
-	obj := rt.UserTypeExpr.AttributeExpr.Type.(*Object)
+	recAtt := &NamedAttributeExpr{"rec", &AttributeExpr{Type: rt.UserTypeExpr}}
+	obj := AsObject(rt)
 	*obj = append(*obj, recAtt)
 	for _, v := range rt.Views {
 		vObj := v.AttributeExpr.Type.(*Object)
