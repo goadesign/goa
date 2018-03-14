@@ -293,6 +293,25 @@ var _ = Describe("Validation", func() {
 		})
 	})
 
+	Context("actions with different http methods", func() {
+		It("should be valid because methods are different", func() {
+			dslengine.Reset()
+
+			Resource("one", func() {
+				Action("first", func() {
+					Routing(GET("/:first"))
+				})
+				Action("second", func() {
+					Routing(DELETE("/:second"))
+				})
+			})
+
+			dslengine.Run()
+
+			Ω(dslengine.Errors).ShouldNot(HaveOccurred())
+		})
+	})
+
 	Describe("EncoderDefinition", func() {
 		var (
 			enc           *EncodingDefinition
