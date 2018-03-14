@@ -198,6 +198,7 @@ var _ = Describe("code generation", func() {
 						"bar": &AttributeDefinition{Type: String},
 						"baz": &AttributeDefinition{Type: DateTime},
 						"qux": &AttributeDefinition{Type: UUID},
+						"quz": &AttributeDefinition{Type: Any},
 					}
 					required = nil
 				})
@@ -208,6 +209,7 @@ var _ = Describe("code generation", func() {
 						"	Baz *time.Time `form:\"baz,omitempty\" json:\"baz,omitempty\" xml:\"baz,omitempty\"`\n" +
 						"	Foo *int `form:\"foo,omitempty\" json:\"foo,omitempty\" xml:\"foo,omitempty\"`\n" +
 						"	Qux *uuid.UUID `form:\"qux,omitempty\" json:\"qux,omitempty\" xml:\"qux,omitempty\"`\n" +
+						"	Quz interface{} `form:\"quz,omitempty\" json:\"quz,omitempty\" xml:\"quz,omitempty\"`\n" +
 						"}"
 					Ω(st).Should(Equal(expected))
 				})
@@ -232,6 +234,7 @@ var _ = Describe("code generation", func() {
 							"	Baz *time.Time `form:\"baz,omitempty\" json:\"baz,omitempty\" xml:\"baz,omitempty\"`\n"+
 							"	Foo *int `%s:\"%s,%s\" %s:\"%s\"`\n"+
 							"	Qux *uuid.UUID `form:\"qux,omitempty\" json:\"qux,omitempty\" xml:\"qux,omitempty\"`\n"+
+							"	Quz interface{} `form:\"quz,omitempty\" json:\"quz,omitempty\" xml:\"quz,omitempty\"`\n"+
 							"}", tn1[11:], tv11, tv12, tn2[11:], tv21)
 						Ω(st).Should(Equal(expected))
 					})
@@ -250,6 +253,7 @@ var _ = Describe("code generation", func() {
 							"	Baz *time.Time `form:\"baz,omitempty\" json:\"baz,omitempty\" xml:\"baz,omitempty\"`\n" +
 							"	ServiceName *int `form:\"foo,omitempty\" json:\"foo,omitempty\" xml:\"foo,omitempty\"`\n" +
 							"	Qux *uuid.UUID `form:\"qux,omitempty\" json:\"qux,omitempty\" xml:\"qux,omitempty\"`\n" +
+							"	Quz interface{} `form:\"quz,omitempty\" json:\"quz,omitempty\" xml:\"quz,omitempty\"`\n" +
 							"}"
 						Ω(st).Should(Equal(expected))
 					})
@@ -268,6 +272,25 @@ var _ = Describe("code generation", func() {
 							"	Baz *time.Time `form:\"baz,omitempty\" json:\"baz,omitempty\" xml:\"baz,omitempty\"`\n" +
 							"	Foo *[]byte `form:\"foo,omitempty\" json:\"foo,omitempty\" xml:\"foo,omitempty\"`\n" +
 							"	Qux *uuid.UUID `form:\"qux,omitempty\" json:\"qux,omitempty\" xml:\"qux,omitempty\"`\n" +
+							"	Quz interface{} `form:\"quz,omitempty\" json:\"quz,omitempty\" xml:\"quz,omitempty\"`\n" +
+							"}"
+						Ω(st).Should(Equal(expected))
+					})
+				})
+
+				Context("that are required", func() {
+					BeforeEach(func() {
+						required = &dslengine.ValidationDefinition{
+							Required: []string{"foo", "bar", "baz", "qux", "quz"},
+						}
+					})
+					It("produces the struct go code", func() {
+						expected := "struct {\n" +
+							"	Bar string `form:\"bar\" json:\"bar\" xml:\"bar\"`\n" +
+							"	Baz time.Time `form:\"baz\" json:\"baz\" xml:\"baz\"`\n" +
+							"	Foo int `form:\"foo\" json:\"foo\" xml:\"foo\"`\n" +
+							"	Qux uuid.UUID `form:\"qux\" json:\"qux\" xml:\"qux\"`\n" +
+							"	Quz interface{} `form:\"quz\" json:\"quz\" xml:\"quz\"`\n" +
 							"}"
 						Ω(st).Should(Equal(expected))
 					})

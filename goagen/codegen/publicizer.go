@@ -57,7 +57,7 @@ func RecursivePublicizer(att *design.AttributeDefinition, source, target string,
 				catt,
 				fmt.Sprintf("%s.%s", source, Goify(n, true)),
 				fmt.Sprintf("%s.%s", target, Goify(n, true)),
-				catt.Type.IsPrimitive() && !att.IsPrimitivePointer(n),
+				catt.Type.IsPrimitive() && !att.IsPrimitivePointer(n) && !att.IsInterface(n),
 				depth+1,
 				false,
 			)
