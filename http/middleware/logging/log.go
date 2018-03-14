@@ -39,7 +39,7 @@ func (a *adapter) Log(_ context.Context, keyvals ...interface{}) {
 	for i := 0; i < len(keyvals); i += 2 {
 		k := keyvals[i]
 		v := keyvals[i+1]
-		vals[i/2+1] = v
+		vals[i/2] = v
 		fm.WriteString(fmt.Sprintf(" %s=%%+v", k))
 	}
 	a.Logger.Printf(fm.String(), vals...)
