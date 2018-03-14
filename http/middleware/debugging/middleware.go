@@ -38,7 +38,7 @@ func New(mux goahttp.Muxer, logger logging.Logger) func(http.Handler) http.Handl
 					entries[i+5] = interface{}(strings.Join(v, ", "))
 					i = i + 2
 				}
-				logger.Log(r.Context(), entries...)
+				logger.Log(entries...)
 			}
 			params := mux.Vars(r)
 			if len(params) > 0 {
@@ -53,7 +53,7 @@ func New(mux goahttp.Muxer, logger logging.Logger) func(http.Handler) http.Handl
 					entries[i+1] = v
 					i = i + 2
 				}
-				logger.Log(r.Context(), entries...)
+				logger.Log(entries...)
 			}
 			buf, err := ioutil.ReadAll(r.Body)
 			if err != nil {
@@ -63,7 +63,7 @@ func New(mux goahttp.Muxer, logger logging.Logger) func(http.Handler) http.Handl
 			if len(buf) == 0 {
 				buf = []byte("<empty>")
 			}
-			logger.Log(r.Context(), "id", requestID, "payload", string(buf))
+			logger.Log("id", requestID, "payload", string(buf))
 
 			dupper := &responseDupper{ResponseWriter: w, Buffer: &bytes.Buffer{}}
 			h.ServeHTTP(dupper, r)
@@ -80,10 +80,10 @@ func New(mux goahttp.Muxer, logger logging.Logger) func(http.Handler) http.Handl
 					entries[i+5] = interface{}(strings.Join(v, ", "))
 					i = i + 2
 				}
-				logger.Log(r.Context(), entries...)
+				logger.Log(entries...)
 			}
 			if dupper.Buffer.Len() > 0 {
-				logger.Log(r.Context(), "id", requestID, "response body", dupper.Buffer.String())
+				logger.Log("id", requestID, "response body", dupper.Buffer.String())
 			}
 		})
 	}

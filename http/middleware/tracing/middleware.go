@@ -56,7 +56,8 @@ type (
 	// tracedLogger is a logger which logs the trace ID with every log entry
 	// when one is present.
 	tracedLogger struct {
-		logging.Logger
+		logger  logging.Logger
+		traceID string
 	}
 
 	// options is the struct storing all the options.
@@ -183,8 +184,8 @@ func WrapDoer(doer Doer) Doer {
 
 // WrapLogger returns a logger which logs the trace ID with every message if
 // there is one.
-func WrapLogger(l logging.Logger) logging.Logger {
-	return &tracedLogger{l}
+func WrapLogger(l logging.Logger, traceID string) logging.Logger {
+	return &tracedLogger{logger: l, traceID: traceID}
 }
 
 // WithTrace returns a context containing the given trace ID.
@@ -219,14 +220,13 @@ func (d *tracedDoer) Do(r *http.Request) (*http.Response, error) {
 }
 
 // Log logs the trace ID when present then the values passed as argument.
-func (l *tracedLogger) Log(ctx context.Context, keyvals ...interface{}) {
-	traceID := ctx.Value(TraceIDKey)
-	if traceID == nil {
-		l.Logger.Log(ctx, keyvals...)
+func (l *tracedLogger) Log(keyvals ...interface{}) {
+	if l.traceID == "" {
+		l.logger.Log(keyvals...)
 		return
 	}
-	keyvals = append([]interface{}{"trace", traceID.(string)}, keyvals...)
-	l.Logger.Log(ctx, keyvals)
+	keyvals = append([]interface{}{"trace", l.traceID}, keyvals...)
+	l.logger.Log(keyvals)
 }
 
 // shortID produces a " unique" 6 bytes long string.
