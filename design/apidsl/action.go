@@ -389,26 +389,6 @@ func OptionalPayload(p interface{}, dsls ...func()) {
 	payload(true, false, p, dsls...)
 }
 
-// Multipart can be used in: Action
-//
-// Multipart implements the action multipart payload DSL. An action multipart payload describes
-// the HTTP request body data structure. The function accepts either a type or a DSL that describes
-// the payload members using the Member DSL which accepts the same syntax as the Attribute DSL.
-// This function can be called passing in a type, a DSL or both.
-//
-func Multipart(p interface{}, dsls ...func()) {
-	payload(false, true, p, dsls...)
-}
-
-// OptionalMultipart can be used in: Action
-//
-// OptionalMultipart implements the action optional multipart payload DSL. The function works
-// identically to the Payload DSL except it sets a bit in the action definition to denote that
-// the payload is not required.
-func OptionalMultipart(p interface{}, dsls ...func()) {
-	payload(true, true, p, dsls...)
-}
-
 func payload(isOptional, isMultipart bool, p interface{}, dsls ...func()) {
 	if len(dsls) > 1 {
 		dslengine.ReportError("too many arguments given to Payload")
@@ -467,6 +447,18 @@ func payload(isOptional, isMultipart bool, p interface{}, dsls ...func()) {
 		}
 		a.PayloadOptional = isOptional
 		a.PayloadMultipart = isMultipart
+	}
+}
+
+// MultipartForm can be used in: Action
+//
+// MultipartForm implements the action multipart form DSL. An action multipart form indicates that
+// the HTTP request body should be encoded using multipart form data as described in
+// https://www.w3.org/TR/html401/interact/forms.html#h-17.13.4.2.
+//
+func MultipartForm(p interface{}, dsls ...func()) {
+	if a, ok := actionDefinition(); ok {
+		a.PayloadMultipart = true
 	}
 }
 
