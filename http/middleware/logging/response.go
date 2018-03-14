@@ -1,6 +1,11 @@
 package logging
 
-import "net/http"
+import (
+	"bufio"
+	"fmt"
+	"net"
+	"net/http"
+)
 
 // ResponseCapture is a http.ResponseWriter which captures the response status
 // code and content length.
@@ -26,4 +31,12 @@ func (w *ResponseCapture) Write(b []byte) (int, error) {
 	n, err := w.ResponseWriter.Write(b)
 	w.ContentLength += n
 	return n, err
+}
+
+// Hijack supports the http.Hijacker interface.
+func (w *ResponseCapture) Hijack() (net.Conn, *bufio.ReadWriter, error) {
+	if h, ok := w.ResponseWriter.(http.Hijacker); ok {
+		return h.Hijack()
+	}
+	return nil, nil, fmt.Errorf("response writer does not support hijacking: %T", w.ResponseWriter)
 }
