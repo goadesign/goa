@@ -12,15 +12,15 @@ import (
 
 const (
 	// TraceIDKey is the request context key used to store its Trace ID if any.
-	TraceIDKey = "goaTraceIDCtxKey"
+	TraceIDKey = "TraceIDCtxKey"
 
 	// TraceSpanIDKey is the request context key used to store the current
 	// trace span ID if any.
-	TraceSpanIDKey = "goaTraceSpanIDCtxKey"
+	TraceSpanIDKey = "TraceSpanIDCtxKey"
 
 	// TraceParentSpanIDKey is the request context key used to store the current
 	// trace parent span ID if any.
-	TraceParentSpanIDKey = "goaTraceParentSpanIDCtxKey"
+	TraceParentSpanIDKey = "TraceParentSpanIDCtxKey"
 )
 
 const (
