@@ -376,7 +376,7 @@ func Params(dsl func()) {
 //	})
 //
 func Payload(p interface{}, dsls ...func()) {
-	payload(false, false, p, dsls...)
+	payload(false, p, dsls...)
 }
 
 // OptionalPayload implements the action optional payload DSL. The function works identically to the
@@ -386,10 +386,10 @@ func Payload(p interface{}, dsls ...func()) {
 //	OptionalPayload(BottlePayload)		// Request payload is described by the BottlePayload type and is optional
 //
 func OptionalPayload(p interface{}, dsls ...func()) {
-	payload(true, false, p, dsls...)
+	payload(true, p, dsls...)
 }
 
-func payload(isOptional, isMultipart bool, p interface{}, dsls ...func()) {
+func payload(isOptional bool, p interface{}, dsls ...func()) {
 	if len(dsls) > 1 {
 		dslengine.ReportError("too many arguments given to Payload")
 		return
@@ -408,7 +408,6 @@ func payload(isOptional, isMultipart bool, p interface{}, dsls ...func()) {
 			if len(dsls) == 0 {
 				a.Payload = actual
 				a.PayloadOptional = isOptional
-				a.PayloadMultipart = isMultipart
 				return
 			}
 			att = design.DupAtt(actual.Definition())
@@ -446,7 +445,6 @@ func payload(isOptional, isMultipart bool, p interface{}, dsls ...func()) {
 			TypeName:            fmt.Sprintf("%s%sPayload", an, rn),
 		}
 		a.PayloadOptional = isOptional
-		a.PayloadMultipart = isMultipart
 	}
 }
 
