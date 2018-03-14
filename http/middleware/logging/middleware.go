@@ -34,16 +34,14 @@ func New(l Logger) func(h http.Handler) http.Handler {
 			reqID := shortID()
 			started := time.Now()
 
-			l.Log(r.Context(),
-				"id", reqID,
+			l.Log("id", reqID,
 				"req", r.Method+" "+r.URL.String(),
 				"from", from(r))
 
 			rw := CaptureResponse(w)
 			h.ServeHTTP(rw, r)
 
-			l.Log(r.Context(),
-				"id", reqID,
+			l.Log("id", reqID,
 				"status", rw.StatusCode,
 				"bytes", rw.ContentLength,
 				"time", time.Since(started).String())
