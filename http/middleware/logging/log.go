@@ -33,7 +33,6 @@ func (a *adapter) Log(keyvals ...interface{}) {
 		keyvals = append(keyvals, "MISSING")
 	}
 	var fm bytes.Buffer
-	fm.WriteString("[%s]")
 	vals := make([]interface{}, n)
 	for i := 0; i < len(keyvals); i += 2 {
 		k := keyvals[i]
