@@ -485,7 +485,7 @@ func payload(isOptional, isMultipart bool, p interface{}, dsls ...func()) {
 // the HTTP request body should be encoded using multipart form data as described in
 // https://www.w3.org/TR/html401/interact/forms.html#h-17.13.4.2.
 //
-func MultipartForm(p interface{}, dsls ...func()) {
+func MultipartForm() {
 	if a, ok := actionDefinition(); ok {
 		a.PayloadMultipart = true
 	}
