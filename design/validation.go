@@ -116,32 +116,9 @@ func (a *APIDefinition) Validate() error {
 		})
 		return nil
 	})
-	for _, route := range allRoutes {
-		for _, other := range allRoutes {
-			if route == other {
-				continue
-			}
-			if strings.HasPrefix(route.Key, other.Key) {
-				diffs := route.DifferentWildcards(other)
-				if len(diffs) > 0 {
-					var msg string
-					conflicts := make([]string, len(diffs))
-					for i, d := range diffs {
-						conflicts[i] = fmt.Sprintf(`"%s" from %s and "%s" from %s`, d[0].Name, d[0].Orig.Context(), d[1].Name, d[1].Orig.Context())
-					}
-					msg = fmt.Sprintf("%s", strings.Join(conflicts, ", "))
-					verr.Add(route.Action,
-						`route "%s" conflicts with route "%s" of %s action %s. Make sure wildcards at the same positions have the same name. Conflicting wildcards are %s.`,
-						route.Route.FullPath(),
-						other.Route.FullPath(),
-						other.Resource.Name,
-						other.Action.Name,
-						msg,
-					)
-				}
-			}
-		}
-	}
+
+	a.validateRoutes(verr, allRoutes)
+
 	a.IterateMediaTypes(func(mt *MediaTypeDefinition) error {
 		verr.Merge(mt.Validate())
 		return nil
@@ -167,6 +144,38 @@ func (a *APIDefinition) Validate() error {
 		return nil
 	}
 	return err
+}
+
+func (a *APIDefinition) validateRoutes(verr *dslengine.ValidationErrors, routes []*routeInfo) {
+	for _, route := range routes {
+		for _, other := range routes {
+			if route == other {
+				continue
+			}
+			if route.Route.Verb != other.Route.Verb {
+				continue
+			}
+			if strings.HasPrefix(route.Key, other.Key) {
+				diffs := route.DifferentWildcards(other)
+				if len(diffs) > 0 {
+					var msg string
+					conflicts := make([]string, len(diffs))
+					for i, d := range diffs {
+						conflicts[i] = fmt.Sprintf(`"%s" from %s and "%s" from %s`, d[0].Name, d[0].Orig.Context(), d[1].Name, d[1].Orig.Context())
+					}
+					msg = fmt.Sprintf("%s", strings.Join(conflicts, ", "))
+					verr.Add(route.Action,
+						`route "%s" conflicts with route "%s" of %s action %s. Make sure wildcards at the same positions have the same name. Conflicting wildcards are %s.`,
+						route.Route.FullPath(),
+						other.Route.FullPath(),
+						other.Resource.Name,
+						other.Action.Name,
+						msg,
+					)
+				}
+			}
+		}
+	}
 }
 
 func (a *APIDefinition) validateContact(verr *dslengine.ValidationErrors) {
