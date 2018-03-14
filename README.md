@@ -53,6 +53,24 @@ Assuming you have a working [Go](https://golang.org) setup:
 go get -u goa.design/goa/...
 ```
 
+### Vendoring
+
+Because goa generates and compiles code `dep` is not able to properly identify all the dependencies
+when running `dep init` in a goa project. The symptoms manifest themselves when running `goa gen`,
+the error is:
+
+```
+exit status 1
+design must define at least one service
+```
+
+Simply add the `goa.design/goa/codegen/generator` as a required package to `Gopkg.toml` to fix the
+issue:
+
+```
+required = ["goa.design/goa/codegen/generator"]
+```
+
 ### Stable Versions
 
 goa follows [Semantic Versioning](http://semver.org/) which is a fancy way of saying it publishes
