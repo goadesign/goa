@@ -30,6 +30,7 @@ var _ = Describe("Generate", func() {
 		outDir, err = ioutil.TempDir(filepath.Join(workspace.Path, "src"), "")
 		Ω(err).ShouldNot(HaveOccurred())
 		os.Args = []string{"goagen", "--out=" + outDir, "--design=foo", "--version=" + version.String()}
+		codegen.TempCount = 0
 	})
 
 	JustBeforeEach(func() {
@@ -244,6 +245,30 @@ var _ = Describe("Generate", func() {
 			})
 		})
 
+		Context("with a multipart payload", func() {
+			BeforeEach(func() {
+				elemType := &design.AttributeDefinition{Type: design.Integer}
+				payload = &design.UserTypeDefinition{
+					AttributeDefinition: &design.AttributeDefinition{
+						Type: design.Object{
+							"int": elemType,
+						},
+					},
+					TypeName: "Collection",
+				}
+				design.Design.Resources["Widget"].Actions["get"].Payload = payload
+				design.Design.Resources["Widget"].Actions["get"].PayloadMultipart = true
+				runCodeTemplates(map[string]string{"outDir": outDir, "design": "foo", "tmpDir": filepath.Base(outDir), "version": version.String()})
+			})
+
+			It("generates the corresponding code", func() {
+				Ω(genErr).Should(BeNil())
+
+				contextsContent, err := ioutil.ReadFile(filepath.Join(outDir, "app", "controllers.go"))
+				Ω(err).ShouldNot(HaveOccurred())
+				Ω(string(contextsContent)).Should(ContainSubstring(controllersMultipartPayloadCode))
+			})
+		})
 	})
 })
 
@@ -499,6 +524,54 @@ func unmarshalGetWidgetPayload(ctx context.Context, service *goa.Service, req *h
 		return err
 	}
 	goa.ContextRequest(ctx).Payload = payload
+	return nil
+}
+`
+
+const controllersMultipartPayloadCode = `
+// MountWidgetController "mounts" a Widget resource controller on the given service.
+func MountWidgetController(service *goa.Service, ctrl WidgetController) {
+	initService(service)
+	var h goa.Handler
+
+	h = func(ctx context.Context, rw http.ResponseWriter, req *http.Request) error {
+		// Check if there was an error loading the request
+		if err := goa.ContextError(ctx); err != nil {
+			return err
+		}
+		// Build the context
+		rctx, err := NewGetWidgetContext(ctx, req, service)
+		if err != nil {
+			return err
+		}
+		// Build the payload
+		if rawPayload := goa.ContextRequest(ctx).Payload; rawPayload != nil {
+			rctx.Payload = rawPayload.(*Collection)
+		} else {
+			return goa.MissingPayloadError()
+		}
+		return ctrl.Get(rctx)
+	}
+	service.Mux.Handle("GET", "/:id", ctrl.MuxHandler("get", h, unmarshalGetWidgetPayload))
+	service.LogInfo("mount", "ctrl", "Widget", "action", "Get", "route", "GET /:id")
+}
+
+// unmarshalGetWidgetPayload unmarshals the request body into the context request data Payload field.
+func unmarshalGetWidgetPayload(ctx context.Context, service *goa.Service, req *http.Request) error {
+	var err error
+	var payload collection
+	rawInt := req.FormValue("int")
+	if int_, err2 := strconv.Atoi(rawInt); err2 == nil {
+		tmp2 := int_
+		tmp1 := &tmp2
+		payload.Int = tmp1
+	} else {
+		err = goa.MergeErrors(err, goa.InvalidParamTypeError("int", rawInt, "integer"))
+	}
+	if err != nil {
+		return err
+	}
+	goa.ContextRequest(ctx).Payload = payload.Publicize()
 	return nil
 }
 `
