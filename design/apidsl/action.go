@@ -477,13 +477,13 @@ func payload(isOptional bool, p interface{}, dsls ...func()) {
 	}
 }
 
-// MultipartForm can be used in: Action
+// MultipartRequest can be used in: Action
 //
-// MultipartForm implements the action multipart form DSL. An action multipart form indicates that
+// MultipartRequest implements the action multipart request DSL. An action multipart request indicates that
 // the HTTP request body should be encoded using multipart form data as described in
 // https://www.w3.org/TR/html401/interact/forms.html#h-17.13.4.2.
 //
-func MultipartForm() {
+func MultipartRequest() {
 	if a, ok := actionDefinition(); ok {
 		a.PayloadMultipart = true
 	}
