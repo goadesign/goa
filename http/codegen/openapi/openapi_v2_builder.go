@@ -51,7 +51,7 @@ func NewV2(root *httpdesign.RootExpr) (*V2, error) {
 			Contact:        root.Design.API.Contact,
 			License:        root.Design.API.License,
 			Version:        root.Design.API.Version,
-			Extensions:     extensionsFromExpr(root.Metadata),
+			Extensions:     ExtensionsFromExpr(root.Metadata),
 		},
 		Host:         host,
 		BasePath:     basePath,
@@ -75,7 +75,7 @@ func NewV2(root *httpdesign.RootExpr) (*V2, error) {
 	}
 
 	for _, res := range root.HTTPServices {
-		for k, v := range extensionsFromExpr(res.Metadata) {
+		for k, v := range ExtensionsFromExpr(res.Metadata) {
 			s.Paths[k] = v
 		}
 		for _, fs := range res.FileServers {
@@ -108,6 +108,35 @@ func NewV2(root *httpdesign.RootExpr) (*V2, error) {
 		}
 	}
 	return s, nil
+}
+
+// ExtensionsFromExpr generates swagger extensions from the given metadata
+// expression.
+func ExtensionsFromExpr(mdata design.MetadataExpr) map[string]interface{} {
+	extensions := make(map[string]interface{})
+	for key, value := range mdata {
+		chunks := strings.Split(key, ":")
+		if len(chunks) != 3 {
+			continue
+		}
+		if chunks[0] != "swagger" || chunks[1] != "extension" {
+			continue
+		}
+		if strings.HasPrefix(chunks[2], "x-") != true {
+			continue
+		}
+		val := value[0]
+		ival := interface{}(val)
+		if err := json.Unmarshal([]byte(val), &ival); err != nil {
+			extensions[chunks[2]] = val
+			continue
+		}
+		extensions[chunks[2]] = ival
+	}
+	if len(extensions) == 0 {
+		return nil
+	}
+	return extensions
 }
 
 // mustGenerate returns true if the metadata indicates that a OpenAPI specification should be
@@ -197,7 +226,7 @@ func tagsFromExpr(mdata design.MetadataExpr) (tags []*Tag) {
 			tag.ExternalDocs = docs
 		}
 
-		tag.Extensions = extensionsFromExpr(mdata)
+		tag.Extensions = ExtensionsFromExpr(mdata)
 
 		tags = append(tags, tag)
 	}
@@ -222,33 +251,6 @@ func summaryFromExpr(name string, metadata design.MetadataExpr) string {
 		}
 	}
 	return name
-}
-
-func extensionsFromExpr(mdata design.MetadataExpr) map[string]interface{} {
-	extensions := make(map[string]interface{})
-	for key, value := range mdata {
-		chunks := strings.Split(key, ":")
-		if len(chunks) != 3 {
-			continue
-		}
-		if chunks[0] != "swagger" || chunks[1] != "extension" {
-			continue
-		}
-		if strings.HasPrefix(chunks[2], "x-") != true {
-			continue
-		}
-		val := value[0]
-		ival := interface{}(val)
-		if err := json.Unmarshal([]byte(val), &ival); err != nil {
-			extensions[chunks[2]] = val
-			continue
-		}
-		extensions[chunks[2]] = ival
-	}
-	if len(extensions) == 0 {
-		return nil
-	}
-	return extensions
 }
 
 func paramsFromExpr(params *design.MappedAttributeExpr, path string) ([]*Parameter, error) {
@@ -319,7 +321,20 @@ func paramFor(at *design.AttributeExpr, name, in string, required bool) *Paramet
 		p.Items = itemsFromExpr(design.AsArray(at.Type).ElemType)
 		p.CollectionFormat = "multi"
 	}
-	p.Extensions = extensionsFromExpr(at.Metadata)
+	switch at.Type {
+	case design.Int, design.UInt, design.UInt32, design.UInt64:
+		p.Type = "integer"
+	case design.Int32, design.Int64:
+		p.Type = "integer"
+		p.Format = at.Type.Name()
+	case design.Float32:
+		p.Type = "number"
+		p.Format = "float"
+	case design.Float64:
+		p.Type = "number"
+		p.Format = "double"
+	}
+	p.Extensions = ExtensionsFromExpr(at.Metadata)
 	initValidations(at, p)
 	return p
 }
@@ -357,7 +372,7 @@ func responseSpecFromExpr(s *V2, root *httpdesign.RootExpr, r *httpdesign.HTTPRe
 		Description: desc,
 		Schema:      schema,
 		Headers:     headers,
-		Extensions:  extensionsFromExpr(r.Metadata),
+		Extensions:  ExtensionsFromExpr(r.Metadata),
 	}, nil
 }
 
@@ -441,7 +456,7 @@ func buildPathFromFileServer(s *V2, root *httpdesign.RootExpr, fs *httpdesign.Fi
 		}
 		p := path.(*Path)
 		p.Get = operation
-		p.Extensions = extensionsFromExpr(fs.Metadata)
+		p.Extensions = ExtensionsFromExpr(fs.Metadata)
 	}
 
 	return nil
@@ -517,7 +532,7 @@ func buildPathFromExpr(s *V2, root *httpdesign.RootExpr, route *httpdesign.Route
 			Responses:    responses,
 			Schemes:      schemes,
 			Deprecated:   false,
-			Extensions:   extensionsFromExpr(route.Metadata),
+			Extensions:   ExtensionsFromExpr(route.Metadata),
 		}
 
 		if key == "" {
@@ -555,7 +570,7 @@ func buildPathFromExpr(s *V2, root *httpdesign.RootExpr, route *httpdesign.Route
 		case "PATCH":
 			p.Patch = operation
 		}
-		p.Extensions = extensionsFromExpr(route.Endpoint.Metadata)
+		p.Extensions = ExtensionsFromExpr(route.Endpoint.Metadata)
 	}
 	return nil
 }
