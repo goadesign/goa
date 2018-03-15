@@ -86,7 +86,12 @@ func EndpointFile(service *design.ServiceExpr) *codegen.File {
 			Source: serviceEndpointsInitT,
 			Data:   data,
 		}
-		sections = []*codegen.SectionTemplate{header, def, init}
+		use := &codegen.SectionTemplate{
+			Name:   "endpoints-use",
+			Source: serviceEndpointsUseT,
+			Data:   data,
+		}
+		sections = []*codegen.SectionTemplate{header, def, init, use}
 		for _, m := range data.Methods {
 			sections = append(sections, &codegen.SectionTemplate{
 				Name:   "endpoint-method",
@@ -164,5 +169,14 @@ func New{{ .VarName }}Endpoint(s {{ .ServiceVarName}}) goa.Endpoint {
 		return nil, s.{{ .VarName }}(ctx{{ if .PayloadRef }}, p{{ end }})
 {{- end }}
 	}
+}
+`
+
+// input: EndpointMethodData
+const serviceEndpointsUseT = `{{ printf "Use applies the given middleware to all the %q service endpoints." .Name | comment }}
+func (e *{{ .VarName }}) Use(m func(goa.Endpoint) goa.Endpoint) {
+{{- range .Methods }}
+	e.{{ .VarName }} = m(e.{{ .VarName }})
+{{- end }}
 }
 `

@@ -110,6 +110,8 @@ func NewListHandler(
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		accept := r.Header.Get("Accept")
 		ctx := context.WithValue(r.Context(), goahttp.ContextKeyAcceptType, accept)
+		ctx = context.WithValue(ctx, goa.ContextKeyMethod, "list")
+		ctx = context.WithValue(ctx, goa.ContextKeyService, "storage")
 		res, err := endpoint(ctx, nil)
 
 		if err != nil {
@@ -150,6 +152,8 @@ func NewShowHandler(
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		accept := r.Header.Get("Accept")
 		ctx := context.WithValue(r.Context(), goahttp.ContextKeyAcceptType, accept)
+		ctx = context.WithValue(ctx, goa.ContextKeyMethod, "show")
+		ctx = context.WithValue(ctx, goa.ContextKeyService, "storage")
 		payload, err := decodeRequest(r)
 		if err != nil {
 			encodeError(ctx, w, err)
@@ -196,6 +200,8 @@ func NewAddHandler(
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		accept := r.Header.Get("Accept")
 		ctx := context.WithValue(r.Context(), goahttp.ContextKeyAcceptType, accept)
+		ctx = context.WithValue(ctx, goa.ContextKeyMethod, "add")
+		ctx = context.WithValue(ctx, goa.ContextKeyService, "storage")
 		payload, err := decodeRequest(r)
 		if err != nil {
 			encodeError(ctx, w, err)
@@ -242,6 +248,8 @@ func NewRemoveHandler(
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		accept := r.Header.Get("Accept")
 		ctx := context.WithValue(r.Context(), goahttp.ContextKeyAcceptType, accept)
+		ctx = context.WithValue(ctx, goa.ContextKeyMethod, "remove")
+		ctx = context.WithValue(ctx, goa.ContextKeyService, "storage")
 		payload, err := decodeRequest(r)
 		if err != nil {
 			encodeError(ctx, w, err)
@@ -288,6 +296,8 @@ func NewRateHandler(
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		accept := r.Header.Get("Accept")
 		ctx := context.WithValue(r.Context(), goahttp.ContextKeyAcceptType, accept)
+		ctx = context.WithValue(ctx, goa.ContextKeyMethod, "rate")
+		ctx = context.WithValue(ctx, goa.ContextKeyService, "storage")
 		payload, err := decodeRequest(r)
 		if err != nil {
 			encodeError(ctx, w, err)
@@ -334,6 +344,8 @@ func NewMultiAddHandler(
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		accept := r.Header.Get("Accept")
 		ctx := context.WithValue(r.Context(), goahttp.ContextKeyAcceptType, accept)
+		ctx = context.WithValue(ctx, goa.ContextKeyMethod, "multi_add")
+		ctx = context.WithValue(ctx, goa.ContextKeyService, "storage")
 		payload, err := decodeRequest(r)
 		if err != nil {
 			encodeError(ctx, w, err)

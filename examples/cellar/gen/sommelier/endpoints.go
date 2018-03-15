@@ -26,6 +26,11 @@ func NewEndpoints(s Service) *Endpoints {
 	}
 }
 
+// Use applies the given middleware to all the "sommelier" service endpoints.
+func (e *Endpoints) Use(m func(goa.Endpoint) goa.Endpoint) {
+	e.Pick = m(e.Pick)
+}
+
 // NewPickEndpoint returns an endpoint function that calls the method "pick" of
 // service "sommelier".
 func NewPickEndpoint(s Service) goa.Endpoint {
