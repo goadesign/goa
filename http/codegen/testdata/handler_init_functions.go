@@ -16,6 +16,8 @@ func NewMethodNoPayloadNoResultHandler(
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		accept := r.Header.Get("Accept")
 		ctx := context.WithValue(r.Context(), goahttp.ContextKeyAcceptType, accept)
+		ctx = context.WithValue(ctx, goa.ContextKeyMethod, "MethodNoPayloadNoResult")
+		ctx = context.WithValue(ctx, goa.ContextKeyService, "ServiceNoPayloadNoResult")
 		res, err := endpoint(ctx, nil)
 
 		if err != nil {
@@ -46,6 +48,8 @@ func NewMethodPayloadNoResultHandler(
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		accept := r.Header.Get("Accept")
 		ctx := context.WithValue(r.Context(), goahttp.ContextKeyAcceptType, accept)
+		ctx = context.WithValue(ctx, goa.ContextKeyMethod, "MethodPayloadNoResult")
+		ctx = context.WithValue(ctx, goa.ContextKeyService, "ServicePayloadNoResult")
 		payload, err := decodeRequest(r)
 		if err != nil {
 			encodeError(ctx, w, err)
@@ -81,6 +85,8 @@ func NewMethodNoPayloadResultHandler(
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		accept := r.Header.Get("Accept")
 		ctx := context.WithValue(r.Context(), goahttp.ContextKeyAcceptType, accept)
+		ctx = context.WithValue(ctx, goa.ContextKeyMethod, "MethodNoPayloadResult")
+		ctx = context.WithValue(ctx, goa.ContextKeyService, "ServiceNoPayloadResult")
 		res, err := endpoint(ctx, nil)
 
 		if err != nil {
@@ -111,6 +117,8 @@ func NewMethodPayloadResultHandler(
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		accept := r.Header.Get("Accept")
 		ctx := context.WithValue(r.Context(), goahttp.ContextKeyAcceptType, accept)
+		ctx = context.WithValue(ctx, goa.ContextKeyMethod, "MethodPayloadResult")
+		ctx = context.WithValue(ctx, goa.ContextKeyService, "ServicePayloadResult")
 		payload, err := decodeRequest(r)
 		if err != nil {
 			encodeError(ctx, w, err)
@@ -147,6 +155,8 @@ func NewMethodPayloadResultErrorHandler(
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		accept := r.Header.Get("Accept")
 		ctx := context.WithValue(r.Context(), goahttp.ContextKeyAcceptType, accept)
+		ctx = context.WithValue(ctx, goa.ContextKeyMethod, "MethodPayloadResultError")
+		ctx = context.WithValue(ctx, goa.ContextKeyService, "ServicePayloadResultError")
 		payload, err := decodeRequest(r)
 		if err != nil {
 			encodeError(ctx, w, err)

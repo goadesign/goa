@@ -22,6 +22,10 @@ func NewEndpoints(s Service) *Endpoints {
 		A: NewAEndpoint(s),
 	}
 }
+// Use applies the given middleware to all the "Single" service endpoints.
+func (e *Endpoints) Use(m func(goa.Endpoint) goa.Endpoint) {
+	e.A = m(e.A)
+}
 // NewAEndpoint returns an endpoint function that calls the method "A" of
 // service "Single".
 func NewAEndpoint(s Service) goa.Endpoint {
@@ -44,6 +48,11 @@ func NewEndpoints(s Service) *Endpoints {
 		B: NewBEndpoint(s),
 		C: NewCEndpoint(s),
 	}
+}
+// Use applies the given middleware to all the "Multiple" service endpoints.
+func (e *Endpoints) Use(m func(goa.Endpoint) goa.Endpoint) {
+	e.B = m(e.B)
+	e.C = m(e.C)
 }
 // NewBEndpoint returns an endpoint function that calls the method "B" of
 // service "Multiple".
@@ -73,6 +82,10 @@ func NewEndpoints(s Service) *Endpoints {
 	return &Endpoints{
 		NoPayload: NewNoPayloadEndpoint(s),
 	}
+}
+// Use applies the given middleware to all the "NoPayload" service endpoints.
+func (e *Endpoints) Use(m func(goa.Endpoint) goa.Endpoint) {
+	e.NoPayload = m(e.NoPayload)
 }
 // NewNoPayloadEndpoint returns an endpoint function that calls the method
 // "NoPayload" of service "NoPayload".

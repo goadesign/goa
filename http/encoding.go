@@ -18,9 +18,11 @@ import (
 )
 
 const (
-	// ContextKeyAcceptType is the context key associated with the request
-	// Accept-Type header value used by the goa response encoder.
-	ContextKeyAcceptType contextKey = iota
+	// ContextKeyAcceptType is the name of the context key used to store the
+	// value of the HTTP request Accept-Type header. The value may be used
+	// by encoders and decoders to implement a content type negotiation
+	// algorithm.
+	ContextKeyAcceptType contextKey = iota + 1
 )
 
 type (
