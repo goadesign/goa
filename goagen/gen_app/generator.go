@@ -243,6 +243,8 @@ func (g *Generator) generateControllers() (err error) {
 		codegen.SimpleImport("github.com/goadesign/goa/cors"),
 		codegen.SimpleImport("regexp"),
 		codegen.SimpleImport("strconv"),
+		codegen.SimpleImport("time"),
+		codegen.NewImport("uuid", "github.com/satori/go.uuid"),
 	}
 	encoders, err := BuildEncoders(g.API.Produces, true)
 	if err != nil {
