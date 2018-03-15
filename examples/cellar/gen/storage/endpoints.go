@@ -36,6 +36,16 @@ func NewEndpoints(s Service) *Endpoints {
 	}
 }
 
+// Use applies the given middleware to all the "storage" service endpoints.
+func (e *Endpoints) Use(m func(goa.Endpoint) goa.Endpoint) {
+	e.List = m(e.List)
+	e.Show = m(e.Show)
+	e.Add = m(e.Add)
+	e.Remove = m(e.Remove)
+	e.Rate = m(e.Rate)
+	e.MultiAdd = m(e.MultiAdd)
+}
+
 // NewListEndpoint returns an endpoint function that calls the method "list" of
 // service "storage".
 func NewListEndpoint(s Service) goa.Endpoint {
