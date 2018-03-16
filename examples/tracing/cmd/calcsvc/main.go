@@ -15,9 +15,7 @@ import (
 	calcsvcsvr "goa.design/goa/examples/calc/gen/http/calc/server"
 	openapisvr "goa.design/goa/examples/calc/gen/http/openapi/server"
 	goahttp "goa.design/goa/http"
-	"goa.design/goa/http/middleware/debugging"
-	"goa.design/goa/http/middleware/logging"
-	"goa.design/goa/http/middleware/tracing"
+	"goa.design/goa/http/middleware"
 	"goa.design/goa/http/middleware/xray"
 )
 
@@ -36,11 +34,11 @@ func main() {
 	// packages define log adapters for common log packages.
 	var (
 		logger  *log.Logger
-		adapter logging.Logger
+		adapter middleware.Logger
 	)
 	{
 		logger = log.New(os.Stderr, "[calc] ", log.Ltime)
-		adapter = logging.NewLogger(logger)
+		adapter = middleware.NewLogger(logger)
 	}
 
 	// Create the structs that implement the services.
@@ -98,16 +96,16 @@ func main() {
 	var handler http.Handler = mux
 	{
 		if *dbg {
-			handler = debugging.New(mux, adapter)(handler)
+			handler = middleware.Debug(mux, adapter)(handler)
 		}
-		handler = logging.New(adapter)(handler)
+		handler = middleware.Log(adapter)(handler)
 		xrayHndlr, err := xray.New("calc", *daemon)
 		if err != nil {
 			logger.Printf("[WARN] cannot connect to xray daemon %s: %s", *daemon, err)
 		}
 		// Wrap the Xray and the tracing handler. The order is very important.
 		handler = xrayHndlr(handler)
-		handler = tracing.New()(handler)
+		handler = middleware.Trace()(handler)
 	}
 
 	// Create channel used by both the signal handler and server goroutines

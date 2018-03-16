@@ -9,7 +9,7 @@ import (
 	"sync"
 	"time"
 
-	"goa.design/goa/http/middleware/tracing"
+	"goa.design/goa/http/middleware"
 )
 
 const (
@@ -58,9 +58,9 @@ func New(service, daemon string) (func(http.Handler) http.Handler, error) {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			var (
 				ctx      = r.Context()
-				spanID   = ctx.Value(tracing.TraceSpanIDKey)
-				traceID  = ctx.Value(tracing.TraceIDKey)
-				parentID = ctx.Value(tracing.TraceParentSpanIDKey)
+				spanID   = ctx.Value(middleware.TraceSpanIDKey)
+				traceID  = ctx.Value(middleware.TraceIDKey)
+				parentID = ctx.Value(middleware.TraceParentSpanIDKey)
 			)
 			if traceID == nil || spanID == nil {
 				h.ServeHTTP(w, r)

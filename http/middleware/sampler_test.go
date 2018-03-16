@@ -1,4 +1,4 @@
-package tracing
+package middleware
 
 import (
 	"math/rand"

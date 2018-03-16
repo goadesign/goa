@@ -97,8 +97,7 @@ func exampleMain(genpkg string, root *httpdesign.RootExpr) *codegen.File {
 		{Path: "time"},
 		{Path: "goa.design/goa", Name: "goa"},
 		{Path: "goa.design/goa/http", Name: "goahttp"},
-		{Path: "goa.design/goa/http/middleware/debugging"},
-		{Path: "goa.design/goa/http/middleware/logging"},
+		{Path: "goa.design/goa/http/middleware"},
 		{Path: rootPath, Name: apiPkg},
 	}
 	for _, svc := range root.HTTPServices {
@@ -185,12 +184,12 @@ const mainT = `func main() {
 	// your log package of choice. The goa.design/middleware/logging/...
 	// packages define log adapters for common log packages.
 	var (
-		adapter logging.Logger
+		adapter middleware.Logger
 		logger *log.Logger
 	)
 	{
 		logger = log.New(os.Stderr, "[{{ .APIPkg }}] ", log.Ltime)
-		adapter = logging.NewLogger(logger)
+		adapter = middleware.NewLogger(logger)
 	}
 
 	// Create the structs that implement the services.
@@ -271,9 +270,9 @@ const mainT = `func main() {
 	var handler http.Handler = mux
 	{
 		if *dbg {
-			handler = debugging.New(mux, adapter)(handler)
+			handler = middleware.Debug(mux, adapter)(handler)
 		}
-		handler = logging.New(adapter)(handler)
+		handler = middleware.Log(adapter)(handler)
 	}
 
 	// Create channel used by both the signal handler and server goroutines
