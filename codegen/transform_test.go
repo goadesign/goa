@@ -19,6 +19,8 @@ var (
 	ObjMap        = mapa(design.String, SimpleObj.Type)
 	UserType      = object("ut", &design.UserTypeExpr{TypeName: "User", AttributeExpr: SimpleObj})
 	ArrayUserType = array(&design.UserTypeExpr{TypeName: "User", AttributeExpr: RequiredObj})
+
+	ObjWithMetadata = withMetadata(object("a", SimpleMap.Type, "b", design.Int), "a", metadata("struct:field:name", "Apple"))
 )
 
 func TestGoTypeTransform(t *testing.T) {
@@ -75,6 +77,8 @@ func TestGoTypeTransform(t *testing.T) {
 		// package handling
 		{"target-package-unmarshal", ArrayUserType, ArrayUserType, true, "tpkg", objTargetPkgUnmarshalCode},
 		{"target-package-marshal", ArrayUserType, ArrayUserType, false, "tpkg", objTargetPkgCode},
+
+		{"with-metadata", ObjWithMetadata, ObjWithMetadata, true, "", objWithMetadataCode},
 	}
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
@@ -125,6 +129,35 @@ func mapa(keyt, elemt design.DataType) *design.AttributeExpr {
 	key := &design.AttributeExpr{Type: keyt}
 	elem := &design.AttributeExpr{Type: elemt}
 	return &design.AttributeExpr{Type: &design.Map{KeyType: key, ElemType: elem}}
+}
+
+func withMetadata(att *design.AttributeExpr, vals ...interface{}) *design.AttributeExpr {
+	obj := design.AsObject(att.Type)
+	if obj == nil {
+		return nil
+	}
+	for i := 0; i < len(vals); i += 2 {
+		attName := vals[i].(string)
+		a := obj.Attribute(attName)
+		if a == nil {
+			continue
+		}
+		a.Metadata = vals[i+1].(map[string][]string)
+	}
+	return att
+}
+
+func metadata(vals ...string) map[string][]string {
+	m := make(map[string][]string)
+	for i := 0; i < len(vals); i += 2 {
+		key := vals[i]
+		value := vals[i+1]
+		if _, ok := m[key]; !ok {
+			m[key] = []string{}
+		}
+		m[key] = append(m[key], value)
+	}
+	return m
 }
 
 const objUnmarshalCode = `func transform() {
@@ -411,6 +444,21 @@ const objTargetPkgCode = `func transform() {
 		target[i] = &tpkg.User{
 			A: val.A,
 			B: val.B,
+		}
+	}
+}
+`
+
+const objWithMetadataCode = `func transform() {
+	target := &TargetType{
+		B: source.B,
+	}
+	if source.Apple != nil {
+		target.Apple = make(map[string]int, len(source.Apple))
+		for key, val := range source.Apple {
+			tk := key
+			tv := val
+			target.Apple[tk] = tv
 		}
 	}
 }
