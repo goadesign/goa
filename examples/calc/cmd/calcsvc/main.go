@@ -15,8 +15,7 @@ import (
 	calcsvcsvr "goa.design/goa/examples/calc/gen/http/calc/server"
 	openapisvr "goa.design/goa/examples/calc/gen/http/openapi/server"
 	goahttp "goa.design/goa/http"
-	"goa.design/goa/http/middleware/debugging"
-	"goa.design/goa/http/middleware/logging"
+	"goa.design/goa/http/middleware"
 )
 
 func main() {
@@ -32,12 +31,12 @@ func main() {
 	// your log package of choice. The goa.design/middleware/logging/...
 	// packages define log adapters for common log packages.
 	var (
-		adapter logging.Logger
+		adapter middleware.Logger
 		logger  *log.Logger
 	)
 	{
 		logger = log.New(os.Stderr, "[calc] ", log.Ltime)
-		adapter = logging.NewLogger(logger)
+		adapter = middleware.NewLogger(logger)
 	}
 
 	// Create the structs that implement the services.
@@ -95,9 +94,9 @@ func main() {
 	var handler http.Handler = mux
 	{
 		if *dbg {
-			handler = debugging.New(mux, adapter)(handler)
+			handler = middleware.Debug(mux, adapter)(handler)
 		}
-		handler = logging.New(adapter)(handler)
+		handler = middleware.Log(adapter)(handler)
 	}
 
 	// Create channel used by both the signal handler and server goroutines

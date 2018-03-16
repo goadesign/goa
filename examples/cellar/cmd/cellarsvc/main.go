@@ -19,8 +19,7 @@ import (
 	sommelier "goa.design/goa/examples/cellar/gen/sommelier"
 	storage "goa.design/goa/examples/cellar/gen/storage"
 	goahttp "goa.design/goa/http"
-	"goa.design/goa/http/middleware/debugging"
-	"goa.design/goa/http/middleware/logging"
+	"goa.design/goa/http/middleware"
 )
 
 func main() {
@@ -37,11 +36,11 @@ func main() {
 	// packages define log adapters for common log packages.
 	var (
 		logger  *log.Logger
-		adapter logging.Logger
+		adapter middleware.Logger
 	)
 	{
 		logger = log.New(os.Stderr, "[cellar] ", log.Ltime)
-		adapter = logging.NewLogger(logger)
+		adapter = middleware.NewLogger(logger)
 	}
 
 	// Initialize service dependencies such as databases.
@@ -123,9 +122,9 @@ func main() {
 	var handler http.Handler = mux
 	{
 		if *dbg {
-			handler = debugging.New(mux, adapter)(handler)
+			handler = middleware.Debug(mux, adapter)(handler)
 		}
-		handler = logging.New(adapter)(handler)
+		handler = middleware.Log(adapter)(handler)
 	}
 
 	// Create channel used by both the signal handler and server goroutines

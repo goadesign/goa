@@ -1,4 +1,4 @@
-package tracing
+package middleware
 
 import (
 	"context"
@@ -28,22 +28,22 @@ func TestNew(t *testing.T) {
 			"100":   {100},
 		}
 		for k, c := range cases {
-			m := New(SamplingPercent(c.Rate))
+			m := Trace(SamplingPercent(c.Rate))
 			if m == nil {
-				t.Errorf("%s: New return nil", k)
+				t.Errorf("%s: Trace return nil", k)
 			}
 		}
 	}
 
 	// valid adaptive sampler tests
 	{
-		m := New(MaxSamplingRate(2))
+		m := Trace(MaxSamplingRate(2))
 		if m == nil {
-			t.Error("New return nil")
+			t.Error("Trace return nil")
 		}
-		m = New(MaxSamplingRate(5), SampleSize(100))
+		m = Trace(MaxSamplingRate(5), SampleSize(100))
 		if m == nil {
-			t.Error("New return nil")
+			t.Error("Trace return nil")
 		}
 	}
 
@@ -60,10 +60,10 @@ func TestNew(t *testing.T) {
 				defer func() {
 					r := recover()
 					if r != "sampling rate must be between 0 and 100" {
-						t.Errorf("%s: New did *not* panic as expected: %v", k, r)
+						t.Errorf("%s: Trace did *not* panic as expected: %v", k, r)
 					}
 				}()
-				New(SamplingPercent(c.SamplingPercentage))
+				Trace(SamplingPercent(c.SamplingPercentage))
 			}()
 		}
 	}
@@ -79,10 +79,10 @@ func TestNew(t *testing.T) {
 				defer func() {
 					r := recover()
 					if r != "max sampling rate must be greater than 0" {
-						t.Errorf("%s: New did *not* panic as expected: %v", k, r)
+						t.Errorf("%s: Trace did *not* panic as expected: %v", k, r)
 					}
 				}()
-				New(MaxSamplingRate(c.MaxSamplingRate))
+				Trace(MaxSamplingRate(c.MaxSamplingRate))
 			}()
 		}
 	}
@@ -98,10 +98,10 @@ func TestNew(t *testing.T) {
 				defer func() {
 					r := recover()
 					if r != "sample size must be greater than 0" {
-						t.Errorf("%s: New did *not* panic as expected: %v", k, r)
+						t.Errorf("%s: Trace did *not* panic as expected: %v", k, r)
 					}
 				}()
-				New(SampleSize(c.SampleSize))
+				Trace(SampleSize(c.SampleSize))
 			}()
 		}
 	}
@@ -132,7 +132,7 @@ func TestMiddleware(t *testing.T) {
 
 	for k, c := range cases {
 		var (
-			m       = New(SamplingPercent(c.Rate), SpanIDFunc(newID), TraceIDFunc(newTraceID))
+			m       = Trace(SamplingPercent(c.Rate), SpanIDFunc(newID), TraceIDFunc(newTraceID))
 			h       = new(testHandler)
 			headers = make(http.Header)
 		)
