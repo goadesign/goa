@@ -185,8 +185,8 @@ func transformObject(source, target *design.AttributeExpr, newVar bool, a targs)
 	var err error
 	walkMatches(source, target, func(src, tgt *design.MappedAttributeExpr, srcAtt, tgtAtt *design.AttributeExpr, n string) {
 		b := a
-		b.sourceVar = a.sourceVar + "." + Goify(src.ElemName(n), true)
-		b.targetVar = a.targetVar + "." + Goify(tgt.ElemName(n), true)
+		b.sourceVar = a.sourceVar + "." + GoifyAtt(srcAtt, src.ElemName(n), true)
+		b.targetVar = a.targetVar + "." + GoifyAtt(tgtAtt, tgt.ElemName(n), true)
 		err = isCompatible(srcAtt.Type, tgtAtt.Type, b.sourceVar, b.targetVar)
 		if err != nil {
 			return
