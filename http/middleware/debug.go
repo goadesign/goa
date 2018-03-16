@@ -4,9 +4,11 @@ import (
 	"bytes"
 	"crypto/rand"
 	"encoding/base64"
+	"fmt"
 	"io"
 	"io/ioutil"
 	"net/http"
+	"sort"
 	"strings"
 
 	goahttp "goa.design/goa/http"
@@ -19,72 +21,84 @@ type responseDupper struct {
 	Status int
 }
 
-// Debug returns a debug middleware which logs detailed information about
+// Debug returns a debug middleware which prints detailed information about
 // incoming requests and outgoing responses including all headers, parameters
 // and bodies.
-func Debug(mux goahttp.Muxer, logger Logger) func(http.Handler) http.Handler {
+func Debug(mux goahttp.Muxer, w io.Writer) func(http.Handler) http.Handler {
 	return func(h http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			requestID := shortID()
-			if len(r.Header) > 0 {
-				entries := make([]interface{}, 4+2*len(r.Header))
-				entries[0] = "id"
-				entries[1] = requestID
-				entries[2] = "headers"
-				entries[3] = len(r.Header)
-				i := 0
-				for k, v := range r.Header {
-					entries[i+4] = k
-					entries[i+5] = interface{}(strings.Join(v, ", "))
-					i = i + 2
-				}
-				logger.Log(entries...)
+			buf := &bytes.Buffer{}
+			// Request ID
+			reqID := r.Context().Value(RequestIDKey)
+			if reqID == nil {
+				reqID = shortID()
 			}
+
+			// Request URL
+			buf.WriteString(fmt.Sprintf("> [%s] %s %s", reqID, r.Method, r.URL.String()))
+
+			// Request Headers
+			keys := make([]string, len(r.Header))
+			i := 0
+			for k := range r.Header {
+				keys[i] = k
+				i++
+			}
+			sort.Strings(keys)
+			for _, k := range keys {
+				buf.WriteString(fmt.Sprintf("\n> [%s] %s: %s", reqID, k, strings.Join(r.Header[k], ", ")))
+			}
+
+			// Request parameters
 			params := mux.Vars(r)
-			if len(params) > 0 {
-				entries := make([]interface{}, 4+2*len(params))
-				entries[0] = "id"
-				entries[1] = requestID
-				entries[2] = "params"
-				entries[3] = len(params)
-				i := 0
-				for k, v := range params {
-					entries[i] = k
-					entries[i+1] = v
-					i = i + 2
-				}
-				logger.Log(entries...)
+			keys = make([]string, len(params))
+			i = 0
+			for k := range params {
+				keys[i] = k
+				i++
 			}
-			buf, err := ioutil.ReadAll(r.Body)
+			sort.Strings(keys)
+			for _, k := range keys {
+				buf.WriteString(fmt.Sprintf("\n> [%s] %s: %s", reqID, k, strings.Join(r.Header[k], ", ")))
+			}
+
+			// Request body
+			b, err := ioutil.ReadAll(r.Body)
 			if err != nil {
-				buf = []byte("failed to read body: " + err.Error())
+				b = []byte("failed to read body: " + err.Error())
 			}
-			r.Body = ioutil.NopCloser(bytes.NewBuffer(buf))
-			if len(buf) == 0 {
-				buf = []byte("<empty>")
+			if len(b) > 0 {
+				buf.WriteByte('\n')
+				lines := strings.Split(string(b), "\n")
+				for _, line := range lines {
+					buf.WriteString(fmt.Sprintf("[%s] %s\n", reqID, line))
+				}
 			}
-			logger.Log(r.Context(), "id", requestID, "payload", string(buf))
+			r.Body = ioutil.NopCloser(bytes.NewBuffer(b))
 
 			dupper := &responseDupper{ResponseWriter: w, Buffer: &bytes.Buffer{}}
 			h.ServeHTTP(dupper, r)
 
-			if len(dupper.Header()) > 0 {
-				entries := make([]interface{}, 4+2*len(dupper.Header()))
-				entries[0] = "id"
-				entries[1] = requestID
-				entries[2] = "response headers"
-				entries[3] = len(dupper.Header())
-				i := 0
-				for k, v := range dupper.Header() {
-					entries[i+4] = k
-					entries[i+5] = interface{}(strings.Join(v, ", "))
-					i = i + 2
-				}
-				logger.Log(entries...)
+			buf.WriteString(fmt.Sprintf("\n< [%s] %s", reqID, http.StatusText(dupper.Status)))
+			keys = make([]string, len(dupper.Header()))
+			i = 0
+			for k := range dupper.Header() {
+				keys[i] = k
+				i++
+			}
+			sort.Strings(keys)
+			for _, k := range keys {
+				buf.WriteString(fmt.Sprintf("\n< [%s] %s: %s", reqID, k, strings.Join(dupper.Header()[k], ", ")))
 			}
 			if dupper.Buffer.Len() > 0 {
-				logger.Log(r.Context(), "id", requestID, "response body", dupper.Buffer.String())
+				buf.WriteByte('\n')
+				lines := strings.Split(dupper.Buffer.String(), "\n")
+				for _, line := range lines {
+					buf.WriteString(fmt.Sprintf("[%s] %s\n", reqID, line))
+				}
 			}
+			buf.WriteByte('\n')
+			w.Write(buf.Bytes())
 		})
 	}
 }
