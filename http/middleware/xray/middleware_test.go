@@ -14,7 +14,7 @@ import (
 	"testing"
 	"time"
 
-	"goa.design/goa/http/middleware/tracing"
+	"goa.design/goa/http/middleware"
 )
 
 const (
@@ -145,7 +145,7 @@ func TestMiddleware(t *testing.T) {
 			})
 		)
 
-		ctx := tracing.WithSpan(req.Context(), c.Trace.TraceID, c.Trace.SpanID, c.Trace.ParentID)
+		ctx := middleware.WithSpan(req.Context(), c.Trace.TraceID, c.Trace.SpanID, c.Trace.ParentID)
 		if c.Request.UserAgent != "" {
 			req.Header.Set("User-Agent", c.Request.UserAgent)
 		}

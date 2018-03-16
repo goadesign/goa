@@ -5,7 +5,7 @@ import (
 	"net/http"
 
 	goahttp "goa.design/goa/http"
-	"goa.design/goa/http/middleware/tracing"
+	"goa.design/goa/http/middleware"
 )
 
 // xrayDoer is a goahttp.Doer middleware that will create xray subsegments for traced requests.
@@ -31,7 +31,7 @@ func (r *xrayDoer) Do(req *http.Request) (*http.Response, error) {
 	defer sub.Close()
 
 	// update the context with the latest segment
-	ctx = tracing.WithSpan(ctx, sub.TraceID, sub.ID, sub.ParentID)
+	ctx = middleware.WithSpan(ctx, sub.TraceID, sub.ID, sub.ParentID)
 	req = req.WithContext(context.WithValue(ctx, SegKey, sub))
 
 	sub.RecordRequest(req, "remote")

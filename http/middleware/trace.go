@@ -1,36 +1,8 @@
-package tracing
+package middleware
 
 import (
 	"context"
-	"crypto/rand"
-	"encoding/base64"
-	"io"
 	"net/http"
-
-	"goa.design/goa/http/middleware/logging"
-)
-
-const (
-	// TraceIDKey is the request context key used to store its Trace ID if any.
-	TraceIDKey = "TraceIDCtxKey"
-
-	// TraceSpanIDKey is the request context key used to store the current
-	// trace span ID if any.
-	TraceSpanIDKey = "TraceSpanIDCtxKey"
-
-	// TraceParentSpanIDKey is the request context key used to store the current
-	// trace parent span ID if any.
-	TraceParentSpanIDKey = "TraceParentSpanIDCtxKey"
-)
-
-const (
-	// TraceIDHeader is the default name of the HTTP request header
-	// containing the current TraceID if any.
-	TraceIDHeader = "TraceID"
-
-	// ParentSpanIDHeader is the default name of the HTTP request header
-	// containing the parent span ID if any.
-	ParentSpanIDHeader = "ParentSpanID"
 )
 
 type (
@@ -56,7 +28,7 @@ type (
 	// tracedLogger is a logger which logs the trace ID with every log entry
 	// when one is present.
 	tracedLogger struct {
-		logger  logging.Logger
+		logger  Logger
 		traceID string
 	}
 
@@ -69,6 +41,65 @@ type (
 		sampleSize      int
 	}
 )
+
+const (
+	// TraceIDHeader is the default name of the HTTP request header
+	// containing the current TraceID if any.
+	TraceIDHeader = "TraceID"
+
+	// ParentSpanIDHeader is the default name of the HTTP request header
+	// containing the parent span ID if any.
+	ParentSpanIDHeader = "ParentSpanID"
+)
+
+// Trace returns a trace middleware that initializes the trace information in the
+// request context.
+//
+// samplingRate must be a value between 0 and 100. It represents the percentage of
+// requests that should be traced. If the incoming request has a Trace ID header
+// then the sampling rate is disregarded and the tracing is enabled.
+//
+// spanIDFunc and traceIDFunc are the functions used to create Span and Trace
+// IDs respectively. This is configurable so that the created IDs are compatible
+// with the various backend tracing systems. The xray package provides
+// implementations that produce AWS X-Ray compatible IDs.
+func Trace(opts ...Option) func(http.Handler) http.Handler {
+	o := &options{
+		traceIDFunc:     shortID,
+		spanIDFunc:      shortID,
+		samplingPercent: 100,
+		// Below only apply if maxSamplingRate is set
+		sampleSize: 1000,
+	}
+	for _, opt := range opts {
+		o = opt(o)
+	}
+	var sampler Sampler
+	if o.maxSamplingRate > 0 {
+		sampler = NewAdaptiveSampler(o.maxSamplingRate, o.sampleSize)
+	} else {
+		sampler = NewFixedSampler(o.samplingPercent)
+	}
+	return func(h http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			// insert a new trace ID only if not already being traced.
+			traceID := r.Header.Get(TraceIDHeader)
+			if traceID == "" && sampler.Sample() {
+				// insert tracing only within sample.
+				traceID = o.traceIDFunc()
+			}
+			if traceID == "" {
+				h.ServeHTTP(w, r)
+			} else {
+				// insert IDs into context to enable tracing.
+				spanID := o.spanIDFunc()
+				parentID := r.Header.Get(ParentSpanIDHeader)
+				ctx := WithSpan(r.Context(), traceID, spanID, parentID)
+				h.ServeHTTP(w, r.WithContext(ctx))
+			}
+		})
+	}
+}
 
 // TraceIDFunc is a constructor option that overrides the function used to
 // compute trace IDs.
@@ -127,55 +158,6 @@ func SampleSize(s int) Option {
 	}
 }
 
-// New returns a trace middleware that initializes the trace information in the
-// request context.
-//
-// samplingRate must be a value between 0 and 100. It represents the percentage of
-// requests that should be traced. If the incoming request has a Trace ID header
-// then the sampling rate is disregarded and the tracing is enabled.
-//
-// spanIDFunc and traceIDFunc are the functions used to create Span and Trace
-// IDs respectively. This is configurable so that the created IDs are compatible
-// with the various backend tracing systems. The xray package provides
-// implementations that produce AWS X-Ray compatible IDs.
-func New(opts ...Option) func(http.Handler) http.Handler {
-	o := &options{
-		traceIDFunc:     shortID,
-		spanIDFunc:      shortID,
-		samplingPercent: 100,
-		// Below only apply if maxSamplingRate is set
-		sampleSize: 1000,
-	}
-	for _, opt := range opts {
-		o = opt(o)
-	}
-	var sampler Sampler
-	if o.maxSamplingRate > 0 {
-		sampler = NewAdaptiveSampler(o.maxSamplingRate, o.sampleSize)
-	} else {
-		sampler = NewFixedSampler(o.samplingPercent)
-	}
-	return func(h http.Handler) http.Handler {
-		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			// insert a new trace ID only if not already being traced.
-			traceID := r.Header.Get(TraceIDHeader)
-			if traceID == "" && sampler.Sample() {
-				// insert tracing only within sample.
-				traceID = o.traceIDFunc()
-			}
-			if traceID == "" {
-				h.ServeHTTP(w, r)
-			} else {
-				// insert IDs into context to enable tracing.
-				spanID := o.spanIDFunc()
-				parentID := r.Header.Get(ParentSpanIDHeader)
-				ctx := WithSpan(r.Context(), traceID, spanID, parentID)
-				h.ServeHTTP(w, r.WithContext(ctx))
-			}
-		})
-	}
-}
-
 // WrapDoer wraps a goa client Doer and sets the trace headers so that the
 // downstream service may properly retrieve the parent span ID and trace ID.
 func WrapDoer(doer Doer) Doer {
@@ -184,7 +166,7 @@ func WrapDoer(doer Doer) Doer {
 
 // WrapLogger returns a logger which logs the trace ID with every message if
 // there is one.
-func WrapLogger(l logging.Logger, traceID string) logging.Logger {
+func WrapLogger(l Logger, traceID string) Logger {
 	return &tracedLogger{logger: l, traceID: traceID}
 }
 
@@ -227,12 +209,4 @@ func (l *tracedLogger) Log(keyvals ...interface{}) {
 	}
 	keyvals = append([]interface{}{"trace", l.traceID}, keyvals...)
 	l.logger.Log(keyvals)
-}
-
-// shortID produces a " unique" 6 bytes long string.
-// Do not use as a reliable way to get unique IDs, instead use for things like logging.
-func shortID() string {
-	b := make([]byte, 6)
-	io.ReadFull(rand.Reader, b)
-	return base64.RawURLEncoding.EncodeToString(b)
 }

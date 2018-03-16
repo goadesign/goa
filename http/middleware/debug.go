@@ -1,4 +1,4 @@
-package debugging
+package middleware
 
 import (
 	"bytes"
@@ -10,7 +10,6 @@ import (
 	"strings"
 
 	goahttp "goa.design/goa/http"
-	"goa.design/goa/http/middleware/logging"
 )
 
 // responseDupper tees the response to a buffer and a response writer.
@@ -20,9 +19,10 @@ type responseDupper struct {
 	Status int
 }
 
-// New returns a debug middleware which logs all the details about incoming
-// requests and outgoing responses.
-func New(mux goahttp.Muxer, logger logging.Logger) func(http.Handler) http.Handler {
+// Debug returns a debug middleware which logs detailed information about
+// incoming requests and outgoing responses including all headers, parameters
+// and bodies.
+func Debug(mux goahttp.Muxer, logger Logger) func(http.Handler) http.Handler {
 	return func(h http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			requestID := shortID()
@@ -63,7 +63,7 @@ func New(mux goahttp.Muxer, logger logging.Logger) func(http.Handler) http.Handl
 			if len(buf) == 0 {
 				buf = []byte("<empty>")
 			}
-			logger.Log("id", requestID, "payload", string(buf))
+			logger.Log(r.Context(), "id", requestID, "payload", string(buf))
 
 			dupper := &responseDupper{ResponseWriter: w, Buffer: &bytes.Buffer{}}
 			h.ServeHTTP(dupper, r)
@@ -83,7 +83,7 @@ func New(mux goahttp.Muxer, logger logging.Logger) func(http.Handler) http.Handl
 				logger.Log(entries...)
 			}
 			if dupper.Buffer.Len() > 0 {
-				logger.Log("id", requestID, "response body", dupper.Buffer.String())
+				logger.Log(r.Context(), "id", requestID, "response body", dupper.Buffer.String())
 			}
 		})
 	}

@@ -13,7 +13,7 @@ import (
 
 	"goa.design/goa/examples/calc/gen/http/cli"
 	goahttp "goa.design/goa/http"
-	"goa.design/goa/http/middleware/tracing"
+	"goa.design/goa/http/middleware"
 	"goa.design/goa/http/middleware/xray"
 )
 
@@ -55,7 +55,7 @@ func main() {
 			doer = goahttp.NewDebugDoer(doer)
 		}
 		doer = xray.WrapDoer(doer)
-		doer = tracing.WrapDoer(doer)
+		doer = middleware.WrapDoer(doer)
 	}
 
 	endpoint, payload, err := cli.ParseEndpoint(
