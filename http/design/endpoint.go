@@ -416,31 +416,20 @@ func (e *EndpointExpr) Validate() error {
 			}
 		}
 
-		if pObj := design.AsObject(e.MethodExpr.Payload.Type); pObj != nil {
+		if design.IsObject(e.MethodExpr.Payload.Type) {
 			if e.MapQueryParams != nil {
 				if pAttr := *e.MapQueryParams; pAttr == "" {
 					verr.Add(e, "MapParams is set to map entire payload but payload is an object. Payload must be a map.")
-				} else {
-					found := false
-					for _, nat := range *pObj {
-						if design.IsMap(nat.Attribute.Type) && nat.Name == pAttr {
-							found = true
-							break
-						}
-					}
-					if !found {
-						verr.Add(e, "MapParams is set to an attribute in Payload. But payload has no attribute with type map and name %s", pAttr)
-					}
+				} else if e.MethodExpr.Payload.Find(pAttr) == nil {
+					verr.Add(e, "MapParams is set to an attribute in Payload. But payload has no attribute with type map and name %s", pAttr)
 				}
 			}
 			for _, nat := range *design.AsObject(e.MappedHeaders().Type) {
 				found := false
-				for _, o := range *pObj {
-					name := strings.Split(nat.Name, ":")[0]
-					if o.Name == name {
-						found = true
-						break
-					}
+				name := strings.Split(nat.Name, ":")[0]
+				if e.MethodExpr.Payload.Find(name) != nil {
+					found = true
+					break
 				}
 				if !found {
 					verr.Add(e, "Header %q is not found in Payload.", nat.Name)
@@ -448,12 +437,10 @@ func (e *EndpointExpr) Validate() error {
 			}
 			for _, nat := range *allParams {
 				found := false
-				for _, o := range *pObj {
-					name := strings.Split(nat.Name, ":")[0]
-					if o.Name == name {
-						found = true
-						break
-					}
+				name := strings.Split(nat.Name, ":")[0]
+				if e.MethodExpr.Payload.Find(name) != nil {
+					found = true
+					break
 				}
 				if !found {
 					verr.Add(e, "Param %q is not found in Payload.", nat.Name)
@@ -463,11 +450,10 @@ func (e *EndpointExpr) Validate() error {
 				if bObj := design.AsObject(e.Body.Type); bObj != nil {
 					for _, nat := range *bObj {
 						found := false
-						for _, o := range *pObj {
-							if o.Name == nat.Name {
-								found = true
-								break
-							}
+						name := strings.Split(nat.Name, ":")[0]
+						if e.MethodExpr.Payload.Find(name) != nil {
+							found = true
+							break
 						}
 						if !found {
 							verr.Add(e, "Body %q is not found in Payload.", nat.Name)
