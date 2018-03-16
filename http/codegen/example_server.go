@@ -270,7 +270,7 @@ const mainT = `func main() {
 	var handler http.Handler = mux
 	{
 		if *dbg {
-			handler = middleware.Debug(mux, adapter)(handler)
+			handler = middleware.Debug(mux, os.Stdout)(handler)
 		}
 		handler = middleware.Log(adapter)(handler)
 	}
