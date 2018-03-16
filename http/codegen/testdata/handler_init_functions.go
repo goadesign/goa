@@ -15,9 +15,9 @@ func NewMethodNoPayloadNoResultHandler(
 	)
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		accept := r.Header.Get("Accept")
-		ctx := context.WithValue(r.Context(), goahttp.ContextKeyAcceptType, accept)
-		ctx = context.WithValue(ctx, goa.ContextKeyMethod, "MethodNoPayloadNoResult")
-		ctx = context.WithValue(ctx, goa.ContextKeyService, "ServiceNoPayloadNoResult")
+		ctx := context.WithValue(r.Context(), goahttp.AcceptTypeKey, accept)
+		ctx = context.WithValue(ctx, goa.MethodKey, "MethodNoPayloadNoResult")
+		ctx = context.WithValue(ctx, goa.ServiceKey, "ServiceNoPayloadNoResult")
 		res, err := endpoint(ctx, nil)
 
 		if err != nil {
@@ -47,9 +47,9 @@ func NewMethodPayloadNoResultHandler(
 	)
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		accept := r.Header.Get("Accept")
-		ctx := context.WithValue(r.Context(), goahttp.ContextKeyAcceptType, accept)
-		ctx = context.WithValue(ctx, goa.ContextKeyMethod, "MethodPayloadNoResult")
-		ctx = context.WithValue(ctx, goa.ContextKeyService, "ServicePayloadNoResult")
+		ctx := context.WithValue(r.Context(), goahttp.AcceptTypeKey, accept)
+		ctx = context.WithValue(ctx, goa.MethodKey, "MethodPayloadNoResult")
+		ctx = context.WithValue(ctx, goa.ServiceKey, "ServicePayloadNoResult")
 		payload, err := decodeRequest(r)
 		if err != nil {
 			encodeError(ctx, w, err)
@@ -84,9 +84,9 @@ func NewMethodNoPayloadResultHandler(
 	)
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		accept := r.Header.Get("Accept")
-		ctx := context.WithValue(r.Context(), goahttp.ContextKeyAcceptType, accept)
-		ctx = context.WithValue(ctx, goa.ContextKeyMethod, "MethodNoPayloadResult")
-		ctx = context.WithValue(ctx, goa.ContextKeyService, "ServiceNoPayloadResult")
+		ctx := context.WithValue(r.Context(), goahttp.AcceptTypeKey, accept)
+		ctx = context.WithValue(ctx, goa.MethodKey, "MethodNoPayloadResult")
+		ctx = context.WithValue(ctx, goa.ServiceKey, "ServiceNoPayloadResult")
 		res, err := endpoint(ctx, nil)
 
 		if err != nil {
@@ -116,9 +116,9 @@ func NewMethodPayloadResultHandler(
 	)
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		accept := r.Header.Get("Accept")
-		ctx := context.WithValue(r.Context(), goahttp.ContextKeyAcceptType, accept)
-		ctx = context.WithValue(ctx, goa.ContextKeyMethod, "MethodPayloadResult")
-		ctx = context.WithValue(ctx, goa.ContextKeyService, "ServicePayloadResult")
+		ctx := context.WithValue(r.Context(), goahttp.AcceptTypeKey, accept)
+		ctx = context.WithValue(ctx, goa.MethodKey, "MethodPayloadResult")
+		ctx = context.WithValue(ctx, goa.ServiceKey, "ServicePayloadResult")
 		payload, err := decodeRequest(r)
 		if err != nil {
 			encodeError(ctx, w, err)
@@ -154,9 +154,9 @@ func NewMethodPayloadResultErrorHandler(
 	)
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		accept := r.Header.Get("Accept")
-		ctx := context.WithValue(r.Context(), goahttp.ContextKeyAcceptType, accept)
-		ctx = context.WithValue(ctx, goa.ContextKeyMethod, "MethodPayloadResultError")
-		ctx = context.WithValue(ctx, goa.ContextKeyService, "ServicePayloadResultError")
+		ctx := context.WithValue(r.Context(), goahttp.AcceptTypeKey, accept)
+		ctx = context.WithValue(ctx, goa.MethodKey, "MethodPayloadResultError")
+		ctx = context.WithValue(ctx, goa.ServiceKey, "ServicePayloadResultError")
 		payload, err := decodeRequest(r)
 		if err != nil {
 			encodeError(ctx, w, err)

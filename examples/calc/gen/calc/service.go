@@ -3,7 +3,8 @@
 // calc service
 //
 // Command:
-// $ goa gen goa.design/goa/examples/calc/design
+// $ goa gen goa.design/goa/examples/calc/design -o
+// $(GOPATH)/src/goa.design/goa/examples/calc
 
 package calcsvc
 
