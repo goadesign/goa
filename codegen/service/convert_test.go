@@ -90,6 +90,7 @@ func TestCompatible(t *testing.T) {
 		{"bytes", design.Bytes, []byte{}, ""},
 		{"array", dsl.ArrayOf(design.String), []string{}, ""},
 		{"map", dsl.MapOf(design.String, design.String), map[string]string{}, ""},
+		{"map-interface", dsl.MapOf(design.String, design.Any), map[string]interface{}{}, ""},
 		{"object", obj, objT{}, ""},
 		{"object-mapped", objMapped, objT{}, ""},
 		{"object-ignored", objIgnored, objT{}, ""},
