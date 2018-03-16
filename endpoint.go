@@ -3,17 +3,15 @@ package goa
 import "context"
 
 const (
-	// ContextKeyMethod is the name of the context key used to store the
-	// name of the method as defined in the design. The generated transport
-	// code initializes the corresponding value prior to invoking the
-	// endpoint.
-	ContextKeyMethod contextKey = iota + 1
+	// MethodKey is the request context key used to store the name of the
+	// method as defined in the design. The generated transport code
+	// initializes the corresponding value prior to invoking the endpoint.
+	MethodKey contextKey = iota + 1
 
-	// ContextKeyService is the name of the context key used to store the
-	// name of the service as defined in the design. The generated transport
-	// code initializes the corresponding value prior to invoking the
-	// endpoint.
-	ContextKeyService
+	// ServiceKey is the request context key used to store the name of the
+	// service as defined in the design. The generated transport code
+	// initializes the corresponding value prior to invoking the endpoint.
+	ServiceKey
 )
 
 type (
