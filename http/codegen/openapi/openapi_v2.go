@@ -92,7 +92,7 @@ type (
 		Schemes []string `json:"schemes,omitempty"`
 		// Deprecated declares this operation to be deprecated.
 		Deprecated bool `json:"deprecated,omitempty"`
-		// Secury is a declaration of which security schemes are applied for this operation.
+		// Security is a declaration of which security schemes are applied for this operation.
 		Security []map[string][]string `json:"security,omitempty"`
 		// Extensions defines the swagger extensions.
 		Extensions map[string]interface{} `json:"-"`
