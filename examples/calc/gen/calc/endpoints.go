@@ -3,7 +3,8 @@
 // calc endpoints
 //
 // Command:
-// $ goa gen goa.design/goa/examples/calc/design
+// $ goa gen goa.design/goa/examples/calc/design -o
+// $(GOPATH)/src/goa.design/goa/examples/calc
 
 package calcsvc
 
@@ -23,6 +24,11 @@ func NewEndpoints(s Service) *Endpoints {
 	return &Endpoints{
 		Add: NewAddEndpoint(s),
 	}
+}
+
+// Use applies the given middleware to all the "calc" service endpoints.
+func (e *Endpoints) Use(m func(goa.Endpoint) goa.Endpoint) {
+	e.Add = m(e.Add)
 }
 
 // NewAddEndpoint returns an endpoint function that calls the method "add" of

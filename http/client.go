@@ -98,7 +98,7 @@ func (dd *debugDoer) Fprint(w io.Writer) {
 
 	b, _ := ioutil.ReadAll(dd.Request.Body)
 	if len(b) > 0 {
-		buf.Write([]byte{'\n'})
+		buf.WriteByte('\n')
 		buf.Write(b)
 	}
 
@@ -121,7 +121,7 @@ func (dd *debugDoer) Fprint(w io.Writer) {
 
 	rb, _ := ioutil.ReadAll(dd.Response.Body) // this is reading from a memory buffer so safe to ignore errors
 	if len(rb) > 0 {
-		buf.Write([]byte{'\n'})
+		buf.WriteByte('\n')
 		buf.Write(rb)
 	}
 	w.Write(buf.Bytes())

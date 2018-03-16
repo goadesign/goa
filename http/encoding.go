@@ -18,11 +18,10 @@ import (
 )
 
 const (
-	// ContextKeyAcceptType is the name of the context key used to store the
-	// value of the HTTP request Accept-Type header. The value may be used
-	// by encoders and decoders to implement a content type negotiation
-	// algorithm.
-	ContextKeyAcceptType contextKey = iota + 1
+	// AcceptTypeKey is the context key used to store the value of the HTTP
+	// request Accept-Type header. The value may be used by encoders and
+	// decoders to implement a content type negotiation algorithm.
+	AcceptTypeKey contextKey = iota + 1
 )
 
 type (
@@ -40,8 +39,8 @@ type (
 		Encode(v interface{}) error
 	}
 
-	// EncodingFunc type allows a function with appropriate signature to
-	// act as a Decoder/Encoder.
+	// EncodingFunc allows a function with appropriate signature to act as a
+	// Decoder/Encoder.
 	EncodingFunc func(v interface{}) error
 
 	// private type used to define context keys.
@@ -105,7 +104,7 @@ func ResponseEncoder(ctx context.Context, w http.ResponseWriter) Encoder {
 		return nil, ""
 	}
 	var accept string
-	if a := ctx.Value(ContextKeyAcceptType); a != nil {
+	if a := ctx.Value(AcceptTypeKey); a != nil {
 		accept = a.(string)
 	}
 	var (
@@ -186,17 +185,15 @@ func ErrorEncoder(encoder func(context.Context, http.ResponseWriter) Encoder) fu
 }
 
 // Decode implements the Decoder interface. It simply calls f(v).
-func (f EncodingFunc) Decode(v interface{}) error {
-	return f(v)
-}
+func (f EncodingFunc) Decode(v interface{}) error { return f(v) }
 
 // Encode implements the Encoder interface. It simply calls f(v).
-func (f EncodingFunc) Encode(v interface{}) error {
-	return f(v)
-}
+func (f EncodingFunc) Encode(v interface{}) error { return f(v) }
 
-// SetContentType initializes the response Content-Type header given a mime type
-// and optionally an already existing value.
+// SetContentType initializes the response Content-Type header given a MIME
+// type. If the Content-Type header is already set and the MIME type is
+// "application/json" or "application/xml" then SetContentType appends a suffix
+// to the header ("+json" or "+xml" respectively).
 func SetContentType(w http.ResponseWriter, ct string) {
 	h := w.Header().Get("Content-Type")
 	if h == "" {
