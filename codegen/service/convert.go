@@ -455,6 +455,8 @@ func isPrimitive(t reflect.Type) bool {
 		fallthrough
 	case reflect.Float64:
 		fallthrough
+	case reflect.Interface:
+		fallthrough
 	case reflect.String:
 		return true
 	case reflect.Slice:
@@ -486,17 +488,22 @@ func compatible(from design.DataType, to reflect.Type, recs ...compRec) error {
 		return compatible(from, to.Elem(), recs...)
 	}
 
+	toName := to.Name()
+	if toName == "" {
+		toName = to.Kind().String()
+	}
+
 	// handle recursive data structures
 	var rec compRec
 	if recs != nil {
 		rec = recs[0]
-		if _, ok := rec.seen[from.Hash()+"-"+to.Name()]; ok {
+		if _, ok := rec.seen[from.Hash()+"-"+toName]; ok {
 			return nil
 		}
 	} else {
 		rec = compRec{path: "<value>", seen: make(map[string]struct{})}
 	}
-	rec.seen[from.Hash()+"-"+to.Name()] = struct{}{}
+	rec.seen[from.Hash()+"-"+toName] = struct{}{}
 
 	if design.IsArray(from) {
 		if to.Kind() != reflect.Slice {
@@ -529,7 +536,7 @@ func compatible(from design.DataType, to reflect.Type, recs ...compRec) error {
 
 	if design.IsObject(from) {
 		if to.Kind() != reflect.Struct {
-			return fmt.Errorf("types don't match: %s is a %s, expected a struct", rec.path, to.Name())
+			return fmt.Errorf("types don't match: %s is a %s, expected a struct", rec.path, toName)
 		}
 		obj := design.AsObject(from)
 		ma := design.NewMappedAttributeExpr(&design.AttributeExpr{Type: obj})
@@ -554,7 +561,7 @@ func compatible(from design.DataType, to reflect.Type, recs ...compRec) error {
 			}
 			if !ok {
 				return fmt.Errorf("types don't match: could not find field %q of external type %q matching attribute %q of type %q",
-					fname, to.Name(), nat.Name, from.Name())
+					fname, toName, nat.Name, from.Name())
 			}
 			err := compatible(
 				nat.Attribute.Type,
@@ -578,7 +585,7 @@ func compatible(from design.DataType, to reflect.Type, recs ...compRec) error {
 		}
 	}
 
-	return fmt.Errorf("types don't match: type of %s is %s but type of corresponding attribute is %s", rec.path, to.Name(), from.Name())
+	return fmt.Errorf("types don't match: type of %s is %s but type of corresponding attribute is %s", rec.path, toName, from.Name())
 }
 
 // input: ConvertData
