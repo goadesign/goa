@@ -28,6 +28,16 @@ type Service interface {
 	MultiAdd(context.Context, []*Bottle) ([]string, error)
 }
 
+// ServiceName is the name of the service as defined in the design. This is the
+// same value that is set in the endpoint request contexts under the ServiceKey
+// key.
+const ServiceName = "storage"
+
+// MethodNames lists the service method names as defined in the design. These
+// are the same values that are set in the endpoint request contexts under the
+// MethodKey key.
+var MethodNames = []string{"list", "show", "add", "remove", "rate", "multi_add"}
+
 // StoredBottleCollection is the result type of the storage service list method.
 type StoredBottleCollection []*StoredBottle
 

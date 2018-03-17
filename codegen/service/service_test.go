@@ -19,6 +19,16 @@ type Service interface {
 	A(context.Context, *APayload) (*AResult, error)
 }
 
+// ServiceName is the name of the service as defined in the design. This is the
+// same value that is set in the endpoint request contexts under the ServiceKey
+// key.
+const ServiceName = "Single"
+
+// MethodNames lists the service method names as defined in the design. These
+// are the same values that are set in the endpoint request contexts under the
+// MethodKey key.
+var MethodNames = []string{"A"}
+
 // APayload is the payload type of the Single service A method.
 type APayload struct {
 	IntField      int
@@ -45,6 +55,16 @@ type Service interface {
 	// B implements B.
 	B(context.Context, *BPayload) (*BResult, error)
 }
+
+// ServiceName is the name of the service as defined in the design. This is the
+// same value that is set in the endpoint request contexts under the ServiceKey
+// key.
+const ServiceName = "Multiple"
+
+// MethodNames lists the service method names as defined in the design. These
+// are the same values that are set in the endpoint request contexts under the
+// MethodKey key.
+var MethodNames = []string{"A", "B"}
 
 // APayload is the payload type of the Multiple service A method.
 type APayload struct {
@@ -108,6 +128,16 @@ type Service interface {
 	EmptyResult(context.Context, *APayload) error
 }
 
+// ServiceName is the name of the service as defined in the design. This is the
+// same value that is set in the endpoint request contexts under the ServiceKey
+// key.
+const ServiceName = "EmptyResult"
+
+// MethodNames lists the service method names as defined in the design. These
+// are the same values that are set in the endpoint request contexts under the
+// MethodKey key.
+var MethodNames = []string{"EmptyResult"}
+
 // APayload is the payload type of the EmptyResult service EmptyResult method.
 type APayload struct {
 	IntField      int
@@ -123,6 +153,16 @@ type Service interface {
 	// EmptyPayload implements EmptyPayload.
 	EmptyPayload(context.Context) (*AResult, error)
 }
+
+// ServiceName is the name of the service as defined in the design. This is the
+// same value that is set in the endpoint request contexts under the ServiceKey
+// key.
+const ServiceName = "EmptyPayload"
+
+// MethodNames lists the service method names as defined in the design. These
+// are the same values that are set in the endpoint request contexts under the
+// MethodKey key.
+var MethodNames = []string{"EmptyPayload"}
 
 // AResult is the result type of the EmptyPayload service EmptyPayload method.
 type AResult struct {
