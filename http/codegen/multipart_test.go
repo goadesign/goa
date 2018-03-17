@@ -81,6 +81,7 @@ func TestServerMultipartNewFunc(t *testing.T) {
 		{"multipart-body-user-type", testdata.PayloadMultipartUserTypeDSL, testdata.MultipartUserTypeDecoderFuncCode},
 		{"multipart-body-array-type", testdata.PayloadMultipartArrayTypeDSL, testdata.MultipartArrayTypeDecoderFuncCode},
 		{"multipart-body-map-type", testdata.PayloadMultipartMapTypeDSL, testdata.MultipartMapTypeDecoderFuncCode},
+		{"multipart-with-params", testdata.PayloadMultipartWithParams, testdata.MultipartWithParamsDecoderFuncCode},
 	}
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {

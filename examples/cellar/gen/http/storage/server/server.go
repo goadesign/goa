@@ -66,7 +66,7 @@ func New(
 		Add:      NewAddHandler(e.Add, mux, dec, enc),
 		Remove:   NewRemoveHandler(e.Remove, mux, dec, enc),
 		Rate:     NewRateHandler(e.Rate, mux, dec, enc),
-		MultiAdd: NewMultiAddHandler(e.MultiAdd, mux, NewStorageMultiAddDecoder(storageMultiAddDecoderFn), enc),
+		MultiAdd: NewMultiAddHandler(e.MultiAdd, mux, NewStorageMultiAddDecoder(mux, storageMultiAddDecoderFn), enc),
 	}
 }
 

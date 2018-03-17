@@ -156,7 +156,7 @@ func (s *{{ .ServicePkgName }}Svc) {{ .Method.VarName }}(ctx context.Context{{ i
 
 // input: MultipartData
 const dummyMultipartRequestDecoderImplT = `{{ printf "%s implements the multipart decoder for service %q endpoint %q. The decoder must populate the argument p after encoding." .FuncName .ServiceName .MethodName | comment }}
-func {{ .FuncName }}(mr *multipart.Reader, p *{{ .PayloadRef }}) error {
+func {{ .FuncName }}(mr *multipart.Reader, p {{ if .Pointer }}*{{ end }}{{ .Payload.Ref }}) error {
 	// Add multipart request decoder logic here
 	return nil
 }
@@ -164,7 +164,7 @@ func {{ .FuncName }}(mr *multipart.Reader, p *{{ .PayloadRef }}) error {
 
 // input: MultipartData
 const dummyMultipartRequestEncoderImplT = `{{ printf "%s implements the multipart encoder for service %q endpoint %q." .FuncName .ServiceName .MethodName | comment }}
-func {{ .FuncName }}(mw *multipart.Writer, p {{ .PayloadRef }}) error {
+func {{ .FuncName }}(mw *multipart.Writer, p {{ .Payload.Ref }}) error {
 	// Add multipart request encoder logic here
 	return nil
 }
