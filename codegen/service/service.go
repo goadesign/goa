@@ -94,6 +94,16 @@ type Service interface {
 	{{ .VarName }}(context.Context{{ if .Payload }}, {{ .PayloadRef }}{{ end }}) {{ if .Result }}({{ .ResultRef }}, error){{ else }}error{{ end }}
 {{- end }}
 }
+
+// ServiceName is the name of the service as defined in the design. This is the
+// same value that is set in the endpoint request contexts under the ServiceKey
+// key.
+const ServiceName = {{ printf "%q" .Name }}
+
+// MethodNames lists the service method names as defined in the design. These
+// are the same values that are set in the endpoint request contexts under the
+// MethodKey key.
+var MethodNames = []string{ {{ range .Methods }}{{ printf "%q" .Name }}, {{ end }} }
 `
 
 const payloadT = `{{ comment .PayloadDesc }}
