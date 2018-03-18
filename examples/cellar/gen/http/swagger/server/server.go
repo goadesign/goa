@@ -49,6 +49,10 @@ func New(
 // Service returns the name of the service served.
 func (s *Server) Service() string { return "swagger" }
 
+// Use wraps the server handlers with the given middleware.
+func (s *Server) Use(m func(http.Handler) http.Handler) {
+}
+
 // Mount configures the mux to serve the swagger endpoints.
 func Mount(mux goahttp.Muxer) {
 	MountGenHTTPOpenapiJSON(mux, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

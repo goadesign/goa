@@ -73,6 +73,16 @@ func New(
 // Service returns the name of the service served.
 func (s *Server) Service() string { return "storage" }
 
+// Use wraps the server handlers with the given middleware.
+func (s *Server) Use(m func(http.Handler) http.Handler) {
+	s.List = m(s.List)
+	s.Show = m(s.Show)
+	s.Add = m(s.Add)
+	s.Remove = m(s.Remove)
+	s.Rate = m(s.Rate)
+	s.MultiAdd = m(s.MultiAdd)
+}
+
 // Mount configures the mux to serve the storage endpoints.
 func Mount(mux goahttp.Muxer, h *Server) {
 	MountListHandler(mux, h.List)
