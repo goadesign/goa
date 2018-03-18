@@ -103,7 +103,7 @@ const ServiceName = {{ printf "%q" .Name }}
 // MethodNames lists the service method names as defined in the design. These
 // are the same values that are set in the endpoint request contexts under the
 // MethodKey key.
-var MethodNames = []string{ {{ range .Methods }}{{ printf "%q" .Name }}, {{ end }} }
+var MethodNames = [{{ len .Methods }}]string{ {{ range .Methods }}{{ printf "%q" .Name }}, {{ end }} }
 `
 
 const payloadT = `{{ comment .PayloadDesc }}
