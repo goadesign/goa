@@ -241,6 +241,8 @@ func GoNativeType(t design.DataType) string {
 			return "uuid.UUID"
 		case design.AnyKind:
 			return "interface{}"
+		case design.FileKind:
+			return "multipart.FileHeader"
 		default:
 			panic(fmt.Sprintf("goa bug: unknown primitive type %#v", actual))
 		}
