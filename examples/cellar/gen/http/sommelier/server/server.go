@@ -52,6 +52,11 @@ func New(
 // Service returns the name of the service served.
 func (s *Server) Service() string { return "sommelier" }
 
+// Use wraps the server handlers with the given middleware.
+func (s *Server) Use(m func(http.Handler) http.Handler) {
+	s.Pick = m(s.Pick)
+}
+
 // Mount configures the mux to serve the sommelier endpoints.
 func Mount(mux goahttp.Muxer, h *Server) {
 	MountPickHandler(mux, h.Pick)

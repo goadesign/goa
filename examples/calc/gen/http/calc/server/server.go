@@ -52,6 +52,11 @@ func New(
 // Service returns the name of the service served.
 func (s *Server) Service() string { return "calc" }
 
+// Use wraps the server handlers with the given middleware.
+func (s *Server) Use(m func(http.Handler) http.Handler) {
+	s.Add = m(s.Add)
+}
+
 // Mount configures the mux to serve the calc endpoints.
 func Mount(mux goahttp.Muxer, h *Server) {
 	MountAddHandler(mux, h.Add)

@@ -58,6 +58,7 @@ func server(genpkg string, svc *httpdesign.ServiceExpr) *codegen.File {
 
 	sections = append(sections, &codegen.SectionTemplate{Name: "server-init", Source: serverInitT, Data: data})
 	sections = append(sections, &codegen.SectionTemplate{Name: "server-service", Source: serverServiceT, Data: data})
+	sections = append(sections, &codegen.SectionTemplate{Name: "server-use", Source: serverUseT, Data: data})
 	sections = append(sections, &codegen.SectionTemplate{Name: "server-mount", Source: serverMountT, Data: data})
 
 	for _, e := range data.Endpoints {
@@ -246,6 +247,15 @@ func {{ .ServerInit }}(
 // input: ServiceData
 const serverServiceT = `{{ printf "%s returns the name of the service served." .ServerService | comment }}
 func (s *{{ .ServerStruct }}) {{ .ServerService }}() string { return "{{ .Service.Name }}" }
+`
+
+// input: ServiceData
+const serverUseT = `{{ printf "Use wraps the server handlers with the given middleware." | comment }}
+func (s *{{ .ServerStruct }}) Use(m func(http.Handler) http.Handler) { 
+{{- range .Endpoints }}
+	s.{{ .Method.VarName }} = m(s.{{ .Method.VarName }})
+{{- end }}
+}
 `
 
 // input: ServiceData
