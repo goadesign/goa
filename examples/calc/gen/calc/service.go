@@ -26,7 +26,7 @@ const ServiceName = "calc"
 // MethodNames lists the service method names as defined in the design. These
 // are the same values that are set in the endpoint request contexts under the
 // MethodKey key.
-var MethodNames = []string{"add"}
+var MethodNames = [1]string{"add"}
 
 // AddPayload is the payload type of the calc service add method.
 type AddPayload struct {

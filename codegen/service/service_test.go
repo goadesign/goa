@@ -27,7 +27,7 @@ const ServiceName = "Single"
 // MethodNames lists the service method names as defined in the design. These
 // are the same values that are set in the endpoint request contexts under the
 // MethodKey key.
-var MethodNames = []string{"A"}
+var MethodNames = [1]string{"A"}
 
 // APayload is the payload type of the Single service A method.
 type APayload struct {
@@ -64,7 +64,7 @@ const ServiceName = "Multiple"
 // MethodNames lists the service method names as defined in the design. These
 // are the same values that are set in the endpoint request contexts under the
 // MethodKey key.
-var MethodNames = []string{"A", "B"}
+var MethodNames = [2]string{"A", "B"}
 
 // APayload is the payload type of the Multiple service A method.
 type APayload struct {
@@ -136,7 +136,7 @@ const ServiceName = "EmptyResult"
 // MethodNames lists the service method names as defined in the design. These
 // are the same values that are set in the endpoint request contexts under the
 // MethodKey key.
-var MethodNames = []string{"EmptyResult"}
+var MethodNames = [1]string{"EmptyResult"}
 
 // APayload is the payload type of the EmptyResult service EmptyResult method.
 type APayload struct {
@@ -162,7 +162,7 @@ const ServiceName = "EmptyPayload"
 // MethodNames lists the service method names as defined in the design. These
 // are the same values that are set in the endpoint request contexts under the
 // MethodKey key.
-var MethodNames = []string{"EmptyPayload"}
+var MethodNames = [1]string{"EmptyPayload"}
 
 // AResult is the result type of the EmptyPayload service EmptyPayload method.
 type AResult struct {
