@@ -20,4 +20,4 @@ const ServiceName = "openapi"
 // MethodNames lists the service method names as defined in the design. These
 // are the same values that are set in the endpoint request contexts under the
 // MethodKey key.
-var MethodNames = []string{}
+var MethodNames = [0]string{}

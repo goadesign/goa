@@ -26,7 +26,7 @@ const ServiceName = "sommelier"
 // MethodNames lists the service method names as defined in the design. These
 // are the same values that are set in the endpoint request contexts under the
 // MethodKey key.
-var MethodNames = []string{"pick"}
+var MethodNames = [1]string{"pick"}
 
 // Criteria is the payload type of the sommelier service pick method.
 type Criteria struct {
