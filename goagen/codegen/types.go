@@ -116,7 +116,7 @@ func goTypeDefObject(obj design.Object, def *design.AttributeDefinition, tabs in
 		WriteTabs(&buffer, tabs+1)
 		field := obj[name]
 		typedef := GoTypeDef(field, tabs+1, jsonTags, private)
-		if (field.Type.IsPrimitive() && private) || field.Type.IsObject() || def.IsPrimitivePointer(name) {
+		if (private && field.Type.IsPrimitive() && !def.IsInterface(name)) || field.Type.IsObject() || def.IsPrimitivePointer(name) {
 			typedef = "*" + typedef
 		}
 		fname := GoifyAtt(field, name, true)
