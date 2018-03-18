@@ -448,6 +448,18 @@ func payload(isOptional bool, p interface{}, dsls ...func()) {
 	}
 }
 
+// MultipartForm can be used in: Action
+//
+// MultipartForm implements the action multipart form DSL. An action multipart form indicates that
+// the HTTP request body should be encoded using multipart form data as described in
+// https://www.w3.org/TR/html401/interact/forms.html#h-17.13.4.2.
+//
+func MultipartForm() {
+	if a, ok := actionDefinition(); ok {
+		a.PayloadMultipart = true
+	}
+}
+
 // newAttribute creates a new attribute definition using the media type with the given identifier
 // as base type.
 func newAttribute(baseMT string) *design.AttributeDefinition {

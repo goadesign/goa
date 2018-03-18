@@ -690,6 +690,27 @@ func paramsFromHeaders(action *design.ActionDefinition) []*Parameter {
 	return params
 }
 
+func paramsFromPayload(payload *design.UserTypeDefinition) ([]*Parameter, error) {
+	if payload == nil {
+		return nil, nil
+	}
+	obj := payload.Type.ToObject()
+	if obj == nil {
+		return nil, fmt.Errorf("invalid parameters definition, not an object")
+	}
+	res := make([]*Parameter, len(obj))
+	i := 0
+	obj.IterateAttributes(func(n string, at *design.AttributeDefinition) error {
+		in := "formData"
+		required := payload.IsRequired(n)
+		param := paramFor(at, n, in, required)
+		res[i] = param
+		i++
+		return nil
+	})
+	return res, nil
+}
+
 func paramFor(at *design.AttributeDefinition, name, in string, required bool) *Parameter {
 	p := &Parameter{
 		In:          in,
@@ -908,15 +929,23 @@ func buildPathFromDefinition(s *Swagger, api *design.APIDefinition, route *desig
 	}
 
 	if action.Payload != nil {
-		payloadSchema := genschema.TypeSchema(api, action.Payload)
-		pp := &Parameter{
-			Name:        "payload",
-			In:          "body",
-			Description: action.Payload.Description,
-			Required:    !action.PayloadOptional,
-			Schema:      payloadSchema,
+		if action.PayloadMultipart {
+			p, err := paramsFromPayload(action.Payload)
+			if err != nil {
+				return err
+			}
+			params = append(params, p...)
+		} else {
+			payloadSchema := genschema.TypeSchema(api, action.Payload)
+			pp := &Parameter{
+				Name:        "payload",
+				In:          "body",
+				Description: action.Payload.Description,
+				Required:    !action.PayloadOptional,
+				Schema:      payloadSchema,
+			}
+			params = append(params, pp)
 		}
-		params = append(params, pp)
 	}
 
 	operationID := fmt.Sprintf("%s#%s", action.Parent.Name, action.Name)
@@ -952,6 +981,44 @@ func buildPathFromDefinition(s *Swagger, api *design.APIDefinition, route *desig
 	computeProduces(operation, s, action)
 	applySecurity(operation, action.Security)
 
+	computePaths(operation, s, route, basePath)
+	return nil
+}
+
+func computeProduces(operation *Operation, s *Swagger, action *design.ActionDefinition) {
+	produces := make(map[string]struct{})
+	action.IterateResponses(func(resp *design.ResponseDefinition) error {
+		if resp.MediaType != "" {
+			produces[resp.MediaType] = struct{}{}
+		}
+		return nil
+	})
+	subset := true
+	for p := range produces {
+		found := false
+		for _, p2 := range s.Produces {
+			if p == p2 {
+				found = true
+				break
+			}
+		}
+		if !found {
+			subset = false
+			break
+		}
+	}
+	if !subset {
+		operation.Produces = make([]string, len(produces))
+		i := 0
+		for p := range produces {
+			operation.Produces[i] = p
+			i++
+		}
+		sort.Strings(operation.Produces)
+	}
+}
+
+func computePaths(operation *Operation, s *Swagger, route *design.RouteDefinition, basePath string) {
 	key := design.WildcardRegex.ReplaceAllStringFunc(
 		route.FullPath(),
 		func(w string) string {
@@ -994,40 +1061,6 @@ func buildPathFromDefinition(s *Swagger, api *design.APIDefinition, route *desig
 		p.Patch = operation
 	}
 	p.Extensions = extensionsFromDefinition(route.Parent.Metadata)
-	return nil
-}
-
-func computeProduces(operation *Operation, s *Swagger, action *design.ActionDefinition) {
-	produces := make(map[string]struct{})
-	action.IterateResponses(func(resp *design.ResponseDefinition) error {
-		if resp.MediaType != "" {
-			produces[resp.MediaType] = struct{}{}
-		}
-		return nil
-	})
-	subset := true
-	for p := range produces {
-		found := false
-		for _, p2 := range s.Produces {
-			if p == p2 {
-				found = true
-				break
-			}
-		}
-		if !found {
-			subset = false
-			break
-		}
-	}
-	if !subset {
-		operation.Produces = make([]string, len(produces))
-		i := 0
-		for p := range produces {
-			operation.Produces[i] = p
-			i++
-		}
-		sort.Strings(operation.Produces)
-	}
 }
 
 func applySecurity(operation *Operation, security *design.SecurityDefinition) {

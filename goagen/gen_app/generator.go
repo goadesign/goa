@@ -242,6 +242,9 @@ func (g *Generator) generateControllers() (err error) {
 		codegen.SimpleImport("github.com/goadesign/goa"),
 		codegen.SimpleImport("github.com/goadesign/goa/cors"),
 		codegen.SimpleImport("regexp"),
+		codegen.SimpleImport("strconv"),
+		codegen.SimpleImport("time"),
+		codegen.NewImport("uuid", "github.com/satori/go.uuid"),
 	}
 	encoders, err := BuildEncoders(g.API.Produces, true)
 	if err != nil {
@@ -305,14 +308,15 @@ func (g *Generator) generateControllers() (err error) {
 			context := fmt.Sprintf("%s%sContext", codegen.Goify(a.Name, true), codegen.Goify(r.Name, true))
 			unmarshal := fmt.Sprintf("unmarshal%s%sPayload", codegen.Goify(a.Name, true), codegen.Goify(r.Name, true))
 			action := map[string]interface{}{
-				"Name":            codegen.Goify(a.Name, true),
-				"DesignName":      a.Name,
-				"Routes":          a.Routes,
-				"Context":         context,
-				"Unmarshal":       unmarshal,
-				"Payload":         a.Payload,
-				"PayloadOptional": a.PayloadOptional,
-				"Security":        a.Security,
+				"Name":             codegen.Goify(a.Name, true),
+				"DesignName":       a.Name,
+				"Routes":           a.Routes,
+				"Context":          context,
+				"Unmarshal":        unmarshal,
+				"Payload":          a.Payload,
+				"PayloadOptional":  a.PayloadOptional,
+				"PayloadMultipart": a.PayloadMultipart,
+				"Security":         a.Security,
 			}
 			data.Actions = append(data.Actions, action)
 			return nil
