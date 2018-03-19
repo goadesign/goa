@@ -453,6 +453,112 @@ var _ = Describe("code generation", func() {
 			})
 		})
 
+		Context("when generating an all-optional private struct, given an attribute definition with fields", func() {
+			var att *AttributeDefinition
+			var object Object
+			var required *dslengine.ValidationDefinition
+			var st string
+
+			JustBeforeEach(func() {
+				att = new(AttributeDefinition)
+				att.Type = object
+				if required != nil {
+					att.Validation = required
+				}
+				st = codegen.GoTypeDef(att, 0, true, true)
+			})
+
+			Context("of primitive types", func() {
+				BeforeEach(func() {
+					object = Object{
+						"foo": &AttributeDefinition{Type: Integer},
+						"bar": &AttributeDefinition{Type: String},
+						"baz": &AttributeDefinition{Type: DateTime},
+						"qux": &AttributeDefinition{Type: UUID},
+						"quz": &AttributeDefinition{Type: Any},
+					}
+					required = nil
+				})
+
+				It("produces the struct go code", func() {
+					expected := "struct {\n" +
+						"	Bar *string `form:\"bar,omitempty\" json:\"bar,omitempty\" xml:\"bar,omitempty\"`\n" +
+						"	Baz *time.Time `form:\"baz,omitempty\" json:\"baz,omitempty\" xml:\"baz,omitempty\"`\n" +
+						"	Foo *int `form:\"foo,omitempty\" json:\"foo,omitempty\" xml:\"foo,omitempty\"`\n" +
+						"	Qux *uuid.UUID `form:\"qux,omitempty\" json:\"qux,omitempty\" xml:\"qux,omitempty\"`\n" +
+						"	Quz interface{} `form:\"quz,omitempty\" json:\"quz,omitempty\" xml:\"quz,omitempty\"`\n" +
+						"}"
+					Ω(st).Should(Equal(expected))
+				})
+
+				Context("that are required", func() {
+					BeforeEach(func() {
+						required = &dslengine.ValidationDefinition{
+							Required: []string{"foo", "bar", "baz", "qux", "quz"},
+						}
+					})
+					It("produces the struct go code", func() {
+						expected := "struct {\n" +
+							"	Bar *string `form:\"bar,omitempty\" json:\"bar,omitempty\" xml:\"bar,omitempty\"`\n" +
+							"	Baz *time.Time `form:\"baz,omitempty\" json:\"baz,omitempty\" xml:\"baz,omitempty\"`\n" +
+							"	Foo *int `form:\"foo,omitempty\" json:\"foo,omitempty\" xml:\"foo,omitempty\"`\n" +
+							"	Qux *uuid.UUID `form:\"qux,omitempty\" json:\"qux,omitempty\" xml:\"qux,omitempty\"`\n" +
+							"	Quz interface{} `form:\"quz,omitempty\" json:\"quz,omitempty\" xml:\"quz,omitempty\"`\n" +
+							"}"
+						Ω(st).Should(Equal(expected))
+					})
+				})
+			})
+
+			Context("of hash of primitive types", func() {
+				BeforeEach(func() {
+					elemType := &AttributeDefinition{Type: Integer}
+					keyType := &AttributeDefinition{Type: Integer}
+					hash := &Hash{KeyType: keyType, ElemType: elemType}
+					object = Object{
+						"foo": &AttributeDefinition{Type: hash},
+					}
+					required = nil
+				})
+
+				It("produces the struct go code", func() {
+					Ω(st).Should(Equal("struct {\n\tFoo map[int]int `form:\"foo,omitempty\" json:\"foo,omitempty\" xml:\"foo,omitempty\"`\n}"))
+				})
+			})
+
+			Context("of array of primitive types", func() {
+				BeforeEach(func() {
+					elemType := &AttributeDefinition{Type: Integer}
+					array := &Array{ElemType: elemType}
+					object = Object{
+						"foo": &AttributeDefinition{Type: array},
+					}
+					required = nil
+				})
+
+				It("produces the struct go code", func() {
+					Ω(st).Should(Equal("struct {\n\tFoo []int `form:\"foo,omitempty\" json:\"foo,omitempty\" xml:\"foo,omitempty\"`\n}"))
+				})
+			})
+
+			Context("that are required", func() {
+				BeforeEach(func() {
+					object = Object{
+						"foo": &AttributeDefinition{Type: Integer},
+					}
+					required = &dslengine.ValidationDefinition{
+						Required: []string{"foo"},
+					}
+				})
+
+				It("produces the struct go code", func() {
+					expected := "struct {\n" +
+						"	Foo *int `form:\"foo,omitempty\" json:\"foo,omitempty\" xml:\"foo,omitempty\"`\n" +
+						"}"
+					Ω(st).Should(Equal(expected))
+				})
+			})
+		})
 	})
 })
 
