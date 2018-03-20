@@ -443,6 +443,86 @@ func DecodeMultiAddResponse(decoder func(*http.Response) goahttp.Decoder, restor
 	}
 }
 
+// BuildMultiUpdateRequest instantiates a HTTP request object with method and
+// path set to call the "storage" service "multi_update" endpoint
+func (c *Client) BuildMultiUpdateRequest(ctx context.Context, v interface{}) (*http.Request, error) {
+	u := &url.URL{Scheme: c.scheme, Host: c.host, Path: MultiUpdateStoragePath()}
+	req, err := http.NewRequest("PUT", u.String(), nil)
+	if err != nil {
+		return nil, goahttp.ErrInvalidURL("storage", "multi_update", u.String(), err)
+	}
+	if ctx != nil {
+		req = req.WithContext(ctx)
+	}
+
+	return req, nil
+}
+
+// EncodeMultiUpdateRequest returns an encoder for requests sent to the storage
+// multi_update server.
+func EncodeMultiUpdateRequest(encoder func(*http.Request) goahttp.Encoder) func(*http.Request, interface{}) error {
+	return func(req *http.Request, v interface{}) error {
+		p, ok := v.(*storage.MultiUpdatePayload)
+		if !ok {
+			return goahttp.ErrInvalidType("storage", "multi_update", "*storage.MultiUpdatePayload", v)
+		}
+		values := req.URL.Query()
+		for _, value := range p.Ids {
+			values.Add("ids", value)
+		}
+		req.URL.RawQuery = values.Encode()
+		if err := encoder(req).Encode(p); err != nil {
+			return goahttp.ErrEncodingError("storage", "multi_update", err)
+		}
+		return nil
+	}
+}
+
+// NewStorageMultiUpdateEncoder returns an encoder to encode the multipart
+// request for the "storage" service "multi_update" endpoint.
+func NewStorageMultiUpdateEncoder(encoderFn StorageMultiUpdateEncoderFunc) func(r *http.Request) goahttp.Encoder {
+	return func(r *http.Request) goahttp.Encoder {
+		body := &bytes.Buffer{}
+		mw := multipart.NewWriter(body)
+		return goahttp.EncodingFunc(func(v interface{}) error {
+			p := v.(*storage.MultiUpdatePayload)
+			if err := encoderFn(mw, p); err != nil {
+				return err
+			}
+			r.Body = ioutil.NopCloser(body)
+			r.Header.Set("Content-Type", mw.FormDataContentType())
+			return mw.Close()
+		})
+	}
+}
+
+// DecodeMultiUpdateResponse returns a decoder for responses returned by the
+// storage multi_update endpoint. restoreBody controls whether the response
+// body should be restored after having been read.
+func DecodeMultiUpdateResponse(decoder func(*http.Response) goahttp.Decoder, restoreBody bool) func(*http.Response) (interface{}, error) {
+	return func(resp *http.Response) (interface{}, error) {
+		if restoreBody {
+			b, err := ioutil.ReadAll(resp.Body)
+			if err != nil {
+				return nil, err
+			}
+			resp.Body = ioutil.NopCloser(bytes.NewBuffer(b))
+			defer func() {
+				resp.Body = ioutil.NopCloser(bytes.NewBuffer(b))
+			}()
+		} else {
+			defer resp.Body.Close()
+		}
+		switch resp.StatusCode {
+		case http.StatusNoContent:
+			return nil, nil
+		default:
+			body, _ := ioutil.ReadAll(resp.Body)
+			return nil, goahttp.ErrInvalidResponse("account", "create", resp.StatusCode, string(body))
+		}
+	}
+}
+
 // unmarshalWineryResponseBodyToWinery builds a value of type *storage.Winery
 // from a value of type *WineryResponseBody.
 func unmarshalWineryResponseBodyToWinery(v *WineryResponseBody) *storage.Winery {

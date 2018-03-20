@@ -9,7 +9,7 @@ type ServiceMultipartPrimitiveMethodMultipartPrimitiveDecoderFunc func(*multipar
 var MultipartUserTypeDecoderFuncTypeCode = `// ServiceMultipartUserTypeMethodMultipartUserTypeDecoderFunc is the type to
 // decode multipart request for the "ServiceMultipartUserType" service
 // "MethodMultipartUserType" endpoint.
-type ServiceMultipartUserTypeMethodMultipartUserTypeDecoderFunc func(*multipart.Reader, *servicemultipartusertype.MethodMultipartUserTypePayload) error
+type ServiceMultipartUserTypeMethodMultipartUserTypeDecoderFunc func(*multipart.Reader, **servicemultipartusertype.MethodMultipartUserTypePayload) error
 `
 
 var MultipartArrayTypeDecoderFuncTypeCode = `// ServiceMultipartArrayTypeMethodMultipartArrayTypeDecoderFunc is the type to
@@ -51,7 +51,7 @@ type ServiceMultipartMapTypeMethodMultipartMapTypeEncoderFunc func(*multipart.Wr
 var MultipartPrimitiveDecoderFuncCode = `// NewServiceMultipartPrimitiveMethodMultipartPrimitiveDecoder returns a
 // decoder to decode the multipart request for the "ServiceMultipartPrimitive"
 // service "MethodMultipartPrimitive" endpoint.
-func NewServiceMultipartPrimitiveMethodMultipartPrimitiveDecoder(ServiceMultipartPrimitiveMethodMultipartPrimitiveDecoderFn ServiceMultipartPrimitiveMethodMultipartPrimitiveDecoderFunc) func(r *http.Request) goahttp.Decoder {
+func NewServiceMultipartPrimitiveMethodMultipartPrimitiveDecoder(mux goahttp.Muxer, ServiceMultipartPrimitiveMethodMultipartPrimitiveDecoderFn ServiceMultipartPrimitiveMethodMultipartPrimitiveDecoderFunc) func(r *http.Request) goahttp.Decoder {
 	return func(r *http.Request) goahttp.Decoder {
 		return goahttp.EncodingFunc(func(v interface{}) error {
 			mr, err := r.MultipartReader()
@@ -59,7 +59,10 @@ func NewServiceMultipartPrimitiveMethodMultipartPrimitiveDecoder(ServiceMultipar
 				return err
 			}
 			p := v.(*string)
-			return ServiceMultipartPrimitiveMethodMultipartPrimitiveDecoderFn(mr, p)
+			if err := ServiceMultipartPrimitiveMethodMultipartPrimitiveDecoderFn(mr, p); err != nil {
+				return err
+			}
+			return nil
 		})
 	}
 }
@@ -68,15 +71,18 @@ func NewServiceMultipartPrimitiveMethodMultipartPrimitiveDecoder(ServiceMultipar
 var MultipartUserTypeDecoderFuncCode = `// NewServiceMultipartUserTypeMethodMultipartUserTypeDecoder returns a decoder
 // to decode the multipart request for the "ServiceMultipartUserType" service
 // "MethodMultipartUserType" endpoint.
-func NewServiceMultipartUserTypeMethodMultipartUserTypeDecoder(ServiceMultipartUserTypeMethodMultipartUserTypeDecoderFn ServiceMultipartUserTypeMethodMultipartUserTypeDecoderFunc) func(r *http.Request) goahttp.Decoder {
+func NewServiceMultipartUserTypeMethodMultipartUserTypeDecoder(mux goahttp.Muxer, ServiceMultipartUserTypeMethodMultipartUserTypeDecoderFn ServiceMultipartUserTypeMethodMultipartUserTypeDecoderFunc) func(r *http.Request) goahttp.Decoder {
 	return func(r *http.Request) goahttp.Decoder {
 		return goahttp.EncodingFunc(func(v interface{}) error {
 			mr, err := r.MultipartReader()
 			if err != nil {
 				return err
 			}
-			p := v.(*servicemultipartusertype.MethodMultipartUserTypePayload)
-			return ServiceMultipartUserTypeMethodMultipartUserTypeDecoderFn(mr, p)
+			p := v.(**servicemultipartusertype.MethodMultipartUserTypePayload)
+			if err := ServiceMultipartUserTypeMethodMultipartUserTypeDecoderFn(mr, p); err != nil {
+				return err
+			}
+			return nil
 		})
 	}
 }
@@ -85,7 +91,7 @@ func NewServiceMultipartUserTypeMethodMultipartUserTypeDecoder(ServiceMultipartU
 var MultipartArrayTypeDecoderFuncCode = `// NewServiceMultipartArrayTypeMethodMultipartArrayTypeDecoder returns a
 // decoder to decode the multipart request for the "ServiceMultipartArrayType"
 // service "MethodMultipartArrayType" endpoint.
-func NewServiceMultipartArrayTypeMethodMultipartArrayTypeDecoder(ServiceMultipartArrayTypeMethodMultipartArrayTypeDecoderFn ServiceMultipartArrayTypeMethodMultipartArrayTypeDecoderFunc) func(r *http.Request) goahttp.Decoder {
+func NewServiceMultipartArrayTypeMethodMultipartArrayTypeDecoder(mux goahttp.Muxer, ServiceMultipartArrayTypeMethodMultipartArrayTypeDecoderFn ServiceMultipartArrayTypeMethodMultipartArrayTypeDecoderFunc) func(r *http.Request) goahttp.Decoder {
 	return func(r *http.Request) goahttp.Decoder {
 		return goahttp.EncodingFunc(func(v interface{}) error {
 			mr, err := r.MultipartReader()
@@ -93,7 +99,10 @@ func NewServiceMultipartArrayTypeMethodMultipartArrayTypeDecoder(ServiceMultipar
 				return err
 			}
 			p := v.(*[]*servicemultipartarraytype.PayloadType)
-			return ServiceMultipartArrayTypeMethodMultipartArrayTypeDecoderFn(mr, p)
+			if err := ServiceMultipartArrayTypeMethodMultipartArrayTypeDecoderFn(mr, p); err != nil {
+				return err
+			}
+			return nil
 		})
 	}
 }
@@ -102,7 +111,7 @@ func NewServiceMultipartArrayTypeMethodMultipartArrayTypeDecoder(ServiceMultipar
 var MultipartMapTypeDecoderFuncCode = `// NewServiceMultipartMapTypeMethodMultipartMapTypeDecoder returns a decoder to
 // decode the multipart request for the "ServiceMultipartMapType" service
 // "MethodMultipartMapType" endpoint.
-func NewServiceMultipartMapTypeMethodMultipartMapTypeDecoder(ServiceMultipartMapTypeMethodMultipartMapTypeDecoderFn ServiceMultipartMapTypeMethodMultipartMapTypeDecoderFunc) func(r *http.Request) goahttp.Decoder {
+func NewServiceMultipartMapTypeMethodMultipartMapTypeDecoder(mux goahttp.Muxer, ServiceMultipartMapTypeMethodMultipartMapTypeDecoderFn ServiceMultipartMapTypeMethodMultipartMapTypeDecoderFunc) func(r *http.Request) goahttp.Decoder {
 	return func(r *http.Request) goahttp.Decoder {
 		return goahttp.EncodingFunc(func(v interface{}) error {
 			mr, err := r.MultipartReader()
@@ -110,7 +119,71 @@ func NewServiceMultipartMapTypeMethodMultipartMapTypeDecoder(ServiceMultipartMap
 				return err
 			}
 			p := v.(*map[string]int)
-			return ServiceMultipartMapTypeMethodMultipartMapTypeDecoderFn(mr, p)
+			if err := ServiceMultipartMapTypeMethodMultipartMapTypeDecoderFn(mr, p); err != nil {
+				return err
+			}
+			return nil
+		})
+	}
+}
+`
+
+var MultipartWithParamsDecoderFuncCode = `// NewServiceMultipartWithParamsMethodMultipartWithParamsDecoder returns a
+// decoder to decode the multipart request for the "ServiceMultipartWithParams"
+// service "MethodMultipartWithParams" endpoint.
+func NewServiceMultipartWithParamsMethodMultipartWithParamsDecoder(mux goahttp.Muxer, ServiceMultipartWithParamsMethodMultipartWithParamsDecoderFn ServiceMultipartWithParamsMethodMultipartWithParamsDecoderFunc) func(r *http.Request) goahttp.Decoder {
+	return func(r *http.Request) goahttp.Decoder {
+		return goahttp.EncodingFunc(func(v interface{}) error {
+			mr, err := r.MultipartReader()
+			if err != nil {
+				return err
+			}
+			p := v.(**servicemultipartwithparams.PayloadType)
+			if err := ServiceMultipartWithParamsMethodMultipartWithParamsDecoderFn(mr, p); err != nil {
+				return err
+			}
+			var (
+				a   string
+				c   map[int][]string
+				b   *string
+				err error
+
+				params = mux.Vars(r)
+			)
+			a = params["a"]
+			err = goa.MergeErrors(err, goa.ValidatePattern("a", a, "patterna"))
+			{
+				cRaw := r.URL.Query()
+				if len(cRaw) == 0 {
+					err = goa.MergeErrors(err, goa.MissingFieldError("c", "query string"))
+				}
+				c = make(map[int][]string, len(cRaw))
+				for keyRaw, val := range cRaw {
+					var key int
+					{
+						v, err2 := strconv.ParseInt(keyRaw, 10, strconv.IntSize)
+						if err2 != nil {
+							err = goa.MergeErrors(err, goa.InvalidFieldTypeError("key", keyRaw, "integer"))
+						}
+						key = int(v)
+					}
+					c[key] = val
+				}
+			}
+			bRaw := r.Header.Get("Authorization")
+			if bRaw != "" {
+				b = &bRaw
+			}
+			if b != nil {
+				err = goa.MergeErrors(err, goa.ValidatePattern("b", *b, "patternb"))
+			}
+			if err != nil {
+				return err
+			}
+			(*p).A = a
+			(*p).C = c
+			(*p).B = b
+			return nil
 		})
 	}
 }
@@ -184,6 +257,26 @@ func NewServiceMultipartMapTypeMethodMultipartMapTypeEncoder(encoderFn ServiceMu
 		mw := multipart.NewWriter(body)
 		return goahttp.EncodingFunc(func(v interface{}) error {
 			p := v.(map[string]int)
+			if err := encoderFn(mw, p); err != nil {
+				return err
+			}
+			r.Body = ioutil.NopCloser(body)
+			r.Header.Set("Content-Type", mw.FormDataContentType())
+			return mw.Close()
+		})
+	}
+}
+`
+
+var MultipartWithParamsEncoderFuncCode = `// NewServiceMultipartWithParamsMethodMultipartWithParamsEncoder returns an
+// encoder to encode the multipart request for the "ServiceMultipartWithParams"
+// service "MethodMultipartWithParams" endpoint.
+func NewServiceMultipartWithParamsMethodMultipartWithParamsEncoder(encoderFn ServiceMultipartWithParamsMethodMultipartWithParamsEncoderFunc) func(r *http.Request) goahttp.Encoder {
+	return func(r *http.Request) goahttp.Encoder {
+		body := &bytes.Buffer{}
+		mw := multipart.NewWriter(body)
+		return goahttp.EncodingFunc(func(v interface{}) error {
+			p := v.(*servicemultipartwithparams.PayloadType)
 			if err := encoderFn(mw, p); err != nil {
 				return err
 			}

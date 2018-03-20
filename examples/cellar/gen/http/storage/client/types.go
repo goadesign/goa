@@ -32,6 +32,13 @@ type AddRequestBody struct {
 	Rating *uint32 `form:"rating,omitempty" json:"rating,omitempty" xml:"rating,omitempty"`
 }
 
+// MultiUpdateRequestBody is the type of the "storage" service "multi_update"
+// endpoint HTTP request body.
+type MultiUpdateRequestBody struct {
+	// Array of bottle info that matches the ids attribute
+	Bottles []*BottleRequestBody `form:"bottles,omitempty" json:"bottles,omitempty" xml:"bottles,omitempty"`
+}
+
 // ListResponseBody is the type of the "storage" service "list" endpoint HTTP
 // response body.
 type ListResponseBody []*StoredBottleResponseBody
@@ -202,6 +209,36 @@ func NewBottleRequestBody(p []*storage.Bottle) []*BottleRequestBody {
 				body[i].Composition[j] = &ComponentRequestBody{
 					Varietal:   val.Varietal,
 					Percentage: val.Percentage,
+				}
+			}
+		}
+	}
+	return body
+}
+
+// NewMultiUpdateRequestBody builds the HTTP request body from the payload of
+// the "multi_update" endpoint of the "storage" service.
+func NewMultiUpdateRequestBody(p *storage.MultiUpdatePayload) *MultiUpdateRequestBody {
+	body := &MultiUpdateRequestBody{}
+	if p.Bottles != nil {
+		body.Bottles = make([]*BottleRequestBody, len(p.Bottles))
+		for j, val := range p.Bottles {
+			body.Bottles[j] = &BottleRequestBody{
+				Name:        val.Name,
+				Vintage:     val.Vintage,
+				Description: val.Description,
+				Rating:      val.Rating,
+			}
+			if val.Winery != nil {
+				body.Bottles[j].Winery = marshalWineryToWineryRequestBody(val.Winery)
+			}
+			if val.Composition != nil {
+				body.Bottles[j].Composition = make([]*ComponentRequestBody, len(val.Composition))
+				for k, val := range val.Composition {
+					body.Bottles[j].Composition[k] = &ComponentRequestBody{
+						Varietal:   val.Varietal,
+						Percentage: val.Percentage,
+					}
 				}
 			}
 		}

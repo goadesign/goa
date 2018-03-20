@@ -63,6 +63,7 @@ func main() {
 		goahttp.ResponseDecoder,
 		debug,
 		cellar.StorageMultiAddEncoderFunc,
+		cellar.StorageMultiUpdateEncoderFunc,
 	)
 	if err != nil {
 		if err == flag.ErrHelp {

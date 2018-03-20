@@ -446,8 +446,8 @@ type (
 		ServiceName string
 		// MethodName is the name of the method.
 		MethodName string
-		// PayloadRef is the fully qualified reference to the payload.
-		PayloadRef string
+		// Payload is the payload data required to generate encoder/decoder.
+		Payload *PayloadData
 	}
 )
 
@@ -675,17 +675,13 @@ func (d ServicesData) analyze(hs *httpdesign.ServiceExpr) *ServiceData {
 		}
 
 		if a.MultipartRequest {
-			var pointer string
-			if !design.IsObject(a.MethodExpr.Payload.Type) {
-				pointer = "*"
-			}
 			ad.MultipartRequestDecoder = &MultipartData{
 				FuncName:    fmt.Sprintf("%s%sDecoderFunc", svc.VarName, ep.VarName),
 				InitName:    fmt.Sprintf("New%s%sDecoder", svc.VarName, ep.VarName),
 				VarName:     fmt.Sprintf("%s%sDecoderFn", svc.Name, ep.VarName),
 				ServiceName: svc.Name,
 				MethodName:  ep.Name,
-				PayloadRef:  pointer + ad.Payload.Ref,
+				Payload:     ad.Payload,
 			}
 			ad.MultipartRequestEncoder = &MultipartData{
 				FuncName:    fmt.Sprintf("%s%sEncoderFunc", svc.VarName, ep.VarName),
@@ -693,7 +689,7 @@ func (d ServicesData) analyze(hs *httpdesign.ServiceExpr) *ServiceData {
 				VarName:     fmt.Sprintf("%s%sEncoderFn", svc.Name, ep.VarName),
 				ServiceName: svc.Name,
 				MethodName:  ep.Name,
-				PayloadRef:  ad.Payload.Ref,
+				Payload:     ad.Payload,
 			}
 		}
 
@@ -761,40 +757,39 @@ func buildPayloadData(svc *service.Data, s *httpdesign.ServiceExpr, e *httpdesig
 
 			mustValidate bool
 		)
-
-		if e.MapQueryParams != nil {
-			var (
-				fieldName string
-				name      = "query"
-				required  = false
-				pType     = payload.Type
-				pAtt      = payload
-			)
-			if n := *e.MapQueryParams; n != "" {
-				pAtt = design.AsObject(payload.Type).Attribute(n)
-				pType = pAtt.Type
-				required = payload.IsRequired(n)
-				name = n
-				fieldName = codegen.Goify(name, true)
-			}
-			varn := codegen.Goify(name, false)
-			mapQueryParam = &ParamData{
-				Name:           name,
-				VarName:        varn,
-				FieldName:      fieldName,
-				Required:       required,
-				Type:           pType,
-				TypeName:       svc.Scope.GoTypeName(pAtt),
-				TypeRef:        svc.Scope.GoTypeRef(pAtt),
-				Map:            design.AsMap(payload.Type) != nil,
-				Validate:       codegen.RecursiveValidationCode(payload, required, false, false, varn),
-				DefaultValue:   pAtt.DefaultValue,
-				Example:        pAtt.Example(design.Root.API.Random()),
-				MapQueryParams: e.MapQueryParams,
-			}
-			queryData = append(queryData, mapQueryParam)
-		}
 		{
+			if e.MapQueryParams != nil {
+				var (
+					fieldName string
+					name      = "query"
+					required  = false
+					pType     = payload.Type
+					pAtt      = payload
+				)
+				if n := *e.MapQueryParams; n != "" {
+					pAtt = design.AsObject(payload.Type).Attribute(n)
+					pType = pAtt.Type
+					required = payload.IsRequired(n)
+					name = n
+					fieldName = codegen.Goify(name, true)
+				}
+				varn := codegen.Goify(name, false)
+				mapQueryParam = &ParamData{
+					Name:           name,
+					VarName:        varn,
+					FieldName:      fieldName,
+					Required:       required,
+					Type:           pType,
+					TypeName:       svc.Scope.GoTypeName(pAtt),
+					TypeRef:        svc.Scope.GoTypeRef(pAtt),
+					Map:            design.AsMap(payload.Type) != nil,
+					Validate:       codegen.RecursiveValidationCode(payload, required, false, false, varn),
+					DefaultValue:   pAtt.DefaultValue,
+					Example:        pAtt.Example(design.Root.API.Random()),
+					MapQueryParams: e.MapQueryParams,
+				}
+				queryData = append(queryData, mapQueryParam)
+			}
 			if serverBodyData != nil {
 				sd.ServerTypeNames[serverBodyData.Name] = struct{}{}
 				sd.ClientTypeNames[serverBodyData.Name] = struct{}{}
@@ -1356,7 +1351,6 @@ func buildErrorsData(svc *service.Data, s *httpdesign.ServiceExpr, e *httpdesign
 // svr is true if the function is generated for server side code.
 func buildBodyType(svc *service.Data, s *httpdesign.ServiceExpr, e *httpdesign.EndpointExpr,
 	body, att *design.AttributeExpr, req, svr bool, sd *ServiceData) *TypeData {
-
 	if body.Type == design.Empty {
 		return nil
 	}

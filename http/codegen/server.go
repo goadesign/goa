@@ -112,9 +112,10 @@ func serverEncodeDecode(genpkg string, svc *httpdesign.ServiceExpr) *codegen.Fil
 		}
 		if e.MultipartRequestDecoder != nil {
 			sections = append(sections, &codegen.SectionTemplate{
-				Name:   "multipart-request-decoder",
-				Source: multipartRequestDecoderT,
-				Data:   e.MultipartRequestDecoder,
+				Name:    "multipart-request-decoder",
+				Source:  multipartRequestDecoderT,
+				FuncMap: transTmplFuncs(svc),
+				Data:    e.MultipartRequestDecoder,
 			})
 		}
 
@@ -238,7 +239,7 @@ func {{ .ServerInit }}(
 			{{- end }}
 		},
 		{{- range .Endpoints }}
-		{{ .Method.VarName }}: {{ .HandlerInit }}(e.{{ .Method.VarName }}, mux, {{ if .MultipartRequestDecoder }}{{ .MultipartRequestDecoder.InitName }}({{ .MultipartRequestDecoder.VarName }}){{ else }}dec{{ end }}, enc),
+		{{ .Method.VarName }}: {{ .HandlerInit }}(e.{{ .Method.VarName }}, mux, {{ if .MultipartRequestDecoder }}{{ .MultipartRequestDecoder.InitName }}(mux, {{ .MultipartRequestDecoder.VarName }}){{ else }}dec{{ end }}, enc),
 		{{- end }}
 	}
 }
@@ -357,12 +358,8 @@ const requestDecoderT = `{{ printf "%s returns a decoder for requests sent to th
 func {{ .RequestDecoder }}(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) (interface{}, error) {
 	return func(r *http.Request) (interface{}, error) {
 {{- if .MultipartRequestDecoder }}
-		var (
-			body {{ .Payload.Ref }}
-			err error
-		)
-		err = decoder(r).Decode(&body)
-		if err != nil {
+		var payload {{ .Payload.Ref }}
+		if err := decoder(r).Decode(&payload); err != nil {
 			return nil, goa.DecodePayloadError(err.Error())
 		}
 {{- else if .Payload.Request.ServerBody }}
@@ -384,30 +381,55 @@ func {{ .RequestDecoder }}(mux goahttp.Muxer, decoder func(*http.Request) goahtt
 		}
 		{{- end }}
 {{ end }}
+{{- if not .MultipartRequestDecoder }}
+	{{- template "request_params_headers" .Payload.Request }}
+	{{- if .Payload.Request.MustValidate }}
+		if err != nil {
+			return nil, err
+		}
+	{{- end }}
+{{- end }}
+{{- if .MultipartRequestDecoder }}
+		return payload, nil
+{{- else if .Payload.Request.PayloadInit }}
 
-{{- if or .Payload.Request.PathParams .Payload.Request.QueryParams .Payload.Request.Headers }}
+		return {{ .Payload.Request.PayloadInit.Name }}({{ range .Payload.Request.PayloadInit.ServerArgs }}{{ .Ref }},{{ end }}), nil
+{{- else if .Payload.DecoderReturnValue }}
+
+		return {{ .Payload.DecoderReturnValue }}, nil
+{{- else }}
+
+		return body, nil
+{{- end }}
+	}
+}
+` + requestParamsHeadersT
+
+// input: RequestData
+const requestParamsHeadersT = `{{- define "request_params_headers" }}
+{{- if or .PathParams .QueryParams .Headers }}
 		var (
-		{{- range .Payload.Request.PathParams }}
+		{{- range .PathParams }}
 			{{ .VarName }} {{ .TypeRef }}
 		{{- end }}
-		{{- range .Payload.Request.QueryParams }}
+		{{- range .QueryParams }}
 			{{ .VarName }} {{ .TypeRef }}
 		{{- end }}
-		{{- range .Payload.Request.Headers }}
+		{{- range .Headers }}
 			{{ .VarName }} {{ .TypeRef }}
 		{{- end }}
-		{{- if not .Payload.Request.ServerBody }}
-		{{- if .Payload.Request.MustValidate }}
+		{{- if not .ServerBody }}
+		{{- if .MustValidate }}
 			err error
 		{{- end }}
 		{{- end }}
-		{{- if .Payload.Request.PathParams }}
+		{{- if .PathParams }}
 
 			params = mux.Vars(r)
 		{{- end }}
 		)
 
-{{- range .Payload.Request.PathParams }}
+{{- range .PathParams }}
 	{{- if and (or (eq .Type.Name "string") (eq .Type.Name "any")) }}
 		{{ .VarName }} = params["{{ .Name }}"]
 
@@ -423,7 +445,7 @@ func {{ .RequestDecoder }}(mux goahttp.Muxer, decoder func(*http.Request) goahtt
 		{{- end }}
 {{- end }}
 
-{{- range .Payload.Request.QueryParams }}
+{{- range .QueryParams }}
 	{{- if and (or (eq .Type.Name "string") (eq .Type.Name "any")) .Required }}
 		{{ .VarName }} = r.URL.Query().Get("{{ .Name }}")
 		if {{ .VarName }} == "" {
@@ -545,7 +567,7 @@ func {{ .RequestDecoder }}(mux goahttp.Muxer, decoder func(*http.Request) goahtt
 		{{- end }}
 {{- end }}
 
-{{- range .Payload.Request.Headers }}
+{{- range .Headers }}
 	{{- if and (or (eq .Type.Name "string") (eq .Type.Name "any")) .Required }}
 		{{ .VarName }} = r.Header.Get("{{ .Name }}")
 		if {{ .VarName }} == "" {
@@ -606,25 +628,7 @@ func {{ .RequestDecoder }}(mux goahttp.Muxer, decoder func(*http.Request) goahtt
 		{{- end }}
 {{- end }}
 {{- end }}
-		{{- if .Payload.Request.MustValidate }}
-		if err != nil {
-			return nil, err
-		}
-		{{- end }}
-		{{- if .MultipartRequestDecoder }}
-			return body, nil
-		{{- else if .Payload.Request.PayloadInit }}
-
-		return {{ .Payload.Request.PayloadInit.Name }}({{ range .Payload.Request.PayloadInit.ServerArgs }}{{ .Ref }},{{ end }}), nil
-		{{- else if .Payload.DecoderReturnValue }}
-
-		return {{ .Payload.DecoderReturnValue }}, nil
-		{{- else }}
-
-		return body, nil
-		{{- end }}
-	}
-}
+{{- end }}
 
 {{- define "path_conversion" }}
 	{{- if eq .Type.Name "array" }}
@@ -991,7 +995,7 @@ const responseT = `{{ define "response" -}}
 	{{- else if eq .Type.Name "float64" -}}
 		{{ .VarName }} := strconv.FormatFloat({{ if not .Required }}*{{ end }}{{ .Target }}, 'f', -1, 64)
 	{{- else if eq .Type.Name "string" -}}
-		{{ .VarName }} := {{ .Target }} 
+		{{ .VarName }} := {{ .Target }}
 	{{- else if eq .Type.Name "bytes" -}}
 		{{ .VarName }} := string({{ .Target }})
 	{{- else if eq .Type.Name "any" -}}
@@ -1015,21 +1019,37 @@ const responseT = `{{ define "response" -}}
 
 // input: multipartData
 const multipartRequestDecoderTypeT = `{{ printf "%s is the type to decode multipart request for the %q service %q endpoint." .FuncName .ServiceName .MethodName | comment }}
-type {{ .FuncName }} func(*multipart.Reader, {{ .PayloadRef }}) error
+type {{ .FuncName }} func(*multipart.Reader, *{{ .Payload.Ref }}) error
 `
 
 // input: multipartData
 const multipartRequestDecoderT = `{{ printf "%s returns a decoder to decode the multipart request for the %q service %q endpoint." .InitName .ServiceName .MethodName | comment }}
-func {{ .InitName }}({{ .VarName }} {{ .FuncName }}) func(r *http.Request) goahttp.Decoder {
+func {{ .InitName }}(mux goahttp.Muxer, {{ .VarName }} {{ .FuncName }}) func(r *http.Request) goahttp.Decoder {
 	return func(r *http.Request) goahttp.Decoder {
 		return goahttp.EncodingFunc(func(v interface{}) error {
 			mr, err := r.MultipartReader()
 			if err != nil {
 				return err
 			}
-			p := v.({{ .PayloadRef }})
-			return {{ .VarName }}(mr, p)
+			p := v.(*{{ .Payload.Ref }})
+			if err := {{ .VarName }}(mr, p); err != nil {
+				return err
+			}
+			{{- template "request_params_headers" .Payload.Request }}
+			{{- if .Payload.Request.MustValidate }}
+			if err != nil {
+				return err
+			}
+			{{- end }}
+			{{- if .Payload.Request.PayloadInit }}
+				{{- range .Payload.Request.PayloadInit.ServerArgs }}
+					{{- if .FieldName }}
+			(*p).{{ .FieldName }} = {{ if .Pointer }}&{{ end }}{{ .Name }}
+					{{- end }}
+				{{- end }}
+			{{- end }}
+			return nil
 		})
 	}
 }
-`
+` + requestParamsHeadersT

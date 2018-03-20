@@ -32,6 +32,13 @@ type AddRequestBody struct {
 	Rating *uint32 `form:"rating,omitempty" json:"rating,omitempty" xml:"rating,omitempty"`
 }
 
+// MultiUpdateRequestBody is the type of the "storage" service "multi_update"
+// endpoint HTTP request body.
+type MultiUpdateRequestBody struct {
+	// Array of bottle info that matches the ids attribute
+	Bottles []*BottleRequestBody `form:"bottles,omitempty" json:"bottles,omitempty" xml:"bottles,omitempty"`
+}
+
 // ListResponseBody is the type of the "storage" service "list" endpoint HTTP
 // response body.
 type ListResponseBody []*StoredBottleResponseBody
@@ -281,6 +288,35 @@ func NewMultiAddBottle(body []*BottleRequestBody) []*storage.Bottle {
 	return v
 }
 
+// NewMultiUpdateMultiUpdatePayload builds a storage service multi_update
+// endpoint payload.
+func NewMultiUpdateMultiUpdatePayload(body *MultiUpdateRequestBody, ids []string) *storage.MultiUpdatePayload {
+	v := &storage.MultiUpdatePayload{}
+	if body.Bottles != nil {
+		v.Bottles = make([]*storage.Bottle, len(body.Bottles))
+		for j, val := range body.Bottles {
+			v.Bottles[j] = &storage.Bottle{
+				Name:        *val.Name,
+				Vintage:     *val.Vintage,
+				Description: val.Description,
+				Rating:      val.Rating,
+			}
+			v.Bottles[j].Winery = unmarshalWineryRequestBodyToWinery(val.Winery)
+			if val.Composition != nil {
+				v.Bottles[j].Composition = make([]*storage.Component, len(val.Composition))
+				for k, val := range val.Composition {
+					v.Bottles[j].Composition[k] = &storage.Component{
+						Varietal:   *val.Varietal,
+						Percentage: val.Percentage,
+					}
+				}
+			}
+		}
+	}
+	v.Ids = ids
+	return v
+}
+
 // Validate runs the validations defined on AddRequestBody
 func (body *AddRequestBody) Validate() (err error) {
 	if body.Name == nil {
@@ -332,6 +368,18 @@ func (body *AddRequestBody) Validate() (err error) {
 	if body.Rating != nil {
 		if *body.Rating > 5 {
 			err = goa.MergeErrors(err, goa.InvalidRangeError("body.rating", *body.Rating, 5, false))
+		}
+	}
+	return
+}
+
+// Validate runs the validations defined on MultiUpdateRequestBody
+func (body *MultiUpdateRequestBody) Validate() (err error) {
+	for _, e := range body.Bottles {
+		if e != nil {
+			if err2 := e.Validate(); err2 != nil {
+				err = goa.MergeErrors(err, err2)
+			}
 		}
 	}
 	return

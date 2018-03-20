@@ -16,23 +16,25 @@ import (
 
 // Client is the "storage" service client.
 type Client struct {
-	ListEndpoint     goa.Endpoint
-	ShowEndpoint     goa.Endpoint
-	AddEndpoint      goa.Endpoint
-	RemoveEndpoint   goa.Endpoint
-	RateEndpoint     goa.Endpoint
-	MultiAddEndpoint goa.Endpoint
+	ListEndpoint        goa.Endpoint
+	ShowEndpoint        goa.Endpoint
+	AddEndpoint         goa.Endpoint
+	RemoveEndpoint      goa.Endpoint
+	RateEndpoint        goa.Endpoint
+	MultiAddEndpoint    goa.Endpoint
+	MultiUpdateEndpoint goa.Endpoint
 }
 
 // NewClient initializes a "storage" service client given the endpoints.
-func NewClient(list, show, add, remove, rate, multiAdd goa.Endpoint) *Client {
+func NewClient(list, show, add, remove, rate, multiAdd, multiUpdate goa.Endpoint) *Client {
 	return &Client{
-		ListEndpoint:     list,
-		ShowEndpoint:     show,
-		AddEndpoint:      add,
-		RemoveEndpoint:   remove,
-		RateEndpoint:     rate,
-		MultiAddEndpoint: multiAdd,
+		ListEndpoint:        list,
+		ShowEndpoint:        show,
+		AddEndpoint:         add,
+		RemoveEndpoint:      remove,
+		RateEndpoint:        rate,
+		MultiAddEndpoint:    multiAdd,
+		MultiUpdateEndpoint: multiUpdate,
 	}
 }
 
@@ -92,4 +94,10 @@ func (c *Client) MultiAdd(ctx context.Context, p []*Bottle) (res []string, err e
 		return
 	}
 	return ires.([]string), nil
+}
+
+// MultiUpdate calls the "multi_update" endpoint of the "storage" service.
+func (c *Client) MultiUpdate(ctx context.Context, p *MultiUpdatePayload) (err error) {
+	_, err = c.MultiUpdateEndpoint(ctx, p)
+	return
 }

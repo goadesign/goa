@@ -20,13 +20,14 @@ import (
 
 // Server lists the storage service endpoint HTTP handlers.
 type Server struct {
-	Mounts   []*MountPoint
-	List     http.Handler
-	Show     http.Handler
-	Add      http.Handler
-	Remove   http.Handler
-	Rate     http.Handler
-	MultiAdd http.Handler
+	Mounts      []*MountPoint
+	List        http.Handler
+	Show        http.Handler
+	Add         http.Handler
+	Remove      http.Handler
+	Rate        http.Handler
+	MultiAdd    http.Handler
+	MultiUpdate http.Handler
 }
 
 // MountPoint holds information about the mounted endpoints.
@@ -44,6 +45,10 @@ type MountPoint struct {
 // "storage" service "multi_add" endpoint.
 type StorageMultiAddDecoderFunc func(*multipart.Reader, *[]*storage.Bottle) error
 
+// StorageMultiUpdateDecoderFunc is the type to decode multipart request for
+// the "storage" service "multi_update" endpoint.
+type StorageMultiUpdateDecoderFunc func(*multipart.Reader, **storage.MultiUpdatePayload) error
+
 // New instantiates HTTP handlers for all the storage service endpoints.
 func New(
 	e *storage.Endpoints,
@@ -51,6 +56,7 @@ func New(
 	dec func(*http.Request) goahttp.Decoder,
 	enc func(context.Context, http.ResponseWriter) goahttp.Encoder,
 	storageMultiAddDecoderFn StorageMultiAddDecoderFunc,
+	storageMultiUpdateDecoderFn StorageMultiUpdateDecoderFunc,
 ) *Server {
 	return &Server{
 		Mounts: []*MountPoint{
@@ -60,13 +66,15 @@ func New(
 			{"Remove", "DELETE", "/storage/{id}"},
 			{"Rate", "POST", "/storage/rate"},
 			{"MultiAdd", "POST", "/storage/multi_add"},
+			{"MultiUpdate", "PUT", "/storage/multi_update"},
 		},
-		List:     NewListHandler(e.List, mux, dec, enc),
-		Show:     NewShowHandler(e.Show, mux, dec, enc),
-		Add:      NewAddHandler(e.Add, mux, dec, enc),
-		Remove:   NewRemoveHandler(e.Remove, mux, dec, enc),
-		Rate:     NewRateHandler(e.Rate, mux, dec, enc),
-		MultiAdd: NewMultiAddHandler(e.MultiAdd, mux, NewStorageMultiAddDecoder(storageMultiAddDecoderFn), enc),
+		List:        NewListHandler(e.List, mux, dec, enc),
+		Show:        NewShowHandler(e.Show, mux, dec, enc),
+		Add:         NewAddHandler(e.Add, mux, dec, enc),
+		Remove:      NewRemoveHandler(e.Remove, mux, dec, enc),
+		Rate:        NewRateHandler(e.Rate, mux, dec, enc),
+		MultiAdd:    NewMultiAddHandler(e.MultiAdd, mux, NewStorageMultiAddDecoder(mux, storageMultiAddDecoderFn), enc),
+		MultiUpdate: NewMultiUpdateHandler(e.MultiUpdate, mux, NewStorageMultiUpdateDecoder(mux, storageMultiUpdateDecoderFn), enc),
 	}
 }
 
@@ -91,6 +99,7 @@ func Mount(mux goahttp.Muxer, h *Server) {
 	MountRemoveHandler(mux, h.Remove)
 	MountRateHandler(mux, h.Rate)
 	MountMultiAddHandler(mux, h.MultiAdd)
+	MountMultiUpdateHandler(mux, h.MultiUpdate)
 }
 
 // MountListHandler configures the mux to serve the "storage" service "list"
@@ -355,6 +364,54 @@ func NewMultiAddHandler(
 		accept := r.Header.Get("Accept")
 		ctx := context.WithValue(r.Context(), goahttp.AcceptTypeKey, accept)
 		ctx = context.WithValue(ctx, goa.MethodKey, "multi_add")
+		ctx = context.WithValue(ctx, goa.ServiceKey, "storage")
+		payload, err := decodeRequest(r)
+		if err != nil {
+			encodeError(ctx, w, err)
+			return
+		}
+
+		res, err := endpoint(ctx, payload)
+
+		if err != nil {
+			encodeError(ctx, w, err)
+			return
+		}
+		if err := encodeResponse(ctx, w, res); err != nil {
+			encodeError(ctx, w, err)
+		}
+	})
+}
+
+// MountMultiUpdateHandler configures the mux to serve the "storage" service
+// "multi_update" endpoint.
+func MountMultiUpdateHandler(mux goahttp.Muxer, h http.Handler) {
+	f, ok := h.(http.HandlerFunc)
+	if !ok {
+		f = func(w http.ResponseWriter, r *http.Request) {
+			h.ServeHTTP(w, r)
+		}
+	}
+	mux.Handle("PUT", "/storage/multi_update", f)
+}
+
+// NewMultiUpdateHandler creates a HTTP handler which loads the HTTP request
+// and calls the "storage" service "multi_update" endpoint.
+func NewMultiUpdateHandler(
+	endpoint goa.Endpoint,
+	mux goahttp.Muxer,
+	dec func(*http.Request) goahttp.Decoder,
+	enc func(context.Context, http.ResponseWriter) goahttp.Encoder,
+) http.Handler {
+	var (
+		decodeRequest  = DecodeMultiUpdateRequest(mux, dec)
+		encodeResponse = EncodeMultiUpdateResponse(enc)
+		encodeError    = goahttp.ErrorEncoder(enc)
+	)
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		accept := r.Header.Get("Accept")
+		ctx := context.WithValue(r.Context(), goahttp.AcceptTypeKey, accept)
+		ctx = context.WithValue(ctx, goa.MethodKey, "multi_update")
 		ctx = context.WithValue(ctx, goa.ServiceKey, "storage")
 		payload, err := decodeRequest(r)
 		if err != nil {

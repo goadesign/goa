@@ -285,7 +285,7 @@ func transformArray(source, target *design.Array, newVar bool, a targs) (string,
 		"TargetPkg":   a.targetPkg,
 		"Unmarshal":   a.unmarshal,
 		"Scope":       a.scope,
-		"LoopVar":     string(105 + strings.Count(a.sourceVar, ".")),
+		"LoopVar":     string(105 + strings.Count(a.targetVar, ".")),
 	}
 	var buf bytes.Buffer
 	if err := transformArrayT.Execute(&buf, data); err != nil {

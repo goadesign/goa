@@ -41,3 +41,8 @@ func RateStoragePath() string {
 func MultiAddStoragePath() string {
 	return "/storage/multi_add"
 }
+
+// MultiUpdateStoragePath returns the URL path to the storage service multi_update HTTP endpoint.
+func MultiUpdateStoragePath() string {
+	return "/storage/multi_update"
+}

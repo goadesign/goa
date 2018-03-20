@@ -2302,3 +2302,28 @@ var PayloadMultipartMapTypeDSL = func() {
 		})
 	})
 }
+
+var PayloadMultipartWithParams = func() {
+	var PayloadType = Type("PayloadType", func() {
+		Attribute("a", String, func() {
+			Pattern("patterna")
+		})
+		Attribute("b", String, func() {
+			Pattern("patternb")
+		})
+		Attribute("c", MapOf(Int, ArrayOf(String)))
+		Required("a", "c")
+	})
+	Service("ServiceMultipartWithParams", func() {
+		Method("MethodMultipartWithParams", func() {
+			Payload(PayloadType)
+			Result(String)
+			HTTP(func() {
+				POST("/{a}")
+				Param("c")
+				Header("b:Authorization", String)
+				MultipartRequest()
+			})
+		})
+	})
+}
