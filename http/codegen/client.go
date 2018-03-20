@@ -249,14 +249,23 @@ func {{ .RequestEncoder }}(encoder func(*http.Request) goahttp.Encoder) func(*ht
 			{{ template "type_conversion" (typeConversionData .Type.KeyType.Type "keyStr" "key") }}
 			{{- if eq .Type.ElemType.Type.Name "array" }}
 			for _, val := range value {
-				{{ template "type_conversion" (typeConversionData .Type.ElemType.Type.ElemType.Type (printf "%sStr" "val") "val") }}
+				{{ template "type_conversion" (typeConversionData .Type.ElemType.Type.ElemType.Type "valStr" "val") }}
 				values.Add(keyStr, valStr)
 			}
 			{{- else }}
-			{{ template "type_conversion" (typeConversionData .Type.ElemType.Type (printf "%sStr" "value") "value") }}
+			{{ template "type_conversion" (typeConversionData .Type.ElemType.Type "valueStr" "value") }}
 			values.Add(keyStr, valueStr)
 			{{- end }}
     }
+		{{- else if .StringSlice }}
+			for _, value := range p{{ if .FieldName }}.{{ .FieldName }}{{ end }} {
+				values.Add("{{ .Name }}", value)
+			}
+		{{- else if .Slice }}
+			for _, value := range p{{ if .FieldName }}.{{ .FieldName }}{{ end }} {
+				{{ template "type_conversion" (typeConversionData .Type.ElemType.Type "valueStr" "value") }}
+				values.Add("{{ .Name }}", valueStr)
+			}
 		{{- else if .FieldName }}
 			{{- if .Pointer }}
 		if p.{{ .FieldName }} != nil {
@@ -494,7 +503,7 @@ const singleResponseT = `case {{ .StatusCode }}:
 
 // input: multipartData
 const multipartRequestEncoderTypeT = `{{ printf "%s is the type to encode multipart request for the %q service %q endpoint." .FuncName .ServiceName .MethodName | comment }}
-type {{ .FuncName }} func(*multipart.Writer, {{ .PayloadRef }}) error
+type {{ .FuncName }} func(*multipart.Writer, {{ .Payload.Ref }}) error
 `
 
 // input: multipartData
@@ -504,7 +513,7 @@ func {{ .InitName }}(encoderFn {{ .FuncName }}) func(r *http.Request) goahttp.En
 		body := &bytes.Buffer{}
 		mw := multipart.NewWriter(body)
 		return goahttp.EncodingFunc(func(v interface{}) error {
-			p := v.({{ .PayloadRef }})
+			p := v.({{ .Payload.Ref }})
 			if err := encoderFn(mw, p); err != nil {
 				return err
 			}

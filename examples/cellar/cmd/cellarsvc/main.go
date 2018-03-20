@@ -108,7 +108,7 @@ func main() {
 	)
 	{
 		sommelierServer = sommeliersvr.New(sommelierEndpoints, mux, dec, enc)
-		storageServer = storagesvr.New(storageEndpoints, mux, dec, enc, cellar.StorageMultiAddDecoderFunc)
+		storageServer = storagesvr.New(storageEndpoints, mux, dec, enc, cellar.StorageMultiAddDecoderFunc, cellar.StorageMultiUpdateDecoderFunc)
 		swaggerServer = swaggersvr.New(nil, mux, dec, enc)
 	}
 

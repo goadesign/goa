@@ -413,7 +413,10 @@ func EncodeMethodQueryArrayBoolRequest(encoder func(*http.Request) goahttp.Encod
 			return goahttp.ErrInvalidType("ServiceQueryArrayBool", "MethodQueryArrayBool", "*servicequeryarraybool.MethodQueryArrayBoolPayload", v)
 		}
 		values := req.URL.Query()
-		values.Add("q", fmt.Sprintf("%v", p.Q))
+		for _, value := range p.Q {
+			valueStr := strconv.FormatBool(value)
+			values.Add("q", valueStr)
+		}
 		req.URL.RawQuery = values.Encode()
 		return nil
 	}
@@ -430,7 +433,10 @@ func EncodeMethodQueryArrayBoolValidateRequest(encoder func(*http.Request) goaht
 			return goahttp.ErrInvalidType("ServiceQueryArrayBoolValidate", "MethodQueryArrayBoolValidate", "*servicequeryarrayboolvalidate.MethodQueryArrayBoolValidatePayload", v)
 		}
 		values := req.URL.Query()
-		values.Add("q", fmt.Sprintf("%v", p.Q))
+		for _, value := range p.Q {
+			valueStr := strconv.FormatBool(value)
+			values.Add("q", valueStr)
+		}
 		req.URL.RawQuery = values.Encode()
 		return nil
 	}
@@ -446,7 +452,10 @@ func EncodeMethodQueryArrayIntRequest(encoder func(*http.Request) goahttp.Encode
 			return goahttp.ErrInvalidType("ServiceQueryArrayInt", "MethodQueryArrayInt", "*servicequeryarrayint.MethodQueryArrayIntPayload", v)
 		}
 		values := req.URL.Query()
-		values.Add("q", fmt.Sprintf("%v", p.Q))
+		for _, value := range p.Q {
+			valueStr := strconv.Itoa(value)
+			values.Add("q", valueStr)
+		}
 		req.URL.RawQuery = values.Encode()
 		return nil
 	}
@@ -462,7 +471,10 @@ func EncodeMethodQueryArrayIntValidateRequest(encoder func(*http.Request) goahtt
 			return goahttp.ErrInvalidType("ServiceQueryArrayIntValidate", "MethodQueryArrayIntValidate", "*servicequeryarrayintvalidate.MethodQueryArrayIntValidatePayload", v)
 		}
 		values := req.URL.Query()
-		values.Add("q", fmt.Sprintf("%v", p.Q))
+		for _, value := range p.Q {
+			valueStr := strconv.Itoa(value)
+			values.Add("q", valueStr)
+		}
 		req.URL.RawQuery = values.Encode()
 		return nil
 	}
@@ -478,7 +490,10 @@ func EncodeMethodQueryArrayInt32Request(encoder func(*http.Request) goahttp.Enco
 			return goahttp.ErrInvalidType("ServiceQueryArrayInt32", "MethodQueryArrayInt32", "*servicequeryarrayint32.MethodQueryArrayInt32Payload", v)
 		}
 		values := req.URL.Query()
-		values.Add("q", fmt.Sprintf("%v", p.Q))
+		for _, value := range p.Q {
+			valueStr := strconv.FormatInt(int64(value), 10)
+			values.Add("q", valueStr)
+		}
 		req.URL.RawQuery = values.Encode()
 		return nil
 	}
@@ -495,7 +510,10 @@ func EncodeMethodQueryArrayInt32ValidateRequest(encoder func(*http.Request) goah
 			return goahttp.ErrInvalidType("ServiceQueryArrayInt32Validate", "MethodQueryArrayInt32Validate", "*servicequeryarrayint32validate.MethodQueryArrayInt32ValidatePayload", v)
 		}
 		values := req.URL.Query()
-		values.Add("q", fmt.Sprintf("%v", p.Q))
+		for _, value := range p.Q {
+			valueStr := strconv.FormatInt(int64(value), 10)
+			values.Add("q", valueStr)
+		}
 		req.URL.RawQuery = values.Encode()
 		return nil
 	}
@@ -511,7 +529,10 @@ func EncodeMethodQueryArrayInt64Request(encoder func(*http.Request) goahttp.Enco
 			return goahttp.ErrInvalidType("ServiceQueryArrayInt64", "MethodQueryArrayInt64", "*servicequeryarrayint64.MethodQueryArrayInt64Payload", v)
 		}
 		values := req.URL.Query()
-		values.Add("q", fmt.Sprintf("%v", p.Q))
+		for _, value := range p.Q {
+			valueStr := strconv.FormatInt(value, 10)
+			values.Add("q", valueStr)
+		}
 		req.URL.RawQuery = values.Encode()
 		return nil
 	}
@@ -528,7 +549,10 @@ func EncodeMethodQueryArrayInt64ValidateRequest(encoder func(*http.Request) goah
 			return goahttp.ErrInvalidType("ServiceQueryArrayInt64Validate", "MethodQueryArrayInt64Validate", "*servicequeryarrayint64validate.MethodQueryArrayInt64ValidatePayload", v)
 		}
 		values := req.URL.Query()
-		values.Add("q", fmt.Sprintf("%v", p.Q))
+		for _, value := range p.Q {
+			valueStr := strconv.FormatInt(value, 10)
+			values.Add("q", valueStr)
+		}
 		req.URL.RawQuery = values.Encode()
 		return nil
 	}
@@ -544,7 +568,10 @@ func EncodeMethodQueryArrayUIntRequest(encoder func(*http.Request) goahttp.Encod
 			return goahttp.ErrInvalidType("ServiceQueryArrayUInt", "MethodQueryArrayUInt", "*servicequeryarrayuint.MethodQueryArrayUIntPayload", v)
 		}
 		values := req.URL.Query()
-		values.Add("q", fmt.Sprintf("%v", p.Q))
+		for _, value := range p.Q {
+			valueStr := strconv.FormatUint(uint64(value), 10)
+			values.Add("q", valueStr)
+		}
 		req.URL.RawQuery = values.Encode()
 		return nil
 	}
@@ -561,7 +588,10 @@ func EncodeMethodQueryArrayUIntValidateRequest(encoder func(*http.Request) goaht
 			return goahttp.ErrInvalidType("ServiceQueryArrayUIntValidate", "MethodQueryArrayUIntValidate", "*servicequeryarrayuintvalidate.MethodQueryArrayUIntValidatePayload", v)
 		}
 		values := req.URL.Query()
-		values.Add("q", fmt.Sprintf("%v", p.Q))
+		for _, value := range p.Q {
+			valueStr := strconv.FormatUint(uint64(value), 10)
+			values.Add("q", valueStr)
+		}
 		req.URL.RawQuery = values.Encode()
 		return nil
 	}
@@ -577,7 +607,10 @@ func EncodeMethodQueryArrayUInt32Request(encoder func(*http.Request) goahttp.Enc
 			return goahttp.ErrInvalidType("ServiceQueryArrayUInt32", "MethodQueryArrayUInt32", "*servicequeryarrayuint32.MethodQueryArrayUInt32Payload", v)
 		}
 		values := req.URL.Query()
-		values.Add("q", fmt.Sprintf("%v", p.Q))
+		for _, value := range p.Q {
+			valueStr := strconv.FormatUint(uint64(value), 10)
+			values.Add("q", valueStr)
+		}
 		req.URL.RawQuery = values.Encode()
 		return nil
 	}
@@ -594,7 +627,10 @@ func EncodeMethodQueryArrayUInt32ValidateRequest(encoder func(*http.Request) goa
 			return goahttp.ErrInvalidType("ServiceQueryArrayUInt32Validate", "MethodQueryArrayUInt32Validate", "*servicequeryarrayuint32validate.MethodQueryArrayUInt32ValidatePayload", v)
 		}
 		values := req.URL.Query()
-		values.Add("q", fmt.Sprintf("%v", p.Q))
+		for _, value := range p.Q {
+			valueStr := strconv.FormatUint(uint64(value), 10)
+			values.Add("q", valueStr)
+		}
 		req.URL.RawQuery = values.Encode()
 		return nil
 	}
@@ -610,7 +646,10 @@ func EncodeMethodQueryArrayUInt64Request(encoder func(*http.Request) goahttp.Enc
 			return goahttp.ErrInvalidType("ServiceQueryArrayUInt64", "MethodQueryArrayUInt64", "*servicequeryarrayuint64.MethodQueryArrayUInt64Payload", v)
 		}
 		values := req.URL.Query()
-		values.Add("q", fmt.Sprintf("%v", p.Q))
+		for _, value := range p.Q {
+			valueStr := strconv.FormatUint(value, 10)
+			values.Add("q", valueStr)
+		}
 		req.URL.RawQuery = values.Encode()
 		return nil
 	}
@@ -627,7 +666,10 @@ func EncodeMethodQueryArrayUInt64ValidateRequest(encoder func(*http.Request) goa
 			return goahttp.ErrInvalidType("ServiceQueryArrayUInt64Validate", "MethodQueryArrayUInt64Validate", "*servicequeryarrayuint64validate.MethodQueryArrayUInt64ValidatePayload", v)
 		}
 		values := req.URL.Query()
-		values.Add("q", fmt.Sprintf("%v", p.Q))
+		for _, value := range p.Q {
+			valueStr := strconv.FormatUint(value, 10)
+			values.Add("q", valueStr)
+		}
 		req.URL.RawQuery = values.Encode()
 		return nil
 	}
@@ -643,7 +685,10 @@ func EncodeMethodQueryArrayFloat32Request(encoder func(*http.Request) goahttp.En
 			return goahttp.ErrInvalidType("ServiceQueryArrayFloat32", "MethodQueryArrayFloat32", "*servicequeryarrayfloat32.MethodQueryArrayFloat32Payload", v)
 		}
 		values := req.URL.Query()
-		values.Add("q", fmt.Sprintf("%v", p.Q))
+		for _, value := range p.Q {
+			valueStr := strconv.FormatFloat(float64(value), 'f', -1, 32)
+			values.Add("q", valueStr)
+		}
 		req.URL.RawQuery = values.Encode()
 		return nil
 	}
@@ -660,7 +705,10 @@ func EncodeMethodQueryArrayFloat32ValidateRequest(encoder func(*http.Request) go
 			return goahttp.ErrInvalidType("ServiceQueryArrayFloat32Validate", "MethodQueryArrayFloat32Validate", "*servicequeryarrayfloat32validate.MethodQueryArrayFloat32ValidatePayload", v)
 		}
 		values := req.URL.Query()
-		values.Add("q", fmt.Sprintf("%v", p.Q))
+		for _, value := range p.Q {
+			valueStr := strconv.FormatFloat(float64(value), 'f', -1, 32)
+			values.Add("q", valueStr)
+		}
 		req.URL.RawQuery = values.Encode()
 		return nil
 	}
@@ -676,7 +724,10 @@ func EncodeMethodQueryArrayFloat64Request(encoder func(*http.Request) goahttp.En
 			return goahttp.ErrInvalidType("ServiceQueryArrayFloat64", "MethodQueryArrayFloat64", "*servicequeryarrayfloat64.MethodQueryArrayFloat64Payload", v)
 		}
 		values := req.URL.Query()
-		values.Add("q", fmt.Sprintf("%v", p.Q))
+		for _, value := range p.Q {
+			valueStr := strconv.FormatFloat(value, 'f', -1, 64)
+			values.Add("q", valueStr)
+		}
 		req.URL.RawQuery = values.Encode()
 		return nil
 	}
@@ -693,7 +744,10 @@ func EncodeMethodQueryArrayFloat64ValidateRequest(encoder func(*http.Request) go
 			return goahttp.ErrInvalidType("ServiceQueryArrayFloat64Validate", "MethodQueryArrayFloat64Validate", "*servicequeryarrayfloat64validate.MethodQueryArrayFloat64ValidatePayload", v)
 		}
 		values := req.URL.Query()
-		values.Add("q", fmt.Sprintf("%v", p.Q))
+		for _, value := range p.Q {
+			valueStr := strconv.FormatFloat(value, 'f', -1, 64)
+			values.Add("q", valueStr)
+		}
 		req.URL.RawQuery = values.Encode()
 		return nil
 	}
@@ -709,7 +763,9 @@ func EncodeMethodQueryArrayStringRequest(encoder func(*http.Request) goahttp.Enc
 			return goahttp.ErrInvalidType("ServiceQueryArrayString", "MethodQueryArrayString", "*servicequeryarraystring.MethodQueryArrayStringPayload", v)
 		}
 		values := req.URL.Query()
-		values.Add("q", fmt.Sprintf("%v", p.Q))
+		for _, value := range p.Q {
+			values.Add("q", value)
+		}
 		req.URL.RawQuery = values.Encode()
 		return nil
 	}
@@ -726,7 +782,9 @@ func EncodeMethodQueryArrayStringValidateRequest(encoder func(*http.Request) goa
 			return goahttp.ErrInvalidType("ServiceQueryArrayStringValidate", "MethodQueryArrayStringValidate", "*servicequeryarraystringvalidate.MethodQueryArrayStringValidatePayload", v)
 		}
 		values := req.URL.Query()
-		values.Add("q", fmt.Sprintf("%v", p.Q))
+		for _, value := range p.Q {
+			values.Add("q", value)
+		}
 		req.URL.RawQuery = values.Encode()
 		return nil
 	}
@@ -742,7 +800,10 @@ func EncodeMethodQueryArrayBytesRequest(encoder func(*http.Request) goahttp.Enco
 			return goahttp.ErrInvalidType("ServiceQueryArrayBytes", "MethodQueryArrayBytes", "*servicequeryarraybytes.MethodQueryArrayBytesPayload", v)
 		}
 		values := req.URL.Query()
-		values.Add("q", fmt.Sprintf("%v", p.Q))
+		for _, value := range p.Q {
+			valueStr := string(value)
+			values.Add("q", valueStr)
+		}
 		req.URL.RawQuery = values.Encode()
 		return nil
 	}
@@ -759,7 +820,10 @@ func EncodeMethodQueryArrayBytesValidateRequest(encoder func(*http.Request) goah
 			return goahttp.ErrInvalidType("ServiceQueryArrayBytesValidate", "MethodQueryArrayBytesValidate", "*servicequeryarraybytesvalidate.MethodQueryArrayBytesValidatePayload", v)
 		}
 		values := req.URL.Query()
-		values.Add("q", fmt.Sprintf("%v", p.Q))
+		for _, value := range p.Q {
+			valueStr := string(value)
+			values.Add("q", valueStr)
+		}
 		req.URL.RawQuery = values.Encode()
 		return nil
 	}
@@ -775,7 +839,10 @@ func EncodeMethodQueryArrayAnyRequest(encoder func(*http.Request) goahttp.Encode
 			return goahttp.ErrInvalidType("ServiceQueryArrayAny", "MethodQueryArrayAny", "*servicequeryarrayany.MethodQueryArrayAnyPayload", v)
 		}
 		values := req.URL.Query()
-		values.Add("q", fmt.Sprintf("%v", p.Q))
+		for _, value := range p.Q {
+			valueStr := fmt.Sprintf("%v", value)
+			values.Add("q", valueStr)
+		}
 		req.URL.RawQuery = values.Encode()
 		return nil
 	}
@@ -791,7 +858,10 @@ func EncodeMethodQueryArrayAnyValidateRequest(encoder func(*http.Request) goahtt
 			return goahttp.ErrInvalidType("ServiceQueryArrayAnyValidate", "MethodQueryArrayAnyValidate", "*servicequeryarrayanyvalidate.MethodQueryArrayAnyValidatePayload", v)
 		}
 		values := req.URL.Query()
-		values.Add("q", fmt.Sprintf("%v", p.Q))
+		for _, value := range p.Q {
+			valueStr := fmt.Sprintf("%v", value)
+			values.Add("q", valueStr)
+		}
 		req.URL.RawQuery = values.Encode()
 		return nil
 	}
@@ -1107,6 +1177,9 @@ func EncodeMethodQueryPrimitiveArrayStringValidateRequest(encoder func(*http.Req
 			return goahttp.ErrInvalidType("ServiceQueryPrimitiveArrayStringValidate", "MethodQueryPrimitiveArrayStringValidate", "[]string", v)
 		}
 		values := req.URL.Query()
+		for _, value := range p {
+			values.Add("q", value)
+		}
 		req.URL.RawQuery = values.Encode()
 		return nil
 	}
@@ -1123,6 +1196,10 @@ func EncodeMethodQueryPrimitiveArrayBoolValidateRequest(encoder func(*http.Reque
 			return goahttp.ErrInvalidType("ServiceQueryPrimitiveArrayBoolValidate", "MethodQueryPrimitiveArrayBoolValidate", "[]bool", v)
 		}
 		values := req.URL.Query()
+		for _, value := range p {
+			valueStr := strconv.FormatBool(value)
+			values.Add("q", valueStr)
+		}
 		req.URL.RawQuery = values.Encode()
 		return nil
 	}

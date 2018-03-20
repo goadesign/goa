@@ -86,7 +86,7 @@ func New(
 		Mounts: []*MountPoint{
 			{"MethodMultiBases", "GET", "/"},
 		},
-		MethodMultiBases: NewMethodMultiBasesHandler(e.MethodMultiBases, mux, NewServiceMultipartMethodMultiBasesDecoder(ServiceMultipartMethodMultiBasesDecoderFn), enc),
+		MethodMultiBases: NewMethodMultiBasesHandler(e.MethodMultiBases, mux, NewServiceMultipartMethodMultiBasesDecoder(mux, ServiceMultipartMethodMultiBasesDecoderFn), enc),
 	}
 }
 `

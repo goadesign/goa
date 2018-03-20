@@ -14,6 +14,7 @@ var (
 	SimpleArray   = array(design.String)
 	SimpleMap     = mapa(design.String, design.Int)
 	ArrayObj      = object("a", design.String, "b", SimpleArray.Type)
+	ArrayObj2     = object("a", design.String, "b", array(ArrayObj.Type).Type)
 	CompositeObj  = defaulta(require(object("aa", SimpleArray.Type, "bb", SimpleObj.Type), "bb"), "aa", []string{"foo", "bar"})
 	ObjArray      = array(RequiredObj.Type)
 	ObjMap        = mapa(design.String, SimpleObj.Type)
@@ -58,6 +59,7 @@ func TestGoTypeTransform(t *testing.T) {
 		{"array-marshal", SimpleArray, SimpleArray, false, "", arrayCode},
 		{"map-marshal", SimpleMap, SimpleMap, false, "", mapCode},
 		{"object-array-marshal", ArrayObj, ArrayObj, false, "", arrayObjCode},
+		{"object-array-array-marshal", ArrayObj2, ArrayObj2, false, "", arrayObj2Code},
 
 		// composite data structures
 		{"composite-unmarshal", CompositeObj, CompositeObj, true, "", compUnmarshalCode},
@@ -276,6 +278,33 @@ const arrayObjCode = `func transform() {
 		target.B = make([]string, len(source.B))
 		for j, val := range source.B {
 			target.B[j] = val
+		}
+	}
+}
+`
+
+const arrayObj2Code = `func transform() {
+	target := &TargetType{
+		A: source.A,
+	}
+	if source.B != nil {
+		target.B = make([]struct {
+			A *string
+			B []string
+		}, len(source.B))
+		for j, val := range source.B {
+			target.B[j] = &struct {
+				A *string
+				B []string
+			}{
+				A: val.A,
+			}
+			if val.B != nil {
+				target.B[j].B = make([]string, len(val.B))
+				for k, val := range val.B {
+					target.B[j].B[k] = val
+				}
+			}
 		}
 	}
 }
