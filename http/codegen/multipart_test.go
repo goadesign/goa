@@ -113,6 +113,7 @@ func TestClientMultipartNewFunc(t *testing.T) {
 		{"multipart-body-user-type", testdata.PayloadMultipartUserTypeDSL, testdata.MultipartUserTypeEncoderFuncCode},
 		{"multipart-body-array-type", testdata.PayloadMultipartArrayTypeDSL, testdata.MultipartArrayTypeEncoderFuncCode},
 		{"multipart-body-map-type", testdata.PayloadMultipartMapTypeDSL, testdata.MultipartMapTypeEncoderFuncCode},
+		{"multipart-with-params", testdata.PayloadMultipartWithParams, testdata.MultipartWithParamsEncoderFuncCode},
 	}
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {

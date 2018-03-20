@@ -1009,7 +1009,7 @@ const responseT = `{{ define "response" -}}
 
 // input: multipartData
 const multipartRequestDecoderTypeT = `{{ printf "%s is the type to decode multipart request for the %q service %q endpoint." .FuncName .ServiceName .MethodName | comment }}
-type {{ .FuncName }} func(*multipart.Reader, {{ if .Pointer }}*{{ end }}{{ .Payload.Ref }}) error
+type {{ .FuncName }} func(*multipart.Reader, *{{ .Payload.Ref }}) error
 `
 
 // input: multipartData
@@ -1021,21 +1021,24 @@ func {{ .InitName }}(mux goahttp.Muxer, {{ .VarName }} {{ .FuncName }}) func(r *
 			if err != nil {
 				return err
 			}
+			p := v.(*{{ .Payload.Ref }})
+			if err := {{ .VarName }}(mr, p); err != nil {
+				return err
+			}
 			{{- template "request_params_headers" .Payload.Request }}
 			{{- if .Payload.Request.MustValidate }}
 			if err != nil {
 				return err
 			}
 			{{- end }}
-			p := v.({{ if .Pointer }}*{{ end }}{{ .Payload.Ref }})
 			{{- if .Payload.Request.PayloadInit }}
 				{{- range .Payload.Request.PayloadInit.ServerArgs }}
 					{{- if .FieldName }}
-			p.{{ .FieldName }} = {{ if .Pointer }}&{{ end }}{{ .Name }}
+			(*p).{{ .FieldName }} = {{ if .Pointer }}&{{ end }}{{ .Name }}
 					{{- end }}
 				{{- end }}
 			{{- end }}
-			return {{ .VarName }}(mr, p)
+			return nil
 		})
 	}
 }

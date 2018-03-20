@@ -448,8 +448,6 @@ type (
 		MethodName string
 		// Payload is the payload data required to generate encoder/decoder.
 		Payload *PayloadData
-		// Pointer is true if the payload type is not an object.
-		Pointer bool
 	}
 )
 
@@ -677,10 +675,6 @@ func (d ServicesData) analyze(hs *httpdesign.ServiceExpr) *ServiceData {
 		}
 
 		if a.MultipartRequest {
-			var pointer bool
-			if !design.IsObject(a.MethodExpr.Payload.Type) {
-				pointer = true
-			}
 			ad.MultipartRequestDecoder = &MultipartData{
 				FuncName:    fmt.Sprintf("%s%sDecoderFunc", svc.VarName, ep.VarName),
 				InitName:    fmt.Sprintf("New%s%sDecoder", svc.VarName, ep.VarName),
@@ -688,7 +682,6 @@ func (d ServicesData) analyze(hs *httpdesign.ServiceExpr) *ServiceData {
 				ServiceName: svc.Name,
 				MethodName:  ep.Name,
 				Payload:     ad.Payload,
-				Pointer:     pointer,
 			}
 			ad.MultipartRequestEncoder = &MultipartData{
 				FuncName:    fmt.Sprintf("%s%sEncoderFunc", svc.VarName, ep.VarName),

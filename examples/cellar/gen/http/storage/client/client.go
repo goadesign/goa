@@ -39,6 +39,10 @@ type Client struct {
 	// endpoint.
 	MultiAddDoer goahttp.Doer
 
+	// MultiUpdate Doer is the HTTP client used to make requests to the
+	// multi_update endpoint.
+	MultiUpdateDoer goahttp.Doer
+
 	// RestoreResponseBody controls whether the response bodies are reset after
 	// decoding so they can be read again.
 	RestoreResponseBody bool
@@ -52,6 +56,10 @@ type Client struct {
 // StorageMultiAddEncoderFunc is the type to encode multipart request for the
 // "storage" service "multi_add" endpoint.
 type StorageMultiAddEncoderFunc func(*multipart.Writer, []*storage.Bottle) error
+
+// StorageMultiUpdateEncoderFunc is the type to encode multipart request for
+// the "storage" service "multi_update" endpoint.
+type StorageMultiUpdateEncoderFunc func(*multipart.Writer, *storage.MultiUpdatePayload) error
 
 // NewClient instantiates HTTP clients for all the storage service servers.
 func NewClient(
@@ -69,6 +77,7 @@ func NewClient(
 		RemoveDoer:          doer,
 		RateDoer:            doer,
 		MultiAddDoer:        doer,
+		MultiUpdateDoer:     doer,
 		RestoreResponseBody: restoreBody,
 		scheme:              scheme,
 		host:                host,
@@ -218,6 +227,32 @@ func (c *Client) MultiAdd(storageMultiAddEncoderFn StorageMultiAddEncoderFunc) g
 
 		if err != nil {
 			return nil, goahttp.ErrRequestError("storage", "multi_add", err)
+		}
+		return decodeResponse(resp)
+	}
+}
+
+// MultiUpdate returns an endpoint that makes HTTP requests to the storage
+// service multi_update server.
+func (c *Client) MultiUpdate(storageMultiUpdateEncoderFn StorageMultiUpdateEncoderFunc) goa.Endpoint {
+	var (
+		encodeRequest  = EncodeMultiUpdateRequest(NewStorageMultiUpdateEncoder(storageMultiUpdateEncoderFn))
+		decodeResponse = DecodeMultiUpdateResponse(c.decoder, c.RestoreResponseBody)
+	)
+	return func(ctx context.Context, v interface{}) (interface{}, error) {
+		req, err := c.BuildMultiUpdateRequest(ctx, v)
+		if err != nil {
+			return nil, err
+		}
+		err = encodeRequest(req, v)
+		if err != nil {
+			return nil, err
+		}
+
+		resp, err := c.MultiUpdateDoer.Do(req)
+
+		if err != nil {
+			return nil, goahttp.ErrRequestError("storage", "multi_update", err)
 		}
 		return decodeResponse(resp)
 	}

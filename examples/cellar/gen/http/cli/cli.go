@@ -27,7 +27,7 @@ import (
 //
 func UsageCommands() string {
 	return `sommelier pick
-storage (list|show|add|remove|rate|multi_add)
+storage (list|show|add|remove|rate|multi_add|multi_update)
 `
 }
 
@@ -55,6 +55,7 @@ func ParseEndpoint(
 	dec func(*http.Response) goahttp.Decoder,
 	restore bool,
 	storageMultiAddEncoderFn storagec.StorageMultiAddEncoderFunc,
+	storageMultiUpdateEncoderFn storagec.StorageMultiUpdateEncoderFunc,
 ) (goa.Endpoint, interface{}, error) {
 	var (
 		sommelierFlags = flag.NewFlagSet("sommelier", flag.ContinueOnError)
@@ -81,6 +82,10 @@ func ParseEndpoint(
 
 		storageMultiAddFlags    = flag.NewFlagSet("multi_add", flag.ExitOnError)
 		storageMultiAddBodyFlag = storageMultiAddFlags.String("body", "REQUIRED", "")
+
+		storageMultiUpdateFlags    = flag.NewFlagSet("multi_update", flag.ExitOnError)
+		storageMultiUpdateBodyFlag = storageMultiUpdateFlags.String("body", "REQUIRED", "")
+		storageMultiUpdateIdsFlag  = storageMultiUpdateFlags.String("ids", "", "")
 	)
 	sommelierFlags.Usage = sommelierUsage
 	sommelierPickFlags.Usage = sommelierPickUsage
@@ -92,6 +97,7 @@ func ParseEndpoint(
 	storageRemoveFlags.Usage = storageRemoveUsage
 	storageRateFlags.Usage = storageRateUsage
 	storageMultiAddFlags.Usage = storageMultiAddUsage
+	storageMultiUpdateFlags.Usage = storageMultiUpdateUsage
 
 	if err := flag.CommandLine.Parse(os.Args[1:]); err != nil {
 		return nil, nil, err
@@ -154,6 +160,9 @@ func ParseEndpoint(
 			case "multi_add":
 				epf = storageMultiAddFlags
 
+			case "multi_update":
+				epf = storageMultiUpdateFlags
+
 			}
 
 		}
@@ -210,6 +219,9 @@ func ParseEndpoint(
 			case "multi_add":
 				endpoint = c.MultiAdd(storageMultiAddEncoderFn)
 				data, err = storagec.BuildMultiAddPayload(*storageMultiAddBodyFlag)
+			case "multi_update":
+				endpoint = c.MultiUpdate(storageMultiUpdateEncoderFn)
+				data, err = storagec.BuildMultiUpdatePayload(*storageMultiUpdateBodyFlag, *storageMultiUpdateIdsFlag)
 			}
 		}
 	}
@@ -266,6 +278,7 @@ COMMAND:
     remove: Remove bottle from storage
     rate: Rate bottles by IDs
     multi_add: Add n number of bottles and return their IDs.
+    multi_update: Update bottles with the given IDs.
 
 Additional help:
     %s storage COMMAND --help
@@ -289,7 +302,7 @@ Show bottle by ID
     -view STRING: 
 
 Example:
-    `+os.Args[0]+` storage show --id "Quis sapiente et sunt dolorem culpa." --view "default"
+    `+os.Args[0]+` storage show --id "Sapiente et." --view "tiny"
 `, os.Args[0])
 }
 
@@ -303,26 +316,26 @@ Example:
     `+os.Args[0]+` storage add --body '{
       "composition": [
          {
-            "percentage": 98,
+            "percentage": 96,
             "varietal": "Syrah"
          },
          {
-            "percentage": 98,
+            "percentage": 96,
             "varietal": "Syrah"
          },
          {
-            "percentage": 98,
+            "percentage": 96,
             "varietal": "Syrah"
          },
          {
-            "percentage": 98,
+            "percentage": 96,
             "varietal": "Syrah"
          }
       ],
       "description": "Red wine blend with an emphasis on the Cabernet Franc grape and including other Bordeaux grape varietals and some Syrah",
       "name": "Blue\'s Cuvee",
-      "rating": 4,
-      "vintage": 1914,
+      "rating": 1,
+      "vintage": 1980,
       "winery": {
          "country": "USA",
          "name": "Longoria",
@@ -340,7 +353,7 @@ Remove bottle from storage
     -id STRING: ID of bottle to remove
 
 Example:
-    `+os.Args[0]+` storage remove --id "Aut quaerat id."
+    `+os.Args[0]+` storage remove --id "Corporis rem."
 `, os.Args[0])
 }
 
@@ -377,18 +390,18 @@ Example:
       {
          "composition": [
             {
-               "percentage": 98,
+               "percentage": 96,
                "varietal": "Syrah"
             },
             {
-               "percentage": 98,
+               "percentage": 96,
                "varietal": "Syrah"
             }
          ],
          "description": "Red wine blend with an emphasis on the Cabernet Franc grape and including other Bordeaux grape varietals and some Syrah",
          "name": "Blue\'s Cuvee",
-         "rating": 3,
-         "vintage": 1966,
+         "rating": 1,
+         "vintage": 2002,
          "winery": {
             "country": "USA",
             "name": "Longoria",
@@ -399,18 +412,18 @@ Example:
       {
          "composition": [
             {
-               "percentage": 98,
+               "percentage": 96,
                "varietal": "Syrah"
             },
             {
-               "percentage": 98,
+               "percentage": 96,
                "varietal": "Syrah"
             }
          ],
          "description": "Red wine blend with an emphasis on the Cabernet Franc grape and including other Bordeaux grape varietals and some Syrah",
          "name": "Blue\'s Cuvee",
-         "rating": 3,
-         "vintage": 1966,
+         "rating": 1,
+         "vintage": 2002,
          "winery": {
             "country": "USA",
             "name": "Longoria",
@@ -418,6 +431,112 @@ Example:
             "url": "http://www.longoriawine.com/"
          }
       }
+   ]'
+`, os.Args[0])
+}
+
+func storageMultiUpdateUsage() {
+	fmt.Fprintf(os.Stderr, `%s [flags] storage multi_update -body JSON -ids JSON
+
+Update bottles with the given IDs.
+    -body JSON: 
+    -ids JSON: 
+
+Example:
+    `+os.Args[0]+` storage multi-update --body '{
+      "bottles": [
+         {
+            "composition": [
+               {
+                  "percentage": 96,
+                  "varietal": "Syrah"
+               },
+               {
+                  "percentage": 96,
+                  "varietal": "Syrah"
+               }
+            ],
+            "description": "Red wine blend with an emphasis on the Cabernet Franc grape and including other Bordeaux grape varietals and some Syrah",
+            "name": "Blue\'s Cuvee",
+            "rating": 1,
+            "vintage": 2002,
+            "winery": {
+               "country": "USA",
+               "name": "Longoria",
+               "region": "Central Coast, California",
+               "url": "http://www.longoriawine.com/"
+            }
+         },
+         {
+            "composition": [
+               {
+                  "percentage": 96,
+                  "varietal": "Syrah"
+               },
+               {
+                  "percentage": 96,
+                  "varietal": "Syrah"
+               }
+            ],
+            "description": "Red wine blend with an emphasis on the Cabernet Franc grape and including other Bordeaux grape varietals and some Syrah",
+            "name": "Blue\'s Cuvee",
+            "rating": 1,
+            "vintage": 2002,
+            "winery": {
+               "country": "USA",
+               "name": "Longoria",
+               "region": "Central Coast, California",
+               "url": "http://www.longoriawine.com/"
+            }
+         },
+         {
+            "composition": [
+               {
+                  "percentage": 96,
+                  "varietal": "Syrah"
+               },
+               {
+                  "percentage": 96,
+                  "varietal": "Syrah"
+               }
+            ],
+            "description": "Red wine blend with an emphasis on the Cabernet Franc grape and including other Bordeaux grape varietals and some Syrah",
+            "name": "Blue\'s Cuvee",
+            "rating": 1,
+            "vintage": 2002,
+            "winery": {
+               "country": "USA",
+               "name": "Longoria",
+               "region": "Central Coast, California",
+               "url": "http://www.longoriawine.com/"
+            }
+         },
+         {
+            "composition": [
+               {
+                  "percentage": 96,
+                  "varietal": "Syrah"
+               },
+               {
+                  "percentage": 96,
+                  "varietal": "Syrah"
+               }
+            ],
+            "description": "Red wine blend with an emphasis on the Cabernet Franc grape and including other Bordeaux grape varietals and some Syrah",
+            "name": "Blue\'s Cuvee",
+            "rating": 1,
+            "vintage": 2002,
+            "winery": {
+               "country": "USA",
+               "name": "Longoria",
+               "region": "Central Coast, California",
+               "url": "http://www.longoriawine.com/"
+            }
+         }
+      ]
+   }' --ids '[
+      "Aut rem vel veritatis.",
+      "Animi nulla aut aut."
    ]'
 `, os.Args[0])
 }

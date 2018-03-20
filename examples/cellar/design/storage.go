@@ -82,4 +82,18 @@ var _ = Service("storage", func() {
 			MultipartRequest()
 		})
 	})
+
+	Method("multi_update", func() {
+		Description("Update bottles with the given IDs.")
+		Payload(func() {
+			Attribute("ids", ArrayOf(String), "IDs of the bottles to be updated")
+			Attribute("bottles", ArrayOf(Bottle), "Array of bottle info that matches the ids attribute")
+		})
+		HTTP(func() {
+			PUT("/multi_update")
+			Param("ids")
+			MultipartRequest()
+			Response(StatusNoContent)
+		})
+	})
 })

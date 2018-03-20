@@ -16,23 +16,25 @@ import (
 
 // Endpoints wraps the "storage" service endpoints.
 type Endpoints struct {
-	List     goa.Endpoint
-	Show     goa.Endpoint
-	Add      goa.Endpoint
-	Remove   goa.Endpoint
-	Rate     goa.Endpoint
-	MultiAdd goa.Endpoint
+	List        goa.Endpoint
+	Show        goa.Endpoint
+	Add         goa.Endpoint
+	Remove      goa.Endpoint
+	Rate        goa.Endpoint
+	MultiAdd    goa.Endpoint
+	MultiUpdate goa.Endpoint
 }
 
 // NewEndpoints wraps the methods of the "storage" service with endpoints.
 func NewEndpoints(s Service) *Endpoints {
 	return &Endpoints{
-		List:     NewListEndpoint(s),
-		Show:     NewShowEndpoint(s),
-		Add:      NewAddEndpoint(s),
-		Remove:   NewRemoveEndpoint(s),
-		Rate:     NewRateEndpoint(s),
-		MultiAdd: NewMultiAddEndpoint(s),
+		List:        NewListEndpoint(s),
+		Show:        NewShowEndpoint(s),
+		Add:         NewAddEndpoint(s),
+		Remove:      NewRemoveEndpoint(s),
+		Rate:        NewRateEndpoint(s),
+		MultiAdd:    NewMultiAddEndpoint(s),
+		MultiUpdate: NewMultiUpdateEndpoint(s),
 	}
 }
 
@@ -44,6 +46,7 @@ func (e *Endpoints) Use(m func(goa.Endpoint) goa.Endpoint) {
 	e.Remove = m(e.Remove)
 	e.Rate = m(e.Rate)
 	e.MultiAdd = m(e.MultiAdd)
+	e.MultiUpdate = m(e.MultiUpdate)
 }
 
 // NewListEndpoint returns an endpoint function that calls the method "list" of
@@ -96,5 +99,14 @@ func NewMultiAddEndpoint(s Service) goa.Endpoint {
 	return func(ctx context.Context, req interface{}) (interface{}, error) {
 		p := req.([]*Bottle)
 		return s.MultiAdd(ctx, p)
+	}
+}
+
+// NewMultiUpdateEndpoint returns an endpoint function that calls the method
+// "multi_update" of service "storage".
+func NewMultiUpdateEndpoint(s Service) goa.Endpoint {
+	return func(ctx context.Context, req interface{}) (interface{}, error) {
+		p := req.(*MultiUpdatePayload)
+		return nil, s.MultiUpdate(ctx, p)
 	}
 }

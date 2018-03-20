@@ -26,6 +26,8 @@ type Service interface {
 	Rate(context.Context, map[uint32][]string) error
 	// Add n number of bottles and return their IDs.
 	MultiAdd(context.Context, []*Bottle) ([]string, error)
+	// Update bottles with the given IDs.
+	MultiUpdate(context.Context, *MultiUpdatePayload) error
 }
 
 // StoredBottleCollection is the result type of the storage service list method.
@@ -77,6 +79,15 @@ type Bottle struct {
 type RemovePayload struct {
 	// ID of bottle to remove
 	ID string
+}
+
+// MultiUpdatePayload is the payload type of the storage service multi_update
+// method.
+type MultiUpdatePayload struct {
+	// IDs of the bottles to be updated
+	Ids []string
+	// Array of bottle info that matches the ids attribute
+	Bottles []*Bottle
 }
 
 type Winery struct {
