@@ -24,9 +24,13 @@ type Service interface {
 	Remove(context.Context, *RemovePayload) error
 	// Rate bottles by IDs
 	Rate(context.Context, map[uint32][]string) error
-	// Add n number of bottles and return their IDs.
+	// Add n number of bottles and return their IDs. This is a multipart request
+	// and each part has field name 'bottle' and contains the encoded bottle info
+	// to be added.
 	MultiAdd(context.Context, []*Bottle) ([]string, error)
-	// Update bottles with the given IDs.
+	// Update bottles with the given IDs. This is a multipart request and each part
+	// has field name 'bottle' and contains the encoded bottle info to be updated.
+	// The IDs in the query parameter is mapped to each part in the request.
 	MultiUpdate(context.Context, *MultiUpdatePayload) error
 }
 

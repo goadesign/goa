@@ -74,7 +74,7 @@ var _ = Service("storage", func() {
 	})
 
 	Method("multi_add", func() {
-		Description("Add n number of bottles and return their IDs.")
+		Description("Add n number of bottles and return their IDs. This is a multipart request and each part has field name 'bottle' and contains the encoded bottle info to be added.")
 		Payload(ArrayOf(Bottle))
 		Result(ArrayOf(String))
 		HTTP(func() {
@@ -84,7 +84,7 @@ var _ = Service("storage", func() {
 	})
 
 	Method("multi_update", func() {
-		Description("Update bottles with the given IDs.")
+		Description("Update bottles with the given IDs. This is a multipart request and each part has field name 'bottle' and contains the encoded bottle info to be updated. The IDs in the query parameter is mapped to each part in the request.")
 		Payload(func() {
 			Attribute("ids", ArrayOf(String), "IDs of the bottles to be updated")
 			Attribute("bottles", ArrayOf(Bottle), "Array of bottle info that matches the ids attribute")

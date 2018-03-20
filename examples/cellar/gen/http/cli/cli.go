@@ -277,8 +277,8 @@ COMMAND:
     add: Add new bottle and return its ID.
     remove: Remove bottle from storage
     rate: Rate bottles by IDs
-    multi_add: Add n number of bottles and return their IDs.
-    multi_update: Update bottles with the given IDs.
+    multi_add: Add n number of bottles and return their IDs. This is a multipart request and each part has field name 'bottle' and contains the encoded bottle info to be added.
+    multi_update: Update bottles with the given IDs. This is a multipart request and each part has field name 'bottle' and contains the encoded bottle info to be updated. The IDs in the query parameter is mapped to each part in the request.
 
 Additional help:
     %s storage COMMAND --help
@@ -382,7 +382,7 @@ Example:
 func storageMultiAddUsage() {
 	fmt.Fprintf(os.Stderr, `%s [flags] storage multi_add -body JSON
 
-Add n number of bottles and return their IDs.
+Add n number of bottles and return their IDs. This is a multipart request and each part has field name 'bottle' and contains the encoded bottle info to be added.
     -body JSON: 
 
 Example:
@@ -438,7 +438,7 @@ Example:
 func storageMultiUpdateUsage() {
 	fmt.Fprintf(os.Stderr, `%s [flags] storage multi_update -body JSON -ids JSON
 
-Update bottles with the given IDs.
+Update bottles with the given IDs. This is a multipart request and each part has field name 'bottle' and contains the encoded bottle info to be updated. The IDs in the query parameter is mapped to each part in the request.
     -body JSON: 
     -ids JSON: 
 
