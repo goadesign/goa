@@ -3,12 +3,9 @@ package http
 import (
 	"bytes"
 	"context"
-	"crypto/rand"
-	"encoding/base64"
 	"encoding/gob"
 	"encoding/json"
 	"encoding/xml"
-	"io"
 	"io/ioutil"
 	"mime"
 	"net/http"
@@ -160,28 +157,43 @@ func ResponseDecoder(resp *http.Response) Decoder {
 }
 
 // ErrorEncoder returns an encoder that checks whether the error is a goa Error
-// and if so sets the response status code using the error status and encodes
-// the corresponding ErrorResponse struct to the response body. If the error is
-// not a goa.Error then it sets the response status code to InternalServerError
-// (500) and writes the error message to the response body.
+// and if so sets the response status code using the error temporary and timeout
+// values. The encoder encodes the corresponding ErrorResponse struct to the
+// response body. If the error is not a goa.Error then it sets the response
+// status code to InternalServerError (500) and writes the error message to the
+// response body.
 func ErrorEncoder(encoder func(context.Context, http.ResponseWriter) Encoder) func(context.Context, http.ResponseWriter, error) {
 	return func(ctx context.Context, w http.ResponseWriter, v error) {
 		switch t := v.(type) {
 
-		case goa.Error:
+		case *goa.ServiceError:
 			enc := encoder(ctx, w)
-			w.WriteHeader(Status(t.Status()))
+			w.WriteHeader(StatusCode(t))
 			enc.Encode(NewErrorResponse(t))
 
 		default:
-			b := make([]byte, 6)
-			io.ReadFull(rand.Reader, b)
-			id := base64.RawURLEncoding.EncodeToString(b)
+			// Note: we don't want to encode because the error could
+			// be due to the encoder.
 			w.Header().Set("Content-Type", "text/plain")
 			w.WriteHeader(http.StatusInternalServerError)
-			w.Write([]byte(id + ": " + t.Error()))
+			w.Write([]byte(t.Error()))
 		}
 	}
+}
+
+// StatusCode implements a heuristic that computes a HTTP response status code
+// appropriate for the timeout and temporary characteristics of the error.
+func StatusCode(err *goa.ServiceError) int {
+	if err.Timeout {
+		if err.Temporary {
+			return http.StatusGatewayTimeout
+		}
+		return http.StatusRequestTimeout
+	}
+	if err.Temporary {
+		return http.StatusServiceUnavailable
+	}
+	return http.StatusBadRequest
 }
 
 // Decode implements the Decoder interface. It simply calls f(v).
