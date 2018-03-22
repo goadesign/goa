@@ -11,6 +11,7 @@ func EncodeMethodHeaderBoolResponse(encoder func(context.Context, http.ResponseW
 			w.Header().Set("h", hs)
 		}
 		w.WriteHeader(http.StatusOK)
+		return nil
 	}
 }
 `
@@ -26,6 +27,7 @@ func EncodeMethodHeaderIntResponse(encoder func(context.Context, http.ResponseWr
 			w.Header().Set("h", hs)
 		}
 		w.WriteHeader(http.StatusOK)
+		return nil
 	}
 }
 `
@@ -41,6 +43,7 @@ func EncodeMethodHeaderInt32Response(encoder func(context.Context, http.Response
 			w.Header().Set("h", hs)
 		}
 		w.WriteHeader(http.StatusOK)
+		return nil
 	}
 }
 `
@@ -56,6 +59,7 @@ func EncodeMethodHeaderInt64Response(encoder func(context.Context, http.Response
 			w.Header().Set("h", hs)
 		}
 		w.WriteHeader(http.StatusOK)
+		return nil
 	}
 }
 `
@@ -71,6 +75,7 @@ func EncodeMethodHeaderUIntResponse(encoder func(context.Context, http.ResponseW
 			w.Header().Set("h", hs)
 		}
 		w.WriteHeader(http.StatusOK)
+		return nil
 	}
 }
 `
@@ -86,6 +91,7 @@ func EncodeMethodHeaderUInt32Response(encoder func(context.Context, http.Respons
 			w.Header().Set("h", hs)
 		}
 		w.WriteHeader(http.StatusOK)
+		return nil
 	}
 }
 `
@@ -101,6 +107,7 @@ func EncodeMethodHeaderUInt64Response(encoder func(context.Context, http.Respons
 			w.Header().Set("h", hs)
 		}
 		w.WriteHeader(http.StatusOK)
+		return nil
 	}
 }
 `
@@ -116,6 +123,7 @@ func EncodeMethodHeaderFloat32Response(encoder func(context.Context, http.Respon
 			w.Header().Set("h", hs)
 		}
 		w.WriteHeader(http.StatusOK)
+		return nil
 	}
 }
 `
@@ -131,6 +139,7 @@ func EncodeMethodHeaderFloat64Response(encoder func(context.Context, http.Respon
 			w.Header().Set("h", hs)
 		}
 		w.WriteHeader(http.StatusOK)
+		return nil
 	}
 }
 `
@@ -144,6 +153,7 @@ func EncodeMethodHeaderStringResponse(encoder func(context.Context, http.Respons
 			w.Header().Set("h", *res.H)
 		}
 		w.WriteHeader(http.StatusOK)
+		return nil
 	}
 }
 `
@@ -159,6 +169,7 @@ func EncodeMethodHeaderBytesResponse(encoder func(context.Context, http.Response
 			w.Header().Set("h", hs)
 		}
 		w.WriteHeader(http.StatusOK)
+		return nil
 	}
 }
 `
@@ -174,6 +185,7 @@ func EncodeMethodHeaderAnyResponse(encoder func(context.Context, http.ResponseWr
 			w.Header().Set("h", hs)
 		}
 		w.WriteHeader(http.StatusOK)
+		return nil
 	}
 }
 `
@@ -194,6 +206,7 @@ func EncodeMethodHeaderArrayBoolResponse(encoder func(context.Context, http.Resp
 			w.Header().Set("h", hs)
 		}
 		w.WriteHeader(http.StatusOK)
+		return nil
 	}
 }
 `
@@ -214,6 +227,7 @@ func EncodeMethodHeaderArrayIntResponse(encoder func(context.Context, http.Respo
 			w.Header().Set("h", hs)
 		}
 		w.WriteHeader(http.StatusOK)
+		return nil
 	}
 }
 `
@@ -234,6 +248,7 @@ func EncodeMethodHeaderArrayInt32Response(encoder func(context.Context, http.Res
 			w.Header().Set("h", hs)
 		}
 		w.WriteHeader(http.StatusOK)
+		return nil
 	}
 }
 `
@@ -254,6 +269,7 @@ func EncodeMethodHeaderArrayInt64Response(encoder func(context.Context, http.Res
 			w.Header().Set("h", hs)
 		}
 		w.WriteHeader(http.StatusOK)
+		return nil
 	}
 }
 `
@@ -274,6 +290,7 @@ func EncodeMethodHeaderArrayUIntResponse(encoder func(context.Context, http.Resp
 			w.Header().Set("h", hs)
 		}
 		w.WriteHeader(http.StatusOK)
+		return nil
 	}
 }
 `
@@ -294,6 +311,7 @@ func EncodeMethodHeaderArrayUInt32Response(encoder func(context.Context, http.Re
 			w.Header().Set("h", hs)
 		}
 		w.WriteHeader(http.StatusOK)
+		return nil
 	}
 }
 `
@@ -314,6 +332,7 @@ func EncodeMethodHeaderArrayUInt64Response(encoder func(context.Context, http.Re
 			w.Header().Set("h", hs)
 		}
 		w.WriteHeader(http.StatusOK)
+		return nil
 	}
 }
 `
@@ -334,6 +353,7 @@ func EncodeMethodHeaderArrayFloat32Response(encoder func(context.Context, http.R
 			w.Header().Set("h", hs)
 		}
 		w.WriteHeader(http.StatusOK)
+		return nil
 	}
 }
 `
@@ -354,6 +374,7 @@ func EncodeMethodHeaderArrayFloat64Response(encoder func(context.Context, http.R
 			w.Header().Set("h", hs)
 		}
 		w.WriteHeader(http.StatusOK)
+		return nil
 	}
 }
 `
@@ -369,6 +390,7 @@ func EncodeMethodHeaderArrayStringResponse(encoder func(context.Context, http.Re
 			w.Header().Set("h", hs)
 		}
 		w.WriteHeader(http.StatusOK)
+		return nil
 	}
 }
 `
@@ -389,6 +411,7 @@ func EncodeMethodHeaderArrayBytesResponse(encoder func(context.Context, http.Res
 			w.Header().Set("h", hs)
 		}
 		w.WriteHeader(http.StatusOK)
+		return nil
 	}
 }
 `
@@ -409,6 +432,7 @@ func EncodeMethodHeaderArrayAnyResponse(encoder func(context.Context, http.Respo
 			w.Header().Set("h", hs)
 		}
 		w.WriteHeader(http.StatusOK)
+		return nil
 	}
 }
 `
@@ -426,6 +450,7 @@ func EncodeMethodHeaderBoolDefaultResponse(encoder func(context.Context, http.Re
 			w.Header().Set("h", "true")
 		}
 		w.WriteHeader(http.StatusOK)
+		return nil
 	}
 }
 `
@@ -440,6 +465,7 @@ func EncodeMethodHeaderBoolRequiredDefaultResponse(encoder func(context.Context,
 		hs := strconv.FormatBool(val)
 		w.Header().Set("h", hs)
 		w.WriteHeader(http.StatusOK)
+		return nil
 	}
 }
 `
@@ -456,6 +482,7 @@ func EncodeMethodHeaderStringDefaultResponse(encoder func(context.Context, http.
 			w.Header().Set("h", "def")
 		}
 		w.WriteHeader(http.StatusOK)
+		return nil
 	}
 }
 `
@@ -468,6 +495,7 @@ func EncodeMethodHeaderStringRequiredDefaultResponse(encoder func(context.Contex
 		res := v.(*serviceheaderstringrequireddefault.MethodHeaderStringRequiredDefaultResult)
 		w.Header().Set("h", res.H)
 		w.WriteHeader(http.StatusOK)
+		return nil
 	}
 }
 `
@@ -491,6 +519,7 @@ func EncodeMethodHeaderArrayBoolDefaultResponse(encoder func(context.Context, ht
 			w.Header().Set("h", "true, false")
 		}
 		w.WriteHeader(http.StatusOK)
+		return nil
 	}
 }
 `
@@ -514,6 +543,7 @@ func EncodeMethodHeaderArrayBoolRequiredDefaultResponse(encoder func(context.Con
 			w.Header().Set("h", "true, false")
 		}
 		w.WriteHeader(http.StatusOK)
+		return nil
 	}
 }
 `
@@ -532,6 +562,7 @@ func EncodeMethodHeaderArrayStringDefaultResponse(encoder func(context.Context, 
 			w.Header().Set("h", "foo, bar")
 		}
 		w.WriteHeader(http.StatusOK)
+		return nil
 	}
 }
 `
@@ -550,6 +581,7 @@ func EncodeMethodHeaderArrayStringRequiredDefaultResponse(encoder func(context.C
 			w.Header().Set("h", "foo, bar")
 		}
 		w.WriteHeader(http.StatusOK)
+		return nil
 	}
 }
 `
@@ -728,6 +760,7 @@ func EncodeMethodTagStringResponse(encoder func(context.Context, http.ResponseWr
 		if res.H != nil && *res.H == "value" {
 			w.Header().Set("h", *res.H)
 			w.WriteHeader(http.StatusAccepted)
+			return nil
 		}
 		enc := encoder(ctx, w)
 		body := NewMethodTagStringOKResponseBody(res)
@@ -745,6 +778,7 @@ func EncodeMethodTagStringRequiredResponse(encoder func(context.Context, http.Re
 		if res.H == "value" {
 			w.Header().Set("h", res.H)
 			w.WriteHeader(http.StatusAccepted)
+			return nil
 		}
 		enc := encoder(ctx, w)
 		body := NewMethodTagStringRequiredOKResponseBody(res)

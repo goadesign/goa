@@ -251,11 +251,12 @@ const mainT = `func main() {
 	{{- end }}
 	)
 	{
+		eh := ErrorHandler(logger)
 	{{- range .Services }}
 		{{-  if .Endpoints }}
-		{{ .Service.PkgName }}Server = {{ .Service.PkgName }}svr.New({{ .Service.PkgName }}Endpoints, mux, dec, enc, ErrorHandler(logger){{ range .Endpoints }}{{ if .MultipartRequestDecoder }}, {{ $.APIPkg }}.{{ .MultipartRequestDecoder.FuncName }}{{ end }}{{ end }})
+		{{ .Service.PkgName }}Server = {{ .Service.PkgName }}svr.New({{ .Service.PkgName }}Endpoints, mux, dec, enc, eh{{ range .Endpoints }}{{ if .MultipartRequestDecoder }}, {{ $.APIPkg }}.{{ .MultipartRequestDecoder.FuncName }}{{ end }}{{ end }})
 		{{-  else }}
-		{{ .Service.PkgName }}Server = {{ .Service.PkgName }}svr.New(nil, mux, dec, enc, ErrorHandler(logger))
+		{{ .Service.PkgName }}Server = {{ .Service.PkgName }}svr.New(nil, mux, dec, enc, eh)
 		{{-  end }}
 	{{- end }}
 	}

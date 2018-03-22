@@ -881,6 +881,8 @@ func {{ .ResponseEncoder }}(encoder func(context.Context, http.ResponseWriter) g
 			{{ template "response" . }}
 			{{- if .ServerBody }}
 			return enc.Encode(body)
+			{{- else }}
+			return nil
 			{{- end }}
 
 			{{- if .TagName }}
