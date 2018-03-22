@@ -19,15 +19,13 @@ import (
 
 // EncodeAddResponse returns an encoder for responses returned by the calc add
 // endpoint.
-func EncodeAddResponse(encoder func(context.Context, http.ResponseWriter) goahttp.Encoder) func(context.Context, http.ResponseWriter, interface{}) {
-	return func(ctx context.Context, w http.ResponseWriter, v interface{}) {
+func EncodeAddResponse(encoder func(context.Context, http.ResponseWriter) goahttp.Encoder) func(context.Context, http.ResponseWriter, interface{}) error {
+	return func(ctx context.Context, w http.ResponseWriter, v interface{}) error {
 		res := v.(int)
 		enc := encoder(ctx, w)
 		body := res
 		w.WriteHeader(http.StatusOK)
-		if err := enc.Encode(body); err != nil {
-			w.Write([]byte("encoding: " + err.Error()))
-		}
+		return enc.Encode(body)
 	}
 }
 

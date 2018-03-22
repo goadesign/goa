@@ -40,12 +40,13 @@ func New(
 	mux goahttp.Muxer,
 	dec func(*http.Request) goahttp.Decoder,
 	enc func(context.Context, http.ResponseWriter) goahttp.Encoder,
+	eh func(context.Context, http.ResponseWriter, error),
 ) *Server {
 	return &Server{
 		Mounts: []*MountPoint{
 			{"Pick", "POST", "/sommelier"},
 		},
-		Pick: NewPickHandler(e.Pick, mux, dec, enc),
+		Pick: NewPickHandler(e.Pick, mux, dec, enc, eh),
 	}
 }
 
@@ -81,6 +82,7 @@ func NewPickHandler(
 	mux goahttp.Muxer,
 	dec func(*http.Request) goahttp.Decoder,
 	enc func(context.Context, http.ResponseWriter) goahttp.Encoder,
+	eh func(context.Context, http.ResponseWriter, error),
 ) http.Handler {
 	var (
 		decodeRequest  = DecodePickRequest(mux, dec)
@@ -88,22 +90,25 @@ func NewPickHandler(
 		encodeError    = EncodePickError(enc)
 	)
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		accept := r.Header.Get("Accept")
-		ctx := context.WithValue(r.Context(), goahttp.AcceptTypeKey, accept)
+		ctx := context.WithValue(r.Context(), goahttp.AcceptTypeKey, r.Header.Get("Accept"))
 		ctx = context.WithValue(ctx, goa.MethodKey, "pick")
 		ctx = context.WithValue(ctx, goa.ServiceKey, "sommelier")
 		payload, err := decodeRequest(r)
 		if err != nil {
-			encodeError(ctx, w, err)
+			eh(ctx, w, err)
 			return
 		}
 
 		res, err := endpoint(ctx, payload)
 
 		if err != nil {
-			encodeError(ctx, w, err)
-			return
+			if err := encodeError(ctx, w, err); err != nil {
+				eh(ctx, w, err)
+				return
+			}
 		}
-		encodeResponse(ctx, w, res)
+		if err := encodeResponse(ctx, w, res); err != nil {
+			eh(ctx, w, err)
+		}
 	})
 }

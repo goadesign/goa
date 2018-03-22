@@ -19,15 +19,13 @@ import (
 
 // EncodeIntegerDivideResponse returns an encoder for responses returned by the
 // divider integer_divide endpoint.
-func EncodeIntegerDivideResponse(encoder func(context.Context, http.ResponseWriter) goahttp.Encoder) func(context.Context, http.ResponseWriter, interface{}) {
-	return func(ctx context.Context, w http.ResponseWriter, v interface{}) {
+func EncodeIntegerDivideResponse(encoder func(context.Context, http.ResponseWriter) goahttp.Encoder) func(context.Context, http.ResponseWriter, interface{}) error {
+	return func(ctx context.Context, w http.ResponseWriter, v interface{}) error {
 		res := v.(int)
 		enc := encoder(ctx, w)
 		body := res
 		w.WriteHeader(http.StatusOK)
-		if err := enc.Encode(body); err != nil {
-			w.Write([]byte("encoding: " + err.Error()))
-		}
+		return enc.Encode(body)
 	}
 }
 
@@ -68,44 +66,39 @@ func DecodeIntegerDivideRequest(mux goahttp.Muxer, decoder func(*http.Request) g
 
 // EncodeIntegerDivideError returns an encoder for errors returned by the
 // integer_divide divider endpoint.
-func EncodeIntegerDivideError(encoder func(context.Context, http.ResponseWriter) goahttp.Encoder) func(context.Context, http.ResponseWriter, error) {
+func EncodeIntegerDivideError(encoder func(context.Context, http.ResponseWriter) goahttp.Encoder) func(context.Context, http.ResponseWriter, error) error {
 	encodeError := goahttp.ErrorEncoder(encoder)
-	return func(ctx context.Context, w http.ResponseWriter, v error) {
+	return func(ctx context.Context, w http.ResponseWriter, v error) error {
 		switch res := v.(type) {
 		case *dividersvc.Error:
 			if res.Name == "has_remainder" {
 				enc := encoder(ctx, w)
 				body := NewIntegerDivideHasRemainderResponseBody(res)
 				w.WriteHeader(http.StatusExpectationFailed)
-				if err := enc.Encode(body); err != nil {
-					w.Write([]byte("encoding: " + err.Error()))
-				}
+				return enc.Encode(body)
 			}
 			if res.Name == "div_by_zero" {
 				enc := encoder(ctx, w)
 				body := NewIntegerDivideDivByZeroResponseBody(res)
 				w.WriteHeader(http.StatusBadRequest)
-				if err := enc.Encode(body); err != nil {
-					w.Write([]byte("encoding: " + err.Error()))
-				}
+				return enc.Encode(body)
 			}
 		default:
-			encodeError(ctx, w, v)
+			return encodeError(ctx, w, v)
 		}
+		return nil
 	}
 }
 
 // EncodeDivideResponse returns an encoder for responses returned by the
 // divider divide endpoint.
-func EncodeDivideResponse(encoder func(context.Context, http.ResponseWriter) goahttp.Encoder) func(context.Context, http.ResponseWriter, interface{}) {
-	return func(ctx context.Context, w http.ResponseWriter, v interface{}) {
+func EncodeDivideResponse(encoder func(context.Context, http.ResponseWriter) goahttp.Encoder) func(context.Context, http.ResponseWriter, interface{}) error {
+	return func(ctx context.Context, w http.ResponseWriter, v interface{}) error {
 		res := v.(float64)
 		enc := encoder(ctx, w)
 		body := res
 		w.WriteHeader(http.StatusOK)
-		if err := enc.Encode(body); err != nil {
-			w.Write([]byte("encoding: " + err.Error()))
-		}
+		return enc.Encode(body)
 	}
 }
 
@@ -146,21 +139,20 @@ func DecodeDivideRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.
 
 // EncodeDivideError returns an encoder for errors returned by the divide
 // divider endpoint.
-func EncodeDivideError(encoder func(context.Context, http.ResponseWriter) goahttp.Encoder) func(context.Context, http.ResponseWriter, error) {
+func EncodeDivideError(encoder func(context.Context, http.ResponseWriter) goahttp.Encoder) func(context.Context, http.ResponseWriter, error) error {
 	encodeError := goahttp.ErrorEncoder(encoder)
-	return func(ctx context.Context, w http.ResponseWriter, v error) {
+	return func(ctx context.Context, w http.ResponseWriter, v error) error {
 		switch res := v.(type) {
 		case *dividersvc.Error:
 			if res.Name == "div_by_zero" {
 				enc := encoder(ctx, w)
 				body := NewDivideDivByZeroResponseBody(res)
 				w.WriteHeader(http.StatusBadRequest)
-				if err := enc.Encode(body); err != nil {
-					w.Write([]byte("encoding: " + err.Error()))
-				}
+				return enc.Encode(body)
 			}
 		default:
-			encodeError(ctx, w, v)
+			return encodeError(ctx, w, v)
 		}
+		return nil
 	}
 }

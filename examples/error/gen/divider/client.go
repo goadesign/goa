@@ -28,6 +28,9 @@ func NewClient(integerDivide, divide goa.Endpoint) *Client {
 }
 
 // IntegerDivide calls the "integer_divide" endpoint of the "divider" service.
+// IntegerDivide can return the following error types:
+//	- *Error
+//	- error: generic transport error.
 func (c *Client) IntegerDivide(ctx context.Context, p *IntOperands) (res int, err error) {
 	var ires interface{}
 	ires, err = c.IntegerDivideEndpoint(ctx, p)

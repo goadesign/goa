@@ -10,8 +10,6 @@ import (
 	"mime"
 	"net/http"
 	"strings"
-
-	goa "goa.design/goa"
 )
 
 const (
@@ -161,43 +159,14 @@ func ResponseDecoder(resp *http.Response) Decoder {
 // and if so uses the error temporary and timeout fields to infer a proper HTTP
 // status code and marshals the error struct to the body using the provided
 // encoder. If the error is not a goa ServiceError struct then it is encoded
-// using EncodeRawError.
-func ErrorEncoder(encoder func(context.Context, http.ResponseWriter) Encoder) func(context.Context, http.ResponseWriter, error) {
-	return func(ctx context.Context, w http.ResponseWriter, err error) {
-		switch e := err.(type) {
-		case *goa.ServiceError:
-			enc := encoder(ctx, w)
-			w.WriteHeader(StatusCode(e))
-			enc.Encode(NewErrorResponse(e))
-		default:
-			EncodeRawError(w, e)
-		}
+// as a permanent internal server error.
+func ErrorEncoder(encoder func(context.Context, http.ResponseWriter) Encoder) func(context.Context, http.ResponseWriter, error) error {
+	return func(ctx context.Context, w http.ResponseWriter, err error) error {
+		enc := encoder(ctx, w)
+		resp := NewErrorResponse(err)
+		w.WriteHeader(resp.StatusCode())
+		return enc.Encode(resp)
 	}
-}
-
-// EncodeRawError writes the error message to the response body directly. The
-// response uses HTTP status code 500 (Internal Server Error). The error message
-// is not encoded so as to avoid infinite loops where the encoder returns an
-// error.
-func EncodeRawError(w http.ResponseWriter, err error) {
-	w.Header().Set("Content-Type", "text/plain")
-	w.WriteHeader(http.StatusInternalServerError)
-	w.Write([]byte(err.Error()))
-}
-
-// StatusCode implements a heuristic that computes a HTTP response status code
-// appropriate for the timeout and temporary characteristics of the error.
-func StatusCode(err *goa.ServiceError) int {
-	if err.Timeout {
-		if err.Temporary {
-			return http.StatusGatewayTimeout
-		}
-		return http.StatusRequestTimeout
-	}
-	if err.Temporary {
-		return http.StatusServiceUnavailable
-	}
-	return http.StatusBadRequest
 }
 
 // Decode implements the Decoder interface. It simply calls f(v).

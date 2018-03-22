@@ -218,6 +218,7 @@ func {{ .ServerInit }}(
 	mux goahttp.Muxer,
 	dec func(*http.Request) goahttp.Decoder,
 	enc func(context.Context, http.ResponseWriter) goahttp.Encoder,
+	eh func(context.Context, http.ResponseWriter, error),
 	{{- range .Endpoints }}
 		{{- if .MultipartRequestDecoder }}
 	{{ .MultipartRequestDecoder.VarName }} {{ .MultipartRequestDecoder.FuncName }},
@@ -239,7 +240,7 @@ func {{ .ServerInit }}(
 			{{- end }}
 		},
 		{{- range .Endpoints }}
-		{{ .Method.VarName }}: {{ .HandlerInit }}(e.{{ .Method.VarName }}, mux, {{ if .MultipartRequestDecoder }}{{ .MultipartRequestDecoder.InitName }}(mux, {{ .MultipartRequestDecoder.VarName }}){{ else }}dec{{ end }}, enc),
+		{{ .Method.VarName }}: {{ .HandlerInit }}(e.{{ .Method.VarName }}, mux, {{ if .MultipartRequestDecoder }}{{ .MultipartRequestDecoder.InitName }}(mux, {{ .MultipartRequestDecoder.VarName }}){{ else }}dec{{ end }}, enc, eh),
 		{{- end }}
 	}
 }
@@ -308,6 +309,7 @@ func {{ .HandlerInit }}(
 	mux goahttp.Muxer,
 	dec func(*http.Request) goahttp.Decoder,
 	enc func(context.Context, http.ResponseWriter) goahttp.Encoder,
+	eh func(context.Context, http.ResponseWriter, error),
 ) http.Handler {
 	var (
 		{{- if .Payload.Ref }}
@@ -317,15 +319,14 @@ func {{ .HandlerInit }}(
 		encodeError    = {{ if .Errors }}{{ .ErrorEncoder }}{{ else }}goahttp.ErrorEncoder{{ end }}(enc)
 	)
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		accept := r.Header.Get("Accept")
-		ctx := context.WithValue(r.Context(), goahttp.AcceptTypeKey, accept)
+		ctx := context.WithValue(r.Context(), goahttp.AcceptTypeKey, r.Header.Get("Accept"))
 		ctx = context.WithValue(ctx, goa.MethodKey, {{ printf "%q" .Method.Name }})
 		ctx = context.WithValue(ctx, goa.ServiceKey, {{ printf "%q" .ServiceName }})
 
 		{{- if .Payload.Ref }}
 		payload, err := decodeRequest(r)
 		if err != nil {
-			encodeError(ctx, w, err)
+			eh(ctx, w, err)
 			return
 		}
 
@@ -335,10 +336,14 @@ func {{ .HandlerInit }}(
 		{{- end }}
 
 		if err != nil {
-			encodeError(ctx, w, err)
-			return
+			if err := encodeError(ctx, w, err); err != nil {
+				eh(ctx, w, err)
+				return
+			}
 		}
-		encodeResponse(ctx, w, res)
+		if err := encodeResponse(ctx, w, res); err != nil {
+			eh(ctx, w, err)
+		}
 	})
 }
 `
@@ -858,8 +863,8 @@ const requestParamsHeadersT = `{{- define "request_params_headers" }}
 
 // input: EndpointData
 const responseEncoderT = `{{ printf "%s returns an encoder for responses returned by the %s %s endpoint." .ResponseEncoder .ServiceName .Method.Name | comment }}
-func {{ .ResponseEncoder }}(encoder func(context.Context, http.ResponseWriter) goahttp.Encoder) func(context.Context, http.ResponseWriter, interface{}) {
-	return func(ctx context.Context, w http.ResponseWriter, v interface{}) {
+func {{ .ResponseEncoder }}(encoder func(context.Context, http.ResponseWriter) goahttp.Encoder) func(context.Context, http.ResponseWriter, interface{}) error {
+	return func(ctx context.Context, w http.ResponseWriter, v interface{}) error {
 
 	{{- if .Result.Ref }}
 		res := v.({{ .Result.Ref }})
@@ -875,9 +880,7 @@ func {{ .ResponseEncoder }}(encoder func(context.Context, http.ResponseWriter) g
 			{{- end -}}
 			{{ template "response" . }}
 			{{- if .ServerBody }}
-			if err := enc.Encode(body); err != nil {
-				w.Write([]byte("encoding: " + err.Error()))
-			}
+			return enc.Encode(body)
 			{{- end }}
 
 			{{- if .TagName }}
@@ -890,6 +893,7 @@ func {{ .ResponseEncoder }}(encoder func(context.Context, http.ResponseWriter) g
 
 		{{- with (index .Result.Responses 0) }}
 		w.WriteHeader({{ .StatusCode }})
+		return nil
 
 		{{- end }}
 
@@ -900,9 +904,9 @@ func {{ .ResponseEncoder }}(encoder func(context.Context, http.ResponseWriter) g
 
 // input: ErrorData
 const errorEncoderT = `{{ printf "%s returns an encoder for errors returned by the %s %s endpoint." .ErrorEncoder .Method.Name .ServiceName | comment }}
-func {{ .ErrorEncoder }}(encoder func(context.Context, http.ResponseWriter) goahttp.Encoder) func(context.Context, http.ResponseWriter, error) {
+func {{ .ErrorEncoder }}(encoder func(context.Context, http.ResponseWriter) goahttp.Encoder) func(context.Context, http.ResponseWriter, error) error {
 	encodeError := goahttp.ErrorEncoder(encoder)
-	return func(ctx context.Context, w http.ResponseWriter, v error) {
+	return func(ctx context.Context, w http.ResponseWriter, v error) error {
 		switch res := v.(type) {
 
 	{{- range $ref := .Errors.Refs }}
@@ -915,9 +919,7 @@ func {{ .ErrorEncoder }}(encoder func(context.Context, http.ResponseWriter) goah
 					{{- end }}
 				{{- template "response" . }}
 				{{- if .ServerBody }}
-				if err := enc.Encode(body); err != nil {
-					w.Write([]byte("encoding: " + err.Error()))
-				}
+				return enc.Encode(body)
 				{{- end }}
 				{{- if .TagName }}
 			}
@@ -926,8 +928,9 @@ func {{ .ErrorEncoder }}(encoder func(context.Context, http.ResponseWriter) goah
 			{{- end }}
 	{{- end }}
 		default:
-			encodeError(ctx, w, v)
+			return encodeError(ctx, w, v)
 		}
+		return nil
 	}
 }
 ` + responseT

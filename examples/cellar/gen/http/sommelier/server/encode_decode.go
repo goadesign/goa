@@ -20,15 +20,13 @@ import (
 
 // EncodePickResponse returns an encoder for responses returned by the
 // sommelier pick endpoint.
-func EncodePickResponse(encoder func(context.Context, http.ResponseWriter) goahttp.Encoder) func(context.Context, http.ResponseWriter, interface{}) {
-	return func(ctx context.Context, w http.ResponseWriter, v interface{}) {
+func EncodePickResponse(encoder func(context.Context, http.ResponseWriter) goahttp.Encoder) func(context.Context, http.ResponseWriter, interface{}) error {
+	return func(ctx context.Context, w http.ResponseWriter, v interface{}) error {
 		res := v.(sommelier.StoredBottleCollection)
 		enc := encoder(ctx, w)
 		body := NewPickResponseBody(res)
 		w.WriteHeader(http.StatusOK)
-		if err := enc.Encode(body); err != nil {
-			w.Write([]byte("encoding: " + err.Error()))
-		}
+		return enc.Encode(body)
 	}
 }
 
@@ -54,27 +52,24 @@ func DecodePickRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.De
 
 // EncodePickError returns an encoder for errors returned by the pick sommelier
 // endpoint.
-func EncodePickError(encoder func(context.Context, http.ResponseWriter) goahttp.Encoder) func(context.Context, http.ResponseWriter, error) {
+func EncodePickError(encoder func(context.Context, http.ResponseWriter) goahttp.Encoder) func(context.Context, http.ResponseWriter, error) error {
 	encodeError := goahttp.ErrorEncoder(encoder)
-	return func(ctx context.Context, w http.ResponseWriter, v error) {
+	return func(ctx context.Context, w http.ResponseWriter, v error) error {
 		switch res := v.(type) {
 		case *sommelier.NoCriteria:
 			enc := encoder(ctx, w)
 			body := NewPickNoCriteriaResponseBody(res)
 			w.WriteHeader(http.StatusBadRequest)
-			if err := enc.Encode(body); err != nil {
-				w.Write([]byte("encoding: " + err.Error()))
-			}
+			return enc.Encode(body)
 		case *sommelier.NoMatch:
 			enc := encoder(ctx, w)
 			body := NewPickNoMatchResponseBody(res)
 			w.WriteHeader(http.StatusNotFound)
-			if err := enc.Encode(body); err != nil {
-				w.Write([]byte("encoding: " + err.Error()))
-			}
+			return enc.Encode(body)
 		default:
-			encodeError(ctx, w, v)
+			return encodeError(ctx, w, v)
 		}
+		return nil
 	}
 }
 

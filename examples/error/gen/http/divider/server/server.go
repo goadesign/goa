@@ -40,14 +40,15 @@ func New(
 	mux goahttp.Muxer,
 	dec func(*http.Request) goahttp.Decoder,
 	enc func(context.Context, http.ResponseWriter) goahttp.Encoder,
+	eh func(context.Context, http.ResponseWriter, error),
 ) *Server {
 	return &Server{
 		Mounts: []*MountPoint{
 			{"IntegerDivide", "GET", "/idiv/{a}/{b}"},
 			{"Divide", "GET", "/div/{a}/{b}"},
 		},
-		IntegerDivide: NewIntegerDivideHandler(e.IntegerDivide, mux, dec, enc),
-		Divide:        NewDivideHandler(e.Divide, mux, dec, enc),
+		IntegerDivide: NewIntegerDivideHandler(e.IntegerDivide, mux, dec, enc, eh),
+		Divide:        NewDivideHandler(e.Divide, mux, dec, enc, eh),
 	}
 }
 
@@ -85,6 +86,7 @@ func NewIntegerDivideHandler(
 	mux goahttp.Muxer,
 	dec func(*http.Request) goahttp.Decoder,
 	enc func(context.Context, http.ResponseWriter) goahttp.Encoder,
+	eh func(context.Context, http.ResponseWriter, error),
 ) http.Handler {
 	var (
 		decodeRequest  = DecodeIntegerDivideRequest(mux, dec)
@@ -92,23 +94,24 @@ func NewIntegerDivideHandler(
 		encodeError    = EncodeIntegerDivideError(enc)
 	)
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		accept := r.Header.Get("Accept")
-		ctx := context.WithValue(r.Context(), goahttp.AcceptTypeKey, accept)
+		ctx := context.WithValue(r.Context(), goahttp.AcceptTypeKey, r.Header.Get("Accept"))
 		ctx = context.WithValue(ctx, goa.MethodKey, "integer_divide")
 		ctx = context.WithValue(ctx, goa.ServiceKey, "divider")
 		payload, err := decodeRequest(r)
 		if err != nil {
-			encodeError(ctx, w, err)
-			return
+			eh(ctx, w, err)
 		}
 
 		res, err := endpoint(ctx, payload)
 
 		if err != nil {
-			encodeError(ctx, w, err)
-			return
+			if err := encodeError(ctx, w, err); err != nil {
+				eh(ctx, w, err)
+			}
 		}
-		encodeResponse(ctx, w, res)
+		if err := encodeResponse(ctx, w, res); err != nil {
+			eh(ctx, w, err)
+		}
 	})
 }
 
@@ -131,6 +134,7 @@ func NewDivideHandler(
 	mux goahttp.Muxer,
 	dec func(*http.Request) goahttp.Decoder,
 	enc func(context.Context, http.ResponseWriter) goahttp.Encoder,
+	eh func(context.Context, http.ResponseWriter, error),
 ) http.Handler {
 	var (
 		decodeRequest  = DecodeDivideRequest(mux, dec)
@@ -138,22 +142,23 @@ func NewDivideHandler(
 		encodeError    = EncodeDivideError(enc)
 	)
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		accept := r.Header.Get("Accept")
-		ctx := context.WithValue(r.Context(), goahttp.AcceptTypeKey, accept)
+		ctx := context.WithValue(r.Context(), goahttp.AcceptTypeKey, r.Header.Get("Accept"))
 		ctx = context.WithValue(ctx, goa.MethodKey, "divide")
 		ctx = context.WithValue(ctx, goa.ServiceKey, "divider")
 		payload, err := decodeRequest(r)
 		if err != nil {
-			encodeError(ctx, w, err)
-			return
+			eh(ctx, w, err)
 		}
 
 		res, err := endpoint(ctx, payload)
 
 		if err != nil {
-			encodeError(ctx, w, err)
-			return
+			if err := encodeError(ctx, w, err); err != nil {
+				eh(ctx, w, err)
+			}
 		}
-		encodeResponse(ctx, w, res)
+		if err := encodeResponse(ctx, w, res); err != nil {
+			eh(ctx, w, err)
+		}
 	})
 }

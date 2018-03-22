@@ -1,6 +1,8 @@
 package http
 
 import (
+	"net/http"
+
 	"goa.design/goa"
 )
 
@@ -31,4 +33,19 @@ func NewErrorResponse(err error) *ErrorResponse {
 		}
 	}
 	return NewErrorResponse(goa.PermanentError("error: %s", err))
+}
+
+// StatusCode implements a heuristic that computes a HTTP response status code
+// appropriate for the timeout and temporary characteristics of the error.
+func (resp *ErrorResponse) StatusCode() int {
+	if resp.Timeout {
+		if resp.Temporary {
+			return http.StatusGatewayTimeout
+		}
+		return http.StatusRequestTimeout
+	}
+	if resp.Temporary {
+		return http.StatusServiceUnavailable
+	}
+	return http.StatusBadRequest
 }

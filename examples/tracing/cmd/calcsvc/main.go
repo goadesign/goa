@@ -83,8 +83,8 @@ func main() {
 		calcsvcServer *calcsvcsvr.Server
 	)
 	{
-		openapiServer = openapisvr.New(nil, mux, dec, enc)
-		calcsvcServer = calcsvcsvr.New(calcsvcEndpoints, mux, dec, enc)
+		openapiServer = openapisvr.New(nil, mux, dec, enc, ErrorHandler(logger))
+		calcsvcServer = calcsvcsvr.New(calcsvcEndpoints, mux, dec, enc, ErrorHandler(logger))
 	}
 
 	// Configure the mux.
@@ -125,12 +125,12 @@ func main() {
 	srv := &http.Server{Addr: *addr, Handler: handler}
 	go func() {
 		for _, m := range openapiServer.Mounts {
-			logger.Printf("[calc] service %q file %q mounted on %s %s", openapiServer.Service(), m.Method, m.Verb, m.Pattern)
+			logger.Printf("file %q mounted on %s %s", m.Method, m.Verb, m.Pattern)
 		}
 		for _, m := range calcsvcServer.Mounts {
-			logger.Printf("[calc] service %q method %q mounted on %s %s", calcsvcServer.Service(), m.Method, m.Verb, m.Pattern)
+			logger.Printf("method %q mounted on %s %s", m.Method, m.Verb, m.Pattern)
 		}
-		logger.Printf("[calc] listening on %s", *addr)
+		logger.Printf("listening on %s", *addr)
 		errc <- srv.ListenAndServe()
 	}()
 
@@ -143,4 +143,15 @@ func main() {
 	srv.Shutdown(ctx)
 
 	logger.Println("exited")
+}
+
+// ErrorHandler returns a function that writes and logs the given error.
+// The function also writes and logs the error unique ID so that it's possible
+// to correlate.
+func ErrorHandler(logger *log.Logger) func(context.Context, http.ResponseWriter, error) {
+	return func(ctx context.Context, w http.ResponseWriter, err error) {
+		id := ctx.Value(middleware.RequestIDKey).(string)
+		w.Write([]byte("[" + id + "] encoding: " + err.Error()))
+		logger.Printf("[%s] ERROR: %s", id, err.Error())
+	}
 }
