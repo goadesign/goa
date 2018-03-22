@@ -21,25 +21,29 @@ import (
 
 // EncodeListResponse returns an encoder for responses returned by the storage
 // list endpoint.
-func EncodeListResponse(encoder func(context.Context, http.ResponseWriter) goahttp.Encoder) func(context.Context, http.ResponseWriter, interface{}) error {
-	return func(ctx context.Context, w http.ResponseWriter, v interface{}) error {
+func EncodeListResponse(encoder func(context.Context, http.ResponseWriter) goahttp.Encoder) func(context.Context, http.ResponseWriter, interface{}) {
+	return func(ctx context.Context, w http.ResponseWriter, v interface{}) {
 		res := v.(storage.StoredBottleCollection)
 		enc := encoder(ctx, w)
 		body := NewListResponseBody(res)
 		w.WriteHeader(http.StatusOK)
-		return enc.Encode(body)
+		if err := enc.Encode(body); err != nil {
+			w.Write([]byte("encoding: " + err.Error()))
+		}
 	}
 }
 
 // EncodeShowResponse returns an encoder for responses returned by the storage
 // show endpoint.
-func EncodeShowResponse(encoder func(context.Context, http.ResponseWriter) goahttp.Encoder) func(context.Context, http.ResponseWriter, interface{}) error {
-	return func(ctx context.Context, w http.ResponseWriter, v interface{}) error {
+func EncodeShowResponse(encoder func(context.Context, http.ResponseWriter) goahttp.Encoder) func(context.Context, http.ResponseWriter, interface{}) {
+	return func(ctx context.Context, w http.ResponseWriter, v interface{}) {
 		res := v.(*storage.StoredBottle)
 		enc := encoder(ctx, w)
 		body := NewShowResponseBody(res)
 		w.WriteHeader(http.StatusOK)
-		return enc.Encode(body)
+		if err := enc.Encode(body); err != nil {
+			w.Write([]byte("encoding: " + err.Error()))
+		}
 	}
 }
 
@@ -83,7 +87,7 @@ func EncodeShowError(encoder func(context.Context, http.ResponseWriter) goahttp.
 			body := NewShowNotFoundResponseBody(res)
 			w.WriteHeader(http.StatusNotFound)
 			if err := enc.Encode(body); err != nil {
-				encodeError(ctx, w, err)
+				w.Write([]byte("encoding: " + err.Error()))
 			}
 		default:
 			encodeError(ctx, w, v)
@@ -93,13 +97,15 @@ func EncodeShowError(encoder func(context.Context, http.ResponseWriter) goahttp.
 
 // EncodeAddResponse returns an encoder for responses returned by the storage
 // add endpoint.
-func EncodeAddResponse(encoder func(context.Context, http.ResponseWriter) goahttp.Encoder) func(context.Context, http.ResponseWriter, interface{}) error {
-	return func(ctx context.Context, w http.ResponseWriter, v interface{}) error {
+func EncodeAddResponse(encoder func(context.Context, http.ResponseWriter) goahttp.Encoder) func(context.Context, http.ResponseWriter, interface{}) {
+	return func(ctx context.Context, w http.ResponseWriter, v interface{}) {
 		res := v.(string)
 		enc := encoder(ctx, w)
 		body := res
 		w.WriteHeader(http.StatusCreated)
-		return enc.Encode(body)
+		if err := enc.Encode(body); err != nil {
+			w.Write([]byte("encoding: " + err.Error()))
+		}
 	}
 }
 
@@ -129,10 +135,9 @@ func DecodeAddRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Dec
 
 // EncodeRemoveResponse returns an encoder for responses returned by the
 // storage remove endpoint.
-func EncodeRemoveResponse(encoder func(context.Context, http.ResponseWriter) goahttp.Encoder) func(context.Context, http.ResponseWriter, interface{}) error {
-	return func(ctx context.Context, w http.ResponseWriter, v interface{}) error {
+func EncodeRemoveResponse(encoder func(context.Context, http.ResponseWriter) goahttp.Encoder) func(context.Context, http.ResponseWriter, interface{}) {
+	return func(ctx context.Context, w http.ResponseWriter, v interface{}) {
 		w.WriteHeader(http.StatusNoContent)
-		return nil
 	}
 }
 
@@ -153,10 +158,9 @@ func DecodeRemoveRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.
 
 // EncodeRateResponse returns an encoder for responses returned by the storage
 // rate endpoint.
-func EncodeRateResponse(encoder func(context.Context, http.ResponseWriter) goahttp.Encoder) func(context.Context, http.ResponseWriter, interface{}) error {
-	return func(ctx context.Context, w http.ResponseWriter, v interface{}) error {
+func EncodeRateResponse(encoder func(context.Context, http.ResponseWriter) goahttp.Encoder) func(context.Context, http.ResponseWriter, interface{}) {
+	return func(ctx context.Context, w http.ResponseWriter, v interface{}) {
 		w.WriteHeader(http.StatusOK)
-		return nil
 	}
 }
 
@@ -195,13 +199,15 @@ func DecodeRateRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.De
 
 // EncodeMultiAddResponse returns an encoder for responses returned by the
 // storage multi_add endpoint.
-func EncodeMultiAddResponse(encoder func(context.Context, http.ResponseWriter) goahttp.Encoder) func(context.Context, http.ResponseWriter, interface{}) error {
-	return func(ctx context.Context, w http.ResponseWriter, v interface{}) error {
+func EncodeMultiAddResponse(encoder func(context.Context, http.ResponseWriter) goahttp.Encoder) func(context.Context, http.ResponseWriter, interface{}) {
+	return func(ctx context.Context, w http.ResponseWriter, v interface{}) {
 		res := v.([]string)
 		enc := encoder(ctx, w)
 		body := res
 		w.WriteHeader(http.StatusOK)
-		return enc.Encode(body)
+		if err := enc.Encode(body); err != nil {
+			w.Write([]byte("encoding: " + err.Error()))
+		}
 	}
 }
 
@@ -237,10 +243,9 @@ func NewStorageMultiAddDecoder(mux goahttp.Muxer, storageMultiAddDecoderFn Stora
 
 // EncodeMultiUpdateResponse returns an encoder for responses returned by the
 // storage multi_update endpoint.
-func EncodeMultiUpdateResponse(encoder func(context.Context, http.ResponseWriter) goahttp.Encoder) func(context.Context, http.ResponseWriter, interface{}) error {
-	return func(ctx context.Context, w http.ResponseWriter, v interface{}) error {
+func EncodeMultiUpdateResponse(encoder func(context.Context, http.ResponseWriter) goahttp.Encoder) func(context.Context, http.ResponseWriter, interface{}) {
+	return func(ctx context.Context, w http.ResponseWriter, v interface{}) {
 		w.WriteHeader(http.StatusNoContent)
-		return nil
 	}
 }
 

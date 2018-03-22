@@ -104,8 +104,6 @@ func NewPickHandler(
 			encodeError(ctx, w, err)
 			return
 		}
-		if err := encodeResponse(ctx, w, res); err != nil {
-			encodeError(ctx, w, err)
-		}
+		encodeResponse(ctx, w, res)
 	})
 }

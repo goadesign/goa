@@ -60,13 +60,12 @@ var (
 				UserExamples: []*ExampleExpr{{
 					Summary: "BadRequest",
 					Value: Val{
+						"name":    "bad_request",
 						"id":      "3F1FKVRR",
-						"code":    "invalid_value",
-						"status":  400,
 						"message": "Value of ID must be an integer",
 					},
 				}},
-				Validation: &ValidationExpr{Required: []string{"id", "code", "status", "message"}},
+				Validation: &ValidationExpr{Required: []string{"name", "id", "message"}},
 			},
 			TypeName: "error",
 		},
@@ -75,26 +74,29 @@ var (
 	}
 
 	errorResultType = &Object{
-		{"id", &AttributeExpr{
+		{"name", &AttributeExpr{
 			Type:         String,
-			Description:  "a unique identifier for this particular occurrence of the problem.",
-			UserExamples: []*ExampleExpr{{Value: "123abc"}},
-		}},
-		{"status", &AttributeExpr{
-			Type:         Int,
-			Description:  "the HTTP status code applicable to this problem.",
-			UserExamples: []*ExampleExpr{{Value: 400}},
-		}},
-		{"code", &AttributeExpr{
-			Type:         String,
-			Description:  "an application-specific error code, expressed as a string value.",
+			Description:  "Name is the name of this class of errors.",
 			Metadata:     MetadataExpr{"struct:error:name": nil},
 			UserExamples: []*ExampleExpr{{Value: "bad_request"}},
 		}},
+		{"id", &AttributeExpr{
+			Type:         String,
+			Description:  "ID is a unique identifier for this particular occurrence of the problem.",
+			UserExamples: []*ExampleExpr{{Value: "123abc"}},
+		}},
 		{"message", &AttributeExpr{
 			Type:         String,
-			Description:  "a human-readable explanation specific to this occurrence of the problem.",
+			Description:  "Message is a human-readable explanation specific to this occurrence of the problem.",
 			UserExamples: []*ExampleExpr{{Value: "parameter 'p' must be an integer"}},
+		}},
+		{"temporary", &AttributeExpr{
+			Type:        Boolean,
+			Description: "Is the error temporary?",
+		}},
+		{"timeout", &AttributeExpr{
+			Type:        Boolean,
+			Description: "Is the error a timeout?",
 		}},
 	}
 

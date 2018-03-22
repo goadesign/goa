@@ -297,7 +297,7 @@ func collectTypes(at *design.AttributeExpr, seen map[string]struct{}, scope *cod
 // buildErrorInitData creates the data needed to generate code around endpoint error return values.
 func buildErrorInitData(er *design.ErrorExpr, scope *codegen.NameScope) *ErrorInitData {
 	return &ErrorInitData{
-		Name:        fmt.Sprintf("New%s", codegen.Goify(er.Name, true)),
+		Name:        fmt.Sprintf("Make%s", codegen.Goify(er.Name, true)),
 		Description: er.Description,
 		ErrName:     er.Name,
 		TypeName:    scope.GoTypeName(er.AttributeExpr),

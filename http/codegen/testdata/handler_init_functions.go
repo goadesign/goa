@@ -24,9 +24,7 @@ func NewMethodNoPayloadNoResultHandler(
 			encodeError(ctx, w, err)
 			return
 		}
-		if err := encodeResponse(ctx, w, res); err != nil {
-			encodeError(ctx, w, err)
-		}
+		encodeResponse(ctx, w, res)
 	})
 }
 `
@@ -62,9 +60,7 @@ func NewMethodPayloadNoResultHandler(
 			encodeError(ctx, w, err)
 			return
 		}
-		if err := encodeResponse(ctx, w, res); err != nil {
-			encodeError(ctx, w, err)
-		}
+		encodeResponse(ctx, w, res)
 	})
 }
 `
@@ -93,9 +89,7 @@ func NewMethodNoPayloadResultHandler(
 			encodeError(ctx, w, err)
 			return
 		}
-		if err := encodeResponse(ctx, w, res); err != nil {
-			encodeError(ctx, w, err)
-		}
+		encodeResponse(ctx, w, res)
 	})
 }
 `
@@ -131,9 +125,7 @@ func NewMethodPayloadResultHandler(
 			encodeError(ctx, w, err)
 			return
 		}
-		if err := encodeResponse(ctx, w, res); err != nil {
-			encodeError(ctx, w, err)
-		}
+		encodeResponse(ctx, w, res)
 	})
 }
 `
@@ -169,9 +161,7 @@ func NewMethodPayloadResultErrorHandler(
 			encodeError(ctx, w, err)
 			return
 		}
-		if err := encodeResponse(ctx, w, res); err != nil {
-			encodeError(ctx, w, err)
-		}
+		encodeResponse(ctx, w, res)
 	})
 }
 `

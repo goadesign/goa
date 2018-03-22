@@ -136,6 +136,19 @@ func InvalidLengthError(name string, target interface{}, ln, value int, min bool
 	return PermanentError("length of %s must be %s than %d but got value %#v (len=%d)", name, comp, value, target, ln)
 }
 
+// NewErrorID creates a unique 8 character ID that is well suited to use as an
+// error identifier.
+func NewErrorID() string {
+	// for the curious - simplifying a bit - the probability of 2 values being
+	// equal for n 6-bytes values is n^2 / 2^49. For n = 1 million this gives around
+	// 1 chance in 500. 6 bytes seems to be a good trade-off between probability of
+	// clashes and length of ID (6 * 4/3 = 8 chars) since clashes are not
+	// catastrophic.
+	b := make([]byte, 6)
+	io.ReadFull(rand.Reader, b)
+	return base64.RawURLEncoding.EncodeToString(b)
+}
+
 // MergeErrors updates an error by merging another into it. It first converts
 // other into a Error if not already one - producing an internal error in that
 // case. The merge algorithm then:
@@ -174,7 +187,7 @@ func (s *ServiceError) Error() string { return s.Message }
 
 func newError(timeout, temporary bool, format string, v ...interface{}) *ServiceError {
 	return &ServiceError{
-		ID:        newErrorID(),
+		ID:        NewErrorID(),
 		Message:   fmt.Sprintf(format, v...),
 		Timeout:   timeout,
 		Temporary: temporary,
@@ -185,20 +198,9 @@ func asError(err error) *ServiceError {
 	e, ok := err.(*ServiceError)
 	if !ok {
 		return &ServiceError{
-			ID:      newErrorID(),
+			ID:      NewErrorID(),
 			Message: err.Error(),
 		}
 	}
 	return e
-}
-
-// If you're curious - simplifying a bit - the probability of 2 values being
-// equal for n 6-bytes values is n^2 / 2^49. For n = 1 million this gives around
-// 1 chance in 500. 6 bytes seems to be a good trade-off between probability of
-// clashes and length of ID (6 * 4/3 = 8 chars) since clashes are not
-// catastrophic.
-func newErrorID() string {
-	b := make([]byte, 6)
-	io.ReadFull(rand.Reader, b)
-	return base64.RawURLEncoding.EncodeToString(b)
 }
