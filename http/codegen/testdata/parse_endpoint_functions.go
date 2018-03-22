@@ -10,17 +10,17 @@ func ParseEndpoint(
 	restore bool,
 ) (goa.Endpoint, interface{}, error) {
 	var (
-		serviceMultiNoPayload1Flags = flag.NewFlagSet("ServiceMultiNoPayload1", flag.ContinueOnError)
+		serviceMultiNoPayload1Flags = flag.NewFlagSet("service-multi-no-payload1", flag.ContinueOnError)
 
-		serviceMultiNoPayload1MethodServiceNoPayload11Flags = flag.NewFlagSet("MethodServiceNoPayload11", flag.ExitOnError)
+		serviceMultiNoPayload1MethodServiceNoPayload11Flags = flag.NewFlagSet("method-service-no-payload11", flag.ExitOnError)
 
-		serviceMultiNoPayload1MethodServiceNoPayload12Flags = flag.NewFlagSet("MethodServiceNoPayload12", flag.ExitOnError)
+		serviceMultiNoPayload1MethodServiceNoPayload12Flags = flag.NewFlagSet("method-service-no-payload12", flag.ExitOnError)
 
-		serviceMultiNoPayload2Flags = flag.NewFlagSet("ServiceMultiNoPayload2", flag.ContinueOnError)
+		serviceMultiNoPayload2Flags = flag.NewFlagSet("service-multi-no-payload2", flag.ContinueOnError)
 
-		serviceMultiNoPayload2MethodServiceNoPayload21Flags = flag.NewFlagSet("MethodServiceNoPayload21", flag.ExitOnError)
+		serviceMultiNoPayload2MethodServiceNoPayload21Flags = flag.NewFlagSet("method-service-no-payload21", flag.ExitOnError)
 
-		serviceMultiNoPayload2MethodServiceNoPayload22Flags = flag.NewFlagSet("MethodServiceNoPayload22", flag.ExitOnError)
+		serviceMultiNoPayload2MethodServiceNoPayload22Flags = flag.NewFlagSet("method-service-no-payload22", flag.ExitOnError)
 	)
 	serviceMultiNoPayload1Flags.Usage = serviceMultiNoPayload1Usage
 	serviceMultiNoPayload1MethodServiceNoPayload11Flags.Usage = serviceMultiNoPayload1MethodServiceNoPayload11Usage
@@ -45,9 +45,9 @@ func ParseEndpoint(
 	{
 		svcn = os.Args[1+flag.NFlag()]
 		switch svcn {
-		case "ServiceMultiNoPayload1":
+		case "service-multi-no-payload1":
 			svcf = serviceMultiNoPayload1Flags
-		case "ServiceMultiNoPayload2":
+		case "service-multi-no-payload2":
 			svcf = serviceMultiNoPayload2Flags
 		default:
 			return nil, nil, fmt.Errorf("unknown service %q", svcn)
@@ -64,22 +64,22 @@ func ParseEndpoint(
 	{
 		epn = os.Args[2+flag.NFlag()+svcf.NFlag()]
 		switch svcn {
-		case "ServiceMultiNoPayload1":
+		case "service-multi-no-payload1":
 			switch epn {
-			case "MethodServiceNoPayload11":
+			case "method-service-no-payload11":
 				epf = serviceMultiNoPayload1MethodServiceNoPayload11Flags
 
-			case "MethodServiceNoPayload12":
+			case "method-service-no-payload12":
 				epf = serviceMultiNoPayload1MethodServiceNoPayload12Flags
 
 			}
 
-		case "ServiceMultiNoPayload2":
+		case "service-multi-no-payload2":
 			switch epn {
-			case "MethodServiceNoPayload21":
+			case "method-service-no-payload21":
 				epf = serviceMultiNoPayload2MethodServiceNoPayload21Flags
 
-			case "MethodServiceNoPayload22":
+			case "method-service-no-payload22":
 				epf = serviceMultiNoPayload2MethodServiceNoPayload22Flags
 
 			}
@@ -104,23 +104,23 @@ func ParseEndpoint(
 	)
 	{
 		switch svcn {
-		case "ServiceMultiNoPayload1":
+		case "service-multi-no-payload1":
 			c := servicemultinopayload1c.NewClient(scheme, host, doer, enc, dec, restore)
 			switch epn {
-			case "MethodServiceNoPayload11":
+			case "method-service-no-payload11":
 				endpoint = c.MethodServiceNoPayload11()
 				data = nil
-			case "MethodServiceNoPayload12":
+			case "method-service-no-payload12":
 				endpoint = c.MethodServiceNoPayload12()
 				data = nil
 			}
-		case "ServiceMultiNoPayload2":
+		case "service-multi-no-payload2":
 			c := servicemultinopayload2c.NewClient(scheme, host, doer, enc, dec, restore)
 			switch epn {
-			case "MethodServiceNoPayload21":
+			case "method-service-no-payload21":
 				endpoint = c.MethodServiceNoPayload21()
 				data = nil
-			case "MethodServiceNoPayload22":
+			case "method-service-no-payload22":
 				endpoint = c.MethodServiceNoPayload22()
 				data = nil
 			}
@@ -144,18 +144,18 @@ func ParseEndpoint(
 	restore bool,
 ) (goa.Endpoint, interface{}, error) {
 	var (
-		serviceMultiSimple1Flags = flag.NewFlagSet("ServiceMultiSimple1", flag.ContinueOnError)
+		serviceMultiSimple1Flags = flag.NewFlagSet("service-multi-simple1", flag.ContinueOnError)
 
-		serviceMultiSimple1MethodMultiSimpleNoPayloadFlags = flag.NewFlagSet("MethodMultiSimpleNoPayload", flag.ExitOnError)
+		serviceMultiSimple1MethodMultiSimpleNoPayloadFlags = flag.NewFlagSet("method-multi-simple-no-payload", flag.ExitOnError)
 
-		serviceMultiSimple1MethodMultiSimplePayloadFlags    = flag.NewFlagSet("MethodMultiSimplePayload", flag.ExitOnError)
+		serviceMultiSimple1MethodMultiSimplePayloadFlags    = flag.NewFlagSet("method-multi-simple-payload", flag.ExitOnError)
 		serviceMultiSimple1MethodMultiSimplePayloadBodyFlag = serviceMultiSimple1MethodMultiSimplePayloadFlags.String("body", "REQUIRED", "")
 
-		serviceMultiSimple2Flags = flag.NewFlagSet("ServiceMultiSimple2", flag.ContinueOnError)
+		serviceMultiSimple2Flags = flag.NewFlagSet("service-multi-simple2", flag.ContinueOnError)
 
-		serviceMultiSimple2MethodMultiSimpleNoPayloadFlags = flag.NewFlagSet("MethodMultiSimpleNoPayload", flag.ExitOnError)
+		serviceMultiSimple2MethodMultiSimpleNoPayloadFlags = flag.NewFlagSet("method-multi-simple-no-payload", flag.ExitOnError)
 
-		serviceMultiSimple2MethodMultiSimplePayloadFlags    = flag.NewFlagSet("MethodMultiSimplePayload", flag.ExitOnError)
+		serviceMultiSimple2MethodMultiSimplePayloadFlags    = flag.NewFlagSet("method-multi-simple-payload", flag.ExitOnError)
 		serviceMultiSimple2MethodMultiSimplePayloadBodyFlag = serviceMultiSimple2MethodMultiSimplePayloadFlags.String("body", "REQUIRED", "")
 	)
 	serviceMultiSimple1Flags.Usage = serviceMultiSimple1Usage
@@ -181,9 +181,9 @@ func ParseEndpoint(
 	{
 		svcn = os.Args[1+flag.NFlag()]
 		switch svcn {
-		case "ServiceMultiSimple1":
+		case "service-multi-simple1":
 			svcf = serviceMultiSimple1Flags
-		case "ServiceMultiSimple2":
+		case "service-multi-simple2":
 			svcf = serviceMultiSimple2Flags
 		default:
 			return nil, nil, fmt.Errorf("unknown service %q", svcn)
@@ -200,22 +200,22 @@ func ParseEndpoint(
 	{
 		epn = os.Args[2+flag.NFlag()+svcf.NFlag()]
 		switch svcn {
-		case "ServiceMultiSimple1":
+		case "service-multi-simple1":
 			switch epn {
-			case "MethodMultiSimpleNoPayload":
+			case "method-multi-simple-no-payload":
 				epf = serviceMultiSimple1MethodMultiSimpleNoPayloadFlags
 
-			case "MethodMultiSimplePayload":
+			case "method-multi-simple-payload":
 				epf = serviceMultiSimple1MethodMultiSimplePayloadFlags
 
 			}
 
-		case "ServiceMultiSimple2":
+		case "service-multi-simple2":
 			switch epn {
-			case "MethodMultiSimpleNoPayload":
+			case "method-multi-simple-no-payload":
 				epf = serviceMultiSimple2MethodMultiSimpleNoPayloadFlags
 
-			case "MethodMultiSimplePayload":
+			case "method-multi-simple-payload":
 				epf = serviceMultiSimple2MethodMultiSimplePayloadFlags
 
 			}
@@ -240,23 +240,23 @@ func ParseEndpoint(
 	)
 	{
 		switch svcn {
-		case "ServiceMultiSimple1":
+		case "service-multi-simple1":
 			c := servicemultisimple1c.NewClient(scheme, host, doer, enc, dec, restore)
 			switch epn {
-			case "MethodMultiSimpleNoPayload":
+			case "method-multi-simple-no-payload":
 				endpoint = c.MethodMultiSimpleNoPayload()
 				data = nil
-			case "MethodMultiSimplePayload":
+			case "method-multi-simple-payload":
 				endpoint = c.MethodMultiSimplePayload()
 				data, err = servicemultisimple1c.BuildMethodMultiSimplePayloadPayload(*serviceMultiSimple1MethodMultiSimplePayloadBodyFlag)
 			}
-		case "ServiceMultiSimple2":
+		case "service-multi-simple2":
 			c := servicemultisimple2c.NewClient(scheme, host, doer, enc, dec, restore)
 			switch epn {
-			case "MethodMultiSimpleNoPayload":
+			case "method-multi-simple-no-payload":
 				endpoint = c.MethodMultiSimpleNoPayload()
 				data = nil
-			case "MethodMultiSimplePayload":
+			case "method-multi-simple-payload":
 				endpoint = c.MethodMultiSimplePayload()
 				data, err = servicemultisimple2c.BuildMethodMultiSimplePayloadPayload(*serviceMultiSimple2MethodMultiSimplePayloadBodyFlag)
 			}
@@ -280,16 +280,16 @@ func ParseEndpoint(
 	restore bool,
 ) (goa.Endpoint, interface{}, error) {
 	var (
-		serviceMultiRequired1Flags = flag.NewFlagSet("ServiceMultiRequired1", flag.ContinueOnError)
+		serviceMultiRequired1Flags = flag.NewFlagSet("service-multi-required1", flag.ContinueOnError)
 
-		serviceMultiRequired1MethodMultiRequiredPayloadFlags    = flag.NewFlagSet("MethodMultiRequiredPayload", flag.ExitOnError)
+		serviceMultiRequired1MethodMultiRequiredPayloadFlags    = flag.NewFlagSet("method-multi-required-payload", flag.ExitOnError)
 		serviceMultiRequired1MethodMultiRequiredPayloadBodyFlag = serviceMultiRequired1MethodMultiRequiredPayloadFlags.String("body", "REQUIRED", "")
 
-		serviceMultiRequired2Flags = flag.NewFlagSet("ServiceMultiRequired2", flag.ContinueOnError)
+		serviceMultiRequired2Flags = flag.NewFlagSet("service-multi-required2", flag.ContinueOnError)
 
-		serviceMultiRequired2MethodMultiRequiredNoPayloadFlags = flag.NewFlagSet("MethodMultiRequiredNoPayload", flag.ExitOnError)
+		serviceMultiRequired2MethodMultiRequiredNoPayloadFlags = flag.NewFlagSet("method-multi-required-no-payload", flag.ExitOnError)
 
-		serviceMultiRequired2MethodMultiRequiredPayloadFlags = flag.NewFlagSet("MethodMultiRequiredPayload", flag.ExitOnError)
+		serviceMultiRequired2MethodMultiRequiredPayloadFlags = flag.NewFlagSet("method-multi-required-payload", flag.ExitOnError)
 		serviceMultiRequired2MethodMultiRequiredPayloadAFlag = serviceMultiRequired2MethodMultiRequiredPayloadFlags.String("a", "REQUIRED", "")
 	)
 	serviceMultiRequired1Flags.Usage = serviceMultiRequired1Usage
@@ -314,9 +314,9 @@ func ParseEndpoint(
 	{
 		svcn = os.Args[1+flag.NFlag()]
 		switch svcn {
-		case "ServiceMultiRequired1":
+		case "service-multi-required1":
 			svcf = serviceMultiRequired1Flags
-		case "ServiceMultiRequired2":
+		case "service-multi-required2":
 			svcf = serviceMultiRequired2Flags
 		default:
 			return nil, nil, fmt.Errorf("unknown service %q", svcn)
@@ -333,19 +333,19 @@ func ParseEndpoint(
 	{
 		epn = os.Args[2+flag.NFlag()+svcf.NFlag()]
 		switch svcn {
-		case "ServiceMultiRequired1":
+		case "service-multi-required1":
 			switch epn {
-			case "MethodMultiRequiredPayload":
+			case "method-multi-required-payload":
 				epf = serviceMultiRequired1MethodMultiRequiredPayloadFlags
 
 			}
 
-		case "ServiceMultiRequired2":
+		case "service-multi-required2":
 			switch epn {
-			case "MethodMultiRequiredNoPayload":
+			case "method-multi-required-no-payload":
 				epf = serviceMultiRequired2MethodMultiRequiredNoPayloadFlags
 
-			case "MethodMultiRequiredPayload":
+			case "method-multi-required-payload":
 				epf = serviceMultiRequired2MethodMultiRequiredPayloadFlags
 
 			}
@@ -370,20 +370,20 @@ func ParseEndpoint(
 	)
 	{
 		switch svcn {
-		case "ServiceMultiRequired1":
+		case "service-multi-required1":
 			c := servicemultirequired1c.NewClient(scheme, host, doer, enc, dec, restore)
 			switch epn {
-			case "MethodMultiRequiredPayload":
+			case "method-multi-required-payload":
 				endpoint = c.MethodMultiRequiredPayload()
 				data, err = servicemultirequired1c.BuildMethodMultiRequiredPayloadPayload(*serviceMultiRequired1MethodMultiRequiredPayloadBodyFlag)
 			}
-		case "ServiceMultiRequired2":
+		case "service-multi-required2":
 			c := servicemultirequired2c.NewClient(scheme, host, doer, enc, dec, restore)
 			switch epn {
-			case "MethodMultiRequiredNoPayload":
+			case "method-multi-required-no-payload":
 				endpoint = c.MethodMultiRequiredNoPayload()
 				data = nil
-			case "MethodMultiRequiredPayload":
+			case "method-multi-required-payload":
 				endpoint = c.MethodMultiRequiredPayload()
 				data, err = servicemultirequired2c.BuildMethodMultiRequiredPayloadPayload(*serviceMultiRequired2MethodMultiRequiredPayloadAFlag)
 			}
@@ -407,11 +407,11 @@ func ParseEndpoint(
 	restore bool,
 ) (goa.Endpoint, interface{}, error) {
 	var (
-		serviceMultiFlags = flag.NewFlagSet("ServiceMulti", flag.ContinueOnError)
+		serviceMultiFlags = flag.NewFlagSet("service-multi", flag.ContinueOnError)
 
-		serviceMultiMethodMultiNoPayloadFlags = flag.NewFlagSet("MethodMultiNoPayload", flag.ExitOnError)
+		serviceMultiMethodMultiNoPayloadFlags = flag.NewFlagSet("method-multi-no-payload", flag.ExitOnError)
 
-		serviceMultiMethodMultiPayloadFlags    = flag.NewFlagSet("MethodMultiPayload", flag.ExitOnError)
+		serviceMultiMethodMultiPayloadFlags    = flag.NewFlagSet("method-multi-payload", flag.ExitOnError)
 		serviceMultiMethodMultiPayloadBodyFlag = serviceMultiMethodMultiPayloadFlags.String("body", "REQUIRED", "")
 		serviceMultiMethodMultiPayloadBFlag    = serviceMultiMethodMultiPayloadFlags.String("b", "", "")
 		serviceMultiMethodMultiPayloadAFlag    = serviceMultiMethodMultiPayloadFlags.String("a", "", "")
@@ -435,7 +435,7 @@ func ParseEndpoint(
 	{
 		svcn = os.Args[1+flag.NFlag()]
 		switch svcn {
-		case "ServiceMulti":
+		case "service-multi":
 			svcf = serviceMultiFlags
 		default:
 			return nil, nil, fmt.Errorf("unknown service %q", svcn)
@@ -452,12 +452,12 @@ func ParseEndpoint(
 	{
 		epn = os.Args[2+flag.NFlag()+svcf.NFlag()]
 		switch svcn {
-		case "ServiceMulti":
+		case "service-multi":
 			switch epn {
-			case "MethodMultiNoPayload":
+			case "method-multi-no-payload":
 				epf = serviceMultiMethodMultiNoPayloadFlags
 
-			case "MethodMultiPayload":
+			case "method-multi-payload":
 				epf = serviceMultiMethodMultiPayloadFlags
 
 			}
@@ -482,13 +482,13 @@ func ParseEndpoint(
 	)
 	{
 		switch svcn {
-		case "ServiceMulti":
+		case "service-multi":
 			c := servicemultic.NewClient(scheme, host, doer, enc, dec, restore)
 			switch epn {
-			case "MethodMultiNoPayload":
+			case "method-multi-no-payload":
 				endpoint = c.MethodMultiNoPayload()
 				data = nil
-			case "MethodMultiPayload":
+			case "method-multi-payload":
 				endpoint = c.MethodMultiPayload()
 				data, err = servicemultic.BuildMethodMultiPayloadPayload(*serviceMultiMethodMultiPayloadBodyFlag, *serviceMultiMethodMultiPayloadBFlag, *serviceMultiMethodMultiPayloadAFlag)
 			}
@@ -632,9 +632,9 @@ func ParseEndpoint(
 	restore bool,
 ) (goa.Endpoint, interface{}, error) {
 	var (
-		serviceBodyPrimitiveBoolValidateFlags = flag.NewFlagSet("ServiceBodyPrimitiveBoolValidate", flag.ContinueOnError)
+		serviceBodyPrimitiveBoolValidateFlags = flag.NewFlagSet("service-body-primitive-bool-validate", flag.ContinueOnError)
 
-		serviceBodyPrimitiveBoolValidateMethodBodyPrimitiveBoolValidateFlags = flag.NewFlagSet("MethodBodyPrimitiveBoolValidate", flag.ExitOnError)
+		serviceBodyPrimitiveBoolValidateMethodBodyPrimitiveBoolValidateFlags = flag.NewFlagSet("method-body-primitive-bool-validate", flag.ExitOnError)
 		serviceBodyPrimitiveBoolValidateMethodBodyPrimitiveBoolValidatePFlag = serviceBodyPrimitiveBoolValidateMethodBodyPrimitiveBoolValidateFlags.String("p", "REQUIRED", "bool is the payload type of the ServiceBodyPrimitiveBoolValidate service MethodBodyPrimitiveBoolValidate method.")
 	)
 	serviceBodyPrimitiveBoolValidateFlags.Usage = serviceBodyPrimitiveBoolValidateUsage
@@ -655,7 +655,7 @@ func ParseEndpoint(
 	{
 		svcn = os.Args[1+flag.NFlag()]
 		switch svcn {
-		case "ServiceBodyPrimitiveBoolValidate":
+		case "service-body-primitive-bool-validate":
 			svcf = serviceBodyPrimitiveBoolValidateFlags
 		default:
 			return nil, nil, fmt.Errorf("unknown service %q", svcn)
@@ -672,9 +672,9 @@ func ParseEndpoint(
 	{
 		epn = os.Args[2+flag.NFlag()+svcf.NFlag()]
 		switch svcn {
-		case "ServiceBodyPrimitiveBoolValidate":
+		case "service-body-primitive-bool-validate":
 			switch epn {
-			case "MethodBodyPrimitiveBoolValidate":
+			case "method-body-primitive-bool-validate":
 				epf = serviceBodyPrimitiveBoolValidateMethodBodyPrimitiveBoolValidateFlags
 
 			}
@@ -699,10 +699,10 @@ func ParseEndpoint(
 	)
 	{
 		switch svcn {
-		case "ServiceBodyPrimitiveBoolValidate":
+		case "service-body-primitive-bool-validate":
 			c := servicebodyprimitiveboolvalidatec.NewClient(scheme, host, doer, enc, dec, restore)
 			switch epn {
-			case "MethodBodyPrimitiveBoolValidate":
+			case "method-body-primitive-bool-validate":
 				endpoint = c.MethodBodyPrimitiveBoolValidate()
 				var err error
 				data, err = strconv.ParseBool(*serviceBodyPrimitiveBoolValidateMethodBodyPrimitiveBoolValidatePFlag)
@@ -730,9 +730,9 @@ func ParseEndpoint(
 	restore bool,
 ) (goa.Endpoint, interface{}, error) {
 	var (
-		serviceBodyPrimitiveArrayStringValidateFlags = flag.NewFlagSet("ServiceBodyPrimitiveArrayStringValidate", flag.ContinueOnError)
+		serviceBodyPrimitiveArrayStringValidateFlags = flag.NewFlagSet("service-body-primitive-array-string-validate", flag.ContinueOnError)
 
-		serviceBodyPrimitiveArrayStringValidateMethodBodyPrimitiveArrayStringValidateFlags = flag.NewFlagSet("MethodBodyPrimitiveArrayStringValidate", flag.ExitOnError)
+		serviceBodyPrimitiveArrayStringValidateMethodBodyPrimitiveArrayStringValidateFlags = flag.NewFlagSet("method-body-primitive-array-string-validate", flag.ExitOnError)
 		serviceBodyPrimitiveArrayStringValidateMethodBodyPrimitiveArrayStringValidatePFlag = serviceBodyPrimitiveArrayStringValidateMethodBodyPrimitiveArrayStringValidateFlags.String("p", "REQUIRED", "[]string is the payload type of the ServiceBodyPrimitiveArrayStringValidate service MethodBodyPrimitiveArrayStringValidate method.")
 	)
 	serviceBodyPrimitiveArrayStringValidateFlags.Usage = serviceBodyPrimitiveArrayStringValidateUsage
@@ -753,7 +753,7 @@ func ParseEndpoint(
 	{
 		svcn = os.Args[1+flag.NFlag()]
 		switch svcn {
-		case "ServiceBodyPrimitiveArrayStringValidate":
+		case "service-body-primitive-array-string-validate":
 			svcf = serviceBodyPrimitiveArrayStringValidateFlags
 		default:
 			return nil, nil, fmt.Errorf("unknown service %q", svcn)
@@ -770,9 +770,9 @@ func ParseEndpoint(
 	{
 		epn = os.Args[2+flag.NFlag()+svcf.NFlag()]
 		switch svcn {
-		case "ServiceBodyPrimitiveArrayStringValidate":
+		case "service-body-primitive-array-string-validate":
 			switch epn {
-			case "MethodBodyPrimitiveArrayStringValidate":
+			case "method-body-primitive-array-string-validate":
 				epf = serviceBodyPrimitiveArrayStringValidateMethodBodyPrimitiveArrayStringValidateFlags
 
 			}
@@ -797,10 +797,10 @@ func ParseEndpoint(
 	)
 	{
 		switch svcn {
-		case "ServiceBodyPrimitiveArrayStringValidate":
+		case "service-body-primitive-array-string-validate":
 			c := servicebodyprimitivearraystringvalidatec.NewClient(scheme, host, doer, enc, dec, restore)
 			switch epn {
-			case "MethodBodyPrimitiveArrayStringValidate":
+			case "method-body-primitive-array-string-validate":
 				endpoint = c.MethodBodyPrimitiveArrayStringValidate()
 				var err error
 				var val []string
@@ -885,9 +885,9 @@ func ParseEndpoint(
 	restore bool,
 ) (goa.Endpoint, interface{}, error) {
 	var (
-		serviceMapQueryPrimitiveArrayFlags = flag.NewFlagSet("ServiceMapQueryPrimitiveArray", flag.ContinueOnError)
+		serviceMapQueryPrimitiveArrayFlags = flag.NewFlagSet("service-map-query-primitive-array", flag.ContinueOnError)
 
-		serviceMapQueryPrimitiveArrayMapQueryPrimitiveArrayFlags = flag.NewFlagSet("MapQueryPrimitiveArray", flag.ExitOnError)
+		serviceMapQueryPrimitiveArrayMapQueryPrimitiveArrayFlags = flag.NewFlagSet("map-query-primitive-array", flag.ExitOnError)
 		serviceMapQueryPrimitiveArrayMapQueryPrimitiveArrayPFlag = serviceMapQueryPrimitiveArrayMapQueryPrimitiveArrayFlags.String("p", "REQUIRED", "map[string][]uint is the payload type of the ServiceMapQueryPrimitiveArray service MapQueryPrimitiveArray method.")
 	)
 	serviceMapQueryPrimitiveArrayFlags.Usage = serviceMapQueryPrimitiveArrayUsage
@@ -908,7 +908,7 @@ func ParseEndpoint(
 	{
 		svcn = os.Args[1+flag.NFlag()]
 		switch svcn {
-		case "ServiceMapQueryPrimitiveArray":
+		case "service-map-query-primitive-array":
 			svcf = serviceMapQueryPrimitiveArrayFlags
 		default:
 			return nil, nil, fmt.Errorf("unknown service %q", svcn)
@@ -925,9 +925,9 @@ func ParseEndpoint(
 	{
 		epn = os.Args[2+flag.NFlag()+svcf.NFlag()]
 		switch svcn {
-		case "ServiceMapQueryPrimitiveArray":
+		case "service-map-query-primitive-array":
 			switch epn {
-			case "MapQueryPrimitiveArray":
+			case "map-query-primitive-array":
 				epf = serviceMapQueryPrimitiveArrayMapQueryPrimitiveArrayFlags
 
 			}
@@ -952,10 +952,10 @@ func ParseEndpoint(
 	)
 	{
 		switch svcn {
-		case "ServiceMapQueryPrimitiveArray":
+		case "service-map-query-primitive-array":
 			c := servicemapqueryprimitivearrayc.NewClient(scheme, host, doer, enc, dec, restore)
 			switch epn {
-			case "MapQueryPrimitiveArray":
+			case "map-query-primitive-array":
 				endpoint = c.MapQueryPrimitiveArray()
 				var err error
 				var val map[string][]uint
