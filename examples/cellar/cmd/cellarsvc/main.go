@@ -107,9 +107,10 @@ func main() {
 		swaggerServer   *swaggersvr.Server
 	)
 	{
-		sommelierServer = sommeliersvr.New(sommelierEndpoints, mux, dec, enc, ErrorHandler(logger))
-		storageServer = storagesvr.New(storageEndpoints, mux, dec, enc, ErrorHandler(logger), cellar.StorageMultiAddDecoderFunc, cellar.StorageMultiUpdateDecoderFunc)
-		swaggerServer = swaggersvr.New(nil, mux, dec, enc, ErrorHandler(logger))
+		eh := ErrorHandler(logger)
+		sommelierServer = sommeliersvr.New(sommelierEndpoints, mux, dec, enc, eh)
+		storageServer = storagesvr.New(storageEndpoints, mux, dec, enc, eh, cellar.StorageMultiAddDecoderFunc, cellar.StorageMultiUpdateDecoderFunc)
+		swaggerServer = swaggersvr.New(nil, mux, dec, enc, eh)
 	}
 
 	// Configure the mux.

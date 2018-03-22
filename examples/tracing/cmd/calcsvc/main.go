@@ -83,8 +83,9 @@ func main() {
 		calcsvcServer *calcsvcsvr.Server
 	)
 	{
-		openapiServer = openapisvr.New(nil, mux, dec, enc, ErrorHandler(logger))
-		calcsvcServer = calcsvcsvr.New(calcsvcEndpoints, mux, dec, enc, ErrorHandler(logger))
+		eh := ErrorHandler(logger)
+		openapiServer = openapisvr.New(nil, mux, dec, enc, eh)
+		calcsvcServer = calcsvcsvr.New(calcsvcEndpoints, mux, dec, enc, eh)
 	}
 
 	// Configure the mux.

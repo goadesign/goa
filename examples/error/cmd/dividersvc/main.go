@@ -79,7 +79,8 @@ func main() {
 		dividersvcServer *dividersvcsvr.Server
 	)
 	{
-		dividersvcServer = dividersvcsvr.New(dividersvcEndpoints, mux, dec, enc, ErrorHandler(logger))
+		eh := ErrorHandler(logger)
+		dividersvcServer = dividersvcsvr.New(dividersvcEndpoints, mux, dec, enc, eh)
 	}
 
 	// Configure the mux.
