@@ -23,7 +23,9 @@ type (
 		Name string
 		// Description is the service description.
 		Description string
-		// VarName is the service struct name.
+		// StructName is the service struct name.
+		StructName string
+		// VarName is the service variable name (first letter in lowercase).
 		VarName string
 		// PkgName is the name of the package containing the generated
 		// service code.
@@ -155,7 +157,6 @@ func (s *Data) Method(name string) *MethodData {
 func (d ServicesData) analyze(service *design.ServiceExpr) *Data {
 	var (
 		scope      *codegen.NameScope
-		varName    string
 		pkgName    string
 		types      []*UserTypeData
 		errTypes   []*UserTypeData
@@ -165,7 +166,6 @@ func (d ServicesData) analyze(service *design.ServiceExpr) *Data {
 	)
 	{
 		scope = codegen.NewNameScope()
-		varName = codegen.Goify(service.Name, true)
 		pkgName = scope.Unique(service, strings.ToLower(codegen.Goify(service.Name, false)), "svc")
 		seen = make(map[string]struct{})
 		seenErrors = make(map[string]struct{})
@@ -265,7 +265,8 @@ func (d ServicesData) analyze(service *design.ServiceExpr) *Data {
 	data := &Data{
 		Name:        service.Name,
 		Description: desc,
-		VarName:     varName,
+		VarName:     codegen.Goify(service.Name, false),
+		StructName:  codegen.Goify(service.Name, true),
 		PkgName:     pkgName,
 		Methods:     methods,
 		UserTypes:   types,
