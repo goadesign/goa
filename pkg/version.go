@@ -3,7 +3,7 @@ package pkg
 import (
 	"fmt"
 	"strconv"
-	"strings"
+	"regexp"
 )
 
 const (
@@ -17,9 +17,14 @@ const (
 	Suffix = "wip"
 )
 
+var (
+	// Version format
+	versionFormat = regexp.MustCompile(`v(\d+?)\.(\d+?)\.(\d+?)(?:-.+)?`)
+)
+
 // Version returns the complete version number.
 func Version() string {
-	ver := "v" + strconv.Itoa(Major) + "." + strconv.Itoa(Minor) + "." + strconv.Itoa(Build)
+	ver := fmt.Sprintf("v%d.%d.%d",Major,Minor,Build)
 	if Suffix != "" {
 		ver += "-" + Suffix
 	}
@@ -29,17 +34,13 @@ func Version() string {
 // Compatible returns true if Major matches the major version of the given version string.
 // It returns an error if the given string is not a valid version string.
 func Compatible(v string) (bool, error) {
-	if len(v) < 5 {
-		return false, fmt.Errorf("invalid version string format %#v", v)
+	matches := versionFormat.FindStringSubmatch(v)
+	if len(matches) != 4{
+		return false, fmt.Errorf("invalid version string format %#v, %+v", v, matches)
 	}
-	v = v[1:]
-	elems := strings.Split(v, ".")
-	if len(elems) != 3 {
-		return false, fmt.Errorf("version not of the form Major.Minor.Build %#v", v)
-	}
-	mj, err := strconv.Atoi(elems[0])
+	mj, err := strconv.Atoi(matches[1])
 	if err != nil {
-		return false, fmt.Errorf("invalid major version number %#v, must be number", elems[0])
+		return false, fmt.Errorf("invalid major version number %#v, must be number, %v", matches[1], err)
 	}
 	return mj == Major, nil
 }
