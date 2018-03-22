@@ -6,8 +6,8 @@ import (
 
 type (
 	// ErrorResponse is the data structure encoded in HTTP responses that
-	// correspond to errors. This struct is mainly intended for clients to
-	// decode error responses.
+	// correspond to errors created by the generated code. This struct is
+	// mainly intended for clients to decode error responses.
 	ErrorResponse struct {
 		// ID is the unique error instance identifier.
 		ID string `json:"token" xml:"token" form:"token"`

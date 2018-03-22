@@ -12,14 +12,14 @@ func EncodeMethodPrimitiveErrorResponseError(encoder func(context.Context, http.
 			body := NewMethodPrimitiveErrorResponseBadRequestResponseBody(res)
 			w.WriteHeader(http.StatusBadRequest)
 			if err := enc.Encode(body); err != nil {
-				encodeError(ctx, w, err)
+				w.Write([]byte("encoding: " + err.Error()))
 			}
 		case *serviceprimitiveerrorresponse.InternalError:
 			enc := encoder(ctx, w)
 			body := NewMethodPrimitiveErrorResponseInternalErrorResponseBody(res)
 			w.WriteHeader(http.StatusInternalServerError)
 			if err := enc.Encode(body); err != nil {
-				encodeError(ctx, w, err)
+				w.Write([]byte("encoding: " + err.Error()))
 			}
 		default:
 			encodeError(ctx, w, v)
@@ -35,12 +35,12 @@ func EncodeMethodDefaultErrorResponseError(encoder func(context.Context, http.Re
 	return func(ctx context.Context, w http.ResponseWriter, v error) {
 		switch res := v.(type) {
 		case *servicedefaulterrorresponse.Error:
-			if res.Code == "bad_request" {
+			if res.Name == "bad_request" {
 				enc := encoder(ctx, w)
 				body := NewMethodDefaultErrorResponseBadRequestResponseBody(res)
 				w.WriteHeader(http.StatusBadRequest)
 				if err := enc.Encode(body); err != nil {
-					encodeError(ctx, w, err)
+					w.Write([]byte("encoding: " + err.Error()))
 				}
 			}
 		default:
@@ -57,20 +57,20 @@ func EncodeMethodServiceErrorResponseError(encoder func(context.Context, http.Re
 	return func(ctx context.Context, w http.ResponseWriter, v error) {
 		switch res := v.(type) {
 		case *serviceserviceerrorresponse.Error:
-			if res.Code == "internal_error" {
+			if res.Name == "internal_error" {
 				enc := encoder(ctx, w)
 				body := NewMethodServiceErrorResponseInternalErrorResponseBody(res)
 				w.WriteHeader(http.StatusInternalServerError)
 				if err := enc.Encode(body); err != nil {
-					encodeError(ctx, w, err)
+					w.Write([]byte("encoding: " + err.Error()))
 				}
 			}
-			if res.Code == "bad_request" {
+			if res.Name == "bad_request" {
 				enc := encoder(ctx, w)
 				body := NewMethodServiceErrorResponseBadRequestResponseBody(res)
 				w.WriteHeader(http.StatusBadRequest)
 				if err := enc.Encode(body); err != nil {
-					encodeError(ctx, w, err)
+					w.Write([]byte("encoding: " + err.Error()))
 				}
 			}
 		default:

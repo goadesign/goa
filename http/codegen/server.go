@@ -338,9 +338,7 @@ func {{ .HandlerInit }}(
 			encodeError(ctx, w, err)
 			return
 		}
-		if err := encodeResponse(ctx, w, res); err != nil {
-			encodeError(ctx, w, err)
-		}
+		encodeResponse(ctx, w, res)
 	})
 }
 `
@@ -860,8 +858,8 @@ const requestParamsHeadersT = `{{- define "request_params_headers" }}
 
 // input: EndpointData
 const responseEncoderT = `{{ printf "%s returns an encoder for responses returned by the %s %s endpoint." .ResponseEncoder .ServiceName .Method.Name | comment }}
-func {{ .ResponseEncoder }}(encoder func(context.Context, http.ResponseWriter) goahttp.Encoder) func(context.Context, http.ResponseWriter, interface{}) error {
-	return func(ctx context.Context, w http.ResponseWriter, v interface{}) error {
+func {{ .ResponseEncoder }}(encoder func(context.Context, http.ResponseWriter) goahttp.Encoder) func(context.Context, http.ResponseWriter, interface{}) {
+	return func(ctx context.Context, w http.ResponseWriter, v interface{}) {
 
 	{{- if .Result.Ref }}
 		res := v.({{ .Result.Ref }})
@@ -877,9 +875,9 @@ func {{ .ResponseEncoder }}(encoder func(context.Context, http.ResponseWriter) g
 			{{- end -}}
 			{{ template "response" . }}
 			{{- if .ServerBody }}
-			return enc.Encode(body)
-			{{- else }}
-			return nil
+			if err := enc.Encode(body); err != nil {
+				w.Write([]byte("encoding: " + err.Error()))
+			}
 			{{- end }}
 
 			{{- if .TagName }}
@@ -892,7 +890,6 @@ func {{ .ResponseEncoder }}(encoder func(context.Context, http.ResponseWriter) g
 
 		{{- with (index .Result.Responses 0) }}
 		w.WriteHeader({{ .StatusCode }})
-		return nil
 
 		{{- end }}
 
@@ -918,9 +915,9 @@ func {{ .ErrorEncoder }}(encoder func(context.Context, http.ResponseWriter) goah
 					{{- end }}
 				{{- template "response" . }}
 				{{- if .ServerBody }}
-			if err := enc.Encode(body); err != nil {
-				encodeError(ctx, w, err)
-			}
+				if err := enc.Encode(body); err != nil {
+					w.Write([]byte("encoding: " + err.Error()))
+				}
 				{{- end }}
 				{{- if .TagName }}
 			}

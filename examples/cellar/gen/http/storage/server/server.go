@@ -89,6 +89,7 @@ func (s *Server) Use(m func(http.Handler) http.Handler) {
 	s.Remove = m(s.Remove)
 	s.Rate = m(s.Rate)
 	s.MultiAdd = m(s.MultiAdd)
+	s.MultiUpdate = m(s.MultiUpdate)
 }
 
 // Mount configures the mux to serve the storage endpoints.
@@ -137,9 +138,7 @@ func NewListHandler(
 			encodeError(ctx, w, err)
 			return
 		}
-		if err := encodeResponse(ctx, w, res); err != nil {
-			encodeError(ctx, w, err)
-		}
+		encodeResponse(ctx, w, res)
 	})
 }
 
@@ -185,9 +184,7 @@ func NewShowHandler(
 			encodeError(ctx, w, err)
 			return
 		}
-		if err := encodeResponse(ctx, w, res); err != nil {
-			encodeError(ctx, w, err)
-		}
+		encodeResponse(ctx, w, res)
 	})
 }
 
@@ -233,9 +230,7 @@ func NewAddHandler(
 			encodeError(ctx, w, err)
 			return
 		}
-		if err := encodeResponse(ctx, w, res); err != nil {
-			encodeError(ctx, w, err)
-		}
+		encodeResponse(ctx, w, res)
 	})
 }
 
@@ -281,9 +276,7 @@ func NewRemoveHandler(
 			encodeError(ctx, w, err)
 			return
 		}
-		if err := encodeResponse(ctx, w, res); err != nil {
-			encodeError(ctx, w, err)
-		}
+		encodeResponse(ctx, w, res)
 	})
 }
 
@@ -329,9 +322,7 @@ func NewRateHandler(
 			encodeError(ctx, w, err)
 			return
 		}
-		if err := encodeResponse(ctx, w, res); err != nil {
-			encodeError(ctx, w, err)
-		}
+		encodeResponse(ctx, w, res)
 	})
 }
 
@@ -377,9 +368,7 @@ func NewMultiAddHandler(
 			encodeError(ctx, w, err)
 			return
 		}
-		if err := encodeResponse(ctx, w, res); err != nil {
-			encodeError(ctx, w, err)
-		}
+		encodeResponse(ctx, w, res)
 	})
 }
 
@@ -425,8 +414,6 @@ func NewMultiUpdateHandler(
 			encodeError(ctx, w, err)
 			return
 		}
-		if err := encodeResponse(ctx, w, res); err != nil {
-			encodeError(ctx, w, err)
-		}
+		encodeResponse(ctx, w, res)
 	})
 }

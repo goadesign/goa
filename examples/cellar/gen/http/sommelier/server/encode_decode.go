@@ -20,13 +20,15 @@ import (
 
 // EncodePickResponse returns an encoder for responses returned by the
 // sommelier pick endpoint.
-func EncodePickResponse(encoder func(context.Context, http.ResponseWriter) goahttp.Encoder) func(context.Context, http.ResponseWriter, interface{}) error {
-	return func(ctx context.Context, w http.ResponseWriter, v interface{}) error {
+func EncodePickResponse(encoder func(context.Context, http.ResponseWriter) goahttp.Encoder) func(context.Context, http.ResponseWriter, interface{}) {
+	return func(ctx context.Context, w http.ResponseWriter, v interface{}) {
 		res := v.(sommelier.StoredBottleCollection)
 		enc := encoder(ctx, w)
 		body := NewPickResponseBody(res)
 		w.WriteHeader(http.StatusOK)
-		return enc.Encode(body)
+		if err := enc.Encode(body); err != nil {
+			w.Write([]byte("encoding: " + err.Error()))
+		}
 	}
 }
 
@@ -61,14 +63,14 @@ func EncodePickError(encoder func(context.Context, http.ResponseWriter) goahttp.
 			body := NewPickNoCriteriaResponseBody(res)
 			w.WriteHeader(http.StatusBadRequest)
 			if err := enc.Encode(body); err != nil {
-				encodeError(ctx, w, err)
+				w.Write([]byte("encoding: " + err.Error()))
 			}
 		case *sommelier.NoMatch:
 			enc := encoder(ctx, w)
 			body := NewPickNoMatchResponseBody(res)
 			w.WriteHeader(http.StatusNotFound)
 			if err := enc.Encode(body); err != nil {
-				encodeError(ctx, w, err)
+				w.Write([]byte("encoding: " + err.Error()))
 			}
 		default:
 			encodeError(ctx, w, v)
