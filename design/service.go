@@ -130,15 +130,10 @@ func (e *ErrorExpr) Validate() error {
 
 // Finalize makes sure the error type is a user type since it has to generate a
 // Go error.
+// Note: this may produce a user type with an attribute that is not an object!
 func (e *ErrorExpr) Finalize() {
 	att := e.AttributeExpr
 	if _, ok := att.Type.(UserType); !ok {
-		if !IsObject(att.Type) {
-			att = &AttributeExpr{
-				Type:       &Object{{"value", att}},
-				Validation: &ValidationExpr{Required: []string{"value"}},
-			}
-		}
 		ut := &UserTypeExpr{
 			AttributeExpr: att,
 			TypeName:      e.Name,

@@ -22,7 +22,7 @@ func NewSommelier(logger *log.Logger) sommelier.Service {
 func (s *sommelierSvc) Pick(ctx context.Context, p *sommelier.Criteria) (sommelier.StoredBottleCollection, error) {
 	var res sommelier.StoredBottleCollection
 	if p.Name == nil && len(p.Varietal) == 0 && p.Winery == nil {
-		return nil, &sommelier.NoCriteria{Value: "must specify a name or one or more varietals or a winery"}
+		return nil, sommelier.NoCriteria("must specify a name or one or more varietals or a winery")
 	}
 	// TBD: implement lookup return sommeliner.NoMatch if empty
 	s.logger.Print("sommelier.pick")

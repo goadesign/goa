@@ -190,7 +190,12 @@ func ErrorResponseBody(a *EndpointExpr, v *ErrorExpr) *design.AttributeExpr {
 	// response body).
 	if !design.IsObject(result.Type) {
 		if len(*design.AsObject(resp.Headers().Type)) == 0 {
-			renameType(result, name, suffix)
+			_, ok := result.Type.(design.UserType)
+			if !ok {
+				// Make sure this is not a primitive type in
+				// which case renaming is not needed.
+				renameType(result, name, suffix)
+			}
 			return result
 		}
 		return &design.AttributeExpr{Type: design.Empty}

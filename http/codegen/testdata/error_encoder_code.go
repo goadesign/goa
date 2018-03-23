@@ -7,14 +7,14 @@ func EncodeMethodPrimitiveErrorResponseError(encoder func(context.Context, http.
 	encodeError := goahttp.ErrorEncoder(encoder)
 	return func(ctx context.Context, w http.ResponseWriter, v error) error {
 		switch res := v.(type) {
-		case *serviceprimitiveerrorresponse.BadRequest:
+		case serviceprimitiveerrorresponse.BadRequest:
 			enc := encoder(ctx, w)
-			body := NewMethodPrimitiveErrorResponseBadRequestResponseBody(res)
+			body := NewBadRequest(res)
 			w.WriteHeader(http.StatusBadRequest)
 			return enc.Encode(body)
-		case *serviceprimitiveerrorresponse.InternalError:
+		case serviceprimitiveerrorresponse.InternalError:
 			enc := encoder(ctx, w)
-			body := NewMethodPrimitiveErrorResponseInternalErrorResponseBody(res)
+			body := NewInternalError(res)
 			w.WriteHeader(http.StatusInternalServerError)
 			return enc.Encode(body)
 		default:

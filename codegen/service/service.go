@@ -131,6 +131,12 @@ func {{ .Name }}(err error) {{ .TypeRef }} {
 		Name: {{ printf "%q" .ErrName }},
 		ID: goa.NewErrorID(),
 		Message: err.Error(),
+	{{- if .Temporary }}
+		Temporary: true,
+	{{- end }}
+	{{- if .Timeout }}
+		Timeout: true,
+	{{- end }}
 	}
 }
 `

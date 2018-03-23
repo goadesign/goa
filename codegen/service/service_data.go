@@ -56,6 +56,10 @@ type (
 		TypeName string
 		// TypeRef is the reference to the error type.
 		TypeRef string
+		// Temporary indicates whether the error is temporary.
+		Temporary bool
+		// Timeout indicates whether the error is due to timeouts.
+		Timeout bool
 	}
 
 	// MethodData describes a single service method.
@@ -190,35 +194,33 @@ func (d ServicesData) analyze(service *design.ServiceExpr) *Data {
 				seen[ut.Name()] = struct{}{}
 			}
 		}
-		for _, e := range service.Methods {
-			patt := e.Payload
+		recordError := func(er *design.ErrorExpr) {
+			errTypes = append(errTypes, collectTypes(er.AttributeExpr, seen, scope)...)
+			if er.Type == design.ErrorResult {
+				if _, ok := seenErrors[er.Name]; ok {
+					return
+				}
+				seenErrors[er.Name] = struct{}{}
+				errorInits = append(errorInits, buildErrorInitData(er, scope))
+			}
+		}
+		for _, er := range service.Errors {
+			recordError(er)
+		}
+		for _, m := range service.Methods {
+			patt := m.Payload
 			if ut, ok := patt.Type.(design.UserType); ok {
 				patt = ut.Attribute()
 			}
 			types = append(types, collectTypes(patt, seen, scope)...)
-			ratt := e.Result
+			ratt := m.Result
 			if ut, ok := ratt.Type.(design.UserType); ok {
 				ratt = ut.Attribute()
 			}
 			types = append(types, collectTypes(ratt, seen, scope)...)
-			for _, er := range e.Errors {
-				errTypes = append(errTypes, collectTypes(er.AttributeExpr, seen, scope)...)
-				if er.Type == design.ErrorResult {
-					if _, ok := seenErrors[er.Name]; ok {
-						continue
-					}
-					seenErrors[er.Name] = struct{}{}
-					errorInits = append(errorInits, buildErrorInitData(er, scope))
-				}
+			for _, er := range m.Errors {
+				recordError(er)
 			}
-		}
-		for _, er := range service.Errors {
-			errTypes = append(errTypes, collectTypes(er.AttributeExpr, seen, scope)...)
-			if _, ok := seenErrors[er.Name]; ok {
-				continue
-			}
-			seenErrors[er.Name] = struct{}{}
-			errorInits = append(errorInits, buildErrorInitData(er, scope))
 		}
 	}
 
@@ -296,12 +298,16 @@ func collectTypes(at *design.AttributeExpr, seen map[string]struct{}, scope *cod
 
 // buildErrorInitData creates the data needed to generate code around endpoint error return values.
 func buildErrorInitData(er *design.ErrorExpr, scope *codegen.NameScope) *ErrorInitData {
+	_, temporary := er.AttributeExpr.Metadata["goa:error:temporary"]
+	_, timeout := er.AttributeExpr.Metadata["goa:error:timeout"]
 	return &ErrorInitData{
 		Name:        fmt.Sprintf("Make%s", codegen.Goify(er.Name, true)),
 		Description: er.Description,
 		ErrName:     er.Name,
 		TypeName:    scope.GoTypeName(er.AttributeExpr),
 		TypeRef:     scope.GoTypeRef(er.AttributeExpr),
+		Temporary:   temporary,
+		Timeout:     timeout,
 	}
 }
 

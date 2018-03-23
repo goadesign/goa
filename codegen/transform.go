@@ -138,6 +138,11 @@ func transformAttribute(source, target *design.AttributeExpr, newVar bool, a tar
 		if newVar {
 			assign = ":="
 		}
+		if _, ok := target.Type.(design.UserType); ok {
+			// Primitive user type, these are used for error results
+			cast := a.scope.GoFullTypeRef(target, a.targetPkg)
+			return fmt.Sprintf("%s %s %s(%s)\n", a.targetVar, assign, cast, a.sourceVar), nil
+		}
 		code = fmt.Sprintf("%s %s %s\n", a.targetVar, assign, a.sourceVar)
 	}
 	if err != nil {

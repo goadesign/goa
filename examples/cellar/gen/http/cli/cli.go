@@ -302,7 +302,7 @@ Show bottle by ID
     -view STRING: 
 
 Example:
-    `+os.Args[0]+` storage show --id "Sapiente et." --view "tiny"
+    `+os.Args[0]+` storage show --id "Blanditiis dolore laudantium repellat." --view "tiny"
 `, os.Args[0])
 }
 
@@ -316,26 +316,26 @@ Example:
     `+os.Args[0]+` storage add --body '{
       "composition": [
          {
-            "percentage": 96,
+            "percentage": 80,
             "varietal": "Syrah"
          },
          {
-            "percentage": 96,
+            "percentage": 80,
             "varietal": "Syrah"
          },
          {
-            "percentage": 96,
+            "percentage": 80,
             "varietal": "Syrah"
          },
          {
-            "percentage": 96,
+            "percentage": 80,
             "varietal": "Syrah"
          }
       ],
       "description": "Red wine blend with an emphasis on the Cabernet Franc grape and including other Bordeaux grape varietals and some Syrah",
       "name": "Blue\'s Cuvee",
-      "rating": 1,
-      "vintage": 1980,
+      "rating": 3,
+      "vintage": 1903,
       "winery": {
          "country": "USA",
          "name": "Longoria",
@@ -353,7 +353,7 @@ Remove bottle from storage
     -id STRING: ID of bottle to remove
 
 Example:
-    `+os.Args[0]+` storage remove --id "Corporis rem."
+    `+os.Args[0]+` storage remove --id "Sed fugiat vel."
 `, os.Args[0])
 }
 
@@ -390,18 +390,18 @@ Example:
       {
          "composition": [
             {
-               "percentage": 96,
+               "percentage": 80,
                "varietal": "Syrah"
             },
             {
-               "percentage": 96,
+               "percentage": 80,
                "varietal": "Syrah"
             }
          ],
          "description": "Red wine blend with an emphasis on the Cabernet Franc grape and including other Bordeaux grape varietals and some Syrah",
          "name": "Blue\'s Cuvee",
          "rating": 1,
-         "vintage": 2002,
+         "vintage": 1936,
          "winery": {
             "country": "USA",
             "name": "Longoria",
@@ -412,18 +412,62 @@ Example:
       {
          "composition": [
             {
-               "percentage": 96,
+               "percentage": 80,
                "varietal": "Syrah"
             },
             {
-               "percentage": 96,
+               "percentage": 80,
                "varietal": "Syrah"
             }
          ],
          "description": "Red wine blend with an emphasis on the Cabernet Franc grape and including other Bordeaux grape varietals and some Syrah",
          "name": "Blue\'s Cuvee",
          "rating": 1,
-         "vintage": 2002,
+         "vintage": 1936,
+         "winery": {
+            "country": "USA",
+            "name": "Longoria",
+            "region": "Central Coast, California",
+            "url": "http://www.longoriawine.com/"
+         }
+      },
+      {
+         "composition": [
+            {
+               "percentage": 80,
+               "varietal": "Syrah"
+            },
+            {
+               "percentage": 80,
+               "varietal": "Syrah"
+            }
+         ],
+         "description": "Red wine blend with an emphasis on the Cabernet Franc grape and including other Bordeaux grape varietals and some Syrah",
+         "name": "Blue\'s Cuvee",
+         "rating": 1,
+         "vintage": 1936,
+         "winery": {
+            "country": "USA",
+            "name": "Longoria",
+            "region": "Central Coast, California",
+            "url": "http://www.longoriawine.com/"
+         }
+      },
+      {
+         "composition": [
+            {
+               "percentage": 80,
+               "varietal": "Syrah"
+            },
+            {
+               "percentage": 80,
+               "varietal": "Syrah"
+            }
+         ],
+         "description": "Red wine blend with an emphasis on the Cabernet Franc grape and including other Bordeaux grape varietals and some Syrah",
+         "name": "Blue\'s Cuvee",
+         "rating": 1,
+         "vintage": 1936,
          "winery": {
             "country": "USA",
             "name": "Longoria",
@@ -448,18 +492,18 @@ Example:
          {
             "composition": [
                {
-                  "percentage": 96,
+                  "percentage": 80,
                   "varietal": "Syrah"
                },
                {
-                  "percentage": 96,
+                  "percentage": 80,
                   "varietal": "Syrah"
                }
             ],
             "description": "Red wine blend with an emphasis on the Cabernet Franc grape and including other Bordeaux grape varietals and some Syrah",
             "name": "Blue\'s Cuvee",
             "rating": 1,
-            "vintage": 2002,
+            "vintage": 1936,
             "winery": {
                "country": "USA",
                "name": "Longoria",
@@ -470,18 +514,18 @@ Example:
          {
             "composition": [
                {
-                  "percentage": 96,
+                  "percentage": 80,
                   "varietal": "Syrah"
                },
                {
-                  "percentage": 96,
+                  "percentage": 80,
                   "varietal": "Syrah"
                }
             ],
             "description": "Red wine blend with an emphasis on the Cabernet Franc grape and including other Bordeaux grape varietals and some Syrah",
             "name": "Blue\'s Cuvee",
             "rating": 1,
-            "vintage": 2002,
+            "vintage": 1936,
             "winery": {
                "country": "USA",
                "name": "Longoria",
@@ -492,18 +536,18 @@ Example:
          {
             "composition": [
                {
-                  "percentage": 96,
+                  "percentage": 80,
                   "varietal": "Syrah"
                },
                {
-                  "percentage": 96,
+                  "percentage": 80,
                   "varietal": "Syrah"
                }
             ],
             "description": "Red wine blend with an emphasis on the Cabernet Franc grape and including other Bordeaux grape varietals and some Syrah",
             "name": "Blue\'s Cuvee",
             "rating": 1,
-            "vintage": 2002,
+            "vintage": 1936,
             "winery": {
                "country": "USA",
                "name": "Longoria",
@@ -514,18 +558,18 @@ Example:
          {
             "composition": [
                {
-                  "percentage": 96,
+                  "percentage": 80,
                   "varietal": "Syrah"
                },
                {
-                  "percentage": 96,
+                  "percentage": 80,
                   "varietal": "Syrah"
                }
             ],
             "description": "Red wine blend with an emphasis on the Cabernet Franc grape and including other Bordeaux grape varietals and some Syrah",
             "name": "Blue\'s Cuvee",
             "rating": 1,
-            "vintage": 2002,
+            "vintage": 1936,
             "winery": {
                "country": "USA",
                "name": "Longoria",
@@ -535,8 +579,9 @@ Example:
          }
       ]
    }' --ids '[
-      "Aut rem vel veritatis.",
-      "Animi nulla aut aut."
+      "Aut soluta minus rerum ut libero tempore.",
+      "Corporis quam delectus quas exercitationem alias est.",
+      "Non exercitationem."
    ]'
 `, os.Args[0])
 }

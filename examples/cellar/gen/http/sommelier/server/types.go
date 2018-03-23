@@ -30,19 +30,13 @@ type PickRequestBody struct {
 // response body.
 type PickResponseBody []*StoredBottleResponseBody
 
-// PickNoCriteriaResponseBody is the type of the "sommelier" service "pick"
-// endpoint HTTP response body for the "no_criteria" error.
-type PickNoCriteriaResponseBody struct {
-	// Missing criteria
-	Value string `form:"value" json:"value" xml:"value"`
-}
+// NoCriteria is the type of the "sommelier" service "pick" endpoint HTTP
+// response body for the "no_criteria" error.
+type NoCriteria string
 
-// PickNoMatchResponseBody is the type of the "sommelier" service "pick"
-// endpoint HTTP response body for the "no_match" error.
-type PickNoMatchResponseBody struct {
-	// No bottle matched given criteria
-	Value string `form:"value" json:"value" xml:"value"`
-}
+// NoMatch is the type of the "sommelier" service "pick" endpoint HTTP response
+// body for the "no_match" error.
+type NoMatch string
 
 // StoredBottleResponseBody is used to define fields on response body types.
 type StoredBottleResponseBody struct {
@@ -110,21 +104,17 @@ func NewPickResponseBody(res sommelier.StoredBottleCollection) PickResponseBody 
 	return body
 }
 
-// NewPickNoCriteriaResponseBody builds the HTTP response body from the result
-// of the "pick" endpoint of the "sommelier" service.
-func NewPickNoCriteriaResponseBody(res *sommelier.NoCriteria) *PickNoCriteriaResponseBody {
-	body := &PickNoCriteriaResponseBody{
-		Value: res.Value,
-	}
+// NewNoCriteria builds the HTTP response body from the result of the "pick"
+// endpoint of the "sommelier" service.
+func NewNoCriteria(res sommelier.NoCriteria) NoCriteria {
+	body := NoCriteria(res)
 	return body
 }
 
-// NewPickNoMatchResponseBody builds the HTTP response body from the result of
-// the "pick" endpoint of the "sommelier" service.
-func NewPickNoMatchResponseBody(res *sommelier.NoMatch) *PickNoMatchResponseBody {
-	body := &PickNoMatchResponseBody{
-		Value: res.Value,
-	}
+// NewNoMatch builds the HTTP response body from the result of the "pick"
+// endpoint of the "sommelier" service.
+func NewNoMatch(res sommelier.NoMatch) NoMatch {
+	body := NoMatch(res)
 	return body
 }
 

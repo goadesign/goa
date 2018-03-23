@@ -20,13 +20,17 @@ var _ = Service("divider", func() {
 
         // The "div_by_zero" error is defined at the service level and
         // thus may be returned by both "divide" and "integer_divide".
-        Error("div_by_zero")
+        Error("div_by_zero", func() {
+                Description("div_by_zero is the error result returned by the service methods when the right operand is 0.")
+        })
 
         Method("integer_divide", func() {
 
                 // The "has_remainder" error is defined at the method
                 // level and is thus specific to "integer_divide".
-                Error("has_remainder")
+                Error("has_remainder", func() {
+                        Description("has_remainder is the error result returned when an integer division has a remainder.")
+                })
                 // ...
         })
 
@@ -114,19 +118,19 @@ func (s *dividerSvc) IntegerDivide(ctx context.Context, p *dividersvc.IntOperand
         }
         if p.A%p.B != 0 {
                 return 0, dividersvc.MakeHasRemainder(fmt.Errorf("remainder is %d", p.A%p.B))
-        }
+
         return p.A / p.B, nil
 }
 ```
 
 And that's it! given this goa knows to initialize a `ErrorResult` using the
-provided error to initiliaze the message field and initializing all the other
+provided error to initiliaze the message field and initializes all the other
 fields from the information provided in the design. The generated transport code
-also writes the proper HTTP status code to use for each. 
-Using the generated command line tool to verify:
+also writes the proper HTTP status code as defined in the HTTP DSL. Using the
+generated command line tool to verify:
 
 ```bash
-./dividercli -v divider integer-divide -a 1 -b 2 
+./dividercli -v divider integer-divide -a 1 -b 2
 > GET http://localhost:8080/idiv/1/2
 < 417 Expectation Failed
 < Content-Length: 68
@@ -134,3 +138,46 @@ Using the generated command line tool to verify:
 < Date: Thu, 22 Mar 2018 01:34:33 GMT
 {"name":"has_remainder","id":"dlqvenWL","message":"remainder is 1"}
 ```
+
+## Using Custom Error Types
+
+The `Error` expression allows specifying a type for the error result thereby
+overridding the default consisting of `ErrorResult`. Any type can be used for
+defining the shape of the error result. Here is an example using string as error
+result type:
+
+```go
+Error("not_found", String, "not_found is the result returned when there is no bottle with the given ID.")
+```
+
+Note how the description can be defined inline when the type is defined
+explicitly. The type may be `ErrorResult` which makes it possible to define a
+description inline in this case as well.
+
+When using a user defined type as error result type goa can be told which
+attribute contains the error name. The value of this attribute is compared with
+the names of the errors as defined in the design by the encoding and decoding
+code to infer the proper encoding details (e.g. HTTP status code). The attribute
+is identified using the special `struct:error:name` metadata:
+
+```go
+var InsertConflict = ResultType("application/vnd.service.insertconflict", func() {
+        Description("InsertConflict is the type of the error values returned when insertion fails because of a conflict")
+        Attributes(func() {
+                Attribute("conflict_value", String)
+                Attribute("error_name", String, "name of error used by goa to encode response", func() {
+                        Metadata("struct:error:name")
+                })
+        })
+        View("default", func() {
+                Attribute("conflict_value")
+                // Note: error_name is omitted from the default view.
+                // in this example error_name is an attribute used to identify
+                // the field containing the name of the error and is not actually
+                // encoded in the response sent to the client.
+        })
+})
+```
+
+Having an attribute that holds the error name is only necessary if the type
+appears more than once in one method.
