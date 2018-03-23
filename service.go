@@ -310,7 +310,8 @@ func (ctrl *Controller) MuxHandler(name string, hdlr Handler, unm Unmarshaler) M
 				}
 				return nil
 			}
-			chain := append(ctrl.Service.middleware, ctrl.middleware...)
+			mwLen := len(ctrl.Service.middleware)
+			chain := append(ctrl.Service.middleware[:mwLen:mwLen], ctrl.middleware...)
 			ml := len(chain)
 			for i := range chain {
 				handler = chain[ml-i-1](handler)
