@@ -385,3 +385,130 @@ func TestMapIsCompatible(t *testing.T) {
 		}
 	}
 }
+
+func TestQualifiedTypeName(t *testing.T) {
+	var (
+		array = &Array{
+			ElemType: &AttributeExpr{
+				Type: String,
+			},
+		}
+		mapStringString = &Map{
+			KeyType: &AttributeExpr{
+				Type: String,
+			},
+			ElemType: &AttributeExpr{
+				Type: String,
+			},
+		}
+		mapStringArray = &Map{
+			KeyType: &AttributeExpr{
+				Type: String,
+			},
+			ElemType: &AttributeExpr{
+				Type: array,
+			},
+		}
+		mapStringMap = &Map{
+			KeyType: &AttributeExpr{
+				Type: String,
+			},
+			ElemType: &AttributeExpr{
+				Type: mapStringString,
+			},
+		}
+	)
+	cases := map[string]struct {
+		t        DataType
+		expected string
+	}{
+		"boolean": {
+			t:        Boolean,
+			expected: "boolean",
+		},
+		"int": {
+			t:        Int,
+			expected: "int",
+		},
+		"int32": {
+			t:        Int32,
+			expected: "int32",
+		},
+		"int64": {
+			t:        Int64,
+			expected: "int64",
+		},
+		"uint": {
+			t:        UInt,
+			expected: "uint",
+		},
+		"uint32": {
+			t:        UInt32,
+			expected: "uint32",
+		},
+		"uint64": {
+			t:        UInt64,
+			expected: "uint64",
+		},
+		"float32": {
+			t:        Float32,
+			expected: "float32",
+		},
+		"float64": {
+			t:        Float64,
+			expected: "float64",
+		},
+		"string": {
+			t:        String,
+			expected: "string",
+		},
+		"bytes": {
+			t:        Bytes,
+			expected: "bytes",
+		},
+		"any": {
+			t:        Any,
+			expected: "any",
+		},
+		"user type": {
+			t: &UserTypeExpr{
+				TypeName: "userType",
+			},
+			expected: "userType",
+		},
+		"result type": {
+			t: &ResultTypeExpr{
+				UserTypeExpr: &UserTypeExpr{
+					TypeName: "resultType",
+				},
+			},
+			expected: "resultType",
+		},
+		"object": {
+			t:        &Object{},
+			expected: "object",
+		},
+		"array": {
+			t:        array,
+			expected: "array<string>",
+		},
+		"map": {
+			t:        mapStringString,
+			expected: "map<string, string>",
+		},
+		"map contains array": {
+			t:        mapStringArray,
+			expected: "map<string, array<string>>",
+		},
+		"map contains map": {
+			t:        mapStringMap,
+			expected: "map<string, map<string, string>>",
+		},
+	}
+
+	for k, tc := range cases {
+		if actual := QualifiedTypeName(tc.t); tc.expected != actual {
+			t.Errorf("%s: got %#v, expected %#v", k, actual, tc.expected)
+		}
+	}
+}
