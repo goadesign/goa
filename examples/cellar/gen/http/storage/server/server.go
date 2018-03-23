@@ -55,6 +55,7 @@ func New(
 	mux goahttp.Muxer,
 	dec func(*http.Request) goahttp.Decoder,
 	enc func(context.Context, http.ResponseWriter) goahttp.Encoder,
+	eh func(context.Context, http.ResponseWriter, error),
 	storageMultiAddDecoderFn StorageMultiAddDecoderFunc,
 	storageMultiUpdateDecoderFn StorageMultiUpdateDecoderFunc,
 ) *Server {
@@ -68,13 +69,13 @@ func New(
 			{"MultiAdd", "POST", "/storage/multi_add"},
 			{"MultiUpdate", "PUT", "/storage/multi_update"},
 		},
-		List:        NewListHandler(e.List, mux, dec, enc),
-		Show:        NewShowHandler(e.Show, mux, dec, enc),
-		Add:         NewAddHandler(e.Add, mux, dec, enc),
-		Remove:      NewRemoveHandler(e.Remove, mux, dec, enc),
-		Rate:        NewRateHandler(e.Rate, mux, dec, enc),
-		MultiAdd:    NewMultiAddHandler(e.MultiAdd, mux, NewStorageMultiAddDecoder(mux, storageMultiAddDecoderFn), enc),
-		MultiUpdate: NewMultiUpdateHandler(e.MultiUpdate, mux, NewStorageMultiUpdateDecoder(mux, storageMultiUpdateDecoderFn), enc),
+		List:        NewListHandler(e.List, mux, dec, enc, eh),
+		Show:        NewShowHandler(e.Show, mux, dec, enc, eh),
+		Add:         NewAddHandler(e.Add, mux, dec, enc, eh),
+		Remove:      NewRemoveHandler(e.Remove, mux, dec, enc, eh),
+		Rate:        NewRateHandler(e.Rate, mux, dec, enc, eh),
+		MultiAdd:    NewMultiAddHandler(e.MultiAdd, mux, NewStorageMultiAddDecoder(mux, storageMultiAddDecoderFn), enc, eh),
+		MultiUpdate: NewMultiUpdateHandler(e.MultiUpdate, mux, NewStorageMultiUpdateDecoder(mux, storageMultiUpdateDecoderFn), enc, eh),
 	}
 }
 
@@ -89,6 +90,7 @@ func (s *Server) Use(m func(http.Handler) http.Handler) {
 	s.Remove = m(s.Remove)
 	s.Rate = m(s.Rate)
 	s.MultiAdd = m(s.MultiAdd)
+	s.MultiUpdate = m(s.MultiUpdate)
 }
 
 // Mount configures the mux to serve the storage endpoints.
@@ -121,24 +123,26 @@ func NewListHandler(
 	mux goahttp.Muxer,
 	dec func(*http.Request) goahttp.Decoder,
 	enc func(context.Context, http.ResponseWriter) goahttp.Encoder,
+	eh func(context.Context, http.ResponseWriter, error),
 ) http.Handler {
 	var (
 		encodeResponse = EncodeListResponse(enc)
 		encodeError    = goahttp.ErrorEncoder(enc)
 	)
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		accept := r.Header.Get("Accept")
-		ctx := context.WithValue(r.Context(), goahttp.AcceptTypeKey, accept)
+		ctx := context.WithValue(r.Context(), goahttp.AcceptTypeKey, r.Header.Get("Accept"))
 		ctx = context.WithValue(ctx, goa.MethodKey, "list")
 		ctx = context.WithValue(ctx, goa.ServiceKey, "storage")
 		res, err := endpoint(ctx, nil)
 
 		if err != nil {
-			encodeError(ctx, w, err)
-			return
+			if err := encodeError(ctx, w, err); err != nil {
+				eh(ctx, w, err)
+				return
+			}
 		}
 		if err := encodeResponse(ctx, w, res); err != nil {
-			encodeError(ctx, w, err)
+			eh(ctx, w, err)
 		}
 	})
 }
@@ -162,6 +166,7 @@ func NewShowHandler(
 	mux goahttp.Muxer,
 	dec func(*http.Request) goahttp.Decoder,
 	enc func(context.Context, http.ResponseWriter) goahttp.Encoder,
+	eh func(context.Context, http.ResponseWriter, error),
 ) http.Handler {
 	var (
 		decodeRequest  = DecodeShowRequest(mux, dec)
@@ -169,24 +174,25 @@ func NewShowHandler(
 		encodeError    = EncodeShowError(enc)
 	)
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		accept := r.Header.Get("Accept")
-		ctx := context.WithValue(r.Context(), goahttp.AcceptTypeKey, accept)
+		ctx := context.WithValue(r.Context(), goahttp.AcceptTypeKey, r.Header.Get("Accept"))
 		ctx = context.WithValue(ctx, goa.MethodKey, "show")
 		ctx = context.WithValue(ctx, goa.ServiceKey, "storage")
 		payload, err := decodeRequest(r)
 		if err != nil {
-			encodeError(ctx, w, err)
+			eh(ctx, w, err)
 			return
 		}
 
 		res, err := endpoint(ctx, payload)
 
 		if err != nil {
-			encodeError(ctx, w, err)
-			return
+			if err := encodeError(ctx, w, err); err != nil {
+				eh(ctx, w, err)
+				return
+			}
 		}
 		if err := encodeResponse(ctx, w, res); err != nil {
-			encodeError(ctx, w, err)
+			eh(ctx, w, err)
 		}
 	})
 }
@@ -210,6 +216,7 @@ func NewAddHandler(
 	mux goahttp.Muxer,
 	dec func(*http.Request) goahttp.Decoder,
 	enc func(context.Context, http.ResponseWriter) goahttp.Encoder,
+	eh func(context.Context, http.ResponseWriter, error),
 ) http.Handler {
 	var (
 		decodeRequest  = DecodeAddRequest(mux, dec)
@@ -217,24 +224,25 @@ func NewAddHandler(
 		encodeError    = goahttp.ErrorEncoder(enc)
 	)
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		accept := r.Header.Get("Accept")
-		ctx := context.WithValue(r.Context(), goahttp.AcceptTypeKey, accept)
+		ctx := context.WithValue(r.Context(), goahttp.AcceptTypeKey, r.Header.Get("Accept"))
 		ctx = context.WithValue(ctx, goa.MethodKey, "add")
 		ctx = context.WithValue(ctx, goa.ServiceKey, "storage")
 		payload, err := decodeRequest(r)
 		if err != nil {
-			encodeError(ctx, w, err)
+			eh(ctx, w, err)
 			return
 		}
 
 		res, err := endpoint(ctx, payload)
 
 		if err != nil {
-			encodeError(ctx, w, err)
-			return
+			if err := encodeError(ctx, w, err); err != nil {
+				eh(ctx, w, err)
+				return
+			}
 		}
 		if err := encodeResponse(ctx, w, res); err != nil {
-			encodeError(ctx, w, err)
+			eh(ctx, w, err)
 		}
 	})
 }
@@ -258,6 +266,7 @@ func NewRemoveHandler(
 	mux goahttp.Muxer,
 	dec func(*http.Request) goahttp.Decoder,
 	enc func(context.Context, http.ResponseWriter) goahttp.Encoder,
+	eh func(context.Context, http.ResponseWriter, error),
 ) http.Handler {
 	var (
 		decodeRequest  = DecodeRemoveRequest(mux, dec)
@@ -265,24 +274,25 @@ func NewRemoveHandler(
 		encodeError    = goahttp.ErrorEncoder(enc)
 	)
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		accept := r.Header.Get("Accept")
-		ctx := context.WithValue(r.Context(), goahttp.AcceptTypeKey, accept)
+		ctx := context.WithValue(r.Context(), goahttp.AcceptTypeKey, r.Header.Get("Accept"))
 		ctx = context.WithValue(ctx, goa.MethodKey, "remove")
 		ctx = context.WithValue(ctx, goa.ServiceKey, "storage")
 		payload, err := decodeRequest(r)
 		if err != nil {
-			encodeError(ctx, w, err)
+			eh(ctx, w, err)
 			return
 		}
 
 		res, err := endpoint(ctx, payload)
 
 		if err != nil {
-			encodeError(ctx, w, err)
-			return
+			if err := encodeError(ctx, w, err); err != nil {
+				eh(ctx, w, err)
+				return
+			}
 		}
 		if err := encodeResponse(ctx, w, res); err != nil {
-			encodeError(ctx, w, err)
+			eh(ctx, w, err)
 		}
 	})
 }
@@ -306,6 +316,7 @@ func NewRateHandler(
 	mux goahttp.Muxer,
 	dec func(*http.Request) goahttp.Decoder,
 	enc func(context.Context, http.ResponseWriter) goahttp.Encoder,
+	eh func(context.Context, http.ResponseWriter, error),
 ) http.Handler {
 	var (
 		decodeRequest  = DecodeRateRequest(mux, dec)
@@ -313,24 +324,25 @@ func NewRateHandler(
 		encodeError    = goahttp.ErrorEncoder(enc)
 	)
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		accept := r.Header.Get("Accept")
-		ctx := context.WithValue(r.Context(), goahttp.AcceptTypeKey, accept)
+		ctx := context.WithValue(r.Context(), goahttp.AcceptTypeKey, r.Header.Get("Accept"))
 		ctx = context.WithValue(ctx, goa.MethodKey, "rate")
 		ctx = context.WithValue(ctx, goa.ServiceKey, "storage")
 		payload, err := decodeRequest(r)
 		if err != nil {
-			encodeError(ctx, w, err)
+			eh(ctx, w, err)
 			return
 		}
 
 		res, err := endpoint(ctx, payload)
 
 		if err != nil {
-			encodeError(ctx, w, err)
-			return
+			if err := encodeError(ctx, w, err); err != nil {
+				eh(ctx, w, err)
+				return
+			}
 		}
 		if err := encodeResponse(ctx, w, res); err != nil {
-			encodeError(ctx, w, err)
+			eh(ctx, w, err)
 		}
 	})
 }
@@ -354,6 +366,7 @@ func NewMultiAddHandler(
 	mux goahttp.Muxer,
 	dec func(*http.Request) goahttp.Decoder,
 	enc func(context.Context, http.ResponseWriter) goahttp.Encoder,
+	eh func(context.Context, http.ResponseWriter, error),
 ) http.Handler {
 	var (
 		decodeRequest  = DecodeMultiAddRequest(mux, dec)
@@ -361,24 +374,25 @@ func NewMultiAddHandler(
 		encodeError    = goahttp.ErrorEncoder(enc)
 	)
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		accept := r.Header.Get("Accept")
-		ctx := context.WithValue(r.Context(), goahttp.AcceptTypeKey, accept)
+		ctx := context.WithValue(r.Context(), goahttp.AcceptTypeKey, r.Header.Get("Accept"))
 		ctx = context.WithValue(ctx, goa.MethodKey, "multi_add")
 		ctx = context.WithValue(ctx, goa.ServiceKey, "storage")
 		payload, err := decodeRequest(r)
 		if err != nil {
-			encodeError(ctx, w, err)
+			eh(ctx, w, err)
 			return
 		}
 
 		res, err := endpoint(ctx, payload)
 
 		if err != nil {
-			encodeError(ctx, w, err)
-			return
+			if err := encodeError(ctx, w, err); err != nil {
+				eh(ctx, w, err)
+				return
+			}
 		}
 		if err := encodeResponse(ctx, w, res); err != nil {
-			encodeError(ctx, w, err)
+			eh(ctx, w, err)
 		}
 	})
 }
@@ -402,6 +416,7 @@ func NewMultiUpdateHandler(
 	mux goahttp.Muxer,
 	dec func(*http.Request) goahttp.Decoder,
 	enc func(context.Context, http.ResponseWriter) goahttp.Encoder,
+	eh func(context.Context, http.ResponseWriter, error),
 ) http.Handler {
 	var (
 		decodeRequest  = DecodeMultiUpdateRequest(mux, dec)
@@ -409,24 +424,25 @@ func NewMultiUpdateHandler(
 		encodeError    = goahttp.ErrorEncoder(enc)
 	)
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		accept := r.Header.Get("Accept")
-		ctx := context.WithValue(r.Context(), goahttp.AcceptTypeKey, accept)
+		ctx := context.WithValue(r.Context(), goahttp.AcceptTypeKey, r.Header.Get("Accept"))
 		ctx = context.WithValue(ctx, goa.MethodKey, "multi_update")
 		ctx = context.WithValue(ctx, goa.ServiceKey, "storage")
 		payload, err := decodeRequest(r)
 		if err != nil {
-			encodeError(ctx, w, err)
+			eh(ctx, w, err)
 			return
 		}
 
 		res, err := endpoint(ctx, payload)
 
 		if err != nil {
-			encodeError(ctx, w, err)
-			return
+			if err := encodeError(ctx, w, err); err != nil {
+				eh(ctx, w, err)
+				return
+			}
 		}
 		if err := encodeResponse(ctx, w, res); err != nil {
-			encodeError(ctx, w, err)
+			eh(ctx, w, err)
 		}
 	})
 }

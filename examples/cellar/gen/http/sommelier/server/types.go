@@ -32,17 +32,11 @@ type PickResponseBody []*StoredBottleResponseBody
 
 // PickNoCriteriaResponseBody is the type of the "sommelier" service "pick"
 // endpoint HTTP response body for the "no_criteria" error.
-type PickNoCriteriaResponseBody struct {
-	// Missing criteria
-	Value string `form:"value" json:"value" xml:"value"`
-}
+type PickNoCriteriaResponseBody string
 
 // PickNoMatchResponseBody is the type of the "sommelier" service "pick"
 // endpoint HTTP response body for the "no_match" error.
-type PickNoMatchResponseBody struct {
-	// No bottle matched given criteria
-	Value string `form:"value" json:"value" xml:"value"`
-}
+type PickNoMatchResponseBody string
 
 // StoredBottleResponseBody is used to define fields on response body types.
 type StoredBottleResponseBody struct {
@@ -112,19 +106,15 @@ func NewPickResponseBody(res sommelier.StoredBottleCollection) PickResponseBody 
 
 // NewPickNoCriteriaResponseBody builds the HTTP response body from the result
 // of the "pick" endpoint of the "sommelier" service.
-func NewPickNoCriteriaResponseBody(res *sommelier.NoCriteria) *PickNoCriteriaResponseBody {
-	body := &PickNoCriteriaResponseBody{
-		Value: res.Value,
-	}
+func NewPickNoCriteriaResponseBody(res sommelier.NoCriteria) PickNoCriteriaResponseBody {
+	body := PickNoCriteriaResponseBody(res)
 	return body
 }
 
 // NewPickNoMatchResponseBody builds the HTTP response body from the result of
 // the "pick" endpoint of the "sommelier" service.
-func NewPickNoMatchResponseBody(res *sommelier.NoMatch) *PickNoMatchResponseBody {
-	body := &PickNoMatchResponseBody{
-		Value: res.Value,
-	}
+func NewPickNoMatchResponseBody(res sommelier.NoMatch) PickNoMatchResponseBody {
+	body := PickNoMatchResponseBody(res)
 	return body
 }
 

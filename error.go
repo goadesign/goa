@@ -3,26 +3,22 @@ Package goa standardizes on structured error responses: a request that fails
 because of an invalid input or an unexpected condition produces a response that
 contains a structured error.
 
-By default, the error data structures returned to clients contains three fields:
-an id, a status and a message.
+By default, the error data structures returned to clients contain four fields:
+an id, a message and two boolean values indicating whether the error is
+temporary and/or a timeout.
 
 * The id is unique for each occurrence of the error, it helps correlate the
   content of the response with the content of the service logs for example.
 
-* The status carries the error handling semantic, whether the error can be
-  retried for example.
-
 * The message contains is specific to the error occurrence and is intended for
   human consumption.
 
-Instances of Error can be created via error class functions. New error classes
-can be created with NewErrorClass.
+* The temporary and timeout fields helps clients determine whether the request
+  should be retried.
 
-All instance of errors created via a error class implement the Error interface.
-This interface is leveraged by the error handler middleware to produce the error
-responses. The middleware takes care of mapping back any error returned by
-previously called middleware or endpoint handler into transport specific
-responses.
+Instances of Error can be created via the NewXXXError functions. The generated
+code uses these functions to produce the error responses in case of request
+validation errors.
 */
 package goa
 
@@ -34,95 +30,67 @@ import (
 	"strings"
 )
 
-const (
-	// StatusInvalid identifies badly formed requests.
-	StatusInvalid ErrorStatus = iota + 1
-	// StatusUnauthorized indicates the request is not authorized.
-	StatusUnauthorized
-	// StatusTimeout identifies a request that timed out.
-	StatusTimeout
-	// StatusBug indicates an uncaught error.
-	StatusBug
-)
-
-var (
-	// ErrInvalid is the error class used to build responses for requests
-	// that fail validations.
-	ErrInvalid = NewErrorClass(StatusInvalid)
-	// ErrUnauthorized is a generic unauthorized error.
-	ErrUnauthorized = NewErrorClass(StatusUnauthorized)
-	// ErrTimeout is the error class used to build responses for requests
-	// that timed out.
-	ErrTimeout = NewErrorClass(StatusTimeout)
-	// ErrBug is the class of error used for uncaught errors.
-	ErrBug = NewErrorClass(StatusBug)
-)
-
 type (
-	// ErrorStatus defines the semantic attached to the error to inform
-	// error handlers. For example clients may use the status to determine
-	// whether a request should be retried.
-	ErrorStatus int
-
-	// ErrorClass is an error generating function.
-	// It accepts a format and values a la fmt.Fprintf.
-	ErrorClass func(format string, v ...interface{}) Error
-
-	// Error is the interface implemented by all errors created using a
-	// ErrorClass function.
-	Error interface {
-		// Error extends the error interface
-		error
-		// ID is a unique value associated with the occurrence of the
-		// error.
-		ID() string
-		// Status of error, informs clients on how to perform handling.
-		Status() ErrorStatus
-		// Message contains the occurrence specific error details.
-		Message() string
-	}
-
-	// serviceError is the error type used by the goa package.
-	serviceError struct {
-		id      string
-		status  ErrorStatus
-		message string
+	// ServiceError is the error type used by the goa package to encode and
+	// decode error responses.
+	ServiceError struct {
+		// ID is a unique value for each occurrence of the error.
+		ID string
+		// Message contains the specific error details.
+		Message string
+		// Is the error a timeout?
+		Timeout bool
+		// Is the error temporary?
+		Temporary bool
 	}
 )
 
-// NewErrorClass creates a error class with the given status.
-func NewErrorClass(status ErrorStatus) ErrorClass {
-	return func(format string, v ...interface{}) Error {
-		return &serviceError{
-			id:      newErrorID(),
-			status:  status,
-			message: fmt.Sprintf(format, v...),
-		}
-	}
+// PermanentError is an error class that indicates that the error is
+// definitive and that retrying the request is not needed.
+func PermanentError(format string, v ...interface{}) *ServiceError {
+	return newError(false, false, format, v...)
+}
+
+// TemporaryError is an error class that indicates that the error is
+// temporary and that retrying the request may be successful.
+func TemporaryError(format string, v ...interface{}) *ServiceError {
+	return newError(false, true, format, v...)
+}
+
+// PermanentTimeoutError is an error class that indicates a timeout
+// and that retrying the request is not needed.
+func PermanentTimeoutError(format string, v ...interface{}) *ServiceError {
+	return newError(true, false, format, v...)
+}
+
+// TemporaryTimeoutError is an error class that indicates a timeout
+// and that retrying the request may be successful.
+func TemporaryTimeoutError(format string, v ...interface{}) *ServiceError {
+	return newError(true, true, format, v...)
 }
 
 // MissingPayloadError is the error produced when a request is missing a
 // required payload.
 func MissingPayloadError() error {
-	return ErrInvalid("missing required payload")
+	return PermanentError("missing required payload")
 }
 
 // DecodePayloadError is the error produced when a request body cannot be
 // decoded successfully.
 func DecodePayloadError(msg string) error {
-	return ErrInvalid(msg)
+	return PermanentError(msg)
 }
 
 // InvalidFieldTypeError is the error produced when the type of a payload field
 // does not match the type defined in the design.
 func InvalidFieldTypeError(name string, val interface{}, expected string) error {
-	return ErrInvalid("invalid value %#v for %q, must be a %s", val, name, expected)
+	return PermanentError("invalid value %#v for %q, must be a %s", val, name, expected)
 }
 
 // MissingFieldError is the error produced when a payload is missing a required
 // field.
 func MissingFieldError(name, context string) error {
-	return ErrInvalid("%q is missing from %s", name, context)
+	return PermanentError("%q is missing from %s", name, context)
 }
 
 // InvalidEnumValueError is the error produced when the value of a payload field
@@ -132,19 +100,19 @@ func InvalidEnumValueError(name string, val interface{}, allowed []interface{}) 
 	for i, a := range allowed {
 		elems[i] = fmt.Sprintf("%#v", a)
 	}
-	return ErrInvalid("value of %s must be one of %s but got value %#v", name, strings.Join(elems, ", "), val)
+	return PermanentError("value of %s must be one of %s but got value %#v", name, strings.Join(elems, ", "), val)
 }
 
 // InvalidFormatError is the error produced when the value of a payload field
 // does not match the format validation defined in the design.
 func InvalidFormatError(name, target string, format Format, formatError error) error {
-	return ErrInvalid("%s must be formatted as a %s but got value %q, %s", name, format, target, formatError.Error())
+	return PermanentError("%s must be formatted as a %s but got value %q, %s", name, format, target, formatError.Error())
 }
 
 // InvalidPatternError is the error produced when the value of a payload field
 // does not match the pattern validation defined in the design.
 func InvalidPatternError(name, target string, pattern string) error {
-	return ErrInvalid("%s must match the regexp %q but got value %q", name, pattern, target)
+	return PermanentError("%s must match the regexp %q but got value %q", name, pattern, target)
 }
 
 // InvalidRangeError is the error produced when the value of a payload field does
@@ -155,7 +123,7 @@ func InvalidRangeError(name string, target interface{}, value interface{}, min b
 	if !min {
 		comp = "lesser or equal"
 	}
-	return ErrInvalid("%s must be %s than %d but got value %#v", name, comp, value, target)
+	return PermanentError("%s must be %s than %d but got value %#v", name, comp, value, target)
 }
 
 // InvalidLengthError is the error produced when the value of a payload field
@@ -165,7 +133,20 @@ func InvalidLengthError(name string, target interface{}, ln, value int, min bool
 	if !min {
 		comp = "lesser or equal"
 	}
-	return ErrInvalid("length of %s must be %s than %d but got value %#v (len=%d)", name, comp, value, target, ln)
+	return PermanentError("length of %s must be %s than %d but got value %#v (len=%d)", name, comp, value, target, ln)
+}
+
+// NewErrorID creates a unique 8 character ID that is well suited to use as an
+// error identifier.
+func NewErrorID() string {
+	// for the curious - simplifying a bit - the probability of 2 values being
+	// equal for n 6-bytes values is n^2 / 2^49. For n = 1 million this gives around
+	// 1 chance in 500. 6 bytes seems to be a good trade-off between probability of
+	// clashes and length of ID (6 * 4/3 = 8 chars) since clashes are not
+	// catastrophic.
+	b := make([]byte, 6)
+	io.ReadFull(rand.Reader, b)
+	return base64.RawURLEncoding.EncodeToString(b)
 }
 
 // MergeErrors updates an error by merging another into it. It first converts
@@ -192,49 +173,34 @@ func MergeErrors(err, other error) error {
 	if other == nil {
 		return err
 	}
-	e := asError(err).(*serviceError)
+	e := asError(err)
 	o := asError(other)
-	switch {
-	case e.status == StatusBug || o.Status() == StatusBug:
-		if e.status != StatusBug {
-			e.status = StatusBug
-		}
-	case e.status != o.Status():
-		e.status = StatusInvalid
-	}
-	e.message = e.message + "; " + o.Message()
+	e.Message = e.Message + "; " + o.Message
+	e.Timeout = e.Timeout && o.Timeout
+	e.Temporary = e.Temporary && o.Temporary
 
 	return e
 }
 
-func asError(err error) Error {
-	e, ok := err.(*serviceError)
+// Error returns the service error message.
+func (s *ServiceError) Error() string { return s.Message }
+
+func newError(timeout, temporary bool, format string, v ...interface{}) *ServiceError {
+	return &ServiceError{
+		ID:        NewErrorID(),
+		Message:   fmt.Sprintf(format, v...),
+		Timeout:   timeout,
+		Temporary: temporary,
+	}
+}
+
+func asError(err error) *ServiceError {
+	e, ok := err.(*ServiceError)
 	if !ok {
-		return &serviceError{
-			id:      newErrorID(),
-			status:  StatusBug,
-			message: err.Error(),
+		return &ServiceError{
+			ID:      NewErrorID(),
+			Message: err.Error(),
 		}
 	}
 	return e
-}
-
-// Error returns the error occurrence details.
-func (e *serviceError) Error() string {
-	return e.message
-}
-
-func (e *serviceError) Status() ErrorStatus { return e.status }
-func (e *serviceError) ID() string          { return e.id }
-func (e *serviceError) Message() string     { return e.message }
-
-// If you're curious - simplifying a bit - the probability of 2 values being
-// equal for n 6-bytes values is n^2 / 2^49. For n = 1 million this gives around
-// 1 chance in 500. 6 bytes seems to be a good trade-off between probability of
-// clashes and length of ID (6 * 4/3 = 8 chars) since clashes are not
-// catastrophic.
-func newErrorID() string {
-	b := make([]byte, 6)
-	io.ReadFull(rand.Reader, b)
-	return base64.RawURLEncoding.EncodeToString(b)
 }

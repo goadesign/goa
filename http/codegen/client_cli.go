@@ -257,7 +257,7 @@ func buildCommandData(svc *ServiceData) *commandData {
 		}
 	}
 	return &commandData{
-		Name:        name,
+		Name:        codegen.KebabCase(name),
 		VarName:     codegen.Goify(name, false),
 		Description: description,
 		Subcommands: subcommands,
@@ -278,7 +278,7 @@ func buildSubcommandData(svc *ServiceData, e *EndpointData) *subcommandData {
 	{
 		svcn := svc.Service.Name
 		en := e.Method.Name
-		name = en
+		name = codegen.KebabCase(en)
 		fullName = goify(svcn, en)
 		description = e.Method.Description
 		if description == "" {

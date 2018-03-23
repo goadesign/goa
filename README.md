@@ -56,8 +56,7 @@ go get -u goa.design/goa/...
 ### Vendoring
 
 Because goa generates and compiles code `dep` is not able to properly identify all the dependencies
-when running `dep init` in a goa project. The symptoms manifest themselves when running `goa gen`,
-the error is:
+when running `dep init` in a goa project. The symptoms manifest themselves when running `goa gen`:
 
 ```
 exit status 1
@@ -110,9 +109,9 @@ var _ = Service("calc", func() {
 		Payload(func() {
 			// Attribute describes an object field
 			Attribute("a", Int, "Left operand")
-      Attribute("b", Int, "Right operand")
-      // Both attributes must be provided when invoking "add"
-      Required("a", "b")
+			Attribute("b", Int, "Right operand")
+			// Both attributes must be provided when invoking "add"
+			Required("a", "b")
 		})
 		// Result describes the method result
 		// Here the result is a simple integer value
@@ -180,11 +179,11 @@ calc.go
 cmd/calccli/main.go
 cmd/calcsvc/main.go
 ```
-The tool generated the `main` functions for two tools: one that runs the server
-and one the client. The tool also generated a dummy service implementation that
-prints a log message. Again note that the `example` command is intended to
-generate just that: an *example*, in particular it is not intended to be re-run
-each time the design changes.
+The tool generated the `main` functions for two commands: one that runs the
+server and one the client. The tool also generated a dummy service
+implementation that prints a log message. Again note that the `example` command
+is intended to generate just that: an *example*, in particular it is not
+intended to be re-run each time the design changes.
 
 Let's implement our service by providing a proper implementation for the `add`
 method. goa generated a payload struct for the `add` method that contains both
@@ -300,21 +299,20 @@ containing the implementation for a HTTP handler that serves the `openapi.json`
 file.
 
 All we need to do is mount the handler on the service mux. Add the corresponding
-import statement:
+import statement to `cmd/calcsvc/main.go`:
 
 ```go
 import openapisvr "calcsvc/gen/http/openapi/server"
 ```
 
-and mount the handler by adding the following line in `cmd/calcsvc/main.go`
-after the mux creation (e.g. one the line after the `// Configure the mux.`
-comment):
+and mount the handler by adding the following line in the same file and after
+the mux creation (e.g. one the line after the `// Configure the mux.` comment):
 
 ```go
 openapisvr.Mount(mux)
 ```
 
-That's it, we now have a self-documenting service! Stop the running service
+That's it! we now have a self-documenting service. Stop the running service
 with CTRL-C. Rebuild and re-run it then make requests to the newly added
 `/swagger.json` endpoint:
 

@@ -107,9 +107,10 @@ func main() {
 		swaggerServer   *swaggersvr.Server
 	)
 	{
-		sommelierServer = sommeliersvr.New(sommelierEndpoints, mux, dec, enc)
-		storageServer = storagesvr.New(storageEndpoints, mux, dec, enc, cellar.StorageMultiAddDecoderFunc, cellar.StorageMultiUpdateDecoderFunc)
-		swaggerServer = swaggersvr.New(nil, mux, dec, enc)
+		eh := ErrorHandler(logger)
+		sommelierServer = sommeliersvr.New(sommelierEndpoints, mux, dec, enc, eh)
+		storageServer = storagesvr.New(storageEndpoints, mux, dec, enc, eh, cellar.StorageMultiAddDecoderFunc, cellar.StorageMultiUpdateDecoderFunc)
+		swaggerServer = swaggersvr.New(nil, mux, dec, enc, eh)
 	}
 
 	// Configure the mux.
@@ -144,15 +145,15 @@ func main() {
 	srv := &http.Server{Addr: *addr, Handler: handler}
 	go func() {
 		for _, m := range sommelierServer.Mounts {
-			logger.Printf("[cellar] service %q method %q mounted on %s %s", sommelierServer.Service(), m.Method, m.Verb, m.Pattern)
+			logger.Printf("method %q mounted on %s %s", m.Method, m.Verb, m.Pattern)
 		}
 		for _, m := range storageServer.Mounts {
-			logger.Printf("[cellar] service %q method %q mounted on %s %s", storageServer.Service(), m.Method, m.Verb, m.Pattern)
+			logger.Printf("method %q mounted on %s %s", m.Method, m.Verb, m.Pattern)
 		}
 		for _, m := range swaggerServer.Mounts {
-			logger.Printf("[cellar] service %q file %q mounted on %s %s", swaggerServer.Service(), m.Method, m.Verb, m.Pattern)
+			logger.Printf("file %q mounted on %s %s", m.Method, m.Verb, m.Pattern)
 		}
-		logger.Printf("[cellar] listening on %s", *addr)
+		logger.Printf("listening on %s", *addr)
 		errc <- srv.ListenAndServe()
 	}()
 
@@ -165,4 +166,15 @@ func main() {
 	srv.Shutdown(ctx)
 
 	logger.Println("exited")
+}
+
+// ErrorHandler returns a function that writes and logs the given error.
+// The function also writes and logs the error unique ID so that it's possible
+// to correlate.
+func ErrorHandler(logger *log.Logger) func(context.Context, http.ResponseWriter, error) {
+	return func(ctx context.Context, w http.ResponseWriter, err error) {
+		id := ctx.Value(middleware.RequestIDKey).(string)
+		w.Write([]byte("[" + id + "] encoding: " + err.Error()))
+		logger.Printf("[%s] ERROR: %s", id, err.Error())
+	}
 }

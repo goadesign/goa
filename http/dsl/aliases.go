@@ -363,13 +363,9 @@ func Enum(vals ...interface{}) {
 
 // Error describes a method error return value. The description includes a
 // unique name (in the scope of the method), an optional type, description and
-// DSL that further describes the type. If no type is specified then the goa
-// ErrorResult type is used. The DSL syntax is identical to the Attribute DSL.
-// Transport specific DSL may further describe the mapping between the error
-// type attributes and the serialized response.
-//
-// goa has a few predefined error names for the common cases, see ErrBadRequest
-// for example.
+// DSL that further describes the type. If no type is specified then the
+// built-in ErrorResult type is used. The DSL syntax is identical to the
+// Attribute DSL.
 //
 // Error must appear in the Service (to define error responses that apply to all
 // the service methods) or Method expressions.
@@ -878,9 +874,44 @@ func Service(name string, fn func()) *design.ServiceExpr {
 	return dsl.Service(name, fn)
 }
 
+// Temporary qualifies an error type as describing temporary (i.e. retryable)
+// errors.
+//
+// Temporary must appear in a Error expression.
+//
+// Temporary takes no argument.
+//
+// Example:
+//
+// var _ = Service("divider", func() {
+//      Error("request_timeout", func() {
+//              Temporary()
+//      })
+// })
+func Temporary() {
+	dsl.Temporary()
+}
+
 // TermsOfService describes the API terms of services or links to them.
 func TermsOfService(terms string) {
 	dsl.TermsOfService(terms)
+}
+
+// Timeout qualifies an error type as describing errors due to timeouts.
+//
+// Timeout must appear in a Error expression.
+//
+// Timeout takes no argument.
+//
+// Example:
+//
+// var _ = Service("divider", func() {
+//	Error("request_timeout", func() {
+//		Timeout()
+//	})
+// })
+func Timeout() {
+	dsl.Timeout()
 }
 
 // Title sets the API title used by the generated documentation and code comments.

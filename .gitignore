@@ -26,3 +26,5 @@ cmd/goagen/goagen
 /examples/cellar/cmd/cellarcli/cellarcli
 /examples/calc/cmd/calcsvc/calcsvc
 /examples/calc/cmd/calccli/calccli
+examples/error/cmd/dividercli/dividercli
+examples/error/cmd/dividersvc/dividersvc

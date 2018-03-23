@@ -32,17 +32,11 @@ type PickResponseBody []*StoredBottleResponseBody
 
 // PickNoCriteriaResponseBody is the type of the "sommelier" service "pick"
 // endpoint HTTP response body for the "no_criteria" error.
-type PickNoCriteriaResponseBody struct {
-	// Missing criteria
-	Value *string `form:"value,omitempty" json:"value,omitempty" xml:"value,omitempty"`
-}
+type PickNoCriteriaResponseBody string
 
 // PickNoMatchResponseBody is the type of the "sommelier" service "pick"
 // endpoint HTTP response body for the "no_match" error.
-type PickNoMatchResponseBody struct {
-	// No bottle matched given criteria
-	Value *string `form:"value,omitempty" json:"value,omitempty" xml:"value,omitempty"`
-}
+type PickNoMatchResponseBody string
 
 // StoredBottleResponseBody is used to define fields on response body types.
 type StoredBottleResponseBody struct {
@@ -125,18 +119,14 @@ func NewPickStoredBottleCollectionOK(body PickResponseBody) sommelier.StoredBott
 }
 
 // NewPickNoCriteria builds a sommelier service pick endpoint no_criteria error.
-func NewPickNoCriteria(body *PickNoCriteriaResponseBody) *sommelier.NoCriteria {
-	v := &sommelier.NoCriteria{
-		Value: *body.Value,
-	}
+func NewPickNoCriteria(body PickNoCriteriaResponseBody) sommelier.NoCriteria {
+	v := sommelier.NoCriteria(body)
 	return v
 }
 
 // NewPickNoMatch builds a sommelier service pick endpoint no_match error.
-func NewPickNoMatch(body *PickNoMatchResponseBody) *sommelier.NoMatch {
-	v := &sommelier.NoMatch{
-		Value: *body.Value,
-	}
+func NewPickNoMatch(body PickNoMatchResponseBody) sommelier.NoMatch {
+	v := sommelier.NoMatch(body)
 	return v
 }
 
@@ -148,22 +138,6 @@ func (body PickResponseBody) Validate() (err error) {
 				err = goa.MergeErrors(err, err2)
 			}
 		}
-	}
-	return
-}
-
-// Validate runs the validations defined on PickNoCriteriaResponseBody
-func (body *PickNoCriteriaResponseBody) Validate() (err error) {
-	if body.Value == nil {
-		err = goa.MergeErrors(err, goa.MissingFieldError("value", "body"))
-	}
-	return
-}
-
-// Validate runs the validations defined on PickNoMatchResponseBody
-func (body *PickNoMatchResponseBody) Validate() (err error) {
-	if body.Value == nil {
-		err = goa.MergeErrors(err, goa.MissingFieldError("value", "body"))
 	}
 	return
 }

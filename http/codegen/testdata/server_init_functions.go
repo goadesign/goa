@@ -7,14 +7,15 @@ func New(
 	mux goahttp.Muxer,
 	dec func(*http.Request) goahttp.Decoder,
 	enc func(context.Context, http.ResponseWriter) goahttp.Encoder,
+	eh func(context.Context, http.ResponseWriter, error),
 ) *Server {
 	return &Server{
 		Mounts: []*MountPoint{
 			{"MethodMultiEndpoints1", "GET", "/server_multi_endpoints/{id}"},
 			{"MethodMultiEndpoints2", "POST", "/server_multi_endpoints"},
 		},
-		MethodMultiEndpoints1: NewMethodMultiEndpoints1Handler(e.MethodMultiEndpoints1, mux, dec, enc),
-		MethodMultiEndpoints2: NewMethodMultiEndpoints2Handler(e.MethodMultiEndpoints2, mux, dec, enc),
+		MethodMultiEndpoints1: NewMethodMultiEndpoints1Handler(e.MethodMultiEndpoints1, mux, dec, enc, eh),
+		MethodMultiEndpoints2: NewMethodMultiEndpoints2Handler(e.MethodMultiEndpoints2, mux, dec, enc, eh),
 	}
 }
 `
@@ -26,13 +27,14 @@ func New(
 	mux goahttp.Muxer,
 	dec func(*http.Request) goahttp.Decoder,
 	enc func(context.Context, http.ResponseWriter) goahttp.Encoder,
+	eh func(context.Context, http.ResponseWriter, error),
 ) *Server {
 	return &Server{
 		Mounts: []*MountPoint{
 			{"MethodMultiBases", "GET", "/base_1/{id}"},
 			{"MethodMultiBases", "GET", "/base_2/{id}"},
 		},
-		MethodMultiBases: NewMethodMultiBasesHandler(e.MethodMultiBases, mux, dec, enc),
+		MethodMultiBases: NewMethodMultiBasesHandler(e.MethodMultiBases, mux, dec, enc, eh),
 	}
 }
 `
@@ -44,6 +46,7 @@ func New(
 	mux goahttp.Muxer,
 	dec func(*http.Request) goahttp.Decoder,
 	enc func(context.Context, http.ResponseWriter) goahttp.Encoder,
+	eh func(context.Context, http.ResponseWriter, error),
 ) *Server {
 	return &Server{
 		Mounts: []*MountPoint{
@@ -61,6 +64,7 @@ func New(
 	mux goahttp.Muxer,
 	dec func(*http.Request) goahttp.Decoder,
 	enc func(context.Context, http.ResponseWriter) goahttp.Encoder,
+	eh func(context.Context, http.ResponseWriter, error),
 ) *Server {
 	return &Server{
 		Mounts: []*MountPoint{
@@ -68,7 +72,7 @@ func New(
 			{"/path/to/file1.json", "GET", "/file1.json"},
 			{"/path/to/file2.json", "GET", "/file2.json"},
 		},
-		MethodMixed: NewMethodMixedHandler(e.MethodMixed, mux, dec, enc),
+		MethodMixed: NewMethodMixedHandler(e.MethodMixed, mux, dec, enc, eh),
 	}
 }
 `
@@ -80,13 +84,14 @@ func New(
 	mux goahttp.Muxer,
 	dec func(*http.Request) goahttp.Decoder,
 	enc func(context.Context, http.ResponseWriter) goahttp.Encoder,
+	eh func(context.Context, http.ResponseWriter, error),
 	ServiceMultipartMethodMultiBasesDecoderFn ServiceMultipartMethodMultiBasesDecoderFunc,
 ) *Server {
 	return &Server{
 		Mounts: []*MountPoint{
 			{"MethodMultiBases", "GET", "/"},
 		},
-		MethodMultiBases: NewMethodMultiBasesHandler(e.MethodMultiBases, mux, NewServiceMultipartMethodMultiBasesDecoder(mux, ServiceMultipartMethodMultiBasesDecoderFn), enc),
+		MethodMultiBases: NewMethodMultiBasesHandler(e.MethodMultiBases, mux, NewServiceMultipartMethodMultiBasesDecoder(mux, ServiceMultipartMethodMultiBasesDecoderFn), enc, eh),
 	}
 }
 `

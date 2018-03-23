@@ -251,11 +251,12 @@ const mainT = `func main() {
 	{{- end }}
 	)
 	{
+		eh := ErrorHandler(logger)
 	{{- range .Services }}
 		{{-  if .Endpoints }}
-		{{ .Service.PkgName }}Server = {{ .Service.PkgName }}svr.New({{ .Service.PkgName }}Endpoints, mux, dec, enc{{ range .Endpoints }}{{ if .MultipartRequestDecoder }}, {{ $.APIPkg }}.{{ .MultipartRequestDecoder.FuncName }}{{ end }}{{ end }})
+		{{ .Service.PkgName }}Server = {{ .Service.PkgName }}svr.New({{ .Service.PkgName }}Endpoints, mux, dec, enc, eh{{ range .Endpoints }}{{ if .MultipartRequestDecoder }}, {{ $.APIPkg }}.{{ .MultipartRequestDecoder.FuncName }}{{ end }}{{ end }})
 		{{-  else }}
-		{{ .Service.PkgName }}Server = {{ .Service.PkgName }}svr.New(nil, mux, dec, enc)
+		{{ .Service.PkgName }}Server = {{ .Service.PkgName }}svr.New(nil, mux, dec, enc, eh)
 		{{-  end }}
 	{{- end }}
 	}
@@ -273,6 +274,7 @@ const mainT = `func main() {
 			handler = middleware.Debug(mux, os.Stdout)(handler)
 		}
 		handler = middleware.Log(adapter)(handler)
+		handler = middleware.RequestID()(handler)
 	}
 
 	// Create channel used by both the signal handler and server goroutines
@@ -294,13 +296,13 @@ const mainT = `func main() {
 		{{- range .Services }}
 		for _, m := range {{ .Service.PkgName }}Server.Mounts {
 			{{- if .FileServers }}
-		  logger.Printf("[{{ $.APIPkg }}] service %q file %q mounted on %s %s", {{ .Service.PkgName }}Server.Service(), m.Method, m.Verb, m.Pattern)
+			logger.Printf("file %q mounted on %s %s", m.Method, m.Verb, m.Pattern)
 			{{- else }}
-			logger.Printf("[{{ $.APIPkg }}] service %q method %q mounted on %s %s", {{ .Service.PkgName }}Server.Service(), m.Method, m.Verb, m.Pattern)
+			logger.Printf("method %q mounted on %s %s", m.Method, m.Verb, m.Pattern)
 			{{- end }}
 		}
 		{{- end }}
-		logger.Printf("[{{ $.APIPkg }}] listening on %s", *addr)
+		logger.Printf("listening on %s", *addr)
 		errc <- srv.ListenAndServe()
 	}()
 
@@ -313,5 +315,16 @@ const mainT = `func main() {
 	srv.Shutdown(ctx)
 
 	logger.Println("exited")
+}
+
+// ErrorHandler returns a function that writes and logs the given error.
+// The function also writes and logs the error unique ID so that it's possible
+// to correlate.
+func ErrorHandler(logger *log.Logger) func(context.Context, http.ResponseWriter, error) {
+	return func(ctx context.Context, w http.ResponseWriter, err error) {
+		id := ctx.Value(middleware.RequestIDKey).(string)
+		w.Write([]byte("[" + id + "] encoding: " + err.Error()))
+		logger.Printf("[%s] ERROR: %s", id, err.Error())
+	}
 }
 `
