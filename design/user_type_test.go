@@ -17,7 +17,7 @@ func TestUserTypeExprIsCompatible(t *testing.T) {
 			values:   []interface{}{i},
 			expected: true,
 		},
-		"not comatible": {
+		"not compatible": {
 			typ:      Int,
 			values:   []interface{}{b},
 			expected: false,
