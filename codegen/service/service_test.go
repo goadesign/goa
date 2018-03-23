@@ -176,14 +176,17 @@ type AResult struct {
 
 		serviceLevelErrorCode = `// Error response result type
 type Error struct {
-	// a unique identifier for this particular occurrence of the problem.
+	// Name is the name of this class of errors.
+	Name string
+	// ID is a unique identifier for this particular occurrence of the problem.
 	ID string
-	// the HTTP status code applicable to this problem.
-	Status int
-	// an application-specific error code, expressed as a string value.
-	Code string
-	// a human-readable explanation specific to this occurrence of the problem.
+	// Message is a human-readable explanation specific to this occurrence of the
+	// problem.
 	Message string
+	// Is the error temporary?
+	Temporary bool
+	// Is the error a timeout?
+	Timeout bool
 }
 
 // Error returns "error".
@@ -191,13 +194,12 @@ func (e *Error) Error() string {
 	return "error"
 }
 
-// NewError initilializes a Error struct reference from a goa.Error
-func NewError(err goa.Error) *Error {
+// MakeError builds a Error from an error.
+func MakeError(err error) *Error {
 	return &Error{
-		ID:      err.ID(),
-		Status:  int(err.Status()),
-		Code:    "error",
-		Message: err.Message(),
+		Name:    "error",
+		ID:      goa.NewErrorID(),
+		Message: err.Error(),
 	}
 }
 `

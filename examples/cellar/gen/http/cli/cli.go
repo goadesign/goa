@@ -27,7 +27,7 @@ import (
 //
 func UsageCommands() string {
 	return `sommelier pick
-storage (list|show|add|remove|rate|multi_add|multi_update)
+storage (list|show|add|remove|rate|multi-add|multi-update)
 `
 }
 
@@ -80,10 +80,10 @@ func ParseEndpoint(
 		storageRateFlags = flag.NewFlagSet("rate", flag.ExitOnError)
 		storageRatePFlag = storageRateFlags.String("p", "REQUIRED", "map[uint32][]string is the payload type of the storage service rate method.")
 
-		storageMultiAddFlags    = flag.NewFlagSet("multi_add", flag.ExitOnError)
+		storageMultiAddFlags    = flag.NewFlagSet("multi-add", flag.ExitOnError)
 		storageMultiAddBodyFlag = storageMultiAddFlags.String("body", "REQUIRED", "")
 
-		storageMultiUpdateFlags    = flag.NewFlagSet("multi_update", flag.ExitOnError)
+		storageMultiUpdateFlags    = flag.NewFlagSet("multi-update", flag.ExitOnError)
 		storageMultiUpdateBodyFlag = storageMultiUpdateFlags.String("body", "REQUIRED", "")
 		storageMultiUpdateIdsFlag  = storageMultiUpdateFlags.String("ids", "", "")
 	)
@@ -157,10 +157,10 @@ func ParseEndpoint(
 			case "rate":
 				epf = storageRateFlags
 
-			case "multi_add":
+			case "multi-add":
 				epf = storageMultiAddFlags
 
-			case "multi_update":
+			case "multi-update":
 				epf = storageMultiUpdateFlags
 
 			}
@@ -216,10 +216,10 @@ func ParseEndpoint(
 				if err != nil {
 					return nil, nil, fmt.Errorf("invalid JSON for storageRatePFlag, example of valid JSON:\n%s", "'{\n      \"1619338135\": [\n         \"Laboriosam consequatur delectus doloribus.\",\n         \"Est mollitia.\",\n         \"Voluptas ex enim.\",\n         \"Est explicabo eveniet dolore.\"\n      ],\n      \"1681700938\": [\n         \"Magnam ut consequatur.\",\n         \"Quo rerum et ut omnis praesentium non.\"\n      ]\n   }'")
 				}
-			case "multi_add":
+			case "multi-add":
 				endpoint = c.MultiAdd(storageMultiAddEncoderFn)
 				data, err = storagec.BuildMultiAddPayload(*storageMultiAddBodyFlag)
-			case "multi_update":
+			case "multi-update":
 				endpoint = c.MultiUpdate(storageMultiUpdateEncoderFn)
 				data, err = storagec.BuildMultiUpdatePayload(*storageMultiUpdateBodyFlag, *storageMultiUpdateIdsFlag)
 			}
@@ -277,8 +277,8 @@ COMMAND:
     add: Add new bottle and return its ID.
     remove: Remove bottle from storage
     rate: Rate bottles by IDs
-    multi_add: Add n number of bottles and return their IDs. This is a multipart request and each part has field name 'bottle' and contains the encoded bottle info to be added.
-    multi_update: Update bottles with the given IDs. This is a multipart request and each part has field name 'bottle' and contains the encoded bottle info to be updated. The IDs in the query parameter is mapped to each part in the request.
+    multi-add: Add n number of bottles and return their IDs. This is a multipart request and each part has field name 'bottle' and contains the encoded bottle info to be added.
+    multi-update: Update bottles with the given IDs. This is a multipart request and each part has field name 'bottle' and contains the encoded bottle info to be updated. The IDs in the query parameter is mapped to each part in the request.
 
 Additional help:
     %s storage COMMAND --help
@@ -380,7 +380,7 @@ Example:
 }
 
 func storageMultiAddUsage() {
-	fmt.Fprintf(os.Stderr, `%s [flags] storage multi_add -body JSON
+	fmt.Fprintf(os.Stderr, `%s [flags] storage multi-add -body JSON
 
 Add n number of bottles and return their IDs. This is a multipart request and each part has field name 'bottle' and contains the encoded bottle info to be added.
     -body JSON: 
@@ -436,7 +436,7 @@ Example:
 }
 
 func storageMultiUpdateUsage() {
-	fmt.Fprintf(os.Stderr, `%s [flags] storage multi_update -body JSON -ids JSON
+	fmt.Fprintf(os.Stderr, `%s [flags] storage multi-update -body JSON -ids JSON
 
 Update bottles with the given IDs. This is a multipart request and each part has field name 'bottle' and contains the encoded bottle info to be updated. The IDs in the query parameter is mapped to each part in the request.
     -body JSON: 

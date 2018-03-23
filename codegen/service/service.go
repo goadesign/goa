@@ -125,13 +125,18 @@ func (e {{ .Ref }}) Error() string {
 `
 
 // input: map[string]{"Type": TypeData, "Error": ErrorData}
-const errorInitT = `{{ printf "%s initilializes a %s struct reference from a goa.Error" .Name .TypeName |  comment }}
-func {{ .Name }}(err goa.Error) {{ .TypeRef }} {
+const errorInitT = `{{ printf "%s builds a %s from an error." .Name .TypeName |  comment }}
+func {{ .Name }}(err error) {{ .TypeRef }} {
 	return &{{ .TypeName }}{
-		ID: err.ID(),
-		Status: int(err.Status()),
-		Code: {{ printf "%q" .ErrName }},
-		Message: err.Message(),
+		Name: {{ printf "%q" .ErrName }},
+		ID: goa.NewErrorID(),
+		Message: err.Error(),
+	{{- if .Temporary }}
+		Temporary: true,
+	{{- end }}
+	{{- if .Timeout }}
+		Timeout: true,
+	{{- end }}
 	}
 }
 `

@@ -38,6 +38,7 @@ func New(
 	mux goahttp.Muxer,
 	dec func(*http.Request) goahttp.Decoder,
 	enc func(context.Context, http.ResponseWriter) goahttp.Encoder,
+	eh func(context.Context, http.ResponseWriter, error),
 ) *Server {
 	return &Server{
 		Mounts: []*MountPoint{

@@ -130,7 +130,7 @@ func (dd *debugDoer) Fprint(w io.Writer) {
 
 // Error builds an error message.
 func (c *clientError) Error() string {
-	return fmt.Sprintf("client [%s %s]: %s", c.service, c.method, c.message)
+	return fmt.Sprintf("[%s %s]: %s", c.service, c.method, c.message)
 }
 
 // ErrInvalidType is the error returned when the wrong type is given to an
@@ -170,9 +170,10 @@ func ErrInvalidResponse(svc, m string, code int, body string) error {
 	}
 	msg := fmt.Sprintf("invalid response code %#v"+b+"%s", code, body)
 
-	temporary := code == http.StatusConflict ||
+	temporary := code == http.StatusServiceUnavailable ||
+		code == http.StatusConflict ||
 		code == http.StatusTooManyRequests ||
-		code == http.StatusServiceUnavailable
+		code == http.StatusGatewayTimeout
 
 	timeout := code == http.StatusRequestTimeout ||
 		code == http.StatusGatewayTimeout

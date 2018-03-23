@@ -3,18 +3,13 @@ package http
 import (
 	"bytes"
 	"context"
-	"crypto/rand"
-	"encoding/base64"
 	"encoding/gob"
 	"encoding/json"
 	"encoding/xml"
-	"io"
 	"io/ioutil"
 	"mime"
 	"net/http"
 	"strings"
-
-	goa "goa.design/goa"
 )
 
 const (
@@ -159,28 +154,18 @@ func ResponseDecoder(resp *http.Response) Decoder {
 	}
 }
 
-// ErrorEncoder returns an encoder that checks whether the error is a goa Error
-// and if so sets the response status code using the error status and encodes
-// the corresponding ErrorResponse struct to the response body. If the error is
-// not a goa.Error then it sets the response status code to InternalServerError
-// (500) and writes the error message to the response body.
-func ErrorEncoder(encoder func(context.Context, http.ResponseWriter) Encoder) func(context.Context, http.ResponseWriter, error) {
-	return func(ctx context.Context, w http.ResponseWriter, v error) {
-		switch t := v.(type) {
-
-		case goa.Error:
-			enc := encoder(ctx, w)
-			w.WriteHeader(Status(t.Status()))
-			enc.Encode(NewErrorResponse(t))
-
-		default:
-			b := make([]byte, 6)
-			io.ReadFull(rand.Reader, b)
-			id := base64.RawURLEncoding.EncodeToString(b)
-			w.Header().Set("Content-Type", "text/plain")
-			w.WriteHeader(http.StatusInternalServerError)
-			w.Write([]byte(id + ": " + t.Error()))
-		}
+// ErrorEncoder returns an encoder that encodes errors returned by service
+// methods. The encoder checks whether the error is a goa ServiceError struct
+// and if so uses the error temporary and timeout fields to infer a proper HTTP
+// status code and marshals the error struct to the body using the provided
+// encoder. If the error is not a goa ServiceError struct then it is encoded
+// as a permanent internal server error.
+func ErrorEncoder(encoder func(context.Context, http.ResponseWriter) Encoder) func(context.Context, http.ResponseWriter, error) error {
+	return func(ctx context.Context, w http.ResponseWriter, err error) error {
+		enc := encoder(ctx, w)
+		resp := NewErrorResponse(err)
+		w.WriteHeader(resp.StatusCode())
+		return enc.Encode(resp)
 	}
 }
 

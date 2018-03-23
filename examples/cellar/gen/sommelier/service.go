@@ -78,22 +78,18 @@ type Component struct {
 	Percentage *uint32
 }
 
-type NoCriteria struct {
-	// Missing criteria
-	Value string
-}
+// Missing criteria
+type NoCriteria string
 
-type NoMatch struct {
-	// No bottle matched given criteria
-	Value string
-}
+// No bottle matched given criteria
+type NoMatch string
 
 // Error returns "no_criteria".
-func (e *NoCriteria) Error() string {
+func (e NoCriteria) Error() string {
 	return "no_criteria"
 }
 
 // Error returns "no_match".
-func (e *NoMatch) Error() string {
+func (e NoMatch) Error() string {
 	return "no_match"
 }

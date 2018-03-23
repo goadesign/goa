@@ -17,7 +17,7 @@ use data structures that use pointers for all fields to test for nil values in
 the unmarshaled data.
 
 The table below lists whether fields generated for user type attributes that are
-primitives use pointers (*) or direct values (-).
+primitives use pointers (\*) or direct values (-).
 
 * (s) : data structure generated for the server
 * (c) : data structure generated for the client
