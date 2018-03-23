@@ -71,6 +71,9 @@ func Temporary() {
 		eval.IncompatibleDSL()
 		return
 	}
+	if attr.Metadata == nil {
+		attr.Metadata = make(design.MetadataExpr)
+	}
 	attr.Metadata["goa:error:temporary"] = nil
 }
 
@@ -92,6 +95,9 @@ func Timeout() {
 	if !ok {
 		eval.IncompatibleDSL()
 		return
+	}
+	if attr.Metadata == nil {
+		attr.Metadata = make(design.MetadataExpr)
 	}
 	attr.Metadata["goa:error:timeout"] = nil
 }

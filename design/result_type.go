@@ -65,7 +65,7 @@ var (
 						"message": "Value of ID must be an integer",
 					},
 				}},
-				Validation: &ValidationExpr{Required: []string{"name", "id", "message"}},
+				Validation: &ValidationExpr{Required: []string{"name", "id", "message", "temporary", "timeout"}},
 			},
 			TypeName: "error",
 		},

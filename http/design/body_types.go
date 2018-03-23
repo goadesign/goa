@@ -191,11 +191,12 @@ func ErrorResponseBody(a *EndpointExpr, v *ErrorExpr) *design.AttributeExpr {
 	if !design.IsObject(result.Type) {
 		if len(*design.AsObject(resp.Headers().Type)) == 0 {
 			_, ok := result.Type.(design.UserType)
-			if !ok {
-				// Make sure this is not a primitive type in
-				// which case renaming is not needed.
-				renameType(result, name, suffix)
+			if ok {
+				// Need to dup to avoid modifying service level
+				// type name (e.g. error type)
+				result = design.DupAtt(result)
 			}
+			renameType(result, name, suffix)
 			return result
 		}
 		return &design.AttributeExpr{Type: design.Empty}

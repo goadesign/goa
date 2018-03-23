@@ -195,6 +195,23 @@ func (d ServicesData) analyze(service *design.ServiceExpr) *Data {
 			}
 		}
 		recordError := func(er *design.ErrorExpr) {
+			if er.Type == design.ErrorResult {
+				_, temporary := er.AttributeExpr.Metadata["goa:error:temporary"]
+				_, timeout := er.AttributeExpr.Metadata["goa:error:timeout"]
+				if temporary || timeout {
+					name := er.Name
+					if temporary {
+						name += "_temporary"
+					}
+					if timeout {
+						name += "_timeout"
+					}
+					er = &design.ErrorExpr{
+						AttributeExpr: er.AttributeExpr,
+						Name:          name,
+					}
+				}
+			}
 			errTypes = append(errTypes, collectTypes(er.AttributeExpr, seen, scope)...)
 			if er.Type == design.ErrorResult {
 				if _, ok := seenErrors[er.Name]; ok {

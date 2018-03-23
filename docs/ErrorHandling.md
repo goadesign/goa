@@ -154,11 +154,19 @@ Note how the description can be defined inline when the type is defined
 explicitly. The type may be `ErrorResult` which makes it possible to define a
 description inline in this case as well.
 
-When using a user defined type as error result type goa can be told which
-attribute contains the error name. The value of this attribute is compared with
-the names of the errors as defined in the design by the encoding and decoding
-code to infer the proper encoding details (e.g. HTTP status code). The attribute
-is identified using the special `struct:error:name` metadata:
+There are a couple of caveats to be aware of when using custom error result
+types:
+
+ 1. The `Temporary` and `Timeout` expressions have no effect on code generation
+    in this case as they otherwise set the corresponding field values on the
+    `ErrorResult` struct.
+
+ 2. If the custom type is a user defined type and if it is used to define
+    multiple errors on the same method then goa must be told which attribute
+    contains the error name. The value of this attribute is compared with the
+    names of the errors as defined in the design by the encoding and decoding
+    code to infer the proper encoding details (e.g. HTTP status code). The
+    attribute is identified using the special `struct:error:name` metadata:
 
 ```go
 var InsertConflict = ResultType("application/vnd.service.insertconflict", func() {
@@ -179,5 +187,15 @@ var InsertConflict = ResultType("application/vnd.service.insertconflict", func()
 })
 ```
 
-Having an attribute that holds the error name is only necessary if the type
-appears more than once in one method.
+## Error HTTP Response Encoding
+
+> Note: this section gives insight into how goa generates the encoding code for
+> errors, you don't need to read it to simply use errors in goa.
+
+The goa code generators leverage the HTTP status code provided in the `HTTP`
+expression if any to encode errors into HTTP responses. The code first switches
+on the type of the error value and matches that with the type of the errors
+defined in the design. If the type is a user provided type and has and attribute
+with the "struct:error:name" metadata defined then it compares the value of the
+corresponding field with the name of the errors in the design. 
+
