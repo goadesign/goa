@@ -11,6 +11,8 @@ import (
 
 	"context"
 
+	"sync"
+
 	"github.com/goadesign/goa"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -183,6 +185,48 @@ var _ = Describe("Service", func() {
 
 		It("creates a handler", func() {
 			Ω(muxHandler).ShouldNot(BeNil())
+		})
+
+		Context("with multiple instances and middlewares", func() {
+			var ctrl *goa.Controller
+			var handlers []goa.MuxHandler
+			var rws []*TestResponseWriter
+			var reqs []*http.Request
+			var p url.Values
+			var wg sync.WaitGroup
+
+			BeforeEach(func() {
+				nopHandler := func(context.Context, http.ResponseWriter, *http.Request) error {
+					return nil
+				}
+				ctrl = s.NewController("test")
+				for i := 0; i < 5; i++ {
+					ctrl.Service.Use(func(goa.Handler) goa.Handler {
+						return nopHandler
+					})
+				}
+				ctrl.Use(func(goa.Handler) goa.Handler { return nopHandler })
+				for i := 0; i < 10; i++ {
+					tmp := ctrl.MuxHandler("test", nopHandler, nil)
+					handlers = append(handlers, tmp)
+					rws = append(rws, &TestResponseWriter{})
+					req, _ := http.NewRequest("GET", "", nil)
+					reqs = append(reqs, req)
+				}
+				p = url.Values{}
+				wg = sync.WaitGroup{}
+				wg.Add(10)
+			})
+
+			It("doesn't race with parallel handler calls", func() {
+				for i := range handlers {
+					go func(j int) {
+						handlers[j](rws[j], reqs[j], p)
+						wg.Done()
+					}(i)
+				}
+				wg.Wait()
+			})
 		})
 
 		Context("with a request", func() {
