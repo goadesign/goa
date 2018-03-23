@@ -184,9 +184,9 @@ type Error struct {
 	// problem.
 	Message string
 	// Is the error temporary?
-	Temporary *bool
+	Temporary bool
 	// Is the error a timeout?
-	Timeout *bool
+	Timeout bool
 }
 
 // Error returns "error".

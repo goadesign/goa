@@ -9,12 +9,12 @@ func EncodeMethodPrimitiveErrorResponseError(encoder func(context.Context, http.
 		switch res := v.(type) {
 		case serviceprimitiveerrorresponse.BadRequest:
 			enc := encoder(ctx, w)
-			body := NewBadRequest(res)
+			body := NewMethodPrimitiveErrorResponseBadRequestResponseBody(res)
 			w.WriteHeader(http.StatusBadRequest)
 			return enc.Encode(body)
 		case serviceprimitiveerrorresponse.InternalError:
 			enc := encoder(ctx, w)
-			body := NewInternalError(res)
+			body := NewMethodPrimitiveErrorResponseInternalErrorResponseBody(res)
 			w.WriteHeader(http.StatusInternalServerError)
 			return enc.Encode(body)
 		default:

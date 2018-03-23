@@ -30,13 +30,13 @@ type PickRequestBody struct {
 // response body.
 type PickResponseBody []*StoredBottleResponseBody
 
-// NoCriteria is the type of the "sommelier" service "pick" endpoint HTTP
-// response body for the "no_criteria" error.
-type NoCriteria string
+// PickNoCriteriaResponseBody is the type of the "sommelier" service "pick"
+// endpoint HTTP response body for the "no_criteria" error.
+type PickNoCriteriaResponseBody string
 
-// NoMatch is the type of the "sommelier" service "pick" endpoint HTTP response
-// body for the "no_match" error.
-type NoMatch string
+// PickNoMatchResponseBody is the type of the "sommelier" service "pick"
+// endpoint HTTP response body for the "no_match" error.
+type PickNoMatchResponseBody string
 
 // StoredBottleResponseBody is used to define fields on response body types.
 type StoredBottleResponseBody struct {
@@ -119,13 +119,13 @@ func NewPickStoredBottleCollectionOK(body PickResponseBody) sommelier.StoredBott
 }
 
 // NewPickNoCriteria builds a sommelier service pick endpoint no_criteria error.
-func NewPickNoCriteria(body NoCriteria) sommelier.NoCriteria {
+func NewPickNoCriteria(body PickNoCriteriaResponseBody) sommelier.NoCriteria {
 	v := sommelier.NoCriteria(body)
 	return v
 }
 
 // NewPickNoMatch builds a sommelier service pick endpoint no_match error.
-func NewPickNoMatch(body NoMatch) sommelier.NoMatch {
+func NewPickNoMatch(body PickNoMatchResponseBody) sommelier.NoMatch {
 	v := sommelier.NoMatch(body)
 	return v
 }

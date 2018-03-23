@@ -90,7 +90,7 @@ func DecodePickResponse(decoder func(*http.Response) goahttp.Decoder, restoreBod
 			return NewPickStoredBottleCollectionOK(body), nil
 		case http.StatusBadRequest:
 			var (
-				body NoCriteria
+				body PickNoCriteriaResponseBody
 				err  error
 			)
 			err = decoder(resp).Decode(&body)
@@ -101,7 +101,7 @@ func DecodePickResponse(decoder func(*http.Response) goahttp.Decoder, restoreBod
 			return nil, NewPickNoCriteria(body)
 		case http.StatusNotFound:
 			var (
-				body NoMatch
+				body PickNoMatchResponseBody
 				err  error
 			)
 			err = decoder(resp).Decode(&body)
