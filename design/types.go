@@ -600,6 +600,37 @@ func UserTypes(dt DataType) map[string]*UserTypeDefinition {
 	}
 }
 
+// HasFile returns true if the underlying type has any file attributes.
+func HasFile(dt DataType) bool {
+	if dt == nil {
+		return false
+	}
+	switch {
+	case dt.IsPrimitive():
+		return dt.Kind() == FileKind
+	case dt.IsArray():
+		if HasFile(dt.ToArray().ElemType.Type) {
+			return true
+		}
+	case dt.IsHash():
+		if HasFile(dt.ToHash().KeyType.Type) {
+			return true
+		}
+		if HasFile(dt.ToHash().ElemType.Type) {
+			return true
+		}
+	case dt.IsObject():
+		for _, att := range dt.ToObject() {
+			if HasFile(att.Type) {
+				return true
+			}
+		}
+	default:
+		panic("unknown type")
+	}
+	return false
+}
+
 // ToSlice converts an ArrayVal to a slice.
 func (a ArrayVal) ToSlice() []interface{} {
 	arr := make([]interface{}, len(a))

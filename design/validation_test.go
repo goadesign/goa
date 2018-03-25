@@ -312,6 +312,113 @@ var _ = Describe("Validation", func() {
 		})
 	})
 
+	Context("with an action", func() {
+		var dsl func()
+
+		JustBeforeEach(func() {
+			dslengine.Reset()
+			Resource("foo", func() {
+				Action("bar", func() {
+					Routing(GET("/buz"))
+					dsl()
+				})
+			})
+			dslengine.Run()
+		})
+
+		Context("which has a file type param", func() {
+			BeforeEach(func() {
+				dsl = func() {
+					Params(func() {
+						Param("file", File)
+					})
+				}
+			})
+
+			It("produces an error", func() {
+				Ω(dslengine.Errors.Error()).Should(Equal(
+					`resource "foo" action "bar": Param file has an invalid type, action params cannot be a file`,
+				))
+			})
+		})
+
+		Context("which has a file array type param", func() {
+			BeforeEach(func() {
+				dsl = func() {
+					Params(func() {
+						Param("file_array", ArrayOf(File))
+					})
+				}
+			})
+
+			It("produces an error", func() {
+				Ω(dslengine.Errors.Error()).Should(Equal(
+					`resource "foo" action "bar": Param file_array has an invalid type, action params cannot be a file array`,
+				))
+			})
+		})
+
+		Context("which has a payload contains a file", func() {
+			dslengine.Reset()
+			var payload = Type("qux", func() {
+				Attribute("file", File)
+				Required("file")
+			})
+			dslengine.Run()
+
+			BeforeEach(func() {
+				dsl = func() {
+					Payload(payload)
+				}
+			})
+
+			It("produces an error", func() {
+				Ω(dslengine.Errors.Error()).Should(Equal(
+					`resource "foo" action "bar": Payload qux contains an invalid type, action payloads cannot contain a file`,
+				))
+			})
+
+			Context("and multipart form", func() {
+				BeforeEach(func() {
+					dsl = func() {
+						Payload(payload)
+						MultipartForm()
+					}
+				})
+
+				It("produces no error", func() {
+					Ω(dslengine.Errors).ShouldNot(HaveOccurred())
+				})
+			})
+		})
+
+		Context("which has a response contains a file", func() {
+			BeforeEach(func() {
+				dslengine.Reset()
+				var response = MediaType("application/vnd.goa.example", func() {
+					TypeName("quux")
+					Attributes(func() {
+						Attribute("file", File)
+						Required("file")
+					})
+					View("default", func() {
+						Attribute("file")
+					})
+				})
+				dslengine.Run()
+				dsl = func() {
+					Response(OK, response)
+				}
+			})
+
+			It("produces an error", func() {
+				Ω(dslengine.Errors.Error()).Should(Equal(
+					`resource "foo" action "bar": Response OK contains an invalid type, action responses cannot contain a file`,
+				))
+			})
+		})
+	})
+
 	Describe("EncoderDefinition", func() {
 		var (
 			enc           *EncodingDefinition
