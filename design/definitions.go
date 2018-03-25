@@ -1054,9 +1054,7 @@ func (a *AttributeDefinition) IsInterface(attName string) bool {
 	return att.Type.Kind() == AnyKind
 }
 
-// IsFile returns true if the field generated for the given attribute has
-// an file type that should not be referenced as a "*multipart.File" pointer.
-// The target attribute must be an object.
+// IsFile returns true if the attribute is of type File or if any its children attributes (if any) is.
 func (a *AttributeDefinition) IsFile(attName string) bool {
 	if !a.Type.IsObject() {
 		panic("checking pointer field on non-object") // bug
