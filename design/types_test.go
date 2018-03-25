@@ -2,6 +2,72 @@ package design
 
 import "testing"
 
+func TestAsObject(t *testing.T) {
+	var (
+		object = &Object{
+			&NamedAttributeExpr{
+				Name: "foo",
+				Attribute: &AttributeExpr{
+					Type: String,
+				},
+			},
+		}
+		objectUserType = &UserTypeExpr{
+			AttributeExpr: &AttributeExpr{
+				Type: object,
+			},
+		}
+		notObjectUserType = &UserTypeExpr{
+			AttributeExpr: &AttributeExpr{
+				Type: Boolean,
+			},
+		}
+		objectResultType = &ResultTypeExpr{
+			UserTypeExpr: objectUserType,
+		}
+		notObjectResultType = &ResultTypeExpr{
+			UserTypeExpr: notObjectUserType,
+		}
+	)
+	cases := map[string]struct {
+		dt       DataType
+		expected *Object
+	}{
+		"object user type": {
+			dt:       objectUserType,
+			expected: object,
+		},
+		"not object user type": {
+			dt:       notObjectUserType,
+			expected: nil,
+		},
+		"object result type": {
+			dt:       objectResultType,
+			expected: object,
+		},
+		"not object result type": {
+			dt:       notObjectResultType,
+			expected: nil,
+		},
+		"object": {
+			dt:       object,
+			expected: object,
+		},
+		"not object": {
+			dt:       Boolean,
+			expected: nil,
+		},
+	}
+
+	for k, tc := range cases {
+		if actual := AsObject(tc.dt); actual != tc.expected {
+			if Equal(actual, tc.expected) != true {
+				t.Errorf("%s: got %#v, expected %#v", k, actual, tc.expected)
+			}
+		}
+	}
+}
+
 func TestIsPrimitive(t *testing.T) {
 	var (
 		primitiveUserType = &UserTypeExpr{
