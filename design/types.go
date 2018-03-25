@@ -191,7 +191,7 @@ const (
 	// Any is the type for an arbitrary JSON value (interface{} in Go).
 	Any = Primitive(AnyKind)
 
-	// File is the type for a file.
+	// File is the type for a file. This type can only be used in a multipart definition.
 	File = Primitive(FileKind)
 )
 
