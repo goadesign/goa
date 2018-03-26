@@ -336,10 +336,16 @@ func (a *ActionDefinition) Validate() *dslengine.ValidationErrors {
 			}
 		}
 		verr.Merge(r.Validate())
+		if HasFile(r.Type) {
+			verr.Add(a, "Response %s contains an invalid type, action responses cannot contain a file", i)
+		}
 	}
 	verr.Merge(a.ValidateParams())
 	if a.Payload != nil {
 		verr.Merge(a.Payload.Validate("action payload", a))
+		if HasFile(a.Payload.Type) && a.PayloadMultipart != true {
+			verr.Add(a, "Payload %s contains an invalid type, action payloads cannot contain a file", a.Payload.TypeName)
+		}
 	}
 	if a.Parent == nil {
 		verr.Add(a, "missing parent resource")
@@ -347,10 +353,16 @@ func (a *ActionDefinition) Validate() *dslengine.ValidationErrors {
 	if a.Params != nil {
 		for n, p := range a.Params.Type.ToObject() {
 			if p.Type.IsPrimitive() {
+				if HasFile(p.Type) {
+					verr.Add(a, "Param %s has an invalid type, action params cannot be a file", n)
+				}
 				continue
 			}
 			if p.Type.IsArray() {
 				if p.Type.ToArray().ElemType.Type.IsPrimitive() {
+					if HasFile(p.Type.ToArray().ElemType.Type) {
+						verr.Add(a, "Param %s has an invalid type, action params cannot be a file array", n)
+					}
 					continue
 				}
 			}

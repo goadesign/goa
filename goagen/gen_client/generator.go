@@ -340,6 +340,7 @@ func (g *Generator) generateResourceClient(pkgDir string, res *design.ResourceDe
 		codegen.SimpleImport("net/url"),
 		codegen.SimpleImport("os"),
 		codegen.SimpleImport("path"),
+		codegen.SimpleImport("path/filepath"),
 		codegen.SimpleImport("strconv"),
 		codegen.SimpleImport("strings"),
 		codegen.SimpleImport("time"),
@@ -656,6 +657,12 @@ func (g *Generator) generateUserTypes(pkgDir string) (err error) {
 	}
 	g.genfiles = append(g.genfiles, utFile)
 	err = g.API.IterateUserTypes(func(t *design.UserTypeDefinition) error {
+		o := t.Type.ToObject()
+		for _, att := range o {
+			if att.Type.Kind() == design.FileKind {
+				att.Type = design.String
+			}
+		}
 		return utWr.Execute(t)
 	})
 	return
@@ -798,6 +805,8 @@ func toString(name, target string, att *design.AttributeDefinition) string {
 		case design.UUIDKind:
 			return fmt.Sprintf("%s := %s.String()", target, strings.Replace(name, "*", "", -1)) // remove pointer if present
 		case design.AnyKind:
+			return fmt.Sprintf("%s := fmt.Sprintf(\"%%v\", %s)", target, name)
+		case design.FileKind:
 			return fmt.Sprintf("%s := fmt.Sprintf(\"%%v\", %s)", target, name)
 		default:
 			panic("unknown primitive type")
@@ -1049,8 +1058,23 @@ func (c * Client) {{ .Name }}(ctx context.Context, {{ if .DirName }}filename, {{
 func (c *Client) {{ $funcName }}(ctx context.Context, path string{{ if .Params }}, {{ .Params }}{{ end }}{{ if .HasPayload }}{{ if .HasMultiContent }}, contentType string{{ end }}{{ end }}) (*http.Request, error) {
 {{ if .HasPayload }}	var body bytes.Buffer
 {{ if .PayloadMultipart }}	w := multipart.NewWriter(&body)
-{{ $o := .Payload.ToObject }}{{ range $name, $att := $o }}{{/*
+{{ $o := .Payload.ToObject }}{{ range $name, $att := $o }}{{ if eq $att.Type.Kind 13 }}{{/*
 */}}	{
+		_, file := filepath.Split({{ printf "payload.%s" (goify $name true) }})
+		fw, err := w.CreateFormFile("{{ $name }}", file)
+		if err != nil {
+			return nil, err
+		}
+		fh, err := os.Open({{ printf "payload.%s" (goify $name true) }})
+		if err != nil {
+			return nil, err
+		}
+		defer fh.Close()
+		if _, err := io.Copy(fw, fh); err != nil {
+			return nil, err
+		}
+	}
+{{ else }}	{
 		fw, err := w.CreateFormField("{{ $name }}")
 		if err != nil {
 			return nil, err
@@ -1060,7 +1084,7 @@ func (c *Client) {{ $funcName }}(ctx context.Context, path string{{ if .Params }
 			return nil, err
 		}
 	}
-{{ end }}	if err := w.Close(); err != nil {
+{{ end }}{{ end }}	if err := w.Close(); err != nil {
 		return nil, err
 	}
 {{ else }}{{ if .HasMultiContent }}	if contentType == "" {
