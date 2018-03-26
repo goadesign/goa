@@ -174,7 +174,7 @@ func byFormat(a *AttributeExpr, r *Random) interface{} {
 	if res, ok := map[ValidationFormat]interface{}{
 		FormatEmail:    r.faker.Email(),
 		FormatHostname: r.faker.DomainName() + "." + r.faker.DomainSuffix(),
-		FormatDateTime: time.Unix(int64(r.Int())%1454957045, 0).Format(time.RFC3339), // to obtain a "fixed" rand
+		FormatDateTime: time.Unix(int64(r.Int())%1454957045, 0).UTC().Format(time.RFC3339), // to obtain a "fixed" rand
 		FormatIPv4:     r.faker.IPv4Address().String(),
 		FormatIPv6:     r.faker.IPv6Address().String(),
 		FormatIP:       r.faker.IPv4Address().String(),
@@ -188,7 +188,7 @@ func byFormat(a *AttributeExpr, r *Random) interface{} {
 		}(),
 		FormatCIDR:    "192.168.100.14/24",
 		FormatRegexp:  r.faker.Characters(3) + ".*",
-		FormatRFC1123: time.Unix(int64(r.Int())%1454957045, 0).Format(time.RFC1123), // to obtain a "fixed" rand
+		FormatRFC1123: time.Unix(int64(r.Int())%1454957045, 0).UTC().Format(time.RFC1123), // to obtain a "fixed" rand
 	}[format]; ok {
 		return res
 	}
