@@ -492,6 +492,7 @@ func (g *Generator) generateUserTypes() (err error) {
 	title := fmt.Sprintf("%s: Application User Types", g.API.Context())
 	imports := []*codegen.ImportSpec{
 		codegen.SimpleImport("fmt"),
+		codegen.SimpleImport("mime/multipart"),
 		codegen.SimpleImport("time"),
 		codegen.SimpleImport("unicode/utf8"),
 		codegen.SimpleImport("github.com/goadesign/goa"),

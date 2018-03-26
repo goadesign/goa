@@ -3,6 +3,7 @@ package design
 import (
 	"crypto/md5"
 	"encoding/binary"
+	"fmt"
 	"math/rand"
 	"time"
 
@@ -71,4 +72,9 @@ func (r *RandomGenerator) Bool() bool {
 // Float64 produces a random float64 value.
 func (r *RandomGenerator) Float64() float64 {
 	return r.rand.Float64()
+}
+
+// File produces a random file.
+func (r *RandomGenerator) File() string {
+	return fmt.Sprintf("%sjpg", r.faker.Sentence(1, false))
 }

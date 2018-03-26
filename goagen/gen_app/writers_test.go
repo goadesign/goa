@@ -1171,6 +1171,9 @@ var _ = Describe("ControllersWriter", func() {
 									"id": &design.AttributeDefinition{
 										Type: design.String,
 									},
+									"icon": &design.AttributeDefinition{
+										Type: design.File,
+									},
 								},
 								Validation: required,
 							},
@@ -2318,6 +2321,12 @@ func unmarshalListBottlePayload(ctx context.Context, service *goa.Service, req *
 func unmarshalListBottlePayload(ctx context.Context, service *goa.Service, req *http.Request) error {
 	var err error
 	var payload listBottlePayload
+	_, rawIcon, err2 := req.FormFile("icon")
+	if err2 == nil {
+		payload.Icon = rawIcon
+	} else {
+		err = goa.MergeErrors(err, goa.InvalidParamTypeError("icon", "icon", "file"))
+	}
 	rawID := req.FormValue("id")
 	payload.ID = &rawID
 	if err != nil {

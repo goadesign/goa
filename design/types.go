@@ -163,6 +163,8 @@ const (
 	UserTypeKind
 	// MediaTypeKind represents a media type.
 	MediaTypeKind
+	// FileKind represents a file.
+	FileKind
 )
 
 const (
@@ -188,6 +190,9 @@ const (
 
 	// Any is the type for an arbitrary JSON value (interface{} in Go).
 	Any = Primitive(AnyKind)
+
+	// File is the type for a file. This type can only be used in a multipart definition.
+	File = Primitive(FileKind)
 )
 
 // DataType implementation
@@ -208,6 +213,8 @@ func (p Primitive) Name() string {
 		return "string"
 	case Any:
 		return "any"
+	case File:
+		return "file"
 	default:
 		panic("unknown primitive type") // bug
 	}
@@ -297,6 +304,8 @@ func (p Primitive) GenerateExample(r *RandomGenerator, seen []string) interface{
 	case Any:
 		// to not make it too complicated, pick one of the primitive types
 		return anyPrimitive[r.Int()%len(anyPrimitive)].GenerateExample(r, seen)
+	case File:
+		return r.File()
 	default:
 		panic("unknown primitive type") // bug
 	}
@@ -589,6 +598,37 @@ func UserTypes(dt DataType) map[string]*UserTypeDefinition {
 	default:
 		panic("unknown type") // bug
 	}
+}
+
+// HasFile returns true if the underlying type has any file attributes.
+func HasFile(dt DataType) bool {
+	if dt == nil {
+		return false
+	}
+	switch {
+	case dt.IsPrimitive():
+		return dt.Kind() == FileKind
+	case dt.IsArray():
+		if HasFile(dt.ToArray().ElemType.Type) {
+			return true
+		}
+	case dt.IsHash():
+		if HasFile(dt.ToHash().KeyType.Type) {
+			return true
+		}
+		if HasFile(dt.ToHash().ElemType.Type) {
+			return true
+		}
+	case dt.IsObject():
+		for _, att := range dt.ToObject() {
+			if HasFile(att.Type) {
+				return true
+			}
+		}
+	default:
+		panic("unknown type")
+	}
+	return false
 }
 
 // ToSlice converts an ArrayVal to a slice.
