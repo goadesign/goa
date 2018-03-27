@@ -111,7 +111,9 @@ func (s *storageSvc) Rate(ctx context.Context, p map[uint32][]string) error {
 	return nil
 }
 
-// Add n number of bottles and return their IDs.
+// Add n number of bottles and return their IDs. This is a multipart request
+// and each part has field name 'bottle' and contains the encoded bottle info
+// to be added.
 func (s *storageSvc) MultiAdd(ctx context.Context, p []*storage.Bottle) ([]string, error) {
 	newIDs := make([]string, 0, len(p))
 	for _, bottle := range p {
@@ -176,7 +178,9 @@ func StorageMultiAddEncoderFunc(mw *multipart.Writer, p []*storage.Bottle) error
 	return nil
 }
 
-// Update bottles with the given IDs.
+// Update bottles with the given IDs. This is a multipart request and each part
+// has field name 'bottle' and contains the encoded bottle info to be updated.
+// The IDs in the query parameter is mapped to each part in the request.
 func (s *storageSvc) MultiUpdate(ctx context.Context, p *storage.MultiUpdatePayload) error {
 	fmt.Println(fmt.Sprintf("%#v", p.Ids))
 	for _, id := range p.Ids {
