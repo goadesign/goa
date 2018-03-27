@@ -84,8 +84,7 @@ type (
 		Method *service.MethodData
 		// ServiceName is the name of the service exposing the endpoint.
 		ServiceName string
-		// ServiceVarName is the goified name of the service exposing
-		// the endpoint.
+		// ServiceVarName is the goified service name (first letter lowercase).
 		ServiceVarName string
 		// ServicePkgName is the name of the service package.
 		ServicePkgName string
@@ -549,7 +548,7 @@ func (d ServicesData) analyze(hs *httpdesign.ServiceExpr) *ServiceData {
 						suffix = strconv.Itoa(i + 1)
 					}
 					i++
-					name := fmt.Sprintf("%s%sPath%s", ep.VarName, svc.VarName, suffix)
+					name := fmt.Sprintf("%s%sPath%s", ep.VarName, svc.StructName, suffix)
 					for j, arg := range params {
 						att := pathParamsObj.Attribute(arg)
 						name := codegen.Goify(arg, false)
@@ -656,7 +655,7 @@ func (d ServicesData) analyze(hs *httpdesign.ServiceExpr) *ServiceData {
 		ad := &EndpointData{
 			Method:          ep,
 			ServiceName:     svc.Name,
-			ServiceVarName:  codegen.Goify(svc.Name, true),
+			ServiceVarName:  svc.VarName,
 			ServicePkgName:  svc.PkgName,
 			Payload:         payload,
 			Result:          buildResultData(svc, hs, a, rd),
@@ -676,16 +675,16 @@ func (d ServicesData) analyze(hs *httpdesign.ServiceExpr) *ServiceData {
 
 		if a.MultipartRequest {
 			ad.MultipartRequestDecoder = &MultipartData{
-				FuncName:    fmt.Sprintf("%s%sDecoderFunc", svc.VarName, ep.VarName),
-				InitName:    fmt.Sprintf("New%s%sDecoder", svc.VarName, ep.VarName),
+				FuncName:    fmt.Sprintf("%s%sDecoderFunc", svc.StructName, ep.VarName),
+				InitName:    fmt.Sprintf("New%s%sDecoder", svc.StructName, ep.VarName),
 				VarName:     fmt.Sprintf("%s%sDecoderFn", svc.Name, ep.VarName),
 				ServiceName: svc.Name,
 				MethodName:  ep.Name,
 				Payload:     ad.Payload,
 			}
 			ad.MultipartRequestEncoder = &MultipartData{
-				FuncName:    fmt.Sprintf("%s%sEncoderFunc", svc.VarName, ep.VarName),
-				InitName:    fmt.Sprintf("New%s%sEncoder", svc.VarName, ep.VarName),
+				FuncName:    fmt.Sprintf("%s%sEncoderFunc", svc.StructName, ep.VarName),
+				InitName:    fmt.Sprintf("New%s%sEncoder", svc.StructName, ep.VarName),
 				VarName:     fmt.Sprintf("%s%sEncoderFn", svc.Name, ep.VarName),
 				ServiceName: svc.Name,
 				MethodName:  ep.Name,

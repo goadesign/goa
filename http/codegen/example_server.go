@@ -131,25 +131,25 @@ func exampleMain(genpkg string, root *httpdesign.RootExpr) *codegen.File {
 
 // input: ServiceData
 const dummyServiceStructT = `{{ printf "%s service example implementation.\nThe example methods log the requests and return zero values." .Service.Name | comment }}
-type {{ .Service.PkgName }}Svc struct {
+type {{ .Service.VarName }}Svc struct {
 	logger *log.Logger
 }
 
-{{ printf "New%s returns the %s service implementation." .Service.VarName .Service.Name | comment }}
-func New{{ .Service.VarName }}(logger *log.Logger) {{ .Service.PkgName }}.Service {
-	return &{{ .Service.PkgName }}Svc{logger}
+{{ printf "New%s returns the %s service implementation." .Service.StructName .Service.Name | comment }}
+func New{{ .Service.StructName }}(logger *log.Logger) {{ .Service.PkgName }}.Service {
+	return &{{ .Service.VarName }}Svc{logger}
 }
 `
 
 // input: EndpointData
 const dummyEndpointImplT = `{{ comment .Method.Description }}
-func (s *{{ .ServicePkgName }}Svc) {{ .Method.VarName }}(ctx context.Context{{ if .Payload.Ref }}, p {{ .Payload.Ref }}{{ end }}) ({{ if .Result.Ref }}{{ .Result.Ref }}, {{ end }}error) {
+func (s *{{ .ServiceVarName }}Svc) {{ .Method.VarName }}(ctx context.Context{{ if .Payload.Ref }}, p {{ .Payload.Ref }}{{ end }}) ({{ if .Result.Ref }}{{ .Result.Ref }}, {{ end }}error) {
 {{- if and .Result.Ref .Result.IsStruct }}
 	res := &{{ .Result.Name }}{}
 {{- else if .Result.Ref }}
 	var res {{ .Result.Ref }}
 {{- end }}
-	s.logger.Print("{{ .ServiceName }}.{{ .Method.Name }}")
+	s.logger.Print("{{ .ServiceVarName }}.{{ .Method.Name }}")
 	return {{ if .Result.Ref }}res, {{ end }}nil
 }
 `
@@ -196,14 +196,14 @@ const mainT = `func main() {
 	var (
 	{{- range .Services }}
 		{{-  if .Endpoints }}
-		{{ .Service.PkgName }}Svc {{.Service.PkgName}}.Service
+		{{ .Service.VarName }}Svc {{.Service.PkgName}}.Service
 		{{-  end }}
 	{{- end }}
 	)
 	{
 	{{- range .Services }}
 		{{-  if .Endpoints }}
-		{{ .Service.PkgName }}Svc = {{ $.APIPkg }}.New{{ .Service.VarName }}(logger)
+		{{ .Service.VarName }}Svc = {{ $.APIPkg }}.New{{ .Service.StructName }}(logger)
 		{{-  end }}
 	{{- end }}
 	}
@@ -213,14 +213,14 @@ const mainT = `func main() {
 	var (
 	{{- range .Services }}
 		{{-  if .Endpoints }}
-		{{ .Service.PkgName }}Endpoints *{{.Service.PkgName}}.Endpoints
+		{{ .Service.VarName }}Endpoints *{{.Service.PkgName}}.Endpoints
 		{{-  end }}
 	{{- end }}
 	)
 	{
 	{{- range .Services }}
 		{{-  if .Endpoints }}
-		{{ .Service.PkgName }}Endpoints = {{ .Service.PkgName }}.NewEndpoints({{ .Service.PkgName }}Svc)
+		{{ .Service.VarName }}Endpoints = {{ .Service.PkgName }}.NewEndpoints({{ .Service.VarName }}Svc)
 		{{-  end }}
 	{{- end }}
 	}
@@ -247,23 +247,23 @@ const mainT = `func main() {
 	// responses.
 	var (
 	{{- range .Services }}
-		{{ .Service.PkgName }}Server *{{.Service.PkgName}}svr.Server
+		{{ .Service.VarName }}Server *{{.Service.PkgName}}svr.Server
 	{{- end }}
 	)
 	{
 		eh := ErrorHandler(logger)
 	{{- range .Services }}
 		{{-  if .Endpoints }}
-		{{ .Service.PkgName }}Server = {{ .Service.PkgName }}svr.New({{ .Service.PkgName }}Endpoints, mux, dec, enc, eh{{ range .Endpoints }}{{ if .MultipartRequestDecoder }}, {{ $.APIPkg }}.{{ .MultipartRequestDecoder.FuncName }}{{ end }}{{ end }})
+		{{ .Service.VarName }}Server = {{ .Service.PkgName }}svr.New({{ .Service.VarName }}Endpoints, mux, dec, enc, eh{{ range .Endpoints }}{{ if .MultipartRequestDecoder }}, {{ $.APIPkg }}.{{ .MultipartRequestDecoder.FuncName }}{{ end }}{{ end }})
 		{{-  else }}
-		{{ .Service.PkgName }}Server = {{ .Service.PkgName }}svr.New(nil, mux, dec, enc, eh)
+		{{ .Service.VarName }}Server = {{ .Service.PkgName }}svr.New(nil, mux, dec, enc, eh)
 		{{-  end }}
 	{{- end }}
 	}
 
 	// Configure the mux.
 	{{- range .Services }}
-	{{ .Service.PkgName }}svr.Mount(mux{{ if .Endpoints }}, {{ .Service.PkgName }}Server{{ end }})
+	{{ .Service.PkgName }}svr.Mount(mux{{ if .Endpoints }}, {{ .Service.VarName }}Server{{ end }})
 	{{- end }}
 
 	// Wrap the multiplexer with additional middlewares. Middlewares mounted
@@ -294,7 +294,7 @@ const mainT = `func main() {
 	srv := &http.Server{Addr: *addr, Handler: handler}
 	go func() {
 		{{- range .Services }}
-		for _, m := range {{ .Service.PkgName }}Server.Mounts {
+		for _, m := range {{ .Service.VarName }}Server.Mounts {
 			{{- if .FileServers }}
 			logger.Printf("file %q mounted on %s %s", m.Method, m.Verb, m.Pattern)
 			{{- else }}

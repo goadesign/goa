@@ -41,10 +41,10 @@ func main() {
 
 	// Create the structs that implement the services.
 	var (
-		calcsvcSvc calcsvc.Service
+		calcSvc calcsvc.Service
 	)
 	{
-		calcsvcSvc = calc.NewCalc(logger)
+		calcSvc = calc.NewCalc(logger)
 	}
 
 	// Wrap the services in endpoints that can be invoked from other
@@ -53,7 +53,7 @@ func main() {
 		calcsvcEndpoints *calcsvc.Endpoints
 	)
 	{
-		calcsvcEndpoints = calcsvc.NewEndpoints(calcsvcSvc)
+		calcsvcEndpoints = calcsvc.NewEndpoints(calcSvc)
 	}
 
 	// Provide the transport specific request decoder and response encoder.
