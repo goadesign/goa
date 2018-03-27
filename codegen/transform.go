@@ -322,12 +322,30 @@ func transformMap(source, target *design.Map, newVar bool, a targs) (string, err
 		"TargetPkg":   a.targetPkg,
 		"Unmarshal":   a.unmarshal,
 		"Scope":       a.scope,
+		"KeyLoopVar":  "",
+		"ValLoopVar":  "",
+	}
+	depth := 0
+	if mapDepth(target.KeyType.Type, &depth); depth > 0 {
+		data["KeyLoopVar"] = string(105 + depth)
+	}
+	depth = 0
+	if mapDepth(target.ElemType.Type, &depth); depth > 0 {
+		data["ValLoopVar"] = string(105 + depth)
 	}
 	var buf bytes.Buffer
 	if err := transformMapT.Execute(&buf, data); err != nil {
 		panic(err) // bug
 	}
 	return buf.String(), nil
+}
+
+func mapDepth(m design.DataType, depth *int) {
+	if mp := design.AsMap(m); mp != nil {
+		*depth++
+		mapDepth(mp.ElemType.Type, depth)
+	}
+	return
 }
 
 func transformAttributeHelpers(source, target design.DataType, a thargs, seen ...map[string]*TransformFunctionData) ([]*TransformFunctionData, error) {
@@ -561,8 +579,8 @@ for {{ .LoopVar }}, val := range {{ .Source }} {
 
 const transformMapTmpl = `{{ .Target }} {{ if .NewVar }}:{{ end }}= make(map[{{ .KeyTypeRef }}]{{ .ElemTypeRef }}, len({{ .Source }}))
 for key, val := range {{ .Source }} {
-	{{ transformAttribute .SourceKey .TargetKey "key" "tk" .SourcePkg .TargetPkg  .Unmarshal true .Scope -}}
-	{{ transformAttribute .SourceElem .TargetElem "val" "tv" .SourcePkg .TargetPkg .Unmarshal true .Scope -}}
-	{{ .Target }}[tk] = tv
+	{{ transformAttribute .SourceKey .TargetKey "key" (printf "tk%s" .KeyLoopVar) .SourcePkg .TargetPkg  .Unmarshal true .Scope -}}
+	{{ transformAttribute .SourceElem .TargetElem "val" (printf "tv%s" .ValLoopVar) .SourcePkg .TargetPkg .Unmarshal true .Scope -}}
+	{{ .Target }}[{{ printf "tk%s" .KeyLoopVar }}] = {{ printf "tv%s" .ValLoopVar }}
 }
 `
