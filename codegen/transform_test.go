@@ -13,6 +13,8 @@ var (
 	SuperObj      = require(object("a", design.String, "b", design.Int, "c", design.Boolean), "a")
 	SimpleArray   = array(design.String)
 	SimpleMap     = mapa(design.String, design.Int)
+	NestedMap     = mapa(design.String, SimpleMap.Type)
+	NestedMap2    = mapa(design.String, NestedMap.Type)
 	ArrayObj      = object("a", design.String, "b", SimpleArray.Type)
 	ArrayObj2     = object("a", design.String, "b", array(ArrayObj.Type).Type)
 	CompositeObj  = defaulta(require(object("aa", SimpleArray.Type, "bb", SimpleObj.Type), "bb"), "aa", []string{"foo", "bar"})
@@ -54,10 +56,13 @@ func TestGoTypeTransform(t *testing.T) {
 		// simple array and map
 		{"array-unmarshal", SimpleArray, SimpleArray, true, "", arrayCode},
 		{"map-unmarshal", SimpleMap, SimpleMap, true, "", mapCode},
+		{"nested-map-unmarshal", NestedMap, NestedMap, true, "", nestedMapCode},
 		{"object-array-unmarshal", ArrayObj, ArrayObj, true, "", arrayObjUnmarshalCode},
 
 		{"array-marshal", SimpleArray, SimpleArray, false, "", arrayCode},
 		{"map-marshal", SimpleMap, SimpleMap, false, "", mapCode},
+		{"nested-map-marshal", NestedMap, NestedMap, false, "", nestedMapCode},
+		{"nested-map-depth-2-marshal", NestedMap2, NestedMap2, false, "", nestedMap2Code},
 		{"object-array-marshal", ArrayObj, ArrayObj, false, "", arrayObjCode},
 		{"object-array-array-marshal", ArrayObj2, ArrayObj2, false, "", arrayObj2Code},
 
@@ -316,6 +321,41 @@ const mapCode = `func transform() {
 		tk := key
 		tv := val
 		target[tk] = tv
+	}
+}
+`
+
+const nestedMapCode = `func transform() {
+	target := make(map[string]map[string]int, len(source))
+	for key, val := range source {
+		tk := key
+		tvj := make(map[string]int, len(val))
+		for key, val := range val {
+			tk := key
+			tv := val
+			tvj[tk] = tv
+		}
+		target[tk] = tvj
+	}
+}
+`
+
+const nestedMap2Code = `func transform() {
+	target := make(map[string]map[string]map[string]int, len(source))
+	for key, val := range source {
+		tk := key
+		tvk := make(map[string]map[string]int, len(val))
+		for key, val := range val {
+			tk := key
+			tvj := make(map[string]int, len(val))
+			for key, val := range val {
+				tk := key
+				tv := val
+				tvj[tk] = tv
+			}
+			tvk[tk] = tvj
+		}
+		target[tk] = tvk
 	}
 }
 `
