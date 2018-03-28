@@ -340,10 +340,25 @@ func transformMap(source, target *design.Map, newVar bool, a targs) (string, err
 	return buf.String(), nil
 }
 
-func mapDepth(m design.DataType, depth *int) {
+func mapDepth(m design.DataType, depth *int, seen ...map[string]struct{}) {
 	if mp := design.AsMap(m); mp != nil {
 		*depth++
-		mapDepth(mp.ElemType.Type, depth)
+		mapDepth(mp.ElemType.Type, depth, seen...)
+	} else if mo := design.AsObject(m); mo != nil {
+		var s map[string]struct{}
+		if len(seen) > 0 {
+			s = seen[0]
+			if _, ok := s[m.Name()]; ok {
+				return
+			}
+		} else {
+			s = make(map[string]struct{})
+			seen = append(seen, s)
+		}
+		s[m.Name()] = struct{}{}
+		for _, nat := range *mo {
+			mapDepth(nat.Attribute.Type, depth, seen...)
+		}
 	}
 	return
 }

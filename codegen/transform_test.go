@@ -15,6 +15,7 @@ var (
 	SimpleMap     = mapa(design.String, design.Int)
 	NestedMap     = mapa(design.String, SimpleMap.Type)
 	NestedMap2    = mapa(design.String, NestedMap.Type)
+	MapArray      = mapa(design.String, array(mapa(design.String, mapa(design.String, design.Int).Type).Type).Type)
 	ArrayObj      = object("a", design.String, "b", SimpleArray.Type)
 	ArrayObj2     = object("a", design.String, "b", array(ArrayObj.Type).Type)
 	CompositeObj  = defaulta(require(object("aa", SimpleArray.Type, "bb", SimpleObj.Type), "bb"), "aa", []string{"foo", "bar"})
@@ -22,8 +23,12 @@ var (
 	ObjMap        = mapa(design.String, SimpleObj.Type)
 	UserType      = object("ut", &design.UserTypeExpr{TypeName: "User", AttributeExpr: SimpleObj})
 	ArrayUserType = array(&design.UserTypeExpr{TypeName: "User", AttributeExpr: RequiredObj})
+	SimpleObjMap  = object("a", design.String, "b", mapa(design.String, design.Int).Type)
+	SimpleMapObj  = mapa(design.String, SimpleObjMap.Type)
 
 	ObjWithMetadata = withMetadata(object("a", SimpleMap.Type, "b", design.Int), "a", metadata("struct:field:name", "Apple"))
+
+	recursiveObjMap = mapa(design.String, objRecursive(&design.UserTypeExpr{TypeName: "Recursive", AttributeExpr: object("a", design.String, "b", design.Int)}).Type)
 )
 
 func TestGoTypeTransform(t *testing.T) {
@@ -57,12 +62,18 @@ func TestGoTypeTransform(t *testing.T) {
 		{"array-unmarshal", SimpleArray, SimpleArray, true, "", arrayCode},
 		{"map-unmarshal", SimpleMap, SimpleMap, true, "", mapCode},
 		{"nested-map-unmarshal", NestedMap, NestedMap, true, "", nestedMapCode},
+		{"map-object-unmarshal", SimpleMapObj, SimpleMapObj, true, "", simpleMapObjCode},
+		{"nested-map-depth-2-unmarshal", NestedMap2, NestedMap2, true, "", nestedMap2Code},
+		{"recursive-object-map-unmarshal", recursiveObjMap, recursiveObjMap, true, "", recursiveObjMapUnmarshalCode},
 		{"object-array-unmarshal", ArrayObj, ArrayObj, true, "", arrayObjUnmarshalCode},
 
 		{"array-marshal", SimpleArray, SimpleArray, false, "", arrayCode},
 		{"map-marshal", SimpleMap, SimpleMap, false, "", mapCode},
+		{"map-object-marshal", SimpleMapObj, SimpleMapObj, false, "", simpleMapObjCode},
 		{"nested-map-marshal", NestedMap, NestedMap, false, "", nestedMapCode},
 		{"nested-map-depth-2-marshal", NestedMap2, NestedMap2, false, "", nestedMap2Code},
+		{"recursive-object-map-marshal", recursiveObjMap, recursiveObjMap, false, "", recursiveObjMapMarshalCode},
+		{"map-array", MapArray, MapArray, false, "", mapArrayCode},
 		{"object-array-marshal", ArrayObj, ArrayObj, false, "", arrayObjCode},
 		{"object-array-array-marshal", ArrayObj2, ArrayObj2, false, "", arrayObj2Code},
 
@@ -136,6 +147,15 @@ func mapa(keyt, elemt design.DataType) *design.AttributeExpr {
 	key := &design.AttributeExpr{Type: keyt}
 	elem := &design.AttributeExpr{Type: elemt}
 	return &design.AttributeExpr{Type: &design.Map{KeyType: key, ElemType: elem}}
+}
+
+func objRecursive(ut *design.UserTypeExpr) *design.UserTypeExpr {
+	obj := ut.AttributeExpr.Type.(*design.Object)
+	if obj == nil {
+		return nil
+	}
+	*obj = append(*obj, &design.NamedAttributeExpr{"rec", &design.AttributeExpr{Type: ut}})
+	return ut
 }
 
 func withMetadata(att *design.AttributeExpr, vals ...interface{}) *design.AttributeExpr {
@@ -356,6 +376,103 @@ const nestedMap2Code = `func transform() {
 			tvk[tk] = tvj
 		}
 		target[tk] = tvk
+	}
+}
+`
+
+const mapArrayCode = `func transform() {
+	target := make(map[string][]map[string]map[string]int, len(source))
+	for key, val := range source {
+		tk := key
+		tv := make([]map[string]map[string]int, len(val))
+		for i, val := range val {
+			tv[i] = make(map[string]map[string]int, len(val))
+			for key, val := range val {
+				tk := key
+				tvj := make(map[string]int, len(val))
+				for key, val := range val {
+					tk := key
+					tv := val
+					tvj[tk] = tv
+				}
+				tv[i][tk] = tvj
+			}
+		}
+		target[tk] = tv
+	}
+}
+`
+
+const recursiveObjMapMarshalCode = `func transform() {
+	target := make(map[string]struct {
+		A   *string
+		B   *int
+		Rec *Recursive
+	}, len(source))
+	for key, val := range source {
+		tk := key
+		tv := &struct {
+			A   *string
+			B   *int
+			Rec *Recursive
+		}{
+			A: val.A,
+			B: val.B,
+		}
+		if val.Rec != nil {
+			tv.Rec = marshalRecursiveToRecursive(val.Rec)
+		}
+		target[tk] = tv
+	}
+}
+`
+
+const recursiveObjMapUnmarshalCode = `func transform() {
+	target := make(map[string]struct {
+		A   *string
+		B   *int
+		Rec *Recursive
+	}, len(source))
+	for key, val := range source {
+		tk := key
+		tv := &struct {
+			A   *string
+			B   *int
+			Rec *Recursive
+		}{
+			A: val.A,
+			B: val.B,
+		}
+		if val.Rec != nil {
+			tv.Rec = unmarshalRecursiveToRecursive(val.Rec)
+		}
+		target[tk] = tv
+	}
+}
+`
+
+const simpleMapObjCode = `func transform() {
+	target := make(map[string]struct {
+		A *string
+		B map[string]int
+	}, len(source))
+	for key, val := range source {
+		tk := key
+		tvj := &struct {
+			A *string
+			B map[string]int
+		}{
+			A: val.A,
+		}
+		if val.B != nil {
+			tvj.B = make(map[string]int, len(val.B))
+			for key, val := range val.B {
+				tk := key
+				tv := val
+				tvj.B[tk] = tv
+			}
+		}
+		target[tk] = tvj
 	}
 }
 `
