@@ -22,6 +22,8 @@ var (
 	ObjMap        = mapa(design.String, SimpleObj.Type)
 	UserType      = object("ut", &design.UserTypeExpr{TypeName: "User", AttributeExpr: SimpleObj})
 	ArrayUserType = array(&design.UserTypeExpr{TypeName: "User", AttributeExpr: RequiredObj})
+	SimpleObjMap  = object("a", design.String, "b", mapa(design.String, design.Int).Type)
+	SimpleMapObj  = mapa(design.String, SimpleObjMap.Type)
 
 	ObjWithMetadata = withMetadata(object("a", SimpleMap.Type, "b", design.Int), "a", metadata("struct:field:name", "Apple"))
 )
@@ -61,6 +63,7 @@ func TestGoTypeTransform(t *testing.T) {
 
 		{"array-marshal", SimpleArray, SimpleArray, false, "", arrayCode},
 		{"map-marshal", SimpleMap, SimpleMap, false, "", mapCode},
+		{"map-object-marshal", SimpleMapObj, SimpleMapObj, false, "", simpleMapObjCode},
 		{"nested-map-marshal", NestedMap, NestedMap, false, "", nestedMapCode},
 		{"nested-map-depth-2-marshal", NestedMap2, NestedMap2, false, "", nestedMap2Code},
 		{"object-array-marshal", ArrayObj, ArrayObj, false, "", arrayObjCode},
@@ -356,6 +359,32 @@ const nestedMap2Code = `func transform() {
 			tvk[tk] = tvj
 		}
 		target[tk] = tvk
+	}
+}
+`
+
+const simpleMapObjCode = `func transform() {
+	target := make(map[string]struct {
+		A *string
+		B map[string]int
+	}, len(source))
+	for key, val := range source {
+		tk := key
+		tvj := &struct {
+			A *string
+			B map[string]int
+		}{
+			A: val.A,
+		}
+		if val.B != nil {
+			tvj.B = make(map[string]int, len(val.B))
+			for key, val := range val.B {
+				tk := key
+				tv := val
+				tvj.B[tk] = tv
+			}
+		}
+		target[tk] = tvj
 	}
 }
 `
