@@ -184,7 +184,11 @@ func transformObject(source, target *design.AttributeExpr, newVar bool, a targs)
 	if newVar {
 		assign = ":="
 	}
-	buffer.WriteString(fmt.Sprintf("%s %s &%s{%s}\n", a.targetVar, assign,
+	deref := "&"
+	if _, ok := target.Type.(*design.Object); ok {
+		deref = ""
+	}
+	buffer.WriteString(fmt.Sprintf("%s %s %s%s{%s}\n", a.targetVar, assign, deref,
 		a.scope.GoFullTypeName(target, a.targetPkg), initCode))
 	buffer.WriteString(postInitCode)
 	var err error
