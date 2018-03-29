@@ -170,6 +170,7 @@ func (s *NameScope) GoFullTypeName(att *design.AttributeExpr, pkg string) string
 }
 
 func goTypeRef(name string, dt design.DataType) string {
+	// For a raw struct, no need to dereference
 	if _, ok := dt.(*design.Object); ok {
 		return name
 	}

@@ -185,6 +185,7 @@ func transformObject(source, target *design.AttributeExpr, newVar bool, a targs)
 		assign = ":="
 	}
 	deref := "&"
+	// if the target is a raw struct no need to return a pointer
 	if _, ok := target.Type.(*design.Object); ok {
 		deref = ""
 	}
