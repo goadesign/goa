@@ -24,7 +24,9 @@ var (
 	UserType      = object("ut", &design.UserTypeExpr{TypeName: "User", AttributeExpr: SimpleObj})
 	ArrayUserType = array(&design.UserTypeExpr{TypeName: "User", AttributeExpr: RequiredObj})
 	SimpleObjMap  = object("a", design.String, "b", mapa(design.String, design.Int).Type)
+	NestedObjMap  = object("a", SimpleMap.Type, "b", NestedMap2.Type)
 	SimpleMapObj  = mapa(design.String, SimpleObjMap.Type)
+	NestedMapObj  = mapa(design.String, NestedObjMap.Type)
 
 	ObjWithMetadata = withMetadata(object("a", SimpleMap.Type, "b", design.Int), "a", metadata("struct:field:name", "Apple"))
 
@@ -64,17 +66,19 @@ func TestGoTypeTransform(t *testing.T) {
 		{"nested-map-unmarshal", NestedMap, NestedMap, true, "", nestedMapCode},
 		{"map-object-unmarshal", SimpleMapObj, SimpleMapObj, true, "", simpleMapObjCode},
 		{"nested-map-depth-2-unmarshal", NestedMap2, NestedMap2, true, "", nestedMap2Code},
+		{"nested-map-object-marshal", NestedMapObj, NestedMapObj, true, "", nestedMapObjCode},
 		{"recursive-object-map-unmarshal", recursiveObjMap, recursiveObjMap, true, "", recursiveObjMapUnmarshalCode},
 		{"object-array-unmarshal", ArrayObj, ArrayObj, true, "", arrayObjUnmarshalCode},
 
 		{"array-marshal", SimpleArray, SimpleArray, false, "", arrayCode},
 		{"map-marshal", SimpleMap, SimpleMap, false, "", mapCode},
 		{"map-object-marshal", SimpleMapObj, SimpleMapObj, false, "", simpleMapObjCode},
+		{"nested-map-object-unmarshal", NestedMapObj, NestedMapObj, false, "", nestedMapObjCode},
 		{"nested-map-marshal", NestedMap, NestedMap, false, "", nestedMapCode},
 		{"nested-map-depth-2-marshal", NestedMap2, NestedMap2, false, "", nestedMap2Code},
 		{"recursive-object-map-marshal", recursiveObjMap, recursiveObjMap, false, "", recursiveObjMapMarshalCode},
 		{"map-array", MapArray, MapArray, false, "", mapArrayCode},
-		{"object-array-marshal", ArrayObj, ArrayObj, false, "", arrayObjCode},
+		{"array-object-marshal", ArrayObj, ArrayObj, false, "", arrayObjCode},
 		{"object-array-array-marshal", ArrayObj2, ArrayObj2, false, "", arrayObj2Code},
 
 		// composite data structures
@@ -318,7 +322,7 @@ const arrayObj2Code = `func transform() {
 			B []string
 		}, len(source.B))
 		for j, val := range source.B {
-			target.B[j] = &struct {
+			target.B[j] = struct {
 				A *string
 				B []string
 			}{
@@ -349,13 +353,13 @@ const nestedMapCode = `func transform() {
 	target := make(map[string]map[string]int, len(source))
 	for key, val := range source {
 		tk := key
-		tvj := make(map[string]int, len(val))
+		tvb := make(map[string]int, len(val))
 		for key, val := range val {
 			tk := key
 			tv := val
-			tvj[tk] = tv
+			tvb[tk] = tv
 		}
-		target[tk] = tvj
+		target[tk] = tvb
 	}
 }
 `
@@ -364,18 +368,60 @@ const nestedMap2Code = `func transform() {
 	target := make(map[string]map[string]map[string]int, len(source))
 	for key, val := range source {
 		tk := key
-		tvk := make(map[string]map[string]int, len(val))
+		tvc := make(map[string]map[string]int, len(val))
 		for key, val := range val {
 			tk := key
-			tvj := make(map[string]int, len(val))
+			tvb := make(map[string]int, len(val))
 			for key, val := range val {
 				tk := key
 				tv := val
-				tvj[tk] = tv
+				tvb[tk] = tv
 			}
-			tvk[tk] = tvj
+			tvc[tk] = tvb
 		}
-		target[tk] = tvk
+		target[tk] = tvc
+	}
+}
+`
+
+const nestedMapObjCode = `func transform() {
+	target := make(map[string]struct {
+		A map[string]int
+		B map[string]map[string]map[string]int
+	}, len(source))
+	for key, val := range source {
+		tk := key
+		tvd := struct {
+			A map[string]int
+			B map[string]map[string]map[string]int
+		}{}
+		if val.A != nil {
+			tvd.A = make(map[string]int, len(val.A))
+			for key, val := range val.A {
+				tk := key
+				tv := val
+				tvd.A[tk] = tv
+			}
+		}
+		if val.B != nil {
+			tvd.B = make(map[string]map[string]map[string]int, len(val.B))
+			for key, val := range val.B {
+				tk := key
+				tvc := make(map[string]map[string]int, len(val))
+				for key, val := range val {
+					tk := key
+					tvb := make(map[string]int, len(val))
+					for key, val := range val {
+						tk := key
+						tv := val
+						tvb[tk] = tv
+					}
+					tvc[tk] = tvb
+				}
+				tvd.B[tk] = tvc
+			}
+		}
+		target[tk] = tvd
 	}
 }
 `
@@ -389,13 +435,13 @@ const mapArrayCode = `func transform() {
 			tv[i] = make(map[string]map[string]int, len(val))
 			for key, val := range val {
 				tk := key
-				tvj := make(map[string]int, len(val))
+				tvb := make(map[string]int, len(val))
 				for key, val := range val {
 					tk := key
 					tv := val
-					tvj[tk] = tv
+					tvb[tk] = tv
 				}
-				tv[i][tk] = tvj
+				tv[i][tk] = tvb
 			}
 		}
 		target[tk] = tv
@@ -411,7 +457,7 @@ const recursiveObjMapMarshalCode = `func transform() {
 	}, len(source))
 	for key, val := range source {
 		tk := key
-		tv := &struct {
+		tv := struct {
 			A   *string
 			B   *int
 			Rec *Recursive
@@ -435,7 +481,7 @@ const recursiveObjMapUnmarshalCode = `func transform() {
 	}, len(source))
 	for key, val := range source {
 		tk := key
-		tv := &struct {
+		tv := struct {
 			A   *string
 			B   *int
 			Rec *Recursive
@@ -458,21 +504,21 @@ const simpleMapObjCode = `func transform() {
 	}, len(source))
 	for key, val := range source {
 		tk := key
-		tvj := &struct {
+		tvb := struct {
 			A *string
 			B map[string]int
 		}{
 			A: val.A,
 		}
 		if val.B != nil {
-			tvj.B = make(map[string]int, len(val.B))
+			tvb.B = make(map[string]int, len(val.B))
 			for key, val := range val.B {
 				tk := key
 				tv := val
-				tvj.B[tk] = tv
+				tvb.B[tk] = tv
 			}
 		}
-		target[tk] = tvj
+		target[tk] = tvb
 	}
 }
 `
@@ -488,7 +534,7 @@ const compUnmarshalCode = `func transform() {
 	if source.Aa == nil {
 		target.Aa = []string{"foo", "bar"}
 	}
-	target.Bb = &struct {
+	target.Bb = struct {
 		A *string
 		B *int
 	}{
@@ -510,7 +556,7 @@ const compCode = `func transform() {
 		target.Aa = []string{"foo", "bar"}
 	}
 	if source.Bb != nil {
-		target.Bb = &struct {
+		target.Bb = struct {
 			A *string
 			B *int
 		}{
@@ -529,7 +575,7 @@ const compDefaultsPointersCode = `func transform() {
 	if source.Aa == nil {
 		target.Aa = "default"
 	}
-	target.Bb = &struct {
+	target.Bb = struct {
 		A *string
 		B *int
 	}{
@@ -545,7 +591,7 @@ const objArrayCode = `func transform() {
 		B *int
 	}, len(source))
 	for i, val := range source {
-		target[i] = &struct {
+		target[i] = struct {
 			A *string
 			B *int
 		}{
@@ -563,7 +609,7 @@ const objMapCode = `func transform() {
 	}, len(source))
 	for key, val := range source {
 		tk := key
-		tv := &struct {
+		tv := struct {
 			A *string
 			B *int
 		}{
