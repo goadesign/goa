@@ -194,7 +194,7 @@ func MapOf(k, v interface{}, fn ...func()) *design.Map {
 		return res
 	}
 	if design.IsMap(tk) {
-		eval.ReportError("invalid MapOf key argument: not a valid Go map key type")
+		eval.ReportError("invalid MapOf key type: key type must be a primitive, array, or user type")
 		return res
 	}
 	if tv == nil {
