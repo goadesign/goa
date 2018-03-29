@@ -131,6 +131,72 @@ func TestAsArray(t *testing.T) {
 	}
 }
 
+func TestAsMap(t *testing.T) {
+	var (
+		mapIntString = &Map{
+			KeyType: &AttributeExpr{
+				Type: Int,
+			},
+			ElemType: &AttributeExpr{
+				Type: String,
+			},
+		}
+		mapUserType = &UserTypeExpr{
+			AttributeExpr: &AttributeExpr{
+				Type: mapIntString,
+			},
+		}
+		notMapUserType = &UserTypeExpr{
+			AttributeExpr: &AttributeExpr{
+				Type: Boolean,
+			},
+		}
+		mapResultType = &ResultTypeExpr{
+			UserTypeExpr: mapUserType,
+		}
+		notMapResultType = &ResultTypeExpr{
+			UserTypeExpr: notMapUserType,
+		}
+	)
+	cases := map[string]struct {
+		dt       DataType
+		expected *Map
+	}{
+		"map user type": {
+			dt:       mapUserType,
+			expected: mapIntString,
+		},
+		"not map user type": {
+			dt:       notMapUserType,
+			expected: nil,
+		},
+		"map result type": {
+			dt:       mapResultType,
+			expected: mapIntString,
+		},
+		"not map result type": {
+			dt:       notMapResultType,
+			expected: nil,
+		},
+		"map": {
+			dt:       mapIntString,
+			expected: mapIntString,
+		},
+		"not map": {
+			dt:       Boolean,
+			expected: nil,
+		},
+	}
+
+	for k, tc := range cases {
+		if actual := AsMap(tc.dt); actual != tc.expected {
+			if Equal(actual, tc.expected) != true {
+				t.Errorf("%s: got %#v, expected %#v", k, actual, tc.expected)
+			}
+		}
+	}
+}
+
 func TestIsPrimitive(t *testing.T) {
 	var (
 		primitiveUserType = &UserTypeExpr{
