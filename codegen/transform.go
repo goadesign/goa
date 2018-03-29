@@ -322,16 +322,10 @@ func transformMap(source, target *design.Map, newVar bool, a targs) (string, err
 		"TargetPkg":   a.targetPkg,
 		"Unmarshal":   a.unmarshal,
 		"Scope":       a.scope,
-		"KeyLoopVar":  "",
-		"ValLoopVar":  "",
+		"LoopVar":     "",
 	}
-	depth := 0
-	if mapDepth(target.KeyType.Type, &depth); depth > 0 {
-		data["KeyLoopVar"] = string(105 + depth)
-	}
-	depth = 0
-	if mapDepth(target.ElemType.Type, &depth); depth > 0 {
-		data["ValLoopVar"] = string(105 + depth)
+	if depth := mapDepth(target); depth > 0 {
+		data["LoopVar"] = string(97 + depth)
 	}
 	var buf bytes.Buffer
 	if err := transformMapT.Execute(&buf, data); err != nil {
@@ -340,27 +334,40 @@ func transformMap(source, target *design.Map, newVar bool, a targs) (string, err
 	return buf.String(), nil
 }
 
-func mapDepth(m design.DataType, depth *int, seen ...map[string]struct{}) {
-	if mp := design.AsMap(m); mp != nil {
-		*depth++
-		mapDepth(mp.ElemType.Type, depth, seen...)
-	} else if mo := design.AsObject(m); mo != nil {
+// mapDepth returns the level of nested maps. If map not nested, it returns 0.
+func mapDepth(mp *design.Map) int {
+	return traverseMap(mp.ElemType.Type, 0)
+}
+
+func traverseMap(dt design.DataType, depth int, seen ...map[string]struct{}) int {
+	if mp := design.AsMap(dt); mp != nil {
+		depth++
+		depth = traverseMap(mp.ElemType.Type, depth, seen...)
+	} else if mo := design.AsObject(dt); mo != nil {
 		var s map[string]struct{}
 		if len(seen) > 0 {
 			s = seen[0]
-			if _, ok := s[m.Name()]; ok {
-				return
-			}
 		} else {
 			s = make(map[string]struct{})
 			seen = append(seen, s)
 		}
-		s[m.Name()] = struct{}{}
-		for _, nat := range *mo {
-			mapDepth(nat.Attribute.Type, depth, seen...)
+		if _, ok := s[dt.Name()]; ok {
+			return depth
 		}
+		s[dt.Name()] = struct{}{}
+		var level int
+		for _, nat := range *mo {
+			// if object type has attributes of type map then find out the attribute that has
+			// the deepest level of nested maps
+			lvl := 0
+			lvl = traverseMap(nat.Attribute.Type, lvl, seen...)
+			if lvl > level {
+				level = lvl
+			}
+		}
+		depth += level
 	}
-	return
+	return depth
 }
 
 func transformAttributeHelpers(source, target design.DataType, a thargs, seen ...map[string]*TransformFunctionData) ([]*TransformFunctionData, error) {
@@ -594,8 +601,8 @@ for {{ .LoopVar }}, val := range {{ .Source }} {
 
 const transformMapTmpl = `{{ .Target }} {{ if .NewVar }}:{{ end }}= make(map[{{ .KeyTypeRef }}]{{ .ElemTypeRef }}, len({{ .Source }}))
 for key, val := range {{ .Source }} {
-	{{ transformAttribute .SourceKey .TargetKey "key" (printf "tk%s" .KeyLoopVar) .SourcePkg .TargetPkg  .Unmarshal true .Scope -}}
-	{{ transformAttribute .SourceElem .TargetElem "val" (printf "tv%s" .ValLoopVar) .SourcePkg .TargetPkg .Unmarshal true .Scope -}}
-	{{ .Target }}[{{ printf "tk%s" .KeyLoopVar }}] = {{ printf "tv%s" .ValLoopVar }}
+	{{ transformAttribute .SourceKey .TargetKey "key" "tk" .SourcePkg .TargetPkg  .Unmarshal true .Scope -}}
+	{{ transformAttribute .SourceElem .TargetElem "val" (printf "tv%s" .LoopVar) .SourcePkg .TargetPkg .Unmarshal true .Scope -}}
+	{{ .Target }}[tk] = {{ printf "tv%s" .LoopVar }}
 }
 `
