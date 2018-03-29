@@ -193,6 +193,10 @@ func MapOf(k, v interface{}, fn ...func()) *design.Map {
 		eval.ReportError("invalid MapOf key argument: not a type and not a known user type name")
 		return res
 	}
+	if design.IsMap(tk) {
+		eval.ReportError("invalid MapOf key argument: not a valid Go map key type")
+		return res
+	}
 	if tv == nil {
 		eval.ReportError("invalid MapOf value argument: not a type and not a known user type name")
 		return res
