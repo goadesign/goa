@@ -13,18 +13,77 @@ type (
 
 	// plugin is a plugin that has been registered with a given command.
 	plugin struct {
+		// GenerateFunc is the plugin generator function.
 		GenerateFunc
+		// name is the plugin name.
+		name string
+		// cmd is the name of cmd to run.
 		cmd string
+		// if first is set the plugin cmd must run before all other plugins.
+		first bool
+		// if last is set the plugin cmd must run after all other plugins.
+		last bool
 	}
 )
 
-// plugins keeps track of the registered plugins.
+// plugins keeps track of the registered plugins sorted by their first/last bools,
+// names, or registration order.
 var plugins []*plugin
 
 // RegisterPlugin adds the plugin to the list of plugins to be invoked with the
 // given command.
-func RegisterPlugin(cmd string, p GenerateFunc) {
-	plugins = append(plugins, &plugin{p, cmd})
+func RegisterPlugin(name string, cmd string, p GenerateFunc) {
+	np := &plugin{name: name, GenerateFunc: p, cmd: cmd}
+	var inserted bool
+	for i, plgn := range plugins {
+		if plgn.last || (!plgn.first && np.name < plgn.name) {
+			plugins = append(plugins[:i], append([]*plugin{np}, plugins[i:]...)...)
+			inserted = true
+			break
+		}
+	}
+	if !inserted {
+		plugins = append(plugins, np)
+	}
+}
+
+// RegisterPluginFirst adds the plugin to the beginning of the list of plugins
+// to be invoked with the given command. If more than one plugins are registered
+// using this, the plugins will be sorted alphabetically by their names. If two
+// plugins have same names, then they are sorted by registration order.
+func RegisterPluginFirst(name string, cmd string, p GenerateFunc) {
+	np := &plugin{name: name, GenerateFunc: p, cmd: cmd, first: true}
+	var inserted bool
+	for i, plgn := range plugins {
+		if !plgn.first || np.name < plgn.name {
+			plugins = append(plugins[:i], append([]*plugin{np}, plugins[i:]...)...)
+			inserted = true
+			break
+		}
+	}
+	if !inserted {
+		plugins = append(plugins, np)
+	}
+}
+
+// RegisterPluginLast adds the plugin to the end of the list of plugins
+// to be invoked with the given command. If more than one plugins are registered
+// using this, the plugins will be sorted alphabetically by their names. If two
+// plugins have same names, then they are sorted by registration order.
+func RegisterPluginLast(name string, cmd string, p GenerateFunc) {
+	np := &plugin{name: name, GenerateFunc: p, cmd: cmd, last: true}
+	var inserted bool
+	for i := len(plugins) - 1; i >= 0; i-- {
+		plgn := plugins[i]
+		if !plgn.last || plgn.name < np.name {
+			plugins = append(plugins[:i+1], append([]*plugin{np}, plugins[i+1:]...)...)
+			inserted = true
+			break
+		}
+	}
+	if !inserted {
+		plugins = append(plugins, np)
+	}
 }
 
 // RunPlugins executes the plugins registered with the given command in the order
