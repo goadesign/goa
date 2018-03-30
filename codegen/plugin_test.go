@@ -7,31 +7,31 @@ import (
 
 func TestRegisterPlugin(t *testing.T) {
 	var (
-		abcP = &plugin{name: "abc"}
-		defP = &plugin{name: "def"}
+		p1 = &plugin{name: "abc"}
+		p2 = &plugin{name: "def"}
 
-		abcPFirst = &plugin{name: "abc", first: true}
+		pf1 = &plugin{name: "abc", first: true}
 
-		abcPLast = &plugin{name: "abc", last: true}
+		pl1 = &plugin{name: "abc", last: true}
 
-		pToInsert = &plugin{name: "cde"}
+		pIns = &plugin{name: "cde"}
 	)
 	tests := []struct {
 		name       string
 		existingPs []*plugin
 		expectedPs []*plugin
 	}{
-		{"no-plugins", []*plugin{}, []*plugin{pToInsert}},
-		{"plugins-without-first", []*plugin{abcP}, []*plugin{abcP, pToInsert}},
-		{"plugins-with-first", []*plugin{abcPFirst, defP}, []*plugin{abcPFirst, pToInsert, defP}},
-		{"plugins-with-same-name", []*plugin{abcPFirst, pToInsert, defP}, []*plugin{abcPFirst, pToInsert, pToInsert, defP}},
-		{"plugins-with-last", []*plugin{abcPFirst, abcPLast}, []*plugin{abcPFirst, pToInsert, abcPLast}},
-		{"mixed", []*plugin{abcPFirst, abcP, defP}, []*plugin{abcPFirst, abcP, pToInsert, defP}},
+		{"no-plugins", []*plugin{}, []*plugin{pIns}},
+		{"plugins-without-first", []*plugin{p1}, []*plugin{p1, pIns}},
+		{"plugins-with-first", []*plugin{pf1, p2}, []*plugin{pf1, pIns, p2}},
+		{"plugins-with-same-name", []*plugin{pf1, pIns, p2}, []*plugin{pf1, pIns, pIns, p2}},
+		{"plugins-with-last", []*plugin{pf1, pl1}, []*plugin{pf1, pIns, pl1}},
+		{"mixed", []*plugin{pf1, p1, p2}, []*plugin{pf1, p1, pIns, p2}},
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			plugins = tc.existingPs
-			RegisterPlugin(pToInsert.name, "", nil)
+			RegisterPlugin(pIns.name, "", nil)
 			if !reflect.DeepEqual(plugins, tc.expectedPs) {
 				t.Errorf("invalid plugin registration order")
 			}
@@ -41,32 +41,32 @@ func TestRegisterPlugin(t *testing.T) {
 
 func TestRegisterPluginFirst(t *testing.T) {
 	var (
-		abcP = &plugin{name: "abc"}
-		defP = &plugin{name: "def"}
+		p1 = &plugin{name: "abc"}
+		p2 = &plugin{name: "def"}
 
-		abcPFirst = &plugin{name: "abc", first: true}
-		defPFirst = &plugin{name: "def", first: true}
+		pf1 = &plugin{name: "abc", first: true}
+		pf2 = &plugin{name: "def", first: true}
 
-		abcPLast = &plugin{name: "abc", last: true}
+		pl1 = &plugin{name: "abc", last: true}
 
-		pToInsert = &plugin{name: "cde", first: true}
+		pIns = &plugin{name: "cde", first: true}
 	)
 	tests := []struct {
 		name       string
 		existingPs []*plugin
 		expectedPs []*plugin
 	}{
-		{"no-plugins", []*plugin{}, []*plugin{pToInsert}},
-		{"plugins-without-first", []*plugin{abcP, defP}, []*plugin{pToInsert, abcP, defP}},
-		{"plugins-with-first", []*plugin{abcPFirst, defPFirst}, []*plugin{abcPFirst, pToInsert, defPFirst}},
-		{"plugins-with-same-name", []*plugin{abcPFirst, pToInsert}, []*plugin{abcPFirst, pToInsert, pToInsert}},
-		{"plugins-with-last", []*plugin{abcPFirst, abcPLast}, []*plugin{abcPFirst, pToInsert, abcPLast}},
-		{"mixed", []*plugin{abcPFirst, defPFirst, abcP, defP}, []*plugin{abcPFirst, pToInsert, defPFirst, abcP, defP}},
+		{"no-plugins", []*plugin{}, []*plugin{pIns}},
+		{"plugins-without-first", []*plugin{p1, p2}, []*plugin{pIns, p1, p2}},
+		{"plugins-with-first", []*plugin{pf1, pf2}, []*plugin{pf1, pIns, pf2}},
+		{"plugins-with-same-name", []*plugin{pf1, pIns}, []*plugin{pf1, pIns, pIns}},
+		{"plugins-with-last", []*plugin{pf1, pl1}, []*plugin{pf1, pIns, pl1}},
+		{"mixed", []*plugin{pf1, pf2, p1, p2}, []*plugin{pf1, pIns, pf2, p1, p2}},
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			plugins = tc.existingPs
-			RegisterPluginFirst(pToInsert.name, "", nil)
+			RegisterPluginFirst(pIns.name, "", nil)
 			if !reflect.DeepEqual(plugins, tc.expectedPs) {
 				t.Errorf("invalid plugin registration order")
 			}
@@ -76,32 +76,32 @@ func TestRegisterPluginFirst(t *testing.T) {
 
 func TestRegisterPluginLast(t *testing.T) {
 	var (
-		abcP = &plugin{name: "abc"}
-		defP = &plugin{name: "def"}
+		p1 = &plugin{name: "abc"}
+		p2 = &plugin{name: "def"}
 
-		abcPLast = &plugin{name: "abc", last: true}
-		defPLast = &plugin{name: "def", last: true}
+		pl1 = &plugin{name: "abc", last: true}
+		pl2 = &plugin{name: "def", last: true}
 
-		abcPFirst = &plugin{name: "abc", first: true}
+		pf1 = &plugin{name: "abc", first: true}
 
-		pToInsert = &plugin{name: "cde", last: true}
+		pIns = &plugin{name: "cde", last: true}
 	)
 	tests := []struct {
 		name       string
 		existingPs []*plugin
 		expectedPs []*plugin
 	}{
-		{"no-plugins", []*plugin{}, []*plugin{pToInsert}},
-		{"plugins-without-last", []*plugin{abcP, defP}, []*plugin{abcP, defP, pToInsert}},
-		{"plugins-with-last", []*plugin{abcPLast, defPLast}, []*plugin{abcPLast, pToInsert, defPLast}},
-		{"plugins-with-same-name", []*plugin{abcPLast, pToInsert}, []*plugin{abcPLast, pToInsert, pToInsert}},
-		{"plugins-with-first", []*plugin{abcPFirst, defPLast}, []*plugin{abcPFirst, pToInsert, defPLast}},
-		{"mixed", []*plugin{abcPFirst, abcP, defP, abcPLast, defPLast}, []*plugin{abcPFirst, abcP, defP, abcPLast, pToInsert, defPLast}},
+		{"no-plugins", []*plugin{}, []*plugin{pIns}},
+		{"plugins-without-last", []*plugin{p1, p2}, []*plugin{p1, p2, pIns}},
+		{"plugins-with-last", []*plugin{pl1, pl2}, []*plugin{pl1, pIns, pl2}},
+		{"plugins-with-same-name", []*plugin{pl1, pIns}, []*plugin{pl1, pIns, pIns}},
+		{"plugins-with-first", []*plugin{pf1, pl2}, []*plugin{pf1, pIns, pl2}},
+		{"mixed", []*plugin{pf1, p1, p2, pl1, pl2}, []*plugin{pf1, p1, p2, pl1, pIns, pl2}},
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			plugins = tc.existingPs
-			RegisterPluginLast(pToInsert.name, "", nil)
+			RegisterPluginLast(pIns.name, "", nil)
 			if !reflect.DeepEqual(plugins, tc.expectedPs) {
 				t.Errorf("invalid plugin registration order")
 			}

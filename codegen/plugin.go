@@ -33,17 +33,17 @@ var plugins []*plugin
 // RegisterPlugin adds the plugin to the list of plugins to be invoked with the
 // given command.
 func RegisterPlugin(name string, cmd string, p GenerateFunc) {
-	newP := &plugin{name: name, GenerateFunc: p, cmd: cmd}
+	np := &plugin{name: name, GenerateFunc: p, cmd: cmd}
 	var inserted bool
 	for i, plgn := range plugins {
-		if plgn.last || (!plgn.first && newP.name < plgn.name) {
-			insertPlugin(newP, i)
+		if plgn.last || (!plgn.first && np.name < plgn.name) {
+			plugins = append(plugins[:i], append([]*plugin{np}, plugins[i:]...)...)
 			inserted = true
 			break
 		}
 	}
 	if !inserted {
-		plugins = append(plugins, newP)
+		plugins = append(plugins, np)
 	}
 }
 
@@ -52,17 +52,17 @@ func RegisterPlugin(name string, cmd string, p GenerateFunc) {
 // using this, the plugins will be sorted alphabetically by their names. If two
 // plugins have same names, then they are sorted by registration order.
 func RegisterPluginFirst(name string, cmd string, p GenerateFunc) {
-	newP := &plugin{name: name, GenerateFunc: p, cmd: cmd, first: true}
+	np := &plugin{name: name, GenerateFunc: p, cmd: cmd, first: true}
 	var inserted bool
 	for i, plgn := range plugins {
-		if !plgn.first || newP.name < plgn.name {
-			insertPlugin(newP, i)
+		if !plgn.first || np.name < plgn.name {
+			plugins = append(plugins[:i], append([]*plugin{np}, plugins[i:]...)...)
 			inserted = true
 			break
 		}
 	}
 	if !inserted {
-		plugins = append(plugins, newP)
+		plugins = append(plugins, np)
 	}
 }
 
@@ -71,18 +71,18 @@ func RegisterPluginFirst(name string, cmd string, p GenerateFunc) {
 // using this, the plugins will be sorted alphabetically by their names. If two
 // plugins have same names, then they are sorted by registration order.
 func RegisterPluginLast(name string, cmd string, p GenerateFunc) {
-	newP := &plugin{name: name, GenerateFunc: p, cmd: cmd, last: true}
+	np := &plugin{name: name, GenerateFunc: p, cmd: cmd, last: true}
 	var inserted bool
 	for i := len(plugins) - 1; i >= 0; i-- {
 		plgn := plugins[i]
-		if !plgn.last || plgn.name < newP.name {
-			insertPlugin(newP, i+1)
+		if !plgn.last || plgn.name < np.name {
+			plugins = append(plugins[:i+1], append([]*plugin{np}, plugins[i+1:]...)...)
 			inserted = true
 			break
 		}
 	}
 	if !inserted {
-		plugins = append(plugins, newP)
+		plugins = append(plugins, np)
 	}
 }
 
@@ -100,11 +100,4 @@ func RunPlugins(cmd, genpkg string, roots []eval.Root, genfiles []*File) ([]*Fil
 		genfiles = gs
 	}
 	return genfiles, nil
-}
-
-// insertPlugin inserts the plugin into the list of plugins at the given index.
-func insertPlugin(p *plugin, index int) {
-	plugins = append(plugins, &plugin{})
-	copy(plugins[index+1:], plugins[index:])
-	plugins[index] = p
 }
