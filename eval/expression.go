@@ -21,7 +21,7 @@ type (
 		WalkSets(SetWalker)
 		// DependsOn returns the list of other DSL roots this root
 		// depends on.  The engine uses this function to order the
-		// execution of the DSL roots and the code generators.
+		// execution of the DSL roots.
 		DependsOn() []Root
 		// Packages returns the import path to the Go packages that make
 		// up the DSL. This is used to skip frames that point to files

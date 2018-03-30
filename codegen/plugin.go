@@ -13,50 +13,98 @@ type (
 
 	// plugin is a plugin that has been registered with a given command.
 	plugin struct {
+		// GenerateFunc is the plugin generator function.
 		GenerateFunc
-		root eval.Root
-		cmd  string
+		// name is the plugin name.
+		name string
+		// cmd is the name of cmd to run.
+		cmd string
+		// if first is set the plugin cmd must run before all other plugins.
+		first bool
+		// if last is set the plugin cmd must run after all other plugins.
+		last bool
 	}
 )
 
-// plugins keeps track of the registered plugins.
+// plugins keeps track of the registered plugins sorted by their first/last bools,
+// names, or registration order.
 var plugins []*plugin
 
 // RegisterPlugin adds the plugin to the list of plugins to be invoked with the
 // given command.
-func RegisterPlugin(cmd string, root eval.Root, p GenerateFunc) {
-	plugins = append(plugins, &plugin{p, root, cmd})
+func RegisterPlugin(name string, cmd string, p GenerateFunc) {
+	newP := &plugin{name: name, GenerateFunc: p, cmd: cmd}
+	var inserted bool
+	for i, plgn := range plugins {
+		if plgn.last || (!plgn.first && newP.name < plgn.name) {
+			insertPlugin(newP, i)
+			inserted = true
+			break
+		}
+	}
+	if !inserted {
+		plugins = append(plugins, newP)
+	}
+}
+
+// RegisterPluginFirst adds the plugin to the beginning of the list of plugins
+// to be invoked with the given command. If more than one plugins are registered
+// using this, the plugins will be sorted alphabetically by their names. If two
+// plugins have same names, then they are sorted by registration order.
+func RegisterPluginFirst(name string, cmd string, p GenerateFunc) {
+	newP := &plugin{name: name, GenerateFunc: p, cmd: cmd, first: true}
+	var inserted bool
+	for i, plgn := range plugins {
+		if !plgn.first || newP.name < plgn.name {
+			insertPlugin(newP, i)
+			inserted = true
+			break
+		}
+	}
+	if !inserted {
+		plugins = append(plugins, newP)
+	}
+}
+
+// RegisterPluginLast adds the plugin to the end of the list of plugins
+// to be invoked with the given command. If more than one plugins are registered
+// using this, the plugins will be sorted alphabetically by their names. If two
+// plugins have same names, then they are sorted by registration order.
+func RegisterPluginLast(name string, cmd string, p GenerateFunc) {
+	newP := &plugin{name: name, GenerateFunc: p, cmd: cmd, last: true}
+	var inserted bool
+	for i := len(plugins) - 1; i >= 0; i-- {
+		plgn := plugins[i]
+		if !plgn.last || plgn.name < newP.name {
+			insertPlugin(newP, i+1)
+			inserted = true
+			break
+		}
+	}
+	if !inserted {
+		plugins = append(plugins, newP)
+	}
 }
 
 // RunPlugins executes the plugins registered with the given command in the order
-// of dependencies.
+// they were registered.
 func RunPlugins(cmd, genpkg string, roots []eval.Root, genfiles []*File) ([]*File, error) {
-	for _, r := range roots {
-		ps := findPlugins(r)
-		if len(ps) == 0 {
+	for _, plugin := range plugins {
+		if plugin.cmd != cmd {
 			continue
 		}
-		for _, plugin := range ps {
-			if plugin.cmd != cmd {
-				continue
-			}
-			gs, err := plugin.GenerateFunc(genpkg, roots, genfiles)
-			if err != nil {
-				return nil, err
-			}
-			genfiles = gs
+		gs, err := plugin.GenerateFunc(genpkg, roots, genfiles)
+		if err != nil {
+			return nil, err
 		}
+		genfiles = gs
 	}
 	return genfiles, nil
 }
 
-// findPlugins finds all registered plugins with the given Root expression.
-func findPlugins(root eval.Root) []*plugin {
-	ps := make([]*plugin, 0, len(plugins))
-	for _, plugin := range plugins {
-		if plugin.root == root {
-			ps = append(ps, plugin)
-		}
-	}
-	return ps
+// insertPlugin inserts the plugin into the list of plugins at the given index.
+func insertPlugin(p *plugin, index int) {
+	plugins = append(plugins, &plugin{})
+	copy(plugins[index+1:], plugins[index:])
+	plugins[index] = p
 }
