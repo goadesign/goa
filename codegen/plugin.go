@@ -14,7 +14,8 @@ type (
 	// plugin is a plugin that has been registered with a given command.
 	plugin struct {
 		GenerateFunc
-		cmd string
+		root eval.Root
+		cmd  string
 	}
 )
 
@@ -23,22 +24,39 @@ var plugins []*plugin
 
 // RegisterPlugin adds the plugin to the list of plugins to be invoked with the
 // given command.
-func RegisterPlugin(cmd string, p GenerateFunc) {
-	plugins = append(plugins, &plugin{p, cmd})
+func RegisterPlugin(cmd string, root eval.Root, p GenerateFunc) {
+	plugins = append(plugins, &plugin{p, root, cmd})
 }
 
 // RunPlugins executes the plugins registered with the given command in the order
-// they were registered.
+// of dependencies.
 func RunPlugins(cmd, genpkg string, roots []eval.Root, genfiles []*File) ([]*File, error) {
-	for _, plugin := range plugins {
-		if plugin.cmd != cmd {
+	for _, r := range roots {
+		ps := findPlugins(r)
+		if len(ps) == 0 {
 			continue
 		}
-		gs, err := plugin.GenerateFunc(genpkg, roots, genfiles)
-		if err != nil {
-			return nil, err
+		for _, plugin := range ps {
+			if plugin.cmd != cmd {
+				continue
+			}
+			gs, err := plugin.GenerateFunc(genpkg, roots, genfiles)
+			if err != nil {
+				return nil, err
+			}
+			genfiles = gs
 		}
-		genfiles = gs
 	}
 	return genfiles, nil
+}
+
+// findPlugins finds all registered plugins with the given Root expression.
+func findPlugins(root eval.Root) []*plugin {
+	ps := make([]*plugin, 0, len(plugins))
+	for _, plugin := range plugins {
+		if plugin.root == root {
+			ps = append(ps, plugin)
+		}
+	}
+	return ps
 }
