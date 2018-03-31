@@ -247,11 +247,13 @@ var _ = Describe("Generate", func() {
 
 		Context("with a multipart payload", func() {
 			BeforeEach(func() {
-				elemType := &design.AttributeDefinition{Type: design.Integer}
+				elemTypeInt := &design.AttributeDefinition{Type: design.Integer}
+				elemTypeFile := &design.AttributeDefinition{Type: design.File}
 				payload = &design.UserTypeDefinition{
 					AttributeDefinition: &design.AttributeDefinition{
 						Type: design.Object{
-							"int": elemType,
+							"int":  elemTypeInt,
+							"file": elemTypeFile,
 						},
 					},
 					TypeName: "Collection",
@@ -560,6 +562,12 @@ func MountWidgetController(service *goa.Service, ctrl WidgetController) {
 func unmarshalGetWidgetPayload(ctx context.Context, service *goa.Service, req *http.Request) error {
 	var err error
 	var payload collection
+	_, rawFile, err2 := req.FormFile("file")
+	if err2 == nil {
+		payload.File = rawFile
+	} else {
+		err = goa.MergeErrors(err, goa.InvalidParamTypeError("file", "file", "file"))
+	}
 	rawInt := req.FormValue("int")
 	if int_, err2 := strconv.Atoi(rawInt); err2 == nil {
 		tmp2 := int_
