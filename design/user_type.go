@@ -24,7 +24,15 @@ func NewUserTypeExpr(name string, fn func()) *UserTypeExpr {
 func (u *UserTypeExpr) Kind() Kind { return UserTypeKind }
 
 // Name returns the type name.
-func (u *UserTypeExpr) Name() string { return u.TypeName }
+func (u *UserTypeExpr) Name() string {
+	if u.AttributeExpr == nil {
+		return u.TypeName
+	}
+	if n, ok := u.AttributeExpr.Metadata["struct:type:name"]; ok {
+		return n[0]
+	}
+	return u.TypeName
+}
 
 // Rename changes the type name to the given value.
 func (u *UserTypeExpr) Rename(n string) { u.TypeName = n }
