@@ -29,7 +29,11 @@ import (
 //    })
 //
 func Error(name string, args ...interface{}) {
-	if len(args) == 0 {
+	er := len(args) == 0
+	if !er && len(args) == 1 {
+		_, er = args[0].(func())
+	}
+	if er {
 		args = []interface{}{design.ErrorResult}
 	}
 	dt, desc, fn := parseAttributeArgs(nil, args...)
