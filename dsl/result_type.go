@@ -122,6 +122,11 @@ func TypeName(name string) {
 	switch expr := eval.Current().(type) {
 	case design.UserType:
 		expr.Rename(name)
+	case *design.AttributeExpr:
+		if expr.Metadata == nil {
+			expr.Metadata = make(design.MetadataExpr)
+		}
+		expr.Metadata["struct:type:name"] = []string{name}
 	default:
 		eval.IncompatibleDSL()
 	}
