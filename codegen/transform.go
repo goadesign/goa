@@ -348,6 +348,8 @@ func traverseMap(dt design.DataType, depth int, seen ...map[string]struct{}) int
 	if mp := design.AsMap(dt); mp != nil {
 		depth++
 		depth = traverseMap(mp.ElemType.Type, depth, seen...)
+	} else if ar := design.AsArray(dt); ar != nil {
+		depth = traverseMap(ar.ElemType.Type, depth, seen...)
 	} else if mo := design.AsObject(dt); mo != nil {
 		var s map[string]struct{}
 		if len(seen) > 0 {

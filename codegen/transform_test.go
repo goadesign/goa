@@ -430,9 +430,9 @@ const mapArrayCode = `func transform() {
 	target := make(map[string][]map[string]map[string]int, len(source))
 	for key, val := range source {
 		tk := key
-		tv := make([]map[string]map[string]int, len(val))
+		tvc := make([]map[string]map[string]int, len(val))
 		for i, val := range val {
-			tv[i] = make(map[string]map[string]int, len(val))
+			tvc[i] = make(map[string]map[string]int, len(val))
 			for key, val := range val {
 				tk := key
 				tvb := make(map[string]int, len(val))
@@ -441,10 +441,10 @@ const mapArrayCode = `func transform() {
 					tv := val
 					tvb[tk] = tv
 				}
-				tv[i][tk] = tvb
+				tvc[i][tk] = tvb
 			}
 		}
-		target[tk] = tv
+		target[tk] = tvc
 	}
 }
 `
