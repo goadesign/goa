@@ -138,8 +138,8 @@ func NewListHandler(
 		if err != nil {
 			if err := encodeError(ctx, w, err); err != nil {
 				eh(ctx, w, err)
-				return
 			}
+			return
 		}
 		if err := encodeResponse(ctx, w, res); err != nil {
 			eh(ctx, w, err)
@@ -188,8 +188,8 @@ func NewShowHandler(
 		if err != nil {
 			if err := encodeError(ctx, w, err); err != nil {
 				eh(ctx, w, err)
-				return
 			}
+			return
 		}
 		if err := encodeResponse(ctx, w, res); err != nil {
 			eh(ctx, w, err)
@@ -238,8 +238,8 @@ func NewAddHandler(
 		if err != nil {
 			if err := encodeError(ctx, w, err); err != nil {
 				eh(ctx, w, err)
-				return
 			}
+			return
 		}
 		if err := encodeResponse(ctx, w, res); err != nil {
 			eh(ctx, w, err)
@@ -288,8 +288,8 @@ func NewRemoveHandler(
 		if err != nil {
 			if err := encodeError(ctx, w, err); err != nil {
 				eh(ctx, w, err)
-				return
 			}
+			return
 		}
 		if err := encodeResponse(ctx, w, res); err != nil {
 			eh(ctx, w, err)
@@ -338,8 +338,8 @@ func NewRateHandler(
 		if err != nil {
 			if err := encodeError(ctx, w, err); err != nil {
 				eh(ctx, w, err)
-				return
 			}
+			return
 		}
 		if err := encodeResponse(ctx, w, res); err != nil {
 			eh(ctx, w, err)
@@ -388,8 +388,8 @@ func NewMultiAddHandler(
 		if err != nil {
 			if err := encodeError(ctx, w, err); err != nil {
 				eh(ctx, w, err)
-				return
 			}
+			return
 		}
 		if err := encodeResponse(ctx, w, res); err != nil {
 			eh(ctx, w, err)
@@ -438,8 +438,8 @@ func NewMultiUpdateHandler(
 		if err != nil {
 			if err := encodeError(ctx, w, err); err != nil {
 				eh(ctx, w, err)
-				return
 			}
+			return
 		}
 		if err := encodeResponse(ctx, w, res); err != nil {
 			eh(ctx, w, err)
