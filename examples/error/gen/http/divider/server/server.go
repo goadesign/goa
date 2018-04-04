@@ -3,7 +3,8 @@
 // divider HTTP server
 //
 // Command:
-// $ goa gen goa.design/goa/examples/error/design
+// $ goa gen goa.design/goa/examples/error/design -o
+// $(GOPATH)/src/goa.design/goa/examples/error
 
 package server
 
@@ -114,8 +115,8 @@ func NewIntegerDivideHandler(
 		if err != nil {
 			if err := encodeError(ctx, w, err); err != nil {
 				eh(ctx, w, err)
-				return
 			}
+			return
 		}
 		if err := encodeResponse(ctx, w, res); err != nil {
 			eh(ctx, w, err)
@@ -164,8 +165,8 @@ func NewDivideHandler(
 		if err != nil {
 			if err := encodeError(ctx, w, err); err != nil {
 				eh(ctx, w, err)
-				return
 			}
+			return
 		}
 		if err := encodeResponse(ctx, w, res); err != nil {
 			eh(ctx, w, err)

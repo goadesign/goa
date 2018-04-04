@@ -3,13 +3,13 @@
 // divider HTTP client types
 //
 // Command:
-// $ goa gen goa.design/goa/examples/error/design
+// $ goa gen goa.design/goa/examples/error/design -o
+// $(GOPATH)/src/goa.design/goa/examples/error
 
 package client
 
 import (
 	goa "goa.design/goa"
-	dividersvc "goa.design/goa/examples/error/gen/divider"
 )
 
 // IntegerDivideHasRemainderResponseBody is the type of the "divider" service
@@ -62,39 +62,39 @@ type DivideDivByZeroResponseBody struct {
 
 // NewIntegerDivideHasRemainder builds a divider service integer_divide
 // endpoint has_remainder error.
-func NewIntegerDivideHasRemainder(body *IntegerDivideHasRemainderResponseBody) *dividersvc.Error {
-	v := &dividersvc.Error{
+func NewIntegerDivideHasRemainder(body *IntegerDivideHasRemainderResponseBody) *goa.ServiceError {
+	v := &goa.ServiceError{
 		Name:      *body.Name,
 		ID:        *body.ID,
 		Message:   *body.Message,
-		Temporary: body.Temporary,
-		Timeout:   body.Timeout,
+		Temporary: *body.Temporary,
+		Timeout:   *body.Timeout,
 	}
 	return v
 }
 
 // NewIntegerDivideDivByZero builds a divider service integer_divide endpoint
 // div_by_zero error.
-func NewIntegerDivideDivByZero(body *IntegerDivideDivByZeroResponseBody) *dividersvc.Error {
-	v := &dividersvc.Error{
+func NewIntegerDivideDivByZero(body *IntegerDivideDivByZeroResponseBody) *goa.ServiceError {
+	v := &goa.ServiceError{
 		Name:      *body.Name,
 		ID:        *body.ID,
 		Message:   *body.Message,
-		Temporary: body.Temporary,
-		Timeout:   body.Timeout,
+		Temporary: *body.Temporary,
+		Timeout:   *body.Timeout,
 	}
 	return v
 }
 
 // NewDivideDivByZero builds a divider service divide endpoint div_by_zero
 // error.
-func NewDivideDivByZero(body *DivideDivByZeroResponseBody) *dividersvc.Error {
-	v := &dividersvc.Error{
+func NewDivideDivByZero(body *DivideDivByZeroResponseBody) *goa.ServiceError {
+	v := &goa.ServiceError{
 		Name:      *body.Name,
 		ID:        *body.ID,
 		Message:   *body.Message,
-		Temporary: body.Temporary,
-		Timeout:   body.Timeout,
+		Temporary: *body.Temporary,
+		Timeout:   *body.Timeout,
 	}
 	return v
 }
@@ -111,6 +111,12 @@ func (body *IntegerDivideHasRemainderResponseBody) Validate() (err error) {
 	if body.Message == nil {
 		err = goa.MergeErrors(err, goa.MissingFieldError("message", "body"))
 	}
+	if body.Temporary == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("temporary", "body"))
+	}
+	if body.Timeout == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("timeout", "body"))
+	}
 	return
 }
 
@@ -125,6 +131,12 @@ func (body *IntegerDivideDivByZeroResponseBody) Validate() (err error) {
 	if body.Message == nil {
 		err = goa.MergeErrors(err, goa.MissingFieldError("message", "body"))
 	}
+	if body.Temporary == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("temporary", "body"))
+	}
+	if body.Timeout == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("timeout", "body"))
+	}
 	return
 }
 
@@ -138,6 +150,12 @@ func (body *DivideDivByZeroResponseBody) Validate() (err error) {
 	}
 	if body.Message == nil {
 		err = goa.MergeErrors(err, goa.MissingFieldError("message", "body"))
+	}
+	if body.Temporary == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("temporary", "body"))
+	}
+	if body.Timeout == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("timeout", "body"))
 	}
 	return
 }

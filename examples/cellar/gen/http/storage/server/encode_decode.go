@@ -83,6 +83,7 @@ func EncodeShowError(encoder func(context.Context, http.ResponseWriter) goahttp.
 		}
 		switch en.ErrorName() {
 		case "not_found":
+			res := v.(*storage.NotFound)
 			enc := encoder(ctx, w)
 			body := NewShowNotFoundResponseBody(res)
 			w.WriteHeader(http.StatusNotFound)

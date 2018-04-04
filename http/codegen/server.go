@@ -922,6 +922,7 @@ func {{ .ErrorEncoder }}(encoder func(context.Context, http.ResponseWriter) goah
 		switch en.ErrorName() {
 	{{- range $err := .Errors }}
 		case {{ printf "%q" .Name }}:
+			res := v.({{ $err.Ref }})
 			{{- with .Response}}
 				{{- template "response" . }}
 				{{- if .ServerBody }}

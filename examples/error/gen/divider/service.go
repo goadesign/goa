@@ -3,7 +3,8 @@
 // divider service
 //
 // Command:
-// $ goa gen goa.design/goa/examples/error/design
+// $ goa gen goa.design/goa/examples/error/design -o
+// $(GOPATH)/src/goa.design/goa/examples/error
 
 package dividersvc
 
@@ -47,43 +48,18 @@ type FloatOperands struct {
 	B float64
 }
 
-// Error response result type
-type Error struct {
-	// Name is the name of this class of errors.
-	Name string
-	// ID is a unique identifier for this particular occurrence of the problem.
-	ID string
-	// Message is a human-readable explanation specific to this occurrence of the
-	// problem.
-	Message string
-	// Is the error temporary?
-	Temporary bool
-	// Is the error a timeout?
-	Timeout bool
-}
-
-// Error returns an error description.
-func (e *Error) Error() string {
-	return "Error response result type"
-}
-
-// ErrorName returns q%!(EXTRA string=error).
-func (e *Error) ErrorName() string {
-	return "error"
-}
-
-// MakeDivByZero builds a Error from an error.
-func MakeDivByZero(err error) *Error {
-	return &Error{
+// MakeDivByZero builds a goa.ServiceError from an error.
+func MakeDivByZero(err error) *goa.ServiceError {
+	return &goa.ServiceError{
 		Name:    "div_by_zero",
 		ID:      goa.NewErrorID(),
 		Message: err.Error(),
 	}
 }
 
-// MakeHasRemainder builds a Error from an error.
-func MakeHasRemainder(err error) *Error {
-	return &Error{
+// MakeHasRemainder builds a goa.ServiceError from an error.
+func MakeHasRemainder(err error) *goa.ServiceError {
+	return &goa.ServiceError{
 		Name:    "has_remainder",
 		ID:      goa.NewErrorID(),
 		Message: err.Error(),

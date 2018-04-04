@@ -56,19 +56,25 @@ func File(service *design.ServiceExpr) *codegen.File {
 		}
 	}
 
-	var newErrorTypes []*UserTypeData
+	var errorTypes []*UserTypeData
 	for _, et := range svc.ErrorTypes {
+		if et.Type == design.ErrorResult {
+			continue
+		}
 		if _, ok := seen[et.Name]; !ok {
 			sections = append(sections, &codegen.SectionTemplate{
 				Name:   "error-user-type",
 				Source: userTypeT,
 				Data:   et,
 			})
-			newErrorTypes = append(newErrorTypes, et)
+			errorTypes = append(errorTypes, et)
 		}
 	}
 
-	for _, et := range newErrorTypes {
+	for _, et := range errorTypes {
+		if et.Type == design.ErrorResult {
+			continue
+		}
 		sections = append(sections, &codegen.SectionTemplate{
 			Name:   "service-error",
 			Source: errorT,

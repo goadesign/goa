@@ -30,9 +30,6 @@ type (
 	// ServicesData encapsulates the data computed from the design.
 	ServicesData map[string]*ServiceData
 
-	// ErrorsData refers to the HTTP method errors.
-	ErrorsData []*ErrorData
-
 	// ServiceData contains the data used to render the code related to a
 	// single service.
 	ServiceData struct {
@@ -93,7 +90,7 @@ type (
 		// Result describes the method HTTP result.
 		Result *ResultData
 		// Errors describes the method HTTP errors.
-		Errors ErrorsData
+		Errors []*ErrorData
 		// Routes describes the possible routes for this endpoint.
 		Routes []*RouteData
 
@@ -474,31 +471,6 @@ func (svc *ServiceData) Endpoint(name string) *EndpointData {
 		}
 	}
 	return nil
-}
-
-// Refs returns the unique error reference types sorted alphabetically.
-func (ed ErrorsData) Refs() []string {
-	refMap := make(map[string]bool)
-	for _, e := range ed {
-		refMap[e.Ref] = true
-	}
-	refs := make([]string, 0, len(refMap))
-	for k := range refMap {
-		refs = append(refs, k)
-	}
-	sort.Strings(refs)
-	return refs
-}
-
-// Get retrieves the error data of the given reference type.
-func (ed ErrorsData) Get(ref string) []*ErrorData {
-	var errs []*ErrorData
-	for _, e := range ed {
-		if e.Ref == ref {
-			errs = append(errs, e)
-		}
-	}
-	return errs
 }
 
 // analyze creates the data necessary to render the code of the given service.
@@ -1182,7 +1154,7 @@ func buildResultData(svc *service.Data, s *httpdesign.ServiceExpr, e *httpdesign
 	}
 }
 
-func buildErrorsData(svc *service.Data, s *httpdesign.ServiceExpr, e *httpdesign.EndpointExpr, sd *ServiceData) ErrorsData {
+func buildErrorsData(svc *service.Data, s *httpdesign.ServiceExpr, e *httpdesign.EndpointExpr, sd *ServiceData) []*ErrorData {
 	data := make(map[string][]*ErrorData)
 	for _, v := range e.HTTPErrors {
 		var (
@@ -1330,7 +1302,7 @@ func buildErrorsData(svc *service.Data, s *httpdesign.ServiceExpr, e *httpdesign
 		i++
 	}
 	sort.Strings(keys)
-	var vals ErrorsData
+	var vals []*ErrorData
 	for _, k := range keys {
 		vals = append(vals, data[k]...)
 	}
