@@ -57,29 +57,34 @@ type Error struct {
 	// problem.
 	Message string
 	// Is the error temporary?
-	Temporary *bool
+	Temporary bool
 	// Is the error a timeout?
-	Timeout *bool
+	Timeout bool
 }
 
-// Error returns "error".
+// Error returns an error description.
 func (e *Error) Error() string {
-	return "error"
+	return "Error response result type"
 }
 
-// MakeHasRemainder builds a Error from an error.
-func MakeHasRemainder(err error) *Error {
-	return &Error{
-		Name:    "has_remainder",
-		ID:      goa.NewErrorID(),
-		Message: err.Error(),
-	}
+// ErrorName returns q%!(EXTRA string=error).
+func (e *Error) ErrorName() string {
+	return "error"
 }
 
 // MakeDivByZero builds a Error from an error.
 func MakeDivByZero(err error) *Error {
 	return &Error{
 		Name:    "div_by_zero",
+		ID:      goa.NewErrorID(),
+		Message: err.Error(),
+	}
+}
+
+// MakeHasRemainder builds a Error from an error.
+func MakeHasRemainder(err error) *Error {
+	return &Error{
+		Name:    "has_remainder",
 		ID:      goa.NewErrorID(),
 		Message: err.Error(),
 	}

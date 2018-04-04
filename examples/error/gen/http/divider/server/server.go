@@ -23,6 +23,12 @@ type Server struct {
 	Divide        http.Handler
 }
 
+// ErrorNamer is an interface implemented by generated error structs that
+// exposes the name of the error as defined in the design.
+type ErrorNamer interface {
+	ErrorName() string
+}
+
 // MountPoint holds information about the mounted endpoints.
 type MountPoint struct {
 	// Method is the name of the service method served by the mounted HTTP handler.
@@ -100,6 +106,7 @@ func NewIntegerDivideHandler(
 		payload, err := decodeRequest(r)
 		if err != nil {
 			eh(ctx, w, err)
+			return
 		}
 
 		res, err := endpoint(ctx, payload)
@@ -107,6 +114,7 @@ func NewIntegerDivideHandler(
 		if err != nil {
 			if err := encodeError(ctx, w, err); err != nil {
 				eh(ctx, w, err)
+				return
 			}
 		}
 		if err := encodeResponse(ctx, w, res); err != nil {
@@ -148,6 +156,7 @@ func NewDivideHandler(
 		payload, err := decodeRequest(r)
 		if err != nil {
 			eh(ctx, w, err)
+			return
 		}
 
 		res, err := endpoint(ctx, payload)
@@ -155,6 +164,7 @@ func NewDivideHandler(
 		if err != nil {
 			if err := encodeError(ctx, w, err); err != nil {
 				eh(ctx, w, err)
+				return
 			}
 		}
 		if err := encodeResponse(ctx, w, res); err != nil {

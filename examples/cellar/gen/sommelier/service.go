@@ -84,12 +84,22 @@ type NoCriteria string
 // No bottle matched given criteria
 type NoMatch string
 
-// Error returns "no_criteria".
+// Error returns an error description.
 func (e NoCriteria) Error() string {
+	return "Missing criteria"
+}
+
+// ErrorName returns q%!(EXTRA string=no_criteria).
+func (e NoCriteria) ErrorName() string {
 	return "no_criteria"
 }
 
-// Error returns "no_match".
+// Error returns an error description.
 func (e NoMatch) Error() string {
+	return "No bottle matched given criteria"
+}
+
+// ErrorName returns q%!(EXTRA string=no_match).
+func (e NoMatch) ErrorName() string {
 	return "no_match"
 }

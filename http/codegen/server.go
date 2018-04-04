@@ -197,6 +197,12 @@ type {{ .ServerStruct }} struct {
 	{{ .Method.VarName }} http.Handler
 	{{- end }}
 }
+
+// ErrorNamer is an interface implemented by generated error structs that
+// exposes the name of the error as defined in the design.
+type ErrorNamer interface {
+	ErrorName() string
+}
 `
 
 // input: ServiceData
@@ -909,23 +915,17 @@ const errorEncoderT = `{{ printf "%s returns an encoder for errors returned by t
 func {{ .ErrorEncoder }}(encoder func(context.Context, http.ResponseWriter) goahttp.Encoder) func(context.Context, http.ResponseWriter, error) error {
 	encodeError := goahttp.ErrorEncoder(encoder)
 	return func(ctx context.Context, w http.ResponseWriter, v error) error {
-		switch res := v.(type) {
-
-	{{- range $ref := .Errors.Refs }}
-		case {{ $ref }}:
-			{{- range $.Errors.Get $ref }}
-
-				{{- with .Response}}
-					{{- if .TagName }}
-			if res.{{ .TagName }} == {{ printf "%q" .TagValue }} {
-					{{- end }}
+		en, ok := v.(ErrorNamer)
+		if !ok {
+			return encodeError(ctx, w, v)
+		}
+		switch en.ErrorName() {
+	{{- range $err := .Errors }}
+		case {{ printf "%q" .Name }}:
+			{{- with .Response}}
 				{{- template "response" . }}
 				{{- if .ServerBody }}
 				return enc.Encode(body)
-				{{- end }}
-				{{- if .TagName }}
-			}
-				{{- end }}
 				{{- end }}
 			{{- end }}
 	{{- end }}

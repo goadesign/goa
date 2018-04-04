@@ -131,7 +131,12 @@ type NotFound struct {
 	ID string
 }
 
-// Error returns "NotFound".
+// Error returns an error description.
 func (e *NotFound) Error() string {
+	return "NotFound is the type returned when attempting to show or delete a bottle that does not exist."
+}
+
+// ErrorName returns q%!(EXTRA string=NotFound).
+func (e *NotFound) ErrorName() string {
 	return "NotFound"
 }

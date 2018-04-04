@@ -118,8 +118,13 @@ const userTypeT = `{{ comment .Description }}
 type {{ .VarName }} {{ .Def }}
 `
 
-const errorT = `// Error returns {{ printf "%q" .Name }}.
+const errorT = `// Error returns an error description.
 func (e {{ .Ref }}) Error() string {
+	return {{ printf "%q" .Description }}
+}
+
+// ErrorName returns {{ printf "q" .Name }}.
+func (e {{ .Ref }}) ErrorName() string {
 	return {{ printf "%q" .Name }}
 }
 `

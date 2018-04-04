@@ -9,12 +9,17 @@ package server
 
 import (
 	"context"
+	"fmt"
+	"io"
 	"net/http"
 	"strconv"
-
+	"strings"
+	"encoding/json"
+	"mime/multipart"
+	"unicode/utf8"
 	goa "goa.design/goa"
-	dividersvc "goa.design/goa/examples/error/gen/divider"
 	goahttp "goa.design/goa/http"
+	dividersvc "goa.design/goa/examples/error/gen/divider"
 )
 
 // EncodeIntegerDivideResponse returns an encoder for responses returned by the
@@ -22,65 +27,66 @@ import (
 func EncodeIntegerDivideResponse(encoder func(context.Context, http.ResponseWriter) goahttp.Encoder) func(context.Context, http.ResponseWriter, interface{}) error {
 	return func(ctx context.Context, w http.ResponseWriter, v interface{}) error {
 		res := v.(int)
-		enc := encoder(ctx, w)
-		body := res
-		w.WriteHeader(http.StatusOK)
-		return enc.Encode(body)
+	enc := encoder(ctx, w)
+	body := res
+	w.WriteHeader(http.StatusOK)
+			return enc.Encode(body)
 	}
 }
-
 // DecodeIntegerDivideRequest returns a decoder for requests sent to the
 // divider integer_divide endpoint.
 func DecodeIntegerDivideRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) (interface{}, error) {
 	return func(r *http.Request) (interface{}, error) {
 		var (
-			a   int
-			b   int
+			a int
+			b int
 			err error
 
 			params = mux.Vars(r)
 		)
 		{
 			aRaw := params["a"]
-			v, err2 := strconv.ParseInt(aRaw, 10, strconv.IntSize)
-			if err2 != nil {
-				err = goa.MergeErrors(err, goa.InvalidFieldTypeError("a", aRaw, "integer"))
-			}
-			a = int(v)
+		v, err2 := strconv.ParseInt(aRaw, 10, strconv.IntSize)
+		if err2 != nil {
+			err = goa.MergeErrors(err, goa.InvalidFieldTypeError("a", aRaw, "integer"))
+		}
+		a = int(v)
 		}
 		{
 			bRaw := params["b"]
-			v, err2 := strconv.ParseInt(bRaw, 10, strconv.IntSize)
-			if err2 != nil {
-				err = goa.MergeErrors(err, goa.InvalidFieldTypeError("b", bRaw, "integer"))
-			}
-			b = int(v)
+		v, err2 := strconv.ParseInt(bRaw, 10, strconv.IntSize)
+		if err2 != nil {
+			err = goa.MergeErrors(err, goa.InvalidFieldTypeError("b", bRaw, "integer"))
+		}
+		b = int(v)
 		}
 		if err != nil {
 			return nil, err
 		}
 
-		return NewIntegerDivideIntOperands(a, b), nil
+		return NewIntegerDivideIntOperands(a,b,), nil
 	}
 }
-
 // EncodeIntegerDivideError returns an encoder for errors returned by the
 // integer_divide divider endpoint.
 func EncodeIntegerDivideError(encoder func(context.Context, http.ResponseWriter) goahttp.Encoder) func(context.Context, http.ResponseWriter, error) error {
 	encodeError := goahttp.ErrorEncoder(encoder)
 	return func(ctx context.Context, w http.ResponseWriter, v error) error {
-		switch res := v.(type) {
-		case *dividersvc.Error:
-			if res.Name == "has_remainder" {
-				enc := encoder(ctx, w)
-				body := NewIntegerDivideHasRemainderResponseBody(res)
-				w.WriteHeader(http.StatusExpectationFailed)
+		en, ok := v.(ErrorNamer)
+		if !ok {
+			return encodeError(ctx, w, v)
+		}
+		switch name := en.ErrorName() {
+		case "has_remainder":
+	enc := encoder(ctx, w)
+	body := NewIntegerDivideHasRemainderResponseBody(res, )
+	w.WriteHeader(http.StatusExpectationFailed)
 				return enc.Encode(body)
 			}
-			if res.Name == "div_by_zero" {
-				enc := encoder(ctx, w)
-				body := NewIntegerDivideDivByZeroResponseBody(res)
-				w.WriteHeader(http.StatusBadRequest)
+		case "div_by_zero":
+	enc := encoder(ctx, w)
+	body := NewIntegerDivideDivByZeroResponseBody(res, )
+	w.WriteHeader(http.StatusBadRequest)
 				return enc.Encode(body)
 			}
 		default:
@@ -89,65 +95,65 @@ func EncodeIntegerDivideError(encoder func(context.Context, http.ResponseWriter)
 		return nil
 	}
 }
-
 // EncodeDivideResponse returns an encoder for responses returned by the
 // divider divide endpoint.
 func EncodeDivideResponse(encoder func(context.Context, http.ResponseWriter) goahttp.Encoder) func(context.Context, http.ResponseWriter, interface{}) error {
 	return func(ctx context.Context, w http.ResponseWriter, v interface{}) error {
 		res := v.(float64)
-		enc := encoder(ctx, w)
-		body := res
-		w.WriteHeader(http.StatusOK)
-		return enc.Encode(body)
+	enc := encoder(ctx, w)
+	body := res
+	w.WriteHeader(http.StatusOK)
+			return enc.Encode(body)
 	}
 }
-
 // DecodeDivideRequest returns a decoder for requests sent to the divider
 // divide endpoint.
 func DecodeDivideRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) (interface{}, error) {
 	return func(r *http.Request) (interface{}, error) {
 		var (
-			a   float64
-			b   float64
+			a float64
+			b float64
 			err error
 
 			params = mux.Vars(r)
 		)
 		{
 			aRaw := params["a"]
-			v, err2 := strconv.ParseFloat(aRaw, 64)
-			if err2 != nil {
-				err = goa.MergeErrors(err, goa.InvalidFieldTypeError("a", aRaw, "float"))
-			}
-			a = v
+		v, err2 := strconv.ParseFloat(aRaw, 64)
+		if err2 != nil {
+			err = goa.MergeErrors(err, goa.InvalidFieldTypeError("a", aRaw, "float"))
+		}
+		a = v
 		}
 		{
 			bRaw := params["b"]
-			v, err2 := strconv.ParseFloat(bRaw, 64)
-			if err2 != nil {
-				err = goa.MergeErrors(err, goa.InvalidFieldTypeError("b", bRaw, "float"))
-			}
-			b = v
+		v, err2 := strconv.ParseFloat(bRaw, 64)
+		if err2 != nil {
+			err = goa.MergeErrors(err, goa.InvalidFieldTypeError("b", bRaw, "float"))
+		}
+		b = v
 		}
 		if err != nil {
 			return nil, err
 		}
 
-		return NewDivideFloatOperands(a, b), nil
+		return NewDivideFloatOperands(a,b,), nil
 	}
 }
-
 // EncodeDivideError returns an encoder for errors returned by the divide
 // divider endpoint.
 func EncodeDivideError(encoder func(context.Context, http.ResponseWriter) goahttp.Encoder) func(context.Context, http.ResponseWriter, error) error {
 	encodeError := goahttp.ErrorEncoder(encoder)
 	return func(ctx context.Context, w http.ResponseWriter, v error) error {
-		switch res := v.(type) {
-		case *dividersvc.Error:
-			if res.Name == "div_by_zero" {
-				enc := encoder(ctx, w)
-				body := NewDivideDivByZeroResponseBody(res)
-				w.WriteHeader(http.StatusBadRequest)
+		en, ok := v.(ErrorNamer)
+		if !ok {
+			return encodeError(ctx, w, v)
+		}
+		switch name := en.ErrorName() {
+		case "div_by_zero":
+	enc := encoder(ctx, w)
+	body := NewDivideDivByZeroResponseBody(res, )
+	w.WriteHeader(http.StatusBadRequest)
 				return enc.Encode(body)
 			}
 		default:

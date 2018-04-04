@@ -55,13 +55,17 @@ func DecodePickRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.De
 func EncodePickError(encoder func(context.Context, http.ResponseWriter) goahttp.Encoder) func(context.Context, http.ResponseWriter, error) error {
 	encodeError := goahttp.ErrorEncoder(encoder)
 	return func(ctx context.Context, w http.ResponseWriter, v error) error {
-		switch res := v.(type) {
-		case sommelier.NoCriteria:
+		en, ok := v.(ErrorNamer)
+		if !ok {
+			return encodeError(ctx, w, v)
+		}
+		switch en.ErrorName() {
+		case "no_criteria":
 			enc := encoder(ctx, w)
 			body := NewPickNoCriteriaResponseBody(res)
 			w.WriteHeader(http.StatusBadRequest)
 			return enc.Encode(body)
-		case sommelier.NoMatch:
+		case "no_match":
 			enc := encoder(ctx, w)
 			body := NewPickNoMatchResponseBody(res)
 			w.WriteHeader(http.StatusNotFound)
