@@ -338,8 +338,8 @@ func {{ .HandlerInit }}(
 		if err != nil {
 			if err := encodeError(ctx, w, err); err != nil {
 				eh(ctx, w, err)
-				return
 			}
+			return
 		}
 		if err := encodeResponse(ctx, w, res); err != nil {
 			eh(ctx, w, err)
