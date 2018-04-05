@@ -370,6 +370,25 @@ func (a *AttributeExpr) Find(name string) *AttributeExpr {
 	return nil
 }
 
+// Delete removes an attribute with the given name. It does nothing if the
+// attribute expression is not a user type or object.
+func (a *AttributeExpr) Delete(name string) {
+	switch t := a.Type.(type) {
+	case UserType:
+		t.Attribute().Delete(name)
+	case *Object:
+		AsObject(t).Delete(name)
+		if a.Validation != nil {
+			a.Validation.RemoveRequired(name)
+		}
+		for _, ex := range a.UserExamples {
+			if m, ok := ex.Value.(map[string]interface{}); ok {
+				delete(m, name)
+			}
+		}
+	}
+}
+
 // validateEnumDefault makes sure that the attribute default value is one of the
 // enum values.
 func (a *AttributeExpr) validateEnumDefault(ctx string, parent eval.Expression) *eval.ValidationErrors {
