@@ -73,11 +73,11 @@ func New{{ .ClientVarName }}({{ .ClientInitArgs }} goa.Endpoint) *{{ .ClientVarN
 const serviceClientMethodT = `
 {{ printf "%s calls the %q endpoint of the %q service." .VarName .Name .ServiceName | comment }}
 {{- if .Errors }}
-{{ printf "%s can return the following error types:" .VarName | comment }}
+{{ printf "%s may return the following errors:" .VarName | comment }}
 	{{- range .Errors }}
-//	- {{ .TypeRef }}{{ if .Description }}: {{ .Description }}{{ end }}
+//	- {{ printf "%q" .ErrName}} (type {{ .TypeRef }}){{ if .Description }}: {{ .Description }}{{ end }}
 	{{- end }}
-//	- error: generic transport error.
+//	- error: internal error
 {{- end }}
 func (c *{{ .ClientVarName }}) {{ .VarName }}(ctx context.Context, {{ if .PayloadRef }}p {{ .PayloadRef }}{{ end }})({{ if .ResultRef }}res {{ .ResultRef }}, {{ end }}err error) {
 	{{- if .ResultRef }}

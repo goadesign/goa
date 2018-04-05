@@ -86,6 +86,12 @@ func EncodeIntegerDivideError(encoder func(context.Context, http.ResponseWriter)
 			body := NewIntegerDivideDivByZeroResponseBody(res)
 			w.WriteHeader(http.StatusBadRequest)
 			return enc.Encode(body)
+		case "timeout":
+			res := v.(*goa.ServiceError)
+			enc := encoder(ctx, w)
+			body := NewIntegerDivideTimeoutResponseBody(res)
+			w.WriteHeader(http.StatusGatewayTimeout)
+			return enc.Encode(body)
 		default:
 			return encodeError(ctx, w, v)
 		}
@@ -155,6 +161,12 @@ func EncodeDivideError(encoder func(context.Context, http.ResponseWriter) goahtt
 			enc := encoder(ctx, w)
 			body := NewDivideDivByZeroResponseBody(res)
 			w.WriteHeader(http.StatusBadRequest)
+			return enc.Encode(body)
+		case "timeout":
+			res := v.(*goa.ServiceError)
+			enc := encoder(ctx, w)
+			body := NewDivideTimeoutResponseBody(res)
+			w.WriteHeader(http.StatusGatewayTimeout)
 			return enc.Encode(body)
 		default:
 			return encodeError(ctx, w, v)
