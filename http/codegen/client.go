@@ -421,7 +421,7 @@ const singleResponseT = `case {{ .StatusCode }}:
 
 		{{- if and (or (eq .Type.Name "string") (eq .Type.Name "any")) .Required }}
 			{{ .VarName }} = resp.Header.Get("{{ .Name }}")
-			if {{ .VarName }} != "" {
+			if {{ .VarName }} == "" {
 				err = goa.MergeErrors(err, goa.MissingFieldError("{{ .Name }}", "header"))
 			}
 
