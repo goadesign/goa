@@ -12,7 +12,7 @@ var _ = Service("divider", func() {
 
 	// The "div_by_zero" error is defined at the service level and
 	// thus may be returned by both "divide" and "integer_divide".
-	Error("div_by_zero")
+	Error("div_by_zero", ErrorResult, "divizion by zero")
 
 	HTTP(func() {
 		// Use HTTP status code 400 Bad Request for "div_by_zero"
@@ -26,7 +26,7 @@ var _ = Service("divider", func() {
 
 		// The "has_remainder" error is defined at the method
 		// level and is thus specific to "integer_divide".
-		Error("has_remainder")
+		Error("has_remainder", ErrorResult, "integer division has remainder")
 
 		HTTP(func() {
 			GET("/idiv/{a}/{b}")

@@ -40,19 +40,19 @@ func main() {
 
 	// Create the structs that implement the services.
 	var (
-		dividersvcSvc dividersvc.Service
+		dividerSvc dividersvc.Service
 	)
 	{
-		dividersvcSvc = divider.NewDivider(logger)
+		dividerSvc = divider.NewDivider(logger)
 	}
 
 	// Wrap the services in endpoints that can be invoked from other
 	// services potentially running in different processes.
 	var (
-		dividersvcEndpoints *dividersvc.Endpoints
+		dividerEndpoints *dividersvc.Endpoints
 	)
 	{
-		dividersvcEndpoints = dividersvc.NewEndpoints(dividersvcSvc)
+		dividerEndpoints = dividersvc.NewEndpoints(dividerSvc)
 	}
 
 	// Provide the transport specific request decoder and response encoder.
@@ -76,15 +76,15 @@ func main() {
 	// the service input and output data structures to HTTP requests and
 	// responses.
 	var (
-		dividersvcServer *dividersvcsvr.Server
+		dividerServer *dividersvcsvr.Server
 	)
 	{
 		eh := ErrorHandler(logger)
-		dividersvcServer = dividersvcsvr.New(dividersvcEndpoints, mux, dec, enc, eh)
+		dividerServer = dividersvcsvr.New(dividerEndpoints, mux, dec, enc, eh)
 	}
 
 	// Configure the mux.
-	dividersvcsvr.Mount(mux, dividersvcServer)
+	dividersvcsvr.Mount(mux, dividerServer)
 
 	// Wrap the multiplexer with additional middlewares. Middlewares mounted
 	// here apply to all the service endpoints.
@@ -113,7 +113,7 @@ func main() {
 	// configure the server as required by your service.
 	srv := &http.Server{Addr: *addr, Handler: handler}
 	go func() {
-		for _, m := range dividersvcServer.Mounts {
+		for _, m := range dividerServer.Mounts {
 			logger.Printf("method %q mounted on %s %s", m.Method, m.Verb, m.Pattern)
 		}
 		logger.Printf("listening on %s", *addr)

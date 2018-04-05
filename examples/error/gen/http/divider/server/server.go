@@ -3,7 +3,8 @@
 // divider HTTP server
 //
 // Command:
-// $ goa gen goa.design/goa/examples/error/design
+// $ goa gen goa.design/goa/examples/error/design -o
+// $(GOPATH)/src/goa.design/goa/examples/error
 
 package server
 
@@ -21,6 +22,12 @@ type Server struct {
 	Mounts        []*MountPoint
 	IntegerDivide http.Handler
 	Divide        http.Handler
+}
+
+// ErrorNamer is an interface implemented by generated error structs that
+// exposes the name of the error as defined in the design.
+type ErrorNamer interface {
+	ErrorName() string
 }
 
 // MountPoint holds information about the mounted endpoints.
@@ -100,6 +107,7 @@ func NewIntegerDivideHandler(
 		payload, err := decodeRequest(r)
 		if err != nil {
 			eh(ctx, w, err)
+			return
 		}
 
 		res, err := endpoint(ctx, payload)
@@ -108,6 +116,7 @@ func NewIntegerDivideHandler(
 			if err := encodeError(ctx, w, err); err != nil {
 				eh(ctx, w, err)
 			}
+			return
 		}
 		if err := encodeResponse(ctx, w, res); err != nil {
 			eh(ctx, w, err)
@@ -148,6 +157,7 @@ func NewDivideHandler(
 		payload, err := decodeRequest(r)
 		if err != nil {
 			eh(ctx, w, err)
+			return
 		}
 
 		res, err := endpoint(ctx, payload)
@@ -156,6 +166,7 @@ func NewDivideHandler(
 			if err := encodeError(ctx, w, err); err != nil {
 				eh(ctx, w, err)
 			}
+			return
 		}
 		if err := encodeResponse(ctx, w, res); err != nil {
 			eh(ctx, w, err)

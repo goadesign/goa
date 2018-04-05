@@ -157,6 +157,9 @@ func (s *NameScope) GoFullTypeName(att *design.AttributeExpr, pkg string) string
 		return s.GoTypeDef(att, false)
 
 	case design.UserType:
+		if actual == design.ErrorResult {
+			return "goa.ServiceError"
+		}
 		n := s.Unique(actual, Goify(actual.Name(), true), "")
 		if pkg == "" {
 			return n

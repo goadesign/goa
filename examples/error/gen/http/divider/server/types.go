@@ -3,11 +3,13 @@
 // divider HTTP server types
 //
 // Command:
-// $ goa gen goa.design/goa/examples/error/design
+// $ goa gen goa.design/goa/examples/error/design -o
+// $(GOPATH)/src/goa.design/goa/examples/error
 
 package server
 
 import (
+	goa "goa.design/goa"
 	dividersvc "goa.design/goa/examples/error/gen/divider"
 )
 
@@ -22,9 +24,9 @@ type IntegerDivideHasRemainderResponseBody struct {
 	// problem.
 	Message string `form:"message" json:"message" xml:"message"`
 	// Is the error temporary?
-	Temporary *bool `form:"temporary,omitempty" json:"temporary,omitempty" xml:"temporary,omitempty"`
+	Temporary bool `form:"temporary" json:"temporary" xml:"temporary"`
 	// Is the error a timeout?
-	Timeout *bool `form:"timeout,omitempty" json:"timeout,omitempty" xml:"timeout,omitempty"`
+	Timeout bool `form:"timeout" json:"timeout" xml:"timeout"`
 }
 
 // IntegerDivideDivByZeroResponseBody is the type of the "divider" service
@@ -38,9 +40,9 @@ type IntegerDivideDivByZeroResponseBody struct {
 	// problem.
 	Message string `form:"message" json:"message" xml:"message"`
 	// Is the error temporary?
-	Temporary *bool `form:"temporary,omitempty" json:"temporary,omitempty" xml:"temporary,omitempty"`
+	Temporary bool `form:"temporary" json:"temporary" xml:"temporary"`
 	// Is the error a timeout?
-	Timeout *bool `form:"timeout,omitempty" json:"timeout,omitempty" xml:"timeout,omitempty"`
+	Timeout bool `form:"timeout" json:"timeout" xml:"timeout"`
 }
 
 // DivideDivByZeroResponseBody is the type of the "divider" service "divide"
@@ -54,14 +56,14 @@ type DivideDivByZeroResponseBody struct {
 	// problem.
 	Message string `form:"message" json:"message" xml:"message"`
 	// Is the error temporary?
-	Temporary *bool `form:"temporary,omitempty" json:"temporary,omitempty" xml:"temporary,omitempty"`
+	Temporary bool `form:"temporary" json:"temporary" xml:"temporary"`
 	// Is the error a timeout?
-	Timeout *bool `form:"timeout,omitempty" json:"timeout,omitempty" xml:"timeout,omitempty"`
+	Timeout bool `form:"timeout" json:"timeout" xml:"timeout"`
 }
 
 // NewIntegerDivideHasRemainderResponseBody builds the HTTP response body from
 // the result of the "integer_divide" endpoint of the "divider" service.
-func NewIntegerDivideHasRemainderResponseBody(res *dividersvc.Error) *IntegerDivideHasRemainderResponseBody {
+func NewIntegerDivideHasRemainderResponseBody(res *goa.ServiceError) *IntegerDivideHasRemainderResponseBody {
 	body := &IntegerDivideHasRemainderResponseBody{
 		Name:      res.Name,
 		ID:        res.ID,
@@ -74,7 +76,7 @@ func NewIntegerDivideHasRemainderResponseBody(res *dividersvc.Error) *IntegerDiv
 
 // NewIntegerDivideDivByZeroResponseBody builds the HTTP response body from the
 // result of the "integer_divide" endpoint of the "divider" service.
-func NewIntegerDivideDivByZeroResponseBody(res *dividersvc.Error) *IntegerDivideDivByZeroResponseBody {
+func NewIntegerDivideDivByZeroResponseBody(res *goa.ServiceError) *IntegerDivideDivByZeroResponseBody {
 	body := &IntegerDivideDivByZeroResponseBody{
 		Name:      res.Name,
 		ID:        res.ID,
@@ -87,7 +89,7 @@ func NewIntegerDivideDivByZeroResponseBody(res *dividersvc.Error) *IntegerDivide
 
 // NewDivideDivByZeroResponseBody builds the HTTP response body from the result
 // of the "divide" endpoint of the "divider" service.
-func NewDivideDivByZeroResponseBody(res *dividersvc.Error) *DivideDivByZeroResponseBody {
+func NewDivideDivByZeroResponseBody(res *goa.ServiceError) *DivideDivByZeroResponseBody {
 	body := &DivideDivByZeroResponseBody{
 		Name:      res.Name,
 		ID:        res.ID,
