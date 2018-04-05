@@ -616,15 +616,35 @@ func (a *APIDefinition) MediaTypeWithIdentifier(id string) *MediaTypeDefinition 
 // Iteration stops if an iterator returns an error and in this case IterateResources returns that
 // error.
 func (a *APIDefinition) IterateResources(it ResourceIterator) error {
-	names := make([]string, len(a.Resources))
+	res := make([]*ResourceDefinition, len(a.Resources))
 	i := 0
-	for n := range a.Resources {
-		names[i] = n
+	for _, r := range a.Resources {
+		res[i] = r
 		i++
 	}
-	sort.Strings(names)
-	for _, n := range names {
-		if err := it(a.Resources[n]); err != nil {
+	// Iterate parent resources first so that action parameters are
+	// finalized prior to child actions needing them.
+	isParent := func(p, c *ResourceDefinition) bool {
+		par := c.Parent()
+		for par != nil {
+			if par == p {
+				return true
+			}
+			par = par.Parent()
+		}
+		return false
+	}
+	sort.Slice(res, func(i, j int) bool {
+		if isParent(res[i], res[j]) {
+			return true
+		}
+		if isParent(res[j], res[i]) {
+			return false
+		}
+		return res[i].Name < res[j].Name
+	})
+	for _, r := range res {
+		if err := it(r); err != nil {
 			return err
 		}
 	}
