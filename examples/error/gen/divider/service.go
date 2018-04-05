@@ -57,6 +57,17 @@ func MakeDivByZero(err error) *goa.ServiceError {
 	}
 }
 
+// MakeTimeout builds a goa.ServiceError from an error.
+func MakeTimeout(err error) *goa.ServiceError {
+	return &goa.ServiceError{
+		Name:      "timeout",
+		ID:        goa.NewErrorID(),
+		Message:   err.Error(),
+		Temporary: true,
+		Timeout:   true,
+	}
+}
+
 // MakeHasRemainder builds a goa.ServiceError from an error.
 func MakeHasRemainder(err error) *goa.ServiceError {
 	return &goa.ServiceError{

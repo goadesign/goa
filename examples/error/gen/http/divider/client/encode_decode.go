@@ -50,10 +50,11 @@ func (c *Client) BuildIntegerDivideRequest(ctx context.Context, v interface{}) (
 // DecodeIntegerDivideResponse returns a decoder for responses returned by the
 // divider integer_divide endpoint. restoreBody controls whether the response
 // body should be restored after having been read.
-// DecodeIntegerDivideResponse may return the following error types:
-//	- *goa.ServiceError: http.StatusExpectationFailed
-//	- *goa.ServiceError: http.StatusBadRequest
-//	- error: generic transport error.
+// DecodeIntegerDivideResponse may return the following errors:
+//	- "has_remainder" (type *goa.ServiceError): http.StatusExpectationFailed
+//	- "div_by_zero" (type *goa.ServiceError): http.StatusBadRequest
+//	- "timeout" (type *goa.ServiceError): http.StatusGatewayTimeout
+//	- error: internal error
 func DecodeIntegerDivideResponse(decoder func(*http.Response) goahttp.Decoder, restoreBody bool) func(*http.Response) (interface{}, error) {
 	return func(resp *http.Response) (interface{}, error) {
 		if restoreBody {
@@ -110,6 +111,21 @@ func DecodeIntegerDivideResponse(decoder func(*http.Response) goahttp.Decoder, r
 			}
 
 			return nil, NewIntegerDivideDivByZero(&body)
+		case http.StatusGatewayTimeout:
+			var (
+				body IntegerDivideTimeoutResponseBody
+				err  error
+			)
+			err = decoder(resp).Decode(&body)
+			if err != nil {
+				return nil, goahttp.ErrDecodingError("divider", "integer_divide", err)
+			}
+			err = body.Validate()
+			if err != nil {
+				return nil, fmt.Errorf("invalid response: %s", err)
+			}
+
+			return nil, NewIntegerDivideTimeout(&body)
 		default:
 			body, _ := ioutil.ReadAll(resp.Body)
 			return nil, goahttp.ErrInvalidResponse("account", "create", resp.StatusCode, string(body))
@@ -147,9 +163,10 @@ func (c *Client) BuildDivideRequest(ctx context.Context, v interface{}) (*http.R
 // DecodeDivideResponse returns a decoder for responses returned by the divider
 // divide endpoint. restoreBody controls whether the response body should be
 // restored after having been read.
-// DecodeDivideResponse may return the following error types:
-//	- *goa.ServiceError: http.StatusBadRequest
-//	- error: generic transport error.
+// DecodeDivideResponse may return the following errors:
+//	- "div_by_zero" (type *goa.ServiceError): http.StatusBadRequest
+//	- "timeout" (type *goa.ServiceError): http.StatusGatewayTimeout
+//	- error: internal error
 func DecodeDivideResponse(decoder func(*http.Response) goahttp.Decoder, restoreBody bool) func(*http.Response) (interface{}, error) {
 	return func(resp *http.Response) (interface{}, error) {
 		if restoreBody {
@@ -191,6 +208,21 @@ func DecodeDivideResponse(decoder func(*http.Response) goahttp.Decoder, restoreB
 			}
 
 			return nil, NewDivideDivByZero(&body)
+		case http.StatusGatewayTimeout:
+			var (
+				body DivideTimeoutResponseBody
+				err  error
+			)
+			err = decoder(resp).Decode(&body)
+			if err != nil {
+				return nil, goahttp.ErrDecodingError("divider", "divide", err)
+			}
+			err = body.Validate()
+			if err != nil {
+				return nil, fmt.Errorf("invalid response: %s", err)
+			}
+
+			return nil, NewDivideTimeout(&body)
 		default:
 			body, _ := ioutil.ReadAll(resp.Body)
 			return nil, goahttp.ErrInvalidResponse("account", "create", resp.StatusCode, string(body))

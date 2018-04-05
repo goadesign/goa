@@ -136,6 +136,37 @@ paths:
           headers: {}
           ref: ""
           extensions: {}
+        "504":
+          description: Gateway Timeout response.
+          schema:
+            schema: ""
+            id: ""
+            title: ""
+            type: ""
+            items: null
+            properties: {}
+            definitions: {}
+            description: ""
+            defaultvalue: null
+            example: null
+            media: null
+            readonly: false
+            pathstart: ""
+            links: []
+            ref: '#/definitions/DivideTimeoutResponseBody'
+            enum: []
+            format: ""
+            pattern: ""
+            minimum: null
+            maximum: null
+            minlength: null
+            maxlength: null
+            required: []
+            additionalproperties: false
+            anyof: []
+          headers: {}
+          ref: ""
+          extensions: {}
       schemes:
       - http
       deprecated: false
@@ -303,6 +334,37 @@ paths:
           headers: {}
           ref: ""
           extensions: {}
+        "504":
+          description: Gateway Timeout response.
+          schema:
+            schema: ""
+            id: ""
+            title: ""
+            type: ""
+            items: null
+            properties: {}
+            definitions: {}
+            description: ""
+            defaultvalue: null
+            example: null
+            media: null
+            readonly: false
+            pathstart: ""
+            links: []
+            ref: '#/definitions/IntegerDivideTimeoutResponseBody'
+            enum: []
+            format: ""
+            pattern: ""
+            minimum: null
+            maximum: null
+            minlength: null
+            maxlength: null
+            required: []
+            additionalproperties: false
+            anyof: []
+          headers: {}
+          ref: ""
+          extensions: {}
       schemes:
       - http
       deprecated: false
@@ -318,6 +380,342 @@ paths:
     extensions: {}
 definitions:
   DivideDivByZeroResponseBody:
+    schema: ""
+    id: ""
+    title: 'Mediatype identifier: application/vnd.goa.error; view=default'
+    type: object
+    items: null
+    properties:
+      id:
+        schema: ""
+        id: ""
+        title: ""
+        type: string
+        items: null
+        properties: {}
+        definitions: {}
+        description: ID is a unique identifier for this particular occurrence of the
+          problem.
+        defaultvalue: null
+        example: 123abc
+        media: null
+        readonly: false
+        pathstart: ""
+        links: []
+        ref: ""
+        enum: []
+        format: ""
+        pattern: ""
+        minimum: null
+        maximum: null
+        minlength: null
+        maxlength: null
+        required: []
+        additionalproperties: false
+        anyof: []
+      message:
+        schema: ""
+        id: ""
+        title: ""
+        type: string
+        items: null
+        properties: {}
+        definitions: {}
+        description: Message is a human-readable explanation specific to this occurrence
+          of the problem.
+        defaultvalue: null
+        example: parameter 'p' must be an integer
+        media: null
+        readonly: false
+        pathstart: ""
+        links: []
+        ref: ""
+        enum: []
+        format: ""
+        pattern: ""
+        minimum: null
+        maximum: null
+        minlength: null
+        maxlength: null
+        required: []
+        additionalproperties: false
+        anyof: []
+      name:
+        schema: ""
+        id: ""
+        title: ""
+        type: string
+        items: null
+        properties: {}
+        definitions: {}
+        description: Name is the name of this class of errors.
+        defaultvalue: null
+        example: bad_request
+        media: null
+        readonly: false
+        pathstart: ""
+        links: []
+        ref: ""
+        enum: []
+        format: ""
+        pattern: ""
+        minimum: null
+        maximum: null
+        minlength: null
+        maxlength: null
+        required: []
+        additionalproperties: false
+        anyof: []
+      temporary:
+        schema: ""
+        id: ""
+        title: ""
+        type: boolean
+        items: null
+        properties: {}
+        definitions: {}
+        description: Is the error temporary?
+        defaultvalue: null
+        example: true
+        media: null
+        readonly: false
+        pathstart: ""
+        links: []
+        ref: ""
+        enum: []
+        format: ""
+        pattern: ""
+        minimum: null
+        maximum: null
+        minlength: null
+        maxlength: null
+        required: []
+        additionalproperties: false
+        anyof: []
+      timeout:
+        schema: ""
+        id: ""
+        title: ""
+        type: boolean
+        items: null
+        properties: {}
+        definitions: {}
+        description: Is the error a timeout?
+        defaultvalue: null
+        example: false
+        media: null
+        readonly: false
+        pathstart: ""
+        links: []
+        ref: ""
+        enum: []
+        format: ""
+        pattern: ""
+        minimum: null
+        maximum: null
+        minlength: null
+        maxlength: null
+        required: []
+        additionalproperties: false
+        anyof: []
+    definitions: {}
+    description: divizion by zero (default view)
+    defaultvalue: null
+    example:
+      id: 123abc
+      message: parameter 'p' must be an integer
+      name: bad_request
+      temporary: false
+      timeout: false
+    media: null
+    readonly: false
+    pathstart: ""
+    links: []
+    ref: ""
+    enum: []
+    format: ""
+    pattern: ""
+    minimum: null
+    maximum: null
+    minlength: null
+    maxlength: null
+    required:
+    - name
+    - id
+    - message
+    - temporary
+    - timeout
+    additionalproperties: false
+    anyof: []
+  DivideTimeoutResponseBody:
+    schema: ""
+    id: ""
+    title: 'Mediatype identifier: application/vnd.goa.error; view=default'
+    type: object
+    items: null
+    properties:
+      id:
+        schema: ""
+        id: ""
+        title: ""
+        type: string
+        items: null
+        properties: {}
+        definitions: {}
+        description: ID is a unique identifier for this particular occurrence of the
+          problem.
+        defaultvalue: null
+        example: 123abc
+        media: null
+        readonly: false
+        pathstart: ""
+        links: []
+        ref: ""
+        enum: []
+        format: ""
+        pattern: ""
+        minimum: null
+        maximum: null
+        minlength: null
+        maxlength: null
+        required: []
+        additionalproperties: false
+        anyof: []
+      message:
+        schema: ""
+        id: ""
+        title: ""
+        type: string
+        items: null
+        properties: {}
+        definitions: {}
+        description: Message is a human-readable explanation specific to this occurrence
+          of the problem.
+        defaultvalue: null
+        example: parameter 'p' must be an integer
+        media: null
+        readonly: false
+        pathstart: ""
+        links: []
+        ref: ""
+        enum: []
+        format: ""
+        pattern: ""
+        minimum: null
+        maximum: null
+        minlength: null
+        maxlength: null
+        required: []
+        additionalproperties: false
+        anyof: []
+      name:
+        schema: ""
+        id: ""
+        title: ""
+        type: string
+        items: null
+        properties: {}
+        definitions: {}
+        description: Name is the name of this class of errors.
+        defaultvalue: null
+        example: bad_request
+        media: null
+        readonly: false
+        pathstart: ""
+        links: []
+        ref: ""
+        enum: []
+        format: ""
+        pattern: ""
+        minimum: null
+        maximum: null
+        minlength: null
+        maxlength: null
+        required: []
+        additionalproperties: false
+        anyof: []
+      temporary:
+        schema: ""
+        id: ""
+        title: ""
+        type: boolean
+        items: null
+        properties: {}
+        definitions: {}
+        description: Is the error temporary?
+        defaultvalue: null
+        example: false
+        media: null
+        readonly: false
+        pathstart: ""
+        links: []
+        ref: ""
+        enum: []
+        format: ""
+        pattern: ""
+        minimum: null
+        maximum: null
+        minlength: null
+        maxlength: null
+        required: []
+        additionalproperties: false
+        anyof: []
+      timeout:
+        schema: ""
+        id: ""
+        title: ""
+        type: boolean
+        items: null
+        properties: {}
+        definitions: {}
+        description: Is the error a timeout?
+        defaultvalue: null
+        example: true
+        media: null
+        readonly: false
+        pathstart: ""
+        links: []
+        ref: ""
+        enum: []
+        format: ""
+        pattern: ""
+        minimum: null
+        maximum: null
+        minlength: null
+        maxlength: null
+        required: []
+        additionalproperties: false
+        anyof: []
+    definitions: {}
+    description: operation timed out, retry later. (default view)
+    defaultvalue: null
+    example:
+      id: 123abc
+      message: parameter 'p' must be an integer
+      name: bad_request
+      temporary: true
+      timeout: false
+    media: null
+    readonly: false
+    pathstart: ""
+    links: []
+    ref: ""
+    enum: []
+    format: ""
+    pattern: ""
+    minimum: null
+    maximum: null
+    minlength: null
+    maxlength: null
+    required:
+    - name
+    - id
+    - message
+    - temporary
+    - timeout
+    additionalproperties: false
+    anyof: []
+  IntegerDivideDivByZeroResponseBody:
     schema: ""
     id: ""
     title: 'Mediatype identifier: application/vnd.goa.error; view=default'
@@ -485,174 +883,6 @@ definitions:
     - timeout
     additionalproperties: false
     anyof: []
-  IntegerDivideDivByZeroResponseBody:
-    schema: ""
-    id: ""
-    title: 'Mediatype identifier: application/vnd.goa.error; view=default'
-    type: object
-    items: null
-    properties:
-      id:
-        schema: ""
-        id: ""
-        title: ""
-        type: string
-        items: null
-        properties: {}
-        definitions: {}
-        description: ID is a unique identifier for this particular occurrence of the
-          problem.
-        defaultvalue: null
-        example: 123abc
-        media: null
-        readonly: false
-        pathstart: ""
-        links: []
-        ref: ""
-        enum: []
-        format: ""
-        pattern: ""
-        minimum: null
-        maximum: null
-        minlength: null
-        maxlength: null
-        required: []
-        additionalproperties: false
-        anyof: []
-      message:
-        schema: ""
-        id: ""
-        title: ""
-        type: string
-        items: null
-        properties: {}
-        definitions: {}
-        description: Message is a human-readable explanation specific to this occurrence
-          of the problem.
-        defaultvalue: null
-        example: parameter 'p' must be an integer
-        media: null
-        readonly: false
-        pathstart: ""
-        links: []
-        ref: ""
-        enum: []
-        format: ""
-        pattern: ""
-        minimum: null
-        maximum: null
-        minlength: null
-        maxlength: null
-        required: []
-        additionalproperties: false
-        anyof: []
-      name:
-        schema: ""
-        id: ""
-        title: ""
-        type: string
-        items: null
-        properties: {}
-        definitions: {}
-        description: Name is the name of this class of errors.
-        defaultvalue: null
-        example: bad_request
-        media: null
-        readonly: false
-        pathstart: ""
-        links: []
-        ref: ""
-        enum: []
-        format: ""
-        pattern: ""
-        minimum: null
-        maximum: null
-        minlength: null
-        maxlength: null
-        required: []
-        additionalproperties: false
-        anyof: []
-      temporary:
-        schema: ""
-        id: ""
-        title: ""
-        type: boolean
-        items: null
-        properties: {}
-        definitions: {}
-        description: Is the error temporary?
-        defaultvalue: null
-        example: true
-        media: null
-        readonly: false
-        pathstart: ""
-        links: []
-        ref: ""
-        enum: []
-        format: ""
-        pattern: ""
-        minimum: null
-        maximum: null
-        minlength: null
-        maxlength: null
-        required: []
-        additionalproperties: false
-        anyof: []
-      timeout:
-        schema: ""
-        id: ""
-        title: ""
-        type: boolean
-        items: null
-        properties: {}
-        definitions: {}
-        description: Is the error a timeout?
-        defaultvalue: null
-        example: false
-        media: null
-        readonly: false
-        pathstart: ""
-        links: []
-        ref: ""
-        enum: []
-        format: ""
-        pattern: ""
-        minimum: null
-        maximum: null
-        minlength: null
-        maxlength: null
-        required: []
-        additionalproperties: false
-        anyof: []
-    definitions: {}
-    description: divizion by zero (default view)
-    defaultvalue: null
-    example:
-      id: 123abc
-      message: parameter 'p' must be an integer
-      name: bad_request
-      temporary: true
-      timeout: true
-    media: null
-    readonly: false
-    pathstart: ""
-    links: []
-    ref: ""
-    enum: []
-    format: ""
-    pattern: ""
-    minimum: null
-    maximum: null
-    minlength: null
-    maxlength: null
-    required:
-    - name
-    - id
-    - message
-    - temporary
-    - timeout
-    additionalproperties: false
-    anyof: []
   IntegerDivideHasRemainderResponseBody:
     schema: ""
     id: ""
@@ -750,6 +980,174 @@ definitions:
         definitions: {}
         description: Is the error temporary?
         defaultvalue: null
+        example: true
+        media: null
+        readonly: false
+        pathstart: ""
+        links: []
+        ref: ""
+        enum: []
+        format: ""
+        pattern: ""
+        minimum: null
+        maximum: null
+        minlength: null
+        maxlength: null
+        required: []
+        additionalproperties: false
+        anyof: []
+      timeout:
+        schema: ""
+        id: ""
+        title: ""
+        type: boolean
+        items: null
+        properties: {}
+        definitions: {}
+        description: Is the error a timeout?
+        defaultvalue: null
+        example: false
+        media: null
+        readonly: false
+        pathstart: ""
+        links: []
+        ref: ""
+        enum: []
+        format: ""
+        pattern: ""
+        minimum: null
+        maximum: null
+        minlength: null
+        maxlength: null
+        required: []
+        additionalproperties: false
+        anyof: []
+    definitions: {}
+    description: integer division has remainder (default view)
+    defaultvalue: null
+    example:
+      id: 123abc
+      message: parameter 'p' must be an integer
+      name: bad_request
+      temporary: true
+      timeout: true
+    media: null
+    readonly: false
+    pathstart: ""
+    links: []
+    ref: ""
+    enum: []
+    format: ""
+    pattern: ""
+    minimum: null
+    maximum: null
+    minlength: null
+    maxlength: null
+    required:
+    - name
+    - id
+    - message
+    - temporary
+    - timeout
+    additionalproperties: false
+    anyof: []
+  IntegerDivideTimeoutResponseBody:
+    schema: ""
+    id: ""
+    title: 'Mediatype identifier: application/vnd.goa.error; view=default'
+    type: object
+    items: null
+    properties:
+      id:
+        schema: ""
+        id: ""
+        title: ""
+        type: string
+        items: null
+        properties: {}
+        definitions: {}
+        description: ID is a unique identifier for this particular occurrence of the
+          problem.
+        defaultvalue: null
+        example: 123abc
+        media: null
+        readonly: false
+        pathstart: ""
+        links: []
+        ref: ""
+        enum: []
+        format: ""
+        pattern: ""
+        minimum: null
+        maximum: null
+        minlength: null
+        maxlength: null
+        required: []
+        additionalproperties: false
+        anyof: []
+      message:
+        schema: ""
+        id: ""
+        title: ""
+        type: string
+        items: null
+        properties: {}
+        definitions: {}
+        description: Message is a human-readable explanation specific to this occurrence
+          of the problem.
+        defaultvalue: null
+        example: parameter 'p' must be an integer
+        media: null
+        readonly: false
+        pathstart: ""
+        links: []
+        ref: ""
+        enum: []
+        format: ""
+        pattern: ""
+        minimum: null
+        maximum: null
+        minlength: null
+        maxlength: null
+        required: []
+        additionalproperties: false
+        anyof: []
+      name:
+        schema: ""
+        id: ""
+        title: ""
+        type: string
+        items: null
+        properties: {}
+        definitions: {}
+        description: Name is the name of this class of errors.
+        defaultvalue: null
+        example: bad_request
+        media: null
+        readonly: false
+        pathstart: ""
+        links: []
+        ref: ""
+        enum: []
+        format: ""
+        pattern: ""
+        minimum: null
+        maximum: null
+        minlength: null
+        maxlength: null
+        required: []
+        additionalproperties: false
+        anyof: []
+      temporary:
+        schema: ""
+        id: ""
+        title: ""
+        type: boolean
+        items: null
+        properties: {}
+        definitions: {}
+        description: Is the error temporary?
+        defaultvalue: null
         example: false
         media: null
         readonly: false
@@ -793,13 +1191,13 @@ definitions:
         additionalproperties: false
         anyof: []
     definitions: {}
-    description: integer division has remainder (default view)
+    description: operation timed out, retry later. (default view)
     defaultvalue: null
     example:
       id: 123abc
       message: parameter 'p' must be an integer
       name: bad_request
-      temporary: false
+      temporary: true
       timeout: false
     media: null
     readonly: false

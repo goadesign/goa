@@ -29,11 +29,7 @@ import (
 //    })
 //
 func Error(name string, args ...interface{}) {
-	er := len(args) == 0
-	if !er && len(args) == 1 {
-		_, er = args[0].(func())
-	}
-	if er {
+	if len(args) == 0 {
 		args = []interface{}{design.ErrorResult}
 	}
 	dt, desc, fn := parseAttributeArgs(nil, args...)
@@ -43,6 +39,9 @@ func Error(name string, args ...interface{}) {
 	}
 	if fn != nil {
 		eval.Execute(fn, att)
+	}
+	if att.Type == nil {
+		att.Type = design.ErrorResult
 	}
 	erro := &design.ErrorExpr{AttributeExpr: att, Name: name}
 	switch actual := eval.Current().(type) {
