@@ -14,10 +14,22 @@ var _ = Service("divider", func() {
 	// thus may be returned by both "divide" and "integer_divide".
 	Error("div_by_zero", ErrorResult, "divizion by zero")
 
+	// The "timeout" error is also defined at the service level.
+	Error("timeout", ErrorResult, "operation timed out, retry later.", func() {
+		// Timeout indicates an error due to a timeout.
+		Timeout()
+		// Temporary indicates that the request may be retried.
+		Temporary()
+	})
+
 	HTTP(func() {
 		// Use HTTP status code 400 Bad Request for "div_by_zero"
 		// errors.
 		Response("div_by_zero", StatusBadRequest)
+
+		// Use HTTP status code 504 Gateway Timeout for "timeout"
+		// errors.
+		Response("timeout", StatusGatewayTimeout)
 	})
 
 	Method("integer_divide", func() {

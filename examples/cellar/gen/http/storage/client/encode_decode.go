@@ -122,9 +122,9 @@ func EncodeShowRequest(encoder func(*http.Request) goahttp.Encoder) func(*http.R
 // DecodeShowResponse returns a decoder for responses returned by the storage
 // show endpoint. restoreBody controls whether the response body should be
 // restored after having been read.
-// DecodeShowResponse may return the following error types:
-//	- *storage.NotFound: http.StatusNotFound
-//	- error: generic transport error.
+// DecodeShowResponse may return the following errors:
+//	- "not_found" (type *storage.NotFound): http.StatusNotFound
+//	- error: internal error
 func DecodeShowResponse(decoder func(*http.Response) goahttp.Decoder, restoreBody bool) func(*http.Response) (interface{}, error) {
 	return func(resp *http.Response) (interface{}, error) {
 		if restoreBody {
