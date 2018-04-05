@@ -3,7 +3,8 @@
 // HTTP request path constructors for the divider service.
 //
 // Command:
-// $ goa gen goa.design/goa/examples/error/design
+// $ goa gen goa.design/goa/examples/error/design -o
+// $(GOPATH)/src/goa.design/goa/examples/error
 
 package server
 

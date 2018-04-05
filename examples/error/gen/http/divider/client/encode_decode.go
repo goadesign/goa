@@ -3,7 +3,8 @@
 // divider HTTP client encoders and decoders
 //
 // Command:
-// $ goa gen goa.design/goa/examples/error/design
+// $ goa gen goa.design/goa/examples/error/design -o
+// $(GOPATH)/src/goa.design/goa/examples/error
 
 package client
 
@@ -50,8 +51,8 @@ func (c *Client) BuildIntegerDivideRequest(ctx context.Context, v interface{}) (
 // divider integer_divide endpoint. restoreBody controls whether the response
 // body should be restored after having been read.
 // DecodeIntegerDivideResponse may return the following error types:
-//	- *dividersvc.Error: http.StatusExpectationFailed
-//	- *dividersvc.Error: http.StatusBadRequest
+//	- *goa.ServiceError: http.StatusExpectationFailed
+//	- *goa.ServiceError: http.StatusBadRequest
 //	- error: generic transport error.
 func DecodeIntegerDivideResponse(decoder func(*http.Response) goahttp.Decoder, restoreBody bool) func(*http.Response) (interface{}, error) {
 	return func(resp *http.Response) (interface{}, error) {
@@ -147,7 +148,7 @@ func (c *Client) BuildDivideRequest(ctx context.Context, v interface{}) (*http.R
 // divide endpoint. restoreBody controls whether the response body should be
 // restored after having been read.
 // DecodeDivideResponse may return the following error types:
-//	- *dividersvc.Error: http.StatusBadRequest
+//	- *goa.ServiceError: http.StatusBadRequest
 //	- error: generic transport error.
 func DecodeDivideResponse(decoder func(*http.Response) goahttp.Decoder, restoreBody bool) func(*http.Response) (interface{}, error) {
 	return func(resp *http.Response) (interface{}, error) {

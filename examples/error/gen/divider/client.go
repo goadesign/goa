@@ -3,7 +3,8 @@
 // divider client
 //
 // Command:
-// $ goa gen goa.design/goa/examples/error/design
+// $ goa gen goa.design/goa/examples/error/design -o
+// $(GOPATH)/src/goa.design/goa/examples/error
 
 package dividersvc
 
@@ -29,7 +30,7 @@ func NewClient(integerDivide, divide goa.Endpoint) *Client {
 
 // IntegerDivide calls the "integer_divide" endpoint of the "divider" service.
 // IntegerDivide can return the following error types:
-//	- *Error
+//	- *goa.ServiceError: integer division has remainder
 //	- error: generic transport error.
 func (c *Client) IntegerDivide(ctx context.Context, p *IntOperands) (res int, err error) {
 	var ires interface{}

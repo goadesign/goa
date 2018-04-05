@@ -32,7 +32,7 @@ func NewErrorResponse(err error) *ErrorResponse {
 			Temporary: gerr.Temporary,
 		}
 	}
-	return NewErrorResponse(goa.PermanentError("error: %s", err))
+	return NewErrorResponse(goa.PermanentError("internal", "error: %s", err))
 }
 
 // StatusCode implements a heuristic that computes a HTTP response status code

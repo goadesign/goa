@@ -3,7 +3,8 @@
 // divider HTTP client CLI support package
 //
 // Command:
-// $ goa gen goa.design/goa/examples/error/design
+// $ goa gen goa.design/goa/examples/error/design -o
+// $(GOPATH)/src/goa.design/goa/examples/error
 
 package client
 

@@ -6,13 +6,19 @@ var PrimitiveErrorResponseEncoderCode = `// EncodeMethodPrimitiveErrorResponseEr
 func EncodeMethodPrimitiveErrorResponseError(encoder func(context.Context, http.ResponseWriter) goahttp.Encoder) func(context.Context, http.ResponseWriter, error) error {
 	encodeError := goahttp.ErrorEncoder(encoder)
 	return func(ctx context.Context, w http.ResponseWriter, v error) error {
-		switch res := v.(type) {
-		case serviceprimitiveerrorresponse.BadRequest:
+		en, ok := v.(ErrorNamer)
+		if !ok {
+			return encodeError(ctx, w, v)
+		}
+		switch en.ErrorName() {
+		case "bad_request":
+			res := v.(serviceprimitiveerrorresponse.BadRequest)
 			enc := encoder(ctx, w)
 			body := NewMethodPrimitiveErrorResponseBadRequestResponseBody(res)
 			w.WriteHeader(http.StatusBadRequest)
 			return enc.Encode(body)
-		case serviceprimitiveerrorresponse.InternalError:
+		case "internal_error":
+			res := v.(serviceprimitiveerrorresponse.InternalError)
 			enc := encoder(ctx, w)
 			body := NewMethodPrimitiveErrorResponseInternalErrorResponseBody(res)
 			w.WriteHeader(http.StatusInternalServerError)
@@ -30,14 +36,17 @@ var DefaultErrorResponseEncoderCode = `// EncodeMethodDefaultErrorResponseError 
 func EncodeMethodDefaultErrorResponseError(encoder func(context.Context, http.ResponseWriter) goahttp.Encoder) func(context.Context, http.ResponseWriter, error) error {
 	encodeError := goahttp.ErrorEncoder(encoder)
 	return func(ctx context.Context, w http.ResponseWriter, v error) error {
-		switch res := v.(type) {
-		case *servicedefaulterrorresponse.Error:
-			if res.Name == "bad_request" {
-				enc := encoder(ctx, w)
-				body := NewMethodDefaultErrorResponseBadRequestResponseBody(res)
-				w.WriteHeader(http.StatusBadRequest)
-				return enc.Encode(body)
-			}
+		en, ok := v.(ErrorNamer)
+		if !ok {
+			return encodeError(ctx, w, v)
+		}
+		switch en.ErrorName() {
+		case "bad_request":
+			res := v.(*goa.ServiceError)
+			enc := encoder(ctx, w)
+			body := NewMethodDefaultErrorResponseBadRequestResponseBody(res)
+			w.WriteHeader(http.StatusBadRequest)
+			return enc.Encode(body)
 		default:
 			return encodeError(ctx, w, v)
 		}
@@ -51,20 +60,23 @@ var ServiceErrorResponseEncoderCode = `// EncodeMethodServiceErrorResponseError 
 func EncodeMethodServiceErrorResponseError(encoder func(context.Context, http.ResponseWriter) goahttp.Encoder) func(context.Context, http.ResponseWriter, error) error {
 	encodeError := goahttp.ErrorEncoder(encoder)
 	return func(ctx context.Context, w http.ResponseWriter, v error) error {
-		switch res := v.(type) {
-		case *serviceserviceerrorresponse.Error:
-			if res.Name == "internal_error" {
-				enc := encoder(ctx, w)
-				body := NewMethodServiceErrorResponseInternalErrorResponseBody(res)
-				w.WriteHeader(http.StatusInternalServerError)
-				return enc.Encode(body)
-			}
-			if res.Name == "bad_request" {
-				enc := encoder(ctx, w)
-				body := NewMethodServiceErrorResponseBadRequestResponseBody(res)
-				w.WriteHeader(http.StatusBadRequest)
-				return enc.Encode(body)
-			}
+		en, ok := v.(ErrorNamer)
+		if !ok {
+			return encodeError(ctx, w, v)
+		}
+		switch en.ErrorName() {
+		case "internal_error":
+			res := v.(*goa.ServiceError)
+			enc := encoder(ctx, w)
+			body := NewMethodServiceErrorResponseInternalErrorResponseBody(res)
+			w.WriteHeader(http.StatusInternalServerError)
+			return enc.Encode(body)
+		case "bad_request":
+			res := v.(*goa.ServiceError)
+			enc := encoder(ctx, w)
+			body := NewMethodServiceErrorResponseBadRequestResponseBody(res)
+			w.WriteHeader(http.StatusBadRequest)
+			return enc.Encode(body)
 		default:
 			return encodeError(ctx, w, v)
 		}

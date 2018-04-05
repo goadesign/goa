@@ -3,7 +3,8 @@
 // divider HTTP server encoders and decoders
 //
 // Command:
-// $ goa gen goa.design/goa/examples/error/design
+// $ goa gen goa.design/goa/examples/error/design -o
+// $(GOPATH)/src/goa.design/goa/examples/error
 
 package server
 
@@ -13,7 +14,6 @@ import (
 	"strconv"
 
 	goa "goa.design/goa"
-	dividersvc "goa.design/goa/examples/error/gen/divider"
 	goahttp "goa.design/goa/http"
 )
 
@@ -69,20 +69,23 @@ func DecodeIntegerDivideRequest(mux goahttp.Muxer, decoder func(*http.Request) g
 func EncodeIntegerDivideError(encoder func(context.Context, http.ResponseWriter) goahttp.Encoder) func(context.Context, http.ResponseWriter, error) error {
 	encodeError := goahttp.ErrorEncoder(encoder)
 	return func(ctx context.Context, w http.ResponseWriter, v error) error {
-		switch res := v.(type) {
-		case *dividersvc.Error:
-			if res.Name == "has_remainder" {
-				enc := encoder(ctx, w)
-				body := NewIntegerDivideHasRemainderResponseBody(res)
-				w.WriteHeader(http.StatusExpectationFailed)
-				return enc.Encode(body)
-			}
-			if res.Name == "div_by_zero" {
-				enc := encoder(ctx, w)
-				body := NewIntegerDivideDivByZeroResponseBody(res)
-				w.WriteHeader(http.StatusBadRequest)
-				return enc.Encode(body)
-			}
+		en, ok := v.(ErrorNamer)
+		if !ok {
+			return encodeError(ctx, w, v)
+		}
+		switch en.ErrorName() {
+		case "has_remainder":
+			res := v.(*goa.ServiceError)
+			enc := encoder(ctx, w)
+			body := NewIntegerDivideHasRemainderResponseBody(res)
+			w.WriteHeader(http.StatusExpectationFailed)
+			return enc.Encode(body)
+		case "div_by_zero":
+			res := v.(*goa.ServiceError)
+			enc := encoder(ctx, w)
+			body := NewIntegerDivideDivByZeroResponseBody(res)
+			w.WriteHeader(http.StatusBadRequest)
+			return enc.Encode(body)
 		default:
 			return encodeError(ctx, w, v)
 		}
@@ -142,14 +145,17 @@ func DecodeDivideRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.
 func EncodeDivideError(encoder func(context.Context, http.ResponseWriter) goahttp.Encoder) func(context.Context, http.ResponseWriter, error) error {
 	encodeError := goahttp.ErrorEncoder(encoder)
 	return func(ctx context.Context, w http.ResponseWriter, v error) error {
-		switch res := v.(type) {
-		case *dividersvc.Error:
-			if res.Name == "div_by_zero" {
-				enc := encoder(ctx, w)
-				body := NewDivideDivByZeroResponseBody(res)
-				w.WriteHeader(http.StatusBadRequest)
-				return enc.Encode(body)
-			}
+		en, ok := v.(ErrorNamer)
+		if !ok {
+			return encodeError(ctx, w, v)
+		}
+		switch en.ErrorName() {
+		case "div_by_zero":
+			res := v.(*goa.ServiceError)
+			enc := encoder(ctx, w)
+			body := NewDivideDivByZeroResponseBody(res)
+			w.WriteHeader(http.StatusBadRequest)
+			return enc.Encode(body)
 		default:
 			return encodeError(ctx, w, v)
 		}

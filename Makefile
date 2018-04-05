@@ -22,7 +22,9 @@ DEPEND=\
 	github.com/golang/lint/golint \
 	golang.org/x/tools/cmd/goimports
 
-all: depend lint aliases gen test
+all: lint aliases gen test
+
+travis: depend all
 
 depend:
 	@go get -t -v ./...
@@ -49,7 +51,8 @@ gen:
 	@cd cmd/goa && \
 	go install && \
 	goa gen goa.design/goa/examples/cellar/design -o $(GOPATH)/src/goa.design/goa/examples/cellar && \
-	goa gen goa.design/goa/examples/calc/design -o $(GOPATH)/src/goa.design/goa/examples/calc
+	goa gen goa.design/goa/examples/calc/design -o $(GOPATH)/src/goa.design/goa/examples/calc && \
+	goa gen goa.design/goa/examples/error/design -o $(GOPATH)/src/goa.design/goa/examples/error
 
 test:
 	go test ./...
