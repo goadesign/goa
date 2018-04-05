@@ -89,7 +89,7 @@ func (e NoCriteria) Error() string {
 	return "Missing criteria"
 }
 
-// ErrorName returns q%!(EXTRA string=no_criteria).
+// ErrorName returns "no_criteria".
 func (e NoCriteria) ErrorName() string {
 	return "no_criteria"
 }
@@ -99,7 +99,7 @@ func (e NoMatch) Error() string {
 	return "No bottle matched given criteria"
 }
 
-// ErrorName returns q%!(EXTRA string=no_match).
+// ErrorName returns "no_match".
 func (e NoMatch) ErrorName() string {
 	return "no_match"
 }

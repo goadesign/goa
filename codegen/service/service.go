@@ -129,7 +129,7 @@ func (e {{ .Ref }}) Error() string {
 	return {{ printf "%q" .Description }}
 }
 
-// ErrorName returns {{ printf "q" .Name }}.
+// ErrorName returns {{ printf "%q" .Name }}.
 func (e {{ .Ref }}) ErrorName() string {
 	return {{ printf "%q" .Name }}
 }
