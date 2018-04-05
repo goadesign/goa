@@ -13,6 +13,8 @@ import (
 	httpdesign "goa.design/goa/http/design"
 )
 
+var cmds = map[string]*subcommandData{}
+
 type (
 	commandData struct {
 		// Name of command e.g. "cellar-storage"
@@ -96,6 +98,8 @@ type (
 		// CheckErr is true if the payload initialization code requires
 		// an "err error" variable that must be checked.
 		CheckErr bool
+		// Args contains the data needed to build payload.
+		Args []*InitArgData
 	}
 
 	fieldData struct {
@@ -133,6 +137,29 @@ func ClientCLIFiles(genpkg string, root *httpdesign.RootExpr) []*codegen.File {
 		files = append(files, payloadBuilders(genpkg, svc, data[i]))
 	}
 	return files
+}
+
+// AddFlags adds the CLI flags and a BuildFunction to the given subcommand.
+func AddFlags(e *httpdesign.EndpointExpr, args []*InitArgData) {
+	data, ok := cmds[goify(e.Service.Name(), e.Name())]
+	if !ok {
+		return
+	}
+	svcData := HTTPServices.Get(e.Service.Name())
+	if svcData == nil {
+		return
+	}
+	epData := svcData.Endpoint(e.Name())
+	if epData == nil {
+		return
+	}
+	if epData.Payload != nil && epData.Payload.Request.PayloadInit != nil {
+		args = append(args, epData.Payload.Request.PayloadInit.ClientArgs...)
+	}
+	flags, bFunc := makeFlags(epData, args)
+	data.Flags = flags
+	*data.BuildFunction = *bFunc
+	generateExample(data, e.Service.Name())
 }
 
 // endpointParser returns the file that implements the command line parser that
@@ -285,15 +312,8 @@ func buildSubcommandData(svc *ServiceData, e *EndpointData) *subcommandData {
 			description = fmt.Sprintf("Make request to the %q endpoint", e.Method.Name)
 		}
 		if e.Payload != nil {
-			var actuals []string
-			var args []*InitArgData
 			if e.Payload.Request.PayloadInit != nil {
-				for _, arg := range e.Payload.Request.PayloadInit.ClientArgs {
-					f := argToFlag(svcn, en, arg)
-					flags = append(flags, f)
-					actuals = append(actuals, f.FullName)
-					args = append(args, arg)
-				}
+				flags, buildFunction = makeFlags(e, e.Payload.Request.PayloadInit.ClientArgs)
 			} else if e.Payload.Ref != "" {
 				ex := jsonExample(e.Method.PayloadEx)
 				fn := goify(svcn, en, "p")
@@ -306,50 +326,7 @@ func buildSubcommandData(svc *ServiceData, e *EndpointData) *subcommandData {
 					Example:     ex,
 				})
 			}
-			if len(actuals) > 0 {
-				// We need a build function
-				var (
-					fdata   []*fieldData
-					formals []string
-					check   bool
-				)
-				{
-					formals = make([]string, len(args))
-					for i, arg := range args {
-						formals[i] = flags[i].FullName
-						if arg.FieldName == "" && arg.Name != "body" {
-							continue
-						}
-						code, chek := fieldLoadCode(flags[i].FullName, flags[i].Type, arg)
-						check = check || chek
-						tn := arg.TypeRef
-						if flags[i].Type == "JSON" {
-							// We need to declare the variable without
-							// a pointer to be able to unmarshal the JSON
-							// using its address.
-							tn = arg.TypeName
-						}
-						fdata = append(fdata, &fieldData{
-							Name:     arg.Name,
-							VarName:  arg.Name,
-							TypeName: tn,
-							Init:     code,
-							Pointer:  arg.Pointer,
-						})
-					}
-				}
-				buildFunction = &buildFunctionData{
-					Name:         "Build" + e.Method.VarName + "Payload",
-					ActualParams: actuals,
-					FormalParams: formals,
-					ServiceName:  svcn,
-					MethodName:   en,
-					ResultType:   e.Payload.Ref,
-					Fields:       fdata,
-					PayloadInit:  e.Payload.Request.PayloadInit,
-					CheckErr:     check,
-				}
-			} else if len(flags) > 0 {
+			if buildFunction == nil && len(flags) > 0 {
 				// No build function, just convert the arg to the body type
 				var convPre, convSuff string
 				target := "data"
@@ -392,13 +369,63 @@ func buildSubcommandData(svc *ServiceData, e *EndpointData) *subcommandData {
 	if e.MultipartRequestEncoder != nil {
 		sub.MultipartRequestEncoder = e.MultipartRequestEncoder
 	}
-	ex := svc.Service.Name + " " + codegen.KebabCase(sub.Name)
+	generateExample(sub, svc.Service.Name)
+	cmds[fullName] = sub
+
+	return sub
+}
+
+func generateExample(sub *subcommandData, svc string) {
+	ex := codegen.KebabCase(svc) + " " + codegen.KebabCase(sub.Name)
 	for _, f := range sub.Flags {
 		ex += " --" + f.Name + " " + f.Example
 	}
 	sub.Example = ex
+}
 
-	return sub
+func makeFlags(e *EndpointData, args []*InitArgData) ([]*flagData, *buildFunctionData) {
+	var (
+		fdata  []*fieldData
+		flags  = make([]*flagData, len(args))
+		params = make([]string, len(args))
+		check  bool
+	)
+	for i, arg := range args {
+		f := argToFlag(e.ServiceName, e.Method.Name, arg)
+		flags[i] = f
+		params[i] = f.FullName
+		if arg.FieldName == "" && arg.Name != "body" {
+			continue
+		}
+		code, chek := fieldLoadCode(f.FullName, f.Type, arg)
+		check = check || chek
+		tn := arg.TypeRef
+		if f.Type == "JSON" {
+			// We need to declare the variable without
+			// a pointer to be able to unmarshal the JSON
+			// using its address.
+			tn = arg.TypeName
+		}
+		fdata = append(fdata, &fieldData{
+			Name:     arg.Name,
+			VarName:  arg.Name,
+			TypeName: tn,
+			Init:     code,
+			Pointer:  arg.Pointer,
+		})
+	}
+	return flags, &buildFunctionData{
+		Name:         "Build" + e.Method.VarName + "Payload",
+		ActualParams: params,
+		FormalParams: params,
+		ServiceName:  e.ServiceName,
+		MethodName:   e.Method.Name,
+		ResultType:   e.Payload.Ref,
+		Fields:       fdata,
+		PayloadInit:  e.Payload.Request.PayloadInit,
+		CheckErr:     check,
+		Args:         args,
+	}
 }
 
 func jsonExample(v interface{}) string {
@@ -780,7 +807,7 @@ func {{ .Name }}({{ range .FormalParams }}{{ . }} string, {{ end }}) ({{ .Result
 	}
 			{{- end }}
 			{{- if .ReturnIsStruct }}
-				{{- range .ClientArgs }}
+				{{- range $.Args }}
 					{{- if .FieldName }}
 	{{ if $.PayloadInit.ReturnTypeAttribute }}res{{ else }}v{{ end }}.{{ .FieldName }} = {{ .Name }}
        				{{- end }}
@@ -792,7 +819,7 @@ func {{ .Name }}({{ range .FormalParams }}{{ . }} string, {{ end }}) ({{ .Result
 
 			{{- if .ReturnIsStruct }}
 	payload := &{{ .ReturnTypeName }}{
-				{{- range .ClientArgs }}
+				{{- range $.Args }}
 					{{- if .FieldName }}
 		{{ .FieldName }}: {{ .Name }},
 					{{- end }}
