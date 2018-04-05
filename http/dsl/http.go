@@ -688,6 +688,10 @@ func Body(args ...interface{}) {
 	if fn != nil {
 		eval.Execute(fn, attr)
 	}
+	if attr.Metadata == nil {
+		attr.Metadata = design.MetadataExpr{}
+	}
+	attr.Metadata["http:body"] = []string{}
 	setter(attr)
 }
 
