@@ -116,6 +116,7 @@ var Component = Type("Component", func() {
 var NotFound = Type("NotFound", func() {
 	Description("NotFound is the type returned when attempting to show or delete a bottle that does not exist.")
 	Attribute("message", String, "Message of error", func() {
+		Metadata("struct:error:name")
 		Example("bottle 1 not found")
 	})
 	Attribute("id", String, "ID of missing bottle")

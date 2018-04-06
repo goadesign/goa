@@ -138,5 +138,5 @@ func (e *NotFound) Error() string {
 
 // ErrorName returns "NotFound".
 func (e *NotFound) ErrorName() string {
-	return "NotFound"
+	return e.Message
 }

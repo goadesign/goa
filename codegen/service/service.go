@@ -1,6 +1,7 @@
 package service
 
 import (
+	"fmt"
 	"path/filepath"
 
 	"goa.design/goa/codegen"
@@ -76,9 +77,10 @@ func File(service *design.ServiceExpr) *codegen.File {
 			continue
 		}
 		sections = append(sections, &codegen.SectionTemplate{
-			Name:   "service-error",
-			Source: errorT,
-			Data:   et,
+			Name:    "service-error",
+			Source:  errorT,
+			FuncMap: map[string]interface{}{"errorName": errorName},
+			Data:    et,
 		})
 	}
 	for _, er := range svc.ErrorInits {
@@ -89,6 +91,18 @@ func File(service *design.ServiceExpr) *codegen.File {
 		})
 	}
 	return &codegen.File{Path: path, SectionTemplates: sections}
+}
+
+func errorName(et *UserTypeData) string {
+	obj := design.AsObject(et.Type)
+	if obj != nil {
+		for _, att := range *obj {
+			if _, ok := att.Attribute.Metadata["struct:error:name"]; ok {
+				return fmt.Sprintf("e.%s", codegen.Goify(att.Name, true))
+			}
+		}
+	}
+	return fmt.Sprintf("%q", et.Name)
 }
 
 // serviceT is the template used to write an service definition.
@@ -131,7 +145,7 @@ func (e {{ .Ref }}) Error() string {
 
 // ErrorName returns {{ printf "%q" .Name }}.
 func (e {{ .Ref }}) ErrorName() string {
-	return {{ printf "%q" .Name }}
+	return {{ errorName . }}
 }
 `
 
