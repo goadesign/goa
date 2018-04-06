@@ -933,7 +933,6 @@ func {{ .ErrorEncoder }}(encoder func(context.Context, http.ResponseWriter) goah
 		default:
 			return encodeError(ctx, w, v)
 		}
-		return nil
 	}
 }
 ` + responseT
