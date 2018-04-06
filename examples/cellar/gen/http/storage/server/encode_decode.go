@@ -91,7 +91,6 @@ func EncodeShowError(encoder func(context.Context, http.ResponseWriter) goahttp.
 		default:
 			return encodeError(ctx, w, v)
 		}
-		return nil
 	}
 }
 

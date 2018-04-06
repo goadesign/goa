@@ -26,7 +26,6 @@ func EncodeMethodPrimitiveErrorResponseError(encoder func(context.Context, http.
 		default:
 			return encodeError(ctx, w, v)
 		}
-		return nil
 	}
 }
 `
@@ -50,7 +49,6 @@ func EncodeMethodDefaultErrorResponseError(encoder func(context.Context, http.Re
 		default:
 			return encodeError(ctx, w, v)
 		}
-		return nil
 	}
 }
 `
@@ -80,7 +78,6 @@ func EncodeMethodServiceErrorResponseError(encoder func(context.Context, http.Re
 		default:
 			return encodeError(ctx, w, v)
 		}
-		return nil
 	}
 }
 `
