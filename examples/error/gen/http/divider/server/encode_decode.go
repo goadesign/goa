@@ -95,7 +95,6 @@ func EncodeIntegerDivideError(encoder func(context.Context, http.ResponseWriter)
 		default:
 			return encodeError(ctx, w, v)
 		}
-		return nil
 	}
 }
 
@@ -171,6 +170,5 @@ func EncodeDivideError(encoder func(context.Context, http.ResponseWriter) goahtt
 		default:
 			return encodeError(ctx, w, v)
 		}
-		return nil
 	}
 }
