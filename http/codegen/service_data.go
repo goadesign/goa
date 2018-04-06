@@ -1249,7 +1249,6 @@ func buildErrorsData(svc *service.Data, s *httpdesign.ServiceExpr, e *httpdesign
 			var (
 				serverBodyData *TypeData
 				clientBodyData *TypeData
-				tag, value     string
 			)
 			{
 				att := v.ErrorExpr.AttributeExpr
@@ -1263,18 +1262,6 @@ func buildErrorsData(svc *service.Data, s *httpdesign.ServiceExpr, e *httpdesign
 					serverBodyData.Description = fmt.Sprintf("%s is the type of the %q service %q endpoint HTTP response body for the %q error.",
 						serverBodyData.VarName, s.Name(), e.Name(), v.Name)
 				}
-				if o := design.AsObject(att.Type); o != nil {
-					for _, n := range *o {
-						if n.Attribute.Metadata == nil {
-							continue
-						}
-						if _, ok := n.Attribute.Metadata["struct:error:name"]; ok {
-							tag = n.Name
-							value = v.Name
-							break
-						}
-					}
-				}
 			}
 
 			responseData = &ResponseData{
@@ -1283,8 +1270,6 @@ func buildErrorsData(svc *service.Data, s *httpdesign.ServiceExpr, e *httpdesign
 				ServerBody: serverBodyData,
 				ClientBody: clientBodyData,
 				ResultInit: init,
-				TagName:    codegen.Goify(tag, true),
-				TagValue:   value,
 			}
 		}
 
