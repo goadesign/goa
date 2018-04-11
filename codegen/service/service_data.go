@@ -25,7 +25,8 @@ type (
 		Description string
 		// StructName is the service struct name.
 		StructName string
-		// VarName is the service variable name (first letter in lowercase).
+		// VarName is the service variable name (first letter in
+		// lowercase).
 		VarName string
 		// PkgName is the name of the package containing the generated
 		// service code.
@@ -43,6 +44,8 @@ type (
 		ErrorInits []*ErrorInitData
 		// Scope initialized with all the service types.
 		Scope *codegen.NameScope
+		// Schemes is the unique security schemes for the service.
+		Schemes []*SchemeData
 	}
 
 	// ErrorInitData describes an error returned by a service method of type
@@ -94,6 +97,21 @@ type (
 		ResultEx interface{}
 		// Errors list the possible errors defined in the design if any.
 		Errors []*ErrorInitData
+		// Requirements contains the security requirements for the
+		// method.
+		Requirements []*RequirementData
+		// Schemes contains the security schemes types used by the
+		// method.
+		Schemes []string
+	}
+
+	// RequirementData lists the schemes and scopes defined by a single
+	// security requirement.
+	RequirementData struct {
+		// Schemes list the requirement schemes.
+		Schemes []*SchemeData
+		// Scopes list the required scopes.
+		Scopes []string
 	}
 
 	// UserTypeData contains the data describing a data type.
@@ -124,6 +142,42 @@ type (
 		Required bool
 		// DefaultValue is the payload attribute default value if any.
 		DefaultValue interface{}
+	}
+
+	// SchemeData describes a single security scheme.
+	SchemeData struct {
+		// Kind is the type of scheme, one of "Basic", "APIKey", "JWT"
+		// or "OAuth2".
+		Type string
+		// Name is the name of the scheme.
+		Name string
+		// UsernameField is the name of the payload field that should be
+		// initialized with the basic auth username if any.
+		UsernameField string
+		// UsernamePointer is true if the username field is a pointer.
+		UsernamePointer bool
+		// UsernameAttr is the attribute name containing the username.
+		UsernameAttr string
+		// PasswordField is the name of the payload field that should be
+		// initialized with the basic auth password if any.
+		PasswordField string
+		// PasswordPointer is true if the password field is a pointer.
+		PasswordPointer bool
+		// PasswordAttr is the attribute name containing the password.
+		PasswordAttr string
+		// CredField contains the name of the payload field that should
+		// be initialized with the API key, the JWT token or the OAuth2
+		// access token.
+		CredField string
+		// CredPointer is true if the credential field is a pointer.
+		CredPointer bool
+		// KeyAttr is the nane of the attribute that contains the
+		// security tag (for APIKey, OAuth2, and JWT schemes).
+		KeyAttr string
+		// Scopes lists the scopes that apply to the scheme.
+		Scopes []string
+		// Flows describes the OAuth2 flows.
+		Flows []*design.FlowExpr
 	}
 )
 
@@ -329,60 +383,184 @@ func buildMethodData(m *design.MethodExpr, svcPkgName string, scope *codegen.Nam
 		resultDesc  string
 		resultEx    interface{}
 		errors      []*ErrorInitData
+		reqs        []*RequirementData
+		schemes     []string
 	)
-	{
-		varName = codegen.Goify(m.Name, true)
-		desc = m.Description
-		if desc == "" {
-			desc = codegen.Goify(m.Name, true) + " implements " + m.Name + "."
+	varName = codegen.Goify(m.Name, true)
+	desc = m.Description
+	if desc == "" {
+		desc = codegen.Goify(m.Name, true) + " implements " + m.Name + "."
+	}
+	if m.Payload.Type != design.Empty {
+		payloadName = scope.GoTypeName(m.Payload)
+		payloadRef = scope.GoTypeRef(m.Payload)
+		if dt, ok := m.Payload.Type.(design.UserType); ok {
+			payloadDef = scope.GoTypeDef(dt.Attribute(), true)
 		}
-		if m.Payload.Type != design.Empty {
-			payloadName = scope.GoTypeName(m.Payload)
-			payloadRef = scope.GoTypeRef(m.Payload)
-			if dt, ok := m.Payload.Type.(design.UserType); ok {
-				payloadDef = scope.GoTypeDef(dt.Attribute(), true)
-			}
-			payloadDesc = m.Payload.Description
-			if payloadDesc == "" {
-				payloadDesc = fmt.Sprintf("%s is the payload type of the %s service %s method.",
-					payloadName, m.Service.Name, m.Name)
-			}
-			payloadEx = m.Payload.Example(design.Root.API.Random())
+		payloadDesc = m.Payload.Description
+		if payloadDesc == "" {
+			payloadDesc = fmt.Sprintf("%s is the payload type of the %s service %s method.",
+				payloadName, m.Service.Name, m.Name)
 		}
-		if m.Result.Type != design.Empty {
-			resultName = scope.GoTypeName(m.Result)
-			resultRef = scope.GoTypeRef(m.Result)
-			if dt, ok := m.Result.Type.(design.UserType); ok {
-				resultDef = scope.GoTypeDef(dt.Attribute(), true)
-			}
-			resultDesc = m.Result.Description
-			if resultDesc == "" {
-				resultDesc = fmt.Sprintf("%s is the result type of the %s service %s method.",
-					resultName, m.Service.Name, m.Name)
-			}
-			resultEx = m.Result.Example(design.Root.API.Random())
+		payloadEx = m.Payload.Example(design.Root.API.Random())
+	}
+	if m.Result.Type != design.Empty {
+		resultName = scope.GoTypeName(m.Result)
+		resultRef = scope.GoTypeRef(m.Result)
+		if dt, ok := m.Result.Type.(design.UserType); ok {
+			resultDef = scope.GoTypeDef(dt.Attribute(), true)
 		}
-		if len(m.Errors) > 0 {
-			errors = make([]*ErrorInitData, len(m.Errors))
-			for i, er := range m.Errors {
-				errors[i] = buildErrorInitData(er, scope)
-			}
+		resultDesc = m.Result.Description
+		if resultDesc == "" {
+			resultDesc = fmt.Sprintf("%s is the result type of the %s service %s method.",
+				resultName, m.Service.Name, m.Name)
+		}
+		resultEx = m.Result.Example(design.Root.API.Random())
+	}
+	if len(m.Errors) > 0 {
+		errors = make([]*ErrorInitData, len(m.Errors))
+		for i, er := range m.Errors {
+			errors[i] = buildErrorInitData(er, scope)
 		}
 	}
+	for _, req := range requirements(m) {
+		var rs []*SchemeData
+		for _, s := range req.Schemes {
+			rs = append(rs, buildSchemeData(s, m))
+			found := false
+			for _, es := range schemes {
+				if es == s.Kind.String() {
+					found = true
+					break
+				}
+			}
+			if !found {
+				schemes = append(schemes, s.Kind.String())
+			}
+		}
+		reqs = append(reqs, &RequirementData{Schemes: rs, Scopes: req.Scopes})
+	}
+
 	return &MethodData{
-		Name:        m.Name,
-		VarName:     varName,
-		Description: desc,
-		Payload:     payloadName,
-		PayloadDef:  payloadDef,
-		PayloadRef:  payloadRef,
-		PayloadDesc: payloadDesc,
-		PayloadEx:   payloadEx,
-		Result:      resultName,
-		ResultDef:   resultDef,
-		ResultRef:   resultRef,
-		ResultDesc:  resultDesc,
-		ResultEx:    resultEx,
-		Errors:      errors,
+		Name:         m.Name,
+		VarName:      varName,
+		Description:  desc,
+		Payload:      payloadName,
+		PayloadDef:   payloadDef,
+		PayloadRef:   payloadRef,
+		PayloadDesc:  payloadDesc,
+		PayloadEx:    payloadEx,
+		Result:       resultName,
+		ResultDef:    resultDef,
+		ResultRef:    resultRef,
+		ResultDesc:   resultDesc,
+		ResultEx:     resultEx,
+		Errors:       errors,
+		Requirements: reqs,
+		Schemes:      schemes,
 	}
+}
+
+// buildSchemeData builds the scheme data for the given scheme and method expressions.
+func buildSchemeData(s *design.SchemeExpr, m *design.MethodExpr) *SchemeData {
+	if !design.IsObject(m.Payload.Type) {
+		return nil
+	}
+	switch s.Kind {
+	case design.BasicAuthKind:
+		userAtt, user := taggedAttribute(m.Payload, "security:username")
+		passAtt, pass := taggedAttribute(m.Payload, "security:password")
+		return &SchemeData{
+			Type:            s.Kind.String(),
+			Name:            s.SchemeName,
+			UsernameAttr:    userAtt,
+			UsernameField:   user,
+			UsernamePointer: m.Payload.IsPrimitivePointer(userAtt, true),
+			PasswordAttr:    passAtt,
+			PasswordField:   pass,
+			PasswordPointer: m.Payload.IsPrimitivePointer(passAtt, true),
+		}
+	case design.APIKeyKind:
+		if keyAtt, key := taggedAttribute(m.Payload, "security:apikey:"+s.SchemeName); key != "" {
+			return &SchemeData{
+				Type:        s.Kind.String(),
+				Name:        s.SchemeName,
+				CredField:   key,
+				CredPointer: m.Payload.IsPrimitivePointer(keyAtt, true),
+				KeyAttr:     keyAtt,
+			}
+		}
+	case design.JWTKind:
+		if keyAtt, key := taggedAttribute(m.Payload, "security:token"); key != "" {
+			var scopes []string
+			if len(s.Scopes) > 0 {
+				scopes = make([]string, len(s.Scopes))
+				for i, s := range s.Scopes {
+					scopes[i] = s.Name
+				}
+			}
+			return &SchemeData{
+				Type:        s.Kind.String(),
+				Name:        s.SchemeName,
+				CredField:   key,
+				CredPointer: m.Payload.IsPrimitivePointer(keyAtt, true),
+				KeyAttr:     keyAtt,
+				Scopes:      scopes,
+			}
+		}
+	case design.OAuth2Kind:
+		if keyAtt, key := taggedAttribute(m.Payload, "security:accesstoken"); key != "" {
+			var scopes []string
+			if len(s.Scopes) > 0 {
+				scopes = make([]string, len(s.Scopes))
+				for i, s := range s.Scopes {
+					scopes[i] = s.Name
+				}
+			}
+			return &SchemeData{
+				Type:        s.Kind.String(),
+				Name:        s.SchemeName,
+				CredField:   key,
+				CredPointer: m.Payload.IsPrimitivePointer(keyAtt, true),
+				KeyAttr:     keyAtt,
+				Scopes:      scopes,
+				Flows:       s.Flows,
+			}
+		}
+	}
+	return nil
+}
+
+// taggedAttribute returns the name and corresponding field name of child
+// attribute of p with the given tag if p is an object.
+func taggedAttribute(a *design.AttributeExpr, tag string) (string, string) {
+	obj := design.AsObject(a.Type)
+	if obj == nil {
+		return "", ""
+	}
+	for _, at := range *obj {
+		if _, ok := at.Attribute.Metadata[tag]; ok {
+			return at.Name, codegen.Goify(at.Name, true)
+		}
+	}
+	return "", ""
+}
+
+// requirements returns the security requirements for the given method.
+func requirements(m *design.MethodExpr) []*design.SecurityExpr {
+	for _, r := range m.Requirements {
+		// Handle special case of no security
+		for _, s := range r.Schemes {
+			if s.Kind == design.NoKind {
+				return nil
+			}
+		}
+	}
+	if len(m.Requirements) > 0 {
+		return m.Requirements
+	}
+	if len(m.Service.Requirements) > 0 {
+		return m.Service.Requirements
+	}
+	return design.Root.API.Requirements
 }

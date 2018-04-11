@@ -323,6 +323,24 @@ func (a *AttributeExpr) IsPrimitivePointer(attName string, useDefault bool) bool
 	return false
 }
 
+// HasTag returns true if the attribute is an object that has an attribute with
+// the given tag.
+func (a *AttributeExpr) HasTag(tag string) bool {
+	if a == nil {
+		return false
+	}
+	obj := AsObject(a.Type)
+	if obj == nil {
+		return false
+	}
+	for _, at := range *obj {
+		if _, ok := at.Attribute.Metadata[tag]; ok {
+			return true
+		}
+	}
+	return false
+}
+
 // HasDefaultValue returns true if the attribute with the given name has a
 // default value.
 func (a *AttributeExpr) HasDefaultValue(attName string) bool {

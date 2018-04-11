@@ -1,0 +1,611 @@
+swagger: "2.0"
+info:
+  title: Security Example API
+  description: This API demonstrates the use of the goa security plugin
+  termsofservice: ""
+  contact: null
+  license: null
+  version: ""
+  extensions: {}
+host: localhost:8080
+basepath: ""
+schemes: []
+consumes: []
+produces: []
+paths:
+  /secure:
+    ref: ""
+    get:
+      tags:
+      - secured_service
+      summary: secure secured_service
+      description: |-
+        This action is secured with the jwt scheme
+
+        Required security scopes:
+          * `api:read`
+
+        Required security scopes:
+          * `api:read`
+      externaldocs: null
+      operationid: secured_service#secure
+      consumes: []
+      produces: []
+      parameters:
+      - name: fail
+        in: query
+        description: Whether to force auth failure even with a valid JWT
+        required: false
+        schema: null
+        type: boolean
+        format: ""
+        allowemptyvalue: false
+        items: null
+        collectionformat: ""
+        default: null
+        maximum: null
+        exclusivemaximum: false
+        minimum: null
+        exclusiveminimum: false
+        maxlength: null
+        minlength: null
+        pattern: ""
+        maxitems: null
+        minitems: null
+        uniqueitems: false
+        enum: []
+        multipleof: 0
+        extensions: {}
+      responses:
+        "200":
+          description: OK response.
+          schema:
+            schema: ""
+            id: ""
+            title: ""
+            type: string
+            items: null
+            properties: {}
+            definitions: {}
+            description: ""
+            defaultvalue: null
+            example: null
+            media: null
+            readonly: false
+            pathstart: ""
+            links: []
+            ref: ""
+            enum: []
+            format: ""
+            pattern: ""
+            minimum: null
+            maximum: null
+            minlength: null
+            maxlength: null
+            required: []
+            additionalproperties: false
+            anyof: []
+          headers: {}
+          ref: ""
+          extensions: {}
+        "401":
+          description: Unauthorized response.
+          schema:
+            schema: ""
+            id: ""
+            title: ""
+            type: ""
+            items: null
+            properties: {}
+            definitions: {}
+            description: ""
+            defaultvalue: null
+            example: null
+            media: null
+            readonly: false
+            pathstart: ""
+            links: []
+            ref: '#/definitions/SecureUnauthorizedResponseBody'
+            enum: []
+            format: ""
+            pattern: ""
+            minimum: null
+            maximum: null
+            minlength: null
+            maxlength: null
+            required: []
+            additionalproperties: false
+            anyof: []
+          headers: {}
+          ref: ""
+          extensions: {}
+      schemes:
+      - http
+      deprecated: false
+      security:
+      - jwt: []
+      extensions: {}
+    put:
+      tags:
+      - secured_service
+      summary: doubly_secure secured_service
+      description: |-
+        This action is secured with the jwt scheme and also requires an API key query string.
+
+        Required security scopes:
+          * `api:read`
+          * `api:write`
+
+        Required security scopes:
+          * `api:read`
+          * `api:write`
+      externaldocs: null
+      operationid: secured_service#doubly_secure
+      consumes: []
+      produces: []
+      parameters:
+      - name: k
+        in: query
+        description: API key
+        required: false
+        schema: null
+        type: string
+        format: ""
+        allowemptyvalue: false
+        items: null
+        collectionformat: ""
+        default: null
+        maximum: null
+        exclusivemaximum: false
+        minimum: null
+        exclusiveminimum: false
+        maxlength: null
+        minlength: null
+        pattern: ""
+        maxitems: null
+        minitems: null
+        uniqueitems: false
+        enum: []
+        multipleof: 0
+        extensions: {}
+      responses:
+        "200":
+          description: OK response.
+          schema:
+            schema: ""
+            id: ""
+            title: ""
+            type: string
+            items: null
+            properties: {}
+            definitions: {}
+            description: ""
+            defaultvalue: null
+            example: null
+            media: null
+            readonly: false
+            pathstart: ""
+            links: []
+            ref: ""
+            enum: []
+            format: ""
+            pattern: ""
+            minimum: null
+            maximum: null
+            minlength: null
+            maxlength: null
+            required: []
+            additionalproperties: false
+            anyof: []
+          headers: {}
+          ref: ""
+          extensions: {}
+        "401":
+          description: Unauthorized response.
+          schema:
+            schema: ""
+            id: ""
+            title: ""
+            type: ""
+            items: null
+            properties: {}
+            definitions: {}
+            description: ""
+            defaultvalue: null
+            example: null
+            media: null
+            readonly: false
+            pathstart: ""
+            links: []
+            ref: '#/definitions/DoublySecureUnauthorizedResponseBody'
+            enum: []
+            format: ""
+            pattern: ""
+            minimum: null
+            maximum: null
+            minlength: null
+            maxlength: null
+            required: []
+            additionalproperties: false
+            anyof: []
+          headers: {}
+          ref: ""
+          extensions: {}
+      schemes:
+      - http
+      deprecated: false
+      security:
+      - api_key: []
+        jwt: []
+      extensions: {}
+    post:
+      tags:
+      - secured_service
+      summary: also_doubly_secure secured_service
+      description: |-
+        This action is secured with the jwt scheme and also requires an API key header.
+
+        Required security scopes:
+          * `api:read`
+          * `api:write`
+
+        Required security scopes:
+          * `api:read`
+          * `api:write`
+      externaldocs: null
+      operationid: secured_service#also_doubly_secure
+      consumes: []
+      produces: []
+      parameters:
+      - name: k
+        in: query
+        description: API key
+        required: false
+        schema: null
+        type: string
+        format: ""
+        allowemptyvalue: false
+        items: null
+        collectionformat: ""
+        default: null
+        maximum: null
+        exclusivemaximum: false
+        minimum: null
+        exclusiveminimum: false
+        maxlength: null
+        minlength: null
+        pattern: ""
+        maxitems: null
+        minitems: null
+        uniqueitems: false
+        enum: []
+        multipleof: 0
+        extensions: {}
+      - name: oauth
+        in: query
+        description: ""
+        required: false
+        schema: null
+        type: string
+        format: ""
+        allowemptyvalue: false
+        items: null
+        collectionformat: ""
+        default: null
+        maximum: null
+        exclusivemaximum: false
+        minimum: null
+        exclusiveminimum: false
+        maxlength: null
+        minlength: null
+        pattern: ""
+        maxitems: null
+        minitems: null
+        uniqueitems: false
+        enum: []
+        multipleof: 0
+        extensions: {}
+      responses:
+        "200":
+          description: OK response.
+          schema:
+            schema: ""
+            id: ""
+            title: ""
+            type: string
+            items: null
+            properties: {}
+            definitions: {}
+            description: ""
+            defaultvalue: null
+            example: null
+            media: null
+            readonly: false
+            pathstart: ""
+            links: []
+            ref: ""
+            enum: []
+            format: ""
+            pattern: ""
+            minimum: null
+            maximum: null
+            minlength: null
+            maxlength: null
+            required: []
+            additionalproperties: false
+            anyof: []
+          headers: {}
+          ref: ""
+          extensions: {}
+        "401":
+          description: Unauthorized response.
+          schema:
+            schema: ""
+            id: ""
+            title: ""
+            type: ""
+            items: null
+            properties: {}
+            definitions: {}
+            description: ""
+            defaultvalue: null
+            example: null
+            media: null
+            readonly: false
+            pathstart: ""
+            links: []
+            ref: '#/definitions/AlsoDoublySecureUnauthorizedResponseBody'
+            enum: []
+            format: ""
+            pattern: ""
+            minimum: null
+            maximum: null
+            minlength: null
+            maxlength: null
+            required: []
+            additionalproperties: false
+            anyof: []
+          headers: {}
+          ref: ""
+          extensions: {}
+      schemes:
+      - http
+      deprecated: false
+      security:
+      - api_key: []
+        jwt: []
+      - basic: []
+        oauth2:
+        - api:read
+        - api:write
+      extensions: {}
+    delete: null
+    options: null
+    head: null
+    patch: null
+    parameters: []
+    extensions: {}
+  /signin:
+    ref: ""
+    get: null
+    put: null
+    post:
+      tags:
+      - secured_service
+      summary: signin secured_service
+      description: Creates a valid JWT
+      externaldocs: null
+      operationid: secured_service#signin
+      consumes: []
+      produces: []
+      parameters: []
+      responses:
+        "204":
+          description: No Content response.
+          schema: null
+          headers: {}
+          ref: ""
+          extensions: {}
+        "401":
+          description: Unauthorized response.
+          schema:
+            schema: ""
+            id: ""
+            title: ""
+            type: ""
+            items: null
+            properties: {}
+            definitions: {}
+            description: ""
+            defaultvalue: null
+            example: null
+            media: null
+            readonly: false
+            pathstart: ""
+            links: []
+            ref: '#/definitions/SigninUnauthorizedResponseBody'
+            enum: []
+            format: ""
+            pattern: ""
+            minimum: null
+            maximum: null
+            minlength: null
+            maxlength: null
+            required: []
+            additionalproperties: false
+            anyof: []
+          headers: {}
+          ref: ""
+          extensions: {}
+      schemes:
+      - http
+      deprecated: false
+      security:
+      - basic: []
+      extensions: {}
+    delete: null
+    options: null
+    head: null
+    patch: null
+    parameters: []
+    extensions: {}
+definitions:
+  AlsoDoublySecureUnauthorizedResponseBody:
+    schema: ""
+    id: ""
+    title: AlsoDoublySecureUnauthorizedResponseBody
+    type: string
+    items: null
+    properties: {}
+    definitions: {}
+    description: Credentials are invalid
+    defaultvalue: null
+    example: Maxime ipsam esse et.
+    media: null
+    readonly: false
+    pathstart: ""
+    links: []
+    ref: ""
+    enum: []
+    format: ""
+    pattern: ""
+    minimum: null
+    maximum: null
+    minlength: null
+    maxlength: null
+    required: []
+    additionalproperties: false
+    anyof: []
+  DoublySecureUnauthorizedResponseBody:
+    schema: ""
+    id: ""
+    title: DoublySecureUnauthorizedResponseBody
+    type: string
+    items: null
+    properties: {}
+    definitions: {}
+    description: Credentials are invalid
+    defaultvalue: null
+    example: Itaque accusamus enim.
+    media: null
+    readonly: false
+    pathstart: ""
+    links: []
+    ref: ""
+    enum: []
+    format: ""
+    pattern: ""
+    minimum: null
+    maximum: null
+    minlength: null
+    maxlength: null
+    required: []
+    additionalproperties: false
+    anyof: []
+  SecureUnauthorizedResponseBody:
+    schema: ""
+    id: ""
+    title: SecureUnauthorizedResponseBody
+    type: string
+    items: null
+    properties: {}
+    definitions: {}
+    description: Credentials are invalid
+    defaultvalue: null
+    example: Accusantium voluptatem alias corrupti voluptates a.
+    media: null
+    readonly: false
+    pathstart: ""
+    links: []
+    ref: ""
+    enum: []
+    format: ""
+    pattern: ""
+    minimum: null
+    maximum: null
+    minlength: null
+    maxlength: null
+    required: []
+    additionalproperties: false
+    anyof: []
+  SigninUnauthorizedResponseBody:
+    schema: ""
+    id: ""
+    title: SigninUnauthorizedResponseBody
+    type: string
+    items: null
+    properties: {}
+    definitions: {}
+    description: Credentials are invalid
+    defaultvalue: null
+    example: Tenetur est et.
+    media: null
+    readonly: false
+    pathstart: ""
+    links: []
+    ref: ""
+    enum: []
+    format: ""
+    pattern: ""
+    minimum: null
+    maximum: null
+    minlength: null
+    maxlength: null
+    required: []
+    additionalproperties: false
+    anyof: []
+parameters: {}
+responses: {}
+securitydefinitions:
+  api_key:
+    type: apiKey
+    description: Secures endpoint by requiring an API key.
+    name: k
+    in: query
+    flow: ""
+    authorizationurl: ""
+    tokenurl: ""
+    scopes: {}
+    extensions: {}
+  basic:
+    type: basic
+    description: Basic authentication used to authenticate security principal during
+      signin
+    name: ""
+    in: ""
+    flow: ""
+    authorizationurl: ""
+    tokenurl: ""
+    scopes: {}
+    extensions: {}
+  jwt:
+    type: apiKey
+    description: |-
+      Secures endpoint by requiring a valid JWT token retrieved via the signin endpoint. Supports scopes "api:read" and "api:write".
+      **Security Scopes**:
+        * `api:read`: Read-only access
+        * `api:write`: Read and write access
+    name: Authorization
+    in: header
+    flow: ""
+    authorizationurl: ""
+    tokenurl: ""
+    scopes: {}
+    extensions: {}
+  oauth2:
+    type: oauth2
+    description: Secures endpoint by requiring a valid OAuth2 token retrieved via
+      the signin endpoint. Supports scopes "api:read" and "api:write".
+    name: ""
+    in: ""
+    flow: accessCode
+    authorizationurl: http://localhost:8080/authorization
+    tokenurl: http://localhost:8080/token
+    scopes:
+      api:read: Read-only access
+      api:write: Read and write access
+    extensions: {}
+tags: []
+externaldocs:
+  description: Security example README
+  url: https://github.com/goadesign/plugins/security/tree/master/example/multi_auth/README.md

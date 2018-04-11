@@ -23,6 +23,11 @@ type (
 		Result *AttributeExpr
 		// Errors lists the error responses.
 		Errors []*ErrorExpr
+		// Requirements contains the security requirements for the
+		// method. One requirement is composed of potentially multiple
+		// schemes. Incoming requests must validate at least one
+		// requirement to be authorized.
+		Requirements []*SecurityExpr
 		// Service that owns method.
 		Service *ServiceExpr
 		// Metadata is an arbitrary set of key/value pairs, see dsl.Metadata
@@ -68,6 +73,32 @@ func (m *MethodExpr) Validate() error {
 		if err := e.Validate(); err != nil {
 			if verrs, ok := err.(*eval.ValidationErrors); ok {
 				verr.Merge(verrs)
+			}
+		}
+	}
+	for _, r := range m.Requirements {
+		for _, s := range r.Schemes {
+			verr.Merge(s.Validate())
+			switch s.Kind {
+			case BasicAuthKind:
+				if !m.Payload.HasTag("security:username") {
+					verr.Add(m, "payload of method %q of service %q does not define a username attribute, use Username to define one.", m.Name, m.Service.Name)
+				}
+				if !m.Payload.HasTag("security:password") {
+					verr.Add(m, "payload of method %q of service %q does not define a password attribute, use Password to define one.", m.Name, m.Service.Name)
+				}
+			case APIKeyKind:
+				if !m.Payload.HasTag("security:apikey:" + s.SchemeName) {
+					verr.Add(m, "payload of method %q of service %q does not define an API key attribute, use APIKey to define one.", m.Name, m.Service.Name)
+				}
+			case JWTKind:
+				if !m.Payload.HasTag("security:token") {
+					verr.Add(m, "payload of method %q of service %q does not define a JWT attribute, use Token to define one.", m.Name, m.Service.Name)
+				}
+			case OAuth2Kind:
+				if !m.Payload.HasTag("security:accesstoken") {
+					verr.Add(m, "payload of method %q of service %q does not define a OAuth2 access token attribute, use AccessToken to define one.", m.Name, m.Service.Name)
+				}
 			}
 		}
 	}
