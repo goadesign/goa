@@ -197,6 +197,72 @@ func TestAsMap(t *testing.T) {
 	}
 }
 
+func TestIsObject(t *testing.T) {
+	var (
+		object = &Object{
+			&NamedAttributeExpr{
+				Name: "foo",
+				Attribute: &AttributeExpr{
+					Type: String,
+				},
+			},
+		}
+		objectUserType = &UserTypeExpr{
+			AttributeExpr: &AttributeExpr{
+				Type: object,
+			},
+		}
+		notObjectUserType = &UserTypeExpr{
+			AttributeExpr: &AttributeExpr{
+				Type: Boolean,
+			},
+		}
+		objectResultType = &ResultTypeExpr{
+			UserTypeExpr: objectUserType,
+		}
+		notObjectResultType = &ResultTypeExpr{
+			UserTypeExpr: notObjectUserType,
+		}
+	)
+	cases := map[string]struct {
+		dt       DataType
+		expected bool
+	}{
+		"object user type": {
+			dt:       objectUserType,
+			expected: true,
+		},
+		"not object user type": {
+			dt:       notObjectUserType,
+			expected: false,
+		},
+		"object result type": {
+			dt:       objectResultType,
+			expected: true,
+		},
+		"not object result type": {
+			dt:       notObjectResultType,
+			expected: false,
+		},
+		"object": {
+			dt:       object,
+			expected: true,
+		},
+		"not object": {
+			dt:       Boolean,
+			expected: false,
+		},
+	}
+
+	for k, tc := range cases {
+		if actual := IsObject(tc.dt); actual != tc.expected {
+			if actual != tc.expected {
+				t.Errorf("%s: got %#v, expected %#v", k, actual, tc.expected)
+			}
+		}
+	}
+}
+
 func TestIsPrimitive(t *testing.T) {
 	var (
 		primitiveUserType = &UserTypeExpr{
