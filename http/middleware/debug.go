@@ -26,7 +26,7 @@ type responseDupper struct {
 // and bodies.
 func Debug(mux goahttp.Muxer, w io.Writer) func(http.Handler) http.Handler {
 	return func(h http.Handler) http.Handler {
-		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		return http.HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {
 			buf := &bytes.Buffer{}
 			// Request ID
 			reqID := r.Context().Value(RequestIDKey)
@@ -76,7 +76,7 @@ func Debug(mux goahttp.Muxer, w io.Writer) func(http.Handler) http.Handler {
 			}
 			r.Body = ioutil.NopCloser(bytes.NewBuffer(b))
 
-			dupper := &responseDupper{ResponseWriter: w, Buffer: &bytes.Buffer{}}
+			dupper := &responseDupper{ResponseWriter: rw, Buffer: &bytes.Buffer{}}
 			h.ServeHTTP(dupper, r)
 
 			buf.WriteString(fmt.Sprintf("\n< [%s] %s", reqID, http.StatusText(dupper.Status)))
