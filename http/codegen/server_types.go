@@ -54,6 +54,7 @@ func serverType(genpkg string, svc *httpdesign.ServiceExpr, seen map[string]stru
 			{Path: "unicode/utf8"},
 			{Path: genpkg + "/" + codegen.SnakeCase(svc.Name()), Name: sd.Service.PkgName},
 			{Path: "goa.design/goa", Name: "goa"},
+			{Path: genpkg + "/" + codegen.SnakeCase(svc.Name()) + "/" + "views", Name: sd.Service.ViewsPkg},
 		},
 	)
 
@@ -86,7 +87,7 @@ func serverType(genpkg string, svc *httpdesign.ServiceExpr, seen map[string]stru
 		adata := rdata.Endpoint(a.Name())
 		for _, resp := range adata.Result.Responses {
 			if data := resp.ServerBody; data != nil {
-				if data.Def != "" {
+				if data.Def != "" && adata.Method.ViewedResult == nil {
 					sections = append(sections, &codegen.SectionTemplate{
 						Name:   "response-server-body",
 						Source: typeDeclT,
@@ -101,6 +102,15 @@ func serverType(genpkg string, svc *httpdesign.ServiceExpr, seen map[string]stru
 				}
 			}
 		}
+	}
+
+	// viewed types
+	for _, t := range rdata.ViewedTypes {
+		sections = append(sections, &codegen.SectionTemplate{
+			Name:   "viewed-type",
+			Source: typeDeclT,
+			Data:   t,
+		})
 	}
 
 	// error body types

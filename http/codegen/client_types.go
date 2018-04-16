@@ -53,6 +53,7 @@ func clientType(genpkg string, svc *httpdesign.ServiceExpr, seen map[string]stru
 		[]*codegen.ImportSpec{
 			{Path: "unicode/utf8"},
 			{Path: genpkg + "/" + codegen.SnakeCase(svc.Name()), Name: sd.Service.PkgName},
+			{Path: genpkg + "/" + codegen.SnakeCase(svc.Name()) + "/" + "views", Name: sd.Service.ViewsPkg},
 			{Path: "goa.design/goa", Name: "goa"},
 		},
 	)
@@ -88,7 +89,7 @@ func clientType(genpkg string, svc *httpdesign.ServiceExpr, seen map[string]stru
 	for _, a := range svc.HTTPEndpoints {
 		adata := rdata.Endpoint(a.Name())
 		for _, resp := range adata.Result.Responses {
-			if data := resp.ClientBody; data != nil {
+			if data := resp.ClientBody; data != nil && adata.Method.ViewedResult == nil {
 				if data.Def != "" {
 					sections = append(sections, &codegen.SectionTemplate{
 						Name:   "client-response-body",
@@ -124,7 +125,6 @@ func clientType(genpkg string, svc *httpdesign.ServiceExpr, seen map[string]stru
 		}
 	}
 
-	// body attribute types
 	for _, data := range rdata.ClientBodyAttributeTypes {
 		if data.Def != "" {
 			sections = append(sections, &codegen.SectionTemplate{
@@ -174,6 +174,7 @@ func clientType(genpkg string, svc *httpdesign.ServiceExpr, seen map[string]stru
 		}
 	}
 
+	// body attribute types
 	// validate methods
 	for _, data := range validatedTypes {
 		sections = append(sections, &codegen.SectionTemplate{
@@ -182,7 +183,6 @@ func clientType(genpkg string, svc *httpdesign.ServiceExpr, seen map[string]stru
 			Data:   data,
 		})
 	}
-
 	return &codegen.File{Path: path, SectionTemplates: sections}
 }
 
@@ -223,5 +223,12 @@ func {{ .Name }}({{- range .ClientArgs }}{{ .Name }} {{ .TypeRef }}, {{ end }}) 
 			}
 		{{- end }}
 	{{ end -}}
+}
+`
+
+const toResultT = `{{ comment .Description }}
+func {{ .VarName }}(vRes {{ .Ref }}) {{ .ReturnRef }} {
+{{ .Code }}
+	return res
 }
 `

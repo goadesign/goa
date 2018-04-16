@@ -20,9 +20,10 @@ func Service(genpkg string, roots []eval.Root) ([]*codegen.File, error) {
 			for _, s := range r.Services {
 				// Make sure service is first so name scope is
 				// properly initialized.
-				files = append(files, service.File(s))
-				files = append(files, service.EndpointFile(s))
+				files = append(files, service.File(genpkg, s))
+				files = append(files, service.EndpointFile(genpkg, s))
 				files = append(files, service.ClientFile(s))
+				files = append(files, service.ViewsFile(genpkg, s))
 				f, err := service.ConvertFile(r, s)
 				if err != nil {
 					return nil, err

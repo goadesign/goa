@@ -640,10 +640,7 @@ definitions:
       rating: 3
       vintage: 2005
       winery:
-        country: USA
         name: Longoria
-        region: Central Coast, California
-        url: http://www.longoriawine.com/
     required:
     - id
     - name
@@ -713,10 +710,7 @@ definitions:
       rating: 3
       vintage: 1924
       winery:
-        country: USA
         name: Longoria
-        region: Central Coast, California
-        url: http://www.longoriawine.com/
     required:
     - id
     - name
@@ -909,10 +903,7 @@ definitions:
         example: http://www.longoriawine.com/
         pattern: (?i)^(https?|ftp)://[^\s/$.?#].[^\s]*$
     example:
-      country: USA
       name: Longoria
-      region: Central Coast, California
-      url: http://www.longoriawine.com/
     required:
     - name
     - region
@@ -925,7 +916,7 @@ definitions:
         type: string
         description: Name of winery
         example: Longoria
-    description: WineryResponseBodyTiny result type (default view) (default view)
+    description: WineryTiny result type (default view) (default view)
     example:
       name: Longoria
     required:

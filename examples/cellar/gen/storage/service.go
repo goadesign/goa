@@ -10,6 +10,8 @@ package storage
 
 import (
 	"context"
+
+	storageviews "goa.design/goa/examples/cellar/gen/storage/views"
 )
 
 // The storage service makes it possible to view, add or remove wine bottles.
@@ -17,7 +19,10 @@ type Service interface {
 	// List all stored bottles
 	List(context.Context) (StoredBottleCollection, error)
 	// Show bottle by ID
-	Show(context.Context, *ShowPayload) (*StoredBottle, error)
+	// It must return one of the following views
+	// * default
+	// * tiny
+	Show(context.Context, *ShowPayload) (*StoredBottle, string, error)
 	// Add new bottle and return its ID.
 	Add(context.Context, *Bottle) (string, error)
 	// Remove bottle from storage
@@ -139,4 +144,92 @@ func (e *NotFound) Error() string {
 // ErrorName returns "NotFound".
 func (e *NotFound) ErrorName() string {
 	return e.Message
+}
+
+// NewWinery converts viewed result type Winery to result type Winery.
+func NewWinery(vRes *storageviews.Winery) *Winery {
+	res := &Winery{
+		URL: vRes.URL,
+	}
+	if vRes.Name != nil {
+		res.Name = *vRes.Name
+	}
+	if vRes.Region != nil {
+		res.Region = *vRes.Region
+	}
+	if vRes.Country != nil {
+		res.Country = *vRes.Country
+	}
+	return res
+}
+
+// NewViewedWinery converts result type Winery to viewed result type Winery.
+func NewViewedWinery(res *Winery) *storageviews.Winery {
+	v := &storageviews.WineryView{
+		Name:    &res.Name,
+		Region:  &res.Region,
+		Country: &res.Country,
+		URL:     res.URL,
+	}
+	return &storageviews.Winery{WineryView: v}
+}
+
+// NewStoredBottle converts viewed result type StoredBottle to result type
+// StoredBottle.
+func NewStoredBottle(vRes *storageviews.StoredBottle) *StoredBottle {
+	res := &StoredBottle{
+		Description: vRes.Description,
+		Rating:      vRes.Rating,
+	}
+	if vRes.ID != nil {
+		res.ID = *vRes.ID
+	}
+	if vRes.Name != nil {
+		res.Name = *vRes.Name
+	}
+	if vRes.Vintage != nil {
+		res.Vintage = *vRes.Vintage
+	}
+	if vRes.Composition != nil {
+		res.Composition = make([]*Component, len(vRes.Composition))
+		for j, val := range vRes.Composition {
+			res.Composition[j] = &Component{
+				Percentage: val.Percentage,
+			}
+			if val.Varietal != nil {
+				res.Composition[j].Varietal = *val.Varietal
+			}
+		}
+	}
+	if vRes.Winery != nil {
+		res.Winery = NewWinery(vRes.Winery)
+	}
+
+	return res
+}
+
+// NewViewedStoredBottle converts result type StoredBottle to viewed result
+// type StoredBottle.
+func NewViewedStoredBottle(res *StoredBottle) *storageviews.StoredBottle {
+	v := &storageviews.StoredBottleView{
+		ID:          &res.ID,
+		Name:        &res.Name,
+		Vintage:     &res.Vintage,
+		Description: res.Description,
+		Rating:      res.Rating,
+	}
+	if res.Composition != nil {
+		v.Composition = make([]*storageviews.Component, len(res.Composition))
+		for j, val := range res.Composition {
+			v.Composition[j] = &storageviews.Component{
+				Varietal:   &val.Varietal,
+				Percentage: val.Percentage,
+			}
+		}
+	}
+	if res.Winery != nil {
+		v.Winery = NewViewedWinery(res.Winery)
+	}
+
+	return &storageviews.StoredBottle{StoredBottleView: v}
 }

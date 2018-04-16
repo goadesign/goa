@@ -11,13 +11,16 @@ package client
 import (
 	"bytes"
 	"context"
+	"fmt"
 	"io/ioutil"
 	"mime/multipart"
 	"net/http"
 	"net/url"
 	"strconv"
 
+	goa "goa.design/goa"
 	storage "goa.design/goa/examples/cellar/gen/storage"
+	storageviews "goa.design/goa/examples/cellar/gen/storage/views"
 	goahttp "goa.design/goa/http"
 )
 
@@ -67,7 +70,6 @@ func DecodeListResponse(decoder func(*http.Response) goahttp.Decoder, restoreBod
 			if err != nil {
 				return nil, goahttp.ErrValidationError("storage", "list", err)
 			}
-
 			return NewListStoredBottleCollectionOK(body), nil
 		default:
 			body, _ := ioutil.ReadAll(resp.Body)
@@ -141,19 +143,23 @@ func DecodeShowResponse(decoder func(*http.Response) goahttp.Decoder, restoreBod
 		switch resp.StatusCode {
 		case http.StatusOK:
 			var (
-				body ShowResponseBody
+				vRes *storageviews.StoredBottle
 				err  error
 			)
-			err = decoder(resp).Decode(&body)
+			err = decoder(resp).Decode(&vRes)
 			if err != nil {
 				return nil, goahttp.ErrDecodingError("storage", "show", err)
 			}
-			err = body.Validate()
-			if err != nil {
-				return nil, goahttp.ErrValidationError("storage", "show", err)
+			view := resp.Header.Get("goa-view")
+			if view == "" {
+				return nil, goa.MergeErrors(err, goa.MissingFieldError("goa-view", "header"))
 			}
-
-			return NewShowStoredBottleOK(&body), nil
+			vRes.View = view
+			if err = vRes.Validate(); err != nil {
+				return nil, fmt.Errorf("invalid response: %s", err)
+			}
+			res := storage.NewStoredBottle(vRes)
+			return res, nil
 		case http.StatusNotFound:
 			var (
 				body ShowNotFoundResponseBody
@@ -167,7 +173,6 @@ func DecodeShowResponse(decoder func(*http.Response) goahttp.Decoder, restoreBod
 			if err != nil {
 				return nil, goahttp.ErrValidationError("storage", "show", err)
 			}
-
 			return nil, NewShowNotFound(&body)
 		default:
 			body, _ := ioutil.ReadAll(resp.Body)
@@ -234,7 +239,6 @@ func DecodeAddResponse(decoder func(*http.Response) goahttp.Decoder, restoreBody
 			if err != nil {
 				return nil, goahttp.ErrDecodingError("storage", "add", err)
 			}
-
 			return body, nil
 		default:
 			body, _ := ioutil.ReadAll(resp.Body)
@@ -433,7 +437,6 @@ func DecodeMultiAddResponse(decoder func(*http.Response) goahttp.Decoder, restor
 			if err != nil {
 				return nil, goahttp.ErrDecodingError("storage", "multi_add", err)
 			}
-
 			return body, nil
 		default:
 			body, _ := ioutil.ReadAll(resp.Body)
@@ -525,19 +528,6 @@ func DecodeMultiUpdateResponse(decoder func(*http.Response) goahttp.Decoder, res
 // unmarshalWineryResponseBodyToWinery builds a value of type *storage.Winery
 // from a value of type *WineryResponseBody.
 func unmarshalWineryResponseBodyToWinery(v *WineryResponseBody) *storage.Winery {
-	res := &storage.Winery{
-		Name:    *v.Name,
-		Region:  *v.Region,
-		Country: *v.Country,
-		URL:     v.URL,
-	}
-
-	return res
-}
-
-// unmarshalWineryToWinery builds a value of type *storage.Winery from a value
-// of type *Winery.
-func unmarshalWineryToWinery(v *Winery) *storage.Winery {
 	res := &storage.Winery{
 		Name:    *v.Name,
 		Region:  *v.Region,

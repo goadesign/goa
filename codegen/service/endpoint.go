@@ -34,10 +34,7 @@ type (
 
 	// EndpointMethodData describes a single endpoint method.
 	EndpointMethodData struct {
-		// Name is the method name.
-		Name string
-		// VarName is the name of the corresponding generated function.
-		VarName string
+		*MethodData
 		// ArgName is the name of the argument used to initialize the client
 		// struct method field.
 		ArgName string
@@ -74,7 +71,7 @@ const (
 )
 
 // EndpointFile returns the endpoint file for the given service.
-func EndpointFile(service *design.ServiceExpr) *codegen.File {
+func EndpointFile(genpkg string, service *design.ServiceExpr) *codegen.File {
 	path := filepath.Join(codegen.Gendir, codegen.SnakeCase(service.Name), "endpoints.go")
 	svc := Services.Get(service.Name)
 	data := endpointData(service)
@@ -85,8 +82,10 @@ func EndpointFile(service *design.ServiceExpr) *codegen.File {
 		header := codegen.Header(service.Name+" endpoints", svc.PkgName,
 			[]*codegen.ImportSpec{
 				&codegen.ImportSpec{Path: "context"},
+				&codegen.ImportSpec{Path: "fmt"},
 				&codegen.ImportSpec{Name: "goa", Path: "goa.design/goa"},
 				&codegen.ImportSpec{Path: "goa.design/goa/security"},
+				&codegen.ImportSpec{Path: genpkg + "/" + codegen.SnakeCase(service.Name) + "/" + "views", Name: svc.ViewsPkg},
 			})
 		def := &codegen.SectionTemplate{
 			Name:   "endpoints-struct",
@@ -123,8 +122,7 @@ func endpointData(service *design.ServiceExpr) *EndpointsData {
 	names := make([]string, len(svc.Methods))
 	for i, m := range svc.Methods {
 		methods[i] = &EndpointMethodData{
-			Name:           m.Name,
-			VarName:        m.VarName,
+			MethodData:     m,
 			ArgName:        codegen.Goify(m.VarName, false),
 			ServiceName:    svc.Name,
 			ServiceVarName: ServiceInterfaceName,
@@ -289,7 +287,25 @@ func New{{ .VarName }}Endpoint(s {{ .ServiceVarName}}{{ range .Schemes }}, auth{
 			return nil, err
 		}
 {{- end }}
-{{- if .ResultRef }}
+{{- if .ViewedResult }}
+		res, view, err := s.{{ .VarName }}(ctx{{ if .PayloadRef }}, p{{ end }})
+		if err != nil {
+			return nil, err
+		}
+		vRes := {{ .ViewedResult.ToViewed.VarName }}(res)
+		switch view {
+			{{- range .ViewedResult.Views }}
+		case {{ printf "%q" .Name }}:
+			vRes = vRes.{{ .Conversion.VarName }}()
+			{{- end }}
+		default:
+			return nil, fmt.Errorf("unknown view %s", view)
+		}
+		if err := vRes.Validate(); err != nil {
+			return nil, err
+		}
+		return vRes, nil
+{{- else if .ResultRef }}
 		return s.{{ .VarName }}(ctx{{ if .PayloadRef }}, p{{ end }})
 {{- else }}
 		return nil, s.{{ .VarName }}(ctx{{ if .PayloadRef }}, p{{ end }})

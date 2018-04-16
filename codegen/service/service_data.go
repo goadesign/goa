@@ -31,20 +31,25 @@ type (
 		// PkgName is the name of the package containing the generated
 		// service code.
 		PkgName string
+		// ViewsPkg is the name of the package containing the view types.
+		ViewsPkg string
 		// Methods lists the service interface methods.
 		Methods []*MethodData
 		// Schemes is the list of security schemes required by the
 		// service methods.
 		Schemes []*SchemeData
-		// UserTypes lists the types definitions that the service
+		// UserTypes lists the type definitions that the service
 		// depends on.
 		UserTypes []*UserTypeData
-		// ErrorTypes lists the error types definitions that the service
+		// ErrorTypes lists the error type definitions that the service
 		// depends on.
 		ErrorTypes []*UserTypeData
 		// Errors list the information required to generate error init
 		// functions.
 		ErrorInits []*ErrorInitData
+		// ViewedTypes lists the type definitions used to render a result type
+		// based on views.
+		ViewedTypes []*ViewedTypeData
 		// Scope initialized with all the service types.
 		Scope *codegen.NameScope
 	}
@@ -106,6 +111,9 @@ type (
 		// Schemes contains the security schemes types used by the
 		// method.
 		Schemes []string
+		// ViewedResult if non-nil indicates that the method result type has
+		// more than one view.
+		ViewedResult *ViewedTypeData
 	}
 
 	// RequirementData lists the schemes and scopes defined by a single
@@ -197,6 +205,73 @@ type (
 		// In indicates the request element that holds the credential.
 		In string
 	}
+
+	// ViewedTypeData contains the data to generate types to deal with
+	// view rendering and also the service constructor code to convert
+	// a result type to its viewed counterpart (and vice versa). If ViewType
+	// attribute is set, it denotes a result type having multiple views.
+	// All the fields in the type struct are pointers except for the view
+	// attribute in the viewed result type which is never a pointer.
+	ViewedTypeData struct {
+		// Result type for which the viewed type is generated.
+		*UserTypeData
+		// ViewType contains the data describing a viewed result type.
+		ViewType *UserTypeData
+		// FullRef is the complete reference to the viewed type
+		// (including views package name).
+		FullRef string
+		// Views lists views defined on a result type
+		Views []*ViewData
+		// ToResult is the constructor code to convert a viewed result type
+		// to a result type.
+		ToResult *InitData
+		// ToViewed is the constructor code to convert a result type to a
+		// viewed result type.
+		ToViewed *InitData
+		// Validate is the validations run on the type which is not a
+		// viewed type (i.e., ViewType is not set)
+		Validate string
+	}
+
+	// ViewData contains data about a result type view.
+	ViewData struct {
+		// Name is the view name.
+		Name string
+		// Description is the view description.
+		Description string
+		// Conversion is the code to transform a result type to the view.
+		Conversion *InitData
+		// Validate is the validation code to run on a viewed result
+		// type based on a view.
+		Validate string
+	}
+
+	// InitData contains the data to generate a constructor function
+	// to initialize a type from another type.
+	InitData struct {
+		// VarName is the name of the constructor function.
+		VarName string
+		// Description is the function description.
+		Description string
+		// Args lists arguments to this function.
+		Args []*InitArgData
+		// Ref is the reference to the source type.
+		Ref *InitArgData
+		// ReturnRef is the reference to the return type.
+		ReturnRef string
+		// Code is the transformation code.
+		Code string
+		// Helpers contain the helpers used in the transformation code.
+		Helpers []*codegen.TransformFunctionData
+	}
+
+	// InitArgData represents a single constructor argument.
+	InitArgData struct {
+		// Name is the argument name.
+		Name string
+		// Ref is the reference to the argument.
+		Ref string
+	}
 )
 
 // Get retrieves the data for the service with the given name computing it if
@@ -228,17 +303,20 @@ func (s *Data) Method(name string) *MethodData {
 // It records the user types needed by the service definition in userTypes.
 func (d ServicesData) analyze(service *design.ServiceExpr) *Data {
 	var (
-		scope      *codegen.NameScope
-		pkgName    string
-		types      []*UserTypeData
-		errTypes   []*UserTypeData
-		errorInits []*ErrorInitData
-		seenErrors map[string]struct{}
-		seen       map[string]struct{}
+		scope       *codegen.NameScope
+		pkgName     string
+		viewsPkg    string
+		types       []*UserTypeData
+		errTypes    []*UserTypeData
+		errorInits  []*ErrorInitData
+		viewedTypes []*ViewedTypeData
+		seenErrors  map[string]struct{}
+		seen        map[string]struct{}
 	)
 	{
 		scope = codegen.NewNameScope()
 		pkgName = scope.Unique(service, strings.ToLower(codegen.Goify(service.Name, false)), "svc")
+		viewsPkg = pkgName + "views"
 		seen = make(map[string]struct{})
 		seenErrors = make(map[string]struct{})
 		for _, e := range service.Methods {
@@ -302,8 +380,19 @@ func (d ServicesData) analyze(service *design.ServiceExpr) *Data {
 	)
 	{
 		methods = make([]*MethodData, len(service.Methods))
+		seen = make(map[string]struct{})
 		for i, e := range service.Methods {
 			m := buildMethodData(e, pkgName, scope)
+			if isProjectable(e.Result.Type) {
+				_, types := collectViewedTypes(e.Result, seen, scope, viewsPkg)
+				viewedTypes = append(viewedTypes, types...)
+				for _, t := range viewedTypes {
+					if e.Result.Type.Name() == t.Name {
+						m.ViewedResult = t
+						break
+					}
+				}
+			}
 			methods[i] = m
 			for _, r := range m.Requirements {
 				for _, s := range r.Schemes {
@@ -338,11 +427,13 @@ func (d ServicesData) analyze(service *design.ServiceExpr) *Data {
 		VarName:     codegen.Goify(service.Name, false),
 		StructName:  codegen.Goify(service.Name, true),
 		PkgName:     pkgName,
+		ViewsPkg:    viewsPkg,
 		Methods:     methods,
 		Schemes:     schemes,
 		UserTypes:   types,
 		ErrorTypes:  errTypes,
 		ErrorInits:  errorInits,
+		ViewedTypes: viewedTypes,
 		Scope:       scope,
 	}
 	d[service.Name] = data
@@ -381,6 +472,61 @@ func collectTypes(at *design.AttributeExpr, seen map[string]struct{}, scope *cod
 	case *design.Map:
 		data = append(data, collect(dt.KeyType)...)
 		data = append(data, collect(dt.ElemType)...)
+	}
+	return
+}
+
+// collectViewedTypes collects all the viewed types from the given result type.
+// It returns the viewed result type and all the other viewed types found
+// during the recursion.
+func collectViewedTypes(at *design.AttributeExpr, seen map[string]struct{}, scope *codegen.NameScope, viewsPkg string) (viewed design.DataType, data []*ViewedTypeData) {
+	if at == nil || at.Type == design.Empty {
+		return
+	}
+	collect := func(at *design.AttributeExpr) (design.DataType, []*ViewedTypeData) {
+		return collectViewedTypes(at, seen, scope, viewsPkg)
+	}
+	switch dt := at.Type.(type) {
+	case design.UserType:
+		if _, ok := seen[dt.Name()]; ok {
+			return
+		}
+		seen[dt.Name()] = struct{}{}
+		vAtt := design.DupAtt(at)
+		viewed = vAtt.Type
+		ut := viewed.(design.UserType)
+		// Remove all validations from the viewed type so that we would end up
+		// with a struct where all its attributes are pointers.
+		ut.Attribute().Validation = &design.ValidationExpr{}
+		_, types := collect(ut.Attribute())
+		data = append(data, types...)
+		data = append(data, buildViewedType(vAtt, at, scope, viewsPkg))
+	case *design.Array:
+		viewed = dt
+		vt, types := collect(dt.ElemType)
+		viewed.(*design.Array).ElemType.Type = vt
+		data = append(data, types...)
+	case *design.Map:
+		viewed = dt
+		vMap := viewed.(*design.Map)
+		vt, types := collect(dt.KeyType)
+		vMap.KeyType.Type = vt
+		data = append(data, types...)
+		vt, types = collect(dt.ElemType)
+		vMap.ElemType.Type = vt
+		data = append(data, types...)
+	case *design.Object:
+		viewed = dt
+		vObj := viewed.(*design.Object)
+		for _, n := range *dt {
+			vt, types := collect(n.Attribute)
+			att := design.DupAtt(n.Attribute)
+			att.Type = vt
+			data = append(data, types...)
+			vObj.Set(n.Name, att)
+		}
+	default:
+		viewed = dt
 	}
 	return
 }
@@ -600,4 +746,243 @@ func requirements(m *design.MethodExpr) []*design.SecurityExpr {
 		return m.Service.Requirements
 	}
 	return design.Root.API.Requirements
+}
+
+// isProjectable returns true if the given type is a result type with
+// more than one view and not a collection.
+func isProjectable(dt design.DataType) bool {
+	if design.IsArray(dt) {
+		return false
+	}
+	rt, ok := dt.(*design.ResultTypeExpr)
+	return ok && len(rt.Views) > 1
+}
+
+// buildViewedType builds the type data to generate views and the constructor
+// code to transform result type to its viewed counterpart (and vice versa).
+func buildViewedType(vAtt, at *design.AttributeExpr, scope *codegen.NameScope, viewsPkg string) *ViewedTypeData {
+	resultVar := scope.GoTypeName(at)
+	ut := vAtt.Type.(design.UserType)
+	dt := at.Type.(design.UserType)
+	if !isProjectable(dt) {
+		varName := scope.GoTypeName(vAtt)
+		return &ViewedTypeData{
+			UserTypeData: &UserTypeData{
+				Name:        ut.Name(),
+				Description: fmt.Sprintf("%s is the transformed type of %s type.", varName, resultVar),
+				VarName:     varName,
+				Def:         scope.GoTypeDef(ut.Attribute(), true),
+				Ref:         scope.GoTypeRef(vAtt),
+				Type:        ut,
+			},
+			Validate: codegen.RecursiveValidationCode(ut.Attribute(), true, false, false, "result"),
+		}
+	}
+	vt := design.Dup(ut).(design.UserType)
+	vt.Rename(ut.Name() + "View")
+	vAtt.Type = vt
+	ref := scope.GoTypeRef(vAtt)
+	varName := codegen.Goify(vt.Name(), true)
+	return &ViewedTypeData{
+		ViewType: &UserTypeData{
+			Name:        vt.Name(),
+			Description: fmt.Sprintf("%s is the transformed type of %s type.", varName, resultVar),
+			VarName:     varName,
+			Def:         scope.GoTypeDef(vt.Attribute(), true),
+			Ref:         ref,
+			Type:        vt,
+		},
+		UserTypeData: &UserTypeData{
+			Name:        dt.Name(),
+			VarName:     resultVar,
+			Description: fmt.Sprintf("%s is a result type with a view.", resultVar),
+			Def:         fmt.Sprintf("struct {\n%s\n// View to render\nView string\n}\n", ref),
+			Ref:         scope.GoTypeRef(at),
+			Type:        dt,
+		},
+		FullRef:  scope.GoFullTypeRef(at, viewsPkg),
+		Views:    buildViews(vAtt, scope),
+		ToResult: convertResult(vAtt, at, "vRes", "res", viewsPkg, "", false, scope),
+		ToViewed: convertResult(at, vAtt, "res", "v", "", viewsPkg, true, scope),
+	}
+}
+
+// buildViews builds the view data for the views defined in the given
+// result type.
+func buildViews(vAtt *design.AttributeExpr, scope *codegen.NameScope) []*ViewData {
+	var views []*ViewData
+	rt, ok := vAtt.Type.(*design.ResultTypeExpr)
+	if !ok {
+		return views
+	}
+	vObj := design.AsObject(vAtt.Type)
+	for _, view := range rt.Views {
+		obj := &design.Object{}
+		viewObj := view.Type.(*design.Object)
+		for _, n := range *viewObj {
+			obj.Set(n.Name, vObj.Attribute(n.Name))
+		}
+		att := &design.AttributeExpr{Type: obj}
+		att.Validation = view.Parent.Validation
+		views = append(views, &ViewData{
+			Name:        view.Name,
+			Description: view.Description,
+			Conversion:  transformToView(vAtt, view, scope),
+			Validate:    codegen.RecursiveValidationCode(att, false, true, false, "result"),
+		})
+	}
+	return views
+}
+
+// convertResult converts the given result type to/from a viewed result type.
+// If toViewed is true it converts the method result type to viewed
+// result type.
+func convertResult(src, tgt *design.AttributeExpr, srcVar, tgtVar, srcPkg, tgtPkg string, toViewed bool, scope *codegen.NameScope) *InitData {
+	srcRT, ok := src.Type.(*design.ResultTypeExpr)
+	if !ok {
+		return nil
+	}
+	tgtRT, ok := tgt.Type.(*design.ResultTypeExpr)
+	if !ok {
+		return nil
+	}
+	// Collect all the non-result type attributes from the target and
+	// generate the code using GoTypeTransform. For attributes that
+	// are a result type, we well then add our generated converters
+	// for initialization.
+	nonRTObj := &design.Object{}
+	nonRT := &design.UserTypeExpr{
+		AttributeExpr: &design.AttributeExpr{Type: nonRTObj},
+		TypeName:      tgtRT.TypeName,
+	}
+	if !toViewed {
+		// Since we are converting a viewed result type to a method
+		// result type we need to set the validations set on the method
+		// result type.
+		nonRT.Validation = tgtRT.Validation
+	}
+	srcObj := design.AsObject(src.Type)
+	tgtObj := design.AsObject(tgt.Type)
+	for _, n := range *srcObj {
+		attr := tgtObj.Attribute(n.Name)
+		if _, ok := attr.Type.(*design.ResultTypeExpr); !ok {
+			nonRTObj.Set(n.Name, attr)
+		}
+	}
+	code, helpers, err := codegen.GoTypeTransform(src.Type, nonRT, srcVar, tgtVar, srcPkg, tgtPkg, !toViewed, scope)
+	if err != nil {
+		panic(err) // bug
+	}
+	// Now iterate through src attributes of type result type and initialize them
+	// in the tgt using the generated converters.
+	for _, n := range *srcObj {
+		if _, ok := n.Attribute.Type.(*design.ResultTypeExpr); !ok {
+			continue
+		}
+		varN := codegen.Goify(n.Name, true)
+		newVar := "New"
+		if toViewed {
+			newVar = "NewViewed"
+		}
+		code += fmt.Sprintf("\nif %s.%s != nil {\n%s.%s = %s%s(%s.%s)\n}\n", srcVar, varN, tgtVar, varN, newVar, scope.GoTypeName(n.Attribute), srcVar, varN)
+	}
+	var (
+		varName   string
+		desc      string
+		args      []*InitArgData
+		returnRef string
+	)
+	if toViewed {
+		resultName := codegen.Goify(srcRT.TypeName, true)
+		code += fmt.Sprintf("\nreturn &%s.%s{%s: %s}", tgtPkg, resultName, scope.GoTypeName(tgt), tgtVar)
+		varName = "NewViewed" + resultName
+		desc = fmt.Sprintf("%s converts result type %s to viewed result type %s.", varName, resultName, resultName)
+		args = []*InitArgData{{Name: srcVar, Ref: scope.GoTypeRef(src)}}
+		returnRef = scope.GoFullTypeRef(src, tgtPkg)
+	} else {
+		code += "\nreturn " + tgtVar
+		resultName := codegen.Goify(tgtRT.TypeName, true)
+		varName = "New" + resultName
+		desc = fmt.Sprintf("%s converts viewed result type %s to result type %s.", varName, resultName, resultName)
+		args = []*InitArgData{{Name: srcVar, Ref: scope.GoFullTypeRef(tgt, srcPkg)}}
+		returnRef = scope.GoTypeRef(tgt)
+	}
+	return &InitData{
+		VarName:     varName,
+		Description: desc,
+		Args:        args,
+		ReturnRef:   returnRef,
+		Code:        code,
+		Helpers:     helpers,
+	}
+}
+
+// transformToView transforms a viewed result type to another viewed result
+// type with only the attributes in the given view.
+func transformToView(vAtt *design.AttributeExpr, view *design.ViewExpr, scope *codegen.NameScope) *InitData {
+	rt, ok := vAtt.Type.(*design.ResultTypeExpr)
+	if !ok {
+		return nil
+	}
+	var (
+		viewN      string
+		resultName string
+		srcVar     string
+		tgtVar     string
+	)
+	viewN = codegen.Goify(view.Name, true)
+	resultName = codegen.Goify(view.Parent.TypeName, true)
+	srcVar = "result"
+	tgtVar = "t"
+	// nonRT will contain all attributes that are non-result type.
+	nonRTObj := &design.Object{}
+	nonRT := &design.UserTypeExpr{
+		AttributeExpr: &design.AttributeExpr{Type: nonRTObj},
+		TypeName:      rt.TypeName,
+	}
+
+	viewObj := view.Type.(*design.Object)
+	// First iteration through view attributes will collect only the
+	// attributes that are not result types so that we can use
+	// GoTypeTransform to generate the code to convert result type
+	// to transformed result type (and vice versa) based on view.
+	for _, n := range *viewObj {
+		attr := vAtt.Find(n.Name)
+		if _, ok := attr.Type.(*design.ResultTypeExpr); !ok {
+			nonRTObj.Set(n.Name, attr)
+		}
+	}
+	code, helpers, err := codegen.GoTypeTransform(vAtt.Type, nonRT, srcVar, tgtVar, "", "", false, scope)
+	if err != nil {
+		panic(err) // bug
+	}
+	// Second iteration through view attributes will append the
+	// conversion code for result types based on view.
+	for _, n := range *viewObj {
+		attr := vAtt.Find(n.Name)
+		if _, ok := attr.Type.(*design.ResultTypeExpr); !ok {
+			continue
+		}
+		varN := codegen.Goify(n.Name, true)
+		srcV := "result." + varN
+		tgtV := "t." + varN
+		viewName := codegen.Goify(view.Name, true)
+		if attV, ok := n.Attribute.Metadata["view"]; ok {
+			// if a view is explicitly set for the result type on the view attribute
+			// use that view.
+			viewName = codegen.Goify(attV[0], true)
+		}
+		code += fmt.Sprintf("\nif %s != nil {\n%s = %s.As%s()\n}\n", srcV, tgtV, srcV, viewName)
+	}
+	code += fmt.Sprintf("\nreturn &%s{\n%s: %s,\nView: %q,\n}", resultName, rt.TypeName, tgtVar, view.Name)
+	varName := "As" + viewN
+	ref := scope.GoTypeRef(&design.AttributeExpr{Type: view.Parent})
+	return &InitData{
+		VarName:     varName,
+		Description: fmt.Sprintf("%s selects fields from the result type %s defined in the %s view.", varName, resultName, view.Name),
+		Ref:         &InitArgData{Name: srcVar, Ref: ref},
+		ReturnRef:   ref,
+		Code:        code,
+		Helpers:     helpers,
+	}
 }

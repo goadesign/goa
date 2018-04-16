@@ -44,18 +44,26 @@ func (s *storageSvc) List(ctx context.Context) (storage.StoredBottleCollection, 
 }
 
 // Show bottle by ID
-func (s *storageSvc) Show(ctx context.Context, p *storage.ShowPayload) (*storage.StoredBottle, error) {
-	var b storage.StoredBottle
+func (s *storageSvc) Show(ctx context.Context, p *storage.ShowPayload) (*storage.StoredBottle, string, error) {
+	var (
+		b    storage.StoredBottle
+		view string
+	)
+	if p.View != nil {
+		view = *p.View
+	} else {
+		view = "default"
+	}
 	if err := s.db.Load("CELLAR", p.ID, &b); err != nil {
 		if err == ErrNotFound {
-			return nil, &storage.NotFound{
+			return nil, view, &storage.NotFound{
 				Message: err.Error(),
 				ID:      p.ID,
 			}
 		}
-		return nil, err // internal error
+		return nil, view, err // internal error
 	}
-	return &b, nil
+	return &b, view, nil
 }
 
 // Add new bottle and return its ID.
@@ -182,7 +190,6 @@ func StorageMultiAddEncoderFunc(mw *multipart.Writer, p []*storage.Bottle) error
 // has field name 'bottle' and contains the encoded bottle info to be updated.
 // The IDs in the query parameter is mapped to each part in the request.
 func (s *storageSvc) MultiUpdate(ctx context.Context, p *storage.MultiUpdatePayload) error {
-	fmt.Println(fmt.Sprintf("%#v", p.Ids))
 	for _, id := range p.Ids {
 		for _, bottle := range p.Bottles {
 			sb := storage.StoredBottle{

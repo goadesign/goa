@@ -16,6 +16,7 @@ import (
 
 	goa "goa.design/goa"
 	storage "goa.design/goa/examples/cellar/gen/storage"
+	storageviews "goa.design/goa/examples/cellar/gen/storage/views"
 	goahttp "goa.design/goa/http"
 )
 
@@ -35,9 +36,11 @@ func EncodeListResponse(encoder func(context.Context, http.ResponseWriter) goaht
 // show endpoint.
 func EncodeShowResponse(encoder func(context.Context, http.ResponseWriter) goahttp.Encoder) func(context.Context, http.ResponseWriter, interface{}) error {
 	return func(ctx context.Context, w http.ResponseWriter, v interface{}) error {
-		res := v.(*storage.StoredBottle)
+		vRes := v.(*storageviews.StoredBottle)
+		w.Header().Set("goa-view", vRes.View)
+		res := vRes.StoredBottleView
 		enc := encoder(ctx, w)
-		body := NewShowResponseBody(res)
+		body := NewStoredBottleView(res)
 		w.WriteHeader(http.StatusOK)
 		return enc.Encode(body)
 	}
@@ -304,8 +307,11 @@ func marshalWineryToWineryResponseBody(v *storage.Winery) *WineryResponseBody {
 }
 
 // marshalWineryToWinery builds a value of type *Winery from a value of type
-// *storage.Winery.
-func marshalWineryToWinery(v *storage.Winery) *Winery {
+// *storageviews.Winery.
+func marshalWineryToWinery(v *storageviews.Winery) *Winery {
+	if v == nil {
+		return nil
+	}
 	res := &Winery{
 		Name:    v.Name,
 		Region:  v.Region,

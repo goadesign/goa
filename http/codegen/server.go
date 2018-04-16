@@ -92,6 +92,7 @@ func serverEncodeDecode(genpkg string, svc *httpdesign.ServiceExpr) *codegen.Fil
 			{Path: "goa.design/goa", Name: "goa"},
 			{Path: "goa.design/goa/http", Name: "goahttp"},
 			{Path: genpkg + "/" + codegen.SnakeCase(svc.Name()), Name: data.Service.PkgName},
+			{Path: genpkg + "/" + codegen.SnakeCase(svc.Name()) + "/" + "views", Name: data.Service.ViewsPkg},
 		}),
 	}
 
@@ -894,9 +895,14 @@ const responseEncoderT = `{{ printf "%s returns an encoder for responses returne
 func {{ .ResponseEncoder }}(encoder func(context.Context, http.ResponseWriter) goahttp.Encoder) func(context.Context, http.ResponseWriter, interface{}) error {
 	return func(ctx context.Context, w http.ResponseWriter, v interface{}) error {
 
-	{{- if .Result.Ref }}
+	{{- if and .Result.Ref .ResponseBodyExists }}
+		{{- if .Method.ViewedResult }}
+		vRes := v.({{ .Method.ViewedResult.FullRef }})
+		w.Header().Set("goa-view", vRes.View)
+		res := vRes.{{ .Method.ViewedResult.ViewType.VarName }}
+		{{- else }}
 		res := v.({{ .Result.Ref }})
-
+		{{- end }}
 		{{- range .Result.Responses }}
 
 			{{- if .TagName }}

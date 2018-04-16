@@ -13,6 +13,7 @@ import (
 
 	goa "goa.design/goa"
 	storage "goa.design/goa/examples/cellar/gen/storage"
+	storageviews "goa.design/goa/examples/cellar/gen/storage/views"
 )
 
 // AddRequestBody is the type of the "storage" service "add" endpoint HTTP
@@ -43,17 +44,66 @@ type MultiUpdateRequestBody struct {
 // response body.
 type ListResponseBody []*StoredBottleResponseBody
 
-// ShowResponseBody is the type of the "storage" service "show" endpoint HTTP
-// response body.
-type ShowResponseBody struct {
+// WineryView is the transformed type of Winery type.
+type WineryView struct {
+	// Name of winery
+	Name *string `form:"name,omitempty" json:"name,omitempty" xml:"name,omitempty"`
+	// Region of winery
+	Region *string `form:"region,omitempty" json:"region,omitempty" xml:"region,omitempty"`
+	// Country of winery
+	Country *string `form:"country,omitempty" json:"country,omitempty" xml:"country,omitempty"`
+	// Winery website URL
+	URL *string `form:"url,omitempty" json:"url,omitempty" xml:"url,omitempty"`
+}
+
+// Winery is a result type with a view.
+type Winery struct {
+	// Name of winery
+	Name *string `form:"name,omitempty" json:"name,omitempty" xml:"name,omitempty"`
+	// Region of winery
+	Region *string `form:"region,omitempty" json:"region,omitempty" xml:"region,omitempty"`
+	// Country of winery
+	Country *string `form:"country,omitempty" json:"country,omitempty" xml:"country,omitempty"`
+	// Winery website URL
+	URL *string `form:"url,omitempty" json:"url,omitempty" xml:"url,omitempty"`
+}
+
+// Component is the transformed type of Component type.
+type Component struct {
+	// Grape varietal
+	Varietal *string `form:"varietal,omitempty" json:"varietal,omitempty" xml:"varietal,omitempty"`
+	// Percentage of varietal in wine
+	Percentage *uint32 `form:"percentage,omitempty" json:"percentage,omitempty" xml:"percentage,omitempty"`
+}
+
+// StoredBottleView is the transformed type of StoredBottle type.
+type StoredBottleView struct {
 	// ID is the unique id of the bottle.
-	ID string `form:"id" json:"id" xml:"id"`
+	ID *string `form:"id,omitempty" json:"id,omitempty" xml:"id,omitempty"`
 	// Name of bottle
-	Name string `form:"name" json:"name" xml:"name"`
+	Name *string `form:"name,omitempty" json:"name,omitempty" xml:"name,omitempty"`
 	// Winery that produces wine
-	Winery *Winery `form:"winery" json:"winery" xml:"winery"`
+	Winery *Winery `form:"winery,omitempty" json:"winery,omitempty" xml:"winery,omitempty"`
 	// Vintage of bottle
-	Vintage uint32 `form:"vintage" json:"vintage" xml:"vintage"`
+	Vintage *uint32 `form:"vintage,omitempty" json:"vintage,omitempty" xml:"vintage,omitempty"`
+	// Composition is the list of grape varietals and associated percentage.
+	Composition []*Component `form:"composition,omitempty" json:"composition,omitempty" xml:"composition,omitempty"`
+	// Description of bottle
+	Description *string `form:"description,omitempty" json:"description,omitempty" xml:"description,omitempty"`
+	// Rating of bottle from 1 (worst) to 5 (best)
+	Rating *uint32 `form:"rating,omitempty" json:"rating,omitempty" xml:"rating,omitempty"`
+}
+
+// StoredBottle is a result type with a view.
+type StoredBottle struct {
+	// ID is the unique id of the bottle.
+	ID *string `form:"id,omitempty" json:"id,omitempty" xml:"id,omitempty"`
+	// Name of bottle
+	Name *string `form:"name,omitempty" json:"name,omitempty" xml:"name,omitempty"`
+	// Winery that produces wine
+	Winery *Winery `form:"winery,omitempty" json:"winery,omitempty" xml:"winery,omitempty"`
+	// Vintage of bottle
+	Vintage *uint32 `form:"vintage,omitempty" json:"vintage,omitempty" xml:"vintage,omitempty"`
 	// Composition is the list of grape varietals and associated percentage.
 	Composition []*Component `form:"composition,omitempty" json:"composition,omitempty" xml:"composition,omitempty"`
 	// Description of bottle
@@ -103,26 +153,6 @@ type WineryResponseBody struct {
 
 // ComponentResponseBody is used to define fields on response body types.
 type ComponentResponseBody struct {
-	// Grape varietal
-	Varietal string `form:"varietal" json:"varietal" xml:"varietal"`
-	// Percentage of varietal in wine
-	Percentage *uint32 `form:"percentage,omitempty" json:"percentage,omitempty" xml:"percentage,omitempty"`
-}
-
-// Winery is used to define fields on response body types.
-type Winery struct {
-	// Name of winery
-	Name string `form:"name" json:"name" xml:"name"`
-	// Region of winery
-	Region string `form:"region" json:"region" xml:"region"`
-	// Country of winery
-	Country string `form:"country" json:"country" xml:"country"`
-	// Winery website URL
-	URL *string `form:"url,omitempty" json:"url,omitempty" xml:"url,omitempty"`
-}
-
-// Component is used to define fields on response body types.
-type Component struct {
 	// Grape varietal
 	Varietal string `form:"varietal" json:"varietal" xml:"varietal"`
 	// Percentage of varietal in wine
@@ -193,10 +223,10 @@ func NewListResponseBody(res storage.StoredBottleCollection) ListResponseBody {
 	return body
 }
 
-// NewShowResponseBody builds the HTTP response body from the result of the
+// NewStoredBottleView builds the HTTP response body from the result of the
 // "show" endpoint of the "storage" service.
-func NewShowResponseBody(res *storage.StoredBottle) *ShowResponseBody {
-	body := &ShowResponseBody{
+func NewStoredBottleView(res *storageviews.StoredBottleView) *StoredBottleView {
+	body := &StoredBottleView{
 		ID:          res.ID,
 		Name:        res.Name,
 		Vintage:     res.Vintage,
@@ -441,35 +471,6 @@ func (body *WineryResponseBody) Validate() (err error) {
 
 // Validate runs the validations defined on ComponentResponseBody
 func (body *ComponentResponseBody) Validate() (err error) {
-	err = goa.MergeErrors(err, goa.ValidatePattern("body.varietal", body.Varietal, "[A-Za-z' ]+"))
-	if utf8.RuneCountInString(body.Varietal) > 100 {
-		err = goa.MergeErrors(err, goa.InvalidLengthError("body.varietal", body.Varietal, utf8.RuneCountInString(body.Varietal), 100, false))
-	}
-	if body.Percentage != nil {
-		if *body.Percentage < 1 {
-			err = goa.MergeErrors(err, goa.InvalidRangeError("body.percentage", *body.Percentage, 1, true))
-		}
-	}
-	if body.Percentage != nil {
-		if *body.Percentage > 100 {
-			err = goa.MergeErrors(err, goa.InvalidRangeError("body.percentage", *body.Percentage, 100, false))
-		}
-	}
-	return
-}
-
-// Validate runs the validations defined on Winery
-func (body *Winery) Validate() (err error) {
-	err = goa.MergeErrors(err, goa.ValidatePattern("body.region", body.Region, "(?i)[a-z '\\.]+"))
-	err = goa.MergeErrors(err, goa.ValidatePattern("body.country", body.Country, "(?i)[a-z '\\.]+"))
-	if body.URL != nil {
-		err = goa.MergeErrors(err, goa.ValidatePattern("body.url", *body.URL, "(?i)^(https?|ftp)://[^\\s/$.?#].[^\\s]*$"))
-	}
-	return
-}
-
-// Validate runs the validations defined on Component
-func (body *Component) Validate() (err error) {
 	err = goa.MergeErrors(err, goa.ValidatePattern("body.varietal", body.Varietal, "[A-Za-z' ]+"))
 	if utf8.RuneCountInString(body.Varietal) > 100 {
 		err = goa.MergeErrors(err, goa.InvalidLengthError("body.varietal", body.Varietal, utf8.RuneCountInString(body.Varietal), 100, false))

@@ -85,7 +85,6 @@ func DecodePickResponse(decoder func(*http.Response) goahttp.Decoder, restoreBod
 			if err != nil {
 				return nil, goahttp.ErrValidationError("sommelier", "pick", err)
 			}
-
 			return NewPickStoredBottleCollectionOK(body), nil
 		case http.StatusBadRequest:
 			var (
@@ -96,7 +95,6 @@ func DecodePickResponse(decoder func(*http.Response) goahttp.Decoder, restoreBod
 			if err != nil {
 				return nil, goahttp.ErrDecodingError("sommelier", "pick", err)
 			}
-
 			return nil, NewPickNoCriteria(body)
 		case http.StatusNotFound:
 			var (
@@ -107,7 +105,6 @@ func DecodePickResponse(decoder func(*http.Response) goahttp.Decoder, restoreBod
 			if err != nil {
 				return nil, goahttp.ErrDecodingError("sommelier", "pick", err)
 			}
-
 			return nil, NewPickNoMatch(body)
 		default:
 			body, _ := ioutil.ReadAll(resp.Body)

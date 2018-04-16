@@ -143,14 +143,14 @@ func New{{ .Service.StructName }}(logger *log.Logger) {{ .Service.PkgName }}.Ser
 
 // input: EndpointData
 const dummyEndpointImplT = `{{ comment .Method.Description }}
-func (s *{{ .ServiceVarName }}Svc) {{ .Method.VarName }}(ctx context.Context{{ if .Payload.Ref }}, p {{ .Payload.Ref }}{{ end }}) ({{ if .Result.Ref }}{{ .Result.Ref }}, {{ end }}error) {
+func (s *{{ .ServiceVarName }}Svc) {{ .Method.VarName }}(ctx context.Context{{ if .Payload.Ref }}, p {{ .Payload.Ref }}{{ end }}) ({{ if .Result.Ref }}{{ .Result.Ref }}, {{ if .Method.ExpandedResult }}string, {{ end }} {{ end }}error) {
 {{- if and .Result.Ref .Result.IsStruct }}
 	res := &{{ .Result.Name }}{}
 {{- else if .Result.Ref }}
 	var res {{ .Result.Ref }}
 {{- end }}
 	s.logger.Print("{{ .ServiceVarName }}.{{ .Method.Name }}")
-	return {{ if .Result.Ref }}res, {{ end }}nil
+	return {{ if .Result.Ref }}res, {{ if .Method.ExpandedResult }}"", {{ end }}{{ end }}nil
 }
 `
 

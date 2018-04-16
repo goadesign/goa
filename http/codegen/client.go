@@ -88,6 +88,7 @@ func clientEncodeDecode(genpkg string, svc *httpdesign.ServiceExpr) *codegen.Fil
 			{Path: "goa.design/goa", Name: "goa"},
 			{Path: "goa.design/goa/http", Name: "goahttp"},
 			{Path: genpkg + "/" + codegen.SnakeCase(svc.Name()), Name: data.Service.PkgName},
+			{Path: genpkg + "/" + codegen.SnakeCase(svc.Name()) + "/" + "views", Name: data.Service.ViewsPkg},
 		}),
 	}
 
@@ -405,6 +406,8 @@ func {{ .ResponseDecoder }}(decoder func(*http.Response) goahttp.Decoder, restor
 			return {{ .ResultInit.Name }}({{ range .ResultInit.ClientArgs }}{{ .Ref }},{{ end }}), nil
 		{{- else if .ClientBody }}
 			return body, nil
+		{{- else if $.Method.ViewedResult }}
+			return res, nil
 		{{- else }}
 			return nil, nil
 		{{- end }}
@@ -468,7 +471,25 @@ const singleResponseT = ` {{- if .ClientBody }}
 				return nil, goahttp.ErrValidationError("{{ $.ServiceName }}", "{{ $.Method.Name }}", err)
 			}
 		{{- end }}
-	{{ end }}
+	{{- else if and $.Method.ViewedResult (not .IsError) }}
+		var (
+			vRes {{ $.Method.ViewedResult.FullRef }}
+			err error
+		)
+		err = decoder(resp).Decode(&vRes)
+		if err != nil {
+			return nil, goahttp.ErrDecodingError("{{ $.ServiceName }}", "{{ $.Method.Name }}", err)
+		}
+		view := resp.Header.Get("goa-view")
+		if view == "" {
+			return nil, goa.MergeErrors(err, goa.MissingFieldError("goa-view", "header"))
+		}
+		vRes.View = view
+		if err = vRes.Validate(); err != nil {
+			return nil, fmt.Errorf("invalid response: %s", err)
+		}
+		res := {{ $.ServicePkgName }}.{{ $.Method.ViewedResult.ToResult.VarName }}(vRes)
+	{{- end }}
 
 	{{- if .Headers }}
 			var (
@@ -554,6 +575,9 @@ const singleResponseT = ` {{- if .ClientBody }}
 		{{- end }}
 		{{- if .Validate }}
 			{{ .Validate }}
+		{{- end }}
+		{{- if $.Method.ViewedResult }}
+		res.{{ .FieldName }} = {{ .VarName }}
 		{{- end }}
 		{{- end }}{{/* range .Headers */}}
 	{{- end }}

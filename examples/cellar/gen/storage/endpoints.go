@@ -10,6 +10,7 @@ package storage
 
 import (
 	"context"
+	"fmt"
 
 	goa "goa.design/goa"
 )
@@ -62,7 +63,23 @@ func NewListEndpoint(s Service) goa.Endpoint {
 func NewShowEndpoint(s Service) goa.Endpoint {
 	return func(ctx context.Context, req interface{}) (interface{}, error) {
 		p := req.(*ShowPayload)
-		return s.Show(ctx, p)
+		res, view, err := s.Show(ctx, p)
+		if err != nil {
+			return nil, err
+		}
+		vRes := NewViewedStoredBottle(res)
+		switch view {
+		case "default":
+			vRes = vRes.AsDefault()
+		case "tiny":
+			vRes = vRes.AsTiny()
+		default:
+			return nil, fmt.Errorf("unknown view %s", view)
+		}
+		if err := vRes.Validate(); err != nil {
+			return nil, err
+		}
+		return vRes, nil
 	}
 }
 
