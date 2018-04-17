@@ -8,9 +8,7 @@
 
 package swagger
 
-import (
-	goa "goa.design/goa"
-)
+import goa "goa.design/goa"
 
 // Endpoints wraps the "swagger" service endpoints.
 type Endpoints struct {

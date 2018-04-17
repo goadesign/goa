@@ -8,9 +8,7 @@
 
 package client
 
-import (
-	"fmt"
-)
+import "fmt"
 
 // ListStoragePath returns the URL path to the storage service list HTTP endpoint.
 func ListStoragePath() string {

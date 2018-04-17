@@ -8,9 +8,7 @@
 
 package swagger
 
-import (
-	goa "goa.design/goa"
-)
+import goa "goa.design/goa"
 
 // Client is the "swagger" service client.
 type Client struct {
