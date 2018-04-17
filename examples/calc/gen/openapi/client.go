@@ -8,9 +8,7 @@
 
 package openapi
 
-import (
-	goa "goa.design/goa"
-)
+import goa "goa.design/goa"
 
 // Client is the "openapi" service client.
 type Client struct {

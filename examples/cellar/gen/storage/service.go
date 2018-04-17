@@ -8,9 +8,7 @@
 
 package storage
 
-import (
-	"context"
-)
+import "context"
 
 // The storage service makes it possible to view, add or remove wine bottles.
 type Service interface {
