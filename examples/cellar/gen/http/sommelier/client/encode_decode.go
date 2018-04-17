@@ -11,7 +11,6 @@ package client
 import (
 	"bytes"
 	"context"
-	"fmt"
 	"io/ioutil"
 	"net/http"
 	"net/url"
@@ -84,7 +83,7 @@ func DecodePickResponse(decoder func(*http.Response) goahttp.Decoder, restoreBod
 			}
 			err = body.Validate()
 			if err != nil {
-				return nil, fmt.Errorf("invalid response: %s", err)
+				return nil, goahttp.ErrValidationError("sommelier", "pick", err)
 			}
 
 			return NewPickStoredBottleCollectionOK(body), nil
