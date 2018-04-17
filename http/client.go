@@ -168,6 +168,13 @@ func ErrDecodingError(svc, m string, err error) error {
 	return &ClientError{Name: "decoding_error", Message: msg, Service: svc, Method: m}
 }
 
+// ErrValidationError is the error returned when the response body is properly
+// received and decoded but fails validation.
+func ErrValidationError(svc, m string, err error) error {
+	msg := fmt.Sprintf("invalid response: %s", err)
+	return &ClientError{Name: "validation_error", Message: msg, Service: svc, Method: m}
+}
+
 // ErrInvalidResponse is the error returned when the service responded with an
 // unexpected response status code.
 func ErrInvalidResponse(svc, m string, code int, body string) error {
