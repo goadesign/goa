@@ -86,6 +86,7 @@ func EndpointFile(service *design.ServiceExpr) *codegen.File {
 			[]*codegen.ImportSpec{
 				&codegen.ImportSpec{Path: "context"},
 				&codegen.ImportSpec{Name: "goa", Path: "goa.design/goa"},
+				&codegen.ImportSpec{Path: "goa.design/goa/security"},
 			})
 		def := &codegen.SectionTemplate{
 			Name:   "endpoints-struct",
@@ -199,27 +200,27 @@ func New{{ .VarName }}Endpoint(s {{ .ServiceVarName}}{{ range .Schemes }}, auth{
 			if err == nil {
 			{{- end }}
 			{{- if eq .Type "Basic" }}
-				s := security.BasicAuthScheme{
+				sc := security.BasicAuthScheme{
 					Name: {{ printf "%q" .Name }},
 				}
-				ctx, err = auth{{ .Type }}Fn(ctx, {{ if .UsernamePointer }}*{{ end }}p.{{ .UsernameField }}, {{ if .PasswordPointer }}*{{ end }}p.{{ .PasswordField }}, &s)
+				ctx, err = auth{{ .Type }}Fn(ctx, {{ if .UsernamePointer }}*{{ end }}p.{{ .UsernameField }}, {{ if .PasswordPointer }}*{{ end }}p.{{ .PasswordField }}, &sc)
 
 			{{- else if eq .Type "APIKey" }}
-				s := security.APIKeyScheme{
+				sc := security.APIKeyScheme{
 					Name: {{ printf "%q" .Name }},
 				}
-				ctx, err = auth{{ .Type }}Fn(ctx, {{ if $s.CredPointer }}*{{ end }}p.{{ $s.CredField }}, &s)
+				ctx, err = auth{{ .Type }}Fn(ctx, {{ if $s.CredPointer }}*{{ end }}p.{{ $s.CredField }}, &sc)
 
 			{{- else if eq .Type "JWT" }}
-				s := security.JWTScheme{
+				sc := security.JWTScheme{
 					Name: {{ printf "%q" .Name }},
 					Scopes: []string{ {{- range .Scopes }}{{ printf "%q" . }}, {{ end }} },
 					RequiredScopes: []string{ {{- range $r.Scopes }}{{ printf "%q" . }}, {{ end }} },
 				}
-				ctx, err = auth{{ .Type }}Fn(ctx, {{ if $s.CredPointer }}*{{ end }}p.{{ $s.CredField }}, &s)
+				ctx, err = auth{{ .Type }}Fn(ctx, {{ if $s.CredPointer }}*{{ end }}p.{{ $s.CredField }}, &sc)
 
 			{{- else if eq .Type "OAuth2" }}
-				s := security.OAuth2Scheme{
+				sc := security.OAuth2Scheme{
 					Name: {{ printf "%q" .Name }},
 					Scopes: []string{ {{- range .Scopes }}{{ printf "%q" . }}, {{ end }} },
 					RequiredScopes: []string{ {{- range $r.Scopes }}{{ printf "%q" . }}, {{ end }} },
@@ -242,7 +243,7 @@ func New{{ .VarName }}Endpoint(s {{ .ServiceVarName}}{{ range .Schemes }}, auth{
 					},
 					{{- end }}
 				}
-				ctx, err = auth{{ .Type }}Fn(ctx, {{ if $s.CredPointer }}*{{ end }}p.{{ $s.CredField }}, &s)
+				ctx, err = auth{{ .Type }}Fn(ctx, {{ if $s.CredPointer }}*{{ end }}p.{{ $s.CredField }}, &sc)
 
 			{{- end }}
 			{{- if ne $sidx 0 }}

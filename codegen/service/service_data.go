@@ -149,35 +149,50 @@ type (
 		// Kind is the type of scheme, one of "Basic", "APIKey", "JWT"
 		// or "OAuth2".
 		Type string
-		// Name is the name of the scheme.
+		// SchemeName is the name of the scheme.
+		SchemeName string
+		// Name refers to a header or parameter name, based on In's
+		// value.
 		Name string
 		// UsernameField is the name of the payload field that should be
 		// initialized with the basic auth username if any.
 		UsernameField string
 		// UsernamePointer is true if the username field is a pointer.
 		UsernamePointer bool
-		// UsernameAttr is the attribute name containing the username.
+		// UsernameAttr is the name of the attribute that contains the
+		// username.
 		UsernameAttr string
+		// UsernameRequired specifies whether the attribute that
+		// contains the username is required.
+		UsernameRequired bool
 		// PasswordField is the name of the payload field that should be
 		// initialized with the basic auth password if any.
 		PasswordField string
 		// PasswordPointer is true if the password field is a pointer.
 		PasswordPointer bool
-		// PasswordAttr is the attribute name containing the password.
+		// PasswordAttr is the name of the attribute that contains the
+		// password.
 		PasswordAttr string
+		// PasswordRequired specifies whether the attribute that
+		// contains the password is required.
+		PasswordRequired bool
 		// CredField contains the name of the payload field that should
 		// be initialized with the API key, the JWT token or the OAuth2
 		// access token.
 		CredField string
 		// CredPointer is true if the credential field is a pointer.
 		CredPointer bool
-		// KeyAttr is the nane of the attribute that contains the
-		// security tag (for APIKey, OAuth2, and JWT schemes).
+		// CredRequired specifies if the key is a required attribute.
+		CredRequired bool
+		// KeyAttr is the name of the attribute that contains
+		// the security tag (for APIKey, OAuth2, and JWT schemes).
 		KeyAttr string
 		// Scopes lists the scopes that apply to the scheme.
 		Scopes []string
 		// Flows describes the OAuth2 flows.
 		Flows []*design.FlowExpr
+		// In indicates the request element that holds the credential.
+		In string
 	}
 )
 
@@ -468,30 +483,35 @@ func buildSchemeData(s *design.SchemeExpr, m *design.MethodExpr) *SchemeData {
 	}
 	switch s.Kind {
 	case design.BasicAuthKind:
-		userAtt, user := taggedAttribute(m.Payload, "security:username")
-		passAtt, pass := taggedAttribute(m.Payload, "security:password")
+		userAtt, user := taggedField(m.Payload, "security:username")
+		passAtt, pass := taggedField(m.Payload, "security:password")
 		return &SchemeData{
-			Type:            s.Kind.String(),
-			Name:            s.SchemeName,
-			UsernameAttr:    userAtt,
-			UsernameField:   user,
-			UsernamePointer: m.Payload.IsPrimitivePointer(userAtt, true),
-			PasswordAttr:    passAtt,
-			PasswordField:   pass,
-			PasswordPointer: m.Payload.IsPrimitivePointer(passAtt, true),
+			Type:             s.Kind.String(),
+			SchemeName:       s.SchemeName,
+			UsernameAttr:     userAtt,
+			UsernameField:    user,
+			UsernamePointer:  m.Payload.IsPrimitivePointer(userAtt, true),
+			UsernameRequired: m.Payload.IsRequired(userAtt),
+			PasswordAttr:     passAtt,
+			PasswordField:    pass,
+			PasswordPointer:  m.Payload.IsPrimitivePointer(passAtt, true),
+			PasswordRequired: m.Payload.IsRequired(passAtt),
 		}
 	case design.APIKeyKind:
-		if keyAtt, key := taggedAttribute(m.Payload, "security:apikey:"+s.SchemeName); key != "" {
+		if keyAtt, key := taggedField(m.Payload, "security:apikey:"+s.SchemeName); key != "" {
 			return &SchemeData{
-				Type:        s.Kind.String(),
-				Name:        s.SchemeName,
-				CredField:   key,
-				CredPointer: m.Payload.IsPrimitivePointer(keyAtt, true),
-				KeyAttr:     keyAtt,
+				Type:         s.Kind.String(),
+				Name:         s.Name,
+				SchemeName:   s.SchemeName,
+				CredField:    key,
+				CredPointer:  m.Payload.IsPrimitivePointer(keyAtt, true),
+				CredRequired: m.Payload.IsRequired(keyAtt),
+				KeyAttr:      keyAtt,
+				In:           s.In,
 			}
 		}
 	case design.JWTKind:
-		if keyAtt, key := taggedAttribute(m.Payload, "security:token"); key != "" {
+		if keyAtt, key := taggedField(m.Payload, "security:token"); key != "" {
 			var scopes []string
 			if len(s.Scopes) > 0 {
 				scopes = make([]string, len(s.Scopes))
@@ -500,16 +520,19 @@ func buildSchemeData(s *design.SchemeExpr, m *design.MethodExpr) *SchemeData {
 				}
 			}
 			return &SchemeData{
-				Type:        s.Kind.String(),
-				Name:        s.SchemeName,
-				CredField:   key,
-				CredPointer: m.Payload.IsPrimitivePointer(keyAtt, true),
-				KeyAttr:     keyAtt,
-				Scopes:      scopes,
+				Type:         s.Kind.String(),
+				Name:         s.Name,
+				SchemeName:   s.SchemeName,
+				CredField:    key,
+				CredPointer:  m.Payload.IsPrimitivePointer(keyAtt, true),
+				CredRequired: m.Payload.IsRequired(keyAtt),
+				KeyAttr:      keyAtt,
+				Scopes:       scopes,
+				In:           s.In,
 			}
 		}
 	case design.OAuth2Kind:
-		if keyAtt, key := taggedAttribute(m.Payload, "security:accesstoken"); key != "" {
+		if keyAtt, key := taggedField(m.Payload, "security:accesstoken"); key != "" {
 			var scopes []string
 			if len(s.Scopes) > 0 {
 				scopes = make([]string, len(s.Scopes))
@@ -518,22 +541,25 @@ func buildSchemeData(s *design.SchemeExpr, m *design.MethodExpr) *SchemeData {
 				}
 			}
 			return &SchemeData{
-				Type:        s.Kind.String(),
-				Name:        s.SchemeName,
-				CredField:   key,
-				CredPointer: m.Payload.IsPrimitivePointer(keyAtt, true),
-				KeyAttr:     keyAtt,
-				Scopes:      scopes,
-				Flows:       s.Flows,
+				Type:         s.Kind.String(),
+				Name:         s.Name,
+				SchemeName:   s.SchemeName,
+				CredField:    key,
+				CredPointer:  m.Payload.IsPrimitivePointer(keyAtt, true),
+				CredRequired: m.Payload.IsRequired(keyAtt),
+				KeyAttr:      keyAtt,
+				Scopes:       scopes,
+				Flows:        s.Flows,
+				In:           s.In,
 			}
 		}
 	}
 	return nil
 }
 
-// taggedAttribute returns the name and corresponding field name of child
+// taggedField returns the name and corresponding field name of child
 // attribute of p with the given tag if p is an object.
-func taggedAttribute(a *design.AttributeExpr, tag string) (string, string) {
+func taggedField(a *design.AttributeExpr, tag string) (string, string) {
 	obj := design.AsObject(a.Type)
 	if obj == nil {
 		return "", ""

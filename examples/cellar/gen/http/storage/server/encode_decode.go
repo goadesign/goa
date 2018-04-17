@@ -216,6 +216,7 @@ func DecodeMultiAddRequest(mux goahttp.Muxer, decoder func(*http.Request) goahtt
 		if err := decoder(r).Decode(&payload); err != nil {
 			return nil, goa.DecodePayloadError(err.Error())
 		}
+
 		return payload, nil
 	}
 }
@@ -255,6 +256,7 @@ func DecodeMultiUpdateRequest(mux goahttp.Muxer, decoder func(*http.Request) goa
 		if err := decoder(r).Decode(&payload); err != nil {
 			return nil, goa.DecodePayloadError(err.Error())
 		}
+
 		return payload, nil
 	}
 }

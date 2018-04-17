@@ -3,14 +3,14 @@
 // secured_service endpoints
 //
 // Command:
-// $ goa gen goa.design/plugins/security/examples/multi_auth/design
+// $ goa gen goa.design/goa/examples/security/design
 
 package securedservice
 
 import (
 	"context"
 
-	"goa.design/goa"
+	goa "goa.design/goa"
 	"goa.design/goa/security"
 )
 
@@ -24,12 +24,12 @@ type Endpoints struct {
 
 // NewEndpoints wraps the methods of the "secured_service" service with
 // endpoints.
-func NewEndpoints(s Service, bafn security.AuthorizeBasicAuthFunc, jwtfn security.AuthorizeJWTFunc, keyfn security.AuthorizeAPIKeyFunc, oauthfn security.AuthorizeOAuth2Func) *Endpoints {
+func NewEndpoints(s Service, authBasicFn security.AuthorizeBasicFunc, authJWTFn security.AuthorizeJWTFunc, authAPIKeyFn security.AuthorizeAPIKeyFunc, authOAuth2Fn security.AuthorizeOAuth2Func) *Endpoints {
 	return &Endpoints{
-		Signin:           NewSigninEndpoint(s, bafn),
-		Secure:           NewSecureEndpoint(s, jwtfn),
-		DoublySecure:     NewDoublySecureEndpoint(s, jwtfn, keyfn),
-		AlsoDoublySecure: NewAlsoDoublySecureEndpoint(s, jwtfn, keyfn, oauthfn, bafn),
+		Signin:           NewSigninEndpoint(s, authBasicFn),
+		Secure:           NewSecureEndpoint(s, authJWTFn),
+		DoublySecure:     NewDoublySecureEndpoint(s, authJWTFn, authAPIKeyFn),
+		AlsoDoublySecure: NewAlsoDoublySecureEndpoint(s, authJWTFn, authAPIKeyFn, authOAuth2Fn, authBasicFn),
 	}
 }
 
@@ -44,14 +44,14 @@ func (e *Endpoints) Use(m func(goa.Endpoint) goa.Endpoint) {
 
 // NewSigninEndpoint returns an endpoint function that calls the method
 // "signin" of service "secured_service".
-func NewSigninEndpoint(s Service, bafn security.AuthorizeBasicAuthFunc) goa.Endpoint {
+func NewSigninEndpoint(s Service, authBasicFn security.AuthorizeBasicFunc) goa.Endpoint {
 	return func(ctx context.Context, req interface{}) (interface{}, error) {
 		p := req.(*SigninPayload)
 		var err error
-		scheme := security.BasicAuthScheme{
-			Name: "basic",
+		sc := security.BasicAuthScheme{
+			Name: "",
 		}
-		ctx, err = bafn(ctx, *p.Username, *p.Password, &scheme)
+		ctx, err = authBasicFn(ctx, p.Username, p.Password, &sc)
 		if err != nil {
 			return nil, err
 		}
@@ -61,16 +61,16 @@ func NewSigninEndpoint(s Service, bafn security.AuthorizeBasicAuthFunc) goa.Endp
 
 // NewSecureEndpoint returns an endpoint function that calls the method
 // "secure" of service "secured_service".
-func NewSecureEndpoint(s Service, jwtfn security.AuthorizeJWTFunc) goa.Endpoint {
+func NewSecureEndpoint(s Service, authJWTFn security.AuthorizeJWTFunc) goa.Endpoint {
 	return func(ctx context.Context, req interface{}) (interface{}, error) {
 		p := req.(*SecurePayload)
 		var err error
-		jwtSch := security.JWTScheme{
-			Name:           "jwt",
+		sc := security.JWTScheme{
+			Name:           "Authorization",
 			Scopes:         []string{"api:read", "api:write"},
 			RequiredScopes: []string{"api:read"},
 		}
-		ctx, err = jwtfn(ctx, *p.Token, &jwtSch)
+		ctx, err = authJWTFn(ctx, *p.Token, &sc)
 		if err != nil {
 			return nil, err
 		}
@@ -80,21 +80,21 @@ func NewSecureEndpoint(s Service, jwtfn security.AuthorizeJWTFunc) goa.Endpoint 
 
 // NewDoublySecureEndpoint returns an endpoint function that calls the method
 // "doubly_secure" of service "secured_service".
-func NewDoublySecureEndpoint(s Service, jwtfn security.AuthorizeJWTFunc, keyfn security.AuthorizeAPIKeyFunc) goa.Endpoint {
+func NewDoublySecureEndpoint(s Service, authJWTFn security.AuthorizeJWTFunc, authAPIKeyFn security.AuthorizeAPIKeyFunc) goa.Endpoint {
 	return func(ctx context.Context, req interface{}) (interface{}, error) {
 		p := req.(*DoublySecurePayload)
 		var err error
-		jwtSch := security.JWTScheme{
-			Name:           "jwt",
+		sc := security.JWTScheme{
+			Name:           "Authorization",
 			Scopes:         []string{"api:read", "api:write"},
 			RequiredScopes: []string{"api:read", "api:write"},
 		}
-		ctx, err = jwtfn(ctx, *p.Token, &jwtSch)
+		ctx, err = authJWTFn(ctx, *p.Token, &sc)
 		if err == nil {
-			apiKeySch := security.APIKeyScheme{
-				Name: "api_key",
+			sc := security.APIKeyScheme{
+				Name: "k",
 			}
-			ctx, err = keyfn(ctx, *p.Key, &apiKeySch)
+			ctx, err = authAPIKeyFn(ctx, *p.Key, &sc)
 		}
 		if err != nil {
 			return nil, err
@@ -105,42 +105,42 @@ func NewDoublySecureEndpoint(s Service, jwtfn security.AuthorizeJWTFunc, keyfn s
 
 // NewAlsoDoublySecureEndpoint returns an endpoint function that calls the
 // method "also_doubly_secure" of service "secured_service".
-func NewAlsoDoublySecureEndpoint(s Service, jwtfn security.AuthorizeJWTFunc, keyfn security.AuthorizeAPIKeyFunc, oauthfn security.AuthorizeOAuth2Func, bafn security.AuthorizeBasicAuthFunc) goa.Endpoint {
+func NewAlsoDoublySecureEndpoint(s Service, authJWTFn security.AuthorizeJWTFunc, authAPIKeyFn security.AuthorizeAPIKeyFunc, authOAuth2Fn security.AuthorizeOAuth2Func, authBasicFn security.AuthorizeBasicFunc) goa.Endpoint {
 	return func(ctx context.Context, req interface{}) (interface{}, error) {
 		p := req.(*AlsoDoublySecurePayload)
 		var err error
-		jwtSch := security.JWTScheme{
-			Name:           "jwt",
+		sc := security.JWTScheme{
+			Name:           "Authorization",
 			Scopes:         []string{"api:read", "api:write"},
 			RequiredScopes: []string{"api:read", "api:write"},
 		}
-		ctx, err = jwtfn(ctx, *p.Token, &jwtSch)
+		ctx, err = authJWTFn(ctx, *p.Token, &sc)
 		if err == nil {
-			apiKeySch := security.APIKeyScheme{
-				Name: "api_key",
+			sc := security.APIKeyScheme{
+				Name: "k",
 			}
-			ctx, err = keyfn(ctx, *p.Key, &apiKeySch)
+			ctx, err = authAPIKeyFn(ctx, *p.Key, &sc)
 		}
 		if err != nil {
-			oauth2Sch := security.OAuth2Scheme{
-				Name:           "oauth2",
+			sc := security.OAuth2Scheme{
+				Name:           "oauth",
 				Scopes:         []string{"api:read", "api:write"},
 				RequiredScopes: []string{"api:read", "api:write"},
 				Flows: []*security.OAuthFlow{
 					&security.OAuthFlow{
 						Type:             "authorization_code",
-						AuthorizationURL: "http://localhost:8080/authorization",
-						TokenURL:         "http://localhost:8080/token",
-						RefreshURL:       "http://localhost:8080/refresh",
+						AuthorizationURL: "/authorization",
+						TokenURL:         "/token",
+						RefreshURL:       "/refresh",
 					},
 				},
 			}
-			ctx, err = oauthfn(ctx, *p.OauthToken, &oauth2Sch)
+			ctx, err = authOAuth2Fn(ctx, *p.OauthToken, &sc)
 			if err == nil {
-				basicAuthSch := security.BasicAuthScheme{
-					Name: "basic",
+				sc := security.BasicAuthScheme{
+					Name: "",
 				}
-				ctx, err = bafn(ctx, *p.Username, *p.Password, &basicAuthSch)
+				ctx, err = authBasicFn(ctx, *p.Username, *p.Password, &sc)
 			}
 		}
 		if err != nil {

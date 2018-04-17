@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"log"
 
-	"goa.design/plugins/security"
-	securedservice "goa.design/plugins/security/examples/multi_auth/gen/secured_service"
+	securedservice "goa.design/goa/examples/security/gen/secured_service"
+	"goa.design/goa/security"
 )
 
 // secured_service service example implementation.

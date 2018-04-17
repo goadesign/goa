@@ -3942,6 +3942,7 @@ func DecodeMethodMultipartPrimitiveRequest(mux goahttp.Muxer, decoder func(*http
 		if err := decoder(r).Decode(&payload); err != nil {
 			return nil, goa.DecodePayloadError(err.Error())
 		}
+
 		return payload, nil
 	}
 }
@@ -3955,6 +3956,7 @@ func DecodeMethodMultipartUserTypeRequest(mux goahttp.Muxer, decoder func(*http.
 		if err := decoder(r).Decode(&payload); err != nil {
 			return nil, goa.DecodePayloadError(err.Error())
 		}
+
 		return payload, nil
 	}
 }
@@ -3968,6 +3970,7 @@ func DecodeMethodMultipartArrayTypeRequest(mux goahttp.Muxer, decoder func(*http
 		if err := decoder(r).Decode(&payload); err != nil {
 			return nil, goa.DecodePayloadError(err.Error())
 		}
+
 		return payload, nil
 	}
 }
@@ -3981,6 +3984,7 @@ func DecodeMethodMultipartMapTypeRequest(mux goahttp.Muxer, decoder func(*http.R
 		if err := decoder(r).Decode(&payload); err != nil {
 			return nil, goa.DecodePayloadError(err.Error())
 		}
+
 		return payload, nil
 	}
 }

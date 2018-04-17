@@ -11,8 +11,8 @@ import (
 	"strings"
 	"time"
 
+	"goa.design/goa/examples/security/gen/http/cli"
 	goahttp "goa.design/goa/http"
-	"goa.design/plugins/security/examples/multi_auth/gen/http/cli"
 )
 
 func main() {

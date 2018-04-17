@@ -398,18 +398,37 @@ func {{ .RequestDecoder }}(mux goahttp.Muxer, decoder func(*http.Request) goahtt
 		}
 	{{- end }}
 {{- end }}
-{{- if .MultipartRequestDecoder }}
-		return payload, nil
-{{- else if .Payload.Request.PayloadInit }}
-
-		return {{ .Payload.Request.PayloadInit.Name }}({{ range .Payload.Request.PayloadInit.ServerArgs }}{{ .Ref }},{{ end }}), nil
+{{- if .Payload.Request.PayloadInit }}
+	payload := {{ .Payload.Request.PayloadInit.Name }}({{ range .Payload.Request.PayloadInit.ServerArgs }}{{ .Ref }}, {{ end }})
 {{- else if .Payload.DecoderReturnValue }}
-
-		return {{ .Payload.DecoderReturnValue }}, nil
+	payload := {{ .Payload.DecoderReturnValue }}
 {{- else }}
-
-		return body, nil
+	payload := body
 {{- end }}
+{{- if .BasicScheme }}{{ with .BasicScheme }}
+	user, pass, {{ if or .UsernameRequired .PasswordRequired }}ok{{ else }}_{{ end }} := r.BasicAuth()
+		{{- if or .UsernameRequired .PasswordRequired}}
+	if !ok {
+		return nil, goa.MissingFieldError("Authorization", "header")
+	}
+		{{- end }}
+	payload.{{ .UsernameField }} = {{ if .UsernamePointer }}&{{ end }}user
+	payload.{{ .PasswordField }} = {{ if .PasswordPointer }}&{{ end }}pass
+{{- end }}{{ end }}
+{{- range .HeaderSchemes }}
+	{{- if not .CredRequired }}
+	if payload.{{ .CredField }} != nil {
+	{{- end }}
+	if strings.Contains({{ if .CredPointer }}*{{ end }}payload.{{ .CredField }}, " ") {
+		// Remove authorization scheme prefix (e.g. "Bearer")
+		cred := strings.SplitN({{ if .CredPointer }}*{{ end }}payload.{{ .CredField }}, " ", 2)[1]
+		payload.{{ .CredField }} = {{ if .CredPointer }}&{{ end }}cred
+	}
+	{{- if not .CredRequired }}
+	}
+	{{- end }}
+{{- end }}
+	return payload, nil
 	}
 }
 ` + requestParamsHeadersT

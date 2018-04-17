@@ -58,9 +58,9 @@ type (
 		RefreshURL string
 	}
 
-	// AuthorizeBasicAuthFunc is the function type that implements the basic auth
+	// AuthorizeBasicFunc is the function type that implements the basic auth
 	// scheme of using username and password.
-	AuthorizeBasicAuthFunc func(ctx context.Context, user, pass string, s *BasicAuthScheme) (context.Context, error)
+	AuthorizeBasicFunc func(ctx context.Context, user, pass string, s *BasicAuthScheme) (context.Context, error)
 
 	// AuthorizeAPIKeyFunc is the function type that implements the API key
 	// scheme of using an API key.

@@ -2,7 +2,7 @@ package design
 
 import (
 	. "goa.design/goa/http/design"
-	. "goa.design/plugins/security/dsl"
+	. "goa.design/goa/http/dsl"
 )
 
 var _ = API("multi_auth", func() {
@@ -10,7 +10,7 @@ var _ = API("multi_auth", func() {
 	Description("This API demonstrates the use of the goa security DSL")
 	Docs(func() { // Documentation links
 		Description("Security example README")
-		URL("https://github.com/goadesign/plugins/security/tree/master/example/multi_auth/README.md")
+		URL("https://github.com/goadesign/goa/tree/master/example/security/README.md")
 	})
 })
 
@@ -62,6 +62,7 @@ var _ = Service("secured_service", func() {
 			Password("password", String, "Password used to perform signin", func() {
 				Example("password")
 			})
+			Required("username", "password")
 		})
 
 		HTTP(func() {
