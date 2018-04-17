@@ -141,6 +141,21 @@ func (a *AttributeExpr) EvalName() string {
 // validated keeps track of validated attributes to handle cyclical definitions.
 var validated = make(map[*AttributeExpr]bool)
 
+// TaggedAttribute returns the name of the child attribute of a with the given
+// tag if a is an object.
+func TaggedAttribute(a *AttributeExpr, tag string) string {
+	obj := AsObject(a.Type)
+	if obj == nil {
+		return ""
+	}
+	for _, at := range *obj {
+		if _, ok := at.Attribute.Metadata[tag]; ok {
+			return at.Name
+		}
+	}
+	return ""
+}
+
 // Validate tests whether the attribute required fields exist.  Since attributes
 // are unaware of their context, additional context information can be provided
 // to be used in error messages.  The parent definition context is automatically

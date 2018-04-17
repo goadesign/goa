@@ -483,8 +483,10 @@ func buildSchemeData(s *design.SchemeExpr, m *design.MethodExpr) *SchemeData {
 	}
 	switch s.Kind {
 	case design.BasicAuthKind:
-		userAtt, user := taggedField(m.Payload, "security:username")
-		passAtt, pass := taggedField(m.Payload, "security:password")
+		userAtt := design.taggedAttribute(m.Payload, "security:username")
+		user := codegen.Goify(userAtt, true)
+		passAtt := design.TaggedAttribute(m.Payload, "security:password")
+		pass := codegen.Goify(passAtt, true)
 		return &SchemeData{
 			Type:             s.Kind.String(),
 			SchemeName:       s.SchemeName,
@@ -498,7 +500,8 @@ func buildSchemeData(s *design.SchemeExpr, m *design.MethodExpr) *SchemeData {
 			PasswordRequired: m.Payload.IsRequired(passAtt),
 		}
 	case design.APIKeyKind:
-		if keyAtt, key := taggedField(m.Payload, "security:apikey:"+s.SchemeName); key != "" {
+		if keyAtt := design.TaggedAttribute(m.Payload, "security:apikey:"+s.SchemeName); keyAtt != "" {
+			key := codegen.Goify(keyAtt, true)
 			return &SchemeData{
 				Type:         s.Kind.String(),
 				Name:         s.Name,
@@ -511,7 +514,8 @@ func buildSchemeData(s *design.SchemeExpr, m *design.MethodExpr) *SchemeData {
 			}
 		}
 	case design.JWTKind:
-		if keyAtt, key := taggedField(m.Payload, "security:token"); key != "" {
+		if keyAtt := design.TaggedAttribute(m.Payload, "security:token"); keyAtt != "" {
+			key := codegen.Goify(keyAtt, true)
 			var scopes []string
 			if len(s.Scopes) > 0 {
 				scopes = make([]string, len(s.Scopes))
@@ -532,7 +536,8 @@ func buildSchemeData(s *design.SchemeExpr, m *design.MethodExpr) *SchemeData {
 			}
 		}
 	case design.OAuth2Kind:
-		if keyAtt, key := taggedField(m.Payload, "security:accesstoken"); key != "" {
+		if keyAtt := design.TaggedAttribute(m.Payload, "security:accesstoken"); keyAtt != "" {
+			key := codegen.Goify(keyAtt, true)
 			var scopes []string
 			if len(s.Scopes) > 0 {
 				scopes = make([]string, len(s.Scopes))
@@ -555,21 +560,6 @@ func buildSchemeData(s *design.SchemeExpr, m *design.MethodExpr) *SchemeData {
 		}
 	}
 	return nil
-}
-
-// taggedField returns the name and corresponding field name of child
-// attribute of p with the given tag if p is an object.
-func taggedField(a *design.AttributeExpr, tag string) (string, string) {
-	obj := design.AsObject(a.Type)
-	if obj == nil {
-		return "", ""
-	}
-	for _, at := range *obj {
-		if _, ok := at.Attribute.Metadata[tag]; ok {
-			return at.Name, codegen.Goify(at.Name, true)
-		}
-	}
-	return "", ""
 }
 
 // requirements returns the security requirements for the given method.

@@ -523,11 +523,11 @@ func (e *EndpointExpr) Finalize() {
 			case BasicAuthKind:
 				continue
 			case APIKeyKind:
-				field = securityField(e.MethodExpr.Payload, "security:apikey:"+sch.SchemeName)
+				field = design.TaggedAttribute(e.MethodExpr.Payload, "security:apikey:"+sch.SchemeName)
 			case JWTKind:
-				field = securityField(e.MethodExpr.Payload, "security:token")
+				field = design.TaggedAttribute(e.MethodExpr.Payload, "security:token")
 			case OAuth2Kind:
-				field = securityField(e.MethodExpr.Payload, "security:accesstoken")
+				field = design.TaggedAttribute(e.MethodExpr.Payload, "security:accesstoken")
 			}
 			sch.Name, sch.In = findKey(e, field)
 			if sch.Name == "" {
@@ -785,20 +785,6 @@ func initAttrFromDesign(att, patt *design.AttributeExpr) {
 	if att.DefaultValue == nil {
 		att.DefaultValue = patt.DefaultValue
 	}
-}
-
-// securityField returns the security attribute name with the given tag.
-func securityField(att *design.AttributeExpr, tag string) string {
-	obj := design.AsObject(att.Type)
-	if obj == nil {
-		return ""
-	}
-	for _, at := range *obj {
-		if _, ok := at.Attribute.Metadata[tag]; ok {
-			return at.Name
-		}
-	}
-	return ""
 }
 
 // findKey finds the given key in the endpoint expression and returns the
