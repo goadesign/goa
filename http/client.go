@@ -35,12 +35,18 @@ type (
 
 	// ClientError is an error returned by a HTTP service client.
 	ClientError struct {
-		Name        string
-		Message     string
-		Service     string
-		Method      string
-		IsTemporary bool
-		IsTimeout   bool
+		// Name is a name for this class of errors.
+		Name string
+		// Message contains the specific error details.
+		Message string
+		// Service is the name of the service.
+		Service string
+		// Method is the name of the service method.
+		Method string
+		// Is the error temporary?
+		Temporary bool
+		// Is the error a timeout?
+		Timeout bool
 	}
 )
 
@@ -134,16 +140,6 @@ func (c *ClientError) Error() string {
 	return fmt.Sprintf("[%s %s]: %s", c.Service, c.Method, c.Message)
 }
 
-// Temporary implements net.Error#Temporary
-func (c *ClientError) Temporary() bool {
-	return c.IsTemporary
-}
-
-// Timeout implements net.Error#Timeout
-func (c *ClientError) Timeout() bool {
-	return c.IsTimeout
-}
-
 // ErrInvalidType is the error returned when the wrong type is given to a
 // method function.
 func ErrInvalidType(svc, m, expected string, actual interface{}) error {
@@ -190,7 +186,7 @@ func ErrInvalidResponse(svc, m string, code int, body string) error {
 		code == http.StatusGatewayTimeout
 
 	return &ClientError{Name: "invalid_response", Message: msg, Service: svc, Method: m,
-		IsTemporary: temporary, IsTimeout: timeout}
+		Temporary: temporary, Timeout: timeout}
 }
 
 // ErrRequestError is the error returned when the request fails to be sent.
@@ -202,5 +198,5 @@ func ErrRequestError(svc, m string, err error) error {
 		timeout = nerr.Timeout()
 	}
 	return &ClientError{Name: "request_error", Message: err.Error(), Service: svc, Method: m,
-		IsTemporary: temporary, IsTimeout: timeout}
+		Temporary: temporary, Timeout: timeout}
 }
