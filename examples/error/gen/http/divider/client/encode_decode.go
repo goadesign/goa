@@ -11,7 +11,6 @@ package client
 import (
 	"bytes"
 	"context"
-	"fmt"
 	"io/ioutil"
 	"net/http"
 	"net/url"
@@ -92,7 +91,7 @@ func DecodeIntegerDivideResponse(decoder func(*http.Response) goahttp.Decoder, r
 			}
 			err = body.Validate()
 			if err != nil {
-				return nil, fmt.Errorf("invalid response: %s", err)
+				return nil, goahttp.ErrValidationError("divider", "integer_divide", err)
 			}
 
 			return nil, NewIntegerDivideHasRemainder(&body)
@@ -107,7 +106,7 @@ func DecodeIntegerDivideResponse(decoder func(*http.Response) goahttp.Decoder, r
 			}
 			err = body.Validate()
 			if err != nil {
-				return nil, fmt.Errorf("invalid response: %s", err)
+				return nil, goahttp.ErrValidationError("divider", "integer_divide", err)
 			}
 
 			return nil, NewIntegerDivideDivByZero(&body)
@@ -122,7 +121,7 @@ func DecodeIntegerDivideResponse(decoder func(*http.Response) goahttp.Decoder, r
 			}
 			err = body.Validate()
 			if err != nil {
-				return nil, fmt.Errorf("invalid response: %s", err)
+				return nil, goahttp.ErrValidationError("divider", "integer_divide", err)
 			}
 
 			return nil, NewIntegerDivideTimeout(&body)
@@ -204,7 +203,7 @@ func DecodeDivideResponse(decoder func(*http.Response) goahttp.Decoder, restoreB
 			}
 			err = body.Validate()
 			if err != nil {
-				return nil, fmt.Errorf("invalid response: %s", err)
+				return nil, goahttp.ErrValidationError("divider", "divide", err)
 			}
 
 			return nil, NewDivideDivByZero(&body)
@@ -219,7 +218,7 @@ func DecodeDivideResponse(decoder func(*http.Response) goahttp.Decoder, restoreB
 			}
 			err = body.Validate()
 			if err != nil {
-				return nil, fmt.Errorf("invalid response: %s", err)
+				return nil, goahttp.ErrValidationError("divider", "divide", err)
 			}
 
 			return nil, NewDivideTimeout(&body)
