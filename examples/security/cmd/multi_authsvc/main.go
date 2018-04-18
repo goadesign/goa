@@ -10,11 +10,11 @@ import (
 	"os/signal"
 	"time"
 
+	multiauth "goa.design/goa/examples/security"
+	securedservicesvr "goa.design/goa/examples/security/gen/http/secured_service/server"
+	securedservice "goa.design/goa/examples/security/gen/secured_service"
 	goahttp "goa.design/goa/http"
 	"goa.design/goa/http/middleware"
-	multiauth "goa.design/plugins/security/examples/multi_auth"
-	securedservicesvr "goa.design/plugins/security/examples/multi_auth/gen/http/secured_service/server"
-	securedservice "goa.design/plugins/security/examples/multi_auth/gen/secured_service"
 )
 
 func main() {
@@ -52,7 +52,7 @@ func main() {
 		securedServiceEndpoints *securedservice.Endpoints
 	)
 	{
-		securedServiceEndpoints = securedservice.NewSecureEndpoints(securedServiceSvc, multiauth.SecuredServiceAuthBasicAuthFn, multiauth.SecuredServiceAuthJWTFn, multiauth.SecuredServiceAuthAPIKeyFn, multiauth.SecuredServiceAuthOAuth2Fn)
+		securedServiceEndpoints = securedservice.NewEndpoints(securedServiceSvc, multiauth.SecuredServiceBasicAuth, multiauth.SecuredServiceJWTAuth, multiauth.SecuredServiceAPIKeyAuth, multiauth.SecuredServiceOAuth2Auth)
 	}
 
 	// Provide the transport specific request decoder and response encoder.

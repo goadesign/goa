@@ -21,8 +21,9 @@ func DecodeMethodQueryBoolRequest(mux goahttp.Muxer, decoder func(*http.Request)
 		if err != nil {
 			return nil, err
 		}
+		payload := NewMethodQueryBoolMethodQueryBoolPayload(q)
 
-		return NewMethodQueryBoolMethodQueryBoolPayload(q), nil
+		return payload, nil
 	}
 }
 `
@@ -52,8 +53,9 @@ func DecodeMethodQueryBoolValidateRequest(mux goahttp.Muxer, decoder func(*http.
 		if err != nil {
 			return nil, err
 		}
+		payload := NewMethodQueryBoolValidateMethodQueryBoolValidatePayload(q)
 
-		return NewMethodQueryBoolValidateMethodQueryBoolValidatePayload(q), nil
+		return payload, nil
 	}
 }
 `
@@ -80,8 +82,9 @@ func DecodeMethodQueryIntRequest(mux goahttp.Muxer, decoder func(*http.Request) 
 		if err != nil {
 			return nil, err
 		}
+		payload := NewMethodQueryIntMethodQueryIntPayload(q)
 
-		return NewMethodQueryIntMethodQueryIntPayload(q), nil
+		return payload, nil
 	}
 }
 `
@@ -111,8 +114,9 @@ func DecodeMethodQueryIntValidateRequest(mux goahttp.Muxer, decoder func(*http.R
 		if err != nil {
 			return nil, err
 		}
+		payload := NewMethodQueryIntValidateMethodQueryIntValidatePayload(q)
 
-		return NewMethodQueryIntValidateMethodQueryIntValidatePayload(q), nil
+		return payload, nil
 	}
 }
 `
@@ -139,8 +143,9 @@ func DecodeMethodQueryInt32Request(mux goahttp.Muxer, decoder func(*http.Request
 		if err != nil {
 			return nil, err
 		}
+		payload := NewMethodQueryInt32MethodQueryInt32Payload(q)
 
-		return NewMethodQueryInt32MethodQueryInt32Payload(q), nil
+		return payload, nil
 	}
 }
 `
@@ -170,8 +175,9 @@ func DecodeMethodQueryInt32ValidateRequest(mux goahttp.Muxer, decoder func(*http
 		if err != nil {
 			return nil, err
 		}
+		payload := NewMethodQueryInt32ValidateMethodQueryInt32ValidatePayload(q)
 
-		return NewMethodQueryInt32ValidateMethodQueryInt32ValidatePayload(q), nil
+		return payload, nil
 	}
 }
 `
@@ -197,8 +203,9 @@ func DecodeMethodQueryInt64Request(mux goahttp.Muxer, decoder func(*http.Request
 		if err != nil {
 			return nil, err
 		}
+		payload := NewMethodQueryInt64MethodQueryInt64Payload(q)
 
-		return NewMethodQueryInt64MethodQueryInt64Payload(q), nil
+		return payload, nil
 	}
 }
 `
@@ -228,8 +235,9 @@ func DecodeMethodQueryInt64ValidateRequest(mux goahttp.Muxer, decoder func(*http
 		if err != nil {
 			return nil, err
 		}
+		payload := NewMethodQueryInt64ValidateMethodQueryInt64ValidatePayload(q)
 
-		return NewMethodQueryInt64ValidateMethodQueryInt64ValidatePayload(q), nil
+		return payload, nil
 	}
 }
 `
@@ -256,8 +264,9 @@ func DecodeMethodQueryUIntRequest(mux goahttp.Muxer, decoder func(*http.Request)
 		if err != nil {
 			return nil, err
 		}
+		payload := NewMethodQueryUIntMethodQueryUIntPayload(q)
 
-		return NewMethodQueryUIntMethodQueryUIntPayload(q), nil
+		return payload, nil
 	}
 }
 `
@@ -287,8 +296,9 @@ func DecodeMethodQueryUIntValidateRequest(mux goahttp.Muxer, decoder func(*http.
 		if err != nil {
 			return nil, err
 		}
+		payload := NewMethodQueryUIntValidateMethodQueryUIntValidatePayload(q)
 
-		return NewMethodQueryUIntValidateMethodQueryUIntValidatePayload(q), nil
+		return payload, nil
 	}
 }
 `
@@ -315,8 +325,9 @@ func DecodeMethodQueryUInt32Request(mux goahttp.Muxer, decoder func(*http.Reques
 		if err != nil {
 			return nil, err
 		}
+		payload := NewMethodQueryUInt32MethodQueryUInt32Payload(q)
 
-		return NewMethodQueryUInt32MethodQueryUInt32Payload(q), nil
+		return payload, nil
 	}
 }
 `
@@ -346,8 +357,9 @@ func DecodeMethodQueryUInt32ValidateRequest(mux goahttp.Muxer, decoder func(*htt
 		if err != nil {
 			return nil, err
 		}
+		payload := NewMethodQueryUInt32ValidateMethodQueryUInt32ValidatePayload(q)
 
-		return NewMethodQueryUInt32ValidateMethodQueryUInt32ValidatePayload(q), nil
+		return payload, nil
 	}
 }
 `
@@ -373,8 +385,9 @@ func DecodeMethodQueryUInt64Request(mux goahttp.Muxer, decoder func(*http.Reques
 		if err != nil {
 			return nil, err
 		}
+		payload := NewMethodQueryUInt64MethodQueryUInt64Payload(q)
 
-		return NewMethodQueryUInt64MethodQueryUInt64Payload(q), nil
+		return payload, nil
 	}
 }
 `
@@ -404,8 +417,9 @@ func DecodeMethodQueryUInt64ValidateRequest(mux goahttp.Muxer, decoder func(*htt
 		if err != nil {
 			return nil, err
 		}
+		payload := NewMethodQueryUInt64ValidateMethodQueryUInt64ValidatePayload(q)
 
-		return NewMethodQueryUInt64ValidateMethodQueryUInt64ValidatePayload(q), nil
+		return payload, nil
 	}
 }
 `
@@ -432,8 +446,9 @@ func DecodeMethodQueryFloat32Request(mux goahttp.Muxer, decoder func(*http.Reque
 		if err != nil {
 			return nil, err
 		}
+		payload := NewMethodQueryFloat32MethodQueryFloat32Payload(q)
 
-		return NewMethodQueryFloat32MethodQueryFloat32Payload(q), nil
+		return payload, nil
 	}
 }
 `
@@ -463,8 +478,9 @@ func DecodeMethodQueryFloat32ValidateRequest(mux goahttp.Muxer, decoder func(*ht
 		if err != nil {
 			return nil, err
 		}
+		payload := NewMethodQueryFloat32ValidateMethodQueryFloat32ValidatePayload(q)
 
-		return NewMethodQueryFloat32ValidateMethodQueryFloat32ValidatePayload(q), nil
+		return payload, nil
 	}
 }
 `
@@ -490,8 +506,9 @@ func DecodeMethodQueryFloat64Request(mux goahttp.Muxer, decoder func(*http.Reque
 		if err != nil {
 			return nil, err
 		}
+		payload := NewMethodQueryFloat64MethodQueryFloat64Payload(q)
 
-		return NewMethodQueryFloat64MethodQueryFloat64Payload(q), nil
+		return payload, nil
 	}
 }
 `
@@ -521,8 +538,9 @@ func DecodeMethodQueryFloat64ValidateRequest(mux goahttp.Muxer, decoder func(*ht
 		if err != nil {
 			return nil, err
 		}
+		payload := NewMethodQueryFloat64ValidateMethodQueryFloat64ValidatePayload(q)
 
-		return NewMethodQueryFloat64ValidateMethodQueryFloat64ValidatePayload(q), nil
+		return payload, nil
 	}
 }
 `
@@ -538,8 +556,9 @@ func DecodeMethodQueryStringRequest(mux goahttp.Muxer, decoder func(*http.Reques
 		if qRaw != "" {
 			q = &qRaw
 		}
+		payload := NewMethodQueryStringMethodQueryStringPayload(q)
 
-		return NewMethodQueryStringMethodQueryStringPayload(q), nil
+		return payload, nil
 	}
 }
 `
@@ -562,8 +581,9 @@ func DecodeMethodQueryStringValidateRequest(mux goahttp.Muxer, decoder func(*htt
 		if err != nil {
 			return nil, err
 		}
+		payload := NewMethodQueryStringValidateMethodQueryStringValidatePayload(q)
 
-		return NewMethodQueryStringValidateMethodQueryStringValidatePayload(q), nil
+		return payload, nil
 	}
 }
 `
@@ -581,8 +601,9 @@ func DecodeMethodQueryBytesRequest(mux goahttp.Muxer, decoder func(*http.Request
 				q = []byte(qRaw)
 			}
 		}
+		payload := NewMethodQueryBytesMethodQueryBytesPayload(q)
 
-		return NewMethodQueryBytesMethodQueryBytesPayload(q), nil
+		return payload, nil
 	}
 }
 `
@@ -608,8 +629,9 @@ func DecodeMethodQueryBytesValidateRequest(mux goahttp.Muxer, decoder func(*http
 		if err != nil {
 			return nil, err
 		}
+		payload := NewMethodQueryBytesValidateMethodQueryBytesValidatePayload(q)
 
-		return NewMethodQueryBytesValidateMethodQueryBytesValidatePayload(q), nil
+		return payload, nil
 	}
 }
 `
@@ -625,8 +647,9 @@ func DecodeMethodQueryAnyRequest(mux goahttp.Muxer, decoder func(*http.Request) 
 		if qRaw != "" {
 			q = qRaw
 		}
+		payload := NewMethodQueryAnyMethodQueryAnyPayload(q)
 
-		return NewMethodQueryAnyMethodQueryAnyPayload(q), nil
+		return payload, nil
 	}
 }
 `
@@ -649,8 +672,9 @@ func DecodeMethodQueryAnyValidateRequest(mux goahttp.Muxer, decoder func(*http.R
 		if err != nil {
 			return nil, err
 		}
+		payload := NewMethodQueryAnyValidateMethodQueryAnyValidatePayload(q)
 
-		return NewMethodQueryAnyValidateMethodQueryAnyValidatePayload(q), nil
+		return payload, nil
 	}
 }
 `
@@ -679,8 +703,9 @@ func DecodeMethodQueryArrayBoolRequest(mux goahttp.Muxer, decoder func(*http.Req
 		if err != nil {
 			return nil, err
 		}
+		payload := NewMethodQueryArrayBoolMethodQueryArrayBoolPayload(q)
 
-		return NewMethodQueryArrayBoolMethodQueryArrayBoolPayload(q), nil
+		return payload, nil
 	}
 }
 `
@@ -719,8 +744,9 @@ func DecodeMethodQueryArrayBoolValidateRequest(mux goahttp.Muxer, decoder func(*
 		if err != nil {
 			return nil, err
 		}
+		payload := NewMethodQueryArrayBoolValidateMethodQueryArrayBoolValidatePayload(q)
 
-		return NewMethodQueryArrayBoolValidateMethodQueryArrayBoolValidatePayload(q), nil
+		return payload, nil
 	}
 }
 `
@@ -749,8 +775,9 @@ func DecodeMethodQueryArrayIntRequest(mux goahttp.Muxer, decoder func(*http.Requ
 		if err != nil {
 			return nil, err
 		}
+		payload := NewMethodQueryArrayIntMethodQueryArrayIntPayload(q)
 
-		return NewMethodQueryArrayIntMethodQueryArrayIntPayload(q), nil
+		return payload, nil
 	}
 }
 `
@@ -788,8 +815,9 @@ func DecodeMethodQueryArrayIntValidateRequest(mux goahttp.Muxer, decoder func(*h
 		if err != nil {
 			return nil, err
 		}
+		payload := NewMethodQueryArrayIntValidateMethodQueryArrayIntValidatePayload(q)
 
-		return NewMethodQueryArrayIntValidateMethodQueryArrayIntValidatePayload(q), nil
+		return payload, nil
 	}
 }
 `
@@ -818,8 +846,9 @@ func DecodeMethodQueryArrayInt32Request(mux goahttp.Muxer, decoder func(*http.Re
 		if err != nil {
 			return nil, err
 		}
+		payload := NewMethodQueryArrayInt32MethodQueryArrayInt32Payload(q)
 
-		return NewMethodQueryArrayInt32MethodQueryArrayInt32Payload(q), nil
+		return payload, nil
 	}
 }
 `
@@ -858,8 +887,9 @@ func DecodeMethodQueryArrayInt32ValidateRequest(mux goahttp.Muxer, decoder func(
 		if err != nil {
 			return nil, err
 		}
+		payload := NewMethodQueryArrayInt32ValidateMethodQueryArrayInt32ValidatePayload(q)
 
-		return NewMethodQueryArrayInt32ValidateMethodQueryArrayInt32ValidatePayload(q), nil
+		return payload, nil
 	}
 }
 `
@@ -888,8 +918,9 @@ func DecodeMethodQueryArrayInt64Request(mux goahttp.Muxer, decoder func(*http.Re
 		if err != nil {
 			return nil, err
 		}
+		payload := NewMethodQueryArrayInt64MethodQueryArrayInt64Payload(q)
 
-		return NewMethodQueryArrayInt64MethodQueryArrayInt64Payload(q), nil
+		return payload, nil
 	}
 }
 `
@@ -928,8 +959,9 @@ func DecodeMethodQueryArrayInt64ValidateRequest(mux goahttp.Muxer, decoder func(
 		if err != nil {
 			return nil, err
 		}
+		payload := NewMethodQueryArrayInt64ValidateMethodQueryArrayInt64ValidatePayload(q)
 
-		return NewMethodQueryArrayInt64ValidateMethodQueryArrayInt64ValidatePayload(q), nil
+		return payload, nil
 	}
 }
 `
@@ -958,8 +990,9 @@ func DecodeMethodQueryArrayUIntRequest(mux goahttp.Muxer, decoder func(*http.Req
 		if err != nil {
 			return nil, err
 		}
+		payload := NewMethodQueryArrayUIntMethodQueryArrayUIntPayload(q)
 
-		return NewMethodQueryArrayUIntMethodQueryArrayUIntPayload(q), nil
+		return payload, nil
 	}
 }
 `
@@ -998,8 +1031,9 @@ func DecodeMethodQueryArrayUIntValidateRequest(mux goahttp.Muxer, decoder func(*
 		if err != nil {
 			return nil, err
 		}
+		payload := NewMethodQueryArrayUIntValidateMethodQueryArrayUIntValidatePayload(q)
 
-		return NewMethodQueryArrayUIntValidateMethodQueryArrayUIntValidatePayload(q), nil
+		return payload, nil
 	}
 }
 `
@@ -1028,8 +1062,9 @@ func DecodeMethodQueryArrayUInt32Request(mux goahttp.Muxer, decoder func(*http.R
 		if err != nil {
 			return nil, err
 		}
+		payload := NewMethodQueryArrayUInt32MethodQueryArrayUInt32Payload(q)
 
-		return NewMethodQueryArrayUInt32MethodQueryArrayUInt32Payload(q), nil
+		return payload, nil
 	}
 }
 `
@@ -1068,8 +1103,9 @@ func DecodeMethodQueryArrayUInt32ValidateRequest(mux goahttp.Muxer, decoder func
 		if err != nil {
 			return nil, err
 		}
+		payload := NewMethodQueryArrayUInt32ValidateMethodQueryArrayUInt32ValidatePayload(q)
 
-		return NewMethodQueryArrayUInt32ValidateMethodQueryArrayUInt32ValidatePayload(q), nil
+		return payload, nil
 	}
 }
 `
@@ -1098,8 +1134,9 @@ func DecodeMethodQueryArrayUInt64Request(mux goahttp.Muxer, decoder func(*http.R
 		if err != nil {
 			return nil, err
 		}
+		payload := NewMethodQueryArrayUInt64MethodQueryArrayUInt64Payload(q)
 
-		return NewMethodQueryArrayUInt64MethodQueryArrayUInt64Payload(q), nil
+		return payload, nil
 	}
 }
 `
@@ -1138,8 +1175,9 @@ func DecodeMethodQueryArrayUInt64ValidateRequest(mux goahttp.Muxer, decoder func
 		if err != nil {
 			return nil, err
 		}
+		payload := NewMethodQueryArrayUInt64ValidateMethodQueryArrayUInt64ValidatePayload(q)
 
-		return NewMethodQueryArrayUInt64ValidateMethodQueryArrayUInt64ValidatePayload(q), nil
+		return payload, nil
 	}
 }
 `
@@ -1168,8 +1206,9 @@ func DecodeMethodQueryArrayFloat32Request(mux goahttp.Muxer, decoder func(*http.
 		if err != nil {
 			return nil, err
 		}
+		payload := NewMethodQueryArrayFloat32MethodQueryArrayFloat32Payload(q)
 
-		return NewMethodQueryArrayFloat32MethodQueryArrayFloat32Payload(q), nil
+		return payload, nil
 	}
 }
 `
@@ -1208,8 +1247,9 @@ func DecodeMethodQueryArrayFloat32ValidateRequest(mux goahttp.Muxer, decoder fun
 		if err != nil {
 			return nil, err
 		}
+		payload := NewMethodQueryArrayFloat32ValidateMethodQueryArrayFloat32ValidatePayload(q)
 
-		return NewMethodQueryArrayFloat32ValidateMethodQueryArrayFloat32ValidatePayload(q), nil
+		return payload, nil
 	}
 }
 `
@@ -1238,8 +1278,9 @@ func DecodeMethodQueryArrayFloat64Request(mux goahttp.Muxer, decoder func(*http.
 		if err != nil {
 			return nil, err
 		}
+		payload := NewMethodQueryArrayFloat64MethodQueryArrayFloat64Payload(q)
 
-		return NewMethodQueryArrayFloat64MethodQueryArrayFloat64Payload(q), nil
+		return payload, nil
 	}
 }
 `
@@ -1278,8 +1319,9 @@ func DecodeMethodQueryArrayFloat64ValidateRequest(mux goahttp.Muxer, decoder fun
 		if err != nil {
 			return nil, err
 		}
+		payload := NewMethodQueryArrayFloat64ValidateMethodQueryArrayFloat64ValidatePayload(q)
 
-		return NewMethodQueryArrayFloat64ValidateMethodQueryArrayFloat64ValidatePayload(q), nil
+		return payload, nil
 	}
 }
 `
@@ -1292,8 +1334,9 @@ func DecodeMethodQueryArrayStringRequest(mux goahttp.Muxer, decoder func(*http.R
 			q []string
 		)
 		q = r.URL.Query()["q"]
+		payload := NewMethodQueryArrayStringMethodQueryArrayStringPayload(q)
 
-		return NewMethodQueryArrayStringMethodQueryArrayStringPayload(q), nil
+		return payload, nil
 	}
 }
 `
@@ -1322,8 +1365,9 @@ func DecodeMethodQueryArrayStringValidateRequest(mux goahttp.Muxer, decoder func
 		if err != nil {
 			return nil, err
 		}
+		payload := NewMethodQueryArrayStringValidateMethodQueryArrayStringValidatePayload(q)
 
-		return NewMethodQueryArrayStringValidateMethodQueryArrayStringValidatePayload(q), nil
+		return payload, nil
 	}
 }
 `
@@ -1344,8 +1388,9 @@ func DecodeMethodQueryArrayBytesRequest(mux goahttp.Muxer, decoder func(*http.Re
 				}
 			}
 		}
+		payload := NewMethodQueryArrayBytesMethodQueryArrayBytesPayload(q)
 
-		return NewMethodQueryArrayBytesMethodQueryArrayBytesPayload(q), nil
+		return payload, nil
 	}
 }
 `
@@ -1380,8 +1425,9 @@ func DecodeMethodQueryArrayBytesValidateRequest(mux goahttp.Muxer, decoder func(
 		if err != nil {
 			return nil, err
 		}
+		payload := NewMethodQueryArrayBytesValidateMethodQueryArrayBytesValidatePayload(q)
 
-		return NewMethodQueryArrayBytesValidateMethodQueryArrayBytesValidatePayload(q), nil
+		return payload, nil
 	}
 }
 `
@@ -1402,8 +1448,9 @@ func DecodeMethodQueryArrayAnyRequest(mux goahttp.Muxer, decoder func(*http.Requ
 				}
 			}
 		}
+		payload := NewMethodQueryArrayAnyMethodQueryArrayAnyPayload(q)
 
-		return NewMethodQueryArrayAnyMethodQueryArrayAnyPayload(q), nil
+		return payload, nil
 	}
 }
 `
@@ -1437,8 +1484,9 @@ func DecodeMethodQueryArrayAnyValidateRequest(mux goahttp.Muxer, decoder func(*h
 		if err != nil {
 			return nil, err
 		}
+		payload := NewMethodQueryArrayAnyValidateMethodQueryArrayAnyValidatePayload(q)
 
-		return NewMethodQueryArrayAnyValidateMethodQueryArrayAnyValidatePayload(q), nil
+		return payload, nil
 	}
 }
 `
@@ -1463,8 +1511,9 @@ func DecodeMethodQueryMapStringStringRequest(mux goahttp.Muxer, decoder func(*ht
 				}
 			}
 		}
+		payload := NewMethodQueryMapStringStringMethodQueryMapStringStringPayload(q)
 
-		return NewMethodQueryMapStringStringMethodQueryMapStringStringPayload(q), nil
+		return payload, nil
 	}
 }
 `
@@ -1506,8 +1555,9 @@ func DecodeMethodQueryMapStringStringValidateRequest(mux goahttp.Muxer, decoder 
 		if err != nil {
 			return nil, err
 		}
+		payload := NewMethodQueryMapStringStringValidateMethodQueryMapStringStringValidatePayload(q)
 
-		return NewMethodQueryMapStringStringValidateMethodQueryMapStringStringValidatePayload(q), nil
+		return payload, nil
 	}
 }
 `
@@ -1541,8 +1591,9 @@ func DecodeMethodQueryMapStringBoolRequest(mux goahttp.Muxer, decoder func(*http
 		if err != nil {
 			return nil, err
 		}
+		payload := NewMethodQueryMapStringBoolMethodQueryMapStringBoolPayload(q)
 
-		return NewMethodQueryMapStringBoolMethodQueryMapStringBoolPayload(q), nil
+		return payload, nil
 	}
 }
 `
@@ -1589,8 +1640,9 @@ func DecodeMethodQueryMapStringBoolValidateRequest(mux goahttp.Muxer, decoder fu
 		if err != nil {
 			return nil, err
 		}
+		payload := NewMethodQueryMapStringBoolValidateMethodQueryMapStringBoolValidatePayload(q)
 
-		return NewMethodQueryMapStringBoolValidateMethodQueryMapStringBoolValidatePayload(q), nil
+		return payload, nil
 	}
 }
 `
@@ -1627,8 +1679,9 @@ func DecodeMethodQueryMapBoolStringRequest(mux goahttp.Muxer, decoder func(*http
 		if err != nil {
 			return nil, err
 		}
+		payload := NewMethodQueryMapBoolStringMethodQueryMapBoolStringPayload(q)
 
-		return NewMethodQueryMapBoolStringMethodQueryMapBoolStringPayload(q), nil
+		return payload, nil
 	}
 }
 `
@@ -1678,8 +1731,9 @@ func DecodeMethodQueryMapBoolStringValidateRequest(mux goahttp.Muxer, decoder fu
 		if err != nil {
 			return nil, err
 		}
+		payload := NewMethodQueryMapBoolStringValidateMethodQueryMapBoolStringValidatePayload(q)
 
-		return NewMethodQueryMapBoolStringValidateMethodQueryMapBoolStringValidatePayload(q), nil
+		return payload, nil
 	}
 }
 `
@@ -1721,8 +1775,9 @@ func DecodeMethodQueryMapBoolBoolRequest(mux goahttp.Muxer, decoder func(*http.R
 		if err != nil {
 			return nil, err
 		}
+		payload := NewMethodQueryMapBoolBoolMethodQueryMapBoolBoolPayload(q)
 
-		return NewMethodQueryMapBoolBoolMethodQueryMapBoolBoolPayload(q), nil
+		return payload, nil
 	}
 }
 `
@@ -1777,8 +1832,9 @@ func DecodeMethodQueryMapBoolBoolValidateRequest(mux goahttp.Muxer, decoder func
 		if err != nil {
 			return nil, err
 		}
+		payload := NewMethodQueryMapBoolBoolValidateMethodQueryMapBoolBoolValidatePayload(q)
 
-		return NewMethodQueryMapBoolBoolValidateMethodQueryMapBoolBoolValidatePayload(q), nil
+		return payload, nil
 	}
 }
 `
@@ -1792,8 +1848,9 @@ func DecodeMethodQueryMapStringArrayStringRequest(mux goahttp.Muxer, decoder fun
 			q map[string][]string
 		)
 		q = r.URL.Query()
+		payload := NewMethodQueryMapStringArrayStringMethodQueryMapStringArrayStringPayload(q)
 
-		return NewMethodQueryMapStringArrayStringMethodQueryMapStringArrayStringPayload(q), nil
+		return payload, nil
 	}
 }
 `
@@ -1825,8 +1882,9 @@ func DecodeMethodQueryMapStringArrayStringValidateRequest(mux goahttp.Muxer, dec
 		if err != nil {
 			return nil, err
 		}
+		payload := NewMethodQueryMapStringArrayStringValidateMethodQueryMapStringArrayStringValidatePayload(q)
 
-		return NewMethodQueryMapStringArrayStringValidateMethodQueryMapStringArrayStringValidatePayload(q), nil
+		return payload, nil
 	}
 }
 `
@@ -1863,8 +1921,9 @@ func DecodeMethodQueryMapStringArrayBoolRequest(mux goahttp.Muxer, decoder func(
 		if err != nil {
 			return nil, err
 		}
+		payload := NewMethodQueryMapStringArrayBoolMethodQueryMapStringArrayBoolPayload(q)
 
-		return NewMethodQueryMapStringArrayBoolMethodQueryMapStringArrayBoolPayload(q), nil
+		return payload, nil
 	}
 }
 `
@@ -1913,8 +1972,9 @@ func DecodeMethodQueryMapStringArrayBoolValidateRequest(mux goahttp.Muxer, decod
 		if err != nil {
 			return nil, err
 		}
+		payload := NewMethodQueryMapStringArrayBoolValidateMethodQueryMapStringArrayBoolValidatePayload(q)
 
-		return NewMethodQueryMapStringArrayBoolValidateMethodQueryMapStringArrayBoolValidatePayload(q), nil
+		return payload, nil
 	}
 }
 `
@@ -1948,8 +2008,9 @@ func DecodeMethodQueryMapBoolArrayStringRequest(mux goahttp.Muxer, decoder func(
 		if err != nil {
 			return nil, err
 		}
+		payload := NewMethodQueryMapBoolArrayStringMethodQueryMapBoolArrayStringPayload(q)
 
-		return NewMethodQueryMapBoolArrayStringMethodQueryMapBoolArrayStringPayload(q), nil
+		return payload, nil
 	}
 }
 `
@@ -1994,8 +2055,9 @@ func DecodeMethodQueryMapBoolArrayStringValidateRequest(mux goahttp.Muxer, decod
 		if err != nil {
 			return nil, err
 		}
+		payload := NewMethodQueryMapBoolArrayStringValidateMethodQueryMapBoolArrayStringValidatePayload(q)
 
-		return NewMethodQueryMapBoolArrayStringValidateMethodQueryMapBoolArrayStringValidatePayload(q), nil
+		return payload, nil
 	}
 }
 `
@@ -2039,8 +2101,9 @@ func DecodeMethodQueryMapBoolArrayBoolRequest(mux goahttp.Muxer, decoder func(*h
 		if err != nil {
 			return nil, err
 		}
+		payload := NewMethodQueryMapBoolArrayBoolMethodQueryMapBoolArrayBoolPayload(q)
 
-		return NewMethodQueryMapBoolArrayBoolMethodQueryMapBoolArrayBoolPayload(q), nil
+		return payload, nil
 	}
 }
 `
@@ -2097,8 +2160,9 @@ func DecodeMethodQueryMapBoolArrayBoolValidateRequest(mux goahttp.Muxer, decoder
 		if err != nil {
 			return nil, err
 		}
+		payload := NewMethodQueryMapBoolArrayBoolValidateMethodQueryMapBoolArrayBoolValidatePayload(q)
 
-		return NewMethodQueryMapBoolArrayBoolValidateMethodQueryMapBoolArrayBoolValidatePayload(q), nil
+		return payload, nil
 	}
 }
 `
@@ -2122,8 +2186,9 @@ func DecodeMethodQueryPrimitiveStringValidateRequest(mux goahttp.Muxer, decoder 
 		if err != nil {
 			return nil, err
 		}
+		payload := q
 
-		return q, nil
+		return payload, nil
 	}
 }
 `
@@ -2154,8 +2219,9 @@ func DecodeMethodQueryPrimitiveBoolValidateRequest(mux goahttp.Muxer, decoder fu
 		if err != nil {
 			return nil, err
 		}
+		payload := q
 
-		return q, nil
+		return payload, nil
 	}
 }
 `
@@ -2184,8 +2250,9 @@ func DecodeMethodQueryPrimitiveArrayStringValidateRequest(mux goahttp.Muxer, dec
 		if err != nil {
 			return nil, err
 		}
+		payload := q
 
-		return q, nil
+		return payload, nil
 	}
 }
 `
@@ -2224,8 +2291,9 @@ func DecodeMethodQueryPrimitiveArrayBoolValidateRequest(mux goahttp.Muxer, decod
 		if err != nil {
 			return nil, err
 		}
+		payload := q
 
-		return q, nil
+		return payload, nil
 	}
 }
 `
@@ -2259,8 +2327,9 @@ func DecodeMethodQueryPrimitiveMapStringArrayStringValidateRequest(mux goahttp.M
 		if err != nil {
 			return nil, err
 		}
+		payload := q
 
-		return q, nil
+		return payload, nil
 	}
 }
 `
@@ -2305,8 +2374,9 @@ func DecodeMethodQueryPrimitiveMapStringBoolValidateRequest(mux goahttp.Muxer, d
 		if err != nil {
 			return nil, err
 		}
+		payload := q
 
-		return q, nil
+		return payload, nil
 	}
 }
 `
@@ -2368,8 +2438,9 @@ func DecodeMethodQueryPrimitiveMapBoolArrayBoolValidateRequest(mux goahttp.Muxer
 		if err != nil {
 			return nil, err
 		}
+		payload := q
 
-		return q, nil
+		return payload, nil
 	}
 }
 `
@@ -2385,8 +2456,9 @@ func DecodeMethodQueryStringMappedRequest(mux goahttp.Muxer, decoder func(*http.
 		if queryRaw != "" {
 			query = &queryRaw
 		}
+		payload := NewMethodQueryStringMappedMethodQueryStringMappedPayload(query)
 
-		return NewMethodQueryStringMappedMethodQueryStringMappedPayload(query), nil
+		return payload, nil
 	}
 }
 `
@@ -2402,8 +2474,9 @@ func DecodeMethodQueryStringDefaultRequest(mux goahttp.Muxer, decoder func(*http
 		if qRaw != "" {
 			q = qRaw
 		}
+		payload := NewMethodQueryStringDefaultMethodQueryStringDefaultPayload(q)
 
-		return NewMethodQueryStringDefaultMethodQueryStringDefaultPayload(q), nil
+		return payload, nil
 	}
 }
 `
@@ -2424,8 +2497,9 @@ func DecodeMethodQueryPrimitiveStringDefaultRequest(mux goahttp.Muxer, decoder f
 		if err != nil {
 			return nil, err
 		}
+		payload := q
 
-		return q, nil
+		return payload, nil
 	}
 }
 `
@@ -2440,8 +2514,9 @@ func DecodeMethodPathStringRequest(mux goahttp.Muxer, decoder func(*http.Request
 			params = mux.Vars(r)
 		)
 		p = params["p"]
+		payload := NewMethodPathStringMethodPathStringPayload(p)
 
-		return NewMethodPathStringMethodPathStringPayload(p), nil
+		return payload, nil
 	}
 }
 `
@@ -2463,8 +2538,9 @@ func DecodeMethodPathStringValidateRequest(mux goahttp.Muxer, decoder func(*http
 		if err != nil {
 			return nil, err
 		}
+		payload := NewMethodPathStringValidateMethodPathStringValidatePayload(p)
 
-		return NewMethodPathStringValidateMethodPathStringValidatePayload(p), nil
+		return payload, nil
 	}
 }
 `
@@ -2486,8 +2562,9 @@ func DecodeMethodPathArrayStringRequest(mux goahttp.Muxer, decoder func(*http.Re
 				p[i] = rv
 			}
 		}
+		payload := NewMethodPathArrayStringMethodPathArrayStringPayload(p)
 
-		return NewMethodPathArrayStringMethodPathArrayStringPayload(p), nil
+		return payload, nil
 	}
 }
 `
@@ -2517,8 +2594,9 @@ func DecodeMethodPathArrayStringValidateRequest(mux goahttp.Muxer, decoder func(
 		if err != nil {
 			return nil, err
 		}
+		payload := NewMethodPathArrayStringValidateMethodPathArrayStringValidatePayload(p)
 
-		return NewMethodPathArrayStringValidateMethodPathArrayStringValidatePayload(p), nil
+		return payload, nil
 	}
 }
 `
@@ -2541,8 +2619,9 @@ func DecodeMethodPathPrimitiveStringValidateRequest(mux goahttp.Muxer, decoder f
 		if err != nil {
 			return nil, err
 		}
+		payload := p
 
-		return p, nil
+		return payload, nil
 	}
 }
 `
@@ -2572,8 +2651,9 @@ func DecodeMethodPathPrimitiveBoolValidateRequest(mux goahttp.Muxer, decoder fun
 		if err != nil {
 			return nil, err
 		}
+		payload := p
 
-		return p, nil
+		return payload, nil
 	}
 }
 `
@@ -2608,8 +2688,9 @@ func DecodeMethodPathPrimitiveArrayStringValidateRequest(mux goahttp.Muxer, deco
 		if err != nil {
 			return nil, err
 		}
+		payload := p
 
-		return p, nil
+		return payload, nil
 	}
 }
 `
@@ -2648,8 +2729,9 @@ func DecodeMethodPathPrimitiveArrayBoolValidateRequest(mux goahttp.Muxer, decode
 		if err != nil {
 			return nil, err
 		}
+		payload := p
 
-		return p, nil
+		return payload, nil
 	}
 }
 `
@@ -2665,8 +2747,9 @@ func DecodeMethodHeaderStringRequest(mux goahttp.Muxer, decoder func(*http.Reque
 		if hRaw != "" {
 			h = &hRaw
 		}
+		payload := NewMethodHeaderStringMethodHeaderStringPayload(h)
 
-		return NewMethodHeaderStringMethodHeaderStringPayload(h), nil
+		return payload, nil
 	}
 }
 `
@@ -2689,8 +2772,9 @@ func DecodeMethodHeaderStringValidateRequest(mux goahttp.Muxer, decoder func(*ht
 		if err != nil {
 			return nil, err
 		}
+		payload := NewMethodHeaderStringValidateMethodHeaderStringValidatePayload(h)
 
-		return NewMethodHeaderStringValidateMethodHeaderStringValidatePayload(h), nil
+		return payload, nil
 	}
 }
 `
@@ -2703,8 +2787,9 @@ func DecodeMethodHeaderArrayStringRequest(mux goahttp.Muxer, decoder func(*http.
 			h []string
 		)
 		h = r.Header["H"]
+		payload := NewMethodHeaderArrayStringMethodHeaderArrayStringPayload(h)
 
-		return NewMethodHeaderArrayStringMethodHeaderArrayStringPayload(h), nil
+		return payload, nil
 	}
 }
 `
@@ -2719,7 +2804,6 @@ func DecodeMethodHeaderArrayStringValidateRequest(mux goahttp.Muxer, decoder fun
 			err error
 		)
 		h = r.Header["H"]
-
 		for _, e := range h {
 			if !(e == "val") {
 				err = goa.MergeErrors(err, goa.InvalidEnumValueError("h[*]", e, []interface{}{"val"}))
@@ -2728,8 +2812,9 @@ func DecodeMethodHeaderArrayStringValidateRequest(mux goahttp.Muxer, decoder fun
 		if err != nil {
 			return nil, err
 		}
+		payload := NewMethodHeaderArrayStringValidateMethodHeaderArrayStringValidatePayload(h)
 
-		return NewMethodHeaderArrayStringValidateMethodHeaderArrayStringValidatePayload(h), nil
+		return payload, nil
 	}
 }
 `
@@ -2753,8 +2838,9 @@ func DecodeMethodHeaderPrimitiveStringValidateRequest(mux goahttp.Muxer, decoder
 		if err != nil {
 			return nil, err
 		}
+		payload := h
 
-		return h, nil
+		return payload, nil
 	}
 }
 `
@@ -2785,8 +2871,9 @@ func DecodeMethodHeaderPrimitiveBoolValidateRequest(mux goahttp.Muxer, decoder f
 		if err != nil {
 			return nil, err
 		}
+		payload := h
 
-		return h, nil
+		return payload, nil
 	}
 }
 `
@@ -2801,7 +2888,6 @@ func DecodeMethodHeaderPrimitiveArrayStringValidateRequest(mux goahttp.Muxer, de
 			err error
 		)
 		h = r.Header["H"]
-
 		if h == nil {
 			err = goa.MergeErrors(err, goa.MissingFieldError("h", "header"))
 		}
@@ -2814,8 +2900,9 @@ func DecodeMethodHeaderPrimitiveArrayStringValidateRequest(mux goahttp.Muxer, de
 		if err != nil {
 			return nil, err
 		}
+		payload := h
 
-		return h, nil
+		return payload, nil
 	}
 }
 `
@@ -2854,8 +2941,9 @@ func DecodeMethodHeaderPrimitiveArrayBoolValidateRequest(mux goahttp.Muxer, deco
 		if err != nil {
 			return nil, err
 		}
+		payload := h
 
-		return h, nil
+		return payload, nil
 	}
 }
 `
@@ -2871,8 +2959,9 @@ func DecodeMethodHeaderStringDefaultRequest(mux goahttp.Muxer, decoder func(*htt
 		if hRaw != "" {
 			h = hRaw
 		}
+		payload := NewMethodHeaderStringDefaultMethodHeaderStringDefaultPayload(h)
 
-		return NewMethodHeaderStringDefaultMethodHeaderStringDefaultPayload(h), nil
+		return payload, nil
 	}
 }
 `
@@ -2893,8 +2982,9 @@ func DecodeMethodHeaderPrimitiveStringDefaultRequest(mux goahttp.Muxer, decoder 
 		if err != nil {
 			return nil, err
 		}
+		payload := h
 
-		return h, nil
+		return payload, nil
 	}
 }
 `
@@ -2914,8 +3004,9 @@ func DecodeMethodBodyStringRequest(mux goahttp.Muxer, decoder func(*http.Request
 			}
 			return nil, goa.DecodePayloadError(err.Error())
 		}
+		payload := NewMethodBodyStringMethodBodyStringPayload(&body)
 
-		return NewMethodBodyStringMethodBodyStringPayload(&body), nil
+		return payload, nil
 	}
 }
 `
@@ -2939,8 +3030,9 @@ func DecodeMethodBodyStringValidateRequest(mux goahttp.Muxer, decoder func(*http
 		if err != nil {
 			return nil, err
 		}
+		payload := NewMethodBodyStringValidateMethodBodyStringValidatePayload(&body)
 
-		return NewMethodBodyStringValidateMethodBodyStringValidatePayload(&body), nil
+		return payload, nil
 	}
 }
 `
@@ -2960,8 +3052,9 @@ func DecodeMethodBodyUserRequest(mux goahttp.Muxer, decoder func(*http.Request) 
 			}
 			return nil, goa.DecodePayloadError(err.Error())
 		}
+		payload := NewMethodBodyUserPayloadType(&body)
 
-		return NewMethodBodyUserPayloadType(&body), nil
+		return payload, nil
 	}
 }
 `
@@ -2985,8 +3078,9 @@ func DecodeMethodBodyUserValidateRequest(mux goahttp.Muxer, decoder func(*http.R
 		if err != nil {
 			return nil, err
 		}
+		payload := NewMethodBodyUserValidatePayloadType(&body)
 
-		return NewMethodBodyUserValidatePayloadType(&body), nil
+		return payload, nil
 	}
 }
 `
@@ -3006,8 +3100,9 @@ func DecodeMethodBodyArrayStringRequest(mux goahttp.Muxer, decoder func(*http.Re
 			}
 			return nil, goa.DecodePayloadError(err.Error())
 		}
+		payload := NewMethodBodyArrayStringMethodBodyArrayStringPayload(&body)
 
-		return NewMethodBodyArrayStringMethodBodyArrayStringPayload(&body), nil
+		return payload, nil
 	}
 }
 `
@@ -3032,8 +3127,9 @@ func DecodeMethodBodyArrayStringValidateRequest(mux goahttp.Muxer, decoder func(
 		if err != nil {
 			return nil, err
 		}
+		payload := NewMethodBodyArrayStringValidateMethodBodyArrayStringValidatePayload(&body)
 
-		return NewMethodBodyArrayStringValidateMethodBodyArrayStringValidatePayload(&body), nil
+		return payload, nil
 	}
 }
 `
@@ -3057,8 +3153,9 @@ func DecodeMethodBodyArrayUserRequest(mux goahttp.Muxer, decoder func(*http.Requ
 		if err != nil {
 			return nil, err
 		}
+		payload := NewMethodBodyArrayUserMethodBodyArrayUserPayload(&body)
 
-		return NewMethodBodyArrayUserMethodBodyArrayUserPayload(&body), nil
+		return payload, nil
 	}
 }
 `
@@ -3082,8 +3179,9 @@ func DecodeMethodBodyArrayUserValidateRequest(mux goahttp.Muxer, decoder func(*h
 		if err != nil {
 			return nil, err
 		}
+		payload := NewMethodBodyArrayUserValidateMethodBodyArrayUserValidatePayload(&body)
 
-		return NewMethodBodyArrayUserValidateMethodBodyArrayUserValidatePayload(&body), nil
+		return payload, nil
 	}
 }
 `
@@ -3103,8 +3201,9 @@ func DecodeMethodBodyMapStringRequest(mux goahttp.Muxer, decoder func(*http.Requ
 			}
 			return nil, goa.DecodePayloadError(err.Error())
 		}
+		payload := NewMethodBodyMapStringMethodBodyMapStringPayload(&body)
 
-		return NewMethodBodyMapStringMethodBodyMapStringPayload(&body), nil
+		return payload, nil
 	}
 }
 `
@@ -3128,8 +3227,9 @@ func DecodeMethodBodyMapStringValidateRequest(mux goahttp.Muxer, decoder func(*h
 		if err != nil {
 			return nil, err
 		}
+		payload := NewMethodBodyMapStringValidateMethodBodyMapStringValidatePayload(&body)
 
-		return NewMethodBodyMapStringValidateMethodBodyMapStringValidatePayload(&body), nil
+		return payload, nil
 	}
 }
 `
@@ -3153,8 +3253,9 @@ func DecodeMethodBodyMapUserRequest(mux goahttp.Muxer, decoder func(*http.Reques
 		if err != nil {
 			return nil, err
 		}
+		payload := NewMethodBodyMapUserMethodBodyMapUserPayload(&body)
 
-		return NewMethodBodyMapUserMethodBodyMapUserPayload(&body), nil
+		return payload, nil
 	}
 }
 `
@@ -3178,8 +3279,9 @@ func DecodeMethodBodyMapUserValidateRequest(mux goahttp.Muxer, decoder func(*htt
 		if err != nil {
 			return nil, err
 		}
+		payload := NewMethodBodyMapUserValidateMethodBodyMapUserValidatePayload(&body)
 
-		return NewMethodBodyMapUserValidateMethodBodyMapUserValidatePayload(&body), nil
+		return payload, nil
 	}
 }
 `
@@ -3208,8 +3310,9 @@ func DecodeMethodBodyPrimitiveStringValidateRequest(mux goahttp.Muxer, decoder f
 		if err != nil {
 			return nil, err
 		}
+		payload := body
 
-		return body, nil
+		return payload, nil
 	}
 }
 `
@@ -3238,8 +3341,9 @@ func DecodeMethodBodyPrimitiveBoolValidateRequest(mux goahttp.Muxer, decoder fun
 		if err != nil {
 			return nil, err
 		}
+		payload := body
 
-		return body, nil
+		return payload, nil
 	}
 }
 `
@@ -3271,8 +3375,9 @@ func DecodeMethodBodyPrimitiveArrayStringValidateRequest(mux goahttp.Muxer, deco
 		if err != nil {
 			return nil, err
 		}
+		payload := body
 
-		return body, nil
+		return payload, nil
 	}
 }
 `
@@ -3304,8 +3409,9 @@ func DecodeMethodBodyPrimitiveArrayBoolValidateRequest(mux goahttp.Muxer, decode
 		if err != nil {
 			return nil, err
 		}
+		payload := body
 
-		return body, nil
+		return payload, nil
 	}
 }
 `
@@ -3339,8 +3445,9 @@ func DecodeMethodBodyPrimitiveArrayUserValidateRequest(mux goahttp.Muxer, decode
 		if err != nil {
 			return nil, err
 		}
+		payload := NewMethodBodyPrimitiveArrayUserValidatePayloadType(body)
 
-		return NewMethodBodyPrimitiveArrayUserValidatePayloadType(body), nil
+		return payload, nil
 	}
 }
 `
@@ -3361,8 +3468,9 @@ func DecodeMethodBodyPrimitiveArrayUserRequest(mux goahttp.Muxer, decoder func(*
 			}
 			return nil, goa.DecodePayloadError(err.Error())
 		}
+		payload := NewMethodBodyPrimitiveArrayUserPayloadType(body)
 
-		return NewMethodBodyPrimitiveArrayUserPayloadType(body), nil
+		return payload, nil
 	}
 }
 `
@@ -3392,8 +3500,9 @@ func DecodeMethodBodyPrimitiveArrayUserValidateRequest(mux goahttp.Muxer, decode
 		if err != nil {
 			return nil, err
 		}
+		payload := NewMethodBodyPrimitiveArrayUserValidatePayloadType(body)
 
-		return NewMethodBodyPrimitiveArrayUserValidatePayloadType(body), nil
+		return payload, nil
 	}
 }
 `
@@ -3421,8 +3530,9 @@ func DecodeMethodBodyQueryObjectRequest(mux goahttp.Muxer, decoder func(*http.Re
 		if bRaw != "" {
 			b = &bRaw
 		}
+		payload := NewMethodBodyQueryObjectMethodBodyQueryObjectPayload(&body, b)
 
-		return NewMethodBodyQueryObjectMethodBodyQueryObjectPayload(&body, b), nil
+		return payload, nil
 	}
 }
 `
@@ -3459,8 +3569,9 @@ func DecodeMethodBodyQueryObjectValidateRequest(mux goahttp.Muxer, decoder func(
 		if err != nil {
 			return nil, err
 		}
+		payload := NewMethodBodyQueryObjectValidateMethodBodyQueryObjectValidatePayload(&body, b)
 
-		return NewMethodBodyQueryObjectValidateMethodBodyQueryObjectValidatePayload(&body, b), nil
+		return payload, nil
 	}
 }
 `
@@ -3488,8 +3599,9 @@ func DecodeMethodBodyQueryUserRequest(mux goahttp.Muxer, decoder func(*http.Requ
 		if bRaw != "" {
 			b = &bRaw
 		}
+		payload := NewMethodBodyQueryUserPayloadType(&body, b)
 
-		return NewMethodBodyQueryUserPayloadType(&body, b), nil
+		return payload, nil
 	}
 }
 `
@@ -3525,8 +3637,9 @@ func DecodeMethodBodyQueryUserValidateRequest(mux goahttp.Muxer, decoder func(*h
 		if err != nil {
 			return nil, err
 		}
+		payload := NewMethodBodyQueryUserValidatePayloadType(&body, b)
 
-		return NewMethodBodyQueryUserValidatePayloadType(&body, b), nil
+		return payload, nil
 	}
 }
 `
@@ -3553,8 +3666,9 @@ func DecodeMethodBodyPathObjectRequest(mux goahttp.Muxer, decoder func(*http.Req
 			params = mux.Vars(r)
 		)
 		b = params["b"]
+		payload := NewMethodBodyPathObjectMethodBodyPathObjectPayload(&body, b)
 
-		return NewMethodBodyPathObjectMethodBodyPathObjectPayload(&body, b), nil
+		return payload, nil
 	}
 }
 `
@@ -3590,8 +3704,9 @@ func DecodeMethodBodyPathObjectValidateRequest(mux goahttp.Muxer, decoder func(*
 		if err != nil {
 			return nil, err
 		}
+		payload := NewMethodBodyPathObjectValidateMethodBodyPathObjectValidatePayload(&body, b)
 
-		return NewMethodBodyPathObjectValidateMethodBodyPathObjectValidatePayload(&body, b), nil
+		return payload, nil
 	}
 }
 `
@@ -3618,8 +3733,9 @@ func DecodeMethodBodyPathUserRequest(mux goahttp.Muxer, decoder func(*http.Reque
 			params = mux.Vars(r)
 		)
 		b = params["b"]
+		payload := NewMethodBodyPathUserPayloadType(&body, b)
 
-		return NewMethodBodyPathUserPayloadType(&body, b), nil
+		return payload, nil
 	}
 }
 `
@@ -3654,8 +3770,9 @@ func DecodeMethodUserBodyPathValidateRequest(mux goahttp.Muxer, decoder func(*ht
 		if err != nil {
 			return nil, err
 		}
+		payload := NewMethodUserBodyPathValidatePayloadType(&body, b)
 
-		return NewMethodUserBodyPathValidatePayloadType(&body, b), nil
+		return payload, nil
 	}
 }
 `
@@ -3687,8 +3804,9 @@ func DecodeMethodBodyQueryPathObjectRequest(mux goahttp.Muxer, decoder func(*htt
 		if bRaw != "" {
 			b = &bRaw
 		}
+		payload := NewMethodBodyQueryPathObjectMethodBodyQueryPathObjectPayload(&body, c, b)
 
-		return NewMethodBodyQueryPathObjectMethodBodyQueryPathObjectPayload(&body, c, b), nil
+		return payload, nil
 	}
 }
 `
@@ -3730,8 +3848,9 @@ func DecodeMethodBodyQueryPathObjectValidateRequest(mux goahttp.Muxer, decoder f
 		if err != nil {
 			return nil, err
 		}
+		payload := NewMethodBodyQueryPathObjectValidateMethodBodyQueryPathObjectValidatePayload(&body, c, b)
 
-		return NewMethodBodyQueryPathObjectValidateMethodBodyQueryPathObjectValidatePayload(&body, c, b), nil
+		return payload, nil
 	}
 }
 `
@@ -3763,8 +3882,9 @@ func DecodeMethodBodyQueryPathUserRequest(mux goahttp.Muxer, decoder func(*http.
 		if bRaw != "" {
 			b = &bRaw
 		}
+		payload := NewMethodBodyQueryPathUserPayloadType(&body, c, b)
 
-		return NewMethodBodyQueryPathUserPayloadType(&body, c, b), nil
+		return payload, nil
 	}
 }
 `
@@ -3806,8 +3926,9 @@ func DecodeMethodBodyQueryPathUserValidateRequest(mux goahttp.Muxer, decoder fun
 		if err != nil {
 			return nil, err
 		}
+		payload := NewMethodBodyQueryPathUserValidatePayloadType(&body, c, b)
 
-		return NewMethodBodyQueryPathUserValidatePayloadType(&body, c, b), nil
+		return payload, nil
 	}
 }
 `
@@ -3832,8 +3953,9 @@ func DecodeMapQueryPrimitivePrimitiveRequest(mux goahttp.Muxer, decoder func(*ht
 				}
 			}
 		}
+		payload := query
 
-		return query, nil
+		return payload, nil
 	}
 }
 `
@@ -3869,8 +3991,9 @@ func DecodeMapQueryPrimitiveArrayRequest(mux goahttp.Muxer, decoder func(*http.R
 		if err != nil {
 			return nil, err
 		}
+		payload := query
 
-		return query, nil
+		return payload, nil
 	}
 }
 `
@@ -3928,8 +4051,9 @@ func DecodeMethodMapQueryObjectRequest(mux goahttp.Muxer, decoder func(*http.Req
 		if err != nil {
 			return nil, err
 		}
+		payload := NewMethodMapQueryObjectPayloadType(&body, a, c)
 
-		return NewMethodMapQueryObjectPayloadType(&body, a, c), nil
+		return payload, nil
 	}
 }
 `

@@ -218,9 +218,9 @@ const mainT = `func main() {
 	{{- end }}
 	)
 	{
-	{{- range .Services }}
+	{{- range .Services }}{{ $svc := . }}
 		{{-  if .Endpoints }}
-		{{ .Service.VarName }}Endpoints = {{ .Service.PkgName }}.NewEndpoints({{ .Service.VarName }}Svc)
+		{{ .Service.VarName }}Endpoints = {{ .Service.PkgName }}.NewEndpoints({{ .Service.VarName }}Svc{{ range .Service.Schemes }}, {{ $.APIPkg }}.{{ $svc.Service.StructName }}{{ .Type }}Auth{{ end }})
 		{{-  end }}
 	{{- end }}
 	}

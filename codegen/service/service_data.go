@@ -33,6 +33,9 @@ type (
 		PkgName string
 		// Methods lists the service interface methods.
 		Methods []*MethodData
+		// Schemes is the list of security schemes required by the
+		// service methods.
+		Schemes []*SchemeData
 		// UserTypes lists the types definitions that the service
 		// depends on.
 		UserTypes []*UserTypeData
@@ -44,8 +47,6 @@ type (
 		ErrorInits []*ErrorInitData
 		// Scope initialized with all the service types.
 		Scope *codegen.NameScope
-		// Schemes is the unique security schemes for the service.
-		Schemes []*SchemeData
 	}
 
 	// ErrorInitData describes an error returned by a service method of type
@@ -295,12 +296,27 @@ func (d ServicesData) analyze(service *design.ServiceExpr) *Data {
 
 	var (
 		methods []*MethodData
+		schemes []*SchemeData
 	)
 	{
 		methods = make([]*MethodData, len(service.Methods))
 		for i, e := range service.Methods {
 			m := buildMethodData(e, pkgName, scope)
 			methods[i] = m
+			for _, r := range m.Requirements {
+				for _, s := range r.Schemes {
+					found := false
+					for _, s2 := range schemes {
+						if s.SchemeName == s2.SchemeName {
+							found = true
+							break
+						}
+					}
+					if !found {
+						schemes = append(schemes, s)
+					}
+				}
+			}
 		}
 	}
 
@@ -321,6 +337,7 @@ func (d ServicesData) analyze(service *design.ServiceExpr) *Data {
 		StructName:  codegen.Goify(service.Name, true),
 		PkgName:     pkgName,
 		Methods:     methods,
+		Schemes:     schemes,
 		UserTypes:   types,
 		ErrorTypes:  errTypes,
 		ErrorInits:  errorInits,
@@ -483,7 +500,7 @@ func buildSchemeData(s *design.SchemeExpr, m *design.MethodExpr) *SchemeData {
 	}
 	switch s.Kind {
 	case design.BasicAuthKind:
-		userAtt := design.taggedAttribute(m.Payload, "security:username")
+		userAtt := design.TaggedAttribute(m.Payload, "security:username")
 		user := codegen.Goify(userAtt, true)
 		passAtt := design.TaggedAttribute(m.Payload, "security:password")
 		pass := codegen.Goify(passAtt, true)

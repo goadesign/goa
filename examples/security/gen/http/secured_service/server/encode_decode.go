@@ -38,6 +38,7 @@ func DecodeSigninRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.
 		}
 		payload.Username = user
 		payload.Password = pass
+
 		return payload, nil
 	}
 }
@@ -110,6 +111,7 @@ func DecodeSecureRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.
 				payload.Token = &cred
 			}
 		}
+
 		return payload, nil
 	}
 }
@@ -172,6 +174,7 @@ func DecodeDoublySecureRequest(mux goahttp.Muxer, decoder func(*http.Request) go
 				payload.Token = &cred
 			}
 		}
+
 		return payload, nil
 	}
 }
@@ -242,6 +245,7 @@ func DecodeAlsoDoublySecureRequest(mux goahttp.Muxer, decoder func(*http.Request
 				payload.Token = &cred
 			}
 		}
+
 		return payload, nil
 	}
 }

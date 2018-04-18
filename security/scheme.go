@@ -7,9 +7,9 @@ import (
 )
 
 type (
-	// BasicAuthScheme represents the BasicAuth`security scheme.
+	// BasicScheme represents the BasicAuth security scheme.
 	// It consists of a simple username and password.
-	BasicAuthScheme struct {
+	BasicScheme struct {
 		// Name is the scheme name defined in the design.
 		Name string
 	}
@@ -60,7 +60,7 @@ type (
 
 	// AuthorizeBasicFunc is the function type that implements the basic auth
 	// scheme of using username and password.
-	AuthorizeBasicFunc func(ctx context.Context, user, pass string, s *BasicAuthScheme) (context.Context, error)
+	AuthorizeBasicFunc func(ctx context.Context, user, pass string, s *BasicScheme) (context.Context, error)
 
 	// AuthorizeAPIKeyFunc is the function type that implements the API key
 	// scheme of using an API key.

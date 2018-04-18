@@ -389,7 +389,7 @@ func {{ .RequestDecoder }}(mux goahttp.Muxer, decoder func(*http.Request) goahtt
 			return nil, err
 		}
 		{{- end }}
-{{ end }}
+{{- end }}
 {{- if not .MultipartRequestDecoder }}
 	{{- template "request_params_headers" .Payload.Request }}
 	{{- if .Payload.Request.MustValidate }}
@@ -397,13 +397,13 @@ func {{ .RequestDecoder }}(mux goahttp.Muxer, decoder func(*http.Request) goahtt
 			return nil, err
 		}
 	{{- end }}
-{{- end }}
-{{- if .Payload.Request.PayloadInit }}
+	{{- if .Payload.Request.PayloadInit }}
 	payload := {{ .Payload.Request.PayloadInit.Name }}({{ range .Payload.Request.PayloadInit.ServerArgs }}{{ .Ref }}, {{ end }})
-{{- else if .Payload.DecoderReturnValue }}
+	{{- else if .Payload.DecoderReturnValue }}
 	payload := {{ .Payload.DecoderReturnValue }}
-{{- else }}
+	{{- else }}
 	payload := body
+	{{- end }}
 {{- end }}
 {{- if .BasicScheme }}{{ with .BasicScheme }}
 	user, pass, {{ if or .UsernameRequired .PasswordRequired }}ok{{ else }}_{{ end }} := r.BasicAuth()
@@ -428,6 +428,7 @@ func {{ .RequestDecoder }}(mux goahttp.Muxer, decoder func(*http.Request) goahtt
 	}
 	{{- end }}
 {{- end }}
+
 	return payload, nil
 	}
 }
@@ -436,6 +437,8 @@ func {{ .RequestDecoder }}(mux goahttp.Muxer, decoder func(*http.Request) goahtt
 // input: RequestData
 const requestParamsHeadersT = `{{- define "request_params_headers" }}
 {{- if or .PathParams .QueryParams .Headers }}
+{{- if .ServerBody }}{{/* we want a newline only if there was code before */}}
+{{ end }}
 		var (
 		{{- range .PathParams }}
 			{{ .VarName }} {{ .TypeRef }}
@@ -610,7 +613,7 @@ const requestParamsHeadersT = `{{- define "request_params_headers" }}
 
 	{{- else if .StringSlice }}
 		{{ .VarName }} = r.Header["{{ .CanonicalName }}"]
-		{{ if .Required }}
+		{{- if .Required }}
 		if {{ .VarName }} == nil {
 			err = goa.MergeErrors(err, goa.MissingFieldError("{{ .Name }}", "header"))
 		}
@@ -651,9 +654,9 @@ const requestParamsHeadersT = `{{- define "request_params_headers" }}
 		{{- end }}
 	}
 	{{- end }}
-		{{- if .Validate }}
+	{{- if .Validate }}
 		{{ .Validate }}
-		{{- end }}
+	{{- end }}
 {{- end }}
 {{- end }}
 {{- end }}

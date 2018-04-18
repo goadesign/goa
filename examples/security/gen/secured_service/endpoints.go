@@ -48,8 +48,8 @@ func NewSigninEndpoint(s Service, authBasicFn security.AuthorizeBasicFunc) goa.E
 	return func(ctx context.Context, req interface{}) (interface{}, error) {
 		p := req.(*SigninPayload)
 		var err error
-		sc := security.BasicAuthScheme{
-			Name: "",
+		sc := security.BasicScheme{
+			Name: "basic",
 		}
 		ctx, err = authBasicFn(ctx, p.Username, p.Password, &sc)
 		if err != nil {
@@ -66,7 +66,7 @@ func NewSecureEndpoint(s Service, authJWTFn security.AuthorizeJWTFunc) goa.Endpo
 		p := req.(*SecurePayload)
 		var err error
 		sc := security.JWTScheme{
-			Name:           "Authorization",
+			Name:           "jwt",
 			Scopes:         []string{"api:read", "api:write"},
 			RequiredScopes: []string{"api:read"},
 		}
@@ -85,14 +85,14 @@ func NewDoublySecureEndpoint(s Service, authJWTFn security.AuthorizeJWTFunc, aut
 		p := req.(*DoublySecurePayload)
 		var err error
 		sc := security.JWTScheme{
-			Name:           "Authorization",
+			Name:           "jwt",
 			Scopes:         []string{"api:read", "api:write"},
 			RequiredScopes: []string{"api:read", "api:write"},
 		}
 		ctx, err = authJWTFn(ctx, *p.Token, &sc)
 		if err == nil {
 			sc := security.APIKeyScheme{
-				Name: "k",
+				Name: "api_key",
 			}
 			ctx, err = authAPIKeyFn(ctx, *p.Key, &sc)
 		}
@@ -110,20 +110,20 @@ func NewAlsoDoublySecureEndpoint(s Service, authJWTFn security.AuthorizeJWTFunc,
 		p := req.(*AlsoDoublySecurePayload)
 		var err error
 		sc := security.JWTScheme{
-			Name:           "Authorization",
+			Name:           "jwt",
 			Scopes:         []string{"api:read", "api:write"},
 			RequiredScopes: []string{"api:read", "api:write"},
 		}
 		ctx, err = authJWTFn(ctx, *p.Token, &sc)
 		if err == nil {
 			sc := security.APIKeyScheme{
-				Name: "k",
+				Name: "api_key",
 			}
 			ctx, err = authAPIKeyFn(ctx, *p.Key, &sc)
 		}
 		if err != nil {
 			sc := security.OAuth2Scheme{
-				Name:           "oauth",
+				Name:           "oauth2",
 				Scopes:         []string{"api:read", "api:write"},
 				RequiredScopes: []string{"api:read", "api:write"},
 				Flows: []*security.OAuthFlow{
@@ -137,8 +137,8 @@ func NewAlsoDoublySecureEndpoint(s Service, authJWTFn security.AuthorizeJWTFunc,
 			}
 			ctx, err = authOAuth2Fn(ctx, *p.OauthToken, &sc)
 			if err == nil {
-				sc := security.BasicAuthScheme{
-					Name: "",
+				sc := security.BasicScheme{
+					Name: "basic",
 				}
 				ctx, err = authBasicFn(ctx, *p.Username, *p.Password, &sc)
 			}

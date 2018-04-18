@@ -62,6 +62,23 @@ type (
 		// method.
 		Schemes []string
 	}
+
+	// AuthFuncsData contains data necessary to render the dummy authorization
+	// functions in the example service file.
+	AuthFuncsData struct {
+		// Schemes is the unique security schemes defined in the API.
+		Schemes []*SchemeData
+		// ServiceName is the name of the service.
+		ServiceName string
+		// ServiceVarName is the generated name of the service.
+		ServiceVarName string
+		// ServicePkg is the service package name.
+		ServicePkg string
+		// Security is the security package name.
+		SecurityPkg string
+		// Errors is the list of possible errors returned by the auth functions.
+		Errors []string
+	}
 )
 
 const (
@@ -200,20 +217,20 @@ func New{{ .VarName }}Endpoint(s {{ .ServiceVarName}}{{ range .Schemes }}, auth{
 			if err == nil {
 			{{- end }}
 			{{- if eq .Type "Basic" }}
-				sc := security.BasicAuthScheme{
-					Name: {{ printf "%q" .Name }},
+				sc := security.BasicScheme{
+					Name: {{ printf "%q" .SchemeName }},
 				}
 				ctx, err = auth{{ .Type }}Fn(ctx, {{ if .UsernamePointer }}*{{ end }}p.{{ .UsernameField }}, {{ if .PasswordPointer }}*{{ end }}p.{{ .PasswordField }}, &sc)
 
 			{{- else if eq .Type "APIKey" }}
 				sc := security.APIKeyScheme{
-					Name: {{ printf "%q" .Name }},
+					Name: {{ printf "%q" .SchemeName }},
 				}
 				ctx, err = auth{{ .Type }}Fn(ctx, {{ if $s.CredPointer }}*{{ end }}p.{{ $s.CredField }}, &sc)
 
 			{{- else if eq .Type "JWT" }}
 				sc := security.JWTScheme{
-					Name: {{ printf "%q" .Name }},
+					Name: {{ printf "%q" .SchemeName }},
 					Scopes: []string{ {{- range .Scopes }}{{ printf "%q" . }}, {{ end }} },
 					RequiredScopes: []string{ {{- range $r.Scopes }}{{ printf "%q" . }}, {{ end }} },
 				}
@@ -221,7 +238,7 @@ func New{{ .VarName }}Endpoint(s {{ .ServiceVarName}}{{ range .Schemes }}, auth{
 
 			{{- else if eq .Type "OAuth2" }}
 				sc := security.OAuth2Scheme{
-					Name: {{ printf "%q" .Name }},
+					Name: {{ printf "%q" .SchemeName }},
 					Scopes: []string{ {{- range .Scopes }}{{ printf "%q" . }}, {{ end }} },
 					RequiredScopes: []string{ {{- range $r.Scopes }}{{ printf "%q" . }}, {{ end }} },
 					{{- if .Flows }}

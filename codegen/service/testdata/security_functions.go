@@ -45,12 +45,12 @@ func NewSecureWithRequiredScopesEndpoint(s Service, authJWTFn security.Authorize
 	return func(ctx context.Context, req interface{}) (interface{}, error) {
 		p := req.(*SecureWithRequiredScopesPayload)
 		var err error
-		s := security.JWTScheme{
+		sc := security.JWTScheme{
 			Name:           "jwt",
 			Scopes:         []string{"api:read", "api:write", "api:admin"},
 			RequiredScopes: []string{"api:read", "api:write"},
 		}
-		ctx, err = authJWTFn(ctx, *p.Token, &s)
+		ctx, err = authJWTFn(ctx, *p.Token, &sc)
 		if err != nil {
 			return nil, err
 		}
@@ -66,10 +66,10 @@ func NewSecureWithAPIKeyOverrideEndpoint(s Service, authAPIKeyFn security.Author
 	return func(ctx context.Context, req interface{}) (interface{}, error) {
 		p := req.(*SecureWithAPIKeyOverridePayload)
 		var err error
-		s := security.APIKeyScheme{
+		sc := security.APIKeyScheme{
 			Name: "api_key",
 		}
-		ctx, err = authAPIKeyFn(ctx, *p.Key, &s)
+		ctx, err = authAPIKeyFn(ctx, *p.Key, &sc)
 		if err != nil {
 			return nil, err
 		}
@@ -84,7 +84,7 @@ func NewSecureWithOAuth2Endpoint(s Service, authOAuth2Fn security.AuthorizeOAuth
 	return func(ctx context.Context, req interface{}) (interface{}, error) {
 		p := req.(*SecureWithOAuth2Payload)
 		var err error
-		s := security.OAuth2Scheme{
+		sc := security.OAuth2Scheme{
 			Name:           "authCode",
 			Scopes:         []string{"api:write", "api:read"},
 			RequiredScopes: []string{},
@@ -97,7 +97,7 @@ func NewSecureWithOAuth2Endpoint(s Service, authOAuth2Fn security.AuthorizeOAuth
 				},
 			},
 		}
-		ctx, err = authOAuth2Fn(ctx, *p.Token, &s)
+		ctx, err = authOAuth2Fn(ctx, *p.Token, &sc)
 		if err != nil {
 			return nil, err
 		}
