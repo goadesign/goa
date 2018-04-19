@@ -8,7 +8,9 @@
 
 package openapi
 
-import goa "goa.design/goa"
+import (
+	goa "goa.design/goa"
+)
 
 // Endpoints wraps the "openapi" service endpoints.
 type Endpoints struct {

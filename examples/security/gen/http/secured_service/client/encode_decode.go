@@ -3,7 +3,8 @@
 // secured_service HTTP client encoders and decoders
 //
 // Command:
-// $ goa gen goa.design/goa/examples/security/design
+// $ goa gen goa.design/goa/examples/security/design -o
+// $(GOPATH)/src/goa.design/goa/examples/security
 
 package client
 

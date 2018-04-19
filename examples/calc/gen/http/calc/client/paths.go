@@ -8,7 +8,9 @@
 
 package client
 
-import "fmt"
+import (
+	"fmt"
+)
 
 // AddCalcPath returns the URL path to the calc service add HTTP endpoint.
 func AddCalcPath(a int, b int) string {

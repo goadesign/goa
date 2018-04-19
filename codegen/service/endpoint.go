@@ -62,23 +62,6 @@ type (
 		// method.
 		Schemes []string
 	}
-
-	// AuthFuncsData contains data necessary to render the dummy authorization
-	// functions in the example service file.
-	AuthFuncsData struct {
-		// Schemes is the unique security schemes defined in the API.
-		Schemes []*SchemeData
-		// ServiceName is the name of the service.
-		ServiceName string
-		// ServiceVarName is the generated name of the service.
-		ServiceVarName string
-		// ServicePkg is the service package name.
-		ServicePkg string
-		// Security is the security package name.
-		SecurityPkg string
-		// Errors is the list of possible errors returned by the auth functions.
-		Errors []string
-	}
 )
 
 const (

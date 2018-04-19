@@ -8,7 +8,9 @@
 
 package server
 
-import "fmt"
+import (
+	"fmt"
+)
 
 // IntegerDivideDividerPath returns the URL path to the divider service integer_divide HTTP endpoint.
 func IntegerDivideDividerPath(a int, b int) string {

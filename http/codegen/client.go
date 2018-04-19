@@ -76,6 +76,7 @@ func clientEncodeDecode(genpkg string, svc *httpdesign.ServiceExpr) *codegen.Fil
 		codegen.Header(title, "client", []*codegen.ImportSpec{
 			{Path: "bytes"},
 			{Path: "context"},
+			{Path: "fmt"},
 			{Path: "io"},
 			{Path: "io/ioutil"},
 			{Path: "mime/multipart"},
