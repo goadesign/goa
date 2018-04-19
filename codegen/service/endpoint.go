@@ -173,7 +173,7 @@ type {{ .VarName }} struct {
 
 // input: EndpointsData
 const serviceEndpointsInitT = `{{ printf "New%s wraps the methods of the %q service with endpoints." .VarName .Name | comment }}
-func New{{ .VarName }}(s {{ .ServiceVarName }}{{ range .Schemes }}, auth{{ . }}Fn security.Authorize{{ . }}Func{{ end }}) *{{ .VarName }} {
+func New{{ .VarName }}(s {{ .ServiceVarName }}{{ range .Schemes }}, auth{{ . }}Fn security.Auth{{ . }}Func{{ end }}) *{{ .VarName }} {
 	return &{{ .VarName }}{
 {{- range .Methods }}
 		{{ .VarName }}: New{{ .VarName }}Endpoint(s{{ range .Schemes }}, auth{{ . }}Fn{{ end }}),
@@ -184,7 +184,7 @@ func New{{ .VarName }}(s {{ .ServiceVarName }}{{ range .Schemes }}, auth{{ . }}F
 
 // input: EndpointMethodData
 const serviceEndpointMethodT = `{{ printf "New%sEndpoint returns an endpoint function that calls the method %q of service %q." .VarName .Name .ServiceName | comment }}
-func New{{ .VarName }}Endpoint(s {{ .ServiceVarName}}{{ range .Schemes }}, auth{{ . }}Fn security.Authorize{{ . }}Func{{ end }}) goa.Endpoint {
+func New{{ .VarName }}Endpoint(s {{ .ServiceVarName}}{{ range .Schemes }}, auth{{ . }}Fn security.Auth{{ . }}Func{{ end }}) goa.Endpoint {
 	return func(ctx context.Context, req interface{}) (interface{}, error) {
 {{- if .PayloadRef }}
 		p := req.({{ .PayloadRef }})

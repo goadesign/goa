@@ -58,21 +58,21 @@ type (
 		RefreshURL string
 	}
 
-	// AuthorizeBasicFunc is the function type that implements the basic auth
+	// AuthBasicFunc is the function type that implements the basic auth
 	// scheme of using username and password.
-	AuthorizeBasicFunc func(ctx context.Context, user, pass string, s *BasicScheme) (context.Context, error)
+	AuthBasicFunc func(ctx context.Context, user, pass string, s *BasicScheme) (context.Context, error)
 
-	// AuthorizeAPIKeyFunc is the function type that implements the API key
+	// AuthAPIKeyFunc is the function type that implements the API key
 	// scheme of using an API key.
-	AuthorizeAPIKeyFunc func(ctx context.Context, key string, s *APIKeyScheme) (context.Context, error)
+	AuthAPIKeyFunc func(ctx context.Context, key string, s *APIKeyScheme) (context.Context, error)
 
-	// AuthorizeOAuth2Func is the function type that implements the OAuth2
+	// AuthOAuth2Func is the function type that implements the OAuth2
 	// scheme of using an OAuth2 token.
-	AuthorizeOAuth2Func func(ctx context.Context, token string, s *OAuth2Scheme) (context.Context, error)
+	AuthOAuth2Func func(ctx context.Context, token string, s *OAuth2Scheme) (context.Context, error)
 
-	// AuthorizeJWTFunc is the function type that implements the JWT
+	// AuthJWTFunc is the function type that implements the JWT
 	// scheme of using a JWT token.
-	AuthorizeJWTFunc func(ctx context.Context, token string, s *JWTScheme) (context.Context, error)
+	AuthJWTFunc func(ctx context.Context, token string, s *JWTScheme) (context.Context, error)
 )
 
 // Validate returns a non-nil error if scopes does not contain all of

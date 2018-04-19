@@ -25,7 +25,7 @@ type Endpoints struct {
 
 // NewEndpoints wraps the methods of the "secured_service" service with
 // endpoints.
-func NewEndpoints(s Service, authBasicFn security.AuthorizeBasicFunc, authJWTFn security.AuthorizeJWTFunc, authAPIKeyFn security.AuthorizeAPIKeyFunc, authOAuth2Fn security.AuthorizeOAuth2Func) *Endpoints {
+func NewEndpoints(s Service, authBasicFn security.AuthBasicFunc, authJWTFn security.AuthJWTFunc, authAPIKeyFn security.AuthAPIKeyFunc, authOAuth2Fn security.AuthOAuth2Func) *Endpoints {
 	return &Endpoints{
 		Signin:           NewSigninEndpoint(s, authBasicFn),
 		Secure:           NewSecureEndpoint(s, authJWTFn),
@@ -45,7 +45,7 @@ func (e *Endpoints) Use(m func(goa.Endpoint) goa.Endpoint) {
 
 // NewSigninEndpoint returns an endpoint function that calls the method
 // "signin" of service "secured_service".
-func NewSigninEndpoint(s Service, authBasicFn security.AuthorizeBasicFunc) goa.Endpoint {
+func NewSigninEndpoint(s Service, authBasicFn security.AuthBasicFunc) goa.Endpoint {
 	return func(ctx context.Context, req interface{}) (interface{}, error) {
 		p := req.(*SigninPayload)
 		var err error
@@ -62,7 +62,7 @@ func NewSigninEndpoint(s Service, authBasicFn security.AuthorizeBasicFunc) goa.E
 
 // NewSecureEndpoint returns an endpoint function that calls the method
 // "secure" of service "secured_service".
-func NewSecureEndpoint(s Service, authJWTFn security.AuthorizeJWTFunc) goa.Endpoint {
+func NewSecureEndpoint(s Service, authJWTFn security.AuthJWTFunc) goa.Endpoint {
 	return func(ctx context.Context, req interface{}) (interface{}, error) {
 		p := req.(*SecurePayload)
 		var err error
@@ -81,7 +81,7 @@ func NewSecureEndpoint(s Service, authJWTFn security.AuthorizeJWTFunc) goa.Endpo
 
 // NewDoublySecureEndpoint returns an endpoint function that calls the method
 // "doubly_secure" of service "secured_service".
-func NewDoublySecureEndpoint(s Service, authJWTFn security.AuthorizeJWTFunc, authAPIKeyFn security.AuthorizeAPIKeyFunc) goa.Endpoint {
+func NewDoublySecureEndpoint(s Service, authJWTFn security.AuthJWTFunc, authAPIKeyFn security.AuthAPIKeyFunc) goa.Endpoint {
 	return func(ctx context.Context, req interface{}) (interface{}, error) {
 		p := req.(*DoublySecurePayload)
 		var err error
@@ -106,7 +106,7 @@ func NewDoublySecureEndpoint(s Service, authJWTFn security.AuthorizeJWTFunc, aut
 
 // NewAlsoDoublySecureEndpoint returns an endpoint function that calls the
 // method "also_doubly_secure" of service "secured_service".
-func NewAlsoDoublySecureEndpoint(s Service, authJWTFn security.AuthorizeJWTFunc, authAPIKeyFn security.AuthorizeAPIKeyFunc, authOAuth2Fn security.AuthorizeOAuth2Func, authBasicFn security.AuthorizeBasicFunc) goa.Endpoint {
+func NewAlsoDoublySecureEndpoint(s Service, authJWTFn security.AuthJWTFunc, authAPIKeyFn security.AuthAPIKeyFunc, authOAuth2Fn security.AuthOAuth2Func, authBasicFn security.AuthBasicFunc) goa.Endpoint {
 	return func(ctx context.Context, req interface{}) (interface{}, error) {
 		p := req.(*AlsoDoublySecurePayload)
 		var err error

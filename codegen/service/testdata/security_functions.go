@@ -11,7 +11,7 @@ func NewEndpoints(s Service) *Endpoints {
 
 var EndpointInitWithRequirementsCode = `// NewEndpoints wraps the methods of the "EndpointsWithRequirements" service
 // with endpoints.
-func NewEndpoints(s Service, authBasicFn security.AuthorizeBasicFunc, authJWTFn security.AuthorizeJWTFunc) *Endpoints {
+func NewEndpoints(s Service, authBasicFn security.AuthBasicFunc, authJWTFn security.AuthJWTFunc) *Endpoints {
 	return &Endpoints{
 		SecureWithRequirements:       NewSecureWithRequirementsEndpoint(s, authBasicFn),
 		DoublySecureWithRequirements: NewDoublySecureWithRequirementsEndpoint(s, authBasicFn, authJWTFn),
@@ -21,7 +21,7 @@ func NewEndpoints(s Service, authBasicFn security.AuthorizeBasicFunc, authJWTFn 
 
 var EndpointInitWithServiceRequirementsCode = `// NewEndpoints wraps the methods of the "EndpointsWithServiceRequirements"
 // service with endpoints.
-func NewEndpoints(s Service, authBasicFn security.AuthorizeBasicFunc) *Endpoints {
+func NewEndpoints(s Service, authBasicFn security.AuthBasicFunc) *Endpoints {
 	return &Endpoints{
 		SecureWithRequirements:     NewSecureWithRequirementsEndpoint(s, authBasicFn),
 		AlsoSecureWithRequirements: NewAlsoSecureWithRequirementsEndpoint(s, authBasicFn),
@@ -41,7 +41,7 @@ func NewEndpoints(s Service) *Endpoints {
 var EndpointWithRequiredScopesCode = `// NewSecureWithRequiredScopesEndpoint returns an endpoint function that calls
 // the method "SecureWithRequiredScopes" of service
 // "EndpointWithRequiredScopes".
-func NewSecureWithRequiredScopesEndpoint(s Service, authJWTFn security.AuthorizeJWTFunc) goa.Endpoint {
+func NewSecureWithRequiredScopesEndpoint(s Service, authJWTFn security.AuthJWTFunc) goa.Endpoint {
 	return func(ctx context.Context, req interface{}) (interface{}, error) {
 		p := req.(*SecureWithRequiredScopesPayload)
 		var err error
@@ -62,7 +62,7 @@ func NewSecureWithRequiredScopesEndpoint(s Service, authJWTFn security.Authorize
 var EndpointWithAPIKeyOverrideCode = `// NewSecureWithAPIKeyOverrideEndpoint returns an endpoint function that calls
 // the method "SecureWithAPIKeyOverride" of service
 // "EndpointWithAPIKeyOverride".
-func NewSecureWithAPIKeyOverrideEndpoint(s Service, authAPIKeyFn security.AuthorizeAPIKeyFunc) goa.Endpoint {
+func NewSecureWithAPIKeyOverrideEndpoint(s Service, authAPIKeyFn security.AuthAPIKeyFunc) goa.Endpoint {
 	return func(ctx context.Context, req interface{}) (interface{}, error) {
 		p := req.(*SecureWithAPIKeyOverridePayload)
 		var err error
@@ -80,7 +80,7 @@ func NewSecureWithAPIKeyOverrideEndpoint(s Service, authAPIKeyFn security.Author
 
 var EndpointWithOAuth2Code = `// NewSecureWithOAuth2Endpoint returns an endpoint function that calls the
 // method "SecureWithOAuth2" of service "EndpointWithOAuth2".
-func NewSecureWithOAuth2Endpoint(s Service, authOAuth2Fn security.AuthorizeOAuth2Func) goa.Endpoint {
+func NewSecureWithOAuth2Endpoint(s Service, authOAuth2Fn security.AuthOAuth2Func) goa.Endpoint {
 	return func(ctx context.Context, req interface{}) (interface{}, error) {
 		p := req.(*SecureWithOAuth2Payload)
 		var err error
