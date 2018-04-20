@@ -113,6 +113,7 @@ func (g *Generator) generateCommands(commandsFile string, clientPkg string, func
 	funcs["joinRouteParams"] = joinRouteParams
 	funcs["routes"] = routes
 	funcs["flagType"] = flagType
+	funcs["defaultVal"] = defaultVal
 	funcs["cmdFieldType"] = cmdFieldTypeString
 	funcs["formatExample"] = formatExample
 	funcs["shouldAddExample"] = shouldAddExample
@@ -588,6 +589,13 @@ func flagType(att *design.AttributeDefinition) string {
 	}
 }
 
+func defaultVal(att *design.AttributeDefinition) string {
+	if att.Type.Kind() == design.IntegerKind {
+		return fmt.Sprintf("%v", att.DefaultValue)
+	}
+	return fmt.Sprintf("%q", fmt.Sprintf("%v", att.DefaultValue))
+}
+
 func shouldAddExample(ut *design.UserTypeDefinition) bool {
 	if ut == nil {
 		return false
@@ -792,14 +800,14 @@ func (cmd *{{ $cmdName }}) RegisterFlags(cc *cobra.Command, c *{{ .Package }}.Cl
 {{ end }}{{ $pparams := defaultRouteParams .Action }}{{ if $pparams }}{{ range $pname, $pparam := $pparams.Type.ToObject }}{{ $tmp := goify $pname false }}{{/*
 */}}{{ if not $pparam.DefaultValue }}	var {{ $tmp }} {{ cmdFieldType $pparam.Type false }}
 {{ end }}	cc.Flags().{{ flagType $pparam }}Var(&cmd.{{ goify $pname true }}, "{{ $pname }}", {{/*
-*/}}{{ if $pparam.DefaultValue }}{{ printf "%#v" $pparam.DefaultValue }}{{ else }}{{ $tmp }}{{ end }}, ` + "`" + `{{ escapeBackticks $pparam.Description }}` + "`" + `)
+*/}}{{ if $pparam.DefaultValue }}{{ defaultVal $pparam }}{{ else }}{{ $tmp }}{{ end }}, ` + "`" + `{{ escapeBackticks $pparam.Description }}` + "`" + `)
 {{ end }}{{ end }}{{ $params := .Action.QueryParams }}{{ if $params }}{{ range $name, $param := $params.Type.ToObject }}{{ $tmp := goify $name false }}{{/*
 */}}{{ if not $param.DefaultValue }}	var {{ $tmp }} {{ cmdFieldType $param.Type false }}
 {{ end }}	cc.Flags().{{ flagType $param }}Var(&cmd.{{ goify $name true }}, "{{ $name }}", {{/*
-*/}}{{ if $param.DefaultValue }}{{ printf "%#v" $param.DefaultValue }}{{ else }}{{ $tmp }}{{ end }}, ` + "`" + `{{ escapeBackticks $param.Description }}` + "`" + `)
+*/}}{{ if $param.DefaultValue }}{{ defaultVal $param }}{{ else }}{{ $tmp }}{{ end }}, ` + "`" + `{{ escapeBackticks $param.Description }}` + "`" + `)
 {{ end }}{{ end }}{{ $headers := .Action.Headers }}{{ if $headers }}{{ range $name, $header := $headers.Type.ToObject }}{{/*
 */}} cc.Flags().StringVar(&cmd.{{ goify $name true }}, "{{ $name }}", {{/*
-*/}}{{ if $header.DefaultValue }}{{ printf "%q" $header.DefaultValue }}{{ else }}""{{ end }}, ` + "`" + `{{ escapeBackticks $header.Description }}` + "`" + `)
+*/}}{{ if $header.DefaultValue }}{{ defaultVal $header }}{{ else }}""{{ end }}, ` + "`" + `{{ escapeBackticks $header.Description }}` + "`" + `)
 {{ end }}{{ end }}}`
 
 const commandsTmpl = `
