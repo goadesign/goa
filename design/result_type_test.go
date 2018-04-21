@@ -29,6 +29,71 @@ func TestResultTypeExprIsError(t *testing.T) {
 	}
 }
 
+func TestResultTypeExprComputeViews(t *testing.T) {
+	var (
+		foo = &ViewExpr{
+			Name: "foo",
+		}
+		bar = &ViewExpr{
+			Name: "bar",
+		}
+		baz = &ViewExpr{
+			Name: "baz",
+		}
+		qux = &ViewExpr{
+			Name: "qux",
+		}
+	)
+	cases := map[string]struct {
+		views    []*ViewExpr
+		userType *UserTypeExpr
+		expected []*ViewExpr
+	}{
+		"views": {
+			views:    []*ViewExpr{foo, bar},
+			expected: []*ViewExpr{foo, bar},
+		},
+		"views of result type array": {
+			userType: &UserTypeExpr{
+				AttributeExpr: &AttributeExpr{
+					Type: &Array{
+						ElemType: &AttributeExpr{
+							Type: &ResultTypeExpr{
+								Views: []*ViewExpr{baz, qux},
+							},
+						},
+					},
+				},
+			},
+			expected: []*ViewExpr{baz, qux},
+		},
+		"no view": {
+			userType: &UserTypeExpr{
+				AttributeExpr: &AttributeExpr{
+					Type: Boolean,
+				},
+			},
+			expected: nil,
+		},
+	}
+
+	for k, tc := range cases {
+		r := ResultTypeExpr{
+			Views:        tc.views,
+			UserTypeExpr: tc.userType,
+		}
+		if actual := r.ComputeViews(); len(tc.expected) != len(actual) {
+			t.Errorf("%s: expected the number of views to match %d got %d ", k, len(tc.expected), len(actual))
+		} else {
+			for i, v := range actual {
+				if v != tc.expected[i] {
+					t.Errorf("%s: got %#v, expected %#v at index %d", k, v, tc.expected[i], i)
+				}
+			}
+		}
+	}
+}
+
 func TestCanonicalIdentifier(t *testing.T) {
 	cases := map[string]struct {
 		identifier string
