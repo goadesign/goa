@@ -27,6 +27,8 @@ all: lint aliases gen test
 travis: depend all
 
 depend:
+	@mkdir -p $(GOPATH)/src/golang.org/x
+	@git clone https://github.com/golang/lint.git $(GOPATH)/src/golang.org/x/lint
 	@go get -v $(DEPEND)
 	@go get -t -v ./...
 
