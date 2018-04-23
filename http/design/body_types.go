@@ -18,12 +18,30 @@ func RequestBody(a *EndpointExpr) *design.AttributeExpr {
 	}
 
 	var (
-		payload = a.MethodExpr.Payload
-		headers = a.MappedHeaders()
-		params  = a.AllParams()
-		suffix  = "RequestBody"
-		name    = codegen.Goify(a.Name(), true) + suffix
+		payload   = a.MethodExpr.Payload
+		headers   = a.MappedHeaders()
+		params    = a.AllParams()
+		suffix    = "RequestBody"
+		name      = codegen.Goify(a.Name(), true) + suffix
+		userField string
+		passField string
 	)
+	{
+		obj := design.AsObject(payload.Type)
+		if obj != nil {
+			for _, at := range *obj {
+				if _, ok := at.Attribute.Metadata["security:username"]; ok {
+					userField = at.Name
+				}
+				if _, ok := at.Attribute.Metadata["security:password"]; ok {
+					passField = at.Name
+				}
+				if userField != "" && passField != "" {
+					break
+				}
+			}
+		}
+	}
 
 	bodyOnly := len(*design.AsObject(headers.Type)) == 0 &&
 		len(*design.AsObject(params.Type)) == 0 &&
@@ -48,6 +66,12 @@ func RequestBody(a *EndpointExpr) *design.AttributeExpr {
 	removeAttributes(body, params)
 	if a.MapQueryParams != nil && *a.MapQueryParams != "" {
 		removeAttribute(body, *a.MapQueryParams)
+	}
+	if userField != "" {
+		removeAttribute(body, userField)
+	}
+	if passField != "" {
+		removeAttribute(body, passField)
 	}
 
 	// 3. Return empty type if no attribute left

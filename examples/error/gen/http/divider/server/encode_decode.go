@@ -59,8 +59,9 @@ func DecodeIntegerDivideRequest(mux goahttp.Muxer, decoder func(*http.Request) g
 		if err != nil {
 			return nil, err
 		}
+		payload := NewIntegerDivideIntOperands(a, b)
 
-		return NewIntegerDivideIntOperands(a, b), nil
+		return payload, nil
 	}
 }
 
@@ -140,8 +141,9 @@ func DecodeDivideRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.
 		if err != nil {
 			return nil, err
 		}
+		payload := NewDivideFloatOperands(a, b)
 
-		return NewDivideFloatOperands(a, b), nil
+		return payload, nil
 	}
 }
 

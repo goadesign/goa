@@ -2,524 +2,128 @@ swagger: "2.0"
 info:
   title: Cellar Service
   description: HTTP service for managing your wine cellar
-  termsofservice: ""
-  contact: null
-  license: null
   version: ""
-  extensions: {}
 host: localhost:8080
-basepath: ""
-schemes: []
-consumes: []
-produces: []
 paths:
   /sommelier:
-    ref: ""
-    get: null
-    put: null
     post:
       tags:
       - sommelier
       summary: pick sommelier
-      description: ""
-      externaldocs: null
-      operationid: sommelier#pick
-      consumes: []
-      produces: []
+      operationId: sommelier#pick
       parameters:
       - name: PickRequestBody
         in: body
-        description: ""
         required: true
         schema:
           schema: ""
-          id: ""
-          title: ""
-          type: ""
-          items: null
-          properties: {}
-          definitions: {}
-          description: ""
-          defaultvalue: null
-          example: null
-          media: null
-          readonly: false
-          pathstart: ""
-          links: []
-          ref: '#/definitions/PickRequestBody'
-          enum: []
-          format: ""
-          pattern: ""
-          minimum: null
-          maximum: null
-          minlength: null
-          maxlength: null
-          required: []
-          additionalproperties: false
-          anyof: []
-        type: ""
-        format: ""
-        allowemptyvalue: false
-        items: null
-        collectionformat: ""
-        default: null
-        maximum: null
-        exclusivemaximum: false
-        minimum: null
-        exclusiveminimum: false
-        maxlength: null
-        minlength: null
-        pattern: ""
-        maxitems: null
-        minitems: null
-        uniqueitems: false
-        enum: []
-        multipleof: 0
-        extensions: {}
+          $ref: '#/definitions/PickRequestBody'
       responses:
         "200":
           description: OK response.
           schema:
             schema: ""
-            id: ""
-            title: ""
-            type: ""
-            items: null
-            properties: {}
-            definitions: {}
-            description: ""
-            defaultvalue: null
-            example: null
-            media: null
-            readonly: false
-            pathstart: ""
-            links: []
-            ref: '#/definitions/StoredBottleResponseBodyCollection'
-            enum: []
-            format: ""
-            pattern: ""
-            minimum: null
-            maximum: null
-            minlength: null
-            maxlength: null
-            required: []
-            additionalproperties: false
-            anyof: []
-          headers: {}
-          ref: ""
-          extensions: {}
+            $ref: '#/definitions/StoredBottleResponseBodyCollection'
         "400":
           description: Bad Request response.
           schema:
             schema: ""
-            id: ""
-            title: ""
-            type: ""
-            items: null
-            properties: {}
-            definitions: {}
-            description: ""
-            defaultvalue: null
-            example: null
-            media: null
-            readonly: false
-            pathstart: ""
-            links: []
-            ref: '#/definitions/PickNoCriteriaResponseBody'
-            enum: []
-            format: ""
-            pattern: ""
-            minimum: null
-            maximum: null
-            minlength: null
-            maxlength: null
-            required: []
-            additionalproperties: false
-            anyof: []
-          headers: {}
-          ref: ""
-          extensions: {}
+            $ref: '#/definitions/PickNoCriteriaResponseBody'
         "404":
           description: Not Found response.
           schema:
             schema: ""
-            id: ""
-            title: ""
-            type: ""
-            items: null
-            properties: {}
-            definitions: {}
-            description: ""
-            defaultvalue: null
-            example: null
-            media: null
-            readonly: false
-            pathstart: ""
-            links: []
-            ref: '#/definitions/PickNoMatchResponseBody'
-            enum: []
-            format: ""
-            pattern: ""
-            minimum: null
-            maximum: null
-            minlength: null
-            maxlength: null
-            required: []
-            additionalproperties: false
-            anyof: []
-          headers: {}
-          ref: ""
-          extensions: {}
+            $ref: '#/definitions/PickNoMatchResponseBody'
       schemes:
       - http
-      deprecated: false
-      security: []
-      extensions: {}
-    delete: null
-    options: null
-    head: null
-    patch: null
-    parameters: []
-    extensions: {}
   /storage:
-    ref: ""
     get:
       tags:
       - storage
       summary: list storage
       description: List all stored bottles
-      externaldocs: null
-      operationid: storage#list
-      consumes: []
-      produces: []
-      parameters: []
+      operationId: storage#list
       responses:
         "200":
           description: OK response.
           schema:
             schema: ""
-            id: ""
-            title: ""
-            type: ""
-            items: null
-            properties: {}
-            definitions: {}
-            description: ""
-            defaultvalue: null
-            example: null
-            media: null
-            readonly: false
-            pathstart: ""
-            links: []
-            ref: '#/definitions/StoredBottleResponseBodyTinyCollection'
-            enum: []
-            format: ""
-            pattern: ""
-            minimum: null
-            maximum: null
-            minlength: null
-            maxlength: null
-            required: []
-            additionalproperties: false
-            anyof: []
-          headers: {}
-          ref: ""
-          extensions: {}
+            $ref: '#/definitions/StoredBottleResponseBodyTinyCollection'
       schemes:
       - http
-      deprecated: false
-      security: []
-      extensions: {}
-    put: null
     post:
       tags:
       - storage
       summary: add storage
       description: Add new bottle and return its ID.
-      externaldocs: null
-      operationid: storage#add
-      consumes: []
-      produces: []
+      operationId: storage#add
       parameters:
       - name: AddRequestBody
         in: body
-        description: ""
         required: true
         schema:
           schema: ""
-          id: ""
-          title: ""
-          type: ""
-          items: null
-          properties: {}
-          definitions: {}
-          description: ""
-          defaultvalue: null
-          example: null
-          media: null
-          readonly: false
-          pathstart: ""
-          links: []
-          ref: '#/definitions/AddRequestBody'
-          enum: []
-          format: ""
-          pattern: ""
-          minimum: null
-          maximum: null
-          minlength: null
-          maxlength: null
-          required: []
-          additionalproperties: false
-          anyof: []
-        type: ""
-        format: ""
-        allowemptyvalue: false
-        items: null
-        collectionformat: ""
-        default: null
-        maximum: null
-        exclusivemaximum: false
-        minimum: null
-        exclusiveminimum: false
-        maxlength: null
-        minlength: null
-        pattern: ""
-        maxitems: null
-        minitems: null
-        uniqueitems: false
-        enum: []
-        multipleof: 0
-        extensions: {}
+          $ref: '#/definitions/AddRequestBody'
       responses:
         "201":
           description: Created response.
           schema:
             schema: ""
-            id: ""
-            title: ""
             type: string
-            items: null
-            properties: {}
-            definitions: {}
-            description: ""
-            defaultvalue: null
-            example: null
-            media: null
-            readonly: false
-            pathstart: ""
-            links: []
-            ref: ""
-            enum: []
-            format: ""
-            pattern: ""
-            minimum: null
-            maximum: null
-            minlength: null
-            maxlength: null
-            required: []
-            additionalproperties: false
-            anyof: []
-          headers: {}
-          ref: ""
-          extensions: {}
       schemes:
       - http
-      deprecated: false
-      security: []
-      extensions: {}
-    delete: null
-    options: null
-    head: null
-    patch: null
-    parameters: []
-    extensions: {}
   /storage/{id}:
-    ref: ""
     get:
       tags:
       - storage
       summary: show storage
       description: Show bottle by ID
-      externaldocs: null
-      operationid: storage#show
-      consumes: []
-      produces: []
+      operationId: storage#show
       parameters:
       - name: view
         in: query
         description: View to render
         required: false
-        schema: null
         type: string
-        format: ""
-        allowemptyvalue: false
-        items: null
-        collectionformat: ""
-        default: null
-        maximum: null
-        exclusivemaximum: false
-        minimum: null
-        exclusiveminimum: false
-        maxlength: null
-        minlength: null
-        pattern: ""
-        maxitems: null
-        minitems: null
-        uniqueitems: false
         enum:
         - default
         - tiny
-        multipleof: 0
-        extensions: {}
       - name: id
         in: path
         description: ID of bottle to show
         required: true
-        schema: null
         type: string
-        format: ""
-        allowemptyvalue: false
-        items: null
-        collectionformat: ""
-        default: null
-        maximum: null
-        exclusivemaximum: false
-        minimum: null
-        exclusiveminimum: false
-        maxlength: null
-        minlength: null
-        pattern: ""
-        maxitems: null
-        minitems: null
-        uniqueitems: false
-        enum: []
-        multipleof: 0
-        extensions: {}
       responses:
         "200":
           description: OK response.
           schema:
             schema: ""
-            id: ""
-            title: ""
-            type: ""
-            items: null
-            properties: {}
-            definitions: {}
-            description: ""
-            defaultvalue: null
-            example: null
-            media: null
-            readonly: false
-            pathstart: ""
-            links: []
-            ref: '#/definitions/ShowResponseBody'
-            enum: []
-            format: ""
-            pattern: ""
-            minimum: null
-            maximum: null
-            minlength: null
-            maxlength: null
-            required: []
-            additionalproperties: false
-            anyof: []
-          headers: {}
-          ref: ""
-          extensions: {}
+            $ref: '#/definitions/ShowResponseBody'
         "404":
           description: Not Found response.
           schema:
             schema: ""
-            id: ""
-            title: ""
-            type: ""
-            items: null
-            properties: {}
-            definitions: {}
-            description: ""
-            defaultvalue: null
-            example: null
-            media: null
-            readonly: false
-            pathstart: ""
-            links: []
-            ref: '#/definitions/ShowNotFoundResponseBody'
-            enum: []
-            format: ""
-            pattern: ""
-            minimum: null
-            maximum: null
-            minlength: null
-            maxlength: null
-            required: []
-            additionalproperties: false
-            anyof: []
-          headers: {}
-          ref: ""
-          extensions: {}
+            $ref: '#/definitions/ShowNotFoundResponseBody'
       schemes:
       - http
-      deprecated: false
-      security: []
-      extensions: {}
-    put: null
-    post: null
     delete:
       tags:
       - storage
       summary: remove storage
       description: Remove bottle from storage
-      externaldocs: null
-      operationid: storage#remove
-      consumes: []
-      produces: []
+      operationId: storage#remove
       parameters:
       - name: id
         in: path
         description: ID of bottle to remove
         required: true
-        schema: null
         type: string
-        format: ""
-        allowemptyvalue: false
-        items: null
-        collectionformat: ""
-        default: null
-        maximum: null
-        exclusivemaximum: false
-        minimum: null
-        exclusiveminimum: false
-        maxlength: null
-        minlength: null
-        pattern: ""
-        maxitems: null
-        minitems: null
-        uniqueitems: false
-        enum: []
-        multipleof: 0
-        extensions: {}
       responses:
         "204":
           description: No Content response.
-          schema: null
-          headers: {}
-          ref: ""
-          extensions: {}
       schemes:
       - http
-      deprecated: false
-      security: []
-      extensions: {}
-    options: null
-    head: null
-    patch: null
-    parameters: []
-    extensions: {}
   /storage/multi_add:
-    ref: ""
-    get: null
-    put: null
     post:
       tags:
       - storage
@@ -527,156 +131,30 @@ paths:
       description: Add n number of bottles and return their IDs. This is a multipart
         request and each part has field name 'bottle' and contains the encoded bottle
         info to be added.
-      externaldocs: null
-      operationid: storage#multi_add
-      consumes: []
-      produces: []
+      operationId: storage#multi_add
       parameters:
       - name: array
         in: body
-        description: ""
         required: true
         schema:
           schema: ""
-          id: ""
-          title: ""
           type: array
           items:
             schema: ""
-            id: ""
-            title: ""
-            type: ""
-            items: null
-            properties: {}
-            definitions: {}
-            description: ""
-            defaultvalue: null
-            example: null
-            media: null
-            readonly: false
-            pathstart: ""
-            links: []
-            ref: '#/definitions/BottleRequestBody'
-            enum: []
-            format: ""
-            pattern: ""
-            minimum: null
-            maximum: null
-            minlength: null
-            maxlength: null
-            required: []
-            additionalproperties: false
-            anyof: []
-          properties: {}
-          definitions: {}
-          description: ""
-          defaultvalue: null
-          example: null
-          media: null
-          readonly: false
-          pathstart: ""
-          links: []
-          ref: ""
-          enum: []
-          format: ""
-          pattern: ""
-          minimum: null
-          maximum: null
-          minlength: null
-          maxlength: null
-          required: []
-          additionalproperties: false
-          anyof: []
-        type: ""
-        format: ""
-        allowemptyvalue: false
-        items: null
-        collectionformat: ""
-        default: null
-        maximum: null
-        exclusivemaximum: false
-        minimum: null
-        exclusiveminimum: false
-        maxlength: null
-        minlength: null
-        pattern: ""
-        maxitems: null
-        minitems: null
-        uniqueitems: false
-        enum: []
-        multipleof: 0
-        extensions: {}
+            $ref: '#/definitions/BottleRequestBody'
       responses:
         "200":
           description: OK response.
           schema:
             schema: ""
-            id: ""
-            title: ""
             type: array
             items:
               schema: ""
-              id: ""
-              title: ""
               type: string
-              items: null
-              properties: {}
-              definitions: {}
-              description: ""
-              defaultvalue: null
               example: Veniam quaerat sint.
-              media: null
-              readonly: false
-              pathstart: ""
-              links: []
-              ref: ""
-              enum: []
-              format: ""
-              pattern: ""
-              minimum: null
-              maximum: null
-              minlength: null
-              maxlength: null
-              required: []
-              additionalproperties: false
-              anyof: []
-            properties: {}
-            definitions: {}
-            description: ""
-            defaultvalue: null
-            example: null
-            media: null
-            readonly: false
-            pathstart: ""
-            links: []
-            ref: ""
-            enum: []
-            format: ""
-            pattern: ""
-            minimum: null
-            maximum: null
-            minlength: null
-            maxlength: null
-            required: []
-            additionalproperties: false
-            anyof: []
-          headers: {}
-          ref: ""
-          extensions: {}
       schemes:
       - http
-      deprecated: false
-      security: []
-      extensions: {}
-    delete: null
-    options: null
-    head: null
-    patch: null
-    parameters: []
-    extensions: {}
   /storage/multi_update:
-    ref: ""
-    get: null
     put:
       tags:
       - storage
@@ -685,251 +163,65 @@ paths:
         and each part has field name 'bottle' and contains the encoded bottle info
         to be updated. The IDs in the query parameter is mapped to each part in the
         request.
-      externaldocs: null
-      operationid: storage#multi_update
-      consumes: []
-      produces: []
+      operationId: storage#multi_update
       parameters:
       - name: ids
         in: query
         description: IDs of the bottles to be updated
         required: false
-        schema: null
         type: array
-        format: ""
-        allowemptyvalue: false
         items:
           type: string
-          format: ""
-          items: null
-          collectionformat: ""
-          default: null
-          maximum: null
-          exclusivemaximum: false
-          minimum: null
-          exclusiveminimum: false
-          maxlength: null
-          minlength: null
-          pattern: ""
-          maxitems: null
-          minitems: null
-          uniqueitems: false
-          enum: []
-          multipleof: 0
-        collectionformat: multi
-        default: null
-        maximum: null
-        exclusivemaximum: false
-        minimum: null
-        exclusiveminimum: false
-        maxlength: null
-        minlength: null
-        pattern: ""
-        maxitems: null
-        minitems: null
-        uniqueitems: false
-        enum: []
-        multipleof: 0
-        extensions: {}
+        collectionFormat: multi
       - name: MultiUpdateRequestBody
         in: body
-        description: ""
         required: true
         schema:
           schema: ""
-          id: ""
-          title: ""
-          type: ""
-          items: null
-          properties: {}
-          definitions: {}
-          description: ""
-          defaultvalue: null
-          example: null
-          media: null
-          readonly: false
-          pathstart: ""
-          links: []
-          ref: '#/definitions/MultiUpdateRequestBody'
-          enum: []
-          format: ""
-          pattern: ""
-          minimum: null
-          maximum: null
-          minlength: null
-          maxlength: null
-          required: []
-          additionalproperties: false
-          anyof: []
-        type: ""
-        format: ""
-        allowemptyvalue: false
-        items: null
-        collectionformat: ""
-        default: null
-        maximum: null
-        exclusivemaximum: false
-        minimum: null
-        exclusiveminimum: false
-        maxlength: null
-        minlength: null
-        pattern: ""
-        maxitems: null
-        minitems: null
-        uniqueitems: false
-        enum: []
-        multipleof: 0
-        extensions: {}
+          $ref: '#/definitions/MultiUpdateRequestBody'
       responses:
         "204":
           description: No Content response.
-          schema: null
-          headers: {}
-          ref: ""
-          extensions: {}
       schemes:
       - http
-      deprecated: false
-      security: []
-      extensions: {}
-    post: null
-    delete: null
-    options: null
-    head: null
-    patch: null
-    parameters: []
-    extensions: {}
   /storage/rate:
-    ref: ""
-    get: null
-    put: null
     post:
       tags:
       - storage
       summary: rate storage
       description: Rate bottles by IDs
-      externaldocs: null
-      operationid: storage#rate
-      consumes: []
-      produces: []
-      parameters: []
+      operationId: storage#rate
       responses:
         "200":
           description: OK response.
-          schema: null
-          headers: {}
-          ref: ""
-          extensions: {}
       schemes:
       - http
-      deprecated: false
-      security: []
-      extensions: {}
-    delete: null
-    options: null
-    head: null
-    patch: null
-    parameters: []
-    extensions: {}
   /swagger/swagger.json:
-    ref: ""
     get:
-      tags: []
       summary: Download ../../gen/http/openapi.json
       description: JSON document containing the API swagger definition
-      externaldocs: null
-      operationid: swagger#/swagger/swagger.json
-      consumes: []
-      produces: []
-      parameters: []
+      operationId: swagger#/swagger/swagger.json
       responses:
         "200":
           description: File downloaded
           schema:
             schema: ""
-            id: ""
-            title: ""
             type: file
-            items: null
-            properties: {}
-            definitions: {}
-            description: ""
-            defaultvalue: null
-            example: null
-            media: null
-            readonly: false
-            pathstart: ""
-            links: []
-            ref: ""
-            enum: []
-            format: ""
-            pattern: ""
-            minimum: null
-            maximum: null
-            minlength: null
-            maxlength: null
-            required: []
-            additionalproperties: false
-            anyof: []
-          headers: {}
-          ref: ""
-          extensions: {}
       schemes:
       - http
-      deprecated: false
-      security: []
-      extensions: {}
-    put: null
-    post: null
-    delete: null
-    options: null
-    head: null
-    patch: null
-    parameters: []
-    extensions: {}
 definitions:
   AddRequestBody:
     schema: ""
-    id: ""
     title: AddRequestBody
     type: object
-    items: null
     properties:
       composition:
         schema: ""
-        id: ""
-        title: ""
         type: array
         items:
           schema: ""
-          id: ""
-          title: ""
-          type: ""
-          items: null
-          properties: {}
-          definitions: {}
-          description: ""
-          defaultvalue: null
-          example: null
-          media: null
-          readonly: false
-          pathstart: ""
-          links: []
-          ref: '#/definitions/ComponentRequestBody'
-          enum: []
-          format: ""
-          pattern: ""
-          minimum: null
-          maximum: null
-          minlength: null
-          maxlength: null
-          required: []
-          additionalproperties: false
-          anyof: []
-        properties: {}
-        definitions: {}
+          $ref: '#/definitions/ComponentRequestBody'
         description: Composition is the list of grape varietals and associated percentage.
-        defaultvalue: null
         example:
         - percentage: 96
           varietal: Syrah
@@ -939,155 +231,36 @@ definitions:
           varietal: Syrah
         - percentage: 96
           varietal: Syrah
-        media: null
-        readonly: false
-        pathstart: ""
-        links: []
-        ref: ""
-        enum: []
-        format: ""
-        pattern: ""
-        minimum: null
-        maximum: null
-        minlength: null
-        maxlength: null
-        required: []
-        additionalproperties: false
-        anyof: []
       description:
         schema: ""
-        id: ""
-        title: ""
         type: string
-        items: null
-        properties: {}
-        definitions: {}
         description: Description of bottle
-        defaultvalue: null
         example: Red wine blend with an emphasis on the Cabernet Franc grape and including
           other Bordeaux grape varietals and some Syrah
-        media: null
-        readonly: false
-        pathstart: ""
-        links: []
-        ref: ""
-        enum: []
-        format: ""
-        pattern: ""
-        minimum: null
-        maximum: null
-        minlength: null
-        maxlength: 2000
-        required: []
-        additionalproperties: false
-        anyof: []
+        maxLength: 2000
       name:
         schema: ""
-        id: ""
-        title: ""
         type: string
-        items: null
-        properties: {}
-        definitions: {}
         description: Name of bottle
-        defaultvalue: null
         example: Blue's Cuvee
-        media: null
-        readonly: false
-        pathstart: ""
-        links: []
-        ref: ""
-        enum: []
-        format: ""
-        pattern: ""
-        minimum: null
-        maximum: null
-        minlength: null
-        maxlength: 100
-        required: []
-        additionalproperties: false
-        anyof: []
+        maxLength: 100
       rating:
         schema: ""
-        id: ""
-        title: ""
         type: integer
-        items: null
-        properties: {}
-        definitions: {}
         description: Rating of bottle from 1 (worst) to 5 (best)
-        defaultvalue: null
         example: 2
-        media: null
-        readonly: false
-        pathstart: ""
-        links: []
-        ref: ""
-        enum: []
-        format: ""
-        pattern: ""
         minimum: 1
         maximum: 5
-        minlength: null
-        maxlength: null
-        required: []
-        additionalproperties: false
-        anyof: []
       vintage:
         schema: ""
-        id: ""
-        title: ""
         type: integer
-        items: null
-        properties: {}
-        definitions: {}
         description: Vintage of bottle
-        defaultvalue: null
         example: 1973
-        media: null
-        readonly: false
-        pathstart: ""
-        links: []
-        ref: ""
-        enum: []
-        format: ""
-        pattern: ""
         minimum: 1900
         maximum: 2020
-        minlength: null
-        maxlength: null
-        required: []
-        additionalproperties: false
-        anyof: []
       winery:
         schema: ""
-        id: ""
-        title: ""
-        type: ""
-        items: null
-        properties: {}
-        definitions: {}
-        description: ""
-        defaultvalue: null
-        example: null
-        media: null
-        readonly: false
-        pathstart: ""
-        links: []
-        ref: '#/definitions/WineryRequestBody'
-        enum: []
-        format: ""
-        pattern: ""
-        minimum: null
-        maximum: null
-        minlength: null
-        maxlength: null
-        required: []
-        additionalproperties: false
-        anyof: []
-    definitions: {}
-    description: ""
-    defaultvalue: null
+        $ref: '#/definitions/WineryRequestBody'
     example:
       composition:
       - percentage: 96
@@ -1108,66 +281,22 @@ definitions:
         name: Longoria
         region: Central Coast, California
         url: http://www.longoriawine.com/
-    media: null
-    readonly: false
-    pathstart: ""
-    links: []
-    ref: ""
-    enum: []
-    format: ""
-    pattern: ""
-    minimum: null
-    maximum: null
-    minlength: null
-    maxlength: null
     required:
     - name
     - winery
     - vintage
-    additionalproperties: false
-    anyof: []
   BottleRequestBody:
     schema: ""
-    id: ""
     title: BottleRequestBody
     type: object
-    items: null
     properties:
       composition:
         schema: ""
-        id: ""
-        title: ""
         type: array
         items:
           schema: ""
-          id: ""
-          title: ""
-          type: ""
-          items: null
-          properties: {}
-          definitions: {}
-          description: ""
-          defaultvalue: null
-          example: null
-          media: null
-          readonly: false
-          pathstart: ""
-          links: []
-          ref: '#/definitions/ComponentRequestBody'
-          enum: []
-          format: ""
-          pattern: ""
-          minimum: null
-          maximum: null
-          minlength: null
-          maxlength: null
-          required: []
-          additionalproperties: false
-          anyof: []
-        properties: {}
-        definitions: {}
+          $ref: '#/definitions/ComponentRequestBody'
         description: Composition is the list of grape varietals and associated percentage.
-        defaultvalue: null
         example:
         - percentage: 96
           varietal: Syrah
@@ -1175,155 +304,37 @@ definitions:
           varietal: Syrah
         - percentage: 96
           varietal: Syrah
-        media: null
-        readonly: false
-        pathstart: ""
-        links: []
-        ref: ""
-        enum: []
-        format: ""
-        pattern: ""
-        minimum: null
-        maximum: null
-        minlength: null
-        maxlength: null
-        required: []
-        additionalproperties: false
-        anyof: []
       description:
         schema: ""
-        id: ""
-        title: ""
         type: string
-        items: null
-        properties: {}
-        definitions: {}
         description: Description of bottle
-        defaultvalue: null
         example: Red wine blend with an emphasis on the Cabernet Franc grape and including
           other Bordeaux grape varietals and some Syrah
-        media: null
-        readonly: false
-        pathstart: ""
-        links: []
-        ref: ""
-        enum: []
-        format: ""
-        pattern: ""
-        minimum: null
-        maximum: null
-        minlength: null
-        maxlength: 2000
-        required: []
-        additionalproperties: false
-        anyof: []
+        maxLength: 2000
       name:
         schema: ""
-        id: ""
-        title: ""
         type: string
-        items: null
-        properties: {}
-        definitions: {}
         description: Name of bottle
-        defaultvalue: null
         example: Blue's Cuvee
-        media: null
-        readonly: false
-        pathstart: ""
-        links: []
-        ref: ""
-        enum: []
-        format: ""
-        pattern: ""
-        minimum: null
-        maximum: null
-        minlength: null
-        maxlength: 100
-        required: []
-        additionalproperties: false
-        anyof: []
+        maxLength: 100
       rating:
         schema: ""
-        id: ""
-        title: ""
         type: integer
-        items: null
-        properties: {}
-        definitions: {}
         description: Rating of bottle from 1 (worst) to 5 (best)
-        defaultvalue: null
         example: 1
-        media: null
-        readonly: false
-        pathstart: ""
-        links: []
-        ref: ""
-        enum: []
-        format: ""
-        pattern: ""
         minimum: 1
         maximum: 5
-        minlength: null
-        maxlength: null
-        required: []
-        additionalproperties: false
-        anyof: []
       vintage:
         schema: ""
-        id: ""
-        title: ""
         type: integer
-        items: null
-        properties: {}
-        definitions: {}
         description: Vintage of bottle
-        defaultvalue: null
         example: 1965
-        media: null
-        readonly: false
-        pathstart: ""
-        links: []
-        ref: ""
-        enum: []
-        format: ""
-        pattern: ""
         minimum: 1900
         maximum: 2020
-        minlength: null
-        maxlength: null
-        required: []
-        additionalproperties: false
-        anyof: []
       winery:
         schema: ""
-        id: ""
-        title: ""
-        type: ""
-        items: null
-        properties: {}
-        definitions: {}
-        description: ""
-        defaultvalue: null
-        example: null
-        media: null
-        readonly: false
-        pathstart: ""
-        links: []
-        ref: '#/definitions/WineryRequestBody'
-        enum: []
-        format: ""
-        pattern: ""
-        minimum: null
-        maximum: null
-        minlength: null
-        maxlength: null
-        required: []
-        additionalproperties: false
-        anyof: []
-    definitions: {}
+        $ref: '#/definitions/WineryRequestBody'
     description: Bottle describes a bottle of wine to be stored.
-    defaultvalue: null
     example:
       composition:
       - percentage: 96
@@ -1344,309 +355,94 @@ definitions:
         name: Longoria
         region: Central Coast, California
         url: http://www.longoriawine.com/
-    media: null
-    readonly: false
-    pathstart: ""
-    links: []
-    ref: ""
-    enum: []
-    format: ""
-    pattern: ""
-    minimum: null
-    maximum: null
-    minlength: null
-    maxlength: null
     required:
     - name
     - winery
     - vintage
-    additionalproperties: false
-    anyof: []
   Component:
     schema: ""
-    id: ""
     title: Component
     type: object
-    items: null
     properties:
       percentage:
         schema: ""
-        id: ""
-        title: ""
         type: integer
-        items: null
-        properties: {}
-        definitions: {}
         description: Percentage of varietal in wine
-        defaultvalue: null
         example: 23
-        media: null
-        readonly: false
-        pathstart: ""
-        links: []
-        ref: ""
-        enum: []
-        format: ""
-        pattern: ""
         minimum: 1
         maximum: 100
-        minlength: null
-        maxlength: null
-        required: []
-        additionalproperties: false
-        anyof: []
       varietal:
         schema: ""
-        id: ""
-        title: ""
         type: string
-        items: null
-        properties: {}
-        definitions: {}
         description: Grape varietal
-        defaultvalue: null
         example: Syrah
-        media: null
-        readonly: false
-        pathstart: ""
-        links: []
-        ref: ""
-        enum: []
-        format: ""
         pattern: '[A-Za-z'' ]+'
-        minimum: null
-        maximum: null
-        minlength: null
-        maxlength: 100
-        required: []
-        additionalproperties: false
-        anyof: []
-    definitions: {}
-    description: ""
-    defaultvalue: null
+        maxLength: 100
     example:
       percentage: 77
       varietal: Syrah
-    media: null
-    readonly: false
-    pathstart: ""
-    links: []
-    ref: ""
-    enum: []
-    format: ""
-    pattern: ""
-    minimum: null
-    maximum: null
-    minlength: null
-    maxlength: null
     required:
     - varietal
-    additionalproperties: false
-    anyof: []
   ComponentRequestBody:
     schema: ""
-    id: ""
     title: ComponentRequestBody
     type: object
-    items: null
     properties:
       percentage:
         schema: ""
-        id: ""
-        title: ""
         type: integer
-        items: null
-        properties: {}
-        definitions: {}
         description: Percentage of varietal in wine
-        defaultvalue: null
         example: 99
-        media: null
-        readonly: false
-        pathstart: ""
-        links: []
-        ref: ""
-        enum: []
-        format: ""
-        pattern: ""
         minimum: 1
         maximum: 100
-        minlength: null
-        maxlength: null
-        required: []
-        additionalproperties: false
-        anyof: []
       varietal:
         schema: ""
-        id: ""
-        title: ""
         type: string
-        items: null
-        properties: {}
-        definitions: {}
         description: Grape varietal
-        defaultvalue: null
         example: Syrah
-        media: null
-        readonly: false
-        pathstart: ""
-        links: []
-        ref: ""
-        enum: []
-        format: ""
         pattern: '[A-Za-z'' ]+'
-        minimum: null
-        maximum: null
-        minlength: null
-        maxlength: 100
-        required: []
-        additionalproperties: false
-        anyof: []
-    definitions: {}
-    description: ""
-    defaultvalue: null
+        maxLength: 100
     example:
       percentage: 93
       varietal: Syrah
-    media: null
-    readonly: false
-    pathstart: ""
-    links: []
-    ref: ""
-    enum: []
-    format: ""
-    pattern: ""
-    minimum: null
-    maximum: null
-    minlength: null
-    maxlength: null
     required:
     - varietal
-    additionalproperties: false
-    anyof: []
   ComponentResponseBody:
     schema: ""
-    id: ""
     title: ComponentResponseBody
     type: object
-    items: null
     properties:
       percentage:
         schema: ""
-        id: ""
-        title: ""
         type: integer
-        items: null
-        properties: {}
-        definitions: {}
         description: Percentage of varietal in wine
-        defaultvalue: null
         example: 46
-        media: null
-        readonly: false
-        pathstart: ""
-        links: []
-        ref: ""
-        enum: []
-        format: ""
-        pattern: ""
         minimum: 1
         maximum: 100
-        minlength: null
-        maxlength: null
-        required: []
-        additionalproperties: false
-        anyof: []
       varietal:
         schema: ""
-        id: ""
-        title: ""
         type: string
-        items: null
-        properties: {}
-        definitions: {}
         description: Grape varietal
-        defaultvalue: null
         example: Syrah
-        media: null
-        readonly: false
-        pathstart: ""
-        links: []
-        ref: ""
-        enum: []
-        format: ""
         pattern: '[A-Za-z'' ]+'
-        minimum: null
-        maximum: null
-        minlength: null
-        maxlength: 100
-        required: []
-        additionalproperties: false
-        anyof: []
-    definitions: {}
-    description: ""
-    defaultvalue: null
+        maxLength: 100
     example:
       percentage: 79
       varietal: Syrah
-    media: null
-    readonly: false
-    pathstart: ""
-    links: []
-    ref: ""
-    enum: []
-    format: ""
-    pattern: ""
-    minimum: null
-    maximum: null
-    minlength: null
-    maxlength: null
     required:
     - varietal
-    additionalproperties: false
-    anyof: []
   MultiUpdateRequestBody:
     schema: ""
-    id: ""
     title: MultiUpdateRequestBody
     type: object
-    items: null
     properties:
       bottles:
         schema: ""
-        id: ""
-        title: ""
         type: array
         items:
           schema: ""
-          id: ""
-          title: ""
-          type: ""
-          items: null
-          properties: {}
-          definitions: {}
-          description: ""
-          defaultvalue: null
-          example: null
-          media: null
-          readonly: false
-          pathstart: ""
-          links: []
-          ref: '#/definitions/BottleRequestBody'
-          enum: []
-          format: ""
-          pattern: ""
-          minimum: null
-          maximum: null
-          minlength: null
-          maxlength: null
-          required: []
-          additionalproperties: false
-          anyof: []
-        properties: {}
-        definitions: {}
+          $ref: '#/definitions/BottleRequestBody'
         description: Array of bottle info that matches the ids attribute
-        defaultvalue: null
         example:
         - composition:
           - percentage: 96
@@ -1708,24 +504,6 @@ definitions:
             name: Longoria
             region: Central Coast, California
             url: http://www.longoriawine.com/
-        media: null
-        readonly: false
-        pathstart: ""
-        links: []
-        ref: ""
-        enum: []
-        format: ""
-        pattern: ""
-        minimum: null
-        maximum: null
-        minlength: null
-        maxlength: null
-        required: []
-        additionalproperties: false
-        anyof: []
-    definitions: {}
-    description: ""
-    defaultvalue: null
     example:
       bottles:
       - composition:
@@ -1788,189 +566,45 @@ definitions:
           name: Longoria
           region: Central Coast, California
           url: http://www.longoriawine.com/
-    media: null
-    readonly: false
-    pathstart: ""
-    links: []
-    ref: ""
-    enum: []
-    format: ""
-    pattern: ""
-    minimum: null
-    maximum: null
-    minlength: null
-    maxlength: null
-    required: []
-    additionalproperties: false
-    anyof: []
   PickNoCriteriaResponseBody:
     schema: ""
-    id: ""
     title: PickNoCriteriaResponseBody
     type: string
-    items: null
-    properties: {}
-    definitions: {}
     description: Missing criteria
-    defaultvalue: null
     example: Earum dolorem.
-    media: null
-    readonly: false
-    pathstart: ""
-    links: []
-    ref: ""
-    enum: []
-    format: ""
-    pattern: ""
-    minimum: null
-    maximum: null
-    minlength: null
-    maxlength: null
-    required: []
-    additionalproperties: false
-    anyof: []
   PickNoMatchResponseBody:
     schema: ""
-    id: ""
     title: PickNoMatchResponseBody
     type: string
-    items: null
-    properties: {}
-    definitions: {}
     description: No bottle matched given criteria
-    defaultvalue: null
     example: Ut iusto aut officia rerum harum qui.
-    media: null
-    readonly: false
-    pathstart: ""
-    links: []
-    ref: ""
-    enum: []
-    format: ""
-    pattern: ""
-    minimum: null
-    maximum: null
-    minlength: null
-    maxlength: null
-    required: []
-    additionalproperties: false
-    anyof: []
   PickRequestBody:
     schema: ""
-    id: ""
     title: PickRequestBody
     type: object
-    items: null
     properties:
       name:
         schema: ""
-        id: ""
-        title: ""
         type: string
-        items: null
-        properties: {}
-        definitions: {}
         description: Name of bottle to pick
-        defaultvalue: null
         example: Blue's Cuvee
-        media: null
-        readonly: false
-        pathstart: ""
-        links: []
-        ref: ""
-        enum: []
-        format: ""
-        pattern: ""
-        minimum: null
-        maximum: null
-        minlength: null
-        maxlength: null
-        required: []
-        additionalproperties: false
-        anyof: []
       varietal:
         schema: ""
-        id: ""
-        title: ""
         type: array
         items:
           schema: ""
-          id: ""
-          title: ""
           type: string
-          items: null
-          properties: {}
-          definitions: {}
-          description: ""
-          defaultvalue: null
           example: Et aut soluta.
-          media: null
-          readonly: false
-          pathstart: ""
-          links: []
-          ref: ""
-          enum: []
-          format: ""
-          pattern: ""
-          minimum: null
-          maximum: null
-          minlength: null
-          maxlength: null
-          required: []
-          additionalproperties: false
-          anyof: []
-        properties: {}
-        definitions: {}
         description: Varietals in preference order
-        defaultvalue: null
         example:
         - pinot noir
         - merlot
         - cabernet franc
-        media: null
-        readonly: false
-        pathstart: ""
-        links: []
-        ref: ""
-        enum: []
-        format: ""
-        pattern: ""
-        minimum: null
-        maximum: null
-        minlength: null
-        maxlength: null
-        required: []
-        additionalproperties: false
-        anyof: []
       winery:
         schema: ""
-        id: ""
-        title: ""
         type: string
-        items: null
-        properties: {}
-        definitions: {}
         description: Winery of bottle to pick
-        defaultvalue: null
         example: longoria
-        media: null
-        readonly: false
-        pathstart: ""
-        links: []
-        ref: ""
-        enum: []
-        format: ""
-        pattern: ""
-        minimum: null
-        maximum: null
-        minlength: null
-        maxlength: null
-        required: []
-        additionalproperties: false
-        anyof: []
-    definitions: {}
-    description: ""
-    defaultvalue: null
     example:
       name: Blue's Cuvee
       varietal:
@@ -1978,145 +612,40 @@ definitions:
       - merlot
       - cabernet franc
       winery: longoria
-    media: null
-    readonly: false
-    pathstart: ""
-    links: []
-    ref: ""
-    enum: []
-    format: ""
-    pattern: ""
-    minimum: null
-    maximum: null
-    minlength: null
-    maxlength: null
-    required: []
-    additionalproperties: false
-    anyof: []
   ShowNotFoundResponseBody:
     schema: ""
-    id: ""
     title: ShowNotFoundResponseBody
     type: object
-    items: null
     properties:
       id:
         schema: ""
-        id: ""
-        title: ""
         type: string
-        items: null
-        properties: {}
-        definitions: {}
         description: ID of missing bottle
-        defaultvalue: null
         example: Exercitationem alias est dolores.
-        media: null
-        readonly: false
-        pathstart: ""
-        links: []
-        ref: ""
-        enum: []
-        format: ""
-        pattern: ""
-        minimum: null
-        maximum: null
-        minlength: null
-        maxlength: null
-        required: []
-        additionalproperties: false
-        anyof: []
       message:
         schema: ""
-        id: ""
-        title: ""
         type: string
-        items: null
-        properties: {}
-        definitions: {}
         description: Message of error
-        defaultvalue: null
         example: bottle 1 not found
-        media: null
-        readonly: false
-        pathstart: ""
-        links: []
-        ref: ""
-        enum: []
-        format: ""
-        pattern: ""
-        minimum: null
-        maximum: null
-        minlength: null
-        maxlength: null
-        required: []
-        additionalproperties: false
-        anyof: []
-    definitions: {}
     description: Bottle not found
-    defaultvalue: null
     example:
       id: Exercitationem ducimus expedita in quam eos distinctio.
       message: bottle 1 not found
-    media: null
-    readonly: false
-    pathstart: ""
-    links: []
-    ref: ""
-    enum: []
-    format: ""
-    pattern: ""
-    minimum: null
-    maximum: null
-    minlength: null
-    maxlength: null
     required:
     - message
     - id
-    additionalproperties: false
-    anyof: []
   ShowResponseBody:
     schema: ""
-    id: ""
     title: 'Mediatype identifier: application/vnd.cellar.stored-bottle; view=default'
     type: object
-    items: null
     properties:
       composition:
         schema: ""
-        id: ""
-        title: ""
         type: array
         items:
           schema: ""
-          id: ""
-          title: ""
-          type: ""
-          items: null
-          properties: {}
-          definitions: {}
-          description: ""
-          defaultvalue: null
-          example: null
-          media: null
-          readonly: false
-          pathstart: ""
-          links: []
-          ref: '#/definitions/Component'
-          enum: []
-          format: ""
-          pattern: ""
-          minimum: null
-          maximum: null
-          minlength: null
-          maxlength: null
-          required: []
-          additionalproperties: false
-          anyof: []
-        properties: {}
-        definitions: {}
+          $ref: '#/definitions/Component'
         description: Composition is the list of grape varietals and associated percentage.
-        defaultvalue: null
         example:
         - percentage: 86
           varietal: Syrah
@@ -2124,181 +653,42 @@ definitions:
           varietal: Syrah
         - percentage: 86
           varietal: Syrah
-        media: null
-        readonly: false
-        pathstart: ""
-        links: []
-        ref: ""
-        enum: []
-        format: ""
-        pattern: ""
-        minimum: null
-        maximum: null
-        minlength: null
-        maxlength: null
-        required: []
-        additionalproperties: false
-        anyof: []
       description:
         schema: ""
-        id: ""
-        title: ""
         type: string
-        items: null
-        properties: {}
-        definitions: {}
         description: Description of bottle
-        defaultvalue: null
         example: Red wine blend with an emphasis on the Cabernet Franc grape and including
           other Bordeaux grape varietals and some Syrah
-        media: null
-        readonly: false
-        pathstart: ""
-        links: []
-        ref: ""
-        enum: []
-        format: ""
-        pattern: ""
-        minimum: null
-        maximum: null
-        minlength: null
-        maxlength: 2000
-        required: []
-        additionalproperties: false
-        anyof: []
+        maxLength: 2000
       id:
         schema: ""
-        id: ""
-        title: ""
         type: string
-        items: null
-        properties: {}
-        definitions: {}
         description: ID is the unique id of the bottle.
-        defaultvalue: null
         example: 123abc
-        media: null
-        readonly: false
-        pathstart: ""
-        links: []
-        ref: ""
-        enum: []
-        format: ""
-        pattern: ""
-        minimum: null
-        maximum: null
-        minlength: null
-        maxlength: null
-        required: []
-        additionalproperties: false
-        anyof: []
       name:
         schema: ""
-        id: ""
-        title: ""
         type: string
-        items: null
-        properties: {}
-        definitions: {}
         description: Name of bottle
-        defaultvalue: null
         example: Blue's Cuvee
-        media: null
-        readonly: false
-        pathstart: ""
-        links: []
-        ref: ""
-        enum: []
-        format: ""
-        pattern: ""
-        minimum: null
-        maximum: null
-        minlength: null
-        maxlength: 100
-        required: []
-        additionalproperties: false
-        anyof: []
+        maxLength: 100
       rating:
         schema: ""
-        id: ""
-        title: ""
         type: integer
-        items: null
-        properties: {}
-        definitions: {}
         description: Rating of bottle from 1 (worst) to 5 (best)
-        defaultvalue: null
         example: 2
-        media: null
-        readonly: false
-        pathstart: ""
-        links: []
-        ref: ""
-        enum: []
-        format: ""
-        pattern: ""
         minimum: 1
         maximum: 5
-        minlength: null
-        maxlength: null
-        required: []
-        additionalproperties: false
-        anyof: []
       vintage:
         schema: ""
-        id: ""
-        title: ""
         type: integer
-        items: null
-        properties: {}
-        definitions: {}
         description: Vintage of bottle
-        defaultvalue: null
         example: 1913
-        media: null
-        readonly: false
-        pathstart: ""
-        links: []
-        ref: ""
-        enum: []
-        format: ""
-        pattern: ""
         minimum: 1900
         maximum: 2020
-        minlength: null
-        maxlength: null
-        required: []
-        additionalproperties: false
-        anyof: []
       winery:
         schema: ""
-        id: ""
-        title: ""
-        type: ""
-        items: null
-        properties: {}
-        definitions: {}
-        description: ""
-        defaultvalue: null
-        example: null
-        media: null
-        readonly: false
-        pathstart: ""
-        links: []
-        ref: '#/definitions/Winery'
-        enum: []
-        format: ""
-        pattern: ""
-        minimum: null
-        maximum: null
-        minlength: null
-        maxlength: null
-        required: []
-        additionalproperties: false
-        anyof: []
-    definitions: {}
+        $ref: '#/definitions/Winery'
     description: ShowResponseBody result type (default view)
-    defaultvalue: null
     example:
       composition:
       - percentage: 86
@@ -2316,67 +706,23 @@ definitions:
         name: Longoria
         region: Central Coast, California
         url: http://www.longoriawine.com/
-    media: null
-    readonly: false
-    pathstart: ""
-    links: []
-    ref: ""
-    enum: []
-    format: ""
-    pattern: ""
-    minimum: null
-    maximum: null
-    minlength: null
-    maxlength: null
     required:
     - id
     - name
     - winery
     - vintage
-    additionalproperties: false
-    anyof: []
   StoredBottleResponseBody:
     schema: ""
-    id: ""
     title: 'Mediatype identifier: application/vnd.cellar.stored-bottle; view=default'
     type: object
-    items: null
     properties:
       composition:
         schema: ""
-        id: ""
-        title: ""
         type: array
         items:
           schema: ""
-          id: ""
-          title: ""
-          type: ""
-          items: null
-          properties: {}
-          definitions: {}
-          description: ""
-          defaultvalue: null
-          example: null
-          media: null
-          readonly: false
-          pathstart: ""
-          links: []
-          ref: '#/definitions/ComponentResponseBody'
-          enum: []
-          format: ""
-          pattern: ""
-          minimum: null
-          maximum: null
-          minlength: null
-          maxlength: null
-          required: []
-          additionalproperties: false
-          anyof: []
-        properties: {}
-        definitions: {}
+          $ref: '#/definitions/ComponentResponseBody'
         description: Composition is the list of grape varietals and associated percentage.
-        defaultvalue: null
         example:
         - percentage: 82
           varietal: Syrah
@@ -2386,182 +732,43 @@ definitions:
           varietal: Syrah
         - percentage: 82
           varietal: Syrah
-        media: null
-        readonly: false
-        pathstart: ""
-        links: []
-        ref: ""
-        enum: []
-        format: ""
-        pattern: ""
-        minimum: null
-        maximum: null
-        minlength: null
-        maxlength: null
-        required: []
-        additionalproperties: false
-        anyof: []
       description:
         schema: ""
-        id: ""
-        title: ""
         type: string
-        items: null
-        properties: {}
-        definitions: {}
         description: Description of bottle
-        defaultvalue: null
         example: Red wine blend with an emphasis on the Cabernet Franc grape and including
           other Bordeaux grape varietals and some Syrah
-        media: null
-        readonly: false
-        pathstart: ""
-        links: []
-        ref: ""
-        enum: []
-        format: ""
-        pattern: ""
-        minimum: null
-        maximum: null
-        minlength: null
-        maxlength: 2000
-        required: []
-        additionalproperties: false
-        anyof: []
+        maxLength: 2000
       id:
         schema: ""
-        id: ""
-        title: ""
         type: string
-        items: null
-        properties: {}
-        definitions: {}
         description: ID is the unique id of the bottle.
-        defaultvalue: null
         example: 123abc
-        media: null
-        readonly: false
-        pathstart: ""
-        links: []
-        ref: ""
-        enum: []
-        format: ""
-        pattern: ""
-        minimum: null
-        maximum: null
-        minlength: null
-        maxlength: null
-        required: []
-        additionalproperties: false
-        anyof: []
       name:
         schema: ""
-        id: ""
-        title: ""
         type: string
-        items: null
-        properties: {}
-        definitions: {}
         description: Name of bottle
-        defaultvalue: null
         example: Blue's Cuvee
-        media: null
-        readonly: false
-        pathstart: ""
-        links: []
-        ref: ""
-        enum: []
-        format: ""
-        pattern: ""
-        minimum: null
-        maximum: null
-        minlength: null
-        maxlength: 100
-        required: []
-        additionalproperties: false
-        anyof: []
+        maxLength: 100
       rating:
         schema: ""
-        id: ""
-        title: ""
         type: integer
-        items: null
-        properties: {}
-        definitions: {}
         description: Rating of bottle from 1 (worst) to 5 (best)
-        defaultvalue: null
         example: 1
-        media: null
-        readonly: false
-        pathstart: ""
-        links: []
-        ref: ""
-        enum: []
-        format: ""
-        pattern: ""
         minimum: 1
         maximum: 5
-        minlength: null
-        maxlength: null
-        required: []
-        additionalproperties: false
-        anyof: []
       vintage:
         schema: ""
-        id: ""
-        title: ""
         type: integer
-        items: null
-        properties: {}
-        definitions: {}
         description: Vintage of bottle
-        defaultvalue: null
         example: 1905
-        media: null
-        readonly: false
-        pathstart: ""
-        links: []
-        ref: ""
-        enum: []
-        format: ""
-        pattern: ""
         minimum: 1900
         maximum: 2020
-        minlength: null
-        maxlength: null
-        required: []
-        additionalproperties: false
-        anyof: []
       winery:
         schema: ""
-        id: ""
-        title: ""
-        type: ""
-        items: null
-        properties: {}
-        definitions: {}
-        description: ""
-        defaultvalue: null
-        example: null
-        media: null
-        readonly: false
-        pathstart: ""
-        links: []
-        ref: '#/definitions/WineryResponseBody'
-        enum: []
-        format: ""
-        pattern: ""
-        minimum: null
-        maximum: null
-        minlength: null
-        maxlength: null
-        required: []
-        additionalproperties: false
-        anyof: []
-    definitions: {}
+        $ref: '#/definitions/WineryResponseBody'
     description: A StoredBottle describes a bottle retrieved by the storage service.
       (default view)
-    defaultvalue: null
     example:
       composition:
       - percentage: 82
@@ -2581,61 +788,20 @@ definitions:
         name: Longoria
         region: Central Coast, California
         url: http://www.longoriawine.com/
-    media: null
-    readonly: false
-    pathstart: ""
-    links: []
-    ref: ""
-    enum: []
-    format: ""
-    pattern: ""
-    minimum: null
-    maximum: null
-    minlength: null
-    maxlength: null
     required:
     - id
     - name
     - winery
     - vintage
-    additionalproperties: false
-    anyof: []
   StoredBottleResponseBodyCollection:
     schema: ""
-    id: ""
     title: 'Mediatype identifier: '
     type: array
     items:
       schema: ""
-      id: ""
-      title: ""
-      type: ""
-      items: null
-      properties: {}
-      definitions: {}
-      description: ""
-      defaultvalue: null
-      example: null
-      media: null
-      readonly: false
-      pathstart: ""
-      links: []
-      ref: '#/definitions/StoredBottleResponseBody'
-      enum: []
-      format: ""
-      pattern: ""
-      minimum: null
-      maximum: null
-      minlength: null
-      maxlength: null
-      required: []
-      additionalproperties: false
-      anyof: []
-    properties: {}
-    definitions: {}
+      $ref: '#/definitions/StoredBottleResponseBody'
     description: StoredBottleResponseBodyCollection is the result type for an array
       of StoredBottleResponseBody (default view)
-    defaultvalue: null
     example:
     - composition:
       - percentage: 82
@@ -2677,169 +843,45 @@ definitions:
         name: Longoria
         region: Central Coast, California
         url: http://www.longoriawine.com/
-    media: null
-    readonly: false
-    pathstart: ""
-    links: []
-    ref: ""
-    enum: []
-    format: ""
-    pattern: ""
-    minimum: null
-    maximum: null
-    minlength: null
-    maxlength: null
-    required: []
-    additionalproperties: false
-    anyof: []
   StoredBottleResponseBodyTiny:
     schema: ""
-    id: ""
     title: 'Mediatype identifier: '
     type: object
-    items: null
     properties:
       id:
         schema: ""
-        id: ""
-        title: ""
         type: string
-        items: null
-        properties: {}
-        definitions: {}
         description: ID is the unique id of the bottle.
-        defaultvalue: null
         example: 123abc
-        media: null
-        readonly: false
-        pathstart: ""
-        links: []
-        ref: ""
-        enum: []
-        format: ""
-        pattern: ""
-        minimum: null
-        maximum: null
-        minlength: null
-        maxlength: null
-        required: []
-        additionalproperties: false
-        anyof: []
       name:
         schema: ""
-        id: ""
-        title: ""
         type: string
-        items: null
-        properties: {}
-        definitions: {}
         description: Name of bottle
-        defaultvalue: null
         example: Blue's Cuvee
-        media: null
-        readonly: false
-        pathstart: ""
-        links: []
-        ref: ""
-        enum: []
-        format: ""
-        pattern: ""
-        minimum: null
-        maximum: null
-        minlength: null
-        maxlength: 100
-        required: []
-        additionalproperties: false
-        anyof: []
+        maxLength: 100
       winery:
         schema: ""
-        id: ""
-        title: ""
-        type: ""
-        items: null
-        properties: {}
-        definitions: {}
-        description: ""
-        defaultvalue: null
-        example: null
-        media: null
-        readonly: false
-        pathstart: ""
-        links: []
-        ref: '#/definitions/WineryResponseBodyTiny'
-        enum: []
-        format: ""
-        pattern: ""
-        minimum: null
-        maximum: null
-        minlength: null
-        maxlength: null
-        required: []
-        additionalproperties: false
-        anyof: []
-    definitions: {}
+        $ref: '#/definitions/WineryResponseBodyTiny'
     description: A StoredBottle describes a bottle retrieved by the storage service.
       (tiny view) (default view) (default view) (default view)
-    defaultvalue: null
     example:
       id: 123abc
       name: Blue's Cuvee
       winery:
         name: Longoria
-    media: null
-    readonly: false
-    pathstart: ""
-    links: []
-    ref: ""
-    enum: []
-    format: ""
-    pattern: ""
-    minimum: null
-    maximum: null
-    minlength: null
-    maxlength: null
     required:
     - id
     - name
     - winery
-    additionalproperties: false
-    anyof: []
   StoredBottleResponseBodyTinyCollection:
     schema: ""
-    id: ""
     title: 'Mediatype identifier: '
     type: array
     items:
       schema: ""
-      id: ""
-      title: ""
-      type: ""
-      items: null
-      properties: {}
-      definitions: {}
-      description: ""
-      defaultvalue: null
-      example: null
-      media: null
-      readonly: false
-      pathstart: ""
-      links: []
-      ref: '#/definitions/StoredBottleResponseBodyTiny'
-      enum: []
-      format: ""
-      pattern: ""
-      minimum: null
-      maximum: null
-      minlength: null
-      maxlength: null
-      required: []
-      additionalproperties: false
-      anyof: []
-    properties: {}
-    definitions: {}
+      $ref: '#/definitions/StoredBottleResponseBodyTiny'
     description: StoredBottleResponseBodyTinyCollection is the result type for an
       array of StoredBottleResponseBodyTiny (default view)
-    defaultvalue: null
     example:
     - id: 123abc
       name: Blue's Cuvee
@@ -2857,488 +899,130 @@ definitions:
       name: Blue's Cuvee
       winery:
         name: Longoria
-    media: null
-    readonly: false
-    pathstart: ""
-    links: []
-    ref: ""
-    enum: []
-    format: ""
-    pattern: ""
-    minimum: null
-    maximum: null
-    minlength: null
-    maxlength: null
-    required: []
-    additionalproperties: false
-    anyof: []
   Winery:
     schema: ""
-    id: ""
     title: 'Mediatype identifier: winery; view=default'
     type: object
-    items: null
     properties:
       country:
         schema: ""
-        id: ""
-        title: ""
         type: string
-        items: null
-        properties: {}
-        definitions: {}
         description: Country of winery
-        defaultvalue: null
         example: USA
-        media: null
-        readonly: false
-        pathstart: ""
-        links: []
-        ref: ""
-        enum: []
-        format: ""
         pattern: (?i)[a-z '\.]+
-        minimum: null
-        maximum: null
-        minlength: null
-        maxlength: null
-        required: []
-        additionalproperties: false
-        anyof: []
       name:
         schema: ""
-        id: ""
-        title: ""
         type: string
-        items: null
-        properties: {}
-        definitions: {}
         description: Name of winery
-        defaultvalue: null
         example: Longoria
-        media: null
-        readonly: false
-        pathstart: ""
-        links: []
-        ref: ""
-        enum: []
-        format: ""
-        pattern: ""
-        minimum: null
-        maximum: null
-        minlength: null
-        maxlength: null
-        required: []
-        additionalproperties: false
-        anyof: []
       region:
         schema: ""
-        id: ""
-        title: ""
         type: string
-        items: null
-        properties: {}
-        definitions: {}
         description: Region of winery
-        defaultvalue: null
         example: Central Coast, California
-        media: null
-        readonly: false
-        pathstart: ""
-        links: []
-        ref: ""
-        enum: []
-        format: ""
         pattern: (?i)[a-z '\.]+
-        minimum: null
-        maximum: null
-        minlength: null
-        maxlength: null
-        required: []
-        additionalproperties: false
-        anyof: []
       url:
         schema: ""
-        id: ""
-        title: ""
         type: string
-        items: null
-        properties: {}
-        definitions: {}
         description: Winery website URL
-        defaultvalue: null
         example: http://www.longoriawine.com/
-        media: null
-        readonly: false
-        pathstart: ""
-        links: []
-        ref: ""
-        enum: []
-        format: ""
         pattern: (?i)^(https?|ftp)://[^\s/$.?#].[^\s]*$
-        minimum: null
-        maximum: null
-        minlength: null
-        maxlength: null
-        required: []
-        additionalproperties: false
-        anyof: []
-    definitions: {}
-    description: ""
-    defaultvalue: null
     example:
       country: USA
       name: Longoria
       region: Central Coast, California
       url: http://www.longoriawine.com/
-    media: null
-    readonly: false
-    pathstart: ""
-    links: []
-    ref: ""
-    enum: []
-    format: ""
-    pattern: ""
-    minimum: null
-    maximum: null
-    minlength: null
-    maxlength: null
     required:
     - name
     - region
     - country
-    additionalproperties: false
-    anyof: []
   WineryRequestBody:
     schema: ""
-    id: ""
     title: 'Mediatype identifier: winery; view=default'
     type: object
-    items: null
     properties:
       country:
         schema: ""
-        id: ""
-        title: ""
         type: string
-        items: null
-        properties: {}
-        definitions: {}
         description: Country of winery
-        defaultvalue: null
         example: USA
-        media: null
-        readonly: false
-        pathstart: ""
-        links: []
-        ref: ""
-        enum: []
-        format: ""
         pattern: (?i)[a-z '\.]+
-        minimum: null
-        maximum: null
-        minlength: null
-        maxlength: null
-        required: []
-        additionalproperties: false
-        anyof: []
       name:
         schema: ""
-        id: ""
-        title: ""
         type: string
-        items: null
-        properties: {}
-        definitions: {}
         description: Name of winery
-        defaultvalue: null
         example: Longoria
-        media: null
-        readonly: false
-        pathstart: ""
-        links: []
-        ref: ""
-        enum: []
-        format: ""
-        pattern: ""
-        minimum: null
-        maximum: null
-        minlength: null
-        maxlength: null
-        required: []
-        additionalproperties: false
-        anyof: []
       region:
         schema: ""
-        id: ""
-        title: ""
         type: string
-        items: null
-        properties: {}
-        definitions: {}
         description: Region of winery
-        defaultvalue: null
         example: Central Coast, California
-        media: null
-        readonly: false
-        pathstart: ""
-        links: []
-        ref: ""
-        enum: []
-        format: ""
         pattern: (?i)[a-z '\.]+
-        minimum: null
-        maximum: null
-        minlength: null
-        maxlength: null
-        required: []
-        additionalproperties: false
-        anyof: []
       url:
         schema: ""
-        id: ""
-        title: ""
         type: string
-        items: null
-        properties: {}
-        definitions: {}
         description: Winery website URL
-        defaultvalue: null
         example: http://www.longoriawine.com/
-        media: null
-        readonly: false
-        pathstart: ""
-        links: []
-        ref: ""
-        enum: []
-        format: ""
         pattern: (?i)^(https?|ftp)://[^\s/$.?#].[^\s]*$
-        minimum: null
-        maximum: null
-        minlength: null
-        maxlength: null
-        required: []
-        additionalproperties: false
-        anyof: []
-    definitions: {}
     description: WineryRequestBody result type (default view)
-    defaultvalue: null
     example:
       country: USA
       name: Longoria
       region: Central Coast, California
       url: http://www.longoriawine.com/
-    media: null
-    readonly: false
-    pathstart: ""
-    links: []
-    ref: ""
-    enum: []
-    format: ""
-    pattern: ""
-    minimum: null
-    maximum: null
-    minlength: null
-    maxlength: null
     required:
     - name
     - region
     - country
-    additionalproperties: false
-    anyof: []
   WineryResponseBody:
     schema: ""
-    id: ""
     title: 'Mediatype identifier: winery; view=default'
     type: object
-    items: null
     properties:
       country:
         schema: ""
-        id: ""
-        title: ""
         type: string
-        items: null
-        properties: {}
-        definitions: {}
         description: Country of winery
-        defaultvalue: null
         example: USA
-        media: null
-        readonly: false
-        pathstart: ""
-        links: []
-        ref: ""
-        enum: []
-        format: ""
         pattern: (?i)[a-z '\.]+
-        minimum: null
-        maximum: null
-        minlength: null
-        maxlength: null
-        required: []
-        additionalproperties: false
-        anyof: []
       name:
         schema: ""
-        id: ""
-        title: ""
         type: string
-        items: null
-        properties: {}
-        definitions: {}
         description: Name of winery
-        defaultvalue: null
         example: Longoria
-        media: null
-        readonly: false
-        pathstart: ""
-        links: []
-        ref: ""
-        enum: []
-        format: ""
-        pattern: ""
-        minimum: null
-        maximum: null
-        minlength: null
-        maxlength: null
-        required: []
-        additionalproperties: false
-        anyof: []
       region:
         schema: ""
-        id: ""
-        title: ""
         type: string
-        items: null
-        properties: {}
-        definitions: {}
         description: Region of winery
-        defaultvalue: null
         example: Central Coast, California
-        media: null
-        readonly: false
-        pathstart: ""
-        links: []
-        ref: ""
-        enum: []
-        format: ""
         pattern: (?i)[a-z '\.]+
-        minimum: null
-        maximum: null
-        minlength: null
-        maxlength: null
-        required: []
-        additionalproperties: false
-        anyof: []
       url:
         schema: ""
-        id: ""
-        title: ""
         type: string
-        items: null
-        properties: {}
-        definitions: {}
         description: Winery website URL
-        defaultvalue: null
         example: http://www.longoriawine.com/
-        media: null
-        readonly: false
-        pathstart: ""
-        links: []
-        ref: ""
-        enum: []
-        format: ""
         pattern: (?i)^(https?|ftp)://[^\s/$.?#].[^\s]*$
-        minimum: null
-        maximum: null
-        minlength: null
-        maxlength: null
-        required: []
-        additionalproperties: false
-        anyof: []
-    definitions: {}
-    description: ""
-    defaultvalue: null
     example:
       country: USA
       name: Longoria
       region: Central Coast, California
       url: http://www.longoriawine.com/
-    media: null
-    readonly: false
-    pathstart: ""
-    links: []
-    ref: ""
-    enum: []
-    format: ""
-    pattern: ""
-    minimum: null
-    maximum: null
-    minlength: null
-    maxlength: null
     required:
     - name
     - region
     - country
-    additionalproperties: false
-    anyof: []
   WineryResponseBodyTiny:
     schema: ""
-    id: ""
     title: 'Mediatype identifier: '
     type: object
-    items: null
     properties:
       name:
         schema: ""
-        id: ""
-        title: ""
         type: string
-        items: null
-        properties: {}
-        definitions: {}
         description: Name of winery
-        defaultvalue: null
         example: Longoria
-        media: null
-        readonly: false
-        pathstart: ""
-        links: []
-        ref: ""
-        enum: []
-        format: ""
-        pattern: ""
-        minimum: null
-        maximum: null
-        minlength: null
-        maxlength: null
-        required: []
-        additionalproperties: false
-        anyof: []
-    definitions: {}
     description: WineryResponseBodyTiny result type (default view) (default view)
-    defaultvalue: null
     example:
       name: Longoria
-    media: null
-    readonly: false
-    pathstart: ""
-    links: []
-    ref: ""
-    enum: []
-    format: ""
-    pattern: ""
-    minimum: null
-    maximum: null
-    minlength: null
-    maxlength: null
     required:
     - name
-    additionalproperties: false
-    anyof: []
-parameters: {}
-responses: {}
-securitydefinitions: {}
-tags: []
-externaldocs: null

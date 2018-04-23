@@ -53,14 +53,15 @@ func NewV2(root *httpdesign.RootExpr) (*V2, error) {
 			Version:        root.Design.API.Version,
 			Extensions:     ExtensionsFromExpr(root.Metadata),
 		},
-		Host:         host,
-		BasePath:     basePath,
-		Paths:        make(map[string]interface{}),
-		Consumes:     root.Consumes,
-		Produces:     root.Produces,
-		Parameters:   paramMap,
-		Tags:         tags,
-		ExternalDocs: docsFromExpr(root.Design.API.Docs),
+		Host:                host,
+		BasePath:            basePath,
+		Paths:               make(map[string]interface{}),
+		Consumes:            root.Consumes,
+		Produces:            root.Produces,
+		Parameters:          paramMap,
+		Tags:                tags,
+		SecurityDefinitions: securitySpecFromExpr(root),
+		ExternalDocs:        docsFromExpr(root.Design.API.Docs),
 	}
 
 	for _, he := range root.HTTPErrors {
@@ -148,6 +149,62 @@ func mustGenerate(meta design.MetadataExpr) bool {
 		}
 	}
 	return true
+}
+
+// securitySpecFromExpr generates the OpenAPI security definitions from the
+// security design.
+func securitySpecFromExpr(root *httpdesign.RootExpr) map[string]*SecurityDefinition {
+	sds := make(map[string]*SecurityDefinition)
+	for _, s := range root.Design.Schemes {
+		sd := SecurityDefinition{
+			Description: s.Description,
+			Extensions:  ExtensionsFromExpr(s.Metadata),
+		}
+		switch s.Kind {
+		case design.BasicAuthKind:
+			sd.Type = "basic"
+		case design.APIKeyKind:
+			sd.Type = "apiKey"
+			sd.In = s.In
+			sd.Name = s.Name
+		case design.JWTKind:
+			sd.Type = "apiKey"
+			// OpenAPI V2 spec does not support JWT scheme. Hence we add the scheme
+			// information to the description.
+			lines := []string{}
+			for _, scope := range s.Scopes {
+				lines = append(lines, fmt.Sprintf("  * `%s`: %s", scope.Name, scope.Description))
+			}
+			sd.In = s.In
+			sd.Name = s.Name
+			sd.Description += fmt.Sprintf("\n**Security Scopes**:\n%s", strings.Join(lines, "\n"))
+		case design.OAuth2Kind:
+			sd.Type = "oauth2"
+			if scopesLen := len(s.Scopes); scopesLen > 0 {
+				scopes := make(map[string]string, scopesLen)
+				for _, scope := range s.Scopes {
+					scopes[scope.Name] = scope.Description
+				}
+				sd.Scopes = scopes
+			}
+		}
+		if len(s.Flows) > 0 {
+			switch s.Flows[0].Kind {
+			case design.AuthorizationCodeFlowKind:
+				sd.Flow = "accessCode"
+			case design.ImplicitFlowKind:
+				sd.Flow = "implicit"
+			case design.PasswordFlowKind:
+				sd.Flow = "password"
+			case design.ClientCredentialsFlowKind:
+				sd.Flow = "application"
+			}
+			sd.AuthorizationURL = s.Flows[0].AuthorizationURL
+			sd.TokenURL = s.Flows[0].TokenURL
+		}
+		sds[s.SchemeName] = &sd
+	}
+	return sds
 }
 
 // hasAbsoluteRoutes returns true if any endpoint exposed by the API uses an
@@ -522,9 +579,36 @@ func buildPathFromExpr(s *V2, root *httpdesign.RootExpr, route *httpdesign.Route
 			schemes = root.Design.API.Schemes()
 		}
 
+		description := endpoint.Description()
+
+		reqs := endpoint.MethodExpr.Requirements
+		requirements := make([]map[string][]string, len(reqs))
+		for i, req := range reqs {
+			requirement := make(map[string][]string)
+			for _, s := range req.Schemes {
+				requirement[s.SchemeName] = []string{}
+				switch s.Kind {
+				case design.OAuth2Kind:
+					for _, scope := range req.Scopes {
+						requirement[s.SchemeName] = append(requirement[s.SchemeName], scope)
+					}
+				case design.JWTKind:
+					lines := make([]string, 0, len(req.Scopes))
+					for _, scope := range req.Scopes {
+						lines = append(lines, fmt.Sprintf("  * `%s`", scope))
+					}
+					if description != "" {
+						description += "\n"
+					}
+					description += fmt.Sprintf("\nRequired security scopes:\n%s", strings.Join(lines, "\n"))
+				}
+			}
+			requirements[i] = requirement
+		}
+
 		operation := &Operation{
 			Tags:         tagNames,
-			Description:  endpoint.Description(),
+			Description:  description,
 			Summary:      summaryFromExpr(endpoint.Name()+" "+endpoint.Service.Name(), endpoint.Metadata),
 			ExternalDocs: docsFromExpr(endpoint.MethodExpr.Docs),
 			OperationID:  operationID,
@@ -533,6 +617,7 @@ func buildPathFromExpr(s *V2, root *httpdesign.RootExpr, route *httpdesign.Route
 			Schemes:      schemes,
 			Deprecated:   false,
 			Extensions:   ExtensionsFromExpr(route.Metadata),
+			Security:     requirements,
 		}
 
 		if key == "" {

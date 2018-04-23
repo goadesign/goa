@@ -52,7 +52,8 @@ gen:
 	go install && \
 	goa gen goa.design/goa/examples/cellar/design -o $(GOPATH)/src/goa.design/goa/examples/cellar && \
 	goa gen goa.design/goa/examples/calc/design -o $(GOPATH)/src/goa.design/goa/examples/calc && \
-	goa gen goa.design/goa/examples/error/design -o $(GOPATH)/src/goa.design/goa/examples/error
+	goa gen goa.design/goa/examples/error/design -o $(GOPATH)/src/goa.design/goa/examples/error && \
+	goa gen goa.design/goa/examples/security/design -o $(GOPATH)/src/goa.design/goa/examples/security
 
 test:
 	go test ./...

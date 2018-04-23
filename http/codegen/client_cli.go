@@ -139,29 +139,6 @@ func ClientCLIFiles(genpkg string, root *httpdesign.RootExpr) []*codegen.File {
 	return files
 }
 
-// AddFlags adds the CLI flags and a BuildFunction to the given subcommand.
-func AddFlags(e *httpdesign.EndpointExpr, args []*InitArgData) {
-	data, ok := cmds[goify(e.Service.Name(), e.Name())]
-	if !ok {
-		return
-	}
-	svcData := HTTPServices.Get(e.Service.Name())
-	if svcData == nil {
-		return
-	}
-	epData := svcData.Endpoint(e.Name())
-	if epData == nil {
-		return
-	}
-	if epData.Payload != nil && epData.Payload.Request.PayloadInit != nil {
-		args = append(args, epData.Payload.Request.PayloadInit.ClientArgs...)
-	}
-	flags, bFunc := makeFlags(epData, args)
-	data.Flags = flags
-	*data.BuildFunction = *bFunc
-	generateExample(data, e.Service.Name())
-}
-
 // endpointParser returns the file that implements the command line parser that
 // builds the client endpoint and payload necessary to perform a request.
 func endpointParser(genpkg string, root *httpdesign.RootExpr, data []*commandData) *codegen.File {
@@ -313,7 +290,9 @@ func buildSubcommandData(svc *ServiceData, e *EndpointData) *subcommandData {
 		}
 		if e.Payload != nil {
 			if e.Payload.Request.PayloadInit != nil {
-				flags, buildFunction = makeFlags(e, e.Payload.Request.PayloadInit.ClientArgs)
+				args := e.Payload.Request.PayloadInit.ClientArgs
+				args = append(args, e.Payload.Request.PayloadInit.CLIArgs...)
+				flags, buildFunction = makeFlags(e, args)
 			} else if e.Payload.Ref != "" {
 				ex := jsonExample(e.Method.PayloadEx)
 				fn := goify(svcn, en, "p")

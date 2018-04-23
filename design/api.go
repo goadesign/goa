@@ -21,19 +21,25 @@ type (
 		Description string
 		// Version is the version of the API described by this DSL.
 		Version string
-		// Servers list the API hosts
+		// Servers lists the API hosts.
 		Servers []*ServerExpr
-		// TermsOfService describes or links to the service terms of API
+		// TermsOfService describes or links to the service terms of API.
 		TermsOfService string
-		// Contact provides the API users with contact information
+		// Contact provides the API users with contact information.
 		Contact *ContactExpr
-		// License describes the API license
+		// License describes the API license.
 		License *LicenseExpr
-		// Docs points to the API external documentation
+		// Docs points to the API external documentation.
 		Docs *DocsExpr
-		// Metadata is a list of key/value pairs
+		// Metadata is a list of key/value pairs.
 		Metadata MetadataExpr
-		// Random generator used to build examples for the API types.
+		// Requirements contains the security requirements that apply to
+		// all the API service methods. One requirement is composed of
+		// potentially multiple schemes. Incoming requests must validate
+		// at least one requirement to be authorized.
+		Requirements []*SecurityExpr
+
+		// random generator used to build examples for the API types.
 		random *Random
 	}
 

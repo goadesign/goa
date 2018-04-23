@@ -45,6 +45,32 @@ const (
 )
 
 const (
+	// OAuth2Kind identifies a "OAuth2" security scheme.
+	OAuth2Kind = design.OAuth2Kind
+	// BasicAuthKind means "basic" security scheme.
+	BasicAuthKind = design.BasicAuthKind
+	// APIKeyKind means "apiKey" security scheme.
+	APIKeyKind = design.APIKeyKind
+	// JWTKind means an "apiKey" security scheme, with support for
+	// TokenPath and Scopes.
+	JWTKind = design.JWTKind
+	// NoKind means to have no security for this endpoint.
+	NoKind = design.NoKind
+)
+
+const (
+	// AuthorizationCodeFlowKind identifies a OAuth2 authorization code
+	// flow.
+	AuthorizationCodeFlowKind = design.AuthorizationCodeFlowKind
+	// ImplicitFlowKind identifiers a OAuth2 implicit flow.
+	ImplicitFlowKind = design.ImplicitFlowKind
+	// PasswordFlowKind identifies a Resource Owner Password flow.
+	PasswordFlowKind = design.PasswordFlowKind
+	// ClientCredentialsFlowKind identifies a OAuth Client Credentials flow.
+	ClientCredentialsFlowKind = design.ClientCredentialsFlowKind
+)
+
+const (
 	// BooleanKind represents a boolean.
 	BooleanKind = design.BooleanKind
 	// IntKind represents a signed integer.

@@ -8,7 +8,9 @@
 
 package client
 
-import goa "goa.design/goa"
+import (
+	goa "goa.design/goa"
+)
 
 // IntegerDivideHasRemainderResponseBody is the type of the "divider" service
 // "integer_divide" endpoint HTTP response body for the "has_remainder" error.

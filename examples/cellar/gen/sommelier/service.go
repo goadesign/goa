@@ -8,7 +8,9 @@
 
 package sommelier
 
-import "context"
+import (
+	"context"
+)
 
 // The sommelier service retrieves bottles given a set of criteria.
 type Service interface {

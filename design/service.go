@@ -23,6 +23,11 @@ type (
 		Methods []*MethodExpr
 		// Errors list the errors common to all the service methods.
 		Errors []*ErrorExpr
+		// Requirements contains the security requirements that apply to
+		// all the service methods. One requirement is composed of
+		// potentially multiple schemes. Incoming requests must validate
+		// at least one requirement to be authorized.
+		Requirements []*SecurityExpr
 		// Metadata is a set of key/value pairs with semantic that is
 		// specific to each generator.
 		Metadata MetadataExpr
@@ -99,6 +104,11 @@ func (s *ServiceExpr) Finalize() {
 	}
 	for _, e := range s.Errors {
 		e.Finalize()
+	}
+	for _, r := range s.Requirements {
+		for _, s := range r.Schemes {
+			s.Finalize()
+		}
 	}
 }
 
