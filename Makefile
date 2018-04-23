@@ -27,8 +27,8 @@ all: lint aliases gen test
 travis: depend all
 
 depend:
-	@go get -t -v ./...
 	@go get -v $(DEPEND)
+	@go get -t -v ./...
 
 lint:
 	@for d in $(DIRS) ; do \
