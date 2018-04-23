@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 
 	"goa.design/goa/codegen"
+	"goa.design/goa/codegen/service"
 	"goa.design/goa/design"
 	httpdesign "goa.design/goa/http/design"
 )
@@ -75,6 +76,7 @@ func clientEncodeDecode(genpkg string, svc *httpdesign.ServiceExpr) *codegen.Fil
 		codegen.Header(title, "client", []*codegen.ImportSpec{
 			{Path: "bytes"},
 			{Path: "context"},
+			{Path: "fmt"},
 			{Path: "io"},
 			{Path: "io/ioutil"},
 			{Path: "mime/multipart"},
@@ -101,6 +103,7 @@ func clientEncodeDecode(genpkg string, svc *httpdesign.ServiceExpr) *codegen.Fil
 				Source: requestEncoderT,
 				FuncMap: map[string]interface{}{
 					"typeConversionData": typeConversionData,
+					"isBearer":           isBearer,
 				},
 				Data: e,
 			})
@@ -139,6 +142,19 @@ func typeConversionData(dt design.DataType, varName string, target string) map[s
 		"VarName": varName,
 		"Target":  target,
 	}
+}
+
+// isBearer returns true if the security scheme uses a Bearer scheme.
+func isBearer(schemes []*service.SchemeData) bool {
+	for _, s := range schemes {
+		if s.Name != "Authorization" {
+			continue
+		}
+		if s.Type == "JWT" || s.Type == "OAuth2" {
+			return true
+		}
+	}
+	return false
 }
 
 // input: ServiceData
@@ -233,13 +249,21 @@ func {{ .RequestEncoder }}(encoder func(*http.Request) goahttp.Encoder) func(*ht
 			{{- if .Pointer }}
 		if p.{{ .FieldName }} != nil {
 			{{- end }}
-		req.Header.Set("{{ .Name }}", {{ if .Pointer }}*{{ end }}p.{{ .FieldName }})
+			{{- if (and (eq .Name "Authorization") (isBearer $.HeaderSchemes)) }}
+		if !strings.Contains({{ if .Pointer }}*{{ end }}p.{{ .FieldName }}, " ") {
+			req.Header.Set({{ printf "%q" .Name }}, "Bearer "+{{ if .Pointer }}*{{ end }}p.{{ .FieldName }})
+		} else {
+			{{- end }}
+			req.Header.Set({{ printf "%q" .Name }}, {{ if .Pointer }}*{{ end }}p.{{ .FieldName }})
+			{{- if (and (eq .Name "Authorization") (isBearer $.HeaderSchemes)) }}
+		}
+			{{- end }}
 			{{- if .Pointer }}
 		}
 			{{- end }}
 		{{- end }}
 	{{- end }}
-	{{- if .Payload.Request.QueryParams }}
+	{{- if or .Payload.Request.QueryParams }}
 		values := req.URL.Query()
 	{{- end }}
 	{{- range .Payload.Request.QueryParams }}
@@ -298,6 +322,21 @@ func {{ .RequestEncoder }}(encoder func(*http.Request) goahttp.Encoder) func(*ht
 			return goahttp.ErrEncodingError("{{ .ServiceName }}", "{{ .Method.Name }}", err)
 		}
 	{{- end }}
+	{{- if .BasicScheme }}{{ with .BasicScheme }}
+		{{- if not .UsernameRequired }}
+		if p.{{ .UsernameField }} != nil {
+		{{- end }}
+		{{- if not .PasswordRequired }}
+		if p.{{ .PasswordField }} != nil {
+		{{- end }}
+		req.SetBasicAuth({{ if .UsernamePointer }}*{{ end }}p.{{ .UsernameField }}, {{ if .PasswordPointer }}*{{ end }}p.{{ .PasswordField }})
+		{{- if not .UsernameRequired }}
+		}
+		{{- end }}
+		{{- if not .PasswordRequired }}
+		}
+		{{- end }}
+	{{- end }}{{ end }}
 		return nil
 	}
 }
@@ -387,6 +426,7 @@ func {{ .ResponseDecoder }}(decoder func(*http.Response) goahttp.Decoder, restor
 }
 `
 
+// input: ResponseData
 const singleResponseT = `case {{ .StatusCode }}:
 	{{- if .ClientBody }}
 			var (

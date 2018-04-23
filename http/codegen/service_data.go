@@ -93,6 +93,18 @@ type (
 		Errors []*ErrorData
 		// Routes describes the possible routes for this endpoint.
 		Routes []*RouteData
+		// BasicScheme is the basic auth security scheme if any.
+		BasicScheme *service.SchemeData
+		// HeaderSchemes lists all the security requirement schemes that
+		// apply to the method and are encoded in the request header.
+		HeaderSchemes []*service.SchemeData
+		// BodySchemes lists all the security requirement schemes that
+		// apply to the method and are encoded in the request body.
+		BodySchemes []*service.SchemeData
+		// QuerySchemes lists all the security requirement schemes that
+		// apply to the method and are encoded in the request query
+		// string.
+		QuerySchemes []*service.SchemeData
 
 		// server
 
@@ -253,6 +265,11 @@ type (
 		// ClientArgs is the list of constructor arguments for client
 		// side code.
 		ClientArgs []*InitArgData
+		// CLIArgs is the list of arguments that should be initialized
+		// from CLI flags. This is used for implicit attributes which
+		// as the time of writing is only used for the basic auth
+		// username and password.
+		CLIArgs []*InitArgData
 		// ReturnTypeName is the qualified (including the package name)
 		// name of the payload, result or error type.
 		ReturnTypeName string
@@ -574,6 +591,33 @@ func (d ServicesData) analyze(hs *httpdesign.ServiceExpr) *ServiceData {
 		}
 
 		payload := buildPayloadData(svc, hs, a, rd)
+
+		var (
+			hsch  []*service.SchemeData
+			bosch []*service.SchemeData
+			qsch  []*service.SchemeData
+			basch *service.SchemeData
+		)
+		{
+			for _, req := range ep.Requirements {
+				for _, s := range req.Schemes {
+					switch s.Type {
+					case "Basic":
+						basch = s
+					default:
+						switch s.In {
+						case "query":
+							qsch = appendUnique(qsch, s)
+						case "header":
+							hsch = appendUnique(hsch, s)
+						default:
+							bosch = appendUnique(bosch, s)
+						}
+					}
+				}
+			}
+		}
+
 		var requestEncoder string
 		{
 			if payload.Request.ClientBody != nil || len(payload.Request.Headers) > 0 || len(payload.Request.QueryParams) > 0 {
@@ -632,6 +676,10 @@ func (d ServicesData) analyze(hs *httpdesign.ServiceExpr) *ServiceData {
 			Payload:         payload,
 			Result:          buildResultData(svc, hs, a, rd),
 			Errors:          buildErrorsData(svc, hs, a, rd),
+			HeaderSchemes:   hsch,
+			BodySchemes:     bosch,
+			QuerySchemes:    qsch,
+			BasicScheme:     basch,
 			Routes:          routes,
 			MountHandler:    fmt.Sprintf("Mount%sHandler", ep.VarName),
 			HandlerInit:     fmt.Sprintf("New%sHandler", ep.VarName),
@@ -894,6 +942,49 @@ func buildPayloadData(svc *service.Data, s *httpdesign.ServiceExpr, e *httpdesig
 		clientArgs = append(clientArgs, args...)
 
 		var (
+			cliArgs []*InitArgData
+		)
+		for _, r := range ep.Requirements {
+			done := false
+			for _, sc := range r.Schemes {
+				if sc.Type == "Basic" {
+					uatt := e.MethodExpr.Payload.Find(sc.UsernameAttr)
+					uarg := &InitArgData{
+						Name:        sc.UsernameAttr,
+						FieldName:   sc.UsernameField,
+						Description: uatt.Description,
+						Ref:         sc.UsernameAttr,
+						Required:    sc.UsernameRequired,
+						TypeName:    svc.Scope.GoTypeName(uatt),
+						TypeRef:     svc.Scope.GoTypeRef(uatt),
+						Pointer:     sc.UsernamePointer,
+						Validate:    codegen.RecursiveValidationCode(uatt, true, false, false, sc.UsernameAttr),
+						Example:     uatt.Example(design.Root.API.Random()),
+					}
+					patt := e.MethodExpr.Payload.Find(sc.PasswordAttr)
+					parg := &InitArgData{
+						Name:        sc.PasswordAttr,
+						FieldName:   sc.PasswordField,
+						Description: patt.Description,
+						Ref:         sc.PasswordAttr,
+						Required:    sc.PasswordRequired,
+						TypeName:    svc.Scope.GoTypeName(patt),
+						TypeRef:     svc.Scope.GoTypeRef(patt),
+						Pointer:     sc.PasswordPointer,
+						Validate:    codegen.RecursiveValidationCode(uatt, true, false, false, sc.PasswordAttr),
+						Example:     patt.Example(design.Root.API.Random()),
+					}
+					cliArgs = []*InitArgData{uarg, parg}
+					done = true
+					break
+				}
+			}
+			if done {
+				break
+			}
+		}
+
+		var (
 			serverCode, clientCode string
 			err                    error
 			origin                 string
@@ -944,6 +1035,7 @@ func buildPayloadData(svc *service.Data, s *httpdesign.ServiceExpr, e *httpdesig
 			Description:         desc,
 			ServerArgs:          serverArgs,
 			ClientArgs:          clientArgs,
+			CLIArgs:             cliArgs,
 			ReturnTypeName:      svc.Scope.GoFullTypeName(payload, svc.PkgName),
 			ReturnTypeRef:       svc.Scope.GoFullTypeRef(payload, svc.PkgName),
 			ReturnIsStruct:      isObject,
@@ -1635,6 +1727,20 @@ func attributeTypeData(ut design.UserType, req, ptr, server bool, scope *codegen
 		ValidateRef: validateRef,
 		Example:     att.Example(design.Root.API.Random()),
 	}
+}
+
+func appendUnique(s []*service.SchemeData, d *service.SchemeData) []*service.SchemeData {
+	found := false
+	for _, se := range s {
+		if se.Name == d.Name {
+			found = true
+			break
+		}
+	}
+	if found {
+		return s
+	}
+	return append(s, d)
 }
 
 // needConversion returns true if the type needs to be converted from a string.

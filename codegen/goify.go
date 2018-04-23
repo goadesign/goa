@@ -13,6 +13,13 @@ import (
 // firstUpper is true the first character of the identifier is uppercase
 // otherwise it's lowercase.
 func Goify(str string, firstUpper bool) string {
+	// Remove optional suffix that defines corresponding transport specific
+	// name.
+	idx := strings.Index(str, ":")
+	if idx > 0 {
+		str = str[:idx]
+	}
+
 	runes := []rune(str)
 
 	// remove trailing invalid identifiers (makes code below simpler)

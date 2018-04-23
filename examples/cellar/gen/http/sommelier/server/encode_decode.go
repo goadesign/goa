@@ -45,8 +45,9 @@ func DecodePickRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.De
 			}
 			return nil, goa.DecodePayloadError(err.Error())
 		}
+		payload := NewPickCriteria(&body)
 
-		return NewPickCriteria(&body), nil
+		return payload, nil
 	}
 }
 

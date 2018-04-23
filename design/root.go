@@ -26,6 +26,8 @@ type (
 		Conversions []*TypeMap
 		// Creations list the external type to user type mappings.
 		Creations []*TypeMap
+		// Schemes list the registered security schemes.
+		Schemes []*SchemeExpr
 	}
 
 	// MetadataExpr is a set of key/value pairs

@@ -389,7 +389,7 @@ func {{ .RequestDecoder }}(mux goahttp.Muxer, decoder func(*http.Request) goahtt
 			return nil, err
 		}
 		{{- end }}
-{{ end }}
+{{- end }}
 {{- if not .MultipartRequestDecoder }}
 	{{- template "request_params_headers" .Payload.Request }}
 	{{- if .Payload.Request.MustValidate }}
@@ -397,19 +397,39 @@ func {{ .RequestDecoder }}(mux goahttp.Muxer, decoder func(*http.Request) goahtt
 			return nil, err
 		}
 	{{- end }}
+	{{- if .Payload.Request.PayloadInit }}
+	payload := {{ .Payload.Request.PayloadInit.Name }}({{ range .Payload.Request.PayloadInit.ServerArgs }}{{ .Ref }}, {{ end }})
+	{{- else if .Payload.DecoderReturnValue }}
+	payload := {{ .Payload.DecoderReturnValue }}
+	{{- else }}
+	payload := body
+	{{- end }}
 {{- end }}
-{{- if .MultipartRequestDecoder }}
-		return payload, nil
-{{- else if .Payload.Request.PayloadInit }}
-
-		return {{ .Payload.Request.PayloadInit.Name }}({{ range .Payload.Request.PayloadInit.ServerArgs }}{{ .Ref }},{{ end }}), nil
-{{- else if .Payload.DecoderReturnValue }}
-
-		return {{ .Payload.DecoderReturnValue }}, nil
-{{- else }}
-
-		return body, nil
+{{- if .BasicScheme }}{{ with .BasicScheme }}
+	user, pass, {{ if or .UsernameRequired .PasswordRequired }}ok{{ else }}_{{ end }} := r.BasicAuth()
+		{{- if or .UsernameRequired .PasswordRequired}}
+	if !ok {
+		return nil, goa.MissingFieldError("Authorization", "header")
+	}
+		{{- end }}
+	payload.{{ .UsernameField }} = {{ if .UsernamePointer }}&{{ end }}user
+	payload.{{ .PasswordField }} = {{ if .PasswordPointer }}&{{ end }}pass
+{{- end }}{{ end }}
+{{- range .HeaderSchemes }}
+	{{- if not .CredRequired }}
+	if payload.{{ .CredField }} != nil {
+	{{- end }}
+	if strings.Contains({{ if .CredPointer }}*{{ end }}payload.{{ .CredField }}, " ") {
+		// Remove authorization scheme prefix (e.g. "Bearer")
+		cred := strings.SplitN({{ if .CredPointer }}*{{ end }}payload.{{ .CredField }}, " ", 2)[1]
+		payload.{{ .CredField }} = {{ if .CredPointer }}&{{ end }}cred
+	}
+	{{- if not .CredRequired }}
+	}
+	{{- end }}
 {{- end }}
+
+	return payload, nil
 	}
 }
 ` + requestParamsHeadersT
@@ -417,6 +437,8 @@ func {{ .RequestDecoder }}(mux goahttp.Muxer, decoder func(*http.Request) goahtt
 // input: RequestData
 const requestParamsHeadersT = `{{- define "request_params_headers" }}
 {{- if or .PathParams .QueryParams .Headers }}
+{{- if .ServerBody }}{{/* we want a newline only if there was code before */}}
+{{ end }}
 		var (
 		{{- range .PathParams }}
 			{{ .VarName }} {{ .TypeRef }}
@@ -591,7 +613,7 @@ const requestParamsHeadersT = `{{- define "request_params_headers" }}
 
 	{{- else if .StringSlice }}
 		{{ .VarName }} = r.Header["{{ .CanonicalName }}"]
-		{{ if .Required }}
+		{{- if .Required }}
 		if {{ .VarName }} == nil {
 			err = goa.MergeErrors(err, goa.MissingFieldError("{{ .Name }}", "header"))
 		}
@@ -632,9 +654,9 @@ const requestParamsHeadersT = `{{- define "request_params_headers" }}
 		{{- end }}
 	}
 	{{- end }}
-		{{- if .Validate }}
+	{{- if .Validate }}
 		{{ .Validate }}
-		{{- end }}
+	{{- end }}
 {{- end }}
 {{- end }}
 {{- end }}

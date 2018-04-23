@@ -33,6 +33,8 @@ func Description(d string) {
 		expr.Description = d
 	case *design.ExampleExpr:
 		expr.Description = d
+	case *design.SchemeExpr:
+		expr.Description = d
 	default:
 		eval.IncompatibleDSL()
 	}

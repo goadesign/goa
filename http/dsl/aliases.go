@@ -43,6 +43,94 @@ func API(name string, fn func()) *design.APIExpr {
 	return dsl.API(name, fn)
 }
 
+// APIKey defines the attribute used to provide the API key to an endpoint
+// secured with API keys. The parameters and usage of APIKey are the same as the
+// goa DSL Attribute function except that it accepts an extra first argument
+// corresponding to the name of the API key security scheme.
+//
+// The generated code produced by goa uses the value of the corresponding
+// payload field to set the API key value.
+//
+// APIKey must appear in Payload or Type.
+//
+// Example:
+//
+//    Method("secured_read", func() {
+//        Security(APIKeyAuth)
+//        Payload(func() {
+//            APIKey("api_key", "key", String, "API key used to perform authorization")
+//            Required("key")
+//        })
+//        Result(String)
+//        HTTP(func() {
+//            GET("/")
+//            Param("key:k") // Provide the key as a query string param "k"
+//        })
+//    })
+//
+//    Method("secured_write", func() {
+//        Security(APIKeyAuth)
+//        Payload(func() {
+//            APIKey("api_key", "key", String, "API key used to perform authorization")
+//            Attribute("data", String, "Data to be written")
+//            Required("key", "data")
+//        })
+//        HTTP(func() {
+//            POST("/")
+//            Header("key:Authorization") // Provide the key in Authorization header (default)
+//        })
+//    })
+//
+func APIKey(scheme, name string, args ...interface{}) {
+	dsl.APIKey(scheme, name, args...)
+}
+
+// APIKeySecurity defines an API key security scheme where a key must be
+// provided by the client to perform authorization.
+//
+// APIKeySecurity is a top level DSL.
+//
+// APIKeySecurity takes a name as first argument and an optional DSL as
+// second argument.
+//
+// Example:
+//
+//    var APIKey = APIKeySecurity("key", func() {
+//          Description("Shared secret")
+//    })
+//
+func APIKeySecurity(name string, fn ...func()) *design.SchemeExpr {
+	return dsl.APIKeySecurity(name, fn...)
+}
+
+// AccessToken defines the attribute used to provide the access token to an
+// endpoint secured with OAuth2. The parameters and usage of AccessToken are the
+// same as the goa DSL Attribute function.
+//
+// The generated code produced by goa uses the value of the corresponding
+// payload field to initialize the Authorization header.
+//
+// AccessToken must appear in Payload or Type.
+//
+// Example:
+//
+//    Method("secured", func() {
+//        Security(OAuth2)
+//        Payload(func() {
+//            AccessToken("token", String, "OAuth2 access token used to perform authorization")
+//            Required("token")
+//        })
+//        Result(String)
+//        HTTP(func() {
+//            // The "Authorization" header is defined implicitly.
+//            GET("/")
+//        })
+//    })
+//
+func AccessToken(name string, args ...interface{}) {
+	dsl.AccessToken(name, args...)
+}
+
 // ArrayOf creates an array type from its element type.
 //
 // ArrayOf may be used wherever types can.
@@ -182,6 +270,44 @@ func Attribute(name string, args ...interface{}) {
 // Attributes implements the result type Attributes DSL. See ResultType.
 func Attributes(fn func()) {
 	dsl.Attributes(fn)
+}
+
+// AuthorizationCodeFlow defines an authorizationCode OAuth2 flow as described
+// in section 1.3.1 of RFC 6749.
+//
+// AuthorizationCodeFlow must be used in OAuth2Security.
+//
+// AuthorizationCodeFlow accepts three arguments: the authorization, token and
+// refresh URLs.
+func AuthorizationCodeFlow(authorizationURL, tokenURL, refreshURL string) {
+	dsl.AuthorizationCodeFlow(authorizationURL, tokenURL, refreshURL)
+}
+
+// BasicAuthSecurity defines a basic authentication security scheme.
+//
+// BasicAuthSecurity is a top level DSL.
+//
+// BasicAuthSecurity takes a name as first argument and an optional DSL as
+// second argument.
+//
+// Example:
+//
+//     var Basic = BasicAuthSecurity("basicauth", func() {
+//         Description("Use your own password!")
+//     })
+//
+func BasicAuthSecurity(name string, fn ...func()) *design.SchemeExpr {
+	return dsl.BasicAuthSecurity(name, fn...)
+}
+
+// ClientCredentialsFlow defines an clientCredentials OAuth2 flow as described
+// in section 1.3.4 of RFC 6749.
+//
+// ClientCredentialsFlow must be used in OAuth2Security.
+//
+// ClientCredentialsFlow accepts two arguments: the token and refresh URLs.
+func ClientCredentialsFlow(tokenURL, refreshURL string) {
+	dsl.ClientCredentialsFlow(tokenURL, refreshURL)
 }
 
 // CollectionOf creates a collection result type from its element result type. A
@@ -503,6 +629,42 @@ func Format(f design.ValidationFormat) {
 	dsl.Format(f)
 }
 
+// ImplicitFlow defines an implicit OAuth2 flow as described in section 1.3.2
+// of RFC 6749.
+//
+// ImplicitFlow must be used in OAuth2Security.
+//
+// ImplicitFlow accepts two arguments: the authorization and refresh URLs.
+func ImplicitFlow(authorizationURL, refreshURL string) {
+	dsl.ImplicitFlow(authorizationURL, refreshURL)
+}
+
+// JWTSecurity defines an HTTP security scheme where a JWT is passed in the
+// request Authorization header as a bearer token to perform auth. This scheme
+// supports defining scopes that endpoint may require to authorize the request.
+// The scheme also supports specifying a token URL used to retrieve token
+// values.
+//
+// Since scopes are not compatible with the Swagger specification, the swagger
+// generator inserts comments in the description of the different elements on
+// which they are defined.
+//
+// JWTSecurity is a top level DSL.
+//
+// JWTSecurity takes a name as first argument and an optional DSL as second
+// argument.
+//
+// Example:
+//
+//    var JWT = JWTSecurity("jwt", func() {
+//        Scope("system:write", "Write to the system")
+//        Scope("system:read", "Read anything in there")
+//    })
+//
+func JWTSecurity(name string, fn ...func()) *design.SchemeExpr {
+	return dsl.JWTSecurity(name, fn...)
+}
+
 // Key makes it possible to specify validations for map keys.
 func Key(fn func()) {
 	dsl.Key(fn)
@@ -587,6 +749,73 @@ func Minimum(val interface{}) {
 // Name sets the contact or license name.
 func Name(name string) {
 	dsl.Name(name)
+}
+
+// NoSecurity removes the need for an endpoint to perform authorization.
+//
+// NoSecurity must appear in Method.
+func NoSecurity() {
+	dsl.NoSecurity()
+}
+
+// OAuth2Security defines an OAuth2 security scheme. The DSL provided as second
+// argument defines the specific flows supported by the scheme. The supported
+// flow types are ImplicitFlow, PasswordFlow, ClientCredentialsFlow, and
+// AuthorizationCodeFlow. The DSL also defines the scopes that may be
+// associated with the incoming request tokens.
+//
+// OAuth2Security is a top level DSL.
+//
+// OAuth2Security takes a name as first argument and a DSL as second argument.
+//
+// Example:
+//
+//    var OAuth2 = OAuth2Security("googauth", func() {
+//        ImplicitFlow("/authorization")
+//
+//        Scope("api:write", "Write acess")
+//        Scope("api:read", "Read access")
+//    })
+//
+func OAuth2Security(name string, fn ...func()) *design.SchemeExpr {
+	return dsl.OAuth2Security(name, fn...)
+}
+
+// Password defines the attribute used to provide the password to an endpoint
+// secured with basic authentication. The parameters and usage of Password are
+// the same as the goa DSL Attribute function.
+//
+// The generated code produced by goa uses the value of the corresponding
+// payload field to compute the basic authentication Authorization header value.
+//
+// Password must appear in Payload or Type.
+//
+// Example:
+//
+//    Method("login", func() {
+//        Security(Basic)
+//        Payload(func() {
+//            Username("user", String)
+//            Password("pass", String)
+//        })
+//        HTTP(func() {
+//            // The "Authorization" header is defined implicitly.
+//            POST("/login")
+//        })
+//    })
+//
+func Password(name string, args ...interface{}) {
+	dsl.Password(name, args...)
+}
+
+// PasswordFlow defines an Resource Owner Password Credentials OAuth2 flow as
+// described in section 1.3.3 of RFC 6749.
+//
+// PasswordFlow must be used in OAuth2Security.
+//
+// PasswordFlow accepts two arguments: the token and refresh URLs.
+func PasswordFlow(tokenURL, refreshURL string) {
+	dsl.PasswordFlow(tokenURL, refreshURL)
 }
 
 // Pattern adds a "pattern" validation to the attribute.
@@ -832,6 +1061,93 @@ func ResultType(identifier string, fn func()) *design.ResultTypeExpr {
 	return dsl.ResultType(identifier, fn)
 }
 
+// Scope has two uses: in JWTSecurity or OAuth2Security it defines a scope
+// supported by the scheme. In Security it lists required scopes.
+//
+// Scope must appear in Security, JWTSecurity or OAuth2Security.
+//
+// Scope accepts one or two arguments: the first argument is the scope name and
+// when used in JWTSecurity or OAuth2Security the second argument is a
+// description.
+//
+// Example:
+//
+//    var JWT = JWTSecurity("JWT", func() {
+//        Scope("api:read", "Read access") // Defines a scope
+//        Scope("api:write", "Write access")
+//    })
+//
+//    Method("secured", func() {
+//        Security(JWT, func() {
+//            Scope("api:read") // Required scope for auth
+//        })
+//    })
+//
+func Scope(name string, desc ...string) {
+	dsl.Scope(name, desc...)
+}
+
+// Security defines authentication requirements to access an API, a service or a
+// service method.
+//
+// The requirement refers to one or more OAuth2Security, BasicAuthSecurity,
+// APIKeySecurity or JWTSecurity security scheme. If the schemes include a
+// OAuth2Security or JWTSecurity scheme then required scopes may be listed by
+// name in the Security DSL. All the listed schemes must be validated by the
+// client for the request to be authorized. Security may appear multiple times
+// in the same scope in which case the client may validate any one of the
+// requirements for the request to be authorized.
+//
+// Security must appear in a API, Service or Method expression.
+//
+// Security accepts an arbitrary number of security schemes as argument
+// specified by name or by reference and an optional DSL function as last
+// argument.
+//
+// Examples:
+//
+//    var _ = API("calc", func() {
+//        // All API endpoints are secured via basic auth by default.
+//        Security(BasicAuth)
+//    })
+//
+//    var _ = Service("calculator", func() {
+//        // Override default API security requirements. Accept either basic
+//        // auth or OAuth2 access token with "api:read" scope.
+//        Security(BasicAuth)
+//        Security("oauth2", func() {
+//            Scope("api:read")
+//        })
+//
+//        Method("add", func() {
+//            Description("Add two operands")
+//
+//            // Override default service security requirements. Require
+//            // both basic auth and OAuth2 access token with "api:write"
+//            // scope.
+//            Security(BasicAuth, "oauth2", func() {
+//                Scope("api:write")
+//            })
+//
+//            Payload(Operands)
+//            Error(ErrBadRequest, ErrorResult)
+//        })
+//
+//        Method("health-check", func() {
+//            Description("Check health")
+//
+//            // Remove need for authorization for this endpoint.
+//            NoSecurity()
+//
+//            Payload(Operands)
+//            Error(ErrBadRequest, ErrorResult)
+//        })
+//    })
+//
+func Security(args ...interface{}) {
+	dsl.Security(args...)
+}
+
 // Server defines an API host.
 func Server(url string, fn ...func()) {
 	dsl.Server(url, fn...)
@@ -919,6 +1235,32 @@ func Title(val string) {
 	dsl.Title(val)
 }
 
+// Token defines the attribute used to provide the JWT to an endpoint secured
+// via JWT. The parameters and usage of Token are the same as the goa DSL
+// Attribute function.
+//
+// The generated code produced by goa uses the value of the corresponding
+// payload field to initialize the Authorization header.
+//
+// Example:
+//
+//    Method("secured", func() {
+//        Security(JWT)
+//        Payload(func() {
+//            Token("token", String, "JWT token used to perform authorization")
+//            Required("token")
+//        })
+//        Result(String)
+//        HTTP(func() {
+//            // The "Authorization" header is defined implicitly.
+//            GET("/")
+//        })
+//    })
+//
+func Token(name string, args ...interface{}) {
+	dsl.Token(name, args...)
+}
+
 // Type defines a user type. A user type has a unique name and may be an alias
 // to an existing type or may describe a completely new type using a list of
 // attributes (object fields). Attribute types may themselves be user type.
@@ -990,6 +1332,33 @@ func TypeName(name string) {
 //
 func URL(url string) {
 	dsl.URL(url)
+}
+
+// Username defines the attribute used to provide the username to an endpoint
+// secured with basic authentication. The parameters and usage of Username are
+// the same as the goa DSL Attribute function.
+//
+// The generated code produced by goa uses the value of the corresponding
+// payload field to compute the basic authentication Authorization header value.
+//
+// Username must appear in Payload or Type.
+//
+// Example:
+//
+//    Method("login", func() {
+//        Security(Basic)
+//        Payload(func() {
+//            Username("user", String)
+//            Password("pass", String)
+//        })
+//        HTTP(func() {
+//            // The "Authorization" header is defined implicitly.
+//            POST("/login")
+//        })
+//    })
+//
+func Username(name string, args ...interface{}) {
+	dsl.Username(name, args...)
 }
 
 // Version specifies the API version. One design describes one version.

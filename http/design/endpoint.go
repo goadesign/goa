@@ -514,27 +514,25 @@ func (e *EndpointExpr) Finalize() {
 		}
 	}
 
-	// Initialize the headers with the corresponding payload attributes.
-	if e.headers != nil {
-		for _, nat := range *design.AsObject(e.headers.Type) {
-			n := nat.Name
-			att := nat.Attribute
-			n = strings.Split(n, ":")[0]
-			var patt *design.AttributeExpr
-			var required bool
-			if payload != nil {
-				patt = payload.Attribute(n)
-				required = e.MethodExpr.Payload.IsRequired(n)
-			} else {
-				patt = e.MethodExpr.Payload
-				required = true
+	// Initialize Authorization header implicitly defined via security DSL
+	// prior to computing body so auth attribute is not assigned to body.
+	for _, req := range e.MethodExpr.Requirements {
+		for _, sch := range req.Schemes {
+			var field string
+			switch sch.Kind {
+			case BasicAuthKind:
+				continue
+			case APIKeyKind:
+				field = design.TaggedAttribute(e.MethodExpr.Payload, "security:apikey:"+sch.SchemeName)
+			case JWTKind:
+				field = design.TaggedAttribute(e.MethodExpr.Payload, "security:token")
+			case OAuth2Kind:
+				field = design.TaggedAttribute(e.MethodExpr.Payload, "security:accesstoken")
 			}
-			initAttrFromDesign(att, patt)
-			if required {
-				if e.headers.Validation == nil {
-					e.headers.Validation = &design.ValidationExpr{}
-				}
-				e.headers.Validation.Required = append(e.headers.Validation.Required, n)
+			sch.Name, sch.In = findKey(e, field)
+			if sch.Name == "" {
+				sch.Name = "Authorization"
+				addHeaderAttr(e, field, sch.Name)
 			}
 		}
 	}
@@ -568,6 +566,31 @@ func (e *EndpointExpr) Finalize() {
 	} else {
 		// No explicit body, compute it
 		e.Body = RequestBody(e)
+	}
+
+	// Initialize the headers with the corresponding payload attributes.
+	if e.headers != nil {
+		for _, nat := range *design.AsObject(e.headers.Type) {
+			n := nat.Name
+			att := nat.Attribute
+			n = strings.Split(n, ":")[0]
+			var patt *design.AttributeExpr
+			var required bool
+			if payload != nil {
+				patt = payload.Attribute(n)
+				required = e.MethodExpr.Payload.IsRequired(n)
+			} else {
+				patt = e.MethodExpr.Payload
+				required = true
+			}
+			initAttrFromDesign(att, patt)
+			if required {
+				if e.headers.Validation == nil {
+					e.headers.Validation = &design.ValidationExpr{}
+				}
+				e.headers.Validation.Required = append(e.headers.Validation.Required, n)
+			}
+		}
 	}
 
 	// Make sure there's a default response if none define explicitly
@@ -762,4 +785,56 @@ func initAttrFromDesign(att, patt *design.AttributeExpr) {
 	if att.DefaultValue == nil {
 		att.DefaultValue = patt.DefaultValue
 	}
+}
+
+// findKey finds the given key in the endpoint expression and returns the
+// transport element name and the position (header, query, or body).
+func findKey(e *EndpointExpr, keyAtt string) (string, string) {
+	if n, exists := e.AllParams().FindKey(keyAtt); exists {
+		return n, "query"
+	} else if n, exists := e.MappedHeaders().FindKey(keyAtt); exists {
+		return n, "header"
+	} else if e.Body == nil {
+		return "", "header"
+	}
+	if _, ok := e.Body.Metadata["http:body"]; ok {
+		if e.Body.Find(keyAtt) != nil {
+			return keyAtt, "body"
+		}
+		if m, ok := e.Body.Metadata["origin:attribute"]; ok && m[0] == keyAtt {
+			return keyAtt, "body"
+		}
+	}
+	return "", "header"
+}
+
+func addHeaderAttr(ep *EndpointExpr, name, suffix string) {
+	h := ep.Headers()
+	obj := design.AsObject(h.Type)
+	if obj == nil {
+		return
+	}
+	attName := name
+	if suffix != "" {
+		attName = attName + ":" + suffix
+	}
+	attr := ep.MethodExpr.Payload.Find(name)
+	obj.Set(attName, attr)
+	if ep.MethodExpr.Payload.IsRequired(name) {
+		if h.Validation == nil {
+			h.Validation = &design.ValidationExpr{}
+		}
+		h.Validation.AddRequired(name)
+	}
+}
+
+func isEmpty(a *design.AttributeExpr) bool {
+	if a.Type == design.Empty {
+		return true
+	}
+	obj := design.AsObject(a.Type)
+	if obj != nil {
+		return len(*obj) == 0
+	}
+	return false
 }

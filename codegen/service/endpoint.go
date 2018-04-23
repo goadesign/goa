@@ -27,6 +27,9 @@ type (
 		Methods []*EndpointMethodData
 		// ClientInitArgs lists the arguments needed to instantiate the client.
 		ClientInitArgs string
+		// Schemes contains the security schemes types used by the
+		// method.
+		Schemes []string
 	}
 
 	// EndpointMethodData describes a single endpoint method.
@@ -50,6 +53,14 @@ type (
 		ResultRef string
 		// Errors list the possible errors defined in the design if any.
 		Errors []*ErrorInitData
+		// Requirements list the security requirements that apply to the
+		// endpoint. One requirement contains a list of schemes, the
+		// incoming requests must validate at least one scheme in each
+		// requirement to be authorized.
+		Requirements []*RequirementData
+		// Schemes contains the security schemes types used by the
+		// method.
+		Schemes []string
 	}
 )
 
@@ -75,6 +86,7 @@ func EndpointFile(service *design.ServiceExpr) *codegen.File {
 			[]*codegen.ImportSpec{
 				&codegen.ImportSpec{Path: "context"},
 				&codegen.ImportSpec{Name: "goa", Path: "goa.design/goa"},
+				&codegen.ImportSpec{Path: "goa.design/goa/security"},
 			})
 		def := &codegen.SectionTemplate{
 			Name:   "endpoints-struct",
@@ -107,6 +119,8 @@ func EndpointFile(service *design.ServiceExpr) *codegen.File {
 func endpointData(service *design.ServiceExpr) *EndpointsData {
 	svc := Services.Get(service.Name)
 	methods := make([]*EndpointMethodData, len(svc.Methods))
+	var schemes []string
+	names := make([]string, len(svc.Methods))
 	for i, m := range svc.Methods {
 		methods[i] = &EndpointMethodData{
 			Name:           m.Name,
@@ -118,13 +132,24 @@ func endpointData(service *design.ServiceExpr) *EndpointsData {
 			PayloadRef:     m.PayloadRef,
 			ResultRef:      m.ResultRef,
 			Errors:         m.Errors,
+			Requirements:   m.Requirements,
+			Schemes:        m.Schemes,
+		}
+		names[i] = codegen.Goify(m.VarName, false)
+		for _, s := range m.Schemes {
+			found := false
+			for _, s2 := range schemes {
+				if s == s2 {
+					found = true
+					break
+				}
+			}
+			if !found {
+				schemes = append(schemes, s)
+			}
 		}
 	}
 	desc := fmt.Sprintf("%s wraps the %q service endpoints.", EndpointsStructName, service.Name)
-	names := make([]string, len(svc.Methods))
-	for i, m := range svc.Methods {
-		names[i] = codegen.Goify(m.VarName, false)
-	}
 	return &EndpointsData{
 		Name:           service.Name,
 		Description:    desc,
@@ -133,6 +158,7 @@ func endpointData(service *design.ServiceExpr) *EndpointsData {
 		ServiceVarName: ServiceInterfaceName,
 		ClientInitArgs: strings.Join(names, ", "),
 		Methods:        methods,
+		Schemes:        schemes,
 	}
 }
 
@@ -147,10 +173,10 @@ type {{ .VarName }} struct {
 
 // input: EndpointsData
 const serviceEndpointsInitT = `{{ printf "New%s wraps the methods of the %q service with endpoints." .VarName .Name | comment }}
-func New{{ .VarName }}(s {{ .ServiceVarName }}) *{{ .VarName }} {
+func New{{ .VarName }}(s {{ .ServiceVarName }}{{ range .Schemes }}, auth{{ . }}Fn security.Auth{{ . }}Func{{ end }}) *{{ .VarName }} {
 	return &{{ .VarName }}{
 {{- range .Methods }}
-		{{ .VarName }}: New{{ .VarName }}Endpoint(s),
+		{{ .VarName }}: New{{ .VarName }}Endpoint(s{{ range .Schemes }}, auth{{ . }}Fn{{ end }}),
 {{- end }}
 	}
 }
@@ -158,10 +184,79 @@ func New{{ .VarName }}(s {{ .ServiceVarName }}) *{{ .VarName }} {
 
 // input: EndpointMethodData
 const serviceEndpointMethodT = `{{ printf "New%sEndpoint returns an endpoint function that calls the method %q of service %q." .VarName .Name .ServiceName | comment }}
-func New{{ .VarName }}Endpoint(s {{ .ServiceVarName}}) goa.Endpoint {
+func New{{ .VarName }}Endpoint(s {{ .ServiceVarName}}{{ range .Schemes }}, auth{{ . }}Fn security.Auth{{ . }}Func{{ end }}) goa.Endpoint {
 	return func(ctx context.Context, req interface{}) (interface{}, error) {
 {{- if .PayloadRef }}
 		p := req.({{ .PayloadRef }})
+{{- end }}
+{{- if .Requirements }}
+		var err error
+	{{- range $ridx, $r := .Requirements }}
+		{{- if ne $ridx 0 }}
+		if err != nil {
+		{{- end }}
+		{{- range $sidx, $s := .Schemes }}
+			{{- if ne $sidx 0 }}
+			if err == nil {
+			{{- end }}
+			{{- if eq .Type "Basic" }}
+				sc := security.BasicScheme{
+					Name: {{ printf "%q" .SchemeName }},
+				}
+				ctx, err = auth{{ .Type }}Fn(ctx, {{ if .UsernamePointer }}*{{ end }}p.{{ .UsernameField }}, {{ if .PasswordPointer }}*{{ end }}p.{{ .PasswordField }}, &sc)
+
+			{{- else if eq .Type "APIKey" }}
+				sc := security.APIKeyScheme{
+					Name: {{ printf "%q" .SchemeName }},
+				}
+				ctx, err = auth{{ .Type }}Fn(ctx, {{ if $s.CredPointer }}*{{ end }}p.{{ $s.CredField }}, &sc)
+
+			{{- else if eq .Type "JWT" }}
+				sc := security.JWTScheme{
+					Name: {{ printf "%q" .SchemeName }},
+					Scopes: []string{ {{- range .Scopes }}{{ printf "%q" . }}, {{ end }} },
+					RequiredScopes: []string{ {{- range $r.Scopes }}{{ printf "%q" . }}, {{ end }} },
+				}
+				ctx, err = auth{{ .Type }}Fn(ctx, {{ if $s.CredPointer }}*{{ end }}p.{{ $s.CredField }}, &sc)
+
+			{{- else if eq .Type "OAuth2" }}
+				sc := security.OAuth2Scheme{
+					Name: {{ printf "%q" .SchemeName }},
+					Scopes: []string{ {{- range .Scopes }}{{ printf "%q" . }}, {{ end }} },
+					RequiredScopes: []string{ {{- range $r.Scopes }}{{ printf "%q" . }}, {{ end }} },
+					{{- if .Flows }}
+					Flows: []*security.OAuthFlow{
+						{{- range .Flows }}
+						&security.OAuthFlow{
+							Type: "{{ .Type }}",
+							{{- if .AuthorizationURL }}
+							AuthorizationURL: {{ printf "%q" .AuthorizationURL }},
+							{{- end }}
+							{{- if .TokenURL }}
+							TokenURL: {{ printf "%q" .TokenURL }},
+							{{- end }}
+							{{- if .RefreshURL }}
+							RefreshURL: {{ printf "%q" .RefreshURL }},
+							{{- end }}
+						},
+						{{- end }}
+					},
+					{{- end }}
+				}
+				ctx, err = auth{{ .Type }}Fn(ctx, {{ if $s.CredPointer }}*{{ end }}p.{{ $s.CredField }}, &sc)
+
+			{{- end }}
+			{{- if ne $sidx 0 }}
+				}
+			{{- end }}
+		{{- end }}
+		{{- if ne $ridx 0 }}
+		}
+		{{- end }}
+	{{- end }}
+		if err != nil {
+			return nil, err
+		}
 {{- end }}
 {{- if .ResultRef }}
 		return s.{{ .VarName }}(ctx{{ if .PayloadRef }}, p{{ end }})

@@ -16,36 +16,36 @@ type (
 	Schema struct {
 		Schema string `json:"$schema,omitempty"`
 		// Core schema
-		ID           string             `json:"id,omitempty"`
-		Title        string             `json:"title,omitempty"`
-		Type         Type               `json:"type,omitempty"`
-		Items        *Schema            `json:"items,omitempty"`
-		Properties   map[string]*Schema `json:"properties,omitempty"`
-		Definitions  map[string]*Schema `json:"definitions,omitempty"`
-		Description  string             `json:"description,omitempty"`
-		DefaultValue interface{}        `json:"default,omitempty"`
-		Example      interface{}        `json:"example,omitempty"`
+		ID           string             `json:"id,omitempty" yaml:"id,omitempty"`
+		Title        string             `json:"title,omitempty" yaml:"title,omitempty"`
+		Type         Type               `json:"type,omitempty" yaml:"type,omitempty"`
+		Items        *Schema            `json:"items,omitempty" yaml:"items,omitempty"`
+		Properties   map[string]*Schema `json:"properties,omitempty" yaml:"properties,omitempty"`
+		Definitions  map[string]*Schema `json:"definitions,omitempty" yaml:"definitions,omitempty"`
+		Description  string             `json:"description,omitempty" yaml:"description,omitempty"`
+		DefaultValue interface{}        `json:"default,omitempty" yaml:"default,omitempty"`
+		Example      interface{}        `json:"example,omitempty" yaml:"example,omitempty"`
 
 		// Hyper schema
-		Media     *Media  `json:"media,omitempty"`
-		ReadOnly  bool    `json:"readOnly,omitempty"`
-		PathStart string  `json:"pathStart,omitempty"`
-		Links     []*Link `json:"links,omitempty"`
-		Ref       string  `json:"$ref,omitempty"`
+		Media     *Media  `json:"media,omitempty" yaml:"media,omitempty"`
+		ReadOnly  bool    `json:"readOnly,omitempty" yaml:"readOnly,omitempty"`
+		PathStart string  `json:"pathStart,omitempty" yaml:"pathStart,omitempty"`
+		Links     []*Link `json:"links,omitempty" yaml:"links,omitempty"`
+		Ref       string  `json:"$ref,omitempty" yaml:"$ref,omitempty"`
 
 		// Validation
-		Enum                 []interface{} `json:"enum,omitempty"`
-		Format               string        `json:"format,omitempty"`
-		Pattern              string        `json:"pattern,omitempty"`
-		Minimum              *float64      `json:"minimum,omitempty"`
-		Maximum              *float64      `json:"maximum,omitempty"`
-		MinLength            *int          `json:"minLength,omitempty"`
-		MaxLength            *int          `json:"maxLength,omitempty"`
-		Required             []string      `json:"required,omitempty"`
-		AdditionalProperties bool          `json:"additionalProperties,omitempty"`
+		Enum                 []interface{} `json:"enum,omitempty" yaml:"enum,omitempty"`
+		Format               string        `json:"format,omitempty" yaml:"format,omitempty"`
+		Pattern              string        `json:"pattern,omitempty" yaml:"pattern,omitempty"`
+		Minimum              *float64      `json:"minimum,omitempty" yaml:"minimum,omitempty"`
+		Maximum              *float64      `json:"maximum,omitempty" yaml:"maximum,omitempty"`
+		MinLength            *int          `json:"minLength,omitempty" yaml:"minLength,omitempty"`
+		MaxLength            *int          `json:"maxLength,omitempty" yaml:"maxLength,omitempty"`
+		Required             []string      `json:"required,omitempty" yaml:"required,omitempty"`
+		AdditionalProperties bool          `json:"additionalProperties,omitempty" yaml:"additionalProperties,omitempty"`
 
 		// Union
-		AnyOf []*Schema `json:"anyOf,omitempty"`
+		AnyOf []*Schema `json:"anyOf,omitempty" yaml:"anyOf,omitempty"`
 	}
 
 	// Type is the JSON type enum.
@@ -53,21 +53,21 @@ type (
 
 	// Media represents a "media" field in a JSON hyper schema.
 	Media struct {
-		BinaryEncoding string `json:"binaryEncoding,omitempty"`
-		Type           string `json:"type,omitempty"`
+		BinaryEncoding string `json:"binaryEncoding,omitempty" yaml:"binaryEncoding,omitempty"`
+		Type           string `json:"type,omitempty" yaml:"type,omitempty"`
 	}
 
 	// Link represents a "link" field in a JSON hyper schema.
 	Link struct {
-		Title        string  `json:"title,omitempty"`
-		Description  string  `json:"description,omitempty"`
-		Rel          string  `json:"rel,omitempty"`
-		Href         string  `json:"href,omitempty"`
-		Method       string  `json:"method,omitempty"`
-		Schema       *Schema `json:"schema,omitempty"`
-		TargetSchema *Schema `json:"targetSchema,omitempty"`
-		ResultType   string  `json:"mediaType,omitempty"`
-		EncType      string  `json:"encType,omitempty"`
+		Title        string  `json:"title,omitempty" yaml:"title,omitempty"`
+		Description  string  `json:"description,omitempty" yaml:"description,omitempty"`
+		Rel          string  `json:"rel,omitempty" yaml:"rel,omitempty"`
+		Href         string  `json:"href,omitempty" yaml:"href,omitempty"`
+		Method       string  `json:"method,omitempty" yaml:"method,omitempty"`
+		Schema       *Schema `json:"schema,omitempty" yaml:"schema,omitempty"`
+		TargetSchema *Schema `json:"targetSchema,omitempty" yaml:"targetSchema,omitempty"`
+		ResultType   string  `json:"mediaType,omitempty" yaml:"mediaType,omitempty"`
+		EncType      string  `json:"encType,omitempty" yaml:"encType,omitempty"`
 	}
 )
 

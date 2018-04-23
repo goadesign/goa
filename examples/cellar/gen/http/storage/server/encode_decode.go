@@ -67,8 +67,9 @@ func DecodeShowRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.De
 		if err != nil {
 			return nil, err
 		}
+		payload := NewShowShowPayload(id, view)
 
-		return NewShowShowPayload(id, view), nil
+		return payload, nil
 	}
 }
 
@@ -125,8 +126,9 @@ func DecodeAddRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Dec
 		if err != nil {
 			return nil, err
 		}
+		payload := NewAddBottle(&body)
 
-		return NewAddBottle(&body), nil
+		return payload, nil
 	}
 }
 
@@ -149,8 +151,9 @@ func DecodeRemoveRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.
 			params = mux.Vars(r)
 		)
 		id = params["id"]
+		payload := NewRemoveRemovePayload(id)
 
-		return NewRemoveRemovePayload(id), nil
+		return payload, nil
 	}
 }
 
@@ -191,8 +194,9 @@ func DecodeRateRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.De
 		if err != nil {
 			return nil, err
 		}
+		payload := query
 
-		return query, nil
+		return payload, nil
 	}
 }
 
@@ -216,6 +220,7 @@ func DecodeMultiAddRequest(mux goahttp.Muxer, decoder func(*http.Request) goahtt
 		if err := decoder(r).Decode(&payload); err != nil {
 			return nil, goa.DecodePayloadError(err.Error())
 		}
+
 		return payload, nil
 	}
 }
@@ -255,6 +260,7 @@ func DecodeMultiUpdateRequest(mux goahttp.Muxer, decoder func(*http.Request) goa
 		if err := decoder(r).Decode(&payload); err != nil {
 			return nil, goa.DecodePayloadError(err.Error())
 		}
+
 		return payload, nil
 	}
 }
@@ -272,6 +278,7 @@ func NewStorageMultiUpdateDecoder(mux goahttp.Muxer, storageMultiUpdateDecoderFn
 			if err := storageMultiUpdateDecoderFn(mr, p); err != nil {
 				return err
 			}
+
 			var (
 				ids []string
 			)
