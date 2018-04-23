@@ -16,3 +16,7 @@ _integration_tests/*/**/*.*
 
 # OSes cruft
 .DS_Store
+
+# vim
+*.swp
+*.swo

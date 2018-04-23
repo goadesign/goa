@@ -103,4 +103,24 @@ var _ = Describe("LogRequest", func() {
 		Ω(logger.InfoEntries[1].Data[12]).Should(Equal("action"))
 		Ω(logger.InfoEntries[1].Data[13]).Should(Equal("<unknown>"))
 	})
+
+	It("hides secret headers", func() {
+		// Add Action name to the context to make sure we log it properly.
+		ctx = goa.WithAction(ctx, "goo")
+
+		h := func(ctx context.Context, rw http.ResponseWriter, req *http.Request) error {
+			return service.Send(ctx, 200, "ok")
+		}
+		lg := middleware.LogRequest(true, "SECRET")(h)
+		req.Header.Add("Secret", "super secret things")
+		req.Header.Add("Not so secret", "public")
+		Ω(lg(ctx, rw, req)).ShouldNot(HaveOccurred())
+		Ω(logger.InfoEntries).Should(HaveLen(5))
+
+		Ω(logger.InfoEntries[1].Data[2]).Should(Equal("Secret"))
+		Ω(logger.InfoEntries[1].Data[3]).Should(Equal("<hidden>"))
+
+		Ω(logger.InfoEntries[1].Data[4]).Should(Equal("Not so secret"))
+		Ω(logger.InfoEntries[1].Data[5]).Should(Equal("public"))
+	})
 })
