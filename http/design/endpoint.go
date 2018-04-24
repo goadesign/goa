@@ -520,7 +520,7 @@ func (e *EndpointExpr) Finalize() {
 		for _, sch := range req.Schemes {
 			var field string
 			switch sch.Kind {
-			case BasicAuthKind:
+			case BasicAuthKind, NoKind:
 				continue
 			case APIKeyKind:
 				field = design.TaggedAttribute(e.MethodExpr.Payload, "security:apikey:"+sch.SchemeName)
