@@ -932,7 +932,7 @@ func {{ .ResponseEncoder }}(encoder func(context.Context, http.ResponseWriter) g
 }
 ` + responseT
 
-// input: ErrorData
+// input: EndpointData
 const errorEncoderT = `{{ printf "%s returns an encoder for errors returned by the %s %s endpoint." .ErrorEncoder .Method.Name .ServiceName | comment }}
 func {{ .ErrorEncoder }}(encoder func(context.Context, http.ResponseWriter) goahttp.Encoder) func(context.Context, http.ResponseWriter, error) error {
 	encodeError := goahttp.ErrorEncoder(encoder)
@@ -942,6 +942,7 @@ func {{ .ErrorEncoder }}(encoder func(context.Context, http.ResponseWriter) goah
 			return encodeError(ctx, w, v)
 		}
 		switch en.ErrorName() {
+	{{- range $gerr := .Errors }}
 	{{- range $err := .Errors }}
 		case {{ printf "%q" .Name }}:
 			res := v.({{ $err.Ref }})
@@ -951,6 +952,7 @@ func {{ .ErrorEncoder }}(encoder func(context.Context, http.ResponseWriter) goah
 				return enc.Encode(body)
 				{{- end }}
 			{{- end }}
+	{{- end }}
 	{{- end }}
 		default:
 			return encodeError(ctx, w, v)
@@ -995,6 +997,10 @@ const responseT = `{{ define "response" -}}
 	}
 		{{- end }}
 
+	{{- end }}
+
+	{{- if .ErrorHeader }}
+	w.Header().Set("goa-error", {{ printf "%q" .ErrorHeader }})
 	{{- end }}
 	w.WriteHeader({{ .StatusCode }})
 {{- end }}

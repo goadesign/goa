@@ -58,6 +58,7 @@ func EncodeSigninError(encoder func(context.Context, http.ResponseWriter) goahtt
 			res := v.(securedservice.Unauthorized)
 			enc := encoder(ctx, w)
 			body := NewSigninUnauthorizedResponseBody(res)
+			w.Header().Set("goa-error", "unauthorized")
 			w.WriteHeader(http.StatusUnauthorized)
 			return enc.Encode(body)
 		default:
@@ -131,6 +132,7 @@ func EncodeSecureError(encoder func(context.Context, http.ResponseWriter) goahtt
 			res := v.(securedservice.Unauthorized)
 			enc := encoder(ctx, w)
 			body := NewSecureUnauthorizedResponseBody(res)
+			w.Header().Set("goa-error", "unauthorized")
 			w.WriteHeader(http.StatusUnauthorized)
 			return enc.Encode(body)
 		default:
@@ -194,6 +196,7 @@ func EncodeDoublySecureError(encoder func(context.Context, http.ResponseWriter) 
 			res := v.(securedservice.Unauthorized)
 			enc := encoder(ctx, w)
 			body := NewDoublySecureUnauthorizedResponseBody(res)
+			w.Header().Set("goa-error", "unauthorized")
 			w.WriteHeader(http.StatusUnauthorized)
 			return enc.Encode(body)
 		default:
@@ -265,6 +268,7 @@ func EncodeAlsoDoublySecureError(encoder func(context.Context, http.ResponseWrit
 			res := v.(securedservice.Unauthorized)
 			enc := encoder(ctx, w)
 			body := NewAlsoDoublySecureUnauthorizedResponseBody(res)
+			w.Header().Set("goa-error", "unauthorized")
 			w.WriteHeader(http.StatusUnauthorized)
 			return enc.Encode(body)
 		default:

@@ -65,12 +65,14 @@ func EncodePickError(encoder func(context.Context, http.ResponseWriter) goahttp.
 			res := v.(sommelier.NoCriteria)
 			enc := encoder(ctx, w)
 			body := NewPickNoCriteriaResponseBody(res)
+			w.Header().Set("goa-error", "no_criteria")
 			w.WriteHeader(http.StatusBadRequest)
 			return enc.Encode(body)
 		case "no_match":
 			res := v.(sommelier.NoMatch)
 			enc := encoder(ctx, w)
 			body := NewPickNoMatchResponseBody(res)
+			w.Header().Set("goa-error", "no_match")
 			w.WriteHeader(http.StatusNotFound)
 			return enc.Encode(body)
 		default:
