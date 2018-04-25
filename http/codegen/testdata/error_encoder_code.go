@@ -15,12 +15,14 @@ func EncodeMethodPrimitiveErrorResponseError(encoder func(context.Context, http.
 			res := v.(serviceprimitiveerrorresponse.BadRequest)
 			enc := encoder(ctx, w)
 			body := NewMethodPrimitiveErrorResponseBadRequestResponseBody(res)
+			w.Header().Set("goa-error", "bad_request")
 			w.WriteHeader(http.StatusBadRequest)
 			return enc.Encode(body)
 		case "internal_error":
 			res := v.(serviceprimitiveerrorresponse.InternalError)
 			enc := encoder(ctx, w)
 			body := NewMethodPrimitiveErrorResponseInternalErrorResponseBody(res)
+			w.Header().Set("goa-error", "internal_error")
 			w.WriteHeader(http.StatusInternalServerError)
 			return enc.Encode(body)
 		default:
@@ -44,6 +46,7 @@ func EncodeMethodDefaultErrorResponseError(encoder func(context.Context, http.Re
 			res := v.(*goa.ServiceError)
 			enc := encoder(ctx, w)
 			body := NewMethodDefaultErrorResponseBadRequestResponseBody(res)
+			w.Header().Set("goa-error", "bad_request")
 			w.WriteHeader(http.StatusBadRequest)
 			return enc.Encode(body)
 		default:
@@ -67,12 +70,14 @@ func EncodeMethodServiceErrorResponseError(encoder func(context.Context, http.Re
 			res := v.(*goa.ServiceError)
 			enc := encoder(ctx, w)
 			body := NewMethodServiceErrorResponseInternalErrorResponseBody(res)
+			w.Header().Set("goa-error", "internal_error")
 			w.WriteHeader(http.StatusInternalServerError)
 			return enc.Encode(body)
 		case "bad_request":
 			res := v.(*goa.ServiceError)
 			enc := encoder(ctx, w)
 			body := NewMethodServiceErrorResponseBadRequestResponseBody(res)
+			w.Header().Set("goa-error", "bad_request")
 			w.WriteHeader(http.StatusBadRequest)
 			return enc.Encode(body)
 		default:

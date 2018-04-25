@@ -90,7 +90,7 @@ type (
 		// Result describes the method HTTP result.
 		Result *ResultData
 		// Errors describes the method HTTP errors.
-		Errors []*ErrorData
+		Errors []*ErrorGroupData
 		// Routes describes the possible routes for this endpoint.
 		Routes []*RouteData
 		// BasicScheme is the basic auth security scheme if any.
@@ -182,6 +182,16 @@ type (
 		Responses []*ResponseData
 	}
 
+	// ErrorGroupData contains the error information required to generate
+	// the transport decode (client) and encode (server) code for all errors
+	// with responses using a given HTTP status code.
+	ErrorGroupData struct {
+		// StatusCode is the response HTTP status code.
+		StatusCode string
+		// Errors contains the information for each error.
+		Errors []*ErrorData
+	}
+
 	// ErrorData contains the error information required to generate the
 	// transport decode (client) and encode (server) code.
 	ErrorData struct {
@@ -229,6 +239,9 @@ type (
 		// Headers provides information about the headers in the
 		// response.
 		Headers []*HeaderData
+		// ErrorHeader contains the value of the response "goa-error"
+		// header if any.
+		ErrorHeader string
 		// ServerBody is the type of the response body used by server
 		// code, nil if body should be empty. The type does NOT use
 		// pointers for all fields.
@@ -1246,7 +1259,7 @@ func buildResultData(svc *service.Data, s *httpdesign.ServiceExpr, e *httpdesign
 	}
 }
 
-func buildErrorsData(svc *service.Data, s *httpdesign.ServiceExpr, e *httpdesign.EndpointExpr, sd *ServiceData) []*ErrorData {
+func buildErrorsData(svc *service.Data, s *httpdesign.ServiceExpr, e *httpdesign.EndpointExpr, sd *ServiceData) []*ErrorGroupData {
 	data := make(map[string][]*ErrorData)
 	for _, v := range e.HTTPErrors {
 		var (
@@ -1356,12 +1369,15 @@ func buildErrorsData(svc *service.Data, s *httpdesign.ServiceExpr, e *httpdesign
 				}
 			}
 
+			headers := extractHeaders(v.Response.MappedHeaders(),
+				v.ErrorExpr.AttributeExpr, false, svc.Scope)
 			responseData = &ResponseData{
-				StatusCode: statusCodeToHTTPConst(v.Response.StatusCode),
-				Headers:    extractHeaders(v.Response.MappedHeaders(), v.ErrorExpr.AttributeExpr, false, svc.Scope),
-				ServerBody: serverBodyData,
-				ClientBody: clientBodyData,
-				ResultInit: init,
+				StatusCode:  statusCodeToHTTPConst(v.Response.StatusCode),
+				Headers:     headers,
+				ErrorHeader: v.Name,
+				ServerBody:  serverBodyData,
+				ClientBody:  clientBodyData,
+				ResultInit:  init,
 			}
 		}
 
@@ -1379,9 +1395,26 @@ func buildErrorsData(svc *service.Data, s *httpdesign.ServiceExpr, e *httpdesign
 		i++
 	}
 	sort.Strings(keys)
-	var vals []*ErrorData
+	var vals []*ErrorGroupData
 	for _, k := range keys {
-		vals = append(vals, data[k]...)
+		es := data[k]
+		for _, e := range es {
+			found := false
+			for _, eg := range vals {
+				if eg.StatusCode == e.Response.StatusCode {
+					eg.Errors = append(eg.Errors, e)
+					found = true
+					break
+				}
+			}
+			if !found {
+				vals = append(vals,
+					&ErrorGroupData{
+						StatusCode: e.Response.StatusCode,
+						Errors:     []*ErrorData{e},
+					})
+			}
+		}
 	}
 	return vals
 }

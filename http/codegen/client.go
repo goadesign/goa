@@ -376,8 +376,10 @@ func {{ .RequestEncoder }}(encoder func(*http.Request) goahttp.Encoder) func(*ht
 const responseDecoderT = `{{ printf "%s returns a decoder for responses returned by the %s %s endpoint. restoreBody controls whether the response body should be restored after having been read." .ResponseDecoder .ServiceName .Method.Name | comment }}
 {{- if .Errors }}
 {{ printf "%s may return the following errors:" .ResponseDecoder | comment }}
+	{{- range $gerr := .Errors }}
 	{{- range $errors := .Errors }}
 //	- {{ printf "%q" .Name }} (type {{ .Ref }}): {{ .Response.StatusCode }}{{ if .Response.Description }}, {{ .Response.Description }}{{ end }}
+	{{- end }}
 	{{- end }}
 //	- error: internal error
 {{- end }}
@@ -397,6 +399,7 @@ func {{ .ResponseDecoder }}(decoder func(*http.Response) goahttp.Decoder, restor
 		}
 		switch resp.StatusCode {
 	{{- range .Result.Responses }}
+		case {{ .StatusCode }}:
 ` + singleResponseT + `
 		{{- if .ResultInit }}
 			return {{ .ResultInit.Name }}({{ range .ResultInit.ClientArgs }}{{ .Ref }},{{ end }}), nil
@@ -407,15 +410,38 @@ func {{ .ResponseDecoder }}(decoder func(*http.Response) goahttp.Decoder, restor
 		{{- end }}
 	{{- end }}
 	{{- range .Errors }}
-		{{- with .Response }}
+		case {{ .StatusCode }}:
+		{{- if gt (len .Errors) 1 }}
+		en := resp.Header.Get("goa-error")
+		switch en {
+			{{- range .Errors }}
+		case {{ printf "%q" .Name }}:
+				{{- with .Response }}
 ` + singleResponseT + `
-		{{- if .ResultInit }}
+					{{- if .ResultInit }}
 			return nil, {{ .ResultInit.Name }}({{ range .ResultInit.ClientArgs }}{{ .Ref }},{{ end }})
-		{{- else if .ClientBody }}
+					{{- else if .ClientBody }}
 			return nil, body
-		{{- else }}
+					{{- else }}
 			return nil, nil
-		{{- end }}
+					{{- end }}
+				{{- end }}
+			{{- end }}
+		default:
+			body, _ := ioutil.ReadAll(resp.Body)
+			return nil, goahttp.ErrInvalidResponse("account", "create", resp.StatusCode, string(body))
+		}
+		{{- else }}
+			{{- with (index .Errors 0).Response }}
+` + singleResponseT + `
+				{{- if .ResultInit }}
+			return nil, {{ .ResultInit.Name }}({{ range .ResultInit.ClientArgs }}{{ .Ref }},{{ end }})
+				{{- else if .ClientBody }}
+			return nil, body
+				{{- else }}
+			return nil, nil
+				{{- end }}
+			{{- end }}
 		{{- end }}
 	{{- end }}
 		default:
@@ -427,8 +453,7 @@ func {{ .ResponseDecoder }}(decoder func(*http.Response) goahttp.Decoder, restor
 `
 
 // input: ResponseData
-const singleResponseT = `case {{ .StatusCode }}:
-	{{- if .ClientBody }}
+const singleResponseT = ` {{- if .ClientBody }}
 			var (
 				body {{ .ClientBody.VarName }}
 				err error
