@@ -252,5 +252,20 @@ func (svc *ServiceExpr) Validate() error {
 			verr.Add(svc, "Unknown canonical endpoint %s", n)
 		}
 	}
+
+	// Validate errors (have status codes and bodies are valid)
+	for _, er := range svc.HTTPErrors {
+		verr.Merge(er.Validate())
+	}
+	for _, er := range Root.HTTPErrors {
+		// This may result in the same error being validated multiple
+		// times however service is the top level expression being
+		// walked and errors cannot be walked until all expressions have
+		// run. Another solution could be to append a new dynamically
+		// generated root that the eval engine would process after. Keep
+		// things simple for now.
+		verr.Merge(er.Validate())
+	}
+
 	return verr
 }
