@@ -229,7 +229,6 @@ func (e *EndpointExpr) Validate() error {
 		} else {
 			hasTags = true
 		}
-		verr.Merge(r.Validate())
 	}
 	if hasTags && allTagged {
 		verr.Add(e, "All responses define a Tag, at least one response must define no Tag.")
@@ -249,7 +248,7 @@ func (e *EndpointExpr) Validate() error {
 
 	// Validate responses and errors (have status codes and bodies are valid)
 	for _, r := range e.Responses {
-		verr.Merge(r.Validate())
+		verr.Merge(r.Validate(e))
 	}
 	for _, er := range e.HTTPErrors {
 		verr.Merge(er.Validate())

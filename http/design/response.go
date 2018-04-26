@@ -124,10 +124,29 @@ func (r *HTTPResponseExpr) EvalName() string {
 
 // Validate checks that the response definition is consistent: its status is set
 // and the result type definition if any is valid.
-func (r *HTTPResponseExpr) Validate() *eval.ValidationErrors {
+func (r *HTTPResponseExpr) Validate(e *EndpointExpr) *eval.ValidationErrors {
 	verr := new(eval.ValidationErrors)
 	if r.headers != nil {
 		verr.Merge(r.headers.Validate("HTTP response headers", r))
+		obj := design.AsObject(e.MethodExpr.Result.Type)
+		matt := design.NewMappedAttributeExpr(r.headers)
+		mobj := design.AsObject(matt.Type)
+		if obj == nil {
+			verr.Add(r, "response defines headers but result is empty")
+		} else {
+			for _, h := range *mobj {
+				found := false
+				for _, at := range *obj {
+					if h.Name == at.Name {
+						found = true
+						break
+					}
+				}
+				if !found {
+					verr.Add(r, "header %q has no equivalent attribute in result type, use notation 'header name:attribute name' to identify corresponding result type attribute.", h.Name)
+				}
+			}
+		}
 	}
 	if r.Body != nil {
 		verr.Merge(r.Body.Validate("HTTP response body", r))
