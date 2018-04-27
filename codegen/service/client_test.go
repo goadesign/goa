@@ -86,7 +86,7 @@ func (c *Client) NoPayload(ctx context.Context, )(err error) {
 		Services = make(ServicesData)
 		design.Root.Services = []*design.ServiceExpr{tc.Service}
 		design.Root.API = &design.APIExpr{Name: "test"}
-		File(tc.Service) // to initialize ServiceScope
+		File("", tc.Service) // to initialize ServiceScope
 		cf := ClientFile(tc.Service)
 		for _, s := range cf.SectionTemplates {
 			if err := s.Write(buf); err != nil {

@@ -109,8 +109,8 @@ func NewNoPayloadEndpoint(s Service) goa.Endpoint {
 		Services = make(ServicesData)
 		design.Root.Services = []*design.ServiceExpr{tc.Service}
 		design.Root.API = &design.APIExpr{Name: "test"}
-		File(tc.Service) // to initialize ServiceScope
-		ef := EndpointFile(tc.Service)
+		File("", tc.Service) // to initialize ServiceScope
+		ef := EndpointFile("", tc.Service)
 		for _, s := range ef.SectionTemplates {
 			if err := s.Write(buf); err != nil {
 				t.Fatal(err)

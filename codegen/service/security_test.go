@@ -25,7 +25,7 @@ func TestSecureEndpointInit(t *testing.T) {
 			if len(design.Root.Services) != 1 {
 				t.Fatalf("got %d services, expected 1", len(design.Root.Services))
 			}
-			fs := EndpointFile(design.Root.Services[0])
+			fs := EndpointFile("", design.Root.Services[0])
 			if fs == nil {
 				t.Fatalf("got nil file, expected not nil")
 			}
@@ -57,7 +57,7 @@ func TestSecureEndpoint(t *testing.T) {
 			if len(design.Root.Services) != 1 {
 				t.Fatalf("got %d services, expected 1", len(design.Root.Services))
 			}
-			fs := EndpointFile(design.Root.Services[0])
+			fs := EndpointFile("", design.Root.Services[0])
 			if fs == nil {
 				t.Fatalf("got nil file, expected not nil")
 			}

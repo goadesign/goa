@@ -380,7 +380,7 @@ func MakeError(err error) *goa.ServiceError {
 			design.Root = new(design.RootExpr)
 			design.Root.API = &design.APIExpr{Name: "test"}
 			design.Root.Services = []*design.ServiceExpr{tc.Service}
-			file := File(tc.Service)
+			file := File("", tc.Service)
 			for _, s := range file.SectionTemplates {
 				if err := s.Write(buf); err != nil {
 					t.Fatal(err)

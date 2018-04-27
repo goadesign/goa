@@ -1255,34 +1255,30 @@ func buildResultData(e *httpdesign.EndpointExpr, sd *ServiceData) *ResultData {
 			}
 
 			var (
-				responseData *ResponseData
+				responseData   *ResponseData
+				headersData    []*HeaderData
+				serverBodyData *TypeData
+				clientBodyData *TypeData
+				mustValidate   bool
 			)
 			{
-				var (
-					serverBodyData *TypeData
-					clientBodyData *TypeData
-					headersData    = extractHeaders(v.MappedHeaders(), result, false, false, ep, svc.Scope)
-
-					mustValidate bool
-				)
-				{
-					if t := ep.ViewedResult; t != nil {
-						att := &design.AttributeExpr{Type: t.ViewType.Type}
-						serverBodyData = buildBodyType(sd, e, att, att, false, true, true)
-					} else {
-						serverBodyData = buildBodyType(sd, e, v.Body, result, false, true, false)
-						clientBodyData = buildBodyType(sd, e, v.Body, result, false, false, false)
-						if clientBodyData != nil {
-							sd.ClientTypeNames[clientBodyData.Name] = struct{}{}
-							sd.ServerTypeNames[clientBodyData.Name] = struct{}{}
-						}
+				headersData = extractHeaders(v.MappedHeaders(), result, false, false, ep, svc.Scope)
+				if t := ep.ViewedResult; t != nil {
+					att := &design.AttributeExpr{Type: t.ViewType.Type}
+					serverBodyData = buildBodyType(sd, e, att, att, false, true, true)
+				} else {
+					serverBodyData = buildBodyType(sd, e, v.Body, result, false, true, false)
+					clientBodyData = buildBodyType(sd, e, v.Body, result, false, false, false)
+					if clientBodyData != nil {
+						sd.ClientTypeNames[clientBodyData.Name] = struct{}{}
+						sd.ServerTypeNames[clientBodyData.Name] = struct{}{}
 					}
-					if !mustValidate {
-						for _, h := range headersData {
-							if h.Validate != "" || h.Required || needConversion(h.Type) {
-								mustValidate = true
-								break
-							}
+				}
+				if !mustValidate {
+					for _, h := range headersData {
+						if h.Validate != "" || h.Required || needConversion(h.Type) {
+							mustValidate = true
+							break
 						}
 					}
 				}
@@ -1726,6 +1722,10 @@ func extractHeaders(a *design.MappedAttributeExpr, serviceType *design.Attribute
 		if !design.IsObject(serviceType.Type) {
 			fieldName = "" // result is initialized directly from header
 		}
+		if !request && md.ViewedResult != nil {
+			// in a viewed result all the struct attributes are pointers
+			required = false
+		}
 		headers = append(headers, &HeaderData{
 			Name:          elem,
 			AttributeName: name,
@@ -1735,7 +1735,7 @@ func extractHeaders(a *design.MappedAttributeExpr, serviceType *design.Attribute
 			VarName:       varn,
 			TypeName:      scope.GoTypeName(c),
 			TypeRef:       typeRef,
-			Required:      required && (!request && md.ViewedResult == nil),
+			Required:      required,
 			Pointer:       a.IsPrimitivePointer(name, req),
 			Slice:         arr != nil,
 			StringSlice:   arr != nil && arr.ElemType.Type.Kind() == design.StringKind,
