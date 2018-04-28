@@ -488,12 +488,12 @@ func collectViewedTypes(at *design.AttributeExpr, seen map[string]struct{}, scop
 	}
 	switch dt := at.Type.(type) {
 	case design.UserType:
+		vAtt := design.DupAtt(at)
+		viewed = vAtt.Type
 		if _, ok := seen[dt.Name()]; ok {
 			return
 		}
 		seen[dt.Name()] = struct{}{}
-		vAtt := design.DupAtt(at)
-		viewed = vAtt.Type
 		ut := viewed.(design.UserType)
 		// Remove all validations from the viewed type so that we would end up
 		// with a struct where all its attributes are pointers.
@@ -788,7 +788,7 @@ func buildViewedType(vAtt, at *design.AttributeExpr, scope *codegen.NameScope, v
 			Name:        vt.Name(),
 			Description: fmt.Sprintf("%s is the transformed type of %s type.", varName, resultVar),
 			VarName:     varName,
-			Def:         scope.GoTypeDef(vt.Attribute(), true),
+			Def:         scope.GoTypeDef(ut.Attribute(), true),
 			Ref:         ref,
 			Type:        vt,
 		},
@@ -966,13 +966,13 @@ func transformToView(vAtt *design.AttributeExpr, view *design.ViewExpr, scope *c
 		varN := codegen.Goify(n.Name, true)
 		srcV := "result." + varN
 		tgtV := "t." + varN
-		viewName := codegen.Goify(view.Name, true)
+		useView := "Default"
 		if attV, ok := n.Attribute.Metadata["view"]; ok {
 			// if a view is explicitly set for the result type on the view attribute
 			// use that view.
-			viewName = codegen.Goify(attV[0], true)
+			useView = codegen.Goify(attV[0], true)
 		}
-		code += fmt.Sprintf("\nif %s != nil {\n%s = %s.As%s()\n}\n", srcV, tgtV, srcV, viewName)
+		code += fmt.Sprintf("\nif %s != nil {\n%s = %s.As%s()\n}\n", srcV, tgtV, srcV, useView)
 	}
 	code += fmt.Sprintf("\nreturn &%s{\n%s: %s,\nView: %q,\n}", resultName, rt.TypeName, tgtVar, view.Name)
 	varName := "As" + viewN

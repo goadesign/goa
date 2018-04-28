@@ -2,6 +2,8 @@ package service
 
 import (
 	"bytes"
+	"fmt"
+	"go/format"
 	"testing"
 
 	"goa.design/goa/codegen"
@@ -9,17 +11,16 @@ import (
 	"goa.design/goa/design"
 )
 
-func TestEndpoint(t *testing.T) {
+func TestViews(t *testing.T) {
 	cases := []struct {
 		Name string
 		DSL  func()
 		Code string
 	}{
-		{"single", testdata.SingleEndpointDSL, testdata.SingleEndpoint},
-		{"multiple", testdata.MultipleEndpointsDSL, testdata.MultipleEndpoints},
-		{"no-payload", testdata.NoPayloadEndpointDSL, testdata.NoPayloadEndpoint},
-		{"with-result", testdata.WithResultEndpointDSL, testdata.WithResultEndpoint},
-		{"with-result-multiple-views", testdata.WithResultMultipleViewsEndpointDSL, testdata.WithResultMultipleViewsEndpoint},
+		{"result-with-multiple-views", testdata.ResultWithMultipleViewsDSL, testdata.ResultWithMultipleViewsCode},
+		{"result-with-user-type", testdata.ResultWithUserTypeDSL, testdata.ResultWithUserTypeCode},
+		{"result-with-result-type", testdata.ResultWithResultTypeDSL, testdata.ResultWithResultTypeCode},
+		{"result-with-recursive-result-type", testdata.ResultWithRecursiveResultTypeDSL, testdata.ResultWithRecursiveResultTypeCode},
 	}
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
@@ -28,7 +29,7 @@ func TestEndpoint(t *testing.T) {
 			if len(design.Root.Services) != 1 {
 				t.Fatalf("got %d services, expected 1", len(design.Root.Services))
 			}
-			fs := EndpointFile("goa.design/goa/example", design.Root.Services[0])
+			fs := ViewsFile("goa.design/goa/example", design.Root.Services[0])
 			if fs == nil {
 				t.Fatalf("got nil file, expected not nil")
 			}
@@ -38,7 +39,12 @@ func TestEndpoint(t *testing.T) {
 					t.Fatal(err)
 				}
 			}
-			code := buf.String()
+			bs, err := format.Source(buf.Bytes())
+			if err != nil {
+				fmt.Println(buf.String())
+				t.Fatal(err)
+			}
+			code := string(bs)
 			if code != c.Code {
 				t.Errorf("%s: got\n%s\ngot vs. expected:\n%s", c.Name, code, codegen.Diff(t, code, c.Code))
 			}

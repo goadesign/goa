@@ -32,6 +32,27 @@ func RunDSL(t *testing.T, dsl func()) *design.RootExpr {
 	return design.Root
 }
 
+// RunDSLWithFunc returns the DSL root resulting from running the given DSL.
+// It executes a function to add any top-level types to the design Root before
+// running the DSL.
+func RunDSLWithFunc(t *testing.T, dsl func(), fn func()) *design.RootExpr {
+	eval.Reset()
+	design.Root = new(design.RootExpr)
+	eval.Register(design.Root)
+	design.Root.API = &design.APIExpr{
+		Name:    "test api",
+		Servers: []*design.ServerExpr{{URL: "http://localhost"}},
+	}
+	fn()
+	if !eval.Execute(dsl, nil) {
+		t.Fatal(eval.Context.Error())
+	}
+	if err := eval.RunDSL(); err != nil {
+		t.Fatal(err)
+	}
+	return design.Root
+}
+
 // SectionCode generates and formats the code for the given section.
 func SectionCode(t *testing.T, section *SectionTemplate) string {
 	var code bytes.Buffer
