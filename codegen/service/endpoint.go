@@ -203,13 +203,32 @@ func New{{ .VarName }}Endpoint(s {{ .ServiceVarName}}{{ range .Schemes }}, auth{
 				sc := security.BasicScheme{
 					Name: {{ printf "%q" .SchemeName }},
 				}
-				ctx, err = auth{{ .Type }}Fn(ctx, {{ if .UsernamePointer }}*{{ end }}p.{{ .UsernameField }}, {{ if .PasswordPointer }}*{{ end }}p.{{ .PasswordField }}, &sc)
+				{{- if .UsernamePointer }}
+				var user string
+				if p.{{ .UsernameField }} != nil {
+					user = *p.{{ .UsernameField }}
+				}
+				{{- end }}
+				{{- if .PasswordPointer }}
+				var pass string
+				if p.{{ .PasswordField }} != nil {
+					pass = *p.{{ .PasswordField }}
+				}
+				{{- end }}
+				ctx, err = auth{{ .Type }}Fn(ctx, {{ if .UsernamePointer }}user{{ else }}p.{{ .UsernameField }}{{ end }},
+					{{- if .PasswordPointer }}pass{{ else }}p.{{ .PasswordField }}{{ end }}, &sc)
 
 			{{- else if eq .Type "APIKey" }}
 				sc := security.APIKeyScheme{
 					Name: {{ printf "%q" .SchemeName }},
 				}
-				ctx, err = auth{{ .Type }}Fn(ctx, {{ if $s.CredPointer }}*{{ end }}p.{{ $s.CredField }}, &sc)
+				{{- if $s.CredPointer }}
+				var key string
+				if p.{{ $s.CredField }} != nil {
+					key = *p.{{ $s.CredField }}
+				}
+				{{- end }}
+				ctx, err = auth{{ .Type }}Fn(ctx, {{ if $s.CredPointer }}key{{ else }}p.{{ $s.CredField }}{{ end }}, &sc)
 
 			{{- else if eq .Type "JWT" }}
 				sc := security.JWTScheme{
@@ -217,7 +236,13 @@ func New{{ .VarName }}Endpoint(s {{ .ServiceVarName}}{{ range .Schemes }}, auth{
 					Scopes: []string{ {{- range .Scopes }}{{ printf "%q" . }}, {{ end }} },
 					RequiredScopes: []string{ {{- range $r.Scopes }}{{ printf "%q" . }}, {{ end }} },
 				}
-				ctx, err = auth{{ .Type }}Fn(ctx, {{ if $s.CredPointer }}*{{ end }}p.{{ $s.CredField }}, &sc)
+				{{- if $s.CredPointer }}
+				var token string
+				if p.{{ $s.CredField }} != nil {
+					token = *p.{{ $s.CredField }}
+				}
+				{{- end }}
+				ctx, err = auth{{ .Type }}Fn(ctx, {{ if $s.CredPointer }}token{{ else }}p.{{ $s.CredField }}{{ end }}, &sc)
 
 			{{- else if eq .Type "OAuth2" }}
 				sc := security.OAuth2Scheme{
@@ -243,7 +268,13 @@ func New{{ .VarName }}Endpoint(s {{ .ServiceVarName}}{{ range .Schemes }}, auth{
 					},
 					{{- end }}
 				}
-				ctx, err = auth{{ .Type }}Fn(ctx, {{ if $s.CredPointer }}*{{ end }}p.{{ $s.CredField }}, &sc)
+				{{- if $s.CredPointer }}
+				var token string
+				if p.{{ $s.CredField }} != nil {
+					token = *p.{{ $s.CredField }}
+				}
+				{{- end }}
+				ctx, err = auth{{ .Type }}Fn(ctx, {{ if $s.CredPointer }}token{{ else }}p.{{ $s.CredField }}{{ end }}, &sc)
 
 			{{- end }}
 			{{- if ne $sidx 0 }}
