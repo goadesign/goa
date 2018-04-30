@@ -58,26 +58,21 @@ only applies for non required attributes with default values.
 
 Views can be defined on a result type. If a method returns a result type with
 multiple views then a views package is generated at the service level which
-projects the result type as per the attributes defined in the view.
-Constructors are generated in the service package to convert a result type
-to a viewed result type and vice versa.
-
-The views package defines a type with name as the result type name suffixed
-with "View". This type has all the fields defined on the result type as
-pointers. The views package also has a type with same name as the result type.
-This type contains the viewed type mentioned above along with a required "view"
-attribute holding the view name which is used to validate that the viewed
-result type contains all the attributes as defined in the view. The type also
-defines "As<View>" functions which projects the viewed result type with only
-the attributes defined in the view.
+projects the result type as per the attributes defined in the view. For each
+result type with multiple views the views package defines a viewed result type
+with identical field names and types but using pointers for all fields so that
+view specific validation logic may be generated. The viewed result type defines
+"As<View>" functions which projects the viewed result type with only the
+attributes defined in the view. Constructors are generated in the service
+package to convert a result type to a viewed result type and vice versa.
 
 The signature for the method that returns a result type with multiple views
-will return the result type, the view to render the result type, and an error.
-The generated endpoint function will use this view to create a validated
-viewed result type with only the attributes defined in the view.
+returns the result type, the view to render the result type, and an error.
+The generated endpoint function uses this view to create a validated viewed
+result type with only the attributes defined in the view.
 
-The server side response marshaling code will marshal the viewed result type
-returned by the endpoint into a will server type omitting any nil attributes.
+The server side response marshaling code marshals the viewed result type
+returned by the endpoint into a server type omitting any nil attributes.
 The view used to render the result type is passed to the client in "Goa-View"
 header.
 

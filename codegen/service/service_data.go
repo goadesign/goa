@@ -111,8 +111,8 @@ type (
 		// Schemes contains the security schemes types used by the
 		// method.
 		Schemes []string
-		// ViewedResult if non-nil indicates that the method result type has
-		// more than one view.
+		// ViewedResult contains the data required to generated the code handling
+		//  multiple views if any.
 		ViewedResult *ViewedTypeData
 	}
 
