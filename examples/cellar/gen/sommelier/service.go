@@ -15,7 +15,7 @@ import (
 // The sommelier service retrieves bottles given a set of criteria.
 type Service interface {
 	// Pick implements pick.
-	Pick(context.Context, *Criteria) (StoredBottleCollection, error)
+	Pick(context.Context, *Criteria) (res StoredBottleCollection, err error)
 }
 
 // ServiceName is the name of the service as defined in the design. This is the

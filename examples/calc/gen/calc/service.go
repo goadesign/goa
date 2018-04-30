@@ -15,7 +15,7 @@ import (
 // The calc service performs operations on numbers
 type Service interface {
 	// Add implements add.
-	Add(context.Context, *AddPayload) (int, error)
+	Add(context.Context, *AddPayload) (res int, err error)
 }
 
 // ServiceName is the name of the service as defined in the design. This is the

@@ -17,26 +17,26 @@ import (
 // The storage service makes it possible to view, add or remove wine bottles.
 type Service interface {
 	// List all stored bottles
-	List(context.Context) (StoredBottleCollection, error)
+	List(context.Context) (res StoredBottleCollection, err error)
 	// Show bottle by ID
-	// It must return one of the following views
+	// Show must return one of the following views
 	// * default
 	// * tiny
-	Show(context.Context, *ShowPayload) (*StoredBottle, string, error)
+	Show(context.Context, *ShowPayload) (res *StoredBottle, view string, err error)
 	// Add new bottle and return its ID.
-	Add(context.Context, *Bottle) (string, error)
+	Add(context.Context, *Bottle) (res string, err error)
 	// Remove bottle from storage
-	Remove(context.Context, *RemovePayload) error
+	Remove(context.Context, *RemovePayload) (err error)
 	// Rate bottles by IDs
-	Rate(context.Context, map[uint32][]string) error
+	Rate(context.Context, map[uint32][]string) (err error)
 	// Add n number of bottles and return their IDs. This is a multipart request
 	// and each part has field name 'bottle' and contains the encoded bottle info
 	// to be added.
-	MultiAdd(context.Context, []*Bottle) ([]string, error)
+	MultiAdd(context.Context, []*Bottle) (res []string, err error)
 	// Update bottles with the given IDs. This is a multipart request and each part
 	// has field name 'bottle' and contains the encoded bottle info to be updated.
 	// The IDs in the query parameter is mapped to each part in the request.
-	MultiUpdate(context.Context, *MultiUpdatePayload) error
+	MultiUpdate(context.Context, *MultiUpdatePayload) (err error)
 }
 
 // ServiceName is the name of the service as defined in the design. This is the

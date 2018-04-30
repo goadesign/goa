@@ -4,7 +4,7 @@ const SingleMethod = `
 // Service is the SingleMethod service interface.
 type Service interface {
 	// A implements A.
-	A(context.Context, *APayload) (*AResult, error)
+	A(context.Context, *APayload) (res *AResult, err error)
 }
 
 // ServiceName is the name of the service as defined in the design. This is the
@@ -40,9 +40,9 @@ const MultipleMethods = `
 // Service is the MultipleMethods service interface.
 type Service interface {
 	// A implements A.
-	A(context.Context, *APayload) (*AResult, error)
+	A(context.Context, *APayload) (res *AResult, err error)
 	// B implements B.
-	B(context.Context, *BPayload) (*BResult, error)
+	B(context.Context, *BPayload) (res *BResult, err error)
 }
 
 // ServiceName is the name of the service as defined in the design. This is the
@@ -108,7 +108,7 @@ const EmptyMethod = `
 // Service is the Empty service interface.
 type Service interface {
 	// Empty implements Empty.
-	Empty(context.Context) error
+	Empty(context.Context) (err error)
 }
 
 // ServiceName is the name of the service as defined in the design. This is the
@@ -126,7 +126,7 @@ const EmptyResultMethod = `
 // Service is the EmptyResult service interface.
 type Service interface {
 	// EmptyResult implements EmptyResult.
-	EmptyResult(context.Context, *APayload) error
+	EmptyResult(context.Context, *APayload) (err error)
 }
 
 // ServiceName is the name of the service as defined in the design. This is the
@@ -153,7 +153,7 @@ const EmptyPayloadMethod = `
 // Service is the EmptyPayload service interface.
 type Service interface {
 	// EmptyPayload implements EmptyPayload.
-	EmptyPayload(context.Context) (*AResult, error)
+	EmptyPayload(context.Context) (res *AResult, err error)
 }
 
 // ServiceName is the name of the service as defined in the design. This is the
@@ -180,7 +180,7 @@ const ServiceError = `
 // Service is the ServiceError service interface.
 type Service interface {
 	// A implements A.
-	A(context.Context) error
+	A(context.Context) (err error)
 }
 
 // ServiceName is the name of the service as defined in the design. This is the
@@ -207,12 +207,12 @@ const MultipleMethodsResultMultipleViews = `
 // Service is the MultipleMethodsResultMultipleViews service interface.
 type Service interface {
 	// A implements A.
-	// It must return one of the following views
+	// A must return one of the following views
 	// * default
 	// * tiny
-	A(context.Context, *APayload) (*MultipleViews, string, error)
+	A(context.Context, *APayload) (res *MultipleViews, view string, err error)
 	// B implements B.
-	B(context.Context) (*SingleView, error)
+	B(context.Context) (res *SingleView, err error)
 }
 
 // ServiceName is the name of the service as defined in the design. This is the
@@ -274,10 +274,10 @@ const ResultWithOtherResultMethod = `
 // Service is the ResultWithOtherResult service interface.
 type Service interface {
 	// A implements A.
-	// It must return one of the following views
+	// A must return one of the following views
 	// * default
 	// * tiny
-	A(context.Context) (*MultipleViews, string, error)
+	A(context.Context) (res *MultipleViews, view string, err error)
 }
 
 // ServiceName is the name of the service as defined in the design. This is the

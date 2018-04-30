@@ -143,7 +143,7 @@ type Service interface {
 {{- range .Methods }}
 	{{ comment .Description }}
 	{{- if .ViewedResult }}
-		{{ comment "It must return one of the following views" }}
+		{{ printf "%s must return one of the following views" .VarName | comment }}
 		{{- range .ViewedResult.Views }}
 			{{- if .Description }}
 			{{ printf "* %s: %s" .Name .Description | comment }}
@@ -152,7 +152,7 @@ type Service interface {
 			{{- end }}
 		{{- end }}
 	{{- end }}
-	{{ .VarName }}(context.Context{{ if .Payload }}, {{ .PayloadRef }}{{ end }}) {{ if .Result }}({{ .ResultRef }}, {{ if .ViewedResult }}string, {{ end }}error){{ else }}error{{ end }}
+	{{ .VarName }}(context.Context{{ if .Payload }}, {{ .PayloadRef }}{{ end }}) ({{ if .Result }}res {{ .ResultRef }}, {{ if .ViewedResult }}view string, {{ end }}{{ end }}err error)
 {{- end }}
 }
 

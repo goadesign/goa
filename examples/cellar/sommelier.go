@@ -19,8 +19,7 @@ func NewSommelier(logger *log.Logger) sommelier.Service {
 }
 
 // Pick implements pick.
-func (s *sommelierSvc) Pick(ctx context.Context, p *sommelier.Criteria) (sommelier.StoredBottleCollection, error) {
-	var res sommelier.StoredBottleCollection
+func (s *sommelierSvc) Pick(ctx context.Context, p *sommelier.Criteria) (res sommelier.StoredBottleCollection, err error) {
 	if p.Name == nil && len(p.Varietal) == 0 && p.Winery == nil {
 		return nil, sommelier.NoCriteria("must specify a name or one or more varietals or a winery")
 	}
