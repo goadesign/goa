@@ -71,7 +71,11 @@ func NewSecureEndpoint(s Service, authJWTFn security.AuthJWTFunc) goa.Endpoint {
 			Scopes:         []string{"api:read", "api:write"},
 			RequiredScopes: []string{"api:read"},
 		}
-		ctx, err = authJWTFn(ctx, *p.Token, &sc)
+		var token string
+		if p.Token != nil {
+			token = *p.Token
+		}
+		ctx, err = authJWTFn(ctx, token, &sc)
 		if err != nil {
 			return nil, err
 		}
@@ -90,12 +94,20 @@ func NewDoublySecureEndpoint(s Service, authJWTFn security.AuthJWTFunc, authAPIK
 			Scopes:         []string{"api:read", "api:write"},
 			RequiredScopes: []string{"api:read", "api:write"},
 		}
-		ctx, err = authJWTFn(ctx, *p.Token, &sc)
+		var token string
+		if p.Token != nil {
+			token = *p.Token
+		}
+		ctx, err = authJWTFn(ctx, token, &sc)
 		if err == nil {
 			sc := security.APIKeyScheme{
 				Name: "api_key",
 			}
-			ctx, err = authAPIKeyFn(ctx, *p.Key, &sc)
+			var key string
+			if p.Key != nil {
+				key = *p.Key
+			}
+			ctx, err = authAPIKeyFn(ctx, key, &sc)
 		}
 		if err != nil {
 			return nil, err
@@ -115,12 +127,20 @@ func NewAlsoDoublySecureEndpoint(s Service, authJWTFn security.AuthJWTFunc, auth
 			Scopes:         []string{"api:read", "api:write"},
 			RequiredScopes: []string{"api:read", "api:write"},
 		}
-		ctx, err = authJWTFn(ctx, *p.Token, &sc)
+		var token string
+		if p.Token != nil {
+			token = *p.Token
+		}
+		ctx, err = authJWTFn(ctx, token, &sc)
 		if err == nil {
 			sc := security.APIKeyScheme{
 				Name: "api_key",
 			}
-			ctx, err = authAPIKeyFn(ctx, *p.Key, &sc)
+			var key string
+			if p.Key != nil {
+				key = *p.Key
+			}
+			ctx, err = authAPIKeyFn(ctx, key, &sc)
 		}
 		if err != nil {
 			sc := security.OAuth2Scheme{
@@ -136,12 +156,24 @@ func NewAlsoDoublySecureEndpoint(s Service, authJWTFn security.AuthJWTFunc, auth
 					},
 				},
 			}
-			ctx, err = authOAuth2Fn(ctx, *p.OauthToken, &sc)
+			var token string
+			if p.OauthToken != nil {
+				token = *p.OauthToken
+			}
+			ctx, err = authOAuth2Fn(ctx, token, &sc)
 			if err == nil {
 				sc := security.BasicScheme{
 					Name: "basic",
 				}
-				ctx, err = authBasicFn(ctx, *p.Username, *p.Password, &sc)
+				var user string
+				if p.Username != nil {
+					user = *p.Username
+				}
+				var pass string
+				if p.Password != nil {
+					pass = *p.Password
+				}
+				ctx, err = authBasicFn(ctx, user, pass, &sc)
 			}
 		}
 		if err != nil {

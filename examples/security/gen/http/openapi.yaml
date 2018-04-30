@@ -26,12 +26,10 @@ paths:
         "200":
           description: OK response.
           schema:
-            schema: ""
             type: string
         "401":
           description: Unauthorized response.
           schema:
-            schema: ""
             $ref: '#/definitions/SecureUnauthorizedResponseBody'
       schemes:
       - http
@@ -58,12 +56,10 @@ paths:
         "200":
           description: OK response.
           schema:
-            schema: ""
             type: string
         "401":
           description: Unauthorized response.
           schema:
-            schema: ""
             $ref: '#/definitions/DoublySecureUnauthorizedResponseBody'
       schemes:
       - http
@@ -95,12 +91,10 @@ paths:
         "200":
           description: OK response.
           schema:
-            schema: ""
             type: string
         "401":
           description: Unauthorized response.
           schema:
-            schema: ""
             $ref: '#/definitions/AlsoDoublySecureUnauthorizedResponseBody'
       schemes:
       - http
@@ -124,7 +118,6 @@ paths:
         "401":
           description: Unauthorized response.
           schema:
-            schema: ""
             $ref: '#/definitions/SigninUnauthorizedResponseBody'
       schemes:
       - http
@@ -132,25 +125,21 @@ paths:
       - basic: []
 definitions:
   AlsoDoublySecureUnauthorizedResponseBody:
-    schema: ""
     title: AlsoDoublySecureUnauthorizedResponseBody
     type: string
     description: Credentials are invalid
     example: Maxime ipsam esse et.
   DoublySecureUnauthorizedResponseBody:
-    schema: ""
     title: DoublySecureUnauthorizedResponseBody
     type: string
     description: Credentials are invalid
     example: Itaque accusamus enim.
   SecureUnauthorizedResponseBody:
-    schema: ""
     title: SecureUnauthorizedResponseBody
     type: string
     description: Credentials are invalid
     example: Accusantium voluptatem alias corrupti voluptates a.
   SigninUnauthorizedResponseBody:
-    schema: ""
     title: SigninUnauthorizedResponseBody
     type: string
     description: Credentials are invalid
