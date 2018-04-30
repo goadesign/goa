@@ -143,10 +143,10 @@ func DecodeShowResponse(decoder func(*http.Response) goahttp.Decoder, restoreBod
 		switch resp.StatusCode {
 		case http.StatusOK:
 			var (
-				vRes *storageviews.StoredBottle
+				vres *storageviews.StoredBottle
 				err  error
 			)
-			err = decoder(resp).Decode(&vRes)
+			err = decoder(resp).Decode(&vres)
 			if err != nil {
 				return nil, goahttp.ErrDecodingError("storage", "show", err)
 			}
@@ -154,11 +154,11 @@ func DecodeShowResponse(decoder func(*http.Response) goahttp.Decoder, restoreBod
 			if view == "" {
 				return nil, goa.MergeErrors(err, goa.MissingFieldError("goa-view", "header"))
 			}
-			vRes.View = view
-			if err = vRes.Validate(); err != nil {
+			vres.View = view
+			if err = vres.Validate(); err != nil {
 				return nil, fmt.Errorf("invalid response: %s", err)
 			}
-			res := storage.NewStoredBottle(vRes)
+			res := storage.NewStoredBottle(vres)
 			return res, nil
 		case http.StatusNotFound:
 			var (

@@ -67,19 +67,19 @@ func NewShowEndpoint(s Service) goa.Endpoint {
 		if err != nil {
 			return nil, err
 		}
-		vRes := NewViewedStoredBottle(res)
+		vres := NewViewedStoredBottle(res)
 		switch view {
 		case "default":
-			vRes = vRes.AsDefault()
+			vres = vres.AsDefault()
 		case "tiny":
-			vRes = vRes.AsTiny()
+			vres = vres.AsTiny()
 		default:
 			return nil, fmt.Errorf("unknown view %s", view)
 		}
-		if err := vRes.Validate(); err != nil {
+		if err := vres.Validate(); err != nil {
 			return nil, err
 		}
-		return vRes, nil
+		return vres, nil
 	}
 }
 

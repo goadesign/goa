@@ -225,10 +225,3 @@ func {{ .Name }}({{- range .ClientArgs }}{{ .Name }} {{ .TypeRef }}, {{ end }}) 
 	{{ end -}}
 }
 `
-
-const toResultT = `{{ comment .Description }}
-func {{ .VarName }}(vRes {{ .Ref }}) {{ .ReturnRef }} {
-{{ .Code }}
-	return res
-}
-`

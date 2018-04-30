@@ -802,7 +802,7 @@ func buildViewedType(vAtt, at *design.AttributeExpr, scope *codegen.NameScope, v
 		},
 		FullRef:  scope.GoFullTypeRef(at, viewsPkg),
 		Views:    buildViews(vAtt, scope),
-		ToResult: convertResult(vAtt, at, "vRes", "res", viewsPkg, "", false, scope),
+		ToResult: convertResult(vAtt, at, "vres", "res", viewsPkg, "", false, scope),
 		ToViewed: convertResult(at, vAtt, "res", "v", "", viewsPkg, true, scope),
 	}
 }

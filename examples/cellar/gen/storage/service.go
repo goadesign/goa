@@ -147,18 +147,18 @@ func (e *NotFound) ErrorName() string {
 }
 
 // NewWinery converts viewed result type Winery to result type Winery.
-func NewWinery(vRes *storageviews.Winery) *Winery {
+func NewWinery(vres *storageviews.Winery) *Winery {
 	res := &Winery{
-		URL: vRes.URL,
+		URL: vres.URL,
 	}
-	if vRes.Name != nil {
-		res.Name = *vRes.Name
+	if vres.Name != nil {
+		res.Name = *vres.Name
 	}
-	if vRes.Region != nil {
-		res.Region = *vRes.Region
+	if vres.Region != nil {
+		res.Region = *vres.Region
 	}
-	if vRes.Country != nil {
-		res.Country = *vRes.Country
+	if vres.Country != nil {
+		res.Country = *vres.Country
 	}
 	return res
 }
@@ -176,23 +176,23 @@ func NewViewedWinery(res *Winery) *storageviews.Winery {
 
 // NewStoredBottle converts viewed result type StoredBottle to result type
 // StoredBottle.
-func NewStoredBottle(vRes *storageviews.StoredBottle) *StoredBottle {
+func NewStoredBottle(vres *storageviews.StoredBottle) *StoredBottle {
 	res := &StoredBottle{
-		Description: vRes.Description,
-		Rating:      vRes.Rating,
+		Description: vres.Description,
+		Rating:      vres.Rating,
 	}
-	if vRes.ID != nil {
-		res.ID = *vRes.ID
+	if vres.ID != nil {
+		res.ID = *vres.ID
 	}
-	if vRes.Name != nil {
-		res.Name = *vRes.Name
+	if vres.Name != nil {
+		res.Name = *vres.Name
 	}
-	if vRes.Vintage != nil {
-		res.Vintage = *vRes.Vintage
+	if vres.Vintage != nil {
+		res.Vintage = *vres.Vintage
 	}
-	if vRes.Composition != nil {
-		res.Composition = make([]*Component, len(vRes.Composition))
-		for j, val := range vRes.Composition {
+	if vres.Composition != nil {
+		res.Composition = make([]*Component, len(vres.Composition))
+		for j, val := range vres.Composition {
 			res.Composition[j] = &Component{
 				Percentage: val.Percentage,
 			}
@@ -201,8 +201,8 @@ func NewStoredBottle(vRes *storageviews.StoredBottle) *StoredBottle {
 			}
 		}
 	}
-	if vRes.Winery != nil {
-		res.Winery = NewWinery(vRes.Winery)
+	if vres.Winery != nil {
+		res.Winery = NewWinery(vres.Winery)
 	}
 
 	return res

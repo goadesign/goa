@@ -473,10 +473,10 @@ const singleResponseT = ` {{- if .ClientBody }}
 		{{- end }}
 	{{- else if and $.Method.ViewedResult (not .IsError) }}
 		var (
-			vRes {{ $.Method.ViewedResult.FullRef }}
+			vres {{ $.Method.ViewedResult.FullRef }}
 			err error
 		)
-		err = decoder(resp).Decode(&vRes)
+		err = decoder(resp).Decode(&vres)
 		if err != nil {
 			return nil, goahttp.ErrDecodingError("{{ $.ServiceName }}", "{{ $.Method.Name }}", err)
 		}
@@ -484,11 +484,11 @@ const singleResponseT = ` {{- if .ClientBody }}
 		if view == "" {
 			return nil, goa.MergeErrors(err, goa.MissingFieldError("goa-view", "header"))
 		}
-		vRes.View = view
-		if err = vRes.Validate(); err != nil {
+		vres.View = view
+		if err = vres.Validate(); err != nil {
 			return nil, fmt.Errorf("invalid response: %s", err)
 		}
-		res := {{ $.ServicePkgName }}.{{ $.Method.ViewedResult.ToResult.VarName }}(vRes)
+		res := {{ $.ServicePkgName }}.{{ $.Method.ViewedResult.ToResult.VarName }}(vres)
 	{{- end }}
 
 	{{- if .Headers }}

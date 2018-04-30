@@ -36,9 +36,9 @@ func EncodeListResponse(encoder func(context.Context, http.ResponseWriter) goaht
 // show endpoint.
 func EncodeShowResponse(encoder func(context.Context, http.ResponseWriter) goahttp.Encoder) func(context.Context, http.ResponseWriter, interface{}) error {
 	return func(ctx context.Context, w http.ResponseWriter, v interface{}) error {
-		vRes := v.(*storageviews.StoredBottle)
-		w.Header().Set("goa-view", vRes.View)
-		res := vRes.StoredBottleView
+		vres := v.(*storageviews.StoredBottle)
+		w.Header().Set("goa-view", vres.View)
+		res := vres.StoredBottleView
 		enc := encoder(ctx, w)
 		body := NewStoredBottleView(res)
 		w.WriteHeader(http.StatusOK)

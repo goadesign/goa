@@ -251,10 +251,10 @@ type SingleView struct {
 
 // NewMultipleViews converts viewed result type MultipleViews to result type
 // MultipleViews.
-func NewMultipleViews(vRes *multiplemethodsresultmultipleviewsviews.MultipleViews) *MultipleViews {
+func NewMultipleViews(vres *multiplemethodsresultmultipleviewsviews.MultipleViews) *MultipleViews {
 	res := &MultipleViews{
-		A: vRes.A,
-		B: vRes.B,
+		A: vres.A,
+		B: vres.B,
 	}
 	return res
 }
@@ -304,12 +304,12 @@ type MultipleViews2 struct {
 
 // NewMultipleViews2 converts viewed result type MultipleViews2 to result type
 // MultipleViews2.
-func NewMultipleViews2(vRes *resultwithotherresultviews.MultipleViews2) *MultipleViews2 {
+func NewMultipleViews2(vres *resultwithotherresultviews.MultipleViews2) *MultipleViews2 {
 	res := &MultipleViews2{
-		B: vRes.B,
+		B: vres.B,
 	}
-	if vRes.A != nil {
-		res.A = *vRes.A
+	if vres.A != nil {
+		res.A = *vres.A
 	}
 	return res
 }
@@ -326,13 +326,13 @@ func NewViewedMultipleViews2(res *MultipleViews2) *resultwithotherresultviews.Mu
 
 // NewMultipleViews converts viewed result type MultipleViews to result type
 // MultipleViews.
-func NewMultipleViews(vRes *resultwithotherresultviews.MultipleViews) *MultipleViews {
+func NewMultipleViews(vres *resultwithotherresultviews.MultipleViews) *MultipleViews {
 	res := &MultipleViews{}
-	if vRes.A != nil {
-		res.A = *vRes.A
+	if vres.A != nil {
+		res.A = *vres.A
 	}
-	if vRes.B != nil {
-		res.B = NewMultipleViews2(vRes.B)
+	if vres.B != nil {
+		res.B = NewMultipleViews2(vres.B)
 	}
 
 	return res
