@@ -390,6 +390,9 @@ func paramFor(at *design.AttributeExpr, name, in string, required bool) *Paramet
 	case design.Float64:
 		p.Type = "number"
 		p.Format = "double"
+	case design.Bytes:
+		p.Type = "string"
+		p.Format = "byte"
 	}
 	p.Extensions = ExtensionsFromExpr(at.Metadata)
 	initValidations(at, p)
