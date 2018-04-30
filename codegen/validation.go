@@ -81,15 +81,15 @@ func HasValidations(att *design.AttributeExpr, ignoreRequired bool) bool {
 // def indicates whether non required attributes that have a default value should
 // not be pointers.
 //
-// req | ptr | def | pointer?
-//  T  |  F  |  F  | F
-//  T  |  F  |  T  | F
-//  T  |  T  |  F  | T
-//  T  |  T  |  T  | T
-//  F  |  F  |  F  | T
-//  F  |  F  |  T  | F if has default value, T otherwise
-//  F  |  T  |  F  | T
-//  F  |  T  |  T  | T
+//    req | ptr | def | pointer?
+//     T  |  F  |  F  | F
+//     T  |  F  |  T  | F
+//     T  |  T  |  F  | T
+//     T  |  T  |  T  | T
+//     F  |  F  |  F  | T
+//     F  |  F  |  T  | F if has default value, T otherwise
+//     F  |  T  |  F  | T
+//     F  |  T  |  T  | T
 //
 // context is used to produce helpful messages in case of error.
 //

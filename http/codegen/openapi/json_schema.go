@@ -292,6 +292,9 @@ func TypeSchema(api *design.APIExpr, t design.DataType) *Schema {
 		case design.Float64Kind:
 			s.Type = Type("number")
 			s.Format = "double"
+		case design.BytesKind:
+			s.Type = Type("string")
+			s.Format = "byte"
 		}
 	case *design.Array:
 		s.Type = Array
