@@ -28,18 +28,15 @@ paths:
         "200":
           description: OK response.
           schema:
-            schema: ""
             type: number
             format: double
         "400":
           description: Bad Request response.
           schema:
-            schema: ""
             $ref: '#/definitions/DivideDivByZeroResponseBody'
         "504":
           description: Gateway Timeout response.
           schema:
-            schema: ""
             $ref: '#/definitions/DivideTimeoutResponseBody'
       schemes:
       - http
@@ -64,56 +61,46 @@ paths:
         "200":
           description: OK response.
           schema:
-            schema: ""
             type: integer
             format: int64
         "400":
           description: Bad Request response.
           schema:
-            schema: ""
             $ref: '#/definitions/IntegerDivideDivByZeroResponseBody'
         "417":
           description: Expectation Failed response.
           schema:
-            schema: ""
             $ref: '#/definitions/IntegerDivideHasRemainderResponseBody'
         "504":
           description: Gateway Timeout response.
           schema:
-            schema: ""
             $ref: '#/definitions/IntegerDivideTimeoutResponseBody'
       schemes:
       - http
 definitions:
   DivideDivByZeroResponseBody:
-    schema: ""
     title: 'Mediatype identifier: application/vnd.goa.error; view=default'
     type: object
     properties:
       id:
-        schema: ""
         type: string
         description: ID is a unique identifier for this particular occurrence of the
           problem.
         example: 123abc
       message:
-        schema: ""
         type: string
         description: Message is a human-readable explanation specific to this occurrence
           of the problem.
         example: parameter 'p' must be an integer
       name:
-        schema: ""
         type: string
         description: Name is the name of this class of errors.
         example: bad_request
       temporary:
-        schema: ""
         type: boolean
         description: Is the error temporary?
         example: true
       timeout:
-        schema: ""
         type: boolean
         description: Is the error a timeout?
         example: false
@@ -131,34 +118,28 @@ definitions:
     - temporary
     - timeout
   DivideTimeoutResponseBody:
-    schema: ""
     title: 'Mediatype identifier: application/vnd.goa.error; view=default'
     type: object
     properties:
       id:
-        schema: ""
         type: string
         description: ID is a unique identifier for this particular occurrence of the
           problem.
         example: 123abc
       message:
-        schema: ""
         type: string
         description: Message is a human-readable explanation specific to this occurrence
           of the problem.
         example: parameter 'p' must be an integer
       name:
-        schema: ""
         type: string
         description: Name is the name of this class of errors.
         example: bad_request
       temporary:
-        schema: ""
         type: boolean
         description: Is the error temporary?
         example: false
       timeout:
-        schema: ""
         type: boolean
         description: Is the error a timeout?
         example: true
@@ -176,34 +157,28 @@ definitions:
     - temporary
     - timeout
   IntegerDivideDivByZeroResponseBody:
-    schema: ""
     title: 'Mediatype identifier: application/vnd.goa.error; view=default'
     type: object
     properties:
       id:
-        schema: ""
         type: string
         description: ID is a unique identifier for this particular occurrence of the
           problem.
         example: 123abc
       message:
-        schema: ""
         type: string
         description: Message is a human-readable explanation specific to this occurrence
           of the problem.
         example: parameter 'p' must be an integer
       name:
-        schema: ""
         type: string
         description: Name is the name of this class of errors.
         example: bad_request
       temporary:
-        schema: ""
         type: boolean
         description: Is the error temporary?
         example: true
       timeout:
-        schema: ""
         type: boolean
         description: Is the error a timeout?
         example: true
@@ -221,34 +196,28 @@ definitions:
     - temporary
     - timeout
   IntegerDivideHasRemainderResponseBody:
-    schema: ""
     title: 'Mediatype identifier: application/vnd.goa.error; view=default'
     type: object
     properties:
       id:
-        schema: ""
         type: string
         description: ID is a unique identifier for this particular occurrence of the
           problem.
         example: 123abc
       message:
-        schema: ""
         type: string
         description: Message is a human-readable explanation specific to this occurrence
           of the problem.
         example: parameter 'p' must be an integer
       name:
-        schema: ""
         type: string
         description: Name is the name of this class of errors.
         example: bad_request
       temporary:
-        schema: ""
         type: boolean
         description: Is the error temporary?
         example: true
       timeout:
-        schema: ""
         type: boolean
         description: Is the error a timeout?
         example: false
@@ -266,34 +235,28 @@ definitions:
     - temporary
     - timeout
   IntegerDivideTimeoutResponseBody:
-    schema: ""
     title: 'Mediatype identifier: application/vnd.goa.error; view=default'
     type: object
     properties:
       id:
-        schema: ""
         type: string
         description: ID is a unique identifier for this particular occurrence of the
           problem.
         example: 123abc
       message:
-        schema: ""
         type: string
         description: Message is a human-readable explanation specific to this occurrence
           of the problem.
         example: parameter 'p' must be an integer
       name:
-        schema: ""
         type: string
         description: Name is the name of this class of errors.
         example: bad_request
       temporary:
-        schema: ""
         type: boolean
         description: Is the error temporary?
         example: false
       timeout:
-        schema: ""
         type: boolean
         description: Is the error a timeout?
         example: true

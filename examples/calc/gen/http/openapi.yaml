@@ -26,7 +26,6 @@ paths:
         "200":
           description: OK response.
           schema:
-            schema: ""
             type: integer
             format: int64
       schemes:
@@ -39,7 +38,6 @@ paths:
         "200":
           description: File downloaded
           schema:
-            schema: ""
             type: file
       schemes:
       - http

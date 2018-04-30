@@ -50,7 +50,11 @@ func NewSecureWithRequiredScopesEndpoint(s Service, authJWTFn security.AuthJWTFu
 			Scopes:         []string{"api:read", "api:write", "api:admin"},
 			RequiredScopes: []string{"api:read", "api:write"},
 		}
-		ctx, err = authJWTFn(ctx, *p.Token, &sc)
+		var token string
+		if p.Token != nil {
+			token = *p.Token
+		}
+		ctx, err = authJWTFn(ctx, token, &sc)
 		if err != nil {
 			return nil, err
 		}
@@ -69,7 +73,11 @@ func NewSecureWithAPIKeyOverrideEndpoint(s Service, authAPIKeyFn security.AuthAP
 		sc := security.APIKeyScheme{
 			Name: "api_key",
 		}
-		ctx, err = authAPIKeyFn(ctx, *p.Key, &sc)
+		var key string
+		if p.Key != nil {
+			key = *p.Key
+		}
+		ctx, err = authAPIKeyFn(ctx, key, &sc)
 		if err != nil {
 			return nil, err
 		}
@@ -97,7 +105,11 @@ func NewSecureWithOAuth2Endpoint(s Service, authOAuth2Fn security.AuthOAuth2Func
 				},
 			},
 		}
-		ctx, err = authOAuth2Fn(ctx, *p.Token, &sc)
+		var token string
+		if p.Token != nil {
+			token = *p.Token
+		}
+		ctx, err = authOAuth2Fn(ctx, token, &sc)
 		if err != nil {
 			return nil, err
 		}

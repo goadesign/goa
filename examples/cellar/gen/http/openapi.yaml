@@ -16,23 +16,19 @@ paths:
         in: body
         required: true
         schema:
-          schema: ""
           $ref: '#/definitions/PickRequestBody'
       responses:
         "200":
           description: OK response.
           schema:
-            schema: ""
             $ref: '#/definitions/StoredBottleResponseBodyCollection'
         "400":
           description: Bad Request response.
           schema:
-            schema: ""
             $ref: '#/definitions/PickNoCriteriaResponseBody'
         "404":
           description: Not Found response.
           schema:
-            schema: ""
             $ref: '#/definitions/PickNoMatchResponseBody'
       schemes:
       - http
@@ -47,7 +43,6 @@ paths:
         "200":
           description: OK response.
           schema:
-            schema: ""
             $ref: '#/definitions/StoredBottleResponseBodyTinyCollection'
       schemes:
       - http
@@ -62,13 +57,11 @@ paths:
         in: body
         required: true
         schema:
-          schema: ""
           $ref: '#/definitions/AddRequestBody'
       responses:
         "201":
           description: Created response.
           schema:
-            schema: ""
             type: string
       schemes:
       - http
@@ -97,12 +90,10 @@ paths:
         "200":
           description: OK response.
           schema:
-            schema: ""
             $ref: '#/definitions/ShowResponseBody'
         "404":
           description: Not Found response.
           schema:
-            schema: ""
             $ref: '#/definitions/ShowNotFoundResponseBody'
       schemes:
       - http
@@ -137,19 +128,15 @@ paths:
         in: body
         required: true
         schema:
-          schema: ""
           type: array
           items:
-            schema: ""
             $ref: '#/definitions/BottleRequestBody'
       responses:
         "200":
           description: OK response.
           schema:
-            schema: ""
             type: array
             items:
-              schema: ""
               type: string
               example: Veniam quaerat sint.
       schemes:
@@ -177,7 +164,6 @@ paths:
         in: body
         required: true
         schema:
-          schema: ""
           $ref: '#/definitions/MultiUpdateRequestBody'
       responses:
         "204":
@@ -205,21 +191,17 @@ paths:
         "200":
           description: File downloaded
           schema:
-            schema: ""
             type: file
       schemes:
       - http
 definitions:
   AddRequestBody:
-    schema: ""
     title: AddRequestBody
     type: object
     properties:
       composition:
-        schema: ""
         type: array
         items:
-          schema: ""
           $ref: '#/definitions/ComponentRequestBody'
         description: Composition is the list of grape varietals and associated percentage.
         example:
@@ -232,34 +214,29 @@ definitions:
         - percentage: 96
           varietal: Syrah
       description:
-        schema: ""
         type: string
         description: Description of bottle
         example: Red wine blend with an emphasis on the Cabernet Franc grape and including
           other Bordeaux grape varietals and some Syrah
         maxLength: 2000
       name:
-        schema: ""
         type: string
         description: Name of bottle
         example: Blue's Cuvee
         maxLength: 100
       rating:
-        schema: ""
         type: integer
         description: Rating of bottle from 1 (worst) to 5 (best)
         example: 2
         minimum: 1
         maximum: 5
       vintage:
-        schema: ""
         type: integer
         description: Vintage of bottle
         example: 1973
         minimum: 1900
         maximum: 2020
       winery:
-        schema: ""
         $ref: '#/definitions/WineryRequestBody'
     example:
       composition:
@@ -286,15 +263,12 @@ definitions:
     - winery
     - vintage
   BottleRequestBody:
-    schema: ""
     title: BottleRequestBody
     type: object
     properties:
       composition:
-        schema: ""
         type: array
         items:
-          schema: ""
           $ref: '#/definitions/ComponentRequestBody'
         description: Composition is the list of grape varietals and associated percentage.
         example:
@@ -305,34 +279,29 @@ definitions:
         - percentage: 96
           varietal: Syrah
       description:
-        schema: ""
         type: string
         description: Description of bottle
         example: Red wine blend with an emphasis on the Cabernet Franc grape and including
           other Bordeaux grape varietals and some Syrah
         maxLength: 2000
       name:
-        schema: ""
         type: string
         description: Name of bottle
         example: Blue's Cuvee
         maxLength: 100
       rating:
-        schema: ""
         type: integer
         description: Rating of bottle from 1 (worst) to 5 (best)
         example: 1
         minimum: 1
         maximum: 5
       vintage:
-        schema: ""
         type: integer
         description: Vintage of bottle
         example: 1965
         minimum: 1900
         maximum: 2020
       winery:
-        schema: ""
         $ref: '#/definitions/WineryRequestBody'
     description: Bottle describes a bottle of wine to be stored.
     example:
@@ -360,19 +329,16 @@ definitions:
     - winery
     - vintage
   Component:
-    schema: ""
     title: Component
     type: object
     properties:
       percentage:
-        schema: ""
         type: integer
         description: Percentage of varietal in wine
         example: 23
         minimum: 1
         maximum: 100
       varietal:
-        schema: ""
         type: string
         description: Grape varietal
         example: Syrah
@@ -384,19 +350,16 @@ definitions:
     required:
     - varietal
   ComponentRequestBody:
-    schema: ""
     title: ComponentRequestBody
     type: object
     properties:
       percentage:
-        schema: ""
         type: integer
         description: Percentage of varietal in wine
         example: 99
         minimum: 1
         maximum: 100
       varietal:
-        schema: ""
         type: string
         description: Grape varietal
         example: Syrah
@@ -408,19 +371,16 @@ definitions:
     required:
     - varietal
   ComponentResponseBody:
-    schema: ""
     title: ComponentResponseBody
     type: object
     properties:
       percentage:
-        schema: ""
         type: integer
         description: Percentage of varietal in wine
         example: 46
         minimum: 1
         maximum: 100
       varietal:
-        schema: ""
         type: string
         description: Grape varietal
         example: Syrah
@@ -432,15 +392,12 @@ definitions:
     required:
     - varietal
   MultiUpdateRequestBody:
-    schema: ""
     title: MultiUpdateRequestBody
     type: object
     properties:
       bottles:
-        schema: ""
         type: array
         items:
-          schema: ""
           $ref: '#/definitions/BottleRequestBody'
         description: Array of bottle info that matches the ids attribute
         example:
@@ -567,32 +524,26 @@ definitions:
           region: Central Coast, California
           url: http://www.longoriawine.com/
   PickNoCriteriaResponseBody:
-    schema: ""
     title: PickNoCriteriaResponseBody
     type: string
     description: Missing criteria
     example: Earum dolorem.
   PickNoMatchResponseBody:
-    schema: ""
     title: PickNoMatchResponseBody
     type: string
     description: No bottle matched given criteria
     example: Ut iusto aut officia rerum harum qui.
   PickRequestBody:
-    schema: ""
     title: PickRequestBody
     type: object
     properties:
       name:
-        schema: ""
         type: string
         description: Name of bottle to pick
         example: Blue's Cuvee
       varietal:
-        schema: ""
         type: array
         items:
-          schema: ""
           type: string
           example: Et aut soluta.
         description: Varietals in preference order
@@ -601,7 +552,6 @@ definitions:
         - merlot
         - cabernet franc
       winery:
-        schema: ""
         type: string
         description: Winery of bottle to pick
         example: longoria
@@ -613,17 +563,14 @@ definitions:
       - cabernet franc
       winery: longoria
   ShowNotFoundResponseBody:
-    schema: ""
     title: ShowNotFoundResponseBody
     type: object
     properties:
       id:
-        schema: ""
         type: string
         description: ID of missing bottle
         example: Exercitationem alias est dolores.
       message:
-        schema: ""
         type: string
         description: Message of error
         example: bottle 1 not found
@@ -635,15 +582,12 @@ definitions:
     - message
     - id
   ShowResponseBody:
-    schema: ""
     title: 'Mediatype identifier: application/vnd.cellar.stored-bottle; view=default'
     type: object
     properties:
       composition:
-        schema: ""
         type: array
         items:
-          schema: ""
           $ref: '#/definitions/Component'
         description: Composition is the list of grape varietals and associated percentage.
         example:
@@ -654,39 +598,33 @@ definitions:
         - percentage: 86
           varietal: Syrah
       description:
-        schema: ""
         type: string
         description: Description of bottle
         example: Red wine blend with an emphasis on the Cabernet Franc grape and including
           other Bordeaux grape varietals and some Syrah
         maxLength: 2000
       id:
-        schema: ""
         type: string
         description: ID is the unique id of the bottle.
         example: 123abc
       name:
-        schema: ""
         type: string
         description: Name of bottle
         example: Blue's Cuvee
         maxLength: 100
       rating:
-        schema: ""
         type: integer
         description: Rating of bottle from 1 (worst) to 5 (best)
         example: 2
         minimum: 1
         maximum: 5
       vintage:
-        schema: ""
         type: integer
         description: Vintage of bottle
         example: 1913
         minimum: 1900
         maximum: 2020
       winery:
-        schema: ""
         $ref: '#/definitions/Winery'
     description: ShowResponseBody result type (default view)
     example:
@@ -712,15 +650,12 @@ definitions:
     - winery
     - vintage
   StoredBottleResponseBody:
-    schema: ""
     title: 'Mediatype identifier: application/vnd.cellar.stored-bottle; view=default'
     type: object
     properties:
       composition:
-        schema: ""
         type: array
         items:
-          schema: ""
           $ref: '#/definitions/ComponentResponseBody'
         description: Composition is the list of grape varietals and associated percentage.
         example:
@@ -733,39 +668,33 @@ definitions:
         - percentage: 82
           varietal: Syrah
       description:
-        schema: ""
         type: string
         description: Description of bottle
         example: Red wine blend with an emphasis on the Cabernet Franc grape and including
           other Bordeaux grape varietals and some Syrah
         maxLength: 2000
       id:
-        schema: ""
         type: string
         description: ID is the unique id of the bottle.
         example: 123abc
       name:
-        schema: ""
         type: string
         description: Name of bottle
         example: Blue's Cuvee
         maxLength: 100
       rating:
-        schema: ""
         type: integer
         description: Rating of bottle from 1 (worst) to 5 (best)
         example: 1
         minimum: 1
         maximum: 5
       vintage:
-        schema: ""
         type: integer
         description: Vintage of bottle
         example: 1905
         minimum: 1900
         maximum: 2020
       winery:
-        schema: ""
         $ref: '#/definitions/WineryResponseBody'
     description: A StoredBottle describes a bottle retrieved by the storage service.
       (default view)
@@ -794,11 +723,9 @@ definitions:
     - winery
     - vintage
   StoredBottleResponseBodyCollection:
-    schema: ""
     title: 'Mediatype identifier: '
     type: array
     items:
-      schema: ""
       $ref: '#/definitions/StoredBottleResponseBody'
     description: StoredBottleResponseBodyCollection is the result type for an array
       of StoredBottleResponseBody (default view)
@@ -844,23 +771,19 @@ definitions:
         region: Central Coast, California
         url: http://www.longoriawine.com/
   StoredBottleResponseBodyTiny:
-    schema: ""
     title: 'Mediatype identifier: '
     type: object
     properties:
       id:
-        schema: ""
         type: string
         description: ID is the unique id of the bottle.
         example: 123abc
       name:
-        schema: ""
         type: string
         description: Name of bottle
         example: Blue's Cuvee
         maxLength: 100
       winery:
-        schema: ""
         $ref: '#/definitions/WineryResponseBodyTiny'
     description: A StoredBottle describes a bottle retrieved by the storage service.
       (tiny view) (default view) (default view) (default view)
@@ -874,11 +797,9 @@ definitions:
     - name
     - winery
   StoredBottleResponseBodyTinyCollection:
-    schema: ""
     title: 'Mediatype identifier: '
     type: array
     items:
-      schema: ""
       $ref: '#/definitions/StoredBottleResponseBodyTiny'
     description: StoredBottleResponseBodyTinyCollection is the result type for an
       array of StoredBottleResponseBodyTiny (default view)
@@ -900,29 +821,24 @@ definitions:
       winery:
         name: Longoria
   Winery:
-    schema: ""
     title: 'Mediatype identifier: winery; view=default'
     type: object
     properties:
       country:
-        schema: ""
         type: string
         description: Country of winery
         example: USA
         pattern: (?i)[a-z '\.]+
       name:
-        schema: ""
         type: string
         description: Name of winery
         example: Longoria
       region:
-        schema: ""
         type: string
         description: Region of winery
         example: Central Coast, California
         pattern: (?i)[a-z '\.]+
       url:
-        schema: ""
         type: string
         description: Winery website URL
         example: http://www.longoriawine.com/
@@ -937,29 +853,24 @@ definitions:
     - region
     - country
   WineryRequestBody:
-    schema: ""
     title: 'Mediatype identifier: winery; view=default'
     type: object
     properties:
       country:
-        schema: ""
         type: string
         description: Country of winery
         example: USA
         pattern: (?i)[a-z '\.]+
       name:
-        schema: ""
         type: string
         description: Name of winery
         example: Longoria
       region:
-        schema: ""
         type: string
         description: Region of winery
         example: Central Coast, California
         pattern: (?i)[a-z '\.]+
       url:
-        schema: ""
         type: string
         description: Winery website URL
         example: http://www.longoriawine.com/
@@ -975,29 +886,24 @@ definitions:
     - region
     - country
   WineryResponseBody:
-    schema: ""
     title: 'Mediatype identifier: winery; view=default'
     type: object
     properties:
       country:
-        schema: ""
         type: string
         description: Country of winery
         example: USA
         pattern: (?i)[a-z '\.]+
       name:
-        schema: ""
         type: string
         description: Name of winery
         example: Longoria
       region:
-        schema: ""
         type: string
         description: Region of winery
         example: Central Coast, California
         pattern: (?i)[a-z '\.]+
       url:
-        schema: ""
         type: string
         description: Winery website URL
         example: http://www.longoriawine.com/
@@ -1012,12 +918,10 @@ definitions:
     - region
     - country
   WineryResponseBodyTiny:
-    schema: ""
     title: 'Mediatype identifier: '
     type: object
     properties:
       name:
-        schema: ""
         type: string
         description: Name of winery
         example: Longoria
