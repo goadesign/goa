@@ -14,7 +14,7 @@ type (
 	// Schema represents an instance of a JSON schema.
 	// See http://json-schema.org/documentation.html
 	Schema struct {
-		Schema string `json:"$schema,omitempty"`
+		Schema string `json:"$schema,omitempty" yaml:"$schema,omitempty"`
 		// Core schema
 		ID           string             `json:"id,omitempty" yaml:"id,omitempty"`
 		Title        string             `json:"title,omitempty" yaml:"title,omitempty"`
