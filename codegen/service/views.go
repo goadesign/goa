@@ -10,8 +10,11 @@ import (
 // ViewsFile returns the views file for the given service containing types
 // to render result types with more than one view appropriately.
 func ViewsFile(genpkg string, service *design.ServiceExpr) *codegen.File {
-	path := filepath.Join(codegen.Gendir, codegen.SnakeCase(service.Name), "views", "view.go")
 	svc := Services.Get(service.Name)
+	if len(svc.ViewedTypes) == 0 {
+		return nil
+	}
+	path := filepath.Join(codegen.Gendir, codegen.SnakeCase(service.Name), "views", "view.go")
 	var (
 		sections []*codegen.SectionTemplate
 	)

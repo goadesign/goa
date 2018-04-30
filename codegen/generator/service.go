@@ -23,7 +23,9 @@ func Service(genpkg string, roots []eval.Root) ([]*codegen.File, error) {
 				files = append(files, service.File(genpkg, s))
 				files = append(files, service.EndpointFile(genpkg, s))
 				files = append(files, service.ClientFile(s))
-				files = append(files, service.ViewsFile(genpkg, s))
+				if f := service.ViewsFile(genpkg, s); f != nil {
+					files = append(files, f)
+				}
 				f, err := service.ConvertFile(r, s)
 				if err != nil {
 					return nil, err

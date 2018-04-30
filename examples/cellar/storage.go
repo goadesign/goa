@@ -76,7 +76,7 @@ func (s *storageSvc) Add(ctx context.Context, p *storage.Bottle) (res string, er
 		Description: p.Description,
 		Rating:      p.Rating,
 	}
-	if err = s.db.Save("CELLAR", id, &sb); err != nil {
+	if err = s.db.Save("CELLAR", res, &sb); err != nil {
 		return "", err // internal error
 	}
 	return res, nil
