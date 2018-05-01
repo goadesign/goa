@@ -132,7 +132,10 @@ func (r *HTTPResponseExpr) Validate(e *EndpointExpr) *eval.ValidationErrors {
 		matt := design.NewMappedAttributeExpr(r.headers)
 		mobj := design.AsObject(matt.Type)
 		if obj == nil {
-			verr.Add(r, "response defines headers but result is empty")
+			if r.headers.Type == design.Empty {
+				// Could be a primitive which is fine
+				verr.Add(r, "response defines headers but result is empty")
+			}
 		} else {
 			for _, h := range *mobj {
 				found := false
