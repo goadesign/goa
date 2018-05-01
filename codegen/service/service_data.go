@@ -66,6 +66,8 @@ type (
 		Temporary bool
 		// Timeout indicates whether the error is due to timeouts.
 		Timeout bool
+		// Fault indicates whether the error is server-side fault.
+		Fault bool
 	}
 
 	// MethodData describes a single service method.
@@ -387,6 +389,7 @@ func collectTypes(at *design.AttributeExpr, seen map[string]struct{}, scope *cod
 func buildErrorInitData(er *design.ErrorExpr, scope *codegen.NameScope) *ErrorInitData {
 	_, temporary := er.AttributeExpr.Metadata["goa:error:temporary"]
 	_, timeout := er.AttributeExpr.Metadata["goa:error:timeout"]
+	_, fault := er.AttributeExpr.Metadata["goa:error:fault"]
 	return &ErrorInitData{
 		Name:        fmt.Sprintf("Make%s", codegen.Goify(er.Name, true)),
 		Description: er.Description,
@@ -395,6 +398,7 @@ func buildErrorInitData(er *design.ErrorExpr, scope *codegen.NameScope) *ErrorIn
 		TypeRef:     scope.GoTypeRef(er.AttributeExpr),
 		Temporary:   temporary,
 		Timeout:     timeout,
+		Fault:       fault,
 	}
 }
 

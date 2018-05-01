@@ -173,6 +173,6 @@ Divide implements divide.
     -b FLOAT64: Right operand
 
 Example:
-    `+os.Args[0]+` divider divide --a 0.17709632804380335 --b 0.5478459023565198
+    `+os.Args[0]+` divider divide --a 0.941744315278658 --b 0.5740977250667921
 `, os.Args[0])
 }

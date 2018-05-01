@@ -26,6 +26,8 @@ type IntegerDivideHasRemainderResponseBody struct {
 	Temporary *bool `form:"temporary,omitempty" json:"temporary,omitempty" xml:"temporary,omitempty"`
 	// Is the error a timeout?
 	Timeout *bool `form:"timeout,omitempty" json:"timeout,omitempty" xml:"timeout,omitempty"`
+	// Is the error a server-side fault?
+	Fault *bool `form:"fault,omitempty" json:"fault,omitempty" xml:"fault,omitempty"`
 }
 
 // IntegerDivideDivByZeroResponseBody is the type of the "divider" service
@@ -42,6 +44,8 @@ type IntegerDivideDivByZeroResponseBody struct {
 	Temporary *bool `form:"temporary,omitempty" json:"temporary,omitempty" xml:"temporary,omitempty"`
 	// Is the error a timeout?
 	Timeout *bool `form:"timeout,omitempty" json:"timeout,omitempty" xml:"timeout,omitempty"`
+	// Is the error a server-side fault?
+	Fault *bool `form:"fault,omitempty" json:"fault,omitempty" xml:"fault,omitempty"`
 }
 
 // IntegerDivideTimeoutResponseBody is the type of the "divider" service
@@ -58,6 +62,8 @@ type IntegerDivideTimeoutResponseBody struct {
 	Temporary *bool `form:"temporary,omitempty" json:"temporary,omitempty" xml:"temporary,omitempty"`
 	// Is the error a timeout?
 	Timeout *bool `form:"timeout,omitempty" json:"timeout,omitempty" xml:"timeout,omitempty"`
+	// Is the error a server-side fault?
+	Fault *bool `form:"fault,omitempty" json:"fault,omitempty" xml:"fault,omitempty"`
 }
 
 // DivideDivByZeroResponseBody is the type of the "divider" service "divide"
@@ -74,6 +80,8 @@ type DivideDivByZeroResponseBody struct {
 	Temporary *bool `form:"temporary,omitempty" json:"temporary,omitempty" xml:"temporary,omitempty"`
 	// Is the error a timeout?
 	Timeout *bool `form:"timeout,omitempty" json:"timeout,omitempty" xml:"timeout,omitempty"`
+	// Is the error a server-side fault?
+	Fault *bool `form:"fault,omitempty" json:"fault,omitempty" xml:"fault,omitempty"`
 }
 
 // DivideTimeoutResponseBody is the type of the "divider" service "divide"
@@ -90,6 +98,8 @@ type DivideTimeoutResponseBody struct {
 	Temporary *bool `form:"temporary,omitempty" json:"temporary,omitempty" xml:"temporary,omitempty"`
 	// Is the error a timeout?
 	Timeout *bool `form:"timeout,omitempty" json:"timeout,omitempty" xml:"timeout,omitempty"`
+	// Is the error a server-side fault?
+	Fault *bool `form:"fault,omitempty" json:"fault,omitempty" xml:"fault,omitempty"`
 }
 
 // NewIntegerDivideHasRemainder builds a divider service integer_divide
@@ -101,6 +111,7 @@ func NewIntegerDivideHasRemainder(body *IntegerDivideHasRemainderResponseBody) *
 		Message:   *body.Message,
 		Temporary: *body.Temporary,
 		Timeout:   *body.Timeout,
+		Fault:     *body.Fault,
 	}
 	return v
 }
@@ -114,6 +125,7 @@ func NewIntegerDivideDivByZero(body *IntegerDivideDivByZeroResponseBody) *goa.Se
 		Message:   *body.Message,
 		Temporary: *body.Temporary,
 		Timeout:   *body.Timeout,
+		Fault:     *body.Fault,
 	}
 	return v
 }
@@ -127,6 +139,7 @@ func NewIntegerDivideTimeout(body *IntegerDivideTimeoutResponseBody) *goa.Servic
 		Message:   *body.Message,
 		Temporary: *body.Temporary,
 		Timeout:   *body.Timeout,
+		Fault:     *body.Fault,
 	}
 	return v
 }
@@ -140,6 +153,7 @@ func NewDivideDivByZero(body *DivideDivByZeroResponseBody) *goa.ServiceError {
 		Message:   *body.Message,
 		Temporary: *body.Temporary,
 		Timeout:   *body.Timeout,
+		Fault:     *body.Fault,
 	}
 	return v
 }
@@ -152,6 +166,7 @@ func NewDivideTimeout(body *DivideTimeoutResponseBody) *goa.ServiceError {
 		Message:   *body.Message,
 		Temporary: *body.Temporary,
 		Timeout:   *body.Timeout,
+		Fault:     *body.Fault,
 	}
 	return v
 }
@@ -174,6 +189,9 @@ func (body *IntegerDivideHasRemainderResponseBody) Validate() (err error) {
 	if body.Timeout == nil {
 		err = goa.MergeErrors(err, goa.MissingFieldError("timeout", "body"))
 	}
+	if body.Fault == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("fault", "body"))
+	}
 	return
 }
 
@@ -193,6 +211,9 @@ func (body *IntegerDivideDivByZeroResponseBody) Validate() (err error) {
 	}
 	if body.Timeout == nil {
 		err = goa.MergeErrors(err, goa.MissingFieldError("timeout", "body"))
+	}
+	if body.Fault == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("fault", "body"))
 	}
 	return
 }
@@ -214,6 +235,9 @@ func (body *IntegerDivideTimeoutResponseBody) Validate() (err error) {
 	if body.Timeout == nil {
 		err = goa.MergeErrors(err, goa.MissingFieldError("timeout", "body"))
 	}
+	if body.Fault == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("fault", "body"))
+	}
 	return
 }
 
@@ -234,6 +258,9 @@ func (body *DivideDivByZeroResponseBody) Validate() (err error) {
 	if body.Timeout == nil {
 		err = goa.MergeErrors(err, goa.MissingFieldError("timeout", "body"))
 	}
+	if body.Fault == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("fault", "body"))
+	}
 	return
 }
 
@@ -253,6 +280,9 @@ func (body *DivideTimeoutResponseBody) Validate() (err error) {
 	}
 	if body.Timeout == nil {
 		err = goa.MergeErrors(err, goa.MissingFieldError("timeout", "body"))
+	}
+	if body.Fault == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("fault", "body"))
 	}
 	return
 }

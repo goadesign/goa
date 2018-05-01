@@ -1327,7 +1327,7 @@ func DecodeMethodPathStringResponse(decoder func(*http.Response) goahttp.Decoder
 			return nil, nil
 		default:
 			body, _ := ioutil.ReadAll(resp.Body)
-			return nil, goahttp.ErrInvalidResponse("account", "create", resp.StatusCode, string(body))
+			return nil, goahttp.ErrInvalidResponse("ServicePathString", "MethodPathString", resp.StatusCode, string(body))
 		}
 	}
 }
@@ -1356,7 +1356,7 @@ func DecodeMethodPathStringValidateResponse(decoder func(*http.Response) goahttp
 			return nil, nil
 		default:
 			body, _ := ioutil.ReadAll(resp.Body)
-			return nil, goahttp.ErrInvalidResponse("account", "create", resp.StatusCode, string(body))
+			return nil, goahttp.ErrInvalidResponse("ServicePathStringValidate", "MethodPathStringValidate", resp.StatusCode, string(body))
 		}
 	}
 }
@@ -1384,7 +1384,7 @@ func DecodeMethodPathArrayStringResponse(decoder func(*http.Response) goahttp.De
 			return nil, nil
 		default:
 			body, _ := ioutil.ReadAll(resp.Body)
-			return nil, goahttp.ErrInvalidResponse("account", "create", resp.StatusCode, string(body))
+			return nil, goahttp.ErrInvalidResponse("ServicePathArrayString", "MethodPathArrayString", resp.StatusCode, string(body))
 		}
 	}
 }
@@ -1413,7 +1413,7 @@ func DecodeMethodPathArrayStringValidateResponse(decoder func(*http.Response) go
 			return nil, nil
 		default:
 			body, _ := ioutil.ReadAll(resp.Body)
-			return nil, goahttp.ErrInvalidResponse("account", "create", resp.StatusCode, string(body))
+			return nil, goahttp.ErrInvalidResponse("ServicePathArrayStringValidate", "MethodPathArrayStringValidate", resp.StatusCode, string(body))
 		}
 	}
 }
@@ -1442,7 +1442,7 @@ func DecodeMethodPathPrimitiveStringValidateResponse(decoder func(*http.Response
 			return nil, nil
 		default:
 			body, _ := ioutil.ReadAll(resp.Body)
-			return nil, goahttp.ErrInvalidResponse("account", "create", resp.StatusCode, string(body))
+			return nil, goahttp.ErrInvalidResponse("ServicePathPrimitiveStringValidate", "MethodPathPrimitiveStringValidate", resp.StatusCode, string(body))
 		}
 	}
 }
@@ -1471,7 +1471,7 @@ func DecodeMethodPathPrimitiveBoolValidateResponse(decoder func(*http.Response) 
 			return nil, nil
 		default:
 			body, _ := ioutil.ReadAll(resp.Body)
-			return nil, goahttp.ErrInvalidResponse("account", "create", resp.StatusCode, string(body))
+			return nil, goahttp.ErrInvalidResponse("ServicePathPrimitiveBoolValidate", "MethodPathPrimitiveBoolValidate", resp.StatusCode, string(body))
 		}
 	}
 }
@@ -1500,7 +1500,7 @@ func DecodeMethodPathPrimitiveArrayStringValidateResponse(decoder func(*http.Res
 			return nil, nil
 		default:
 			body, _ := ioutil.ReadAll(resp.Body)
-			return nil, goahttp.ErrInvalidResponse("account", "create", resp.StatusCode, string(body))
+			return nil, goahttp.ErrInvalidResponse("ServicePathPrimitiveArrayStringValidate", "MethodPathPrimitiveArrayStringValidate", resp.StatusCode, string(body))
 		}
 	}
 }
@@ -1529,7 +1529,7 @@ func DecodeMethodPathPrimitiveArrayBoolValidateResponse(decoder func(*http.Respo
 			return nil, nil
 		default:
 			body, _ := ioutil.ReadAll(resp.Body)
-			return nil, goahttp.ErrInvalidResponse("account", "create", resp.StatusCode, string(body))
+			return nil, goahttp.ErrInvalidResponse("ServicePathPrimitiveArrayBoolValidate", "MethodPathPrimitiveArrayBoolValidate", resp.StatusCode, string(body))
 		}
 	}
 }

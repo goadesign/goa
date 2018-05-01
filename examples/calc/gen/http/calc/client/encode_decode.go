@@ -77,7 +77,7 @@ func DecodeAddResponse(decoder func(*http.Response) goahttp.Decoder, restoreBody
 			return body, nil
 		default:
 			body, _ := ioutil.ReadAll(resp.Body)
-			return nil, goahttp.ErrInvalidResponse("account", "create", resp.StatusCode, string(body))
+			return nil, goahttp.ErrInvalidResponse("calc", "add", resp.StatusCode, string(body))
 		}
 	}
 }

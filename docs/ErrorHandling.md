@@ -51,9 +51,10 @@ default error type `ErrorResult`. This type defines the following fields:
 * `Message` is the error message.
 * `Temporary` indicates whether the error is temporary.
 * `Timeout` indicates whether the error is due to a timeout.
+* `Fault` indicates whether the error is due to a server-side fault.
 
 The DSL makes is possible to specify whether an error denotes a temporary
-condition and/or a timeout, here are some examples:
+condition and/or a timeout or a server-side fault, here are some examples:
 
 ```go
         Error("network_failure", func() {
@@ -64,14 +65,18 @@ condition and/or a timeout, here are some examples:
                 Timeout()
         })
 
-       Error("remote_timeout", func() {
+        Error("remote_timeout", func() {
                 Temporary()
                 Timeout()
         })
+
+        Error("internal_error", func() {
+                Fault()
+        })
 ```
 
-The generated code takes care of initializing the `ErrorResult` `Temporary` and
-`Timeout` fields appropriately when encoding the error response.
+The generated code takes care of initializing the `ErrorResult` `Temporary`,
+`Timeout` and `Fault` fields appropriately when encoding the error response.
 
 ### Designing HTTP Responses
 
@@ -101,11 +106,10 @@ var _ = Service("divider", func() {
 
 ## Returning Errors
 
-Given the divider service design above goa generates a `ErrorResult` data
-structure in the `divider` service package. goa also generates two helper
-functions that build the corresponding errors: `MakeDivByZero` and
-`MakeHasRemainder`. These functions accept a Go error as argument making it
-convenient to map a business logic error to a specific error result.
+Given the divider service design above goa generates two helper functions that
+build the corresponding errors: `MakeDivByZero` and `MakeHasRemainder`. These
+functions accept a Go error as argument making it convenient to map a business
+logic error to a specific error result.
 
 Here is an example of what an implementation of `integer_divide` could look
 like:
@@ -157,9 +161,9 @@ description inline in this case as well.
 There are a couple of caveats to be aware of when using custom error result
 types:
 
- 1. The `Temporary` and `Timeout` expressions have no effect on code generation
-    in this case as they otherwise set the corresponding field values on the
-    `ErrorResult` struct.
+ 1. The `Temporary`, `Timeout` and `Fault` expressions have no effect on code
+    generation in this case as they otherwise set the corresponding field values
+    on the `ErrorResult` struct.
 
  2. If the custom type is a user defined type and if it is used to define
     multiple errors on the same method then goa must be told which attribute
@@ -181,7 +185,7 @@ var InsertConflict = ResultType("application/vnd.service.insertconflict", func()
                 Attribute("conflict_value")
                 // Note: error_name is omitted from the default view.
                 // in this example error_name is an attribute used to identify
-                // the field containing the name of the error and is not actually
+                // the field containing the name of the error and is not
                 // encoded in the response sent to the client.
         })
 })
@@ -197,5 +201,5 @@ expression if any to encode errors into HTTP responses. The code first switches
 on the type of the error value and matches that with the type of the errors
 defined in the design. If the type is a user provided type and has and attribute
 with the "struct:error:name" metadata defined then it compares the value of the
-corresponding field with the name of the errors in the design. 
+corresponding field with the name of the errors in the design.
 

@@ -47,6 +47,8 @@ type (
 		Temporary bool
 		// Is the error a timeout?
 		Timeout bool
+		// Is the error a server-side fault?
+		Fault bool
 	}
 )
 
@@ -192,8 +194,12 @@ func ErrInvalidResponse(svc, m string, code int, body string) error {
 	timeout := code == http.StatusRequestTimeout ||
 		code == http.StatusGatewayTimeout
 
+	fault := code == http.StatusInternalServerError ||
+		code == http.StatusNotImplemented ||
+		code == http.StatusBadGateway
+
 	return &ClientError{Name: "invalid_response", Message: msg, Service: svc, Method: m,
-		Temporary: temporary, Timeout: timeout}
+		Temporary: temporary, Timeout: timeout, Fault: fault}
 }
 
 // ErrRequestError is the error returned when the request fails to be sent.

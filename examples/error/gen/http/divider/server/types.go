@@ -27,6 +27,8 @@ type IntegerDivideHasRemainderResponseBody struct {
 	Temporary bool `form:"temporary" json:"temporary" xml:"temporary"`
 	// Is the error a timeout?
 	Timeout bool `form:"timeout" json:"timeout" xml:"timeout"`
+	// Is the error a server-side fault?
+	Fault bool `form:"fault" json:"fault" xml:"fault"`
 }
 
 // IntegerDivideDivByZeroResponseBody is the type of the "divider" service
@@ -43,6 +45,8 @@ type IntegerDivideDivByZeroResponseBody struct {
 	Temporary bool `form:"temporary" json:"temporary" xml:"temporary"`
 	// Is the error a timeout?
 	Timeout bool `form:"timeout" json:"timeout" xml:"timeout"`
+	// Is the error a server-side fault?
+	Fault bool `form:"fault" json:"fault" xml:"fault"`
 }
 
 // IntegerDivideTimeoutResponseBody is the type of the "divider" service
@@ -59,6 +63,8 @@ type IntegerDivideTimeoutResponseBody struct {
 	Temporary bool `form:"temporary" json:"temporary" xml:"temporary"`
 	// Is the error a timeout?
 	Timeout bool `form:"timeout" json:"timeout" xml:"timeout"`
+	// Is the error a server-side fault?
+	Fault bool `form:"fault" json:"fault" xml:"fault"`
 }
 
 // DivideDivByZeroResponseBody is the type of the "divider" service "divide"
@@ -75,6 +81,8 @@ type DivideDivByZeroResponseBody struct {
 	Temporary bool `form:"temporary" json:"temporary" xml:"temporary"`
 	// Is the error a timeout?
 	Timeout bool `form:"timeout" json:"timeout" xml:"timeout"`
+	// Is the error a server-side fault?
+	Fault bool `form:"fault" json:"fault" xml:"fault"`
 }
 
 // DivideTimeoutResponseBody is the type of the "divider" service "divide"
@@ -91,6 +99,8 @@ type DivideTimeoutResponseBody struct {
 	Temporary bool `form:"temporary" json:"temporary" xml:"temporary"`
 	// Is the error a timeout?
 	Timeout bool `form:"timeout" json:"timeout" xml:"timeout"`
+	// Is the error a server-side fault?
+	Fault bool `form:"fault" json:"fault" xml:"fault"`
 }
 
 // NewIntegerDivideHasRemainderResponseBody builds the HTTP response body from
@@ -102,6 +112,7 @@ func NewIntegerDivideHasRemainderResponseBody(res *goa.ServiceError) *IntegerDiv
 		Message:   res.Message,
 		Temporary: res.Temporary,
 		Timeout:   res.Timeout,
+		Fault:     res.Fault,
 	}
 	return body
 }
@@ -115,6 +126,7 @@ func NewIntegerDivideDivByZeroResponseBody(res *goa.ServiceError) *IntegerDivide
 		Message:   res.Message,
 		Temporary: res.Temporary,
 		Timeout:   res.Timeout,
+		Fault:     res.Fault,
 	}
 	return body
 }
@@ -128,6 +140,7 @@ func NewIntegerDivideTimeoutResponseBody(res *goa.ServiceError) *IntegerDivideTi
 		Message:   res.Message,
 		Temporary: res.Temporary,
 		Timeout:   res.Timeout,
+		Fault:     res.Fault,
 	}
 	return body
 }
@@ -141,6 +154,7 @@ func NewDivideDivByZeroResponseBody(res *goa.ServiceError) *DivideDivByZeroRespo
 		Message:   res.Message,
 		Temporary: res.Temporary,
 		Timeout:   res.Timeout,
+		Fault:     res.Fault,
 	}
 	return body
 }
@@ -154,6 +168,7 @@ func NewDivideTimeoutResponseBody(res *goa.ServiceError) *DivideTimeoutResponseB
 		Message:   res.Message,
 		Temporary: res.Temporary,
 		Timeout:   res.Timeout,
+		Fault:     res.Fault,
 	}
 	return body
 }

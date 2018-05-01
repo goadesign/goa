@@ -581,6 +581,24 @@ func Extend(t design.DataType) {
 	dsl.Extend(t)
 }
 
+// Fault qualifies an error type as describing errors due to a server-side
+// fault.
+//
+// Fault must appear in a Error expression.
+//
+// Fault takes no argument.
+//
+// Example:
+//
+//    var _ = Service("divider", func() {
+//         Error("internal_error", func() {
+//                 Fault()
+//         })
+//    })
+func Fault() {
+	dsl.Fault()
+}
+
 // Field is syntactic sugar to define an attribute with the "rpc:tag" metadata
 // set with the value of the first argument.
 //
@@ -1199,11 +1217,11 @@ func Service(name string, fn func()) *design.ServiceExpr {
 //
 // Example:
 //
-// var _ = Service("divider", func() {
-//      Error("request_timeout", func() {
-//              Temporary()
-//      })
-// })
+//    var _ = Service("divider", func() {
+//         Error("request_timeout", func() {
+//                 Temporary()
+//         })
+//    })
 func Temporary() {
 	dsl.Temporary()
 }
@@ -1221,11 +1239,11 @@ func TermsOfService(terms string) {
 //
 // Example:
 //
-// var _ = Service("divider", func() {
-//	Error("request_timeout", func() {
-//		Timeout()
-//	})
-// })
+//    var _ = Service("divider", func() {
+//	   Error("request_timeout", func() {
+//		   Timeout()
+//	   })
+//    })
 func Timeout() {
 	dsl.Timeout()
 }

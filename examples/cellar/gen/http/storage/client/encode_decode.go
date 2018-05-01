@@ -71,7 +71,7 @@ func DecodeListResponse(decoder func(*http.Response) goahttp.Decoder, restoreBod
 			return NewListStoredBottleCollectionOK(body), nil
 		default:
 			body, _ := ioutil.ReadAll(resp.Body)
-			return nil, goahttp.ErrInvalidResponse("account", "create", resp.StatusCode, string(body))
+			return nil, goahttp.ErrInvalidResponse("storage", "list", resp.StatusCode, string(body))
 		}
 	}
 }
@@ -171,7 +171,7 @@ func DecodeShowResponse(decoder func(*http.Response) goahttp.Decoder, restoreBod
 			return nil, NewShowNotFound(&body)
 		default:
 			body, _ := ioutil.ReadAll(resp.Body)
-			return nil, goahttp.ErrInvalidResponse("account", "create", resp.StatusCode, string(body))
+			return nil, goahttp.ErrInvalidResponse("storage", "show", resp.StatusCode, string(body))
 		}
 	}
 }
@@ -238,7 +238,7 @@ func DecodeAddResponse(decoder func(*http.Response) goahttp.Decoder, restoreBody
 			return body, nil
 		default:
 			body, _ := ioutil.ReadAll(resp.Body)
-			return nil, goahttp.ErrInvalidResponse("account", "create", resp.StatusCode, string(body))
+			return nil, goahttp.ErrInvalidResponse("storage", "add", resp.StatusCode, string(body))
 		}
 	}
 }
@@ -290,7 +290,7 @@ func DecodeRemoveResponse(decoder func(*http.Response) goahttp.Decoder, restoreB
 			return nil, nil
 		default:
 			body, _ := ioutil.ReadAll(resp.Body)
-			return nil, goahttp.ErrInvalidResponse("account", "create", resp.StatusCode, string(body))
+			return nil, goahttp.ErrInvalidResponse("storage", "remove", resp.StatusCode, string(body))
 		}
 	}
 }
@@ -353,7 +353,7 @@ func DecodeRateResponse(decoder func(*http.Response) goahttp.Decoder, restoreBod
 			return nil, nil
 		default:
 			body, _ := ioutil.ReadAll(resp.Body)
-			return nil, goahttp.ErrInvalidResponse("account", "create", resp.StatusCode, string(body))
+			return nil, goahttp.ErrInvalidResponse("storage", "rate", resp.StatusCode, string(body))
 		}
 	}
 }
@@ -437,7 +437,7 @@ func DecodeMultiAddResponse(decoder func(*http.Response) goahttp.Decoder, restor
 			return body, nil
 		default:
 			body, _ := ioutil.ReadAll(resp.Body)
-			return nil, goahttp.ErrInvalidResponse("account", "create", resp.StatusCode, string(body))
+			return nil, goahttp.ErrInvalidResponse("storage", "multi_add", resp.StatusCode, string(body))
 		}
 	}
 }
@@ -517,7 +517,7 @@ func DecodeMultiUpdateResponse(decoder func(*http.Response) goahttp.Decoder, res
 			return nil, nil
 		default:
 			body, _ := ioutil.ReadAll(resp.Body)
-			return nil, goahttp.ErrInvalidResponse("account", "create", resp.StatusCode, string(body))
+			return nil, goahttp.ErrInvalidResponse("storage", "multi_update", resp.StatusCode, string(body))
 		}
 	}
 }
