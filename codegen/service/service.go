@@ -162,6 +162,9 @@ func {{ .Name }}(err error) {{ .TypeRef }} {
 	{{- if .Timeout }}
 		Timeout: true,
 	{{- end }}
+	{{- if .Fault }}
+		Fault: true,
+	{{- end }}
 	}
 }
 `
