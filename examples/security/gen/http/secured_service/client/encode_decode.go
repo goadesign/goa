@@ -72,7 +72,7 @@ func DecodeSigninResponse(decoder func(*http.Response) goahttp.Decoder, restoreB
 			return nil, NewSigninUnauthorized(body)
 		default:
 			body, _ := ioutil.ReadAll(resp.Body)
-			return nil, goahttp.ErrInvalidResponse("account", "create", resp.StatusCode, string(body))
+			return nil, goahttp.ErrInvalidResponse("secured_service", "signin", resp.StatusCode, string(body))
 		}
 	}
 }
@@ -161,7 +161,7 @@ func DecodeSecureResponse(decoder func(*http.Response) goahttp.Decoder, restoreB
 			return nil, NewSecureUnauthorized(body)
 		default:
 			body, _ := ioutil.ReadAll(resp.Body)
-			return nil, goahttp.ErrInvalidResponse("account", "create", resp.StatusCode, string(body))
+			return nil, goahttp.ErrInvalidResponse("secured_service", "secure", resp.StatusCode, string(body))
 		}
 	}
 }
@@ -250,7 +250,7 @@ func DecodeDoublySecureResponse(decoder func(*http.Response) goahttp.Decoder, re
 			return nil, NewDoublySecureUnauthorized(body)
 		default:
 			body, _ := ioutil.ReadAll(resp.Body)
-			return nil, goahttp.ErrInvalidResponse("account", "create", resp.StatusCode, string(body))
+			return nil, goahttp.ErrInvalidResponse("secured_service", "doubly_secure", resp.StatusCode, string(body))
 		}
 	}
 }
@@ -348,7 +348,7 @@ func DecodeAlsoDoublySecureResponse(decoder func(*http.Response) goahttp.Decoder
 			return nil, NewAlsoDoublySecureUnauthorized(body)
 		default:
 			body, _ := ioutil.ReadAll(resp.Body)
-			return nil, goahttp.ErrInvalidResponse("account", "create", resp.StatusCode, string(body))
+			return nil, goahttp.ErrInvalidResponse("secured_service", "also_doubly_secure", resp.StatusCode, string(body))
 		}
 	}
 }

@@ -63,11 +63,11 @@ func Error(name string, args ...interface{}) {
 //
 // Example:
 //
-// var _ = Service("divider", func() {
-//      Error("request_timeout", func() {
-//              Temporary()
-//      })
-// })
+//    var _ = Service("divider", func() {
+//         Error("request_timeout", func() {
+//                 Temporary()
+//         })
+//    })
 func Temporary() {
 	attr, ok := eval.Current().(*design.AttributeExpr)
 	if !ok {
@@ -88,11 +88,11 @@ func Temporary() {
 //
 // Example:
 //
-// var _ = Service("divider", func() {
-//	Error("request_timeout", func() {
-//		Timeout()
-//	})
-// })
+//    var _ = Service("divider", func() {
+//	   Error("request_timeout", func() {
+//		   Timeout()
+//	   })
+//    })
 func Timeout() {
 	attr, ok := eval.Current().(*design.AttributeExpr)
 	if !ok {
@@ -103,4 +103,30 @@ func Timeout() {
 		attr.Metadata = make(design.MetadataExpr)
 	}
 	attr.Metadata["goa:error:timeout"] = nil
+}
+
+// Fault qualifies an error type as describing errors due to a server-side
+// fault.
+//
+// Fault must appear in a Error expression.
+//
+// Fault takes no argument.
+//
+// Example:
+//
+//    var _ = Service("divider", func() {
+//         Error("internal_error", func() {
+//                 Fault()
+//         })
+//    })
+func Fault() {
+	attr, ok := eval.Current().(*design.AttributeExpr)
+	if !ok {
+		eval.IncompatibleDSL()
+		return
+	}
+	if attr.Metadata == nil {
+		attr.Metadata = make(design.MetadataExpr)
+	}
+	attr.Metadata["goa:error:fault"] = nil
 }

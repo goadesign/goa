@@ -127,7 +127,7 @@ func DecodeIntegerDivideResponse(decoder func(*http.Response) goahttp.Decoder, r
 			return nil, NewIntegerDivideTimeout(&body)
 		default:
 			body, _ := ioutil.ReadAll(resp.Body)
-			return nil, goahttp.ErrInvalidResponse("account", "create", resp.StatusCode, string(body))
+			return nil, goahttp.ErrInvalidResponse("divider", "integer_divide", resp.StatusCode, string(body))
 		}
 	}
 }
@@ -224,7 +224,7 @@ func DecodeDivideResponse(decoder func(*http.Response) goahttp.Decoder, restoreB
 			return nil, NewDivideTimeout(&body)
 		default:
 			body, _ := ioutil.ReadAll(resp.Body)
-			return nil, goahttp.ErrInvalidResponse("account", "create", resp.StatusCode, string(body))
+			return nil, goahttp.ErrInvalidResponse("divider", "divide", resp.StatusCode, string(body))
 		}
 	}
 }

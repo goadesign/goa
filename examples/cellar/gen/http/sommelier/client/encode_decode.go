@@ -111,7 +111,7 @@ func DecodePickResponse(decoder func(*http.Response) goahttp.Decoder, restoreBod
 			return nil, NewPickNoMatch(body)
 		default:
 			body, _ := ioutil.ReadAll(resp.Body)
-			return nil, goahttp.ErrInvalidResponse("account", "create", resp.StatusCode, string(body))
+			return nil, goahttp.ErrInvalidResponse("sommelier", "pick", resp.StatusCode, string(body))
 		}
 	}
 }

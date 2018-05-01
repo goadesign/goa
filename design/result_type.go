@@ -65,7 +65,7 @@ var (
 						"message": "Value of ID must be an integer",
 					},
 				}},
-				Validation: &ValidationExpr{Required: []string{"name", "id", "message", "temporary", "timeout"}},
+				Validation: &ValidationExpr{Required: []string{"name", "id", "message", "temporary", "timeout", "fault"}},
 			},
 			TypeName: "error",
 		},
@@ -97,6 +97,10 @@ var (
 		{"timeout", &AttributeExpr{
 			Type:        Boolean,
 			Description: "Is the error a timeout?",
+		}},
+		{"fault", &AttributeExpr{
+			Type:        Boolean,
+			Description: "Is the error a server-side fault?",
 		}},
 	}
 
