@@ -73,6 +73,7 @@ func TestGoify(t *testing.T) {
 		firstUpper bool
 		expected   string
 	}{
+		"empty":                                             {"", false, ""},
 		"first upper false":                                 {"blue_id", false, "blueID"},
 		"first upper false normal identifier all lower":     {"blue", false, "blue"},
 		"first upper false and UUID":                        {"blue_uuid", false, "blueUUID"},
@@ -86,7 +87,7 @@ func TestGoify(t *testing.T) {
 		"only UUID and firstupper false":                    {"UUID", false, "uuid"},
 		"consecutives invalid identifiers firstupper false": {"[[fields___type]]", false, "fieldsType"},
 		"consecutives invalid identifiers":                  {"[[fields___type]]", true, "FieldsType"},
-		"invalid identifiers":                               {"[[", false, ""},
+		"invalid identifiers":                               {"[[", false, "val"},
 		"middle upper firstupper false":                     {"MiddleUpper", false, "middleUpper"},
 		"middle upper":                                      {"MiddleUpper", true, "MiddleUpper"},
 	}

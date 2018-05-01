@@ -13,6 +13,11 @@ import (
 // firstUpper is true the first character of the identifier is uppercase
 // otherwise it's lowercase.
 func Goify(str string, firstUpper bool) string {
+	// Optimize trivial case
+	if str == "" {
+		return ""
+	}
+
 	// Remove optional suffix that defines corresponding transport specific
 	// name.
 	idx := strings.Index(str, ":")
@@ -24,6 +29,14 @@ func Goify(str string, firstUpper bool) string {
 
 	// remove trailing invalid identifiers (makes code below simpler)
 	runes = removeTrailingInvalid(runes)
+
+	// If all characters are invalid produce a default value.
+	if len(runes) == 0 {
+		if firstUpper {
+			return "Val"
+		}
+		return "val"
+	}
 
 	w, i := 0, 0 // index of start of word, scan
 	for i+1 <= len(runes) {
