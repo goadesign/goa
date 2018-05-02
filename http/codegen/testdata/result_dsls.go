@@ -600,6 +600,59 @@ var ResultBodyUserDSL = func() {
 	})
 }
 
+var ResultBodyMultipleViewsDSL = func() {
+	var ResultType = ResultType("ResultTypeMultipleViews", func() {
+		Attribute("a", String)
+		Attribute("b", String)
+		Attribute("c", String)
+		View("default", func() {
+			Attribute("a")
+			Attribute("b")
+		})
+		View("tiny", func() {
+			Attribute("a")
+		})
+	})
+	Service("ServiceBodyMultipleView", func() {
+		Method("MethodBodyMultipleView", func() {
+			Result(ResultType)
+			HTTP(func() {
+				POST("/")
+				Response(StatusOK, func() {
+					Header("c:Location")
+				})
+			})
+		})
+	})
+}
+
+var EmptyBodyResultMultipleViewsDSL = func() {
+	var ResultType = ResultType("ResultTypeMultipleViews", func() {
+		Attribute("a", String)
+		Attribute("b", String)
+		Attribute("c", String)
+		View("default", func() {
+			Attribute("a")
+			Attribute("b")
+		})
+		View("tiny", func() {
+			Attribute("c")
+		})
+	})
+	Service("ServiceEmptyBodyResultMultipleView", func() {
+		Method("MethodEmptyBodyResultMultipleView", func() {
+			Result(ResultType)
+			HTTP(func() {
+				POST("/")
+				Response(StatusOK, func() {
+					Header("c:Location")
+					Body(Empty)
+				})
+			})
+		})
+	})
+}
+
 var ResultBodyArrayStringDSL = func() {
 	Service("ServiceBodyArrayString", func() {
 		Method("MethodBodyArrayString", func() {
@@ -772,6 +825,23 @@ var ResultTagStringRequiredDSL = func() {
 					Tag("h", "value")
 				})
 				Response(StatusOK)
+			})
+		})
+	})
+}
+
+var EmptyServerResponseDSL = func() {
+	Service("ServiceEmptyServerResponse", func() {
+		Method("MethodEmptyServerResponse", func() {
+			Result(func() {
+				Attribute("h", String)
+				Required("h")
+			})
+			HTTP(func() {
+				GET("/")
+				Response(StatusOK, func() {
+					Body(Empty)
+				})
 			})
 		})
 	})

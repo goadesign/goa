@@ -625,6 +625,38 @@ func EncodeMethodBodyUserResponse(encoder func(context.Context, http.ResponseWri
 }
 `
 
+var ResultBodyMultipleViewsEncodeCode = `// EncodeMethodBodyMultipleViewResponse returns an encoder for responses
+// returned by the ServiceBodyMultipleView MethodBodyMultipleView endpoint.
+func EncodeMethodBodyMultipleViewResponse(encoder func(context.Context, http.ResponseWriter) goahttp.Encoder) func(context.Context, http.ResponseWriter, interface{}) error {
+	return func(ctx context.Context, w http.ResponseWriter, v interface{}) error {
+		res := v.(*servicebodymultipleviewviews.Resulttypemultipleviews)
+		w.Header().Set("goa-view", res.View)
+		enc := encoder(ctx, w)
+		body := NewProjectedResulttypemultipleviews(res)
+		if res.C != nil {
+			w.Header().Set("Location", *res.C)
+		}
+		w.WriteHeader(http.StatusOK)
+		return enc.Encode(body)
+	}
+}
+`
+
+var EmptyBodyResultMultipleViewsEncodeCode = `// EncodeMethodEmptyBodyResultMultipleViewResponse returns an encoder for
+// responses returned by the ServiceEmptyBodyResultMultipleView
+// MethodEmptyBodyResultMultipleView endpoint.
+func EncodeMethodEmptyBodyResultMultipleViewResponse(encoder func(context.Context, http.ResponseWriter) goahttp.Encoder) func(context.Context, http.ResponseWriter, interface{}) error {
+	return func(ctx context.Context, w http.ResponseWriter, v interface{}) error {
+		res := v.(*serviceemptybodyresultmultipleviewviews.Resulttypemultipleviews)
+		if res.C != nil {
+			w.Header().Set("Location", *res.C)
+		}
+		w.WriteHeader(http.StatusOK)
+		return nil
+	}
+}
+`
+
 var ResultBodyArrayStringEncodeCode = `// EncodeMethodBodyArrayStringResponse returns an encoder for responses
 // returned by the ServiceBodyArrayString MethodBodyArrayString endpoint.
 func EncodeMethodBodyArrayStringResponse(encoder func(context.Context, http.ResponseWriter) goahttp.Encoder) func(context.Context, http.ResponseWriter, interface{}) error {
@@ -784,6 +816,17 @@ func EncodeMethodTagStringRequiredResponse(encoder func(context.Context, http.Re
 		body := NewMethodTagStringRequiredOKResponseBody(res)
 		w.WriteHeader(http.StatusOK)
 		return enc.Encode(body)
+	}
+}
+`
+
+var EmptyServerResponseEncodeCode = `// EncodeMethodEmptyServerResponseResponse returns an encoder for responses
+// returned by the ServiceEmptyServerResponse MethodEmptyServerResponse
+// endpoint.
+func EncodeMethodEmptyServerResponseResponse(encoder func(context.Context, http.ResponseWriter) goahttp.Encoder) func(context.Context, http.ResponseWriter, interface{}) error {
+	return func(ctx context.Context, w http.ResponseWriter, v interface{}) error {
+		w.WriteHeader(http.StatusOK)
+		return nil
 	}
 }
 `

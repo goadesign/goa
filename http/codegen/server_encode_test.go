@@ -51,6 +51,8 @@ func TestEncode(t *testing.T) {
 		{"body-string", testdata.ResultBodyStringDSL, testdata.ResultBodyStringEncodeCode},
 		{"body-object", testdata.ResultBodyObjectDSL, testdata.ResultBodyObjectEncodeCode},
 		{"body-user", testdata.ResultBodyUserDSL, testdata.ResultBodyUserEncodeCode},
+		{"body-result-multiple-views", testdata.ResultBodyMultipleViewsDSL, testdata.ResultBodyMultipleViewsEncodeCode},
+		{"empty-body-result-multiple-views", testdata.EmptyBodyResultMultipleViewsDSL, testdata.EmptyBodyResultMultipleViewsEncodeCode},
 		{"body-array-string", testdata.ResultBodyArrayStringDSL, testdata.ResultBodyArrayStringEncodeCode},
 		{"body-array-user", testdata.ResultBodyArrayUserDSL, testdata.ResultBodyArrayUserEncodeCode},
 
@@ -65,6 +67,7 @@ func TestEncode(t *testing.T) {
 
 		{"tag-string", testdata.ResultTagStringDSL, testdata.ResultTagStringEncodeCode},
 		{"tag-string-required", testdata.ResultTagStringRequiredDSL, testdata.ResultTagStringRequiredEncodeCode},
+		{"empty-server-response", testdata.EmptyServerResponseDSL, testdata.EmptyServerResponseEncodeCode},
 	}
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {

@@ -523,13 +523,17 @@ func (svc *ServiceData) Endpoint(name string) *EndpointData {
 	return nil
 }
 
-// ResponseBodyExists returns true if at least one of the responses has a body.
-func (e *EndpointData) ResponseBodyExists() bool {
-	if e.Result != nil {
-		return true
+// NeedServerResponse returns true if server response has a body or a header.
+// It is used in initializing the result in the server response encoding.
+func (e *EndpointData) NeedServerResponse() bool {
+	if e.Result == nil {
+		return false
 	}
 	for _, r := range e.Result.Responses {
 		if r.ServerBody != nil {
+			return true
+		}
+		if len(r.Headers) > 0 {
 			return true
 		}
 	}
@@ -1306,7 +1310,7 @@ func buildResultData(e *httpdesign.EndpointExpr, sd *ServiceData) *ResultData {
 			)
 			{
 				headersData = extractHeaders(v.MappedHeaders(), result, false, false, ep, svc.Scope)
-				if t := ep.ViewedResult; t != nil {
+				if t := ep.ViewedResult; t != nil && v.Body.Type != design.Empty {
 					att := &design.AttributeExpr{Type: t.Type}
 					var proj design.UserType
 					for _, p := range sd.ProjectedTypes {
