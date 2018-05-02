@@ -57,19 +57,17 @@ only applies for non required attributes with default values.
 # How are views for a result type computed?
 
 Views can be defined on a result type. If a method returns a result type with
-multiple views then a views package is generated at the service level which
-projects the result type as per the attributes defined in the view. For each
-result type with multiple views the views package defines a viewed result type
-with identical field names and types but using pointers for all fields so that
-view specific validation logic may be generated. The viewed result type defines
-"As<View>" functions which projects the viewed result type with only the
-attributes defined in the view. Constructors are generated in the service
-package to convert a result type to a viewed result type and vice versa.
-
-The signature for the method that returns a result type with multiple views
-returns the result type, the view to render the result type, and an error.
-The generated endpoint function uses this view to create a validated viewed
-result type with only the attributes defined in the view.
+multiple views then
+* the service method returns an extra view along with the result and error
+* a views package is generated at the service level which defines a viewed
+  result type for each result with multiple views. This viewed result type
+  has identical field names and types but uses pointers for all fields so that
+  view specific validation logic may be generated. The viewed result type
+  defines "As<View>" functions which projects the viewed result type with only
+  the attributes defined in the view. Constructors are generated in the service
+  package to convert a result type to a viewed result type and vice versa.
+* the generated endpoint function uses the view returned by the service method
+  to create a validated viewed result type.
 
 The server side response marshaling code marshals the viewed result type
 returned by the endpoint into a server type omitting any nil attributes.
