@@ -36,11 +36,10 @@ func EncodeListResponse(encoder func(context.Context, http.ResponseWriter) goaht
 // show endpoint.
 func EncodeShowResponse(encoder func(context.Context, http.ResponseWriter) goahttp.Encoder) func(context.Context, http.ResponseWriter, interface{}) error {
 	return func(ctx context.Context, w http.ResponseWriter, v interface{}) error {
-		vres := v.(*storageviews.StoredBottle)
-		w.Header().Set("goa-view", vres.View)
-		res := vres.StoredBottleView
+		res := v.(*storageviews.StoredBottle)
+		w.Header().Set("goa-view", res.View)
 		enc := encoder(ctx, w)
-		body := NewStoredBottleView(res)
+		body := NewProjectedStoredBottle(res)
 		w.WriteHeader(http.StatusOK)
 		return enc.Encode(body)
 	}
@@ -306,13 +305,13 @@ func marshalWineryToWineryResponseBody(v *storage.Winery) *WineryResponseBody {
 	return res
 }
 
-// marshalWineryToWinery builds a value of type *Winery from a value of type
-// *storageviews.Winery.
-func marshalWineryToWinery(v *storageviews.Winery) *Winery {
+// marshalWineryToProjectedWinery builds a value of type *ProjectedWinery from
+// a value of type *storageviews.Winery.
+func marshalWineryToProjectedWinery(v *storageviews.Winery) *ProjectedWinery {
 	if v == nil {
 		return nil
 	}
-	res := &Winery{
+	res := &ProjectedWinery{
 		Name:    v.Name,
 		Region:  v.Region,
 		Country: v.Country,

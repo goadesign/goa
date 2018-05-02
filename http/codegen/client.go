@@ -488,7 +488,7 @@ const singleResponseT = ` {{- if .ClientBody }}
 		if err = vres.Validate(); err != nil {
 			return nil, fmt.Errorf("invalid response: %s", err)
 		}
-		res := {{ $.ServicePkgName }}.{{ $.Method.ViewedResult.ToResult.VarName }}(vres)
+		res := {{ $.ServicePkgName }}.{{ $.Method.ViewedResult.ConvertToResult.VarName }}(vres)
 	{{- end }}
 
 	{{- if .Headers }}

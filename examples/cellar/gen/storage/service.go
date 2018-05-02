@@ -146,34 +146,6 @@ func (e *NotFound) ErrorName() string {
 	return e.Message
 }
 
-// NewWinery converts viewed result type Winery to result type Winery.
-func NewWinery(vres *storageviews.Winery) *Winery {
-	res := &Winery{
-		URL: vres.URL,
-	}
-	if vres.Name != nil {
-		res.Name = *vres.Name
-	}
-	if vres.Region != nil {
-		res.Region = *vres.Region
-	}
-	if vres.Country != nil {
-		res.Country = *vres.Country
-	}
-	return res
-}
-
-// NewViewedWinery converts result type Winery to viewed result type Winery.
-func NewViewedWinery(res *Winery) *storageviews.Winery {
-	v := &storageviews.WineryView{
-		Name:    &res.Name,
-		Region:  &res.Region,
-		Country: &res.Country,
-		URL:     res.URL,
-	}
-	return &storageviews.Winery{WineryView: v}
-}
-
 // NewStoredBottle converts viewed result type StoredBottle to result type
 // StoredBottle.
 func NewStoredBottle(vres *storageviews.StoredBottle) *StoredBottle {
@@ -232,4 +204,32 @@ func NewViewedStoredBottle(res *StoredBottle) *storageviews.StoredBottle {
 	}
 
 	return &storageviews.StoredBottle{StoredBottleView: v}
+}
+
+// NewWinery converts viewed result type Winery to result type Winery.
+func NewWinery(vres *storageviews.Winery) *Winery {
+	res := &Winery{
+		URL: vres.URL,
+	}
+	if vres.Name != nil {
+		res.Name = *vres.Name
+	}
+	if vres.Region != nil {
+		res.Region = *vres.Region
+	}
+	if vres.Country != nil {
+		res.Country = *vres.Country
+	}
+	return res
+}
+
+// NewViewedWinery converts result type Winery to viewed result type Winery.
+func NewViewedWinery(res *Winery) *storageviews.Winery {
+	v := &storageviews.WineryView{
+		Name:    &res.Name,
+		Region:  &res.Region,
+		Country: &res.Country,
+		URL:     res.URL,
+	}
+	return &storageviews.Winery{WineryView: v}
 }

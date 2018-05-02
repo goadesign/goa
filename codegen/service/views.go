@@ -11,7 +11,7 @@ import (
 // to render result types with more than one view appropriately.
 func ViewsFile(genpkg string, service *design.ServiceExpr) *codegen.File {
 	svc := Services.Get(service.Name)
-	if len(svc.ViewedTypes) == 0 {
+	if len(svc.ProjectedTypes) == 0 {
 		return nil
 	}
 	path := filepath.Join(codegen.Gendir, codegen.SnakeCase(service.Name), "views", "view.go")
@@ -27,40 +27,35 @@ func ViewsFile(genpkg string, service *design.ServiceExpr) *codegen.File {
 		sections = []*codegen.SectionTemplate{header}
 
 		// type definitions
-		for _, t := range svc.ViewedTypes {
-			if t.ViewType != nil {
-				sections = append(sections, &codegen.SectionTemplate{
-					Name:   "viewed-type",
-					Source: userTypeT,
-					Data:   t.ViewType,
-				})
-			}
+		for _, t := range svc.ProjectedTypes {
 			sections = append(sections, &codegen.SectionTemplate{
-				Name:   "user-type",
+				Name:   "projected-type",
 				Source: userTypeT,
 				Data:   t.UserTypeData,
 			})
 		}
 
 		var helpers []*codegen.TransformFunctionData
-		for _, t := range svc.ViewedTypes {
+		for _, t := range svc.ProjectedTypes {
 			for _, v := range t.Views {
-				helpers = codegen.AppendHelpers(helpers, v.Conversion.Helpers)
+				helpers = codegen.AppendHelpers(helpers, v.Project.Helpers)
 				sections = append(sections, &codegen.SectionTemplate{
 					Name:   "as-view",
 					Source: initTypeT,
-					Data:   v.Conversion,
+					Data:   v.Project,
 				})
 			}
 		}
 
 		// validations
-		for _, t := range svc.ViewedTypes {
-			sections = append(sections, &codegen.SectionTemplate{
-				Name:   "validate-type",
-				Source: validateT,
-				Data:   t,
-			})
+		for _, t := range svc.ProjectedTypes {
+			if t.Validate != "" {
+				sections = append(sections, &codegen.SectionTemplate{
+					Name:   "validate-type",
+					Source: validateT,
+					Data:   t,
+				})
+			}
 		}
 
 		// transform helpers
@@ -78,16 +73,7 @@ func ViewsFile(genpkg string, service *design.ServiceExpr) *codegen.File {
 
 const validateT = `{{ printf "Validate runs the validations defined on %s." .VarName | comment }}
 func (result {{ .Ref }}) Validate() (err error) {
-{{- if .ViewType }}
-  switch result.View {
-	{{- range .Views }}
-  case {{ printf "%q" .Name }}:
-  {{ .Validate }}
-	{{- end }}
-  }
-{{- else }}
 	{{ .Validate }}
-{{- end }}
   return
 }
 `

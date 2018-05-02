@@ -17,9 +17,9 @@ import (
 // Service is the divider service interface.
 type Service interface {
 	// IntegerDivide implements integer_divide.
-	IntegerDivide(context.Context, *IntOperands) (int, error)
+	IntegerDivide(context.Context, *IntOperands) (res int, err error)
 	// Divide implements divide.
-	Divide(context.Context, *FloatOperands) (float64, error)
+	Divide(context.Context, *FloatOperands) (res float64, err error)
 }
 
 // ServiceName is the name of the service as defined in the design. This is the

@@ -1,20 +1,20 @@
 package testdata
 
-const ResultWithMultipleViewsCode = `// ResultTypeView is the transformed type of ResultType type.
+const ResultWithMultipleViewsCode = `// ResultTypeView is a type which is projected based on a view.
 type ResultTypeView struct {
 	A *string
 	B *string
 }
 
-// ResultType is a result type with a view.
+// ResultType is the viewed result type that projects ResultTypeView based on a
+// view.
 type ResultType struct {
 	*ResultTypeView
 	// View to render
 	View string
 }
 
-// AsDefault selects fields from the result type ResultType defined in the
-// default view.
+// AsDefault projects viewed result type ResultType using the default view.
 func (result *ResultType) AsDefault() *ResultType {
 	t := &ResultTypeView{
 		A: result.A,
@@ -26,8 +26,7 @@ func (result *ResultType) AsDefault() *ResultType {
 	}
 }
 
-// AsTiny selects fields from the result type ResultType defined in the tiny
-// view.
+// AsTiny projects viewed result type ResultType using the tiny view.
 func (result *ResultType) AsTiny() *ResultType {
 	t := &ResultTypeView{
 		A: result.A,
@@ -57,26 +56,26 @@ func (result *ResultType) Validate() (err error) {
 }
 `
 
-var ResultWithUserTypeCode = `// UserType is the transformed type of UserType type.
-type UserType struct {
-	A *string
-}
-
-// ResultTypeView is the transformed type of ResultType type.
+var ResultWithUserTypeCode = `// ResultTypeView is a type which is projected based on a view.
 type ResultTypeView struct {
 	A *UserType
 	B *string
 }
 
-// ResultType is a result type with a view.
+// ResultType is the viewed result type that projects ResultTypeView based on a
+// view.
 type ResultType struct {
 	*ResultTypeView
 	// View to render
 	View string
 }
 
-// AsDefault selects fields from the result type ResultType defined in the
-// default view.
+// UserType is a type that runs validations on a projected type.
+type UserType struct {
+	A *string
+}
+
+// AsDefault projects viewed result type ResultType using the default view.
 func (result *ResultType) AsDefault() *ResultType {
 	t := &ResultTypeView{
 		B: result.B,
@@ -90,8 +89,7 @@ func (result *ResultType) AsDefault() *ResultType {
 	}
 }
 
-// AsTiny selects fields from the result type ResultType defined in the tiny
-// view.
+// AsTiny projects viewed result type ResultType using the tiny view.
 func (result *ResultType) AsTiny() *ResultType {
 	t := &ResultTypeView{}
 	if result.A != nil {
@@ -103,12 +101,6 @@ func (result *ResultType) AsTiny() *ResultType {
 	}
 }
 
-// Validate runs the validations defined on UserType.
-func (result *UserType) Validate() (err error) {
-
-	return
-}
-
 // Validate runs the validations defined on ResultType.
 func (result *ResultType) Validate() (err error) {
 	switch result.View {
@@ -116,19 +108,9 @@ func (result *ResultType) Validate() (err error) {
 		if result.A == nil {
 			err = goa.MergeErrors(err, goa.MissingFieldError("a", "result"))
 		}
-		if result.A != nil {
-			if err2 := result.A.Validate(); err2 != nil {
-				err = goa.MergeErrors(err, err2)
-			}
-		}
 	case "tiny":
 		if result.A == nil {
 			err = goa.MergeErrors(err, goa.MissingFieldError("a", "result"))
-		}
-		if result.A != nil {
-			if err2 := result.A.Validate(); err2 != nil {
-				err = goa.MergeErrors(err, err2)
-			}
 		}
 	}
 	return
@@ -148,55 +130,90 @@ func marshalUserTypeToUserType(v *UserType) *UserType {
 }
 `
 
-const ResultWithResultTypeCode = `// UserType is the transformed type of UserType type.
-type UserType struct {
-	P *string
-}
-
-// RT2View is the transformed type of RT2 type.
-type RT2View struct {
-	C *string
-	D *UserType
-	E *string
-}
-
-// RT2 is a result type with a view.
-type RT2 struct {
-	*RT2View
-	// View to render
-	View string
-}
-
-// RT3View is the transformed type of RT3 type.
-type RT3View struct {
-	X []string
-	Y map[int]*UserType
-	Z *string
-}
-
-// RT3 is a result type with a view.
-type RT3 struct {
-	*RT3View
-	// View to render
-	View string
-}
-
-// RTView is the transformed type of RT type.
+const ResultWithResultTypeCode = `// RTView is a type which is projected based on a view.
 type RTView struct {
 	A *string
 	B *RT2
 	C *RT3
 }
 
-// RT is a result type with a view.
+// RT is the viewed result type that projects RTView based on a view.
 type RT struct {
 	*RTView
 	// View to render
 	View string
 }
 
-// AsDefault selects fields from the result type RT2 defined in the default
-// view.
+// RT2View is a type which is projected based on a view.
+type RT2View struct {
+	C *string
+	D *UserType
+	E *string
+}
+
+// RT2 is the viewed result type that projects RT2View based on a view.
+type RT2 struct {
+	*RT2View
+	// View to render
+	View string
+}
+
+// UserType is a type that runs validations on a projected type.
+type UserType struct {
+	P *string
+}
+
+// RT3View is a type which is projected based on a view.
+type RT3View struct {
+	X []string
+	Y map[int]*UserType
+	Z *string
+}
+
+// RT3 is the viewed result type that projects RT3View based on a view.
+type RT3 struct {
+	*RT3View
+	// View to render
+	View string
+}
+
+// AsDefault projects viewed result type RT using the default view.
+func (result *RT) AsDefault() *RT {
+	t := &RTView{
+		A: result.A,
+	}
+	if result.B != nil {
+		t.B = result.B.AsExtended()
+	}
+
+	if result.C != nil {
+		t.C = result.C.AsDefault()
+	}
+
+	return &RT{
+		RTView: t,
+		View:   "default",
+	}
+}
+
+// AsTiny projects viewed result type RT using the tiny view.
+func (result *RT) AsTiny() *RT {
+	t := &RTView{}
+	if result.B != nil {
+		t.B = result.B.AsTiny()
+	}
+
+	if result.C != nil {
+		t.C = result.C.AsDefault()
+	}
+
+	return &RT{
+		RTView: t,
+		View:   "tiny",
+	}
+}
+
+// AsDefault projects viewed result type RT2 using the default view.
 func (result *RT2) AsDefault() *RT2 {
 	t := &RT2View{
 		C: result.C,
@@ -210,8 +227,7 @@ func (result *RT2) AsDefault() *RT2 {
 	}
 }
 
-// AsExtended selects fields from the result type RT2 defined in the extended
-// view.
+// AsExtended projects viewed result type RT2 using the extended view.
 func (result *RT2) AsExtended() *RT2 {
 	t := &RT2View{
 		C: result.C,
@@ -226,7 +242,7 @@ func (result *RT2) AsExtended() *RT2 {
 	}
 }
 
-// AsTiny selects fields from the result type RT2 defined in the tiny view.
+// AsTiny projects viewed result type RT2 using the tiny view.
 func (result *RT2) AsTiny() *RT2 {
 	t := &RT2View{}
 	if result.D != nil {
@@ -238,8 +254,7 @@ func (result *RT2) AsTiny() *RT2 {
 	}
 }
 
-// AsDefault selects fields from the result type RT3 defined in the default
-// view.
+// AsDefault projects viewed result type RT3 using the default view.
 func (result *RT3) AsDefault() *RT3 {
 	t := &RT3View{}
 	if result.X != nil {
@@ -264,7 +279,7 @@ func (result *RT3) AsDefault() *RT3 {
 	}
 }
 
-// AsTiny selects fields from the result type RT3 defined in the tiny view.
+// AsTiny projects viewed result type RT3 using the tiny view.
 func (result *RT3) AsTiny() *RT3 {
 	t := &RT3View{}
 	if result.X != nil {
@@ -277,106 +292,6 @@ func (result *RT3) AsTiny() *RT3 {
 		RT3View: t,
 		View:    "tiny",
 	}
-}
-
-// AsDefault selects fields from the result type RT defined in the default view.
-func (result *RT) AsDefault() *RT {
-	t := &RTView{
-		A: result.A,
-	}
-	if result.B != nil {
-		t.B = result.B.AsExtended()
-	}
-
-	if result.C != nil {
-		t.C = result.C.AsDefault()
-	}
-
-	return &RT{
-		RTView: t,
-		View:   "default",
-	}
-}
-
-// AsTiny selects fields from the result type RT defined in the tiny view.
-func (result *RT) AsTiny() *RT {
-	t := &RTView{}
-	if result.B != nil {
-		t.B = result.B.AsTiny()
-	}
-
-	if result.C != nil {
-		t.C = result.C.AsDefault()
-	}
-
-	return &RT{
-		RTView: t,
-		View:   "tiny",
-	}
-}
-
-// Validate runs the validations defined on UserType.
-func (result *UserType) Validate() (err error) {
-
-	return
-}
-
-// Validate runs the validations defined on RT2.
-func (result *RT2) Validate() (err error) {
-	switch result.View {
-	case "default":
-		if result.C == nil {
-			err = goa.MergeErrors(err, goa.MissingFieldError("c", "result"))
-		}
-		if result.D == nil {
-			err = goa.MergeErrors(err, goa.MissingFieldError("d", "result"))
-		}
-		if result.D != nil {
-			if err2 := result.D.Validate(); err2 != nil {
-				err = goa.MergeErrors(err, err2)
-			}
-		}
-	case "extended":
-		if result.C == nil {
-			err = goa.MergeErrors(err, goa.MissingFieldError("c", "result"))
-		}
-		if result.D == nil {
-			err = goa.MergeErrors(err, goa.MissingFieldError("d", "result"))
-		}
-		if result.D != nil {
-			if err2 := result.D.Validate(); err2 != nil {
-				err = goa.MergeErrors(err, err2)
-			}
-		}
-	case "tiny":
-		if result.D == nil {
-			err = goa.MergeErrors(err, goa.MissingFieldError("d", "result"))
-		}
-		if result.D != nil {
-			if err2 := result.D.Validate(); err2 != nil {
-				err = goa.MergeErrors(err, err2)
-			}
-		}
-	}
-	return
-}
-
-// Validate runs the validations defined on RT3.
-func (result *RT3) Validate() (err error) {
-	switch result.View {
-	case "default":
-		if result.X == nil {
-			err = goa.MergeErrors(err, goa.MissingFieldError("x", "result"))
-		}
-		if result.Y == nil {
-			err = goa.MergeErrors(err, goa.MissingFieldError("y", "result"))
-		}
-	case "tiny":
-		if result.X == nil {
-			err = goa.MergeErrors(err, goa.MissingFieldError("x", "result"))
-		}
-	}
-	return
 }
 
 // Validate runs the validations defined on RT.
@@ -420,6 +335,49 @@ func (result *RT) Validate() (err error) {
 	return
 }
 
+// Validate runs the validations defined on RT2.
+func (result *RT2) Validate() (err error) {
+	switch result.View {
+	case "default":
+		if result.C == nil {
+			err = goa.MergeErrors(err, goa.MissingFieldError("c", "result"))
+		}
+		if result.D == nil {
+			err = goa.MergeErrors(err, goa.MissingFieldError("d", "result"))
+		}
+	case "extended":
+		if result.C == nil {
+			err = goa.MergeErrors(err, goa.MissingFieldError("c", "result"))
+		}
+		if result.D == nil {
+			err = goa.MergeErrors(err, goa.MissingFieldError("d", "result"))
+		}
+	case "tiny":
+		if result.D == nil {
+			err = goa.MergeErrors(err, goa.MissingFieldError("d", "result"))
+		}
+	}
+	return
+}
+
+// Validate runs the validations defined on RT3.
+func (result *RT3) Validate() (err error) {
+	switch result.View {
+	case "default":
+		if result.X == nil {
+			err = goa.MergeErrors(err, goa.MissingFieldError("x", "result"))
+		}
+		if result.Y == nil {
+			err = goa.MergeErrors(err, goa.MissingFieldError("y", "result"))
+		}
+	case "tiny":
+		if result.X == nil {
+			err = goa.MergeErrors(err, goa.MissingFieldError("x", "result"))
+		}
+	}
+	return
+}
+
 // marshalUserTypeToUserType builds a value of type *UserType from a value of
 // type *UserType.
 func marshalUserTypeToUserType(v *UserType) *UserType {
@@ -434,19 +392,19 @@ func marshalUserTypeToUserType(v *UserType) *UserType {
 }
 `
 
-const ResultWithRecursiveResultTypeCode = `// RTView is the transformed type of RT type.
+var ResultWithRecursiveResultTypeCode = `// RTView is a type which is projected based on a view.
 type RTView struct {
-	A *RT
+	A *RTView
 }
 
-// RT is a result type with a view.
+// RT is the viewed result type that projects RTView based on a view.
 type RT struct {
 	*RTView
 	// View to render
 	View string
 }
 
-// AsDefault selects fields from the result type RT defined in the default view.
+// AsDefault projects viewed result type RT using the default view.
 func (result *RT) AsDefault() *RT {
 	t := &RTView{}
 	if result.A != nil {
@@ -459,7 +417,7 @@ func (result *RT) AsDefault() *RT {
 	}
 }
 
-// AsTiny selects fields from the result type RT defined in the tiny view.
+// AsTiny projects viewed result type RT using the tiny view.
 func (result *RT) AsTiny() *RT {
 	t := &RTView{}
 	if result.A != nil {

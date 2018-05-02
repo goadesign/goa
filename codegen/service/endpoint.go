@@ -292,11 +292,11 @@ func New{{ .VarName }}Endpoint(s {{ .ServiceVarName}}{{ range .Schemes }}, auth{
 		if err != nil {
 			return nil, err
 		}
-		vres := {{ .ViewedResult.ToViewed.VarName }}(res)
+		vres := {{ .ViewedResult.ConvertToViewed.VarName }}(res)
 		switch view {
 			{{- range .ViewedResult.Views }}
 		case {{ printf "%q" .Name }}:
-			vres = vres.{{ .Conversion.VarName }}()
+			vres = vres.{{ .Project.VarName }}()
 			{{- end }}
 		default:
 			return nil, fmt.Errorf("unknown view %s", view)

@@ -72,9 +72,8 @@ type (
 		// ClientTransformHelpers is the list of transform functions
 		// required by the various client side constructors.
 		ClientTransformHelpers []*codegen.TransformFunctionData
-		// ViewedTypes lists the types that are rendered based on a view
-		// in a result type.
-		ViewedTypes []*TypeData
+		// ProjectedTypes lists the types that are projected based on a view.
+		ProjectedTypes []*ProjectedTypeData
 	}
 
 	// EndpointData contains the data used to render the code related to a
@@ -483,6 +482,19 @@ type (
 		// Payload is the payload data required to generate encoder/decoder.
 		Payload *PayloadData
 	}
+
+	// ProjectedTypeData contains the data needed to render the projected types.
+	// A projected type uses pointers for all its fields and is used to encode a
+	// viewed result type in the server response body.
+	ProjectedTypeData struct {
+		// This contains the data to generate the projected type.
+		*TypeData
+		// ProjectedType is the projected type.
+		ProjectedType design.UserType
+		// Type is the type in views package for which the projected type
+		// is generated.
+		Type design.UserType
+	}
 )
 
 // Get retrieves the transport data for the service with the given name
@@ -539,6 +551,26 @@ func (d ServicesData) analyze(hs *httpdesign.ServiceExpr) *ServiceData {
 		ClientStruct:     "Client",
 		ServerTypeNames:  make(map[string]struct{}),
 		ClientTypeNames:  make(map[string]struct{}),
+	}
+
+	for _, t := range svc.ProjectedTypes {
+		if t.Validate != "" {
+			att := buildProjectedType(&design.AttributeExpr{Type: t.Type})
+			pt := att.Type.(design.UserType)
+			name := svc.Scope.GoTypeName(att)
+			// Add the omitempty tags for marshal/unmarshal
+			rd.ProjectedTypes = append(rd.ProjectedTypes, &ProjectedTypeData{
+				TypeData: &TypeData{
+					Name:        name,
+					Description: fmt.Sprintf("%s is the projected type of %s type.", name, t.Type.Name()),
+					VarName:     name,
+					Def:         goTypeDef(svc.Scope, pt.Attribute(), true, false),
+					Ref:         svc.Scope.GoTypeRef(att),
+				},
+				ProjectedType: pt,
+				Type:          t.Type,
+			})
+		}
 	}
 
 	for _, s := range hs.FileServers {
@@ -749,31 +781,6 @@ func (d ServicesData) analyze(hs *httpdesign.ServiceExpr) *ServiceData {
 		rd.Endpoints = append(rd.Endpoints, ad)
 	}
 
-	for _, t := range svc.ViewedTypes {
-		var ptr bool
-		if v := t.ViewType; v != nil {
-			ptr = true
-			// Add the omitempty tags for marshal/unmarshal
-			newT := &TypeData{
-				Name:        v.Name,
-				Description: v.Description,
-				VarName:     v.VarName,
-				Def:         goTypeDef(svc.Scope, v.Type.(design.UserType).Attribute(), true, false),
-				Ref:         v.Ref,
-			}
-			rd.ViewedTypes = append(rd.ViewedTypes, newT)
-		}
-		// Add the viewed type
-		newT := &TypeData{
-			Name:        t.Name,
-			Description: t.Description,
-			VarName:     t.VarName,
-			Def:         goTypeDef(svc.Scope, t.Type.(design.UserType).Attribute(), ptr, false),
-			Ref:         t.Ref,
-		}
-		rd.ViewedTypes = append(rd.ViewedTypes, newT)
-	}
-
 	for _, a := range hs.HTTPEndpoints {
 		collectUserTypes(a.Body.Type, func(ut design.UserType) {
 			if d := attributeTypeData(ut, true, true, true, svc.Scope, rd); d != nil {
@@ -812,6 +819,42 @@ func (d ServicesData) analyze(hs *httpdesign.ServiceExpr) *ServiceData {
 	}
 
 	return rd
+}
+
+// buildProjectedType builds a projected type that uses pointers for all
+// its attributes so that the server response body contains only the
+// projected attributes of a viewed result type.
+func buildProjectedType(a *design.AttributeExpr, seen ...map[string]design.DataType) (patt *design.AttributeExpr) {
+	patt = a
+	switch dt := a.Type.(type) {
+	case design.UserType:
+		var s map[string]design.DataType
+		if len(seen) > 0 {
+			s = seen[0]
+		} else {
+			s = make(map[string]design.DataType)
+			seen = append(seen, s)
+		}
+		patt = design.DupAtt(a)
+		if t, ok := s[dt.Name()]; ok {
+			patt.Type = t
+			return
+		}
+		pt := patt.Type.(design.UserType)
+		pt.Rename("Projected" + dt.Name())
+		s[pt.Name()] = pt
+		buildProjectedType(pt.Attribute(), seen...)
+	case *design.Array:
+		dt.ElemType = buildProjectedType(dt.ElemType, seen...)
+	case *design.Map:
+		dt.KeyType = buildProjectedType(dt.KeyType, seen...)
+		dt.ElemType = buildProjectedType(dt.ElemType, seen...)
+	case *design.Object:
+		for _, n := range *dt {
+			n.Attribute = buildProjectedType(n.Attribute, seen...)
+		}
+	}
+	return
 }
 
 // buildPayloadData returns the data structure used to describe the endpoint
@@ -1264,8 +1307,16 @@ func buildResultData(e *httpdesign.EndpointExpr, sd *ServiceData) *ResultData {
 			{
 				headersData = extractHeaders(v.MappedHeaders(), result, false, false, ep, svc.Scope)
 				if t := ep.ViewedResult; t != nil {
-					att := &design.AttributeExpr{Type: t.ViewType.Type}
-					serverBodyData = buildBodyType(sd, e, att, att, false, true, true)
+					att := &design.AttributeExpr{Type: t.Type}
+					var proj design.UserType
+					for _, p := range sd.ProjectedTypes {
+						if p.Type == t.Type {
+							proj = p.ProjectedType
+							break
+						}
+					}
+					patt := &design.AttributeExpr{Type: proj}
+					serverBodyData = buildBodyType(sd, e, patt, att, false, true, true)
 				} else {
 					serverBodyData = buildBodyType(sd, e, v.Body, result, false, true, false)
 					clientBodyData = buildBodyType(sd, e, v.Body, result, false, false, false)

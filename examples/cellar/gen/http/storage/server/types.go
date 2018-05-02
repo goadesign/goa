@@ -44,8 +44,26 @@ type MultiUpdateRequestBody struct {
 // response body.
 type ListResponseBody []*StoredBottleResponseBody
 
-// WineryView is the transformed type of Winery type.
-type WineryView struct {
+// ProjectedStoredBottle is the projected type of StoredBottle type.
+type ProjectedStoredBottle struct {
+	// ID is the unique id of the bottle.
+	ID *string `form:"id,omitempty" json:"id,omitempty" xml:"id,omitempty"`
+	// Name of bottle
+	Name *string `form:"name,omitempty" json:"name,omitempty" xml:"name,omitempty"`
+	// Winery that produces wine
+	Winery *ProjectedWinery `form:"winery,omitempty" json:"winery,omitempty" xml:"winery,omitempty"`
+	// Vintage of bottle
+	Vintage *uint32 `form:"vintage,omitempty" json:"vintage,omitempty" xml:"vintage,omitempty"`
+	// Composition is the list of grape varietals and associated percentage.
+	Composition []*ProjectedComponent `form:"composition,omitempty" json:"composition,omitempty" xml:"composition,omitempty"`
+	// Description of bottle
+	Description *string `form:"description,omitempty" json:"description,omitempty" xml:"description,omitempty"`
+	// Rating of bottle from 1 (worst) to 5 (best)
+	Rating *uint32 `form:"rating,omitempty" json:"rating,omitempty" xml:"rating,omitempty"`
+}
+
+// ProjectedWinery is the projected type of Winery type.
+type ProjectedWinery struct {
 	// Name of winery
 	Name *string `form:"name,omitempty" json:"name,omitempty" xml:"name,omitempty"`
 	// Region of winery
@@ -56,60 +74,12 @@ type WineryView struct {
 	URL *string `form:"url,omitempty" json:"url,omitempty" xml:"url,omitempty"`
 }
 
-// Winery is a result type with a view.
-type Winery struct {
-	// Name of winery
-	Name *string `form:"name,omitempty" json:"name,omitempty" xml:"name,omitempty"`
-	// Region of winery
-	Region *string `form:"region,omitempty" json:"region,omitempty" xml:"region,omitempty"`
-	// Country of winery
-	Country *string `form:"country,omitempty" json:"country,omitempty" xml:"country,omitempty"`
-	// Winery website URL
-	URL *string `form:"url,omitempty" json:"url,omitempty" xml:"url,omitempty"`
-}
-
-// Component is the transformed type of Component type.
-type Component struct {
+// ProjectedComponent is the projected type of Component type.
+type ProjectedComponent struct {
 	// Grape varietal
 	Varietal *string `form:"varietal,omitempty" json:"varietal,omitempty" xml:"varietal,omitempty"`
 	// Percentage of varietal in wine
 	Percentage *uint32 `form:"percentage,omitempty" json:"percentage,omitempty" xml:"percentage,omitempty"`
-}
-
-// StoredBottleView is the transformed type of StoredBottle type.
-type StoredBottleView struct {
-	// ID is the unique id of the bottle.
-	ID *string `form:"id,omitempty" json:"id,omitempty" xml:"id,omitempty"`
-	// Name of bottle
-	Name *string `form:"name,omitempty" json:"name,omitempty" xml:"name,omitempty"`
-	// Winery that produces wine
-	Winery *Winery `form:"winery,omitempty" json:"winery,omitempty" xml:"winery,omitempty"`
-	// Vintage of bottle
-	Vintage *uint32 `form:"vintage,omitempty" json:"vintage,omitempty" xml:"vintage,omitempty"`
-	// Composition is the list of grape varietals and associated percentage.
-	Composition []*Component `form:"composition,omitempty" json:"composition,omitempty" xml:"composition,omitempty"`
-	// Description of bottle
-	Description *string `form:"description,omitempty" json:"description,omitempty" xml:"description,omitempty"`
-	// Rating of bottle from 1 (worst) to 5 (best)
-	Rating *uint32 `form:"rating,omitempty" json:"rating,omitempty" xml:"rating,omitempty"`
-}
-
-// StoredBottle is a result type with a view.
-type StoredBottle struct {
-	// ID is the unique id of the bottle.
-	ID *string `form:"id,omitempty" json:"id,omitempty" xml:"id,omitempty"`
-	// Name of bottle
-	Name *string `form:"name,omitempty" json:"name,omitempty" xml:"name,omitempty"`
-	// Winery that produces wine
-	Winery *Winery `form:"winery,omitempty" json:"winery,omitempty" xml:"winery,omitempty"`
-	// Vintage of bottle
-	Vintage *uint32 `form:"vintage,omitempty" json:"vintage,omitempty" xml:"vintage,omitempty"`
-	// Composition is the list of grape varietals and associated percentage.
-	Composition []*Component `form:"composition,omitempty" json:"composition,omitempty" xml:"composition,omitempty"`
-	// Description of bottle
-	Description *string `form:"description,omitempty" json:"description,omitempty" xml:"description,omitempty"`
-	// Rating of bottle from 1 (worst) to 5 (best)
-	Rating *uint32 `form:"rating,omitempty" json:"rating,omitempty" xml:"rating,omitempty"`
 }
 
 // ShowNotFoundResponseBody is the type of the "storage" service "show"
@@ -223,10 +193,10 @@ func NewListResponseBody(res storage.StoredBottleCollection) ListResponseBody {
 	return body
 }
 
-// NewStoredBottleView builds the HTTP response body from the result of the
-// "show" endpoint of the "storage" service.
-func NewStoredBottleView(res *storageviews.StoredBottleView) *StoredBottleView {
-	body := &StoredBottleView{
+// NewProjectedStoredBottle builds the HTTP response body from the result of
+// the "show" endpoint of the "storage" service.
+func NewProjectedStoredBottle(res *storageviews.StoredBottle) *ProjectedStoredBottle {
+	body := &ProjectedStoredBottle{
 		ID:          res.ID,
 		Name:        res.Name,
 		Vintage:     res.Vintage,
@@ -234,12 +204,12 @@ func NewStoredBottleView(res *storageviews.StoredBottleView) *StoredBottleView {
 		Rating:      res.Rating,
 	}
 	if res.Winery != nil {
-		body.Winery = marshalWineryToWinery(res.Winery)
+		body.Winery = marshalWineryToProjectedWinery(res.Winery)
 	}
 	if res.Composition != nil {
-		body.Composition = make([]*Component, len(res.Composition))
+		body.Composition = make([]*ProjectedComponent, len(res.Composition))
 		for j, val := range res.Composition {
-			body.Composition[j] = &Component{
+			body.Composition[j] = &ProjectedComponent{
 				Varietal:   val.Varietal,
 				Percentage: val.Percentage,
 			}

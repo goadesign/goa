@@ -14,34 +14,7 @@ import (
 	goa "goa.design/goa"
 )
 
-// WineryView is the transformed type of Winery type.
-type WineryView struct {
-	// Name of winery
-	Name *string
-	// Region of winery
-	Region *string
-	// Country of winery
-	Country *string
-	// Winery website URL
-	URL *string
-}
-
-// Winery is a result type with a view.
-type Winery struct {
-	*WineryView
-	// View to render
-	View string
-}
-
-// Component is the transformed type of Component type.
-type Component struct {
-	// Grape varietal
-	Varietal *string
-	// Percentage of varietal in wine
-	Percentage *uint32
-}
-
-// StoredBottleView is the transformed type of StoredBottle type.
+// StoredBottleView is a type which is projected based on a view.
 type StoredBottleView struct {
 	// ID is the unique id of the bottle.
 	ID *string
@@ -59,41 +32,42 @@ type StoredBottleView struct {
 	Rating *uint32
 }
 
-// StoredBottle is a result type with a view.
+// StoredBottle is the viewed result type that projects StoredBottleView based
+// on a view.
 type StoredBottle struct {
 	*StoredBottleView
 	// View to render
 	View string
 }
 
-// AsDefault selects fields from the result type Winery defined in the default
-// view.
-func (result *Winery) AsDefault() *Winery {
-	t := &WineryView{
-		Name:    result.Name,
-		Region:  result.Region,
-		Country: result.Country,
-		URL:     result.URL,
-	}
-	return &Winery{
-		WineryView: t,
-		View:       "default",
-	}
+// WineryView is a type which is projected based on a view.
+type WineryView struct {
+	// Name of winery
+	Name *string
+	// Region of winery
+	Region *string
+	// Country of winery
+	Country *string
+	// Winery website URL
+	URL *string
 }
 
-// AsTiny selects fields from the result type Winery defined in the tiny view.
-func (result *Winery) AsTiny() *Winery {
-	t := &WineryView{
-		Name: result.Name,
-	}
-	return &Winery{
-		WineryView: t,
-		View:       "tiny",
-	}
+// Winery is the viewed result type that projects WineryView based on a view.
+type Winery struct {
+	*WineryView
+	// View to render
+	View string
 }
 
-// AsDefault selects fields from the result type StoredBottle defined in the
-// default view.
+// Component is a type that runs validations on a projected type.
+type Component struct {
+	// Grape varietal
+	Varietal *string
+	// Percentage of varietal in wine
+	Percentage *uint32
+}
+
+// AsDefault projects viewed result type StoredBottle using the default view.
 func (result *StoredBottle) AsDefault() *StoredBottle {
 	t := &StoredBottleView{
 		ID:          result.ID,
@@ -121,8 +95,7 @@ func (result *StoredBottle) AsDefault() *StoredBottle {
 	}
 }
 
-// AsTiny selects fields from the result type StoredBottle defined in the tiny
-// view.
+// AsTiny projects viewed result type StoredBottle using the tiny view.
 func (result *StoredBottle) AsTiny() *StoredBottle {
 	t := &StoredBottleView{
 		ID:   result.ID,
@@ -138,57 +111,29 @@ func (result *StoredBottle) AsTiny() *StoredBottle {
 	}
 }
 
-// Validate runs the validations defined on Winery.
-func (result *Winery) Validate() (err error) {
-	switch result.View {
-	case "default":
-		if result.Name == nil {
-			err = goa.MergeErrors(err, goa.MissingFieldError("name", "result"))
-		}
-		if result.Region == nil {
-			err = goa.MergeErrors(err, goa.MissingFieldError("region", "result"))
-		}
-		if result.Country == nil {
-			err = goa.MergeErrors(err, goa.MissingFieldError("country", "result"))
-		}
-		if result.Region != nil {
-			err = goa.MergeErrors(err, goa.ValidatePattern("result.region", *result.Region, "(?i)[a-z '\\.]+"))
-		}
-		if result.Country != nil {
-			err = goa.MergeErrors(err, goa.ValidatePattern("result.country", *result.Country, "(?i)[a-z '\\.]+"))
-		}
-		if result.URL != nil {
-			err = goa.MergeErrors(err, goa.ValidatePattern("result.url", *result.URL, "(?i)^(https?|ftp)://[^\\s/$.?#].[^\\s]*$"))
-		}
-	case "tiny":
-		if result.Name == nil {
-			err = goa.MergeErrors(err, goa.MissingFieldError("name", "result"))
-		}
+// AsDefault projects viewed result type Winery using the default view.
+func (result *Winery) AsDefault() *Winery {
+	t := &WineryView{
+		Name:    result.Name,
+		Region:  result.Region,
+		Country: result.Country,
+		URL:     result.URL,
 	}
-	return
+	return &Winery{
+		WineryView: t,
+		View:       "default",
+	}
 }
 
-// Validate runs the validations defined on Component.
-func (result *Component) Validate() (err error) {
-	if result.Varietal != nil {
-		err = goa.MergeErrors(err, goa.ValidatePattern("result.varietal", *result.Varietal, "[A-Za-z' ]+"))
+// AsTiny projects viewed result type Winery using the tiny view.
+func (result *Winery) AsTiny() *Winery {
+	t := &WineryView{
+		Name: result.Name,
 	}
-	if result.Varietal != nil {
-		if utf8.RuneCountInString(*result.Varietal) > 100 {
-			err = goa.MergeErrors(err, goa.InvalidLengthError("result.varietal", *result.Varietal, utf8.RuneCountInString(*result.Varietal), 100, false))
-		}
+	return &Winery{
+		WineryView: t,
+		View:       "tiny",
 	}
-	if result.Percentage != nil {
-		if *result.Percentage < 1 {
-			err = goa.MergeErrors(err, goa.InvalidRangeError("result.percentage", *result.Percentage, 1, true))
-		}
-	}
-	if result.Percentage != nil {
-		if *result.Percentage > 100 {
-			err = goa.MergeErrors(err, goa.InvalidRangeError("result.percentage", *result.Percentage, 100, false))
-		}
-	}
-	return
 }
 
 // Validate runs the validations defined on StoredBottle.
@@ -268,6 +213,62 @@ func (result *StoredBottle) Validate() (err error) {
 			if err2 := result.Winery.Validate(); err2 != nil {
 				err = goa.MergeErrors(err, err2)
 			}
+		}
+	}
+	return
+}
+
+// Validate runs the validations defined on Winery.
+func (result *Winery) Validate() (err error) {
+	switch result.View {
+	case "default":
+		if result.Name == nil {
+			err = goa.MergeErrors(err, goa.MissingFieldError("name", "result"))
+		}
+		if result.Region == nil {
+			err = goa.MergeErrors(err, goa.MissingFieldError("region", "result"))
+		}
+		if result.Country == nil {
+			err = goa.MergeErrors(err, goa.MissingFieldError("country", "result"))
+		}
+		if result.Region != nil {
+			err = goa.MergeErrors(err, goa.ValidatePattern("result.region", *result.Region, "(?i)[a-z '\\.]+"))
+		}
+		if result.Country != nil {
+			err = goa.MergeErrors(err, goa.ValidatePattern("result.country", *result.Country, "(?i)[a-z '\\.]+"))
+		}
+		if result.URL != nil {
+			err = goa.MergeErrors(err, goa.ValidatePattern("result.url", *result.URL, "(?i)^(https?|ftp)://[^\\s/$.?#].[^\\s]*$"))
+		}
+	case "tiny":
+		if result.Name == nil {
+			err = goa.MergeErrors(err, goa.MissingFieldError("name", "result"))
+		}
+	}
+	return
+}
+
+// Validate runs the validations defined on Component.
+func (result *Component) Validate() (err error) {
+	if result.Varietal == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("varietal", "result"))
+	}
+	if result.Varietal != nil {
+		err = goa.MergeErrors(err, goa.ValidatePattern("result.varietal", *result.Varietal, "[A-Za-z' ]+"))
+	}
+	if result.Varietal != nil {
+		if utf8.RuneCountInString(*result.Varietal) > 100 {
+			err = goa.MergeErrors(err, goa.InvalidLengthError("result.varietal", *result.Varietal, utf8.RuneCountInString(*result.Varietal), 100, false))
+		}
+	}
+	if result.Percentage != nil {
+		if *result.Percentage < 1 {
+			err = goa.MergeErrors(err, goa.InvalidRangeError("result.percentage", *result.Percentage, 1, true))
+		}
+	}
+	if result.Percentage != nil {
+		if *result.Percentage > 100 {
+			err = goa.MergeErrors(err, goa.InvalidRangeError("result.percentage", *result.Percentage, 100, false))
 		}
 	}
 	return

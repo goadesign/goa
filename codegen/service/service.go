@@ -92,28 +92,28 @@ func File(genpkg string, service *design.ServiceExpr) *codegen.File {
 		})
 	}
 
-	// view functions
-	var helpers []*codegen.TransformFunctionData
-	for _, t := range svc.ViewedTypes {
-		if t.ToResult != nil {
-			helpers = codegen.AppendHelpers(helpers, t.ToResult.Helpers)
+	// transform result type functions
+	var projh []*codegen.TransformFunctionData
+	for _, t := range svc.ProjectedTypes {
+		if t.ConvertToResult != nil {
+			projh = codegen.AppendHelpers(projh, t.ConvertToResult.Helpers)
 			sections = append(sections, &codegen.SectionTemplate{
 				Name:   "viewed-result-to-result",
 				Source: initTypeT,
-				Data:   t.ToResult,
+				Data:   t.ConvertToResult,
 			})
 		}
-		if t.ToViewed != nil {
-			helpers = codegen.AppendHelpers(helpers, t.ToViewed.Helpers)
+		if t.ConvertToViewed != nil {
+			projh = codegen.AppendHelpers(projh, t.ConvertToViewed.Helpers)
 			sections = append(sections, &codegen.SectionTemplate{
 				Name:   "result-to-viewed-result",
 				Source: initTypeT,
-				Data:   t.ToViewed,
+				Data:   t.ConvertToViewed,
 			})
 		}
 	}
 
-	for _, h := range helpers {
+	for _, h := range projh {
 		sections = append(sections, &codegen.SectionTemplate{
 			Name:   "transform-helpers",
 			Source: transformHelperT,

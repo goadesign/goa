@@ -105,9 +105,9 @@ func serverType(genpkg string, svc *httpdesign.ServiceExpr, seen map[string]stru
 	}
 
 	// viewed types
-	for _, t := range rdata.ViewedTypes {
+	for _, t := range rdata.ProjectedTypes {
 		sections = append(sections, &codegen.SectionTemplate{
-			Name:   "viewed-type",
+			Name:   "projected-type",
 			Source: typeDeclT,
 			Data:   t,
 		})
