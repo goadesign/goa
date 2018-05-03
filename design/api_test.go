@@ -30,6 +30,22 @@ func TestAPIExprSchemes(t *testing.T) {
 	}
 }
 
+func TestAPIExprEvalName(t *testing.T) {
+	cases := map[string]struct {
+		name     string
+		expected string
+	}{
+		"foo": {name: "foo", expected: "API foo"},
+	}
+
+	for k, tc := range cases {
+		api := APIExpr{Name: tc.name}
+		if actual := api.EvalName(); actual != tc.expected {
+			t.Errorf("%s: got %#v, expected %#v", k, actual, tc.expected)
+		}
+	}
+}
+
 func TestServerExprValidate(t *testing.T) {
 	cases := map[string]struct {
 		url      string
