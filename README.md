@@ -55,16 +55,11 @@ go get -u goa.design/goa/...
 
 ### Vendoring
 
-Because goa generates and compiles code `dep` is not able to properly identify all the dependencies
-when running `dep init` in a goa project. The symptoms manifest themselves when running `goa gen`:
-
-```
-exit status 1
-design must define at least one service
-```
-
-Simply add the `goa.design/goa/codegen/generator` as a required package to `Gopkg.toml` to fix the
-issue:
+Since goa generates and compiles code vendoring tools are not able to
+automatically identify all the dependencies. In particular the `generator`
+package is only used by the generated code. To alleviate this issue simply add
+`goa.design/goa/codegen/generator` as a required package to the vendor manifest.
+For example if you are using `dep` add the following line to `Gopkg.toml`:
 
 ```
 required = ["goa.design/goa/codegen/generator"]
@@ -72,21 +67,24 @@ required = ["goa.design/goa/codegen/generator"]
 
 ### Stable Versions
 
-goa follows [Semantic Versioning](http://semver.org/) which is a fancy way of saying it publishes
-releases with version numbers of the form `vX.Y.Z` and makes sure that your code can upgrade to new
-versions with the same `X` component without having to make changes.
+goa follows [Semantic Versioning](http://semver.org/) which is a fancy way of
+saying it publishes releases with version numbers of the form `vX.Y.Z` and makes
+sure that your code can upgrade to new versions with the same `X` component
+without having to make changes.
 
-Releases are tagged with the corresponding version number. There is also a branch for each major
-version (`v1` and `v2`). The recommended practice is to vendor the stable branch.
+Releases are tagged with the corresponding version number. There is also a
+branch for each major version (`v1` and `v2`). The recommended practice is to
+vendor the stable branch.
 
-Current Release: `v2.0.0`
-Stable Branch: `v2`
+Current Release: `v2.0.0-wip`
 
 ## Teaser
 
 ### 1. Design
 
-Create the file `$GOPATH/src/calcsvc/design/design.go` with the following content:
+Create the file `$GOPATH/src/calcsvc/design/design.go` with the following
+content:
+
 ```go
 package design
 
@@ -128,6 +126,7 @@ var _ = Service("calc", func() {
 	})
 })
 ```
+
 This file contains the design for a `calc` service which accepts HTTP GET
 requests to `/add/{a}/{b}` where `{a}` and `{b}` are placeholders for integer
 values. The API returns the sum of `a` and `b` in the HTTP response body.
@@ -135,12 +134,15 @@ values. The API returns the sum of `a` and `b` in the HTTP response body.
 ### 2. Implement
 
 Now that the design is done, let's run `goa` on the design package:
-```
+
+``` bash
 cd $GOPATH/src/calcsvc
 goa gen calcsvc/design
 ```
+
 This produces a `gen` directory with the following directory structure:
-```
+
+``` text
 gen
 ├── calc
 │   ├── client.go
@@ -165,25 +167,32 @@ gen
 
 6 directories, 14 files
 ```
+
 * `calc` contains the service endpoints and interface as well as a service
   client.
 * `http` contains the HTTP transport layer. This layer maps the service
   endpoints to HTTP handlers server side and HTTP client methods client side.
-  The `http` directory also contains a complete OpenAPI 2.0 spec of the service.
+  The `http` directory also contains a complete
+  [OpenAPI 2.0](https://github.com/OAI/OpenAPI-Specification/blob/master/versions/2.0.md)
+  spec of the service.
 
-The `goa` tool also exposes a `example` command which generates an example
-implementation and provides a good starting point. Let's run it:
-```
+
+The `goa` tool can also generate example implementations for both the service
+and client. These examples provide a good starting point:
+
+``` text
 goa example calcsvc/design
 calc.go
 cmd/calccli/main.go
 cmd/calcsvc/main.go
 ```
+
 The tool generated the `main` functions for two commands: one that runs the
 server and one the client. The tool also generated a dummy service
 implementation that prints a log message. Again note that the `example` command
 is intended to generate just that: an *example*, in particular it is not
-intended to be re-run each time the design changes.
+intended to be re-run each time the design changes (as opposed to the `gen`
+command which should be re-run each time the desgin changes).
 
 Let's implement our service by providing a proper implementation for the `add`
 method. goa generated a payload struct for the `add` method that contains both
@@ -194,7 +203,7 @@ request so all we have to do is to perform the actual sum. Edit the file
 ```go
 // Add returns the sum of attributes a and b of p.
 func (s *calcsvcSvc) Add(ctx context.Context, p *calcsvc.AddPayload) (int, error) {
-	return p.A + p.B, nil
+        return p.A + p.B, nil
 }
 ```
 
@@ -205,7 +214,7 @@ specification and a client tool.
 
 Now let's compile and run the service:
 
-```
+``` bash
 cd $GOPATH/src/calcsvc/cmd/calcsvc
 go build
 ./calcsvc
@@ -215,66 +224,41 @@ go build
 
 Open a new console and compile the generated CLI tool:
 
-```
+``` bash
 cd $GOPATH/src/calcsvc/cmd/calccli
 go build
 ```
 
 and run it:
 
-```
+``` bash
 ./calccli -a 1 -b 2
 3
 ```
 
 The tool includes contextual help:
-```
+
+``` bash
 ./calccli --help
-./calccli is a command line client for the calc API.
-
-Usage:
-    ./calccli [-url URL][-timeout SECONDS][-verbose|-v] SERVICE ENDPOINT [flags]
-
-    -url URL:    specify service URL (http://localhost:8080)
-    -timeout:    maximum number of seconds to wait for response (30)
-    -verbose|-v: print request and response details (false)
-
-Commands:
-    calc add
-    
-Additional help:
-    ./calccli SERVICE [ENDPOINT] --help
-
-Example:
-    ./calccli calc add --a 5952269320165453119 --b 1828520165265779840
 ```
 
 Help is also available on each command:
 
-```
+``` bash
 ./calccli calc add --help
-./calccli [flags] calc add -a INT -b INT
-
-Add implements add.
-    -a INT: Left operand
-    -b INT: Right operand
-
-Example:
-    ./calccli calc add --a 5952269320165453119 --b 1828520165265779840
 ```
 
 Now let's see how robust our code is and try to use non integer values:
 
-```
+``` bash
 ./calccli calc add -a 1 -b foo
 invalid value for b, must be INT
 run './calccli --help' for detailed usage.
 ```
 
-As you can see the generated tool validated the command line arguments against
-the types defined in the design. The server also validates the types when
-decoding incoming requests so that your code only has to deal with the business
-logic.
+The generated code validates the command line arguments against the types
+defined in the design. The server also validates the types when decoding
+incoming requests so that your code only has to deal with the business logic.
 
 ### 4. Document
 
@@ -288,9 +272,9 @@ function makes it possible to server static file. Edit the file
 
 ```go
 var _ = Service("openapi", func() {
-  // Serve the file with relative path ../../gen/http/openapi.json for requests
-  // sent to /swagger.json.
-  Files("/swagger.json", "../../gen/http/openapi.json")
+        // Serve the file with relative path ../../gen/http/openapi.json for
+        // requests sent to /swagger.json.
+        Files("/swagger.json", "../../gen/http/openapi.json")
 })
 ```
 
@@ -334,22 +318,22 @@ curl localhost:8080/swagger.json
 
 Consult the following resources to learn more about goa.
 
-### goa.design
+### Docs
 
-[goa.design](https://goa.design) contains further information on goa including a getting
-started guide, detailed DSL documentation as well as information on how to implement a goa service.
+The [Getting Started Guide](https://github.com/goadesign/goa/blob/v2/docs/Guide.md) is
+a great place to start.
+
+There is also a [FAQ](https://github.com/goadesign/goa/blob/v2/docs/FAQ.md) and
+a document describing
+[error handling](https://github.com/goadesign/goa/blob/v2/docs/ErrorHandling.md).
 
 ### Examples
 
-The [examples](https://github.com/goadesign/examples) repo contains simple examples illustrating
-basic concepts.
-
-The [goa-cellar](https://github.com/goadesign/goa-cellar) repo contains the implementation for a
-goa service which demonstrates many aspects of the design language. It is kept up-to-date and
-provides a reference for testing functionality.
+The [examples](https://github.com/goadesign/goa/tree/v2/examples) directory
+contains simple examples illustrating basic concepts.
 
 ## Contributing
 
-Did you fix a bug? write docs or additional tests? or implement some new awesome functionality?
-You're a rock star!! Just make sure that `make` succeeds (or that TravisCI is green) and send a PR
-over.
+Did you fix a bug? write docs or additional tests? or implement some new awesome
+functionality? You're a rock star!! Just make sure that `make` succeeds (or that
+TravisCI is green) and send a PR over.
