@@ -113,14 +113,11 @@ func DecodePickResponse(decoder func(*http.Response) goahttp.Decoder, restoreBod
 	}
 }
 
-// unmarshalWineryResponseBodyToWinery builds a value of type *sommelier.Winery
-// from a value of type *WineryResponseBody.
-func unmarshalWineryResponseBodyToWinery(v *WineryResponseBody) *sommelier.Winery {
+// unmarshalWineryResponseBodyTinyToWinery builds a value of type
+// *sommelier.Winery from a value of type *WineryResponseBodyTiny.
+func unmarshalWineryResponseBodyTinyToWinery(v *WineryResponseBodyTiny) *sommelier.Winery {
 	res := &sommelier.Winery{
-		Name:    *v.Name,
-		Region:  *v.Region,
-		Country: *v.Country,
-		URL:     v.URL,
+		Name: *v.Name,
 	}
 
 	return res

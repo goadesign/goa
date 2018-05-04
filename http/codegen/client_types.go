@@ -89,7 +89,7 @@ func clientType(genpkg string, svc *httpdesign.ServiceExpr, seen map[string]stru
 	for _, a := range svc.HTTPEndpoints {
 		adata := rdata.Endpoint(a.Name())
 		for _, resp := range adata.Result.Responses {
-			if data := resp.ClientBody; data != nil && adata.Method.ViewedResult == nil {
+			if data := resp.ClientBody; data != nil {
 				if data.Def != "" {
 					sections = append(sections, &codegen.SectionTemplate{
 						Name:   "client-response-body",

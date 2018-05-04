@@ -133,17 +133,14 @@ func NewAEndpoint(s Service) goa.Endpoint {
 		if err != nil {
 			return nil, err
 		}
-		vres := NewViewedViewtype(res)
+		var vres *withresultmultipleviewsviews.Viewtype
 		switch view {
 		case "default":
-			vres = vres.AsDefault()
+			vres = NewViewtypeDefault(res)
 		case "tiny":
-			vres = vres.AsTiny()
+			vres = NewViewtypeTiny(res)
 		default:
 			return nil, fmt.Errorf("unknown view %s", view)
-		}
-		if err := vres.Validate(); err != nil {
-			return nil, err
 		}
 		return vres, nil
 	}

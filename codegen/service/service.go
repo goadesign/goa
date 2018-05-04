@@ -103,12 +103,12 @@ func File(genpkg string, service *design.ServiceExpr) *codegen.File {
 				Data:   t.ConvertToResult,
 			})
 		}
-		if t.ConvertToViewed != nil {
-			projh = codegen.AppendHelpers(projh, t.ConvertToViewed.Helpers)
+		for _, p := range t.Views {
+			projh = codegen.AppendHelpers(projh, p.Project.Helpers)
 			sections = append(sections, &codegen.SectionTemplate{
-				Name:   "result-to-viewed-result",
+				Name:   "project-result-init",
 				Source: initTypeT,
-				Data:   t.ConvertToViewed,
+				Data:   p.Project,
 			})
 		}
 	}

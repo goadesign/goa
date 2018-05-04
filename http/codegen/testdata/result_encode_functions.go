@@ -6,8 +6,8 @@ func EncodeMethodHeaderBoolResponse(encoder func(context.Context, http.ResponseW
 	return func(ctx context.Context, w http.ResponseWriter, v interface{}) error {
 		res := v.(*serviceheaderbool.MethodHeaderBoolResult)
 		if res.H != nil {
-			val := res.H
-			hs := strconv.FormatBool(*val)
+			val := *res.H
+			hs := strconv.FormatBool(val)
 			w.Header().Set("h", hs)
 		}
 		w.WriteHeader(http.StatusOK)
@@ -22,8 +22,8 @@ func EncodeMethodHeaderIntResponse(encoder func(context.Context, http.ResponseWr
 	return func(ctx context.Context, w http.ResponseWriter, v interface{}) error {
 		res := v.(*serviceheaderint.MethodHeaderIntResult)
 		if res.H != nil {
-			val := res.H
-			hs := strconv.Itoa(*val)
+			val := *res.H
+			hs := strconv.Itoa(val)
 			w.Header().Set("h", hs)
 		}
 		w.WriteHeader(http.StatusOK)
@@ -38,8 +38,8 @@ func EncodeMethodHeaderInt32Response(encoder func(context.Context, http.Response
 	return func(ctx context.Context, w http.ResponseWriter, v interface{}) error {
 		res := v.(*serviceheaderint32.MethodHeaderInt32Result)
 		if res.H != nil {
-			val := res.H
-			hs := strconv.FormatInt(int64(*val), 10)
+			val := *res.H
+			hs := strconv.FormatInt(int64(val), 10)
 			w.Header().Set("h", hs)
 		}
 		w.WriteHeader(http.StatusOK)
@@ -54,8 +54,8 @@ func EncodeMethodHeaderInt64Response(encoder func(context.Context, http.Response
 	return func(ctx context.Context, w http.ResponseWriter, v interface{}) error {
 		res := v.(*serviceheaderint64.MethodHeaderInt64Result)
 		if res.H != nil {
-			val := res.H
-			hs := strconv.FormatInt(*val, 10)
+			val := *res.H
+			hs := strconv.FormatInt(val, 10)
 			w.Header().Set("h", hs)
 		}
 		w.WriteHeader(http.StatusOK)
@@ -70,8 +70,8 @@ func EncodeMethodHeaderUIntResponse(encoder func(context.Context, http.ResponseW
 	return func(ctx context.Context, w http.ResponseWriter, v interface{}) error {
 		res := v.(*serviceheaderuint.MethodHeaderUIntResult)
 		if res.H != nil {
-			val := res.H
-			hs := strconv.FormatUint(uint64(*val), 10)
+			val := *res.H
+			hs := strconv.FormatUint(uint64(val), 10)
 			w.Header().Set("h", hs)
 		}
 		w.WriteHeader(http.StatusOK)
@@ -86,8 +86,8 @@ func EncodeMethodHeaderUInt32Response(encoder func(context.Context, http.Respons
 	return func(ctx context.Context, w http.ResponseWriter, v interface{}) error {
 		res := v.(*serviceheaderuint32.MethodHeaderUInt32Result)
 		if res.H != nil {
-			val := res.H
-			hs := strconv.FormatUint(uint64(*val), 10)
+			val := *res.H
+			hs := strconv.FormatUint(uint64(val), 10)
 			w.Header().Set("h", hs)
 		}
 		w.WriteHeader(http.StatusOK)
@@ -102,8 +102,8 @@ func EncodeMethodHeaderUInt64Response(encoder func(context.Context, http.Respons
 	return func(ctx context.Context, w http.ResponseWriter, v interface{}) error {
 		res := v.(*serviceheaderuint64.MethodHeaderUInt64Result)
 		if res.H != nil {
-			val := res.H
-			hs := strconv.FormatUint(*val, 10)
+			val := *res.H
+			hs := strconv.FormatUint(val, 10)
 			w.Header().Set("h", hs)
 		}
 		w.WriteHeader(http.StatusOK)
@@ -118,8 +118,8 @@ func EncodeMethodHeaderFloat32Response(encoder func(context.Context, http.Respon
 	return func(ctx context.Context, w http.ResponseWriter, v interface{}) error {
 		res := v.(*serviceheaderfloat32.MethodHeaderFloat32Result)
 		if res.H != nil {
-			val := res.H
-			hs := strconv.FormatFloat(float64(*val), 'f', -1, 32)
+			val := *res.H
+			hs := strconv.FormatFloat(float64(val), 'f', -1, 32)
 			w.Header().Set("h", hs)
 		}
 		w.WriteHeader(http.StatusOK)
@@ -134,8 +134,8 @@ func EncodeMethodHeaderFloat64Response(encoder func(context.Context, http.Respon
 	return func(ctx context.Context, w http.ResponseWriter, v interface{}) error {
 		res := v.(*serviceheaderfloat64.MethodHeaderFloat64Result)
 		if res.H != nil {
-			val := res.H
-			hs := strconv.FormatFloat(*val, 'f', -1, 64)
+			val := *res.H
+			hs := strconv.FormatFloat(val, 'f', -1, 64)
 			w.Header().Set("h", hs)
 		}
 		w.WriteHeader(http.StatusOK)
@@ -164,7 +164,7 @@ func EncodeMethodHeaderBytesResponse(encoder func(context.Context, http.Response
 	return func(ctx context.Context, w http.ResponseWriter, v interface{}) error {
 		res := v.(*serviceheaderbytes.MethodHeaderBytesResult)
 		if res.H != nil {
-			val := res.H
+			val := *res.H
 			hs := string(val)
 			w.Header().Set("h", hs)
 		}
@@ -180,7 +180,7 @@ func EncodeMethodHeaderAnyResponse(encoder func(context.Context, http.ResponseWr
 	return func(ctx context.Context, w http.ResponseWriter, v interface{}) error {
 		res := v.(*serviceheaderany.MethodHeaderAnyResult)
 		if res.H != nil {
-			val := res.H
+			val := *res.H
 			hs := fmt.Sprintf("%v", val)
 			w.Header().Set("h", hs)
 		}
@@ -196,7 +196,7 @@ func EncodeMethodHeaderArrayBoolResponse(encoder func(context.Context, http.Resp
 	return func(ctx context.Context, w http.ResponseWriter, v interface{}) error {
 		res := v.(*serviceheaderarraybool.MethodHeaderArrayBoolResult)
 		if res.H != nil {
-			val := res.H
+			val := *res.H
 			hsSlice := make([]string, len(val))
 			for i, e := range val {
 				es := strconv.FormatBool(e)
@@ -217,7 +217,7 @@ func EncodeMethodHeaderArrayIntResponse(encoder func(context.Context, http.Respo
 	return func(ctx context.Context, w http.ResponseWriter, v interface{}) error {
 		res := v.(*serviceheaderarrayint.MethodHeaderArrayIntResult)
 		if res.H != nil {
-			val := res.H
+			val := *res.H
 			hsSlice := make([]string, len(val))
 			for i, e := range val {
 				es := strconv.Itoa(e)
@@ -238,7 +238,7 @@ func EncodeMethodHeaderArrayInt32Response(encoder func(context.Context, http.Res
 	return func(ctx context.Context, w http.ResponseWriter, v interface{}) error {
 		res := v.(*serviceheaderarrayint32.MethodHeaderArrayInt32Result)
 		if res.H != nil {
-			val := res.H
+			val := *res.H
 			hsSlice := make([]string, len(val))
 			for i, e := range val {
 				es := strconv.FormatInt(int64(e), 10)
@@ -259,7 +259,7 @@ func EncodeMethodHeaderArrayInt64Response(encoder func(context.Context, http.Res
 	return func(ctx context.Context, w http.ResponseWriter, v interface{}) error {
 		res := v.(*serviceheaderarrayint64.MethodHeaderArrayInt64Result)
 		if res.H != nil {
-			val := res.H
+			val := *res.H
 			hsSlice := make([]string, len(val))
 			for i, e := range val {
 				es := strconv.FormatInt(e, 10)
@@ -280,7 +280,7 @@ func EncodeMethodHeaderArrayUIntResponse(encoder func(context.Context, http.Resp
 	return func(ctx context.Context, w http.ResponseWriter, v interface{}) error {
 		res := v.(*serviceheaderarrayuint.MethodHeaderArrayUIntResult)
 		if res.H != nil {
-			val := res.H
+			val := *res.H
 			hsSlice := make([]string, len(val))
 			for i, e := range val {
 				es := strconv.FormatUint(uint64(e), 10)
@@ -301,7 +301,7 @@ func EncodeMethodHeaderArrayUInt32Response(encoder func(context.Context, http.Re
 	return func(ctx context.Context, w http.ResponseWriter, v interface{}) error {
 		res := v.(*serviceheaderarrayuint32.MethodHeaderArrayUInt32Result)
 		if res.H != nil {
-			val := res.H
+			val := *res.H
 			hsSlice := make([]string, len(val))
 			for i, e := range val {
 				es := strconv.FormatUint(uint64(e), 10)
@@ -322,7 +322,7 @@ func EncodeMethodHeaderArrayUInt64Response(encoder func(context.Context, http.Re
 	return func(ctx context.Context, w http.ResponseWriter, v interface{}) error {
 		res := v.(*serviceheaderarrayuint64.MethodHeaderArrayUInt64Result)
 		if res.H != nil {
-			val := res.H
+			val := *res.H
 			hsSlice := make([]string, len(val))
 			for i, e := range val {
 				es := strconv.FormatUint(e, 10)
@@ -343,7 +343,7 @@ func EncodeMethodHeaderArrayFloat32Response(encoder func(context.Context, http.R
 	return func(ctx context.Context, w http.ResponseWriter, v interface{}) error {
 		res := v.(*serviceheaderarrayfloat32.MethodHeaderArrayFloat32Result)
 		if res.H != nil {
-			val := res.H
+			val := *res.H
 			hsSlice := make([]string, len(val))
 			for i, e := range val {
 				es := strconv.FormatFloat(float64(e), 'f', -1, 32)
@@ -364,7 +364,7 @@ func EncodeMethodHeaderArrayFloat64Response(encoder func(context.Context, http.R
 	return func(ctx context.Context, w http.ResponseWriter, v interface{}) error {
 		res := v.(*serviceheaderarrayfloat64.MethodHeaderArrayFloat64Result)
 		if res.H != nil {
-			val := res.H
+			val := *res.H
 			hsSlice := make([]string, len(val))
 			for i, e := range val {
 				es := strconv.FormatFloat(e, 'f', -1, 64)
@@ -385,7 +385,7 @@ func EncodeMethodHeaderArrayStringResponse(encoder func(context.Context, http.Re
 	return func(ctx context.Context, w http.ResponseWriter, v interface{}) error {
 		res := v.(*serviceheaderarraystring.MethodHeaderArrayStringResult)
 		if res.H != nil {
-			val := res.H
+			val := *res.H
 			hs := strings.Join(val, ", ")
 			w.Header().Set("h", hs)
 		}
@@ -401,7 +401,7 @@ func EncodeMethodHeaderArrayBytesResponse(encoder func(context.Context, http.Res
 	return func(ctx context.Context, w http.ResponseWriter, v interface{}) error {
 		res := v.(*serviceheaderarraybytes.MethodHeaderArrayBytesResult)
 		if res.H != nil {
-			val := res.H
+			val := *res.H
 			hsSlice := make([]string, len(val))
 			for i, e := range val {
 				es := string(e)
@@ -422,7 +422,7 @@ func EncodeMethodHeaderArrayAnyResponse(encoder func(context.Context, http.Respo
 	return func(ctx context.Context, w http.ResponseWriter, v interface{}) error {
 		res := v.(*serviceheaderarrayany.MethodHeaderArrayAnyResult)
 		if res.H != nil {
-			val := res.H
+			val := *res.H
 			hsSlice := make([]string, len(val))
 			for i, e := range val {
 				es := fmt.Sprintf("%v", e)
@@ -443,8 +443,8 @@ func EncodeMethodHeaderBoolDefaultResponse(encoder func(context.Context, http.Re
 	return func(ctx context.Context, w http.ResponseWriter, v interface{}) error {
 		res := v.(*serviceheaderbooldefault.MethodHeaderBoolDefaultResult)
 		if res.H != nil {
-			val := res.H
-			hs := strconv.FormatBool(*val)
+			val := *res.H
+			hs := strconv.FormatBool(val)
 			w.Header().Set("h", hs)
 		} else {
 			w.Header().Set("h", "true")
@@ -461,9 +461,13 @@ var ResultHeaderBoolRequiredDefaultEncodeCode = `// EncodeMethodHeaderBoolRequir
 func EncodeMethodHeaderBoolRequiredDefaultResponse(encoder func(context.Context, http.ResponseWriter) goahttp.Encoder) func(context.Context, http.ResponseWriter, interface{}) error {
 	return func(ctx context.Context, w http.ResponseWriter, v interface{}) error {
 		res := v.(*serviceheaderboolrequireddefault.MethodHeaderBoolRequiredDefaultResult)
-		val := res.H
-		hs := strconv.FormatBool(val)
-		w.Header().Set("h", hs)
+		if res.H != nil {
+			val := *res.H
+			hs := strconv.FormatBool(val)
+			w.Header().Set("h", hs)
+		} else {
+			w.Header().Set("h", "true")
+		}
 		w.WriteHeader(http.StatusOK)
 		return nil
 	}
@@ -493,7 +497,11 @@ var ResultHeaderStringRequiredDefaultEncodeCode = `// EncodeMethodHeaderStringRe
 func EncodeMethodHeaderStringRequiredDefaultResponse(encoder func(context.Context, http.ResponseWriter) goahttp.Encoder) func(context.Context, http.ResponseWriter, interface{}) error {
 	return func(ctx context.Context, w http.ResponseWriter, v interface{}) error {
 		res := v.(*serviceheaderstringrequireddefault.MethodHeaderStringRequiredDefaultResult)
-		w.Header().Set("h", res.H)
+		if res.H != nil {
+			w.Header().Set("h", *res.H)
+		} else {
+			w.Header().Set("h", "def")
+		}
 		w.WriteHeader(http.StatusOK)
 		return nil
 	}
@@ -507,7 +515,7 @@ func EncodeMethodHeaderArrayBoolDefaultResponse(encoder func(context.Context, ht
 	return func(ctx context.Context, w http.ResponseWriter, v interface{}) error {
 		res := v.(*serviceheaderarraybooldefault.MethodHeaderArrayBoolDefaultResult)
 		if res.H != nil {
-			val := res.H
+			val := *res.H
 			hsSlice := make([]string, len(val))
 			for i, e := range val {
 				es := strconv.FormatBool(e)
@@ -531,7 +539,7 @@ func EncodeMethodHeaderArrayBoolRequiredDefaultResponse(encoder func(context.Con
 	return func(ctx context.Context, w http.ResponseWriter, v interface{}) error {
 		res := v.(*serviceheaderarrayboolrequireddefault.MethodHeaderArrayBoolRequiredDefaultResult)
 		if res.H != nil {
-			val := res.H
+			val := *res.H
 			hsSlice := make([]string, len(val))
 			for i, e := range val {
 				es := strconv.FormatBool(e)
@@ -555,7 +563,7 @@ func EncodeMethodHeaderArrayStringDefaultResponse(encoder func(context.Context, 
 	return func(ctx context.Context, w http.ResponseWriter, v interface{}) error {
 		res := v.(*serviceheaderarraystringdefault.MethodHeaderArrayStringDefaultResult)
 		if res.H != nil {
-			val := res.H
+			val := *res.H
 			hs := strings.Join(val, ", ")
 			w.Header().Set("h", hs)
 		} else {
@@ -574,7 +582,7 @@ func EncodeMethodHeaderArrayStringRequiredDefaultResponse(encoder func(context.C
 	return func(ctx context.Context, w http.ResponseWriter, v interface{}) error {
 		res := v.(*serviceheaderarraystringrequireddefault.MethodHeaderArrayStringRequiredDefaultResult)
 		if res.H != nil {
-			val := res.H
+			val := *res.H
 			hs := strings.Join(val, ", ")
 			w.Header().Set("h", hs)
 		} else {
@@ -632,7 +640,7 @@ func EncodeMethodBodyMultipleViewResponse(encoder func(context.Context, http.Res
 		res := v.(*servicebodymultipleviewviews.Resulttypemultipleviews)
 		w.Header().Set("goa-view", res.View)
 		enc := encoder(ctx, w)
-		body := NewProjectedResulttypemultipleviews(res)
+		body := NewMethodBodyMultipleViewResponseBody(res)
 		if res.C != nil {
 			w.Header().Set("Location", *res.C)
 		}
@@ -807,8 +815,8 @@ var ResultTagStringRequiredEncodeCode = `// EncodeMethodTagStringRequiredRespons
 func EncodeMethodTagStringRequiredResponse(encoder func(context.Context, http.ResponseWriter) goahttp.Encoder) func(context.Context, http.ResponseWriter, interface{}) error {
 	return func(ctx context.Context, w http.ResponseWriter, v interface{}) error {
 		res := v.(*servicetagstringrequired.MethodTagStringRequiredResult)
-		if res.H == "value" {
-			w.Header().Set("h", res.H)
+		if res.H != nil && *res.H == "value" {
+			w.Header().Set("h", *res.H)
 			w.WriteHeader(http.StatusAccepted)
 			return nil
 		}

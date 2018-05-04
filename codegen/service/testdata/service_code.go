@@ -259,14 +259,29 @@ func NewMultipleViews(vres *multiplemethodsresultmultipleviewsviews.MultipleView
 	return res
 }
 
-// NewViewedMultipleViews converts result type MultipleViews to viewed result
-// type MultipleViews.
-func NewViewedMultipleViews(res *MultipleViews) *multiplemethodsresultmultipleviewsviews.MultipleViews {
-	v := &multiplemethodsresultmultipleviewsviews.MultipleViewsView{
+// NewMultipleViewsDefault projects result type MultipleViews into viewed
+// result type MultipleViews using the default view.
+func NewMultipleViewsDefault(res *MultipleViews) *multiplemethodsresultmultipleviewsviews.MultipleViews {
+	t := &multiplemethodsresultmultipleviewsviews.MultipleViewsView{
 		A: res.A,
 		B: res.B,
 	}
-	return &multiplemethodsresultmultipleviewsviews.MultipleViews{MultipleViewsView: v}
+	return &multiplemethodsresultmultipleviewsviews.MultipleViews{
+		MultipleViewsView: t,
+		View:              "default",
+	}
+}
+
+// NewMultipleViewsTiny projects result type MultipleViews into viewed result
+// type MultipleViews using the tiny view.
+func NewMultipleViewsTiny(res *MultipleViews) *multiplemethodsresultmultipleviewsviews.MultipleViews {
+	t := &multiplemethodsresultmultipleviewsviews.MultipleViewsView{
+		A: res.A,
+	}
+	return &multiplemethodsresultmultipleviewsviews.MultipleViews{
+		MultipleViewsView: t,
+		View:              "tiny",
+	}
 }
 `
 
@@ -312,21 +327,34 @@ func NewMultipleViews(vres *resultwithotherresultviews.MultipleViews) *MultipleV
 	if vres.B != nil {
 		res.B = NewMultipleViews2(vres.B)
 	}
-
 	return res
 }
 
-// NewViewedMultipleViews converts result type MultipleViews to viewed result
-// type MultipleViews.
-func NewViewedMultipleViews(res *MultipleViews) *resultwithotherresultviews.MultipleViews {
-	v := &resultwithotherresultviews.MultipleViewsView{
+// NewMultipleViewsDefault projects result type MultipleViews into viewed
+// result type MultipleViews using the default view.
+func NewMultipleViewsDefault(res *MultipleViews) *resultwithotherresultviews.MultipleViews {
+	t := &resultwithotherresultviews.MultipleViewsView{
 		A: &res.A,
 	}
 	if res.B != nil {
-		v.B = NewViewedMultipleViews2(res.B)
+		t.B = NewMultipleViews2Default(res.B)
 	}
+	return &resultwithotherresultviews.MultipleViews{
+		MultipleViewsView: t,
+		View:              "default",
+	}
+}
 
-	return &resultwithotherresultviews.MultipleViews{MultipleViewsView: v}
+// NewMultipleViewsTiny projects result type MultipleViews into viewed result
+// type MultipleViews using the tiny view.
+func NewMultipleViewsTiny(res *MultipleViews) *resultwithotherresultviews.MultipleViews {
+	t := &resultwithotherresultviews.MultipleViewsView{
+		A: &res.A,
+	}
+	return &resultwithotherresultviews.MultipleViews{
+		MultipleViewsView: t,
+		View:              "tiny",
+	}
 }
 
 // NewMultipleViews2 converts viewed result type MultipleViews2 to result type
@@ -341,13 +369,28 @@ func NewMultipleViews2(vres *resultwithotherresultviews.MultipleViews2) *Multipl
 	return res
 }
 
-// NewViewedMultipleViews2 converts result type MultipleViews2 to viewed result
-// type MultipleViews2.
-func NewViewedMultipleViews2(res *MultipleViews2) *resultwithotherresultviews.MultipleViews2 {
-	v := &resultwithotherresultviews.MultipleViews2View{
+// NewMultipleViews2Default projects result type MultipleViews2 into viewed
+// result type MultipleViews2 using the default view.
+func NewMultipleViews2Default(res *MultipleViews2) *resultwithotherresultviews.MultipleViews2 {
+	t := &resultwithotherresultviews.MultipleViews2View{
 		A: &res.A,
 		B: res.B,
 	}
-	return &resultwithotherresultviews.MultipleViews2{MultipleViews2View: v}
+	return &resultwithotherresultviews.MultipleViews2{
+		MultipleViews2View: t,
+		View:               "default",
+	}
+}
+
+// NewMultipleViews2Tiny projects result type MultipleViews2 into viewed result
+// type MultipleViews2 using the tiny view.
+func NewMultipleViews2Tiny(res *MultipleViews2) *resultwithotherresultviews.MultipleViews2 {
+	t := &resultwithotherresultviews.MultipleViews2View{
+		A: &res.A,
+	}
+	return &resultwithotherresultviews.MultipleViews2{
+		MultipleViews2View: t,
+		View:               "tiny",
+	}
 }
 `

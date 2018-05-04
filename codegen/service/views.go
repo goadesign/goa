@@ -35,18 +35,6 @@ func ViewsFile(genpkg string, service *design.ServiceExpr) *codegen.File {
 			})
 		}
 
-		var helpers []*codegen.TransformFunctionData
-		for _, t := range svc.ProjectedTypes {
-			for _, v := range t.Views {
-				helpers = codegen.AppendHelpers(helpers, v.Project.Helpers)
-				sections = append(sections, &codegen.SectionTemplate{
-					Name:   "as-view",
-					Source: initTypeT,
-					Data:   v.Project,
-				})
-			}
-		}
-
 		// validations
 		for _, t := range svc.ProjectedTypes {
 			if t.Validate != "" {
@@ -56,15 +44,6 @@ func ViewsFile(genpkg string, service *design.ServiceExpr) *codegen.File {
 					Data:   t,
 				})
 			}
-		}
-
-		// transform helpers
-		for _, h := range helpers {
-			sections = append(sections, &codegen.SectionTemplate{
-				Name:   "transform-helpers",
-				Source: transformHelperT,
-				Data:   h,
-			})
 		}
 	}
 

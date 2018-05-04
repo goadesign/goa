@@ -33,7 +33,7 @@ primitives use pointers (\*) or direct values (-).
 
 | Properties / Data Structure | Payload / Result | Req. Body (s) | Resp. Body (s) | Req. Body (c) | Resp. Body (c) |
 ------------------------------|------------------|---------------|----------------|---------------|----------------|
-| Required OR Default         | -                | *             | -              | -             | *              |
+| Required OR Default         | -                | *             | *              | -             | *              |
 | Not Required, No Default    | *                | *             | *              | *             | *              |
 
 # How are default values used?
@@ -62,12 +62,11 @@ multiple views then
 * a views package is generated at the service level which defines a viewed
   result type for each result with multiple views. This viewed result type
   has identical field names and types but uses pointers for all fields so that
-  view specific validation logic may be generated. The viewed result type
-  defines "As<View>" functions which projects the viewed result type with only
-  the attributes defined in the view. Constructors are generated in the service
-  package to convert a result type to a viewed result type and vice versa.
+  view specific validation logic may be generated. Constructors are generated
+  in the service package to convert a result type to a viewed result type and
+  vice versa.
 * the generated endpoint function uses the view returned by the service method
-  to create a validated viewed result type.
+  to create a viewed result type.
 
 The server side response marshaling code marshals the viewed result type
 returned by the endpoint into a server type omitting any nil attributes.

@@ -17,14 +17,14 @@ import (
 // "integer_divide" endpoint HTTP response body for the "has_remainder" error.
 type IntegerDivideHasRemainderResponseBody struct {
 	// Name is the name of this class of errors.
-	Name string `form:"name" json:"name" xml:"name"`
+	Name *string `form:"name,omitempty" json:"name,omitempty" xml:"name,omitempty"`
 	// ID is a unique identifier for this particular occurrence of the problem.
-	ID string `form:"id" json:"id" xml:"id"`
+	ID *string `form:"id,omitempty" json:"id,omitempty" xml:"id,omitempty"`
 	// Message is a human-readable explanation specific to this occurrence of the
 	// problem.
-	Message string `form:"message" json:"message" xml:"message"`
+	Message *string `form:"message,omitempty" json:"message,omitempty" xml:"message,omitempty"`
 	// Is the error temporary?
-	Temporary bool `form:"temporary" json:"temporary" xml:"temporary"`
+	Temporary *bool `form:"temporary,omitempty" json:"temporary,omitempty" xml:"temporary,omitempty"`
 	// Is the error a timeout?
 	Timeout bool `form:"timeout" json:"timeout" xml:"timeout"`
 	// Is the error a server-side fault?
@@ -35,14 +35,14 @@ type IntegerDivideHasRemainderResponseBody struct {
 // "integer_divide" endpoint HTTP response body for the "div_by_zero" error.
 type IntegerDivideDivByZeroResponseBody struct {
 	// Name is the name of this class of errors.
-	Name string `form:"name" json:"name" xml:"name"`
+	Name *string `form:"name,omitempty" json:"name,omitempty" xml:"name,omitempty"`
 	// ID is a unique identifier for this particular occurrence of the problem.
-	ID string `form:"id" json:"id" xml:"id"`
+	ID *string `form:"id,omitempty" json:"id,omitempty" xml:"id,omitempty"`
 	// Message is a human-readable explanation specific to this occurrence of the
 	// problem.
-	Message string `form:"message" json:"message" xml:"message"`
+	Message *string `form:"message,omitempty" json:"message,omitempty" xml:"message,omitempty"`
 	// Is the error temporary?
-	Temporary bool `form:"temporary" json:"temporary" xml:"temporary"`
+	Temporary *bool `form:"temporary,omitempty" json:"temporary,omitempty" xml:"temporary,omitempty"`
 	// Is the error a timeout?
 	Timeout bool `form:"timeout" json:"timeout" xml:"timeout"`
 	// Is the error a server-side fault?
@@ -53,14 +53,14 @@ type IntegerDivideDivByZeroResponseBody struct {
 // "integer_divide" endpoint HTTP response body for the "timeout" error.
 type IntegerDivideTimeoutResponseBody struct {
 	// Name is the name of this class of errors.
-	Name string `form:"name" json:"name" xml:"name"`
+	Name *string `form:"name,omitempty" json:"name,omitempty" xml:"name,omitempty"`
 	// ID is a unique identifier for this particular occurrence of the problem.
-	ID string `form:"id" json:"id" xml:"id"`
+	ID *string `form:"id,omitempty" json:"id,omitempty" xml:"id,omitempty"`
 	// Message is a human-readable explanation specific to this occurrence of the
 	// problem.
-	Message string `form:"message" json:"message" xml:"message"`
+	Message *string `form:"message,omitempty" json:"message,omitempty" xml:"message,omitempty"`
 	// Is the error temporary?
-	Temporary bool `form:"temporary" json:"temporary" xml:"temporary"`
+	Temporary *bool `form:"temporary,omitempty" json:"temporary,omitempty" xml:"temporary,omitempty"`
 	// Is the error a timeout?
 	Timeout bool `form:"timeout" json:"timeout" xml:"timeout"`
 	// Is the error a server-side fault?
@@ -71,14 +71,14 @@ type IntegerDivideTimeoutResponseBody struct {
 // endpoint HTTP response body for the "div_by_zero" error.
 type DivideDivByZeroResponseBody struct {
 	// Name is the name of this class of errors.
-	Name string `form:"name" json:"name" xml:"name"`
+	Name *string `form:"name,omitempty" json:"name,omitempty" xml:"name,omitempty"`
 	// ID is a unique identifier for this particular occurrence of the problem.
-	ID string `form:"id" json:"id" xml:"id"`
+	ID *string `form:"id,omitempty" json:"id,omitempty" xml:"id,omitempty"`
 	// Message is a human-readable explanation specific to this occurrence of the
 	// problem.
-	Message string `form:"message" json:"message" xml:"message"`
+	Message *string `form:"message,omitempty" json:"message,omitempty" xml:"message,omitempty"`
 	// Is the error temporary?
-	Temporary bool `form:"temporary" json:"temporary" xml:"temporary"`
+	Temporary *bool `form:"temporary,omitempty" json:"temporary,omitempty" xml:"temporary,omitempty"`
 	// Is the error a timeout?
 	Timeout bool `form:"timeout" json:"timeout" xml:"timeout"`
 	// Is the error a server-side fault?
@@ -89,14 +89,14 @@ type DivideDivByZeroResponseBody struct {
 // endpoint HTTP response body for the "timeout" error.
 type DivideTimeoutResponseBody struct {
 	// Name is the name of this class of errors.
-	Name string `form:"name" json:"name" xml:"name"`
+	Name *string `form:"name,omitempty" json:"name,omitempty" xml:"name,omitempty"`
 	// ID is a unique identifier for this particular occurrence of the problem.
-	ID string `form:"id" json:"id" xml:"id"`
+	ID *string `form:"id,omitempty" json:"id,omitempty" xml:"id,omitempty"`
 	// Message is a human-readable explanation specific to this occurrence of the
 	// problem.
-	Message string `form:"message" json:"message" xml:"message"`
+	Message *string `form:"message,omitempty" json:"message,omitempty" xml:"message,omitempty"`
 	// Is the error temporary?
-	Temporary bool `form:"temporary" json:"temporary" xml:"temporary"`
+	Temporary *bool `form:"temporary,omitempty" json:"temporary,omitempty" xml:"temporary,omitempty"`
 	// Is the error a timeout?
 	Timeout bool `form:"timeout" json:"timeout" xml:"timeout"`
 	// Is the error a server-side fault?

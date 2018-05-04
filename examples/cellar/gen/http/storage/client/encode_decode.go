@@ -11,7 +11,6 @@ package client
 import (
 	"bytes"
 	"context"
-	"fmt"
 	"io/ioutil"
 	"mime/multipart"
 	"net/http"
@@ -156,7 +155,7 @@ func DecodeShowResponse(decoder func(*http.Response) goahttp.Decoder, restoreBod
 			}
 			vres.View = view
 			if err = vres.Validate(); err != nil {
-				return nil, fmt.Errorf("invalid response: %s", err)
+				return nil, goahttp.ErrValidationError("storage", "show", err)
 			}
 			res := storage.NewStoredBottle(vres)
 			return res, nil
@@ -525,14 +524,11 @@ func DecodeMultiUpdateResponse(decoder func(*http.Response) goahttp.Decoder, res
 	}
 }
 
-// unmarshalWineryResponseBodyToWinery builds a value of type *storage.Winery
-// from a value of type *WineryResponseBody.
-func unmarshalWineryResponseBodyToWinery(v *WineryResponseBody) *storage.Winery {
+// unmarshalWineryResponseBodyTinyToWinery builds a value of type
+// *storage.Winery from a value of type *WineryResponseBodyTiny.
+func unmarshalWineryResponseBodyTinyToWinery(v *WineryResponseBodyTiny) *storage.Winery {
 	res := &storage.Winery{
-		Name:    *v.Name,
-		Region:  *v.Region,
-		Country: *v.Country,
-		URL:     v.URL,
+		Name: *v.Name,
 	}
 
 	return res

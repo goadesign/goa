@@ -14,29 +14,6 @@ type ResultType struct {
 	View string
 }
 
-// AsDefault projects viewed result type ResultType using the default view.
-func (result *ResultType) AsDefault() *ResultType {
-	t := &ResultTypeView{
-		A: result.A,
-		B: result.B,
-	}
-	return &ResultType{
-		ResultTypeView: t,
-		View:           "default",
-	}
-}
-
-// AsTiny projects viewed result type ResultType using the tiny view.
-func (result *ResultType) AsTiny() *ResultType {
-	t := &ResultTypeView{
-		A: result.A,
-	}
-	return &ResultType{
-		ResultTypeView: t,
-		View:           "tiny",
-	}
-}
-
 // Validate runs the validations defined on ResultType.
 func (result *ResultType) Validate() (err error) {
 	switch result.View {
@@ -75,32 +52,6 @@ type UserType struct {
 	A *string
 }
 
-// AsDefault projects viewed result type ResultType using the default view.
-func (result *ResultType) AsDefault() *ResultType {
-	t := &ResultTypeView{
-		B: result.B,
-	}
-	if result.A != nil {
-		t.A = marshalUserTypeToUserType(result.A)
-	}
-	return &ResultType{
-		ResultTypeView: t,
-		View:           "default",
-	}
-}
-
-// AsTiny projects viewed result type ResultType using the tiny view.
-func (result *ResultType) AsTiny() *ResultType {
-	t := &ResultTypeView{}
-	if result.A != nil {
-		t.A = marshalUserTypeToUserType(result.A)
-	}
-	return &ResultType{
-		ResultTypeView: t,
-		View:           "tiny",
-	}
-}
-
 // Validate runs the validations defined on ResultType.
 func (result *ResultType) Validate() (err error) {
 	switch result.View {
@@ -114,19 +65,6 @@ func (result *ResultType) Validate() (err error) {
 		}
 	}
 	return
-}
-
-// marshalUserTypeToUserType builds a value of type *UserType from a value of
-// type *UserType.
-func marshalUserTypeToUserType(v *UserType) *UserType {
-	if v == nil {
-		return nil
-	}
-	res := &UserType{
-		A: v.A,
-	}
-
-	return res
 }
 `
 
@@ -175,123 +113,6 @@ type RT3 struct {
 	*RT3View
 	// View to render
 	View string
-}
-
-// AsDefault projects viewed result type RT using the default view.
-func (result *RT) AsDefault() *RT {
-	t := &RTView{
-		A: result.A,
-	}
-	if result.B != nil {
-		t.B = result.B.AsExtended()
-	}
-
-	if result.C != nil {
-		t.C = result.C.AsDefault()
-	}
-
-	return &RT{
-		RTView: t,
-		View:   "default",
-	}
-}
-
-// AsTiny projects viewed result type RT using the tiny view.
-func (result *RT) AsTiny() *RT {
-	t := &RTView{}
-	if result.B != nil {
-		t.B = result.B.AsTiny()
-	}
-
-	if result.C != nil {
-		t.C = result.C.AsDefault()
-	}
-
-	return &RT{
-		RTView: t,
-		View:   "tiny",
-	}
-}
-
-// AsDefault projects viewed result type RT2 using the default view.
-func (result *RT2) AsDefault() *RT2 {
-	t := &RT2View{
-		C: result.C,
-	}
-	if result.D != nil {
-		t.D = marshalUserTypeToUserType(result.D)
-	}
-	return &RT2{
-		RT2View: t,
-		View:    "default",
-	}
-}
-
-// AsExtended projects viewed result type RT2 using the extended view.
-func (result *RT2) AsExtended() *RT2 {
-	t := &RT2View{
-		C: result.C,
-		E: result.E,
-	}
-	if result.D != nil {
-		t.D = marshalUserTypeToUserType(result.D)
-	}
-	return &RT2{
-		RT2View: t,
-		View:    "extended",
-	}
-}
-
-// AsTiny projects viewed result type RT2 using the tiny view.
-func (result *RT2) AsTiny() *RT2 {
-	t := &RT2View{}
-	if result.D != nil {
-		t.D = marshalUserTypeToUserType(result.D)
-	}
-	return &RT2{
-		RT2View: t,
-		View:    "tiny",
-	}
-}
-
-// AsDefault projects viewed result type RT3 using the default view.
-func (result *RT3) AsDefault() *RT3 {
-	t := &RT3View{}
-	if result.X != nil {
-		t.X = make([]string, len(result.X))
-		for j, val := range result.X {
-			t.X[j] = val
-		}
-	}
-	if result.Y != nil {
-		t.Y = make(map[int]*UserType, len(result.Y))
-		for key, val := range result.Y {
-			tk := key
-			tv := &UserType{
-				P: val.P,
-			}
-			t.Y[tk] = tv
-		}
-	}
-	return &RT3{
-		RT3View: t,
-		View:    "default",
-	}
-}
-
-// AsTiny projects viewed result type RT3 using the tiny view.
-func (result *RT3) AsTiny() *RT3 {
-	t := &RT3View{}
-	if result.X != nil {
-		t.X = make([]string, len(result.X))
-		for j, val := range result.X {
-			t.X[j] = val
-		}
-	}
-	return &RT3{
-		RT3View: t,
-		View:    "tiny",
-	}
 }
 
 // Validate runs the validations defined on RT.
@@ -377,24 +198,11 @@ func (result *RT3) Validate() (err error) {
 	}
 	return
 }
-
-// marshalUserTypeToUserType builds a value of type *UserType from a value of
-// type *UserType.
-func marshalUserTypeToUserType(v *UserType) *UserType {
-	if v == nil {
-		return nil
-	}
-	res := &UserType{
-		P: v.P,
-	}
-
-	return res
-}
 `
 
 var ResultWithRecursiveResultTypeCode = `// RTView is a type which is projected based on a view.
 type RTView struct {
-	A *RTView
+	A *RT
 }
 
 // RT is the viewed result type that projects RTView based on a view.
@@ -402,32 +210,6 @@ type RT struct {
 	*RTView
 	// View to render
 	View string
-}
-
-// AsDefault projects viewed result type RT using the default view.
-func (result *RT) AsDefault() *RT {
-	t := &RTView{}
-	if result.A != nil {
-		t.A = result.A.AsTiny()
-	}
-
-	return &RT{
-		RTView: t,
-		View:   "default",
-	}
-}
-
-// AsTiny projects viewed result type RT using the tiny view.
-func (result *RT) AsTiny() *RT {
-	t := &RTView{}
-	if result.A != nil {
-		t.A = result.A.AsDefault()
-	}
-
-	return &RT{
-		RTView: t,
-		View:   "tiny",
-	}
 }
 
 // Validate runs the validations defined on RT.

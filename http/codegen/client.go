@@ -486,7 +486,7 @@ const singleResponseT = ` {{- if .ClientBody }}
 		}
 		vres.View = view
 		if err = vres.Validate(); err != nil {
-			return nil, fmt.Errorf("invalid response: %s", err)
+			return nil, goahttp.ErrValidationError("{{ $.ServiceName }}", "{{ $.Method.Name }}", err)
 		}
 		res := {{ $.ServicePkgName }}.{{ $.Method.ViewedResult.ConvertToResult.VarName }}(vres)
 	{{- end }}

@@ -39,7 +39,7 @@ func EncodeShowResponse(encoder func(context.Context, http.ResponseWriter) goaht
 		res := v.(*storageviews.StoredBottle)
 		w.Header().Set("goa-view", res.View)
 		enc := encoder(ctx, w)
-		body := NewProjectedStoredBottle(res)
+		body := NewShowResponseBody(res)
 		w.WriteHeader(http.StatusOK)
 		return enc.Encode(body)
 	}
@@ -292,26 +292,23 @@ func NewStorageMultiUpdateDecoder(mux goahttp.Muxer, storageMultiUpdateDecoderFn
 	}
 }
 
-// marshalWineryToWineryResponseBody builds a value of type *WineryResponseBody
-// from a value of type *storage.Winery.
-func marshalWineryToWineryResponseBody(v *storage.Winery) *WineryResponseBody {
-	res := &WineryResponseBody{
-		Name:    v.Name,
-		Region:  v.Region,
-		Country: v.Country,
-		URL:     v.URL,
+// marshalWineryToWineryResponseBodyTiny builds a value of type
+// *WineryResponseBodyTiny from a value of type *storage.Winery.
+func marshalWineryToWineryResponseBodyTiny(v *storage.Winery) *WineryResponseBodyTiny {
+	res := &WineryResponseBodyTiny{
+		Name: &v.Name,
 	}
 
 	return res
 }
 
-// marshalWineryToProjectedWinery builds a value of type *ProjectedWinery from
-// a value of type *storageviews.Winery.
-func marshalWineryToProjectedWinery(v *storageviews.Winery) *ProjectedWinery {
+// marshalWineryToWineryResponseBody builds a value of type *WineryResponseBody
+// from a value of type *storageviews.Winery.
+func marshalWineryToWineryResponseBody(v *storageviews.Winery) *WineryResponseBody {
 	if v == nil {
 		return nil
 	}
-	res := &ProjectedWinery{
+	res := &WineryResponseBody{
 		Name:    v.Name,
 		Region:  v.Region,
 		Country: v.Country,

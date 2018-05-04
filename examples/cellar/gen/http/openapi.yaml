@@ -569,14 +569,14 @@ definitions:
       id:
         type: string
         description: ID of missing bottle
-        example: Exercitationem alias est dolores.
+        example: Delectus quas exercitationem alias est dolores non.
       message:
         type: string
         description: Message of error
         example: bottle 1 not found
     description: Bottle not found
     example:
-      id: Exercitationem ducimus expedita in quam eos distinctio.
+      id: Ducimus expedita in quam eos distinctio.
       message: bottle 1 not found
     required:
     - message
@@ -591,11 +591,9 @@ definitions:
           $ref: '#/definitions/Component'
         description: Composition is the list of grape varietals and associated percentage.
         example:
-        - percentage: 86
+        - percentage: 82
           varietal: Syrah
-        - percentage: 86
-          varietal: Syrah
-        - percentage: 86
+        - percentage: 82
           varietal: Syrah
       description:
         type: string
@@ -615,7 +613,7 @@ definitions:
       rating:
         type: integer
         description: Rating of bottle from 1 (worst) to 5 (best)
-        example: 2
+        example: 3
         minimum: 1
         maximum: 5
       vintage:
@@ -629,16 +627,16 @@ definitions:
     description: ShowResponseBody result type (default view)
     example:
       composition:
-      - percentage: 86
+      - percentage: 82
         varietal: Syrah
-      - percentage: 86
+      - percentage: 82
         varietal: Syrah
       description: Red wine blend with an emphasis on the Cabernet Franc grape and
         including other Bordeaux grape varietals and some Syrah
       id: 123abc
       name: Blue's Cuvee
-      rating: 3
-      vintage: 2005
+      rating: 2
+      vintage: 1998
       winery:
         name: Longoria
     required:
@@ -740,10 +738,7 @@ definitions:
       rating: 2
       vintage: 1963
       winery:
-        country: USA
         name: Longoria
-        region: Central Coast, California
-        url: http://www.longoriawine.com/
     - composition:
       - percentage: 82
         varietal: Syrah
@@ -760,10 +755,7 @@ definitions:
       rating: 2
       vintage: 1963
       winery:
-        country: USA
         name: Longoria
-        region: Central Coast, California
-        url: http://www.longoriawine.com/
   StoredBottleResponseBodyTiny:
     title: 'Mediatype identifier: '
     type: object
@@ -916,7 +908,7 @@ definitions:
         type: string
         description: Name of winery
         example: Longoria
-    description: WineryTiny result type (default view) (default view)
+    description: WineryResponseBodyTinyTiny result type (default view) (default view)
     example:
       name: Longoria
     required:

@@ -45,7 +45,7 @@ type StoredBottleResponseBody struct {
 	// Name of bottle
 	Name *string `form:"name,omitempty" json:"name,omitempty" xml:"name,omitempty"`
 	// Winery that produces wine
-	Winery *WineryResponseBody `form:"winery,omitempty" json:"winery,omitempty" xml:"winery,omitempty"`
+	Winery *WineryResponseBodyTiny `form:"winery,omitempty" json:"winery,omitempty" xml:"winery,omitempty"`
 	// Vintage of bottle
 	Vintage *uint32 `form:"vintage,omitempty" json:"vintage,omitempty" xml:"vintage,omitempty"`
 	// Composition is the list of grape varietals and associated percentage.
@@ -56,16 +56,10 @@ type StoredBottleResponseBody struct {
 	Rating *uint32 `form:"rating,omitempty" json:"rating,omitempty" xml:"rating,omitempty"`
 }
 
-// WineryResponseBody is used to define fields on response body types.
-type WineryResponseBody struct {
+// WineryResponseBodyTiny is used to define fields on response body types.
+type WineryResponseBodyTiny struct {
 	// Name of winery
 	Name *string `form:"name,omitempty" json:"name,omitempty" xml:"name,omitempty"`
-	// Region of winery
-	Region *string `form:"region,omitempty" json:"region,omitempty" xml:"region,omitempty"`
-	// Country of winery
-	Country *string `form:"country,omitempty" json:"country,omitempty" xml:"country,omitempty"`
-	// Winery website URL
-	URL *string `form:"url,omitempty" json:"url,omitempty" xml:"url,omitempty"`
 }
 
 // ComponentResponseBody is used to define fields on response body types.
@@ -104,7 +98,7 @@ func NewPickStoredBottleCollectionOK(body PickResponseBody) sommelier.StoredBott
 			Description: val.Description,
 			Rating:      val.Rating,
 		}
-		v[i].Winery = unmarshalWineryResponseBodyToWinery(val.Winery)
+		v[i].Winery = unmarshalWineryResponseBodyTinyToWinery(val.Winery)
 		if val.Composition != nil {
 			v[i].Composition = make([]*sommelier.Component, len(val.Composition))
 			for j, val := range val.Composition {
@@ -201,25 +195,10 @@ func (body *StoredBottleResponseBody) Validate() (err error) {
 	return
 }
 
-// Validate runs the validations defined on WineryResponseBody
-func (body *WineryResponseBody) Validate() (err error) {
+// Validate runs the validations defined on WineryResponseBodyTiny
+func (body *WineryResponseBodyTiny) Validate() (err error) {
 	if body.Name == nil {
 		err = goa.MergeErrors(err, goa.MissingFieldError("name", "body"))
-	}
-	if body.Region == nil {
-		err = goa.MergeErrors(err, goa.MissingFieldError("region", "body"))
-	}
-	if body.Country == nil {
-		err = goa.MergeErrors(err, goa.MissingFieldError("country", "body"))
-	}
-	if body.Region != nil {
-		err = goa.MergeErrors(err, goa.ValidatePattern("body.region", *body.Region, "(?i)[a-z '\\.]+"))
-	}
-	if body.Country != nil {
-		err = goa.MergeErrors(err, goa.ValidatePattern("body.country", *body.Country, "(?i)[a-z '\\.]+"))
-	}
-	if body.URL != nil {
-		err = goa.MergeErrors(err, goa.ValidatePattern("body.url", *body.URL, "(?i)^(https?|ftp)://[^\\s/$.?#].[^\\s]*$"))
 	}
 	return
 }

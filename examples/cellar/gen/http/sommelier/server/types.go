@@ -41,13 +41,13 @@ type PickNoMatchResponseBody string
 // StoredBottleResponseBody is used to define fields on response body types.
 type StoredBottleResponseBody struct {
 	// ID is the unique id of the bottle.
-	ID string `form:"id" json:"id" xml:"id"`
+	ID *string `form:"id,omitempty" json:"id,omitempty" xml:"id,omitempty"`
 	// Name of bottle
-	Name string `form:"name" json:"name" xml:"name"`
+	Name *string `form:"name,omitempty" json:"name,omitempty" xml:"name,omitempty"`
 	// Winery that produces wine
-	Winery *WineryResponseBody `form:"winery" json:"winery" xml:"winery"`
+	Winery *WineryResponseBodyTiny `form:"winery,omitempty" json:"winery,omitempty" xml:"winery,omitempty"`
 	// Vintage of bottle
-	Vintage uint32 `form:"vintage" json:"vintage" xml:"vintage"`
+	Vintage *uint32 `form:"vintage,omitempty" json:"vintage,omitempty" xml:"vintage,omitempty"`
 	// Composition is the list of grape varietals and associated percentage.
 	Composition []*ComponentResponseBody `form:"composition,omitempty" json:"composition,omitempty" xml:"composition,omitempty"`
 	// Description of bottle
@@ -56,22 +56,16 @@ type StoredBottleResponseBody struct {
 	Rating *uint32 `form:"rating,omitempty" json:"rating,omitempty" xml:"rating,omitempty"`
 }
 
-// WineryResponseBody is used to define fields on response body types.
-type WineryResponseBody struct {
+// WineryResponseBodyTiny is used to define fields on response body types.
+type WineryResponseBodyTiny struct {
 	// Name of winery
-	Name string `form:"name" json:"name" xml:"name"`
-	// Region of winery
-	Region string `form:"region" json:"region" xml:"region"`
-	// Country of winery
-	Country string `form:"country" json:"country" xml:"country"`
-	// Winery website URL
-	URL *string `form:"url,omitempty" json:"url,omitempty" xml:"url,omitempty"`
+	Name *string `form:"name,omitempty" json:"name,omitempty" xml:"name,omitempty"`
 }
 
 // ComponentResponseBody is used to define fields on response body types.
 type ComponentResponseBody struct {
 	// Grape varietal
-	Varietal string `form:"varietal" json:"varietal" xml:"varietal"`
+	Varietal *string `form:"varietal,omitempty" json:"varietal,omitempty" xml:"varietal,omitempty"`
 	// Percentage of varietal in wine
 	Percentage *uint32 `form:"percentage,omitempty" json:"percentage,omitempty" xml:"percentage,omitempty"`
 }
@@ -82,20 +76,20 @@ func NewPickResponseBody(res sommelier.StoredBottleCollection) PickResponseBody 
 	body := make([]*StoredBottleResponseBody, len(res))
 	for i, val := range res {
 		body[i] = &StoredBottleResponseBody{
-			ID:          val.ID,
-			Name:        val.Name,
-			Vintage:     val.Vintage,
+			ID:          &val.ID,
+			Name:        &val.Name,
+			Vintage:     &val.Vintage,
 			Description: val.Description,
 			Rating:      val.Rating,
 		}
 		if val.Winery != nil {
-			body[i].Winery = marshalWineryToWineryResponseBody(val.Winery)
+			body[i].Winery = marshalWineryToWineryResponseBodyTiny(val.Winery)
 		}
 		if val.Composition != nil {
 			body[i].Composition = make([]*ComponentResponseBody, len(val.Composition))
 			for j, val := range val.Composition {
 				body[i].Composition[j] = &ComponentResponseBody{
-					Varietal:   val.Varietal,
+					Varietal:   &val.Varietal,
 					Percentage: val.Percentage,
 				}
 			}
@@ -135,22 +129,37 @@ func NewPickCriteria(body *PickRequestBody) *sommelier.Criteria {
 
 // Validate runs the validations defined on StoredBottleResponseBody
 func (body *StoredBottleResponseBody) Validate() (err error) {
+	if body.ID == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("id", "body"))
+	}
+	if body.Name == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("name", "body"))
+	}
 	if body.Winery == nil {
 		err = goa.MergeErrors(err, goa.MissingFieldError("winery", "body"))
 	}
-	if utf8.RuneCountInString(body.Name) > 100 {
-		err = goa.MergeErrors(err, goa.InvalidLengthError("body.name", body.Name, utf8.RuneCountInString(body.Name), 100, false))
+	if body.Vintage == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("vintage", "body"))
+	}
+	if body.Name != nil {
+		if utf8.RuneCountInString(*body.Name) > 100 {
+			err = goa.MergeErrors(err, goa.InvalidLengthError("body.name", *body.Name, utf8.RuneCountInString(*body.Name), 100, false))
+		}
 	}
 	if body.Winery != nil {
 		if err2 := body.Winery.Validate(); err2 != nil {
 			err = goa.MergeErrors(err, err2)
 		}
 	}
-	if body.Vintage < 1900 {
-		err = goa.MergeErrors(err, goa.InvalidRangeError("body.vintage", body.Vintage, 1900, true))
+	if body.Vintage != nil {
+		if *body.Vintage < 1900 {
+			err = goa.MergeErrors(err, goa.InvalidRangeError("body.vintage", *body.Vintage, 1900, true))
+		}
 	}
-	if body.Vintage > 2020 {
-		err = goa.MergeErrors(err, goa.InvalidRangeError("body.vintage", body.Vintage, 2020, false))
+	if body.Vintage != nil {
+		if *body.Vintage > 2020 {
+			err = goa.MergeErrors(err, goa.InvalidRangeError("body.vintage", *body.Vintage, 2020, false))
+		}
 	}
 	for _, e := range body.Composition {
 		if e != nil {
@@ -177,21 +186,26 @@ func (body *StoredBottleResponseBody) Validate() (err error) {
 	return
 }
 
-// Validate runs the validations defined on WineryResponseBody
-func (body *WineryResponseBody) Validate() (err error) {
-	err = goa.MergeErrors(err, goa.ValidatePattern("body.region", body.Region, "(?i)[a-z '\\.]+"))
-	err = goa.MergeErrors(err, goa.ValidatePattern("body.country", body.Country, "(?i)[a-z '\\.]+"))
-	if body.URL != nil {
-		err = goa.MergeErrors(err, goa.ValidatePattern("body.url", *body.URL, "(?i)^(https?|ftp)://[^\\s/$.?#].[^\\s]*$"))
+// Validate runs the validations defined on WineryResponseBodyTiny
+func (body *WineryResponseBodyTiny) Validate() (err error) {
+	if body.Name == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("name", "body"))
 	}
 	return
 }
 
 // Validate runs the validations defined on ComponentResponseBody
 func (body *ComponentResponseBody) Validate() (err error) {
-	err = goa.MergeErrors(err, goa.ValidatePattern("body.varietal", body.Varietal, "[A-Za-z' ]+"))
-	if utf8.RuneCountInString(body.Varietal) > 100 {
-		err = goa.MergeErrors(err, goa.InvalidLengthError("body.varietal", body.Varietal, utf8.RuneCountInString(body.Varietal), 100, false))
+	if body.Varietal == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("varietal", "body"))
+	}
+	if body.Varietal != nil {
+		err = goa.MergeErrors(err, goa.ValidatePattern("body.varietal", *body.Varietal, "[A-Za-z' ]+"))
+	}
+	if body.Varietal != nil {
+		if utf8.RuneCountInString(*body.Varietal) > 100 {
+			err = goa.MergeErrors(err, goa.InvalidLengthError("body.varietal", *body.Varietal, utf8.RuneCountInString(*body.Varietal), 100, false))
+		}
 	}
 	if body.Percentage != nil {
 		if *body.Percentage < 1 {
