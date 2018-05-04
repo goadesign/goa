@@ -20,7 +20,7 @@ func TestRootExprValidate(t *testing.T) {
 				Errors: []error{},
 			},
 		},
-		"not result type": {
+		"missing api declaration": {
 			api: nil,
 			expected: &eval.ValidationErrors{
 				Errors: []error{fmt.Errorf("Missing API declaration")},
