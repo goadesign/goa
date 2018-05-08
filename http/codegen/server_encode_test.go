@@ -4,7 +4,6 @@ import (
 	"testing"
 
 	"goa.design/goa/codegen"
-	"goa.design/goa/design"
 	"goa.design/goa/http/codegen/testdata"
 	httpdesign "goa.design/goa/http/design"
 )
@@ -73,7 +72,6 @@ func TestEncode(t *testing.T) {
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
 			RunHTTPDSL(t, c.DSL)
-			design.Root.GeneratedTypes = &design.GeneratedRoot{}
 			fs := ServerFiles("", httpdesign.Root)
 			if len(fs) != 2 {
 				t.Fatalf("got %d files, expected two", len(fs))

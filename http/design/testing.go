@@ -21,6 +21,7 @@ func RunHTTPDSL(t *testing.T, dsl func()) *RootExpr {
 		t.Fatal(err)
 	}
 
+	design.Root.GeneratedTypes = &design.GeneratedRoot{}
 	// return generated root
 	return Root
 }

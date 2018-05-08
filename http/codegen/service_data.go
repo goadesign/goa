@@ -259,6 +259,8 @@ type (
 		// TagValue is the value the result attribute named by TagName
 		// must have for this response to be used.
 		TagValue string
+		// TagRequired is true if the tag attribute is required.
+		TagRequired bool
 		// MustValidate is true if at least one header requires validation.
 		MustValidate bool
 		// IsError if true indicates that this is an error response.
@@ -1112,12 +1114,14 @@ func buildResultData(e *httpdesign.EndpointExpr, sd *ServiceData) *ResultData {
 		ep     = svc.Method(e.MethodExpr.Name)
 
 		name, ref, pkg string
+		viewed         bool
 		responses      []*ResponseData
 	)
 	{
 		pkg = svc.PkgName
 		if ep.ViewedResult != nil {
 			pkg = svc.ViewsPkg
+			viewed = true
 		}
 		if result.Type != design.Empty {
 			name = svc.Scope.GoFullTypeName(result, pkg)
@@ -1131,24 +1135,25 @@ func buildResultData(e *httpdesign.EndpointExpr, sd *ServiceData) *ResultData {
 				}
 				notag = i
 			}
+			// Project response body if body type is a result type and if the
+			// endpoint is not a result type with multiple views
+			if ut, ok := v.Body.Type.(design.UserType); ok && !viewed {
+				if rt, ok := ut.(*design.ResultTypeExpr); ok {
+					view := "default"
+					if vm, ok := result.Metadata["view"]; ok {
+						view = vm[0]
+					}
+					var err error
+					if rt, err = design.Project(rt, view); err != nil {
+						panic(err) //bug
+					}
+				}
+			}
 			var (
 				init *InitData
 				body = v.Body.Type
 			)
-
-			// Project response body if body type is a result type and if the
-			// endpoint is not a result type with multiple views
-			if rt, ok := body.(*design.ResultTypeExpr); ok && ep.ViewedResult == nil {
-				view := "default"
-				if vm, ok := result.Metadata["view"]; ok {
-					view = vm[0]
-				}
-				var err error
-				if rt, err = design.Project(rt, view); err != nil {
-					panic(err) //bug
-				}
-			}
-			if needInit(result.Type) && ep.ViewedResult == nil {
+			if needInit(result.Type) && !viewed {
 				var (
 					name       string
 					desc       string
@@ -1179,7 +1184,7 @@ func buildResultData(e *httpdesign.EndpointExpr, sd *ServiceData) *ResultData {
 							Validate: vcode,
 						}}
 					}
-					for _, h := range extractHeaders(v.MappedHeaders(), result, false, ep.ViewedResult != nil, svc.Scope) {
+					for _, h := range extractHeaders(v.MappedHeaders(), result, false, viewed, svc.Scope) {
 						clientArgs = append(clientArgs, &InitArgData{
 							Name:      h.VarName,
 							Ref:       h.VarName,
@@ -1247,7 +1252,7 @@ func buildResultData(e *httpdesign.EndpointExpr, sd *ServiceData) *ResultData {
 				mustValidate   bool
 			)
 			{
-				headersData = extractHeaders(v.MappedHeaders(), result, false, true, svc.Scope)
+				headersData = extractHeaders(v.MappedHeaders(), result, false, viewed, svc.Scope)
 				if t := ep.ViewedResult; t != nil {
 					serverBodyData = buildBodyType(sd, e, v.Body, &design.AttributeExpr{Type: t.Type}, false, true, pkg)
 				} else {
@@ -1275,6 +1280,7 @@ func buildResultData(e *httpdesign.EndpointExpr, sd *ServiceData) *ResultData {
 					ResultInit:   init,
 					TagName:      codegen.Goify(v.Tag[0], true),
 					TagValue:     v.Tag[1],
+					TagRequired:  result.IsRequired(v.Tag[0]) && !viewed,
 					MustValidate: mustValidate,
 				}
 			}
@@ -1549,7 +1555,7 @@ func buildBodyType(sd *ServiceData, e *httpdesign.EndpointExpr, body, att *desig
 		srcType := att.Type
 		tgtType := body.Type
 		if svr && !req {
-			// In server response all the attributes are pointers. So we need to
+			// In server response type all the attributes are pointers. So we need to
 			// remove the required validations from the body to transform.
 			tgtType = design.Dup(body.Type)
 			removeRequired(tgtType)

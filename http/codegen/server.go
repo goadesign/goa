@@ -163,11 +163,12 @@ func conversionData(varName, name string, dt design.DataType) map[string]interfa
 
 // headerConversionData produces the template data suitable for executing the
 // "header_conversion" template.
-func headerConversionData(dt design.DataType, varName string, target string) map[string]interface{} {
+func headerConversionData(dt design.DataType, varName string, required bool, target string) map[string]interface{} {
 	return map[string]interface{}{
-		"Type":    dt,
-		"VarName": varName,
-		"Target":  target,
+		"Type":     dt,
+		"VarName":  varName,
+		"Required": required,
+		"Target":   target,
 	}
 }
 
@@ -897,10 +898,14 @@ func {{ .ResponseEncoder }}(encoder func(context.Context, http.ResponseWriter) g
 		res := v.({{ .Result.Ref }})
 		{{- range .Result.Responses }}
 			{{- if and .ServerBody $.Method.ViewedResult }}
-			w.Header().Set("goa-view", res.View)
+		w.Header().Set("goa-view", res.View)
 			{{- end }}
 			{{- if .TagName }}
+			{{- if .TagRequired }}
+		if res.{{ .TagName }} == {{ printf "%q" .TagValue }} {
+			{{- else }}
 		if res.{{ .TagName }} != nil && *res.{{ .TagName }} == {{ printf "%q" .TagValue }} {
+			{{- end }}
 			{{- end -}}
 			{{ template "response" . }}
 			{{- if .ServerBody }}
@@ -961,6 +966,8 @@ func {{ .ErrorEncoder }}(encoder func(context.Context, http.ResponseWriter) goah
 const responseT = `{{ define "response" -}}
 	{{- if .ServerBody }}
 	enc := encoder(ctx, w)
+	{{- end }}
+	{{- if .ServerBody }}
 		{{- if .ServerBody.Init }}
 	body := {{ .ServerBody.Init.Name }}({{ range .ServerBody.Init.ServerArgs }}{{ .Ref }}, {{ end }})
 		{{- else }}
@@ -968,25 +975,31 @@ const responseT = `{{ define "response" -}}
 		{{- end }}
 	{{- end }}
 	{{- range .Headers }}
-		{{- $initDef := and .DefaultValue (not $.TagName) }}
-		{{- if not $.TagName }}
+		{{- $initDef := and (or .Pointer .Slice) .DefaultValue (not $.TagName) }}
+		{{- $checkNil := and (or (not .Required) $initDef) (not $.TagName) }}
+		{{- if $checkNil }}
 	if res.{{ .FieldName }} != nil {
 		{{- end }}
+
 		{{- if eq .Type.Name "string" }}
-	w.Header().Set("{{ .Name }}", *res{{ if .FieldName }}.{{ .FieldName }}{{ end }})
+	w.Header().Set("{{ .Name }}", {{ if not .Required }}*{{ end }}res{{ if .FieldName }}.{{ .FieldName }}{{ end }})
 		{{- else }}
-	val := *res{{ if .FieldName }}.{{ .FieldName }}{{ end }}
-	{{ template "header_conversion" (headerConversionData .Type (printf "%ss" .VarName) "val") }}
+	val := res{{ if .FieldName }}.{{ .FieldName }}{{ end }}
+	{{ template "header_conversion" (headerConversionData .Type (printf "%ss" .VarName) .Required "val") }}
 	w.Header().Set("{{ .Name }}", {{ .VarName }}s)
 		{{- end }}
+
 		{{- if $initDef }}
-	} else {
+	{{ if $checkNil }} } else { {{ else }}if res.{{ .FieldName }} == nil { {{ end }}
 		w.Header().Set("{{ .Name }}", "{{ printValue .Type .DefaultValue }}")
 		{{- end }}
-		{{- if not $.TagName }}
+
+		{{- if or $checkNil $initDef }}
 	}
 		{{- end }}
+
 	{{- end }}
+
 	{{- if .ErrorHeader }}
 	w.Header().Set("goa-error", {{ printf "%q" .ErrorHeader }})
 	{{- end }}
@@ -995,23 +1008,23 @@ const responseT = `{{ define "response" -}}
 
 {{- define "header_conversion" }}
 	{{- if eq .Type.Name "boolean" -}}
-		{{ .VarName }} := strconv.FormatBool({{ .Target }})
+		{{ .VarName }} := strconv.FormatBool({{ if not .Required }}*{{ end }}{{ .Target }})
 	{{- else if eq .Type.Name "int" -}}
-		{{ .VarName }} := strconv.Itoa({{ .Target }})
+		{{ .VarName }} := strconv.Itoa({{ if not .Required }}*{{ end }}{{ .Target }})
 	{{- else if eq .Type.Name "int32" -}}
-		{{ .VarName }} := strconv.FormatInt(int64({{ .Target }}), 10)
+		{{ .VarName }} := strconv.FormatInt(int64({{ if not .Required }}*{{ end }}{{ .Target }}), 10)
 	{{- else if eq .Type.Name "int64" -}}
-		{{ .VarName }} := strconv.FormatInt({{ .Target }}, 10)
+		{{ .VarName }} := strconv.FormatInt({{ if not .Required }}*{{ end }}{{ .Target }}, 10)
 	{{- else if eq .Type.Name "uint" -}}
-		{{ .VarName }} := strconv.FormatUint(uint64({{ .Target }}), 10)
+		{{ .VarName }} := strconv.FormatUint(uint64({{ if not .Required }}*{{ end }}{{ .Target }}), 10)
 	{{- else if eq .Type.Name "uint32" -}}
-		{{ .VarName }} := strconv.FormatUint(uint64({{ .Target }}), 10)
+		{{ .VarName }} := strconv.FormatUint(uint64({{ if not .Required }}*{{ end }}{{ .Target }}), 10)
 	{{- else if eq .Type.Name "uint64" -}}
-		{{ .VarName }} := strconv.FormatUint({{ .Target }}, 10)
+		{{ .VarName }} := strconv.FormatUint({{ if not .Required }}*{{ end }}{{ .Target }}, 10)
 	{{- else if eq .Type.Name "float32" -}}
-		{{ .VarName }} := strconv.FormatFloat(float64({{ .Target }}), 'f', -1, 32)
+		{{ .VarName }} := strconv.FormatFloat(float64({{ if not .Required }}*{{ end }}{{ .Target }}), 'f', -1, 32)
 	{{- else if eq .Type.Name "float64" -}}
-		{{ .VarName }} := strconv.FormatFloat({{ .Target }}, 'f', -1, 64)
+		{{ .VarName }} := strconv.FormatFloat({{ if not .Required }}*{{ end }}{{ .Target }}, 'f', -1, 64)
 	{{- else if eq .Type.Name "string" -}}
 		{{ .VarName }} := {{ .Target }}
 	{{- else if eq .Type.Name "bytes" -}}
@@ -1024,7 +1037,7 @@ const responseT = `{{ define "response" -}}
 		{{- else -}}
 		{{ .VarName }}Slice := make([]string, len({{ .Target }}))
 		for i, e := range {{ .Target }}  {
-			{{ template "header_conversion" (headerConversionData .Type.ElemType.Type "es" "e") }}
+			{{ template "header_conversion" (headerConversionData .Type.ElemType.Type "es" true "e") }}
 			{{ .VarName }}Slice[i] = es	
 		}
 		{{ .VarName }} := strings.Join({{ .VarName }}Slice, ", ")
