@@ -316,26 +316,22 @@ Example:
     `+os.Args[0]+` storage add --body '{
       "composition": [
          {
-            "percentage": 96,
+            "percentage": 82,
             "varietal": "Syrah"
          },
          {
-            "percentage": 96,
+            "percentage": 82,
             "varietal": "Syrah"
          },
          {
-            "percentage": 96,
-            "varietal": "Syrah"
-         },
-         {
-            "percentage": 96,
+            "percentage": 82,
             "varietal": "Syrah"
          }
       ],
       "description": "Red wine blend with an emphasis on the Cabernet Franc grape and including other Bordeaux grape varietals and some Syrah",
       "name": "Blue\'s Cuvee",
-      "rating": 1,
-      "vintage": 1980,
+      "rating": 2,
+      "vintage": 1934,
       "winery": {
          "country": "USA",
          "name": "Longoria",
@@ -390,11 +386,11 @@ Example:
       {
          "composition": [
             {
-               "percentage": 96,
+               "percentage": 82,
                "varietal": "Syrah"
             },
             {
-               "percentage": 96,
+               "percentage": 82,
                "varietal": "Syrah"
             }
          ],
@@ -412,11 +408,11 @@ Example:
       {
          "composition": [
             {
-               "percentage": 96,
+               "percentage": 82,
                "varietal": "Syrah"
             },
             {
-               "percentage": 96,
+               "percentage": 82,
                "varietal": "Syrah"
             }
          ],
@@ -448,11 +444,11 @@ Example:
          {
             "composition": [
                {
-                  "percentage": 96,
+                  "percentage": 82,
                   "varietal": "Syrah"
                },
                {
-                  "percentage": 96,
+                  "percentage": 82,
                   "varietal": "Syrah"
                }
             ],
@@ -470,11 +466,11 @@ Example:
          {
             "composition": [
                {
-                  "percentage": 96,
+                  "percentage": 82,
                   "varietal": "Syrah"
                },
                {
-                  "percentage": 96,
+                  "percentage": 82,
                   "varietal": "Syrah"
                }
             ],
@@ -492,11 +488,11 @@ Example:
          {
             "composition": [
                {
-                  "percentage": 96,
+                  "percentage": 82,
                   "varietal": "Syrah"
                },
                {
-                  "percentage": 96,
+                  "percentage": 82,
                   "varietal": "Syrah"
                }
             ],
@@ -514,11 +510,11 @@ Example:
          {
             "composition": [
                {
-                  "percentage": 96,
+                  "percentage": 82,
                   "varietal": "Syrah"
                },
                {
-                  "percentage": 96,
+                  "percentage": 82,
                   "varietal": "Syrah"
                }
             ],

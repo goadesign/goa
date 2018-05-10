@@ -14,7 +14,8 @@ import (
 	goa "goa.design/goa"
 )
 
-// StoredBottleView is a type which is projected based on a view.
+// StoredBottleView is a type used by StoredBottle type to project based on a
+// view.
 type StoredBottleView struct {
 	// ID is the unique id of the bottle.
 	ID *string
@@ -32,15 +33,15 @@ type StoredBottleView struct {
 	Rating *uint32
 }
 
-// StoredBottle is the viewed result type that projects StoredBottleView based
-// on a view.
+// StoredBottle is the viewed result type that is projected based on a view.
 type StoredBottle struct {
-	*StoredBottleView
+	// Type to project
+	Projected *StoredBottleView
 	// View to render
 	View string
 }
 
-// WineryView is a type which is projected based on a view.
+// WineryView is a type used by Winery type to project based on a view.
 type WineryView struct {
 	// Name of winery
 	Name *string
@@ -52,9 +53,10 @@ type WineryView struct {
 	URL *string
 }
 
-// Winery is the viewed result type that projects WineryView based on a view.
+// Winery is the viewed result type that is projected based on a view.
 type Winery struct {
-	*WineryView
+	// Type to project
+	Projected *WineryView
 	// View to render
 	View string
 }
@@ -67,82 +69,101 @@ type Component struct {
 	Percentage *uint32
 }
 
+// NewStoredBottle initializes StoredBottle viewed result type from
+// StoredBottleView projected type and a view.
+func NewStoredBottle(p *StoredBottleView, view string) *StoredBottle {
+	return &StoredBottle{
+		Projected: p,
+		View:      view,
+	}
+}
+
+// NewWinery initializes Winery viewed result type from WineryView projected
+// type and a view.
+func NewWinery(p *WineryView, view string) *Winery {
+	return &Winery{
+		Projected: p,
+		View:      view,
+	}
+}
+
 // Validate runs the validations defined on StoredBottle.
 func (result *StoredBottle) Validate() (err error) {
+	projected := result.Projected
 	switch result.View {
-	case "default":
-		if result.ID == nil {
-			err = goa.MergeErrors(err, goa.MissingFieldError("id", "result"))
+	case "tiny":
+		if projected.ID == nil {
+			err = goa.MergeErrors(err, goa.MissingFieldError("id", "projected"))
 		}
-		if result.Name == nil {
-			err = goa.MergeErrors(err, goa.MissingFieldError("name", "result"))
+		if projected.Name == nil {
+			err = goa.MergeErrors(err, goa.MissingFieldError("name", "projected"))
 		}
-		if result.Winery == nil {
-			err = goa.MergeErrors(err, goa.MissingFieldError("winery", "result"))
+		if projected.Winery == nil {
+			err = goa.MergeErrors(err, goa.MissingFieldError("winery", "projected"))
 		}
-		if result.Vintage == nil {
-			err = goa.MergeErrors(err, goa.MissingFieldError("vintage", "result"))
-		}
-		if result.Name != nil {
-			if utf8.RuneCountInString(*result.Name) > 100 {
-				err = goa.MergeErrors(err, goa.InvalidLengthError("result.name", *result.Name, utf8.RuneCountInString(*result.Name), 100, false))
+		if projected.Name != nil {
+			if utf8.RuneCountInString(*projected.Name) > 100 {
+				err = goa.MergeErrors(err, goa.InvalidLengthError("projected.name", *projected.Name, utf8.RuneCountInString(*projected.Name), 100, false))
 			}
 		}
-		if result.Winery != nil {
-			if err2 := result.Winery.Validate(); err2 != nil {
+		if projected.Winery != nil {
+			if err2 := projected.Winery.Validate(); err2 != nil {
 				err = goa.MergeErrors(err, err2)
 			}
 		}
-		if result.Vintage != nil {
-			if *result.Vintage < 1900 {
-				err = goa.MergeErrors(err, goa.InvalidRangeError("result.vintage", *result.Vintage, 1900, true))
+	default:
+		if projected.ID == nil {
+			err = goa.MergeErrors(err, goa.MissingFieldError("id", "projected"))
+		}
+		if projected.Name == nil {
+			err = goa.MergeErrors(err, goa.MissingFieldError("name", "projected"))
+		}
+		if projected.Winery == nil {
+			err = goa.MergeErrors(err, goa.MissingFieldError("winery", "projected"))
+		}
+		if projected.Vintage == nil {
+			err = goa.MergeErrors(err, goa.MissingFieldError("vintage", "projected"))
+		}
+		if projected.Name != nil {
+			if utf8.RuneCountInString(*projected.Name) > 100 {
+				err = goa.MergeErrors(err, goa.InvalidLengthError("projected.name", *projected.Name, utf8.RuneCountInString(*projected.Name), 100, false))
 			}
 		}
-		if result.Vintage != nil {
-			if *result.Vintage > 2020 {
-				err = goa.MergeErrors(err, goa.InvalidRangeError("result.vintage", *result.Vintage, 2020, false))
+		if projected.Winery != nil {
+			if err2 := projected.Winery.Validate(); err2 != nil {
+				err = goa.MergeErrors(err, err2)
 			}
 		}
-		for _, e := range result.Composition {
+		if projected.Vintage != nil {
+			if *projected.Vintage < 1900 {
+				err = goa.MergeErrors(err, goa.InvalidRangeError("projected.vintage", *projected.Vintage, 1900, true))
+			}
+		}
+		if projected.Vintage != nil {
+			if *projected.Vintage > 2020 {
+				err = goa.MergeErrors(err, goa.InvalidRangeError("projected.vintage", *projected.Vintage, 2020, false))
+			}
+		}
+		for _, e := range projected.Composition {
 			if e != nil {
 				if err2 := e.Validate(); err2 != nil {
 					err = goa.MergeErrors(err, err2)
 				}
 			}
 		}
-		if result.Description != nil {
-			if utf8.RuneCountInString(*result.Description) > 2000 {
-				err = goa.MergeErrors(err, goa.InvalidLengthError("result.description", *result.Description, utf8.RuneCountInString(*result.Description), 2000, false))
+		if projected.Description != nil {
+			if utf8.RuneCountInString(*projected.Description) > 2000 {
+				err = goa.MergeErrors(err, goa.InvalidLengthError("projected.description", *projected.Description, utf8.RuneCountInString(*projected.Description), 2000, false))
 			}
 		}
-		if result.Rating != nil {
-			if *result.Rating < 1 {
-				err = goa.MergeErrors(err, goa.InvalidRangeError("result.rating", *result.Rating, 1, true))
+		if projected.Rating != nil {
+			if *projected.Rating < 1 {
+				err = goa.MergeErrors(err, goa.InvalidRangeError("projected.rating", *projected.Rating, 1, true))
 			}
 		}
-		if result.Rating != nil {
-			if *result.Rating > 5 {
-				err = goa.MergeErrors(err, goa.InvalidRangeError("result.rating", *result.Rating, 5, false))
-			}
-		}
-	case "tiny":
-		if result.ID == nil {
-			err = goa.MergeErrors(err, goa.MissingFieldError("id", "result"))
-		}
-		if result.Name == nil {
-			err = goa.MergeErrors(err, goa.MissingFieldError("name", "result"))
-		}
-		if result.Winery == nil {
-			err = goa.MergeErrors(err, goa.MissingFieldError("winery", "result"))
-		}
-		if result.Name != nil {
-			if utf8.RuneCountInString(*result.Name) > 100 {
-				err = goa.MergeErrors(err, goa.InvalidLengthError("result.name", *result.Name, utf8.RuneCountInString(*result.Name), 100, false))
-			}
-		}
-		if result.Winery != nil {
-			if err2 := result.Winery.Validate(); err2 != nil {
-				err = goa.MergeErrors(err, err2)
+		if projected.Rating != nil {
+			if *projected.Rating > 5 {
+				err = goa.MergeErrors(err, goa.InvalidRangeError("projected.rating", *projected.Rating, 5, false))
 			}
 		}
 	}
@@ -151,29 +172,30 @@ func (result *StoredBottle) Validate() (err error) {
 
 // Validate runs the validations defined on Winery.
 func (result *Winery) Validate() (err error) {
+	projected := result.Projected
 	switch result.View {
-	case "default":
-		if result.Name == nil {
-			err = goa.MergeErrors(err, goa.MissingFieldError("name", "result"))
-		}
-		if result.Region == nil {
-			err = goa.MergeErrors(err, goa.MissingFieldError("region", "result"))
-		}
-		if result.Country == nil {
-			err = goa.MergeErrors(err, goa.MissingFieldError("country", "result"))
-		}
-		if result.Region != nil {
-			err = goa.MergeErrors(err, goa.ValidatePattern("result.region", *result.Region, "(?i)[a-z '\\.]+"))
-		}
-		if result.Country != nil {
-			err = goa.MergeErrors(err, goa.ValidatePattern("result.country", *result.Country, "(?i)[a-z '\\.]+"))
-		}
-		if result.URL != nil {
-			err = goa.MergeErrors(err, goa.ValidatePattern("result.url", *result.URL, "(?i)^(https?|ftp)://[^\\s/$.?#].[^\\s]*$"))
-		}
 	case "tiny":
-		if result.Name == nil {
-			err = goa.MergeErrors(err, goa.MissingFieldError("name", "result"))
+		if projected.Name == nil {
+			err = goa.MergeErrors(err, goa.MissingFieldError("name", "projected"))
+		}
+	default:
+		if projected.Name == nil {
+			err = goa.MergeErrors(err, goa.MissingFieldError("name", "projected"))
+		}
+		if projected.Region == nil {
+			err = goa.MergeErrors(err, goa.MissingFieldError("region", "projected"))
+		}
+		if projected.Country == nil {
+			err = goa.MergeErrors(err, goa.MissingFieldError("country", "projected"))
+		}
+		if projected.Region != nil {
+			err = goa.MergeErrors(err, goa.ValidatePattern("projected.region", *projected.Region, "(?i)[a-z '\\.]+"))
+		}
+		if projected.Country != nil {
+			err = goa.MergeErrors(err, goa.ValidatePattern("projected.country", *projected.Country, "(?i)[a-z '\\.]+"))
+		}
+		if projected.URL != nil {
+			err = goa.MergeErrors(err, goa.ValidatePattern("projected.url", *projected.URL, "(?i)^(https?|ftp)://[^\\s/$.?#].[^\\s]*$"))
 		}
 	}
 	return
@@ -181,9 +203,6 @@ func (result *Winery) Validate() (err error) {
 
 // Validate runs the validations defined on Component.
 func (result *Component) Validate() (err error) {
-	if result.Varietal == nil {
-		err = goa.MergeErrors(err, goa.MissingFieldError("varietal", "result"))
-	}
 	if result.Varietal != nil {
 		err = goa.MergeErrors(err, goa.ValidatePattern("result.varietal", *result.Varietal, "[A-Za-z' ]+"))
 	}

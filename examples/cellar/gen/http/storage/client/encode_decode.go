@@ -17,7 +17,6 @@ import (
 	"net/url"
 	"strconv"
 
-	goa "goa.design/goa"
 	storage "goa.design/goa/examples/cellar/gen/storage"
 	storageviews "goa.design/goa/examples/cellar/gen/storage/views"
 	goahttp "goa.design/goa/http"
@@ -142,23 +141,20 @@ func DecodeShowResponse(decoder func(*http.Response) goahttp.Decoder, restoreBod
 		switch resp.StatusCode {
 		case http.StatusOK:
 			var (
-				vres *storageviews.StoredBottle
+				body ShowResponseBody
 				err  error
 			)
-			err = decoder(resp).Decode(&vres)
+			err = decoder(resp).Decode(&body)
 			if err != nil {
 				return nil, goahttp.ErrDecodingError("storage", "show", err)
 			}
+			p := NewShowStoredBottleOK(&body)
 			view := resp.Header.Get("goa-view")
-			if view == "" {
-				return nil, goa.MergeErrors(err, goa.MissingFieldError("goa-view", "header"))
-			}
-			vres.View = view
+			vres := storageviews.NewStoredBottle(p, view)
 			if err = vres.Validate(); err != nil {
 				return nil, goahttp.ErrValidationError("storage", "show", err)
 			}
-			res := storage.NewStoredBottle(vres)
-			return res, nil
+			return storage.NewStoredBottle(vres), nil
 		case http.StatusNotFound:
 			var (
 				body ShowNotFoundResponseBody
@@ -167,10 +163,6 @@ func DecodeShowResponse(decoder func(*http.Response) goahttp.Decoder, restoreBod
 			err = decoder(resp).Decode(&body)
 			if err != nil {
 				return nil, goahttp.ErrDecodingError("storage", "show", err)
-			}
-			err = body.Validate()
-			if err != nil {
-				return nil, goahttp.ErrValidationError("storage", "show", err)
 			}
 			return nil, NewShowNotFound(&body)
 		default:
@@ -531,6 +523,18 @@ func unmarshalWineryResponseBodyTinyToWinery(v *WineryResponseBodyTiny) *storage
 		Name: *v.Name,
 	}
 
+	return res
+}
+
+// marshalWineryResponseBodyToWineryView builds a value of type
+// *storageviews.WineryView from a value of type *WineryResponseBody.
+func marshalWineryResponseBodyToWineryView(v *WineryResponseBody) *storageviews.WineryView {
+	res := &storageviews.WineryView{
+		Name:    v.Name,
+		Region:  v.Region,
+		Country: v.Country,
+		URL:     v.URL,
+	}
 	return res
 }
 

@@ -248,6 +248,16 @@ func IsPrimitive(dt DataType) bool {
 	}
 }
 
+// IsProjectable returns true if the data type is a result type with
+// more than one view and not a collection.
+func IsProjectable(dt DataType) bool {
+	if IsArray(dt) {
+		return false
+	}
+	rt, ok := dt.(*ResultTypeExpr)
+	return ok && len(rt.Views) > 1
+}
+
 // Equal compares the types recursively and returns true if they are equal. Two
 // types are equal if:
 //

@@ -1,8 +1,10 @@
 package service
 
 import (
+	"bytes"
 	"fmt"
 	"strings"
+	"text/template"
 
 	"goa.design/goa/codegen"
 	"goa.design/goa/design"
@@ -11,6 +13,12 @@ import (
 // Services holds the data computed from the design needed to generate the code
 // of the services.
 var Services = make(ServicesData)
+
+var (
+	// initResultTypeTmpl is the template to render code to initialize a
+	// result type or viewed result type.
+	initResultTypeCodeTmpl = template.Must(template.New("initResultCodeType").Parse(initResultTypeCodeT))
+)
 
 type (
 	// ServicesData encapsulates the data computed from the service designs.
@@ -141,20 +149,6 @@ type (
 		Type design.UserType
 	}
 
-	// FieldData contains the data needed to render a single field.
-	FieldData struct {
-		// Name is the name of the attribute.
-		Name string
-		// VarName is the name of the Go type field.
-		VarName string
-		// TypeRef is the reference to the field type.
-		TypeRef string
-		// Required is true if the field is required.
-		Required bool
-		// DefaultValue is the payload attribute default value if any.
-		DefaultValue interface{}
-	}
-
 	// SchemeData describes a single security scheme.
 	SchemeData struct {
 		// Kind is the type of scheme, one of "Basic", "APIKey", "JWT"
@@ -209,26 +203,40 @@ type (
 	// ProjectedTypeData contains the data to generate a user type that can
 	// be projected based on a view. The generated type uses pointers for all
 	// fields so that view specific validation logic may be implemented.
-	// A projected type will be generated for every user type found in a
-	// method result type having multiple views. If the user type is a result
-	// type, then a viewed result type is generated which embeds the projected
-	// type with a view attribute holding the view name. Finally, the generated
+	// A projected type is generated for every user type found in a method
+	// result type having multiple views. If the user type is a result
+	// type, then a viewed result type is generated which holds the projected
+	// type and a view attribute holding the view name. Finally, the generated
 	// code also defines functions that convert the result types to and from the
 	// corresponding viewed result type as well as project the viewed result
 	// type based on a view.
 	ProjectedTypeData struct {
+		// This holds the projected type or the viewed result type.
 		*UserTypeData
 		// Validate is the validation code run on the projected type.
 		Validate string
+		// MustValidate if true generates the validation code for the projected
+		// type.
+		MustValidate bool
+
+		// attributes set only for a viewed result type
+
+		// Views lists the views defined on the result type and the functions
+		// to project a viewed result type.
+		Views []*ProjectData
+		// ProjectedType is the type which the viewed result type projects
+		// based on a view.
+		ProjectedType design.UserType
 		// FullRef is the complete reference to the viewed result type
 		// (including views package name).
 		FullRef string
-		// Views lists the views defined on a result type and the functions
-		// to project a viewed result type.
-		Views []*ProjectData
+		// Init is the constructor to initialize the viewed result type.
+		Init *InitData
 		// ConvertToResult is the code to convert a viewed result type to a
 		// result type.
 		ConvertToResult *InitData
+		// ViewsPkg is the views package name.
+		ViewsPkg string
 	}
 
 	// ProjectData contains data about projecting a result type based on
@@ -238,23 +246,27 @@ type (
 		Name string
 		// Description is the view description.
 		Description string
+		// Validate is the validations run on the projected type based on a view.
+		Validate string
 		// Project is the code to project a result type based on a view.
 		Project *InitData
 	}
 
-	// InitData contains the data to generate a constructor function
-	// to initialize a type from another type.
+	// InitData contains the data to render a constructor.
 	InitData struct {
-		// VarName is the name of the constructor function.
-		VarName string
+		// Name is the name of the constructor function.
+		Name string
 		// Description is the function description.
 		Description string
 		// Args lists arguments to this function.
 		Args []*InitArgData
-		// Ref is the reference to the source type.
-		Ref *InitArgData
-		// ReturnRef is the reference to the return type.
+		// ReturnTypeRef is the reference to the return type.
 		ReturnRef string
+		// ReturnTypeName is the name of the struct to be returned. This is used
+		// in tandem with ReturnIsStruct.
+		ReturnTypeName string
+		// ReturnIsStruct is true if the return type is a struct.
+		ReturnIsStruct bool
 		// Code is the transformation code.
 		Code string
 		// Helpers contain the helpers used in the transformation code.
@@ -265,8 +277,11 @@ type (
 	InitArgData struct {
 		// Name is the argument name.
 		Name string
-		// Ref is the reference to the argument.
+		// Ref is the reference to the argument type.
 		Ref string
+		// FieldName is the name of the data structure field that should
+		// be initialized with the argument if any.
+		FieldName string
 	}
 )
 
@@ -366,9 +381,10 @@ func (d ServicesData) analyze(service *design.ServiceExpr) *Data {
 				ratt = ut.Attribute()
 			}
 			types = append(types, collectTypes(ratt, seen, scope)...)
-			if isProjectable(m.Result.Type) {
-				_, pts := collectProjectedTypes(m.Result, seenProj, scope, viewspkg)
-				projTypes = append(projTypes, pts...)
+			if design.IsProjectable(m.Result.Type) {
+				projected := design.DupAtt(m.Result)
+				projected.RemoveRequired()
+				projTypes = append(projTypes, collectProjectedTypes(projected, m.Result, seenProj, scope, viewspkg)...)
 			}
 			for _, er := range m.Errors {
 				recordError(er)
@@ -384,7 +400,7 @@ func (d ServicesData) analyze(service *design.ServiceExpr) *Data {
 		methods = make([]*MethodData, len(service.Methods))
 		for i, e := range service.Methods {
 			m := buildMethodData(e, pkgName, scope)
-			if isProjectable(e.Result.Type) {
+			if design.IsProjectable(e.Result.Type) {
 				rt := e.Result.Type.(*design.ResultTypeExpr)
 				m.ViewedResult = seenProj[rt.TypeName]
 			}
@@ -690,54 +706,32 @@ func requirements(m *design.MethodExpr) []*design.SecurityExpr {
 
 // collectProjectedTypes collects all the projected types from the given
 // result type and stores them in data.
-func collectProjectedTypes(att *design.AttributeExpr, seen map[string]*ProjectedTypeData, scope *codegen.NameScope, viewspkg string) (projected *design.AttributeExpr, data []*ProjectedTypeData) {
-	collect := func(att *design.AttributeExpr) (*design.AttributeExpr, []*ProjectedTypeData) {
-		return collectProjectedTypes(att, seen, scope, viewspkg)
+func collectProjectedTypes(projected, att *design.AttributeExpr, seen map[string]*ProjectedTypeData, scope *codegen.NameScope, viewspkg string) (data []*ProjectedTypeData) {
+	collect := func(projected, att *design.AttributeExpr) []*ProjectedTypeData {
+		return collectProjectedTypes(projected, att, seen, scope, viewspkg)
 	}
-	var types []*ProjectedTypeData
-	projected = att
-	switch dt := projected.Type.(type) {
+	switch pt := projected.Type.(type) {
 	case design.UserType:
+		dt := att.Type.(design.UserType)
 		if _, ok := seen[dt.Name()]; ok {
 			return
 		}
-		seen[dt.Name()] = nil
-		projected = design.DupAtt(att)
-		pt := projected.Type.(design.UserType)
-		if v := pt.Attribute().Validation; v != nil {
-			// Remove all required attribute validations from the viewed type
-			// so that we would end up with a struct where all its attributes
-			// are pointers.
-			v.Required = []string{}
-		}
-		_, types = collect(pt.Attribute())
 		data = append(data, buildProjectedTypes(projected, att, seen, scope, viewspkg)...)
-		data = append(data, types...)
+		data = append(data, collect(pt.Attribute(), dt.Attribute())...)
 	case *design.Array:
-		dt.ElemType, types = collect(dt.ElemType)
-		data = append(data, types...)
+		dt := att.Type.(*design.Array)
+		data = append(data, collect(pt.ElemType, dt.ElemType)...)
 	case *design.Map:
-		dt.KeyType, types = collect(dt.KeyType)
-		data = append(data, types...)
-		dt.ElemType, types = collect(dt.ElemType)
-		data = append(data, types...)
+		dt := att.Type.(*design.Map)
+		data = append(data, collect(pt.KeyType, dt.KeyType)...)
+		data = append(data, collect(pt.ElemType, dt.ElemType)...)
 	case *design.Object:
-		for _, n := range *dt {
-			n.Attribute, types = collect(n.Attribute)
-			data = append(data, types...)
+		dt := att.Type.(*design.Object)
+		for _, n := range *pt {
+			data = append(data, collect(n.Attribute, dt.Attribute(n.Name))...)
 		}
 	}
 	return
-}
-
-// isProjectable returns true if the given type is a result type with
-// more than one view and not a collection.
-func isProjectable(dt design.DataType) bool {
-	if design.IsArray(dt) {
-		return false
-	}
-	rt, ok := dt.(*design.ResultTypeExpr)
-	return ok && len(rt.Views) > 1
 }
 
 // buildProjectedTypes builds projected type for the given attribute of type
@@ -745,13 +739,12 @@ func isProjectable(dt design.DataType) bool {
 // also generates a viewed result type which implements functions to convert
 // the result type to and from a viewed result type.
 func buildProjectedTypes(projected, att *design.AttributeExpr, seen map[string]*ProjectedTypeData, scope *codegen.NameScope, viewspkg string) (types []*ProjectedTypeData) {
+	dt := att.Type.(design.UserType)
 	pt := projected.Type.(design.UserType)
-	ut := att.Type.(design.UserType)
-	if !isProjectable(pt) {
+	if !design.IsProjectable(pt) {
 		// pt is a user type or a result type with a single view.
 		// This type must still be generated in the viewspkg.
 		varname := scope.GoTypeName(projected)
-		valattr := design.DupAtt(ut.Attribute())
 		p := &ProjectedTypeData{
 			UserTypeData: &UserTypeData{
 				Name:        pt.Name(),
@@ -761,68 +754,106 @@ func buildProjectedTypes(projected, att *design.AttributeExpr, seen map[string]*
 				Ref:         scope.GoTypeRef(projected),
 				Type:        pt,
 			},
-			Validate: codegen.RecursiveValidationCode(valattr, false, true, false, "result"),
+			Validate: codegen.RecursiveValidationCode(att, false, true, false, "result"),
+		}
+		if p.Validate != "" {
+			p.MustValidate = true
 		}
 		types = append(types, p)
-		seen[pt.Name()] = p
+		seen[dt.Name()] = p
 		return types
 	}
-	// pt is a result type with multiple views. Generate two types in the
-	// 1. a type with "View" suffix that uses pointers for all attributes
-	// 2. a type that embeds the View type and has a "view" attribute
-	// (viewed result type)
-	vatt := design.DupAtt(projected)
-	vt := vatt.Type.(design.UserType)
-	vt.Rename(pt.Name() + "View")
-	vtvar := scope.GoTypeName(vatt)
-	vtref := scope.GoTypeRef(vatt)
+	pt.Rename(pt.Name() + "View")
+	ptvar := scope.GoTypeName(projected)
 	types = append(types, &ProjectedTypeData{
 		UserTypeData: &UserTypeData{
-			Name:        vt.Name(),
-			Description: fmt.Sprintf("%s is a type which is projected based on a view.", vtvar),
-			VarName:     vtvar,
-			Def:         scope.GoTypeDef(pt.Attribute(), false),
-			Ref:         vtref,
-			Type:        vt,
-		},
-	})
-	resvar := scope.GoTypeName(projected)
-	views, validate := buildProjectData(vatt, att, scope, viewspkg)
-	vr := &ProjectedTypeData{
-		UserTypeData: &UserTypeData{
 			Name:        pt.Name(),
-			Description: fmt.Sprintf("%s is the viewed result type that projects %s based on a view.", resvar, vtvar),
-			VarName:     resvar,
-			Def:         fmt.Sprintf("struct {\n%s\n// View to render\nView string\n}\n", vtref),
+			Description: fmt.Sprintf("%s is a type used by %s type to project based on a view.", ptvar, scope.GoTypeName(att)),
+			VarName:     ptvar,
+			Def:         scope.GoTypeDef(pt.Attribute(), false),
 			Ref:         scope.GoTypeRef(projected),
 			Type:        pt,
 		},
-		Validate:        validate,
-		FullRef:         scope.GoFullTypeRef(projected, viewspkg),
-		Views:           views,
-		ConvertToResult: convertToResult(vatt, att, viewspkg, scope),
-	}
+	})
+	vr := buildViewedResultType(att, projected, scope, viewspkg)
 	types = append(types, vr)
-	seen[pt.Name()] = vr
+	seen[dt.Name()] = vr
 	return types
+}
+
+// buildViewedResultType builds a viewed result type from the given result type
+// and projected type.
+func buildViewedResultType(att, projected *design.AttributeExpr, scope *codegen.NameScope, viewspkg string) *ProjectedTypeData {
+	var (
+		ut       *UserTypeData
+		initd    *InitData
+		views    []*ProjectData
+		validate bool
+	)
+	pt := projected.Type.(design.UserType)
+	resvar := scope.GoTypeName(att)
+	vratt := &design.AttributeExpr{
+		Type: &design.UserTypeExpr{
+			AttributeExpr: &design.AttributeExpr{
+				Type: &design.Object{
+					&design.NamedAttributeExpr{Name: "projected", Attribute: &design.AttributeExpr{Type: pt, Description: "Type to project"}},
+					&design.NamedAttributeExpr{Name: "view", Attribute: &design.AttributeExpr{Type: design.String, Description: "View to render"}},
+				},
+				Validation: &design.ValidationExpr{Required: []string{"projected", "view"}},
+			},
+			TypeName: resvar,
+		},
+	}
+	vrt := vratt.Type.(design.UserType)
+	resref := scope.GoTypeRef(vratt)
+	ut = &UserTypeData{
+		Name:        pt.Name(),
+		Description: fmt.Sprintf("%s is the viewed result type that is projected based on a view.", resvar),
+		VarName:     resvar,
+		Def:         scope.GoTypeDef(vrt.Attribute(), true),
+		Ref:         resref,
+		Type:        vrt,
+	}
+	vinit := "New" + resvar
+	initd = &InitData{
+		Name:        vinit,
+		Description: fmt.Sprintf("%s initializes %s viewed result type from %s projected type and a view.", vinit, resvar, scope.GoTypeName(projected)),
+		Args: []*InitArgData{
+			&InitArgData{Name: "p", Ref: scope.GoTypeRef(projected), FieldName: "Projected"},
+			&InitArgData{Name: "view", Ref: "string", FieldName: "View"},
+		},
+		ReturnRef:      resref,
+		ReturnIsStruct: true,
+		ReturnTypeName: resvar,
+	}
+	views, validate = buildProjectData(att, projected, scope, viewspkg)
+	return &ProjectedTypeData{
+		UserTypeData:    ut,
+		Views:           views,
+		FullRef:         scope.GoFullTypeRef(vratt, viewspkg),
+		ProjectedType:   pt,
+		Init:            initd,
+		ConvertToResult: convertToResult(projected, att, viewspkg, scope),
+		ViewsPkg:        viewspkg,
+		MustValidate:    validate,
+	}
 }
 
 // buildProjectData builds the data to generate the constructor code to
 // project a result type to a viewed result type and the validation code to
 // validate the viewed result type based on a view.
-func buildProjectData(vatt, att *design.AttributeExpr, scope *codegen.NameScope, viewspkg string) ([]*ProjectData, string) {
+func buildProjectData(att, projected *design.AttributeExpr, scope *codegen.NameScope, viewspkg string) ([]*ProjectData, bool) {
 	rt := att.Type.(*design.ResultTypeExpr)
 	var (
+		defaultv *ProjectData
 		views    []*ProjectData
-		validate string
+		validate bool
 	)
-	vobj := design.AsObject(vatt.Type)
-	vtgt := "result"
-	validate = fmt.Sprintf("switch %s.View {", vtgt)
+	views = make([]*ProjectData, 0, len(rt.Views))
+	vobj := design.AsObject(projected.Type)
 	for _, view := range rt.Views {
 		obj := &design.Object{}
-		viewobj := view.Type.(*design.Object)
-		for _, n := range *viewobj {
+		for _, n := range *view.Type.(*design.Object) {
 			if attr := vobj.Attribute(n.Name); attr != nil {
 				obj.Set(n.Name, attr)
 			}
@@ -830,82 +861,81 @@ func buildProjectData(vatt, att *design.AttributeExpr, scope *codegen.NameScope,
 		valattr := &design.AttributeExpr{Type: obj}
 		if rt.Validation != nil {
 			valattr.Validation = rt.Validation.Dup()
+			validate = true
 		}
-		validate += fmt.Sprintf("\ncase %q:\n%s", view.Name, codegen.RecursiveValidationCode(valattr, false, true, false, vtgt))
-		views = append(views, &ProjectData{
+		pd := &ProjectData{
 			Name:        view.Name,
 			Description: view.Description,
-			Project:     projectToView(att, vatt, view, scope, viewspkg),
-		})
+			Project:     projectToView(att, projected, view, scope, viewspkg),
+			Validate:    codegen.RecursiveValidationCode(valattr, false, true, false, "projected"),
+		}
+		if view.Name == "default" {
+			// if default view, append the ProjectData for this view outside the
+			// loop so that it is the last item in the list. It is easier this
+			// way to default the validation logic to the "default" view if the
+			// "view" attribute is not set in the viewed result type.
+			defaultv = pd
+			continue
+		}
+		views = append(views, pd)
 	}
-	validate += "\n}"
+	views = append(views, defaultv)
 	return views, validate
 }
 
 // convertToResult converts the given viewed result type to result type.
-func convertToResult(vatt, res *design.AttributeExpr, viewspkg string, scope *codegen.NameScope) *InitData {
-	resrt := res.Type.(*design.ResultTypeExpr)
-	code, helpers := buildConstructorCode(vatt, res, "vres", "res", viewspkg, "", false, scope)
-	code += "\nreturn res"
-	rname := codegen.Goify(resrt.TypeName, true)
-	vname := "New" + rname
+func convertToResult(projected, res *design.AttributeExpr, viewspkg string, scope *codegen.NameScope) *InitData {
+	code, helpers := buildConstructorCode(projected, res, "p", "res", viewspkg, "", "", scope)
+	rname := scope.GoTypeName(res)
+	name := "New" + rname
 	return &InitData{
-		VarName:     vname,
-		Description: fmt.Sprintf("%s converts viewed result type %s to result type %s.", vname, rname, rname),
-		Args: []*InitArgData{
-			{Name: "vres", Ref: scope.GoFullTypeRef(res, viewspkg)},
-		},
-		ReturnRef: scope.GoTypeRef(res),
-		Code:      code,
-		Helpers:   helpers,
+		Name:        name,
+		Description: fmt.Sprintf("%s converts viewed result type %s to result type %s.", name, rname, rname),
+		Args:        []*InitArgData{{Name: "vres", Ref: scope.GoFullTypeRef(res, viewspkg)}},
+		ReturnRef:   scope.GoTypeRef(res),
+		Code:        code,
+		Helpers:     helpers,
 	}
 }
 
 // projectToView builds the constructor function to project the given
 // result type to the given viewed result type based on a view.
 func projectToView(res, vres *design.AttributeExpr, view *design.ViewExpr, scope *codegen.NameScope, viewspkg string) *InitData {
-	vresrt := vres.Type.(*design.ResultTypeExpr)
-	rname := scope.GoTypeName(res)
 	obj := &design.Object{}
 	tgt := &design.AttributeExpr{
 		Type: &design.UserTypeExpr{
 			AttributeExpr: &design.AttributeExpr{Type: obj},
-			TypeName:      vresrt.TypeName,
+			TypeName:      scope.GoTypeName(vres),
 		},
 	}
-	viewobj := view.Type.(*design.Object)
 	vresobj := design.AsObject(vres.Type)
 	// Select only the attributes from the given view
-	for _, n := range *viewobj {
-		attr := vresobj.Attribute(n.Name)
-		if attr == nil {
-			continue
-		}
-		// Add any specific view metadata from view attribute
-		if v, ok := n.Attribute.Metadata["view"]; ok {
-			if attr.Metadata == nil {
-				attr.Metadata = design.MetadataExpr{}
+	for _, n := range *view.Type.(*design.Object) {
+		if attr := vresobj.Attribute(n.Name); attr != nil {
+			// Add any specific view metadata from view attribute
+			if v, ok := n.Attribute.Metadata["view"]; ok {
+				if attr.Metadata == nil {
+					attr.Metadata = design.MetadataExpr{}
+				}
+				attr.Metadata["view"] = v
 			}
-			attr.Metadata["view"] = v
+			obj.Set(n.Name, attr)
 		}
-		obj.Set(n.Name, attr)
 	}
-	code, helpers := buildConstructorCode(res, tgt, "res", "t", "", viewspkg, true, scope)
-	code += fmt.Sprintf("\nreturn &%s.%s{\n%s: t,\nView: %q,\n}", viewspkg, rname, vresrt.TypeName, view.Name)
-	vname := "New" + rname + codegen.Goify(view.Name, true)
+	code, helpers := buildConstructorCode(res, tgt, "res", "p", "", viewspkg, view.Name, scope)
+	rname := scope.GoTypeName(res)
+	name := "New" + rname + codegen.Goify(view.Name, true)
 	return &InitData{
-		VarName:     vname,
-		Description: fmt.Sprintf("%s projects result type %s into viewed result type %s using the %s view.", vname, rname, rname, view.Name),
-		Args: []*InitArgData{
-			{Name: "res", Ref: scope.GoTypeRef(res)},
-		},
-		ReturnRef: scope.GoFullTypeRef(res, viewspkg),
-		Code:      code,
-		Helpers:   helpers,
+		Name:        name,
+		Description: fmt.Sprintf("%s projects result type %s into viewed result type %s using the %s view.", name, rname, rname, view.Name),
+		Args:        []*InitArgData{{Name: "res", Ref: scope.GoTypeRef(res)}},
+		ReturnRef:   scope.GoFullTypeRef(res, viewspkg),
+		Code:        code,
+		Helpers:     helpers,
 	}
 }
 
-func buildConstructorCode(src, tgt *design.AttributeExpr, srcvar, tgtvar, srcpkg, tgtpkg string, viewed bool, scope *codegen.NameScope) (string, []*codegen.TransformFunctionData) {
+func buildConstructorCode(src, tgt *design.AttributeExpr, srcvar, tgtvar, srcpkg, tgtpkg string, view string, scope *codegen.NameScope) (string, []*codegen.TransformFunctionData) {
 	// t contains only the attributes of type other than result type from tgt
 	t := design.DupAtt(tgt)
 	// trts contains only the attributes of type result type from tgt
@@ -917,22 +947,57 @@ func buildConstructorCode(src, tgt *design.AttributeExpr, srcvar, tgtvar, srcpkg
 			tobj.Delete(n.Name)
 		}
 	}
-	code, helpers, err := codegen.GoTypeTransform(src.Type, t.Type, srcvar, tgtvar, srcpkg, tgtpkg, !viewed, scope)
+	code, helpers, err := codegen.GoTypeTransform(src.Type, t.Type, srcvar, tgtvar, srcpkg, tgtpkg, view == "", scope)
 	if err != nil {
 		panic(err) // bug
 	}
-	for _, n := range *trts {
-		varn := codegen.Goify(n.Name, true)
-		init := "New" + scope.GoTypeName(n.Attribute)
-		if viewed {
-			view := "Default"
-			if attV, ok := n.Attribute.Metadata["view"]; ok {
-				// view is explicitly set for the result type on the attribute
-				view = codegen.Goify(attV[0], true)
-			}
-			init += view
-		}
-		code += fmt.Sprintf("\nif %s.%s != nil {\n%s.%s = %s(%s.%s)\n}", srcvar, varn, tgtvar, varn, init, srcvar, varn)
+	data := map[string]interface{}{
+		"Source": srcvar,
+		"Target": tgtvar,
+		"Code":   code,
+		"View":   view,
 	}
-	return code, helpers
+	if view != "" {
+		data["InitName"] = tgtpkg + "." + "New" + scope.GoTypeName(src)
+	}
+	attrs := make([]map[string]interface{}, 0, len(*trts))
+	for _, n := range *trts {
+		init := "New" + scope.GoTypeName(n.Attribute)
+		if view != "" {
+			v := "default"
+			if attv, ok := n.Attribute.Metadata["view"]; ok {
+				// view is explicitly set for the result type on the attribute
+				v = attv[0]
+			}
+			init += codegen.Goify(v, true)
+		}
+		varn := codegen.Goify(n.Name, true)
+		attrs = append(attrs, map[string]interface{}{
+			"SourceVar": srcvar + "." + varn,
+			"TargetVar": tgtvar + "." + varn,
+			"InitName":  init,
+		})
+	}
+	data["Attributes"] = attrs
+	var buf bytes.Buffer
+	if err = initResultTypeCodeTmpl.Execute(&buf, data); err != nil {
+		panic(err) // bug
+	}
+	return buf.String(), helpers
 }
+
+const initResultTypeCodeT = `{{- if not .View }}
+{{- .Source }} := vres.Projected
+{{ end }}
+{{- .Code }}
+{{- range .Attributes }}
+if {{ .SourceVar }} != nil {
+	{{ .TargetVar }} = {{ .InitName }}({{ .SourceVar }})
+}
+{{- end }}
+{{- if .View }}
+return {{ .InitName }}({{ .Target }}, {{ printf "%q" .View }})
+{{- else }}
+return {{ .Target }}
+{{- end -}}
+`

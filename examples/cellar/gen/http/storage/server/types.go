@@ -182,16 +182,13 @@ func NewListResponseBody(res storage.StoredBottleCollection) ListResponseBody {
 
 // NewShowResponseBody builds the HTTP response body from the result of the
 // "show" endpoint of the "storage" service.
-func NewShowResponseBody(res *storageviews.StoredBottle) *ShowResponseBody {
+func NewShowResponseBody(res *storageviews.StoredBottleView) *ShowResponseBody {
 	body := &ShowResponseBody{
 		ID:          res.ID,
 		Name:        res.Name,
 		Vintage:     res.Vintage,
 		Description: res.Description,
 		Rating:      res.Rating,
-	}
-	if res.Winery != nil {
-		body.Winery = marshalWineryToWineryResponseBody(res.Winery)
 	}
 	if res.Composition != nil {
 		body.Composition = make([]*ComponentResponseBody, len(res.Composition))
@@ -201,6 +198,9 @@ func NewShowResponseBody(res *storageviews.StoredBottle) *ShowResponseBody {
 				Percentage: val.Percentage,
 			}
 		}
+	}
+	if res.Winery != nil {
+		body.Winery = marshalWineryViewToWineryResponseBody(res.Winery.Projected)
 	}
 	return body
 }
@@ -461,29 +461,6 @@ func (body *ComponentResponseBody) Validate() (err error) {
 		if *body.Percentage > 100 {
 			err = goa.MergeErrors(err, goa.InvalidRangeError("body.percentage", *body.Percentage, 100, false))
 		}
-	}
-	return
-}
-
-// Validate runs the validations defined on WineryResponseBody
-func (body *WineryResponseBody) Validate() (err error) {
-	if body.Name == nil {
-		err = goa.MergeErrors(err, goa.MissingFieldError("name", "body"))
-	}
-	if body.Region == nil {
-		err = goa.MergeErrors(err, goa.MissingFieldError("region", "body"))
-	}
-	if body.Country == nil {
-		err = goa.MergeErrors(err, goa.MissingFieldError("country", "body"))
-	}
-	if body.Region != nil {
-		err = goa.MergeErrors(err, goa.ValidatePattern("body.region", *body.Region, "(?i)[a-z '\\.]+"))
-	}
-	if body.Country != nil {
-		err = goa.MergeErrors(err, goa.ValidatePattern("body.country", *body.Country, "(?i)[a-z '\\.]+"))
-	}
-	if body.URL != nil {
-		err = goa.MergeErrors(err, goa.ValidatePattern("body.url", *body.URL, "(?i)^(https?|ftp)://[^\\s/$.?#].[^\\s]*$"))
 	}
 	return
 }

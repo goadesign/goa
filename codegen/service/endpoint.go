@@ -296,10 +296,10 @@ func New{{ .VarName }}Endpoint(s {{ .ServiceVarName}}{{ range .Schemes }}, auth{
 		switch view {
 			{{- range .ViewedResult.Views }}
 		case {{ printf "%q" .Name }}:
-			vres = {{ .Project.VarName }}(res)
+			vres = {{ .Project.Name }}(res)
 			{{- end }}
 		default:
-			return nil, fmt.Errorf("unknown view %s", view)
+			return nil, fmt.Errorf("unknown view %q", view)
 		}
 		return vres, nil
 {{- else if .ResultRef }}

@@ -99,7 +99,7 @@ func File(genpkg string, service *design.ServiceExpr) *codegen.File {
 			projh = codegen.AppendHelpers(projh, t.ConvertToResult.Helpers)
 			sections = append(sections, &codegen.SectionTemplate{
 				Name:   "viewed-result-to-result",
-				Source: initTypeT,
+				Source: typeInitT,
 				Data:   t.ConvertToResult,
 			})
 		}
@@ -107,7 +107,7 @@ func File(genpkg string, service *design.ServiceExpr) *codegen.File {
 			projh = codegen.AppendHelpers(projh, p.Project.Helpers)
 			sections = append(sections, &codegen.SectionTemplate{
 				Name:   "project-result-init",
-				Source: initTypeT,
+				Source: typeInitT,
 				Data:   p.Project,
 			})
 		}
@@ -211,8 +211,18 @@ func {{ .Name }}(err error) {{ .TypeRef }} {
 `
 
 // input: InitData
-const initTypeT = `{{ comment .Description }}
-func {{ if .Ref }}({{ .Ref.Name }} {{ .Ref.Ref }}){{ end }}{{ .VarName }}({{ range .Args }}{{ .Name }} {{ .Ref }}, {{ end }}) {{ .ReturnRef }} {
+const typeInitT = `{{ comment .Description }}
+func {{ .Name }}({{ range .Args }}{{ .Name }} {{ .Ref }}, {{ end }}) {{ .ReturnRef }} {
+{{- if .ReturnIsStruct }}
+	return &{{ .ReturnTypeName }}{
+	{{- range .Args }}
+		{{- if .FieldName }}
+		{{ .FieldName }}: {{ .Name }},
+		{{- end }}
+	{{- end }}
+	}
+{{- else }}
 	{{ .Code }}
+{{- end }}
 }
 `

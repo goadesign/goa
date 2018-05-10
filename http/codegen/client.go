@@ -403,11 +403,19 @@ func {{ .ResponseDecoder }}(decoder func(*http.Response) goahttp.Decoder, restor
 		case {{ .StatusCode }}:
 ` + singleResponseT + `
 		{{- if .ResultInit }}
+			{{- if $.Method.ViewedResult }}
+			p := {{ .ResultInit.Name }}({{ range .ResultInit.ClientArgs }}{{ .Ref }},{{ end }})
+			view := resp.Header.Get("goa-view")
+			vres := {{ $.Method.ViewedResult.ViewsPkg}}.{{ $.Method.ViewedResult.Init.Name }}(p, view)
+			if err = vres.Validate(); err != nil {
+				return nil, goahttp.ErrValidationError("{{ $.ServiceName }}", "{{ $.Method.Name }}", err)
+			}
+			return {{ $.ServicePkgName }}.{{ $.Method.ViewedResult.ConvertToResult.Name }}(vres), nil
+			{{- else }}
 			return {{ .ResultInit.Name }}({{ range .ResultInit.ClientArgs }}{{ .Ref }},{{ end }}), nil
+			{{- end }}
 		{{- else if .ClientBody }}
 			return body, nil
-		{{- else if $.Method.ViewedResult }}
-			return res, nil
 		{{- else }}
 			return nil, nil
 		{{- end }}
@@ -471,24 +479,6 @@ const singleResponseT = ` {{- if .ClientBody }}
 				return nil, goahttp.ErrValidationError("{{ $.ServiceName }}", "{{ $.Method.Name }}", err)
 			}
 		{{- end }}
-	{{- else if and $.Method.ViewedResult (not .IsError) }}
-		var (
-			vres {{ $.Method.ViewedResult.FullRef }}
-			err error
-		)
-		err = decoder(resp).Decode(&vres)
-		if err != nil {
-			return nil, goahttp.ErrDecodingError("{{ $.ServiceName }}", "{{ $.Method.Name }}", err)
-		}
-		view := resp.Header.Get("goa-view")
-		if view == "" {
-			return nil, goa.MergeErrors(err, goa.MissingFieldError("goa-view", "header"))
-		}
-		vres.View = view
-		if err = vres.Validate(); err != nil {
-			return nil, goahttp.ErrValidationError("{{ $.ServiceName }}", "{{ $.Method.Name }}", err)
-		}
-		res := {{ $.ServicePkgName }}.{{ $.Method.ViewedResult.ConvertToResult.VarName }}(vres)
 	{{- end }}
 
 	{{- if .Headers }}
@@ -575,9 +565,6 @@ const singleResponseT = ` {{- if .ClientBody }}
 		{{- end }}
 		{{- if .Validate }}
 			{{ .Validate }}
-		{{- end }}
-		{{- if $.Method.ViewedResult }}
-		res.{{ .FieldName }} = {{ .VarName }}
 		{{- end }}
 		{{- end }}{{/* range .Headers */}}
 	{{- end }}

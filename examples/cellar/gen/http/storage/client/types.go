@@ -13,6 +13,7 @@ import (
 
 	goa "goa.design/goa"
 	storage "goa.design/goa/examples/cellar/gen/storage"
+	storageviews "goa.design/goa/examples/cellar/gen/storage/views"
 )
 
 // AddRequestBody is the type of the "storage" service "add" endpoint HTTP
@@ -42,6 +43,25 @@ type MultiUpdateRequestBody struct {
 // ListResponseBody is the type of the "storage" service "list" endpoint HTTP
 // response body.
 type ListResponseBody []*StoredBottleResponseBody
+
+// ShowResponseBody is the type of the "storage" service "show" endpoint HTTP
+// response body.
+type ShowResponseBody struct {
+	// ID is the unique id of the bottle.
+	ID *string `form:"id,omitempty" json:"id,omitempty" xml:"id,omitempty"`
+	// Name of bottle
+	Name *string `form:"name,omitempty" json:"name,omitempty" xml:"name,omitempty"`
+	// Winery that produces wine
+	Winery *WineryResponseBody `form:"winery,omitempty" json:"winery,omitempty" xml:"winery,omitempty"`
+	// Vintage of bottle
+	Vintage *uint32 `form:"vintage,omitempty" json:"vintage,omitempty" xml:"vintage,omitempty"`
+	// Composition is the list of grape varietals and associated percentage.
+	Composition []*ComponentResponseBody `form:"composition,omitempty" json:"composition,omitempty" xml:"composition,omitempty"`
+	// Description of bottle
+	Description *string `form:"description,omitempty" json:"description,omitempty" xml:"description,omitempty"`
+	// Rating of bottle from 1 (worst) to 5 (best)
+	Rating *uint32 `form:"rating,omitempty" json:"rating,omitempty" xml:"rating,omitempty"`
+}
 
 // ShowNotFoundResponseBody is the type of the "storage" service "show"
 // endpoint HTTP response body for the "not_found" error.
@@ -82,6 +102,18 @@ type ComponentResponseBody struct {
 	Varietal *string `form:"varietal,omitempty" json:"varietal,omitempty" xml:"varietal,omitempty"`
 	// Percentage of varietal in wine
 	Percentage *uint32 `form:"percentage,omitempty" json:"percentage,omitempty" xml:"percentage,omitempty"`
+}
+
+// WineryResponseBody is used to define fields on response body types.
+type WineryResponseBody struct {
+	// Name of winery
+	Name *string `form:"name,omitempty" json:"name,omitempty" xml:"name,omitempty"`
+	// Region of winery
+	Region *string `form:"region,omitempty" json:"region,omitempty" xml:"region,omitempty"`
+	// Country of winery
+	Country *string `form:"country,omitempty" json:"country,omitempty" xml:"country,omitempty"`
+	// Winery website URL
+	URL *string `form:"url,omitempty" json:"url,omitempty" xml:"url,omitempty"`
 }
 
 // WineryRequestBody is used to define fields on request body types.
@@ -227,6 +259,32 @@ func NewListStoredBottleCollectionOK(body ListResponseBody) storage.StoredBottle
 	return v
 }
 
+// NewShowStoredBottleOK builds a "storage" service "show" endpoint result from
+// a HTTP "OK" response.
+func NewShowStoredBottleOK(body *ShowResponseBody) *storageviews.StoredBottleView {
+	v := &storageviews.StoredBottleView{
+		ID:          body.ID,
+		Name:        body.Name,
+		Vintage:     body.Vintage,
+		Description: body.Description,
+		Rating:      body.Rating,
+	}
+	if body.Composition != nil {
+		v.Composition = make([]*storageviews.Component, len(body.Composition))
+		for j, val := range body.Composition {
+			v.Composition[j] = &storageviews.Component{
+				Varietal:   val.Varietal,
+				Percentage: val.Percentage,
+			}
+		}
+	}
+	if body.Winery != nil {
+		t := marshalWineryResponseBodyToWineryView(body.Winery)
+		v.Winery = storageviews.NewWinery(t, "tiny")
+	}
+	return v
+}
+
 // NewShowNotFound builds a storage service show endpoint not_found error.
 func NewShowNotFound(body *ShowNotFoundResponseBody) *storage.NotFound {
 	v := &storage.NotFound{
@@ -244,17 +302,6 @@ func (body ListResponseBody) Validate() (err error) {
 				err = goa.MergeErrors(err, err2)
 			}
 		}
-	}
-	return
-}
-
-// Validate runs the validations defined on ShowNotFoundResponseBody
-func (body *ShowNotFoundResponseBody) Validate() (err error) {
-	if body.Message == nil {
-		err = goa.MergeErrors(err, goa.MissingFieldError("message", "body"))
-	}
-	if body.ID == nil {
-		err = goa.MergeErrors(err, goa.MissingFieldError("id", "body"))
 	}
 	return
 }

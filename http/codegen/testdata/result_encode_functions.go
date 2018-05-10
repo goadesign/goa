@@ -629,8 +629,9 @@ var ResultBodyMultipleViewsEncodeCode = `// EncodeMethodBodyMultipleViewResponse
 // returned by the ServiceBodyMultipleView MethodBodyMultipleView endpoint.
 func EncodeMethodBodyMultipleViewResponse(encoder func(context.Context, http.ResponseWriter) goahttp.Encoder) func(context.Context, http.ResponseWriter, interface{}) error {
 	return func(ctx context.Context, w http.ResponseWriter, v interface{}) error {
-		res := v.(*servicebodymultipleviewviews.Resulttypemultipleviews)
-		w.Header().Set("goa-view", res.View)
+		vres := v.(*servicebodymultipleviewviews.Resulttypemultipleviews)
+		res := vres.Projected
+		w.Header().Set("goa-view", vres.View)
 		enc := encoder(ctx, w)
 		body := NewMethodBodyMultipleViewResponseBody(res)
 		if res.C != nil {
@@ -647,7 +648,8 @@ var EmptyBodyResultMultipleViewsEncodeCode = `// EncodeMethodEmptyBodyResultMult
 // MethodEmptyBodyResultMultipleView endpoint.
 func EncodeMethodEmptyBodyResultMultipleViewResponse(encoder func(context.Context, http.ResponseWriter) goahttp.Encoder) func(context.Context, http.ResponseWriter, interface{}) error {
 	return func(ctx context.Context, w http.ResponseWriter, v interface{}) error {
-		res := v.(*serviceemptybodyresultmultipleviewviews.Resulttypemultipleviews)
+		vres := v.(*serviceemptybodyresultmultipleviewviews.Resulttypemultipleviews)
+		res := vres.Projected
 		if res.C != nil {
 			w.Header().Set("Location", *res.C)
 		}

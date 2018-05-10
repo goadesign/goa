@@ -895,10 +895,15 @@ const responseEncoderT = `{{ printf "%s returns an encoder for responses returne
 func {{ .ResponseEncoder }}(encoder func(context.Context, http.ResponseWriter) goahttp.Encoder) func(context.Context, http.ResponseWriter, interface{}) error {
 	return func(ctx context.Context, w http.ResponseWriter, v interface{}) error {
 	{{- if and .Result.Ref .NeedServerResponse }}
+		{{- if .Method.ViewedResult }}
+		vres := v.({{ .Method.ViewedResult.FullRef }})
+		res := vres.Projected
+		{{- else }}
 		res := v.({{ .Result.Ref }})
+		{{- end }}
 		{{- range .Result.Responses }}
 			{{- if and .ServerBody $.Method.ViewedResult }}
-		w.Header().Set("goa-view", res.View)
+		w.Header().Set("goa-view", vres.View)
 			{{- end }}
 			{{- if .TagName }}
 			{{- if .TagRequired }}

@@ -74,8 +74,9 @@ The view used to render the result type is passed to the client in "Goa-View"
 header.
 
 The client side response unmarshaling code unmarshals the response into the
-viewed result type and sets the view attribute from the Goa-View header.
-It validates the attributes in the viewed result type as defined by the view
-and converts the viewed result type into the service result type using the
-appropriate constructor.
+client type which is then transformed to the viewed result type and sets the
+view attribute of the viewed result type from the Goa-View header. It validates
+the attributes in the viewed result type as defined by the view and converts
+the viewed result type into the service result type using the appropriate
+constructor.
 
