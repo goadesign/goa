@@ -183,6 +183,8 @@ type (
 		// Responses contains the data for the corresponding HTTP
 		// responses.
 		Responses []*ResponseData
+		// View is the view used to render the result.
+		View string
 	}
 
 	// ErrorGroupData contains the error information required to generate
@@ -266,8 +268,6 @@ type (
 		TagRequired bool
 		// MustValidate is true if at least one header requires validation.
 		MustValidate bool
-		// IsError if true indicates that this is an error response.
-		IsError bool
 	}
 
 	// InitData contains the data required to render a constructor.
@@ -1107,12 +1107,21 @@ func buildResultData(e *httpdesign.EndpointExpr, sd *ServiceData) *ResultData {
 		svc    = sd.Service
 		ep     = svc.Method(e.MethodExpr.Name)
 
-		name, ref, pkg string
-		viewed         bool
-		responses      []*ResponseData
+		name      string
+		ref       string
+		pkg       string
+		view      string
+		viewed    bool
+		responses []*ResponseData
 	)
 	{
 		pkg = svc.PkgName
+		view = "default"
+		if result.Metadata != nil {
+			if v, ok := result.Metadata["view"]; ok {
+				view = v[0]
+			}
+		}
 		if ep.ViewedResult != nil {
 			result = &design.AttributeExpr{Type: ep.ViewedResult.ProjectedType}
 			pkg = svc.ViewsPkg
@@ -1291,6 +1300,7 @@ func buildResultData(e *httpdesign.EndpointExpr, sd *ServiceData) *ResultData {
 		Name:      name,
 		Ref:       ref,
 		Responses: responses,
+		View:      view,
 	}
 }
 
@@ -1417,7 +1427,6 @@ func buildErrorsData(e *httpdesign.EndpointExpr, sd *ServiceData) []*ErrorGroupD
 				ServerBody:  serverBodyData,
 				ClientBody:  clientBodyData,
 				ResultInit:  init,
-				IsError:     true,
 			}
 		}
 
