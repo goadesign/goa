@@ -19,9 +19,9 @@ type Service interface {
 	// List all stored bottles
 	List(context.Context) (res StoredBottleCollection, err error)
 	// Show bottle by ID
-	// Show must return one of the following views
-	// * tiny
-	// * default
+	// The return value must have one of the following views
+	// * "tiny"
+	// * "default"
 	Show(context.Context, *ShowPayload) (res *StoredBottle, view string, err error)
 	// Add new bottle and return its ID.
 	Add(context.Context, *Bottle) (res string, err error)
@@ -190,7 +190,7 @@ func NewStoredBottleTiny(res *StoredBottle) *storageviews.StoredBottle {
 	if res.Winery != nil {
 		p.Winery = NewWineryTiny(res.Winery)
 	}
-	return storageviews.NewStoredBottle(p, "tiny")
+	return &storageviews.StoredBottle{p, "tiny"}
 }
 
 // NewStoredBottleDefault projects result type StoredBottle into viewed result
@@ -215,7 +215,7 @@ func NewStoredBottleDefault(res *StoredBottle) *storageviews.StoredBottle {
 	if res.Winery != nil {
 		p.Winery = NewWineryTiny(res.Winery)
 	}
-	return storageviews.NewStoredBottle(p, "default")
+	return &storageviews.StoredBottle{p, "default"}
 }
 
 // NewWinery converts viewed result type Winery to result type Winery.
@@ -242,7 +242,7 @@ func NewWineryTiny(res *Winery) *storageviews.Winery {
 	p := &storageviews.WineryView{
 		Name: &res.Name,
 	}
-	return storageviews.NewWinery(p, "tiny")
+	return &storageviews.Winery{p, "tiny"}
 }
 
 // NewWineryDefault projects result type Winery into viewed result type Winery
@@ -254,5 +254,5 @@ func NewWineryDefault(res *Winery) *storageviews.Winery {
 		Country: &res.Country,
 		URL:     res.URL,
 	}
-	return storageviews.NewWinery(p, "default")
+	return &storageviews.Winery{p, "default"}
 }

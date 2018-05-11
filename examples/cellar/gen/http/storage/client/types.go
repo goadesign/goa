@@ -280,7 +280,7 @@ func NewShowStoredBottleOK(body *ShowResponseBody) *storageviews.StoredBottleVie
 	}
 	if body.Winery != nil {
 		t := marshalWineryResponseBodyToWineryView(body.Winery)
-		v.Winery = storageviews.NewWinery(t, "tiny")
+		v.Winery = &storageviews.Winery{t, "tiny"}
 	}
 	return v
 }

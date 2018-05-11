@@ -35,17 +35,6 @@ func ViewsFile(genpkg string, service *design.ServiceExpr) *codegen.File {
 			})
 		}
 
-		// viewed result type init
-		for _, t := range svc.ProjectedTypes {
-			if t.Init != nil {
-				sections = append(sections, &codegen.SectionTemplate{
-					Name:   "projected-type",
-					Source: typeInitT,
-					Data:   t.Init,
-				})
-			}
-		}
-
 		// validations
 		for _, t := range svc.ProjectedTypes {
 			if t.MustValidate {

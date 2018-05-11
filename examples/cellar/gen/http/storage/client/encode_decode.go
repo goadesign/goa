@@ -150,7 +150,7 @@ func DecodeShowResponse(decoder func(*http.Response) goahttp.Decoder, restoreBod
 			}
 			p := NewShowStoredBottleOK(&body)
 			view := resp.Header.Get("goa-view")
-			vres := storageviews.NewStoredBottle(p, view)
+			vres := &storageviews.StoredBottle{p, view}
 			if err = vres.Validate(); err != nil {
 				return nil, goahttp.ErrValidationError("storage", "show", err)
 			}

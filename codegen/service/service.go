@@ -143,12 +143,12 @@ type Service interface {
 {{- range .Methods }}
 	{{ comment .Description }}
 	{{- if .ViewedResult }}
-		{{ printf "%s must return one of the following views" .VarName | comment }}
+		{{ comment "The return value must have one of the following views" }}
 		{{- range .ViewedResult.Views }}
 			{{- if .Description }}
-			{{ printf "* %s: %s" .Name .Description | comment }}
+			{{ printf "* %q: %s" .Name .Description | comment }}
 			{{- else }}
-			{{ printf "* %s" .Name | comment }}
+			{{ printf "* %q" .Name | comment }}
 			{{- end }}
 		{{- end }}
 	{{- end }}

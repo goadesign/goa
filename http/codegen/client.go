@@ -406,7 +406,7 @@ func {{ .ResponseDecoder }}(decoder func(*http.Response) goahttp.Decoder, restor
 			{{- if $.Method.ViewedResult }}
 			p := {{ .ResultInit.Name }}({{ range .ResultInit.ClientArgs }}{{ .Ref }},{{ end }})
 			view := resp.Header.Get("goa-view")
-			vres := {{ $.Method.ViewedResult.ViewsPkg}}.{{ $.Method.ViewedResult.Init.Name }}(p, view)
+			vres := &{{ $.Method.ViewedResult.ViewsPkg}}.{{ $.Method.ViewedResult.VarName }}{p, view}
 			if err = vres.Validate(); err != nil {
 				return nil, goahttp.ErrValidationError("{{ $.ServiceName }}", "{{ $.Method.Name }}", err)
 			}

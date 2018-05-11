@@ -498,7 +498,7 @@ func (svc *ServiceData) Endpoint(name string) *EndpointData {
 }
 
 // NeedServerResponse returns true if server response has a body or a header.
-// It is used in initializing the result in the server response encoding.
+// It is used when initializing the result in the server response encoding.
 func (e *EndpointData) NeedServerResponse() bool {
 	if e.Result == nil {
 		return false
@@ -741,23 +741,32 @@ func (d ServicesData) analyze(hs *httpdesign.ServiceExpr) *ServiceData {
 
 	for _, a := range hs.HTTPEndpoints {
 		collectUserTypes(a.Body.Type, func(ut design.UserType) {
-			if d := attributeTypeData(ut, true, true, true, true, svc.Scope, rd); d != nil {
+			if d := attributeTypeData(ut, true, true, true, svc.Scope, rd); d != nil {
 				rd.ServerBodyAttributeTypes = append(rd.ServerBodyAttributeTypes, d)
 			}
-			if d := attributeTypeData(ut, true, false, false, true, svc.Scope, rd); d != nil {
+			if d := attributeTypeData(ut, true, false, false, svc.Scope, rd); d != nil {
 				rd.ClientBodyAttributeTypes = append(rd.ClientBodyAttributeTypes, d)
 			}
 		})
 
 		if res := a.MethodExpr.Result; res != nil {
 			md := rd.Endpoint(a.Name())
-			validate := md.Method.ViewedResult == nil
 			for _, v := range a.Responses {
-				collectUserTypes(v.Body.Type, func(ut design.UserType) {
-					if d := attributeTypeData(ut, false, true, true, validate, svc.Scope, rd); d != nil {
+				body := v.Body
+				if md.Method.ViewedResult != nil {
+					// If a method endpoint has a result type with multiple views, no
+					// need to generate the validation in the server and client packages
+					// for all the user type we generate. We call the validation
+					// function defined in the views package for such types. We may still
+					// need to generate the type struct in the server and client packages
+					// because the response body type may need them.
+					body = dupAttNoValidation(body)
+				}
+				collectUserTypes(body.Type, func(ut design.UserType) {
+					if d := attributeTypeData(ut, false, true, true, svc.Scope, rd); d != nil {
 						rd.ServerBodyAttributeTypes = append(rd.ServerBodyAttributeTypes, d)
 					}
-					if d := attributeTypeData(ut, false, true, false, validate, svc.Scope, rd); d != nil {
+					if d := attributeTypeData(ut, false, true, false, svc.Scope, rd); d != nil {
 						rd.ClientBodyAttributeTypes = append(rd.ClientBodyAttributeTypes, d)
 					}
 				})
@@ -766,10 +775,10 @@ func (d ServicesData) analyze(hs *httpdesign.ServiceExpr) *ServiceData {
 
 		for _, v := range a.HTTPErrors {
 			collectUserTypes(v.Response.Body.Type, func(ut design.UserType) {
-				if d := attributeTypeData(ut, false, false, true, true, svc.Scope, rd); d != nil {
+				if d := attributeTypeData(ut, false, false, true, svc.Scope, rd); d != nil {
 					rd.ServerBodyAttributeTypes = append(rd.ServerBodyAttributeTypes, d)
 				}
-				if d := attributeTypeData(ut, false, true, false, true, svc.Scope, rd); d != nil {
+				if d := attributeTypeData(ut, false, true, false, svc.Scope, rd); d != nil {
 					rd.ClientBodyAttributeTypes = append(rd.ClientBodyAttributeTypes, d)
 				}
 			})
@@ -1139,8 +1148,11 @@ func buildResultData(e *httpdesign.EndpointExpr, sd *ServiceData) *ResultData {
 				}
 				notag = i
 			}
-			// Project response body if body type is a result type and if the
-			// endpoint is not a result type with multiple views
+			// If result type does not have multiple views, project the response
+			// body to the specified view (default view if none specified).
+			// If result type has multiple views, we initialize a viewed
+			// result type which is projected, validated, and transformed to the
+			// response body.
 			if ut, ok := v.Body.Type.(design.UserType); ok && !viewed {
 				if rt, ok := ut.(*design.ResultTypeExpr); ok {
 					view := "default"
@@ -1557,11 +1569,12 @@ func buildBodyType(sd *ServiceData, e *httpdesign.EndpointExpr, body, att *desig
 
 		srcType := att.Type
 		tgtType := body.Type
-		if svr && !req {
-			// In server response type all the attributes are pointers. So we need to
-			// remove the required validations from the body to transform.
-			tgt := design.DupAtt(body)
-			tgt.RemoveRequired()
+		if svr && !req || !svr && !req {
+			// In server and client response type all the field are pointers.
+			// So we need to remove the validations from the body before transform.
+			// We dup the body here so that the validations may be generated for
+			// the response body type.
+			tgt := dupAttNoValidation(body)
 			tgtType = tgt.Type
 		}
 		src := sourceVar
@@ -1783,7 +1796,7 @@ func collectUserTypes(dt design.DataType, cb func(design.UserType), seen ...map[
 	}
 }
 
-func attributeTypeData(ut design.UserType, req, ptr, server, mustValidate bool, scope *codegen.NameScope, rd *ServiceData) *TypeData {
+func attributeTypeData(ut design.UserType, req, ptr, server bool, scope *codegen.NameScope, rd *ServiceData) *TypeData {
 	if ut == design.Empty {
 		return nil
 	}
@@ -1818,11 +1831,9 @@ func attributeTypeData(ut design.UserType, req, ptr, server, mustValidate bool, 
 		useDefault := !req && server || req && !server
 
 		def = goTypeDef(scope, ut.Attribute(), ptr, useDefault)
-		if mustValidate {
-			validate = codegen.RecursiveValidationCode(ut.Attribute(), true, ptr, useDefault, "body")
-			if validate != "" {
-				validateRef = "err = v.Validate()"
-			}
+		validate = codegen.RecursiveValidationCode(ut.Attribute(), true, ptr, useDefault, "body")
+		if validate != "" {
+			validateRef = "err = v.Validate()"
 		}
 	}
 	return &TypeData{
@@ -1902,6 +1913,39 @@ func needInit(dt design.DataType) bool {
 	}
 }
 
+// dupAttNoValidation creates a copy of the given attribute expression and
+// removes all the validation. This method is recursive so that the validation
+// is removed from every attribute expression underneath.
+func dupAttNoValidation(a *design.AttributeExpr, seen ...map[string]struct{}) *design.AttributeExpr {
+	a = design.DupAtt(a)
+	a.Validation = &design.ValidationExpr{}
+	switch actual := a.Type.(type) {
+	case design.UserType:
+		var s map[string]struct{}
+		if len(seen) > 0 {
+			s = seen[0]
+		} else {
+			s = make(map[string]struct{})
+			seen = append(seen, s)
+		}
+		if _, ok := s[actual.Name()]; ok {
+			return a
+		}
+		s[actual.Name()] = struct{}{}
+		actual.SetAttribute(dupAttNoValidation(actual.Attribute(), seen...))
+	case *design.Array:
+		actual.ElemType = dupAttNoValidation(actual.ElemType, seen...)
+	case *design.Map:
+		actual.KeyType = dupAttNoValidation(actual.KeyType, seen...)
+		actual.ElemType = dupAttNoValidation(actual.ElemType, seen...)
+	case *design.Object:
+		for _, nat := range *actual {
+			nat.Attribute = dupAttNoValidation(nat.Attribute, seen...)
+		}
+	}
+	return a
+}
+
 // transformViewedResult transforms a viewed result type to a response body
 // type if unmarshal is set to false. If unmarshal set to true, it unmarshals
 // a response body to the viewed result type.
@@ -1948,7 +1992,7 @@ func transformViewedResult(srcType, tgtType design.DataType, src, tgt, srcpkg, t
 			"Unmarshal": unmarshal,
 		}
 		if unmarshal {
-			data["InitName"] = fmt.Sprintf("%s.New%s", tgtpkg, varn)
+			data["ResultName"] = fmt.Sprintf("%s.%s", tgtpkg, varn)
 			data["View"] = "default"
 			if tatt.Metadata != nil {
 				if v, ok := tatt.Metadata["view"]; ok {
@@ -2058,7 +2102,7 @@ const transformViewedResultT = `
 if {{ .SourceVar }} != nil {
 {{- if .Unmarshal }}
 	t := {{ .Helper }}({{ .SourceVar }})
-	{{ .TargetVar }} = {{ .InitName }}(t, {{ printf "%q" .View }})
+	{{ .TargetVar }} = &{{ .ResultName }}{t, {{ printf "%q" .View }}}
 {{- else }}
 	{{ .TargetVar }} = {{ .Helper }}({{ .SourceVar }}.Projected)
 {{- end }}

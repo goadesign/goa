@@ -14,15 +14,6 @@ type ResultType struct {
 	View string
 }
 
-// NewResultType initializes ResultType viewed result type from ResultTypeView
-// projected type and a view.
-func NewResultType(p *ResultTypeView, view string) *ResultType {
-	return &ResultType{
-		Projected: p,
-		View:      view,
-	}
-}
-
 // Validate runs the validations defined on ResultType.
 func (result *ResultType) Validate() (err error) {
 	projected := result.Projected
@@ -60,15 +51,6 @@ type ResultType struct {
 // UserType is a type that runs validations on a projected type.
 type UserType struct {
 	A *string
-}
-
-// NewResultType initializes ResultType viewed result type from ResultTypeView
-// projected type and a view.
-func NewResultType(p *ResultTypeView, view string) *ResultType {
-	return &ResultType{
-		Projected: p,
-		View:      view,
-	}
 }
 
 // Validate runs the validations defined on ResultType.
@@ -136,33 +118,6 @@ type RT3 struct {
 	Projected *RT3View
 	// View to render
 	View string
-}
-
-// NewRT initializes RT viewed result type from RTView projected type and a
-// view.
-func NewRT(p *RTView, view string) *RT {
-	return &RT{
-		Projected: p,
-		View:      view,
-	}
-}
-
-// NewRT2 initializes RT2 viewed result type from RT2View projected type and a
-// view.
-func NewRT2(p *RT2View, view string) *RT2 {
-	return &RT2{
-		Projected: p,
-		View:      view,
-	}
-}
-
-// NewRT3 initializes RT3 viewed result type from RT3View projected type and a
-// view.
-func NewRT3(p *RT3View, view string) *RT3 {
-	return &RT3{
-		Projected: p,
-		View:      view,
-	}
 }
 
 // Validate runs the validations defined on RT.
@@ -255,7 +210,7 @@ func (result *RT3) Validate() (err error) {
 
 var ResultWithRecursiveResultTypeCode = `// RTView is a type used by RT type to project based on a view.
 type RTView struct {
-	A *RTView
+	A *RT
 }
 
 // RT is the viewed result type that is projected based on a view.
@@ -264,15 +219,6 @@ type RT struct {
 	Projected *RTView
 	// View to render
 	View string
-}
-
-// NewRT initializes RT viewed result type from RTView projected type and a
-// view.
-func NewRT(p *RTView, view string) *RT {
-	return &RT{
-		Projected: p,
-		View:      view,
-	}
 }
 
 // Validate runs the validations defined on RT.

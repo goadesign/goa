@@ -69,24 +69,6 @@ type Component struct {
 	Percentage *uint32
 }
 
-// NewStoredBottle initializes StoredBottle viewed result type from
-// StoredBottleView projected type and a view.
-func NewStoredBottle(p *StoredBottleView, view string) *StoredBottle {
-	return &StoredBottle{
-		Projected: p,
-		View:      view,
-	}
-}
-
-// NewWinery initializes Winery viewed result type from WineryView projected
-// type and a view.
-func NewWinery(p *WineryView, view string) *Winery {
-	return &Winery{
-		Projected: p,
-		View:      view,
-	}
-}
-
 // Validate runs the validations defined on StoredBottle.
 func (result *StoredBottle) Validate() (err error) {
 	projected := result.Projected

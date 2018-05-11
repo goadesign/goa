@@ -307,39 +307,6 @@ func (a *AttributeExpr) IsRequiredNoDefault(attName string) bool {
 	return false
 }
 
-// RemoveRequired removes the required attributes from the validation.
-// This method is recursive so that the required attribute validation is
-// removed from every attribute expression underneath.
-func (a *AttributeExpr) RemoveRequired(seen ...map[string]struct{}) {
-	switch actual := a.Type.(type) {
-	case UserType:
-		var s map[string]struct{}
-		if len(seen) > 0 {
-			s = seen[0]
-		} else {
-			s = make(map[string]struct{})
-			seen = append(seen, s)
-		}
-		if _, ok := s[actual.Name()]; ok {
-			return
-		}
-		s[actual.Name()] = struct{}{}
-		if actual.Attribute().Validation != nil {
-			actual.Attribute().Validation.Required = []string{}
-		}
-		actual.Attribute().RemoveRequired(seen...)
-	case *Array:
-		actual.ElemType.RemoveRequired(seen...)
-	case *Map:
-		actual.KeyType.RemoveRequired(seen...)
-		actual.ElemType.RemoveRequired(seen...)
-	case *Object:
-		for _, nat := range *actual {
-			nat.Attribute.RemoveRequired(seen...)
-		}
-	}
-}
-
 // IsPrimitivePointer returns true if the field generated for the given
 // attribute should be a pointer to a primitive type. The receiver attribute must
 // be an object.
