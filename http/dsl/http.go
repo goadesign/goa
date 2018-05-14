@@ -652,6 +652,10 @@ func Body(args ...interface{}) {
 	)
 	switch a := args[0].(type) {
 	case string:
+		if ref.Find(a) == nil {
+			eval.ReportError("%q is not found in result type", a)
+			return
+		}
 		obj := design.AsObject(ref.Type)
 		if obj == nil {
 			eval.ReportError("%s type must be an object with an attribute with name %#v, got %T", kind, a, ref.Type)
