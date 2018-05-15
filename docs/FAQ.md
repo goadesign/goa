@@ -1,4 +1,4 @@
-# When are validation defined in the design enforced?
+# When are validations defined in the design enforced?
 
 There is a trade-off between perfomance and robustness wrt enforcing the validations
 defined in the service design. goa trusts that the user code does the right thing
