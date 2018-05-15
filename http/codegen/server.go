@@ -896,14 +896,13 @@ func {{ .ResponseEncoder }}(encoder func(context.Context, http.ResponseWriter) g
 	return func(ctx context.Context, w http.ResponseWriter, v interface{}) error {
 	{{- if and .Result.Ref .NeedServerResponse }}
 		{{- if .Method.ViewedResult }}
-		vres := v.({{ .Method.ViewedResult.FullRef }})
-		res := vres.Projected
+		res := v.({{ .Method.ViewedResult.FullRef }})
 		{{- else }}
 		res := v.({{ .Result.Ref }})
 		{{- end }}
 		{{- range .Result.Responses }}
 			{{- if and .ServerBody $.Method.ViewedResult }}
-		w.Header().Set("goa-view", vres.View)
+		w.Header().Set("goa-view", res.View)
 			{{- end }}
 			{{- if .TagName }}
 			{{- if .TagRequired }}
@@ -976,7 +975,7 @@ const responseT = `{{ define "response" -}}
 		{{- if .ServerBody.Init }}
 	body := {{ .ServerBody.Init.Name }}({{ range .ServerBody.Init.ServerArgs }}{{ .Ref }}, {{ end }})
 		{{- else }}
-	body := res
+	body := res{{ if .ResultAttr }}.{{ .ResultAttr }}{{ end }}
 		{{- end }}
 	{{- end }}
 	{{- range .Headers }}

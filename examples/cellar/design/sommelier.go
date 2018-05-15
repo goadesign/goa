@@ -10,9 +10,9 @@ var _ = Service("sommelier", func() {
 	})
 	Method("pick", func() {
 		Payload(Criteria)
-		Result(CollectionOf(StoredBottle, func() {
+		Result(CollectionOf(StoredBottle), func() {
 			View("default")
-		}))
+		})
 		Error("no_criteria", String, "Missing criteria")
 		Error("no_match", String, "No bottle matched given criteria")
 		HTTP(func() {

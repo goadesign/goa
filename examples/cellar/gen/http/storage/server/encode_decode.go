@@ -24,7 +24,7 @@ import (
 // list endpoint.
 func EncodeListResponse(encoder func(context.Context, http.ResponseWriter) goahttp.Encoder) func(context.Context, http.ResponseWriter, interface{}) error {
 	return func(ctx context.Context, w http.ResponseWriter, v interface{}) error {
-		res := v.(storage.StoredBottleCollection)
+		res := v.(storage.StoredBottleTinyCollection)
 		enc := encoder(ctx, w)
 		body := NewListResponseBody(res)
 		w.WriteHeader(http.StatusOK)
@@ -36,9 +36,8 @@ func EncodeListResponse(encoder func(context.Context, http.ResponseWriter) goaht
 // show endpoint.
 func EncodeShowResponse(encoder func(context.Context, http.ResponseWriter) goahttp.Encoder) func(context.Context, http.ResponseWriter, interface{}) error {
 	return func(ctx context.Context, w http.ResponseWriter, v interface{}) error {
-		vres := v.(*storageviews.StoredBottle)
-		res := vres.Projected
-		w.Header().Set("goa-view", vres.View)
+		res := v.(*storageviews.StoredBottle)
+		w.Header().Set("goa-view", res.View)
 		enc := encoder(ctx, w)
 		body := NewShowResponseBody(res)
 		w.WriteHeader(http.StatusOK)
@@ -293,24 +292,24 @@ func NewStorageMultiUpdateDecoder(mux goahttp.Muxer, storageMultiUpdateDecoderFn
 	}
 }
 
-// marshalWineryToWineryResponseBodyTiny builds a value of type
-// *WineryResponseBodyTiny from a value of type *storage.Winery.
-func marshalWineryToWineryResponseBodyTiny(v *storage.Winery) *WineryResponseBodyTiny {
-	res := &WineryResponseBodyTiny{
+// marshalWineryTinyToWineryTinyResponseBody builds a value of type
+// *WineryTinyResponseBody from a value of type *storage.WineryTiny.
+func marshalWineryTinyToWineryTinyResponseBody(v *storage.WineryTiny) *WineryTinyResponseBody {
+	res := &WineryTinyResponseBody{
 		Name: &v.Name,
 	}
 
 	return res
 }
 
-// marshalWineryViewToWineryResponseBody builds a value of type
-// *WineryResponseBody from a value of type *storageviews.WineryView.
-func marshalWineryViewToWineryResponseBody(v *storageviews.WineryView) *WineryResponseBody {
+// marshalWineryToVWineryResponseBody builds a value of type
+// *WineryResponseBody from a value of type *storageviews.Winery.
+func marshalWineryToVWineryResponseBody(v *storageviews.Winery) *WineryResponseBody {
 	res := &WineryResponseBody{
-		Name:    v.Name,
-		Region:  v.Region,
-		Country: v.Country,
-		URL:     v.URL,
+		Name:    v.Projected.Name,
+		Region:  v.Projected.Region,
+		Country: v.Projected.Country,
+		URL:     v.Projected.URL,
 	}
 	return res
 }

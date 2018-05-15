@@ -207,7 +207,7 @@ const MultipleMethodsResultMultipleViews = `
 // Service is the MultipleMethodsResultMultipleViews service interface.
 type Service interface {
 	// A implements A.
-	// The return value must have one of the following views
+	// The "view" return value must have one of the following views
 	// * "tiny"
 	// * "default"
 	A(context.Context, *APayload) (res *MultipleViews, view string, err error)
@@ -284,7 +284,7 @@ const ResultWithOtherResultMethod = `
 // Service is the ResultWithOtherResult service interface.
 type Service interface {
 	// A implements A.
-	// The return value must have one of the following views
+	// The "view" return value must have one of the following views
 	// * "tiny"
 	// * "default"
 	A(context.Context) (res *MultipleViews, view string, err error)

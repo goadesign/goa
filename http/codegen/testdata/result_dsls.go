@@ -653,6 +653,33 @@ var EmptyBodyResultMultipleViewsDSL = func() {
 	})
 }
 
+var ExplicitBodyPrimitiveResultMultipleViewsDSL = func() {
+	var ResultType = ResultType("ResultTypeMultipleViews", func() {
+		Attribute("a", String)
+		Attribute("b", String)
+		Attribute("c", String)
+		View("default", func() {
+			Attribute("a")
+			Attribute("b")
+		})
+		View("tiny", func() {
+			Attribute("c")
+		})
+	})
+	Service("ServiceExplicitBodyPrimitiveResultMultipleView", func() {
+		Method("MethodExplicitBodyPrimitiveResultMultipleView", func() {
+			Result(ResultType)
+			HTTP(func() {
+				POST("/")
+				Response(StatusOK, func() {
+					Header("c:Location")
+					Body("a")
+				})
+			})
+		})
+	})
+}
+
 var ResultBodyArrayStringDSL = func() {
 	Service("ServiceBodyArrayString", func() {
 		Method("MethodBodyArrayString", func() {

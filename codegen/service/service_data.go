@@ -379,7 +379,7 @@ func (d ServicesData) analyze(service *design.ServiceExpr) *Data {
 				ratt = ut.Attribute()
 			}
 			types = append(types, collectTypes(ratt, seen, scope)...)
-			if design.IsProjectable(m.Result.Type) {
+			if rt, ok := m.Result.Type.(*design.ResultTypeExpr); ok && rt.HasMultipleViews() {
 				projected := dupAttNoRequired(m.Result)
 				projTypes = append(projTypes, collectProjectedTypes(projected, m.Result, seenProj, scope, viewspkg)...)
 			}
@@ -397,8 +397,7 @@ func (d ServicesData) analyze(service *design.ServiceExpr) *Data {
 		methods = make([]*MethodData, len(service.Methods))
 		for i, e := range service.Methods {
 			m := buildMethodData(e, pkgName, scope)
-			if design.IsProjectable(e.Result.Type) {
-				rt := e.Result.Type.(*design.ResultTypeExpr)
+			if rt, ok := e.Result.Type.(*design.ResultTypeExpr); ok && rt.HasMultipleViews() {
 				m.ViewedResult = seenProj[rt.TypeName]
 			}
 			methods[i] = m
@@ -774,9 +773,7 @@ func collectProjectedTypes(projected, att *design.AttributeExpr, seen map[string
 func buildProjectedTypes(projected, att *design.AttributeExpr, seen map[string]*ProjectedTypeData, scope *codegen.NameScope, viewspkg string) (types []*ProjectedTypeData) {
 	dt := att.Type.(design.UserType)
 	pt := projected.Type.(design.UserType)
-	if !design.IsProjectable(pt) {
-		// pt is a user type or a result type with a single view.
-		// This type must still be generated in the viewspkg.
+	if rt, ok := pt.(*design.ResultTypeExpr); !ok || !rt.HasMultipleViews() {
 		varname := scope.GoTypeName(projected)
 		p := &ProjectedTypeData{
 			UserTypeData: &UserTypeData{
@@ -809,6 +806,7 @@ func buildProjectedTypes(projected, att *design.AttributeExpr, seen map[string]*
 		},
 	})
 	vr := buildViewedResultType(att, projected, scope, viewspkg)
+	projected.Type = vr.Type
 	types = append(types, vr)
 	seen[dt.Name()] = vr
 	return types
@@ -822,28 +820,29 @@ func buildViewedResultType(att, projected *design.AttributeExpr, scope *codegen.
 		views    []*ProjectData
 		validate bool
 	)
-	pt := projected.Type.(design.UserType)
-	resvar := scope.GoTypeName(att)
-	vratt := &design.AttributeExpr{
-		Type: &design.UserTypeExpr{
+	rt := att.Type.(*design.ResultTypeExpr)
+	vrt := &design.ResultTypeExpr{
+		UserTypeExpr: &design.UserTypeExpr{
 			AttributeExpr: &design.AttributeExpr{
 				Type: &design.Object{
-					&design.NamedAttributeExpr{Name: "projected", Attribute: &design.AttributeExpr{Type: pt, Description: "Type to project"}},
+					&design.NamedAttributeExpr{Name: "projected", Attribute: &design.AttributeExpr{Type: projected.Type, Description: "Type to project"}},
 					&design.NamedAttributeExpr{Name: "view", Attribute: &design.AttributeExpr{Type: design.String, Description: "View to render"}},
 				},
 				Validation: &design.ValidationExpr{Required: []string{"projected", "view"}},
 			},
-			TypeName: resvar,
+			TypeName: rt.TypeName,
 		},
+		Identifier: rt.Identifier,
+		Views:      rt.Views,
 	}
-	vrt := vratt.Type.(design.UserType)
-	resref := scope.GoTypeRef(vratt)
+	vratt := &design.AttributeExpr{Type: vrt}
+	resvar := scope.GoTypeName(vratt)
 	ut = &UserTypeData{
-		Name:        pt.Name(),
+		Name:        resvar,
 		Description: fmt.Sprintf("%s is the viewed result type that is projected based on a view.", resvar),
 		VarName:     resvar,
 		Def:         scope.GoTypeDef(vrt.Attribute(), true),
-		Ref:         resref,
+		Ref:         scope.GoTypeRef(vratt),
 		Type:        vrt,
 	}
 	views, validate = buildProjectData(att, projected, scope, viewspkg)
@@ -851,7 +850,6 @@ func buildViewedResultType(att, projected *design.AttributeExpr, scope *codegen.
 		UserTypeData:    ut,
 		Views:           views,
 		FullRef:         scope.GoFullTypeRef(vratt, viewspkg),
-		ProjectedType:   pt,
 		ConvertToResult: convertToResult(projected, att, viewspkg, scope),
 		ViewsPkg:        viewspkg,
 		MustValidate:    validate,
@@ -979,7 +977,7 @@ func buildConstructorCode(src, tgt *design.AttributeExpr, srcvar, tgtvar, srcpkg
 	if view != "" {
 		data["InitName"] = tgtpkg + "." + scope.GoTypeName(src)
 	}
-	attrs := make([]map[string]interface{}, 0, len(*trts))
+	fields := make([]map[string]interface{}, 0, len(*trts))
 	for _, n := range *trts {
 		init := "New" + scope.GoTypeName(n.Attribute)
 		if view != "" {
@@ -990,12 +988,12 @@ func buildConstructorCode(src, tgt *design.AttributeExpr, srcvar, tgtvar, srcpkg
 			}
 			init += codegen.Goify(v, true)
 		}
-		attrs = append(attrs, map[string]interface{}{
+		fields = append(fields, map[string]interface{}{
 			"VarName":   codegen.Goify(n.Name, true),
 			"FieldInit": init,
 		})
 	}
-	data["Fields"] = attrs
+	data["Fields"] = fields
 	var buf bytes.Buffer
 	if err = initResultTypeCodeTmpl.Execute(&buf, data); err != nil {
 		panic(err) // bug

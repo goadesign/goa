@@ -201,7 +201,7 @@ func {{ .Name }}({{- range .ClientArgs }}{{ .Name }} {{ .TypeRef }}, {{ end }}) 
 		{{ .ClientCode }}
 		{{- if .ReturnTypeAttribute }}
 		res := &{{ .ReturnTypeName }}{
-			{{ .ReturnTypeAttribute }}: v,
+			{{ .ReturnTypeAttribute }}: {{ if .ReturnIsPrimitivePointer }}&{{ end }}v,
 		}
 		{{- end }}
 		{{- if .ReturnIsStruct }}

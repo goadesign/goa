@@ -68,7 +68,7 @@ func DecodeListResponse(decoder func(*http.Response) goahttp.Decoder, restoreBod
 			if err != nil {
 				return nil, goahttp.ErrValidationError("storage", "list", err)
 			}
-			return NewListStoredBottleCollectionOK(body), nil
+			return NewListStoredBottleTinyCollectionOK(body), nil
 		default:
 			body, _ := ioutil.ReadAll(resp.Body)
 			return nil, goahttp.ErrInvalidResponse("storage", "list", resp.StatusCode, string(body))
@@ -148,9 +148,8 @@ func DecodeShowResponse(decoder func(*http.Response) goahttp.Decoder, restoreBod
 			if err != nil {
 				return nil, goahttp.ErrDecodingError("storage", "show", err)
 			}
-			p := NewShowStoredBottleOK(&body)
-			view := resp.Header.Get("goa-view")
-			vres := &storageviews.StoredBottle{p, view}
+			vres := NewShowStoredBottleOK(&body)
+			vres.View = resp.Header.Get("goa-view")
 			if err = vres.Validate(); err != nil {
 				return nil, goahttp.ErrValidationError("storage", "show", err)
 			}
@@ -516,25 +515,26 @@ func DecodeMultiUpdateResponse(decoder func(*http.Response) goahttp.Decoder, res
 	}
 }
 
-// unmarshalWineryResponseBodyTinyToWinery builds a value of type
-// *storage.Winery from a value of type *WineryResponseBodyTiny.
-func unmarshalWineryResponseBodyTinyToWinery(v *WineryResponseBodyTiny) *storage.Winery {
-	res := &storage.Winery{
+// unmarshalWineryTinyResponseBodyToWineryTiny builds a value of type
+// *storage.WineryTiny from a value of type *WineryTinyResponseBody.
+func unmarshalWineryTinyResponseBodyToWineryTiny(v *WineryTinyResponseBody) *storage.WineryTiny {
+	res := &storage.WineryTiny{
 		Name: *v.Name,
 	}
 
 	return res
 }
 
-// marshalWineryResponseBodyToWineryView builds a value of type
-// *storageviews.WineryView from a value of type *WineryResponseBody.
-func marshalWineryResponseBodyToWineryView(v *WineryResponseBody) *storageviews.WineryView {
-	res := &storageviews.WineryView{
+// unmarshalWineryResponseBodyToVWinery builds a value of type
+// *storageviews.Winery from a value of type *WineryResponseBody.
+func unmarshalWineryResponseBodyToVWinery(v *WineryResponseBody) *storageviews.Winery {
+	t := &storageviews.WineryView{
 		Name:    v.Name,
 		Region:  v.Region,
 		Country: v.Country,
 		URL:     v.URL,
 	}
+	res := &storageviews.Winery{t, "tiny"}
 	return res
 }
 

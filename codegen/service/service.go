@@ -143,7 +143,7 @@ type Service interface {
 {{- range .Methods }}
 	{{ comment .Description }}
 	{{- if .ViewedResult }}
-		{{ comment "The return value must have one of the following views" }}
+		{{ comment "The \"view\" return value must have one of the following views" }}
 		{{- range .ViewedResult.Views }}
 			{{- if .Description }}
 			{{ printf "* %q: %s" .Name .Description | comment }}

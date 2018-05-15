@@ -39,13 +39,13 @@ func NewClient(list, show, add, remove, rate, multiAdd, multiUpdate goa.Endpoint
 }
 
 // List calls the "list" endpoint of the "storage" service.
-func (c *Client) List(ctx context.Context) (res StoredBottleCollection, err error) {
+func (c *Client) List(ctx context.Context) (res StoredBottleTinyCollection, err error) {
 	var ires interface{}
 	ires, err = c.ListEndpoint(ctx, nil)
 	if err != nil {
 		return
 	}
-	return ires.(StoredBottleCollection), nil
+	return ires.(StoredBottleTinyCollection), nil
 }
 
 // Show calls the "show" endpoint of the "storage" service.

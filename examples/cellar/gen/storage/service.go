@@ -17,9 +17,9 @@ import (
 // The storage service makes it possible to view, add or remove wine bottles.
 type Service interface {
 	// List all stored bottles
-	List(context.Context) (res StoredBottleCollection, err error)
+	List(context.Context) (res StoredBottleTinyCollection, err error)
 	// Show bottle by ID
-	// The return value must have one of the following views
+	// The "view" return value must have one of the following views
 	// * "tiny"
 	// * "default"
 	Show(context.Context, *ShowPayload) (res *StoredBottle, view string, err error)
@@ -49,8 +49,9 @@ const ServiceName = "storage"
 // MethodKey key.
 var MethodNames = [7]string{"list", "show", "add", "remove", "rate", "multi_add", "multi_update"}
 
-// StoredBottleCollection is the result type of the storage service list method.
-type StoredBottleCollection []*StoredBottle
+// StoredBottleTinyCollection is the result type of the storage service list
+// method.
+type StoredBottleTinyCollection []*StoredBottleTiny
 
 // ShowPayload is the payload type of the storage service show method.
 type ShowPayload struct {
@@ -107,6 +108,22 @@ type MultiUpdatePayload struct {
 	Ids []string
 	// Array of bottle info that matches the ids attribute
 	Bottles []*Bottle
+}
+
+// A StoredBottle describes a bottle retrieved by the storage service. (tiny
+// view)
+type StoredBottleTiny struct {
+	// ID is the unique id of the bottle.
+	ID string
+	// Name of bottle
+	Name string
+	// Winery that produces wine
+	Winery *WineryTiny
+}
+
+type WineryTiny struct {
+	// Name of winery
+	Name string
 }
 
 type Winery struct {

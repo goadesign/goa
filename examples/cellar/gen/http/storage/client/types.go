@@ -42,7 +42,7 @@ type MultiUpdateRequestBody struct {
 
 // ListResponseBody is the type of the "storage" service "list" endpoint HTTP
 // response body.
-type ListResponseBody []*StoredBottleResponseBody
+type ListResponseBody []*StoredBottleTinyResponseBody
 
 // ShowResponseBody is the type of the "storage" service "show" endpoint HTTP
 // response body.
@@ -72,36 +72,20 @@ type ShowNotFoundResponseBody struct {
 	ID *string `form:"id,omitempty" json:"id,omitempty" xml:"id,omitempty"`
 }
 
-// StoredBottleResponseBody is used to define fields on response body types.
-type StoredBottleResponseBody struct {
+// StoredBottleTinyResponseBody is used to define fields on response body types.
+type StoredBottleTinyResponseBody struct {
 	// ID is the unique id of the bottle.
 	ID *string `form:"id,omitempty" json:"id,omitempty" xml:"id,omitempty"`
 	// Name of bottle
 	Name *string `form:"name,omitempty" json:"name,omitempty" xml:"name,omitempty"`
 	// Winery that produces wine
-	Winery *WineryResponseBodyTiny `form:"winery,omitempty" json:"winery,omitempty" xml:"winery,omitempty"`
-	// Vintage of bottle
-	Vintage *uint32 `form:"vintage,omitempty" json:"vintage,omitempty" xml:"vintage,omitempty"`
-	// Composition is the list of grape varietals and associated percentage.
-	Composition []*ComponentResponseBody `form:"composition,omitempty" json:"composition,omitempty" xml:"composition,omitempty"`
-	// Description of bottle
-	Description *string `form:"description,omitempty" json:"description,omitempty" xml:"description,omitempty"`
-	// Rating of bottle from 1 (worst) to 5 (best)
-	Rating *uint32 `form:"rating,omitempty" json:"rating,omitempty" xml:"rating,omitempty"`
+	Winery *WineryTinyResponseBody `form:"winery,omitempty" json:"winery,omitempty" xml:"winery,omitempty"`
 }
 
-// WineryResponseBodyTiny is used to define fields on response body types.
-type WineryResponseBodyTiny struct {
+// WineryTinyResponseBody is used to define fields on response body types.
+type WineryTinyResponseBody struct {
 	// Name of winery
 	Name *string `form:"name,omitempty" json:"name,omitempty" xml:"name,omitempty"`
-}
-
-// ComponentResponseBody is used to define fields on response body types.
-type ComponentResponseBody struct {
-	// Grape varietal
-	Varietal *string `form:"varietal,omitempty" json:"varietal,omitempty" xml:"varietal,omitempty"`
-	// Percentage of varietal in wine
-	Percentage *uint32 `form:"percentage,omitempty" json:"percentage,omitempty" xml:"percentage,omitempty"`
 }
 
 // WineryResponseBody is used to define fields on response body types.
@@ -114,6 +98,14 @@ type WineryResponseBody struct {
 	Country *string `form:"country,omitempty" json:"country,omitempty" xml:"country,omitempty"`
 	// Winery website URL
 	URL *string `form:"url,omitempty" json:"url,omitempty" xml:"url,omitempty"`
+}
+
+// ComponentResponseBody is used to define fields on response body types.
+type ComponentResponseBody struct {
+	// Grape varietal
+	Varietal *string `form:"varietal,omitempty" json:"varietal,omitempty" xml:"varietal,omitempty"`
+	// Percentage of varietal in wine
+	Percentage *uint32 `form:"percentage,omitempty" json:"percentage,omitempty" xml:"percentage,omitempty"`
 }
 
 // WineryRequestBody is used to define fields on request body types.
@@ -233,36 +225,24 @@ func NewMultiUpdateRequestBody(p *storage.MultiUpdatePayload) *MultiUpdateReques
 	return body
 }
 
-// NewListStoredBottleCollectionOK builds a "storage" service "list" endpoint
-// result from a HTTP "OK" response.
-func NewListStoredBottleCollectionOK(body ListResponseBody) storage.StoredBottleCollection {
-	v := make([]*storage.StoredBottle, len(body))
+// NewListStoredBottleTinyCollectionOK builds a "storage" service "list"
+// endpoint result from a HTTP "OK" response.
+func NewListStoredBottleTinyCollectionOK(body ListResponseBody) storage.StoredBottleTinyCollection {
+	v := make([]*storage.StoredBottleTiny, len(body))
 	for i, val := range body {
-		v[i] = &storage.StoredBottle{
-			ID:          *val.ID,
-			Name:        *val.Name,
-			Vintage:     *val.Vintage,
-			Description: val.Description,
-			Rating:      val.Rating,
+		v[i] = &storage.StoredBottleTiny{
+			ID:   *val.ID,
+			Name: *val.Name,
 		}
-		v[i].Winery = unmarshalWineryResponseBodyTinyToWinery(val.Winery)
-		if val.Composition != nil {
-			v[i].Composition = make([]*storage.Component, len(val.Composition))
-			for j, val := range val.Composition {
-				v[i].Composition[j] = &storage.Component{
-					Varietal:   *val.Varietal,
-					Percentage: val.Percentage,
-				}
-			}
-		}
+		v[i].Winery = unmarshalWineryTinyResponseBodyToWineryTiny(val.Winery)
 	}
 	return v
 }
 
 // NewShowStoredBottleOK builds a "storage" service "show" endpoint result from
 // a HTTP "OK" response.
-func NewShowStoredBottleOK(body *ShowResponseBody) *storageviews.StoredBottleView {
-	v := &storageviews.StoredBottleView{
+func NewShowStoredBottleOK(body *ShowResponseBody) *storageviews.StoredBottle {
+	t := &storageviews.StoredBottleView{
 		ID:          body.ID,
 		Name:        body.Name,
 		Vintage:     body.Vintage,
@@ -270,18 +250,18 @@ func NewShowStoredBottleOK(body *ShowResponseBody) *storageviews.StoredBottleVie
 		Rating:      body.Rating,
 	}
 	if body.Composition != nil {
-		v.Composition = make([]*storageviews.Component, len(body.Composition))
+		t.Composition = make([]*storageviews.Component, len(body.Composition))
 		for j, val := range body.Composition {
-			v.Composition[j] = &storageviews.Component{
+			t.Composition[j] = &storageviews.Component{
 				Varietal:   val.Varietal,
 				Percentage: val.Percentage,
 			}
 		}
 	}
 	if body.Winery != nil {
-		t := marshalWineryResponseBodyToWineryView(body.Winery)
-		v.Winery = &storageviews.Winery{t, "tiny"}
+		t.Winery = unmarshalWineryResponseBodyToVWinery(body.Winery)
 	}
+	v := &storageviews.StoredBottle{t, "default"}
 	return v
 }
 
@@ -306,8 +286,8 @@ func (body ListResponseBody) Validate() (err error) {
 	return
 }
 
-// Validate runs the validations defined on StoredBottleResponseBody
-func (body *StoredBottleResponseBody) Validate() (err error) {
+// Validate runs the validations defined on StoredBottleTinyResponseBody
+func (body *StoredBottleTinyResponseBody) Validate() (err error) {
 	if body.ID == nil {
 		err = goa.MergeErrors(err, goa.MissingFieldError("id", "body"))
 	}
@@ -316,9 +296,6 @@ func (body *StoredBottleResponseBody) Validate() (err error) {
 	}
 	if body.Winery == nil {
 		err = goa.MergeErrors(err, goa.MissingFieldError("winery", "body"))
-	}
-	if body.Vintage == nil {
-		err = goa.MergeErrors(err, goa.MissingFieldError("vintage", "body"))
 	}
 	if body.Name != nil {
 		if utf8.RuneCountInString(*body.Name) > 100 {
@@ -330,71 +307,13 @@ func (body *StoredBottleResponseBody) Validate() (err error) {
 			err = goa.MergeErrors(err, err2)
 		}
 	}
-	if body.Vintage != nil {
-		if *body.Vintage < 1900 {
-			err = goa.MergeErrors(err, goa.InvalidRangeError("body.vintage", *body.Vintage, 1900, true))
-		}
-	}
-	if body.Vintage != nil {
-		if *body.Vintage > 2020 {
-			err = goa.MergeErrors(err, goa.InvalidRangeError("body.vintage", *body.Vintage, 2020, false))
-		}
-	}
-	for _, e := range body.Composition {
-		if e != nil {
-			if err2 := e.Validate(); err2 != nil {
-				err = goa.MergeErrors(err, err2)
-			}
-		}
-	}
-	if body.Description != nil {
-		if utf8.RuneCountInString(*body.Description) > 2000 {
-			err = goa.MergeErrors(err, goa.InvalidLengthError("body.description", *body.Description, utf8.RuneCountInString(*body.Description), 2000, false))
-		}
-	}
-	if body.Rating != nil {
-		if *body.Rating < 1 {
-			err = goa.MergeErrors(err, goa.InvalidRangeError("body.rating", *body.Rating, 1, true))
-		}
-	}
-	if body.Rating != nil {
-		if *body.Rating > 5 {
-			err = goa.MergeErrors(err, goa.InvalidRangeError("body.rating", *body.Rating, 5, false))
-		}
-	}
 	return
 }
 
-// Validate runs the validations defined on WineryResponseBodyTiny
-func (body *WineryResponseBodyTiny) Validate() (err error) {
+// Validate runs the validations defined on WineryTinyResponseBody
+func (body *WineryTinyResponseBody) Validate() (err error) {
 	if body.Name == nil {
 		err = goa.MergeErrors(err, goa.MissingFieldError("name", "body"))
-	}
-	return
-}
-
-// Validate runs the validations defined on ComponentResponseBody
-func (body *ComponentResponseBody) Validate() (err error) {
-	if body.Varietal == nil {
-		err = goa.MergeErrors(err, goa.MissingFieldError("varietal", "body"))
-	}
-	if body.Varietal != nil {
-		err = goa.MergeErrors(err, goa.ValidatePattern("body.varietal", *body.Varietal, "[A-Za-z' ]+"))
-	}
-	if body.Varietal != nil {
-		if utf8.RuneCountInString(*body.Varietal) > 100 {
-			err = goa.MergeErrors(err, goa.InvalidLengthError("body.varietal", *body.Varietal, utf8.RuneCountInString(*body.Varietal), 100, false))
-		}
-	}
-	if body.Percentage != nil {
-		if *body.Percentage < 1 {
-			err = goa.MergeErrors(err, goa.InvalidRangeError("body.percentage", *body.Percentage, 1, true))
-		}
-	}
-	if body.Percentage != nil {
-		if *body.Percentage > 100 {
-			err = goa.MergeErrors(err, goa.InvalidRangeError("body.percentage", *body.Percentage, 100, false))
-		}
 	}
 	return
 }
