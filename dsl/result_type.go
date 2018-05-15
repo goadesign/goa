@@ -41,7 +41,7 @@ var resultTypeCount int
 //        ContentType("application/json") // Override Content-Type header
 //
 //        Attributes(func() {
-//            Attribute("id", Integer, "ID of bottle")
+//            Attribute("id", Int, "ID of bottle")
 //            Attribute("href", String, "API href of bottle")
 //            Attribute("account", Account, "Owner account")
 //            Attribute("origin", Origin, "Details on wine origin")
