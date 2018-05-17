@@ -53,21 +53,7 @@ func ViewsFile(genpkg string, service *design.ServiceExpr) *codegen.File {
 // input: ProjectedTypeData
 const validateT = `{{ printf "Validate runs the validations defined on %s." .VarName | comment }}
 func (result {{ .Ref }}) Validate() (err error) {
-{{- if .Views }}
-	projected := result.Projected
-	switch result.View {
-	{{- range .Views }}
-	{{- if ne .Name "default" }}
-	case {{ printf "%q" .Name }}:
-	{{- else }}
-	default:
-	{{- end }}
 	{{ .Validate }}
-	{{- end }}
-	}
-{{- else }}
-	{{ .Validate }}
-{{- end }}
   return
 }
 `

@@ -295,7 +295,7 @@ func New{{ .VarName }}Endpoint(s {{ .ServiceVarName}}{{ range .Schemes }}, auth{
 		var vres {{ .ViewedResult.FullRef }}
 		switch view {
 			{{- range .ViewedResult.Views }}
-		case {{ printf "%q" .Name }}:
+		case {{ printf "%q" .Name }}{{ if eq .Name "default" }}, ""{{ end }}:
 			vres = {{ .Project.Name }}(res)
 			{{- end }}
 		default:

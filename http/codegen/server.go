@@ -902,7 +902,7 @@ func {{ .ResponseEncoder }}(encoder func(context.Context, http.ResponseWriter) g
 		{{- end }}
 		{{- range .Result.Responses }}
 			{{- if and .ServerBody $.Method.ViewedResult }}
-		w.Header().Set("goa-view", res.View)
+		w.Header().Set("goa-view", res{{ if $.Method.ViewedResult.IsCollection }}[0]{{ end }}.View)
 			{{- end }}
 			{{- if .TagName }}
 			{{- if .TagRequired }}

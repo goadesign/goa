@@ -259,7 +259,7 @@ func NewShowStoredBottleOK(body *ShowResponseBody) *storageviews.StoredBottle {
 		}
 	}
 	if body.Winery != nil {
-		t.Winery = unmarshalWineryResponseBodyToVWinery(body.Winery)
+		t.Winery = unmarshalWineryResponseBodyToViewedWinery(body.Winery)
 	}
 	v := &storageviews.StoredBottle{t, "default"}
 	return v
@@ -282,6 +282,17 @@ func (body ListResponseBody) Validate() (err error) {
 				err = goa.MergeErrors(err, err2)
 			}
 		}
+	}
+	return
+}
+
+// Validate runs the validations defined on ShowNotFoundResponseBody
+func (body *ShowNotFoundResponseBody) Validate() (err error) {
+	if body.Message == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("message", "body"))
+	}
+	if body.ID == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("id", "body"))
 	}
 	return
 }

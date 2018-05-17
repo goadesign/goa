@@ -180,7 +180,7 @@ func NewShowResponseBody(res *storageviews.StoredBottle) *ShowResponseBody {
 		}
 	}
 	if res.Projected.Winery != nil {
-		body.Winery = marshalWineryToVWineryResponseBody(res.Projected.Winery)
+		body.Winery = marshalViewedWineryToWineryResponseBody(res.Projected.Winery)
 	}
 	return body
 }

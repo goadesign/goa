@@ -302,9 +302,9 @@ func marshalWineryTinyToWineryTinyResponseBody(v *storage.WineryTiny) *WineryTin
 	return res
 }
 
-// marshalWineryToVWineryResponseBody builds a value of type
+// marshalViewedWineryToWineryResponseBody builds a value of type
 // *WineryResponseBody from a value of type *storageviews.Winery.
-func marshalWineryToVWineryResponseBody(v *storageviews.Winery) *WineryResponseBody {
+func marshalViewedWineryToWineryResponseBody(v *storageviews.Winery) *WineryResponseBody {
 	res := &WineryResponseBody{
 		Name:    v.Projected.Name,
 		Region:  v.Projected.Region,

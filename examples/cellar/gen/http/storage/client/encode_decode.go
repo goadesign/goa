@@ -163,6 +163,10 @@ func DecodeShowResponse(decoder func(*http.Response) goahttp.Decoder, restoreBod
 			if err != nil {
 				return nil, goahttp.ErrDecodingError("storage", "show", err)
 			}
+			err = body.Validate()
+			if err != nil {
+				return nil, goahttp.ErrValidationError("storage", "show", err)
+			}
 			return nil, NewShowNotFound(&body)
 		default:
 			body, _ := ioutil.ReadAll(resp.Body)
@@ -525,9 +529,9 @@ func unmarshalWineryTinyResponseBodyToWineryTiny(v *WineryTinyResponseBody) *sto
 	return res
 }
 
-// unmarshalWineryResponseBodyToVWinery builds a value of type
+// unmarshalWineryResponseBodyToViewedWinery builds a value of type
 // *storageviews.Winery from a value of type *WineryResponseBody.
-func unmarshalWineryResponseBodyToVWinery(v *WineryResponseBody) *storageviews.Winery {
+func unmarshalWineryResponseBodyToViewedWinery(v *WineryResponseBody) *storageviews.Winery {
 	t := &storageviews.WineryView{
 		Name:    v.Name,
 		Region:  v.Region,

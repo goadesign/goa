@@ -667,7 +667,7 @@ definitions:
         maximum: 2020
       winery:
         schema: ""
-        $ref: '#/definitions/WineryTinyResponseBody'
+        $ref: '#/definitions/WineryResponseBodyTiny'
     description: A StoredBottle describes a bottle retrieved by the storage service.
       (default view)
     example:
@@ -717,7 +717,10 @@ definitions:
       rating: 1
       vintage: 1926
       winery:
+        country: USA
         name: Longoria
+        region: Central Coast, California
+        url: http://www.longoriawine.com/
     - composition:
       - percentage: 65
         varietal: Syrah
@@ -734,7 +737,10 @@ definitions:
       rating: 1
       vintage: 1926
       winery:
+        country: USA
         name: Longoria
+        region: Central Coast, California
+        url: http://www.longoriawine.com/
   StoredBottleTinyResponseBody:
     schema: ""
     title: 'Mediatype identifier: '
