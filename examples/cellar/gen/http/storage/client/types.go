@@ -239,32 +239,6 @@ func NewListStoredBottleTinyCollectionOK(body ListResponseBody) storage.StoredBo
 	return v
 }
 
-// NewShowStoredBottleOK builds a "storage" service "show" endpoint result from
-// a HTTP "OK" response.
-func NewShowStoredBottleOK(body *ShowResponseBody) *storageviews.StoredBottle {
-	t := &storageviews.StoredBottleView{
-		ID:          body.ID,
-		Name:        body.Name,
-		Vintage:     body.Vintage,
-		Description: body.Description,
-		Rating:      body.Rating,
-	}
-	if body.Composition != nil {
-		t.Composition = make([]*storageviews.Component, len(body.Composition))
-		for j, val := range body.Composition {
-			t.Composition[j] = &storageviews.Component{
-				Varietal:   val.Varietal,
-				Percentage: val.Percentage,
-			}
-		}
-	}
-	if body.Winery != nil {
-		t.Winery = unmarshalWineryResponseBodyToViewedWinery(body.Winery)
-	}
-	v := &storageviews.StoredBottle{t, "default"}
-	return v
-}
-
 // NewShowNotFound builds a storage service show endpoint not_found error.
 func NewShowNotFound(body *ShowNotFoundResponseBody) *storage.NotFound {
 	v := &storage.NotFound{
@@ -272,6 +246,65 @@ func NewShowNotFound(body *ShowNotFoundResponseBody) *storage.NotFound {
 		ID:      *body.ID,
 	}
 	return v
+}
+
+// NewShowResponseBodyToStoredBottleDefault projects response body
+// ShowResponseBody into viewed result type StoredBottle using the default view.
+func NewShowResponseBodyToStoredBottleDefault(res *ShowResponseBody) *storageviews.StoredBottle {
+	vres := &storageviews.StoredBottleView{
+		ID:          res.ID,
+		Name:        res.Name,
+		Vintage:     res.Vintage,
+		Description: res.Description,
+		Rating:      res.Rating,
+	}
+	if res.Composition != nil {
+		vres.Composition = make([]*storageviews.Component, len(res.Composition))
+		for j, val := range res.Composition {
+			vres.Composition[j] = &storageviews.Component{
+				Varietal:   val.Varietal,
+				Percentage: val.Percentage,
+			}
+		}
+	}
+	if res.Winery != nil {
+		vres.Winery = NewWineryResponseBodyToWineryTiny(res.Winery)
+	}
+	return &storageviews.StoredBottle{vres, "default"}
+}
+
+// NewShowResponseBodyToStoredBottleTiny projects response body
+// ShowResponseBody into viewed result type StoredBottle using the tiny view.
+func NewShowResponseBodyToStoredBottleTiny(res *ShowResponseBody) *storageviews.StoredBottle {
+	vres := &storageviews.StoredBottleView{
+		ID:   res.ID,
+		Name: res.Name,
+	}
+	if res.Winery != nil {
+		vres.Winery = NewWineryResponseBodyToWineryTiny(res.Winery)
+	}
+	return &storageviews.StoredBottle{vres, "tiny"}
+}
+
+// NewWineryResponseBodyToWineryDefault projects response body
+// WineryResponseBody into viewed result type Winery using the default view.
+func NewWineryResponseBodyToWineryDefault(res *WineryResponseBody) *storageviews.Winery {
+	vres := &storageviews.WineryView{
+		Name:    res.Name,
+		Region:  res.Region,
+		Country: res.Country,
+		URL:     res.URL,
+	}
+	return &storageviews.Winery{vres, "default"}
+}
+
+// NewWineryResponseBodyToWineryTiny projects response body WineryResponseBody
+// into viewed result type Winery using the tiny view.
+func NewWineryResponseBodyToWineryTiny(res *WineryResponseBody) *storageviews.Winery {
+	vres := &storageviews.WineryView{
+		Name: res.Name,
+	}
+	return &storageviews.Winery{vres, "tiny"}
 }
 
 // Validate runs the validations defined on ListResponseBody

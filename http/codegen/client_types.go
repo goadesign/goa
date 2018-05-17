@@ -174,6 +174,25 @@ func clientType(genpkg string, svc *httpdesign.ServiceExpr, seen map[string]stru
 		}
 	}
 
+	// response body to viewed result type
+	var projh []*codegen.TransformFunctionData
+	for _, p := range rdata.ClientProjections {
+		projh = codegen.AppendHelpers(projh, p.Project.Helpers)
+		sections = append(sections, &codegen.SectionTemplate{
+			Name:   "viewed-result-init",
+			Source: viewedResultTypeInitT,
+			Data:   p.Project,
+		})
+	}
+
+	for _, h := range projh {
+		sections = append(sections, &codegen.SectionTemplate{
+			Name:   "transform-helpers",
+			Source: transformHelperT,
+			Data:   h,
+		})
+	}
+
 	// body attribute types
 	// validate methods
 	for _, data := range validatedTypes {
@@ -223,5 +242,22 @@ func {{ .Name }}({{- range .ClientArgs }}{{ .Name }} {{ .TypeRef }}, {{ end }}) 
 			}
 		{{- end }}
 	{{ end -}}
+}
+`
+
+// input: service.InitData
+const viewedResultTypeInitT = `{{ comment .Description }}
+func {{ .Name }}({{ range .Args }}{{ .Name }} {{ .Ref }}, {{ end }}) {{ .ReturnRef }} {
+{{- if .ReturnIsStruct }}
+  return &{{ .ReturnTypeName }}{
+  {{- range .Args }}
+    {{- if .FieldName }}
+    {{ .FieldName }}: {{ .Name }},
+    {{- end }}
+  {{- end }}
+  }
+{{- else }}
+  {{ .Code }}
+{{- end }}
 }
 `

@@ -15,7 +15,6 @@ import (
 
 	goa "goa.design/goa"
 	sommelier "goa.design/goa/examples/cellar/gen/sommelier"
-	sommelierviews "goa.design/goa/examples/cellar/gen/sommelier/views"
 	goahttp "goa.design/goa/http"
 )
 
@@ -23,8 +22,7 @@ import (
 // sommelier pick endpoint.
 func EncodePickResponse(encoder func(context.Context, http.ResponseWriter) goahttp.Encoder) func(context.Context, http.ResponseWriter, interface{}) error {
 	return func(ctx context.Context, w http.ResponseWriter, v interface{}) error {
-		res := v.(sommelierviews.StoredBottleCollection)
-		w.Header().Set("goa-view", res[0].View)
+		res := v.(sommelier.StoredBottleCollection)
 		enc := encoder(ctx, w)
 		body := NewPickResponseBody(res)
 		w.WriteHeader(http.StatusOK)
@@ -83,14 +81,12 @@ func EncodePickError(encoder func(context.Context, http.ResponseWriter) goahttp.
 	}
 }
 
-// marshalViewedWineryToWineryResponseBody builds a value of type
-// *WineryResponseBody from a value of type *sommelierviews.Winery.
-func marshalViewedWineryToWineryResponseBody(v *sommelierviews.Winery) *WineryResponseBody {
-	res := &WineryResponseBody{
-		Name:    v.Projected.Name,
-		Region:  v.Projected.Region,
-		Country: v.Projected.Country,
-		URL:     v.Projected.URL,
+// marshalWineryTinyToWineryTinyResponseBody builds a value of type
+// *WineryTinyResponseBody from a value of type *sommelier.WineryTiny.
+func marshalWineryTinyToWineryTinyResponseBody(v *sommelier.WineryTiny) *WineryTinyResponseBody {
+	res := &WineryTinyResponseBody{
+		Name: &v.Name,
 	}
+
 	return res
 }

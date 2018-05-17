@@ -16,7 +16,6 @@ import (
 	"net/url"
 
 	sommelier "goa.design/goa/examples/cellar/gen/sommelier"
-	sommelierviews "goa.design/goa/examples/cellar/gen/sommelier/views"
 	goahttp "goa.design/goa/http"
 )
 
@@ -82,12 +81,11 @@ func DecodePickResponse(decoder func(*http.Response) goahttp.Decoder, restoreBod
 			if err != nil {
 				return nil, goahttp.ErrDecodingError("sommelier", "pick", err)
 			}
-			vres := NewPickStoredBottleCollectionOK(body)
-			vres.View = resp.Header.Get("goa-view")
-			if err = vres.Validate(); err != nil {
+			err = body.Validate()
+			if err != nil {
 				return nil, goahttp.ErrValidationError("sommelier", "pick", err)
 			}
-			return sommelier.NewStoredBottleCollection(vres), nil
+			return NewPickStoredBottleCollectionOK(body), nil
 		case http.StatusBadRequest:
 			var (
 				body PickNoCriteriaResponseBody
@@ -115,15 +113,12 @@ func DecodePickResponse(decoder func(*http.Response) goahttp.Decoder, restoreBod
 	}
 }
 
-// unmarshalWineryResponseBodyToViewedWinery builds a value of type
-// *sommelierviews.Winery from a value of type *WineryResponseBody.
-func unmarshalWineryResponseBodyToViewedWinery(v *WineryResponseBody) *sommelierviews.Winery {
-	t := &sommelierviews.WineryView{
-		Name:    v.Name,
-		Region:  v.Region,
-		Country: v.Country,
-		URL:     v.URL,
+// unmarshalWineryTinyResponseBodyToWineryTiny builds a value of type
+// *sommelier.WineryTiny from a value of type *WineryTinyResponseBody.
+func unmarshalWineryTinyResponseBodyToWineryTiny(v *WineryTinyResponseBody) *sommelier.WineryTiny {
+	res := &sommelier.WineryTiny{
+		Name: *v.Name,
 	}
-	res := &sommelierviews.Winery{t, "tiny"}
+
 	return res
 }

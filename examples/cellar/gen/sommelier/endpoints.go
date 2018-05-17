@@ -10,10 +10,8 @@ package sommelier
 
 import (
 	"context"
-	"fmt"
 
 	goa "goa.design/goa"
-	sommelierviews "goa.design/goa/examples/cellar/gen/sommelier/views"
 )
 
 // Endpoints wraps the "sommelier" service endpoints.
@@ -38,19 +36,6 @@ func (e *Endpoints) Use(m func(goa.Endpoint) goa.Endpoint) {
 func NewPickEndpoint(s Service) goa.Endpoint {
 	return func(ctx context.Context, req interface{}) (interface{}, error) {
 		p := req.(*Criteria)
-		res, view, err := s.Pick(ctx, p)
-		if err != nil {
-			return nil, err
-		}
-		var vres sommelierviews.StoredBottleCollection
-		switch view {
-		case "tiny":
-			vres = NewStoredBottleCollectionTiny(res)
-		case "default", "":
-			vres = NewStoredBottleCollectionDefault(res)
-		default:
-			return nil, fmt.Errorf("unknown view %q", view)
-		}
-		return vres, nil
+		return s.Pick(ctx, p)
 	}
 }
