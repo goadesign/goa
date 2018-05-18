@@ -126,33 +126,57 @@ func (r *HTTPResponseExpr) EvalName() string {
 // and the result type definition if any is valid.
 func (r *HTTPResponseExpr) Validate(e *EndpointExpr) *eval.ValidationErrors {
 	verr := new(eval.ValidationErrors)
-	if r.headers != nil {
-		verr.Merge(r.headers.Validate("HTTP response headers", r))
-		obj := design.AsObject(e.MethodExpr.Result.Type)
-		matt := design.NewMappedAttributeExpr(r.headers)
-		mobj := design.AsObject(matt.Type)
-		if obj == nil {
-			if r.headers.Type == design.Empty {
-				// Could be a primitive which is fine
-				verr.Add(r, "response defines headers but result is empty")
+	if e.MethodExpr.Result != nil {
+		rt, isrt := e.MethodExpr.Result.Type.(*design.ResultTypeExpr)
+		var inview string
+		if isrt {
+			inview = " all views in"
+		}
+		hasAttribute := func(name string) bool {
+			if !design.IsObject(e.MethodExpr.Result.Type) {
+				return false
 			}
-		} else {
-			for _, h := range *mobj {
-				found := false
-				for _, at := range *obj {
-					if h.Name == at.Name {
-						found = true
-						break
-					}
+			if !isrt {
+				return e.MethodExpr.Result.Find(name) != nil
+			}
+			if v, ok := e.MethodExpr.Result.Metadata["view"]; ok {
+				return rt.ViewHasAttribute(v[0], name)
+			}
+			for _, v := range rt.Views {
+				if !rt.ViewHasAttribute(v.Name, name) {
+					return false
 				}
-				if !found {
-					verr.Add(r, "header %q has no equivalent attribute in result type, use notation 'header name:attribute name' to identify corresponding result type attribute.", h.Name)
+			}
+			return true
+		}
+		if r.headers != nil {
+			verr.Merge(r.headers.Validate("HTTP response headers", r))
+			matt := design.NewMappedAttributeExpr(r.headers)
+			mobj := design.AsObject(matt.Type)
+			if e.MethodExpr.Result.Type == design.Empty {
+				verr.Add(r, "response defines headers but result is empty")
+			} else {
+				for _, h := range *mobj {
+					if !hasAttribute(h.Name) {
+						verr.Add(r, "header %q has no equivalent attribute in%s result type, use notation 'attribute_name:header_name' to identify corresponding result type attribute.", h.Name, inview)
+					}
 				}
 			}
 		}
-	}
-	if r.Body != nil {
-		verr.Merge(r.Body.Validate("HTTP response body", r))
+		if r.Body != nil {
+			verr.Merge(r.Body.Validate("HTTP response body", r))
+			if att, ok := r.Body.Metadata["origin:attribute"]; ok {
+				if !hasAttribute(att[0]) {
+					verr.Add(r, "body %q has no equivalent attribute in%s result type", att[0], inview)
+				}
+			} else if bobj := design.AsObject(r.Body.Type); bobj != nil {
+				for _, n := range *bobj {
+					if !hasAttribute(n.Name) {
+						verr.Add(r, "body %q has no equivalent attribute in%s result type", n.Name, inview)
+					}
+				}
+			}
+		}
 	}
 	if r.StatusCode == 0 {
 		verr.Add(r, "HTTP response status not defined")

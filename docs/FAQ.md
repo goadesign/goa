@@ -33,7 +33,7 @@ primitives use pointers (\*) or direct values (-).
 
 | Properties / Data Structure | Payload / Result | Req. Body (s) | Resp. Body (s) | Req. Body (c) | Resp. Body (c) |
 ------------------------------|------------------|---------------|----------------|---------------|----------------|
-| Required OR Default         | -                | *             | -              | -             | *              |
+| Required OR Default         | -                | *             | *              | -             | *              |
 | Not Required, No Default    | *                | *             | *              | *             | *              |
 
 # How are default values used?
@@ -53,3 +53,30 @@ or client side to unmarshal a response) the default value is used to set the
 value of missing fields. Note that if the attribute is required then the
 generated code returns an error if the corresponding field is missing. So this
 only applies for non required attributes with default values.
+
+# How are views for a result type computed?
+
+Views can be defined on a result type. If a method returns a result type with
+multiple views then
+* the service method returns an extra view along with the result and error
+* a views package is generated at the service level which defines a viewed
+  result type for each result with multiple views. This viewed result type
+  has identical field names and types but uses pointers for all fields so that
+  view specific validation logic may be generated. Constructors are generated
+  in the service package to convert a result type to a viewed result type and
+  vice versa.
+* the generated endpoint function uses the view returned by the service method
+  to create a viewed result type.
+
+The server side response marshaling code marshals the viewed result type
+returned by the endpoint into a server type omitting any nil attributes.
+The view used to render the result type is passed to the client in "Goa-View"
+header.
+
+The client side response unmarshaling code unmarshals the response into the
+client type which is then transformed to the viewed result type and sets the
+view attribute of the viewed result type from the Goa-View header. It validates
+the attributes in the viewed result type as defined by the view and converts
+the viewed result type into the service result type using the appropriate
+constructor.
+

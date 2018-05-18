@@ -185,6 +185,21 @@ func (m *ResultTypeExpr) ComputeViews() []*ViewExpr {
 	return nil
 }
 
+// HasMultipleViews returns true if the result type has more than one view.
+func (m *ResultTypeExpr) HasMultipleViews() bool {
+	return len(m.Views) > 1
+}
+
+// ViewHasAttribute returns true if the result type view has the given
+// attribute.
+func (m *ResultTypeExpr) ViewHasAttribute(view, attr string) bool {
+	v := m.View(view)
+	if v == nil {
+		return false
+	}
+	return v.AttributeExpr.Find(attr) != nil
+}
+
 // Finalize builds the default view if not explicitly defined and finalizes
 // the underlying UserTypeExpr.
 func (m *ResultTypeExpr) Finalize() {
@@ -334,8 +349,8 @@ func projectCollection(m *ResultTypeExpr, view string, seen ...map[string]*Attri
 }
 
 func projectRecursive(at *AttributeExpr, vat *NamedAttributeExpr, view string, seen ...map[string]*AttributeExpr) (*AttributeExpr, error) {
-	rt, isResultType := at.Type.(*ResultTypeExpr)
-	if IsObject(at.Type) || isResultType {
+	at = DupAtt(at)
+	if ut, ok := at.Type.(UserType); ok {
 		var s map[string]*AttributeExpr
 		if len(seen) > 0 {
 			s = seen[0]
@@ -343,16 +358,11 @@ func projectRecursive(at *AttributeExpr, vat *NamedAttributeExpr, view string, s
 			s = make(map[string]*AttributeExpr)
 			seen = append(seen, s)
 		}
-		key := at.Type.Name()
-		if isResultType {
-			key = rt.Identifier
-		}
-		if att, ok := s[key]; ok {
+		if att, ok := s[ut.Name()]; ok {
 			return att, nil
 		}
-		s[key] = at
+		s[ut.Name()] = at
 	}
-	at = DupAtt(at)
 	if rt, ok := at.Type.(*ResultTypeExpr); ok {
 		vatt := vat.Attribute
 		var view string

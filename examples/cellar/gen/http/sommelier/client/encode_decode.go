@@ -85,7 +85,6 @@ func DecodePickResponse(decoder func(*http.Response) goahttp.Decoder, restoreBod
 			if err != nil {
 				return nil, goahttp.ErrValidationError("sommelier", "pick", err)
 			}
-
 			return NewPickStoredBottleCollectionOK(body), nil
 		case http.StatusBadRequest:
 			var (
@@ -96,7 +95,6 @@ func DecodePickResponse(decoder func(*http.Response) goahttp.Decoder, restoreBod
 			if err != nil {
 				return nil, goahttp.ErrDecodingError("sommelier", "pick", err)
 			}
-
 			return nil, NewPickNoCriteria(body)
 		case http.StatusNotFound:
 			var (
@@ -107,7 +105,6 @@ func DecodePickResponse(decoder func(*http.Response) goahttp.Decoder, restoreBod
 			if err != nil {
 				return nil, goahttp.ErrDecodingError("sommelier", "pick", err)
 			}
-
 			return nil, NewPickNoMatch(body)
 		default:
 			body, _ := ioutil.ReadAll(resp.Body)
@@ -116,14 +113,11 @@ func DecodePickResponse(decoder func(*http.Response) goahttp.Decoder, restoreBod
 	}
 }
 
-// unmarshalWineryResponseBodyToWinery builds a value of type *sommelier.Winery
-// from a value of type *WineryResponseBody.
-func unmarshalWineryResponseBodyToWinery(v *WineryResponseBody) *sommelier.Winery {
-	res := &sommelier.Winery{
-		Name:    *v.Name,
-		Region:  *v.Region,
-		Country: *v.Country,
-		URL:     v.URL,
+// unmarshalWineryTinyResponseBodyToWineryTiny builds a value of type
+// *sommelier.WineryTiny from a value of type *WineryTinyResponseBody.
+func unmarshalWineryTinyResponseBodyToWineryTiny(v *WineryTinyResponseBody) *sommelier.WineryTiny {
+	res := &sommelier.WineryTiny{
+		Name: *v.Name,
 	}
 
 	return res

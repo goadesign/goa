@@ -53,6 +53,7 @@ func clientType(genpkg string, svc *httpdesign.ServiceExpr, seen map[string]stru
 		[]*codegen.ImportSpec{
 			{Path: "unicode/utf8"},
 			{Path: genpkg + "/" + codegen.SnakeCase(svc.Name()), Name: sd.Service.PkgName},
+			{Path: genpkg + "/" + codegen.SnakeCase(svc.Name()) + "/" + "views", Name: sd.Service.ViewsPkg},
 			{Path: "goa.design/goa", Name: "goa"},
 		},
 	)
@@ -124,7 +125,6 @@ func clientType(genpkg string, svc *httpdesign.ServiceExpr, seen map[string]stru
 		}
 	}
 
-	// body attribute types
 	for _, data := range rdata.ClientBodyAttributeTypes {
 		if data.Def != "" {
 			sections = append(sections, &codegen.SectionTemplate{
@@ -174,6 +174,26 @@ func clientType(genpkg string, svc *httpdesign.ServiceExpr, seen map[string]stru
 		}
 	}
 
+	// response body to viewed result type
+	var projh []*codegen.TransformFunctionData
+	for _, p := range rdata.ClientProjections {
+		projh = codegen.AppendHelpers(projh, p.Project.Helpers)
+		sections = append(sections, &codegen.SectionTemplate{
+			Name:   "viewed-result-init",
+			Source: viewedResultTypeInitT,
+			Data:   p.Project,
+		})
+	}
+
+	for _, h := range projh {
+		sections = append(sections, &codegen.SectionTemplate{
+			Name:   "transform-helpers",
+			Source: transformHelperT,
+			Data:   h,
+		})
+	}
+
+	// body attribute types
 	// validate methods
 	for _, data := range validatedTypes {
 		sections = append(sections, &codegen.SectionTemplate{
@@ -182,7 +202,6 @@ func clientType(genpkg string, svc *httpdesign.ServiceExpr, seen map[string]stru
 			Data:   data,
 		})
 	}
-
 	return &codegen.File{Path: path, SectionTemplates: sections}
 }
 
@@ -201,7 +220,7 @@ func {{ .Name }}({{- range .ClientArgs }}{{ .Name }} {{ .TypeRef }}, {{ end }}) 
 		{{ .ClientCode }}
 		{{- if .ReturnTypeAttribute }}
 		res := &{{ .ReturnTypeName }}{
-			{{ .ReturnTypeAttribute }}: v,
+			{{ .ReturnTypeAttribute }}: {{ if .ReturnIsPrimitivePointer }}&{{ end }}v,
 		}
 		{{- end }}
 		{{- if .ReturnIsStruct }}
@@ -223,5 +242,12 @@ func {{ .Name }}({{- range .ClientArgs }}{{ .Name }} {{ .TypeRef }}, {{ end }}) 
 			}
 		{{- end }}
 	{{ end -}}
+}
+`
+
+// input: service.InitData
+const viewedResultTypeInitT = `{{ comment .Description }}
+func {{ .Name }}({{ range .Args }}{{ .Name }} {{ .Ref }}, {{ end }}) {{ .ReturnRef }} {
+  {{ .Code }}
 }
 `

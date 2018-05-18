@@ -15,7 +15,7 @@ import (
 // The sommelier service retrieves bottles given a set of criteria.
 type Service interface {
 	// Pick implements pick.
-	Pick(context.Context, *Criteria) (StoredBottleCollection, error)
+	Pick(context.Context, *Criteria) (res StoredBottleCollection, err error)
 }
 
 // ServiceName is the name of the service as defined in the design. This is the
@@ -42,14 +42,15 @@ type Criteria struct {
 // method.
 type StoredBottleCollection []*StoredBottle
 
-// A StoredBottle describes a bottle retrieved by the storage service.
+// A StoredBottle describes a bottle retrieved by the storage service. (default
+// view)
 type StoredBottle struct {
 	// ID is the unique id of the bottle.
 	ID string
 	// Name of bottle
 	Name string
 	// Winery that produces wine
-	Winery *Winery
+	Winery *WineryTiny
 	// Vintage of bottle
 	Vintage uint32
 	// Composition is the list of grape varietals and associated percentage.
@@ -60,15 +61,10 @@ type StoredBottle struct {
 	Rating *uint32
 }
 
-type Winery struct {
+// Winery result type (tiny view)
+type WineryTiny struct {
 	// Name of winery
 	Name string
-	// Region of winery
-	Region string
-	// Country of winery
-	Country string
-	// Winery website URL
-	URL *string
 }
 
 type Component struct {

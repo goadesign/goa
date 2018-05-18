@@ -16,15 +16,15 @@ import (
 // credentials.
 type Service interface {
 	// Creates a valid JWT
-	Signin(context.Context, *SigninPayload) error
+	Signin(context.Context, *SigninPayload) (err error)
 	// This action is secured with the jwt scheme
-	Secure(context.Context, *SecurePayload) (string, error)
+	Secure(context.Context, *SecurePayload) (res string, err error)
 	// This action is secured with the jwt scheme and also requires an API key
 	// query string.
-	DoublySecure(context.Context, *DoublySecurePayload) (string, error)
+	DoublySecure(context.Context, *DoublySecurePayload) (res string, err error)
 	// This action is secured with the jwt scheme and also requires an API key
 	// header.
-	AlsoDoublySecure(context.Context, *AlsoDoublySecurePayload) (string, error)
+	AlsoDoublySecure(context.Context, *AlsoDoublySecurePayload) (res string, err error)
 }
 
 // ServiceName is the name of the service as defined in the design. This is the

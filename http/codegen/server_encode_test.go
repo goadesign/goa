@@ -51,9 +51,12 @@ func TestEncode(t *testing.T) {
 		{"body-string", testdata.ResultBodyStringDSL, testdata.ResultBodyStringEncodeCode},
 		{"body-object", testdata.ResultBodyObjectDSL, testdata.ResultBodyObjectEncodeCode},
 		{"body-user", testdata.ResultBodyUserDSL, testdata.ResultBodyUserEncodeCode},
+		{"body-result-multiple-views", testdata.ResultBodyMultipleViewsDSL, testdata.ResultBodyMultipleViewsEncodeCode},
+		{"body-result-collection-multiple-views", testdata.ResultBodyCollectionDSL, testdata.ResultBodyCollectionMultipleViewsEncodeCode},
+		{"body-result-collection-explicit-view", testdata.ResultBodyCollectionExplicitViewDSL, testdata.ResultBodyCollectionExplicitViewEncodeCode},
+		{"empty-body-result-multiple-views", testdata.EmptyBodyResultMultipleViewsDSL, testdata.EmptyBodyResultMultipleViewsEncodeCode},
 		{"body-array-string", testdata.ResultBodyArrayStringDSL, testdata.ResultBodyArrayStringEncodeCode},
 		{"body-array-user", testdata.ResultBodyArrayUserDSL, testdata.ResultBodyArrayUserEncodeCode},
-
 		{"body-primitive-string", testdata.ResultBodyPrimitiveStringDSL, testdata.ResultBodyPrimitiveStringEncodeCode},
 		{"body-primitive-bool", testdata.ResultBodyPrimitiveBoolDSL, testdata.ResultBodyPrimitiveBoolEncodeCode},
 		{"body-primitive-array-string", testdata.ResultBodyPrimitiveArrayStringDSL, testdata.ResultBodyPrimitiveArrayStringEncodeCode},
@@ -63,8 +66,14 @@ func TestEncode(t *testing.T) {
 		{"body-header-object", testdata.ResultBodyHeaderObjectDSL, testdata.ResultBodyHeaderObjectEncodeCode},
 		{"body-header-user", testdata.ResultBodyHeaderUserDSL, testdata.ResultBodyHeaderUserEncodeCode},
 
+		{"explicit-body-primitive-result-multiple-views", testdata.ExplicitBodyPrimitiveResultMultipleViewsDSL, testdata.ExplicitBodyPrimitiveResultMultipleViewsEncodeCode},
+		{"explicit-body-user-result-multiple-views", testdata.ExplicitBodyUserResultMultipleViewsDSL, testdata.ExplicitBodyUserResultMultipleViewsEncodeCode},
+
 		{"tag-string", testdata.ResultTagStringDSL, testdata.ResultTagStringEncodeCode},
 		{"tag-string-required", testdata.ResultTagStringRequiredDSL, testdata.ResultTagStringRequiredEncodeCode},
+		{"tag-result-multiple-views", testdata.ResultMultipleViewsTagDSL, testdata.ResultMultipleViewsTagEncodeCode},
+
+		{"empty-server-response", testdata.EmptyServerResponseDSL, testdata.EmptyServerResponseEncodeCode},
 	}
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {

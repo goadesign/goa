@@ -81,14 +81,11 @@ func EncodePickError(encoder func(context.Context, http.ResponseWriter) goahttp.
 	}
 }
 
-// marshalWineryToWineryResponseBody builds a value of type *WineryResponseBody
-// from a value of type *sommelier.Winery.
-func marshalWineryToWineryResponseBody(v *sommelier.Winery) *WineryResponseBody {
-	res := &WineryResponseBody{
-		Name:    v.Name,
-		Region:  v.Region,
-		Country: v.Country,
-		URL:     v.URL,
+// marshalWineryTinyToWineryTinyResponseBody builds a value of type
+// *WineryTinyResponseBody from a value of type *sommelier.WineryTiny.
+func marshalWineryTinyToWineryTinyResponseBody(v *sommelier.WineryTiny) *WineryTinyResponseBody {
+	res := &WineryTinyResponseBody{
+		Name: &v.Name,
 	}
 
 	return res
