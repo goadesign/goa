@@ -248,16 +248,6 @@ func {{ .Name }}({{- range .ClientArgs }}{{ .Name }} {{ .TypeRef }}, {{ end }}) 
 // input: service.InitData
 const viewedResultTypeInitT = `{{ comment .Description }}
 func {{ .Name }}({{ range .Args }}{{ .Name }} {{ .Ref }}, {{ end }}) {{ .ReturnRef }} {
-{{- if .ReturnIsStruct }}
-  return &{{ .ReturnTypeName }}{
-  {{- range .Args }}
-    {{- if .FieldName }}
-    {{ .FieldName }}: {{ .Name }},
-    {{- end }}
-  {{- end }}
-  }
-{{- else }}
   {{ .Code }}
-{{- end }}
 }
 `

@@ -905,7 +905,7 @@ func buildProjectData(att, projected *design.AttributeExpr, scope *codegen.NameS
 			if rt.Validation != nil {
 				valattr.Validation = rt.Validation.Dup()
 			}
-			validate = codegen.RecursiveValidationCode(valattr, false, true, false, "projected")
+			validate = codegen.RecursiveValidationCode(valattr, false, true, false, "result.Projected")
 		}
 		pd := &ProjectData{
 			Name:        view.Name,
@@ -1085,7 +1085,6 @@ for _, projected := range result {
 	}
 }
 {{- else -}}
-projected := result.Projected
 switch result.View {
 	{{- range .Views }}
 	{{- if ne .Name "default" }}

@@ -165,15 +165,15 @@ func (r *HTTPResponseExpr) Validate(e *EndpointExpr) *eval.ValidationErrors {
 		}
 		if r.Body != nil {
 			verr.Merge(r.Body.Validate("HTTP response body", r))
-			if bobj := design.AsObject(r.Body.Type); bobj != nil {
+			if att, ok := r.Body.Metadata["origin:attribute"]; ok {
+				if !hasAttribute(att[0]) {
+					verr.Add(r, "body %q has no equivalent attribute in%s result type", att[0], inview)
+				}
+			} else if bobj := design.AsObject(r.Body.Type); bobj != nil {
 				for _, n := range *bobj {
 					if !hasAttribute(n.Name) {
 						verr.Add(r, "body %q has no equivalent attribute in%s result type", n.Name, inview)
 					}
-				}
-			} else if att, ok := r.Body.Metadata["origin:attribute"]; ok {
-				if !hasAttribute(att[0]) {
-					verr.Add(r, "body %q has no equivalent attribute in%s result type", att[0], inview)
 				}
 			}
 		}

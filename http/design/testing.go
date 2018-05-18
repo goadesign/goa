@@ -21,7 +21,6 @@ func RunHTTPDSL(t *testing.T, dsl func()) *RootExpr {
 		t.Fatal(err)
 	}
 
-	design.Root.GeneratedTypes = &design.GeneratedRoot{}
 	// return generated root
 	return Root
 }
@@ -50,8 +49,10 @@ func setupDSLRun() {
 	// reset all roots and codegen data structures
 	eval.Reset()
 	design.Root = new(design.RootExpr)
+	design.Root.GeneratedTypes = &design.GeneratedRoot{}
 	Root = &RootExpr{Design: design.Root}
 	eval.Register(design.Root)
+	eval.Register(design.Root.GeneratedTypes)
 	eval.Register(Root)
 	design.Root.API = &design.APIExpr{
 		Name:    "test api",

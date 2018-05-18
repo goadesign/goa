@@ -897,18 +897,16 @@ func {{ .ResponseEncoder }}(encoder func(context.Context, http.ResponseWriter) g
 	{{- if and .Result.Ref .NeedServerResponse }}
 		{{- if .Method.ViewedResult }}
 		res := v.({{ .Method.ViewedResult.FullRef }})
+		w.Header().Set("goa-view", res{{ if $.Method.ViewedResult.IsCollection }}[0]{{ end }}.View)
 		{{- else }}
 		res := v.({{ .Result.Ref }})
 		{{- end }}
 		{{- range .Result.Responses }}
-			{{- if and .ServerBody $.Method.ViewedResult }}
-		w.Header().Set("goa-view", res{{ if $.Method.ViewedResult.IsCollection }}[0]{{ end }}.View)
-			{{- end }}
 			{{- if .TagName }}
 			{{- if .TagRequired }}
-		if res.{{ .TagName }} == {{ printf "%q" .TagValue }} {
+		if res.{{ if .ViewedResult }}Projected.{{ end }}{{ .TagName }} == {{ printf "%q" .TagValue }} {
 			{{- else }}
-		if res.{{ .TagName }} != nil && *res.{{ .TagName }} == {{ printf "%q" .TagValue }} {
+		if res.{{ if .ViewedResult }}Projected.{{ end }}{{ .TagName }} != nil && *res.{{ if .ViewedResult }}Projected.{{ end }}{{ .TagName }} == {{ printf "%q" .TagValue }} {
 			{{- end }}
 			{{- end -}}
 			{{ template "response" . }}
@@ -982,19 +980,19 @@ const responseT = `{{ define "response" -}}
 		{{- $initDef := and (or .Pointer .Slice) .DefaultValue (not $.TagName) }}
 		{{- $checkNil := and (or (not .Required) $initDef) (not $.TagName) }}
 		{{- if $checkNil }}
-	if res.{{ .FieldName }} != nil {
+	if res.{{ if $.ViewedResult }}Projected.{{ end }}{{ .FieldName }} != nil {
 		{{- end }}
 
 		{{- if eq .Type.Name "string" }}
-	w.Header().Set("{{ .Name }}", {{ if not .Required }}*{{ end }}res{{ if .FieldName }}.{{ .FieldName }}{{ end }})
+	w.Header().Set("{{ .Name }}", {{ if not .Required }}*{{ end }}res{{ if $.ViewedResult }}.Projected{{ end }}{{ if .FieldName }}.{{ .FieldName }}{{ end }})
 		{{- else }}
-	val := res{{ if .FieldName }}.{{ .FieldName }}{{ end }}
+	val := res{{ if $.ViewedResult }}.Projected{{ end }}{{ if .FieldName }}.{{ .FieldName }}{{ end }}
 	{{ template "header_conversion" (headerConversionData .Type (printf "%ss" .VarName) .Required "val") }}
 	w.Header().Set("{{ .Name }}", {{ .VarName }}s)
 		{{- end }}
 
 		{{- if $initDef }}
-	{{ if $checkNil }} } else { {{ else }}if res.{{ .FieldName }} == nil { {{ end }}
+	{{ if $checkNil }} } else { {{ else }}if res{{ if $.ViewedResult }}.Projected{{ end }}.{{ .FieldName }} == nil { {{ end }}
 		w.Header().Set("{{ .Name }}", "{{ printValue .Type .DefaultValue }}")
 		{{- end }}
 

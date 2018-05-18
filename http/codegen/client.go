@@ -402,7 +402,9 @@ func {{ .ResponseDecoder }}(decoder func(*http.Response) goahttp.Decoder, restor
 	{{- range .Result.Responses }}
 		case {{ .StatusCode }}:
 ` + singleResponseT + `
-		{{- if $.Method.ViewedResult }}
+		{{- if .ResultInit }}
+		return {{ .ResultInit.Name }}({{ range .ResultInit.ClientArgs }}{{ .Ref }},{{ end }}), nil
+		{{- else if .ViewedResult }}
 		var (
 			vres {{ $.Method.ViewedResult.FullRef }}
 			view string
@@ -416,12 +418,13 @@ func {{ .ResponseDecoder }}(decoder func(*http.Response) goahttp.Decoder, restor
 		default:
 			return nil, goahttp.ErrValidationError("{{ $.ServiceName }}", "{{ $.Method.Name }}", fmt.Errorf("unknown goa-view in header %q", view))
 		}
+		{{- range .Headers }}
+		vres.Projected.{{ .FieldName }} = {{ .VarName }}
+		{{- end }}
 		if err = vres.Validate(); err != nil {
 			return nil, goahttp.ErrValidationError("{{ $.ServiceName }}", "{{ $.Method.Name }}", err)
 		}
 		return {{ $.ServicePkgName }}.{{ $.Method.ViewedResult.ConvertToResult.Name }}(vres), nil
-		{{- else if .ResultInit }}
-		return {{ .ResultInit.Name }}({{ range .ResultInit.ClientArgs }}{{ .Ref }},{{ end }}), nil
 		{{- else if .ClientBody }}
 			return body, nil
 		{{- else }}

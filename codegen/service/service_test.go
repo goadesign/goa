@@ -23,6 +23,7 @@ func TestService(t *testing.T) {
 		{"payload-no-result", testdata.EmptyResultMethodDSL, testdata.EmptyResultMethod},
 		{"no-payload-result", testdata.EmptyPayloadMethodDSL, testdata.EmptyPayloadMethod},
 		{"result-with-multiple-views", testdata.MultipleMethodsResultMultipleViewsDSL, testdata.MultipleMethodsResultMultipleViews},
+		{"result-collection-multiple-views", testdata.ResultCollectionMultipleViewsMethodDSL, testdata.ResultCollectionMultipleViewsMethod},
 		{"result-with-other-result", testdata.ResultWithOtherResultMethodDSL, testdata.ResultWithOtherResultMethod},
 		{"service-level-error", testdata.ServiceErrorDSL, testdata.ServiceError},
 	}
@@ -31,7 +32,6 @@ func TestService(t *testing.T) {
 			codegen.RunDSLWithFunc(t, c.DSL, func() {
 				design.Root.Types = []design.UserType{testdata.APayload, testdata.BPayload, testdata.AResult, testdata.BResult, testdata.ParentType, testdata.ChildType}
 			})
-			design.Root.GeneratedTypes = &design.GeneratedRoot{}
 			if len(design.Root.Services) != 1 {
 				t.Fatalf("got %d services, expected 1", len(design.Root.Services))
 			}

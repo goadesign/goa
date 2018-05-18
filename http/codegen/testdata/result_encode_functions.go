@@ -629,14 +629,41 @@ var ResultBodyMultipleViewsEncodeCode = `// EncodeMethodBodyMultipleViewResponse
 // returned by the ServiceBodyMultipleView MethodBodyMultipleView endpoint.
 func EncodeMethodBodyMultipleViewResponse(encoder func(context.Context, http.ResponseWriter) goahttp.Encoder) func(context.Context, http.ResponseWriter, interface{}) error {
 	return func(ctx context.Context, w http.ResponseWriter, v interface{}) error {
-		vres := v.(*servicebodymultipleviewviews.Resulttypemultipleviews)
-		res := vres.Projected
-		w.Header().Set("goa-view", vres.View)
+		res := v.(*servicebodymultipleviewviews.Resulttypemultipleviews)
+		w.Header().Set("goa-view", res.View)
 		enc := encoder(ctx, w)
 		body := NewMethodBodyMultipleViewResponseBody(res)
-		if res.C != nil {
-			w.Header().Set("Location", *res.C)
+		if res.Projected.C != nil {
+			w.Header().Set("Location", *res.Projected.C)
 		}
+		w.WriteHeader(http.StatusOK)
+		return enc.Encode(body)
+	}
+}
+`
+
+var ResultBodyCollectionMultipleViewsEncodeCode = `// EncodeMethodBodyCollectionResponse returns an encoder for responses returned
+// by the ServiceBodyCollection MethodBodyCollection endpoint.
+func EncodeMethodBodyCollectionResponse(encoder func(context.Context, http.ResponseWriter) goahttp.Encoder) func(context.Context, http.ResponseWriter, interface{}) error {
+	return func(ctx context.Context, w http.ResponseWriter, v interface{}) error {
+		res := v.(servicebodycollectionviews.ResulttypecollectionCollection)
+		w.Header().Set("goa-view", res[0].View)
+		enc := encoder(ctx, w)
+		body := NewMethodBodyCollectionResponseBody(res)
+		w.WriteHeader(http.StatusOK)
+		return enc.Encode(body)
+	}
+}
+`
+
+var ResultBodyCollectionExplicitViewEncodeCode = `// EncodeMethodBodyCollectionExplicitViewResponse returns an encoder for
+// responses returned by the ServiceBodyCollectionExplicitView
+// MethodBodyCollectionExplicitView endpoint.
+func EncodeMethodBodyCollectionExplicitViewResponse(encoder func(context.Context, http.ResponseWriter) goahttp.Encoder) func(context.Context, http.ResponseWriter, interface{}) error {
+	return func(ctx context.Context, w http.ResponseWriter, v interface{}) error {
+		res := v.(servicebodycollectionexplicitview.ResulttypecollectionTinyCollection)
+		enc := encoder(ctx, w)
+		body := NewMethodBodyCollectionExplicitViewResponseBody(res)
 		w.WriteHeader(http.StatusOK)
 		return enc.Encode(body)
 	}
@@ -648,10 +675,10 @@ var EmptyBodyResultMultipleViewsEncodeCode = `// EncodeMethodEmptyBodyResultMult
 // MethodEmptyBodyResultMultipleView endpoint.
 func EncodeMethodEmptyBodyResultMultipleViewResponse(encoder func(context.Context, http.ResponseWriter) goahttp.Encoder) func(context.Context, http.ResponseWriter, interface{}) error {
 	return func(ctx context.Context, w http.ResponseWriter, v interface{}) error {
-		vres := v.(*serviceemptybodyresultmultipleviewviews.Resulttypemultipleviews)
-		res := vres.Projected
-		if res.C != nil {
-			w.Header().Set("Location", *res.C)
+		res := v.(*serviceemptybodyresultmultipleviewviews.Resulttypemultipleviews)
+		w.Header().Set("goa-view", res.View)
+		if res.Projected.C != nil {
+			w.Header().Set("Location", *res.Projected.C)
 		}
 		w.WriteHeader(http.StatusOK)
 		return nil
@@ -680,6 +707,43 @@ func EncodeMethodBodyArrayUserResponse(encoder func(context.Context, http.Respon
 		enc := encoder(ctx, w)
 		body := NewMethodBodyArrayUserResponseBody(res)
 		w.WriteHeader(http.StatusNoContent)
+		return enc.Encode(body)
+	}
+}
+`
+
+var ExplicitBodyPrimitiveResultMultipleViewsEncodeCode = `// EncodeMethodExplicitBodyPrimitiveResultMultipleViewResponse returns an
+// encoder for responses returned by the
+// ServiceExplicitBodyPrimitiveResultMultipleView
+// MethodExplicitBodyPrimitiveResultMultipleView endpoint.
+func EncodeMethodExplicitBodyPrimitiveResultMultipleViewResponse(encoder func(context.Context, http.ResponseWriter) goahttp.Encoder) func(context.Context, http.ResponseWriter, interface{}) error {
+	return func(ctx context.Context, w http.ResponseWriter, v interface{}) error {
+		res := v.(*serviceexplicitbodyprimitiveresultmultipleviewviews.Resulttypemultipleviews)
+		w.Header().Set("goa-view", res.View)
+		enc := encoder(ctx, w)
+		body := res.A
+		if res.Projected.C != nil {
+			w.Header().Set("Location", *res.Projected.C)
+		}
+		w.WriteHeader(http.StatusOK)
+		return enc.Encode(body)
+	}
+}
+`
+
+var ExplicitBodyUserResultMultipleViewsEncodeCode = `// EncodeMethodExplicitBodyUserResultMultipleViewResponse returns an encoder
+// for responses returned by the ServiceExplicitBodyUserResultMultipleView
+// MethodExplicitBodyUserResultMultipleView endpoint.
+func EncodeMethodExplicitBodyUserResultMultipleViewResponse(encoder func(context.Context, http.ResponseWriter) goahttp.Encoder) func(context.Context, http.ResponseWriter, interface{}) error {
+	return func(ctx context.Context, w http.ResponseWriter, v interface{}) error {
+		res := v.(*serviceexplicitbodyuserresultmultipleviewviews.Resulttypemultipleviews)
+		w.Header().Set("goa-view", res.View)
+		enc := encoder(ctx, w)
+		body := NewUserType(res)
+		if res.Projected.C != nil {
+			w.Header().Set("Location", *res.Projected.C)
+		}
+		w.WriteHeader(http.StatusOK)
 		return enc.Encode(body)
 	}
 }
@@ -816,6 +880,27 @@ func EncodeMethodTagStringRequiredResponse(encoder func(context.Context, http.Re
 		}
 		enc := encoder(ctx, w)
 		body := NewMethodTagStringRequiredOKResponseBody(res)
+		w.WriteHeader(http.StatusOK)
+		return enc.Encode(body)
+	}
+}
+`
+
+var ResultMultipleViewsTagEncodeCode = `// EncodeMethodTagMultipleViewsResponse returns an encoder for responses
+// returned by the ServiceTagMultipleViews MethodTagMultipleViews endpoint.
+func EncodeMethodTagMultipleViewsResponse(encoder func(context.Context, http.ResponseWriter) goahttp.Encoder) func(context.Context, http.ResponseWriter, interface{}) error {
+	return func(ctx context.Context, w http.ResponseWriter, v interface{}) error {
+		res := v.(*servicetagmultipleviewsviews.Resulttypemultipleviews)
+		w.Header().Set("goa-view", res.View)
+		if res.Projected.B != nil && *res.Projected.B == "value" {
+			enc := encoder(ctx, w)
+			body := NewMethodTagMultipleViewsAcceptedResponseBody(res)
+			w.Header().Set("c", *res.Projected.C)
+			w.WriteHeader(http.StatusAccepted)
+			return enc.Encode(body)
+		}
+		enc := encoder(ctx, w)
+		body := NewMethodTagMultipleViewsOKResponseBody(res)
 		w.WriteHeader(http.StatusOK)
 		return enc.Encode(body)
 	}

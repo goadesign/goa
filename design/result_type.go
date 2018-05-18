@@ -350,8 +350,7 @@ func projectCollection(m *ResultTypeExpr, view string, seen ...map[string]*Attri
 
 func projectRecursive(at *AttributeExpr, vat *NamedAttributeExpr, view string, seen ...map[string]*AttributeExpr) (*AttributeExpr, error) {
 	at = DupAtt(at)
-	rt, isrt := at.Type.(*ResultTypeExpr)
-	if isrt || IsObject(at.Type) {
+	if ut, ok := at.Type.(UserType); ok {
 		var s map[string]*AttributeExpr
 		if len(seen) > 0 {
 			s = seen[0]
@@ -359,16 +358,12 @@ func projectRecursive(at *AttributeExpr, vat *NamedAttributeExpr, view string, s
 			s = make(map[string]*AttributeExpr)
 			seen = append(seen, s)
 		}
-		key := at.Type.Name()
-		if isrt {
-			key = rt.Identifier
-		}
-		if att, ok := s[key]; ok {
+		if att, ok := s[ut.Name()]; ok {
 			return att, nil
 		}
-		s[key] = at
+		s[ut.Name()] = at
 	}
-	if isrt {
+	if rt, ok := at.Type.(*ResultTypeExpr); ok {
 		vatt := vat.Attribute
 		var view string
 		if len(vatt.Metadata["view"]) > 0 {

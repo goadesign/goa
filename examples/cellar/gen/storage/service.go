@@ -121,6 +121,7 @@ type StoredBottleTiny struct {
 	Winery *WineryTiny
 }
 
+// Winery result type (tiny view)
 type WineryTiny struct {
 	// Name of winery
 	Name string

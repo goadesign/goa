@@ -28,6 +28,29 @@ var ResultWithMultipleViewsDSL = func() {
 	})
 }
 
+var ResultCollectionMultipleViewsDSL = func() {
+	var RT = ResultType("application/vnd.result", func() {
+		TypeName("ResultType")
+		Attributes(func() {
+			Attribute("a", String)
+			Attribute("b", String)
+			Required("a", "b")
+		})
+		View("default", func() {
+			Attribute("a")
+			Attribute("b")
+		})
+		View("tiny", func() {
+			Attribute("a")
+		})
+	})
+	Service("ResultCollectionMultipleViews", func() {
+		Method("A", func() {
+			Result(CollectionOf(RT))
+		})
+	})
+}
+
 var ResultWithUserTypeDSL = func() {
 	var UT = Type("UserType", func() {
 		Attribute("a")

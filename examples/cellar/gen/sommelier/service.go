@@ -61,6 +61,7 @@ type StoredBottle struct {
 	Rating *uint32
 }
 
+// Winery result type (tiny view)
 type WineryTiny struct {
 	// Name of winery
 	Name string

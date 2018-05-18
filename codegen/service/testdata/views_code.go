@@ -1,6 +1,6 @@
 package testdata
 
-const ResultWithMultipleViewsCode = `// ResultTypeView is a type used by ResultType type to project based on a view.
+const ResultWithMultipleViewsCode = `// ResultTypeView is a type that runs validations on a projected type.
 type ResultTypeView struct {
 	A *string
 	B *string
@@ -16,25 +16,71 @@ type ResultType struct {
 
 // Validate runs the validations defined on ResultType.
 func (result *ResultType) Validate() (err error) {
-	projected := result.Projected
 	switch result.View {
 	case "tiny":
-		if projected.A == nil {
-			err = goa.MergeErrors(err, goa.MissingFieldError("a", "projected"))
+		if result.Projected.A == nil {
+			err = goa.MergeErrors(err, goa.MissingFieldError("a", "result.Projected"))
 		}
 	default:
-		if projected.A == nil {
-			err = goa.MergeErrors(err, goa.MissingFieldError("a", "projected"))
+		if result.Projected.A == nil {
+			err = goa.MergeErrors(err, goa.MissingFieldError("a", "result.Projected"))
 		}
-		if projected.B == nil {
-			err = goa.MergeErrors(err, goa.MissingFieldError("b", "projected"))
+		if result.Projected.B == nil {
+			err = goa.MergeErrors(err, goa.MissingFieldError("b", "result.Projected"))
 		}
 	}
 	return
 }
 `
 
-var ResultWithUserTypeCode = `// ResultTypeView is a type used by ResultType type to project based on a view.
+const ResultCollectionMultipleViewsCode = `// ResultTypeCollection is the viewed result type that is projected based on a
+// view.
+type ResultTypeCollection []*ResultType
+
+// ResultTypeView is a type that runs validations on a projected type.
+type ResultTypeView struct {
+	A *string
+	B *string
+}
+
+// ResultType is the viewed result type that is projected based on a view.
+type ResultType struct {
+	// Type to project
+	Projected *ResultTypeView
+	// View to render
+	View string
+}
+
+// Validate runs the validations defined on ResultTypeCollection.
+func (result ResultTypeCollection) Validate() (err error) {
+	for _, projected := range result {
+		if err2 := projected.Validate(); err2 != nil {
+			err = goa.MergeErrors(err, err2)
+		}
+	}
+	return
+}
+
+// Validate runs the validations defined on ResultType.
+func (result *ResultType) Validate() (err error) {
+	switch result.View {
+	case "tiny":
+		if result.Projected.A == nil {
+			err = goa.MergeErrors(err, goa.MissingFieldError("a", "result.Projected"))
+		}
+	default:
+		if result.Projected.A == nil {
+			err = goa.MergeErrors(err, goa.MissingFieldError("a", "result.Projected"))
+		}
+		if result.Projected.B == nil {
+			err = goa.MergeErrors(err, goa.MissingFieldError("b", "result.Projected"))
+		}
+	}
+	return
+}
+`
+
+const ResultWithUserTypeCode = `// ResultTypeView is a type that runs validations on a projected type.
 type ResultTypeView struct {
 	A *UserType
 	B *string
@@ -55,22 +101,21 @@ type UserType struct {
 
 // Validate runs the validations defined on ResultType.
 func (result *ResultType) Validate() (err error) {
-	projected := result.Projected
 	switch result.View {
 	case "tiny":
-		if projected.A == nil {
-			err = goa.MergeErrors(err, goa.MissingFieldError("a", "projected"))
+		if result.Projected.A == nil {
+			err = goa.MergeErrors(err, goa.MissingFieldError("a", "result.Projected"))
 		}
 	default:
-		if projected.A == nil {
-			err = goa.MergeErrors(err, goa.MissingFieldError("a", "projected"))
+		if result.Projected.A == nil {
+			err = goa.MergeErrors(err, goa.MissingFieldError("a", "result.Projected"))
 		}
 	}
 	return
 }
 `
 
-const ResultWithResultTypeCode = `// RTView is a type used by RT type to project based on a view.
+const ResultWithResultTypeCode = `// RTView is a type that runs validations on a projected type.
 type RTView struct {
 	A *string
 	B *RT2
@@ -85,7 +130,7 @@ type RT struct {
 	View string
 }
 
-// RT2View is a type used by RT2 type to project based on a view.
+// RT2View is a type that runs validations on a projected type.
 type RT2View struct {
 	C *string
 	D *UserType
@@ -105,7 +150,7 @@ type UserType struct {
 	P *string
 }
 
-// RT3View is a type used by RT3 type to project based on a view.
+// RT3View is a type that runs validations on a projected type.
 type RT3View struct {
 	X []string
 	Y map[int]*UserType
@@ -122,39 +167,38 @@ type RT3 struct {
 
 // Validate runs the validations defined on RT.
 func (result *RT) Validate() (err error) {
-	projected := result.Projected
 	switch result.View {
 	case "tiny":
-		if projected.B == nil {
-			err = goa.MergeErrors(err, goa.MissingFieldError("b", "projected"))
+		if result.Projected.B == nil {
+			err = goa.MergeErrors(err, goa.MissingFieldError("b", "result.Projected"))
 		}
-		if projected.C == nil {
-			err = goa.MergeErrors(err, goa.MissingFieldError("c", "projected"))
+		if result.Projected.C == nil {
+			err = goa.MergeErrors(err, goa.MissingFieldError("c", "result.Projected"))
 		}
-		if projected.B != nil {
-			if err2 := projected.B.Validate(); err2 != nil {
+		if result.Projected.B != nil {
+			if err2 := result.Projected.B.Validate(); err2 != nil {
 				err = goa.MergeErrors(err, err2)
 			}
 		}
-		if projected.C != nil {
-			if err2 := projected.C.Validate(); err2 != nil {
+		if result.Projected.C != nil {
+			if err2 := result.Projected.C.Validate(); err2 != nil {
 				err = goa.MergeErrors(err, err2)
 			}
 		}
 	default:
-		if projected.B == nil {
-			err = goa.MergeErrors(err, goa.MissingFieldError("b", "projected"))
+		if result.Projected.B == nil {
+			err = goa.MergeErrors(err, goa.MissingFieldError("b", "result.Projected"))
 		}
-		if projected.C == nil {
-			err = goa.MergeErrors(err, goa.MissingFieldError("c", "projected"))
+		if result.Projected.C == nil {
+			err = goa.MergeErrors(err, goa.MissingFieldError("c", "result.Projected"))
 		}
-		if projected.B != nil {
-			if err2 := projected.B.Validate(); err2 != nil {
+		if result.Projected.B != nil {
+			if err2 := result.Projected.B.Validate(); err2 != nil {
 				err = goa.MergeErrors(err, err2)
 			}
 		}
-		if projected.C != nil {
-			if err2 := projected.C.Validate(); err2 != nil {
+		if result.Projected.C != nil {
+			if err2 := result.Projected.C.Validate(); err2 != nil {
 				err = goa.MergeErrors(err, err2)
 			}
 		}
@@ -164,25 +208,24 @@ func (result *RT) Validate() (err error) {
 
 // Validate runs the validations defined on RT2.
 func (result *RT2) Validate() (err error) {
-	projected := result.Projected
 	switch result.View {
 	case "extended":
-		if projected.C == nil {
-			err = goa.MergeErrors(err, goa.MissingFieldError("c", "projected"))
+		if result.Projected.C == nil {
+			err = goa.MergeErrors(err, goa.MissingFieldError("c", "result.Projected"))
 		}
-		if projected.D == nil {
-			err = goa.MergeErrors(err, goa.MissingFieldError("d", "projected"))
+		if result.Projected.D == nil {
+			err = goa.MergeErrors(err, goa.MissingFieldError("d", "result.Projected"))
 		}
 	case "tiny":
-		if projected.D == nil {
-			err = goa.MergeErrors(err, goa.MissingFieldError("d", "projected"))
+		if result.Projected.D == nil {
+			err = goa.MergeErrors(err, goa.MissingFieldError("d", "result.Projected"))
 		}
 	default:
-		if projected.C == nil {
-			err = goa.MergeErrors(err, goa.MissingFieldError("c", "projected"))
+		if result.Projected.C == nil {
+			err = goa.MergeErrors(err, goa.MissingFieldError("c", "result.Projected"))
 		}
-		if projected.D == nil {
-			err = goa.MergeErrors(err, goa.MissingFieldError("d", "projected"))
+		if result.Projected.D == nil {
+			err = goa.MergeErrors(err, goa.MissingFieldError("d", "result.Projected"))
 		}
 	}
 	return
@@ -190,25 +233,24 @@ func (result *RT2) Validate() (err error) {
 
 // Validate runs the validations defined on RT3.
 func (result *RT3) Validate() (err error) {
-	projected := result.Projected
 	switch result.View {
 	case "tiny":
-		if projected.X == nil {
-			err = goa.MergeErrors(err, goa.MissingFieldError("x", "projected"))
+		if result.Projected.X == nil {
+			err = goa.MergeErrors(err, goa.MissingFieldError("x", "result.Projected"))
 		}
 	default:
-		if projected.X == nil {
-			err = goa.MergeErrors(err, goa.MissingFieldError("x", "projected"))
+		if result.Projected.X == nil {
+			err = goa.MergeErrors(err, goa.MissingFieldError("x", "result.Projected"))
 		}
-		if projected.Y == nil {
-			err = goa.MergeErrors(err, goa.MissingFieldError("y", "projected"))
+		if result.Projected.Y == nil {
+			err = goa.MergeErrors(err, goa.MissingFieldError("y", "result.Projected"))
 		}
 	}
 	return
 }
 `
 
-var ResultWithRecursiveResultTypeCode = `// RTView is a type used by RT type to project based on a view.
+const ResultWithRecursiveResultTypeCode = `// RTView is a type that runs validations on a projected type.
 type RTView struct {
 	A *RT
 }
@@ -223,23 +265,22 @@ type RT struct {
 
 // Validate runs the validations defined on RT.
 func (result *RT) Validate() (err error) {
-	projected := result.Projected
 	switch result.View {
 	case "tiny":
-		if projected.A == nil {
-			err = goa.MergeErrors(err, goa.MissingFieldError("a", "projected"))
+		if result.Projected.A == nil {
+			err = goa.MergeErrors(err, goa.MissingFieldError("a", "result.Projected"))
 		}
-		if projected.A != nil {
-			if err2 := projected.A.Validate(); err2 != nil {
+		if result.Projected.A != nil {
+			if err2 := result.Projected.A.Validate(); err2 != nil {
 				err = goa.MergeErrors(err, err2)
 			}
 		}
 	default:
-		if projected.A == nil {
-			err = goa.MergeErrors(err, goa.MissingFieldError("a", "projected"))
+		if result.Projected.A == nil {
+			err = goa.MergeErrors(err, goa.MissingFieldError("a", "result.Projected"))
 		}
-		if projected.A != nil {
-			if err2 := projected.A.Validate(); err2 != nil {
+		if result.Projected.A != nil {
+			if err2 := result.Projected.A.Validate(); err2 != nil {
 				err = goa.MergeErrors(err, err2)
 			}
 		}

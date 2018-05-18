@@ -18,7 +18,9 @@ import (
 func RunDSL(t *testing.T, dsl func()) *design.RootExpr {
 	eval.Reset()
 	design.Root = new(design.RootExpr)
+	design.Root.GeneratedTypes = &design.GeneratedRoot{}
 	eval.Register(design.Root)
+	eval.Register(design.Root.GeneratedTypes)
 	design.Root.API = &design.APIExpr{
 		Name:    "test api",
 		Servers: []*design.ServerExpr{{URL: "http://localhost"}},
@@ -38,7 +40,9 @@ func RunDSL(t *testing.T, dsl func()) *design.RootExpr {
 func RunDSLWithFunc(t *testing.T, dsl func(), fn func()) *design.RootExpr {
 	eval.Reset()
 	design.Root = new(design.RootExpr)
+	design.Root.GeneratedTypes = &design.GeneratedRoot{}
 	eval.Register(design.Root)
+	eval.Register(design.Root.GeneratedTypes)
 	design.Root.API = &design.APIExpr{
 		Name:    "test api",
 		Servers: []*design.ServerExpr{{URL: "http://localhost"}},

@@ -26,9 +26,9 @@ type IntegerDivideHasRemainderResponseBody struct {
 	// Is the error temporary?
 	Temporary *bool `form:"temporary,omitempty" json:"temporary,omitempty" xml:"temporary,omitempty"`
 	// Is the error a timeout?
-	Timeout bool `form:"timeout" json:"timeout" xml:"timeout"`
+	Timeout *bool `form:"timeout,omitempty" json:"timeout,omitempty" xml:"timeout,omitempty"`
 	// Is the error a server-side fault?
-	Fault bool `form:"fault" json:"fault" xml:"fault"`
+	Fault *bool `form:"fault,omitempty" json:"fault,omitempty" xml:"fault,omitempty"`
 }
 
 // IntegerDivideDivByZeroResponseBody is the type of the "divider" service
@@ -44,9 +44,9 @@ type IntegerDivideDivByZeroResponseBody struct {
 	// Is the error temporary?
 	Temporary *bool `form:"temporary,omitempty" json:"temporary,omitempty" xml:"temporary,omitempty"`
 	// Is the error a timeout?
-	Timeout bool `form:"timeout" json:"timeout" xml:"timeout"`
+	Timeout *bool `form:"timeout,omitempty" json:"timeout,omitempty" xml:"timeout,omitempty"`
 	// Is the error a server-side fault?
-	Fault bool `form:"fault" json:"fault" xml:"fault"`
+	Fault *bool `form:"fault,omitempty" json:"fault,omitempty" xml:"fault,omitempty"`
 }
 
 // IntegerDivideTimeoutResponseBody is the type of the "divider" service
@@ -62,9 +62,9 @@ type IntegerDivideTimeoutResponseBody struct {
 	// Is the error temporary?
 	Temporary *bool `form:"temporary,omitempty" json:"temporary,omitempty" xml:"temporary,omitempty"`
 	// Is the error a timeout?
-	Timeout bool `form:"timeout" json:"timeout" xml:"timeout"`
+	Timeout *bool `form:"timeout,omitempty" json:"timeout,omitempty" xml:"timeout,omitempty"`
 	// Is the error a server-side fault?
-	Fault bool `form:"fault" json:"fault" xml:"fault"`
+	Fault *bool `form:"fault,omitempty" json:"fault,omitempty" xml:"fault,omitempty"`
 }
 
 // DivideDivByZeroResponseBody is the type of the "divider" service "divide"
@@ -80,9 +80,9 @@ type DivideDivByZeroResponseBody struct {
 	// Is the error temporary?
 	Temporary *bool `form:"temporary,omitempty" json:"temporary,omitempty" xml:"temporary,omitempty"`
 	// Is the error a timeout?
-	Timeout bool `form:"timeout" json:"timeout" xml:"timeout"`
+	Timeout *bool `form:"timeout,omitempty" json:"timeout,omitempty" xml:"timeout,omitempty"`
 	// Is the error a server-side fault?
-	Fault bool `form:"fault" json:"fault" xml:"fault"`
+	Fault *bool `form:"fault,omitempty" json:"fault,omitempty" xml:"fault,omitempty"`
 }
 
 // DivideTimeoutResponseBody is the type of the "divider" service "divide"
@@ -98,21 +98,21 @@ type DivideTimeoutResponseBody struct {
 	// Is the error temporary?
 	Temporary *bool `form:"temporary,omitempty" json:"temporary,omitempty" xml:"temporary,omitempty"`
 	// Is the error a timeout?
-	Timeout bool `form:"timeout" json:"timeout" xml:"timeout"`
+	Timeout *bool `form:"timeout,omitempty" json:"timeout,omitempty" xml:"timeout,omitempty"`
 	// Is the error a server-side fault?
-	Fault bool `form:"fault" json:"fault" xml:"fault"`
+	Fault *bool `form:"fault,omitempty" json:"fault,omitempty" xml:"fault,omitempty"`
 }
 
 // NewIntegerDivideHasRemainderResponseBody builds the HTTP response body from
 // the result of the "integer_divide" endpoint of the "divider" service.
 func NewIntegerDivideHasRemainderResponseBody(res *goa.ServiceError) *IntegerDivideHasRemainderResponseBody {
 	body := &IntegerDivideHasRemainderResponseBody{
-		Name:      res.Name,
-		ID:        res.ID,
-		Message:   res.Message,
-		Temporary: res.Temporary,
-		Timeout:   res.Timeout,
-		Fault:     res.Fault,
+		Name:      &res.Name,
+		ID:        &res.ID,
+		Message:   &res.Message,
+		Temporary: &res.Temporary,
+		Timeout:   &res.Timeout,
+		Fault:     &res.Fault,
 	}
 	return body
 }
@@ -121,12 +121,12 @@ func NewIntegerDivideHasRemainderResponseBody(res *goa.ServiceError) *IntegerDiv
 // result of the "integer_divide" endpoint of the "divider" service.
 func NewIntegerDivideDivByZeroResponseBody(res *goa.ServiceError) *IntegerDivideDivByZeroResponseBody {
 	body := &IntegerDivideDivByZeroResponseBody{
-		Name:      res.Name,
-		ID:        res.ID,
-		Message:   res.Message,
-		Temporary: res.Temporary,
-		Timeout:   res.Timeout,
-		Fault:     res.Fault,
+		Name:      &res.Name,
+		ID:        &res.ID,
+		Message:   &res.Message,
+		Temporary: &res.Temporary,
+		Timeout:   &res.Timeout,
+		Fault:     &res.Fault,
 	}
 	return body
 }
@@ -135,12 +135,12 @@ func NewIntegerDivideDivByZeroResponseBody(res *goa.ServiceError) *IntegerDivide
 // result of the "integer_divide" endpoint of the "divider" service.
 func NewIntegerDivideTimeoutResponseBody(res *goa.ServiceError) *IntegerDivideTimeoutResponseBody {
 	body := &IntegerDivideTimeoutResponseBody{
-		Name:      res.Name,
-		ID:        res.ID,
-		Message:   res.Message,
-		Temporary: res.Temporary,
-		Timeout:   res.Timeout,
-		Fault:     res.Fault,
+		Name:      &res.Name,
+		ID:        &res.ID,
+		Message:   &res.Message,
+		Temporary: &res.Temporary,
+		Timeout:   &res.Timeout,
+		Fault:     &res.Fault,
 	}
 	return body
 }
@@ -149,12 +149,12 @@ func NewIntegerDivideTimeoutResponseBody(res *goa.ServiceError) *IntegerDivideTi
 // of the "divide" endpoint of the "divider" service.
 func NewDivideDivByZeroResponseBody(res *goa.ServiceError) *DivideDivByZeroResponseBody {
 	body := &DivideDivByZeroResponseBody{
-		Name:      res.Name,
-		ID:        res.ID,
-		Message:   res.Message,
-		Temporary: res.Temporary,
-		Timeout:   res.Timeout,
-		Fault:     res.Fault,
+		Name:      &res.Name,
+		ID:        &res.ID,
+		Message:   &res.Message,
+		Temporary: &res.Temporary,
+		Timeout:   &res.Timeout,
+		Fault:     &res.Fault,
 	}
 	return body
 }
@@ -163,12 +163,12 @@ func NewDivideDivByZeroResponseBody(res *goa.ServiceError) *DivideDivByZeroRespo
 // of the "divide" endpoint of the "divider" service.
 func NewDivideTimeoutResponseBody(res *goa.ServiceError) *DivideTimeoutResponseBody {
 	body := &DivideTimeoutResponseBody{
-		Name:      res.Name,
-		ID:        res.ID,
-		Message:   res.Message,
-		Temporary: res.Temporary,
-		Timeout:   res.Timeout,
-		Fault:     res.Fault,
+		Name:      &res.Name,
+		ID:        &res.ID,
+		Message:   &res.Message,
+		Temporary: &res.Temporary,
+		Timeout:   &res.Timeout,
+		Fault:     &res.Fault,
 	}
 	return body
 }

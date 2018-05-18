@@ -43,12 +43,7 @@ paths:
         "200":
           description: OK response.
           schema:
-<<<<<<< HEAD
-            $ref: '#/definitions/StoredBottleResponseBodyTinyCollection'
-=======
-            schema: ""
             $ref: '#/definitions/StoredBottleTinyResponseBodyCollection'
->>>>>>> Project result type if it has only one view or view explicitly specified
       schemes:
       - http
     post:
@@ -329,27 +324,6 @@ definitions:
     - name
     - winery
     - vintage
-  Component:
-    title: Component
-    type: object
-    properties:
-      percentage:
-        type: integer
-        description: Percentage of varietal in wine
-        example: 23
-        minimum: 1
-        maximum: 100
-      varietal:
-        type: string
-        description: Grape varietal
-        example: Syrah
-        pattern: '[A-Za-z'' ]+'
-        maxLength: 100
-    example:
-      percentage: 77
-      varietal: Syrah
-    required:
-    - varietal
   ComponentRequestBody:
     title: ComponentRequestBody
     type: object
@@ -564,7 +538,7 @@ definitions:
       composition:
         type: array
         items:
-          $ref: '#/definitions/Component'
+          $ref: '#/definitions/ComponentResponseBody'
         description: Composition is the list of grape varietals and associated percentage.
         example:
         - percentage: 65
@@ -599,7 +573,7 @@ definitions:
         minimum: 1900
         maximum: 2020
       winery:
-        $ref: '#/definitions/Winery'
+        $ref: '#/definitions/WineryResponseBodyTiny'
     description: ShowResponseBody result type (default view)
     example:
       composition:
@@ -666,7 +640,6 @@ definitions:
         minimum: 1900
         maximum: 2020
       winery:
-        schema: ""
         $ref: '#/definitions/WineryTinyResponseBody'
     description: A StoredBottle describes a bottle retrieved by the storage service.
       (default view)
@@ -736,7 +709,6 @@ definitions:
       winery:
         name: Longoria
   StoredBottleTinyResponseBody:
-    schema: ""
     title: 'Mediatype identifier: '
     type: object
     properties:
@@ -750,7 +722,6 @@ definitions:
         example: Blue's Cuvee
         maxLength: 100
       winery:
-        schema: ""
         $ref: '#/definitions/WineryTinyResponseBody'
     description: A StoredBottle describes a bottle retrieved by the storage service.
       (tiny view) (default view) (default view) (default view)
@@ -764,11 +735,9 @@ definitions:
     - name
     - winery
   StoredBottleTinyResponseBodyCollection:
-    schema: ""
     title: 'Mediatype identifier: '
     type: array
     items:
-      schema: ""
       $ref: '#/definitions/StoredBottleTinyResponseBody'
     description: StoredBottleTinyResponseBodyCollection is the result type for an
       array of StoredBottleTinyResponseBody (default view)
@@ -785,42 +754,6 @@ definitions:
       name: Blue's Cuvee
       winery:
         name: Longoria
-    - id: 123abc
-      name: Blue's Cuvee
-      winery:
-        name: Longoria
-  Winery:
-    title: 'Mediatype identifier: winery; view=default'
-    type: object
-    properties:
-      country:
-        type: string
-        description: Country of winery
-        example: USA
-        pattern: (?i)[a-z '\.]+
-      name:
-        type: string
-        description: Name of winery
-        example: Longoria
-      region:
-        type: string
-        description: Region of winery
-        example: Central Coast, California
-        pattern: (?i)[a-z '\.]+
-      url:
-        type: string
-        description: Winery website URL
-        example: http://www.longoriawine.com/
-        pattern: (?i)^(https?|ftp)://[^\s/$.?#].[^\s]*$
-    example:
-      country: USA
-      name: Longoria
-      region: Central Coast, California
-      url: http://www.longoriawine.com/
-    required:
-    - name
-    - region
-    - country
   WineryRequestBody:
     title: 'Mediatype identifier: winery; view=default'
     type: object
@@ -854,35 +787,7 @@ definitions:
     - name
     - region
     - country
-  WineryResponseBody:
-    title: 'Mediatype identifier: winery; view=default'
-    type: object
-    properties:
-      country:
-        type: string
-        description: Country of winery
-        example: USA
-        pattern: (?i)[a-z '\.]+
-      name:
-        type: string
-        description: Name of winery
-        example: Longoria
-      region:
-        type: string
-        description: Region of winery
-        example: Central Coast, California
-        pattern: (?i)[a-z '\.]+
-      url:
-        type: string
-        description: Winery website URL
-        example: http://www.longoriawine.com/
-        pattern: (?i)^(https?|ftp)://[^\s/$.?#].[^\s]*$
-    example:
-      name: Longoria
-    required:
-    - name
-  WineryTinyResponseBody:
-    schema: ""
+  WineryResponseBodyTiny:
     title: 'Mediatype identifier: '
     type: object
     properties:
@@ -890,7 +795,21 @@ definitions:
         type: string
         description: Name of winery
         example: Longoria
-    description: WineryTinyResponseBody result type (default view) (default view)
+    description: WineryResponseBody result type (tiny view) (default view) (default
+      view)
+    example:
+      name: Longoria
+    required:
+    - name
+  WineryTinyResponseBody:
+    title: 'Mediatype identifier: '
+    type: object
+    properties:
+      name:
+        type: string
+        description: Name of winery
+        example: Longoria
+    description: Winery result type (tiny view) (default view) (default view)
     example:
       name: Longoria
     required:

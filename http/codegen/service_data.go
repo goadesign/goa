@@ -772,7 +772,7 @@ func (d ServicesData) analyze(hs *httpdesign.ServiceExpr) *ServiceData {
 			md := svc.Method(a.Name())
 			for _, v := range a.Responses {
 				body := v.Body
-				if md.ViewedResult != nil {
+				if _, ok := body.Metadata["origin:attribute"]; !ok && md.ViewedResult != nil {
 					// If a method endpoint has a result type with multiple views, no
 					// need to generate the validation in the server and client packages
 					// for all the user type we generate. We call the validation
@@ -1129,6 +1129,7 @@ func buildPayloadData(e *httpdesign.EndpointExpr, sd *ServiceData) *PayloadData 
 	}
 }
 
+// buildResultData builds the result data for the given service endpoint.
 func buildResultData(e *httpdesign.EndpointExpr, sd *ServiceData) *ResultData {
 	var (
 		result = e.MethodExpr.Result
@@ -1151,18 +1152,14 @@ func buildResultData(e *httpdesign.EndpointExpr, sd *ServiceData) *ResultData {
 				view = v[0]
 			}
 		}
+		if result.Type != design.Empty {
+			name = svc.Scope.GoFullTypeName(result, svc.PkgName)
+			ref = svc.Scope.GoFullTypeRef(result, svc.PkgName)
+		}
 		if ep.ViewedResult != nil {
 			result = &design.AttributeExpr{Type: ep.ViewedResult.Type}
 			pkg = svc.ViewsPkg
 			viewed = true
-		}
-		if result.Type != design.Empty {
-			name = svc.Scope.GoFullTypeName(result, pkg)
-			ref = svc.Scope.GoFullTypeRef(result, pkg)
-		}
-		projres := result
-		if viewed && !design.IsArray(result.Type) {
-			projres = result.Find("projected")
 		}
 		seenProj = make(map[string][]*service.ProjectData)
 		notag := -1
@@ -1174,112 +1171,31 @@ func buildResultData(e *httpdesign.EndpointExpr, sd *ServiceData) *ResultData {
 				notag = i
 			}
 			var (
-				init   *InitData
-				origin string
-
-				body = v.Body.Type
-			)
-			respBody := result
-			if body != design.Empty {
-				// If design uses Body("name") syntax we need to use the
-				// attribute in the result type for body transformation.
-				if o, ok := v.Body.Metadata["origin:attribute"]; ok {
-					if viewed {
-						respBody = projres
-					}
-					origin = o[0]
-					respBody = design.AsObject(respBody.Type).Attribute(origin)
-				}
-			}
-			if viewed {
-				sd.ClientProjections = append(sd.ClientProjections, projectBodyToViewedResult(v.Body, result, svc.Scope, pkg, seenProj)...)
-			} else if needInit(projres.Type) {
-				var (
-					name       string
-					desc       string
-					isObject   bool
-					code       string
-					err        error
-					clientArgs []*InitArgData
-				)
-				{
-					status := codegen.Goify(http.StatusText(v.StatusCode), true)
-					name = fmt.Sprintf("New%s%s%s", codegen.Goify(ep.Name, true), codegen.Goify(ep.Result, true), status)
-					desc = fmt.Sprintf("%s builds a %q service %q endpoint result from a HTTP %q response.",
-						name, svc.Name, e.Name(), status)
-					isObject = design.IsObject(projres.Type)
-					if body != design.Empty {
-						ref := "body"
-						if design.IsObject(body) {
-							ref = "&body"
-						}
-						var vcode string
-						if ut, ok := body.(design.UserType); ok {
-							if val := ut.Attribute().Validation; val != nil {
-								vcode = codegen.RecursiveValidationCode(ut.Attribute(), true, false, false, "body")
-							}
-						}
-						clientArgs = []*InitArgData{{
-							Name:     "body",
-							Ref:      ref,
-							TypeRef:  svc.Scope.GoTypeRef(&design.AttributeExpr{Type: body}),
-							Validate: vcode,
-						}}
-						var helpers []*codegen.TransformFunctionData
-						code, helpers, err = codegen.GoTypeTransform(body, respBody.Type, "body", "v", "", pkg, true, svc.Scope)
-						if err == nil {
-							sd.ClientTransformHelpers = codegen.AppendHelpers(sd.ClientTransformHelpers, helpers)
-						}
-					} else if design.IsArray(projres.Type) || design.IsMap(projres.Type) {
-						if params := design.AsObject(e.QueryParams().Type); len(*params) > 0 {
-							var helpers []*codegen.TransformFunctionData
-							code, helpers, err = codegen.GoTypeTransform((*params)[0].Attribute.Type, projres.Type,
-								codegen.Goify((*params)[0].Name, false), "v", "", svc.PkgName, true, svc.Scope)
-							if err == nil {
-								sd.ClientTransformHelpers = codegen.AppendHelpers(sd.ClientTransformHelpers, helpers)
-							}
-						}
-					}
-					if err != nil {
-						fmt.Println(err.Error()) // TBD validate DSL so errors are not possible
-					}
-					for _, h := range extractHeaders(v.MappedHeaders(), projres, false, viewed, svc.Scope) {
-						clientArgs = append(clientArgs, &InitArgData{
-							Name:      h.VarName,
-							Ref:       h.VarName,
-							FieldName: h.FieldName,
-							TypeRef:   h.TypeRef,
-							Validate:  h.Validate,
-							Example:   h.Example,
-						})
-					}
-				}
-
-				init = &InitData{
-					Name:                     name,
-					Description:              desc,
-					ClientArgs:               clientArgs,
-					ReturnTypeName:           svc.Scope.GoFullTypeName(result, pkg),
-					ReturnTypeRef:            svc.Scope.GoFullTypeRef(result, pkg),
-					ReturnIsStruct:           isObject,
-					ReturnTypeAttribute:      codegen.Goify(origin, true),
-					ReturnIsPrimitivePointer: viewed,
-					ClientCode:               code,
-				}
-			}
-
-			var (
 				responseData   *ResponseData
 				headersData    []*HeaderData
 				serverBodyData *TypeData
 				clientBodyData *TypeData
 				projections    []*service.ProjectData
+				init           *InitData
+				origin         string
 				mustValidate   bool
 			)
 			{
-				headersData = extractHeaders(v.MappedHeaders(), projres, false, viewed, svc.Scope)
-				serverBodyData = buildBodyType(sd, e, v.Body, result, false, true, false, pkg)
-				clientBodyData = buildBodyType(sd, e, v.Body, result, false, false, false, pkg)
+				if o, ok := v.Body.Metadata["origin:attribute"]; ok {
+					origin = o[0]
+				}
+				if v.Body.Type != design.Empty && viewed && origin == "" {
+					// Generate constructors to transform client response body to viewed
+					// result type. If DSL uses explicit body definition using
+					// Body("name"), we don't generate these constructors but transform
+					// client response body directly to result type.
+					sd.ClientProjections = append(sd.ClientProjections, projectBodyToViewedResult(v.Body, result, svc.Scope, svc.ViewsPkg, seenProj)...)
+				} else if needInit(e.MethodExpr.Result.Type) {
+					init = buildResponseResultInit(v, e, sd, svc.PkgName)
+				}
+				headersData = extractHeaders(v.MappedHeaders(), result, false, viewed, svc.Scope)
+				serverBodyData = buildBodyType(sd, e, v.Body, result, false, true, viewed, pkg)
+				clientBodyData = buildBodyType(sd, e, v.Body, result, false, false, viewed, pkg)
 				if clientBodyData != nil {
 					sd.ServerTypeNames[clientBodyData.Name] = struct{}{}
 					sd.ClientTypeNames[clientBodyData.Name] = struct{}{}
@@ -1290,7 +1206,7 @@ func buildResultData(e *httpdesign.EndpointExpr, sd *ServiceData) *ResultData {
 						break
 					}
 				}
-				if p, ok := seenProj[svc.Scope.GoTypeName(v.Body)]; ok {
+				if p, ok := seenProj[svc.Scope.GoTypeName(v.Body)]; viewed && ok {
 					projections = p
 				}
 				responseData = &ResponseData{
@@ -1302,7 +1218,7 @@ func buildResultData(e *httpdesign.EndpointExpr, sd *ServiceData) *ResultData {
 					ResultInit:        init,
 					TagName:           codegen.Goify(v.Tag[0], true),
 					TagValue:          v.Tag[1],
-					TagRequired:       projres.IsRequired(v.Tag[0]) && !viewed,
+					TagRequired:       result.IsRequired(v.Tag[0]) && !viewed,
 					MustValidate:      mustValidate,
 					ResultAttr:        codegen.Goify(origin, true),
 					ViewedResult:      viewed,
@@ -1323,6 +1239,85 @@ func buildResultData(e *httpdesign.EndpointExpr, sd *ServiceData) *ResultData {
 		Ref:       ref,
 		Responses: responses,
 		View:      view,
+	}
+}
+
+// buildResponseResultInit builds the constructor to transform a client
+// response to a result type.
+func buildResponseResultInit(resp *httpdesign.HTTPResponseExpr, e *httpdesign.EndpointExpr, sd *ServiceData, pkg string) *InitData {
+	var (
+		code       string
+		origin     string
+		err        error
+		clientArgs []*InitArgData
+
+		svc = sd.Service
+		md  = svc.Method(e.MethodExpr.Name)
+	)
+	result := e.MethodExpr.Result
+	respBody := result
+	if resp.Body.Type != design.Empty {
+		// If design uses Body("name") syntax we need to use the
+		// attribute in the result type for body transformation.
+		if o, ok := resp.Body.Metadata["origin:attribute"]; ok {
+			origin = o[0]
+			respBody = design.AsObject(respBody.Type).Attribute(origin)
+		}
+		ref := "body"
+		if design.IsObject(resp.Body.Type) {
+			ref = "&body"
+		}
+		var vcode string
+		if ut, ok := resp.Body.Type.(design.UserType); ok {
+			if val := ut.Attribute().Validation; val != nil {
+				vcode = codegen.RecursiveValidationCode(ut.Attribute(), true, false, false, "body")
+			}
+		}
+		clientArgs = []*InitArgData{{
+			Name:     "body",
+			Ref:      ref,
+			TypeRef:  svc.Scope.GoTypeRef(&design.AttributeExpr{Type: resp.Body.Type}),
+			Validate: vcode,
+		}}
+		var helpers []*codegen.TransformFunctionData
+		code, helpers, err = codegen.GoTypeTransform(resp.Body.Type, respBody.Type, "body", "v", "", pkg, true, svc.Scope)
+		if err == nil {
+			sd.ClientTransformHelpers = codegen.AppendHelpers(sd.ClientTransformHelpers, helpers)
+		}
+	} else if design.IsArray(result.Type) || design.IsMap(result.Type) {
+		if params := design.AsObject(e.QueryParams().Type); len(*params) > 0 {
+			var helpers []*codegen.TransformFunctionData
+			code, helpers, err = codegen.GoTypeTransform((*params)[0].Attribute.Type, result.Type,
+				codegen.Goify((*params)[0].Name, false), "v", "", svc.PkgName, true, svc.Scope)
+			if err == nil {
+				sd.ClientTransformHelpers = codegen.AppendHelpers(sd.ClientTransformHelpers, helpers)
+			}
+		}
+	}
+	if err != nil {
+		fmt.Println(err.Error()) // TBD validate DSL so errors are not possible
+	}
+	for _, h := range extractHeaders(resp.MappedHeaders(), result, false, false, svc.Scope) {
+		clientArgs = append(clientArgs, &InitArgData{
+			Name:      h.VarName,
+			Ref:       h.VarName,
+			FieldName: h.FieldName,
+			TypeRef:   h.TypeRef,
+			Validate:  h.Validate,
+			Example:   h.Example,
+		})
+	}
+	status := codegen.Goify(http.StatusText(resp.StatusCode), true)
+	name := fmt.Sprintf("New%s%s%s", codegen.Goify(md.Name, true), codegen.Goify(md.Result, true), status)
+	return &InitData{
+		Name:                name,
+		Description:         fmt.Sprintf("%s builds a %q service %q endpoint result from a HTTP %q response.", name, svc.Name, e.Name(), status),
+		ClientArgs:          clientArgs,
+		ReturnTypeName:      svc.Scope.GoFullTypeName(result, pkg),
+		ReturnTypeRef:       svc.Scope.GoFullTypeRef(result, pkg),
+		ReturnIsStruct:      design.IsObject(result.Type),
+		ReturnTypeAttribute: codegen.Goify(origin, true),
+		ClientCode:          code,
 	}
 }
 
@@ -1428,8 +1423,8 @@ func buildErrorsData(e *httpdesign.EndpointExpr, sd *ServiceData) []*ErrorGroupD
 			)
 			{
 				att := v.ErrorExpr.AttributeExpr
-				serverBodyData = buildBodyType(sd, e, v.Response.Body, att, false, true, true, svc.PkgName)
-				clientBodyData = buildBodyType(sd, e, v.Response.Body, att, false, false, true, svc.PkgName)
+				serverBodyData = buildBodyType(sd, e, v.Response.Body, att, false, true, false, svc.PkgName)
+				clientBodyData = buildBodyType(sd, e, v.Response.Body, att, false, false, false, svc.PkgName)
 				if clientBodyData != nil {
 					sd.ClientTypeNames[clientBodyData.Name] = struct{}{}
 					sd.ServerTypeNames[clientBodyData.Name] = struct{}{}
@@ -1502,14 +1497,13 @@ func buildErrorsData(e *httpdesign.EndpointExpr, sd *ServiceData) []*ErrorGroupD
 //
 // svr is true if the function is generated for server side code.
 //
-// iserr indicates whether the type is for an error response body.
-func buildBodyType(sd *ServiceData, e *httpdesign.EndpointExpr, body, att *design.AttributeExpr, req, svr, iserr bool, pkg string) *TypeData {
+// viewed indicates whether the body is built from a viewed result type.
+func buildBodyType(sd *ServiceData, e *httpdesign.EndpointExpr, body, att *design.AttributeExpr, req, svr, viewed bool, pkg string) *TypeData {
 	if body.Type == design.Empty {
 		return nil
 	}
 	var (
 		svc = sd.Service
-		md  = svc.Method(e.Name())
 
 		marshaled bool
 	)
@@ -1542,7 +1536,7 @@ func buildBodyType(sd *ServiceData, e *httpdesign.EndpointExpr, body, att *desig
 			}
 			desc = fmt.Sprintf("%s is the type of the %q service %q endpoint HTTP %s body.",
 				varname, svc.Name, e.Name(), ctx)
-			if svr && req || (!svr && !req && (iserr || md.ViewedResult == nil)) {
+			if svr && req || (!svr && !req && !viewed) {
 				// validate unmarshaled data
 				validateDef = codegen.RecursiveValidationCode(body, true, !marshaled, marshaled, "body")
 				if validateDef != "" {
@@ -1593,15 +1587,20 @@ func buildBodyType(sd *ServiceData, e *httpdesign.EndpointExpr, body, att *desig
 		// If design uses Body("name") syntax then need to use payload/result
 		// attribute to transform.
 		if o, ok := body.Metadata["origin:attribute"]; ok {
-			if !iserr && md.ViewedResult != nil {
-				srcType = att.Find("projected").Type
+			srcObj := design.AsObject(srcType)
+			if viewed {
+				srcObj = design.AsObject(srcObj.Attribute("projected").Type)
 			}
 			origin = o[0]
-			srcType = design.AsObject(srcType).Attribute(origin).Type
-			src = src + "." + codegen.Goify(origin, true)
+			srcType = srcObj.Attribute(origin).Type
+			if viewed {
+				src = src + ".Projected." + codegen.Goify(origin, true)
+			} else {
+				src = src + "." + codegen.Goify(origin, true)
+			}
 		}
 		var helpers []*codegen.TransformFunctionData
-		if svr && !req && md.ViewedResult != nil && !iserr {
+		if svr && !req && (viewed && origin == "") {
 			code, helpers, err = transformViewedResult(srcType, tgtType, src, "body", pkg, "", "", false, svc.Scope)
 		} else {
 			code, helpers, err = codegen.GoTypeTransform(srcType, tgtType, src, "body", pkg, "", false, svc.Scope)

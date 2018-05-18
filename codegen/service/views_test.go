@@ -18,6 +18,7 @@ func TestViews(t *testing.T) {
 		Code string
 	}{
 		{"result-with-multiple-views", testdata.ResultWithMultipleViewsDSL, testdata.ResultWithMultipleViewsCode},
+		{"result-collection-multiple-views", testdata.ResultCollectionMultipleViewsDSL, testdata.ResultCollectionMultipleViewsCode},
 		{"result-with-user-type", testdata.ResultWithUserTypeDSL, testdata.ResultWithUserTypeCode},
 		{"result-with-result-type", testdata.ResultWithResultTypeDSL, testdata.ResultWithResultTypeCode},
 		{"result-with-recursive-result-type", testdata.ResultWithRecursiveResultTypeDSL, testdata.ResultWithRecursiveResultTypeCode},
@@ -25,7 +26,6 @@ func TestViews(t *testing.T) {
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
 			codegen.RunDSL(t, c.DSL)
-			design.Root.GeneratedTypes = &design.GeneratedRoot{}
 			if len(design.Root.Services) != 1 {
 				t.Fatalf("got %d services, expected 1", len(design.Root.Services))
 			}
