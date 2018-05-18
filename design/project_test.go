@@ -159,7 +159,7 @@ func array(dt DataType) *Array {
 
 func resultRecursive(params ...interface{}) *ResultTypeExpr {
 	rt := resultType(params...)
-	recAtt := &NamedAttributeExpr{"rec", &AttributeExpr{Type: rt.UserTypeExpr}}
+	recAtt := &NamedAttributeExpr{"rec", &AttributeExpr{Type: rt}}
 	obj := AsObject(rt)
 	*obj = append(*obj, recAtt)
 	for _, v := range rt.Views {

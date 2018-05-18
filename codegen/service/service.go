@@ -9,7 +9,7 @@ import (
 )
 
 // File returns the service file for the given service.
-func File(service *design.ServiceExpr) *codegen.File {
+func File(genpkg string, service *design.ServiceExpr) *codegen.File {
 	path := filepath.Join(codegen.Gendir, codegen.SnakeCase(service.Name), "service.go")
 	svc := Services.Get(service.Name)
 	header := codegen.Header(
@@ -18,6 +18,7 @@ func File(service *design.ServiceExpr) *codegen.File {
 		[]*codegen.ImportSpec{
 			{Path: "context"},
 			{Path: "goa.design/goa"},
+			{Path: genpkg + "/" + codegen.SnakeCase(service.Name) + "/" + "views", Name: svc.ViewsPkg},
 		})
 	def := &codegen.SectionTemplate{Name: "service", Source: serviceT, Data: svc}
 
@@ -90,6 +91,36 @@ func File(service *design.ServiceExpr) *codegen.File {
 			Data:   er,
 		})
 	}
+
+	// transform result type functions
+	var projh []*codegen.TransformFunctionData
+	for _, t := range svc.ProjectedTypes {
+		if t.ConvertToResult != nil {
+			projh = codegen.AppendHelpers(projh, t.ConvertToResult.Helpers)
+			sections = append(sections, &codegen.SectionTemplate{
+				Name:   "viewed-result-to-result",
+				Source: typeInitT,
+				Data:   t.ConvertToResult,
+			})
+		}
+		for _, p := range t.Views {
+			projh = codegen.AppendHelpers(projh, p.Project.Helpers)
+			sections = append(sections, &codegen.SectionTemplate{
+				Name:   "project-result-init",
+				Source: typeInitT,
+				Data:   p.Project,
+			})
+		}
+	}
+
+	for _, h := range projh {
+		sections = append(sections, &codegen.SectionTemplate{
+			Name:   "transform-helpers",
+			Source: transformHelperT,
+			Data:   h,
+		})
+	}
+
 	return &codegen.File{Path: path, SectionTemplates: sections}
 }
 
@@ -111,7 +142,17 @@ const serviceT = `
 type Service interface {
 {{- range .Methods }}
 	{{ comment .Description }}
-	{{ .VarName }}(context.Context{{ if .Payload }}, {{ .PayloadRef }}{{ end }}) {{ if .Result }}({{ .ResultRef }}, error){{ else }}error{{ end }}
+	{{- if .ViewedResult }}
+		{{ comment "The \"view\" return value must have one of the following views" }}
+		{{- range .ViewedResult.Views }}
+			{{- if .Description }}
+			{{ printf "* %q: %s" .Name .Description | comment }}
+			{{- else }}
+			{{ printf "* %q" .Name | comment }}
+			{{- end }}
+		{{- end }}
+	{{- end }}
+	{{ .VarName }}(context.Context{{ if .Payload }}, {{ .PayloadRef }}{{ end }}) ({{ if .Result }}res {{ .ResultRef }}, {{ if .ViewedResult }}view string, {{ end }}{{ end }}err error)
 {{- end }}
 }
 
@@ -166,5 +207,22 @@ func {{ .Name }}(err error) {{ .TypeRef }} {
 		Fault: true,
 	{{- end }}
 	}
+}
+`
+
+// input: InitData
+const typeInitT = `{{ comment .Description }}
+func {{ .Name }}({{ range .Args }}{{ .Name }} {{ .Ref }}, {{ end }}) {{ .ReturnRef }} {
+{{- if .ReturnIsStruct }}
+	return &{{ .ReturnTypeName }}{
+	{{- range .Args }}
+		{{- if .FieldName }}
+		{{ .FieldName }}: {{ .Name }},
+		{{- end }}
+	{{- end }}
+	}
+{{- else }}
+	{{ .Code }}
+{{- end }}
 }
 `

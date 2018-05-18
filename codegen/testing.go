@@ -18,11 +18,36 @@ import (
 func RunDSL(t *testing.T, dsl func()) *design.RootExpr {
 	eval.Reset()
 	design.Root = new(design.RootExpr)
+	design.Root.GeneratedTypes = &design.GeneratedRoot{}
 	eval.Register(design.Root)
+	eval.Register(design.Root.GeneratedTypes)
 	design.Root.API = &design.APIExpr{
 		Name:    "test api",
 		Servers: []*design.ServerExpr{{URL: "http://localhost"}},
 	}
+	if !eval.Execute(dsl, nil) {
+		t.Fatal(eval.Context.Error())
+	}
+	if err := eval.RunDSL(); err != nil {
+		t.Fatal(err)
+	}
+	return design.Root
+}
+
+// RunDSLWithFunc returns the DSL root resulting from running the given DSL.
+// It executes a function to add any top-level types to the design Root before
+// running the DSL.
+func RunDSLWithFunc(t *testing.T, dsl func(), fn func()) *design.RootExpr {
+	eval.Reset()
+	design.Root = new(design.RootExpr)
+	design.Root.GeneratedTypes = &design.GeneratedRoot{}
+	eval.Register(design.Root)
+	eval.Register(design.Root.GeneratedTypes)
+	design.Root.API = &design.APIExpr{
+		Name:    "test api",
+		Servers: []*design.ServerExpr{{URL: "http://localhost"}},
+	}
+	fn()
 	if !eval.Execute(dsl, nil) {
 		t.Fatal(eval.Context.Error())
 	}

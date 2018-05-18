@@ -88,6 +88,7 @@ func clientEncodeDecode(genpkg string, svc *httpdesign.ServiceExpr) *codegen.Fil
 			{Path: "goa.design/goa", Name: "goa"},
 			{Path: "goa.design/goa/http", Name: "goahttp"},
 			{Path: genpkg + "/" + codegen.SnakeCase(svc.Name()), Name: data.Service.PkgName},
+			{Path: genpkg + "/" + codegen.SnakeCase(svc.Name()) + "/" + "views", Name: data.Service.ViewsPkg},
 		}),
 	}
 
@@ -402,7 +403,28 @@ func {{ .ResponseDecoder }}(decoder func(*http.Response) goahttp.Decoder, restor
 		case {{ .StatusCode }}:
 ` + singleResponseT + `
 		{{- if .ResultInit }}
-			return {{ .ResultInit.Name }}({{ range .ResultInit.ClientArgs }}{{ .Ref }},{{ end }}), nil
+		return {{ .ResultInit.Name }}({{ range .ResultInit.ClientArgs }}{{ .Ref }},{{ end }}), nil
+		{{- else if .ViewedResult }}
+		var (
+			vres {{ $.Method.ViewedResult.FullRef }}
+			view string
+		)
+		view = resp.Header.Get("goa-view")
+		switch view {
+			{{- range .ClientProjections }}
+		case {{ printf "%q" .Name }}{{ if eq .Name "default" }}, ""{{ end }}:
+			vres = {{ .Project.Name }}({{ if not $.Method.ViewedResult.IsCollection }}&{{ end }}body)
+			{{- end }}
+		default:
+			return nil, goahttp.ErrValidationError("{{ $.ServiceName }}", "{{ $.Method.Name }}", fmt.Errorf("unknown goa-view in header %q", view))
+		}
+		{{- range .Headers }}
+		vres.Projected.{{ .FieldName }} = {{ .VarName }}
+		{{- end }}
+		if err = vres.Validate(); err != nil {
+			return nil, goahttp.ErrValidationError("{{ $.ServiceName }}", "{{ $.Method.Name }}", err)
+		}
+		return {{ $.ServicePkgName }}.{{ $.Method.ViewedResult.ConvertToResult.Name }}(vres), nil
 		{{- else if .ClientBody }}
 			return body, nil
 		{{- else }}
@@ -468,7 +490,7 @@ const singleResponseT = ` {{- if .ClientBody }}
 				return nil, goahttp.ErrValidationError("{{ $.ServiceName }}", "{{ $.Method.Name }}", err)
 			}
 		{{- end }}
-	{{ end }}
+	{{- end }}
 
 	{{- if .Headers }}
 			var (

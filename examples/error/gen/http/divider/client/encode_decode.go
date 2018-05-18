@@ -78,7 +78,6 @@ func DecodeIntegerDivideResponse(decoder func(*http.Response) goahttp.Decoder, r
 			if err != nil {
 				return nil, goahttp.ErrDecodingError("divider", "integer_divide", err)
 			}
-
 			return body, nil
 		case http.StatusExpectationFailed:
 			var (
@@ -93,7 +92,6 @@ func DecodeIntegerDivideResponse(decoder func(*http.Response) goahttp.Decoder, r
 			if err != nil {
 				return nil, goahttp.ErrValidationError("divider", "integer_divide", err)
 			}
-
 			return nil, NewIntegerDivideHasRemainder(&body)
 		case http.StatusBadRequest:
 			var (
@@ -108,7 +106,6 @@ func DecodeIntegerDivideResponse(decoder func(*http.Response) goahttp.Decoder, r
 			if err != nil {
 				return nil, goahttp.ErrValidationError("divider", "integer_divide", err)
 			}
-
 			return nil, NewIntegerDivideDivByZero(&body)
 		case http.StatusGatewayTimeout:
 			var (
@@ -123,7 +120,6 @@ func DecodeIntegerDivideResponse(decoder func(*http.Response) goahttp.Decoder, r
 			if err != nil {
 				return nil, goahttp.ErrValidationError("divider", "integer_divide", err)
 			}
-
 			return nil, NewIntegerDivideTimeout(&body)
 		default:
 			body, _ := ioutil.ReadAll(resp.Body)
@@ -190,7 +186,6 @@ func DecodeDivideResponse(decoder func(*http.Response) goahttp.Decoder, restoreB
 			if err != nil {
 				return nil, goahttp.ErrDecodingError("divider", "divide", err)
 			}
-
 			return body, nil
 		case http.StatusBadRequest:
 			var (
@@ -205,7 +200,6 @@ func DecodeDivideResponse(decoder func(*http.Response) goahttp.Decoder, restoreB
 			if err != nil {
 				return nil, goahttp.ErrValidationError("divider", "divide", err)
 			}
-
 			return nil, NewDivideDivByZero(&body)
 		case http.StatusGatewayTimeout:
 			var (
@@ -220,7 +214,6 @@ func DecodeDivideResponse(decoder func(*http.Response) goahttp.Decoder, restoreB
 			if err != nil {
 				return nil, goahttp.ErrValidationError("divider", "divide", err)
 			}
-
 			return nil, NewDivideTimeout(&body)
 		default:
 			body, _ := ioutil.ReadAll(resp.Body)

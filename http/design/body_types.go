@@ -98,167 +98,73 @@ func RequestBody(a *EndpointExpr) *design.AttributeExpr {
 // given endpoint and response. If the DSL defines a body explicitly via the
 // Body function then the corresponding attribute is used. Otherwise the
 // attribute is computed by removing the attributes of the method payload used
-// to define headers and parameters. Also if the response defines a view then
-// the response result type is projected first.
+// to define headers.
 func ResponseBody(a *EndpointExpr, resp *HTTPResponseExpr) *design.AttributeExpr {
-	result := a.MethodExpr.Result
-	if result == nil || result.Type == design.Empty {
-		return &design.AttributeExpr{Type: design.Empty}
-	}
-	if resp.Body != nil {
-		return resp.Body
-	}
-
-	var suffix string
+	var name, suffix string
 	if len(a.Responses) > 1 {
 		suffix = codegen.Goify(http.StatusText(resp.StatusCode), true)
 	}
-
-	var (
-		headers = resp.MappedHeaders()
-		name    = codegen.Goify(a.Name(), true) + suffix + "ResponseBody"
-	)
-
-	// 1. If Result is not an object then check whether there are headers
-	// defined and if so return empty type (result encoded in response
-	// headers) otherwise return renamed result type (result encoded in
-	// response body).
-	if !design.IsObject(result.Type) {
-		if len(*design.AsObject(resp.Headers().Type)) == 0 {
-			result = design.DupAtt(result)
-			renameType(result, name, "ResponseBody")
-			return result
-		}
-		return &design.AttributeExpr{Type: design.Empty}
-	}
-
-	// 2. Project if response type is result type and attribute has a view.
-	rt, isrt := result.Type.(*design.ResultTypeExpr)
-	if isrt {
-		if v := result.Metadata["view"]; len(v) > 0 {
-			dt, err := design.Project(rt, v[0])
-			if err != nil {
-				panic(err) // bug
-			}
-			result = design.DupAtt(result)
-			result.Type = dt
-		}
-	}
-
-	// 3. Remove header attributes
-	body := design.NewMappedAttributeExpr(result)
-	removeAttributes(body, headers)
-
-	// 4. Return empty type if no attribute left
-	if len(*design.AsObject(body.Type)) == 0 {
-		return &design.AttributeExpr{Type: design.Empty}
-	}
-
-	// 5. Build computed user type
-	userType := &design.UserTypeExpr{
-		AttributeExpr: body.Attribute(),
-		TypeName:      name,
-	}
-	if isrt {
-		views := make([]*design.ViewExpr, len(rt.Views))
-		for i, v := range rt.Views {
-			mv := design.NewMappedAttributeExpr(v.AttributeExpr)
-			removeAttributes(mv, headers)
-			nv := &design.ViewExpr{
-				AttributeExpr: mv.Attribute(),
-				Name:          v.Name,
-			}
-			views[i] = nv
-		}
-		nmt := &design.ResultTypeExpr{
-			UserTypeExpr: userType,
-			Identifier:   rt.Identifier,
-			ContentType:  rt.ContentType,
-			Views:        views,
-		}
-		for _, v := range views {
-			v.Parent = nmt
-		}
-		return &design.AttributeExpr{Type: nmt, Validation: userType.Validation}
-	}
-	appendSuffix(userType.Attribute().Type, "ResponseBody")
-
-	return &design.AttributeExpr{Type: userType, Validation: userType.Validation}
+	name = codegen.Goify(a.Name(), true) + suffix
+	return buildResponseBody(name, a.MethodExpr.Result, resp)
 }
 
 // ErrorResponseBody returns an attribute describing the response body of a
 // given error. If the DSL defines a body explicitly via the Body function then
 // the corresponding attribute is returned. Otherwise the attribute is computed
 // by removing the attributes of the error used to define headers and
-// parameters. Also if the error response defines a view then the result type is
-// projected first.
+// parameters.
 func ErrorResponseBody(a *EndpointExpr, v *ErrorExpr) *design.AttributeExpr {
-	result := v.ErrorExpr.AttributeExpr
-	if result == nil || result.Type == design.Empty {
+	var name, suffix string
+	suffix = codegen.Goify(v.ErrorExpr.Name, true)
+	name = codegen.Goify(a.Name(), true) + suffix
+	return buildResponseBody(name, v.ErrorExpr.AttributeExpr, v.Response)
+}
+
+func buildResponseBody(name string, attr *design.AttributeExpr, resp *HTTPResponseExpr) *design.AttributeExpr {
+	name += "ResponseBody"
+	if attr == nil || attr.Type == design.Empty {
 		return &design.AttributeExpr{Type: design.Empty}
 	}
-	resp := v.Response
 	if resp.Body != nil {
 		return resp.Body
 	}
 
 	var (
 		headers = resp.MappedHeaders()
-		suffix  = codegen.Goify(v.ErrorExpr.Name, true) + "ResponseBody"
-		name    = codegen.Goify(a.Name(), true) + suffix
 	)
 
-	// 1. If Result is not an object then check whether there are headers
-	// defined and if so return empty type (result encoded in response
-	// headers) otherwise return renamed result type (result encoded in
+	// 1. If attribute is not an object then check whether there are headers
+	// defined and if so return empty type (attr encoded in response
+	// headers) otherwise return renamed attr type (attr encoded in
 	// response body).
-	if !design.IsObject(result.Type) {
+	if !design.IsObject(attr.Type) {
 		if len(*design.AsObject(resp.Headers().Type)) == 0 {
-			_, ok := result.Type.(design.UserType)
-			if ok {
-				// Need to dup to avoid modifying service level
-				// type name (e.g. error type)
-				result = design.DupAtt(result)
-			}
-			renameType(result, name, suffix)
-			return result
+			attr = design.DupAtt(attr)
+			renameType(attr, name, "ResponseBody")
+			return attr
 		}
 		return &design.AttributeExpr{Type: design.Empty}
 	}
 
-	// 2. Project if errorResponse type is result type and attribute has a view.
-	rt, isrt := v.ErrorExpr.AttributeExpr.Type.(*design.ResultTypeExpr)
-	if isrt {
-		if v := result.Metadata["view"]; len(v) > 0 {
-			dt, err := design.Project(rt, v[0])
-			if err != nil {
-				panic(err) // bug
-			}
-			result = design.DupAtt(result)
-			result.Type = dt
-		}
-	}
-
-	// 3. Remove header attributes
-	body := design.NewMappedAttributeExpr(result)
+	// 2. Remove header attributes
+	body := design.NewMappedAttributeExpr(attr)
 	removeAttributes(body, headers)
 
-	// 4. Return empty type if no attribute left
+	// 3. Return empty type if no attribute left
 	if len(*design.AsObject(body.Type)) == 0 {
 		return &design.AttributeExpr{Type: design.Empty}
 	}
 
-	// 5. Build computed user type
+	// 4. Build computed user type
 	userType := &design.UserTypeExpr{
 		AttributeExpr: body.Attribute(),
 		TypeName:      name,
 	}
-	appendSuffix(userType.Attribute().Type, suffix)
-
+	appendSuffix(userType.Attribute().Type, "ResponseBody")
+	rt, isrt := attr.Type.(*design.ResultTypeExpr)
 	if !isrt {
 		return &design.AttributeExpr{Type: userType, Validation: userType.Validation}
 	}
-
 	views := make([]*design.ViewExpr, len(rt.Views))
 	for i, v := range rt.Views {
 		mv := design.NewMappedAttributeExpr(v.AttributeExpr)
@@ -309,6 +215,7 @@ func appendSuffix(dt design.DataType, suffix string, seen ...map[string]struct{}
 			s = seen[0]
 		} else {
 			s = make(map[string]struct{})
+			seen = append(seen, s)
 		}
 		if _, ok := s[actual.Name()]; ok {
 			return

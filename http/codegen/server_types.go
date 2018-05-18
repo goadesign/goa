@@ -54,6 +54,7 @@ func serverType(genpkg string, svc *httpdesign.ServiceExpr, seen map[string]stru
 			{Path: "unicode/utf8"},
 			{Path: genpkg + "/" + codegen.SnakeCase(svc.Name()), Name: sd.Service.PkgName},
 			{Path: "goa.design/goa", Name: "goa"},
+			{Path: genpkg + "/" + codegen.SnakeCase(svc.Name()) + "/" + "views", Name: sd.Service.ViewsPkg},
 		},
 	)
 

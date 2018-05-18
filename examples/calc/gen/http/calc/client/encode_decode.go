@@ -73,7 +73,6 @@ func DecodeAddResponse(decoder func(*http.Response) goahttp.Decoder, restoreBody
 			if err != nil {
 				return nil, goahttp.ErrDecodingError("calc", "add", err)
 			}
-
 			return body, nil
 		default:
 			body, _ := ioutil.ReadAll(resp.Body)

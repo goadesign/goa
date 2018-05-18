@@ -308,7 +308,7 @@ func (a *AttributeExpr) IsRequiredNoDefault(attName string) bool {
 }
 
 // IsPrimitivePointer returns true if the field generated for the given
-// attribute should be a pointer to a primitive type. The receiver attribute ules
+// attribute should be a pointer to a primitive type. The receiver attribute must
 // be an object.
 //
 // If useDefault is true and the attribute has a default value then

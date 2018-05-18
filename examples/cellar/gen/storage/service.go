@@ -10,28 +10,33 @@ package storage
 
 import (
 	"context"
+
+	storageviews "goa.design/goa/examples/cellar/gen/storage/views"
 )
 
 // The storage service makes it possible to view, add or remove wine bottles.
 type Service interface {
 	// List all stored bottles
-	List(context.Context) (StoredBottleCollection, error)
+	List(context.Context) (res StoredBottleTinyCollection, err error)
 	// Show bottle by ID
-	Show(context.Context, *ShowPayload) (*StoredBottle, error)
+	// The "view" return value must have one of the following views
+	// * "tiny"
+	// * "default"
+	Show(context.Context, *ShowPayload) (res *StoredBottle, view string, err error)
 	// Add new bottle and return its ID.
-	Add(context.Context, *Bottle) (string, error)
+	Add(context.Context, *Bottle) (res string, err error)
 	// Remove bottle from storage
-	Remove(context.Context, *RemovePayload) error
+	Remove(context.Context, *RemovePayload) (err error)
 	// Rate bottles by IDs
-	Rate(context.Context, map[uint32][]string) error
+	Rate(context.Context, map[uint32][]string) (err error)
 	// Add n number of bottles and return their IDs. This is a multipart request
 	// and each part has field name 'bottle' and contains the encoded bottle info
 	// to be added.
-	MultiAdd(context.Context, []*Bottle) ([]string, error)
+	MultiAdd(context.Context, []*Bottle) (res []string, err error)
 	// Update bottles with the given IDs. This is a multipart request and each part
 	// has field name 'bottle' and contains the encoded bottle info to be updated.
 	// The IDs in the query parameter is mapped to each part in the request.
-	MultiUpdate(context.Context, *MultiUpdatePayload) error
+	MultiUpdate(context.Context, *MultiUpdatePayload) (err error)
 }
 
 // ServiceName is the name of the service as defined in the design. This is the
@@ -44,8 +49,9 @@ const ServiceName = "storage"
 // MethodKey key.
 var MethodNames = [7]string{"list", "show", "add", "remove", "rate", "multi_add", "multi_update"}
 
-// StoredBottleCollection is the result type of the storage service list method.
-type StoredBottleCollection []*StoredBottle
+// StoredBottleTinyCollection is the result type of the storage service list
+// method.
+type StoredBottleTinyCollection []*StoredBottleTiny
 
 // ShowPayload is the payload type of the storage service show method.
 type ShowPayload struct {
@@ -104,6 +110,23 @@ type MultiUpdatePayload struct {
 	Bottles []*Bottle
 }
 
+// A StoredBottle describes a bottle retrieved by the storage service. (tiny
+// view)
+type StoredBottleTiny struct {
+	// ID is the unique id of the bottle.
+	ID string
+	// Name of bottle
+	Name string
+	// Winery that produces wine
+	Winery *WineryTiny
+}
+
+// Winery result type (tiny view)
+type WineryTiny struct {
+	// Name of winery
+	Name string
+}
+
 type Winery struct {
 	// Name of winery
 	Name string
@@ -139,4 +162,113 @@ func (e *NotFound) Error() string {
 // ErrorName returns "NotFound".
 func (e *NotFound) ErrorName() string {
 	return e.Message
+}
+
+// NewStoredBottle converts viewed result type StoredBottle to result type
+// StoredBottle.
+func NewStoredBottle(vres *storageviews.StoredBottle) *StoredBottle {
+	res := &StoredBottle{
+		Description: vres.Projected.Description,
+		Rating:      vres.Projected.Rating,
+	}
+	if vres.Projected.ID != nil {
+		res.ID = *vres.Projected.ID
+	}
+	if vres.Projected.Name != nil {
+		res.Name = *vres.Projected.Name
+	}
+	if vres.Projected.Vintage != nil {
+		res.Vintage = *vres.Projected.Vintage
+	}
+	if vres.Projected.Composition != nil {
+		res.Composition = make([]*Component, len(vres.Projected.Composition))
+		for j, val := range vres.Projected.Composition {
+			res.Composition[j] = &Component{
+				Percentage: val.Percentage,
+			}
+			if val.Varietal != nil {
+				res.Composition[j].Varietal = *val.Varietal
+			}
+		}
+	}
+	if vres.Projected.Winery != nil {
+		res.Winery = NewWinery(vres.Projected.Winery)
+	}
+	return res
+}
+
+// NewStoredBottleTiny projects result type StoredBottle into viewed result
+// type StoredBottle using the tiny view.
+func NewStoredBottleTiny(res *StoredBottle) *storageviews.StoredBottle {
+	vres := &storageviews.StoredBottleView{
+		ID:   &res.ID,
+		Name: &res.Name,
+	}
+	if res.Winery != nil {
+		vres.Winery = NewWineryTiny(res.Winery)
+	}
+	return &storageviews.StoredBottle{vres, "tiny"}
+}
+
+// NewStoredBottleDefault projects result type StoredBottle into viewed result
+// type StoredBottle using the default view.
+func NewStoredBottleDefault(res *StoredBottle) *storageviews.StoredBottle {
+	vres := &storageviews.StoredBottleView{
+		ID:          &res.ID,
+		Name:        &res.Name,
+		Vintage:     &res.Vintage,
+		Description: res.Description,
+		Rating:      res.Rating,
+	}
+	if res.Composition != nil {
+		vres.Composition = make([]*storageviews.Component, len(res.Composition))
+		for j, val := range res.Composition {
+			vres.Composition[j] = &storageviews.Component{
+				Varietal:   &val.Varietal,
+				Percentage: val.Percentage,
+			}
+		}
+	}
+	if res.Winery != nil {
+		vres.Winery = NewWineryTiny(res.Winery)
+	}
+	return &storageviews.StoredBottle{vres, "default"}
+}
+
+// NewWinery converts viewed result type Winery to result type Winery.
+func NewWinery(vres *storageviews.Winery) *Winery {
+	res := &Winery{
+		URL: vres.Projected.URL,
+	}
+	if vres.Projected.Name != nil {
+		res.Name = *vres.Projected.Name
+	}
+	if vres.Projected.Region != nil {
+		res.Region = *vres.Projected.Region
+	}
+	if vres.Projected.Country != nil {
+		res.Country = *vres.Projected.Country
+	}
+	return res
+}
+
+// NewWineryTiny projects result type Winery into viewed result type Winery
+// using the tiny view.
+func NewWineryTiny(res *Winery) *storageviews.Winery {
+	vres := &storageviews.WineryView{
+		Name: &res.Name,
+	}
+	return &storageviews.Winery{vres, "tiny"}
+}
+
+// NewWineryDefault projects result type Winery into viewed result type Winery
+// using the default view.
+func NewWineryDefault(res *Winery) *storageviews.Winery {
+	vres := &storageviews.WineryView{
+		Name:    &res.Name,
+		Region:  &res.Region,
+		Country: &res.Country,
+		URL:     res.URL,
+	}
+	return &storageviews.Winery{vres, "default"}
 }

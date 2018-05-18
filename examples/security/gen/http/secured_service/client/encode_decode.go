@@ -68,7 +68,6 @@ func DecodeSigninResponse(decoder func(*http.Response) goahttp.Decoder, restoreB
 			if err != nil {
 				return nil, goahttp.ErrDecodingError("secured_service", "signin", err)
 			}
-
 			return nil, NewSigninUnauthorized(body)
 		default:
 			body, _ := ioutil.ReadAll(resp.Body)
@@ -146,7 +145,6 @@ func DecodeSecureResponse(decoder func(*http.Response) goahttp.Decoder, restoreB
 			if err != nil {
 				return nil, goahttp.ErrDecodingError("secured_service", "secure", err)
 			}
-
 			return body, nil
 		case http.StatusUnauthorized:
 			var (
@@ -157,7 +155,6 @@ func DecodeSecureResponse(decoder func(*http.Response) goahttp.Decoder, restoreB
 			if err != nil {
 				return nil, goahttp.ErrDecodingError("secured_service", "secure", err)
 			}
-
 			return nil, NewSecureUnauthorized(body)
 		default:
 			body, _ := ioutil.ReadAll(resp.Body)
@@ -235,7 +232,6 @@ func DecodeDoublySecureResponse(decoder func(*http.Response) goahttp.Decoder, re
 			if err != nil {
 				return nil, goahttp.ErrDecodingError("secured_service", "doubly_secure", err)
 			}
-
 			return body, nil
 		case http.StatusUnauthorized:
 			var (
@@ -246,7 +242,6 @@ func DecodeDoublySecureResponse(decoder func(*http.Response) goahttp.Decoder, re
 			if err != nil {
 				return nil, goahttp.ErrDecodingError("secured_service", "doubly_secure", err)
 			}
-
 			return nil, NewDoublySecureUnauthorized(body)
 		default:
 			body, _ := ioutil.ReadAll(resp.Body)
@@ -333,7 +328,6 @@ func DecodeAlsoDoublySecureResponse(decoder func(*http.Response) goahttp.Decoder
 			if err != nil {
 				return nil, goahttp.ErrDecodingError("secured_service", "also_doubly_secure", err)
 			}
-
 			return body, nil
 		case http.StatusUnauthorized:
 			var (
@@ -344,7 +338,6 @@ func DecodeAlsoDoublySecureResponse(decoder func(*http.Response) goahttp.Decoder
 			if err != nil {
 				return nil, goahttp.ErrDecodingError("secured_service", "also_doubly_secure", err)
 			}
-
 			return nil, NewAlsoDoublySecureUnauthorized(body)
 		default:
 			body, _ := ioutil.ReadAll(resp.Body)

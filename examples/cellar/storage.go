@@ -35,37 +35,40 @@ func NewStorage(db *bolt.DB, logger *log.Logger) (storage.Service, error) {
 }
 
 // List all stored bottles
-func (s *storageSvc) List(ctx context.Context) (storage.StoredBottleCollection, error) {
-	var bottles []*storage.StoredBottle
-	if err := s.db.LoadAll("CELLAR", &bottles); err != nil {
+func (s *storageSvc) List(ctx context.Context) (res storage.StoredBottleTinyCollection, err error) {
+	if err = s.db.LoadAll("CELLAR", &res); err != nil {
 		return nil, err // internal error
 	}
-	return bottles, nil
+	return res, nil
 }
 
 // Show bottle by ID
-func (s *storageSvc) Show(ctx context.Context, p *storage.ShowPayload) (*storage.StoredBottle, error) {
-	var b storage.StoredBottle
-	if err := s.db.Load("CELLAR", p.ID, &b); err != nil {
+func (s *storageSvc) Show(ctx context.Context, p *storage.ShowPayload) (res *storage.StoredBottle, view string, err error) {
+	if p.View != nil {
+		view = *p.View
+	} else {
+		view = "default"
+	}
+	if err = s.db.Load("CELLAR", p.ID, &res); err != nil {
 		if err == ErrNotFound {
-			return nil, &storage.NotFound{
+			return nil, view, &storage.NotFound{
 				Message: err.Error(),
 				ID:      p.ID,
 			}
 		}
-		return nil, err // internal error
+		return nil, view, err // internal error
 	}
-	return &b, nil
+	return res, view, nil
 }
 
 // Add new bottle and return its ID.
-func (s *storageSvc) Add(ctx context.Context, p *storage.Bottle) (string, error) {
-	id, err := s.db.NewID("CELLAR")
+func (s *storageSvc) Add(ctx context.Context, p *storage.Bottle) (res string, err error) {
+	res, err = s.db.NewID("CELLAR")
 	if err != nil {
 		return "", err // internal error
 	}
 	sb := storage.StoredBottle{
-		ID:          id,
+		ID:          res,
 		Name:        p.Name,
 		Winery:      p.Winery,
 		Vintage:     p.Vintage,
@@ -73,23 +76,23 @@ func (s *storageSvc) Add(ctx context.Context, p *storage.Bottle) (string, error)
 		Description: p.Description,
 		Rating:      p.Rating,
 	}
-	if err = s.db.Save("CELLAR", id, &sb); err != nil {
+	if err = s.db.Save("CELLAR", res, &sb); err != nil {
 		return "", err // internal error
 	}
-	return id, nil
+	return res, nil
 }
 
 // Remove bottle from storage
-func (s *storageSvc) Remove(ctx context.Context, p *storage.RemovePayload) error {
+func (s *storageSvc) Remove(ctx context.Context, p *storage.RemovePayload) (err error) {
 	return s.db.Delete("CELLAR", p.ID) // internal error if not nil
 }
 
 // Rate bottles by IDs
-func (s *storageSvc) Rate(ctx context.Context, p map[uint32][]string) error {
+func (s *storageSvc) Rate(ctx context.Context, p map[uint32][]string) (err error) {
 	for rating, ids := range p {
 		for _, id := range ids {
 			var b storage.StoredBottle
-			if err := s.db.Load("CELLAR", id, &b); err != nil {
+			if err = s.db.Load("CELLAR", id, &b); err != nil {
 				if err == ErrNotFound {
 					continue
 				}
@@ -103,7 +106,7 @@ func (s *storageSvc) Rate(ctx context.Context, p map[uint32][]string) error {
 				Description: b.Description,
 				Rating:      &rating,
 			}
-			if err := s.db.Save("CELLAR", id, &sb); err != nil {
+			if err = s.db.Save("CELLAR", id, &sb); err != nil {
 				return err // internal error
 			}
 		}
@@ -114,8 +117,8 @@ func (s *storageSvc) Rate(ctx context.Context, p map[uint32][]string) error {
 // Add n number of bottles and return their IDs. This is a multipart request
 // and each part has field name 'bottle' and contains the encoded bottle info
 // to be added.
-func (s *storageSvc) MultiAdd(ctx context.Context, p []*storage.Bottle) ([]string, error) {
-	newIDs := make([]string, 0, len(p))
+func (s *storageSvc) MultiAdd(ctx context.Context, p []*storage.Bottle) (res []string, err error) {
+	res = make([]string, 0, len(p))
 	for _, bottle := range p {
 		id, err := s.db.NewID("CELLAR")
 		if err != nil {
@@ -133,9 +136,9 @@ func (s *storageSvc) MultiAdd(ctx context.Context, p []*storage.Bottle) ([]strin
 		if err = s.db.Save("CELLAR", id, &sb); err != nil {
 			return nil, err // internal error
 		}
-		newIDs = append(newIDs, id)
+		res = append(res, id)
 	}
-	return newIDs, nil
+	return res, nil
 }
 
 // StorageMultiAddDecoderFunc implements the multipart decoder for service
@@ -182,7 +185,6 @@ func StorageMultiAddEncoderFunc(mw *multipart.Writer, p []*storage.Bottle) error
 // has field name 'bottle' and contains the encoded bottle info to be updated.
 // The IDs in the query parameter is mapped to each part in the request.
 func (s *storageSvc) MultiUpdate(ctx context.Context, p *storage.MultiUpdatePayload) error {
-	fmt.Println(fmt.Sprintf("%#v", p.Ids))
 	for _, id := range p.Ids {
 		for _, bottle := range p.Bottles {
 			sb := storage.StoredBottle{

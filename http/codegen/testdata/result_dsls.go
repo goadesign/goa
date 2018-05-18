@@ -600,6 +600,178 @@ var ResultBodyUserDSL = func() {
 	})
 }
 
+var ResultBodyMultipleViewsDSL = func() {
+	var ResultType = ResultType("ResultTypeMultipleViews", func() {
+		Attribute("a", String)
+		Attribute("b", String)
+		Attribute("c", String)
+		View("default", func() {
+			Attribute("a")
+			Attribute("b")
+			Attribute("c")
+		})
+		View("tiny", func() {
+			Attribute("c")
+		})
+	})
+	Service("ServiceBodyMultipleView", func() {
+		Method("MethodBodyMultipleView", func() {
+			Result(ResultType)
+			HTTP(func() {
+				POST("/")
+				Response(StatusOK, func() {
+					Header("c:Location")
+				})
+			})
+		})
+	})
+}
+
+var ResultBodyCollectionDSL = func() {
+	var RT = ResultType("ResultTypeCollection", func() {
+		Attributes(func() {
+			Attribute("a", String)
+			Attribute("b", String)
+			Attribute("c", String)
+		})
+		View("default", func() {
+			Attribute("a")
+			Attribute("b")
+			Attribute("c")
+		})
+		View("tiny", func() {
+			Attribute("c")
+		})
+	})
+	Service("ServiceBodyCollection", func() {
+		Method("MethodBodyCollection", func() {
+			Result(CollectionOf(RT))
+			HTTP(func() {
+				POST("/")
+				Response(StatusOK)
+			})
+		})
+	})
+}
+
+var ResultBodyCollectionExplicitViewDSL = func() {
+	var RT = ResultType("ResultTypeCollection", func() {
+		Attributes(func() {
+			Attribute("a", String)
+			Attribute("b", String)
+			Attribute("c", String)
+		})
+		View("default", func() {
+			Attribute("a")
+			Attribute("b")
+			Attribute("c")
+		})
+		View("tiny", func() {
+			Attribute("c")
+		})
+	})
+	Service("ServiceBodyCollectionExplicitView", func() {
+		Method("MethodBodyCollectionExplicitView", func() {
+			Result(CollectionOf(RT), func() {
+				View("tiny")
+			})
+			HTTP(func() {
+				POST("/")
+				Response(StatusOK)
+			})
+		})
+	})
+}
+
+var EmptyBodyResultMultipleViewsDSL = func() {
+	var ResultType = ResultType("ResultTypeMultipleViews", func() {
+		Attribute("a", String)
+		Attribute("b", String)
+		Attribute("c", String)
+		View("default", func() {
+			Attribute("a")
+			Attribute("c")
+		})
+		View("tiny", func() {
+			Attribute("c")
+		})
+	})
+	Service("ServiceEmptyBodyResultMultipleView", func() {
+		Method("MethodEmptyBodyResultMultipleView", func() {
+			Result(ResultType)
+			HTTP(func() {
+				POST("/")
+				Response(StatusOK, func() {
+					Header("c:Location")
+					Body(Empty)
+				})
+			})
+		})
+	})
+}
+
+var ExplicitBodyPrimitiveResultMultipleViewsDSL = func() {
+	var ResultType = ResultType("ResultTypeMultipleViews", func() {
+		Attribute("a", String)
+		Attribute("b", String)
+		Attribute("c", String)
+		View("default", func() {
+			Attribute("a")
+			Attribute("b")
+			Attribute("c")
+		})
+		View("tiny", func() {
+			Attribute("a")
+			Attribute("c")
+		})
+	})
+	Service("ServiceExplicitBodyPrimitiveResultMultipleView", func() {
+		Method("MethodExplicitBodyPrimitiveResultMultipleView", func() {
+			Result(ResultType)
+			HTTP(func() {
+				POST("/")
+				Response(StatusOK, func() {
+					Header("c:Location")
+					Body("a")
+				})
+			})
+		})
+	})
+}
+
+var ExplicitBodyUserResultMultipleViewsDSL = func() {
+	var UserType = Type("UserType", func() {
+		Attribute("x", String)
+		Attribute("y", Int)
+	})
+	var ResultType = ResultType("ResultTypeMultipleViews", func() {
+		Attribute("a", UserType)
+		Attribute("b", String)
+		Attribute("c", String)
+		View("default", func() {
+			Attribute("a")
+			Attribute("b")
+			Attribute("c")
+		})
+		View("tiny", func() {
+			Attribute("a")
+			Attribute("c")
+		})
+	})
+	Service("ServiceExplicitBodyUserResultMultipleView", func() {
+		Method("MethodExplicitBodyUserResultMultipleView", func() {
+			Result(ResultType)
+			HTTP(func() {
+				POST("/")
+				Response(StatusOK, func() {
+					Header("c:Location")
+					Body("a")
+				})
+			})
+		})
+	})
+}
+
 var ResultBodyArrayStringDSL = func() {
 	Service("ServiceBodyArrayString", func() {
 		Method("MethodBodyArrayString", func() {
@@ -772,6 +944,51 @@ var ResultTagStringRequiredDSL = func() {
 					Tag("h", "value")
 				})
 				Response(StatusOK)
+			})
+		})
+	})
+}
+
+var ResultMultipleViewsTagDSL = func() {
+	var ResultType = ResultType("ResultTypeMultipleViews", func() {
+		Attribute("a", String)
+		Attribute("b", String)
+		Attribute("c", String)
+		View("default", func() {
+			Attribute("a")
+			Attribute("c")
+		})
+		View("tiny", func() {
+			Attribute("c")
+		})
+	})
+	Service("ServiceTagMultipleViews", func() {
+		Method("MethodTagMultipleViews", func() {
+			Result(ResultType)
+			HTTP(func() {
+				GET("/")
+				Response(StatusAccepted, func() {
+					Header("c")
+					Tag("b", "value")
+				})
+				Response(StatusOK)
+			})
+		})
+	})
+}
+
+var EmptyServerResponseDSL = func() {
+	Service("ServiceEmptyServerResponse", func() {
+		Method("MethodEmptyServerResponse", func() {
+			Result(func() {
+				Attribute("h", String)
+				Required("h")
+			})
+			HTTP(func() {
+				GET("/")
+				Response(StatusOK, func() {
+					Body(Empty)
+				})
 			})
 		})
 	})

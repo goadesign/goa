@@ -29,7 +29,9 @@ var StoredBottle = ResultType("application/vnd.cellar.stored-bottle", func() {
 	View("default", func() {
 		Attribute("id")
 		Attribute("name")
-		Attribute("winery")
+		Attribute("winery", func() {
+			View("tiny")
+		})
 		Attribute("vintage")
 		Attribute("composition")
 		Attribute("description")

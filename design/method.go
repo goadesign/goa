@@ -105,13 +105,32 @@ func (m *MethodExpr) Validate() error {
 	return verr
 }
 
-// Finalize makes sure the method payload and result types are set.
+// Finalize makes sure the method payload and result types are set. It also
+// projects the result if it is a result type and a view is explicitly set in
+// the design or a result type having at most one view.
 func (m *MethodExpr) Finalize() {
 	if m.Payload == nil {
 		m.Payload = &AttributeExpr{Type: Empty}
 	}
 	if m.Result == nil {
 		m.Result = &AttributeExpr{Type: Empty}
+	} else if rt, ok := m.Result.Type.(*ResultTypeExpr); ok {
+		var project bool
+		view := "default"
+		if v, ok := m.Result.Metadata["view"]; ok {
+			project = true
+			view = v[0]
+		}
+		if !project && !rt.HasMultipleViews() {
+			project = true
+		}
+		if project {
+			prt, err := Project(rt, view)
+			if err != nil {
+				panic(err) // bug
+			}
+			m.Result.Type = prt
+		}
 	}
 	for _, e := range m.Errors {
 		e.Finalize()
