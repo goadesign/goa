@@ -76,6 +76,9 @@ func NewV2(root *httpdesign.RootExpr) (*V2, error) {
 	}
 
 	for _, res := range root.HTTPServices {
+		if !mustGenerate(res.Metadata) || !mustGenerate(res.ServiceExpr.Metadata) {
+			continue
+		}
 		for k, v := range ExtensionsFromExpr(res.Metadata) {
 			s.Paths[k] = v
 		}
@@ -214,6 +217,9 @@ func securitySpecFromExpr(root *httpdesign.RootExpr) map[string]*SecurityDefinit
 func hasAbsoluteRoutes(root *httpdesign.RootExpr) bool {
 	hasAbsoluteRoutes := false
 	for _, res := range root.HTTPServices {
+		if !mustGenerate(res.Metadata) || !mustGenerate(res.ServiceExpr.Metadata) {
+			continue
+		}
 		for _, fs := range res.FileServers {
 			if !mustGenerate(fs.Metadata) {
 				continue
