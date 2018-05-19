@@ -58,7 +58,7 @@ import (
 //
 // `swagger:generate`: specifies whether Swagger specification should be
 // generated. Defaults to true.
-// Applicable to services, endpoints and file servers.
+// Applicable to services, methods and file servers.
 //
 //        Metadata("swagger:generate", "false")
 //

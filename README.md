@@ -49,7 +49,8 @@ invoking the client code.
 ## Installation
 
 Assuming you have a working [Go](https://golang.org) setup:
-```
+
+``` bash
 go get -u goa.design/goa/...
 ```
 
@@ -61,7 +62,7 @@ package is only used by the generated code. To alleviate this issue simply add
 `goa.design/goa/codegen/generator` as a required package to the vendor manifest.
 For example if you are using `dep` add the following line to `Gopkg.toml`:
 
-```
+``` toml
 required = ["goa.design/goa/codegen/generator"]
 ```
 
@@ -93,37 +94,37 @@ import . "goa.design/goa/http/dsl"
 
 // API describes the global properties of the API server.
 var _ = API("calc", func() {
-	Title("Calculator Service")
-	Description("HTTP service for adding numbers, a goa teaser")
+        Title("Calculator Service")
+        Description("HTTP service for adding numbers, a goa teaser")
 })
 
 // Service describes a service
 var _ = Service("calc", func() {
-	Description("The calc service performs operations on numbers")
-	// Method describes a service method (endpoint)
-	Method("add", func() {
-		// Payload describes the method payload
-		// Here the payload is an object that consists of two fields
-		Payload(func() {
-			// Attribute describes an object field
-			Attribute("a", Int, "Left operand")
-			Attribute("b", Int, "Right operand")
-			// Both attributes must be provided when invoking "add"
-			Required("a", "b")
-		})
-		// Result describes the method result
-		// Here the result is a simple integer value
-		Result(Int)
-		// HTTP describes the HTTP transport mapping
-		HTTP(func() {
-			// Requests to the service consist of HTTP GET requests
-			// The payload fields are encoded as path parameters
-			GET("/add/{a}/{b}")
-			// Responses use a "200 OK" HTTP status
-			// The result is encoded in the response body
-			Response(StatusOK)
-		})
-	})
+        Description("The calc service performs operations on numbers")
+        // Method describes a service method (endpoint)
+        Method("add", func() {
+                // Payload describes the method payload
+                // Here the payload is an object that consists of two fields
+                Payload(func() {
+                        // Attribute describes an object field
+                        Attribute("a", Int, "Left operand")
+                        Attribute("b", Int, "Right operand")
+                        // Both attributes must be provided when invoking "add"
+                        Required("a", "b")
+                })
+                // Result describes the method result
+                // Here the result is a simple integer value
+                Result(Int)
+                // HTTP describes the HTTP transport mapping
+                HTTP(func() {
+                        // Requests to the service consist of HTTP GET requests
+                        // The payload fields are encoded as path parameters
+                        GET("/add/{a}/{b}")
+                        // Responses use a "200 OK" HTTP status
+                        // The result is encoded in the response body
+                        Response(StatusOK)
+                })
+        })
 })
 ```
 
@@ -175,7 +176,6 @@ gen
   The `http` directory also contains a complete
   [OpenAPI 2.0](https://github.com/OAI/OpenAPI-Specification/blob/master/versions/2.0.md)
   spec of the service.
-
 
 The `goa` tool can also generate example implementations for both the service
 and client. These examples provide a good starting point:
@@ -300,7 +300,7 @@ That's it! we now have a self-documenting service. Stop the running service
 with CTRL-C. Rebuild and re-run it then make requests to the newly added
 `/swagger.json` endpoint:
 
-```
+``` bash
 ^C[calc] 05:04:28 exiting (interrupt)
 [calc] 05:04:28 exited
 go build
@@ -309,7 +309,7 @@ go build
 
 In a different console:
 
-```
+``` bash
 curl localhost:8080/swagger.json
 {"swagger":"2.0","info":{"title":"Calculator Service","description":...
 ```

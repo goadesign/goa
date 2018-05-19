@@ -162,25 +162,25 @@ func NewListResponseBody(res storage.StoredBottleTinyCollection) ListResponseBod
 
 // NewShowResponseBody builds the HTTP response body from the result of the
 // "show" endpoint of the "storage" service.
-func NewShowResponseBody(res *storageviews.StoredBottle) *ShowResponseBody {
+func NewShowResponseBody(res *storageviews.StoredBottleView) *ShowResponseBody {
 	body := &ShowResponseBody{
-		ID:          res.Projected.ID,
-		Name:        res.Projected.Name,
-		Vintage:     res.Projected.Vintage,
-		Description: res.Projected.Description,
-		Rating:      res.Projected.Rating,
+		ID:          res.ID,
+		Name:        res.Name,
+		Vintage:     res.Vintage,
+		Description: res.Description,
+		Rating:      res.Rating,
 	}
-	if res.Projected.Composition != nil {
-		body.Composition = make([]*ComponentResponseBody, len(res.Projected.Composition))
-		for j, val := range res.Projected.Composition {
+	if res.Winery != nil {
+		body.Winery = marshalWineryViewToWineryResponseBody(res.Winery)
+	}
+	if res.Composition != nil {
+		body.Composition = make([]*ComponentResponseBody, len(res.Composition))
+		for j, val := range res.Composition {
 			body.Composition[j] = &ComponentResponseBody{
 				Varietal:   val.Varietal,
 				Percentage: val.Percentage,
 			}
 		}
-	}
-	if res.Projected.Winery != nil {
-		body.Winery = marshalViewedWineryToWineryResponseBody(res.Projected.Winery)
 	}
 	return body
 }

@@ -897,7 +897,7 @@ func {{ .ResponseEncoder }}(encoder func(context.Context, http.ResponseWriter) g
 	{{- if and .Result.Ref .NeedServerResponse }}
 		{{- if .Method.ViewedResult }}
 		res := v.({{ .Method.ViewedResult.FullRef }})
-		w.Header().Set("goa-view", res{{ if $.Method.ViewedResult.IsCollection }}[0]{{ end }}.View)
+		w.Header().Set("goa-view", res.View)
 		{{- else }}
 		res := v.({{ .Result.Ref }})
 		{{- end }}

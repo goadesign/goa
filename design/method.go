@@ -81,22 +81,22 @@ func (m *MethodExpr) Validate() error {
 			verr.Merge(s.Validate())
 			switch s.Kind {
 			case BasicAuthKind:
-				if !m.Payload.HasTag("security:username") {
+				if !hasTag(m.Payload, "security:username") {
 					verr.Add(m, "payload of method %q of service %q does not define a username attribute, use Username to define one.", m.Name, m.Service.Name)
 				}
-				if !m.Payload.HasTag("security:password") {
+				if !hasTag(m.Payload, "security:password") {
 					verr.Add(m, "payload of method %q of service %q does not define a password attribute, use Password to define one.", m.Name, m.Service.Name)
 				}
 			case APIKeyKind:
-				if !m.Payload.HasTag("security:apikey:" + s.SchemeName) {
+				if !hasTag(m.Payload, "security:apikey:"+s.SchemeName) {
 					verr.Add(m, "payload of method %q of service %q does not define an API key attribute, use APIKey to define one.", m.Name, m.Service.Name)
 				}
 			case JWTKind:
-				if !m.Payload.HasTag("security:token") {
+				if !hasTag(m.Payload, "security:token") {
 					verr.Add(m, "payload of method %q of service %q does not define a JWT attribute, use Token to define one.", m.Name, m.Service.Name)
 				}
 			case OAuth2Kind:
-				if !m.Payload.HasTag("security:accesstoken") {
+				if !hasTag(m.Payload, "security:accesstoken") {
 					verr.Add(m, "payload of method %q of service %q does not define a OAuth2 access token attribute, use AccessToken to define one.", m.Name, m.Service.Name)
 				}
 			}
@@ -105,16 +105,41 @@ func (m *MethodExpr) Validate() error {
 	return verr
 }
 
+// hasTag is a helper function that traverses the given attribute and all its
+// bases recursively looking for an attribute with the given tag metadata. This
+// recursion is only needed for attributes that have not been finalized yet.
+func hasTag(p *AttributeExpr, tag string) bool {
+	if p.HasTag(tag) {
+		return true
+	}
+	for _, base := range p.Bases {
+		ut, ok := base.(UserType)
+		if !ok {
+			continue
+		}
+		return hasTag(ut.Attribute(), tag)
+	}
+	if ut, ok := p.Type.(UserType); ok {
+		return hasTag(ut.Attribute(), tag)
+	}
+	return false
+}
+
 // Finalize makes sure the method payload and result types are set. It also
 // projects the result if it is a result type and a view is explicitly set in
 // the design or a result type having at most one view.
 func (m *MethodExpr) Finalize() {
 	if m.Payload == nil {
 		m.Payload = &AttributeExpr{Type: Empty}
+	} else {
+		m.Payload.Finalize()
 	}
 	if m.Result == nil {
 		m.Result = &AttributeExpr{Type: Empty}
-	} else if rt, ok := m.Result.Type.(*ResultTypeExpr); ok {
+	} else {
+		m.Result.Finalize()
+	}
+	if rt, ok := m.Result.Type.(*ResultTypeExpr); ok {
 		var project bool
 		view := "default"
 		if v, ok := m.Result.Metadata["view"]; ok {

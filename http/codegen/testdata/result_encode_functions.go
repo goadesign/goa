@@ -632,7 +632,7 @@ func EncodeMethodBodyMultipleViewResponse(encoder func(context.Context, http.Res
 		res := v.(*servicebodymultipleviewviews.Resulttypemultipleviews)
 		w.Header().Set("goa-view", res.View)
 		enc := encoder(ctx, w)
-		body := NewMethodBodyMultipleViewResponseBody(res)
+		body := NewMethodBodyMultipleViewResponseBody(res.Projected)
 		if res.Projected.C != nil {
 			w.Header().Set("Location", *res.Projected.C)
 		}
@@ -647,9 +647,9 @@ var ResultBodyCollectionMultipleViewsEncodeCode = `// EncodeMethodBodyCollection
 func EncodeMethodBodyCollectionResponse(encoder func(context.Context, http.ResponseWriter) goahttp.Encoder) func(context.Context, http.ResponseWriter, interface{}) error {
 	return func(ctx context.Context, w http.ResponseWriter, v interface{}) error {
 		res := v.(servicebodycollectionviews.ResulttypecollectionCollection)
-		w.Header().Set("goa-view", res[0].View)
+		w.Header().Set("goa-view", res.View)
 		enc := encoder(ctx, w)
-		body := NewMethodBodyCollectionResponseBody(res)
+		body := NewMethodBodyCollectionResponseBody(res.Projected)
 		w.WriteHeader(http.StatusOK)
 		return enc.Encode(body)
 	}
@@ -739,7 +739,7 @@ func EncodeMethodExplicitBodyUserResultMultipleViewResponse(encoder func(context
 		res := v.(*serviceexplicitbodyuserresultmultipleviewviews.Resulttypemultipleviews)
 		w.Header().Set("goa-view", res.View)
 		enc := encoder(ctx, w)
-		body := NewUserType(res)
+		body := NewUserType(res.Projected)
 		if res.Projected.C != nil {
 			w.Header().Set("Location", *res.Projected.C)
 		}
@@ -894,13 +894,13 @@ func EncodeMethodTagMultipleViewsResponse(encoder func(context.Context, http.Res
 		w.Header().Set("goa-view", res.View)
 		if res.Projected.B != nil && *res.Projected.B == "value" {
 			enc := encoder(ctx, w)
-			body := NewMethodTagMultipleViewsAcceptedResponseBody(res)
+			body := NewMethodTagMultipleViewsAcceptedResponseBody(res.Projected)
 			w.Header().Set("c", *res.Projected.C)
 			w.WriteHeader(http.StatusAccepted)
 			return enc.Encode(body)
 		}
 		enc := encoder(ctx, w)
-		body := NewMethodTagMultipleViewsOKResponseBody(res)
+		body := NewMethodTagMultipleViewsOKResponseBody(res.Projected)
 		w.WriteHeader(http.StatusOK)
 		return enc.Encode(body)
 	}
