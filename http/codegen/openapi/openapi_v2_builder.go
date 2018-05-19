@@ -83,14 +83,14 @@ func NewV2(root *httpdesign.RootExpr) (*V2, error) {
 			s.Paths[k] = v
 		}
 		for _, fs := range res.FileServers {
-			if mustGenerate(fs.Metadata) {
+			if mustGenerate(fs.Metadata) || mustGenerate(fs.Service.Metadata) {
 				if err := buildPathFromFileServer(s, root, fs); err != nil {
 					return nil, err
 				}
 			}
 		}
 		for _, a := range res.HTTPEndpoints {
-			if mustGenerate(a.Metadata) {
+			if mustGenerate(a.Metadata) || mustGenerate(a.MethodExpr.Metadata) {
 				for _, route := range a.Routes {
 					if err := buildPathFromExpr(s, root, route, basePath); err != nil {
 						return nil, err
@@ -221,14 +221,14 @@ func hasAbsoluteRoutes(root *httpdesign.RootExpr) bool {
 			continue
 		}
 		for _, fs := range res.FileServers {
-			if !mustGenerate(fs.Metadata) {
+			if !mustGenerate(fs.Metadata) || !mustGenerate(fs.Service.Metadata) {
 				continue
 			}
 			hasAbsoluteRoutes = true
 			break
 		}
 		for _, a := range res.HTTPEndpoints {
-			if !mustGenerate(a.Metadata) {
+			if !mustGenerate(a.Metadata) || !mustGenerate(a.MethodExpr.Metadata) {
 				continue
 			}
 			for _, ro := range a.Routes {
