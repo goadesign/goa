@@ -592,9 +592,12 @@ func New{{ .Name }}(ctx context.Context, r *http.Request, service *goa.Service) 
 {{ end }}		{{ printf "rctx.%s" (goifyatt $att $name true) }} = params
 {{ else }}		raw{{ goify $name true}} := param{{ goify $name true}}[0]
 {{ template "Coerce" (newCoerceData $name $att ($.Params.IsPrimitivePointer $name) (printf "rctx.%s" (goifyatt $att $name true)) 2) }}{{ end }}{{/*
-*/}}{{ $validation := validationChecker $att ($.Params.IsNonZero $name) ($.Params.IsRequired $name) ($.Params.HasDefaultValue $name) (printf "rctx.%s" (goifyatt $att $name true)) $name 2 false }}{{/*
-*/}}{{ if $validation }}{{ $validation }}
-{{ end }}	}
+*/}}{{ if $att.Type.IsArray }}{{ $validation := validationChecker (arrayAttribute $att) true true false "param" (printf "%s[0]" $name) 2 false }}{{/*
+*/}}{{ if $validation }}for _, param := range {{ printf "rctx.%s" (goifyatt $att $name true) }} {
+	{{ $validation }}
+	}{{ end }}{{/*
+*/}}{{ else }}{{ $validation := validationChecker $att ($.Params.IsNonZero $name) ($.Params.IsRequired $name) ($.Params.HasDefaultValue $name) (printf "rctx.%s" (goifyatt $att $name true)) $name 2 false }}{{/*
+*/}}{{ if $validation }}{{ $validation }}{{ end }}{{ end }}	}
 {{ end }}{{ end }}{{/* if .Params */}}	return &rctx, err
 }
 `
