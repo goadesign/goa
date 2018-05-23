@@ -73,7 +73,8 @@ func (c *Client) Do(ctx context.Context, req *http.Request) (*http.Response, err
 	}
 	startedAt := time.Now()
 	ctx, id := ContextWithRequestID(ctx)
-	goa.LogInfo(ctx, "started", "id", id, req.Method, req.URL.String())
+	// escape '%' because underlying logger implementation parses as a format string
+	goa.LogInfo(ctx, "started", "id", id, req.Method, strings.Replace(req.URL.String(), "%", "%%", -1))
 	if c.Dump {
 		c.dumpRequest(ctx, req)
 	}
