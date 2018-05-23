@@ -21,8 +21,18 @@ type (
 	}
 )
 
-// RequestID returns a middleware which initializes the context with a unique value under the
-// RequestIDKey key.
+// RequestID returns a middleware, which initializes the context with a unique
+// value under the RequestIDKey key. Optionally uses the incoming "X-Request-Id"
+// header, if present, with or without a length limit to use as request ID. the
+// default behavior is to always generate a new ID.
+//
+// examples of use:
+//  service.Use(middleware.RequestID())
+//
+//  // enable options for using "X-Request-Id" header with length limit.
+//  service.Use(middleware.RequestID(
+//    middleware.UseXRequestIDHeaderOption(true),
+//    middleware.XRequestHeaderLimitOption(128)))
 func RequestID(options ...RequestIDOption) func(http.Handler) http.Handler {
 	o := new(requestIDOption)
 	for _, option := range options {
@@ -35,9 +45,10 @@ func RequestID(options ...RequestIDOption) func(http.Handler) http.Handler {
 				id = r.Header.Get("X-Request-Id")
 				if o.xRequestHeaderLimit > 0 && len(id) > o.xRequestHeaderLimit {
 					id = id[:o.xRequestHeaderLimit]
+				} else if id == "" {
+					id = shortID()
 				}
-			}
-			if id == "" {
+			} else {
 				id = shortID()
 			}
 			ctx := context.WithValue(r.Context(), RequestIDKey, id)
