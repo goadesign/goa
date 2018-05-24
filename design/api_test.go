@@ -96,6 +96,22 @@ func TestServerExprValidate(t *testing.T) {
 	}
 }
 
+func TestServerParamExprEvalName(t *testing.T) {
+	cases := map[string]struct {
+		name     string
+		expected string
+	}{
+		"foo": {name: "foo", expected: "URL parameter foo"},
+	}
+
+	for k, tc := range cases {
+		param := ServerParamExpr{Name: tc.name}
+		if actual := param.EvalName(); actual != tc.expected {
+			t.Errorf("%s: got %#v, expected %#v", k, actual, tc.expected)
+		}
+	}
+}
+
 func TestURLParams(t *testing.T) {
 	cases := map[string]struct {
 		url      string
