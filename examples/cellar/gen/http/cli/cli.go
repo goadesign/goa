@@ -316,22 +316,18 @@ Example:
     `+os.Args[0]+` storage add --body '{
       "composition": [
          {
-            "percentage": 86,
+            "percentage": 34,
             "varietal": "Syrah"
          },
          {
-            "percentage": 86,
-            "varietal": "Syrah"
-         },
-         {
-            "percentage": 86,
+            "percentage": 34,
             "varietal": "Syrah"
          }
       ],
       "description": "Red wine blend with an emphasis on the Cabernet Franc grape and including other Bordeaux grape varietals and some Syrah",
       "name": "Blue\'s Cuvee",
-      "rating": 3,
-      "vintage": 2016,
+      "rating": 1,
+      "vintage": 2013,
       "winery": {
          "country": "USA",
          "name": "Longoria",
@@ -349,7 +345,7 @@ Remove bottle from storage
     -id STRING: ID of bottle to remove
 
 Example:
-    `+os.Args[0]+` storage remove --id "Ab repellendus quidem modi."
+    `+os.Args[0]+` storage remove --id "Distinctio aut non."
 `, os.Args[0])
 }
 
@@ -392,26 +388,18 @@ Example:
       {
          "composition": [
             {
-               "percentage": 86,
+               "percentage": 34,
                "varietal": "Syrah"
             },
             {
-               "percentage": 86,
-               "varietal": "Syrah"
-            },
-            {
-               "percentage": 86,
-               "varietal": "Syrah"
-            },
-            {
-               "percentage": 86,
+               "percentage": 34,
                "varietal": "Syrah"
             }
          ],
          "description": "Red wine blend with an emphasis on the Cabernet Franc grape and including other Bordeaux grape varietals and some Syrah",
          "name": "Blue\'s Cuvee",
-         "rating": 1,
-         "vintage": 1989,
+         "rating": 3,
+         "vintage": 2005,
          "winery": {
             "country": "USA",
             "name": "Longoria",
@@ -422,26 +410,18 @@ Example:
       {
          "composition": [
             {
-               "percentage": 86,
+               "percentage": 34,
                "varietal": "Syrah"
             },
             {
-               "percentage": 86,
-               "varietal": "Syrah"
-            },
-            {
-               "percentage": 86,
-               "varietal": "Syrah"
-            },
-            {
-               "percentage": 86,
+               "percentage": 34,
                "varietal": "Syrah"
             }
          ],
          "description": "Red wine blend with an emphasis on the Cabernet Franc grape and including other Bordeaux grape varietals and some Syrah",
          "name": "Blue\'s Cuvee",
-         "rating": 1,
-         "vintage": 1989,
+         "rating": 3,
+         "vintage": 2005,
          "winery": {
             "country": "USA",
             "name": "Longoria",
@@ -466,26 +446,18 @@ Example:
          {
             "composition": [
                {
-                  "percentage": 86,
+                  "percentage": 34,
                   "varietal": "Syrah"
                },
                {
-                  "percentage": 86,
-                  "varietal": "Syrah"
-               },
-               {
-                  "percentage": 86,
-                  "varietal": "Syrah"
-               },
-               {
-                  "percentage": 86,
+                  "percentage": 34,
                   "varietal": "Syrah"
                }
             ],
             "description": "Red wine blend with an emphasis on the Cabernet Franc grape and including other Bordeaux grape varietals and some Syrah",
             "name": "Blue\'s Cuvee",
-            "rating": 1,
-            "vintage": 1989,
+            "rating": 3,
+            "vintage": 2005,
             "winery": {
                "country": "USA",
                "name": "Longoria",
@@ -496,26 +468,18 @@ Example:
          {
             "composition": [
                {
-                  "percentage": 86,
+                  "percentage": 34,
                   "varietal": "Syrah"
                },
                {
-                  "percentage": 86,
-                  "varietal": "Syrah"
-               },
-               {
-                  "percentage": 86,
-                  "varietal": "Syrah"
-               },
-               {
-                  "percentage": 86,
+                  "percentage": 34,
                   "varietal": "Syrah"
                }
             ],
             "description": "Red wine blend with an emphasis on the Cabernet Franc grape and including other Bordeaux grape varietals and some Syrah",
             "name": "Blue\'s Cuvee",
-            "rating": 1,
-            "vintage": 1989,
+            "rating": 3,
+            "vintage": 2005,
             "winery": {
                "country": "USA",
                "name": "Longoria",
@@ -526,26 +490,18 @@ Example:
          {
             "composition": [
                {
-                  "percentage": 86,
+                  "percentage": 34,
                   "varietal": "Syrah"
                },
                {
-                  "percentage": 86,
-                  "varietal": "Syrah"
-               },
-               {
-                  "percentage": 86,
-                  "varietal": "Syrah"
-               },
-               {
-                  "percentage": 86,
+                  "percentage": 34,
                   "varietal": "Syrah"
                }
             ],
             "description": "Red wine blend with an emphasis on the Cabernet Franc grape and including other Bordeaux grape varietals and some Syrah",
             "name": "Blue\'s Cuvee",
-            "rating": 1,
-            "vintage": 1989,
+            "rating": 3,
+            "vintage": 2005,
             "winery": {
                "country": "USA",
                "name": "Longoria",
@@ -555,9 +511,8 @@ Example:
          }
       ]
    }' --ids '[
-      "Est beatae eveniet et tempora nobis enim.",
-      "Dolorum libero qui.",
-      "Et neque iste dolorem."
+      "Et neque iste dolorem.",
+      "Aut magnam commodi."
    ]'
 `, os.Args[0])
 }

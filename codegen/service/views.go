@@ -37,12 +37,23 @@ func ViewsFile(genpkg string, service *design.ServiceExpr) *codegen.File {
 
 		// validations
 		for _, t := range svc.ProjectedTypes {
-			if t.MustValidate {
+			if t.Validate != nil {
 				sections = append(sections, &codegen.SectionTemplate{
 					Name:   "validate-type",
 					Source: validateT,
-					Data:   t,
+					Data:   t.Validate,
 				})
+			}
+			if t.Views != nil {
+				for _, v := range t.Views {
+					if v.Validate != nil {
+						sections = append(sections, &codegen.SectionTemplate{
+							Name:   "validate-type",
+							Source: validateT,
+							Data:   v.Validate,
+						})
+					}
+				}
 			}
 		}
 	}
@@ -50,9 +61,9 @@ func ViewsFile(genpkg string, service *design.ServiceExpr) *codegen.File {
 	return &codegen.File{Path: path, SectionTemplates: sections}
 }
 
-// input: ProjectedTypeData
-const validateT = `{{ printf "Validate runs the validations defined on %s." .VarName | comment }}
-func (result {{ .Ref }}) Validate() (err error) {
+// input: ValidateData
+const validateT = `{{ comment .Description }}
+func (result {{ .Ref }}) {{ .Name }}() (err error) {
 	{{ .Validate }}
   return
 }

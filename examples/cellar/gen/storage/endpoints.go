@@ -70,10 +70,10 @@ func NewShowEndpoint(s Service) goa.Endpoint {
 		}
 		var vres *storageviews.StoredBottle
 		switch view {
-		case "tiny":
-			vres = NewStoredBottleTiny(res)
 		case "default", "":
 			vres = NewStoredBottleDefault(res)
+		case "tiny":
+			vres = NewStoredBottleTiny(res)
 		default:
 			return nil, fmt.Errorf("unknown view %q", view)
 		}

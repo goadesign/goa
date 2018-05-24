@@ -44,12 +44,14 @@ type (
 	targs struct {
 		sourceVar, targetVar string
 		sourcePkg, targetPkg string
+		sourcePtr, targetPtr bool
 		unmarshal            bool
 		scope                *NameScope
 	}
 
 	thargs struct {
 		sourcePkg, targetPkg string
+		sourcePtr, targetPtr bool
 		unmarshal            bool
 		scope                *NameScope
 	}
@@ -79,37 +81,43 @@ func init() {
 // source or target type respectively in case it's not the same package as where
 // the generated code lives.
 //
-// unmarshal indicates whether the code is being generated to initialize a type
-// from unmarshaled data or to initialize a type that is marshaled:
+// unmarshal if true indicates whether the code is being generated to
+// initialize a type from unmarshaled data, otherwise to initialize a type that
+// is marshaled:
 //
-//     - The source type used to unmarshal uses pointers for all fields - even
-//       required ones.
+//   if unmarshal is true (unmarshal)
+//     - The source type uses pointers for all fields - even required ones.
+//     - The target type do not use pointers for primitive fields that have
+//			 default values even when not required.
 //
-//     - The target type used to unmarshal and the source type used to marshal
-//       do not use pointers for primitive fields that have default values even
-//       when not required.
+//   if unmarshal is false (marshal)
+//     - The source type used do not use pointers for primitive fields that
+//			 have default values even when not required.
+//     - The target type fields are initialized with their default values
+//			 (if any) when source field is a primitive pointer and nil or a
+//			 non-primitive type and nil.
 //
-//     - The generated code initializes marshaled type fields with their default
-//       values when otherwise nil.
+// sourcePtr and targetPtr forces the fields in source and target type to be
+// pointers irrespective of the unmarshal parameter even if the source and
+// target type has required and default values.
 //
 // scope is used to compute the name of the user types when initializing fields
 // that use them.
 //
-func GoTypeTransform(source, target design.DataType, sourceVar, targetVar, sourcePkg, targetPkg string,
-	unmarshal bool, scope *NameScope) (string, []*TransformFunctionData, error) {
+func GoTypeTransform(source, target design.DataType, sourceVar, targetVar, sourcePkg, targetPkg string, sourcePtr, targetPtr, unmarshal bool, scope *NameScope) (string, []*TransformFunctionData, error) {
 
 	var (
 		satt = &design.AttributeExpr{Type: source}
 		tatt = &design.AttributeExpr{Type: target}
 	)
 
-	a := targs{sourceVar, targetVar, sourcePkg, targetPkg, unmarshal, scope}
+	a := targs{sourceVar, targetVar, sourcePkg, targetPkg, sourcePtr, targetPtr, unmarshal, scope}
 	code, err := transformAttribute(satt, tatt, true, a)
 	if err != nil {
 		return "", nil, err
 	}
 
-	b := thargs{sourcePkg, targetPkg, unmarshal, scope}
+	b := thargs{sourcePkg, targetPkg, sourcePtr, targetPtr, unmarshal, scope}
 	funcs, err := transformAttributeHelpers(source, target, b)
 	if err != nil {
 		return "", nil, err
@@ -161,8 +169,8 @@ func transformObject(source, target *design.AttributeExpr, newVar bool, a targs)
 		if !design.IsPrimitive(srcAtt.Type) {
 			return
 		}
-		srcPtr := a.unmarshal || source.IsPrimitivePointer(n, !a.unmarshal)
-		tgtPtr := target.IsPrimitivePointer(n, true)
+		srcPtr := a.sourcePtr || a.unmarshal || source.IsPrimitivePointer(n, !a.unmarshal)
+		tgtPtr := a.targetPtr || target.IsPrimitivePointer(n, true)
 		deref := ""
 		srcField := a.sourceVar + "." + Goify(src.ElemName(n), true)
 		if srcPtr && !tgtPtr {
@@ -258,15 +266,19 @@ func transformObject(source, target *design.AttributeExpr, newVar bool, a targs)
 		if tgt.HasDefaultValue(n) {
 			if b.unmarshal {
 				code += fmt.Sprintf("if %s == nil {\n\t", b.sourceVar)
-				if tgt.IsPrimitivePointer(n, true) {
+				if tgt.IsPrimitivePointer(n, true) || b.targetPtr {
 					code += fmt.Sprintf("tmp := %#v\n\t%s = &tmp\n", tgtAtt.DefaultValue, b.targetVar)
 				} else {
 					code += fmt.Sprintf("%s = %#v\n", b.targetVar, tgtAtt.DefaultValue)
 				}
 				code += "}\n"
-			} else if src.IsPrimitivePointer(n, true) || !design.IsPrimitive(srcAtt.Type) {
+			} else if src.IsPrimitivePointer(n, true) || b.sourcePtr || !design.IsPrimitive(srcAtt.Type) {
 				code += fmt.Sprintf("if %s == nil {\n\t", b.sourceVar)
-				code += fmt.Sprintf("%s = %#v\n", b.targetVar, tgtAtt.DefaultValue)
+				if b.targetPtr {
+					code += fmt.Sprintf("tmp := %#v\n\t%s = &tmp\n", tgtAtt.DefaultValue, b.targetVar)
+				} else {
+					code += fmt.Sprintf("%s = %#v\n", b.targetVar, tgtAtt.DefaultValue)
+				}
 				code += "}\n"
 			}
 		}
@@ -293,6 +305,8 @@ func transformArray(source, target *design.Array, newVar bool, a targs) (string,
 		"TargetElem":  target.ElemType,
 		"SourcePkg":   a.sourcePkg,
 		"TargetPkg":   a.targetPkg,
+		"SourcePtr":   a.sourcePtr,
+		"TargetPtr":   a.targetPtr,
 		"Unmarshal":   a.unmarshal,
 		"Scope":       a.scope,
 		"LoopVar":     string(105 + strings.Count(a.targetVar, ".")),
@@ -325,6 +339,8 @@ func transformMap(source, target *design.Map, newVar bool, a targs) (string, err
 		"TargetElem":  target.ElemType,
 		"SourcePkg":   a.sourcePkg,
 		"TargetPkg":   a.targetPkg,
+		"SourcePtr":   a.sourcePtr,
+		"TargetPtr":   a.targetPtr,
 		"Unmarshal":   a.unmarshal,
 		"Scope":       a.scope,
 		"LoopVar":     "",
@@ -506,7 +522,7 @@ func collectHelpers(source, target *design.AttributeExpr, a thargs, req bool, se
 				return nil, nil
 			}
 			code, err := transformAttribute(ut.Attribute(), target, true,
-				targs{"v", "res", a.sourcePkg, a.targetPkg, a.unmarshal, a.scope})
+				targs{"v", "res", a.sourcePkg, a.targetPkg, a.sourcePtr, a.targetPtr, a.unmarshal, a.scope})
 			if err != nil {
 				return nil, err
 			}
@@ -596,20 +612,20 @@ func transformHelperName(satt, tatt *design.AttributeExpr, a targs) string {
 }
 
 // used by template
-func transformAttributeHelper(source, target *design.AttributeExpr, sourceVar, targetVar, sourcePkg, targetPkg string, unmarshal, newVar bool, scope *NameScope) (string, error) {
-	return transformAttribute(source, target, newVar, targs{sourceVar, targetVar, sourcePkg, targetPkg, unmarshal, scope})
+func transformAttributeHelper(source, target *design.AttributeExpr, sourceVar, targetVar, sourcePkg, targetPkg string, sourcePtr, targetPtr, unmarshal, newVar bool, scope *NameScope) (string, error) {
+	return transformAttribute(source, target, newVar, targs{sourceVar, targetVar, sourcePkg, targetPkg, sourcePtr, targetPtr, unmarshal, scope})
 }
 
 const transformArrayTmpl = `{{ .Target}} {{ if .NewVar }}:{{ end }}= make([]{{ .ElemTypeRef }}, len({{ .Source }}))
 for {{ .LoopVar }}, val := range {{ .Source }} {
-	{{ transformAttribute .SourceElem .TargetElem "val" (printf "%s[%s]" .Target .LoopVar) .SourcePkg .TargetPkg .Unmarshal false .Scope -}}
+	{{ transformAttribute .SourceElem .TargetElem "val" (printf "%s[%s]" .Target .LoopVar) .SourcePkg .TargetPkg .SourcePtr .TargetPtr .Unmarshal false .Scope -}}
 }
 `
 
 const transformMapTmpl = `{{ .Target }} {{ if .NewVar }}:{{ end }}= make(map[{{ .KeyTypeRef }}]{{ .ElemTypeRef }}, len({{ .Source }}))
 for key, val := range {{ .Source }} {
-	{{ transformAttribute .SourceKey .TargetKey "key" "tk" .SourcePkg .TargetPkg  .Unmarshal true .Scope -}}
-	{{ transformAttribute .SourceElem .TargetElem "val" (printf "tv%s" .LoopVar) .SourcePkg .TargetPkg .Unmarshal true .Scope -}}
+	{{ transformAttribute .SourceKey .TargetKey "key" "tk" .SourcePkg .TargetPkg  .SourcePtr .TargetPtr .Unmarshal true .Scope -}}
+	{{ transformAttribute .SourceElem .TargetElem "val" (printf "tv%s" .LoopVar) .SourcePkg .TargetPkg .SourcePtr .TargetPtr .Unmarshal true .Scope -}}
 	{{ .Target }}[tk] = {{ printf "tv%s" .LoopVar }}
 }
 `

@@ -239,6 +239,29 @@ func NewListStoredBottleTinyCollectionOK(body ListResponseBody) storage.StoredBo
 	return v
 }
 
+// NewShowStoredBottleOK builds a "storage" service "show" endpoint result from
+// a HTTP "OK" response.
+func NewShowStoredBottleOK(body *ShowResponseBody) *storageviews.StoredBottleView {
+	v := &storageviews.StoredBottleView{
+		ID:          body.ID,
+		Name:        body.Name,
+		Vintage:     body.Vintage,
+		Description: body.Description,
+		Rating:      body.Rating,
+	}
+	v.Winery = unmarshalWineryResponseBodyToWineryView(body.Winery)
+	if body.Composition != nil {
+		v.Composition = make([]*storageviews.Component, len(body.Composition))
+		for j, val := range body.Composition {
+			v.Composition[j] = &storageviews.Component{
+				Varietal:   val.Varietal,
+				Percentage: val.Percentage,
+			}
+		}
+	}
+	return v
+}
+
 // NewShowNotFound builds a storage service show endpoint not_found error.
 func NewShowNotFound(body *ShowNotFoundResponseBody) *storage.NotFound {
 	v := &storage.NotFound{
@@ -246,65 +269,6 @@ func NewShowNotFound(body *ShowNotFoundResponseBody) *storage.NotFound {
 		ID:      *body.ID,
 	}
 	return v
-}
-
-// NewShowResponseBodyToStoredBottleDefault projects response body
-// ShowResponseBody into viewed result type StoredBottle using the default view.
-func NewShowResponseBodyToStoredBottleDefault(res *ShowResponseBody) *storageviews.StoredBottle {
-	vres := &storageviews.StoredBottleView{
-		ID:          res.ID,
-		Name:        res.Name,
-		Vintage:     res.Vintage,
-		Description: res.Description,
-		Rating:      res.Rating,
-	}
-	if res.Composition != nil {
-		vres.Composition = make([]*storageviews.Component, len(res.Composition))
-		for j, val := range res.Composition {
-			vres.Composition[j] = &storageviews.Component{
-				Varietal:   val.Varietal,
-				Percentage: val.Percentage,
-			}
-		}
-	}
-	if res.Winery != nil {
-		vres.Winery = NewWineryResponseBodyToWineryTiny(res.Winery)
-	}
-	return &storageviews.StoredBottle{vres, "default"}
-}
-
-// NewShowResponseBodyToStoredBottleTiny projects response body
-// ShowResponseBody into viewed result type StoredBottle using the tiny view.
-func NewShowResponseBodyToStoredBottleTiny(res *ShowResponseBody) *storageviews.StoredBottle {
-	vres := &storageviews.StoredBottleView{
-		ID:   res.ID,
-		Name: res.Name,
-	}
-	if res.Winery != nil {
-		vres.Winery = NewWineryResponseBodyToWineryTiny(res.Winery)
-	}
-	return &storageviews.StoredBottle{vres, "tiny"}
-}
-
-// NewWineryResponseBodyToWineryDefault projects response body
-// WineryResponseBody into viewed result type Winery using the default view.
-func NewWineryResponseBodyToWineryDefault(res *WineryResponseBody) *storageviews.Winery {
-	vres := &storageviews.WineryView{
-		Name:    res.Name,
-		Region:  res.Region,
-		Country: res.Country,
-		URL:     res.URL,
-	}
-	return &storageviews.Winery{vres, "default"}
-}
-
-// NewWineryResponseBodyToWineryTiny projects response body WineryResponseBody
-// into viewed result type Winery using the tiny view.
-func NewWineryResponseBodyToWineryTiny(res *WineryResponseBody) *storageviews.Winery {
-	vres := &storageviews.WineryView{
-		Name: res.Name,
-	}
-	return &storageviews.Winery{vres, "tiny"}
 }
 
 // Validate runs the validations defined on ListResponseBody
@@ -358,6 +322,55 @@ func (body *StoredBottleTinyResponseBody) Validate() (err error) {
 func (body *WineryTinyResponseBody) Validate() (err error) {
 	if body.Name == nil {
 		err = goa.MergeErrors(err, goa.MissingFieldError("name", "body"))
+	}
+	return
+}
+
+// Validate runs the validations defined on WineryResponseBody
+func (body *WineryResponseBody) Validate() (err error) {
+	if body.Name == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("name", "body"))
+	}
+	if body.Region == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("region", "body"))
+	}
+	if body.Country == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("country", "body"))
+	}
+	if body.Region != nil {
+		err = goa.MergeErrors(err, goa.ValidatePattern("body.region", *body.Region, "(?i)[a-z '\\.]+"))
+	}
+	if body.Country != nil {
+		err = goa.MergeErrors(err, goa.ValidatePattern("body.country", *body.Country, "(?i)[a-z '\\.]+"))
+	}
+	if body.URL != nil {
+		err = goa.MergeErrors(err, goa.ValidatePattern("body.url", *body.URL, "(?i)^(https?|ftp)://[^\\s/$.?#].[^\\s]*$"))
+	}
+	return
+}
+
+// Validate runs the validations defined on ComponentResponseBody
+func (body *ComponentResponseBody) Validate() (err error) {
+	if body.Varietal == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("varietal", "body"))
+	}
+	if body.Varietal != nil {
+		err = goa.MergeErrors(err, goa.ValidatePattern("body.varietal", *body.Varietal, "[A-Za-z' ]+"))
+	}
+	if body.Varietal != nil {
+		if utf8.RuneCountInString(*body.Varietal) > 100 {
+			err = goa.MergeErrors(err, goa.InvalidLengthError("body.varietal", *body.Varietal, utf8.RuneCountInString(*body.Varietal), 100, false))
+		}
+	}
+	if body.Percentage != nil {
+		if *body.Percentage < 1 {
+			err = goa.MergeErrors(err, goa.InvalidRangeError("body.percentage", *body.Percentage, 1, true))
+		}
+	}
+	if body.Percentage != nil {
+		if *body.Percentage > 100 {
+			err = goa.MergeErrors(err, goa.InvalidRangeError("body.percentage", *body.Percentage, 100, false))
+		}
 	}
 	return
 }

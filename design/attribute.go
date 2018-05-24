@@ -387,7 +387,7 @@ func (a *AttributeExpr) Find(name string) *AttributeExpr {
 		case UserType:
 			return t.Attribute().Find(name)
 		case *Object:
-			if att := AsObject(t).Attribute(name); att != nil {
+			if att := t.Attribute(name); att != nil {
 				return att
 			}
 		}
@@ -419,6 +419,32 @@ func (a *AttributeExpr) Delete(name string) {
 				delete(m, name)
 			}
 		}
+	}
+}
+
+// Debug dumps the attribute to STDOUT in a goa developer friendly way.
+func (a *AttributeExpr) Debug(prefix string) { a.debug(prefix, make(map[*AttributeExpr]int), 0) }
+func (a *AttributeExpr) debug(prefix string, seen map[*AttributeExpr]int, indent int) {
+	for i := 0; i < indent; i++ {
+		prefix = "  " + prefix
+	}
+	if c, ok := seen[a]; ok && c > 1 {
+		fmt.Printf("%s: ...\n", prefix)
+		return
+	}
+	seen[a]++
+	fmt.Printf("%s: %q\n", prefix, a.Type.Name())
+	if o := AsObject(a.Type); o != nil {
+		for _, att := range *o {
+			att.Attribute.debug(" - "+att.Name, seen, indent+1)
+		}
+	}
+	if a := AsArray(a.Type); a != nil {
+		a.ElemType.debug(" Elem", seen, indent+2)
+	}
+	if m := AsMap(a.Type); m != nil {
+		m.KeyType.debug(" Key", seen, indent+2)
+		m.ElemType.debug(" Elem", seen, indent+2)
 	}
 }
 

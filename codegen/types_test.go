@@ -7,33 +7,53 @@ import (
 )
 
 func TestGoTypeDef(t *testing.T) {
+	var (
+		simpleArray = array(design.Boolean)
+		simpleMap   = mapa(design.Int, design.String)
+		requiredObj = require(object("IntField", design.Int, "StringField", design.String), "IntField", "StringField")
+		defaultObj  = defaulta(object("IntField", design.Int, "StringField", design.String), "IntField", 1, "StringField", "foo")
+		ut          = &design.UserTypeExpr{AttributeExpr: &design.AttributeExpr{Type: design.Boolean}, TypeName: "UserType"}
+		rt          = &design.ResultTypeExpr{UserTypeExpr: &design.UserTypeExpr{AttributeExpr: &design.AttributeExpr{Type: design.Boolean}, TypeName: "ResultType"}, Identifier: "application/vnd.goa.example", Views: nil}
+		userType    = &design.AttributeExpr{Type: ut}
+		resultType  = &design.AttributeExpr{Type: rt}
+		mixedObj    = require(object("IntField", design.Int, "ArrayField", simpleArray.Type, "MapField", simpleMap.Type, "UserTypeField", ut), "IntField", "ArrayField", "MapField", "UserTypeField")
+	)
 	cases := map[string]struct {
-		dataType design.DataType
-		expected string
+		att        *design.AttributeExpr
+		usedefault bool
+		forceptr   bool
+		expected   string
 	}{
-		"BooleanKind": {design.Boolean, "bool"},
-		"IntKind":     {design.Int, "int"},
-		"Int32Kind":   {design.Int32, "int32"},
-		"Int64Kind":   {design.Int64, "int64"},
-		"UIntKind":    {design.UInt, "uint"},
-		"UInt32Kind":  {design.UInt32, "uint32"},
-		"UInt64Kind":  {design.UInt64, "uint64"},
-		"Float32Kind": {design.Float32, "float32"},
-		"Float64Kind": {design.Float64, "float64"},
-		"StringKind":  {design.String, "string"},
-		"BytesKind":   {design.Bytes, "[]byte"},
-		"AnyKind":     {design.Any, "interface{}"},
+		"BooleanKind": {&design.AttributeExpr{Type: design.Boolean}, true, false, "bool"},
+		"IntKind":     {&design.AttributeExpr{Type: design.Int}, true, false, "int"},
+		"Int32Kind":   {&design.AttributeExpr{Type: design.Int32}, true, false, "int32"},
+		"Int64Kind":   {&design.AttributeExpr{Type: design.Int64}, true, false, "int64"},
+		"UIntKind":    {&design.AttributeExpr{Type: design.UInt}, true, false, "uint"},
+		"UInt32Kind":  {&design.AttributeExpr{Type: design.UInt32}, true, false, "uint32"},
+		"UInt64Kind":  {&design.AttributeExpr{Type: design.UInt64}, true, false, "uint64"},
+		"Float32Kind": {&design.AttributeExpr{Type: design.Float32}, true, false, "float32"},
+		"Float64Kind": {&design.AttributeExpr{Type: design.Float64}, true, false, "float64"},
+		"StringKind":  {&design.AttributeExpr{Type: design.String}, true, false, "string"},
+		"BytesKind":   {&design.AttributeExpr{Type: design.Bytes}, true, false, "[]byte"},
+		"AnyKind":     {&design.AttributeExpr{Type: design.Any}, true, false, "interface{}"},
 
-		"Array":          {&design.Array{&design.AttributeExpr{Type: design.Boolean}}, "[]bool"},
-		"Map":            {&design.Map{KeyType: &design.AttributeExpr{Type: design.Int}, ElemType: &design.AttributeExpr{Type: design.String}}, "map[int]string"},
-		"Object":         {&design.Object{{"IntField", &design.AttributeExpr{Type: design.Int}}, {"StringField", &design.AttributeExpr{Type: design.String}}}, "struct {\n\tIntField *int\n\tStringField *string\n}"},
-		"UserTypeExpr":   {&design.UserTypeExpr{AttributeExpr: &design.AttributeExpr{Type: design.Boolean}, TypeName: "UserType"}, "UserType"},
-		"ResultTypeExpr": {&design.ResultTypeExpr{UserTypeExpr: &design.UserTypeExpr{AttributeExpr: &design.AttributeExpr{Type: design.Boolean}, TypeName: "ResultType"}, Identifier: "application/vnd.goa.example", Views: nil}, "ResultType"},
+		"Array":          {simpleArray, true, false, "[]bool"},
+		"Map":            {simpleMap, true, false, "map[int]string"},
+		"UserTypeExpr":   {userType, true, false, "UserType"},
+		"ResultTypeExpr": {resultType, true, false, "ResultType"},
+
+		"Object":          {requiredObj, true, false, "struct {\n\tIntField int\n\tStringField string\n}"},
+		"ObjectPtr":       {requiredObj, true, true, "struct {\n\tIntField *int\n\tStringField *string\n}"},
+		"ObjDefault":      {defaultObj, true, false, "struct {\n\tIntField int\n\tStringField string\n}"},
+		"ObjDefaultNoDef": {defaultObj, false, false, "struct {\n\tIntField *int\n\tStringField *string\n}"},
+		"ObjDefaultPtr":   {defaultObj, true, true, "struct {\n\tIntField *int\n\tStringField *string\n}"},
+		"ObjMixed":        {mixedObj, true, false, "struct {\n\tIntField int\n\tArrayField []bool\n\tMapField map[int]string\n\tUserTypeField UserType\n}"},
+		"ObjMixedPtr":     {mixedObj, true, true, "struct {\n\tIntField *int\n\tArrayField []bool\n\tMapField map[int]string\n\tUserTypeField *UserType\n}"},
 	}
 
 	for k, tc := range cases {
 		scope := NewNameScope()
-		actual := scope.GoTypeDef(&design.AttributeExpr{Type: tc.dataType}, true)
+		actual := scope.GoTypeDef(tc.att, tc.usedefault, tc.forceptr)
 		if actual != tc.expected {
 			t.Errorf("%s: got %#v, expected %#v", k, actual, tc.expected)
 		}

@@ -170,7 +170,7 @@ func (e *EndpointExpr) Headers() *design.AttributeExpr {
 
 // MappedHeaders computes the mapped attribute expression from Headers.
 func (e *EndpointExpr) MappedHeaders() *design.MappedAttributeExpr {
-	return design.NewMappedAttributeExpr(e.headers)
+	return design.NewMappedAttributeExpr(e.Headers())
 }
 
 // Params initializes and returns the attribute holding the endpoint parameters.
@@ -188,7 +188,7 @@ func (e *EndpointExpr) Params() *design.AttributeExpr {
 
 // MappedParams computes the mapped attribute expression from Params.
 func (e *EndpointExpr) MappedParams() *design.MappedAttributeExpr {
-	return design.NewMappedAttributeExpr(e.params)
+	return design.NewMappedAttributeExpr(e.Params())
 }
 
 // HasAbsoluteRoutes returns true if all the endpoint routes are absolute.

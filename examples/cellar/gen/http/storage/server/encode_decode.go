@@ -39,7 +39,7 @@ func EncodeShowResponse(encoder func(context.Context, http.ResponseWriter) goaht
 		res := v.(*storageviews.StoredBottle)
 		w.Header().Set("goa-view", res.View)
 		enc := encoder(ctx, w)
-		body := NewShowResponseBody(res)
+		body := NewShowResponseBody(res.Projected)
 		w.WriteHeader(http.StatusOK)
 		return enc.Encode(body)
 	}
@@ -302,15 +302,16 @@ func marshalWineryTinyToWineryTinyResponseBody(v *storage.WineryTiny) *WineryTin
 	return res
 }
 
-// marshalViewedWineryToWineryResponseBody builds a value of type
-// *WineryResponseBody from a value of type *storageviews.Winery.
-func marshalViewedWineryToWineryResponseBody(v *storageviews.Winery) *WineryResponseBody {
+// marshalWineryViewToWineryResponseBody builds a value of type
+// *WineryResponseBody from a value of type *storageviews.WineryView.
+func marshalWineryViewToWineryResponseBody(v *storageviews.WineryView) *WineryResponseBody {
 	res := &WineryResponseBody{
-		Name:    v.Projected.Name,
-		Region:  v.Projected.Region,
-		Country: v.Projected.Country,
-		URL:     v.Projected.URL,
+		Name:    v.Name,
+		Region:  v.Region,
+		Country: v.Country,
+		URL:     v.URL,
 	}
+
 	return res
 }
 

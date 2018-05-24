@@ -285,7 +285,7 @@ func Example(args ...interface{}) {
 			eval.ReportError("example value is missing")
 			return
 		}
-		if !a.Type.IsCompatible(ex.Value) {
+		if a.Type != nil && !a.Type.IsCompatible(ex.Value) {
 			eval.ReportError("example value %#v is incompatible with attribute of type %s",
 				ex.Value, a.Type.Name())
 			return

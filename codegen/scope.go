@@ -67,22 +67,26 @@ done:
 
 // GoTypeDef returns the Go code that defines a Go type which matches the data
 // structure definition (the part that comes after `type foo`).
-func (s *NameScope) GoTypeDef(att *design.AttributeExpr, useDefault bool) string {
+//
+// pointer if true indicates that the attributes in the expression must be
+// generated as pointer fields even though the attributes are required and/or
+// have defaults.
+func (s *NameScope) GoTypeDef(att *design.AttributeExpr, useDefault bool, pointer bool) string {
 	switch actual := att.Type.(type) {
 	case design.Primitive:
 		return GoNativeTypeName(actual)
 	case *design.Array:
-		d := s.GoTypeDef(actual.ElemType, useDefault)
+		d := s.GoTypeDef(actual.ElemType, useDefault, pointer)
 		if design.IsObject(actual.ElemType.Type) {
 			d = "*" + d
 		}
 		return "[]" + d
 	case *design.Map:
-		keyDef := s.GoTypeDef(actual.KeyType, useDefault)
+		keyDef := s.GoTypeDef(actual.KeyType, useDefault, pointer)
 		if design.IsObject(actual.KeyType.Type) {
 			keyDef = "*" + keyDef
 		}
-		elemDef := s.GoTypeDef(actual.ElemType, useDefault)
+		elemDef := s.GoTypeDef(actual.ElemType, useDefault, pointer)
 		if design.IsObject(actual.ElemType.Type) {
 			elemDef = "*" + elemDef
 		}
@@ -102,8 +106,12 @@ func (s *NameScope) GoTypeDef(att *design.AttributeExpr, useDefault bool) string
 			)
 			{
 				fn = GoifyAtt(at, name, true)
-				tdef = s.GoTypeDef(at, useDefault)
-				if design.IsObject(at.Type) || att.IsPrimitivePointer(name, useDefault) {
+				tdef = s.GoTypeDef(at, useDefault, pointer)
+				ptr := design.IsObject(at.Type) || att.IsPrimitivePointer(name, useDefault)
+				if pointer && !(design.IsMap(at.Type) || design.IsArray(at.Type)) {
+					ptr = true
+				}
+				if ptr {
 					tdef = "*" + tdef
 				}
 				if at.Description != "" {
@@ -154,7 +162,7 @@ func (s *NameScope) GoFullTypeName(att *design.AttributeExpr, pkg string) string
 			s.GoFullTypeRef(actual.KeyType, pkg),
 			s.GoFullTypeRef(actual.ElemType, pkg))
 	case *design.Object:
-		return s.GoTypeDef(att, false)
+		return s.GoTypeDef(att, false, false)
 
 	case design.UserType:
 		if actual == design.ErrorResult {
