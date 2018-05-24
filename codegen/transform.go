@@ -86,26 +86,20 @@ func init() {
 // is marshaled:
 //
 //   if unmarshal is true (unmarshal)
-//     - The source type used to unmarshal uses pointers for all fields - even
-//			 required ones.
-//     - The target type used to unmarshal do not use pointers for primitive
-//			 fields that have default values even when not required.
-//     - The target type fields are initialized with their default values
-//			 (if any) when source field is nil
+//     - The source type uses pointers for all fields - even required ones.
+//     - The target type do not use pointers for primitive fields that have
+//			 default values even when not required.
 //
 //   if unmarshal is false (marshal)
-//     - The source type used to marshal do not use pointers for primitive
-//			 fields that have default values even when not required.
-//     - The target type used to marshal uses pointers for all fields - even
-//			 required ones.
+//     - The source type used do not use pointers for primitive fields that
+//			 have default values even when not required.
 //     - The target type fields are initialized with their default values
 //			 (if any) when source field is a primitive pointer and nil or a
 //			 non-primitive type and nil.
 //
-// sourcePtr forces the fields in source to be pointers irrespective of the
-// unmarshal parameter even if the source type has required and default values.
-// targetPtr forces the fields in target to be pointers irrespective of the
-// unmarshal parameter even if the target type has required and default values.
+// sourcePtr and targetPtr forces the fields in source and target type to be
+// pointers irrespective of the unmarshal parameter even if the source and
+// target type has required and default values.
 //
 // scope is used to compute the name of the user types when initializing fields
 // that use them.

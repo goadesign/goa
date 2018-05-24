@@ -218,14 +218,15 @@ type (
 		*UserTypeData
 		// Validate is the validation code run on the projected type.
 		Validate *ValidateData
-		// MustValidate if true indicates that the projected type must be validated.
-		MustValidate bool
-
-		// fields set only for a viewed result type
-
 		// Views lists the views defined on the result type and the functions
 		// to project a viewed result type.
 		Views []*ProjectData
+
+		// fields set only for a viewed result type
+
+		// IsViewedResult if true indicates the data corresponds to a viewed result
+		// type.
+		IsViewedResult bool
 		// FullRef is the complete reference to the viewed result type
 		// (including views package name).
 		FullRef string
@@ -739,11 +740,21 @@ func collectProjectedTypesR(projected, att *design.AttributeExpr, seen map[strin
 	}
 	switch pt := projected.Type.(type) {
 	case design.UserType:
-		if _, ok := seen[pt.Name()]; ok {
+		// If the attribute type has already been projected (i.e., projected type
+		// or a viewed result type has been generated) and if the type corresponds
+		// to a viewed result type, we change the type name to refer to a projected
+		// type instead.
+		if pd, ok := seen[pt.Name()]; ok && (pd == nil || !pd.IsViewedResult) {
+			// Projected type has already been seen and is not a viewed result type.
+			// Break the recursion.
 			return
 		}
 		if rt, ok := pt.(*design.ResultTypeExpr); ok && rt.HasMultipleViews() {
 			rt.Rename(rt.Name() + "View")
+		}
+		if _, ok := seen[pt.Name()]; ok {
+			// Projected type has already been seen. Break the recursion.
+			return
 		}
 		seen[pt.Name()] = nil
 		dt := att.Type.(design.UserType)
@@ -846,6 +857,7 @@ func buildViewedResultType(projected, att *design.AttributeExpr, scope *codegen.
 		ViewsPkg:        viewspkg,
 		Validate:        buildValidationData(att, "", ref, true, scope),
 		IsCollection:    col,
+		IsViewedResult:  true,
 	}
 }
 

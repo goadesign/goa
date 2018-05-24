@@ -67,6 +67,10 @@ done:
 
 // GoTypeDef returns the Go code that defines a Go type which matches the data
 // structure definition (the part that comes after `type foo`).
+//
+// pointer if true indicates that the attributes in the expression must be
+// generated as pointer fields even though the attributes are required and/or
+// have defaults.
 func (s *NameScope) GoTypeDef(att *design.AttributeExpr, useDefault bool, pointer bool) string {
 	switch actual := att.Type.(type) {
 	case design.Primitive:
