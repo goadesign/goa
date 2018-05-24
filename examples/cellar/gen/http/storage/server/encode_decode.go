@@ -305,9 +305,6 @@ func marshalWineryTinyToWineryTinyResponseBody(v *storage.WineryTiny) *WineryTin
 // marshalWineryViewToWineryResponseBody builds a value of type
 // *WineryResponseBody from a value of type *storageviews.WineryView.
 func marshalWineryViewToWineryResponseBody(v *storageviews.WineryView) *WineryResponseBody {
-	if v == nil {
-		return nil
-	}
 	res := &WineryResponseBody{
 		Name:    v.Name,
 		Region:  v.Region,

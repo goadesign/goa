@@ -168,29 +168,19 @@ func (e *NotFound) ErrorName() string {
 // StoredBottle.
 func NewStoredBottle(vres *storageviews.StoredBottle) *StoredBottle {
 	res := &StoredBottle{
+		ID:          *vres.Projected.ID,
+		Name:        *vres.Projected.Name,
+		Vintage:     *vres.Projected.Vintage,
 		Description: vres.Projected.Description,
 		Rating:      vres.Projected.Rating,
 	}
-	if vres.Projected.ID != nil {
-		res.ID = *vres.Projected.ID
-	}
-	if vres.Projected.Name != nil {
-		res.Name = *vres.Projected.Name
-	}
-	if vres.Projected.Vintage != nil {
-		res.Vintage = *vres.Projected.Vintage
-	}
-	if vres.Projected.Winery != nil {
-		res.Winery = unmarshalWineryViewToWinery(vres.Projected.Winery)
-	}
+	res.Winery = unmarshalWineryViewToWinery(vres.Projected.Winery)
 	if vres.Projected.Composition != nil {
 		res.Composition = make([]*Component, len(vres.Projected.Composition))
 		for j, val := range vres.Projected.Composition {
 			res.Composition[j] = &Component{
+				Varietal:   *val.Varietal,
 				Percentage: val.Percentage,
-			}
-			if val.Varietal != nil {
-				res.Composition[j].Varietal = *val.Varietal
 			}
 		}
 	}
@@ -273,20 +263,11 @@ func newWineryViewTiny(res *Winery) *storageviews.WineryView {
 // unmarshalWineryViewToWinery builds a value of type *Winery from a value of
 // type *storageviews.WineryView.
 func unmarshalWineryViewToWinery(v *storageviews.WineryView) *Winery {
-	if v == nil {
-		return nil
-	}
 	res := &Winery{
-		URL: v.URL,
-	}
-	if v.Name != nil {
-		res.Name = *v.Name
-	}
-	if v.Region != nil {
-		res.Region = *v.Region
-	}
-	if v.Country != nil {
-		res.Country = *v.Country
+		Name:    *v.Name,
+		Region:  *v.Region,
+		Country: *v.Country,
+		URL:     v.URL,
 	}
 
 	return res

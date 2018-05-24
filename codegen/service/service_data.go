@@ -396,7 +396,7 @@ func (d ServicesData) analyze(service *design.ServiceExpr) *Data {
 			types = append(types, collectTypes(ratt, seen, scope)...)
 			// collect viewed results and associated projected user types
 			if rt, ok := m.Result.Type.(*design.ResultTypeExpr); ok && rt.HasMultipleViews() {
-				projected := dupAttNoValidation(m.Result)
+				projected := design.DupAtt(m.Result)
 				projTypes = append(projTypes, collectProjectedTypes(projected, m.Result, seenProj, scope, viewspkg)...)
 			}
 			for _, er := range m.Errors {
@@ -480,7 +480,7 @@ func collectTypes(at *design.AttributeExpr, seen map[string]struct{}, scope *cod
 			Name:        dt.Name(),
 			VarName:     scope.GoTypeName(at),
 			Description: dt.Attribute().Description,
-			Def:         scope.GoTypeDef(dt.Attribute(), true),
+			Def:         scope.GoTypeDef(dt.Attribute(), true, false),
 			Ref:         scope.GoTypeRef(at),
 			Type:        dt,
 		})
@@ -545,7 +545,7 @@ func buildMethodData(m *design.MethodExpr, svcPkgName string, scope *codegen.Nam
 		payloadName = scope.GoTypeName(m.Payload)
 		payloadRef = scope.GoTypeRef(m.Payload)
 		if dt, ok := m.Payload.Type.(design.UserType); ok {
-			payloadDef = scope.GoTypeDef(dt.Attribute(), true)
+			payloadDef = scope.GoTypeDef(dt.Attribute(), true, false)
 		}
 		payloadDesc = m.Payload.Description
 		if payloadDesc == "" {
@@ -558,7 +558,7 @@ func buildMethodData(m *design.MethodExpr, svcPkgName string, scope *codegen.Nam
 		rname = scope.GoTypeName(m.Result)
 		resultRef = scope.GoTypeRef(m.Result)
 		if dt, ok := m.Result.Type.(design.UserType); ok {
-			resultDef = scope.GoTypeDef(dt.Attribute(), true)
+			resultDef = scope.GoTypeDef(dt.Attribute(), true, false)
 		}
 		resultDesc = m.Result.Description
 		if resultDesc == "" {
@@ -716,39 +716,6 @@ func requirements(m *design.MethodExpr) []*design.SecurityExpr {
 	return design.Root.API.Requirements
 }
 
-// dupAttNoValidation creates a copy of the given attribute expression and
-// removes all the validation and attribute defaults.
-func dupAttNoValidation(a *design.AttributeExpr, seen ...map[string]struct{}) *design.AttributeExpr {
-	a = design.DupAtt(a)
-	a.Validation = nil
-	a.DefaultValue = nil
-	switch actual := a.Type.(type) {
-	case design.UserType:
-		var s map[string]struct{}
-		if len(seen) > 0 {
-			s = seen[0]
-		} else {
-			s = make(map[string]struct{})
-			seen = append(seen, s)
-		}
-		if _, ok := s[actual.Name()]; ok {
-			return a
-		}
-		s[actual.Name()] = struct{}{}
-		actual.SetAttribute(dupAttNoValidation(actual.Attribute(), seen...))
-	case *design.Array:
-		actual.ElemType = dupAttNoValidation(actual.ElemType, seen...)
-	case *design.Map:
-		actual.KeyType = dupAttNoValidation(actual.KeyType, seen...)
-		actual.ElemType = dupAttNoValidation(actual.ElemType, seen...)
-	case *design.Object:
-		for _, nat := range *actual {
-			nat.Attribute = dupAttNoValidation(nat.Attribute, seen...)
-		}
-	}
-	return a
-}
-
 // collectProjectedTypes collects all the projected types from the given
 // result type and stores them in data.
 func collectProjectedTypes(projected, att *design.AttributeExpr, seen map[string]*ProjectedTypeData, scope *codegen.NameScope, viewspkg string) (data []*ProjectedTypeData) {
@@ -772,14 +739,14 @@ func collectProjectedTypesR(projected, att *design.AttributeExpr, seen map[strin
 	}
 	switch pt := projected.Type.(type) {
 	case design.UserType:
-		if rt, ok := pt.(*design.ResultTypeExpr); ok && rt.HasMultipleViews() {
-			rt.Rename(rt.Name() + "View")
-		}
-		dt := att.Type.(design.UserType)
 		if _, ok := seen[pt.Name()]; ok {
 			return
 		}
+		if rt, ok := pt.(*design.ResultTypeExpr); ok && rt.HasMultipleViews() {
+			rt.Rename(rt.Name() + "View")
+		}
 		seen[pt.Name()] = nil
+		dt := att.Type.(design.UserType)
 		types := collect(pt.Attribute(), dt.Attribute())
 		if pd := buildProjectedType(projected, att, scope, viewspkg); pd != nil {
 			data = append(data, pd)
@@ -823,7 +790,7 @@ func buildProjectedType(projected, att *design.AttributeExpr, scope *codegen.Nam
 		Name:        pt.Name(),
 		Description: fmt.Sprintf("%s is a type that runs validations on a projected type.", varname),
 		VarName:     varname,
-		Def:         scope.GoTypeDef(pt.Attribute(), false),
+		Def:         scope.GoTypeDef(pt.Attribute(), true, true),
 		Ref:         ref,
 		Type:        pt,
 	}
@@ -866,7 +833,7 @@ func buildViewedResultType(projected, att *design.AttributeExpr, scope *codegen.
 		Name:        resvar,
 		Description: fmt.Sprintf("%s is the viewed result type that is projected based on a view.", resvar),
 		VarName:     resvar,
-		Def:         scope.GoTypeDef(projected.Type.(design.UserType).Attribute(), true),
+		Def:         scope.GoTypeDef(projected.Type.(design.UserType).Attribute(), true, false),
 		Ref:         ref,
 		Type:        projected.Type.(design.UserType),
 	}
@@ -1110,7 +1077,7 @@ func buildConstructorCode(src, tgt *design.AttributeExpr, srcvar, tgtvar, srcpkg
 	case toResult:
 		// transforming viewed result type to a result type
 		srcvar += ".Projected"
-		code, helpers, err = codegen.GoTypeTransform(src.Type, tgt.Type, srcvar, tgtvar, srcpkg, tgtpkg, true, scope)
+		code, helpers, err = codegen.GoTypeTransform(src.Type, tgt.Type, srcvar, tgtvar, srcpkg, tgtpkg, true, false, true, scope)
 		if err != nil {
 			panic(err) // bug
 		}
@@ -1139,7 +1106,7 @@ func buildConstructorCode(src, tgt *design.AttributeExpr, srcvar, tgtvar, srcpkg
 		}
 		data["Source"] = srcvar
 		data["Target"] = tgtvar
-		code, helpers, err = codegen.GoTypeTransform(src.Type, t.Type, srcvar, tgtvar, srcpkg, tgtpkg, false, scope)
+		code, helpers, err = codegen.GoTypeTransform(src.Type, t.Type, srcvar, tgtvar, srcpkg, tgtpkg, false, true, false, scope)
 		if err != nil {
 			panic(err) // bug
 		}

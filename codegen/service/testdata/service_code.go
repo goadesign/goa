@@ -327,12 +327,9 @@ type MultipleViews struct {
 func NewMultipleViewsCollection(vres resultcollectionmultipleviewsmethodviews.MultipleViewsCollection) MultipleViewsCollection {
 	res := make([]*MultipleViews, len(vres.Projected))
 	for i, val := range vres.Projected {
-		res[i] = &MultipleViews{}
-		if val.A != nil {
-			res[i].A = *val.A
-		}
-		if val.B != nil {
-			res[i].B = *val.B
+		res[i] = &MultipleViews{
+			A: *val.A,
+			B: *val.B,
 		}
 	}
 	return res
@@ -430,13 +427,10 @@ type MultipleViews2 struct {
 // NewMultipleViews converts viewed result type MultipleViews to result type
 // MultipleViews.
 func NewMultipleViews(vres *resultwithotherresultviews.MultipleViews) *MultipleViews {
-	res := &MultipleViews{}
-	if vres.Projected.A != nil {
-		res.A = *vres.Projected.A
+	res := &MultipleViews{
+		A: *vres.Projected.A,
 	}
-	if vres.Projected.B != nil {
-		res.B = unmarshalMultipleViews2ViewToMultipleViews2(vres.Projected.B)
-	}
+	res.B = unmarshalMultipleViews2ViewToMultipleViews2(vres.Projected.B)
 	return res
 }
 
@@ -498,14 +492,9 @@ func newMultipleViews2ViewTiny(res *MultipleViews2) *resultwithotherresultviews.
 // *MultipleViews2 from a value of type
 // *resultwithotherresultviews.MultipleViews2View.
 func unmarshalMultipleViews2ViewToMultipleViews2(v *resultwithotherresultviews.MultipleViews2View) *MultipleViews2 {
-	if v == nil {
-		return nil
-	}
 	res := &MultipleViews2{
+		A: *v.A,
 		B: v.B,
-	}
-	if v.A != nil {
-		res.A = *v.A
 	}
 
 	return res

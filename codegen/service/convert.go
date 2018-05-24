@@ -123,7 +123,7 @@ func ConvertFile(root *design.RootExpr, service *design.ServiceExpr) (*codegen.F
 		t := reflect.TypeOf(c.External)
 		tgtPkg := t.String()
 		tgtPkg = tgtPkg[:strings.Index(tgtPkg, ".")]
-		code, tf, err := codegen.GoTypeTransform(c.User, dt, "t", "v", "", tgtPkg, false, svc.Scope)
+		code, tf, err := codegen.GoTypeTransform(c.User, dt, "t", "v", "", tgtPkg, false, false, false, svc.Scope)
 		if err != nil {
 			return nil, err
 		}
@@ -157,7 +157,7 @@ func ConvertFile(root *design.RootExpr, service *design.ServiceExpr) (*codegen.F
 		t := reflect.TypeOf(c.External)
 		srcPkg := t.String()
 		srcPkg = srcPkg[:strings.Index(srcPkg, ".")]
-		code, tf, err := codegen.GoTypeTransform(dt, c.User, "v", "temp", srcPkg, "", false, svc.Scope)
+		code, tf, err := codegen.GoTypeTransform(dt, c.User, "v", "temp", srcPkg, "", false, false, false, svc.Scope)
 		if err != nil {
 			return nil, err
 		}

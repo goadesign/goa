@@ -757,19 +757,8 @@ func (d ServicesData) analyze(hs *httpdesign.ServiceExpr) *ServiceData {
 		})
 
 		if res := a.MethodExpr.Result; res != nil {
-			md := svc.Method(a.Name())
 			for _, v := range a.Responses {
-				body := v.Body
-				if _, ok := body.Metadata["origin:attribute"]; !ok && md.ViewedResult != nil {
-					// If a method endpoint has a result type with multiple views, no
-					// need to generate the validation in the server and client packages
-					// for all the user type we generate. We call the validation
-					// function defined in the views package for such types. We may still
-					// need to generate the type struct in the server and client packages
-					// because the response body type may need them.
-					body = dupAttNoValidation(body)
-				}
-				collectUserTypes(body.Type, func(ut design.UserType) {
+				collectUserTypes(v.Body.Type, func(ut design.UserType) {
 					if d := attributeTypeData(ut, false, true, true, svc.Scope, rd); d != nil {
 						rd.ServerBodyAttributeTypes = append(rd.ServerBodyAttributeTypes, d)
 					}
@@ -782,7 +771,7 @@ func (d ServicesData) analyze(hs *httpdesign.ServiceExpr) *ServiceData {
 
 		for _, v := range a.HTTPErrors {
 			collectUserTypes(v.Response.Body.Type, func(ut design.UserType) {
-				if d := attributeTypeData(ut, false, false, true, svc.Scope, rd); d != nil {
+				if d := attributeTypeData(ut, false, true, true, svc.Scope, rd); d != nil {
 					rd.ServerBodyAttributeTypes = append(rd.ServerBodyAttributeTypes, d)
 				}
 				if d := attributeTypeData(ut, false, true, false, svc.Scope, rd); d != nil {
@@ -1044,7 +1033,7 @@ func buildPayloadData(e *httpdesign.EndpointExpr, sd *ServiceData) *PayloadData 
 			}
 
 			var helpers []*codegen.TransformFunctionData
-			serverCode, helpers, err = codegen.GoTypeTransform(body, ptype, "body", "v", "", svc.PkgName, true, svc.Scope)
+			serverCode, helpers, err = codegen.GoTypeTransform(body, ptype, "body", "v", "", svc.PkgName, true, false, true, svc.Scope)
 			if err == nil {
 				sd.ServerTransformHelpers = codegen.AppendHelpers(sd.ServerTransformHelpers, helpers)
 			}
@@ -1053,7 +1042,7 @@ func buildPayloadData(e *httpdesign.EndpointExpr, sd *ServiceData) *PayloadData 
 			// payload given to the client endpoint. It differs
 			// because the body type there does not use pointers for
 			// all fields (no need to validate).
-			clientCode, helpers, err = codegen.GoTypeTransform(body, ptype, "body", "v", "", svc.PkgName, false, svc.Scope)
+			clientCode, helpers, err = codegen.GoTypeTransform(body, ptype, "body", "v", "", svc.PkgName, false, false, false, svc.Scope)
 			if err == nil {
 				sd.ClientTransformHelpers = codegen.AppendHelpers(sd.ClientTransformHelpers, helpers)
 			}
@@ -1061,12 +1050,12 @@ func buildPayloadData(e *httpdesign.EndpointExpr, sd *ServiceData) *PayloadData 
 			if params := design.AsObject(e.QueryParams().Type); len(*params) > 0 {
 				var helpers []*codegen.TransformFunctionData
 				serverCode, helpers, err = codegen.GoTypeTransform((*params)[0].Attribute.Type, payload.Type,
-					codegen.Goify((*params)[0].Name, false), "v", "", svc.PkgName, true, svc.Scope)
+					codegen.Goify((*params)[0].Name, false), "v", "", svc.PkgName, false, false, true, svc.Scope)
 				if err == nil {
 					sd.ServerTransformHelpers = codegen.AppendHelpers(sd.ServerTransformHelpers, helpers)
 				}
 				clientCode, helpers, err = codegen.GoTypeTransform((*params)[0].Attribute.Type, payload.Type,
-					codegen.Goify((*params)[0].Name, false), "v", "", svc.PkgName, false, svc.Scope)
+					codegen.Goify((*params)[0].Name, false), "v", "", svc.PkgName, false, false, false, svc.Scope)
 				if err == nil {
 					sd.ClientTransformHelpers = codegen.AppendHelpers(sd.ClientTransformHelpers, helpers)
 				}
@@ -1260,7 +1249,7 @@ func buildResponseResultInit(resp *httpdesign.HTTPResponseExpr, e *httpdesign.En
 			Validate: vcode,
 		}}
 		var helpers []*codegen.TransformFunctionData
-		code, helpers, err = codegen.GoTypeTransform(resp.Body.Type, respBody.Type, "body", "v", "", pkg, true, svc.Scope)
+		code, helpers, err = codegen.GoTypeTransform(resp.Body.Type, respBody.Type, "body", "v", "", pkg, true, md.ViewedResult != nil, true, svc.Scope)
 		if err == nil {
 			sd.ClientTransformHelpers = codegen.AppendHelpers(sd.ClientTransformHelpers, helpers)
 		}
@@ -1268,7 +1257,7 @@ func buildResponseResultInit(resp *httpdesign.HTTPResponseExpr, e *httpdesign.En
 		if params := design.AsObject(e.QueryParams().Type); len(*params) > 0 {
 			var helpers []*codegen.TransformFunctionData
 			code, helpers, err = codegen.GoTypeTransform((*params)[0].Attribute.Type, result.Type,
-				codegen.Goify((*params)[0].Name, false), "v", "", svc.PkgName, true, svc.Scope)
+				codegen.Goify((*params)[0].Name, false), "v", "", svc.PkgName, false, false, true, svc.Scope)
 			if err == nil {
 				sd.ClientTransformHelpers = codegen.AppendHelpers(sd.ClientTransformHelpers, helpers)
 			}
@@ -1362,7 +1351,7 @@ func buildErrorsData(e *httpdesign.EndpointExpr, sd *ServiceData) []*ErrorGroupD
 					}
 
 					var helpers []*codegen.TransformFunctionData
-					code, helpers, err = codegen.GoTypeTransform(body, etype, "body", "v", "", svc.PkgName, true, svc.Scope)
+					code, helpers, err = codegen.GoTypeTransform(body, etype, "body", "v", "", svc.PkgName, true, false, true, svc.Scope)
 					if err == nil {
 						sd.ClientTransformHelpers = codegen.AppendHelpers(sd.ClientTransformHelpers, helpers)
 					}
@@ -1370,7 +1359,7 @@ func buildErrorsData(e *httpdesign.EndpointExpr, sd *ServiceData) []*ErrorGroupD
 					if params := design.AsObject(e.QueryParams().Type); len(*params) > 0 {
 						var helpers []*codegen.TransformFunctionData
 						code, helpers, err = codegen.GoTypeTransform((*params)[0].Attribute.Type, herr.Type,
-							codegen.Goify((*params)[0].Name, false), "v", "", svc.PkgName, true, svc.Scope)
+							codegen.Goify((*params)[0].Name, false), "v", "", svc.PkgName, false, false, true, svc.Scope)
 						if err == nil {
 							sd.ClientTransformHelpers = codegen.AppendHelpers(sd.ClientTransformHelpers, helpers)
 						}
@@ -1554,15 +1543,6 @@ func buildBodyType(sd *ServiceData, e *httpdesign.EndpointExpr, body, att *desig
 			name, ctx, rctx, e.Name(), svc.Name)
 
 		srcType := att.Type
-		tgtType := body.Type
-		if svr && !req || !svr && !req {
-			// In server and client response type all the field are pointers.
-			// So we need to remove the validations from the body before transform.
-			// We dup the body here so that the validations may be generated for
-			// the response body type.
-			tgt := dupAttNoValidation(body)
-			tgtType = tgt.Type
-		}
 		src := sourceVar
 		// If design uses Body("name") syntax then need to use payload/result
 		// attribute to transform.
@@ -1573,7 +1553,12 @@ func buildBodyType(sd *ServiceData, e *httpdesign.EndpointExpr, body, att *desig
 			src += "." + codegen.Goify(origin, true)
 		}
 		var helpers []*codegen.TransformFunctionData
-		code, helpers, err = codegen.GoTypeTransform(srcType, tgtType, src, "body", pkg, "", false, svc.Scope)
+		var srcptr, tgtptr bool
+		if svr && !req {
+			srcptr = viewed
+			tgtptr = true
+		}
+		code, helpers, err = codegen.GoTypeTransform(srcType, body.Type, src, "body", pkg, "", srcptr, tgtptr, false, svc.Scope)
 		if err != nil {
 			fmt.Println(err.Error()) // TBD validate DSL so errors are not possible
 		}
@@ -1898,39 +1883,6 @@ func needInit(dt design.DataType) bool {
 	default:
 		panic(fmt.Sprintf("unknown data type %T", actual)) // bug
 	}
-}
-
-// dupAttNoValidation creates a copy of the given attribute expression and
-// removes all the validation and attribute defaults.
-func dupAttNoValidation(a *design.AttributeExpr, seen ...map[string]struct{}) *design.AttributeExpr {
-	a = design.DupAtt(a)
-	a.Validation = nil
-	a.DefaultValue = nil
-	switch actual := a.Type.(type) {
-	case design.UserType:
-		var s map[string]struct{}
-		if len(seen) > 0 {
-			s = seen[0]
-		} else {
-			s = make(map[string]struct{})
-			seen = append(seen, s)
-		}
-		if _, ok := s[actual.Name()]; ok {
-			return a
-		}
-		s[actual.Name()] = struct{}{}
-		actual.SetAttribute(dupAttNoValidation(actual.Attribute(), seen...))
-	case *design.Array:
-		actual.ElemType = dupAttNoValidation(actual.ElemType, seen...)
-	case *design.Map:
-		actual.KeyType = dupAttNoValidation(actual.KeyType, seen...)
-		actual.ElemType = dupAttNoValidation(actual.ElemType, seen...)
-	case *design.Object:
-		for _, nat := range *actual {
-			nat.Attribute = dupAttNoValidation(nat.Attribute, seen...)
-		}
-	}
-	return a
 }
 
 const (
