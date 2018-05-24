@@ -897,14 +897,14 @@ func {{ .ResponseEncoder }}(encoder func(context.Context, http.ResponseWriter) g
 	{{- if and .Result.Ref .NeedServerResponse }}
 		{{- if .Method.ViewedResult }}
 		res := v.({{ .Method.ViewedResult.FullRef }})
-		w.Header().Set("goa-view", res{{ if $.Method.ViewedResult.IsCollection }}[0]{{ end }}.View)
+		w.Header().Set("goa-view", res.View)
 		{{- else }}
 		res := v.({{ .Result.Ref }})
 		{{- end }}
 		{{- range .Result.Responses }}
 			{{- if .TagName }}
 			{{- if .TagRequired }}
-		if res.{{ if .ViewedResult }}Projected.{{ end }}{{ .TagName }} == {{ printf "%q" .TagValue }} {
+		if {{ if .ViewedResult }}*{{ end }}res.{{ if .ViewedResult }}Projected.{{ end }}{{ .TagName }} == {{ printf "%q" .TagValue }} {
 			{{- else }}
 		if res.{{ if .ViewedResult }}Projected.{{ end }}{{ .TagName }} != nil && *res.{{ if .ViewedResult }}Projected.{{ end }}{{ .TagName }} == {{ printf "%q" .TagValue }} {
 			{{- end }}
@@ -984,7 +984,7 @@ const responseT = `{{ define "response" -}}
 		{{- end }}
 
 		{{- if eq .Type.Name "string" }}
-	w.Header().Set("{{ .Name }}", {{ if not .Required }}*{{ end }}res{{ if $.ViewedResult }}.Projected{{ end }}{{ if .FieldName }}.{{ .FieldName }}{{ end }})
+	w.Header().Set("{{ .Name }}", {{ if or (not .Required) $.ViewedResult }}*{{ end }}res{{ if $.ViewedResult }}.Projected{{ end }}{{ if .FieldName }}.{{ .FieldName }}{{ end }})
 		{{- else }}
 	val := res{{ if $.ViewedResult }}.Projected{{ end }}{{ if .FieldName }}.{{ .FieldName }}{{ end }}
 	{{ template "header_conversion" (headerConversionData .Type (printf "%ss" .VarName) .Required "val") }}

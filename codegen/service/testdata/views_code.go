@@ -1,41 +1,12 @@
 package testdata
 
-const ResultWithMultipleViewsCode = `// ResultTypeView is a type that runs validations on a projected type.
-type ResultTypeView struct {
-	A *string
-	B *string
-}
-
-// ResultType is the viewed result type that is projected based on a view.
+const ResultWithMultipleViewsCode = `// ResultType is the viewed result type that is projected based on a view.
 type ResultType struct {
 	// Type to project
 	Projected *ResultTypeView
 	// View to render
 	View string
 }
-
-// Validate runs the validations defined on ResultType.
-func (result *ResultType) Validate() (err error) {
-	switch result.View {
-	case "tiny":
-		if result.Projected.A == nil {
-			err = goa.MergeErrors(err, goa.MissingFieldError("a", "result.Projected"))
-		}
-	default:
-		if result.Projected.A == nil {
-			err = goa.MergeErrors(err, goa.MissingFieldError("a", "result.Projected"))
-		}
-		if result.Projected.B == nil {
-			err = goa.MergeErrors(err, goa.MissingFieldError("b", "result.Projected"))
-		}
-	}
-	return
-}
-`
-
-const ResultCollectionMultipleViewsCode = `// ResultTypeCollection is the viewed result type that is projected based on a
-// view.
-type ResultTypeCollection []*ResultType
 
 // ResultTypeView is a type that runs validations on a projected type.
 type ResultTypeView struct {
@@ -43,55 +14,128 @@ type ResultTypeView struct {
 	B *string
 }
 
-// ResultType is the viewed result type that is projected based on a view.
-type ResultType struct {
+// Validate runs the validations defined on ResultType.
+func (result *ResultType) Validate() (err error) {
+	switch result.View {
+	case "default", "":
+		err = result.Projected.ValidateDefault()
+	case "tiny":
+		err = result.Projected.ValidateTiny()
+	default:
+		err = goa.InvalidEnumValueError("view", result.View, []interface{}{"default", "tiny"})
+	}
+	return
+}
+
+// ValidateDefault runs the validations defined on ResultType using the
+// "default" view.
+func (result *ResultTypeView) ValidateDefault() (err error) {
+	if result.A == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("a", "result"))
+	}
+	if result.B == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("b", "result"))
+	}
+	return
+}
+
+// ValidateTiny runs the validations defined on ResultType using the "tiny"
+// view.
+func (result *ResultTypeView) ValidateTiny() (err error) {
+	if result.A == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("a", "result"))
+	}
+	return
+}
+`
+
+const ResultCollectionMultipleViewsCode = `// ResultTypeCollection is the viewed result type that is projected based on a
+// view.
+type ResultTypeCollection struct {
 	// Type to project
-	Projected *ResultTypeView
+	Projected ResultTypeCollectionView
 	// View to render
 	View string
 }
 
+// ResultTypeCollectionView is a type that runs validations on a projected type.
+type ResultTypeCollectionView []*ResultTypeView
+
+// ResultTypeView is a type that runs validations on a projected type.
+type ResultTypeView struct {
+	A *string
+	B *string
+}
+
 // Validate runs the validations defined on ResultTypeCollection.
 func (result ResultTypeCollection) Validate() (err error) {
-	for _, projected := range result {
-		if err2 := projected.Validate(); err2 != nil {
+	switch result.View {
+	case "default", "":
+		err = result.Projected.ValidateDefault()
+	case "tiny":
+		err = result.Projected.ValidateTiny()
+	default:
+		err = goa.InvalidEnumValueError("view", result.View, []interface{}{"default", "tiny"})
+	}
+	return
+}
+
+// ValidateDefault runs the validations defined on ResultTypeCollection using
+// the "default" view.
+func (result ResultTypeCollectionView) ValidateDefault() (err error) {
+	for _, item := range result {
+		if err2 := item.ValidateDefault(); err2 != nil {
 			err = goa.MergeErrors(err, err2)
 		}
 	}
 	return
 }
 
-// Validate runs the validations defined on ResultType.
-func (result *ResultType) Validate() (err error) {
-	switch result.View {
-	case "tiny":
-		if result.Projected.A == nil {
-			err = goa.MergeErrors(err, goa.MissingFieldError("a", "result.Projected"))
+// ValidateTiny runs the validations defined on ResultTypeCollection using the
+// "tiny" view.
+func (result ResultTypeCollectionView) ValidateTiny() (err error) {
+	for _, item := range result {
+		if err2 := item.ValidateTiny(); err2 != nil {
+			err = goa.MergeErrors(err, err2)
 		}
-	default:
-		if result.Projected.A == nil {
-			err = goa.MergeErrors(err, goa.MissingFieldError("a", "result.Projected"))
-		}
-		if result.Projected.B == nil {
-			err = goa.MergeErrors(err, goa.MissingFieldError("b", "result.Projected"))
-		}
+	}
+	return
+}
+
+// ValidateDefault runs the validations defined on ResultType using the
+// "default" view.
+func (result *ResultTypeView) ValidateDefault() (err error) {
+	if result.A == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("a", "result"))
+	}
+	if result.B == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("b", "result"))
+	}
+	return
+}
+
+// ValidateTiny runs the validations defined on ResultType using the "tiny"
+// view.
+func (result *ResultTypeView) ValidateTiny() (err error) {
+	if result.A == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("a", "result"))
 	}
 	return
 }
 `
 
-const ResultWithUserTypeCode = `// ResultTypeView is a type that runs validations on a projected type.
-type ResultTypeView struct {
-	A *UserType
-	B *string
-}
-
-// ResultType is the viewed result type that is projected based on a view.
+const ResultWithUserTypeCode = `// ResultType is the viewed result type that is projected based on a view.
 type ResultType struct {
 	// Type to project
 	Projected *ResultTypeView
 	// View to render
 	View string
+}
+
+// ResultTypeView is a type that runs validations on a projected type.
+type ResultTypeView struct {
+	A *UserType
+	B *string
 }
 
 // UserType is a type that runs validations on a projected type.
@@ -102,27 +146,42 @@ type UserType struct {
 // Validate runs the validations defined on ResultType.
 func (result *ResultType) Validate() (err error) {
 	switch result.View {
+	case "default", "":
+		err = result.Projected.ValidateDefault()
 	case "tiny":
-		if result.Projected.A == nil {
-			err = goa.MergeErrors(err, goa.MissingFieldError("a", "result.Projected"))
-		}
+		err = result.Projected.ValidateTiny()
 	default:
-		if result.Projected.A == nil {
-			err = goa.MergeErrors(err, goa.MissingFieldError("a", "result.Projected"))
-		}
+		err = goa.InvalidEnumValueError("view", result.View, []interface{}{"default", "tiny"})
 	}
+	return
+}
+
+// ValidateDefault runs the validations defined on ResultType using the
+// "default" view.
+func (result *ResultTypeView) ValidateDefault() (err error) {
+	if result.A == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("a", "result"))
+	}
+	return
+}
+
+// ValidateTiny runs the validations defined on ResultType using the "tiny"
+// view.
+func (result *ResultTypeView) ValidateTiny() (err error) {
+	if result.A == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("a", "result"))
+	}
+	return
+}
+
+// Validate runs the validations defined on UserType.
+func (result *UserType) Validate() (err error) {
+
 	return
 }
 `
 
-const ResultWithResultTypeCode = `// RTView is a type that runs validations on a projected type.
-type RTView struct {
-	A *string
-	B *RT2
-	C *RT3
-}
-
-// RT is the viewed result type that is projected based on a view.
+const ResultWithResultTypeCode = `// RT is the viewed result type that is projected based on a view.
 type RT struct {
 	// Type to project
 	Projected *RTView
@@ -130,19 +189,18 @@ type RT struct {
 	View string
 }
 
+// RTView is a type that runs validations on a projected type.
+type RTView struct {
+	A *string
+	B *RT2View
+	C *RT3View
+}
+
 // RT2View is a type that runs validations on a projected type.
 type RT2View struct {
 	C *string
 	D *UserType
 	E *string
-}
-
-// RT2 is the viewed result type that is projected based on a view.
-type RT2 struct {
-	// Type to project
-	Projected *RT2View
-	// View to render
-	View string
 }
 
 // UserType is a type that runs validations on a projected type.
@@ -157,105 +215,109 @@ type RT3View struct {
 	Z *string
 }
 
-// RT3 is the viewed result type that is projected based on a view.
-type RT3 struct {
-	// Type to project
-	Projected *RT3View
-	// View to render
-	View string
-}
-
 // Validate runs the validations defined on RT.
 func (result *RT) Validate() (err error) {
 	switch result.View {
+	case "default", "":
+		err = result.Projected.ValidateDefault()
 	case "tiny":
-		if result.Projected.B == nil {
-			err = goa.MergeErrors(err, goa.MissingFieldError("b", "result.Projected"))
-		}
-		if result.Projected.C == nil {
-			err = goa.MergeErrors(err, goa.MissingFieldError("c", "result.Projected"))
-		}
-		if result.Projected.B != nil {
-			if err2 := result.Projected.B.Validate(); err2 != nil {
-				err = goa.MergeErrors(err, err2)
-			}
-		}
-		if result.Projected.C != nil {
-			if err2 := result.Projected.C.Validate(); err2 != nil {
-				err = goa.MergeErrors(err, err2)
-			}
-		}
+		err = result.Projected.ValidateTiny()
 	default:
-		if result.Projected.B == nil {
-			err = goa.MergeErrors(err, goa.MissingFieldError("b", "result.Projected"))
+		err = goa.InvalidEnumValueError("view", result.View, []interface{}{"default", "tiny"})
+	}
+	return
+}
+
+// ValidateDefault runs the validations defined on RT using the "default" view.
+func (result *RTView) ValidateDefault() (err error) {
+
+	if result.B != nil {
+		if err2 := result.B.ValidateExtended(); err2 != nil {
+			err = goa.MergeErrors(err, err2)
 		}
-		if result.Projected.C == nil {
-			err = goa.MergeErrors(err, goa.MissingFieldError("c", "result.Projected"))
-		}
-		if result.Projected.B != nil {
-			if err2 := result.Projected.B.Validate(); err2 != nil {
-				err = goa.MergeErrors(err, err2)
-			}
-		}
-		if result.Projected.C != nil {
-			if err2 := result.Projected.C.Validate(); err2 != nil {
-				err = goa.MergeErrors(err, err2)
-			}
+	}
+	if result.C != nil {
+		if err2 := result.C.ValidateDefault(); err2 != nil {
+			err = goa.MergeErrors(err, err2)
 		}
 	}
 	return
 }
 
-// Validate runs the validations defined on RT2.
-func (result *RT2) Validate() (err error) {
-	switch result.View {
-	case "extended":
-		if result.Projected.C == nil {
-			err = goa.MergeErrors(err, goa.MissingFieldError("c", "result.Projected"))
+// ValidateTiny runs the validations defined on RT using the "tiny" view.
+func (result *RTView) ValidateTiny() (err error) {
+
+	if result.B != nil {
+		if err2 := result.B.ValidateTiny(); err2 != nil {
+			err = goa.MergeErrors(err, err2)
 		}
-		if result.Projected.D == nil {
-			err = goa.MergeErrors(err, goa.MissingFieldError("d", "result.Projected"))
-		}
-	case "tiny":
-		if result.Projected.D == nil {
-			err = goa.MergeErrors(err, goa.MissingFieldError("d", "result.Projected"))
-		}
-	default:
-		if result.Projected.C == nil {
-			err = goa.MergeErrors(err, goa.MissingFieldError("c", "result.Projected"))
-		}
-		if result.Projected.D == nil {
-			err = goa.MergeErrors(err, goa.MissingFieldError("d", "result.Projected"))
+	}
+	if result.C != nil {
+		if err2 := result.C.ValidateDefault(); err2 != nil {
+			err = goa.MergeErrors(err, err2)
 		}
 	}
 	return
 }
 
-// Validate runs the validations defined on RT3.
-func (result *RT3) Validate() (err error) {
-	switch result.View {
-	case "tiny":
-		if result.Projected.X == nil {
-			err = goa.MergeErrors(err, goa.MissingFieldError("x", "result.Projected"))
-		}
-	default:
-		if result.Projected.X == nil {
-			err = goa.MergeErrors(err, goa.MissingFieldError("x", "result.Projected"))
-		}
-		if result.Projected.Y == nil {
-			err = goa.MergeErrors(err, goa.MissingFieldError("y", "result.Projected"))
-		}
+// ValidateDefault runs the validations defined on RT2 using the "default" view.
+func (result *RT2View) ValidateDefault() (err error) {
+	if result.C == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("c", "result"))
+	}
+	if result.D == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("d", "result"))
+	}
+	return
+}
+
+// ValidateExtended runs the validations defined on RT2 using the "extended"
+// view.
+func (result *RT2View) ValidateExtended() (err error) {
+	if result.C == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("c", "result"))
+	}
+	if result.D == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("d", "result"))
+	}
+	return
+}
+
+// ValidateTiny runs the validations defined on RT2 using the "tiny" view.
+func (result *RT2View) ValidateTiny() (err error) {
+	if result.D == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("d", "result"))
+	}
+	return
+}
+
+// Validate runs the validations defined on UserType.
+func (result *UserType) Validate() (err error) {
+
+	return
+}
+
+// ValidateDefault runs the validations defined on RT3 using the "default" view.
+func (result *RT3View) ValidateDefault() (err error) {
+	if result.X == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("x", "result"))
+	}
+	if result.Y == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("y", "result"))
+	}
+	return
+}
+
+// ValidateTiny runs the validations defined on RT3 using the "tiny" view.
+func (result *RT3View) ValidateTiny() (err error) {
+	if result.X == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("x", "result"))
 	}
 	return
 }
 `
 
-const ResultWithRecursiveResultTypeCode = `// RTView is a type that runs validations on a projected type.
-type RTView struct {
-	A *RT
-}
-
-// RT is the viewed result type that is projected based on a view.
+const ResultWithRecursiveResultTypeCode = `// RT is the viewed result type that is projected based on a view.
 type RT struct {
 	// Type to project
 	Projected *RTView
@@ -263,26 +325,45 @@ type RT struct {
 	View string
 }
 
+// RTView is a type that runs validations on a projected type.
+type RTView struct {
+	A *RTView
+}
+
 // Validate runs the validations defined on RT.
 func (result *RT) Validate() (err error) {
 	switch result.View {
+	case "default", "":
+		err = result.Projected.ValidateDefault()
 	case "tiny":
-		if result.Projected.A == nil {
-			err = goa.MergeErrors(err, goa.MissingFieldError("a", "result.Projected"))
-		}
-		if result.Projected.A != nil {
-			if err2 := result.Projected.A.Validate(); err2 != nil {
-				err = goa.MergeErrors(err, err2)
-			}
-		}
+		err = result.Projected.ValidateTiny()
 	default:
-		if result.Projected.A == nil {
-			err = goa.MergeErrors(err, goa.MissingFieldError("a", "result.Projected"))
+		err = goa.InvalidEnumValueError("view", result.View, []interface{}{"default", "tiny"})
+	}
+	return
+}
+
+// ValidateDefault runs the validations defined on RT using the "default" view.
+func (result *RTView) ValidateDefault() (err error) {
+	if result.A == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("a", "result"))
+	}
+	if result.A != nil {
+		if err2 := result.A.ValidateTiny(); err2 != nil {
+			err = goa.MergeErrors(err, err2)
 		}
-		if result.Projected.A != nil {
-			if err2 := result.Projected.A.Validate(); err2 != nil {
-				err = goa.MergeErrors(err, err2)
-			}
+	}
+	return
+}
+
+// ValidateTiny runs the validations defined on RT using the "tiny" view.
+func (result *RTView) ValidateTiny() (err error) {
+	if result.A == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("a", "result"))
+	}
+	if result.A != nil {
+		if err2 := result.A.ValidateDefault(); err2 != nil {
+			err = goa.MergeErrors(err, err2)
 		}
 	}
 	return

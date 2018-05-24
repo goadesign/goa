@@ -403,28 +403,17 @@ func {{ .ResponseDecoder }}(decoder func(*http.Response) goahttp.Decoder, restor
 		case {{ .StatusCode }}:
 ` + singleResponseT + `
 		{{- if .ResultInit }}
+			{{- if .ViewedResult }}
+			p := {{ .ResultInit.Name }}({{ range .ResultInit.ClientArgs }}{{ .Ref }},{{ end }})
+			view := resp.Header.Get("goa-view")
+			vres := {{ if not $.Method.ViewedResult.IsCollection }}&{{ end }}{{ $.Method.ViewedResult.ViewsPkg}}.{{ $.Method.ViewedResult.VarName }}{p, view}
+			if err = vres.Validate(); err != nil {
+				return nil, goahttp.ErrValidationError("{{ $.ServiceName }}", "{{ $.Method.Name }}", err)
+			}
+			return {{ $.ServicePkgName }}.{{ $.Method.ViewedResult.ConvertToResult.Name }}(vres), nil
+			{{- else }}
 		return {{ .ResultInit.Name }}({{ range .ResultInit.ClientArgs }}{{ .Ref }},{{ end }}), nil
-		{{- else if .ViewedResult }}
-		var (
-			vres {{ $.Method.ViewedResult.FullRef }}
-			view string
-		)
-		view = resp.Header.Get("goa-view")
-		switch view {
-			{{- range .ClientProjections }}
-		case {{ printf "%q" .Name }}{{ if eq .Name "default" }}, ""{{ end }}:
-			vres = {{ .Project.Name }}({{ if not $.Method.ViewedResult.IsCollection }}&{{ end }}body)
 			{{- end }}
-		default:
-			return nil, goahttp.ErrValidationError("{{ $.ServiceName }}", "{{ $.Method.Name }}", fmt.Errorf("unknown goa-view in header %q", view))
-		}
-		{{- range .Headers }}
-		vres.Projected.{{ .FieldName }} = {{ .VarName }}
-		{{- end }}
-		if err = vres.Validate(); err != nil {
-			return nil, goahttp.ErrValidationError("{{ $.ServiceName }}", "{{ $.Method.Name }}", err)
-		}
-		return {{ $.ServicePkgName }}.{{ $.Method.ViewedResult.ConvertToResult.Name }}(vres), nil
 		{{- else if .ClientBody }}
 			return body, nil
 		{{- else }}

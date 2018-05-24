@@ -20,8 +20,8 @@ type Service interface {
 	List(context.Context) (res StoredBottleTinyCollection, err error)
 	// Show bottle by ID
 	// The "view" return value must have one of the following views
-	// * "tiny"
 	// * "default"
+	// * "tiny"
 	Show(context.Context, *ShowPayload) (res *StoredBottle, view string, err error)
 	// Add new bottle and return its ID.
 	Add(context.Context, *Bottle) (res string, err error)
@@ -168,51 +168,42 @@ func (e *NotFound) ErrorName() string {
 // StoredBottle.
 func NewStoredBottle(vres *storageviews.StoredBottle) *StoredBottle {
 	res := &StoredBottle{
+		ID:          *vres.Projected.ID,
+		Name:        *vres.Projected.Name,
+		Vintage:     *vres.Projected.Vintage,
 		Description: vres.Projected.Description,
 		Rating:      vres.Projected.Rating,
 	}
-	if vres.Projected.ID != nil {
-		res.ID = *vres.Projected.ID
-	}
-	if vres.Projected.Name != nil {
-		res.Name = *vres.Projected.Name
-	}
-	if vres.Projected.Vintage != nil {
-		res.Vintage = *vres.Projected.Vintage
-	}
+	res.Winery = unmarshalWineryViewToWinery(vres.Projected.Winery)
 	if vres.Projected.Composition != nil {
 		res.Composition = make([]*Component, len(vres.Projected.Composition))
 		for j, val := range vres.Projected.Composition {
 			res.Composition[j] = &Component{
+				Varietal:   *val.Varietal,
 				Percentage: val.Percentage,
-			}
-			if val.Varietal != nil {
-				res.Composition[j].Varietal = *val.Varietal
 			}
 		}
 	}
-	if vres.Projected.Winery != nil {
-		res.Winery = NewWinery(vres.Projected.Winery)
-	}
 	return res
-}
-
-// NewStoredBottleTiny projects result type StoredBottle into viewed result
-// type StoredBottle using the tiny view.
-func NewStoredBottleTiny(res *StoredBottle) *storageviews.StoredBottle {
-	vres := &storageviews.StoredBottleView{
-		ID:   &res.ID,
-		Name: &res.Name,
-	}
-	if res.Winery != nil {
-		vres.Winery = NewWineryTiny(res.Winery)
-	}
-	return &storageviews.StoredBottle{vres, "tiny"}
 }
 
 // NewStoredBottleDefault projects result type StoredBottle into viewed result
 // type StoredBottle using the default view.
 func NewStoredBottleDefault(res *StoredBottle) *storageviews.StoredBottle {
+	p := newStoredBottleViewDefault(res)
+	return &storageviews.StoredBottle{p, "default"}
+}
+
+// NewStoredBottleTiny projects result type StoredBottle into viewed result
+// type StoredBottle using the tiny view.
+func NewStoredBottleTiny(res *StoredBottle) *storageviews.StoredBottle {
+	p := newStoredBottleViewTiny(res)
+	return &storageviews.StoredBottle{p, "tiny"}
+}
+
+// newStoredBottleViewDefault projects result type StoredBottle into projected
+// type StoredBottleView using the default view.
+func newStoredBottleViewDefault(res *StoredBottle) *storageviews.StoredBottleView {
 	vres := &storageviews.StoredBottleView{
 		ID:          &res.ID,
 		Name:        &res.Name,
@@ -230,45 +221,54 @@ func NewStoredBottleDefault(res *StoredBottle) *storageviews.StoredBottle {
 		}
 	}
 	if res.Winery != nil {
-		vres.Winery = NewWineryTiny(res.Winery)
+		vres.Winery = newWineryViewTiny(res.Winery)
 	}
-	return &storageviews.StoredBottle{vres, "default"}
+	return vres
 }
 
-// NewWinery converts viewed result type Winery to result type Winery.
-func NewWinery(vres *storageviews.Winery) *Winery {
-	res := &Winery{
-		URL: vres.Projected.URL,
-	}
-	if vres.Projected.Name != nil {
-		res.Name = *vres.Projected.Name
-	}
-	if vres.Projected.Region != nil {
-		res.Region = *vres.Projected.Region
-	}
-	if vres.Projected.Country != nil {
-		res.Country = *vres.Projected.Country
-	}
-	return res
-}
-
-// NewWineryTiny projects result type Winery into viewed result type Winery
-// using the tiny view.
-func NewWineryTiny(res *Winery) *storageviews.Winery {
-	vres := &storageviews.WineryView{
+// newStoredBottleViewTiny projects result type StoredBottle into projected
+// type StoredBottleView using the tiny view.
+func newStoredBottleViewTiny(res *StoredBottle) *storageviews.StoredBottleView {
+	vres := &storageviews.StoredBottleView{
+		ID:   &res.ID,
 		Name: &res.Name,
 	}
-	return &storageviews.Winery{vres, "tiny"}
+	if res.Winery != nil {
+		vres.Winery = newWineryViewTiny(res.Winery)
+	}
+	return vres
 }
 
-// NewWineryDefault projects result type Winery into viewed result type Winery
-// using the default view.
-func NewWineryDefault(res *Winery) *storageviews.Winery {
+// newWineryViewDefault projects result type Winery into projected type
+// WineryView using the default view.
+func newWineryViewDefault(res *Winery) *storageviews.WineryView {
 	vres := &storageviews.WineryView{
 		Name:    &res.Name,
 		Region:  &res.Region,
 		Country: &res.Country,
 		URL:     res.URL,
 	}
-	return &storageviews.Winery{vres, "default"}
+	return vres
+}
+
+// newWineryViewTiny projects result type Winery into projected type WineryView
+// using the tiny view.
+func newWineryViewTiny(res *Winery) *storageviews.WineryView {
+	vres := &storageviews.WineryView{
+		Name: &res.Name,
+	}
+	return vres
+}
+
+// unmarshalWineryViewToWinery builds a value of type *Winery from a value of
+// type *storageviews.WineryView.
+func unmarshalWineryViewToWinery(v *storageviews.WineryView) *Winery {
+	res := &Winery{
+		Name:    *v.Name,
+		Region:  *v.Region,
+		Country: *v.Country,
+		URL:     v.URL,
+	}
+
+	return res
 }

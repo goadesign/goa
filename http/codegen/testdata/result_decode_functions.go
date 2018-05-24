@@ -64,20 +64,9 @@ func DecodeMethodBodyMultipleViewResponse(decoder func(*http.Response) goahttp.D
 			if cRaw != "" {
 				c = &cRaw
 			}
-			var (
-				vres *servicebodymultipleviewviews.Resulttypemultipleviews
-				view string
-			)
-			view = resp.Header.Get("goa-view")
-			switch view {
-			case "default", "":
-				vres = NewMethodBodyMultipleViewResponseBodyToResulttypemultipleviewsDefault(&body)
-			case "tiny":
-				vres = NewMethodBodyMultipleViewResponseBodyToResulttypemultipleviewsTiny(&body)
-			default:
-				return nil, goahttp.ErrValidationError("ServiceBodyMultipleView", "MethodBodyMultipleView", fmt.Errorf("unknown goa-view in header %q", view))
-			}
-			vres.Projected.C = c
+			p := NewMethodBodyMultipleViewResulttypemultipleviewsOK(&body, c)
+			view := resp.Header.Get("goa-view")
+			vres := &servicebodymultipleviewviews.Resulttypemultipleviews{p, view}
 			if err = vres.Validate(); err != nil {
 				return nil, goahttp.ErrValidationError("ServiceBodyMultipleView", "MethodBodyMultipleView", err)
 			}
@@ -117,7 +106,13 @@ func DecodeMethodEmptyBodyResultMultipleViewResponse(decoder func(*http.Response
 			if cRaw != "" {
 				c = &cRaw
 			}
-			return NewMethodEmptyBodyResultMultipleViewResulttypemultipleviewsOK(c), nil
+			p := NewMethodEmptyBodyResultMultipleViewResulttypemultipleviewsOK(c)
+			view := resp.Header.Get("goa-view")
+			vres := &serviceemptybodyresultmultipleviewviews.Resulttypemultipleviews{p, view}
+			if err = vres.Validate(); err != nil {
+				return nil, goahttp.ErrValidationError("ServiceEmptyBodyResultMultipleView", "MethodEmptyBodyResultMultipleView", err)
+			}
+			return serviceemptybodyresultmultipleview.NewResulttypemultipleviews(vres), nil
 		default:
 			body, _ := ioutil.ReadAll(resp.Body)
 			return nil, goahttp.ErrInvalidResponse("ServiceEmptyBodyResultMultipleView", "MethodEmptyBodyResultMultipleView", resp.StatusCode, string(body))
@@ -161,7 +156,13 @@ func DecodeMethodExplicitBodyUserResultMultipleViewResponse(decoder func(*http.R
 			if cRaw != "" {
 				c = &cRaw
 			}
-			return NewMethodExplicitBodyUserResultMultipleViewResulttypemultipleviewsOK(&body, c), nil
+			p := NewMethodExplicitBodyUserResultMultipleViewResulttypemultipleviewsOK(&body, c)
+			view := resp.Header.Get("goa-view")
+			vres := &serviceexplicitbodyuserresultmultipleviewviews.Resulttypemultipleviews{p, view}
+			if err = vres.Validate(); err != nil {
+				return nil, goahttp.ErrValidationError("ServiceExplicitBodyUserResultMultipleView", "MethodExplicitBodyUserResultMultipleView", err)
+			}
+			return serviceexplicitbodyuserresultmultipleview.NewResulttypemultipleviews(vres), nil
 		default:
 			body, _ := ioutil.ReadAll(resp.Body)
 			return nil, goahttp.ErrInvalidResponse("ServiceExplicitBodyUserResultMultipleView", "MethodExplicitBodyUserResultMultipleView", resp.StatusCode, string(body))
@@ -205,20 +206,9 @@ func DecodeMethodTagMultipleViewsResponse(decoder func(*http.Response) goahttp.D
 			if cRaw != "" {
 				c = &cRaw
 			}
-			var (
-				vres *servicetagmultipleviewsviews.Resulttypemultipleviews
-				view string
-			)
-			view = resp.Header.Get("goa-view")
-			switch view {
-			case "default", "":
-				vres = NewMethodTagMultipleViewsAcceptedResponseBodyToResulttypemultipleviewsDefault(&body)
-			case "tiny":
-				vres = NewMethodTagMultipleViewsAcceptedResponseBodyToResulttypemultipleviewsTiny(&body)
-			default:
-				return nil, goahttp.ErrValidationError("ServiceTagMultipleViews", "MethodTagMultipleViews", fmt.Errorf("unknown goa-view in header %q", view))
-			}
-			vres.Projected.C = c
+			p := NewMethodTagMultipleViewsResulttypemultipleviewsAccepted(&body, c)
+			view := resp.Header.Get("goa-view")
+			vres := &servicetagmultipleviewsviews.Resulttypemultipleviews{p, view}
 			if err = vres.Validate(); err != nil {
 				return nil, goahttp.ErrValidationError("ServiceTagMultipleViews", "MethodTagMultipleViews", err)
 			}
@@ -232,19 +222,9 @@ func DecodeMethodTagMultipleViewsResponse(decoder func(*http.Response) goahttp.D
 			if err != nil {
 				return nil, goahttp.ErrDecodingError("ServiceTagMultipleViews", "MethodTagMultipleViews", err)
 			}
-			var (
-				vres *servicetagmultipleviewsviews.Resulttypemultipleviews
-				view string
-			)
-			view = resp.Header.Get("goa-view")
-			switch view {
-			case "default", "":
-				vres = NewMethodTagMultipleViewsOKResponseBodyToResulttypemultipleviewsDefault(&body)
-			case "tiny":
-				vres = NewMethodTagMultipleViewsOKResponseBodyToResulttypemultipleviewsTiny(&body)
-			default:
-				return nil, goahttp.ErrValidationError("ServiceTagMultipleViews", "MethodTagMultipleViews", fmt.Errorf("unknown goa-view in header %q", view))
-			}
+			p := NewMethodTagMultipleViewsResulttypemultipleviewsOK(&body)
+			view := resp.Header.Get("goa-view")
+			vres := &servicetagmultipleviewsviews.Resulttypemultipleviews{p, view}
 			if err = vres.Validate(); err != nil {
 				return nil, goahttp.ErrValidationError("ServiceTagMultipleViews", "MethodTagMultipleViews", err)
 			}

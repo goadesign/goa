@@ -162,25 +162,25 @@ func NewListResponseBody(res storage.StoredBottleTinyCollection) ListResponseBod
 
 // NewShowResponseBody builds the HTTP response body from the result of the
 // "show" endpoint of the "storage" service.
-func NewShowResponseBody(res *storageviews.StoredBottle) *ShowResponseBody {
+func NewShowResponseBody(res *storageviews.StoredBottleView) *ShowResponseBody {
 	body := &ShowResponseBody{
-		ID:          res.Projected.ID,
-		Name:        res.Projected.Name,
-		Vintage:     res.Projected.Vintage,
-		Description: res.Projected.Description,
-		Rating:      res.Projected.Rating,
+		ID:          res.ID,
+		Name:        res.Name,
+		Vintage:     res.Vintage,
+		Description: res.Description,
+		Rating:      res.Rating,
 	}
-	if res.Projected.Composition != nil {
-		body.Composition = make([]*ComponentResponseBody, len(res.Projected.Composition))
-		for j, val := range res.Projected.Composition {
+	if res.Winery != nil {
+		body.Winery = marshalWineryViewToWineryResponseBody(res.Winery)
+	}
+	if res.Composition != nil {
+		body.Composition = make([]*ComponentResponseBody, len(res.Composition))
+		for j, val := range res.Composition {
 			body.Composition[j] = &ComponentResponseBody{
 				Varietal:   val.Varietal,
 				Percentage: val.Percentage,
 			}
 		}
-	}
-	if res.Projected.Winery != nil {
-		body.Winery = marshalViewedWineryToWineryResponseBody(res.Projected.Winery)
 	}
 	return body
 }
@@ -380,6 +380,55 @@ func (body *StoredBottleTinyResponseBody) Validate() (err error) {
 func (body *WineryTinyResponseBody) Validate() (err error) {
 	if body.Name == nil {
 		err = goa.MergeErrors(err, goa.MissingFieldError("name", "body"))
+	}
+	return
+}
+
+// Validate runs the validations defined on WineryResponseBody
+func (body *WineryResponseBody) Validate() (err error) {
+	if body.Name == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("name", "body"))
+	}
+	if body.Region == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("region", "body"))
+	}
+	if body.Country == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("country", "body"))
+	}
+	if body.Region != nil {
+		err = goa.MergeErrors(err, goa.ValidatePattern("body.region", *body.Region, "(?i)[a-z '\\.]+"))
+	}
+	if body.Country != nil {
+		err = goa.MergeErrors(err, goa.ValidatePattern("body.country", *body.Country, "(?i)[a-z '\\.]+"))
+	}
+	if body.URL != nil {
+		err = goa.MergeErrors(err, goa.ValidatePattern("body.url", *body.URL, "(?i)^(https?|ftp)://[^\\s/$.?#].[^\\s]*$"))
+	}
+	return
+}
+
+// Validate runs the validations defined on ComponentResponseBody
+func (body *ComponentResponseBody) Validate() (err error) {
+	if body.Varietal == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("varietal", "body"))
+	}
+	if body.Varietal != nil {
+		err = goa.MergeErrors(err, goa.ValidatePattern("body.varietal", *body.Varietal, "[A-Za-z' ]+"))
+	}
+	if body.Varietal != nil {
+		if utf8.RuneCountInString(*body.Varietal) > 100 {
+			err = goa.MergeErrors(err, goa.InvalidLengthError("body.varietal", *body.Varietal, utf8.RuneCountInString(*body.Varietal), 100, false))
+		}
+	}
+	if body.Percentage != nil {
+		if *body.Percentage < 1 {
+			err = goa.MergeErrors(err, goa.InvalidRangeError("body.percentage", *body.Percentage, 1, true))
+		}
+	}
+	if body.Percentage != nil {
+		if *body.Percentage > 100 {
+			err = goa.MergeErrors(err, goa.InvalidRangeError("body.percentage", *body.Percentage, 100, false))
+		}
 	}
 	return
 }

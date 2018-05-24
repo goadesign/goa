@@ -11,7 +11,6 @@ package client
 import (
 	"bytes"
 	"context"
-	"fmt"
 	"io/ioutil"
 	"mime/multipart"
 	"net/http"
@@ -149,19 +148,9 @@ func DecodeShowResponse(decoder func(*http.Response) goahttp.Decoder, restoreBod
 			if err != nil {
 				return nil, goahttp.ErrDecodingError("storage", "show", err)
 			}
-			var (
-				vres *storageviews.StoredBottle
-				view string
-			)
-			view = resp.Header.Get("goa-view")
-			switch view {
-			case "default", "":
-				vres = NewShowResponseBodyToStoredBottleDefault(&body)
-			case "tiny":
-				vres = NewShowResponseBodyToStoredBottleTiny(&body)
-			default:
-				return nil, goahttp.ErrValidationError("storage", "show", fmt.Errorf("unknown goa-view in header %q", view))
-			}
+			p := NewShowStoredBottleOK(&body)
+			view := resp.Header.Get("goa-view")
+			vres := &storageviews.StoredBottle{p, view}
 			if err = vres.Validate(); err != nil {
 				return nil, goahttp.ErrValidationError("storage", "show", err)
 			}
@@ -536,6 +525,19 @@ func DecodeMultiUpdateResponse(decoder func(*http.Response) goahttp.Decoder, res
 func unmarshalWineryTinyResponseBodyToWineryTiny(v *WineryTinyResponseBody) *storage.WineryTiny {
 	res := &storage.WineryTiny{
 		Name: *v.Name,
+	}
+
+	return res
+}
+
+// unmarshalWineryResponseBodyToWineryView builds a value of type
+// *storageviews.WineryView from a value of type *WineryResponseBody.
+func unmarshalWineryResponseBodyToWineryView(v *WineryResponseBody) *storageviews.WineryView {
+	res := &storageviews.WineryView{
+		Name:    v.Name,
+		Region:  v.Region,
+		Country: v.Country,
+		URL:     v.URL,
 	}
 
 	return res
