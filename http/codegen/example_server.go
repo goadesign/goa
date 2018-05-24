@@ -76,7 +76,7 @@ func dummyServiceFile(genpkg string, root *httpdesign.RootExpr, svc *httpdesign.
 }
 
 func exampleMain(genpkg string, root *httpdesign.RootExpr) *codegen.File {
-	mainPath := filepath.Join("cmd", codegen.SnakeCase(root.Design.API.Name)+"svc", "main.go")
+	mainPath := filepath.Join("cmd", codegen.SnakeCase(codegen.Goify(root.Design.API.Name, true))+"_svc", "main.go")
 	if _, err := os.Stat(mainPath); !os.IsNotExist(err) {
 		return nil // file already exists, skip it.
 	}
