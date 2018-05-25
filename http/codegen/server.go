@@ -489,12 +489,20 @@ const requestParamsHeadersT = `{{- define "request_params_headers" }}
 		if {{ .VarName }}Raw != "" {
 			{{ .VarName }} = {{ if and (eq .Type.Name "string") .Pointer }}&{{ end }}{{ .VarName }}Raw
 		}
+		{{- if .DefaultValue }} else {
+			{{ .VarName }} = {{ if eq .Type.Name "string" }}{{ printf "%q" .DefaultValue }}{{ else }}{{ printf "%#v" .DefaultValue }}{{ end }}
+		}
+		{{- end }}
 
 	{{- else if .StringSlice }}
 		{{ .VarName }} = r.URL.Query()["{{ .Name }}"]
 		{{- if .Required }}
 		if {{ .VarName }} == nil {
 			err = goa.MergeErrors(err, goa.MissingFieldError("{{ .Name }}", "query string"))
+		}
+		{{- else if .DefaultValue }}
+		if {{ .VarName }} == nil {
+			{{ .VarName }} = {{ printf "%#v" .DefaultValue }}
 		}
 		{{- end }}
 
@@ -505,13 +513,18 @@ const requestParamsHeadersT = `{{- define "request_params_headers" }}
 		if {{ .VarName }}Raw == nil {
 			return goa.MergeErrors(err, goa.MissingFieldError("{{ .Name }}", "query string"))
 		}
+		{{- else if .DefaultValue }}
+		if {{ .VarName }}Raw == nil {
+			{{ .VarName }} = {{ printf "%#v" .DefaultValue }}
+		}
 		{{- end }}
 
-		{{- if not .Required }}
+		{{- if .DefaultValue }}else {
+		{{- else if not .Required }}
 		if {{ .VarName }}Raw != nil {
 		{{- end }}
 		{{- template "slice_conversion" . }}
-		{{- if not .Required }}
+		{{- if or .DefaultValue (not .Required) }}
 		}
 		{{- end }}
 	}
@@ -522,6 +535,10 @@ const requestParamsHeadersT = `{{- define "request_params_headers" }}
 		if len({{ .VarName }}) == 0 {
 			err = goa.MergeErrors(err, goa.MissingFieldError("{{ .Name }}", "query string"))
 		}
+		{{- else if .DefaultValue }}
+		if len({{ .VarName }}) == 0 {
+			{{ .VarName }} = {{ printf "%#v" .DefaultValue }}
+		}
 		{{- end }}
 
 	{{- else if .Map }}
@@ -531,9 +548,14 @@ const requestParamsHeadersT = `{{- define "request_params_headers" }}
 		if len({{ .VarName }}Raw) == 0 {
 			err = goa.MergeErrors(err, goa.MissingFieldError("{{ .Name }}", "query string"))
 		}
+		{{- else if .DefaultValue }}
+		if len({{ .VarName }}Raw) == 0 {
+			{{ .VarName }} = {{ printf "%#v" .DefaultValue }}
+		}
 		{{- end }}
 
-		{{- if not .Required }}
+		{{- if .DefaultValue }}else {
+		{{- else if not .Required }}
 		if len({{ .VarName }}Raw) != 0 {
 		{{- end }}
 		{{- if eq .Type.ElemType.Type.Name "array" }}
@@ -545,7 +567,7 @@ const requestParamsHeadersT = `{{- define "request_params_headers" }}
 		{{- else }}
 			{{- template "map_conversion" . }}
 		{{- end }}
-		{{- if not .Required }}
+		{{- if or .DefaultValue (not .Required) }}
 		}
 		{{- end }}
 	}
@@ -557,9 +579,14 @@ const requestParamsHeadersT = `{{- define "request_params_headers" }}
 		if len({{ .VarName }}Raw) == 0 {
 			err = goa.MergeErrors(err, goa.MissingFieldError("{{ .Name }}", "query string"))
 		}
+		{{- else if .DefaultValue }}
+		if len({{ .VarName }}Raw) == 0 {
+			{{ .VarName }} = {{ printf "%#v" .DefaultValue }}
+		}
 		{{- end }}
 
-		{{- if not .Required }}
+		{{- if .DefaultValue }}else {
+		{{- else if not .Required }}
 		if len({{ .VarName }}Raw) != 0 {
 		{{- end }}
 		{{- if eq .Type.ElemType.Type.Name "array" }}
@@ -571,7 +598,7 @@ const requestParamsHeadersT = `{{- define "request_params_headers" }}
 		{{- else }}
 			{{- template "map_conversion" . }}
 		{{- end }}
-		{{- if not .Required }}
+		{{- if or .DefaultValue (not .Required) }}
 		}
 		{{- end }}
 	}
@@ -583,12 +610,18 @@ const requestParamsHeadersT = `{{- define "request_params_headers" }}
 		if {{ .VarName }}Raw == "" {
 			err = goa.MergeErrors(err, goa.MissingFieldError("{{ .Name }}", "query string"))
 		}
+		{{- else if .DefaultValue }}
+		if {{ .VarName }}Raw == "" {
+			{{ .VarName }} = {{ printf "%#v" .DefaultValue }}
+		}
 		{{- end }}
-		{{- if not .Required }}
+
+		{{- if .DefaultValue }}else {
+		{{- else if not .Required }}
 		if {{ .VarName }}Raw != "" {
 		{{- end }}
 		{{- template "type_conversion" . }}
-		{{- if not .Required }}
+		{{- if or .DefaultValue (not .Required) }}
 		}
 		{{- end }}
 	}
@@ -611,12 +644,20 @@ const requestParamsHeadersT = `{{- define "request_params_headers" }}
 		if {{ .VarName }}Raw != "" {
 			{{ .VarName }} = {{ if and (eq .Type.Name "string") .Pointer }}&{{ end }}{{ .VarName }}Raw
 		}
+		{{- if .DefaultValue }} else {
+			{{ .VarName }} = {{ if eq .Type.Name "string" }}{{ printf "%q" .DefaultValue }}{{ else }}{{ printf "%#v" .DefaultValue }}{{ end }}
+		}
+		{{- end }}
 
 	{{- else if .StringSlice }}
 		{{ .VarName }} = r.Header["{{ .CanonicalName }}"]
 		{{- if .Required }}
 		if {{ .VarName }} == nil {
 			err = goa.MergeErrors(err, goa.MissingFieldError("{{ .Name }}", "header"))
+		}
+		{{- else if .DefaultValue }}
+		if {{ .VarName }} == nil {
+			{{ .VarName }} = {{ printf "%#v" .DefaultValue }}
 		}
 		{{- end }}
 
@@ -626,13 +667,18 @@ const requestParamsHeadersT = `{{- define "request_params_headers" }}
 		{{ if .Required }}if {{ .VarName }}Raw == nil {
 			err = goa.MergeErrors(err, goa.MissingFieldError("{{ .Name }}", "header"))
 		}
+		{{- else if .DefaultValue }}
+		if {{ .VarName }}Raw == nil {
+			{{ .VarName }} = {{ printf "%#v" .DefaultValue }}
+		}
 		{{- end }}
 
-		{{- if not .Required }}
+		{{- if .DefaultValue }}else {
+		{{- else if not .Required }}
 		if {{ .VarName }}Raw != nil {
 		{{- end }}
 		{{- template "slice_conversion" . }}
-		{{- if not .Required }}
+		{{- if or .DefaultValue (not .Required) }}
 		}
 		{{- end }}
 	}
@@ -644,13 +690,18 @@ const requestParamsHeadersT = `{{- define "request_params_headers" }}
 		if {{ .VarName }}Raw == "" {
 			err = goa.MergeErrors(err, goa.MissingFieldError("{{ .Name }}", "header"))
 		}
+		{{- else if .DefaultValue }}
+		if {{ .VarName }}Raw == "" {
+			{{ .VarName }} = {{ printf "%#v" .DefaultValue }}
+		}
 		{{- end }}
 
-		{{- if not .Required }}
+		{{- if .DefaultValue }}else {
+		{{- else if not .Required }}
 		if {{ .VarName }}Raw != "" {
 		{{- end }}
 		{{- template "type_conversion" . }}
-		{{- if not .Required }}
+		{{- if or .DefaultValue (not .Required) }}
 		}
 		{{- end }}
 	}
