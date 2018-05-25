@@ -571,7 +571,7 @@ func (d ServicesData) analyze(hs *httpdesign.ServiceExpr) *ServiceData {
 					name := fmt.Sprintf("%s%sPath%s", ep.VarName, svc.StructName, suffix)
 					for j, arg := range params {
 						att := pathParamsObj.Attribute(arg)
-						name := codegen.Goify(arg, false)
+						name := svc.Scope.Unique(codegen.Goify(arg, false))
 						pointer := pathParams.IsPrimitivePointer(arg, false)
 						var vcode string
 						if att.Validation != nil {
@@ -1610,7 +1610,7 @@ func extractPathParams(a *design.MappedAttributeExpr, serviceType *design.Attrib
 	var params []*ParamData
 	codegen.WalkMappedAttr(a, func(name, elem string, required bool, c *design.AttributeExpr) error {
 		var (
-			varn = codegen.Goify(name, false)
+			varn = scope.Unique(codegen.Goify(name, false))
 			arr  = design.AsArray(c.Type)
 		)
 		fieldName := codegen.Goify(name, true)
@@ -1646,7 +1646,7 @@ func extractQueryParams(a *design.MappedAttributeExpr, serviceType *design.Attri
 	var params []*ParamData
 	codegen.WalkMappedAttr(a, func(name, elem string, required bool, c *design.AttributeExpr) error {
 		var (
-			varn    = codegen.Goify(name, false)
+			varn    = scope.Unique(codegen.Goify(name, false))
 			arr     = design.AsArray(c.Type)
 			mp      = design.AsMap(c.Type)
 			typeRef = scope.GoTypeRef(c)
@@ -1692,7 +1692,7 @@ func extractHeaders(a *design.MappedAttributeExpr, serviceType *design.Attribute
 		var (
 			name     = nat.Name
 			elem     = a.ElemName(nat.Name)
-			varn     = codegen.Goify(name, false)
+			varn     = scope.Unique(codegen.Goify(name, false))
 			required = true
 
 			fieldName string

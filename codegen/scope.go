@@ -31,14 +31,14 @@ func NewNameScope() *NameScope {
 		counts: make(map[string]int),
 	}
 	if design.Root.API != nil {
-		ns.Unique(design.Root.API, design.Root.API.Name)
+		ns.HashedUnique(design.Root.API, design.Root.API.Name)
 	}
 	return ns
 }
 
-// Unique builds the unique name for key using name and - if not unique -
+// HashedUnique builds the unique name for key using name and - if not unique -
 // appending suffix and - if still not unique - a counter value.
-func (s *NameScope) Unique(key Hasher, name string, suffix ...string) string {
+func (s *NameScope) HashedUnique(key Hasher, name string, suffix ...string) string {
 	if n, ok := s.names[key.Hash()]; ok {
 		return n
 	}
@@ -62,6 +62,32 @@ func (s *NameScope) Unique(key Hasher, name string, suffix ...string) string {
 done:
 	s.counts[name] = i + 1
 	s.names[key.Hash()] = name
+	return name
+}
+
+// Unique returns a unique name for the given name. If given name not unique
+// the suffix is appended. It still not unique, a counter value is added to
+// the name until unique. The generated unique name is not added to the names
+// and counts hash.
+func (s *NameScope) Unique(name string, suffix ...string) string {
+	var (
+		i   int
+		suf string
+	)
+	_, ok := s.counts[name]
+	if !ok {
+		goto done
+	}
+	if len(suffix) > 0 {
+		suf = suffix[0]
+	}
+	name += suf
+	i, ok = s.counts[name]
+	if !ok {
+		goto done
+	}
+	name += strconv.Itoa(i + 1)
+done:
 	return name
 }
 
@@ -168,7 +194,7 @@ func (s *NameScope) GoFullTypeName(att *design.AttributeExpr, pkg string) string
 		if actual == design.ErrorResult {
 			return "goa.ServiceError"
 		}
-		n := s.Unique(actual, Goify(actual.Name(), true), "")
+		n := s.HashedUnique(actual, Goify(actual.Name(), true), "")
 		if pkg == "" {
 			return n
 		}

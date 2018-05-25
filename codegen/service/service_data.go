@@ -340,7 +340,7 @@ func (d ServicesData) analyze(service *design.ServiceExpr) *Data {
 	)
 	{
 		scope = codegen.NewNameScope()
-		pkgName = scope.Unique(service, strings.ToLower(codegen.Goify(service.Name, false)), "svc")
+		pkgName = scope.HashedUnique(service, strings.ToLower(codegen.Goify(service.Name, false)), "svc")
 		viewspkg = pkgName + "views"
 		seen = make(map[string]struct{})
 		seenErrors = make(map[string]struct{})
