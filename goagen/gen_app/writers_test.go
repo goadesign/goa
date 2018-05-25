@@ -2576,7 +2576,7 @@ type SimplePayload struct {
 
 	userTypeIncludingHash = `// complexPayload user type.
 type complexPayload struct {
-	Misc map[int]*miscPayload ` + "`" + `form:"misc,omitempty" json:"misc,omitempty" yaml:"misc,omitempty"  xml:"misc,omitempty"` + "`" + `
+	Misc map[int]*miscPayload ` + "`" + `form:"misc,omitempty" json:"misc,omitempty" yaml:"misc,omitempty" xml:"misc,omitempty"` + "`" + `
 	Name *string ` + "`" + `form:"name,omitempty" json:"name,omitempty" yaml:"name,omitempty" xml:"name,omitempty"` + "`" + `
 }
 
