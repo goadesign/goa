@@ -1033,7 +1033,7 @@ func buildPayloadData(e *httpdesign.EndpointExpr, sd *ServiceData) *PayloadData 
 			}
 
 			var helpers []*codegen.TransformFunctionData
-			serverCode, helpers, err = codegen.GoTypeTransform(body, ptype, "body", "v", "", svc.PkgName, true, false, true, svc.Scope)
+			serverCode, helpers, err = codegen.GoTypeTransform(body, ptype, "body", "v", "", svc.PkgName, true, svc.Scope)
 			if err == nil {
 				sd.ServerTransformHelpers = codegen.AppendHelpers(sd.ServerTransformHelpers, helpers)
 			}
@@ -1042,7 +1042,7 @@ func buildPayloadData(e *httpdesign.EndpointExpr, sd *ServiceData) *PayloadData 
 			// payload given to the client endpoint. It differs
 			// because the body type there does not use pointers for
 			// all fields (no need to validate).
-			clientCode, helpers, err = codegen.GoTypeTransform(body, ptype, "body", "v", "", svc.PkgName, false, false, false, svc.Scope)
+			clientCode, helpers, err = codegen.GoTypeTransform(body, ptype, "body", "v", "", svc.PkgName, false, svc.Scope)
 			if err == nil {
 				sd.ClientTransformHelpers = codegen.AppendHelpers(sd.ClientTransformHelpers, helpers)
 			}
@@ -1050,12 +1050,12 @@ func buildPayloadData(e *httpdesign.EndpointExpr, sd *ServiceData) *PayloadData 
 			if params := design.AsObject(e.QueryParams().Type); len(*params) > 0 {
 				var helpers []*codegen.TransformFunctionData
 				serverCode, helpers, err = codegen.GoTypeTransform((*params)[0].Attribute.Type, payload.Type,
-					codegen.Goify((*params)[0].Name, false), "v", "", svc.PkgName, false, false, true, svc.Scope)
+					codegen.Goify((*params)[0].Name, false), "v", "", svc.PkgName, true, svc.Scope)
 				if err == nil {
 					sd.ServerTransformHelpers = codegen.AppendHelpers(sd.ServerTransformHelpers, helpers)
 				}
 				clientCode, helpers, err = codegen.GoTypeTransform((*params)[0].Attribute.Type, payload.Type,
-					codegen.Goify((*params)[0].Name, false), "v", "", svc.PkgName, false, false, false, svc.Scope)
+					codegen.Goify((*params)[0].Name, false), "v", "", svc.PkgName, false, svc.Scope)
 				if err == nil {
 					sd.ClientTransformHelpers = codegen.AppendHelpers(sd.ClientTransformHelpers, helpers)
 				}
@@ -1249,7 +1249,7 @@ func buildResponseResultInit(resp *httpdesign.HTTPResponseExpr, e *httpdesign.En
 			Validate: vcode,
 		}}
 		var helpers []*codegen.TransformFunctionData
-		code, helpers, err = codegen.GoTypeTransform(resp.Body.Type, respBody.Type, "body", "v", "", pkg, true, md.ViewedResult != nil, true, svc.Scope)
+		code, helpers, err = codegen.GoTypeTransform(resp.Body.Type, respBody.Type, "body", "v", "", pkg, true, svc.Scope)
 		if err == nil {
 			sd.ClientTransformHelpers = codegen.AppendHelpers(sd.ClientTransformHelpers, helpers)
 		}
@@ -1257,7 +1257,7 @@ func buildResponseResultInit(resp *httpdesign.HTTPResponseExpr, e *httpdesign.En
 		if params := design.AsObject(e.QueryParams().Type); len(*params) > 0 {
 			var helpers []*codegen.TransformFunctionData
 			code, helpers, err = codegen.GoTypeTransform((*params)[0].Attribute.Type, result.Type,
-				codegen.Goify((*params)[0].Name, false), "v", "", svc.PkgName, false, false, true, svc.Scope)
+				codegen.Goify((*params)[0].Name, false), "v", "", svc.PkgName, true, svc.Scope)
 			if err == nil {
 				sd.ClientTransformHelpers = codegen.AppendHelpers(sd.ClientTransformHelpers, helpers)
 			}
@@ -1351,7 +1351,7 @@ func buildErrorsData(e *httpdesign.EndpointExpr, sd *ServiceData) []*ErrorGroupD
 					}
 
 					var helpers []*codegen.TransformFunctionData
-					code, helpers, err = codegen.GoTypeTransform(body, etype, "body", "v", "", svc.PkgName, true, false, true, svc.Scope)
+					code, helpers, err = codegen.GoTypeTransform(body, etype, "body", "v", "", svc.PkgName, true, svc.Scope)
 					if err == nil {
 						sd.ClientTransformHelpers = codegen.AppendHelpers(sd.ClientTransformHelpers, helpers)
 					}
@@ -1359,7 +1359,7 @@ func buildErrorsData(e *httpdesign.EndpointExpr, sd *ServiceData) []*ErrorGroupD
 					if params := design.AsObject(e.QueryParams().Type); len(*params) > 0 {
 						var helpers []*codegen.TransformFunctionData
 						code, helpers, err = codegen.GoTypeTransform((*params)[0].Attribute.Type, herr.Type,
-							codegen.Goify((*params)[0].Name, false), "v", "", svc.PkgName, false, false, true, svc.Scope)
+							codegen.Goify((*params)[0].Name, false), "v", "", svc.PkgName, true, svc.Scope)
 						if err == nil {
 							sd.ClientTransformHelpers = codegen.AppendHelpers(sd.ClientTransformHelpers, helpers)
 						}
@@ -1553,12 +1553,7 @@ func buildBodyType(sd *ServiceData, e *httpdesign.EndpointExpr, body, att *desig
 			src += "." + codegen.Goify(origin, true)
 		}
 		var helpers []*codegen.TransformFunctionData
-		var srcptr, tgtptr bool
-		if svr && !req {
-			srcptr = viewed
-			tgtptr = true
-		}
-		code, helpers, err = codegen.GoTypeTransform(srcType, body.Type, src, "body", pkg, "", srcptr, tgtptr, false, svc.Scope)
+		code, helpers, err = codegen.GoTypeTransform(srcType, body.Type, src, "body", pkg, "", false, svc.Scope)
 		if err != nil {
 			fmt.Println(err.Error()) // TBD validate DSL so errors are not possible
 		}

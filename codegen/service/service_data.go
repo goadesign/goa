@@ -481,7 +481,7 @@ func collectTypes(at *design.AttributeExpr, seen map[string]struct{}, scope *cod
 			Name:        dt.Name(),
 			VarName:     scope.GoTypeName(at),
 			Description: dt.Attribute().Description,
-			Def:         scope.GoTypeDef(dt.Attribute(), true, false),
+			Def:         scope.GoTypeDef(dt.Attribute(), true),
 			Ref:         scope.GoTypeRef(at),
 			Type:        dt,
 		})
@@ -546,7 +546,7 @@ func buildMethodData(m *design.MethodExpr, svcPkgName string, scope *codegen.Nam
 		payloadName = scope.GoTypeName(m.Payload)
 		payloadRef = scope.GoTypeRef(m.Payload)
 		if dt, ok := m.Payload.Type.(design.UserType); ok {
-			payloadDef = scope.GoTypeDef(dt.Attribute(), true, false)
+			payloadDef = scope.GoTypeDef(dt.Attribute(), true)
 		}
 		payloadDesc = m.Payload.Description
 		if payloadDesc == "" {
@@ -559,7 +559,7 @@ func buildMethodData(m *design.MethodExpr, svcPkgName string, scope *codegen.Nam
 		rname = scope.GoTypeName(m.Result)
 		resultRef = scope.GoTypeRef(m.Result)
 		if dt, ok := m.Result.Type.(design.UserType); ok {
-			resultDef = scope.GoTypeDef(dt.Attribute(), true, false)
+			resultDef = scope.GoTypeDef(dt.Attribute(), true)
 		}
 		resultDesc = m.Result.Description
 		if resultDesc == "" {
@@ -738,6 +738,7 @@ func collectProjectedTypesR(projected, att *design.AttributeExpr, seen map[strin
 	collect := func(projected, att *design.AttributeExpr) []*ProjectedTypeData {
 		return collectProjectedTypesR(projected, att, seen, scope, viewspkg)
 	}
+	projected.ForcePointer = true
 	switch pt := projected.Type.(type) {
 	case design.UserType:
 		// If the attribute type has already been projected (i.e., projected type
@@ -752,8 +753,9 @@ func collectProjectedTypesR(projected, att *design.AttributeExpr, seen map[strin
 		if rt, ok := pt.(*design.ResultTypeExpr); ok && rt.HasMultipleViews() {
 			rt.Rename(rt.Name() + "View")
 		}
-		if _, ok := seen[pt.Name()]; ok {
+		if pd, ok := seen[pt.Name()]; ok {
 			// Projected type has already been seen. Break the recursion.
+			projected.Type = pd.Type
 			return
 		}
 		seen[pt.Name()] = nil
@@ -801,7 +803,7 @@ func buildProjectedType(projected, att *design.AttributeExpr, scope *codegen.Nam
 		Name:        pt.Name(),
 		Description: fmt.Sprintf("%s is a type that runs validations on a projected type.", varname),
 		VarName:     varname,
-		Def:         scope.GoTypeDef(pt.Attribute(), true, true),
+		Def:         scope.GoTypeDef(pt.Attribute(), true),
 		Ref:         ref,
 		Type:        pt,
 	}
@@ -844,7 +846,7 @@ func buildViewedResultType(projected, att *design.AttributeExpr, scope *codegen.
 		Name:        resvar,
 		Description: fmt.Sprintf("%s is the viewed result type that is projected based on a view.", resvar),
 		VarName:     resvar,
-		Def:         scope.GoTypeDef(projected.Type.(design.UserType).Attribute(), true, false),
+		Def:         scope.GoTypeDef(projected.Type.(design.UserType).Attribute(), true),
 		Ref:         ref,
 		Type:        projected.Type.(design.UserType),
 	}
@@ -1089,7 +1091,7 @@ func buildConstructorCode(src, tgt *design.AttributeExpr, srcvar, tgtvar, srcpkg
 	case toResult:
 		// transforming viewed result type to a result type
 		srcvar += ".Projected"
-		code, helpers, err = codegen.GoTypeTransform(src.Type, tgt.Type, srcvar, tgtvar, srcpkg, tgtpkg, true, false, true, scope)
+		code, helpers, err = codegen.GoTypeTransform(src.Type, tgt.Type, srcvar, tgtvar, srcpkg, tgtpkg, true, scope)
 		if err != nil {
 			panic(err) // bug
 		}
@@ -1118,7 +1120,7 @@ func buildConstructorCode(src, tgt *design.AttributeExpr, srcvar, tgtvar, srcpkg
 		}
 		data["Source"] = srcvar
 		data["Target"] = tgtvar
-		code, helpers, err = codegen.GoTypeTransform(src.Type, t.Type, srcvar, tgtvar, srcpkg, tgtpkg, false, true, false, scope)
+		code, helpers, err = codegen.GoTypeTransform(src.Type, t.Type, srcvar, tgtvar, srcpkg, tgtpkg, false, scope)
 		if err != nil {
 			panic(err) // bug
 		}

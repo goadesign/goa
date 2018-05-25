@@ -192,7 +192,7 @@ func (r *HTTPResponseExpr) Finalize(a *EndpointExpr, svcAtt *design.AttributeExp
 	r.Parent = a
 
 	// Initialize the body attributes (if an object) with the corresponding
-	// payload attributes.
+	// result attributes.
 	svcObj := design.AsObject(svcAtt.Type)
 	if r.Body != nil {
 		if body := design.AsObject(r.Body.Type); body != nil {

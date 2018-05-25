@@ -21,39 +21,35 @@ func TestGoTypeDef(t *testing.T) {
 	cases := map[string]struct {
 		att        *design.AttributeExpr
 		usedefault bool
-		forceptr   bool
 		expected   string
 	}{
-		"BooleanKind": {&design.AttributeExpr{Type: design.Boolean}, true, false, "bool"},
-		"IntKind":     {&design.AttributeExpr{Type: design.Int}, true, false, "int"},
-		"Int32Kind":   {&design.AttributeExpr{Type: design.Int32}, true, false, "int32"},
-		"Int64Kind":   {&design.AttributeExpr{Type: design.Int64}, true, false, "int64"},
-		"UIntKind":    {&design.AttributeExpr{Type: design.UInt}, true, false, "uint"},
-		"UInt32Kind":  {&design.AttributeExpr{Type: design.UInt32}, true, false, "uint32"},
-		"UInt64Kind":  {&design.AttributeExpr{Type: design.UInt64}, true, false, "uint64"},
-		"Float32Kind": {&design.AttributeExpr{Type: design.Float32}, true, false, "float32"},
-		"Float64Kind": {&design.AttributeExpr{Type: design.Float64}, true, false, "float64"},
-		"StringKind":  {&design.AttributeExpr{Type: design.String}, true, false, "string"},
-		"BytesKind":   {&design.AttributeExpr{Type: design.Bytes}, true, false, "[]byte"},
-		"AnyKind":     {&design.AttributeExpr{Type: design.Any}, true, false, "interface{}"},
+		"BooleanKind": {&design.AttributeExpr{Type: design.Boolean}, true, "bool"},
+		"IntKind":     {&design.AttributeExpr{Type: design.Int}, true, "int"},
+		"Int32Kind":   {&design.AttributeExpr{Type: design.Int32}, true, "int32"},
+		"Int64Kind":   {&design.AttributeExpr{Type: design.Int64}, true, "int64"},
+		"UIntKind":    {&design.AttributeExpr{Type: design.UInt}, true, "uint"},
+		"UInt32Kind":  {&design.AttributeExpr{Type: design.UInt32}, true, "uint32"},
+		"UInt64Kind":  {&design.AttributeExpr{Type: design.UInt64}, true, "uint64"},
+		"Float32Kind": {&design.AttributeExpr{Type: design.Float32}, true, "float32"},
+		"Float64Kind": {&design.AttributeExpr{Type: design.Float64}, true, "float64"},
+		"StringKind":  {&design.AttributeExpr{Type: design.String}, true, "string"},
+		"BytesKind":   {&design.AttributeExpr{Type: design.Bytes}, true, "[]byte"},
+		"AnyKind":     {&design.AttributeExpr{Type: design.Any}, true, "interface{}"},
 
-		"Array":          {simpleArray, true, false, "[]bool"},
-		"Map":            {simpleMap, true, false, "map[int]string"},
-		"UserTypeExpr":   {userType, true, false, "UserType"},
-		"ResultTypeExpr": {resultType, true, false, "ResultType"},
+		"Array":          {simpleArray, true, "[]bool"},
+		"Map":            {simpleMap, true, "map[int]string"},
+		"UserTypeExpr":   {userType, true, "UserType"},
+		"ResultTypeExpr": {resultType, true, "ResultType"},
 
-		"Object":          {requiredObj, true, false, "struct {\n\tIntField int\n\tStringField string\n}"},
-		"ObjectPtr":       {requiredObj, true, true, "struct {\n\tIntField *int\n\tStringField *string\n}"},
-		"ObjDefault":      {defaultObj, true, false, "struct {\n\tIntField int\n\tStringField string\n}"},
-		"ObjDefaultNoDef": {defaultObj, false, false, "struct {\n\tIntField *int\n\tStringField *string\n}"},
-		"ObjDefaultPtr":   {defaultObj, true, true, "struct {\n\tIntField *int\n\tStringField *string\n}"},
-		"ObjMixed":        {mixedObj, true, false, "struct {\n\tIntField int\n\tArrayField []bool\n\tMapField map[int]string\n\tUserTypeField UserType\n}"},
-		"ObjMixedPtr":     {mixedObj, true, true, "struct {\n\tIntField *int\n\tArrayField []bool\n\tMapField map[int]string\n\tUserTypeField *UserType\n}"},
+		"Object":          {requiredObj, true, "struct {\n\tIntField int\n\tStringField string\n}"},
+		"ObjDefault":      {defaultObj, true, "struct {\n\tIntField int\n\tStringField string\n}"},
+		"ObjDefaultNoDef": {defaultObj, false, "struct {\n\tIntField *int\n\tStringField *string\n}"},
+		"ObjMixed":        {mixedObj, true, "struct {\n\tIntField int\n\tArrayField []bool\n\tMapField map[int]string\n\tUserTypeField UserType\n}"},
 	}
 
 	for k, tc := range cases {
 		scope := NewNameScope()
-		actual := scope.GoTypeDef(tc.att, tc.usedefault, tc.forceptr)
+		actual := scope.GoTypeDef(tc.att, tc.usedefault)
 		if actual != tc.expected {
 			t.Errorf("%s: got %#v, expected %#v", k, actual, tc.expected)
 		}
