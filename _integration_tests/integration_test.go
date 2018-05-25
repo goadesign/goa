@@ -38,9 +38,9 @@ func TestDefaultMedia(t *testing.T) {
 	expected := `// CreateGreetingPayload is the Greeting create action payload.
 type CreateGreetingPayload struct {
 	// A required string field in the parent type.
-	Message string ` + "`" + `form:"message" json:"message" xml:"message"` + "`" + `
+	Message string ` + "`" + `form:"message" json:"message" yaml:"message" xml:"message"` + "`" + `
 	// An optional boolean field in the parent type.
-	ParentOptional *bool ` + "`" + `form:"parent_optional,omitempty" json:"parent_optional,omitempty" xml:"parent_optional,omitempty"` + "`" + `
+	ParentOptional *bool ` + "`" + `form:"parent_optional,omitempty" json:"parent_optional,omitempty" yaml:"parent_optional,omitempty" xml:"parent_optional,omitempty"` + "`" + `
 }
 `
 	if !strings.Contains(string(b), expected) {

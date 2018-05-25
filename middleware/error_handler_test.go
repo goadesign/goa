@@ -21,15 +21,15 @@ import (
 // errorResponse contains the details of a error response. It implements ServiceError.
 type errorResponse struct {
 	// ID is the unique error instance identifier.
-	ID string `json:"id" xml:"id" form:"id"`
+	ID string `json:"id" yaml:"id" xml:"id" form:"id"`
 	// Code identifies the class of errors.
-	Code string `json:"code" xml:"code" form:"code"`
+	Code string `json:"code" yaml:"code" xml:"code" form:"code"`
 	// Status is the HTTP status code used by responses that cary the error.
-	Status int `json:"status" xml:"status" form:"status"`
+	Status int `json:"status" yaml:"status" xml:"status" form:"status"`
 	// Detail describes the specific error occurrence.
-	Detail string `json:"detail" xml:"detail" form:"detail"`
+	Detail string `json:"detail" yaml:"detail" xml:"detail" form:"detail"`
 	// Meta contains additional key/value pairs useful to clients.
-	Meta map[string]interface{} `json:"meta,omitempty" xml:"meta,omitempty" form:"meta,omitempty"`
+	Meta map[string]interface{} `json:"meta,omitempty" yaml:"meta,omitempty" xml:"meta,omitempty" form:"meta,omitempty"`
 }
 
 // Error returns the error occurrence details.
