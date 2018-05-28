@@ -177,9 +177,9 @@ var _ = Describe("Struct publicize code generation", func() {
 
 const (
 	objectPublicizeCode = `target = &struct {
-	Bar interface{} ` + "`" + `form:"bar" json:"bar" xml:"bar"` + "`" + `
-	Baz interface{} ` + "`" + `form:"baz,omitempty" json:"baz,omitempty" xml:"baz,omitempty"` + "`" + `
-	Foo *string ` + "`" + `form:"foo,omitempty" json:"foo,omitempty" xml:"foo,omitempty"` + "`" + `
+	Bar interface{} ` + "`" + `form:"bar" json:"bar" yaml:"bar" xml:"bar"` + "`" + `
+	Baz interface{} ` + "`" + `form:"baz,omitempty" json:"baz,omitempty" yaml:"baz,omitempty" xml:"baz,omitempty"` + "`" + `
+	Foo *string ` + "`" + `form:"foo,omitempty" json:"foo,omitempty" yaml:"foo,omitempty" xml:"foo,omitempty"` + "`" + `
 }{}
 if source.Bar != nil {
 	target.Bar = source.Bar

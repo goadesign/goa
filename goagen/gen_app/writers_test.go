@@ -2554,7 +2554,7 @@ type BottlesController interface {
 
 	simpleUserType = `// simplePayload user type.
 type simplePayload struct {
-	Name *string ` + "`" + `form:"name,omitempty" json:"name,omitempty" xml:"name,omitempty"` + "`" + `
+	Name *string ` + "`" + `form:"name,omitempty" json:"name,omitempty" yaml:"name,omitempty" xml:"name,omitempty"` + "`" + `
 }
 
 
@@ -2570,14 +2570,14 @@ func (ut *simplePayload) Publicize() *SimplePayload {
 
 // SimplePayload user type.
 type SimplePayload struct {
-	Name *string ` + "`" + `form:"name,omitempty" json:"name,omitempty" xml:"name,omitempty"` + "`" + `
+	Name *string ` + "`" + `form:"name,omitempty" json:"name,omitempty" yaml:"name,omitempty" xml:"name,omitempty"` + "`" + `
 }
 `
 
 	userTypeIncludingHash = `// complexPayload user type.
 type complexPayload struct {
-	Misc map[int]*miscPayload ` + "`" + `form:"misc,omitempty" json:"misc,omitempty" xml:"misc,omitempty"` + "`" + `
-	Name *string ` + "`" + `form:"name,omitempty" json:"name,omitempty" xml:"name,omitempty"` + "`" + `
+	Misc map[int]*miscPayload ` + "`" + `form:"misc,omitempty" json:"misc,omitempty" yaml:"misc,omitempty" xml:"misc,omitempty"` + "`" + `
+	Name *string ` + "`" + `form:"name,omitempty" json:"name,omitempty" yaml:"name,omitempty" xml:"name,omitempty"` + "`" + `
 }
 
 
@@ -2604,8 +2604,8 @@ func (ut *complexPayload) Publicize() *ComplexPayload {
 
 // ComplexPayload user type.
 type ComplexPayload struct {
-	Misc map[int]*MiscPayload ` + "`" + `form:"misc,omitempty" json:"misc,omitempty" xml:"misc,omitempty"` + "`" + `
-	Name *string ` + "`" + `form:"name,omitempty" json:"name,omitempty" xml:"name,omitempty"` + "`" + `
+	Misc map[int]*MiscPayload ` + "`" + `form:"misc,omitempty" json:"misc,omitempty" yaml:"misc,omitempty" xml:"misc,omitempty"` + "`" + `
+	Name *string ` + "`" + `form:"name,omitempty" json:"name,omitempty" yaml:"name,omitempty" xml:"name,omitempty"` + "`" + `
 }
 `
 )
