@@ -46,6 +46,39 @@ func TestAPIExprEvalName(t *testing.T) {
 	}
 }
 
+func TestAPIExprFinalize(t *testing.T) {
+	var (
+		goadesign = &ServerExpr{
+			URL: "https://goa.design",
+		}
+		localhost = &ServerExpr{
+			URL: "http://localhost:8080",
+		}
+	)
+	cases := map[string]struct {
+		servers  []*ServerExpr
+		expected []*ServerExpr
+	}{
+		"no server": {servers: nil, expected: []*ServerExpr{localhost}},
+		"1 server":  {servers: []*ServerExpr{goadesign}, expected: []*ServerExpr{goadesign}},
+		"2 servers": {servers: []*ServerExpr{goadesign, localhost}, expected: []*ServerExpr{goadesign, localhost}},
+	}
+
+	for k, tc := range cases {
+		api := APIExpr{Servers: tc.servers}
+		api.Finalize()
+		if actual := api.Servers; len(tc.expected) != len(actual) {
+			t.Errorf("%s: expected the number of scheme values to match %d got %d ", k, len(tc.expected), len(actual))
+		} else {
+			for i, v := range actual {
+				if v.URL != tc.expected[i].URL {
+					t.Errorf("%s: got %#v, expected %#v at index %d", k, v, tc.expected[i], i)
+				}
+			}
+		}
+	}
+}
+
 func TestServerExprValidate(t *testing.T) {
 	cases := map[string]struct {
 		url      string
