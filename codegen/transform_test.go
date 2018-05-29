@@ -41,87 +41,72 @@ func TestGoTypeTransform(t *testing.T) {
 	cases := []struct {
 		Name           string
 		Source, Target *design.AttributeExpr
-		SrcPtr, TgtPtr bool
 		Unmarshal      bool
 		TargetPkg      string
 
 		Code string
 	}{
-		{"simple-unmarshal", SimpleObj, SimpleObj, false, false, true, "", objUnmarshalCode},
-		{"required-unmarshal", SimpleObj, RequiredObj, false, false, true, "", requiredUnmarshalCode},
-		{"default-unmarshal", DefaultObj, DefaultObj, false, false, true, "", defaultUnmarshalCode},
+		{"simple-unmarshal", SimpleObj, SimpleObj, true, "", objUnmarshalCode},
+		{"required-unmarshal", SimpleObj, RequiredObj, true, "", requiredUnmarshalCode},
+		{"default-unmarshal", DefaultObj, DefaultObj, true, "", defaultUnmarshalCode},
 
-		{"simple-marshal", SimpleObj, SimpleObj, false, false, false, "", objCode},
-		{"required-marshal", RequiredObj, RequiredObj, false, false, false, "", requiredCode},
-		{"default-marshal", DefaultObj, DefaultObj, false, false, false, "", defaultCode},
+		{"simple-marshal", SimpleObj, SimpleObj, false, "", objCode},
+		{"required-marshal", RequiredObj, RequiredObj, false, "", requiredCode},
+		{"default-marshal", DefaultObj, DefaultObj, false, "", defaultCode},
 
 		// non match field ignore
-		{"super-unmarshal", SuperObj, SimpleObj, false, false, true, "", objUnmarshalCode},
-		{"super-marshal", SuperObj, SimpleObj, false, false, false, "", objCode},
-		{"super-unmarshal-r", SimpleObj, SuperObj, false, false, true, "", objUnmarshalCode},
-		{"super-marshal-r", SimpleObj, SuperObj, false, false, false, "", objCode},
+		{"super-unmarshal", SuperObj, SimpleObj, true, "", objUnmarshalCode},
+		{"super-marshal", SuperObj, SimpleObj, false, "", objCode},
+		{"super-unmarshal-r", SimpleObj, SuperObj, true, "", objUnmarshalCode},
+		{"super-marshal-r", SimpleObj, SuperObj, false, "", objCode},
 
 		// simple array and map
-		{"array-unmarshal", SimpleArray, SimpleArray, false, false, true, "", arrayCode},
-		{"map-unmarshal", SimpleMap, SimpleMap, false, false, true, "", mapCode},
-		{"nested-map-unmarshal", NestedMap, NestedMap, false, false, true, "", nestedMapCode},
-		{"map-object-unmarshal", SimpleMapObj, SimpleMapObj, false, false, true, "", simpleMapObjCode},
-		{"nested-map-depth-2-unmarshal", NestedMap2, NestedMap2, false, false, true, "", nestedMap2Code},
-		{"nested-map-object-marshal", NestedMapObj, NestedMapObj, false, false, true, "", nestedMapObjCode},
-		{"recursive-object-map-unmarshal", recursiveObjMap, recursiveObjMap, false, false, true, "", recursiveObjMapUnmarshalCode},
-		{"object-array-unmarshal", ArrayObj, ArrayObj, false, false, true, "", arrayObjUnmarshalCode},
+		{"array-unmarshal", SimpleArray, SimpleArray, true, "", arrayCode},
+		{"map-unmarshal", SimpleMap, SimpleMap, true, "", mapCode},
+		{"nested-map-unmarshal", NestedMap, NestedMap, true, "", nestedMapCode},
+		{"map-object-unmarshal", SimpleMapObj, SimpleMapObj, true, "", simpleMapObjCode},
+		{"nested-map-depth-2-unmarshal", NestedMap2, NestedMap2, true, "", nestedMap2Code},
+		{"nested-map-object-marshal", NestedMapObj, NestedMapObj, true, "", nestedMapObjCode},
+		{"recursive-object-map-unmarshal", recursiveObjMap, recursiveObjMap, true, "", recursiveObjMapUnmarshalCode},
+		{"object-array-unmarshal", ArrayObj, ArrayObj, true, "", arrayObjUnmarshalCode},
 
-		{"array-marshal", SimpleArray, SimpleArray, false, false, false, "", arrayCode},
-		{"map-marshal", SimpleMap, SimpleMap, false, false, false, "", mapCode},
-		{"map-object-marshal", SimpleMapObj, SimpleMapObj, false, false, false, "", simpleMapObjCode},
-		{"nested-map-object-unmarshal", NestedMapObj, NestedMapObj, false, false, false, "", nestedMapObjCode},
-		{"nested-map-marshal", NestedMap, NestedMap, false, false, false, "", nestedMapCode},
-		{"nested-map-depth-2-marshal", NestedMap2, NestedMap2, false, false, false, "", nestedMap2Code},
-		{"recursive-object-map-marshal", recursiveObjMap, recursiveObjMap, false, false, false, "", recursiveObjMapMarshalCode},
-		{"map-array", MapArray, MapArray, false, false, false, "", mapArrayCode},
-		{"array-object-marshal", ArrayObj, ArrayObj, false, false, false, "", arrayObjCode},
-		{"object-array-array-marshal", ArrayObj2, ArrayObj2, false, false, false, "", arrayObj2Code},
+		{"array-marshal", SimpleArray, SimpleArray, false, "", arrayCode},
+		{"map-marshal", SimpleMap, SimpleMap, false, "", mapCode},
+		{"map-object-marshal", SimpleMapObj, SimpleMapObj, false, "", simpleMapObjCode},
+		{"nested-map-object-unmarshal", NestedMapObj, NestedMapObj, false, "", nestedMapObjCode},
+		{"nested-map-marshal", NestedMap, NestedMap, false, "", nestedMapCode},
+		{"nested-map-depth-2-marshal", NestedMap2, NestedMap2, false, "", nestedMap2Code},
+		{"recursive-object-map-marshal", recursiveObjMap, recursiveObjMap, false, "", recursiveObjMapMarshalCode},
+		{"map-array", MapArray, MapArray, false, "", mapArrayCode},
+		{"array-object-marshal", ArrayObj, ArrayObj, false, "", arrayObjCode},
+		{"object-array-array-marshal", ArrayObj2, ArrayObj2, false, "", arrayObj2Code},
 
 		// composite data structures
-		{"composite-unmarshal", CompositeObj, CompositeObj, false, false, true, "", compUnmarshalCode},
-		{"composite-marshal", CompositeObj, CompositeObj, false, false, false, "", compCode},
+		{"composite-unmarshal", CompositeObj, CompositeObj, true, "", compUnmarshalCode},
+		{"composite-marshal", CompositeObj, CompositeObj, false, "", compCode},
 
 		// object in arrays and maps
-		{"object-array-unmarshal", ObjArray, ObjArray, false, false, true, "", objArrayCode},
-		{"object-map-unmarshal", ObjMap, ObjMap, false, false, true, "", objMapCode},
-		{"user-type-unmarshal", UserType, UserType, false, false, true, "", userTypeUnmarshalCode},
-		{"array-user-type-unmarshal", ArrayUserType, ArrayUserType, false, false, true, "", arrayUserTypeUnmarshalCode},
+		{"object-array-unmarshal", ObjArray, ObjArray, true, "", objArrayCode},
+		{"object-map-unmarshal", ObjMap, ObjMap, true, "", objMapCode},
+		{"user-type-unmarshal", UserType, UserType, true, "", userTypeUnmarshalCode},
+		{"array-user-type-unmarshal", ArrayUserType, ArrayUserType, true, "", arrayUserTypeUnmarshalCode},
 
-		{"object-array-marshal", ObjArray, ObjArray, false, false, false, "", objArrayCode},
-		{"object-map-marshal", ObjMap, ObjMap, false, false, false, "", objMapCode},
-		{"user-type-marshal", UserType, UserType, false, false, false, "", userTypeCode},
-		{"array-user-type-marshal", ArrayUserType, ArrayUserType, false, false, false, "", arrayUserTypeCode},
+		{"object-array-marshal", ObjArray, ObjArray, false, "", objArrayCode},
+		{"object-map-marshal", ObjMap, ObjMap, false, "", objMapCode},
+		{"user-type-marshal", UserType, UserType, false, "", userTypeCode},
+		{"array-user-type-marshal", ArrayUserType, ArrayUserType, false, "", arrayUserTypeCode},
 
 		// package handling
-		{"target-package-unmarshal", ArrayUserType, ArrayUserType, false, false, true, "tpkg", objTargetPkgUnmarshalCode},
-		{"target-package-marshal", ArrayUserType, ArrayUserType, false, false, false, "tpkg", objTargetPkgCode},
+		{"target-package-unmarshal", ArrayUserType, ArrayUserType, true, "tpkg", objTargetPkgUnmarshalCode},
+		{"target-package-marshal", ArrayUserType, ArrayUserType, false, "tpkg", objTargetPkgCode},
 
-		{"with-metadata", ObjWithMetadata, ObjWithMetadata, false, false, true, "", objWithMetadataCode},
-
-		// force pointer
-		{"required-unmarshal-src-ptr", RequiredObj, RequiredObj, true, false, true, "", objSrcPtrCode},
-		{"required-unmarshal-tgt-ptr", RequiredObj, RequiredObj, false, true, true, "", objUnmarshalTgtPtrCode},
-		{"required-unmarshal-src-tgt-ptr", RequiredObj, RequiredObj, true, true, true, "", objSrcTgtPtrCode},
-		{"default-unmarshal-src-ptr", DefaultObj, DefaultObj, true, false, true, "", defaultUnmarshalCode},
-		{"default-unmarshal-tgt-ptr", DefaultObj, DefaultObj, false, true, true, "", defaultUnmarshalTgtPtrCode},
-		{"default-unmarshal-src-tgt-ptr", DefaultObj, DefaultObj, true, true, true, "", defaultUnmarshalTgtPtrCode},
-		{"required-marshal-src-ptr", RequiredObj, RequiredObj, true, false, false, "", objSrcPtrCode},
-		{"required-marshal-tgt-ptr", RequiredObj, RequiredObj, false, true, false, "", objMarshalTgtPtrCode},
-		{"required-marshal-src-tgt-ptr", RequiredObj, RequiredObj, true, true, false, "", objSrcTgtPtrCode},
-		{"default-marshal-src-ptr", DefaultObj, DefaultObj, true, false, false, "", defaultMarshalSrcPtrCode},
-		{"default-marshal-tgt-ptr", DefaultObj, DefaultObj, false, true, false, "", defaultMarshalTgtPtrCode},
-		{"default-marshal-src-tgt-ptr", DefaultObj, DefaultObj, true, true, false, "", defaultMarshalSrcTgtPtrCode},
+		{"with-metadata", ObjWithMetadata, ObjWithMetadata, true, "", objWithMetadataCode},
 	}
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
 			src := &design.UserTypeExpr{TypeName: "SourceType", AttributeExpr: c.Source}
 			tgt := &design.UserTypeExpr{TypeName: "TargetType", AttributeExpr: c.Target}
-			code, _, err := GoTypeTransform(src, tgt, sourceVar, targetVar, "", c.TargetPkg, c.SrcPtr, c.TgtPtr, c.Unmarshal, NewNameScope())
+			code, _, err := GoTypeTransform(src, tgt, sourceVar, targetVar, "", c.TargetPkg, c.Unmarshal, NewNameScope())
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -707,115 +692,6 @@ const objWithMetadataCode = `func transform() {
 			tv := val
 			target.Apple[tk] = tv
 		}
-	}
-}
-`
-
-const objSrcPtrCode = `func transform() {
-	target := &TargetType{
-		A: *source.A,
-		B: *source.B,
-	}
-}
-`
-
-const objSrcTgtPtrCode = `func transform() {
-	target := &TargetType{
-		A: source.A,
-		B: source.B,
-	}
-}
-`
-
-const objUnmarshalTgtPtrCode = `func transform() {
-	target := &TargetType{
-		A: source.A,
-		B: source.B,
-	}
-}
-`
-
-const objMarshalTgtPtrCode = `func transform() {
-	target := &TargetType{
-		A: &source.A,
-		B: &source.B,
-	}
-}
-`
-
-const defaultUnmarshalTgtPtrCode = `func transform() {
-	target := &TargetType{
-		B: source.B,
-	}
-	target.A = make([]string, len(source.A))
-	for j, val := range source.A {
-		target.A[j] = val
-	}
-	if source.A == nil {
-		tmp := []string{"foo", "bar"}
-		target.A = &tmp
-	}
-	if source.B == nil {
-		tmp := 42
-		target.B = &tmp
-	}
-}
-`
-
-const defaultMarshalSrcPtrCode = `func transform() {
-	target := &TargetType{}
-	if source.B != nil {
-		target.B = *source.B
-	}
-	if source.A != nil {
-		target.A = make([]string, len(source.A))
-		for j, val := range source.A {
-			target.A[j] = val
-		}
-	}
-	if source.A == nil {
-		target.A = []string{"foo", "bar"}
-	}
-	if source.B == nil {
-		target.B = 42
-	}
-}
-`
-
-const defaultMarshalTgtPtrCode = `func transform() {
-	target := &TargetType{
-		B: &source.B,
-	}
-	if source.A != nil {
-		target.A = make([]string, len(source.A))
-		for j, val := range source.A {
-			target.A[j] = val
-		}
-	}
-	if source.A == nil {
-		tmp := []string{"foo", "bar"}
-		target.A = &tmp
-	}
-}
-`
-
-const defaultMarshalSrcTgtPtrCode = `func transform() {
-	target := &TargetType{
-		B: source.B,
-	}
-	if source.A != nil {
-		target.A = make([]string, len(source.A))
-		for j, val := range source.A {
-			target.A[j] = val
-		}
-	}
-	if source.A == nil {
-		tmp := []string{"foo", "bar"}
-		target.A = &tmp
-	}
-	if source.B == nil {
-		tmp := 42
-		target.B = &tmp
 	}
 }
 `

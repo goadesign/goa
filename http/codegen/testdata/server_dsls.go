@@ -89,6 +89,9 @@ var ServerMultiBasesDSL = func() {
 			Path("/base_2")
 		})
 		Method("MethodMultiBases", func() {
+			Payload(func() {
+				Attribute("id", String)
+			})
 			HTTP(func() {
 				GET("/{id}")
 			})
@@ -102,6 +105,9 @@ var ServerMultiEndpointsDSL = func() {
 			Path("/server_multi_endpoints")
 		})
 		Method("MethodMultiEndpoints1", func() {
+			Payload(func() {
+				Attribute("id", String)
+			})
 			HTTP(func() {
 				GET("/{id}")
 			})
@@ -128,6 +134,9 @@ var ServerFileServerDSL = func() {
 var ServerMixedDSL = func() {
 	Service("ServerMixed", func() {
 		Method("MethodMixed", func() {
+			Payload(func() {
+				Attribute("id", String)
+			})
 			HTTP(func() {
 				GET("/{id}")
 			})

@@ -7,7 +7,7 @@ import (
 )
 
 type (
-	// AttributeExpr defines a object field with optional description,
+	// AttributeExpr defines an object field with optional description,
 	// default value and validations.
 	AttributeExpr struct {
 		// DSLFunc contains the DSL used to initialize the expression.
@@ -30,6 +30,9 @@ type (
 		DefaultValue interface{}
 		// UserExample set in DSL or computed in Finalize
 		UserExamples []*ExampleExpr
+		// ForcePointer if true indicates that the field must be a pointer even though
+		// it has required attributes or a default value.
+		ForcePointer bool
 	}
 
 	// ExampleExpr represents an example.
@@ -311,6 +314,9 @@ func (a *AttributeExpr) IsRequiredNoDefault(attName string) bool {
 // attribute should be a pointer to a primitive type. The receiver attribute must
 // be an object.
 //
+// If ForcePointer is set to true on the resulting attribute, then
+// IsPrimitivePointer returns true.
+//
 // If useDefault is true and the attribute has a default value then
 // IsPrimitivePointer returns false. This makes it possible to differentiate
 // between request types where attributes with default values should not be
@@ -332,6 +338,9 @@ func (a *AttributeExpr) IsPrimitivePointer(attName string, useDefault bool) bool
 		return false
 	}
 	if IsPrimitive(att.Type) {
+		if att.ForcePointer {
+			return true
+		}
 		return att.Type.Kind() != BytesKind && att.Type.Kind() != AnyKind &&
 			!a.IsRequired(attName) && (!a.HasDefaultValue(attName) || !useDefault)
 	}

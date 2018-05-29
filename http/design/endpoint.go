@@ -170,7 +170,9 @@ func (e *EndpointExpr) Headers() *design.AttributeExpr {
 
 // MappedHeaders computes the mapped attribute expression from Headers.
 func (e *EndpointExpr) MappedHeaders() *design.MappedAttributeExpr {
-	return design.NewMappedAttributeExpr(e.Headers())
+	h := design.NewMappedAttributeExpr(e.headers)
+	h.Merge(e.Service.MappedHeaders())
+	return h
 }
 
 // Params initializes and returns the attribute holding the endpoint parameters.
@@ -210,52 +212,16 @@ func (e *EndpointExpr) Validate() error {
 		verr.Add(e, "Endpoint name cannot be empty")
 	}
 
+	// Validate routes
+
 	// Routes cannot be empty
 	if len(e.Routes) == 0 {
 		verr.Add(e, "No route defined for HTTP endpoint")
-	}
-
-	// All responses but one must have tags for the same status code
-	hasTags := false
-	allTagged := true
-	for i, r := range e.Responses {
-		for j, r2 := range e.Responses {
-			if i != j && r.StatusCode == r2.StatusCode {
-				verr.Add(r, "Multiple response definitions with status code %d", r.StatusCode)
-			}
+	} else {
+		for _, r := range e.Routes {
+			verr.Merge(r.Validate())
 		}
-		if r.Tag[0] == "" {
-			allTagged = false
-		} else {
-			hasTags = true
-		}
-	}
-	if hasTags && allTagged {
-		verr.Add(e, "All responses define a Tag, at least one response must define no Tag.")
-	}
-	if hasTags && !design.IsObject(e.MethodExpr.Result.Type) {
-		verr.Add(e, "Some responses define a Tag but the method Result type is not an object.")
-	}
-
-	// Make sure parameters and headers use compatible types
-	verr.Merge(e.validateParams())
-	verr.Merge(e.validateHeaders())
-
-	// Validate body attribute (required fields exist etc.)
-	if e.Body != nil {
-		verr.Merge(e.Body.Validate("HTTP endpoint payload", e))
-	}
-
-	// Validate responses and errors (have status codes and bodies are valid)
-	for _, r := range e.Responses {
-		verr.Merge(r.Validate(e))
-	}
-	for _, er := range e.HTTPErrors {
-		verr.Merge(er.Validate())
-	}
-
-	// Make sure that the same parameters are used in all routes
-	if len(e.Routes) > 1 {
+		// Make sure that the same parameters are used in all routes
 		params := e.Routes[0].Params()
 		for _, r := range e.Routes[1:] {
 			for _, p := range params {
@@ -285,31 +251,48 @@ func (e *EndpointExpr) Validate() error {
 		}
 	}
 
-	// Make sure there's no duplicate params in absolute route
-	for _, r := range e.Routes {
-		paths := r.FullPaths()
-		for _, path := range paths {
-			matches := WildcardRegex.FindAllStringSubmatch(path, -1)
-			wcs := make(map[string]struct{}, len(matches))
-			for _, match := range matches {
-				if _, ok := wcs[match[1]]; ok {
-					verr.Add(r, "Wildcard %q appears multiple times in full path %q", match[1], path)
-				}
-				wcs[match[1]] = struct{}{}
+	// Validate responses
+
+	// All responses but one must have tags for the same status code
+	hasTags := false
+	allTagged := true
+	for i, r := range e.Responses {
+		verr.Merge(r.Validate(e))
+		for j, r2 := range e.Responses {
+			if i != j && r.StatusCode == r2.StatusCode {
+				verr.Add(r, "Multiple response definitions with status code %d", r.StatusCode)
 			}
 		}
+		if r.Tag[0] == "" {
+			allTagged = false
+		} else {
+			hasTags = true
+		}
+	}
+	if hasTags && allTagged {
+		verr.Add(e, "All responses define a Tag, at least one response must define no Tag.")
+	}
+	if hasTags && !design.IsObject(e.MethodExpr.Result.Type) {
+		verr.Add(e, "Some responses define a Tag but the method Result type is not an object.")
 	}
 
-	var routeParams []string
-	// Collect all the parameters in the endpoint.
-	// NOTE: We don't use AllParams() here because path parameters are only added to
-	// e.params during finalize.
-	allParams := &design.Object{}
-	if e.params != nil {
-		allParams = design.AsObject(e.params.Type)
+	// Make sure parameters and headers use compatible types
+	verr.Merge(e.validateParams())
+	verr.Merge(e.validateHeaders())
+
+	// Validate body attribute (required fields exist etc.)
+	if e.Body != nil {
+		verr.Merge(e.Body.Validate("HTTP endpoint payload", e))
 	}
+
+	// Validate errors
+	for _, er := range e.HTTPErrors {
+		verr.Merge(er.Validate())
+	}
+
+	// Collect all the parameters in the endpoint.
+	allParams := design.AsObject(e.AllParams().Type)
 	for _, r := range e.Routes {
-		routeParams = append(routeParams, r.Params()...)
 		for _, p := range r.Params() {
 			if att := allParams.Attribute(p); att == nil {
 				allParams.Set(p, &design.AttributeExpr{Type: design.String})
@@ -336,20 +319,14 @@ func (e *EndpointExpr) Validate() error {
 					verr.Add(e, "Payload type is array but HTTP endpoint defines MultipartRequest and route/query string parameters. At most one of these must be defined.")
 				}
 				hasParams = true
-				if ln > 1 {
-					verr.Add(e, "Payload type is array but HTTP endpoint defines multiple route or query string parameters. At most one of these must be defined and it must be an array.")
-				}
 			}
-			if ln := len(*design.AsObject(e.Headers().Type)); ln > 0 {
+			if ln := len(*design.AsObject(e.MappedHeaders().Type)); ln > 0 {
 				if e.MultipartRequest {
 					verr.Add(e, "Payload type is array but HTTP endpoint defines MultipartRequest and headers. At most one of these must be defined.")
 				}
 				hasHeaders = true
 				if hasParams {
 					verr.Add(e, "Payload type is array but HTTP endpoint defines both route or query string parameters and headers. At most one parameter or header must be defined and it must be of type array.")
-				}
-				if ln > 1 {
-					verr.Add(e, "Payload type is array but HTTP endpoint defines multiple headers. At most one header must be defined and it must be an array.")
 				}
 			}
 			if e.Body != nil && e.Body.Type != design.Empty {
@@ -392,15 +369,6 @@ func (e *EndpointExpr) Validate() error {
 					verr.Add(e, "Payload type is map but HTTP endpoint defines MultipartRequest and route/query string parameters. At most one of these must be defined.")
 				}
 				hasParams = true
-				if ln > 1 {
-					verr.Add(e, "Payload type is map but HTTP endpoint defines multiple route or query string parameters. At most one query string parameter must be defined and it must be a map.")
-				}
-				if len(routeParams) > 0 {
-					verr.Add(e, "Payload type is map but HTTP endpoint defines route parameters. Route parameters cannot be decoded from the map Payload.")
-				}
-			}
-			if ln := len(*design.AsObject(e.Headers().Type)); ln > 0 {
-				verr.Add(e, "Payload type is map but HTTP endpoint defines headers. Map payloads can only be decoded from HTTP request bodies or query strings.")
 			}
 			if e.Body != nil && e.Body.Type != design.Empty {
 				if e.MultipartRequest {
@@ -423,38 +391,11 @@ func (e *EndpointExpr) Validate() error {
 					verr.Add(e, "MapParams is set to an attribute in Payload. But payload has no attribute with type map and name %s", pAttr)
 				}
 			}
-			for _, nat := range *design.AsObject(e.MappedHeaders().Type) {
-				found := false
-				name := strings.Split(nat.Name, ":")[0]
-				if e.MethodExpr.Payload.Find(name) != nil {
-					found = true
-					break
-				}
-				if !found {
-					verr.Add(e, "Header %q is not found in Payload.", nat.Name)
-				}
-			}
-			for _, nat := range *allParams {
-				found := false
-				name := strings.Split(nat.Name, ":")[0]
-				if e.MethodExpr.Payload.Find(name) != nil {
-					found = true
-					break
-				}
-				if !found {
-					verr.Add(e, "Param %q is not found in Payload.", nat.Name)
-				}
-			}
 			if e.Body != nil {
 				if bObj := design.AsObject(e.Body.Type); bObj != nil {
 					for _, nat := range *bObj {
-						found := false
 						name := strings.Split(nat.Name, ":")[0]
-						if e.MethodExpr.Payload.Find(name) != nil {
-							found = true
-							break
-						}
-						if !found {
+						if e.MethodExpr.Payload.Find(name) == nil {
 							verr.Add(e, "Body %q is not found in Payload.", nat.Name)
 						}
 					}
@@ -567,31 +508,6 @@ func (e *EndpointExpr) Finalize() {
 		e.Body = RequestBody(e)
 	}
 
-	// Initialize the headers with the corresponding payload attributes.
-	if e.headers != nil {
-		for _, nat := range *design.AsObject(e.headers.Type) {
-			n := nat.Name
-			att := nat.Attribute
-			n = strings.Split(n, ":")[0]
-			var patt *design.AttributeExpr
-			var required bool
-			if payload != nil {
-				patt = payload.Attribute(n)
-				required = e.MethodExpr.Payload.IsRequired(n)
-			} else {
-				patt = e.MethodExpr.Payload
-				required = true
-			}
-			initAttrFromDesign(att, patt)
-			if required {
-				if e.headers.Validation == nil {
-					e.headers.Validation = &design.ValidationExpr{}
-				}
-				e.headers.Validation.Required = append(e.headers.Validation.Required, n)
-			}
-		}
-	}
-
 	// Make sure there's a default response if none define explicitly
 	if len(e.Responses) == 0 {
 		status := StatusOK
@@ -630,16 +546,18 @@ func (e *EndpointExpr) Finalize() {
 	}
 }
 
-// validateParams checks the endpoint parameters are of an allowed type.
+// validateParams checks the endpoint parameters are of an allowed type and the
+// method payload contains the parameters.
 func (e *EndpointExpr) validateParams() *eval.ValidationErrors {
-	if e.params == nil {
-		return nil
-	}
-	verr := new(eval.ValidationErrors)
-	params := design.AsObject(e.params.Type)
 	var routeParams []string
+	params := design.AsObject(e.AllParams().Type)
 	for _, r := range e.Routes {
-		routeParams = append(routeParams, r.Params()...)
+		for _, p := range r.Params() {
+			routeParams = append(routeParams, p)
+			if att := params.Attribute(p); att == nil {
+				params.Set(p, &design.AttributeExpr{Type: design.String})
+			}
+		}
 	}
 	isRouteParam := func(p string) bool {
 		for _, rp := range routeParams {
@@ -649,44 +567,91 @@ func (e *EndpointExpr) validateParams() *eval.ValidationErrors {
 		}
 		return false
 	}
+	if len(*params) == 0 {
+		return nil
+	}
+	verr := new(eval.ValidationErrors)
 	for _, nat := range *params {
-		n := nat.Name
-		p := nat.Attribute
-		if design.IsObject(p.Type) {
-			verr.Add(e, "parameter %s cannot be an object, parameter types must be primitive, array or map (query string only)", n)
-		} else if isRouteParam(n) && design.IsMap(p.Type) {
-			verr.Add(e, "parameter %s cannot be a map, parameter types must be primitive or array", n)
-		} else if design.IsArray(p.Type) {
-			if !design.IsPrimitive(design.AsArray(p.Type).ElemType.Type) {
-				verr.Add(e, "elements of array parameter %s must be primitive", n)
+		if design.IsObject(nat.Attribute.Type) {
+			verr.Add(e, "parameter %s cannot be an object, parameter types must be primitive, array or map (query string only)", nat.Name)
+		} else if isRouteParam(nat.Name) && design.IsMap(nat.Attribute.Type) {
+			verr.Add(e, "parameter %s cannot be a map, parameter types must be primitive or array", nat.Name)
+		} else if arr := design.AsArray(nat.Attribute.Type); arr != nil {
+			if !design.IsPrimitive(arr.ElemType.Type) {
+				verr.Add(e, "elements of array parameter %s must be primitive", nat.Name)
 			}
 		} else {
-			ctx := fmt.Sprintf("parameter %s", n)
-			verr.Merge(p.Validate(ctx, e))
+			ctx := fmt.Sprintf("parameter %s", nat.Name)
+			verr.Merge(nat.Attribute.Validate(ctx, e))
+		}
+	}
+	if e.MethodExpr.Payload == nil {
+		if len(*params) > 0 {
+			verr.Add(e, "Parameters are defined but Payload is not defined")
+		}
+	} else {
+		switch e.MethodExpr.Payload.Type.(type) {
+		case *design.Object:
+			for _, nat := range *params {
+				name := strings.Split(nat.Name, ":")[0]
+				if e.MethodExpr.Payload.Find(name) == nil {
+					verr.Add(e, "Parameter %q is not found in payload.", nat.Name)
+				}
+			}
+		case *design.Array:
+			if len(*params) > 1 {
+				verr.Add(e, "Payload type is array but HTTP endpoint defines multiple parameters. At most one parameter must be defined and it must be an array.")
+			}
+		case *design.Map:
+			if len(*params) > 1 {
+				verr.Add(e, "Payload type is map but HTTP endpoint defines multiple parameters. At most one query string parameter must be defined and it must be a map.")
+			}
 		}
 	}
 	return verr
 }
 
-// validateHeaders makes sure headers are of an allowed type.
+// validateHeaders makes sure headers are of an allowed type and the method
+// payload contains the headers.
 func (e *EndpointExpr) validateHeaders() *eval.ValidationErrors {
-	if e.headers == nil {
+	headers := design.AsObject(e.MappedHeaders().Type)
+	if len(*headers) == 0 {
 		return nil
 	}
 	verr := new(eval.ValidationErrors)
-	headers := design.AsObject(e.headers.Type)
 	for _, nat := range *headers {
-		n := nat.Name
-		p := nat.Attribute
-		if design.IsObject(p.Type) {
-			verr.Add(e, "header %s cannot be an object, header type must be primitive or array", n)
-		} else if design.IsArray(p.Type) {
-			if !design.IsPrimitive(design.AsArray(p.Type).ElemType.Type) {
-				verr.Add(e, "elements of array header %s must be primitive", n)
+		if design.IsObject(nat.Attribute.Type) {
+			verr.Add(e, "header %s cannot be an object, header type must be primitive or array", nat.Name)
+		} else if arr := design.AsArray(nat.Attribute.Type); arr != nil {
+			if !design.IsPrimitive(arr.ElemType.Type) {
+				verr.Add(e, "elements of array header %s must be primitive", nat.Name)
 			}
 		} else {
-			ctx := fmt.Sprintf("header %s", n)
-			verr.Merge(p.Validate(ctx, e))
+			ctx := fmt.Sprintf("header %s", nat.Name)
+			verr.Merge(nat.Attribute.Validate(ctx, e))
+		}
+	}
+	if e.MethodExpr.Payload == nil {
+		if len(*headers) > 0 {
+			verr.Add(e, "Headers are defined but Payload is not defined")
+		}
+	} else {
+		switch e.MethodExpr.Payload.Type.(type) {
+		case *design.Object:
+			for _, nat := range *headers {
+				name := strings.Split(nat.Name, ":")[0]
+				if e.MethodExpr.Payload.Find(name) == nil {
+					verr.Add(e, "header %q is not found in payload.", nat.Name)
+				}
+			}
+		case *design.Array:
+			if len(*headers) > 1 {
+				verr.Add(e, "Payload type is array but HTTP endpoint defines multiple headers. At most one header must be defined and it must be an array.")
+			}
+		case *design.Map:
+			if len(*headers) > 0 {
+				verr.Add(e, "Payload type is map but HTTP endpoint defines headers. Map payloads can only be decoded from HTTP request bodies or query strings.")
+			}
 		}
 	}
 	return verr
@@ -695,6 +660,48 @@ func (e *EndpointExpr) validateHeaders() *eval.ValidationErrors {
 // EvalName returns the generic definition name used in error messages.
 func (r *RouteExpr) EvalName() string {
 	return fmt.Sprintf(`route %s "%s" of %s`, r.Method, r.Path, r.Endpoint.EvalName())
+}
+
+// Validate validates a route expression by ensuring that the route parameters
+// can be inferred from the method payload and there is no duplicate parameters
+// in an absolute route.
+func (r *RouteExpr) Validate() *eval.ValidationErrors {
+	verr := new(eval.ValidationErrors)
+
+	// Make sure route params are defined in the method payload
+	if rparams := r.Params(); len(rparams) > 0 {
+		if r.Endpoint.MethodExpr.Payload == nil {
+			verr.Add(r, "Route parameters are defined, but method payload is not defined.")
+		} else {
+			switch r.Endpoint.MethodExpr.Payload.Type.(type) {
+			case *design.Map:
+				verr.Add(r, "Route parameters are defined, but method payload is a map. Method payload must be a primitive or an object.")
+			case *design.Object:
+				for _, p := range rparams {
+					if r.Endpoint.MethodExpr.Payload.Find(p) == nil {
+						verr.Add(r, "Route param %q not found in method payload", p)
+					}
+				}
+			}
+			if len(rparams) > 1 && design.IsPrimitive(r.Endpoint.MethodExpr.Payload.Type) {
+				verr.Add(r, "Multiple route parameters are defined, but method payload is a primitive. Only one router parameter can be defined if payload is primitive.")
+			}
+		}
+	}
+
+	// Make sure there's no duplicate params in absolute route
+	paths := r.FullPaths()
+	for _, path := range paths {
+		matches := WildcardRegex.FindAllStringSubmatch(path, -1)
+		wcs := make(map[string]struct{}, len(matches))
+		for _, match := range matches {
+			if _, ok := wcs[match[1]]; ok {
+				verr.Add(r, "Wildcard %q appears multiple times in full path %q", match[1], path)
+			}
+			wcs[match[1]] = struct{}{}
+		}
+	}
+	return verr
 }
 
 // Params returns all the route parameters across all the base paths. For

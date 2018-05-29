@@ -31,14 +31,15 @@ func NewNameScope() *NameScope {
 		counts: make(map[string]int),
 	}
 	if design.Root.API != nil {
-		ns.Unique(design.Root.API, design.Root.API.Name)
+		ns.HashedUnique(design.Root.API, design.Root.API.Name)
 	}
 	return ns
 }
 
-// Unique builds the unique name for key using name and - if not unique -
-// appending suffix and - if still not unique - a counter value.
-func (s *NameScope) Unique(key Hasher, name string, suffix ...string) string {
+// HashedUnique builds the unique name for key using name and - if not unique -
+// appending suffix and - if still not unique - a counter value. It returns
+// the same value when called multiple times for a key returning the same hash.
+func (s *NameScope) HashedUnique(key Hasher, name string, suffix ...string) string {
 	if n, ok := s.names[key.Hash()]; ok {
 		return n
 	}
@@ -65,28 +66,49 @@ done:
 	return name
 }
 
+// Unique returns a unique name for the given name. If given name not unique
+// the suffix is appended. It still not unique, a counter value is added to
+// the name until unique.
+func (s *NameScope) Unique(name string, suffix ...string) string {
+	var (
+		i   int
+		suf string
+	)
+	_, ok := s.counts[name]
+	if !ok {
+		goto done
+	}
+	if len(suffix) > 0 {
+		suf = suffix[0]
+	}
+	name += suf
+	i, ok = s.counts[name]
+	if !ok {
+		goto done
+	}
+	name += strconv.Itoa(i + 1)
+done:
+	return name
+}
+
 // GoTypeDef returns the Go code that defines a Go type which matches the data
 // structure definition (the part that comes after `type foo`).
-//
-// pointer if true indicates that the attributes in the expression must be
-// generated as pointer fields even though the attributes are required and/or
-// have defaults.
-func (s *NameScope) GoTypeDef(att *design.AttributeExpr, useDefault bool, pointer bool) string {
+func (s *NameScope) GoTypeDef(att *design.AttributeExpr, useDefault bool) string {
 	switch actual := att.Type.(type) {
 	case design.Primitive:
 		return GoNativeTypeName(actual)
 	case *design.Array:
-		d := s.GoTypeDef(actual.ElemType, useDefault, pointer)
+		d := s.GoTypeDef(actual.ElemType, useDefault)
 		if design.IsObject(actual.ElemType.Type) {
 			d = "*" + d
 		}
 		return "[]" + d
 	case *design.Map:
-		keyDef := s.GoTypeDef(actual.KeyType, useDefault, pointer)
+		keyDef := s.GoTypeDef(actual.KeyType, useDefault)
 		if design.IsObject(actual.KeyType.Type) {
 			keyDef = "*" + keyDef
 		}
-		elemDef := s.GoTypeDef(actual.ElemType, useDefault, pointer)
+		elemDef := s.GoTypeDef(actual.ElemType, useDefault)
 		if design.IsObject(actual.ElemType.Type) {
 			elemDef = "*" + elemDef
 		}
@@ -106,12 +128,8 @@ func (s *NameScope) GoTypeDef(att *design.AttributeExpr, useDefault bool, pointe
 			)
 			{
 				fn = GoifyAtt(at, name, true)
-				tdef = s.GoTypeDef(at, useDefault, pointer)
-				ptr := design.IsObject(at.Type) || att.IsPrimitivePointer(name, useDefault)
-				if pointer && !(design.IsMap(at.Type) || design.IsArray(at.Type)) {
-					ptr = true
-				}
-				if ptr {
+				tdef = s.GoTypeDef(at, useDefault)
+				if design.IsObject(at.Type) || att.IsPrimitivePointer(name, useDefault) {
 					tdef = "*" + tdef
 				}
 				if at.Description != "" {
@@ -162,13 +180,13 @@ func (s *NameScope) GoFullTypeName(att *design.AttributeExpr, pkg string) string
 			s.GoFullTypeRef(actual.KeyType, pkg),
 			s.GoFullTypeRef(actual.ElemType, pkg))
 	case *design.Object:
-		return s.GoTypeDef(att, false, false)
+		return s.GoTypeDef(att, false)
 
 	case design.UserType:
 		if actual == design.ErrorResult {
 			return "goa.ServiceError"
 		}
-		n := s.Unique(actual, Goify(actual.Name(), true), "")
+		n := s.HashedUnique(actual, Goify(actual.Name(), true), "")
 		if pkg == "" {
 			return n
 		}
