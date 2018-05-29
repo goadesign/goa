@@ -334,6 +334,8 @@ type (
 		Pointer bool
 		// Required is true if the arg is required to build the payload.
 		Required bool
+		// DefaultValue is the default value of the arg.
+		DefaultValue interface{}
 		// Validate contains the validation code for the argument
 		// value if any.
 		Validate string
@@ -950,26 +952,28 @@ func buildPayloadData(e *httpdesign.EndpointExpr, sd *ServiceData) *PayloadData 
 		}
 		for _, p := range request.QueryParams {
 			args = append(args, &InitArgData{
-				Name:      p.VarName,
-				Ref:       p.VarName,
-				FieldName: p.FieldName,
-				TypeName:  p.TypeName,
-				TypeRef:   p.TypeRef,
-				Required:  p.Required,
-				Validate:  p.Validate,
-				Example:   p.Example,
+				Name:         p.VarName,
+				Ref:          p.VarName,
+				FieldName:    p.FieldName,
+				TypeName:     p.TypeName,
+				TypeRef:      p.TypeRef,
+				Required:     p.Required,
+				DefaultValue: p.DefaultValue,
+				Validate:     p.Validate,
+				Example:      p.Example,
 			})
 		}
 		for _, h := range request.Headers {
 			args = append(args, &InitArgData{
-				Name:      h.VarName,
-				Ref:       h.VarName,
-				FieldName: h.FieldName,
-				TypeName:  h.TypeName,
-				TypeRef:   h.TypeRef,
-				Required:  h.Required,
-				Validate:  h.Validate,
-				Example:   h.Example,
+				Name:         h.VarName,
+				Ref:          h.VarName,
+				FieldName:    h.FieldName,
+				TypeName:     h.TypeName,
+				TypeRef:      h.TypeRef,
+				Required:     h.Required,
+				DefaultValue: h.DefaultValue,
+				Validate:     h.Validate,
+				Example:      h.Example,
 			})
 		}
 		serverArgs = append(serverArgs, args...)
