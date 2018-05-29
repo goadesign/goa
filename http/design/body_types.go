@@ -141,6 +141,7 @@ func buildResponseBody(name string, attr *design.AttributeExpr, resp *HTTPRespon
 		if len(*design.AsObject(resp.Headers().Type)) == 0 {
 			attr = design.DupAtt(attr)
 			renameType(attr, name, "ResponseBody")
+			setForcePointer(attr)
 			return attr
 		}
 		return &design.AttributeExpr{Type: design.Empty}
@@ -157,9 +158,10 @@ func buildResponseBody(name string, attr *design.AttributeExpr, resp *HTTPRespon
 
 	// 4. Build computed user type
 	userType := &design.UserTypeExpr{
-		AttributeExpr: body.Attribute(),
+		AttributeExpr: design.DupAtt(body.Attribute()),
 		TypeName:      name,
 	}
+	setForcePointer(userType.Attribute())
 	appendSuffix(userType.Attribute().Type, "ResponseBody")
 	rt, isrt := attr.Type.(*design.ResultTypeExpr)
 	if !isrt {
@@ -187,24 +189,48 @@ func buildResponseBody(name string, attr *design.AttributeExpr, resp *HTTPRespon
 	return &design.AttributeExpr{Type: nmt, Validation: userType.Validation}
 }
 
+func setForcePointer(att *design.AttributeExpr, seen ...map[string]struct{}) {
+	switch actual := att.Type.(type) {
+	case design.Primitive:
+		att.ForcePointer = true
+	case design.UserType:
+		var s map[string]struct{}
+		if len(seen) > 0 {
+			s = seen[0]
+		} else {
+			s = make(map[string]struct{})
+			seen = append(seen, s)
+		}
+		if _, ok := s[actual.Name()]; ok {
+			return
+		}
+		s[actual.Name()] = struct{}{}
+		setForcePointer(actual.(design.UserType).Attribute(), seen...)
+	case *design.Object:
+		for _, nat := range *actual {
+			setForcePointer(nat.Attribute, seen...)
+		}
+	case *design.Array:
+		setForcePointer(actual.ElemType, seen...)
+	case *design.Map:
+		setForcePointer(actual.KeyType, seen...)
+		setForcePointer(actual.ElemType, seen...)
+	}
+}
+
 func renameType(att *design.AttributeExpr, name, suffix string) {
 	rt := att.Type
 	switch rt.(type) {
 	case design.UserType:
-		rt = design.Dup(rt)
 		rt.(design.UserType).Rename(name)
 		appendSuffix(rt.(design.UserType).Attribute().Type, suffix)
 	case *design.Object:
-		rt = design.Dup(rt)
 		appendSuffix(rt, suffix)
 	case *design.Array:
-		rt = design.Dup(rt)
 		appendSuffix(rt, suffix)
 	case *design.Map:
-		rt = design.Dup(rt)
 		appendSuffix(rt, suffix)
 	}
-	att.Type = rt
 }
 
 func appendSuffix(dt design.DataType, suffix string, seen ...map[string]struct{}) {

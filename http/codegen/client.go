@@ -494,20 +494,21 @@ const singleResponseT = ` {{- if .ClientBody }}
 			)
 		{{- range .Headers }}
 
-		{{- if and (or (eq .Type.Name "string") (eq .Type.Name "any")) .Required }}
-			{{ .VarName }} = resp.Header.Get("{{ .Name }}")
-			if {{ .VarName }} == "" {
-				err = goa.MergeErrors(err, goa.MissingFieldError("{{ .Name }}", "header"))
-			}
-
-		{{- else if (or (eq .Type.Name "string") (eq .Type.Name "any")) }}
+		{{- if (or (eq .Type.Name "string") (eq .Type.Name "any")) }}
 			{{ .VarName }}Raw := resp.Header.Get("{{ .Name }}")
-			if {{ .VarName }}Raw != "" {
+			{{- if .Required }}
+				if {{ .VarName }}Raw == "" {
+					err = goa.MergeErrors(err, goa.MissingFieldError("{{ .Name }}", "header"))
+				}
 				{{ .VarName }} = {{ if and (eq .Type.Name "string") .Pointer }}&{{ end }}{{ .VarName }}Raw
-			}
-			{{- if .DefaultValue }} else {
-				{{ .VarName }} = {{ if eq .Type.Name "string" }}{{ printf "%q" .DefaultValue }}{{ else }}{{ printf "%#v" .DefaultValue }}{{ end }}
-			}
+			{{- else }}
+				if {{ .VarName }}Raw != "" {
+					{{ .VarName }} = {{ if and (eq .Type.Name "string") .Pointer }}&{{ end }}{{ .VarName }}Raw
+				}
+				{{- if .DefaultValue }} else {
+					{{ .VarName }} = {{ if eq .Type.Name "string" }}{{ printf "%q" .DefaultValue }}{{ else }}{{ printf "%#v" .DefaultValue }}{{ end }}
+				}
+				{{- end }}
 			{{- end }}
 
 		{{- else if .StringSlice }}

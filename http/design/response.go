@@ -191,34 +191,9 @@ func (r *HTTPResponseExpr) Validate(e *EndpointExpr) *eval.ValidationErrors {
 func (r *HTTPResponseExpr) Finalize(a *EndpointExpr, svcAtt *design.AttributeExpr) {
 	r.Parent = a
 
-	// Initialize the headers with the corresponding result attributes.
-	svcObj := design.AsObject(svcAtt.Type)
-	if r.headers != nil {
-		for _, nat := range *design.AsObject(r.headers.Type) {
-			n := nat.Name
-			att := nat.Attribute
-			n = strings.Split(n, ":")[0]
-			var patt *design.AttributeExpr
-			var required bool
-			if svcObj != nil {
-				patt = svcObj.Attribute(n)
-				required = svcAtt.IsRequired(n)
-			} else {
-				patt = svcAtt
-				required = svcAtt.Type != design.Empty
-			}
-			initAttrFromDesign(att, patt)
-			if required {
-				if r.headers.Validation == nil {
-					r.headers.Validation = &design.ValidationExpr{}
-				}
-				r.headers.Validation.Required = append(r.headers.Validation.Required, n)
-			}
-		}
-	}
-
 	// Initialize the body attributes (if an object) with the corresponding
-	// payload attributes.
+	// result attributes.
+	svcObj := design.AsObject(svcAtt.Type)
 	if r.Body != nil {
 		if body := design.AsObject(r.Body.Type); body != nil {
 			for _, nat := range *body {

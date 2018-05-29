@@ -93,16 +93,6 @@ func TestClientEncode(t *testing.T) {
 		{"query-string-default", testdata.PayloadQueryStringDefaultDSL, testdata.PayloadQueryStringDefaultEncodeCode},
 		{"query-primitive-string-default", testdata.PayloadQueryPrimitiveStringDefaultDSL, testdata.PayloadQueryPrimitiveStringDefaultEncodeCode},
 
-		{"path-string", testdata.PayloadPathStringDSL, testdata.PayloadPathStringEncodeCode},
-		{"path-string-validate", testdata.PayloadPathStringValidateDSL, testdata.PayloadPathStringValidateEncodeCode},
-		{"path-array-string", testdata.PayloadPathArrayStringDSL, testdata.PayloadPathArrayStringEncodeCode},
-		{"path-array-string-validate", testdata.PayloadPathArrayStringValidateDSL, testdata.PayloadPathArrayStringValidateEncodeCode},
-
-		{"path-primitive-string-validate", testdata.PayloadPathPrimitiveStringValidateDSL, testdata.PayloadPathPrimitiveStringValidateEncodeCode},
-		{"path-primitive-bool-validate", testdata.PayloadPathPrimitiveBoolValidateDSL, testdata.PayloadPathPrimitiveBoolValidateEncodeCode},
-		{"path-primitive-array-string-validate", testdata.PayloadPathPrimitiveArrayStringValidateDSL, testdata.PayloadPathPrimitiveArrayStringValidateEncodeCode},
-		{"path-primitive-array-bool-validate", testdata.PayloadPathPrimitiveArrayBoolValidateDSL, testdata.PayloadPathPrimitiveArrayBoolValidateEncodeCode},
-
 		{"header-string", testdata.PayloadHeaderStringDSL, testdata.PayloadHeaderStringEncodeCode},
 		{"header-string-validate", testdata.PayloadHeaderStringValidateDSL, testdata.PayloadHeaderStringValidateEncodeCode},
 		{"header-array-string", testdata.PayloadHeaderArrayStringDSL, testdata.PayloadHeaderArrayStringEncodeCode},
