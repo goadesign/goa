@@ -2473,6 +2473,8 @@ func DecodeMethodQueryStringDefaultRequest(mux goahttp.Muxer, decoder func(*http
 		qRaw := r.URL.Query().Get("q")
 		if qRaw != "" {
 			q = qRaw
+		} else {
+			q = "def"
 		}
 		payload := NewMethodQueryStringDefaultMethodQueryStringDefaultPayload(q)
 
@@ -2958,6 +2960,8 @@ func DecodeMethodHeaderStringDefaultRequest(mux goahttp.Muxer, decoder func(*htt
 		hRaw := r.Header.Get("h")
 		if hRaw != "" {
 			h = hRaw
+		} else {
+			h = "def"
 		}
 		payload := NewMethodHeaderStringDefaultMethodHeaderStringDefaultPayload(h)
 
