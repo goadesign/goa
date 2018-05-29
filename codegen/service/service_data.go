@@ -738,7 +738,6 @@ func collectProjectedTypesR(projected, att *design.AttributeExpr, seen map[strin
 	collect := func(projected, att *design.AttributeExpr) []*ProjectedTypeData {
 		return collectProjectedTypesR(projected, att, seen, scope, viewspkg)
 	}
-	projected.ForcePointer = true
 	switch pt := projected.Type.(type) {
 	case design.UserType:
 		// If the attribute type has already been projected (i.e., projected type
@@ -778,6 +777,8 @@ func collectProjectedTypesR(projected, att *design.AttributeExpr, seen map[strin
 		for _, n := range *pt {
 			data = append(data, collect(n.Attribute, dt.Attribute(n.Name))...)
 		}
+	case design.Primitive:
+		projected.ForcePointer = true
 	}
 	return
 }

@@ -37,7 +37,8 @@ func NewNameScope() *NameScope {
 }
 
 // HashedUnique builds the unique name for key using name and - if not unique -
-// appending suffix and - if still not unique - a counter value.
+// appending suffix and - if still not unique - a counter value. It returns
+// the same value when called multiple times for a key returning the same hash.
 func (s *NameScope) HashedUnique(key Hasher, name string, suffix ...string) string {
 	if n, ok := s.names[key.Hash()]; ok {
 		return n
@@ -67,8 +68,7 @@ done:
 
 // Unique returns a unique name for the given name. If given name not unique
 // the suffix is appended. It still not unique, a counter value is added to
-// the name until unique. The generated unique name is not added to the names
-// and counts hash.
+// the name until unique.
 func (s *NameScope) Unique(name string, suffix ...string) string {
 	var (
 		i   int

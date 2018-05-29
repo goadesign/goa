@@ -140,8 +140,8 @@ func buildResponseBody(name string, attr *design.AttributeExpr, resp *HTTPRespon
 	if !design.IsObject(attr.Type) {
 		if len(*design.AsObject(resp.Headers().Type)) == 0 {
 			attr = design.DupAtt(attr)
-			setForcePointer(attr)
 			renameType(attr, name, "ResponseBody")
+			setForcePointer(attr)
 			return attr
 		}
 		return &design.AttributeExpr{Type: design.Empty}
@@ -158,7 +158,7 @@ func buildResponseBody(name string, attr *design.AttributeExpr, resp *HTTPRespon
 
 	// 4. Build computed user type
 	userType := &design.UserTypeExpr{
-		AttributeExpr: body.Attribute(),
+		AttributeExpr: design.DupAtt(body.Attribute()),
 		TypeName:      name,
 	}
 	setForcePointer(userType.Attribute())
@@ -190,10 +190,9 @@ func buildResponseBody(name string, attr *design.AttributeExpr, resp *HTTPRespon
 }
 
 func setForcePointer(att *design.AttributeExpr, seen ...map[string]struct{}) {
-	rt := design.Dup(att.Type)
-	att.ForcePointer = true
-	att.Type = rt
-	switch actual := rt.(type) {
+	switch actual := att.Type.(type) {
+	case design.Primitive:
+		att.ForcePointer = true
 	case design.UserType:
 		var s map[string]struct{}
 		if len(seen) > 0 {
@@ -223,20 +222,15 @@ func renameType(att *design.AttributeExpr, name, suffix string) {
 	rt := att.Type
 	switch rt.(type) {
 	case design.UserType:
-		rt = design.Dup(rt)
 		rt.(design.UserType).Rename(name)
 		appendSuffix(rt.(design.UserType).Attribute().Type, suffix)
 	case *design.Object:
-		rt = design.Dup(rt)
 		appendSuffix(rt, suffix)
 	case *design.Array:
-		rt = design.Dup(rt)
 		appendSuffix(rt, suffix)
 	case *design.Map:
-		rt = design.Dup(rt)
 		appendSuffix(rt, suffix)
 	}
-	att.Type = rt
 }
 
 func appendSuffix(dt design.DataType, suffix string, seen ...map[string]struct{}) {
