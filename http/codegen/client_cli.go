@@ -475,9 +475,9 @@ func fieldLoadCode(actual, fType string, arg *InitArgData) (string, bool) {
 			endIf = "\n}"
 		}
 		if arg.TypeName == stringN {
-			var ref string
-			if !arg.Required {
-				ref = "&"
+			ref := "&"
+			if arg.Required || arg.DefaultValue != nil {
+				ref = ""
 			}
 			code = arg.Name + " = " + ref + actual
 		} else {
