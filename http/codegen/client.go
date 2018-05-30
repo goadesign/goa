@@ -410,7 +410,7 @@ func {{ .ResponseDecoder }}(decoder func(*http.Response) goahttp.Decoder, restor
 			if err = vres.Validate(); err != nil {
 				return nil, goahttp.ErrValidationError("{{ $.ServiceName }}", "{{ $.Method.Name }}", err)
 			}
-			return {{ $.ServicePkgName }}.{{ $.Method.ViewedResult.ConvertToResult.Name }}(vres), nil
+			return {{ $.ServicePkgName }}.{{ $.Method.ViewedResult.ResultInit.Name }}(vres), nil
 			{{- else }}
 		return {{ .ResultInit.Name }}({{ range .ResultInit.ClientArgs }}{{ .Ref }},{{ end }}), nil
 			{{- end }}

@@ -249,28 +249,51 @@ type SingleView struct {
 	B *string
 }
 
-// NewMultipleViews converts viewed result type MultipleViews to result type
-// MultipleViews.
+// NewMultipleViews initializes result type MultipleViews from viewed result
+// type MultipleViews.
 func NewMultipleViews(vres *multiplemethodsresultmultipleviewsviews.MultipleViews) *MultipleViews {
-	res := &MultipleViews{
-		A: vres.Projected.A,
-		B: vres.Projected.B,
+	var res *MultipleViews
+	switch vres.View {
+	case "default", "":
+		res = newMultipleViewsDefault(vres.Projected)
+	case "tiny":
+		res = newMultipleViewsTiny(vres.Projected)
 	}
 	return res
 }
 
-// NewMultipleViewsDefault projects result type MultipleViews into viewed
-// result type MultipleViews using the default view.
-func NewMultipleViewsDefault(res *MultipleViews) *multiplemethodsresultmultipleviewsviews.MultipleViews {
-	p := newMultipleViewsViewDefault(res)
-	return &multiplemethodsresultmultipleviewsviews.MultipleViews{p, "default"}
+// NewViewedMultipleViews initializes viewed result type MultipleViews from
+// result type MultipleViews using the given view.
+func NewViewedMultipleViews(res *MultipleViews, view string) *multiplemethodsresultmultipleviewsviews.MultipleViews {
+	var vres *multiplemethodsresultmultipleviewsviews.MultipleViews
+	switch view {
+	case "default", "":
+		p := newMultipleViewsViewDefault(res)
+		vres = &multiplemethodsresultmultipleviewsviews.MultipleViews{p, "default"}
+	case "tiny":
+		p := newMultipleViewsViewTiny(res)
+		vres = &multiplemethodsresultmultipleviewsviews.MultipleViews{p, "tiny"}
+	}
+	return vres
 }
 
-// NewMultipleViewsTiny projects result type MultipleViews into viewed result
-// type MultipleViews using the tiny view.
-func NewMultipleViewsTiny(res *MultipleViews) *multiplemethodsresultmultipleviewsviews.MultipleViews {
-	p := newMultipleViewsViewTiny(res)
-	return &multiplemethodsresultmultipleviewsviews.MultipleViews{p, "tiny"}
+// newMultipleViewsDefault converts projected type MultipleViews to service
+// type MultipleViews.
+func newMultipleViewsDefault(vres *multiplemethodsresultmultipleviewsviews.MultipleViewsView) *MultipleViews {
+	res := &MultipleViews{
+		A: vres.A,
+		B: vres.B,
+	}
+	return res
+}
+
+// newMultipleViewsTiny converts projected type MultipleViews to service type
+// MultipleViews.
+func newMultipleViewsTiny(vres *multiplemethodsresultmultipleviewsviews.MultipleViewsView) *MultipleViews {
+	res := &MultipleViews{
+		A: vres.A,
+	}
+	return res
 }
 
 // newMultipleViewsViewDefault projects result type MultipleViews into
@@ -322,32 +345,53 @@ type MultipleViews struct {
 	B int
 }
 
-// NewMultipleViewsCollection converts viewed result type
-// MultipleViewsCollection to result type MultipleViewsCollection.
+// NewMultipleViewsCollection initializes result type MultipleViewsCollection
+// from viewed result type MultipleViewsCollection.
 func NewMultipleViewsCollection(vres resultcollectionmultipleviewsmethodviews.MultipleViewsCollection) MultipleViewsCollection {
-	res := make([]*MultipleViews, len(vres.Projected))
-	for i, val := range vres.Projected {
-		res[i] = &MultipleViews{
-			A: *val.A,
-			B: *val.B,
-		}
+	var res MultipleViewsCollection
+	switch vres.View {
+	case "default", "":
+		res = newMultipleViewsCollectionDefault(vres.Projected)
+	case "tiny":
+		res = newMultipleViewsCollectionTiny(vres.Projected)
 	}
 	return res
 }
 
-// NewMultipleViewsCollectionDefault projects result type
-// MultipleViewsCollection into viewed result type MultipleViewsCollection
-// using the default view.
-func NewMultipleViewsCollectionDefault(res MultipleViewsCollection) resultcollectionmultipleviewsmethodviews.MultipleViewsCollection {
-	p := newMultipleViewsCollectionViewDefault(res)
-	return resultcollectionmultipleviewsmethodviews.MultipleViewsCollection{p, "default"}
+// NewViewedMultipleViewsCollection initializes viewed result type
+// MultipleViewsCollection from result type MultipleViewsCollection using the
+// given view.
+func NewViewedMultipleViewsCollection(res MultipleViewsCollection, view string) resultcollectionmultipleviewsmethodviews.MultipleViewsCollection {
+	var vres resultcollectionmultipleviewsmethodviews.MultipleViewsCollection
+	switch view {
+	case "default", "":
+		p := newMultipleViewsCollectionViewDefault(res)
+		vres = resultcollectionmultipleviewsmethodviews.MultipleViewsCollection{p, "default"}
+	case "tiny":
+		p := newMultipleViewsCollectionViewTiny(res)
+		vres = resultcollectionmultipleviewsmethodviews.MultipleViewsCollection{p, "tiny"}
+	}
+	return vres
 }
 
-// NewMultipleViewsCollectionTiny projects result type MultipleViewsCollection
-// into viewed result type MultipleViewsCollection using the tiny view.
-func NewMultipleViewsCollectionTiny(res MultipleViewsCollection) resultcollectionmultipleviewsmethodviews.MultipleViewsCollection {
-	p := newMultipleViewsCollectionViewTiny(res)
-	return resultcollectionmultipleviewsmethodviews.MultipleViewsCollection{p, "tiny"}
+// newMultipleViewsCollectionDefault converts projected type
+// MultipleViewsCollection to service type MultipleViewsCollection.
+func newMultipleViewsCollectionDefault(vres resultcollectionmultipleviewsmethodviews.MultipleViewsCollectionView) MultipleViewsCollection {
+	res := make(MultipleViewsCollection, len(vres))
+	for i, n := range vres {
+		res[i] = newMultipleViewsDefault(n)
+	}
+	return res
+}
+
+// newMultipleViewsCollectionTiny converts projected type
+// MultipleViewsCollection to service type MultipleViewsCollection.
+func newMultipleViewsCollectionTiny(vres resultcollectionmultipleviewsmethodviews.MultipleViewsCollectionView) MultipleViewsCollection {
+	res := make(MultipleViewsCollection, len(vres))
+	for i, n := range vres {
+		res[i] = newMultipleViewsTiny(n)
+	}
+	return res
 }
 
 // newMultipleViewsCollectionViewDefault projects result type
@@ -370,6 +414,29 @@ func newMultipleViewsCollectionViewTiny(res MultipleViewsCollection) resultcolle
 		vres[i] = newMultipleViewsViewTiny(n)
 	}
 	return vres
+}
+
+// newMultipleViewsDefault converts projected type MultipleViews to service
+// type MultipleViews.
+func newMultipleViewsDefault(vres *resultcollectionmultipleviewsmethodviews.MultipleViewsView) *MultipleViews {
+	res := &MultipleViews{}
+	if vres.A != nil {
+		res.A = *vres.A
+	}
+	if vres.B != nil {
+		res.B = *vres.B
+	}
+	return res
+}
+
+// newMultipleViewsTiny converts projected type MultipleViews to service type
+// MultipleViews.
+func newMultipleViewsTiny(vres *resultcollectionmultipleviewsmethodviews.MultipleViewsView) *MultipleViews {
+	res := &MultipleViews{}
+	if vres.A != nil {
+		res.A = *vres.A
+	}
+	return res
 }
 
 // newMultipleViewsViewDefault projects result type MultipleViews into
@@ -424,28 +491,58 @@ type MultipleViews2 struct {
 	B *string
 }
 
-// NewMultipleViews converts viewed result type MultipleViews to result type
-// MultipleViews.
+// NewMultipleViews initializes result type MultipleViews from viewed result
+// type MultipleViews.
 func NewMultipleViews(vres *resultwithotherresultviews.MultipleViews) *MultipleViews {
-	res := &MultipleViews{
-		A: *vres.Projected.A,
+	var res *MultipleViews
+	switch vres.View {
+	case "default", "":
+		res = newMultipleViewsDefault(vres.Projected)
+	case "tiny":
+		res = newMultipleViewsTiny(vres.Projected)
 	}
-	res.B = unmarshalMultipleViews2ViewToMultipleViews2(vres.Projected.B)
 	return res
 }
 
-// NewMultipleViewsDefault projects result type MultipleViews into viewed
-// result type MultipleViews using the default view.
-func NewMultipleViewsDefault(res *MultipleViews) *resultwithotherresultviews.MultipleViews {
-	p := newMultipleViewsViewDefault(res)
-	return &resultwithotherresultviews.MultipleViews{p, "default"}
+// NewViewedMultipleViews initializes viewed result type MultipleViews from
+// result type MultipleViews using the given view.
+func NewViewedMultipleViews(res *MultipleViews, view string) *resultwithotherresultviews.MultipleViews {
+	var vres *resultwithotherresultviews.MultipleViews
+	switch view {
+	case "default", "":
+		p := newMultipleViewsViewDefault(res)
+		vres = &resultwithotherresultviews.MultipleViews{p, "default"}
+	case "tiny":
+		p := newMultipleViewsViewTiny(res)
+		vres = &resultwithotherresultviews.MultipleViews{p, "tiny"}
+	}
+	return vres
 }
 
-// NewMultipleViewsTiny projects result type MultipleViews into viewed result
-// type MultipleViews using the tiny view.
-func NewMultipleViewsTiny(res *MultipleViews) *resultwithotherresultviews.MultipleViews {
-	p := newMultipleViewsViewTiny(res)
-	return &resultwithotherresultviews.MultipleViews{p, "tiny"}
+// newMultipleViewsDefault converts projected type MultipleViews to service
+// type MultipleViews.
+func newMultipleViewsDefault(vres *resultwithotherresultviews.MultipleViewsView) *MultipleViews {
+	res := &MultipleViews{}
+	if vres.A != nil {
+		res.A = *vres.A
+	}
+	if vres.B != nil {
+		res.B = newMultipleViews2Default(vres.B)
+	}
+	return res
+}
+
+// newMultipleViewsTiny converts projected type MultipleViews to service type
+// MultipleViews.
+func newMultipleViewsTiny(vres *resultwithotherresultviews.MultipleViewsView) *MultipleViews {
+	res := &MultipleViews{}
+	if vres.A != nil {
+		res.A = *vres.A
+	}
+	if vres.B != nil {
+		res.B = newMultipleViews2Default(vres.B)
+	}
+	return res
 }
 
 // newMultipleViewsViewDefault projects result type MultipleViews into
@@ -469,6 +566,28 @@ func newMultipleViewsViewTiny(res *MultipleViews) *resultwithotherresultviews.Mu
 	return vres
 }
 
+// newMultipleViews2Default converts projected type MultipleViews2 to service
+// type MultipleViews2.
+func newMultipleViews2Default(vres *resultwithotherresultviews.MultipleViews2View) *MultipleViews2 {
+	res := &MultipleViews2{
+		B: vres.B,
+	}
+	if vres.A != nil {
+		res.A = *vres.A
+	}
+	return res
+}
+
+// newMultipleViews2Tiny converts projected type MultipleViews2 to service type
+// MultipleViews2.
+func newMultipleViews2Tiny(vres *resultwithotherresultviews.MultipleViews2View) *MultipleViews2 {
+	res := &MultipleViews2{}
+	if vres.A != nil {
+		res.A = *vres.A
+	}
+	return res
+}
+
 // newMultipleViews2ViewDefault projects result type MultipleViews2 into
 // projected type MultipleViews2View using the default view.
 func newMultipleViews2ViewDefault(res *MultipleViews2) *resultwithotherresultviews.MultipleViews2View {
@@ -486,17 +605,5 @@ func newMultipleViews2ViewTiny(res *MultipleViews2) *resultwithotherresultviews.
 		A: &res.A,
 	}
 	return vres
-}
-
-// unmarshalMultipleViews2ViewToMultipleViews2 builds a value of type
-// *MultipleViews2 from a value of type
-// *resultwithotherresultviews.MultipleViews2View.
-func unmarshalMultipleViews2ViewToMultipleViews2(v *resultwithotherresultviews.MultipleViews2View) *MultipleViews2 {
-	res := &MultipleViews2{
-		A: *v.A,
-		B: v.B,
-	}
-
-	return res
 }
 `

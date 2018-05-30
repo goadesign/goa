@@ -60,7 +60,7 @@ type Component struct {
 	Percentage *uint32
 }
 
-// Validate runs the validations defined on StoredBottle.
+// Validate runs the validations defined on the viewed result type StoredBottle.
 func (result *StoredBottle) Validate() (err error) {
 	switch result.View {
 	case "default", "":
@@ -73,7 +73,7 @@ func (result *StoredBottle) Validate() (err error) {
 	return
 }
 
-// ValidateDefault runs the validations defined on StoredBottle using the
+// ValidateDefault runs the validations defined on StoredBottleView using the
 // "default" view.
 func (result *StoredBottleView) ValidateDefault() (err error) {
 	if result.ID == nil {
@@ -130,8 +130,8 @@ func (result *StoredBottleView) ValidateDefault() (err error) {
 	return
 }
 
-// ValidateTiny runs the validations defined on StoredBottle using the "tiny"
-// view.
+// ValidateTiny runs the validations defined on StoredBottleView using the
+// "tiny" view.
 func (result *StoredBottleView) ValidateTiny() (err error) {
 	if result.ID == nil {
 		err = goa.MergeErrors(err, goa.MissingFieldError("id", "result"))
@@ -152,8 +152,8 @@ func (result *StoredBottleView) ValidateTiny() (err error) {
 	return
 }
 
-// ValidateDefault runs the validations defined on Winery using the "default"
-// view.
+// ValidateDefault runs the validations defined on WineryView using the
+// "default" view.
 func (result *WineryView) ValidateDefault() (err error) {
 	if result.Name == nil {
 		err = goa.MergeErrors(err, goa.MissingFieldError("name", "result"))
@@ -176,7 +176,8 @@ func (result *WineryView) ValidateDefault() (err error) {
 	return
 }
 
-// ValidateTiny runs the validations defined on Winery using the "tiny" view.
+// ValidateTiny runs the validations defined on WineryView using the "tiny"
+// view.
 func (result *WineryView) ValidateTiny() (err error) {
 	if result.Name == nil {
 		err = goa.MergeErrors(err, goa.MissingFieldError("name", "result"))
@@ -184,7 +185,7 @@ func (result *WineryView) ValidateTiny() (err error) {
 	return
 }
 
-// Validate runs the validations defined on Component.
+// Validate runs the validations defined on Component
 func (result *Component) Validate() (err error) {
 	if result.Varietal != nil {
 		err = goa.MergeErrors(err, goa.ValidatePattern("result.varietal", *result.Varietal, "[A-Za-z' ]+"))

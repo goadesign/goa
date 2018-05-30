@@ -10,10 +10,8 @@ package storage
 
 import (
 	"context"
-	"fmt"
 
 	goa "goa.design/goa"
-	storageviews "goa.design/goa/examples/cellar/gen/storage/views"
 )
 
 // Endpoints wraps the "storage" service endpoints.
@@ -68,14 +66,9 @@ func NewShowEndpoint(s Service) goa.Endpoint {
 		if err != nil {
 			return nil, err
 		}
-		var vres *storageviews.StoredBottle
-		switch view {
-		case "default", "":
-			vres = NewStoredBottleDefault(res)
-		case "tiny":
-			vres = NewStoredBottleTiny(res)
-		default:
-			return nil, fmt.Errorf("unknown view %q", view)
+		vres := NewViewedStoredBottle(res, view)
+		if err := vres.Validate(); err != nil {
+			return nil, err
 		}
 		return vres, nil
 	}
