@@ -530,9 +530,9 @@ func unmarshalWineryTinyResponseBodyToWineryTiny(v *WineryTinyResponseBody) *sto
 	return res
 }
 
-// unmarshalWineryResponseBodyToWineryView builds a value of type
+// marshalWineryResponseBodyToWineryView builds a value of type
 // *storageviews.WineryView from a value of type *WineryResponseBody.
-func unmarshalWineryResponseBodyToWineryView(v *WineryResponseBody) *storageviews.WineryView {
+func marshalWineryResponseBodyToWineryView(v *WineryResponseBody) *storageviews.WineryView {
 	res := &storageviews.WineryView{
 		Name:    v.Name,
 		Region:  v.Region,

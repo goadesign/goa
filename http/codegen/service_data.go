@@ -1253,7 +1253,7 @@ func buildResponseResultInit(resp *httpdesign.HTTPResponseExpr, e *httpdesign.En
 			Validate: vcode,
 		}}
 		var helpers []*codegen.TransformFunctionData
-		code, helpers, err = codegen.GoTypeTransform(resp.Body.Type, respBody.Type, "body", "v", "", pkg, true, svc.Scope)
+		code, helpers, err = codegen.GoTypeTransform(resp.Body.Type, respBody.Type, "body", "v", "", pkg, md.ViewedResult == nil, svc.Scope)
 		if err == nil {
 			sd.ClientTransformHelpers = codegen.AppendHelpers(sd.ClientTransformHelpers, helpers)
 		}
