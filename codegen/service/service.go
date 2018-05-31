@@ -93,22 +93,34 @@ func File(genpkg string, service *design.ServiceExpr) *codegen.File {
 	}
 
 	// transform result type functions
+	for _, t := range svc.ViewedResultTypes {
+		sections = append(sections, &codegen.SectionTemplate{
+			Name:   "viewed-result-type-to-service-result-type",
+			Source: typeInitT,
+			Data:   t.ResultInit,
+		})
+		sections = append(sections, &codegen.SectionTemplate{
+			Name:   "service-result-type-to-viewed-result-type",
+			Source: typeInitT,
+			Data:   t.Init,
+		})
+	}
 	var projh []*codegen.TransformFunctionData
 	for _, t := range svc.ProjectedTypes {
-		if t.ConvertToResult != nil {
-			projh = codegen.AppendHelpers(projh, t.ConvertToResult.Helpers)
+		for _, i := range t.TypeInits {
+			projh = codegen.AppendHelpers(projh, i.Helpers)
 			sections = append(sections, &codegen.SectionTemplate{
-				Name:   "viewed-result-to-result",
+				Name:   "projected-type-to-service-type",
 				Source: typeInitT,
-				Data:   t.ConvertToResult,
+				Data:   i,
 			})
 		}
-		for _, p := range t.Views {
-			projh = codegen.AppendHelpers(projh, p.Project.Helpers)
+		for _, i := range t.Projections {
+			projh = codegen.AppendHelpers(projh, i.Helpers)
 			sections = append(sections, &codegen.SectionTemplate{
-				Name:   "project-result-init",
+				Name:   "service-type-to-projected-type",
 				Source: typeInitT,
-				Data:   p.Project,
+				Data:   i,
 			})
 		}
 	}
@@ -212,17 +224,7 @@ func {{ .Name }}(err error) {{ .TypeRef }} {
 
 // input: InitData
 const typeInitT = `{{ comment .Description }}
-func {{ .Name }}({{ range .Args }}{{ .Name }} {{ .Ref }}, {{ end }}) {{ .ReturnRef }} {
-{{- if .ReturnIsStruct }}
-	return &{{ .ReturnTypeName }}{
-	{{- range .Args }}
-		{{- if .FieldName }}
-		{{ .FieldName }}: {{ .Name }},
-		{{- end }}
-	{{- end }}
-	}
-{{- else }}
+func {{ .Name }}({{ range .Args }}{{ .Name }} {{ .Ref }}, {{ end }}) {{ .ReturnTypeRef }} {
 	{{ .Code }}
-{{- end }}
 }
 `

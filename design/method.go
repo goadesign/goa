@@ -65,6 +65,33 @@ func (m *MethodExpr) Validate() error {
 	verr := new(eval.ValidationErrors)
 	if m.Payload != nil {
 		verr.Merge(m.Payload.Validate("payload", m))
+		// validate security scheme requirements
+		for _, r := range m.Requirements {
+			for _, s := range r.Schemes {
+				verr.Merge(s.Validate())
+				switch s.Kind {
+				case BasicAuthKind:
+					if !hasTag(m.Payload, "security:username") {
+						verr.Add(m, "payload of method %q of service %q does not define a username attribute, use Username to define one.", m.Name, m.Service.Name)
+					}
+					if !hasTag(m.Payload, "security:password") {
+						verr.Add(m, "payload of method %q of service %q does not define a password attribute, use Password to define one.", m.Name, m.Service.Name)
+					}
+				case APIKeyKind:
+					if !hasTag(m.Payload, "security:apikey:"+s.SchemeName) {
+						verr.Add(m, "payload of method %q of service %q does not define an API key attribute, use APIKey to define one.", m.Name, m.Service.Name)
+					}
+				case JWTKind:
+					if !hasTag(m.Payload, "security:token") {
+						verr.Add(m, "payload of method %q of service %q does not define a JWT attribute, use Token to define one.", m.Name, m.Service.Name)
+					}
+				case OAuth2Kind:
+					if !hasTag(m.Payload, "security:accesstoken") {
+						verr.Add(m, "payload of method %q of service %q does not define a OAuth2 access token attribute, use AccessToken to define one.", m.Name, m.Service.Name)
+					}
+				}
+			}
+		}
 	}
 	if m.Result != nil {
 		verr.Merge(m.Result.Validate("result", m))
@@ -73,32 +100,6 @@ func (m *MethodExpr) Validate() error {
 		if err := e.Validate(); err != nil {
 			if verrs, ok := err.(*eval.ValidationErrors); ok {
 				verr.Merge(verrs)
-			}
-		}
-	}
-	for _, r := range m.Requirements {
-		for _, s := range r.Schemes {
-			verr.Merge(s.Validate())
-			switch s.Kind {
-			case BasicAuthKind:
-				if !hasTag(m.Payload, "security:username") {
-					verr.Add(m, "payload of method %q of service %q does not define a username attribute, use Username to define one.", m.Name, m.Service.Name)
-				}
-				if !hasTag(m.Payload, "security:password") {
-					verr.Add(m, "payload of method %q of service %q does not define a password attribute, use Password to define one.", m.Name, m.Service.Name)
-				}
-			case APIKeyKind:
-				if !hasTag(m.Payload, "security:apikey:"+s.SchemeName) {
-					verr.Add(m, "payload of method %q of service %q does not define an API key attribute, use APIKey to define one.", m.Name, m.Service.Name)
-				}
-			case JWTKind:
-				if !hasTag(m.Payload, "security:token") {
-					verr.Add(m, "payload of method %q of service %q does not define a JWT attribute, use Token to define one.", m.Name, m.Service.Name)
-				}
-			case OAuth2Kind:
-				if !hasTag(m.Payload, "security:accesstoken") {
-					verr.Add(m, "payload of method %q of service %q does not define a OAuth2 access token attribute, use AccessToken to define one.", m.Name, m.Service.Name)
-				}
 			}
 		}
 	}
