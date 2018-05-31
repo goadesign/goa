@@ -1253,6 +1253,18 @@ func buildResponseResultInit(resp *httpdesign.HTTPResponseExpr, e *httpdesign.En
 			Validate: vcode,
 		}}
 		var helpers []*codegen.TransformFunctionData
+		// If the method result type is a viewed result type (i.e. result type with
+		// multiple views), then we marshal the client response body to the viewed
+		// result type so that the transformation code never assumes that all the
+		// required attributes in the result type are set (a view in the viewed
+		// result type may not contain a required attribute). The client response
+		// body validation is now delegated to the viewed result type which
+		// contains view-specific validation logic.
+		// If the method result type is a user type or a result type with single
+		// view, then we unmarshal the client response body to the result type
+		// after validating the response body. Here, the transformation code must
+		// rely that the required attributes are set in the response body
+		// (otherwise validation would fail).
 		code, helpers, err = codegen.GoTypeTransform(resp.Body.Type, respBody.Type, "body", "v", "", pkg, md.ViewedResult == nil, svc.Scope)
 		if err == nil {
 			sd.ClientTransformHelpers = codegen.AppendHelpers(sd.ClientTransformHelpers, helpers)

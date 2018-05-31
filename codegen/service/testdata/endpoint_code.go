@@ -133,7 +133,7 @@ func NewAEndpoint(s Service) goa.Endpoint {
 		if err != nil {
 			return nil, err
 		}
-		vres := NewViewedViewtype(res, view)
+		vres := newViewedViewtype(res, view)
 		if err := vres.Validate(); err != nil {
 			return nil, err
 		}

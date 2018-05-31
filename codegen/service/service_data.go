@@ -208,7 +208,7 @@ type (
 
 	// ViewedResultTypeData contains the data used to generate a viewed result type
 	// (i.e. a method result type with more than one view). The viewed result
-	// type holds the projected type and a view based on which it projects the
+	// type holds the projected type and a view based on which it creates the
 	// projected type. It also contains the code to validate the viewed result
 	// type and the functions to initialize a viewed result type from a result
 	// type and vice versa.
@@ -242,24 +242,28 @@ type (
 		Description string
 	}
 
-	// ProjectedTypeData contains the data used to generate a user type that can
-	// be projected based on a view. The generated type uses pointers for all
-	// fields so that view specific validation logic may be implemented.
-	// A projected type is generated for every user type found in a viewed result
-	// type. It also contains to data to generate view-based validation logic
-	// and transformation functions to convert a projected type to its
-	// corresponding service type and vice versa.
+	// ProjectedTypeData contains the data used to generate a projected type for
+	// the corresponding user type or result type in the service package. The
+	// generated type uses pointers for all fields. It also contains the data
+	// to generate view-based validation logic and transformation functions to
+	// convert a projected type to its corresponding service type and vice versa.
 	ProjectedTypeData struct {
 		// the projected type
 		*UserTypeData
-		// Validations lists the validation functions to run on the projected type
-		// or the viewed result type.
+		// Validations lists the validation functions to run on the projected type.
+		// If the projected type corresponds to a result type with multiple views
+		// then a validation function for each view is generated. For user types
+		// and result types with a single view, only one validation function is
+		// generated.
 		Validations []*ValidateData
-		// Projections contains the code to project a projected type based on
-		// views.
+		// Projections contains the code to create a projected type based on
+		// views. If the projected type corresponds to a result type with multiple
+		// views, then a function for each view is generated.
 		Projections []*InitData
 		// TypeInits contains the code to convert a projected type to its
-		// corresponding service type.
+		// corresponding service type. If the projected type corresponds to a
+		// result type with multiple views, then a function for each view is
+		// generated.
 		TypeInits []*InitData
 		// ViewsPkg is the views package name.
 		ViewsPkg string
@@ -734,8 +738,9 @@ func requirements(m *design.MethodExpr) []*design.SecurityExpr {
 	return design.Root.API.Requirements
 }
 
-// collectProjectedTypes collects all the projected types from the given
-// user type and stores them in data.
+// collectProjectedTypes builds a projected type for every user type found
+// when recursing through the attributes. It stores the projected types in
+// data.
 func collectProjectedTypes(projected, att *design.AttributeExpr, seen map[string]*ProjectedTypeData, scope *codegen.NameScope, viewspkg string) (data []*ProjectedTypeData) {
 	collect := func(projected, att *design.AttributeExpr) []*ProjectedTypeData {
 		return collectProjectedTypes(projected, att, seen, scope, viewspkg)
@@ -744,6 +749,11 @@ func collectProjectedTypes(projected, att *design.AttributeExpr, seen map[string
 	case design.UserType:
 		dt := att.Type.(design.UserType)
 		if pd, ok := seen[dt.Name()]; ok {
+			// a projected type is already created for this user type. We change the
+			// attribute type to this seen projected type. The seen projected type
+			// can be nil if the attribute type has a ciruclar type definition in
+			// which case we don't change the attribute type until the projected type
+			// is created during the recursion.
 			if pd != nil {
 				projected.Type = pd.Type
 			}
@@ -758,6 +768,7 @@ func collectProjectedTypes(projected, att *design.AttributeExpr, seen map[string
 		types := collect(pt.Attribute(), dt.Attribute())
 		pd := buildProjectedType(projected, att, scope, viewspkg)
 		seen[dt.Name()] = pd
+		// Change the attribute type to the newly created projected type.
 		projected.Type = pd.Type
 		data = append(data, pd)
 		data = append(data, types...)
@@ -864,7 +875,7 @@ func buildViewedResultType(att *design.AttributeExpr, projected design.UserType,
 	if err := initTypeCodeTmpl.Execute(&buf, data); err != nil {
 		panic(err) // bug
 	}
-	name = "NewViewed" + resvar
+	name = "newViewed" + resvar
 	init = &InitData{
 		Name:        name,
 		Description: fmt.Sprintf("%s initializes viewed result type %s from result type %s using the given view.", name, resvar, resvar),
@@ -1150,6 +1161,27 @@ func buildValidations(projected *design.AttributeExpr, scope *codegen.NameScope)
 	return validations
 }
 
+// buildConstructorCode builds the transformation code to create a projected
+// type from a service type and vice versa.
+//
+// src and tgt contains the projected type or a service type
+//
+// srcvar and tgtvar contains the variable name that holds the source and
+// target data structures in the transformation code.
+//
+// srcpkg and tgtpkg contains the name of the package where the source and
+// target types are defined.
+//
+// view parameter is used to generate the function name to call to initialize
+// the items of a result type collection. This parameter is applicable only
+// when the src/tgt is a result type collection.
+//
+// scope is used to compute the name of the user types when initializing fields
+// that use them.
+//
+// unmarshal if true indicates that the code generated is to convert a
+// projected type to a service type. If false, the code generated is to convert
+// a service type to a projected type.
 func buildConstructorCode(src, tgt *design.AttributeExpr, srcvar, tgtvar, srcpkg, tgtpkg string, view string, scope *codegen.NameScope, unmarshal bool) (string, []*codegen.TransformFunctionData) {
 	var (
 		code    string
@@ -1161,7 +1193,6 @@ func buildConstructorCode(src, tgt *design.AttributeExpr, srcvar, tgtvar, srcpkg
 	data := map[string]interface{}{
 		"ArgVar":       srcvar,
 		"ReturnVar":    tgtvar,
-		"View":         view,
 		"IsCollection": arr != nil,
 		"TargetType":   scope.GoFullTypeName(tgt, tgtpkg),
 	}

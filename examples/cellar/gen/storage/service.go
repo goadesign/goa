@@ -177,9 +177,9 @@ func NewStoredBottle(vres *storageviews.StoredBottle) *StoredBottle {
 	return res
 }
 
-// NewViewedStoredBottle initializes viewed result type StoredBottle from
+// newViewedStoredBottle initializes viewed result type StoredBottle from
 // result type StoredBottle using the given view.
-func NewViewedStoredBottle(res *StoredBottle, view string) *storageviews.StoredBottle {
+func newViewedStoredBottle(res *StoredBottle, view string) *storageviews.StoredBottle {
 	var vres *storageviews.StoredBottle
 	switch view {
 	case "default", "":

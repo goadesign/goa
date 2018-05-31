@@ -262,9 +262,9 @@ func NewMultipleViews(vres *multiplemethodsresultmultipleviewsviews.MultipleView
 	return res
 }
 
-// NewViewedMultipleViews initializes viewed result type MultipleViews from
+// newViewedMultipleViews initializes viewed result type MultipleViews from
 // result type MultipleViews using the given view.
-func NewViewedMultipleViews(res *MultipleViews, view string) *multiplemethodsresultmultipleviewsviews.MultipleViews {
+func newViewedMultipleViews(res *MultipleViews, view string) *multiplemethodsresultmultipleviewsviews.MultipleViews {
 	var vres *multiplemethodsresultmultipleviewsviews.MultipleViews
 	switch view {
 	case "default", "":
@@ -358,10 +358,10 @@ func NewMultipleViewsCollection(vres resultcollectionmultipleviewsmethodviews.Mu
 	return res
 }
 
-// NewViewedMultipleViewsCollection initializes viewed result type
+// newViewedMultipleViewsCollection initializes viewed result type
 // MultipleViewsCollection from result type MultipleViewsCollection using the
 // given view.
-func NewViewedMultipleViewsCollection(res MultipleViewsCollection, view string) resultcollectionmultipleviewsmethodviews.MultipleViewsCollection {
+func newViewedMultipleViewsCollection(res MultipleViewsCollection, view string) resultcollectionmultipleviewsmethodviews.MultipleViewsCollection {
 	var vres resultcollectionmultipleviewsmethodviews.MultipleViewsCollection
 	switch view {
 	case "default", "":
@@ -503,9 +503,9 @@ func NewMultipleViews(vres *resultwithotherresultviews.MultipleViews) *MultipleV
 	return res
 }
 
-// NewViewedMultipleViews initializes viewed result type MultipleViews from
+// newViewedMultipleViews initializes viewed result type MultipleViews from
 // result type MultipleViews using the given view.
-func NewViewedMultipleViews(res *MultipleViews, view string) *resultwithotherresultviews.MultipleViews {
+func newViewedMultipleViews(res *MultipleViews, view string) *resultwithotherresultviews.MultipleViews {
 	var vres *resultwithotherresultviews.MultipleViews
 	switch view {
 	case "default", "":

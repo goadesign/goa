@@ -66,7 +66,7 @@ func NewShowEndpoint(s Service) goa.Endpoint {
 		if err != nil {
 			return nil, err
 		}
-		vres := NewViewedStoredBottle(res, view)
+		vres := newViewedStoredBottle(res, view)
 		if err := vres.Validate(); err != nil {
 			return nil, err
 		}
