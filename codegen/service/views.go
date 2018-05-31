@@ -27,6 +27,13 @@ func ViewsFile(genpkg string, service *design.ServiceExpr) *codegen.File {
 		sections = []*codegen.SectionTemplate{header}
 
 		// type definitions
+		for _, t := range svc.ViewedResultTypes {
+			sections = append(sections, &codegen.SectionTemplate{
+				Name:   "viewed-result-type",
+				Source: userTypeT,
+				Data:   t.UserTypeData,
+			})
+		}
 		for _, t := range svc.ProjectedTypes {
 			sections = append(sections, &codegen.SectionTemplate{
 				Name:   "projected-type",
@@ -36,24 +43,20 @@ func ViewsFile(genpkg string, service *design.ServiceExpr) *codegen.File {
 		}
 
 		// validations
+		for _, t := range svc.ViewedResultTypes {
+			sections = append(sections, &codegen.SectionTemplate{
+				Name:   "validate-viewed-result-type",
+				Source: validateT,
+				Data:   t.Validate,
+			})
+		}
 		for _, t := range svc.ProjectedTypes {
-			if t.Validate != nil {
+			for _, v := range t.Validations {
 				sections = append(sections, &codegen.SectionTemplate{
-					Name:   "validate-type",
+					Name:   "validate-projected-type",
 					Source: validateT,
-					Data:   t.Validate,
+					Data:   v,
 				})
-			}
-			if t.Views != nil {
-				for _, v := range t.Views {
-					if v.Validate != nil {
-						sections = append(sections, &codegen.SectionTemplate{
-							Name:   "validate-type",
-							Source: validateT,
-							Data:   v.Validate,
-						})
-					}
-				}
 			}
 		}
 	}
