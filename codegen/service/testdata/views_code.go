@@ -18,7 +18,7 @@ type ResultTypeView struct {
 func (result *ResultType) Validate() (err error) {
 	switch result.View {
 	case "default", "":
-		err = result.Projected.ValidateDefault()
+		err = result.Projected.Validate()
 	case "tiny":
 		err = result.Projected.ValidateTiny()
 	default:
@@ -27,9 +27,9 @@ func (result *ResultType) Validate() (err error) {
 	return
 }
 
-// ValidateDefault runs the validations defined on ResultTypeView using the
-// "default" view.
-func (result *ResultTypeView) ValidateDefault() (err error) {
+// Validate runs the validations defined on ResultTypeView using the "default"
+// view.
+func (result *ResultTypeView) Validate() (err error) {
 	if result.A == nil {
 		err = goa.MergeErrors(err, goa.MissingFieldError("a", "result"))
 	}
@@ -72,7 +72,7 @@ type ResultTypeView struct {
 func (result ResultTypeCollection) Validate() (err error) {
 	switch result.View {
 	case "default", "":
-		err = result.Projected.ValidateDefault()
+		err = result.Projected.Validate()
 	case "tiny":
 		err = result.Projected.ValidateTiny()
 	default:
@@ -81,11 +81,11 @@ func (result ResultTypeCollection) Validate() (err error) {
 	return
 }
 
-// ValidateDefault runs the validations defined on ResultTypeCollectionView
-// using the "default" view.
-func (result ResultTypeCollectionView) ValidateDefault() (err error) {
+// Validate runs the validations defined on ResultTypeCollectionView using the
+// "default" view.
+func (result ResultTypeCollectionView) Validate() (err error) {
 	for _, item := range result {
-		if err2 := item.ValidateDefault(); err2 != nil {
+		if err2 := item.Validate(); err2 != nil {
 			err = goa.MergeErrors(err, err2)
 		}
 	}
@@ -103,9 +103,9 @@ func (result ResultTypeCollectionView) ValidateTiny() (err error) {
 	return
 }
 
-// ValidateDefault runs the validations defined on ResultTypeView using the
-// "default" view.
-func (result *ResultTypeView) ValidateDefault() (err error) {
+// Validate runs the validations defined on ResultTypeView using the "default"
+// view.
+func (result *ResultTypeView) Validate() (err error) {
 	if result.A == nil {
 		err = goa.MergeErrors(err, goa.MissingFieldError("a", "result"))
 	}
@@ -148,7 +148,7 @@ type UserType struct {
 func (result *ResultType) Validate() (err error) {
 	switch result.View {
 	case "default", "":
-		err = result.Projected.ValidateDefault()
+		err = result.Projected.Validate()
 	case "tiny":
 		err = result.Projected.ValidateTiny()
 	default:
@@ -157,9 +157,9 @@ func (result *ResultType) Validate() (err error) {
 	return
 }
 
-// ValidateDefault runs the validations defined on ResultTypeView using the
-// "default" view.
-func (result *ResultTypeView) ValidateDefault() (err error) {
+// Validate runs the validations defined on ResultTypeView using the "default"
+// view.
+func (result *ResultTypeView) Validate() (err error) {
 	if result.A == nil {
 		err = goa.MergeErrors(err, goa.MissingFieldError("a", "result"))
 	}
@@ -220,7 +220,7 @@ type RT3View struct {
 func (result *RT) Validate() (err error) {
 	switch result.View {
 	case "default", "":
-		err = result.Projected.ValidateDefault()
+		err = result.Projected.Validate()
 	case "tiny":
 		err = result.Projected.ValidateTiny()
 	default:
@@ -229,9 +229,8 @@ func (result *RT) Validate() (err error) {
 	return
 }
 
-// ValidateDefault runs the validations defined on RTView using the "default"
-// view.
-func (result *RTView) ValidateDefault() (err error) {
+// Validate runs the validations defined on RTView using the "default" view.
+func (result *RTView) Validate() (err error) {
 
 	if result.B != nil {
 		if err2 := result.B.ValidateExtended(); err2 != nil {
@@ -239,7 +238,7 @@ func (result *RTView) ValidateDefault() (err error) {
 		}
 	}
 	if result.C != nil {
-		if err2 := result.C.ValidateDefault(); err2 != nil {
+		if err2 := result.C.Validate(); err2 != nil {
 			err = goa.MergeErrors(err, err2)
 		}
 	}
@@ -255,16 +254,15 @@ func (result *RTView) ValidateTiny() (err error) {
 		}
 	}
 	if result.C != nil {
-		if err2 := result.C.ValidateDefault(); err2 != nil {
+		if err2 := result.C.Validate(); err2 != nil {
 			err = goa.MergeErrors(err, err2)
 		}
 	}
 	return
 }
 
-// ValidateDefault runs the validations defined on RT2View using the "default"
-// view.
-func (result *RT2View) ValidateDefault() (err error) {
+// Validate runs the validations defined on RT2View using the "default" view.
+func (result *RT2View) Validate() (err error) {
 	if result.C == nil {
 		err = goa.MergeErrors(err, goa.MissingFieldError("c", "result"))
 	}
@@ -300,9 +298,8 @@ func (result *UserType) Validate() (err error) {
 	return
 }
 
-// ValidateDefault runs the validations defined on RT3View using the "default"
-// view.
-func (result *RT3View) ValidateDefault() (err error) {
+// Validate runs the validations defined on RT3View using the "default" view.
+func (result *RT3View) Validate() (err error) {
 	if result.X == nil {
 		err = goa.MergeErrors(err, goa.MissingFieldError("x", "result"))
 	}
@@ -338,7 +335,7 @@ type RTView struct {
 func (result *RT) Validate() (err error) {
 	switch result.View {
 	case "default", "":
-		err = result.Projected.ValidateDefault()
+		err = result.Projected.Validate()
 	case "tiny":
 		err = result.Projected.ValidateTiny()
 	default:
@@ -347,9 +344,8 @@ func (result *RT) Validate() (err error) {
 	return
 }
 
-// ValidateDefault runs the validations defined on RTView using the "default"
-// view.
-func (result *RTView) ValidateDefault() (err error) {
+// Validate runs the validations defined on RTView using the "default" view.
+func (result *RTView) Validate() (err error) {
 	if result.A == nil {
 		err = goa.MergeErrors(err, goa.MissingFieldError("a", "result"))
 	}
@@ -367,7 +363,7 @@ func (result *RTView) ValidateTiny() (err error) {
 		err = goa.MergeErrors(err, goa.MissingFieldError("a", "result"))
 	}
 	if result.A != nil {
-		if err2 := result.A.ValidateDefault(); err2 != nil {
+		if err2 := result.A.Validate(); err2 != nil {
 			err = goa.MergeErrors(err, err2)
 		}
 	}

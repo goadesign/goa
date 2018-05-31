@@ -990,7 +990,10 @@ func buildTypeInits(projected, att *design.AttributeExpr, scope *codegen.NameSco
 			},
 		}
 		code, helpers := buildConstructorCode(src, att, "vres", "res", viewspkg, "", view.Name, scope, true)
-		name := "new" + resvar + codegen.Goify(view.Name, true)
+		name := "new" + resvar
+		if view.Name != "default" {
+			name += codegen.Goify(view.Name, true)
+		}
 		init = append(init, &InitData{
 			Name:          name,
 			Description:   fmt.Sprintf("%s converts projected type %s to service type %s.", name, resvar, resvar),
@@ -1049,10 +1052,13 @@ func buildProjections(projected, att *design.AttributeExpr, scope *codegen.NameS
 			},
 		}
 		code, helpers := buildConstructorCode(att, tgt, "res", "vres", "", viewspkg, view.Name, scope, false)
-		name := "new" + tname + codegen.Goify(view.Name, true)
+		name := "new" + tname
+		if view.Name != "default" {
+			name += codegen.Goify(view.Name, true)
+		}
 		projections = append(projections, &InitData{
 			Name:          name,
-			Description:   fmt.Sprintf("%s projects result type %s into projected type %s using the %s view.", name, scope.GoTypeName(att), tname, view.Name),
+			Description:   fmt.Sprintf("%s projects result type %s into projected type %s using the %q view.", name, scope.GoTypeName(att), tname, view.Name),
 			Args:          []*InitArgData{{Name: "res", Ref: scope.GoTypeRef(att)}},
 			ReturnTypeRef: scope.GoFullTypeRef(projected, viewspkg),
 			Code:          code,
@@ -1085,7 +1091,10 @@ func buildValidations(projected *design.AttributeExpr, scope *codegen.NameScope)
 				"Source":       "result",
 				"IsCollection": isarr,
 			}
-			name := "Validate" + codegen.Goify(view.Name, true)
+			name := "Validate"
+			if view.Name != "default" {
+				name += codegen.Goify(view.Name, true)
+			}
 			if isarr {
 				// dealing with an array type
 				data["Source"] = "item"
@@ -1100,8 +1109,8 @@ func buildValidations(projected *design.AttributeExpr, scope *codegen.NameScope)
 						if rt2, ok := attr.Type.(*design.ResultTypeExpr); ok && rt2.HasMultipleViews() {
 							// use explicitly specified view (if any) for the attribute,
 							// otherwise use default
-							vw := "default"
-							if v, ok := n.Attribute.Metadata["view"]; ok {
+							vw := ""
+							if v, ok := n.Attribute.Metadata["view"]; ok && v[0] != "default" {
 								vw = v[0]
 							}
 							fields = append(fields, map[string]interface{}{
@@ -1158,7 +1167,7 @@ func buildConstructorCode(src, tgt *design.AttributeExpr, srcvar, tgtvar, srcpkg
 	}
 	if arr != nil {
 		init := "new" + scope.GoTypeName(arr.ElemType)
-		if view != "" {
+		if view != "" && view != "default" {
 			init += codegen.Goify(view, true)
 		}
 		data["InitName"] = init
@@ -1190,9 +1199,9 @@ func buildConstructorCode(src, tgt *design.AttributeExpr, srcvar, tgtvar, srcpkg
 		for _, n := range *trts {
 			finit := "new" + scope.GoTypeName(n.Attribute)
 			if view != "" {
-				v := "default"
+				v := ""
 				if vatt := rt.View(view).AttributeExpr.Find(n.Name); vatt != nil {
-					if attv, ok := vatt.Metadata["view"]; ok {
+					if attv, ok := vatt.Metadata["view"]; ok && attv[0] != "default" {
 						// view is explicitly set for the result type on the attribute
 						v = attv[0]
 					}
@@ -1220,10 +1229,10 @@ const (
   {{- range .Views }}
   case {{ printf "%q" .Name }}{{ if eq .Name "default" }}, ""{{ end }}:
     {{- if $.ToViewed }}
-    p := {{ $.InitName }}{{ goify .Name true }}({{ $.ArgVar }})
+    p := {{ $.InitName }}{{ if ne .Name "default" }}{{ goify .Name true }}{{ end }}({{ $.ArgVar }})
     {{ $.ReturnVar }} = {{ if not $.IsCollection }}&{{ end }}{{ $.TargetType }}{ p,  {{ printf "%q" .Name }} }
     {{- else }}
-    {{ $.ReturnVar }} = {{ $.InitName }}{{ goify .Name true }}({{ $.ArgVar }}.Projected)
+    {{ $.ReturnVar }} = {{ $.InitName }}{{ if ne .Name "default" }}{{ goify .Name true }}{{ end }}({{ $.ArgVar }}.Projected)
     {{- end }}
   {{- end }}
   }
@@ -1246,7 +1255,7 @@ return {{ .ReturnVar }}`
 switch {{ .ArgVar }}.View {
 	{{- range .Views }}
 case {{ printf "%q" .Name }}{{ if eq .Name "default" }}, ""{{ end }}:
-	err = {{ $.ArgVar }}.Projected.Validate{{ goify .Name true }}()
+	err = {{ $.ArgVar }}.Projected.Validate{{ if ne .Name "default" }}{{ goify .Name true }}{{ end }}()
 	{{- end }}
 default:
 	err = goa.InvalidEnumValueError("view", {{ .Source }}.View, []interface{}{ {{ range .Views }}{{ printf "%q" .Name }}, {{ end }} })

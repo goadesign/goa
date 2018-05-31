@@ -64,7 +64,7 @@ type Component struct {
 func (result *StoredBottle) Validate() (err error) {
 	switch result.View {
 	case "default", "":
-		err = result.Projected.ValidateDefault()
+		err = result.Projected.Validate()
 	case "tiny":
 		err = result.Projected.ValidateTiny()
 	default:
@@ -73,9 +73,9 @@ func (result *StoredBottle) Validate() (err error) {
 	return
 }
 
-// ValidateDefault runs the validations defined on StoredBottleView using the
+// Validate runs the validations defined on StoredBottleView using the
 // "default" view.
-func (result *StoredBottleView) ValidateDefault() (err error) {
+func (result *StoredBottleView) Validate() (err error) {
 	if result.ID == nil {
 		err = goa.MergeErrors(err, goa.MissingFieldError("id", "result"))
 	}
@@ -152,9 +152,8 @@ func (result *StoredBottleView) ValidateTiny() (err error) {
 	return
 }
 
-// ValidateDefault runs the validations defined on WineryView using the
-// "default" view.
-func (result *WineryView) ValidateDefault() (err error) {
+// Validate runs the validations defined on WineryView using the "default" view.
+func (result *WineryView) Validate() (err error) {
 	if result.Name == nil {
 		err = goa.MergeErrors(err, goa.MissingFieldError("name", "result"))
 	}
