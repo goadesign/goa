@@ -36,6 +36,19 @@ func (c *Client) BuildSigninRequest(ctx context.Context, v interface{}) (*http.R
 	return req, nil
 }
 
+// EncodeSigninRequest returns an encoder for requests sent to the
+// secured_service signin server.
+func EncodeSigninRequest(encoder func(*http.Request) goahttp.Encoder) func(*http.Request, interface{}) error {
+	return func(req *http.Request, v interface{}) error {
+		p, ok := v.(*securedservice.SigninPayload)
+		if !ok {
+			return goahttp.ErrInvalidType("secured_service", "signin", "*securedservice.SigninPayload", v)
+		}
+		req.SetBasicAuth(p.Username, p.Password)
+		return nil
+	}
+}
+
 // DecodeSigninResponse returns a decoder for responses returned by the
 // secured_service signin endpoint. restoreBody controls whether the response
 // body should be restored after having been read.

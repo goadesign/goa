@@ -32,6 +32,8 @@ type (
 		// PkgName is the service HTTP client package import name,
 		// e.g. "storagec".
 		PkgName string
+		// NeedStream if true passes websocket specific arguments to the CLI.
+		NeedStream bool
 	}
 
 	subcommandData struct {
@@ -184,8 +186,15 @@ func endpointParser(genpkg string, root *httpdesign.RootExpr, data []*commandDat
 		codegen.Header(title, "cli", specs),
 		{Source: usageT, Data: usages},
 		{Source: exampleT, Data: examples},
-		{Source: parseT, Data: data},
 	}
+	sections = append(sections, &codegen.SectionTemplate{
+		Name:   "parse-endpoint",
+		Source: parseT,
+		Data:   data,
+		FuncMap: map[string]interface{}{
+			"streamingCmdExists": streamingCmdExists,
+		},
+	})
 	for _, cmd := range data {
 		sections = append(sections, &codegen.SectionTemplate{
 			Name:    "cli-command-usage",
@@ -267,6 +276,7 @@ func buildCommandData(svc *ServiceData) *commandData {
 		Subcommands: subcommands,
 		Example:     example,
 		PkgName:     svc.Service.PkgName + "c",
+		NeedStream:  streamingEndpointExists(svc),
 	}
 }
 
@@ -612,6 +622,17 @@ func argToFlag(svcn, en string, arg *InitArgData) *flagData {
 	}
 }
 
+// streamingCmdExists returns true if at least one command in the list of commands
+// uses stream for sending payload/result.
+func streamingCmdExists(data []*commandData) bool {
+	for _, c := range data {
+		if c.NeedStream {
+			return true
+		}
+	}
+	return false
+}
+
 // input: []string
 const usageT = `// UsageCommands returns the set of commands and sub-commands using the format
 //
@@ -640,6 +661,10 @@ func ParseEndpoint(
 	enc func(*http.Request) goahttp.Encoder,
 	dec func(*http.Response) goahttp.Decoder,
 	restore bool,
+	{{- if streamingCmdExists . }}
+	dialer goahttp.Dialer,
+	connConfigFn goahttp.ConnConfigureFunc,
+	{{- end }}
 	{{- range $c := . }}
 	{{- range .Subcommands }}
 		{{- if .MultipartRequestEncoder }}
@@ -732,7 +757,7 @@ func ParseEndpoint(
 		switch svcn {
 	{{- range . }}
 		case "{{ .Name }}":
-			c := {{ .PkgName }}.NewClient(scheme, host, doer, enc, dec, restore)
+			c := {{ .PkgName }}.NewClient(scheme, host, doer, enc, dec, restore{{ if .NeedStream }}, dialer, connConfigFn{{- end }})
 			switch epn {
 		{{- $pkgName := .PkgName }}{{ range .Subcommands }}
 			case "{{ .Name }}":

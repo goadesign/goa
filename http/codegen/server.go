@@ -37,9 +37,13 @@ func server(genpkg string, svc *httpdesign.ServiceExpr) *codegen.File {
 			{Path: "io"},
 			{Path: "mime/multipart"},
 			{Path: "net/http"},
+			{Path: "sync"},
+			{Path: "time"},
+			{Path: "github.com/gorilla/websocket"},
 			{Path: "goa.design/goa", Name: "goa"},
 			{Path: "goa.design/goa/http", Name: "goahttp"},
 			{Path: genpkg + "/" + codegen.SnakeCase(svc.Name()), Name: data.Service.PkgName},
+			{Path: genpkg + "/" + codegen.SnakeCase(svc.Name()) + "/" + "views", Name: data.Service.ViewsPkg},
 		}),
 	}
 
@@ -54,9 +58,23 @@ func server(genpkg string, svc *httpdesign.ServiceExpr) *codegen.File {
 				Data:   e.MultipartRequestDecoder,
 			})
 		}
+		if e.ServerStream != nil {
+			sections = append(sections, &codegen.SectionTemplate{
+				Name:   "server-stream-struct-type",
+				Source: streamStructTypeT,
+				Data:   e.ServerStream,
+			})
+		}
 	}
 
-	sections = append(sections, &codegen.SectionTemplate{Name: "server-init", Source: serverInitT, Data: data})
+	sections = append(sections, &codegen.SectionTemplate{
+		Name:   "server-init",
+		Source: serverInitT,
+		Data:   data,
+		FuncMap: map[string]interface{}{
+			"streamingEndpointExists": streamingEndpointExists,
+		},
+	})
 	sections = append(sections, &codegen.SectionTemplate{Name: "server-service", Source: serverServiceT, Data: data})
 	sections = append(sections, &codegen.SectionTemplate{Name: "server-use", Source: serverUseT, Data: data})
 	sections = append(sections, &codegen.SectionTemplate{Name: "server-mount", Source: serverMountT, Data: data})
@@ -67,6 +85,27 @@ func server(genpkg string, svc *httpdesign.ServiceExpr) *codegen.File {
 	}
 	for _, s := range data.FileServers {
 		sections = append(sections, &codegen.SectionTemplate{Name: "server-files", Source: fileServerT, FuncMap: funcs, Data: s})
+	}
+	for _, e := range data.Endpoints {
+		if e.ServerStream != nil {
+			sections = append(sections, &codegen.SectionTemplate{
+				Name:   "server-stream-send",
+				Source: streamSendT,
+				Data:   e.ServerStream,
+			})
+			if e.Method.ViewedResult != nil {
+				sections = append(sections, &codegen.SectionTemplate{
+					Name:   "server-stream-set-view",
+					Source: streamSetViewT,
+					Data:   e.ServerStream,
+				})
+			}
+			sections = append(sections, &codegen.SectionTemplate{
+				Name:   "server-stream-close",
+				Source: streamCloseT,
+				Data:   e.ServerStream,
+			})
+		}
 	}
 
 	return &codegen.File{Path: path, SectionTemplates: sections}
@@ -138,6 +177,17 @@ func serverEncodeDecode(genpkg string, svc *httpdesign.ServiceExpr) *codegen.Fil
 	}
 
 	return &codegen.File{Path: path, SectionTemplates: sections}
+}
+
+// streamingEndpointExists returns true if at least one of the endpoints in
+// the service defines a streaming payload or result.
+func streamingEndpointExists(sd *ServiceData) bool {
+	for _, e := range sd.Endpoints {
+		if e.ServerStream != nil || e.ClientStream != nil {
+			return true
+		}
+	}
+	return false
 }
 
 func transTmplFuncs(s *httpdesign.ServiceExpr) map[string]interface{} {
@@ -226,6 +276,10 @@ func {{ .ServerInit }}(
 	dec func(*http.Request) goahttp.Decoder,
 	enc func(context.Context, http.ResponseWriter) goahttp.Encoder,
 	eh func(context.Context, http.ResponseWriter, error),
+	{{- if streamingEndpointExists . }}
+	up goahttp.Upgrader,
+	connConfigFn goahttp.ConnConfigureFunc,
+	{{- end }}
 	{{- range .Endpoints }}
 		{{- if .MultipartRequestDecoder }}
 	{{ .MultipartRequestDecoder.VarName }} {{ .MultipartRequestDecoder.FuncName }},
@@ -247,7 +301,7 @@ func {{ .ServerInit }}(
 			{{- end }}
 		},
 		{{- range .Endpoints }}
-		{{ .Method.VarName }}: {{ .HandlerInit }}(e.{{ .Method.VarName }}, mux, {{ if .MultipartRequestDecoder }}{{ .MultipartRequestDecoder.InitName }}(mux, {{ .MultipartRequestDecoder.VarName }}){{ else }}dec{{ end }}, enc, eh),
+		{{ .Method.VarName }}: {{ .HandlerInit }}(e.{{ .Method.VarName }}, mux, {{ if .MultipartRequestDecoder }}{{ .MultipartRequestDecoder.InitName }}(mux, {{ .MultipartRequestDecoder.VarName }}){{ else }}dec{{ end }}, enc, eh{{ if .ServerStream }}, up, connConfigFn{{ end }}),
 		{{- end }}
 	}
 }
@@ -317,12 +371,25 @@ func {{ .HandlerInit }}(
 	dec func(*http.Request) goahttp.Decoder,
 	enc func(context.Context, http.ResponseWriter) goahttp.Encoder,
 	eh func(context.Context, http.ResponseWriter, error),
+	{{- if .ServerStream }}
+	up goahttp.Upgrader,
+	connConfigFn goahttp.ConnConfigureFunc,
+	{{- end }}
 ) http.Handler {
 	var (
-		{{- if .Payload.Ref }}
+		{{- if .ServerStream }}
+			{{- if and .Payload.Ref (not .ServerStream.RecvRef) }}
 		decodeRequest  = {{ .RequestDecoder }}(mux, dec)
-		{{- end }}
+			{{- end }}
+			{{- if not .ServerStream.SendRef }}
 		encodeResponse = {{ .ResponseEncoder }}(enc)
+			{{- end }}
+		{{- else }}
+			{{- if .Payload.Ref }}
+		decodeRequest  = {{ .RequestDecoder }}(mux, dec)
+			{{- end }}
+		encodeResponse = {{ .ResponseEncoder }}(enc)
+		{{- end }}
 		encodeError    = {{ if .Errors }}{{ .ErrorEncoder }}{{ else }}goahttp.ErrorEncoder{{ end }}(enc)
 	)
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -330,27 +397,47 @@ func {{ .HandlerInit }}(
 		ctx = context.WithValue(ctx, goa.MethodKey, {{ printf "%q" .Method.Name }})
 		ctx = context.WithValue(ctx, goa.ServiceKey, {{ printf "%q" .ServiceName }})
 
-		{{- if .Payload.Ref }}
+	{{- if .Payload.Ref }}
 		payload, err := decodeRequest(r)
 		if err != nil {
 			eh(ctx, w, err)
 			return
 		}
+	{{- end }}
 
-		res, err := endpoint(ctx, payload)
-		{{- else }}
-		res, err := endpoint(ctx, nil)
+	{{- if .ServerStream }}
+		v := &{{ .ServicePkgName }}.{{ .Method.ServerStream.EndpointStruct }}{
+			Stream: &{{ .ServerStream.VarName }}{
+				upgrader: up,
+				connConfigFn: connConfigFn,
+				w: w,
+				r: r,
+			},
+		{{- if and .Payload.Ref (not .ServerStream.RecvRef) }}
+			Payload: payload.({{ .Payload.Ref }}),
 		{{- end }}
+		}
+		_, err = endpoint(ctx, v)
+	{{- else }}
+		res, err := endpoint(ctx, {{ if .Payload.Ref }}payload{{ else }}nil{{ end }})
+	{{- end }}
 
 		if err != nil {
+			{{- if .ServerStream }}
+			if _, ok := err.(websocket.HandshakeError); ok {
+				return
+			}
+			{{- end }}
 			if err := encodeError(ctx, w, err); err != nil {
 				eh(ctx, w, err)
 			}
 			return
 		}
+	{{- if not .ServerStream }}
 		if err := encodeResponse(ctx, w, res); err != nil {
 			eh(ctx, w, err)
 		}
+	{{- end }}
 	})
 }
 `

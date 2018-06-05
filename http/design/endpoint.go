@@ -268,6 +268,11 @@ func (e *EndpointExpr) Validate() error {
 		} else {
 			hasTags = true
 		}
+		if r.StatusCode < 400 {
+			if e.MethodExpr.IsResultStreaming() && r.Body != nil && r.Body.Type == design.Empty {
+				verr.Add(r, "Response body is empty but the endpoint uses streaming result. Response body cannot be empty for a success response if endpoint defines streaming result.")
+			}
+		}
 	}
 	if hasTags && allTagged {
 		verr.Add(e, "All responses define a Tag, at least one response must define no Tag.")

@@ -44,10 +44,6 @@ type (
 		ServiceName string
 		// ServiceVarName is the name of the owner service Go interface.
 		ServiceVarName string
-		// PayloadRef is reference to the payload Go type if any.
-		PayloadRef string
-		// ResultRef is reference to the result Go type if any.
-		ResultRef string
 		// Errors list the possible errors defined in the design if any.
 		Errors []*ErrorInitData
 		// Requirements list the security requirements that apply to the
@@ -92,17 +88,26 @@ func EndpointFile(genpkg string, service *design.ServiceExpr) *codegen.File {
 			Source: serviceEndpointsT,
 			Data:   data,
 		}
-		init := &codegen.SectionTemplate{
+		sections = []*codegen.SectionTemplate{header, def}
+		for _, m := range data.Methods {
+			if m.ServerStream != nil {
+				sections = append(sections, &codegen.SectionTemplate{
+					Name:   "endpoint-input-struct",
+					Source: serviceEndpointInputStructT,
+					Data:   m,
+				})
+			}
+		}
+		sections = append(sections, &codegen.SectionTemplate{
 			Name:   "endpoints-init",
 			Source: serviceEndpointsInitT,
 			Data:   data,
-		}
-		use := &codegen.SectionTemplate{
+		})
+		sections = append(sections, &codegen.SectionTemplate{
 			Name:   "endpoints-use",
 			Source: serviceEndpointsUseT,
 			Data:   data,
-		}
-		sections = []*codegen.SectionTemplate{header, def, init, use}
+		})
 		for _, m := range data.Methods {
 			sections = append(sections, &codegen.SectionTemplate{
 				Name:   "endpoint-method",
@@ -127,8 +132,6 @@ func endpointData(service *design.ServiceExpr) *EndpointsData {
 			ServiceName:    svc.Name,
 			ServiceVarName: ServiceInterfaceName,
 			ClientVarName:  ClientStructName,
-			PayloadRef:     m.PayloadRef,
-			ResultRef:      m.ResultRef,
 			Errors:         m.Errors,
 			Requirements:   m.Requirements,
 			Schemes:        m.Schemes,
@@ -181,10 +184,25 @@ func New{{ .VarName }}(s {{ .ServiceVarName }}{{ range .Schemes }}, auth{{ . }}F
 `
 
 // input: EndpointMethodData
-const serviceEndpointMethodT = `{{ printf "New%sEndpoint returns an endpoint function that calls the method %q of service %q." .VarName .Name .ServiceName | comment }}
-func New{{ .VarName }}Endpoint(s {{ .ServiceVarName}}{{ range .Schemes }}, auth{{ . }}Fn security.Auth{{ . }}Func{{ end }}) goa.Endpoint {
-	return func(ctx context.Context, req interface{}) (interface{}, error) {
+const serviceEndpointInputStructT = `{{ printf "%s is the input type of %q endpoint that holds the method payload and the server stream." .ServerStream.EndpointStruct .Name | comment }}
+type {{ .ServerStream.EndpointStruct }} struct {
 {{- if .PayloadRef }}
+	{{ comment "Payload is the method payload." }}
+	Payload {{ .PayloadRef }}
+{{- end }}
+	{{ printf "Stream is the server stream used by the %q method to send/receive data." .Name | comment }}
+	Stream {{ .ServerStream.Interface }}
+}
+`
+
+// input: EndpointMethodData
+const serviceEndpointMethodT = `{{ printf "New%sEndpoint returns an endpoint function that calls the method %q of service %q." .VarName .Name .ServiceName | comment }}
+func New{{ .VarName }}Endpoint(s {{ .ServiceVarName }}{{ range .Schemes }}, auth{{ . }}Fn security.Auth{{ . }}Func{{ end }}) goa.Endpoint {
+	return func(ctx context.Context, req interface{}) (interface{}, error) {
+{{- if .ServerStream }}
+		ep := req.(*{{ .ServerStream.EndpointStruct }})
+		p := ep.Payload
+{{- else if .PayloadRef }}
 		p := req.({{ .PayloadRef }})
 {{- end }}
 {{- if .Requirements }}
@@ -287,7 +305,9 @@ func New{{ .VarName }}Endpoint(s {{ .ServiceVarName}}{{ range .Schemes }}, auth{
 			return nil, err
 		}
 {{- end }}
-{{- if .ViewedResult }}
+{{- if .ServerStream }}
+	return nil, s.{{ .VarName }}(ctx, {{ if and .PayloadRef (not .ServerStream.RecvRef) }}ep.Payload, {{ end }}ep.Stream)
+{{- else if .ViewedResult }}
 		res,{{ if not .ViewedResult.ViewName }} view,{{ end }} err := s.{{ .VarName }}(ctx{{ if .PayloadRef }}, p{{ end }})
 		if err != nil {
 			return nil, err
@@ -300,7 +320,7 @@ func New{{ .VarName }}Endpoint(s {{ .ServiceVarName}}{{ range .Schemes }}, auth{
 {{- else if .ResultRef }}
 		return s.{{ .VarName }}(ctx{{ if .PayloadRef }}, p{{ end }})
 {{- else }}
-		return nil, s.{{ .VarName }}(ctx{{ if .PayloadRef }}, p{{ end }})
+	return {{ if not .ResultRef }}nil, {{ end }}s.{{ .VarName }}(ctx{{ if .PayloadRef }}, p{{ end }})
 {{- end }}
 	}
 }

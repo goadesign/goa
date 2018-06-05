@@ -7,6 +7,9 @@ import (
 )
 
 type (
+	// streamKind is a type denoting the kind of stream.
+	streamKind int
+
 	// MethodExpr defines a single method.
 	MethodExpr struct {
 		// DSLFunc contains the DSL used to initialize the expression.
@@ -32,7 +35,22 @@ type (
 		Service *ServiceExpr
 		// Metadata is an arbitrary set of key/value pairs, see dsl.Metadata
 		Metadata MetadataExpr
+		// Stream is the kind of stream (payload, result, or both) the method
+		// defines.
+		Stream streamKind
 	}
+)
+
+const (
+	// NoStreamKind represents no payload or result stream in method.
+	NoStreamKind streamKind = iota
+	// ClientStreamKind represents client sends a streaming payload to method.
+	ClientStreamKind
+	// ServerStreamKind represents server sends a streaming result from method.
+	ServerStreamKind
+	// BidirectionalStreamKind represents both client and server streams payload
+	// and result respectively.
+	BidirectionalStreamKind
 )
 
 // Error returns the error with the given name. It looks up recursively in the
@@ -143,4 +161,9 @@ func (m *MethodExpr) Finalize() {
 	for _, e := range m.Errors {
 		e.Finalize()
 	}
+}
+
+// IsResultStreaming determines whether the method result is streamed.
+func (m *MethodExpr) IsResultStreaming() bool {
+	return m.Stream == ServerStreamKind || m.Stream == BidirectionalStreamKind
 }

@@ -1208,6 +1208,56 @@ func Service(name string, fn func()) *design.ServiceExpr {
 	return dsl.Service(name, fn)
 }
 
+// StreamingResult defines the method output to be a stream of data type.
+//
+// StreamingResult must appear in a Method expression.
+//
+// The arguments to a StreamingResult DSL is same as the Result DSL.
+//
+// Examples:
+//
+//    // Method result is a stream of integers
+//    Method("add", func() {
+//        StreamingResult(Int32)
+//    })
+//
+//    Method("add", func() {
+//        StreamingResult(Int32, "Resulting sum")
+//    })
+//
+//		// Method result is a stream of integers with validation set on each
+//    Method("add", func() {
+//        StreamingResult(Int32, "Resulting sum", func() {
+//            Minimum(0)
+//        })
+//    })
+//
+//    // Method result is a stream of objects defined inline
+//    Method("add", func() {
+//        StreamingResult(func() {
+//            Description("Result defines a single field which is the sum.")
+//            Attribute("value", Int32, "Resulting sum")
+//            Required("value")
+//        })
+//    })
+//
+//    // Method result is a stream of user type
+//    Method("add", func() {
+//        StreamingResult(Sum)
+//    })
+//
+//    // Method result is a stream of result type with a view
+//    Method("add", func() {
+//        StreamingResult(Sum, func() {
+//            View("default")
+//            Required("value")
+//        })
+//    })
+//
+func StreamingResult(val interface{}, args ...interface{}) {
+	dsl.StreamingResult(val, args...)
+}
+
 // Temporary qualifies an error type as describing temporary (i.e. retryable)
 // errors.
 //

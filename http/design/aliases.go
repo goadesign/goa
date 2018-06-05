@@ -40,6 +40,18 @@ const (
 )
 
 const (
+	// NoStreamKind represents no payload or result stream in method.
+	NoStreamKind = design.NoStreamKind
+	// ClientStreamKind represents client sends a streaming payload to method.
+	ClientStreamKind = design.ClientStreamKind
+	// ServerStreamKind represents server sends a streaming result from method.
+	ServerStreamKind = design.ServerStreamKind
+	// BidirectionalStreamKind represents both client and server streams payload
+	// and result respectively.
+	BidirectionalStreamKind = design.BidirectionalStreamKind
+)
+
+const (
 	// DefaultView is the name of the default result type view.
 	DefaultView = design.DefaultView
 )

@@ -98,6 +98,7 @@ func exampleMain(genpkg string, root *httpdesign.RootExpr) *codegen.File {
 		{Path: "goa.design/goa", Name: "goa"},
 		{Path: "goa.design/goa/http", Name: "goahttp"},
 		{Path: "goa.design/goa/http/middleware"},
+		{Path: "github.com/gorilla/websocket"},
 		{Path: rootPath, Name: apiPkg},
 	}
 	for _, svc := range root.HTTPServices {
@@ -116,6 +117,9 @@ func exampleMain(genpkg string, root *httpdesign.RootExpr) *codegen.File {
 	for _, svc := range root.HTTPServices {
 		svcdata = append(svcdata, HTTPServices.Get(svc.Name()))
 	}
+	if needStream(svcdata) {
+		specs = append(specs, &codegen.ImportSpec{Path: "github.com/gorilla/websocket"})
+	}
 	data := map[string]interface{}{
 		"Services": svcdata,
 		"APIPkg":   apiPkg,
@@ -124,9 +128,23 @@ func exampleMain(genpkg string, root *httpdesign.RootExpr) *codegen.File {
 		Name:   "service-main",
 		Source: mainT,
 		Data:   data,
+		FuncMap: map[string]interface{}{
+			"needStream": needStream,
+		},
 	})
 
 	return &codegen.File{Path: mainPath, SectionTemplates: sections}
+}
+
+// needStream returns true if at least one method in the list of services
+// uses stream for sending payload/result.
+func needStream(data []*ServiceData) bool {
+	for _, svc := range data {
+		if streamingEndpointExists(svc) {
+			return true
+		}
+	}
+	return false
 }
 
 // input: ServiceData
@@ -143,12 +161,18 @@ func New{{ .Service.StructName }}(logger *log.Logger) {{ .Service.PkgName }}.Ser
 
 // input: EndpointData
 const dummyEndpointImplT = `{{ comment .Method.Description }}
+{{- if .ServerStream }}
+func (s *{{ .ServiceVarName }}Svc) {{ .Method.VarName }}(ctx context.Context{{ if and .Payload.Ref (not .ServerStream.RecvRef) }}, p {{ .Payload.Ref }}{{ end }}, stream {{ .ServerStream.Interface }}) (err error) {
+{{- else }}
 func (s *{{ .ServiceVarName }}Svc) {{ .Method.VarName }}(ctx context.Context{{ if .Payload.Ref }}, p {{ .Payload.Ref }}{{ end }}) ({{ if .Result.Ref }}res {{ .Result.Ref }}, {{ if .Method.ViewedResult }}{{ if not .Method.ViewedResult.ViewName }}view string, {{ end }}{{ end }} {{ end }}err error) {
-{{- if and .Result.Ref .Result.IsStruct }}
+{{- end }}
+{{- if and (and .Result.Ref .Result.IsStruct) (not .ServerStream) }}
 	res = &{{ .Result.Name }}{}
 {{- end }}
 {{- if .Method.ViewedResult }}
-	{{- if not .Method.ViewedResult.ViewName }}
+	{{- if .ServerStream }}
+	stream.SetView({{ printf "%q" .Result.View }})
+	{{- else if not .Method.ViewedResult.ViewName }}
 	view = {{ printf "%q" .Result.View }}
 	{{- end }}
 {{- end }}
@@ -255,9 +279,12 @@ const mainT = `func main() {
 	)
 	{
 		eh := ErrorHandler(logger)
+	{{- if needStream .Services }}
+		upgrader := &websocket.Upgrader{}
+	{{- end }}
 	{{- range .Services }}
 		{{-  if .Endpoints }}
-		{{ .Service.VarName }}Server = {{ .Service.PkgName }}svr.New({{ .Service.VarName }}Endpoints, mux, dec, enc, eh{{ range .Endpoints }}{{ if .MultipartRequestDecoder }}, {{ $.APIPkg }}.{{ .MultipartRequestDecoder.FuncName }}{{ end }}{{ end }})
+		{{ .Service.VarName }}Server = {{ .Service.PkgName }}svr.New({{ .Service.VarName }}Endpoints, mux, dec, enc, eh{{ if needStream $.Services }}, upgrader, nil{{ end }}{{ range .Endpoints }}{{ if .MultipartRequestDecoder }}, {{ $.APIPkg }}.{{ .MultipartRequestDecoder.FuncName }}{{ end }}{{ end }})
 		{{-  else }}
 		{{ .Service.VarName }}Server = {{ .Service.PkgName }}svr.New(nil, mux, dec, enc, eh)
 		{{-  end }}
