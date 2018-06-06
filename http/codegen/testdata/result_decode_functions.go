@@ -109,9 +109,6 @@ func DecodeMethodEmptyBodyResultMultipleViewResponse(decoder func(*http.Response
 			p := NewMethodEmptyBodyResultMultipleViewResulttypemultipleviewsOK(c)
 			view := resp.Header.Get("goa-view")
 			vres := &serviceemptybodyresultmultipleviewviews.Resulttypemultipleviews{p, view}
-			if err = vres.Validate(); err != nil {
-				return nil, goahttp.ErrValidationError("ServiceEmptyBodyResultMultipleView", "MethodEmptyBodyResultMultipleView", err)
-			}
 			return serviceemptybodyresultmultipleview.NewResulttypemultipleviews(vres), nil
 		default:
 			body, _ := ioutil.ReadAll(resp.Body)
