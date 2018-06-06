@@ -14,7 +14,12 @@ import (
 
 const (
 	// SegKey is the request context key used to store the segments if any.
-	SegKey = "XraySegCtxKey"
+	SegKey contextKey = iota + 1
+)
+
+type (
+	// private type used to define context keys.
+	contextKey int
 )
 
 // New returns a middleware that sends AWS X-Ray segments to the daemon running
