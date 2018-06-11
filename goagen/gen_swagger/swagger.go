@@ -929,6 +929,7 @@ func buildPathFromDefinition(s *Swagger, api *design.APIDefinition, route *desig
 		responses[strconv.Itoa(r.Status)] = resp
 	}
 
+	consumesMultipart := false
 	if action.Payload != nil {
 		if action.PayloadMultipart {
 			p, err := paramsFromPayload(action.Payload)
@@ -936,6 +937,7 @@ func buildPathFromDefinition(s *Swagger, api *design.APIDefinition, route *desig
 				return err
 			}
 			params = append(params, p...)
+			consumesMultipart = true
 		} else {
 			payloadSchema := genschema.TypeSchema(api, action.Payload)
 			pp := &Parameter{
@@ -977,6 +979,10 @@ func buildPathFromDefinition(s *Swagger, api *design.APIDefinition, route *desig
 		Schemes:      schemes,
 		Deprecated:   false,
 		Extensions:   extensionsFromDefinition(route.Metadata),
+	}
+
+	if consumesMultipart {
+		operation.Consumes = append(operation.Consumes, "multipart/form-data")
 	}
 
 	computeProduces(operation, s, action)
