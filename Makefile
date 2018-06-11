@@ -44,7 +44,6 @@ docs:
 
 depend:
 	@mkdir -p $(GOPATH)/src/golang.org/x
-	@git clone https://github.com/golang/lint.git $(GOPATH)/src/golang.org/x/lint
 	@go get -v ./...
 	@go get -v $(DEPEND)
 
