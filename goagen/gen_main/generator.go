@@ -22,7 +22,7 @@ import (
 
 //NewGenerator returns an initialized instance of a JavaScript Client Generator
 func NewGenerator(options ...Option) *Generator {
-	g := &Generator{}
+	g := &Generator{OutDir: "."}
 
 	for _, option := range options {
 		option(g)
