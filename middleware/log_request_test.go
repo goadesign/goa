@@ -117,10 +117,11 @@ var _ = Describe("LogRequest", func() {
 		Ω(lg(ctx, rw, req)).ShouldNot(HaveOccurred())
 		Ω(logger.InfoEntries).Should(HaveLen(5))
 
-		Ω(logger.InfoEntries[1].Data[2]).Should(Equal("Secret"))
-		Ω(logger.InfoEntries[1].Data[3]).Should(Equal("<hidden>"))
+		Ω(logger.InfoEntries[1].Data[2]).Should(Equal("Not so secret"))
+		Ω(logger.InfoEntries[1].Data[3]).Should(Equal("public"))
 
-		Ω(logger.InfoEntries[1].Data[4]).Should(Equal("Not so secret"))
-		Ω(logger.InfoEntries[1].Data[5]).Should(Equal("public"))
+		Ω(logger.InfoEntries[1].Data[4]).Should(Equal("Secret"))
+		Ω(logger.InfoEntries[1].Data[5]).Should(Equal("<hidden>"))
+
 	})
 })
