@@ -7,6 +7,7 @@ import (
 	"io"
 	"net"
 	"net/http"
+	"sort"
 	"strings"
 	"time"
 
@@ -43,7 +44,15 @@ func LogRequest(verbose bool, sensitiveHeaders ...string) goa.Middleware {
 				if len(r.Header) > 0 {
 					logCtx := make([]interface{}, 2*len(r.Header))
 					i := 0
-					for k, v := range r.Header {
+					keys := make([]string, len(r.Header))
+					for k := range r.Header {
+						keys[i] = k
+						i++
+					}
+					sort.Strings(keys)
+					i = 0
+					for _, k := range keys {
+						v := r.Header[k]
 						logCtx[i] = k
 						if _, ok := suppressed[strings.ToLower(k)]; ok {
 							logCtx[i+1] = "<hidden>"
