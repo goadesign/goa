@@ -33,7 +33,7 @@ type StoredBottleView struct {
 	// Vintage of bottle
 	Vintage *uint32
 	// Composition is the list of grape varietals and associated percentage.
-	Composition []*Component
+	Composition []*ComponentView
 	// Description of bottle
 	Description *string
 	// Rating of bottle from 1 (worst) to 5 (best)
@@ -52,8 +52,8 @@ type WineryView struct {
 	URL *string
 }
 
-// Component is a type that runs validations on a projected type.
-type Component struct {
+// ComponentView is a type that runs validations on a projected type.
+type ComponentView struct {
 	// Grape varietal
 	Varietal *string
 	// Percentage of varietal in wine
@@ -184,8 +184,8 @@ func (result *WineryView) ValidateTiny() (err error) {
 	return
 }
 
-// Validate runs the validations defined on Component
-func (result *Component) Validate() (err error) {
+// Validate runs the validations defined on ComponentView.
+func (result *ComponentView) Validate() (err error) {
 	if result.Varietal != nil {
 		err = goa.MergeErrors(err, goa.ValidatePattern("result.varietal", *result.Varietal, "[A-Za-z' ]+"))
 	}

@@ -760,9 +760,7 @@ func collectProjectedTypes(projected, att *design.AttributeExpr, seen map[string
 			return
 		}
 		seen[dt.ID()] = nil
-		if rt, ok := pt.(*design.ResultTypeExpr); ok && rt.HasMultipleViews() {
-			rt.Rename(rt.Name() + "View")
-		}
+		pt.Rename(pt.Name() + "View")
 		// We recurse before building the projected type so that user types within
 		// a projected type is also converted to their respective projected types.
 		types := collect(pt.Attribute(), dt.Attribute())
@@ -1153,7 +1151,7 @@ func buildValidations(projected *design.AttributeExpr, scope *codegen.NameScope)
 		name := "Validate"
 		validations = append(validations, &ValidateData{
 			Name:        name,
-			Description: fmt.Sprintf("%s runs the validations defined on %s", name, tname),
+			Description: fmt.Sprintf("%s runs the validations defined on %s.", name, tname),
 			Ref:         ref,
 			Validate:    codegen.RecursiveValidationCode(projected, false, true, false, "result"),
 		})

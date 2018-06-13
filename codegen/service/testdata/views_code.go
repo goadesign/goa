@@ -135,12 +135,12 @@ type ResultType struct {
 
 // ResultTypeView is a type that runs validations on a projected type.
 type ResultTypeView struct {
-	A *UserType
+	A *UserTypeView
 	B *string
 }
 
-// UserType is a type that runs validations on a projected type.
-type UserType struct {
+// UserTypeView is a type that runs validations on a projected type.
+type UserTypeView struct {
 	A *string
 }
 
@@ -175,8 +175,8 @@ func (result *ResultTypeView) ValidateTiny() (err error) {
 	return
 }
 
-// Validate runs the validations defined on UserType
-func (result *UserType) Validate() (err error) {
+// Validate runs the validations defined on UserTypeView.
+func (result *UserTypeView) Validate() (err error) {
 
 	return
 }
@@ -200,19 +200,19 @@ type RTView struct {
 // RT2View is a type that runs validations on a projected type.
 type RT2View struct {
 	C *string
-	D *UserType
+	D *UserTypeView
 	E *string
 }
 
-// UserType is a type that runs validations on a projected type.
-type UserType struct {
+// UserTypeView is a type that runs validations on a projected type.
+type UserTypeView struct {
 	P *string
 }
 
 // RT3View is a type that runs validations on a projected type.
 type RT3View struct {
 	X []string
-	Y map[int]*UserType
+	Y map[int]*UserTypeView
 	Z *string
 }
 
@@ -292,8 +292,8 @@ func (result *RT2View) ValidateTiny() (err error) {
 	return
 }
 
-// Validate runs the validations defined on UserType
-func (result *UserType) Validate() (err error) {
+// Validate runs the validations defined on UserTypeView.
+func (result *UserTypeView) Validate() (err error) {
 
 	return
 }

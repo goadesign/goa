@@ -253,9 +253,9 @@ func NewShowStoredBottleOK(body *ShowResponseBody) *storageviews.StoredBottleVie
 		v.Winery = marshalWineryResponseBodyToWineryView(body.Winery)
 	}
 	if body.Composition != nil {
-		v.Composition = make([]*storageviews.Component, len(body.Composition))
+		v.Composition = make([]*storageviews.ComponentView, len(body.Composition))
 		for j, val := range body.Composition {
-			v.Composition[j] = &storageviews.Component{
+			v.Composition[j] = &storageviews.ComponentView{
 				Varietal:   val.Varietal,
 				Percentage: val.Percentage,
 			}
