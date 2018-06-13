@@ -16,7 +16,7 @@ func Walk(a *design.AttributeExpr, walker func(*design.AttributeExpr) error) err
 // WalkType traverses the data structure recursively and calls the given function
 // once on each attribute starting with the user type attribute.
 func WalkType(u design.UserType, walker func(*design.AttributeExpr) error) error {
-	return walk(u.Attribute(), walker, map[string]bool{u.Name(): true})
+	return walk(u.Attribute(), walker, map[string]bool{u.ID(): true})
 }
 
 // WalkMappedAttr iterates over the mapped attributes. It calls the given
@@ -40,10 +40,10 @@ func walk(at *design.AttributeExpr, walker func(*design.AttributeExpr) error, se
 		return err
 	}
 	walkUt := func(ut design.UserType) error {
-		if _, ok := seen[ut.Name()]; ok {
+		if _, ok := seen[ut.ID()]; ok {
 			return nil
 		}
-		seen[ut.Name()] = true
+		seen[ut.ID()] = true
 		return walk(ut.Attribute(), walker, seen)
 	}
 	switch actual := at.Type.(type) {

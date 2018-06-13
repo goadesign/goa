@@ -367,7 +367,7 @@ func (d ServicesData) analyze(service *design.ServiceExpr) *Data {
 			}
 
 			if ut, ok := e.Payload.Type.(design.UserType); ok {
-				seen[ut.Name()] = struct{}{}
+				seen[ut.ID()] = struct{}{}
 			}
 
 			// Create user type for raw object results
@@ -379,7 +379,7 @@ func (d ServicesData) analyze(service *design.ServiceExpr) *Data {
 			}
 
 			if ut, ok := e.Result.Type.(design.UserType); ok {
-				seen[ut.Name()] = struct{}{}
+				seen[ut.ID()] = struct{}{}
 			}
 		}
 		recordError := func(er *design.ErrorExpr) {
@@ -430,7 +430,7 @@ func (d ServicesData) analyze(service *design.ServiceExpr) *Data {
 				if vrt, ok := seenViewed[m.Result]; ok {
 					m.ViewedResult = vrt
 				} else {
-					projected := seenProj[m.Result]
+					projected := seenProj[rt.ID()]
 					vrt := buildViewedResultType(e.Result, projected.Type, scope, viewspkg)
 					viewedRTs = append(viewedRTs, vrt)
 					seenViewed[vrt.Name] = vrt
@@ -495,7 +495,7 @@ func collectTypes(at *design.AttributeExpr, seen map[string]struct{}, scope *cod
 	collect := func(at *design.AttributeExpr) []*UserTypeData { return collectTypes(at, seen, scope) }
 	switch dt := at.Type.(type) {
 	case design.UserType:
-		if _, ok := seen[dt.Name()]; ok {
+		if _, ok := seen[dt.ID()]; ok {
 			return nil
 		}
 		data = append(data, &UserTypeData{
@@ -506,7 +506,7 @@ func collectTypes(at *design.AttributeExpr, seen map[string]struct{}, scope *cod
 			Ref:         scope.GoTypeRef(at),
 			Type:        dt,
 		})
-		seen[dt.Name()] = struct{}{}
+		seen[dt.ID()] = struct{}{}
 		data = append(data, collect(dt.Attribute())...)
 	case *design.Object:
 		for _, nat := range *dt {
@@ -748,7 +748,7 @@ func collectProjectedTypes(projected, att *design.AttributeExpr, seen map[string
 	switch pt := projected.Type.(type) {
 	case design.UserType:
 		dt := att.Type.(design.UserType)
-		if pd, ok := seen[dt.Name()]; ok {
+		if pd, ok := seen[dt.ID()]; ok {
 			// a projected type is already created for this user type. We change the
 			// attribute type to this seen projected type. The seen projected type
 			// can be nil if the attribute type has a ciruclar type definition in
@@ -759,7 +759,7 @@ func collectProjectedTypes(projected, att *design.AttributeExpr, seen map[string
 			}
 			return
 		}
-		seen[dt.Name()] = nil
+		seen[dt.ID()] = nil
 		if rt, ok := pt.(*design.ResultTypeExpr); ok && rt.HasMultipleViews() {
 			rt.Rename(rt.Name() + "View")
 		}
@@ -767,7 +767,7 @@ func collectProjectedTypes(projected, att *design.AttributeExpr, seen map[string
 		// a projected type is also converted to their respective projected types.
 		types := collect(pt.Attribute(), dt.Attribute())
 		pd := buildProjectedType(projected, att, scope, viewspkg)
-		seen[dt.Name()] = pd
+		seen[dt.ID()] = pd
 		// Change the attribute type to the newly created projected type.
 		projected.Type = pd.Type
 		data = append(data, pd)

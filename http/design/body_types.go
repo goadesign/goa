@@ -190,21 +190,21 @@ func buildResponseBody(name string, attr *design.AttributeExpr, resp *HTTPRespon
 }
 
 func setForcePointer(att *design.AttributeExpr, seen ...map[string]struct{}) {
+	var s map[string]struct{}
+	if len(seen) > 0 {
+		s = seen[0]
+	} else {
+		s = make(map[string]struct{})
+		seen = append(seen, s)
+	}
 	switch actual := att.Type.(type) {
 	case design.Primitive:
 		att.ForcePointer = true
 	case design.UserType:
-		var s map[string]struct{}
-		if len(seen) > 0 {
-			s = seen[0]
-		} else {
-			s = make(map[string]struct{})
-			seen = append(seen, s)
-		}
-		if _, ok := s[actual.Name()]; ok {
+		if _, ok := s[actual.ID()]; ok {
 			return
 		}
-		s[actual.Name()] = struct{}{}
+		s[actual.ID()] = struct{}{}
 		setForcePointer(actual.(design.UserType).Attribute(), seen...)
 	case *design.Object:
 		for _, nat := range *actual {
@@ -234,21 +234,21 @@ func renameType(att *design.AttributeExpr, name, suffix string) {
 }
 
 func appendSuffix(dt design.DataType, suffix string, seen ...map[string]struct{}) {
+	var s map[string]struct{}
+	if len(seen) > 0 {
+		s = seen[0]
+	} else {
+		s = make(map[string]struct{})
+		seen = append(seen, s)
+	}
 	switch actual := dt.(type) {
 	case design.UserType:
-		var s map[string]struct{}
-		if len(seen) > 0 {
-			s = seen[0]
-		} else {
-			s = make(map[string]struct{})
-			seen = append(seen, s)
-		}
-		if _, ok := s[actual.Name()]; ok {
+		if _, ok := s[actual.ID()]; ok {
 			return
 		}
 		actual.Rename(actual.Name() + suffix)
-		s[actual.Name()] = struct{}{}
-		appendSuffix(actual.Attribute().Type, suffix, s)
+		s[actual.ID()] = struct{}{}
+		appendSuffix(actual.Attribute().Type, suffix, seen...)
 	case *design.Object:
 		for _, nat := range *actual {
 			appendSuffix(nat.Attribute.Type, suffix, seen...)
