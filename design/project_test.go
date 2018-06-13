@@ -27,11 +27,7 @@ var (
 	compositeResultDefault = resultType("a", object(collectionResultDefault), "b", String)
 	compositeResultLink    = resultType("a", object(collectionResultLink))
 
-	recursiveResult        = resultRecursive("a", String, "r", simpleResult, view("default", "a", String, "r", AsObject(simpleResult)))
-	recursiveResultDefault = resultRecursive("a", String, "r", simpleResult)
-
-	childResult        = resultType("x", recursiveResult, "y", recursiveResult, view("default", "x", recursiveResult, "y", recursiveResult))
-	childResultDefault = resultType("x", recursiveResult, "y", recursiveResult)
+	recursiveResult = resultRecursive("a", String, "r", simpleResult, view("default", "a", String, "r", AsObject(simpleResult)))
 )
 
 func init() {
@@ -53,8 +49,7 @@ func TestProject(t *testing.T) {
 		{"collection-link", collectionResult, "link", collectionResultLink},
 		{"composite-default", compositeResult, "default", compositeResultDefault},
 		{"composite-link", compositeResult, "link", compositeResultLink},
-		{"recursive", recursiveResult, "default", recursiveResultDefault},
-		{"parent-child-recursive", childResult, "default", childResultDefault},
+		{"recursive", recursiveResult, "default", recursiveResult},
 	}
 	for _, k := range cases {
 		t.Run(k.Name, func(t *testing.T) {
@@ -130,12 +125,13 @@ func resultType(params ...interface{}) *ResultTypeExpr {
 		}
 	}
 
+	t := testrand.String()
 	return &ResultTypeExpr{
 		UserTypeExpr: &UserTypeExpr{
 			AttributeExpr: &AttributeExpr{Type: &obj},
-			TypeName:      testrand.String(),
+			TypeName:      t,
 		},
-		Identifier: "vnd.application.test",
+		Identifier: "vnd.application." + t,
 		Views:      views,
 	}
 }
@@ -159,11 +155,11 @@ func array(dt DataType) *Array {
 
 func resultRecursive(params ...interface{}) *ResultTypeExpr {
 	rt := resultType(params...)
-	recAtt := &NamedAttributeExpr{"rec", &AttributeExpr{Type: rt}}
+	recAtt := &NamedAttributeExpr{Name: "rec", Attribute: &AttributeExpr{Type: rt}}
 	obj := AsObject(rt)
 	*obj = append(*obj, recAtt)
 	for _, v := range rt.Views {
-		vObj := v.AttributeExpr.Type.(*Object)
+		vObj := v.Type.(*Object)
 		*vObj = append(*vObj, recAtt)
 	}
 	return rt

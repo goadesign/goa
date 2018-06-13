@@ -21,7 +21,7 @@ paths:
         "200":
           description: OK response.
           schema:
-            $ref: '#/definitions/StoredBottleResponseBodyCollection'
+            $ref: '#/definitions/PickResponseBody'
         "400":
           description: Bad Request response.
           schema:
@@ -43,7 +43,7 @@ paths:
         "200":
           description: OK response.
           schema:
-            $ref: '#/definitions/StoredBottleTinyResponseBodyCollection'
+            $ref: '#/definitions/ListResponseBody'
       schemes:
       - http
     post:
@@ -366,6 +366,31 @@ definitions:
       varietal: Syrah
     required:
     - varietal
+  ListResponseBody:
+    title: 'Mediatype identifier: application/vnd.cellar.stored-bottle; type=collection;
+      view=tiny'
+    type: array
+    items:
+      $ref: '#/definitions/StoredBottleTinyResponseBody'
+    description: ListResponseBody is the result type for an array of StoredBottleTinyResponseBody
+      (default view)
+    example:
+    - id: 123abc
+      name: Blue's Cuvee
+      winery:
+        name: Longoria
+    - id: 123abc
+      name: Blue's Cuvee
+      winery:
+        name: Longoria
+    - id: 123abc
+      name: Blue's Cuvee
+      winery:
+        name: Longoria
+    - id: 123abc
+      name: Blue's Cuvee
+      winery:
+        name: Longoria
   MultiUpdateRequestBody:
     title: MultiUpdateRequestBody
     type: object
@@ -492,6 +517,83 @@ definitions:
       - merlot
       - cabernet franc
       winery: longoria
+  PickResponseBody:
+    title: 'Mediatype identifier: application/vnd.cellar.stored-bottle; type=collection;
+      view=default'
+    type: array
+    items:
+      $ref: '#/definitions/StoredBottleResponseBody'
+    description: StoredBottleCollection is the result type for an array of StoredBottle
+      (default view)
+    example:
+    - composition:
+      - percentage: 65
+        varietal: Syrah
+      - percentage: 65
+        varietal: Syrah
+      - percentage: 65
+        varietal: Syrah
+      - percentage: 65
+        varietal: Syrah
+      description: Red wine blend with an emphasis on the Cabernet Franc grape and
+        including other Bordeaux grape varietals and some Syrah
+      id: 123abc
+      name: Blue's Cuvee
+      rating: 1
+      vintage: 1926
+      winery:
+        name: Longoria
+    - composition:
+      - percentage: 65
+        varietal: Syrah
+      - percentage: 65
+        varietal: Syrah
+      - percentage: 65
+        varietal: Syrah
+      - percentage: 65
+        varietal: Syrah
+      description: Red wine blend with an emphasis on the Cabernet Franc grape and
+        including other Bordeaux grape varietals and some Syrah
+      id: 123abc
+      name: Blue's Cuvee
+      rating: 1
+      vintage: 1926
+      winery:
+        name: Longoria
+    - composition:
+      - percentage: 65
+        varietal: Syrah
+      - percentage: 65
+        varietal: Syrah
+      - percentage: 65
+        varietal: Syrah
+      - percentage: 65
+        varietal: Syrah
+      description: Red wine blend with an emphasis on the Cabernet Franc grape and
+        including other Bordeaux grape varietals and some Syrah
+      id: 123abc
+      name: Blue's Cuvee
+      rating: 1
+      vintage: 1926
+      winery:
+        name: Longoria
+    - composition:
+      - percentage: 65
+        varietal: Syrah
+      - percentage: 65
+        varietal: Syrah
+      - percentage: 65
+        varietal: Syrah
+      - percentage: 65
+        varietal: Syrah
+      description: Red wine blend with an emphasis on the Cabernet Franc grape and
+        including other Bordeaux grape varietals and some Syrah
+      id: 123abc
+      name: Blue's Cuvee
+      rating: 1
+      vintage: 1926
+      winery:
+        name: Longoria
   ShowNotFoundResponseBody:
     title: ShowNotFoundResponseBody
     type: object
@@ -638,84 +740,8 @@ definitions:
     - name
     - winery
     - vintage
-  StoredBottleResponseBodyCollection:
-    title: 'Mediatype identifier: '
-    type: array
-    items:
-      $ref: '#/definitions/StoredBottleResponseBody'
-    description: StoredBottleResponseBodyCollection is the result type for an array
-      of StoredBottleResponseBody (default view)
-    example:
-    - composition:
-      - percentage: 65
-        varietal: Syrah
-      - percentage: 65
-        varietal: Syrah
-      - percentage: 65
-        varietal: Syrah
-      - percentage: 65
-        varietal: Syrah
-      description: Red wine blend with an emphasis on the Cabernet Franc grape and
-        including other Bordeaux grape varietals and some Syrah
-      id: 123abc
-      name: Blue's Cuvee
-      rating: 1
-      vintage: 1926
-      winery:
-        name: Longoria
-    - composition:
-      - percentage: 65
-        varietal: Syrah
-      - percentage: 65
-        varietal: Syrah
-      - percentage: 65
-        varietal: Syrah
-      - percentage: 65
-        varietal: Syrah
-      description: Red wine blend with an emphasis on the Cabernet Franc grape and
-        including other Bordeaux grape varietals and some Syrah
-      id: 123abc
-      name: Blue's Cuvee
-      rating: 1
-      vintage: 1926
-      winery:
-        name: Longoria
-    - composition:
-      - percentage: 65
-        varietal: Syrah
-      - percentage: 65
-        varietal: Syrah
-      - percentage: 65
-        varietal: Syrah
-      - percentage: 65
-        varietal: Syrah
-      description: Red wine blend with an emphasis on the Cabernet Franc grape and
-        including other Bordeaux grape varietals and some Syrah
-      id: 123abc
-      name: Blue's Cuvee
-      rating: 1
-      vintage: 1926
-      winery:
-        name: Longoria
-    - composition:
-      - percentage: 65
-        varietal: Syrah
-      - percentage: 65
-        varietal: Syrah
-      - percentage: 65
-        varietal: Syrah
-      - percentage: 65
-        varietal: Syrah
-      description: Red wine blend with an emphasis on the Cabernet Franc grape and
-        including other Bordeaux grape varietals and some Syrah
-      id: 123abc
-      name: Blue's Cuvee
-      rating: 1
-      vintage: 1926
-      winery:
-        name: Longoria
   StoredBottleTinyResponseBody:
-    title: 'Mediatype identifier: '
+    title: 'Mediatype identifier: application/vnd.cellar.stored-bottle; view=default'
     type: object
     properties:
       id:
@@ -730,7 +756,7 @@ definitions:
       winery:
         $ref: '#/definitions/WineryTinyResponseBody'
     description: A StoredBottle describes a bottle retrieved by the storage service.
-      (tiny view) (default view) (default view) (default view)
+      (tiny view) (default view)
     example:
       id: 123abc
       name: Blue's Cuvee
@@ -740,30 +766,6 @@ definitions:
     - id
     - name
     - winery
-  StoredBottleTinyResponseBodyCollection:
-    title: 'Mediatype identifier: '
-    type: array
-    items:
-      $ref: '#/definitions/StoredBottleTinyResponseBody'
-    description: StoredBottleTinyResponseBodyCollection is the result type for an
-      array of StoredBottleTinyResponseBody (default view)
-    example:
-    - id: 123abc
-      name: Blue's Cuvee
-      winery:
-        name: Longoria
-    - id: 123abc
-      name: Blue's Cuvee
-      winery:
-        name: Longoria
-    - id: 123abc
-      name: Blue's Cuvee
-      winery:
-        name: Longoria
-    - id: 123abc
-      name: Blue's Cuvee
-      winery:
-        name: Longoria
   WineryRequestBody:
     title: 'Mediatype identifier: winery; view=default'
     type: object
@@ -798,28 +800,27 @@ definitions:
     - region
     - country
   WineryResponseBodyTiny:
-    title: 'Mediatype identifier: '
+    title: 'Mediatype identifier: winery; view=default'
     type: object
     properties:
       name:
         type: string
         description: Name of winery
         example: Longoria
-    description: WineryResponseBody result type (tiny view) (default view) (default
-      view)
+    description: WineryResponseBodyTiny result type (default view)
     example:
       name: Longoria
     required:
     - name
   WineryTinyResponseBody:
-    title: 'Mediatype identifier: '
+    title: 'Mediatype identifier: winery; view=default'
     type: object
     properties:
       name:
         type: string
         description: Name of winery
         example: Longoria
-    description: Winery result type (tiny view) (default view) (default view)
+    description: WineryTinyResponseBody result type (default view)
     example:
       name: Longoria
     required:

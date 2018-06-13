@@ -279,6 +279,8 @@ func projectSingle(m *ResultTypeExpr, view string, seen ...map[string]*Attribute
 				ut = rt.UserTypeExpr
 			}
 		}
+	} else {
+		seen = append(seen, make(map[string]*AttributeExpr))
 	}
 	if ut == nil {
 		ut = &UserTypeExpr{
@@ -349,18 +351,15 @@ func projectCollection(m *ResultTypeExpr, view string, seen ...map[string]*Attri
 }
 
 func projectRecursive(at *AttributeExpr, vat *NamedAttributeExpr, view string, seen ...map[string]*AttributeExpr) (*AttributeExpr, error) {
-	if ut, ok := at.Type.(UserType); ok {
-		var s map[string]*AttributeExpr
-		if len(seen) > 0 {
-			s = seen[0]
-		} else {
-			s = make(map[string]*AttributeExpr)
-			seen = append(seen, s)
-		}
+	s := seen[0]
+	ut, isUT := at.Type.(UserType)
+	if isUT {
 		if att, ok := s[ut.ID()]; ok {
 			return att, nil
 		}
-		at = DupAtt(at)
+	}
+	at = DupAtt(at)
+	if isUT {
 		s[ut.ID()] = at
 	}
 	if rt, ok := at.Type.(*ResultTypeExpr); ok {
