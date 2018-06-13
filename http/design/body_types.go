@@ -158,7 +158,7 @@ func buildResponseBody(name string, attr *design.AttributeExpr, resp *HTTPRespon
 
 	// 4. Build computed user type
 	userType := &design.UserTypeExpr{
-		AttributeExpr: design.DupAtt(body.Attribute()),
+		AttributeExpr: body.Attribute(),
 		TypeName:      name,
 	}
 	setForcePointer(userType.Attribute())
