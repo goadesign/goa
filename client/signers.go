@@ -98,7 +98,7 @@ func (s *BasicSigner) Sign(req *http.Request) error {
 }
 
 // SignWebSocket adds the basic auth header to the WebSocket dial config
-func (s *BasicSigner) SignWebSocket(cfg *websocket.Config) error {
+func (s *WebSocketSigner) SignWebSocket(cfg *websocket.Config) error {
 	if s.Username != "" && s.Password != "" {
 		cfg.Header.Set("Authorization", "Basic "+base64.StdEncoding.EncodeToString([]byte(s.Username+":"+s.Password)))
 	}
