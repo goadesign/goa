@@ -347,6 +347,9 @@ func (g *Generator) generateResourceClient(pkgDir string, res *design.ResourceDe
 		codegen.SimpleImport("context"),
 		codegen.SimpleImport("golang.org/x/net/websocket"),
 		codegen.NewImport("uuid", "github.com/goadesign/goa/uuid"),
+		codegen.SimpleImport("errors"),
+		codegen.SimpleImport("encoding/base64"),
+		codegen.NewImport("goaclient", "github.com/goadesign/goa/client"),
 	}
 	title := fmt.Sprintf("%s: %s Resource Client", g.API.Context(), res.Name)
 	if err = file.WriteHeader(title, g.Target, imports); err != nil {
@@ -1010,6 +1013,13 @@ func (c *Client) {{ $funcName }}(ctx context.Context, path string{{ if .Params }
 	cfg, err := websocket.NewConfig(url_, url_)
 	if err != nil {
 		return nil, err
+	}
+	if c.BasicAuthSigner != nil {
+		wsSigner, ok := c.BasicAuthSigner.(*goaclient.BasicSigner)
+		if !ok {
+			return nil, errors.New("BasicAuthSigner type conversion failed.")
+		}
+		wsSigner.SignWebSocket(cfg)
 	}
 {{ range $header := .Headers }}{{ $tmp := tempvar }}	{{ toString $header.VarName $tmp $header.Attribute }}
 	cfg.Header["{{ $header.Name }}"] = []string{ {{ $tmp }} }

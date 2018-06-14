@@ -1,8 +1,11 @@
 package client
 
 import (
+	"encoding/base64"
 	"fmt"
 	"net/http"
+
+	"golang.org/x/net/websocket"
 )
 
 type (
@@ -10,6 +13,10 @@ type (
 	Signer interface {
 		// Sign adds required headers, cookies etc.
 		Sign(*http.Request) error
+	}
+
+	WebSocketSigner interface {
+		SignWebSocket(*websocket.Conn) error
 	}
 
 	// BasicSigner implements basic auth.
@@ -85,6 +92,13 @@ type (
 func (s *BasicSigner) Sign(req *http.Request) error {
 	if s.Username != "" && s.Password != "" {
 		req.SetBasicAuth(s.Username, s.Password)
+	}
+	return nil
+}
+
+func (s *BasicSigner) SignWebSocket(cfg *websocket.Config) error {
+	if s.Username != "" && s.Password != "" {
+		cfg.Header.Set("Authorization", "Basic "+base64.StdEncoding.EncodeToString([]byte(s.Username+":"+s.Password)))
 	}
 	return nil
 }
