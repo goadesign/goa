@@ -249,6 +249,10 @@ func (a *AttributeExpr) Merge(other *AttributeExpr) {
 	if left == nil || right == nil {
 		panic("cannot merge non object attributes") // bug
 	}
+	if a.Type == Empty && len(*right) > 0 {
+		a.Type = &Object{}
+		left = AsObject(a.Type)
+	}
 	if other.Validation != nil {
 		if a.Validation == nil {
 			a.Validation = other.Validation.Dup()
@@ -268,7 +272,10 @@ func (a *AttributeExpr) Inherit(parent *AttributeExpr) {
 	if !a.shouldInherit(parent) {
 		return
 	}
-
+	pobj := AsObject(parent.Type)
+	if a.Type == Empty && len(*pobj) > 0 {
+		a.Type = &Object{}
+	}
 	a.inheritValidations(parent)
 	a.inheritRecursive(parent)
 }
