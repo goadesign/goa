@@ -23,11 +23,19 @@ type (
 	// WsSigner is the common interface for websocket signers
 	WsSigner interface {
 		// WsSign adds required headers, cookies, etc. to websocket config
-		WsSign(*websocket.Conn) error
+		WsSign(*websocket.Config) error
 	}
 
 	// BasicSigner implements basic auth.
 	BasicSigner struct {
+		// Username is the basic auth user.
+		Username string
+		// Password is err guess what? the basic auth password.
+		Password string
+	}
+
+	// WsBasicSigner implements basic auth for a websocket.
+	WsBasicSigner struct {
 		// Username is the basic auth user.
 		Username string
 		// Password is err guess what? the basic auth password.
@@ -106,7 +114,7 @@ func (s *BasicSigner) Sign(req *http.Request) error {
 }
 
 // WsSign adds the basic auth header to the websocket config
-func (s *BasicSigner) WsSign(cfg *websocket.Config) error {
+func (s *WsBasicSigner) WsSign(cfg *websocket.Config) error {
 	if s.Username != "" && s.Password != "" {
 		cfg.Header.Set(AuthHeader, "Basic "+base64.StdEncoding.EncodeToString([]byte(s.Username+":"+s.Password)))
 	}
