@@ -661,9 +661,9 @@ var ResultBodyCollectionExplicitViewEncodeCode = `// EncodeMethodBodyCollectionE
 // MethodBodyCollectionExplicitView endpoint.
 func EncodeMethodBodyCollectionExplicitViewResponse(encoder func(context.Context, http.ResponseWriter) goahttp.Encoder) func(context.Context, http.ResponseWriter, interface{}) error {
 	return func(ctx context.Context, w http.ResponseWriter, v interface{}) error {
-		res := v.(servicebodycollectionexplicitview.ResulttypecollectionTinyCollection)
+		res := v.(servicebodycollectionexplicitviewviews.ResulttypecollectionCollection)
 		enc := encoder(ctx, w)
-		body := NewMethodBodyCollectionExplicitViewResponseBody(res)
+		body := NewMethodBodyCollectionExplicitViewResponseBody(res.Projected)
 		w.WriteHeader(http.StatusOK)
 		return enc.Encode(body)
 	}

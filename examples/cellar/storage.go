@@ -35,7 +35,7 @@ func NewStorage(db *bolt.DB, logger *log.Logger) (storage.Service, error) {
 }
 
 // List all stored bottles
-func (s *storageSvc) List(ctx context.Context) (res storage.StoredBottleTinyCollection, err error) {
+func (s *storageSvc) List(ctx context.Context) (res storage.StoredBottleCollection, err error) {
 	if err = s.db.LoadAll("CELLAR", &res); err != nil {
 		return nil, err // internal error
 	}

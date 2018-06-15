@@ -17,7 +17,7 @@ import (
 // The storage service makes it possible to view, add or remove wine bottles.
 type Service interface {
 	// List all stored bottles
-	List(context.Context) (res StoredBottleTinyCollection, err error)
+	List(context.Context) (res StoredBottleCollection, err error)
 	// Show bottle by ID
 	// The "view" return value must have one of the following views
 	// * "default"
@@ -49,9 +49,8 @@ const ServiceName = "storage"
 // MethodKey key.
 var MethodNames = [7]string{"list", "show", "add", "remove", "rate", "multi_add", "multi_update"}
 
-// StoredBottleTinyCollection is the result type of the storage service list
-// method.
-type StoredBottleTinyCollection []*StoredBottleTiny
+// StoredBottleCollection is the result type of the storage service list method.
+type StoredBottleCollection []*StoredBottle
 
 // ShowPayload is the payload type of the storage service show method.
 type ShowPayload struct {
@@ -110,22 +109,6 @@ type MultiUpdatePayload struct {
 	Bottles []*Bottle
 }
 
-// A StoredBottle describes a bottle retrieved by the storage service. (tiny
-// view)
-type StoredBottleTiny struct {
-	// ID is the unique id of the bottle.
-	ID string
-	// Name of bottle
-	Name string
-	// Winery that produces wine
-	Winery *WineryTiny
-}
-
-type WineryTiny struct {
-	// Name of winery
-	Name string
-}
-
 type Winery struct {
 	// Name of winery
 	Name string
@@ -163,6 +146,35 @@ func (e *NotFound) ErrorName() string {
 	return e.Message
 }
 
+// NewStoredBottleCollection initializes result type StoredBottleCollection
+// from viewed result type StoredBottleCollection.
+func NewStoredBottleCollection(vres storageviews.StoredBottleCollection) StoredBottleCollection {
+	var res StoredBottleCollection
+	switch vres.View {
+	case "default", "":
+		res = newStoredBottleCollection(vres.Projected)
+	case "tiny":
+		res = newStoredBottleCollectionTiny(vres.Projected)
+	}
+	return res
+}
+
+// newViewedStoredBottleCollection initializes viewed result type
+// StoredBottleCollection from result type StoredBottleCollection using the
+// given view.
+func newViewedStoredBottleCollection(res StoredBottleCollection, view string) storageviews.StoredBottleCollection {
+	var vres storageviews.StoredBottleCollection
+	switch view {
+	case "default", "":
+		p := newStoredBottleCollectionView(res)
+		vres = storageviews.StoredBottleCollection{p, "default"}
+	case "tiny":
+		p := newStoredBottleCollectionViewTiny(res)
+		vres = storageviews.StoredBottleCollection{p, "tiny"}
+	}
+	return vres
+}
+
 // NewStoredBottle initializes result type StoredBottle from viewed result type
 // StoredBottle.
 func NewStoredBottle(vres *storageviews.StoredBottle) *StoredBottle {
@@ -187,6 +199,47 @@ func newViewedStoredBottle(res *StoredBottle, view string) *storageviews.StoredB
 	case "tiny":
 		p := newStoredBottleViewTiny(res)
 		vres = &storageviews.StoredBottle{p, "tiny"}
+	}
+	return vres
+}
+
+// newStoredBottleCollection converts projected type StoredBottleCollection to
+// service type StoredBottleCollection.
+func newStoredBottleCollection(vres storageviews.StoredBottleCollectionView) StoredBottleCollection {
+	res := make(StoredBottleCollection, len(vres))
+	for i, n := range vres {
+		res[i] = newStoredBottle(n)
+	}
+	return res
+}
+
+// newStoredBottleCollectionTiny converts projected type StoredBottleCollection
+// to service type StoredBottleCollection.
+func newStoredBottleCollectionTiny(vres storageviews.StoredBottleCollectionView) StoredBottleCollection {
+	res := make(StoredBottleCollection, len(vres))
+	for i, n := range vres {
+		res[i] = newStoredBottleTiny(n)
+	}
+	return res
+}
+
+// newStoredBottleCollectionView projects result type StoredBottleCollection
+// into projected type StoredBottleCollectionView using the "default" view.
+func newStoredBottleCollectionView(res StoredBottleCollection) storageviews.StoredBottleCollectionView {
+	vres := make(storageviews.StoredBottleCollectionView, len(res))
+	for i, n := range res {
+		vres[i] = newStoredBottleView(n)
+	}
+	return vres
+}
+
+// newStoredBottleCollectionViewTiny projects result type
+// StoredBottleCollection into projected type StoredBottleCollectionView using
+// the "tiny" view.
+func newStoredBottleCollectionViewTiny(res StoredBottleCollection) storageviews.StoredBottleCollectionView {
+	vres := make(storageviews.StoredBottleCollectionView, len(res))
+	for i, n := range res {
+		vres[i] = newStoredBottleViewTiny(n)
 	}
 	return vres
 }

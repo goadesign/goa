@@ -277,6 +277,29 @@ func newViewedMultipleViews(res *MultipleViews, view string) *multiplemethodsres
 	return vres
 }
 
+// NewSingleView initializes result type SingleView from viewed result type
+// SingleView.
+func NewSingleView(vres *multiplemethodsresultmultipleviewsviews.SingleView) *SingleView {
+	var res *SingleView
+	switch vres.View {
+	case "default", "":
+		res = newSingleView(vres.Projected)
+	}
+	return res
+}
+
+// newViewedSingleView initializes viewed result type SingleView from result
+// type SingleView using the given view.
+func newViewedSingleView(res *SingleView, view string) *multiplemethodsresultmultipleviewsviews.SingleView {
+	var vres *multiplemethodsresultmultipleviewsviews.SingleView
+	switch view {
+	case "default", "":
+		p := newSingleViewView(res)
+		vres = &multiplemethodsresultmultipleviewsviews.SingleView{p, "default"}
+	}
+	return vres
+}
+
 // newMultipleViews converts projected type MultipleViews to service type
 // MultipleViews.
 func newMultipleViews(vres *multiplemethodsresultmultipleviewsviews.MultipleViewsView) *MultipleViews {
@@ -311,6 +334,25 @@ func newMultipleViewsView(res *MultipleViews) *multiplemethodsresultmultipleview
 func newMultipleViewsViewTiny(res *MultipleViews) *multiplemethodsresultmultipleviewsviews.MultipleViewsView {
 	vres := &multiplemethodsresultmultipleviewsviews.MultipleViewsView{
 		A: res.A,
+	}
+	return vres
+}
+
+// newSingleView converts projected type SingleView to service type SingleView.
+func newSingleView(vres *multiplemethodsresultmultipleviewsviews.SingleViewView) *SingleView {
+	res := &SingleView{
+		A: vres.A,
+		B: vres.B,
+	}
+	return res
+}
+
+// newSingleViewView projects result type SingleView into projected type
+// SingleViewView using the "default" view.
+func newSingleViewView(res *SingleView) *multiplemethodsresultmultipleviewsviews.SingleViewView {
+	vres := &multiplemethodsresultmultipleviewsviews.SingleViewView{
+		A: res.A,
+		B: res.B,
 	}
 	return vres
 }

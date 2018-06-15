@@ -61,8 +61,7 @@ type (
 		// ProjectedTypes lists the types which uses pointers for all fields to
 		// define view specific validation logic.
 		ProjectedTypes []*ProjectedTypeData
-		// ViewedResultTypes lists all the method result types having multiple
-		// views.
+		// ViewedResultTypes lists all the viewed method result types.
 		ViewedResultTypes []*ViewedResultTypeData
 		// Scope initialized with all the service types.
 		Scope *codegen.NameScope
@@ -126,7 +125,7 @@ type (
 		// method.
 		Schemes []string
 		// ViewedResult contains the data required to generate the code handling
-		// multiple views if any.
+		// views if any.
 		ViewedResult *ViewedResultTypeData
 	}
 
@@ -230,6 +229,9 @@ type (
 		FullRef string
 		// IsCollection indicates whether the viewed result type is a collection.
 		IsCollection bool
+		// ViewName is the view name to use to render the result type. It is set
+		// only if the result type has at most one view.
+		ViewName string
 		// ViewsPkg is the views package name.
 		ViewsPkg string
 	}
@@ -251,19 +253,17 @@ type (
 		// the projected type
 		*UserTypeData
 		// Validations lists the validation functions to run on the projected type.
-		// If the projected type corresponds to a result type with multiple views
-		// then a validation function for each view is generated. For user types
-		// and result types with a single view, only one validation function is
-		// generated.
+		// If the projected type corresponds to a result type then a validation
+		// function for each view is generated. For user types, only one validation
+		// function is generated.
 		Validations []*ValidateData
 		// Projections contains the code to create a projected type based on
-		// views. If the projected type corresponds to a result type with multiple
-		// views, then a function for each view is generated.
+		// views. If the projected type corresponds to a result type, then a
+		// function for each view is generated.
 		Projections []*InitData
 		// TypeInits contains the code to convert a projected type to its
 		// corresponding service type. If the projected type corresponds to a
-		// result type with multiple views, then a function for each view is
-		// generated.
+		// result type, then a function for each view is generated.
 		TypeInits []*InitData
 		// ViewsPkg is the views package name.
 		ViewsPkg string
@@ -408,7 +408,7 @@ func (d ServicesData) analyze(service *design.ServiceExpr) *Data {
 			}
 			types = append(types, collectTypes(ratt, seen, scope)...)
 			// collect projected types
-			if rt, ok := m.Result.Type.(*design.ResultTypeExpr); ok && rt.HasMultipleViews() {
+			if _, ok := m.Result.Type.(*design.ResultTypeExpr); ok {
 				projected := design.DupAtt(m.Result)
 				projTypes = append(projTypes, collectProjectedTypes(projected, m.Result, seenProj, scope, viewspkg)...)
 			}
@@ -426,7 +426,7 @@ func (d ServicesData) analyze(service *design.ServiceExpr) *Data {
 		methods = make([]*MethodData, len(service.Methods))
 		for i, e := range service.Methods {
 			m := buildMethodData(e, pkgName, scope)
-			if rt, ok := e.Result.Type.(*design.ResultTypeExpr); ok && rt.HasMultipleViews() {
+			if rt, ok := e.Result.Type.(*design.ResultTypeExpr); ok {
 				if vrt, ok := seenViewed[m.Result]; ok {
 					m.ViewedResult = vrt
 				} else {
@@ -796,7 +796,7 @@ func buildProjectedType(projected, att *design.AttributeExpr, scope *codegen.Nam
 		typeInits   []*InitData
 	)
 	pt := projected.Type.(design.UserType)
-	if rt, isrt := pt.(*design.ResultTypeExpr); isrt && rt.HasMultipleViews() {
+	if _, isrt := pt.(*design.ResultTypeExpr); isrt {
 		typeInits = buildTypeInits(projected, att, scope, viewspkg)
 		projections = buildProjections(projected, att, scope, viewspkg)
 	}
@@ -828,12 +828,20 @@ func buildViewedResultType(att *design.AttributeExpr, projected design.UserType,
 		validate *ValidateData
 		data     map[string]interface{}
 		buf      bytes.Buffer
+		viewName string
 
 		resvar  = scope.GoTypeName(att)
 		resref  = scope.GoTypeRef(att)
 		isarr   = design.IsArray(att.Type)
 		vresref = scope.GoFullTypeRef(att, viewspkg)
 	)
+	if !rt.HasMultipleViews() {
+		viewName = design.DefaultView
+	}
+	if v, ok := att.Metadata["view"]; ok && len(v) > 0 {
+		viewName = v[0]
+	}
+
 	// collect result type views
 	views = make([]*ViewData, 0, len(rt.Views))
 	for _, view := range rt.Views {
@@ -924,6 +932,7 @@ func buildViewedResultType(att *design.AttributeExpr, projected design.UserType,
 		Views:        views,
 		Validate:     validate,
 		IsCollection: isarr,
+		ViewName:     viewName,
 		ViewsPkg:     viewspkg,
 	}
 }
@@ -1000,7 +1009,7 @@ func buildTypeInits(projected, att *design.AttributeExpr, scope *codegen.NameSco
 		}
 		code, helpers := buildConstructorCode(src, att, "vres", "res", viewspkg, "", view.Name, scope, true)
 		name := "new" + resvar
-		if view.Name != "default" {
+		if view.Name != design.DefaultView {
 			name += codegen.Goify(view.Name, true)
 		}
 		init = append(init, &InitData{
@@ -1062,7 +1071,7 @@ func buildProjections(projected, att *design.AttributeExpr, scope *codegen.NameS
 		}
 		code, helpers := buildConstructorCode(att, tgt, "res", "vres", "", viewspkg, view.Name, scope, false)
 		name := "new" + tname
-		if view.Name != "default" {
+		if view.Name != design.DefaultView {
 			name += codegen.Goify(view.Name, true)
 		}
 		projections = append(projections, &InitData{
@@ -1086,9 +1095,9 @@ func buildValidations(projected *design.AttributeExpr, scope *codegen.NameScope)
 		ref   = scope.GoTypeRef(projected)
 		tname = scope.GoTypeName(projected)
 	)
-	if rt, isrt := projected.Type.(*design.ResultTypeExpr); isrt && rt.HasMultipleViews() {
-		// for result types with multiple views, we create a validation function
-		// containing view specific validation logic for each view
+	if rt, isrt := projected.Type.(*design.ResultTypeExpr); isrt {
+		// for result types we create a validation function containing view
+		// specific validation logic for each view
 		isarr := design.IsArray(projected.Type)
 		for _, view := range rt.Views {
 			var (
@@ -1115,11 +1124,11 @@ func buildValidations(projected *design.AttributeExpr, scope *codegen.NameScope)
 				// select only the attributes from the given view expression
 				for _, n := range *view.Type.(*design.Object) {
 					if attr := sobj.Attribute(n.Name); attr != nil {
-						if rt2, ok := attr.Type.(*design.ResultTypeExpr); ok && rt2.HasMultipleViews() {
+						if rt2, ok := attr.Type.(*design.ResultTypeExpr); ok {
 							// use explicitly specified view (if any) for the attribute,
 							// otherwise use default
 							vw := ""
-							if v, ok := n.Attribute.Metadata["view"]; ok && v[0] != "default" {
+							if v, ok := n.Attribute.Metadata["view"]; ok && len(v) > 0 && v[0] != design.DefaultView {
 								vw = v[0]
 							}
 							fields = append(fields, map[string]interface{}{
@@ -1196,7 +1205,7 @@ func buildConstructorCode(src, tgt *design.AttributeExpr, srcvar, tgtvar, srcpkg
 	}
 	if arr != nil {
 		init := "new" + scope.GoTypeName(arr.ElemType)
-		if view != "" && view != "default" {
+		if view != "" && view != design.DefaultView {
 			init += codegen.Goify(view, true)
 		}
 		data["InitName"] = init
@@ -1230,7 +1239,7 @@ func buildConstructorCode(src, tgt *design.AttributeExpr, srcvar, tgtvar, srcpkg
 			if view != "" {
 				v := ""
 				if vatt := rt.View(view).AttributeExpr.Find(n.Name); vatt != nil {
-					if attv, ok := vatt.Metadata["view"]; ok && attv[0] != "default" {
+					if attv, ok := vatt.Metadata["view"]; ok && len(attv) > 0 && attv[0] != design.DefaultView {
 						// view is explicitly set for the result type on the attribute
 						v = attv[0]
 					}

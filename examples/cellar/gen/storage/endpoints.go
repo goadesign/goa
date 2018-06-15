@@ -53,7 +53,15 @@ func (e *Endpoints) Use(m func(goa.Endpoint) goa.Endpoint) {
 // service "storage".
 func NewListEndpoint(s Service) goa.Endpoint {
 	return func(ctx context.Context, req interface{}) (interface{}, error) {
-		return s.List(ctx)
+		res, err := s.List(ctx)
+		if err != nil {
+			return nil, err
+		}
+		vres := newViewedStoredBottleCollection(res, "tiny")
+		if err := vres.Validate(); err != nil {
+			return nil, err
+		}
+		return vres, nil
 	}
 }
 
