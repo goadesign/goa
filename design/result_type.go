@@ -209,8 +209,12 @@ func (m *ResultTypeExpr) ViewHasAttribute(view, attr string) bool {
 // the underlying UserTypeExpr.
 func (m *ResultTypeExpr) Finalize() {
 	if m.View("default") == nil {
+		att := DupAtt(m.AttributeExpr)
+		if arr := AsArray(att.Type); arr != nil {
+			att.Type = AsObject(arr.ElemType.Type)
+		}
 		v := &ViewExpr{
-			AttributeExpr: DupAtt(m.AttributeExpr),
+			AttributeExpr: att,
 			Name:          "default",
 			Parent:        m,
 		}
