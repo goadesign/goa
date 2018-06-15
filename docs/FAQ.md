@@ -56,17 +56,15 @@ only applies for non required attributes with default values.
 
 # How are views for a result type computed?
 
-Views can be defined on a result type. If a method returns a result type with
-multiple views then
-* the service method returns an extra view along with the result and error
+Views can be defined on a result type. If a method returns a result type
+* the service method returns an extra view along with the result and error if
+  the result type has more than one view. The generated endpoint function uses
+  this view to create a viewed result type.
 * a views package is generated at the service level which defines a viewed
-  result type for each result with multiple views. This viewed result type
-  has identical field names and types but uses pointers for all fields so that
-  view specific validation logic may be generated. Constructors are generated
-  in the service package to convert a result type to a viewed result type and
-  vice versa.
-* the generated endpoint function uses the view returned by the service method
-  to create a viewed result type.
+  result type for each method result. This viewed result type has identical
+  field names and types but uses pointers for all fields so that view specific
+  validation logic may be generated. Constructors are generated in the service
+  package to convert a result type to a viewed result type and vice versa.
 
 The server side response marshaling code marshals the viewed result type
 returned by the endpoint into a server type omitting any nil attributes.
@@ -80,3 +78,6 @@ the attributes in the viewed result type as defined by the view and converts
 the viewed result type into the service result type using the appropriate
 constructor.
 
+NOTE: If a result type is defined without any views, a "default" view is added
+to the result type by goa. If you don't care about views, you can define a
+method result using the `Type` DSL which will bypass the view-specific logic.
