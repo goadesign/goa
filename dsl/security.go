@@ -164,6 +164,8 @@ func JWTSecurity(name string, fn ...func()) *design.SchemeExpr {
 	expr := &design.SchemeExpr{
 		SchemeName: name,
 		Kind:       design.JWTKind,
+		In:         "header",
+		Name:       "Authorization",
 	}
 
 	if len(fn) != 0 {
