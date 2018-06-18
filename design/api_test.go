@@ -168,3 +168,20 @@ func TestURLParams(t *testing.T) {
 		}
 	}
 }
+
+func TestApiExpr_Hash(t *testing.T) {
+	cases := map[string]struct {
+		name     string
+		expected string
+	}{
+		"foo":   {name: "foo", expected: "_api_+foo"},
+		"empty": {name: "", expected: "_api_+"},
+	}
+
+	for k, tc := range cases {
+		api := APIExpr{Name: tc.name}
+		if actual := api.Hash(); actual != tc.expected {
+			t.Errorf("%s: got %#v, expected %#v", k, actual, tc.expected)
+		}
+	}
+}
