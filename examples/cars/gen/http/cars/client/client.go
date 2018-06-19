@@ -117,21 +117,22 @@ func (c *Client) List() goa.Endpoint {
 		if c.connConfigFn != nil {
 			conn = c.connConfigFn(conn)
 		}
-
-		return &listClientStream{conn: conn}, nil
+		stream := &listClientStream{conn: conn}
+		return stream, nil
 	}
 }
 
 // Recv receives a carssvc.Car type from the "list" endpoint websocket
 // connection.
 func (c *listClientStream) Recv() (*carssvc.Car, error) {
-	var v carssvc.Car
-	err := c.conn.ReadJSON(&v)
+	var body ListResponseBody
+	err := c.conn.ReadJSON(&body)
 	if websocket.IsCloseError(err, goahttp.NormalSocketCloseErrors...) {
 		return nil, io.EOF
 	}
 	if err != nil {
 		return nil, err
 	}
-	return &v, nil
+	res := NewListCarOK(&body)
+	return res, nil
 }

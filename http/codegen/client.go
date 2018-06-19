@@ -92,6 +92,13 @@ func client(genpkg string, svc *httpdesign.ServiceExpr) *codegen.File {
 				Source: streamRecvT,
 				Data:   e.ClientStream,
 			})
+			if e.Method.ViewedResult != nil {
+				sections = append(sections, &codegen.SectionTemplate{
+					Name:   "client-stream-set-view",
+					Source: streamSetViewT,
+					Data:   e.ClientStream,
+				})
+			}
 		}
 	}
 
@@ -278,8 +285,12 @@ func (c *{{ .ClientStruct }}) {{ .EndpointInit }}({{ if .MultipartRequestEncoder
 		if c.connConfigFn != nil {
 			conn = c.connConfigFn(conn)
 		}
-
-		return &{{ .ClientStream.VarName }}{conn: conn}, nil
+		stream := &{{ .ClientStream.VarName }}{conn: conn}
+		{{- if .Method.ViewedResult }}
+		view := resp.Header.Get("goa-view")
+		stream.SetView(view)
+		{{- end }}
+		return stream, nil
 	{{- else }}
 		resp, err := c.{{ .Method.VarName }}Doer.Do(req)
 

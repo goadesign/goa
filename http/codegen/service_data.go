@@ -501,6 +501,8 @@ type (
 		Interface string
 		// Endpoint is endpoint data that defines streaming payload/result.
 		Endpoint *EndpointData
+		// Response is the successful response data for the streaming endpoint.
+		Response *ResponseData
 		// Scheme is the scheme used by the streaming connection.
 		Scheme string
 		// SendName is the fully qualified type name sent through the stream.
@@ -803,6 +805,7 @@ func (d ServicesData) analyze(hs *httpdesign.ServiceExpr) *ServiceData {
 				VarName:   ep.ServerStream.VarName,
 				Interface: fmt.Sprintf("%s.%s", svc.PkgName, ep.ServerStream.Interface),
 				Endpoint:  ad,
+				Response:  ad.Result.Responses[0],
 				PkgName:   svc.PkgName,
 				Scheme:    wsscheme,
 				Type:      "server",
@@ -811,6 +814,7 @@ func (d ServicesData) analyze(hs *httpdesign.ServiceExpr) *ServiceData {
 				VarName:   ep.ClientStream.VarName,
 				Interface: fmt.Sprintf("%s.%s", svc.PkgName, ep.ClientStream.Interface),
 				Endpoint:  ad,
+				Response:  ad.Result.Responses[0],
 				PkgName:   svc.PkgName,
 				Scheme:    wsscheme,
 				Type:      "client",
@@ -2088,14 +2092,18 @@ type {{ .VarName }} struct {
 	// stream interface.
 	// input: StreamData
 	streamSendT = `{{ printf "Send sends %s type to the %q endpoint websocket connection." .SendName .Endpoint.Method.Name | comment }}
-func (s *{{ .VarName }}) Send(res {{ .SendRef }}) error {
+func (s *{{ .VarName }}) Send(v {{ .SendRef }}) error {
 	var (
 		err error
 		upgrade func()
 	)
 	{
 		upgrade = func() {
-			s.conn, err = s.upgrader.Upgrade(s.w, s.r, nil)
+  {{- if .Endpoint.Method.ViewedResult }}
+			respHdr := make(http.Header)
+			respHdr.Add("goa-view", s.view)
+	{{- end }}
+			s.conn, err = s.upgrader.Upgrade(s.w, s.r, {{ if .Endpoint.Method.ViewedResult }}respHdr{{ else }}nil{{ end }})
 			if err != nil {
 				return
 			}
@@ -2110,25 +2118,16 @@ func (s *{{ .VarName }}) Send(res {{ .SendRef }}) error {
 		return err
 	}
   {{- if .Endpoint.Method.ViewedResult }}
-  vres := {{ .PkgName }}.{{ .Endpoint.Method.ViewedResult.Init.Name }}(res, s.view)
-  if err := vres.Validate(); err != nil {
+  res := {{ .PkgName }}.{{ .Endpoint.Method.ViewedResult.Init.Name }}(v, s.view)
+  if err := res.Validate(); err != nil {
     return err
   }
+	{{- else }}
+	res := v
   {{- end }}
-  return s.conn.WriteJSON({{ if .Endpoint.Method.ViewedResult }}vres{{ else }}res{{ end }})
+	body := {{ .Response.ServerBody.Init.Name }}({{ range .Response.ServerBody.Init.ServerArgs }}{{ .Ref }}, {{ end }})
+  return s.conn.WriteJSON(body)
 }
-
-{{- define "websocket_upgrade" }}
-	conn, err := up.Upgrade(w, r, nil)
-	if err != nil {
-		if err := encodeError(ctx, w, err); err != nil {
-			eh(ctx, w, err)
-		}
-	}
-	if connConfigFn != nil {
-		conn = connConfigFn(conn)
-	}
-{{- end }}
 `
 
 	// streamRecvT renders the function implementing the Recv method in
@@ -2136,25 +2135,23 @@ func (s *{{ .VarName }}) Send(res {{ .SendRef }}) error {
 	// input: StreamData
 	streamRecvT = `{{ printf "Recv receives a %s type from the %q endpoint websocket connection." .RecvName .Endpoint.Method.Name | comment }}
 func (c *{{ .VarName }}) Recv() ({{ .RecvRef }}, error) {
-	{{- if .Endpoint.Method.ViewedResult }}
-	var v {{ .Endpoint.Method.ViewedResult.FullName }}
-	{{- else }}
-	var v {{ .RecvName }}
-	{{- end }}
-  err := c.conn.ReadJSON(&v)
+	var body {{ .Response.ClientBody.VarName }}
+  err := c.conn.ReadJSON(&body)
   if websocket.IsCloseError(err, goahttp.NormalSocketCloseErrors...) {
     return nil, io.EOF
   }
   if err != nil {
     return nil, err
   }
+	res := {{ .Response.ResultInit.Name }}({{ range .Response.ResultInit.ClientArgs }}{{ .Ref }},{{ end }})
   {{- if .Endpoint.Method.ViewedResult }}
-  if err := (&v).Validate(); err != nil {
+	vres := {{ if not .Endpoint.Method.ViewedResult.IsCollection }}&{{ end }}{{ .Endpoint.Method.ViewedResult.ViewsPkg }}.{{ .Endpoint.Method.ViewedResult.VarName }}{res, c.view}
+  if err := vres.Validate(); err != nil {
     return nil, goahttp.ErrValidationError("{{ .Endpoint.ServiceName }}", "{{ .Endpoint.Method.Name }}", err)
   }
-  return {{ .PkgName }}.{{ .Endpoint.Method.ViewedResult.ResultInit.Name }}(&v), nil
+  return {{ .PkgName }}.{{ .Endpoint.Method.ViewedResult.ResultInit.Name }}(vres), nil
   {{- else }}
-  return &v, nil
+  return res, nil
   {{- end }}
 }
 `

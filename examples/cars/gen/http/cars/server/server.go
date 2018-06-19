@@ -203,7 +203,7 @@ func NewListHandler(
 }
 
 // Send sends carssvc.Car type to the "list" endpoint websocket connection.
-func (s *listServerStream) Send(res *carssvc.Car) error {
+func (s *listServerStream) Send(v *carssvc.Car) error {
 	var (
 		err     error
 		upgrade func()
@@ -227,7 +227,9 @@ func (s *listServerStream) Send(res *carssvc.Car) error {
 	if err != nil {
 		return err
 	}
-	return s.conn.WriteJSON(res)
+	res := v
+	body := NewListResponseBody(res)
+	return s.conn.WriteJSON(body)
 }
 
 // Close closes the "list" endpoint websocket connection after sending a close
