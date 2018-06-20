@@ -20,6 +20,11 @@ func NewUserTypeExpr(name string, fn func()) *UserTypeExpr {
 	}
 }
 
+// ID returns the type name of the user type.
+func (u *UserTypeExpr) ID() string {
+	return u.Name()
+}
+
 // Kind implements DataKind.
 func (u *UserTypeExpr) Kind() Kind { return UserTypeKind }
 
@@ -80,7 +85,7 @@ func (u *UserTypeExpr) Example(r *Random) interface{} {
 }
 
 func (u *UserTypeExpr) recExample(r *Random) *interface{} {
-	if ex, ok := r.Seen[u.Name()]; ok {
+	if ex, ok := r.Seen[u.ID()]; ok {
 		return ex
 	}
 	if r.Seen == nil {
@@ -88,7 +93,7 @@ func (u *UserTypeExpr) recExample(r *Random) *interface{} {
 	}
 	var ex interface{}
 	pex := &ex
-	r.Seen[u.Name()] = pex
+	r.Seen[u.ID()] = pex
 	actual := u.Type.Example(r)
 	*pex = actual
 	return pex

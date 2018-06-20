@@ -364,10 +364,14 @@ func traverseMap(dt design.DataType, depth int, seen ...map[string]struct{}) int
 			s = make(map[string]struct{})
 			seen = append(seen, s)
 		}
-		if _, ok := s[dt.Name()]; ok {
+		key := dt.Name()
+		if u, ok := dt.(design.UserType); ok {
+			key = u.ID()
+		}
+		if _, ok := s[key]; ok {
 			return depth
 		}
-		s[dt.Name()] = struct{}{}
+		s[key] = struct{}{}
 		var level int
 		for _, nat := range *mo {
 			// if object type has attributes of type map then find out the attribute that has

@@ -1751,6 +1751,12 @@ func collectUserTypes(dt design.DataType, cb func(design.UserType), seen ...map[
 	if dt == design.Empty {
 		return
 	}
+	var s map[string]struct{}
+	if len(seen) > 0 {
+		s = seen[0]
+	} else {
+		s = make(map[string]struct{})
+	}
 	switch actual := dt.(type) {
 	case *design.Object:
 		for _, nat := range *actual {
@@ -1762,16 +1768,10 @@ func collectUserTypes(dt design.DataType, cb func(design.UserType), seen ...map[
 		collectUserTypes(actual.KeyType.Type, cb, seen...)
 		collectUserTypes(actual.ElemType.Type, cb, seen...)
 	case design.UserType:
-		var s map[string]struct{}
-		if len(seen) > 0 {
-			s = seen[0]
-		} else {
-			s = make(map[string]struct{})
-		}
-		if _, ok := s[actual.Name()]; ok {
+		if _, ok := s[actual.ID()]; ok {
 			return
 		}
-		s[actual.Name()] = struct{}{}
+		s[actual.ID()] = struct{}{}
 		cb(actual)
 		collectUserTypes(actual.Attribute().Type, cb, s)
 	}

@@ -64,11 +64,13 @@ func DecodeListResponse(decoder func(*http.Response) goahttp.Decoder, restoreBod
 			if err != nil {
 				return nil, goahttp.ErrDecodingError("storage", "list", err)
 			}
-			err = body.Validate()
-			if err != nil {
+			p := NewListStoredBottleCollectionOK(body)
+			view := "tiny"
+			vres := storageviews.StoredBottleCollection{p, view}
+			if err = vres.Validate(); err != nil {
 				return nil, goahttp.ErrValidationError("storage", "list", err)
 			}
-			return NewListStoredBottleTinyCollectionOK(body), nil
+			return storage.NewStoredBottleCollection(vres), nil
 		default:
 			body, _ := ioutil.ReadAll(resp.Body)
 			return nil, goahttp.ErrInvalidResponse("storage", "list", resp.StatusCode, string(body))
@@ -518,16 +520,6 @@ func DecodeMultiUpdateResponse(decoder func(*http.Response) goahttp.Decoder, res
 			return nil, goahttp.ErrInvalidResponse("storage", "multi_update", resp.StatusCode, string(body))
 		}
 	}
-}
-
-// unmarshalWineryTinyResponseBodyToWineryTiny builds a value of type
-// *storage.WineryTiny from a value of type *WineryTinyResponseBody.
-func unmarshalWineryTinyResponseBodyToWineryTiny(v *WineryTinyResponseBody) *storage.WineryTiny {
-	res := &storage.WineryTiny{
-		Name: *v.Name,
-	}
-
-	return res
 }
 
 // marshalWineryResponseBodyToWineryView builds a value of type

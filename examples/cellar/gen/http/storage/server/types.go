@@ -42,7 +42,7 @@ type MultiUpdateRequestBody struct {
 
 // ListResponseBody is the type of the "storage" service "list" endpoint HTTP
 // response body.
-type ListResponseBody []*StoredBottleTinyResponseBody
+type ListResponseBody []*StoredBottleResponseBody
 
 // ShowResponseBody is the type of the "storage" service "show" endpoint HTTP
 // response body.
@@ -72,20 +72,22 @@ type ShowNotFoundResponseBody struct {
 	ID *string `form:"id,omitempty" json:"id,omitempty" xml:"id,omitempty"`
 }
 
-// StoredBottleTinyResponseBody is used to define fields on response body types.
-type StoredBottleTinyResponseBody struct {
+// StoredBottleResponseBody is used to define fields on response body types.
+type StoredBottleResponseBody struct {
 	// ID is the unique id of the bottle.
 	ID *string `form:"id,omitempty" json:"id,omitempty" xml:"id,omitempty"`
 	// Name of bottle
 	Name *string `form:"name,omitempty" json:"name,omitempty" xml:"name,omitempty"`
 	// Winery that produces wine
-	Winery *WineryTinyResponseBody `form:"winery,omitempty" json:"winery,omitempty" xml:"winery,omitempty"`
-}
-
-// WineryTinyResponseBody is used to define fields on response body types.
-type WineryTinyResponseBody struct {
-	// Name of winery
-	Name *string `form:"name,omitempty" json:"name,omitempty" xml:"name,omitempty"`
+	Winery *WineryResponseBody `form:"winery,omitempty" json:"winery,omitempty" xml:"winery,omitempty"`
+	// Vintage of bottle
+	Vintage *uint32 `form:"vintage,omitempty" json:"vintage,omitempty" xml:"vintage,omitempty"`
+	// Composition is the list of grape varietals and associated percentage.
+	Composition []*ComponentResponseBody `form:"composition,omitempty" json:"composition,omitempty" xml:"composition,omitempty"`
+	// Description of bottle
+	Description *string `form:"description,omitempty" json:"description,omitempty" xml:"description,omitempty"`
+	// Rating of bottle from 1 (worst) to 5 (best)
+	Rating *uint32 `form:"rating,omitempty" json:"rating,omitempty" xml:"rating,omitempty"`
 }
 
 // WineryResponseBody is used to define fields on response body types.
@@ -146,15 +148,27 @@ type BottleRequestBody struct {
 
 // NewListResponseBody builds the HTTP response body from the result of the
 // "list" endpoint of the "storage" service.
-func NewListResponseBody(res storage.StoredBottleTinyCollection) ListResponseBody {
-	body := make([]*StoredBottleTinyResponseBody, len(res))
+func NewListResponseBody(res storageviews.StoredBottleCollectionView) ListResponseBody {
+	body := make([]*StoredBottleResponseBody, len(res))
 	for i, val := range res {
-		body[i] = &StoredBottleTinyResponseBody{
-			ID:   &val.ID,
-			Name: &val.Name,
+		body[i] = &StoredBottleResponseBody{
+			ID:          val.ID,
+			Name:        val.Name,
+			Vintage:     val.Vintage,
+			Description: val.Description,
+			Rating:      val.Rating,
 		}
 		if val.Winery != nil {
-			body[i].Winery = marshalWineryTinyToWineryTinyResponseBody(val.Winery)
+			body[i].Winery = marshalWineryViewToWineryResponseBody(val.Winery)
+		}
+		if val.Composition != nil {
+			body[i].Composition = make([]*ComponentResponseBody, len(val.Composition))
+			for j, val := range val.Composition {
+				body[i].Composition[j] = &ComponentResponseBody{
+					Varietal:   val.Varietal,
+					Percentage: val.Percentage,
+				}
+			}
 		}
 	}
 	return body
@@ -352,8 +366,8 @@ func (body *MultiUpdateRequestBody) Validate() (err error) {
 	return
 }
 
-// Validate runs the validations defined on StoredBottleTinyResponseBody
-func (body *StoredBottleTinyResponseBody) Validate() (err error) {
+// Validate runs the validations defined on StoredBottleResponseBody
+func (body *StoredBottleResponseBody) Validate() (err error) {
 	if body.ID == nil {
 		err = goa.MergeErrors(err, goa.MissingFieldError("id", "body"))
 	}
@@ -362,6 +376,9 @@ func (body *StoredBottleTinyResponseBody) Validate() (err error) {
 	}
 	if body.Winery == nil {
 		err = goa.MergeErrors(err, goa.MissingFieldError("winery", "body"))
+	}
+	if body.Vintage == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("vintage", "body"))
 	}
 	if body.Name != nil {
 		if utf8.RuneCountInString(*body.Name) > 100 {
@@ -373,13 +390,37 @@ func (body *StoredBottleTinyResponseBody) Validate() (err error) {
 			err = goa.MergeErrors(err, err2)
 		}
 	}
-	return
-}
-
-// Validate runs the validations defined on WineryTinyResponseBody
-func (body *WineryTinyResponseBody) Validate() (err error) {
-	if body.Name == nil {
-		err = goa.MergeErrors(err, goa.MissingFieldError("name", "body"))
+	if body.Vintage != nil {
+		if *body.Vintage < 1900 {
+			err = goa.MergeErrors(err, goa.InvalidRangeError("body.vintage", *body.Vintage, 1900, true))
+		}
+	}
+	if body.Vintage != nil {
+		if *body.Vintage > 2020 {
+			err = goa.MergeErrors(err, goa.InvalidRangeError("body.vintage", *body.Vintage, 2020, false))
+		}
+	}
+	for _, e := range body.Composition {
+		if e != nil {
+			if err2 := e.Validate(); err2 != nil {
+				err = goa.MergeErrors(err, err2)
+			}
+		}
+	}
+	if body.Description != nil {
+		if utf8.RuneCountInString(*body.Description) > 2000 {
+			err = goa.MergeErrors(err, goa.InvalidLengthError("body.description", *body.Description, utf8.RuneCountInString(*body.Description), 2000, false))
+		}
+	}
+	if body.Rating != nil {
+		if *body.Rating < 1 {
+			err = goa.MergeErrors(err, goa.InvalidRangeError("body.rating", *body.Rating, 1, true))
+		}
+	}
+	if body.Rating != nil {
+		if *body.Rating > 5 {
+			err = goa.MergeErrors(err, goa.InvalidRangeError("body.rating", *body.Rating, 5, false))
+		}
 	}
 	return
 }

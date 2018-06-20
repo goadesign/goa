@@ -104,7 +104,15 @@ func (e *Endpoints) Use(m func(goa.Endpoint) goa.Endpoint) {
 // service "WithResult".
 func NewAEndpoint(s Service) goa.Endpoint {
 	return func(ctx context.Context, req interface{}) (interface{}, error) {
-		return s.A(ctx)
+		res, err := s.A(ctx)
+		if err != nil {
+			return nil, err
+		}
+		vres := newViewedRtype(res, "default")
+		if err := vres.Validate(); err != nil {
+			return nil, err
+		}
+		return vres, nil
 	}
 }
 `

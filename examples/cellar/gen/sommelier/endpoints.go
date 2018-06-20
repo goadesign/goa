@@ -36,6 +36,14 @@ func (e *Endpoints) Use(m func(goa.Endpoint) goa.Endpoint) {
 func NewPickEndpoint(s Service) goa.Endpoint {
 	return func(ctx context.Context, req interface{}) (interface{}, error) {
 		p := req.(*Criteria)
-		return s.Pick(ctx, p)
+		res, err := s.Pick(ctx, p)
+		if err != nil {
+			return nil, err
+		}
+		vres := newViewedStoredBottleCollection(res, "default")
+		if err := vres.Validate(); err != nil {
+			return nil, err
+		}
+		return vres, nil
 	}
 }

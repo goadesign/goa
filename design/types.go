@@ -70,6 +70,8 @@ type (
 	// their own types.
 	UserType interface {
 		DataType
+		// ID returns the identifier for the user type.
+		ID() string
 		// Rename changes the type name to the given value.
 		Rename(string)
 		// Attribute provides the underlying type and validations.
