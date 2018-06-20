@@ -155,6 +155,7 @@ type Service interface {
 {{- range .Methods }}
 	{{ comment .Description }}
 	{{- if .ViewedResult }}
+		{{- if not .ViewedResult.ViewName }}
 		{{ comment "The \"view\" return value must have one of the following views" }}
 		{{- range .ViewedResult.Views }}
 			{{- if .Description }}
@@ -163,8 +164,9 @@ type Service interface {
 			{{ printf "* %q" .Name | comment }}
 			{{- end }}
 		{{- end }}
+		{{- end }}
 	{{- end }}
-	{{ .VarName }}(context.Context{{ if .Payload }}, {{ .PayloadRef }}{{ end }}) ({{ if .Result }}res {{ .ResultRef }}, {{ if .ViewedResult }}view string, {{ end }}{{ end }}err error)
+	{{ .VarName }}(context.Context{{ if .Payload }}, {{ .PayloadRef }}{{ end }}) ({{ if .Result }}res {{ .ResultRef }}, {{ if .ViewedResult }}{{ if not .ViewedResult.ViewName }}view string, {{ end }}{{ end }}{{ end }}err error)
 {{- end }}
 }
 

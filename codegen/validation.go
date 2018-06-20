@@ -232,10 +232,10 @@ func recurseValidationCode(att *design.AttributeExpr, req, ptr, def bool, target
 
 	// Break infinite recursions
 	if ut, ok := att.Type.(design.UserType); ok {
-		if buf, ok := seen[ut.Name()]; ok {
+		if buf, ok := seen[ut.ID()]; ok {
 			return buf
 		}
-		seen[ut.Name()] = buf
+		seen[ut.ID()] = buf
 	}
 
 	validation := ValidationCode(att, req, ptr, def, target, context)

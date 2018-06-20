@@ -10,6 +10,8 @@ package sommelier
 
 import (
 	"context"
+
+	sommelierviews "goa.design/goa/examples/cellar/gen/sommelier/views"
 )
 
 // The sommelier service retrieves bottles given a set of criteria.
@@ -42,15 +44,14 @@ type Criteria struct {
 // method.
 type StoredBottleCollection []*StoredBottle
 
-// A StoredBottle describes a bottle retrieved by the storage service. (default
-// view)
+// A StoredBottle describes a bottle retrieved by the storage service.
 type StoredBottle struct {
 	// ID is the unique id of the bottle.
 	ID string
 	// Name of bottle
 	Name string
 	// Winery that produces wine
-	Winery *WineryTiny
+	Winery *Winery
 	// Vintage of bottle
 	Vintage uint32
 	// Composition is the list of grape varietals and associated percentage.
@@ -61,10 +62,15 @@ type StoredBottle struct {
 	Rating *uint32
 }
 
-// Winery result type (tiny view)
-type WineryTiny struct {
+type Winery struct {
 	// Name of winery
 	Name string
+	// Region of winery
+	Region string
+	// Country of winery
+	Country string
+	// Winery website URL
+	URL *string
 }
 
 type Component struct {
@@ -98,4 +104,206 @@ func (e NoMatch) Error() string {
 // ErrorName returns "no_match".
 func (e NoMatch) ErrorName() string {
 	return "no_match"
+}
+
+// NewStoredBottleCollection initializes result type StoredBottleCollection
+// from viewed result type StoredBottleCollection.
+func NewStoredBottleCollection(vres sommelierviews.StoredBottleCollection) StoredBottleCollection {
+	var res StoredBottleCollection
+	switch vres.View {
+	case "default", "":
+		res = newStoredBottleCollection(vres.Projected)
+	case "tiny":
+		res = newStoredBottleCollectionTiny(vres.Projected)
+	}
+	return res
+}
+
+// newViewedStoredBottleCollection initializes viewed result type
+// StoredBottleCollection from result type StoredBottleCollection using the
+// given view.
+func newViewedStoredBottleCollection(res StoredBottleCollection, view string) sommelierviews.StoredBottleCollection {
+	var vres sommelierviews.StoredBottleCollection
+	switch view {
+	case "default", "":
+		p := newStoredBottleCollectionView(res)
+		vres = sommelierviews.StoredBottleCollection{p, "default"}
+	case "tiny":
+		p := newStoredBottleCollectionViewTiny(res)
+		vres = sommelierviews.StoredBottleCollection{p, "tiny"}
+	}
+	return vres
+}
+
+// newStoredBottleCollection converts projected type StoredBottleCollection to
+// service type StoredBottleCollection.
+func newStoredBottleCollection(vres sommelierviews.StoredBottleCollectionView) StoredBottleCollection {
+	res := make(StoredBottleCollection, len(vres))
+	for i, n := range vres {
+		res[i] = newStoredBottle(n)
+	}
+	return res
+}
+
+// newStoredBottleCollectionTiny converts projected type StoredBottleCollection
+// to service type StoredBottleCollection.
+func newStoredBottleCollectionTiny(vres sommelierviews.StoredBottleCollectionView) StoredBottleCollection {
+	res := make(StoredBottleCollection, len(vres))
+	for i, n := range vres {
+		res[i] = newStoredBottleTiny(n)
+	}
+	return res
+}
+
+// newStoredBottleCollectionView projects result type StoredBottleCollection
+// into projected type StoredBottleCollectionView using the "default" view.
+func newStoredBottleCollectionView(res StoredBottleCollection) sommelierviews.StoredBottleCollectionView {
+	vres := make(sommelierviews.StoredBottleCollectionView, len(res))
+	for i, n := range res {
+		vres[i] = newStoredBottleView(n)
+	}
+	return vres
+}
+
+// newStoredBottleCollectionViewTiny projects result type
+// StoredBottleCollection into projected type StoredBottleCollectionView using
+// the "tiny" view.
+func newStoredBottleCollectionViewTiny(res StoredBottleCollection) sommelierviews.StoredBottleCollectionView {
+	vres := make(sommelierviews.StoredBottleCollectionView, len(res))
+	for i, n := range res {
+		vres[i] = newStoredBottleViewTiny(n)
+	}
+	return vres
+}
+
+// newStoredBottle converts projected type StoredBottle to service type
+// StoredBottle.
+func newStoredBottle(vres *sommelierviews.StoredBottleView) *StoredBottle {
+	res := &StoredBottle{
+		Description: vres.Description,
+		Rating:      vres.Rating,
+	}
+	if vres.ID != nil {
+		res.ID = *vres.ID
+	}
+	if vres.Name != nil {
+		res.Name = *vres.Name
+	}
+	if vres.Vintage != nil {
+		res.Vintage = *vres.Vintage
+	}
+	if vres.Composition != nil {
+		res.Composition = make([]*Component, len(vres.Composition))
+		for j, val := range vres.Composition {
+			res.Composition[j] = &Component{
+				Varietal:   *val.Varietal,
+				Percentage: val.Percentage,
+			}
+		}
+	}
+	if vres.Winery != nil {
+		res.Winery = newWineryTiny(vres.Winery)
+	}
+	return res
+}
+
+// newStoredBottleTiny converts projected type StoredBottle to service type
+// StoredBottle.
+func newStoredBottleTiny(vres *sommelierviews.StoredBottleView) *StoredBottle {
+	res := &StoredBottle{}
+	if vres.ID != nil {
+		res.ID = *vres.ID
+	}
+	if vres.Name != nil {
+		res.Name = *vres.Name
+	}
+	if vres.Winery != nil {
+		res.Winery = newWineryTiny(vres.Winery)
+	}
+	return res
+}
+
+// newStoredBottleView projects result type StoredBottle into projected type
+// StoredBottleView using the "default" view.
+func newStoredBottleView(res *StoredBottle) *sommelierviews.StoredBottleView {
+	vres := &sommelierviews.StoredBottleView{
+		ID:          &res.ID,
+		Name:        &res.Name,
+		Vintage:     &res.Vintage,
+		Description: res.Description,
+		Rating:      res.Rating,
+	}
+	if res.Composition != nil {
+		vres.Composition = make([]*sommelierviews.ComponentView, len(res.Composition))
+		for j, val := range res.Composition {
+			vres.Composition[j] = &sommelierviews.ComponentView{
+				Varietal:   &val.Varietal,
+				Percentage: val.Percentage,
+			}
+		}
+	}
+	if res.Winery != nil {
+		vres.Winery = newWineryViewTiny(res.Winery)
+	}
+	return vres
+}
+
+// newStoredBottleViewTiny projects result type StoredBottle into projected
+// type StoredBottleView using the "tiny" view.
+func newStoredBottleViewTiny(res *StoredBottle) *sommelierviews.StoredBottleView {
+	vres := &sommelierviews.StoredBottleView{
+		ID:   &res.ID,
+		Name: &res.Name,
+	}
+	if res.Winery != nil {
+		vres.Winery = newWineryViewTiny(res.Winery)
+	}
+	return vres
+}
+
+// newWinery converts projected type Winery to service type Winery.
+func newWinery(vres *sommelierviews.WineryView) *Winery {
+	res := &Winery{
+		URL: vres.URL,
+	}
+	if vres.Name != nil {
+		res.Name = *vres.Name
+	}
+	if vres.Region != nil {
+		res.Region = *vres.Region
+	}
+	if vres.Country != nil {
+		res.Country = *vres.Country
+	}
+	return res
+}
+
+// newWineryTiny converts projected type Winery to service type Winery.
+func newWineryTiny(vres *sommelierviews.WineryView) *Winery {
+	res := &Winery{}
+	if vres.Name != nil {
+		res.Name = *vres.Name
+	}
+	return res
+}
+
+// newWineryView projects result type Winery into projected type WineryView
+// using the "default" view.
+func newWineryView(res *Winery) *sommelierviews.WineryView {
+	vres := &sommelierviews.WineryView{
+		Name:    &res.Name,
+		Region:  &res.Region,
+		Country: &res.Country,
+		URL:     res.URL,
+	}
+	return vres
+}
+
+// newWineryViewTiny projects result type Winery into projected type WineryView
+// using the "tiny" view.
+func newWineryViewTiny(res *Winery) *sommelierviews.WineryView {
+	vres := &sommelierviews.WineryView{
+		Name: &res.Name,
+	}
+	return vres
 }

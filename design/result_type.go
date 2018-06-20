@@ -148,6 +148,11 @@ func (m *ResultTypeExpr) Dup(att *AttributeExpr) UserType {
 	}
 }
 
+// ID returns the identifier of the result type.
+func (m *ResultTypeExpr) ID() string {
+	return m.Identifier
+}
+
 // Name returns the result type name.
 func (m *ResultTypeExpr) Name() string { return m.TypeName }
 
@@ -204,8 +209,12 @@ func (m *ResultTypeExpr) ViewHasAttribute(view, attr string) bool {
 // the underlying UserTypeExpr.
 func (m *ResultTypeExpr) Finalize() {
 	if m.View("default") == nil {
+		att := DupAtt(m.AttributeExpr)
+		if arr := AsArray(att.Type); arr != nil {
+			att.Type = AsObject(arr.ElemType.Type)
+		}
 		v := &ViewExpr{
-			AttributeExpr: DupAtt(m.AttributeExpr),
+			AttributeExpr: att,
 			Name:          "default",
 			Parent:        m,
 		}
@@ -266,8 +275,6 @@ func projectSingle(m *ResultTypeExpr, view string, seen ...map[string]*Attribute
 		typeName += strings.Title(view)
 	}
 
-	params := map[string]string{"view": view}
-	id := mime.FormatMediaType(m.Identifier, params)
 	var ut *UserTypeExpr
 	if len(seen) > 0 {
 		s := seen[0]
@@ -276,6 +283,8 @@ func projectSingle(m *ResultTypeExpr, view string, seen ...map[string]*Attribute
 				ut = rt.UserTypeExpr
 			}
 		}
+	} else {
+		seen = append(seen, make(map[string]*AttributeExpr))
 	}
 	if ut == nil {
 		ut = &UserTypeExpr{
@@ -288,7 +297,7 @@ func projectSingle(m *ResultTypeExpr, view string, seen ...map[string]*Attribute
 	ut.TypeName = typeName
 	ut.AttributeExpr.Type = Dup(v.Type)
 	projected := &ResultTypeExpr{
-		Identifier:   id,
+		Identifier:   m.projectIdentifier(view),
 		UserTypeExpr: ut,
 	}
 	projected.Views = []*ViewExpr{&ViewExpr{
@@ -320,25 +329,22 @@ func projectCollection(m *ResultTypeExpr, view string, seen ...map[string]*Attri
 	}
 
 	// Build the projected collection with the results
-	params := map[string]string{"view": view}
-	id := mime.FormatMediaType(m.Identifier, params)
-	desc := m.TypeName + " is the result type for an array of " + e.TypeName + " (" + view + " view)"
 	proj := &ResultTypeExpr{
-		Identifier: id,
+		Identifier: m.projectIdentifier(view),
 		UserTypeExpr: &UserTypeExpr{
 			AttributeExpr: &AttributeExpr{
-				Description:  desc,
+				Description:  m.TypeName + " is the result type for an array of " + e.TypeName + " (" + view + " view)",
 				Type:         &Array{ElemType: &AttributeExpr{Type: pe}},
 				UserExamples: m.UserExamples,
 			},
 			TypeName: pe.TypeName + "Collection",
 		},
+		Views: []*ViewExpr{&ViewExpr{
+			AttributeExpr: DupAtt(pe.View("default").AttributeExpr),
+			Name:          "default",
+			Parent:        pe,
+		}},
 	}
-	proj.Views = []*ViewExpr{&ViewExpr{
-		AttributeExpr: DupAtt(pe.View("default").AttributeExpr),
-		Name:          "default",
-		Parent:        pe,
-	}}
 
 	// Run the DSL that was created by the CollectionOf function
 	if !eval.Execute(proj.DSL(), proj) {
@@ -349,19 +355,16 @@ func projectCollection(m *ResultTypeExpr, view string, seen ...map[string]*Attri
 }
 
 func projectRecursive(at *AttributeExpr, vat *NamedAttributeExpr, view string, seen ...map[string]*AttributeExpr) (*AttributeExpr, error) {
-	at = DupAtt(at)
-	if ut, ok := at.Type.(UserType); ok {
-		var s map[string]*AttributeExpr
-		if len(seen) > 0 {
-			s = seen[0]
-		} else {
-			s = make(map[string]*AttributeExpr)
-			seen = append(seen, s)
-		}
-		if att, ok := s[ut.Name()]; ok {
+	s := seen[0]
+	ut, isUT := at.Type.(UserType)
+	if isUT {
+		if att, ok := s[ut.ID()]; ok {
 			return att, nil
 		}
-		s[ut.Name()] = at
+	}
+	at = DupAtt(at)
+	if isUT {
+		s[ut.ID()] = at
 	}
 	if rt, ok := at.Type.(*ResultTypeExpr); ok {
 		vatt := vat.Attribute
@@ -424,6 +427,9 @@ func (m *ResultTypeExpr) projectIdentifier(view string) string {
 	base, params, err := mime.ParseMediaType(m.Identifier)
 	if err != nil {
 		base = m.Identifier
+	}
+	if params == nil {
+		params = make(map[string]string)
 	}
 	params["view"] = view
 	return mime.FormatMediaType(base, params)

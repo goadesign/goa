@@ -288,11 +288,11 @@ func New{{ .VarName }}Endpoint(s {{ .ServiceVarName}}{{ range .Schemes }}, auth{
 		}
 {{- end }}
 {{- if .ViewedResult }}
-		res, view, err := s.{{ .VarName }}(ctx{{ if .PayloadRef }}, p{{ end }})
+		res,{{ if not .ViewedResult.ViewName }} view,{{ end }} err := s.{{ .VarName }}(ctx{{ if .PayloadRef }}, p{{ end }})
 		if err != nil {
 			return nil, err
 		}
-		vres := {{ $.ViewedResult.Init.Name }}(res, view)
+		vres := {{ $.ViewedResult.Init.Name }}(res, {{ if .ViewedResult.ViewName }}{{ printf "%q" .ViewedResult.ViewName }}{{ else }}view{{ end }})
 		if err := vres.Validate(); err != nil {
 			return nil, err
 		}

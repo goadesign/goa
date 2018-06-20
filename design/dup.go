@@ -78,11 +78,11 @@ func (d *dupper) DupType(t DataType) DataType {
 			ElemType: d.DupAttribute(actual.ElemType),
 		}
 	case UserType:
-		if u, ok := d.uts[actual.Name()]; ok {
+		if u, ok := d.uts[actual.ID()]; ok {
 			return u
 		}
 		dp := actual.Dup(nil)
-		d.uts[actual.Name()] = dp
+		d.uts[actual.ID()] = dp
 		dupAtt := d.DupAttribute(actual.Attribute())
 		dp.SetAttribute(dupAtt)
 		return dp

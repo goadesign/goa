@@ -140,24 +140,6 @@ func (m *MethodExpr) Finalize() {
 	} else {
 		m.Result.Finalize()
 	}
-	if rt, ok := m.Result.Type.(*ResultTypeExpr); ok {
-		var project bool
-		view := "default"
-		if v, ok := m.Result.Metadata["view"]; ok {
-			project = true
-			view = v[0]
-		}
-		if !project && !rt.HasMultipleViews() {
-			project = true
-		}
-		if project {
-			prt, err := Project(rt, view)
-			if err != nil {
-				panic(err) // bug
-			}
-			m.Result.Type = prt
-		}
-	}
 	for _, e := range m.Errors {
 		e.Finalize()
 	}
