@@ -61,7 +61,7 @@ var _ = Describe("Dup", func() {
 
 	Context("with a user type", func() {
 		const typeName = "foo"
-		var att = &AttributeDefinition{Type: Integer}
+		var att = &AttributeDefinition{Type: Integer, ReadOnly: true}
 
 		BeforeEach(func() {
 			dt = &UserTypeDefinition{
@@ -78,7 +78,7 @@ var _ = Describe("Dup", func() {
 	})
 
 	Context("with a media type", func() {
-		var obj = Object{"att": &AttributeDefinition{Type: Integer}}
+		var obj = Object{"att": &AttributeDefinition{Type: Integer, ReadOnly: true}}
 		var ut = &UserTypeDefinition{
 			TypeName:            "foo",
 			AttributeDefinition: &AttributeDefinition{Type: obj},

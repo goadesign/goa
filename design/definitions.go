@@ -328,6 +328,8 @@ type (
 		DefaultValue interface{}
 		// Optional member example value
 		Example interface{}
+		// Optional readonly flag
+		ReadOnly bool
 		// Optional view used to render Attribute (only applies to media type attributes).
 		View string
 		// NonZeroAttributes lists the names of the child attributes that cannot have a
@@ -1148,6 +1150,12 @@ func (a *AttributeDefinition) GenerateExample(rand *RandomGenerator, seen []stri
 	return a.Example
 }
 
+// SetReadOnly sets the attribute's ReadOnly field as true.
+func (a *AttributeDefinition) SetReadOnly() {
+	a.ReadOnly = true
+}
+
+
 func (a *AttributeDefinition) arrayExample(rand *RandomGenerator, seen []string) interface{} {
 	ary := a.Type.ToArray()
 	ln := newExampleGenerator(a, rand).ExampleLength()
@@ -1304,6 +1312,9 @@ func (a *AttributeDefinition) inheritRecursive(parent *AttributeDefinition, seen
 			}
 			if att.Example == nil {
 				att.Example = patt.Example
+			}
+			if patt.ReadOnly {
+				att.ReadOnly = patt.ReadOnly
 			}
 		}
 	}

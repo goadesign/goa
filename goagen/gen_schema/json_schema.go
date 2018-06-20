@@ -446,6 +446,7 @@ func buildAttributeSchema(api *design.APIDefinition, s *JSONSchema, at *design.A
 	s.DefaultValue = toStringMap(at.DefaultValue)
 	s.Description = at.Description
 	s.Example = at.GenerateExample(api.RandomGenerator(), nil)
+	s.ReadOnly = at.ReadOnly
 	val := at.Validation
 	if val == nil {
 		return s

@@ -50,6 +50,7 @@ func (d *dupper) DupAttribute(att *AttributeDefinition) *AttributeDefinition {
 		View:              att.View,
 		DSLFunc:           att.DSLFunc,
 		Example:           att.Example,
+		ReadOnly:          att.ReadOnly,
 	}
 	return &dup
 }
