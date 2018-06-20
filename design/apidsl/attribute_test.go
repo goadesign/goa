@@ -197,7 +197,7 @@ var _ = Describe("Attribute", func() {
 	Context("with a name and a DSL defining a 'readOnly' attribute", func() {
 		BeforeEach(func() {
 			name = "foo"
-			dsl = func() { ReadOnly()}
+			dsl = func() { ReadOnly() }
 		})
 
 		It("produces an attribute of type string set to readOnly", func() {

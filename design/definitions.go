@@ -1155,7 +1155,6 @@ func (a *AttributeDefinition) SetReadOnly() {
 	a.ReadOnly = true
 }
 
-
 func (a *AttributeDefinition) arrayExample(rand *RandomGenerator, seen []string) interface{} {
 	ary := a.Type.ToArray()
 	ln := newExampleGenerator(a, rand).ExampleLength()
