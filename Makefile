@@ -20,7 +20,7 @@ DEPEND=\
 	github.com/goadesign/goa.design/tools/godoc2md \
 	github.com/goadesign/goa.design/tools/mdc \
 	github.com/golang/lint/golint \
-	github.com/on99/gocyclo \
+	github.com/fzipp/gocyclo \
 	github.com/onsi/ginkgo \
 	github.com/onsi/ginkgo/ginkgo \
 	github.com/onsi/gomega \
