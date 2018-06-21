@@ -208,7 +208,7 @@ var _ = Describe("Attribute", func() {
 			Ω(o).Should(HaveLen(1))
 			Ω(o).Should(HaveKey(name))
 			Ω(o[name].Type).Should(Equal(String))
-			Ω(o[name].ReadOnly).Should(BeTrue())
+			Ω(o[name].IsReadOnly()).Should(BeTrue())
 		})
 	})
 

@@ -61,7 +61,7 @@ var _ = Describe("Inherit", func() {
 
 		BeforeEach(func() {
 			child.Type.(design.Object)[attName] = &design.AttributeDefinition{Type: design.String}
-			parent.Type.(design.Object)[attName] = &design.AttributeDefinition{Type: design.String, DefaultValue: def, ReadOnly: true}
+			parent.Type.(design.Object)[attName] = &design.AttributeDefinition{Type: design.String, DefaultValue: def, Metadata: map[string][]string{"swagger:read-only": nil}}
 		})
 
 		It("inherits the default value and readOnly value", func() {
@@ -69,7 +69,7 @@ var _ = Describe("Inherit", func() {
 			Ω(obj).Should(HaveLen(1))
 			Ω(obj).Should(HaveKey(attName))
 			Ω(obj[attName].DefaultValue).Should(Equal(def))
-			Ω(obj[attName].ReadOnly).Should(BeTrue())
+			Ω(obj[attName].IsReadOnly()).Should(BeTrue())
 		})
 	})
 

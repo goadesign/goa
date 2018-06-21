@@ -328,8 +328,6 @@ type (
 		DefaultValue interface{}
 		// Optional member example value
 		Example interface{}
-		// Optional readonly flag
-		ReadOnly bool
 		// Optional view used to render Attribute (only applies to media type attributes).
 		View string
 		// NonZeroAttributes lists the names of the child attributes that cannot have a
@@ -1152,7 +1150,18 @@ func (a *AttributeDefinition) GenerateExample(rand *RandomGenerator, seen []stri
 
 // SetReadOnly sets the attribute's ReadOnly field as true.
 func (a *AttributeDefinition) SetReadOnly() {
-	a.ReadOnly = true
+	if a.Metadata == nil {
+		a.Metadata = map[string][]string{}
+	}
+	a.Metadata["swagger:read-only"] = nil
+}
+
+// IsReadOnly returns true if attribute is read-only (set using SetReadOnly() method)
+func (a *AttributeDefinition) IsReadOnly() bool {
+	if _, readOnlyMetadataIsPresent := a.Metadata["swagger:read-only"]; readOnlyMetadataIsPresent {
+		return true
+	}
+	return false
 }
 
 func (a *AttributeDefinition) arrayExample(rand *RandomGenerator, seen []string) interface{} {
@@ -1312,8 +1321,17 @@ func (a *AttributeDefinition) inheritRecursive(parent *AttributeDefinition, seen
 			if att.Example == nil {
 				att.Example = patt.Example
 			}
-			if patt.ReadOnly {
-				att.ReadOnly = patt.ReadOnly
+			if patt.Metadata != nil {
+				if att.Metadata == nil {
+					att.Metadata = patt.Metadata
+				} else {
+					// Copy all key/value pairs from parent to child that DO NOT exist in child; existing ones will remain with the same value
+					for k, v := range patt.Metadata {
+						if _, keyMetadataIsPresent := att.Metadata[k]; !keyMetadataIsPresent {
+							att.Metadata[k] = v
+						}
+					}
+				}
 			}
 		}
 	}
