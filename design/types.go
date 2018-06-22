@@ -602,26 +602,37 @@ func UserTypes(dt DataType) map[string]*UserTypeDefinition {
 
 // HasFile returns true if the underlying type has any file attributes.
 func HasFile(dt DataType) bool {
+	return hasFile(dt, nil)
+}
+
+func hasFile(dt DataType, traversed []DataType) bool {
 	if dt == nil {
 		return false
 	}
+	for _, v := range traversed {
+		if dt == v {
+			return false
+		}
+	}
+	traversed = append(traversed, dt)
+
 	switch {
 	case dt.IsPrimitive():
 		return dt.Kind() == FileKind
 	case dt.IsArray():
-		if HasFile(dt.ToArray().ElemType.Type) {
+		if hasFile(dt.ToArray().ElemType.Type, traversed) {
 			return true
 		}
 	case dt.IsHash():
-		if HasFile(dt.ToHash().KeyType.Type) {
+		if hasFile(dt.ToHash().KeyType.Type, traversed) {
 			return true
 		}
-		if HasFile(dt.ToHash().ElemType.Type) {
+		if hasFile(dt.ToHash().ElemType.Type, traversed) {
 			return true
 		}
 	case dt.IsObject():
 		for _, att := range dt.ToObject() {
-			if HasFile(att.Type) {
+			if hasFile(att.Type, traversed) {
 				return true
 			}
 		}
