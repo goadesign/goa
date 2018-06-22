@@ -159,10 +159,10 @@ func NewStoredBottleCollection(vres storageviews.StoredBottleCollection) StoredB
 	return res
 }
 
-// newViewedStoredBottleCollection initializes viewed result type
+// NewViewedStoredBottleCollection initializes viewed result type
 // StoredBottleCollection from result type StoredBottleCollection using the
 // given view.
-func newViewedStoredBottleCollection(res StoredBottleCollection, view string) storageviews.StoredBottleCollection {
+func NewViewedStoredBottleCollection(res StoredBottleCollection, view string) storageviews.StoredBottleCollection {
 	var vres storageviews.StoredBottleCollection
 	switch view {
 	case "default", "":
@@ -188,9 +188,9 @@ func NewStoredBottle(vres *storageviews.StoredBottle) *StoredBottle {
 	return res
 }
 
-// newViewedStoredBottle initializes viewed result type StoredBottle from
+// NewViewedStoredBottle initializes viewed result type StoredBottle from
 // result type StoredBottle using the given view.
-func newViewedStoredBottle(res *StoredBottle, view string) *storageviews.StoredBottle {
+func NewViewedStoredBottle(res *StoredBottle, view string) *storageviews.StoredBottle {
 	var vres *storageviews.StoredBottle
 	switch view {
 	case "default", "":

@@ -1,17 +1,20 @@
 # Streaming Result
 
 goa makes it possible to define unidirectional server-side streaming where an
-endpoint can receive a payload and return a stream of results.
+endpoint can receive a payload and stream a sequence of results. The streamed
+results are instances of the same type.
 
-This document describes how to define a method to return a stream of result
-and what the code generator produces for the transport-independent and
-transport-dependent code.
+This document describes a method to stream a sequence of results and what the
+generator produces for the transport-independent and transport-dependent code.
 
 ## Design
 
 The [StreamingResult DSL](https://godoc.org/goa.design/goa/dsl#StreamingResult)
-can be defined on a method to setup an endpoint that returns a stream of result.
-`StreamingResult` DSL has the syntax similar to the `Result` DSL.
+can be defined on a method to setup an endpoint that streams a sequence of
+results. `StreamingResult` DSL has the syntax similar to the `Result` DSL.
+`StreamingResult` and `Result` are mutually exclusive: only one of then may be
+used inside a given `Method` expression.
+
 
 ```go
 var _ = Service("cellar", func() {
@@ -28,25 +31,25 @@ endpoint in the service package.
 ```go
 // Interface that the server must satisfy.
 type ListServerStream interface {
-  // Send sends StoredBottle through the stream.
+  // Send streams instances of "StoredBottle".
   Send(*StoredBottle) error
-  // Close closes the stream.
+  // Close the stream.
   Close() error
 }
 
 // Interface that the client must satisfy.
 type ListClientStream interface {
-  // Recv receives a StoredBottle from the stream.
+  // Recv reads instances of "StoredBottle" from the stream.
   Recv() (*StoredBottle, error)
 }
 ```
 
-* `Send` method sends a result through the stream. It may return an error if
-  a problem occurred when sending the result to the stream.
-* `Close` method closes the stream. Closing a stream indicates that the server
-  has sent all the results and is going to close the stream.
-* `Recv` receives a result from the stream. It returns an `io.EOF` error if it
-  has received all the results sent by the server.
+* `Send` can be called 0 or more times to stream the result instances to the
+	client. If `Send` returns an error then any subsequent call to `Send` will
+	also fail and `Close` does not need to be called.
+* `Close` closes the stream. Any subsequent call to `Send` returns an error.
+* `Recv` reads the next result instance from the stream. It returns `io.EOF`
+	if the server closed the stream.
 
 The `List` method signature in the `Service` interface accepts the server
 stream interface as one of the arguments. The generated goa client returns the
@@ -71,9 +74,9 @@ func (s *cellarSvc) List(ctx context.Context, stream cellarsvc.ListServerStream)
 }
 ```
 
-### Streaming in a HTTP Endpoint
+### Streaming via HTTP
 
-Streaming is achieved in a HTTP endpoint using websockets. Goa uses
+Streaming in HTTP leverages websockets. goa uses
 [gorilla websocket](https://godoc.org/github.com/gorilla/websocket) to
 implement the server and client streaming interfaces.
 
@@ -81,7 +84,7 @@ The `goa http` package provides a websocket Upgrader and Dialer interface
 and a websocket connection configurer function type which can be used to
 customize a websocket connection obtained through the Upgrader and Dialer.
 
-Here is an example to provide a custom websocket connection configuration
+Here is an example that provides a custom websocket connection configuration
 to the server and client streams.
 
 ```go

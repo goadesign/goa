@@ -122,8 +122,8 @@ type (
 		// MultipartRequestDecoder indicates the request decoder for multipart
 		// content type.
 		MultipartRequestDecoder *MultipartData
-		// ClientStream holds the data to render the client struct which
-		// implements the client stream interface.
+		// ServerStream holds the data to render the server struct which
+		// implements the server stream interface.
 		ServerStream *StreamData
 
 		// client
@@ -2068,6 +2068,7 @@ const (
 	// input: StreamData
 	streamStructTypeT = `{{ printf "%s implements the %s interface." .VarName .Interface | comment }}
 type {{ .VarName }} struct {
+	sync.RWMutex
 {{- if eq .Type "server" }}
 	once sync.Once
 	{{ comment "upgrader is the websocket connection upgrader." }}
@@ -2078,6 +2079,8 @@ type {{ .VarName }} struct {
 	w http.ResponseWriter
 	{{ comment "r is the HTTP request." }}
 	r *http.Request
+	{{ comment "sendErr is the error occurred during Send." }}
+	sendErr error
 {{- end }}
   {{ comment "conn is the underlying websocket connection." }}
   conn *websocket.Conn
@@ -2093,40 +2096,45 @@ type {{ .VarName }} struct {
 	// input: StreamData
 	streamSendT = `{{ printf "Send sends %s type to the %q endpoint websocket connection." .SendName .Endpoint.Method.Name | comment }}
 func (s *{{ .VarName }}) Send(v {{ .SendRef }}) error {
-	var (
-		err error
-		upgrade func()
-	)
-	{
-		upgrade = func() {
-  {{- if .Endpoint.Method.ViewedResult }}
-			respHdr := make(http.Header)
-			respHdr.Add("goa-view", s.view)
-	{{- end }}
-			s.conn, err = s.upgrader.Upgrade(s.w, s.r, {{ if .Endpoint.Method.ViewedResult }}respHdr{{ else }}nil{{ end }})
-			if err != nil {
-				return
-			}
-			if s.connConfigFn != nil {
-				s.conn = s.connConfigFn(s.conn)
-			}
-		}
-	}
 	{{ comment "Upgrade the HTTP connection to a websocket connection only once before sending result. Connection upgrade is done here so that authorization logic in the endpoint is executed before calling the actual service method which may call Send()." }}
-	s.once.Do(upgrade)
-	if err != nil {
-		return err
+	s.once.Do(func() {
+  {{- if .Endpoint.Method.ViewedResult }}
+		respHdr := make(http.Header)
+		respHdr.Add("goa-view", s.view)
+  {{- end }}
+		conn, err := s.upgrader.Upgrade(s.w, s.r, {{ if .Endpoint.Method.ViewedResult }}respHdr{{ else }}nil{{ end }})
+		if err != nil {
+			s.Lock()
+			s.sendErr = err
+			s.Unlock()
+			return
+		}
+		if s.connConfigFn != nil {
+			conn = s.connConfigFn(conn)
+		}
+		s.Lock()
+		s.conn = conn
+		s.Unlock()
+  })
+	if s.sendErr != nil {
+		if s.conn != nil {
+			return s.Close()
+		}
+		return s.sendErr
 	}
   {{- if .Endpoint.Method.ViewedResult }}
   res := {{ .PkgName }}.{{ .Endpoint.Method.ViewedResult.Init.Name }}(v, s.view)
-  if err := res.Validate(); err != nil {
-    return err
-  }
 	{{- else }}
 	res := v
   {{- end }}
 	body := {{ .Response.ServerBody.Init.Name }}({{ range .Response.ServerBody.Init.ServerArgs }}{{ .Ref }}, {{ end }})
-  return s.conn.WriteJSON(body)
+	if err := s.conn.WriteJSON(body); err != nil {
+		s.Lock()
+		s.sendErr = err
+		s.Unlock()
+		return s.sendErr
+	}
+  return nil
 }
 `
 
@@ -2134,18 +2142,27 @@ func (s *{{ .VarName }}) Send(v {{ .SendRef }}) error {
 	// stream interface.
 	// input: StreamData
 	streamRecvT = `{{ printf "Recv receives a %s type from the %q endpoint websocket connection." .RecvName .Endpoint.Method.Name | comment }}
-func (c *{{ .VarName }}) Recv() ({{ .RecvRef }}, error) {
+func (s *{{ .VarName }}) Recv() ({{ .RecvRef }}, error) {
+	if s.conn == nil {
+		return nil, nil
+	}
 	var body {{ .Response.ClientBody.VarName }}
-  err := c.conn.ReadJSON(&body)
+  err := s.conn.ReadJSON(&body)
   if websocket.IsCloseError(err, goahttp.NormalSocketCloseErrors...) {
     return nil, io.EOF
   }
   if err != nil {
     return nil, err
   }
+	{{- if and .Response.ClientBody.ValidateRef (not .Endpoint.Method.ViewedResult) }}
+	{{ .Response.ClientBody.ValidateRef }}
+	if err != nil {
+		return nil, goahttp.ErrValidationError("{{ .Endpoint.ServiceName }}", "{{ .Endpoint.Method.Name }}", err)
+	}
+	{{- end }}
 	res := {{ .Response.ResultInit.Name }}({{ range .Response.ResultInit.ClientArgs }}{{ .Ref }},{{ end }})
   {{- if .Endpoint.Method.ViewedResult }}
-	vres := {{ if not .Endpoint.Method.ViewedResult.IsCollection }}&{{ end }}{{ .Endpoint.Method.ViewedResult.ViewsPkg }}.{{ .Endpoint.Method.ViewedResult.VarName }}{res, c.view}
+	vres := {{ if not .Endpoint.Method.ViewedResult.IsCollection }}&{{ end }}{{ .Endpoint.Method.ViewedResult.ViewsPkg }}.{{ .Endpoint.Method.ViewedResult.VarName }}{res, s.view}
   if err := vres.Validate(); err != nil {
     return nil, goahttp.ErrValidationError("{{ .Endpoint.ServiceName }}", "{{ .Endpoint.Method.Name }}", err)
   }
@@ -2161,6 +2178,9 @@ func (c *{{ .VarName }}) Recv() ({{ .RecvRef }}, error) {
 	// input: StreamData
 	streamCloseT = `{{ printf "Close closes the %q endpoint websocket connection after sending a close control message." .Endpoint.Method.Name | comment }}
 func (s *{{ .VarName }}) Close() error {
+	if s.conn == nil {
+		return nil
+	}
   if err := s.conn.WriteControl(
     websocket.CloseMessage,
     websocket.FormatCloseMessage(websocket.CloseNormalClosure, "end of message"),
@@ -2168,7 +2188,13 @@ func (s *{{ .VarName }}) Close() error {
   ); err != nil {
     return err
   }
-  return s.conn.Close()
+	if err := s.conn.Close(); err != nil {
+		return err
+	}
+	s.Lock()
+	defer s.Unlock()
+	s.conn = nil
+  return nil
 }
 `
 
@@ -2177,6 +2203,8 @@ func (s *{{ .VarName }}) Close() error {
 	// input: StreamData
 	streamSetViewT = `{{ printf "SetView sets the view to render the %s type before sending to the %q endpoint websocket connection." .SendName .Endpoint.Method.Name | comment }}
 func (s *{{ .VarName }}) SetView(view string) {
+	s.Lock()
+	defer s.Unlock()
   s.view = view
 }
 `

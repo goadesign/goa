@@ -190,7 +190,7 @@ type {{ .ServerStream.EndpointStruct }} struct {
 	{{ comment "Payload is the method payload." }}
 	Payload {{ .PayloadRef }}
 {{- end }}
-	{{ printf "Stream is the server stream used by the %q method to send/receive data." .Name | comment }}
+	{{ printf "Stream is the server stream used by the %q method to send data." .Name | comment }}
 	Stream {{ .ServerStream.Interface }}
 }
 `
@@ -201,7 +201,9 @@ func New{{ .VarName }}Endpoint(s {{ .ServiceVarName }}{{ range .Schemes }}, auth
 	return func(ctx context.Context, req interface{}) (interface{}, error) {
 {{- if .ServerStream }}
 		ep := req.(*{{ .ServerStream.EndpointStruct }})
+		{{- if .PayloadRef }}
 		p := ep.Payload
+		{{- end }}
 {{- else if .PayloadRef }}
 		p := req.({{ .PayloadRef }})
 {{- end }}
@@ -313,9 +315,6 @@ func New{{ .VarName }}Endpoint(s {{ .ServiceVarName }}{{ range .Schemes }}, auth
 			return nil, err
 		}
 		vres := {{ $.ViewedResult.Init.Name }}(res, {{ if .ViewedResult.ViewName }}{{ printf "%q" .ViewedResult.ViewName }}{{ else }}view{{ end }})
-		if err := vres.Validate(); err != nil {
-			return nil, err
-		}
 		return vres, nil
 {{- else if .ResultRef }}
 		return s.{{ .VarName }}(ctx{{ if .PayloadRef }}, p{{ end }})

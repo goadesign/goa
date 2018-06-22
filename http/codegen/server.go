@@ -136,12 +136,14 @@ func serverEncodeDecode(genpkg string, svc *httpdesign.ServiceExpr) *codegen.Fil
 	}
 
 	for _, e := range data.Endpoints {
-		sections = append(sections, &codegen.SectionTemplate{
-			Name:    "response-encoder",
-			FuncMap: transTmplFuncs(svc),
-			Source:  responseEncoderT,
-			Data:    e,
-		})
+		if e.ServerStream == nil {
+			sections = append(sections, &codegen.SectionTemplate{
+				Name:    "response-encoder",
+				FuncMap: transTmplFuncs(svc),
+				Source:  responseEncoderT,
+				Data:    e,
+			})
+		}
 		if e.Payload.Ref != "" {
 			sections = append(sections, &codegen.SectionTemplate{
 				Name:    "request-decoder",
@@ -405,7 +407,7 @@ func {{ .HandlerInit }}(
 		}
 	{{- end }}
 
-	{{- if .ServerStream }}
+	{{ if .ServerStream }}
 		v := &{{ .ServicePkgName }}.{{ .Method.ServerStream.EndpointStruct }}{
 			Stream: &{{ .ServerStream.VarName }}{
 				upgrader: up,

@@ -262,9 +262,9 @@ func NewMultipleViews(vres *multiplemethodsresultmultipleviewsviews.MultipleView
 	return res
 }
 
-// newViewedMultipleViews initializes viewed result type MultipleViews from
+// NewViewedMultipleViews initializes viewed result type MultipleViews from
 // result type MultipleViews using the given view.
-func newViewedMultipleViews(res *MultipleViews, view string) *multiplemethodsresultmultipleviewsviews.MultipleViews {
+func NewViewedMultipleViews(res *MultipleViews, view string) *multiplemethodsresultmultipleviewsviews.MultipleViews {
 	var vres *multiplemethodsresultmultipleviewsviews.MultipleViews
 	switch view {
 	case "default", "":
@@ -288,9 +288,9 @@ func NewSingleView(vres *multiplemethodsresultmultipleviewsviews.SingleView) *Si
 	return res
 }
 
-// newViewedSingleView initializes viewed result type SingleView from result
+// NewViewedSingleView initializes viewed result type SingleView from result
 // type SingleView using the given view.
-func newViewedSingleView(res *SingleView, view string) *multiplemethodsresultmultipleviewsviews.SingleView {
+func NewViewedSingleView(res *SingleView, view string) *multiplemethodsresultmultipleviewsviews.SingleView {
 	var vres *multiplemethodsresultmultipleviewsviews.SingleView
 	switch view {
 	case "default", "":
@@ -400,10 +400,10 @@ func NewMultipleViewsCollection(vres resultcollectionmultipleviewsmethodviews.Mu
 	return res
 }
 
-// newViewedMultipleViewsCollection initializes viewed result type
+// NewViewedMultipleViewsCollection initializes viewed result type
 // MultipleViewsCollection from result type MultipleViewsCollection using the
 // given view.
-func newViewedMultipleViewsCollection(res MultipleViewsCollection, view string) resultcollectionmultipleviewsmethodviews.MultipleViewsCollection {
+func NewViewedMultipleViewsCollection(res MultipleViewsCollection, view string) resultcollectionmultipleviewsmethodviews.MultipleViewsCollection {
 	var vres resultcollectionmultipleviewsmethodviews.MultipleViewsCollection
 	switch view {
 	case "default", "":
@@ -545,9 +545,9 @@ func NewMultipleViews(vres *resultwithotherresultviews.MultipleViews) *MultipleV
 	return res
 }
 
-// newViewedMultipleViews initializes viewed result type MultipleViews from
+// NewViewedMultipleViews initializes viewed result type MultipleViews from
 // result type MultipleViews using the given view.
-func newViewedMultipleViews(res *MultipleViews, view string) *resultwithotherresultviews.MultipleViews {
+func NewViewedMultipleViews(res *MultipleViews, view string) *resultwithotherresultviews.MultipleViews {
 	var vres *resultwithotherresultviews.MultipleViews
 	switch view {
 	case "default", "":
@@ -690,5 +690,103 @@ var MethodNames = [1]string{"A"}
 
 type ForcedType struct {
 	A *string
+}
+`
+
+const StreamingResultMethod = `
+// Service is the StreamingResultService service interface.
+type Service interface {
+	// StreamingResultMethod implements StreamingResultMethod.
+	StreamingResultMethod(context.Context, *APayload, StreamingResultMethodServerStream) (err error)
+}
+
+// ServiceName is the name of the service as defined in the design. This is the
+// same value that is set in the endpoint request contexts under the ServiceKey
+// key.
+const ServiceName = "StreamingResultService"
+
+// MethodNames lists the service method names as defined in the design. These
+// are the same values that are set in the endpoint request contexts under the
+// MethodKey key.
+var MethodNames = [1]string{"StreamingResultMethod"}
+
+// StreamingResultMethodServerStream is the interface a "StreamingResultMethod"
+// endpoint server stream must satisfy.
+type StreamingResultMethodServerStream interface {
+	// Send streams instances of "AResult".
+	Send(*AResult) error
+	// Close closes the stream.
+	Close() error
+}
+
+// StreamingResultMethodClientStream is the interface a "StreamingResultMethod"
+// endpoint client stream must satisfy.
+type StreamingResultMethodClientStream interface {
+	// Recv reads instances of "AResult" from the stream.
+	Recv() (*AResult, error)
+}
+
+// APayload is the payload type of the StreamingResultService service
+// StreamingResultMethod method.
+type APayload struct {
+	IntField      int
+	StringField   string
+	BooleanField  bool
+	BytesField    []byte
+	OptionalField *string
+}
+
+// AResult is the result type of the StreamingResultService service
+// StreamingResultMethod method.
+type AResult struct {
+	IntField      int
+	StringField   string
+	BooleanField  bool
+	BytesField    []byte
+	OptionalField *string
+}
+`
+
+const StreamingResultNoPayloadMethod = `
+// Service is the StreamingResultNoPayloadService service interface.
+type Service interface {
+	// StreamingResultNoPayloadMethod implements StreamingResultNoPayloadMethod.
+	StreamingResultNoPayloadMethod(context.Context, StreamingResultNoPayloadMethodServerStream) (err error)
+}
+
+// ServiceName is the name of the service as defined in the design. This is the
+// same value that is set in the endpoint request contexts under the ServiceKey
+// key.
+const ServiceName = "StreamingResultNoPayloadService"
+
+// MethodNames lists the service method names as defined in the design. These
+// are the same values that are set in the endpoint request contexts under the
+// MethodKey key.
+var MethodNames = [1]string{"StreamingResultNoPayloadMethod"}
+
+// StreamingResultNoPayloadMethodServerStream is the interface a
+// "StreamingResultNoPayloadMethod" endpoint server stream must satisfy.
+type StreamingResultNoPayloadMethodServerStream interface {
+	// Send streams instances of "AResult".
+	Send(*AResult) error
+	// Close closes the stream.
+	Close() error
+}
+
+// StreamingResultNoPayloadMethodClientStream is the interface a
+// "StreamingResultNoPayloadMethod" endpoint client stream must satisfy.
+type StreamingResultNoPayloadMethodClientStream interface {
+	// Recv reads instances of "AResult" from the stream.
+	Recv() (*AResult, error)
+}
+
+// AResult is the result type of the StreamingResultNoPayloadService service
+// StreamingResultNoPayloadMethod method.
+type AResult struct {
+	IntField      int
+	StringField   string
+	BooleanField  bool
+	BytesField    []byte
+	OptionalField *string
 }
 `

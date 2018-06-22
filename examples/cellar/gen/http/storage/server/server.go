@@ -188,7 +188,6 @@ func NewShowHandler(
 			eh(ctx, w, err)
 			return
 		}
-
 		res, err := endpoint(ctx, payload)
 
 		if err != nil {
@@ -238,7 +237,6 @@ func NewAddHandler(
 			eh(ctx, w, err)
 			return
 		}
-
 		res, err := endpoint(ctx, payload)
 
 		if err != nil {
@@ -288,7 +286,6 @@ func NewRemoveHandler(
 			eh(ctx, w, err)
 			return
 		}
-
 		res, err := endpoint(ctx, payload)
 
 		if err != nil {
@@ -338,7 +335,6 @@ func NewRateHandler(
 			eh(ctx, w, err)
 			return
 		}
-
 		res, err := endpoint(ctx, payload)
 
 		if err != nil {
@@ -388,7 +384,6 @@ func NewMultiAddHandler(
 			eh(ctx, w, err)
 			return
 		}
-
 		res, err := endpoint(ctx, payload)
 
 		if err != nil {
@@ -438,7 +433,6 @@ func NewMultiUpdateHandler(
 			eh(ctx, w, err)
 			return
 		}
-
 		res, err := endpoint(ctx, payload)
 
 		if err != nil {

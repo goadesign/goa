@@ -35,7 +35,7 @@ type (
 		Service *ServiceExpr
 		// Metadata is an arbitrary set of key/value pairs, see dsl.Metadata
 		Metadata MetadataExpr
-		// Stream is the kind of stream (payload, result, or both) the method
+		// Stream is the kind of stream (none, payload, result, or both) the method
 		// defines.
 		Stream streamKind
 	}

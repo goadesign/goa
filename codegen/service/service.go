@@ -209,20 +209,20 @@ var MethodNames = [{{ len .Methods }}]string{ {{ range .Methods }}{{ printf "%q"
 {{- end }}
 
 {{- define "stream_interface" }}
-{{ printf "%s is the interface a %q endpoint stream must satisfy." .Stream.VarName .Endpoint | comment }}
+{{ printf "%s is the interface a %q endpoint %s stream must satisfy." .Stream.Interface .Endpoint .Kind | comment }}
 type {{ .Stream.Interface }} interface {
 	{{- if .Stream.SendRef }}
-		{{ printf "Send sends %s type across the %q endpoint stream." .Stream.SendName .Endpoint | comment }}
+		{{ printf "Send streams instances of %q." .Stream.SendName | comment }}
 		Send({{ .Stream.SendRef }}) error
-		{{ printf "Close closes the %q endpoint stream." .Endpoint | comment }}
+		{{ comment "Close closes the stream." }}
 		Close() error
 	{{- end }}
 	{{- if .Stream.RecvRef }}
-		{{ printf "Recv receives %s type from the %q endpoint stream." .Stream.RecvName .Endpoint | comment }}
+		{{ printf "Recv reads instances of %q from the stream." .Stream.RecvName | comment }}
 		Recv() ({{ .Stream.RecvRef }}, error)
 	{{- end }}
 	{{- if and .IsViewedResult (eq .Kind "server") }}
-		{{ printf "SetView sets the view using which the %s result must be rendered before sending." .Stream.SendName | comment }}
+		{{ comment "SetView sets the view used to render the result before streaming." }}
 		SetView(view string)
 	{{- end }}
 }

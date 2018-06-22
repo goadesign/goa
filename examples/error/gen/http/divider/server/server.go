@@ -109,7 +109,6 @@ func NewIntegerDivideHandler(
 			eh(ctx, w, err)
 			return
 		}
-
 		res, err := endpoint(ctx, payload)
 
 		if err != nil {
@@ -159,7 +158,6 @@ func NewDivideHandler(
 			eh(ctx, w, err)
 			return
 		}
-
 		res, err := endpoint(ctx, payload)
 
 		if err != nil {

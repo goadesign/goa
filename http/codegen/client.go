@@ -36,6 +36,7 @@ func client(genpkg string, svc *httpdesign.ServiceExpr) *codegen.File {
 			{Path: "net/http"},
 			{Path: "strconv"},
 			{Path: "strings"},
+			{Path: "sync"},
 			{Path: "github.com/gorilla/websocket"},
 			{Path: "goa.design/goa", Name: "goa"},
 			{Path: "goa.design/goa/http", Name: "goahttp"},
@@ -280,7 +281,10 @@ func (c *{{ .ClientStruct }}) {{ .EndpointInit }}({{ if .MultipartRequestEncoder
 	{{- if .ClientStream }}
 		conn, resp, err := c.dialer.Dial(req.URL.String(), req.Header)
 		if err != nil {
-			return decodeResponse(resp)
+			if resp != nil {
+				return decodeResponse(resp)
+			}
+			return nil, goahttp.ErrRequestError("{{ .ServiceName }}", "{{ .Method.Name }}", err)
 		}
 		if c.connConfigFn != nil {
 			conn = c.connConfigFn(conn)

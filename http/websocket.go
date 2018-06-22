@@ -7,13 +7,13 @@ import (
 )
 
 type (
-	// Upgrader defines the interface a websocket connection upgrader must satisfy.
+	// Upgrader is an HTTP connection that is able to upgrade to websocket.
 	Upgrader interface {
 		// Upgrade upgrades the HTTP connection to the websocket protocol.
 		Upgrade(w http.ResponseWriter, r *http.Request, responseHeader http.Header) (*websocket.Conn, error)
 	}
 
-	// Dialer defines the interface a client websocket dialer must satisfy.
+	// Dialer creates a websocket connection to a given URL.
 	Dialer interface {
 		// Dial creates a client connection to the websocket server.
 		Dial(url string, h http.Header) (*websocket.Conn, *http.Response, error)
