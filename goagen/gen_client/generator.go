@@ -1011,6 +1011,9 @@ func (c *Client) {{ $funcName }}(ctx context.Context, path string{{ if .Params }
 	if err != nil {
 		return nil, err
 	}
+	if c.BasicAuthWsSigner != nil {
+		c.BasicAuthWsSigner.WsSign(cfg)
+	}
 {{ range $header := .Headers }}{{ $tmp := tempvar }}	{{ toString $header.VarName $tmp $header.Attribute }}
 	cfg.Header["{{ $header.Name }}"] = []string{ {{ $tmp }} }
 {{ end }}	return websocket.DialConfig(cfg)
