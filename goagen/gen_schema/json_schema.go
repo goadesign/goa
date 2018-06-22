@@ -42,6 +42,8 @@ type (
 		Maximum              *float64      `json:"maximum,omitempty"`
 		MinLength            *int          `json:"minLength,omitempty"`
 		MaxLength            *int          `json:"maxLength,omitempty"`
+		MinItems             *int          `json:"minItems,omitempty"`
+		MaxItems             *int          `json:"maxItems,omitempty"`
 		Required             []string      `json:"required,omitempty"`
 		AdditionalProperties bool          `json:"additionalProperties,omitempty"`
 
@@ -324,6 +326,10 @@ type mergeItems []struct {
 }
 
 func (s *JSONSchema) createMergeItems(other *JSONSchema) mergeItems {
+	minInt := func(a, b *int) bool { return (a == nil && b != nil) || (a != nil && b != nil && *a > *b) }
+	maxInt := func(a, b *int) bool { return (a == nil && b != nil) || (a != nil && b != nil && *a < *b) }
+	minFloat := func(a, b *float64) bool { return (a == nil && b != nil) || (a != nil && b != nil && *a > *b) }
+	maxFloat := func(a, b *float64) bool { return (a == nil && b != nil) || (a != nil && b != nil && *a < *b) }
 	return mergeItems{
 		{&s.ID, other.ID, s.ID == ""},
 		{&s.Type, other.Type, s.Type == ""},
@@ -340,23 +346,27 @@ func (s *JSONSchema) createMergeItems(other *JSONSchema) mergeItems {
 		{&s.AdditionalProperties, other.AdditionalProperties, s.AdditionalProperties == false},
 		{
 			a: s.Minimum, b: other.Minimum,
-			needed: (s.Minimum == nil && s.Minimum != nil) ||
-				(s.Minimum != nil && other.Minimum != nil && *s.Minimum > *other.Minimum),
+			needed: minFloat(s.Minimum, other.Minimum),
 		},
 		{
 			a: s.Maximum, b: other.Maximum,
-			needed: (s.Maximum == nil && other.Maximum != nil) ||
-				(s.Maximum != nil && other.Maximum != nil && *s.Maximum < *other.Maximum),
+			needed: maxFloat(s.Maximum, other.Maximum),
 		},
 		{
 			a: s.MinLength, b: other.MinLength,
-			needed: (s.MinLength == nil && other.MinLength != nil) ||
-				(s.MinLength != nil && other.MinLength != nil && *s.MinLength > *other.MinLength),
+			needed: minInt(s.MinLength, other.MinLength),
 		},
 		{
 			a: s.MaxLength, b: other.MaxLength,
-			needed: (s.MaxLength == nil && other.MaxLength != nil) ||
-				(s.MaxLength != nil && other.MaxLength != nil && *s.MaxLength > *other.MaxLength),
+			needed: maxInt(s.MaxLength, other.MaxLength),
+		},
+		{
+			a: s.MinItems, b: other.MinItems,
+			needed: minInt(s.MinItems, other.MinItems),
+		},
+		{
+			a: s.MaxItems, b: other.MaxItems,
+			needed: maxInt(s.MaxItems, other.MaxItems),
 		},
 	}
 }
@@ -415,6 +425,8 @@ func (s *JSONSchema) Dup() *JSONSchema {
 		Maximum:              s.Maximum,
 		MinLength:            s.MinLength,
 		MaxLength:            s.MaxLength,
+		MinItems:             s.MinItems,
+		MaxItems:             s.MaxItems,
 		Required:             s.Required,
 		AdditionalProperties: s.AdditionalProperties,
 	}
@@ -460,10 +472,20 @@ func buildAttributeSchema(api *design.APIDefinition, s *JSONSchema, at *design.A
 		s.Maximum = val.Maximum
 	}
 	if val.MinLength != nil {
-		s.MinLength = val.MinLength
+		switch {
+		case at.Type.IsArray():
+			s.MinItems = val.MinLength
+		default:
+			s.MinLength = val.MinLength
+		}
 	}
 	if val.MaxLength != nil {
-		s.MaxLength = val.MaxLength
+		switch {
+		case at.Type.IsArray():
+			s.MaxItems = val.MaxLength
+		default:
+			s.MaxLength = val.MaxLength
+		}
 	}
 	s.Required = val.Required
 	return s
