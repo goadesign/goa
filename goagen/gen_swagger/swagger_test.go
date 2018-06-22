@@ -330,6 +330,24 @@ var _ = Describe("New", func() {
 			It("serializes into valid swagger JSON", func() { validateSwagger(swagger) })
 		})
 
+		Context("with recursive payload", func() {
+			BeforeEach(func() {
+				p := Type("RecursivePayload", func() {
+					Member("m1", "RecursivePayload")
+				})
+				Resource("res", func() {
+					Action("act", func() {
+						Routing(
+							PUT("/"),
+						)
+						Payload(p)
+					})
+				})
+			})
+
+			It("serializes into valid swagger JSON", func() { validateSwagger(swagger) })
+		})
+
 		Context("with zero value validations", func() {
 			const (
 				intParam = "intParam"
