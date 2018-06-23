@@ -376,6 +376,72 @@ var _ = Describe("New", func() {
 			})
 		})
 
+		Context("with minItems and maxItems validations in payload's attribute", func() {
+			const (
+				arrParam = "arrParam"
+				minVal   = 0
+				maxVal   = 42
+			)
+
+			BeforeEach(func() {
+				PayloadWithValidations := Type("Payload", func() {
+					Attribute(arrParam, ArrayOf(String), func() {
+						MinLength(minVal)
+						MaxLength(maxVal)
+					})
+				})
+				Resource("res", func() {
+					Action("act", func() {
+						Routing(
+							PUT("/"),
+						)
+						Payload(PayloadWithValidations)
+					})
+				})
+			})
+
+			It("serializes into valid swagger JSON", func() {
+				validateSwaggerWithFragments(swagger, [][]byte{
+					// payload
+					[]byte(`"minItems":0`),
+					[]byte(`"maxItems":42`),
+				})
+			})
+		})
+
+		Context("with minItems and maxItems validations in payload", func() {
+			const (
+				strParam = "strParam"
+				minVal   = 0
+				maxVal   = 42
+			)
+
+			BeforeEach(func() {
+				PayloadWithValidations := Type("Payload", func() {
+					Attribute(strParam, String)
+				})
+				Resource("res", func() {
+					Action("act", func() {
+						Routing(
+							PUT("/"),
+						)
+						Payload(ArrayOf(PayloadWithValidations), func() {
+							MinLength(minVal)
+							MaxLength(maxVal)
+						})
+					})
+				})
+			})
+
+			It("serializes into valid swagger JSON", func() {
+				validateSwaggerWithFragments(swagger, [][]byte{
+					// payload
+					[]byte(`"minItems":0`),
+					[]byte(`"maxItems":42`),
+				})
+			})
+		})
+
 		Context("with response templates", func() {
 			const okName = "OK"
 			const okDesc = "OK description"
