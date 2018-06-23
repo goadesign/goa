@@ -1208,7 +1208,7 @@ func Service(name string, fn func()) *design.ServiceExpr {
 	return dsl.Service(name, fn)
 }
 
-// StreamingResult defines the method output to be a stream of data type.
+// StreamingResult defines a that streams instances of the given type.
 //
 // StreamingResult must appear in a Method expression.
 //
