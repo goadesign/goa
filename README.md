@@ -10,6 +10,13 @@ unique design-first approach.
 [![Godoc](https://godoc.org/github.com/goadesign/goa?status.svg)](http://godoc.org/github.com/goadesign/goa)
 [![Slack](https://img.shields.io/badge/slack-gophers-orange.svg?style=flat)](https://gophers.slack.com/messages/goa/)
 
+## V2
+
+[goa v2](https://github.com/goadesign/goa/tree/v2) is currently in beta:
+it is robust enough to be used in production but there may still be breaking
+changes before the final release. If you're new to goa then you may want to
+consider starting with v2.
+
 ## Why goa?
 
 goa takes a different approach to building micro-services. Instead of focusing
