@@ -1148,6 +1148,22 @@ func (a *AttributeDefinition) GenerateExample(rand *RandomGenerator, seen []stri
 	return a.Example
 }
 
+// SetReadOnly sets the attribute's ReadOnly field as true.
+func (a *AttributeDefinition) SetReadOnly() {
+	if a.Metadata == nil {
+		a.Metadata = map[string][]string{}
+	}
+	a.Metadata["swagger:read-only"] = nil
+}
+
+// IsReadOnly returns true if attribute is read-only (set using SetReadOnly() method)
+func (a *AttributeDefinition) IsReadOnly() bool {
+	if _, readOnlyMetadataIsPresent := a.Metadata["swagger:read-only"]; readOnlyMetadataIsPresent {
+		return true
+	}
+	return false
+}
+
 func (a *AttributeDefinition) arrayExample(rand *RandomGenerator, seen []string) interface{} {
 	ary := a.Type.ToArray()
 	ln := newExampleGenerator(a, rand).ExampleLength()
@@ -1304,6 +1320,18 @@ func (a *AttributeDefinition) inheritRecursive(parent *AttributeDefinition, seen
 			}
 			if att.Example == nil {
 				att.Example = patt.Example
+			}
+			if patt.Metadata != nil {
+				if att.Metadata == nil {
+					att.Metadata = patt.Metadata
+				} else {
+					// Copy all key/value pairs from parent to child that DO NOT exist in child; existing ones will remain with the same value
+					for k, v := range patt.Metadata {
+						if _, keyMetadataIsPresent := att.Metadata[k]; !keyMetadataIsPresent {
+							att.Metadata[k] = v
+						}
+					}
+				}
 			}
 		}
 	}

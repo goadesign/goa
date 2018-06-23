@@ -320,6 +320,15 @@ func Example(exp interface{}) {
 	}
 }
 
+// ReadOnly can be used in: Attribute
+// ReadOnly sets the readOnly property of an attribute to true. It is used when attributes are computed in the API and
+// are not expected from the client
+func ReadOnly() {
+	if a, ok := attributeDefinition(); ok {
+		a.SetReadOnly()
+	}
+}
+
 // NoExample can be used in: Attribute, Header, Param, HashOf, ArrayOf
 //
 // NoExample sets the example of an attribute to be blank for the documentation. It is used when
