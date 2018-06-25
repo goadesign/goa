@@ -143,12 +143,14 @@ func New{{ .Service.StructName }}(logger *log.Logger) {{ .Service.PkgName }}.Ser
 
 // input: EndpointData
 const dummyEndpointImplT = `{{ comment .Method.Description }}
-func (s *{{ .ServiceVarName }}Svc) {{ .Method.VarName }}(ctx context.Context{{ if .Payload.Ref }}, p {{ .Payload.Ref }}{{ end }}) ({{ if .Result.Ref }}res {{ .Result.Ref }}, {{ if .Method.ViewedResult }}view string, {{ end }} {{ end }}err error) {
+func (s *{{ .ServiceVarName }}Svc) {{ .Method.VarName }}(ctx context.Context{{ if .Payload.Ref }}, p {{ .Payload.Ref }}{{ end }}) ({{ if .Result.Ref }}res {{ .Result.Ref }}, {{ if .Method.ViewedResult }}{{ if not .Method.ViewedResult.ViewName }}view string, {{ end }}{{ end }} {{ end }}err error) {
 {{- if and .Result.Ref .Result.IsStruct }}
 	res = &{{ .Result.Name }}{}
 {{- end }}
 {{- if .Method.ViewedResult }}
+	{{- if not .Method.ViewedResult.ViewName }}
 	view = {{ printf "%q" .Result.View }}
+	{{- end }}
 {{- end }}
 	s.logger.Print("{{ .ServiceVarName }}.{{ .Method.Name }}")
 	return

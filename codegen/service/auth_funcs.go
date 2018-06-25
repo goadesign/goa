@@ -25,6 +25,7 @@ func AuthFuncsFile(genpkg string, root *design.RootExpr) *codegen.File {
 
 	var (
 		sections []*codegen.SectionTemplate
+		generate bool
 	)
 	{
 		specs := []*codegen.ImportSpec{
@@ -41,11 +42,12 @@ func AuthFuncsFile(genpkg string, root *design.RootExpr) *codegen.File {
 				Name: pkgName,
 			})
 		}
-		header := codegen.Header(root.API.Name+" authentication logic.", apiPkg, specs)
+		header := codegen.Header("", apiPkg, specs)
 		sections = []*codegen.SectionTemplate{header}
 		for _, s := range root.Services {
 			svc := Services.Get(s.Name)
 			if len(svc.Schemes) > 0 {
+				generate = true
 				sections = append(sections, &codegen.SectionTemplate{
 					Name:   "security-authfuncs",
 					Source: dummyAuthFuncsT,
@@ -54,10 +56,9 @@ func AuthFuncsFile(genpkg string, root *design.RootExpr) *codegen.File {
 			}
 		}
 	}
-	if len(sections) == 0 {
+	if len(sections) == 0 || !generate {
 		return nil
 	}
-
 	return &codegen.File{
 		Path:             "auth.go",
 		SectionTemplates: sections,
