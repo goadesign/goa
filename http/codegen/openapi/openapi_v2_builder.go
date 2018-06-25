@@ -83,18 +83,20 @@ func NewV2(root *httpdesign.RootExpr) (*V2, error) {
 			s.Paths[k] = v
 		}
 		for _, fs := range res.FileServers {
-			if mustGenerate(fs.Metadata) || mustGenerate(fs.Service.Metadata) {
-				if err := buildPathFromFileServer(s, root, fs); err != nil {
-					return nil, err
-				}
+			if !mustGenerate(fs.Metadata) || !mustGenerate(fs.Service.Metadata) {
+				continue
+			}
+			if err := buildPathFromFileServer(s, root, fs); err != nil {
+				return nil, err
 			}
 		}
 		for _, a := range res.HTTPEndpoints {
-			if mustGenerate(a.Metadata) || mustGenerate(a.MethodExpr.Metadata) {
-				for _, route := range a.Routes {
-					if err := buildPathFromExpr(s, root, route, basePath); err != nil {
-						return nil, err
-					}
+			if !mustGenerate(a.Metadata) || !mustGenerate(a.MethodExpr.Metadata) {
+				continue
+			}
+			for _, route := range a.Routes {
+				if err := buildPathFromExpr(s, root, route, basePath); err != nil {
+					return nil, err
 				}
 			}
 		}
@@ -307,7 +309,21 @@ func tagNamesFromExpr(mdatas ...design.MetadataExpr) (tagNames []string) {
 	return
 }
 
-func summaryFromExpr(name string, metadata design.MetadataExpr) string {
+func summaryFromExpr(name string, e *httpdesign.EndpointExpr) string {
+	for n, mdata := range e.Metadata {
+		if n == "swagger:summary" && len(mdata) > 0 {
+			return mdata[0]
+		}
+	}
+	for n, mdata := range e.MethodExpr.Metadata {
+		if n == "swagger:summary" && len(mdata) > 0 {
+			return mdata[0]
+		}
+	}
+	return name
+}
+
+func summaryFromMetadata(name string, metadata design.MetadataExpr) string {
 	for n, mdata := range metadata {
 		if n == "swagger:summary" && len(mdata) > 0 {
 			return mdata[0]
@@ -497,7 +513,7 @@ func buildPathFromFileServer(s *V2, root *httpdesign.RootExpr, fs *httpdesign.Fi
 
 		operation := &Operation{
 			Description:  fs.Description,
-			Summary:      summaryFromExpr(fmt.Sprintf("Download %s", fs.FilePath), fs.Metadata),
+			Summary:      summaryFromMetadata(fmt.Sprintf("Download %s", fs.FilePath), fs.Metadata),
 			ExternalDocs: docsFromExpr(fs.Docs),
 			OperationID:  operationID,
 			Parameters:   param,
@@ -618,7 +634,7 @@ func buildPathFromExpr(s *V2, root *httpdesign.RootExpr, route *httpdesign.Route
 		operation := &Operation{
 			Tags:         tagNames,
 			Description:  description,
-			Summary:      summaryFromExpr(endpoint.Name()+" "+endpoint.Service.Name(), endpoint.Metadata),
+			Summary:      summaryFromExpr(endpoint.Name()+" "+endpoint.Service.Name(), endpoint),
 			ExternalDocs: docsFromExpr(endpoint.MethodExpr.Docs),
 			OperationID:  operationID,
 			Parameters:   params,
