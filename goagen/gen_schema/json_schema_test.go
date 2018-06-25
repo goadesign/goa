@@ -29,7 +29,7 @@ var _ = Describe("TypeSchema", func() {
 		BeforeEach(func() {
 			MediaType("application/foo.bar", func() {
 				Attributes(func() {
-					Attribute("bar")
+					Attribute("bar", func() { ReadOnly() })
 				})
 				View("default", func() {
 					Attribute("bar")

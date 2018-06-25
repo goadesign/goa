@@ -194,6 +194,24 @@ var _ = Describe("Attribute", func() {
 		})
 	})
 
+	Context("with a name and a DSL defining a 'readOnly' attribute", func() {
+		BeforeEach(func() {
+			name = "foo"
+			dsl = func() { ReadOnly() }
+		})
+
+		It("produces an attribute of type string set to readOnly", func() {
+			t := parent.Type
+			Ω(t).ShouldNot(BeNil())
+			Ω(t).Should(BeAssignableToTypeOf(Object{}))
+			o := t.(Object)
+			Ω(o).Should(HaveLen(1))
+			Ω(o).Should(HaveKey(name))
+			Ω(o[name].Type).Should(Equal(String))
+			Ω(o[name].IsReadOnly()).Should(BeTrue())
+		})
+	})
+
 	Context("with a name and a DSL defining an enum validation", func() {
 		BeforeEach(func() {
 			name = "foo"
