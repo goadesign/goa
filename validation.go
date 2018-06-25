@@ -16,6 +16,9 @@ import (
 type Format string
 
 const (
+	// FormatDate defines RFC3339 date values.
+	FormatDate Format = "date"
+
 	// FormatDateTime defines RFC3339 date time values.
 	FormatDateTime Format = "date-time"
 
@@ -51,6 +54,9 @@ const (
 
 	// FormatRFC1123 defines RFC1123 date time values.
 	FormatRFC1123 = "rfc1123"
+
+	// LayoutRFC3339Date is a layout of RFC3339 date for use in time.Parse.
+	LayoutRFC3339Date = "2006-01-02"
 )
 
 var (
@@ -67,6 +73,7 @@ var (
 // see http://json-schema.org/latest/json-schema-validation.html#anchor105
 // Supported formats are:
 //
+//     - "date": RFC3339 date value
 //     - "date-time": RFC3339 date time value
 //     - "email": RFC5322 email address
 //     - "hostname": RFC1035 Internet host name
@@ -79,6 +86,8 @@ var (
 func ValidateFormat(f Format, val string) error {
 	var err error
 	switch f {
+	case FormatDate:
+		_, err = time.Parse(LayoutRFC3339Date, val)
 	case FormatDateTime:
 		_, err = time.Parse(time.RFC3339, val)
 	case FormatUUID:
