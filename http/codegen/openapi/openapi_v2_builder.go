@@ -424,7 +424,7 @@ func responseSpecFromExpr(s *V2, root *httpdesign.RootExpr, r *httpdesign.HTTPRe
 		schema = NewSchema()
 		schema.Ref = ResultTypeRef(root.Design.API, mt, view)
 	} else if r.Body.Type != design.Empty {
-		schema = TypeSchema(root.Design.API, r.Body.Type)
+		schema = TypeSchema(root.Design.API, r.Body.Type, r.Body.Validation)
 	}
 	headers, err := headersFromExpr(r.MappedHeaders())
 	if err != nil {
@@ -488,7 +488,7 @@ func buildPathFromFileServer(s *V2, root *httpdesign.RootExpr, fs *httpdesign.Fi
 			},
 		}
 		if len(wcs) > 0 {
-			schema := TypeSchema(root.Design.API, design.ErrorResult)
+			schema := TypeSchema(root.Design.API, design.ErrorResult, nil)
 			responses["404"] = &Response{Description: "File not found", Schema: schema}
 		}
 
@@ -566,7 +566,7 @@ func buildPathFromExpr(s *V2, root *httpdesign.RootExpr, route *httpdesign.Route
 				In:          "body",
 				Description: endpoint.Body.Description,
 				Required:    true,
-				Schema:      TypeSchema(root.Design.API, endpoint.Body.Type),
+				Schema:      TypeSchema(root.Design.API, endpoint.Body.Type, endpoint.Body.Validation),
 			}
 			params = append(params, pp)
 		}
