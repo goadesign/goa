@@ -42,7 +42,7 @@ func AuthFuncsFile(genpkg string, root *design.RootExpr) *codegen.File {
 				Name: pkgName,
 			})
 		}
-		header := codegen.Header(root.API.Name+" authentication logic.", apiPkg, specs)
+		header := codegen.Header("", apiPkg, specs)
 		sections = []*codegen.SectionTemplate{header}
 		for _, s := range root.Services {
 			svc := Services.Get(s.Name)
