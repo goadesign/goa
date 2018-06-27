@@ -448,6 +448,8 @@ func oneof(target string, vals []interface{}) string {
 // constant returns the Go constant name of the format with the given value.
 func constant(formatName string) string {
 	switch formatName {
+	case "date":
+		return "goa.FormatDate"
 	case "date-time":
 		return "goa.FormatDateTime"
 	case "email":

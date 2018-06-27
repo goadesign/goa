@@ -386,6 +386,7 @@ func Enum(val ...interface{}) {
 // Format DSL.
 var SupportedValidationFormats = []string{
 	"cidr",
+	"date",
 	"date-time",
 	"email",
 	"hostname",
@@ -403,6 +404,8 @@ var SupportedValidationFormats = []string{
 // Format adds a "format" validation to the attribute.
 // See http://json-schema.org/latest/json-schema-validation.html#anchor104.
 // The formats supported by goa are:
+//
+// "date": RFC3339 date
 //
 // "date-time": RFC3339 date time
 //
