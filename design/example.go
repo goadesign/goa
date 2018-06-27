@@ -6,7 +6,6 @@ import (
 	"regexp"
 	"time"
 
-	"github.com/goadesign/goa"
 	regen "github.com/zach-klippenstein/goregen"
 )
 
@@ -153,8 +152,8 @@ func (eg *exampleGenerator) generateFormatExample() interface{} {
 	if res, ok := map[string]interface{}{
 		"email":     eg.r.faker.Email(),
 		"hostname":  eg.r.faker.DomainName() + "." + eg.r.faker.DomainSuffix(),
-		"date":      time.Unix(int64(eg.r.Int())%1454957045, 0).Format(goa.LayoutRFC3339Date), // to obtain a "fixed" rand
-		"date-time": time.Unix(int64(eg.r.Int())%1454957045, 0).Format(time.RFC3339),          // to obtain a "fixed" rand
+		"date":      time.Unix(int64(eg.r.Int())%1454957045, 0).Format("2006-01-02"), // to obtain a "fixed" rand
+		"date-time": time.Unix(int64(eg.r.Int())%1454957045, 0).Format(time.RFC3339), // to obtain a "fixed" rand
 		"ipv4":      eg.r.faker.IPv4Address().String(),
 		"ipv6":      eg.r.faker.IPv6Address().String(),
 		"ip":        eg.r.faker.IPv4Address().String(),

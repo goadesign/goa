@@ -54,9 +54,6 @@ const (
 
 	// FormatRFC1123 defines RFC1123 date time values.
 	FormatRFC1123 = "rfc1123"
-
-	// LayoutRFC3339Date is a layout of RFC3339 date for use in time.Parse.
-	LayoutRFC3339Date = "2006-01-02"
 )
 
 var (
@@ -87,7 +84,7 @@ func ValidateFormat(f Format, val string) error {
 	var err error
 	switch f {
 	case FormatDate:
-		_, err = time.Parse(LayoutRFC3339Date, val)
+		_, err = time.Parse("2006-01-02", val)
 	case FormatDateTime:
 		_, err = time.Parse(time.RFC3339, val)
 	case FormatUUID:
