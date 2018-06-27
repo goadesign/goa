@@ -19,6 +19,32 @@ var _ = Describe("ValidateFormat", func() {
 		valErr = goa.ValidateFormat(f, val)
 	})
 
+	Context("Date", func() {
+		BeforeEach(func() {
+			f = goa.FormatDate
+		})
+
+		Context("with an invalid value", func() {
+			BeforeEach(func() {
+				val = "201510-26"
+			})
+
+			It("does not validates", func() {
+				Ω(valErr).Should(HaveOccurred())
+			})
+		})
+
+		Context("with a valid value", func() {
+			BeforeEach(func() {
+				val = "2015-10-26"
+			})
+
+			It("validates", func() {
+				Ω(valErr).ShouldNot(HaveOccurred())
+			})
+		})
+	})
+
 	Context("DateTime", func() {
 		BeforeEach(func() {
 			f = goa.FormatDateTime
