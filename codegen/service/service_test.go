@@ -26,6 +26,8 @@ func TestService(t *testing.T) {
 		{"result-collection-multiple-views", testdata.ResultCollectionMultipleViewsMethodDSL, testdata.ResultCollectionMultipleViewsMethod},
 		{"result-with-other-result", testdata.ResultWithOtherResultMethodDSL, testdata.ResultWithOtherResultMethod},
 		{"service-level-error", testdata.ServiceErrorDSL, testdata.ServiceError},
+		{"force-generate-type", testdata.ForceGenerateTypeDSL, testdata.ForceGenerateType},
+		{"force-generate-type-explicit", testdata.ForceGenerateTypeExplicitDSL, testdata.ForceGenerateTypeExplicit},
 	}
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {

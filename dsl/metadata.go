@@ -12,7 +12,30 @@ import (
 // services and API definitions.
 //
 // While keys can have any value the following names are handled explicitly by
-// goa when set on attributes.
+// goa when set on attributes or types.
+//
+// type:generate:force forces the code generation for the type it is defined
+// on. By default goa only generates types that are used explicitly by the
+// service methods. This metadata key makes it possible to override this
+// behavior and forces goa to generate the corresponding struct. The value is
+// a slice of strings that lists the names of the services for which to
+// generate the struct. If left empty then the struct is generated for all
+// services.
+//
+//        package design
+//
+//        var ExternalType = Type("ExternalType", func() {
+//                Attribute("name", String)
+//                Metadata("type:generate:force", service1, service2)
+//        })
+//
+//        var _ = Service("service1", func() {
+//                ...
+//        })
+//
+//        var _ = Service("service2", func() {
+//                ...
+//        })
 //
 // struct:error:name identifies the attribute of a result type used to select
 // the returned error when multiple errors are defined on the same method.

@@ -648,3 +648,47 @@ func newMultipleViews2ViewTiny(res *MultipleViews2) *resultwithotherresultviews.
 	return vres
 }
 `
+
+const ForceGenerateType = `
+// Service is the ForceGenerateType service interface.
+type Service interface {
+	// A implements A.
+	A(context.Context) (err error)
+}
+
+// ServiceName is the name of the service as defined in the design. This is the
+// same value that is set in the endpoint request contexts under the ServiceKey
+// key.
+const ServiceName = "ForceGenerateType"
+
+// MethodNames lists the service method names as defined in the design. These
+// are the same values that are set in the endpoint request contexts under the
+// MethodKey key.
+var MethodNames = [1]string{"A"}
+
+type ForcedType struct {
+	A *string
+}
+`
+
+const ForceGenerateTypeExplicit = `
+// Service is the ForceGenerateTypeExplicit service interface.
+type Service interface {
+	// A implements A.
+	A(context.Context) (err error)
+}
+
+// ServiceName is the name of the service as defined in the design. This is the
+// same value that is set in the endpoint request contexts under the ServiceKey
+// key.
+const ServiceName = "ForceGenerateTypeExplicit"
+
+// MethodNames lists the service method names as defined in the design. These
+// are the same values that are set in the endpoint request contexts under the
+// MethodKey key.
+var MethodNames = [1]string{"A"}
+
+type ForcedType struct {
+	A *string
+}
+`
