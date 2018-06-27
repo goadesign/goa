@@ -14,22 +14,20 @@ import (
 // While keys can have any value the following names are handled explicitly by
 // goa when set on attributes or types.
 //
-// type:generate:force specified on a Type will generate a Go struct in the
-// service packages specified in the value. If no services are specified, it
-// generates the type in all the services in the design package. The Type
-// definition to force generate can exist in an external package and must be
-// imported in the API design.
+// type:generate:force forces the code generation for the type it is defined
+// on. By default goa only generates types that are used explicitly by the
+// service methods. This metadata key makes it possible to override this
+// behavior and forces goa to generate the corresponding struct. The value is
+// a slice of strings that lists the names of the services for which to
+// generate the struct. If left empty then the struct is generated for all
+// services.
 //
-//        package my_package
+//        package design
 //
 //        var ExternalType = Type("ExternalType", func() {
 //                Attribute("name", String)
 //                Metadata("type:generate:force", service1, service2)
 //        })
-//
-//        package design
-//
-//        import _ "my_package"
 //
 //        var _ = Service("service1", func() {
 //                ...
