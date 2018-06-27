@@ -66,14 +66,13 @@ func NewLoginEndpoint(s Service, authBasicFn security.AuthBasicFunc) goa.Endpoin
 func NewListEndpoint(s Service, authJWTFn security.AuthJWTFunc) goa.Endpoint {
 	return func(ctx context.Context, req interface{}) (interface{}, error) {
 		ep := req.(*ListEndpointInput)
-		p := ep.Payload
 		var err error
 		sc := security.JWTScheme{
 			Name:           "jwt",
 			Scopes:         []string{"stream:read", "stream:write"},
 			RequiredScopes: []string{"stream:read"},
 		}
-		ctx, err = authJWTFn(ctx, p.Token, &sc)
+		ctx, err = authJWTFn(ctx, ep.Payload.Token, &sc)
 		if err != nil {
 			return nil, err
 		}

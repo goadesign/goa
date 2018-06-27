@@ -113,6 +113,9 @@ func EndpointFile(genpkg string, service *design.ServiceExpr) *codegen.File {
 				Name:   "endpoint-method",
 				Source: serviceEndpointMethodT,
 				Data:   m,
+				FuncMap: map[string]interface{}{
+					"payloadVar": payloadVar,
+				},
 			})
 		}
 	}
@@ -163,6 +166,13 @@ func endpointData(service *design.ServiceExpr) *EndpointsData {
 	}
 }
 
+func payloadVar(e *EndpointMethodData) string {
+	if e.ServerStream != nil {
+		return "ep.Payload"
+	}
+	return "p"
+}
+
 // input: EndpointsData
 const serviceEndpointsT = `{{ comment .Description }}
 type {{ .VarName }} struct {
@@ -201,12 +211,10 @@ func New{{ .VarName }}Endpoint(s {{ .ServiceVarName }}{{ range .Schemes }}, auth
 	return func(ctx context.Context, req interface{}) (interface{}, error) {
 {{- if .ServerStream }}
 		ep := req.(*{{ .ServerStream.EndpointStruct }})
-		{{- if .PayloadRef }}
-		p := ep.Payload
-		{{- end }}
 {{- else if .PayloadRef }}
 		p := req.({{ .PayloadRef }})
 {{- end }}
+{{- $payload := payloadVar . }}
 {{- if .Requirements }}
 		var err error
 	{{- range $ridx, $r := .Requirements }}
@@ -223,18 +231,18 @@ func New{{ .VarName }}Endpoint(s {{ .ServiceVarName }}{{ range .Schemes }}, auth
 				}
 				{{- if .UsernamePointer }}
 				var user string
-				if p.{{ .UsernameField }} != nil {
-					user = *p.{{ .UsernameField }}
+				if {{ $payload }}.{{ .UsernameField }} != nil {
+					user = *{{ $payload }}.{{ .UsernameField }}
 				}
 				{{- end }}
 				{{- if .PasswordPointer }}
 				var pass string
-				if p.{{ .PasswordField }} != nil {
-					pass = *p.{{ .PasswordField }}
+				if {{ $payload }}.{{ .PasswordField }} != nil {
+					pass = *{{ $payload }}.{{ .PasswordField }}
 				}
 				{{- end }}
-				ctx, err = auth{{ .Type }}Fn(ctx, {{ if .UsernamePointer }}user{{ else }}p.{{ .UsernameField }}{{ end }},
-					{{- if .PasswordPointer }}pass{{ else }}p.{{ .PasswordField }}{{ end }}, &sc)
+				ctx, err = auth{{ .Type }}Fn(ctx, {{ if .UsernamePointer }}user{{ else }}{{ $payload }}.{{ .UsernameField }}{{ end }},
+					{{- if .PasswordPointer }}pass{{ else }}{{ $payload }}.{{ .PasswordField }}{{ end }}, &sc)
 
 			{{- else if eq .Type "APIKey" }}
 				sc := security.APIKeyScheme{
@@ -242,11 +250,11 @@ func New{{ .VarName }}Endpoint(s {{ .ServiceVarName }}{{ range .Schemes }}, auth
 				}
 				{{- if $s.CredPointer }}
 				var key string
-				if p.{{ $s.CredField }} != nil {
-					key = *p.{{ $s.CredField }}
+				if {{ $payload }}.{{ $s.CredField }} != nil {
+					key = *{{ $payload }}.{{ $s.CredField }}
 				}
 				{{- end }}
-				ctx, err = auth{{ .Type }}Fn(ctx, {{ if $s.CredPointer }}key{{ else }}p.{{ $s.CredField }}{{ end }}, &sc)
+				ctx, err = auth{{ .Type }}Fn(ctx, {{ if $s.CredPointer }}key{{ else }}{{ $payload }}.{{ $s.CredField }}{{ end }}, &sc)
 
 			{{- else if eq .Type "JWT" }}
 				sc := security.JWTScheme{
@@ -256,11 +264,11 @@ func New{{ .VarName }}Endpoint(s {{ .ServiceVarName }}{{ range .Schemes }}, auth
 				}
 				{{- if $s.CredPointer }}
 				var token string
-				if p.{{ $s.CredField }} != nil {
-					token = *p.{{ $s.CredField }}
+				if {{ $payload }}.{{ $s.CredField }} != nil {
+					token = *{{ $payload }}.{{ $s.CredField }}
 				}
 				{{- end }}
-				ctx, err = auth{{ .Type }}Fn(ctx, {{ if $s.CredPointer }}token{{ else }}p.{{ $s.CredField }}{{ end }}, &sc)
+				ctx, err = auth{{ .Type }}Fn(ctx, {{ if $s.CredPointer }}token{{ else }}{{ $payload }}.{{ $s.CredField }}{{ end }}, &sc)
 
 			{{- else if eq .Type "OAuth2" }}
 				sc := security.OAuth2Scheme{
@@ -288,11 +296,11 @@ func New{{ .VarName }}Endpoint(s {{ .ServiceVarName }}{{ range .Schemes }}, auth
 				}
 				{{- if $s.CredPointer }}
 				var token string
-				if p.{{ $s.CredField }} != nil {
-					token = *p.{{ $s.CredField }}
+				if {{ $payload }}.{{ $s.CredField }} != nil {
+					token = *{{ $payload }}.{{ $s.CredField }}
 				}
 				{{- end }}
-				ctx, err = auth{{ .Type }}Fn(ctx, {{ if $s.CredPointer }}token{{ else }}p.{{ $s.CredField }}{{ end }}, &sc)
+				ctx, err = auth{{ .Type }}Fn(ctx, {{ if $s.CredPointer }}token{{ else }}{{ $payload }}.{{ $s.CredField }}{{ end }}, &sc)
 
 			{{- end }}
 			{{- if ne $sidx 0 }}
@@ -308,18 +316,18 @@ func New{{ .VarName }}Endpoint(s {{ .ServiceVarName }}{{ range .Schemes }}, auth
 		}
 {{- end }}
 {{- if .ServerStream }}
-	return nil, s.{{ .VarName }}(ctx, {{ if and .PayloadRef (not .ServerStream.RecvRef) }}ep.Payload, {{ end }}ep.Stream)
+	return nil, s.{{ .VarName }}(ctx, {{ if and .PayloadRef (not .ServerStream.RecvRef) }}{{ $payload }}, {{ end }}ep.Stream)
 {{- else if .ViewedResult }}
-		res,{{ if not .ViewedResult.ViewName }} view,{{ end }} err := s.{{ .VarName }}(ctx{{ if .PayloadRef }}, p{{ end }})
+		res,{{ if not .ViewedResult.ViewName }} view,{{ end }} err := s.{{ .VarName }}(ctx{{ if .PayloadRef }}, {{ $payload }}{{ end }})
 		if err != nil {
 			return nil, err
 		}
 		vres := {{ $.ViewedResult.Init.Name }}(res, {{ if .ViewedResult.ViewName }}{{ printf "%q" .ViewedResult.ViewName }}{{ else }}view{{ end }})
 		return vres, nil
 {{- else if .ResultRef }}
-		return s.{{ .VarName }}(ctx{{ if .PayloadRef }}, p{{ end }})
+		return s.{{ .VarName }}(ctx{{ if .PayloadRef }}, {{ $payload }}{{ end }})
 {{- else }}
-	return {{ if not .ResultRef }}nil, {{ end }}s.{{ .VarName }}(ctx{{ if .PayloadRef }}, p{{ end }})
+	return {{ if not .ResultRef }}nil, {{ end }}s.{{ .VarName }}(ctx{{ if .PayloadRef }}, {{ $payload }}{{ end }})
 {{- end }}
 	}
 }

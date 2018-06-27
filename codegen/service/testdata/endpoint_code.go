@@ -195,7 +195,6 @@ func (e *Endpoints) Use(m func(goa.Endpoint) goa.Endpoint) {
 func NewStreamingResultMethodEndpoint(s Service) goa.Endpoint {
 	return func(ctx context.Context, req interface{}) (interface{}, error) {
 		ep := req.(*StreamingResultMethodEndpointInput)
-		p := ep.Payload
 		return nil, s.StreamingResultMethod(ctx, ep.Payload, ep.Stream)
 	}
 }

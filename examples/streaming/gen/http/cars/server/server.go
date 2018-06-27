@@ -135,6 +135,7 @@ func NewLoginHandler(
 			eh(ctx, w, err)
 			return
 		}
+
 		res, err := endpoint(ctx, payload)
 
 		if err != nil {
@@ -185,6 +186,7 @@ func NewListHandler(
 			eh(ctx, w, err)
 			return
 		}
+
 		v := &carssvc.ListEndpointInput{
 			Stream: &listServerStream{
 				upgrader:     up,

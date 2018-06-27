@@ -1225,7 +1225,7 @@ func Service(name string, fn func()) *design.ServiceExpr {
 //        StreamingResult(Int32, "Resulting sum")
 //    })
 //
-//		// Method result is a stream of integers with validation set on each
+//    // Method result is a stream of integers with validation set on each
 //    Method("add", func() {
 //        StreamingResult(Int32, "Resulting sum", func() {
 //            Minimum(0)

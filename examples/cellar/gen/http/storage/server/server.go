@@ -139,6 +139,7 @@ func NewListHandler(
 		ctx := context.WithValue(r.Context(), goahttp.AcceptTypeKey, r.Header.Get("Accept"))
 		ctx = context.WithValue(ctx, goa.MethodKey, "list")
 		ctx = context.WithValue(ctx, goa.ServiceKey, "storage")
+
 		res, err := endpoint(ctx, nil)
 
 		if err != nil {
@@ -188,6 +189,7 @@ func NewShowHandler(
 			eh(ctx, w, err)
 			return
 		}
+
 		res, err := endpoint(ctx, payload)
 
 		if err != nil {
@@ -237,6 +239,7 @@ func NewAddHandler(
 			eh(ctx, w, err)
 			return
 		}
+
 		res, err := endpoint(ctx, payload)
 
 		if err != nil {
@@ -286,6 +289,7 @@ func NewRemoveHandler(
 			eh(ctx, w, err)
 			return
 		}
+
 		res, err := endpoint(ctx, payload)
 
 		if err != nil {
@@ -335,6 +339,7 @@ func NewRateHandler(
 			eh(ctx, w, err)
 			return
 		}
+
 		res, err := endpoint(ctx, payload)
 
 		if err != nil {
@@ -384,6 +389,7 @@ func NewMultiAddHandler(
 			eh(ctx, w, err)
 			return
 		}
+
 		res, err := endpoint(ctx, payload)
 
 		if err != nil {
@@ -433,6 +439,7 @@ func NewMultiUpdateHandler(
 			eh(ctx, w, err)
 			return
 		}
+
 		res, err := endpoint(ctx, payload)
 
 		if err != nil {
