@@ -61,6 +61,8 @@ func Enum(vals ...interface{}) {
 // See http://json-schema.org/latest/json-schema-validation.html#anchor104.
 // The formats supported by goa are:
 //
+// FormatDate: RFC3339 date
+//
 // FormatDateTime: RFC3339 date time
 //
 // FormatUUID: RFC4122 uuid
