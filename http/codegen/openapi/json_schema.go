@@ -41,6 +41,8 @@ type (
 		Maximum              *float64      `json:"maximum,omitempty" yaml:"maximum,omitempty"`
 		MinLength            *int          `json:"minLength,omitempty" yaml:"minLength,omitempty"`
 		MaxLength            *int          `json:"maxLength,omitempty" yaml:"maxLength,omitempty"`
+		MinItems             *int          `json:"minItems,omitempty" yaml:"minItems,omitempty"`
+		MaxItems             *int          `json:"maxItems,omitempty" yaml:"maxItems,omitempty"`
 		Required             []string      `json:"required,omitempty" yaml:"required,omitempty"`
 		AdditionalProperties bool          `json:"additionalProperties,omitempty" yaml:"additionalProperties,omitempty"`
 
@@ -166,7 +168,7 @@ func GenerateServiceDefinition(api *design.APIExpr, res *httpdesign.ServiceExpr)
 	for _, a := range res.HTTPEndpoints {
 		var requestSchema *Schema
 		if a.MethodExpr.Payload != nil {
-			requestSchema = TypeSchema(api, a.MethodExpr.Payload.Type)
+			requestSchema = AttributeTypeSchema(api, a.MethodExpr.Payload)
 			requestSchema.Description = a.Name() + " payload"
 		}
 		if a.Params() != nil {
@@ -325,6 +327,11 @@ type mergeItems []struct {
 }
 
 func (s *Schema) createMergeItems(other *Schema) mergeItems {
+	minInt := func(a, b *int) bool { return (a == nil && b != nil) || (a != nil && b != nil && *a > *b) }
+	maxInt := func(a, b *int) bool { return (a == nil && b != nil) || (a != nil && b != nil && *a < *b) }
+	minFloat64 := func(a, b *float64) bool { return (a == nil && b != nil) || (a != nil && b != nil && *a > *b) }
+	maxFloat64 := func(a, b *float64) bool { return (a == nil && b != nil) || (a != nil && b != nil && *a < *b) }
+
 	return mergeItems{
 		{&s.ID, other.ID, s.ID == ""},
 		{&s.Type, other.Type, s.Type == ""},
@@ -339,26 +346,12 @@ func (s *Schema) createMergeItems(other *Schema) mergeItems {
 		{&s.Format, other.Format, s.Format == ""},
 		{&s.Pattern, other.Pattern, s.Pattern == ""},
 		{&s.AdditionalProperties, other.AdditionalProperties, s.AdditionalProperties == false},
-		{
-			a: s.Minimum, b: other.Minimum,
-			needed: (s.Minimum == nil && s.Minimum != nil) ||
-				(s.Minimum != nil && other.Minimum != nil && *s.Minimum > *other.Minimum),
-		},
-		{
-			a: s.Maximum, b: other.Maximum,
-			needed: (s.Maximum == nil && other.Maximum != nil) ||
-				(s.Maximum != nil && other.Maximum != nil && *s.Maximum < *other.Maximum),
-		},
-		{
-			a: s.MinLength, b: other.MinLength,
-			needed: (s.MinLength == nil && other.MinLength != nil) ||
-				(s.MinLength != nil && other.MinLength != nil && *s.MinLength > *other.MinLength),
-		},
-		{
-			a: s.MaxLength, b: other.MaxLength,
-			needed: (s.MaxLength == nil && other.MaxLength != nil) ||
-				(s.MaxLength != nil && other.MaxLength != nil && *s.MaxLength > *other.MaxLength),
-		},
+		{&s.Minimum, other.Minimum, minFloat64(s.Minimum, other.Minimum)},
+		{&s.Maximum, other.Maximum, maxFloat64(s.Maximum, other.Maximum)},
+		{&s.MinLength, other.MinLength, minInt(s.MinLength, other.MinLength)},
+		{&s.MaxLength, other.MaxLength, maxInt(s.MaxLength, other.MaxLength)},
+		{&s.MinItems, other.MinItems, minInt(s.MinItems, other.MinItems)},
+		{&s.MaxItems, other.MaxItems, maxInt(s.MaxItems, other.MaxItems)},
 	}
 }
 
@@ -416,6 +409,8 @@ func (s *Schema) Dup() *Schema {
 		Maximum:              s.Maximum,
 		MinLength:            s.MinLength,
 		MaxLength:            s.MaxLength,
+		MinItems:             s.MinItems,
+		MaxItems:             s.MaxItems,
 		Required:             s.Required,
 		AdditionalProperties: s.AdditionalProperties,
 	}
@@ -442,9 +437,16 @@ func buildAttributeSchema(api *design.APIExpr, s *Schema, at *design.AttributeEx
 	s.DefaultValue = toStringMap(at.DefaultValue)
 	s.Description = at.Description
 	s.Example = at.Example(api.Random())
+	initAttributeValidation(s, at)
+
+	return s
+}
+
+// initAttributeValidation initializes validation rules for an attribute.
+func initAttributeValidation(s *Schema, at *design.AttributeExpr) {
 	val := at.Validation
 	if val == nil {
-		return s
+		return
 	}
 	s.Enum = val.Values
 	s.Format = string(val.Format)
@@ -456,12 +458,26 @@ func buildAttributeSchema(api *design.APIExpr, s *Schema, at *design.AttributeEx
 		s.Maximum = val.Maximum
 	}
 	if val.MinLength != nil {
-		s.MinLength = val.MinLength
+		if _, ok := at.Type.(*design.Array); ok {
+			s.MinItems = val.MinLength
+		} else {
+			s.MinLength = val.MinLength
+		}
 	}
 	if val.MaxLength != nil {
-		s.MaxLength = val.MaxLength
+		if _, ok := at.Type.(*design.Array); ok {
+			s.MaxItems = val.MaxLength
+		} else {
+			s.MaxLength = val.MaxLength
+		}
 	}
 	s.Required = val.Required
+}
+
+// AttributeTypeSchema produces the JSON schema corresponding to the given attribute.
+func AttributeTypeSchema(api *design.APIExpr, at *design.AttributeExpr) *Schema {
+	s := TypeSchema(api, at.Type)
+	initAttributeValidation(s, at)
 	return s
 }
 
