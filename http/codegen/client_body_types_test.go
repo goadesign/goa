@@ -44,6 +44,8 @@ func TestBodyTypeInit(t *testing.T) {
 		{"body-path-user-validate", testdata.PayloadBodyPathUserValidateDSL, 2, BodyPathUserValidateInitCode},
 		{"body-primitive-array-user-validate", testdata.PayloadBodyPrimitiveArrayUserValidateDSL, 2, BodyPrimitiveArrayUserValidateInitCode},
 		{"result-body-user", testdata.ResultBodyObjectHeaderDSL, 2, ResultBodyObjectHeaderInitCode},
+		{"result-explicit-body-primitive", testdata.ExplicitBodyPrimitiveResultMultipleViewsDSL, 1, ExplicitBodyPrimitiveResultMultipleViewsInitCode},
+		{"result-explicit-body-user-type", testdata.ExplicitBodyUserResultMultipleViewsDSL, 2, ExplicitBodyUserResultMultipleViewsInitCode},
 	}
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
@@ -119,5 +121,36 @@ func NewMethodBodyObjectHeaderMethodBodyObjectHeaderResultOK(body *MethodBodyObj
 	}
 	v.B = b
 	return v
+}
+`
+
+const ExplicitBodyPrimitiveResultMultipleViewsInitCode = `// NewMethodExplicitBodyPrimitiveResultMultipleViewResulttypemultipleviewsOK
+// builds a "ServiceExplicitBodyPrimitiveResultMultipleView" service
+// "MethodExplicitBodyPrimitiveResultMultipleView" endpoint result from a HTTP
+// "OK" response.
+func NewMethodExplicitBodyPrimitiveResultMultipleViewResulttypemultipleviewsOK(body string, c *string) *serviceexplicitbodyprimitiveresultmultipleviewviews.ResulttypemultipleviewsView {
+	v := body
+	res := &serviceexplicitbodyprimitiveresultmultipleviewviews.ResulttypemultipleviewsView{
+		A: &v,
+	}
+	res.C = c
+	return res
+}
+`
+
+const ExplicitBodyUserResultMultipleViewsInitCode = `// NewMethodExplicitBodyUserResultMultipleViewResulttypemultipleviewsOK builds
+// a "ServiceExplicitBodyUserResultMultipleView" service
+// "MethodExplicitBodyUserResultMultipleView" endpoint result from a HTTP "OK"
+// response.
+func NewMethodExplicitBodyUserResultMultipleViewResulttypemultipleviewsOK(body *UserType, c *string) *serviceexplicitbodyuserresultmultipleviewviews.ResulttypemultipleviewsView {
+	v := &serviceexplicitbodyuserresultmultipleviewviews.UserTypeView{
+		X: body.X,
+		Y: body.Y,
+	}
+	res := &serviceexplicitbodyuserresultmultipleviewviews.ResulttypemultipleviewsView{
+		A: v,
+	}
+	res.C = c
+	return res
 }
 `
