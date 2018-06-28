@@ -26,8 +26,8 @@ paths:
         - sedan
         - hatchback
       responses:
-        "200":
-          description: OK response.
+        "101":
+          description: Switching Protocols response.
           schema:
             $ref: '#/definitions/ListResponseBody'
         "401":

@@ -562,6 +562,15 @@ func buildPathFromExpr(s *V2, root *httpdesign.RootExpr, route *httpdesign.Route
 
 		responses := make(map[string]*Response, len(endpoint.Responses))
 		for _, r := range endpoint.Responses {
+			if endpoint.MethodExpr.IsStreaming() {
+				// A streaming endpoint allows at most one successful response
+				// definition. So it is okay to change the first successful
+				// response to a HTTP 101 response for openapi docs.
+				if _, ok := responses[strconv.Itoa(httpdesign.StatusSwitchingProtocols)]; !ok {
+					r = r.Dup()
+					r.StatusCode = httpdesign.StatusSwitchingProtocols
+				}
+			}
 			resp, err := responseSpecFromExpr(s, root, r)
 			if err != nil {
 				return err

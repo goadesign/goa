@@ -256,6 +256,7 @@ func (e *EndpointExpr) Validate() error {
 	// All responses but one must have tags for the same status code
 	hasTags := false
 	allTagged := true
+	successResp := false
 	for i, r := range e.Responses {
 		verr.Merge(r.Validate(e))
 		for j, r2 := range e.Responses {
@@ -268,8 +269,13 @@ func (e *EndpointExpr) Validate() error {
 		} else {
 			hasTags = true
 		}
-		if r.StatusCode < 400 {
-			if e.MethodExpr.IsResultStreaming() && r.Body != nil && r.Body.Type == design.Empty {
+		if r.StatusCode < 400 && e.MethodExpr.IsResultStreaming() {
+			if successResp {
+				verr.Add(r, "Multiple success response defined for a streaming endpoint. At most one success response can be defined for a streaming endpoint.")
+			} else {
+				successResp = true
+			}
+			if r.Body != nil && r.Body.Type == design.Empty {
 				verr.Add(r, "Response body is empty but the endpoint uses streaming result. Response body cannot be empty for a success response if endpoint defines streaming result.")
 			}
 		}

@@ -163,6 +163,11 @@ func (m *MethodExpr) Finalize() {
 	}
 }
 
+// IsStreaming determines whether the method streams payload or result.
+func (m *MethodExpr) IsStreaming() bool {
+	return m.Stream != NoStreamKind
+}
+
 // IsResultStreaming determines whether the method result is streamed.
 func (m *MethodExpr) IsResultStreaming() bool {
 	return m.Stream == ServerStreamKind || m.Stream == BidirectionalStreamKind
