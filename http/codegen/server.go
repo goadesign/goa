@@ -1026,7 +1026,7 @@ const responseT = `{{ define "response" -}}
 		{{- if .ServerBody.Init }}
 	body := {{ .ServerBody.Init.Name }}({{ range .ServerBody.Init.ServerArgs }}{{ .Ref }}, {{ end }})
 		{{- else }}
-	body := res{{ if .ResultAttr }}.{{ .ResultAttr }}{{ end }}
+	body := res{{ if $.ViewedResult }}.Projected{{ end }}{{ if .ResultAttr }}.{{ .ResultAttr }}{{ end }}
 		{{- end }}
 	{{- end }}
 	{{- range .Headers }}

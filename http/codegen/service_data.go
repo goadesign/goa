@@ -1217,6 +1217,7 @@ func buildResponseResultInit(resp *httpdesign.HTTPResponseExpr, e *httpdesign.En
 		code       string
 		origin     string
 		err        error
+		pointer    bool
 		clientArgs []*InitArgData
 
 		svc = sd.Service
@@ -1234,11 +1235,13 @@ func buildResponseResultInit(resp *httpdesign.HTTPResponseExpr, e *httpdesign.En
 		// attribute in the result type for body transformation.
 		if o, ok := resp.Body.Metadata["origin:attribute"]; ok {
 			origin = o[0]
+			pointer = respBody.IsPrimitivePointer(origin, true)
 			respBody = design.AsObject(respBody.Type).Attribute(origin)
 		}
 		ref := "body"
 		if design.IsObject(resp.Body.Type) {
 			ref = "&body"
+			pointer = false
 		}
 		var vcode string
 		if ut, ok := resp.Body.Type.(design.UserType); ok {
@@ -1295,14 +1298,15 @@ func buildResponseResultInit(resp *httpdesign.HTTPResponseExpr, e *httpdesign.En
 	status := codegen.Goify(http.StatusText(resp.StatusCode), true)
 	name := fmt.Sprintf("New%s%s%s", codegen.Goify(md.Name, true), codegen.Goify(md.Result, true), status)
 	return &InitData{
-		Name:                name,
-		Description:         fmt.Sprintf("%s builds a %q service %q endpoint result from a HTTP %q response.", name, svc.Name, e.Name(), status),
-		ClientArgs:          clientArgs,
-		ReturnTypeName:      svc.Scope.GoFullTypeName(result, pkg),
-		ReturnTypeRef:       svc.Scope.GoFullTypeRef(result, pkg),
-		ReturnIsStruct:      design.IsObject(result.Type),
-		ReturnTypeAttribute: codegen.Goify(origin, true),
-		ClientCode:          code,
+		Name:                     name,
+		Description:              fmt.Sprintf("%s builds a %q service %q endpoint result from a HTTP %q response.", name, svc.Name, e.Name(), status),
+		ClientArgs:               clientArgs,
+		ReturnTypeName:           svc.Scope.GoFullTypeName(result, pkg),
+		ReturnTypeRef:            svc.Scope.GoFullTypeRef(result, pkg),
+		ReturnIsStruct:           design.IsObject(result.Type),
+		ReturnTypeAttribute:      codegen.Goify(origin, true),
+		ReturnIsPrimitivePointer: pointer,
+		ClientCode:               code,
 	}
 }
 
