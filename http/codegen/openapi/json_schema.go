@@ -168,7 +168,7 @@ func GenerateServiceDefinition(api *design.APIExpr, res *httpdesign.ServiceExpr)
 	for _, a := range res.HTTPEndpoints {
 		var requestSchema *Schema
 		if a.MethodExpr.Payload != nil {
-			requestSchema = TypeSchema(api, a.MethodExpr.Payload.Type, a.MethodExpr.Payload.Validation)
+			requestSchema = AttributeTypeSchema(api, a.MethodExpr.Payload)
 			requestSchema.Description = a.Name() + " payload"
 		}
 		if a.Params() != nil {
@@ -185,7 +185,6 @@ func GenerateServiceDefinition(api *design.APIExpr, res *httpdesign.ServiceExpr)
 		var identifier string
 		for _, resp := range a.Responses {
 			dt := resp.Body.Type
-			val := resp.Body.Validation
 			if mt := dt.(*design.ResultTypeExpr); mt != nil {
 				if identifier == "" {
 					identifier = mt.Identifier
@@ -193,13 +192,13 @@ func GenerateServiceDefinition(api *design.APIExpr, res *httpdesign.ServiceExpr)
 					identifier = ""
 				}
 				if targetSchema == nil {
-					targetSchema = TypeSchema(api, mt, val)
+					targetSchema = TypeSchema(api, mt)
 				} else if targetSchema.AnyOf == nil {
 					firstSchema := targetSchema
 					targetSchema = NewSchema()
-					targetSchema.AnyOf = []*Schema{firstSchema, TypeSchema(api, mt, val)}
+					targetSchema.AnyOf = []*Schema{firstSchema, TypeSchema(api, mt)}
 				} else {
-					targetSchema.AnyOf = append(targetSchema.AnyOf, TypeSchema(api, mt, val))
+					targetSchema.AnyOf = append(targetSchema.AnyOf, TypeSchema(api, mt))
 				}
 			}
 		}
@@ -274,7 +273,7 @@ func GenerateTypeDefinition(api *design.APIExpr, ut *design.UserTypeExpr) {
 }
 
 // TypeSchema produces the JSON schema corresponding to the given data type.
-func TypeSchema(api *design.APIExpr, t design.DataType, val *design.ValidationExpr) *Schema {
+func TypeSchema(api *design.APIExpr, t design.DataType) *Schema {
 	s := NewSchema()
 	switch actual := t.(type) {
 	case design.Primitive:
@@ -319,35 +318,6 @@ func TypeSchema(api *design.APIExpr, t design.DataType, val *design.ValidationEx
 		// Use "default" view by default
 		s.Ref = ResultTypeRef(api, actual, design.DefaultView)
 	}
-
-	if val == nil {
-		return s
-	}
-	s.Enum = val.Values
-	s.Format = string(val.Format)
-	s.Pattern = val.Pattern
-	if val.Minimum != nil {
-		s.Minimum = val.Minimum
-	}
-	if val.Maximum != nil {
-		s.Maximum = val.Maximum
-	}
-	if val.MinLength != nil {
-		if _, ok := t.(*design.Array); ok {
-			s.MinItems = val.MinLength
-		} else {
-			s.MinLength = val.MinLength
-		}
-	}
-	if val.MaxLength != nil {
-		if _, ok := t.(*design.Array); ok {
-			s.MaxItems = val.MaxLength
-		} else {
-			s.MaxLength = val.MaxLength
-		}
-	}
-	s.Required = val.Required
-
 	return s
 }
 
@@ -459,7 +429,7 @@ func (s *Schema) Dup() *Schema {
 // buildAttributeSchema initializes the given JSON schema that corresponds to
 // the given attribute.
 func buildAttributeSchema(api *design.APIExpr, s *Schema, at *design.AttributeExpr) *Schema {
-	s.Merge(TypeSchema(api, at.Type, at.Validation))
+	s.Merge(TypeSchema(api, at.Type))
 	if s.Ref != "" {
 		// Ref is exclusive with other fields
 		return s
@@ -467,6 +437,47 @@ func buildAttributeSchema(api *design.APIExpr, s *Schema, at *design.AttributeEx
 	s.DefaultValue = toStringMap(at.DefaultValue)
 	s.Description = at.Description
 	s.Example = at.Example(api.Random())
+	initAttributeValidation(s, at)
+
+	return s
+}
+
+// initAttributeValidation initializes validation rules for an attribute.
+func initAttributeValidation(s *Schema, at *design.AttributeExpr) {
+	val := at.Validation
+	if val == nil {
+		return
+	}
+	s.Enum = val.Values
+	s.Format = string(val.Format)
+	s.Pattern = val.Pattern
+	if val.Minimum != nil {
+		s.Minimum = val.Minimum
+	}
+	if val.Maximum != nil {
+		s.Maximum = val.Maximum
+	}
+	if val.MinLength != nil {
+		if _, ok := at.Type.(*design.Array); ok {
+			s.MinItems = val.MinLength
+		} else {
+			s.MinLength = val.MinLength
+		}
+	}
+	if val.MaxLength != nil {
+		if _, ok := at.Type.(*design.Array); ok {
+			s.MaxItems = val.MaxLength
+		} else {
+			s.MaxLength = val.MaxLength
+		}
+	}
+	s.Required = val.Required
+}
+
+// AttributeTypeSchema produces the JSON schema corresponding to the given attribute.
+func AttributeTypeSchema(api *design.APIExpr, at *design.AttributeExpr) *Schema {
+	s := TypeSchema(api, at.Type)
+	initAttributeValidation(s, at)
 	return s
 }
 
