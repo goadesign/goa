@@ -207,7 +207,7 @@ func {{ .Name }}({{- range .ClientArgs }}{{ .Name }} {{ .TypeRef }}, {{ end }}) 
 		{{- if .ReturnIsStruct }}
 			{{- range .ClientArgs }}
 				{{- if .FieldName }}
-			v.{{ .FieldName }} = {{ if .Pointer }}&{{ end }}{{ .Name }}
+			{{ if $.ReturnTypeAttribute }}res{{ else }}v{{ end }}.{{ .FieldName }} = {{ if .Pointer }}&{{ end }}{{ .Name }}
 				{{- end }}
 			{{- end }}
 		{{- end }}
