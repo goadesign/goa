@@ -440,7 +440,7 @@ func responseSpecFromExpr(s *V2, root *httpdesign.RootExpr, r *httpdesign.HTTPRe
 		schema = NewSchema()
 		schema.Ref = ResultTypeRef(root.Design.API, mt, view)
 	} else if r.Body.Type != design.Empty {
-		schema = TypeSchema(root.Design.API, r.Body.Type)
+		schema = AttributeTypeSchema(root.Design.API, r.Body)
 	}
 	headers, err := headersFromExpr(r.MappedHeaders())
 	if err != nil {
@@ -582,7 +582,7 @@ func buildPathFromExpr(s *V2, root *httpdesign.RootExpr, route *httpdesign.Route
 				In:          "body",
 				Description: endpoint.Body.Description,
 				Required:    true,
-				Schema:      TypeSchema(root.Design.API, endpoint.Body.Type),
+				Schema:      AttributeTypeSchema(root.Design.API, endpoint.Body),
 			}
 			params = append(params, pp)
 		}

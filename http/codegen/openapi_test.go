@@ -3,17 +3,25 @@ package codegen
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
+	"flag"
+	"fmt"
+	"io/ioutil"
 	"path/filepath"
 	"testing"
 	"text/template"
 
 	"github.com/go-openapi/loads"
+	"goa.design/goa/http/codegen/openapi"
 
 	"goa.design/goa/design"
 	httpdesign "goa.design/goa/http/design"
 )
 
-func newDesign(t *testing.T, httpSvcs ...*httpdesign.ServiceExpr) *httpdesign.RootExpr {
+var update = flag.Bool("update", false, "update .golden files")
+
+func newDesign(httpSvcs ...*httpdesign.ServiceExpr) *httpdesign.RootExpr {
+	openapi.Definitions = make(map[string]*openapi.Schema)
 	a := &design.APIExpr{
 		Name:    "test",
 		Servers: []*design.ServerExpr{{URL: "https://goa.design"}},
@@ -29,8 +37,26 @@ func newDesign(t *testing.T, httpSvcs ...*httpdesign.ServiceExpr) *httpdesign.Ro
 	}
 }
 
-func newService(t *testing.T) *httpdesign.ServiceExpr {
-	ep := &design.MethodExpr{
+func newService(endpoints ...*httpdesign.EndpointExpr) *httpdesign.ServiceExpr {
+	s := &design.ServiceExpr{
+		Name: "testService",
+	}
+	res := &httpdesign.ServiceExpr{
+		ServiceExpr:   s,
+		Paths:         []string{"/"},
+		HTTPEndpoints: endpoints,
+	}
+	for _, ep := range endpoints {
+		ep.MethodExpr.Service = s
+		ep.Service = res
+		ep.Finalize()
+		s.Methods = append(s.Methods, ep.MethodExpr)
+	}
+	return res
+}
+
+func newSimpleEndpoint() *httpdesign.EndpointExpr {
+	method := &design.MethodExpr{
 		Name: "testEndpoint",
 		Payload: &design.AttributeExpr{
 			Type: &design.UserTypeExpr{
@@ -41,26 +67,13 @@ func newService(t *testing.T) *httpdesign.ServiceExpr {
 				AttributeExpr: &design.AttributeExpr{Type: design.String},
 			}},
 	}
-	s := &design.ServiceExpr{
-		Name:    "testService",
-		Methods: []*design.MethodExpr{ep},
-	}
-	ep.Service = s
 	route := &httpdesign.RouteExpr{Method: "GET", Path: "/"}
-	endpoint := &httpdesign.EndpointExpr{
-		MethodExpr: ep,
+	ep := &httpdesign.EndpointExpr{
+		MethodExpr: method,
 		Routes:     []*httpdesign.RouteExpr{route},
-		Service:    &httpdesign.ServiceExpr{ServiceExpr: s},
 	}
-	endpoint.Finalize()
-	route.Endpoint = endpoint
-	res := &httpdesign.ServiceExpr{
-		ServiceExpr:   s,
-		Paths:         []string{"/"},
-		HTTPEndpoints: []*httpdesign.EndpointExpr{endpoint},
-	}
-	endpoint.Service = res
-	return res
+	route.Endpoint = ep
+	return ep
 }
 
 func TestOpenAPI(t *testing.T) {
@@ -68,9 +81,9 @@ func TestOpenAPI(t *testing.T) {
 		invalidURL = "http://[::1]:namedport"
 	)
 	var (
-		simple  = newDesign(t, newService(t))
-		empty   = newDesign(t)
-		invalid = newDesign(t)
+		simple  = newDesign(newService(newSimpleEndpoint()))
+		empty   = newDesign()
+		invalid = newDesign()
 	)
 	invalid.Design.API.Servers[0].URL = invalidURL
 	cases := map[string]struct {
@@ -95,7 +108,7 @@ func TestOpenAPI(t *testing.T) {
 
 func TestOutputPath(t *testing.T) {
 	var (
-		simple = newDesign(t, newService(t))
+		simple = newDesign(newService(newSimpleEndpoint()))
 	)
 	o, err := OpenAPIFiles(simple)
 	if err != nil {
@@ -118,49 +131,227 @@ func TestSections(t *testing.T) {
 		genPkg = "goa.design/goa"
 	)
 	var (
-		empty  = newDesign(t)
-		simple = newDesign(t, newService(t))
+		empty  = newDesign()
+		simple = newDesign(newService(newSimpleEndpoint()))
 	)
-	cases := map[string]struct {
+	cases := []struct {
+		Name string
 		Root *httpdesign.RootExpr
 	}{
-		"empty": {Root: empty},
-		"valid": {Root: simple},
+		{"empty", empty},
+		{"valid", simple},
 	}
-	for k, c := range cases {
-		o, err := OpenAPIFiles(c.Root)
-		if err != nil {
-			t.Fatalf("%s: OpenAPI failed with %s", k, err)
-		}
-		for i := 0; i < len(o); i++ {
-			s := o[i].SectionTemplates
-			if len(s) != 1 {
-				t.Fatalf("%s: expected 1 section, got %d", k, len(s))
-			}
-			if s[0].Source == "" {
-				t.Fatalf("%s: empty section template", k)
-			}
-			if s[0].Data == nil {
-				t.Fatalf("%s: nil data", k)
-			}
-			var buf bytes.Buffer
-			tmpl := template.Must(template.New("openapi").Funcs(s[0].FuncMap).Parse(s[0].Source))
-			err = tmpl.Execute(&buf, s[0].Data)
+	for _, c := range cases {
+		t.Run(c.Name, func(t *testing.T) {
+			oFiles, err := OpenAPIFiles(c.Root)
 			if err != nil {
-				t.Fatalf("%s: failed to render template: %s", k, err)
+				t.Fatalf("OpenAPI failed with %s", err)
 			}
-			validateSwagger(t, k, buf.Bytes())
-		}
+			for i, o := range oFiles {
+				tname := fmt.Sprintf("file%d", i)
+				s := o.SectionTemplates
+				t.Run(tname, func(t *testing.T) {
+					if len(s) != 1 {
+						t.Fatalf("expected 1 section, got %d", len(s))
+					}
+					if s[0].Source == "" {
+						t.Fatalf("empty section template")
+					}
+					if s[0].Data == nil {
+						t.Fatalf("nil data")
+					}
+					var buf bytes.Buffer
+					tmpl := template.Must(template.New("openapi").Funcs(s[0].FuncMap).Parse(s[0].Source))
+					err = tmpl.Execute(&buf, s[0].Data)
+					if err != nil {
+						t.Fatalf("failed to render template: %s", err)
+					}
+					if err := validateSwagger(buf.Bytes()); err != nil {
+						t.Errorf("invalid swagger: %s", err)
+					}
+				})
+			}
+		})
 	}
 }
 
 // validateSwagger asserts that the given bytes contain a valid Swagger spec.
-func validateSwagger(t *testing.T, title string, b []byte) {
+func validateSwagger(b []byte) error {
 	doc, err := loads.Analyzed(json.RawMessage(b), "")
 	if err != nil {
-		t.Errorf("%s: invalid swagger: %s", title, err)
+		return err
 	}
 	if doc == nil {
-		t.Errorf("%s: nil swagger", title)
+		return errors.New("nil swagger")
 	}
+	return nil
+}
+
+func TestValidations(t *testing.T) {
+	var (
+		goldenPath = filepath.Join("testdata", "openapi_v2", t.Name())
+		newInt     = func(v int) *int { return &v }
+		newFloat64 = func(v float64) *float64 { return &v }
+	)
+	cases := []struct {
+		Name     string
+		Endpoint *httpdesign.EndpointExpr
+	}{
+		{"string", newEndpointSimpleValidation(design.String,
+			&design.ValidationExpr{
+				MinLength: newInt(0),
+				MaxLength: newInt(42),
+			}),
+		},
+		{"integer", newEndpointSimpleValidation(design.Int,
+			&design.ValidationExpr{
+				Minimum: newFloat64(0),
+				Maximum: newFloat64(42),
+			}),
+		},
+		{"array", newEndpointComplexValidation(
+			&design.ValidationExpr{
+				MinLength: newInt(0),
+				MaxLength: newInt(42),
+			}),
+		},
+	}
+	for _, c := range cases {
+		t.Run(c.Name, func(t *testing.T) {
+			root := newDesign(newService(c.Endpoint))
+			oFiles, err := OpenAPIFiles(root)
+			if err != nil {
+				t.Fatalf("OpenAPI failed with %s", err)
+			}
+			if len(oFiles) == 0 {
+				t.Fatalf("No swagger files")
+			}
+			for i, o := range oFiles {
+				tname := fmt.Sprintf("file%d", i)
+				s := o.SectionTemplates
+				t.Run(tname, func(t *testing.T) {
+					if len(s) != 1 {
+						t.Fatalf("expected 1 section, got %d", len(s))
+					}
+					if s[0].Source == "" {
+						t.Fatalf("empty section template")
+					}
+					if s[0].Data == nil {
+						t.Fatalf("nil data")
+					}
+					var buf bytes.Buffer
+					tmpl := template.Must(template.New("openapi").Funcs(s[0].FuncMap).Parse(s[0].Source))
+					err = tmpl.Execute(&buf, s[0].Data)
+					if err != nil {
+						t.Fatalf("failed to render template: %s", err)
+					}
+					if err := validateSwagger(buf.Bytes()); err != nil {
+						t.Fatalf("invalid swagger: %s", err)
+					}
+
+					golden := filepath.Join(goldenPath, fmt.Sprintf("%s_%s.golden", c.Name, tname))
+					if *update {
+						if err := ioutil.WriteFile(golden, buf.Bytes(), 0644); err != nil {
+							t.Fatalf("failed to update golden file: %s", err)
+						}
+					}
+
+					want, err := ioutil.ReadFile(golden)
+					if err != nil {
+						t.Fatalf("failed to read golden file: %s", err)
+					}
+					if !bytes.Equal(buf.Bytes(), want) {
+						t.Errorf("result do not match the golden file:\n--BEGIN--\n%s\n--END--\n", buf.Bytes())
+					}
+				})
+			}
+		})
+	}
+}
+
+func newEndpointSimpleValidation(typ design.Primitive, validation *design.ValidationExpr) *httpdesign.EndpointExpr {
+	route := &httpdesign.RouteExpr{Method: "POST", Path: "/"}
+	ep := &httpdesign.EndpointExpr{
+		MethodExpr: &design.MethodExpr{
+			Name:    "testEndpoint",
+			Payload: &design.AttributeExpr{},
+			Result: &design.AttributeExpr{
+				Type:         typ,
+				UserExamples: []*design.ExampleExpr{{}},
+				Validation:   validation,
+			},
+		},
+		Body: &design.AttributeExpr{
+			Type:         typ,
+			UserExamples: []*design.ExampleExpr{{}},
+			Validation:   validation,
+		},
+		Routes:    []*httpdesign.RouteExpr{route},
+		Responses: []*httpdesign.HTTPResponseExpr{},
+	}
+	route.Endpoint = ep
+	return ep
+}
+
+func newEndpointComplexValidation(validation *design.ValidationExpr) *httpdesign.EndpointExpr {
+	route := &httpdesign.RouteExpr{Method: "POST", Path: "/"}
+	ep := &httpdesign.EndpointExpr{
+		MethodExpr: &design.MethodExpr{
+			Name:    "testEndpoint",
+			Payload: &design.AttributeExpr{},
+			Result: &design.AttributeExpr{
+				Type:         design.String,
+				UserExamples: []*design.ExampleExpr{{}},
+				Validation:   validation,
+			},
+		},
+		Body: &design.AttributeExpr{
+			Type: &design.Array{
+				ElemType: &design.AttributeExpr{
+					Type: &design.Object{
+						{
+							Name: "foo",
+							Attribute: &design.AttributeExpr{
+								Type: &design.Array{
+									ElemType: &design.AttributeExpr{
+										Type:         design.String,
+										Validation:   validation,
+										UserExamples: []*design.ExampleExpr{{}},
+									},
+								},
+								UserExamples: []*design.ExampleExpr{{}},
+								Validation:   validation,
+							},
+						},
+						{
+							Name: "bar",
+							Attribute: &design.AttributeExpr{
+								Type: &design.Array{
+									ElemType: &design.AttributeExpr{
+										Type: &design.UserTypeExpr{
+											TypeName: "bar",
+											AttributeExpr: &design.AttributeExpr{
+												Type:         design.String,
+												UserExamples: []*design.ExampleExpr{{}},
+												Validation:   validation,
+											},
+										},
+										UserExamples: []*design.ExampleExpr{{}},
+									},
+								},
+								UserExamples: []*design.ExampleExpr{{}},
+								Validation:   validation,
+							},
+						},
+					},
+					UserExamples: []*design.ExampleExpr{{}},
+				},
+			},
+			Validation: validation,
+		},
+		Routes:    []*httpdesign.RouteExpr{route},
+		Responses: []*httpdesign.HTTPResponseExpr{},
+	}
+	route.Endpoint = ep
+	return ep
 }
