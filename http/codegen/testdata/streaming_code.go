@@ -53,49 +53,35 @@ func NewStreamingResultMethodHandler(
 var StreamingResultServerStreamSendCode = `// Send sends streamingresultservice.UserType type to the
 // "StreamingResultMethod" endpoint websocket connection.
 func (s *StreamingResultMethodServerStream) Send(v *streamingresultservice.UserType) error {
+	var err error
 	// Upgrade the HTTP connection to a websocket connection only once before
 	// sending result. Connection upgrade is done here so that authorization logic
 	// in the endpoint is executed before calling the actual service method which
 	// may call Send().
 	s.once.Do(func() {
-		conn, err := s.upgrader.Upgrade(s.w, s.r, nil)
+		var conn *websocket.Conn
+		conn, err = s.upgrader.Upgrade(s.w, s.r, nil)
 		if err != nil {
-			s.Lock()
-			s.sendErr = err
-			s.Unlock()
 			return
 		}
 		if s.connConfigFn != nil {
 			conn = s.connConfigFn(conn)
 		}
-		s.Lock()
 		s.conn = conn
-		s.Unlock()
 	})
-	if s.sendErr != nil {
-		if s.conn != nil {
-			return s.Close()
-		}
-		return s.sendErr
+	if err != nil {
+		s.Close()
+		return err
 	}
 	res := v
 	body := NewStreamingResultMethodResponseBody(res)
-	if err := s.conn.WriteJSON(body); err != nil {
-		s.Lock()
-		s.sendErr = err
-		s.Unlock()
-		return s.sendErr
-	}
-	return nil
+	return s.conn.WriteJSON(body)
 }
 `
 
 var StreamingResultServerStreamCloseCode = `// Close closes the "StreamingResultMethod" endpoint websocket connection after
 // sending a close control message.
 func (s *StreamingResultMethodServerStream) Close() error {
-	if s.conn == nil {
-		return nil
-	}
 	if err := s.conn.WriteControl(
 		websocket.CloseMessage,
 		websocket.FormatCloseMessage(websocket.CloseNormalClosure, "end of message"),
@@ -106,9 +92,6 @@ func (s *StreamingResultMethodServerStream) Close() error {
 	if err := s.conn.Close(); err != nil {
 		return err
 	}
-	s.Lock()
-	defer s.Unlock()
-	s.conn = nil
 	return nil
 }
 `
@@ -166,6 +149,7 @@ func NewStreamingResultWithViewsMethodHandler(
 var StreamingResultWithViewsServerStreamSendCode = `// Send sends streamingresultwithviewsservice.Usertype type to the
 // "StreamingResultWithViewsMethod" endpoint websocket connection.
 func (s *StreamingResultWithViewsMethodServerStream) Send(v *streamingresultwithviewsservice.Usertype) error {
+	var err error
 	// Upgrade the HTTP connection to a websocket connection only once before
 	// sending result. Connection upgrade is done here so that authorization logic
 	// in the endpoint is executed before calling the actual service method which
@@ -173,35 +157,23 @@ func (s *StreamingResultWithViewsMethodServerStream) Send(v *streamingresultwith
 	s.once.Do(func() {
 		respHdr := make(http.Header)
 		respHdr.Add("goa-view", s.view)
-		conn, err := s.upgrader.Upgrade(s.w, s.r, respHdr)
+		var conn *websocket.Conn
+		conn, err = s.upgrader.Upgrade(s.w, s.r, respHdr)
 		if err != nil {
-			s.Lock()
-			s.sendErr = err
-			s.Unlock()
 			return
 		}
 		if s.connConfigFn != nil {
 			conn = s.connConfigFn(conn)
 		}
-		s.Lock()
 		s.conn = conn
-		s.Unlock()
 	})
-	if s.sendErr != nil {
-		if s.conn != nil {
-			return s.Close()
-		}
-		return s.sendErr
+	if err != nil {
+		s.Close()
+		return err
 	}
 	res := streamingresultwithviewsservice.NewViewedUsertype(v, s.view)
 	body := NewStreamingResultWithViewsMethodResponseBody(res.Projected)
-	if err := s.conn.WriteJSON(body); err != nil {
-		s.Lock()
-		s.sendErr = err
-		s.Unlock()
-		return s.sendErr
-	}
-	return nil
+	return s.conn.WriteJSON(body)
 }
 `
 
@@ -209,8 +181,6 @@ var StreamingResultWithViewsServerStreamSetViewCode = `// SetView sets the view 
 // type before sending to the "StreamingResultWithViewsMethod" endpoint
 // websocket connection.
 func (s *StreamingResultWithViewsMethodServerStream) SetView(view string) {
-	s.Lock()
-	defer s.Unlock()
 	s.view = view
 }
 `
@@ -293,9 +263,6 @@ func (c *Client) StreamingResultMethod() goa.Endpoint {
 var StreamingResultWithViewsServerStreamCloseCode = `// Close closes the "StreamingResultWithViewsMethod" endpoint websocket
 // connection after sending a close control message.
 func (s *StreamingResultWithViewsMethodServerStream) Close() error {
-	if s.conn == nil {
-		return nil
-	}
 	if err := s.conn.WriteControl(
 		websocket.CloseMessage,
 		websocket.FormatCloseMessage(websocket.CloseNormalClosure, "end of message"),
@@ -306,9 +273,6 @@ func (s *StreamingResultWithViewsMethodServerStream) Close() error {
 	if err := s.conn.Close(); err != nil {
 		return err
 	}
-	s.Lock()
-	defer s.Unlock()
-	s.conn = nil
 	return nil
 }
 `
@@ -316,12 +280,9 @@ func (s *StreamingResultWithViewsMethodServerStream) Close() error {
 var StreamingResultClientStreamRecvCode = `// Recv receives a streamingresultservice.UserType type from the
 // "StreamingResultMethod" endpoint websocket connection.
 func (s *StreamingResultMethodClientStream) Recv() (*streamingresultservice.UserType, error) {
-	if s.conn == nil {
-		return nil, nil
-	}
 	var body StreamingResultMethodResponseBody
 	err := s.conn.ReadJSON(&body)
-	if websocket.IsCloseError(err, goahttp.NormalSocketCloseErrors...) {
+	if websocket.IsCloseError(err, websocket.CloseNormalClosure) {
 		return nil, io.EOF
 	}
 	if err != nil {
@@ -370,12 +331,9 @@ func (c *Client) StreamingResultWithViewsMethod() goa.Endpoint {
 var StreamingResultWithViewsClientStreamRecvCode = `// Recv receives a streamingresultwithviewsservice.Usertype type from the
 // "StreamingResultWithViewsMethod" endpoint websocket connection.
 func (s *StreamingResultWithViewsMethodClientStream) Recv() (*streamingresultwithviewsservice.Usertype, error) {
-	if s.conn == nil {
-		return nil, nil
-	}
 	var body StreamingResultWithViewsMethodResponseBody
 	err := s.conn.ReadJSON(&body)
-	if websocket.IsCloseError(err, goahttp.NormalSocketCloseErrors...) {
+	if websocket.IsCloseError(err, websocket.CloseNormalClosure) {
 		return nil, io.EOF
 	}
 	if err != nil {
@@ -393,8 +351,6 @@ func (s *StreamingResultWithViewsMethodClientStream) Recv() (*streamingresultwit
 var StreamingResultWithViewsClientStreamSetViewCode = `// SetView sets the view to render the  type before sending to the
 // "StreamingResultWithViewsMethod" endpoint websocket connection.
 func (s *StreamingResultWithViewsMethodClientStream) SetView(view string) {
-	s.Lock()
-	defer s.Unlock()
 	s.view = view
 }
 `

@@ -46,7 +46,6 @@ type MountPoint struct {
 
 // listServerStream implements the carssvc.ListServerStream interface.
 type listServerStream struct {
-	sync.RWMutex
 	once sync.Once
 	// upgrader is the websocket connection upgrader.
 	upgrader goahttp.Upgrader
@@ -56,8 +55,6 @@ type listServerStream struct {
 	w http.ResponseWriter
 	// r is the HTTP request.
 	r *http.Request
-	// sendErr is the error occurred during Send.
-	sendErr error
 	// conn is the underlying websocket connection.
 	conn *websocket.Conn
 	// view is the view to render carssvc.Car result type before sending to the
@@ -212,6 +209,7 @@ func NewListHandler(
 
 // Send sends carssvc.Car type to the "list" endpoint websocket connection.
 func (s *listServerStream) Send(v *carssvc.Car) error {
+	var err error
 	// Upgrade the HTTP connection to a websocket connection only once before
 	// sending result. Connection upgrade is done here so that authorization logic
 	// in the endpoint is executed before calling the actual service method which
@@ -219,51 +217,34 @@ func (s *listServerStream) Send(v *carssvc.Car) error {
 	s.once.Do(func() {
 		respHdr := make(http.Header)
 		respHdr.Add("goa-view", s.view)
-		conn, err := s.upgrader.Upgrade(s.w, s.r, respHdr)
+		var conn *websocket.Conn
+		conn, err = s.upgrader.Upgrade(s.w, s.r, respHdr)
 		if err != nil {
-			s.Lock()
-			s.sendErr = err
-			s.Unlock()
 			return
 		}
 		if s.connConfigFn != nil {
 			conn = s.connConfigFn(conn)
 		}
-		s.Lock()
 		s.conn = conn
-		s.Unlock()
 	})
-	if s.sendErr != nil {
-		if s.conn != nil {
-			return s.Close()
-		}
-		return s.sendErr
+	if err != nil {
+		s.Close()
+		return err
 	}
 	res := carssvc.NewViewedCar(v, s.view)
 	body := NewListResponseBody(res.Projected)
-	if err := s.conn.WriteJSON(body); err != nil {
-		s.Lock()
-		s.sendErr = err
-		s.Unlock()
-		return s.sendErr
-	}
-	return nil
+	return s.conn.WriteJSON(body)
 }
 
 // SetView sets the view to render the carssvc.Car type before sending to the
 // "list" endpoint websocket connection.
 func (s *listServerStream) SetView(view string) {
-	s.Lock()
-	defer s.Unlock()
 	s.view = view
 }
 
 // Close closes the "list" endpoint websocket connection after sending a close
 // control message.
 func (s *listServerStream) Close() error {
-	if s.conn == nil {
-		return nil
-	}
 	if err := s.conn.WriteControl(
 		websocket.CloseMessage,
 		websocket.FormatCloseMessage(websocket.CloseNormalClosure, "end of message"),
@@ -274,8 +255,5 @@ func (s *listServerStream) Close() error {
 	if err := s.conn.Close(); err != nil {
 		return err
 	}
-	s.Lock()
-	defer s.Unlock()
-	s.conn = nil
 	return nil
 }

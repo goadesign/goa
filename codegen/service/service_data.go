@@ -646,7 +646,7 @@ func buildMethodData(m *design.MethodExpr, svcPkgName string, scope *codegen.Nam
 			errors[i] = buildErrorInitData(er, scope)
 		}
 	}
-	if m.Stream != design.NoStreamKind {
+	if m.IsStreaming() {
 		svrStream = &StreamData{
 			Interface: vname + "ServerStream",
 			VarName:   m.Name + "ServerStream",

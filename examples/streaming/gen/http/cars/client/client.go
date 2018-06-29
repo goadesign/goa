@@ -12,7 +12,6 @@ import (
 	"context"
 	"io"
 	"net/http"
-	"sync"
 
 	"github.com/gorilla/websocket"
 	goa "goa.design/goa"
@@ -43,7 +42,6 @@ type Client struct {
 
 // listClientStream implements the carssvc.ListClientStream interface.
 type listClientStream struct {
-	sync.RWMutex
 	// conn is the underlying websocket connection.
 	conn *websocket.Conn
 	// view is the view to render  result type before sending to the websocket
@@ -136,12 +134,9 @@ func (c *Client) List() goa.Endpoint {
 // Recv receives a carssvc.Car type from the "list" endpoint websocket
 // connection.
 func (s *listClientStream) Recv() (*carssvc.Car, error) {
-	if s.conn == nil {
-		return nil, nil
-	}
 	var body ListResponseBody
 	err := s.conn.ReadJSON(&body)
-	if websocket.IsCloseError(err, goahttp.NormalSocketCloseErrors...) {
+	if websocket.IsCloseError(err, websocket.CloseNormalClosure) {
 		return nil, io.EOF
 	}
 	if err != nil {
@@ -158,7 +153,5 @@ func (s *listClientStream) Recv() (*carssvc.Car, error) {
 // SetView sets the view to render the  type before sending to the "list"
 // endpoint websocket connection.
 func (s *listClientStream) SetView(view string) {
-	s.Lock()
-	defer s.Unlock()
 	s.view = view
 }

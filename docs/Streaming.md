@@ -11,17 +11,17 @@ generator produces for the transport-independent and transport-dependent code.
 
 The [StreamingResult DSL](https://godoc.org/goa.design/goa/dsl#StreamingResult)
 can be defined on a method to setup an endpoint that streams a sequence of
-results. `StreamingResult` DSL has the syntax similar to the `Result` DSL.
+results. `StreamingResult` DSL has a similar syntax to the `Result` DSL.
 `StreamingResult` and `Result` are mutually exclusive: only one of then may be
 used inside a given `Method` expression.
 
 
 ```go
 var _ = Service("cellar", func() {
-        Method("list", func() {
-                // StoredBottle is sent to the client through a stream.
-                StreamingResult(StoredBottle)
-        })
+    Method("list", func() {
+        // StoredBottle is sent to the client through a stream.
+        StreamingResult(StoredBottle)
+    })
 })
 ```
 
@@ -31,16 +31,16 @@ endpoint in the service package.
 ```go
 // Interface that the server must satisfy.
 type ListServerStream interface {
-  // Send streams instances of "StoredBottle".
-  Send(*StoredBottle) error
-  // Close the stream.
-  Close() error
+    // Send streams instances of "StoredBottle".
+    Send(*StoredBottle) error
+    // Close the stream.
+    Close() error
 }
 
 // Interface that the client must satisfy.
 type ListClientStream interface {
-  // Recv reads instances of "StoredBottle" from the stream.
-  Recv() (*StoredBottle, error)
+    // Recv reads instances of "StoredBottle" from the stream.
+    Recv() (*StoredBottle, error)
 }
 ```
 
@@ -64,13 +64,13 @@ Here is an example service endpoint implementation that sends a stream of
 ```go
 // Lists lists the stored bottles.
 func (s *cellarSvc) List(ctx context.Context, stream cellarsvc.ListServerStream) (err error) {
-				bottles := loadStoredBottles()
-  			for _, c := range bottles {
-    						if err := stream.Send(c); err != nil {
-      									return err
-    						}
-  			}
-  			return stream.Close()
+    bottles := loadStoredBottles()
+    for _, c := range bottles {
+        if err := stream.Send(c); err != nil {
+            return err
+        }
+    }
+    return stream.Close()
 }
 ```
 
@@ -94,16 +94,16 @@ to the server and client streams.
 //upgrader := &websocket.Upgrader{}
 // Custom websocket upgrader
 upgrader := &websocket.Upgrader {
-				ReadBufferSize:  1024,
-				WriteBufferSize: 1024,
+    ReadBufferSize:  1024,
+    WriteBufferSize: 1024,
 }
 
 // Websocket connection configurer
 connConfigurer := func(conn *websocket.Conn) *websocket.Conn {
-				conn.SetPingHandler(...)
-				conn.SetPongHandler(...)
-				conn.SetCloseHandler(...)
-				return conn
+    conn.SetPingHandler(...)
+    conn.SetPongHandler(...)
+    conn.SetCloseHandler(...)
+    return conn
 }
 
 cellarServer = cellarsvcsvr.New(cellarEndpoints, mux, dec, enc, eh, upgrader, connConfigurer)
@@ -114,26 +114,26 @@ cellarServer = cellarsvcsvr.New(cellarEndpoints, mux, dec, enc, eh, upgrader, co
 //dialer = websocket.DefaultDialer
 // Custom dialer
 dialer = &websocket.Dialer {
-				ReadBufferSize:  1024,
-				WriteBufferSize: 1024,
+    ReadBufferSize:  1024,
+    WriteBufferSize: 1024,
 }
 
 endpoint, payload, err := cli.ParseEndpoint(
-				scheme,
-				host,
-				doer,
-				goahttp.RequestEncoder,
-				goahttp.ResponseDecoder,
-				debug,
-				dialer,
-				connConfigurer,
+    scheme,
+    host,
+    doer,
+    goahttp.RequestEncoder,
+    goahttp.ResponseDecoder,
+    debug,
+    dialer,
+    connConfigurer,
 )
 ```
 
 ### Result Type with Multiple Views
 
 If the method returns a result type with multiple views, a `SetView` method is
-generated in both the interfaces with the following signature
+generated in both the interfaces with the following signature:
 
 ```go
 SetView(view string)
@@ -141,8 +141,8 @@ SetView(view string)
 
 The application developer must call this method in the service endpoint
 implementation before sending the data to the stream so that the result type is
-rendered with appropriate view. If this method is never invoked the `default`
-view is used to render the result type.
+rendered with the appropriate view. If this method is never invoked the
+`default` view is used to render the result type.
 
 Here is an example that uses the view requested to render the stored bottles
 before it is sent to the stream.
@@ -150,13 +150,13 @@ before it is sent to the stream.
 ```go
 // Lists lists the stored bottles.
 func (s *cellarSvc) List(ctx context.Context, p *cellarsvc.ListPayload, stream cellarsvc.ListServerStream) (err error) {
-				stream.SetView(p.View)
-        bottles := loadStoredBottles()
-        for _, c := range bottles {
-                if err := stream.Send(c); err != nil {
-                        return err
-                }
+    stream.SetView(p.View)
+    bottles := loadStoredBottles()
+    for _, c := range bottles {
+        if err := stream.Send(c); err != nil {
+            return err
         }
-        return stream.Close()
+    }
+    return stream.Close()
 }
 ```

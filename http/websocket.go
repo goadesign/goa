@@ -23,8 +23,3 @@ type (
 	// custom handlers.
 	ConnConfigureFunc func(*websocket.Conn) *websocket.Conn
 )
-
-var (
-	// NormalSocketCloseErrors lists the normal close errors sent by the websocket.
-	NormalSocketCloseErrors = []int{websocket.CloseNormalClosure}
-)

@@ -2068,7 +2068,6 @@ const (
 	// input: StreamData
 	streamStructTypeT = `{{ printf "%s implements the %s interface." .VarName .Interface | comment }}
 type {{ .VarName }} struct {
-	sync.RWMutex
 {{- if eq .Type "server" }}
 	once sync.Once
 	{{ comment "upgrader is the websocket connection upgrader." }}
@@ -2079,15 +2078,13 @@ type {{ .VarName }} struct {
 	w http.ResponseWriter
 	{{ comment "r is the HTTP request." }}
 	r *http.Request
-	{{ comment "sendErr is the error occurred during Send." }}
-	sendErr error
 {{- end }}
-  {{ comment "conn is the underlying websocket connection." }}
-  conn *websocket.Conn
-  {{- if .Endpoint.Method.ViewedResult }}
-  {{ printf "view is the view to render %s result type before sending to the websocket connection." .SendName | comment }}
-  view string
-  {{- end }}
+	{{ comment "conn is the underlying websocket connection." }}
+	conn *websocket.Conn
+	{{- if .Endpoint.Method.ViewedResult }}
+	{{ printf "view is the view to render %s result type before sending to the websocket connection." .SendName | comment }}
+	view string
+	{{- end }}
 }
 `
 
@@ -2096,31 +2093,26 @@ type {{ .VarName }} struct {
 	// input: StreamData
 	streamSendT = `{{ printf "Send sends %s type to the %q endpoint websocket connection." .SendName .Endpoint.Method.Name | comment }}
 func (s *{{ .VarName }}) Send(v {{ .SendRef }}) error {
+	var err error
 	{{ comment "Upgrade the HTTP connection to a websocket connection only once before sending result. Connection upgrade is done here so that authorization logic in the endpoint is executed before calling the actual service method which may call Send()." }}
 	s.once.Do(func() {
-  {{- if .Endpoint.Method.ViewedResult }}
+	{{- if .Endpoint.Method.ViewedResult }}
 		respHdr := make(http.Header)
 		respHdr.Add("goa-view", s.view)
-  {{- end }}
-		conn, err := s.upgrader.Upgrade(s.w, s.r, {{ if .Endpoint.Method.ViewedResult }}respHdr{{ else }}nil{{ end }})
+	{{- end }}
+		var conn *websocket.Conn
+		conn, err = s.upgrader.Upgrade(s.w, s.r, {{ if .Endpoint.Method.ViewedResult }}respHdr{{ else }}nil{{ end }})
 		if err != nil {
-			s.Lock()
-			s.sendErr = err
-			s.Unlock()
 			return
 		}
 		if s.connConfigFn != nil {
 			conn = s.connConfigFn(conn)
 		}
-		s.Lock()
 		s.conn = conn
-		s.Unlock()
-  })
-	if s.sendErr != nil {
-		if s.conn != nil {
-			return s.Close()
-		}
-		return s.sendErr
+	})
+	if err != nil {
+		s.Close()
+		return err
 	}
   {{- if .Endpoint.Method.ViewedResult }}
   res := {{ .PkgName }}.{{ .Endpoint.Method.ViewedResult.Init.Name }}(v, s.view)
@@ -2128,13 +2120,7 @@ func (s *{{ .VarName }}) Send(v {{ .SendRef }}) error {
 	res := v
   {{- end }}
 	body := {{ .Response.ServerBody.Init.Name }}({{ range .Response.ServerBody.Init.ServerArgs }}{{ .Ref }}, {{ end }})
-	if err := s.conn.WriteJSON(body); err != nil {
-		s.Lock()
-		s.sendErr = err
-		s.Unlock()
-		return s.sendErr
-	}
-  return nil
+  return s.conn.WriteJSON(body)
 }
 `
 
@@ -2143,12 +2129,9 @@ func (s *{{ .VarName }}) Send(v {{ .SendRef }}) error {
 	// input: StreamData
 	streamRecvT = `{{ printf "Recv receives a %s type from the %q endpoint websocket connection." .RecvName .Endpoint.Method.Name | comment }}
 func (s *{{ .VarName }}) Recv() ({{ .RecvRef }}, error) {
-	if s.conn == nil {
-		return nil, nil
-	}
 	var body {{ .Response.ClientBody.VarName }}
-  err := s.conn.ReadJSON(&body)
-  if websocket.IsCloseError(err, goahttp.NormalSocketCloseErrors...) {
+	err := s.conn.ReadJSON(&body)
+  if websocket.IsCloseError(err, websocket.CloseNormalClosure) {
     return nil, io.EOF
   }
   if err != nil {
@@ -2178,10 +2161,7 @@ func (s *{{ .VarName }}) Recv() ({{ .RecvRef }}, error) {
 	// input: StreamData
 	streamCloseT = `{{ printf "Close closes the %q endpoint websocket connection after sending a close control message." .Endpoint.Method.Name | comment }}
 func (s *{{ .VarName }}) Close() error {
-	if s.conn == nil {
-		return nil
-	}
-  if err := s.conn.WriteControl(
+	if err := s.conn.WriteControl(
     websocket.CloseMessage,
     websocket.FormatCloseMessage(websocket.CloseNormalClosure, "end of message"),
     time.Now().Add(time.Second),
@@ -2191,9 +2171,6 @@ func (s *{{ .VarName }}) Close() error {
 	if err := s.conn.Close(); err != nil {
 		return err
 	}
-	s.Lock()
-	defer s.Unlock()
-	s.conn = nil
   return nil
 }
 `
@@ -2203,8 +2180,6 @@ func (s *{{ .VarName }}) Close() error {
 	// input: StreamData
 	streamSetViewT = `{{ printf "SetView sets the view to render the %s type before sending to the %q endpoint websocket connection." .SendName .Endpoint.Method.Name | comment }}
 func (s *{{ .VarName }}) SetView(view string) {
-	s.Lock()
-	defer s.Unlock()
   s.view = view
 }
 `

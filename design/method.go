@@ -43,7 +43,7 @@ type (
 
 const (
 	// NoStreamKind represents no payload or result stream in method.
-	NoStreamKind streamKind = iota
+	NoStreamKind streamKind = iota + 1
 	// ClientStreamKind represents client sends a streaming payload to method.
 	ClientStreamKind
 	// ServerStreamKind represents server sends a streaming result from method.
@@ -165,7 +165,7 @@ func (m *MethodExpr) Finalize() {
 
 // IsStreaming determines whether the method streams payload or result.
 func (m *MethodExpr) IsStreaming() bool {
-	return m.Stream != NoStreamKind
+	return m.Stream != 0 && m.Stream != NoStreamKind
 }
 
 // IsResultStreaming determines whether the method result is streamed.
