@@ -321,6 +321,22 @@ var PayloadQueryStringValidateDSL = func() {
 	})
 }
 
+var PayloadQueryStringNotRequiredValidateDSL = func() {
+	Service("ServiceQueryStringNotRequiredValidate", func() {
+		Method("MethodQueryStringNotRequiredValidate", func() {
+			Payload(func() {
+				Attribute("q", String, func() {
+					Enum("val")
+				})
+			})
+			HTTP(func() {
+				GET("/")
+				Param("q")
+			})
+		})
+	})
+}
+
 var PayloadQueryBytesDSL = func() {
 	Service("ServiceQueryBytes", func() {
 		Method("MethodQueryBytes", func() {
@@ -1244,6 +1260,23 @@ var PayloadQueryStringDefaultDSL = func() {
 	})
 }
 
+var PayloadQueryStringDefaultValidateDSL = func() {
+	Service("ServiceQueryStringDefaultValidate", func() {
+		Method("MethodQueryStringDefaultValidate", func() {
+			Payload(func() {
+				Attribute("q", func() {
+					Default("def")
+					Enum("def")
+				})
+			})
+			HTTP(func() {
+				GET("/")
+				Param("q")
+			})
+		})
+	})
+}
+
 var PayloadQueryPrimitiveStringDefaultDSL = func() {
 	Service("ServiceQueryPrimitiveStringDefault", func() {
 		Method("MethodQueryPrimitiveStringDefault", func() {
@@ -1501,6 +1534,23 @@ var PayloadHeaderStringDefaultDSL = func() {
 			Payload(func() {
 				Attribute("h", String, func() {
 					Default("def")
+				})
+			})
+			HTTP(func() {
+				GET("/")
+				Header("h")
+			})
+		})
+	})
+}
+
+var PayloadHeaderStringDefaultValidateDSL = func() {
+	Service("ServiceHeaderStringDefaultValidate", func() {
+		Method("MethodHeaderStringDefaultValidate", func() {
+			Payload(func() {
+				Attribute("h", String, func() {
+					Default("def")
+					Enum("def")
 				})
 			})
 			HTTP(func() {

@@ -58,6 +58,10 @@ paths:
         required: true
         schema:
           $ref: '#/definitions/AddRequestBody'
+          required:
+          - name
+          - winery
+          - vintage
       responses:
         "201":
           description: Created response.
@@ -95,6 +99,9 @@ paths:
           description: Not Found response.
           schema:
             $ref: '#/definitions/ShowNotFoundResponseBody'
+            required:
+            - message
+            - id
       schemes:
       - http
     delete:

@@ -1073,3 +1073,49 @@ func BuildMethodQueryUIntPayload(serviceQueryUIntMethodQueryUIntQ string) (*serv
 	return payload, nil
 }
 `
+
+var QueryStringBuildCode = `// BuildMethodQueryStringPayload builds the payload for the ServiceQueryString
+// MethodQueryString endpoint from CLI flags.
+func BuildMethodQueryStringPayload(serviceQueryStringMethodQueryStringQ string) (*servicequerystring.MethodQueryStringPayload, error) {
+	var q *string
+	{
+		if serviceQueryStringMethodQueryStringQ != "" {
+			q = &serviceQueryStringMethodQueryStringQ
+		}
+	}
+	payload := &servicequerystring.MethodQueryStringPayload{
+		Q: q,
+	}
+	return payload, nil
+}
+`
+
+var QueryStringRequiredBuildCode = `// BuildMethodQueryStringValidatePayload builds the payload for the
+// ServiceQueryStringValidate MethodQueryStringValidate endpoint from CLI flags.
+func BuildMethodQueryStringValidatePayload(serviceQueryStringValidateMethodQueryStringValidateQ string) (*servicequerystringvalidate.MethodQueryStringValidatePayload, error) {
+	var q string
+	{
+		q = serviceQueryStringValidateMethodQueryStringValidateQ
+	}
+	payload := &servicequerystringvalidate.MethodQueryStringValidatePayload{
+		Q: q,
+	}
+	return payload, nil
+}
+`
+
+var QueryStringDefaultBuildCode = `// BuildMethodQueryStringDefaultPayload builds the payload for the
+// ServiceQueryStringDefault MethodQueryStringDefault endpoint from CLI flags.
+func BuildMethodQueryStringDefaultPayload(serviceQueryStringDefaultMethodQueryStringDefaultQ string) (*servicequerystringdefault.MethodQueryStringDefaultPayload, error) {
+	var q string
+	{
+		if serviceQueryStringDefaultMethodQueryStringDefaultQ != "" {
+			q = serviceQueryStringDefaultMethodQueryStringDefaultQ
+		}
+	}
+	payload := &servicequerystringdefault.MethodQueryStringDefaultPayload{
+		Q: q,
+	}
+	return payload, nil
+}
+`
