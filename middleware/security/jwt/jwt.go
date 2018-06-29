@@ -18,10 +18,10 @@ import (
 // scopes claim in the JWT and ensures goa-defined Security DSLs are properly validated.
 //
 // The steps taken by the middleware are:
-//
-//     1. Validate the "Bearer" token present in the "Authorization" header against the key(s)
+//     1. Extract the "Bearer" token from the Authorization header or query parameter
+//     2. Validate the "Bearer" token against the key(s)
 //        given to New
-//     2. If scopes are defined in the design for the action, validate them
+//     3. If scopes are defined in the design for the action, validate them
 //        against the scopes presented by the JWT in the claim "scope", or if
 //        that's not defined, "scopes".
 //
@@ -62,26 +62,29 @@ import (
 func New(resolver KeyResolver, validationFunc goa.Middleware, scheme *goa.JWTSecurity) goa.Middleware {
 	return func(nextHandler goa.Handler) goa.Handler {
 		return func(ctx context.Context, rw http.ResponseWriter, req *http.Request) error {
-			// TODO: implement the QUERY string handler too
-			if scheme.In != goa.LocHeader {
+			var (
+				incomingToken string
+				err           error
+			)
+
+			if scheme.In == goa.LocHeader {
+				incomingToken, err = extractTokenFromHeader(scheme.Name, req)
+				if err != nil {
+					return err
+				}
+			} else if scheme.In == goa.LocQuery {
+				incomingToken, err = extractTokenFromQueryParam(scheme.Name, req)
+				if err != nil {
+					return err
+				}
+			} else {
 				return fmt.Errorf("whoops, security scheme with location (in) %q not supported", scheme.In)
 			}
-			val := req.Header.Get(scheme.Name)
-			if val == "" {
-				return ErrJWTError(fmt.Sprintf("missing header %q", scheme.Name))
-			}
-
-			if !strings.HasPrefix(strings.ToLower(val), "bearer ") {
-				return ErrJWTError(fmt.Sprintf("invalid or malformed %q header, expected 'Bearer JWT-token...'", val))
-			}
-
-			incomingToken := strings.Split(val, " ")[1]
 
 			rsaKeys, ecdsaKeys, hmacKeys := partitionKeys(resolver.SelectKeys(req))
 
 			var (
 				token     *jwt.Token
-				err       error
 				validated = false
 			)
 
@@ -132,6 +135,30 @@ func New(resolver KeyResolver, validationFunc goa.Middleware, scheme *goa.JWTSec
 			return nextHandler(ctx, rw, req)
 		}
 	}
+}
+
+func extractTokenFromHeader(schemeName string, req *http.Request) (string, error) {
+	val := req.Header.Get(schemeName)
+	if val == "" {
+		return "", ErrJWTError(fmt.Sprintf("missing header %q", schemeName))
+	}
+
+	if !strings.HasPrefix(strings.ToLower(val), "bearer ") {
+		return "", ErrJWTError(fmt.Sprintf("invalid or malformed %q header, expected 'Bearer JWT-token...'", val))
+	}
+
+	incomingToken := strings.Split(val, " ")[1]
+
+	return incomingToken, nil
+}
+
+func extractTokenFromQueryParam(schemeName string, req *http.Request) (string, error) {
+	incomingToken := req.URL.Query().Get(schemeName)
+	if incomingToken == "" {
+		return "", ErrJWTError(fmt.Sprintf("missing parameter %q %+v", schemeName, req))
+	}
+
+	return incomingToken, nil
 }
 
 // partitionKeys sorts keys by their type.
