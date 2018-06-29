@@ -155,7 +155,7 @@ func extractTokenFromHeader(schemeName string, req *http.Request) (string, error
 func extractTokenFromQueryParam(schemeName string, req *http.Request) (string, error) {
 	incomingToken := req.URL.Query().Get(schemeName)
 	if incomingToken == "" {
-		return "", ErrJWTError(fmt.Sprintf("missing parameter %q %+v", schemeName, req))
+		return "", ErrJWTError(fmt.Sprintf("missing parameter %q", schemeName))
 	}
 
 	return incomingToken, nil
