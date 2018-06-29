@@ -588,6 +588,34 @@ func DecodeMethodQueryStringValidateRequest(mux goahttp.Muxer, decoder func(*htt
 }
 `
 
+var PayloadQueryStringNotRequiredValidateDecodeCode = `// DecodeMethodQueryStringNotRequiredValidateRequest returns a decoder for
+// requests sent to the ServiceQueryStringNotRequiredValidate
+// MethodQueryStringNotRequiredValidate endpoint.
+func DecodeMethodQueryStringNotRequiredValidateRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) (interface{}, error) {
+	return func(r *http.Request) (interface{}, error) {
+		var (
+			q   *string
+			err error
+		)
+		qRaw := r.URL.Query().Get("q")
+		if qRaw != "" {
+			q = &qRaw
+		}
+		if q != nil {
+			if !(*q == "val") {
+				err = goa.MergeErrors(err, goa.InvalidEnumValueError("q", *q, []interface{}{"val"}))
+			}
+		}
+		if err != nil {
+			return nil, err
+		}
+		payload := NewMethodQueryStringNotRequiredValidateMethodQueryStringNotRequiredValidatePayload(q)
+
+		return payload, nil
+	}
+}
+`
+
 var PayloadQueryBytesDecodeCode = `// DecodeMethodQueryBytesRequest returns a decoder for requests sent to the
 // ServiceQueryBytes MethodQueryBytes endpoint.
 func DecodeMethodQueryBytesRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) (interface{}, error) {
@@ -2483,6 +2511,34 @@ func DecodeMethodQueryStringDefaultRequest(mux goahttp.Muxer, decoder func(*http
 }
 `
 
+var PayloadQueryStringDefaultValidateDecodeCode = `// DecodeMethodQueryStringDefaultValidateRequest returns a decoder for requests
+// sent to the ServiceQueryStringDefaultValidate
+// MethodQueryStringDefaultValidate endpoint.
+func DecodeMethodQueryStringDefaultValidateRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) (interface{}, error) {
+	return func(r *http.Request) (interface{}, error) {
+		var (
+			q   string
+			err error
+		)
+		qRaw := r.URL.Query().Get("q")
+		if qRaw != "" {
+			q = qRaw
+		} else {
+			q = "def"
+		}
+		if !(q == "def") {
+			err = goa.MergeErrors(err, goa.InvalidEnumValueError("q", q, []interface{}{"def"}))
+		}
+		if err != nil {
+			return nil, err
+		}
+		payload := NewMethodQueryStringDefaultValidateMethodQueryStringDefaultValidatePayload(q)
+
+		return payload, nil
+	}
+}
+`
+
 var PayloadQueryPrimitiveStringDefaultDecodeCode = `// DecodeMethodQueryPrimitiveStringDefaultRequest returns a decoder for
 // requests sent to the ServiceQueryPrimitiveStringDefault
 // MethodQueryPrimitiveStringDefault endpoint.
@@ -2964,6 +3020,34 @@ func DecodeMethodHeaderStringDefaultRequest(mux goahttp.Muxer, decoder func(*htt
 			h = "def"
 		}
 		payload := NewMethodHeaderStringDefaultMethodHeaderStringDefaultPayload(h)
+
+		return payload, nil
+	}
+}
+`
+
+var PayloadHeaderStringDefaultValidateDecodeCode = `// DecodeMethodHeaderStringDefaultValidateRequest returns a decoder for
+// requests sent to the ServiceHeaderStringDefaultValidate
+// MethodHeaderStringDefaultValidate endpoint.
+func DecodeMethodHeaderStringDefaultValidateRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) (interface{}, error) {
+	return func(r *http.Request) (interface{}, error) {
+		var (
+			h   string
+			err error
+		)
+		hRaw := r.Header.Get("h")
+		if hRaw != "" {
+			h = hRaw
+		} else {
+			h = "def"
+		}
+		if !(h == "def") {
+			err = goa.MergeErrors(err, goa.InvalidEnumValueError("h", h, []interface{}{"def"}))
+		}
+		if err != nil {
+			return nil, err
+		}
+		payload := NewMethodHeaderStringDefaultValidateMethodHeaderStringDefaultValidatePayload(h)
 
 		return payload, nil
 	}

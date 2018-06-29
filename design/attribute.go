@@ -90,7 +90,7 @@ type (
 		Required []string
 	}
 
-	// ValidationFormat is the type used to enumerates the possible string
+	// ValidationFormat is the type used to enumerate the possible string
 	// formats.
 	ValidationFormat string
 )
