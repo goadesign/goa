@@ -334,6 +334,12 @@ var _ = Describe("New", func() {
 			BeforeEach(func() {
 				p := Type("RecursivePayload", func() {
 					Member("m1", "RecursivePayload")
+					Member("m2", ArrayOf("RecursivePayload"))
+					Member("m3", HashOf(String, "RecursivePayload"))
+					Member("m4", func() {
+						Member("m5", String)
+						Member("m6", "RecursivePayload")
+					})
 				})
 				Resource("res", func() {
 					Action("act", func() {

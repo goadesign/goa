@@ -609,13 +609,6 @@ func hasFile(dt DataType, traversed []DataType) bool {
 	if dt == nil {
 		return false
 	}
-	for _, v := range traversed {
-		if dt == v {
-			return false
-		}
-	}
-	traversed = append(traversed, dt)
-
 	switch {
 	case dt.IsPrimitive():
 		return dt.Kind() == FileKind
@@ -630,6 +623,14 @@ func hasFile(dt DataType, traversed []DataType) bool {
 		if hasFile(dt.ToHash().ElemType.Type, traversed) {
 			return true
 		}
+	case dt.IsObject() && dt.Kind() == UserTypeKind:
+		for _, v := range traversed {
+			if dt == v {
+				return false
+			}
+		}
+		traversed = append(traversed, dt)
+		fallthrough
 	case dt.IsObject():
 		for _, att := range dt.ToObject() {
 			if hasFile(att.Type, traversed) {
