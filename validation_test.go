@@ -12,6 +12,8 @@ import (
 
 func TestValidateFormat(t *testing.T) {
 	var (
+		validDate       = "2015-10-26"
+		invalidDate     = "201510-26"
 		validDateTime   = "2015-10-26T08:31:23Z"
 		invalidDateTime = "201510-26T08:31:23Z"
 		validUUID       = "6ba7b810-9dad-11d1-80b4-00c04fd430c8"
@@ -43,6 +45,8 @@ func TestValidateFormat(t *testing.T) {
 		format   Format
 		expected error
 	}{
+		"valid date":         {"validDate", validDate, FormatDate, nil},
+		"invalid date":       {"invalidDate", invalidDate, FormatDate, InvalidFormatError("invalidDate", invalidDate, FormatDate, &time.ParseError{"2006-01-02", invalidDate, "-", invalidDate[4:], ""})},
 		"valid date-time":    {"validDateTime", validDateTime, FormatDateTime, nil},
 		"invalid date-time":  {"invalidDateTime", invalidDateTime, FormatDateTime, InvalidFormatError("invalidDateTime", invalidDateTime, FormatDateTime, &time.ParseError{time.RFC3339, invalidDateTime, "-", invalidDateTime[4:], ""})},
 		"valid uuid":         {"validUUID", validUUID, FormatUUID, nil},

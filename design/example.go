@@ -174,6 +174,7 @@ func byFormat(a *AttributeExpr, r *Random) interface{} {
 	if res, ok := map[ValidationFormat]interface{}{
 		FormatEmail:    r.faker.Email(),
 		FormatHostname: r.faker.DomainName() + "." + r.faker.DomainSuffix(),
+		FormatDate:     time.Unix(int64(r.Int())%1454957045, 0).UTC().Format("2006-01-02"), // to obtain a "fixed" rand
 		FormatDateTime: time.Unix(int64(r.Int())%1454957045, 0).UTC().Format(time.RFC3339), // to obtain a "fixed" rand
 		FormatIPv4:     r.faker.IPv4Address().String(),
 		FormatIPv6:     r.faker.IPv6Address().String(),
