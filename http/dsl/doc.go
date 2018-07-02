@@ -22,39 +22,27 @@ For example:
 
     var _ = Service("name", func() {
         Method("name", func() {
-            Request(RequestType)     // has attributes rq1, rq2, rq3 and rq4
-            Response(ResponseType)   // has attributes rp1 and rp2
+            Payload(PayloadType)     // has attributes rq1, rq2, rq3 and rq4
+            Result(ResultType)       // has attributes rp1 and rp2
             Error("name", ErrorType) // has attributes er1 and er2
 
             HTTP(func() {
-                GET("/{rq1}")            // rq1 read from path parameter
-                Request(func() {
-                    Params(func() {
-                        Param("rq2")     // rq2 read from query string
-                    })
-                    Headers(func() {
-                        Header("rq3")    // rq3 read from header
-                    })
+                GET("/{rq1}")    // rq1 read from path parameter
+                Param("rq2")     // rq2 read from query string
+                Header("rq3")    // rq3 read from header
+                Body(func() {
+                    Attribute("rq4") // rq4 read from body field, default
+                })
+                Response(StatusOK, func() {
+                    Header("rp1")    // rp1 written to header
                     Body(func() {
-                        Attribute("rq4") // rq4 read from body field
+                        Attribute("rp2") // rp2 written to body field, default
                     })
                 })
-                Response(func() {
-                    Code(StatusOK)
-                    Headers(func() {
-                        Header("rp1")    // rp1 written to header
-                    })
+                Response(StatusBadRequest, func() {
+                    Header("er1")    // er1 written to header
                     Body(func() {
-                        Attribute("rp2") // rp2 written to body field
-                    })
-                })
-                Error("name", func() {
-                    Code(StatusBadRequest)
-                    Headers(func() {
-                        Header("er1")    // er1 written to header
-                    })
-                    Body(func() {
-                        Attribute("er2") // er2 written to body field
+                        Attribute("er2") // er2 written to body field, default
                     })
                 })
             })
@@ -71,29 +59,19 @@ The example above can thus be simplified to:
 
     var _ = Service("name", func() {
         Method("name", func() {
-            Request(RequestType)     // has attributes rq1, rq2, rq3 and rq4
-            Response(ResponseType)   // has attributes rp1 and rp2
+            Payload(PayloadType)     // has attributes rq1, rq2, rq3 and rq4
+            Result(ResultType)       // has attributes rp1 and rp2
             Error("name", ErrorType) // has attributes er1 and er2
 
             HTTP(func() {
-                GET("/{rq1}")            // rq1 read from path parameter
-                Request(func() {
-                    Params(func() {
-                        Param("rq2")     // rq2 read from query string
-                    })
-                    Headers(func() {
-                        Header("rq3")    // rq3 read from header
-                    })
+                GET("/{rq1}")    // rq1 read from path parameter
+                Param("rq2")     // rq2 read from query string
+                Header("rq3")    // rq3 read from header
+                Response(StatusOK, func() {
+                    Header("rp1")    // rp1 written to header
                 })
-                Response(func() {
-                    Headers(func() {
-                        Header("rp1")    // rp1 written to header
-                    })
-                })
-                Error("name", func() {
-                    Headers(func() {
-                        Header("er1")    // er1 written to header
-                    })
+                Response("name", StatusBadRequest, func() {
+                    Header("er1")    // er1 written to header
                 })
             })
         })
