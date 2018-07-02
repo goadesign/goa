@@ -97,7 +97,6 @@ func (c *Client) List() goa.Endpoint {
 		if err != nil {
 			return nil, err
 		}
-
 		resp, err := c.ListDoer.Do(req)
 
 		if err != nil {
@@ -123,7 +122,6 @@ func (c *Client) Show() goa.Endpoint {
 		if err != nil {
 			return nil, err
 		}
-
 		resp, err := c.ShowDoer.Do(req)
 
 		if err != nil {
@@ -149,7 +147,6 @@ func (c *Client) Add() goa.Endpoint {
 		if err != nil {
 			return nil, err
 		}
-
 		resp, err := c.AddDoer.Do(req)
 
 		if err != nil {
@@ -170,7 +167,6 @@ func (c *Client) Remove() goa.Endpoint {
 		if err != nil {
 			return nil, err
 		}
-
 		resp, err := c.RemoveDoer.Do(req)
 
 		if err != nil {
@@ -196,7 +192,6 @@ func (c *Client) Rate() goa.Endpoint {
 		if err != nil {
 			return nil, err
 		}
-
 		resp, err := c.RateDoer.Do(req)
 
 		if err != nil {
@@ -222,7 +217,6 @@ func (c *Client) MultiAdd(storageMultiAddEncoderFn StorageMultiAddEncoderFunc) g
 		if err != nil {
 			return nil, err
 		}
-
 		resp, err := c.MultiAddDoer.Do(req)
 
 		if err != nil {
@@ -248,7 +242,6 @@ func (c *Client) MultiUpdate(storageMultiUpdateEncoderFn StorageMultiUpdateEncod
 		if err != nil {
 			return nil, err
 		}
-
 		resp, err := c.MultiUpdateDoer.Do(req)
 
 		if err != nil {

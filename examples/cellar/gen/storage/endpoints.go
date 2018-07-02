@@ -57,10 +57,7 @@ func NewListEndpoint(s Service) goa.Endpoint {
 		if err != nil {
 			return nil, err
 		}
-		vres := newViewedStoredBottleCollection(res, "tiny")
-		if err := vres.Validate(); err != nil {
-			return nil, err
-		}
+		vres := NewViewedStoredBottleCollection(res, "tiny")
 		return vres, nil
 	}
 }
@@ -74,10 +71,7 @@ func NewShowEndpoint(s Service) goa.Endpoint {
 		if err != nil {
 			return nil, err
 		}
-		vres := newViewedStoredBottle(res, view)
-		if err := vres.Validate(); err != nil {
-			return nil, err
-		}
+		vres := NewViewedStoredBottle(res, view)
 		return vres, nil
 	}
 }

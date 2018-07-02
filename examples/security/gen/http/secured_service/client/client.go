@@ -69,6 +69,7 @@ func NewClient(
 // service signin server.
 func (c *Client) Signin() goa.Endpoint {
 	var (
+		encodeRequest  = EncodeSigninRequest(c.encoder)
 		decodeResponse = DecodeSigninResponse(c.decoder, c.RestoreResponseBody)
 	)
 	return func(ctx context.Context, v interface{}) (interface{}, error) {
@@ -76,7 +77,10 @@ func (c *Client) Signin() goa.Endpoint {
 		if err != nil {
 			return nil, err
 		}
-
+		err = encodeRequest(req, v)
+		if err != nil {
+			return nil, err
+		}
 		resp, err := c.SigninDoer.Do(req)
 
 		if err != nil {
@@ -102,7 +106,6 @@ func (c *Client) Secure() goa.Endpoint {
 		if err != nil {
 			return nil, err
 		}
-
 		resp, err := c.SecureDoer.Do(req)
 
 		if err != nil {
@@ -128,7 +131,6 @@ func (c *Client) DoublySecure() goa.Endpoint {
 		if err != nil {
 			return nil, err
 		}
-
 		resp, err := c.DoublySecureDoer.Do(req)
 
 		if err != nil {
@@ -154,7 +156,6 @@ func (c *Client) AlsoDoublySecure() goa.Endpoint {
 		if err != nil {
 			return nil, err
 		}
-
 		resp, err := c.AlsoDoublySecureDoer.Do(req)
 
 		if err != nil {

@@ -79,3 +79,43 @@ var WithResultMultipleViewsEndpointDSL = func() {
 		})
 	})
 }
+
+var StreamingResultEndpointDSL = func() {
+	var AType = Type("AType", func() {
+		Attribute("a", String)
+	})
+	var RType = ResultType("application/vnd.withresult", func() {
+		TypeName("Rtype")
+		Attributes(func() {
+			Attribute("a", String)
+			Attribute("b", String)
+		})
+		View("default", func() {
+			Attribute("a")
+		})
+	})
+	Service("StreamingResultEndpoint", func() {
+		Method("StreamingResultMethod", func() {
+			Payload(AType)
+			StreamingResult(RType)
+		})
+	})
+}
+
+var StreamingResultNoPayloadEndpointDSL = func() {
+	var RType = ResultType("application/vnd.withresult", func() {
+		TypeName("Rtype")
+		Attributes(func() {
+			Attribute("a", String)
+			Attribute("b", String)
+		})
+		View("default", func() {
+			Attribute("a")
+		})
+	})
+	Service("StreamingResultNoPayloadEndpoint", func() {
+		Method("StreamingResultNoPayloadMethod", func() {
+			StreamingResult(RType)
+		})
+	})
+}

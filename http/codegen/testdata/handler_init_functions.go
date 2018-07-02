@@ -18,6 +18,7 @@ func NewMethodNoPayloadNoResultHandler(
 		ctx := context.WithValue(r.Context(), goahttp.AcceptTypeKey, r.Header.Get("Accept"))
 		ctx = context.WithValue(ctx, goa.MethodKey, "MethodNoPayloadNoResult")
 		ctx = context.WithValue(ctx, goa.ServiceKey, "ServiceNoPayloadNoResult")
+
 		res, err := endpoint(ctx, nil)
 
 		if err != nil {
@@ -91,6 +92,7 @@ func NewMethodNoPayloadResultHandler(
 		ctx := context.WithValue(r.Context(), goahttp.AcceptTypeKey, r.Header.Get("Accept"))
 		ctx = context.WithValue(ctx, goa.MethodKey, "MethodNoPayloadResult")
 		ctx = context.WithValue(ctx, goa.ServiceKey, "ServiceNoPayloadResult")
+
 		res, err := endpoint(ctx, nil)
 
 		if err != nil {

@@ -79,7 +79,7 @@ const serviceClientMethodT = `
 	{{- end }}
 //	- error: internal error
 {{- end }}
-func (c *{{ .ClientVarName }}) {{ .VarName }}(ctx context.Context, {{ if .PayloadRef }}p {{ .PayloadRef }}{{ end }})({{ if .ResultRef }}res {{ .ResultRef }}, {{ end }}err error) {
+func (c *{{ .ClientVarName }}) {{ .VarName }}(ctx context.Context, {{ if .PayloadRef }}p {{ .PayloadRef }}{{ end }})({{ if .ClientStream }}res {{ .ClientStream.Interface }}, {{ else if .ResultRef }}res {{ .ResultRef }}, {{ end }}err error) {
 	{{- if .ResultRef }}
 	var ires interface{}
 	{{- end }}
@@ -90,7 +90,7 @@ func (c *{{ .ClientVarName }}) {{ .VarName }}(ctx context.Context, {{ if .Payloa
 	if err != nil {
 		return
 	}
-	return ires.({{ .ResultRef }}), nil
+	return ires.({{ if .ClientStream }}{{ .ClientStream.Interface }}{{ else }}{{ .ResultRef }}{{ end }}), nil
 	{{- end }}
 }
 `

@@ -119,10 +119,10 @@ func NewStoredBottleCollection(vres sommelierviews.StoredBottleCollection) Store
 	return res
 }
 
-// newViewedStoredBottleCollection initializes viewed result type
+// NewViewedStoredBottleCollection initializes viewed result type
 // StoredBottleCollection from result type StoredBottleCollection using the
 // given view.
-func newViewedStoredBottleCollection(res StoredBottleCollection, view string) sommelierviews.StoredBottleCollection {
+func NewViewedStoredBottleCollection(res StoredBottleCollection, view string) sommelierviews.StoredBottleCollection {
 	var vres sommelierviews.StoredBottleCollection
 	switch view {
 	case "default", "":
