@@ -20,7 +20,14 @@ func File(genpkg string, service *design.ServiceExpr) *codegen.File {
 			{Path: "goa.design/goa"},
 			{Path: genpkg + "/" + codegen.SnakeCase(service.Name) + "/" + "views", Name: svc.ViewsPkg},
 		})
-	def := &codegen.SectionTemplate{Name: "service", Source: serviceT, Data: svc}
+	def := &codegen.SectionTemplate{
+		Name:   "service",
+		Source: serviceT,
+		Data:   svc,
+		FuncMap: map[string]interface{}{
+			"streamInterfaceFor": streamInterfaceFor,
+		},
+	}
 
 	sections := []*codegen.SectionTemplate{header, def}
 	seen := make(map[string]struct{})
@@ -148,6 +155,17 @@ func errorName(et *UserTypeData) string {
 	return fmt.Sprintf("%q", et.Name)
 }
 
+// streamInterfaceFor builds the data to generate the client and server stream
+// interfaces for the given endpoint.
+func streamInterfaceFor(kind string, m *MethodData, stream *StreamData) map[string]interface{} {
+	return map[string]interface{}{
+		"Kind":           kind,
+		"Endpoint":       m.Name,
+		"Stream":         stream,
+		"IsViewedResult": m.ViewedResult != nil,
+	}
+}
+
 // serviceT is the template used to write an service definition.
 const serviceT = `
 {{ comment .Description }}
@@ -166,7 +184,11 @@ type Service interface {
 		{{- end }}
 		{{- end }}
 	{{- end }}
+	{{- if .ServerStream }}
+	{{ .VarName }}(context.Context{{ if .Payload }}, {{ .PayloadRef }}{{ end }}, {{ .ServerStream.Interface }}) (err error)
+	{{- else }}
 	{{ .VarName }}(context.Context{{ if .Payload }}, {{ .PayloadRef }}{{ end }}) ({{ if .Result }}res {{ .ResultRef }}, {{ if .ViewedResult }}{{ if not .ViewedResult.ViewName }}view string, {{ end }}{{ end }}{{ end }}err error)
+	{{- end }}
 {{- end }}
 }
 
@@ -179,6 +201,32 @@ const ServiceName = {{ printf "%q" .Name }}
 // are the same values that are set in the endpoint request contexts under the
 // MethodKey key.
 var MethodNames = [{{ len .Methods }}]string{ {{ range .Methods }}{{ printf "%q" .Name }}, {{ end }} }
+{{- range .Methods }}
+	{{- if or .ServerStream .ClientStream }}
+		{{ template "stream_interface" (streamInterfaceFor "server" . .ServerStream) }}
+		{{ template "stream_interface" (streamInterfaceFor "client" . .ClientStream) }}
+	{{- end }}
+{{- end }}
+
+{{- define "stream_interface" }}
+{{ printf "%s is the interface a %q endpoint %s stream must satisfy." .Stream.Interface .Endpoint .Kind | comment }}
+type {{ .Stream.Interface }} interface {
+	{{- if .Stream.SendRef }}
+		{{ printf "Send streams instances of %q." .Stream.SendName | comment }}
+		Send({{ .Stream.SendRef }}) error
+		{{ comment "Close closes the stream." }}
+		Close() error
+	{{- end }}
+	{{- if .Stream.RecvRef }}
+		{{ printf "Recv reads instances of %q from the stream." .Stream.RecvName | comment }}
+		Recv() ({{ .Stream.RecvRef }}, error)
+	{{- end }}
+	{{- if and .IsViewedResult (eq .Kind "server") }}
+		{{ comment "SetView sets the view used to render the result before streaming." }}
+		SetView(view string)
+	{{- end }}
+}
+{{- end }}
 `
 
 const payloadT = `{{ comment .PayloadDesc }}

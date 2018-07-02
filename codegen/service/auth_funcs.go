@@ -15,8 +15,12 @@ func AuthFuncsFile(genpkg string, root *design.RootExpr) *codegen.File {
 	var (
 		apiPkg   = strings.ToLower(codegen.Goify(root.API.Name, false))
 		rootPath = "."
+		filepath = "auth.go"
 	)
 	{
+		if _, err := os.Stat(filepath); !os.IsNotExist(err) {
+			return nil // file already exists, skip it.
+		}
 		idx := strings.LastIndex(genpkg, string(os.PathSeparator))
 		if idx > 0 {
 			rootPath = genpkg[:idx]
@@ -59,8 +63,9 @@ func AuthFuncsFile(genpkg string, root *design.RootExpr) *codegen.File {
 	if len(sections) == 0 || !generate {
 		return nil
 	}
+
 	return &codegen.File{
-		Path:             "auth.go",
+		Path:             filepath,
 		SectionTemplates: sections,
 	}
 }

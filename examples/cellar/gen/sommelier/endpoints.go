@@ -40,10 +40,7 @@ func NewPickEndpoint(s Service) goa.Endpoint {
 		if err != nil {
 			return nil, err
 		}
-		vres := newViewedStoredBottleCollection(res, "default")
-		if err := vres.Validate(); err != nil {
-			return nil, err
-		}
+		vres := NewViewedStoredBottleCollection(res, "default")
 		return vres, nil
 	}
 }

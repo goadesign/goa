@@ -2,6 +2,8 @@ package design
 
 import (
 	"fmt"
+	"net/url"
+	"sort"
 
 	"goa.design/goa/eval"
 )
@@ -107,6 +109,27 @@ func (s *ServiceExpr) Finalize() {
 			s.Finalize()
 		}
 	}
+}
+
+// Schemes returns the list of schemes used by the service.
+func (s *ServiceExpr) Schemes() []string {
+	schemes := make(map[string]bool)
+	for _, srv := range s.Servers {
+		if u, err := url.Parse(srv.URL); err == nil && u.Scheme != "" {
+			schemes[u.Scheme] = true
+		}
+	}
+	if len(schemes) == 0 {
+		return Root.API.Schemes()
+	}
+	ss := make([]string, len(schemes))
+	i := 0
+	for s := range schemes {
+		ss[i] = s
+		i++
+	}
+	sort.Strings(ss)
+	return ss
 }
 
 // Validate checks that the error name is found in the result metadata for

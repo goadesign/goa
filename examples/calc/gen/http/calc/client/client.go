@@ -61,7 +61,6 @@ func (c *Client) Add() goa.Endpoint {
 		if err != nil {
 			return nil, err
 		}
-
 		resp, err := c.AddDoer.Do(req)
 
 		if err != nil {

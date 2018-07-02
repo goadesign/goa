@@ -66,7 +66,6 @@ func (c *Client) Pick() goa.Endpoint {
 		if err != nil {
 			return nil, err
 		}
-
 		resp, err := c.PickDoer.Do(req)
 
 		if err != nil {
