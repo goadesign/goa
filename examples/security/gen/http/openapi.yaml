@@ -159,6 +159,8 @@ securityDefinitions:
       **Security Scopes**:
         * `api:read`: Read-only access
         * `api:write`: Read and write access
+    name: Authorization
+    in: header
   oauth2:
     type: oauth2
     description: Secures endpoint by requiring a valid OAuth2 token retrieved via

@@ -872,7 +872,6 @@ func buildPayloadData(e *httpdesign.EndpointExpr, sd *ServiceData) *PayloadData 
 				}
 			}
 		}
-
 		request = &RequestData{
 			PathParams:   paramsData,
 			QueryParams:  queryData,
@@ -1691,7 +1690,7 @@ func extractQueryParams(a *design.MappedAttributeExpr, serviceType *design.Attri
 				mp.KeyType.Type.Kind() == design.StringKind &&
 				mp.ElemType.Type.Kind() == design.ArrayKind &&
 				design.AsArray(mp.ElemType.Type).ElemType.Type.Kind() == design.StringKind,
-			Validate:     codegen.RecursiveValidationCode(c, required, false, false, varn),
+			Validate:     codegen.RecursiveValidationCode(c, required, false, c.DefaultValue != nil, varn),
 			DefaultValue: c.DefaultValue,
 			Example:      c.Example(design.Root.API.Random()),
 		})
@@ -1741,7 +1740,7 @@ func extractHeaders(a *design.MappedAttributeExpr, serviceType *design.Attribute
 			Slice:         arr != nil,
 			StringSlice:   arr != nil && arr.ElemType.Type.Kind() == design.StringKind,
 			Type:          hattr.Type,
-			Validate:      codegen.RecursiveValidationCode(hattr, required, false, false, varn),
+			Validate:      codegen.RecursiveValidationCode(hattr, required, false, hattr.DefaultValue != nil, varn),
 			DefaultValue:  hattr.DefaultValue,
 			Example:       hattr.Example(design.Root.API.Random()),
 		})

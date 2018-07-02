@@ -90,12 +90,15 @@ type (
 		Required []string
 	}
 
-	// ValidationFormat is the type used to enumerates the possible string
+	// ValidationFormat is the type used to enumerate the possible string
 	// formats.
 	ValidationFormat string
 )
 
 const (
+	// FormatDate describes RFC3339 date values.
+	FormatDate ValidationFormat = "date"
+
 	// FormatDateTime describes RFC3339 date time values.
 	FormatDateTime ValidationFormat = "date-time"
 
@@ -634,6 +637,8 @@ func (v *ValidationExpr) Dup() *ValidationExpr {
 // IsSupportedValidationFormat checks if the validation format is supported by goa.
 func (a *AttributeExpr) IsSupportedValidationFormat(vf ValidationFormat) bool {
 	switch vf {
+	case FormatDate:
+		return true
 	case FormatDateTime:
 		return true
 	case FormatUUID:

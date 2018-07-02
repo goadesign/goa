@@ -11,6 +11,8 @@ import (
 )
 
 const (
+	// FormatDate describes RFC3339 date values.
+	FormatDate = design.FormatDate
 	// FormatDateTime describes RFC3339 date time values.
 	FormatDateTime = design.FormatDateTime
 	// FormatUUID describes RFC4122 UUID values.

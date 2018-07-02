@@ -12,6 +12,7 @@ func TestFormat(t *testing.T) {
 	cases := map[string]struct {
 		Format design.ValidationFormat
 	}{
+		"date":      {design.FormatDate},
 		"date-time": {design.FormatDateTime},
 		"uuid":      {design.FormatUUID},
 		"email":     {design.FormatEmail},

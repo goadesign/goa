@@ -35,6 +35,7 @@ func TestDecode(t *testing.T) {
 		{"query-float64-validate", testdata.PayloadQueryFloat64ValidateDSL, testdata.PayloadQueryFloat64ValidateDecodeCode},
 		{"query-string", testdata.PayloadQueryStringDSL, testdata.PayloadQueryStringDecodeCode},
 		{"query-string-validate", testdata.PayloadQueryStringValidateDSL, testdata.PayloadQueryStringValidateDecodeCode},
+		{"query-string-not-required-validate", testdata.PayloadQueryStringNotRequiredValidateDSL, testdata.PayloadQueryStringNotRequiredValidateDecodeCode},
 		{"query-bytes", testdata.PayloadQueryBytesDSL, testdata.PayloadQueryBytesDecodeCode},
 		{"query-bytes-validate", testdata.PayloadQueryBytesValidateDSL, testdata.PayloadQueryBytesValidateDecodeCode},
 		{"query-any", testdata.PayloadQueryAnyDSL, testdata.PayloadQueryAnyDecodeCode},
@@ -91,6 +92,7 @@ func TestDecode(t *testing.T) {
 		{"query-string-mapped", testdata.PayloadQueryStringMappedDSL, testdata.PayloadQueryStringMappedDecodeCode},
 
 		{"query-string-default", testdata.PayloadQueryStringDefaultDSL, testdata.PayloadQueryStringDefaultDecodeCode},
+		{"query-string-default-validate", testdata.PayloadQueryStringDefaultValidateDSL, testdata.PayloadQueryStringDefaultValidateDecodeCode},
 		{"query-primitive-string-default", testdata.PayloadQueryPrimitiveStringDefaultDSL, testdata.PayloadQueryPrimitiveStringDefaultDecodeCode},
 
 		{"path-string", testdata.PayloadPathStringDSL, testdata.PayloadPathStringDecodeCode},
@@ -114,6 +116,7 @@ func TestDecode(t *testing.T) {
 		{"header-primitive-array-bool-validate", testdata.PayloadHeaderPrimitiveArrayBoolValidateDSL, testdata.PayloadHeaderPrimitiveArrayBoolValidateDecodeCode},
 
 		{"header-string-default", testdata.PayloadHeaderStringDefaultDSL, testdata.PayloadHeaderStringDefaultDecodeCode},
+		{"header-string-default-validate", testdata.PayloadHeaderStringDefaultValidateDSL, testdata.PayloadHeaderStringDefaultValidateDecodeCode},
 		{"header-primitive-string-default", testdata.PayloadHeaderPrimitiveStringDefaultDSL, testdata.PayloadHeaderPrimitiveStringDefaultDecodeCode},
 
 		{"body-string", testdata.PayloadBodyStringDSL, testdata.PayloadBodyStringDecodeCode},

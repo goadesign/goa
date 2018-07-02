@@ -318,7 +318,7 @@ func buildSubcommandData(svc *ServiceData, e *EndpointData) *subcommandData {
 					"*"+flags[0].FullName+"Flag",
 					target,
 					e.Method.Payload,
-					true,
+					false,
 				)
 				conversion = convPre + conv + convSuff
 				if check {
@@ -482,7 +482,7 @@ func fieldLoadCode(actual, fType string, arg *InitArgData) (string, bool) {
 			code = arg.Name + " = " + ref + actual
 		} else {
 			ex := jsonExample(arg.Example)
-			code, check = conversionCode(actual, arg.Name, arg.TypeName, arg.Required)
+			code, check = conversionCode(actual, arg.Name, arg.TypeName, !arg.Required && arg.DefaultValue == nil)
 			if check {
 				code += "\nif err != nil {\n"
 				if flagType(arg.TypeName) == "JSON" {
@@ -518,7 +518,7 @@ var (
 
 // conversionCode produces the code that converts the string stored in the
 // variable "from" to the value stored in the variable "to" of type typeName.
-func conversionCode(from, to, typeName string, required bool) (string, bool) {
+func conversionCode(from, to, typeName string, pointer bool) (string, bool) {
 	var (
 		parse    string
 		cast     string
@@ -527,7 +527,7 @@ func conversionCode(from, to, typeName string, required bool) (string, bool) {
 	target := to
 	needCast := typeName != stringN && typeName != bytesN && flagType(typeName) != "JSON"
 	decl := ""
-	if needCast && !required {
+	if needCast && pointer {
 		target = "val"
 		decl = ":"
 	}
@@ -579,7 +579,7 @@ func conversionCode(from, to, typeName string, required bool) (string, bool) {
 	}
 	if to != target {
 		ref := ""
-		if !required {
+		if pointer {
 			ref = "&"
 		}
 		parse = parse + fmt.Sprintf("\n%s = %s%s", to, ref, target)
