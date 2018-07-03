@@ -126,7 +126,13 @@ func (r *HTTPResponseExpr) EvalName() string {
 // and the result type definition if any is valid.
 func (r *HTTPResponseExpr) Validate(e *EndpointExpr) *eval.ValidationErrors {
 	verr := new(eval.ValidationErrors)
-	if e.MethodExpr.Result != nil {
+	if e.MethodExpr.Result == nil {
+		if r.headers != nil {
+			if len(*design.AsObject(r.headers.Type)) > 0 {
+				verr.Add(r, "response define headers but result is empty")
+			}
+		}
+	} else {
 		rt, isrt := e.MethodExpr.Result.Type.(*design.ResultTypeExpr)
 		var inview string
 		if isrt {
