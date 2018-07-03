@@ -22,15 +22,15 @@ func (a *AttributeExpr) Example(r *Random) interface{} {
 	if len(a.UserExamples) > 0 {
 		return a.UserExamples[0].Value
 	}
-	// Randomize array length first, since that's from higher level
+	// randomize array length first, since that's from higher level
 	if hasLengthValidation(a) {
 		return byLength(a, r)
 	}
-	// Enum should dominate, because the potential "examples" are fixed
+	// enum should dominate, because the potential "examples" are fixed
 	if hasEnumValidation(a) {
 		return byEnum(a, r)
 	}
-	// loop until a satisified example is generated
+	// loop until a satisfying example is generated
 	var (
 		hasFormat  = hasFormatValidation(a)
 		hasPattern = hasPatternValidation(a)
@@ -196,8 +196,10 @@ func byFormat(a *AttributeExpr, r *Random) interface{} {
 	panic("Validation: unknown format '" + format + "'") // bug
 }
 
-// byPattern generates a random value that satisifies the pattern. Note: if multiple patterns are
-// given, only one of them is used. currently, it doesn't support multiple.
+// byPattern generates a random value that satisfies the pattern.
+//
+// Note: if
+// multiple patterns are given, only one of them is used.
 func byPattern(a *AttributeExpr, r *Random) interface{} {
 	if !hasPatternValidation(a) {
 		return false

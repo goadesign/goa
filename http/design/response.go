@@ -186,7 +186,7 @@ func (r *HTTPResponseExpr) Validate(e *EndpointExpr) *eval.ValidationErrors {
 	}
 	if r.StatusCode == 0 {
 		verr.Add(r, "HTTP response status not defined")
-	} else if !bodyAllowedForStatus(r.StatusCode) && r.bodyExists() {
+	} else if !bodyAllowedForStatus(r.StatusCode) && r.bodyExists() && !e.MethodExpr.IsStreaming() {
 		verr.Add(r, "Response body defined for status code %d which does not allow response body.", r.StatusCode)
 	}
 	return verr
