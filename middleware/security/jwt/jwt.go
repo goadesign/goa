@@ -69,13 +69,11 @@ func New(validationKeys interface{}, validationFunc goa.Middleware, scheme *goa.
 			)
 
 			if scheme.In == goa.LocHeader {
-				incomingToken, err = extractTokenFromHeader(scheme.Name, req)
-				if err != nil {
+				if incomingToken, err = extractTokenFromHeader(scheme.Name, req); err != nil {
 					return err
 				}
 			} else if scheme.In == goa.LocQuery {
-				incomingToken, err = extractTokenFromQueryParam(scheme.Name, req)
-				if err != nil {
+				if incomingToken, err = extractTokenFromQueryParam(scheme.Name, req); err != nil {
 					return err
 				}
 			} else {
