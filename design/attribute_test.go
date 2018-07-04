@@ -423,6 +423,63 @@ func TestAttributeExprIsPrimitivePointer(t *testing.T) {
 	}
 }
 
+func TestAttributeExprHasTag(t *testing.T) {
+	var (
+		tag = "view"
+	)
+	cases := map[string]struct {
+		attribute *AttributeExpr
+		tag       string
+		expected  bool
+	}{
+		"has tag": {
+			attribute: &AttributeExpr{
+				Type: &Object{
+					&NamedAttributeExpr{
+						Name: "foo",
+						Attribute: &AttributeExpr{
+							Metadata: MetadataExpr{
+								tag: []string{"default"},
+							},
+						},
+					},
+				},
+			},
+			tag:      tag,
+			expected: true,
+		},
+		"attribute expr is nil": {
+			attribute: nil,
+			tag:       tag,
+			expected:  false,
+		},
+		"not object": {
+			attribute: &AttributeExpr{
+				Type: String,
+			},
+			tag:      tag,
+			expected: false,
+		},
+		"object but has no tag": {
+			attribute: &AttributeExpr{
+				Type: &Object{
+					&NamedAttributeExpr{
+						Name:      "foo",
+						Attribute: &AttributeExpr{},
+					},
+				},
+			},
+			tag: tag,
+		},
+	}
+
+	for k, tc := range cases {
+		if actual := tc.attribute.HasTag(tc.tag); tc.expected != actual {
+			t.Errorf("%s: got %#v, expected %#v", k, actual, tc.expected)
+		}
+	}
+}
+
 func TestAttributeHasDefaultValue(t *testing.T) {
 	var (
 		object = &Object{
