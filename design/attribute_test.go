@@ -480,7 +480,7 @@ func TestAttributeExprHasTag(t *testing.T) {
 	}
 }
 
-func TestAttributeHasDefaultValue(t *testing.T) {
+func TestAttributeExprHasDefaultValue(t *testing.T) {
 	var (
 		object = &Object{
 			&NamedAttributeExpr{
