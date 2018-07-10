@@ -82,17 +82,21 @@ func (s *StreamingResultMethodServerStream) Send(v *streamingresultservice.UserT
 var StreamingResultServerStreamCloseCode = `// Close closes the "StreamingResultMethod" endpoint websocket connection after
 // sending a close control message.
 func (s *StreamingResultMethodServerStream) Close() error {
-	if err := s.conn.WriteControl(
+	if s.conn == nil {
+		return nil
+	}
+	err := s.conn.WriteControl(
 		websocket.CloseMessage,
 		websocket.FormatCloseMessage(websocket.CloseNormalClosure, "end of message"),
 		time.Now().Add(time.Second),
-	); err != nil {
+	)
+	if err == websocket.ErrCloseSent {
+		return nil
+	}
+	if err != nil {
 		return err
 	}
-	if err := s.conn.Close(); err != nil {
-		return err
-	}
-	return nil
+	return s.conn.Close()
 }
 `
 
@@ -263,17 +267,21 @@ func (c *Client) StreamingResultMethod() goa.Endpoint {
 var StreamingResultWithViewsServerStreamCloseCode = `// Close closes the "StreamingResultWithViewsMethod" endpoint websocket
 // connection after sending a close control message.
 func (s *StreamingResultWithViewsMethodServerStream) Close() error {
-	if err := s.conn.WriteControl(
+	if s.conn == nil {
+		return nil
+	}
+	err := s.conn.WriteControl(
 		websocket.CloseMessage,
 		websocket.FormatCloseMessage(websocket.CloseNormalClosure, "end of message"),
 		time.Now().Add(time.Second),
-	); err != nil {
+	)
+	if err == websocket.ErrCloseSent {
+		return nil
+	}
+	if err != nil {
 		return err
 	}
-	if err := s.conn.Close(); err != nil {
-		return err
-	}
-	return nil
+	return s.conn.Close()
 }
 `
 

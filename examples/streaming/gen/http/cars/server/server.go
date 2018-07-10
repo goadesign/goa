@@ -245,15 +245,19 @@ func (s *listServerStream) SetView(view string) {
 // Close closes the "list" endpoint websocket connection after sending a close
 // control message.
 func (s *listServerStream) Close() error {
-	if err := s.conn.WriteControl(
+	if s.conn == nil {
+		return nil
+	}
+	err := s.conn.WriteControl(
 		websocket.CloseMessage,
 		websocket.FormatCloseMessage(websocket.CloseNormalClosure, "end of message"),
 		time.Now().Add(time.Second),
-	); err != nil {
+	)
+	if err == websocket.ErrCloseSent {
+		return nil
+	}
+	if err != nil {
 		return err
 	}
-	if err := s.conn.Close(); err != nil {
-		return err
-	}
-	return nil
+	return s.conn.Close()
 }
