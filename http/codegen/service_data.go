@@ -2078,8 +2078,6 @@ type {{ .VarName }} struct {
 	w http.ResponseWriter
 	{{ comment "r is the HTTP request." }}
 	r *http.Request
-	{{ comment "isClosed indicates whether the websocket connection has already been closed." }}
-	isClosed bool
 {{- end }}
 	{{ comment "conn is the underlying websocket connection." }}
 	conn *websocket.Conn
@@ -2116,13 +2114,13 @@ func (s *{{ .VarName }}) Send(v {{ .SendRef }}) error {
 		s.Close()
 		return err
 	}
-  {{- if .Endpoint.Method.ViewedResult }}
-  res := {{ .PkgName }}.{{ .Endpoint.Method.ViewedResult.Init.Name }}(v, s.view)
+	{{- if .Endpoint.Method.ViewedResult }}
+	res := {{ .PkgName }}.{{ .Endpoint.Method.ViewedResult.Init.Name }}(v, s.view)
 	{{- else }}
 	res := v
-  {{- end }}
+	{{- end }}
 	body := {{ .Response.ServerBody.Init.Name }}({{ range .Response.ServerBody.Init.ServerArgs }}{{ .Ref }}, {{ end }})
-  return s.conn.WriteJSON(body)
+	return s.conn.WriteJSON(body)
 }
 `
 
@@ -2133,12 +2131,12 @@ func (s *{{ .VarName }}) Send(v {{ .SendRef }}) error {
 func (s *{{ .VarName }}) Recv() ({{ .RecvRef }}, error) {
 	var body {{ .Response.ClientBody.VarName }}
 	err := s.conn.ReadJSON(&body)
-  if websocket.IsCloseError(err, websocket.CloseNormalClosure) {
-    return nil, io.EOF
-  }
-  if err != nil {
-    return nil, err
-  }
+	if websocket.IsCloseError(err, websocket.CloseNormalClosure) {
+		return nil, io.EOF
+	}
+	if err != nil {
+		return nil, err
+	}
 	{{- if and .Response.ClientBody.ValidateRef (not .Endpoint.Method.ViewedResult) }}
 	{{ .Response.ClientBody.ValidateRef }}
 	if err != nil {
@@ -2146,15 +2144,15 @@ func (s *{{ .VarName }}) Recv() ({{ .RecvRef }}, error) {
 	}
 	{{- end }}
 	res := {{ .Response.ResultInit.Name }}({{ range .Response.ResultInit.ClientArgs }}{{ .Ref }},{{ end }})
-  {{- if .Endpoint.Method.ViewedResult }}
+	{{- if .Endpoint.Method.ViewedResult }}
 	vres := {{ if not .Endpoint.Method.ViewedResult.IsCollection }}&{{ end }}{{ .Endpoint.Method.ViewedResult.ViewsPkg }}.{{ .Endpoint.Method.ViewedResult.VarName }}{res, s.view}
-  if err := vres.Validate(); err != nil {
-    return nil, goahttp.ErrValidationError("{{ .Endpoint.ServiceName }}", "{{ .Endpoint.Method.Name }}", err)
-  }
-  return {{ .PkgName }}.{{ .Endpoint.Method.ViewedResult.ResultInit.Name }}(vres), nil
-  {{- else }}
-  return res, nil
-  {{- end }}
+	if err := vres.Validate(); err != nil {
+		return nil, goahttp.ErrValidationError("{{ .Endpoint.ServiceName }}", "{{ .Endpoint.Method.Name }}", err)
+	}
+	return {{ .PkgName }}.{{ .Endpoint.Method.ViewedResult.ResultInit.Name }}(vres), nil
+	{{- else }}
+	return res, nil
+	{{- end }}
 }
 `
 
@@ -2163,21 +2161,21 @@ func (s *{{ .VarName }}) Recv() ({{ .RecvRef }}, error) {
 	// input: StreamData
 	streamCloseT = `{{ printf "Close closes the %q endpoint websocket connection after sending a close control message." .Endpoint.Method.Name | comment }}
 func (s *{{ .VarName }}) Close() error {
-	if s.conn == nil || s.isClosed {
+	if s.conn == nil {
 		return nil
 	}
-	if err := s.conn.WriteControl(
-    websocket.CloseMessage,
-    websocket.FormatCloseMessage(websocket.CloseNormalClosure, "end of message"),
-    time.Now().Add(time.Second),
-  ); err != nil {
-    return err
-  }
-	if err := s.conn.Close(); err != nil {
+	err := s.conn.WriteControl(
+		websocket.CloseMessage,
+		websocket.FormatCloseMessage(websocket.CloseNormalClosure, "end of message"),
+		time.Now().Add(time.Second),
+	)
+	if err == websocket.ErrCloseSent {
+		return nil
+	}
+	if err != nil {
 		return err
 	}
-	s.isClosed = true
-  return nil
+	return s.conn.Close()
 }
 `
 
@@ -2186,7 +2184,7 @@ func (s *{{ .VarName }}) Close() error {
 	// input: StreamData
 	streamSetViewT = `{{ printf "SetView sets the view to render the %s type before sending to the %q endpoint websocket connection." .SendName .Endpoint.Method.Name | comment }}
 func (s *{{ .VarName }}) SetView(view string) {
-  s.view = view
+	s.view = view
 }
 `
 )
