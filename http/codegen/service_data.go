@@ -2078,6 +2078,8 @@ type {{ .VarName }} struct {
 	w http.ResponseWriter
 	{{ comment "r is the HTTP request." }}
 	r *http.Request
+	{{ comment "isClosed indicates whether the websocket connection has already been closed." }}
+	isClosed bool
 {{- end }}
 	{{ comment "conn is the underlying websocket connection." }}
 	conn *websocket.Conn
@@ -2161,6 +2163,9 @@ func (s *{{ .VarName }}) Recv() ({{ .RecvRef }}, error) {
 	// input: StreamData
 	streamCloseT = `{{ printf "Close closes the %q endpoint websocket connection after sending a close control message." .Endpoint.Method.Name | comment }}
 func (s *{{ .VarName }}) Close() error {
+	if s.conn == nil || s.isClosed {
+		return nil
+	}
 	if err := s.conn.WriteControl(
     websocket.CloseMessage,
     websocket.FormatCloseMessage(websocket.CloseNormalClosure, "end of message"),
@@ -2171,6 +2176,7 @@ func (s *{{ .VarName }}) Close() error {
 	if err := s.conn.Close(); err != nil {
 		return err
 	}
+	s.isClosed = true
   return nil
 }
 `

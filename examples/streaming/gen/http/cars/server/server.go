@@ -55,6 +55,8 @@ type listServerStream struct {
 	w http.ResponseWriter
 	// r is the HTTP request.
 	r *http.Request
+	// isClosed indicates whether the websocket connection has already been closed.
+	isClosed bool
 	// conn is the underlying websocket connection.
 	conn *websocket.Conn
 	// view is the view to render carssvc.Car result type before sending to the
@@ -245,6 +247,9 @@ func (s *listServerStream) SetView(view string) {
 // Close closes the "list" endpoint websocket connection after sending a close
 // control message.
 func (s *listServerStream) Close() error {
+	if s.conn == nil || s.isClosed {
+		return nil
+	}
 	if err := s.conn.WriteControl(
 		websocket.CloseMessage,
 		websocket.FormatCloseMessage(websocket.CloseNormalClosure, "end of message"),
@@ -255,5 +260,6 @@ func (s *listServerStream) Close() error {
 	if err := s.conn.Close(); err != nil {
 		return err
 	}
+	s.isClosed = true
 	return nil
 }
