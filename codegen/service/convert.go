@@ -85,19 +85,27 @@ func ConvertFile(root *design.RootExpr, service *design.ServiceExpr) (*codegen.F
 	}
 
 	// Retrieve external packages info
-	ppm := make(map[string]struct{})
+	ppm := make(map[string]string)
 	for _, c := range conversions {
-		pkg := reflect.TypeOf(c.External).PkgPath()
-		ppm[pkg] = struct{}{}
+		pkg := reflect.TypeOf(c.External)
+		p := pkg.PkgPath()
+
+		alias := strings.Split(pkg.String(), ".")[0]
+
+		ppm[p] = alias
 	}
 	for _, c := range creations {
-		pkg := reflect.TypeOf(c.External).PkgPath()
-		ppm[pkg] = struct{}{}
+		pkg := reflect.TypeOf(c.External)
+		p := pkg.PkgPath()
+
+		alias := strings.Split(pkg.String(), ".")[0]
+
+		ppm[p] = alias
 	}
 	pkgs := make([]*codegen.ImportSpec, len(ppm))
 	i := 0
-	for pp := range ppm {
-		pkgs[i] = &codegen.ImportSpec{Path: pp}
+	for pp, alias := range ppm {
+		pkgs[i] = &codegen.ImportSpec{Name: alias, Path: pp}
 		i++
 	}
 
