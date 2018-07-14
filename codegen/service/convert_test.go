@@ -180,7 +180,7 @@ func TestConvertFile(t *testing.T) {
 
 				if c.SectionIndex == 0 {
 					methodSection := sections[1]
-					code = codegen.SectionCodeFromInputAndMethods(t, sections[c.SectionIndex], methodSection)
+					code = codegen.SectionCodeFromImportsAndMethods(t, sections[c.SectionIndex], methodSection)
 				} else {
 					code = codegen.SectionCode(t, sections[c.SectionIndex])
 				}
