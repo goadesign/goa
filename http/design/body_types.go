@@ -22,7 +22,7 @@ func RequestBody(a *EndpointExpr) *design.AttributeExpr {
 		headers   = a.MappedHeaders()
 		params    = a.AllParams()
 		suffix    = "RequestBody"
-		name      = codegen.Goify(a.Name(), true) + suffix
+		name      = codegen.Goify(a.Name(), true) + codegen.Goify(a.Service.Name(), true) + suffix
 		userField string
 		passField string
 	)
