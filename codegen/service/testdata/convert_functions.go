@@ -174,3 +174,23 @@ func marshalObjectFieldToObjectFieldT(v *ObjectField) *testdata.ObjectFieldT {
 	return res
 }
 `
+
+var CreateExternalConvert = `// Service service type conversion functions
+//
+// Command:
+// $ goa
+
+package service
+
+import (
+	external "goa.design/goa/codegen/service/testdata/external"
+)
+
+// CreateFromConvertModel initializes t from the fields of v
+func (t *StringType) CreateFromConvertModel(v *external.ConvertModel) {
+	temp := &StringType{
+		Foo: &v.Foo,
+	}
+	*t = *temp
+}
+`

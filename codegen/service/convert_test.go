@@ -157,6 +157,8 @@ func TestConvertFile(t *testing.T) {
 		{"create-object", testdata.CreateObjectDSL, 1, testdata.CreateObjectCode},
 		{"create-object-required", testdata.CreateObjectRequiredDSL, 1, testdata.CreateObjectRequiredCode},
 		{"create-object-extra", testdata.CreateObjectExtraDSL, 1, testdata.CreateObjectExtraCode},
+		{"create-external-convert", testdata.CreateExternalDSL, 0, testdata.CreateExternalConvert},
+		{"create-alias-convert", testdata.CreateAliasDSL, 0, testdata.CreateAliasConvert},
 	}
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
@@ -173,7 +175,16 @@ func TestConvertFile(t *testing.T) {
 				if len(sections) <= c.SectionIndex {
 					t.Fatalf("got %d sections, expected at least %d", len(sections), c.SectionIndex+1)
 				}
-				code := codegen.SectionCode(t, sections[c.SectionIndex])
+
+				var code string
+
+				if c.SectionIndex == 0 {
+					methodSection := sections[1]
+					code = codegen.SectionCodeNoPackageDef(t, sections[c.SectionIndex], methodSection)
+				} else {
+					code = codegen.SectionCode(t, sections[c.SectionIndex])
+				}
+
 				if code != c.Code {
 					t.Errorf("invalid code, got:\n%s\ngot vs. expected:\n%s", code, codegen.Diff(t, code, c.Code))
 				}
