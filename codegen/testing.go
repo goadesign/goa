@@ -63,7 +63,8 @@ func SectionCode(t *testing.T, section *SectionTemplate) string {
 	return sectionCodeWithPrefix(t, section, "package foo\n")
 }
 
-func SectionCodeNoPackageDef(t *testing.T, importSection *SectionTemplate, methodSection *SectionTemplate) string {
+// SectionCodeFromInputAndMethods generates and formats the code for given import and method definition sections.
+func SectionCodeFromInputAndMethods(t *testing.T, importSection *SectionTemplate, methodSection *SectionTemplate) string {
 	var code bytes.Buffer
 	if err := importSection.Write(&code); err != nil {
 		t.Fatal(err)
