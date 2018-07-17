@@ -28,6 +28,9 @@ var (
 	SimpleMapObj  = mapa(design.String, SimpleObjMap.Type)
 	NestedMapObj  = mapa(design.String, NestedObjMap.Type)
 
+	DefaultPointerObj = pointer(defaulta(object("Int64", design.Int64, "Uint32", design.UInt32, "Float64", design.Float64, "String", design.String, "Bytes", design.Bytes), "Int64", 100, "Uint32", 1, "Float64", 1.0, "String", "foo", "Bytes", []byte{0, 1, 2}))
+	NonRequiredObj    = object("Int64", design.Int64, "Uint32", design.UInt32, "Float64", design.Float64, "String", design.String, "Bytes", design.Bytes)
+
 	ObjWithMetadata = withMetadata(object("a", SimpleMap.Type, "b", design.Int), "a", metadata("struct:field:name", "Apple"))
 
 	recursiveObjMap = mapa(design.String, objRecursive(&design.UserTypeExpr{TypeName: "Recursive", AttributeExpr: object("a", design.String, "b", design.Int)}).Type)
@@ -49,10 +52,12 @@ func TestGoTypeTransform(t *testing.T) {
 		{"simple-unmarshal", SimpleObj, SimpleObj, true, "", objUnmarshalCode},
 		{"required-unmarshal", SimpleObj, RequiredObj, true, "", requiredUnmarshalCode},
 		{"default-unmarshal", DefaultObj, DefaultObj, true, "", defaultUnmarshalCode},
+		{"default-pointer-unmarshal", NonRequiredObj, DefaultPointerObj, true, "", defaultPointerUnmarshalCode},
 
 		{"simple-marshal", SimpleObj, SimpleObj, false, "", objCode},
 		{"required-marshal", RequiredObj, RequiredObj, false, "", requiredCode},
 		{"default-marshal", DefaultObj, DefaultObj, false, "", defaultCode},
+		{"default-pointer-marshal", NonRequiredObj, DefaultPointerObj, false, "", defaultPointerMarshalCode},
 
 		// non match field ignore
 		{"super-unmarshal", SuperObj, SimpleObj, true, "", objUnmarshalCode},
@@ -191,6 +196,37 @@ func metadata(vals ...string) map[string][]string {
 	return m
 }
 
+func pointer(src *design.AttributeExpr, seen ...map[string]struct{}) *design.AttributeExpr {
+	var s map[string]struct{}
+	if len(seen) > 0 {
+		s = seen[0]
+	} else {
+		s = make(map[string]struct{})
+		seen = append(seen, s)
+	}
+	att := design.DupAtt(src)
+	switch actual := att.Type.(type) {
+	case design.Primitive:
+		att.ForcePointer = true
+	case design.UserType:
+		if _, ok := s[actual.ID()]; ok {
+			return att
+		}
+		s[actual.ID()] = struct{}{}
+		pointer(actual.(design.UserType).Attribute(), seen...)
+	case *design.Object:
+		for _, nat := range *actual {
+			nat.Attribute = pointer(nat.Attribute, seen...)
+		}
+	case *design.Array:
+		actual.ElemType = pointer(actual.ElemType, seen...)
+	case *design.Map:
+		actual.KeyType = pointer(actual.KeyType, seen...)
+		actual.ElemType = pointer(actual.ElemType, seen...)
+	}
+	return att
+}
+
 const objUnmarshalCode = `func transform() {
 	target := &TargetType{
 		A: *source.A,
@@ -255,18 +291,6 @@ const defaultCode = `func transform() {
 	}
 	if source.A == nil {
 		target.A = []string{"foo", "bar"}
-	}
-}
-`
-
-const objDefaultPointersCode = `func transform() {
-	target := &TargetType{
-		A: *source.A,
-		B: source.B,
-	}
-	if source.B == nil {
-		tmp := 42
-		target.B = &tmp
 	}
 }
 `
@@ -692,6 +716,64 @@ const objWithMetadataCode = `func transform() {
 			tv := val
 			target.Apple[tk] = tv
 		}
+	}
+}
+`
+
+const defaultPointerUnmarshalCode = `func transform() {
+	target := &TargetType{
+		Int64:   source.Int64,
+		Uint32:  source.Uint32,
+		Float64: source.Float64,
+		String:  source.String,
+		Bytes:   source.Bytes,
+	}
+	if source.Int64 == nil {
+		var tmp int64 = 100
+		target.Int64 = &tmp
+	}
+	if source.Uint32 == nil {
+		var tmp uint32 = 1
+		target.Uint32 = &tmp
+	}
+	if source.Float64 == nil {
+		var tmp float64 = 1
+		target.Float64 = &tmp
+	}
+	if source.String == nil {
+		var tmp string = "foo"
+		target.String = &tmp
+	}
+	if source.Bytes == nil {
+		var tmp []byte = []byte{0x0, 0x1, 0x2}
+		target.Bytes = &tmp
+	}
+}
+`
+
+const defaultPointerMarshalCode = `func transform() {
+	target := &TargetType{
+		Int64:   source.Int64,
+		Uint32:  source.Uint32,
+		Float64: source.Float64,
+		String:  source.String,
+		Bytes:   &source.Bytes,
+	}
+	if source.Int64 == nil {
+		var tmp int64 = 100
+		target.Int64 = &tmp
+	}
+	if source.Uint32 == nil {
+		var tmp uint32 = 1
+		target.Uint32 = &tmp
+	}
+	if source.Float64 == nil {
+		var tmp float64 = 1
+		target.Float64 = &tmp
+	}
+	if source.String == nil {
+		var tmp string = "foo"
+		target.String = &tmp
 	}
 }
 `
