@@ -261,7 +261,7 @@ func transformObject(source, target *design.AttributeExpr, newVar bool, a targs)
 			if b.unmarshal {
 				code += fmt.Sprintf("if %s == nil {\n\t", b.sourceVar)
 				if tgt.IsPrimitivePointer(n, true) {
-					code += fmt.Sprintf("tmp := %#v\n\t%s = &tmp\n", tgtAtt.DefaultValue, b.targetVar)
+					code += fmt.Sprintf("var tmp %s = %#v\n\t%s = &tmp\n", GoNativeTypeName(tgtAtt.Type), tgtAtt.DefaultValue, b.targetVar)
 				} else {
 					code += fmt.Sprintf("%s = %#v\n", b.targetVar, tgtAtt.DefaultValue)
 				}
@@ -269,7 +269,7 @@ func transformObject(source, target *design.AttributeExpr, newVar bool, a targs)
 			} else if src.IsPrimitivePointer(n, true) || !design.IsPrimitive(srcAtt.Type) {
 				code += fmt.Sprintf("if %s == nil {\n\t", b.sourceVar)
 				if tgt.IsPrimitivePointer(n, true) {
-					code += fmt.Sprintf("tmp := %#v\n\t%s = &tmp\n", tgtAtt.DefaultValue, b.targetVar)
+					code += fmt.Sprintf("var tmp %s = %#v\n\t%s = &tmp\n", GoNativeTypeName(tgtAtt.Type), tgtAtt.DefaultValue, b.targetVar)
 				} else {
 					code += fmt.Sprintf("%s = %#v\n", b.targetVar, tgtAtt.DefaultValue)
 				}
