@@ -188,6 +188,31 @@ func (m *MethodExpr) Finalize() {
 	for _, e := range m.Errors {
 		e.Finalize()
 	}
+
+	// Inherit security requirements
+	noreq := false
+	for _, r := range m.Requirements {
+		// Handle special case of no security
+		for _, s := range r.Schemes {
+			if s.Kind == NoKind {
+				noreq = true
+				break
+			}
+		}
+		if noreq {
+			break
+		}
+	}
+	if noreq {
+		m.Requirements = nil
+	} else if len(m.Requirements) == 0 {
+		if len(m.Service.Requirements) > 0 {
+			m.Requirements = copyReqs(m.Service.Requirements)
+		} else {
+			m.Requirements = copyReqs(Root.API.Requirements)
+		}
+	}
+
 }
 
 // IsStreaming determines whether the method streams payload or result.
@@ -198,4 +223,29 @@ func (m *MethodExpr) IsStreaming() bool {
 // IsResultStreaming determines whether the method result is streamed.
 func (m *MethodExpr) IsResultStreaming() bool {
 	return m.Stream == ServerStreamKind || m.Stream == BidirectionalStreamKind
+}
+
+// helper function that duplicates just enough of a security expression so that
+// its scheme names can be overridden without affecting the original.
+func copyReqs(reqs []*SecurityExpr) []*SecurityExpr {
+	reqs2 := make([]*SecurityExpr, len(reqs))
+	for i, req := range reqs {
+		req2 := &SecurityExpr{Scopes: req.Scopes}
+		schs := make([]*SchemeExpr, len(req.Schemes))
+		for j, sch := range req.Schemes {
+			schs[j] = &SchemeExpr{
+				Kind:        sch.Kind,
+				SchemeName:  sch.SchemeName,
+				Description: sch.Description,
+				In:          sch.In,
+				Name:        sch.Name,
+				Scopes:      sch.Scopes,
+				Flows:       sch.Flows,
+				Metadata:    sch.Metadata,
+			}
+		}
+		req2.Schemes = schs
+		reqs2[i] = req2
+	}
+	return reqs2
 }
