@@ -19,8 +19,8 @@ func RequestBody(a *EndpointExpr) *design.AttributeExpr {
 
 	var (
 		payload   = a.MethodExpr.Payload
-		headers   = a.MappedHeaders()
-		params    = a.AllParams()
+		headers   = a.Headers
+		params    = a.Params
 		suffix    = "RequestBody"
 		name      = codegen.Goify(a.Name(), true) + suffix
 		userField string
@@ -43,9 +43,7 @@ func RequestBody(a *EndpointExpr) *design.AttributeExpr {
 		}
 	}
 
-	bodyOnly := len(*design.AsObject(headers.Type)) == 0 &&
-		len(*design.AsObject(params.Type)) == 0 &&
-		a.MapQueryParams == nil
+	bodyOnly := headers.IsEmpty() && params.IsEmpty() && a.MapQueryParams == nil
 
 	// 1. If Payload is not an object then check whether there are params or
 	// headers defined and if so return empty type (payload encoded in
@@ -129,16 +127,12 @@ func buildResponseBody(name string, attr *design.AttributeExpr, resp *HTTPRespon
 		return resp.Body
 	}
 
-	var (
-		headers = resp.MappedHeaders()
-	)
-
 	// 1. If attribute is not an object then check whether there are headers
 	// defined and if so return empty type (attr encoded in response
 	// headers) otherwise return renamed attr type (attr encoded in
 	// response body).
 	if !design.IsObject(attr.Type) {
-		if len(*design.AsObject(resp.Headers().Type)) == 0 {
+		if resp.Headers.IsEmpty() {
 			attr = design.DupAtt(attr)
 			renameType(attr, name, "ResponseBody")
 			setForcePointer(attr)
@@ -149,7 +143,7 @@ func buildResponseBody(name string, attr *design.AttributeExpr, resp *HTTPRespon
 
 	// 2. Remove header attributes
 	body := design.NewMappedAttributeExpr(attr)
-	removeAttributes(body, headers)
+	removeAttributes(body, resp.Headers)
 
 	// 3. Return empty type if no attribute left
 	if len(*design.AsObject(body.Type)) == 0 {
@@ -170,7 +164,7 @@ func buildResponseBody(name string, attr *design.AttributeExpr, resp *HTTPRespon
 	views := make([]*design.ViewExpr, len(rt.Views))
 	for i, v := range rt.Views {
 		mv := design.NewMappedAttributeExpr(v.AttributeExpr)
-		removeAttributes(mv, headers)
+		removeAttributes(mv, resp.Headers)
 		nv := &design.ViewExpr{
 			AttributeExpr: mv.Attribute(),
 			Name:          v.Name,

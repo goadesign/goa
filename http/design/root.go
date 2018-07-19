@@ -26,26 +26,6 @@ var (
 )
 
 type (
-	// ParamHolder is the interface implemented by the design data structures
-	// that represent HTTP constructs with path and query string parameters.
-	ParamHolder interface {
-		eval.Expression
-		// Params returns the attribute holding the parameters. It takes
-		// care of initializing the underlying struct field so that it
-		// never returns nil.
-		Params() *design.AttributeExpr
-	}
-
-	// HeaderHolder is the interface implemented by the design data
-	// structures that represent HTTP constructs with HTTP headers.
-	HeaderHolder interface {
-		eval.Expression
-		// Headers returns the attribute holding the headers. It takes
-		// care of initializing the underlying struct field so that it
-		// never returns nil.
-		Headers() *design.AttributeExpr
-	}
-
 	// RootExpr is the data structure built by the top level HTTP DSL.
 	RootExpr struct {
 		// Design is the transport agnostic root expression.
@@ -53,6 +33,12 @@ type (
 		// Path is the common request path prefix to all the service
 		// HTTP endpoints.
 		Path string
+		// Params defines the HTTP request path and query parameters
+		// common to all the API endpoints.
+		Params *design.MappedAttributeExpr
+		// Headers defines the HTTP request headers common to to all the
+		// API endpoints.
+		Headers *design.MappedAttributeExpr
 		// Consumes lists the mime types supported by the API
 		// controllers.
 		Consumes []string
@@ -66,16 +52,6 @@ type (
 		// Metadata is a set of key/value pairs with semantic that is
 		// specific to each generator.
 		Metadata design.MetadataExpr
-		// params defines common request parameters to all the service
-		// HTTP endpoints. The keys may use the "attribute:param" syntax
-		// where "attribute" is the name of the attribute and "param"
-		// the name of the HTTP parameter.
-		params *design.AttributeExpr
-		// headers defines common headers to all the service HTTP
-		// endpoints. The keys may use the "attribute:header" syntax
-		// where "attribute" is the name of the attribute and "header"
-		// the name of the HTTP header.
-		headers *design.AttributeExpr
 	}
 )
 
@@ -124,32 +100,6 @@ func (r *RootExpr) ServiceFor(s *design.ServiceExpr) *ServiceExpr {
 	}
 	r.HTTPServices = append(r.HTTPServices, res)
 	return res
-}
-
-// Headers initializes and returns the attribute holding the API headers.
-func (r *RootExpr) Headers() *design.AttributeExpr {
-	if r.headers == nil {
-		r.headers = &design.AttributeExpr{Type: &design.Object{}}
-	}
-	return r.headers
-}
-
-// MappedHeaders computes the mapped attribute expression from Headers.
-func (r *RootExpr) MappedHeaders() *design.MappedAttributeExpr {
-	return design.NewMappedAttributeExpr(r.headers)
-}
-
-// Params initializes and returns the attribute holding the API parameters.
-func (r *RootExpr) Params() *design.AttributeExpr {
-	if r.params == nil {
-		r.params = &design.AttributeExpr{Type: &design.Object{}}
-	}
-	return r.params
-}
-
-// MappedParams computes the mapped attribute expression from Params.
-func (r *RootExpr) MappedParams() *design.MappedAttributeExpr {
-	return design.NewMappedAttributeExpr(r.params)
 }
 
 // EvalName is the expression name used by the evaluation engine to display

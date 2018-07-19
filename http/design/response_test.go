@@ -20,7 +20,7 @@ func TestResponseValidation(t *testing.T) {
 		{"object result", testdata.ObjectResultResponseWithHeadersDSL, ""},
 		{"array result", testdata.ArrayResultResponseWithHeadersDSL, ""},
 		{"map result", testdata.MapResultResponseWithHeadersDSL, ""},
-		{"invalid", testdata.EmptyResultResponseWithHeadersDSL, `HTTP response of service "EmptyResultResponseWithHeaders" HTTP endpoint "Method": response define headers but result is empty`},
+		{"invalid", testdata.EmptyResultResponseWithHeadersDSL, `HTTP response of service "EmptyResultResponseWithHeaders" HTTP endpoint "Method": response defines headers but result is empty`},
 	}
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {

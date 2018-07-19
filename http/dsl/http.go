@@ -313,8 +313,8 @@ func route(method, path string) *httpdesign.RouteExpr {
 //     })
 //
 func Headers(args interface{}) {
-	h, ok := eval.Current().(httpdesign.HeaderHolder)
-	if !ok {
+	h := headers(eval.Current())
+	if h == nil {
 		eval.IncompatibleDSL()
 		return
 	}
@@ -331,7 +331,7 @@ func Headers(args interface{}) {
 	if o == nil {
 		eval.ReportError("type must be an object but got %s", reflect.TypeOf(args).Name())
 	}
-	h.Headers().Merge(&design.AttributeExpr{Type: o})
+	h.Merge(design.NewMappedAttributeExpr(&design.AttributeExpr{Type: o}))
 }
 
 // Header describes a single HTTP header. The properties (description, type,
@@ -367,15 +367,16 @@ func Headers(args interface{}) {
 //    })
 //
 func Header(name string, args ...interface{}) {
-	h, ok := eval.Current().(httpdesign.HeaderHolder)
-	if !ok {
+	h := headers(eval.Current())
+	if h == nil {
 		eval.IncompatibleDSL()
 		return
 	}
 	if name == "" {
 		eval.ReportError("header name cannot be empty")
 	}
-	eval.Execute(func() { dsl.Attribute(name, args...) }, h.Headers())
+	eval.Execute(func() { dsl.Attribute(name, args...) }, h.AttributeExpr)
+	h.Remap()
 }
 
 // Params groups a set of Param expressions. It makes it possible to list
@@ -403,13 +404,13 @@ func Header(name string, args ...interface{}) {
 //     })
 //
 func Params(args interface{}) {
-	h, ok := eval.Current().(httpdesign.ParamHolder)
-	if !ok {
+	p := params(eval.Current())
+	if p == nil {
 		eval.IncompatibleDSL()
 		return
 	}
 	if fn, ok := args.(func()); ok {
-		eval.Execute(fn, h)
+		eval.Execute(fn, p)
 		return
 	}
 	t, ok := args.(design.UserType)
@@ -421,7 +422,7 @@ func Params(args interface{}) {
 	if o == nil {
 		eval.ReportError("type must be an object but got %s", reflect.TypeOf(args).Name())
 	}
-	h.Params().Merge(&design.AttributeExpr{Type: o})
+	p.Merge(design.NewMappedAttributeExpr(&design.AttributeExpr{Type: o}))
 }
 
 // Param describes a single HTTP request path or query string parameter.
@@ -472,15 +473,16 @@ func Params(args interface{}) {
 //    })
 //
 func Param(name string, args ...interface{}) {
-	h, ok := eval.Current().(httpdesign.ParamHolder)
-	if !ok {
+	p := params(eval.Current())
+	if p == nil {
 		eval.IncompatibleDSL()
 		return
 	}
 	if name == "" {
 		eval.ReportError("parameter name cannot be empty")
 	}
-	eval.Execute(func() { dsl.Attribute(name, args...) }, h.Params())
+	eval.Execute(func() { dsl.Attribute(name, args...) }, p.AttributeExpr)
+	p.Remap()
 }
 
 // MapParams describes the query string parameters in a HTTP request.
@@ -720,4 +722,58 @@ func CanonicalMethod(name string) {
 		return
 	}
 	r.CanonicalEndpointName = name
+}
+
+// headers returns the mapped attribute containing the headers for the given
+// expression if it's either the root, a service or an endpoint - nil otherwise.
+func headers(exp eval.Expression) *design.MappedAttributeExpr {
+	switch e := exp.(type) {
+	case *httpdesign.RootExpr:
+		if e.Headers == nil {
+			e.Headers = design.NewEmptyMappedAttributeExpr()
+		}
+		return e.Headers
+	case *httpdesign.ServiceExpr:
+		if e.Headers == nil {
+			e.Headers = design.NewEmptyMappedAttributeExpr()
+		}
+		return e.Headers
+	case *httpdesign.EndpointExpr:
+		if e.Headers == nil {
+			e.Headers = design.NewEmptyMappedAttributeExpr()
+		}
+		return e.Headers
+	case *httpdesign.HTTPResponseExpr:
+		if e.Headers == nil {
+			e.Headers = design.NewEmptyMappedAttributeExpr()
+		}
+		return e.Headers
+	default:
+		return nil
+	}
+}
+
+// params returns the mapped attribute containing the path and query params for
+// the given expression if it's either the root, a service or an endpoint - nil
+// otherwise.
+func params(exp eval.Expression) *design.MappedAttributeExpr {
+	switch e := exp.(type) {
+	case *httpdesign.RootExpr:
+		if e.Params == nil {
+			e.Params = design.NewEmptyMappedAttributeExpr()
+		}
+		return e.Params
+	case *httpdesign.ServiceExpr:
+		if e.Params == nil {
+			e.Params = design.NewEmptyMappedAttributeExpr()
+		}
+		return e.Params
+	case *httpdesign.EndpointExpr:
+		if e.Params == nil {
+			e.Params = design.NewEmptyMappedAttributeExpr()
+		}
+		return e.Params
+	default:
+		return nil
+	}
 }

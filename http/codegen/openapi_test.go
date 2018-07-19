@@ -49,6 +49,7 @@ func newService(endpoints ...*httpdesign.EndpointExpr) *httpdesign.ServiceExpr {
 	for _, ep := range endpoints {
 		ep.MethodExpr.Service = s
 		ep.Service = res
+		ep.Prepare()
 		ep.Finalize()
 		s.Methods = append(s.Methods, ep.MethodExpr)
 	}
@@ -71,6 +72,8 @@ func newSimpleEndpoint() *httpdesign.EndpointExpr {
 	ep := &httpdesign.EndpointExpr{
 		MethodExpr: method,
 		Routes:     []*httpdesign.RouteExpr{route},
+		Headers:    design.NewEmptyMappedAttributeExpr(),
+		Params:     design.NewEmptyMappedAttributeExpr(),
 	}
 	route.Endpoint = ep
 	return ep

@@ -24,6 +24,12 @@ type (
 		ServiceExpr *design.ServiceExpr
 		// Common URL prefixes to all service endpoint HTTP requests
 		Paths []string
+		// Params defines the HTTP request path and query parameters
+		// common to all the service endpoints.
+		Params *design.MappedAttributeExpr
+		// Headers defines the HTTP request headers common to all the
+		// service endpoints.
+		Headers *design.MappedAttributeExpr
 		// Name of parent service if any
 		ParentName string
 		// Endpoint with canonical service path
@@ -37,16 +43,6 @@ type (
 		// Metadata is a set of key/value pairs with semantic that is
 		// specific to each generator.
 		Metadata design.MetadataExpr
-		// params defines common request parameters to all the service
-		// HTTP endpoints. The keys may use the "attribute:param" syntax
-		// where "attribute" is the name of the attribute and "param"
-		// the name of the HTTP parameter.
-		params *design.AttributeExpr
-		// headers defines common headers to all the service HTTP
-		// endpoints. The keys may use the "attribute:header" syntax
-		// where "attribute" is the name of the attribute and "header"
-		// the name of the HTTP header.
-		headers *design.AttributeExpr
 	}
 )
 
@@ -192,32 +188,6 @@ func (svc *ServiceExpr) HTTPError(name string) *ErrorExpr {
 	return nil
 }
 
-// Headers initializes and returns the attribute holding the API headers.
-func (svc *ServiceExpr) Headers() *design.AttributeExpr {
-	if svc.headers == nil {
-		svc.headers = &design.AttributeExpr{Type: &design.Object{}}
-	}
-	return svc.headers
-}
-
-// MappedHeaders computes the mapped attribute expression from Headers.
-func (svc *ServiceExpr) MappedHeaders() *design.MappedAttributeExpr {
-	return design.NewMappedAttributeExpr(svc.headers)
-}
-
-// Params initializes and returns the attribute holding the API parameters.
-func (svc *ServiceExpr) Params() *design.AttributeExpr {
-	if svc.params == nil {
-		svc.params = &design.AttributeExpr{Type: &design.Object{}}
-	}
-	return svc.params
-}
-
-// MappedParams computes the mapped attribute expression from Params.
-func (svc *ServiceExpr) MappedParams() *design.MappedAttributeExpr {
-	return design.NewMappedAttributeExpr(svc.params)
-}
-
 // EvalName returns the generic definition name used in error messages.
 func (svc *ServiceExpr) EvalName() string {
 	if svc.Name() == "" {
@@ -226,14 +196,21 @@ func (svc *ServiceExpr) EvalName() string {
 	return fmt.Sprintf("service %#v", svc.Name())
 }
 
+// Prepare initializes the error responses.
+func (svc *ServiceExpr) Prepare() {
+	for _, er := range svc.HTTPErrors {
+		er.Response.Prepare()
+	}
+}
+
 // Validate makes sure the service is valid.
 func (svc *ServiceExpr) Validate() error {
 	verr := new(eval.ValidationErrors)
-	if svc.params != nil {
-		verr.Merge(svc.params.Validate("parameters", svc))
+	if svc.Params != nil {
+		verr.Merge(svc.Params.Validate("parameters", svc))
 	}
-	if svc.headers != nil {
-		verr.Merge(svc.headers.Validate("headers", svc))
+	if svc.Headers != nil {
+		verr.Merge(svc.Headers.Validate("headers", svc))
 	}
 	if n := svc.ParentName; n != "" {
 		if p := Root.Service(n); p == nil {

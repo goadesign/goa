@@ -40,6 +40,9 @@ func RunDSL() error {
 		return Context.Errors
 	}
 	for _, root := range roots {
+		root.WalkSets(prepareSet)
+	}
+	for _, root := range roots {
 		root.WalkSets(validateSet)
 	}
 	if Context.Errors != nil {
@@ -70,6 +73,20 @@ func runSet(set ExpressionSet) error {
 		}
 		if recursed > 100 {
 			return fmt.Errorf("too many generated expressions, infinite loop?")
+		}
+	}
+	return nil
+}
+
+// prepareSet runs the pre validation steps on all the set expressions that
+// define one.
+func prepareSet(set ExpressionSet) error {
+	for _, def := range set {
+		if def == nil {
+			continue
+		}
+		if p, ok := def.(Preparer); ok {
+			p.Prepare()
 		}
 	}
 	return nil

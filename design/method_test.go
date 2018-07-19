@@ -12,6 +12,11 @@ func TestMethodExprValidate(t *testing.T) {
 		identifier = "result"
 	)
 	var (
+		attributeTypeEmpty = func() *AttributeExpr {
+			return &AttributeExpr{
+				Type: Empty,
+			}
+		}
 		attributeTypeNil = func() *AttributeExpr {
 			return &AttributeExpr{
 				Type: nil,
@@ -76,17 +81,23 @@ func TestMethodExprValidate(t *testing.T) {
 		expected *eval.ValidationErrors
 	}{
 		"no error": {
+			payload:  attributeTypeEmpty(),
+			result:   attributeTypeEmpty(),
 			expected: &eval.ValidationErrors{},
 		},
 		"error only in payload": {
 			payload:  attributeTypeNil(),
+			result:   attributeTypeEmpty(),
 			expected: &eval.ValidationErrors{Errors: []error{errAttributeTypeNil}},
 		},
 		"error only in result": {
+			payload:  attributeTypeEmpty(),
 			result:   attributeTypeNil(),
 			expected: &eval.ValidationErrors{Errors: []error{errAttributeTypeNil}},
 		},
 		"errors only in errors": {
+			payload: attributeTypeEmpty(),
+			result:  attributeTypeEmpty(),
 			errors: []*ErrorExpr{
 				{
 					AttributeExpr: errorDuplicatedMetadata(),

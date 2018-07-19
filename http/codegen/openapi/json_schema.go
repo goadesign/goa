@@ -167,19 +167,9 @@ func GenerateServiceDefinition(api *design.APIExpr, res *httpdesign.ServiceExpr)
 	Definitions[res.Name()] = s
 	for _, a := range res.HTTPEndpoints {
 		var requestSchema *Schema
-		if a.MethodExpr.Payload != nil {
+		if a.MethodExpr.Payload.Type != design.Empty {
 			requestSchema = AttributeTypeSchema(api, a.MethodExpr.Payload)
 			requestSchema.Description = a.Name() + " payload"
-		}
-		if a.Params() != nil {
-			params := a.MappedParams()
-			// We don't want to keep the path params, these are
-			// defined inline in the href
-			for _, r := range a.Routes {
-				for _, p := range r.Params() {
-					design.AsObject(params.Type).Delete(p)
-				}
-			}
 		}
 		var targetSchema *Schema
 		var identifier string
