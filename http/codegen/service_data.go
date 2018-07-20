@@ -615,8 +615,7 @@ func (d ServicesData) analyze(hs *httpdesign.ServiceExpr) *ServiceData {
 				)
 				{
 					initArgs := make([]*InitArgData, len(params))
-					pathParams := a.PathParams()
-					pathParamsObj := design.AsObject(pathParams.Type)
+					pathParamsObj := design.AsObject(a.PathParams().Type)
 					suffix := ""
 					if i > 0 {
 						suffix = strconv.Itoa(i + 1)
@@ -626,7 +625,7 @@ func (d ServicesData) analyze(hs *httpdesign.ServiceExpr) *ServiceData {
 					for j, arg := range params {
 						att := pathParamsObj.Attribute(arg)
 						name := svc.Scope.Unique(codegen.Goify(arg, false))
-						pointer := pathParams.IsPrimitivePointer(arg, false)
+						pointer := a.Params.IsPrimitivePointer(arg, false)
 						var vcode string
 						if att.Validation != nil {
 							vcode = codegen.RecursiveValidationCode(att, true, false, false, name)
@@ -898,7 +897,7 @@ func buildPayloadData(e *httpdesign.EndpointExpr, sd *ServiceData) *PayloadData 
 			clientBodyData = buildBodyType(sd, e, e.Body, payload, true, false, false, svc.PkgName)
 			paramsData     = extractPathParams(e.PathParams(), payload, svc.Scope)
 			queryData      = extractQueryParams(e.QueryParams(), payload, svc.Scope)
-			headersData    = extractHeaders(e.MappedHeaders(), payload, true, svc.Scope)
+			headersData    = extractHeaders(e.Headers, payload, true, svc.Scope)
 
 			mustValidate bool
 		)
@@ -1140,7 +1139,7 @@ func buildPayloadData(e *httpdesign.EndpointExpr, sd *ServiceData) *PayloadData 
 				sd.ClientTransformHelpers = codegen.AppendHelpers(sd.ClientTransformHelpers, helpers)
 			}
 		} else if design.IsArray(payload.Type) || design.IsMap(payload.Type) {
-			if params := design.AsObject(e.QueryParams().Type); len(*params) > 0 {
+			if params := design.AsObject(e.Params.Type); len(*params) > 0 {
 				var helpers []*codegen.TransformFunctionData
 				serverCode, helpers, err = codegen.GoTypeTransform((*params)[0].Attribute.Type, payload.Type,
 					codegen.Goify((*params)[0].Name, false), "v", "", svc.PkgName, true, svc.Scope)
@@ -1183,11 +1182,9 @@ func buildPayloadData(e *httpdesign.EndpointExpr, sd *ServiceData) *PayloadData 
 		ref = svc.Scope.GoFullTypeRef(payload, svc.PkgName)
 	}
 	if init == nil {
-		if o := design.AsObject(e.PathParams().Type); o != nil && len(*o) > 0 {
+		if o := design.AsObject(e.Params.Type); o != nil && len(*o) > 0 {
 			returnValue = codegen.Goify((*o)[0].Name, false)
-		} else if o := design.AsObject(e.QueryParams().Type); o != nil && len(*o) > 0 {
-			returnValue = codegen.Goify((*o)[0].Name, false)
-		} else if o := design.AsObject(e.MappedHeaders().Type); o != nil && len(*o) > 0 {
+		} else if o := design.AsObject(e.Headers.Type); o != nil && len(*o) > 0 {
 			returnValue = codegen.Goify((*o)[0].Name, false)
 		} else if e.MapQueryParams != nil && *e.MapQueryParams == "" {
 			returnValue = mapQueryParam.Name
@@ -1257,7 +1254,7 @@ func buildResultData(e *httpdesign.EndpointExpr, sd *ServiceData) *ResultData {
 				if needInit(result.Type) {
 					init = buildResponseResultInit(v, e, sd)
 				}
-				headersData = extractHeaders(v.MappedHeaders(), result, false, svc.Scope)
+				headersData = extractHeaders(v.Headers, result, false, svc.Scope)
 				serverBodyData = buildBodyType(sd, e, v.Body, result, false, true, viewed, pkg)
 				clientBodyData = buildBodyType(sd, e, v.Body, result, false, false, viewed, pkg)
 				if clientBodyData != nil {
@@ -1377,7 +1374,7 @@ func buildResponseResultInit(resp *httpdesign.HTTPResponseExpr, e *httpdesign.En
 	if err != nil {
 		fmt.Println(err.Error()) // TBD validate DSL so errors are not possible
 	}
-	for _, h := range extractHeaders(resp.MappedHeaders(), result, false, svc.Scope) {
+	for _, h := range extractHeaders(resp.Headers, result, false, svc.Scope) {
 		clientArgs = append(clientArgs, &InitArgData{
 			Name:      h.VarName,
 			Ref:       h.VarName,
@@ -1433,7 +1430,7 @@ func buildErrorsData(e *httpdesign.EndpointExpr, sd *ServiceData) []*ErrorGroupD
 					}
 					args = []*InitArgData{{Name: "body", Ref: ref, TypeRef: svc.Scope.GoTypeRef(&design.AttributeExpr{Type: body})}}
 				}
-				for _, h := range extractHeaders(v.Response.MappedHeaders(), v.ErrorExpr.AttributeExpr, false, svc.Scope) {
+				for _, h := range extractHeaders(v.Response.Headers, v.ErrorExpr.AttributeExpr, false, svc.Scope) {
 					args = append(args, &InitArgData{
 						Name:      h.VarName,
 						Ref:       h.VarName,
@@ -1516,7 +1513,7 @@ func buildErrorsData(e *httpdesign.EndpointExpr, sd *ServiceData) []*ErrorGroupD
 				}
 			}
 
-			headers := extractHeaders(v.Response.MappedHeaders(),
+			headers := extractHeaders(v.Response.Headers,
 				v.ErrorExpr.AttributeExpr, false, svc.Scope)
 			responseData = &ResponseData{
 				StatusCode:  statusCodeToHTTPConst(v.Response.StatusCode),

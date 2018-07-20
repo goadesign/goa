@@ -83,6 +83,8 @@ type (
 		StatusCode int
 		// Response description
 		Description string
+		// Headers describe the HTTP response headers.
+		Headers *design.MappedAttributeExpr
 		// Response body if any
 		Body *design.AttributeExpr
 		// Response Content-Type header value
@@ -95,23 +97,8 @@ type (
 		Parent eval.Expression
 		// Metadata is a list of key/value pairs
 		Metadata design.MetadataExpr
-		// Response header attribute, access with Headers method
-		headers *design.AttributeExpr
 	}
 )
-
-// Headers returns the raw response headers attribute.
-func (r *HTTPResponseExpr) Headers() *design.AttributeExpr {
-	if r.headers == nil {
-		r.headers = &design.AttributeExpr{Type: &design.Object{}}
-	}
-	return r.headers
-}
-
-// MappedHeaders returns the computed response headers attribute map.
-func (r *HTTPResponseExpr) MappedHeaders() *design.MappedAttributeExpr {
-	return design.NewMappedAttributeExpr(r.headers)
-}
 
 // EvalName returns the generic definition name used in error messages.
 func (r *HTTPResponseExpr) EvalName() string {
@@ -122,72 +109,80 @@ func (r *HTTPResponseExpr) EvalName() string {
 	return "HTTP response" + suffix
 }
 
+// Prepare makes sure the response is initialized even if not done explicitly
+// by design.
+func (r *HTTPResponseExpr) Prepare() {
+	if r.Headers == nil {
+		r.Headers = design.NewEmptyMappedAttributeExpr()
+	}
+}
+
 // Validate checks that the response definition is consistent: its status is set
 // and the result type definition if any is valid.
 func (r *HTTPResponseExpr) Validate(e *EndpointExpr) *eval.ValidationErrors {
 	verr := new(eval.ValidationErrors)
-	if e.MethodExpr.Result == nil {
-		if r.headers != nil {
-			if len(*design.AsObject(r.headers.Type)) > 0 {
-				verr.Add(r, "response define headers but result is empty")
-			}
-		}
-	} else {
-		rt, isrt := e.MethodExpr.Result.Type.(*design.ResultTypeExpr)
-		var inview string
-		if isrt {
-			inview = " all views in"
-		}
-		hasAttribute := func(name string) bool {
-			if !design.IsObject(e.MethodExpr.Result.Type) {
-				return false
-			}
-			if !isrt {
-				return e.MethodExpr.Result.Find(name) != nil
-			}
-			if v, ok := e.MethodExpr.Result.Metadata["view"]; ok {
-				return rt.ViewHasAttribute(v[0], name)
-			}
-			for _, v := range rt.Views {
-				if !rt.ViewHasAttribute(v.Name, name) {
-					return false
-				}
-			}
-			return true
-		}
-		if r.headers != nil {
-			verr.Merge(r.headers.Validate("HTTP response headers", r))
-			matt := design.NewMappedAttributeExpr(r.headers)
-			mobj := design.AsObject(matt.Type)
-			if e.MethodExpr.Result.Type == design.Empty {
-				verr.Add(r, "response defines headers but result is empty")
-			} else {
-				for _, h := range *mobj {
-					if !hasAttribute(h.Name) {
-						verr.Add(r, "header %q has no equivalent attribute in%s result type, use notation 'attribute_name:header_name' to identify corresponding result type attribute.", h.Name, inview)
-					}
-				}
-			}
-		}
-		if r.Body != nil {
-			verr.Merge(r.Body.Validate("HTTP response body", r))
-			if att, ok := r.Body.Metadata["origin:attribute"]; ok {
-				if !hasAttribute(att[0]) {
-					verr.Add(r, "body %q has no equivalent attribute in%s result type", att[0], inview)
-				}
-			} else if bobj := design.AsObject(r.Body.Type); bobj != nil {
-				for _, n := range *bobj {
-					if !hasAttribute(n.Name) {
-						verr.Add(r, "body %q has no equivalent attribute in%s result type", n.Name, inview)
-					}
-				}
-			}
-		}
-	}
+
 	if r.StatusCode == 0 {
 		verr.Add(r, "HTTP response status not defined")
 	} else if !bodyAllowedForStatus(r.StatusCode) && r.bodyExists() && !e.MethodExpr.IsStreaming() {
 		verr.Add(r, "Response body defined for status code %d which does not allow response body.", r.StatusCode)
+	}
+
+	if e.MethodExpr.Result.Type == design.Empty {
+		if !r.Headers.IsEmpty() {
+			verr.Add(r, "response defines headers but result is empty")
+		}
+		return verr
+	}
+
+	rt, isrt := e.MethodExpr.Result.Type.(*design.ResultTypeExpr)
+	var inview string
+	if isrt {
+		inview = " all views in"
+	}
+	hasAttribute := func(name string) bool {
+		if !design.IsObject(e.MethodExpr.Result.Type) {
+			return false
+		}
+		if !isrt {
+			return e.MethodExpr.Result.Find(name) != nil
+		}
+		if v, ok := e.MethodExpr.Result.Metadata["view"]; ok {
+			return rt.ViewHasAttribute(v[0], name)
+		}
+		for _, v := range rt.Views {
+			if !rt.ViewHasAttribute(v.Name, name) {
+				return false
+			}
+		}
+		return true
+	}
+	if !r.Headers.IsEmpty() {
+		verr.Merge(r.Headers.Validate("HTTP response headers", r))
+		if e.MethodExpr.Result.Type == design.Empty {
+			verr.Add(r, "response defines headers but result is empty")
+		} else {
+			mobj := design.AsObject(r.Headers.Type)
+			for _, h := range *mobj {
+				if !hasAttribute(h.Name) {
+					verr.Add(r, "header %q has no equivalent attribute in%s result type, use notation 'attribute_name:header_name' to identify corresponding result type attribute.", h.Name, inview)
+				}
+			}
+		}
+	}
+	if r.Body != nil {
+		verr.Merge(r.Body.Validate("HTTP response body", r))
+		if att, ok := r.Body.Metadata["origin:attribute"]; ok {
+			if !hasAttribute(att[0]) {
+				verr.Add(r, "body %q has no equivalent attribute in%s result type", att[0], inview)
+			}
+		} else if bobj := design.AsObject(r.Body.Type); bobj != nil {
+			for _, n := range *bobj {
+				if !hasAttribute(n.Name) {
+					verr.Add(r, "body %q has no equivalent attribute in%s result type", n.Name, inview)
+				}
+			}
+		}
 	}
 	return verr
 }
@@ -239,9 +234,7 @@ func (r *HTTPResponseExpr) Dup() *HTTPResponseExpr {
 	if r.Body != nil {
 		res.Body = design.DupAtt(r.Body)
 	}
-	if r.headers != nil {
-		res.headers = design.DupAtt(r.headers)
-	}
+	res.Headers = design.DupMappedAtt(r.Headers)
 	return &res
 }
 

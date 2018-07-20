@@ -31,7 +31,7 @@ func NewV2(root *httpdesign.RootExpr) (*V2, error) {
 	if hasAbsoluteRoutes(root) {
 		basePath = ""
 	}
-	params, err := paramsFromExpr(root.MappedParams(), basePath)
+	params, err := paramsFromExpr(root.Params, basePath)
 	if err != nil {
 		return nil, err
 	}
@@ -361,8 +361,8 @@ func paramsFromExpr(params *design.MappedAttributeExpr, path string) ([]*Paramet
 func paramsFromHeaders(endpoint *httpdesign.EndpointExpr) []*Parameter {
 	params := []*Parameter{}
 	var (
-		rma = endpoint.Service.MappedParams()
-		ma  = endpoint.MappedHeaders()
+		rma = endpoint.Service.Params
+		ma  = endpoint.Headers
 
 		merged *design.MappedAttributeExpr
 	)
@@ -442,7 +442,7 @@ func responseSpecFromExpr(s *V2, root *httpdesign.RootExpr, r *httpdesign.HTTPRe
 	} else if r.Body.Type != design.Empty {
 		schema = AttributeTypeSchema(root.Design.API, r.Body)
 	}
-	headers, err := headersFromExpr(r.MappedHeaders())
+	headers, err := headersFromExpr(r.Headers)
 	if err != nil {
 		return nil, err
 	}
@@ -553,11 +553,10 @@ func buildPathFromExpr(s *V2, root *httpdesign.RootExpr, route *httpdesign.Route
 		tagNames = []string{route.Endpoint.Service.Name()}
 	}
 	for _, key := range route.FullPaths() {
-		params, err := paramsFromExpr(endpoint.AllParams(), key)
+		params, err := paramsFromExpr(endpoint.Params, key)
 		if err != nil {
 			return err
 		}
-
 		params = append(params, paramsFromHeaders(endpoint)...)
 
 		responses := make(map[string]*Response, len(endpoint.Responses))

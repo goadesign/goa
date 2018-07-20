@@ -78,10 +78,21 @@ func (m *MethodExpr) EvalName() string {
 	return prefix + suffix
 }
 
+// Prepare makes sure the payload and result types are initialized (to the Empty
+// type if nil).
+func (m *MethodExpr) Prepare() {
+	if m.Payload == nil {
+		m.Payload = &AttributeExpr{Type: Empty}
+	}
+	if m.Result == nil {
+		m.Result = &AttributeExpr{Type: Empty}
+	}
+}
+
 // Validate validates the method payloads, results, and errors (if any).
 func (m *MethodExpr) Validate() error {
 	verr := new(eval.ValidationErrors)
-	if m.Payload != nil {
+	if m.Payload.Type != Empty {
 		verr.Merge(m.Payload.Validate("payload", m))
 		// validate security scheme requirements
 		for _, r := range m.Requirements {
@@ -127,7 +138,7 @@ func (m *MethodExpr) Validate() error {
 			}
 		}
 	}
-	if m.Result != nil {
+	if m.Result.Type != Empty {
 		verr.Merge(m.Result.Validate("result", m))
 	}
 	for _, e := range m.Errors {

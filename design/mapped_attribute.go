@@ -1,53 +1,46 @@
 package design
 
-import "strings"
+import (
+	"strings"
+)
 
 // MappedAttributeExpr is an attribute expression of type object that map the
-// object keys to names used in transport specific elements (e.g. HTTP header
-// names).
+// object keys to external names (e.g. HTTP header names).
 type MappedAttributeExpr struct {
 	*AttributeExpr
 	nameMap    map[string]string
 	reverseMap map[string]string
 }
 
+// NewEmptyMappedAttributeExpr creates an empty mapped attribute expression.
+func NewEmptyMappedAttributeExpr() *MappedAttributeExpr {
+	return NewMappedAttributeExpr(&AttributeExpr{Type: &Object{}})
+}
+
 // NewMappedAttributeExpr instantiates a mapped attribute expression for the
 // given attribute. The type of att must be Object.
 func NewMappedAttributeExpr(att *AttributeExpr) *MappedAttributeExpr {
 	if att == nil {
-		return NewMappedAttributeExpr(&AttributeExpr{Type: &Object{}})
+		return NewEmptyMappedAttributeExpr()
 	}
 	if !IsObject(att.Type) {
 		panic("cannot create a mapped attribute with a non object attribute") // bug
 	}
 	var (
-		o          = AsObject(att.Type)
-		n          = &Object{}
 		nameMap    = make(map[string]string)
 		reverseMap = make(map[string]string)
 		validation *ValidationExpr
 	)
 	if att.Validation != nil {
 		validation = att.Validation.Dup()
-	}
-	for _, nat := range *o {
-		elems := strings.Split(nat.Name, ":")
-		n.Set(elems[0], DupAtt(nat.Attribute))
-		if len(elems) > 1 {
-			nameMap[elems[0]] = elems[1]
-			reverseMap[elems[1]] = elems[0]
+	} else if ut, ok := att.Type.(UserType); ok {
+		if val := ut.Attribute().Validation; val != nil {
+			validation = val.Dup()
 		}
 	}
-	if validation == nil {
-		if ut, ok := att.Type.(UserType); ok {
-			if val := ut.Attribute().Validation; val != nil {
-				validation = val.Dup()
-			}
-		}
-	}
-	return &MappedAttributeExpr{
+	ma := &MappedAttributeExpr{
 		AttributeExpr: &AttributeExpr{
-			Type:         n,
+			Type:         Dup(att.Type),
 			References:   att.References,
 			Bases:        att.Bases,
 			Description:  att.Description,
@@ -60,6 +53,27 @@ func NewMappedAttributeExpr(att *AttributeExpr) *MappedAttributeExpr {
 		nameMap:    nameMap,
 		reverseMap: reverseMap,
 	}
+	ma.Remap()
+	return ma
+}
+
+// Remap recomputes the name mappings from the inner attribute. Use this if
+// the underlying attribute is modified after the mapped attribute has been
+// initially created.
+func (ma *MappedAttributeExpr) Remap() {
+	var (
+		n = &Object{}
+		o = AsObject(ma.Type)
+	)
+	for _, nat := range *o {
+		elems := strings.Split(nat.Name, ":")
+		n.Set(elems[0], nat.Attribute)
+		if len(elems) > 1 {
+			ma.nameMap[elems[0]] = elems[1]
+			ma.reverseMap[elems[1]] = elems[0]
+		}
+	}
+	ma.Type = n
 }
 
 // DupMappedAtt creates a deep copy of ma.
@@ -145,12 +159,11 @@ func (ma *MappedAttributeExpr) KeyName(elemName string) string {
 // Merge merges other's attributes into a overriding attributes of a with
 // attributes of other with identical names.
 func (ma *MappedAttributeExpr) Merge(other *MappedAttributeExpr) {
-	ma.AttributeExpr.Merge(other.AttributeExpr)
-	for _, nat := range *AsObject(other.AttributeExpr.Type) {
-		if en := other.ElemName(nat.Name); en != nat.Name {
-			ma.Map(en, nat.Name)
-		}
+	if other == nil {
+		return
 	}
+	ma.AttributeExpr.Merge(other.Attribute())
+	ma.Remap()
 }
 
 // FindKey finds the given key in the mapped attribute expression.
@@ -164,4 +177,9 @@ func (ma *MappedAttributeExpr) FindKey(keyName string) (string, bool) {
 		}
 	}
 	return "", false
+}
+
+// IsEmpty returns true if the mapped attribute contains no key.
+func (ma *MappedAttributeExpr) IsEmpty() bool {
+	return len(*ma.Type.(*Object)) == 0
 }

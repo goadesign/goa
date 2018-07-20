@@ -37,10 +37,20 @@ type (
 		DSL() func()
 	}
 
+	// A Preparer expression requires an additional pass after the DSL has
+	// executed and BEFORE it is validated (e.g. to flatten inheritance)
+	Preparer interface {
+		// Prepare is run by the engine right after the DSL has run.
+		// Prepare cannot fail, any potential failure should be returned
+		// by implementing Validator instead.
+		Prepare()
+	}
+
 	// A Validator expression can be validated.
 	Validator interface {
-		// Validate returns nil if the expression contains no validation
-		// error.  The Validate implementation may take advantage of
+		// Validate runs after Prepare if the expression is a Preparer.
+		// It returns nil if the expression contains no validation
+		// error. The Validate implementation may take advantage of
 		// ValidationErrors to report more than one errors at a time.
 		Validate() error
 	}
