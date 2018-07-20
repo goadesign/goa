@@ -678,7 +678,7 @@ func buildMethodData(m *design.MethodExpr, svcPkgName string, scope *codegen.Nam
 			cliStream.RecvRef = resultRef
 		}
 	}
-	for _, req := range requirements(m) {
+	for _, req := range m.Requirements {
 		var rs []*SchemeData
 		for _, s := range req.Schemes {
 			rs = append(rs, buildSchemeData(s, m))
@@ -802,25 +802,6 @@ func buildSchemeData(s *design.SchemeExpr, m *design.MethodExpr) *SchemeData {
 		}
 	}
 	return nil
-}
-
-// requirements returns the security requirements for the given method.
-func requirements(m *design.MethodExpr) []*design.SecurityExpr {
-	for _, r := range m.Requirements {
-		// Handle special case of no security
-		for _, s := range r.Schemes {
-			if s.Kind == design.NoKind {
-				return nil
-			}
-		}
-	}
-	if len(m.Requirements) > 0 {
-		return m.Requirements
-	}
-	if len(m.Service.Requirements) > 0 {
-		return m.Service.Requirements
-	}
-	return design.Root.API.Requirements
 }
 
 // collectProjectedTypes builds a projected type for every user type found
