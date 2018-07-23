@@ -365,9 +365,15 @@ var _ = Describe("AllParams", func() {
 			}
 		})
 
-		It("AllParams does NOT return the query parameters of the parent resource canonical action or the API", func() {
-			for _, p := range []string{"canquery", "pbasequery", "apiquery"} {
+		It("AllParams does NOT return the query parameters of the parent resource canonical action", func() {
+			for _, p := range []string{"canquery", "pbasequery"} {
 				Ω(allParams).ShouldNot(HaveKey(p))
+			}
+		})
+
+		It("AllParams does return the query parameters of the parent API", func() {
+			for _, p := range []string{"apiquery"} {
+				Ω(allParams).Should(HaveKey(p))
 			}
 		})
 

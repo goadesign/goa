@@ -1517,9 +1517,8 @@ func (a *ActionDefinition) AllParams() *AttributeDefinition {
 		res = res.Merge(p.CanonicalAction().PathParams())
 	} else {
 		res = res.Merge(a.Parent.PathParams())
-		res = res.Merge(Design.PathParams())
 	}
-	return res
+	return res.Merge(Design.Params)
 }
 
 // HasAbsoluteRoutes returns true if all the action routes are absolute.
