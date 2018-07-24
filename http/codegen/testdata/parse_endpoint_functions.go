@@ -1119,3 +1119,27 @@ func BuildMethodQueryStringDefaultPayload(serviceQueryStringDefaultMethodQuerySt
 	return payload, nil
 }
 `
+
+var EmptyBodyBuildCode = `// BuildMethodBodyPrimitiveArrayUserPayload builds the payload for the
+// ServiceBodyPrimitiveArrayUser MethodBodyPrimitiveArrayUser endpoint from CLI
+// flags.
+func BuildMethodBodyPrimitiveArrayUserPayload(serviceBodyPrimitiveArrayUserMethodBodyPrimitiveArrayUserA string) (*servicebodyprimitivearrayuser.PayloadType, error) {
+	var err error
+	var a []string
+	{
+		if serviceBodyPrimitiveArrayUserMethodBodyPrimitiveArrayUserA != "" {
+			err = json.Unmarshal([]byte(serviceBodyPrimitiveArrayUserMethodBodyPrimitiveArrayUserA), &a)
+			if err != nil {
+				return nil, fmt.Errorf("invalid JSON for a, example of valid JSON:\n%s", "'[\n      \"Perspiciatis repellendus harum et est.\",\n      \"Nisi quibusdam nisi sint sunt beatae.\"\n   ]'")
+			}
+		}
+	}
+	if err != nil {
+		return nil, err
+	}
+	payload := &servicebodyprimitivearrayuser.PayloadType{
+		A: a,
+	}
+	return payload, nil
+}
+`

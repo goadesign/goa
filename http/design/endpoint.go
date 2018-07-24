@@ -499,7 +499,7 @@ func (e *EndpointExpr) Finalize() {
 	}
 	init(e.Params)
 	init(e.Headers)
-	if e.Body != nil && design.IsObject(e.Body.Type) {
+	if e.Body != nil && e.Body.Type != design.Empty && design.IsObject(e.Body.Type) {
 		ma := design.NewMappedAttributeExpr(e.Body)
 		init(ma)
 		e.Body = ma.AttributeExpr
