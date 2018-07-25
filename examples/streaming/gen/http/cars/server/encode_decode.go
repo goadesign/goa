@@ -34,7 +34,7 @@ func EncodeLoginResponse(encoder func(context.Context, http.ResponseWriter) goah
 // endpoint.
 func DecodeLoginRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) (interface{}, error) {
 	return func(r *http.Request) (interface{}, error) {
-		payload := NewLoginLoginPayload()
+		payload := NewLoginPayload()
 		user, pass, ok := r.BasicAuth()
 		if !ok {
 			return nil, goa.MissingFieldError("Authorization", "header")
@@ -92,7 +92,7 @@ func DecodeListRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.De
 		if err != nil {
 			return nil, err
 		}
-		payload := NewListListPayload(style, token)
+		payload := NewListPayload(style, token)
 		if strings.Contains(payload.Token, " ") {
 			// Remove authorization scheme prefix (e.g. "Bearer")
 			cred := strings.SplitN(payload.Token, " ", 2)[1]

@@ -982,7 +982,16 @@ func buildPayloadData(e *httpdesign.EndpointExpr, sd *ServiceData) *PayloadData 
 			clientArgs []*InitArgData
 			serverArgs []*InitArgData
 		)
-		name = fmt.Sprintf("New%s%s", codegen.Goify(ep.Name, true), codegen.Goify(ep.Payload, true))
+		n := codegen.Goify(ep.Name, true)
+		p := codegen.Goify(ep.Payload, true)
+		// Raw payload object has type name prefixed with endpoint name. No need to
+		// prefix the type name again.
+		if strings.HasPrefix(p, n) {
+			name = fmt.Sprintf("New%s", p)
+		} else {
+			name = fmt.Sprintf("New%s%s", n, p)
+		}
+		name = svc.Scope.Unique(name)
 		desc = fmt.Sprintf("%s builds a %s service %s endpoint payload.",
 			name, svc.Name, e.Name())
 		isObject = design.IsObject(payload.Type)

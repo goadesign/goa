@@ -68,13 +68,13 @@ func NewListUnauthorizedResponseBody(res carssvc.Unauthorized) ListUnauthorizedR
 	return body
 }
 
-// NewLoginLoginPayload builds a cars service login endpoint payload.
-func NewLoginLoginPayload() *carssvc.LoginPayload {
+// NewLoginPayload builds a cars service login endpoint payload.
+func NewLoginPayload() *carssvc.LoginPayload {
 	return &carssvc.LoginPayload{}
 }
 
-// NewListListPayload builds a cars service list endpoint payload.
-func NewListListPayload(style string, token string) *carssvc.ListPayload {
+// NewListPayload builds a cars service list endpoint payload.
+func NewListPayload(style string, token string) *carssvc.ListPayload {
 	return &carssvc.ListPayload{
 		Style: style,
 		Token: token,

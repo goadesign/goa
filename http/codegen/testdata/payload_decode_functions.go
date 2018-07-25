@@ -21,7 +21,7 @@ func DecodeMethodQueryBoolRequest(mux goahttp.Muxer, decoder func(*http.Request)
 		if err != nil {
 			return nil, err
 		}
-		payload := NewMethodQueryBoolMethodQueryBoolPayload(q)
+		payload := NewMethodQueryBoolPayload(q)
 
 		return payload, nil
 	}
@@ -53,7 +53,7 @@ func DecodeMethodQueryBoolValidateRequest(mux goahttp.Muxer, decoder func(*http.
 		if err != nil {
 			return nil, err
 		}
-		payload := NewMethodQueryBoolValidateMethodQueryBoolValidatePayload(q)
+		payload := NewMethodQueryBoolValidatePayload(q)
 
 		return payload, nil
 	}
@@ -82,7 +82,7 @@ func DecodeMethodQueryIntRequest(mux goahttp.Muxer, decoder func(*http.Request) 
 		if err != nil {
 			return nil, err
 		}
-		payload := NewMethodQueryIntMethodQueryIntPayload(q)
+		payload := NewMethodQueryIntPayload(q)
 
 		return payload, nil
 	}
@@ -114,7 +114,7 @@ func DecodeMethodQueryIntValidateRequest(mux goahttp.Muxer, decoder func(*http.R
 		if err != nil {
 			return nil, err
 		}
-		payload := NewMethodQueryIntValidateMethodQueryIntValidatePayload(q)
+		payload := NewMethodQueryIntValidatePayload(q)
 
 		return payload, nil
 	}
@@ -143,7 +143,7 @@ func DecodeMethodQueryInt32Request(mux goahttp.Muxer, decoder func(*http.Request
 		if err != nil {
 			return nil, err
 		}
-		payload := NewMethodQueryInt32MethodQueryInt32Payload(q)
+		payload := NewMethodQueryInt32Payload(q)
 
 		return payload, nil
 	}
@@ -175,7 +175,7 @@ func DecodeMethodQueryInt32ValidateRequest(mux goahttp.Muxer, decoder func(*http
 		if err != nil {
 			return nil, err
 		}
-		payload := NewMethodQueryInt32ValidateMethodQueryInt32ValidatePayload(q)
+		payload := NewMethodQueryInt32ValidatePayload(q)
 
 		return payload, nil
 	}
@@ -203,7 +203,7 @@ func DecodeMethodQueryInt64Request(mux goahttp.Muxer, decoder func(*http.Request
 		if err != nil {
 			return nil, err
 		}
-		payload := NewMethodQueryInt64MethodQueryInt64Payload(q)
+		payload := NewMethodQueryInt64Payload(q)
 
 		return payload, nil
 	}
@@ -235,7 +235,7 @@ func DecodeMethodQueryInt64ValidateRequest(mux goahttp.Muxer, decoder func(*http
 		if err != nil {
 			return nil, err
 		}
-		payload := NewMethodQueryInt64ValidateMethodQueryInt64ValidatePayload(q)
+		payload := NewMethodQueryInt64ValidatePayload(q)
 
 		return payload, nil
 	}
@@ -264,7 +264,7 @@ func DecodeMethodQueryUIntRequest(mux goahttp.Muxer, decoder func(*http.Request)
 		if err != nil {
 			return nil, err
 		}
-		payload := NewMethodQueryUIntMethodQueryUIntPayload(q)
+		payload := NewMethodQueryUIntPayload(q)
 
 		return payload, nil
 	}
@@ -296,7 +296,7 @@ func DecodeMethodQueryUIntValidateRequest(mux goahttp.Muxer, decoder func(*http.
 		if err != nil {
 			return nil, err
 		}
-		payload := NewMethodQueryUIntValidateMethodQueryUIntValidatePayload(q)
+		payload := NewMethodQueryUIntValidatePayload(q)
 
 		return payload, nil
 	}
@@ -325,7 +325,7 @@ func DecodeMethodQueryUInt32Request(mux goahttp.Muxer, decoder func(*http.Reques
 		if err != nil {
 			return nil, err
 		}
-		payload := NewMethodQueryUInt32MethodQueryUInt32Payload(q)
+		payload := NewMethodQueryUInt32Payload(q)
 
 		return payload, nil
 	}
@@ -357,7 +357,7 @@ func DecodeMethodQueryUInt32ValidateRequest(mux goahttp.Muxer, decoder func(*htt
 		if err != nil {
 			return nil, err
 		}
-		payload := NewMethodQueryUInt32ValidateMethodQueryUInt32ValidatePayload(q)
+		payload := NewMethodQueryUInt32ValidatePayload(q)
 
 		return payload, nil
 	}
@@ -385,7 +385,7 @@ func DecodeMethodQueryUInt64Request(mux goahttp.Muxer, decoder func(*http.Reques
 		if err != nil {
 			return nil, err
 		}
-		payload := NewMethodQueryUInt64MethodQueryUInt64Payload(q)
+		payload := NewMethodQueryUInt64Payload(q)
 
 		return payload, nil
 	}
@@ -417,7 +417,7 @@ func DecodeMethodQueryUInt64ValidateRequest(mux goahttp.Muxer, decoder func(*htt
 		if err != nil {
 			return nil, err
 		}
-		payload := NewMethodQueryUInt64ValidateMethodQueryUInt64ValidatePayload(q)
+		payload := NewMethodQueryUInt64ValidatePayload(q)
 
 		return payload, nil
 	}
@@ -446,7 +446,7 @@ func DecodeMethodQueryFloat32Request(mux goahttp.Muxer, decoder func(*http.Reque
 		if err != nil {
 			return nil, err
 		}
-		payload := NewMethodQueryFloat32MethodQueryFloat32Payload(q)
+		payload := NewMethodQueryFloat32Payload(q)
 
 		return payload, nil
 	}
@@ -478,7 +478,7 @@ func DecodeMethodQueryFloat32ValidateRequest(mux goahttp.Muxer, decoder func(*ht
 		if err != nil {
 			return nil, err
 		}
-		payload := NewMethodQueryFloat32ValidateMethodQueryFloat32ValidatePayload(q)
+		payload := NewMethodQueryFloat32ValidatePayload(q)
 
 		return payload, nil
 	}
@@ -506,7 +506,7 @@ func DecodeMethodQueryFloat64Request(mux goahttp.Muxer, decoder func(*http.Reque
 		if err != nil {
 			return nil, err
 		}
-		payload := NewMethodQueryFloat64MethodQueryFloat64Payload(q)
+		payload := NewMethodQueryFloat64Payload(q)
 
 		return payload, nil
 	}
@@ -538,7 +538,7 @@ func DecodeMethodQueryFloat64ValidateRequest(mux goahttp.Muxer, decoder func(*ht
 		if err != nil {
 			return nil, err
 		}
-		payload := NewMethodQueryFloat64ValidateMethodQueryFloat64ValidatePayload(q)
+		payload := NewMethodQueryFloat64ValidatePayload(q)
 
 		return payload, nil
 	}
@@ -556,7 +556,7 @@ func DecodeMethodQueryStringRequest(mux goahttp.Muxer, decoder func(*http.Reques
 		if qRaw != "" {
 			q = &qRaw
 		}
-		payload := NewMethodQueryStringMethodQueryStringPayload(q)
+		payload := NewMethodQueryStringPayload(q)
 
 		return payload, nil
 	}
@@ -581,7 +581,7 @@ func DecodeMethodQueryStringValidateRequest(mux goahttp.Muxer, decoder func(*htt
 		if err != nil {
 			return nil, err
 		}
-		payload := NewMethodQueryStringValidateMethodQueryStringValidatePayload(q)
+		payload := NewMethodQueryStringValidatePayload(q)
 
 		return payload, nil
 	}
@@ -609,7 +609,7 @@ func DecodeMethodQueryStringNotRequiredValidateRequest(mux goahttp.Muxer, decode
 		if err != nil {
 			return nil, err
 		}
-		payload := NewMethodQueryStringNotRequiredValidateMethodQueryStringNotRequiredValidatePayload(q)
+		payload := NewMethodQueryStringNotRequiredValidatePayload(q)
 
 		return payload, nil
 	}
@@ -629,7 +629,7 @@ func DecodeMethodQueryBytesRequest(mux goahttp.Muxer, decoder func(*http.Request
 				q = []byte(qRaw)
 			}
 		}
-		payload := NewMethodQueryBytesMethodQueryBytesPayload(q)
+		payload := NewMethodQueryBytesPayload(q)
 
 		return payload, nil
 	}
@@ -657,7 +657,7 @@ func DecodeMethodQueryBytesValidateRequest(mux goahttp.Muxer, decoder func(*http
 		if err != nil {
 			return nil, err
 		}
-		payload := NewMethodQueryBytesValidateMethodQueryBytesValidatePayload(q)
+		payload := NewMethodQueryBytesValidatePayload(q)
 
 		return payload, nil
 	}
@@ -675,7 +675,7 @@ func DecodeMethodQueryAnyRequest(mux goahttp.Muxer, decoder func(*http.Request) 
 		if qRaw != "" {
 			q = qRaw
 		}
-		payload := NewMethodQueryAnyMethodQueryAnyPayload(q)
+		payload := NewMethodQueryAnyPayload(q)
 
 		return payload, nil
 	}
@@ -700,7 +700,7 @@ func DecodeMethodQueryAnyValidateRequest(mux goahttp.Muxer, decoder func(*http.R
 		if err != nil {
 			return nil, err
 		}
-		payload := NewMethodQueryAnyValidateMethodQueryAnyValidatePayload(q)
+		payload := NewMethodQueryAnyValidatePayload(q)
 
 		return payload, nil
 	}
@@ -731,7 +731,7 @@ func DecodeMethodQueryArrayBoolRequest(mux goahttp.Muxer, decoder func(*http.Req
 		if err != nil {
 			return nil, err
 		}
-		payload := NewMethodQueryArrayBoolMethodQueryArrayBoolPayload(q)
+		payload := NewMethodQueryArrayBoolPayload(q)
 
 		return payload, nil
 	}
@@ -772,7 +772,7 @@ func DecodeMethodQueryArrayBoolValidateRequest(mux goahttp.Muxer, decoder func(*
 		if err != nil {
 			return nil, err
 		}
-		payload := NewMethodQueryArrayBoolValidateMethodQueryArrayBoolValidatePayload(q)
+		payload := NewMethodQueryArrayBoolValidatePayload(q)
 
 		return payload, nil
 	}
@@ -803,7 +803,7 @@ func DecodeMethodQueryArrayIntRequest(mux goahttp.Muxer, decoder func(*http.Requ
 		if err != nil {
 			return nil, err
 		}
-		payload := NewMethodQueryArrayIntMethodQueryArrayIntPayload(q)
+		payload := NewMethodQueryArrayIntPayload(q)
 
 		return payload, nil
 	}
@@ -843,7 +843,7 @@ func DecodeMethodQueryArrayIntValidateRequest(mux goahttp.Muxer, decoder func(*h
 		if err != nil {
 			return nil, err
 		}
-		payload := NewMethodQueryArrayIntValidateMethodQueryArrayIntValidatePayload(q)
+		payload := NewMethodQueryArrayIntValidatePayload(q)
 
 		return payload, nil
 	}
@@ -874,7 +874,7 @@ func DecodeMethodQueryArrayInt32Request(mux goahttp.Muxer, decoder func(*http.Re
 		if err != nil {
 			return nil, err
 		}
-		payload := NewMethodQueryArrayInt32MethodQueryArrayInt32Payload(q)
+		payload := NewMethodQueryArrayInt32Payload(q)
 
 		return payload, nil
 	}
@@ -915,7 +915,7 @@ func DecodeMethodQueryArrayInt32ValidateRequest(mux goahttp.Muxer, decoder func(
 		if err != nil {
 			return nil, err
 		}
-		payload := NewMethodQueryArrayInt32ValidateMethodQueryArrayInt32ValidatePayload(q)
+		payload := NewMethodQueryArrayInt32ValidatePayload(q)
 
 		return payload, nil
 	}
@@ -946,7 +946,7 @@ func DecodeMethodQueryArrayInt64Request(mux goahttp.Muxer, decoder func(*http.Re
 		if err != nil {
 			return nil, err
 		}
-		payload := NewMethodQueryArrayInt64MethodQueryArrayInt64Payload(q)
+		payload := NewMethodQueryArrayInt64Payload(q)
 
 		return payload, nil
 	}
@@ -987,7 +987,7 @@ func DecodeMethodQueryArrayInt64ValidateRequest(mux goahttp.Muxer, decoder func(
 		if err != nil {
 			return nil, err
 		}
-		payload := NewMethodQueryArrayInt64ValidateMethodQueryArrayInt64ValidatePayload(q)
+		payload := NewMethodQueryArrayInt64ValidatePayload(q)
 
 		return payload, nil
 	}
@@ -1018,7 +1018,7 @@ func DecodeMethodQueryArrayUIntRequest(mux goahttp.Muxer, decoder func(*http.Req
 		if err != nil {
 			return nil, err
 		}
-		payload := NewMethodQueryArrayUIntMethodQueryArrayUIntPayload(q)
+		payload := NewMethodQueryArrayUIntPayload(q)
 
 		return payload, nil
 	}
@@ -1059,7 +1059,7 @@ func DecodeMethodQueryArrayUIntValidateRequest(mux goahttp.Muxer, decoder func(*
 		if err != nil {
 			return nil, err
 		}
-		payload := NewMethodQueryArrayUIntValidateMethodQueryArrayUIntValidatePayload(q)
+		payload := NewMethodQueryArrayUIntValidatePayload(q)
 
 		return payload, nil
 	}
@@ -1090,7 +1090,7 @@ func DecodeMethodQueryArrayUInt32Request(mux goahttp.Muxer, decoder func(*http.R
 		if err != nil {
 			return nil, err
 		}
-		payload := NewMethodQueryArrayUInt32MethodQueryArrayUInt32Payload(q)
+		payload := NewMethodQueryArrayUInt32Payload(q)
 
 		return payload, nil
 	}
@@ -1131,7 +1131,7 @@ func DecodeMethodQueryArrayUInt32ValidateRequest(mux goahttp.Muxer, decoder func
 		if err != nil {
 			return nil, err
 		}
-		payload := NewMethodQueryArrayUInt32ValidateMethodQueryArrayUInt32ValidatePayload(q)
+		payload := NewMethodQueryArrayUInt32ValidatePayload(q)
 
 		return payload, nil
 	}
@@ -1162,7 +1162,7 @@ func DecodeMethodQueryArrayUInt64Request(mux goahttp.Muxer, decoder func(*http.R
 		if err != nil {
 			return nil, err
 		}
-		payload := NewMethodQueryArrayUInt64MethodQueryArrayUInt64Payload(q)
+		payload := NewMethodQueryArrayUInt64Payload(q)
 
 		return payload, nil
 	}
@@ -1203,7 +1203,7 @@ func DecodeMethodQueryArrayUInt64ValidateRequest(mux goahttp.Muxer, decoder func
 		if err != nil {
 			return nil, err
 		}
-		payload := NewMethodQueryArrayUInt64ValidateMethodQueryArrayUInt64ValidatePayload(q)
+		payload := NewMethodQueryArrayUInt64ValidatePayload(q)
 
 		return payload, nil
 	}
@@ -1234,7 +1234,7 @@ func DecodeMethodQueryArrayFloat32Request(mux goahttp.Muxer, decoder func(*http.
 		if err != nil {
 			return nil, err
 		}
-		payload := NewMethodQueryArrayFloat32MethodQueryArrayFloat32Payload(q)
+		payload := NewMethodQueryArrayFloat32Payload(q)
 
 		return payload, nil
 	}
@@ -1275,7 +1275,7 @@ func DecodeMethodQueryArrayFloat32ValidateRequest(mux goahttp.Muxer, decoder fun
 		if err != nil {
 			return nil, err
 		}
-		payload := NewMethodQueryArrayFloat32ValidateMethodQueryArrayFloat32ValidatePayload(q)
+		payload := NewMethodQueryArrayFloat32ValidatePayload(q)
 
 		return payload, nil
 	}
@@ -1306,7 +1306,7 @@ func DecodeMethodQueryArrayFloat64Request(mux goahttp.Muxer, decoder func(*http.
 		if err != nil {
 			return nil, err
 		}
-		payload := NewMethodQueryArrayFloat64MethodQueryArrayFloat64Payload(q)
+		payload := NewMethodQueryArrayFloat64Payload(q)
 
 		return payload, nil
 	}
@@ -1347,7 +1347,7 @@ func DecodeMethodQueryArrayFloat64ValidateRequest(mux goahttp.Muxer, decoder fun
 		if err != nil {
 			return nil, err
 		}
-		payload := NewMethodQueryArrayFloat64ValidateMethodQueryArrayFloat64ValidatePayload(q)
+		payload := NewMethodQueryArrayFloat64ValidatePayload(q)
 
 		return payload, nil
 	}
@@ -1362,7 +1362,7 @@ func DecodeMethodQueryArrayStringRequest(mux goahttp.Muxer, decoder func(*http.R
 			q []string
 		)
 		q = r.URL.Query()["q"]
-		payload := NewMethodQueryArrayStringMethodQueryArrayStringPayload(q)
+		payload := NewMethodQueryArrayStringPayload(q)
 
 		return payload, nil
 	}
@@ -1393,7 +1393,7 @@ func DecodeMethodQueryArrayStringValidateRequest(mux goahttp.Muxer, decoder func
 		if err != nil {
 			return nil, err
 		}
-		payload := NewMethodQueryArrayStringValidateMethodQueryArrayStringValidatePayload(q)
+		payload := NewMethodQueryArrayStringValidatePayload(q)
 
 		return payload, nil
 	}
@@ -1416,7 +1416,7 @@ func DecodeMethodQueryArrayBytesRequest(mux goahttp.Muxer, decoder func(*http.Re
 				}
 			}
 		}
-		payload := NewMethodQueryArrayBytesMethodQueryArrayBytesPayload(q)
+		payload := NewMethodQueryArrayBytesPayload(q)
 
 		return payload, nil
 	}
@@ -1453,7 +1453,7 @@ func DecodeMethodQueryArrayBytesValidateRequest(mux goahttp.Muxer, decoder func(
 		if err != nil {
 			return nil, err
 		}
-		payload := NewMethodQueryArrayBytesValidateMethodQueryArrayBytesValidatePayload(q)
+		payload := NewMethodQueryArrayBytesValidatePayload(q)
 
 		return payload, nil
 	}
@@ -1476,7 +1476,7 @@ func DecodeMethodQueryArrayAnyRequest(mux goahttp.Muxer, decoder func(*http.Requ
 				}
 			}
 		}
-		payload := NewMethodQueryArrayAnyMethodQueryArrayAnyPayload(q)
+		payload := NewMethodQueryArrayAnyPayload(q)
 
 		return payload, nil
 	}
@@ -1512,7 +1512,7 @@ func DecodeMethodQueryArrayAnyValidateRequest(mux goahttp.Muxer, decoder func(*h
 		if err != nil {
 			return nil, err
 		}
-		payload := NewMethodQueryArrayAnyValidateMethodQueryArrayAnyValidatePayload(q)
+		payload := NewMethodQueryArrayAnyValidatePayload(q)
 
 		return payload, nil
 	}
@@ -1539,7 +1539,7 @@ func DecodeMethodQueryMapStringStringRequest(mux goahttp.Muxer, decoder func(*ht
 				}
 			}
 		}
-		payload := NewMethodQueryMapStringStringMethodQueryMapStringStringPayload(q)
+		payload := NewMethodQueryMapStringStringPayload(q)
 
 		return payload, nil
 	}
@@ -1583,7 +1583,7 @@ func DecodeMethodQueryMapStringStringValidateRequest(mux goahttp.Muxer, decoder 
 		if err != nil {
 			return nil, err
 		}
-		payload := NewMethodQueryMapStringStringValidateMethodQueryMapStringStringValidatePayload(q)
+		payload := NewMethodQueryMapStringStringValidatePayload(q)
 
 		return payload, nil
 	}
@@ -1619,7 +1619,7 @@ func DecodeMethodQueryMapStringBoolRequest(mux goahttp.Muxer, decoder func(*http
 		if err != nil {
 			return nil, err
 		}
-		payload := NewMethodQueryMapStringBoolMethodQueryMapStringBoolPayload(q)
+		payload := NewMethodQueryMapStringBoolPayload(q)
 
 		return payload, nil
 	}
@@ -1668,7 +1668,7 @@ func DecodeMethodQueryMapStringBoolValidateRequest(mux goahttp.Muxer, decoder fu
 		if err != nil {
 			return nil, err
 		}
-		payload := NewMethodQueryMapStringBoolValidateMethodQueryMapStringBoolValidatePayload(q)
+		payload := NewMethodQueryMapStringBoolValidatePayload(q)
 
 		return payload, nil
 	}
@@ -1707,7 +1707,7 @@ func DecodeMethodQueryMapBoolStringRequest(mux goahttp.Muxer, decoder func(*http
 		if err != nil {
 			return nil, err
 		}
-		payload := NewMethodQueryMapBoolStringMethodQueryMapBoolStringPayload(q)
+		payload := NewMethodQueryMapBoolStringPayload(q)
 
 		return payload, nil
 	}
@@ -1759,7 +1759,7 @@ func DecodeMethodQueryMapBoolStringValidateRequest(mux goahttp.Muxer, decoder fu
 		if err != nil {
 			return nil, err
 		}
-		payload := NewMethodQueryMapBoolStringValidateMethodQueryMapBoolStringValidatePayload(q)
+		payload := NewMethodQueryMapBoolStringValidatePayload(q)
 
 		return payload, nil
 	}
@@ -1803,7 +1803,7 @@ func DecodeMethodQueryMapBoolBoolRequest(mux goahttp.Muxer, decoder func(*http.R
 		if err != nil {
 			return nil, err
 		}
-		payload := NewMethodQueryMapBoolBoolMethodQueryMapBoolBoolPayload(q)
+		payload := NewMethodQueryMapBoolBoolPayload(q)
 
 		return payload, nil
 	}
@@ -1860,7 +1860,7 @@ func DecodeMethodQueryMapBoolBoolValidateRequest(mux goahttp.Muxer, decoder func
 		if err != nil {
 			return nil, err
 		}
-		payload := NewMethodQueryMapBoolBoolValidateMethodQueryMapBoolBoolValidatePayload(q)
+		payload := NewMethodQueryMapBoolBoolValidatePayload(q)
 
 		return payload, nil
 	}
@@ -1876,7 +1876,7 @@ func DecodeMethodQueryMapStringArrayStringRequest(mux goahttp.Muxer, decoder fun
 			q map[string][]string
 		)
 		q = r.URL.Query()
-		payload := NewMethodQueryMapStringArrayStringMethodQueryMapStringArrayStringPayload(q)
+		payload := NewMethodQueryMapStringArrayStringPayload(q)
 
 		return payload, nil
 	}
@@ -1910,7 +1910,7 @@ func DecodeMethodQueryMapStringArrayStringValidateRequest(mux goahttp.Muxer, dec
 		if err != nil {
 			return nil, err
 		}
-		payload := NewMethodQueryMapStringArrayStringValidateMethodQueryMapStringArrayStringValidatePayload(q)
+		payload := NewMethodQueryMapStringArrayStringValidatePayload(q)
 
 		return payload, nil
 	}
@@ -1949,7 +1949,7 @@ func DecodeMethodQueryMapStringArrayBoolRequest(mux goahttp.Muxer, decoder func(
 		if err != nil {
 			return nil, err
 		}
-		payload := NewMethodQueryMapStringArrayBoolMethodQueryMapStringArrayBoolPayload(q)
+		payload := NewMethodQueryMapStringArrayBoolPayload(q)
 
 		return payload, nil
 	}
@@ -2000,7 +2000,7 @@ func DecodeMethodQueryMapStringArrayBoolValidateRequest(mux goahttp.Muxer, decod
 		if err != nil {
 			return nil, err
 		}
-		payload := NewMethodQueryMapStringArrayBoolValidateMethodQueryMapStringArrayBoolValidatePayload(q)
+		payload := NewMethodQueryMapStringArrayBoolValidatePayload(q)
 
 		return payload, nil
 	}
@@ -2036,7 +2036,7 @@ func DecodeMethodQueryMapBoolArrayStringRequest(mux goahttp.Muxer, decoder func(
 		if err != nil {
 			return nil, err
 		}
-		payload := NewMethodQueryMapBoolArrayStringMethodQueryMapBoolArrayStringPayload(q)
+		payload := NewMethodQueryMapBoolArrayStringPayload(q)
 
 		return payload, nil
 	}
@@ -2083,7 +2083,7 @@ func DecodeMethodQueryMapBoolArrayStringValidateRequest(mux goahttp.Muxer, decod
 		if err != nil {
 			return nil, err
 		}
-		payload := NewMethodQueryMapBoolArrayStringValidateMethodQueryMapBoolArrayStringValidatePayload(q)
+		payload := NewMethodQueryMapBoolArrayStringValidatePayload(q)
 
 		return payload, nil
 	}
@@ -2129,7 +2129,7 @@ func DecodeMethodQueryMapBoolArrayBoolRequest(mux goahttp.Muxer, decoder func(*h
 		if err != nil {
 			return nil, err
 		}
-		payload := NewMethodQueryMapBoolArrayBoolMethodQueryMapBoolArrayBoolPayload(q)
+		payload := NewMethodQueryMapBoolArrayBoolPayload(q)
 
 		return payload, nil
 	}
@@ -2188,7 +2188,7 @@ func DecodeMethodQueryMapBoolArrayBoolValidateRequest(mux goahttp.Muxer, decoder
 		if err != nil {
 			return nil, err
 		}
-		payload := NewMethodQueryMapBoolArrayBoolValidateMethodQueryMapBoolArrayBoolValidatePayload(q)
+		payload := NewMethodQueryMapBoolArrayBoolValidatePayload(q)
 
 		return payload, nil
 	}
@@ -2484,7 +2484,7 @@ func DecodeMethodQueryStringMappedRequest(mux goahttp.Muxer, decoder func(*http.
 		if queryRaw != "" {
 			query = &queryRaw
 		}
-		payload := NewMethodQueryStringMappedMethodQueryStringMappedPayload(query)
+		payload := NewMethodQueryStringMappedPayload(query)
 
 		return payload, nil
 	}
@@ -2504,7 +2504,7 @@ func DecodeMethodQueryStringDefaultRequest(mux goahttp.Muxer, decoder func(*http
 		} else {
 			q = "def"
 		}
-		payload := NewMethodQueryStringDefaultMethodQueryStringDefaultPayload(q)
+		payload := NewMethodQueryStringDefaultPayload(q)
 
 		return payload, nil
 	}
@@ -2532,7 +2532,7 @@ func DecodeMethodQueryStringDefaultValidateRequest(mux goahttp.Muxer, decoder fu
 		if err != nil {
 			return nil, err
 		}
-		payload := NewMethodQueryStringDefaultValidateMethodQueryStringDefaultValidatePayload(q)
+		payload := NewMethodQueryStringDefaultValidatePayload(q)
 
 		return payload, nil
 	}
@@ -2572,7 +2572,7 @@ func DecodeMethodPathStringRequest(mux goahttp.Muxer, decoder func(*http.Request
 			params = mux.Vars(r)
 		)
 		p = params["p"]
-		payload := NewMethodPathStringMethodPathStringPayload(p)
+		payload := NewMethodPathStringPayload(p)
 
 		return payload, nil
 	}
@@ -2596,7 +2596,7 @@ func DecodeMethodPathStringValidateRequest(mux goahttp.Muxer, decoder func(*http
 		if err != nil {
 			return nil, err
 		}
-		payload := NewMethodPathStringValidateMethodPathStringValidatePayload(p)
+		payload := NewMethodPathStringValidatePayload(p)
 
 		return payload, nil
 	}
@@ -2620,7 +2620,7 @@ func DecodeMethodPathArrayStringRequest(mux goahttp.Muxer, decoder func(*http.Re
 				p[i] = rv
 			}
 		}
-		payload := NewMethodPathArrayStringMethodPathArrayStringPayload(p)
+		payload := NewMethodPathArrayStringPayload(p)
 
 		return payload, nil
 	}
@@ -2652,7 +2652,7 @@ func DecodeMethodPathArrayStringValidateRequest(mux goahttp.Muxer, decoder func(
 		if err != nil {
 			return nil, err
 		}
-		payload := NewMethodPathArrayStringValidateMethodPathArrayStringValidatePayload(p)
+		payload := NewMethodPathArrayStringValidatePayload(p)
 
 		return payload, nil
 	}
@@ -2805,7 +2805,7 @@ func DecodeMethodHeaderStringRequest(mux goahttp.Muxer, decoder func(*http.Reque
 		if hRaw != "" {
 			h = &hRaw
 		}
-		payload := NewMethodHeaderStringMethodHeaderStringPayload(h)
+		payload := NewMethodHeaderStringPayload(h)
 
 		return payload, nil
 	}
@@ -2830,7 +2830,7 @@ func DecodeMethodHeaderStringValidateRequest(mux goahttp.Muxer, decoder func(*ht
 		if err != nil {
 			return nil, err
 		}
-		payload := NewMethodHeaderStringValidateMethodHeaderStringValidatePayload(h)
+		payload := NewMethodHeaderStringValidatePayload(h)
 
 		return payload, nil
 	}
@@ -2845,7 +2845,7 @@ func DecodeMethodHeaderArrayStringRequest(mux goahttp.Muxer, decoder func(*http.
 			h []string
 		)
 		h = r.Header["H"]
-		payload := NewMethodHeaderArrayStringMethodHeaderArrayStringPayload(h)
+		payload := NewMethodHeaderArrayStringPayload(h)
 
 		return payload, nil
 	}
@@ -2870,7 +2870,7 @@ func DecodeMethodHeaderArrayStringValidateRequest(mux goahttp.Muxer, decoder fun
 		if err != nil {
 			return nil, err
 		}
-		payload := NewMethodHeaderArrayStringValidateMethodHeaderArrayStringValidatePayload(h)
+		payload := NewMethodHeaderArrayStringValidatePayload(h)
 
 		return payload, nil
 	}
@@ -3019,7 +3019,7 @@ func DecodeMethodHeaderStringDefaultRequest(mux goahttp.Muxer, decoder func(*htt
 		} else {
 			h = "def"
 		}
-		payload := NewMethodHeaderStringDefaultMethodHeaderStringDefaultPayload(h)
+		payload := NewMethodHeaderStringDefaultPayload(h)
 
 		return payload, nil
 	}
@@ -3047,7 +3047,7 @@ func DecodeMethodHeaderStringDefaultValidateRequest(mux goahttp.Muxer, decoder f
 		if err != nil {
 			return nil, err
 		}
-		payload := NewMethodHeaderStringDefaultValidateMethodHeaderStringDefaultValidatePayload(h)
+		payload := NewMethodHeaderStringDefaultValidatePayload(h)
 
 		return payload, nil
 	}
@@ -3092,7 +3092,7 @@ func DecodeMethodBodyStringRequest(mux goahttp.Muxer, decoder func(*http.Request
 			}
 			return nil, goa.DecodePayloadError(err.Error())
 		}
-		payload := NewMethodBodyStringMethodBodyStringPayload(&body)
+		payload := NewMethodBodyStringPayload(&body)
 
 		return payload, nil
 	}
@@ -3118,7 +3118,7 @@ func DecodeMethodBodyStringValidateRequest(mux goahttp.Muxer, decoder func(*http
 		if err != nil {
 			return nil, err
 		}
-		payload := NewMethodBodyStringValidateMethodBodyStringValidatePayload(&body)
+		payload := NewMethodBodyStringValidatePayload(&body)
 
 		return payload, nil
 	}
@@ -3188,7 +3188,7 @@ func DecodeMethodBodyArrayStringRequest(mux goahttp.Muxer, decoder func(*http.Re
 			}
 			return nil, goa.DecodePayloadError(err.Error())
 		}
-		payload := NewMethodBodyArrayStringMethodBodyArrayStringPayload(&body)
+		payload := NewMethodBodyArrayStringPayload(&body)
 
 		return payload, nil
 	}
@@ -3215,7 +3215,7 @@ func DecodeMethodBodyArrayStringValidateRequest(mux goahttp.Muxer, decoder func(
 		if err != nil {
 			return nil, err
 		}
-		payload := NewMethodBodyArrayStringValidateMethodBodyArrayStringValidatePayload(&body)
+		payload := NewMethodBodyArrayStringValidatePayload(&body)
 
 		return payload, nil
 	}
@@ -3241,7 +3241,7 @@ func DecodeMethodBodyArrayUserRequest(mux goahttp.Muxer, decoder func(*http.Requ
 		if err != nil {
 			return nil, err
 		}
-		payload := NewMethodBodyArrayUserMethodBodyArrayUserPayload(&body)
+		payload := NewMethodBodyArrayUserPayload(&body)
 
 		return payload, nil
 	}
@@ -3267,7 +3267,7 @@ func DecodeMethodBodyArrayUserValidateRequest(mux goahttp.Muxer, decoder func(*h
 		if err != nil {
 			return nil, err
 		}
-		payload := NewMethodBodyArrayUserValidateMethodBodyArrayUserValidatePayload(&body)
+		payload := NewMethodBodyArrayUserValidatePayload(&body)
 
 		return payload, nil
 	}
@@ -3289,7 +3289,7 @@ func DecodeMethodBodyMapStringRequest(mux goahttp.Muxer, decoder func(*http.Requ
 			}
 			return nil, goa.DecodePayloadError(err.Error())
 		}
-		payload := NewMethodBodyMapStringMethodBodyMapStringPayload(&body)
+		payload := NewMethodBodyMapStringPayload(&body)
 
 		return payload, nil
 	}
@@ -3315,7 +3315,7 @@ func DecodeMethodBodyMapStringValidateRequest(mux goahttp.Muxer, decoder func(*h
 		if err != nil {
 			return nil, err
 		}
-		payload := NewMethodBodyMapStringValidateMethodBodyMapStringValidatePayload(&body)
+		payload := NewMethodBodyMapStringValidatePayload(&body)
 
 		return payload, nil
 	}
@@ -3341,7 +3341,7 @@ func DecodeMethodBodyMapUserRequest(mux goahttp.Muxer, decoder func(*http.Reques
 		if err != nil {
 			return nil, err
 		}
-		payload := NewMethodBodyMapUserMethodBodyMapUserPayload(&body)
+		payload := NewMethodBodyMapUserPayload(&body)
 
 		return payload, nil
 	}
@@ -3367,7 +3367,7 @@ func DecodeMethodBodyMapUserValidateRequest(mux goahttp.Muxer, decoder func(*htt
 		if err != nil {
 			return nil, err
 		}
-		payload := NewMethodBodyMapUserValidateMethodBodyMapUserValidatePayload(&body)
+		payload := NewMethodBodyMapUserValidatePayload(&body)
 
 		return payload, nil
 	}
@@ -3618,7 +3618,7 @@ func DecodeMethodBodyQueryObjectRequest(mux goahttp.Muxer, decoder func(*http.Re
 		if bRaw != "" {
 			b = &bRaw
 		}
-		payload := NewMethodBodyQueryObjectMethodBodyQueryObjectPayload(&body, b)
+		payload := NewMethodBodyQueryObjectPayload(&body, b)
 
 		return payload, nil
 	}
@@ -3657,7 +3657,7 @@ func DecodeMethodBodyQueryObjectValidateRequest(mux goahttp.Muxer, decoder func(
 		if err != nil {
 			return nil, err
 		}
-		payload := NewMethodBodyQueryObjectValidateMethodBodyQueryObjectValidatePayload(&body, b)
+		payload := NewMethodBodyQueryObjectValidatePayload(&body, b)
 
 		return payload, nil
 	}
@@ -3754,7 +3754,7 @@ func DecodeMethodBodyPathObjectRequest(mux goahttp.Muxer, decoder func(*http.Req
 			params = mux.Vars(r)
 		)
 		b = params["b"]
-		payload := NewMethodBodyPathObjectMethodBodyPathObjectPayload(&body, b)
+		payload := NewMethodBodyPathObjectPayload(&body, b)
 
 		return payload, nil
 	}
@@ -3792,7 +3792,7 @@ func DecodeMethodBodyPathObjectValidateRequest(mux goahttp.Muxer, decoder func(*
 		if err != nil {
 			return nil, err
 		}
-		payload := NewMethodBodyPathObjectValidateMethodBodyPathObjectValidatePayload(&body, b)
+		payload := NewMethodBodyPathObjectValidatePayload(&body, b)
 
 		return payload, nil
 	}
@@ -3892,7 +3892,7 @@ func DecodeMethodBodyQueryPathObjectRequest(mux goahttp.Muxer, decoder func(*htt
 		if bRaw != "" {
 			b = &bRaw
 		}
-		payload := NewMethodBodyQueryPathObjectMethodBodyQueryPathObjectPayload(&body, c, b)
+		payload := NewMethodBodyQueryPathObjectPayload(&body, c, b)
 
 		return payload, nil
 	}
@@ -3936,7 +3936,7 @@ func DecodeMethodBodyQueryPathObjectValidateRequest(mux goahttp.Muxer, decoder f
 		if err != nil {
 			return nil, err
 		}
-		payload := NewMethodBodyQueryPathObjectValidateMethodBodyQueryPathObjectValidatePayload(&body, c, b)
+		payload := NewMethodBodyQueryPathObjectValidatePayload(&body, c, b)
 
 		return payload, nil
 	}
