@@ -112,10 +112,9 @@ func NewMethodUserBodyPathValidateRequestBody(p *servicebodypathuservalidate.Pay
 }
 `
 
-const ResultBodyObjectHeaderInitCode = `// NewMethodBodyObjectHeaderMethodBodyObjectHeaderResultOK builds a
-// "ServiceBodyObjectHeader" service "MethodBodyObjectHeader" endpoint result
-// from a HTTP "OK" response.
-func NewMethodBodyObjectHeaderMethodBodyObjectHeaderResultOK(body *MethodBodyObjectHeaderResponseBody, b *string) *servicebodyobjectheader.MethodBodyObjectHeaderResult {
+const ResultBodyObjectHeaderInitCode = `// NewMethodBodyObjectHeaderResultOK builds a "ServiceBodyObjectHeader" service
+// "MethodBodyObjectHeader" endpoint result from a HTTP "OK" response.
+func NewMethodBodyObjectHeaderResultOK(body *MethodBodyObjectHeaderResponseBody, b *string) *servicebodyobjectheader.MethodBodyObjectHeaderResult {
 	v := &servicebodyobjectheader.MethodBodyObjectHeaderResult{
 		A: body.A,
 	}

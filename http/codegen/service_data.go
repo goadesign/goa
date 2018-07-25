@@ -1394,7 +1394,17 @@ func buildResponseResultInit(resp *httpdesign.HTTPResponseExpr, e *httpdesign.En
 		})
 	}
 	status := codegen.Goify(http.StatusText(resp.StatusCode), true)
-	name := fmt.Sprintf("New%s%s%s", codegen.Goify(md.Name, true), codegen.Goify(md.Result, true), status)
+	n := codegen.Goify(md.Name, true)
+	r := codegen.Goify(md.Result, true)
+	// Raw result object has type name prefixed with endpoint name. No need to
+	// prefix the type name again.
+	var name string
+	if strings.HasPrefix(r, n) {
+		name = fmt.Sprintf("New%s%s", r, status)
+	} else {
+		name = fmt.Sprintf("New%s%s%s", n, r, status)
+	}
+	name = svc.Scope.Unique(name)
 	return &InitData{
 		Name:                     name,
 		Description:              fmt.Sprintf("%s builds a %q service %q endpoint result from a HTTP %q response.", name, svc.Name, e.Name(), status),
