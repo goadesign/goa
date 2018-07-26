@@ -3,8 +3,6 @@ package testdata
 import (
 	. "goa.design/goa/design"
 	. "goa.design/goa/dsl"
-	"goa.design/goa/codegen/service/testdata/external"
-	"goa.design/goa/codegen/service/testdata/alias-external"
 )
 
 var ConvertStringDSL = func() {
@@ -140,32 +138,6 @@ var ConvertObjectRequiredDSL = func() {
 	Service("Service", func() {
 		Method("Method", func() {
 			Payload(ObjectType)
-		})
-	})
-}
-
-var ConvertExternalDSL = func() {
-	var StringType = Type("StringType", func() {
-		CreateFrom(external.ConvertModel{})
-		Attribute("Foo", String)
-	})
-
-	Service("Service", func() {
-		Method("Method", func() {
-			Payload(StringType)
-		})
-	})
-}
-
-var ConvertAliasDSL = func() {
-	var StringType = Type("StringType", func() {
-		CreateFrom(aliasd.ConvertModel{})
-		Attribute("Bar", String)
-	})
-
-	Service("Service", func() {
-		Method("Method", func() {
-			Payload(StringType)
 		})
 	})
 }

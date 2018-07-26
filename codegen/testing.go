@@ -1,7 +1,6 @@
 package codegen
 
 import (
-	"fmt"
 	"bytes"
 	"io/ioutil"
 	"os"
@@ -60,32 +59,11 @@ func RunDSLWithFunc(t *testing.T, dsl func(), fn func()) *design.RootExpr {
 
 // SectionCode generates and formats the code for the given section.
 func SectionCode(t *testing.T, section *SectionTemplate) string {
-	return sectionCodeWithPrefix(t, section, "package foo\n")
-}
-
-// SectionCodeFromImportsAndMethods generates and formats the code for given import and method definition sections.
-func SectionCodeFromImportsAndMethods(t *testing.T, importSection *SectionTemplate, methodSection *SectionTemplate) string {
-	var code bytes.Buffer
-	if err := importSection.Write(&code); err != nil {
-		t.Fatal(err)
-	}
-
-	return sectionCodeWithPrefix(t, methodSection, code.String())
-}
-
-func sectionCodeWithPrefix(t *testing.T, section *SectionTemplate, prefix string) string {
 	var code bytes.Buffer
 	if err := section.Write(&code); err != nil {
 		t.Fatal(err)
 	}
-
-	codestr := code.String()
-
-	if len(prefix) > 0 {
-		codestr = fmt.Sprintf("%s\n%s", prefix, codestr)
-	}
-
-	return FormatTestCode(t, codestr)
+	return FormatTestCode(t, "package foo\n"+code.String())
 }
 
 // FormatTestCode formats the given Go code. The code must correspond to the

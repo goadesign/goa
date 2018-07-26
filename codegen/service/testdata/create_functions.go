@@ -92,23 +92,3 @@ func (t *ObjectType) CreateFromObjectExtraT(v *testdata.ObjectExtraT) {
 	*t = *temp
 }
 `
-
-var CreateAliasConvert = `// Service service type conversion functions
-//
-// Command:
-// $ goa
-
-package service
-
-import (
-	aliasd "goa.design/goa/codegen/service/testdata/alias-external"
-)
-
-// CreateFromConvertModel initializes t from the fields of v
-func (t *StringType) CreateFromConvertModel(v *aliasd.ConvertModel) {
-	temp := &StringType{
-		Bar: &v.Bar,
-	}
-	*t = *temp
-}
-`
