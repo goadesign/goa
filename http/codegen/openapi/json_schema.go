@@ -224,7 +224,7 @@ func ResultTypeRef(api *design.APIExpr, mt *design.ResultTypeExpr, view string) 
 	return ResultTypeRefWithPrefix(api, mt, view, "")
 }
 
-// ResultTypeRef produces the JSON reference to the media type definition with
+// ResultTypeRefWithPrefix produces the JSON reference to the media type definition with
 // the given view and adds the provided prefix to the type name
 func ResultTypeRefWithPrefix(api *design.APIExpr, mt *design.ResultTypeExpr, view string, prefix string) string {
 	projected, err := design.Project(mt, view)
@@ -502,7 +502,7 @@ func AttributeTypeSchema(api *design.APIExpr, at *design.AttributeExpr) *Schema 
 	return AttributeTypeSchemaWithPrefix(api, at, "")
 }
 
-// AttributeTypeSchema produces the JSON schema corresponding to the given attribute
+// AttributeTypeSchemaWithPrefix produces the JSON schema corresponding to the given attribute
 // and adds the provided prefix to the type name
 func AttributeTypeSchemaWithPrefix(api *design.APIExpr, at *design.AttributeExpr, prefix string) *Schema {
 	s := TypeSchemaWithPrefix(api, at.Type, prefix)
