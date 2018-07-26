@@ -520,20 +520,35 @@ type (
 		Interface string
 		// Endpoint is endpoint data that defines streaming payload/result.
 		Endpoint *EndpointData
+		// Payload is the streaming payload type sent via the stream.
+		Payload *TypeData
 		// Response is the successful response data for the streaming endpoint.
 		Response *ResponseData
-		// Scheme is the scheme used by the streaming connection.
+		// Scheme is the scheme used by the streaming connection (ws or wss).
 		Scheme string
-		// SendName is the fully qualified type name sent through the stream.
+		// SendName is the name of the send function.
 		SendName string
-		// SendRef is the fully qualified type ref sent through the stream.
-		SendRef string
-		// RecvName is the fully qualified type name received from the stream.
+		// SendDesc is the description for the send function.
+		SendDesc string
+		// SendTypeName is the fully qualified type name sent through the stream.
+		SendTypeName string
+		// SendTypeRef is the fully qualified type ref sent through the stream.
+		SendTypeRef string
+		// RecvName is the name of the receive function.
 		RecvName string
-		// RecvName is the fully qualified type ref received from the stream.
-		RecvRef string
+		// RecvDesc is the description for the recv function.
+		RecvDesc string
+		// RecvTypeName is the fully qualified type name received from the stream.
+		RecvTypeName string
+		// RecvTypeRef is the fully qualified type ref received from the stream.
+		RecvTypeRef string
+		// MustClose indicates whether to generate the Close() function for the
+		// stream.
+		MustClose bool
 		// PkgName is the service package name.
 		PkgName string
+		// Kind is the kind of the stream (payload or result or bidirectional).
+		Kind design.StreamKind
 	}
 )
 
@@ -813,6 +828,7 @@ func (d ServicesData) analyze(hs *httpdesign.ServiceExpr) *ServiceData {
 			RequestEncoder:  requestEncoder,
 			ResponseDecoder: fmt.Sprintf("Decode%sResponse", ep.VarName),
 		}
+		buildStreamData(ad, a, wsscheme, rd)
 
 		if a.MultipartRequest {
 			ad.MultipartRequestDecoder = &MultipartData{
@@ -832,40 +848,6 @@ func (d ServicesData) analyze(hs *httpdesign.ServiceExpr) *ServiceData {
 				Payload:     ad.Payload,
 			}
 		}
-		if ep.ServerStream != nil || ep.ClientStream != nil {
-			ad.ServerStream = &StreamData{
-				VarName:   ep.ServerStream.VarName,
-				Interface: fmt.Sprintf("%s.%s", svc.PkgName, ep.ServerStream.Interface),
-				Endpoint:  ad,
-				Response:  ad.Result.Responses[0],
-				PkgName:   svc.PkgName,
-				Scheme:    wsscheme,
-				Type:      "server",
-			}
-			ad.ClientStream = &StreamData{
-				VarName:   ep.ClientStream.VarName,
-				Interface: fmt.Sprintf("%s.%s", svc.PkgName, ep.ClientStream.Interface),
-				Endpoint:  ad,
-				Response:  ad.Result.Responses[0],
-				PkgName:   svc.PkgName,
-				Scheme:    wsscheme,
-				Type:      "client",
-			}
-			if ep.ServerStream.SendRef != "" {
-				// server streaming result
-				ad.ServerStream.SendName = ad.Result.Name
-				ad.ServerStream.SendRef = ad.Result.Ref
-				ad.ClientStream.RecvName = ad.Result.Name
-				ad.ClientStream.RecvRef = ad.Result.Ref
-			}
-			if ep.ServerStream.RecvRef != "" {
-				// client streaming payload
-				ad.ServerStream.RecvName = ad.Payload.Name
-				ad.ServerStream.RecvRef = ad.Payload.Ref
-				ad.ClientStream.SendName = ad.Payload.Name
-				ad.ClientStream.SendRef = ad.Payload.Ref
-			}
-		}
 
 		rd.Endpoints = append(rd.Endpoints, ad)
 	}
@@ -879,6 +861,17 @@ func (d ServicesData) analyze(hs *httpdesign.ServiceExpr) *ServiceData {
 				rd.ClientBodyAttributeTypes = append(rd.ClientBodyAttributeTypes, d)
 			}
 		})
+
+		if a.MethodExpr.StreamingPayload.Type != design.Empty {
+			collectUserTypes(a.StreamingBody.Type, func(ut design.UserType) {
+				if d := attributeTypeData(ut, true, true, true, svc.Scope, rd); d != nil {
+					rd.ServerBodyAttributeTypes = append(rd.ServerBodyAttributeTypes, d)
+				}
+				if d := attributeTypeData(ut, true, false, false, svc.Scope, rd); d != nil {
+					rd.ClientBodyAttributeTypes = append(rd.ClientBodyAttributeTypes, d)
+				}
+			})
+		}
 
 		if res := a.MethodExpr.Result; res != nil {
 			for _, v := range a.Responses {
@@ -1661,6 +1654,162 @@ func buildErrorsData(e *httpdesign.EndpointExpr, sd *ServiceData) []*ErrorGroupD
 	return vals
 }
 
+func buildStreamData(ed *EndpointData, e *httpdesign.EndpointExpr, scheme string, sd *ServiceData) {
+	if !e.MethodExpr.IsStreaming() {
+		return
+	}
+	var (
+		svrSendTypeName string
+		svrSendTypeRef  string
+		svrRecvTypeName string
+		svrRecvTypeRef  string
+		svrSendDesc     string
+		svrRecvDesc     string
+		svrPayload      *TypeData
+		cliSendDesc     string
+		cliRecvDesc     string
+		cliPayload      *TypeData
+
+		m        = e.MethodExpr
+		md       = ed.Method
+		svc      = sd.Service
+		spayload = m.StreamingPayload
+	)
+	{
+		svrSendTypeName = ed.Result.Name
+		svrSendTypeRef = ed.Result.Ref
+		svrSendDesc = fmt.Sprintf("%s streams instances of %q to the %q endpoint websocket connection.", md.ServerStream.SendName, svrSendTypeName, md.Name)
+		cliRecvDesc = fmt.Sprintf("%s reads instances of %q from the %q endpoint websocket connection.", md.ClientStream.RecvName, svrSendTypeName, md.Name)
+		if e.MethodExpr.Stream == design.ClientStreamKind || e.MethodExpr.Stream == design.BidirectionalStreamKind {
+			svrRecvTypeName = svc.Scope.GoFullTypeName(e.MethodExpr.StreamingPayload, svc.PkgName)
+			svrRecvTypeRef = svc.Scope.GoFullTypeRef(e.MethodExpr.StreamingPayload, svc.PkgName)
+			svrPayload = buildRequestBodyType(sd, e, e.StreamingBody, e.MethodExpr.StreamingPayload, true, svc.PkgName)
+			if needInit(spayload.Type) {
+				body := e.StreamingBody.Type
+				// generate constructor function to transform request body,
+				// into the method streaming payload type
+				var (
+					name       string
+					desc       string
+					isObject   bool
+					serverArgs []*InitArgData
+					serverCode string
+					err        error
+				)
+				{
+					n := codegen.Goify(m.Name, true)
+					p := codegen.Goify(svrPayload.Name, true)
+					// Raw payload object has type name prefixed with endpoint name. No need to
+					// prefix the type name again.
+					if strings.HasPrefix(p, n) {
+						name = fmt.Sprintf("New%s", p)
+					} else {
+						name = fmt.Sprintf("New%s%s", n, p)
+					}
+					desc = fmt.Sprintf("%s builds a %s service %s endpoint payload.", name, svc.Name, m.Name)
+					isObject = design.IsObject(spayload.Type)
+					if body != design.Empty {
+						var (
+							ref    string
+							svcode string
+						)
+						{
+							ref = "body"
+							if design.IsObject(body) {
+								ref = "&body"
+							}
+							if ut, ok := body.(design.UserType); ok {
+								if val := ut.Attribute().Validation; val != nil {
+									svcode = codegen.RecursiveValidationCode(ut.Attribute(), true, false, false, "body")
+								}
+							}
+						}
+						serverArgs = []*InitArgData{{
+							Name:     "body",
+							Ref:      ref,
+							TypeName: svc.Scope.GoTypeName(&design.AttributeExpr{Type: body}),
+							TypeRef:  svc.Scope.GoTypeRef(&design.AttributeExpr{Type: body}),
+							Required: true,
+							Example:  e.Body.Example(design.Root.API.Random()),
+							Validate: svcode,
+						}}
+					}
+					if body != design.Empty {
+						var helpers []*codegen.TransformFunctionData
+						serverCode, helpers, err = codegen.GoTypeTransform(body, spayload.Type, "body", "v", "", svc.PkgName, true, svc.Scope)
+						if err == nil {
+							sd.ServerTransformHelpers = codegen.AppendHelpers(sd.ServerTransformHelpers, helpers)
+						}
+					}
+					if err != nil {
+						fmt.Println(err.Error()) // TBD validate DSL so errors are not possible
+					}
+				}
+				svrPayload.Init = &InitData{
+					Name:           name,
+					Description:    desc,
+					ServerArgs:     serverArgs,
+					ReturnTypeName: svc.Scope.GoFullTypeName(spayload, svc.PkgName),
+					ReturnTypeRef:  svc.Scope.GoFullTypeRef(spayload, svc.PkgName),
+					ReturnIsStruct: isObject,
+					ServerCode:     serverCode,
+				}
+			}
+			cliPayload = buildRequestBodyType(sd, e, e.StreamingBody, e.MethodExpr.StreamingPayload, false, svc.PkgName)
+			if cliPayload != nil {
+				sd.ClientTypeNames[cliPayload.Name] = false
+				sd.ServerTypeNames[cliPayload.Name] = false
+			}
+			if e.MethodExpr.Stream == design.ClientStreamKind {
+				svrSendDesc = fmt.Sprintf("%s streams instances of %q to the %q endpoint websocket connection and closes the connection.", md.ServerStream.SendName, svrSendTypeName, md.Name)
+				cliRecvDesc = fmt.Sprintf("%s stops sending messages to the %q endpoint websocket connection and reads instances of %q from the connection.", md.ClientStream.RecvName, md.Name, svrSendTypeName)
+			}
+			svrRecvDesc = fmt.Sprintf("%s reads instances of %q from the %q endpoint websocket connection.", md.ServerStream.RecvName, svrRecvTypeName, md.Name)
+			cliSendDesc = fmt.Sprintf("%s streams instances of %q to the %q endpoint websocket connection.", md.ClientStream.SendName, svrRecvTypeName, md.Name)
+		}
+	}
+	ed.ServerStream = &StreamData{
+		VarName:      md.ServerStream.VarName,
+		Interface:    fmt.Sprintf("%s.%s", svc.PkgName, md.ServerStream.Interface),
+		Endpoint:     ed,
+		Payload:      svrPayload,
+		Response:     ed.Result.Responses[0],
+		PkgName:      svc.PkgName,
+		Scheme:       scheme,
+		Type:         "server",
+		Kind:         md.ServerStream.Kind,
+		SendName:     md.ServerStream.SendName,
+		SendDesc:     svrSendDesc,
+		SendTypeName: svrSendTypeName,
+		SendTypeRef:  svrSendTypeRef,
+		RecvName:     md.ServerStream.RecvName,
+		RecvDesc:     svrRecvDesc,
+		RecvTypeName: svrRecvTypeName,
+		RecvTypeRef:  svrRecvTypeRef,
+		MustClose:    md.ServerStream.MustClose,
+	}
+	ed.ClientStream = &StreamData{
+		VarName:      md.ClientStream.VarName,
+		Interface:    fmt.Sprintf("%s.%s", svc.PkgName, md.ClientStream.Interface),
+		Endpoint:     ed,
+		Payload:      cliPayload,
+		Response:     ed.Result.Responses[0],
+		PkgName:      svc.PkgName,
+		Scheme:       scheme,
+		Type:         "client",
+		Kind:         md.ClientStream.Kind,
+		SendName:     md.ClientStream.SendName,
+		SendDesc:     cliSendDesc,
+		SendTypeName: svrRecvTypeName,
+		SendTypeRef:  svrRecvTypeRef,
+		RecvName:     md.ClientStream.RecvName,
+		RecvDesc:     cliRecvDesc,
+		RecvTypeName: svrSendTypeName,
+		RecvTypeRef:  svrSendTypeRef,
+		MustClose:    md.ClientStream.MustClose,
+	}
+}
+
 // buildRequestBodyType builds the TypeData for a request body. The data makes
 // it possible to generate a function on the client side that creates the body
 // from the service method payload.
@@ -2207,6 +2356,15 @@ func needInit(dt design.DataType) bool {
 	}
 }
 
+// upgradeParams returns the data required to render the websocket_upgrade
+// template.
+func upgradeParams(e *EndpointData, fn string) map[string]interface{} {
+	return map[string]interface{}{
+		"ViewedResult": e.Method.ViewedResult,
+		"Function":     fn,
+	}
+}
+
 const (
 	// pathInitT is the template used to render the code of path constructors.
 	pathInitT = `
@@ -2299,8 +2457,10 @@ type {{ .VarName }} struct {
 	{{ comment "conn is the underlying websocket connection." }}
 	conn *websocket.Conn
 	{{- if .Endpoint.Method.ViewedResult }}
-	{{ printf "view is the view to render %s result type before sending to the websocket connection." .SendName | comment }}
+		{{- if not .Endpoint.Method.ViewedResult.ViewName }}
+	{{ printf "view is the view to render %s result type before sending to the websocket connection." .SendTypeName | comment }}
 	view string
+		{{- end }}
 	{{- end }}
 }
 `
@@ -2308,17 +2468,163 @@ type {{ .VarName }} struct {
 	// streamSendT renders the function implementing the Send method in
 	// stream interface.
 	// input: StreamData
-	streamSendT = `{{ printf "Send sends %s type to the %q endpoint websocket connection." .SendName .Endpoint.Method.Name | comment }}
-func (s *{{ .VarName }}) Send(v {{ .SendRef }}) error {
-	var err error
-	{{ comment "Upgrade the HTTP connection to a websocket connection only once before sending result. Connection upgrade is done here so that authorization logic in the endpoint is executed before calling the actual service method which may call Send()." }}
-	s.once.Do(func() {
+	streamSendT = `{{ comment .SendDesc }}
+func (s *{{ .VarName }}) {{ .SendName }}(v {{ .SendTypeRef }}) error {
+{{- if eq .Type "server" }}
+	{{- if eq .SendName "Send" }}
+		var err error
+		{{- template "websocket_upgrade" (upgradeParams .Endpoint .SendName) }}
+	{{- else }} {{/* SendAndClose */}}
+		defer s.conn.Close()
+	{{- end }}
 	{{- if .Endpoint.Method.ViewedResult }}
-		respHdr := make(http.Header)
-		respHdr.Add("goa-view", s.view)
+		{{- if .Endpoint.Method.ViewedResult.ViewName }}
+			res := {{ .PkgName }}.{{ .Endpoint.Method.ViewedResult.Init.Name }}(v, {{ printf "%q" .Endpoint.Method.ViewedResult.ViewName }})
+		{{- else }}
+			res := {{ .PkgName }}.{{ .Endpoint.Method.ViewedResult.Init.Name }}(v, s.view)
+		{{- end }}
+	{{- else }}
+	res := v
+	{{- end }}
+	{{- $servBodyLen := len .Response.ServerBody }}
+	{{- if gt $servBodyLen 0 }}
+		{{- if (index .Response.ServerBody 0).Init }}
+			{{- if .Endpoint.Method.ViewedResult }}
+				{{- if .Endpoint.Method.ViewedResult.ViewName }}
+					{{- $vsb := (viewedServerBody $.Response.ServerBody .Endpoint.Method.ViewedResult.ViewName) }}
+					body := {{ $vsb.Init.Name }}({{ range $vsb.Init.ServerArgs }}{{ .Ref }}, {{ end }})
+				{{- else }}
+					var body interface{}
+					switch s.view {
+					{{- range .Endpoint.Method.ViewedResult.Views }}
+						case {{ printf "%q" .Name }}{{ if eq .Name "default" }}, ""{{ end }}:
+						{{- $vsb := (viewedServerBody $.Response.ServerBody .Name) }}
+							body = {{ $vsb.Init.Name }}({{ range $vsb.Init.ServerArgs }}{{ .Ref }}, {{ end }})
+						{{- end }}
+					}
+				{{- end }}
+			{{- else }}
+				body := {{ (index .Response.ServerBody 0).Init.Name }}({{ range (index .Response.ServerBody 0).Init.ServerArgs }}{{ .Ref }}, {{ end }})
+			{{- end }}
+			return s.conn.WriteJSON(body)
+		{{- else }}
+			return s.conn.WriteJSON(res)
+		{{- end }}
+	{{- else }}
+		return s.conn.WriteJSON(res)
+	{{- end }}
+{{- else }}
+	{{- if .Payload.Init }}
+		body := {{ .Payload.Init.Name }}(v)
+		return s.conn.WriteJSON(body)
+	{{- else }}
+		return s.conn.WriteJSON(v)
+	{{- end }}
+{{- end }}
+}
+` + upgradeT
+
+	// streamRecvT renders the function implementing the Recv method in
+	// stream interface.
+	// input: StreamData
+	streamRecvT = `{{ comment .RecvDesc }}
+func (s *{{ .VarName }}) {{ .RecvName }}() ({{ .RecvTypeRef }}, error) {
+	var (
+		rv {{ .RecvTypeRef }}
+	{{- if eq .Type "server" }}
+		msg *{{ .Payload.Ref }}
+	{{- else }}
+		body {{ .Response.ClientBody.VarName }}
+	{{- end }}
+		err error
+	)
+{{- if eq .Type "server" }}
+	{{- template "websocket_upgrade" (upgradeParams .Endpoint .RecvName) }}
+	if err = s.conn.ReadJSON(&msg); err != nil {
+		return rv, err
+	}
+	if msg == nil {
+		return rv, io.EOF
+	}
+	body := *msg
+	{{- if .Payload.ValidateRef }}
+		{{ .Payload.ValidateRef }}
+		if err != nil {
+			return rv, err
+		}
+	{{- end }}
+	{{- if .Payload.Init }}
+		return {{ .Payload.Init.Name }}(body), nil
+	{{- else }}
+		return body, nil
+	{{- end }}
+{{- else }} {{/* client side code */}}
+	{{- if eq .RecvName "CloseAndRecv" }}
+		defer s.conn.Close()
+		{{ comment "Send a nil payload to the server implying end of message" }}
+		if err = s.conn.WriteJSON(nil); err != nil {
+			return rv, err
+		}
+	{{- end }}
+	err = s.conn.ReadJSON(&body)
+	if websocket.IsCloseError(err, websocket.CloseNormalClosure) {
+		{{- if not .MustClose }}
+			s.conn.Close()
+		{{- end }}
+		return rv, io.EOF
+	}
+	if err != nil {
+		return rv, err
+	}
+	{{- if and .Response.ClientBody.ValidateRef (not .Endpoint.Method.ViewedResult) }}
+	{{ .Response.ClientBody.ValidateRef }}
+	if err != nil {
+		return rv, err
+	}
+	{{- end }}
+	{{- if .Response.ResultInit }}
+		res := {{ .Response.ResultInit.Name }}({{ range .Response.ResultInit.ClientArgs }}{{ .Ref }},{{ end }})
+		{{- if .Endpoint.Method.ViewedResult }}{{ with .Endpoint.Method.ViewedResult }}
+			vres := {{ if not .IsCollection }}&{{ end }}{{ .ViewsPkg }}.{{ .VarName }}{res, {{ if .ViewName }}{{ printf "%q" .ViewName }}{{ else }}s.view{{ end }} }
+			if err := vres.Validate(); err != nil {
+				return rv, goahttp.ErrValidationError("{{ $.Endpoint.ServiceName }}", "{{ $.Endpoint.Method.Name }}", err)
+			}
+			return {{ $.PkgName }}.{{ .ResultInit.Name }}(vres){{ end }}, nil
+		{{- else }}
+			return res, nil
+		{{- end }}
+	{{- else }}
+		return body, nil
+	{{- end }}
+{{- end }}
+}
+` + upgradeT
+
+	// upgradeT renders the code to upgrade the HTTP connection to a gorilla
+	// websocket connection.
+	upgradeT = `{{- define "websocket_upgrade" }}
+	{{ printf "Upgrade the HTTP connection to a websocket connection only once. Connection upgrade is done here so that authorization logic in the endpoint is executed before calling the actual service method which may call %s()." .Function | comment }}
+	s.once.Do(func() {
+	{{- if and .ViewedResult (eq .Function "Send") }}
+		{{- if not .ViewedResult.ViewName }}
+			respHdr := make(http.Header)
+			respHdr.Add("goa-view", s.view)
+		{{- end }}
 	{{- end }}
 		var conn *websocket.Conn
-		conn, err = s.upgrader.Upgrade(s.w, s.r, {{ if .Endpoint.Method.ViewedResult }}respHdr{{ else }}nil{{ end }})
+		{{- if eq .Function "Send" }}
+			{{- if .ViewedResult }}
+				{{- if not .ViewedResult.ViewName }}
+					conn, err = s.upgrader.Upgrade(s.w, s.r, respHdr)
+				{{- else }}
+					conn, err = s.upgrader.Upgrade(s.w, s.r, nil)
+				{{- end }}
+			{{- else }}
+				conn, err = s.upgrader.Upgrade(s.w, s.r, nil)
+			{{- end }}
+		{{- else }}
+			conn, err = s.upgrader.Upgrade(s.w, s.r, nil)
+		{{- end }}
 		if err != nil {
 			return
 		}
@@ -2328,78 +2634,41 @@ func (s *{{ .VarName }}) Send(v {{ .SendRef }}) error {
 		s.conn = conn
 	})
 	if err != nil {
-		s.Close()
-		return err
+		return {{ if eq .Function "Recv" }}rv, {{ end }}err
 	}
-	{{- if .Endpoint.Method.ViewedResult }}
-	res := {{ .PkgName }}.{{ .Endpoint.Method.ViewedResult.Init.Name }}(v, s.view)
-	{{- else }}
-	res := v
-	{{- end }}
-	body := {{ (index .Response.ServerBody 0).Init.Name }}({{ range (index .Response.ServerBody 0).Init.ServerArgs }}{{ .Ref }}, {{ end }})
-	return s.conn.WriteJSON(body)
-}
-`
-
-	// streamRecvT renders the function implementing the Recv method in
-	// stream interface.
-	// input: StreamData
-	streamRecvT = `{{ printf "Recv receives a %s type from the %q endpoint websocket connection." .RecvName .Endpoint.Method.Name | comment }}
-func (s *{{ .VarName }}) Recv() ({{ .RecvRef }}, error) {
-	var body {{ .Response.ClientBody.VarName }}
-	err := s.conn.ReadJSON(&body)
-	if websocket.IsCloseError(err, websocket.CloseNormalClosure) {
-		return nil, io.EOF
-	}
-	if err != nil {
-		return nil, err
-	}
-	{{- if and .Response.ClientBody.ValidateRef (not .Endpoint.Method.ViewedResult) }}
-	{{ .Response.ClientBody.ValidateRef }}
-	if err != nil {
-		return nil, goahttp.ErrValidationError("{{ .Endpoint.ServiceName }}", "{{ .Endpoint.Method.Name }}", err)
-	}
-	{{- end }}
-	res := {{ .Response.ResultInit.Name }}({{ range .Response.ResultInit.ClientArgs }}{{ .Ref }},{{ end }})
-	{{- if .Endpoint.Method.ViewedResult }}
-	vres := {{ if not .Endpoint.Method.ViewedResult.IsCollection }}&{{ end }}{{ .Endpoint.Method.ViewedResult.ViewsPkg }}.{{ .Endpoint.Method.ViewedResult.VarName }}{res, s.view}
-	if err := vres.Validate(); err != nil {
-		return nil, goahttp.ErrValidationError("{{ .Endpoint.ServiceName }}", "{{ .Endpoint.Method.Name }}", err)
-	}
-	return {{ .PkgName }}.{{ .Endpoint.Method.ViewedResult.ResultInit.Name }}(vres), nil
-	{{- else }}
-	return res, nil
-	{{- end }}
-}
+{{- end }}
 `
 
 	// streamCloseT renders the function implementing the Close method in
 	// stream interface.
 	// input: StreamData
-	streamCloseT = `{{ printf "Close closes the %q endpoint websocket connection after sending a close control message." .Endpoint.Method.Name | comment }}
+	streamCloseT = `{{ printf "Close closes the %q endpoint websocket connection." .Endpoint.Method.Name | comment }}
 func (s *{{ .VarName }}) Close() error {
-	if s.conn == nil {
-		return nil
-	}
-	err := s.conn.WriteControl(
+	defer s.conn.Close()
+	var err error
+{{- if eq .Type "server" }}
+	{{- template "websocket_upgrade" (upgradeParams .Endpoint "Close") }}
+	if err = s.conn.WriteControl(
 		websocket.CloseMessage,
-		websocket.FormatCloseMessage(websocket.CloseNormalClosure, "end of message"),
+		websocket.FormatCloseMessage(websocket.CloseNormalClosure, "server closing connection"),
 		time.Now().Add(time.Second),
-	)
-	if err == websocket.ErrCloseSent {
-		return nil
-	}
-	if err != nil {
+	); err != nil {
 		return err
 	}
-	return s.conn.Close()
+{{- else }} {{/* client side code */}}
+	{{ comment "Send a nil payload to the server implying client closing connection." }}
+  if err = s.conn.WriteJSON(nil); err != nil {
+    return err
+  }
+{{- end }}
+	return nil
 }
-`
+` + upgradeT
 
 	// streamSetViewT renders the function implementing the SetView method in
 	// server stream interface.
 	// input: StreamData
-	streamSetViewT = `{{ printf "SetView sets the view to render the %s type before sending to the %q endpoint websocket connection." .SendName .Endpoint.Method.Name | comment }}
+	streamSetViewT = `{{ printf "SetView sets the view to render the %s type before sending to the %q endpoint websocket connection." .SendTypeName .Endpoint.Method.Name | comment }}
 func (s *{{ .VarName }}) SetView(view string) {
 	s.view = view
 }

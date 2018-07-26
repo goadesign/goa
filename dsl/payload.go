@@ -81,6 +81,66 @@ func Payload(val interface{}, args ...interface{}) {
 	e.Payload = methodDSL("Payload", val, args...)
 }
 
+// StreamingPayload defines a method that accepts a stream of instances of the
+// given type.
+//
+// StreamingPayload must appear in a Method expression.
+//
+// The arguments to a StreamingPayload DSL is same as the Payload DSL.
+//
+// Examples:
+//
+//    // Method payload is the JWT token and the method streaming payload is a
+//		// stream of strings.
+//    Method("upper", func() {
+//        Payload(func() {
+//            Token("token", String, func() {
+//					      Description("JWT used for authentication")
+//						})
+//				})
+//        StreamingPayload(String)
+//    })
+//
+//    // Method streaming payload is a stream of string with validation set
+//		// on each
+//    Method("upper"), func() {
+//        StreamingPayload(String, "string to convert to uppercase", func() {
+//            Pattern("^[a-z]")
+//        })
+//    }
+//
+//    // Method payload is a stream of objects defined inline
+//    Method("add", func() {
+//        StreamingPayload(func() {
+//            Description("Left and right operands to add")
+//            Attribute("left", Int32, "Left operand")
+//            Attribute("right", Int32, "Left operand")
+//            Required("left", "right")
+//        })
+//    })
+//
+//    // Method payload is a stream of user type
+//    Method("add", func() {
+//        StreamingPayload(Operands)
+//    })
+//
+func StreamingPayload(val interface{}, args ...interface{}) {
+	if len(args) > 2 {
+		eval.ReportError("too many arguments")
+	}
+	e, ok := eval.Current().(*design.MethodExpr)
+	if !ok {
+		eval.IncompatibleDSL()
+		return
+	}
+	e.StreamingPayload = methodDSL("StreamingPayload", val, args...)
+	if e.Stream == design.ServerStreamKind {
+		e.Stream = design.BidirectionalStreamKind
+	} else {
+		e.Stream = design.ClientStreamKind
+	}
+}
+
 func methodDSL(suffix string, p interface{}, args ...interface{}) *design.AttributeExpr {
 	var (
 		att *design.AttributeExpr

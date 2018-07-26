@@ -12,16 +12,25 @@ import (
 	goa "goa.design/goa"
 )
 
-// Car is the viewed result type that is projected based on a view.
-type Car struct {
+// StoredCar is the viewed result type that is projected based on a view.
+type StoredCar struct {
 	// Type to project
-	Projected *CarView
+	Projected *StoredCarView
 	// View to render
 	View string
 }
 
-// CarView is a type that runs validations on a projected type.
-type CarView struct {
+// StoredCarCollection is the viewed result type that is projected based on a
+// view.
+type StoredCarCollection struct {
+	// Type to project
+	Projected StoredCarCollectionView
+	// View to render
+	View string
+}
+
+// StoredCarView is a type that runs validations on a projected type.
+type StoredCarView struct {
 	// The make of the car
 	Make *string
 	// The car model
@@ -30,8 +39,11 @@ type CarView struct {
 	BodyStyle *string
 }
 
-// Validate runs the validations defined on the viewed result type Car.
-func (result *Car) Validate() (err error) {
+// StoredCarCollectionView is a type that runs validations on a projected type.
+type StoredCarCollectionView []*StoredCarView
+
+// Validate runs the validations defined on the viewed result type StoredCar.
+func (result *StoredCar) Validate() (err error) {
 	switch result.View {
 	case "default", "":
 		err = result.Projected.Validate()
@@ -41,8 +53,21 @@ func (result *Car) Validate() (err error) {
 	return
 }
 
-// Validate runs the validations defined on CarView using the "default" view.
-func (result *CarView) Validate() (err error) {
+// Validate runs the validations defined on the viewed result type
+// StoredCarCollection.
+func (result StoredCarCollection) Validate() (err error) {
+	switch result.View {
+	case "default", "":
+		err = result.Projected.Validate()
+	default:
+		err = goa.InvalidEnumValueError("view", result.View, []interface{}{"default"})
+	}
+	return
+}
+
+// Validate runs the validations defined on StoredCarView using the "default"
+// view.
+func (result *StoredCarView) Validate() (err error) {
 	if result.Make == nil {
 		err = goa.MergeErrors(err, goa.MissingFieldError("make", "result"))
 	}
@@ -51,6 +76,17 @@ func (result *CarView) Validate() (err error) {
 	}
 	if result.BodyStyle == nil {
 		err = goa.MergeErrors(err, goa.MissingFieldError("body_style", "result"))
+	}
+	return
+}
+
+// Validate runs the validations defined on StoredCarCollectionView using the
+// "default" view.
+func (result StoredCarCollectionView) Validate() (err error) {
+	for _, item := range result {
+		if err2 := item.Validate(); err2 != nil {
+			err = goa.MergeErrors(err, err2)
+		}
 	}
 	return
 }

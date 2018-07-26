@@ -43,6 +43,16 @@ func File(genpkg string, service *design.ServiceExpr) *codegen.File {
 				})
 			}
 		}
+		if m.StreamingPayloadDef != "" {
+			if _, ok := seen[m.StreamingPayload]; !ok {
+				seen[m.StreamingPayload] = struct{}{}
+				sections = append(sections, &codegen.SectionTemplate{
+					Name:   "service-streamig-payload",
+					Source: streamingPayloadT,
+					Data:   m,
+				})
+			}
+		}
 		if m.ResultDef != "" {
 			if _, ok := seen[m.Result]; !ok {
 				seen[m.Result] = struct{}{}
@@ -157,12 +167,12 @@ func errorName(et *UserTypeData) string {
 
 // streamInterfaceFor builds the data to generate the client and server stream
 // interfaces for the given endpoint.
-func streamInterfaceFor(kind string, m *MethodData, stream *StreamData) map[string]interface{} {
+func streamInterfaceFor(typ string, m *MethodData, stream *StreamData) map[string]interface{} {
 	return map[string]interface{}{
-		"Kind":           kind,
+		"Type":           typ,
 		"Endpoint":       m.Name,
 		"Stream":         stream,
-		"IsViewedResult": m.ViewedResult != nil,
+		"IsViewedResult": m.ViewedResult != nil && m.ViewedResult.ViewName == "",
 	}
 }
 
@@ -174,20 +184,20 @@ type Service interface {
 	{{ comment .Description }}
 	{{- if .ViewedResult }}
 		{{- if not .ViewedResult.ViewName }}
-		{{ comment "The \"view\" return value must have one of the following views" }}
-		{{- range .ViewedResult.Views }}
-			{{- if .Description }}
-			{{ printf "* %q: %s" .Name .Description | comment }}
-			{{- else }}
-			{{ printf "* %q" .Name | comment }}
+			{{ comment "The \"view\" return value must have one of the following views" }}
+			{{- range .ViewedResult.Views }}
+				{{- if .Description }}
+					{{ printf "- %q: %s" .Name .Description | comment }}
+				{{- else }}
+					{{ printf "- %q" .Name | comment }}
+				{{- end }}
 			{{- end }}
-		{{- end }}
 		{{- end }}
 	{{- end }}
 	{{- if .ServerStream }}
-	{{ .VarName }}(context.Context{{ if .Payload }}, {{ .PayloadRef }}{{ end }}, {{ .ServerStream.Interface }}) (err error)
+		{{ .VarName }}(context.Context{{ if .Payload }}, {{ .PayloadRef }}{{ end }}, {{ .ServerStream.Interface }}) (err error)
 	{{- else }}
-	{{ .VarName }}(context.Context{{ if .Payload }}, {{ .PayloadRef }}{{ end }}) ({{ if .Result }}res {{ .ResultRef }}, {{ if .ViewedResult }}{{ if not .ViewedResult.ViewName }}view string, {{ end }}{{ end }}{{ end }}err error)
+		{{ .VarName }}(context.Context{{ if .Payload }}, {{ .PayloadRef }}{{ end }}) ({{ if .Result }}res {{ .ResultRef }}, {{ if .ViewedResult }}{{ if not .ViewedResult.ViewName }}view string, {{ end }}{{ end }}{{ end }}err error)
 	{{- end }}
 {{- end }}
 }
@@ -202,26 +212,28 @@ const ServiceName = {{ printf "%q" .Name }}
 // MethodKey key.
 var MethodNames = [{{ len .Methods }}]string{ {{ range .Methods }}{{ printf "%q" .Name }}, {{ end }} }
 {{- range .Methods }}
-	{{- if or .ServerStream .ClientStream }}
+	{{- if .ServerStream }}
 		{{ template "stream_interface" (streamInterfaceFor "server" . .ServerStream) }}
 		{{ template "stream_interface" (streamInterfaceFor "client" . .ClientStream) }}
 	{{- end }}
 {{- end }}
 
 {{- define "stream_interface" }}
-{{ printf "%s is the interface a %q endpoint %s stream must satisfy." .Stream.Interface .Endpoint .Kind | comment }}
+{{ printf "%s is the interface a %q endpoint %s stream must satisfy." .Stream.Interface .Endpoint .Type | comment }}
 type {{ .Stream.Interface }} interface {
-	{{- if .Stream.SendRef }}
-		{{ printf "Send streams instances of %q." .Stream.SendName | comment }}
-		Send({{ .Stream.SendRef }}) error
+	{{- if .Stream.SendTypeRef }}
+		{{ comment .Stream.SendDesc }}
+		{{ .Stream.SendName }}({{ .Stream.SendTypeRef }}) error
+	{{- end }}
+	{{- if .Stream.RecvTypeRef }}
+		{{ comment .Stream.RecvDesc }}
+		{{ .Stream.RecvName }}() ({{ .Stream.RecvTypeRef }}, error)
+	{{- end }}
+	{{- if .Stream.MustClose }}
 		{{ comment "Close closes the stream." }}
 		Close() error
 	{{- end }}
-	{{- if .Stream.RecvRef }}
-		{{ printf "Recv reads instances of %q from the stream." .Stream.RecvName | comment }}
-		Recv() ({{ .Stream.RecvRef }}, error)
-	{{- end }}
-	{{- if and .IsViewedResult (eq .Kind "server") }}
+	{{- if and .IsViewedResult (eq .Type "server") }}
 		{{ comment "SetView sets the view used to render the result before streaming." }}
 		SetView(view string)
 	{{- end }}
@@ -231,6 +243,10 @@ type {{ .Stream.Interface }} interface {
 
 const payloadT = `{{ comment .PayloadDesc }}
 type {{ .Payload }} {{ .PayloadDef }}
+`
+
+const streamingPayloadT = `{{ comment .StreamingPayloadDesc }}
+type {{ .StreamingPayload }} {{ .StreamingPayloadDef }}
 `
 
 const resultT = `{{ comment .ResultDesc }}

@@ -43,6 +43,35 @@ paths:
       - ws
       security:
       - jwt: []
+  /cars/add:
+    get:
+      tags:
+      - cars
+      summary: add cars
+      description: |-
+        Add car models.
+
+        Required security scopes:
+          * `stream:write`
+      operationId: cars#add
+      responses:
+        "101":
+          description: Switching Protocols response.
+          schema:
+            $ref: '#/definitions/CarsStoredCarResponseBodyCollection'
+        "401":
+          description: Unauthorized response.
+          schema:
+            $ref: '#/definitions/AddUnauthorizedResponseBody'
+        "403":
+          description: Forbidden response.
+          schema:
+            $ref: '#/definitions/AddInvalidScopesResponseBody'
+      schemes:
+      - http
+      - ws
+      security:
+      - jwt: []
   /cars/login:
     post:
       tags:
@@ -64,7 +93,44 @@ paths:
       - ws
       security:
       - basic: []
+  /cars/update:
+    get:
+      tags:
+      - cars
+      summary: update cars
+      description: |-
+        Update car models.
+
+        Required security scopes:
+          * `stream:write`
+      operationId: cars#update
+      responses:
+        "101":
+          description: Switching Protocols response.
+          schema:
+            $ref: '#/definitions/CarsStoredCarResponseBodyCollection'
+        "401":
+          description: Unauthorized response.
+          schema:
+            $ref: '#/definitions/UpdateUnauthorizedResponseBody'
+        "403":
+          description: Forbidden response.
+          schema:
+            $ref: '#/definitions/UpdateInvalidScopesResponseBody'
+      schemes:
+      - http
+      - ws
+      security:
+      - jwt: []
 definitions:
+  AddInvalidScopesResponseBody:
+    title: AddInvalidScopesResponseBody
+    type: string
+    example: Exercitationem nihil consequatur sequi at.
+  AddUnauthorizedResponseBody:
+    title: AddUnauthorizedResponseBody
+    type: string
+    example: Totam ut iste iure qui debitis in.
   CarsListResponseBody:
     title: 'Mediatype identifier: application/vnd.goa.car; view=default'
     type: object
@@ -72,37 +138,87 @@ definitions:
       body_style:
         type: string
         description: The car body style
-        example: Et similique voluptatem aut.
+        example: Placeat dolore.
       make:
         type: string
         description: The make of the car
-        example: Laudantium qui minima voluptatibus in incidunt.
+        example: Quia minima ut magnam.
       model:
         type: string
         description: The car model
-        example: Rerum dolor.
+        example: Et repellendus.
     description: ListResponseBody result type (default view)
     example:
-      body_style: Atque doloremque sunt.
-      make: Nihil modi consequuntur impedit culpa dolor iste.
-      model: Quis velit.
+      body_style: Labore sit sit earum.
+      make: Dolor cumque ab natus.
+      model: Quibusdam hic rerum autem pariatur nihil.
     required:
     - make
     - model
     - body_style
+  CarsStoredCarResponseBodyCollection:
+    title: 'Mediatype identifier: application/vnd.goa.car; type=collection; view=default'
+    type: array
+    items:
+      $ref: '#/definitions/StoredCarResponseBody'
+    description: AddResponseBody is the result type for an array of StoredCarResponseBody
+      (default view)
+    example:
+    - body_style: Odit reiciendis aperiam perspiciatis harum et.
+      make: Mollitia asperiores.
+      model: Amet nihil.
+    - body_style: Odit reiciendis aperiam perspiciatis harum et.
+      make: Mollitia asperiores.
+      model: Amet nihil.
+    - body_style: Odit reiciendis aperiam perspiciatis harum et.
+      make: Mollitia asperiores.
+      model: Amet nihil.
   ListInvalidScopesResponseBody:
     title: ListInvalidScopesResponseBody
     type: string
-    example: Mollitia asperiores.
+    example: Temporibus exercitationem ipsam harum eos excepturi.
   ListUnauthorizedResponseBody:
     title: ListUnauthorizedResponseBody
     type: string
-    example: Voluptas harum aut.
+    example: Earum et facere autem.
   LoginUnauthorizedResponseBody:
     title: LoginUnauthorizedResponseBody
     type: string
     description: Credentials are invalid
-    example: Vero odio odio id autem.
+    example: Magni officia earum alias.
+  StoredCarResponseBody:
+    title: 'Mediatype identifier: application/vnd.goa.car; view=default'
+    type: object
+    properties:
+      body_style:
+        type: string
+        description: The car body style
+        example: Quia error aspernatur consectetur animi eum molestiae.
+      make:
+        type: string
+        description: The make of the car
+        example: Occaecati aut eum ut quidem.
+      model:
+        type: string
+        description: The car model
+        example: Amet magnam.
+    description: StoredCarResponseBody result type (default view)
+    example:
+      body_style: Odit rerum quibusdam odit itaque.
+      make: Officia minus labore aut.
+      model: Sed deleniti.
+    required:
+    - make
+    - model
+    - body_style
+  UpdateInvalidScopesResponseBody:
+    title: UpdateInvalidScopesResponseBody
+    type: string
+    example: Laborum magni.
+  UpdateUnauthorizedResponseBody:
+    title: UpdateUnauthorizedResponseBody
+    type: string
+    example: Sed voluptatem.
 securityDefinitions:
   basic:
     type: basic

@@ -1210,6 +1210,50 @@ func Service(name string, fn func()) *design.ServiceExpr {
 	return dsl.Service(name, fn)
 }
 
+// StreamingPayload defines a method that accepts a stream of instances of the
+// given type.
+//
+// StreamingPayload must appear in a Method expression.
+//
+// The arguments to a StreamingPayload DSL is same as the Payload DSL.
+//
+// Examples:
+//
+//    // Method payload is a stream of strings
+//    Method("upper", func() {
+//        StreamingPayload(String)
+//    })
+//
+//    Method("upper", func() {
+//        StreamingPayload(String, "string to convert to uppercase")
+//    })
+//
+//    // Method payload is a stream of string with validation set on each
+//    Method("upper"), func() {
+//        StreamingPayload(String, "string to convert to uppercase", func() {
+//            Pattern("^[a-z]")
+//        })
+//    }
+//
+//    // Method payload is a stream of objects defined inline
+//    Method("add", func() {
+//        StreamingPayload(func() {
+//            Description("Left and right operands to add")
+//            Attribute("left", Int32, "Left operand")
+//            Attribute("right", Int32, "Left operand")
+//            Required("left", "right")
+//        })
+//    })
+//
+//    // Method payload is a stream of user type
+//    Method("add", func() {
+//        StreamingPayload(Operands)
+//    })
+//
+func StreamingPayload(val interface{}, args ...interface{}) {
+	dsl.StreamingPayload(val, args...)
+}
+
 // StreamingResult defines a method that streams instances of the given type.
 //
 // StreamingResult must appear in a Method expression.

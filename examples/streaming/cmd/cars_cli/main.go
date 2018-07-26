@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bufio"
 	"context"
 	"encoding/json"
 	"flag"
@@ -9,6 +10,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"os/signal"
 	"strings"
 	"time"
 
@@ -84,18 +86,17 @@ func main() {
 	}
 
 	data, err := endpoint(context.Background(), payload)
-
 	if debug {
 		doer.(goahttp.DebugDoer).Fprint(os.Stderr)
 	}
-
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err.Error())
 		os.Exit(1)
 	}
 
 	if data != nil && !debug {
-		if s, ok := data.(carssvc.ListClientStream); ok {
+		switch s := data.(type) {
+		case carssvc.ListClientStream:
 			for {
 				d, err := s.Recv()
 				if err == io.EOF {
@@ -107,7 +108,59 @@ func main() {
 				m, _ := json.MarshalIndent(d, "", "    ")
 				fmt.Println(string(m))
 			}
-		} else {
+		case carssvc.AddClientStream:
+			trapCtrlC()
+			fmt.Println("Press Ctrl+D to stop sending payload.")
+			scanner := bufio.NewScanner(os.Stdin)
+			for scanner.Scan() {
+				t := scanner.Text()
+				p, err := buildAddStreamingPayload(t)
+				if err != nil {
+					fmt.Println(fmt.Errorf("Error creating payload: %s", err))
+					os.Exit(1)
+				}
+				if err := s.Send(p); err != nil {
+					fmt.Println(fmt.Errorf("Error sending into stream: %s", err))
+					os.Exit(1)
+				}
+			}
+			d, err := s.CloseAndRecv()
+			if err == io.EOF {
+				os.Exit(0)
+			}
+			if err != nil {
+				fmt.Println(fmt.Errorf("Error reading from stream: %s", err))
+			}
+			m, _ := json.MarshalIndent(d, "", "    ")
+			fmt.Println(string(m))
+		case carssvc.UpdateClientStream:
+			trapCtrlC()
+			fmt.Println("Press Ctrl+D to stop.")
+			scanner := bufio.NewScanner(os.Stdin)
+			for scanner.Scan() {
+				t := scanner.Text()
+				p, err := buildUpdateStreamingPayload(t)
+				if err != nil {
+					fmt.Println(fmt.Errorf("Error creating payload: %s", err))
+					os.Exit(1)
+				}
+				if err := s.Send(p); err != nil {
+					fmt.Println(fmt.Errorf("Error sending into stream: %s", err))
+					os.Exit(1)
+				}
+				var cars carssvc.StoredCarCollection
+				cars, err = s.Recv()
+				if err == io.EOF {
+					s.Close()
+					os.Exit(0)
+				}
+				if err != nil {
+					fmt.Println(fmt.Errorf("Error reading from stream: %s", err))
+				}
+				m, _ := json.MarshalIndent(cars, "", "    ")
+				fmt.Println(string(m))
+			}
+		default:
 			m, _ := json.MarshalIndent(data, "", "    ")
 			fmt.Println(string(m))
 		}
@@ -139,4 +192,44 @@ func indent(s string) string {
 		return ""
 	}
 	return "    " + strings.Replace(s, "\n", "\n    ", -1)
+}
+
+// Graceful shutdown
+func trapCtrlC() {
+	ch := make(chan os.Signal, 1)
+	signal.Notify(ch, os.Interrupt)
+	go func() {
+		for range ch {
+			fmt.Println("\nexiting")
+			os.Exit(0)
+		}
+	}()
+}
+
+// buildAddStreamingPayload builds the streaming payload for the cars add
+// endpoint.
+func buildAddStreamingPayload(carsAddBody string) (*carssvc.AddStreamingPayload, error) {
+	var err error
+	var car carssvc.AddStreamingPayload
+	{
+		err = json.Unmarshal([]byte(carsAddBody), &car)
+		if err != nil {
+			return nil, fmt.Errorf("invalid JSON for body, example of valid JSON:\n%s", "'{\n      \"car\": {\n         \"body_style\": \"Laudantium qui minima voluptatibus in incidunt.\",\n         \"make\": \"Aspernatur totam.\",\n         \"model\": \"Vero odio odio id autem.\"\n      }\n   }'")
+		}
+	}
+	return &car, nil
+}
+
+// buildUpdateStreamingPayload builds the streaming payload for the cars update
+// endpoint.
+func buildUpdateStreamingPayload(carsUpdateBody string) ([]*carssvc.Car, error) {
+	var err error
+	var cars []*carssvc.Car
+	{
+		err = json.Unmarshal([]byte(carsUpdateBody), &cars)
+		if err != nil {
+			return nil, fmt.Errorf("invalid JSON for body")
+		}
+	}
+	return cars, nil
 }

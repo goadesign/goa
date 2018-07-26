@@ -2,6 +2,8 @@ package cars
 
 import (
 	"context"
+	"fmt"
+	"io"
 	"log"
 	"time"
 
@@ -48,41 +50,95 @@ func (s *carsSvc) List(ctx context.Context, p *carssvc.ListPayload, stream carss
 	return stream.Close()
 }
 
-var modelsByStyle = map[string][]*carssvc.Car{
-	"sedan": []*carssvc.Car{
-		&carssvc.Car{Make: "Acura", Model: "TLX", BodyStyle: "sedan"},
-		&carssvc.Car{Make: "Audi", Model: "A4", BodyStyle: "sedan"},
-		&carssvc.Car{Make: "BMW", Model: "M3", BodyStyle: "sedan"},
-		&carssvc.Car{Make: "Chevrolet", Model: "Cruze", BodyStyle: "sedan"},
-		&carssvc.Car{Make: "Ford", Model: "Focus", BodyStyle: "sedan"},
-		&carssvc.Car{Make: "Honda", Model: "Accord", BodyStyle: "sedan"},
-		&carssvc.Car{Make: "Hyundai", Model: "Accent", BodyStyle: "sedan"},
-		&carssvc.Car{Make: "Infiniti", Model: "Q50", BodyStyle: "sedan"},
-		&carssvc.Car{Make: "Kia", Model: "Rio", BodyStyle: "sedan"},
-		&carssvc.Car{Make: "Lexus", Model: "ES", BodyStyle: "sedan"},
-		&carssvc.Car{Make: "Mazda", Model: "6", BodyStyle: "sedan"},
-		&carssvc.Car{Make: "Mercedes", Model: "C-Class", BodyStyle: "sedan"},
-		&carssvc.Car{Make: "Nissan", Model: "Altima", BodyStyle: "sedan"},
-		&carssvc.Car{Make: "Porsche", Model: "Panamera", BodyStyle: "sedan"},
-		&carssvc.Car{Make: "Subaru", Model: "Impreza", BodyStyle: "sedan"},
-		&carssvc.Car{Make: "Volkswagen", Model: "Passat", BodyStyle: "sedan"},
+// Add car models.
+func (s *carsSvc) Add(ctx context.Context, p *carssvc.AddPayload, stream carssvc.AddServerStream) (err error) {
+	var res carssvc.StoredCarCollection
+	for {
+		sp, err := stream.Recv()
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			return err
+		}
+		if car := sp.Car; car != nil {
+			sc := &carssvc.StoredCar{
+				Make:      car.Make,
+				Model:     car.Model,
+				BodyStyle: car.BodyStyle,
+			}
+			modelsByStyle[car.BodyStyle] = append(modelsByStyle[car.BodyStyle], sc)
+			res = append(res, sc)
+		}
+	}
+	return stream.SendAndClose(res)
+}
+
+// Update car models.
+func (s *carsSvc) Update(ctx context.Context, p *carssvc.UpdatePayload, stream carssvc.UpdateServerStream) (err error) {
+	for {
+		cars, err := stream.Recv()
+		fmt.Println(fmt.Sprintf("%#v", cars))
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			return err
+		}
+		var res carssvc.StoredCarCollection
+		for _, car := range cars {
+			fmt.Println(fmt.Sprintf("%#v", car))
+			sc := &carssvc.StoredCar{
+				Make:      car.Make,
+				Model:     car.Model,
+				BodyStyle: car.BodyStyle,
+			}
+			modelsByStyle[car.BodyStyle] = append(modelsByStyle[car.BodyStyle], sc)
+			fmt.Println(fmt.Sprintf("%#v", sc))
+			res = append(res, sc)
+		}
+		if err := stream.Send(res); err != nil {
+			return err
+		}
+	}
+	return stream.Close()
+}
+
+var modelsByStyle = map[string][]*carssvc.StoredCar{
+	"sedan": []*carssvc.StoredCar{
+		&carssvc.StoredCar{Make: "Acura", Model: "TLX", BodyStyle: "sedan"},
+		&carssvc.StoredCar{Make: "Audi", Model: "A4", BodyStyle: "sedan"},
+		&carssvc.StoredCar{Make: "BMW", Model: "M3", BodyStyle: "sedan"},
+		&carssvc.StoredCar{Make: "Chevrolet", Model: "Cruze", BodyStyle: "sedan"},
+		&carssvc.StoredCar{Make: "Ford", Model: "Focus", BodyStyle: "sedan"},
+		&carssvc.StoredCar{Make: "Honda", Model: "Accord", BodyStyle: "sedan"},
+		&carssvc.StoredCar{Make: "Hyundai", Model: "Accent", BodyStyle: "sedan"},
+		&carssvc.StoredCar{Make: "Infiniti", Model: "Q50", BodyStyle: "sedan"},
+		&carssvc.StoredCar{Make: "Kia", Model: "Rio", BodyStyle: "sedan"},
+		&carssvc.StoredCar{Make: "Lexus", Model: "ES", BodyStyle: "sedan"},
+		&carssvc.StoredCar{Make: "Mazda", Model: "6", BodyStyle: "sedan"},
+		&carssvc.StoredCar{Make: "Mercedes", Model: "C-Class", BodyStyle: "sedan"},
+		&carssvc.StoredCar{Make: "Nissan", Model: "Altima", BodyStyle: "sedan"},
+		&carssvc.StoredCar{Make: "Porsche", Model: "Panamera", BodyStyle: "sedan"},
+		&carssvc.StoredCar{Make: "Subaru", Model: "Impreza", BodyStyle: "sedan"},
+		&carssvc.StoredCar{Make: "Volkswagen", Model: "Passat", BodyStyle: "sedan"},
 	},
-	"hatchback": []*carssvc.Car{
-		&carssvc.Car{Make: "Acura", Model: "MDX", BodyStyle: "hatchback"},
-		&carssvc.Car{Make: "Audi", Model: "Q3", BodyStyle: "hatchback"},
-		&carssvc.Car{Make: "BMW", Model: "X3", BodyStyle: "hatchback"},
-		&carssvc.Car{Make: "Chevrolet", Model: "Equinox", BodyStyle: "hatchback"},
-		&carssvc.Car{Make: "Ford", Model: "Escape", BodyStyle: "hatchback"},
-		&carssvc.Car{Make: "Honda", Model: "CRV", BodyStyle: "hatchback"},
-		&carssvc.Car{Make: "Hyundai", Model: "Santa Fe", BodyStyle: "hatchback"},
-		&carssvc.Car{Make: "Infiniti", Model: "QX30", BodyStyle: "hatchback"},
-		&carssvc.Car{Make: "Kia", Model: "Sorento", BodyStyle: "hatchback"},
-		&carssvc.Car{Make: "Lexus", Model: "NX", BodyStyle: "hatchback"},
-		&carssvc.Car{Make: "Mazda", Model: "CX5", BodyStyle: "hatchback"},
-		&carssvc.Car{Make: "Mercedes", Model: "GLA-Class", BodyStyle: "hatchback"},
-		&carssvc.Car{Make: "Nissan", Model: "Rogue", BodyStyle: "hatchback"},
-		&carssvc.Car{Make: "Porsche", Model: "Cayenne", BodyStyle: "hatchback"},
-		&carssvc.Car{Make: "Subaru", Model: "Outback", BodyStyle: "hatchback"},
-		&carssvc.Car{Make: "Volkswagen", Model: "Golf", BodyStyle: "hatchback"},
+	"hatchback": []*carssvc.StoredCar{
+		&carssvc.StoredCar{Make: "Acura", Model: "MDX", BodyStyle: "hatchback"},
+		&carssvc.StoredCar{Make: "Audi", Model: "Q3", BodyStyle: "hatchback"},
+		&carssvc.StoredCar{Make: "BMW", Model: "X3", BodyStyle: "hatchback"},
+		&carssvc.StoredCar{Make: "Chevrolet", Model: "Equinox", BodyStyle: "hatchback"},
+		&carssvc.StoredCar{Make: "Ford", Model: "Escape", BodyStyle: "hatchback"},
+		&carssvc.StoredCar{Make: "Honda", Model: "CRV", BodyStyle: "hatchback"},
+		&carssvc.StoredCar{Make: "Hyundai", Model: "Santa Fe", BodyStyle: "hatchback"},
+		&carssvc.StoredCar{Make: "Infiniti", Model: "QX30", BodyStyle: "hatchback"},
+		&carssvc.StoredCar{Make: "Kia", Model: "Sorento", BodyStyle: "hatchback"},
+		&carssvc.StoredCar{Make: "Lexus", Model: "NX", BodyStyle: "hatchback"},
+		&carssvc.StoredCar{Make: "Mazda", Model: "CX5", BodyStyle: "hatchback"},
+		&carssvc.StoredCar{Make: "Mercedes", Model: "GLA-Class", BodyStyle: "hatchback"},
+		&carssvc.StoredCar{Make: "Nissan", Model: "Rogue", BodyStyle: "hatchback"},
+		&carssvc.StoredCar{Make: "Porsche", Model: "Cayenne", BodyStyle: "hatchback"},
+		&carssvc.StoredCar{Make: "Subaru", Model: "Outback", BodyStyle: "hatchback"},
+		&carssvc.StoredCar{Make: "Volkswagen", Model: "Golf", BodyStyle: "hatchback"},
 	},
 }

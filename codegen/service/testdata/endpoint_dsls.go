@@ -102,6 +102,22 @@ var StreamingResultEndpointDSL = func() {
 	})
 }
 
+var StreamingPayloadEndpointDSL = func() {
+	var AType = Type("AType", func() {
+		Attribute("a", String)
+	})
+	var BType = Type("BType", func() {
+		Attribute("x", String)
+	})
+	Service("StreamingPayloadEndpoint", func() {
+		Method("StreamingPayloadMethod", func() {
+			Payload(BType)
+			StreamingPayload(AType)
+			Result(AResult)
+		})
+	})
+}
+
 var StreamingResultNoPayloadEndpointDSL = func() {
 	var RType = ResultType("application/vnd.withresult", func() {
 		TypeName("Rtype")
@@ -116,6 +132,22 @@ var StreamingResultNoPayloadEndpointDSL = func() {
 	Service("StreamingResultNoPayloadEndpoint", func() {
 		Method("StreamingResultNoPayloadMethod", func() {
 			StreamingResult(RType)
+		})
+	})
+}
+
+var BidirectionalStreamingEndpointDSL = func() {
+	var AType = Type("AType", func() {
+		Attribute("a", String)
+	})
+	var BType = Type("BType", func() {
+		Attribute("x", String)
+	})
+	Service("BidirectionalStreamingEndpoint", func() {
+		Method("BidirectionalStreamingMethod", func() {
+			Payload(AType)
+			StreamingPayload(BType)
+			StreamingResult(AResult)
 		})
 	})
 }

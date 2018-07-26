@@ -140,6 +140,8 @@ func TestMethodExprValidate(t *testing.T) {
 			Payload: tc.payload,
 			Result:  tc.result,
 			Errors:  tc.errors,
+
+			StreamingPayload: &AttributeExpr{Type: Empty},
 		}
 		if actual := m.Validate().(*eval.ValidationErrors); len(tc.expected.Errors) != len(actual.Errors) {
 			t.Errorf("%s: expected the number of error values to match %d got %d ", k, len(tc.expected.Errors), len(actual.Errors))

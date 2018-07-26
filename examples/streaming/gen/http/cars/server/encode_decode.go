@@ -132,3 +132,126 @@ func EncodeListError(encoder func(context.Context, http.ResponseWriter) goahttp.
 		}
 	}
 }
+
+// DecodeAddRequest returns a decoder for requests sent to the cars add
+// endpoint.
+func DecodeAddRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) (interface{}, error) {
+	return func(r *http.Request) (interface{}, error) {
+		var (
+			token *string
+		)
+		tokenRaw := r.Header.Get("Authorization")
+		if tokenRaw != "" {
+			token = &tokenRaw
+		}
+		payload := NewAddPayload(token)
+		if payload.Token != nil {
+			if strings.Contains(*payload.Token, " ") {
+				// Remove authorization scheme prefix (e.g. "Bearer")
+				cred := strings.SplitN(*payload.Token, " ", 2)[1]
+				payload.Token = &cred
+			}
+		}
+
+		return payload, nil
+	}
+}
+
+// EncodeAddError returns an encoder for errors returned by the add cars
+// endpoint.
+func EncodeAddError(encoder func(context.Context, http.ResponseWriter) goahttp.Encoder) func(context.Context, http.ResponseWriter, error) error {
+	encodeError := goahttp.ErrorEncoder(encoder)
+	return func(ctx context.Context, w http.ResponseWriter, v error) error {
+		en, ok := v.(ErrorNamer)
+		if !ok {
+			return encodeError(ctx, w, v)
+		}
+		switch en.ErrorName() {
+		case "invalid-scopes":
+			res := v.(carssvc.InvalidScopes)
+			enc := encoder(ctx, w)
+			body := NewAddInvalidScopesResponseBody(res)
+			w.Header().Set("goa-error", "invalid-scopes")
+			w.WriteHeader(http.StatusForbidden)
+			return enc.Encode(body)
+		case "unauthorized":
+			res := v.(carssvc.Unauthorized)
+			enc := encoder(ctx, w)
+			body := NewAddUnauthorizedResponseBody(res)
+			w.Header().Set("goa-error", "unauthorized")
+			w.WriteHeader(http.StatusUnauthorized)
+			return enc.Encode(body)
+		default:
+			return encodeError(ctx, w, v)
+		}
+	}
+}
+
+// DecodeUpdateRequest returns a decoder for requests sent to the cars update
+// endpoint.
+func DecodeUpdateRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) (interface{}, error) {
+	return func(r *http.Request) (interface{}, error) {
+		var (
+			token *string
+		)
+		tokenRaw := r.Header.Get("Authorization")
+		if tokenRaw != "" {
+			token = &tokenRaw
+		}
+		payload := NewUpdatePayload(token)
+		if payload.Token != nil {
+			if strings.Contains(*payload.Token, " ") {
+				// Remove authorization scheme prefix (e.g. "Bearer")
+				cred := strings.SplitN(*payload.Token, " ", 2)[1]
+				payload.Token = &cred
+			}
+		}
+
+		return payload, nil
+	}
+}
+
+// EncodeUpdateError returns an encoder for errors returned by the update cars
+// endpoint.
+func EncodeUpdateError(encoder func(context.Context, http.ResponseWriter) goahttp.Encoder) func(context.Context, http.ResponseWriter, error) error {
+	encodeError := goahttp.ErrorEncoder(encoder)
+	return func(ctx context.Context, w http.ResponseWriter, v error) error {
+		en, ok := v.(ErrorNamer)
+		if !ok {
+			return encodeError(ctx, w, v)
+		}
+		switch en.ErrorName() {
+		case "invalid-scopes":
+			res := v.(carssvc.InvalidScopes)
+			enc := encoder(ctx, w)
+			body := NewUpdateInvalidScopesResponseBody(res)
+			w.Header().Set("goa-error", "invalid-scopes")
+			w.WriteHeader(http.StatusForbidden)
+			return enc.Encode(body)
+		case "unauthorized":
+			res := v.(carssvc.Unauthorized)
+			enc := encoder(ctx, w)
+			body := NewUpdateUnauthorizedResponseBody(res)
+			w.Header().Set("goa-error", "unauthorized")
+			w.WriteHeader(http.StatusUnauthorized)
+			return enc.Encode(body)
+		default:
+			return encodeError(ctx, w, v)
+		}
+	}
+}
+
+// unmarshalCarStreamingBodyToCar builds a value of type *carssvc.Car from a
+// value of type *CarStreamingBody.
+func unmarshalCarStreamingBodyToCar(v *CarStreamingBody) *carssvc.Car {
+	if v == nil {
+		return nil
+	}
+	res := &carssvc.Car{
+		Make:      *v.Make,
+		Model:     *v.Model,
+		BodyStyle: *v.BodyStyle,
+	}
+
+	return res
+}

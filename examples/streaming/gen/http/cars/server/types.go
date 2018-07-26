@@ -9,9 +9,21 @@
 package server
 
 import (
+	goa "goa.design/goa"
 	carssvc "goa.design/goa/examples/streaming/gen/cars"
 	carssvcviews "goa.design/goa/examples/streaming/gen/cars/views"
 )
+
+// AddStreamingBody is the type of the "cars" service "add" endpoint HTTP
+// request body.
+type AddStreamingBody struct {
+	// Car to add.
+	Car *CarStreamingBody `form:"car,omitempty" json:"car,omitempty" xml:"car,omitempty"`
+}
+
+// UpdateStreamingBody is the type of the "cars" service "update" endpoint HTTP
+// request body.
+type UpdateStreamingBody []*CarStreamingBody
 
 // ListResponseBody is the type of the "cars" service "list" endpoint HTTP
 // response body.
@@ -23,6 +35,14 @@ type ListResponseBody struct {
 	// The car body style
 	BodyStyle string `form:"body_style" json:"body_style" xml:"body_style"`
 }
+
+// AddResponseBody is the type of the "cars" service "add" endpoint HTTP
+// response body.
+type AddResponseBody []*StoredCarResponseBody
+
+// UpdateResponseBody is the type of the "cars" service "update" endpoint HTTP
+// response body.
+type UpdateResponseBody []*StoredCarResponseBody
 
 // LoginUnauthorizedResponseBody is the type of the "cars" service "login"
 // endpoint HTTP response body for the "unauthorized" error.
@@ -36,13 +56,77 @@ type ListInvalidScopesResponseBody string
 // endpoint HTTP response body for the "unauthorized" error.
 type ListUnauthorizedResponseBody string
 
+// AddInvalidScopesResponseBody is the type of the "cars" service "add"
+// endpoint HTTP response body for the "invalid-scopes" error.
+type AddInvalidScopesResponseBody string
+
+// AddUnauthorizedResponseBody is the type of the "cars" service "add" endpoint
+// HTTP response body for the "unauthorized" error.
+type AddUnauthorizedResponseBody string
+
+// UpdateInvalidScopesResponseBody is the type of the "cars" service "update"
+// endpoint HTTP response body for the "invalid-scopes" error.
+type UpdateInvalidScopesResponseBody string
+
+// UpdateUnauthorizedResponseBody is the type of the "cars" service "update"
+// endpoint HTTP response body for the "unauthorized" error.
+type UpdateUnauthorizedResponseBody string
+
+// StoredCarResponseBody is used to define fields on response body types.
+type StoredCarResponseBody struct {
+	// The make of the car
+	Make string `form:"make" json:"make" xml:"make"`
+	// The car model
+	Model string `form:"model" json:"model" xml:"model"`
+	// The car body style
+	BodyStyle string `form:"body_style" json:"body_style" xml:"body_style"`
+}
+
+// CarStreamingBody is used to define fields on request body types.
+type CarStreamingBody struct {
+	// The make of the car
+	Make *string `form:"make,omitempty" json:"make,omitempty" xml:"make,omitempty"`
+	// The car model
+	Model *string `form:"model,omitempty" json:"model,omitempty" xml:"model,omitempty"`
+	// The car body style
+	BodyStyle *string `form:"body_style,omitempty" json:"body_style,omitempty" xml:"body_style,omitempty"`
+}
+
 // NewListResponseBody builds the HTTP response body from the result of the
 // "list" endpoint of the "cars" service.
-func NewListResponseBody(res *carssvcviews.CarView) *ListResponseBody {
+func NewListResponseBody(res *carssvcviews.StoredCarView) *ListResponseBody {
 	body := &ListResponseBody{
 		Make:      *res.Make,
 		Model:     *res.Model,
 		BodyStyle: *res.BodyStyle,
+	}
+	return body
+}
+
+// NewAddResponseBody builds the HTTP response body from the result of the
+// "add" endpoint of the "cars" service.
+func NewAddResponseBody(res carssvcviews.StoredCarCollectionView) AddResponseBody {
+	body := make([]*StoredCarResponseBody, len(res))
+	for i, val := range res {
+		body[i] = &StoredCarResponseBody{
+			Make:      *val.Make,
+			Model:     *val.Model,
+			BodyStyle: *val.BodyStyle,
+		}
+	}
+	return body
+}
+
+// NewUpdateResponseBody builds the HTTP response body from the result of the
+// "update" endpoint of the "cars" service.
+func NewUpdateResponseBody(res carssvcviews.StoredCarCollectionView) UpdateResponseBody {
+	body := make([]*StoredCarResponseBody, len(res))
+	for i, val := range res {
+		body[i] = &StoredCarResponseBody{
+			Make:      *val.Make,
+			Model:     *val.Model,
+			BodyStyle: *val.BodyStyle,
+		}
 	}
 	return body
 }
@@ -68,6 +152,34 @@ func NewListUnauthorizedResponseBody(res carssvc.Unauthorized) ListUnauthorizedR
 	return body
 }
 
+// NewAddInvalidScopesResponseBody builds the HTTP response body from the
+// result of the "add" endpoint of the "cars" service.
+func NewAddInvalidScopesResponseBody(res carssvc.InvalidScopes) AddInvalidScopesResponseBody {
+	body := AddInvalidScopesResponseBody(res)
+	return body
+}
+
+// NewAddUnauthorizedResponseBody builds the HTTP response body from the result
+// of the "add" endpoint of the "cars" service.
+func NewAddUnauthorizedResponseBody(res carssvc.Unauthorized) AddUnauthorizedResponseBody {
+	body := AddUnauthorizedResponseBody(res)
+	return body
+}
+
+// NewUpdateInvalidScopesResponseBody builds the HTTP response body from the
+// result of the "update" endpoint of the "cars" service.
+func NewUpdateInvalidScopesResponseBody(res carssvc.InvalidScopes) UpdateInvalidScopesResponseBody {
+	body := UpdateInvalidScopesResponseBody(res)
+	return body
+}
+
+// NewUpdateUnauthorizedResponseBody builds the HTTP response body from the
+// result of the "update" endpoint of the "cars" service.
+func NewUpdateUnauthorizedResponseBody(res carssvc.Unauthorized) UpdateUnauthorizedResponseBody {
+	body := UpdateUnauthorizedResponseBody(res)
+	return body
+}
+
 // NewLoginPayload builds a cars service login endpoint payload.
 func NewLoginPayload() *carssvc.LoginPayload {
 	return &carssvc.LoginPayload{}
@@ -79,4 +191,64 @@ func NewListPayload(style string, token string) *carssvc.ListPayload {
 		Style: style,
 		Token: token,
 	}
+}
+
+// NewAddPayload builds a cars service add endpoint payload.
+func NewAddPayload(token *string) *carssvc.AddPayload {
+	return &carssvc.AddPayload{
+		Token: token,
+	}
+}
+
+// NewAddStreamingBody builds a cars service add endpoint payload.
+func NewAddStreamingBody(body *AddStreamingBody) *carssvc.AddStreamingPayload {
+	v := &carssvc.AddStreamingPayload{}
+	if body.Car != nil {
+		v.Car = unmarshalCarStreamingBodyToCar(body.Car)
+	}
+	return v
+}
+
+// NewUpdatePayload builds a cars service update endpoint payload.
+func NewUpdatePayload(token *string) *carssvc.UpdatePayload {
+	return &carssvc.UpdatePayload{
+		Token: token,
+	}
+}
+
+// NewUpdateStreamingBody builds a cars service update endpoint payload.
+func NewUpdateStreamingBody(body UpdateStreamingBody) []*carssvc.Car {
+	v := make([]*carssvc.Car, len(body))
+	for i, val := range body {
+		v[i] = &carssvc.Car{
+			Make:      *val.Make,
+			Model:     *val.Model,
+			BodyStyle: *val.BodyStyle,
+		}
+	}
+	return v
+}
+
+// Validate runs the validations defined on AddStreamingBody
+func (body *AddStreamingBody) Validate() (err error) {
+	if body.Car != nil {
+		if err2 := body.Car.Validate(); err2 != nil {
+			err = goa.MergeErrors(err, err2)
+		}
+	}
+	return
+}
+
+// Validate runs the validations defined on carStreamingBody
+func (body *CarStreamingBody) Validate() (err error) {
+	if body.Make == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("make", "body"))
+	}
+	if body.Model == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("model", "body"))
+	}
+	if body.BodyStyle == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("body_style", "body"))
+	}
+	return
 }

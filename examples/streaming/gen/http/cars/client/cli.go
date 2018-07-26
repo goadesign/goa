@@ -47,3 +47,32 @@ func BuildListPayload(carsListStyle string, carsListToken string) (*carssvc.List
 	}
 	return payload, nil
 }
+
+// BuildAddPayload builds the payload for the cars add endpoint from CLI flags.
+func BuildAddPayload(carsAddToken string) (*carssvc.AddPayload, error) {
+	var token *string
+	{
+		if carsAddToken != "" {
+			token = &carsAddToken
+		}
+	}
+	payload := &carssvc.AddPayload{
+		Token: token,
+	}
+	return payload, nil
+}
+
+// BuildUpdatePayload builds the payload for the cars update endpoint from CLI
+// flags.
+func BuildUpdatePayload(carsUpdateToken string) (*carssvc.UpdatePayload, error) {
+	var token *string
+	{
+		if carsUpdateToken != "" {
+			token = &carsUpdateToken
+		}
+	}
+	payload := &carssvc.UpdatePayload{
+		Token: token,
+	}
+	return payload, nil
+}

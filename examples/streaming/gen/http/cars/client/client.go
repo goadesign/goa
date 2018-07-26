@@ -12,6 +12,7 @@ import (
 	"context"
 	"io"
 	"net/http"
+	"time"
 
 	"github.com/gorilla/websocket"
 	goa "goa.design/goa"
@@ -27,6 +28,12 @@ type Client struct {
 
 	// List Doer is the HTTP client used to make requests to the list endpoint.
 	ListDoer goahttp.Doer
+
+	// Add Doer is the HTTP client used to make requests to the add endpoint.
+	AddDoer goahttp.Doer
+
+	// Update Doer is the HTTP client used to make requests to the update endpoint.
+	UpdateDoer goahttp.Doer
 
 	// RestoreResponseBody controls whether the response bodies are reset after
 	// decoding so they can be read again.
@@ -49,6 +56,24 @@ type listClientStream struct {
 	view string
 }
 
+// addClientStream implements the carssvc.AddClientStream interface.
+type addClientStream struct {
+	// conn is the underlying websocket connection.
+	conn *websocket.Conn
+	// view is the view to render carssvc.AddStreamingPayload result type before
+	// sending to the websocket connection.
+	view string
+}
+
+// updateClientStream implements the carssvc.UpdateClientStream interface.
+type updateClientStream struct {
+	// conn is the underlying websocket connection.
+	conn *websocket.Conn
+	// view is the view to render []*carssvc.Car result type before sending to the
+	// websocket connection.
+	view string
+}
+
 // NewClient instantiates HTTP clients for all the cars service servers.
 func NewClient(
 	scheme string,
@@ -63,6 +88,8 @@ func NewClient(
 	return &Client{
 		LoginDoer:           doer,
 		ListDoer:            doer,
+		AddDoer:             doer,
+		UpdateDoer:          doer,
 		RestoreResponseBody: restoreBody,
 		scheme:              scheme,
 		host:                host,
@@ -131,9 +158,9 @@ func (c *Client) List() goa.Endpoint {
 	}
 }
 
-// Recv receives a carssvc.Car type from the "list" endpoint websocket
-// connection.
-func (s *listClientStream) Recv() (*carssvc.Car, error) {
+// Recv reads instances of "carssvc.StoredCar" from the "list" endpoint
+// websocket connection.
+func (s *listClientStream) Recv() (*carssvc.StoredCar, error) {
 	var body ListResponseBody
 	err := s.conn.ReadJSON(&body)
 	if websocket.IsCloseError(err, websocket.CloseNormalClosure) {
@@ -142,16 +169,171 @@ func (s *listClientStream) Recv() (*carssvc.Car, error) {
 	if err != nil {
 		return nil, err
 	}
-	res := NewListCarOK(&body)
-	vres := &carssvcviews.Car{res, s.view}
+	res := NewListStoredCarOK(&body)
+	vres := &carssvcviews.StoredCar{res, s.view}
 	if err := vres.Validate(); err != nil {
 		return nil, goahttp.ErrValidationError("cars", "list", err)
 	}
-	return carssvc.NewCar(vres), nil
+	return carssvc.NewStoredCar(vres), nil
 }
 
 // SetView sets the view to render the  type before sending to the "list"
 // endpoint websocket connection.
 func (s *listClientStream) SetView(view string) {
+	s.view = view
+}
+
+// Add returns an endpoint that makes HTTP requests to the cars service add
+// server.
+func (c *Client) Add() goa.Endpoint {
+	var (
+		encodeRequest  = EncodeAddRequest(c.encoder)
+		decodeResponse = DecodeAddResponse(c.decoder, c.RestoreResponseBody)
+	)
+	return func(ctx context.Context, v interface{}) (interface{}, error) {
+		req, err := c.BuildAddRequest(ctx, v)
+		if err != nil {
+			return nil, err
+		}
+		err = encodeRequest(req, v)
+		if err != nil {
+			return nil, err
+		}
+		conn, resp, err := c.dialer.Dial(req.URL.String(), req.Header)
+		if err != nil {
+			if resp != nil {
+				return decodeResponse(resp)
+			}
+			return nil, goahttp.ErrRequestError("cars", "add", err)
+		}
+		if c.connConfigFn != nil {
+			conn = c.connConfigFn(conn)
+		}
+		stream := &addClientStream{conn: conn}
+		view := resp.Header.Get("goa-view")
+		stream.SetView(view)
+		return stream, nil
+	}
+}
+
+// Recv stops sending messages to the "add" endpoint websocket connection and
+// reads instances of "carssvc.StoredCarCollection" from the connection.
+func (s *addClientStream) CloseAndRecv() (carssvc.StoredCarCollection, error) {
+	defer s.conn.Close()
+	// Send a nil payload to the server implying end of message
+	if err := s.conn.WriteJSON(nil); err != nil {
+		return nil, err
+	}
+	var body AddResponseBody
+	err := s.conn.ReadJSON(&body)
+	if websocket.IsCloseError(err, websocket.CloseNormalClosure) {
+		return nil, io.EOF
+	}
+	if err != nil {
+		return nil, err
+	}
+	res := NewAddStoredCarCollectionCreated(body)
+	vres := carssvcviews.StoredCarCollection{res, s.view}
+	if err := vres.Validate(); err != nil {
+		return nil, goahttp.ErrValidationError("cars", "add", err)
+	}
+	return carssvc.NewStoredCarCollection(vres), nil
+}
+
+// Send streams instances of "carssvc.AddStreamingPayload" to the "add"
+// endpoint websocket connection.
+func (s *addClientStream) Send(v *carssvc.AddStreamingPayload) error {
+	body := NewAddStreamingBody(v)
+	return s.conn.WriteJSON(body)
+}
+
+// SetView sets the view to render the carssvc.AddStreamingPayload type before
+// sending to the "add" endpoint websocket connection.
+func (s *addClientStream) SetView(view string) {
+	s.view = view
+}
+
+// Update returns an endpoint that makes HTTP requests to the cars service
+// update server.
+func (c *Client) Update() goa.Endpoint {
+	var (
+		encodeRequest  = EncodeUpdateRequest(c.encoder)
+		decodeResponse = DecodeUpdateResponse(c.decoder, c.RestoreResponseBody)
+	)
+	return func(ctx context.Context, v interface{}) (interface{}, error) {
+		req, err := c.BuildUpdateRequest(ctx, v)
+		if err != nil {
+			return nil, err
+		}
+		err = encodeRequest(req, v)
+		if err != nil {
+			return nil, err
+		}
+		conn, resp, err := c.dialer.Dial(req.URL.String(), req.Header)
+		if err != nil {
+			if resp != nil {
+				return decodeResponse(resp)
+			}
+			return nil, goahttp.ErrRequestError("cars", "update", err)
+		}
+		if c.connConfigFn != nil {
+			conn = c.connConfigFn(conn)
+		}
+		stream := &updateClientStream{conn: conn}
+		view := resp.Header.Get("goa-view")
+		stream.SetView(view)
+		return stream, nil
+	}
+}
+
+// Recv reads instances of "carssvc.StoredCarCollection" from the "update"
+// endpoint websocket connection.
+func (s *updateClientStream) Recv() (carssvc.StoredCarCollection, error) {
+	var body UpdateResponseBody
+	err := s.conn.ReadJSON(&body)
+	if websocket.IsCloseError(err, websocket.CloseNormalClosure) {
+		return nil, io.EOF
+	}
+	if err != nil {
+		return nil, err
+	}
+	res := NewUpdateStoredCarCollectionOK(body)
+	vres := carssvcviews.StoredCarCollection{res, s.view}
+	if err := vres.Validate(); err != nil {
+		return nil, goahttp.ErrValidationError("cars", "update", err)
+	}
+	return carssvc.NewStoredCarCollection(vres), nil
+}
+
+// Send streams instances of "[]*carssvc.Car" to the "update" endpoint
+// websocket connection.
+func (s *updateClientStream) Send(v []*carssvc.Car) error {
+	body := NewUpdateStreamingBody(v)
+	return s.conn.WriteJSON(body)
+}
+
+// Close closes the "update" endpoint websocket connection after sending a
+// close control message.
+func (s *updateClientStream) Close() error {
+	if s.conn == nil {
+		return nil
+	}
+	err := s.conn.WriteControl(
+		websocket.CloseMessage,
+		websocket.FormatCloseMessage(websocket.CloseNormalClosure, "end of message"),
+		time.Now().Add(time.Second),
+	)
+	if err == websocket.ErrCloseSent {
+		return nil
+	}
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+// SetView sets the view to render the []*carssvc.Car type before sending to
+// the "update" endpoint websocket connection.
+func (s *updateClientStream) SetView(view string) {
 	s.view = view
 }

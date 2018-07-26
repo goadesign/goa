@@ -24,7 +24,7 @@ import (
 //    command (subcommand1|subcommand2|...)
 //
 func UsageCommands() string {
-	return `cars (login|list)
+	return `cars (login|list|add|update)
 `
 }
 
@@ -55,10 +55,18 @@ func ParseEndpoint(
 		carsListFlags     = flag.NewFlagSet("list", flag.ExitOnError)
 		carsListStyleFlag = carsListFlags.String("style", "REQUIRED", "")
 		carsListTokenFlag = carsListFlags.String("token", "REQUIRED", "")
+
+		carsAddFlags     = flag.NewFlagSet("add", flag.ExitOnError)
+		carsAddTokenFlag = carsAddFlags.String("token", "", "")
+
+		carsUpdateFlags     = flag.NewFlagSet("update", flag.ExitOnError)
+		carsUpdateTokenFlag = carsUpdateFlags.String("token", "", "")
 	)
 	carsFlags.Usage = carsUsage
 	carsLoginFlags.Usage = carsLoginUsage
 	carsListFlags.Usage = carsListUsage
+	carsAddFlags.Usage = carsAddUsage
+	carsUpdateFlags.Usage = carsUpdateUsage
 
 	if err := flag.CommandLine.Parse(os.Args[1:]); err != nil {
 		return nil, nil, err
@@ -100,6 +108,12 @@ func ParseEndpoint(
 			case "list":
 				epf = carsListFlags
 
+			case "add":
+				epf = carsAddFlags
+
+			case "update":
+				epf = carsUpdateFlags
+
 			}
 
 		}
@@ -131,6 +145,12 @@ func ParseEndpoint(
 			case "list":
 				endpoint = c.List()
 				data, err = carssvcc.BuildListPayload(*carsListStyleFlag, *carsListTokenFlag)
+			case "add":
+				endpoint = c.Add()
+				data, err = carssvcc.BuildAddPayload(*carsAddTokenFlag)
+			case "update":
+				endpoint = c.Update()
+				data, err = carssvcc.BuildUpdatePayload(*carsUpdateTokenFlag)
 			}
 		}
 	}
@@ -150,6 +170,8 @@ Usage:
 COMMAND:
     login: Creates a valid JWT
     list: Lists car models by body style.
+    add: Add car models.
+    update: Update car models.
 
 Additional help:
     %s cars COMMAND --help
@@ -175,6 +197,28 @@ Lists car models by body style.
     -token STRING: 
 
 Example:
-    `+os.Args[0]+` cars list --style "hatchback" --token "Voluptatem perferendis dignissimos similique doloribus et rerum."
+    `+os.Args[0]+` cars list --style "hatchback" --token "Sint beatae temporibus nemo."
+`, os.Args[0])
+}
+
+func carsAddUsage() {
+	fmt.Fprintf(os.Stderr, `%s [flags] cars add -token STRING
+
+Add car models.
+    -token STRING: 
+
+Example:
+    `+os.Args[0]+` cars add --token "Voluptas harum aut."
+`, os.Args[0])
+}
+
+func carsUpdateUsage() {
+	fmt.Fprintf(os.Stderr, `%s [flags] cars update -token STRING
+
+Update car models.
+    -token STRING: 
+
+Example:
+    `+os.Args[0]+` cars update --token "At debitis ut dicta porro."
 `, os.Args[0])
 }

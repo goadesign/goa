@@ -141,5 +141,9 @@ func StreamingResult(val interface{}, args ...interface{}) {
 		return
 	}
 	e.Result = methodDSL("Result", val, args...)
-	e.Stream = design.ServerStreamKind
+	if e.Stream == design.ClientStreamKind {
+		e.Stream = design.BidirectionalStreamKind
+	} else {
+		e.Stream = design.ServerStreamKind
+	}
 }

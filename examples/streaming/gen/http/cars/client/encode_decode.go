@@ -163,13 +163,13 @@ func DecodeListResponse(decoder func(*http.Response) goahttp.Decoder, restoreBod
 			if err != nil {
 				return nil, goahttp.ErrDecodingError("cars", "list", err)
 			}
-			p := NewListCarOK(&body)
+			p := NewListStoredCarOK(&body)
 			view := "default"
-			vres := &carssvcviews.Car{p, view}
+			vres := &carssvcviews.StoredCar{p, view}
 			if err = vres.Validate(); err != nil {
 				return nil, goahttp.ErrValidationError("cars", "list", err)
 			}
-			return carssvc.NewCar(vres), nil
+			return carssvc.NewStoredCar(vres), nil
 		case http.StatusForbidden:
 			var (
 				body ListInvalidScopesResponseBody
@@ -195,4 +195,216 @@ func DecodeListResponse(decoder func(*http.Response) goahttp.Decoder, restoreBod
 			return nil, goahttp.ErrInvalidResponse("cars", "list", resp.StatusCode, string(body))
 		}
 	}
+}
+
+// BuildAddRequest instantiates a HTTP request object with method and path set
+// to call the "cars" service "add" endpoint
+func (c *Client) BuildAddRequest(ctx context.Context, v interface{}) (*http.Request, error) {
+	u := &url.URL{Scheme: "ws", Host: c.host, Path: AddCarsPath()}
+	req, err := http.NewRequest("GET", u.String(), nil)
+	if err != nil {
+		return nil, goahttp.ErrInvalidURL("cars", "add", u.String(), err)
+	}
+	if ctx != nil {
+		req = req.WithContext(ctx)
+	}
+
+	return req, nil
+}
+
+// EncodeAddRequest returns an encoder for requests sent to the cars add server.
+func EncodeAddRequest(encoder func(*http.Request) goahttp.Encoder) func(*http.Request, interface{}) error {
+	return func(req *http.Request, v interface{}) error {
+		p, ok := v.(*carssvc.AddPayload)
+		if !ok {
+			return goahttp.ErrInvalidType("cars", "add", "*carssvc.AddPayload", v)
+		}
+		if p.Token != nil {
+			if !strings.Contains(*p.Token, " ") {
+				req.Header.Set("Authorization", "Bearer "+*p.Token)
+			} else {
+				req.Header.Set("Authorization", *p.Token)
+			}
+		}
+		return nil
+	}
+}
+
+// DecodeAddResponse returns a decoder for responses returned by the cars add
+// endpoint. restoreBody controls whether the response body should be restored
+// after having been read.
+// DecodeAddResponse may return the following errors:
+//	- "invalid-scopes" (type carssvc.InvalidScopes): http.StatusForbidden
+//	- "unauthorized" (type carssvc.Unauthorized): http.StatusUnauthorized
+//	- error: internal error
+func DecodeAddResponse(decoder func(*http.Response) goahttp.Decoder, restoreBody bool) func(*http.Response) (interface{}, error) {
+	return func(resp *http.Response) (interface{}, error) {
+		if restoreBody {
+			b, err := ioutil.ReadAll(resp.Body)
+			if err != nil {
+				return nil, err
+			}
+			resp.Body = ioutil.NopCloser(bytes.NewBuffer(b))
+			defer func() {
+				resp.Body = ioutil.NopCloser(bytes.NewBuffer(b))
+			}()
+		} else {
+			defer resp.Body.Close()
+		}
+		switch resp.StatusCode {
+		case http.StatusCreated:
+			var (
+				body AddResponseBody
+				err  error
+			)
+			err = decoder(resp).Decode(&body)
+			if err != nil {
+				return nil, goahttp.ErrDecodingError("cars", "add", err)
+			}
+			p := NewAddStoredCarCollectionCreated(body)
+			view := "default"
+			vres := carssvcviews.StoredCarCollection{p, view}
+			if err = vres.Validate(); err != nil {
+				return nil, goahttp.ErrValidationError("cars", "add", err)
+			}
+			return carssvc.NewStoredCarCollection(vres), nil
+		case http.StatusForbidden:
+			var (
+				body AddInvalidScopesResponseBody
+				err  error
+			)
+			err = decoder(resp).Decode(&body)
+			if err != nil {
+				return nil, goahttp.ErrDecodingError("cars", "add", err)
+			}
+			return nil, NewAddInvalidScopes(body)
+		case http.StatusUnauthorized:
+			var (
+				body AddUnauthorizedResponseBody
+				err  error
+			)
+			err = decoder(resp).Decode(&body)
+			if err != nil {
+				return nil, goahttp.ErrDecodingError("cars", "add", err)
+			}
+			return nil, NewAddUnauthorized(body)
+		default:
+			body, _ := ioutil.ReadAll(resp.Body)
+			return nil, goahttp.ErrInvalidResponse("cars", "add", resp.StatusCode, string(body))
+		}
+	}
+}
+
+// BuildUpdateRequest instantiates a HTTP request object with method and path
+// set to call the "cars" service "update" endpoint
+func (c *Client) BuildUpdateRequest(ctx context.Context, v interface{}) (*http.Request, error) {
+	u := &url.URL{Scheme: "ws", Host: c.host, Path: UpdateCarsPath()}
+	req, err := http.NewRequest("GET", u.String(), nil)
+	if err != nil {
+		return nil, goahttp.ErrInvalidURL("cars", "update", u.String(), err)
+	}
+	if ctx != nil {
+		req = req.WithContext(ctx)
+	}
+
+	return req, nil
+}
+
+// EncodeUpdateRequest returns an encoder for requests sent to the cars update
+// server.
+func EncodeUpdateRequest(encoder func(*http.Request) goahttp.Encoder) func(*http.Request, interface{}) error {
+	return func(req *http.Request, v interface{}) error {
+		p, ok := v.(*carssvc.UpdatePayload)
+		if !ok {
+			return goahttp.ErrInvalidType("cars", "update", "*carssvc.UpdatePayload", v)
+		}
+		if p.Token != nil {
+			if !strings.Contains(*p.Token, " ") {
+				req.Header.Set("Authorization", "Bearer "+*p.Token)
+			} else {
+				req.Header.Set("Authorization", *p.Token)
+			}
+		}
+		return nil
+	}
+}
+
+// DecodeUpdateResponse returns a decoder for responses returned by the cars
+// update endpoint. restoreBody controls whether the response body should be
+// restored after having been read.
+// DecodeUpdateResponse may return the following errors:
+//	- "invalid-scopes" (type carssvc.InvalidScopes): http.StatusForbidden
+//	- "unauthorized" (type carssvc.Unauthorized): http.StatusUnauthorized
+//	- error: internal error
+func DecodeUpdateResponse(decoder func(*http.Response) goahttp.Decoder, restoreBody bool) func(*http.Response) (interface{}, error) {
+	return func(resp *http.Response) (interface{}, error) {
+		if restoreBody {
+			b, err := ioutil.ReadAll(resp.Body)
+			if err != nil {
+				return nil, err
+			}
+			resp.Body = ioutil.NopCloser(bytes.NewBuffer(b))
+			defer func() {
+				resp.Body = ioutil.NopCloser(bytes.NewBuffer(b))
+			}()
+		} else {
+			defer resp.Body.Close()
+		}
+		switch resp.StatusCode {
+		case http.StatusOK:
+			var (
+				body UpdateResponseBody
+				err  error
+			)
+			err = decoder(resp).Decode(&body)
+			if err != nil {
+				return nil, goahttp.ErrDecodingError("cars", "update", err)
+			}
+			p := NewUpdateStoredCarCollectionOK(body)
+			view := "default"
+			vres := carssvcviews.StoredCarCollection{p, view}
+			if err = vres.Validate(); err != nil {
+				return nil, goahttp.ErrValidationError("cars", "update", err)
+			}
+			return carssvc.NewStoredCarCollection(vres), nil
+		case http.StatusForbidden:
+			var (
+				body UpdateInvalidScopesResponseBody
+				err  error
+			)
+			err = decoder(resp).Decode(&body)
+			if err != nil {
+				return nil, goahttp.ErrDecodingError("cars", "update", err)
+			}
+			return nil, NewUpdateInvalidScopes(body)
+		case http.StatusUnauthorized:
+			var (
+				body UpdateUnauthorizedResponseBody
+				err  error
+			)
+			err = decoder(resp).Decode(&body)
+			if err != nil {
+				return nil, goahttp.ErrDecodingError("cars", "update", err)
+			}
+			return nil, NewUpdateUnauthorized(body)
+		default:
+			body, _ := ioutil.ReadAll(resp.Body)
+			return nil, goahttp.ErrInvalidResponse("cars", "update", resp.StatusCode, string(body))
+		}
+	}
+}
+
+// marshalCarToCarStreamingBody builds a value of type *CarStreamingBody from a
+// value of type *carssvc.Car.
+func marshalCarToCarStreamingBody(v *carssvc.Car) *CarStreamingBody {
+	if v == nil {
+		return nil
+	}
+	res := &CarStreamingBody{
+		Make:      v.Make,
+		Model:     v.Model,
+		BodyStyle: v.BodyStyle,
+	}
+
+	return res
 }

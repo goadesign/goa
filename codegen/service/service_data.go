@@ -106,6 +106,16 @@ type (
 		PayloadDesc string
 		// PayloadEx is an example of a valid payload value.
 		PayloadEx interface{}
+		// StreamingPayload is the name of the streaming payload type if any.
+		StreamingPayload string
+		// StreamingPayloadDef is the streaming payload type definition if any.
+		StreamingPayloadDef string
+		// StreamingPayloadRef is a reference to the streaming payload type if any.
+		StreamingPayloadRef string
+		// StreamingPayloadDesc is the streaming payload type description if any.
+		StreamingPayloadDesc string
+		// StreamingPayloadEx is an example of a valid streaming payload value.
+		StreamingPayloadEx interface{}
 		// Result is the name of the result type if any.
 		Result string
 		// ResultDef is the result type definition if any.
@@ -144,18 +154,31 @@ type (
 		// VarName is the name of the struct type that implements the stream
 		// interface.
 		VarName string
-		// SendName is the type name sent through the stream.
+		// SendName is the name of the send function.
 		SendName string
-		// SendRef is the reference to the type sent through the stream.
-		SendRef string
-		// RecvName is the type name received from the stream.
+		// SendDesc is the description for the send function.
+		SendDesc string
+		// SendTypeName is the type name sent through the stream.
+		SendTypeName string
+		// SendTypeRef is the reference to the type sent through the stream.
+		SendTypeRef string
+		// RecvName is the name of the receive function.
 		RecvName string
-		// RecvRef is the reference to the type received from the stream.
-		RecvRef string
+		// RecvDesc is the description for the recv function.
+		RecvDesc string
+		// RecvTypeName is the type name received from the stream.
+		RecvTypeName string
+		// RecvTypeRef is the reference to the type received from the stream.
+		RecvTypeRef string
+		// MustClose indicates whether the stream should implement the Close()
+		// function.
+		MustClose bool
 		// EndpointStruct is the name of the endpoint struct that holds a payload
 		// reference (if any) and the endpoint server stream. It is set only if the
 		// client sends a normal payload and server streams a result.
 		EndpointStruct string
+		// Kind is the kind of the stream (payload or result or bidirectional).
+		Kind design.StreamKind
 	}
 
 	// RequirementData lists the schemes and scopes defined by a single
@@ -388,30 +411,28 @@ func (d ServicesData) analyze(service *design.ServiceExpr) *Data {
 		seenErrors = make(map[string]struct{})
 		seenProj = make(map[string]*ProjectedTypeData)
 		seenViewed = make(map[string]*ViewedResultTypeData)
+
+		// A function to convert raw object type to user type.
+		makeUserType := func(att *design.AttributeExpr, name string) {
+			if _, ok := att.Type.(*design.Object); ok {
+				att.Type = &design.UserTypeExpr{
+					AttributeExpr: design.DupAtt(att),
+					TypeName:      name,
+				}
+			}
+			if ut, ok := att.Type.(design.UserType); ok {
+				seen[ut.ID()] = struct{}{}
+			}
+		}
+
 		for _, e := range service.Methods {
+			name := codegen.Goify(e.Name, true)
 			// Create user type for raw object payloads
-			if _, ok := e.Payload.Type.(*design.Object); ok {
-				e.Payload.Type = &design.UserTypeExpr{
-					AttributeExpr: design.DupAtt(e.Payload),
-					TypeName:      fmt.Sprintf("%sPayload", codegen.Goify(e.Name, true)),
-				}
-			}
-
-			if ut, ok := e.Payload.Type.(design.UserType); ok {
-				seen[ut.ID()] = struct{}{}
-			}
-
+			makeUserType(e.Payload, name+"Payload")
+			// Create user type for raw object streaming payloads
+			makeUserType(e.StreamingPayload, name+"StreamingPayload")
 			// Create user type for raw object results
-			if _, ok := e.Result.Type.(*design.Object); ok {
-				e.Result.Type = &design.UserTypeExpr{
-					AttributeExpr: design.DupAtt(e.Result),
-					TypeName:      fmt.Sprintf("%sResult", codegen.Goify(e.Name, true)),
-				}
-			}
-
-			if ut, ok := e.Result.Type.(design.UserType); ok {
-				seen[ut.ID()] = struct{}{}
-			}
+			makeUserType(e.Result, name+"Result")
 		}
 		recordError := func(er *design.ErrorExpr) {
 			errTypes = append(errTypes, collectTypes(er.AttributeExpr, seen, scope)...)
@@ -426,18 +447,19 @@ func (d ServicesData) analyze(service *design.ServiceExpr) *Data {
 		for _, er := range service.Errors {
 			recordError(er)
 		}
+
+		// A function to collect inner user types from an attribute expression
+		collectUserTypes := func(att *design.AttributeExpr) {
+			if ut, ok := att.Type.(design.UserType); ok {
+				att = ut.Attribute()
+			}
+			types = append(types, collectTypes(att, seen, scope)...)
+		}
 		for _, m := range service.Methods {
 			// collect inner user types
-			patt := m.Payload
-			if ut, ok := patt.Type.(design.UserType); ok {
-				patt = ut.Attribute()
-			}
-			types = append(types, collectTypes(patt, seen, scope)...)
-			ratt := m.Result
-			if ut, ok := ratt.Type.(design.UserType); ok {
-				ratt = ut.Attribute()
-			}
-			types = append(types, collectTypes(ratt, seen, scope)...)
+			collectUserTypes(m.Payload)
+			collectUserTypes(m.StreamingPayload)
+			collectUserTypes(m.Result)
 			// collect projected types
 			if _, ok := m.Result.Type.(*design.ResultTypeExpr); ok {
 				projected := design.DupAtt(m.Result)
@@ -591,23 +613,28 @@ func buildErrorInitData(er *design.ErrorExpr, scope *codegen.NameScope) *ErrorIn
 // records the user types needed by the service definition in userTypes.
 func buildMethodData(m *design.MethodExpr, svcPkgName string, scope *codegen.NameScope) *MethodData {
 	var (
-		vname       string
-		desc        string
-		payloadName string
-		payloadDef  string
-		payloadRef  string
-		payloadDesc string
-		payloadEx   interface{}
-		rname       string
-		resultDef   string
-		resultRef   string
-		resultDesc  string
-		resultEx    interface{}
-		errors      []*ErrorInitData
-		reqs        []*RequirementData
-		schemes     []string
-		svrStream   *StreamData
-		cliStream   *StreamData
+		vname        string
+		desc         string
+		payloadName  string
+		payloadDef   string
+		payloadRef   string
+		payloadDesc  string
+		payloadEx    interface{}
+		spayloadName string
+		spayloadDef  string
+		spayloadRef  string
+		spayloadDesc string
+		spayloadEx   interface{}
+		rname        string
+		resultDef    string
+		resultRef    string
+		resultDesc   string
+		resultEx     interface{}
+		errors       []*ErrorInitData
+		reqs         []*RequirementData
+		schemes      []string
+		svrStream    *StreamData
+		cliStream    *StreamData
 	)
 	vname = codegen.Goify(m.Name, true)
 	desc = m.Description
@@ -626,6 +653,19 @@ func buildMethodData(m *design.MethodExpr, svcPkgName string, scope *codegen.Nam
 				payloadName, m.Service.Name, m.Name)
 		}
 		payloadEx = m.Payload.Example(design.Root.API.Random())
+	}
+	if m.StreamingPayload.Type != design.Empty {
+		spayloadName = scope.GoTypeName(m.StreamingPayload)
+		spayloadRef = scope.GoTypeRef(m.StreamingPayload)
+		if dt, ok := m.StreamingPayload.Type.(design.UserType); ok {
+			spayloadDef = scope.GoTypeDef(dt.Attribute(), true)
+		}
+		spayloadDesc = m.StreamingPayload.Description
+		if spayloadDesc == "" {
+			spayloadDesc = fmt.Sprintf("%s is the streaming payload type of the %s service %s method.",
+				spayloadName, m.Service.Name, m.Name)
+		}
+		spayloadEx = m.StreamingPayload.Example(design.Root.API.Random())
 	}
 	if m.Result.Type != design.Empty {
 		rname = scope.GoTypeName(m.Result)
@@ -648,34 +688,48 @@ func buildMethodData(m *design.MethodExpr, svcPkgName string, scope *codegen.Nam
 	}
 	if m.IsStreaming() {
 		svrStream = &StreamData{
-			Interface: vname + "ServerStream",
-			VarName:   m.Name + "ServerStream",
+			Interface:      vname + "ServerStream",
+			VarName:        m.Name + "ServerStream",
+			EndpointStruct: vname + "EndpointInput",
+			Kind:           m.Stream,
+			SendName:       "Send",
+			SendDesc:       fmt.Sprintf("Send streams instances of %q.", rname),
+			SendTypeName:   rname,
+			SendTypeRef:    resultRef,
+			MustClose:      true,
 		}
 		cliStream = &StreamData{
-			Interface: vname + "ClientStream",
-			VarName:   m.Name + "ClientStream",
+			Interface:    vname + "ClientStream",
+			VarName:      m.Name + "ClientStream",
+			Kind:         m.Stream,
+			RecvName:     "Recv",
+			RecvDesc:     fmt.Sprintf("Recv reads instances of %q from the stream.", rname),
+			RecvTypeName: rname,
+			RecvTypeRef:  resultRef,
 		}
-		switch m.Stream {
-		case design.ServerStreamKind:
-			svrStream.SendName = rname
-			svrStream.SendRef = resultRef
-			cliStream.RecvName = rname
-			cliStream.RecvRef = resultRef
-			svrStream.EndpointStruct = vname + "EndpointInput"
-		case design.ClientStreamKind:
-			svrStream.RecvName = payloadName
-			svrStream.RecvRef = payloadRef
-			cliStream.SendName = payloadName
-			cliStream.SendRef = payloadRef
-		case design.BidirectionalStreamKind:
-			svrStream.SendName = rname
-			svrStream.SendRef = resultRef
-			svrStream.RecvName = payloadName
-			svrStream.RecvRef = payloadRef
-			cliStream.SendName = payloadName
-			cliStream.SendRef = payloadRef
-			cliStream.RecvName = rname
-			cliStream.RecvRef = resultRef
+		if m.Stream == design.ClientStreamKind || m.Stream == design.BidirectionalStreamKind {
+			switch m.Stream {
+			case design.ClientStreamKind:
+				if resultRef != "" {
+					svrStream.SendName = "SendAndClose"
+					svrStream.SendDesc = fmt.Sprintf("SendAndClose streams instances of %q and closes the stream.", rname)
+					svrStream.MustClose = false
+					cliStream.RecvName = "CloseAndRecv"
+					cliStream.RecvDesc = fmt.Sprintf("CloseAndRecv stops sending messages to the stream and reads instances of %q from the stream.", rname)
+				} else {
+					cliStream.MustClose = true
+				}
+			case design.BidirectionalStreamKind:
+				cliStream.MustClose = true
+			}
+			svrStream.RecvName = "Recv"
+			svrStream.RecvDesc = fmt.Sprintf("Recv reads instances of %q from the stream.", spayloadName)
+			svrStream.RecvTypeName = spayloadName
+			svrStream.RecvTypeRef = spayloadRef
+			cliStream.SendName = "Send"
+			cliStream.SendDesc = fmt.Sprintf("Send streams instances of %q.", spayloadName)
+			cliStream.SendTypeName = spayloadName
+			cliStream.SendTypeRef = spayloadRef
 		}
 	}
 	for _, req := range m.Requirements {
@@ -697,24 +751,29 @@ func buildMethodData(m *design.MethodExpr, svcPkgName string, scope *codegen.Nam
 	}
 
 	return &MethodData{
-		Name:         m.Name,
-		VarName:      vname,
-		Description:  desc,
-		Payload:      payloadName,
-		PayloadDef:   payloadDef,
-		PayloadRef:   payloadRef,
-		PayloadDesc:  payloadDesc,
-		PayloadEx:    payloadEx,
-		Result:       rname,
-		ResultDef:    resultDef,
-		ResultRef:    resultRef,
-		ResultDesc:   resultDesc,
-		ResultEx:     resultEx,
-		Errors:       errors,
-		Requirements: reqs,
-		Schemes:      schemes,
-		ServerStream: svrStream,
-		ClientStream: cliStream,
+		Name:                 m.Name,
+		VarName:              vname,
+		Description:          desc,
+		Payload:              payloadName,
+		PayloadDef:           payloadDef,
+		PayloadRef:           payloadRef,
+		PayloadDesc:          payloadDesc,
+		PayloadEx:            payloadEx,
+		StreamingPayload:     spayloadName,
+		StreamingPayloadDef:  spayloadDef,
+		StreamingPayloadRef:  spayloadRef,
+		StreamingPayloadDesc: spayloadDesc,
+		StreamingPayloadEx:   spayloadEx,
+		Result:               rname,
+		ResultDef:            resultDef,
+		ResultRef:            resultRef,
+		ResultDesc:           resultDesc,
+		ResultEx:             resultEx,
+		Errors:               errors,
+		Requirements:         reqs,
+		Schemes:              schemes,
+		ServerStream:         svrStream,
+		ClientStream:         cliStream,
 	}
 }
 

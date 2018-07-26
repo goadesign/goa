@@ -41,6 +41,9 @@ type (
 		Headers *design.MappedAttributeExpr
 		// Body describes the HTTP request body.
 		Body *design.AttributeExpr
+		// StreamingBody describes the body transferred through the websocket
+		// stream.
+		StreamingBody *design.AttributeExpr
 		// Responses is the list of all the possible success HTTP
 		// responses.
 		Responses []*HTTPResponseExpr
@@ -297,7 +300,7 @@ func (e *EndpointExpr) Validate() error {
 		} else {
 			hasTags = true
 		}
-		if r.StatusCode < 400 && e.MethodExpr.IsResultStreaming() {
+		if r.StatusCode < 400 && e.MethodExpr.Stream == design.ServerStreamKind {
 			if successResp {
 				verr.Add(r, "Multiple success response defined for a streaming endpoint. At most one success response can be defined for a streaming endpoint.")
 			} else {
@@ -517,6 +520,8 @@ func (e *EndpointExpr) Finalize() {
 		e.Body = RequestBody(e)
 	}
 
+	e.StreamingBody = StreamingBody(e)
+
 	// Initialize responses parent, headers and body
 	for _, r := range e.Responses {
 		r.Finalize(e, e.MethodExpr.Result)
@@ -694,6 +699,13 @@ func (r *RouteExpr) Validate() *eval.ValidationErrors {
 				verr.Add(r, "Wildcard %q appears multiple times in full path %q", match[1], path)
 			}
 			wcs[match[1]] = struct{}{}
+		}
+	}
+
+	// For streaming endpoints, websockets does not support verbs other than GET
+	if r.Endpoint.MethodExpr.IsStreaming() {
+		if r.Method != "GET" {
+			verr.Add(r, "Streaming endpoint supports only \"GET\" method. Got %q.", r.Method)
 		}
 	}
 	return verr

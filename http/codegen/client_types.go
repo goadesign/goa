@@ -83,6 +83,23 @@ func clientType(genpkg string, svc *httpdesign.ServiceExpr, seen map[string]stru
 				validatedTypes = append(validatedTypes, data)
 			}
 		}
+		if adata.ClientStream != nil {
+			if data := adata.ClientStream.Payload; data != nil {
+				if data.Def != "" {
+					sections = append(sections, &codegen.SectionTemplate{
+						Name:   "client-request-body",
+						Source: typeDeclT,
+						Data:   data,
+					})
+				}
+				if data.Init != nil {
+					initData = append(initData, data.Init)
+				}
+				if data.ValidateDef != "" {
+					validatedTypes = append(validatedTypes, data)
+				}
+			}
+		}
 	}
 
 	// response body types
