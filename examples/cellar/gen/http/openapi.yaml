@@ -16,12 +16,12 @@ paths:
         in: body
         required: true
         schema:
-          $ref: '#/definitions/PickRequestBody'
+          $ref: '#/definitions/SommelierPickRequestBody'
       responses:
         "200":
           description: OK response.
           schema:
-            $ref: '#/definitions/StoredBottleResponseBodyCollection'
+            $ref: '#/definitions/SommelierStoredBottleResponseBodyCollection'
         "400":
           description: Bad Request response.
           schema:
@@ -43,7 +43,7 @@ paths:
         "200":
           description: OK response.
           schema:
-            $ref: '#/definitions/StoredBottleResponseBodyTinyCollection'
+            $ref: '#/definitions/StorageStoredBottleResponseBodyTinyCollection'
       schemes:
       - http
     post:
@@ -57,7 +57,7 @@ paths:
         in: body
         required: true
         schema:
-          $ref: '#/definitions/AddRequestBody'
+          $ref: '#/definitions/StorageAddRequestBody'
           required:
           - name
           - winery
@@ -94,7 +94,7 @@ paths:
         "200":
           description: OK response.
           schema:
-            $ref: '#/definitions/ShowResponseBody'
+            $ref: '#/definitions/StorageShowResponseBody'
         "404":
           description: Not Found response.
           schema:
@@ -171,7 +171,7 @@ paths:
         in: body
         required: true
         schema:
-          $ref: '#/definitions/MultiUpdateRequestBody'
+          $ref: '#/definitions/StorageMultiUpdateRequestBody'
       responses:
         "204":
           description: No Content response.
@@ -202,73 +202,6 @@ paths:
       schemes:
       - http
 definitions:
-  AddRequestBody:
-    title: AddRequestBody
-    type: object
-    properties:
-      composition:
-        type: array
-        items:
-          $ref: '#/definitions/ComponentRequestBody'
-        description: Composition is the list of grape varietals and associated percentage.
-        example:
-        - percentage: 85
-          varietal: Syrah
-        - percentage: 85
-          varietal: Syrah
-        - percentage: 85
-          varietal: Syrah
-        - percentage: 85
-          varietal: Syrah
-      description:
-        type: string
-        description: Description of bottle
-        example: Red wine blend with an emphasis on the Cabernet Franc grape and including
-          other Bordeaux grape varietals and some Syrah
-        maxLength: 2000
-      name:
-        type: string
-        description: Name of bottle
-        example: Blue's Cuvee
-        maxLength: 100
-      rating:
-        type: integer
-        description: Rating of bottle from 1 (worst) to 5 (best)
-        example: 1
-        minimum: 1
-        maximum: 5
-      vintage:
-        type: integer
-        description: Vintage of bottle
-        example: 1965
-        minimum: 1900
-        maximum: 2020
-      winery:
-        $ref: '#/definitions/WineryRequestBody'
-    example:
-      composition:
-      - percentage: 85
-        varietal: Syrah
-      - percentage: 85
-        varietal: Syrah
-      - percentage: 85
-        varietal: Syrah
-      - percentage: 85
-        varietal: Syrah
-      description: Red wine blend with an emphasis on the Cabernet Franc grape and
-        including other Bordeaux grape varietals and some Syrah
-      name: Blue's Cuvee
-      rating: 1
-      vintage: 2008
-      winery:
-        country: USA
-        name: Longoria
-        region: Central Coast, California
-        url: http://www.longoriawine.com/
-    required:
-    - name
-    - winery
-    - vintage
   BottleRequestBody:
     title: BottleRequestBody
     type: object
@@ -375,93 +308,6 @@ definitions:
       varietal: Syrah
     required:
     - varietal
-  MultiUpdateRequestBody:
-    title: MultiUpdateRequestBody
-    type: object
-    properties:
-      bottles:
-        type: array
-        items:
-          $ref: '#/definitions/BottleRequestBody'
-        description: Array of bottle info that matches the ids attribute
-        example:
-        - composition:
-          - percentage: 85
-            varietal: Syrah
-          - percentage: 85
-            varietal: Syrah
-          description: Red wine blend with an emphasis on the Cabernet Franc grape
-            and including other Bordeaux grape varietals and some Syrah
-          name: Blue's Cuvee
-          rating: 1
-          vintage: 1978
-          winery:
-            country: USA
-            name: Longoria
-            region: Central Coast, California
-            url: http://www.longoriawine.com/
-        - composition:
-          - percentage: 85
-            varietal: Syrah
-          - percentage: 85
-            varietal: Syrah
-          description: Red wine blend with an emphasis on the Cabernet Franc grape
-            and including other Bordeaux grape varietals and some Syrah
-          name: Blue's Cuvee
-          rating: 1
-          vintage: 1978
-          winery:
-            country: USA
-            name: Longoria
-            region: Central Coast, California
-            url: http://www.longoriawine.com/
-    example:
-      bottles:
-      - composition:
-        - percentage: 85
-          varietal: Syrah
-        - percentage: 85
-          varietal: Syrah
-        description: Red wine blend with an emphasis on the Cabernet Franc grape and
-          including other Bordeaux grape varietals and some Syrah
-        name: Blue's Cuvee
-        rating: 1
-        vintage: 1978
-        winery:
-          country: USA
-          name: Longoria
-          region: Central Coast, California
-          url: http://www.longoriawine.com/
-      - composition:
-        - percentage: 85
-          varietal: Syrah
-        - percentage: 85
-          varietal: Syrah
-        description: Red wine blend with an emphasis on the Cabernet Franc grape and
-          including other Bordeaux grape varietals and some Syrah
-        name: Blue's Cuvee
-        rating: 1
-        vintage: 1978
-        winery:
-          country: USA
-          name: Longoria
-          region: Central Coast, California
-          url: http://www.longoriawine.com/
-      - composition:
-        - percentage: 85
-          varietal: Syrah
-        - percentage: 85
-          varietal: Syrah
-        description: Red wine blend with an emphasis on the Cabernet Franc grape and
-          including other Bordeaux grape varietals and some Syrah
-        name: Blue's Cuvee
-        rating: 1
-        vintage: 1978
-        winery:
-          country: USA
-          name: Longoria
-          region: Central Coast, California
-          url: http://www.longoriawine.com/
   PickNoCriteriaResponseBody:
     title: PickNoCriteriaResponseBody
     type: string
@@ -472,8 +318,27 @@ definitions:
     type: string
     description: No bottle matched given criteria
     example: Quas exercitationem.
-  PickRequestBody:
-    title: PickRequestBody
+  ShowNotFoundResponseBody:
+    title: ShowNotFoundResponseBody
+    type: object
+    properties:
+      id:
+        type: string
+        description: ID of missing bottle
+        example: Consequuntur ut molestiae possimus.
+      message:
+        type: string
+        description: Message of error
+        example: bottle 1 not found
+    description: Bottle not found
+    example:
+      id: Aliquam itaque quam beatae veniam quaerat sint.
+      message: bottle 1 not found
+    required:
+    - message
+    - id
+  SommelierPickRequestBody:
+    title: SommelierPickRequestBody
     type: object
     properties:
       name:
@@ -501,165 +366,7 @@ definitions:
       - merlot
       - cabernet franc
       winery: longoria
-  ShowNotFoundResponseBody:
-    title: ShowNotFoundResponseBody
-    type: object
-    properties:
-      id:
-        type: string
-        description: ID of missing bottle
-        example: Consequuntur ut molestiae possimus.
-      message:
-        type: string
-        description: Message of error
-        example: bottle 1 not found
-    description: Bottle not found
-    example:
-      id: Aliquam itaque quam beatae veniam quaerat sint.
-      message: bottle 1 not found
-    required:
-    - message
-    - id
-  ShowResponseBody:
-    title: 'Mediatype identifier: application/vnd.cellar.stored-bottle; view=default'
-    type: object
-    properties:
-      composition:
-        type: array
-        items:
-          $ref: '#/definitions/ComponentResponseBody'
-        description: Composition is the list of grape varietals and associated percentage.
-        example:
-        - percentage: 78
-          varietal: Syrah
-        - percentage: 78
-          varietal: Syrah
-        - percentage: 78
-          varietal: Syrah
-        - percentage: 78
-          varietal: Syrah
-      description:
-        type: string
-        description: Description of bottle
-        example: Red wine blend with an emphasis on the Cabernet Franc grape and including
-          other Bordeaux grape varietals and some Syrah
-        maxLength: 2000
-      id:
-        type: string
-        description: ID is the unique id of the bottle.
-        example: 123abc
-      name:
-        type: string
-        description: Name of bottle
-        example: Blue's Cuvee
-        maxLength: 100
-      rating:
-        type: integer
-        description: Rating of bottle from 1 (worst) to 5 (best)
-        example: 1
-        minimum: 1
-        maximum: 5
-      vintage:
-        type: integer
-        description: Vintage of bottle
-        example: 1952
-        minimum: 1900
-        maximum: 2020
-      winery:
-        $ref: '#/definitions/WineryResponseBodyTiny'
-    description: ShowResponseBody result type (default view)
-    example:
-      composition:
-      - percentage: 78
-        varietal: Syrah
-      - percentage: 78
-        varietal: Syrah
-      - percentage: 78
-        varietal: Syrah
-      - percentage: 78
-        varietal: Syrah
-      description: Red wine blend with an emphasis on the Cabernet Franc grape and
-        including other Bordeaux grape varietals and some Syrah
-      id: 123abc
-      name: Blue's Cuvee
-      rating: 2
-      vintage: 1978
-      winery:
-        name: Longoria
-    required:
-    - id
-    - name
-    - winery
-    - vintage
-  StoredBottleResponseBody:
-    title: 'Mediatype identifier: application/vnd.cellar.stored-bottle; view=default'
-    type: object
-    properties:
-      composition:
-        type: array
-        items:
-          $ref: '#/definitions/ComponentResponseBody'
-        description: Composition is the list of grape varietals and associated percentage.
-        example:
-        - percentage: 78
-          varietal: Syrah
-        - percentage: 78
-          varietal: Syrah
-        - percentage: 78
-          varietal: Syrah
-        - percentage: 78
-          varietal: Syrah
-      description:
-        type: string
-        description: Description of bottle
-        example: Red wine blend with an emphasis on the Cabernet Franc grape and including
-          other Bordeaux grape varietals and some Syrah
-        maxLength: 2000
-      id:
-        type: string
-        description: ID is the unique id of the bottle.
-        example: 123abc
-      name:
-        type: string
-        description: Name of bottle
-        example: Blue's Cuvee
-        maxLength: 100
-      rating:
-        type: integer
-        description: Rating of bottle from 1 (worst) to 5 (best)
-        example: 4
-        minimum: 1
-        maximum: 5
-      vintage:
-        type: integer
-        description: Vintage of bottle
-        example: 1939
-        minimum: 1900
-        maximum: 2020
-      winery:
-        $ref: '#/definitions/WineryResponseBodyTiny'
-    description: A StoredBottle describes a bottle retrieved by the storage service.
-      (default view)
-    example:
-      composition:
-      - percentage: 78
-        varietal: Syrah
-      - percentage: 78
-        varietal: Syrah
-      description: Red wine blend with an emphasis on the Cabernet Franc grape and
-        including other Bordeaux grape varietals and some Syrah
-      id: 123abc
-      name: Blue's Cuvee
-      rating: 3
-      vintage: 1907
-      winery:
-        name: Longoria
-    required:
-    - id
-    - name
-    - winery
-    - vintage
-  StoredBottleResponseBodyCollection:
+  SommelierStoredBottleResponseBodyCollection:
     title: 'Mediatype identifier: application/vnd.cellar.stored-bottle; type=collection;
       view=default'
     type: array
@@ -748,6 +455,324 @@ definitions:
         name: Longoria
         region: Central Coast, California
         url: http://www.longoriawine.com/
+  StorageAddRequestBody:
+    title: StorageAddRequestBody
+    type: object
+    properties:
+      composition:
+        type: array
+        items:
+          $ref: '#/definitions/ComponentRequestBody'
+        description: Composition is the list of grape varietals and associated percentage.
+        example:
+        - percentage: 85
+          varietal: Syrah
+        - percentage: 85
+          varietal: Syrah
+        - percentage: 85
+          varietal: Syrah
+        - percentage: 85
+          varietal: Syrah
+      description:
+        type: string
+        description: Description of bottle
+        example: Red wine blend with an emphasis on the Cabernet Franc grape and including
+          other Bordeaux grape varietals and some Syrah
+        maxLength: 2000
+      name:
+        type: string
+        description: Name of bottle
+        example: Blue's Cuvee
+        maxLength: 100
+      rating:
+        type: integer
+        description: Rating of bottle from 1 (worst) to 5 (best)
+        example: 1
+        minimum: 1
+        maximum: 5
+      vintage:
+        type: integer
+        description: Vintage of bottle
+        example: 1965
+        minimum: 1900
+        maximum: 2020
+      winery:
+        $ref: '#/definitions/WineryRequestBody'
+    example:
+      composition:
+      - percentage: 85
+        varietal: Syrah
+      - percentage: 85
+        varietal: Syrah
+      - percentage: 85
+        varietal: Syrah
+      - percentage: 85
+        varietal: Syrah
+      description: Red wine blend with an emphasis on the Cabernet Franc grape and
+        including other Bordeaux grape varietals and some Syrah
+      name: Blue's Cuvee
+      rating: 1
+      vintage: 2008
+      winery:
+        country: USA
+        name: Longoria
+        region: Central Coast, California
+        url: http://www.longoriawine.com/
+    required:
+    - name
+    - winery
+    - vintage
+  StorageMultiUpdateRequestBody:
+    title: StorageMultiUpdateRequestBody
+    type: object
+    properties:
+      bottles:
+        type: array
+        items:
+          $ref: '#/definitions/BottleRequestBody'
+        description: Array of bottle info that matches the ids attribute
+        example:
+        - composition:
+          - percentage: 85
+            varietal: Syrah
+          - percentage: 85
+            varietal: Syrah
+          description: Red wine blend with an emphasis on the Cabernet Franc grape
+            and including other Bordeaux grape varietals and some Syrah
+          name: Blue's Cuvee
+          rating: 1
+          vintage: 1978
+          winery:
+            country: USA
+            name: Longoria
+            region: Central Coast, California
+            url: http://www.longoriawine.com/
+        - composition:
+          - percentage: 85
+            varietal: Syrah
+          - percentage: 85
+            varietal: Syrah
+          description: Red wine blend with an emphasis on the Cabernet Franc grape
+            and including other Bordeaux grape varietals and some Syrah
+          name: Blue's Cuvee
+          rating: 1
+          vintage: 1978
+          winery:
+            country: USA
+            name: Longoria
+            region: Central Coast, California
+            url: http://www.longoriawine.com/
+    example:
+      bottles:
+      - composition:
+        - percentage: 85
+          varietal: Syrah
+        - percentage: 85
+          varietal: Syrah
+        description: Red wine blend with an emphasis on the Cabernet Franc grape and
+          including other Bordeaux grape varietals and some Syrah
+        name: Blue's Cuvee
+        rating: 1
+        vintage: 1978
+        winery:
+          country: USA
+          name: Longoria
+          region: Central Coast, California
+          url: http://www.longoriawine.com/
+      - composition:
+        - percentage: 85
+          varietal: Syrah
+        - percentage: 85
+          varietal: Syrah
+        description: Red wine blend with an emphasis on the Cabernet Franc grape and
+          including other Bordeaux grape varietals and some Syrah
+        name: Blue's Cuvee
+        rating: 1
+        vintage: 1978
+        winery:
+          country: USA
+          name: Longoria
+          region: Central Coast, California
+          url: http://www.longoriawine.com/
+      - composition:
+        - percentage: 85
+          varietal: Syrah
+        - percentage: 85
+          varietal: Syrah
+        description: Red wine blend with an emphasis on the Cabernet Franc grape and
+          including other Bordeaux grape varietals and some Syrah
+        name: Blue's Cuvee
+        rating: 1
+        vintage: 1978
+        winery:
+          country: USA
+          name: Longoria
+          region: Central Coast, California
+          url: http://www.longoriawine.com/
+  StorageShowResponseBody:
+    title: 'Mediatype identifier: application/vnd.cellar.stored-bottle; view=default'
+    type: object
+    properties:
+      composition:
+        type: array
+        items:
+          $ref: '#/definitions/ComponentResponseBody'
+        description: Composition is the list of grape varietals and associated percentage.
+        example:
+        - percentage: 78
+          varietal: Syrah
+        - percentage: 78
+          varietal: Syrah
+        - percentage: 78
+          varietal: Syrah
+        - percentage: 78
+          varietal: Syrah
+      description:
+        type: string
+        description: Description of bottle
+        example: Red wine blend with an emphasis on the Cabernet Franc grape and including
+          other Bordeaux grape varietals and some Syrah
+        maxLength: 2000
+      id:
+        type: string
+        description: ID is the unique id of the bottle.
+        example: 123abc
+      name:
+        type: string
+        description: Name of bottle
+        example: Blue's Cuvee
+        maxLength: 100
+      rating:
+        type: integer
+        description: Rating of bottle from 1 (worst) to 5 (best)
+        example: 1
+        minimum: 1
+        maximum: 5
+      vintage:
+        type: integer
+        description: Vintage of bottle
+        example: 1952
+        minimum: 1900
+        maximum: 2020
+      winery:
+        $ref: '#/definitions/WineryResponseBodyTiny'
+    description: ShowResponseBody result type (default view)
+    example:
+      composition:
+      - percentage: 78
+        varietal: Syrah
+      - percentage: 78
+        varietal: Syrah
+      - percentage: 78
+        varietal: Syrah
+      - percentage: 78
+        varietal: Syrah
+      description: Red wine blend with an emphasis on the Cabernet Franc grape and
+        including other Bordeaux grape varietals and some Syrah
+      id: 123abc
+      name: Blue's Cuvee
+      rating: 2
+      vintage: 1978
+      winery:
+        name: Longoria
+    required:
+    - id
+    - name
+    - winery
+    - vintage
+  StorageStoredBottleResponseBodyTinyCollection:
+    title: 'Mediatype identifier: application/vnd.cellar.stored-bottle; type=collection;
+      view=tiny'
+    type: array
+    items:
+      $ref: '#/definitions/StoredBottleResponseBodyTiny'
+    description: StorageStoredBottleResponseBodyTinyCollection is the result type
+      for an array of StoredBottleResponseBodyTiny (default view)
+    example:
+    - id: 123abc
+      name: Blue's Cuvee
+      winery:
+        name: Longoria
+    - id: 123abc
+      name: Blue's Cuvee
+      winery:
+        name: Longoria
+    - id: 123abc
+      name: Blue's Cuvee
+      winery:
+        name: Longoria
+    - id: 123abc
+      name: Blue's Cuvee
+      winery:
+        name: Longoria
+  StoredBottleResponseBody:
+    title: 'Mediatype identifier: application/vnd.cellar.stored-bottle; view=default'
+    type: object
+    properties:
+      composition:
+        type: array
+        items:
+          $ref: '#/definitions/ComponentResponseBody'
+        description: Composition is the list of grape varietals and associated percentage.
+        example:
+        - percentage: 78
+          varietal: Syrah
+        - percentage: 78
+          varietal: Syrah
+        - percentage: 78
+          varietal: Syrah
+        - percentage: 78
+          varietal: Syrah
+      description:
+        type: string
+        description: Description of bottle
+        example: Red wine blend with an emphasis on the Cabernet Franc grape and including
+          other Bordeaux grape varietals and some Syrah
+        maxLength: 2000
+      id:
+        type: string
+        description: ID is the unique id of the bottle.
+        example: 123abc
+      name:
+        type: string
+        description: Name of bottle
+        example: Blue's Cuvee
+        maxLength: 100
+      rating:
+        type: integer
+        description: Rating of bottle from 1 (worst) to 5 (best)
+        example: 4
+        minimum: 1
+        maximum: 5
+      vintage:
+        type: integer
+        description: Vintage of bottle
+        example: 1939
+        minimum: 1900
+        maximum: 2020
+      winery:
+        $ref: '#/definitions/WineryResponseBodyTiny'
+    description: A StoredBottle describes a bottle retrieved by the storage service.
+      (default view)
+    example:
+      composition:
+      - percentage: 78
+        varietal: Syrah
+      - percentage: 78
+        varietal: Syrah
+      description: Red wine blend with an emphasis on the Cabernet Franc grape and
+        including other Bordeaux grape varietals and some Syrah
+      id: 123abc
+      name: Blue's Cuvee
+      rating: 3
+      vintage: 1907
+      winery:
+        name: Longoria
+    required:
+    - id
+    - name
+    - winery
+    - vintage
   StoredBottleResponseBodyTiny:
     title: 'Mediatype identifier: application/vnd.cellar.stored-bottle; view=default'
     type: object
@@ -774,31 +799,6 @@ definitions:
     - id
     - name
     - winery
-  StoredBottleResponseBodyTinyCollection:
-    title: 'Mediatype identifier: application/vnd.cellar.stored-bottle; type=collection;
-      view=tiny'
-    type: array
-    items:
-      $ref: '#/definitions/StoredBottleResponseBodyTiny'
-    description: StoredBottleResponseBodyTinyCollection is the result type for an
-      array of StoredBottleResponseBodyTiny (default view)
-    example:
-    - id: 123abc
-      name: Blue's Cuvee
-      winery:
-        name: Longoria
-    - id: 123abc
-      name: Blue's Cuvee
-      winery:
-        name: Longoria
-    - id: 123abc
-      name: Blue's Cuvee
-      winery:
-        name: Longoria
-    - id: 123abc
-      name: Blue's Cuvee
-      winery:
-        name: Longoria
   WineryRequestBody:
     title: 'Mediatype identifier: winery; view=default'
     type: object
