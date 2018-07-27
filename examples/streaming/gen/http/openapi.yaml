@@ -29,7 +29,7 @@ paths:
         "101":
           description: Switching Protocols response.
           schema:
-            $ref: '#/definitions/ListResponseBody'
+            $ref: '#/definitions/CarsListResponseBody'
         "401":
           description: Unauthorized response.
           schema:
@@ -65,11 +65,7 @@ paths:
       security:
       - basic: []
 definitions:
-  ListInvalidScopesResponseBody:
-    title: ListInvalidScopesResponseBody
-    type: string
-    example: Mollitia asperiores.
-  ListResponseBody:
+  CarsListResponseBody:
     title: 'Mediatype identifier: application/vnd.goa.car; view=default'
     type: object
     properties:
@@ -94,6 +90,10 @@ definitions:
     - make
     - model
     - body_style
+  ListInvalidScopesResponseBody:
+    title: ListInvalidScopesResponseBody
+    type: string
+    example: Mollitia asperiores.
   ListUnauthorizedResponseBody:
     title: ListUnauthorizedResponseBody
     type: string
