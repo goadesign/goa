@@ -59,7 +59,7 @@ func DecodeAddRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Dec
 		if err != nil {
 			return nil, err
 		}
-		payload := NewAddAddPayload(a, b)
+		payload := NewAddPayload(a, b)
 
 		return payload, nil
 	}

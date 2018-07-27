@@ -32,7 +32,7 @@ func EncodeSigninResponse(encoder func(context.Context, http.ResponseWriter) goa
 // secured_service signin endpoint.
 func DecodeSigninRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) (interface{}, error) {
 	return func(r *http.Request) (interface{}, error) {
-		payload := NewSigninSigninPayload()
+		payload := NewSigninPayload()
 		user, pass, ok := r.BasicAuth()
 		if !ok {
 			return nil, goa.MissingFieldError("Authorization", "header")
@@ -105,7 +105,7 @@ func DecodeSecureRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.
 		if err != nil {
 			return nil, err
 		}
-		payload := NewSecureSecurePayload(fail, token)
+		payload := NewSecurePayload(fail, token)
 		if payload.Token != nil {
 			if strings.Contains(*payload.Token, " ") {
 				// Remove authorization scheme prefix (e.g. "Bearer")
@@ -169,7 +169,7 @@ func DecodeDoublySecureRequest(mux goahttp.Muxer, decoder func(*http.Request) go
 		if tokenRaw != "" {
 			token = &tokenRaw
 		}
-		payload := NewDoublySecureDoublySecurePayload(key, token)
+		payload := NewDoublySecurePayload(key, token)
 		if payload.Token != nil {
 			if strings.Contains(*payload.Token, " ") {
 				// Remove authorization scheme prefix (e.g. "Bearer")
@@ -238,7 +238,7 @@ func DecodeAlsoDoublySecureRequest(mux goahttp.Muxer, decoder func(*http.Request
 		if tokenRaw != "" {
 			token = &tokenRaw
 		}
-		payload := NewAlsoDoublySecureAlsoDoublySecurePayload(key, oauthToken, token)
+		payload := NewAlsoDoublySecurePayload(key, oauthToken, token)
 		user, pass, _ := r.BasicAuth()
 		payload.Username = &user
 		payload.Password = &pass

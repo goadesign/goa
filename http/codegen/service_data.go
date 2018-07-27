@@ -982,7 +982,16 @@ func buildPayloadData(e *httpdesign.EndpointExpr, sd *ServiceData) *PayloadData 
 			clientArgs []*InitArgData
 			serverArgs []*InitArgData
 		)
-		name = fmt.Sprintf("New%s%s", codegen.Goify(ep.Name, true), codegen.Goify(ep.Payload, true))
+		n := codegen.Goify(ep.Name, true)
+		p := codegen.Goify(ep.Payload, true)
+		// Raw payload object has type name prefixed with endpoint name. No need to
+		// prefix the type name again.
+		if strings.HasPrefix(p, n) {
+			p = svc.Scope.HashedUnique(payload.Type, p)
+			name = fmt.Sprintf("New%s", p)
+		} else {
+			name = fmt.Sprintf("New%s%s", n, p)
+		}
 		desc = fmt.Sprintf("%s builds a %s service %s endpoint payload.",
 			name, svc.Name, e.Name())
 		isObject = design.IsObject(payload.Type)
@@ -1385,7 +1394,17 @@ func buildResponseResultInit(resp *httpdesign.HTTPResponseExpr, e *httpdesign.En
 		})
 	}
 	status := codegen.Goify(http.StatusText(resp.StatusCode), true)
-	name := fmt.Sprintf("New%s%s%s", codegen.Goify(md.Name, true), codegen.Goify(md.Result, true), status)
+	n := codegen.Goify(md.Name, true)
+	r := codegen.Goify(md.Result, true)
+	// Raw result object has type name prefixed with endpoint name. No need to
+	// prefix the type name again.
+	var name string
+	if strings.HasPrefix(r, n) {
+		r = svc.Scope.HashedUnique(result.Type, r)
+		name = fmt.Sprintf("New%s%s", r, status)
+	} else {
+		name = fmt.Sprintf("New%s%s%s", n, r, status)
+	}
 	return &InitData{
 		Name:                     name,
 		Description:              fmt.Sprintf("%s builds a %q service %q endpoint result from a HTTP %q response.", name, svc.Name, e.Name(), status),

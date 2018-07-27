@@ -59,33 +59,31 @@ func NewAlsoDoublySecureUnauthorizedResponseBody(res securedservice.Unauthorized
 	return body
 }
 
-// NewSigninSigninPayload builds a secured_service service signin endpoint
-// payload.
-func NewSigninSigninPayload() *securedservice.SigninPayload {
+// NewSigninPayload builds a secured_service service signin endpoint payload.
+func NewSigninPayload() *securedservice.SigninPayload {
 	return &securedservice.SigninPayload{}
 }
 
-// NewSecureSecurePayload builds a secured_service service secure endpoint
-// payload.
-func NewSecureSecurePayload(fail *bool, token *string) *securedservice.SecurePayload {
+// NewSecurePayload builds a secured_service service secure endpoint payload.
+func NewSecurePayload(fail *bool, token *string) *securedservice.SecurePayload {
 	return &securedservice.SecurePayload{
 		Fail:  fail,
 		Token: token,
 	}
 }
 
-// NewDoublySecureDoublySecurePayload builds a secured_service service
-// doubly_secure endpoint payload.
-func NewDoublySecureDoublySecurePayload(key *string, token *string) *securedservice.DoublySecurePayload {
+// NewDoublySecurePayload builds a secured_service service doubly_secure
+// endpoint payload.
+func NewDoublySecurePayload(key *string, token *string) *securedservice.DoublySecurePayload {
 	return &securedservice.DoublySecurePayload{
 		Key:   key,
 		Token: token,
 	}
 }
 
-// NewAlsoDoublySecureAlsoDoublySecurePayload builds a secured_service service
+// NewAlsoDoublySecurePayload builds a secured_service service
 // also_doubly_secure endpoint payload.
-func NewAlsoDoublySecureAlsoDoublySecurePayload(key *string, oauthToken *string, token *string) *securedservice.AlsoDoublySecurePayload {
+func NewAlsoDoublySecurePayload(key *string, oauthToken *string, token *string) *securedservice.AlsoDoublySecurePayload {
 	return &securedservice.AlsoDoublySecurePayload{
 		Key:        key,
 		OauthToken: oauthToken,

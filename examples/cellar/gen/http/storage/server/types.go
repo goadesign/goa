@@ -209,8 +209,8 @@ func NewShowNotFoundResponseBody(res *storage.NotFound) *ShowNotFoundResponseBod
 	return body
 }
 
-// NewShowShowPayload builds a storage service show endpoint payload.
-func NewShowShowPayload(id string, view *string) *storage.ShowPayload {
+// NewShowPayload builds a storage service show endpoint payload.
+func NewShowPayload(id string, view *string) *storage.ShowPayload {
 	return &storage.ShowPayload{
 		ID:   id,
 		View: view,
@@ -238,8 +238,8 @@ func NewAddBottle(body *AddRequestBody) *storage.Bottle {
 	return v
 }
 
-// NewRemoveRemovePayload builds a storage service remove endpoint payload.
-func NewRemoveRemovePayload(id string) *storage.RemovePayload {
+// NewRemovePayload builds a storage service remove endpoint payload.
+func NewRemovePayload(id string) *storage.RemovePayload {
 	return &storage.RemovePayload{
 		ID: id,
 	}
@@ -269,9 +269,8 @@ func NewMultiAddBottle(body []*BottleRequestBody) []*storage.Bottle {
 	return v
 }
 
-// NewMultiUpdateMultiUpdatePayload builds a storage service multi_update
-// endpoint payload.
-func NewMultiUpdateMultiUpdatePayload(body *MultiUpdateRequestBody, ids []string) *storage.MultiUpdatePayload {
+// NewMultiUpdatePayload builds a storage service multi_update endpoint payload.
+func NewMultiUpdatePayload(body *MultiUpdateRequestBody, ids []string) *storage.MultiUpdatePayload {
 	v := &storage.MultiUpdatePayload{}
 	if body.Bottles != nil {
 		v.Bottles = make([]*storage.Bottle, len(body.Bottles))
