@@ -69,7 +69,7 @@ func DecodeShowRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.De
 		if err != nil {
 			return nil, err
 		}
-		payload := NewShowShowPayload(id, view)
+		payload := NewShowPayload(id, view)
 
 		return payload, nil
 	}
@@ -154,7 +154,7 @@ func DecodeRemoveRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.
 			params = mux.Vars(r)
 		)
 		id = params["id"]
-		payload := NewRemoveRemovePayload(id)
+		payload := NewRemovePayload(id)
 
 		return payload, nil
 	}

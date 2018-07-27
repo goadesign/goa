@@ -20,7 +20,7 @@ func DecodeMethodEmptyServerResponseResponse(decoder func(*http.Response) goahtt
 		}
 		switch resp.StatusCode {
 		case http.StatusOK:
-			return NewMethodEmptyServerResponseMethodEmptyServerResponseResultOK(), nil
+			return NewMethodEmptyServerResponseResultOK(), nil
 		default:
 			body, _ := ioutil.ReadAll(resp.Body)
 			return nil, goahttp.ErrInvalidResponse("ServiceEmptyServerResponse", "MethodEmptyServerResponse", resp.StatusCode, string(body))

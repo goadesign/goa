@@ -226,7 +226,7 @@ func StorageMultiUpdateDecoderFunc(mr *multipart.Reader, p **storage.MultiUpdate
 		bottles = append(bottles, &bottle)
 	}
 	reqBody := storages.MultiUpdateRequestBody{Bottles: bottles}
-	*p = storages.NewMultiUpdateMultiUpdatePayload(&reqBody, []string{})
+	*p = storages.NewMultiUpdatePayload(&reqBody, []string{})
 	return nil
 }
 

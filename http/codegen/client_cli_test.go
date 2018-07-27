@@ -36,6 +36,7 @@ func TestClientCLIFiles(t *testing.T) {
 		{"payload-map-user-type", testdata.PayloadBodyInlineMapUserDSL, testdata.PayloadMapUserTypeBuildCode, 1, 1},
 		{"map-query", testdata.PayloadMapQueryPrimitiveArrayDSL, testdata.MapQueryParseCode, 0, 3},
 		{"map-query-object", testdata.PayloadMapQueryObjectDSL, testdata.MapQueryObjectBuildCode, 1, 1},
+		{"empty-body-build", testdata.PayloadBodyPrimitiveFieldEmptyDSL, testdata.EmptyBodyBuildCode, 1, 1},
 	}
 
 	for _, c := range cases {
