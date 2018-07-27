@@ -65,7 +65,7 @@ func NewV2(root *httpdesign.RootExpr) (*V2, error) {
 	}
 
 	for _, he := range root.HTTPErrors {
-		res, err := responseSpecFromExpr(s, root, he.Response)
+		res, err := responseSpecFromExpr(s, root, he.Response, "")
 		if err != nil {
 			return nil, err
 		}
@@ -430,7 +430,7 @@ func itemsFromExpr(at *design.AttributeExpr) *Items {
 	return items
 }
 
-func responseSpecFromExpr(s *V2, root *httpdesign.RootExpr, r *httpdesign.HTTPResponseExpr) (*Response, error) {
+func responseSpecFromExpr(s *V2, root *httpdesign.RootExpr, r *httpdesign.HTTPResponseExpr, typeNamePrefix string) (*Response, error) {
 	var schema *Schema
 	if mt, ok := r.Body.Type.(*design.ResultTypeExpr); ok {
 		view := design.DefaultView
@@ -438,7 +438,7 @@ func responseSpecFromExpr(s *V2, root *httpdesign.RootExpr, r *httpdesign.HTTPRe
 			view = v[0]
 		}
 		schema = NewSchema()
-		schema.Ref = ResultTypeRef(root.Design.API, mt, view)
+		schema.Ref = ResultTypeRefWithPrefix(root.Design.API, mt, view, typeNamePrefix)
 	} else if r.Body.Type != design.Empty {
 		schema = AttributeTypeSchema(root.Design.API, r.Body)
 	}
@@ -570,14 +570,14 @@ func buildPathFromExpr(s *V2, root *httpdesign.RootExpr, route *httpdesign.Route
 					r.StatusCode = httpdesign.StatusSwitchingProtocols
 				}
 			}
-			resp, err := responseSpecFromExpr(s, root, r)
+			resp, err := responseSpecFromExpr(s, root, r, endpoint.Service.Name())
 			if err != nil {
 				return err
 			}
 			responses[strconv.Itoa(r.StatusCode)] = resp
 		}
 		for _, er := range endpoint.HTTPErrors {
-			resp, err := responseSpecFromExpr(s, root, er.Response)
+			resp, err := responseSpecFromExpr(s, root, er.Response, endpoint.Service.Name())
 			if err != nil {
 				return err
 			}
@@ -590,7 +590,7 @@ func buildPathFromExpr(s *V2, root *httpdesign.RootExpr, route *httpdesign.Route
 				In:          "body",
 				Description: endpoint.Body.Description,
 				Required:    true,
-				Schema:      AttributeTypeSchema(root.Design.API, endpoint.Body),
+				Schema:      AttributeTypeSchemaWithPrefix(root.Design.API, endpoint.Body, codegen.Goify(endpoint.Service.Name(), true)),
 			}
 			params = append(params, pp)
 		}
