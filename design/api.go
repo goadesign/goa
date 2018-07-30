@@ -126,6 +126,9 @@ func (a *APIExpr) Hash() string { return "_api_+" + a.Name }
 
 // Finalize makes sure there's one server definition.
 func (a *APIExpr) Finalize() {
+	if a.Name == "" {
+		a.Name = "api"
+	}
 	if len(a.Servers) == 0 {
 		a.Servers = []*ServerExpr{{URL: "http://localhost:8080"}}
 	}
