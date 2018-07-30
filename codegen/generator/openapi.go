@@ -12,11 +12,7 @@ import (
 // OpenAPI iterates through the roots and returns the files needed to render
 // the service OpenAPI spec. It returns an error if the roots slice does not
 // include a HTTP root.
-func OpenAPI(_ string, roots []eval.Root) ([]*codegen.File, error) {
-	var (
-		files []*codegen.File
-		err   error
-	)
+func OpenAPI(_ string, roots []eval.Root) (files []*codegen.File, err error) {
 	for _, root := range roots {
 		if r, ok := root.(*httpdesign.RootExpr); ok {
 			files, err = httpcodegen.OpenAPIFiles(r)
