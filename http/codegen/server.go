@@ -37,6 +37,8 @@ func server(genpkg string, svc *httpdesign.ServiceExpr) *codegen.File {
 			{Path: "io"},
 			{Path: "mime/multipart"},
 			{Path: "net/http"},
+			{Path: "path"},
+			{Path: "strings"},
 			{Path: "sync"},
 			{Path: "time"},
 			{Path: "github.com/gorilla/websocket"},
@@ -331,8 +333,17 @@ func {{ .MountServer }}(mux goahttp.Muxer{{ if .Endpoints }}, h *{{ .ServerStruc
 	{{- end }}
 	{{- range .FileServers }}
 		{{- if .IsDir }}
-	{{ .MountHandler }}(mux, http.FileServer(http.Dir({{ printf "%q" .FilePath }})))
-		{{- else }}
+	{{ .MountHandler }}(mux, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			upath := path.Clean(r.URL.Path)
+			rpath := upath
+			{{- range .RequestPaths }}
+			if strings.HasPrefix(upath, "{{ . }}") {
+				rpath = upath[{{ len . }}:]
+			}
+			{{- end }}
+			http.ServeFile(w, r, path.Join({{ printf "%q" .FilePath }}, rpath))
+		}))
+	 	{{- else }}
 	{{ .MountHandler }}(mux, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			http.ServeFile(w, r, {{ printf "%q" .FilePath }})
 		}))
@@ -359,8 +370,15 @@ func {{ .MountHandler }}(mux goahttp.Muxer, h http.Handler) {
 // input: FileServerData
 const fileServerT = `{{ printf "%s configures the mux to serve GET request made to %q." .MountHandler (join .RequestPaths ", ") | comment }}
 func {{ .MountHandler }}(mux goahttp.Muxer, h http.Handler) {
-	{{- range .RequestPaths }}
+	{{- if .IsDir }}
+		{{- range .RequestPaths }}
+	mux.Handle("GET", "{{ . }}/", h.ServeHTTP)
+	mux.Handle("GET", "{{ . }}/*{{ $.PathParam }}", h.ServeHTTP)
+		{{- end }}
+	{{- else }}
+		{{- range .RequestPaths }}
 	mux.Handle("GET", "{{ . }}", h.ServeHTTP)
+		{{- end }}
 	{{- end }}
 }
 `

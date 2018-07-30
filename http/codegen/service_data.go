@@ -158,6 +158,9 @@ type (
 		// Dir is true if the file server servers files under a
 		// directory, false if it serves a single file.
 		IsDir bool
+		// PathParam is the name of the parameter used to capture the
+		// path for file servers that serve files under a directory.
+		PathParam string
 	}
 
 	// PayloadData contains the payload information required to generate the
@@ -593,11 +596,25 @@ func (d ServicesData) analyze(hs *httpdesign.ServiceExpr) *ServiceData {
 	}
 
 	for _, s := range hs.FileServers {
+		paths := make([]string, len(s.RequestPaths))
+		for i, p := range s.RequestPaths {
+			idx := strings.LastIndex(p, "/{")
+			if idx > 0 {
+				paths[i] = p[:idx]
+			} else {
+				paths[i] = p
+			}
+		}
+		var pp string
+		if s.IsDir() {
+			pp = httpdesign.ExtractWildcards(s.RequestPaths[0])[0]
+		}
 		data := &FileServerData{
 			MountHandler: fmt.Sprintf("Mount%s", codegen.Goify(s.FilePath, true)),
-			RequestPaths: s.RequestPaths,
+			RequestPaths: paths,
 			FilePath:     s.FilePath,
 			IsDir:        s.IsDir(),
+			PathParam:    pp,
 		}
 		rd.FileServers = append(rd.FileServers, data)
 	}
