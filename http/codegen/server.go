@@ -1202,9 +1202,9 @@ const multipartRequestDecoderT = `{{ printf "%s returns a decoder to decode the 
 func {{ .InitName }}(mux goahttp.Muxer, {{ .VarName }} {{ .FuncName }}) func(r *http.Request) goahttp.Decoder {
 	return func(r *http.Request) goahttp.Decoder {
 		return goahttp.EncodingFunc(func(v interface{}) error {
-			mr, err := r.MultipartReader()
-			if err != nil {
-				return err
+			mr, merr := r.MultipartReader()
+			if merr != nil {
+				return merr
 			}
 			p := v.(*{{ .Payload.Ref }})
 			if err := {{ .VarName }}(mr, p); err != nil {
