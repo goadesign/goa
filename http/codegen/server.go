@@ -202,6 +202,7 @@ func transTmplFuncs(s *httpdesign.ServiceExpr) map[string]interface{} {
 		"conversionData":       conversionData,
 		"headerConversionData": headerConversionData,
 		"printValue":           printValue,
+		"viewedServerBody":     viewedServerBody,
 	}
 }
 
@@ -242,6 +243,17 @@ func printValue(dt design.DataType, v interface{}) string {
 	default:
 		panic("unsupported type value " + dt.Name()) // bug
 	}
+}
+
+// viewedServerBody returns the type data that uses the given view for
+// rendering.
+func viewedServerBody(sbd []*TypeData, view string) *TypeData {
+	for _, v := range sbd {
+		if v.View == view {
+			return v
+		}
+	}
+	panic("view not found in server body types: " + view)
 }
 
 // input: ServiceData
@@ -1124,12 +1136,22 @@ func {{ .ErrorEncoder }}(encoder func(context.Context, http.ResponseWriter) goah
 
 // input: ResponseData
 const responseT = `{{ define "response" -}}
-	{{- if .ServerBody }}
+	{{- $servBodyLen := len .ServerBody }}
+	{{- if gt $servBodyLen 0 }}
 	enc := encoder(ctx, w)
 	{{- end }}
-	{{- if .ServerBody }}
-		{{- if .ServerBody.Init }}
-	body := {{ .ServerBody.Init.Name }}({{ range .ServerBody.Init.ServerArgs }}{{ .Ref }}, {{ end }})
+	{{- if gt $servBodyLen 0 }}
+		{{- if and (gt $servBodyLen 1) $.ViewedResult }}
+	var body interface{}
+	switch res.View	{
+			{{- range $.ViewedResult.Views }}
+	case {{ printf "%q" .Name }}{{ if eq .Name "default" }}, ""{{ end }}:
+		{{- $vsb := (viewedServerBody $.ServerBody .Name) }}
+		body = {{ $vsb.Init.Name }}({{ range $vsb.Init.ServerArgs }}{{ .Ref }}, {{ end }})
+			{{- end }}
+	}
+		{{- else if (index .ServerBody 0).Init }}
+	body := {{ (index .ServerBody 0).Init.Name }}({{ range (index .ServerBody 0).Init.ServerArgs }}{{ .Ref }}, {{ end }})
 		{{- else }}
 	body := res{{ if $.ViewedResult }}.Projected{{ end }}{{ if .ResultAttr }}.{{ .ResultAttr }}{{ end }}
 		{{- end }}

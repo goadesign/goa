@@ -33,7 +33,7 @@ primitives use pointers (\*) or direct values (-).
 
 | Properties / Data Structure | Payload / Result | Req. Body (s) | Resp. Body (s) | Req. Body (c) | Resp. Body (c) |
 ------------------------------|------------------|---------------|----------------|---------------|----------------|
-| Required OR Default         | -                | *             | *              | -             | *              |
+| Required OR Default         | -                | *             | -              | -             | *              |
 | Not Required, No Default    | *                | *             | *              | *             | *              |
 
 # How are default values used?
