@@ -86,8 +86,8 @@ func NewPickRequestBody(p *sommelier.Criteria) *PickRequestBody {
 	}
 	if p.Varietal != nil {
 		body.Varietal = make([]string, len(p.Varietal))
-		for j, val := range p.Varietal {
-			body.Varietal[j] = val
+		for i, val := range p.Varietal {
+			body.Varietal[i] = val
 		}
 	}
 	return body

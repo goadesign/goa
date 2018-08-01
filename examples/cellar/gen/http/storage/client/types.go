@@ -160,8 +160,8 @@ func NewAddRequestBody(p *storage.Bottle) *AddRequestBody {
 	}
 	if p.Composition != nil {
 		body.Composition = make([]*ComponentRequestBody, len(p.Composition))
-		for j, val := range p.Composition {
-			body.Composition[j] = &ComponentRequestBody{
+		for i, val := range p.Composition {
+			body.Composition[i] = &ComponentRequestBody{
 				Varietal:   val.Varietal,
 				Percentage: val.Percentage,
 			}
@@ -203,20 +203,20 @@ func NewMultiUpdateRequestBody(p *storage.MultiUpdatePayload) *MultiUpdateReques
 	body := &MultiUpdateRequestBody{}
 	if p.Bottles != nil {
 		body.Bottles = make([]*BottleRequestBody, len(p.Bottles))
-		for j, val := range p.Bottles {
-			body.Bottles[j] = &BottleRequestBody{
+		for i, val := range p.Bottles {
+			body.Bottles[i] = &BottleRequestBody{
 				Name:        val.Name,
 				Vintage:     val.Vintage,
 				Description: val.Description,
 				Rating:      val.Rating,
 			}
 			if val.Winery != nil {
-				body.Bottles[j].Winery = marshalWineryToWineryRequestBody(val.Winery)
+				body.Bottles[i].Winery = marshalWineryToWineryRequestBody(val.Winery)
 			}
 			if val.Composition != nil {
-				body.Bottles[j].Composition = make([]*ComponentRequestBody, len(val.Composition))
-				for k, val := range val.Composition {
-					body.Bottles[j].Composition[k] = &ComponentRequestBody{
+				body.Bottles[i].Composition = make([]*ComponentRequestBody, len(val.Composition))
+				for j, val := range val.Composition {
+					body.Bottles[i].Composition[j] = &ComponentRequestBody{
 						Varietal:   val.Varietal,
 						Percentage: val.Percentage,
 					}
@@ -270,8 +270,8 @@ func NewShowStoredBottleOK(body *ShowResponseBody) *storageviews.StoredBottleVie
 	}
 	if body.Composition != nil {
 		v.Composition = make([]*storageviews.ComponentView, len(body.Composition))
-		for j, val := range body.Composition {
-			v.Composition[j] = &storageviews.ComponentView{
+		for i, val := range body.Composition {
+			v.Composition[i] = &storageviews.ComponentView{
 				Varietal:   val.Varietal,
 				Percentage: val.Percentage,
 			}

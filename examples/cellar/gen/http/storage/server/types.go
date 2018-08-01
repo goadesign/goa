@@ -189,8 +189,8 @@ func NewShowResponseBody(res *storageviews.StoredBottleView) *ShowResponseBody {
 	}
 	if res.Composition != nil {
 		body.Composition = make([]*ComponentResponseBody, len(res.Composition))
-		for j, val := range res.Composition {
-			body.Composition[j] = &ComponentResponseBody{
+		for i, val := range res.Composition {
+			body.Composition[i] = &ComponentResponseBody{
 				Varietal:   val.Varietal,
 				Percentage: val.Percentage,
 			}
@@ -228,8 +228,8 @@ func NewAddBottle(body *AddRequestBody) *storage.Bottle {
 	v.Winery = unmarshalWineryRequestBodyToWinery(body.Winery)
 	if body.Composition != nil {
 		v.Composition = make([]*storage.Component, len(body.Composition))
-		for j, val := range body.Composition {
-			v.Composition[j] = &storage.Component{
+		for i, val := range body.Composition {
+			v.Composition[i] = &storage.Component{
 				Varietal:   *val.Varietal,
 				Percentage: val.Percentage,
 			}
@@ -274,18 +274,18 @@ func NewMultiUpdatePayload(body *MultiUpdateRequestBody, ids []string) *storage.
 	v := &storage.MultiUpdatePayload{}
 	if body.Bottles != nil {
 		v.Bottles = make([]*storage.Bottle, len(body.Bottles))
-		for j, val := range body.Bottles {
-			v.Bottles[j] = &storage.Bottle{
+		for i, val := range body.Bottles {
+			v.Bottles[i] = &storage.Bottle{
 				Name:        *val.Name,
 				Vintage:     *val.Vintage,
 				Description: val.Description,
 				Rating:      val.Rating,
 			}
-			v.Bottles[j].Winery = unmarshalWineryRequestBodyToWinery(val.Winery)
+			v.Bottles[i].Winery = unmarshalWineryRequestBodyToWinery(val.Winery)
 			if val.Composition != nil {
-				v.Bottles[j].Composition = make([]*storage.Component, len(val.Composition))
-				for k, val := range val.Composition {
-					v.Bottles[j].Composition[k] = &storage.Component{
+				v.Bottles[i].Composition = make([]*storage.Component, len(val.Composition))
+				for j, val := range val.Composition {
+					v.Bottles[i].Composition[j] = &storage.Component{
 						Varietal:   *val.Varietal,
 						Percentage: val.Percentage,
 					}
