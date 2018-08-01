@@ -44,8 +44,8 @@ func (t *ArrayStringType) ConvertToArrayStringT() *testdata.ArrayStringT {
 	v := &testdata.ArrayStringT{}
 	if t.ArrayString != nil {
 		v.ArrayString = make([]string, len(t.ArrayString))
-		for j, val := range t.ArrayString {
-			v.ArrayString[j] = val
+		for i, val := range t.ArrayString {
+			v.ArrayString[i] = val
 		}
 	}
 	return v
@@ -57,8 +57,8 @@ func (t *ArrayStringType) ConvertToArrayStringT() *testdata.ArrayStringT {
 	v := &testdata.ArrayStringT{}
 	if t.ArrayString != nil {
 		v.ArrayString = make([]string, len(t.ArrayString))
-		for j, val := range t.ArrayString {
-			v.ArrayString[j] = val
+		for i, val := range t.ArrayString {
+			v.ArrayString[i] = val
 		}
 	}
 	return v
@@ -123,8 +123,8 @@ func marshalObjectFieldToObjectFieldT(v *ObjectField) *testdata.ObjectFieldT {
 	}
 	if v.Array != nil {
 		res.Array = make([]bool, len(v.Array))
-		for j, val := range v.Array {
-			res.Array[j] = val
+		for i, val := range v.Array {
+			res.Array[i] = val
 		}
 	}
 	if v.Map != nil {
@@ -158,8 +158,8 @@ func marshalObjectFieldToObjectFieldT(v *ObjectField) *testdata.ObjectFieldT {
 	}
 	if v.Array != nil {
 		res.Array = make([]bool, len(v.Array))
-		for j, val := range v.Array {
-			res.Array[j] = val
+		for i, val := range v.Array {
+			res.Array[i] = val
 		}
 	}
 	if v.Map != nil {

@@ -251,8 +251,8 @@ const defaultUnmarshalCode = `func transform() {
 		target.B = *source.B
 	}
 	target.A = make([]string, len(source.A))
-	for j, val := range source.A {
-		target.A[j] = val
+	for i, val := range source.A {
+		target.A[i] = val
 	}
 	if source.A == nil {
 		target.A = []string{"foo", "bar"}
@@ -285,8 +285,8 @@ const defaultCode = `func transform() {
 	}
 	if source.A != nil {
 		target.A = make([]string, len(source.A))
-		for j, val := range source.A {
-			target.A[j] = val
+		for i, val := range source.A {
+			target.A[i] = val
 		}
 	}
 	if source.A == nil {
@@ -316,8 +316,8 @@ const arrayObjUnmarshalCode = `func transform() {
 	}
 	if source.B != nil {
 		target.B = make([]string, len(source.B))
-		for j, val := range source.B {
-			target.B[j] = val
+		for i, val := range source.B {
+			target.B[i] = val
 		}
 	}
 }
@@ -329,8 +329,8 @@ const arrayObjCode = `func transform() {
 	}
 	if source.B != nil {
 		target.B = make([]string, len(source.B))
-		for j, val := range source.B {
-			target.B[j] = val
+		for i, val := range source.B {
+			target.B[i] = val
 		}
 	}
 }
@@ -345,17 +345,17 @@ const arrayObj2Code = `func transform() {
 			A *string
 			B []string
 		}, len(source.B))
-		for j, val := range source.B {
-			target.B[j] = struct {
+		for i, val := range source.B {
+			target.B[i] = struct {
 				A *string
 				B []string
 			}{
 				A: val.A,
 			}
 			if val.B != nil {
-				target.B[j].B = make([]string, len(val.B))
-				for k, val := range val.B {
-					target.B[j].B[k] = val
+				target.B[i].B = make([]string, len(val.B))
+				for j, val := range val.B {
+					target.B[i].B[j] = val
 				}
 			}
 		}
@@ -551,8 +551,8 @@ const compUnmarshalCode = `func transform() {
 	target := &TargetType{}
 	if source.Aa != nil {
 		target.Aa = make([]string, len(source.Aa))
-		for j, val := range source.Aa {
-			target.Aa[j] = val
+		for i, val := range source.Aa {
+			target.Aa[i] = val
 		}
 	}
 	if source.Aa == nil {
@@ -572,8 +572,8 @@ const compCode = `func transform() {
 	target := &TargetType{}
 	if source.Aa != nil {
 		target.Aa = make([]string, len(source.Aa))
-		for j, val := range source.Aa {
-			target.Aa[j] = val
+		for i, val := range source.Aa {
+			target.Aa[i] = val
 		}
 	}
 	if source.Aa == nil {
