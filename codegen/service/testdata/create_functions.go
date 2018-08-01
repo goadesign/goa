@@ -42,8 +42,8 @@ func (t *ArrayStringType) CreateFromArrayStringT(v *testdata.ArrayStringT) {
 	temp := &ArrayStringType{}
 	if v.ArrayString != nil {
 		temp.ArrayString = make([]string, len(v.ArrayString))
-		for j, val := range v.ArrayString {
-			temp.ArrayString[j] = val
+		for i, val := range v.ArrayString {
+			temp.ArrayString[i] = val
 		}
 	}
 	*t = *temp
@@ -55,8 +55,8 @@ func (t *ArrayStringType) CreateFromArrayStringT(v *testdata.ArrayStringT) {
 	temp := &ArrayStringType{}
 	if v.ArrayString != nil {
 		temp.ArrayString = make([]string, len(v.ArrayString))
-		for j, val := range v.ArrayString {
-			temp.ArrayString[j] = val
+		for i, val := range v.ArrayString {
+			temp.ArrayString[i] = val
 		}
 	}
 	*t = *temp

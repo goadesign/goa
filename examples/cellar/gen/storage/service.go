@@ -262,8 +262,8 @@ func newStoredBottle(vres *storageviews.StoredBottleView) *StoredBottle {
 	}
 	if vres.Composition != nil {
 		res.Composition = make([]*Component, len(vres.Composition))
-		for j, val := range vres.Composition {
-			res.Composition[j] = &Component{
+		for i, val := range vres.Composition {
+			res.Composition[i] = &Component{
 				Varietal:   *val.Varietal,
 				Percentage: val.Percentage,
 			}
@@ -303,8 +303,8 @@ func newStoredBottleView(res *StoredBottle) *storageviews.StoredBottleView {
 	}
 	if res.Composition != nil {
 		vres.Composition = make([]*storageviews.ComponentView, len(res.Composition))
-		for j, val := range res.Composition {
-			vres.Composition[j] = &storageviews.ComponentView{
+		for i, val := range res.Composition {
+			vres.Composition[i] = &storageviews.ComponentView{
 				Varietal:   &val.Varietal,
 				Percentage: val.Percentage,
 			}

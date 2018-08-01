@@ -104,8 +104,8 @@ func BuildAddPayload(storageAddBody string) (*storage.Bottle, error) {
 	}
 	if body.Composition != nil {
 		v.Composition = make([]*storage.Component, len(body.Composition))
-		for j, val := range body.Composition {
-			v.Composition[j] = &storage.Component{
+		for i, val := range body.Composition {
+			v.Composition[i] = &storage.Component{
 				Varietal:   val.Varietal,
 				Percentage: val.Percentage,
 			}
@@ -191,20 +191,20 @@ func BuildMultiUpdatePayload(storageMultiUpdateBody string, storageMultiUpdateId
 	v := &storage.MultiUpdatePayload{}
 	if body.Bottles != nil {
 		v.Bottles = make([]*storage.Bottle, len(body.Bottles))
-		for j, val := range body.Bottles {
-			v.Bottles[j] = &storage.Bottle{
+		for i, val := range body.Bottles {
+			v.Bottles[i] = &storage.Bottle{
 				Name:        val.Name,
 				Vintage:     val.Vintage,
 				Description: val.Description,
 				Rating:      val.Rating,
 			}
 			if val.Winery != nil {
-				v.Bottles[j].Winery = marshalWineryRequestBodyToWinery(val.Winery)
+				v.Bottles[i].Winery = marshalWineryRequestBodyToWinery(val.Winery)
 			}
 			if val.Composition != nil {
-				v.Bottles[j].Composition = make([]*storage.Component, len(val.Composition))
-				for k, val := range val.Composition {
-					v.Bottles[j].Composition[k] = &storage.Component{
+				v.Bottles[i].Composition = make([]*storage.Component, len(val.Composition))
+				for j, val := range val.Composition {
+					v.Bottles[i].Composition[j] = &storage.Component{
 						Varietal:   val.Varietal,
 						Percentage: val.Percentage,
 					}
