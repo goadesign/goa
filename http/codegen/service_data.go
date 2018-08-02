@@ -243,6 +243,8 @@ type (
 		// MustValidate is true if the request body or at least one
 		// parameter or header requires validation.
 		MustValidate bool
+		// Multipart if true indicates the request is a multipart request.
+		Multipart bool
 	}
 
 	// ResponseData describes a response.
@@ -985,6 +987,7 @@ func buildPayloadData(e *httpdesign.EndpointExpr, sd *ServiceData) *PayloadData 
 			ServerBody:   serverBodyData,
 			ClientBody:   clientBodyData,
 			MustValidate: mustValidate,
+			Multipart:    e.MultipartRequest,
 		}
 	}
 

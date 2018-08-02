@@ -162,7 +162,7 @@ paths:
       - name: ids
         in: query
         description: IDs of the bottles to be updated
-        required: false
+        required: true
         type: array
         items:
           type: string
@@ -172,6 +172,8 @@ paths:
         required: true
         schema:
           $ref: '#/definitions/StorageMultiUpdateRequestBody'
+          required:
+          - bottles
       responses:
         "204":
           description: No Content response.
@@ -609,6 +611,8 @@ definitions:
           name: Longoria
           region: Central Coast, California
           url: http://www.longoriawine.com/
+    required:
+    - bottles
   StorageShowResponseBody:
     title: 'Mediatype identifier: application/vnd.cellar.stored-bottle; view=default'
     type: object
