@@ -684,6 +684,10 @@ func Body(args ...interface{}) {
 		}
 	case func():
 		fn = a
+		if ref == nil {
+			eval.ReportError("Body is set but Payload is not defined")
+			return
+		}
 		attr = ref
 	default:
 		eval.InvalidArgError("attribute name, user type or DSL", a)
