@@ -337,6 +337,12 @@ func (e *EndpointExpr) Validate() error {
 		if e.MultipartRequest {
 			verr.Add(e, "MultipartRequest is set but Payload is not defined")
 		}
+		if !e.Params.IsEmpty() {
+			verr.Add(e, "Params are set but Payload is not defined.")
+		}
+		if !e.Headers.IsEmpty() {
+			verr.Add(e, "Headers are set but Payload is not defined.")
+		}
 		return verr
 	}
 	if design.IsArray(e.MethodExpr.Payload.Type) {
