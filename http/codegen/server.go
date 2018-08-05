@@ -557,10 +557,8 @@ const requestParamsHeadersT = `{{- define "request_params_headers" }}
 		{{- range .Headers }}
 			{{ .VarName }} {{ .TypeRef }}
 		{{- end }}
-		{{- if not .ServerBody }}
-		{{- if .MustValidate }}
+		{{- if and .MustValidate (or (not .ServerBody) .Multipart) }}
 			err error
-		{{- end }}
 		{{- end }}
 		{{- if .PathParams }}
 

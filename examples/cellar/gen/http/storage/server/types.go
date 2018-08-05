@@ -272,23 +272,21 @@ func NewMultiAddBottle(body []*BottleRequestBody) []*storage.Bottle {
 // NewMultiUpdatePayload builds a storage service multi_update endpoint payload.
 func NewMultiUpdatePayload(body *MultiUpdateRequestBody, ids []string) *storage.MultiUpdatePayload {
 	v := &storage.MultiUpdatePayload{}
-	if body.Bottles != nil {
-		v.Bottles = make([]*storage.Bottle, len(body.Bottles))
-		for i, val := range body.Bottles {
-			v.Bottles[i] = &storage.Bottle{
-				Name:        *val.Name,
-				Vintage:     *val.Vintage,
-				Description: val.Description,
-				Rating:      val.Rating,
-			}
-			v.Bottles[i].Winery = unmarshalWineryRequestBodyToWinery(val.Winery)
-			if val.Composition != nil {
-				v.Bottles[i].Composition = make([]*storage.Component, len(val.Composition))
-				for j, val := range val.Composition {
-					v.Bottles[i].Composition[j] = &storage.Component{
-						Varietal:   *val.Varietal,
-						Percentage: val.Percentage,
-					}
+	v.Bottles = make([]*storage.Bottle, len(body.Bottles))
+	for i, val := range body.Bottles {
+		v.Bottles[i] = &storage.Bottle{
+			Name:        *val.Name,
+			Vintage:     *val.Vintage,
+			Description: val.Description,
+			Rating:      val.Rating,
+		}
+		v.Bottles[i].Winery = unmarshalWineryRequestBodyToWinery(val.Winery)
+		if val.Composition != nil {
+			v.Bottles[i].Composition = make([]*storage.Component, len(val.Composition))
+			for j, val := range val.Composition {
+				v.Bottles[i].Composition[j] = &storage.Component{
+					Varietal:   *val.Varietal,
+					Percentage: val.Percentage,
 				}
 			}
 		}
@@ -355,6 +353,9 @@ func (body *AddRequestBody) Validate() (err error) {
 
 // Validate runs the validations defined on MultiUpdateRequestBody
 func (body *MultiUpdateRequestBody) Validate() (err error) {
+	if body.Bottles == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("bottles", "body"))
+	}
 	for _, e := range body.Bottles {
 		if e != nil {
 			if err2 := e.Validate(); err2 != nil {
