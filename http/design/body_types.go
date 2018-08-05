@@ -135,7 +135,6 @@ func buildResponseBody(name string, attr *design.AttributeExpr, resp *HTTPRespon
 		if resp.Headers.IsEmpty() {
 			attr = design.DupAtt(attr)
 			renameType(attr, name, "ResponseBody")
-			setForcePointer(attr)
 			return attr
 		}
 		return &design.AttributeExpr{Type: design.Empty}
@@ -155,7 +154,6 @@ func buildResponseBody(name string, attr *design.AttributeExpr, resp *HTTPRespon
 		AttributeExpr: body.Attribute(),
 		TypeName:      name,
 	}
-	setForcePointer(userType.Attribute())
 	appendSuffix(userType.Attribute().Type, "ResponseBody")
 	rt, isrt := attr.Type.(*design.ResultTypeExpr)
 	if !isrt {
@@ -181,35 +179,6 @@ func buildResponseBody(name string, attr *design.AttributeExpr, resp *HTTPRespon
 		v.Parent = nmt
 	}
 	return &design.AttributeExpr{Type: nmt, Validation: userType.Validation}
-}
-
-func setForcePointer(att *design.AttributeExpr, seen ...map[string]struct{}) {
-	var s map[string]struct{}
-	if len(seen) > 0 {
-		s = seen[0]
-	} else {
-		s = make(map[string]struct{})
-		seen = append(seen, s)
-	}
-	switch actual := att.Type.(type) {
-	case design.Primitive:
-		att.ForcePointer = true
-	case design.UserType:
-		if _, ok := s[actual.ID()]; ok {
-			return
-		}
-		s[actual.ID()] = struct{}{}
-		setForcePointer(actual.(design.UserType).Attribute(), seen...)
-	case *design.Object:
-		for _, nat := range *actual {
-			setForcePointer(nat.Attribute, seen...)
-		}
-	case *design.Array:
-		setForcePointer(actual.ElemType, seen...)
-	case *design.Map:
-		setForcePointer(actual.KeyType, seen...)
-		setForcePointer(actual.ElemType, seen...)
-	}
 }
 
 func renameType(att *design.AttributeExpr, name, suffix string) {
