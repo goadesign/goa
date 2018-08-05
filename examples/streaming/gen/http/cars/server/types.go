@@ -17,11 +17,11 @@ import (
 // response body.
 type ListResponseBody struct {
 	// The make of the car
-	Make *string `form:"make,omitempty" json:"make,omitempty" xml:"make,omitempty"`
+	Make string `form:"make" json:"make" xml:"make"`
 	// The car model
-	Model *string `form:"model,omitempty" json:"model,omitempty" xml:"model,omitempty"`
+	Model string `form:"model" json:"model" xml:"model"`
 	// The car body style
-	BodyStyle *string `form:"body_style,omitempty" json:"body_style,omitempty" xml:"body_style,omitempty"`
+	BodyStyle string `form:"body_style" json:"body_style" xml:"body_style"`
 }
 
 // LoginUnauthorizedResponseBody is the type of the "cars" service "login"
@@ -40,9 +40,9 @@ type ListUnauthorizedResponseBody string
 // "list" endpoint of the "cars" service.
 func NewListResponseBody(res *carssvcviews.CarView) *ListResponseBody {
 	body := &ListResponseBody{
-		Make:      res.Make,
-		Model:     res.Model,
-		BodyStyle: res.BodyStyle,
+		Make:      *res.Make,
+		Model:     *res.Model,
+		BodyStyle: *res.BodyStyle,
 	}
 	return body
 }

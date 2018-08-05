@@ -25,7 +25,7 @@ func EncodePickResponse(encoder func(context.Context, http.ResponseWriter) goaht
 	return func(ctx context.Context, w http.ResponseWriter, v interface{}) error {
 		res := v.(sommelierviews.StoredBottleCollection)
 		enc := encoder(ctx, w)
-		body := NewPickResponseBody(res.Projected)
+		body := NewStoredBottleResponseBodyCollection(res.Projected)
 		w.WriteHeader(http.StatusOK)
 		return enc.Encode(body)
 	}
@@ -82,14 +82,11 @@ func EncodePickError(encoder func(context.Context, http.ResponseWriter) goahttp.
 	}
 }
 
-// marshalWineryViewToWineryResponseBody builds a value of type
-// *WineryResponseBody from a value of type *sommelierviews.WineryView.
-func marshalWineryViewToWineryResponseBody(v *sommelierviews.WineryView) *WineryResponseBody {
-	res := &WineryResponseBody{
-		Name:    v.Name,
-		Region:  v.Region,
-		Country: v.Country,
-		URL:     v.URL,
+// marshalWineryViewToWineryResponseBodyTiny builds a value of type
+// *WineryResponseBodyTiny from a value of type *sommelierviews.WineryView.
+func marshalWineryViewToWineryResponseBodyTiny(v *sommelierviews.WineryView) *WineryResponseBodyTiny {
+	res := &WineryResponseBodyTiny{
+		Name: *v.Name,
 	}
 
 	return res

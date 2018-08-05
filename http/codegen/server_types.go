@@ -86,7 +86,7 @@ func serverType(genpkg string, svc *httpdesign.ServiceExpr, seen map[string]stru
 	for _, a := range svc.HTTPEndpoints {
 		adata := rdata.Endpoint(a.Name())
 		for _, resp := range adata.Result.Responses {
-			if data := resp.ServerBody; data != nil {
+			for _, data := range resp.ServerBody {
 				if data.Def != "" {
 					sections = append(sections, &codegen.SectionTemplate{
 						Name:   "response-server-body",
@@ -109,7 +109,7 @@ func serverType(genpkg string, svc *httpdesign.ServiceExpr, seen map[string]stru
 		adata := rdata.Endpoint(a.Name())
 		for _, gerr := range adata.Errors {
 			for _, herr := range gerr.Errors {
-				if data := herr.Response.ServerBody; data != nil {
+				for _, data := range herr.Response.ServerBody {
 					if data.Def != "" {
 						sections = append(sections, &codegen.SectionTemplate{
 							Name:   "error-body-type-decl",

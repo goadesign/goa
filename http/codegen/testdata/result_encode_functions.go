@@ -632,7 +632,13 @@ func EncodeMethodBodyMultipleViewResponse(encoder func(context.Context, http.Res
 		res := v.(*servicebodymultipleviewviews.Resulttypemultipleviews)
 		w.Header().Set("goa-view", res.View)
 		enc := encoder(ctx, w)
-		body := NewMethodBodyMultipleViewResponseBody(res.Projected)
+		var body interface{}
+		switch res.View {
+		case "default", "":
+			body = NewMethodBodyMultipleViewResponseBody(res.Projected)
+		case "tiny":
+			body = NewMethodBodyMultipleViewResponseBodyTiny(res.Projected)
+		}
 		if res.Projected.C != nil {
 			w.Header().Set("Location", *res.Projected.C)
 		}
@@ -649,7 +655,13 @@ func EncodeMethodBodyCollectionResponse(encoder func(context.Context, http.Respo
 		res := v.(servicebodycollectionviews.ResulttypecollectionCollection)
 		w.Header().Set("goa-view", res.View)
 		enc := encoder(ctx, w)
-		body := NewMethodBodyCollectionResponseBody(res.Projected)
+		var body interface{}
+		switch res.View {
+		case "default", "":
+			body = NewResulttypecollectionResponseBodyCollection(res.Projected)
+		case "tiny":
+			body = NewResulttypecollectionResponseBodyTinyCollection(res.Projected)
+		}
 		w.WriteHeader(http.StatusOK)
 		return enc.Encode(body)
 	}
@@ -663,7 +675,7 @@ func EncodeMethodBodyCollectionExplicitViewResponse(encoder func(context.Context
 	return func(ctx context.Context, w http.ResponseWriter, v interface{}) error {
 		res := v.(servicebodycollectionexplicitviewviews.ResulttypecollectionCollection)
 		enc := encoder(ctx, w)
-		body := NewMethodBodyCollectionExplicitViewResponseBody(res.Projected)
+		body := NewResulttypecollectionResponseBodyTinyCollection(res.Projected)
 		w.WriteHeader(http.StatusOK)
 		return enc.Encode(body)
 	}
@@ -894,13 +906,25 @@ func EncodeMethodTagMultipleViewsResponse(encoder func(context.Context, http.Res
 		w.Header().Set("goa-view", res.View)
 		if res.Projected.B != nil && *res.Projected.B == "value" {
 			enc := encoder(ctx, w)
-			body := NewMethodTagMultipleViewsAcceptedResponseBody(res.Projected)
+			var body interface{}
+			switch res.View {
+			case "default", "":
+				body = NewMethodTagMultipleViewsAcceptedResponseBody(res.Projected)
+			case "tiny":
+				body = NewMethodTagMultipleViewsAcceptedResponseBodyTiny(res.Projected)
+			}
 			w.Header().Set("c", *res.Projected.C)
 			w.WriteHeader(http.StatusAccepted)
 			return enc.Encode(body)
 		}
 		enc := encoder(ctx, w)
-		body := NewMethodTagMultipleViewsOKResponseBody(res.Projected)
+		var body interface{}
+		switch res.View {
+		case "default", "":
+			body = NewMethodTagMultipleViewsOKResponseBody(res.Projected)
+		case "tiny":
+			body = NewMethodTagMultipleViewsOKResponseBodyTiny(res.Projected)
+		}
 		w.WriteHeader(http.StatusOK)
 		return enc.Encode(body)
 	}
