@@ -605,7 +605,7 @@ func HasFile(dt DataType) bool {
 	return hasFile(dt, nil)
 }
 
-func hasFile(dt DataType, traversed []DataType) bool {
+func hasFile(dt DataType, seen map[string]struct{}) bool {
 	if dt == nil {
 		return false
 	}
@@ -613,32 +613,31 @@ func hasFile(dt DataType, traversed []DataType) bool {
 	case dt.IsPrimitive():
 		return dt.Kind() == FileKind
 	case dt.IsArray():
-		if hasFile(dt.ToArray().ElemType.Type, traversed) {
-			return true
+		et := dt.ToArray().ElemType.Type
+		if _, ok := seen[et.Name()]; ok {
+			return false
 		}
+		return hasFile(et, seen)
 	case dt.IsHash():
-		if hasFile(dt.ToHash().KeyType.Type, traversed) {
+		if hasFile(dt.ToHash().KeyType.Type, seen) {
 			return true
 		}
-		if hasFile(dt.ToHash().ElemType.Type, traversed) {
-			return true
-		}
-	case dt.IsObject() && dt.Kind() == UserTypeKind:
-		for _, v := range traversed {
-			if dt == v {
-				return false
-			}
-		}
-		traversed = append(traversed, dt)
-		fallthrough
+		return hasFile(dt.ToHash().ElemType.Type, seen)
 	case dt.IsObject():
+		if _, ok := seen[dt.Name()]; ok {
+			return false
+		}
+		if seen == nil {
+			seen = make(map[string]struct{})
+		}
+		seen[dt.Name()] = struct{}{}
 		for _, att := range dt.ToObject() {
-			if hasFile(att.Type, traversed) {
+			if hasFile(att.Type, seen) {
 				return true
 			}
 		}
 	default:
-		panic("unknown type")
+		panic("unknown type") // bug
 	}
 	return false
 }
