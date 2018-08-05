@@ -37,7 +37,7 @@ type AddRequestBody struct {
 // endpoint HTTP request body.
 type MultiUpdateRequestBody struct {
 	// Array of bottle info that matches the ids attribute
-	Bottles []*BottleRequestBody `form:"bottles,omitempty" json:"bottles,omitempty" xml:"bottles,omitempty"`
+	Bottles []*BottleRequestBody `form:"bottles" json:"bottles" xml:"bottles"`
 }
 
 // ListResponseBody is the type of the "storage" service "list" endpoint HTTP

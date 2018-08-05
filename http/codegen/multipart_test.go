@@ -81,7 +81,8 @@ func TestServerMultipartNewFunc(t *testing.T) {
 		{"multipart-body-user-type", testdata.PayloadMultipartUserTypeDSL, testdata.MultipartUserTypeDecoderFuncCode},
 		{"multipart-body-array-type", testdata.PayloadMultipartArrayTypeDSL, testdata.MultipartArrayTypeDecoderFuncCode},
 		{"multipart-body-map-type", testdata.PayloadMultipartMapTypeDSL, testdata.MultipartMapTypeDecoderFuncCode},
-		{"multipart-with-params", testdata.PayloadMultipartWithParams, testdata.MultipartWithParamsDecoderFuncCode},
+		{"multipart-with-param", testdata.PayloadMultipartWithParamDSL, testdata.MultipartWithParamDecoderFuncCode},
+		{"multipart-with-params-and-headers", testdata.PayloadMultipartWithParamsAndHeadersDSL, testdata.MultipartWithParamsAndHeadersDecoderFuncCode},
 	}
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
@@ -113,7 +114,8 @@ func TestClientMultipartNewFunc(t *testing.T) {
 		{"multipart-body-user-type", testdata.PayloadMultipartUserTypeDSL, testdata.MultipartUserTypeEncoderFuncCode},
 		{"multipart-body-array-type", testdata.PayloadMultipartArrayTypeDSL, testdata.MultipartArrayTypeEncoderFuncCode},
 		{"multipart-body-map-type", testdata.PayloadMultipartMapTypeDSL, testdata.MultipartMapTypeEncoderFuncCode},
-		{"multipart-with-params", testdata.PayloadMultipartWithParams, testdata.MultipartWithParamsEncoderFuncCode},
+		{"multipart-with-param", testdata.PayloadMultipartWithParamDSL, testdata.MultipartWithParamEncoderFuncCode},
+		{"multipart-with-params-and-headers", testdata.PayloadMultipartWithParamsAndHeadersDSL, testdata.MultipartWithParamsAndHeadersEncoderFuncCode},
 	}
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {

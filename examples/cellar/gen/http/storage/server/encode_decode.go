@@ -233,9 +233,9 @@ func DecodeMultiAddRequest(mux goahttp.Muxer, decoder func(*http.Request) goahtt
 func NewStorageMultiAddDecoder(mux goahttp.Muxer, storageMultiAddDecoderFn StorageMultiAddDecoderFunc) func(r *http.Request) goahttp.Decoder {
 	return func(r *http.Request) goahttp.Decoder {
 		return goahttp.EncodingFunc(func(v interface{}) error {
-			mr, err := r.MultipartReader()
-			if err != nil {
-				return err
+			mr, merr := r.MultipartReader()
+			if merr != nil {
+				return merr
 			}
 			p := v.(*[]*storage.Bottle)
 			if err := storageMultiAddDecoderFn(mr, p); err != nil {
@@ -273,9 +273,9 @@ func DecodeMultiUpdateRequest(mux goahttp.Muxer, decoder func(*http.Request) goa
 func NewStorageMultiUpdateDecoder(mux goahttp.Muxer, storageMultiUpdateDecoderFn StorageMultiUpdateDecoderFunc) func(r *http.Request) goahttp.Decoder {
 	return func(r *http.Request) goahttp.Decoder {
 		return goahttp.EncodingFunc(func(v interface{}) error {
-			mr, err := r.MultipartReader()
-			if err != nil {
-				return err
+			mr, merr := r.MultipartReader()
+			if merr != nil {
+				return merr
 			}
 			p := v.(**storage.MultiUpdatePayload)
 			if err := storageMultiUpdateDecoderFn(mr, p); err != nil {
@@ -284,8 +284,15 @@ func NewStorageMultiUpdateDecoder(mux goahttp.Muxer, storageMultiUpdateDecoderFn
 
 			var (
 				ids []string
+				err error
 			)
 			ids = r.URL.Query()["ids"]
+			if ids == nil {
+				err = goa.MergeErrors(err, goa.MissingFieldError("ids", "query string"))
+			}
+			if err != nil {
+				return err
+			}
 			(*p).Ids = ids
 			return nil
 		})

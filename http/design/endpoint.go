@@ -428,6 +428,9 @@ func (e *EndpointExpr) Validate() error {
 			}
 		}
 		if e.Body != nil {
+			if e.MultipartRequest {
+				verr.Add(e, "HTTP endpoint defines MultipartRequest and body. At most one of these must be defined.")
+			}
 			if bObj := design.AsObject(e.Body.Type); bObj != nil {
 				for _, nat := range *bObj {
 					name := strings.Split(nat.Name, ":")[0]

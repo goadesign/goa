@@ -88,6 +88,7 @@ var _ = Service("storage", func() {
 		Payload(func() {
 			Attribute("ids", ArrayOf(String), "IDs of the bottles to be updated")
 			Attribute("bottles", ArrayOf(Bottle), "Array of bottle info that matches the ids attribute")
+			Required("ids", "bottles")
 		})
 		HTTP(func() {
 			PUT("/multi_update")

@@ -85,7 +85,7 @@ func ParseEndpoint(
 
 		storageMultiUpdateFlags    = flag.NewFlagSet("multi-update", flag.ExitOnError)
 		storageMultiUpdateBodyFlag = storageMultiUpdateFlags.String("body", "REQUIRED", "")
-		storageMultiUpdateIdsFlag  = storageMultiUpdateFlags.String("ids", "", "")
+		storageMultiUpdateIdsFlag  = storageMultiUpdateFlags.String("ids", "REQUIRED", "")
 	)
 	sommelierFlags.Usage = sommelierUsage
 	sommelierPickFlags.Usage = sommelierPickUsage
