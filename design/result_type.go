@@ -280,7 +280,11 @@ func projectSingle(m *ResultTypeExpr, view string, seen ...map[string]*Attribute
 		s := seen[0]
 		if att, ok := s[m.Identifier]; ok {
 			if rt, ok2 := att.Type.(*ResultTypeExpr); ok2 {
-				ut = rt.UserTypeExpr
+				ut = &UserTypeExpr{
+					AttributeExpr: DupAtt(rt.Attribute()),
+					TypeName:      rt.TypeName,
+					Service:       rt.Service,
+				}
 			}
 		}
 	} else {
