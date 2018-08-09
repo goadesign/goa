@@ -87,18 +87,21 @@ func serverType(genpkg string, svc *httpdesign.ServiceExpr, seen map[string]stru
 		adata := rdata.Endpoint(a.Name())
 		for _, resp := range adata.Result.Responses {
 			for _, data := range resp.ServerBody {
-				if data.Def != "" {
-					sections = append(sections, &codegen.SectionTemplate{
-						Name:   "response-server-body",
-						Source: typeDeclT,
-						Data:   data,
-					})
-				}
-				if data.Init != nil {
-					initData = append(initData, data.Init)
-				}
-				if data.ValidateDef != "" {
-					validatedTypes = append(validatedTypes, data)
+				if generated, ok := sd.ServerTypeNames[data.Name]; ok && !generated {
+					if data.Def != "" && !sd.ServerTypeNames[data.VarName] {
+						sections = append(sections, &codegen.SectionTemplate{
+							Name:   "response-server-body",
+							Source: typeDeclT,
+							Data:   data,
+						})
+					}
+					if data.Init != nil {
+						initData = append(initData, data.Init)
+					}
+					if data.ValidateDef != "" {
+						validatedTypes = append(validatedTypes, data)
+					}
+					sd.ServerTypeNames[data.Name] = true
 				}
 			}
 		}

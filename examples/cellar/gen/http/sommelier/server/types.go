@@ -71,18 +71,6 @@ type ComponentResponseBody struct {
 	Percentage *uint32 `form:"percentage,omitempty" json:"percentage,omitempty" xml:"percentage,omitempty"`
 }
 
-// WineryResponseBody is used to define fields on response body types.
-type WineryResponseBody struct {
-	// Name of winery
-	Name string `form:"name" json:"name" xml:"name"`
-	// Region of winery
-	Region string `form:"region" json:"region" xml:"region"`
-	// Country of winery
-	Country string `form:"country" json:"country" xml:"country"`
-	// Winery website URL
-	URL *string `form:"url,omitempty" json:"url,omitempty" xml:"url,omitempty"`
-}
-
 // NewStoredBottleResponseBodyCollection builds the HTTP response body from the
 // result of the "pick" endpoint of the "sommelier" service.
 func NewStoredBottleResponseBodyCollection(res sommelierviews.StoredBottleCollectionView) StoredBottleResponseBodyCollection {
@@ -194,16 +182,6 @@ func (body *ComponentResponseBody) Validate() (err error) {
 		if *body.Percentage > 100 {
 			err = goa.MergeErrors(err, goa.InvalidRangeError("body.percentage", *body.Percentage, 100, false))
 		}
-	}
-	return
-}
-
-// Validate runs the validations defined on WineryResponseBody
-func (body *WineryResponseBody) Validate() (err error) {
-	err = goa.MergeErrors(err, goa.ValidatePattern("body.region", body.Region, "(?i)[a-z '\\.]+"))
-	err = goa.MergeErrors(err, goa.ValidatePattern("body.country", body.Country, "(?i)[a-z '\\.]+"))
-	if body.URL != nil {
-		err = goa.MergeErrors(err, goa.ValidatePattern("body.url", *body.URL, "(?i)^(https?|ftp)://[^\\s/$.?#].[^\\s]*$"))
 	}
 	return
 }
