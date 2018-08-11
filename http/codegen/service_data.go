@@ -61,11 +61,17 @@ type (
 		// attributes in the client code.
 		ClientBodyAttributeTypes []*TypeData
 		// ServerTypeNames records the user type names used to define
-		// the endpoint request and response bodies for server code
-		ServerTypeNames map[string]struct{}
+		// the endpoint request and response bodies for server code.
+		// The type name is used as the key and a bool as the value
+		// which if true indicates that the type has been generated
+		// in the server package.
+		ServerTypeNames map[string]bool
 		// ClientTypeNames records the user type names used to define
 		// the endpoint request and response bodies for client code.
-		ClientTypeNames map[string]struct{}
+		// The type name is used as the key and a bool as the value
+		// which if true indicates that the type has been generated
+		// in the client package.
+		ClientTypeNames map[string]bool
 		// ServerTransformHelpers is the list of transform functions
 		// required by the various server side constructors.
 		ServerTransformHelpers []*codegen.TransformFunctionData
@@ -587,8 +593,8 @@ func (d ServicesData) analyze(hs *httpdesign.ServiceExpr) *ServiceData {
 		MountServer:      "Mount",
 		ServerService:    "Service",
 		ClientStruct:     "Client",
-		ServerTypeNames:  make(map[string]struct{}),
-		ClientTypeNames:  make(map[string]struct{}),
+		ServerTypeNames:  make(map[string]bool),
+		ClientTypeNames:  make(map[string]bool),
 	}
 
 	var wsscheme string
@@ -877,9 +883,9 @@ func (d ServicesData) analyze(hs *httpdesign.ServiceExpr) *ServiceData {
 		if res := a.MethodExpr.Result; res != nil {
 			for _, v := range a.Responses {
 				collectUserTypes(v.Body.Type, func(ut design.UserType) {
-					if d := attributeTypeData(ut, false, false, true, svc.Scope, rd); d != nil {
-						rd.ServerBodyAttributeTypes = append(rd.ServerBodyAttributeTypes, d)
-					}
+					// NOTE: ServerBodyAttributeTypes for response body types are
+					// collected in buildResponseBodyType because we have to generate
+					// body types for each view in a result type.
 					if d := attributeTypeData(ut, false, true, false, svc.Scope, rd); d != nil {
 						rd.ClientBodyAttributeTypes = append(rd.ClientBodyAttributeTypes, d)
 					}
@@ -889,9 +895,9 @@ func (d ServicesData) analyze(hs *httpdesign.ServiceExpr) *ServiceData {
 
 		for _, v := range a.HTTPErrors {
 			collectUserTypes(v.Response.Body.Type, func(ut design.UserType) {
-				if d := attributeTypeData(ut, false, false, true, svc.Scope, rd); d != nil {
-					rd.ServerBodyAttributeTypes = append(rd.ServerBodyAttributeTypes, d)
-				}
+				// NOTE: ServerBodyAttributeTypes for error response body types are
+				// collected in buildResponseBodyType because we have to generate
+				// body types for each view in a result type.
 				if d := attributeTypeData(ut, false, true, false, svc.Scope, rd); d != nil {
 					rd.ClientBodyAttributeTypes = append(rd.ClientBodyAttributeTypes, d)
 				}
@@ -962,8 +968,8 @@ func buildPayloadData(e *httpdesign.EndpointExpr, sd *ServiceData) *PayloadData 
 				queryData = append(queryData, mapQueryParam)
 			}
 			if serverBodyData != nil {
-				sd.ServerTypeNames[serverBodyData.Name] = struct{}{}
-				sd.ClientTypeNames[serverBodyData.Name] = struct{}{}
+				sd.ServerTypeNames[serverBodyData.Name] = false
+				sd.ClientTypeNames[serverBodyData.Name] = false
 			}
 			for _, p := range paramsData {
 				if p.Validate != "" || needConversion(p.Type) {
@@ -1359,8 +1365,7 @@ func buildResponses(e *httpdesign.EndpointExpr, result *design.AttributeExpr, vi
 					clientBodyData = buildResponseBodyType(sd, e, resp.Body, result, false, nil, pkg)
 				}
 				if clientBodyData != nil {
-					sd.ServerTypeNames[clientBodyData.Name] = struct{}{}
-					sd.ClientTypeNames[clientBodyData.Name] = struct{}{}
+					sd.ClientTypeNames[clientBodyData.Name] = false
 				}
 				for _, h := range headersData {
 					if h.Validate != "" || h.Required || needConversion(h.Type) {
@@ -1598,8 +1603,7 @@ func buildErrorsData(e *httpdesign.EndpointExpr, sd *ServiceData) []*ErrorGroupD
 				}
 				clientBodyData = buildResponseBodyType(sd, e, v.Response.Body, att, false, nil, svc.PkgName)
 				if clientBodyData != nil {
-					sd.ServerTypeNames[clientBodyData.Name] = struct{}{}
-					sd.ClientTypeNames[clientBodyData.Name] = struct{}{}
+					sd.ClientTypeNames[clientBodyData.Name] = false
 					clientBodyData.Description = fmt.Sprintf("%s is the type of the %q service %q endpoint HTTP response body for the %q error.",
 						clientBodyData.VarName, svc.Name, e.Name(), v.Name)
 					serverBodyData[0].Description = fmt.Sprintf("%s is the type of the %q service %q endpoint HTTP response body for the %q error.",
@@ -1788,15 +1792,16 @@ func buildResponseBodyType(sd *ServiceData, e *httpdesign.EndpointExpr, body, at
 		validateDef string
 		validateRef string
 		viewName    string
+		mustInit    bool
 
 		svc = sd.Service
 	)
 	{
-		name = body.Type.Name()
+		// For server code, we project the response body type if the type is a result
+		// type and generate a type for each view in the result type. This makes it
+		// possible to return only the attributes in the view in the server response.
 		if svr && view != nil && *view != "" {
 			viewName = *view
-			// Project the response body result type. This makes it possible to
-			// return only the attributes in the view in the server response.
 			body = design.DupAtt(body)
 			if rt, ok := body.Type.(*design.ResultTypeExpr); ok {
 				var err error
@@ -1805,16 +1810,16 @@ func buildResponseBodyType(sd *ServiceData, e *httpdesign.EndpointExpr, body, at
 					panic(err)
 				}
 				body.Type = rt
-				sd.ServerTypeNames[rt.Name()] = struct{}{}
-				collectUserTypes(body.Type, func(ut design.UserType) {
-					if d := attributeTypeData(ut, false, false, true, svc.Scope, sd); d != nil {
-						sd.ServerBodyAttributeTypes = append(sd.ServerBodyAttributeTypes, d)
-					}
-				})
+				sd.ServerTypeNames[rt.Name()] = false
 			}
 		}
+
+		name = body.Type.Name()
 		ref = svc.Scope.GoTypeRef(body)
+		mustInit = att.Type != design.Empty && needInit(body.Type)
+
 		if ut, ok := body.Type.(design.UserType); ok {
+			// response body is a user type.
 			varname = codegen.Goify(ut.Name(), true)
 			def = goTypeDef(svc.Scope, ut.Attribute(), !svr, svr)
 			desc = fmt.Sprintf("%s is the type of the %q service %q endpoint HTTP response body.",
@@ -1826,15 +1831,39 @@ func buildResponseBodyType(sd *ServiceData, e *httpdesign.EndpointExpr, body, at
 					validateRef = "err = body.Validate()"
 				}
 			}
+		} else if !design.IsPrimitive(body.Type) && mustInit {
+			// response body is an array or map type.
+			name = codegen.Goify(e.Name(), true) + "ResponseBody"
+			varname = name
+			desc = fmt.Sprintf("%s is the type of the %q service %q endpoint HTTP response body.",
+				varname, svc.Name, e.Name())
+			def = goTypeDef(svc.Scope, body, !svr, svr)
+			validateRef = codegen.RecursiveValidationCode(body, true, !svr, svr, "body")
 		} else {
+			// response body is a primitive type.
 			varname = svc.Scope.GoTypeRef(body)
 			validateRef = codegen.RecursiveValidationCode(body, true, !svr, svr, "body")
 			desc = body.Description
 		}
 	}
+	if svr {
+		sd.ServerTypeNames[name] = false
+		// We collect the server body types need to generate a response body type
+		// here because the response body type would be different from the actual
+		// type in the HTTPResponseExpr since we projected the body type above.
+		// For client side, we don't have to generate a separate body type per
+		// view. Hence the client types are collected in "analyze" function.
+		collectUserTypes(body.Type, func(ut design.UserType) {
+			if d := attributeTypeData(ut, false, false, true, svc.Scope, sd); d != nil {
+				sd.ServerBodyAttributeTypes = append(sd.ServerBodyAttributeTypes, d)
+			}
+		})
+
+	}
+
 	var init *InitData
 	{
-		if svr && att.Type != design.Empty && needInit(body.Type) {
+		if svr && mustInit {
 			var (
 				name    string
 				desc    string
@@ -2072,7 +2101,7 @@ func attributeTypeData(ut design.UserType, req, ptr, server bool, scope *codegen
 	if _, ok := seen[ut.Name()]; ok {
 		return nil
 	}
-	seen[ut.Name()] = struct{}{}
+	seen[ut.Name()] = false
 
 	att := &design.AttributeExpr{Type: ut}
 	var (
