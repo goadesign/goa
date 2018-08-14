@@ -1219,16 +1219,19 @@ func Service(name string, fn func()) *design.ServiceExpr {
 //
 // Examples:
 //
-//    // Method payload is a stream of strings
+//    // Method payload is the JWT token and the method streaming payload is a
+//		// stream of strings.
 //    Method("upper", func() {
+//        Payload(func() {
+//            Token("token", String, func() {
+//					      Description("JWT used for authentication")
+//						})
+//				})
 //        StreamingPayload(String)
 //    })
 //
-//    Method("upper", func() {
-//        StreamingPayload(String, "string to convert to uppercase")
-//    })
-//
-//    // Method payload is a stream of string with validation set on each
+//    // Method streaming payload is a stream of string with validation set
+//		// on each
 //    Method("upper"), func() {
 //        StreamingPayload(String, "string to convert to uppercase", func() {
 //            Pattern("^[a-z]")

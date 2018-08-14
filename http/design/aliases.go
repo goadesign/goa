@@ -48,6 +48,9 @@ const (
 	ClientStreamKind = design.ClientStreamKind
 	// ServerStreamKind represents server sends a streaming result from method.
 	ServerStreamKind = design.ServerStreamKind
+	// BidirectionalStreamKind represents client and server sending payload and
+	// result respectively via a stream.
+	BidirectionalStreamKind = design.BidirectionalStreamKind
 )
 
 const (
