@@ -169,9 +169,12 @@ func errorName(et *UserTypeData) string {
 // interfaces for the given endpoint.
 func streamInterfaceFor(typ string, m *MethodData, stream *StreamData) map[string]interface{} {
 	return map[string]interface{}{
-		"Type":           typ,
-		"Endpoint":       m.Name,
-		"Stream":         stream,
+		"Type":     typ,
+		"Endpoint": m.Name,
+		"Stream":   stream,
+		// If a view is explicitly set (ViewName is not empty) in the Result
+		// expression, we can use that view to render the result type instead
+		// of iterating through the list of views defined in the result type.
 		"IsViewedResult": m.ViewedResult != nil && m.ViewedResult.ViewName == "",
 	}
 }
@@ -187,9 +190,9 @@ type Service interface {
 			{{ comment "The \"view\" return value must have one of the following views" }}
 			{{- range .ViewedResult.Views }}
 				{{- if .Description }}
-					{{ printf "- %q: %s" .Name .Description | comment }}
+					{{ printf "//	- %q: %s" .Name .Description }}
 				{{- else }}
-					{{ printf "- %q" .Name | comment }}
+					{{ printf "//	- %q" .Name }}
 				{{- end }}
 			{{- end }}
 		{{- end }}

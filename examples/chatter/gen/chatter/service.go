@@ -26,8 +26,8 @@ type Service interface {
 	Summary(context.Context, *SummaryPayload, SummaryServerStream) (err error)
 	// Returns the chat messages sent to the server.
 	// The "view" return value must have one of the following views
-	// - "tiny"
-	// - "default"
+	//	- "tiny"
+	//	- "default"
 	History(context.Context, *HistoryPayload, HistoryServerStream) (err error)
 }
 

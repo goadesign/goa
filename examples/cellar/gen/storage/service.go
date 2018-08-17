@@ -20,8 +20,8 @@ type Service interface {
 	List(context.Context) (res StoredBottleCollection, err error)
 	// Show bottle by ID
 	// The "view" return value must have one of the following views
-	// - "default"
-	// - "tiny"
+	//	- "default"
+	//	- "tiny"
 	Show(context.Context, *ShowPayload) (res *StoredBottle, view string, err error)
 	// Add new bottle and return its ID.
 	Add(context.Context, *Bottle) (res string, err error)

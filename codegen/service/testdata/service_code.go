@@ -208,8 +208,8 @@ const MultipleMethodsResultMultipleViews = `
 type Service interface {
 	// A implements A.
 	// The "view" return value must have one of the following views
-	// - "default"
-	// - "tiny"
+	//	- "default"
+	//	- "tiny"
 	A(context.Context, *APayload) (res *MultipleViews, view string, err error)
 	// B implements B.
 	B(context.Context) (res *SingleView, err error)
@@ -363,8 +363,8 @@ const ResultCollectionMultipleViewsMethod = `
 type Service interface {
 	// A implements A.
 	// The "view" return value must have one of the following views
-	// - "default"
-	// - "tiny"
+	//	- "default"
+	//	- "tiny"
 	A(context.Context) (res MultipleViewsCollection, view string, err error)
 }
 
@@ -505,8 +505,8 @@ const ResultWithOtherResultMethod = `
 type Service interface {
 	// A implements A.
 	// The "view" return value must have one of the following views
-	// - "default"
-	// - "tiny"
+	//	- "default"
+	//	- "tiny"
 	A(context.Context) (res *MultipleViews, view string, err error)
 }
 
@@ -752,8 +752,8 @@ const StreamingResultWithViewsMethod = `
 type Service interface {
 	// StreamingResultWithViewsMethod implements StreamingResultWithViewsMethod.
 	// The "view" return value must have one of the following views
-	// - "default"
-	// - "tiny"
+	//	- "default"
+	//	- "tiny"
 	StreamingResultWithViewsMethod(context.Context, string, StreamingResultWithViewsMethodServerStream) (err error)
 }
 
@@ -1168,8 +1168,8 @@ type Service interface {
 	// StreamingPayloadResultWithViewsMethod implements
 	// StreamingPayloadResultWithViewsMethod.
 	// The "view" return value must have one of the following views
-	// - "default"
-	// - "tiny"
+	//	- "default"
+	//	- "tiny"
 	StreamingPayloadResultWithViewsMethod(context.Context, StreamingPayloadResultWithViewsMethodServerStream) (err error)
 }
 
@@ -1533,8 +1533,8 @@ type Service interface {
 	// BidirectionalStreamingResultWithViewsMethod implements
 	// BidirectionalStreamingResultWithViewsMethod.
 	// The "view" return value must have one of the following views
-	// - "default"
-	// - "tiny"
+	//	- "default"
+	//	- "tiny"
 	BidirectionalStreamingResultWithViewsMethod(context.Context, BidirectionalStreamingResultWithViewsMethodServerStream) (err error)
 }
 

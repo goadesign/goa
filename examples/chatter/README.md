@@ -1,6 +1,6 @@
 # Chatter Service
 
-The "chatter" service illustrates the **streaming endpoint** feautres in
+The "chatter" service illustrates the **streaming endpoint** features in
 goa v2.
 
 ## Design

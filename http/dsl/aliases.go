@@ -1220,7 +1220,7 @@ func Service(name string, fn func()) *design.ServiceExpr {
 // Examples:
 //
 //    // Method payload is the JWT token and the method streaming payload is a
-//		// stream of strings.
+//    // stream of strings.
 //    Method("upper", func() {
 //        Payload(func() {
 //            Token("token", String, func() {
