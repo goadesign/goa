@@ -417,7 +417,9 @@ func (a *AttributeExpr) Find(name string) *AttributeExpr {
 		return att
 	}
 	for _, b := range a.Bases {
-		return findAttrFn(b)
+		if att := findAttrFn(b); att != nil {
+			return att
+		}
 	}
 	return nil
 }
