@@ -7,8 +7,8 @@ import (
 )
 
 type (
-	// streamKind is a type denoting the kind of stream.
-	streamKind int
+	// StreamKind is a type denoting the kind of stream.
+	StreamKind int
 
 	// MethodExpr defines a single method.
 	MethodExpr struct {
@@ -37,19 +37,21 @@ type (
 		Metadata MetadataExpr
 		// Stream is the kind of stream (none, payload, result, or both) the method
 		// defines.
-		Stream streamKind
+		Stream StreamKind
+		// StreamingPayload is the payload sent across the stream.
+		StreamingPayload *AttributeExpr
 	}
 )
 
 const (
 	// NoStreamKind represents no payload or result stream in method.
-	NoStreamKind streamKind = iota + 1
+	NoStreamKind StreamKind = iota + 1
 	// ClientStreamKind represents client sends a streaming payload to method.
 	ClientStreamKind
 	// ServerStreamKind represents server sends a streaming result from method.
 	ServerStreamKind
-	// BidirectionalStreamKind represents both client and server streams payload
-	// and result respectively.
+	// BidirectionalStreamKind represents client and server sending payload and
+	// result respectively via a stream.
 	BidirectionalStreamKind
 )
 
@@ -83,6 +85,9 @@ func (m *MethodExpr) EvalName() string {
 func (m *MethodExpr) Prepare() {
 	if m.Payload == nil {
 		m.Payload = &AttributeExpr{Type: Empty}
+	}
+	if m.StreamingPayload == nil {
+		m.StreamingPayload = &AttributeExpr{Type: Empty}
 	}
 	if m.Result == nil {
 		m.Result = &AttributeExpr{Type: Empty}
@@ -138,6 +143,9 @@ func (m *MethodExpr) Validate() error {
 			}
 		}
 	}
+	if m.StreamingPayload.Type != Empty {
+		verr.Merge(m.StreamingPayload.Validate("streaming_payload", m))
+	}
 	if m.Result.Type != Empty {
 		verr.Merge(m.Result.Validate("result", m))
 	}
@@ -180,6 +188,11 @@ func (m *MethodExpr) Finalize() {
 	} else {
 		m.Payload.Finalize()
 	}
+	if m.StreamingPayload == nil {
+		m.StreamingPayload = &AttributeExpr{Type: Empty}
+	} else {
+		m.StreamingPayload.Finalize()
+	}
 	if m.Result == nil {
 		m.Result = &AttributeExpr{Type: Empty}
 	} else {
@@ -218,11 +231,6 @@ func (m *MethodExpr) Finalize() {
 // IsStreaming determines whether the method streams payload or result.
 func (m *MethodExpr) IsStreaming() bool {
 	return m.Stream != 0 && m.Stream != NoStreamKind
-}
-
-// IsResultStreaming determines whether the method result is streamed.
-func (m *MethodExpr) IsResultStreaming() bool {
-	return m.Stream == ServerStreamKind || m.Stream == BidirectionalStreamKind
 }
 
 // helper function that duplicates just enough of a security expression so that

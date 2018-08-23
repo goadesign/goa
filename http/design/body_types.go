@@ -92,6 +92,29 @@ func RequestBody(a *EndpointExpr) *design.AttributeExpr {
 	}
 }
 
+// StreamingBody TODO
+func StreamingBody(e *EndpointExpr) *design.AttributeExpr {
+	if !e.MethodExpr.IsStreaming() || e.MethodExpr.Stream == design.ServerStreamKind {
+		return nil
+	}
+	att := e.MethodExpr.StreamingPayload
+	if !design.IsObject(att.Type) {
+		return design.DupAtt(att)
+	}
+	suffix := "StreamingBody"
+	ut := &design.UserTypeExpr{
+		AttributeExpr: design.DupAtt(att),
+		TypeName:      codegen.Goify(e.Name(), true) + suffix,
+	}
+	appendSuffix(ut.Attribute().Type, suffix)
+
+	return &design.AttributeExpr{
+		Type:         ut,
+		Validation:   att.Validation,
+		UserExamples: att.UserExamples,
+	}
+}
+
 // ResponseBody returns an attribute representing the response body for the
 // given endpoint and response. If the DSL defines a body explicitly via the
 // Body function then the corresponding attribute is used. Otherwise the

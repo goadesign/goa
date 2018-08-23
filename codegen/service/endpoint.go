@@ -316,7 +316,7 @@ func New{{ .VarName }}Endpoint(s {{ .ServiceVarName }}{{ range .Schemes }}, auth
 		}
 {{- end }}
 {{- if .ServerStream }}
-	return nil, s.{{ .VarName }}(ctx, {{ if and .PayloadRef (not .ServerStream.RecvRef) }}{{ $payload }}, {{ end }}ep.Stream)
+	return nil, s.{{ .VarName }}(ctx, {{ if .PayloadRef }}{{ $payload }}, {{ end }}ep.Stream)
 {{- else if .ViewedResult }}
 		res,{{ if not .ViewedResult.ViewName }} view,{{ end }} err := s.{{ .VarName }}(ctx{{ if .PayloadRef }}, {{ $payload }}{{ end }})
 		if err != nil {

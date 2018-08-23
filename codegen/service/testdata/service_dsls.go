@@ -230,10 +230,200 @@ var StreamingResultMethodDSL = func() {
 	})
 }
 
+var StreamingResultWithViewsMethodDSL = func() {
+	var RTWithViews = ResultType("application/vnd.result.multiple.views", func() {
+		TypeName("MultipleViews")
+		Attributes(func() {
+			Attribute("a", String)
+			Attribute("b", String)
+		})
+		View("default", func() {
+			Attribute("a")
+			Attribute("b")
+		})
+		View("tiny", func() {
+			Attribute("a")
+		})
+	})
+	Service("StreamingResultWithViewsService", func() {
+		Method("StreamingResultWithViewsMethod", func() {
+			Payload(String)
+			StreamingResult(RTWithViews)
+		})
+	})
+}
+
+var StreamingResultWithExplicitViewMethodDSL = func() {
+	var RTWithViews = ResultType("application/vnd.result.multiple.views", func() {
+		TypeName("MultipleViews")
+		Attributes(func() {
+			Attribute("a", String)
+			Attribute("b", String)
+		})
+		View("default", func() {
+			Attribute("a")
+			Attribute("b")
+		})
+		View("tiny", func() {
+			Attribute("a")
+		})
+	})
+	Service("StreamingResultWithExplicitViewService", func() {
+		Method("StreamingResultWithExplicitViewMethod", func() {
+			Payload(ArrayOf(Int32))
+			StreamingResult(RTWithViews, func() {
+				View("tiny")
+			})
+		})
+	})
+}
+
 var StreamingResultNoPayloadMethodDSL = func() {
 	Service("StreamingResultNoPayloadService", func() {
 		Method("StreamingResultNoPayloadMethod", func() {
 			StreamingResult(AResult)
+		})
+	})
+}
+
+var StreamingPayloadMethodDSL = func() {
+	Service("StreamingPayloadService", func() {
+		Method("StreamingPayloadMethod", func() {
+			Payload(BPayload)
+			StreamingPayload(APayload)
+			Result(AResult)
+		})
+	})
+}
+
+var StreamingPayloadNoPayloadMethodDSL = func() {
+	Service("StreamingPayloadNoPayloadService", func() {
+		Method("StreamingPayloadNoPayloadMethod", func() {
+			StreamingPayload(Any)
+			Result(String)
+		})
+	})
+}
+
+var StreamingPayloadNoResultMethodDSL = func() {
+	Service("StreamingPayloadNoResultService", func() {
+		Method("StreamingPayloadNoResultMethod", func() {
+			StreamingPayload(Int)
+		})
+	})
+}
+
+var StreamingPayloadResultWithViewsMethodDSL = func() {
+	var RTWithViews = ResultType("application/vnd.result.multiple.views", func() {
+		TypeName("MultipleViews")
+		Attributes(func() {
+			Attribute("a", String)
+			Attribute("b", String)
+		})
+		View("default", func() {
+			Attribute("a")
+			Attribute("b")
+		})
+		View("tiny", func() {
+			Attribute("a")
+		})
+	})
+	Service("StreamingPayloadResultWithViewsService", func() {
+		Method("StreamingPayloadResultWithViewsMethod", func() {
+			StreamingPayload(APayload)
+			Result(RTWithViews)
+		})
+	})
+}
+
+var StreamingPayloadResultWithExplicitViewMethodDSL = func() {
+	var RTWithViews = ResultType("application/vnd.result.multiple.views", func() {
+		TypeName("MultipleViews")
+		Attributes(func() {
+			Attribute("a", String)
+			Attribute("b", String)
+		})
+		View("default", func() {
+			Attribute("a")
+			Attribute("b")
+		})
+		View("tiny", func() {
+			Attribute("a")
+		})
+	})
+	Service("StreamingPayloadResultWithExplicitViewService", func() {
+		Method("StreamingPayloadResultWithExplicitViewMethod", func() {
+			StreamingPayload(ArrayOf(String))
+			Result(RTWithViews, func() {
+				View("tiny")
+			})
+		})
+	})
+}
+
+var BidirectionalStreamingMethodDSL = func() {
+	Service("BidirectionalStreamingService", func() {
+		Method("BidirectionalStreamingMethod", func() {
+			Payload(BPayload)
+			StreamingPayload(APayload)
+			StreamingResult(AResult)
+		})
+	})
+}
+
+var BidirectionalStreamingNoPayloadMethodDSL = func() {
+	Service("BidirectionalStreamingNoPayloadService", func() {
+		Method("BidirectionalStreamingNoPayloadMethod", func() {
+			StreamingPayload(String)
+			StreamingResult(Int)
+		})
+	})
+}
+
+var BidirectionalStreamingResultWithViewsMethodDSL = func() {
+	var RTWithViews = ResultType("application/vnd.result.multiple.views", func() {
+		TypeName("MultipleViews")
+		Attributes(func() {
+			Attribute("a", String)
+			Attribute("b", String)
+		})
+		View("default", func() {
+			Attribute("a")
+			Attribute("b")
+		})
+		View("tiny", func() {
+			Attribute("a")
+		})
+	})
+	Service("BidirectionalStreamingResultWithViewsService", func() {
+		Method("BidirectionalStreamingResultWithViewsMethod", func() {
+			StreamingPayload(APayload)
+			StreamingResult(RTWithViews)
+		})
+	})
+}
+
+var BidirectionalStreamingResultWithExplicitViewMethodDSL = func() {
+	var RTWithViews = ResultType("application/vnd.result.multiple.views", func() {
+		TypeName("MultipleViews")
+		Attributes(func() {
+			Attribute("a", String)
+			Attribute("b", String)
+		})
+		View("default", func() {
+			Attribute("a")
+			Attribute("b")
+		})
+		View("tiny", func() {
+			Attribute("a")
+		})
+	})
+	Service("BidirectionalStreamingResultWithExplicitViewService", func() {
+		Method("BidirectionalStreamingResultWithExplicitViewMethod", func() {
+			StreamingPayload(ArrayOf(Bytes))
+			StreamingResult(RTWithViews, func() {
+				View("default")
+			})
 		})
 	})
 }

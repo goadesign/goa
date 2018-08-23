@@ -37,6 +37,7 @@ func client(genpkg string, svc *httpdesign.ServiceExpr) *codegen.File {
 			{Path: "strconv"},
 			{Path: "strings"},
 			{Path: "sync"},
+			{Path: "time"},
 			{Path: "github.com/gorilla/websocket"},
 			{Path: "goa.design/goa", Name: "goa"},
 			{Path: "goa.design/goa/http", Name: "goahttp"},
@@ -88,12 +89,39 @@ func client(genpkg string, svc *httpdesign.ServiceExpr) *codegen.File {
 			Data:   e,
 		})
 		if e.ClientStream != nil {
-			sections = append(sections, &codegen.SectionTemplate{
-				Name:   "client-stream-recv",
-				Source: streamRecvT,
-				Data:   e.ClientStream,
-			})
-			if e.Method.ViewedResult != nil {
+			if e.ClientStream.RecvTypeRef != "" {
+				sections = append(sections, &codegen.SectionTemplate{
+					Name:   "client-stream-recv",
+					Source: streamRecvT,
+					Data:   e.ClientStream,
+					FuncMap: map[string]interface{}{
+						"upgradeParams": upgradeParams,
+					},
+				})
+			}
+			switch e.ClientStream.Kind {
+			case design.ClientStreamKind, design.BidirectionalStreamKind:
+				sections = append(sections, &codegen.SectionTemplate{
+					Name:   "client-stream-send",
+					Source: streamSendT,
+					Data:   e.ClientStream,
+					FuncMap: map[string]interface{}{
+						"upgradeParams":    upgradeParams,
+						"viewedServerBody": viewedServerBody,
+					},
+				})
+			}
+			if e.ClientStream.MustClose {
+				sections = append(sections, &codegen.SectionTemplate{
+					Name:   "client-stream-close",
+					Source: streamCloseT,
+					Data:   e.ClientStream,
+					FuncMap: map[string]interface{}{
+						"upgradeParams": upgradeParams,
+					},
+				})
+			}
+			if e.Method.ViewedResult != nil && e.Method.ViewedResult.ViewName == "" {
 				sections = append(sections, &codegen.SectionTemplate{
 					Name:   "client-stream-set-view",
 					Source: streamSetViewT,
@@ -255,10 +283,8 @@ func New{{ .ClientStruct }}(
 const endpointInitT = `{{ printf "%s returns an endpoint that makes HTTP requests to the %s service %s server." .EndpointInit .ServiceName .Method.Name | comment }}
 func (c *{{ .ClientStruct }}) {{ .EndpointInit }}({{ if .MultipartRequestEncoder }}{{ .MultipartRequestEncoder.VarName }} {{ .MultipartRequestEncoder.FuncName }}{{ end }}) goa.Endpoint {
 	var (
-		{{- if .ClientStream }}
-			{{- if not .ClientStream.SendRef }}
+		{{- if and .ClientStream .RequestEncoder }}
 		encodeRequest  = {{ .RequestEncoder }}({{ if .MultipartRequestEncoder }}{{ .MultipartRequestEncoder.InitName }}({{ .MultipartRequestEncoder.VarName }}){{ else }}c.encoder{{ end }})
-			{{- end }}
 		{{- else }}
 			{{- if .RequestEncoder }}
 		encodeRequest  = {{ .RequestEncoder }}({{ if .MultipartRequestEncoder }}{{ .MultipartRequestEncoder.InitName }}({{ .MultipartRequestEncoder.VarName }}){{ else }}c.encoder{{ end }})
@@ -291,8 +317,10 @@ func (c *{{ .ClientStruct }}) {{ .EndpointInit }}({{ if .MultipartRequestEncoder
 		}
 		stream := &{{ .ClientStream.VarName }}{conn: conn}
 		{{- if .Method.ViewedResult }}
+			{{- if not .Method.ViewedResult.ViewName }}
 		view := resp.Header.Get("goa-view")
 		stream.SetView(view)
+			{{- end }}
 		{{- end }}
 		return stream, nil
 	{{- else }}

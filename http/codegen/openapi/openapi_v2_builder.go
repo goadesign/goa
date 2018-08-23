@@ -611,6 +611,21 @@ func buildPathFromExpr(s *V2, root *httpdesign.RootExpr, route *httpdesign.Route
 		if len(schemes) == 0 {
 			schemes = root.Design.API.Schemes()
 		}
+		if endpoint.MethodExpr.IsStreaming() {
+			// For streaming endpoints, discard schemes other than ws or wss
+			for i := len(schemes) - 1; i >= 0; i-- {
+				if schemes[i] != "ws" && schemes[i] != "wss" {
+					schemes = append(schemes[:i], schemes[i+1:]...)
+				}
+			}
+		} else {
+			// Discard ws or wss schemes if they exist
+			for i := len(schemes) - 1; i >= 0; i-- {
+				if schemes[i] == "ws" || schemes[i] == "wss" {
+					schemes = append(schemes[:i], schemes[i+1:]...)
+				}
+			}
+		}
 
 		description := endpoint.Description()
 

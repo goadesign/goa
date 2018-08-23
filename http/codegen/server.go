@@ -90,23 +90,45 @@ func server(genpkg string, svc *httpdesign.ServiceExpr) *codegen.File {
 	}
 	for _, e := range data.Endpoints {
 		if e.ServerStream != nil {
-			sections = append(sections, &codegen.SectionTemplate{
-				Name:   "server-stream-send",
-				Source: streamSendT,
-				Data:   e.ServerStream,
-			})
-			if e.Method.ViewedResult != nil {
+			if e.ServerStream.SendTypeRef != "" {
+				sections = append(sections, &codegen.SectionTemplate{
+					Name:   "server-stream-send",
+					Source: streamSendT,
+					Data:   e.ServerStream,
+					FuncMap: map[string]interface{}{
+						"upgradeParams":    upgradeParams,
+						"viewedServerBody": viewedServerBody,
+					},
+				})
+			}
+			switch e.ServerStream.Kind {
+			case design.ClientStreamKind, design.BidirectionalStreamKind:
+				sections = append(sections, &codegen.SectionTemplate{
+					Name:   "server-stream-recv",
+					Source: streamRecvT,
+					Data:   e.ServerStream,
+					FuncMap: map[string]interface{}{
+						"upgradeParams": upgradeParams,
+					},
+				})
+			}
+			if e.ServerStream.MustClose {
+				sections = append(sections, &codegen.SectionTemplate{
+					Name:   "server-stream-close",
+					Source: streamCloseT,
+					Data:   e.ServerStream,
+					FuncMap: map[string]interface{}{
+						"upgradeParams": upgradeParams,
+					},
+				})
+			}
+			if e.Method.ViewedResult != nil && e.Method.ViewedResult.ViewName == "" {
 				sections = append(sections, &codegen.SectionTemplate{
 					Name:   "server-stream-set-view",
 					Source: streamSetViewT,
 					Data:   e.ServerStream,
 				})
 			}
-			sections = append(sections, &codegen.SectionTemplate{
-				Name:   "server-stream-close",
-				Source: streamCloseT,
-				Data:   e.ServerStream,
-			})
 		}
 	}
 
@@ -410,11 +432,8 @@ func {{ .HandlerInit }}(
 ) http.Handler {
 	var (
 		{{- if .ServerStream }}
-			{{- if and .Payload.Ref (not .ServerStream.RecvRef) }}
+			{{- if .Payload.Ref }}
 		decodeRequest  = {{ .RequestDecoder }}(mux, dec)
-			{{- end }}
-			{{- if not .ServerStream.SendRef }}
-		encodeResponse = {{ .ResponseEncoder }}(enc)
 			{{- end }}
 		{{- else }}
 			{{- if .Payload.Ref }}
@@ -445,7 +464,7 @@ func {{ .HandlerInit }}(
 				w: w,
 				r: r,
 			},
-		{{- if and .Payload.Ref (not .ServerStream.RecvRef) }}
+		{{- if .Payload.Ref }}
 			Payload: payload.({{ .Payload.Ref }}),
 		{{- end }}
 		}
