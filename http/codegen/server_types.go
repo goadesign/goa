@@ -80,6 +80,20 @@ func serverType(genpkg string, svc *httpdesign.ServiceExpr, seen map[string]stru
 				validatedTypes = append(validatedTypes, data)
 			}
 		}
+		if adata.ServerStream != nil {
+			if data := adata.ServerStream.Payload; data != nil {
+				if data.Def != "" {
+					sections = append(sections, &codegen.SectionTemplate{
+						Name:   "request-body-type-decl",
+						Source: typeDeclT,
+						Data:   data,
+					})
+				}
+				if data.ValidateDef != "" {
+					validatedTypes = append(validatedTypes, data)
+				}
+			}
+		}
 	}
 
 	// response body types
@@ -163,6 +177,15 @@ func serverType(genpkg string, svc *httpdesign.ServiceExpr, seen map[string]stru
 				Source: serverTypeInitT,
 				Data:   init,
 			})
+		}
+		if adata.ServerStream != nil && adata.ServerStream.Payload != nil {
+			if init := adata.ServerStream.Payload.Init; init != nil {
+				sections = append(sections, &codegen.SectionTemplate{
+					Name:   "server-payload-init",
+					Source: serverTypeInitT,
+					Data:   init,
+				})
+			}
 		}
 	}
 

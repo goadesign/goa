@@ -162,7 +162,7 @@ func New{{ .Service.StructName }}(logger *log.Logger) {{ .Service.PkgName }}.Ser
 // input: EndpointData
 const dummyEndpointImplT = `{{ comment .Method.Description }}
 {{- if .ServerStream }}
-func (s *{{ .ServiceVarName }}Svc) {{ .Method.VarName }}(ctx context.Context{{ if and .Payload.Ref (not .ServerStream.RecvRef) }}, p {{ .Payload.Ref }}{{ end }}, stream {{ .ServerStream.Interface }}) (err error) {
+func (s *{{ .ServiceVarName }}Svc) {{ .Method.VarName }}(ctx context.Context{{ if .Payload.Ref }}, p {{ .Payload.Ref }}{{ end }}, stream {{ .ServerStream.Interface }}) (err error) {
 {{- else }}
 func (s *{{ .ServiceVarName }}Svc) {{ .Method.VarName }}(ctx context.Context{{ if .Payload.Ref }}, p {{ .Payload.Ref }}{{ end }}) ({{ if .Result.Ref }}res {{ .Result.Ref }}, {{ if .Method.ViewedResult }}{{ if not .Method.ViewedResult.ViewName }}view string, {{ end }}{{ end }} {{ end }}err error) {
 {{- end }}

@@ -31,6 +31,7 @@ func ExampleCLI(genpkg string, root *httpdesign.RootExpr) *codegen.File {
 		{Path: "os"},
 		{Path: "strings"},
 		{Path: "time"},
+		{Path: "github.com/gorilla/websocket"},
 		{Path: "goa.design/goa/http", Name: "goahttp"},
 		{Path: rootPath, Name: apiPkg},
 		{Path: genpkg + "/http/cli"},
@@ -50,9 +51,23 @@ func ExampleCLI(genpkg string, root *httpdesign.RootExpr) *codegen.File {
 			Name:   "cli-main",
 			Source: mainCLIT,
 			Data:   data,
+			FuncMap: map[string]interface{}{
+				"needStreaming": needStreaming,
+			},
 		},
 	}
 	return &codegen.File{Path: path, SectionTemplates: sections}
+}
+
+// needStreaming returns true if at least one endpoint in the service
+// uses stream for sending payload/result.
+func needStreaming(data []*ServiceData) bool {
+	for _, s := range data {
+		if streamingEndpointExists(s) {
+			return true
+		}
+	}
+	return false
 }
 
 // input: map[string]interface{}{"Services":[]ServiceData, "APIPkg": string, "APIName": string}
@@ -95,6 +110,16 @@ const mainCLIT = `func main() {
 		}
 	}
 
+	{{ if needStreaming .Services }}
+	var (
+    dialer *websocket.Dialer
+		connConfigFn goahttp.ConnConfigureFunc
+  )
+  {
+    dialer = websocket.DefaultDialer
+  }
+	{{ end }}
+
 	endpoint, payload, err := cli.ParseEndpoint(
 		scheme,
 		host,
@@ -102,6 +127,10 @@ const mainCLIT = `func main() {
 		goahttp.RequestEncoder,
 		goahttp.ResponseDecoder,
 		debug,
+		{{- if needStreaming .Services }}
+		dialer,
+		connConfigFn,
+		{{- end }}
 		{{- range .Services }}
 			{{- range .Endpoints }}
 			  {{- if .MultipartRequestDecoder }}

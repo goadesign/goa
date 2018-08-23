@@ -202,9 +202,8 @@ func (a *AttributeExpr) Validate(ctx string, parent eval.Expression) *eval.Valid
 		if !ok {
 			verr.Add(parent, "%sdefines a view %v but is not a result type", ctx, views)
 		}
-		if rt != nil {
+		if name := views[0]; name != "default" && rt != nil {
 			found := false
-			name := views[0]
 			for _, v := range rt.Views {
 				if v.Name == name {
 					found = true

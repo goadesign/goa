@@ -18,6 +18,12 @@ func TestClient(t *testing.T) {
 		{"single", testdata.SingleEndpointDSL, testdata.SingleMethodClient},
 		{"multiple", testdata.MultipleEndpointsDSL, testdata.MultipleMethodsClient},
 		{"no-payload", testdata.NoPayloadEndpointDSL, testdata.NoPayloadMethodsClient},
+		{"streaming-result", testdata.StreamingResultMethodDSL, testdata.StreamingResultMethodClient},
+		{"streaming-result-no-payload", testdata.StreamingResultNoPayloadMethodDSL, testdata.StreamingResultNoPayloadMethodClient},
+		{"streaming-payload", testdata.StreamingPayloadMethodDSL, testdata.StreamingPayloadMethodClient},
+		{"streaming-payload-no-payload", testdata.StreamingPayloadNoPayloadMethodDSL, testdata.StreamingPayloadNoPayloadMethodClient},
+		{"bidirectional-streaming", testdata.BidirectionalStreamingMethodDSL, testdata.BidirectionalStreamingMethodClient},
+		{"bidirectional-streaming-no-payload", testdata.BidirectionalStreamingNoPayloadMethodDSL, testdata.BidirectionalStreamingNoPayloadMethodClient},
 	}
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
