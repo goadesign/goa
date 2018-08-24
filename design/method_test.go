@@ -154,3 +154,22 @@ func TestMethodExprValidate(t *testing.T) {
 		}
 	}
 }
+
+func TestMethodExpr_EvalName(t *testing.T) {
+	cases := map[string]struct {
+		name     string
+		service  *ServiceExpr
+		expected string
+	}{
+		"unnamed": {name: "", service: nil, expected: "unnamed method"},
+		"foo":     {name: "foo", service: nil, expected: fmt.Sprintf("method %#v", "foo")},
+		"bar":     {name: "bar", service: &ServiceExpr{Name: ""}, expected: fmt.Sprintf("unnamed service method %#v", "bar")},
+		"baz":     {name: "baz", service: &ServiceExpr{Name: "baz service"}, expected: fmt.Sprintf("service %#v method %#v", "baz service", "baz")},
+	}
+	for k, tc := range cases {
+		m := MethodExpr{Name: tc.name, Service: tc.service}
+		if actual := m.EvalName(); actual != tc.expected {
+			t.Errorf("%s: got %#v, expected %#v", k, actual, tc.expected)
+		}
+	}
+}
