@@ -111,3 +111,24 @@ func TestErrorExprValidate(t *testing.T) {
 		}
 	}
 }
+
+func TestFlowExpr_EvalName(t *testing.T) {
+	const tokenURL = "http://domain/token"
+	const refreshURL = "http://domain/refresh"
+
+	cases := map[string]struct {
+		tokenURL   string
+		refreshURL string
+		expected   string
+	}{
+		"tokenURL test":   {tokenURL: tokenURL, refreshURL: "", expected: fmt.Sprintf("flow with token URL %q", tokenURL)},
+		"refreshURL test": {tokenURL: "", refreshURL: refreshURL, expected: fmt.Sprintf("flow with refresh URL %q", refreshURL)},
+	}
+
+	for k, tc := range cases {
+		fe := &FlowExpr{TokenURL: tc.tokenURL, RefreshURL: tc.refreshURL}
+		if actual := fe.EvalName(); actual != tc.expected {
+			t.Errorf("%s: got %#v, expected %#v", k, actual, tc.expected)
+		}
+	}
+}
