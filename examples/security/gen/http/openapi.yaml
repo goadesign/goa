@@ -22,6 +22,11 @@ paths:
         description: Whether to force auth failure even with a valid JWT
         required: false
         type: boolean
+      - name: Authorization
+        in: header
+        description: JWT used for authentication
+        required: false
+        type: string
       responses:
         "200":
           description: OK response.
@@ -50,6 +55,11 @@ paths:
       - name: k
         in: query
         description: API key
+        required: false
+        type: string
+      - name: Authorization
+        in: header
+        description: JWT used for authentication
         required: false
         type: string
       responses:
@@ -85,6 +95,11 @@ paths:
         type: string
       - name: oauth
         in: query
+        required: false
+        type: string
+      - name: Authorization
+        in: header
+        description: JWT used for authentication
         required: false
         type: string
       responses:
