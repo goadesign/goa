@@ -115,10 +115,10 @@ func TestPayloadConstructor(t *testing.T) {
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
 			RunHTTPDSL(t, c.DSL)
-			if len(expr.Root.HTTPServices) != 1 {
-				t.Fatalf("got %d file(s), expected 1", len(expr.Root.HTTPServices))
+			if len(expr.Root.API.HTTP.Services) != 1 {
+				t.Fatalf("got %d file(s), expected 1", len(expr.Root.API.HTTP.Services))
 			}
-			fs := serverType("", expr.Root.HTTPServices[0], make(map[string]struct{}))
+			fs := serverType("", expr.Root.API.HTTP.Services[0], make(map[string]struct{}))
 			sections := fs.SectionTemplates
 			var section *codegen.SectionTemplate
 			for _, s := range sections {

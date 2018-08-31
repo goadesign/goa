@@ -81,6 +81,14 @@ import (
 func Response(val interface{}, args ...interface{}) {
 	name, ok := val.(string)
 	switch t := eval.Current().(type) {
+	case *expr.HTTPExpr:
+		if !ok {
+			eval.InvalidArgError("name of error", val)
+			return
+		}
+		if e := httpError(name, t, args...); e != nil {
+			t.Errors = append(t.Errors, e)
+		}
 	case *expr.HTTPServiceExpr:
 		if !ok {
 			eval.InvalidArgError("name of error", val)
@@ -108,6 +116,20 @@ func Response(val interface{}, args ...interface{}) {
 			eval.Execute(fn, resp)
 		}
 		t.Responses = append(t.Responses, resp)
+	default:
+		eval.IncompatibleDSL()
+	}
+}
+
+// Code sets the Response status code.
+//
+// Code must appear in a Response expression.
+//
+// Code accepts one argument: the HTTP or gRPC status code.
+func Code(code int) {
+	switch t := eval.Current().(type) {
+	case *expr.HTTPResponseExpr:
+		t.StatusCode = code
 	default:
 		eval.IncompatibleDSL()
 	}

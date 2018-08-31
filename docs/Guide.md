@@ -39,7 +39,7 @@ code generation and runtime support for HTTP APIs. The HTTP DSL is built on top
 of the core DSL package and adds transport specific keywords to describe aspects
 specific to HTTP requests and responses.
 
-## Data Types
+## Basic Data Types
 
 The primitive types include `Int`, `Int32`, `Int64`, `UInt` `UInt32`, `UInt64`,
 `Float32`, `Float64` and `Bytes`. This makes it possible to support transports
@@ -74,20 +74,20 @@ import . "goa.design/goa/expr"
 import . "goa.design/goa/dsl"
 
 var _ = API("adder", func() {
-	Server("http://localhost:8080")
+    Server("http://localhost:8080")
 })
 
 var _ = Service("addersvc", func() {
-	Method("add", func() {
-		Payload(func() {
-			Attribute("left", Int, "Left operand")
-			Attribute("right", Int, "Right operand")
-		})
-		Result(Int)
-		HTTP(func() {
-			GET("/")
-		})
-	})
+    Method("add", func() {
+        Payload(func() {
+            Attribute("left", Int, "Left operand")
+            Attribute("right", Int, "Right operand")
+        })
+        Result(Int)
+        HTTP(func() {
+            GET("/")
+        })
+    })
 })
 ' > adder/design/design.go
 ```
@@ -118,6 +118,7 @@ goa example adder/design
 The following sections describe how to use the goa DSL to describe services.
 They provide an overview of the key concepts, review the
 [GoDocs](https://godoc.org/goa.design/goa/dsl) for a complete reference.
+
 ### `API` Expression
 
 Like in v1 the top level DSL function in v2 is `API`. The `API` DSL lists the
@@ -163,7 +164,7 @@ all the service methods, more on error responses in the next section.
 var _ = Service("account", func() {
     // Error which applies to all methods.
     Error(ErrUnauthorized, Unauthorized)
-    
+
     // HTTP transport properties.
     HTTP(func() {
         Path("/accounts")
@@ -347,11 +348,11 @@ from the incoming HTTP request state.
 
 The HTTP request state comprises four different parts:
 
-- The URL path parameters (for example the route `/bottle/{id}` defines the `id` path parameter)
-- The URL query string parameters
-- The HTTP headers
-- And finally the HTTP request body
- 
+* The URL path parameters (for example the route `/bottle/{id}` defines the `id` path parameter)
+* The URL query string parameters
+* The HTTP headers
+* And finally the HTTP request body
+
 The HTTP expressions drive how the generated code decodes the request into the
 payload type:
 
@@ -360,28 +361,28 @@ payload type:
 * The `Header` expression defines values loaded from HTTP headers.
 * The `Body` expression defines values loaded from the request body.
 
-The next two sections describe the expressions in more details. 
+The next two sections describe the expressions in more details.
 
 Note that the generated code provides a default decoder implementation that
 ought to be sufficient in most cases however it also makes it possible to plug a
 user provided decoder in the (hopefully rare) cases when that's needed.
- 
+
 #### Mapping payload with non-object types
 
 When the payload type is a primitive type (i.e. one of String, any of the
 integer of float types, Bool or Bytes), an array or a map then the value is
 loaded from:
 
-- the first URL path parameter defined in the design if any
-- otherwise the first query string parameter defined in the design if any
-- otherwise the first header defined in the design if any
-- otherwise the body
+* the first URL path parameter defined in the design if any
+* otherwise the first query string parameter defined in the design if any
+* otherwise the first header defined in the design if any
+* otherwise the body
 
 with the following restrictions:
 
-- only primitive or array types may be used to define path parameters or headers
-- only primitive, array and map types may be used to define query string parameters
-- array and map types used to define path parameters, query string parameters or
+* only primitive or array types may be used to define path parameters or headers
+* only primitive, array and map types may be used to define query string parameters
+* array and map types used to define path parameters, query string parameters or
   headers must use primitive types to define their elements
 
 Arrays in paths and headers are represented using comma separated values.
@@ -417,7 +418,6 @@ Method("delete", func() {
 | Generated method   | Example request | Corresponding call         |
 | ------------------ | --------------- | -------------------------- |
 | Delete([]string)   | DELETE /a,b     | Delete([]string{"a", "b"}) |
-
 
 > Note that in both the previous examples the name of the path parameter is
 > irrelevant.
@@ -501,7 +501,7 @@ Method("create", func() {
 The following HTTP expression causes the `id` attribute to get loaded from the
 path parameter while `name` and `age` are loaded from the request body:
 
-```go 
+```go
 Method("create", func() {
     Payload(func() {
         Attribute("id", Int)
@@ -523,7 +523,7 @@ arrays or maps.
 
 Consider the following payload:
 
-```go 
+```go
 Method("rate", func() {
     Payload(func() {
         Attribute("id", Int)
@@ -534,7 +534,7 @@ Method("rate", func() {
 
 Using the following HTTP expression the rates are loaded from the body:
 
-```go 
+```go
 Method("rate", func() {
     Payload(func() {
         Attribute("id", Int)
@@ -561,7 +561,7 @@ key, header name or body field name) and the corresponding payload attribute
 name. The mapping is defined using the syntax `"attribute name:element name"`,
 for example:
 
-```go 
+```go
 Header("version:X-Api-Version")
 ```
 
@@ -573,7 +573,7 @@ make up the body can be explicitly listed. This syntax allows for specifying a
 mapping between the incoming data field names and the payload attribute names,
 for example:
 
-```go 
+```go
 Method("create", func() {
     Payload(func() {
         Attribute("name", String)

@@ -698,6 +698,75 @@ func CanonicalMethod(name string) {
 	r.CanonicalEndpointName = name
 }
 
+// Tag identifies a method result type field and a value. The algorithm that
+// encodes the result into the HTTP response iterates through the responses and
+// uses the first response that has a matching tag (that is for which the result
+// field with the tag name matches the tag value). There must be one and only
+// one response with no Tag expression, this response is used when no other tag
+// matches.
+//
+// Tag must appear in Response.
+//
+// Tag accepts two arguments: the name of the field and the (string) value.
+//
+// Example:
+//
+//    Method("create", func() {
+//        Result(CreateResult)
+//        HTTP(func() {
+//            Response(StatusCreated, func() {
+//                Tag("outcome", "created") // Assumes CreateResult has attribute
+//                                          // "outcome" which may be "created"
+//                                          // or "accepted"
+//            })
+//
+//            Response(StatusAccepted, func() {
+//                Tag("outcome", "accepted")
+//            })
+//
+//            Response(StatusOK)            // Default response if "outcome" is
+//                                          // neither "created" nor "accepted"
+//        })
+//    })
+//
+func Tag(name, value string) {
+	res, ok := eval.Current().(*expr.HTTPResponseExpr)
+	if !ok {
+		eval.IncompatibleDSL()
+		return
+	}
+	res.Tag = [2]string{name, value}
+}
+
+// ContentType sets the value of the Content-Type response header. By default
+// the ID of the result type is used.
+//
+// ContentType may appear in a ResultType or a Response expression.
+// ContentType accepts one argument: the mime type as defined by RFC 6838.
+//
+//    var _ = ResultType("application/vnd.myapp.mytype", func() {
+//        ContentType("application/json")
+//    })
+//
+//    var _ = Method("add", func() {
+//	  HTTP(func() {
+//            Response(OK, func() {
+//                ContentType("application/json")
+//            })
+//        })
+//    })
+//
+func ContentType(typ string) {
+	switch actual := eval.Current().(type) {
+	case *expr.ResultTypeExpr:
+		actual.ContentType = typ
+	case *expr.HTTPResponseExpr:
+		actual.ContentType = typ
+	default:
+		eval.IncompatibleDSL()
+	}
+}
+
 // headers returns the mapped attribute containing the headers for the given
 // expression if it's either the root, a service or an endpoint - nil otherwise.
 func headers(exp eval.Expression) *expr.MappedAttributeExpr {

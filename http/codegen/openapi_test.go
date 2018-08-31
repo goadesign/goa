@@ -21,14 +21,16 @@ var update = flag.Bool("update", false, "update .golden files")
 
 func newDesign(httpSvcs ...*expr.HTTPServiceExpr) *expr.RootExpr {
 	openapi.Definitions = make(map[string]*openapi.Schema)
-	a := &expr.APIExpr{Name: "test"}
+	a := expr.NewAPIExpr("test", func() {})
 	a.Servers = []*expr.ServerExpr{a.DefaultServer()}
 	a.Servers[0].Hosts[0].URIs = []expr.URIExpr{expr.URIExpr("https://goa.design")}
+	a.HTTP.Services = httpSvcs
+
 	services := make([]*expr.ServiceExpr, len(httpSvcs))
 	for i, r := range httpSvcs {
 		services[i] = r.ServiceExpr
 	}
-	return &expr.RootExpr{API: a, Services: services, HTTPServices: httpSvcs}
+	return &expr.RootExpr{API: a, Services: services}
 }
 
 func newService(endpoints ...*expr.HTTPEndpointExpr) *expr.HTTPServiceExpr {
@@ -424,7 +426,7 @@ func TestExtensions(t *testing.T) {
 }
 
 func newEndpointExtensions(typ expr.Primitive, meta expr.MetaExpr) *expr.HTTPEndpointExpr {
-	route := &expr.HTTPRouteExpr{Method: "POST", Path: "/"}
+	route := &expr.RouteExpr{Method: "POST", Path: "/"}
 	ep := &expr.HTTPEndpointExpr{
 		MethodExpr: &expr.MethodExpr{
 			Name:    "testEndpoint",
@@ -433,8 +435,8 @@ func newEndpointExtensions(typ expr.Primitive, meta expr.MetaExpr) *expr.HTTPEnd
 				Type: expr.Empty,
 			},
 		},
-		Routes:    []*expr.HTTPRouteExpr{route},
-		Responses: []*expr.HTTPHTTPResponseExpr{},
+		Routes:    []*expr.RouteExpr{route},
+		Responses: []*expr.HTTPResponseExpr{},
 		Meta:      meta,
 	}
 	route.Endpoint = ep

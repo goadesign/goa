@@ -23,7 +23,7 @@ func TestTransformHelperServer(t *testing.T) {
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
 			RunHTTPDSL(t, c.DSL)
-			f := serverEncodeDecode("", expr.Root.HTTPServices[0])
+			f := serverEncodeDecode("", expr.Root.API.HTTP.Services[0])
 			sections := f.SectionTemplates
 			code := codegen.SectionCode(t, sections[len(sections)-c.Offset])
 			if code != c.Code {
@@ -48,7 +48,7 @@ func TestTransformHelperCLI(t *testing.T) {
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
 			RunHTTPDSL(t, c.DSL)
-			f := clientEncodeDecode("", expr.Root.HTTPServices[0])
+			f := clientEncodeDecode("", expr.Root.API.HTTP.Services[0])
 			sections := f.SectionTemplates
 			code := codegen.SectionCode(t, sections[len(sections)-c.Offset])
 			if code != c.Code {

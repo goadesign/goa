@@ -132,24 +132,6 @@ func TypeName(name string) {
 	}
 }
 
-// ContentType sets the value of the Content-Type response header. By default
-// the ID of the result type is used.
-//
-// ContentType may appear in a ResultType expression.
-// ContentType accepts one argument: the mime type as defined by RFC 6838.
-//
-//    var _ = ResultType("application/vnd.myapp.mytype") {
-//        ContentType("application/json")
-//    }
-//
-func ContentType(typ string) {
-	if mt, ok := eval.Current().(*expr.ResultTypeExpr); ok {
-		mt.ContentType = typ
-	} else {
-		eval.IncompatibleDSL()
-	}
-}
-
 // View adds a new view to a result type. A view has a name and lists attributes
 // that are rendered when the view is used to produce a response. The attribute
 // names must appear in the result type expression. If an attribute is itself a

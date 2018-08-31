@@ -22,7 +22,7 @@ func TestBodyTypeDecl(t *testing.T) {
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
 			expr.RunHTTPDSL(t, c.DSL)
-			fs := clientType(genpkg, expr.Root.HTTPServices[0], make(map[string]struct{}))
+			fs := clientType(genpkg, expr.Root.API.HTTP.Services[0], make(map[string]struct{}))
 			section := fs.SectionTemplates[1]
 			code := codegen.SectionCode(t, section)
 			if code != c.Code {
@@ -50,7 +50,7 @@ func TestBodyTypeInit(t *testing.T) {
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
 			RunHTTPDSL(t, c.DSL)
-			fs := clientType(genpkg, expr.Root.HTTPServices[0], make(map[string]struct{}))
+			fs := clientType(genpkg, expr.Root.API.HTTP.Services[0], make(map[string]struct{}))
 			section := fs.SectionTemplates[c.SectionIndex]
 			code := codegen.SectionCode(t, section)
 			if code != c.Code {
