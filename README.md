@@ -10,8 +10,6 @@ unique design-first approach.
 [![Godoc](https://godoc.org/github.com/goadesign/goa?status.svg)](http://godoc.org/github.com/goadesign/goa)
 [![Slack](https://img.shields.io/badge/slack-gophers-orange.svg?style=flat)](https://gophers.slack.com/messages/goa/)
 
-**=> goa v1.4.0 released! [Release Notes](https://goa.design/blog/007-v_1_4_0/) <=**
-
 ## V2
 
 [goa v2](https://github.com/goadesign/goa/tree/v2) is currently in beta:
