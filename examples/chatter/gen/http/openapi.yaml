@@ -15,6 +15,12 @@ paths:
         Required security scopes:
           * `stream:write`
       operationId: chatter#echoer
+      parameters:
+      - name: Authorization
+        in: header
+        description: JWT used for authentication
+        required: true
+        type: string
       responses:
         "101":
           description: Switching Protocols response.
@@ -49,6 +55,11 @@ paths:
         description: View to use to render the result
         required: false
         type: string
+      - name: Authorization
+        in: header
+        description: JWT used for authentication
+        required: true
+        type: string
       responses:
         "101":
           description: Switching Protocols response.
@@ -77,6 +88,12 @@ paths:
         Required security scopes:
           * `stream:write`
       operationId: chatter#listener
+      parameters:
+      - name: Authorization
+        in: header
+        description: JWT used for authentication
+        required: true
+        type: string
       responses:
         "101":
           description: Switching Protocols response.
@@ -123,6 +140,12 @@ paths:
         Required security scopes:
           * `stream:write`
       operationId: chatter#summary
+      parameters:
+      - name: Authorization
+        in: header
+        description: JWT used for authentication
+        required: true
+        type: string
       responses:
         "101":
           description: Switching Protocols response.
@@ -157,13 +180,13 @@ definitions:
       sent_at:
         type: string
         description: Time at which the message was sent
-        example: "1983-06-06T03:57:42Z"
+        example: 1983-06-06T03:57:42Z
         format: date-time
     description: ChatSummaryResponseBody result type (default view)
     example:
       length: 9188469515160886076
       message: Quibusdam voluptate nulla autem quisquam dolorum.
-      sent_at: "2009-06-14T08:11:36Z"
+      sent_at: 2009-06-14T08:11:36Z
     required:
     - message
   ChatterChatSummaryResponseBodyCollection:
@@ -176,13 +199,13 @@ definitions:
     example:
     - length: 3915772424247758741
       message: Sequi tenetur.
-      sent_at: "2009-01-25T10:15:11Z"
+      sent_at: 2009-01-25T10:15:11Z
     - length: 3915772424247758741
       message: Sequi tenetur.
-      sent_at: "2009-01-25T10:15:11Z"
+      sent_at: 2009-01-25T10:15:11Z
     - length: 3915772424247758741
       message: Sequi tenetur.
-      sent_at: "2009-01-25T10:15:11Z"
+      sent_at: 2009-01-25T10:15:11Z
   ChatterHistoryResponseBody:
     title: 'Mediatype identifier: application/vnd.goa.summary; view=default'
     type: object
@@ -199,13 +222,13 @@ definitions:
       sent_at:
         type: string
         description: Time at which the message was sent
-        example: "1978-02-25T14:12:07Z"
+        example: 1978-02-25T14:12:07Z
         format: date-time
     description: HistoryResponseBody result type (default view)
     example:
       length: 8447087998172944251
       message: A et soluta.
-      sent_at: "1992-03-13T17:19:43Z"
+      sent_at: 1992-03-13T17:19:43Z
     required:
     - message
   EchoerInvalidScopesResponseBody:
