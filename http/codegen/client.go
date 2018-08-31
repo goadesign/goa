@@ -11,12 +11,12 @@ import (
 
 // ClientFiles returns the client HTTP transport files.
 func ClientFiles(genpkg string, root *expr.RootExpr) []*codegen.File {
-	fw := make([]*codegen.File, 2*len(root.HTTPServices))
-	for i, r := range root.HTTPServices {
+	fw := make([]*codegen.File, 2*len(root.API.HTTP.Services))
+	for i, r := range root.API.HTTP.Services {
 		fw[i] = client(genpkg, r)
 	}
-	for i, r := range root.HTTPServices {
-		fw[i+len(root.HTTPServices)] = clientEncodeDecode(genpkg, r)
+	for i, r := range root.API.HTTP.Services {
+		fw[i+len(root.API.HTTP.Services)] = clientEncodeDecode(genpkg, r)
 	}
 	return fw
 }

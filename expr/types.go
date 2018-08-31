@@ -1,5 +1,5 @@
 /*
-package expr defines types which are used to describe the data structures used
+Package expr defines types which are used to describe the data structures used
 by both the request and response messages used by services.
 
 There are primitive types corresponding to scalar values (bool, string, integers

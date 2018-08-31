@@ -1,5 +1,6 @@
-# <img src="http://goa.design/img/goa-logo.svg">
+#
 
+![goa logo](https://goa.design/img/goa-logo.svg "goa")
 goa is a framework for building micro-services and APIs in Go using a unique
 design-first approach.
 
@@ -10,7 +11,7 @@ design-first approach.
 [![Godoc](https://godoc.org/goa.design/goa?status.svg)](https://godoc.org/goa.design/goa)
 [![Slack](https://img.shields.io/badge/slack-gophers-orange.svg?style=flat)](https://gophers.slack.com/messages/goa/)
 
-## Why goa?
+## Overview
 
 goa takes a different approach to building services by making it possible to
 describe the *design* of the service API using a simple Go DSL. goa uses the
@@ -265,7 +266,7 @@ The `http` directory contains the OpenAPI 2.0 specification in both YAML and
 JSON format.
 
 The specification can easily be served from the service itself using a file
-server. The [Files](http://godoc.org/goa.design/goa/http/dsl/http.go#Files) DSL
+server. The [Files](http://godoc.org/goa.design/goa/dsl/http.go#Files) DSL
 function makes it possible to server static file. Edit the file
 `design/design.go` and add:
 

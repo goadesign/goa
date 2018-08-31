@@ -282,7 +282,7 @@ func runDSL(t *testing.T, dsl func()) *expr.RootExpr {
 	eval.Reset()
 	expr.Root = new(expr.RootExpr)
 	eval.Register(expr.Root)
-	expr.Root.API = &expr.APIExpr{Name: "test api"}
+	expr.Root.API = expr.NewAPIExpr("test api", func() {})
 	expr.Root.API.Servers = []*expr.ServerExpr{expr.Root.API.DefaultServer()}
 
 	// run DSL (first pass)
@@ -347,7 +347,9 @@ func objRecursive() *expr.UserTypeExpr {
 		TypeName: "objRecursiveT",
 	}
 	obj := res.AttributeExpr.Type.(*expr.Object)
-	*obj = append(*obj, &expr.NamedAttributeExpr{"Rec", &expr.AttributeExpr{Type: res}})
+	*obj = append(*obj, &expr.NamedAttributeExpr{
+		Name:      "Rec",
+		Attribute: &expr.AttributeExpr{Type: res}})
 
 	return res
 }

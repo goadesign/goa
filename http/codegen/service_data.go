@@ -561,7 +561,7 @@ func (d ServicesData) Get(name string) *ServiceData {
 	if data, ok := d[name]; ok {
 		return data
 	}
-	service := expr.Root.HTTPService(name)
+	service := expr.Root.API.HTTP.Service(name)
 	if service == nil {
 		return nil
 	}

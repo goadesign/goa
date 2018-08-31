@@ -5,7 +5,8 @@ import "goa.design/goa/eval"
 
 // Description sets the expression description.
 //
-// Description must appear in API, Docs, Type or Attribute.
+// Description may appear in API, Docs, Type or Attribute.
+// Description may also appear in Response and FileServer.
 //
 // Description accepts one arguments: the description string.
 //
@@ -16,27 +17,31 @@ import "goa.design/goa/eval"
 //    })
 //
 func Description(d string) {
-	switch expr := eval.Current().(type) {
+	switch e := eval.Current().(type) {
 	case *expr.APIExpr:
-		expr.Description = d
+		e.Description = d
 	case *expr.ServerExpr:
-		expr.Description = d
+		e.Description = d
 	case *expr.HostExpr:
-		expr.Description = d
+		e.Description = d
 	case *expr.ServiceExpr:
-		expr.Description = d
+		e.Description = d
 	case *expr.ResultTypeExpr:
-		expr.Description = d
+		e.Description = d
 	case *expr.AttributeExpr:
-		expr.Description = d
+		e.Description = d
 	case *expr.DocsExpr:
-		expr.Description = d
+		e.Description = d
 	case *expr.MethodExpr:
-		expr.Description = d
+		e.Description = d
 	case *expr.ExampleExpr:
-		expr.Description = d
+		e.Description = d
 	case *expr.SchemeExpr:
-		expr.Description = d
+		e.Description = d
+	case *expr.HTTPResponseExpr:
+		e.Description = d
+	case *expr.HTTPFileServerExpr:
+		e.Description = d
 	default:
 		eval.IncompatibleDSL()
 	}

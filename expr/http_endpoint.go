@@ -170,11 +170,11 @@ func (e *HTTPEndpointExpr) QueryParams() *MappedAttributeExpr {
 func (e *HTTPEndpointExpr) Prepare() {
 	// Inherit headers and params from parent service and API
 	headers := NewEmptyMappedAttributeExpr()
-	headers.Merge(Root.HTTPHeaders)
+	headers.Merge(Root.API.HTTP.Headers)
 	headers.Merge(e.Service.Headers)
 
 	params := NewEmptyMappedAttributeExpr()
-	params.Merge(Root.HTTPParams)
+	params.Merge(Root.API.HTTP.Params)
 	params.Merge(e.Service.Params)
 
 	if p := e.Service.Parent(); p != nil {

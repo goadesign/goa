@@ -26,11 +26,11 @@ func NewV2(root *expr.RootExpr, h *expr.HostExpr) (*V2, error) {
 	}
 	host := u.Host
 
-	basePath := root.HTTPPath
+	basePath := root.API.HTTP.Path
 	if hasAbsoluteRoutes(root) {
 		basePath = ""
 	}
-	params, err := paramsFromExpr(root.HTTPParams, basePath)
+	params, err := paramsFromExpr(root.API.HTTP.Params, basePath)
 	if err != nil {
 		return nil, err
 	}
@@ -55,15 +55,15 @@ func NewV2(root *expr.RootExpr, h *expr.HostExpr) (*V2, error) {
 		Host:                host,
 		BasePath:            basePath,
 		Paths:               make(map[string]interface{}),
-		Consumes:            root.HTTPConsumes,
-		Produces:            root.HTTPProduces,
+		Consumes:            root.API.HTTP.Consumes,
+		Produces:            root.API.HTTP.Produces,
 		Parameters:          paramMap,
 		Tags:                tags,
 		SecurityDefinitions: securitySpecFromExpr(root),
 		ExternalDocs:        docsFromExpr(root.API.Docs),
 	}
 
-	for _, he := range root.HTTPErrors {
+	for _, he := range root.API.HTTP.Errors {
 		res, err := responseSpecFromExpr(s, root, he.Response, "")
 		if err != nil {
 			return nil, err
@@ -74,7 +74,7 @@ func NewV2(root *expr.RootExpr, h *expr.HostExpr) (*V2, error) {
 		s.Responses[he.Name] = res
 	}
 
-	for _, res := range root.HTTPServices {
+	for _, res := range root.API.HTTP.Services {
 		if !mustGenerate(res.Meta) || !mustGenerate(res.ServiceExpr.Meta) {
 			continue
 		}
@@ -217,7 +217,7 @@ func securitySpecFromExpr(root *expr.RootExpr) map[string]*SecurityDefinition {
 // the base path must be "/" and all routes must be absolutes.
 func hasAbsoluteRoutes(root *expr.RootExpr) bool {
 	hasAbsoluteRoutes := false
-	for _, res := range root.HTTPServices {
+	for _, res := range root.API.HTTP.Services {
 		if !mustGenerate(res.Meta) || !mustGenerate(res.ServiceExpr.Meta) {
 			continue
 		}

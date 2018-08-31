@@ -25,9 +25,9 @@ func Example(genpkg string, roots []eval.Root) ([]*codegen.File, error) {
 		}
 
 		// HTTP
-		if len(r.HTTPServices) > 0 {
-			svcs := make([]string, 0, len(r.HTTPServices))
-			for _, s := range r.HTTPServices {
+		if len(r.API.HTTP.Services) > 0 {
+			svcs := make([]string, 0, len(r.API.HTTP.Services))
+			for _, s := range r.API.HTTP.Services {
 				svcs = append(svcs, s.Name())
 			}
 			files = append(files, httpcodegen.ExampleServerFiles(genpkg, r)...)

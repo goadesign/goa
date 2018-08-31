@@ -10,10 +10,10 @@ import (
 
 // PathFiles returns the service path files.
 func PathFiles(root *expr.RootExpr) []*codegen.File {
-	fw := make([]*codegen.File, 2*len(root.HTTPServices))
-	for i := 0; i < len(root.HTTPServices); i++ {
-		fw[i*2] = serverPath(root.HTTPServices[i])
-		fw[i*2+1] = clientPath(root.HTTPServices[i])
+	fw := make([]*codegen.File, 2*len(root.API.HTTP.Services))
+	for i := 0; i < len(root.API.HTTP.Services); i++ {
+		fw[i*2] = serverPath(root.API.HTTP.Services[i])
+		fw[i*2+1] = clientPath(root.API.HTTP.Services[i])
 	}
 	return fw
 }

@@ -22,10 +22,8 @@ import (
 )
 
 const (
-	srcDSLDefault  = "goa.design/goa/dsl"
-	destDSLDefault = "goa.design/goa/http/dsl"
-	//rpcDSL    = "goa.design/goa/dsl/rpc"
-	aliasFile = "aliases.go"
+	srcDSLDefault = "goa.design/goa/dsl"
+	aliasFile     = "aliases.go"
 )
 
 // aliasTmpl is the template used to render the aliasing functions.
@@ -36,11 +34,14 @@ var headerTmpl = template.Must(template.New("header").Parse(headerT))
 func main() {
 	var (
 		srcDSL  = flag.String("src", srcDSLDefault, "source DSL `package path`")
-		destDSL = flag.String("dest", destDSLDefault, "destination DSL `package path`")
+		destDSL = flag.String("dest", "", "destination DSL `package path`")
 		dslOnly = flag.Bool("dsl", false, "generate DSL aliases only")
 	)
 	{
 		flag.Parse()
+		if *destDSL == "" {
+			fail("missing destination package")
+		}
 	}
 
 	var (

@@ -123,7 +123,7 @@ func ClientCLIFiles(genpkg string, root *expr.RootExpr) []*codegen.File {
 		data []*commandData
 		svcs []*expr.HTTPServiceExpr
 	)
-	for _, svc := range root.HTTPServices {
+	for _, svc := range root.API.HTTP.Services {
 		sd := HTTPServices.Get(svc.Name())
 		if len(sd.Endpoints) > 0 {
 			data = append(data, buildCommandData(sd))

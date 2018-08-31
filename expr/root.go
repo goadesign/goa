@@ -90,7 +90,7 @@ func NameMap(encoded string) (string, string) {
 // WalkSets returns the expressions in order of evaluation.
 func (r *RootExpr) WalkSets(walk eval.SetWalker) {
 	if r.API == nil {
-		r.API = &APIExpr{}
+		r.API = NewAPIExpr("API", func() {})
 	}
 
 	// Top level API DSL
@@ -123,16 +123,16 @@ func (r *RootExpr) WalkSets(walk eval.SetWalker) {
 	walk(methods)
 
 	// HTTP services and endpoints
-	httpsvcs := make(eval.ExpressionSet, len(r.HTTPServices))
-	sort.SliceStable(r.HTTPServices, func(i, j int) bool {
-		if r.HTTPServices[j].ParentName == r.HTTPServices[i].Name() {
+	httpsvcs := make(eval.ExpressionSet, len(r.API.HTTP.Services))
+	sort.SliceStable(r.API.HTTP.Services, func(i, j int) bool {
+		if r.API.HTTP.Services[j].ParentName == r.API.HTTP.Services[i].Name() {
 			return true
 		}
 		return false
 	})
 	var endpoints eval.ExpressionSet
 	var servers eval.ExpressionSet
-	for i, svc := range r.HTTPServices {
+	for i, svc := range r.API.HTTP.Services {
 		httpsvcs[i] = svc
 		for _, e := range svc.HTTPEndpoints {
 			endpoints = append(endpoints, e)

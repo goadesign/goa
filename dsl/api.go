@@ -45,7 +45,7 @@ func API(name string, fn func()) *expr.APIExpr {
 		eval.IncompatibleDSL()
 		return nil
 	}
-	expr.Root.API = &expr.APIExpr{Name: name, DSLFunc: fn}
+	expr.Root.API = expr.NewAPIExpr(name, fn)
 	return expr.Root.API
 }
 
@@ -134,6 +134,8 @@ func Docs(fn func()) {
 		e.Docs = docs
 	case *expr.AttributeExpr:
 		e.Docs = docs
+	case *expr.HTTPFileServerExpr:
+		e.Docs = docs
 	default:
 		eval.IncompatibleDSL()
 	}
@@ -143,15 +145,6 @@ func Docs(fn func()) {
 func TermsOfService(terms string) {
 	if s, ok := eval.Current().(*expr.APIExpr); ok {
 		s.TermsOfService = terms
-		return
-	}
-	eval.IncompatibleDSL()
-}
-
-// Param defines a server URL parameter.
-func Param(name string, args ...interface{}) {
-	if _, ok := eval.Current().(*expr.ServerExpr); !ok {
-		eval.IncompatibleDSL()
 		return
 	}
 	eval.IncompatibleDSL()

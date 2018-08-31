@@ -9,9 +9,9 @@ import (
 
 // ServerTypeFiles returns the HTTP transport type files.
 func ServerTypeFiles(genpkg string, root *expr.RootExpr) []*codegen.File {
-	fw := make([]*codegen.File, len(root.HTTPServices))
+	fw := make([]*codegen.File, len(root.API.HTTP.Services))
 	seen := make(map[string]struct{})
-	for i, r := range root.HTTPServices {
+	for i, r := range root.API.HTTP.Services {
 		fw[i] = serverType(genpkg, r, seen)
 	}
 	return fw

@@ -71,7 +71,7 @@ echo '
 package design
 
 import . "goa.design/goa/expr"
-import . "goa.design/goa/http/dsl"
+import . "goa.design/goa/dsl"
 
 var _ = API("adder", func() {
 	Server("http://localhost:8080")

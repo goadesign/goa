@@ -22,7 +22,7 @@ func RunDSL(t *testing.T, dsl func()) *expr.RootExpr {
 	expr.Root.GeneratedTypes = &expr.GeneratedRoot{}
 	eval.Register(expr.Root)
 	eval.Register(expr.Root.GeneratedTypes)
-	expr.Root.API = &expr.APIExpr{Name: "test api"}
+	expr.Root.API = expr.NewAPIExpr("test api", func() {})
 	expr.Root.API.Servers = []*expr.ServerExpr{expr.Root.API.DefaultServer()}
 	if !eval.Execute(dsl, nil) {
 		t.Fatal(eval.Context.Error())
@@ -42,7 +42,7 @@ func RunDSLWithFunc(t *testing.T, dsl func(), fn func()) *expr.RootExpr {
 	expr.Root.GeneratedTypes = &expr.GeneratedRoot{}
 	eval.Register(expr.Root)
 	eval.Register(expr.Root.GeneratedTypes)
-	expr.Root.API = &expr.APIExpr{Name: "test api"}
+	expr.Root.API = expr.NewAPIExpr("test api", func() {})
 	expr.Root.API.Servers = []*expr.ServerExpr{expr.Root.API.DefaultServer()}
 	fn()
 	if !eval.Execute(dsl, nil) {

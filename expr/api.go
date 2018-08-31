@@ -36,7 +36,8 @@ type (
 		// potentially multiple schemes. Incoming requests must validate
 		// at least one requirement to be authorized.
 		Requirements []*SecurityExpr
-
+		// HTTP contains the HTTP specific API level expressions.
+		HTTP *HTTPExpr
 		// random generator used to build examples for the API types.
 		random *Random
 	}
@@ -67,6 +68,15 @@ type (
 		URL string `json:"url,omitempty"`
 	}
 )
+
+// NewAPIExpr initializes an API expression.
+func NewAPIExpr(name string, dsl func()) *APIExpr {
+	return &APIExpr{
+		Name:    name,
+		HTTP:    new(HTTPExpr),
+		DSLFunc: dsl,
+	}
+}
 
 // Schemes returns the list of transport schemes used by all the API servers.
 // The possible values for the elements of the returned slice are "http",

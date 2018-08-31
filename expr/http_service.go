@@ -112,7 +112,7 @@ func (svc *HTTPServiceExpr) URITemplate() string {
 // API and parent service base paths as needed.
 func (svc *HTTPServiceExpr) FullPaths() []string {
 	if len(svc.Paths) == 0 {
-		return []string{path.Join(Root.HTTPPath)}
+		return []string{path.Join(Root.API.HTTP.Path)}
 	}
 	var paths []string
 	for _, p := range svc.Paths {
@@ -135,7 +135,7 @@ func (svc *HTTPServiceExpr) FullPaths() []string {
 				}
 			}
 		} else {
-			basePaths = []string{Root.HTTPPath}
+			basePaths = []string{Root.API.HTTP.Path}
 		}
 		for _, base := range basePaths {
 			paths = append(paths, httppath.Clean(path.Join(base, p)))
@@ -147,7 +147,7 @@ func (svc *HTTPServiceExpr) FullPaths() []string {
 // Parent returns the parent service if any, nil otherwise.
 func (svc *HTTPServiceExpr) Parent() *HTTPServiceExpr {
 	if svc.ParentName != "" {
-		if parent := Root.HTTPService(svc.ParentName); parent != nil {
+		if parent := Root.API.HTTP.Service(svc.ParentName); parent != nil {
 			return parent
 		}
 	}
@@ -189,7 +189,7 @@ func (svc *HTTPServiceExpr) Validate() error {
 		verr.Merge(svc.Headers.Validate("headers", svc))
 	}
 	if n := svc.ParentName; n != "" {
-		if p := Root.HTTPService(n); p == nil {
+		if p := Root.API.HTTP.Service(n); p == nil {
 			verr.Add(svc, "Parent service %s not found", n)
 		} else {
 			if p.CanonicalEndpoint() == nil {
@@ -210,7 +210,7 @@ func (svc *HTTPServiceExpr) Validate() error {
 	for _, er := range svc.HTTPErrors {
 		verr.Merge(er.Validate())
 	}
-	for _, er := range Root.HTTPErrors {
+	for _, er := range Root.API.HTTP.Errors {
 		// This may result in the same error being validated multiple
 		// times however service is the top level expression being
 		// walked and errors cannot be walked until all expressions have
