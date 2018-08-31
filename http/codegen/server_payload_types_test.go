@@ -4,8 +4,8 @@ import (
 	"testing"
 
 	"goa.design/goa/codegen"
+	"goa.design/goa/expr"
 	"goa.design/goa/http/codegen/testdata"
-	httpdesign "goa.design/goa/http/design"
 )
 
 func TestPayloadConstructor(t *testing.T) {
@@ -115,10 +115,10 @@ func TestPayloadConstructor(t *testing.T) {
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
 			RunHTTPDSL(t, c.DSL)
-			if len(httpdesign.Root.HTTPServices) != 1 {
-				t.Fatalf("got %d file(s), expected 1", len(httpdesign.Root.HTTPServices))
+			if len(expr.Root.HTTPServices) != 1 {
+				t.Fatalf("got %d file(s), expected 1", len(expr.Root.HTTPServices))
 			}
-			fs := serverType("", httpdesign.Root.HTTPServices[0], make(map[string]struct{}))
+			fs := serverType("", expr.Root.HTTPServices[0], make(map[string]struct{}))
 			sections := fs.SectionTemplates
 			var section *codegen.SectionTemplate
 			for _, s := range sections {

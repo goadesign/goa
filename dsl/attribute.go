@@ -3,7 +3,7 @@ package dsl
 import (
 	"fmt"
 
-	"goa.design/goa/design"
+	"goa.design/goa/expr"
 	"goa.design/goa/eval"
 )
 
@@ -112,12 +112,12 @@ import (
 //    })
 //
 func Attribute(name string, args ...interface{}) {
-	var parent *design.AttributeExpr
+	var parent *expr.AttributeExpr
 	{
 		switch def := eval.Current().(type) {
-		case *design.AttributeExpr:
+		case *expr.AttributeExpr:
 			parent = def
-		case design.CompositeExpr:
+		case expr.CompositeExpr:
 			parent = def.Attribute()
 		default:
 			eval.IncompatibleDSL()
@@ -128,19 +128,19 @@ func Attribute(name string, args ...interface{}) {
 			return
 		}
 		if parent.Type == nil {
-			parent.Type = &design.Object{}
+			parent.Type = &expr.Object{}
 		}
-		if _, ok := parent.Type.(*design.Object); !ok {
+		if _, ok := parent.Type.(*expr.Object); !ok {
 			eval.ReportError("can't define child attribute %#v on attribute of type %s", name, parent.Type.Name())
 			return
 		}
 	}
 
-	var attr *design.AttributeExpr
+	var attr *expr.AttributeExpr
 	{
 		for _, ref := range parent.References {
-			if att := design.AsObject(ref).Attribute(name); att != nil {
-				attr = design.DupAtt(att)
+			if att := expr.AsObject(ref).Attribute(name); att != nil {
+				attr = expr.DupAtt(att)
 				break
 			}
 		}
@@ -154,7 +154,7 @@ func Attribute(name string, args ...interface{}) {
 				attr.Type = dataType
 			}
 		} else {
-			attr = &design.AttributeExpr{
+			attr = &expr.AttributeExpr{
 				Type:        dataType,
 				Description: description,
 			}
@@ -166,11 +166,11 @@ func Attribute(name string, args ...interface{}) {
 		}
 		if attr.Type == nil {
 			// DSL did not contain an "Attribute" declaration
-			attr.Type = design.String
+			attr.Type = expr.String
 		}
 	}
 
-	parent.Type.(*design.Object).Set(name, attr)
+	parent.Type.(*expr.Object).Set(name, attr)
 }
 
 // Field is syntactic sugar to define an attribute with the "rpc:tag" meta
@@ -199,14 +199,14 @@ func Field(tag interface{}, name string, args ...interface{}) {
 
 // Default sets the default value for an attribute.
 func Default(def interface{}) {
-	a, ok := eval.Current().(*design.AttributeExpr)
+	a, ok := eval.Current().(*expr.AttributeExpr)
 	if !ok {
 		eval.IncompatibleDSL()
 		return
 	}
 	if a.Type != nil && !a.Type.IsCompatible(def) {
 		eval.ReportError("default value %#v is incompatible with attribute of type %s",
-			def, design.QualifiedTypeName(a.Type))
+			def, expr.QualifiedTypeName(a.Type))
 		return
 	}
 	a.SetDefault(def)
@@ -274,8 +274,8 @@ func Example(args ...interface{}) {
 		}
 		arg = args[1]
 	}
-	if a, ok := eval.Current().(*design.AttributeExpr); ok {
-		ex := &design.ExampleExpr{Summary: summary}
+	if a, ok := eval.Current().(*expr.AttributeExpr); ok {
+		ex := &expr.ExampleExpr{Summary: summary}
 		if dsl, ok := arg.(func()); ok {
 			eval.Execute(dsl, ex)
 		} else {
@@ -294,9 +294,9 @@ func Example(args ...interface{}) {
 	}
 }
 
-func parseAttributeArgs(baseAttr *design.AttributeExpr, args ...interface{}) (design.DataType, string, func()) {
+func parseAttributeArgs(baseAttr *expr.AttributeExpr, args ...interface{}) (expr.DataType, string, func()) {
 	var (
-		dataType    design.DataType
+		dataType    expr.DataType
 		description string
 		fn          func()
 		ok          bool
@@ -305,12 +305,12 @@ func parseAttributeArgs(baseAttr *design.AttributeExpr, args ...interface{}) (de
 	parseDataType := func(expected string, index int) {
 		if name, ok2 := args[index].(string); ok2 {
 			// Lookup type by name
-			if dataType = design.Root.UserType(name); dataType == nil {
+			if dataType = expr.Root.UserType(name); dataType == nil {
 				eval.InvalidArgError(expected, args[index])
 			}
 			return
 		}
-		if dataType, ok = args[index].(design.DataType); !ok {
+		if dataType, ok = args[index].(expr.DataType); !ok {
 			eval.InvalidArgError(expected, args[index])
 		}
 	}
@@ -334,7 +334,7 @@ func parseAttributeArgs(baseAttr *design.AttributeExpr, args ...interface{}) (de
 		if baseAttr != nil {
 			dataType = baseAttr.Type
 		} else {
-			dataType = design.String
+			dataType = expr.String
 		}
 	case 1:
 		success = func() {

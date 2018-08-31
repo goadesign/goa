@@ -1,6 +1,6 @@
 package dsl
 
-import "goa.design/goa/design"
+import "goa.design/goa/expr"
 import "goa.design/goa/eval"
 
 // Description sets the expression description.
@@ -17,25 +17,25 @@ import "goa.design/goa/eval"
 //
 func Description(d string) {
 	switch expr := eval.Current().(type) {
-	case *design.APIExpr:
+	case *expr.APIExpr:
 		expr.Description = d
-	case *design.ServerExpr:
+	case *expr.ServerExpr:
 		expr.Description = d
-	case *design.HostExpr:
+	case *expr.HostExpr:
 		expr.Description = d
-	case *design.ServiceExpr:
+	case *expr.ServiceExpr:
 		expr.Description = d
-	case *design.ResultTypeExpr:
+	case *expr.ResultTypeExpr:
 		expr.Description = d
-	case *design.AttributeExpr:
+	case *expr.AttributeExpr:
 		expr.Description = d
-	case *design.DocsExpr:
+	case *expr.DocsExpr:
 		expr.Description = d
-	case *design.MethodExpr:
+	case *expr.MethodExpr:
 		expr.Description = d
-	case *design.ExampleExpr:
+	case *expr.ExampleExpr:
 		expr.Description = d
-	case *design.SchemeExpr:
+	case *expr.SchemeExpr:
 		expr.Description = d
 	default:
 		eval.IncompatibleDSL()

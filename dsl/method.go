@@ -1,7 +1,7 @@
 package dsl
 
 import (
-	"goa.design/goa/design"
+	"goa.design/goa/expr"
 	"goa.design/goa/eval"
 )
 
@@ -25,11 +25,11 @@ import (
 //    })
 //
 func Method(name string, fn func()) {
-	s, ok := eval.Current().(*design.ServiceExpr)
+	s, ok := eval.Current().(*expr.ServiceExpr)
 	if !ok {
 		eval.IncompatibleDSL()
 		return
 	}
-	ep := &design.MethodExpr{Name: name, Service: s, DSLFunc: fn}
+	ep := &expr.MethodExpr{Name: name, Service: s, DSLFunc: fn}
 	s.Methods = append(s.Methods, ep)
 }

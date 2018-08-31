@@ -5,14 +5,14 @@ import (
 	"regexp"
 	"strconv"
 
-	"goa.design/goa/design"
+	"goa.design/goa/expr"
 	"goa.design/goa/eval"
 )
 
 // Enum adds a "enum" validation to the attribute.
 // See http://json-schema.org/latest/json-schema-validation.html#anchor76.
 func Enum(vals ...interface{}) {
-	if a, ok := eval.Current().(*design.AttributeExpr); ok {
+	if a, ok := eval.Current().(*expr.AttributeExpr); ok {
 		for i, v := range vals {
 			// When can a.Type be nil? glad you asked
 			// There are two ways to write an Attribute declaration with the DSL that
@@ -40,14 +40,14 @@ func Enum(vals ...interface{}) {
 		}
 		if ok {
 			if a.Validation == nil {
-				a.Validation = &design.ValidationExpr{}
+				a.Validation = &expr.ValidationExpr{}
 			}
 			a.Validation.Values = make([]interface{}, len(vals))
 			for i, v := range vals {
 				switch actual := v.(type) {
-				case design.MapVal:
+				case expr.MapVal:
 					a.Validation.Values[i] = actual.ToMap()
-				case design.ArrayVal:
+				case expr.ArrayVal:
 					a.Validation.Values[i] = actual.ToSlice()
 				default:
 					a.Validation.Values[i] = actual
@@ -85,18 +85,18 @@ func Enum(vals ...interface{}) {
 //
 // FormatRFC1123: RFC1123 date time
 //
-func Format(f design.ValidationFormat) {
-	if a, ok := eval.Current().(*design.AttributeExpr); ok {
+func Format(f expr.ValidationFormat) {
+	if a, ok := eval.Current().(*expr.AttributeExpr); ok {
 		if !a.IsSupportedValidationFormat(f) {
 			eval.ReportError("invalid validation format %q", f)
 		}
-		if a.Type != nil && a.Type.Kind() != design.StringKind {
+		if a.Type != nil && a.Type.Kind() != expr.StringKind {
 			incompatibleAttributeType("format", a.Type.Name(), "a string")
 		} else {
 			if a.Validation == nil {
-				a.Validation = &design.ValidationExpr{}
+				a.Validation = &expr.ValidationExpr{}
 			}
-			a.Validation.Format = design.ValidationFormat(f)
+			a.Validation.Format = expr.ValidationFormat(f)
 		}
 	}
 }
@@ -104,8 +104,8 @@ func Format(f design.ValidationFormat) {
 // Pattern adds a "pattern" validation to the attribute.
 // See http://json-schema.org/latest/json-schema-validation.html#anchor33.
 func Pattern(p string) {
-	if a, ok := eval.Current().(*design.AttributeExpr); ok {
-		if a.Type != nil && a.Type.Kind() != design.StringKind {
+	if a, ok := eval.Current().(*expr.AttributeExpr); ok {
+		if a.Type != nil && a.Type.Kind() != expr.StringKind {
 			incompatibleAttributeType("pattern", a.Type.Name(), "a string")
 		} else {
 			_, err := regexp.Compile(p)
@@ -113,7 +113,7 @@ func Pattern(p string) {
 				eval.ReportError("invalid pattern %#v, %s", p, err)
 			} else {
 				if a.Validation == nil {
-					a.Validation = &design.ValidationExpr{}
+					a.Validation = &expr.ValidationExpr{}
 				}
 				a.Validation.Pattern = p
 			}
@@ -124,12 +124,12 @@ func Pattern(p string) {
 // Minimum adds a "minimum" validation to the attribute.
 // See http://json-schema.org/latest/json-schema-validation.html#anchor21.
 func Minimum(val interface{}) {
-	if a, ok := eval.Current().(*design.AttributeExpr); ok {
+	if a, ok := eval.Current().(*expr.AttributeExpr); ok {
 		if a.Type != nil &&
-			a.Type.Kind() != design.IntKind && a.Type.Kind() != design.UIntKind &&
-			a.Type.Kind() != design.Int32Kind && a.Type.Kind() != design.UInt32Kind &&
-			a.Type.Kind() != design.Int64Kind && a.Type.Kind() != design.UInt64Kind &&
-			a.Type.Kind() != design.Float32Kind && a.Type.Kind() != design.Float64Kind {
+			a.Type.Kind() != expr.IntKind && a.Type.Kind() != expr.UIntKind &&
+			a.Type.Kind() != expr.Int32Kind && a.Type.Kind() != expr.UInt32Kind &&
+			a.Type.Kind() != expr.Int64Kind && a.Type.Kind() != expr.UInt64Kind &&
+			a.Type.Kind() != expr.Float32Kind && a.Type.Kind() != expr.Float64Kind {
 
 			incompatibleAttributeType("minimum", a.Type.Name(), "an integer or a number")
 		} else {
@@ -149,7 +149,7 @@ func Minimum(val interface{}) {
 				return
 			}
 			if a.Validation == nil {
-				a.Validation = &design.ValidationExpr{}
+				a.Validation = &expr.ValidationExpr{}
 			}
 			a.Validation.Minimum = &f
 		}
@@ -159,12 +159,12 @@ func Minimum(val interface{}) {
 // Maximum adds a "maximum" validation to the attribute.
 // See http://json-schema.org/latest/json-schema-validation.html#anchor17.
 func Maximum(val interface{}) {
-	if a, ok := eval.Current().(*design.AttributeExpr); ok {
+	if a, ok := eval.Current().(*expr.AttributeExpr); ok {
 		if a.Type != nil &&
-			a.Type.Kind() != design.IntKind && a.Type.Kind() != design.UIntKind &&
-			a.Type.Kind() != design.Int32Kind && a.Type.Kind() != design.UInt32Kind &&
-			a.Type.Kind() != design.Int64Kind && a.Type.Kind() != design.UInt64Kind &&
-			a.Type.Kind() != design.Float32Kind && a.Type.Kind() != design.Float64Kind {
+			a.Type.Kind() != expr.IntKind && a.Type.Kind() != expr.UIntKind &&
+			a.Type.Kind() != expr.Int32Kind && a.Type.Kind() != expr.UInt32Kind &&
+			a.Type.Kind() != expr.Int64Kind && a.Type.Kind() != expr.UInt64Kind &&
+			a.Type.Kind() != expr.Float32Kind && a.Type.Kind() != expr.Float64Kind {
 
 			incompatibleAttributeType("maximum", a.Type.Name(), "an integer or a number")
 		} else {
@@ -184,7 +184,7 @@ func Maximum(val interface{}) {
 				return
 			}
 			if a.Validation == nil {
-				a.Validation = &design.ValidationExpr{}
+				a.Validation = &expr.ValidationExpr{}
 			}
 			a.Validation.Maximum = &f
 		}
@@ -194,20 +194,20 @@ func Maximum(val interface{}) {
 // MinLength adds a "minItems" validation to the attribute.
 // See http://json-schema.org/latest/json-schema-validation.html#anchor45.
 func MinLength(val int) {
-	if a, ok := eval.Current().(*design.AttributeExpr); ok {
+	if a, ok := eval.Current().(*expr.AttributeExpr); ok {
 		if a.Type != nil {
 			kind := a.Type.Kind()
-			if kind != design.BytesKind &&
-				kind != design.StringKind &&
-				kind != design.ArrayKind &&
-				kind != design.MapKind {
+			if kind != expr.BytesKind &&
+				kind != expr.StringKind &&
+				kind != expr.ArrayKind &&
+				kind != expr.MapKind {
 
 				incompatibleAttributeType("minimum length", a.Type.Name(), "a string or an array")
 				return
 			}
 		}
 		if a.Validation == nil {
-			a.Validation = &design.ValidationExpr{}
+			a.Validation = &expr.ValidationExpr{}
 		}
 		a.Validation.MinLength = &val
 	}
@@ -216,20 +216,20 @@ func MinLength(val int) {
 // MaxLength adds a "maxItems" validation to the attribute.
 // See http://json-schema.org/latest/json-schema-validation.html#anchor42.
 func MaxLength(val int) {
-	if a, ok := eval.Current().(*design.AttributeExpr); ok {
+	if a, ok := eval.Current().(*expr.AttributeExpr); ok {
 		if a.Type != nil {
 			kind := a.Type.Kind()
-			if kind != design.BytesKind &&
-				kind != design.StringKind &&
-				kind != design.ArrayKind &&
-				kind != design.MapKind {
+			if kind != expr.BytesKind &&
+				kind != expr.StringKind &&
+				kind != expr.ArrayKind &&
+				kind != expr.MapKind {
 
 				incompatibleAttributeType("maximum length", a.Type.Name(), "a string or an array")
 				return
 			}
 		}
 		if a.Validation == nil {
-			a.Validation = &design.ValidationExpr{}
+			a.Validation = &expr.ValidationExpr{}
 		}
 		a.Validation.MaxLength = &val
 	}
@@ -238,23 +238,23 @@ func MaxLength(val int) {
 // Required adds a "required" validation to the attribute.
 // See http://json-schema.org/latest/json-schema-validation.html#anchor61.
 func Required(names ...string) {
-	var at *design.AttributeExpr
+	var at *expr.AttributeExpr
 
 	switch def := eval.Current().(type) {
-	case *design.AttributeExpr:
+	case *expr.AttributeExpr:
 		at = def
-	case *design.ResultTypeExpr:
+	case *expr.ResultTypeExpr:
 		at = def.AttributeExpr
 	default:
 		eval.IncompatibleDSL()
 		return
 	}
 
-	if at.Type != nil && at.Type.Kind() != design.ObjectKind {
+	if at.Type != nil && at.Type.Kind() != expr.ObjectKind {
 		incompatibleAttributeType("required", at.Type.Name(), "an object")
 	} else {
 		if at.Validation == nil {
-			at.Validation = &design.ValidationExpr{}
+			at.Validation = &expr.ValidationExpr{}
 		}
 		at.Validation.AddRequired(names...)
 	}

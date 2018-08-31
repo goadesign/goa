@@ -8,7 +8,7 @@ import (
 
 	"goa.design/goa/codegen"
 	"goa.design/goa/codegen/service/testdata"
-	"goa.design/goa/design"
+	"goa.design/goa/expr"
 )
 
 func TestService(t *testing.T) {
@@ -45,12 +45,12 @@ func TestService(t *testing.T) {
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
 			codegen.RunDSLWithFunc(t, c.DSL, func() {
-				design.Root.Types = []design.UserType{testdata.APayload, testdata.BPayload, testdata.AResult, testdata.BResult, testdata.ParentType, testdata.ChildType}
+				expr.Root.Types = []expr.UserType{testdata.APayload, testdata.BPayload, testdata.AResult, testdata.BResult, testdata.ParentType, testdata.ChildType}
 			})
-			if len(design.Root.Services) != 1 {
-				t.Fatalf("got %d services, expected 1", len(design.Root.Services))
+			if len(expr.Root.Services) != 1 {
+				t.Fatalf("got %d services, expected 1", len(expr.Root.Services))
 			}
-			fs := File("goa.design/goa/example", design.Root.Services[0])
+			fs := File("goa.design/goa/example", expr.Root.Services[0])
 			if fs == nil {
 				t.Fatalf("got nil file, expected not nil")
 			}

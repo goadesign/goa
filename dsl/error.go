@@ -1,8 +1,8 @@
 package dsl
 
 import (
-	"goa.design/goa/design"
 	"goa.design/goa/eval"
+	"goa.design/goa/expr"
 )
 
 // Error describes a method error return value. The description includes a
@@ -30,10 +30,10 @@ import (
 //
 func Error(name string, args ...interface{}) {
 	if len(args) == 0 {
-		args = []interface{}{design.ErrorResult}
+		args = []interface{}{expr.ErrorResult}
 	}
 	dt, desc, fn := parseAttributeArgs(nil, args...)
-	att := &design.AttributeExpr{
+	att := &expr.AttributeExpr{
 		Description: desc,
 		Type:        dt,
 	}
@@ -41,13 +41,13 @@ func Error(name string, args ...interface{}) {
 		eval.Execute(fn, att)
 	}
 	if att.Type == nil {
-		att.Type = design.ErrorResult
+		att.Type = expr.ErrorResult
 	}
-	erro := &design.ErrorExpr{AttributeExpr: att, Name: name}
+	erro := &expr.ErrorExpr{AttributeExpr: att, Name: name}
 	switch actual := eval.Current().(type) {
-	case *design.ServiceExpr:
+	case *expr.ServiceExpr:
 		actual.Errors = append(actual.Errors, erro)
-	case *design.MethodExpr:
+	case *expr.MethodExpr:
 		actual.Errors = append(actual.Errors, erro)
 	default:
 		eval.IncompatibleDSL()
@@ -69,13 +69,13 @@ func Error(name string, args ...interface{}) {
 //         })
 //    })
 func Temporary() {
-	attr, ok := eval.Current().(*design.AttributeExpr)
+	attr, ok := eval.Current().(*expr.AttributeExpr)
 	if !ok {
 		eval.IncompatibleDSL()
 		return
 	}
 	if attr.Meta == nil {
-		attr.Meta = make(design.MetaExpr)
+		attr.Meta = make(expr.MetaExpr)
 	}
 	attr.Meta["goa:error:temporary"] = nil
 }
@@ -94,13 +94,13 @@ func Temporary() {
 //	   })
 //    })
 func Timeout() {
-	attr, ok := eval.Current().(*design.AttributeExpr)
+	attr, ok := eval.Current().(*expr.AttributeExpr)
 	if !ok {
 		eval.IncompatibleDSL()
 		return
 	}
 	if attr.Meta == nil {
-		attr.Meta = make(design.MetaExpr)
+		attr.Meta = make(expr.MetaExpr)
 	}
 	attr.Meta["goa:error:timeout"] = nil
 }
@@ -120,13 +120,13 @@ func Timeout() {
 //         })
 //    })
 func Fault() {
-	attr, ok := eval.Current().(*design.AttributeExpr)
+	attr, ok := eval.Current().(*expr.AttributeExpr)
 	if !ok {
 		eval.IncompatibleDSL()
 		return
 	}
 	if attr.Meta == nil {
-		attr.Meta = make(design.MetaExpr)
+		attr.Meta = make(expr.MetaExpr)
 	}
 	attr.Meta["goa:error:fault"] = nil
 }

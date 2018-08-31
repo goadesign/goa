@@ -70,7 +70,7 @@ mkdir -p adder/design
 echo '
 package design
 
-import . "goa.design/goa/http/design"
+import . "goa.design/goa/expr"
 import . "goa.design/goa/http/dsl"
 
 var _ = API("adder", func() {

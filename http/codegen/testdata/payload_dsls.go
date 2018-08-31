@@ -1,8 +1,8 @@
 package testdata
 
 import (
-	. "goa.design/goa/design"
-	. "goa.design/goa/http/dsl"
+	. "goa.design/goa/dsl"
+	. "goa.design/goa/expr"
 )
 
 // The DSL function names follow the following pattern:

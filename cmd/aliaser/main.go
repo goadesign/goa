@@ -304,7 +304,7 @@ import (
 {{- if $.Comments }}
 {{ index $.Comments $i }}
 {{- end }}
-{{ $n }} = design.{{ $n }}
+{{ $n }} = expr.{{ $n }}
 {{- end }}
 )
 `

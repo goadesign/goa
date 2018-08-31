@@ -4,8 +4,8 @@ import (
 	"testing"
 
 	"goa.design/goa/codegen"
+	"goa.design/goa/expr"
 	"goa.design/goa/http/codegen/testdata"
-	httpdesign "goa.design/goa/http/design"
 )
 
 func TestClientCLIFiles(t *testing.T) {
@@ -42,7 +42,7 @@ func TestClientCLIFiles(t *testing.T) {
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
 			RunHTTPDSL(t, c.DSL)
-			fs := ClientCLIFiles("", httpdesign.Root)
+			fs := ClientCLIFiles("", expr.Root)
 			sections := fs[c.FileIndex].SectionTemplates
 			code := codegen.SectionCode(t, sections[c.SectionIndex])
 			if code != c.Code {

@@ -1,7 +1,7 @@
 package dsl
 
 import (
-	"goa.design/goa/design"
+	"goa.design/goa/expr"
 	"goa.design/goa/eval"
 )
 
@@ -68,22 +68,22 @@ import (
 //    }
 //
 func ConvertTo(obj interface{}) {
-	var ut design.UserType
+	var ut expr.UserType
 	switch actual := eval.Current().(type) {
-	case *design.AttributeExpr:
-		for _, t := range design.Root.Types {
+	case *expr.AttributeExpr:
+		for _, t := range expr.Root.Types {
 			if t.Attribute() == actual {
 				ut = t
 			}
 		}
-	case *design.ResultTypeExpr:
+	case *expr.ResultTypeExpr:
 		ut = actual
 	default:
 		eval.IncompatibleDSL()
 		return
 	}
-	design.Root.Conversions =
-		append(design.Root.Conversions, &design.TypeMap{User: ut, External: obj})
+	expr.Root.Conversions =
+		append(expr.Root.Conversions, &expr.TypeMap{User: ut, External: obj})
 }
 
 // CreateFrom specifies an external type that instances of the generated struct
@@ -149,20 +149,20 @@ func ConvertTo(obj interface{}) {
 //    }
 //
 func CreateFrom(obj interface{}) {
-	var ut design.UserType
+	var ut expr.UserType
 	switch actual := eval.Current().(type) {
-	case *design.AttributeExpr:
-		for _, t := range design.Root.Types {
+	case *expr.AttributeExpr:
+		for _, t := range expr.Root.Types {
 			if t.Attribute() == actual {
 				ut = t
 			}
 		}
-	case *design.ResultTypeExpr:
+	case *expr.ResultTypeExpr:
 		ut = actual
 	default:
 		eval.IncompatibleDSL()
 		return
 	}
-	design.Root.Creations =
-		append(design.Root.Creations, &design.TypeMap{User: ut, External: obj})
+	expr.Root.Creations =
+		append(expr.Root.Creations, &expr.TypeMap{User: ut, External: obj})
 }

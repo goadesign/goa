@@ -7,7 +7,7 @@ import (
 	"text/template"
 
 	"goa.design/goa/codegen"
-	"goa.design/goa/design"
+	"goa.design/goa/expr"
 )
 
 // Services holds the data computed from the design needed to generate the code
@@ -178,7 +178,7 @@ type (
 		// client sends a normal payload and server streams a result.
 		EndpointStruct string
 		// Kind is the kind of the stream (payload or result or bidirectional).
-		Kind design.StreamKind
+		Kind expr.StreamKind
 	}
 
 	// RequirementData lists the schemes and scopes defined by a single
@@ -203,7 +203,7 @@ type (
 		// Ref is the reference to the type.
 		Ref string
 		// Type is the underlying type.
-		Type design.UserType
+		Type expr.UserType
 	}
 
 	// SchemeData describes a single security scheme.
@@ -252,7 +252,7 @@ type (
 		// Scopes lists the scopes that apply to the scheme.
 		Scopes []string
 		// Flows describes the OAuth2 flows.
-		Flows []*design.FlowExpr
+		Flows []*expr.FlowExpr
 		// In indicates the request element that holds the credential.
 		In string
 	}
@@ -367,7 +367,7 @@ func (d ServicesData) Get(name string) *Data {
 	if data, ok := d[name]; ok {
 		return data
 	}
-	service := design.Root.Service(name)
+	service := expr.Root.Service(name)
 	if service == nil {
 		return nil
 	}
@@ -388,7 +388,7 @@ func (s *Data) Method(name string) *MethodData {
 
 // analyze creates the data necessary to render the code of the given service.
 // It records the user types needed by the service definition in userTypes.
-func (d ServicesData) analyze(service *design.ServiceExpr) *Data {
+func (d ServicesData) analyze(service *expr.ServiceExpr) *Data {
 	var (
 		scope      *codegen.NameScope
 		pkgName    string
@@ -413,14 +413,14 @@ func (d ServicesData) analyze(service *design.ServiceExpr) *Data {
 		seenViewed = make(map[string]*ViewedResultTypeData)
 
 		// A function to convert raw object type to user type.
-		makeUserType := func(att *design.AttributeExpr, name string) {
-			if _, ok := att.Type.(*design.Object); ok {
-				att.Type = &design.UserTypeExpr{
-					AttributeExpr: design.DupAtt(att),
+		makeUserType := func(att *expr.AttributeExpr, name string) {
+			if _, ok := att.Type.(*expr.Object); ok {
+				att.Type = &expr.UserTypeExpr{
+					AttributeExpr: expr.DupAtt(att),
 					TypeName:      name,
 				}
 			}
-			if ut, ok := att.Type.(design.UserType); ok {
+			if ut, ok := att.Type.(expr.UserType); ok {
 				seen[ut.ID()] = struct{}{}
 			}
 		}
@@ -434,9 +434,9 @@ func (d ServicesData) analyze(service *design.ServiceExpr) *Data {
 			// Create user type for raw object results
 			makeUserType(e.Result, name+"Result")
 		}
-		recordError := func(er *design.ErrorExpr) {
+		recordError := func(er *expr.ErrorExpr) {
 			errTypes = append(errTypes, collectTypes(er.AttributeExpr, seen, scope)...)
-			if er.Type == design.ErrorResult {
+			if er.Type == expr.ErrorResult {
 				if _, ok := seenErrors[er.Name]; ok {
 					return
 				}
@@ -449,8 +449,8 @@ func (d ServicesData) analyze(service *design.ServiceExpr) *Data {
 		}
 
 		// A function to collect inner user types from an attribute expression
-		collectUserTypes := func(att *design.AttributeExpr) {
-			if ut, ok := att.Type.(design.UserType); ok {
+		collectUserTypes := func(att *expr.AttributeExpr) {
+			if ut, ok := att.Type.(expr.UserType); ok {
 				att = ut.Attribute()
 			}
 			types = append(types, collectTypes(att, seen, scope)...)
@@ -461,8 +461,8 @@ func (d ServicesData) analyze(service *design.ServiceExpr) *Data {
 			collectUserTypes(m.StreamingPayload)
 			collectUserTypes(m.Result)
 			// collect projected types
-			if _, ok := m.Result.Type.(*design.ResultTypeExpr); ok {
-				projected := design.DupAtt(m.Result)
+			if _, ok := m.Result.Type.(*expr.ResultTypeExpr); ok {
+				projected := expr.DupAtt(m.Result)
 				projTypes = append(projTypes, collectProjectedTypes(projected, m.Result, seenProj, scope, viewspkg)...)
 			}
 			for _, er := range m.Errors {
@@ -471,9 +471,9 @@ func (d ServicesData) analyze(service *design.ServiceExpr) *Data {
 		}
 	}
 
-	for _, t := range design.Root.Types {
+	for _, t := range expr.Root.Types {
 		if svcs, ok := t.Attribute().Meta["type:generate:force"]; ok {
-			att := &design.AttributeExpr{Type: t}
+			att := &expr.AttributeExpr{Type: t}
 			if len(svcs) > 0 {
 				// Force generate type only in the specified services
 				for _, svc := range svcs {
@@ -496,8 +496,8 @@ func (d ServicesData) analyze(service *design.ServiceExpr) *Data {
 	{
 		methods = make([]*MethodData, len(service.Methods))
 		for i, e := range service.Methods {
-			m := buildMethodData(e, pkgName, scope)
-			if rt, ok := e.Result.Type.(*design.ResultTypeExpr); ok {
+			m := buildMethodData(e, pkgName, service, scope)
+			if rt, ok := e.Result.Type.(*expr.ResultTypeExpr); ok {
 				if vrt, ok := seenViewed[m.Result]; ok {
 					m.ViewedResult = vrt
 				} else {
@@ -559,13 +559,13 @@ func (d ServicesData) analyze(service *design.ServiceExpr) *Data {
 
 // collectTypes recurses through the attribute to gather all user types and
 // records them in userTypes.
-func collectTypes(at *design.AttributeExpr, seen map[string]struct{}, scope *codegen.NameScope) (data []*UserTypeData) {
-	if at == nil || at.Type == design.Empty {
+func collectTypes(at *expr.AttributeExpr, seen map[string]struct{}, scope *codegen.NameScope) (data []*UserTypeData) {
+	if at == nil || at.Type == expr.Empty {
 		return
 	}
-	collect := func(at *design.AttributeExpr) []*UserTypeData { return collectTypes(at, seen, scope) }
+	collect := func(at *expr.AttributeExpr) []*UserTypeData { return collectTypes(at, seen, scope) }
 	switch dt := at.Type.(type) {
-	case design.UserType:
+	case expr.UserType:
 		if _, ok := seen[dt.ID()]; ok {
 			return nil
 		}
@@ -579,13 +579,13 @@ func collectTypes(at *design.AttributeExpr, seen map[string]struct{}, scope *cod
 		})
 		seen[dt.ID()] = struct{}{}
 		data = append(data, collect(dt.Attribute())...)
-	case *design.Object:
+	case *expr.Object:
 		for _, nat := range *dt {
 			data = append(data, collect(nat.Attribute)...)
 		}
-	case *design.Array:
+	case *expr.Array:
 		data = append(data, collect(dt.ElemType)...)
-	case *design.Map:
+	case *expr.Map:
 		data = append(data, collect(dt.KeyType)...)
 		data = append(data, collect(dt.ElemType)...)
 	}
@@ -593,7 +593,7 @@ func collectTypes(at *design.AttributeExpr, seen map[string]struct{}, scope *cod
 }
 
 // buildErrorInitData creates the data needed to generate code around endpoint error return values.
-func buildErrorInitData(er *design.ErrorExpr, scope *codegen.NameScope) *ErrorInitData {
+func buildErrorInitData(er *expr.ErrorExpr, scope *codegen.NameScope) *ErrorInitData {
 	_, temporary := er.AttributeExpr.Meta["goa:error:temporary"]
 	_, timeout := er.AttributeExpr.Meta["goa:error:timeout"]
 	_, fault := er.AttributeExpr.Meta["goa:error:fault"]
@@ -611,7 +611,7 @@ func buildErrorInitData(er *design.ErrorExpr, scope *codegen.NameScope) *ErrorIn
 
 // buildMethodData creates the data needed to render the given endpoint. It
 // records the user types needed by the service definition in userTypes.
-func buildMethodData(m *design.MethodExpr, svcPkgName string, scope *codegen.NameScope) *MethodData {
+func buildMethodData(m *expr.MethodExpr, svcPkgName string, service *expr.ServiceExpr, scope *codegen.NameScope) *MethodData {
 	var (
 		vname        string
 		desc         string
@@ -641,10 +641,10 @@ func buildMethodData(m *design.MethodExpr, svcPkgName string, scope *codegen.Nam
 	if desc == "" {
 		desc = codegen.Goify(m.Name, true) + " implements " + m.Name + "."
 	}
-	if m.Payload.Type != design.Empty {
+	if m.Payload.Type != expr.Empty {
 		payloadName = scope.GoTypeName(m.Payload)
 		payloadRef = scope.GoTypeRef(m.Payload)
-		if dt, ok := m.Payload.Type.(design.UserType); ok {
+		if dt, ok := m.Payload.Type.(expr.UserType); ok {
 			payloadDef = scope.GoTypeDef(dt.Attribute(), true)
 		}
 		payloadDesc = m.Payload.Description
@@ -652,12 +652,12 @@ func buildMethodData(m *design.MethodExpr, svcPkgName string, scope *codegen.Nam
 			payloadDesc = fmt.Sprintf("%s is the payload type of the %s service %s method.",
 				payloadName, m.Service.Name, m.Name)
 		}
-		payloadEx = m.Payload.Example(design.Root.API.Random())
+		payloadEx = m.Payload.Example(expr.Root.API.Random())
 	}
-	if m.StreamingPayload.Type != design.Empty {
+	if m.StreamingPayload.Type != expr.Empty {
 		spayloadName = scope.GoTypeName(m.StreamingPayload)
 		spayloadRef = scope.GoTypeRef(m.StreamingPayload)
-		if dt, ok := m.StreamingPayload.Type.(design.UserType); ok {
+		if dt, ok := m.StreamingPayload.Type.(expr.UserType); ok {
 			spayloadDef = scope.GoTypeDef(dt.Attribute(), true)
 		}
 		spayloadDesc = m.StreamingPayload.Description
@@ -665,12 +665,12 @@ func buildMethodData(m *design.MethodExpr, svcPkgName string, scope *codegen.Nam
 			spayloadDesc = fmt.Sprintf("%s is the streaming payload type of the %s service %s method.",
 				spayloadName, m.Service.Name, m.Name)
 		}
-		spayloadEx = m.StreamingPayload.Example(design.Root.API.Random())
+		spayloadEx = m.StreamingPayload.Example(expr.Root.API.Random())
 	}
-	if m.Result.Type != design.Empty {
+	if m.Result.Type != expr.Empty {
 		rname = scope.GoTypeName(m.Result)
 		resultRef = scope.GoTypeRef(m.Result)
-		if dt, ok := m.Result.Type.(design.UserType); ok {
+		if dt, ok := m.Result.Type.(expr.UserType); ok {
 			resultDef = scope.GoTypeDef(dt.Attribute(), true)
 		}
 		resultDesc = m.Result.Description
@@ -678,7 +678,7 @@ func buildMethodData(m *design.MethodExpr, svcPkgName string, scope *codegen.Nam
 			resultDesc = fmt.Sprintf("%s is the result type of the %s service %s method.",
 				rname, m.Service.Name, m.Name)
 		}
-		resultEx = m.Result.Example(design.Root.API.Random())
+		resultEx = m.Result.Example(expr.Root.API.Random())
 	}
 	if len(m.Errors) > 0 {
 		errors = make([]*ErrorInitData, len(m.Errors))
@@ -707,9 +707,9 @@ func buildMethodData(m *design.MethodExpr, svcPkgName string, scope *codegen.Nam
 			RecvTypeName: rname,
 			RecvTypeRef:  resultRef,
 		}
-		if m.Stream == design.ClientStreamKind || m.Stream == design.BidirectionalStreamKind {
+		if m.Stream == expr.ClientStreamKind || m.Stream == expr.BidirectionalStreamKind {
 			switch m.Stream {
-			case design.ClientStreamKind:
+			case expr.ClientStreamKind:
 				if resultRef != "" {
 					svrStream.SendName = "SendAndClose"
 					svrStream.SendDesc = fmt.Sprintf("SendAndClose streams instances of %q and closes the stream.", rname)
@@ -719,7 +719,7 @@ func buildMethodData(m *design.MethodExpr, svcPkgName string, scope *codegen.Nam
 				} else {
 					cliStream.MustClose = true
 				}
-			case design.BidirectionalStreamKind:
+			case expr.BidirectionalStreamKind:
 				cliStream.MustClose = true
 			}
 			svrStream.RecvName = "Recv"
@@ -777,16 +777,16 @@ func buildMethodData(m *design.MethodExpr, svcPkgName string, scope *codegen.Nam
 	}
 }
 
-// buildSchemeData builds the scheme data for the given scheme and method expressions.
-func buildSchemeData(s *design.SchemeExpr, m *design.MethodExpr) *SchemeData {
-	if !design.IsObject(m.Payload.Type) {
+// buildSchemeData builds the scheme data for the given scheme and method expr.
+func buildSchemeData(s *expr.SchemeExpr, m *expr.MethodExpr) *SchemeData {
+	if !expr.IsObject(m.Payload.Type) {
 		return nil
 	}
 	switch s.Kind {
-	case design.BasicAuthKind:
-		userAtt := design.TaggedAttribute(m.Payload, "security:username")
+	case expr.BasicAuthKind:
+		userAtt := expr.TaggedAttribute(m.Payload, "security:username")
 		user := codegen.Goify(userAtt, true)
-		passAtt := design.TaggedAttribute(m.Payload, "security:password")
+		passAtt := expr.TaggedAttribute(m.Payload, "security:password")
 		pass := codegen.Goify(passAtt, true)
 		return &SchemeData{
 			Type:             s.Kind.String(),
@@ -800,8 +800,8 @@ func buildSchemeData(s *design.SchemeExpr, m *design.MethodExpr) *SchemeData {
 			PasswordPointer:  m.Payload.IsPrimitivePointer(passAtt, true),
 			PasswordRequired: m.Payload.IsRequired(passAtt),
 		}
-	case design.APIKeyKind:
-		if keyAtt := design.TaggedAttribute(m.Payload, "security:apikey:"+s.SchemeName); keyAtt != "" {
+	case expr.APIKeyKind:
+		if keyAtt := expr.TaggedAttribute(m.Payload, "security:apikey:"+s.SchemeName); keyAtt != "" {
 			key := codegen.Goify(keyAtt, true)
 			return &SchemeData{
 				Type:         s.Kind.String(),
@@ -814,8 +814,8 @@ func buildSchemeData(s *design.SchemeExpr, m *design.MethodExpr) *SchemeData {
 				In:           s.In,
 			}
 		}
-	case design.JWTKind:
-		if keyAtt := design.TaggedAttribute(m.Payload, "security:token"); keyAtt != "" {
+	case expr.JWTKind:
+		if keyAtt := expr.TaggedAttribute(m.Payload, "security:token"); keyAtt != "" {
 			key := codegen.Goify(keyAtt, true)
 			var scopes []string
 			if len(s.Scopes) > 0 {
@@ -836,8 +836,8 @@ func buildSchemeData(s *design.SchemeExpr, m *design.MethodExpr) *SchemeData {
 				In:           s.In,
 			}
 		}
-	case design.OAuth2Kind:
-		if keyAtt := design.TaggedAttribute(m.Payload, "security:accesstoken"); keyAtt != "" {
+	case expr.OAuth2Kind:
+		if keyAtt := expr.TaggedAttribute(m.Payload, "security:accesstoken"); keyAtt != "" {
 			key := codegen.Goify(keyAtt, true)
 			var scopes []string
 			if len(s.Scopes) > 0 {
@@ -866,13 +866,13 @@ func buildSchemeData(s *design.SchemeExpr, m *design.MethodExpr) *SchemeData {
 // collectProjectedTypes builds a projected type for every user type found
 // when recursing through the attributes. It stores the projected types in
 // data.
-func collectProjectedTypes(projected, att *design.AttributeExpr, seen map[string]*ProjectedTypeData, scope *codegen.NameScope, viewspkg string) (data []*ProjectedTypeData) {
-	collect := func(projected, att *design.AttributeExpr) []*ProjectedTypeData {
+func collectProjectedTypes(projected, att *expr.AttributeExpr, seen map[string]*ProjectedTypeData, scope *codegen.NameScope, viewspkg string) (data []*ProjectedTypeData) {
+	collect := func(projected, att *expr.AttributeExpr) []*ProjectedTypeData {
 		return collectProjectedTypes(projected, att, seen, scope, viewspkg)
 	}
 	switch pt := projected.Type.(type) {
-	case design.UserType:
-		dt := att.Type.(design.UserType)
+	case expr.UserType:
+		dt := att.Type.(expr.UserType)
 		if pd, ok := seen[dt.ID()]; ok {
 			// a projected type is already created for this user type. We change the
 			// attribute type to this seen projected type. The seen projected type
@@ -895,19 +895,19 @@ func collectProjectedTypes(projected, att *design.AttributeExpr, seen map[string
 		projected.Type = pd.Type
 		data = append(data, pd)
 		data = append(data, types...)
-	case *design.Array:
-		dt := att.Type.(*design.Array)
+	case *expr.Array:
+		dt := att.Type.(*expr.Array)
 		data = append(data, collect(pt.ElemType, dt.ElemType)...)
-	case *design.Map:
-		dt := att.Type.(*design.Map)
+	case *expr.Map:
+		dt := att.Type.(*expr.Map)
 		data = append(data, collect(pt.KeyType, dt.KeyType)...)
 		data = append(data, collect(pt.ElemType, dt.ElemType)...)
-	case *design.Object:
-		dt := att.Type.(*design.Object)
+	case *expr.Object:
+		dt := att.Type.(*expr.Object)
 		for _, n := range *pt {
 			data = append(data, collect(n.Attribute, dt.Attribute(n.Name))...)
 		}
-	case design.Primitive:
+	case expr.Primitive:
 		projected.ForcePointer = true
 	}
 	return
@@ -915,13 +915,13 @@ func collectProjectedTypes(projected, att *design.AttributeExpr, seen map[string
 
 // buildProjectedType builds projected type for the given attribute of type
 // user type.
-func buildProjectedType(projected, att *design.AttributeExpr, scope *codegen.NameScope, viewspkg string) *ProjectedTypeData {
+func buildProjectedType(projected, att *expr.AttributeExpr, scope *codegen.NameScope, viewspkg string) *ProjectedTypeData {
 	var (
 		projections []*InitData
 		typeInits   []*InitData
 	)
-	pt := projected.Type.(design.UserType)
-	if _, isrt := pt.(*design.ResultTypeExpr); isrt {
+	pt := projected.Type.(expr.UserType)
+	if _, isrt := pt.(*expr.ResultTypeExpr); isrt {
 		typeInits = buildTypeInits(projected, att, scope, viewspkg)
 		projections = buildProjections(projected, att, scope, viewspkg)
 	}
@@ -944,8 +944,8 @@ func buildProjectedType(projected, att *design.AttributeExpr, scope *codegen.Nam
 
 // buildViewedResultType builds a viewed result type from the given result type
 // and projected type.
-func buildViewedResultType(att *design.AttributeExpr, projected design.UserType, scope *codegen.NameScope, viewspkg string) *ViewedResultTypeData {
-	rt := att.Type.(*design.ResultTypeExpr)
+func buildViewedResultType(att *expr.AttributeExpr, projected expr.UserType, scope *codegen.NameScope, viewspkg string) *ViewedResultTypeData {
+	rt := att.Type.(*expr.ResultTypeExpr)
 	var (
 		views    []*ViewData
 		resinit  *InitData
@@ -957,11 +957,11 @@ func buildViewedResultType(att *design.AttributeExpr, projected design.UserType,
 
 		resvar  = scope.GoTypeName(att)
 		resref  = scope.GoTypeRef(att)
-		isarr   = design.IsArray(att.Type)
+		isarr   = expr.IsArray(att.Type)
 		vresref = scope.GoFullTypeRef(att, viewspkg)
 	)
 	if !rt.HasMultipleViews() {
-		viewName = design.DefaultView
+		viewName = expr.DefaultView
 	}
 	if v, ok := att.Meta["view"]; ok && len(v) > 0 {
 		viewName = v[0]
@@ -1001,7 +1001,7 @@ func buildViewedResultType(att *design.AttributeExpr, projected design.UserType,
 		"ReturnTypeRef": vresref,
 		"IsCollection":  isarr,
 		"TargetType":    scope.GoFullTypeName(att, viewspkg),
-		"InitName":      "new" + scope.GoTypeName(&design.AttributeExpr{Type: projected}),
+		"InitName":      "new" + scope.GoTypeName(&expr.AttributeExpr{Type: projected}),
 	}
 	if err := initTypeCodeTmpl.Execute(&buf, data); err != nil {
 		panic(err) // bug
@@ -1065,21 +1065,21 @@ func buildViewedResultType(att *design.AttributeExpr, projected design.UserType,
 
 // wrapProjected builds a viewed result type by wrapping the given projected
 // in a result type with "projected" and "view" attributes.
-func wrapProjected(projected design.UserType) design.UserType {
-	rt := projected.(*design.ResultTypeExpr)
-	pratt := &design.NamedAttributeExpr{
+func wrapProjected(projected expr.UserType) expr.UserType {
+	rt := projected.(*expr.ResultTypeExpr)
+	pratt := &expr.NamedAttributeExpr{
 		Name:      "projected",
-		Attribute: &design.AttributeExpr{Type: rt, Description: "Type to project"},
+		Attribute: &expr.AttributeExpr{Type: rt, Description: "Type to project"},
 	}
-	prview := &design.NamedAttributeExpr{
+	prview := &expr.NamedAttributeExpr{
 		Name:      "view",
-		Attribute: &design.AttributeExpr{Type: design.String, Description: "View to render"},
+		Attribute: &expr.AttributeExpr{Type: expr.String, Description: "View to render"},
 	}
-	return &design.ResultTypeExpr{
-		UserTypeExpr: &design.UserTypeExpr{
-			AttributeExpr: &design.AttributeExpr{
-				Type:       &design.Object{pratt, prview},
-				Validation: &design.ValidationExpr{Required: []string{"projected", "view"}},
+	return &expr.ResultTypeExpr{
+		UserTypeExpr: &expr.UserTypeExpr{
+			AttributeExpr: &expr.AttributeExpr{
+				Type:       &expr.Object{pratt, prview},
+				Validation: &expr.ValidationExpr{Required: []string{"projected", "view"}},
 			},
 			TypeName: rt.TypeName,
 		},
@@ -1090,43 +1090,43 @@ func wrapProjected(projected design.UserType) design.UserType {
 
 // buildTypeInits builds the data to generate the constructor code to
 // initialize a service result type from a projected type.
-func buildTypeInits(projected, att *design.AttributeExpr, scope *codegen.NameScope, viewspkg string) []*InitData {
+func buildTypeInits(projected, att *expr.AttributeExpr, scope *codegen.NameScope, viewspkg string) []*InitData {
 	var (
 		init []*InitData
 
 		resvar = scope.GoTypeName(att)
 	)
-	prt := projected.Type.(*design.ResultTypeExpr)
-	pobj := design.AsObject(projected.Type)
-	parr := design.AsArray(projected.Type)
+	prt := projected.Type.(*expr.ResultTypeExpr)
+	pobj := expr.AsObject(projected.Type)
+	parr := expr.AsArray(projected.Type)
 	if parr != nil {
-		pobj = design.AsObject(parr.ElemType.Type)
+		pobj = expr.AsObject(parr.ElemType.Type)
 	}
 	init = make([]*InitData, 0, len(prt.Views))
 	for _, view := range prt.Views {
-		var typ design.DataType
-		obj := &design.Object{}
+		var typ expr.DataType
+		obj := &expr.Object{}
 		// Select only the attributes from the given view
-		for _, n := range *view.Type.(*design.Object) {
+		for _, n := range *view.Type.(*expr.Object) {
 			if attr := pobj.Attribute(n.Name); attr != nil {
 				obj.Set(n.Name, attr)
 			}
 		}
 		typ = obj
 		if parr != nil {
-			typ = &design.Array{ElemType: &design.AttributeExpr{
-				Type: &design.ResultTypeExpr{
-					UserTypeExpr: &design.UserTypeExpr{
-						AttributeExpr: &design.AttributeExpr{Type: obj},
+			typ = &expr.Array{ElemType: &expr.AttributeExpr{
+				Type: &expr.ResultTypeExpr{
+					UserTypeExpr: &expr.UserTypeExpr{
+						AttributeExpr: &expr.AttributeExpr{Type: obj},
 						TypeName:      scope.GoTypeName(parr.ElemType),
 					},
 				},
 			}}
 		}
-		src := &design.AttributeExpr{
-			Type: &design.ResultTypeExpr{
-				UserTypeExpr: &design.UserTypeExpr{
-					AttributeExpr: &design.AttributeExpr{Type: typ},
+		src := &expr.AttributeExpr{
+			Type: &expr.ResultTypeExpr{
+				UserTypeExpr: &expr.UserTypeExpr{
+					AttributeExpr: &expr.AttributeExpr{Type: typ},
 					TypeName:      scope.GoTypeName(projected),
 				},
 				Views:      prt.Views,
@@ -1135,7 +1135,7 @@ func buildTypeInits(projected, att *design.AttributeExpr, scope *codegen.NameSco
 		}
 		code, helpers := buildConstructorCode(src, att, "vres", "res", viewspkg, "", view.Name, scope, true)
 		name := "new" + resvar
-		if view.Name != design.DefaultView {
+		if view.Name != expr.DefaultView {
 			name += codegen.Goify(view.Name, true)
 		}
 		init = append(init, &InitData{
@@ -1152,43 +1152,43 @@ func buildTypeInits(projected, att *design.AttributeExpr, scope *codegen.NameSco
 
 // buildProjections builds the data to generate the constructor code to
 // project a result type to a projected type based on a view.
-func buildProjections(projected, att *design.AttributeExpr, scope *codegen.NameScope, viewspkg string) []*InitData {
+func buildProjections(projected, att *expr.AttributeExpr, scope *codegen.NameScope, viewspkg string) []*InitData {
 	var projections []*InitData
-	rt := att.Type.(*design.ResultTypeExpr)
+	rt := att.Type.(*expr.ResultTypeExpr)
 	projections = make([]*InitData, 0, len(rt.Views))
 	for _, view := range rt.Views {
 		var (
-			typ design.DataType
+			typ expr.DataType
 
 			tname = scope.GoTypeName(projected)
 		)
-		obj := &design.Object{}
-		pobj := design.AsObject(projected.Type)
-		parr := design.AsArray(projected.Type)
+		obj := &expr.Object{}
+		pobj := expr.AsObject(projected.Type)
+		parr := expr.AsArray(projected.Type)
 		if parr != nil {
-			pobj = design.AsObject(parr.ElemType.Type)
+			pobj = expr.AsObject(parr.ElemType.Type)
 		}
 		// Select only the attributes from the given view
-		for _, n := range *view.Type.(*design.Object) {
+		for _, n := range *view.Type.(*expr.Object) {
 			if attr := pobj.Attribute(n.Name); attr != nil {
 				obj.Set(n.Name, attr)
 			}
 		}
 		typ = obj
 		if parr != nil {
-			typ = &design.Array{ElemType: &design.AttributeExpr{
-				Type: &design.ResultTypeExpr{
-					UserTypeExpr: &design.UserTypeExpr{
-						AttributeExpr: &design.AttributeExpr{Type: obj},
+			typ = &expr.Array{ElemType: &expr.AttributeExpr{
+				Type: &expr.ResultTypeExpr{
+					UserTypeExpr: &expr.UserTypeExpr{
+						AttributeExpr: &expr.AttributeExpr{Type: obj},
 						TypeName:      parr.ElemType.Type.Name(),
 					},
 				},
 			}}
 		}
-		tgt := &design.AttributeExpr{
-			Type: &design.ResultTypeExpr{
-				UserTypeExpr: &design.UserTypeExpr{
-					AttributeExpr: &design.AttributeExpr{Type: typ},
+		tgt := &expr.AttributeExpr{
+			Type: &expr.ResultTypeExpr{
+				UserTypeExpr: &expr.UserTypeExpr{
+					AttributeExpr: &expr.AttributeExpr{Type: typ},
 					TypeName:      projected.Type.Name(),
 				},
 				Views:      rt.Views,
@@ -1197,7 +1197,7 @@ func buildProjections(projected, att *design.AttributeExpr, scope *codegen.NameS
 		}
 		code, helpers := buildConstructorCode(att, tgt, "res", "vres", "", viewspkg, view.Name, scope, false)
 		name := "new" + tname
-		if view.Name != design.DefaultView {
+		if view.Name != expr.DefaultView {
 			name += codegen.Goify(view.Name, true)
 		}
 		projections = append(projections, &InitData{
@@ -1214,17 +1214,17 @@ func buildProjections(projected, att *design.AttributeExpr, scope *codegen.NameS
 
 // buildValidationData builds the data required to generate validations for the
 // projected types.
-func buildValidations(projected *design.AttributeExpr, scope *codegen.NameScope) []*ValidateData {
+func buildValidations(projected *expr.AttributeExpr, scope *codegen.NameScope) []*ValidateData {
 	var (
 		validations []*ValidateData
 
 		ref   = scope.GoTypeRef(projected)
 		tname = scope.GoTypeName(projected)
 	)
-	if rt, isrt := projected.Type.(*design.ResultTypeExpr); isrt {
+	if rt, isrt := projected.Type.(*expr.ResultTypeExpr); isrt {
 		// for result types we create a validation function containing view
 		// specific validation logic for each view
-		isarr := design.IsArray(projected.Type)
+		isarr := expr.IsArray(projected.Type)
 		for _, view := range rt.Views {
 			var (
 				data map[string]interface{}
@@ -1244,17 +1244,17 @@ func buildValidations(projected *design.AttributeExpr, scope *codegen.NameScope)
 				data["Source"] = "item"
 				data["ValidateVar"] = name
 			} else {
-				o := &design.Object{}
-				sobj := design.AsObject(projected.Type)
+				o := &expr.Object{}
+				sobj := expr.AsObject(projected.Type)
 				fields := []map[string]interface{}{}
 				// select only the attributes from the given view expression
-				for _, n := range *view.Type.(*design.Object) {
+				for _, n := range *view.Type.(*expr.Object) {
 					if attr := sobj.Attribute(n.Name); attr != nil {
-						if rt2, ok := attr.Type.(*design.ResultTypeExpr); ok {
+						if rt2, ok := attr.Type.(*expr.ResultTypeExpr); ok {
 							// use explicitly specified view (if any) for the attribute,
 							// otherwise use default
 							vw := ""
-							if v, ok := n.Attribute.Meta["view"]; ok && len(v) > 0 && v[0] != design.DefaultView {
+							if v, ok := n.Attribute.Meta["view"]; ok && len(v) > 0 && v[0] != expr.DefaultView {
 								vw = v[0]
 							}
 							fields = append(fields, map[string]interface{}{
@@ -1267,7 +1267,7 @@ func buildValidations(projected *design.AttributeExpr, scope *codegen.NameScope)
 						}
 					}
 				}
-				data["Validate"] = codegen.RecursiveValidationCode(&design.AttributeExpr{Type: o, Validation: rt.Validation}, false, true, false, "result")
+				data["Validate"] = codegen.RecursiveValidationCode(&expr.AttributeExpr{Type: o, Validation: rt.Validation}, false, true, false, "result")
 				data["Fields"] = fields
 			}
 			if err := validateTypeCodeTmpl.Execute(&buf, data); err != nil {
@@ -1315,14 +1315,14 @@ func buildValidations(projected *design.AttributeExpr, scope *codegen.NameScope)
 // unmarshal if true indicates that the code generated is to convert a
 // projected type to a service type. If false, the code generated is to convert
 // a service type to a projected type.
-func buildConstructorCode(src, tgt *design.AttributeExpr, srcvar, tgtvar, srcpkg, tgtpkg string, view string, scope *codegen.NameScope, unmarshal bool) (string, []*codegen.TransformFunctionData) {
+func buildConstructorCode(src, tgt *expr.AttributeExpr, srcvar, tgtvar, srcpkg, tgtpkg string, view string, scope *codegen.NameScope, unmarshal bool) (string, []*codegen.TransformFunctionData) {
 	var (
 		code    string
 		err     error
 		helpers []*codegen.TransformFunctionData
 	)
-	rt := src.Type.(*design.ResultTypeExpr)
-	arr := design.AsArray(tgt.Type)
+	rt := src.Type.(*expr.ResultTypeExpr)
+	arr := expr.AsArray(tgt.Type)
 	data := map[string]interface{}{
 		"ArgVar":       srcvar,
 		"ReturnVar":    tgtvar,
@@ -1331,17 +1331,17 @@ func buildConstructorCode(src, tgt *design.AttributeExpr, srcvar, tgtvar, srcpkg
 	}
 	if arr != nil {
 		init := "new" + scope.GoTypeName(arr.ElemType)
-		if view != "" && view != design.DefaultView {
+		if view != "" && view != expr.DefaultView {
 			init += codegen.Goify(view, true)
 		}
 		data["InitName"] = init
 	} else {
 		// service type to projected type (or vice versa)
-		trts := &design.Object{}
-		t := design.DupAtt(tgt)
-		tobj := design.AsObject(t.Type)
+		trts := &expr.Object{}
+		t := expr.DupAtt(tgt)
+		tobj := expr.AsObject(t.Type)
 		for _, n := range *tobj {
-			if _, ok := n.Attribute.Type.(*design.ResultTypeExpr); ok {
+			if _, ok := n.Attribute.Type.(*expr.ResultTypeExpr); ok {
 				trts.Set(n.Name, n.Attribute)
 				tobj.Delete(n.Name)
 			}
@@ -1365,7 +1365,7 @@ func buildConstructorCode(src, tgt *design.AttributeExpr, srcvar, tgtvar, srcpkg
 			if view != "" {
 				v := ""
 				if vatt := rt.View(view).AttributeExpr.Find(n.Name); vatt != nil {
-					if attv, ok := vatt.Meta["view"]; ok && len(attv) > 0 && attv[0] != design.DefaultView {
+					if attv, ok := vatt.Meta["view"]; ok && len(attv) > 0 && attv[0] != expr.DefaultView {
 						// view is explicitly set for the result type on the attribute
 						v = attv[0]
 					}

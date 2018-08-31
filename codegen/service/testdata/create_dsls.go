@@ -3,8 +3,8 @@ package testdata
 import (
 	"goa.design/goa/codegen/service/testdata/alias-external"
 	"goa.design/goa/codegen/service/testdata/external"
-	. "goa.design/goa/design"
 	. "goa.design/goa/dsl"
+	. "goa.design/goa/expr"
 )
 
 var CreateStringDSL = func() {

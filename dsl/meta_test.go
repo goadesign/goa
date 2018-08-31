@@ -3,9 +3,9 @@ package dsl_test
 import (
 	"testing"
 
-	"goa.design/goa/design"
 	. "goa.design/goa/dsl"
 	"goa.design/goa/eval"
+	"goa.design/goa/expr"
 )
 
 func TestMetaData(t *testing.T) {
@@ -13,14 +13,14 @@ func TestMetaData(t *testing.T) {
 		Expr        eval.Expression
 		Name        string
 		Values      []string
-		MetaFunc    func(e eval.Expression) design.MetaExpr
+		MetaFunc    func(e eval.Expression) expr.MetaExpr
 		Invocations int
 	}{
-		"userType":   {&design.UserTypeExpr{AttributeExpr: &design.AttributeExpr{}}, "swagger:summary", []string{"Short summary of what endpoint does"}, userTypeMeta, 1},
-		"api":        {&design.APIExpr{}, "meta", []string{"some meta"}, apiExprMeta, 2},
-		"attribute":  {&design.AttributeExpr{}, "attribute_meta", []string{"attr meta", "more attr meta"}, attributeMeta, 2},
-		"method":     {&design.MethodExpr{Name: "testmethod"}, "method", []string{"method meta"}, methodMeta, 2},
-		"resultType": {&design.ResultTypeExpr{UserTypeExpr: &design.UserTypeExpr{AttributeExpr: &design.AttributeExpr{}}}, "resultTypeMeta", []string{"result type meta"}, resultTypeMeta, 2},
+		"userType":   {&expr.UserTypeExpr{AttributeExpr: &expr.AttributeExpr{}}, "swagger:summary", []string{"Short summary of what endpoint does"}, userTypeMeta, 1},
+		"api":        {&expr.APIExpr{}, "metadata", []string{"some metadata"}, apiExprMeta, 2},
+		"attribute":  {&expr.AttributeExpr{}, "attribute_meta", []string{"attr meta", "more attr meta"}, attributeMeta, 2},
+		"method":     {&expr.MethodExpr{Name: "testmethod"}, "method", []string{"method meta"}, methodMeta, 2},
+		"resultType": {&expr.ResultTypeExpr{UserTypeExpr: &expr.UserTypeExpr{AttributeExpr: &expr.AttributeExpr{}}}, "resultTypeMeta", []string{"result type meta"}, resultTypeMeta, 2},
 	}
 
 	for k, tc := range cases {
@@ -58,8 +58,8 @@ func hasValue(vals []string, val string) bool {
 	}
 	return false
 }
-func apiExprMeta(e eval.Expression) design.MetaExpr    { return e.(*design.APIExpr).Meta }
-func userTypeMeta(e eval.Expression) design.MetaExpr   { return e.(*design.UserTypeExpr).Meta }
-func attributeMeta(e eval.Expression) design.MetaExpr  { return e.(*design.AttributeExpr).Meta }
-func methodMeta(e eval.Expression) design.MetaExpr     { return e.(*design.MethodExpr).Meta }
-func resultTypeMeta(e eval.Expression) design.MetaExpr { return e.(*design.ResultTypeExpr).Meta }
+func apiExprMeta(e eval.Expression) expr.MetaExpr    { return e.(*expr.APIExpr).Meta }
+func userTypeMeta(e eval.Expression) expr.MetaExpr   { return e.(*expr.UserTypeExpr).Meta }
+func attributeMeta(e eval.Expression) expr.MetaExpr  { return e.(*expr.AttributeExpr).Meta }
+func methodMeta(e eval.Expression) expr.MetaExpr     { return e.(*expr.MethodExpr).Meta }
+func resultTypeMeta(e eval.Expression) expr.MetaExpr { return e.(*expr.ResultTypeExpr).Meta }

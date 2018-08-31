@@ -1,8 +1,8 @@
 package dsl
 
 import (
-	"goa.design/goa/design"
 	"goa.design/goa/eval"
+	"goa.design/goa/expr"
 )
 
 // Meta is a set of key/value pairs that can be assigned to an object. Each
@@ -128,7 +128,7 @@ import (
 //        })
 //
 func Meta(name string, value ...string) {
-	appendMeta := func(meta design.MetaExpr, name string, value ...string) design.MetaExpr {
+	appendMeta := func(meta expr.MetaExpr, name string, value ...string) expr.MetaExpr {
 		if meta == nil {
 			meta = make(map[string][]string)
 		}
@@ -137,18 +137,18 @@ func Meta(name string, value ...string) {
 	}
 
 	switch expr := eval.Current().(type) {
-	case design.CompositeExpr:
+	case expr.CompositeExpr:
 		att := expr.Attribute()
 		att.Meta = appendMeta(att.Meta, name, value...)
-	case *design.AttributeExpr:
+	case *expr.AttributeExpr:
 		expr.Meta = appendMeta(expr.Meta, name, value...)
-	case *design.ResultTypeExpr:
+	case *expr.ResultTypeExpr:
 		expr.Meta = appendMeta(expr.Meta, name, value...)
-	case *design.MethodExpr:
+	case *expr.MethodExpr:
 		expr.Meta = appendMeta(expr.Meta, name, value...)
-	case *design.ServiceExpr:
+	case *expr.ServiceExpr:
 		expr.Meta = appendMeta(expr.Meta, name, value...)
-	case *design.APIExpr:
+	case *expr.APIExpr:
 		expr.Meta = appendMeta(expr.Meta, name, value...)
 	default:
 		eval.IncompatibleDSL()

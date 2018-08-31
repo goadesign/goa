@@ -5,8 +5,8 @@ import (
 	"mime"
 	"strings"
 
-	"goa.design/goa/design"
 	"goa.design/goa/eval"
+	"goa.design/goa/expr"
 )
 
 // Counter used to create unique result type names for identifier-less result
@@ -61,7 +61,7 @@ var resultTypeCount int
 //        })
 //     })
 //
-func ResultType(identifier string, fn func()) *design.ResultTypeExpr {
+func ResultType(identifier string, fn func()) *expr.ResultTypeExpr {
 	if _, ok := eval.Current().(eval.TopExpr); !ok {
 		eval.IncompatibleDSL()
 		return nil
@@ -76,10 +76,10 @@ func ResultType(identifier string, fn func()) *design.ResultTypeExpr {
 		// one run.
 		identifier = "text/plain"
 	}
-	canonicalID := design.CanonicalIdentifier(identifier)
+	canonicalID := expr.CanonicalIdentifier(identifier)
 	// Validate that result type identifier doesn't clash
-	for _, rt := range design.Root.ResultTypes {
-		if re := rt.(*design.ResultTypeExpr); re.Identifier == canonicalID {
+	for _, rt := range expr.Root.ResultTypes {
+		if re := rt.(*expr.ResultTypeExpr); re.Identifier == canonicalID {
 			eval.ReportError(
 				"result type %#v with canonical identifier %#v is defined twice",
 				identifier, canonicalID)
@@ -107,8 +107,8 @@ func ResultType(identifier string, fn func()) *design.ResultTypeExpr {
 		typeName = fmt.Sprintf("ResultType%d", resultTypeCount)
 	}
 	// Now save the type in the API result types map
-	mt := design.NewResultTypeExpr(typeName, identifier, fn)
-	design.Root.ResultTypes = append(design.Root.ResultTypes, mt)
+	mt := expr.NewResultTypeExpr(typeName, identifier, fn)
+	expr.Root.ResultTypes = append(expr.Root.ResultTypes, mt)
 
 	return mt
 }
@@ -119,14 +119,14 @@ func ResultType(identifier string, fn func()) *design.ResultTypeExpr {
 // This function makes it possible to override that and provide a custom name.
 // name must be a valid Go identifier.
 func TypeName(name string) {
-	switch expr := eval.Current().(type) {
-	case design.UserType:
-		expr.Rename(name)
-	case *design.AttributeExpr:
-		if expr.Meta == nil {
-			expr.Meta = make(design.MetaExpr)
+	switch e := eval.Current().(type) {
+	case expr.UserType:
+		e.Rename(name)
+	case *expr.AttributeExpr:
+		if e.Meta == nil {
+			e.Meta = make(expr.MetaExpr)
 		}
-		expr.Meta["struct:type:name"] = []string{name}
+		e.Meta["struct:type:name"] = []string{name}
 	default:
 		eval.IncompatibleDSL()
 	}
@@ -143,7 +143,7 @@ func TypeName(name string) {
 //    }
 //
 func ContentType(typ string) {
-	if mt, ok := eval.Current().(*design.ResultTypeExpr); ok {
+	if mt, ok := eval.Current().(*expr.ResultTypeExpr); ok {
 		mt.ContentType = typ
 	} else {
 		eval.IncompatibleDSL()
@@ -179,22 +179,22 @@ func ContentType(typ string) {
 //	})
 //
 func View(name string, adsl ...func()) {
-	switch expr := eval.Current().(type) {
-	case *design.ResultTypeExpr:
-		mt := expr
+	switch e := eval.Current().(type) {
+	case *expr.ResultTypeExpr:
+		mt := e
 		if mt.View(name) != nil {
 			eval.ReportError("multiple expressions for view %#v in result type %#v", name, mt.TypeName)
 			return
 		}
-		at := &design.AttributeExpr{}
+		at := &expr.AttributeExpr{}
 		ok := false
 		if len(adsl) > 0 {
 			ok = eval.Execute(adsl[0], at)
-		} else if a, ok := mt.Type.(*design.Array); ok {
+		} else if a, ok := mt.Type.(*expr.Array); ok {
 			// inherit view from collection element if present
 			elem := a.ElemType
 			if elem != nil {
-				if pa, ok2 := elem.Type.(*design.ResultTypeExpr); ok2 {
+				if pa, ok2 := elem.Type.(*expr.ResultTypeExpr); ok2 {
 					if v := pa.View(name); v != nil {
 						at = v.AttributeExpr
 						ok = true
@@ -214,11 +214,11 @@ func View(name string, adsl ...func()) {
 			mt.Views = append(mt.Views, view)
 		}
 
-	case *design.AttributeExpr:
-		if expr.Meta == nil {
-			expr.Meta = make(map[string][]string)
+	case *expr.AttributeExpr:
+		if e.Meta == nil {
+			e.Meta = make(map[string][]string)
 		}
-		expr.Meta["view"] = []string{name}
+		e.Meta["view"] = []string{name}
 
 	default:
 		eval.IncompatibleDSL()
@@ -252,14 +252,14 @@ func View(name string, adsl ...func()) {
 //
 //     var MultiResults = CollectionOf(DivisionResult)
 //
-func CollectionOf(v interface{}, adsl ...func()) *design.ResultTypeExpr {
-	var m *design.ResultTypeExpr
+func CollectionOf(v interface{}, adsl ...func()) *expr.ResultTypeExpr {
+	var m *expr.ResultTypeExpr
 	var ok bool
-	m, ok = v.(*design.ResultTypeExpr)
+	m, ok = v.(*expr.ResultTypeExpr)
 	if !ok {
 		if id, ok := v.(string); ok {
-			if dt := design.Root.UserType(design.CanonicalIdentifier(id)); dt != nil {
-				if mt, ok := dt.(*design.ResultTypeExpr); ok {
+			if dt := expr.Root.UserType(expr.CanonicalIdentifier(id)); dt != nil {
+				if mt, ok := dt.(*expr.ResultTypeExpr); ok {
 					m = mt
 				}
 			}
@@ -268,14 +268,14 @@ func CollectionOf(v interface{}, adsl ...func()) *design.ResultTypeExpr {
 	if m == nil {
 		eval.ReportError("invalid CollectionOf argument: not a result type and not a known result type identifier")
 		// don't return nil to avoid panics, the error will get reported at the end
-		return design.NewResultTypeExpr("InvalidCollection", "text/plain", nil)
+		return expr.NewResultTypeExpr("InvalidCollection", "text/plain", nil)
 	}
 	id := m.Identifier
 	rtype, params, err := mime.ParseMediaType(id)
 	if err != nil {
 		eval.ReportError("invalid result type identifier %#v: %s", id, err)
 		// don't return nil to avoid panics, the error will get reported at the end
-		return design.NewResultTypeExpr("InvalidCollection", "text/plain", nil)
+		return expr.NewResultTypeExpr("InvalidCollection", "text/plain", nil)
 	}
 	hasType := false
 	for param := range params {
@@ -288,13 +288,13 @@ func CollectionOf(v interface{}, adsl ...func()) *design.ResultTypeExpr {
 		params["type"] = "collection"
 	}
 	id = mime.FormatMediaType(rtype, params)
-	canonical := design.CanonicalIdentifier(id)
-	if mt := design.Root.GeneratedResultType(canonical); mt != nil {
+	canonical := expr.CanonicalIdentifier(id)
+	if mt := expr.Root.GeneratedResultType(canonical); mt != nil {
 		// Already have a type for this collection, reuse it.
 		return mt
 	}
-	mt := design.NewResultTypeExpr("", id, func() {
-		rt, ok := eval.Current().(*design.ResultTypeExpr)
+	mt := expr.NewResultTypeExpr("", id, func() {
+		rt, ok := eval.Current().(*expr.ResultTypeExpr)
 		if !ok {
 			eval.IncompatibleDSL()
 			return
@@ -303,7 +303,7 @@ func CollectionOf(v interface{}, adsl ...func()) *design.ResultTypeExpr {
 		// DSL has executed since the DSL may modify element type name
 		// via the TypeName function.
 		rt.TypeName = m.TypeName + "Collection"
-		rt.AttributeExpr = &design.AttributeExpr{Type: ArrayOf(m)}
+		rt.AttributeExpr = &expr.AttributeExpr{Type: ArrayOf(m)}
 		if len(adsl) > 0 {
 			eval.Execute(adsl[0], rt)
 		}
@@ -311,7 +311,7 @@ func CollectionOf(v interface{}, adsl ...func()) *design.ResultTypeExpr {
 			// If the DSL didn't create any view (or there is no DSL
 			// at all) then inherit the views from the collection
 			// element.
-			rt.Views = make([]*design.ViewExpr, len(m.Views))
+			rt.Views = make([]*expr.ViewExpr, len(m.Views))
 			for i, v := range m.Views {
 				v := v
 				rt.Views[i] = v
@@ -320,7 +320,7 @@ func CollectionOf(v interface{}, adsl ...func()) *design.ResultTypeExpr {
 	})
 	// do not execute the DSL right away, will be done last to make sure
 	// the element DSL has run first.
-	*design.Root.GeneratedTypes = append(*design.Root.GeneratedTypes, mt)
+	*expr.Root.GeneratedTypes = append(*expr.Root.GeneratedTypes, mt)
 	return mt
 }
 
@@ -361,15 +361,15 @@ func CollectionOf(v interface{}, adsl ...func()) *design.ResultTypeExpr {
 //		})
 //	})
 //
-func Reference(t design.DataType) {
-	if !design.IsObject(t) {
+func Reference(t expr.DataType) {
+	if !expr.IsObject(t) {
 		eval.ReportError("argument of Reference must be an object, got %s", t.Name())
 		return
 	}
 	switch def := eval.Current().(type) {
-	case *design.ResultTypeExpr:
+	case *expr.ResultTypeExpr:
 		def.References = append(def.References, t)
-	case *design.AttributeExpr:
+	case *expr.AttributeExpr:
 		def.References = append(def.References, t)
 	default:
 		eval.IncompatibleDSL()
@@ -398,15 +398,15 @@ func Reference(t design.DataType) {
 //        Extend(CreateBottlePayload) // Adds attributes "name" and "vintage"
 //    })
 //
-func Extend(t design.DataType) {
-	if !design.IsObject(t) {
+func Extend(t expr.DataType) {
+	if !expr.IsObject(t) {
 		eval.ReportError("argument of Extend must be an object, got %s", t.Name())
 		return
 	}
 	switch def := eval.Current().(type) {
-	case *design.ResultTypeExpr:
+	case *expr.ResultTypeExpr:
 		def.Bases = append(def.Bases, t)
-	case *design.AttributeExpr:
+	case *expr.AttributeExpr:
 		def.Bases = append(def.Bases, t)
 	default:
 		eval.IncompatibleDSL()
@@ -415,7 +415,7 @@ func Extend(t design.DataType) {
 
 // Attributes implements the result type Attributes DSL. See ResultType.
 func Attributes(fn func()) {
-	mt, ok := eval.Current().(*design.ResultTypeExpr)
+	mt, ok := eval.Current().(*expr.ResultTypeExpr)
 	if !ok {
 		eval.IncompatibleDSL()
 		return
@@ -425,23 +425,23 @@ func Attributes(fn func()) {
 
 // buildView builds a view expression given an attribute and a corresponding
 // result type.
-func buildView(name string, mt *design.ResultTypeExpr, at *design.AttributeExpr) (*design.ViewExpr, error) {
+func buildView(name string, mt *expr.ResultTypeExpr, at *expr.AttributeExpr) (*expr.ViewExpr, error) {
 	if at.Type == nil {
 		return nil, fmt.Errorf("invalid view DSL")
 	}
-	o := design.AsObject(at.Type)
+	o := expr.AsObject(at.Type)
 	if o == nil {
 		return nil, fmt.Errorf("invalid view DSL")
 	}
-	mto := design.AsObject(mt.Type)
+	mto := expr.AsObject(mt.Type)
 	if mto == nil {
-		mto = design.AsObject(mt.Type.(*design.Array).ElemType.Type)
+		mto = expr.AsObject(mt.Type.(*expr.Array).ElemType.Type)
 	}
 	for _, nat := range *o {
 		n := nat.Name
 		cat := nat.Attribute
 		if existing := mt.Find(n); existing != nil {
-			dup := design.DupAtt(existing)
+			dup := expr.DupAtt(existing)
 			if dup.Meta == nil {
 				dup.Meta = make(map[string][]string)
 			}
@@ -453,7 +453,7 @@ func buildView(name string, mt *design.ResultTypeExpr, at *design.AttributeExpr)
 			return nil, fmt.Errorf("unknown attribute %#v", n)
 		}
 	}
-	return &design.ViewExpr{
+	return &expr.ViewExpr{
 		AttributeExpr: at,
 		Name:          name,
 		Parent:        mt,

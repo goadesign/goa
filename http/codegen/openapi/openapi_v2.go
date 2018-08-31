@@ -3,7 +3,7 @@ package openapi
 import (
 	"encoding/json"
 
-	"goa.design/goa/design"
+	"goa.design/goa/expr"
 	yaml "gopkg.in/yaml.v2"
 )
 
@@ -33,8 +33,8 @@ type (
 		Title          string                 `json:"title,omitempty" yaml:"title,omitempty"`
 		Description    string                 `json:"description,omitempty" yaml:"description,omitempty"`
 		TermsOfService string                 `json:"termsOfService,omitempty" yaml:"termsOfService,omitempty"`
-		Contact        *design.ContactExpr    `json:"contact,omitempty" yaml:"contact,omitempty"`
-		License        *design.LicenseExpr    `json:"license,omitempty" yaml:"license,omitempty"`
+		Contact        *expr.ContactExpr      `json:"contact,omitempty" yaml:"contact,omitempty"`
+		License        *expr.LicenseExpr      `json:"license,omitempty" yaml:"license,omitempty"`
 		Version        string                 `json:"version" yaml:"version"`
 		Extensions     map[string]interface{} `json:"-" yaml:"-"`
 	}

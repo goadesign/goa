@@ -8,13 +8,12 @@ import (
 	"strings"
 
 	"goa.design/goa/codegen"
-	"goa.design/goa/design"
-	httpdesign "goa.design/goa/http/design"
+	"goa.design/goa/expr"
 )
 
 // ExampleServerFiles returns and example main and dummy service
 // implementations.
-func ExampleServerFiles(genpkg string, root *httpdesign.RootExpr) []*codegen.File {
+func ExampleServerFiles(genpkg string, root *expr.RootExpr) []*codegen.File {
 	var fw []*codegen.File
 	for _, svc := range root.HTTPServices {
 		f := dummyServiceFile(genpkg, root, svc)
@@ -22,7 +21,7 @@ func ExampleServerFiles(genpkg string, root *httpdesign.RootExpr) []*codegen.Fil
 			fw = append(fw, f)
 		}
 	}
-	for _, svr := range root.Design.API.Servers {
+	for _, svr := range root.API.Servers {
 		if m := exampleMain(genpkg, root, svr); m != nil {
 			fw = append(fw, m)
 		}
@@ -31,10 +30,10 @@ func ExampleServerFiles(genpkg string, root *httpdesign.RootExpr) []*codegen.Fil
 }
 
 // dummyServiceFile returns a dummy implementation of the given service.
-func dummyServiceFile(genpkg string, root *httpdesign.RootExpr, svc *httpdesign.ServiceExpr) *codegen.File {
+func dummyServiceFile(genpkg string, root *expr.RootExpr, svc *expr.HTTPServiceExpr) *codegen.File {
 	path := codegen.SnakeCase(svc.Name()) + ".go"
 	data := HTTPServices.Get(svc.Name())
-	apiPkg := strings.ToLower(codegen.Goify(root.Design.API.Name, false))
+	apiPkg := strings.ToLower(codegen.Goify(root.API.Name, false))
 	sections := []*codegen.SectionTemplate{
 		codegen.Header("", apiPkg, []*codegen.ImportSpec{
 			{Path: "context"},
@@ -77,7 +76,7 @@ func dummyServiceFile(genpkg string, root *httpdesign.RootExpr, svc *httpdesign.
 	}
 }
 
-func exampleMain(genpkg string, root *httpdesign.RootExpr, svr *design.ServerExpr) *codegen.File {
+func exampleMain(genpkg string, root *expr.RootExpr, svr *expr.ServerExpr) *codegen.File {
 	pkg := codegen.SnakeCase(codegen.Goify(svr.Name, true))
 	mainPath := filepath.Join("cmd", pkg, "main.go")
 	idx := strings.LastIndex(genpkg, string(os.PathSeparator))
@@ -85,7 +84,7 @@ func exampleMain(genpkg string, root *httpdesign.RootExpr, svr *design.ServerExp
 	if idx > 0 {
 		rootPath = genpkg[:idx]
 	}
-	apiPkg := strings.ToLower(codegen.Goify(root.Design.API.Name, false))
+	apiPkg := strings.ToLower(codegen.Goify(root.API.Name, false))
 	specs := []*codegen.ImportSpec{
 		{Path: "context"},
 		{Path: "flag"},
@@ -123,7 +122,7 @@ func exampleMain(genpkg string, root *httpdesign.RootExpr, svr *design.ServerExp
 		specs = append(specs, &codegen.ImportSpec{Path: "github.com/gorilla/websocket"})
 	}
 	// URIs have been validated by DSL.
-	u, _ := url.Parse(string(root.Design.API.Servers[0].Hosts[0].URIs[0]))
+	u, _ := url.Parse(string(root.API.Servers[0].Hosts[0].URIs[0]))
 	data := map[string]interface{}{
 		"Services":    svcdata,
 		"APIPkg":      apiPkg,
@@ -194,8 +193,62 @@ func exampleMain(genpkg string, root *httpdesign.RootExpr, svr *design.ServerExp
 		FuncMap: map[string]interface{}{"needStream": needStream},
 	})
 
+	return &codegen.File{Path: mainPath, SectionTemplates: sections}
+}
+
+// dummyMultipart returns a dummy implementation of the multipart decoders
+// and encoders.
+func dummyMultipart(genpkg string, root *expr.RootExpr) *codegen.File {
+	mpath := "multipart.go"
+	if _, err := os.Stat(mpath); !os.IsNotExist(err) {
+		return nil // file already exists, skip it.
+	}
+	var (
+		sections []*codegen.SectionTemplate
+		mustGen  bool
+
+		apiPkg = strings.ToLower(codegen.Goify(root.API.Name, false))
+	)
+	{
+		specs := []*codegen.ImportSpec{
+			{Path: "mime/multipart"},
+		}
+		for _, svc := range root.HTTPServices {
+			pkgName := HTTPServices.Get(svc.Name()).Service.PkgName
+			specs = append(specs, &codegen.ImportSpec{
+				Path: path.Join(genpkg, codegen.SnakeCase(svc.Name())),
+				Name: pkgName,
+			})
+		}
+		header := codegen.Header("", apiPkg, specs)
+		sections = []*codegen.SectionTemplate{header}
+		for _, svc := range root.HTTPServices {
+			data := HTTPServices.Get(svc.Name())
+			for _, e := range data.Endpoints {
+				if e.MultipartRequestDecoder != nil {
+					mustGen = true
+					sections = append(sections, &codegen.SectionTemplate{
+						Name:   "dummy-multipart-request-decoder",
+						Source: dummyMultipartRequestDecoderImplT,
+						Data:   e.MultipartRequestDecoder,
+					})
+				}
+				if e.MultipartRequestEncoder != nil {
+					mustGen = true
+					sections = append(sections, &codegen.SectionTemplate{
+						Name:   "dummy-multipart-request-encoder",
+						Source: dummyMultipartRequestEncoderImplT,
+						Data:   e.MultipartRequestEncoder,
+					})
+				}
+			}
+		}
+	}
+	if !mustGen {
+		return nil
+	}
 	return &codegen.File{
-		Path:             mainPath,
+		Path:             mpath,
 		SectionTemplates: sections,
 		SkipExist:        true,
 	}

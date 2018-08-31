@@ -1,13 +1,12 @@
 package dsl
 
 import (
-	"goa.design/goa/design"
 	"goa.design/goa/eval"
+	"goa.design/goa/expr"
 )
 
-// API provides the API name, description and other properties. API also lists
-// the servers that expose the services describe in the design. There may only
-// be one API declaration in a given design package.
+// API defines a network service API. It provides the API name, description and other global
+// properties. There may only be one API declaration in a given design package.
 //
 // API is a top level DSL. API takes two arguments: the name of the API and the
 // defining DSL.
@@ -37,7 +36,7 @@ import (
 //        })
 //    }
 //
-func API(name string, fn func()) *design.APIExpr {
+func API(name string, fn func()) *expr.APIExpr {
 	if name == "" {
 		eval.ReportError("API first argument cannot be empty")
 		return nil
@@ -46,8 +45,8 @@ func API(name string, fn func()) *design.APIExpr {
 		eval.IncompatibleDSL()
 		return nil
 	}
-	design.Root.API = &design.APIExpr{Name: name, DSLFunc: fn}
-	return design.Root.API
+	expr.Root.API = &expr.APIExpr{Name: name, DSLFunc: fn}
+	return expr.Root.API
 }
 
 // Title sets the API title. It is used by the generated OpenAPI specification.
@@ -63,29 +62,43 @@ func API(name string, fn func()) *design.APIExpr {
 //    })
 //
 func Title(val string) {
-	if a, ok := eval.Current().(*design.APIExpr); ok {
-		a.Title = val
+	if s, ok := eval.Current().(*expr.APIExpr); ok {
+		s.Title = val
 		return
 	}
 	eval.IncompatibleDSL()
 }
 
-// Version sets the API version. It is used by the generated OpenAPI
-// specification.
-//
-// Version must appear in a API expression.
-//
-// Version accepts a single string argument.
-//
-// Example:
-//
-//    var _ = API("divider", func() {
-//        Version("1.0")
-//    })
-//
+// Version specifies the API version. One design describes one version.
 func Version(ver string) {
-	if a, ok := eval.Current().(*design.APIExpr); ok {
-		a.Version = ver
+	if s, ok := eval.Current().(*expr.APIExpr); ok {
+		s.Version = ver
+		return
+	}
+	eval.IncompatibleDSL()
+}
+
+// Contact sets the API contact information.
+func Contact(fn func()) {
+	contact := new(expr.ContactExpr)
+	if !eval.Execute(fn, contact) {
+		return
+	}
+	if a, ok := eval.Current().(*expr.APIExpr); ok {
+		a.Contact = contact
+		return
+	}
+	eval.IncompatibleDSL()
+}
+
+// License sets the API license information.
+func License(fn func()) {
+	license := new(expr.LicenseExpr)
+	if !eval.Execute(fn, license) {
+		return
+	}
+	if a, ok := eval.Current().(*expr.APIExpr); ok {
+		a.License = license
 		return
 	}
 	eval.IncompatibleDSL()
@@ -94,7 +107,7 @@ func Version(ver string) {
 // Docs provides external documentation URLs. It is used by the generated
 // OpenAPI specification.
 //
-// Docs must appear in a API, Service, Method or Attribute expression.
+// Docs must appear in an API, Service, Method or Attribute expr.
 //
 // Docs takes a single argument which is the defining DSL.
 //
@@ -108,97 +121,37 @@ func Version(ver string) {
 //    })
 //
 func Docs(fn func()) {
-	docs := new(design.DocsExpr)
+	docs := new(expr.DocsExpr)
 	if !eval.Execute(fn, docs) {
 		return
 	}
 	switch e := eval.Current().(type) {
-	case *design.APIExpr:
+	case *expr.APIExpr:
 		e.Docs = docs
-	case *design.ServiceExpr:
+	case *expr.ServiceExpr:
 		e.Docs = docs
-	case *design.MethodExpr:
+	case *expr.MethodExpr:
 		e.Docs = docs
-	case *design.AttributeExpr:
+	case *expr.AttributeExpr:
 		e.Docs = docs
 	default:
 		eval.IncompatibleDSL()
 	}
 }
 
-// Contact sets the API contact information. It is used by the generated OpenAPI
-// specification.
-//
-// Contact must appear in a API expression.
-//
-// Contact takes a single argument which is the defining DSL.
-//
-// Example:
-//
-//    var _ = API("divider", func() {
-//        Contact(func() {
-//            Name("support")
-//            Email("support@goa.design")
-//            URL("https://goa.design")
-//        })
-//    })
-//
-func Contact(fn func()) {
-	contact := new(design.ContactExpr)
-	if !eval.Execute(fn, contact) {
-		return
-	}
-	if a, ok := eval.Current().(*design.APIExpr); ok {
-		a.Contact = contact
-		return
-	}
-	eval.IncompatibleDSL()
-}
-
-// License sets the API license. It is used by the generated OpenAPI
-// specification.
-//
-// License must appear in a API expression.
-//
-// License takes a single argument which is the defining DSL.
-//
-// Example:
-//
-//    var _ = API("divider", func() {
-//        License(func() {
-//            Name("MIT")
-//            URL("https://github.com/goadesign/goa/blob/master/LICENSE")
-//        })
-//    })
-//
-func License(fn func()) {
-	license := new(design.LicenseExpr)
-	if !eval.Execute(fn, license) {
-		return
-	}
-	if a, ok := eval.Current().(*design.APIExpr); ok {
-		a.License = license
-		return
-	}
-	eval.IncompatibleDSL()
-}
-
-// TermsOfService sets the terms of service of the API. It is used by the
-// generated OpenAPI specification.
-//
-// TermsOfService must appear in a API expression.
-//
-// TermsOfService takes a single argument which is the TOS text or URL.
-//
-// Example:
-//
-//    var _ = API("github", func() {
-//        TermsOfService("https://help.github.com/articles/github-terms-of-API/"
-//    })
-//
+// TermsOfService describes the API terms of services or links to them.
 func TermsOfService(terms string) {
-	if a, ok := eval.Current().(*design.APIExpr); ok {
-		a.TermsOfService = terms
+	if s, ok := eval.Current().(*expr.APIExpr); ok {
+		s.TermsOfService = terms
+		return
+	}
+	eval.IncompatibleDSL()
+}
+
+// Param defines a server URL parameter.
+func Param(name string, args ...interface{}) {
+	if _, ok := eval.Current().(*expr.ServerExpr); !ok {
+		eval.IncompatibleDSL()
 		return
 	}
 	eval.IncompatibleDSL()
@@ -221,9 +174,9 @@ func TermsOfService(terms string) {
 //
 func Name(name string) {
 	switch def := eval.Current().(type) {
-	case *design.ContactExpr:
+	case *expr.ContactExpr:
 		def.Name = name
-	case *design.LicenseExpr:
+	case *expr.LicenseExpr:
 		def.Name = name
 	default:
 		eval.IncompatibleDSL()
@@ -245,7 +198,7 @@ func Name(name string) {
 //    })
 //
 func Email(email string) {
-	if c, ok := eval.Current().(*design.ContactExpr); ok {
+	if c, ok := eval.Current().(*expr.ContactExpr); ok {
 		c.Email = email
 	}
 }
@@ -264,11 +217,11 @@ func Email(email string) {
 //
 func URL(url string) {
 	switch def := eval.Current().(type) {
-	case *design.ContactExpr:
+	case *expr.ContactExpr:
 		def.URL = url
-	case *design.LicenseExpr:
+	case *expr.LicenseExpr:
 		def.URL = url
-	case *design.DocsExpr:
+	case *expr.DocsExpr:
 		def.URL = url
 	default:
 		eval.IncompatibleDSL()

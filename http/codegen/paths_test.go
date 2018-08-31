@@ -4,8 +4,8 @@ import (
 	"testing"
 
 	"goa.design/goa/codegen"
+	"goa.design/goa/expr"
 	"goa.design/goa/http/codegen/testdata"
-	httpdesign "goa.design/goa/http/design"
 )
 
 func TestPaths(t *testing.T) {
@@ -34,10 +34,10 @@ func TestPaths(t *testing.T) {
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
 			RunHTTPDSL(t, c.DSL)
-			if len(httpdesign.Root.HTTPServices) != 1 {
-				t.Fatalf("got %d file(s), expected 1", len(httpdesign.Root.HTTPServices))
+			if len(expr.Root.HTTPServices) != 1 {
+				t.Fatalf("got %d file(s), expected 1", len(expr.Root.HTTPServices))
 			}
-			fs := serverPath(httpdesign.Root.HTTPServices[0])
+			fs := serverPath(expr.Root.HTTPServices[0])
 			sections := fs.SectionTemplates
 			code := codegen.SectionCode(t, sections[1])
 			if code != c.Code {

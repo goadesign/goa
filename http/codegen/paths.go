@@ -5,11 +5,11 @@ import (
 	"path/filepath"
 
 	"goa.design/goa/codegen"
-	httpdesign "goa.design/goa/http/design"
+	"goa.design/goa/expr"
 )
 
 // PathFiles returns the service path files.
-func PathFiles(root *httpdesign.RootExpr) []*codegen.File {
+func PathFiles(root *expr.RootExpr) []*codegen.File {
 	fw := make([]*codegen.File, 2*len(root.HTTPServices))
 	for i := 0; i < len(root.HTTPServices); i++ {
 		fw[i*2] = serverPath(root.HTTPServices[i])
@@ -20,21 +20,21 @@ func PathFiles(root *httpdesign.RootExpr) []*codegen.File {
 
 // serverPath returns the server file containing the request path constructors
 // for the given service.
-func serverPath(svc *httpdesign.ServiceExpr) *codegen.File {
+func serverPath(svc *expr.HTTPServiceExpr) *codegen.File {
 	path := filepath.Join(codegen.Gendir, "http", codegen.SnakeCase(svc.Name()), "server", "paths.go")
 	return &codegen.File{Path: path, SectionTemplates: pathSections(svc, "server")}
 }
 
 // clientPath returns the client file containing the request path constructors
 // for the given service.
-func clientPath(svc *httpdesign.ServiceExpr) *codegen.File {
+func clientPath(svc *expr.HTTPServiceExpr) *codegen.File {
 	path := filepath.Join(codegen.Gendir, "http", codegen.SnakeCase(svc.Name()), "client", "paths.go")
 	return &codegen.File{Path: path, SectionTemplates: pathSections(svc, "client")}
 }
 
 // pathSections returns the sections of the file of the pkg package that
 // contains the request path constructors for the given service.
-func pathSections(svc *httpdesign.ServiceExpr, pkg string) []*codegen.SectionTemplate {
+func pathSections(svc *expr.HTTPServiceExpr, pkg string) []*codegen.SectionTemplate {
 	title := fmt.Sprintf("HTTP request path constructors for the %s service.", svc.Name())
 	sections := []*codegen.SectionTemplate{
 		codegen.Header(title, pkg, []*codegen.ImportSpec{

@@ -5,7 +5,7 @@ import (
 	"strconv"
 	"strings"
 
-	"goa.design/goa/design"
+	"goa.design/goa/expr"
 )
 
 type (
@@ -30,8 +30,8 @@ func NewNameScope() *NameScope {
 		names:  make(map[string]string),
 		counts: make(map[string]int),
 	}
-	if design.Root.API != nil {
-		ns.HashedUnique(design.Root.API, design.Root.API.Name)
+	if expr.Root.API != nil {
+		ns.HashedUnique(expr.Root.API, expr.Root.API.Name)
 	}
 	return ns
 }
@@ -93,27 +93,27 @@ done:
 
 // GoTypeDef returns the Go code that defines a Go type which matches the data
 // structure definition (the part that comes after `type foo`).
-func (s *NameScope) GoTypeDef(att *design.AttributeExpr, useDefault bool) string {
+func (s *NameScope) GoTypeDef(att *expr.AttributeExpr, useDefault bool) string {
 	switch actual := att.Type.(type) {
-	case design.Primitive:
+	case expr.Primitive:
 		return GoNativeTypeName(actual)
-	case *design.Array:
+	case *expr.Array:
 		d := s.GoTypeDef(actual.ElemType, useDefault)
-		if design.IsObject(actual.ElemType.Type) {
+		if expr.IsObject(actual.ElemType.Type) {
 			d = "*" + d
 		}
 		return "[]" + d
-	case *design.Map:
+	case *expr.Map:
 		keyDef := s.GoTypeDef(actual.KeyType, useDefault)
-		if design.IsObject(actual.KeyType.Type) {
+		if expr.IsObject(actual.KeyType.Type) {
 			keyDef = "*" + keyDef
 		}
 		elemDef := s.GoTypeDef(actual.ElemType, useDefault)
-		if design.IsObject(actual.ElemType.Type) {
+		if expr.IsObject(actual.ElemType.Type) {
 			elemDef = "*" + elemDef
 		}
 		return fmt.Sprintf("map[%s]%s", keyDef, elemDef)
-	case *design.Object:
+	case *expr.Object:
 		var ss []string
 		ss = append(ss, "struct {")
 		for _, nat := range *actual {
@@ -129,7 +129,7 @@ func (s *NameScope) GoTypeDef(att *design.AttributeExpr, useDefault bool) string
 			{
 				fn = GoifyAtt(at, name, true)
 				tdef = s.GoTypeDef(at, useDefault)
-				if design.IsObject(at.Type) || att.IsPrimitivePointer(name, useDefault) {
+				if expr.IsObject(at.Type) || att.IsPrimitivePointer(name, useDefault) {
 					tdef = "*" + tdef
 				}
 				if at.Description != "" {
@@ -141,7 +141,7 @@ func (s *NameScope) GoTypeDef(att *design.AttributeExpr, useDefault bool) string
 		}
 		ss = append(ss, "}")
 		return strings.Join(ss, "\n")
-	case design.UserType:
+	case expr.UserType:
 		return s.GoTypeName(att)
 	default:
 		panic(fmt.Sprintf("unknown data type %T", actual)) // bug
@@ -150,40 +150,40 @@ func (s *NameScope) GoTypeDef(att *design.AttributeExpr, useDefault bool) string
 
 // GoTypeRef returns the Go code that refers to the Go type which matches the
 // given attribute type.
-func (s *NameScope) GoTypeRef(att *design.AttributeExpr) string {
+func (s *NameScope) GoTypeRef(att *expr.AttributeExpr) string {
 	name := s.GoTypeName(att)
 	return goTypeRef(name, att.Type)
 }
 
 // GoFullTypeRef returns the Go code that refers to the Go type which matches
 // the given attribute type defined in the given package if a user type.
-func (s *NameScope) GoFullTypeRef(att *design.AttributeExpr, pkg string) string {
+func (s *NameScope) GoFullTypeRef(att *expr.AttributeExpr, pkg string) string {
 	name := s.GoFullTypeName(att, pkg)
 	return goTypeRef(name, att.Type)
 }
 
 // GoTypeName returns the Go type name of the given attribute type.
-func (s *NameScope) GoTypeName(att *design.AttributeExpr) string {
+func (s *NameScope) GoTypeName(att *expr.AttributeExpr) string {
 	return s.GoFullTypeName(att, "")
 }
 
 // GoFullTypeName returns the Go type name of the given data type qualified with
 // the given package name if applicable and if not the empty string.
-func (s *NameScope) GoFullTypeName(att *design.AttributeExpr, pkg string) string {
+func (s *NameScope) GoFullTypeName(att *expr.AttributeExpr, pkg string) string {
 	switch actual := att.Type.(type) {
-	case design.Primitive:
+	case expr.Primitive:
 		return GoNativeTypeName(actual)
-	case *design.Array:
+	case *expr.Array:
 		return "[]" + s.GoFullTypeRef(actual.ElemType, pkg)
-	case *design.Map:
+	case *expr.Map:
 		return fmt.Sprintf("map[%s]%s",
 			s.GoFullTypeRef(actual.KeyType, pkg),
 			s.GoFullTypeRef(actual.ElemType, pkg))
-	case *design.Object:
+	case *expr.Object:
 		return s.GoTypeDef(att, false)
 
-	case design.UserType:
-		if actual == design.ErrorResult {
+	case expr.UserType:
+		if actual == expr.ErrorResult {
 			return "goa.ServiceError"
 		}
 		n := s.HashedUnique(actual, Goify(actual.Name(), true), "")
@@ -191,19 +191,19 @@ func (s *NameScope) GoFullTypeName(att *design.AttributeExpr, pkg string) string
 			return n
 		}
 		return pkg + "." + n
-	case design.CompositeExpr:
+	case expr.CompositeExpr:
 		return s.GoFullTypeName(actual.Attribute(), pkg)
 	default:
 		panic(fmt.Sprintf("unknown data type %T", actual)) // bug
 	}
 }
 
-func goTypeRef(name string, dt design.DataType) string {
+func goTypeRef(name string, dt expr.DataType) string {
 	// For a raw struct, no need to dereference
-	if _, ok := dt.(*design.Object); ok {
+	if _, ok := dt.(*expr.Object); ok {
 		return name
 	}
-	if design.IsObject(dt) {
+	if expr.IsObject(dt) {
 		return "*" + name
 	}
 	return name

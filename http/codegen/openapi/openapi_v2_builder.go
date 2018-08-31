@@ -11,12 +11,11 @@ import (
 	"strings"
 
 	"goa.design/goa/codegen"
-	"goa.design/goa/design"
-	httpdesign "goa.design/goa/http/design"
+	"goa.design/goa/expr"
 )
 
 // NewV2 returns the OpenAPI v2 specification for the given API.
-func NewV2(root *httpdesign.RootExpr, h *design.HostExpr) (*V2, error) {
+func NewV2(root *expr.RootExpr, h *expr.HostExpr) (*V2, error) {
 	if root == nil {
 		return nil, nil
 	}
@@ -26,11 +25,12 @@ func NewV2(root *httpdesign.RootExpr, h *design.HostExpr) (*V2, error) {
 		return nil, fmt.Errorf("failed to parse server URL: %s", err)
 	}
 	host := u.Host
-	basePath := u.Path
+
+	basePath := root.HTTPPath
 	if hasAbsoluteRoutes(root) {
 		basePath = ""
 	}
-	params, err := paramsFromExpr(design.NewMappedAttributeExpr(h.Variables), basePath)
+	params, err := paramsFromExpr(root.HTTPParams, basePath)
 	if err != nil {
 		return nil, err
 	}
@@ -44,23 +44,23 @@ func NewV2(root *httpdesign.RootExpr, h *design.HostExpr) (*V2, error) {
 	s := &V2{
 		Swagger: "2.0",
 		Info: &Info{
-			Title:          root.Design.API.Title,
-			Description:    root.Design.API.Description,
-			TermsOfService: root.Design.API.TermsOfService,
-			Contact:        root.Design.API.Contact,
-			License:        root.Design.API.License,
-			Version:        root.Design.API.Version,
-			Extensions:     ExtensionsFromExpr(root.Design.API.Meta),
+			Title:          root.API.Title,
+			Description:    root.API.Description,
+			TermsOfService: root.API.TermsOfService,
+			Contact:        root.API.Contact,
+			License:        root.API.License,
+			Version:        root.API.Version,
+			Extensions:     ExtensionsFromExpr(root.Meta),
 		},
 		Host:                host,
 		BasePath:            basePath,
 		Paths:               make(map[string]interface{}),
-		Consumes:            root.Consumes,
-		Produces:            root.Produces,
+		Consumes:            root.HTTPConsumes,
+		Produces:            root.HTTPProduces,
 		Parameters:          paramMap,
 		Tags:                tags,
 		SecurityDefinitions: securitySpecFromExpr(root),
-		ExternalDocs:        docsFromExpr(root.Design.API.Docs),
+		ExternalDocs:        docsFromExpr(root.API.Docs),
 	}
 
 	for _, he := range root.HTTPErrors {
@@ -117,7 +117,7 @@ func NewV2(root *httpdesign.RootExpr, h *design.HostExpr) (*V2, error) {
 
 // ExtensionsFromExpr generates swagger extensions from the given meta
 // expression.
-func ExtensionsFromExpr(mdata design.MetaExpr) map[string]interface{} {
+func ExtensionsFromExpr(mdata expr.MetaExpr) map[string]interface{} {
 	extensions := make(map[string]interface{})
 	for key, value := range mdata {
 		chunks := strings.Split(key, ":")
@@ -146,7 +146,7 @@ func ExtensionsFromExpr(mdata design.MetaExpr) map[string]interface{} {
 
 // mustGenerate returns true if the meta indicates that a OpenAPI specification should be
 // generated, false otherwise.
-func mustGenerate(meta design.MetaExpr) bool {
+func mustGenerate(meta expr.MetaExpr) bool {
 	if m, ok := meta["swagger:generate"]; ok {
 		if len(m) > 0 && m[0] == "false" {
 			return false
@@ -157,21 +157,21 @@ func mustGenerate(meta design.MetaExpr) bool {
 
 // securitySpecFromExpr generates the OpenAPI security definitions from the
 // security design.
-func securitySpecFromExpr(root *httpdesign.RootExpr) map[string]*SecurityDefinition {
+func securitySpecFromExpr(root *expr.RootExpr) map[string]*SecurityDefinition {
 	sds := make(map[string]*SecurityDefinition)
-	for _, s := range root.Design.Schemes {
+	for _, s := range root.Schemes {
 		sd := SecurityDefinition{
 			Description: s.Description,
 			Extensions:  ExtensionsFromExpr(s.Meta),
 		}
 		switch s.Kind {
-		case design.BasicAuthKind:
+		case expr.BasicAuthKind:
 			sd.Type = "basic"
-		case design.APIKeyKind:
+		case expr.APIKeyKind:
 			sd.Type = "apiKey"
 			sd.In = s.In
 			sd.Name = s.Name
-		case design.JWTKind:
+		case expr.JWTKind:
 			sd.Type = "apiKey"
 			// OpenAPI V2 spec does not support JWT scheme. Hence we add the scheme
 			// information to the description.
@@ -182,7 +182,7 @@ func securitySpecFromExpr(root *httpdesign.RootExpr) map[string]*SecurityDefinit
 			sd.In = s.In
 			sd.Name = s.Name
 			sd.Description += fmt.Sprintf("\n**Security Scopes**:\n%s", strings.Join(lines, "\n"))
-		case design.OAuth2Kind:
+		case expr.OAuth2Kind:
 			sd.Type = "oauth2"
 			if scopesLen := len(s.Scopes); scopesLen > 0 {
 				scopes := make(map[string]string, scopesLen)
@@ -194,13 +194,13 @@ func securitySpecFromExpr(root *httpdesign.RootExpr) map[string]*SecurityDefinit
 		}
 		if len(s.Flows) > 0 {
 			switch s.Flows[0].Kind {
-			case design.AuthorizationCodeFlowKind:
+			case expr.AuthorizationCodeFlowKind:
 				sd.Flow = "accessCode"
-			case design.ImplicitFlowKind:
+			case expr.ImplicitFlowKind:
 				sd.Flow = "implicit"
-			case design.PasswordFlowKind:
+			case expr.PasswordFlowKind:
 				sd.Flow = "password"
-			case design.ClientCredentialsFlowKind:
+			case expr.ClientCredentialsFlowKind:
 				sd.Flow = "application"
 			}
 			sd.AuthorizationURL = s.Flows[0].AuthorizationURL
@@ -215,7 +215,7 @@ func securitySpecFromExpr(root *httpdesign.RootExpr) map[string]*SecurityDefinit
 // absolute route of if the API has file servers. This is needed as OpenAPI does
 // not support exceptions to the base path so if the API has any absolute route
 // the base path must be "/" and all routes must be absolutes.
-func hasAbsoluteRoutes(root *httpdesign.RootExpr) bool {
+func hasAbsoluteRoutes(root *expr.RootExpr) bool {
 	hasAbsoluteRoutes := false
 	for _, res := range root.HTTPServices {
 		if !mustGenerate(res.Meta) || !mustGenerate(res.ServiceExpr.Meta) {
@@ -249,7 +249,7 @@ func hasAbsoluteRoutes(root *httpdesign.RootExpr) bool {
 	return hasAbsoluteRoutes
 }
 
-func tagsFromExpr(mdata design.MetaExpr) (tags []*Tag) {
+func tagsFromExpr(mdata expr.MetaExpr) (tags []*Tag) {
 	var keys []string
 	for k := range mdata {
 		keys = append(keys, k)
@@ -298,7 +298,7 @@ func tagsFromExpr(mdata design.MetaExpr) (tags []*Tag) {
 	return
 }
 
-func tagNamesFromExpr(mdatas ...design.MetaExpr) (tagNames []string) {
+func tagNamesFromExpr(mdatas ...expr.MetaExpr) (tagNames []string) {
 	for _, mdata := range mdatas {
 		tags := tagsFromExpr(mdata)
 		for _, tag := range tags {
@@ -308,7 +308,7 @@ func tagNamesFromExpr(mdatas ...design.MetaExpr) (tagNames []string) {
 	return
 }
 
-func summaryFromExpr(name string, e *httpdesign.EndpointExpr) string {
+func summaryFromExpr(name string, e *expr.HTTPEndpointExpr) string {
 	for n, mdata := range e.Meta {
 		if n == "swagger:summary" && len(mdata) > 0 {
 			return mdata[0]
@@ -322,7 +322,7 @@ func summaryFromExpr(name string, e *httpdesign.EndpointExpr) string {
 	return name
 }
 
-func summaryFromMeta(name string, meta design.MetaExpr) string {
+func summaryFromMeta(name string, meta expr.MetaExpr) string {
 	for n, mdata := range meta {
 		if n == "swagger:summary" && len(mdata) > 0 {
 			return mdata[0]
@@ -331,16 +331,16 @@ func summaryFromMeta(name string, meta design.MetaExpr) string {
 	return name
 }
 
-func paramsFromExpr(params *design.MappedAttributeExpr, path string) ([]*Parameter, error) {
+func paramsFromExpr(params *expr.MappedAttributeExpr, path string) ([]*Parameter, error) {
 	if params == nil {
 		return nil, nil
 	}
 	var (
 		res       []*Parameter
-		wildcards = design.ExtractWildcards(path)
+		wildcards = expr.ExtractHTTPWildcards(path)
 		i         = 0
 	)
-	codegen.WalkMappedAttr(params, func(n, pn string, required bool, at *design.AttributeExpr) error {
+	codegen.WalkMappedAttr(params, func(n, pn string, required bool, at *expr.AttributeExpr) error {
 		in := "query"
 		for _, w := range wildcards {
 			if n == w {
@@ -357,13 +357,13 @@ func paramsFromExpr(params *design.MappedAttributeExpr, path string) ([]*Paramet
 	return res, nil
 }
 
-func paramsFromHeaders(endpoint *httpdesign.EndpointExpr) []*Parameter {
+func paramsFromHeaders(endpoint *expr.HTTPEndpointExpr) []*Parameter {
 	params := []*Parameter{}
 	var (
 		rma = endpoint.Service.Params
 		ma  = endpoint.Headers
 
-		merged *design.MappedAttributeExpr
+		merged *expr.MappedAttributeExpr
 	)
 	{
 		if rma == nil {
@@ -371,12 +371,12 @@ func paramsFromHeaders(endpoint *httpdesign.EndpointExpr) []*Parameter {
 		} else if ma == nil {
 			merged = rma
 		} else {
-			merged = design.DupMappedAtt(rma)
+			merged = expr.DupMappedAtt(rma)
 			merged.Merge(ma)
 		}
 	}
 
-	for _, n := range *design.AsObject(merged.Type) {
+	for _, n := range *expr.AsObject(merged.Type) {
 		header := n.Attribute
 		required := merged.IsRequiredNoDefault(n.Name)
 		p := paramFor(header, merged.ElemName(n.Name), "header", required)
@@ -385,7 +385,7 @@ func paramsFromHeaders(endpoint *httpdesign.EndpointExpr) []*Parameter {
 	return params
 }
 
-func paramFor(at *design.AttributeExpr, name, in string, required bool) *Parameter {
+func paramFor(at *expr.AttributeExpr, name, in string, required bool) *Parameter {
 	p := &Parameter{
 		In:          in,
 		Name:        name,
@@ -394,23 +394,23 @@ func paramFor(at *design.AttributeExpr, name, in string, required bool) *Paramet
 		Required:    required,
 		Type:        at.Type.Name(),
 	}
-	if design.IsArray(at.Type) {
-		p.Items = itemsFromExpr(design.AsArray(at.Type).ElemType)
+	if expr.IsArray(at.Type) {
+		p.Items = itemsFromExpr(expr.AsArray(at.Type).ElemType)
 		p.CollectionFormat = "multi"
 	}
 	switch at.Type {
-	case design.Int, design.UInt, design.UInt32, design.UInt64:
+	case expr.Int, expr.UInt, expr.UInt32, expr.UInt64:
 		p.Type = "integer"
-	case design.Int32, design.Int64:
+	case expr.Int32, expr.Int64:
 		p.Type = "integer"
 		p.Format = at.Type.Name()
-	case design.Float32:
+	case expr.Float32:
 		p.Type = "number"
 		p.Format = "float"
-	case design.Float64:
+	case expr.Float64:
 		p.Type = "number"
 		p.Format = "double"
-	case design.Bytes:
+	case expr.Bytes:
 		p.Type = "string"
 		p.Format = "byte"
 	}
@@ -419,26 +419,26 @@ func paramFor(at *design.AttributeExpr, name, in string, required bool) *Paramet
 	return p
 }
 
-func itemsFromExpr(at *design.AttributeExpr) *Items {
+func itemsFromExpr(at *expr.AttributeExpr) *Items {
 	items := &Items{Type: at.Type.Name()}
 	initValidations(at, items)
-	if design.IsArray(at.Type) {
-		items.Items = itemsFromExpr(design.AsArray(at.Type).ElemType)
+	if expr.IsArray(at.Type) {
+		items.Items = itemsFromExpr(expr.AsArray(at.Type).ElemType)
 	}
 	return items
 }
 
-func responseSpecFromExpr(s *V2, root *httpdesign.RootExpr, r *httpdesign.HTTPResponseExpr, typeNamePrefix string) (*Response, error) {
+func responseSpecFromExpr(s *V2, root *expr.RootExpr, r *expr.HTTPResponseExpr, typeNamePrefix string) (*Response, error) {
 	var schema *Schema
-	if mt, ok := r.Body.Type.(*design.ResultTypeExpr); ok {
-		view := design.DefaultView
+	if mt, ok := r.Body.Type.(*expr.ResultTypeExpr); ok {
+		view := expr.DefaultView
 		if v, ok := r.Body.Meta["view"]; ok {
 			view = v[0]
 		}
 		schema = NewSchema()
-		schema.Ref = ResultTypeRefWithPrefix(root.Design.API, mt, view, typeNamePrefix)
-	} else if r.Body.Type != design.Empty {
-		schema = AttributeTypeSchema(root.Design.API, r.Body)
+		schema.Ref = ResultTypeRefWithPrefix(root.API, mt, view, typeNamePrefix)
+	} else if r.Body.Type != expr.Empty {
+		schema = AttributeTypeSchema(root.API, r.Body)
 	}
 	headers, err := headersFromExpr(r.Headers)
 	if err != nil {
@@ -456,16 +456,16 @@ func responseSpecFromExpr(s *V2, root *httpdesign.RootExpr, r *httpdesign.HTTPRe
 	}, nil
 }
 
-func headersFromExpr(headers *design.MappedAttributeExpr) (map[string]*Header, error) {
+func headersFromExpr(headers *expr.MappedAttributeExpr) (map[string]*Header, error) {
 	if headers == nil {
 		return nil, nil
 	}
-	obj := design.AsObject(headers.Type)
+	obj := expr.AsObject(headers.Type)
 	if obj == nil {
 		return nil, fmt.Errorf("invalid headers definition, not an object")
 	}
 	res := make(map[string]*Header)
-	codegen.WalkMappedAttr(headers, func(_, n string, required bool, at *design.AttributeExpr) error {
+	codegen.WalkMappedAttr(headers, func(_, n string, required bool, at *expr.AttributeExpr) error {
 		header := &Header{
 			Default:     at.DefaultValue,
 			Description: at.Description,
@@ -481,9 +481,9 @@ func headersFromExpr(headers *design.MappedAttributeExpr) (map[string]*Header, e
 	return res, nil
 }
 
-func buildPathFromFileServer(s *V2, root *httpdesign.RootExpr, fs *httpdesign.FileServerExpr) error {
+func buildPathFromFileServer(s *V2, root *expr.RootExpr, fs *expr.HTTPFileServerExpr) error {
 	for _, path := range fs.RequestPaths {
-		wcs := design.ExtractWildcards(path)
+		wcs := expr.ExtractHTTPWildcards(path)
 		var param []*Parameter
 		if len(wcs) > 0 {
 			param = []*Parameter{{
@@ -502,12 +502,12 @@ func buildPathFromFileServer(s *V2, root *httpdesign.RootExpr, fs *httpdesign.Fi
 			},
 		}
 		if len(wcs) > 0 {
-			schema := TypeSchema(root.Design.API, design.ErrorResult)
+			schema := TypeSchema(root.API, expr.ErrorResult)
 			responses["404"] = &Response{Description: "File not found", Schema: schema}
 		}
 
 		operationID := fmt.Sprintf("%s#%s", fs.Service.Name(), path)
-		schemes := root.Design.API.Schemes()
+		schemes := root.API.Schemes()
 
 		operation := &Operation{
 			Description:  fs.Description,
@@ -519,7 +519,7 @@ func buildPathFromFileServer(s *V2, root *httpdesign.RootExpr, fs *httpdesign.Fi
 			Schemes:      schemes,
 		}
 
-		key := design.WildcardRegex.ReplaceAllStringFunc(
+		key := expr.HTTPWildcardRegex.ReplaceAllStringFunc(
 			path,
 			func(w string) string {
 				return fmt.Sprintf("/{%s}", w[2:])
@@ -542,7 +542,7 @@ func buildPathFromFileServer(s *V2, root *httpdesign.RootExpr, fs *httpdesign.Fi
 	return nil
 }
 
-func buildPathFromExpr(s *V2, root *httpdesign.RootExpr, h *design.HostExpr, route *httpdesign.RouteExpr, basePath string) error {
+func buildPathFromExpr(s *V2, root *expr.RootExpr, h *expr.HostExpr, route *expr.RouteExpr, basePath string) error {
 	endpoint := route.Endpoint
 
 	tagNames := tagNamesFromExpr(endpoint.Service.Meta, endpoint.Meta)
@@ -563,9 +563,9 @@ func buildPathFromExpr(s *V2, root *httpdesign.RootExpr, h *design.HostExpr, rou
 				// A streaming endpoint allows at most one successful response
 				// definition. So it is okay to change the first successful
 				// response to a HTTP 101 response for openapi docs.
-				if _, ok := responses[strconv.Itoa(httpdesign.StatusSwitchingProtocols)]; !ok {
+				if _, ok := responses[strconv.Itoa(expr.StatusSwitchingProtocols)]; !ok {
 					r = r.Dup()
-					r.StatusCode = httpdesign.StatusSwitchingProtocols
+					r.StatusCode = expr.StatusSwitchingProtocols
 				}
 			}
 			resp, err := responseSpecFromExpr(s, root, r, endpoint.Service.Name())
@@ -582,13 +582,13 @@ func buildPathFromExpr(s *V2, root *httpdesign.RootExpr, h *design.HostExpr, rou
 			responses[strconv.Itoa(er.Response.StatusCode)] = resp
 		}
 
-		if endpoint.Body.Type != design.Empty {
+		if endpoint.Body.Type != expr.Empty {
 			pp := &Parameter{
 				Name:        endpoint.Body.Type.Name(),
 				In:          "body",
 				Description: endpoint.Body.Description,
 				Required:    true,
-				Schema:      AttributeTypeSchemaWithPrefix(root.Design.API, endpoint.Body, codegen.Goify(endpoint.Service.Name(), true)),
+				Schema:      AttributeTypeSchemaWithPrefix(root.API, endpoint.Body, codegen.Goify(endpoint.Service.Name(), true)),
 			}
 			params = append(params, pp)
 		}
@@ -630,11 +630,11 @@ func buildPathFromExpr(s *V2, root *httpdesign.RootExpr, h *design.HostExpr, rou
 			for _, s := range req.Schemes {
 				requirement[s.SchemeName] = []string{}
 				switch s.Kind {
-				case design.OAuth2Kind:
+				case expr.OAuth2Kind:
 					for _, scope := range req.Scopes {
 						requirement[s.SchemeName] = append(requirement[s.SchemeName], scope)
 					}
-				case design.JWTKind:
+				case expr.JWTKind:
 					lines := make([]string, 0, len(req.Scopes))
 					for _, scope := range req.Scopes {
 						lines = append(lines, fmt.Sprintf("  * `%s`", scope))
@@ -665,7 +665,7 @@ func buildPathFromExpr(s *V2, root *httpdesign.RootExpr, h *design.HostExpr, rou
 		if key == "" {
 			key = "/"
 		}
-		bp := design.WildcardRegex.ReplaceAllStringFunc(
+		bp := expr.HTTPWildcardRegex.ReplaceAllStringFunc(
 			basePath,
 			func(w string) string {
 				return fmt.Sprintf("/{%s}", w[2:])
@@ -712,7 +712,7 @@ func scopesList(scopes []string) string {
 	return strings.Join(lines, "\n")
 }
 
-func docsFromExpr(docs *design.DocsExpr) *ExternalDocs {
+func docsFromExpr(docs *expr.DocsExpr) *ExternalDocs {
 	if docs == nil {
 		return nil
 	}
@@ -813,7 +813,7 @@ func initMaxLengthValidation(def interface{}, isArray bool, max *int) {
 	}
 }
 
-func initValidations(attr *design.AttributeExpr, def interface{}) {
+func initValidations(attr *expr.AttributeExpr, def interface{}) {
 	val := attr.Validation
 	if val == nil {
 		return
@@ -828,9 +828,9 @@ func initValidations(attr *design.AttributeExpr, def interface{}) {
 		initMaximumValidation(def, val.Maximum)
 	}
 	if val.MinLength != nil {
-		initMinLengthValidation(def, design.IsArray(attr.Type), val.MinLength)
+		initMinLengthValidation(def, expr.IsArray(attr.Type), val.MinLength)
 	}
 	if val.MaxLength != nil {
-		initMaxLengthValidation(def, design.IsArray(attr.Type), val.MaxLength)
+		initMaxLengthValidation(def, expr.IsArray(attr.Type), val.MaxLength)
 	}
 }
