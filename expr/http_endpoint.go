@@ -543,7 +543,7 @@ func (e *HTTPEndpointExpr) Finalize() {
 			}
 		}
 		if !found {
-			for _, herr := range Root.HTTPErrors {
+			for _, herr := range Root.API.HTTP.Errors {
 				if herr.Name == err.Name {
 					e.HTTPErrors = append(e.HTTPErrors, herr.Dup())
 				}

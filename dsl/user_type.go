@@ -1,8 +1,17 @@
 package dsl
 
 import (
-	"goa.design/goa/expr"
 	"goa.design/goa/eval"
+	"goa.design/goa/expr"
+)
+
+var (
+	// ErrorResultIdentifier is the result type identifier used for error
+	// responses.
+	ErrorResultIdentifier = expr.ErrorResultIdentifier
+
+	// ErrorResult is the built-in result type for error responses.
+	ErrorResult = expr.ErrorResult
 )
 
 // Type defines a user type. A user type has a unique name and may be an alias

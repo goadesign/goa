@@ -130,6 +130,9 @@ func ClientCLIFiles(genpkg string, root *expr.RootExpr) []*codegen.File {
 			svcs = append(svcs, svc)
 		}
 	}
+	if len(svcs) == 0 {
+		return nil
+	}
 
 	var files []*codegen.File
 	for _, svr := range root.API.Servers {

@@ -1,12 +1,80 @@
 package dsl
 
 import (
+	"fmt"
 	"strings"
 
 	"reflect"
 
 	"goa.design/goa/eval"
 	"goa.design/goa/expr"
+)
+
+const (
+	StatusContinue           = expr.StatusContinue
+	StatusSwitchingProtocols = expr.StatusSwitchingProtocols
+	StatusProcessing         = expr.StatusProcessing
+
+	StatusOK                   = expr.StatusOK
+	StatusCreated              = expr.StatusCreated
+	StatusAccepted             = expr.StatusAccepted
+	StatusNonAuthoritativeInfo = expr.StatusNonAuthoritativeInfo
+	StatusNoContent            = expr.StatusNoContent
+	StatusResetContent         = expr.StatusResetContent
+	StatusPartialContent       = expr.StatusPartialContent
+	StatusMultiStatus          = expr.StatusMultiStatus
+	StatusAlreadyReported      = expr.StatusAlreadyReported
+	StatusIMUsed               = expr.StatusIMUsed
+
+	StatusMultipleChoices  = expr.StatusMultipleChoices
+	StatusMovedPermanently = expr.StatusMovedPermanently
+	StatusFound            = expr.StatusFound
+	StatusSeeOther         = expr.StatusSeeOther
+	StatusNotModified      = expr.StatusNotModified
+	StatusUseProxy         = expr.StatusUseProxy
+
+	StatusTemporaryRedirect = expr.StatusTemporaryRedirect
+	StatusPermanentRedirect = expr.StatusPermanentRedirect
+
+	StatusBadRequest                   = expr.StatusBadRequest
+	StatusUnauthorized                 = expr.StatusUnauthorized
+	StatusPaymentRequired              = expr.StatusPaymentRequired
+	StatusForbidden                    = expr.StatusForbidden
+	StatusNotFound                     = expr.StatusNotFound
+	StatusMethodNotAllowed             = expr.StatusMethodNotAllowed
+	StatusNotAcceptable                = expr.StatusNotAcceptable
+	StatusProxyAuthRequired            = expr.StatusProxyAuthRequired
+	StatusRequestTimeout               = expr.StatusRequestTimeout
+	StatusConflict                     = expr.StatusConflict
+	StatusGone                         = expr.StatusGone
+	StatusLengthRequired               = expr.StatusLengthRequired
+	StatusPreconditionFailed           = expr.StatusPreconditionFailed
+	StatusRequestEntityTooLarge        = expr.StatusRequestEntityTooLarge
+	StatusRequestURITooLong            = expr.StatusRequestURITooLong
+	StatusUnsupportedResultType        = expr.StatusUnsupportedResultType
+	StatusRequestedRangeNotSatisfiable = expr.StatusRequestedRangeNotSatisfiable
+	StatusExpectationFailed            = expr.StatusExpectationFailed
+	StatusTeapot                       = expr.StatusTeapot
+	StatusUnprocessableEntity          = expr.StatusUnprocessableEntity
+	StatusLocked                       = expr.StatusLocked
+	StatusFailedDependency             = expr.StatusFailedDependency
+	StatusUpgradeRequired              = expr.StatusUpgradeRequired
+	StatusPreconditionRequired         = expr.StatusPreconditionRequired
+	StatusTooManyRequests              = expr.StatusTooManyRequests
+	StatusRequestHeaderFieldsTooLarge  = expr.StatusRequestHeaderFieldsTooLarge
+	StatusUnavailableForLegalReasons   = expr.StatusUnavailableForLegalReasons
+
+	StatusInternalServerError           = expr.StatusInternalServerError
+	StatusNotImplemented                = expr.StatusNotImplemented
+	StatusBadGateway                    = expr.StatusBadGateway
+	StatusServiceUnavailable            = expr.StatusServiceUnavailable
+	StatusGatewayTimeout                = expr.StatusGatewayTimeout
+	StatusHTTPVersionNotSupported       = expr.StatusHTTPVersionNotSupported
+	StatusVariantAlsoNegotiates         = expr.StatusVariantAlsoNegotiates
+	StatusInsufficientStorage           = expr.StatusInsufficientStorage
+	StatusLoopDetected                  = expr.StatusLoopDetected
+	StatusNotExtended                   = expr.StatusNotExtended
+	StatusNetworkAuthenticationRequired = expr.StatusNetworkAuthenticationRequired
 )
 
 // HTTP defines the HTTP transport specific properties of an API, a service or a
@@ -24,7 +92,7 @@ import (
 //
 // HTTP must appear in API, a Service or an Method expression.
 //
-// HTTP accepts a single argument which is the defining DSL function.
+// HTTP accepts an optional argument which is the defining DSL function.
 //
 // Example:
 //
@@ -71,7 +139,15 @@ import (
 //        })
 //    })
 //
-func HTTP(fn func()) {
+func HTTP(fns ...func()) {
+	if len(fns) > 1 {
+		eval.InvalidArgError("zero or one function", fmt.Sprintf("%d functions", len(fns)))
+		return
+	}
+	fn := func() {}
+	if len(fns) == 1 {
+		fn = fns[0]
+	}
 	switch actual := eval.Current().(type) {
 	case *expr.APIExpr:
 		eval.Execute(fn, expr.Root)

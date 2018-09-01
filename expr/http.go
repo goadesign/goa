@@ -1,6 +1,8 @@
 package expr
 
-import "regexp"
+import (
+	"regexp"
+)
 
 type (
 	// HTTPExpr contains the API level HTTP specific expressions.

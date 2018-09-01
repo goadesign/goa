@@ -4,7 +4,7 @@ import (
 	"testing"
 
 	. "goa.design/goa/dsl"
-	. "goa.design/goa/expr"
+	"goa.design/goa/expr"
 )
 
 func TestHTTPRouteValidation(t *testing.T) {
@@ -19,9 +19,9 @@ func TestHTTPRouteValidation(t *testing.T) {
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
 			if c.Error == "" {
-				RunHTTPDSL(t, c.DSL)
+				expr.RunHTTPDSL(t, c.DSL)
 			} else {
-				err := RunInvalidHTTPDSL(t, c.DSL)
+				err := expr.RunInvalidHTTPDSL(t, c.DSL)
 				if err.Error() != c.Error {
 					t.Errorf("got error %q, expected %q", err.Error(), c.Error)
 				}

@@ -1,8 +1,8 @@
 package dsl
 
 import (
-	"goa.design/goa/expr"
 	"goa.design/goa/eval"
+	"goa.design/goa/expr"
 )
 
 // Method defines a single service method.

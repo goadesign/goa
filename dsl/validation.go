@@ -5,8 +5,52 @@ import (
 	"regexp"
 	"strconv"
 
-	"goa.design/goa/expr"
 	"goa.design/goa/eval"
+	"goa.design/goa/expr"
+)
+
+const (
+	// FormatDate describes RFC3339 date values.
+	FormatDate = expr.FormatDate
+
+	// FormatDateTime describes RFC3339 date time values.
+	FormatDateTime = expr.FormatDateTime
+
+	// FormatUUID describes RFC4122 UUID values.
+	FormatUUID = expr.FormatUUID
+
+	// FormatEmail describes RFC5322 email addresses.
+	FormatEmail = expr.FormatEmail
+
+	// FormatHostname describes RFC1035 Internet hostnames.
+	FormatHostname = expr.FormatHostname
+
+	// FormatIPv4 describes RFC2373 IPv4 address values.
+	FormatIPv4 = expr.FormatIPv4
+
+	// FormatIPv6 describes RFC2373 IPv6 address values.
+	FormatIPv6 = expr.FormatIPv6
+
+	// FormatIP describes RFC2373 IPv4 or IPv6 address values.
+	FormatIP = expr.FormatIP
+
+	// FormatURI describes RFC3986 URI values.
+	FormatURI = expr.FormatURI
+
+	// FormatMAC describes IEEE 802 MAC-48, EUI-48 or EUI-64 MAC address values.
+	FormatMAC = expr.FormatMAC
+
+	// FormatCIDR describes RFC4632 and RFC4291 CIDR notation IP address values.
+	FormatCIDR = expr.FormatCIDR
+
+	// FormatRegexp describes regular expression syntax accepted by RE2.
+	FormatRegexp = expr.FormatRegexp
+
+	// FormatJSON describes JSON text.
+	FormatJSON = expr.FormatJSON
+
+	// FormatRFC1123 describes RFC1123 date time values.
+	FormatRFC1123 = expr.FormatRFC1123
 )
 
 // Enum adds a "enum" validation to the attribute.

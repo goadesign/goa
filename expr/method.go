@@ -35,8 +35,8 @@ type (
 		Service *ServiceExpr
 		// Meta is an arbitrary set of key/value pairs, see dsl.Meta
 		Meta MetaExpr
-		// Stream is the kind of stream (none, payload, result, or both) the method
-		// defines.
+		// Stream is the kind of stream (none, payload, result, or both)
+		// the method defines.
 		Stream StreamKind
 		// StreamingPayload is the payload sent across the stream.
 		StreamingPayload *AttributeExpr
@@ -46,12 +46,14 @@ type (
 const (
 	// NoStreamKind represents no payload or result stream in method.
 	NoStreamKind StreamKind = iota + 1
-	// ClientStreamKind represents client sends a streaming payload to method.
+	// ClientStreamKind represents client sends a streaming payload to
+	// method.
 	ClientStreamKind
-	// ServerStreamKind represents server sends a streaming result from method.
+	// ServerStreamKind represents server sends a streaming result from
+	// method.
 	ServerStreamKind
-	// BidirectionalStreamKind represents client and server sending payload and
-	// result respectively via a stream.
+	// BidirectionalStreamKind represents client and server sending payload
+	// and result respectively via a stream.
 	BidirectionalStreamKind
 )
 

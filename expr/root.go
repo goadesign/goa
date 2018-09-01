@@ -90,16 +90,20 @@ func (r *RootExpr) WalkSets(walk eval.SetWalker) {
 	}
 	walk(mtypes)
 
-	// Services and methods
+	// Services
 	services := make(eval.ExpressionSet, len(r.Services))
 	var methods eval.ExpressionSet
 	for i, s := range r.Services {
 		services[i] = s
-		for _, e := range s.Methods {
-			methods = append(methods, e)
-		}
 	}
 	walk(services)
+
+	// Methods (must be done after services)
+	for _, s := range r.Services {
+		for _, m := range s.Methods {
+			methods = append(methods, m)
+		}
+	}
 	walk(methods)
 
 	// HTTP services and endpoints
@@ -110,20 +114,20 @@ func (r *RootExpr) WalkSets(walk eval.SetWalker) {
 		}
 		return false
 	})
-	var endpoints eval.ExpressionSet
-	var servers eval.ExpressionSet
+	var httpepts eval.ExpressionSet
+	var httpsvrs eval.ExpressionSet
 	for i, svc := range r.API.HTTP.Services {
 		httpsvcs[i] = svc
 		for _, e := range svc.HTTPEndpoints {
-			endpoints = append(endpoints, e)
+			httpepts = append(httpepts, e)
 		}
 		for _, s := range svc.FileServers {
-			servers = append(servers, s)
+			httpsvrs = append(httpsvrs, s)
 		}
 	}
 	walk(httpsvcs)
-	walk(endpoints)
-	walk(servers)
+	walk(httpepts)
+	walk(httpsvrs)
 }
 
 // DependsOn returns nil, the core DSL has no dependency.
@@ -186,7 +190,7 @@ func (r *RootExpr) Error(name string) *ErrorExpr {
 
 // HTTPService returns the service with the given name if any.
 func (r *RootExpr) HTTPService(name string) *HTTPServiceExpr {
-	for _, res := range r.HTTPServices {
+	for _, res := range r.API.HTTP.Services {
 		if res.Name() == name {
 			return res
 		}
@@ -203,7 +207,7 @@ func (r *RootExpr) HTTPServiceFor(s *ServiceExpr) *HTTPServiceExpr {
 	res := &HTTPServiceExpr{
 		ServiceExpr: s,
 	}
-	r.HTTPServices = append(r.HTTPServices, res)
+	r.API.HTTP.Services = append(r.API.HTTP.Services, res)
 	return res
 }
 

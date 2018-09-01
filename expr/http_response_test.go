@@ -4,7 +4,7 @@ import (
 	"testing"
 
 	. "goa.design/goa/dsl"
-	. "goa.design/goa/expr"
+	"goa.design/goa/expr"
 )
 
 func TestHTTPResponseValidation(t *testing.T) {
@@ -16,7 +16,7 @@ func TestHTTPResponseValidation(t *testing.T) {
 		{"empty", emptyResultEmptyResponseDSL, ""},
 		{"non empty result", nonEmptyResultEmptyResponseDSL, ""},
 		{"non empty response", emptyResultNonEmptyResponseDSL, ""},
-		// {"string result", stringResultResponseWithHeadersDSL, ""},
+		{"string result", stringResultResponseWithHeadersDSL, ""},
 		{"object result", objectResultResponseWithHeadersDSL, ""},
 		{"array result", arrayResultResponseWithHeadersDSL, ""},
 		{"map result", mapResultResponseWithHeadersDSL, ""},
@@ -25,9 +25,9 @@ func TestHTTPResponseValidation(t *testing.T) {
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
 			if c.Error == "" {
-				RunHTTPDSL(t, c.DSL)
+				expr.RunHTTPDSL(t, c.DSL)
 			} else {
-				err := RunInvalidHTTPDSL(t, c.DSL)
+				err := expr.RunInvalidHTTPDSL(t, c.DSL)
 				if err.Error() != c.Error {
 					t.Errorf("got error %q, expected %q", err.Error(), c.Error)
 				}
@@ -68,19 +68,19 @@ var emptyResultNonEmptyResponseDSL = func() {
 	})
 }
 
-// var stringResultResponseWithHeadersDSL = func() {
-// 	Service("StringResultResponseWithHeaders", func() {
-// 		Method("Method", func() {
-// 			Result(String)
-// 			HTTP(func() {
-// 				POST("/")
-// 				Response(func() {
-// 					Header("Location")
-// 				})
-// 			})
-// 		})
-// 	})
-// }
+var stringResultResponseWithHeadersDSL = func() {
+	Service("StringResultResponseWithHeaders", func() {
+		Method("Method", func() {
+			Result(String)
+			HTTP(func() {
+				POST("/")
+				Response(func() {
+					Header("Location")
+				})
+			})
+		})
+	})
+}
 
 var objectResultResponseWithHeadersDSL = func() {
 	Service("ObjectResultResponseWithHeaders", func() {

@@ -15,7 +15,7 @@ import (
 // implementations.
 func ExampleServerFiles(genpkg string, root *expr.RootExpr) []*codegen.File {
 	var fw []*codegen.File
-	for _, svc := range root.HTTPServices {
+	for _, svc := range root.API.HTTP.Services {
 		f := dummyServiceFile(genpkg, root, svc)
 		if f != nil {
 			fw = append(fw, f)
