@@ -49,6 +49,7 @@ var _ = Service("divider", func() {
 	Method("divide", func() {
 		Payload(FloatOperands)
 		Result(Float64)
+
 		HTTP(func() {
 			GET("/div/{a}/{b}")
 			Response(StatusOK)

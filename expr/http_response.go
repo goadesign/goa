@@ -160,13 +160,15 @@ func (r *HTTPResponseExpr) Validate(e *HTTPEndpointExpr) *eval.ValidationErrors 
 		verr.Merge(r.Headers.Validate("HTTP response headers", r))
 		if e.MethodExpr.Result.Type == Empty {
 			verr.Add(r, "response defines headers but result is empty")
-		} else {
+		} else if IsObject(e.MethodExpr.Result.Type) {
 			mobj := AsObject(r.Headers.Type)
 			for _, h := range *mobj {
 				if !hasAttribute(h.Name) {
 					verr.Add(r, "header %q has no equivalent attribute in%s result type, use notation 'attribute_name:header_name' to identify corresponding result type attribute.", h.Name, inview)
 				}
 			}
+		} else if len(*AsObject(r.Headers.Type)) > 1 {
+			verr.Add(r, "response defines more than one header but result type is not an object")
 		}
 	}
 	if r.Body != nil {

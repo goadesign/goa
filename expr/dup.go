@@ -1,5 +1,7 @@
 package expr
 
+import "fmt"
+
 // Dup creates a copy the given data type.
 func Dup(d DataType) DataType {
 	res := newDupper().DupType(d)
@@ -87,5 +89,5 @@ func (d *dupper) DupType(t DataType) DataType {
 		dp.SetAttribute(dupAtt)
 		return dp
 	}
-	panic("unknown type " + t.Name())
+	panic("unknown type " + fmt.Sprintf("%T", t))
 }
