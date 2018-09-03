@@ -25,11 +25,11 @@ paths:
         "400":
           description: Bad Request response.
           schema:
-            $ref: '#/definitions/pickno_criteriaResponseBody'
+            $ref: '#/definitions/pick_no_criteriaResponseBody'
         "404":
           description: Not Found response.
           schema:
-            $ref: '#/definitions/pickno_matchResponseBody'
+            $ref: '#/definitions/pick_no_matchResponseBody'
       schemes:
       - http
   /storage:
@@ -98,7 +98,7 @@ paths:
         "404":
           description: Not Found response.
           schema:
-            $ref: '#/definitions/shownot_foundResponseBody'
+            $ref: '#/definitions/show_not_foundResponseBody'
             required:
             - message
             - id
@@ -783,18 +783,18 @@ definitions:
       name: Longoria
     required:
     - name
-  pickno_criteriaResponseBody:
-    title: pickno_criteriaResponseBody
+  pick_no_criteriaResponseBody:
+    title: pick_no_criteriaResponseBody
     type: string
     description: Missing criteria
     example: Exercitationem ducimus expedita in quam eos distinctio.
-  pickno_matchResponseBody:
-    title: pickno_matchResponseBody
+  pick_no_matchResponseBody:
+    title: pick_no_matchResponseBody
     type: string
     description: No bottle matched given criteria
     example: Ut molestiae possimus.
-  shownot_foundResponseBody:
-    title: shownot_foundResponseBody
+  show_not_foundResponseBody:
+    title: show_not_foundResponseBody
     type: object
     properties:
       id:

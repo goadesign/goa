@@ -159,7 +159,7 @@ func DecodeShowResponse(decoder func(*http.Response) goahttp.Decoder, restoreBod
 			return storage.NewStoredBottle(vres), nil
 		case http.StatusNotFound:
 			var (
-				body ShownotFoundResponseBody
+				body ShowNotFoundResponseBody
 				err  error
 			)
 			err = decoder(resp).Decode(&body)

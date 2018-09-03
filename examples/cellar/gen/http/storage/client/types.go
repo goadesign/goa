@@ -63,9 +63,9 @@ type ShowResponseBody struct {
 	Rating *uint32 `form:"rating,omitempty" json:"rating,omitempty" xml:"rating,omitempty"`
 }
 
-// ShownotFoundResponseBody is the type of the "storage" service "show"
+// ShowNotFoundResponseBody is the type of the "storage" service "show"
 // endpoint HTTP response body for the "not_found" error.
-type ShownotFoundResponseBody struct {
+type ShowNotFoundResponseBody struct {
 	// Message of error
 	Message *string `form:"message,omitempty" json:"message,omitempty" xml:"message,omitempty"`
 	// ID of missing bottle
@@ -277,7 +277,7 @@ func NewShowStoredBottleOK(body *ShowResponseBody) *storageviews.StoredBottleVie
 }
 
 // NewShowNotFound builds a storage service show endpoint not_found error.
-func NewShowNotFound(body *ShownotFoundResponseBody) *storage.NotFound {
+func NewShowNotFound(body *ShowNotFoundResponseBody) *storage.NotFound {
 	v := &storage.NotFound{
 		Message: *body.Message,
 		ID:      *body.ID,
@@ -285,8 +285,8 @@ func NewShowNotFound(body *ShownotFoundResponseBody) *storage.NotFound {
 	return v
 }
 
-// Validate runs the validations defined on shownot_foundResponseBody
-func (body *ShownotFoundResponseBody) Validate() (err error) {
+// Validate runs the validations defined on show_not_foundResponseBody
+func (body *ShowNotFoundResponseBody) Validate() (err error) {
 	if body.Message == nil {
 		err = goa.MergeErrors(err, goa.MissingFieldError("message", "body"))
 	}

@@ -86,7 +86,8 @@ type (
 		Method *service.MethodData
 		// ServiceName is the name of the service exposing the endpoint.
 		ServiceName string
-		// ServiceVarName is the goified service name (first letter lowercase).
+		// ServiceVarName is the goified service name (first letter
+		// lowercase).
 		ServiceVarName string
 		// ServicePkgName is the name of the service package.
 		ServicePkgName string
@@ -124,8 +125,8 @@ type (
 		ResponseEncoder string
 		// ErrorEncoder is the name of the error encoder function.
 		ErrorEncoder string
-		// MultipartRequestDecoder indicates the request decoder for multipart
-		// content type.
+		// MultipartRequestDecoder indicates the request decoder for
+		// multipart content type.
 		MultipartRequestDecoder *MultipartData
 		// ServerStream holds the data to render the server struct which
 		// implements the server stream interface.
@@ -144,8 +145,8 @@ type (
 		RequestEncoder string
 		// ResponseDecoder is the name of the response decoder function.
 		ResponseDecoder string
-		// MultipartRequestEncoder indicates the request encoder for multipart
-		// content type.
+		// MultipartRequestEncoder indicates the request encoder for
+		// multipart content type.
 		MultipartRequestEncoder *MultipartData
 		// ClientStream holds the data to render the client struct which
 		// implements the client stream interface.
@@ -253,7 +254,8 @@ type (
 		// MustValidate is true if the request body or at least one
 		// parameter or header requires validation.
 		MustValidate bool
-		// Multipart if true indicates the request is a multipart request.
+		// Multipart if true indicates the request is a multipart
+		// request.
 		Multipart bool
 	}
 
@@ -269,16 +271,18 @@ type (
 		// ErrorHeader contains the value of the response "goa-error"
 		// header if any.
 		ErrorHeader string
-		// ServerBody is the type of the response body used by server code, nil if
-		// body should be empty. The type does NOT use pointers for all fields.
-		// If the method result is a result type and the response data describes a
-		// success response, then this field contains a type for every view in the
-		// result type. The type name is suffixed with the name of the view (except
-		// for "default" view where no suffix is added). A constructor is also
-		// generated server side for each view to transform the result type to the
-		// corresponding response body type. If method result is not a result type
-		// or if the response describes an error response, then this field
-		// contains at most one item.
+		// ServerBody is the type of the response body used by server
+		// code, nil if body should be empty. The type does NOT use
+		// pointers for all fields. If the method result is a result
+		// type and the response data describes a success response, then
+		// this field contains a type for every view in the result type.
+		// The type name is suffixed with the name of the view (except
+		// for "default" view where no suffix is added). A constructor
+		// is also generated server side for each view to transform the
+		// result type to the corresponding response body type. If
+		// method result is not a result type or if the response
+		// describes an error response, then this field contains at most
+		// one item.
 		ServerBody []*TypeData
 		// ClientBody is the type of the response body used by client
 		// code, nil if body should be empty. The type uses pointers for
@@ -297,11 +301,13 @@ type (
 		TagPointer bool
 		// MustValidate is true if at least one header requires validation.
 		MustValidate bool
-		// ResultAttr sets the response body from the specified result type
-		// attribute. This field is set when the design uses Body("name") syntax
-		// to set the response body and the result type is an object.
+		// ResultAttr sets the response body from the specified result
+		// type attribute. This field is set when the design uses
+		// Body("name") syntax to set the response body and the result
+		// type is an object.
 		ResultAttr string
-		// ViewedResult indicates whether the response body type is a result type.
+		// ViewedResult indicates whether the response body type is a
+		// result type.
 		ViewedResult *service.ViewedResultTypeData
 	}
 
@@ -461,7 +467,8 @@ type (
 		StringSlice bool
 		// Slice is true if the param type is an array.
 		Slice bool
-		// Type describes the datatype of the variable value. Mainly used for conversion.
+		// Type describes the datatype of the variable value. Mainly
+		// used for conversion.
 		Type expr.DataType
 		// Validate contains the validation code if any.
 		Validate string
@@ -496,7 +503,8 @@ type (
 		View string
 	}
 
-	// MultipartData contains the data needed to render multipart encoder/decoder.
+	// MultipartData contains the data needed to render multipart
+	// encoder/decoder.
 	MultipartData struct {
 		// FuncName is the name used to generate function type.
 		FuncName string
@@ -508,48 +516,56 @@ type (
 		ServiceName string
 		// MethodName is the name of the method.
 		MethodName string
-		// Payload is the payload data required to generate encoder/decoder.
+		// Payload is the payload data required to generate
+		// encoder/decoder.
 		Payload *PayloadData
 	}
 
-	// StreamData contains the data needed to render struct type that implements
-	// the server and client stream interfaces.
+	// StreamData contains the data needed to render struct type that
+	// implements the server and client stream interfaces.
 	StreamData struct {
 		// VarName is the name of the struct.
 		VarName string
 		// Type is type of the stream (server or client).
 		Type string
-		// Interface is the fully qualified name of the interface that the struct
-		// implements.
+		// Interface is the fully qualified name of the interface that
+		// the struct implements.
 		Interface string
-		// Endpoint is endpoint data that defines streaming payload/result.
+		// Endpoint is endpoint data that defines streaming
+		// payload/result.
 		Endpoint *EndpointData
 		// Payload is the streaming payload type sent via the stream.
 		Payload *TypeData
-		// Response is the successful response data for the streaming endpoint.
+		// Response is the successful response data for the streaming
+		// endpoint.
 		Response *ResponseData
 		// SendName is the name of the send function.
 		SendName string
 		// SendDesc is the description for the send function.
 		SendDesc string
-		// SendTypeName is the fully qualified type name sent through the stream.
+		// SendTypeName is the fully qualified type name sent through
+		// the stream.
 		SendTypeName string
-		// SendTypeRef is the fully qualified type ref sent through the stream.
+		// SendTypeRef is the fully qualified type ref sent through the
+		// stream.
 		SendTypeRef string
 		// RecvName is the name of the receive function.
 		RecvName string
 		// RecvDesc is the description for the recv function.
 		RecvDesc string
-		// RecvTypeName is the fully qualified type name received from the stream.
+		// RecvTypeName is the fully qualified type name received from
+		// the stream.
 		RecvTypeName string
-		// RecvTypeRef is the fully qualified type ref received from the stream.
-		RecvTypeRef string
-		// MustClose indicates whether to generate the Close() function for the
+		// RecvTypeRef is the fully qualified type ref received from the
 		// stream.
+		RecvTypeRef string
+		// MustClose indicates whether to generate the Close() function
+		// for the stream.
 		MustClose bool
 		// PkgName is the service package name.
 		PkgName string
-		// Kind is the kind of the stream (payload or result or bidirectional).
+		// Kind is the kind of the stream (payload, result or
+		// bidirectional).
 		Kind expr.StreamKind
 	}
 )

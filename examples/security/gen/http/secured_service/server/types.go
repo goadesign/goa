@@ -12,50 +12,50 @@ import (
 	securedservice "goa.design/goa/examples/security/gen/secured_service"
 )
 
-// SigninunauthorizedResponseBody is the type of the "secured_service" service
+// SigninUnauthorizedResponseBody is the type of the "secured_service" service
 // "signin" endpoint HTTP response body for the "unauthorized" error.
-type SigninunauthorizedResponseBody string
+type SigninUnauthorizedResponseBody string
 
-// SecureunauthorizedResponseBody is the type of the "secured_service" service
+// SecureUnauthorizedResponseBody is the type of the "secured_service" service
 // "secure" endpoint HTTP response body for the "unauthorized" error.
-type SecureunauthorizedResponseBody string
+type SecureUnauthorizedResponseBody string
 
-// DoublySecureunauthorizedResponseBody is the type of the "secured_service"
+// DoublySecureUnauthorizedResponseBody is the type of the "secured_service"
 // service "doubly_secure" endpoint HTTP response body for the "unauthorized"
 // error.
-type DoublySecureunauthorizedResponseBody string
+type DoublySecureUnauthorizedResponseBody string
 
-// AlsoDoublySecureunauthorizedResponseBody is the type of the
+// AlsoDoublySecureUnauthorizedResponseBody is the type of the
 // "secured_service" service "also_doubly_secure" endpoint HTTP response body
 // for the "unauthorized" error.
-type AlsoDoublySecureunauthorizedResponseBody string
+type AlsoDoublySecureUnauthorizedResponseBody string
 
-// NewSigninunauthorizedResponseBody builds the HTTP response body from the
+// NewSigninUnauthorizedResponseBody builds the HTTP response body from the
 // result of the "signin" endpoint of the "secured_service" service.
-func NewSigninunauthorizedResponseBody(res securedservice.Unauthorized) SigninunauthorizedResponseBody {
-	body := SigninunauthorizedResponseBody(res)
+func NewSigninUnauthorizedResponseBody(res securedservice.Unauthorized) SigninUnauthorizedResponseBody {
+	body := SigninUnauthorizedResponseBody(res)
 	return body
 }
 
-// NewSecureunauthorizedResponseBody builds the HTTP response body from the
+// NewSecureUnauthorizedResponseBody builds the HTTP response body from the
 // result of the "secure" endpoint of the "secured_service" service.
-func NewSecureunauthorizedResponseBody(res securedservice.Unauthorized) SecureunauthorizedResponseBody {
-	body := SecureunauthorizedResponseBody(res)
+func NewSecureUnauthorizedResponseBody(res securedservice.Unauthorized) SecureUnauthorizedResponseBody {
+	body := SecureUnauthorizedResponseBody(res)
 	return body
 }
 
-// NewDoublySecureunauthorizedResponseBody builds the HTTP response body from
+// NewDoublySecureUnauthorizedResponseBody builds the HTTP response body from
 // the result of the "doubly_secure" endpoint of the "secured_service" service.
-func NewDoublySecureunauthorizedResponseBody(res securedservice.Unauthorized) DoublySecureunauthorizedResponseBody {
-	body := DoublySecureunauthorizedResponseBody(res)
+func NewDoublySecureUnauthorizedResponseBody(res securedservice.Unauthorized) DoublySecureUnauthorizedResponseBody {
+	body := DoublySecureUnauthorizedResponseBody(res)
 	return body
 }
 
-// NewAlsoDoublySecureunauthorizedResponseBody builds the HTTP response body
+// NewAlsoDoublySecureUnauthorizedResponseBody builds the HTTP response body
 // from the result of the "also_doubly_secure" endpoint of the
 // "secured_service" service.
-func NewAlsoDoublySecureunauthorizedResponseBody(res securedservice.Unauthorized) AlsoDoublySecureunauthorizedResponseBody {
-	body := AlsoDoublySecureunauthorizedResponseBody(res)
+func NewAlsoDoublySecureUnauthorizedResponseBody(res securedservice.Unauthorized) AlsoDoublySecureUnauthorizedResponseBody {
+	body := AlsoDoublySecureUnauthorizedResponseBody(res)
 	return body
 }
 

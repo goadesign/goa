@@ -74,7 +74,7 @@ func DecodeSigninResponse(decoder func(*http.Response) goahttp.Decoder, restoreB
 			return nil, nil
 		case http.StatusUnauthorized:
 			var (
-				body SigninunauthorizedResponseBody
+				body SigninUnauthorizedResponseBody
 				err  error
 			)
 			err = decoder(resp).Decode(&body)
@@ -161,7 +161,7 @@ func DecodeSecureResponse(decoder func(*http.Response) goahttp.Decoder, restoreB
 			return body, nil
 		case http.StatusUnauthorized:
 			var (
-				body SecureunauthorizedResponseBody
+				body SecureUnauthorizedResponseBody
 				err  error
 			)
 			err = decoder(resp).Decode(&body)
@@ -248,7 +248,7 @@ func DecodeDoublySecureResponse(decoder func(*http.Response) goahttp.Decoder, re
 			return body, nil
 		case http.StatusUnauthorized:
 			var (
-				body DoublySecureunauthorizedResponseBody
+				body DoublySecureUnauthorizedResponseBody
 				err  error
 			)
 			err = decoder(resp).Decode(&body)
@@ -344,7 +344,7 @@ func DecodeAlsoDoublySecureResponse(decoder func(*http.Response) goahttp.Decoder
 			return body, nil
 		case http.StatusUnauthorized:
 			var (
-				body AlsoDoublySecureunauthorizedResponseBody
+				body AlsoDoublySecureUnauthorizedResponseBody
 				err  error
 			)
 			err = decoder(resp).Decode(&body)

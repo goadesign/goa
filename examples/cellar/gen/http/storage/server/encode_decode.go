@@ -94,7 +94,7 @@ func EncodeShowError(encoder func(context.Context, http.ResponseWriter) goahttp.
 		case "not_found":
 			res := v.(*storage.NotFound)
 			enc := encoder(ctx, w)
-			body := NewShownotFoundResponseBody(res)
+			body := NewShowNotFoundResponseBody(res)
 			w.Header().Set("goa-error", "not_found")
 			w.WriteHeader(http.StatusNotFound)
 			return enc.Encode(body)

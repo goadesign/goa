@@ -74,9 +74,9 @@ type ShowResponseBodyTiny struct {
 	Winery *WineryResponseBodyTiny `form:"winery" json:"winery" xml:"winery"`
 }
 
-// ShownotFoundResponseBody is the type of the "storage" service "show"
+// ShowNotFoundResponseBody is the type of the "storage" service "show"
 // endpoint HTTP response body for the "not_found" error.
-type ShownotFoundResponseBody struct {
+type ShowNotFoundResponseBody struct {
 	// Message of error
 	Message string `form:"message" json:"message" xml:"message"`
 	// ID of missing bottle
@@ -197,10 +197,10 @@ func NewShowResponseBodyTiny(res *storageviews.StoredBottleView) *ShowResponseBo
 	return body
 }
 
-// NewShownotFoundResponseBody builds the HTTP response body from the result of
+// NewShowNotFoundResponseBody builds the HTTP response body from the result of
 // the "show" endpoint of the "storage" service.
-func NewShownotFoundResponseBody(res *storage.NotFound) *ShownotFoundResponseBody {
-	body := &ShownotFoundResponseBody{
+func NewShowNotFoundResponseBody(res *storage.NotFound) *ShowNotFoundResponseBody {
+	body := &ShowNotFoundResponseBody{
 		Message: res.Message,
 		ID:      res.ID,
 	}

@@ -82,7 +82,7 @@ func DecodeLoginResponse(decoder func(*http.Response) goahttp.Decoder, restoreBo
 			return body, nil
 		case http.StatusUnauthorized:
 			var (
-				body LoginunauthorizedResponseBody
+				body LoginUnauthorizedResponseBody
 				err  error
 			)
 			err = decoder(resp).Decode(&body)
@@ -163,7 +163,7 @@ func DecodeEchoerResponse(decoder func(*http.Response) goahttp.Decoder, restoreB
 			return body, nil
 		case http.StatusForbidden:
 			var (
-				body EchoerinvalidScopesResponseBody
+				body EchoerInvalidScopesResponseBody
 				err  error
 			)
 			err = decoder(resp).Decode(&body)
@@ -173,7 +173,7 @@ func DecodeEchoerResponse(decoder func(*http.Response) goahttp.Decoder, restoreB
 			return nil, NewEchoerInvalidScopes(body)
 		case http.StatusUnauthorized:
 			var (
-				body EchoerunauthorizedResponseBody
+				body EchoerUnauthorizedResponseBody
 				err  error
 			)
 			err = decoder(resp).Decode(&body)
@@ -246,7 +246,7 @@ func DecodeListenerResponse(decoder func(*http.Response) goahttp.Decoder, restor
 			return nil, nil
 		case http.StatusForbidden:
 			var (
-				body ListenerinvalidScopesResponseBody
+				body ListenerInvalidScopesResponseBody
 				err  error
 			)
 			err = decoder(resp).Decode(&body)
@@ -256,7 +256,7 @@ func DecodeListenerResponse(decoder func(*http.Response) goahttp.Decoder, restor
 			return nil, NewListenerInvalidScopes(body)
 		case http.StatusUnauthorized:
 			var (
-				body ListenerunauthorizedResponseBody
+				body ListenerUnauthorizedResponseBody
 				err  error
 			)
 			err = decoder(resp).Decode(&body)
@@ -343,7 +343,7 @@ func DecodeSummaryResponse(decoder func(*http.Response) goahttp.Decoder, restore
 			return chattersvc.NewChatSummaryCollection(vres), nil
 		case http.StatusForbidden:
 			var (
-				body SummaryinvalidScopesResponseBody
+				body SummaryInvalidScopesResponseBody
 				err  error
 			)
 			err = decoder(resp).Decode(&body)
@@ -353,7 +353,7 @@ func DecodeSummaryResponse(decoder func(*http.Response) goahttp.Decoder, restore
 			return nil, NewSummaryInvalidScopes(body)
 		case http.StatusUnauthorized:
 			var (
-				body SummaryunauthorizedResponseBody
+				body SummaryUnauthorizedResponseBody
 				err  error
 			)
 			err = decoder(resp).Decode(&body)
@@ -445,7 +445,7 @@ func DecodeHistoryResponse(decoder func(*http.Response) goahttp.Decoder, restore
 			return chattersvc.NewChatSummary(vres), nil
 		case http.StatusForbidden:
 			var (
-				body HistoryinvalidScopesResponseBody
+				body HistoryInvalidScopesResponseBody
 				err  error
 			)
 			err = decoder(resp).Decode(&body)
@@ -455,7 +455,7 @@ func DecodeHistoryResponse(decoder func(*http.Response) goahttp.Decoder, restore
 			return nil, NewHistoryInvalidScopes(body)
 		case http.StatusUnauthorized:
 			var (
-				body HistoryunauthorizedResponseBody
+				body HistoryUnauthorizedResponseBody
 				err  error
 			)
 			err = decoder(resp).Decode(&body)

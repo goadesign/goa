@@ -23,12 +23,17 @@ func ServerFiles(genpkg string, root *expr.RootExpr) []*codegen.File {
 	return fw
 }
 
-// server returns the files defining the HTTP server.
+// server returns the file implementing the HTTP server.
 func server(genpkg string, svc *expr.HTTPServiceExpr) *codegen.File {
 	path := filepath.Join(codegen.Gendir, "http", codegen.SnakeCase(svc.Name()), "server", "server.go")
 	data := HTTPServices.Get(svc.Name())
 	title := fmt.Sprintf("%s HTTP server", svc.Name())
-	funcs := map[string]interface{}{"join": func(ss []string, s string) string { return strings.Join(ss, s) }}
+	funcs := map[string]interface{}{
+		"join": func(ss []string, s string) string { return strings.Join(ss, s) },
+		"streamingEndpointExists": streamingEndpointExists,
+		"upgradeParams":           upgradeParams,
+		"viewedServerBody":        viewedServerBody,
+	}
 	sections := []*codegen.SectionTemplate{
 		codegen.Header(title, "server", []*codegen.ImportSpec{
 			{Path: "context"},
@@ -68,14 +73,7 @@ func server(genpkg string, svc *expr.HTTPServiceExpr) *codegen.File {
 		}
 	}
 
-	sections = append(sections, &codegen.SectionTemplate{
-		Name:   "server-init",
-		Source: serverInitT,
-		Data:   data,
-		FuncMap: map[string]interface{}{
-			"streamingEndpointExists": streamingEndpointExists,
-		},
-	})
+	sections = append(sections, &codegen.SectionTemplate{Name: "server-init", Source: serverInitT, Data: data, FuncMap: funcs})
 	sections = append(sections, &codegen.SectionTemplate{Name: "server-service", Source: serverServiceT, Data: data})
 	sections = append(sections, &codegen.SectionTemplate{Name: "server-use", Source: serverUseT, Data: data})
 	sections = append(sections, &codegen.SectionTemplate{Name: "server-mount", Source: serverMountT, Data: data})
@@ -90,43 +88,17 @@ func server(genpkg string, svc *expr.HTTPServiceExpr) *codegen.File {
 	for _, e := range data.Endpoints {
 		if e.ServerStream != nil {
 			if e.ServerStream.SendTypeRef != "" {
-				sections = append(sections, &codegen.SectionTemplate{
-					Name:   "server-stream-send",
-					Source: streamSendT,
-					Data:   e.ServerStream,
-					FuncMap: map[string]interface{}{
-						"upgradeParams":    upgradeParams,
-						"viewedServerBody": viewedServerBody,
-					},
-				})
+				sections = append(sections, &codegen.SectionTemplate{Name: "server-stream-send", Source: streamSendT, Data: e.ServerStream, FuncMap: funcs})
 			}
 			switch e.ServerStream.Kind {
 			case expr.ClientStreamKind, expr.BidirectionalStreamKind:
-				sections = append(sections, &codegen.SectionTemplate{
-					Name:   "server-stream-recv",
-					Source: streamRecvT,
-					Data:   e.ServerStream,
-					FuncMap: map[string]interface{}{
-						"upgradeParams": upgradeParams,
-					},
-				})
+				sections = append(sections, &codegen.SectionTemplate{Name: "server-stream-recv", Source: streamRecvT, Data: e.ServerStream, FuncMap: funcs})
 			}
 			if e.ServerStream.MustClose {
-				sections = append(sections, &codegen.SectionTemplate{
-					Name:   "server-stream-close",
-					Source: streamCloseT,
-					Data:   e.ServerStream,
-					FuncMap: map[string]interface{}{
-						"upgradeParams": upgradeParams,
-					},
-				})
+				sections = append(sections, &codegen.SectionTemplate{Name: "server-stream-close", Source: streamCloseT, Data: e.ServerStream, FuncMap: funcs})
 			}
 			if e.Method.ViewedResult != nil && e.Method.ViewedResult.ViewName == "" {
-				sections = append(sections, &codegen.SectionTemplate{
-					Name:   "server-stream-set-view",
-					Source: streamSetViewT,
-					Data:   e.ServerStream,
-				})
+				sections = append(sections, &codegen.SectionTemplate{Name: "server-stream-set-view", Source: streamSetViewT, Data: e.ServerStream})
 			}
 		}
 	}

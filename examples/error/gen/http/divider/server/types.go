@@ -13,9 +13,9 @@ import (
 	dividersvc "goa.design/goa/examples/error/gen/divider"
 )
 
-// IntegerDividehasRemainderResponseBody is the type of the "divider" service
+// IntegerDivideHasRemainderResponseBody is the type of the "divider" service
 // "integer_divide" endpoint HTTP response body for the "has_remainder" error.
-type IntegerDividehasRemainderResponseBody struct {
+type IntegerDivideHasRemainderResponseBody struct {
 	// Name is the name of this class of errors.
 	Name string `form:"name" json:"name" xml:"name"`
 	// ID is a unique identifier for this particular occurrence of the problem.
@@ -31,9 +31,9 @@ type IntegerDividehasRemainderResponseBody struct {
 	Fault bool `form:"fault" json:"fault" xml:"fault"`
 }
 
-// IntegerDividedivByZeroResponseBody is the type of the "divider" service
+// IntegerDivideDivByZeroResponseBody is the type of the "divider" service
 // "integer_divide" endpoint HTTP response body for the "div_by_zero" error.
-type IntegerDividedivByZeroResponseBody struct {
+type IntegerDivideDivByZeroResponseBody struct {
 	// Name is the name of this class of errors.
 	Name string `form:"name" json:"name" xml:"name"`
 	// ID is a unique identifier for this particular occurrence of the problem.
@@ -49,9 +49,9 @@ type IntegerDividedivByZeroResponseBody struct {
 	Fault bool `form:"fault" json:"fault" xml:"fault"`
 }
 
-// IntegerDividetimeoutResponseBody is the type of the "divider" service
+// IntegerDivideTimeoutResponseBody is the type of the "divider" service
 // "integer_divide" endpoint HTTP response body for the "timeout" error.
-type IntegerDividetimeoutResponseBody struct {
+type IntegerDivideTimeoutResponseBody struct {
 	// Name is the name of this class of errors.
 	Name string `form:"name" json:"name" xml:"name"`
 	// ID is a unique identifier for this particular occurrence of the problem.
@@ -67,9 +67,9 @@ type IntegerDividetimeoutResponseBody struct {
 	Fault bool `form:"fault" json:"fault" xml:"fault"`
 }
 
-// DividedivByZeroResponseBody is the type of the "divider" service "divide"
+// DivideDivByZeroResponseBody is the type of the "divider" service "divide"
 // endpoint HTTP response body for the "div_by_zero" error.
-type DividedivByZeroResponseBody struct {
+type DivideDivByZeroResponseBody struct {
 	// Name is the name of this class of errors.
 	Name string `form:"name" json:"name" xml:"name"`
 	// ID is a unique identifier for this particular occurrence of the problem.
@@ -85,9 +85,9 @@ type DividedivByZeroResponseBody struct {
 	Fault bool `form:"fault" json:"fault" xml:"fault"`
 }
 
-// DividetimeoutResponseBody is the type of the "divider" service "divide"
+// DivideTimeoutResponseBody is the type of the "divider" service "divide"
 // endpoint HTTP response body for the "timeout" error.
-type DividetimeoutResponseBody struct {
+type DivideTimeoutResponseBody struct {
 	// Name is the name of this class of errors.
 	Name string `form:"name" json:"name" xml:"name"`
 	// ID is a unique identifier for this particular occurrence of the problem.
@@ -103,10 +103,10 @@ type DividetimeoutResponseBody struct {
 	Fault bool `form:"fault" json:"fault" xml:"fault"`
 }
 
-// NewIntegerDividehasRemainderResponseBody builds the HTTP response body from
+// NewIntegerDivideHasRemainderResponseBody builds the HTTP response body from
 // the result of the "integer_divide" endpoint of the "divider" service.
-func NewIntegerDividehasRemainderResponseBody(res *goa.ServiceError) *IntegerDividehasRemainderResponseBody {
-	body := &IntegerDividehasRemainderResponseBody{
+func NewIntegerDivideHasRemainderResponseBody(res *goa.ServiceError) *IntegerDivideHasRemainderResponseBody {
+	body := &IntegerDivideHasRemainderResponseBody{
 		Name:      res.Name,
 		ID:        res.ID,
 		Message:   res.Message,
@@ -117,10 +117,10 @@ func NewIntegerDividehasRemainderResponseBody(res *goa.ServiceError) *IntegerDiv
 	return body
 }
 
-// NewIntegerDividedivByZeroResponseBody builds the HTTP response body from the
+// NewIntegerDivideDivByZeroResponseBody builds the HTTP response body from the
 // result of the "integer_divide" endpoint of the "divider" service.
-func NewIntegerDividedivByZeroResponseBody(res *goa.ServiceError) *IntegerDividedivByZeroResponseBody {
-	body := &IntegerDividedivByZeroResponseBody{
+func NewIntegerDivideDivByZeroResponseBody(res *goa.ServiceError) *IntegerDivideDivByZeroResponseBody {
+	body := &IntegerDivideDivByZeroResponseBody{
 		Name:      res.Name,
 		ID:        res.ID,
 		Message:   res.Message,
@@ -131,10 +131,10 @@ func NewIntegerDividedivByZeroResponseBody(res *goa.ServiceError) *IntegerDivide
 	return body
 }
 
-// NewIntegerDividetimeoutResponseBody builds the HTTP response body from the
+// NewIntegerDivideTimeoutResponseBody builds the HTTP response body from the
 // result of the "integer_divide" endpoint of the "divider" service.
-func NewIntegerDividetimeoutResponseBody(res *goa.ServiceError) *IntegerDividetimeoutResponseBody {
-	body := &IntegerDividetimeoutResponseBody{
+func NewIntegerDivideTimeoutResponseBody(res *goa.ServiceError) *IntegerDivideTimeoutResponseBody {
+	body := &IntegerDivideTimeoutResponseBody{
 		Name:      res.Name,
 		ID:        res.ID,
 		Message:   res.Message,
@@ -145,10 +145,10 @@ func NewIntegerDividetimeoutResponseBody(res *goa.ServiceError) *IntegerDivideti
 	return body
 }
 
-// NewDividedivByZeroResponseBody builds the HTTP response body from the result
+// NewDivideDivByZeroResponseBody builds the HTTP response body from the result
 // of the "divide" endpoint of the "divider" service.
-func NewDividedivByZeroResponseBody(res *goa.ServiceError) *DividedivByZeroResponseBody {
-	body := &DividedivByZeroResponseBody{
+func NewDivideDivByZeroResponseBody(res *goa.ServiceError) *DivideDivByZeroResponseBody {
+	body := &DivideDivByZeroResponseBody{
 		Name:      res.Name,
 		ID:        res.ID,
 		Message:   res.Message,
@@ -159,10 +159,10 @@ func NewDividedivByZeroResponseBody(res *goa.ServiceError) *DividedivByZeroRespo
 	return body
 }
 
-// NewDividetimeoutResponseBody builds the HTTP response body from the result
+// NewDivideTimeoutResponseBody builds the HTTP response body from the result
 // of the "divide" endpoint of the "divider" service.
-func NewDividetimeoutResponseBody(res *goa.ServiceError) *DividetimeoutResponseBody {
-	body := &DividetimeoutResponseBody{
+func NewDivideTimeoutResponseBody(res *goa.ServiceError) *DivideTimeoutResponseBody {
+	body := &DivideTimeoutResponseBody{
 		Name:      res.Name,
 		ID:        res.ID,
 		Message:   res.Message,

@@ -31,13 +31,13 @@ type PickRequestBody struct {
 // "pick" endpoint HTTP response body.
 type StoredBottleResponseBodyCollection []*StoredBottleResponseBody
 
-// PicknoCriteriaResponseBody is the type of the "sommelier" service "pick"
+// PickNoCriteriaResponseBody is the type of the "sommelier" service "pick"
 // endpoint HTTP response body for the "no_criteria" error.
-type PicknoCriteriaResponseBody string
+type PickNoCriteriaResponseBody string
 
-// PicknoMatchResponseBody is the type of the "sommelier" service "pick"
+// PickNoMatchResponseBody is the type of the "sommelier" service "pick"
 // endpoint HTTP response body for the "no_match" error.
-type PicknoMatchResponseBody string
+type PickNoMatchResponseBody string
 
 // StoredBottleResponseBody is used to define fields on response body types.
 type StoredBottleResponseBody struct {
@@ -99,17 +99,17 @@ func NewStoredBottleResponseBodyCollection(res sommelierviews.StoredBottleCollec
 	return body
 }
 
-// NewPicknoCriteriaResponseBody builds the HTTP response body from the result
+// NewPickNoCriteriaResponseBody builds the HTTP response body from the result
 // of the "pick" endpoint of the "sommelier" service.
-func NewPicknoCriteriaResponseBody(res sommelier.NoCriteria) PicknoCriteriaResponseBody {
-	body := PicknoCriteriaResponseBody(res)
+func NewPickNoCriteriaResponseBody(res sommelier.NoCriteria) PickNoCriteriaResponseBody {
+	body := PickNoCriteriaResponseBody(res)
 	return body
 }
 
-// NewPicknoMatchResponseBody builds the HTTP response body from the result of
+// NewPickNoMatchResponseBody builds the HTTP response body from the result of
 // the "pick" endpoint of the "sommelier" service.
-func NewPicknoMatchResponseBody(res sommelier.NoMatch) PicknoMatchResponseBody {
-	body := PicknoMatchResponseBody(res)
+func NewPickNoMatchResponseBody(res sommelier.NoMatch) PickNoMatchResponseBody {
+	body := PickNoMatchResponseBody(res)
 	return body
 }
 

@@ -23,11 +23,11 @@ paths:
         "401":
           description: Unauthorized response.
           schema:
-            $ref: '#/definitions/echoerunauthorizedResponseBody'
+            $ref: '#/definitions/echoer_unauthorizedResponseBody'
         "403":
           description: Forbidden response.
           schema:
-            $ref: '#/definitions/echoerinvalid-scopesResponseBody'
+            $ref: '#/definitions/echoer_invalid-scopesResponseBody'
       schemes:
       - ws
       security:
@@ -57,11 +57,11 @@ paths:
         "401":
           description: Unauthorized response.
           schema:
-            $ref: '#/definitions/historyunauthorizedResponseBody'
+            $ref: '#/definitions/history_unauthorizedResponseBody'
         "403":
           description: Forbidden response.
           schema:
-            $ref: '#/definitions/historyinvalid-scopesResponseBody'
+            $ref: '#/definitions/history_invalid-scopesResponseBody'
       schemes:
       - ws
       security:
@@ -83,11 +83,11 @@ paths:
         "401":
           description: Unauthorized response.
           schema:
-            $ref: '#/definitions/listenerunauthorizedResponseBody'
+            $ref: '#/definitions/listener_unauthorizedResponseBody'
         "403":
           description: Forbidden response.
           schema:
-            $ref: '#/definitions/listenerinvalid-scopesResponseBody'
+            $ref: '#/definitions/listener_invalid-scopesResponseBody'
       schemes:
       - ws
       security:
@@ -107,7 +107,7 @@ paths:
         "401":
           description: Unauthorized response.
           schema:
-            $ref: '#/definitions/loginunauthorizedResponseBody'
+            $ref: '#/definitions/login_unauthorizedResponseBody'
       schemes:
       - http
       security:
@@ -131,11 +131,11 @@ paths:
         "401":
           description: Unauthorized response.
           schema:
-            $ref: '#/definitions/summaryunauthorizedResponseBody'
+            $ref: '#/definitions/summary_unauthorizedResponseBody'
         "403":
           description: Forbidden response.
           schema:
-            $ref: '#/definitions/summaryinvalid-scopesResponseBody'
+            $ref: '#/definitions/summary_invalid-scopesResponseBody'
       schemes:
       - ws
       security:
@@ -208,41 +208,41 @@ definitions:
       sent_at: "1992-03-13T17:19:43Z"
     required:
     - message
-  echoerinvalid-scopesResponseBody:
-    title: echoerinvalid-scopesResponseBody
+  echoer_invalid-scopesResponseBody:
+    title: echoer_invalid-scopesResponseBody
     type: string
     example: Laudantium est consectetur ut.
-  echoerunauthorizedResponseBody:
-    title: echoerunauthorizedResponseBody
+  echoer_unauthorizedResponseBody:
+    title: echoer_unauthorizedResponseBody
     type: string
     example: Nihil veniam nihil.
-  historyinvalid-scopesResponseBody:
-    title: historyinvalid-scopesResponseBody
+  history_invalid-scopesResponseBody:
+    title: history_invalid-scopesResponseBody
     type: string
     example: Tenetur non fugiat.
-  historyunauthorizedResponseBody:
-    title: historyunauthorizedResponseBody
+  history_unauthorizedResponseBody:
+    title: history_unauthorizedResponseBody
     type: string
     example: Ut fuga dolores nisi qui est accusamus.
-  listenerinvalid-scopesResponseBody:
-    title: listenerinvalid-scopesResponseBody
+  listener_invalid-scopesResponseBody:
+    title: listener_invalid-scopesResponseBody
     type: string
     example: Aut est at molestiae.
-  listenerunauthorizedResponseBody:
-    title: listenerunauthorizedResponseBody
+  listener_unauthorizedResponseBody:
+    title: listener_unauthorizedResponseBody
     type: string
     example: Qui voluptas accusantium est sequi vel nihil.
-  loginunauthorizedResponseBody:
-    title: loginunauthorizedResponseBody
+  login_unauthorizedResponseBody:
+    title: login_unauthorizedResponseBody
     type: string
     description: Credentials are invalid
     example: Maiores numquam voluptatibus voluptatem.
-  summaryinvalid-scopesResponseBody:
-    title: summaryinvalid-scopesResponseBody
+  summary_invalid-scopesResponseBody:
+    title: summary_invalid-scopesResponseBody
     type: string
     example: Quibusdam consequatur suscipit non fugit et.
-  summaryunauthorizedResponseBody:
-    title: summaryunauthorizedResponseBody
+  summary_unauthorizedResponseBody:
+    title: summary_unauthorizedResponseBody
     type: string
     example: Consequatur sint eius magni quod.
 securityDefinitions:

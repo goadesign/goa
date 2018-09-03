@@ -513,16 +513,16 @@ func (e *HTTPEndpointExpr) Finalize() {
 		e.Body = ma.AttributeExpr
 	} else {
 		// No explicit body, compute it
-		e.Body = HTTPRequestBody(e)
+		e.Body = httpRequestBody(e)
 	}
 
-	e.StreamingBody = StreamingBody(e)
+	e.StreamingBody = httpStreamingBody(e)
 
 	// Initialize responses parent, headers and body
 	for _, r := range e.Responses {
 		r.Finalize(e, e.MethodExpr.Result)
 		if r.Body == nil {
-			r.Body = ResponseBody(e, r)
+			r.Body = httpResponseBody(e, r)
 		}
 
 		// Initialize response content type if result is media type.

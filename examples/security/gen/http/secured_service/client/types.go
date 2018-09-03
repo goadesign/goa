@@ -12,48 +12,48 @@ import (
 	securedservice "goa.design/goa/examples/security/gen/secured_service"
 )
 
-// SigninunauthorizedResponseBody is the type of the "secured_service" service
+// SigninUnauthorizedResponseBody is the type of the "secured_service" service
 // "signin" endpoint HTTP response body for the "unauthorized" error.
-type SigninunauthorizedResponseBody string
+type SigninUnauthorizedResponseBody string
 
-// SecureunauthorizedResponseBody is the type of the "secured_service" service
+// SecureUnauthorizedResponseBody is the type of the "secured_service" service
 // "secure" endpoint HTTP response body for the "unauthorized" error.
-type SecureunauthorizedResponseBody string
+type SecureUnauthorizedResponseBody string
 
-// DoublySecureunauthorizedResponseBody is the type of the "secured_service"
+// DoublySecureUnauthorizedResponseBody is the type of the "secured_service"
 // service "doubly_secure" endpoint HTTP response body for the "unauthorized"
 // error.
-type DoublySecureunauthorizedResponseBody string
+type DoublySecureUnauthorizedResponseBody string
 
-// AlsoDoublySecureunauthorizedResponseBody is the type of the
+// AlsoDoublySecureUnauthorizedResponseBody is the type of the
 // "secured_service" service "also_doubly_secure" endpoint HTTP response body
 // for the "unauthorized" error.
-type AlsoDoublySecureunauthorizedResponseBody string
+type AlsoDoublySecureUnauthorizedResponseBody string
 
 // NewSigninUnauthorized builds a secured_service service signin endpoint
 // unauthorized error.
-func NewSigninUnauthorized(body SigninunauthorizedResponseBody) securedservice.Unauthorized {
+func NewSigninUnauthorized(body SigninUnauthorizedResponseBody) securedservice.Unauthorized {
 	v := securedservice.Unauthorized(body)
 	return v
 }
 
 // NewSecureUnauthorized builds a secured_service service secure endpoint
 // unauthorized error.
-func NewSecureUnauthorized(body SecureunauthorizedResponseBody) securedservice.Unauthorized {
+func NewSecureUnauthorized(body SecureUnauthorizedResponseBody) securedservice.Unauthorized {
 	v := securedservice.Unauthorized(body)
 	return v
 }
 
 // NewDoublySecureUnauthorized builds a secured_service service doubly_secure
 // endpoint unauthorized error.
-func NewDoublySecureUnauthorized(body DoublySecureunauthorizedResponseBody) securedservice.Unauthorized {
+func NewDoublySecureUnauthorized(body DoublySecureUnauthorizedResponseBody) securedservice.Unauthorized {
 	v := securedservice.Unauthorized(body)
 	return v
 }
 
 // NewAlsoDoublySecureUnauthorized builds a secured_service service
 // also_doubly_secure endpoint unauthorized error.
-func NewAlsoDoublySecureUnauthorized(body AlsoDoublySecureunauthorizedResponseBody) securedservice.Unauthorized {
+func NewAlsoDoublySecureUnauthorized(body AlsoDoublySecureUnauthorizedResponseBody) securedservice.Unauthorized {
 	v := securedservice.Unauthorized(body)
 	return v
 }

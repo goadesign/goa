@@ -29,41 +29,41 @@ type HistoryResponseBody struct {
 	SentAt *string `form:"sent_at,omitempty" json:"sent_at,omitempty" xml:"sent_at,omitempty"`
 }
 
-// LoginunauthorizedResponseBody is the type of the "chatter" service "login"
+// LoginUnauthorizedResponseBody is the type of the "chatter" service "login"
 // endpoint HTTP response body for the "unauthorized" error.
-type LoginunauthorizedResponseBody string
+type LoginUnauthorizedResponseBody string
 
-// EchoerinvalidScopesResponseBody is the type of the "chatter" service
+// EchoerInvalidScopesResponseBody is the type of the "chatter" service
 // "echoer" endpoint HTTP response body for the "invalid-scopes" error.
-type EchoerinvalidScopesResponseBody string
+type EchoerInvalidScopesResponseBody string
 
-// EchoerunauthorizedResponseBody is the type of the "chatter" service "echoer"
+// EchoerUnauthorizedResponseBody is the type of the "chatter" service "echoer"
 // endpoint HTTP response body for the "unauthorized" error.
-type EchoerunauthorizedResponseBody string
+type EchoerUnauthorizedResponseBody string
 
-// ListenerinvalidScopesResponseBody is the type of the "chatter" service
+// ListenerInvalidScopesResponseBody is the type of the "chatter" service
 // "listener" endpoint HTTP response body for the "invalid-scopes" error.
-type ListenerinvalidScopesResponseBody string
+type ListenerInvalidScopesResponseBody string
 
-// ListenerunauthorizedResponseBody is the type of the "chatter" service
+// ListenerUnauthorizedResponseBody is the type of the "chatter" service
 // "listener" endpoint HTTP response body for the "unauthorized" error.
-type ListenerunauthorizedResponseBody string
+type ListenerUnauthorizedResponseBody string
 
-// SummaryinvalidScopesResponseBody is the type of the "chatter" service
+// SummaryInvalidScopesResponseBody is the type of the "chatter" service
 // "summary" endpoint HTTP response body for the "invalid-scopes" error.
-type SummaryinvalidScopesResponseBody string
+type SummaryInvalidScopesResponseBody string
 
-// SummaryunauthorizedResponseBody is the type of the "chatter" service
+// SummaryUnauthorizedResponseBody is the type of the "chatter" service
 // "summary" endpoint HTTP response body for the "unauthorized" error.
-type SummaryunauthorizedResponseBody string
+type SummaryUnauthorizedResponseBody string
 
-// HistoryinvalidScopesResponseBody is the type of the "chatter" service
+// HistoryInvalidScopesResponseBody is the type of the "chatter" service
 // "history" endpoint HTTP response body for the "invalid-scopes" error.
-type HistoryinvalidScopesResponseBody string
+type HistoryInvalidScopesResponseBody string
 
-// HistoryunauthorizedResponseBody is the type of the "chatter" service
+// HistoryUnauthorizedResponseBody is the type of the "chatter" service
 // "history" endpoint HTTP response body for the "unauthorized" error.
-type HistoryunauthorizedResponseBody string
+type HistoryUnauthorizedResponseBody string
 
 // ChatSummaryResponseBody is used to define fields on response body types.
 type ChatSummaryResponseBody struct {
@@ -77,35 +77,35 @@ type ChatSummaryResponseBody struct {
 
 // NewLoginUnauthorized builds a chatter service login endpoint unauthorized
 // error.
-func NewLoginUnauthorized(body LoginunauthorizedResponseBody) chattersvc.Unauthorized {
+func NewLoginUnauthorized(body LoginUnauthorizedResponseBody) chattersvc.Unauthorized {
 	v := chattersvc.Unauthorized(body)
 	return v
 }
 
 // NewEchoerInvalidScopes builds a chatter service echoer endpoint
 // invalid-scopes error.
-func NewEchoerInvalidScopes(body EchoerinvalidScopesResponseBody) chattersvc.InvalidScopes {
+func NewEchoerInvalidScopes(body EchoerInvalidScopesResponseBody) chattersvc.InvalidScopes {
 	v := chattersvc.InvalidScopes(body)
 	return v
 }
 
 // NewEchoerUnauthorized builds a chatter service echoer endpoint unauthorized
 // error.
-func NewEchoerUnauthorized(body EchoerunauthorizedResponseBody) chattersvc.Unauthorized {
+func NewEchoerUnauthorized(body EchoerUnauthorizedResponseBody) chattersvc.Unauthorized {
 	v := chattersvc.Unauthorized(body)
 	return v
 }
 
 // NewListenerInvalidScopes builds a chatter service listener endpoint
 // invalid-scopes error.
-func NewListenerInvalidScopes(body ListenerinvalidScopesResponseBody) chattersvc.InvalidScopes {
+func NewListenerInvalidScopes(body ListenerInvalidScopesResponseBody) chattersvc.InvalidScopes {
 	v := chattersvc.InvalidScopes(body)
 	return v
 }
 
 // NewListenerUnauthorized builds a chatter service listener endpoint
 // unauthorized error.
-func NewListenerUnauthorized(body ListenerunauthorizedResponseBody) chattersvc.Unauthorized {
+func NewListenerUnauthorized(body ListenerUnauthorizedResponseBody) chattersvc.Unauthorized {
 	v := chattersvc.Unauthorized(body)
 	return v
 }
@@ -126,14 +126,14 @@ func NewSummaryChatSummaryCollectionOK(body SummaryResponseBody) chattersvcviews
 
 // NewSummaryInvalidScopes builds a chatter service summary endpoint
 // invalid-scopes error.
-func NewSummaryInvalidScopes(body SummaryinvalidScopesResponseBody) chattersvc.InvalidScopes {
+func NewSummaryInvalidScopes(body SummaryInvalidScopesResponseBody) chattersvc.InvalidScopes {
 	v := chattersvc.InvalidScopes(body)
 	return v
 }
 
 // NewSummaryUnauthorized builds a chatter service summary endpoint
 // unauthorized error.
-func NewSummaryUnauthorized(body SummaryunauthorizedResponseBody) chattersvc.Unauthorized {
+func NewSummaryUnauthorized(body SummaryUnauthorizedResponseBody) chattersvc.Unauthorized {
 	v := chattersvc.Unauthorized(body)
 	return v
 }
@@ -151,14 +151,14 @@ func NewHistoryChatSummaryOK(body *HistoryResponseBody) *chattersvcviews.ChatSum
 
 // NewHistoryInvalidScopes builds a chatter service history endpoint
 // invalid-scopes error.
-func NewHistoryInvalidScopes(body HistoryinvalidScopesResponseBody) chattersvc.InvalidScopes {
+func NewHistoryInvalidScopes(body HistoryInvalidScopesResponseBody) chattersvc.InvalidScopes {
 	v := chattersvc.InvalidScopes(body)
 	return v
 }
 
 // NewHistoryUnauthorized builds a chatter service history endpoint
 // unauthorized error.
-func NewHistoryUnauthorized(body HistoryunauthorizedResponseBody) chattersvc.Unauthorized {
+func NewHistoryUnauthorized(body HistoryUnauthorizedResponseBody) chattersvc.Unauthorized {
 	v := chattersvc.Unauthorized(body)
 	return v
 }

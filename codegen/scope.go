@@ -181,7 +181,6 @@ func (s *NameScope) GoFullTypeName(att *expr.AttributeExpr, pkg string) string {
 			s.GoFullTypeRef(actual.ElemType, pkg))
 	case *expr.Object:
 		return s.GoTypeDef(att, false)
-
 	case expr.UserType:
 		if actual == expr.ErrorResult {
 			return "goa.ServiceError"

@@ -36,41 +36,41 @@ type HistoryResponseBody struct {
 	SentAt *string `form:"sent_at,omitempty" json:"sent_at,omitempty" xml:"sent_at,omitempty"`
 }
 
-// LoginunauthorizedResponseBody is the type of the "chatter" service "login"
+// LoginUnauthorizedResponseBody is the type of the "chatter" service "login"
 // endpoint HTTP response body for the "unauthorized" error.
-type LoginunauthorizedResponseBody string
+type LoginUnauthorizedResponseBody string
 
-// EchoerinvalidScopesResponseBody is the type of the "chatter" service
+// EchoerInvalidScopesResponseBody is the type of the "chatter" service
 // "echoer" endpoint HTTP response body for the "invalid-scopes" error.
-type EchoerinvalidScopesResponseBody string
+type EchoerInvalidScopesResponseBody string
 
-// EchoerunauthorizedResponseBody is the type of the "chatter" service "echoer"
+// EchoerUnauthorizedResponseBody is the type of the "chatter" service "echoer"
 // endpoint HTTP response body for the "unauthorized" error.
-type EchoerunauthorizedResponseBody string
+type EchoerUnauthorizedResponseBody string
 
-// ListenerinvalidScopesResponseBody is the type of the "chatter" service
+// ListenerInvalidScopesResponseBody is the type of the "chatter" service
 // "listener" endpoint HTTP response body for the "invalid-scopes" error.
-type ListenerinvalidScopesResponseBody string
+type ListenerInvalidScopesResponseBody string
 
-// ListenerunauthorizedResponseBody is the type of the "chatter" service
+// ListenerUnauthorizedResponseBody is the type of the "chatter" service
 // "listener" endpoint HTTP response body for the "unauthorized" error.
-type ListenerunauthorizedResponseBody string
+type ListenerUnauthorizedResponseBody string
 
-// SummaryinvalidScopesResponseBody is the type of the "chatter" service
+// SummaryInvalidScopesResponseBody is the type of the "chatter" service
 // "summary" endpoint HTTP response body for the "invalid-scopes" error.
-type SummaryinvalidScopesResponseBody string
+type SummaryInvalidScopesResponseBody string
 
-// SummaryunauthorizedResponseBody is the type of the "chatter" service
+// SummaryUnauthorizedResponseBody is the type of the "chatter" service
 // "summary" endpoint HTTP response body for the "unauthorized" error.
-type SummaryunauthorizedResponseBody string
+type SummaryUnauthorizedResponseBody string
 
-// HistoryinvalidScopesResponseBody is the type of the "chatter" service
+// HistoryInvalidScopesResponseBody is the type of the "chatter" service
 // "history" endpoint HTTP response body for the "invalid-scopes" error.
-type HistoryinvalidScopesResponseBody string
+type HistoryInvalidScopesResponseBody string
 
-// HistoryunauthorizedResponseBody is the type of the "chatter" service
+// HistoryUnauthorizedResponseBody is the type of the "chatter" service
 // "history" endpoint HTTP response body for the "unauthorized" error.
-type HistoryunauthorizedResponseBody string
+type HistoryUnauthorizedResponseBody string
 
 // ChatSummaryResponseBody is used to define fields on response body types.
 type ChatSummaryResponseBody struct {
@@ -116,66 +116,66 @@ func NewHistoryResponseBody(res *chattersvcviews.ChatSummaryView) *HistoryRespon
 	return body
 }
 
-// NewLoginunauthorizedResponseBody builds the HTTP response body from the
+// NewLoginUnauthorizedResponseBody builds the HTTP response body from the
 // result of the "login" endpoint of the "chatter" service.
-func NewLoginunauthorizedResponseBody(res chattersvc.Unauthorized) LoginunauthorizedResponseBody {
-	body := LoginunauthorizedResponseBody(res)
+func NewLoginUnauthorizedResponseBody(res chattersvc.Unauthorized) LoginUnauthorizedResponseBody {
+	body := LoginUnauthorizedResponseBody(res)
 	return body
 }
 
-// NewEchoerinvalidScopesResponseBody builds the HTTP response body from the
+// NewEchoerInvalidScopesResponseBody builds the HTTP response body from the
 // result of the "echoer" endpoint of the "chatter" service.
-func NewEchoerinvalidScopesResponseBody(res chattersvc.InvalidScopes) EchoerinvalidScopesResponseBody {
-	body := EchoerinvalidScopesResponseBody(res)
+func NewEchoerInvalidScopesResponseBody(res chattersvc.InvalidScopes) EchoerInvalidScopesResponseBody {
+	body := EchoerInvalidScopesResponseBody(res)
 	return body
 }
 
-// NewEchoerunauthorizedResponseBody builds the HTTP response body from the
+// NewEchoerUnauthorizedResponseBody builds the HTTP response body from the
 // result of the "echoer" endpoint of the "chatter" service.
-func NewEchoerunauthorizedResponseBody(res chattersvc.Unauthorized) EchoerunauthorizedResponseBody {
-	body := EchoerunauthorizedResponseBody(res)
+func NewEchoerUnauthorizedResponseBody(res chattersvc.Unauthorized) EchoerUnauthorizedResponseBody {
+	body := EchoerUnauthorizedResponseBody(res)
 	return body
 }
 
-// NewListenerinvalidScopesResponseBody builds the HTTP response body from the
+// NewListenerInvalidScopesResponseBody builds the HTTP response body from the
 // result of the "listener" endpoint of the "chatter" service.
-func NewListenerinvalidScopesResponseBody(res chattersvc.InvalidScopes) ListenerinvalidScopesResponseBody {
-	body := ListenerinvalidScopesResponseBody(res)
+func NewListenerInvalidScopesResponseBody(res chattersvc.InvalidScopes) ListenerInvalidScopesResponseBody {
+	body := ListenerInvalidScopesResponseBody(res)
 	return body
 }
 
-// NewListenerunauthorizedResponseBody builds the HTTP response body from the
+// NewListenerUnauthorizedResponseBody builds the HTTP response body from the
 // result of the "listener" endpoint of the "chatter" service.
-func NewListenerunauthorizedResponseBody(res chattersvc.Unauthorized) ListenerunauthorizedResponseBody {
-	body := ListenerunauthorizedResponseBody(res)
+func NewListenerUnauthorizedResponseBody(res chattersvc.Unauthorized) ListenerUnauthorizedResponseBody {
+	body := ListenerUnauthorizedResponseBody(res)
 	return body
 }
 
-// NewSummaryinvalidScopesResponseBody builds the HTTP response body from the
+// NewSummaryInvalidScopesResponseBody builds the HTTP response body from the
 // result of the "summary" endpoint of the "chatter" service.
-func NewSummaryinvalidScopesResponseBody(res chattersvc.InvalidScopes) SummaryinvalidScopesResponseBody {
-	body := SummaryinvalidScopesResponseBody(res)
+func NewSummaryInvalidScopesResponseBody(res chattersvc.InvalidScopes) SummaryInvalidScopesResponseBody {
+	body := SummaryInvalidScopesResponseBody(res)
 	return body
 }
 
-// NewSummaryunauthorizedResponseBody builds the HTTP response body from the
+// NewSummaryUnauthorizedResponseBody builds the HTTP response body from the
 // result of the "summary" endpoint of the "chatter" service.
-func NewSummaryunauthorizedResponseBody(res chattersvc.Unauthorized) SummaryunauthorizedResponseBody {
-	body := SummaryunauthorizedResponseBody(res)
+func NewSummaryUnauthorizedResponseBody(res chattersvc.Unauthorized) SummaryUnauthorizedResponseBody {
+	body := SummaryUnauthorizedResponseBody(res)
 	return body
 }
 
-// NewHistoryinvalidScopesResponseBody builds the HTTP response body from the
+// NewHistoryInvalidScopesResponseBody builds the HTTP response body from the
 // result of the "history" endpoint of the "chatter" service.
-func NewHistoryinvalidScopesResponseBody(res chattersvc.InvalidScopes) HistoryinvalidScopesResponseBody {
-	body := HistoryinvalidScopesResponseBody(res)
+func NewHistoryInvalidScopesResponseBody(res chattersvc.InvalidScopes) HistoryInvalidScopesResponseBody {
+	body := HistoryInvalidScopesResponseBody(res)
 	return body
 }
 
-// NewHistoryunauthorizedResponseBody builds the HTTP response body from the
+// NewHistoryUnauthorizedResponseBody builds the HTTP response body from the
 // result of the "history" endpoint of the "chatter" service.
-func NewHistoryunauthorizedResponseBody(res chattersvc.Unauthorized) HistoryunauthorizedResponseBody {
-	body := HistoryunauthorizedResponseBody(res)
+func NewHistoryUnauthorizedResponseBody(res chattersvc.Unauthorized) HistoryUnauthorizedResponseBody {
+	body := HistoryUnauthorizedResponseBody(res)
 	return body
 }
 

@@ -258,5 +258,5 @@ func bodyAllowedForStatus(status int) bool {
 // response expression via Body() or Result() in the method expression.
 func (r *HTTPResponseExpr) bodyExists() bool {
 	ep, ok := r.Parent.(*HTTPEndpointExpr)
-	return ok && ResponseBody(ep, r).Type != Empty
+	return ok && httpResponseBody(ep, r).Type != Empty
 }

@@ -30,7 +30,7 @@ paths:
         "401":
           description: Unauthorized response.
           schema:
-            $ref: '#/definitions/secureunauthorizedResponseBody'
+            $ref: '#/definitions/secure_unauthorizedResponseBody'
       schemes:
       - http
       security:
@@ -60,7 +60,7 @@ paths:
         "401":
           description: Unauthorized response.
           schema:
-            $ref: '#/definitions/doubly_secureunauthorizedResponseBody'
+            $ref: '#/definitions/doubly_secure_unauthorizedResponseBody'
       schemes:
       - http
       security:
@@ -95,7 +95,7 @@ paths:
         "401":
           description: Unauthorized response.
           schema:
-            $ref: '#/definitions/also_doubly_secureunauthorizedResponseBody'
+            $ref: '#/definitions/also_doubly_secure_unauthorizedResponseBody'
       schemes:
       - http
       security:
@@ -118,29 +118,29 @@ paths:
         "401":
           description: Unauthorized response.
           schema:
-            $ref: '#/definitions/signinunauthorizedResponseBody'
+            $ref: '#/definitions/signin_unauthorizedResponseBody'
       schemes:
       - http
       security:
       - basic: []
 definitions:
-  also_doubly_secureunauthorizedResponseBody:
-    title: also_doubly_secureunauthorizedResponseBody
+  also_doubly_secure_unauthorizedResponseBody:
+    title: also_doubly_secure_unauthorizedResponseBody
     type: string
     description: Credentials are invalid
     example: Maxime ipsam esse et.
-  doubly_secureunauthorizedResponseBody:
-    title: doubly_secureunauthorizedResponseBody
+  doubly_secure_unauthorizedResponseBody:
+    title: doubly_secure_unauthorizedResponseBody
     type: string
     description: Credentials are invalid
     example: Itaque accusamus enim.
-  secureunauthorizedResponseBody:
-    title: secureunauthorizedResponseBody
+  secure_unauthorizedResponseBody:
+    title: secure_unauthorizedResponseBody
     type: string
     description: Credentials are invalid
     example: Accusantium voluptatem alias corrupti voluptates a.
-  signinunauthorizedResponseBody:
-    title: signinunauthorizedResponseBody
+  signin_unauthorizedResponseBody:
+    title: signin_unauthorizedResponseBody
     type: string
     description: Credentials are invalid
     example: Tenetur est et.

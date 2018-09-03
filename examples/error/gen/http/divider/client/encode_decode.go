@@ -81,7 +81,7 @@ func DecodeIntegerDivideResponse(decoder func(*http.Response) goahttp.Decoder, r
 			return body, nil
 		case http.StatusExpectationFailed:
 			var (
-				body IntegerDividehasRemainderResponseBody
+				body IntegerDivideHasRemainderResponseBody
 				err  error
 			)
 			err = decoder(resp).Decode(&body)
@@ -95,7 +95,7 @@ func DecodeIntegerDivideResponse(decoder func(*http.Response) goahttp.Decoder, r
 			return nil, NewIntegerDivideHasRemainder(&body)
 		case http.StatusBadRequest:
 			var (
-				body IntegerDividedivByZeroResponseBody
+				body IntegerDivideDivByZeroResponseBody
 				err  error
 			)
 			err = decoder(resp).Decode(&body)
@@ -109,7 +109,7 @@ func DecodeIntegerDivideResponse(decoder func(*http.Response) goahttp.Decoder, r
 			return nil, NewIntegerDivideDivByZero(&body)
 		case http.StatusGatewayTimeout:
 			var (
-				body IntegerDividetimeoutResponseBody
+				body IntegerDivideTimeoutResponseBody
 				err  error
 			)
 			err = decoder(resp).Decode(&body)
@@ -189,7 +189,7 @@ func DecodeDivideResponse(decoder func(*http.Response) goahttp.Decoder, restoreB
 			return body, nil
 		case http.StatusBadRequest:
 			var (
-				body DividedivByZeroResponseBody
+				body DivideDivByZeroResponseBody
 				err  error
 			)
 			err = decoder(resp).Decode(&body)
@@ -203,7 +203,7 @@ func DecodeDivideResponse(decoder func(*http.Response) goahttp.Decoder, restoreB
 			return nil, NewDivideDivByZero(&body)
 		case http.StatusGatewayTimeout:
 			var (
-				body DividetimeoutResponseBody
+				body DivideTimeoutResponseBody
 				err  error
 			)
 			err = decoder(resp).Decode(&body)

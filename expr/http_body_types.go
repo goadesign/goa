@@ -4,21 +4,22 @@ import (
 	"net/http"
 )
 
-// HTTPRequestBody returns an attribute describing the request body of the given
-// endpoint. If the DSL defines a body explicitly via the Body function then the
-// corresponding attribute is used. Otherwise the attribute is computed by
-// removing the attributes of the method payload used to define headers and
+// httpRequestBody returns an attribute describing the HTTP request body of the
+// given endpoint. If the DSL defines a body explicitly via the Body function
+// then the corresponding attribute is used. Otherwise the attribute is computed
+// by removing the attributes of the method payload used to define headers and
 // parameters.
-func HTTPRequestBody(a *HTTPEndpointExpr) *AttributeExpr {
+func httpRequestBody(a *HTTPEndpointExpr) *AttributeExpr {
 	if a.Body != nil {
 		return a.Body
 	}
 
+	const suffix = "RequestBody"
 	var (
 		payload   = a.MethodExpr.Payload
 		headers   = a.Headers
 		params    = a.Params
-		name      = a.Name() + "RequestBody"
+		name      = a.Name() + suffix
 		userField string
 		passField string
 	)
@@ -48,7 +49,7 @@ func HTTPRequestBody(a *HTTPEndpointExpr) *AttributeExpr {
 	if !IsObject(payload.Type) {
 		if bodyOnly {
 			payload = DupAtt(payload)
-			renameType(payload, name, "RequestBody")
+			renameType(payload, name, suffix)
 			return payload
 		}
 		return &AttributeExpr{Type: Empty}
@@ -79,7 +80,7 @@ func HTTPRequestBody(a *HTTPEndpointExpr) *AttributeExpr {
 		AttributeExpr: att,
 		TypeName:      name,
 	}
-	appendSuffix(ut.Attribute().Type, "RequestBody")
+	appendSuffix(ut.Attribute().Type, suffix)
 
 	return &AttributeExpr{
 		Type:         ut,
@@ -88,8 +89,9 @@ func HTTPRequestBody(a *HTTPEndpointExpr) *AttributeExpr {
 	}
 }
 
-// StreamingBody TODO
-func StreamingBody(e *HTTPEndpointExpr) *AttributeExpr {
+// httpStreamingBody returns an attribute representing the structs being
+// streamed via websocket.
+func httpStreamingBody(e *HTTPEndpointExpr) *AttributeExpr {
 	if !e.MethodExpr.IsStreaming() || e.MethodExpr.Stream == ServerStreamKind {
 		return nil
 	}
@@ -97,7 +99,7 @@ func StreamingBody(e *HTTPEndpointExpr) *AttributeExpr {
 	if !IsObject(att.Type) {
 		return DupAtt(att)
 	}
-	suffix := "StreamingBody"
+	const suffix = "StreamingBody"
 	ut := &UserTypeExpr{
 		AttributeExpr: DupAtt(att),
 		TypeName:      e.Name() + suffix,
@@ -111,32 +113,33 @@ func StreamingBody(e *HTTPEndpointExpr) *AttributeExpr {
 	}
 }
 
-// ResponseBody returns an attribute representing the response body for the
-// given endpoint and response. If the DSL defines a body explicitly via the
+// httpResponseBody returns an attribute representing the HTTP response body for
+// the given endpoint and response. If the DSL defines a body explicitly via the
 // Body function then the corresponding attribute is used. Otherwise the
 // attribute is computed by removing the attributes of the method payload used
 // to define headers.
-func ResponseBody(a *HTTPEndpointExpr, resp *HTTPResponseExpr) *AttributeExpr {
+func httpResponseBody(a *HTTPEndpointExpr, resp *HTTPResponseExpr) *AttributeExpr {
 	var name, suffix string
 	if len(a.Responses) > 1 {
 		suffix = http.StatusText(resp.StatusCode)
 	}
 	name = a.Name() + suffix
-	return buildResponseBody(name, a.MethodExpr.Result, resp)
+	return buildHTTPResponseBody(name, a.MethodExpr.Result, resp)
 }
 
-// ErrorResponseBody returns an attribute describing the response body of a
+// httpErrorResponseBody returns an attribute describing the response body of a
 // given error. If the DSL defines a body explicitly via the Body function then
 // the corresponding attribute is returned. Otherwise the attribute is computed
 // by removing the attributes of the error used to define headers and
 // parameters.
-func ErrorResponseBody(a *HTTPEndpointExpr, v *HTTPErrorExpr) *AttributeExpr {
-	name := a.Name() + v.ErrorExpr.Name
-	return buildResponseBody(name, v.ErrorExpr.AttributeExpr, v.Response)
+func httpErrorResponseBody(a *HTTPEndpointExpr, v *HTTPErrorExpr) *AttributeExpr {
+	name := a.Name() + "_" + v.ErrorExpr.Name
+	return buildHTTPResponseBody(name, v.ErrorExpr.AttributeExpr, v.Response)
 }
 
-func buildResponseBody(name string, attr *AttributeExpr, resp *HTTPResponseExpr) *AttributeExpr {
-	name += "ResponseBody"
+func buildHTTPResponseBody(name string, attr *AttributeExpr, resp *HTTPResponseExpr) *AttributeExpr {
+	const suffix = "ResponseBody"
+	name += suffix
 	if attr == nil || attr.Type == Empty {
 		return &AttributeExpr{Type: Empty}
 	}
@@ -151,7 +154,7 @@ func buildResponseBody(name string, attr *AttributeExpr, resp *HTTPResponseExpr)
 	if !IsObject(attr.Type) {
 		if resp.Headers.IsEmpty() {
 			attr = DupAtt(attr)
-			renameType(attr, name, "ResponseBody")
+			renameType(attr, name, suffix)
 			return attr
 		}
 		return &AttributeExpr{Type: Empty}
@@ -171,7 +174,7 @@ func buildResponseBody(name string, attr *AttributeExpr, resp *HTTPResponseExpr)
 		AttributeExpr: body.Attribute(),
 		TypeName:      name,
 	}
-	appendSuffix(userType.Attribute().Type, "ResponseBody")
+	appendSuffix(userType.Attribute().Type, suffix)
 	rt, isrt := attr.Type.(*ResultTypeExpr)
 	if !isrt {
 		return &AttributeExpr{Type: userType, Validation: userType.Validation}

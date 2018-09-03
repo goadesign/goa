@@ -12,9 +12,9 @@ import (
 	goa "goa.design/goa"
 )
 
-// IntegerDividehasRemainderResponseBody is the type of the "divider" service
+// IntegerDivideHasRemainderResponseBody is the type of the "divider" service
 // "integer_divide" endpoint HTTP response body for the "has_remainder" error.
-type IntegerDividehasRemainderResponseBody struct {
+type IntegerDivideHasRemainderResponseBody struct {
 	// Name is the name of this class of errors.
 	Name *string `form:"name,omitempty" json:"name,omitempty" xml:"name,omitempty"`
 	// ID is a unique identifier for this particular occurrence of the problem.
@@ -30,9 +30,9 @@ type IntegerDividehasRemainderResponseBody struct {
 	Fault *bool `form:"fault,omitempty" json:"fault,omitempty" xml:"fault,omitempty"`
 }
 
-// IntegerDividedivByZeroResponseBody is the type of the "divider" service
+// IntegerDivideDivByZeroResponseBody is the type of the "divider" service
 // "integer_divide" endpoint HTTP response body for the "div_by_zero" error.
-type IntegerDividedivByZeroResponseBody struct {
+type IntegerDivideDivByZeroResponseBody struct {
 	// Name is the name of this class of errors.
 	Name *string `form:"name,omitempty" json:"name,omitempty" xml:"name,omitempty"`
 	// ID is a unique identifier for this particular occurrence of the problem.
@@ -48,9 +48,9 @@ type IntegerDividedivByZeroResponseBody struct {
 	Fault *bool `form:"fault,omitempty" json:"fault,omitempty" xml:"fault,omitempty"`
 }
 
-// IntegerDividetimeoutResponseBody is the type of the "divider" service
+// IntegerDivideTimeoutResponseBody is the type of the "divider" service
 // "integer_divide" endpoint HTTP response body for the "timeout" error.
-type IntegerDividetimeoutResponseBody struct {
+type IntegerDivideTimeoutResponseBody struct {
 	// Name is the name of this class of errors.
 	Name *string `form:"name,omitempty" json:"name,omitempty" xml:"name,omitempty"`
 	// ID is a unique identifier for this particular occurrence of the problem.
@@ -66,9 +66,9 @@ type IntegerDividetimeoutResponseBody struct {
 	Fault *bool `form:"fault,omitempty" json:"fault,omitempty" xml:"fault,omitempty"`
 }
 
-// DividedivByZeroResponseBody is the type of the "divider" service "divide"
+// DivideDivByZeroResponseBody is the type of the "divider" service "divide"
 // endpoint HTTP response body for the "div_by_zero" error.
-type DividedivByZeroResponseBody struct {
+type DivideDivByZeroResponseBody struct {
 	// Name is the name of this class of errors.
 	Name *string `form:"name,omitempty" json:"name,omitempty" xml:"name,omitempty"`
 	// ID is a unique identifier for this particular occurrence of the problem.
@@ -84,9 +84,9 @@ type DividedivByZeroResponseBody struct {
 	Fault *bool `form:"fault,omitempty" json:"fault,omitempty" xml:"fault,omitempty"`
 }
 
-// DividetimeoutResponseBody is the type of the "divider" service "divide"
+// DivideTimeoutResponseBody is the type of the "divider" service "divide"
 // endpoint HTTP response body for the "timeout" error.
-type DividetimeoutResponseBody struct {
+type DivideTimeoutResponseBody struct {
 	// Name is the name of this class of errors.
 	Name *string `form:"name,omitempty" json:"name,omitempty" xml:"name,omitempty"`
 	// ID is a unique identifier for this particular occurrence of the problem.
@@ -104,7 +104,7 @@ type DividetimeoutResponseBody struct {
 
 // NewIntegerDivideHasRemainder builds a divider service integer_divide
 // endpoint has_remainder error.
-func NewIntegerDivideHasRemainder(body *IntegerDividehasRemainderResponseBody) *goa.ServiceError {
+func NewIntegerDivideHasRemainder(body *IntegerDivideHasRemainderResponseBody) *goa.ServiceError {
 	v := &goa.ServiceError{
 		Name:      *body.Name,
 		ID:        *body.ID,
@@ -118,7 +118,7 @@ func NewIntegerDivideHasRemainder(body *IntegerDividehasRemainderResponseBody) *
 
 // NewIntegerDivideDivByZero builds a divider service integer_divide endpoint
 // div_by_zero error.
-func NewIntegerDivideDivByZero(body *IntegerDividedivByZeroResponseBody) *goa.ServiceError {
+func NewIntegerDivideDivByZero(body *IntegerDivideDivByZeroResponseBody) *goa.ServiceError {
 	v := &goa.ServiceError{
 		Name:      *body.Name,
 		ID:        *body.ID,
@@ -132,7 +132,7 @@ func NewIntegerDivideDivByZero(body *IntegerDividedivByZeroResponseBody) *goa.Se
 
 // NewIntegerDivideTimeout builds a divider service integer_divide endpoint
 // timeout error.
-func NewIntegerDivideTimeout(body *IntegerDividetimeoutResponseBody) *goa.ServiceError {
+func NewIntegerDivideTimeout(body *IntegerDivideTimeoutResponseBody) *goa.ServiceError {
 	v := &goa.ServiceError{
 		Name:      *body.Name,
 		ID:        *body.ID,
@@ -146,7 +146,7 @@ func NewIntegerDivideTimeout(body *IntegerDividetimeoutResponseBody) *goa.Servic
 
 // NewDivideDivByZero builds a divider service divide endpoint div_by_zero
 // error.
-func NewDivideDivByZero(body *DividedivByZeroResponseBody) *goa.ServiceError {
+func NewDivideDivByZero(body *DivideDivByZeroResponseBody) *goa.ServiceError {
 	v := &goa.ServiceError{
 		Name:      *body.Name,
 		ID:        *body.ID,
@@ -159,7 +159,7 @@ func NewDivideDivByZero(body *DividedivByZeroResponseBody) *goa.ServiceError {
 }
 
 // NewDivideTimeout builds a divider service divide endpoint timeout error.
-func NewDivideTimeout(body *DividetimeoutResponseBody) *goa.ServiceError {
+func NewDivideTimeout(body *DivideTimeoutResponseBody) *goa.ServiceError {
 	v := &goa.ServiceError{
 		Name:      *body.Name,
 		ID:        *body.ID,
@@ -172,8 +172,8 @@ func NewDivideTimeout(body *DividetimeoutResponseBody) *goa.ServiceError {
 }
 
 // Validate runs the validations defined on
-// integer_dividehas_remainderResponseBody
-func (body *IntegerDividehasRemainderResponseBody) Validate() (err error) {
+// integer_divide_has_remainderResponseBody
+func (body *IntegerDivideHasRemainderResponseBody) Validate() (err error) {
 	if body.Name == nil {
 		err = goa.MergeErrors(err, goa.MissingFieldError("name", "body"))
 	}
@@ -196,8 +196,8 @@ func (body *IntegerDividehasRemainderResponseBody) Validate() (err error) {
 }
 
 // Validate runs the validations defined on
-// integer_dividediv_by_zeroResponseBody
-func (body *IntegerDividedivByZeroResponseBody) Validate() (err error) {
+// integer_divide_div_by_zeroResponseBody
+func (body *IntegerDivideDivByZeroResponseBody) Validate() (err error) {
 	if body.Name == nil {
 		err = goa.MergeErrors(err, goa.MissingFieldError("name", "body"))
 	}
@@ -219,8 +219,8 @@ func (body *IntegerDividedivByZeroResponseBody) Validate() (err error) {
 	return
 }
 
-// Validate runs the validations defined on integer_dividetimeoutResponseBody
-func (body *IntegerDividetimeoutResponseBody) Validate() (err error) {
+// Validate runs the validations defined on integer_divide_timeoutResponseBody
+func (body *IntegerDivideTimeoutResponseBody) Validate() (err error) {
 	if body.Name == nil {
 		err = goa.MergeErrors(err, goa.MissingFieldError("name", "body"))
 	}
@@ -242,8 +242,8 @@ func (body *IntegerDividetimeoutResponseBody) Validate() (err error) {
 	return
 }
 
-// Validate runs the validations defined on dividediv_by_zeroResponseBody
-func (body *DividedivByZeroResponseBody) Validate() (err error) {
+// Validate runs the validations defined on divide_div_by_zeroResponseBody
+func (body *DivideDivByZeroResponseBody) Validate() (err error) {
 	if body.Name == nil {
 		err = goa.MergeErrors(err, goa.MissingFieldError("name", "body"))
 	}
@@ -265,8 +265,8 @@ func (body *DividedivByZeroResponseBody) Validate() (err error) {
 	return
 }
 
-// Validate runs the validations defined on dividetimeoutResponseBody
-func (body *DividetimeoutResponseBody) Validate() (err error) {
+// Validate runs the validations defined on divide_timeoutResponseBody
+func (body *DivideTimeoutResponseBody) Validate() (err error) {
 	if body.Name == nil {
 		err = goa.MergeErrors(err, goa.MissingFieldError("name", "body"))
 	}

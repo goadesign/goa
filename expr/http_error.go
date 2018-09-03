@@ -58,7 +58,7 @@ func (e *HTTPErrorExpr) Finalize(a *HTTPEndpointExpr) {
 	e.ErrorExpr = ee
 	e.Response.Finalize(a, e.AttributeExpr)
 	if e.Response.Body == nil {
-		e.Response.Body = ErrorResponseBody(a, e)
+		e.Response.Body = httpErrorResponseBody(a, e)
 	}
 
 	// Initialize response content type if result is media type.
