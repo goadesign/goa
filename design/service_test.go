@@ -132,3 +132,36 @@ func TestFlowExpr_EvalName(t *testing.T) {
 		}
 	}
 }
+
+func TestSchemeExpr_EvalName(t *testing.T) {
+	cases := map[string]struct {
+		kind     SchemeKind
+		expected string
+	}{
+		"OAuth2Kind":    {kind: OAuth2Kind, expected: "OAuth2Security"},
+		"BasicAuthKind": {kind: BasicAuthKind, expected: "BasicAuthSecurity"},
+		"APIKeyKind":    {kind: APIKeyKind, expected: "APIKeySecurity"},
+		"JWTKind":       {kind: JWTKind, expected: "JWTSecurity"},
+		"NoKind":        {kind: NoKind, expected: "This case is panic"},
+	}
+
+	for k, tc := range cases {
+		func() {
+			// panic recover
+			defer func() {
+				if k != "NoKind" {
+					return
+				}
+
+				if recover() == nil {
+					t.Errorf("should have panicked!")
+				}
+			}()
+
+			se := &SchemeExpr{Kind: tc.kind}
+			if actual := se.EvalName(); actual != tc.expected {
+				t.Errorf("%s: got %#v, expected %#v", k, actual, tc.expected)
+			}
+		}()
+	}
+}
