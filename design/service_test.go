@@ -165,3 +165,25 @@ func TestSchemeExpr_EvalName(t *testing.T) {
 		}()
 	}
 }
+
+func TestSecurityExpr_EvalName(t *testing.T) {
+	scheme1 := &SchemeExpr{SchemeName: "A"}
+	scheme2 := &SchemeExpr{SchemeName: ""}
+
+	cases := map[string]struct {
+		schemes  []*SchemeExpr
+		expected string
+	}{
+		"security with suffix":           {schemes: []*SchemeExpr{scheme1}, expected: "Securityscheme A"},
+		"empty string are security only": {schemes: []*SchemeExpr{scheme2}, expected: "Security"},
+		"in case of security only":       {schemes: nil, expected: "Security"},
+		"also in case of security only":  {schemes: []*SchemeExpr{}, expected: "Security"},
+	}
+
+	for k, tc := range cases {
+		se := &SecurityExpr{Schemes: tc.schemes}
+		if actual := se.EvalName(); actual != tc.expected {
+			t.Errorf("%s: got %#v, expected %#v", k, actual, tc.expected)
+		}
+	}
+}
