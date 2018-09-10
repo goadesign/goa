@@ -12,6 +12,16 @@ import (
 	"goa.design/goa/eval"
 )
 
+type (
+	inner struct {
+		foo string
+	}
+
+	hasNonPtrFields struct {
+		inner inner
+	}
+)
+
 func TestDesignType(t *testing.T) {
 	var f bool
 	cases := []struct {
@@ -40,6 +50,7 @@ func TestDesignType(t *testing.T) {
 		{"invalid-array", []*bool{&f}, nil, "*(<value>[0]): only pointer to struct can be converted"},
 		{"invalid-map-key", map[*bool]string{&f: ""}, nil, "*(<value>.key): only pointer to struct can be converted"},
 		{"invalid-map-val", map[string]*bool{"": &f}, nil, "*(<value>.value): only pointer to struct can be converted"},
+		{"invalid-struct", hasNonPtrFields{inner: inner{foo: "foo"}}, nil, "<value>.inner: fields of type struct must use pointers"},
 	}
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {

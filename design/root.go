@@ -1,6 +1,8 @@
 package design
 
-import "goa.design/goa/eval"
+import (
+	"goa.design/goa/eval"
+)
 
 // Root is the root object built by the DSL.
 var Root = &RootExpr{GeneratedTypes: &GeneratedRoot{}}

@@ -222,11 +222,9 @@ func transformObject(source, target *design.AttributeExpr, newVar bool, a targs)
 			return
 		}
 
-		// Nil check handling.
-		//
 		// We need to check for a nil source if it holds a reference
 		// (pointer to primitive or an object, array or map) and is not
-		// required. We also want to always check when unmarshaling is
+		// required. We also want to always check when unmarshaling if
 		// the attribute type is not a primitive: either it's a user
 		// type and we want to avoid calling transform helper functions
 		// with nil value (if unmarshaling then requiredness has been
@@ -596,7 +594,15 @@ func transformHelperName(satt, tatt *design.AttributeExpr, a targs) string {
 	)
 	{
 		sname = a.scope.GoTypeName(satt)
+		if _, ok := satt.Metadata["goa.external"]; ok {
+			// type belongs to external package so name could clash
+			sname += "Ext"
+		}
 		tname = a.scope.GoTypeName(tatt)
+		if _, ok := tatt.Metadata["goa.external"]; ok {
+			// type belongs to external package so name could clash
+			tname += "Ext"
+		}
 		prefix = "marshal"
 		if a.unmarshal {
 			prefix = "unmarshal"
