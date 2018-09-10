@@ -69,7 +69,7 @@ var ConvertObjectCode = `// ConvertToObjectT creates an instance of ObjectT init
 func (t *ObjectType) ConvertToObjectT() *testdata.ObjectT {
 	v := &testdata.ObjectT{}
 	if t.Object != nil {
-		v.Object = marshalObjectFieldToObjectFieldT(t.Object)
+		v.Object = marshalObjectFieldToObjectFieldTExt(t.Object)
 	}
 	return v
 }
@@ -79,15 +79,15 @@ var ConvertObjectRequiredCode = `// ConvertToObjectT creates an instance of Obje
 func (t *ObjectType) ConvertToObjectT() *testdata.ObjectT {
 	v := &testdata.ObjectT{}
 	if t.Object != nil {
-		v.Object = marshalObjectFieldToObjectFieldT(t.Object)
+		v.Object = marshalObjectFieldToObjectFieldTExt(t.Object)
 	}
 	return v
 }
 `
 
-var ConvertObjectHelperCode = `// marshalObjectFieldToObjectFieldT builds a value of type
+var ConvertObjectHelperCode = `// marshalObjectFieldToObjectFieldTExt builds a value of type
 // *testdata.ObjectFieldT from a value of type *ObjectField.
-func marshalObjectFieldToObjectFieldT(v *ObjectField) *testdata.ObjectFieldT {
+func marshalObjectFieldToObjectFieldTExt(v *ObjectField) *testdata.ObjectFieldT {
 	res := &testdata.ObjectFieldT{
 		Bytes: v.Bytes,
 	}
@@ -140,9 +140,9 @@ func marshalObjectFieldToObjectFieldT(v *ObjectField) *testdata.ObjectFieldT {
 }
 `
 
-var ConvertObjectRequiredHelperCode = `// marshalObjectFieldToObjectFieldT builds a value of type
+var ConvertObjectRequiredHelperCode = `// marshalObjectFieldToObjectFieldTExt builds a value of type
 // *testdata.ObjectFieldT from a value of type *ObjectField.
-func marshalObjectFieldToObjectFieldT(v *ObjectField) *testdata.ObjectFieldT {
+func marshalObjectFieldToObjectFieldTExt(v *ObjectField) *testdata.ObjectFieldT {
 	res := &testdata.ObjectFieldT{
 		Bool:    v.Bool,
 		Int:     v.Int,

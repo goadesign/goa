@@ -584,8 +584,8 @@ func (e *EndpointExpr) validateParams() *eval.ValidationErrors {
 	if e.MethodExpr.Payload == nil {
 		verr.Add(e, "Parameters are defined but Payload is not defined")
 	} else {
-		switch e.MethodExpr.Payload.Type.(type) {
-		case *design.Object:
+		p := e.MethodExpr.Payload.Type
+		if design.IsObject(p) {
 			for _, nat := range pparams {
 				name := strings.Split(nat.Name, ":")[0]
 				if e.MethodExpr.Payload.Find(name) == nil {
@@ -598,11 +598,11 @@ func (e *EndpointExpr) validateParams() *eval.ValidationErrors {
 					verr.Add(e, "Querys string parameter %q not found in payload.", nat.Name)
 				}
 			}
-		case *design.Array:
+		} else if design.IsArray(p) {
 			if len(pparams)+len(qparams) > 1 {
 				verr.Add(e, "Payload type is array but HTTP endpoint defines multiple parameters. At most one parameter must be defined and it must be an array.")
 			}
-		case *design.Map:
+		} else if design.IsMap(p) {
 			if len(pparams)+len(qparams) > 1 {
 				verr.Add(e, "Payload type is map but HTTP endpoint defines multiple parameters. At most one query string parameter must be defined and it must be a map.")
 			}

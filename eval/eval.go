@@ -43,6 +43,7 @@ func RunDSL() error {
 		root.WalkSets(prepareSet)
 	}
 	for _, root := range roots {
+		validateSet(ExpressionSet{root})
 		root.WalkSets(validateSet)
 	}
 	if Context.Errors != nil {

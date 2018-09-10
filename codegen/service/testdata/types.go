@@ -20,7 +20,7 @@ type ObjectT struct {
 
 type ObjectExtraT struct {
 	Object *ObjectFieldT
-	t      time.Time
+	t      *time.Time
 }
 
 type ObjectFieldT struct {
