@@ -365,6 +365,12 @@ func Contact(fn func()) {
 // match is found or if the matching field type does not correspond to the
 // attribute type.
 //
+// The following limitations apply on the external Go struct field types
+// recursively:
+//
+//    * struct fields must use pointers
+//    * pointers on slices or on maps are not supported
+//
 // ConvertTo must appear in Type or ResutType.
 //
 // ConvertTo accepts one arguments: an instance of the external type.
@@ -425,6 +431,12 @@ func ConvertTo(obj interface{}) {
 // conversion code is generated for it. In all other cases it is an error if no
 // match is found or if the matching field type does not correspond to the
 // attribute type.
+//
+// The following limitations apply on the external Go struct field types
+// recursively:
+//
+//    * struct fields must use pointers
+//    * pointers on slices or on maps are not supported
 //
 // CreateFrom must appear in Type or ResutType.
 //
