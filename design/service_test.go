@@ -111,3 +111,79 @@ func TestErrorExprValidate(t *testing.T) {
 		}
 	}
 }
+
+func TestFlowExpr_EvalName(t *testing.T) {
+	const tokenURL = "http://domain/token"
+	const refreshURL = "http://domain/refresh"
+
+	cases := map[string]struct {
+		tokenURL   string
+		refreshURL string
+		expected   string
+	}{
+		"tokenURL test":   {tokenURL: tokenURL, refreshURL: "", expected: fmt.Sprintf("flow with token URL %q", tokenURL)},
+		"refreshURL test": {tokenURL: "", refreshURL: refreshURL, expected: fmt.Sprintf("flow with refresh URL %q", refreshURL)},
+	}
+
+	for k, tc := range cases {
+		fe := &FlowExpr{TokenURL: tc.tokenURL, RefreshURL: tc.refreshURL}
+		if actual := fe.EvalName(); actual != tc.expected {
+			t.Errorf("%s: got %#v, expected %#v", k, actual, tc.expected)
+		}
+	}
+}
+
+func TestSchemeExpr_EvalName(t *testing.T) {
+	cases := map[string]struct {
+		kind     SchemeKind
+		expected string
+	}{
+		"OAuth2Kind":    {kind: OAuth2Kind, expected: "OAuth2Security"},
+		"BasicAuthKind": {kind: BasicAuthKind, expected: "BasicAuthSecurity"},
+		"APIKeyKind":    {kind: APIKeyKind, expected: "APIKeySecurity"},
+		"JWTKind":       {kind: JWTKind, expected: "JWTSecurity"},
+		"NoKind":        {kind: NoKind, expected: "This case is panic"},
+	}
+
+	for k, tc := range cases {
+		func() {
+			// panic recover
+			defer func() {
+				if k != "NoKind" {
+					return
+				}
+
+				if recover() == nil {
+					t.Errorf("should have panicked!")
+				}
+			}()
+
+			se := &SchemeExpr{Kind: tc.kind}
+			if actual := se.EvalName(); actual != tc.expected {
+				t.Errorf("%s: got %#v, expected %#v", k, actual, tc.expected)
+			}
+		}()
+	}
+}
+
+func TestSecurityExpr_EvalName(t *testing.T) {
+	scheme1 := &SchemeExpr{SchemeName: "A"}
+	scheme2 := &SchemeExpr{SchemeName: ""}
+
+	cases := map[string]struct {
+		schemes  []*SchemeExpr
+		expected string
+	}{
+		"security with suffix":           {schemes: []*SchemeExpr{scheme1}, expected: "Securityscheme A"},
+		"empty string are security only": {schemes: []*SchemeExpr{scheme2}, expected: "Security"},
+		"in case of security only":       {schemes: nil, expected: "Security"},
+		"also in case of security only":  {schemes: []*SchemeExpr{}, expected: "Security"},
+	}
+
+	for k, tc := range cases {
+		se := &SecurityExpr{Schemes: tc.schemes}
+		if actual := se.EvalName(); actual != tc.expected {
+			t.Errorf("%s: got %#v, expected %#v", k, actual, tc.expected)
+		}
+	}
+}
