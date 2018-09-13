@@ -368,7 +368,7 @@ func buildDesignType(dt *design.DataType, t reflect.Type, ref design.DataType, r
 				if design.IsMap(fdt) {
 					return fmt.Errorf("%s: field of type pointer to map are not supported, use map instead", recf.path)
 				}
-			} else if f.Type.Kind() == reflect.Struct {
+			} else if f.Type.Kind() == reflect.Struct && f.Type.NumField() != 0 {
 				return fmt.Errorf("%s: fields of type struct must use pointers", recf.path)
 			} else {
 				if isPrimitive(f.Type) {
