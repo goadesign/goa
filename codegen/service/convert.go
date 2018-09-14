@@ -368,7 +368,7 @@ func buildDesignType(dt *design.DataType, t reflect.Type, ref design.DataType, r
 				if design.IsMap(fdt) {
 					return fmt.Errorf("%s: field of type pointer to map are not supported, use map instead", recf.path)
 				}
-			} else if f.Type.Kind() == reflect.Struct && f.Type.NumField() != 0 {
+			} else if f.Type.Kind() == reflect.Struct && needsConversion(oref, f.Name) {
 				return fmt.Errorf("%s: fields of type struct must use pointers", recf.path)
 			} else {
 				if isPrimitive(f.Type) {
@@ -407,6 +407,42 @@ func buildDesignType(dt *design.DataType, t reflect.Type, ref design.DataType, r
 		*dt = design.Any
 	}
 	return nil
+}
+
+// returns true if a field with name needs convertion to obj
+func needsConversion(obj *design.Object, name string) bool {
+	if obj == nil {
+		return false
+	}
+	// first look for a "struct.field.external" metadata
+	for _, nat := range *obj {
+		if m := nat.Attribute.Metadata["struct.field.external"]; len(m) > 0 {
+			if m[0] == name {
+				return false
+			}
+		}
+	}
+	// next look for an exact match
+	for _, nat := range *obj {
+		if nat.Name == name {
+			return true
+		}
+	}
+	// next try to lower case first letter
+	ln := strings.ToLower(name[0:1]) + name[1:]
+	for _, nat := range *obj {
+		if nat.Name == ln {
+			return true
+		}
+	}
+	// finally look for a snake case representation
+	sn := codegen.SnakeCase(name)
+	for _, nat := range *obj {
+		if nat.Name == sn {
+			return true
+		}
+	}
+	return false
 }
 
 // attributeName computes the name of the attribute for the given field name and
