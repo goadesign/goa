@@ -1,6 +1,8 @@
 package design
 
 import (
+	"fmt"
+
 	"goa.design/goa/eval"
 )
 
@@ -12,8 +14,10 @@ type (
 	RootExpr struct {
 		// API contains the API expression built by the DSL.
 		API *APIExpr
-		// Services contains the list of services exposed by the API.
+		// Services contains the list of services defined in the design.
 		Services []*ServiceExpr
+		// Servers containst the list of servers that expose services.
+		Servers []*ServerExpr
 		// Errors contains the list of errors returned by all the API
 		// methods.
 		Errors []*ErrorExpr
@@ -148,13 +152,31 @@ func (r *RootExpr) EvalName() string {
 	return "design"
 }
 
-// Validate makes sure the root expression is valid for code generation.
-func (r *RootExpr) Validate() error {
-	var verr eval.ValidationErrors
+// Validate makes sure server expressions are valid.
+func (r *RootExpr) Validate() *eval.ValidationErrors {
+	verr := new(eval.ValidationErrors)
 	if r.API == nil {
 		verr.Add(r, "Missing API declaration")
 	}
-	return &verr
+	names := make(map[string]struct{})
+	for _, s := range r.Servers {
+		verr.Merge(s.Validate().(*eval.ValidationErrors))
+		if _, ok := names[s.Name]; ok {
+			verr.AddError(s, fmt.Errorf("duplicate server name"))
+		}
+		names[s.Name] = struct{}{}
+	}
+	return verr
+}
+
+// Finalize finalizes the server expressions.
+func (r *RootExpr) Finalize() {
+	if len(r.Servers) == 0 {
+		r.Servers = []*ServerExpr{r.DefaultServer()}
+	}
+	for _, s := range r.Servers {
+		s.Finalize()
+	}
 }
 
 // Dup creates a new map from the given expression.

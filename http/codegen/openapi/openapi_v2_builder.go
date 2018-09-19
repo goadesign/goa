@@ -16,18 +16,17 @@ import (
 )
 
 // NewV2 returns the OpenAPI v2 specification for the given API.
-func NewV2(root *httpdesign.RootExpr) (*V2, error) {
+func NewV2(root *httpdesign.RootExpr, uri string) (*V2, error) {
 	if root == nil {
 		return nil, nil
 	}
 	tags := tagsFromExpr(root.Metadata)
-	u, err := url.Parse(root.Design.API.Servers[0].URL)
+	u, err := url.Parse(uri)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse server URL: %s", err)
 	}
 	host := u.Host
-
-	basePath := root.Path
+	basePath := u.Path
 	if hasAbsoluteRoutes(root) {
 		basePath = ""
 	}

@@ -6,23 +6,23 @@ import (
 	httpdesign "goa.design/goa/http/design"
 )
 
-// Response describes a single HTTP response. Response describes both success and
-// error responses. When describing an error response the first argument is the
-// name of the error.
+// Response describes a single HTTP response. Response describes both success
+// and error responses. When describing an error response the first argument is
+// the name of the error.
 //
 // While a service method may only define a single result type Response may be
 // called multiple times to define multiple success HTTP responses. In this case
 // the Tag expression makes it possible to specify the name of a field in the
-// method result type and a value that the field must have for the
-// corresponding response to be sent. The tag field must be of type String.
+// method result type and a value that the field must have for the corresponding
+// response to be sent. The tag field must be of type String.
 //
 // Response allows specifying the response status code as an argument or via the
 // Code expression, headers via the Header and ContentType expressions and body
 // via the Body expression.
 //
-// By default success HTTP responses use status code 200 and error HTTP responses
-// use status code 400. Also by default the responses use the method result
-// type (success responses) or error type (error responses) to define the
+// By default success HTTP responses use status code 200 and error HTTP
+// responses use status code 400. Also by default the responses use the method
+// result type (success responses) or error type (error responses) to define the
 // response body shape.
 //
 // Additionally if the response type is a result type then the "Content-Type"
@@ -45,13 +45,13 @@ import (
 // the following:
 //
 //     Method("show", func() {
-//         Response(AccountResult)
+//         Result(AccountResult)
 //     })
 //
 // is equivalent to:
 //
 //     Method("show", func() {
-//         Response(AccountResult)
+//         Result(AccountResult)
 //         HTTP(func() {
 //             Response(func() {
 //                 Code(StatusOK)
@@ -67,22 +67,19 @@ import (
 // The following:
 //
 //     Method("show", func() {
-//         Response(ShowResponse)
+//         Result(AccountResult)
 //         HTTP(func() {
-//             Response(func() {
-//                 Header("href")
-//             })
+//             Response(func() { Header("href") })
 //         })
 //     })
 //
 // is thus equivalent to:
 //
 //     Method("show", func() {
-//         Response(ShowResponse)
+//         Result(AccountResult)
 //         HTTP(func() {
 //             Response(func() {
 //                 Code(StatusOK)
-//                 ContentType("application/vnd.goa.account")
 //                 Header("href", String, "Account API href")
 //                 Body(func() {
 //                     Attribute("name", String, "Account name")
@@ -91,10 +88,10 @@ import (
 //         })
 //     })
 //
-// Response must appear in a API or service HTTP expression to define error
-// responses common to all the API or service methods. Response may also appear
-// in an method HTTP expression to define both the success and error responses
-// specific to the method.
+// Response must appear in a API, a service or a method HTTP expression. When
+// defined in a API or service, Response describes the default HTTP mapping for
+// the corresponding error. When defined in a method expression Response may
+// define the mapping to HTTP for the method result or for an error.
 //
 // Response takes one to three arguments. Success responses accept a status code
 // or a function as first argument. If the first argument is a status code then

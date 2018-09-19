@@ -6,57 +6,83 @@ import (
 	"strings"
 
 	"goa.design/goa/codegen"
+	"goa.design/goa/design"
 	httpdesign "goa.design/goa/http/design"
 )
 
 // ExampleCLI returns an example client tool main implementation.
-func ExampleCLI(genpkg string, root *httpdesign.RootExpr) *codegen.File {
-	path := filepath.Join("cmd", codegen.SnakeCase(codegen.Goify(root.Design.API.Name, true))+"_cli", "main.go")
-	if _, err := os.Stat(path); !os.IsNotExist(err) {
-		return nil // file already exists, skip it.
-	}
-	idx := strings.LastIndex(genpkg, string(os.PathSeparator))
-	rootPath := "."
-	if idx > 0 {
-		rootPath = genpkg[:idx]
-	}
-	apiPkg := strings.ToLower(codegen.Goify(root.Design.API.Name, false))
-	specs := []*codegen.ImportSpec{
-		{Path: "context"},
-		{Path: "encoding/json"},
-		{Path: "flag"},
-		{Path: "fmt"},
-		{Path: "net/http"},
-		{Path: "net/url"},
-		{Path: "os"},
-		{Path: "strings"},
-		{Path: "time"},
-		{Path: "github.com/gorilla/websocket"},
-		{Path: "goa.design/goa/http", Name: "goahttp"},
-		{Path: rootPath, Name: apiPkg},
-		{Path: genpkg + "/http/cli"},
-	}
-	svcdata := make([]*ServiceData, 0, len(root.HTTPServices))
-	for _, svc := range root.HTTPServices {
-		svcdata = append(svcdata, HTTPServices.Get(svc.Name()))
-	}
-	data := map[string]interface{}{
-		"Services": svcdata,
-		"APIPkg":   apiPkg,
-		"APIName":  root.Design.API.Name,
-	}
-	sections := []*codegen.SectionTemplate{
-		codegen.Header("", "main", specs),
-		&codegen.SectionTemplate{
-			Name:   "cli-main",
-			Source: mainCLIT,
-			Data:   data,
-			FuncMap: map[string]interface{}{
-				"needStreaming": needStreaming,
+func ExampleCLI(genpkg string, root *httpdesign.RootExpr) []*codegen.File {
+	files := make([]*codegen.File, len(design.Root.Servers))
+	for i, svr := range design.Root.Servers {
+		pkg := codegen.SnakeCase(codegen.Goify(svr.Name, true))
+		path := filepath.Join("cmd", pkg+"-cli", "main.go")
+		if _, err := os.Stat(path); !os.IsNotExist(err) {
+			return nil // file already exists, skip it.
+		}
+		idx := strings.LastIndex(genpkg, string(os.PathSeparator))
+		rootPath := "."
+		if idx > 0 {
+			rootPath = genpkg[:idx]
+		}
+		specs := []*codegen.ImportSpec{
+			{Path: "context"},
+			{Path: "encoding/json"},
+			{Path: "flag"},
+			{Path: "fmt"},
+			{Path: "net/http"},
+			{Path: "net/url"},
+			{Path: "os"},
+			{Path: "strings"},
+			{Path: "time"},
+			{Path: "github.com/gorilla/websocket"},
+			{Path: "goa.design/goa/http", Name: "goahttp"},
+			{Path: genpkg + "/http/cli/" + pkg},
+			{Path: rootPath, Name: codegen.ExampleTopPackageName},
+		}
+		svcdata := make([]*ServiceData, len(svr.Services))
+		for i, svc := range svr.Services {
+			svcdata[i] = HTTPServices.Get(svc)
+		}
+		vars := design.AsObject(svr.Hosts[0].Variables.Type)
+		var variables []map[string]interface{}
+		if len(*vars) > 0 {
+			variables = make([]map[string]interface{}, len(*vars))
+			for i, v := range *vars {
+				def := v.Attribute.DefaultValue
+				if def == nil {
+					// DSL ensures v.Attribute has either a
+					// default value or an enum validation
+					def = v.Attribute.Validation.Values[0]
+				}
+				variables[i] = map[string]interface{}{
+					"Name":         v.Name,
+					"Description":  v.Attribute.Description,
+					"VarName":      codegen.Goify(v.Name, false),
+					"DefaultValue": def,
+				}
+			}
+		}
+		data := map[string]interface{}{
+			"Services":   svcdata,
+			"APIPkg":     codegen.ExampleTopPackageName,
+			"ServerName": svr.Name,
+			"DefaultURL": svr.Hosts[0].URIs[0],
+			"Variables":  variables,
+		}
+		sections := []*codegen.SectionTemplate{
+			codegen.Header("", "main", specs),
+			&codegen.SectionTemplate{
+				Name:   "cli-main",
+				Source: mainCLIT,
+				Data:   data,
+				FuncMap: map[string]interface{}{
+					"needStreaming": needStreaming,
+				},
 			},
-		},
+		}
+		files[i] = &codegen.File{Path: path, SectionTemplates: sections}
 	}
-	return &codegen.File{Path: path, SectionTemplates: sections}
+	return files
 }
 
 // needStreaming returns true if at least one endpoint in the service
@@ -70,16 +96,25 @@ func needStreaming(data []*ServiceData) bool {
 	return false
 }
 
-// input: map[string]interface{}{"Services":[]ServiceData, "APIPkg": string, "APIName": string}
+// input: map[string]interface{}{"Services":[]ServiceData, "APIPkg": string, "ServerName": string}
 const mainCLIT = `func main() {
 	var (
-		addr    = flag.String("url", "http://localhost:8080", "` + "`" + `URL` + "`" + ` to service host")
+		addr    = flag.String("url", "{{ .DefaultURL }}", "` + "`" + `URL` + "`" + ` to service host")
+{{ range .Variables }}
+		{{ .VarName }} = flag.String("{{ .Name }}", {{ printf "%q" .DefaultValue }}, {{ printf "%q" .Description }})
+{{- end }}
 		verbose = flag.Bool("verbose", false, "Print request and response details")
 		v       = flag.Bool("v", false, "Print request and response details")
 		timeout = flag.Int("timeout", 30, "Maximum number of ` + "`" + `seconds` + "`" + ` to wait for response")
 	)
 	flag.Usage = usage
 	flag.Parse()
+{{ if .Variables }}
+
+	{{ range .Variables }}
+	addr = strings.Replace(addr, "{{{ .Name }}}", {{ .VarName }}, -1)
+	{{- end }}
+{{- end }}
 
 	var (
 		scheme string
@@ -94,9 +129,6 @@ const mainCLIT = `func main() {
 		}
 		scheme = u.Scheme
 		host = u.Host
-		if scheme == "" {
-			scheme = "http"
-		}
 		debug = *verbose || *v
 	}
 
@@ -166,7 +198,7 @@ const mainCLIT = `func main() {
 }
 
 func usage() {
-	fmt.Fprintf(os.Stderr, ` + "`" + `%s is a command line client for the {{ .APIName }} API.
+	fmt.Fprintf(os.Stderr, ` + "`" + `%s is a command line client for the {{ .ServerName }} server.
 
 Usage:
     %s [-url URL][-timeout SECONDS][-verbose|-v] SERVICE ENDPOINT [flags]

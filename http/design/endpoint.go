@@ -171,11 +171,9 @@ func (e *EndpointExpr) QueryParams() *design.MappedAttributeExpr {
 func (e *EndpointExpr) Prepare() {
 	// Inherit headers and params from parent service and API
 	headers := design.NewEmptyMappedAttributeExpr()
-	headers.Merge(Root.Headers)
 	headers.Merge(e.Service.Headers)
 
 	params := design.NewEmptyMappedAttributeExpr()
-	params.Merge(Root.Params)
 	params.Merge(e.Service.Params)
 
 	if p := e.Service.Parent(); p != nil {
@@ -217,11 +215,8 @@ func (e *EndpointExpr) Prepare() {
 		e.Responses = []*HTTPResponseExpr{{StatusCode: status}}
 	}
 
-	// Inherit HTTP errors from service and root
+	// Inherit HTTP errors from service
 	for _, r := range e.Service.HTTPErrors {
-		e.HTTPErrors = append(e.HTTPErrors, r.Dup())
-	}
-	for _, r := range Root.HTTPErrors {
 		e.HTTPErrors = append(e.HTTPErrors, r.Dup())
 	}
 
@@ -533,6 +528,24 @@ func (e *EndpointExpr) Finalize() {
 		if r.Body.Type != design.Empty && r.ContentType == "" {
 			if mt, ok := r.Body.Type.(*design.ResultTypeExpr); ok {
 				r.ContentType = mt.Identifier
+			}
+		}
+	}
+
+	// Lookup undefined HTTP errors in API.
+	for _, err := range e.MethodExpr.Errors {
+		found := false
+		for _, herr := range e.HTTPErrors {
+			if err.Name == herr.Name {
+				found = true
+				break
+			}
+		}
+		if !found {
+			for _, herr := range Root.HTTPErrors {
+				if herr.Name == err.Name {
+					e.HTTPErrors = append(e.HTTPErrors, herr.Dup())
+				}
 			}
 		}
 	}

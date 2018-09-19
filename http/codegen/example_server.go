@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"goa.design/goa/codegen"
+	"goa.design/goa/design"
 	httpdesign "goa.design/goa/http/design"
 )
 
@@ -20,8 +21,10 @@ func ExampleServerFiles(genpkg string, root *httpdesign.RootExpr) []*codegen.Fil
 			fw = append(fw, f)
 		}
 	}
-	if m := exampleMain(genpkg, root); m != nil {
+	for _, svr := range root.Design.Servers {
+		if m := exampleMain(genpkg, root, svr); m != nil {
 		fw = append(fw, m)
+	}
 	}
 	return fw
 }
@@ -75,8 +78,9 @@ func dummyServiceFile(genpkg string, root *httpdesign.RootExpr, svc *httpdesign.
 	}
 }
 
-func exampleMain(genpkg string, root *httpdesign.RootExpr) *codegen.File {
-	mainPath := filepath.Join("cmd", codegen.SnakeCase(codegen.Goify(root.Design.API.Name, true))+"_svc", "main.go")
+func exampleMain(genpkg string, root *httpdesign.RootExpr, svr *design.ServerExpr) *codegen.File {
+	pkg := codegen.SnakeCase(codegen.Goify(svr.Name, true))
+	mainPath := filepath.Join("cmd", pkg, "main.go")
 	if _, err := os.Stat(mainPath); !os.IsNotExist(err) {
 		return nil // file already exists, skip it.
 	}
@@ -113,9 +117,9 @@ func exampleMain(genpkg string, root *httpdesign.RootExpr) *codegen.File {
 		})
 	}
 	sections := []*codegen.SectionTemplate{codegen.Header("", "main", specs)}
-	svcdata := make([]*ServiceData, 0, len(root.HTTPServices))
-	for _, svc := range root.HTTPServices {
-		svcdata = append(svcdata, HTTPServices.Get(svc.Name()))
+	svcdata := make([]*ServiceData, len(svr.Services))
+	for i, svc := range svr.Services {
+		svcdata[i] = HTTPServices.Get(svc)
 	}
 	if needStream(svcdata) {
 		specs = append(specs, &codegen.ImportSpec{Path: "github.com/gorilla/websocket"})
@@ -125,12 +129,10 @@ func exampleMain(genpkg string, root *httpdesign.RootExpr) *codegen.File {
 		"APIPkg":   apiPkg,
 	}
 	sections = append(sections, &codegen.SectionTemplate{
-		Name:   "service-main",
-		Source: mainT,
-		Data:   data,
-		FuncMap: map[string]interface{}{
-			"needStream": needStream,
-		},
+		Name:    "service-main",
+		Source:  mainT,
+		Data:    data,
+		FuncMap: map[string]interface{}{"needStream": needStream},
 	})
 
 	return &codegen.File{Path: mainPath, SectionTemplates: sections}

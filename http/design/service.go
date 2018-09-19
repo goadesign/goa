@@ -2,9 +2,7 @@ package design
 
 import (
 	"fmt"
-	"net/url"
 	"path"
-	"sort"
 	"strings"
 
 	"github.com/dimfeld/httppath"
@@ -54,27 +52,6 @@ func (svc *ServiceExpr) Name() string {
 // Description of service (service)
 func (svc *ServiceExpr) Description() string {
 	return svc.ServiceExpr.Description
-}
-
-// Schemes returns the service endpoint HTTP schemes.
-func (svc *ServiceExpr) Schemes() []string {
-	schemes := make(map[string]bool)
-	for _, s := range svc.ServiceExpr.Servers {
-		if u, err := url.Parse(s.URL); err != nil {
-			schemes[u.Scheme] = true
-		}
-	}
-	if len(schemes) == 0 {
-		return nil
-	}
-	ss := make([]string, len(schemes))
-	i := 0
-	for s := range schemes {
-		ss[i] = s
-		i++
-	}
-	sort.Strings(ss)
-	return ss
 }
 
 // Error returns the error with the given name.
@@ -132,12 +109,9 @@ func (svc *ServiceExpr) URITemplate() string {
 	return ca.Routes[0].FullPaths()[0]
 }
 
-// FullPaths computes the base paths to the service endpoints concatenating the
-// API and parent service base paths as needed.
+// FullPaths computes the base paths to the service endpoints concatenating
+// parent service base paths as needed.
 func (svc *ServiceExpr) FullPaths() []string {
-	if len(svc.Paths) == 0 {
-		return []string{path.Join(Root.Path)}
-	}
 	var paths []string
 	for _, p := range svc.Paths {
 		if strings.HasPrefix(p, "//") {
@@ -158,8 +132,6 @@ func (svc *ServiceExpr) FullPaths() []string {
 					}
 				}
 			}
-		} else {
-			basePaths = []string{Root.Path}
 		}
 		for _, base := range basePaths {
 			paths = append(paths, httppath.Clean(path.Join(base, p)))

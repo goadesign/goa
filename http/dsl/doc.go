@@ -6,11 +6,11 @@ specific information. These include the API, Service, Method and Error DSLs.
 
 For example:
 
-    var _ = API("name", func() {
+    var _ = Service("name", func() {
         Description("Optional description")
         // HTTP specific properties
         HTTP(func() {
-            // Base path for all the API requests.
+            // Base path for all the service methods.
             Path("/path")
         })
     })
