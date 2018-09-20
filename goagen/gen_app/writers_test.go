@@ -1174,6 +1174,20 @@ var _ = Describe("ControllersWriter", func() {
 									"icon": &design.AttributeDefinition{
 										Type: design.File,
 									},
+									"options": &design.AttributeDefinition{
+										Type: &design.Array{
+											ElemType: &design.AttributeDefinition{
+												Type: design.String,
+											},
+										},
+									},
+									"flags": &design.AttributeDefinition{
+										Type: &design.Array{
+											ElemType: &design.AttributeDefinition{
+												Type: design.Integer,
+											},
+										},
+									},
 								},
 								Validation: required,
 							},
@@ -1188,7 +1202,10 @@ var _ = Describe("ControllersWriter", func() {
 					b, err := ioutil.ReadFile(filename)
 					Ω(err).ShouldNot(HaveOccurred())
 					written := string(b)
-					Ω(written).Should(ContainSubstring(payloadMultipartObjUnmarshal))
+					Ω(written).Should(ContainSubstring(payloadMultipartObjUnmarshalID))
+					Ω(written).Should(ContainSubstring(payloadMultipartObjUnmarshalIcon))
+					Ω(written).Should(ContainSubstring(payloadMultipartObjUnmarshalOptions))
+					Ω(written).Should(ContainSubstring(payloadMultipartObjUnmarshalFlags))
 				})
 			})
 
@@ -2317,30 +2334,39 @@ func unmarshalListBottlePayload(ctx context.Context, service *goa.Service, req *
 }
 `
 
-	payloadMultipartObjUnmarshal = `
-func unmarshalListBottlePayload(ctx context.Context, service *goa.Service, req *http.Request) error {
-	var err error
-	var payload listBottlePayload
+	payloadMultipartObjUnmarshalID = `
+	rawID := req.FormValue("id")
+	payload.ID = &rawID`
+
+	payloadMultipartObjUnmarshalIcon = `
 	_, rawIcon, err2 := req.FormFile("icon")
 	if err2 == nil {
 		payload.Icon = rawIcon
 	} else {
 		err = goa.MergeErrors(err, goa.InvalidParamTypeError("icon", "icon", "file"))
+	}`
+
+	payloadMultipartObjUnmarshalOptions = `
+	rawOptions := req.Form["options[]"]
+	tmpOptions := make([]string, len(rawOptions))
+	for i := 0; i < len(rawOptions); i++ {
+		tmp := rawOptions[i]
+		tmpOptions[i] = tmp
 	}
-	rawID := req.FormValue("id")
-	payload.ID = &rawID
-	if err != nil {
-		return err
+	payload.Options = tmpOptions`
+
+	payloadMultipartObjUnmarshalFlags = `
+	rawFlags := req.Form["flags[]"]
+	tmpFlags := make([]int, len(rawFlags))
+	for i := 0; i < len(rawFlags); i++ {
+		tmp, err2 := strconv.Atoi(rawFlags[i])
+		if err2 != nil {
+			err = goa.MergeErrors(err, goa.InvalidParamTypeError("flags", rawFlags, "[]int"))
+			break
+		}
+		tmpFlags[i] = tmp
 	}
-	if err := payload.Validate(); err != nil {
-		// Initialize payload with private data structure so it can be logged
-		goa.ContextRequest(ctx).Payload = payload
-		return err
-	}
-	goa.ContextRequest(ctx).Payload = payload.Publicize()
-	return nil
-}
-`
+	payload.Flags = tmpFlags`
 
 	payloadNoValidationsObjUnmarshal = `
 func unmarshalListBottlePayload(ctx context.Context, service *goa.Service, req *http.Request) error {
