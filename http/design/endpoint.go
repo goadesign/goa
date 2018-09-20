@@ -748,16 +748,13 @@ func (r *RouteExpr) Params() []string {
 	return res
 }
 
-// FullPaths returns the endpoint full paths computed by concatenating the API and
-// service base paths with the endpoint specific paths.
+// FullPaths returns the endpoint full paths computed by concatenating the
+// service base paths with the route specific path.
 func (r *RouteExpr) FullPaths() []string {
 	if r.IsAbsolute() {
 		return []string{httppath.Clean(r.Path[1:])}
 	}
-	var bases []string
-	if r.Endpoint != nil && r.Endpoint.Service != nil {
-		bases = r.Endpoint.Service.FullPaths()
-	}
+	bases := r.Endpoint.Service.FullPaths()
 	res := make([]string, len(bases))
 	for i, b := range bases {
 		res[i] = httppath.Clean(path.Join(b, r.Path))

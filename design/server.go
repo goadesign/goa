@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/url"
 	"regexp"
+	"sort"
 
 	"goa.design/goa/eval"
 )
@@ -75,6 +76,26 @@ func (s *ServerExpr) Finalize() {
 	}
 }
 
+// Schemes returns the list of transport schemes used by all the server
+// endpoints. The possible values for the elements of the returned slice are
+// "http", "https", "grpc" and "grpcs".
+func (s *ServerExpr) Schemes() []string {
+	schemes := make(map[string]struct{})
+	for _, h := range s.Hosts {
+		for _, sch := range h.Schemes() {
+			schemes[sch] = struct{}{}
+		}
+	}
+	ss := make([]string, len(schemes))
+	i := 0
+	for s := range schemes {
+		ss[i] = s
+		i++
+	}
+	sort.Strings(ss)
+	return ss
+}
+
 var validSchemes = map[string]struct{}{"http": struct{}{}, "https": struct{}{}, "grpc": struct{}{}, "grpcs": struct{}{}}
 
 // Validate validates the host.
@@ -95,16 +116,18 @@ func (h *HostExpr) Validate() error {
 			verr.Add(h, "invalid scheme for URI %q, scheme must be one of 'http', 'https', 'grpc' or 'grpcs'", u)
 		}
 	}
-	for _, v := range *(h.Variables.Type.(*Object)) {
-		if !IsPrimitive(v.Attribute.Type) {
-			verr.Add(h, "invalid type for URI variable %q: type must be a primitive", v.Name)
-		}
-		if v.Attribute.Validation == nil {
-			if v.Attribute.DefaultValue == nil {
+	if h.Variables != nil {
+		for _, v := range *(h.Variables.Type.(*Object)) {
+			if !IsPrimitive(v.Attribute.Type) {
+				verr.Add(h, "invalid type for URI variable %q: type must be a primitive", v.Name)
+			}
+			if v.Attribute.Validation == nil {
+				if v.Attribute.DefaultValue == nil {
+					verr.Add(h, "URI variable %q must have a default value or an enum validation", v.Name)
+				}
+			} else if v.Attribute.DefaultValue == nil && len(v.Attribute.Validation.Values) == 0 {
 				verr.Add(h, "URI variable %q must have a default value or an enum validation", v.Name)
 			}
-		} else if v.Attribute.DefaultValue == nil && len(v.Attribute.Validation.Values) == 0 {
-			verr.Add(h, "URI variable %q must have a default value or an enum validation", v.Name)
 		}
 	}
 	return verr
@@ -122,6 +145,26 @@ func (h *HostExpr) Attribute() *AttributeExpr {
 		h.Variables = &AttributeExpr{Type: &Object{}}
 	}
 	return h.Variables
+}
+
+// Schemes returns the list of transport schemes defined for the host. The
+// possible values for the elements of the returned slice are "http", "https",
+// "grpc" and "grpcs".
+func (h *HostExpr) Schemes() []string {
+	schemes := make(map[string]struct{})
+	for _, uri := range h.URIs {
+		if u, err := url.Parse(string(uri)); err == nil && u.Scheme != "" {
+			schemes[u.Scheme] = struct{}{}
+		}
+	}
+	ss := make([]string, len(schemes))
+	i := 0
+	for s := range schemes {
+		ss[i] = s
+		i++
+	}
+	sort.Strings(ss)
+	return ss
 }
 
 // Params return the names of the parameters used in URI if any.

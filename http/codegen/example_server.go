@@ -21,10 +21,10 @@ func ExampleServerFiles(genpkg string, root *httpdesign.RootExpr) []*codegen.Fil
 			fw = append(fw, f)
 		}
 	}
-	for _, svr := range root.Design.Servers {
+	for _, svr := range root.Design.API.Servers {
 		if m := exampleMain(genpkg, root, svr); m != nil {
-		fw = append(fw, m)
-	}
+			fw = append(fw, m)
+		}
 	}
 	return fw
 }

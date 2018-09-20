@@ -37,7 +37,7 @@ func ClientTypeFiles(genpkg string, root *httpdesign.RootExpr) []*codegen.File {
 //     have default values are never required (enforced by DSL engine).
 //
 //   * The result struct fields (if a struct) hold pointers when not required
-//     or have a default value (so generated code can set when null)
+//     or have a default value (so generated code can set when null).
 //
 //   * Response header variables hold pointers when not required and have no
 //     default value.

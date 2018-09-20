@@ -16,8 +16,6 @@ type (
 		API *APIExpr
 		// Services contains the list of services defined in the design.
 		Services []*ServiceExpr
-		// Servers containst the list of servers that expose services.
-		Servers []*ServerExpr
 		// Errors contains the list of errors returned by all the API
 		// methods.
 		Errors []*ErrorExpr
@@ -153,13 +151,10 @@ func (r *RootExpr) EvalName() string {
 }
 
 // Validate makes sure server expressions are valid.
-func (r *RootExpr) Validate() *eval.ValidationErrors {
+func (r *RootExpr) Validate() error {
 	verr := new(eval.ValidationErrors)
-	if r.API == nil {
-		verr.Add(r, "Missing API declaration")
-	}
 	names := make(map[string]struct{})
-	for _, s := range r.Servers {
+	for _, s := range r.API.Servers {
 		verr.Merge(s.Validate().(*eval.ValidationErrors))
 		if _, ok := names[s.Name]; ok {
 			verr.AddError(s, fmt.Errorf("duplicate server name"))
@@ -171,10 +166,13 @@ func (r *RootExpr) Validate() *eval.ValidationErrors {
 
 // Finalize finalizes the server expressions.
 func (r *RootExpr) Finalize() {
-	if len(r.Servers) == 0 {
-		r.Servers = []*ServerExpr{r.DefaultServer()}
+	if r.API == nil {
+		r.API = &APIExpr{}
 	}
-	for _, s := range r.Servers {
+	if len(r.API.Servers) == 0 {
+		r.API.Servers = []*ServerExpr{r.API.DefaultServer()}
+	}
+	for _, s := range r.API.Servers {
 		s.Finalize()
 	}
 }

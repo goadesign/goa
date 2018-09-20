@@ -97,9 +97,6 @@ func (s *ServiceExpr) Validate() error {
 
 // Finalize finalizes all the service methods and errors.
 func (s *ServiceExpr) Finalize() {
-	for _, m := range s.Methods {
-		m.Finalize()
-	}
 	for _, e := range s.Errors {
 		e.Finalize()
 	}

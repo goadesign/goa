@@ -6,8 +6,8 @@ import (
 	"reflect"
 	"strconv"
 
-	"goa.design/goa/design"
 	"goa.design/goa/codegen"
+	"goa.design/goa/design"
 
 	httpdesign "goa.design/goa/http/design"
 )
@@ -131,7 +131,7 @@ func APISchema(api *design.APIExpr, r *httpdesign.RootExpr) *Schema {
 	for _, res := range r.HTTPServices {
 		GenerateServiceDefinition(api, res)
 	}
-	href := api.Servers[0].URL
+	href := string(api.Servers[0].Hosts[0].URIs[0])
 	links := []*Link{
 		{
 			Href: href,

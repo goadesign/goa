@@ -12,9 +12,10 @@ import (
 
 // ExampleCLI returns an example client tool main implementation.
 func ExampleCLI(genpkg string, root *httpdesign.RootExpr) []*codegen.File {
-	files := make([]*codegen.File, len(design.Root.Servers))
-	for i, svr := range design.Root.Servers {
+	files := make([]*codegen.File, len(design.Root.API.Servers))
+	for i, svr := range design.Root.API.Servers {
 		pkg := codegen.SnakeCase(codegen.Goify(svr.Name, true))
+		apiPkg := strings.ToLower(codegen.Goify(root.Design.API.Name, false))
 		path := filepath.Join("cmd", pkg+"-cli", "main.go")
 		if _, err := os.Stat(path); !os.IsNotExist(err) {
 			return nil // file already exists, skip it.
@@ -37,7 +38,7 @@ func ExampleCLI(genpkg string, root *httpdesign.RootExpr) []*codegen.File {
 			{Path: "github.com/gorilla/websocket"},
 			{Path: "goa.design/goa/http", Name: "goahttp"},
 			{Path: genpkg + "/http/cli/" + pkg},
-			{Path: rootPath, Name: codegen.ExampleTopPackageName},
+			{Path: rootPath, Name: apiPkg},
 		}
 		svcdata := make([]*ServiceData, len(svr.Services))
 		for i, svc := range svr.Services {
@@ -64,7 +65,7 @@ func ExampleCLI(genpkg string, root *httpdesign.RootExpr) []*codegen.File {
 		}
 		data := map[string]interface{}{
 			"Services":   svcdata,
-			"APIPkg":     codegen.ExampleTopPackageName,
+			"APIPkg":     apiPkg,
 			"ServerName": svr.Name,
 			"DefaultURL": svr.Hosts[0].URIs[0],
 			"Variables":  variables,

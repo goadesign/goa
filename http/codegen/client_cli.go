@@ -133,7 +133,7 @@ func ClientCLIFiles(genpkg string, root *httpdesign.RootExpr) []*codegen.File {
 	}
 
 	var files []*codegen.File
-	for _, svr := range design.Root.Servers {
+	for _, svr := range design.Root.API.Servers {
 		files = append(files, endpointParser(genpkg, root, svr, data))
 	}
 	for i, svc := range svcs {

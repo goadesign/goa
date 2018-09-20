@@ -112,6 +112,9 @@ func (svc *ServiceExpr) URITemplate() string {
 // FullPaths computes the base paths to the service endpoints concatenating
 // parent service base paths as needed.
 func (svc *ServiceExpr) FullPaths() []string {
+	if len(svc.Paths) == 0 {
+		return []string{"/"}
+	}
 	var paths []string
 	for _, p := range svc.Paths {
 		if strings.HasPrefix(p, "//") {
@@ -132,6 +135,8 @@ func (svc *ServiceExpr) FullPaths() []string {
 					}
 				}
 			}
+		} else {
+			basePaths = []string{"/"}
 		}
 		for _, base := range basePaths {
 			paths = append(paths, httppath.Clean(path.Join(base, p)))
@@ -217,4 +222,11 @@ func (svc *ServiceExpr) Validate() error {
 	}
 
 	return verr
+}
+
+// Finalize initializes the path if no path is set in design.
+func (svc *ServiceExpr) Finalize() {
+	if len(svc.Paths) == 0 {
+		svc.Paths = []string{"/"}
+	}
 }

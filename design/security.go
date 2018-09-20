@@ -152,13 +152,6 @@ func (s *SchemeExpr) Validate() *eval.ValidationErrors {
 	return verr
 }
 
-// Finalize makes the TokenURL and AuthorizationURL complete if needed.
-func (s *SchemeExpr) Finalize() {
-	for _, f := range s.Flows {
-		f.Finalize()
-	}
-}
-
 // EvalName returns the name of the expression used in error messages.
 func (f *FlowExpr) EvalName() string {
 	if f.TokenURL != "" {

@@ -524,8 +524,6 @@ type (
 		Payload *TypeData
 		// Response is the successful response data for the streaming endpoint.
 		Response *ResponseData
-		// Scheme is the scheme used by the streaming connection (ws or wss).
-		Scheme string
 		// SendName is the name of the send function.
 		SendName string
 		// SendDesc is the description for the send function.
@@ -610,20 +608,6 @@ func (d ServicesData) analyze(hs *httpdesign.ServiceExpr) *ServiceData {
 		ClientStruct:     "Client",
 		ServerTypeNames:  make(map[string]bool),
 		ClientTypeNames:  make(map[string]bool),
-	}
-
-	var wsscheme string
-	{
-		for _, s := range hs.ServiceExpr.Schemes() {
-			if s == "ws" || s == "wss" {
-				wsscheme = s
-				break
-			}
-		}
-		if wsscheme == "" {
-			// use ws scheme for websocket if none specified
-			wsscheme = "ws"
-		}
 	}
 
 	for _, s := range hs.FileServers {
@@ -772,13 +756,10 @@ func (d ServicesData) analyze(hs *httpdesign.ServiceExpr) *ServiceData {
 				}
 			}
 			var buf bytes.Buffer
-			var payloadRef, scheme string
+			var payloadRef string
 			pathInit := routes[0].PathInit
 			if len(pathInit.ClientArgs) > 0 && a.MethodExpr.Payload.Type != design.Empty {
 				payloadRef = svc.Scope.GoFullTypeRef(a.MethodExpr.Payload, svc.PkgName)
-			}
-			if ep.ServerStream != nil || ep.ClientStream != nil {
-				scheme = wsscheme
 			}
 			data := map[string]interface{}{
 				"PayloadRef":   payloadRef,
@@ -787,7 +768,6 @@ func (d ServicesData) analyze(hs *httpdesign.ServiceExpr) *ServiceData {
 				"Args":         args,
 				"PathInit":     pathInit,
 				"Verb":         routes[0].Verb,
-				"Scheme":       scheme,
 			}
 			if err := requestInitTmpl.Execute(&buf, data); err != nil {
 				panic(err) // bug
@@ -828,7 +808,7 @@ func (d ServicesData) analyze(hs *httpdesign.ServiceExpr) *ServiceData {
 			RequestEncoder:  requestEncoder,
 			ResponseDecoder: fmt.Sprintf("Decode%sResponse", ep.VarName),
 		}
-		buildStreamData(ad, a, wsscheme, rd)
+		buildStreamData(ad, a, rd)
 
 		if a.MultipartRequest {
 			ad.MultipartRequestDecoder = &MultipartData{
@@ -1654,7 +1634,7 @@ func buildErrorsData(e *httpdesign.EndpointExpr, sd *ServiceData) []*ErrorGroupD
 	return vals
 }
 
-func buildStreamData(ed *EndpointData, e *httpdesign.EndpointExpr, scheme string, sd *ServiceData) {
+func buildStreamData(ed *EndpointData, e *httpdesign.EndpointExpr, sd *ServiceData) {
 	if !e.MethodExpr.IsStreaming() {
 		return
 	}
@@ -1775,7 +1755,6 @@ func buildStreamData(ed *EndpointData, e *httpdesign.EndpointExpr, scheme string
 		Payload:      svrPayload,
 		Response:     ed.Result.Responses[0],
 		PkgName:      svc.PkgName,
-		Scheme:       scheme,
 		Type:         "server",
 		Kind:         md.ServerStream.Kind,
 		SendName:     md.ServerStream.SendName,
@@ -1795,7 +1774,6 @@ func buildStreamData(ed *EndpointData, e *httpdesign.EndpointExpr, scheme string
 		Payload:      cliPayload,
 		Response:     ed.Result.Responses[0],
 		PkgName:      svc.PkgName,
-		Scheme:       scheme,
 		Type:         "client",
 		Kind:         md.ClientStream.Kind,
 		SendName:     md.ClientStream.SendName,
@@ -2427,7 +2405,7 @@ const (
 	{{- end }}
 	}
 {{- end }}
-	u := &url.URL{Scheme: {{ if .Scheme }}{{ printf "%q" .Scheme }}{{ else }}c.scheme{{ end }}, Host: c.host, Path: {{ .PathInit.Name }}({{ range .PathInit.ClientArgs }}{{ .Ref }}, {{ end }})}
+	u := &url.URL{Scheme: c.scheme, Host: c.host, Path: {{ .PathInit.Name }}({{ range .PathInit.ClientArgs }}{{ .Ref }}, {{ end }})}
 	req, err := http.NewRequest("{{ .Verb }}", u.String(), nil)
 	if err != nil {
 		return nil, goahttp.ErrInvalidURL("{{ .ServiceName }}", "{{ .EndpointName }}", u.String(), err)

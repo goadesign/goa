@@ -1,7 +1,6 @@
 package design
 
 import (
-	"net/url"
 	"sort"
 
 	"goa.design/goa/eval"
@@ -64,20 +63,15 @@ type (
 	}
 )
 
-// Schemes returns the list of HTTP methods used by all the API servers.
+// Schemes returns the list of transport schemes used by all the API servers.
+// The possible values for the elements of the returned slice are "http",
+// "https", "grpc" and "grpcs".
 func (a *APIExpr) Schemes() []string {
 	schemes := make(map[string]struct{})
 	for _, s := range a.Servers {
-		for _, h := range s.Hosts {
-			for _, uri := range h.URIs {
-				if u, err := url.Parse(string(uri)); err == nil && u.Scheme != "" {
-					schemes[u.Scheme] = struct{}{}
-				}
-			}
+		for _, sch := range s.Schemes() {
+			schemes[sch] = struct{}{}
 		}
-	}
-	if len(schemes) == 0 {
-		return []string{"http"}
 	}
 	ss := make([]string, len(schemes))
 	i := 0
@@ -102,7 +96,10 @@ func (a *APIExpr) Random() *Random {
 // exposes all the services in the design and listens on localhost port 80 for
 // HTTP requests and port 8080 for gRPC requests.
 func (a *APIExpr) DefaultServer() *ServerExpr {
-	svcs := make([]string, len(root.Services))
+	svcs := make([]string, len(Root.Services))
+	for i, svc := range Root.Services {
+		svcs[i] = svc.Name
+	}
 	return &ServerExpr{
 		Name:        a.Name,
 		Description: "Default server for " + a.Name,

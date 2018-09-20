@@ -66,7 +66,7 @@ func Server(name string, fn ...func()) *design.ServerExpr {
 	if len(fn) > 0 {
 		eval.Execute(fn[0], server)
 	}
-	design.Root.Servers = append(design.Root.Servers, server)
+	design.Root.API.Servers = append(design.Root.API.Servers, server)
 	return server
 }
 
