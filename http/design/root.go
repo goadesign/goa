@@ -1,7 +1,6 @@
 package design
 
 import (
-	"regexp"
 	"sort"
 	"strings"
 
@@ -12,10 +11,6 @@ import (
 var (
 	// Root holds the root expression built on process initialization.
 	Root = &RootExpr{Design: design.Root}
-
-	// WildcardRegex is the regular expression used to capture path
-	// parameters.
-	WildcardRegex = regexp.MustCompile(`/{\*?([a-zA-Z0-9_]+)}`)
 
 	// ErrorResult is the built-in result type for error responses.
 	ErrorResult = design.ErrorResult
@@ -120,16 +115,6 @@ func (r *RootExpr) Finalize() {
 	if len(r.Produces) == 0 {
 		r.Produces = []string{"application/json", "application/xml", "application/gob"}
 	}
-}
-
-// ExtractWildcards returns the names of the wildcards that appear in path.
-func ExtractWildcards(path string) []string {
-	matches := WildcardRegex.FindAllStringSubmatch(path, -1)
-	wcs := make([]string, len(matches))
-	for i, m := range matches {
-		wcs[i] = m[1]
-	}
-	return wcs
 }
 
 // NameMap returns the attribute and HTTP element name encoded in the given

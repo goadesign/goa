@@ -56,5 +56,5 @@ func (f *FileServerExpr) Finalize() {
 
 // IsDir returns true if the file server serves a directory, false otherwise.
 func (f *FileServerExpr) IsDir() bool {
-	return WildcardRegex.MatchString(f.RequestPaths[0])
+	return design.WildcardRegex.MatchString(f.RequestPaths[0])
 }

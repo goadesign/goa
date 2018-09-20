@@ -3,7 +3,15 @@ info:
   title: Divider Service
   description: An example illustrating error handling in goa. See docs/ErrorHandling.md.
   version: ""
-host: localhost:8080
+host: localhost:80
+consumes:
+- application/json
+- application/xml
+- application/gob
+produces:
+- application/json
+- application/xml
+- application/gob
 paths:
   /div/{a}/{b}:
     get:
@@ -39,6 +47,7 @@ paths:
           schema:
             $ref: '#/definitions/DividerDivideTimeoutResponseBody'
       schemes:
+      - grpc
       - http
   /idiv/{a}/{b}:
     get:
@@ -76,6 +85,7 @@ paths:
           schema:
             $ref: '#/definitions/DividerIntegerDivideTimeoutResponseBody'
       schemes:
+      - grpc
       - http
 definitions:
   DividerDivideDivByZeroResponseBody:

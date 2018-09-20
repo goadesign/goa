@@ -337,7 +337,7 @@ func paramsFromExpr(params *design.MappedAttributeExpr, path string) ([]*Paramet
 	}
 	var (
 		res       []*Parameter
-		wildcards = httpdesign.ExtractWildcards(path)
+		wildcards = design.ExtractWildcards(path)
 		i         = 0
 	)
 	codegen.WalkMappedAttr(params, func(n, pn string, required bool, at *design.AttributeExpr) error {
@@ -483,7 +483,7 @@ func headersFromExpr(headers *design.MappedAttributeExpr) (map[string]*Header, e
 
 func buildPathFromFileServer(s *V2, root *httpdesign.RootExpr, fs *httpdesign.FileServerExpr) error {
 	for _, path := range fs.RequestPaths {
-		wcs := httpdesign.ExtractWildcards(path)
+		wcs := design.ExtractWildcards(path)
 		var param []*Parameter
 		if len(wcs) > 0 {
 			param = []*Parameter{{
@@ -519,7 +519,7 @@ func buildPathFromFileServer(s *V2, root *httpdesign.RootExpr, fs *httpdesign.Fi
 			Schemes:      schemes,
 		}
 
-		key := httpdesign.WildcardRegex.ReplaceAllStringFunc(
+		key := design.WildcardRegex.ReplaceAllStringFunc(
 			path,
 			func(w string) string {
 				return fmt.Sprintf("/{%s}", w[2:])
@@ -665,7 +665,7 @@ func buildPathFromExpr(s *V2, root *httpdesign.RootExpr, h *design.HostExpr, rou
 		if key == "" {
 			key = "/"
 		}
-		bp := httpdesign.WildcardRegex.ReplaceAllStringFunc(
+		bp := design.WildcardRegex.ReplaceAllStringFunc(
 			basePath,
 			func(w string) string {
 				return fmt.Sprintf("/{%s}", w[2:])

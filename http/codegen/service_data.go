@@ -622,7 +622,7 @@ func (d ServicesData) analyze(hs *httpdesign.ServiceExpr) *ServiceData {
 		}
 		var pp string
 		if s.IsDir() {
-			pp = httpdesign.ExtractWildcards(s.RequestPaths[0])[0]
+			pp = design.ExtractWildcards(s.RequestPaths[0])[0]
 		}
 		data := &FileServerData{
 			MountHandler: fmt.Sprintf("Mount%s", codegen.Goify(s.FilePath, true)),
@@ -641,7 +641,7 @@ func (d ServicesData) analyze(hs *httpdesign.ServiceExpr) *ServiceData {
 		i := 0
 		for _, r := range a.Routes {
 			for _, rpath := range r.FullPaths() {
-				params := httpdesign.ExtractRouteWildcards(rpath)
+				params := design.ExtractWildcards(rpath)
 				var (
 					init *InitData
 				)
@@ -677,7 +677,7 @@ func (d ServicesData) analyze(hs *httpdesign.ServiceExpr) *ServiceData {
 					}
 
 					var buffer bytes.Buffer
-					pf := httpdesign.WildcardRegex.ReplaceAllString(rpath, "/%v")
+					pf := design.WildcardRegex.ReplaceAllString(rpath, "/%v")
 					err := pathInitTmpl.Execute(&buffer, map[string]interface{}{
 						"Args":       initArgs,
 						"PathParams": pathParamsObj,

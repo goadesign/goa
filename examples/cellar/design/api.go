@@ -6,6 +6,7 @@ import . "goa.design/goa/http/dsl"
 var _ = API("cellar", func() {
 	Title("Cellar Service")
 	Description("HTTP service for managing your wine cellar")
+
 	Server("http://localhost:8080")
 })
 

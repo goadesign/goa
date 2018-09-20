@@ -72,16 +72,6 @@ type (
 	}
 )
 
-// ExtractRouteWildcards returns the names of the wildcards that appear in path.
-func ExtractRouteWildcards(path string) []string {
-	matches := WildcardRegex.FindAllStringSubmatch(path, -1)
-	wcs := make([]string, len(matches))
-	for i, m := range matches {
-		wcs[i] = m[1]
-	}
-	return wcs
-}
-
 // Name of HTTP endpoint
 func (e *EndpointExpr) Name() string {
 	return e.MethodExpr.Name
@@ -705,7 +695,7 @@ func (r *RouteExpr) Validate() *eval.ValidationErrors {
 	// Make sure there's no duplicate params in absolute route
 	paths := r.FullPaths()
 	for _, path := range paths {
-		matches := WildcardRegex.FindAllStringSubmatch(path, -1)
+		matches := design.WildcardRegex.FindAllStringSubmatch(path, -1)
 		wcs := make(map[string]struct{}, len(matches))
 		for _, match := range matches {
 			if _, ok := wcs[match[1]]; ok {
@@ -731,7 +721,7 @@ func (r *RouteExpr) Params() []string {
 	paths := r.FullPaths()
 	var res []string
 	for _, p := range paths {
-		ws := ExtractRouteWildcards(p)
+		ws := design.ExtractWildcards(p)
 		for _, w := range ws {
 			found := false
 			for _, r := range res {

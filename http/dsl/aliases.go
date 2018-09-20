@@ -11,11 +11,15 @@ import (
 	dsl "goa.design/goa/dsl"
 )
 
-// API defines a network service API. It provides the API name, description and other global
-// properties. There may only be one API declaration in a given design package.
+// API provides the API name, description and other properties. API also lists
+// the servers that expose the services describe in the design. There may only
+// be one API declaration in a given design package.
 //
-// API is a top level DSL.
-// API takes two arguments: the name of the API and the defining DSL.
+// API is a top level DSL. API takes two arguments: the name of the API and the
+// defining DSL.
+//
+// The API properties are leveraged by the OpenAPI specification. The server
+// expressions are also used by the server and the client tool code generators.
 //
 // Example:
 //
@@ -341,16 +345,16 @@ func CollectionOf(v interface{}, adsl ...func()) *design.ResultTypeExpr {
 	return dsl.CollectionOf(v, adsl...)
 }
 
-// Contact sets the service contact information. It is used by the generated
-// OpenAPI specification.
+// Contact sets the API contact information. It is used by the generated OpenAPI
+// specification.
 //
-// Contact must appear in a Service expression.
+// Contact must appear in a API expression.
 //
 // Contact takes a single argument which is the defining DSL.
 //
 // Example:
 //
-//    var _ = Service("divider", func() {
+//    var _ = API("divider", func() {
 //        Contact(func() {
 //            Name("support")
 //            Email("support@goa.design")
@@ -512,7 +516,7 @@ func Elem(fn func()) {
 //
 // Example:
 //
-//    var _ = Service("divider", func() {
+//    var _ = API("divider", func() {
 //        Contact(func() {
 //            Email("support@goa.design")
 //        })
@@ -755,16 +759,16 @@ func Key(fn func()) {
 	dsl.Key(fn)
 }
 
-// License sets the service license. It is used by the generated OpenAPI
+// License sets the API license. It is used by the generated OpenAPI
 // specification.
 //
-// License must appear in a Service expression.
+// License must appear in a API expression.
 //
 // License takes a single argument which is the defining DSL.
 //
 // Example:
 //
-//    var _ = Service("divider", func() {
+//    var _ = API("divider", func() {
 //        License(func() {
 //            Name("MIT")
 //            URL("https://github.com/goadesign/goa/blob/master/LICENSE")
@@ -854,7 +858,7 @@ func Minimum(val interface{}) {
 //
 // Example:
 //
-//    var _ = Service("divider", func() {
+//    var _ = API("divider", func() {
 //        License(func() {
 //            Name("MIT")
 //            URL("https://github.com/goadesign/goa/blob/master/LICENSE")
@@ -1201,8 +1205,8 @@ func Scope(name string, desc ...string) {
 	dsl.Scope(name, desc...)
 }
 
-// Security defines authentication requirements to access an API, a service or a
-// service method.
+// Security defines authentication requirements to access a service or a service
+// method.
 //
 // The requirement refers to one or more OAuth2Security, BasicAuthSecurity,
 // APIKeySecurity or JWTSecurity security scheme. If the schemes include a
@@ -1212,18 +1216,13 @@ func Scope(name string, desc ...string) {
 // in the same scope in which case the client may validate any one of the
 // requirements for the request to be authorized.
 //
-// Security must appear in a API, Service or Method expression.
+// Security must appear in a Service or Method expression.
 //
 // Security accepts an arbitrary number of security schemes as argument
 // specified by name or by reference and an optional DSL function as last
 // argument.
 //
 // Examples:
-//
-//    var _ = API("calc", func() {
-//        // All API endpoints are secured via basic auth by default.
-//        Security(BasicAuth)
-//    })
 //
 //    var _ = Service("calculator", func() {
 //        // Override default API security requirements. Accept either basic
@@ -1500,17 +1499,17 @@ func Temporary() {
 	dsl.Temporary()
 }
 
-// TermsOfService sets the service terms of service. It is used by the generated
-// OpenAPI specification.
+// TermsOfService sets the terms of service of the API. It is used by the
+// generated OpenAPI specification.
 //
-// TermsOfService must appear in a Service expression.
+// TermsOfService must appear in a API expression.
 //
 // TermsOfService takes a single argument which is the TOS text or URL.
 //
 // Example:
 //
-//    var _ = Service("github", func() {
-//        TermsOfService("https://help.github.com/articles/github-terms-of-service/"
+//    var _ = API("github", func() {
+//        TermsOfService("https://help.github.com/articles/github-terms-of-API/"
 //    })
 //
 func TermsOfService(terms string) {
@@ -1534,17 +1533,16 @@ func Timeout() {
 	dsl.Timeout()
 }
 
-// Title sets the service title. It is used by the generated OpenAPI
-// specification.
+// Title sets the API title. It is used by the generated OpenAPI specification.
 //
-// Title must appear in a Service expression.
+// Title must appear in a API expression.
 //
 // Title accepts a single string argument.
 //
 // Example:
 //
-//    var _ = Service("divider", func() {
-//        Title("divider service")
+//    var _ = API("divider", func() {
+//        Title("divider API")
 //    })
 //
 func Title(val string) {
@@ -1736,16 +1734,16 @@ func Variable(name string, args ...interface{}) {
 	dsl.Variable(name, args...)
 }
 
-// Version sets the service version. It is used by the generated OpenAPI
+// Version sets the API version. It is used by the generated OpenAPI
 // specification.
 //
-// Version must appear in a Service expression.
+// Version must appear in a API expression.
 //
 // Version accepts a single string argument.
 //
 // Example:
 //
-//    var _ = Service("divider", func() {
+//    var _ = API("divider", func() {
 //        Version("1.0")
 //    })
 //

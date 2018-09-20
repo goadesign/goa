@@ -51,6 +51,7 @@ func New(
 	return &Server{
 		Mounts: []*MountPoint{
 			{"Add", "GET", "/add/{a}/{b}"},
+			{"../../gen/http/openapi.json", "GET", "/swagger.json"},
 		},
 		Add: NewAddHandler(e.Add, mux, dec, enc, eh),
 	}
@@ -67,6 +68,9 @@ func (s *Server) Use(m func(http.Handler) http.Handler) {
 // Mount configures the mux to serve the calc endpoints.
 func Mount(mux goahttp.Muxer, h *Server) {
 	MountAddHandler(mux, h.Add)
+	MountGenHTTPOpenapiJSON(mux, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		http.ServeFile(w, r, "../../gen/http/openapi.json")
+	}))
 }
 
 // MountAddHandler configures the mux to serve the "calc" service "add"
@@ -117,4 +121,10 @@ func NewAddHandler(
 			eh(ctx, w, err)
 		}
 	})
+}
+
+// MountGenHTTPOpenapiJSON configures the mux to serve GET request made to
+// "/swagger.json".
+func MountGenHTTPOpenapiJSON(mux goahttp.Muxer, h http.Handler) {
+	mux.Handle("GET", "/swagger.json", h.ServeHTTP)
 }

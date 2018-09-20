@@ -3,7 +3,15 @@ info:
   title: Cellar Service
   description: HTTP service for managing your wine cellar
   version: ""
-host: localhost:8080
+host: localhost:80
+consumes:
+- application/json
+- application/xml
+- application/gob
+produces:
+- application/json
+- application/xml
+- application/gob
 paths:
   /sommelier:
     post:
@@ -31,6 +39,7 @@ paths:
           schema:
             $ref: '#/definitions/PickNoMatchResponseBody'
       schemes:
+      - grpc
       - http
   /storage:
     get:
@@ -45,6 +54,7 @@ paths:
           schema:
             $ref: '#/definitions/StorageStoredBottleResponseBodyTinyCollection'
       schemes:
+      - grpc
       - http
     post:
       tags:
@@ -68,6 +78,7 @@ paths:
           schema:
             type: string
       schemes:
+      - grpc
       - http
   /storage/{id}:
     get:
@@ -103,6 +114,7 @@ paths:
             - message
             - id
       schemes:
+      - grpc
       - http
     delete:
       tags:
@@ -120,6 +132,7 @@ paths:
         "204":
           description: No Content response.
       schemes:
+      - grpc
       - http
   /storage/multi_add:
     post:
@@ -147,6 +160,7 @@ paths:
               type: string
               example: Officiis aut magnam.
       schemes:
+      - grpc
       - http
   /storage/multi_update:
     put:
@@ -178,6 +192,7 @@ paths:
         "204":
           description: No Content response.
       schemes:
+      - grpc
       - http
   /storage/rate:
     post:
@@ -190,6 +205,7 @@ paths:
         "200":
           description: OK response.
       schemes:
+      - grpc
       - http
   /swagger/swagger.json:
     get:
@@ -202,6 +218,7 @@ paths:
           schema:
             type: file
       schemes:
+      - grpc
       - http
 definitions:
   BottleRequestBody:

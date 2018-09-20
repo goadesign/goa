@@ -59,14 +59,15 @@ func Server(name string, fn ...func()) *design.ServerExpr {
 	if len(fn) > 1 {
 		eval.ReportError("too many arguments given to Server")
 	}
-	if _, ok := eval.Current().(eval.TopExpr); !ok {
+	api, ok := eval.Current().(*design.APIExpr)
+	if !ok {
 		eval.IncompatibleDSL()
 	}
 	server := &design.ServerExpr{Name: name}
 	if len(fn) > 0 {
 		eval.Execute(fn[0], server)
 	}
-	design.Root.API.Servers = append(design.Root.API.Servers, server)
+	api.Servers = append(api.Servers, server)
 	return server
 }
 
