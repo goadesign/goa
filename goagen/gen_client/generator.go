@@ -160,6 +160,7 @@ func (g *Generator) Generate() (_ []string, err error) {
 			"tempvar":            codegen.Tempvar,
 			"title":              strings.Title,
 			"toString":           toString,
+			"toValueTypeName":    toValueTypeName,
 			"typeName":           typeName,
 			"format":             format,
 			"handleSpecialTypes": handleSpecialTypes,
@@ -874,6 +875,16 @@ func typeName(mt *design.MediaTypeDefinition) string {
 }
 
 // initParams returns required and optional paramData extracted from given attribute definition.
+func toValueTypeName(varName, name string, att *design.AttributeDefinition) string {
+	if att == nil {
+		return varName
+	}
+	if att.IsRequired(name) {
+		return varName
+	}
+	return "*" + varName
+}
+
 func initParams(att *design.AttributeDefinition) ([]*paramData, []*paramData) {
 	if att == nil {
 		return nil, nil
@@ -890,11 +901,10 @@ func initParams(att *design.AttributeDefinition) ([]*paramData, []*paramData) {
 		}
 		if q.Type.IsPrimitive() {
 			param.MustToString = q.Type.Kind() != design.StringKind
+			param.ValueName = toValueTypeName(varName, n, att)
 			if att.IsRequired(n) {
-				param.ValueName = varName
 				reqParamData = append(reqParamData, param)
 			} else {
-				param.ValueName = "*" + varName
 				param.CheckNil = true
 				optParamData = append(optParamData, param)
 			}
@@ -1058,6 +1068,7 @@ func (c * Client) {{ .Name }}(ctx context.Context, {{ if .DirName }}filename, {{
 func (c *Client) {{ $funcName }}(ctx context.Context, path string{{ if .Params }}, {{ .Params }}{{ end }}{{ if .HasPayload }}{{ if .HasMultiContent }}, contentType string{{ end }}{{ end }}) (*http.Request, error) {
 {{ if .HasPayload }}	var body bytes.Buffer
 {{ if .PayloadMultipart }}	w := multipart.NewWriter(&body)
+{{ $payload := .Payload.Definition }}
 {{ $o := .Payload.ToObject }}{{ range $name, $att := $o }}{{ if eq $att.Type.Kind 13 }}{{/*
 */}}	{
 		_, file := filepath.Split({{ printf "payload.%s" (goify $name true) }})
@@ -1074,16 +1085,28 @@ func (c *Client) {{ $funcName }}(ctx context.Context, path string{{ if .Params }
 			return nil, err
 		}
 	}
-{{ else }}	{
+{{ else if $att.Type.IsPrimitive }}	{
 		fw, err := w.CreateFormField("{{ $name }}")
 		if err != nil {
 			return nil, err
 		}
-		{{ toString (printf "payload.%s" (goify $name true)) "s" $att }}
+		tmp_{{ goify $name true }} := {{ toValueTypeName (printf "payload.%s" (goify $name true)) $name $payload }}
+		{{ toString (printf "tmp_%s" (goify $name true)) "s" $att }}
 		if _, err := fw.Write([]byte(s)); err != nil {
 			return nil, err
 		}
 	}
+{{ else }}  {
+		tmp_{{ goify $name true }} := payload.{{ goify $name true }}
+		fw, err := w.CreateFormField("{{ $name }}")
+		if err != nil {
+			return nil, err
+		}
+		{{ toString (printf "tmp_%s" (goify $name true)) "s" $att }}
+		if _, err := fw.Write([]byte(s)); err != nil {
+			return nil, err
+		}
+  }
 {{ end }}{{ end }}	if err := w.Close(); err != nil {
 		return nil, err
 	}
