@@ -52,11 +52,11 @@ aliases:
 gen:
 	@cd cmd/goa && \
 	go install && \
-	rm -rf $(GOPATH)/src/goa.design/goa/examples/calc/cmd     && \
-	rm -rf $(GOPATH)/src/goa.design/goa/examples/cellar/cmd   && \
-	rm -rf $(GOPATH)/src/goa.design/goa/examples/chatter/cmd  && \
-	rm -rf $(GOPATH)/src/goa.design/goa/examples/error/cmd    && \
-	rm -rf $(GOPATH)/src/goa.design/goa/examples/security/cmd && \
+	rm -rf $(GOPATH)/src/goa.design/goa/examples/calc/cmd              && \
+	rm -rf $(GOPATH)/src/goa.design/goa/examples/cellar/cmd/cellar-cli && \
+	rm -rf $(GOPATH)/src/goa.design/goa/examples/chatter/cmd           && \
+	rm -rf $(GOPATH)/src/goa.design/goa/examples/error/cmd             && \
+	rm -rf $(GOPATH)/src/goa.design/goa/examples/security/cmd          && \
 	goa gen     goa.design/goa/examples/calc/design     -o $(GOPATH)/src/goa.design/goa/examples/calc     && \
 	goa example goa.design/goa/examples/calc/design     -o $(GOPATH)/src/goa.design/goa/examples/calc     && \
 	goa gen     goa.design/goa/examples/cellar/design   -o $(GOPATH)/src/goa.design/goa/examples/cellar   && \

@@ -10,6 +10,8 @@ import (
 	"os/signal"
 	"time"
 
+	"github.com/boltdb/bolt"
+
 	cellar "goa.design/goa/examples/cellar"
 	sommeliersvr "goa.design/goa/examples/cellar/gen/http/sommelier/server"
 	storagesvr "goa.design/goa/examples/cellar/gen/http/storage/server"
@@ -41,6 +43,19 @@ func main() {
 		adapter = middleware.NewLogger(logger)
 	}
 
+	// Initialize service dependencies such as databases.
+	var (
+		db *bolt.DB
+	)
+	{
+		var err error
+		db, err = bolt.Open("cellar.db", 0600, nil)
+		if err != nil {
+			log.Fatal(err)
+		}
+		defer db.Close()
+	}
+
 	// Create the structs that implement the services.
 	var (
 		sommelierSvc sommelier.Service
@@ -48,7 +63,11 @@ func main() {
 	)
 	{
 		sommelierSvc = cellar.NewSommelier(logger)
-		storageSvc = cellar.NewStorage(logger)
+		var err error
+		storageSvc, err = cellar.NewStorage(db, logger)
+		if err != nil {
+			logger.Fatalf("error creating database: %s", err)
+		}
 	}
 
 	// Wrap the services in endpoints that can be invoked from other
