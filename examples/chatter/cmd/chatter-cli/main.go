@@ -1,17 +1,21 @@
 package main
 
 import (
+	"bufio"
 	"context"
 	"encoding/json"
 	"flag"
 	"fmt"
+	"io"
 	"net/http"
 	"net/url"
 	"os"
+	"os/signal"
 	"strings"
 	"time"
 
 	"github.com/gorilla/websocket"
+	"goa.design/goa/examples/chatter/gen/chatter"
 	cli "goa.design/goa/examples/chatter/gen/http/cli/chatter"
 	goahttp "goa.design/goa/http"
 )
@@ -92,8 +96,77 @@ func main() {
 	}
 
 	if data != nil && !debug {
-		m, _ := json.MarshalIndent(data, "", "    ")
-		fmt.Println(string(m))
+		switch stream := data.(type) {
+		case chattersvc.EchoerClientStream:
+			// bidirectional streaming
+			trapCtrlC(stream)
+			fmt.Println("Press Ctrl+D to stop chatting.")
+			scanner := bufio.NewScanner(os.Stdin)
+			for scanner.Scan() {
+				p := scanner.Text()
+				if err := stream.Send(p); err != nil {
+					fmt.Println(fmt.Errorf("Error sending into stream: %s", err))
+					os.Exit(1)
+				}
+				d, err := stream.Recv()
+				if err == io.EOF {
+					break
+				}
+				if err != nil {
+					fmt.Println(fmt.Errorf("Error reading from stream: %s", err))
+				}
+				prettyPrint(d)
+			}
+			if err := stream.Close(); err != nil {
+				fmt.Println(fmt.Errorf("Error closing stream: %s", err))
+			}
+		case chattersvc.ListenerClientStream:
+			// payload streaming (no server response)
+			trapCtrlC(stream)
+			fmt.Println("Press Ctrl+D to stop chatting.")
+			scanner := bufio.NewScanner(os.Stdin)
+			for scanner.Scan() {
+				p := scanner.Text()
+				if err := stream.Send(p); err != nil {
+					fmt.Println(fmt.Errorf("Error sending into stream: %s", err))
+					os.Exit(1)
+				}
+			}
+			if err := stream.Close(); err != nil {
+				fmt.Println(fmt.Errorf("Error closing stream: %s", err))
+			}
+		case chattersvc.SummaryClientStream:
+			// payload streaming (server responds with a result type)
+			trapCtrlC(stream)
+			fmt.Println("Press Ctrl+D to stop chatting.")
+			scanner := bufio.NewScanner(os.Stdin)
+			for scanner.Scan() {
+				p := scanner.Text()
+				if err := stream.Send(p); err != nil {
+					fmt.Println(fmt.Errorf("Error sending into stream: %s", err))
+					os.Exit(1)
+				}
+			}
+			if p, err := stream.CloseAndRecv(); err != nil {
+				fmt.Println(fmt.Errorf("Error closing stream: %s", err))
+			} else {
+				prettyPrint(p)
+			}
+		case chattersvc.HistoryClientStream:
+			// result streaming
+			for {
+				p, err := stream.Recv()
+				if err == io.EOF {
+					break
+				}
+				if err != nil {
+					fmt.Println(fmt.Errorf("Error reading from stream: %s", err))
+				}
+				prettyPrint(p)
+			}
+		default:
+			prettyPrint(data)
+		}
 	}
 }
 
@@ -122,4 +195,28 @@ func indent(s string) string {
 		return ""
 	}
 	return "    " + strings.Replace(s, "\n", "\n    ", -1)
+}
+
+func prettyPrint(s interface{}) {
+	m, _ := json.MarshalIndent(s, "", "    ")
+	fmt.Println(string(m))
+}
+
+// Trap Ctrl+C to gracefully exit the client.
+func trapCtrlC(stream interface{}) {
+	ch := make(chan os.Signal, 1)
+	signal.Notify(ch, os.Interrupt)
+	go func(stream interface{}) {
+		for range ch {
+			fmt.Println("\nexiting")
+			if s, ok := stream.(chattersvc.EchoerClientStream); ok {
+				s.Close()
+			} else if s, ok := stream.(chattersvc.ListenerClientStream); ok {
+				s.Close()
+			} else if s, ok := stream.(chattersvc.SummaryClientStream); ok {
+				s.CloseAndRecv()
+			}
+			os.Exit(0)
+		}
+	}(stream)
 }

@@ -155,22 +155,22 @@ definitions:
     title: AlsoDoublySecureUnauthorizedResponseBody
     type: string
     description: Credentials are invalid
-    example: Maxime ipsam esse et.
+    example: Eligendi qui recusandae officia dolores a maxime.
   DoublySecureUnauthorizedResponseBody:
     title: DoublySecureUnauthorizedResponseBody
     type: string
     description: Credentials are invalid
-    example: Itaque accusamus enim.
+    example: Eveniet maxime.
   SecureUnauthorizedResponseBody:
     title: SecureUnauthorizedResponseBody
     type: string
     description: Credentials are invalid
-    example: Accusantium voluptatem alias corrupti voluptates a.
+    example: Ab vel rem.
   SigninUnauthorizedResponseBody:
     title: SigninUnauthorizedResponseBody
     type: string
     description: Credentials are invalid
-    example: Tenetur est et.
+    example: Et neque.
 securityDefinitions:
   api_key:
     type: apiKey

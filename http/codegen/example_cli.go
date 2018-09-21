@@ -81,7 +81,11 @@ func ExampleCLI(genpkg string, root *httpdesign.RootExpr) []*codegen.File {
 				},
 			},
 		}
-		files[i] = &codegen.File{Path: path, SectionTemplates: sections}
+		files[i] = &codegen.File{
+			Path:             path,
+			SectionTemplates: sections,
+			SkipExist:        true,
+		}
 	}
 	return files
 }

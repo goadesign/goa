@@ -11,7 +11,7 @@ import (
 	"strings"
 	"time"
 
-	cli "goa.design/goa/examples/security/gen/http/cli/multi_auth"
+	cli "goa.design/goa/examples/security/gen/http/cli/multiauth"
 	goahttp "goa.design/goa/http"
 )
 
@@ -87,7 +87,7 @@ func main() {
 }
 
 func usage() {
-	fmt.Fprintf(os.Stderr, `%s is a command line client for the multi_auth server.
+	fmt.Fprintf(os.Stderr, `%s is a command line client for the multiauth server.
 
 Usage:
     %s [-url URL][-timeout SECONDS][-verbose|-v] SERVICE ENDPOINT [flags]
