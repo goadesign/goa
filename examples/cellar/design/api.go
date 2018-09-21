@@ -8,8 +8,8 @@ var _ = API("cellar", func() {
 	Description("HTTP service for managing your wine cellar")
 
 	Server("cellar", func() {
-		Description("cellar hosts the storage and sommelier services.")
-		Services("sommelier", "storage")
+		Description("cellar hosts the storage, sommelier and swagger services.")
+		Services("sommelier", "storage", "swagger")
 		Host("localhost", func() {
 			Description("default host")
 			URI("http://localhost:8000/cellar")

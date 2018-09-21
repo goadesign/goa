@@ -13,6 +13,7 @@ import (
 	cellar "goa.design/goa/examples/cellar"
 	sommeliersvr "goa.design/goa/examples/cellar/gen/http/sommelier/server"
 	storagesvr "goa.design/goa/examples/cellar/gen/http/storage/server"
+	swaggersvr "goa.design/goa/examples/cellar/gen/http/swagger/server"
 	sommelier "goa.design/goa/examples/cellar/gen/sommelier"
 	storage "goa.design/goa/examples/cellar/gen/storage"
 	goahttp "goa.design/goa/http"
@@ -84,16 +85,19 @@ func main() {
 	var (
 		sommelierServer *sommeliersvr.Server
 		storageServer   *storagesvr.Server
+		swaggerServer   *swaggersvr.Server
 	)
 	{
 		eh := ErrorHandler(logger)
 		sommelierServer = sommeliersvr.New(sommelierEndpoints, mux, dec, enc, eh)
 		storageServer = storagesvr.New(storageEndpoints, mux, dec, enc, eh, cellar.StorageMultiAddDecoderFunc, cellar.StorageMultiUpdateDecoderFunc)
+		swaggerServer = swaggersvr.New(nil, mux, dec, enc, eh)
 	}
 
 	// Configure the mux.
 	sommeliersvr.Mount(mux, sommelierServer)
 	storagesvr.Mount(mux, storageServer)
+	swaggersvr.Mount(mux)
 
 	// Wrap the multiplexer with additional middlewares. Middlewares mounted
 	// here apply to all the service endpoints.
@@ -127,6 +131,9 @@ func main() {
 		}
 		for _, m := range storageServer.Mounts {
 			logger.Printf("method %q mounted on %s %s", m.Method, m.Verb, m.Pattern)
+		}
+		for _, m := range swaggerServer.Mounts {
+			logger.Printf("file %q mounted on %s %s", m.Method, m.Verb, m.Pattern)
 		}
 		logger.Printf("listening on %s", *addr)
 		errc <- srv.ListenAndServe()
