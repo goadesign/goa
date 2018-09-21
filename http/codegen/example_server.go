@@ -33,9 +33,6 @@ func ExampleServerFiles(genpkg string, root *httpdesign.RootExpr) []*codegen.Fil
 // dummyServiceFile returns a dummy implementation of the given service.
 func dummyServiceFile(genpkg string, root *httpdesign.RootExpr, svc *httpdesign.ServiceExpr) *codegen.File {
 	path := codegen.SnakeCase(svc.Name()) + ".go"
-	if _, err := os.Stat(path); !os.IsNotExist(err) {
-		return nil // file already exists, skip it.
-	}
 	data := HTTPServices.Get(svc.Name())
 	apiPkg := strings.ToLower(codegen.Goify(root.Design.API.Name, false))
 	sections := []*codegen.SectionTemplate{
@@ -76,15 +73,13 @@ func dummyServiceFile(genpkg string, root *httpdesign.RootExpr, svc *httpdesign.
 	return &codegen.File{
 		Path:             path,
 		SectionTemplates: sections,
+		SkipExist:        true,
 	}
 }
 
 func exampleMain(genpkg string, root *httpdesign.RootExpr, svr *design.ServerExpr) *codegen.File {
 	pkg := codegen.SnakeCase(codegen.Goify(svr.Name, true))
 	mainPath := filepath.Join("cmd", pkg, "main.go")
-	if _, err := os.Stat(mainPath); !os.IsNotExist(err) {
-		return nil // file already exists, skip it.
-	}
 	idx := strings.LastIndex(genpkg, string(os.PathSeparator))
 	rootPath := "."
 	if idx > 0 {
@@ -139,7 +134,11 @@ func exampleMain(genpkg string, root *httpdesign.RootExpr, svr *design.ServerExp
 		FuncMap: map[string]interface{}{"needStream": needStream},
 	})
 
-	return &codegen.File{Path: mainPath, SectionTemplates: sections}
+	return &codegen.File{
+		Path:             mainPath,
+		SectionTemplates: sections,
+		SkipExist:        true,
+	}
 }
 
 // needStream returns true if at least one method in the list of services

@@ -87,6 +87,9 @@ func (s *ServerExpr) Finalize() {
 			URIs:        []URIExpr{"http://localhost:80", "grpc://localhost:8080"},
 		}}
 	}
+	for _, h := range s.Hosts {
+		h.Finalize()
+	}
 }
 
 // Schemes returns the list of transport schemes used by all the server
@@ -145,6 +148,13 @@ func (h *HostExpr) Validate() error {
 		}
 	}
 	return verr
+}
+
+// Finalize makes sure Variables is set.
+func (h *HostExpr) Finalize() {
+	if h.Variables == nil {
+		h.Variables = &AttributeExpr{Type: &Object{}}
+	}
 }
 
 // EvalName returns the name returned in error messages.

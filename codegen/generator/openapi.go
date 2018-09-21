@@ -1,8 +1,6 @@
 package generator
 
 import (
-	"fmt"
-
 	"goa.design/goa/codegen"
 	"goa.design/goa/eval"
 	httpcodegen "goa.design/goa/http/codegen"
@@ -12,18 +10,11 @@ import (
 // OpenAPI iterates through the roots and returns the files needed to render
 // the service OpenAPI spec. It returns an error if the roots slice does not
 // include a HTTP root.
-func OpenAPI(_ string, roots []eval.Root) (files []*codegen.File, err error) {
+func OpenAPI(_ string, roots []eval.Root) ([]*codegen.File, error) {
 	for _, root := range roots {
 		if r, ok := root.(*httpdesign.RootExpr); ok {
-			files, err = httpcodegen.OpenAPIFiles(r)
-			break
+			return httpcodegen.OpenAPIFiles(r)
 		}
 	}
-	if err != nil {
-		return nil, err
-	}
-	if files == nil {
-		return nil, fmt.Errorf("openapi: could not find HTTP design in DSL roots")
-	}
-	return files, nil
+	return nil, nil
 }
