@@ -18,42 +18,44 @@ import (
 // the first host is used to set the OpenAPI v2 specification 'host' and
 // 'basePath' values.
 //
-// Server is a top level expression.
+// Server must appear in a API expression.
 //
 // Server takes two arguments: the name of the server and the defining DSL.
 //
 // Example:
 //
-//    var _ = Server("calcsvr", func() {
-//        Description("calcsvr hosts the Calculator Service.")
+//    var _ = API("calc", func() {
+//        Server("calcsvr", func() {
+//            Description("calcsvr hosts the Calculator Service.")
 //
-//        // List the services hosted by this server.
-//        Services("calc")
+//            // List the services hosted by this server.
+//            Services("calc")
 //
-//        // List the Hosts and their transport URLs.
-//        Host("production", func() {
-//            Description("Production host.")
-//            // URIs can be parameterized using {param} notation.
-//            URI("https://{version}.goa.design/calc")
-//            URI("grpcs://{version}.goa.design")
+//            // List the Hosts and their transport URLs.
+//            Host("production", func() {
+//               Description("Production host.")
+//               // URIs can be parameterized using {param} notation.
+//               URI("https://{version}.goa.design/calc")
+//               URI("grpcs://{version}.goa.design")
 //
-//            // Variable describes a URI variable.
-//            Variable("version", String, "API version", func() {
-//                // URI parameters must have a default value and/or an
-//                // enum validation.
-//                Default("v1")
-//            })
-//        })
+//               // Variable describes a URI variable.
+//               Variable("version", String, "API version", func() {
+//                   // URI parameters must have a default value and/or an
+//                   // enum validation.
+//                   Default("v1")
+//               })
+//           })
 //
-//        Host("development", func() {
-//            Description("Development hosts.")
-//            // Transport specific URLs, supported schemes are:
-//            // 'http', 'https', 'grpc' and 'grpcs' with the respective default
-//            // ports: 80, 443, 8080, 8443.
-//            URI("http://localhost:80/calc")
-//            URI("grpc://localhost:8080")
-//        })
-//    })
+//           Host("development", func() {
+//               Description("Development hosts.")
+//               // Transport specific URLs, supported schemes are:
+//               // 'http', 'https', 'grpc' and 'grpcs' with the respective default
+//               // ports: 80, 443, 8080, 8443.
+//               URI("http://localhost:80/calc")
+//               URI("grpc://localhost:8080")
+//           })
+//       })
+//   })
 //
 func Server(name string, fn ...func()) *design.ServerExpr {
 	if len(fn) > 1 {
