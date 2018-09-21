@@ -1,6 +1,7 @@
 package codegen
 
 import (
+	"net/url"
 	"os"
 	"path"
 	"path/filepath"
@@ -124,9 +125,12 @@ func exampleMain(genpkg string, root *httpdesign.RootExpr, svr *design.ServerExp
 	if needStream(svcdata) {
 		specs = append(specs, &codegen.ImportSpec{Path: "github.com/gorilla/websocket"})
 	}
+	// URIs have been validated by DSL.
+	u, _ := url.Parse(string(root.Design.API.Servers[0].Hosts[0].URIs[0]))
 	data := map[string]interface{}{
-		"Services": svcdata,
-		"APIPkg":   apiPkg,
+		"Services":    svcdata,
+		"APIPkg":      apiPkg,
+		"DefaultHost": u.Host,
 	}
 	sections = append(sections, &codegen.SectionTemplate{
 		Name:    "service-main",
@@ -199,12 +203,12 @@ func {{ .FuncName }}(mw *multipart.Writer, p {{ .Payload.Ref }}) error {
 }
 `
 
-// input: map[string]interface{}{"Services":[]ServiceData, "APIPkg": string}
+// input: map[string]interface{}{"Services":[]ServiceData, "APIPkg": string, "DefaultHost": string}
 const mainT = `func main() {
 	// Define command line flags, add any other flag required to configure
 	// the service.
 	var (
-		addr = flag.String("listen", ":8080", "HTTP listen ` + "`" + `address` + "`" + `")
+		addr = flag.String("listen", "{{ .DefaultHost }}", "HTTP listen ` + "`" + `address` + "`" + `")
 		dbg  = flag.Bool("debug", false, "Log request and response bodies")
 	)
 	flag.Parse()

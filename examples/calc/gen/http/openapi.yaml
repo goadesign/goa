@@ -3,7 +3,7 @@ info:
   title: Calculator Service
   description: HTTP service for adding numbers, a goa teaser
   version: ""
-host: localhost:80
+host: localhost:8000
 consumes:
 - application/json
 - application/xml

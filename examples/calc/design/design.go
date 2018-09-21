@@ -22,7 +22,7 @@ var _ = API("calc", func() {
 			// Transport specific URLs, supported schemes are:
 			// 'http', 'https', 'grpc' and 'grpcs' with the respective default
 			// ports: 80, 443, 8080, 8443.
-			URI("http://localhost:80/calc")
+			URI("http://localhost:8000/calc")
 			URI("grpc://localhost:8080")
 		})
 

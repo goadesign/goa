@@ -37,7 +37,7 @@ func ExampleCLI(genpkg string, root *httpdesign.RootExpr) []*codegen.File {
 			{Path: "time"},
 			{Path: "github.com/gorilla/websocket"},
 			{Path: "goa.design/goa/http", Name: "goahttp"},
-			{Path: genpkg + "/http/cli/" + pkg},
+			{Path: genpkg + "/http/cli/" + pkg, Name: "cli"},
 			{Path: rootPath, Name: apiPkg},
 		}
 		svcdata := make([]*ServiceData, len(svr.Services))
@@ -113,7 +113,7 @@ const mainCLIT = `func main() {
 {{ if .Variables }}
 
 	{{ range .Variables }}
-	addr = strings.Replace(addr, "{{{ .Name }}}", {{ .VarName }}, -1)
+	addr = strings.Replace(addr, {{ printf "\"{%s}\"" .Name }}, {{ .VarName }}, -1)
 	{{- end }}
 {{- end }}
 
@@ -204,7 +204,7 @@ func usage() {
 Usage:
     %s [-url URL][-timeout SECONDS][-verbose|-v] SERVICE ENDPOINT [flags]
 
-    -url URL:    specify service URL (http://localhost:8080)
+    -url URL:    specify service URL ({{ .DefaultURL }})
     -timeout:    maximum number of seconds to wait for response (30)
     -verbose|-v: print request and response details (false)
 

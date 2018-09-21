@@ -11,13 +11,14 @@ import (
 	"strings"
 	"time"
 
-	"goa.design/goa/examples/security/gen/http/cli"
+	cli "goa.design/goa/examples/calc/gen/http/cli/calc"
 	goahttp "goa.design/goa/http"
 )
 
 func main() {
 	var (
-		addr    = flag.String("url", "http://localhost:8080", "`URL` to service host")
+		addr = flag.String("url", "http://localhost:8000/calc", "`URL` to service host")
+
 		verbose = flag.Bool("verbose", false, "Print request and response details")
 		v       = flag.Bool("v", false, "Print request and response details")
 		timeout = flag.Int("timeout", 30, "Maximum number of `seconds` to wait for response")
@@ -38,9 +39,6 @@ func main() {
 		}
 		scheme = u.Scheme
 		host = u.Host
-		if scheme == "" {
-			scheme = "http"
-		}
 		debug = *verbose || *v
 	}
 
@@ -89,12 +87,12 @@ func main() {
 }
 
 func usage() {
-	fmt.Fprintf(os.Stderr, `%s is a command line client for the multi_auth API.
+	fmt.Fprintf(os.Stderr, `%s is a command line client for the calc server.
 
 Usage:
     %s [-url URL][-timeout SECONDS][-verbose|-v] SERVICE ENDPOINT [flags]
 
-    -url URL:    specify service URL (http://localhost:8080)
+    -url URL:    specify service URL (http://localhost:8000/calc)
     -timeout:    maximum number of seconds to wait for response (30)
     -verbose|-v: print request and response details (false)
 
