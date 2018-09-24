@@ -1,12 +1,14 @@
 package codegen
 
 import (
+	"net/url"
 	"os"
 	"path"
 	"path/filepath"
 	"strings"
 
 	"goa.design/goa/codegen"
+	"goa.design/goa/design"
 	httpdesign "goa.design/goa/http/design"
 )
 
@@ -20,8 +22,10 @@ func ExampleServerFiles(genpkg string, root *httpdesign.RootExpr) []*codegen.Fil
 			fw = append(fw, f)
 		}
 	}
-	if m := exampleMain(genpkg, root); m != nil {
-		fw = append(fw, m)
+	for _, svr := range root.Design.API.Servers {
+		if m := exampleMain(genpkg, root, svr); m != nil {
+			fw = append(fw, m)
+		}
 	}
 	return fw
 }
@@ -29,9 +33,6 @@ func ExampleServerFiles(genpkg string, root *httpdesign.RootExpr) []*codegen.Fil
 // dummyServiceFile returns a dummy implementation of the given service.
 func dummyServiceFile(genpkg string, root *httpdesign.RootExpr, svc *httpdesign.ServiceExpr) *codegen.File {
 	path := codegen.SnakeCase(svc.Name()) + ".go"
-	if _, err := os.Stat(path); !os.IsNotExist(err) {
-		return nil // file already exists, skip it.
-	}
 	data := HTTPServices.Get(svc.Name())
 	apiPkg := strings.ToLower(codegen.Goify(root.Design.API.Name, false))
 	sections := []*codegen.SectionTemplate{
@@ -72,14 +73,13 @@ func dummyServiceFile(genpkg string, root *httpdesign.RootExpr, svc *httpdesign.
 	return &codegen.File{
 		Path:             path,
 		SectionTemplates: sections,
+		SkipExist:        true,
 	}
 }
 
-func exampleMain(genpkg string, root *httpdesign.RootExpr) *codegen.File {
-	mainPath := filepath.Join("cmd", codegen.SnakeCase(codegen.Goify(root.Design.API.Name, true))+"_svc", "main.go")
-	if _, err := os.Stat(mainPath); !os.IsNotExist(err) {
-		return nil // file already exists, skip it.
-	}
+func exampleMain(genpkg string, root *httpdesign.RootExpr, svr *design.ServerExpr) *codegen.File {
+	pkg := codegen.SnakeCase(codegen.Goify(svr.Name, true))
+	mainPath := filepath.Join("cmd", pkg, "main.go")
 	idx := strings.LastIndex(genpkg, string(os.PathSeparator))
 	rootPath := "."
 	if idx > 0 {
@@ -113,27 +113,32 @@ func exampleMain(genpkg string, root *httpdesign.RootExpr) *codegen.File {
 		})
 	}
 	sections := []*codegen.SectionTemplate{codegen.Header("", "main", specs)}
-	svcdata := make([]*ServiceData, 0, len(root.HTTPServices))
-	for _, svc := range root.HTTPServices {
-		svcdata = append(svcdata, HTTPServices.Get(svc.Name()))
+	svcdata := make([]*ServiceData, len(svr.Services))
+	for i, svc := range svr.Services {
+		svcdata[i] = HTTPServices.Get(svc)
 	}
 	if needStream(svcdata) {
 		specs = append(specs, &codegen.ImportSpec{Path: "github.com/gorilla/websocket"})
 	}
+	// URIs have been validated by DSL.
+	u, _ := url.Parse(string(root.Design.API.Servers[0].Hosts[0].URIs[0]))
 	data := map[string]interface{}{
-		"Services": svcdata,
-		"APIPkg":   apiPkg,
+		"Services":    svcdata,
+		"APIPkg":      apiPkg,
+		"DefaultHost": u.Host,
 	}
 	sections = append(sections, &codegen.SectionTemplate{
-		Name:   "service-main",
-		Source: mainT,
-		Data:   data,
-		FuncMap: map[string]interface{}{
-			"needStream": needStream,
-		},
+		Name:    "service-main",
+		Source:  mainT,
+		Data:    data,
+		FuncMap: map[string]interface{}{"needStream": needStream},
 	})
 
-	return &codegen.File{Path: mainPath, SectionTemplates: sections}
+	return &codegen.File{
+		Path:             mainPath,
+		SectionTemplates: sections,
+		SkipExist:        true,
+	}
 }
 
 // needStream returns true if at least one method in the list of services
@@ -197,12 +202,12 @@ func {{ .FuncName }}(mw *multipart.Writer, p {{ .Payload.Ref }}) error {
 }
 `
 
-// input: map[string]interface{}{"Services":[]ServiceData, "APIPkg": string}
+// input: map[string]interface{}{"Services":[]ServiceData, "APIPkg": string, "DefaultHost": string}
 const mainT = `func main() {
 	// Define command line flags, add any other flag required to configure
 	// the service.
 	var (
-		addr = flag.String("listen", ":8080", "HTTP listen ` + "`" + `address` + "`" + `")
+		addr = flag.String("listen", "{{ .DefaultHost }}", "HTTP listen ` + "`" + `address` + "`" + `")
 		dbg  = flag.Bool("debug", false, "Log request and response bodies")
 	)
 	flag.Parse()

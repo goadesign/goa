@@ -73,7 +73,9 @@ func Generate(dir, cmd string) ([]string, error) {
 		if err != nil {
 			return nil, err
 		}
-		written[filename] = struct{}{}
+		if filename != "" {
+			written[filename] = struct{}{}
+		}
 	}
 
 	// 7. Compute all output filenames.

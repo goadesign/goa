@@ -54,8 +54,6 @@ func setupDSLRun() {
 	eval.Register(design.Root)
 	eval.Register(design.Root.GeneratedTypes)
 	eval.Register(Root)
-	design.Root.API = &design.APIExpr{
-		Name:    "test api",
-		Servers: []*design.ServerExpr{{URL: "http://localhost"}},
-	}
+	design.Root.API = &design.APIExpr{Name: "test api"}
+	design.Root.API.Servers = []*design.ServerExpr{design.Root.API.DefaultServer()}
 }

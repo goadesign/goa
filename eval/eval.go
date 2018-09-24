@@ -40,6 +40,7 @@ func RunDSL() error {
 		return Context.Errors
 	}
 	for _, root := range roots {
+		prepareSet(ExpressionSet{root})
 		root.WalkSets(prepareSet)
 	}
 	for _, root := range roots {
@@ -50,6 +51,7 @@ func RunDSL() error {
 		return Context.Errors
 	}
 	for _, root := range roots {
+		finalizeSet(ExpressionSet{root})
 		root.WalkSets(finalizeSet)
 	}
 

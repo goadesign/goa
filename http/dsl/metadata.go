@@ -64,8 +64,6 @@ func Metadata(name string, value ...string) {
 		return metadata
 	}
 	switch expr := eval.Current().(type) {
-	case *httpdesign.RootExpr:
-		expr.Metadata = appendMetadata(expr.Metadata, name, value...)
 	case *httpdesign.ServiceExpr:
 		expr.Metadata = appendMetadata(expr.Metadata, name, value...)
 	case *httpdesign.EndpointExpr:

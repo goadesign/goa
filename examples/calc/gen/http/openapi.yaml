@@ -3,7 +3,15 @@ info:
   title: Calculator Service
   description: HTTP service for adding numbers, a goa teaser
   version: ""
-host: localhost:8080
+host: localhost:8000
+consumes:
+- application/json
+- application/xml
+- application/gob
+produces:
+- application/json
+- application/xml
+- application/gob
 paths:
   /add/{a}/{b}:
     get:
@@ -29,15 +37,17 @@ paths:
             type: integer
             format: int64
       schemes:
+      - grpc
       - http
   /swagger.json:
     get:
       summary: Download ../../gen/http/openapi.json
-      operationId: openapi#/swagger.json
+      operationId: calc#/swagger.json
       responses:
         "200":
           description: File downloaded
           schema:
             type: file
       schemes:
+      - grpc
       - http

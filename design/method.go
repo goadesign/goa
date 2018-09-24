@@ -218,12 +218,8 @@ func (m *MethodExpr) Finalize() {
 	}
 	if noreq {
 		m.Requirements = nil
-	} else if len(m.Requirements) == 0 {
-		if len(m.Service.Requirements) > 0 {
-			m.Requirements = copyReqs(m.Service.Requirements)
-		} else {
-			m.Requirements = copyReqs(Root.API.Requirements)
-		}
+	} else if len(m.Requirements) == 0 && len(m.Service.Requirements) > 0 {
+		m.Requirements = copyReqs(m.Service.Requirements)
 	}
 
 }

@@ -152,79 +152,35 @@ func (s *SchemeExpr) Validate() *eval.ValidationErrors {
 	return verr
 }
 
-// Finalize makes the TokenURL and AuthorizationURL complete if needed.
-func (s *SchemeExpr) Finalize() {
-	for _, f := range s.Flows {
-		f.Finalize()
-	}
-}
-
 // EvalName returns the name of the expression used in error messages.
-func (s *FlowExpr) EvalName() string {
-	if s.TokenURL != "" {
-		return fmt.Sprintf("flow with token URL %q", s.TokenURL)
+func (f *FlowExpr) EvalName() string {
+	if f.TokenURL != "" {
+		return fmt.Sprintf("flow with token URL %q", f.TokenURL)
 	}
-	return fmt.Sprintf("flow with refresh URL %q", s.RefreshURL)
+	return fmt.Sprintf("flow with refresh URL %q", f.RefreshURL)
 }
 
 // Validate ensures that TokenURL and AuthorizationURL are valid URLs.
-func (s *FlowExpr) Validate() *eval.ValidationErrors {
+func (f *FlowExpr) Validate() *eval.ValidationErrors {
 	verr := new(eval.ValidationErrors)
-	_, err := url.Parse(s.TokenURL)
+	_, err := url.Parse(f.TokenURL)
 	if err != nil {
-		verr.Add(s, "invalid token URL %q: %s", s.TokenURL, err)
+		verr.Add(f, "invalid token URL %q: %s", f.TokenURL, err)
 	}
-	_, err = url.Parse(s.AuthorizationURL)
+	_, err = url.Parse(f.AuthorizationURL)
 	if err != nil {
-		verr.Add(s, "invalid authorization URL %q: %s", s.AuthorizationURL, err)
+		verr.Add(f, "invalid authorization URL %q: %s", f.AuthorizationURL, err)
 	}
-	_, err = url.Parse(s.RefreshURL)
+	_, err = url.Parse(f.RefreshURL)
 	if err != nil {
-		verr.Add(s, "invalid refresh URL %q: %s", s.RefreshURL, err)
+		verr.Add(f, "invalid refresh URL %q: %s", f.RefreshURL, err)
 	}
 	return verr
 }
 
-// Finalize makes the TokenURL and AuthorizationURL complete if needed.
-func (s *FlowExpr) Finalize() {
-	tu, _ := url.Parse(s.TokenURL)         // validated in Validate
-	au, _ := url.Parse(s.AuthorizationURL) // validated in Validate
-	ru, _ := url.Parse(s.RefreshURL)       // validated in Validate
-	tokenOK := s.TokenURL == "" || tu.IsAbs()
-	authOK := s.AuthorizationURL == "" || au.IsAbs()
-	refreshOK := s.RefreshURL == "" || ru.IsAbs()
-	if tokenOK && authOK && refreshOK {
-		return
-	}
-	var (
-		scheme string
-		host   string
-	)
-	if len(Root.API.Servers) > 0 {
-		u, _ := url.Parse(Root.API.Servers[0].URL)
-		scheme = u.Scheme
-		host = u.Host
-	}
-	if !tokenOK {
-		tu.Scheme = scheme
-		tu.Host = host
-		s.TokenURL = tu.String()
-	}
-	if !authOK {
-		au.Scheme = scheme
-		au.Host = host
-		s.AuthorizationURL = au.String()
-	}
-	if !refreshOK {
-		ru.Scheme = scheme
-		ru.Host = host
-		s.RefreshURL = ru.String()
-	}
-}
-
 // Type returns the grant type of the OAuth2 grant.
-func (s *FlowExpr) Type() string {
-	switch s.Kind {
+func (f *FlowExpr) Type() string {
+	switch f.Kind {
 	case AuthorizationCodeFlowKind:
 		return "authorization_code"
 	case ImplicitFlowKind:
@@ -234,7 +190,7 @@ func (s *FlowExpr) Type() string {
 	case ClientCredentialsFlowKind:
 		return "client_credentials"
 	default:
-		panic(fmt.Sprintf("unknown flow kind: %#v", s.Kind)) // bug
+		panic(fmt.Sprintf("unknown flow kind: %#v", f.Kind)) // bug
 	}
 }
 

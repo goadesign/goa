@@ -5,7 +5,7 @@ import (
 	. "goa.design/goa/http/dsl"
 )
 
-var _ = API("multi_auth", func() {
+var _ = API("multiauth", func() {
 	Title("Security Example API")
 	Description("This API demonstrates the use of the goa security DSL")
 	Docs(func() { // Documentation links

@@ -2,7 +2,15 @@ swagger: "2.0"
 info:
   title: Chatter service describing the streaming features of goa v2.
   version: ""
-host: localhost:8080
+host: localhost:80
+consumes:
+- application/json
+- application/xml
+- application/gob
+produces:
+- application/json
+- application/xml
+- application/gob
 paths:
   /echoer:
     get:
@@ -35,6 +43,7 @@ paths:
           schema:
             $ref: '#/definitions/EchoerInvalidScopesResponseBody'
       schemes:
+      - grpc
       - ws
       security:
       - jwt: []
@@ -74,6 +83,7 @@ paths:
           schema:
             $ref: '#/definitions/HistoryInvalidScopesResponseBody'
       schemes:
+      - grpc
       - ws
       security:
       - jwt: []
@@ -106,6 +116,7 @@ paths:
           schema:
             $ref: '#/definitions/ListenerInvalidScopesResponseBody'
       schemes:
+      - grpc
       - ws
       security:
       - jwt: []
@@ -126,6 +137,7 @@ paths:
           schema:
             $ref: '#/definitions/LoginUnauthorizedResponseBody'
       schemes:
+      - grpc
       - http
       security:
       - basic: []
@@ -160,6 +172,7 @@ paths:
           schema:
             $ref: '#/definitions/SummaryInvalidScopesResponseBody'
       schemes:
+      - grpc
       - ws
       security:
       - jwt: []
