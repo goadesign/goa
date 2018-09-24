@@ -2,8 +2,6 @@ package design
 
 import (
 	"fmt"
-	"net/url"
-	"sort"
 
 	"goa.design/goa/eval"
 )
@@ -13,14 +11,12 @@ type (
 	ServiceExpr struct {
 		// DSLFunc contains the DSL used to initialize the expression.
 		eval.DSLFunc
-		// Name of method group.
+		// Name of service.
 		Name string
-		// Description of method group for consumption by humans.
+		// Description of service used in documentation.
 		Description string
 		// Docs points to external documentation
 		Docs *DocsExpr
-		// Servers list the API hosts
-		Servers []*ServerExpr
 		// Methods is the list of service methods.
 		Methods []*MethodExpr
 		// Errors list the errors common to all the service methods.
@@ -99,37 +95,11 @@ func (s *ServiceExpr) Validate() error {
 	return verr
 }
 
-// Finalize finalizes all the service errors and security requirements.
+// Finalize finalizes all the service methods and errors.
 func (s *ServiceExpr) Finalize() {
 	for _, e := range s.Errors {
 		e.Finalize()
 	}
-	for _, r := range s.Requirements {
-		for _, s := range r.Schemes {
-			s.Finalize()
-		}
-	}
-}
-
-// Schemes returns the list of schemes used by the service.
-func (s *ServiceExpr) Schemes() []string {
-	schemes := make(map[string]bool)
-	for _, srv := range s.Servers {
-		if u, err := url.Parse(srv.URL); err == nil && u.Scheme != "" {
-			schemes[u.Scheme] = true
-		}
-	}
-	if len(schemes) == 0 {
-		return Root.API.Schemes()
-	}
-	ss := make([]string, len(schemes))
-	i := 0
-	for s := range schemes {
-		ss[i] = s
-		i++
-	}
-	sort.Strings(ss)
-	return ss
 }
 
 // Validate checks that the error name is found in the result metadata for

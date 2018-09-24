@@ -179,8 +179,8 @@ func JWTSecurity(name string, fn ...func()) *design.SchemeExpr {
 	return expr
 }
 
-// Security defines authentication requirements to access an API, a service or a
-// service method.
+// Security defines authentication requirements to access a service or a service
+// method.
 //
 // The requirement refers to one or more OAuth2Security, BasicAuthSecurity,
 // APIKeySecurity or JWTSecurity security scheme. If the schemes include a
@@ -190,18 +190,13 @@ func JWTSecurity(name string, fn ...func()) *design.SchemeExpr {
 // in the same scope in which case the client may validate any one of the
 // requirements for the request to be authorized.
 //
-// Security must appear in a API, Service or Method expression.
+// Security must appear in a Service or Method expression.
 //
 // Security accepts an arbitrary number of security schemes as argument
 // specified by name or by reference and an optional DSL function as last
 // argument.
 //
 // Examples:
-//
-//    var _ = API("calc", func() {
-//        // All API endpoints are secured via basic auth by default.
-//        Security(BasicAuth)
-//    })
 //
 //    var _ = Service("calculator", func() {
 //        // Override default API security requirements. Accept either basic
@@ -282,8 +277,6 @@ func Security(args ...interface{}) {
 	case *design.MethodExpr:
 		actual.Requirements = append(actual.Requirements, security)
 	case *design.ServiceExpr:
-		actual.Requirements = append(actual.Requirements, security)
-	case *design.APIExpr:
 		actual.Requirements = append(actual.Requirements, security)
 	default:
 		eval.IncompatibleDSL()

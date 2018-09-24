@@ -21,10 +21,6 @@ cmd/goagen/goagen
 # Example outputs
 /examples/account/cmd/*
 /examples/account/account
-/examples/cellar/cmd/cellarsvc/cellarsvc
 /examples/cellar/cmd/cellarsvc/cellar.db
-/examples/cellar/cmd/cellarcli/cellarcli
-/examples/calc/cmd/calcsvc/calcsvc
-/examples/calc/cmd/calccli/calccli
-examples/error/cmd/dividercli/dividercli
-examples/error/cmd/dividersvc/dividersvc
+examples/calc/cmd/calc/calc
+examples/calc/cmd/calc-cli/calc-cli

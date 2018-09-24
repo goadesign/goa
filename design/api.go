@@ -1,8 +1,6 @@
 package design
 
 import (
-	"net/url"
-	"regexp"
 	"sort"
 
 	"goa.design/goa/eval"
@@ -33,32 +31,9 @@ type (
 		Docs *DocsExpr
 		// Metadata is a list of key/value pairs.
 		Metadata MetadataExpr
-		// Requirements contains the security requirements that apply to
-		// all the API service methods. One requirement is composed of
-		// potentially multiple schemes. Incoming requests must validate
-		// at least one requirement to be authorized.
-		Requirements []*SecurityExpr
 
 		// random generator used to build examples for the API types.
 		random *Random
-	}
-
-	// ServerExpr contains a single API host information.
-	ServerExpr struct {
-		// Description of host
-		Description string
-		// URL to host, may contain parameter elements using the
-		// "{param}" syntax.
-		URL string
-		// Params defines the URL parameters if any.
-		Params *AttributeExpr
-	}
-
-	// ServerParamExpr defines a single server URL parameter.
-	ServerParamExpr struct {
-		*AttributeExpr
-		// Name is the parameter name
-		Name string
 	}
 
 	// ContactExpr contains the API contact information.
@@ -88,16 +63,15 @@ type (
 	}
 )
 
-// Schemes returns the list of HTTP methods used by all the API servers.
+// Schemes returns the list of transport schemes used by all the API servers.
+// The possible values for the elements of the returned slice are "http",
+// "https", "grpc" and "grpcs".
 func (a *APIExpr) Schemes() []string {
-	schemes := make(map[string]bool)
+	schemes := make(map[string]struct{})
 	for _, s := range a.Servers {
-		if u, err := url.Parse(s.URL); err == nil && u.Scheme != "" {
-			schemes[u.Scheme] = true
+		for _, sch := range s.Schemes() {
+			schemes[sch] = struct{}{}
 		}
-	}
-	if len(schemes) == 0 {
-		return []string{"http"}
 	}
 	ss := make([]string, len(schemes))
 	i := 0
@@ -118,6 +92,26 @@ func (a *APIExpr) Random() *Random {
 	return a.random
 }
 
+// DefaultServer returns a server expression that describes a server which
+// exposes all the services in the design and listens on localhost port 80 for
+// HTTP requests and port 8080 for gRPC requests.
+func (a *APIExpr) DefaultServer() *ServerExpr {
+	svcs := make([]string, len(Root.Services))
+	for i, svc := range Root.Services {
+		svcs[i] = svc.Name
+	}
+	return &ServerExpr{
+		Name:        a.Name,
+		Description: "Default server for " + a.Name,
+		Services:    svcs,
+		Hosts: []*HostExpr{{
+			Name:       "localhost",
+			ServerName: a.Name,
+			URIs:       []URIExpr{URIExpr("http://localhost:80"), URIExpr("grpc://localhost:8080")},
+		}},
+	}
+}
+
 // EvalName is the qualified name of the expression.
 func (a *APIExpr) EvalName() string { return "API " + a.Name }
 
@@ -130,62 +124,9 @@ func (a *APIExpr) Finalize() {
 		a.Name = "api"
 	}
 	if len(a.Servers) == 0 {
-		a.Servers = []*ServerExpr{{URL: "http://localhost:8080"}}
+		a.Servers = []*ServerExpr{a.DefaultServer()}
 	}
 }
-
-// EvalName is the qualified name of the expression.
-func (s *ServerExpr) EvalName() string { return "Server " + s.URL }
-
-// Attribute returns the embedded attribute.
-func (s *ServerExpr) Attribute() *AttributeExpr {
-	return s.Params
-}
-
-// Validate makes sure the server expression defines all the parameters and that
-// for each parameter there is a default value.
-func (s *ServerExpr) Validate() error {
-	var (
-		verr   = new(eval.ValidationErrors)
-		params = URLParams(s.URL)
-	)
-	if s.Params == nil {
-		if len(params) > 0 {
-			verr.Add(s, "missing Param expressions")
-		}
-		return verr
-	}
-	o := s.Params.Type.(*Object)
-	if params := URLParams(s.URL); params != nil {
-		if len(params) != len(*o) {
-			verr.Add(s, "invalid parameter count, expected %d, got %d",
-				len(params), len(*o))
-		} else {
-			for _, p := range params {
-				found := false
-				for _, nat := range *o {
-					if nat.Name == p {
-						found = true
-						break
-					}
-				}
-				if !found {
-					verr.Add(s, "parameter %s is not defined", p)
-				}
-			}
-		}
-	}
-	for _, nat := range *o {
-		if nat.Attribute.DefaultValue == nil {
-			verr.Add(s, "parameter %s has no default value", nat.Name)
-		}
-	}
-
-	return verr
-}
-
-// EvalName is the qualified name of the expression.
-func (p *ServerParamExpr) EvalName() string { return "URL parameter " + p.Name }
 
 // EvalName is the qualified name of the expression.
 func (l *LicenseExpr) EvalName() string { return "License " + l.Name }
@@ -195,20 +136,3 @@ func (d *DocsExpr) EvalName() string { return "Documentation " + d.URL }
 
 // EvalName is the qualified name of the expression.
 func (c *ContactExpr) EvalName() string { return "Contact " + c.Name }
-
-// URLParamsRegexp is the regular expression used to capture the parameters
-// present in a URL.
-var URLParamsRegexp = regexp.MustCompile(`\{([^\{\}]+)\}`)
-
-// URLParams returns the list of parameters present in the given URL if any.
-func URLParams(url string) []string {
-	matches := URLParamsRegexp.FindAllStringSubmatch(url, -1)
-	if len(matches) == 0 {
-		return nil
-	}
-	params := make([]string, len(matches))
-	for i, m := range matches {
-		params[i] = m[1]
-	}
-	return params
-}

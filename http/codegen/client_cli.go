@@ -13,8 +13,6 @@ import (
 	httpdesign "goa.design/goa/http/design"
 )
 
-var cmds = map[string]*subcommandData{}
-
 type (
 	commandData struct {
 		// Name of command e.g. "cellar-storage"
@@ -134,7 +132,10 @@ func ClientCLIFiles(genpkg string, root *httpdesign.RootExpr) []*codegen.File {
 		}
 	}
 
-	files := []*codegen.File{endpointParser(genpkg, root, data)}
+	var files []*codegen.File
+	for _, svr := range design.Root.API.Servers {
+		files = append(files, endpointParser(genpkg, root, svr, data))
+	}
 	for i, svc := range svcs {
 		files = append(files, payloadBuilders(genpkg, svc, data[i]))
 	}
@@ -143,9 +144,10 @@ func ClientCLIFiles(genpkg string, root *httpdesign.RootExpr) []*codegen.File {
 
 // endpointParser returns the file that implements the command line parser that
 // builds the client endpoint and payload necessary to perform a request.
-func endpointParser(genpkg string, root *httpdesign.RootExpr, data []*commandData) *codegen.File {
-	path := filepath.Join(codegen.Gendir, "http", "cli", "cli.go")
-	title := fmt.Sprintf("%s HTTP client CLI support package", root.Design.API.Name)
+func endpointParser(genpkg string, root *httpdesign.RootExpr, svr *design.ServerExpr, data []*commandData) *codegen.File {
+	pkg := codegen.SnakeCase(codegen.Goify(svr.Name, true))
+	path := filepath.Join(codegen.Gendir, "http", "cli", pkg, "cli.go")
+	title := fmt.Sprintf("%s HTTP client CLI support package", svr.Name)
 	specs := []*codegen.ImportSpec{
 		{Path: "encoding/json"},
 		{Path: "flag"},
@@ -157,7 +159,8 @@ func endpointParser(genpkg string, root *httpdesign.RootExpr, data []*commandDat
 		{Path: "goa.design/goa", Name: "goa"},
 		{Path: "goa.design/goa/http", Name: "goahttp"},
 	}
-	for _, svc := range root.HTTPServices {
+	for _, sv := range svr.Services {
+		svc := root.Service(sv)
 		sd := HTTPServices.Get(svc.Name())
 		specs = append(specs, &codegen.ImportSpec{
 			Path: genpkg + "/http/" + codegen.SnakeCase(sd.Service.Name) + "/client",
@@ -359,7 +362,6 @@ func buildSubcommandData(svc *ServiceData, e *EndpointData) *subcommandData {
 		sub.MultipartRequestEncoder = e.MultipartRequestEncoder
 	}
 	generateExample(sub, svc.Service.Name)
-	cmds[fullName] = sub
 
 	return sub
 }
@@ -814,9 +816,9 @@ func {{ .Name }}({{ range .FormalParams }}{{ . }} string, {{ end }}) ({{ .Result
 				{{- range $.Args }}
 					{{- if .FieldName }}
 	{{ if $.PayloadInit.ReturnTypeAttribute }}res{{ else }}v{{ end }}.{{ .FieldName }} = {{ .Name }}
-       				{{- end }}
-       			{{- end }}
-       		{{- end }}
+				{{- end }}
+			{{- end }}
+		{{- end }}
 	return {{ if .ReturnTypeAttribute }}res{{ else }}v{{ end }}, nil
 
 		{{- else }}
@@ -828,7 +830,7 @@ func {{ .Name }}({{ range .FormalParams }}{{ . }} string, {{ end }}) ({{ .Result
 		{{ .FieldName }}: {{ .Name }},
 					{{- end }}
 				{{- end }}
-        }
+	}
 	return payload, nil
 			{{-  end }}
 

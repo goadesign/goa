@@ -16,22 +16,21 @@ import (
 )
 
 // NewV2 returns the OpenAPI v2 specification for the given API.
-func NewV2(root *httpdesign.RootExpr) (*V2, error) {
+func NewV2(root *httpdesign.RootExpr, h *design.HostExpr) (*V2, error) {
 	if root == nil {
 		return nil, nil
 	}
-	tags := tagsFromExpr(root.Metadata)
-	u, err := url.Parse(root.Design.API.Servers[0].URL)
+	tags := tagsFromExpr(root.Design.API.Metadata)
+	u, err := url.Parse(string(h.URIs[0]))
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse server URL: %s", err)
 	}
 	host := u.Host
-
-	basePath := root.Path
+	basePath := u.Path
 	if hasAbsoluteRoutes(root) {
 		basePath = ""
 	}
-	params, err := paramsFromExpr(root.Params, basePath)
+	params, err := paramsFromExpr(design.NewMappedAttributeExpr(h.Variables), basePath)
 	if err != nil {
 		return nil, err
 	}
@@ -51,7 +50,7 @@ func NewV2(root *httpdesign.RootExpr) (*V2, error) {
 			Contact:        root.Design.API.Contact,
 			License:        root.Design.API.License,
 			Version:        root.Design.API.Version,
-			Extensions:     ExtensionsFromExpr(root.Metadata),
+			Extensions:     ExtensionsFromExpr(root.Design.API.Metadata),
 		},
 		Host:                host,
 		BasePath:            basePath,
@@ -95,7 +94,7 @@ func NewV2(root *httpdesign.RootExpr) (*V2, error) {
 				continue
 			}
 			for _, route := range a.Routes {
-				if err := buildPathFromExpr(s, root, route, basePath); err != nil {
+				if err := buildPathFromExpr(s, root, h, route, basePath); err != nil {
 					return nil, err
 				}
 			}
@@ -338,7 +337,7 @@ func paramsFromExpr(params *design.MappedAttributeExpr, path string) ([]*Paramet
 	}
 	var (
 		res       []*Parameter
-		wildcards = httpdesign.ExtractWildcards(path)
+		wildcards = design.ExtractWildcards(path)
 		i         = 0
 	)
 	codegen.WalkMappedAttr(params, func(n, pn string, required bool, at *design.AttributeExpr) error {
@@ -484,7 +483,7 @@ func headersFromExpr(headers *design.MappedAttributeExpr) (map[string]*Header, e
 
 func buildPathFromFileServer(s *V2, root *httpdesign.RootExpr, fs *httpdesign.FileServerExpr) error {
 	for _, path := range fs.RequestPaths {
-		wcs := httpdesign.ExtractWildcards(path)
+		wcs := design.ExtractWildcards(path)
 		var param []*Parameter
 		if len(wcs) > 0 {
 			param = []*Parameter{{
@@ -520,7 +519,7 @@ func buildPathFromFileServer(s *V2, root *httpdesign.RootExpr, fs *httpdesign.Fi
 			Schemes:      schemes,
 		}
 
-		key := httpdesign.WildcardRegex.ReplaceAllStringFunc(
+		key := design.WildcardRegex.ReplaceAllStringFunc(
 			path,
 			func(w string) string {
 				return fmt.Sprintf("/{%s}", w[2:])
@@ -543,7 +542,7 @@ func buildPathFromFileServer(s *V2, root *httpdesign.RootExpr, fs *httpdesign.Fi
 	return nil
 }
 
-func buildPathFromExpr(s *V2, root *httpdesign.RootExpr, route *httpdesign.RouteExpr, basePath string) error {
+func buildPathFromExpr(s *V2, root *httpdesign.RootExpr, h *design.HostExpr, route *httpdesign.RouteExpr, basePath string) error {
 	endpoint := route.Endpoint
 
 	tagNames := tagNamesFromExpr(endpoint.Service.Metadata, endpoint.Metadata)
@@ -606,22 +605,18 @@ func buildPathFromExpr(s *V2, root *httpdesign.RootExpr, route *httpdesign.Route
 			operationID = fmt.Sprintf("%s#%d", operationID, index)
 		}
 
-		schemes := endpoint.Service.Schemes()
-		if len(schemes) == 0 {
-			schemes = root.Design.API.Schemes()
-		}
+		schemes := h.Schemes()
+
+		// replace http with ws for streaming endpoints
 		if endpoint.MethodExpr.IsStreaming() {
-			// For streaming endpoints, discard schemes other than ws or wss
 			for i := len(schemes) - 1; i >= 0; i-- {
-				if schemes[i] != "ws" && schemes[i] != "wss" {
-					schemes = append(schemes[:i], schemes[i+1:]...)
+				if schemes[i] == "http" {
+					news := append([]string{"ws"}, schemes[i+1:]...)
+					schemes = append(schemes[:i], news...)
 				}
-			}
-		} else {
-			// Discard ws or wss schemes if they exist
-			for i := len(schemes) - 1; i >= 0; i-- {
-				if schemes[i] == "ws" || schemes[i] == "wss" {
-					schemes = append(schemes[:i], schemes[i+1:]...)
+				if schemes[i] == "https" {
+					news := append([]string{"wss"}, schemes[i+1:]...)
+					schemes = append(schemes[:i], news...)
 				}
 			}
 		}
@@ -670,7 +665,7 @@ func buildPathFromExpr(s *V2, root *httpdesign.RootExpr, route *httpdesign.Route
 		if key == "" {
 			key = "/"
 		}
-		bp := httpdesign.WildcardRegex.ReplaceAllStringFunc(
+		bp := design.WildcardRegex.ReplaceAllStringFunc(
 			basePath,
 			func(w string) string {
 				return fmt.Sprintf("/{%s}", w[2:])

@@ -21,6 +21,8 @@ func Description(d string) {
 		expr.Description = d
 	case *design.ServerExpr:
 		expr.Description = d
+	case *design.HostExpr:
+		expr.Description = d
 	case *design.ServiceExpr:
 		expr.Description = d
 	case *design.ResultTypeExpr:

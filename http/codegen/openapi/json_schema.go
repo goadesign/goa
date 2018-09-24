@@ -6,8 +6,8 @@ import (
 	"reflect"
 	"strconv"
 
-	"goa.design/goa/design"
 	"goa.design/goa/codegen"
+	"goa.design/goa/design"
 
 	httpdesign "goa.design/goa/http/design"
 )
@@ -131,7 +131,7 @@ func APISchema(api *design.APIExpr, r *httpdesign.RootExpr) *Schema {
 	for _, res := range r.HTTPServices {
 		GenerateServiceDefinition(api, res)
 	}
-	href := api.Servers[0].URL
+	href := string(api.Servers[0].Hosts[0].URIs[0])
 	links := []*Link{
 		{
 			Href: href,
@@ -553,12 +553,12 @@ func toSchemaHrefs(r *httpdesign.RouteExpr) []string {
 	paths := r.FullPaths()
 	res := make([]string, len(paths))
 	for i, path := range paths {
-		params := httpdesign.ExtractRouteWildcards(path)
+		params := design.ExtractWildcards(path)
 		args := make([]interface{}, len(params))
 		for j, p := range params {
 			args[j] = fmt.Sprintf("/{%s}", p)
 		}
-		tmpl := httpdesign.WildcardRegex.ReplaceAllLiteralString(path, "%s")
+		tmpl := design.WildcardRegex.ReplaceAllLiteralString(path, "%s")
 		res[i] = fmt.Sprintf(tmpl, args...)
 	}
 	return res

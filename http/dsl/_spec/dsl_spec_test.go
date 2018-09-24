@@ -146,30 +146,109 @@ var _ = API("http_dsl_spec", func() {
 var _ = Service("service", func() {
 
 	// Error defines a common error response to all the service methods.
-	// The DSL is identical as when used in an API expression.
-	Error("service_error")
+	// It accepts the name of the error as first argument and the type that
+	// describes the response as second argument. If no type is provided
+	// then the built-in ErrorResult type is used. The expression below is
+	// therefore equivalent to:
+	//
+	//     Error("service_error")
+	//
+	Error("service_error", ErrorResult)
 
-	// HTTP specific properties, see the API HTTP DSL for the descriptions
-	// of the DSL functions.
+	// HTTP specific properties
 	HTTP(func() {
 		// HTTP request path prefix to all the service methods
-		// (appended to API path prefix if there is one).
 		Path("/service/{service_param}")
 
-		// Service path prefix and query string parameters if any.
-		// The Service HTTP Params definition works identically to the
-		// API HTTP Params definition.
+		// Params groups path and query string parameter expressions.
+		// The attributes defined in Params must correspond to
+		// attributes defined in the method paylods.
 		Params(func() {
+			// Param defines a single path or query string
+			// parameter. The arguments of Param are the same as the
+			// Attribute function.
 			Param("service_param")
+			// The name argument can optionally define a mapping
+			// between the attribute and the query string key name
+			// using the syntax "attribute name:query string key".
+			Param("attribute_name:query-key")
+			Required("service_path_param")
 		})
 
-		// Service specific errors. Syntax and logic is identical to the
-		// API level HTTP Response expressions.
+		// Params also accepts a user type as argument. The user type
+		// must be an object. Params may appear multiple times in which
+		// case the union of all parameters defined in each Params
+		// expression is used to define the service path and query
+		// string parameters.
+		Params(CommonParams)
+
+		// Headers defines HTTP headers common to all the service
+		// endpoints. The attributes defined in Headers must correspond
+		// to attributes defined in the method payloads.
+		Headers(func() {
+			// Header defines a single header. The arguments of
+			// Header are the same as the Attribute function.
+			// The name argument can optionally define a mapping
+			// between the attribute and the HTTP header name
+			// using the syntax "attribute name:header name".
+			Header("name:Header-Name")
+			Required("name")
+		})
+
+		// Headers also accepts a user type as argument. The user type
+		// must be an object. Headers may appear multiple times in which
+		// case the union of all headers defined in each Headers
+		// expression is used to define the common service endpoint
+		// headers.
+		Headers(CommonHeaders)
+
+		// Consumes lists the mime types corresponding to the encodings
+		// supported by the API in requests. goa knows how to generate
+		// the decoding code for the following mime types:
+		// "application/json", "application/xml" and "application/gob".
+		// The decoding code for other mime types must be written and
+		// provided to the generated handler constructors.
+		Consumes("application/json", "application/xml")
+
+		// Produces lists the mime types corresponding to the encodings
+		// used by the API to encode responses. goa knows how to
+		// generate the encoding code for the following mime types:
+		// "application/json", "application/xml" and "application/gob".
+		// The encoding code for other mime types must be written and
+		// provided to the generated handler constructors.
+		Produces("application/json", "application/xml")
+
+		// Response defines the HTTP response associated with the given
+		// error. By default the response uses HTTP status code 400
+		// ("Bad Request") and the error type attributes define the
+		// shape of the body.
+		//
+		// Response the name of the error as first argument, an HTTP
+		// status code as second argument and an optional function used
+		// to describe the mapping of the error type attributes to the
+		// HTTP response headers and body fields. The name of the error
+		// must correspond to one of the errors defined in the service
+		// expression.
 		Response("service_error", StatusForbidden, func() {
+			// Headers list the error response headers.
 			Headers(func() {
+				// Header defines a single header. The name of
+				// the header attribute must match the name of a
+				// error type attribute. The name argument can
+				// optionally define a mapping between the
+				// attribute and the HTTP header name using the
+				// syntax "attribute name:header name".
 				Header("name:Header-Name")
 			})
+
+			// Body defines the response body fields.
+			// By default (when Body is absent) the error type
+			// attributes not listed in the Headers DSL are used
+			// to define the response body fields.
 			Body(func() {
+				// The names of the attributes must match the
+				// names of attributes of the method result
+				// type.
 				Attribute("id")
 				Attribute("status")
 				Attribute("code")

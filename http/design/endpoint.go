@@ -72,16 +72,6 @@ type (
 	}
 )
 
-// ExtractRouteWildcards returns the names of the wildcards that appear in path.
-func ExtractRouteWildcards(path string) []string {
-	matches := WildcardRegex.FindAllStringSubmatch(path, -1)
-	wcs := make([]string, len(matches))
-	for i, m := range matches {
-		wcs[i] = m[1]
-	}
-	return wcs
-}
-
 // Name of HTTP endpoint
 func (e *EndpointExpr) Name() string {
 	return e.MethodExpr.Name
@@ -171,11 +161,9 @@ func (e *EndpointExpr) QueryParams() *design.MappedAttributeExpr {
 func (e *EndpointExpr) Prepare() {
 	// Inherit headers and params from parent service and API
 	headers := design.NewEmptyMappedAttributeExpr()
-	headers.Merge(Root.Headers)
 	headers.Merge(e.Service.Headers)
 
 	params := design.NewEmptyMappedAttributeExpr()
-	params.Merge(Root.Params)
 	params.Merge(e.Service.Params)
 
 	if p := e.Service.Parent(); p != nil {
@@ -217,11 +205,8 @@ func (e *EndpointExpr) Prepare() {
 		e.Responses = []*HTTPResponseExpr{{StatusCode: status}}
 	}
 
-	// Inherit HTTP errors from service and root
+	// Inherit HTTP errors from service
 	for _, r := range e.Service.HTTPErrors {
-		e.HTTPErrors = append(e.HTTPErrors, r.Dup())
-	}
-	for _, r := range Root.HTTPErrors {
 		e.HTTPErrors = append(e.HTTPErrors, r.Dup())
 	}
 
@@ -537,6 +522,24 @@ func (e *EndpointExpr) Finalize() {
 		}
 	}
 
+	// Lookup undefined HTTP errors in API.
+	for _, err := range e.MethodExpr.Errors {
+		found := false
+		for _, herr := range e.HTTPErrors {
+			if err.Name == herr.Name {
+				found = true
+				break
+			}
+		}
+		if !found {
+			for _, herr := range Root.HTTPErrors {
+				if herr.Name == err.Name {
+					e.HTTPErrors = append(e.HTTPErrors, herr.Dup())
+				}
+			}
+		}
+	}
+
 	// Make sure all error types are user types and have a body.
 	for _, herr := range e.HTTPErrors {
 		herr.Finalize(e)
@@ -692,7 +695,7 @@ func (r *RouteExpr) Validate() *eval.ValidationErrors {
 	// Make sure there's no duplicate params in absolute route
 	paths := r.FullPaths()
 	for _, path := range paths {
-		matches := WildcardRegex.FindAllStringSubmatch(path, -1)
+		matches := design.WildcardRegex.FindAllStringSubmatch(path, -1)
 		wcs := make(map[string]struct{}, len(matches))
 		for _, match := range matches {
 			if _, ok := wcs[match[1]]; ok {
@@ -718,7 +721,7 @@ func (r *RouteExpr) Params() []string {
 	paths := r.FullPaths()
 	var res []string
 	for _, p := range paths {
-		ws := ExtractRouteWildcards(p)
+		ws := design.ExtractWildcards(p)
 		for _, w := range ws {
 			found := false
 			for _, r := range res {
@@ -735,16 +738,13 @@ func (r *RouteExpr) Params() []string {
 	return res
 }
 
-// FullPaths returns the endpoint full paths computed by concatenating the API and
-// service base paths with the endpoint specific paths.
+// FullPaths returns the endpoint full paths computed by concatenating the
+// service base paths with the route specific path.
 func (r *RouteExpr) FullPaths() []string {
 	if r.IsAbsolute() {
 		return []string{httppath.Clean(r.Path[1:])}
 	}
-	var bases []string
-	if r.Endpoint != nil && r.Endpoint.Service != nil {
-		bases = r.Endpoint.Service.FullPaths()
-	}
+	bases := r.Endpoint.Service.FullPaths()
 	res := make([]string, len(bases))
 	for i, b := range bases {
 		res[i] = httppath.Clean(path.Join(b, r.Path))

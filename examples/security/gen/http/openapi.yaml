@@ -3,7 +3,15 @@ info:
   title: Security Example API
   description: This API demonstrates the use of the goa security DSL
   version: ""
-host: localhost:8080
+host: localhost:80
+consumes:
+- application/json
+- application/xml
+- application/gob
+produces:
+- application/json
+- application/xml
+- application/gob
 paths:
   /secure:
     get:
@@ -37,6 +45,7 @@ paths:
           schema:
             $ref: '#/definitions/SecureUnauthorizedResponseBody'
       schemes:
+      - grpc
       - http
       security:
       - jwt: []
@@ -72,6 +81,7 @@ paths:
           schema:
             $ref: '#/definitions/DoublySecureUnauthorizedResponseBody'
       schemes:
+      - grpc
       - http
       security:
       - api_key: []
@@ -112,6 +122,7 @@ paths:
           schema:
             $ref: '#/definitions/AlsoDoublySecureUnauthorizedResponseBody'
       schemes:
+      - grpc
       - http
       security:
       - api_key: []
@@ -135,6 +146,7 @@ paths:
           schema:
             $ref: '#/definitions/SigninUnauthorizedResponseBody'
       schemes:
+      - grpc
       - http
       security:
       - basic: []
@@ -143,22 +155,22 @@ definitions:
     title: AlsoDoublySecureUnauthorizedResponseBody
     type: string
     description: Credentials are invalid
-    example: Maxime ipsam esse et.
+    example: Eligendi qui recusandae officia dolores a maxime.
   DoublySecureUnauthorizedResponseBody:
     title: DoublySecureUnauthorizedResponseBody
     type: string
     description: Credentials are invalid
-    example: Itaque accusamus enim.
+    example: Eveniet maxime.
   SecureUnauthorizedResponseBody:
     title: SecureUnauthorizedResponseBody
     type: string
     description: Credentials are invalid
-    example: Accusantium voluptatem alias corrupti voluptates a.
+    example: Ab vel rem.
   SigninUnauthorizedResponseBody:
     title: SigninUnauthorizedResponseBody
     type: string
     description: Credentials are invalid
-    example: Tenetur est et.
+    example: Et neque.
 securityDefinitions:
   api_key:
     type: apiKey

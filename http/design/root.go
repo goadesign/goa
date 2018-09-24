@@ -1,8 +1,6 @@
 package design
 
 import (
-	"net/url"
-	"regexp"
 	"sort"
 	"strings"
 
@@ -13,10 +11,6 @@ import (
 var (
 	// Root holds the root expression built on process initialization.
 	Root = &RootExpr{Design: design.Root}
-
-	// WildcardRegex is the regular expression used to capture path
-	// parameters.
-	WildcardRegex = regexp.MustCompile(`/{\*?([a-zA-Z0-9_]+)}`)
 
 	// ErrorResult is the built-in result type for error responses.
 	ErrorResult = design.ErrorResult
@@ -30,15 +24,6 @@ type (
 	RootExpr struct {
 		// Design is the transport agnostic root expression.
 		Design *design.RootExpr
-		// Path is the common request path prefix to all the service
-		// HTTP endpoints.
-		Path string
-		// Params defines the HTTP request path and query parameters
-		// common to all the API endpoints.
-		Params *design.MappedAttributeExpr
-		// Headers defines the HTTP request headers common to to all the
-		// API endpoints.
-		Headers *design.MappedAttributeExpr
 		// Consumes lists the mime types supported by the API
 		// controllers.
 		Consumes []string
@@ -49,35 +34,8 @@ type (
 		HTTPServices []*ServiceExpr
 		// HTTPErrors lists the error HTTP responses.
 		HTTPErrors []*ErrorExpr
-		// Metadata is a set of key/value pairs with semantic that is
-		// specific to each generator.
-		Metadata design.MetadataExpr
 	}
 )
-
-// Schemes returns the list of HTTP schemes used by the API servers.
-func (r *RootExpr) Schemes() []string {
-	if r.Design == nil {
-		return nil
-	}
-	schemes := make(map[string]bool)
-	for _, s := range r.Design.API.Servers {
-		if u, err := url.Parse(s.URL); err != nil {
-			schemes[u.Scheme] = true
-		}
-	}
-	if len(schemes) == 0 {
-		return nil
-	}
-	ss := make([]string, len(schemes))
-	i := 0
-	for s := range schemes {
-		ss[i] = s
-		i++
-	}
-	sort.Strings(ss)
-	return ss
-}
 
 // Service returns the service with the given name if any.
 func (r *RootExpr) Service(name string) *ServiceExpr {
@@ -149,14 +107,14 @@ func (r *RootExpr) Packages() []string {
 	}
 }
 
-// ExtractWildcards returns the names of the wildcards that appear in path.
-func ExtractWildcards(path string) []string {
-	matches := WildcardRegex.FindAllStringSubmatch(path, -1)
-	wcs := make([]string, len(matches))
-	for i, m := range matches {
-		wcs[i] = m[1]
+// Finalize initializes Consumes and Produces with defaults if not set.
+func (r *RootExpr) Finalize() {
+	if len(r.Consumes) == 0 {
+		r.Consumes = []string{"application/json", "application/xml", "application/gob"}
 	}
-	return wcs
+	if len(r.Produces) == 0 {
+		r.Produces = []string{"application/json", "application/xml", "application/gob"}
+	}
 }
 
 // NameMap returns the attribute and HTTP element name encoded in the given
