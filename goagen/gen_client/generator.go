@@ -874,7 +874,7 @@ func typeName(mt *design.MediaTypeDefinition) string {
 	return codegen.GoTypeName(mt, mt.AllRequired(), 1, false)
 }
 
-// initParams returns required and optional paramData extracted from given attribute definition.
+// toValueTypeName returns varName with `*` if it is not set as "required"
 func toValueTypeName(varName, name string, att *design.AttributeDefinition) string {
 	if att == nil {
 		return varName
@@ -885,6 +885,7 @@ func toValueTypeName(varName, name string, att *design.AttributeDefinition) stri
 	return "*" + varName
 }
 
+// initParams returns required and optional paramData extracted from given attribute definition.
 func initParams(att *design.AttributeDefinition) ([]*paramData, []*paramData) {
 	if att == nil {
 		return nil, nil
