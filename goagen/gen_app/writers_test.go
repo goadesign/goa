@@ -1169,22 +1169,64 @@ var _ = Describe("ControllersWriter", func() {
 							AttributeDefinition: &design.AttributeDefinition{
 								Type: design.Object{
 									"id": &design.AttributeDefinition{
+										Type: design.Integer,
+									},
+									"title": &design.AttributeDefinition{
 										Type: design.String,
 									},
 									"icon": &design.AttributeDefinition{
 										Type: design.File,
 									},
-									"options": &design.AttributeDefinition{
+									"flags": &design.AttributeDefinition{
+										Type: &design.Array{
+											ElemType: &design.AttributeDefinition{
+												Type: design.Boolean,
+											},
+										},
+									},
+									"optionCodes": &design.AttributeDefinition{
+										Type: &design.Array{
+											ElemType: &design.AttributeDefinition{
+												Type: design.Integer,
+											},
+										},
+									},
+									"ratios": &design.AttributeDefinition{
+										Type: &design.Array{
+											ElemType: &design.AttributeDefinition{
+												Type: design.Number,
+											},
+										},
+									},
+									"commentLines": &design.AttributeDefinition{
 										Type: &design.Array{
 											ElemType: &design.AttributeDefinition{
 												Type: design.String,
 											},
 										},
 									},
-									"flags": &design.AttributeDefinition{
+									"objs": &design.AttributeDefinition{
 										Type: &design.Array{
 											ElemType: &design.AttributeDefinition{
-												Type: design.Integer,
+												Type: &design.Object{},
+											},
+										},
+									},
+									"hashObjs": &design.AttributeDefinition{
+										Type: &design.Array{
+											ElemType: &design.AttributeDefinition{
+												Type: &design.Hash{
+													KeyType: &design.AttributeDefinition{
+														Type: design.String,
+													},
+													ElemType: &design.AttributeDefinition{
+														Type: &design.Array{
+															ElemType: &design.AttributeDefinition{
+																Type: design.String,
+															},
+														},
+													},
+												},
 											},
 										},
 									},
@@ -1203,9 +1245,14 @@ var _ = Describe("ControllersWriter", func() {
 					Ω(err).ShouldNot(HaveOccurred())
 					written := string(b)
 					Ω(written).Should(ContainSubstring(payloadMultipartObjUnmarshalID))
+					Ω(written).Should(ContainSubstring(payloadMultipartObjUnmarshalTitle))
 					Ω(written).Should(ContainSubstring(payloadMultipartObjUnmarshalIcon))
-					Ω(written).Should(ContainSubstring(payloadMultipartObjUnmarshalOptions))
 					Ω(written).Should(ContainSubstring(payloadMultipartObjUnmarshalFlags))
+					Ω(written).Should(ContainSubstring(payloadMultipartObjUnmarshalOptionCodes))
+					Ω(written).Should(ContainSubstring(payloadMultipartObjUnmarshalRatios))
+					Ω(written).Should(ContainSubstring(payloadMultipartObjUnmarshalCommentLines))
+					Ω(written).Should(ContainSubstring(payloadMultipartObjUnmarshalObjs))
+					Ω(written).Should(ContainSubstring(payloadMultipartObjUnmarshalHashObjs))
 				})
 			})
 
@@ -2336,7 +2383,17 @@ func unmarshalListBottlePayload(ctx context.Context, service *goa.Service, req *
 
 	payloadMultipartObjUnmarshalID = `
 	rawID := req.FormValue("id")
-	payload.ID = &rawID`
+	if id, err2 := strconv.Atoi(rawID); err2 == nil {
+		tmp2 := id
+		tmp1 := &tmp2
+		payload.ID = tmp1
+	} else {
+		err = goa.MergeErrors(err, goa.InvalidParamTypeError("id", rawID, "integer"))
+	}`
+
+	payloadMultipartObjUnmarshalTitle = `
+	rawTitle := req.FormValue("title")
+	payload.Title = &rawTitle`
 
 	payloadMultipartObjUnmarshalIcon = `
 	_, rawIcon, err2 := req.FormFile("icon")
@@ -2346,27 +2403,79 @@ func unmarshalListBottlePayload(ctx context.Context, service *goa.Service, req *
 		err = goa.MergeErrors(err, goa.InvalidParamTypeError("icon", "icon", "file"))
 	}`
 
-	payloadMultipartObjUnmarshalOptions = `
-	rawOptions := req.Form["options[]"]
-	tmpOptions := make([]string, len(rawOptions))
-	for i := 0; i < len(rawOptions); i++ {
-		tmp := rawOptions[i]
-		tmpOptions[i] = tmp
+	payloadMultipartObjUnmarshalCommentLines = `
+	rawCommentLines := req.Form["commentLines[]"]
+	tmpCommentLines := make([]string, len(rawCommentLines))
+	for i := 0; i < len(rawCommentLines); i++ {
+		tmp := rawCommentLines[i]
+		tmpCommentLines[i] = tmp
 	}
-	payload.Options = tmpOptions`
+	payload.CommentLines = tmpCommentLines`
 
 	payloadMultipartObjUnmarshalFlags = `
 	rawFlags := req.Form["flags[]"]
-	tmpFlags := make([]int, len(rawFlags))
+	tmpFlags := make([]bool, len(rawFlags))
 	for i := 0; i < len(rawFlags); i++ {
-		tmp, err2 := strconv.Atoi(rawFlags[i])
+		tmp, err2 := strconv.ParseBool(rawFlags[i])
 		if err2 != nil {
-			err = goa.MergeErrors(err, goa.InvalidParamTypeError("flags", rawFlags, "[]int"))
+			err = goa.MergeErrors(err, goa.InvalidParamTypeError("flags", rawFlags, "[]bool"))
 			break
 		}
 		tmpFlags[i] = tmp
 	}
 	payload.Flags = tmpFlags`
+
+	payloadMultipartObjUnmarshalOptionCodes = `
+	rawOptionCodes := req.Form["optionCodes[]"]
+	tmpOptionCodes := make([]int, len(rawOptionCodes))
+	for i := 0; i < len(rawOptionCodes); i++ {
+		tmp, err2 := strconv.Atoi(rawOptionCodes[i])
+		if err2 != nil {
+			err = goa.MergeErrors(err, goa.InvalidParamTypeError("optionCodes", rawOptionCodes, "[]int"))
+			break
+		}
+		tmpOptionCodes[i] = tmp
+	}
+	payload.OptionCodes = tmpOptionCodes`
+
+	payloadMultipartObjUnmarshalRatios = `
+	rawRatios := req.Form["ratios[]"]
+	tmpRatios := make([]float, len(rawRatios))
+	for i := 0; i < len(rawRatios); i++ {
+		tmp, err2 := strconv.ParseFloat(rawRatios[i])
+		if err2 != nil {
+			err = goa.MergeErrors(err, goa.InvalidParamTypeError("ratios", rawRatios, "[]float"))
+			break
+		}
+		tmpRatios[i] = tmp
+	}
+	payload.Ratios = tmpRatios`
+
+	payloadMultipartObjUnmarshalObjs = `
+	rawObjs := req.Form["objs[]"]
+	tmpObjs := make([]interface{}, len(rawObjs))
+	for i := 0; i < len(rawObjs); i++ {
+		tmp, err2 := (interface{})(nil), (error)(nil)
+		if err2 != nil {
+			err = goa.MergeErrors(err, goa.InvalidParamTypeError("objs", rawObjs, "[]interface{}"))
+			break
+		}
+		tmpObjs[i] = tmp
+	}
+	payload.Objs = tmpObjs`
+
+	payloadMultipartObjUnmarshalHashObjs = `
+	rawHashObjs := req.Form["hashObjs[]"]
+	tmpHashObjs := make([]map[string][]string, len(rawHashObjs))
+	for i := 0; i < len(rawHashObjs); i++ {
+		tmp, err2 := map[string][]string{}, (error)(nil)
+		if err2 != nil {
+			err = goa.MergeErrors(err, goa.InvalidParamTypeError("hashObjs", rawHashObjs, "[]map[string][]string"))
+			break
+		}
+		tmpHashObjs[i] = tmp
+	}
+	payload.HashObjs = tmpHashObjs`
 
 	payloadNoValidationsObjUnmarshal = `
 func unmarshalListBottlePayload(ctx context.Context, service *goa.Service, req *http.Request) error {

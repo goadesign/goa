@@ -456,32 +456,47 @@ func arrayAttribute(a *design.AttributeDefinition) *design.AttributeDefinition {
 	return a.Type.(*design.Array).ElemType
 }
 
-func valueTypeOf(pr string, att *design.AttributeDefinition) string {
-	switch att.Type.Kind() {
-	case design.BooleanKind:
-		return pr + "bool"
-	case design.IntegerKind:
-		return pr + "int"
-	case design.NumberKind:
-		return pr + "float"
-	case design.StringKind:
-		return pr + "string"
-	case design.ArrayKind:
-		return valueTypeOf("[]"+pr, arrayAttribute(att))
-	}
-	return pr + "interface{}"
+func hashAttribute(a *design.AttributeDefinition) (*design.AttributeDefinition, *design.AttributeDefinition) {
+	hash := a.Type.(*design.Hash)
+	return hash.KeyType, hash.ElemType
 }
 
-func fromString(att *design.AttributeDefinition) string {
+// valueTypeOf returns the golang type definition string from attribute definition
+func valueTypeOf(prefix string, att *design.AttributeDefinition) string {
 	switch att.Type.Kind() {
 	case design.BooleanKind:
-		return "ParseBool"
+		return prefix + "bool"
 	case design.IntegerKind:
-		return "Atoi"
+		return prefix + "int"
 	case design.NumberKind:
-		return "ParseFloat"
+		return prefix + "float"
+	case design.StringKind:
+		return prefix + "string"
+	case design.ArrayKind:
+		return valueTypeOf(prefix+"[]", arrayAttribute(att))
+	case design.HashKind:
+		key, elm := hashAttribute(att)
+		return valueTypeOf(prefix+"map["+valueTypeOf("", key)+"]", elm)
 	}
-	panic("undefined strconv function")
+	return prefix + "interface{}"
+}
+
+// fromString returns the gocode expression to convert string typed varName value to go-type defined in the attribute
+func fromString(att *design.AttributeDefinition, varName string) string {
+	switch att.Type.Kind() {
+	case design.BooleanKind:
+		return "strconv.ParseBool(" + varName + ")"
+	case design.IntegerKind:
+		return "strconv.Atoi(" + varName + ")"
+	case design.NumberKind:
+		return "strconv.ParseFloat(" + varName + ")"
+	case design.StringKind:
+		return varName + ", (error)(nil)"
+	case design.ArrayKind:
+	case design.HashKind:
+		return valueTypeOf("", att) + "{}, (error)(nil)"
+	}
+	return "(" + valueTypeOf("", att) + ")(nil), (error)(nil)"
 }
 
 const (
@@ -571,7 +586,7 @@ type {{ .Name }} struct {
 */}}{{ tabs .Depth }}tmp{{ goify .Name true }} := make({{ valueTypeOf "" .Attribute }}, len(raw{{ goify .Name true }}))
 {{ tabs .Depth }}for i := 0; i < len(raw{{ goify .Name true }}); i++ {
 {{ if eq (arrayAttribute .Attribute).Type.Kind 4 }}{{ tabs .Depth}}	tmp := raw{{ goify .Name true }}[i]{{ else }}{{/*
-*/}}{{ tabs .Depth }}	tmp, err2 := strconv.{{ fromString (arrayAttribute .Attribute) }}(raw{{ goify .Name true }}[i])
+*/}}{{ tabs .Depth }}	tmp, err2 := {{ fromString (arrayAttribute .Attribute) (printf "raw%s[i]" (goify .Name true)) }}
 {{ tabs .Depth }}	if err2 != nil {
 {{ tabs .Depth }}		err = goa.MergeErrors(err, goa.InvalidParamTypeError("{{ .Name }}", raw{{ goify .Name true }}, "{{ valueTypeOf "" .Attribute }}"))
 {{ tabs .Depth }}		break
