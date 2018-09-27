@@ -565,6 +565,65 @@ var _ = Describe("Generate", func() {
 			Ω(content).Should(ContainSubstring("uuid \"github.com/goadesign/goa/uuid\""))
 		})
 	})
+
+	Context("with a multipartform action with a user type payload", func() {
+		BeforeEach(func() {
+			codegen.TempCount = 0
+			testType := &design.UserTypeDefinition{
+				AttributeDefinition: &design.AttributeDefinition{
+					Type: design.Object{
+						"param": &design.AttributeDefinition{Type: design.Integer},
+						"time":  &design.AttributeDefinition{Type: design.DateTime},
+						"uuid":  &design.AttributeDefinition{Type: design.UUID},
+					},
+					Validation: &dslengine.ValidationDefinition{
+						Required: []string{"uuid"},
+					},
+				},
+				TypeName: "TestType",
+			}
+			design.Design = &design.APIDefinition{
+				Types: map[string]*design.UserTypeDefinition{
+					"TestType": testType,
+				},
+				Name:        "testapi",
+				Title:       "dummy API with no resource",
+				Description: "I told you it's dummy",
+				Consumes:    design.DefaultEncoders,
+				Resources: map[string]*design.ResourceDefinition{
+					"foo": {
+						Name: "foo",
+						Actions: map[string]*design.ActionDefinition{
+							"show": {
+								Name: "show",
+								Routes: []*design.RouteDefinition{
+									{
+										Verb: "GET",
+										Path: "",
+									},
+								},
+								Payload:          testType,
+								PayloadMultipart: true,
+							},
+						},
+					},
+				},
+			}
+			fooRes := design.Design.Resources["foo"]
+			showAct := fooRes.Actions["show"]
+			showAct.Parent = fooRes
+			showAct.Routes[0].Parent = showAct
+		})
+
+		It("treat non-required param as pointer type", func() {
+			Ω(genErr).Should(BeNil())
+			Ω(files).Should(HaveLen(9))
+			content, err := ioutil.ReadFile(filepath.Join(outDir, "client", "foo.go"))
+			Ω(err).ShouldNot(HaveOccurred())
+			Ω(string(content)).Should(ContainSubstring("tmp_Param := *payload.Param"))
+			Ω(string(content)).Should(ContainSubstring("tmp_UUID := payload.UUID"))
+		})
+	})
 })
 
 var _ = Describe("NewGenerator", func() {
