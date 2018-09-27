@@ -215,6 +215,8 @@ func (w *ContextsWriter) Execute(data *ContextTemplateData) error {
 		"printVal":           codegen.PrintVal,
 		"canonicalHeaderKey": http.CanonicalHeaderKey,
 		"isPathParam":        data.IsPathParam,
+		"valueTypeOf":        valueTypeOf,
+		"fromString":         fromString,
 	}
 	if err := w.ExecuteTemplate("new", ctxNewT, fn, data); err != nil {
 		return err
@@ -335,7 +337,10 @@ func (w *ControllersWriter) Execute(data []*ControllerTemplateData) error {
 		fn := template.FuncMap{
 			"newCoerceData":  newCoerceData,
 			"finalizeCode":   w.Finalizer.Code,
+			"arrayAttribute": arrayAttribute,
 			"validationCode": w.Validator.Code,
+			"valueTypeOf":    valueTypeOf,
+			"fromString":     fromString,
 		}
 		if err := w.ExecuteTemplate("unmarshal", unmarshalT, fn, d); err != nil {
 			return err
@@ -451,6 +456,49 @@ func arrayAttribute(a *design.AttributeDefinition) *design.AttributeDefinition {
 	return a.Type.(*design.Array).ElemType
 }
 
+func hashAttribute(a *design.AttributeDefinition) (*design.AttributeDefinition, *design.AttributeDefinition) {
+	hash := a.Type.(*design.Hash)
+	return hash.KeyType, hash.ElemType
+}
+
+// valueTypeOf returns the golang type definition string from attribute definition
+func valueTypeOf(prefix string, att *design.AttributeDefinition) string {
+	switch att.Type.Kind() {
+	case design.BooleanKind:
+		return prefix + "bool"
+	case design.IntegerKind:
+		return prefix + "int"
+	case design.NumberKind:
+		return prefix + "float"
+	case design.StringKind:
+		return prefix + "string"
+	case design.ArrayKind:
+		return valueTypeOf(prefix+"[]", arrayAttribute(att))
+	case design.HashKind:
+		key, elm := hashAttribute(att)
+		return valueTypeOf(prefix+"map["+valueTypeOf("", key)+"]", elm)
+	}
+	return prefix + "interface{}"
+}
+
+// fromString returns the gocode expression to convert string typed varName value to go-type defined in the attribute
+func fromString(att *design.AttributeDefinition, varName string) string {
+	switch att.Type.Kind() {
+	case design.BooleanKind:
+		return "strconv.ParseBool(" + varName + ")"
+	case design.IntegerKind:
+		return "strconv.Atoi(" + varName + ")"
+	case design.NumberKind:
+		return "strconv.ParseFloat(" + varName + ")"
+	case design.StringKind:
+		return varName + ", (error)(nil)"
+	case design.ArrayKind:
+	case design.HashKind:
+		return valueTypeOf("", att) + "{}, (error)(nil)"
+	}
+	return "(" + valueTypeOf("", att) + ")(nil), (error)(nil)"
+}
+
 const (
 	// ctxT generates the code for the context data type.
 	// template input: *ContextTemplateData
@@ -479,7 +527,7 @@ type {{ .Name }} struct {
 {{ tabs .Depth }}} else {
 {{ tabs .Depth }}	err = goa.MergeErrors(err, goa.InvalidParamTypeError("{{ .Name }}", raw{{ goify .Name true }}, "boolean"))
 {{ tabs .Depth }}}
-{{ end }}{{ if eq .Attribute.Type.Kind 2 }}{{/*
+{{ else if eq .Attribute.Type.Kind 2 }}{{/*
 
 */}}{{/* IntegerType */}}{{/*
 */}}{{ $tmp := tempvar }}{{/*
@@ -491,7 +539,7 @@ type {{ .Name }} struct {
 {{ end }}{{ tabs .Depth }}} else {
 {{ tabs .Depth }}	err = goa.MergeErrors(err, goa.InvalidParamTypeError("{{ .Name }}", raw{{ goify .Name true }}, "integer"))
 {{ tabs .Depth }}}
-{{ end }}{{ if eq .Attribute.Type.Kind 3 }}{{/*
+{{ else if eq .Attribute.Type.Kind 3 }}{{/*
 
 */}}{{/* NumberType */}}{{/*
 */}}{{ $varName := or (and (not .Pointer) .VarName) tempvar }}{{/*
@@ -501,11 +549,11 @@ type {{ .Name }} struct {
 {{ tabs .Depth }}} else {
 {{ tabs .Depth }}	err = goa.MergeErrors(err, goa.InvalidParamTypeError("{{ .Name }}", raw{{ goify .Name true }}, "number"))
 {{ tabs .Depth }}}
-{{ end }}{{ if eq .Attribute.Type.Kind 4 }}{{/*
+{{ else if eq .Attribute.Type.Kind 4 }}{{/*
 
 */}}{{/* StringType */}}{{/*
 */}}{{ tabs .Depth }}{{ .Pkg }} = {{ if .Pointer }}&{{ end }}raw{{ goify .Name true }}
-{{ end }}{{ if eq .Attribute.Type.Kind 5 }}{{/*
+{{ else if eq .Attribute.Type.Kind 5 }}{{/*
 
 */}}{{/* DateTimeType */}}{{/*
 */}}{{ $varName := or (and (not .Pointer) .VarName) tempvar }}{{/*
@@ -515,7 +563,7 @@ type {{ .Name }} struct {
 {{ tabs .Depth }}} else {
 {{ tabs .Depth }}	err = goa.MergeErrors(err, goa.InvalidParamTypeError("{{ .Name }}", raw{{ goify .Name true }}, "datetime"))
 {{ tabs .Depth }}}
-{{ end }}{{ if eq .Attribute.Type.Kind 6 }}{{/*
+{{ else if eq .Attribute.Type.Kind 6 }}{{/*
 
 */}}{{/* UUIDType */}}{{/*
 */}}{{ $varName := or (and (not .Pointer) .VarName) tempvar }}{{/*
@@ -525,13 +573,29 @@ type {{ .Name }} struct {
 {{ tabs .Depth }}} else {
 {{ tabs .Depth }}	err = goa.MergeErrors(err, goa.InvalidParamTypeError("{{ .Name }}", raw{{ goify .Name true }}, "uuid"))
 {{ tabs .Depth }}}
-{{ end }}{{ if eq .Attribute.Type.Kind 7 }}{{/*
+{{ else if eq .Attribute.Type.Kind 7 }}{{/*
 
 */}}{{/* AnyType */}}{{/*
 */}}{{ if .Pointer }}{{ $tmp := tempvar }}{{ tabs .Depth }}{{ $tmp }} := interface{}(raw{{ goify .Name true }})
 {{ tabs .Depth }}{{ .Pkg }} = &{{ $tmp }}
-{{ else }}{{ tabs .Depth }}{{ .Pkg }} = raw{{ goify .Name true }}
-{{ end }}{{ end }}{{ if eq .Attribute.Type.Kind 13 }}{{/*
+{{ else }}{{ tabs .Depth }}{{ .Pkg }} = raw{{ goify .Name true }}{{/*
+*/}}{{ end }}
+{{ else if eq .Attribute.Type.Kind 8 }}{{/*
+
+*/}}{{/* ArrayType */}}{{/*
+*/}}{{ tabs .Depth }}tmp{{ goify .Name true }} := make({{ valueTypeOf "" .Attribute }}, len(raw{{ goify .Name true }}))
+{{ tabs .Depth }}for i := 0; i < len(raw{{ goify .Name true }}); i++ {
+{{ if eq (arrayAttribute .Attribute).Type.Kind 4 }}{{ tabs .Depth}}	tmp := raw{{ goify .Name true }}[i]{{ else }}{{/*
+*/}}{{ tabs .Depth }}	tmp, err2 := {{ fromString (arrayAttribute .Attribute) (printf "raw%s[i]" (goify .Name true)) }}
+{{ tabs .Depth }}	if err2 != nil {
+{{ tabs .Depth }}		err = goa.MergeErrors(err, goa.InvalidParamTypeError("{{ .Name }}", raw{{ goify .Name true }}, "{{ valueTypeOf "" .Attribute }}"))
+{{ tabs .Depth }}		break
+{{ tabs .Depth }}	}{{ end }}
+{{ tabs .Depth}}	tmp{{ goify .Name true }}[i] = tmp
+{{ tabs .Depth}}}
+{{ tabs .Depth }}{{ .Pkg }} = tmp{{ goify .Name true }}{{/*
+*/}}
+{{ else if eq .Attribute.Type.Kind 13 }}{{/*
 
 */}}{{/* FileType */}}{{/*
 */}}{{ tabs .Depth }}if err2 == nil {
@@ -785,8 +849,9 @@ func handle{{ .Resource }}Origin(h goa.Handler) goa.Handler {
 func {{ .Unmarshal }}(ctx context.Context, service *goa.Service, req *http.Request) error {
 	{{ if .PayloadMultipart}}var err error
 	var payload {{ gotypename .Payload nil 1 true }}
-	{{ $o := .Payload.ToObject }}{{ range $name, $att := $o -}}
-	{{ if eq $att.Type.Kind 13 }}_, raw{{ goify $name true }}, err2 := req.FormFile("{{ $name }}"){{ else }}{{/*
+{{ $o := .Payload.ToObject }}{{ range $name, $att := $o -}}
+	{{ if eq $att.Type.Kind 13 }}	_, raw{{ goify $name true }}, err2 := req.FormFile("{{ $name }}"){{ else if eq $att.Type.Kind 8 }}{{/*
+*/}}	raw{{ goify $name true }} := req.Form["{{ $name }}[]"]{{ else }}{{/*
 */}}	raw{{ goify $name true }} := req.FormValue("{{ $name }}"){{ end }}
 {{ template "Coerce" (newCoerceData $name $att true (printf "payload.%s" (goifyatt $att $name true)) 1) }}{{ end }}{{/*
 */}}	if err != nil {
