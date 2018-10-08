@@ -100,7 +100,13 @@ func (m *MethodExpr) Validate() error {
 	if m.Payload.Type != Empty {
 		verr.Merge(m.Payload.Validate("payload", m))
 		// validate security scheme requirements
-		for _, r := range m.Requirements {
+		var requirements []*SecurityExpr
+		if len(m.Requirements) > 0 {
+			requirements = m.Requirements
+		} else if len(m.Service.Requirements) > 0 {
+			requirements = m.Service.Requirements
+		}
+		for _, r := range requirements {
 			for _, s := range r.Schemes {
 				verr.Merge(s.Validate())
 				switch s.Kind {
