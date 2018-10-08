@@ -112,22 +112,22 @@ func (m *MethodExpr) Validate() error {
 				switch s.Kind {
 				case BasicAuthKind:
 					if !hasTag(m.Payload, "security:username") {
-						verr.Add(m, "payload of method %q of service %q does not define a username attribute, use Username to define one.", m.Name, m.Service.Name)
+						verr.Add(m, "payload of method %q of service %q does not define a username attribute, use Username to define one", m.Name, m.Service.Name)
 					}
 					if !hasTag(m.Payload, "security:password") {
-						verr.Add(m, "payload of method %q of service %q does not define a password attribute, use Password to define one.", m.Name, m.Service.Name)
+						verr.Add(m, "payload of method %q of service %q does not define a password attribute, use Password to define one", m.Name, m.Service.Name)
 					}
 				case APIKeyKind:
 					if !hasTag(m.Payload, "security:apikey:"+s.SchemeName) {
-						verr.Add(m, "payload of method %q of service %q does not define an API key attribute, use APIKey to define one.", m.Name, m.Service.Name)
+						verr.Add(m, "payload of method %q of service %q does not define an API key attribute, use APIKey to define one", m.Name, m.Service.Name)
 					}
 				case JWTKind:
 					if !hasTag(m.Payload, "security:token") {
-						verr.Add(m, "payload of method %q of service %q does not define a JWT attribute, use Token to define one.", m.Name, m.Service.Name)
+						verr.Add(m, "payload of method %q of service %q does not define a JWT attribute, use Token to define one", m.Name, m.Service.Name)
 					}
 				case OAuth2Kind:
 					if !hasTag(m.Payload, "security:accesstoken") {
-						verr.Add(m, "payload of method %q of service %q does not define a OAuth2 access token attribute, use AccessToken to define one.", m.Name, m.Service.Name)
+						verr.Add(m, "payload of method %q of service %q does not define a OAuth2 access token attribute, use AccessToken to define one", m.Name, m.Service.Name)
 					}
 				}
 			}

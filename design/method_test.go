@@ -120,11 +120,11 @@ func TestMethodExprValidate(t *testing.T) {
 		errAttributeTypeNil       = fmt.Errorf("attribute type is nil")
 		errDuplicatedMetadata     = fmt.Errorf("metadata 'struct:error:name' already set for attribute %q of result type %q", "foo", identifier)
 		errMissingMetadata        = fmt.Errorf("metadata 'struct:error:name' is missing in result type %q", identifier)
-		errMissingUsernameAttr    = fmt.Errorf("payload of method \"test\" of service \"test\" does not define a username attribute, use Username to define one.")
-		errMissingPasswordAttr    = fmt.Errorf("payload of method \"test\" of service \"test\" does not define a password attribute, use Password to define one.")
-		errMissingAPIKeyAttr      = fmt.Errorf("payload of method \"test\" of service \"test\" does not define an API key attribute, use APIKey to define one.")
-		errMissingJWTAttr         = fmt.Errorf("payload of method \"test\" of service \"test\" does not define a JWT attribute, use Token to define one.")
-		errMissingAccessTokenAttr = fmt.Errorf("payload of method \"test\" of service \"test\" does not define a OAuth2 access token attribute, use AccessToken to define one.")
+		errMissingUsernameAttr    = fmt.Errorf("payload of method \"test\" of service \"test\" does not define a username attribute, use Username to define one")
+		errMissingPasswordAttr    = fmt.Errorf("payload of method \"test\" of service \"test\" does not define a password attribute, use Password to define one")
+		errMissingAPIKeyAttr      = fmt.Errorf("payload of method \"test\" of service \"test\" does not define an API key attribute, use APIKey to define one")
+		errMissingJWTAttr         = fmt.Errorf("payload of method \"test\" of service \"test\" does not define a JWT attribute, use Token to define one")
+		errMissingAccessTokenAttr = fmt.Errorf("payload of method \"test\" of service \"test\" does not define a OAuth2 access token attribute, use AccessToken to define one")
 	)
 
 	cases := map[string]struct {
