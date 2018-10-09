@@ -29,6 +29,37 @@ func TestFlowExprEvalName(t *testing.T) {
 	}
 }
 
+func TestFlowExprType(t *testing.T) {
+	cases := map[string]struct {
+		kind     FlowKind
+		expected string
+	}{
+		"authorization code": {
+			kind:     AuthorizationCodeFlowKind,
+			expected: "authorization_code",
+		},
+		"implicit": {
+			kind:     ImplicitFlowKind,
+			expected: "implicit",
+		},
+		"password": {
+			kind:     PasswordFlowKind,
+			expected: "password",
+		},
+		"client credentials": {
+			kind:     ClientCredentialsFlowKind,
+			expected: "client_credentials",
+		},
+	}
+
+	for k, tc := range cases {
+		f := &FlowExpr{Kind: tc.kind}
+		if actual := f.Type(); actual != tc.expected {
+			t.Errorf("%s: got %#v, expected %#v", k, actual, tc.expected)
+		}
+	}
+}
+
 func TestFlowExprValidate(t *testing.T) {
 	var (
 		tokenURL                   = "http://example.com/token"
