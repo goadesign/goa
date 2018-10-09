@@ -12,6 +12,54 @@ func TestMethodExprValidate(t *testing.T) {
 		identifier = "result"
 	)
 	var (
+		object = &UserTypeExpr{
+			TypeName: "Object",
+			AttributeExpr: &AttributeExpr{
+				Description: "Object represents object values",
+				Type:        &Object{},
+			},
+		}
+		requirements = func(schemes ...*SchemeExpr) []*SecurityExpr {
+			if len(schemes) > 0 {
+				return []*SecurityExpr{{Schemes: schemes}}
+			}
+			return nil
+		}
+		service = func(schemes ...*SchemeExpr) *ServiceExpr {
+			return &ServiceExpr{
+				Name:         "test",
+				Requirements: requirements(schemes...),
+			}
+		}
+		basicScheme = func() *SchemeExpr {
+			return &SchemeExpr{
+				Kind:       BasicAuthKind,
+				SchemeName: "Basic",
+			}
+		}
+		apiKeyScheme = func() *SchemeExpr {
+			return &SchemeExpr{
+				Kind:       APIKeyKind,
+				SchemeName: "APIKey",
+			}
+		}
+		jwtScheme = func() *SchemeExpr {
+			return &SchemeExpr{
+				Kind:       JWTKind,
+				SchemeName: "JWT",
+			}
+		}
+		oauth2Scheme = func() *SchemeExpr {
+			return &SchemeExpr{
+				Kind:       OAuth2Kind,
+				SchemeName: "OAuth2",
+			}
+		}
+		attributeTypeObject = func() *AttributeExpr {
+			return &AttributeExpr{
+				Type: object,
+			}
+		}
 		attributeTypeEmpty = func() *AttributeExpr {
 			return &AttributeExpr{
 				Type: Empty,
@@ -69,16 +117,23 @@ func TestMethodExprValidate(t *testing.T) {
 				},
 			}
 		}
-		errAttributeTypeNil   = fmt.Errorf("attribute type is nil")
-		errDuplicatedMetadata = fmt.Errorf("metadata 'struct:error:name' already set for attribute %q of result type %q", "foo", identifier)
-		errMissingMetadata    = fmt.Errorf("metadata 'struct:error:name' is missing in result type %q", identifier)
+		errAttributeTypeNil       = fmt.Errorf("attribute type is nil")
+		errDuplicatedMetadata     = fmt.Errorf("metadata 'struct:error:name' already set for attribute %q of result type %q", "foo", identifier)
+		errMissingMetadata        = fmt.Errorf("metadata 'struct:error:name' is missing in result type %q", identifier)
+		errMissingUsernameAttr    = fmt.Errorf("payload of method \"test\" of service \"test\" does not define a username attribute, use Username to define one")
+		errMissingPasswordAttr    = fmt.Errorf("payload of method \"test\" of service \"test\" does not define a password attribute, use Password to define one")
+		errMissingAPIKeyAttr      = fmt.Errorf("payload of method \"test\" of service \"test\" does not define an API key attribute, use APIKey to define one")
+		errMissingJWTAttr         = fmt.Errorf("payload of method \"test\" of service \"test\" does not define a JWT attribute, use Token to define one")
+		errMissingAccessTokenAttr = fmt.Errorf("payload of method \"test\" of service \"test\" does not define a OAuth2 access token attribute, use AccessToken to define one")
 	)
 
 	cases := map[string]struct {
-		payload  *AttributeExpr
-		result   *AttributeExpr
-		errors   []*ErrorExpr
-		expected *eval.ValidationErrors
+		service      *ServiceExpr
+		requirements []*SecurityExpr
+		payload      *AttributeExpr
+		result       *AttributeExpr
+		errors       []*ErrorExpr
+		expected     *eval.ValidationErrors
 	}{
 		"no error": {
 			payload:  attributeTypeEmpty(),
@@ -113,7 +168,58 @@ func TestMethodExprValidate(t *testing.T) {
 				errMissingMetadata,
 			}},
 		},
-		"errors in all": {
+		"error only in schemes": {
+			requirements: requirements(basicScheme(), apiKeyScheme(), jwtScheme(), oauth2Scheme()),
+			payload:      attributeTypeObject(),
+			result:       attributeTypeEmpty(),
+			expected: &eval.ValidationErrors{Errors: []error{
+				errMissingUsernameAttr,
+				errMissingPasswordAttr,
+				errMissingAPIKeyAttr,
+				errMissingJWTAttr,
+				errMissingAccessTokenAttr,
+			}},
+		},
+		"error only in inherited schemes": {
+			service: service(basicScheme(), apiKeyScheme(), jwtScheme(), oauth2Scheme()),
+			payload: attributeTypeObject(),
+			result:  attributeTypeEmpty(),
+			expected: &eval.ValidationErrors{Errors: []error{
+				errMissingUsernameAttr,
+				errMissingPasswordAttr,
+				errMissingAPIKeyAttr,
+				errMissingJWTAttr,
+				errMissingAccessTokenAttr,
+			}},
+		},
+		"errors in payload, schemes, result and errors": {
+			requirements: requirements(basicScheme(), apiKeyScheme(), jwtScheme(), oauth2Scheme()),
+			payload:      attributeTypeNil(),
+			result:       attributeTypeNil(),
+			errors: []*ErrorExpr{
+				{
+					AttributeExpr: errorDuplicatedMetadata(),
+					Name:          "foo",
+				},
+				{
+					AttributeExpr: errorMissingMetadata(),
+					Name:          "bar",
+				},
+			},
+			expected: &eval.ValidationErrors{Errors: []error{
+				errAttributeTypeNil,
+				errMissingUsernameAttr,
+				errMissingPasswordAttr,
+				errMissingAPIKeyAttr,
+				errMissingJWTAttr,
+				errMissingAccessTokenAttr,
+				errAttributeTypeNil,
+				errDuplicatedMetadata,
+				errMissingMetadata,
+			}},
+		},
+		"errors in payload, inherited schemes, result and errors": {
+			service: service(basicScheme(), apiKeyScheme(), jwtScheme(), oauth2Scheme()),
 			payload: attributeTypeNil(),
 			result:  attributeTypeNil(),
 			errors: []*ErrorExpr{
@@ -128,6 +234,11 @@ func TestMethodExprValidate(t *testing.T) {
 			},
 			expected: &eval.ValidationErrors{Errors: []error{
 				errAttributeTypeNil,
+				errMissingUsernameAttr,
+				errMissingPasswordAttr,
+				errMissingAPIKeyAttr,
+				errMissingJWTAttr,
+				errMissingAccessTokenAttr,
 				errAttributeTypeNil,
 				errDuplicatedMetadata,
 				errMissingMetadata,
@@ -136,10 +247,19 @@ func TestMethodExprValidate(t *testing.T) {
 	}
 
 	for k, tc := range cases {
+		var s *ServiceExpr
+		if tc.service == nil {
+			s = service()
+		} else {
+			s = tc.service
+		}
 		m := MethodExpr{
-			Payload: tc.payload,
-			Result:  tc.result,
-			Errors:  tc.errors,
+			Name:         "test",
+			Service:      s,
+			Requirements: tc.requirements,
+			Payload:      tc.payload,
+			Result:       tc.result,
+			Errors:       tc.errors,
 
 			StreamingPayload: &AttributeExpr{Type: Empty},
 		}
