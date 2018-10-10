@@ -39,6 +39,47 @@ func (t *StringPointerType) ConvertToStringPointerT() *testdata.StringPointerT {
 }
 `
 
+var ConvertExternalNameCode = `// ConvertToExternalNameT creates an instance of ExternalNameT initialized from
+// t.
+func (t *ExternalNameType) ConvertToExternalNameT() *testdata.ExternalNameT {
+	v := &testdata.ExternalNameT{}
+	if t.String != nil {
+		v.String = *t.String
+	}
+	return v
+}
+`
+
+var ConvertExternalNameRequiredCode = `// ConvertToExternalNameT creates an instance of ExternalNameT initialized from
+// t.
+func (t *ExternalNameType) ConvertToExternalNameT() *testdata.ExternalNameT {
+	v := &testdata.ExternalNameT{
+		String: t.String,
+	}
+	return v
+}
+`
+
+var ConvertExternalNamePointerCode = `// ConvertToExternalNamePointerT creates an instance of ExternalNamePointerT
+// initialized from t.
+func (t *ExternalNamePointerType) ConvertToExternalNamePointerT() *testdata.ExternalNamePointerT {
+	v := &testdata.ExternalNamePointerT{
+		String: t.String,
+	}
+	return v
+}
+`
+
+var ConvertExternalNamePointerRequiredCode = `// ConvertToExternalNamePointerT creates an instance of ExternalNamePointerT
+// initialized from t.
+func (t *ExternalNamePointerType) ConvertToExternalNamePointerT() *testdata.ExternalNamePointerT {
+	v := &testdata.ExternalNamePointerT{
+		String: &t.String,
+	}
+	return v
+}
+`
+
 var ConvertArrayStringCode = `// ConvertToArrayStringT creates an instance of ArrayStringT initialized from t.
 func (t *ArrayStringType) ConvertToArrayStringT() *testdata.ArrayStringT {
 	v := &testdata.ArrayStringT{}

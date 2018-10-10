@@ -10,6 +10,14 @@ type StringPointerT struct {
 	String *string
 }
 
+type ExternalNameT struct {
+	String string
+}
+
+type ExternalNamePointerT struct {
+	String *string
+}
+
 type ArrayStringT struct {
 	ArrayString []string
 }
