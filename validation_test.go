@@ -46,9 +46,9 @@ func TestValidateFormat(t *testing.T) {
 		expected error
 	}{
 		"valid date":         {"validDate", validDate, FormatDate, nil},
-		"invalid date":       {"invalidDate", invalidDate, FormatDate, InvalidFormatError("invalidDate", invalidDate, FormatDate, &time.ParseError{"2006-01-02", invalidDate, "-", invalidDate[4:], ""})},
+		"invalid date":       {"invalidDate", invalidDate, FormatDate, InvalidFormatError("invalidDate", invalidDate, FormatDate, &time.ParseError{Layout: "2006-01-02", Value: invalidDate, LayoutElem: "-", ValueElem: invalidDate[4:]})},
 		"valid date-time":    {"validDateTime", validDateTime, FormatDateTime, nil},
-		"invalid date-time":  {"invalidDateTime", invalidDateTime, FormatDateTime, InvalidFormatError("invalidDateTime", invalidDateTime, FormatDateTime, &time.ParseError{time.RFC3339, invalidDateTime, "-", invalidDateTime[4:], ""})},
+		"invalid date-time":  {"invalidDateTime", invalidDateTime, FormatDateTime, InvalidFormatError("invalidDateTime", invalidDateTime, FormatDateTime, &time.ParseError{Layout: time.RFC3339, Value: invalidDateTime, LayoutElem: "-", ValueElem: invalidDateTime[4:]})},
 		"valid uuid":         {"validUUID", validUUID, FormatUUID, nil},
 		"invalid uuid":       {"invalidUUID", invalidUUID, FormatUUID, InvalidFormatError("invalidUUID", invalidUUID, FormatUUID, fmt.Errorf("uuid: UUID string too short: %s", invalidUUID))},
 		"valid email":        {"validEmail", validEmail, FormatEmail, nil},
@@ -66,7 +66,7 @@ func TestValidateFormat(t *testing.T) {
 		"invalid ipv4 as ip": {"invalidIPv4", invalidIPv4, FormatIP, InvalidFormatError("invalidIPv4", invalidIPv4, FormatIP, fmt.Errorf("\"%s\" is an invalid %s value", invalidIPv4, FormatIP))},
 		"invalid ipv6 as ip": {"invalidIPv6", invalidIPv6, FormatIP, InvalidFormatError("invalidIPv6", invalidIPv6, FormatIP, fmt.Errorf("\"%s\" is an invalid %s value", invalidIPv6, FormatIP))},
 		"valid uri":          {"validURI", validURI, FormatURI, nil},
-		"invalid uri":        {"invalidURI", invalidURI, FormatURI, InvalidFormatError("invalidURI", invalidURI, FormatURI, &url.Error{"parse", invalidURI, errors.New("invalid URI for request")})},
+		"invalid uri":        {"invalidURI", invalidURI, FormatURI, InvalidFormatError("invalidURI", invalidURI, FormatURI, &url.Error{Op: "parse", URL: invalidURI, Err: errors.New("invalid URI for request")})},
 		"valid mac":          {"validMAC", validMAC, FormatMAC, nil},
 		"invalid mac":        {"invalidMAC", invalidMAC, FormatMAC, InvalidFormatError("invalidMAC", invalidMAC, FormatMAC, &net.AddrError{Err: "invalid MAC address", Addr: invalidMAC})},
 		"valid cidr":         {"validCIDR", validCIDR, FormatCIDR, nil},
@@ -76,7 +76,7 @@ func TestValidateFormat(t *testing.T) {
 		"valid json":         {"validJSON", validJSON, FormatJSON, nil},
 		"invalid json":       {"invalidJSON", invalidJSON, FormatJSON, InvalidFormatError("invalidJSON", invalidJSON, FormatJSON, fmt.Errorf("invalid JSON"))},
 		"valid rfc1123":      {"validRFC1123", validRFC1123, FormatRFC1123, nil},
-		"invalid rfc1123":    {"invalidRFC1123", invalidRFC1123, FormatRFC1123, InvalidFormatError("invalidRFC1123", invalidRFC1123, FormatRFC1123, &time.ParseError{time.RFC1123, invalidRFC1123, ", ", invalidRFC1123[3:], ""})},
+		"invalid rfc1123":    {"invalidRFC1123", invalidRFC1123, FormatRFC1123, InvalidFormatError("invalidRFC1123", invalidRFC1123, FormatRFC1123, &time.ParseError{Layout: time.RFC1123, Value: invalidRFC1123, LayoutElem: ", ", ValueElem: invalidRFC1123[3:]})},
 	}
 
 	for k, tc := range cases {
