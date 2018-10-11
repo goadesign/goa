@@ -23,8 +23,8 @@ func ClientFile(service *design.ServiceExpr) *codegen.File {
 	{
 		header := codegen.Header(service.Name+" client", svc.PkgName,
 			[]*codegen.ImportSpec{
-				&codegen.ImportSpec{Path: "context"},
-				&codegen.ImportSpec{Name: "goa", Path: "goa.design/goa"},
+				{Path: "context"},
+				{Name: "goa", Path: "goa.design/goa"},
 			})
 		def := &codegen.SectionTemplate{
 			Name:   "client-struct",

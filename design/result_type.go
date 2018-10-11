@@ -304,7 +304,7 @@ func projectSingle(m *ResultTypeExpr, view string, seen ...map[string]*Attribute
 		Identifier:   m.projectIdentifier(view),
 		UserTypeExpr: ut,
 	}
-	projected.Views = []*ViewExpr{&ViewExpr{
+	projected.Views = []*ViewExpr{{
 		Name:          "default",
 		AttributeExpr: DupAtt(v.AttributeExpr),
 		Parent:        projected,
@@ -343,7 +343,7 @@ func projectCollection(m *ResultTypeExpr, view string, seen ...map[string]*Attri
 			},
 			TypeName: pe.TypeName + "Collection",
 		},
-		Views: []*ViewExpr{&ViewExpr{
+		Views: []*ViewExpr{{
 			AttributeExpr: DupAtt(pe.View("default").AttributeExpr),
 			Name:          "default",
 			Parent:        pe,

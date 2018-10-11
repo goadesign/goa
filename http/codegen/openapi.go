@@ -47,11 +47,11 @@ func OpenAPIFiles(root *httpdesign.RootExpr) ([]*codegen.File, error) {
 	}
 
 	return []*codegen.File{
-		&codegen.File{
+		{
 			Path:             jsonPath,
 			SectionTemplates: []*codegen.SectionTemplate{jsonSection},
 		},
-		&codegen.File{
+		{
 			Path:             yamlPath,
 			SectionTemplates: []*codegen.SectionTemplate{yamlSection},
 		},
