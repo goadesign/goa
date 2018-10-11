@@ -2,8 +2,8 @@ package pkg
 
 import (
 	"fmt"
-	"strconv"
 	"regexp"
+	"strconv"
 )
 
 const (
@@ -24,18 +24,14 @@ var (
 
 // Version returns the complete version number.
 func Version() string {
-	ver := fmt.Sprintf("v%d.%d.%d",Major,Minor,Build)
-	if Suffix != "" {
-		ver += "-" + Suffix
-	}
-	return ver
+	return fmt.Sprintf("v%d.%d.%d-%s", Major, Minor, Build, Suffix)
 }
 
 // Compatible returns true if Major matches the major version of the given version string.
 // It returns an error if the given string is not a valid version string.
 func Compatible(v string) (bool, error) {
 	matches := versionFormat.FindStringSubmatch(v)
-	if len(matches) != 4{
+	if len(matches) != 4 {
 		return false, fmt.Errorf("invalid version string format %#v, %+v", v, matches)
 	}
 	mj, err := strconv.Atoi(matches[1])
