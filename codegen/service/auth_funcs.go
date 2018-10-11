@@ -36,6 +36,7 @@ func AuthFuncsFile(genpkg string, root *design.RootExpr) *codegen.File {
 			{Path: "context"},
 			{Path: "fmt"},
 			{Path: "goa.design/goa", Name: "goa"},
+			{Path: "goa.design/goa/logging", Name: "goalog"},
 			{Path: "goa.design/goa/security"},
 			{Path: rootPath, Name: apiPkg},
 		}
@@ -74,7 +75,7 @@ func AuthFuncsFile(genpkg string, root *design.RootExpr) *codegen.File {
 // data: Data
 const dummyAuthFuncsT = `{{ range .Schemes }}
 {{ printf "%s%sAuth implements the authorization logic for service %q for the %q security scheme." $.StructName .Type $.Name .SchemeName | comment }}
-func {{ $.StructName }}{{ .Type }}Auth(ctx context.Context, {{ if eq .Type "Basic" }}user, pass{{ else if eq .Type "APIKey" }}key{{ else }}token{{ end }} string, s *security.{{ .Type }}Scheme) (context.Context, error) {
+func {{ $.StructName }}{{ .Type }}Auth(ctx context.Context, logger goalog.Logger, {{ if eq .Type "Basic" }}user, pass{{ else if eq .Type "APIKey" }}key{{ else }}token{{ end }} string, s *security.{{ .Type }}Scheme) (context.Context, error) {
 	//
 	// TBD: add authorization logic.
 	//

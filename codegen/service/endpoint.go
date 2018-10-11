@@ -80,6 +80,7 @@ func EndpointFile(genpkg string, service *design.ServiceExpr) *codegen.File {
 				&codegen.ImportSpec{Path: "context"},
 				&codegen.ImportSpec{Path: "fmt"},
 				&codegen.ImportSpec{Name: "goa", Path: "goa.design/goa"},
+				&codegen.ImportSpec{Name: "goalog", Path: "goa.design/goa/logging"},
 				&codegen.ImportSpec{Path: "goa.design/goa/security"},
 				&codegen.ImportSpec{Path: genpkg + "/" + codegen.SnakeCase(service.Name) + "/" + "views", Name: svc.ViewsPkg},
 			})
@@ -209,6 +210,7 @@ type {{ .ServerStream.EndpointStruct }} struct {
 const serviceEndpointMethodT = `{{ printf "New%sEndpoint returns an endpoint function that calls the method %q of service %q." .VarName .Name .ServiceName | comment }}
 func New{{ .VarName }}Endpoint(s {{ .ServiceVarName }}{{ range .Schemes }}, auth{{ . }}Fn security.Auth{{ . }}Func{{ end }}) goa.Endpoint {
 	return func(ctx context.Context, req interface{}) (interface{}, error) {
+		logger := s.GetLogger()
 {{- if .ServerStream }}
 		ep := req.(*{{ .ServerStream.EndpointStruct }})
 {{- else if .PayloadRef }}
@@ -241,7 +243,7 @@ func New{{ .VarName }}Endpoint(s {{ .ServiceVarName }}{{ range .Schemes }}, auth
 					pass = *{{ $payload }}.{{ .PasswordField }}
 				}
 				{{- end }}
-				ctx, err = auth{{ .Type }}Fn(ctx, {{ if .UsernamePointer }}user{{ else }}{{ $payload }}.{{ .UsernameField }}{{ end }},
+				ctx, err = auth{{ .Type }}Fn(ctx, logger, {{ if .UsernamePointer }}user{{ else }}{{ $payload }}.{{ .UsernameField }}{{ end }},
 					{{- if .PasswordPointer }}pass{{ else }}{{ $payload }}.{{ .PasswordField }}{{ end }}, &sc)
 
 			{{- else if eq .Type "APIKey" }}
@@ -254,7 +256,7 @@ func New{{ .VarName }}Endpoint(s {{ .ServiceVarName }}{{ range .Schemes }}, auth
 					key = *{{ $payload }}.{{ $s.CredField }}
 				}
 				{{- end }}
-				ctx, err = auth{{ .Type }}Fn(ctx, {{ if $s.CredPointer }}key{{ else }}{{ $payload }}.{{ $s.CredField }}{{ end }}, &sc)
+				ctx, err = auth{{ .Type }}Fn(ctx, logger, {{ if $s.CredPointer }}key{{ else }}{{ $payload }}.{{ $s.CredField }}{{ end }}, &sc)
 
 			{{- else if eq .Type "JWT" }}
 				sc := security.JWTScheme{
@@ -268,7 +270,7 @@ func New{{ .VarName }}Endpoint(s {{ .ServiceVarName }}{{ range .Schemes }}, auth
 					token = *{{ $payload }}.{{ $s.CredField }}
 				}
 				{{- end }}
-				ctx, err = auth{{ .Type }}Fn(ctx, {{ if $s.CredPointer }}token{{ else }}{{ $payload }}.{{ $s.CredField }}{{ end }}, &sc)
+				ctx, err = auth{{ .Type }}Fn(ctx, logger, {{ if $s.CredPointer }}token{{ else }}{{ $payload }}.{{ $s.CredField }}{{ end }}, &sc)
 
 			{{- else if eq .Type "OAuth2" }}
 				sc := security.OAuth2Scheme{
@@ -300,7 +302,7 @@ func New{{ .VarName }}Endpoint(s {{ .ServiceVarName }}{{ range .Schemes }}, auth
 					token = *{{ $payload }}.{{ $s.CredField }}
 				}
 				{{- end }}
-				ctx, err = auth{{ .Type }}Fn(ctx, {{ if $s.CredPointer }}token{{ else }}{{ $payload }}.{{ $s.CredField }}{{ end }}, &sc)
+				ctx, err = auth{{ .Type }}Fn(ctx, logger, {{ if $s.CredPointer }}token{{ else }}{{ $payload }}.{{ $s.CredField }}{{ end }}, &sc)
 
 			{{- end }}
 			{{- if ne $sidx 0 }}

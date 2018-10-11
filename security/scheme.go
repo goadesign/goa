@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 	"strings"
+
+	goalog "goa.design/goa/logging"
 )
 
 type (
@@ -60,19 +62,19 @@ type (
 
 	// AuthBasicFunc is the function type that implements the basic auth
 	// scheme of using username and password.
-	AuthBasicFunc func(ctx context.Context, user, pass string, s *BasicScheme) (context.Context, error)
+	AuthBasicFunc func(ctx context.Context, logger goalog.Logger, user, pass string, s *BasicScheme) (context.Context, error)
 
 	// AuthAPIKeyFunc is the function type that implements the API key
 	// scheme of using an API key.
-	AuthAPIKeyFunc func(ctx context.Context, key string, s *APIKeyScheme) (context.Context, error)
+	AuthAPIKeyFunc func(ctx context.Context, logger goalog.Logger, key string, s *APIKeyScheme) (context.Context, error)
 
 	// AuthOAuth2Func is the function type that implements the OAuth2
 	// scheme of using an OAuth2 token.
-	AuthOAuth2Func func(ctx context.Context, token string, s *OAuth2Scheme) (context.Context, error)
+	AuthOAuth2Func func(ctx context.Context, logger goalog.Logger, token string, s *OAuth2Scheme) (context.Context, error)
 
 	// AuthJWTFunc is the function type that implements the JWT
 	// scheme of using a JWT token.
-	AuthJWTFunc func(ctx context.Context, token string, s *JWTScheme) (context.Context, error)
+	AuthJWTFunc func(ctx context.Context, logger goalog.Logger, token string, s *JWTScheme) (context.Context, error)
 )
 
 // Validate returns a non-nil error if scopes does not contain all of
