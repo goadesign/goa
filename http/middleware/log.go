@@ -3,10 +3,11 @@ package middleware
 import (
 	"bytes"
 	"fmt"
-	"log"
 	"net"
 	"net/http"
 	"time"
+
+	goalog "goa.design/goa/logging"
 )
 
 type (
@@ -21,7 +22,7 @@ type (
 	// adapter is a thin wrapper around the stdlib logger that adapts it to
 	// the Logger interface.
 	adapter struct {
-		*log.Logger
+		goalog.Logger
 	}
 )
 
@@ -60,7 +61,7 @@ func Log(l Logger) func(h http.Handler) http.Handler {
 }
 
 // NewLogger creates a Logger backed by a stdlib logger.
-func NewLogger(l *log.Logger) Logger {
+func NewLogger(l goalog.Logger) Logger {
 	return &adapter{l}
 }
 
@@ -77,7 +78,8 @@ func (a *adapter) Log(keyvals ...interface{}) {
 		vals[i/2] = v
 		fm.WriteString(fmt.Sprintf(" %s=%%+v", k))
 	}
-	a.Logger.Printf(fm.String(), vals...)
+
+	a.Logger.Infof(fm.String(), vals...)
 }
 
 // from makes a best effort to compute the request client IP.
