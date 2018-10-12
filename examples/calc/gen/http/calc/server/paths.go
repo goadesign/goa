@@ -3,8 +3,7 @@
 // HTTP request path constructors for the calc service.
 //
 // Command:
-// $ goa gen goa.design/goa/examples/calc/design -o
-// $(GOPATH)/src/goa.design/goa/examples/calc
+// $ goa gen goa.design/goa/examples/calc/design
 
 package server
 

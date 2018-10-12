@@ -5,6 +5,7 @@ import (
 
 	jwt "github.com/dgrijalva/jwt-go"
 	chattersvc "goa.design/goa/examples/chatter/gen/chatter"
+	goalog "goa.design/goa/logging"
 	"goa.design/goa/security"
 )
 
@@ -26,7 +27,7 @@ var (
 
 // ChatterBasicAuth implements the authorization logic for service "chatter"
 // for the "basic" security scheme.
-func ChatterBasicAuth(ctx context.Context, user, pass string, s *security.BasicScheme) (context.Context, error) {
+func ChatterBasicAuth(ctx context.Context, logger goalog.Logger, user, pass string, s *security.BasicScheme) (context.Context, error) {
 	if user != "goa" {
 		return ctx, ErrUnauthorized
 	}
@@ -38,7 +39,7 @@ func ChatterBasicAuth(ctx context.Context, user, pass string, s *security.BasicS
 
 // ChatterJWTAuth implements the authorization logic for service "chatter" for
 // the "jwt" security scheme.
-func ChatterJWTAuth(ctx context.Context, token string, s *security.JWTScheme) (context.Context, error) {
+func ChatterJWTAuth(ctx context.Context, logger goalog.Logger, token string, s *security.JWTScheme) (context.Context, error) {
 	claims := make(jwt.MapClaims)
 
 	// authorize request

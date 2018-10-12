@@ -3,8 +3,7 @@
 // secured_service HTTP server types
 //
 // Command:
-// $ goa gen goa.design/goa/examples/security/design -o
-// $(GOPATH)/src/goa.design/goa/examples/security
+// $ goa gen goa.design/goa/examples/security/design
 
 package server
 

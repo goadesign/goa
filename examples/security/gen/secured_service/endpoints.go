@@ -3,8 +3,7 @@
 // secured_service endpoints
 //
 // Command:
-// $ goa gen goa.design/goa/examples/security/design -o
-// $(GOPATH)/src/goa.design/goa/examples/security
+// $ goa gen goa.design/goa/examples/security/design
 
 package securedservice
 
@@ -52,7 +51,8 @@ func NewSigninEndpoint(s Service, authBasicFn security.AuthBasicFunc) goa.Endpoi
 		sc := security.BasicScheme{
 			Name: "basic",
 		}
-		ctx, err = authBasicFn(ctx, p.Username, p.Password, &sc)
+		logger := s.GetLogger()
+		ctx, err = authBasicFn(ctx, logger, p.Username, p.Password, &sc)
 		if err != nil {
 			return nil, err
 		}
@@ -75,7 +75,8 @@ func NewSecureEndpoint(s Service, authJWTFn security.AuthJWTFunc) goa.Endpoint {
 		if p.Token != nil {
 			token = *p.Token
 		}
-		ctx, err = authJWTFn(ctx, token, &sc)
+		logger := s.GetLogger()
+		ctx, err = authJWTFn(ctx, logger, token, &sc)
 		if err != nil {
 			return nil, err
 		}
@@ -98,7 +99,8 @@ func NewDoublySecureEndpoint(s Service, authJWTFn security.AuthJWTFunc, authAPIK
 		if p.Token != nil {
 			token = *p.Token
 		}
-		ctx, err = authJWTFn(ctx, token, &sc)
+		logger := s.GetLogger()
+		ctx, err = authJWTFn(ctx, logger, token, &sc)
 		if err == nil {
 			sc := security.APIKeyScheme{
 				Name: "api_key",
@@ -107,7 +109,8 @@ func NewDoublySecureEndpoint(s Service, authJWTFn security.AuthJWTFunc, authAPIK
 			if p.Key != nil {
 				key = *p.Key
 			}
-			ctx, err = authAPIKeyFn(ctx, key, &sc)
+			logger := s.GetLogger()
+			ctx, err = authAPIKeyFn(ctx, logger, key, &sc)
 		}
 		if err != nil {
 			return nil, err
@@ -131,7 +134,8 @@ func NewAlsoDoublySecureEndpoint(s Service, authJWTFn security.AuthJWTFunc, auth
 		if p.Token != nil {
 			token = *p.Token
 		}
-		ctx, err = authJWTFn(ctx, token, &sc)
+		logger := s.GetLogger()
+		ctx, err = authJWTFn(ctx, logger, token, &sc)
 		if err == nil {
 			sc := security.APIKeyScheme{
 				Name: "api_key",
@@ -140,7 +144,8 @@ func NewAlsoDoublySecureEndpoint(s Service, authJWTFn security.AuthJWTFunc, auth
 			if p.Key != nil {
 				key = *p.Key
 			}
-			ctx, err = authAPIKeyFn(ctx, key, &sc)
+			logger := s.GetLogger()
+			ctx, err = authAPIKeyFn(ctx, logger, key, &sc)
 		}
 		if err != nil {
 			sc := security.OAuth2Scheme{
@@ -160,7 +165,8 @@ func NewAlsoDoublySecureEndpoint(s Service, authJWTFn security.AuthJWTFunc, auth
 			if p.OauthToken != nil {
 				token = *p.OauthToken
 			}
-			ctx, err = authOAuth2Fn(ctx, token, &sc)
+			logger := s.GetLogger()
+			ctx, err = authOAuth2Fn(ctx, logger, token, &sc)
 			if err == nil {
 				sc := security.BasicScheme{
 					Name: "basic",
@@ -173,7 +179,8 @@ func NewAlsoDoublySecureEndpoint(s Service, authJWTFn security.AuthJWTFunc, auth
 				if p.Password != nil {
 					pass = *p.Password
 				}
-				ctx, err = authBasicFn(ctx, user, pass, &sc)
+				logger := s.GetLogger()
+				ctx, err = authBasicFn(ctx, logger, user, pass, &sc)
 			}
 		}
 		if err != nil {

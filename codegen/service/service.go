@@ -18,6 +18,7 @@ func File(genpkg string, service *design.ServiceExpr) *codegen.File {
 		[]*codegen.ImportSpec{
 			{Path: "context"},
 			{Path: "goa.design/goa"},
+			{Path: "goa.design/goa/logging", Name: "goalog"},
 			{Path: genpkg + "/" + codegen.SnakeCase(service.Name) + "/" + "views", Name: svc.ViewsPkg},
 		})
 	def := &codegen.SectionTemplate{
@@ -183,6 +184,7 @@ func streamInterfaceFor(typ string, m *MethodData, stream *StreamData) map[strin
 const serviceT = `
 {{ comment .Description }}
 type Service interface {
+	GetLogger() goalog.Logger
 {{- range .Methods }}
 	{{ comment .Description }}
 	{{- if .ViewedResult }}

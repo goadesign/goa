@@ -2,47 +2,49 @@ package multiauth
 
 import (
 	"context"
-	"log"
 
 	securedservice "goa.design/goa/examples/security/gen/secured_service"
+	goalog "goa.design/goa/logging"
 )
 
 // secured_service service example implementation.
 // The example methods log the requests and return zero values.
 type securedServiceSvc struct {
-	logger *log.Logger
+	logger goalog.Logger
+}
+
+// Required for compatibility with Service interface
+func (s *securedServiceSvc) GetLogger() goalog.Logger {
+	return s.logger
 }
 
 // NewSecuredService returns the secured_service service implementation.
-func NewSecuredService(logger *log.Logger) securedservice.Service {
-	return &securedServiceSvc{logger}
+func NewSecuredService(logger goalog.Logger) securedservice.Service {
+	return &securedServiceSvc{logger: logger}
 }
 
 // Creates a valid JWT
-func (s *securedServiceSvc) Signin(ctx context.Context, p *securedservice.SigninPayload) error {
-	s.logger.Print("securedService.signin")
-	return nil
+func (s *securedServiceSvc) Signin(ctx context.Context, p *securedservice.SigninPayload) (err error) {
+	s.logger.Debug("securedService.signin")
+	return
 }
 
 // This action is secured with the jwt scheme
-func (s *securedServiceSvc) Secure(ctx context.Context, p *securedservice.SecurePayload) (string, error) {
-	var res string
-	s.logger.Print("securedService.secure")
-	return res, nil
+func (s *securedServiceSvc) Secure(ctx context.Context, p *securedservice.SecurePayload) (res string, err error) {
+	s.logger.Debug("securedService.secure")
+	return
 }
 
 // This action is secured with the jwt scheme and also requires an API key
 // query string.
-func (s *securedServiceSvc) DoublySecure(ctx context.Context, p *securedservice.DoublySecurePayload) (string, error) {
-	var res string
-	s.logger.Print("securedService.doubly_secure")
-	return res, nil
+func (s *securedServiceSvc) DoublySecure(ctx context.Context, p *securedservice.DoublySecurePayload) (res string, err error) {
+	s.logger.Debug("securedService.doubly_secure")
+	return
 }
 
 // This action is secured with the jwt scheme and also requires an API key
 // header.
-func (s *securedServiceSvc) AlsoDoublySecure(ctx context.Context, p *securedservice.AlsoDoublySecurePayload) (string, error) {
-	var res string
-	s.logger.Print("securedService.also_doubly_secure")
-	return res, nil
+func (s *securedServiceSvc) AlsoDoublySecure(ctx context.Context, p *securedservice.AlsoDoublySecurePayload) (res string, err error) {
+	s.logger.Debug("securedService.also_doubly_secure")
+	return
 }
