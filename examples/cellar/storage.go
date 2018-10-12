@@ -5,13 +5,13 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"log"
 	"mime/multipart"
 	"strings"
 
 	storagec "goa.design/goa/examples/cellar/gen/http/storage/client"
 	storages "goa.design/goa/examples/cellar/gen/http/storage/server"
 	storage "goa.design/goa/examples/cellar/gen/storage"
+	goalog "goa.design/goa/logging"
 
 	"github.com/boltdb/bolt"
 )
@@ -20,18 +20,23 @@ import (
 // The example methods log the requests and return zero values.
 type storageSvc struct {
 	db     *Bolt
-	logger *log.Logger
+	logger goalog.Logger
+}
+
+// Required for compatibility with Service interface
+func (s *storageSvc) GetLogger() goalog.Logger {
+	return s.logger
 }
 
 // NewStorage returns the storage service implementation.
-func NewStorage(db *bolt.DB, logger *log.Logger) (storage.Service, error) {
+func NewStorage(db *bolt.DB, logger goalog.Logger) (storage.Service, error) {
 	// Setup database
 	bolt, err := NewBoltDB(db)
 	if err != nil {
 		return nil, err
 	}
 	// Build and return service implementation.
-	return &storageSvc{bolt, logger}, nil
+	return &storageSvc{db: bolt, logger: logger}, nil
 }
 
 // List all stored bottles
@@ -184,7 +189,7 @@ func StorageMultiAddEncoderFunc(mw *multipart.Writer, p []*storage.Bottle) error
 // Update bottles with the given IDs. This is a multipart request and each part
 // has field name 'bottle' and contains the encoded bottle info to be updated.
 // The IDs in the query parameter is mapped to each part in the request.
-func (s *storageSvc) MultiUpdate(ctx context.Context, p *storage.MultiUpdatePayload) error {
+func (s *storageSvc) MultiUpdate(ctx context.Context, p *storage.MultiUpdatePayload) (err error) {
 	for _, id := range p.Ids {
 		for _, bottle := range p.Bottles {
 			sb := storage.StoredBottle{
@@ -201,7 +206,7 @@ func (s *storageSvc) MultiUpdate(ctx context.Context, p *storage.MultiUpdatePayl
 			}
 		}
 	}
-	s.logger.Print(fmt.Sprintf("Updated bottles: %s", strings.Join(p.Ids, ", ")))
+	s.logger.Infof("Updated bottles: %s", strings.Join(p.Ids, ", "))
 	return nil
 }
 

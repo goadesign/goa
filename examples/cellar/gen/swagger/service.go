@@ -3,13 +3,17 @@
 // swagger service
 //
 // Command:
-// $ goa gen goa.design/goa/examples/cellar/design -o
-// $(GOPATH)/src/goa.design/goa/examples/cellar
+// $ goa gen goa.design/goa/examples/cellar/design
 
 package swagger
 
+import (
+	goalog "goa.design/goa/logging"
+)
+
 // The swagger service serves the API swagger definition.
 type Service interface {
+	GetLogger() goalog.Logger
 }
 
 // ServiceName is the name of the service as defined in the design. This is the

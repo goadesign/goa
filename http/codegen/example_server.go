@@ -40,6 +40,7 @@ func dummyServiceFile(genpkg string, root *httpdesign.RootExpr, svc *httpdesign.
 			{Path: "context"},
 			{Path: "log"},
 			{Path: "mime/multipart"},
+			{Path: "goa.design/goa/logging", Name: "goalog"},
 			{Path: genpkg + "/" + codegen.SnakeCase(svc.Name()), Name: data.Service.PkgName},
 		}),
 		{
@@ -98,6 +99,7 @@ func exampleMain(genpkg string, root *httpdesign.RootExpr, svr *design.ServerExp
 		{Path: "goa.design/goa", Name: "goa"},
 		{Path: "goa.design/goa/http", Name: "goahttp"},
 		{Path: "goa.design/goa/http/middleware"},
+		{Path: "goa.design/goa/logging", Name: "goalog"},
 		{Path: "github.com/gorilla/websocket"},
 		{Path: rootPath, Name: apiPkg},
 	}
@@ -155,12 +157,17 @@ func needStream(data []*ServiceData) bool {
 // input: ServiceData
 const dummyServiceStructT = `{{ printf "%s service example implementation.\nThe example methods log the requests and return zero values." .Service.Name | comment }}
 type {{ .Service.VarName }}Svc struct {
-	logger *log.Logger
+	logger goalog.Logger	
+}
+
+// Required for compatibility with Service interface
+func (s *{{ .Service.VarName }}Svc) GetLogger() goalog.Logger { 
+	return s.logger 
 }
 
 {{ printf "New%s returns the %s service implementation." .Service.StructName .Service.Name | comment }}
-func New{{ .Service.StructName }}(logger *log.Logger) {{ .Service.PkgName }}.Service {
-	return &{{ .Service.VarName }}Svc{logger}
+func New{{ .Service.StructName }}(logger goalog.Logger) {{ .Service.PkgName }}.Service {
+	return &{{ .Service.VarName }}Svc{logger: logger}
 }
 `
 
@@ -181,7 +188,7 @@ func (s *{{ .ServiceVarName }}Svc) {{ .Method.VarName }}(ctx context.Context{{ i
 	view = {{ printf "%q" .Result.View }}
 	{{- end }}
 {{- end }}
-	s.logger.Print("{{ .ServiceVarName }}.{{ .Method.Name }}")
+	s.logger.Debug("{{ .ServiceVarName }}.{{ .Method.Name }}")
 	return
 }
 `
@@ -213,14 +220,14 @@ const mainT = `func main() {
 	flag.Parse()
 
 	// Setup logger and goa log adapter. Replace logger with your own using
-	// your log package of choice. The goa.design/middleware/logging/...
-	// packages define log adapters for common log packages.
+	// your log package of choice. 
+	// The goa.design/logging package define log adapters for common log packages. 
 	var (
 		adapter middleware.Logger
-		logger *log.Logger
+		logger goalog.Logger
 	)
 	{
-		logger = log.New(os.Stderr, "[{{ .APIPkg }}] ", log.Ltime)
+		logger = goalog.NewStdLogger("[{{ .APIPkg }}]")
 		adapter = middleware.NewLogger(logger)
 	}
 
@@ -331,35 +338,34 @@ const mainT = `func main() {
 		{{- range .Services }}
 		for _, m := range {{ .Service.VarName }}Server.Mounts {
 			{{- if .FileServers }}
-			logger.Printf("file %q mounted on %s %s", m.Method, m.Verb, m.Pattern)
+			logger.Infof("file %q mounted on %s %s", m.Method, m.Verb, m.Pattern)
 			{{- else }}
-			logger.Printf("method %q mounted on %s %s", m.Method, m.Verb, m.Pattern)
+			logger.Infof("method %q mounted on %s %s", m.Method, m.Verb, m.Pattern)
 			{{- end }}
 		}
 		{{- end }}
-		logger.Printf("listening on %s", *addr)
+		logger.Infof("listening on %s", *addr)
 		errc <- srv.ListenAndServe()
 	}()
 
 	// Wait for signal.
-	logger.Printf("exiting (%v)", <-errc)
+	logger.Infof("exiting (%v)", <-errc)
 
 	// Shutdown gracefully with a 30s timeout.
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 	srv.Shutdown(ctx)
 
-	logger.Println("exited")
+	logger.Info("exited")
 }
 
 // ErrorHandler returns a function that writes and logs the given error.
 // The function also writes and logs the error unique ID so that it's possible
 // to correlate.
-func ErrorHandler(logger *log.Logger) func(context.Context, http.ResponseWriter, error) {
+func ErrorHandler(logger goalog.Logger) func(context.Context, http.ResponseWriter, error) {
 	return func(ctx context.Context, w http.ResponseWriter, err error) {
 		id := ctx.Value(middleware.RequestIDKey).(string)
-		w.Write([]byte("[" + id + "] encoding: " + err.Error()))
-		logger.Printf("[%s] ERROR: %s", id, err.Error())
+		logger.Error("id", id, "error", err.Error())
 	}
 }
 `

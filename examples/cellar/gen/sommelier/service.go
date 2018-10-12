@@ -3,8 +3,7 @@
 // sommelier service
 //
 // Command:
-// $ goa gen goa.design/goa/examples/cellar/design -o
-// $(GOPATH)/src/goa.design/goa/examples/cellar
+// $ goa gen goa.design/goa/examples/cellar/design
 
 package sommelier
 
@@ -12,10 +11,12 @@ import (
 	"context"
 
 	sommelierviews "goa.design/goa/examples/cellar/gen/sommelier/views"
+	goalog "goa.design/goa/logging"
 )
 
 // The sommelier service retrieves bottles given a set of criteria.
 type Service interface {
+	GetLogger() goalog.Logger
 	// Pick implements pick.
 	Pick(context.Context, *Criteria) (res StoredBottleCollection, err error)
 }

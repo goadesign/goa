@@ -3,22 +3,27 @@ package chatter
 import (
 	"context"
 	"io"
-	"log"
 	"time"
 
 	jwt "github.com/dgrijalva/jwt-go"
 	chattersvc "goa.design/goa/examples/chatter/gen/chatter"
+	goalog "goa.design/goa/logging"
 )
 
 // chatter service example implementation.
 // The example methods log the requests and return zero values.
 type chatterSvc struct {
-	logger         *log.Logger
+	logger         goalog.Logger
 	storedMessages []*chattersvc.ChatSummary
 }
 
+// Required for compatibility with Service interface
+func (s *chatterSvc) GetLogger() goalog.Logger {
+	return s.logger
+}
+
 // NewChatter returns the chatter service implementation.
-func NewChatter(logger *log.Logger) chattersvc.Service {
+func NewChatter(logger goalog.Logger) chattersvc.Service {
 	return &chatterSvc{
 		logger:         logger,
 		storedMessages: make([]*chattersvc.ChatSummary, 0, 10),
@@ -34,7 +39,7 @@ func (s *chatterSvc) Login(ctx context.Context, p *chattersvc.LoginPayload) (res
 		"scopes": []string{"stream:read", "stream:write"},
 	})
 
-	s.logger.Printf("user '%s' logged in", p.User)
+	s.logger.Infof("user '%s' logged in", p.User)
 
 	// note that if "SignedString" returns an error then it is returned as
 	// an internal error to the client
@@ -42,9 +47,8 @@ func (s *chatterSvc) Login(ctx context.Context, p *chattersvc.LoginPayload) (res
 }
 
 // Echoes the message sent by the client.
-// NOTE: An example for bidirectional streaming.
 func (s *chatterSvc) Echoer(ctx context.Context, p *chattersvc.EchoerPayload, stream chattersvc.EchoerServerStream) (err error) {
-	s.logger.Printf("authentication successful")
+	s.logger.Infof("authentication successful")
 	for {
 		str, err := stream.Recv()
 		if err == io.EOF {
@@ -62,10 +66,8 @@ func (s *chatterSvc) Echoer(ctx context.Context, p *chattersvc.EchoerPayload, st
 }
 
 // Listens to the messages sent by the client.
-// NOTE: An example for payload streaming where server does not respond with a
-// result type.
 func (s *chatterSvc) Listener(ctx context.Context, p *chattersvc.ListenerPayload, stream chattersvc.ListenerServerStream) (err error) {
-	s.logger.Printf("authentication successful")
+	s.logger.Infof("authentication successful")
 	for {
 		str, err := stream.Recv()
 		if err == io.EOF {
@@ -79,12 +81,10 @@ func (s *chatterSvc) Listener(ctx context.Context, p *chattersvc.ListenerPayload
 	return nil
 }
 
-// Summarizes the messages sent by the client.
-// NOTE: An example for payload streaming where server responds with a result
-// type.
+// Summarizes the chat messages sent by the client.
 func (s *chatterSvc) Summary(ctx context.Context, p *chattersvc.SummaryPayload, stream chattersvc.SummaryServerStream) (err error) {
 	var summary chattersvc.ChatSummaryCollection
-	s.logger.Printf("authentication successful")
+	s.logger.Infof("authentication successful")
 	for {
 		str, err := stream.Recv()
 		if err == io.EOF {
@@ -101,9 +101,8 @@ func (s *chatterSvc) Summary(ctx context.Context, p *chattersvc.SummaryPayload, 
 }
 
 // Returns the chat messages sent to the server.
-// NOTE: An example for result streaming.
 func (s *chatterSvc) History(ctx context.Context, p *chattersvc.HistoryPayload, stream chattersvc.HistoryServerStream) (err error) {
-	s.logger.Printf("authentication successful")
+	s.logger.Infof("authentication successful")
 	stream.SetView("default")
 	if p.View != nil {
 		stream.SetView(*p.View)
@@ -120,7 +119,7 @@ func (s *chatterSvc) History(ctx context.Context, p *chattersvc.HistoryPayload, 
 func (s *chatterSvc) storeMessage(message string) {
 	mlen := len(message)
 	sentAt := time.Now().Format(time.RFC3339)
-	s.logger.Printf("Storing message: %q (length: %d, sent_at: %s)", message, mlen, sentAt)
+	s.logger.Infof("Storing message: %q (length: %d, sent_at: %s)", message, mlen, sentAt)
 	s.storedMessages = append(s.storedMessages, &chattersvc.ChatSummary{
 		Message: message,
 		Length:  &mlen,

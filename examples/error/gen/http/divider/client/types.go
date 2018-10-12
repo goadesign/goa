@@ -3,8 +3,7 @@
 // divider HTTP client types
 //
 // Command:
-// $ goa gen goa.design/goa/examples/error/design -o
-// $(GOPATH)/src/goa.design/goa/examples/error
+// $ goa gen goa.design/goa/examples/error/design
 
 package client
 

@@ -3,8 +3,7 @@
 // chatter HTTP client CLI support package
 //
 // Command:
-// $ goa gen goa.design/goa/examples/chatter/design -o
-// $(GOPATH)/src/goa.design/goa/examples/chatter
+// $ goa gen goa.design/goa/examples/chatter/design
 
 package cli
 

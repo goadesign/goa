@@ -3,8 +3,7 @@
 // chatter service
 //
 // Command:
-// $ goa gen goa.design/goa/examples/chatter/design -o
-// $(GOPATH)/src/goa.design/goa/examples/chatter
+// $ goa gen goa.design/goa/examples/chatter/design
 
 package chattersvc
 
@@ -12,10 +11,12 @@ import (
 	"context"
 
 	chattersvcviews "goa.design/goa/examples/chatter/gen/chatter/views"
+	goalog "goa.design/goa/logging"
 )
 
 // The chatter service implements a simple client and server chat.
 type Service interface {
+	GetLogger() goalog.Logger
 	// Creates a valid JWT token for auth to chat.
 	Login(context.Context, *LoginPayload) (res string, err error)
 	// Echoes the message sent by the client.
