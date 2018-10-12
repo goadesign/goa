@@ -4,6 +4,7 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"log"
 	"net/http"
 	"os"
 	"os/signal"
@@ -34,7 +35,7 @@ func main() {
 		logger  goalog.Logger
 	)
 	{
-		logger = goalog.NewStdLogger("[multiauth]")
+		logger = goalog.NewStdLogger(os.Stderr, "[multiauth]", log.Ltime)
 		adapter = middleware.NewLogger(logger)
 	}
 

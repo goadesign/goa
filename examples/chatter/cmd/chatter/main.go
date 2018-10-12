@@ -4,6 +4,7 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"log"
 	"net/http"
 	"os"
 	"os/signal"
@@ -35,7 +36,7 @@ func main() {
 		logger  goalog.Logger
 	)
 	{
-		logger = goalog.NewStdLogger("[chatter]")
+		logger = goalog.NewStdLogger(os.Stderr, "[chatter]", log.Ltime)
 		adapter = middleware.NewLogger(logger)
 	}
 

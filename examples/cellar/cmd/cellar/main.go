@@ -40,7 +40,7 @@ func main() {
 		logger  goalog.Logger
 	)
 	{
-		logger = goalog.NewStdLogger("[cellar]")
+		logger = goalog.NewStdLogger(os.Stderr, "[cellar]", log.Ltime)
 		adapter = middleware.NewLogger(logger)
 	}
 

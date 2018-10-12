@@ -227,7 +227,7 @@ const mainT = `func main() {
 		logger goalog.Logger
 	)
 	{
-		logger = goalog.NewStdLogger("[{{ .APIPkg }}]")
+		logger = goalog.NewStdLogger(os.Stderr, "[{{ .APIPkg }}]", log.Ltime)
 		adapter = middleware.NewLogger(logger)
 	}
 

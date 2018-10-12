@@ -3,8 +3,8 @@ package logging
 import (
 	"bytes"
 	"fmt"
+	"io"
 	"log"
-	"os"
 )
 
 type stdlogger struct {
@@ -13,9 +13,9 @@ type stdlogger struct {
 }
 
 // NewStdLogger returns the adapted standard logger
-func NewStdLogger(prefix string) Logger {
+func NewStdLogger(out io.Writer, prefix string, flag int) Logger {
 
-	return &stdlogger{logger: log.New(os.Stderr, prefix, log.Ltime), prefix: prefix}
+	return &stdlogger{logger: log.New(out, prefix, flag), prefix: prefix}
 }
 
 func (l *stdlogger) Debug(args ...interface{}) {
