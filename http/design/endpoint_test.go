@@ -3,6 +3,7 @@ package design_test
 import (
 	"testing"
 
+	"goa.design/goa/eval"
 	"goa.design/goa/http/design"
 	"goa.design/goa/http/design/testdata"
 )
@@ -24,6 +25,59 @@ func TestRouteValidation(t *testing.T) {
 				err := design.RunInvalidHTTPDSL(t, c.DSL)
 				if err.Error() != c.Error {
 					t.Errorf("got error %q, expected %q", err.Error(), c.Error)
+				}
+			}
+		})
+	}
+}
+
+func TestEndpointValidation(t *testing.T) {
+	cases := map[string]struct {
+		DSL    func()
+		Errors []string
+	}{
+		"endpoint-body-as-payload-prop": {
+			DSL: testdata.EndpointBodyAsPayloadProp,
+		},
+		"endpoint-body-as-missed-payload-prop": {
+			DSL: testdata.EndpointBodyAsMissedPayloadProp,
+			Errors: []string{
+				"\"name\" is not found in result type in service \"Service\" HTTP endpoint \"Method\"",
+			},
+		},
+		"endpoint-body-extend-payload": {
+			DSL: testdata.EndpointBodyExtendPayload,
+		},
+		"endpoint-body-as-user-type": {
+			DSL: testdata.EndpointBodyAsUserType,
+		},
+	}
+	for name, c := range cases {
+		t.Run(name, func(t *testing.T) {
+			if c.Errors == nil || len(c.Errors) == 0 {
+				design.RunHTTPDSL(t, c.DSL)
+			} else {
+				var errors []error
+
+				err := design.RunInvalidHTTPDSL(t, c.DSL)
+				if err != nil {
+					if merr, ok := err.(eval.MultiError); ok {
+						for _, e := range merr {
+							errors = append(errors, e.GoError)
+						}
+					} else {
+						errors = append(errors, err)
+					}
+				}
+
+				if len(c.Errors) != len(errors) {
+					t.Errorf("%s: got %d, expected the number of error values to match %d", name, len(errors), len(c.Errors))
+				} else {
+					for i, err := range errors {
+						if err.Error() != c.Errors[i] {
+							t.Errorf("%s:\ngot \t\t%q,\nexpected\t%q at index %d", name, err.Error(), c.Errors[i], i)
+						}
+					}
 				}
 			}
 		})

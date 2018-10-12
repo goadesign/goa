@@ -37,3 +37,69 @@ var DuplicateWCRouteDSL = func() {
 		})
 	})
 }
+
+var EndpointBodyAsPayloadProp = func() {
+	Service("Service", func() {
+		Method("Method", func() {
+			Payload(func() {
+				Attribute("id", String)
+				Attribute("name", String)
+			})
+			HTTP(func() {
+				POST("/{id}")
+				Body("name")
+			})
+		})
+	})
+}
+
+var EndpointBodyAsMissedPayloadProp = func() {
+	Service("Service", func() {
+		Method("Method", func() {
+			Payload(func() {
+				Attribute("id", String)
+			})
+			HTTP(func() {
+				POST("/{id}")
+				Body("name")
+			})
+		})
+	})
+}
+
+var EndpointBodyExtendPayload = func() {
+	Service("Service", func() {
+		Method("Method", func() {
+			Payload(func() {
+				Attribute("id", String)
+			})
+			HTTP(func() {
+				POST("/{id}")
+				Body(func() {
+					Attribute("name", String)
+				})
+			})
+		})
+	})
+}
+
+var EndpointBodyAsUserType = func() {
+	var Entity = Type("Entity", func() {
+		Attribute("id", String)
+		Attribute("name", String)
+	})
+
+	var EntityData = Type("EntityData", func() {
+		Attribute("name", String)
+	})
+
+	Service("Service", func() {
+		Method("Method", func() {
+			Payload(Entity)
+			HTTP(func() {
+				POST("/{id}")
+				Body(EntityData)
+			})
+		})
+	})
+}
