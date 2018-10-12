@@ -3,7 +3,6 @@
 // swagger HTTP client encoders and decoders
 //
 // Command:
-// $ goa gen goa.design/goa/examples/cellar/design -o
-// $(GOPATH)/src/goa.design/goa/examples/cellar
+// $ goa gen goa.design/goa/examples/cellar/design
 
 package client

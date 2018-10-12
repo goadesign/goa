@@ -4,7 +4,6 @@ import (
 	"context"
 	"flag"
 	"fmt"
-	"log"
 	"net/http"
 	"os"
 	"os/signal"
@@ -16,6 +15,7 @@ import (
 	chattersvcsvr "goa.design/goa/examples/chatter/gen/http/chatter/server"
 	goahttp "goa.design/goa/http"
 	"goa.design/goa/http/middleware"
+	goalog "goa.design/goa/logging"
 )
 
 func main() {
@@ -28,14 +28,14 @@ func main() {
 	flag.Parse()
 
 	// Setup logger and goa log adapter. Replace logger with your own using
-	// your log package of choice. The goa.design/middleware/logging/...
-	// packages define log adapters for common log packages.
+	// your log package of choice.
+	// The goa.design/logging package define log adapters for common log packages.
 	var (
 		adapter middleware.Logger
-		logger  *log.Logger
+		logger  goalog.Logger
 	)
 	{
-		logger = log.New(os.Stderr, "[chatter] ", log.Ltime)
+		logger = goalog.NewStdLogger("[chatter]")
 		adapter = middleware.NewLogger(logger)
 	}
 
@@ -116,30 +116,29 @@ func main() {
 	srv := &http.Server{Addr: *addr, Handler: handler}
 	go func() {
 		for _, m := range chatterServer.Mounts {
-			logger.Printf("method %q mounted on %s %s", m.Method, m.Verb, m.Pattern)
+			logger.Infof("method %q mounted on %s %s", m.Method, m.Verb, m.Pattern)
 		}
-		logger.Printf("listening on %s", *addr)
+		logger.Infof("listening on %s", *addr)
 		errc <- srv.ListenAndServe()
 	}()
 
 	// Wait for signal.
-	logger.Printf("exiting (%v)", <-errc)
+	logger.Infof("exiting (%v)", <-errc)
 
 	// Shutdown gracefully with a 30s timeout.
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 	srv.Shutdown(ctx)
 
-	logger.Println("exited")
+	logger.Info("exited")
 }
 
 // ErrorHandler returns a function that writes and logs the given error.
 // The function also writes and logs the error unique ID so that it's possible
 // to correlate.
-func ErrorHandler(logger *log.Logger) func(context.Context, http.ResponseWriter, error) {
+func ErrorHandler(logger goalog.Logger) func(context.Context, http.ResponseWriter, error) {
 	return func(ctx context.Context, w http.ResponseWriter, err error) {
 		id := ctx.Value(middleware.RequestIDKey).(string)
-		w.Write([]byte("[" + id + "] encoding: " + err.Error()))
-		logger.Printf("[%s] ERROR: %s", id, err.Error())
+		logger.Error("id", id, "error", err.Error())
 	}
 }

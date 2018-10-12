@@ -210,7 +210,7 @@ type {{ .ServerStream.EndpointStruct }} struct {
 const serviceEndpointMethodT = `{{ printf "New%sEndpoint returns an endpoint function that calls the method %q of service %q." .VarName .Name .ServiceName | comment }}
 func New{{ .VarName }}Endpoint(s {{ .ServiceVarName }}{{ range .Schemes }}, auth{{ . }}Fn security.Auth{{ . }}Func{{ end }}) goa.Endpoint {
 	return func(ctx context.Context, req interface{}) (interface{}, error) {
-		logger := s.GetLogger()
+		
 {{- if .ServerStream }}
 		ep := req.(*{{ .ServerStream.EndpointStruct }})
 {{- else if .PayloadRef }}
@@ -243,6 +243,7 @@ func New{{ .VarName }}Endpoint(s {{ .ServiceVarName }}{{ range .Schemes }}, auth
 					pass = *{{ $payload }}.{{ .PasswordField }}
 				}
 				{{- end }}
+				logger := s.GetLogger()
 				ctx, err = auth{{ .Type }}Fn(ctx, logger, {{ if .UsernamePointer }}user{{ else }}{{ $payload }}.{{ .UsernameField }}{{ end }},
 					{{- if .PasswordPointer }}pass{{ else }}{{ $payload }}.{{ .PasswordField }}{{ end }}, &sc)
 
@@ -256,6 +257,7 @@ func New{{ .VarName }}Endpoint(s {{ .ServiceVarName }}{{ range .Schemes }}, auth
 					key = *{{ $payload }}.{{ $s.CredField }}
 				}
 				{{- end }}
+				logger := s.GetLogger()
 				ctx, err = auth{{ .Type }}Fn(ctx, logger, {{ if $s.CredPointer }}key{{ else }}{{ $payload }}.{{ $s.CredField }}{{ end }}, &sc)
 
 			{{- else if eq .Type "JWT" }}
@@ -270,6 +272,7 @@ func New{{ .VarName }}Endpoint(s {{ .ServiceVarName }}{{ range .Schemes }}, auth
 					token = *{{ $payload }}.{{ $s.CredField }}
 				}
 				{{- end }}
+				logger := s.GetLogger()
 				ctx, err = auth{{ .Type }}Fn(ctx, logger, {{ if $s.CredPointer }}token{{ else }}{{ $payload }}.{{ $s.CredField }}{{ end }}, &sc)
 
 			{{- else if eq .Type "OAuth2" }}
@@ -302,6 +305,7 @@ func New{{ .VarName }}Endpoint(s {{ .ServiceVarName }}{{ range .Schemes }}, auth
 					token = *{{ $payload }}.{{ $s.CredField }}
 				}
 				{{- end }}
+				logger := s.GetLogger()
 				ctx, err = auth{{ .Type }}Fn(ctx, logger, {{ if $s.CredPointer }}token{{ else }}{{ $payload }}.{{ $s.CredField }}{{ end }}, &sc)
 
 			{{- end }}

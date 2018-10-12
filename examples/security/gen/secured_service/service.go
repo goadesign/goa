@@ -3,18 +3,20 @@
 // secured_service service
 //
 // Command:
-// $ goa gen goa.design/goa/examples/security/design -o
-// $(GOPATH)/src/goa.design/goa/examples/security
+// $ goa gen goa.design/goa/examples/security/design
 
 package securedservice
 
 import (
 	"context"
+
+	goalog "goa.design/goa/logging"
 )
 
 // The secured service exposes endpoints that require valid authorization
 // credentials.
 type Service interface {
+	GetLogger() goalog.Logger
 	// Creates a valid JWT
 	Signin(context.Context, *SigninPayload) (err error)
 	// This action is secured with the jwt scheme

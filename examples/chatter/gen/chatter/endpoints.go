@@ -3,8 +3,7 @@
 // chatter endpoints
 //
 // Command:
-// $ goa gen goa.design/goa/examples/chatter/design -o
-// $(GOPATH)/src/goa.design/goa/examples/chatter
+// $ goa gen goa.design/goa/examples/chatter/design
 
 package chattersvc
 
@@ -89,7 +88,8 @@ func NewLoginEndpoint(s Service, authBasicFn security.AuthBasicFunc) goa.Endpoin
 		sc := security.BasicScheme{
 			Name: "basic",
 		}
-		ctx, err = authBasicFn(ctx, p.User, p.Password, &sc)
+		logger := s.GetLogger()
+		ctx, err = authBasicFn(ctx, logger, p.User, p.Password, &sc)
 		if err != nil {
 			return nil, err
 		}
@@ -108,7 +108,8 @@ func NewEchoerEndpoint(s Service, authJWTFn security.AuthJWTFunc) goa.Endpoint {
 			Scopes:         []string{"stream:read", "stream:write"},
 			RequiredScopes: []string{"stream:write"},
 		}
-		ctx, err = authJWTFn(ctx, ep.Payload.Token, &sc)
+		logger := s.GetLogger()
+		ctx, err = authJWTFn(ctx, logger, ep.Payload.Token, &sc)
 		if err != nil {
 			return nil, err
 		}
@@ -127,7 +128,8 @@ func NewListenerEndpoint(s Service, authJWTFn security.AuthJWTFunc) goa.Endpoint
 			Scopes:         []string{"stream:read", "stream:write"},
 			RequiredScopes: []string{"stream:write"},
 		}
-		ctx, err = authJWTFn(ctx, ep.Payload.Token, &sc)
+		logger := s.GetLogger()
+		ctx, err = authJWTFn(ctx, logger, ep.Payload.Token, &sc)
 		if err != nil {
 			return nil, err
 		}
@@ -146,7 +148,8 @@ func NewSummaryEndpoint(s Service, authJWTFn security.AuthJWTFunc) goa.Endpoint 
 			Scopes:         []string{"stream:read", "stream:write"},
 			RequiredScopes: []string{"stream:write"},
 		}
-		ctx, err = authJWTFn(ctx, ep.Payload.Token, &sc)
+		logger := s.GetLogger()
+		ctx, err = authJWTFn(ctx, logger, ep.Payload.Token, &sc)
 		if err != nil {
 			return nil, err
 		}
@@ -165,7 +168,8 @@ func NewHistoryEndpoint(s Service, authJWTFn security.AuthJWTFunc) goa.Endpoint 
 			Scopes:         []string{"stream:read", "stream:write"},
 			RequiredScopes: []string{"stream:read"},
 		}
-		ctx, err = authJWTFn(ctx, ep.Payload.Token, &sc)
+		logger := s.GetLogger()
+		ctx, err = authJWTFn(ctx, logger, ep.Payload.Token, &sc)
 		if err != nil {
 			return nil, err
 		}

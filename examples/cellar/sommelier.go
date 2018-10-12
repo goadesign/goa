@@ -2,20 +2,25 @@ package cellar
 
 import (
 	"context"
-	"log"
 
 	sommelier "goa.design/goa/examples/cellar/gen/sommelier"
+	goalog "goa.design/goa/logging"
 )
 
 // sommelier service example implementation.
 // The example methods log the requests and return zero values.
 type sommelierSvc struct {
-	logger *log.Logger
+	logger goalog.Logger
+}
+
+// Required for compatibility with Service interface
+func (s *sommelierSvc) GetLogger() goalog.Logger {
+	return s.logger
 }
 
 // NewSommelier returns the sommelier service implementation.
-func NewSommelier(logger *log.Logger) sommelier.Service {
-	return &sommelierSvc{logger}
+func NewSommelier(logger goalog.Logger) sommelier.Service {
+	return &sommelierSvc{logger: logger}
 }
 
 // Pick implements pick.
@@ -24,6 +29,6 @@ func (s *sommelierSvc) Pick(ctx context.Context, p *sommelier.Criteria) (res som
 		return nil, sommelier.NoCriteria("must specify a name or one or more varietals or a winery")
 	}
 	// TBD: implement lookup return sommeliner.NoMatch if empty
-	s.logger.Print("sommelier.pick")
+	s.logger.Debug("sommelier.pick")
 	return res, nil
 }

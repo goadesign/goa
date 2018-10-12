@@ -3,8 +3,7 @@
 // divider service
 //
 // Command:
-// $ goa gen goa.design/goa/examples/error/design -o
-// $(GOPATH)/src/goa.design/goa/examples/error
+// $ goa gen goa.design/goa/examples/error/design
 
 package dividersvc
 
@@ -12,10 +11,12 @@ import (
 	"context"
 
 	"goa.design/goa"
+	goalog "goa.design/goa/logging"
 )
 
 // Service is the divider service interface.
 type Service interface {
+	GetLogger() goalog.Logger
 	// IntegerDivide implements integer_divide.
 	IntegerDivide(context.Context, *IntOperands) (res int, err error)
 	// Divide implements divide.

@@ -3,8 +3,7 @@
 // storage service
 //
 // Command:
-// $ goa gen goa.design/goa/examples/cellar/design -o
-// $(GOPATH)/src/goa.design/goa/examples/cellar
+// $ goa gen goa.design/goa/examples/cellar/design
 
 package storage
 
@@ -12,10 +11,12 @@ import (
 	"context"
 
 	storageviews "goa.design/goa/examples/cellar/gen/storage/views"
+	goalog "goa.design/goa/logging"
 )
 
 // The storage service makes it possible to view, add or remove wine bottles.
 type Service interface {
+	GetLogger() goalog.Logger
 	// List all stored bottles
 	List(context.Context) (res StoredBottleCollection, err error)
 	// Show bottle by ID
