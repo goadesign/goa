@@ -103,3 +103,49 @@ var EndpointBodyAsUserType = func() {
 		})
 	})
 }
+
+var FinalizeEndpointBodyAsExtendedTypeDSL = func() {
+	var EntityData = Type("EntityData", func() {
+		Attribute("name", String)
+	})
+
+	var Entity = Type("Entity", func() {
+		Attribute("id", String)
+		Extend(EntityData)
+		Required("id")
+	})
+
+	Service("Service", func() {
+		Method("Method", func() {
+			Payload(Entity)
+			HTTP(func() {
+				POST("/")
+			})
+		})
+	})
+}
+
+var FinalizeEndpointBodyAsPropWithExtendedTypeDSL = func() {
+	var EntityData = Type("EntityData", func() {
+		Attribute("name", String)
+	})
+
+	var Entity = Type("Entity", func() {
+		Attribute("id", String)
+		Extend(EntityData)
+		Required("id")
+	})
+
+	Service("Service", func() {
+		Method("Method", func() {
+			Payload(func() {
+				AccessToken("token", String)
+				Attribute("payload", Entity)
+			})
+			HTTP(func() {
+				POST("/")
+				Body("payload")
+			})
+		})
+	})
+}

@@ -3,6 +3,7 @@ package design_test
 import (
 	"testing"
 
+	. "goa.design/goa/design"
 	"goa.design/goa/eval"
 	"goa.design/goa/http/design"
 	"goa.design/goa/http/design/testdata"
@@ -76,6 +77,46 @@ func TestEndpointValidation(t *testing.T) {
 					for i, err := range errors {
 						if err.Error() != c.Errors[i] {
 							t.Errorf("%s:\ngot \t\t%q,\nexpected\t%q at index %d", name, err.Error(), c.Errors[i], i)
+						}
+					}
+				}
+			}
+		})
+	}
+}
+
+func TestEndpointFinalization(t *testing.T) {
+	cases := map[string]struct {
+		DSL          func()
+		ExpectedBody DataType
+	}{
+		"body-as-extend-type": {
+			DSL:          testdata.FinalizeEndpointBodyAsExtendedTypeDSL,
+			ExpectedBody: testdata.FinalizeEndpointBodyAsExtendedType,
+		},
+		"body-as-prop-with-extend-type": {
+			DSL:          testdata.FinalizeEndpointBodyAsPropWithExtendedTypeDSL,
+			ExpectedBody: testdata.FinalizeEndpointBodyAsPropWithExtendedType,
+		},
+	}
+	for name, tc := range cases {
+		t.Run(name, func(t *testing.T) {
+			root := design.RunHTTPDSL(t, tc.DSL)
+			e := root.HTTPServices[0].HTTPEndpoints[0]
+
+			if tc.ExpectedBody != nil {
+				if e.Body == nil {
+					t.Errorf("%s: got endpoint without body, expected endpoint with body", name)
+					return
+				}
+				bodyObj := *AsObject(e.Body.Type)
+				expectedBodyObj := *AsObject(tc.ExpectedBody)
+				if len(bodyObj) != len(expectedBodyObj) {
+					t.Errorf("%s: got %d, expected %d attribute(s) in endpoint body", name, len(bodyObj), len(expectedBodyObj))
+				} else {
+					for i := 0; i < len(expectedBodyObj); i++ {
+						if bodyObj[i].Name != expectedBodyObj[i].Name {
+							t.Errorf("%s: got %q, expected %q attribute in endpoint body", name, bodyObj[i].Name, expectedBodyObj[i].Name)
 						}
 					}
 				}
