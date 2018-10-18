@@ -1,8 +1,8 @@
 package dsl
 
 import (
-	"goa.design/goa/expr"
 	"goa.design/goa/eval"
+	"goa.design/goa/expr"
 )
 
 // ConvertTo specifies an external type that instances of the generated struct
@@ -112,7 +112,7 @@ func ConvertTo(obj interface{}) {
 //    * struct fields must use pointers
 //    * pointers on slices or on maps are not supported
 //
-// CreateFrom must appear in Type or ResutType.
+// CreateFrom must appear in Type or ResultType.
 //
 // CreateFrom accepts one arguments: an instance of the external type.
 //

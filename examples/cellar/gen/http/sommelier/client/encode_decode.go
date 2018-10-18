@@ -85,7 +85,7 @@ func DecodePickResponse(decoder func(*http.Response) goahttp.Decoder, restoreBod
 			p := NewPickStoredBottleCollectionOK(body)
 			view := "default"
 			vres := sommelierviews.StoredBottleCollection{p, view}
-			if err = vres.Validate(); err != nil {
+			if err = sommelierviews.ValidateStoredBottleCollection(vres); err != nil {
 				return nil, goahttp.ErrValidationError("sommelier", "pick", err)
 			}
 			res := sommelier.NewStoredBottleCollection(vres)

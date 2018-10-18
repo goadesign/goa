@@ -131,8 +131,9 @@ func NewPickNoMatch(body PickNoMatchResponseBody) sommelier.NoMatch {
 	return v
 }
 
-// Validate runs the validations defined on StoredBottleResponse.
-func (body *StoredBottleResponse) Validate() (err error) {
+// ValidateStoredBottleResponse runs the validations defined on
+// StoredBottleResponse
+func ValidateStoredBottleResponse(body *StoredBottleResponse) (err error) {
 	if body.ID == nil {
 		err = goa.MergeErrors(err, goa.MissingFieldError("id", "body"))
 	}
@@ -151,7 +152,7 @@ func (body *StoredBottleResponse) Validate() (err error) {
 		}
 	}
 	if body.Winery != nil {
-		if err2 := body.Winery.Validate(); err2 != nil {
+		if err2 := ValidateWineryResponse(body.Winery); err2 != nil {
 			err = goa.MergeErrors(err, err2)
 		}
 	}
@@ -167,7 +168,7 @@ func (body *StoredBottleResponse) Validate() (err error) {
 	}
 	for _, e := range body.Composition {
 		if e != nil {
-			if err2 := e.Validate(); err2 != nil {
+			if err2 := ValidateComponentResponse(e); err2 != nil {
 				err = goa.MergeErrors(err, err2)
 			}
 		}
@@ -190,8 +191,8 @@ func (body *StoredBottleResponse) Validate() (err error) {
 	return
 }
 
-// Validate runs the validations defined on WineryResponse.
-func (body *WineryResponse) Validate() (err error) {
+// ValidateWineryResponse runs the validations defined on WineryResponse
+func ValidateWineryResponse(body *WineryResponse) (err error) {
 	if body.Name == nil {
 		err = goa.MergeErrors(err, goa.MissingFieldError("name", "body"))
 	}
@@ -213,8 +214,8 @@ func (body *WineryResponse) Validate() (err error) {
 	return
 }
 
-// Validate runs the validations defined on ComponentResponse.
-func (body *ComponentResponse) Validate() (err error) {
+// ValidateComponentResponse runs the validations defined on ComponentResponse
+func ValidateComponentResponse(body *ComponentResponse) (err error) {
 	if body.Varietal == nil {
 		err = goa.MergeErrors(err, goa.MissingFieldError("varietal", "body"))
 	}

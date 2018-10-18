@@ -10,6 +10,48 @@ import (
 	"goa.design/goa/expr"
 )
 
+type (
+	// AttributeHelper provides an interface for figuring out common attribute
+	// characteristics.
+	AttributeHelper interface {
+		IsPointer(att *expr.AttributeExpr, required, pointer, useDefault bool) bool
+	}
+
+	defaultH struct{}
+)
+
+// newGoAttributeHelper returns a new Go attribute helper.
+func newAttributeHelper() AttributeHelper {
+	return &defaultH{}
+}
+
+// IsPointer returns if the given attribute is a pointer.
+//
+// req indicates whether the attribute is required (true) or optional (false) in
+// which case target is a pointer if ptr is false and def is false or def is
+// true and there's no default value.
+//
+// ptr indicates whether the data structure described by att uses pointers to
+// hold all attributes (even required ones) so that they may be properly
+// validated.
+//
+// def indicates whether non required attributes that have a default value should
+// not be pointers.
+//
+//    req | ptr | def | pointer?
+//     T  |  F  |  F  | F
+//     T  |  F  |  T  | F
+//     T  |  T  |  F  | T
+//     T  |  T  |  T  | T
+//     F  |  F  |  F  | T
+//     F  |  F  |  T  | F if has default value, T otherwise
+//     F  |  T  |  F  | T
+//     F  |  T  |  T  | T
+//
+func (g *defaultH) IsPointer(att *expr.AttributeExpr, required, pointer, useDefault bool) bool {
+	return pointer || (!required && (att.DefaultValue == nil || !useDefault))
+}
+
 var (
 	enumValT     *template.Template
 	formatValT   *template.Template
@@ -41,59 +83,15 @@ func init() {
 	userValT = template.Must(template.New("user").Funcs(fm).Parse(userValTmpl))
 }
 
-// HasValidations returns true if the given attribute or any of its children
-// recursively has validations. If ignoreRequired is true then HasValidation
-// does not consider "Required" validations. This is necessary to know whether
-// validation code should be generated for types that don't use pointers to
-// define required fields.
-func HasValidations(att *expr.AttributeExpr, ignoreRequired bool) bool {
-	if att.Validation != nil {
-		if !ignoreRequired || !att.Validation.HasRequiredOnly() {
-			return true
-		}
-	}
-	if o := expr.AsObject(att.Type); o != nil {
-		for _, catt := range *o {
-			seen := make(map[*expr.AttributeExpr]struct{})
-			seen[att] = struct{}{}
-			if hasValidationsRecurse(catt.Attribute, ignoreRequired, seen) {
-				return true
-			}
-		}
-	}
-	return false
-}
-
 // ValidationCode produces Go code that runs the validations defined in the
 // given attribute definition if any against the content of the variable named
 // target. The generated code assumes that there is a pre-existing "err"
 // variable of type error. It initializes that variable in case a validation
 // fails.
 //
-// req indicates whether the attribute is required (true) or optional (false) in
-// which case target is a pointer if ptr is false and def is false or def is
-// true and there's no default value.
-//
-// ptr indicates whether the data structure described by att uses pointers to
-// hold all attributes (even required ones) so that they may be properly
-// validated.
-//
-// def indicates whether non required attributes that have a default value should
-// not be pointers.
-//
-//    req | ptr | def | pointer?
-//     T  |  F  |  F  | F
-//     T  |  F  |  T  | F
-//     T  |  T  |  F  | T
-//     T  |  T  |  T  | T
-//     F  |  F  |  F  | T
-//     F  |  F  |  T  | F if has default value, T otherwise
-//     F  |  T  |  F  | T
-//     F  |  T  |  T  | T
-//
 // context is used to produce helpful messages in case of error.
 //
-func ValidationCode(att *expr.AttributeExpr, req, ptr, def bool, target, context string) string {
+func ValidationCode(att *expr.AttributeExpr, req, ptr, def bool, target, context string, ah AttributeHelper) string {
 	validation := att.Validation
 	if validation == nil {
 		return ""
@@ -101,7 +99,7 @@ func ValidationCode(att *expr.AttributeExpr, req, ptr, def bool, target, context
 	var (
 		kind            = att.Type.Kind()
 		isNativePointer = kind == expr.BytesKind || kind == expr.AnyKind
-		isPointer       = ptr || (!req && (att.DefaultValue == nil || !def))
+		isPointer       = ah.IsPointer(att, req, ptr, def)
 		tval            = target
 	)
 	if isPointer && expr.IsPrimitive(att.Type) && !isNativePointer {
@@ -197,34 +195,22 @@ func ValidationCode(att *expr.AttributeExpr, req, ptr, def bool, target, context
 
 // RecursiveValidationCode produces Go code that runs the validations defined in
 // the given attribute and its children recursively against the value held by
-// the variable named target. See ValidationCode for a description of the
-// arguments and their effects.
-func RecursiveValidationCode(att *expr.AttributeExpr, req, ptr, def bool, target string) string {
+// the variable named target.
+//
+// ahs is the optional AttributeHelper to use to compute validation. If none
+// specified, validation logic uses a default attribute helper.
+func RecursiveValidationCode(att *expr.AttributeExpr, req, ptr, def bool, target string, ahs ...AttributeHelper) string {
+	var ah AttributeHelper
+	if len(ahs) > 0 {
+		ah = ahs[0]
+	} else {
+		ah = newAttributeHelper()
+	}
 	seen := make(map[string]*bytes.Buffer)
-	return recurseValidationCode(att, req, ptr, def, target, target, seen).String()
+	return recurseValidationCode(att, req, ptr, def, target, target, seen, ah).String()
 }
 
-func hasValidationsRecurse(att *expr.AttributeExpr, ignoreRequired bool, seen map[*expr.AttributeExpr]struct{}) bool {
-	if att.Validation != nil {
-		if !ignoreRequired || !att.Validation.HasRequiredOnly() {
-			return true
-		}
-	}
-	if o := expr.AsObject(att.Type); o != nil {
-		for _, catt := range *o {
-			if _, ok := seen[catt.Attribute]; ok {
-				continue // break infinite recursions
-			}
-			seen[catt.Attribute] = struct{}{}
-			if hasValidationsRecurse(catt.Attribute, ignoreRequired, seen) {
-				return true
-			}
-		}
-	}
-	return false
-}
-
-func recurseValidationCode(att *expr.AttributeExpr, req, ptr, def bool, target, context string, seen map[string]*bytes.Buffer) *bytes.Buffer {
+func recurseValidationCode(att *expr.AttributeExpr, req, ptr, def bool, target, context string, seen map[string]*bytes.Buffer, ah AttributeHelper) *bytes.Buffer {
 	var (
 		buf   = new(bytes.Buffer)
 		first = true
@@ -238,17 +224,29 @@ func recurseValidationCode(att *expr.AttributeExpr, req, ptr, def bool, target, 
 		seen[ut.ID()] = buf
 	}
 
-	validation := ValidationCode(att, req, ptr, def, target, context)
+	validation := ValidationCode(att, req, ptr, def, target, context, ah)
 	if validation != "" {
 		buf.WriteString(validation)
 		first = false
+	}
+
+	runUserValT := func(ut expr.UserType, target string) string {
+		var buf bytes.Buffer
+		data := map[string]interface{}{
+			"name":   Goify(ut.Name(), true),
+			"target": target,
+		}
+		if err := userValT.Execute(&buf, data); err != nil {
+			panic(err) // bug
+		}
+		return fmt.Sprintf("if %s != nil {\n\t%s\n}", target, buf.String())
 	}
 
 	if o := expr.AsObject(att.Type); o != nil {
 		for _, nat := range *o {
 			n := nat.Name
 			catt := nat.Attribute
-			validation := recurseAttribute(att, catt, n, target, context, ptr, def, seen)
+			validation := recurseAttribute(att, catt, n, target, context, ptr, def, seen, ah)
 			if validation != "" {
 				if !first {
 					buf.WriteByte('\n')
@@ -259,16 +257,12 @@ func recurseValidationCode(att *expr.AttributeExpr, req, ptr, def bool, target, 
 			}
 		}
 	} else if a := expr.AsArray(att.Type); a != nil {
-		val := recurseValidationCode(a.ElemType, true, false, def, "e", context+"[*]", seen).String()
+		val := recurseValidationCode(a.ElemType, true, false, def, "e", context+"[*]", seen, ah).String()
 		if val != "" {
-			switch a.ElemType.Type.(type) {
+			switch dt := a.ElemType.Type.(type) {
 			case expr.UserType:
 				// For user and result types, call the Validate method
-				var buf bytes.Buffer
-				if err := userValT.Execute(&buf, map[string]interface{}{"target": "e"}); err != nil {
-					panic(err) // bug
-				}
-				val = fmt.Sprintf("if e != nil {\n\t%s\n}", buf.String())
+				val = runUserValT(dt, "e")
 			}
 			data := map[string]interface{}{
 				"target":     target,
@@ -284,27 +278,19 @@ func recurseValidationCode(att *expr.AttributeExpr, req, ptr, def bool, target, 
 			}
 		}
 	} else if m := expr.AsMap(att.Type); m != nil {
-		keyVal := recurseValidationCode(m.KeyType, true, false, def, "k", context+".key", seen).String()
-		valueVal := recurseValidationCode(m.ElemType, true, false, def, "v", context+"[key]", seen).String()
+		keyVal := recurseValidationCode(m.KeyType, true, false, def, "k", context+".key", seen, ah).String()
+		valueVal := recurseValidationCode(m.ElemType, true, false, def, "v", context+"[key]", seen, ah).String()
 		if keyVal != "" || valueVal != "" {
 			if keyVal != "" {
-				if _, ok := m.KeyType.Type.(expr.UserType); ok {
-					var buf bytes.Buffer
-					if err := userValT.Execute(&buf, map[string]interface{}{"target": "k"}); err != nil {
-						panic(err) // bug
-					}
-					keyVal = fmt.Sprintf("\nif k != nil {\n\t%s\n}", buf.String())
+				if ut, ok := m.KeyType.Type.(expr.UserType); ok {
+					keyVal = runUserValT(ut, "k")
 				} else {
 					keyVal = "\n" + keyVal
 				}
 			}
 			if valueVal != "" {
-				if _, ok := m.ElemType.Type.(expr.UserType); ok {
-					var buf bytes.Buffer
-					if err := userValT.Execute(&buf, map[string]interface{}{"target": "v"}); err != nil {
-						panic(err) // bug
-					}
-					valueVal = fmt.Sprintf("\nif v != nil {\n\t%s\n}", buf.String())
+				if ut, ok := m.ElemType.Type.(expr.UserType); ok {
+					valueVal = runUserValT(ut, "v")
 				} else {
 					valueVal = "\n" + valueVal
 				}
@@ -327,7 +313,7 @@ func recurseValidationCode(att *expr.AttributeExpr, req, ptr, def bool, target, 
 	return buf
 }
 
-func recurseAttribute(att, catt *expr.AttributeExpr, n, target, context string, ptr, def bool, seen map[string]*bytes.Buffer) string {
+func recurseAttribute(att, catt *expr.AttributeExpr, n, target, context string, ptr, def bool, seen map[string]*bytes.Buffer, ah AttributeHelper) string {
 	var validation string
 	if ut, ok := catt.Type.(expr.UserType); ok {
 		// We need to check empirically whether there are validations to be
@@ -365,9 +351,9 @@ func recurseAttribute(att, catt *expr.AttributeExpr, n, target, context string, 
 			var buf bytes.Buffer
 			tgt := fmt.Sprintf("%s.%s", target, GoifyAtt(catt, n, true))
 			if expr.IsArray(catt.Type) {
-				buf.Write(recurseValidationCode(catt, att.IsRequired(n), ptr, def, tgt, context, seen).Bytes())
+				buf.Write(recurseValidationCode(catt, att.IsRequired(n), ptr, def, tgt, context, seen, ah).Bytes())
 			} else {
-				if err := userValT.Execute(&buf, map[string]interface{}{"target": tgt}); err != nil {
+				if err := userValT.Execute(&buf, map[string]interface{}{"name": Goify(ut.Name(), true), "target": tgt}); err != nil {
 					panic(err) // bug
 				}
 			}
@@ -382,6 +368,7 @@ func recurseAttribute(att, catt *expr.AttributeExpr, n, target, context string, 
 			fmt.Sprintf("%s.%s", target, GoifyAtt(catt, n, true)),
 			fmt.Sprintf("%s.%s", context, n),
 			seen,
+			ah,
 		).String()
 	}
 	if validation != "" {
@@ -457,7 +444,7 @@ const (
 {{- .valueValidation }}
 }`
 
-	userValTmpl = `if err2 := {{ .target }}.Validate(); err2 != nil {
+	userValTmpl = `if err2 := Validate{{ .name }}({{ .target }}); err2 != nil {
         err = goa.MergeErrors(err, err2)
 }`
 

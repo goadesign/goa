@@ -358,7 +358,7 @@ func DecodeSummaryResponse(decoder func(*http.Response) goahttp.Decoder, restore
 			p := NewSummaryChatSummaryCollectionOK(body)
 			view := "default"
 			vres := chattersvcviews.ChatSummaryCollection{p, view}
-			if err = vres.Validate(); err != nil {
+			if err = chattersvcviews.ValidateChatSummaryCollection(vres); err != nil {
 				return nil, goahttp.ErrValidationError("chatter", "summary", err)
 			}
 			res := chattersvc.NewChatSummaryCollection(vres)
@@ -468,7 +468,7 @@ func DecodeHistoryResponse(decoder func(*http.Response) goahttp.Decoder, restore
 			p := NewHistoryChatSummaryOK(&body)
 			view := resp.Header.Get("goa-view")
 			vres := &chattersvcviews.ChatSummary{p, view}
-			if err = vres.Validate(); err != nil {
+			if err = chattersvcviews.ValidateChatSummary(vres); err != nil {
 				return nil, goahttp.ErrValidationError("chatter", "history", err)
 			}
 			res := chattersvc.NewChatSummary(vres)

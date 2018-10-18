@@ -128,8 +128,9 @@ func NewPickCriteria(body *PickRequestBody) *sommelier.Criteria {
 	return v
 }
 
-// Validate runs the validations defined on StoredBottleResponse.
-func (body *StoredBottleResponse) Validate() (err error) {
+// ValidateStoredBottleResponse runs the validations defined on
+// StoredBottleResponse
+func ValidateStoredBottleResponse(body *StoredBottleResponse) (err error) {
 	if body.Winery == nil {
 		err = goa.MergeErrors(err, goa.MissingFieldError("winery", "body"))
 	}
@@ -144,7 +145,7 @@ func (body *StoredBottleResponse) Validate() (err error) {
 	}
 	for _, e := range body.Composition {
 		if e != nil {
-			if err2 := e.Validate(); err2 != nil {
+			if err2 := ValidateComponentResponse(e); err2 != nil {
 				err = goa.MergeErrors(err, err2)
 			}
 		}
@@ -167,8 +168,8 @@ func (body *StoredBottleResponse) Validate() (err error) {
 	return
 }
 
-// Validate runs the validations defined on ComponentResponse.
-func (body *ComponentResponse) Validate() (err error) {
+// ValidateComponentResponse runs the validations defined on ComponentResponse
+func ValidateComponentResponse(body *ComponentResponse) (err error) {
 	err = goa.MergeErrors(err, goa.ValidatePattern("body.varietal", body.Varietal, "[A-Za-z' ]+"))
 	if utf8.RuneCountInString(body.Varietal) > 100 {
 		err = goa.MergeErrors(err, goa.InvalidLengthError("body.varietal", body.Varietal, utf8.RuneCountInString(body.Varietal), 100, false))
