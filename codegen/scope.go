@@ -148,7 +148,7 @@ func (s *NameScope) GoTypeDef(att *design.AttributeExpr, useDefault bool) string
 	}
 }
 
-// GoVarRef returns the Go code that returns the address of a variable of the Go type
+// GoVar returns the Go code that returns the address of a variable of the Go type
 // which matches the given attribute type.
 func (s *NameScope) GoVar(varName string, dt design.DataType) string {
 	// For a raw struct, no need to indirecting
