@@ -1,6 +1,7 @@
 package service
 
 import (
+	"os"
 	"reflect"
 	"testing"
 	"time"
@@ -21,6 +22,66 @@ type (
 		inner inner
 	}
 )
+
+func TestCommonPath(t *testing.T) {
+	cases := map[string]struct {
+		Paths              []string
+		ExpectedCommonPath string
+	}{
+		"common-path-exist": {
+			Paths: []string{
+				"/home/user1/tmp/coverage/test",
+				"/home/user1/tmp/covert/operator",
+				"/home/user1/tmp/coven/members",
+				"/home//user1/tmp/coventry",
+				"/home/user1/././tmp/covertly/foo",
+				"/home/bob/../user1/tmp/coved/bar",
+			},
+			ExpectedCommonPath: "/home/user1/tmp",
+		},
+		"common-path-does-not-exist": {
+			Paths: []string{
+				"/home1/user1/tmp/coverage/test",
+				"/home/user1/tmp/covert/operator",
+			},
+			ExpectedCommonPath: "",
+		},
+	}
+
+	for name, tc := range cases {
+		t.Run(name, func(t *testing.T) {
+			cp := commonPath(os.PathSeparator, tc.Paths...)
+			if cp != tc.ExpectedCommonPath {
+				t.Errorf("got %s expected %s", cp, tc.ExpectedCommonPath)
+			}
+		})
+	}
+}
+
+func TestPkgImport(t *testing.T) {
+	cwd := os.Getenv("GOPATH") + "/src/goa.design/goa/codegen/service"
+	goModCwd := "/home/user/project/goa/codegen/service"
+	cases := []struct {
+		Name           string
+		Cwd            string
+		Pkg            string
+		ExpectedImport string
+	}{
+		{"root-pkg", cwd, "goa.design/goa", "goa.design/goa"},
+		{"internal-pkg", cwd, "goa.design/goa/codegen", "goa.design/goa/codegen"},
+		{"vendored-pkg", cwd, "goa.design/goa/vendor/github.com/some/pkg", "github.com/some/pkg"},
+		{"external-pkg", cwd, "github.com/some/pkg", "github.com/some/pkg"},
+		{"gomod-root-pkg", goModCwd, "goa.design/goa", "goa.design/goa"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.Name, func(t *testing.T) {
+			pkgImport := getPkgImport(tc.Pkg, tc.Cwd)
+			if pkgImport != tc.ExpectedImport {
+				t.Errorf("got %s, expected %s", pkgImport, tc.ExpectedImport)
+			}
+		})
+	}
+}
 
 func TestDesignType(t *testing.T) {
 	var f bool

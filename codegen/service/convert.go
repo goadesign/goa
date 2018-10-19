@@ -2,6 +2,8 @@ package service
 
 import (
 	"fmt"
+	"os"
+	"path"
 	"path/filepath"
 	"reflect"
 	"strconv"
@@ -23,6 +25,103 @@ type ConvertData struct {
 	TypeName string
 	//  Code is the function code.
 	Code string
+}
+
+func commonPath(sep byte, paths ...string) string {
+	// Handle special cases.
+	switch len(paths) {
+	case 0:
+		return ""
+	case 1:
+		return path.Clean(paths[0])
+	}
+
+	// Note, we treat string as []byte, not []rune as is often
+	// done in Go. (And sep as byte, not rune). This is because
+	// most/all supported OS' treat paths as string of non-zero
+	// bytes. A filename may be displayed as a sequence of Unicode
+	// runes (typically encoded as UTF-8) but paths are
+	// not required to be valid UTF-8 or in any normalized form
+	// (e.g. "é" (U+00C9) and "é" (U+0065,U+0301) are different
+	// file names.
+	c := []byte(path.Clean(paths[0]))
+
+	// We add a trailing sep to handle the case where the
+	// common prefix directory is included in the path list
+	// (e.g. /home/user1, /home/user1/foo, /home/user1/bar).
+	// path.Clean will have cleaned off trailing / separators with
+	// the exception of the root directory, "/" (in which case we
+	// make it "//", but this will get fixed up to "/" bellow).
+	c = append(c, sep)
+
+	// Ignore the first path since it's already in c
+	for _, v := range paths[1:] {
+		// Clean up each path before testing it
+		v = path.Clean(v) + string(sep)
+
+		// Find the first non-common byte and truncate c
+		if len(v) < len(c) {
+			c = c[:len(v)]
+		}
+		for i := 0; i < len(c); i++ {
+			if v[i] != c[i] {
+				c = c[:i]
+				break
+			}
+		}
+	}
+
+	// Remove trailing non-separator characters and the final separator
+	for i := len(c) - 1; i >= 0; i-- {
+		if c[i] == sep {
+			c = c[:i]
+			break
+		}
+	}
+
+	return string(c)
+}
+
+// getPkgImport returns the correct import path of a package.
+// It's needed because the "reflect" package provides the binary import path
+// ("goa.design/goa/vendor/some/package") for vendored packages
+// instead the source import path ("some/package")
+func getPkgImport(pkg, cwd string) string {
+	gosrc := path.Join(os.Getenv("GOPATH"), "src")
+
+	// check for go modules
+	if !strings.HasPrefix(cwd, gosrc) {
+		return pkg
+	}
+
+	pkgpath := path.Join(gosrc, pkg)
+	parentpath := commonPath(os.PathSeparator, cwd, pkgpath)
+
+	// check for external packages
+	if parentpath == gosrc {
+		return pkg
+	}
+
+	rootpkg := string(parentpath[len(gosrc)+1:])
+
+	// check for vendored packages
+	vendorPrefix := path.Join(rootpkg, "vendor")
+	if strings.HasPrefix(pkg, vendorPrefix) {
+		return string(pkg[len(vendorPrefix)+1:])
+	}
+
+	return pkg
+}
+
+func getExternalTypeInfo(external interface{}) (string, string, error) {
+	cwd, err := os.Getwd()
+	if err != nil {
+		return "", "", err
+	}
+	pkg := reflect.TypeOf(external)
+	pkgImport := getPkgImport(pkg.PkgPath(), cwd)
+	alias := strings.Split(pkg.String(), ".")[0]
+	return pkgImport, alias, nil
 }
 
 // ConvertFile returns the file containing the conversion and creation functions
@@ -87,16 +186,18 @@ func ConvertFile(root *design.RootExpr, service *design.ServiceExpr) (*codegen.F
 	// Retrieve external packages info
 	ppm := make(map[string]string)
 	for _, c := range conversions {
-		pkg := reflect.TypeOf(c.External)
-		p := pkg.PkgPath()
-		alias := strings.Split(pkg.String(), ".")[0]
-		ppm[p] = alias
+		pkgImport, alias, err := getExternalTypeInfo(c.External)
+		if err != nil {
+			return nil, err
+		}
+		ppm[pkgImport] = alias
 	}
 	for _, c := range creations {
-		pkg := reflect.TypeOf(c.External)
-		p := pkg.PkgPath()
-		alias := strings.Split(pkg.String(), ".")[0]
-		ppm[p] = alias
+		pkgImport, alias, err := getExternalTypeInfo(c.External)
+		if err != nil {
+			return nil, err
+		}
+		ppm[pkgImport] = alias
 	}
 	pkgs := make([]*codegen.ImportSpec, len(ppm))
 	i := 0
