@@ -8,7 +8,6 @@ script:
 - cd ../../.. && mkdir goa.design && cp -r github.com/goadesign/goa goa.design/goa
 - cd goa.design/goa
 - make travis
-- make test-aliaser
 # https://graysonkoonce.com/getting-the-current-branch-name-during-a-pull-request-in-travis-ci/
 - export GOA_BRANCH=$(if [ "$TRAVIS_PULL_REQUEST" == "false" ]; then echo $TRAVIS_BRANCH; else echo $TRAVIS_PULL_REQUEST_BRANCH; fi)
 - make test-plugins
