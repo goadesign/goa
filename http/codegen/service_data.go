@@ -1005,10 +1005,6 @@ func buildPayloadData(e *httpdesign.EndpointExpr, sd *ServiceData) *PayloadData 
 			name, svc.Name, e.Name())
 		isObject = design.IsObject(payload.Type)
 		if body != design.Empty {
-			ref := "body"
-			if design.IsObject(body) {
-				ref = "&body"
-			}
 			var (
 				svcode string
 				cvcode string
@@ -1021,7 +1017,7 @@ func buildPayloadData(e *httpdesign.EndpointExpr, sd *ServiceData) *PayloadData 
 			}
 			serverArgs = []*InitArgData{{
 				Name:     "body",
-				Ref:      ref,
+				Ref:      svc.Scope.GoVar("body", body),
 				TypeName: svc.Scope.GoTypeName(&design.AttributeExpr{Type: body}),
 				TypeRef:  svc.Scope.GoTypeRef(&design.AttributeExpr{Type: body}),
 				Required: true,
@@ -1030,7 +1026,7 @@ func buildPayloadData(e *httpdesign.EndpointExpr, sd *ServiceData) *PayloadData 
 			}}
 			clientArgs = []*InitArgData{{
 				Name:     "body",
-				Ref:      ref,
+				Ref:      svc.Scope.GoVar("body", body),
 				TypeName: svc.Scope.GoTypeName(&design.AttributeExpr{Type: body}),
 				TypeRef:  svc.Scope.GoTypeRef(&design.AttributeExpr{Type: body}),
 				Required: true,
@@ -1826,7 +1822,7 @@ func buildRequestBodyType(sd *ServiceData, e *httpdesign.EndpointExpr, body, att
 				}
 			}
 		} else {
-			varname = svc.Scope.GoTypeRef(body)
+			varname = svc.Scope.GoTypeRef(&design.AttributeExpr{Type: body.Type})
 			validateRef = codegen.RecursiveValidationCode(body, true, svr, !svr, "body")
 			desc = body.Description
 		}

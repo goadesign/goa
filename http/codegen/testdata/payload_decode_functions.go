@@ -3147,6 +3147,63 @@ func DecodeMethodBodyUserRequest(mux goahttp.Muxer, decoder func(*http.Request) 
 }
 `
 
+var PayloadBodyUserRequiredDecodeCode = `// DecodeMethodBodyUserRequest returns a decoder for requests sent to the
+// ServiceBodyUser MethodBodyUser endpoint.
+func DecodeMethodBodyUserRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) (interface{}, error) {
+	return func(r *http.Request) (interface{}, error) {
+		var (
+			body MethodBodyUserRequestBody
+			err  error
+		)
+		err = decoder(r).Decode(&body)
+		if err != nil {
+			if err == io.EOF {
+				return nil, goa.MissingPayloadError()
+			}
+			return nil, goa.DecodePayloadError(err.Error())
+		}
+		err = body.Validate()
+		if err != nil {
+			return nil, err
+		}
+		payload := NewMethodBodyUserPayloadType(&body)
+
+		return payload, nil
+	}
+}
+`
+
+var PayloadBodyNestedUserDecodeCode = `// DecodeMethodBodyUserRequest returns a decoder for requests sent to the
+// ServiceBodyUser MethodBodyUser endpoint.
+func DecodeMethodBodyUserRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) (interface{}, error) {
+	return func(r *http.Request) (interface{}, error) {
+		var (
+			body struct {
+				A *string
+				B *string
+			}
+			err error
+		)
+		err = decoder(r).Decode(&body)
+		if err != nil {
+			if err == io.EOF {
+				return nil, goa.MissingPayloadError()
+			}
+			return nil, goa.DecodePayloadError(err.Error())
+		}
+		if body.A == nil {
+			err = goa.MergeErrors(err, goa.MissingFieldError("a", "body"))
+		}
+		if err != nil {
+			return nil, err
+		}
+		payload := NewMethodBodyUserPayloadType(body)
+
+		return payload, nil
+	}
+}
+`
+
 var PayloadBodyUserValidateDecodeCode = `// DecodeMethodBodyUserValidateRequest returns a decoder for requests sent to
 // the ServiceBodyUserValidate MethodBodyUserValidate endpoint.
 func DecodeMethodBodyUserValidateRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) (interface{}, error) {
