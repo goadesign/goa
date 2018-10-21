@@ -19,12 +19,12 @@ DEPEND=\
 	github.com/goadesign/goa-cellar \
 	github.com/goadesign/goa.design/tools/godoc2md \
 	github.com/goadesign/goa.design/tools/mdc \
-	github.com/golang/lint/golint \
 	github.com/fzipp/gocyclo \
 	github.com/onsi/ginkgo \
 	github.com/onsi/ginkgo/ginkgo \
 	github.com/onsi/gomega \
 	github.com/pkg/errors \
+	golang.org/x/lint/golint \
 	golang.org/x/tools/cmd/cover \
 	golang.org/x/tools/cmd/goimports
 
