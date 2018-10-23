@@ -1,10 +1,10 @@
 package testdata
 
 import (
+	"goa.design/goa/codegen/service/testdata/alias-external"
+	"goa.design/goa/codegen/service/testdata/external"
 	. "goa.design/goa/design"
 	. "goa.design/goa/dsl"
-	"goa.design/goa/codegen/service/testdata/external"
-	"goa.design/goa/codegen/service/testdata/alias-external"
 )
 
 var CreateStringDSL = func() {
@@ -53,6 +53,56 @@ var CreateStringPointerRequiredDSL = func() {
 	Service("Service", func() {
 		Method("Method", func() {
 			Payload(StringType)
+		})
+	})
+}
+
+var CreateExternalNameDSL = func() {
+	var ExternalNameType = Type("ExternalNameType", func() {
+		CreateFrom(ExternalNameT{})
+		Attribute("string", String)
+	})
+	Service("Service", func() {
+		Method("Method", func() {
+			Payload(ExternalNameType)
+		})
+	})
+}
+
+var CreateExternalNameRequiredDSL = func() {
+	var ExternalNameType = Type("ExternalNameType", func() {
+		CreateFrom(ExternalNameT{})
+		Attribute("string", String)
+		Required("string")
+	})
+	Service("Service", func() {
+		Method("Method", func() {
+			Payload(ExternalNameType)
+		})
+	})
+}
+
+var CreateExternalNamePointerDSL = func() {
+	var ExternalNamePointerType = Type("ExternalNamePointerType", func() {
+		CreateFrom(ExternalNamePointerT{})
+		Attribute("string", String)
+	})
+	Service("Service", func() {
+		Method("Method", func() {
+			Payload(ExternalNamePointerType)
+		})
+	})
+}
+
+var CreateExternalNamePointerRequiredDSL = func() {
+	var ExternalNamePointerType = Type("ExternalNamePointerType", func() {
+		CreateFrom(ExternalNamePointerT{})
+		Attribute("string", String)
+		Required("string")
+	})
+	Service("Service", func() {
+		Method("Method", func() {
+			Payload(ExternalNamePointerType)
 		})
 	})
 }

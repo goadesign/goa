@@ -37,6 +37,43 @@ func (t *StringType) CreateFromStringPointerT(v *testdata.StringPointerT) {
 }
 `
 
+var CreateExternalNameCode = `// CreateFromExternalNameT initializes t from the fields of v
+func (t *ExternalNameType) CreateFromExternalNameT(v *testdata.ExternalNameT) {
+	temp := &ExternalNameType{
+		String: &v.String,
+	}
+	*t = *temp
+}
+`
+
+var CreateExternalNameRequiredCode = `// CreateFromExternalNameT initializes t from the fields of v
+func (t *ExternalNameType) CreateFromExternalNameT(v *testdata.ExternalNameT) {
+	temp := &ExternalNameType{
+		String: v.String,
+	}
+	*t = *temp
+}
+`
+
+var CreateExternalNamePointerCode = `// CreateFromExternalNamePointerT initializes t from the fields of v
+func (t *ExternalNamePointerType) CreateFromExternalNamePointerT(v *testdata.ExternalNamePointerT) {
+	temp := &ExternalNamePointerType{
+		String: v.String,
+	}
+	*t = *temp
+}
+`
+
+var CreateExternalNamePointerRequiredCode = `// CreateFromExternalNamePointerT initializes t from the fields of v
+func (t *ExternalNamePointerType) CreateFromExternalNamePointerT(v *testdata.ExternalNamePointerT) {
+	temp := &ExternalNamePointerType{}
+	if v.String != nil {
+		temp.String = *v.String
+	}
+	*t = *temp
+}
+`
+
 var CreateArrayStringCode = `// CreateFromArrayStringT initializes t from the fields of v
 func (t *ArrayStringType) CreateFromArrayStringT(v *testdata.ArrayStringT) {
 	temp := &ArrayStringType{}

@@ -1,10 +1,10 @@
 package testdata
 
 import (
+	"goa.design/goa/codegen/service/testdata/alias-external"
+	"goa.design/goa/codegen/service/testdata/external"
 	. "goa.design/goa/design"
 	. "goa.design/goa/dsl"
-	"goa.design/goa/codegen/service/testdata/external"
-	"goa.design/goa/codegen/service/testdata/alias-external"
 )
 
 var ConvertStringDSL = func() {
@@ -53,6 +53,56 @@ var ConvertStringPointerRequiredDSL = func() {
 	Service("Service", func() {
 		Method("Method", func() {
 			Payload(StringPointerType)
+		})
+	})
+}
+
+var ConvertExternalNameDSL = func() {
+	var ExternalNameType = Type("ExternalNameType", func() {
+		ConvertTo(ExternalNameT{})
+		Attribute("string", String)
+	})
+	Service("Service", func() {
+		Method("Method", func() {
+			Payload(ExternalNameType)
+		})
+	})
+}
+
+var ConvertExternalNameRequiredDSL = func() {
+	var ExternalNameType = Type("ExternalNameType", func() {
+		ConvertTo(ExternalNameT{})
+		Attribute("string", String)
+		Required("string")
+	})
+	Service("Service", func() {
+		Method("Method", func() {
+			Payload(ExternalNameType)
+		})
+	})
+}
+
+var ConvertExternalNamePointerDSL = func() {
+	var ExternalNamePointerType = Type("ExternalNamePointerType", func() {
+		ConvertTo(ExternalNamePointerT{})
+		Attribute("string", String)
+	})
+	Service("Service", func() {
+		Method("Method", func() {
+			Payload(ExternalNamePointerType)
+		})
+	})
+}
+
+var ConvertExternalNamePointerRequiredDSL = func() {
+	var ExternalNamePointerType = Type("ExternalNamePointerType", func() {
+		ConvertTo(ExternalNamePointerT{})
+		Attribute("string", String)
+		Required("string")
+	})
+	Service("Service", func() {
+		Method("Method", func() {
+			Payload(ExternalNamePointerType)
 		})
 	})
 }
