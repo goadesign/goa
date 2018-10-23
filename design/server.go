@@ -112,7 +112,7 @@ func (s *ServerExpr) Schemes() []string {
 	return ss
 }
 
-var validSchemes = map[string]struct{}{"http": struct{}{}, "https": struct{}{}, "grpc": struct{}{}, "grpcs": struct{}{}}
+var validSchemes = map[string]struct{}{"http": {}, "https": {}, "grpc": {}, "grpcs": {}}
 
 // Validate validates the host.
 func (h *HostExpr) Validate() error {

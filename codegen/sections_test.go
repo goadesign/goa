@@ -37,7 +37,7 @@ import (
 `
 	)
 	var (
-		imprt   = []*ImportSpec{&ImportSpec{Path: "test"}}
+		imprt   = []*ImportSpec{{Path: "test"}}
 		imports = append(imprt, &ImportSpec{Path: "other"})
 	)
 	cases := map[string]struct {

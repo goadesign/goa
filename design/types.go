@@ -303,7 +303,7 @@ func equal(dt, dt2 DataType, seen ...map[string]*[]*bool) *[]*bool {
 			if at == nil {
 				return &fs
 			}
-			bs = append(bs, (*equal(nat.Attribute.Type, at.Type, s))...)
+			bs = append(bs, *equal(nat.Attribute.Type, at.Type, s)...)
 		}
 		return &bs
 	case UserType:

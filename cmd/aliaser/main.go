@@ -162,7 +162,7 @@ func main() {
 		}
 
 		designImports := map[string]*PackageDecl{
-			"design": &PackageDecl{Name: "design", ImportPath: srcDesignPkgPath},
+			"design": {Name: "design", ImportPath: srcDesignPkgPath},
 		}
 		constAliases, err := WriteConstAliases(designF, consts, destDesignPkgName, designImports)
 		if err != nil {

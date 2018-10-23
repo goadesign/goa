@@ -103,7 +103,7 @@ func FormatTestCode(t *testing.T, code string) string {
 // otherwise degrades to using the dmp package.
 func Diff(t *testing.T, s1, s2 string) string {
 	_, err := exec.LookPath("diff")
-	supportsDiff := (err == nil)
+	supportsDiff := err == nil
 	if !supportsDiff {
 		dmp := diffmatchpatch.New()
 		diffs := dmp.DiffMain(s1, s2, false)

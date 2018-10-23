@@ -72,7 +72,7 @@ func ExampleCLI(genpkg string, root *httpdesign.RootExpr) []*codegen.File {
 		}
 		sections := []*codegen.SectionTemplate{
 			codegen.Header("", "main", specs),
-			&codegen.SectionTemplate{
+			{
 				Name:   "cli-main",
 				Source: mainCLIT,
 				Data:   data,

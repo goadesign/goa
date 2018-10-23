@@ -290,7 +290,7 @@ func Security(args ...interface{}) {
 func NoSecurity() {
 	security := &design.SecurityExpr{
 		Schemes: []*design.SchemeExpr{
-			&design.SchemeExpr{Kind: design.NoKind},
+			{Kind: design.NoKind},
 		},
 	}
 

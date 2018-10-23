@@ -10,7 +10,7 @@ import (
 type (
 	requestIDTestHandler struct {
 		testCaseName string
-		handler http.HandlerFunc
+		handler      http.HandlerFunc
 	}
 
 	requestIDTestCase struct {
@@ -39,7 +39,7 @@ func TestRequestID(t *testing.T) {
 		ignored http.ResponseWriter
 	)
 	for _, tc := range []*requestIDTestCase{
-		&requestIDTestCase{"default without header", nil, makeRequest(""),
+		{"default without header", nil, makeRequest(""),
 			func(_ http.ResponseWriter, r *http.Request) {
 				id := getRequestID(r)
 				if len(id) != 8 {
@@ -47,7 +47,7 @@ func TestRequestID(t *testing.T) {
 				}
 			},
 		},
-		&requestIDTestCase{"default ignores header", nil, makeRequest("ignore this header"),
+		{"default ignores header", nil, makeRequest("ignore this header"),
 			func(_ http.ResponseWriter, r *http.Request) {
 				id := getRequestID(r)
 				if len(id) != 8 {
@@ -55,7 +55,7 @@ func TestRequestID(t *testing.T) {
 				}
 			},
 		},
-		&requestIDTestCase{"generate without header",
+		{"generate without header",
 			[]middleware.RequestIDOption{middleware.UseXRequestIDHeaderOption(true)},
 			makeRequest(""),
 			func(_ http.ResponseWriter, r *http.Request) {
@@ -65,7 +65,7 @@ func TestRequestID(t *testing.T) {
 				}
 			},
 		},
-		&requestIDTestCase{"accept header",
+		{"accept header",
 			[]middleware.RequestIDOption{middleware.UseXRequestIDHeaderOption(true)},
 			makeRequest("accept+header"),
 			func(_ http.ResponseWriter, r *http.Request) {
@@ -75,7 +75,7 @@ func TestRequestID(t *testing.T) {
 				}
 			},
 		},
-		&requestIDTestCase{"truncate header",
+		{"truncate header",
 			[]middleware.RequestIDOption{
 				middleware.UseXRequestIDHeaderOption(true),
 				middleware.XRequestHeaderLimitOption(3),
