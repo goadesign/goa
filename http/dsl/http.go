@@ -80,6 +80,8 @@ import (
 //
 func HTTP(fn func()) {
 	switch actual := eval.Current().(type) {
+	case *design.APIExpr:
+		eval.Execute(fn, httpdesign.Root)
 	case *design.ServiceExpr:
 		res := httpdesign.Root.ServiceFor(actual)
 		res.DSLFunc = fn
