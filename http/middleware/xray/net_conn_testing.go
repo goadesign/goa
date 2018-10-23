@@ -11,7 +11,7 @@ type TestNetConn struct {
 }
 
 // Make sure TestNetConn implements net.Conn
-var _ (net.Conn) = (*TestNetConn)(nil)
+var _ net.Conn = (*TestNetConn)(nil)
 
 // NewTestNetConn creates a mock net.Conn which uses expectations set by the
 // tests to implement the behavior.

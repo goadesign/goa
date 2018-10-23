@@ -81,7 +81,7 @@ func (g *Generator) Write(debug bool) error {
 		}
 		sections = []*codegen.SectionTemplate{
 			codegen.Header("Code Generator", "main", imports),
-			&codegen.SectionTemplate{
+			{
 				Name:   "main",
 				Source: mainT,
 				Data:   data,

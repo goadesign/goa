@@ -44,7 +44,7 @@ func TestDesignType(t *testing.T) {
 		{"array", []string{}, dsl.ArrayOf(design.String), ""},
 		{"map", map[string]string{}, dsl.MapOf(design.String, design.String), ""},
 		{"object", objT{}, obj, ""},
-		{"array-object", []objT{objT{}}, dsl.ArrayOf(obj), ""},
+		{"array-object", []objT{{}}, dsl.ArrayOf(obj), ""},
 
 		{"invalid-bool", &f, nil, "*(<value>): only pointer to struct can be converted"},
 		{"invalid-array", []*bool{&f}, nil, "*(<value>[0]): only pointer to struct can be converted"},
@@ -107,7 +107,7 @@ func TestCompatible(t *testing.T) {
 		{"object-ignored", objIgnored, objT{}, ""},
 		{"object-extra", objIgnored, objExtraT{}, ""},
 		{"object-recursive", objRecursive(), objRecursiveT{}, ""},
-		{"array-object", dsl.ArrayOf(obj), []objT{objT{}}, ""},
+		{"array-object", dsl.ArrayOf(obj), []objT{{}}, ""},
 
 		{"invalid-primitive", design.String, 0, "types don't match: type of <value> is int but type of corresponding attribute is string"},
 		{"invalid-int", design.Int, 0.0, "types don't match: type of <value> is float64 but type of corresponding attribute is int"},
@@ -120,7 +120,7 @@ func TestCompatible(t *testing.T) {
 		{"invalid-obj-3", obj, objT3{}, "types don't match: type of <value>.Goo is int but type of corresponding attribute is float32"},
 		{"invalid-obj-4", obj, objT4{}, "types don't match: type of <value>.Goo2 is float32 but type of corresponding attribute is uint"},
 		{"invalid-obj-5", obj, objT5{}, "types don't match: could not find field \"Baz\" of external type \"objT5\" matching attribute \"Baz\" of type \"objT\""},
-		{"invalid-array-object", dsl.ArrayOf(obj), []objT2{objT2{}}, "types don't match: type of <value>[0].Bar is string but type of corresponding attribute is int"},
+		{"invalid-array-object", dsl.ArrayOf(obj), []objT2{{}}, "types don't match: type of <value>[0].Bar is string but type of corresponding attribute is int"},
 	}
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
