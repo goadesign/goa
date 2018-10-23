@@ -31,6 +31,9 @@ var (
 	DefaultPointerObj = pointer(defaulta(object("Int64", design.Int64, "Uint32", design.UInt32, "Float64", design.Float64, "String", design.String, "Bytes", design.Bytes), "Int64", 100, "Uint32", 1, "Float64", 1.0, "String", "foo", "Bytes", []byte{0, 1, 2}))
 	NonRequiredObj    = object("Int64", design.Int64, "Uint32", design.UInt32, "Float64", design.Float64, "String", design.String, "Bytes", design.Bytes)
 
+	ExternalAttrsSource = object("Int64", design.Int64, "Foo", design.String)
+	ExternalAttrsTarget = object("Int64", design.Int64, "Foo:Bar", design.String)
+
 	ObjWithMetadata = withMetadata(object("a", SimpleMap.Type, "b", design.Int), "a", metadata("struct:field:name", "Apple"))
 
 	recursiveObjMap = mapa(design.String, objRecursive(&design.UserTypeExpr{TypeName: "Recursive", AttributeExpr: object("a", design.String, "b", design.Int)}).Type)
@@ -58,6 +61,9 @@ func TestGoTypeTransform(t *testing.T) {
 		{"required-marshal", RequiredObj, RequiredObj, false, "", requiredCode},
 		{"default-marshal", DefaultObj, DefaultObj, false, "", defaultCode},
 		{"default-pointer-marshal", NonRequiredObj, DefaultPointerObj, false, "", defaultPointerMarshalCode},
+
+		// // external name of attribute
+		{"external-attr-marshal", ExternalAttrsSource, ExternalAttrsTarget, false, "", externalAgttrMarshalCode},
 
 		// non match field ignore
 		{"super-unmarshal", SuperObj, SimpleObj, true, "", objUnmarshalCode},
@@ -747,6 +753,14 @@ const defaultPointerUnmarshalCode = `func transform() {
 	if source.Bytes == nil {
 		var tmp []byte = []byte{0x0, 0x1, 0x2}
 		target.Bytes = &tmp
+	}
+}
+`
+
+const externalAgttrMarshalCode = `func transform() {
+	target := &TargetType{
+		Int64: source.Int64,
+		Bar:   source.Foo,
 	}
 }
 `

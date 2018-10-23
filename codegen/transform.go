@@ -163,8 +163,8 @@ func transformObject(source, target *design.AttributeExpr, newVar bool, a targs)
 		if !design.IsPrimitive(srcAtt.Type) {
 			return
 		}
-		srcPtr := a.unmarshal || source.IsPrimitivePointer(n, !a.unmarshal)
-		tgtPtr := target.IsPrimitivePointer(n, true)
+		srcPtr := a.unmarshal || src.IsPrimitivePointer(n, !a.unmarshal)
+		tgtPtr := tgt.IsPrimitivePointer(n, true)
 		deref := ""
 		srcField := a.sourceVar + "." + Goify(src.ElemName(n), true)
 		if srcPtr && !tgtPtr {
