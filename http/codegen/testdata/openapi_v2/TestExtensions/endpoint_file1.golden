@@ -1,0 +1,17 @@
+swagger: "2.0"
+info:
+  version: ""
+host: goa.design
+paths:
+  /:
+    post:
+      operationId: testService#testEndpoint
+      responses:
+        "204":
+          description: No Content response.
+      schemes:
+      - https
+      summary: testEndpoint testService
+      tags:
+      - testService
+    x-test-foo: bar
