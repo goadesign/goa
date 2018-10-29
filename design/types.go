@@ -465,6 +465,10 @@ func (a *Array) Example(r *Random) interface{} {
 func (a *Array) MakeSlice(s []interface{}) interface{} {
 	slice := reflect.MakeSlice(toReflectType(a), 0, len(s))
 	for _, item := range s {
+		if item == nil {
+			continue
+		}
+
 		slice = reflect.Append(slice, reflect.ValueOf(item))
 	}
 	return slice.Interface()
