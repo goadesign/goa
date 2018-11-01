@@ -1081,44 +1081,38 @@ const requestParamsHeadersT = `{{- define "request_params_headers" }}
 const responseEncoderT = `{{ printf "%s returns an encoder for responses returned by the %s %s endpoint." .ResponseEncoder .ServiceName .Method.Name | comment }}
 func {{ .ResponseEncoder }}(encoder func(context.Context, http.ResponseWriter) goahttp.Encoder) func(context.Context, http.ResponseWriter, interface{}) error {
 	return func(ctx context.Context, w http.ResponseWriter, v interface{}) error {
-	{{- if and .Result.Ref .NeedServerResponse }}
+	{{- if .Result.MustInit }}
 		{{- if .Method.ViewedResult }}
-		res := v.({{ .Method.ViewedResult.FullRef }})
+			res := v.({{ .Method.ViewedResult.FullRef }})
 			{{- if not .Method.ViewedResult.ViewName }}
-		w.Header().Set("goa-view", res.View)
+				w.Header().Set("goa-view", res.View)
 			{{- end }}
 		{{- else }}
-		res := v.({{ .Result.Ref }})
+			res := v.({{ .Result.Ref }})
 		{{- end }}
 		{{- range .Result.Responses }}
 			{{- if .TagName }}
-			{{- if .TagRequired }}
-		if {{ if .ViewedResult }}*{{ end }}res.{{ if .ViewedResult }}Projected.{{ end }}{{ .TagName }} == {{ printf "%q" .TagValue }} {
-			{{- else }}
-		if res.{{ if .ViewedResult }}Projected.{{ end }}{{ .TagName }} != nil && *res.{{ if .ViewedResult }}Projected.{{ end }}{{ .TagName }} == {{ printf "%q" .TagValue }} {
-			{{- end }}
+				{{- if .TagRequired }}
+					if {{ if .ViewedResult }}*{{ end }}res.{{ if .ViewedResult }}Projected.{{ end }}{{ .TagName }} == {{ printf "%q" .TagValue }} {
+				{{- else }}
+					if res.{{ if .ViewedResult }}Projected.{{ end }}{{ .TagName }} != nil && *res.{{ if .ViewedResult }}Projected.{{ end }}{{ .TagName }} == {{ printf "%q" .TagValue }} {
+				{{- end }}
 			{{- end -}}
 			{{ template "response" . }}
 			{{- if .ServerBody }}
-			return enc.Encode(body)
+				return enc.Encode(body)
 			{{- else }}
-			return nil
+				return nil
 			{{- end }}
-
 			{{- if .TagName }}
-		}
+				}
 			{{- end }}
-
 		{{- end }}
-
 	{{- else }}
-
 		{{- with (index .Result.Responses 0) }}
-		w.WriteHeader({{ .StatusCode }})
-		return nil
-
+			w.WriteHeader({{ .StatusCode }})
+			return nil
 		{{- end }}
-
 	{{- end }}
 	}
 }
