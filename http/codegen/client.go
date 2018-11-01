@@ -521,10 +521,19 @@ func {{ .ResponseDecoder }}(decoder func(*http.Response) goahttp.Decoder, restor
 					return nil, goahttp.ErrValidationError("{{ $.ServiceName }}", "{{ $.Method.Name }}", err)
 				}
 			{{- end }}
-			return {{ $.ServicePkgName }}.{{ $.Method.ViewedResult.ResultInit.Name }}(vres), nil
+			res := {{ $.ServicePkgName }}.{{ $.Method.ViewedResult.ResultInit.Name }}(vres)
 			{{- else }}
-		return {{ .ResultInit.Name }}({{ range .ResultInit.ClientArgs }}{{ .Ref }},{{ end }}), nil
+			res := {{ .ResultInit.Name }}({{ range .ResultInit.ClientArgs }}{{ .Ref }},{{ end }})
 			{{- end }}
+			{{- if .TagName }}
+				{{- if .TagPointer }}
+					tmp := {{ printf "%q" .TagValue }}
+					res.{{ .TagName }} = &tmp
+				{{- else }}
+					res.{{ .TagName }} = {{ printf "%q" .TagValue }}
+				{{- end }}
+			{{- end }}
+			return res, nil
 		{{- else if .ClientBody }}
 			return body, nil
 		{{- else }}
