@@ -20,7 +20,8 @@ func DecodeMethodEmptyServerResponseResponse(decoder func(*http.Response) goahtt
 		}
 		switch resp.StatusCode {
 		case http.StatusOK:
-			return NewMethodEmptyServerResponseResultOK(), nil
+			res := NewMethodEmptyServerResponseResultOK()
+			return res, nil
 		default:
 			body, _ := ioutil.ReadAll(resp.Body)
 			return nil, goahttp.ErrInvalidResponse("ServiceEmptyServerResponse", "MethodEmptyServerResponse", resp.StatusCode, string(body))
@@ -70,7 +71,8 @@ func DecodeMethodBodyMultipleViewResponse(decoder func(*http.Response) goahttp.D
 			if err = vres.Validate(); err != nil {
 				return nil, goahttp.ErrValidationError("ServiceBodyMultipleView", "MethodBodyMultipleView", err)
 			}
-			return servicebodymultipleview.NewResulttypemultipleviews(vres), nil
+			res := servicebodymultipleview.NewResulttypemultipleviews(vres)
+			return res, nil
 		default:
 			body, _ := ioutil.ReadAll(resp.Body)
 			return nil, goahttp.ErrInvalidResponse("ServiceBodyMultipleView", "MethodBodyMultipleView", resp.StatusCode, string(body))
@@ -109,7 +111,8 @@ func DecodeMethodEmptyBodyResultMultipleViewResponse(decoder func(*http.Response
 			p := NewMethodEmptyBodyResultMultipleViewResulttypemultipleviewsOK(c)
 			view := resp.Header.Get("goa-view")
 			vres := &serviceemptybodyresultmultipleviewviews.Resulttypemultipleviews{p, view}
-			return serviceemptybodyresultmultipleview.NewResulttypemultipleviews(vres), nil
+			res := serviceemptybodyresultmultipleview.NewResulttypemultipleviews(vres)
+			return res, nil
 		default:
 			body, _ := ioutil.ReadAll(resp.Body)
 			return nil, goahttp.ErrInvalidResponse("ServiceEmptyBodyResultMultipleView", "MethodEmptyBodyResultMultipleView", resp.StatusCode, string(body))
@@ -159,7 +162,8 @@ func DecodeMethodExplicitBodyUserResultMultipleViewResponse(decoder func(*http.R
 			if err = vres.Validate(); err != nil {
 				return nil, goahttp.ErrValidationError("ServiceExplicitBodyUserResultMultipleView", "MethodExplicitBodyUserResultMultipleView", err)
 			}
-			return serviceexplicitbodyuserresultmultipleview.NewResulttypemultipleviews(vres), nil
+			res := serviceexplicitbodyuserresultmultipleview.NewResulttypemultipleviews(vres)
+			return res, nil
 		default:
 			body, _ := ioutil.ReadAll(resp.Body)
 			return nil, goahttp.ErrInvalidResponse("ServiceExplicitBodyUserResultMultipleView", "MethodExplicitBodyUserResultMultipleView", resp.StatusCode, string(body))
@@ -209,7 +213,10 @@ func DecodeMethodTagMultipleViewsResponse(decoder func(*http.Response) goahttp.D
 			if err = vres.Validate(); err != nil {
 				return nil, goahttp.ErrValidationError("ServiceTagMultipleViews", "MethodTagMultipleViews", err)
 			}
-			return servicetagmultipleviews.NewResulttypemultipleviews(vres), nil
+			res := servicetagmultipleviews.NewResulttypemultipleviews(vres)
+			tmp := "value"
+			res.B = &tmp
+			return res, nil
 		case http.StatusOK:
 			var (
 				body MethodTagMultipleViewsOKResponseBody
@@ -225,10 +232,45 @@ func DecodeMethodTagMultipleViewsResponse(decoder func(*http.Response) goahttp.D
 			if err = vres.Validate(); err != nil {
 				return nil, goahttp.ErrValidationError("ServiceTagMultipleViews", "MethodTagMultipleViews", err)
 			}
-			return servicetagmultipleviews.NewResulttypemultipleviews(vres), nil
+			res := servicetagmultipleviews.NewResulttypemultipleviews(vres)
+			return res, nil
 		default:
 			body, _ := ioutil.ReadAll(resp.Body)
 			return nil, goahttp.ErrInvalidResponse("ServiceTagMultipleViews", "MethodTagMultipleViews", resp.StatusCode, string(body))
+		}
+	}
+}
+`
+
+var EmptyServerResponseWithTagsDecodeCode = `// DecodeMethodEmptyServerResponseWithTagsResponse returns a decoder for
+// responses returned by the ServiceEmptyServerResponseWithTags
+// MethodEmptyServerResponseWithTags endpoint. restoreBody controls whether the
+// response body should be restored after having been read.
+func DecodeMethodEmptyServerResponseWithTagsResponse(decoder func(*http.Response) goahttp.Decoder, restoreBody bool) func(*http.Response) (interface{}, error) {
+	return func(resp *http.Response) (interface{}, error) {
+		if restoreBody {
+			b, err := ioutil.ReadAll(resp.Body)
+			if err != nil {
+				return nil, err
+			}
+			resp.Body = ioutil.NopCloser(bytes.NewBuffer(b))
+			defer func() {
+				resp.Body = ioutil.NopCloser(bytes.NewBuffer(b))
+			}()
+		} else {
+			defer resp.Body.Close()
+		}
+		switch resp.StatusCode {
+		case http.StatusNotModified:
+			res := NewMethodEmptyServerResponseWithTagsResultNotModified()
+			res.H = "true"
+			return res, nil
+		case http.StatusNoContent:
+			res := NewMethodEmptyServerResponseWithTagsResultNoContent()
+			return res, nil
+		default:
+			body, _ := ioutil.ReadAll(resp.Body)
+			return nil, goahttp.ErrInvalidResponse("ServiceEmptyServerResponseWithTags", "MethodEmptyServerResponseWithTags", resp.StatusCode, string(body))
 		}
 	}
 }

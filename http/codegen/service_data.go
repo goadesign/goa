@@ -294,8 +294,8 @@ type (
 		// TagValue is the value the result attribute named by TagName
 		// must have for this response to be used.
 		TagValue string
-		// TagRequired is true if the tag attribute is required.
-		TagRequired bool
+		// TagPointer is true if the tag attribute is a pointer.
+		TagPointer bool
 		// MustValidate is true if at least one header requires validation.
 		MustValidate bool
 		// ResultAttr sets the response body from the specified result type
@@ -1437,6 +1437,19 @@ func buildResponses(e *httpdesign.EndpointExpr, result *design.AttributeExpr, vi
 						ClientCode:               code,
 					}
 				}
+
+				var (
+					tagName string
+					tagVal  string
+					tagPtr  bool
+				)
+				{
+					if resp.Tag[0] != "" {
+						tagName = codegen.Goify(resp.Tag[0], true)
+						tagVal = resp.Tag[1]
+						tagPtr = viewed || result.IsPrimitivePointer(resp.Tag[0], true)
+					}
+				}
 				responses = append(responses, &ResponseData{
 					StatusCode:   statusCodeToHTTPConst(resp.StatusCode),
 					Description:  resp.Description,
@@ -1444,9 +1457,9 @@ func buildResponses(e *httpdesign.EndpointExpr, result *design.AttributeExpr, vi
 					ServerBody:   serverBodyData,
 					ClientBody:   clientBodyData,
 					ResultInit:   init,
-					TagName:      codegen.Goify(resp.Tag[0], true),
-					TagValue:     resp.Tag[1],
-					TagRequired:  result.IsRequired(resp.Tag[0]) && !viewed,
+					TagName:      tagName,
+					TagValue:     tagVal,
+					TagPointer:   tagPtr,
 					MustValidate: mustValidate,
 					ResultAttr:   codegen.Goify(origin, true),
 					ViewedResult: md.ViewedResult,

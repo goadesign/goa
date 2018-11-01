@@ -1092,10 +1092,10 @@ func {{ .ResponseEncoder }}(encoder func(context.Context, http.ResponseWriter) g
 		{{- end }}
 		{{- range .Result.Responses }}
 			{{- if .TagName }}
-				{{- if .TagRequired }}
-					if {{ if .ViewedResult }}*{{ end }}res.{{ if .ViewedResult }}Projected.{{ end }}{{ .TagName }} == {{ printf "%q" .TagValue }} {
-				{{- else }}
+				{{- if .TagPointer }}
 					if res.{{ if .ViewedResult }}Projected.{{ end }}{{ .TagName }} != nil && *res.{{ if .ViewedResult }}Projected.{{ end }}{{ .TagName }} == {{ printf "%q" .TagValue }} {
+				{{- else }}
+					if {{ if .ViewedResult }}*{{ end }}res.{{ if .ViewedResult }}Projected.{{ end }}{{ .TagName }} == {{ printf "%q" .TagValue }} {
 				{{- end }}
 			{{- end -}}
 			{{ template "response" . }}
