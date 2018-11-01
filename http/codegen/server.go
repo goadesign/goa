@@ -161,11 +161,9 @@ func serverEncodeDecode(genpkg string, svc *httpdesign.ServiceExpr) *codegen.Fil
 
 	for _, e := range data.Endpoints {
 		if e.ServerStream == nil {
-			fm := transTmplFuncs(svc)
-			fm["mustInitResult"] = mustInitResult
 			sections = append(sections, &codegen.SectionTemplate{
 				Name:    "response-encoder",
-				FuncMap: fm,
+				FuncMap: transTmplFuncs(svc),
 				Source:  responseEncoderT,
 				Data:    e,
 			})
@@ -278,25 +276,6 @@ func viewedServerBody(sbd []*TypeData, view string) *TypeData {
 		}
 	}
 	panic("view not found in server body types: " + view)
-}
-
-// mustInitResult returns true if a variable holding the result type must be
-// initialized when encoding server response. If the server responses need not
-// be gleaned from the result type (i.e., response has no body or headers or
-// there are no tagged responses), then the variable holding the result type
-// will not be initialized.
-func mustInitResult(ed *EndpointData) bool {
-	// No result type
-	if ed.Method.Result == "" {
-		return false
-	}
-	for _, r := range ed.Result.Responses {
-		// response has a body or headers or tag
-		if len(r.ServerBody) > 0 || len(r.Headers) > 0 || r.TagName != "" {
-			return true
-		}
-	}
-	return false
 }
 
 // input: ServiceData
@@ -1102,7 +1081,7 @@ const requestParamsHeadersT = `{{- define "request_params_headers" }}
 const responseEncoderT = `{{ printf "%s returns an encoder for responses returned by the %s %s endpoint." .ResponseEncoder .ServiceName .Method.Name | comment }}
 func {{ .ResponseEncoder }}(encoder func(context.Context, http.ResponseWriter) goahttp.Encoder) func(context.Context, http.ResponseWriter, interface{}) error {
 	return func(ctx context.Context, w http.ResponseWriter, v interface{}) error {
-	{{- if mustInitResult . }}
+	{{- if .Result.MustInit }}
 		{{- if .Method.ViewedResult }}
 			res := v.({{ .Method.ViewedResult.FullRef }})
 			{{- if not .Method.ViewedResult.ViewName }}

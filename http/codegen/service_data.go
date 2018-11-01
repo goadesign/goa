@@ -201,6 +201,11 @@ type (
 		Responses []*ResponseData
 		// View is the view used to render the result.
 		View string
+		// MustInit indicates if a variable holding the result type must be
+		// initialized. It is used by server response encoder to initialize
+		// the result variable only if there are multiple responses, or the
+		// response has a body or a header.
+		MustInit bool
 	}
 
 	// ErrorGroupData contains the error information required to generate
@@ -1207,14 +1212,13 @@ func buildResultData(e *httpdesign.EndpointExpr, sd *ServiceData) *ResultData {
 		svc    = sd.Service
 		ep     = svc.Method(e.MethodExpr.Name)
 
-		name   string
-		ref    string
-		pkg    string
-		view   string
-		viewed bool
+		name      string
+		ref       string
+		view      string
+		mustInit  bool
+		responses []*ResponseData
 	)
 	{
-		pkg = svc.PkgName
 		view = "default"
 		if result.Metadata != nil {
 			if v, ok := result.Metadata["view"]; ok {
@@ -1225,18 +1229,28 @@ func buildResultData(e *httpdesign.EndpointExpr, sd *ServiceData) *ResultData {
 			name = svc.Scope.GoFullTypeName(result, svc.PkgName)
 			ref = svc.Scope.GoFullTypeRef(result, svc.PkgName)
 		}
+		viewed := false
+		pkg := svc.PkgName
 		if ep.ViewedResult != nil {
 			result = design.AsObject(ep.ViewedResult.Type).Attribute("projected")
 			pkg = svc.ViewsPkg
 			viewed = true
+		}
+		responses = buildResponses(e, result, viewed, sd, pkg)
+		for _, r := range responses {
+			// response has a body or headers or tag
+			if len(r.ServerBody) > 0 || len(r.Headers) > 0 || r.TagName != "" {
+				mustInit = true
+			}
 		}
 	}
 	return &ResultData{
 		IsStruct:  design.IsObject(result.Type),
 		Name:      name,
 		Ref:       ref,
-		Responses: buildResponses(e, result, viewed, sd, pkg),
+		Responses: responses,
 		View:      view,
+		MustInit:  mustInit,
 	}
 }
 
