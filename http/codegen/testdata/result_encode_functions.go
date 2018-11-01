@@ -941,3 +941,19 @@ func EncodeMethodEmptyServerResponseResponse(encoder func(context.Context, http.
 	}
 }
 `
+
+var EmptyServerResponseWithTagsEncodeCode = `// EncodeMethodEmptyServerResponseWithTagsResponse returns an encoder for
+// responses returned by the ServiceEmptyServerResponseWithTags
+// MethodEmptyServerResponseWithTags endpoint.
+func EncodeMethodEmptyServerResponseWithTagsResponse(encoder func(context.Context, http.ResponseWriter) goahttp.Encoder) func(context.Context, http.ResponseWriter, interface{}) error {
+	return func(ctx context.Context, w http.ResponseWriter, v interface{}) error {
+		res := v.(*serviceemptyserverresponsewithtags.MethodEmptyServerResponseWithTagsResult)
+		if res.H == "true" {
+			w.WriteHeader(http.StatusNotModified)
+			return nil
+		}
+		w.WriteHeader(http.StatusNoContent)
+		return nil
+	}
+}
+`
