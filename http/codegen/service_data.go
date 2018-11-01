@@ -576,23 +576,6 @@ func (svc *ServiceData) Endpoint(name string) *EndpointData {
 	return nil
 }
 
-// NeedServerResponse returns true if server response has a body or a header.
-// It is used when initializing the result in the server response encoding.
-func (e *EndpointData) NeedServerResponse() bool {
-	if e.Result == nil {
-		return false
-	}
-	for _, r := range e.Result.Responses {
-		if len(r.ServerBody) > 0 {
-			return true
-		}
-		if len(r.Headers) > 0 {
-			return true
-		}
-	}
-	return false
-}
-
 // analyze creates the data necessary to render the code of the given service.
 // It records the user types needed by the service definition in userTypes.
 func (d ServicesData) analyze(hs *httpdesign.ServiceExpr) *ServiceData {

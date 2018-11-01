@@ -993,3 +993,24 @@ var EmptyServerResponseDSL = func() {
 		})
 	})
 }
+
+var EmptyServerResponseWithTagsDSL = func() {
+	Service("ServiceEmptyServerResponseWithTags", func() {
+		Method("MethodEmptyServerResponseWithTags", func() {
+			Result(func() {
+				Attribute("h", String)
+				Required("h")
+			})
+			HTTP(func() {
+				GET("/")
+				Response(StatusNoContent, func() {
+					Body(Empty)
+				})
+				Response(StatusNotModified, func() {
+					Tag("h", "true")
+					Body(Empty)
+				})
+			})
+		})
+	})
+}
