@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 
 	"goa.design/goa/design"
+	yaml "gopkg.in/yaml.v2"
 )
 
 type (
@@ -352,4 +353,57 @@ func (s SecurityDefinition) MarshalJSON() ([]byte, error) {
 // MarshalJSON returns the JSON encoding of t.
 func (t Tag) MarshalJSON() ([]byte, error) {
 	return marshalJSON(_Tag(t), t.Extensions)
+}
+
+func marshalYAML(v interface{}, extensions map[string]interface{}) (interface{}, error) {
+	if len(extensions) == 0 {
+		return v, nil
+	}
+	marshaled, err := yaml.Marshal(v)
+	if err != nil {
+		return nil, err
+	}
+	var unmarshaled map[string]interface{}
+	if err := yaml.Unmarshal(marshaled, &unmarshaled); err != nil {
+		return nil, err
+	}
+	for k, v := range extensions {
+		unmarshaled[k] = v
+	}
+	return unmarshaled, nil
+}
+
+// MarshalYAML returns value which marshaled in place of the original value
+func (i Info) MarshalYAML() (interface{}, error) {
+	return marshalYAML(_Info(i), i.Extensions)
+}
+
+// MarshalYAML returns value which marshaled in place of the original value
+func (p Path) MarshalYAML() (interface{}, error) {
+	return marshalYAML(_Path(p), p.Extensions)
+}
+
+// MarshalYAML returns value which marshaled in place of the original value
+func (o Operation) MarshalYAML() (interface{}, error) {
+	return marshalYAML(_Operation(o), o.Extensions)
+}
+
+// MarshalYAML returns value which marshaled in place of the original value
+func (p Parameter) MarshalYAML() (interface{}, error) {
+	return marshalYAML(_Parameter(p), p.Extensions)
+}
+
+// MarshalYAML returns value which marshaled in place of the original value
+func (r Response) MarshalYAML() (interface{}, error) {
+	return marshalYAML(_Response(r), r.Extensions)
+}
+
+// MarshalYAML returns value which marshaled in place of the original value
+func (s SecurityDefinition) MarshalYAML() (interface{}, error) {
+	return marshalYAML(_SecurityDefinition(s), s.Extensions)
+}
+
+// MarshalYAML returns value which marshaled in place of the original value
+func (t Tag) MarshalYAML() (interface{}, error) {
+	return marshalYAML(_Tag(t), t.Extensions)
 }
