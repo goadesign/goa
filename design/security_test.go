@@ -181,6 +181,37 @@ func TestSchemeExprEvalName(t *testing.T) {
 	}
 }
 
+func TestSchemeExprType(t *testing.T) {
+	cases := map[string]struct {
+		kind     SchemeKind
+		expected string
+	}{
+		"oauth2": {
+			kind:     OAuth2Kind,
+			expected: "OAuth2",
+		},
+		"basic auth": {
+			kind:     BasicAuthKind,
+			expected: "BasicAuth",
+		},
+		"api key": {
+			kind:     APIKeyKind,
+			expected: "APIKey",
+		},
+		"jwt": {
+			kind:     JWTKind,
+			expected: "JWT",
+		},
+	}
+
+	for k, tc := range cases {
+		f := &SchemeExpr{Kind: tc.kind}
+		if actual := f.Type(); actual != tc.expected {
+			t.Errorf("%s: got %#v, expected %#v", k, actual, tc.expected)
+		}
+	}
+}
+
 func TestSecurityExprEvalName(t *testing.T) {
 	scheme1 := &SchemeExpr{SchemeName: "A"}
 	scheme2 := &SchemeExpr{SchemeName: ""}
