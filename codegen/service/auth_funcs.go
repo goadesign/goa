@@ -73,7 +73,7 @@ func AuthFuncsFile(genpkg string, root *design.RootExpr) *codegen.File {
 
 // data: Data
 const dummyAuthFuncsT = `{{ range .Schemes }}
-{{ printf "%s%sAuth implements the authorization logic for service %q for the %q security scheme." $.StructName .Type $.Name .SchemeName | comment }}
+{{ printf "%sAuth implements the authorization logic for service %q for the %q security scheme." .Type $.Name .SchemeName | comment }}
 func (s *{{ $.VarName }}Svc) {{ .Type }}Auth(ctx context.Context, {{ if eq .Type "Basic" }}user, pass{{ else if eq .Type "APIKey" }}key{{ else }}token{{ end }} string, scheme *security.{{ .Type }}Scheme) (context.Context, error) {
 	//
 	// TBD: add authorization logic.

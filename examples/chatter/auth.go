@@ -24,9 +24,9 @@ var (
 	Key = []byte("secret")
 )
 
-// ChatterBasicAuth implements the authorization logic for service "chatter"
+// BasicAuth implements the authorization logic for service "chatter"
 // for the "basic" security scheme.
-func ChatterBasicAuth(ctx context.Context, user, pass string, s *security.BasicScheme) (context.Context, error) {
+func (s *chatterSvc) BasicAuth(ctx context.Context, user, pass string, scheme *security.BasicScheme) (context.Context, error) {
 	if user != "goa" {
 		return ctx, ErrUnauthorized
 	}
@@ -36,9 +36,9 @@ func ChatterBasicAuth(ctx context.Context, user, pass string, s *security.BasicS
 	return ctx, nil
 }
 
-// ChatterJWTAuth implements the authorization logic for service "chatter" for
+// JWTAuth implements the authorization logic for service "chatter" for
 // the "jwt" security scheme.
-func ChatterJWTAuth(ctx context.Context, token string, s *security.JWTScheme) (context.Context, error) {
+func (s *chatterSvc) JWTAuth(ctx context.Context, token string, scheme *security.JWTScheme) (context.Context, error) {
 	claims := make(jwt.MapClaims)
 
 	// authorize request
@@ -60,7 +60,7 @@ func ChatterJWTAuth(ctx context.Context, token string, s *security.JWTScheme) (c
 	for _, scp := range scopes {
 		scopesInToken = append(scopesInToken, scp.(string))
 	}
-	if err := s.Validate(scopesInToken); err != nil {
+	if err := scheme.Validate(scopesInToken); err != nil {
 		return ctx, chattersvc.InvalidScopes(err.Error())
 	}
 	return ctx, nil
