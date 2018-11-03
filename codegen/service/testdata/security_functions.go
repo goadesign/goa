@@ -11,20 +11,24 @@ func NewEndpoints(s Service) *Endpoints {
 
 var EndpointInitWithRequirementsCode = `// NewEndpoints wraps the methods of the "EndpointsWithRequirements" service
 // with endpoints.
-func NewEndpoints(s Service, authBasicFn security.AuthBasicFunc, authJWTFn security.AuthJWTFunc) *Endpoints {
+func NewEndpoints(s Service) *Endpoints {
+	// Typing service to authenticated interface
+	a := s.(authenticated)
 	return &Endpoints{
-		SecureWithRequirements:       NewSecureWithRequirementsEndpoint(s, authBasicFn),
-		DoublySecureWithRequirements: NewDoublySecureWithRequirementsEndpoint(s, authBasicFn, authJWTFn),
+		SecureWithRequirements:       NewSecureWithRequirementsEndpoint(s, a.BasicAuth),
+		DoublySecureWithRequirements: NewDoublySecureWithRequirementsEndpoint(s, a.BasicAuth, a.JWTAuth),
 	}
 }
 `
 
 var EndpointInitWithServiceRequirementsCode = `// NewEndpoints wraps the methods of the "EndpointsWithServiceRequirements"
 // service with endpoints.
-func NewEndpoints(s Service, authBasicFn security.AuthBasicFunc) *Endpoints {
+func NewEndpoints(s Service) *Endpoints {
+	// Typing service to authenticated interface
+	a := s.(authenticated)
 	return &Endpoints{
-		SecureWithRequirements:     NewSecureWithRequirementsEndpoint(s, authBasicFn),
-		AlsoSecureWithRequirements: NewAlsoSecureWithRequirementsEndpoint(s, authBasicFn),
+		SecureWithRequirements:     NewSecureWithRequirementsEndpoint(s, a.BasicAuth),
+		AlsoSecureWithRequirements: NewAlsoSecureWithRequirementsEndpoint(s, a.BasicAuth),
 	}
 }
 `

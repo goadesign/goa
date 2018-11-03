@@ -185,12 +185,10 @@ type {{ .VarName }} struct {
 // input: EndpointsData
 const serviceEndpointsInitT = `{{ printf "New%s wraps the methods of the %q service with endpoints." .VarName .Name | comment }}
 func New{{ .VarName }}(s {{ .ServiceVarName }}) *{{ .VarName }} {
-	
 {{- if .Schemes }}
 	// Typing service to authenticated interface
 	a := s.(authenticated)
 {{- end }}
-	
 	return &{{ .VarName }}{
 {{- range .Methods }}
 		{{ .VarName }}: New{{ .VarName }}Endpoint(s{{ range .Schemes }}, a.{{ . }}Auth{{ end }}),
