@@ -10,6 +10,8 @@ package securedservice
 
 import (
 	"context"
+
+	"goa.design/goa/security"
 )
 
 // The secured service exposes endpoints that require valid authorization
@@ -25,6 +27,14 @@ type Service interface {
 	// This action is secured with the jwt scheme and also requires an API key
 	// header.
 	AlsoDoublySecure(context.Context, *AlsoDoublySecurePayload) (res string, err error)
+}
+
+// authenticated is the internal interface for security functions
+type authenticated interface {
+	BasicAuth(ctx context.Context, user, pass string, schema *security.BasicScheme) (context.Context, error)
+	JWTAuth(ctx context.Context, token string, schema *security.JWTScheme) (context.Context, error)
+	APIKeyAuth(ctx context.Context, key string, schema *security.APIKeyScheme) (context.Context, error)
+	OAuth2Auth(ctx context.Context, token string, schema *security.OAuth2Scheme) (context.Context, error)
 }
 
 // ServiceName is the name of the service as defined in the design. This is the

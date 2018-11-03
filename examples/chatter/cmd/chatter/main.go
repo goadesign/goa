@@ -53,7 +53,7 @@ func main() {
 		chatterEndpoints *chattersvc.Endpoints
 	)
 	{
-		chatterEndpoints = chattersvc.NewEndpoints(chatterSvc, chatter.ChatterBasicAuth, chatter.ChatterJWTAuth)
+		chatterEndpoints = chattersvc.NewEndpoints(chatterSvc)
 	}
 
 	// Provide the transport specific request decoder and response encoder.
