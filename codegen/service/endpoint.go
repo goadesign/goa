@@ -187,7 +187,7 @@ const serviceEndpointsInitT = `{{ printf "New%s wraps the methods of the %q serv
 func New{{ .VarName }}(s {{ .ServiceVarName }}) *{{ .VarName }} {
 {{- if .Schemes }}
 	// Typing service to authenticated interface
-	a := s.(authenticated)
+	a := s.(auther)
 {{- end }}
 	return &{{ .VarName }}{
 {{- range .Methods }}
