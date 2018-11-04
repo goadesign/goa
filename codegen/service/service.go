@@ -208,7 +208,7 @@ type Service interface {
 
 {{- if .Schemes }}
 // auther defines the authorization functions used by the service.
-type authenticated interface {
+type auther interface {
 	{{- range .Schemes }}
 	{{ .Type }}Auth(ctx context.Context, {{ if eq .Type "Basic" }}user, pass{{ else if eq .Type "APIKey" }}key{{ else }}token{{ end }} string, schema *security.{{ .Type }}Scheme) (context.Context, error)
 	{{- end }}
