@@ -12,8 +12,8 @@ func NewEndpoints(s Service) *Endpoints {
 var EndpointInitWithRequirementsCode = `// NewEndpoints wraps the methods of the "EndpointsWithRequirements" service
 // with endpoints.
 func NewEndpoints(s Service) *Endpoints {
-	// Typing service to authenticated interface
-	a := s.(authenticated)
+	// Casting service to Auther interface
+	a := s.(Auther)
 	return &Endpoints{
 		SecureWithRequirements:       NewSecureWithRequirementsEndpoint(s, a.BasicAuth),
 		DoublySecureWithRequirements: NewDoublySecureWithRequirementsEndpoint(s, a.BasicAuth, a.JWTAuth),
@@ -24,8 +24,8 @@ func NewEndpoints(s Service) *Endpoints {
 var EndpointInitWithServiceRequirementsCode = `// NewEndpoints wraps the methods of the "EndpointsWithServiceRequirements"
 // service with endpoints.
 func NewEndpoints(s Service) *Endpoints {
-	// Typing service to authenticated interface
-	a := s.(authenticated)
+	// Casting service to Auther interface
+	a := s.(Auther)
 	return &Endpoints{
 		SecureWithRequirements:     NewSecureWithRequirementsEndpoint(s, a.BasicAuth),
 		AlsoSecureWithRequirements: NewAlsoSecureWithRequirementsEndpoint(s, a.BasicAuth),

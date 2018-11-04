@@ -186,8 +186,8 @@ type {{ .VarName }} struct {
 const serviceEndpointsInitT = `{{ printf "New%s wraps the methods of the %q service with endpoints." .VarName .Name | comment }}
 func New{{ .VarName }}(s {{ .ServiceVarName }}) *{{ .VarName }} {
 {{- if .Schemes }}
-	// Typing service to authenticated interface
-	a := s.(auther)
+	// Casting service to Auther interface
+	a := s.(Auther)
 {{- end }}
 	return &{{ .VarName }}{
 {{- range .Methods }}

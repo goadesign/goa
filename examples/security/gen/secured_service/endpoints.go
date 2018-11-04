@@ -26,8 +26,8 @@ type Endpoints struct {
 // NewEndpoints wraps the methods of the "secured_service" service with
 // endpoints.
 func NewEndpoints(s Service) *Endpoints {
-	// Typing service to authenticated interface
-	a := s.(authenticated)
+	// Casting service to Auther interface
+	a := s.(Auther)
 	return &Endpoints{
 		Signin:           NewSigninEndpoint(s, a.BasicAuth),
 		Secure:           NewSecureEndpoint(s, a.JWTAuth),

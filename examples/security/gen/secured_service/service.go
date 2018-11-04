@@ -29,11 +29,18 @@ type Service interface {
 	AlsoDoublySecure(context.Context, *AlsoDoublySecurePayload) (res string, err error)
 }
 
-// authenticated is the internal interface for security functions
-type authenticated interface {
+// Auther defines the authorization functions to be implemented by the service.
+type Auther interface {
+	// BasicAuth should implement the authorization logic for the Basic security
+	// scheme.
 	BasicAuth(ctx context.Context, user, pass string, schema *security.BasicScheme) (context.Context, error)
+	// JWTAuth should implement the authorization logic for the JWT security scheme.
 	JWTAuth(ctx context.Context, token string, schema *security.JWTScheme) (context.Context, error)
+	// APIKeyAuth should implement the authorization logic for the APIKey security
+	// scheme.
 	APIKeyAuth(ctx context.Context, key string, schema *security.APIKeyScheme) (context.Context, error)
+	// OAuth2Auth should implement the authorization logic for the OAuth2 security
+	// scheme.
 	OAuth2Auth(ctx context.Context, token string, schema *security.OAuth2Scheme) (context.Context, error)
 }
 

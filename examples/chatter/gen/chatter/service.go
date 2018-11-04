@@ -32,9 +32,12 @@ type Service interface {
 	History(context.Context, *HistoryPayload, HistoryServerStream) (err error)
 }
 
-// authenticated is the internal interface for security functions
-type authenticated interface {
+// Auther defines the authorization functions to be implemented by the service.
+type Auther interface {
+	// BasicAuth should implement the authorization logic for the Basic security
+	// scheme.
 	BasicAuth(ctx context.Context, user, pass string, schema *security.BasicScheme) (context.Context, error)
+	// JWTAuth should implement the authorization logic for the JWT security scheme.
 	JWTAuth(ctx context.Context, token string, schema *security.JWTScheme) (context.Context, error)
 }
 

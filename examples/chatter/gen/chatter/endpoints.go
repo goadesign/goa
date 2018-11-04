@@ -62,8 +62,8 @@ type HistoryEndpointInput struct {
 
 // NewEndpoints wraps the methods of the "chatter" service with endpoints.
 func NewEndpoints(s Service) *Endpoints {
-	// Typing service to authenticated interface
-	a := s.(authenticated)
+	// Casting service to Auther interface
+	a := s.(Auther)
 	return &Endpoints{
 		Login:    NewLoginEndpoint(s, a.BasicAuth),
 		Echoer:   NewEchoerEndpoint(s, a.JWTAuth),
