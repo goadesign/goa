@@ -207,7 +207,7 @@ type Service interface {
 }
 
 {{- if .Schemes }}
-// authenticated is the internal interface for security functions
+// auther defines the authorization functions used by the service.
 type authenticated interface {
 	{{- range .Schemes }}
 	{{ .Type }}Auth(ctx context.Context, {{ if eq .Type "Basic" }}user, pass{{ else if eq .Type "APIKey" }}key{{ else }}token{{ end }} string, schema *security.{{ .Type }}Scheme) (context.Context, error)
