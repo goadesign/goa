@@ -10,6 +10,8 @@ import (
 	"mime"
 	"net/http"
 	"strings"
+
+	"github.com/ajg/form"
 )
 
 const (
@@ -70,6 +72,8 @@ func RequestDecoder(r *http.Request) Decoder {
 		return gob.NewDecoder(r.Body)
 	case "application/xml":
 		return xml.NewDecoder(r.Body)
+	case "application/x-www-form-urlencoded":
+		return form.NewDecoder(r.Body)
 	default:
 		return json.NewDecoder(r.Body)
 	}
