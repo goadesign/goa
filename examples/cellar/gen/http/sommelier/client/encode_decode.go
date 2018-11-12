@@ -88,7 +88,8 @@ func DecodePickResponse(decoder func(*http.Response) goahttp.Decoder, restoreBod
 			if err = vres.Validate(); err != nil {
 				return nil, goahttp.ErrValidationError("sommelier", "pick", err)
 			}
-			return sommelier.NewStoredBottleCollection(vres), nil
+			res := sommelier.NewStoredBottleCollection(vres)
+			return res, nil
 		case http.StatusBadRequest:
 			var (
 				body PickNoCriteriaResponseBody

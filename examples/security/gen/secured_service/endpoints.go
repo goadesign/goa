@@ -25,12 +25,14 @@ type Endpoints struct {
 
 // NewEndpoints wraps the methods of the "secured_service" service with
 // endpoints.
-func NewEndpoints(s Service, authBasicFn security.AuthBasicFunc, authJWTFn security.AuthJWTFunc, authAPIKeyFn security.AuthAPIKeyFunc, authOAuth2Fn security.AuthOAuth2Func) *Endpoints {
+func NewEndpoints(s Service) *Endpoints {
+	// Casting service to Auther interface
+	a := s.(Auther)
 	return &Endpoints{
-		Signin:           NewSigninEndpoint(s, authBasicFn),
-		Secure:           NewSecureEndpoint(s, authJWTFn),
-		DoublySecure:     NewDoublySecureEndpoint(s, authJWTFn, authAPIKeyFn),
-		AlsoDoublySecure: NewAlsoDoublySecureEndpoint(s, authJWTFn, authAPIKeyFn, authOAuth2Fn, authBasicFn),
+		Signin:           NewSigninEndpoint(s, a.BasicAuth),
+		Secure:           NewSecureEndpoint(s, a.JWTAuth),
+		DoublySecure:     NewDoublySecureEndpoint(s, a.JWTAuth, a.APIKeyAuth),
+		AlsoDoublySecure: NewAlsoDoublySecureEndpoint(s, a.JWTAuth, a.APIKeyAuth, a.OAuth2Auth, a.BasicAuth),
 	}
 }
 
