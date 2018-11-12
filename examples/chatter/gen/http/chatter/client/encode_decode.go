@@ -340,7 +340,8 @@ func DecodeSummaryResponse(decoder func(*http.Response) goahttp.Decoder, restore
 			if err = vres.Validate(); err != nil {
 				return nil, goahttp.ErrValidationError("chatter", "summary", err)
 			}
-			return chattersvc.NewChatSummaryCollection(vres), nil
+			res := chattersvc.NewChatSummaryCollection(vres)
+			return res, nil
 		case http.StatusForbidden:
 			var (
 				body SummaryInvalidScopesResponseBody
@@ -442,7 +443,8 @@ func DecodeHistoryResponse(decoder func(*http.Response) goahttp.Decoder, restore
 			if err = vres.Validate(); err != nil {
 				return nil, goahttp.ErrValidationError("chatter", "history", err)
 			}
-			return chattersvc.NewChatSummary(vres), nil
+			res := chattersvc.NewChatSummary(vres)
+			return res, nil
 		case http.StatusForbidden:
 			var (
 				body HistoryInvalidScopesResponseBody

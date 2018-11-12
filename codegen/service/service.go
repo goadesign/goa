@@ -18,6 +18,7 @@ func File(genpkg string, service *design.ServiceExpr) *codegen.File {
 		[]*codegen.ImportSpec{
 			{Path: "context"},
 			{Path: "goa.design/goa"},
+			{Path: "goa.design/goa/security"},
 			{Path: genpkg + "/" + codegen.SnakeCase(service.Name) + "/" + "views", Name: svc.ViewsPkg},
 		})
 	def := &codegen.SectionTemplate{
@@ -204,6 +205,16 @@ type Service interface {
 	{{- end }}
 {{- end }}
 }
+
+{{- if .Schemes }}
+// Auther defines the authorization functions to be implemented by the service.
+type Auther interface {
+	{{- range .Schemes }}
+	{{ printf "%sAuth implements the authorization logic for the %s security scheme." .Type .Type | comment }}
+	{{ .Type }}Auth(ctx context.Context, {{ if eq .Type "Basic" }}user, pass{{ else if eq .Type "APIKey" }}key{{ else }}token{{ end }} string, schema *security.{{ .Type }}Scheme) (context.Context, error)
+	{{- end }}
+}
+{{- end }}
 
 // ServiceName is the name of the service as defined in the design. This is the
 // same value that is set in the endpoint request contexts under the ServiceKey
