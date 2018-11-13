@@ -642,6 +642,7 @@ func EncodeMethodBodyMultipleViewResponse(encoder func(context.Context, http.Res
 		if res.Projected.C != nil {
 			w.Header().Set("Location", *res.Projected.C)
 		}
+		w.Header().Set("Content-Type", "resulttypemultipleviews")
 		w.WriteHeader(http.StatusOK)
 		return enc.Encode(body)
 	}
@@ -662,6 +663,7 @@ func EncodeMethodBodyCollectionResponse(encoder func(context.Context, http.Respo
 		case "tiny":
 			body = NewResulttypecollectionResponseBodyTinyCollection(res.Projected)
 		}
+		w.Header().Set("Content-Type", "resulttypecollection; type=collection")
 		w.WriteHeader(http.StatusOK)
 		return enc.Encode(body)
 	}
@@ -676,6 +678,7 @@ func EncodeMethodBodyCollectionExplicitViewResponse(encoder func(context.Context
 		res := v.(servicebodycollectionexplicitviewviews.ResulttypecollectionCollection)
 		enc := encoder(ctx, w)
 		body := NewResulttypecollectionResponseBodyTinyCollection(res.Projected)
+		w.Header().Set("Content-Type", "resulttypecollection; type=collection")
 		w.WriteHeader(http.StatusOK)
 		return enc.Encode(body)
 	}
@@ -914,6 +917,7 @@ func EncodeMethodTagMultipleViewsResponse(encoder func(context.Context, http.Res
 				body = NewMethodTagMultipleViewsAcceptedResponseBodyTiny(res.Projected)
 			}
 			w.Header().Set("c", *res.Projected.C)
+			w.Header().Set("Content-Type", "resulttypemultipleviews")
 			w.WriteHeader(http.StatusAccepted)
 			return enc.Encode(body)
 		}
@@ -925,6 +929,7 @@ func EncodeMethodTagMultipleViewsResponse(encoder func(context.Context, http.Res
 		case "tiny":
 			body = NewMethodTagMultipleViewsOKResponseBodyTiny(res.Projected)
 		}
+		w.Header().Set("Content-Type", "resulttypemultipleviews")
 		w.WriteHeader(http.StatusOK)
 		return enc.Encode(body)
 	}

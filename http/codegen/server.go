@@ -1198,6 +1198,9 @@ const responseT = `{{ define "response" -}}
 	{{- if .ErrorHeader }}
 	w.Header().Set("goa-error", {{ printf "%q" .ErrorHeader }})
 	{{- end }}
+	{{- if .ContentType }}
+	w.Header().Set("Content-Type", "{{ .ContentType }}")
+	{{- end }}
 	w.WriteHeader({{ .StatusCode }})
 {{- end }}
 

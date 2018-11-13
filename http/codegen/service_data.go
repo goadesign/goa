@@ -262,6 +262,8 @@ type (
 	ResponseData struct {
 		// StatusCode is the return code of the response.
 		StatusCode string
+		// Content-Type of the response
+		ContentType string
 		// Description is the response description.
 		Description string
 		// Headers provides information about the headers in the
@@ -1452,6 +1454,7 @@ func buildResponses(e *httpdesign.EndpointExpr, result *design.AttributeExpr, vi
 				}
 				responses = append(responses, &ResponseData{
 					StatusCode:   statusCodeToHTTPConst(resp.StatusCode),
+					ContentType:  resp.ContentType,
 					Description:  resp.Description,
 					Headers:      headersData,
 					ServerBody:   serverBodyData,
