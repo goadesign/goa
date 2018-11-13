@@ -261,6 +261,7 @@ func {{ .FuncName }}(mw *multipart.Writer, p {{ .Payload.Ref }}) error {
 }
 `
 
+// input: map[string]interface{}{"Services":[]ServiceData, "APIPkg": string, "DefaultHost": string}
 const mainStartT = `func main() {
 	// Define command line flags, add any other flag required to configure
 	// the service.
@@ -271,6 +272,7 @@ const mainStartT = `func main() {
 	flag.Parse()
 `
 
+// input: map[string]interface{}{"Services":[]ServiceData, "APIPkg": string, "DefaultHost": string}
 const mainLoggerT = `
 	// Setup logger and goa log adapter. Replace logger with your own using
 	// your log package of choice.
@@ -284,6 +286,7 @@ const mainLoggerT = `
 	}
 `
 
+// input: map[string]interface{}{"Services":[]ServiceData, "APIPkg": string, "DefaultHost": string}
 const mainStructT = `
 	// Create the structs that implement the services.
 	var (
@@ -302,6 +305,7 @@ const mainStructT = `
 	}
 `
 
+// input: map[string]interface{}{"Services":[]ServiceData, "APIPkg": string, "DefaultHost": string}
 const mainEndpointsT = `
 	// Wrap the services in endpoints that can be invoked from other
 	// services potentially running in different processes.
@@ -321,6 +325,7 @@ const mainEndpointsT = `
 	}
 `
 
+// input: map[string]interface{}{"Services":[]ServiceData, "APIPkg": string, "DefaultHost": string}
 const mainEncoderMuxT = `
 	// Provide the transport specific request decoder and response encoder.
 	// The goa http package has built-in support for JSON, XML and gob.
@@ -364,6 +369,7 @@ const mainEncoderMuxT = `
 	{{- end }} 
 `
 
+// input: map[string]interface{}{"Services":[]ServiceData, "APIPkg": string, "DefaultHost": string}
 const mainMiddlewareT = `
 	// Wrap the multiplexer with additional middlewares. Middlewares mounted
 	// here apply to all the service endpoints.
@@ -377,6 +383,7 @@ const mainMiddlewareT = `
 	}
 `
 
+// input: map[string]interface{}{"Services":[]ServiceData, "APIPkg": string, "DefaultHost": string}
 const mainHTTPT = `
 	// Create channel used by both the signal handler and server goroutines
 	// to notify the main goroutine when to stop the server.
@@ -406,6 +413,7 @@ const mainHTTPT = `
 	}()
 `
 
+// input: map[string]interface{}{"Services":[]ServiceData, "APIPkg": string, "DefaultHost": string}
 const mainEndT = `
 	// Wait for signal.
 	logger.Printf("exiting (%v)", <-errc)
@@ -417,6 +425,7 @@ const mainEndT = `
 }
 `
 
+// input: map[string]interface{}{"Services":[]ServiceData, "APIPkg": string, "DefaultHost": string}
 const mainErrorHandlerT = `
 // ErrorHandler returns a function that writes and logs the given error.
 // The function also writes and logs the error unique ID so that it's possible
