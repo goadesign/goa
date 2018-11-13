@@ -101,6 +101,7 @@ func exampleMain(genpkg string, root *httpdesign.RootExpr, svr *design.ServerExp
 		{Path: "github.com/gorilla/websocket"},
 		{Path: rootPath, Name: apiPkg},
 	}
+
 	for _, svc := range root.HTTPServices {
 		pkgName := HTTPServices.Get(svc.Name()).Service.PkgName
 		specs = append(specs, &codegen.ImportSpec{
@@ -112,6 +113,7 @@ func exampleMain(genpkg string, root *httpdesign.RootExpr, svr *design.ServerExp
 			Name: pkgName,
 		})
 	}
+
 	sections := []*codegen.SectionTemplate{codegen.Header("", "main", specs)}
 	svcdata := make([]*ServiceData, len(svr.Services))
 	for i, svc := range svr.Services {
@@ -127,9 +129,67 @@ func exampleMain(genpkg string, root *httpdesign.RootExpr, svr *design.ServerExp
 		"APIPkg":      apiPkg,
 		"DefaultHost": u.Host,
 	}
+
+	// Service Main sections
 	sections = append(sections, &codegen.SectionTemplate{
-		Name:    "service-main",
-		Source:  mainT,
+		Name:    "service-main-start",
+		Source:  mainStartT,
+		Data:    data,
+		FuncMap: map[string]interface{}{"needStream": needStream},
+	})
+
+	sections = append(sections, &codegen.SectionTemplate{
+		Name:    "service-main-logger",
+		Source:  mainLoggerT,
+		Data:    data,
+		FuncMap: map[string]interface{}{"needStream": needStream},
+	})
+
+	sections = append(sections, &codegen.SectionTemplate{
+		Name:    "service-main-struct",
+		Source:  mainStructT,
+		Data:    data,
+		FuncMap: map[string]interface{}{"needStream": needStream},
+	})
+
+	sections = append(sections, &codegen.SectionTemplate{
+		Name:    "service-main-endpoints",
+		Source:  mainEndpointsT,
+		Data:    data,
+		FuncMap: map[string]interface{}{"needStream": needStream},
+	})
+
+	sections = append(sections, &codegen.SectionTemplate{
+		Name:    "service-main-mux",
+		Source:  mainEncoderMuxT,
+		Data:    data,
+		FuncMap: map[string]interface{}{"needStream": needStream},
+	})
+
+	sections = append(sections, &codegen.SectionTemplate{
+		Name:    "service-main-middleware",
+		Source:  mainMiddlewareT,
+		Data:    data,
+		FuncMap: map[string]interface{}{"needStream": needStream},
+	})
+
+	sections = append(sections, &codegen.SectionTemplate{
+		Name:    "service-main-http",
+		Source:  mainHTTPT,
+		Data:    data,
+		FuncMap: map[string]interface{}{"needStream": needStream},
+	})
+
+	sections = append(sections, &codegen.SectionTemplate{
+		Name:    "service-main-end",
+		Source:  mainEndT,
+		Data:    data,
+		FuncMap: map[string]interface{}{"needStream": needStream},
+	})
+
+	sections = append(sections, &codegen.SectionTemplate{
+		Name:    "service-main-errorhandler",
+		Source:  mainErrorHandlerT,
 		Data:    data,
 		FuncMap: map[string]interface{}{"needStream": needStream},
 	})
@@ -157,7 +217,6 @@ const dummyServiceStructT = `{{ printf "%s service example implementation.\nThe 
 type {{ .Service.VarName }}Svc struct {
 	logger *log.Logger
 }
-
 {{ printf "New%s returns the %s service implementation." .Service.StructName .Service.Name | comment }}
 func New{{ .Service.StructName }}(logger *log.Logger) {{ .Service.PkgName }}.Service {
 	return &{{ .Service.VarName }}Svc{logger}
@@ -202,8 +261,7 @@ func {{ .FuncName }}(mw *multipart.Writer, p {{ .Payload.Ref }}) error {
 }
 `
 
-// input: map[string]interface{}{"Services":[]ServiceData, "APIPkg": string, "DefaultHost": string}
-const mainT = `func main() {
+const mainStartT = `func main() {
 	// Define command line flags, add any other flag required to configure
 	// the service.
 	var (
@@ -211,10 +269,11 @@ const mainT = `func main() {
 		dbg  = flag.Bool("debug", false, "Log request and response bodies")
 	)
 	flag.Parse()
+`
 
+const mainLoggerT = `
 	// Setup logger and goa log adapter. Replace logger with your own using
-	// your log package of choice. The goa.design/middleware/logging/...
-	// packages define log adapters for common log packages.
+	// your log package of choice.
 	var (
 		adapter middleware.Logger
 		logger *log.Logger
@@ -223,7 +282,9 @@ const mainT = `func main() {
 		logger = log.New(os.Stderr, "[{{ .APIPkg }}] ", log.Ltime)
 		adapter = middleware.NewLogger(logger)
 	}
+`
 
+const mainStructT = `
 	// Create the structs that implement the services.
 	var (
 	{{- range .Services }}
@@ -239,7 +300,9 @@ const mainT = `func main() {
 		{{-  end }}
 	{{- end }}
 	}
+`
 
+const mainEndpointsT = `
 	// Wrap the services in endpoints that can be invoked from other
 	// services potentially running in different processes.
 	var (
@@ -256,7 +319,9 @@ const mainT = `func main() {
 		{{-  end }}
 	{{- end }}
 	}
+`
 
+const mainEncoderMuxT = `
 	// Provide the transport specific request decoder and response encoder.
 	// The goa http package has built-in support for JSON, XML and gob.
 	// Other encodings can be used by providing the corresponding functions,
@@ -265,14 +330,12 @@ const mainT = `func main() {
 		dec = goahttp.RequestDecoder
 		enc = goahttp.ResponseEncoder
 	)
-
 	// Build the service HTTP request multiplexer and configure it to serve
 	// HTTP requests to the service endpoints.
 	var mux goahttp.Muxer
 	{
 		mux = goahttp.NewMuxer()
 	}
-
 	// Wrap the endpoints with the transport specific layers. The generated
 	// server packages contains code generated from the design which maps
 	// the service input and output data structures to HTTP requests and
@@ -295,12 +358,13 @@ const mainT = `func main() {
 		{{-  end }}
 	{{- end }}
 	}
-
 	// Configure the mux.
 	{{- range .Services }}
 	{{ .Service.PkgName }}svr.Mount(mux{{ if .Endpoints }}, {{ .Service.VarName }}Server{{ end }})
-	{{- end }}
+	{{- end }} 
+`
 
+const mainMiddlewareT = `
 	// Wrap the multiplexer with additional middlewares. Middlewares mounted
 	// here apply to all the service endpoints.
 	var handler http.Handler = mux
@@ -311,11 +375,12 @@ const mainT = `func main() {
 		handler = middleware.Log(adapter)(handler)
 		handler = middleware.RequestID()(handler)
 	}
+`
 
+const mainHTTPT = `
 	// Create channel used by both the signal handler and server goroutines
 	// to notify the main goroutine when to stop the server.
 	errc := make(chan error)
-
 	// Setup interrupt handler. This optional step configures the process so
 	// that SIGINT and SIGTERM signals cause the service to stop gracefully.
 	go func() {
@@ -323,7 +388,6 @@ const mainT = `func main() {
 		signal.Notify(c, os.Interrupt)
 		errc <- fmt.Errorf("%s", <-c)
 	}()
-
 	// Start HTTP server using default configuration, change the code to
 	// configure the server as required by your service.
 	srv := &http.Server{Addr: *addr, Handler: handler}
@@ -340,18 +404,20 @@ const mainT = `func main() {
 		logger.Printf("listening on %s", *addr)
 		errc <- srv.ListenAndServe()
 	}()
+`
 
+const mainEndT = `
 	// Wait for signal.
 	logger.Printf("exiting (%v)", <-errc)
-
 	// Shutdown gracefully with a 30s timeout.
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 	srv.Shutdown(ctx)
-
 	logger.Println("exited")
 }
+`
 
+const mainErrorHandlerT = `
 // ErrorHandler returns a function that writes and logs the given error.
 // The function also writes and logs the error unique ID so that it's possible
 // to correlate.
