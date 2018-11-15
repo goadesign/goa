@@ -123,10 +123,10 @@ func TypeName(name string) {
 	case design.UserType:
 		expr.Rename(name)
 	case *design.AttributeExpr:
-		if expr.Metadata == nil {
-			expr.Metadata = make(design.MetadataExpr)
+		if expr.Meta == nil {
+			expr.Meta = make(design.MetaExpr)
 		}
-		expr.Metadata["struct:type:name"] = []string{name}
+		expr.Meta["struct:type:name"] = []string{name}
 	default:
 		eval.IncompatibleDSL()
 	}
@@ -215,10 +215,10 @@ func View(name string, adsl ...func()) {
 		}
 
 	case *design.AttributeExpr:
-		if expr.Metadata == nil {
-			expr.Metadata = make(map[string][]string)
+		if expr.Meta == nil {
+			expr.Meta = make(map[string][]string)
 		}
-		expr.Metadata["view"] = []string{name}
+		expr.Meta["view"] = []string{name}
 
 	default:
 		eval.IncompatibleDSL()
@@ -442,11 +442,11 @@ func buildView(name string, mt *design.ResultTypeExpr, at *design.AttributeExpr)
 		cat := nat.Attribute
 		if existing := mt.Find(n); existing != nil {
 			dup := design.DupAtt(existing)
-			if dup.Metadata == nil {
-				dup.Metadata = make(map[string][]string)
+			if dup.Meta == nil {
+				dup.Meta = make(map[string][]string)
 			}
-			if len(cat.Metadata["view"]) > 0 {
-				dup.Metadata["view"] = cat.Metadata["view"]
+			if len(cat.Meta["view"]) > 0 {
+				dup.Meta["view"] = cat.Meta["view"]
 			}
 			o.Set(n, dup)
 		} else if n != "links" {

@@ -33,8 +33,8 @@ type (
 		Requirements []*SecurityExpr
 		// Service that owns method.
 		Service *ServiceExpr
-		// Metadata is an arbitrary set of key/value pairs, see dsl.Metadata
-		Metadata MetadataExpr
+		// Meta is an arbitrary set of key/value pairs, see dsl.Meta
+		Meta MetaExpr
 		// Stream is the kind of stream (none, payload, result, or both) the method
 		// defines.
 		Stream StreamKind
@@ -166,7 +166,7 @@ func (m *MethodExpr) Validate() error {
 }
 
 // hasTag is a helper function that traverses the given attribute and all its
-// bases recursively looking for an attribute with the given tag metadata. This
+// bases recursively looking for an attribute with the given tag meta. This
 // recursion is only needed for attributes that have not been finalized yet.
 func hasTag(p *AttributeExpr, tag string) bool {
 	if p.HasTag(tag) {
@@ -251,7 +251,7 @@ func copyReqs(reqs []*SecurityExpr) []*SecurityExpr {
 				Name:        sch.Name,
 				Scopes:      sch.Scopes,
 				Flows:       sch.Flows,
-				Metadata:    sch.Metadata,
+				Meta:        sch.Meta,
 			}
 		}
 		req2.Schemes = schs

@@ -97,10 +97,10 @@ func Goify(str string, firstUpper bool) string {
 	return fixReserved(string(runes))
 }
 
-// GoifyAtt honors any struct:field:name metadata set on the attribute and calls
+// GoifyAtt honors any struct:field:name meta set on the attribute and calls
 // Goify with the tag value if present or the given name otherwise.
 func GoifyAtt(att *design.AttributeExpr, name string, upper bool) string {
-	if tname, ok := att.Metadata["struct:field:name"]; ok {
+	if tname, ok := att.Meta["struct:field:name"]; ok {
 		if len(tname) > 0 {
 			name = tname[0]
 		}

@@ -60,8 +60,8 @@ var _ = API("dsl_spec", func() {
 		})
 	})
 
-	// Metadata whose effects depend on the generators.
-	Metadata("metadata", "value", "other value")
+	// Meta whose effects depend on the generators.
+	Meta("meta", "value", "other value")
 })
 
 // The Service expression defines a single service. There may be any number of
@@ -158,10 +158,10 @@ var _ = Service("service", func() {
 		// expression.
 		Error("method_specific_error")
 
-		// Metadata expression. Effect depends on generators.
-		// Metadata takes the name of the metadta as first argument and
+		// Meta expression. Effect depends on generators.
+		// Meta takes the name of the metadta as first argument and
 		// one or more values.
-		Metadata("name", "some value", "some other value")
+		Meta("name", "some value", "some other value")
 	})
 
 	// Method with inline payload and result object types

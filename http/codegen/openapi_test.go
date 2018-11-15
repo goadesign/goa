@@ -366,7 +366,7 @@ func TestExtensions(t *testing.T) {
 		Endpoint *httpdesign.EndpointExpr
 	}{
 		{"endpoint", newEndpointExtensions(design.String,
-			design.MetadataExpr{
+			design.MetaExpr{
 				"swagger:extension:x-test-foo": []string{"bar"},
 			},
 		)},
@@ -428,7 +428,7 @@ func TestExtensions(t *testing.T) {
 	}
 }
 
-func newEndpointExtensions(typ design.Primitive, metadata design.MetadataExpr) *httpdesign.EndpointExpr {
+func newEndpointExtensions(typ design.Primitive, metadata design.MetaExpr) *httpdesign.EndpointExpr {
 	route := &httpdesign.RouteExpr{Method: "POST", Path: "/"}
 	ep := &httpdesign.EndpointExpr{
 		MethodExpr: &design.MethodExpr{
@@ -440,7 +440,7 @@ func newEndpointExtensions(typ design.Primitive, metadata design.MetadataExpr) *
 		},
 		Routes:    []*httpdesign.RouteExpr{route},
 		Responses: []*httpdesign.HTTPResponseExpr{},
-		Metadata:  metadata,
+		Meta:      metadata,
 	}
 	route.Endpoint = ep
 	return ep

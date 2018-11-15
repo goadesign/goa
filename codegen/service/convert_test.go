@@ -319,7 +319,7 @@ var objMapped = &design.UserTypeExpr{
 		Type: &design.Object{
 			{"Foo", &design.AttributeExpr{Type: design.String}},
 			{"Bar", &design.AttributeExpr{Type: design.Int}},
-			{"mapped", &design.AttributeExpr{Type: design.Boolean, Metadata: design.MetadataExpr{"struct.field.external": []string{"Baz"}}}},
+			{"mapped", &design.AttributeExpr{Type: design.Boolean, Meta: design.MetaExpr{"struct.field.external": []string{"Baz"}}}},
 		},
 	},
 	TypeName: "objT",
@@ -330,7 +330,7 @@ var objIgnored = &design.UserTypeExpr{
 		Type: &design.Object{
 			{"Foo", &design.AttributeExpr{Type: design.String}},
 			{"Bar", &design.AttributeExpr{Type: design.Int}},
-			{"ignored", &design.AttributeExpr{Type: design.Boolean, Metadata: design.MetadataExpr{"struct.field.external": []string{"-"}}}},
+			{"ignored", &design.AttributeExpr{Type: design.Boolean, Meta: design.MetaExpr{"struct.field.external": []string{"-"}}}},
 		},
 	},
 	TypeName: "objT",

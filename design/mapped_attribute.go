@@ -45,7 +45,7 @@ func NewMappedAttributeExpr(att *AttributeExpr) *MappedAttributeExpr {
 			Bases:        att.Bases,
 			Description:  att.Description,
 			Docs:         att.Docs,
-			Metadata:     att.Metadata,
+			Meta:         att.Meta,
 			DefaultValue: att.DefaultValue,
 			UserExamples: att.UserExamples,
 			Validation:   validation,

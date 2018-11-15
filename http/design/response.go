@@ -95,8 +95,8 @@ type (
 		// Parent expression, one of EndpointExpr, ServiceExpr or
 		// RootExpr.
 		Parent eval.Expression
-		// Metadata is a list of key/value pairs
-		Metadata design.MetadataExpr
+		// Meta is a list of key/value pairs
+		Meta design.MetaExpr
 	}
 )
 
@@ -147,7 +147,7 @@ func (r *HTTPResponseExpr) Validate(e *EndpointExpr) *eval.ValidationErrors {
 		if !isrt {
 			return e.MethodExpr.Result.Find(name) != nil
 		}
-		if v, ok := e.MethodExpr.Result.Metadata["view"]; ok {
+		if v, ok := e.MethodExpr.Result.Meta["view"]; ok {
 			return rt.ViewHasAttribute(v[0], name)
 		}
 		for _, v := range rt.Views {
@@ -172,7 +172,7 @@ func (r *HTTPResponseExpr) Validate(e *EndpointExpr) *eval.ValidationErrors {
 	}
 	if r.Body != nil {
 		verr.Merge(r.Body.Validate("HTTP response body", r))
-		if att, ok := r.Body.Metadata["origin:attribute"]; ok {
+		if att, ok := r.Body.Meta["origin:attribute"]; ok {
 			if !hasAttribute(att[0]) {
 				verr.Add(r, "body %q has no equivalent attribute in%s result type", att[0], inview)
 			}
@@ -229,7 +229,7 @@ func (r *HTTPResponseExpr) Dup() *HTTPResponseExpr {
 		Description: r.Description,
 		ContentType: r.ContentType,
 		Parent:      r.Parent,
-		Metadata:    r.Metadata,
+		Meta:        r.Meta,
 	}
 	if r.Body != nil {
 		res.Body = design.DupAtt(r.Body)

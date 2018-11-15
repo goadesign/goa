@@ -29,8 +29,13 @@ type (
 		License *LicenseExpr
 		// Docs points to the API external documentation.
 		Docs *DocsExpr
-		// Metadata is a list of key/value pairs.
-		Metadata MetadataExpr
+		// Meta is a list of key/value pairs.
+		Meta MetaExpr
+		// Requirements contains the security requirements that apply to
+		// all the API service methods. One requirement is composed of
+		// potentially multiple schemes. Incoming requests must validate
+		// at least one requirement to be authorized.
+		Requirements []*SecurityExpr
 
 		// random generator used to build examples for the API types.
 		random *Random

@@ -32,7 +32,7 @@ var (
 
 func init() {
 	vobj := (*collectionLinkView)[0]
-	vobj.Attribute.Metadata = map[string][]string{"view": {"link"}}
+	vobj.Attribute.Meta = map[string][]string{"view": []string{"link"}}
 }
 
 func TestProject(t *testing.T) {
@@ -94,7 +94,7 @@ func view(name string, params ...interface{}) *ViewExpr {
 		}
 		att := &AttributeExpr{Type: params[i+1].(DataType)}
 		if attView != "" {
-			att.Metadata = MetadataExpr{"view": []string{attView}}
+			att.Meta = MetaExpr{"view": []string{attView}}
 		}
 		obj[i/2] = &NamedAttributeExpr{Name: attName, Attribute: att}
 	}

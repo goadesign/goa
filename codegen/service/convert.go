@@ -427,7 +427,7 @@ func buildDesignType(dt *design.DataType, t reflect.Type, ref design.DataType, r
 			atn, _ := attributeName(oref, f.Name)
 			if oref != nil {
 				if at := oref.Attribute(atn); at != nil {
-					if m := at.Metadata["struct.field.external"]; len(m) > 0 {
+					if m := at.Meta["struct.field.external"]; len(m) > 0 {
 						if m[0] == "-" {
 							continue
 						}
@@ -441,8 +441,8 @@ func buildDesignType(dt *design.DataType, t reflect.Type, ref design.DataType, r
 		obj := design.Object(make([]*design.NamedAttributeExpr, len(fields)))
 		ut := &design.UserTypeExpr{
 			AttributeExpr: &design.AttributeExpr{
-				Type:     &obj,
-				Metadata: map[string][]string{"goa.external": nil},
+				Type: &obj,
+				Meta: map[string][]string{"goa.external": nil},
 			},
 			TypeName: t.Name(),
 		}
@@ -486,8 +486,8 @@ func buildDesignType(dt *design.DataType, t reflect.Type, ref design.DataType, r
 			obj[i] = &design.NamedAttributeExpr{
 				Name: name,
 				Attribute: &design.AttributeExpr{
-					Type:     fdt,
-					Metadata: map[string][]string{"goa.external": nil},
+					Type: fdt,
+					Meta: map[string][]string{"goa.external": nil},
 				},
 			}
 		}
@@ -516,9 +516,9 @@ func attributeName(obj *design.Object, name string) (string, string) {
 	if obj == nil {
 		return name, ""
 	}
-	// first look for a "struct.field.external" metadata
+	// first look for a "struct.field.external" meta
 	for _, nat := range *obj {
-		if m := nat.Attribute.Metadata["struct.field.external"]; len(m) > 0 {
+		if m := nat.Attribute.Meta["struct.field.external"]; len(m) > 0 {
 			if m[0] == name {
 				return nat.Name, name
 			}
@@ -661,7 +661,7 @@ func compatible(from design.DataType, to reflect.Type, recs ...compRec) error {
 				field reflect.StructField
 			)
 			{
-				if ef, k := nat.Attribute.Metadata["struct.field.external"]; k {
+				if ef, k := nat.Attribute.Meta["struct.field.external"]; k {
 					fname = ef[0]
 					if fname == "-" {
 						continue

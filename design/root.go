@@ -34,8 +34,8 @@ type (
 		Schemes []*SchemeExpr
 	}
 
-	// MetadataExpr is a set of key/value pairs
-	MetadataExpr map[string][]string
+	// MetaExpr is a set of key/value pairs
+	MetaExpr map[string][]string
 
 	// TypeMap defines a user to external type mapping.
 	TypeMap struct {
@@ -178,8 +178,8 @@ func (r *RootExpr) Finalize() {
 }
 
 // Dup creates a new map from the given expression.
-func (m MetadataExpr) Dup() MetadataExpr {
-	d := make(MetadataExpr, len(m))
+func (m MetaExpr) Dup() MetaExpr {
+	d := make(MetaExpr, len(m))
 	for k, v := range m {
 		d[k] = v
 	}

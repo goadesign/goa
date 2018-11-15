@@ -77,7 +77,7 @@ var (
 		{"name", &AttributeExpr{
 			Type:         String,
 			Description:  "Name is the name of this class of errors.",
-			Metadata:     MetadataExpr{"struct:error:name": nil},
+			Meta:         MetaExpr{"struct:error:name": nil},
 			UserExamples: []*ExampleExpr{{Value: "bad_request"}},
 		}},
 		{"id", &AttributeExpr{
@@ -373,11 +373,11 @@ func projectRecursive(at *AttributeExpr, vat *NamedAttributeExpr, view string, s
 	if rt, ok := at.Type.(*ResultTypeExpr); ok {
 		vatt := vat.Attribute
 		var view string
-		if len(vatt.Metadata["view"]) > 0 {
-			view = vatt.Metadata["view"][0]
+		if len(vatt.Meta["view"]) > 0 {
+			view = vatt.Meta["view"][0]
 		}
-		if view == "" && len(at.Metadata["view"]) > 0 {
-			view = at.Metadata["view"][0]
+		if view == "" && len(at.Meta["view"]) > 0 {
+			view = at.Meta["view"][0]
 		}
 		if view == "" {
 			view = DefaultView

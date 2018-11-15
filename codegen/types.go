@@ -41,18 +41,18 @@ func GoNativeTypeName(t design.DataType) string {
 	}
 }
 
-// AttributeTags computes the struct field tags from its metadata if any.
+// AttributeTags computes the struct field tags from its meta if any.
 func AttributeTags(parent, att *design.AttributeExpr) string {
 	var elems []string
-	keys := make([]string, len(att.Metadata))
+	keys := make([]string, len(att.Meta))
 	i := 0
-	for k := range att.Metadata {
+	for k := range att.Meta {
 		keys[i] = k
 		i++
 	}
 	sort.Strings(keys)
 	for _, key := range keys {
-		val := att.Metadata[key]
+		val := att.Meta[key]
 		if strings.HasPrefix(key, "struct:tag:") {
 			name := key[11:]
 			value := strings.Join(val, ",")

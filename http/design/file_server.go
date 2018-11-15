@@ -21,8 +21,8 @@ type (
 		FilePath string
 		// RequestPaths is the list of HTTP paths that serve the assets.
 		RequestPaths []string
-		// Metadata is a list of key/value pairs
-		Metadata design.MetadataExpr
+		// Meta is a list of key/value pairs
+		Meta design.MetaExpr
 	}
 )
 

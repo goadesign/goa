@@ -16,7 +16,7 @@ func TestAttributeExprValidate(t *testing.T) {
 			Required: []string{"foo"},
 		}
 
-		metadata = MetadataExpr{
+		metadata = MetaExpr{
 			"view": []string{"foo"},
 		}
 
@@ -28,7 +28,7 @@ func TestAttributeExprValidate(t *testing.T) {
 	cases := map[string]struct {
 		typ        DataType
 		validation *ValidationExpr
-		metadata   MetadataExpr
+		metadata   MetaExpr
 		expected   *eval.ValidationErrors
 	}{
 		"no error": {
@@ -189,7 +189,7 @@ func TestAttributeExprValidate(t *testing.T) {
 		attribute := AttributeExpr{
 			Type:       tc.typ,
 			Validation: tc.validation,
-			Metadata:   tc.metadata,
+			Meta:       tc.metadata,
 		}
 		if actual := attribute.Validate(ctx, nil); tc.expected != actual {
 			if len(tc.expected.Errors) != len(actual.Errors) {
@@ -438,7 +438,7 @@ func TestAttributeExprHasTag(t *testing.T) {
 					&NamedAttributeExpr{
 						Name: "foo",
 						Attribute: &AttributeExpr{
-							Metadata: MetadataExpr{
+							Meta: MetaExpr{
 								tag: []string{"default"},
 							},
 						},

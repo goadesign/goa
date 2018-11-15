@@ -635,11 +635,16 @@ func Body(args ...interface{}) {
 			eval.ReportError("%s type must be an object with an attribute with name %#v, got %T", kind, a, ref.Type)
 			return
 		}
-		attr = design.DupAtt(obj.Attribute(a))
-		if attr.Metadata == nil {
-			attr.Metadata = design.MetadataExpr{"origin:attribute": []string{a}}
+		attr = obj.Attribute(a)
+		if attr == nil {
+			eval.ReportError("%s type does not have an attribute named %#v", kind, a)
+			return
+		}
+		attr = design.DupAtt(attr)
+		if attr.Meta == nil {
+			attr.Meta = design.MetaExpr{"origin:attribute": []string{a}}
 		} else {
-			attr.Metadata["origin:attribute"] = []string{a}
+			attr.Meta["origin:attribute"] = []string{a}
 		}
 		if attr == nil {
 			eval.ReportError("%s type does not have an attribute named %#v", kind, a)
@@ -670,10 +675,10 @@ func Body(args ...interface{}) {
 	if fn != nil {
 		eval.Execute(fn, attr)
 	}
-	if attr.Metadata == nil {
-		attr.Metadata = design.MetadataExpr{}
+	if attr.Meta == nil {
+		attr.Meta = design.MetaExpr{}
 	}
-	attr.Metadata["http:body"] = []string{}
+	attr.Meta["http:body"] = []string{}
 	setter(attr)
 }
 

@@ -26,9 +26,9 @@ type (
 		// potentially multiple schemes. Incoming requests must validate
 		// at least one requirement to be authorized.
 		Requirements []*SecurityExpr
-		// Metadata is a set of key/value pairs with semantic that is
+		// Meta is a set of key/value pairs with semantic that is
 		// specific to each generator.
-		Metadata MetadataExpr
+		Meta MetaExpr
 	}
 
 	// ErrorExpr defines an error response. It consists of a named
@@ -102,7 +102,7 @@ func (s *ServiceExpr) Finalize() {
 	}
 }
 
-// Validate checks that the error name is found in the result metadata for
+// Validate checks that the error name is found in the result meta for
 // custom error types.
 func (e *ErrorExpr) Validate() error {
 	verr := new(eval.ValidationErrors)
@@ -113,16 +113,16 @@ func (e *ErrorExpr) Validate() error {
 	if o := AsObject(rt); o != nil {
 		var errField string
 		for _, n := range *o {
-			if _, ok := n.Attribute.Metadata["struct:error:name"]; ok {
+			if _, ok := n.Attribute.Meta["struct:error:name"]; ok {
 				if errField != "" {
-					verr.Add(e, "metadata 'struct:error:name' already set for attribute %q of result type %q", errField, rt.Identifier)
+					verr.Add(e, "meta 'struct:error:name' already set for attribute %q of result type %q", errField, rt.Identifier)
 					continue
 				}
 				errField = n.Name
 			}
 		}
 		if errField == "" {
-			verr.Add(e, "metadata 'struct:error:name' is missing in result type %q", rt.Identifier)
+			verr.Add(e, "meta 'struct:error:name' is missing in result type %q", rt.Identifier)
 		}
 	}
 	return verr

@@ -13,11 +13,11 @@ func TestMetaData(t *testing.T) {
 		Expr        eval.Expression
 		Name        string
 		Values      []string
-		MetaFunc    func(e eval.Expression) design.MetadataExpr
+		MetaFunc    func(e eval.Expression) design.MetaExpr
 		Invocations int
 	}{
 		"userType":   {&design.UserTypeExpr{AttributeExpr: &design.AttributeExpr{}}, "swagger:summary", []string{"Short summary of what endpoint does"}, userTypeMeta, 1},
-		"api":        {&design.APIExpr{}, "metadata", []string{"some metadata"}, apiExprMeta, 2},
+		"api":        {&design.APIExpr{}, "meta", []string{"some meta"}, apiExprMeta, 2},
 		"attribute":  {&design.AttributeExpr{}, "attribute_meta", []string{"attr meta", "more attr meta"}, attributeMeta, 2},
 		"method":     {&design.MethodExpr{Name: "testmethod"}, "method", []string{"method meta"}, methodMeta, 2},
 		"resultType": {&design.ResultTypeExpr{UserTypeExpr: &design.UserTypeExpr{AttributeExpr: &design.AttributeExpr{}}}, "resultTypeMeta", []string{"result type meta"}, resultTypeMeta, 2},
@@ -28,18 +28,18 @@ func TestMetaData(t *testing.T) {
 			eval.Context = &eval.DSLContext{}
 			for i := tc.Invocations; i > 0; i-- {
 				eval.Execute(func() {
-					Metadata(tc.Name, tc.Values...)
+					Meta(tc.Name, tc.Values...)
 				}, tc.Expr)
 			}
 			if eval.Context.Errors != nil {
-				t.Errorf("%s: Metadata failed unexpectedly with %s", k, eval.Context.Errors)
+				t.Errorf("%s: Meta failed unexpectedly with %s", k, eval.Context.Errors)
 			}
 			meta := tc.MetaFunc(tc.Expr)
 			if _, ok := meta[tc.Name]; !ok {
 				t.Errorf("%s: expected %s to be present", k, tc.Name)
 			}
 			if len(meta[tc.Name]) != (len(tc.Values) * tc.Invocations) {
-				t.Errorf("%s: expected the number of metadata values to match %d got %d ", k, len(tc.Values), len(meta[tc.Name]))
+				t.Errorf("%s: expected the number of meta values to match %d got %d ", k, len(tc.Values), len(meta[tc.Name]))
 			}
 			for _, caseVal := range tc.Values {
 				if !hasValue(meta[tc.Name], caseVal) {
@@ -58,8 +58,8 @@ func hasValue(vals []string, val string) bool {
 	}
 	return false
 }
-func apiExprMeta(e eval.Expression) design.MetadataExpr    { return e.(*design.APIExpr).Metadata }
-func userTypeMeta(e eval.Expression) design.MetadataExpr   { return e.(*design.UserTypeExpr).Metadata }
-func attributeMeta(e eval.Expression) design.MetadataExpr  { return e.(*design.AttributeExpr).Metadata }
-func methodMeta(e eval.Expression) design.MetadataExpr     { return e.(*design.MethodExpr).Metadata }
-func resultTypeMeta(e eval.Expression) design.MetadataExpr { return e.(*design.ResultTypeExpr).Metadata }
+func apiExprMeta(e eval.Expression) design.MetaExpr    { return e.(*design.APIExpr).Meta }
+func userTypeMeta(e eval.Expression) design.MetaExpr   { return e.(*design.UserTypeExpr).Meta }
+func attributeMeta(e eval.Expression) design.MetaExpr  { return e.(*design.AttributeExpr).Meta }
+func methodMeta(e eval.Expression) design.MetaExpr     { return e.(*design.MethodExpr).Meta }
+func resultTypeMeta(e eval.Expression) design.MetaExpr { return e.(*design.ResultTypeExpr).Meta }

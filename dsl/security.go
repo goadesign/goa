@@ -328,8 +328,19 @@ func NoSecurity() {
 //    })
 //
 func Username(name string, args ...interface{}) {
-	args = useDSL(args, func() { Metadata("security:username") })
+	args = useDSL(args, func() { Meta("security:username") })
 	Attribute(name, args...)
+}
+
+// UsernameField is syntactic sugar to define a username attribute with the
+// "rpc:tag" meta set with the value of the first argument.
+//
+// UsernameField takes the same arguments as Username with the addition of the
+// tag value as the first argument.
+//
+func UsernameField(tag interface{}, name string, args ...interface{}) {
+	args = useDSL(args, func() { Meta("security:username") })
+	Field(tag, name, args...)
 }
 
 // Password defines the attribute used to provide the password to an endpoint
@@ -356,8 +367,19 @@ func Username(name string, args ...interface{}) {
 //    })
 //
 func Password(name string, args ...interface{}) {
-	args = useDSL(args, func() { Metadata("security:password") })
+	args = useDSL(args, func() { Meta("security:password") })
 	Attribute(name, args...)
+}
+
+// PasswordField is syntactic sugar to define a password attribute with the
+// "rpc:tag" meta set with the value of the first argument.
+//
+// PasswordField takes the same arguments as Password with the addition of the
+// tag value as the first argument.
+//
+func PasswordField(tag interface{}, name string, args ...interface{}) {
+	args = useDSL(args, func() { Meta("security:password") })
+	Field(tag, name, args...)
 }
 
 // APIKey defines the attribute used to provide the API key to an endpoint
@@ -399,8 +421,19 @@ func Password(name string, args ...interface{}) {
 //    })
 //
 func APIKey(scheme, name string, args ...interface{}) {
-	args = useDSL(args, func() { Metadata("security:apikey:"+scheme, scheme) })
+	args = useDSL(args, func() { Meta("security:apikey:"+scheme, scheme) })
 	Attribute(name, args...)
+}
+
+// APIKeyField is syntactic sugar to define an API key attribute with the
+// "rpc:tag" meta set with the value of the first argument.
+//
+// APIKeyField takes the same arguments as APIKey with the addition of the
+// tag value as the first argument.
+//
+func APIKeyField(tag interface{}, scheme, name string, args ...interface{}) {
+	args = useDSL(args, func() { Meta("security:apikey:"+scheme, scheme) })
+	Field(tag, name, args...)
 }
 
 // AccessToken defines the attribute used to provide the access token to an
@@ -428,8 +461,19 @@ func APIKey(scheme, name string, args ...interface{}) {
 //    })
 //
 func AccessToken(name string, args ...interface{}) {
-	args = useDSL(args, func() { Metadata("security:accesstoken") })
+	args = useDSL(args, func() { Meta("security:accesstoken") })
 	Attribute(name, args...)
+}
+
+// AccessTokenField is syntactic sugar to define an access token attribute with the
+// "rpc:tag" meta set with the value of the first argument.
+//
+// AccessTokenField takes the same arguments as AccessToken with the addition of the
+// tag value as the first argument.
+//
+func AccessTokenField(tag interface{}, name string, args ...interface{}) {
+	args = useDSL(args, func() { Meta("security:accesstoken") })
+	Field(tag, name, args...)
 }
 
 // Token defines the attribute used to provide the JWT to an endpoint secured
@@ -455,8 +499,19 @@ func AccessToken(name string, args ...interface{}) {
 //    })
 //
 func Token(name string, args ...interface{}) {
-	args = useDSL(args, func() { Metadata("security:token") })
+	args = useDSL(args, func() { Meta("security:token") })
 	Attribute(name, args...)
+}
+
+// TokenField is syntactic sugar to define a JWT token attribute with the
+// "rpc:tag" meta set with the value of the first argument.
+//
+// TokenField takes the same arguments as Token with the addition of the
+// tag value as the first argument.
+//
+func TokenField(tag interface{}, name string, args ...interface{}) {
+	args = useDSL(args, func() { Meta("security:token") })
+	Field(tag, name, args...)
 }
 
 // Scope has two uses: in JWTSecurity or OAuth2Security it defines a scope

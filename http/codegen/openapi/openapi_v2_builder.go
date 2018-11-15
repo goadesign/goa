@@ -20,7 +20,7 @@ func NewV2(root *httpdesign.RootExpr, h *design.HostExpr) (*V2, error) {
 	if root == nil {
 		return nil, nil
 	}
-	tags := tagsFromExpr(root.Design.API.Metadata)
+	tags := tagsFromExpr(root.Meta)
 	u, err := url.Parse(string(h.URIs[0]))
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse server URL: %s", err)
@@ -50,7 +50,7 @@ func NewV2(root *httpdesign.RootExpr, h *design.HostExpr) (*V2, error) {
 			Contact:        root.Design.API.Contact,
 			License:        root.Design.API.License,
 			Version:        root.Design.API.Version,
-			Extensions:     ExtensionsFromExpr(root.Design.API.Metadata),
+			Extensions:     ExtensionsFromExpr(root.Design.API.Meta),
 		},
 		Host:                host,
 		BasePath:            basePath,
@@ -75,14 +75,14 @@ func NewV2(root *httpdesign.RootExpr, h *design.HostExpr) (*V2, error) {
 	}
 
 	for _, res := range root.HTTPServices {
-		if !mustGenerate(res.Metadata) || !mustGenerate(res.ServiceExpr.Metadata) {
+		if !mustGenerate(res.Meta) || !mustGenerate(res.ServiceExpr.Meta) {
 			continue
 		}
-		for k, v := range ExtensionsFromExpr(res.Metadata) {
+		for k, v := range ExtensionsFromExpr(res.Meta) {
 			s.Paths[k] = v
 		}
 		for _, fs := range res.FileServers {
-			if !mustGenerate(fs.Metadata) || !mustGenerate(fs.Service.Metadata) {
+			if !mustGenerate(fs.Meta) || !mustGenerate(fs.Service.Meta) {
 				continue
 			}
 			if err := buildPathFromFileServer(s, root, fs); err != nil {
@@ -90,7 +90,7 @@ func NewV2(root *httpdesign.RootExpr, h *design.HostExpr) (*V2, error) {
 			}
 		}
 		for _, a := range res.HTTPEndpoints {
-			if !mustGenerate(a.Metadata) || !mustGenerate(a.MethodExpr.Metadata) {
+			if !mustGenerate(a.Meta) || !mustGenerate(a.MethodExpr.Meta) {
 				continue
 			}
 			for _, route := range a.Routes {
@@ -115,9 +115,9 @@ func NewV2(root *httpdesign.RootExpr, h *design.HostExpr) (*V2, error) {
 	return s, nil
 }
 
-// ExtensionsFromExpr generates swagger extensions from the given metadata
+// ExtensionsFromExpr generates swagger extensions from the given meta
 // expression.
-func ExtensionsFromExpr(mdata design.MetadataExpr) map[string]interface{} {
+func ExtensionsFromExpr(mdata design.MetaExpr) map[string]interface{} {
 	extensions := make(map[string]interface{})
 	for key, value := range mdata {
 		chunks := strings.Split(key, ":")
@@ -144,9 +144,9 @@ func ExtensionsFromExpr(mdata design.MetadataExpr) map[string]interface{} {
 	return extensions
 }
 
-// mustGenerate returns true if the metadata indicates that a OpenAPI specification should be
+// mustGenerate returns true if the meta indicates that a OpenAPI specification should be
 // generated, false otherwise.
-func mustGenerate(meta design.MetadataExpr) bool {
+func mustGenerate(meta design.MetaExpr) bool {
 	if m, ok := meta["swagger:generate"]; ok {
 		if len(m) > 0 && m[0] == "false" {
 			return false
@@ -162,7 +162,7 @@ func securitySpecFromExpr(root *httpdesign.RootExpr) map[string]*SecurityDefinit
 	for _, s := range root.Design.Schemes {
 		sd := SecurityDefinition{
 			Description: s.Description,
-			Extensions:  ExtensionsFromExpr(s.Metadata),
+			Extensions:  ExtensionsFromExpr(s.Meta),
 		}
 		switch s.Kind {
 		case design.BasicAuthKind:
@@ -218,18 +218,18 @@ func securitySpecFromExpr(root *httpdesign.RootExpr) map[string]*SecurityDefinit
 func hasAbsoluteRoutes(root *httpdesign.RootExpr) bool {
 	hasAbsoluteRoutes := false
 	for _, res := range root.HTTPServices {
-		if !mustGenerate(res.Metadata) || !mustGenerate(res.ServiceExpr.Metadata) {
+		if !mustGenerate(res.Meta) || !mustGenerate(res.ServiceExpr.Meta) {
 			continue
 		}
 		for _, fs := range res.FileServers {
-			if !mustGenerate(fs.Metadata) || !mustGenerate(fs.Service.Metadata) {
+			if !mustGenerate(fs.Meta) || !mustGenerate(fs.Service.Meta) {
 				continue
 			}
 			hasAbsoluteRoutes = true
 			break
 		}
 		for _, a := range res.HTTPEndpoints {
-			if !mustGenerate(a.Metadata) || !mustGenerate(a.MethodExpr.Metadata) {
+			if !mustGenerate(a.Meta) || !mustGenerate(a.MethodExpr.Meta) {
 				continue
 			}
 			for _, ro := range a.Routes {
@@ -249,7 +249,7 @@ func hasAbsoluteRoutes(root *httpdesign.RootExpr) bool {
 	return hasAbsoluteRoutes
 }
 
-func tagsFromExpr(mdata design.MetadataExpr) (tags []*Tag) {
+func tagsFromExpr(mdata design.MetaExpr) (tags []*Tag) {
 	var keys []string
 	for k := range mdata {
 		keys = append(keys, k)
@@ -298,7 +298,7 @@ func tagsFromExpr(mdata design.MetadataExpr) (tags []*Tag) {
 	return
 }
 
-func tagNamesFromExpr(mdatas ...design.MetadataExpr) (tagNames []string) {
+func tagNamesFromExpr(mdatas ...design.MetaExpr) (tagNames []string) {
 	for _, mdata := range mdatas {
 		tags := tagsFromExpr(mdata)
 		for _, tag := range tags {
@@ -309,12 +309,12 @@ func tagNamesFromExpr(mdatas ...design.MetadataExpr) (tagNames []string) {
 }
 
 func summaryFromExpr(name string, e *httpdesign.EndpointExpr) string {
-	for n, mdata := range e.Metadata {
+	for n, mdata := range e.Meta {
 		if n == "swagger:summary" && len(mdata) > 0 {
 			return mdata[0]
 		}
 	}
-	for n, mdata := range e.MethodExpr.Metadata {
+	for n, mdata := range e.MethodExpr.Meta {
 		if n == "swagger:summary" && len(mdata) > 0 {
 			return mdata[0]
 		}
@@ -322,8 +322,8 @@ func summaryFromExpr(name string, e *httpdesign.EndpointExpr) string {
 	return name
 }
 
-func summaryFromMetadata(name string, metadata design.MetadataExpr) string {
-	for n, mdata := range metadata {
+func summaryFromMeta(name string, meta design.MetaExpr) string {
+	for n, mdata := range meta {
 		if n == "swagger:summary" && len(mdata) > 0 {
 			return mdata[0]
 		}
@@ -414,7 +414,7 @@ func paramFor(at *design.AttributeExpr, name, in string, required bool) *Paramet
 		p.Type = "string"
 		p.Format = "byte"
 	}
-	p.Extensions = ExtensionsFromExpr(at.Metadata)
+	p.Extensions = ExtensionsFromExpr(at.Meta)
 	initValidations(at, p)
 	return p
 }
@@ -432,7 +432,7 @@ func responseSpecFromExpr(s *V2, root *httpdesign.RootExpr, r *httpdesign.HTTPRe
 	var schema *Schema
 	if mt, ok := r.Body.Type.(*design.ResultTypeExpr); ok {
 		view := design.DefaultView
-		if v, ok := r.Body.Metadata["view"]; ok {
+		if v, ok := r.Body.Meta["view"]; ok {
 			view = v[0]
 		}
 		schema = NewSchema()
@@ -452,7 +452,7 @@ func responseSpecFromExpr(s *V2, root *httpdesign.RootExpr, r *httpdesign.HTTPRe
 		Description: desc,
 		Schema:      schema,
 		Headers:     headers,
-		Extensions:  ExtensionsFromExpr(r.Metadata),
+		Extensions:  ExtensionsFromExpr(r.Meta),
 	}, nil
 }
 
@@ -511,7 +511,7 @@ func buildPathFromFileServer(s *V2, root *httpdesign.RootExpr, fs *httpdesign.Fi
 
 		operation := &Operation{
 			Description:  fs.Description,
-			Summary:      summaryFromMetadata(fmt.Sprintf("Download %s", fs.FilePath), fs.Metadata),
+			Summary:      summaryFromMeta(fmt.Sprintf("Download %s", fs.FilePath), fs.Meta),
 			ExternalDocs: docsFromExpr(fs.Docs),
 			OperationID:  operationID,
 			Parameters:   param,
@@ -536,7 +536,7 @@ func buildPathFromFileServer(s *V2, root *httpdesign.RootExpr, fs *httpdesign.Fi
 		}
 		p := path.(*Path)
 		p.Get = operation
-		p.Extensions = ExtensionsFromExpr(fs.Metadata)
+		p.Extensions = ExtensionsFromExpr(fs.Meta)
 	}
 
 	return nil
@@ -545,7 +545,7 @@ func buildPathFromFileServer(s *V2, root *httpdesign.RootExpr, fs *httpdesign.Fi
 func buildPathFromExpr(s *V2, root *httpdesign.RootExpr, h *design.HostExpr, route *httpdesign.RouteExpr, basePath string) error {
 	endpoint := route.Endpoint
 
-	tagNames := tagNamesFromExpr(endpoint.Service.Metadata, endpoint.Metadata)
+	tagNames := tagNamesFromExpr(endpoint.Service.Meta, endpoint.Meta)
 	if len(tagNames) == 0 {
 		// By default tag with service name
 		tagNames = []string{route.Endpoint.Service.Name()}
@@ -658,7 +658,7 @@ func buildPathFromExpr(s *V2, root *httpdesign.RootExpr, h *design.HostExpr, rou
 			Responses:    responses,
 			Schemes:      schemes,
 			Deprecated:   false,
-			Extensions:   ExtensionsFromExpr(route.Metadata),
+			Extensions:   ExtensionsFromExpr(route.Meta),
 			Security:     requirements,
 		}
 
@@ -697,7 +697,7 @@ func buildPathFromExpr(s *V2, root *httpdesign.RootExpr, h *design.HostExpr, rou
 		case "PATCH":
 			p.Patch = operation
 		}
-		p.Extensions = ExtensionsFromExpr(route.Endpoint.Metadata)
+		p.Extensions = ExtensionsFromExpr(route.Endpoint.Meta)
 	}
 	return nil
 }

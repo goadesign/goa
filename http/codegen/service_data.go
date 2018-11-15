@@ -1125,7 +1125,7 @@ func buildPayloadData(e *httpdesign.EndpointExpr, sd *ServiceData) *PayloadData 
 			// If design uses Body("name") syntax then need to use payload
 			// attribute to transform.
 			ptype := payload.Type
-			if o, ok := e.Body.Metadata["origin:attribute"]; ok {
+			if o, ok := e.Body.Meta["origin:attribute"]; ok {
 				origin = o[0]
 				ptype = design.AsObject(ptype).Attribute(origin).Type
 			}
@@ -1220,8 +1220,8 @@ func buildResultData(e *httpdesign.EndpointExpr, sd *ServiceData) *ResultData {
 	)
 	{
 		view = "default"
-		if result.Metadata != nil {
-			if v, ok := result.Metadata["view"]; ok {
+		if result.Meta != nil {
+			if v, ok := result.Meta["view"]; ok {
 				view = v[0]
 			}
 		}
@@ -1292,7 +1292,7 @@ func buildResponses(e *httpdesign.EndpointExpr, result *design.AttributeExpr, vi
 					// If design uses Body("name") syntax we need to use the
 					// corresponding attribute in the result type for body
 					// transformation.
-					if o, ok := resp.Body.Metadata["origin:attribute"]; ok {
+					if o, ok := resp.Body.Meta["origin:attribute"]; ok {
 						origin = o[0]
 						resAttr = design.AsObject(resAttr.Type).Attribute(origin)
 					}
@@ -1305,7 +1305,7 @@ func buildResponses(e *httpdesign.EndpointExpr, result *design.AttributeExpr, vi
 						if sbd := buildResponseBodyType(sd, e, resp.Body, result, true, &vname, pkg); sbd != nil {
 							serverBodyData = append(serverBodyData, sbd)
 						}
-					} else if v, ok := e.MethodExpr.Result.Metadata["view"]; ok && len(v) > 0 {
+					} else if v, ok := e.MethodExpr.Result.Meta["view"]; ok && len(v) > 0 {
 						// Design explicitly sets the view to render the result.
 						// We generate only one server body type which will be rendered
 						// using the specified view.
@@ -1534,7 +1534,7 @@ func buildErrorsData(e *httpdesign.EndpointExpr, sd *ServiceData) []*ErrorGroupD
 					// If design uses Body("name") syntax then need to use payload
 					// attribute to transform.
 					etype := herr.Type
-					if o, ok := v.Response.Body.Metadata["origin:attribute"]; ok {
+					if o, ok := v.Response.Body.Meta["origin:attribute"]; ok {
 						origin = o[0]
 						etype = design.AsObject(etype).Attribute(origin).Type
 					}
@@ -1863,7 +1863,7 @@ func buildRequestBodyType(sd *ServiceData, e *httpdesign.EndpointExpr, body, att
 				src := sourceVar
 				// If design uses Body("name") syntax then need to use payload attribute
 				// to transform.
-				if o, ok := body.Metadata["origin:attribute"]; ok {
+				if o, ok := body.Meta["origin:attribute"]; ok {
 					srcObj := design.AsObject(srcType)
 					origin = o[0]
 					srcType = srcObj.Attribute(origin).Type
@@ -2020,7 +2020,7 @@ func buildResponseBodyType(sd *ServiceData, e *httpdesign.EndpointExpr, body, at
 				src := sourceVar
 				// If design uses Body("name") syntax then need to use result attribute
 				// to transform.
-				if o, ok := body.Metadata["origin:attribute"]; ok {
+				if o, ok := body.Meta["origin:attribute"]; ok {
 					srcObj := design.AsObject(srcType)
 					origin = o[0]
 					srcType = srcObj.Attribute(origin).Type

@@ -53,9 +53,9 @@ type (
 		// MultipartRequest indicates that the request content type for
 		// the endpoint is a multipart type.
 		MultipartRequest bool
-		// Metadata is a set of key/value pairs with semantic that is
-		// specific to each generator, see dsl.Metadata.
-		Metadata design.MetadataExpr
+		// Meta is a set of key/value pairs with semantic that is
+		// specific to each generator, see dsl.Meta.
+		Meta design.MetaExpr
 	}
 
 	// RouteExpr represents an endpoint route (HTTP endpoint).
@@ -66,9 +66,9 @@ type (
 		Path string
 		// Endpoint is the endpoint this route applies to.
 		Endpoint *EndpointExpr
-		// Metadata is an arbitrary set of key/value pairs, see
-		// dsl.Metadata
-		Metadata design.MetadataExpr
+		// Meta is an arbitrary set of key/value pairs, see
+		// dsl.Meta
+		Meta design.MetaExpr
 	}
 )
 
@@ -760,7 +760,7 @@ func (r *RouteExpr) IsAbsolute() bool {
 
 // initAttrFromDesign overrides the type of att with the one of patt and
 // initializes other non-initialized fields of att with the one of patt except
-// Metadata.
+// Meta.
 func initAttrFromDesign(att, patt *design.AttributeExpr) {
 	if patt == nil || patt.Type == design.Empty {
 		return
@@ -796,11 +796,11 @@ func findKey(e *EndpointExpr, keyAtt string) (string, string) {
 	} else if e.Body == nil {
 		return "", "header"
 	}
-	if _, ok := e.Body.Metadata["http:body"]; ok {
+	if _, ok := e.Body.Meta["http:body"]; ok {
 		if e.Body.Find(keyAtt) != nil {
 			return keyAtt, "body"
 		}
-		if m, ok := e.Body.Metadata["origin:attribute"]; ok && m[0] == keyAtt {
+		if m, ok := e.Body.Meta["origin:attribute"]; ok && m[0] == keyAtt {
 			return keyAtt, "body"
 		}
 	}

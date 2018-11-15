@@ -173,7 +173,7 @@ func Attribute(name string, args ...interface{}) {
 	parent.Type.(*design.Object).Set(name, attr)
 }
 
-// Field is syntactic sugar to define an attribute with the "rpc:tag" metadata
+// Field is syntactic sugar to define an attribute with the "rpc:tag" meta
 // set with the value of the first argument.
 //
 // Field must appear wherever Attribute can.
@@ -188,7 +188,7 @@ func Attribute(name string, args ...interface{}) {
 //     })
 //
 func Field(tag interface{}, name string, args ...interface{}) {
-	fn := func() { Metadata("rpc:tag", fmt.Sprintf("%v", tag)) }
+	fn := func() { Meta("rpc:tag", fmt.Sprintf("%v", tag)) }
 	if d, ok := args[len(args)-1].(func()); ok {
 		old := fn
 		fn = func() { d(); old() }
@@ -220,8 +220,8 @@ func Default(def interface{}) {
 // using the first syntax where the summary is the string "default".
 //
 // If no example is explicitly provided in an attribute expression then a random
-// example is generated unless the "swagger:example" metadata is set to "false".
-// See Metadata.
+// example is generated unless the "swagger:example" meta is set to "false".
+// See Meta.
 //
 // Example must appear in a Attributes or Attribute expression DSL.
 //

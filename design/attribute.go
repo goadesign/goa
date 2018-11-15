@@ -24,8 +24,8 @@ type (
 		Docs *DocsExpr
 		// Optional validations
 		Validation *ValidationExpr
-		// Metadata is a list of key/value pairs
-		Metadata MetadataExpr
+		// Meta is a list of key/value pairs
+		Meta MetaExpr
 		// Optional member default value
 		DefaultValue interface{}
 		// UserExample set in DSL or computed in Finalize
@@ -155,7 +155,7 @@ func TaggedAttribute(a *AttributeExpr, tag string) string {
 		return ""
 	}
 	for _, at := range *obj {
-		if _, ok := at.Attribute.Metadata[tag]; ok {
+		if _, ok := at.Attribute.Meta[tag]; ok {
 			return at.Name
 		}
 	}
@@ -197,7 +197,7 @@ func (a *AttributeExpr) Validate(ctx string, parent eval.Expression) *eval.Valid
 		}
 	}
 
-	if views, ok := a.Metadata["view"]; ok {
+	if views, ok := a.Meta["view"]; ok {
 		rt, ok := a.Type.(*ResultTypeExpr)
 		if !ok {
 			verr.Add(parent, "%sdefines a view %v but is not a result type", ctx, views)
@@ -367,7 +367,7 @@ func (a *AttributeExpr) HasTag(tag string) bool {
 		return false
 	}
 	for _, at := range *obj {
-		if _, ok := at.Attribute.Metadata[tag]; ok {
+		if _, ok := at.Attribute.Meta[tag]; ok {
 			return true
 		}
 	}

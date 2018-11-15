@@ -30,10 +30,10 @@ func RequestBody(a *EndpointExpr) *design.AttributeExpr {
 		obj := design.AsObject(payload.Type)
 		if obj != nil {
 			for _, at := range *obj {
-				if _, ok := at.Attribute.Metadata["security:username"]; ok {
+				if _, ok := at.Attribute.Meta["security:username"]; ok {
 					userField = at.Name
 				}
-				if _, ok := at.Attribute.Metadata["security:password"]; ok {
+				if _, ok := at.Attribute.Meta["security:password"]; ok {
 					passField = at.Name
 				}
 				if userField != "" && passField != "" {

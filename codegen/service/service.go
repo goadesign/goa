@@ -158,7 +158,7 @@ func errorName(et *UserTypeData) string {
 	obj := design.AsObject(et.Type)
 	if obj != nil {
 		for _, att := range *obj {
-			if _, ok := att.Attribute.Metadata["struct:error:name"]; ok {
+			if _, ok := att.Attribute.Meta["struct:error:name"]; ok {
 				return fmt.Sprintf("e.%s", codegen.Goify(att.Name, true))
 			}
 		}

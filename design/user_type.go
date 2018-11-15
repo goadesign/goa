@@ -33,7 +33,7 @@ func (u *UserTypeExpr) Name() string {
 	if u.AttributeExpr == nil {
 		return u.TypeName
 	}
-	if n, ok := u.AttributeExpr.Metadata["struct:type:name"]; ok {
+	if n, ok := u.AttributeExpr.Meta["struct:type:name"]; ok {
 		return n[0]
 	}
 	return u.TypeName

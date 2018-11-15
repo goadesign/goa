@@ -12,25 +12,25 @@ func TestErrorExprValidate(t *testing.T) {
 		identifier = "result"
 	)
 	var (
-		metadata = MetadataExpr{
+		meta = MetaExpr{
 			"struct:error:name": []string{"error1"},
 		}
 		foo = &NamedAttributeExpr{
 			Name: "foo",
 			Attribute: &AttributeExpr{
-				Metadata: metadata,
+				Meta: meta,
 			},
 		}
 		bar = &NamedAttributeExpr{
 			Name: "bar",
 			Attribute: &AttributeExpr{
-				Metadata: metadata,
+				Meta: meta,
 			},
 		}
 		baz = &NamedAttributeExpr{
 			Name: "foo",
 			Attribute: &AttributeExpr{
-				Metadata: MetadataExpr{},
+				Meta: MetaExpr{},
 			},
 		}
 	)
@@ -59,7 +59,7 @@ func TestErrorExprValidate(t *testing.T) {
 			att:      &AttributeExpr{Type: Boolean},
 			expected: &eval.ValidationErrors{},
 		},
-		"duplicated metadata": {
+		"duplicated meta": {
 			att: &AttributeExpr{
 				Type: &ResultTypeExpr{
 					UserTypeExpr: &UserTypeExpr{
@@ -74,10 +74,10 @@ func TestErrorExprValidate(t *testing.T) {
 				},
 			},
 			expected: &eval.ValidationErrors{
-				Errors: []error{fmt.Errorf("metadata 'struct:error:name' already set for attribute %q of result type %q", "foo", identifier)},
+				Errors: []error{fmt.Errorf("meta 'struct:error:name' already set for attribute %q of result type %q", "foo", identifier)},
 			},
 		},
-		"missing metadata": {
+		"missing meta": {
 			att: &AttributeExpr{
 				Type: &ResultTypeExpr{
 					UserTypeExpr: &UserTypeExpr{
@@ -91,7 +91,7 @@ func TestErrorExprValidate(t *testing.T) {
 				},
 			},
 			expected: &eval.ValidationErrors{
-				Errors: []error{fmt.Errorf("metadata 'struct:error:name' is missing in result type %q", identifier)},
+				Errors: []error{fmt.Errorf("meta 'struct:error:name' is missing in result type %q", identifier)},
 			},
 		},
 	}

@@ -472,7 +472,7 @@ func (d ServicesData) analyze(service *design.ServiceExpr) *Data {
 	}
 
 	for _, t := range design.Root.Types {
-		if svcs, ok := t.Attribute().Metadata["type:generate:force"]; ok {
+		if svcs, ok := t.Attribute().Meta["type:generate:force"]; ok {
 			att := &design.AttributeExpr{Type: t}
 			if len(svcs) > 0 {
 				// Force generate type only in the specified services
@@ -594,9 +594,9 @@ func collectTypes(at *design.AttributeExpr, seen map[string]struct{}, scope *cod
 
 // buildErrorInitData creates the data needed to generate code around endpoint error return values.
 func buildErrorInitData(er *design.ErrorExpr, scope *codegen.NameScope) *ErrorInitData {
-	_, temporary := er.AttributeExpr.Metadata["goa:error:temporary"]
-	_, timeout := er.AttributeExpr.Metadata["goa:error:timeout"]
-	_, fault := er.AttributeExpr.Metadata["goa:error:fault"]
+	_, temporary := er.AttributeExpr.Meta["goa:error:temporary"]
+	_, timeout := er.AttributeExpr.Meta["goa:error:timeout"]
+	_, fault := er.AttributeExpr.Meta["goa:error:fault"]
 	return &ErrorInitData{
 		Name:        fmt.Sprintf("Make%s", codegen.Goify(er.Name, true)),
 		Description: er.Description,
@@ -963,7 +963,7 @@ func buildViewedResultType(att *design.AttributeExpr, projected design.UserType,
 	if !rt.HasMultipleViews() {
 		viewName = design.DefaultView
 	}
-	if v, ok := att.Metadata["view"]; ok && len(v) > 0 {
+	if v, ok := att.Meta["view"]; ok && len(v) > 0 {
 		viewName = v[0]
 	}
 
@@ -1254,7 +1254,7 @@ func buildValidations(projected *design.AttributeExpr, scope *codegen.NameScope)
 							// use explicitly specified view (if any) for the attribute,
 							// otherwise use default
 							vw := ""
-							if v, ok := n.Attribute.Metadata["view"]; ok && len(v) > 0 && v[0] != design.DefaultView {
+							if v, ok := n.Attribute.Meta["view"]; ok && len(v) > 0 && v[0] != design.DefaultView {
 								vw = v[0]
 							}
 							fields = append(fields, map[string]interface{}{
@@ -1365,7 +1365,7 @@ func buildConstructorCode(src, tgt *design.AttributeExpr, srcvar, tgtvar, srcpkg
 			if view != "" {
 				v := ""
 				if vatt := rt.View(view).AttributeExpr.Find(n.Name); vatt != nil {
-					if attv, ok := vatt.Metadata["view"]; ok && len(attv) > 0 && attv[0] != design.DefaultView {
+					if attv, ok := vatt.Meta["view"]; ok && len(attv) > 0 && attv[0] != design.DefaultView {
 						// view is explicitly set for the result type on the attribute
 						v = attv[0]
 					}

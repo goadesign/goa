@@ -170,7 +170,7 @@ types:
     contains the error name. The value of this attribute is compared with the
     names of the errors as defined in the design by the encoding and decoding
     code to infer the proper encoding details (e.g. HTTP status code). The
-    attribute is identified using the special `struct:error:name` metadata:
+    attribute is identified using the special `struct:error:name` meta:
 
 ```go
 var InsertConflict = ResultType("application/vnd.service.insertconflict", func() {
@@ -178,7 +178,7 @@ var InsertConflict = ResultType("application/vnd.service.insertconflict", func()
         Attributes(func() {
                 Attribute("conflict_value", String)
                 Attribute("error_name", String, "name of error used by goa to encode response", func() {
-                        Metadata("struct:error:name")
+                        Meta("struct:error:name")
                 })
         })
         View("default", func() {
@@ -200,6 +200,6 @@ The goa code generators leverage the HTTP status code provided in the `HTTP`
 expression if any to encode errors into HTTP responses. The code first switches
 on the type of the error value and matches that with the type of the errors
 defined in the design. If the type is a user provided type and has and attribute
-with the "struct:error:name" metadata defined then it compares the value of the
+with the "struct:error:name" meta defined then it compares the value of the
 corresponding field with the name of the errors in the design.
 

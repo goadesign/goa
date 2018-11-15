@@ -74,10 +74,10 @@ func Temporary() {
 		eval.IncompatibleDSL()
 		return
 	}
-	if attr.Metadata == nil {
-		attr.Metadata = make(design.MetadataExpr)
+	if attr.Meta == nil {
+		attr.Meta = make(design.MetaExpr)
 	}
-	attr.Metadata["goa:error:temporary"] = nil
+	attr.Meta["goa:error:temporary"] = nil
 }
 
 // Timeout qualifies an error type as describing errors due to timeouts.
@@ -99,10 +99,10 @@ func Timeout() {
 		eval.IncompatibleDSL()
 		return
 	}
-	if attr.Metadata == nil {
-		attr.Metadata = make(design.MetadataExpr)
+	if attr.Meta == nil {
+		attr.Meta = make(design.MetaExpr)
 	}
-	attr.Metadata["goa:error:timeout"] = nil
+	attr.Meta["goa:error:timeout"] = nil
 }
 
 // Fault qualifies an error type as describing errors due to a server-side
@@ -125,8 +125,8 @@ func Fault() {
 		eval.IncompatibleDSL()
 		return
 	}
-	if attr.Metadata == nil {
-		attr.Metadata = make(design.MetadataExpr)
+	if attr.Meta == nil {
+		attr.Meta = make(design.MetaExpr)
 	}
-	attr.Metadata["goa:error:fault"] = nil
+	attr.Meta["goa:error:fault"] = nil
 }

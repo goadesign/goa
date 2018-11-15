@@ -69,8 +69,8 @@ type (
 		Scopes []*ScopeExpr
 		// Flows determine the oauth2 flows supported by this scheme.
 		Flows []*FlowExpr
-		// Metadata is a list of key/value pairs
-		Metadata MetadataExpr
+		// Meta is a list of key/value pairs
+		Meta MetaExpr
 	}
 
 	// FlowExpr describes a specific OAuth2 flow.
@@ -114,7 +114,7 @@ func DupScheme(sch *SchemeExpr) *SchemeExpr {
 		In:          sch.In,
 		Scopes:      sch.Scopes,
 		Flows:       sch.Flows,
-		Metadata:    sch.Metadata,
+		Meta:        sch.Meta,
 	}
 	return &dup
 }

@@ -70,10 +70,10 @@ func TestMethodExprValidate(t *testing.T) {
 				Type: nil,
 			}
 		}
-		metadata = MetadataExpr{
+		meta = MetaExpr{
 			"struct:error:name": []string{"error1"},
 		}
-		errorDuplicatedMetadata = func() *AttributeExpr {
+		errorDuplicatedMeta = func() *AttributeExpr {
 			return &AttributeExpr{
 				Type: &ResultTypeExpr{
 					UserTypeExpr: &UserTypeExpr{
@@ -82,13 +82,13 @@ func TestMethodExprValidate(t *testing.T) {
 								&NamedAttributeExpr{
 									Name: "foo",
 									Attribute: &AttributeExpr{
-										Metadata: metadata,
+										Meta: meta,
 									},
 								},
 								&NamedAttributeExpr{
 									Name: "bar",
 									Attribute: &AttributeExpr{
-										Metadata: metadata,
+										Meta: meta,
 									},
 								},
 							},
@@ -98,7 +98,7 @@ func TestMethodExprValidate(t *testing.T) {
 				},
 			}
 		}
-		errorMissingMetadata = func() *AttributeExpr {
+		errorMissingMeta = func() *AttributeExpr {
 			return &AttributeExpr{
 				Type: &ResultTypeExpr{
 					UserTypeExpr: &UserTypeExpr{
@@ -107,7 +107,7 @@ func TestMethodExprValidate(t *testing.T) {
 								&NamedAttributeExpr{
 									Name: "foo",
 									Attribute: &AttributeExpr{
-										Metadata: MetadataExpr{},
+										Meta: MetaExpr{},
 									},
 								},
 							},
@@ -118,8 +118,8 @@ func TestMethodExprValidate(t *testing.T) {
 			}
 		}
 		errAttributeTypeNil       = fmt.Errorf("attribute type is nil")
-		errDuplicatedMetadata     = fmt.Errorf("metadata 'struct:error:name' already set for attribute %q of result type %q", "foo", identifier)
-		errMissingMetadata        = fmt.Errorf("metadata 'struct:error:name' is missing in result type %q", identifier)
+		errDuplicatedMeta         = fmt.Errorf("meta 'struct:error:name' already set for attribute %q of result type %q", "foo", identifier)
+		errMissingMeta            = fmt.Errorf("meta 'struct:error:name' is missing in result type %q", identifier)
 		errMissingUsernameAttr    = fmt.Errorf("payload of method \"test\" of service \"test\" does not define a username attribute, use Username to define one")
 		errMissingPasswordAttr    = fmt.Errorf("payload of method \"test\" of service \"test\" does not define a password attribute, use Password to define one")
 		errMissingAPIKeyAttr      = fmt.Errorf("payload of method \"test\" of service \"test\" does not define an API key attribute, use APIKey to define one")
@@ -155,17 +155,17 @@ func TestMethodExprValidate(t *testing.T) {
 			result:  attributeTypeEmpty(),
 			errors: []*ErrorExpr{
 				{
-					AttributeExpr: errorDuplicatedMetadata(),
+					AttributeExpr: errorDuplicatedMeta(),
 					Name:          "foo",
 				},
 				{
-					AttributeExpr: errorMissingMetadata(),
+					AttributeExpr: errorMissingMeta(),
 					Name:          "bar",
 				},
 			},
 			expected: &eval.ValidationErrors{Errors: []error{
-				errDuplicatedMetadata,
-				errMissingMetadata,
+				errDuplicatedMeta,
+				errMissingMeta,
 			}},
 		},
 		"error only in schemes": {
@@ -198,11 +198,11 @@ func TestMethodExprValidate(t *testing.T) {
 			result:       attributeTypeNil(),
 			errors: []*ErrorExpr{
 				{
-					AttributeExpr: errorDuplicatedMetadata(),
+					AttributeExpr: errorDuplicatedMeta(),
 					Name:          "foo",
 				},
 				{
-					AttributeExpr: errorMissingMetadata(),
+					AttributeExpr: errorMissingMeta(),
 					Name:          "bar",
 				},
 			},
@@ -214,8 +214,8 @@ func TestMethodExprValidate(t *testing.T) {
 				errMissingJWTAttr,
 				errMissingAccessTokenAttr,
 				errAttributeTypeNil,
-				errDuplicatedMetadata,
-				errMissingMetadata,
+				errDuplicatedMeta,
+				errMissingMeta,
 			}},
 		},
 		"errors in payload, inherited schemes, result and errors": {
@@ -224,11 +224,11 @@ func TestMethodExprValidate(t *testing.T) {
 			result:  attributeTypeNil(),
 			errors: []*ErrorExpr{
 				{
-					AttributeExpr: errorDuplicatedMetadata(),
+					AttributeExpr: errorDuplicatedMeta(),
 					Name:          "foo",
 				},
 				{
-					AttributeExpr: errorMissingMetadata(),
+					AttributeExpr: errorMissingMeta(),
 					Name:          "bar",
 				},
 			},
@@ -240,8 +240,8 @@ func TestMethodExprValidate(t *testing.T) {
 				errMissingJWTAttr,
 				errMissingAccessTokenAttr,
 				errAttributeTypeNil,
-				errDuplicatedMetadata,
-				errMissingMetadata,
+				errDuplicatedMeta,
+				errMissingMeta,
 			}},
 		},
 	}

@@ -594,12 +594,12 @@ func transformHelperName(satt, tatt *design.AttributeExpr, a targs) string {
 	)
 	{
 		sname = a.scope.GoTypeName(satt)
-		if _, ok := satt.Metadata["goa.external"]; ok {
+		if _, ok := satt.Meta["goa.external"]; ok {
 			// type belongs to external package so name could clash
 			sname += "Ext"
 		}
 		tname = a.scope.GoTypeName(tatt)
-		if _, ok := tatt.Metadata["goa.external"]; ok {
+		if _, ok := tatt.Meta["goa.external"]; ok {
 			// type belongs to external package so name could clash
 			tname += "Ext"
 		}

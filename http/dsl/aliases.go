@@ -89,6 +89,16 @@ func APIKey(scheme, name string, args ...interface{}) {
 	dsl.APIKey(scheme, name, args...)
 }
 
+// APIKeyField is syntactic sugar to define an API key attribute with the
+// "rpc:tag" meta set with the value of the first argument.
+//
+// APIKeyField takes the same arguments as APIKey with the addition of the
+// tag value as the first argument.
+//
+func APIKeyField(tag interface{}, scheme, name string, args ...interface{}) {
+	dsl.APIKeyField(tag, scheme, name, args...)
+}
+
 // APIKeySecurity defines an API key security scheme where a key must be
 // provided by the client to perform authorization.
 //
@@ -133,6 +143,16 @@ func APIKeySecurity(name string, fn ...func()) *design.SchemeExpr {
 //
 func AccessToken(name string, args ...interface{}) {
 	dsl.AccessToken(name, args...)
+}
+
+// AccessTokenField is syntactic sugar to define an access token attribute with the
+// "rpc:tag" meta set with the value of the first argument.
+//
+// AccessTokenField takes the same arguments as AccessToken with the addition of the
+// tag value as the first argument.
+//
+func AccessTokenField(tag interface{}, name string, args ...interface{}) {
+	dsl.AccessTokenField(tag, name, args...)
 }
 
 // ArrayOf creates an array type from its element type.
@@ -378,9 +398,9 @@ func Contact(fn func()) {
 //       version of the field name
 //
 // This algorithm does not apply if the attribute is equipped with the
-// "struct.field.external" metadata. In this case the matching is done by
-// looking up the field with a name corresponding to the value of the metadata.
-// If the value of the metadata is "-" the attribute isn't matched and no
+// "struct.field.external" meta. In this case the matching is done by
+// looking up the field with a name corresponding to the value of the meta.
+// If the value of the meta is "-" the attribute isn't matched and no
 // conversion code is generated for it. In all other cases it is an error if no
 // match is found or if the matching field type does not correspond to the
 // attribute type.
@@ -408,11 +428,11 @@ func Contact(fn func()) {
 //        Attribute("name", String, func() {
 //            // The "name" attribute is matched to the external
 //            // type "MyName" field.
-//            Metadata("struct.field.external", "MyName")
+//            Meta("struct.field.external", "MyName")
 //        })
 //        Attribute("vineyard", String, func() {
 //            // The "vineyard" attribute is not converted.
-//            Metadata("struct.field.external", "-")
+//            Meta("struct.field.external", "-")
 //        })
 //    })
 //
@@ -445,9 +465,9 @@ func ConvertTo(obj interface{}) {
 //       version of the field name
 //
 // This algorithm does not apply if the attribute is equipped with the
-// "struct.field.external" metadata. In this case the matching is done by
-// looking up the field with a name corresponding to the value of the metadata.
-// If the value of the metadata is "-" the attribute isn't matched and no
+// "struct.field.external" meta. In this case the matching is done by
+// looking up the field with a name corresponding to the value of the meta.
+// If the value of the meta is "-" the attribute isn't matched and no
 // conversion code is generated for it. In all other cases it is an error if no
 // match is found or if the matching field type does not correspond to the
 // attribute type.
@@ -473,12 +493,12 @@ func ConvertTo(obj interface{}) {
 //        Attribute("name", String, func() {
 //            // The "name" attribute is matched to the external
 //            // type "MyName" field.
-//            Metadata("struct.field.external", "MyName")
+//            Meta("struct.field.external", "MyName")
 //        })
 //        Attribute("vineyard", String, func() {
 //            // The "vineyard" attribute is not initialized by the
 //            // generated constructor method.
-//            Metadata("struct.field.external", "-")
+//            Meta("struct.field.external", "-")
 //        })
 //    })
 //
@@ -567,8 +587,8 @@ func Error(name string, args ...interface{}) {
 // using the first syntax where the summary is the string "default".
 //
 // If no example is explicitly provided in an attribute expression then a random
-// example is generated unless the "swagger:example" metadata is set to "false".
-// See Metadata.
+// example is generated unless the "swagger:example" meta is set to "false".
+// See Meta.
 //
 // Example must appear in a Attributes or Attribute expression DSL.
 //
@@ -644,7 +664,7 @@ func Fault() {
 	dsl.Fault()
 }
 
-// Field is syntactic sugar to define an attribute with the "rpc:tag" metadata
+// Field is syntactic sugar to define an attribute with the "rpc:tag" meta
 // set with the value of the first argument.
 //
 // Field must appear wherever Attribute can.
@@ -924,6 +944,16 @@ func OAuth2Security(name string, fn ...func()) *design.SchemeExpr {
 //
 func Password(name string, args ...interface{}) {
 	dsl.Password(name, args...)
+}
+
+// PasswordField is syntactic sugar to define a password attribute with the
+// "rpc:tag" meta set with the value of the first argument.
+//
+// PasswordField takes the same arguments as Password with the addition of the
+// tag value as the first argument.
+//
+func PasswordField(tag interface{}, name string, args ...interface{}) {
+	dsl.PasswordField(tag, name, args...)
 }
 
 // PasswordFlow defines an Resource Owner Password Credentials OAuth2 flow as
@@ -1577,6 +1607,16 @@ func Token(name string, args ...interface{}) {
 	dsl.Token(name, args...)
 }
 
+// TokenField is syntactic sugar to define a JWT token attribute with the
+// "rpc:tag" meta set with the value of the first argument.
+//
+// TokenField takes the same arguments as Token with the addition of the
+// tag value as the first argument.
+//
+func TokenField(tag interface{}, name string, args ...interface{}) {
+	dsl.TokenField(tag, name, args...)
+}
+
 // Type defines a user type. A user type has a unique name and may be an alias
 // to an existing type or may describe a completely new type using a list of
 // attributes (object fields). Attribute types may themselves be user type.
@@ -1703,6 +1743,16 @@ func URL(url string) {
 //
 func Username(name string, args ...interface{}) {
 	dsl.Username(name, args...)
+}
+
+// UsernameField is syntactic sugar to define a username attribute with the
+// "rpc:tag" meta set with the value of the first argument.
+//
+// UsernameField takes the same arguments as Username with the addition of the
+// tag value as the first argument.
+//
+func UsernameField(tag interface{}, name string, args ...interface{}) {
+	dsl.UsernameField(tag, name, args...)
 }
 
 // Variable defines a server host URI variable.
