@@ -51,7 +51,7 @@ func Generate(dir, cmd string) ([]string, error) {
 	}
 
 	// 4. Run the code pre generation plugins.
-	err := codegen.RunPluginsPreGenerate(cmd, genpkg, roots)
+	err := codegen.RunPluginsPrepare(cmd, genpkg, roots)
 	if err != nil {
 		return nil, err
 	}
