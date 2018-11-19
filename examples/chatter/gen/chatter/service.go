@@ -12,6 +12,7 @@ import (
 	"context"
 
 	chattersvcviews "goa.design/goa/examples/chatter/gen/chatter/views"
+	"goa.design/goa/security"
 )
 
 // The chatter service implements a simple client and server chat.
@@ -29,6 +30,14 @@ type Service interface {
 	//	- "tiny"
 	//	- "default"
 	History(context.Context, *HistoryPayload, HistoryServerStream) (err error)
+}
+
+// Auther defines the authorization functions to be implemented by the service.
+type Auther interface {
+	// BasicAuth implements the authorization logic for the Basic security scheme.
+	BasicAuth(ctx context.Context, user, pass string, schema *security.BasicScheme) (context.Context, error)
+	// JWTAuth implements the authorization logic for the JWT security scheme.
+	JWTAuth(ctx context.Context, token string, schema *security.JWTScheme) (context.Context, error)
 }
 
 // ServiceName is the name of the service as defined in the design. This is the

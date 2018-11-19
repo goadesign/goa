@@ -3,7 +3,7 @@ info:
   title: Security Example API
   description: This API demonstrates the use of the goa security DSL
   version: ""
-host: localhost:8080
+host: localhost:80
 paths:
   /secure:
     get:
@@ -22,6 +22,11 @@ paths:
         description: Whether to force auth failure even with a valid JWT
         required: false
         type: boolean
+      - name: Authorization
+        in: header
+        description: JWT used for authentication
+        required: false
+        type: string
       responses:
         "200":
           description: OK response.
@@ -32,6 +37,7 @@ paths:
           schema:
             $ref: '#/definitions/secure_unauthorizedResponseBody'
       schemes:
+      - grpc
       - http
       security:
       - jwt: []
@@ -52,6 +58,11 @@ paths:
         description: API key
         required: false
         type: string
+      - name: Authorization
+        in: header
+        description: JWT used for authentication
+        required: false
+        type: string
       responses:
         "200":
           description: OK response.
@@ -62,6 +73,7 @@ paths:
           schema:
             $ref: '#/definitions/doubly_secure_unauthorizedResponseBody'
       schemes:
+      - grpc
       - http
       security:
       - api_key: []
@@ -87,6 +99,11 @@ paths:
         in: query
         required: false
         type: string
+      - name: Authorization
+        in: header
+        description: JWT used for authentication
+        required: false
+        type: string
       responses:
         "200":
           description: OK response.
@@ -97,6 +114,7 @@ paths:
           schema:
             $ref: '#/definitions/also_doubly_secure_unauthorizedResponseBody'
       schemes:
+      - grpc
       - http
       security:
       - api_key: []
@@ -120,6 +138,7 @@ paths:
           schema:
             $ref: '#/definitions/signin_unauthorizedResponseBody'
       schemes:
+      - grpc
       - http
       security:
       - basic: []

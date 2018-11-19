@@ -5,7 +5,19 @@ import . "goa.design/goa/dsl"
 var _ = API("cellar", func() {
 	Title("Cellar Service")
 	Description("HTTP service for managing your wine cellar")
-	Server("http://localhost:8080")
+
+	Server("cellar", func() {
+		Description("cellar hosts the storage, sommelier and swagger services.")
+		Services("sommelier", "storage", "swagger")
+		Host("localhost", func() {
+			Description("default host")
+			URI("http://localhost:8000/cellar")
+		})
+		Host("goa.design", func() {
+			Description("public host")
+			URI("https://goa.design/cellar")
+		})
+	})
 })
 
 var StoredBottle = ResultType("application/vnd.cellar.stored-bottle", func() {

@@ -771,6 +771,7 @@ func (d ServicesData) analyze(hs *expr.HTTPServiceExpr) *ServiceData {
 				"Args":         args,
 				"PathInit":     pathInit,
 				"Verb":         routes[0].Verb,
+				"IsStreaming":  a.MethodExpr.IsStreaming(),
 			}
 			if err := requestInitTmpl.Execute(&buf, data); err != nil {
 				panic(err) // bug
@@ -2430,7 +2431,16 @@ const (
 	{{- end }}
 	}
 {{- end }}
-	u := &url.URL{Scheme: c.scheme, Host: c.host, Path: {{ .PathInit.Name }}({{ range .PathInit.ClientArgs }}{{ .Ref }}, {{ end }})}
+	{{- if .IsStreaming }}
+		scheme := c.scheme
+		switch c.scheme {
+		case "http":
+			scheme = "ws"
+		case "https":
+			scheme = "wss"
+		}
+	{{- end }}
+	u := &url.URL{Scheme: {{ if .IsStreaming }}scheme{{ else }}c.scheme{{ end }}, Host: c.host, Path: {{ .PathInit.Name }}({{ range .PathInit.ClientArgs }}{{ .Ref }}, {{ end }})}
 	req, err := http.NewRequest("{{ .Verb }}", u.String(), nil)
 	if err != nil {
 		return nil, goahttp.ErrInvalidURL("{{ .ServiceName }}", "{{ .EndpointName }}", u.String(), err)

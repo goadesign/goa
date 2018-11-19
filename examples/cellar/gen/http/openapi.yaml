@@ -3,7 +3,7 @@ info:
   title: Cellar Service
   description: HTTP service for managing your wine cellar
   version: ""
-host: localhost:8080
+host: localhost:8000
 paths:
   /sommelier:
     post:
@@ -203,6 +203,7 @@ paths:
             type: file
       schemes:
       - http
+      - https
 definitions:
   BottleRequestBody:
     title: BottleRequestBody

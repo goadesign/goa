@@ -2,7 +2,7 @@ swagger: "2.0"
 info:
   title: Chatter service describing the streaming features of goa v2.
   version: ""
-host: localhost:8080
+host: localhost:80
 paths:
   /echoer:
     get:
@@ -15,6 +15,12 @@ paths:
         Required security scopes:
           * `stream:write`
       operationId: chatter#echoer
+      parameters:
+      - name: Authorization
+        in: header
+        description: JWT used for authentication
+        required: true
+        type: string
       responses:
         "101":
           description: Switching Protocols response.
@@ -29,6 +35,7 @@ paths:
           schema:
             $ref: '#/definitions/echoer_invalid-scopesResponseBody'
       schemes:
+      - grpc
       - ws
       security:
       - jwt: []
@@ -49,6 +56,11 @@ paths:
         description: View to use to render the result
         required: false
         type: string
+      - name: Authorization
+        in: header
+        description: JWT used for authentication
+        required: true
+        type: string
       responses:
         "101":
           description: Switching Protocols response.
@@ -63,6 +75,7 @@ paths:
           schema:
             $ref: '#/definitions/history_invalid-scopesResponseBody'
       schemes:
+      - grpc
       - ws
       security:
       - jwt: []
@@ -77,6 +90,12 @@ paths:
         Required security scopes:
           * `stream:write`
       operationId: chatter#listener
+      parameters:
+      - name: Authorization
+        in: header
+        description: JWT used for authentication
+        required: true
+        type: string
       responses:
         "101":
           description: Switching Protocols response.
@@ -89,6 +108,7 @@ paths:
           schema:
             $ref: '#/definitions/listener_invalid-scopesResponseBody'
       schemes:
+      - grpc
       - ws
       security:
       - jwt: []
@@ -109,6 +129,7 @@ paths:
           schema:
             $ref: '#/definitions/login_unauthorizedResponseBody'
       schemes:
+      - grpc
       - http
       security:
       - basic: []
@@ -123,6 +144,12 @@ paths:
         Required security scopes:
           * `stream:write`
       operationId: chatter#summary
+      parameters:
+      - name: Authorization
+        in: header
+        description: JWT used for authentication
+        required: true
+        type: string
       responses:
         "101":
           description: Switching Protocols response.
@@ -137,6 +164,7 @@ paths:
           schema:
             $ref: '#/definitions/summary_invalid-scopesResponseBody'
       schemes:
+      - grpc
       - ws
       security:
       - jwt: []

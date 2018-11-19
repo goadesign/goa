@@ -61,13 +61,15 @@ type HistoryEndpointInput struct {
 }
 
 // NewEndpoints wraps the methods of the "chatter" service with endpoints.
-func NewEndpoints(s Service, authBasicFn security.AuthBasicFunc, authJWTFn security.AuthJWTFunc) *Endpoints {
+func NewEndpoints(s Service) *Endpoints {
+	// Casting service to Auther interface
+	a := s.(Auther)
 	return &Endpoints{
-		Login:    NewLoginEndpoint(s, authBasicFn),
-		Echoer:   NewEchoerEndpoint(s, authJWTFn),
-		Listener: NewListenerEndpoint(s, authJWTFn),
-		Summary:  NewSummaryEndpoint(s, authJWTFn),
-		History:  NewHistoryEndpoint(s, authJWTFn),
+		Login:    NewLoginEndpoint(s, a.BasicAuth),
+		Echoer:   NewEchoerEndpoint(s, a.JWTAuth),
+		Listener: NewListenerEndpoint(s, a.JWTAuth),
+		Summary:  NewSummaryEndpoint(s, a.JWTAuth),
+		History:  NewHistoryEndpoint(s, a.JWTAuth),
 	}
 }
 

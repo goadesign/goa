@@ -225,6 +225,19 @@ func (r *RootExpr) Validate() error {
 	return &verr
 }
 
+// Finalize finalizes the server expressions.
+func (r *RootExpr) Finalize() {
+	if r.API == nil {
+		r.API = &APIExpr{}
+	}
+	if len(r.API.Servers) == 0 {
+		r.API.Servers = []*ServerExpr{r.API.DefaultServer()}
+	}
+	for _, s := range r.API.Servers {
+		s.Finalize()
+	}
+}
+
 // Dup creates a new map from the given expression.
 func (m MetaExpr) Dup() MetaExpr {
 	d := make(MetaExpr, len(m))

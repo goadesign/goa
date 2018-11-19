@@ -193,7 +193,7 @@ func exampleMain(genpkg string, root *expr.RootExpr, svr *expr.ServerExpr) *code
 		FuncMap: map[string]interface{}{"needStream": needStream},
 	})
 
-	return &codegen.File{Path: mainPath, SectionTemplates: sections}
+	return &codegen.File{Path: mainPath, SectionTemplates: sections, SkipExist: true}
 }
 
 // dummyMultipart returns a dummy implementation of the multipart decoders

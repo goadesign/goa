@@ -3,7 +3,7 @@ info:
   title: Divider Service
   description: An example illustrating error handling in goa. See docs/ErrorHandling.md.
   version: ""
-host: localhost:8080
+host: localhost:80
 paths:
   /div/{a}/{b}:
     get:
@@ -39,6 +39,7 @@ paths:
           schema:
             $ref: '#/definitions/Dividerdivide_timeoutResponseBody'
       schemes:
+      - grpc
       - http
   /idiv/{a}/{b}:
     get:
@@ -76,6 +77,7 @@ paths:
           schema:
             $ref: '#/definitions/Dividerinteger_divide_timeoutResponseBody'
       schemes:
+      - grpc
       - http
 definitions:
   Dividerdivide_div_by_zeroResponseBody:
@@ -114,8 +116,8 @@ definitions:
       id: 123abc
       message: parameter 'p' must be an integer
       name: bad_request
-      temporary: false
-      timeout: false
+      temporary: true
+      timeout: true
     required:
     - name
     - id
@@ -130,7 +132,7 @@ definitions:
       fault:
         type: boolean
         description: Is the error a server-side fault?
-        example: false
+        example: true
       id:
         type: string
         description: ID is a unique identifier for this particular occurrence of the
@@ -148,19 +150,19 @@ definitions:
       temporary:
         type: boolean
         description: Is the error temporary?
-        example: true
+        example: false
       timeout:
         type: boolean
         description: Is the error a timeout?
-        example: true
+        example: false
     description: operation timed out, retry later. (default view)
     example:
-      fault: false
+      fault: true
       id: 123abc
       message: parameter 'p' must be an integer
       name: bad_request
       temporary: true
-      timeout: true
+      timeout: false
     required:
     - name
     - id
@@ -193,19 +195,19 @@ definitions:
       temporary:
         type: boolean
         description: Is the error temporary?
-        example: false
+        example: true
       timeout:
         type: boolean
         description: Is the error a timeout?
         example: false
     description: divizion by zero (default view)
     example:
-      fault: false
+      fault: true
       id: 123abc
       message: parameter 'p' must be an integer
       name: bad_request
-      temporary: true
-      timeout: true
+      temporary: false
+      timeout: false
     required:
     - name
     - id
@@ -220,7 +222,7 @@ definitions:
       fault:
         type: boolean
         description: Is the error a server-side fault?
-        example: true
+        example: false
       id:
         type: string
         description: ID is a unique identifier for this particular occurrence of the
@@ -242,14 +244,14 @@ definitions:
       timeout:
         type: boolean
         description: Is the error a timeout?
-        example: true
+        example: false
     description: integer division has remainder (default view)
     example:
       fault: false
       id: 123abc
       message: parameter 'p' must be an integer
       name: bad_request
-      temporary: false
+      temporary: true
       timeout: true
     required:
     - name
@@ -287,7 +289,7 @@ definitions:
       timeout:
         type: boolean
         description: Is the error a timeout?
-        example: true
+        example: false
     description: operation timed out, retry later. (default view)
     example:
       fault: true

@@ -6,8 +6,6 @@ import (
 
 var _ = API("chatter", func() {
 	Title("Chatter service describing the streaming features of goa v2.")
-	Server("http://localhost:8080")
-	Server("ws://localhost:8080")
 })
 
 var _ = Service("chatter", func() {
