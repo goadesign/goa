@@ -131,66 +131,70 @@ func exampleMain(genpkg string, root *expr.RootExpr, svr *expr.ServerExpr) *code
 
 	// Service Main sections
 	sections = append(sections, &codegen.SectionTemplate{
-		Name:    "service-main-start",
-		Source:  mainStartT,
+		Name:   "service-main-start",
+		Source: mainStartT,
+		Data:   data,
+	})
+
+	sections = append(sections, &codegen.SectionTemplate{
+		Name:   "service-main-logger",
+		Source: mainLoggerT,
+		Data:   data,
+	})
+
+	sections = append(sections, &codegen.SectionTemplate{
+		Name:   "service-main-struct",
+		Source: mainStructT,
+		Data:   data,
+	})
+
+	sections = append(sections, &codegen.SectionTemplate{
+		Name:   "service-main-endpoints",
+		Source: mainEndpointsT,
+		Data:   data,
+	})
+
+	sections = append(sections, &codegen.SectionTemplate{
+		Name:   "service-main-encoding",
+		Source: mainEncodingT,
+		Data:   data,
+	})
+
+	sections = append(sections, &codegen.SectionTemplate{
+		Name:   "service-main-mux",
+		Source: mainMuxT,
+		Data:   data,
+	})
+
+	sections = append(sections, &codegen.SectionTemplate{
+		Name:    "service-main-server-init",
+		Source:  mainServerInitT,
 		Data:    data,
 		FuncMap: map[string]interface{}{"needStream": needStream},
 	})
 
 	sections = append(sections, &codegen.SectionTemplate{
-		Name:    "service-main-logger",
-		Source:  mainLoggerT,
-		Data:    data,
-		FuncMap: map[string]interface{}{"needStream": needStream},
+		Name:   "service-main-middleware",
+		Source: mainMiddlewareT,
+		Data:   data,
 	})
 
 	sections = append(sections, &codegen.SectionTemplate{
-		Name:    "service-main-struct",
-		Source:  mainStructT,
-		Data:    data,
-		FuncMap: map[string]interface{}{"needStream": needStream},
+		Name:   "service-main-http",
+		Source: mainHTTPT,
+		Data:   data,
 	})
 
 	sections = append(sections, &codegen.SectionTemplate{
-		Name:    "service-main-endpoints",
-		Source:  mainEndpointsT,
-		Data:    data,
-		FuncMap: map[string]interface{}{"needStream": needStream},
+		Name:   "service-main-end",
+		Source: mainEndT,
+		Data:   data,
 	})
 
 	sections = append(sections, &codegen.SectionTemplate{
-		Name:    "service-main-mux",
-		Source:  mainEncoderMuxT,
-		Data:    data,
-		FuncMap: map[string]interface{}{"needStream": needStream},
-	})
-
-	sections = append(sections, &codegen.SectionTemplate{
-		Name:    "service-main-middleware",
-		Source:  mainMiddlewareT,
-		Data:    data,
-		FuncMap: map[string]interface{}{"needStream": needStream},
-	})
-
-	sections = append(sections, &codegen.SectionTemplate{
-		Name:    "service-main-http",
-		Source:  mainHTTPT,
-		Data:    data,
-		FuncMap: map[string]interface{}{"needStream": needStream},
-	})
-
-	sections = append(sections, &codegen.SectionTemplate{
-		Name:    "service-main-end",
-		Source:  mainEndT,
-		Data:    data,
-		FuncMap: map[string]interface{}{"needStream": needStream},
-	})
-
-	sections = append(sections, &codegen.SectionTemplate{
-		Name:    "service-main-errorhandler",
-		Source:  mainErrorHandlerT,
-		Data:    data,
-		FuncMap: map[string]interface{}{"needStream": needStream},
+		Name:   "service-main-errorhandler",
+		Source: mainErrorHandlerT,
+		Data:   data,
 	})
 
 	return &codegen.File{Path: mainPath, SectionTemplates: sections, SkipExist: true}
@@ -379,7 +383,7 @@ const mainEndpointsT = `
 `
 
 // input: map[string]interface{}{"Services":[]ServiceData, "APIPkg": string, "DefaultHost": string}
-const mainEncoderMuxT = `
+const mainEncodingT = `
 	// Provide the transport specific request decoder and response encoder.
 	// The goa http package has built-in support for JSON, XML and gob.
 	// Other encodings can be used by providing the corresponding functions,
@@ -388,12 +392,20 @@ const mainEncoderMuxT = `
 		dec = goahttp.RequestDecoder
 		enc = goahttp.ResponseEncoder
 	)
+`
+
+// input: map[string]interface{}{"Services":[]ServiceData, "APIPkg": string, "DefaultHost": string}
+const mainMuxT = `
 	// Build the service HTTP request multiplexer and configure it to serve
 	// HTTP requests to the service endpoints.
 	var mux goahttp.Muxer
 	{
 		mux = goahttp.NewMuxer()
 	}
+`
+
+// input: map[string]interface{}{"Services":[]ServiceData, "APIPkg": string, "DefaultHost": string}
+const mainServerInitT = `
 	// Wrap the endpoints with the transport specific layers. The generated
 	// server packages contains code generated from the design which maps
 	// the service input and output data structures to HTTP requests and
@@ -419,7 +431,7 @@ const mainEncoderMuxT = `
 	// Configure the mux.
 	{{- range .Services }}
 	{{ .Service.PkgName }}svr.Mount(mux{{ if .Endpoints }}, {{ .Service.VarName }}Server{{ end }})
-	{{- end }} 
+	{{- end }}
 `
 
 // input: map[string]interface{}{"Services":[]ServiceData, "APIPkg": string, "DefaultHost": string}

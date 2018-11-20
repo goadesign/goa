@@ -13,7 +13,6 @@ import (
 	calc "goa.design/goa/examples/calc"
 	calcsvc "goa.design/goa/examples/calc/gen/calc"
 	calcsvcsvr "goa.design/goa/examples/calc/gen/http/calc/server"
-	openapisvr "goa.design/goa/examples/calc/gen/http/openapi/server"
 	goahttp "goa.design/goa/http"
 	"goa.design/goa/http/middleware"
 	"goa.design/goa/http/middleware/xray"
@@ -79,17 +78,14 @@ func main() {
 	// the service input and output data structures to HTTP requests and
 	// responses.
 	var (
-		openapiServer *openapisvr.Server
 		calcsvcServer *calcsvcsvr.Server
 	)
 	{
 		eh := ErrorHandler(logger)
-		openapiServer = openapisvr.New(nil, mux, dec, enc, eh)
 		calcsvcServer = calcsvcsvr.New(calcsvcEndpoints, mux, dec, enc, eh)
 	}
 
 	// Configure the mux.
-	openapisvr.Mount(mux)
 	calcsvcsvr.Mount(mux, calcsvcServer)
 
 	// Wrap the multiplexer with additional middlewares. Middlewares mounted
@@ -125,9 +121,6 @@ func main() {
 	// configure the server as required by your service.
 	srv := &http.Server{Addr: *addr, Handler: handler}
 	go func() {
-		for _, m := range openapiServer.Mounts {
-			logger.Printf("file %q mounted on %s %s", m.Method, m.Verb, m.Pattern)
-		}
 		for _, m := range calcsvcServer.Mounts {
 			logger.Printf("method %q mounted on %s %s", m.Method, m.Verb, m.Pattern)
 		}

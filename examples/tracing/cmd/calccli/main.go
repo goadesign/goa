@@ -11,7 +11,7 @@ import (
 	"strings"
 	"time"
 
-	"goa.design/goa/examples/calc/gen/http/cli"
+	"goa.design/goa/examples/calc/gen/http/cli/calc"
 	goahttp "goa.design/goa/http"
 	"goa.design/goa/http/middleware"
 	"goa.design/goa/http/middleware/xray"
