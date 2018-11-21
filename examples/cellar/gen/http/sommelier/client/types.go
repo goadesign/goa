@@ -131,7 +131,7 @@ func NewPickNoMatch(body PickNoMatchResponseBody) sommelier.NoMatch {
 	return v
 }
 
-// Validate runs the validations defined on StoredBottleResponseBody
+// Validate runs the validations defined on StoredBottleResponseBody.
 func (body *StoredBottleResponseBody) Validate() (err error) {
 	if body.ID == nil {
 		err = goa.MergeErrors(err, goa.MissingFieldError("id", "body"))
@@ -190,7 +190,7 @@ func (body *StoredBottleResponseBody) Validate() (err error) {
 	return
 }
 
-// Validate runs the validations defined on WineryResponseBody
+// Validate runs the validations defined on WineryResponseBody.
 func (body *WineryResponseBody) Validate() (err error) {
 	if body.Name == nil {
 		err = goa.MergeErrors(err, goa.MissingFieldError("name", "body"))
@@ -213,7 +213,7 @@ func (body *WineryResponseBody) Validate() (err error) {
 	return
 }
 
-// Validate runs the validations defined on ComponentResponseBody
+// Validate runs the validations defined on ComponentResponseBody.
 func (body *ComponentResponseBody) Validate() (err error) {
 	if body.Varietal == nil {
 		err = goa.MergeErrors(err, goa.MissingFieldError("varietal", "body"))

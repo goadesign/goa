@@ -247,7 +247,7 @@ func {{ .Name }}({{ range .ServerArgs }}{{ .Name }} {{.TypeRef }}, {{ end }}) {{
 `
 
 // input: TypeData
-const validateT = `{{ printf "Validate runs the validations defined on %s" .Name | comment }}
+const validateT = `{{ printf "Validate runs the validations defined on %s." .VarName | comment }}
 func (body {{ .Ref }}) Validate() (err error) {
 	{{ .ValidateDef }}
 	return

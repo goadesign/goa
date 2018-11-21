@@ -285,7 +285,7 @@ func NewShowNotFound(body *ShowNotFoundResponseBody) *storage.NotFound {
 	return v
 }
 
-// Validate runs the validations defined on show_not_foundResponseBody
+// Validate runs the validations defined on ShowNotFoundResponseBody.
 func (body *ShowNotFoundResponseBody) Validate() (err error) {
 	if body.Message == nil {
 		err = goa.MergeErrors(err, goa.MissingFieldError("message", "body"))
@@ -296,7 +296,7 @@ func (body *ShowNotFoundResponseBody) Validate() (err error) {
 	return
 }
 
-// Validate runs the validations defined on StoredBottleResponseBody
+// Validate runs the validations defined on StoredBottleResponseBody.
 func (body *StoredBottleResponseBody) Validate() (err error) {
 	if body.ID == nil {
 		err = goa.MergeErrors(err, goa.MissingFieldError("id", "body"))
@@ -355,7 +355,7 @@ func (body *StoredBottleResponseBody) Validate() (err error) {
 	return
 }
 
-// Validate runs the validations defined on WineryResponseBody
+// Validate runs the validations defined on WineryResponseBody.
 func (body *WineryResponseBody) Validate() (err error) {
 	if body.Name == nil {
 		err = goa.MergeErrors(err, goa.MissingFieldError("name", "body"))
@@ -378,7 +378,7 @@ func (body *WineryResponseBody) Validate() (err error) {
 	return
 }
 
-// Validate runs the validations defined on ComponentResponseBody
+// Validate runs the validations defined on ComponentResponseBody.
 func (body *ComponentResponseBody) Validate() (err error) {
 	if body.Varietal == nil {
 		err = goa.MergeErrors(err, goa.MissingFieldError("varietal", "body"))
@@ -404,7 +404,7 @@ func (body *ComponentResponseBody) Validate() (err error) {
 	return
 }
 
-// Validate runs the validations defined on WineryRequestBody
+// Validate runs the validations defined on WineryRequestBody.
 func (body *WineryRequestBody) Validate() (err error) {
 	err = goa.MergeErrors(err, goa.ValidatePattern("body.region", body.Region, "(?i)[a-z '\\.]+"))
 	err = goa.MergeErrors(err, goa.ValidatePattern("body.country", body.Country, "(?i)[a-z '\\.]+"))
@@ -414,7 +414,7 @@ func (body *WineryRequestBody) Validate() (err error) {
 	return
 }
 
-// Validate runs the validations defined on ComponentRequestBody
+// Validate runs the validations defined on ComponentRequestBody.
 func (body *ComponentRequestBody) Validate() (err error) {
 	err = goa.MergeErrors(err, goa.ValidatePattern("body.varietal", body.Varietal, "[A-Za-z' ]+"))
 	if utf8.RuneCountInString(body.Varietal) > 100 {
@@ -433,7 +433,7 @@ func (body *ComponentRequestBody) Validate() (err error) {
 	return
 }
 
-// Validate runs the validations defined on BottleRequestBody
+// Validate runs the validations defined on BottleRequestBody.
 func (body *BottleRequestBody) Validate() (err error) {
 	if body.Winery == nil {
 		err = goa.MergeErrors(err, goa.MissingFieldError("winery", "body"))

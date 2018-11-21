@@ -213,7 +213,7 @@ func NewHistoryPayload(view *string, token string) *chattersvc.HistoryPayload {
 	}
 }
 
-// Validate runs the validations defined on ChatSummaryResponseBody
+// Validate runs the validations defined on ChatSummaryResponseBody.
 func (body *ChatSummaryResponseBody) Validate() (err error) {
 	if body.SentAt != nil {
 		err = goa.MergeErrors(err, goa.ValidateFormat("body.sent_at", *body.SentAt, goa.FormatDateTime))

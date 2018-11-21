@@ -62,12 +62,14 @@ func main() {
 		dec = goahttp.RequestDecoder
 		enc = goahttp.ResponseEncoder
 	)
+
 	// Build the service HTTP request multiplexer and configure it to serve
 	// HTTP requests to the service endpoints.
 	var mux goahttp.Muxer
 	{
 		mux = goahttp.NewMuxer()
 	}
+
 	// Wrap the endpoints with the transport specific layers. The generated
 	// server packages contains code generated from the design which maps
 	// the service input and output data structures to HTTP requests and

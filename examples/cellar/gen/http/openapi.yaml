@@ -16,7 +16,7 @@ paths:
         in: body
         required: true
         schema:
-          $ref: '#/definitions/SommelierpickRequestBody'
+          $ref: '#/definitions/SommelierPickRequestBody'
       responses:
         "200":
           description: OK response.
@@ -25,11 +25,11 @@ paths:
         "400":
           description: Bad Request response.
           schema:
-            $ref: '#/definitions/pick_no_criteriaResponseBody'
+            $ref: '#/definitions/PickNoCriteriaResponseBody'
         "404":
           description: Not Found response.
           schema:
-            $ref: '#/definitions/pick_no_matchResponseBody'
+            $ref: '#/definitions/PickNoMatchResponseBody'
       schemes:
       - http
   /storage:
@@ -57,7 +57,7 @@ paths:
         in: body
         required: true
         schema:
-          $ref: '#/definitions/StorageaddRequestBody'
+          $ref: '#/definitions/StorageAddRequestBody'
           required:
           - name
           - winery
@@ -81,7 +81,7 @@ paths:
         in: query
         description: View to render
         required: false
-        type: string
+        type: String
         enum:
         - default
         - tiny
@@ -89,7 +89,7 @@ paths:
         in: path
         description: ID of bottle to show
         required: true
-        type: string
+        type: String
       responses:
         "200":
           description: OK response.
@@ -98,7 +98,7 @@ paths:
         "404":
           description: Not Found response.
           schema:
-            $ref: '#/definitions/show_not_foundResponseBody'
+            $ref: '#/definitions/ShowNotFoundResponseBody'
             required:
             - message
             - id
@@ -115,7 +115,7 @@ paths:
         in: path
         description: ID of bottle to remove
         required: true
-        type: string
+        type: String
       responses:
         "204":
           description: No Content response.
@@ -163,7 +163,7 @@ paths:
         in: query
         description: IDs of the bottles to be updated
         required: true
-        type: array
+        type: Array
         items:
           type: string
         collectionFormat: multi
@@ -171,7 +171,7 @@ paths:
         in: body
         required: true
         schema:
-          $ref: '#/definitions/Storagemulti_updateRequestBody'
+          $ref: '#/definitions/StorageMultiUpdateRequestBody'
           required:
           - bottles
       responses:
@@ -311,6 +311,64 @@ definitions:
       varietal: Syrah
     required:
     - varietal
+  PickNoCriteriaResponseBody:
+    title: PickNoCriteriaResponseBody
+    type: string
+    description: Missing criteria
+    example: Exercitationem ducimus expedita in quam eos distinctio.
+  PickNoMatchResponseBody:
+    title: PickNoMatchResponseBody
+    type: string
+    description: No bottle matched given criteria
+    example: Ut molestiae possimus.
+  ShowNotFoundResponseBody:
+    title: ShowNotFoundResponseBody
+    type: object
+    properties:
+      id:
+        type: string
+        description: ID of missing bottle
+        example: Nulla architecto magni eos tempora sapiente.
+      message:
+        type: string
+        description: Message of error
+        example: bottle 1 not found
+    description: Bottle not found
+    example:
+      id: Est beatae eveniet et tempora nobis enim.
+      message: bottle 1 not found
+    required:
+    - message
+    - id
+  SommelierPickRequestBody:
+    title: SommelierPickRequestBody
+    type: object
+    properties:
+      name:
+        type: string
+        description: Name of bottle to pick
+        example: Blue's Cuvee
+      varietal:
+        type: array
+        items:
+          type: string
+          example: Aliquam itaque quam beatae veniam quaerat sint.
+        description: Varietals in preference order
+        example:
+        - pinot noir
+        - merlot
+        - cabernet franc
+      winery:
+        type: string
+        description: Winery of bottle to pick
+        example: longoria
+    example:
+      name: Blue's Cuvee
+      varietal:
+      - pinot noir
+      - merlot
+      - cabernet franc
+      winery: longoria
   SommelierStoredBottleResponseBodyCollection:
     title: 'Mediatype identifier: application/vnd.cellar.stored-bottle; type=collection;
       view=default'
@@ -380,62 +438,8 @@ definitions:
       vintage: 1920
       winery:
         name: Longoria
-  SommelierpickRequestBody:
-    title: SommelierpickRequestBody
-    type: object
-    properties:
-      name:
-        type: string
-        description: Name of bottle to pick
-        example: Blue's Cuvee
-      varietal:
-        type: array
-        items:
-          type: string
-          example: Aliquam itaque quam beatae veniam quaerat sint.
-        description: Varietals in preference order
-        example:
-        - pinot noir
-        - merlot
-        - cabernet franc
-      winery:
-        type: string
-        description: Winery of bottle to pick
-        example: longoria
-    example:
-      name: Blue's Cuvee
-      varietal:
-      - pinot noir
-      - merlot
-      - cabernet franc
-      winery: longoria
-  StorageStoredBottleResponseBodyTinyCollection:
-    title: 'Mediatype identifier: application/vnd.cellar.stored-bottle; type=collection;
-      view=tiny'
-    type: array
-    items:
-      $ref: '#/definitions/StoredBottleResponseBodyTiny'
-    description: StorageStoredBottleResponseBodyTinyCollection is the result type
-      for an array of StoredBottleResponseBodyTiny (default view)
-    example:
-    - id: 123abc
-      name: Blue's Cuvee
-      winery:
-        name: Longoria
-    - id: 123abc
-      name: Blue's Cuvee
-      winery:
-        name: Longoria
-    - id: 123abc
-      name: Blue's Cuvee
-      winery:
-        name: Longoria
-    - id: 123abc
-      name: Blue's Cuvee
-      winery:
-        name: Longoria
-  StorageaddRequestBody:
-    title: StorageaddRequestBody
+  StorageAddRequestBody:
+    title: StorageAddRequestBody
     type: object
     properties:
       composition:
@@ -497,8 +501,8 @@ definitions:
     - name
     - winery
     - vintage
-  Storagemulti_updateRequestBody:
-    title: Storagemulti_updateRequestBody
+  StorageMultiUpdateRequestBody:
+    title: StorageMultiUpdateRequestBody
     type: object
     properties:
       bottles:
@@ -571,6 +575,31 @@ definitions:
           url: http://www.longoriawine.com/
     required:
     - bottles
+  StorageStoredBottleResponseBodyTinyCollection:
+    title: 'Mediatype identifier: application/vnd.cellar.stored-bottle; type=collection;
+      view=tiny'
+    type: array
+    items:
+      $ref: '#/definitions/StoredBottleResponseBodyTiny'
+    description: StorageStoredBottleResponseBodyTinyCollection is the result type
+      for an array of StoredBottleResponseBodyTiny (default view)
+    example:
+    - id: 123abc
+      name: Blue's Cuvee
+      winery:
+        name: Longoria
+    - id: 123abc
+      name: Blue's Cuvee
+      winery:
+        name: Longoria
+    - id: 123abc
+      name: Blue's Cuvee
+      winery:
+        name: Longoria
+    - id: 123abc
+      name: Blue's Cuvee
+      winery:
+        name: Longoria
   StorageshowResponseBody:
     title: 'Mediatype identifier: application/vnd.cellar.stored-bottle; view=default'
     type: object
@@ -784,32 +813,3 @@ definitions:
       name: Longoria
     required:
     - name
-  pick_no_criteriaResponseBody:
-    title: pick_no_criteriaResponseBody
-    type: string
-    description: Missing criteria
-    example: Exercitationem ducimus expedita in quam eos distinctio.
-  pick_no_matchResponseBody:
-    title: pick_no_matchResponseBody
-    type: string
-    description: No bottle matched given criteria
-    example: Ut molestiae possimus.
-  show_not_foundResponseBody:
-    title: show_not_foundResponseBody
-    type: object
-    properties:
-      id:
-        type: string
-        description: ID of missing bottle
-        example: Nulla architecto magni eos tempora sapiente.
-      message:
-        type: string
-        description: Message of error
-        example: bottle 1 not found
-    description: Bottle not found
-    example:
-      id: Est beatae eveniet et tempora nobis enim.
-      message: bottle 1 not found
-    required:
-    - message
-    - id

@@ -20,7 +20,7 @@ paths:
         in: header
         description: JWT used for authentication
         required: true
-        type: string
+        type: String
       responses:
         "101":
           description: Switching Protocols response.
@@ -29,11 +29,11 @@ paths:
         "401":
           description: Unauthorized response.
           schema:
-            $ref: '#/definitions/echoer_unauthorizedResponseBody'
+            $ref: '#/definitions/EchoerUnauthorizedResponseBody'
         "403":
           description: Forbidden response.
           schema:
-            $ref: '#/definitions/echoer_invalid-scopesResponseBody'
+            $ref: '#/definitions/EchoerInvalidScopesResponseBody'
       schemes:
       - grpc
       - ws
@@ -55,12 +55,12 @@ paths:
         in: query
         description: View to use to render the result
         required: false
-        type: string
+        type: String
       - name: Authorization
         in: header
         description: JWT used for authentication
         required: true
-        type: string
+        type: String
       responses:
         "101":
           description: Switching Protocols response.
@@ -69,11 +69,11 @@ paths:
         "401":
           description: Unauthorized response.
           schema:
-            $ref: '#/definitions/history_unauthorizedResponseBody'
+            $ref: '#/definitions/HistoryUnauthorizedResponseBody'
         "403":
           description: Forbidden response.
           schema:
-            $ref: '#/definitions/history_invalid-scopesResponseBody'
+            $ref: '#/definitions/HistoryInvalidScopesResponseBody'
       schemes:
       - grpc
       - ws
@@ -95,18 +95,18 @@ paths:
         in: header
         description: JWT used for authentication
         required: true
-        type: string
+        type: String
       responses:
         "101":
           description: Switching Protocols response.
         "401":
           description: Unauthorized response.
           schema:
-            $ref: '#/definitions/listener_unauthorizedResponseBody'
+            $ref: '#/definitions/ListenerUnauthorizedResponseBody'
         "403":
           description: Forbidden response.
           schema:
-            $ref: '#/definitions/listener_invalid-scopesResponseBody'
+            $ref: '#/definitions/ListenerInvalidScopesResponseBody'
       schemes:
       - grpc
       - ws
@@ -127,7 +127,7 @@ paths:
         "401":
           description: Unauthorized response.
           schema:
-            $ref: '#/definitions/login_unauthorizedResponseBody'
+            $ref: '#/definitions/LoginUnauthorizedResponseBody'
       schemes:
       - grpc
       - http
@@ -149,7 +149,7 @@ paths:
         in: header
         description: JWT used for authentication
         required: true
-        type: string
+        type: String
       responses:
         "101":
           description: Switching Protocols response.
@@ -158,11 +158,11 @@ paths:
         "401":
           description: Unauthorized response.
           schema:
-            $ref: '#/definitions/summary_unauthorizedResponseBody'
+            $ref: '#/definitions/SummaryUnauthorizedResponseBody'
         "403":
           description: Forbidden response.
           schema:
-            $ref: '#/definitions/summary_invalid-scopesResponseBody'
+            $ref: '#/definitions/SummaryInvalidScopesResponseBody'
       schemes:
       - grpc
       - ws
@@ -236,41 +236,41 @@ definitions:
       sent_at: "1992-03-13T17:19:43Z"
     required:
     - message
-  echoer_invalid-scopesResponseBody:
-    title: echoer_invalid-scopesResponseBody
+  EchoerInvalidScopesResponseBody:
+    title: EchoerInvalidScopesResponseBody
     type: string
     example: Laudantium est consectetur ut.
-  echoer_unauthorizedResponseBody:
-    title: echoer_unauthorizedResponseBody
+  EchoerUnauthorizedResponseBody:
+    title: EchoerUnauthorizedResponseBody
     type: string
     example: Nihil veniam nihil.
-  history_invalid-scopesResponseBody:
-    title: history_invalid-scopesResponseBody
+  HistoryInvalidScopesResponseBody:
+    title: HistoryInvalidScopesResponseBody
     type: string
     example: Tenetur non fugiat.
-  history_unauthorizedResponseBody:
-    title: history_unauthorizedResponseBody
+  HistoryUnauthorizedResponseBody:
+    title: HistoryUnauthorizedResponseBody
     type: string
     example: Ut fuga dolores nisi qui est accusamus.
-  listener_invalid-scopesResponseBody:
-    title: listener_invalid-scopesResponseBody
+  ListenerInvalidScopesResponseBody:
+    title: ListenerInvalidScopesResponseBody
     type: string
     example: Aut est at molestiae.
-  listener_unauthorizedResponseBody:
-    title: listener_unauthorizedResponseBody
+  ListenerUnauthorizedResponseBody:
+    title: ListenerUnauthorizedResponseBody
     type: string
     example: Qui voluptas accusantium est sequi vel nihil.
-  login_unauthorizedResponseBody:
-    title: login_unauthorizedResponseBody
+  LoginUnauthorizedResponseBody:
+    title: LoginUnauthorizedResponseBody
     type: string
     description: Credentials are invalid
     example: Maiores numquam voluptatibus voluptatem.
-  summary_invalid-scopesResponseBody:
-    title: summary_invalid-scopesResponseBody
+  SummaryInvalidScopesResponseBody:
+    title: SummaryInvalidScopesResponseBody
     type: string
     example: Quibusdam consequatur suscipit non fugit et.
-  summary_unauthorizedResponseBody:
-    title: summary_unauthorizedResponseBody
+  SummaryUnauthorizedResponseBody:
+    title: SummaryUnauthorizedResponseBody
     type: string
     example: Consequatur sint eius magni quod.
 securityDefinitions:

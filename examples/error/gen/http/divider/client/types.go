@@ -172,7 +172,7 @@ func NewDivideTimeout(body *DivideTimeoutResponseBody) *goa.ServiceError {
 }
 
 // Validate runs the validations defined on
-// integer_divide_has_remainderResponseBody
+// IntegerDivideHasRemainderResponseBody.
 func (body *IntegerDivideHasRemainderResponseBody) Validate() (err error) {
 	if body.Name == nil {
 		err = goa.MergeErrors(err, goa.MissingFieldError("name", "body"))
@@ -195,8 +195,7 @@ func (body *IntegerDivideHasRemainderResponseBody) Validate() (err error) {
 	return
 }
 
-// Validate runs the validations defined on
-// integer_divide_div_by_zeroResponseBody
+// Validate runs the validations defined on IntegerDivideDivByZeroResponseBody.
 func (body *IntegerDivideDivByZeroResponseBody) Validate() (err error) {
 	if body.Name == nil {
 		err = goa.MergeErrors(err, goa.MissingFieldError("name", "body"))
@@ -219,7 +218,7 @@ func (body *IntegerDivideDivByZeroResponseBody) Validate() (err error) {
 	return
 }
 
-// Validate runs the validations defined on integer_divide_timeoutResponseBody
+// Validate runs the validations defined on IntegerDivideTimeoutResponseBody.
 func (body *IntegerDivideTimeoutResponseBody) Validate() (err error) {
 	if body.Name == nil {
 		err = goa.MergeErrors(err, goa.MissingFieldError("name", "body"))
@@ -242,7 +241,7 @@ func (body *IntegerDivideTimeoutResponseBody) Validate() (err error) {
 	return
 }
 
-// Validate runs the validations defined on divide_div_by_zeroResponseBody
+// Validate runs the validations defined on DivideDivByZeroResponseBody.
 func (body *DivideDivByZeroResponseBody) Validate() (err error) {
 	if body.Name == nil {
 		err = goa.MergeErrors(err, goa.MissingFieldError("name", "body"))
@@ -265,7 +264,7 @@ func (body *DivideDivByZeroResponseBody) Validate() (err error) {
 	return
 }
 
-// Validate runs the validations defined on divide_timeoutResponseBody
+// Validate runs the validations defined on DivideTimeoutResponseBody.
 func (body *DivideTimeoutResponseBody) Validate() (err error) {
 	if body.Name == nil {
 		err = goa.MergeErrors(err, goa.MissingFieldError("name", "body"))

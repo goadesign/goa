@@ -21,12 +21,12 @@ paths:
         in: query
         description: Whether to force auth failure even with a valid JWT
         required: false
-        type: boolean
+        type: Boolean
       - name: Authorization
         in: header
         description: JWT used for authentication
         required: false
-        type: string
+        type: String
       responses:
         "200":
           description: OK response.
@@ -35,7 +35,7 @@ paths:
         "401":
           description: Unauthorized response.
           schema:
-            $ref: '#/definitions/secure_unauthorizedResponseBody'
+            $ref: '#/definitions/SecureUnauthorizedResponseBody'
       schemes:
       - grpc
       - http
@@ -57,12 +57,12 @@ paths:
         in: query
         description: API key
         required: false
-        type: string
+        type: String
       - name: Authorization
         in: header
         description: JWT used for authentication
         required: false
-        type: string
+        type: String
       responses:
         "200":
           description: OK response.
@@ -71,7 +71,7 @@ paths:
         "401":
           description: Unauthorized response.
           schema:
-            $ref: '#/definitions/doubly_secure_unauthorizedResponseBody'
+            $ref: '#/definitions/DoublySecureUnauthorizedResponseBody'
       schemes:
       - grpc
       - http
@@ -94,16 +94,16 @@ paths:
         in: query
         description: API key
         required: false
-        type: string
+        type: String
       - name: oauth
         in: query
         required: false
-        type: string
+        type: String
       - name: Authorization
         in: header
         description: JWT used for authentication
         required: false
-        type: string
+        type: String
       responses:
         "200":
           description: OK response.
@@ -112,7 +112,7 @@ paths:
         "401":
           description: Unauthorized response.
           schema:
-            $ref: '#/definitions/also_doubly_secure_unauthorizedResponseBody'
+            $ref: '#/definitions/AlsoDoublySecureUnauthorizedResponseBody'
       schemes:
       - grpc
       - http
@@ -136,30 +136,30 @@ paths:
         "401":
           description: Unauthorized response.
           schema:
-            $ref: '#/definitions/signin_unauthorizedResponseBody'
+            $ref: '#/definitions/SigninUnauthorizedResponseBody'
       schemes:
       - grpc
       - http
       security:
       - basic: []
 definitions:
-  also_doubly_secure_unauthorizedResponseBody:
-    title: also_doubly_secure_unauthorizedResponseBody
+  AlsoDoublySecureUnauthorizedResponseBody:
+    title: AlsoDoublySecureUnauthorizedResponseBody
     type: string
     description: Credentials are invalid
     example: Maxime ipsam esse et.
-  doubly_secure_unauthorizedResponseBody:
-    title: doubly_secure_unauthorizedResponseBody
+  DoublySecureUnauthorizedResponseBody:
+    title: DoublySecureUnauthorizedResponseBody
     type: string
     description: Credentials are invalid
     example: Itaque accusamus enim.
-  secure_unauthorizedResponseBody:
-    title: secure_unauthorizedResponseBody
+  SecureUnauthorizedResponseBody:
+    title: SecureUnauthorizedResponseBody
     type: string
     description: Credentials are invalid
     example: Accusantium voluptatem alias corrupti voluptates a.
-  signin_unauthorizedResponseBody:
-    title: signin_unauthorizedResponseBody
+  SigninUnauthorizedResponseBody:
+    title: SigninUnauthorizedResponseBody
     type: string
     description: Credentials are invalid
     example: Tenetur est et.
