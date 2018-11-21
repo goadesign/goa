@@ -70,6 +70,17 @@ func Title(val string) {
 }
 
 // Version specifies the API version. One design describes one version.
+//
+// Version must appear in a API expression.
+//
+// Version accepts a single string argument.
+//
+// Example:
+//
+//    var _ = API("divider", func() {
+//        Version("1.0")
+//    })
+//
 func Version(ver string) {
 	if s, ok := eval.Current().(*expr.APIExpr); ok {
 		s.Version = ver
@@ -79,6 +90,21 @@ func Version(ver string) {
 }
 
 // Contact sets the API contact information.
+//
+// Contact must appear in a API expression.
+//
+// Contact takes a single argument which is the defining DSL.
+//
+// Example:
+//
+//    var _ = API("divider", func() {
+//        Contact(func() {
+//            Name("support")
+//            Email("support@goa.design")
+//            URL("https://goa.design")
+//        })
+//    })
+//
 func Contact(fn func()) {
 	contact := new(expr.ContactExpr)
 	if !eval.Execute(fn, contact) {
@@ -92,6 +118,20 @@ func Contact(fn func()) {
 }
 
 // License sets the API license information.
+//
+// License must appear in a API expression.
+//
+// License takes a single argument which is the defining DSL.
+//
+// Example:
+//
+//    var _ = API("divider", func() {
+//        License(func() {
+//            Name("MIT")
+//            URL("https://github.com/goadesign/goa/blob/master/LICENSE")
+//        })
+//    })
+//
 func License(fn func()) {
 	license := new(expr.LicenseExpr)
 	if !eval.Execute(fn, license) {
@@ -142,6 +182,17 @@ func Docs(fn func()) {
 }
 
 // TermsOfService describes the API terms of services or links to them.
+//
+// TermsOfService must appear in a API expression.
+//
+// TermsOfService takes a single argument which is the TOS text or URL.
+//
+// Example:
+//
+//    var _ = API("github", func() {
+//        TermsOfService("https://help.github.com/articles/github-terms-of-API/"
+//    })
+//
 func TermsOfService(terms string) {
 	if s, ok := eval.Current().(*expr.APIExpr); ok {
 		s.TermsOfService = terms
