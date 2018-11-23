@@ -19,7 +19,7 @@ ALIASER_DESTS=\
 # Standard dependencies are installed via go get
 DEPEND=\
 	github.com/sergi/go-diff/diffmatchpatch \
-	github.com/golang/lint/golint \
+	golang.org/x/lint/golint \
 	golang.org/x/tools/cmd/goimports
 
 all: lint aliases gen test
@@ -27,8 +27,6 @@ all: lint aliases gen test
 travis: depend all
 
 depend:
-	@mkdir -p $(GOPATH)/src/golang.org/x
-	@git clone https://github.com/golang/lint.git $(GOPATH)/src/golang.org/x/lint
 	@go get -v $(DEPEND)
 	@go get -t -v ./...
 

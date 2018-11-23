@@ -1618,6 +1618,42 @@ var PayloadBodyUserDSL = func() {
 	})
 }
 
+var PayloadBodyUserRequiredDSL = func() {
+	var PayloadType = Type("PayloadType", func() {
+		Attribute("a", String)
+		Attribute("b", String)
+		Required("a")
+	})
+	Service("ServiceBodyUser", func() {
+		Method("MethodBodyUser", func() {
+			Payload(PayloadType)
+			HTTP(func() {
+				POST("/")
+			})
+		})
+	})
+}
+
+var PayloadBodyNestedUserDSL = func() {
+	var NestedType = Type("NestedType", func() {
+		Attribute("a", String)
+		Attribute("b", String)
+		Required("a")
+	})
+	var PayloadType = Type("PayloadType", func() {
+		Attribute("data", NestedType)
+	})
+	Service("ServiceBodyUser", func() {
+		Method("MethodBodyUser", func() {
+			Payload(PayloadType)
+			HTTP(func() {
+				POST("/")
+				Body("data")
+			})
+		})
+	})
+}
+
 var PayloadBodyUserValidateDSL = func() {
 	var PayloadType = Type("PayloadType", func() {
 		Attribute("a", String, func() {
