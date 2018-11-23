@@ -75,16 +75,15 @@ func RequestDecoder(r *http.Request) Decoder {
 	}
 }
 
-// ResponseEncoder returns a HTTP response encoder and the corresponding mime
-// type suitable for the given request. The encoder supports the following mime
-// types:
+// ResponseEncoder returns a HTTP response encoder leveraging the mime type set in the context under
+// the AcceptTypeKey if any. The encoder supports the following mime types:
 //
 //     * application/json using package encoding/json
 //     * application/xml using package encoding/xml
 //     * application/gob using package encoding/gob
 //
-// ResponseEncoder defaults to the JSON encoder if the request "Accept" header
-// does not match any of the supported mime types or is missing altogether.
+// ResponseEncoder defaults to the JSON encoder if the context AcceptTypeKey value does not match
+// any of the supported mime types or is missing altogether.
 func ResponseEncoder(ctx context.Context, w http.ResponseWriter) Encoder {
 	negotiate := func(a string) (Encoder, string) {
 		switch a {
