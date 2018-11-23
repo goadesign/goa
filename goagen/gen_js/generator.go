@@ -326,7 +326,7 @@ const jsFuncsT = `{{$params := params .Action}}
   {{if .Action.Payload}}// data contains the action payload (request body)
   {{end}}{{if $params}}// {{join $params ", "}} {{if gt (len $params) 1}}are{{else}}is{{end}} used to build the request query string.
   {{end}}// config is an optional object to be merged into the config built by the function prior to making the request.
-  // The content of the config object is described here: https://github.com/mzabriskie/axios#request-api
+  // The content of the config object is described here: https://github.com/axios/axios#request-config
   // This function returns a promise which raises an error if the HTTP response is a 4xx or 5xx.
   client.{{$name}} = function (path{{if .Action.Payload}}, data{{end}}{{if $params}}, {{join $params ", "}}{{end}}, config) {
     var cfg = {
