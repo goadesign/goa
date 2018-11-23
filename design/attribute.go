@@ -219,8 +219,11 @@ func (a *AttributeExpr) Validate(ctx string, parent eval.Expression) *eval.Valid
 	return verr
 }
 
-// Finalize merges base type attributes.
+// Finalize merges base type attributes and finalize the Type attribute.
 func (a *AttributeExpr) Finalize() {
+	if ut, ok := a.Type.(UserType); ok {
+		ut.Attribute().Finalize()
+	}
 	for _, ref := range a.References {
 		ru, ok := ref.(UserType)
 		if !ok {
