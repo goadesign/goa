@@ -50,7 +50,13 @@ func Generate(dir, cmd string) ([]string, error) {
 		genfuncs = gs
 	}
 
-	// 4. Generate initial set of files produced by goa code generators.
+	// 4. Run the code pre generation plugins.
+	err := codegen.RunPluginsPrepare(cmd, genpkg, roots)
+	if err != nil {
+		return nil, err
+	}
+
+	// 5. Generate initial set of files produced by goa code generators.
 	var genfiles []*codegen.File
 	for _, gen := range genfuncs {
 		fs, err := gen(genpkg, roots)
@@ -60,13 +66,13 @@ func Generate(dir, cmd string) ([]string, error) {
 		genfiles = append(genfiles, fs...)
 	}
 
-	// 5. Run the code generation plugins.
-	genfiles, err := codegen.RunPlugins(cmd, genpkg, roots, genfiles)
+	// 6. Run the code generation plugins.
+	genfiles, err = codegen.RunPlugins(cmd, genpkg, roots, genfiles)
 	if err != nil {
 		return nil, err
 	}
 
-	// 6. Write the files.
+	// 7. Write the files.
 	written := make(map[string]struct{})
 	for _, f := range genfiles {
 		filename, err := f.Render(dir)
@@ -78,7 +84,7 @@ func Generate(dir, cmd string) ([]string, error) {
 		}
 	}
 
-	// 7. Compute all output filenames.
+	// 8. Compute all output filenames.
 	var outputs []string
 	{
 		outputs = make([]string, len(written))
