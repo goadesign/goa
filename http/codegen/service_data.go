@@ -751,6 +751,7 @@ func (d ServicesData) analyze(hs *httpdesign.ServiceExpr) *ServiceData {
 			}
 			data := map[string]interface{}{
 				"PayloadRef":   payloadRef,
+				"HasFields":    design.IsObject(a.MethodExpr.Payload.Type),
 				"ServiceName":  svc.Name,
 				"EndpointName": ep.Name,
 				"Args":         args,
@@ -2402,9 +2403,9 @@ const (
 		}
 	{{- range .Args }}
 		{{- if .Pointer }}
-		if p.{{ .FieldName }} != nil {
+		if p{{ if $.HasFields }}.{{ .FieldName }}{{ end }} != nil {
 		{{- end }}
-			{{ .Name }} = {{ if .Pointer }}*{{ end }}p.{{ .FieldName }}
+			{{ .Name }} = {{ if .Pointer }}*{{ end }}p{{ if $.HasFields }}.{{ .FieldName }}{{ end }}
 		{{- if .Pointer }}
 		}
 		{{- end }}
