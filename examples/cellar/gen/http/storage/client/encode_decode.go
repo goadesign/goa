@@ -524,6 +524,19 @@ func DecodeMultiUpdateResponse(decoder func(*http.Response) goahttp.Decoder, res
 	}
 }
 
+// unmarshalWineryResponseToWineryView builds a value of type
+// *storageviews.WineryView from a value of type *WineryResponse.
+func unmarshalWineryResponseToWineryView(v *WineryResponse) *storageviews.WineryView {
+	res := &storageviews.WineryView{
+		Name:    v.Name,
+		Region:  v.Region,
+		Country: v.Country,
+		URL:     v.URL,
+	}
+
+	return res
+}
+
 // unmarshalWineryResponseBodyToWineryView builds a value of type
 // *storageviews.WineryView from a value of type *WineryResponseBody.
 func unmarshalWineryResponseBodyToWineryView(v *WineryResponseBody) *storageviews.WineryView {

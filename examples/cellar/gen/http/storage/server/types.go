@@ -40,9 +40,9 @@ type MultiUpdateRequestBody struct {
 	Bottles []*BottleRequestBody `form:"bottles,omitempty" json:"bottles,omitempty" xml:"bottles,omitempty"`
 }
 
-// StoredBottleResponseBodyTinyCollection is the type of the "storage" service
+// StoredBottleResponseTinyCollection is the type of the "storage" service
 // "list" endpoint HTTP response body.
-type StoredBottleResponseBodyTinyCollection []*StoredBottleResponseBodyTiny
+type StoredBottleResponseTinyCollection []*StoredBottleResponseTiny
 
 // ShowResponseBody is the type of the "storage" service "show" endpoint HTTP
 // response body.
@@ -83,14 +83,20 @@ type ShowNotFoundResponseBody struct {
 	ID string `form:"id" json:"id" xml:"id"`
 }
 
-// StoredBottleResponseBodyTiny is used to define fields on response body types.
-type StoredBottleResponseBodyTiny struct {
+// StoredBottleResponseTiny is used to define fields on response body types.
+type StoredBottleResponseTiny struct {
 	// ID is the unique id of the bottle.
 	ID string `form:"id" json:"id" xml:"id"`
 	// Name of bottle
 	Name string `form:"name" json:"name" xml:"name"`
 	// Winery that produces wine
-	Winery *WineryResponseBodyTiny `form:"winery" json:"winery" xml:"winery"`
+	Winery *WineryResponseTiny `form:"winery" json:"winery" xml:"winery"`
+}
+
+// WineryResponseTiny is used to define fields on response body types.
+type WineryResponseTiny struct {
+	// Name of winery
+	Name string `form:"name" json:"name" xml:"name"`
 }
 
 // WineryResponseBodyTiny is used to define fields on response body types.
@@ -143,17 +149,17 @@ type BottleRequestBody struct {
 	Rating *uint32 `form:"rating,omitempty" json:"rating,omitempty" xml:"rating,omitempty"`
 }
 
-// NewStoredBottleResponseBodyTinyCollection builds the HTTP response body from
-// the result of the "list" endpoint of the "storage" service.
-func NewStoredBottleResponseBodyTinyCollection(res storageviews.StoredBottleCollectionView) StoredBottleResponseBodyTinyCollection {
-	body := make([]*StoredBottleResponseBodyTiny, len(res))
+// NewStoredBottleResponseTinyCollection builds the HTTP response body from the
+// result of the "list" endpoint of the "storage" service.
+func NewStoredBottleResponseTinyCollection(res storageviews.StoredBottleCollectionView) StoredBottleResponseTinyCollection {
+	body := make([]*StoredBottleResponseTiny, len(res))
 	for i, val := range res {
-		body[i] = &StoredBottleResponseBodyTiny{
+		body[i] = &StoredBottleResponseTiny{
 			ID:   *val.ID,
 			Name: *val.Name,
 		}
 		if val.Winery != nil {
-			body[i].Winery = marshalWineryViewToWineryResponseBodyTiny(val.Winery)
+			body[i].Winery = marshalWineryViewToWineryResponseTiny(val.Winery)
 		}
 	}
 	return body
@@ -364,8 +370,8 @@ func (body *MultiUpdateRequestBody) Validate() (err error) {
 	return
 }
 
-// Validate runs the validations defined on StoredBottleResponseBodyTiny
-func (body *StoredBottleResponseBodyTiny) Validate() (err error) {
+// Validate runs the validations defined on StoredBottleResponseTiny
+func (body *StoredBottleResponseTiny) Validate() (err error) {
 	if body.Winery == nil {
 		err = goa.MergeErrors(err, goa.MissingFieldError("winery", "body"))
 	}

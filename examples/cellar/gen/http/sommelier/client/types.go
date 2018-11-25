@@ -29,7 +29,7 @@ type PickRequestBody struct {
 
 // PickResponseBody is the type of the "sommelier" service "pick" endpoint HTTP
 // response body.
-type PickResponseBody []*StoredBottleResponseBody
+type PickResponseBody []*StoredBottleResponse
 
 // PickNoCriteriaResponseBody is the type of the "sommelier" service "pick"
 // endpoint HTTP response body for the "no_criteria" error.
@@ -39,26 +39,26 @@ type PickNoCriteriaResponseBody string
 // endpoint HTTP response body for the "no_match" error.
 type PickNoMatchResponseBody string
 
-// StoredBottleResponseBody is used to define fields on response body types.
-type StoredBottleResponseBody struct {
+// StoredBottleResponse is used to define fields on response body types.
+type StoredBottleResponse struct {
 	// ID is the unique id of the bottle.
 	ID *string `form:"id,omitempty" json:"id,omitempty" xml:"id,omitempty"`
 	// Name of bottle
 	Name *string `form:"name,omitempty" json:"name,omitempty" xml:"name,omitempty"`
 	// Winery that produces wine
-	Winery *WineryResponseBody `form:"winery,omitempty" json:"winery,omitempty" xml:"winery,omitempty"`
+	Winery *WineryResponse `form:"winery,omitempty" json:"winery,omitempty" xml:"winery,omitempty"`
 	// Vintage of bottle
 	Vintage *uint32 `form:"vintage,omitempty" json:"vintage,omitempty" xml:"vintage,omitempty"`
 	// Composition is the list of grape varietals and associated percentage.
-	Composition []*ComponentResponseBody `form:"composition,omitempty" json:"composition,omitempty" xml:"composition,omitempty"`
+	Composition []*ComponentResponse `form:"composition,omitempty" json:"composition,omitempty" xml:"composition,omitempty"`
 	// Description of bottle
 	Description *string `form:"description,omitempty" json:"description,omitempty" xml:"description,omitempty"`
 	// Rating of bottle from 1 (worst) to 5 (best)
 	Rating *uint32 `form:"rating,omitempty" json:"rating,omitempty" xml:"rating,omitempty"`
 }
 
-// WineryResponseBody is used to define fields on response body types.
-type WineryResponseBody struct {
+// WineryResponse is used to define fields on response body types.
+type WineryResponse struct {
 	// Name of winery
 	Name *string `form:"name,omitempty" json:"name,omitempty" xml:"name,omitempty"`
 	// Region of winery
@@ -69,8 +69,8 @@ type WineryResponseBody struct {
 	URL *string `form:"url,omitempty" json:"url,omitempty" xml:"url,omitempty"`
 }
 
-// ComponentResponseBody is used to define fields on response body types.
-type ComponentResponseBody struct {
+// ComponentResponse is used to define fields on response body types.
+type ComponentResponse struct {
 	// Grape varietal
 	Varietal *string `form:"varietal,omitempty" json:"varietal,omitempty" xml:"varietal,omitempty"`
 	// Percentage of varietal in wine
@@ -105,7 +105,7 @@ func NewPickStoredBottleCollectionOK(body PickResponseBody) sommelierviews.Store
 			Description: val.Description,
 			Rating:      val.Rating,
 		}
-		v[i].Winery = unmarshalWineryResponseBodyToWineryView(val.Winery)
+		v[i].Winery = unmarshalWineryResponseToWineryView(val.Winery)
 		if val.Composition != nil {
 			v[i].Composition = make([]*sommelierviews.ComponentView, len(val.Composition))
 			for j, val := range val.Composition {
@@ -131,8 +131,8 @@ func NewPickNoMatch(body PickNoMatchResponseBody) sommelier.NoMatch {
 	return v
 }
 
-// Validate runs the validations defined on StoredBottleResponseBody
-func (body *StoredBottleResponseBody) Validate() (err error) {
+// Validate runs the validations defined on StoredBottleResponse
+func (body *StoredBottleResponse) Validate() (err error) {
 	if body.ID == nil {
 		err = goa.MergeErrors(err, goa.MissingFieldError("id", "body"))
 	}
@@ -190,8 +190,8 @@ func (body *StoredBottleResponseBody) Validate() (err error) {
 	return
 }
 
-// Validate runs the validations defined on WineryResponseBody
-func (body *WineryResponseBody) Validate() (err error) {
+// Validate runs the validations defined on WineryResponse
+func (body *WineryResponse) Validate() (err error) {
 	if body.Name == nil {
 		err = goa.MergeErrors(err, goa.MissingFieldError("name", "body"))
 	}
@@ -213,8 +213,8 @@ func (body *WineryResponseBody) Validate() (err error) {
 	return
 }
 
-// Validate runs the validations defined on ComponentResponseBody
-func (body *ComponentResponseBody) Validate() (err error) {
+// Validate runs the validations defined on ComponentResponse
+func (body *ComponentResponse) Validate() (err error) {
 	if body.Varietal == nil {
 		err = goa.MergeErrors(err, goa.MissingFieldError("varietal", "body"))
 	}

@@ -27,8 +27,7 @@ func main() {
 	flag.Parse()
 
 	// Setup logger and goa log adapter. Replace logger with your own using
-	// your log package of choice. The goa.design/middleware/logging/...
-	// packages define log adapters for common log packages.
+	// your log package of choice.
 	var (
 		adapter middleware.Logger
 		logger  *log.Logger
@@ -63,14 +62,12 @@ func main() {
 		dec = goahttp.RequestDecoder
 		enc = goahttp.ResponseEncoder
 	)
-
 	// Build the service HTTP request multiplexer and configure it to serve
 	// HTTP requests to the service endpoints.
 	var mux goahttp.Muxer
 	{
 		mux = goahttp.NewMuxer()
 	}
-
 	// Wrap the endpoints with the transport specific layers. The generated
 	// server packages contains code generated from the design which maps
 	// the service input and output data structures to HTTP requests and
@@ -82,7 +79,6 @@ func main() {
 		eh := ErrorHandler(logger)
 		dividerServer = dividersvcsvr.New(dividerEndpoints, mux, dec, enc, eh)
 	}
-
 	// Configure the mux.
 	dividersvcsvr.Mount(mux, dividerServer)
 
@@ -100,7 +96,6 @@ func main() {
 	// Create channel used by both the signal handler and server goroutines
 	// to notify the main goroutine when to stop the server.
 	errc := make(chan error)
-
 	// Setup interrupt handler. This optional step configures the process so
 	// that SIGINT and SIGTERM signals cause the service to stop gracefully.
 	go func() {
@@ -108,7 +103,6 @@ func main() {
 		signal.Notify(c, os.Interrupt)
 		errc <- fmt.Errorf("%s", <-c)
 	}()
-
 	// Start HTTP server using default configuration, change the code to
 	// configure the server as required by your service.
 	srv := &http.Server{Addr: *addr, Handler: handler}
@@ -122,12 +116,10 @@ func main() {
 
 	// Wait for signal.
 	logger.Printf("exiting (%v)", <-errc)
-
 	// Shutdown gracefully with a 30s timeout.
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 	srv.Shutdown(ctx)
-
 	logger.Println("exited")
 }
 

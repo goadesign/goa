@@ -611,7 +611,7 @@ func (s *listenerServerStream) Close() error {
 func (s *summaryServerStream) SendAndClose(v chattersvc.ChatSummaryCollection) error {
 	defer s.conn.Close()
 	res := chattersvc.NewViewedChatSummaryCollection(v, "default")
-	body := NewChatSummaryResponseBodyCollection(res.Projected)
+	body := NewChatSummaryResponseCollection(res.Projected)
 	return s.conn.WriteJSON(body)
 }
 

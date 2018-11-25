@@ -415,10 +415,6 @@ func TestExtensions(t *testing.T) {
 					if err != nil {
 						t.Fatalf("failed to read golden file: %s", err)
 					}
-					// wantS := string(want)
-					gotS := string(buf.Bytes())
-					fmt.Println(gotS)
-
 					if !bytes.Equal(buf.Bytes(), want) {
 						t.Errorf("result do not match the golden file:\n--BEGIN--\n%s\n--END--\n", buf.Bytes())
 					}

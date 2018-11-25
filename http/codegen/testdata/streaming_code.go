@@ -464,11 +464,11 @@ func (s *StreamingResultCollectionWithViewsMethodServerStream) Send(v streamingr
 	var body interface{}
 	switch s.view {
 	case "tiny":
-		body = NewUsertypeResponseBodyTinyCollection(res.Projected)
+		body = NewUsertypeResponseTinyCollection(res.Projected)
 	case "extended":
-		body = NewUsertypeResponseBodyExtendedCollection(res.Projected)
+		body = NewUsertypeResponseExtendedCollection(res.Projected)
 	case "default", "":
-		body = NewUsertypeResponseBodyCollection(res.Projected)
+		body = NewUsertypeResponseCollection(res.Projected)
 	}
 	return s.conn.WriteJSON(body)
 }
@@ -540,7 +540,7 @@ func (s *StreamingResultCollectionWithExplicitViewMethodServerStream) Send(v str
 		return err
 	}
 	res := streamingresultcollectionwithexplicitviewservice.NewViewedUsertypeCollection(v, "tiny")
-	body := NewUsertypeResponseBodyTinyCollection(res.Projected)
+	body := NewUsertypeResponseTinyCollection(res.Projected)
 	return s.conn.WriteJSON(body)
 }
 `
@@ -765,7 +765,7 @@ func (s *StreamingResultUserTypeArrayMethodServerStream) Send(v []*streamingresu
 		return err
 	}
 	res := v
-	body := NewUserTypeResponseBody(res)
+	body := NewUserTypeResponse(res)
 	return s.conn.WriteJSON(body)
 }
 `
@@ -814,7 +814,7 @@ func (s *StreamingResultUserTypeMapMethodServerStream) Send(v map[string]*stream
 		return err
 	}
 	res := v
-	body := NewMapStringUserTypeResponseBody(res)
+	body := NewMapStringUserTypeResponse(res)
 	return s.conn.WriteJSON(body)
 }
 `
@@ -1435,11 +1435,11 @@ func (s *StreamingPayloadResultCollectionWithViewsMethodServerStream) SendAndClo
 	var body interface{}
 	switch s.view {
 	case "tiny":
-		body = NewUsertypeResponseBodyTinyCollection(res.Projected)
+		body = NewUsertypeResponseTinyCollection(res.Projected)
 	case "extended":
-		body = NewUsertypeResponseBodyExtendedCollection(res.Projected)
+		body = NewUsertypeResponseExtendedCollection(res.Projected)
 	case "default", "":
-		body = NewUsertypeResponseBodyCollection(res.Projected)
+		body = NewUsertypeResponseCollection(res.Projected)
 	}
 	return s.conn.WriteJSON(body)
 }
@@ -1547,7 +1547,7 @@ var StreamingPayloadResultCollectionWithExplicitViewServerStreamSendCode = `// S
 func (s *StreamingPayloadResultCollectionWithExplicitViewMethodServerStream) SendAndClose(v streamingpayloadresultcollectionwithexplicitviewservice.UsertypeCollection) error {
 	defer s.conn.Close()
 	res := streamingpayloadresultcollectionwithexplicitviewservice.NewViewedUsertypeCollection(v, "tiny")
-	body := NewUsertypeResponseBodyTinyCollection(res.Projected)
+	body := NewUsertypeResponseTinyCollection(res.Projected)
 	return s.conn.WriteJSON(body)
 }
 `
@@ -2695,11 +2695,11 @@ func (s *BidirectionalStreamingResultCollectionWithViewsMethodServerStream) Send
 	var body interface{}
 	switch s.view {
 	case "tiny":
-		body = NewUsertypeResponseBodyTinyCollection(res.Projected)
+		body = NewUsertypeResponseTinyCollection(res.Projected)
 	case "extended":
-		body = NewUsertypeResponseBodyExtendedCollection(res.Projected)
+		body = NewUsertypeResponseExtendedCollection(res.Projected)
 	case "default", "":
-		body = NewUsertypeResponseBodyCollection(res.Projected)
+		body = NewUsertypeResponseCollection(res.Projected)
 	}
 	return s.conn.WriteJSON(body)
 }
@@ -2818,7 +2818,7 @@ func (s *BidirectionalStreamingResultCollectionWithExplicitViewMethodServerStrea
 		return err
 	}
 	res := bidirectionalstreamingresultcollectionwithexplicitviewservice.NewViewedUsertypeCollection(v, "tiny")
-	body := NewUsertypeResponseBodyTinyCollection(res.Projected)
+	body := NewUsertypeResponseTinyCollection(res.Projected)
 	return s.conn.WriteJSON(body)
 }
 `
@@ -3181,7 +3181,7 @@ func (s *BidirectionalStreamingUserTypeArrayMethodServerStream) Send(v []*bidire
 		return err
 	}
 	res := v
-	body := NewResultTypeResponseBody(res)
+	body := NewResultTypeResponse(res)
 	return s.conn.WriteJSON(body)
 }
 `
@@ -3276,7 +3276,7 @@ func (s *BidirectionalStreamingUserTypeMapMethodServerStream) Send(v map[string]
 		return err
 	}
 	res := v
-	body := NewMapStringResultTypeResponseBody(res)
+	body := NewMapStringResultTypeResponse(res)
 	return s.conn.WriteJSON(body)
 }
 `
