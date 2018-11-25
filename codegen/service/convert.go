@@ -87,7 +87,8 @@ func commonPath(sep byte, paths ...string) string {
 // ("goa.design/goa/vendor/some/package") for vendored packages
 // instead the source import path ("some/package")
 func getPkgImport(pkg, cwd string) string {
-	gosrc := path.Join(os.Getenv("GOPATH"), "src")
+	gosrc := path.Join(filepath.ToSlash(os.Getenv("GOPATH")), "src")
+	cwd = filepath.ToSlash(cwd)
 
 	// check for go modules
 	if !strings.HasPrefix(cwd, gosrc) {

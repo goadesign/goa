@@ -27,9 +27,9 @@ type PickRequestBody struct {
 	Winery *string `form:"winery,omitempty" json:"winery,omitempty" xml:"winery,omitempty"`
 }
 
-// StoredBottleResponseBodyCollection is the type of the "sommelier" service
-// "pick" endpoint HTTP response body.
-type StoredBottleResponseBodyCollection []*StoredBottleResponseBody
+// StoredBottleResponseCollection is the type of the "sommelier" service "pick"
+// endpoint HTTP response body.
+type StoredBottleResponseCollection []*StoredBottleResponse
 
 // PickNoCriteriaResponseBody is the type of the "sommelier" service "pick"
 // endpoint HTTP response body for the "no_criteria" error.
@@ -39,44 +39,44 @@ type PickNoCriteriaResponseBody string
 // endpoint HTTP response body for the "no_match" error.
 type PickNoMatchResponseBody string
 
-// StoredBottleResponseBody is used to define fields on response body types.
-type StoredBottleResponseBody struct {
+// StoredBottleResponse is used to define fields on response body types.
+type StoredBottleResponse struct {
 	// ID is the unique id of the bottle.
 	ID string `form:"id" json:"id" xml:"id"`
 	// Name of bottle
 	Name string `form:"name" json:"name" xml:"name"`
 	// Winery that produces wine
-	Winery *WineryResponseBodyTiny `form:"winery" json:"winery" xml:"winery"`
+	Winery *WineryResponseTiny `form:"winery" json:"winery" xml:"winery"`
 	// Vintage of bottle
 	Vintage uint32 `form:"vintage" json:"vintage" xml:"vintage"`
 	// Composition is the list of grape varietals and associated percentage.
-	Composition []*ComponentResponseBody `form:"composition,omitempty" json:"composition,omitempty" xml:"composition,omitempty"`
+	Composition []*ComponentResponse `form:"composition,omitempty" json:"composition,omitempty" xml:"composition,omitempty"`
 	// Description of bottle
 	Description *string `form:"description,omitempty" json:"description,omitempty" xml:"description,omitempty"`
 	// Rating of bottle from 1 (worst) to 5 (best)
 	Rating *uint32 `form:"rating,omitempty" json:"rating,omitempty" xml:"rating,omitempty"`
 }
 
-// WineryResponseBodyTiny is used to define fields on response body types.
-type WineryResponseBodyTiny struct {
+// WineryResponseTiny is used to define fields on response body types.
+type WineryResponseTiny struct {
 	// Name of winery
 	Name string `form:"name" json:"name" xml:"name"`
 }
 
-// ComponentResponseBody is used to define fields on response body types.
-type ComponentResponseBody struct {
+// ComponentResponse is used to define fields on response body types.
+type ComponentResponse struct {
 	// Grape varietal
 	Varietal string `form:"varietal" json:"varietal" xml:"varietal"`
 	// Percentage of varietal in wine
 	Percentage *uint32 `form:"percentage,omitempty" json:"percentage,omitempty" xml:"percentage,omitempty"`
 }
 
-// NewStoredBottleResponseBodyCollection builds the HTTP response body from the
+// NewStoredBottleResponseCollection builds the HTTP response body from the
 // result of the "pick" endpoint of the "sommelier" service.
-func NewStoredBottleResponseBodyCollection(res sommelierviews.StoredBottleCollectionView) StoredBottleResponseBodyCollection {
-	body := make([]*StoredBottleResponseBody, len(res))
+func NewStoredBottleResponseCollection(res sommelierviews.StoredBottleCollectionView) StoredBottleResponseCollection {
+	body := make([]*StoredBottleResponse, len(res))
 	for i, val := range res {
-		body[i] = &StoredBottleResponseBody{
+		body[i] = &StoredBottleResponse{
 			ID:          *val.ID,
 			Name:        *val.Name,
 			Vintage:     *val.Vintage,
@@ -84,12 +84,12 @@ func NewStoredBottleResponseBodyCollection(res sommelierviews.StoredBottleCollec
 			Rating:      val.Rating,
 		}
 		if val.Winery != nil {
-			body[i].Winery = marshalWineryViewToWineryResponseBodyTiny(val.Winery)
+			body[i].Winery = marshalWineryViewToWineryResponseTiny(val.Winery)
 		}
 		if val.Composition != nil {
-			body[i].Composition = make([]*ComponentResponseBody, len(val.Composition))
+			body[i].Composition = make([]*ComponentResponse, len(val.Composition))
 			for j, val := range val.Composition {
-				body[i].Composition[j] = &ComponentResponseBody{
+				body[i].Composition[j] = &ComponentResponse{
 					Varietal:   *val.Varietal,
 					Percentage: val.Percentage,
 				}
@@ -128,8 +128,8 @@ func NewPickCriteria(body *PickRequestBody) *sommelier.Criteria {
 	return v
 }
 
-// Validate runs the validations defined on StoredBottleResponseBody
-func (body *StoredBottleResponseBody) Validate() (err error) {
+// Validate runs the validations defined on StoredBottleResponse
+func (body *StoredBottleResponse) Validate() (err error) {
 	if body.Winery == nil {
 		err = goa.MergeErrors(err, goa.MissingFieldError("winery", "body"))
 	}
@@ -167,8 +167,8 @@ func (body *StoredBottleResponseBody) Validate() (err error) {
 	return
 }
 
-// Validate runs the validations defined on ComponentResponseBody
-func (body *ComponentResponseBody) Validate() (err error) {
+// Validate runs the validations defined on ComponentResponse
+func (body *ComponentResponse) Validate() (err error) {
 	err = goa.MergeErrors(err, goa.ValidatePattern("body.varietal", body.Varietal, "[A-Za-z' ]+"))
 	if utf8.RuneCountInString(body.Varietal) > 100 {
 		err = goa.MergeErrors(err, goa.InvalidLengthError("body.varietal", body.Varietal, utf8.RuneCountInString(body.Varietal), 100, false))
