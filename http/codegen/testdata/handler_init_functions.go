@@ -55,7 +55,9 @@ func NewMethodPayloadNoResultHandler(
 		ctx = context.WithValue(ctx, goa.ServiceKey, "ServicePayloadNoResult")
 		payload, err := decodeRequest(r)
 		if err != nil {
-			eh(ctx, w, err)
+			if err := encodeError(ctx, w, err); err != nil {
+				eh(ctx, w, err)
+			}
 			return
 		}
 
@@ -129,7 +131,9 @@ func NewMethodPayloadResultHandler(
 		ctx = context.WithValue(ctx, goa.ServiceKey, "ServicePayloadResult")
 		payload, err := decodeRequest(r)
 		if err != nil {
-			eh(ctx, w, err)
+			if err := encodeError(ctx, w, err); err != nil {
+				eh(ctx, w, err)
+			}
 			return
 		}
 
@@ -169,7 +173,9 @@ func NewMethodPayloadResultErrorHandler(
 		ctx = context.WithValue(ctx, goa.ServiceKey, "ServicePayloadResultError")
 		payload, err := decodeRequest(r)
 		if err != nil {
-			eh(ctx, w, err)
+			if err := encodeError(ctx, w, err); err != nil {
+				eh(ctx, w, err)
+			}
 			return
 		}
 
