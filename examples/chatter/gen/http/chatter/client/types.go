@@ -16,7 +16,7 @@ import (
 
 // SummaryResponseBody is the type of the "chatter" service "summary" endpoint
 // HTTP response body.
-type SummaryResponseBody []*ChatSummaryResponseBody
+type SummaryResponseBody []*ChatSummaryResponse
 
 // HistoryResponseBody is the type of the "chatter" service "history" endpoint
 // HTTP response body.
@@ -65,8 +65,8 @@ type HistoryInvalidScopesResponseBody string
 // "history" endpoint HTTP response body for the "unauthorized" error.
 type HistoryUnauthorizedResponseBody string
 
-// ChatSummaryResponseBody is used to define fields on response body types.
-type ChatSummaryResponseBody struct {
+// ChatSummaryResponse is used to define fields on response body types.
+type ChatSummaryResponse struct {
 	// Message sent to the server
 	Message *string `form:"message,omitempty" json:"message,omitempty" xml:"message,omitempty"`
 	// Length of the message sent
@@ -163,8 +163,8 @@ func NewHistoryUnauthorized(body HistoryUnauthorizedResponseBody) chattersvc.Una
 	return v
 }
 
-// Validate runs the validations defined on ChatSummaryResponseBody
-func (body *ChatSummaryResponseBody) Validate() (err error) {
+// Validate runs the validations defined on ChatSummaryResponse
+func (body *ChatSummaryResponse) Validate() (err error) {
 	if body.Message == nil {
 		err = goa.MergeErrors(err, goa.MissingFieldError("message", "body"))
 	}

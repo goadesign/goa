@@ -14,9 +14,9 @@ import (
 	chattersvcviews "goa.design/goa/examples/chatter/gen/chatter/views"
 )
 
-// ChatSummaryResponseBodyCollection is the type of the "chatter" service
-// "summary" endpoint HTTP response body.
-type ChatSummaryResponseBodyCollection []*ChatSummaryResponseBody
+// ChatSummaryResponseCollection is the type of the "chatter" service "summary"
+// endpoint HTTP response body.
+type ChatSummaryResponseCollection []*ChatSummaryResponse
 
 // HistoryResponseBodyTiny is the type of the "chatter" service "history"
 // endpoint HTTP response body.
@@ -72,8 +72,8 @@ type HistoryInvalidScopesResponseBody string
 // "history" endpoint HTTP response body for the "unauthorized" error.
 type HistoryUnauthorizedResponseBody string
 
-// ChatSummaryResponseBody is used to define fields on response body types.
-type ChatSummaryResponseBody struct {
+// ChatSummaryResponse is used to define fields on response body types.
+type ChatSummaryResponse struct {
 	// Message sent to the server
 	Message string `form:"message" json:"message" xml:"message"`
 	// Length of the message sent
@@ -82,12 +82,12 @@ type ChatSummaryResponseBody struct {
 	SentAt *string `form:"sent_at,omitempty" json:"sent_at,omitempty" xml:"sent_at,omitempty"`
 }
 
-// NewChatSummaryResponseBodyCollection builds the HTTP response body from the
+// NewChatSummaryResponseCollection builds the HTTP response body from the
 // result of the "summary" endpoint of the "chatter" service.
-func NewChatSummaryResponseBodyCollection(res chattersvcviews.ChatSummaryCollectionView) ChatSummaryResponseBodyCollection {
-	body := make([]*ChatSummaryResponseBody, len(res))
+func NewChatSummaryResponseCollection(res chattersvcviews.ChatSummaryCollectionView) ChatSummaryResponseCollection {
+	body := make([]*ChatSummaryResponse, len(res))
 	for i, val := range res {
-		body[i] = &ChatSummaryResponseBody{
+		body[i] = &ChatSummaryResponse{
 			Message: *val.Message,
 			Length:  val.Length,
 			SentAt:  val.SentAt,
@@ -213,8 +213,8 @@ func NewHistoryPayload(view *string, token string) *chattersvc.HistoryPayload {
 	}
 }
 
-// Validate runs the validations defined on ChatSummaryResponseBody
-func (body *ChatSummaryResponseBody) Validate() (err error) {
+// Validate runs the validations defined on ChatSummaryResponse
+func (body *ChatSummaryResponse) Validate() (err error) {
 	if body.SentAt != nil {
 		err = goa.MergeErrors(err, goa.ValidateFormat("body.sent_at", *body.SentAt, goa.FormatDateTime))
 	}

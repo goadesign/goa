@@ -42,7 +42,7 @@ type MultiUpdateRequestBody struct {
 
 // ListResponseBody is the type of the "storage" service "list" endpoint HTTP
 // response body.
-type ListResponseBody []*StoredBottleResponseBody
+type ListResponseBody []*StoredBottleResponse
 
 // ShowResponseBody is the type of the "storage" service "show" endpoint HTTP
 // response body.
@@ -72,22 +72,42 @@ type ShowNotFoundResponseBody struct {
 	ID *string `form:"id,omitempty" json:"id,omitempty" xml:"id,omitempty"`
 }
 
-// StoredBottleResponseBody is used to define fields on response body types.
-type StoredBottleResponseBody struct {
+// StoredBottleResponse is used to define fields on response body types.
+type StoredBottleResponse struct {
 	// ID is the unique id of the bottle.
 	ID *string `form:"id,omitempty" json:"id,omitempty" xml:"id,omitempty"`
 	// Name of bottle
 	Name *string `form:"name,omitempty" json:"name,omitempty" xml:"name,omitempty"`
 	// Winery that produces wine
-	Winery *WineryResponseBody `form:"winery,omitempty" json:"winery,omitempty" xml:"winery,omitempty"`
+	Winery *WineryResponse `form:"winery,omitempty" json:"winery,omitempty" xml:"winery,omitempty"`
 	// Vintage of bottle
 	Vintage *uint32 `form:"vintage,omitempty" json:"vintage,omitempty" xml:"vintage,omitempty"`
 	// Composition is the list of grape varietals and associated percentage.
-	Composition []*ComponentResponseBody `form:"composition,omitempty" json:"composition,omitempty" xml:"composition,omitempty"`
+	Composition []*ComponentResponse `form:"composition,omitempty" json:"composition,omitempty" xml:"composition,omitempty"`
 	// Description of bottle
 	Description *string `form:"description,omitempty" json:"description,omitempty" xml:"description,omitempty"`
 	// Rating of bottle from 1 (worst) to 5 (best)
 	Rating *uint32 `form:"rating,omitempty" json:"rating,omitempty" xml:"rating,omitempty"`
+}
+
+// WineryResponse is used to define fields on response body types.
+type WineryResponse struct {
+	// Name of winery
+	Name *string `form:"name,omitempty" json:"name,omitempty" xml:"name,omitempty"`
+	// Region of winery
+	Region *string `form:"region,omitempty" json:"region,omitempty" xml:"region,omitempty"`
+	// Country of winery
+	Country *string `form:"country,omitempty" json:"country,omitempty" xml:"country,omitempty"`
+	// Winery website URL
+	URL *string `form:"url,omitempty" json:"url,omitempty" xml:"url,omitempty"`
+}
+
+// ComponentResponse is used to define fields on response body types.
+type ComponentResponse struct {
+	// Grape varietal
+	Varietal *string `form:"varietal,omitempty" json:"varietal,omitempty" xml:"varietal,omitempty"`
+	// Percentage of varietal in wine
+	Percentage *uint32 `form:"percentage,omitempty" json:"percentage,omitempty" xml:"percentage,omitempty"`
 }
 
 // WineryResponseBody is used to define fields on response body types.
@@ -239,7 +259,7 @@ func NewListStoredBottleCollectionOK(body ListResponseBody) storageviews.StoredB
 			Description: val.Description,
 			Rating:      val.Rating,
 		}
-		v[i].Winery = unmarshalWineryResponseBodyToWineryView(val.Winery)
+		v[i].Winery = unmarshalWineryResponseToWineryView(val.Winery)
 		if val.Composition != nil {
 			v[i].Composition = make([]*storageviews.ComponentView, len(val.Composition))
 			for j, val := range val.Composition {
@@ -296,8 +316,8 @@ func (body *ShowNotFoundResponseBody) Validate() (err error) {
 	return
 }
 
-// Validate runs the validations defined on StoredBottleResponseBody
-func (body *StoredBottleResponseBody) Validate() (err error) {
+// Validate runs the validations defined on StoredBottleResponse
+func (body *StoredBottleResponse) Validate() (err error) {
 	if body.ID == nil {
 		err = goa.MergeErrors(err, goa.MissingFieldError("id", "body"))
 	}
@@ -350,6 +370,55 @@ func (body *StoredBottleResponseBody) Validate() (err error) {
 	if body.Rating != nil {
 		if *body.Rating > 5 {
 			err = goa.MergeErrors(err, goa.InvalidRangeError("body.rating", *body.Rating, 5, false))
+		}
+	}
+	return
+}
+
+// Validate runs the validations defined on WineryResponse
+func (body *WineryResponse) Validate() (err error) {
+	if body.Name == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("name", "body"))
+	}
+	if body.Region == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("region", "body"))
+	}
+	if body.Country == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("country", "body"))
+	}
+	if body.Region != nil {
+		err = goa.MergeErrors(err, goa.ValidatePattern("body.region", *body.Region, "(?i)[a-z '\\.]+"))
+	}
+	if body.Country != nil {
+		err = goa.MergeErrors(err, goa.ValidatePattern("body.country", *body.Country, "(?i)[a-z '\\.]+"))
+	}
+	if body.URL != nil {
+		err = goa.MergeErrors(err, goa.ValidatePattern("body.url", *body.URL, "(?i)^(https?|ftp)://[^\\s/$.?#].[^\\s]*$"))
+	}
+	return
+}
+
+// Validate runs the validations defined on ComponentResponse
+func (body *ComponentResponse) Validate() (err error) {
+	if body.Varietal == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("varietal", "body"))
+	}
+	if body.Varietal != nil {
+		err = goa.MergeErrors(err, goa.ValidatePattern("body.varietal", *body.Varietal, "[A-Za-z' ]+"))
+	}
+	if body.Varietal != nil {
+		if utf8.RuneCountInString(*body.Varietal) > 100 {
+			err = goa.MergeErrors(err, goa.InvalidLengthError("body.varietal", *body.Varietal, utf8.RuneCountInString(*body.Varietal), 100, false))
+		}
+	}
+	if body.Percentage != nil {
+		if *body.Percentage < 1 {
+			err = goa.MergeErrors(err, goa.InvalidRangeError("body.percentage", *body.Percentage, 1, true))
+		}
+	}
+	if body.Percentage != nil {
+		if *body.Percentage > 100 {
+			err = goa.MergeErrors(err, goa.InvalidRangeError("body.percentage", *body.Percentage, 100, false))
 		}
 	}
 	return
