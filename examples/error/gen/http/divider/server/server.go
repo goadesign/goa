@@ -106,7 +106,9 @@ func NewIntegerDivideHandler(
 		ctx = context.WithValue(ctx, goa.ServiceKey, "divider")
 		payload, err := decodeRequest(r)
 		if err != nil {
-			eh(ctx, w, err)
+			if err := encodeError(ctx, w, err); err != nil {
+				eh(ctx, w, err)
+			}
 			return
 		}
 
@@ -156,7 +158,9 @@ func NewDivideHandler(
 		ctx = context.WithValue(ctx, goa.ServiceKey, "divider")
 		payload, err := decodeRequest(r)
 		if err != nil {
-			eh(ctx, w, err)
+			if err := encodeError(ctx, w, err); err != nil {
+				eh(ctx, w, err)
+			}
 			return
 		}
 
