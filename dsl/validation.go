@@ -250,7 +250,7 @@ func Required(names ...string) {
 		return
 	}
 
-	if at.Type != nil && at.Type.Kind() != design.ObjectKind {
+	if at.Type != nil && !design.IsObject(at.Type) {
 		incompatibleAttributeType("required", at.Type.Name(), "an object")
 	} else {
 		if at.Validation == nil {
