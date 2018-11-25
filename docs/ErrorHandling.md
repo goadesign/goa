@@ -170,16 +170,18 @@ types:
     contains the error name. The value of this attribute is compared with the
     names of the errors as defined in the design by the encoding and decoding
     code to infer the proper encoding details (e.g. HTTP status code). The
-    attribute is identified using the special `struct:error:name` metadata:
+    attribute is identified using the special `struct:error:name` metadata,
+    must be a string and must be required:
 
 ```go
 var InsertConflict = ResultType("application/vnd.service.insertconflict", func() {
         Description("InsertConflict is the type of the error values returned when insertion fails because of a conflict")
         Attributes(func() {
                 Attribute("conflict_value", String)
-                Attribute("error_name", String, "name of error used by goa to encode response", func() {
+                Attribute("name", String, "name of error used by goa to encode response", func() {
                         Metadata("struct:error:name")
                 })
+                Required("conflict_value", "name")
         })
         View("default", func() {
                 Attribute("conflict_value")
@@ -190,6 +192,10 @@ var InsertConflict = ResultType("application/vnd.service.insertconflict", func()
         })
 })
 ```
+
+ 3. User types used to define custom error types cannot have an attribute
+    named `error_name` as the generated code defines a `ErrorName`
+    function on the error struct.
 
 ## Error HTTP Response Encoding
 
