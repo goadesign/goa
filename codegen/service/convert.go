@@ -288,7 +288,12 @@ func ConvertFile(root *design.RootExpr, service *design.ServiceExpr) (*codegen.F
 	}
 
 	// Build transformation helper functions section if any.
+	seen := make(map[string]struct{})
 	for _, tf := range transFuncs {
+		if _, ok := seen[tf.Name]; ok {
+			continue
+		}
+		seen[tf.Name] = struct{}{}
 		sections = append(sections, &codegen.SectionTemplate{
 			Name:   "convert-create-helper",
 			Source: transformHelperT,
