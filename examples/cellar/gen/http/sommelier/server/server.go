@@ -101,7 +101,9 @@ func NewPickHandler(
 		ctx = context.WithValue(ctx, goa.ServiceKey, "sommelier")
 		payload, err := decodeRequest(r)
 		if err != nil {
-			eh(ctx, w, err)
+			if err := encodeError(ctx, w, err); err != nil {
+				eh(ctx, w, err)
+			}
 			return
 		}
 

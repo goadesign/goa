@@ -186,7 +186,9 @@ func NewShowHandler(
 		ctx = context.WithValue(ctx, goa.ServiceKey, "storage")
 		payload, err := decodeRequest(r)
 		if err != nil {
-			eh(ctx, w, err)
+			if err := encodeError(ctx, w, err); err != nil {
+				eh(ctx, w, err)
+			}
 			return
 		}
 
@@ -236,7 +238,9 @@ func NewAddHandler(
 		ctx = context.WithValue(ctx, goa.ServiceKey, "storage")
 		payload, err := decodeRequest(r)
 		if err != nil {
-			eh(ctx, w, err)
+			if err := encodeError(ctx, w, err); err != nil {
+				eh(ctx, w, err)
+			}
 			return
 		}
 
@@ -286,7 +290,9 @@ func NewRemoveHandler(
 		ctx = context.WithValue(ctx, goa.ServiceKey, "storage")
 		payload, err := decodeRequest(r)
 		if err != nil {
-			eh(ctx, w, err)
+			if err := encodeError(ctx, w, err); err != nil {
+				eh(ctx, w, err)
+			}
 			return
 		}
 
@@ -336,7 +342,9 @@ func NewRateHandler(
 		ctx = context.WithValue(ctx, goa.ServiceKey, "storage")
 		payload, err := decodeRequest(r)
 		if err != nil {
-			eh(ctx, w, err)
+			if err := encodeError(ctx, w, err); err != nil {
+				eh(ctx, w, err)
+			}
 			return
 		}
 
@@ -386,7 +394,9 @@ func NewMultiAddHandler(
 		ctx = context.WithValue(ctx, goa.ServiceKey, "storage")
 		payload, err := decodeRequest(r)
 		if err != nil {
-			eh(ctx, w, err)
+			if err := encodeError(ctx, w, err); err != nil {
+				eh(ctx, w, err)
+			}
 			return
 		}
 
@@ -436,7 +446,9 @@ func NewMultiUpdateHandler(
 		ctx = context.WithValue(ctx, goa.ServiceKey, "storage")
 		payload, err := decodeRequest(r)
 		if err != nil {
-			eh(ctx, w, err)
+			if err := encodeError(ctx, w, err); err != nil {
+				eh(ctx, w, err)
+			}
 			return
 		}
 

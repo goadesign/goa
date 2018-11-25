@@ -22,7 +22,9 @@ func NewStreamingResultMethodHandler(
 		ctx = context.WithValue(ctx, goa.ServiceKey, "StreamingResultService")
 		payload, err := decodeRequest(r)
 		if err != nil {
-			eh(ctx, w, err)
+			if err := encodeError(ctx, w, err); err != nil {
+				eh(ctx, w, err)
+			}
 			return
 		}
 
@@ -891,7 +893,9 @@ func NewStreamingPayloadMethodHandler(
 		ctx = context.WithValue(ctx, goa.ServiceKey, "StreamingPayloadService")
 		payload, err := decodeRequest(r)
 		if err != nil {
-			eh(ctx, w, err)
+			if err := encodeError(ctx, w, err); err != nil {
+				eh(ctx, w, err)
+			}
 			return
 		}
 
@@ -2053,7 +2057,9 @@ func NewBidirectionalStreamingMethodHandler(
 		ctx = context.WithValue(ctx, goa.ServiceKey, "BidirectionalStreamingService")
 		payload, err := decodeRequest(r)
 		if err != nil {
-			eh(ctx, w, err)
+			if err := encodeError(ctx, w, err); err != nil {
+				eh(ctx, w, err)
+			}
 			return
 		}
 
