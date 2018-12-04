@@ -87,7 +87,8 @@ func commonPath(sep byte, paths ...string) string {
 // ("goa.design/goa/vendor/some/package") for vendored packages
 // instead the source import path ("some/package")
 func getPkgImport(pkg, cwd string) string {
-	gosrc := path.Join(os.Getenv("GOPATH"), "src")
+	gosrc := path.Join(filepath.ToSlash(os.Getenv("GOPATH")), "src")
+	cwd = filepath.ToSlash(cwd)
 
 	// check for go modules
 	if !strings.HasPrefix(cwd, gosrc) {
@@ -287,7 +288,12 @@ func ConvertFile(root *expr.RootExpr, service *expr.ServiceExpr) (*codegen.File,
 	}
 
 	// Build transformation helper functions section if any.
+	seen := make(map[string]struct{})
 	for _, tf := range transFuncs {
+		if _, ok := seen[tf.Name]; ok {
+			continue
+		}
+		seen[tf.Name] = struct{}{}
 		sections = append(sections, &codegen.SectionTemplate{
 			Name:   "convert-create-helper",
 			Source: transformHelperT,

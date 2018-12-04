@@ -148,6 +148,16 @@ func (s *NameScope) GoTypeDef(att *expr.AttributeExpr, useDefault bool) string {
 	}
 }
 
+// GoVar returns the Go code that returns the address of a variable of the Go type
+// which matches the given attribute type.
+func (s *NameScope) GoVar(varName string, dt expr.DataType) string {
+	// For a raw struct, no need to indirecting
+	if isRawStruct(dt) {
+		return varName
+	}
+	return "&" + varName
+}
+
 // GoTypeRef returns the Go code that refers to the Go type which matches the
 // given attribute type.
 func (s *NameScope) GoTypeRef(att *expr.AttributeExpr) string {
@@ -199,11 +209,18 @@ func (s *NameScope) GoFullTypeName(att *expr.AttributeExpr, pkg string) string {
 
 func goTypeRef(name string, dt expr.DataType) string {
 	// For a raw struct, no need to dereference
-	if _, ok := dt.(*expr.Object); ok {
+	if isRawStruct(dt) {
 		return name
 	}
-	if expr.IsObject(dt) {
-		return "*" + name
+	return "*" + name
+}
+
+func isRawStruct(dt expr.DataType) bool {
+	if _, ok := dt.(*expr.Object); ok {
+		return true
 	}
-	return name
+	if expr.IsObject(dt) {
+		return false
+	}
+	return true
 }

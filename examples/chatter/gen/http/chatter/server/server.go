@@ -191,7 +191,9 @@ func NewLoginHandler(
 		ctx = context.WithValue(ctx, goa.ServiceKey, "chatter")
 		payload, err := decodeRequest(r)
 		if err != nil {
-			eh(ctx, w, err)
+			if err := encodeError(ctx, w, err); err != nil {
+				eh(ctx, w, err)
+			}
 			return
 		}
 
@@ -242,7 +244,9 @@ func NewEchoerHandler(
 		ctx = context.WithValue(ctx, goa.ServiceKey, "chatter")
 		payload, err := decodeRequest(r)
 		if err != nil {
-			eh(ctx, w, err)
+			if err := encodeError(ctx, w, err); err != nil {
+				eh(ctx, w, err)
+			}
 			return
 		}
 
@@ -302,7 +306,9 @@ func NewListenerHandler(
 		ctx = context.WithValue(ctx, goa.ServiceKey, "chatter")
 		payload, err := decodeRequest(r)
 		if err != nil {
-			eh(ctx, w, err)
+			if err := encodeError(ctx, w, err); err != nil {
+				eh(ctx, w, err)
+			}
 			return
 		}
 
@@ -362,7 +368,9 @@ func NewSummaryHandler(
 		ctx = context.WithValue(ctx, goa.ServiceKey, "chatter")
 		payload, err := decodeRequest(r)
 		if err != nil {
-			eh(ctx, w, err)
+			if err := encodeError(ctx, w, err); err != nil {
+				eh(ctx, w, err)
+			}
 			return
 		}
 
@@ -422,7 +430,9 @@ func NewHistoryHandler(
 		ctx = context.WithValue(ctx, goa.ServiceKey, "chatter")
 		payload, err := decodeRequest(r)
 		if err != nil {
-			eh(ctx, w, err)
+			if err := encodeError(ctx, w, err); err != nil {
+				eh(ctx, w, err)
+			}
 			return
 		}
 
@@ -611,7 +621,7 @@ func (s *listenerServerStream) Close() error {
 func (s *summaryServerStream) SendAndClose(v chattersvc.ChatSummaryCollection) error {
 	defer s.conn.Close()
 	res := chattersvc.NewViewedChatSummaryCollection(v, "default")
-	body := NewChatSummaryResponseBodyCollection(res.Projected)
+	body := NewChatSummaryResponseCollection(res.Projected)
 	return s.conn.WriteJSON(body)
 }
 

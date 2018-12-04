@@ -658,9 +658,9 @@ func EncodeMethodBodyCollectionResponse(encoder func(context.Context, http.Respo
 		var body interface{}
 		switch res.View {
 		case "default", "":
-			body = NewResulttypecollectionResponseBodyCollection(res.Projected)
+			body = NewResulttypecollectionResponseCollection(res.Projected)
 		case "tiny":
-			body = NewResulttypecollectionResponseBodyTinyCollection(res.Projected)
+			body = NewResulttypecollectionResponseTinyCollection(res.Projected)
 		}
 		w.WriteHeader(http.StatusOK)
 		return enc.Encode(body)
@@ -675,7 +675,7 @@ func EncodeMethodBodyCollectionExplicitViewResponse(encoder func(context.Context
 	return func(ctx context.Context, w http.ResponseWriter, v interface{}) error {
 		res := v.(servicebodycollectionexplicitviewviews.ResulttypecollectionCollection)
 		enc := encoder(ctx, w)
-		body := NewResulttypecollectionResponseBodyTinyCollection(res.Projected)
+		body := NewResulttypecollectionResponseTinyCollection(res.Projected)
 		w.WriteHeader(http.StatusOK)
 		return enc.Encode(body)
 	}
@@ -823,7 +823,7 @@ func EncodeMethodBodyPrimitiveArrayUserResponse(encoder func(context.Context, ht
 	return func(ctx context.Context, w http.ResponseWriter, v interface{}) error {
 		res := v.([]*servicebodyprimitivearrayuser.ResultType)
 		enc := encoder(ctx, w)
-		body := NewResultTypeResponseBody(res)
+		body := NewResultTypeResponse(res)
 		w.WriteHeader(http.StatusNoContent)
 		return enc.Encode(body)
 	}

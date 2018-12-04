@@ -766,6 +766,7 @@ func (d ServicesData) analyze(hs *expr.HTTPServiceExpr) *ServiceData {
 			}
 			data := map[string]interface{}{
 				"PayloadRef":   payloadRef,
+				"HasFields":    expr.IsObject(a.MethodExpr.Payload.Type),
 				"ServiceName":  svc.Name,
 				"EndpointName": ep.Name,
 				"Args":         args,
@@ -1009,10 +1010,6 @@ func buildPayloadData(e *expr.HTTPEndpointExpr, sd *ServiceData) *PayloadData {
 			name, svc.Name, e.Name())
 		isObject = expr.IsObject(payload.Type)
 		if body != expr.Empty {
-			ref := "body"
-			if expr.IsObject(body) {
-				ref = "&body"
-			}
 			var (
 				svcode string
 				cvcode string
@@ -1025,7 +1022,7 @@ func buildPayloadData(e *expr.HTTPEndpointExpr, sd *ServiceData) *PayloadData {
 			}
 			serverArgs = []*InitArgData{{
 				Name:     "body",
-				Ref:      ref,
+				Ref:      svc.Scope.GoVar("body", body),
 				TypeName: svc.Scope.GoTypeName(&expr.AttributeExpr{Type: body}),
 				TypeRef:  svc.Scope.GoTypeRef(&expr.AttributeExpr{Type: body}),
 				Required: true,
@@ -1034,7 +1031,7 @@ func buildPayloadData(e *expr.HTTPEndpointExpr, sd *ServiceData) *PayloadData {
 			}}
 			clientArgs = []*InitArgData{{
 				Name:     "body",
-				Ref:      ref,
+				Ref:      svc.Scope.GoVar("body", body),
 				TypeName: svc.Scope.GoTypeName(&expr.AttributeExpr{Type: body}),
 				TypeRef:  svc.Scope.GoTypeRef(&expr.AttributeExpr{Type: body}),
 				Required: true,
@@ -1852,7 +1849,7 @@ func buildRequestBodyType(sd *ServiceData, e *expr.HTTPEndpointExpr, body, att *
 				}
 			}
 		} else {
-			varname = svc.Scope.GoTypeRef(body)
+			varname = svc.Scope.GoTypeRef(&expr.AttributeExpr{Type: body.Type})
 			validateRef = codegen.RecursiveValidationCode(body, true, svr, !svr, "body")
 			desc = body.Description
 		}
@@ -2422,9 +2419,9 @@ const (
 		}
 	{{- range .Args }}
 		{{- if .Pointer }}
-		if p.{{ .FieldName }} != nil {
+		if p{{ if $.HasFields }}.{{ .FieldName }}{{ end }} != nil {
 		{{- end }}
-			{{ .Name }} = {{ if .Pointer }}*{{ end }}p.{{ .FieldName }}
+			{{ .Name }} = {{ if .Pointer }}*{{ end }}p{{ if $.HasFields }}.{{ .FieldName }}{{ end }}
 		{{- if .Pointer }}
 		}
 		{{- end }}

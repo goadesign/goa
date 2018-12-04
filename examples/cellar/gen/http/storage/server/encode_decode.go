@@ -26,7 +26,7 @@ func EncodeListResponse(encoder func(context.Context, http.ResponseWriter) goaht
 	return func(ctx context.Context, w http.ResponseWriter, v interface{}) error {
 		res := v.(storageviews.StoredBottleCollection)
 		enc := encoder(ctx, w)
-		body := NewStoredBottleResponseBodyTinyCollection(res.Projected)
+		body := NewStoredBottleResponseTinyCollection(res.Projected)
 		w.WriteHeader(http.StatusOK)
 		return enc.Encode(body)
 	}
@@ -303,6 +303,16 @@ func NewStorageMultiUpdateDecoder(mux goahttp.Muxer, storageMultiUpdateDecoderFn
 			return nil
 		})
 	}
+}
+
+// marshalWineryViewToWineryResponseTiny builds a value of type
+// *WineryResponseTiny from a value of type *storageviews.WineryView.
+func marshalWineryViewToWineryResponseTiny(v *storageviews.WineryView) *WineryResponseTiny {
+	res := &WineryResponseTiny{
+		Name: *v.Name,
+	}
+
+	return res
 }
 
 // marshalWineryViewToWineryResponseBodyTiny builds a value of type

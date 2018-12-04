@@ -156,7 +156,7 @@ func buildHTTPResponseBody(name string, attr *AttributeExpr, resp *HTTPResponseE
 	if !IsObject(attr.Type) {
 		if resp.Headers.IsEmpty() {
 			attr = DupAtt(attr)
-			renameType(attr, name, suffix)
+			renameType(attr, name, "Response") // Do not use ResponseBody as it could clash with name of element
 			return attr
 		}
 		return &AttributeExpr{Type: Empty}

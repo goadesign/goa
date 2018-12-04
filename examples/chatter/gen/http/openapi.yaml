@@ -162,7 +162,7 @@ paths:
         "101":
           description: Switching Protocols response.
           schema:
-            $ref: '#/definitions/ChatterChatSummaryResponseBodyCollection'
+            $ref: '#/definitions/ChatterChatSummaryResponseCollection'
         "401":
           description: Unauthorized response.
           schema:
@@ -177,7 +177,7 @@ paths:
       security:
       - jwt: []
 definitions:
-  ChatSummaryResponseBody:
+  ChatSummaryResponse:
     title: 'Mediatype identifier: application/vnd.goa.summary; view=default'
     type: object
     properties:
@@ -195,19 +195,19 @@ definitions:
         description: Time at which the message was sent
         example: "1983-06-06T03:57:42Z"
         format: date-time
-    description: ChatSummaryResponseBody result type (default view)
+    description: ChatSummaryResponse result type (default view)
     example:
       length: 9188469515160886076
       message: Quibusdam voluptate nulla autem quisquam dolorum.
       sent_at: "2009-06-14T08:11:36Z"
     required:
     - message
-  ChatterChatSummaryResponseBodyCollection:
+  ChatterChatSummaryResponseCollection:
     title: 'Mediatype identifier: application/vnd.goa.summary; type=collection; view=default'
     type: array
     items:
-      $ref: '#/definitions/ChatSummaryResponseBody'
-    description: SummaryResponseBody is the result type for an array of ChatSummaryResponseBody
+      $ref: '#/definitions/ChatSummaryResponse'
+    description: SummaryResponseBody is the result type for an array of ChatSummaryResponse
       (default view)
     example:
     - length: 3915772424247758741

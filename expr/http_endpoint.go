@@ -431,10 +431,17 @@ func (e *HTTPEndpointExpr) Validate() error {
 				verr.Add(e, "HTTP endpoint defines MultipartRequest and body. At most one of these must be defined.")
 			}
 			if bObj := AsObject(e.Body.Type); bObj != nil {
-				for _, nat := range *bObj {
-					name := strings.Split(nat.Name, ":")[0]
-					if e.MethodExpr.Payload.Find(name) == nil {
-						verr.Add(e, "Body %q is not found in Payload.", nat.Name)
+				var props []string
+				props, ok := e.Body.Meta["origin:attribute"]
+				if !ok {
+					for _, nat := range *bObj {
+						name := strings.Split(nat.Name, ":")[0]
+						props = append(props, name)
+					}
+				}
+				for _, prop := range props {
+					if e.MethodExpr.Payload.Find(prop) == nil {
+						verr.Add(e, "Body %q is not found in Payload.", prop)
 					}
 				}
 			}
@@ -507,6 +514,11 @@ func (e *HTTPEndpointExpr) Finalize() {
 	}
 	init(e.Params)
 	init(e.Headers)
+
+	if e.Body != nil {
+		e.Body.Finalize()
+	}
+
 	if e.Body != nil && e.Body.Type != Empty && IsObject(e.Body.Type) {
 		ma := NewMappedAttributeExpr(e.Body)
 		init(ma)

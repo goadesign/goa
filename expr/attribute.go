@@ -219,8 +219,11 @@ func (a *AttributeExpr) Validate(ctx string, parent eval.Expression) *eval.Valid
 	return verr
 }
 
-// Finalize merges base type attributes.
+// Finalize merges base type attributes and finalize the Type attribute.
 func (a *AttributeExpr) Finalize() {
+	if ut, ok := a.Type.(UserType); ok {
+		ut.Attribute().Finalize()
+	}
 	for _, ref := range a.References {
 		ru, ok := ref.(UserType)
 		if !ok {
@@ -268,7 +271,7 @@ func (a *AttributeExpr) Merge(other *AttributeExpr) {
 }
 
 // Inherit merges the properties of existing target type attributes with the
-// argument's.  The algorithm is recursive so that child attributes are also
+// argument's. The algorithm is recursive so that child attributes are also
 // merged.
 func (a *AttributeExpr) Inherit(parent *AttributeExpr) {
 	if !a.shouldInherit(parent) {
@@ -279,7 +282,7 @@ func (a *AttributeExpr) Inherit(parent *AttributeExpr) {
 		a.Type = &Object{}
 	}
 	a.inheritValidations(parent)
-	a.inheritRecursive(parent)
+	a.inheritRecursive(parent, make(map[*AttributeExpr]struct{}))
 }
 
 // AllRequired returns the list of all required fields from the underlying
@@ -497,7 +500,7 @@ func (a *AttributeExpr) validateEnumDefault(ctx string, parent eval.Expression) 
 	return verr
 }
 
-func (a *AttributeExpr) inheritRecursive(parent *AttributeExpr) {
+func (a *AttributeExpr) inheritRecursive(parent *AttributeExpr, seen map[*AttributeExpr]struct{}) {
 	if !a.shouldInherit(parent) {
 		return
 	}
@@ -514,8 +517,15 @@ func (a *AttributeExpr) inheritRecursive(parent *AttributeExpr) {
 			if att.Type == nil {
 				att.Type = patt.Type
 			} else if att.shouldInherit(patt) {
+				if _, ok := seen[att]; ok {
+					continue
+				}
+				seen[att] = struct{}{}
 				for _, nat := range *AsObject(att.Type) {
-					nat.Attribute.Inherit(AsObject(patt.Type).Attribute(nat.Name))
+					child := nat.Attribute
+					parent := AsObject(patt.Type).Attribute(nat.Name)
+					child.inheritValidations(parent)
+					child.inheritRecursive(parent, seen)
 				}
 			}
 		}

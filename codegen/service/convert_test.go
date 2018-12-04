@@ -50,7 +50,7 @@ func TestCommonPath(t *testing.T) {
 
 	for name, tc := range cases {
 		t.Run(name, func(t *testing.T) {
-			cp := commonPath(os.PathSeparator, tc.Paths...)
+			cp := commonPath('/', tc.Paths...)
 			if cp != tc.ExpectedCommonPath {
 				t.Errorf("got %s expected %s", cp, tc.ExpectedCommonPath)
 			}

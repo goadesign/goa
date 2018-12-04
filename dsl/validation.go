@@ -294,7 +294,7 @@ func Required(names ...string) {
 		return
 	}
 
-	if at.Type != nil && at.Type.Kind() != expr.ObjectKind {
+	if at.Type != nil && !expr.IsObject(at.Type) {
 		incompatibleAttributeType("required", at.Type.Name(), "an object")
 	} else {
 		if at.Validation == nil {
