@@ -71,3 +71,13 @@ func (h *HTTPExpr) ServiceFor(s *ServiceExpr) *HTTPServiceExpr {
 func (h *HTTPExpr) EvalName() string {
 	return "API HTTP"
 }
+
+// Finalize initializes Consumes and Produces with defaults if not set.
+func (h *HTTPExpr) Finalize() {
+	if len(h.Consumes) == 0 {
+		h.Consumes = []string{"application/json", "application/xml", "application/gob"}
+	}
+	if len(h.Produces) == 0 {
+		h.Produces = []string{"application/json", "application/xml", "application/gob"}
+	}
+}

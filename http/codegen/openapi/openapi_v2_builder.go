@@ -392,7 +392,7 @@ func paramFor(at *expr.AttributeExpr, name, in string, required bool) *Parameter
 		Default:     toStringMap(at.DefaultValue),
 		Description: at.Description,
 		Required:    required,
-		Type:        codegen.Goify(at.Type.Name(), true),
+		Type:        at.Type.Name(),
 	}
 	if expr.IsArray(at.Type) {
 		p.Items = itemsFromExpr(expr.AsArray(at.Type).ElemType)

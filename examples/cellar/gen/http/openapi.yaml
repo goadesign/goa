@@ -4,6 +4,14 @@ info:
   description: HTTP service for managing your wine cellar
   version: ""
 host: localhost:8000
+consumes:
+- application/json
+- application/xml
+- application/gob
+produces:
+- application/json
+- application/xml
+- application/gob
 paths:
   /sommelier:
     post:
@@ -12,7 +20,7 @@ paths:
       summary: pick sommelier
       operationId: sommelier#pick
       parameters:
-      - name: pickRequestBody
+      - name: PickRequestBody
         in: body
         required: true
         schema:
@@ -25,11 +33,11 @@ paths:
         "400":
           description: Bad Request response.
           schema:
-            $ref: '#/definitions/PickNoCriteriaResponseBody'
+            $ref: '#/definitions/pick_no_criteria_response_body'
         "404":
           description: Not Found response.
           schema:
-            $ref: '#/definitions/PickNoMatchResponseBody'
+            $ref: '#/definitions/pick_no_match_response_body'
       schemes:
       - http
   /storage:
@@ -53,7 +61,7 @@ paths:
       description: Add new bottle and return its ID.
       operationId: storage#add
       parameters:
-      - name: addRequestBody
+      - name: AddRequestBody
         in: body
         required: true
         schema:
@@ -81,7 +89,7 @@ paths:
         in: query
         description: View to render
         required: false
-        type: String
+        type: string
         enum:
         - default
         - tiny
@@ -89,16 +97,16 @@ paths:
         in: path
         description: ID of bottle to show
         required: true
-        type: String
+        type: string
       responses:
         "200":
           description: OK response.
           schema:
-            $ref: '#/definitions/StorageshowResponseBody'
+            $ref: '#/definitions/StorageShowResponseBody'
         "404":
           description: Not Found response.
           schema:
-            $ref: '#/definitions/ShowNotFoundResponseBody'
+            $ref: '#/definitions/show_not_found_response_body'
             required:
             - message
             - id
@@ -115,7 +123,7 @@ paths:
         in: path
         description: ID of bottle to remove
         required: true
-        type: String
+        type: string
       responses:
         "204":
           description: No Content response.
@@ -163,11 +171,11 @@ paths:
         in: query
         description: IDs of the bottles to be updated
         required: true
-        type: Array
+        type: array
         items:
           type: string
         collectionFormat: multi
-      - name: multi_updateRequestBody
+      - name: multi_update_request_body
         in: body
         required: true
         schema:
@@ -311,35 +319,6 @@ definitions:
       varietal: Syrah
     required:
     - varietal
-  PickNoCriteriaResponseBody:
-    title: PickNoCriteriaResponseBody
-    type: string
-    description: Missing criteria
-    example: Exercitationem ducimus expedita in quam eos distinctio.
-  PickNoMatchResponseBody:
-    title: PickNoMatchResponseBody
-    type: string
-    description: No bottle matched given criteria
-    example: Ut molestiae possimus.
-  ShowNotFoundResponseBody:
-    title: ShowNotFoundResponseBody
-    type: object
-    properties:
-      id:
-        type: string
-        description: ID of missing bottle
-        example: Nulla architecto magni eos tempora sapiente.
-      message:
-        type: string
-        description: Message of error
-        example: bottle 1 not found
-    description: Bottle not found
-    example:
-      id: Est beatae eveniet et tempora nobis enim.
-      message: bottle 1 not found
-    required:
-    - message
-    - id
   SommelierPickRequestBody:
     title: SommelierPickRequestBody
     type: object
@@ -375,7 +354,7 @@ definitions:
     type: array
     items:
       $ref: '#/definitions/StoredBottleResponseBody'
-    description: pickResponseBody is the result type for an array of StoredBottleResponseBody
+    description: PickResponseBody is the result type for an array of StoredBottleResponseBody
       (default view)
     example:
     - composition:
@@ -575,32 +554,7 @@ definitions:
           url: http://www.longoriawine.com/
     required:
     - bottles
-  StorageStoredBottleResponseBodyTinyCollection:
-    title: 'Mediatype identifier: application/vnd.cellar.stored-bottle; type=collection;
-      view=tiny'
-    type: array
-    items:
-      $ref: '#/definitions/StoredBottleResponseBodyTiny'
-    description: StorageStoredBottleResponseBodyTinyCollection is the result type
-      for an array of StoredBottleResponseBodyTiny (default view)
-    example:
-    - id: 123abc
-      name: Blue's Cuvee
-      winery:
-        name: Longoria
-    - id: 123abc
-      name: Blue's Cuvee
-      winery:
-        name: Longoria
-    - id: 123abc
-      name: Blue's Cuvee
-      winery:
-        name: Longoria
-    - id: 123abc
-      name: Blue's Cuvee
-      winery:
-        name: Longoria
-  StorageshowResponseBody:
+  StorageShowResponseBody:
     title: 'Mediatype identifier: application/vnd.cellar.stored-bottle; view=default'
     type: object
     properties:
@@ -647,7 +601,7 @@ definitions:
         maximum: 2020
       winery:
         $ref: '#/definitions/WineryResponseBodyTiny'
-    description: showResponseBody result type (default view)
+    description: ShowResponseBody result type (default view)
     example:
       composition:
       - percentage: 41
@@ -671,6 +625,31 @@ definitions:
     - name
     - winery
     - vintage
+  StorageStoredBottleResponseBodyTinyCollection:
+    title: 'Mediatype identifier: application/vnd.cellar.stored-bottle; type=collection;
+      view=tiny'
+    type: array
+    items:
+      $ref: '#/definitions/StoredBottleResponseBodyTiny'
+    description: StorageStoredBottleResponseBodyTinyCollection is the result type
+      for an array of StoredBottleResponseBodyTiny (default view)
+    example:
+    - id: 123abc
+      name: Blue's Cuvee
+      winery:
+        name: Longoria
+    - id: 123abc
+      name: Blue's Cuvee
+      winery:
+        name: Longoria
+    - id: 123abc
+      name: Blue's Cuvee
+      winery:
+        name: Longoria
+    - id: 123abc
+      name: Blue's Cuvee
+      winery:
+        name: Longoria
   StoredBottleResponseBody:
     title: 'Mediatype identifier: application/vnd.cellar.stored-bottle; view=default'
     type: object
@@ -813,3 +792,32 @@ definitions:
       name: Longoria
     required:
     - name
+  pick_no_criteria_response_body:
+    title: pick_no_criteria_response_body
+    type: string
+    description: Missing criteria
+    example: Exercitationem ducimus expedita in quam eos distinctio.
+  pick_no_match_response_body:
+    title: pick_no_match_response_body
+    type: string
+    description: No bottle matched given criteria
+    example: Ut molestiae possimus.
+  show_not_found_response_body:
+    title: show_not_found_response_body
+    type: object
+    properties:
+      id:
+        type: string
+        description: ID of missing bottle
+        example: Nulla architecto magni eos tempora sapiente.
+      message:
+        type: string
+        description: Message of error
+        example: bottle 1 not found
+    description: Bottle not found
+    example:
+      id: Est beatae eveniet et tempora nobis enim.
+      message: bottle 1 not found
+    required:
+    - message
+    - id

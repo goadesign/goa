@@ -3,6 +3,14 @@ info:
   title: Chatter service describing the streaming features of goa v2.
   version: ""
 host: localhost:80
+consumes:
+- application/json
+- application/xml
+- application/gob
+produces:
+- application/json
+- application/xml
+- application/gob
 paths:
   /echoer:
     get:
@@ -20,7 +28,7 @@ paths:
         in: header
         description: JWT used for authentication
         required: true
-        type: String
+        type: string
       responses:
         "101":
           description: Switching Protocols response.
@@ -29,11 +37,11 @@ paths:
         "401":
           description: Unauthorized response.
           schema:
-            $ref: '#/definitions/EchoerUnauthorizedResponseBody'
+            $ref: '#/definitions/echoer_unauthorized_response_body'
         "403":
           description: Forbidden response.
           schema:
-            $ref: '#/definitions/EchoerInvalidScopesResponseBody'
+            $ref: '#/definitions/echoer_invalid-scopes_response_body'
       schemes:
       - grpc
       - ws
@@ -55,25 +63,25 @@ paths:
         in: query
         description: View to use to render the result
         required: false
-        type: String
+        type: string
       - name: Authorization
         in: header
         description: JWT used for authentication
         required: true
-        type: String
+        type: string
       responses:
         "101":
           description: Switching Protocols response.
           schema:
-            $ref: '#/definitions/ChatterhistoryResponseBody'
+            $ref: '#/definitions/ChatterHistoryResponseBody'
         "401":
           description: Unauthorized response.
           schema:
-            $ref: '#/definitions/HistoryUnauthorizedResponseBody'
+            $ref: '#/definitions/history_unauthorized_response_body'
         "403":
           description: Forbidden response.
           schema:
-            $ref: '#/definitions/HistoryInvalidScopesResponseBody'
+            $ref: '#/definitions/history_invalid-scopes_response_body'
       schemes:
       - grpc
       - ws
@@ -95,18 +103,18 @@ paths:
         in: header
         description: JWT used for authentication
         required: true
-        type: String
+        type: string
       responses:
         "101":
           description: Switching Protocols response.
         "401":
           description: Unauthorized response.
           schema:
-            $ref: '#/definitions/ListenerUnauthorizedResponseBody'
+            $ref: '#/definitions/listener_unauthorized_response_body'
         "403":
           description: Forbidden response.
           schema:
-            $ref: '#/definitions/ListenerInvalidScopesResponseBody'
+            $ref: '#/definitions/listener_invalid-scopes_response_body'
       schemes:
       - grpc
       - ws
@@ -127,7 +135,7 @@ paths:
         "401":
           description: Unauthorized response.
           schema:
-            $ref: '#/definitions/LoginUnauthorizedResponseBody'
+            $ref: '#/definitions/login_unauthorized_response_body'
       schemes:
       - grpc
       - http
@@ -149,7 +157,7 @@ paths:
         in: header
         description: JWT used for authentication
         required: true
-        type: String
+        type: string
       responses:
         "101":
           description: Switching Protocols response.
@@ -158,11 +166,11 @@ paths:
         "401":
           description: Unauthorized response.
           schema:
-            $ref: '#/definitions/SummaryUnauthorizedResponseBody'
+            $ref: '#/definitions/summary_unauthorized_response_body'
         "403":
           description: Forbidden response.
           schema:
-            $ref: '#/definitions/SummaryInvalidScopesResponseBody'
+            $ref: '#/definitions/summary_invalid-scopes_response_body'
       schemes:
       - grpc
       - ws
@@ -199,7 +207,7 @@ definitions:
     type: array
     items:
       $ref: '#/definitions/ChatSummaryResponseBody'
-    description: summaryResponseBody is the result type for an array of ChatSummaryResponseBody
+    description: SummaryResponseBody is the result type for an array of ChatSummaryResponseBody
       (default view)
     example:
     - length: 3915772424247758741
@@ -211,7 +219,7 @@ definitions:
     - length: 3915772424247758741
       message: Sequi tenetur.
       sent_at: "2009-01-25T10:15:11Z"
-  ChatterhistoryResponseBody:
+  ChatterHistoryResponseBody:
     title: 'Mediatype identifier: application/vnd.goa.summary; view=default'
     type: object
     properties:
@@ -229,48 +237,48 @@ definitions:
         description: Time at which the message was sent
         example: "1978-02-25T14:12:07Z"
         format: date-time
-    description: historyResponseBody result type (default view)
+    description: HistoryResponseBody result type (default view)
     example:
       length: 8447087998172944251
       message: A et soluta.
       sent_at: "1992-03-13T17:19:43Z"
     required:
     - message
-  EchoerInvalidScopesResponseBody:
-    title: EchoerInvalidScopesResponseBody
+  echoer_invalid-scopes_response_body:
+    title: echoer_invalid-scopes_response_body
     type: string
     example: Laudantium est consectetur ut.
-  EchoerUnauthorizedResponseBody:
-    title: EchoerUnauthorizedResponseBody
+  echoer_unauthorized_response_body:
+    title: echoer_unauthorized_response_body
     type: string
     example: Nihil veniam nihil.
-  HistoryInvalidScopesResponseBody:
-    title: HistoryInvalidScopesResponseBody
+  history_invalid-scopes_response_body:
+    title: history_invalid-scopes_response_body
     type: string
     example: Tenetur non fugiat.
-  HistoryUnauthorizedResponseBody:
-    title: HistoryUnauthorizedResponseBody
+  history_unauthorized_response_body:
+    title: history_unauthorized_response_body
     type: string
     example: Ut fuga dolores nisi qui est accusamus.
-  ListenerInvalidScopesResponseBody:
-    title: ListenerInvalidScopesResponseBody
+  listener_invalid-scopes_response_body:
+    title: listener_invalid-scopes_response_body
     type: string
     example: Aut est at molestiae.
-  ListenerUnauthorizedResponseBody:
-    title: ListenerUnauthorizedResponseBody
+  listener_unauthorized_response_body:
+    title: listener_unauthorized_response_body
     type: string
     example: Qui voluptas accusantium est sequi vel nihil.
-  LoginUnauthorizedResponseBody:
-    title: LoginUnauthorizedResponseBody
+  login_unauthorized_response_body:
+    title: login_unauthorized_response_body
     type: string
     description: Credentials are invalid
     example: Maiores numquam voluptatibus voluptatem.
-  SummaryInvalidScopesResponseBody:
-    title: SummaryInvalidScopesResponseBody
+  summary_invalid-scopes_response_body:
+    title: summary_invalid-scopes_response_body
     type: string
     example: Quibusdam consequatur suscipit non fugit et.
-  SummaryUnauthorizedResponseBody:
-    title: SummaryUnauthorizedResponseBody
+  summary_unauthorized_response_body:
+    title: summary_unauthorized_response_body
     type: string
     example: Consequatur sint eius magni quod.
 securityDefinitions:

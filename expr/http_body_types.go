@@ -2,6 +2,8 @@ package expr
 
 import (
 	"net/http"
+	"strings"
+	"unicode"
 )
 
 // httpRequestBody returns an attribute describing the HTTP request body of the
@@ -19,7 +21,7 @@ func httpRequestBody(a *HTTPEndpointExpr) *AttributeExpr {
 		payload   = a.MethodExpr.Payload
 		headers   = a.Headers
 		params    = a.Params
-		name      = a.Name() + suffix
+		name      = concat(a.Name(), "Request", "Body")
 		userField string
 		passField string
 	)
@@ -102,7 +104,7 @@ func httpStreamingBody(e *HTTPEndpointExpr) *AttributeExpr {
 	const suffix = "StreamingBody"
 	ut := &UserTypeExpr{
 		AttributeExpr: DupAtt(att),
-		TypeName:      e.Name() + suffix,
+		TypeName:      concat(e.Name(), "Streaming", "Body"),
 	}
 	appendSuffix(ut.Attribute().Type, suffix)
 
@@ -139,7 +141,7 @@ func httpErrorResponseBody(a *HTTPEndpointExpr, v *HTTPErrorExpr) *AttributeExpr
 
 func buildHTTPResponseBody(name string, attr *AttributeExpr, resp *HTTPResponseExpr) *AttributeExpr {
 	const suffix = "ResponseBody"
-	name += suffix
+	name = concat(name, "Response", "Body")
 	if attr == nil || attr.Type == Empty {
 		return &AttributeExpr{Type: Empty}
 	}
@@ -199,6 +201,61 @@ func buildHTTPResponseBody(name string, attr *AttributeExpr, resp *HTTPResponseE
 		v.Parent = nmt
 	}
 	return &AttributeExpr{Type: nmt, Validation: userType.Validation}
+}
+
+// buildBodyTypeName concatenates the given strings to generate the
+// endpoint's body type name.
+//
+// The concatenation algorithm is:
+// 1) If the first string contains underscores and starts with a lower case,
+// the rest of the strings are converted to lower case and concatenated with
+// underscores.
+// e.g. concat("my_endpoint", "Request", "BODY") => "my_endpoint_request_body"
+// 2) If the first string contains underscores and starts with a upper case,
+// the rest of the strings are converted to title case and concatenated with
+// underscores.
+// e.g. concat("My_endpoint", "response", "body") => "My_endpoint_Response_Body"
+// 3) If the first string is a single word or camelcased, the rest of the
+// strings are concatenated to form a valid upper camelcase.
+// e.g. concat("myEndpoint", "streaming", "Body") => "MyEndpointStreamingBody"
+//
+func concat(strs ...string) string {
+	if len(strs) == 1 {
+		return strs[0]
+	}
+
+	// hasUnderscore returns true if the string has at least one underscore.
+	hasUnderscore := func(str string) bool {
+		for i := 0; i < len(str); i++ {
+			if rune(str[i]) == '_' {
+				return true
+			}
+		}
+		return false
+	}
+
+	// isLower returns true if the first letter in the screen is lower-case.
+	isLower := func(str string) bool {
+		return unicode.IsLower(rune(str[0]))
+	}
+
+	name := strs[0]
+	switch {
+	case isLower(name) && hasUnderscore(name):
+		for i := 1; i < len(strs); i++ {
+			name += "_" + strings.ToLower(strs[i])
+		}
+	case !isLower(name) && hasUnderscore(name):
+		for i := 1; i < len(strs); i++ {
+			name += "_" + strings.Title(strs[i])
+		}
+	default:
+		name = strings.Title(name)
+		for i := 1; i < len(strs); i++ {
+			name += strings.Title(strs[i])
+		}
+	}
+	return name
 }
 
 func renameType(att *AttributeExpr, name, suffix string) {

@@ -125,6 +125,7 @@ func (r *RootExpr) WalkSets(walk eval.SetWalker) {
 			httpsvrs = append(httpsvrs, s)
 		}
 	}
+	walk(eval.ExpressionSet{r.API.HTTP})
 	walk(httpsvcs)
 	walk(httpepts)
 	walk(httpsvrs)

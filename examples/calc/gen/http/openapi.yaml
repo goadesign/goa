@@ -4,6 +4,14 @@ info:
   description: HTTP service for adding numbers, a goa teaser
   version: ""
 host: localhost:8000
+consumes:
+- application/json
+- application/xml
+- application/gob
+produces:
+- application/json
+- application/xml
+- application/gob
 paths:
   /add/{a}/{b}:
     get:

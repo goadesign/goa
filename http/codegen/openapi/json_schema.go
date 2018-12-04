@@ -248,7 +248,10 @@ func TypeRef(api *expr.APIExpr, ut *expr.UserTypeExpr) string {
 // TypeRefWithPrefix produces the JSON reference to the type definition and adds the provided prefix
 // to the type name
 func TypeRefWithPrefix(api *expr.APIExpr, ut *expr.UserTypeExpr, prefix string) string {
-	typeName := codegen.Goify(prefix, true) + codegen.Goify(ut.TypeName, true)
+	typeName := ut.TypeName
+	if prefix != "" {
+		typeName = codegen.Goify(prefix, true) + codegen.Goify(ut.TypeName, true)
+	}
 	if _, ok := Definitions[typeName]; !ok {
 		GenerateTypeDefinitionWithName(api, ut, typeName)
 	}
