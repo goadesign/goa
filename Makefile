@@ -63,9 +63,10 @@ test-plugins:
 	@if [ -z $(GOA_BRANCH) ]; then\
 		GOA_BRANCH=$$(git rev-parse --abbrev-ref HEAD); \
 	fi
-	@go get -d -v goa.design/plugins/... && \
-	cd $(GOPATH)/src/goa.design/plugins && \
-	git checkout $(GOA_BRANCH) || echo "Using master branch" && \
+	@if [ ! -d "$(GOPATH)/src/goa.design/plugins" ]; then\
+		git clone https://github.com/goadesign/plugins.git $(GOPATH)/src/goa.design/plugins; \
+	fi
+	@cd $(GOPATH)/src/goa.design/plugins && git checkout $(GOA_BRANCH) || echo "Using master branch in plugins repo" && \
 	make -k || (echo "Tests in plugin repo (https://github.com/goadesign/plugins) failed" \
                   "due to changes in goa repo (branch: $(GOA_BRANCH))!" \
                   "Create a branch with name '$(GOA_BRANCH)' in the plugin repo and fix these errors." && exit 1)
