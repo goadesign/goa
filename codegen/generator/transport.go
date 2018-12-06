@@ -5,8 +5,8 @@ import (
 
 	"goa.design/goa/codegen"
 	"goa.design/goa/eval"
+	"goa.design/goa/expr"
 	httpcodegen "goa.design/goa/http/codegen"
-	httpdesign "goa.design/goa/http/design"
 )
 
 // Transport iterates through the roots and returns the files needed to render
@@ -15,15 +15,18 @@ import (
 func Transport(genpkg string, roots []eval.Root) ([]*codegen.File, error) {
 	var files []*codegen.File
 	for _, root := range roots {
-		if r, ok := root.(*httpdesign.RootExpr); ok {
-			files = httpcodegen.ServerFiles(genpkg, r)
-			files = append(files, httpcodegen.ClientFiles(genpkg, r)...)
-			files = append(files, httpcodegen.ServerTypeFiles(genpkg, r)...)
-			files = append(files, httpcodegen.ClientTypeFiles(genpkg, r)...)
-			files = append(files, httpcodegen.PathFiles(r)...)
-			files = append(files, httpcodegen.ClientCLIFiles(genpkg, r)...)
-			break
+		r, ok := root.(*expr.RootExpr)
+		if !ok {
+			continue // could be a plugin root expression
 		}
+
+		// HTTP
+		files = append(files, httpcodegen.ServerFiles(genpkg, r)...)
+		files = append(files, httpcodegen.ClientFiles(genpkg, r)...)
+		files = append(files, httpcodegen.ServerTypeFiles(genpkg, r)...)
+		files = append(files, httpcodegen.ClientTypeFiles(genpkg, r)...)
+		files = append(files, httpcodegen.PathFiles(r)...)
+		files = append(files, httpcodegen.ClientCLIFiles(genpkg, r)...)
 	}
 	if len(files) == 0 {
 		return nil, fmt.Errorf("transport: no HTTP design found")

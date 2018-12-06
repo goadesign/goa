@@ -5,15 +5,12 @@
 # Targets:
 # - "depend" retrieves the Go packages needed to run the linter and tests
 # - "lint" runs the linter and checks the code format using goimports
-# - "aliases" builds the DSL aliases files
 # - "test" runs the tests
 #
 # Meta targets:
 # - "all" is the default target, it runs all the targets in the order above.
 #
-DIRS=$(shell go list -f {{.Dir}} goa.design/goa/design/...)
-ALIASER_DESTS=\
-	http
+DIRS=$(shell go list -f {{.Dir}} goa.design/goa/expr/...)
 
 # Only list test and build dependencies
 # Standard dependencies are installed via go get
@@ -22,7 +19,7 @@ DEPEND=\
 	golang.org/x/lint/golint \
 	golang.org/x/tools/cmd/goimports
 
-all: lint aliases gen test
+all: lint gen test
 
 travis: depend all
 
@@ -39,13 +36,6 @@ lint:
 	@if [ "`golint ./... | grep -vf .golint_exclude | tee /dev/stderr`" ]; then \
 		echo "^ - Lint errors!" && echo && exit 1; \
 	fi
-
-aliases:
-	@cd cmd/aliaser && \
-	go build && \
-	for d in $(ALIASER_DESTS) ; do \
-		./aliaser -src goa.design/goa/dsl -dest goa.design/goa/$$d/dsl > /dev/null; \
-	done
 
 gen:
 	@cd cmd/goa && \
@@ -69,22 +59,14 @@ gen:
 test:
 	go test ./...
 
-test-aliaser: aliases
-	@for d in $(ALIASER_DESTS) ; do \
-		if [ "`git diff $$d/*/aliases.go | tee /dev/stderr`" ]; then \
-			echo "^ - Aliaser tool output not identical!" && echo && exit 1; \
-		else \
-			echo "Aliaser tool output identical"; \
-		fi \
-	done
-
 test-plugins:
 	@if [ -z $(GOA_BRANCH) ]; then\
 		GOA_BRANCH=$$(git rev-parse --abbrev-ref HEAD); \
 	fi
-	@go get -d -v goa.design/plugins/... && \
-	cd $(GOPATH)/src/goa.design/plugins && \
-	git checkout $(GOA_BRANCH) || echo "Using master branch" && \
+	@if [ ! -d "$(GOPATH)/src/goa.design/plugins" ]; then\
+		git clone https://github.com/goadesign/plugins.git $(GOPATH)/src/goa.design/plugins; \
+	fi
+	@cd $(GOPATH)/src/goa.design/plugins && git checkout $(GOA_BRANCH) || echo "Using master branch in plugins repo" && \
 	make -k || (echo "Tests in plugin repo (https://github.com/goadesign/plugins) failed" \
                   "due to changes in goa repo (branch: $(GOA_BRANCH))!" \
                   "Create a branch with name '$(GOA_BRANCH)' in the plugin repo and fix these errors." && exit 1)

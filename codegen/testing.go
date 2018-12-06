@@ -9,41 +9,41 @@ import (
 	"strings"
 	"testing"
 
-	"goa.design/goa/design"
 	"goa.design/goa/eval"
+	"goa.design/goa/expr"
 
 	"github.com/sergi/go-diff/diffmatchpatch"
 )
 
 // RunDSL returns the DSL root resulting from running the given DSL.
-func RunDSL(t *testing.T, dsl func()) *design.RootExpr {
+func RunDSL(t *testing.T, dsl func()) *expr.RootExpr {
 	eval.Reset()
-	design.Root = new(design.RootExpr)
-	design.Root.GeneratedTypes = &design.GeneratedRoot{}
-	eval.Register(design.Root)
-	eval.Register(design.Root.GeneratedTypes)
-	design.Root.API = &design.APIExpr{Name: "test api"}
-	design.Root.API.Servers = []*design.ServerExpr{design.Root.API.DefaultServer()}
+	expr.Root = new(expr.RootExpr)
+	expr.Root.GeneratedTypes = &expr.GeneratedRoot{}
+	eval.Register(expr.Root)
+	eval.Register(expr.Root.GeneratedTypes)
+	expr.Root.API = expr.NewAPIExpr("test api", func() {})
+	expr.Root.API.Servers = []*expr.ServerExpr{expr.Root.API.DefaultServer()}
 	if !eval.Execute(dsl, nil) {
 		t.Fatal(eval.Context.Error())
 	}
 	if err := eval.RunDSL(); err != nil {
 		t.Fatal(err)
 	}
-	return design.Root
+	return expr.Root
 }
 
 // RunDSLWithFunc returns the DSL root resulting from running the given DSL.
 // It executes a function to add any top-level types to the design Root before
 // running the DSL.
-func RunDSLWithFunc(t *testing.T, dsl func(), fn func()) *design.RootExpr {
+func RunDSLWithFunc(t *testing.T, dsl func(), fn func()) *expr.RootExpr {
 	eval.Reset()
-	design.Root = new(design.RootExpr)
-	design.Root.GeneratedTypes = &design.GeneratedRoot{}
-	eval.Register(design.Root)
-	eval.Register(design.Root.GeneratedTypes)
-	design.Root.API = &design.APIExpr{Name: "test api"}
-	design.Root.API.Servers = []*design.ServerExpr{design.Root.API.DefaultServer()}
+	expr.Root = new(expr.RootExpr)
+	expr.Root.GeneratedTypes = &expr.GeneratedRoot{}
+	eval.Register(expr.Root)
+	eval.Register(expr.Root.GeneratedTypes)
+	expr.Root.API = expr.NewAPIExpr("test api", func() {})
+	expr.Root.API.Servers = []*expr.ServerExpr{expr.Root.API.DefaultServer()}
 	fn()
 	if !eval.Execute(dsl, nil) {
 		t.Fatal(eval.Context.Error())
@@ -51,7 +51,7 @@ func RunDSLWithFunc(t *testing.T, dsl func(), fn func()) *design.RootExpr {
 	if err := eval.RunDSL(); err != nil {
 		t.Fatal(err)
 	}
-	return design.Root
+	return expr.Root
 }
 
 // SectionCode generates and formats the code for the given section.

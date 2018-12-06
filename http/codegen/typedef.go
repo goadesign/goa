@@ -5,7 +5,7 @@ import (
 	"strings"
 
 	"goa.design/goa/codegen"
-	"goa.design/goa/design"
+	"goa.design/goa/expr"
 )
 
 // goTypeDef returns the Go code that defines the struct corresponding to ma.
@@ -23,32 +23,32 @@ import (
 // values even when not required (to account for the fact that they have a
 // default value so cannot be nil) otherwise the fields are values only when
 // required.
-func goTypeDef(scope *codegen.NameScope, att *design.AttributeExpr, ptr, useDefault bool) string {
+func goTypeDef(scope *codegen.NameScope, att *expr.AttributeExpr, ptr, useDefault bool) string {
 	switch actual := att.Type.(type) {
-	case design.Primitive:
+	case expr.Primitive:
 		return codegen.GoNativeTypeName(actual)
-	case *design.Array:
+	case *expr.Array:
 		d := goTypeDef(scope, actual.ElemType, ptr, useDefault)
-		if design.IsObject(actual.ElemType.Type) {
+		if expr.IsObject(actual.ElemType.Type) {
 			d = "*" + d
 		}
 		return "[]" + d
-	case *design.Map:
+	case *expr.Map:
 		keyDef := goTypeDef(scope, actual.KeyType, ptr, useDefault)
-		if design.IsObject(actual.KeyType.Type) {
+		if expr.IsObject(actual.KeyType.Type) {
 			keyDef = "*" + keyDef
 		}
 		elemDef := goTypeDef(scope, actual.ElemType, ptr, useDefault)
-		if design.IsObject(actual.ElemType.Type) {
+		if expr.IsObject(actual.ElemType.Type) {
 			elemDef = "*" + elemDef
 		}
 		return fmt.Sprintf("map[%s]%s", keyDef, elemDef)
-	case *design.Object:
+	case *expr.Object:
 		var ss []string
 		ss = append(ss, "struct {")
-		ma := design.NewMappedAttributeExpr(att)
+		ma := expr.NewMappedAttributeExpr(att)
 		mat := ma.Attribute()
-		codegen.WalkMappedAttr(ma, func(name, elem string, required bool, at *design.AttributeExpr) error {
+		codegen.WalkMappedAttr(ma, func(name, elem string, required bool, at *expr.AttributeExpr) error {
 			var (
 				fn   string
 				tdef string
@@ -58,11 +58,11 @@ func goTypeDef(scope *codegen.NameScope, att *design.AttributeExpr, ptr, useDefa
 			{
 				fn = codegen.GoifyAtt(at, name, true)
 				tdef = goTypeDef(scope, at, ptr, useDefault)
-				if design.IsPrimitive(at.Type) {
+				if expr.IsPrimitive(at.Type) {
 					if ptr || mat.IsPrimitivePointer(name, useDefault) {
 						tdef = "*" + tdef
 					}
-				} else if design.IsObject(at.Type) {
+				} else if expr.IsObject(at.Type) {
 					tdef = "*" + tdef
 				}
 				if at.Description != "" {
@@ -75,7 +75,7 @@ func goTypeDef(scope *codegen.NameScope, att *design.AttributeExpr, ptr, useDefa
 		})
 		ss = append(ss, "}")
 		return strings.Join(ss, "\n")
-	case design.UserType:
+	case expr.UserType:
 		return scope.GoTypeName(att)
 	default:
 		panic(fmt.Sprintf("unknown data type %T", actual)) // bug
@@ -83,7 +83,7 @@ func goTypeDef(scope *codegen.NameScope, att *design.AttributeExpr, ptr, useDefa
 }
 
 // attributeTags computes the struct field tags.
-func attributeTags(parent, att *design.AttributeExpr, t string, optional bool) string {
+func attributeTags(parent, att *expr.AttributeExpr, t string, optional bool) string {
 	if tags := codegen.AttributeTags(parent, att); tags != "" {
 		return tags
 	}

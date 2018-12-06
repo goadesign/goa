@@ -4,12 +4,12 @@ import (
 	"path/filepath"
 
 	"goa.design/goa/codegen"
-	"goa.design/goa/design"
+	"goa.design/goa/expr"
 )
 
 // ViewsFile returns the views file for the given service containing types
 // to render result types with more than one view appropriately.
-func ViewsFile(genpkg string, service *design.ServiceExpr) *codegen.File {
+func ViewsFile(genpkg string, service *expr.ServiceExpr) *codegen.File {
 	svc := Services.Get(service.Name)
 	if len(svc.ProjectedTypes) == 0 {
 		return nil

@@ -100,7 +100,14 @@ func DecodeLoginResponse(decoder func(*http.Response) goahttp.Decoder, restoreBo
 // BuildEchoerRequest instantiates a HTTP request object with method and path
 // set to call the "chatter" service "echoer" endpoint
 func (c *Client) BuildEchoerRequest(ctx context.Context, v interface{}) (*http.Request, error) {
-	u := &url.URL{Scheme: c.scheme, Host: c.host, Path: EchoerChatterPath()}
+	scheme := c.scheme
+	switch c.scheme {
+	case "http":
+		scheme = "ws"
+	case "https":
+		scheme = "wss"
+	}
+	u := &url.URL{Scheme: scheme, Host: c.host, Path: EchoerChatterPath()}
 	req, err := http.NewRequest("GET", u.String(), nil)
 	if err != nil {
 		return nil, goahttp.ErrInvalidURL("chatter", "echoer", u.String(), err)
@@ -191,7 +198,14 @@ func DecodeEchoerResponse(decoder func(*http.Response) goahttp.Decoder, restoreB
 // BuildListenerRequest instantiates a HTTP request object with method and path
 // set to call the "chatter" service "listener" endpoint
 func (c *Client) BuildListenerRequest(ctx context.Context, v interface{}) (*http.Request, error) {
-	u := &url.URL{Scheme: c.scheme, Host: c.host, Path: ListenerChatterPath()}
+	scheme := c.scheme
+	switch c.scheme {
+	case "http":
+		scheme = "ws"
+	case "https":
+		scheme = "wss"
+	}
+	u := &url.URL{Scheme: scheme, Host: c.host, Path: ListenerChatterPath()}
 	req, err := http.NewRequest("GET", u.String(), nil)
 	if err != nil {
 		return nil, goahttp.ErrInvalidURL("chatter", "listener", u.String(), err)
@@ -274,7 +288,14 @@ func DecodeListenerResponse(decoder func(*http.Response) goahttp.Decoder, restor
 // BuildSummaryRequest instantiates a HTTP request object with method and path
 // set to call the "chatter" service "summary" endpoint
 func (c *Client) BuildSummaryRequest(ctx context.Context, v interface{}) (*http.Request, error) {
-	u := &url.URL{Scheme: c.scheme, Host: c.host, Path: SummaryChatterPath()}
+	scheme := c.scheme
+	switch c.scheme {
+	case "http":
+		scheme = "ws"
+	case "https":
+		scheme = "wss"
+	}
+	u := &url.URL{Scheme: scheme, Host: c.host, Path: SummaryChatterPath()}
 	req, err := http.NewRequest("GET", u.String(), nil)
 	if err != nil {
 		return nil, goahttp.ErrInvalidURL("chatter", "summary", u.String(), err)
@@ -372,7 +393,14 @@ func DecodeSummaryResponse(decoder func(*http.Response) goahttp.Decoder, restore
 // BuildHistoryRequest instantiates a HTTP request object with method and path
 // set to call the "chatter" service "history" endpoint
 func (c *Client) BuildHistoryRequest(ctx context.Context, v interface{}) (*http.Request, error) {
-	u := &url.URL{Scheme: c.scheme, Host: c.host, Path: HistoryChatterPath()}
+	scheme := c.scheme
+	switch c.scheme {
+	case "http":
+		scheme = "ws"
+	case "https":
+		scheme = "wss"
+	}
+	u := &url.URL{Scheme: scheme, Host: c.host, Path: HistoryChatterPath()}
 	req, err := http.NewRequest("GET", u.String(), nil)
 	if err != nil {
 		return nil, goahttp.ErrInvalidURL("chatter", "history", u.String(), err)

@@ -6,7 +6,7 @@ import (
 	"strings"
 	"text/template"
 
-	"goa.design/goa/design"
+	"goa.design/goa/expr"
 )
 
 var (
@@ -98,11 +98,11 @@ func init() {
 // scope is used to compute the name of the user types when initializing fields
 // that use them.
 //
-func GoTypeTransform(source, target design.DataType, sourceVar, targetVar, sourcePkg, targetPkg string, unmarshal bool, scope *NameScope) (string, []*TransformFunctionData, error) {
+func GoTypeTransform(source, target expr.DataType, sourceVar, targetVar, sourcePkg, targetPkg string, unmarshal bool, scope *NameScope) (string, []*TransformFunctionData, error) {
 
 	var (
-		satt = &design.AttributeExpr{Type: source}
-		tatt = &design.AttributeExpr{Type: target}
+		satt = &expr.AttributeExpr{Type: source}
+		tatt = &expr.AttributeExpr{Type: target}
 	)
 
 	a := targs{sourceVar, targetVar, sourcePkg, targetPkg, unmarshal, scope}
@@ -120,7 +120,7 @@ func GoTypeTransform(source, target design.DataType, sourceVar, targetVar, sourc
 	return strings.TrimRight(code, "\n"), funcs, nil
 }
 
-func transformAttribute(source, target *design.AttributeExpr, newVar bool, a targs) (string, error) {
+func transformAttribute(source, target *expr.AttributeExpr, newVar bool, a targs) (string, error) {
 	if err := isCompatible(source.Type, target.Type, a.sourceVar, a.targetVar); err != nil {
 		return "", err
 	}
@@ -129,18 +129,18 @@ func transformAttribute(source, target *design.AttributeExpr, newVar bool, a tar
 		err  error
 	)
 	switch {
-	case design.IsArray(source.Type):
-		code, err = transformArray(design.AsArray(source.Type), design.AsArray(target.Type), newVar, a)
-	case design.IsMap(source.Type):
-		code, err = transformMap(design.AsMap(source.Type), design.AsMap(target.Type), newVar, a)
-	case design.IsObject(source.Type):
+	case expr.IsArray(source.Type):
+		code, err = transformArray(expr.AsArray(source.Type), expr.AsArray(target.Type), newVar, a)
+	case expr.IsMap(source.Type):
+		code, err = transformMap(expr.AsMap(source.Type), expr.AsMap(target.Type), newVar, a)
+	case expr.IsObject(source.Type):
 		code, err = transformObject(source, target, newVar, a)
 	default:
 		assign := "="
 		if newVar {
 			assign = ":="
 		}
-		if _, ok := target.Type.(design.UserType); ok {
+		if _, ok := target.Type.(expr.UserType); ok {
 			// Primitive user type, these are used for error results
 			cast := a.scope.GoFullTypeRef(target, a.targetPkg)
 			return fmt.Sprintf("%s %s %s(%s)\n", a.targetVar, assign, cast, a.sourceVar), nil
@@ -153,14 +153,14 @@ func transformAttribute(source, target *design.AttributeExpr, newVar bool, a tar
 	return code, nil
 }
 
-func transformObject(source, target *design.AttributeExpr, newVar bool, a targs) (string, error) {
+func transformObject(source, target *expr.AttributeExpr, newVar bool, a targs) (string, error) {
 	buffer := &bytes.Buffer{}
 	var (
 		initCode     string
 		postInitCode string
 	)
-	walkMatches(source, target, func(src, tgt *design.MappedAttributeExpr, srcAtt, _ *design.AttributeExpr, n string) {
-		if !design.IsPrimitive(srcAtt.Type) {
+	walkMatches(source, target, func(src, tgt *expr.MappedAttributeExpr, srcAtt, _ *expr.AttributeExpr, n string) {
+		if !expr.IsPrimitive(srcAtt.Type) {
 			return
 		}
 		srcPtr := a.unmarshal || src.IsPrimitivePointer(n, !a.unmarshal)
@@ -188,14 +188,14 @@ func transformObject(source, target *design.AttributeExpr, newVar bool, a targs)
 	}
 	deref := "&"
 	// if the target is a raw struct no need to return a pointer
-	if _, ok := target.Type.(*design.Object); ok {
+	if _, ok := target.Type.(*expr.Object); ok {
 		deref = ""
 	}
 	buffer.WriteString(fmt.Sprintf("%s %s %s%s{%s}\n", a.targetVar, assign, deref,
 		a.scope.GoFullTypeName(target, a.targetPkg), initCode))
 	buffer.WriteString(postInitCode)
 	var err error
-	walkMatches(source, target, func(src, tgt *design.MappedAttributeExpr, srcAtt, tgtAtt *design.AttributeExpr, n string) {
+	walkMatches(source, target, func(src, tgt *expr.MappedAttributeExpr, srcAtt, tgtAtt *expr.AttributeExpr, n string) {
 		b := a
 		b.sourceVar = a.sourceVar + "." + GoifyAtt(srcAtt, src.ElemName(n), true)
 		b.targetVar = a.targetVar + "." + GoifyAtt(tgtAtt, tgt.ElemName(n), true)
@@ -207,15 +207,15 @@ func transformObject(source, target *design.AttributeExpr, newVar bool, a targs)
 		var (
 			code string
 		)
-		_, ok := srcAtt.Type.(design.UserType)
+		_, ok := srcAtt.Type.(expr.UserType)
 		switch {
-		case design.IsArray(srcAtt.Type):
-			code, err = transformArray(design.AsArray(srcAtt.Type), design.AsArray(tgtAtt.Type), false, b)
-		case design.IsMap(srcAtt.Type):
-			code, err = transformMap(design.AsMap(srcAtt.Type), design.AsMap(tgtAtt.Type), false, b)
+		case expr.IsArray(srcAtt.Type):
+			code, err = transformArray(expr.AsArray(srcAtt.Type), expr.AsArray(tgtAtt.Type), false, b)
+		case expr.IsMap(srcAtt.Type):
+			code, err = transformMap(expr.AsMap(srcAtt.Type), expr.AsMap(tgtAtt.Type), false, b)
 		case ok:
 			code = fmt.Sprintf("%s = %s(%s)\n", b.targetVar, transformHelperName(srcAtt, tgtAtt, b), b.sourceVar)
-		case design.IsObject(srcAtt.Type):
+		case expr.IsObject(srcAtt.Type):
 			code, err = transformAttribute(srcAtt, tgtAtt, false, b)
 		}
 		if err != nil {
@@ -233,8 +233,8 @@ func transformObject(source, target *design.AttributeExpr, newVar bool, a targs)
 		// avoid derefencing nil.
 		var checkNil bool
 		{
-			isRef := !design.IsPrimitive(srcAtt.Type) && !src.IsRequired(n) || src.IsPrimitivePointer(n, !b.unmarshal)
-			marshalNonPrimitive := !b.unmarshal && !design.IsPrimitive(srcAtt.Type)
+			isRef := !expr.IsPrimitive(srcAtt.Type) && !src.IsRequired(n) || src.IsPrimitivePointer(n, !b.unmarshal)
+			marshalNonPrimitive := !b.unmarshal && !expr.IsPrimitive(srcAtt.Type)
 			checkNil = isRef || marshalNonPrimitive
 		}
 		if code != "" && checkNil {
@@ -264,7 +264,7 @@ func transformObject(source, target *design.AttributeExpr, newVar bool, a targs)
 					code += fmt.Sprintf("%s = %#v\n", b.targetVar, tgtAtt.DefaultValue)
 				}
 				code += "}\n"
-			} else if src.IsPrimitivePointer(n, true) || !design.IsPrimitive(srcAtt.Type) {
+			} else if src.IsPrimitivePointer(n, true) || !expr.IsPrimitive(srcAtt.Type) {
 				code += fmt.Sprintf("if %s == nil {\n\t", b.sourceVar)
 				if tgt.IsPrimitivePointer(n, true) {
 					code += fmt.Sprintf("var tmp %s = %#v\n\t%s = &tmp\n", GoNativeTypeName(tgtAtt.Type), tgtAtt.DefaultValue, b.targetVar)
@@ -284,7 +284,7 @@ func transformObject(source, target *design.AttributeExpr, newVar bool, a targs)
 	return buffer.String(), nil
 }
 
-func transformArray(source, target *design.Array, newVar bool, a targs) (string, error) {
+func transformArray(source, target *expr.Array, newVar bool, a targs) (string, error) {
 	if err := isCompatible(source.ElemType.Type, target.ElemType.Type, a.sourceVar+"[0]", a.targetVar+"[0]"); err != nil {
 		return "", err
 	}
@@ -310,7 +310,7 @@ func transformArray(source, target *design.Array, newVar bool, a targs) (string,
 	return code, nil
 }
 
-func transformMap(source, target *design.Map, newVar bool, a targs) (string, error) {
+func transformMap(source, target *expr.Map, newVar bool, a targs) (string, error) {
 	if err := isCompatible(source.KeyType.Type, target.KeyType.Type, a.sourceVar+".key", a.targetVar+".key"); err != nil {
 		return "", err
 	}
@@ -344,17 +344,17 @@ func transformMap(source, target *design.Map, newVar bool, a targs) (string, err
 }
 
 // mapDepth returns the level of nested maps. If map not nested, it returns 0.
-func mapDepth(mp *design.Map) int {
+func mapDepth(mp *expr.Map) int {
 	return traverseMap(mp.ElemType.Type, 0)
 }
 
-func traverseMap(dt design.DataType, depth int, seen ...map[string]struct{}) int {
-	if mp := design.AsMap(dt); mp != nil {
+func traverseMap(dt expr.DataType, depth int, seen ...map[string]struct{}) int {
+	if mp := expr.AsMap(dt); mp != nil {
 		depth++
 		depth = traverseMap(mp.ElemType.Type, depth, seen...)
-	} else if ar := design.AsArray(dt); ar != nil {
+	} else if ar := expr.AsArray(dt); ar != nil {
 		depth = traverseMap(ar.ElemType.Type, depth, seen...)
-	} else if mo := design.AsObject(dt); mo != nil {
+	} else if mo := expr.AsObject(dt); mo != nil {
 		var s map[string]struct{}
 		if len(seen) > 0 {
 			s = seen[0]
@@ -363,7 +363,7 @@ func traverseMap(dt design.DataType, depth int, seen ...map[string]struct{}) int
 			seen = append(seen, s)
 		}
 		key := dt.Name()
-		if u, ok := dt.(design.UserType); ok {
+		if u, ok := dt.(expr.UserType); ok {
 			key = u.ID()
 		}
 		if _, ok := s[key]; ok {
@@ -385,20 +385,20 @@ func traverseMap(dt design.DataType, depth int, seen ...map[string]struct{}) int
 	return depth
 }
 
-func transformAttributeHelpers(source, target design.DataType, a thargs, seen ...map[string]*TransformFunctionData) ([]*TransformFunctionData, error) {
+func transformAttributeHelpers(source, target expr.DataType, a thargs, seen ...map[string]*TransformFunctionData) ([]*TransformFunctionData, error) {
 	var (
 		helpers []*TransformFunctionData
 		err     error
 	)
 	// Do not generate a transform function for the top most user type.
 	switch {
-	case design.IsArray(source):
-		source = design.AsArray(source).ElemType.Type
-		target = design.AsArray(target).ElemType.Type
+	case expr.IsArray(source):
+		source = expr.AsArray(source).ElemType.Type
+		target = expr.AsArray(target).ElemType.Type
 		helpers, err = transformAttributeHelpers(source, target, a, seen...)
-	case design.IsMap(source):
-		sm := design.AsMap(source)
-		tm := design.AsMap(target)
+	case expr.IsMap(source):
+		sm := expr.AsMap(source)
+		tm := expr.AsMap(target)
 		source = sm.ElemType.Type
 		target = tm.ElemType.Type
 		helpers, err = transformAttributeHelpers(source, target, a, seen...)
@@ -409,7 +409,7 @@ func transformAttributeHelpers(source, target design.DataType, a thargs, seen ..
 			other, err = transformAttributeHelpers(source, target, a, seen...)
 			helpers = append(helpers, other...)
 		}
-	case design.IsObject(source):
+	case expr.IsObject(source):
 		helpers, err = transformObjectHelpers(source, target, a, seen...)
 	}
 	if err != nil {
@@ -418,15 +418,15 @@ func transformAttributeHelpers(source, target design.DataType, a thargs, seen ..
 	return helpers, nil
 }
 
-func transformObjectHelpers(source, target design.DataType, a thargs, seen ...map[string]*TransformFunctionData) ([]*TransformFunctionData, error) {
+func transformObjectHelpers(source, target expr.DataType, a thargs, seen ...map[string]*TransformFunctionData) ([]*TransformFunctionData, error) {
 	var (
 		helpers []*TransformFunctionData
 		err     error
 
-		satt = &design.AttributeExpr{Type: source}
-		tatt = &design.AttributeExpr{Type: target}
+		satt = &expr.AttributeExpr{Type: source}
+		tatt = &expr.AttributeExpr{Type: target}
 	)
-	walkMatches(satt, tatt, func(src, tgt *design.MappedAttributeExpr, srcAtt, tgtAtt *design.AttributeExpr, n string) {
+	walkMatches(satt, tatt, func(src, tgt *expr.MappedAttributeExpr, srcAtt, tgtAtt *expr.AttributeExpr, n string) {
 		if err != nil {
 			return
 		}
@@ -446,18 +446,18 @@ func transformObjectHelpers(source, target design.DataType, a thargs, seen ...ma
 // isCompatible returns an error if a and b are not both objects, both arrays,
 // both maps or both the same primitive type. actx and bctx are used to build
 // the error message if any.
-func isCompatible(a, b design.DataType, actx, bctx string) error {
+func isCompatible(a, b expr.DataType, actx, bctx string) error {
 	switch {
-	case design.IsObject(a):
-		if !design.IsObject(b) {
+	case expr.IsObject(a):
+		if !expr.IsObject(b) {
 			return fmt.Errorf("%s is an object but %s type is %s", actx, bctx, b.Name())
 		}
-	case design.IsArray(a):
-		if !design.IsArray(b) {
+	case expr.IsArray(a):
+		if !expr.IsArray(b) {
 			return fmt.Errorf("%s is an array but %s type is %s", actx, bctx, b.Name())
 		}
-	case design.IsMap(a):
-		if !design.IsMap(b) {
+	case expr.IsMap(a):
+		if !expr.IsMap(b) {
 			return fmt.Errorf("%s is a hash but %s type is %s", actx, bctx, b.Name())
 		}
 	default:
@@ -471,37 +471,37 @@ func isCompatible(a, b design.DataType, actx, bctx string) error {
 
 // collectHelpers recursively traverses the given attributes and return the
 // transform helper functions required to generate the transform code.
-func collectHelpers(source, target *design.AttributeExpr, a thargs, req bool, seen ...map[string]*TransformFunctionData) ([]*TransformFunctionData, error) {
+func collectHelpers(source, target *expr.AttributeExpr, a thargs, req bool, seen ...map[string]*TransformFunctionData) ([]*TransformFunctionData, error) {
 	var data []*TransformFunctionData
 	switch {
-	case design.IsArray(source.Type):
+	case expr.IsArray(source.Type):
 		helpers, err := transformAttributeHelpers(
-			design.AsArray(source.Type).ElemType.Type,
-			design.AsArray(target.Type).ElemType.Type,
+			expr.AsArray(source.Type).ElemType.Type,
+			expr.AsArray(target.Type).ElemType.Type,
 			a, seen...)
 		if err != nil {
 			return nil, err
 		}
 		data = append(data, helpers...)
-	case design.IsMap(source.Type):
+	case expr.IsMap(source.Type):
 		helpers, err := transformAttributeHelpers(
-			design.AsMap(source.Type).KeyType.Type,
-			design.AsMap(target.Type).KeyType.Type,
+			expr.AsMap(source.Type).KeyType.Type,
+			expr.AsMap(target.Type).KeyType.Type,
 			a, seen...)
 		if err != nil {
 			return nil, err
 		}
 		data = append(data, helpers...)
 		helpers, err = transformAttributeHelpers(
-			design.AsMap(source.Type).ElemType.Type,
-			design.AsMap(target.Type).ElemType.Type,
+			expr.AsMap(source.Type).ElemType.Type,
+			expr.AsMap(target.Type).ElemType.Type,
 			a, seen...)
 		if err != nil {
 			return nil, err
 		}
 		data = append(data, helpers...)
-	case design.IsObject(source.Type):
-		if ut, ok := source.Type.(design.UserType); ok {
+	case expr.IsObject(source.Type):
+		if ut, ok := source.Type.(expr.UserType); ok {
 			name := transformHelperName(source, target, targs{unmarshal: a.unmarshal, scope: a.scope})
 			var s map[string]*TransformFunctionData
 			if len(seen) > 0 {
@@ -531,7 +531,7 @@ func collectHelpers(source, target *design.AttributeExpr, a thargs, req bool, se
 			data = append(data, t)
 		}
 		var err error
-		walkMatches(source, target, func(srcm, _ *design.MappedAttributeExpr, src, tgt *design.AttributeExpr, n string) {
+		walkMatches(source, target, func(srcm, _ *expr.MappedAttributeExpr, src, tgt *expr.AttributeExpr, n string) {
 			var helpers []*TransformFunctionData
 			helpers, err = collectHelpers(src, tgt, a, srcm.IsRequired(n), seen...)
 			if err != nil {
@@ -546,13 +546,13 @@ func collectHelpers(source, target *design.AttributeExpr, a thargs, req bool, se
 	return data, nil
 }
 
-func walkMatches(source, target *design.AttributeExpr, walker func(src, tgt *design.MappedAttributeExpr, srcc, tgtc *design.AttributeExpr, n string)) {
-	src := design.NewMappedAttributeExpr(source)
-	tgt := design.NewMappedAttributeExpr(target)
-	srcObj := design.AsObject(src.Type)
-	tgtObj := design.AsObject(tgt.Type)
+func walkMatches(source, target *expr.AttributeExpr, walker func(src, tgt *expr.MappedAttributeExpr, srcc, tgtc *expr.AttributeExpr, n string)) {
+	src := expr.NewMappedAttributeExpr(source)
+	tgt := expr.NewMappedAttributeExpr(target)
+	srcObj := expr.AsObject(src.Type)
+	tgtObj := expr.AsObject(tgt.Type)
 	// Map source object attribute names to target object attributes
-	attributeMap := make(map[string]*design.AttributeExpr)
+	attributeMap := make(map[string]*expr.AttributeExpr)
 	for _, nat := range *srcObj {
 		if att := tgtObj.Attribute(nat.Name); att != nil {
 			attributeMap[nat.Name] = att
@@ -586,7 +586,7 @@ func AppendHelpers(oldH, newH []*TransformFunctionData) []*TransformFunctionData
 	return oldH
 }
 
-func transformHelperName(satt, tatt *design.AttributeExpr, a targs) string {
+func transformHelperName(satt, tatt *expr.AttributeExpr, a targs) string {
 	var (
 		sname  string
 		tname  string
@@ -594,12 +594,12 @@ func transformHelperName(satt, tatt *design.AttributeExpr, a targs) string {
 	)
 	{
 		sname = a.scope.GoTypeName(satt)
-		if _, ok := satt.Metadata["goa.external"]; ok {
+		if _, ok := satt.Meta["goa.external"]; ok {
 			// type belongs to external package so name could clash
 			sname += "Ext"
 		}
 		tname = a.scope.GoTypeName(tatt)
-		if _, ok := tatt.Metadata["goa.external"]; ok {
+		if _, ok := tatt.Meta["goa.external"]; ok {
 			// type belongs to external package so name could clash
 			tname += "Ext"
 		}
@@ -612,7 +612,7 @@ func transformHelperName(satt, tatt *design.AttributeExpr, a targs) string {
 }
 
 // used by template
-func transformAttributeHelper(source, target *design.AttributeExpr, sourceVar, targetVar, sourcePkg, targetPkg string, unmarshal, newVar bool, scope *NameScope) (string, error) {
+func transformAttributeHelper(source, target *expr.AttributeExpr, sourceVar, targetVar, sourcePkg, targetPkg string, unmarshal, newVar bool, scope *NameScope) (string, error) {
 	return transformAttribute(source, target, newVar, targs{sourceVar, targetVar, sourcePkg, targetPkg, unmarshal, scope})
 }
 

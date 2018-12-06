@@ -14,33 +14,30 @@ import (
 	"github.com/go-openapi/loads"
 	"goa.design/goa/http/codegen/openapi"
 
-	"goa.design/goa/design"
-	httpdesign "goa.design/goa/http/design"
+	"goa.design/goa/expr"
 )
 
 var update = flag.Bool("update", false, "update .golden files")
 
-func newDesign(httpSvcs ...*httpdesign.ServiceExpr) *httpdesign.RootExpr {
+func newDesign(httpSvcs ...*expr.HTTPServiceExpr) *expr.RootExpr {
 	openapi.Definitions = make(map[string]*openapi.Schema)
-	a := &design.APIExpr{Name: "test"}
-	a.Servers = []*design.ServerExpr{a.DefaultServer()}
-	a.Servers[0].Hosts[0].URIs = []design.URIExpr{design.URIExpr("https://goa.design")}
-	services := make([]*design.ServiceExpr, len(httpSvcs))
+	a := expr.NewAPIExpr("test", func() {})
+	a.Servers = []*expr.ServerExpr{a.DefaultServer()}
+	a.Servers[0].Hosts[0].URIs = []expr.URIExpr{expr.URIExpr("https://goa.design")}
+	a.HTTP.Services = httpSvcs
+
+	services := make([]*expr.ServiceExpr, len(httpSvcs))
 	for i, r := range httpSvcs {
 		services[i] = r.ServiceExpr
 	}
-	d := &design.RootExpr{API: a, Services: services}
-	return &httpdesign.RootExpr{
-		Design:       d,
-		HTTPServices: httpSvcs,
-	}
+	return &expr.RootExpr{API: a, Services: services}
 }
 
-func newService(endpoints ...*httpdesign.EndpointExpr) *httpdesign.ServiceExpr {
-	s := &design.ServiceExpr{
+func newService(endpoints ...*expr.HTTPEndpointExpr) *expr.HTTPServiceExpr {
+	s := &expr.ServiceExpr{
 		Name: "testService",
 	}
-	res := &httpdesign.ServiceExpr{
+	res := &expr.HTTPServiceExpr{
 		ServiceExpr:   s,
 		Paths:         []string{"/"},
 		HTTPEndpoints: endpoints,
@@ -55,24 +52,24 @@ func newService(endpoints ...*httpdesign.EndpointExpr) *httpdesign.ServiceExpr {
 	return res
 }
 
-func newSimpleEndpoint() *httpdesign.EndpointExpr {
-	method := &design.MethodExpr{
+func newSimpleEndpoint() *expr.HTTPEndpointExpr {
+	method := &expr.MethodExpr{
 		Name: "testEndpoint",
-		Payload: &design.AttributeExpr{
-			Type: &design.UserTypeExpr{
-				AttributeExpr: &design.AttributeExpr{Type: design.String},
+		Payload: &expr.AttributeExpr{
+			Type: &expr.UserTypeExpr{
+				AttributeExpr: &expr.AttributeExpr{Type: expr.String},
 			}},
-		Result: &design.AttributeExpr{
-			Type: &design.UserTypeExpr{
-				AttributeExpr: &design.AttributeExpr{Type: design.String},
+		Result: &expr.AttributeExpr{
+			Type: &expr.UserTypeExpr{
+				AttributeExpr: &expr.AttributeExpr{Type: expr.String},
 			}},
 	}
-	route := &httpdesign.RouteExpr{Method: "GET", Path: "/"}
-	ep := &httpdesign.EndpointExpr{
+	route := &expr.RouteExpr{Method: "GET", Path: "/"}
+	ep := &expr.HTTPEndpointExpr{
 		MethodExpr: method,
-		Routes:     []*httpdesign.RouteExpr{route},
-		Headers:    design.NewEmptyMappedAttributeExpr(),
-		Params:     design.NewEmptyMappedAttributeExpr(),
+		Routes:     []*expr.RouteExpr{route},
+		Headers:    expr.NewEmptyMappedAttributeExpr(),
+		Params:     expr.NewEmptyMappedAttributeExpr(),
 	}
 	route.Endpoint = ep
 	return ep
@@ -87,9 +84,9 @@ func TestOpenAPI(t *testing.T) {
 		empty   = newDesign()
 		invalid = newDesign()
 	)
-	invalid.Design.API.Servers[0].Hosts[0].URIs[0] = invalidURL
+	invalid.API.Servers[0].Hosts[0].URIs[0] = invalidURL
 	cases := map[string]struct {
-		Root  *httpdesign.RootExpr
+		Root  *expr.RootExpr
 		Error bool
 	}{
 		"empty":   {Root: empty, Error: false},
@@ -137,7 +134,7 @@ func TestSections(t *testing.T) {
 	)
 	cases := []struct {
 		Name string
-		Root *httpdesign.RootExpr
+		Root *expr.RootExpr
 	}{
 		{"empty", empty},
 		{"valid", simple},
@@ -196,22 +193,22 @@ func TestValidations(t *testing.T) {
 	)
 	cases := []struct {
 		Name     string
-		Endpoint *httpdesign.EndpointExpr
+		Endpoint *expr.HTTPEndpointExpr
 	}{
-		{"string", newEndpointSimpleValidation(design.String,
-			&design.ValidationExpr{
+		{"string", newEndpointSimpleValidation(expr.String,
+			&expr.ValidationExpr{
 				MinLength: newInt(0),
 				MaxLength: newInt(42),
 			}),
 		},
-		{"integer", newEndpointSimpleValidation(design.Int,
-			&design.ValidationExpr{
+		{"integer", newEndpointSimpleValidation(expr.Int,
+			&expr.ValidationExpr{
 				Minimum: newFloat64(0),
 				Maximum: newFloat64(42),
 			}),
 		},
 		{"array", newEndpointComplexValidation(
-			&design.ValidationExpr{
+			&expr.ValidationExpr{
 				MinLength: newInt(0),
 				MaxLength: newInt(42),
 			}),
@@ -270,88 +267,88 @@ func TestValidations(t *testing.T) {
 	}
 }
 
-func newEndpointSimpleValidation(typ design.Primitive, validation *design.ValidationExpr) *httpdesign.EndpointExpr {
-	route := &httpdesign.RouteExpr{Method: "POST", Path: "/"}
-	ep := &httpdesign.EndpointExpr{
-		MethodExpr: &design.MethodExpr{
+func newEndpointSimpleValidation(typ expr.Primitive, validation *expr.ValidationExpr) *expr.HTTPEndpointExpr {
+	route := &expr.RouteExpr{Method: "POST", Path: "/"}
+	ep := &expr.HTTPEndpointExpr{
+		MethodExpr: &expr.MethodExpr{
 			Name:    "testEndpoint",
-			Payload: &design.AttributeExpr{},
-			Result: &design.AttributeExpr{
+			Payload: &expr.AttributeExpr{},
+			Result: &expr.AttributeExpr{
 				Type:         typ,
-				UserExamples: []*design.ExampleExpr{{}},
+				UserExamples: []*expr.ExampleExpr{{}},
 				Validation:   validation,
 			},
 		},
-		Body: &design.AttributeExpr{
+		Body: &expr.AttributeExpr{
 			Type:         typ,
-			UserExamples: []*design.ExampleExpr{{}},
+			UserExamples: []*expr.ExampleExpr{{}},
 			Validation:   validation,
 		},
-		Routes:    []*httpdesign.RouteExpr{route},
-		Responses: []*httpdesign.HTTPResponseExpr{},
+		Routes:    []*expr.RouteExpr{route},
+		Responses: []*expr.HTTPResponseExpr{},
 	}
 	route.Endpoint = ep
 	return ep
 }
 
-func newEndpointComplexValidation(validation *design.ValidationExpr) *httpdesign.EndpointExpr {
-	route := &httpdesign.RouteExpr{Method: "POST", Path: "/"}
-	ep := &httpdesign.EndpointExpr{
-		MethodExpr: &design.MethodExpr{
+func newEndpointComplexValidation(validation *expr.ValidationExpr) *expr.HTTPEndpointExpr {
+	route := &expr.RouteExpr{Method: "POST", Path: "/"}
+	ep := &expr.HTTPEndpointExpr{
+		MethodExpr: &expr.MethodExpr{
 			Name:    "testEndpoint",
-			Payload: &design.AttributeExpr{},
-			Result: &design.AttributeExpr{
-				Type:         design.String,
-				UserExamples: []*design.ExampleExpr{{}},
+			Payload: &expr.AttributeExpr{},
+			Result: &expr.AttributeExpr{
+				Type:         expr.String,
+				UserExamples: []*expr.ExampleExpr{{}},
 				Validation:   validation,
 			},
 		},
-		Body: &design.AttributeExpr{
-			Type: &design.Array{
-				ElemType: &design.AttributeExpr{
-					Type: &design.Object{
+		Body: &expr.AttributeExpr{
+			Type: &expr.Array{
+				ElemType: &expr.AttributeExpr{
+					Type: &expr.Object{
 						{
 							Name: "foo",
-							Attribute: &design.AttributeExpr{
-								Type: &design.Array{
-									ElemType: &design.AttributeExpr{
-										Type:         design.String,
+							Attribute: &expr.AttributeExpr{
+								Type: &expr.Array{
+									ElemType: &expr.AttributeExpr{
+										Type:         expr.String,
 										Validation:   validation,
-										UserExamples: []*design.ExampleExpr{{}},
+										UserExamples: []*expr.ExampleExpr{{}},
 									},
 								},
-								UserExamples: []*design.ExampleExpr{{}},
+								UserExamples: []*expr.ExampleExpr{{}},
 								Validation:   validation,
 							},
 						},
 						{
 							Name: "bar",
-							Attribute: &design.AttributeExpr{
-								Type: &design.Array{
-									ElemType: &design.AttributeExpr{
-										Type: &design.UserTypeExpr{
+							Attribute: &expr.AttributeExpr{
+								Type: &expr.Array{
+									ElemType: &expr.AttributeExpr{
+										Type: &expr.UserTypeExpr{
 											TypeName: "bar",
-											AttributeExpr: &design.AttributeExpr{
-												Type:         design.String,
-												UserExamples: []*design.ExampleExpr{{}},
+											AttributeExpr: &expr.AttributeExpr{
+												Type:         expr.String,
+												UserExamples: []*expr.ExampleExpr{{}},
 												Validation:   validation,
 											},
 										},
-										UserExamples: []*design.ExampleExpr{{}},
+										UserExamples: []*expr.ExampleExpr{{}},
 									},
 								},
-								UserExamples: []*design.ExampleExpr{{}},
+								UserExamples: []*expr.ExampleExpr{{}},
 								Validation:   validation,
 							},
 						},
 					},
-					UserExamples: []*design.ExampleExpr{{}},
+					UserExamples: []*expr.ExampleExpr{{}},
 				},
 			},
 			Validation: validation,
 		},
-		Routes:    []*httpdesign.RouteExpr{route},
-		Responses: []*httpdesign.HTTPResponseExpr{},
+		Routes:    []*expr.RouteExpr{route},
+		Responses: []*expr.HTTPResponseExpr{},
 	}
 	route.Endpoint = ep
 	return ep
@@ -363,10 +360,10 @@ func TestExtensions(t *testing.T) {
 	)
 	cases := []struct {
 		Name     string
-		Endpoint *httpdesign.EndpointExpr
+		Endpoint *expr.HTTPEndpointExpr
 	}{
-		{"endpoint", newEndpointExtensions(design.String,
-			design.MetadataExpr{
+		{"endpoint", newEndpointExtensions(expr.String,
+			expr.MetaExpr{
 				"swagger:extension:x-test-foo": []string{"bar"},
 			},
 		)},
@@ -424,19 +421,19 @@ func TestExtensions(t *testing.T) {
 	}
 }
 
-func newEndpointExtensions(typ design.Primitive, metadata design.MetadataExpr) *httpdesign.EndpointExpr {
-	route := &httpdesign.RouteExpr{Method: "POST", Path: "/"}
-	ep := &httpdesign.EndpointExpr{
-		MethodExpr: &design.MethodExpr{
+func newEndpointExtensions(typ expr.Primitive, meta expr.MetaExpr) *expr.HTTPEndpointExpr {
+	route := &expr.RouteExpr{Method: "POST", Path: "/"}
+	ep := &expr.HTTPEndpointExpr{
+		MethodExpr: &expr.MethodExpr{
 			Name:    "testEndpoint",
-			Payload: &design.AttributeExpr{Type: design.Empty},
-			Result: &design.AttributeExpr{
-				Type: design.Empty,
+			Payload: &expr.AttributeExpr{Type: expr.Empty},
+			Result: &expr.AttributeExpr{
+				Type: expr.Empty,
 			},
 		},
-		Routes:    []*httpdesign.RouteExpr{route},
-		Responses: []*httpdesign.HTTPResponseExpr{},
-		Metadata:  metadata,
+		Routes:    []*expr.RouteExpr{route},
+		Responses: []*expr.HTTPResponseExpr{},
+		Meta:      meta,
 	}
 	route.Endpoint = ep
 	return ep

@@ -15,7 +15,7 @@ type (
 	Logger interface {
 		// Log creates a log entry using a sequence of alternating keys
 		// and values.
-		Log(keyvals ...interface{})
+		Log(keyvals ...interface{}) error
 	}
 
 	// adapter is a thin wrapper around the stdlib logger that adapts it to
@@ -64,7 +64,7 @@ func NewLogger(l *log.Logger) Logger {
 	return &adapter{l}
 }
 
-func (a *adapter) Log(keyvals ...interface{}) {
+func (a *adapter) Log(keyvals ...interface{}) error {
 	n := (len(keyvals) + 1) / 2
 	if len(keyvals)%2 != 0 {
 		keyvals = append(keyvals, "MISSING")
@@ -78,6 +78,7 @@ func (a *adapter) Log(keyvals ...interface{}) {
 		fm.WriteString(fmt.Sprintf(" %s=%%+v", k))
 	}
 	a.Logger.Printf(fm.String(), vals...)
+	return nil
 }
 
 // from makes a best effort to compute the request client IP.

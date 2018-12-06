@@ -1,7 +1,7 @@
 package dsl
 
 import (
-	"goa.design/goa/design"
+	"goa.design/goa/expr"
 	"goa.design/goa/eval"
 )
 
@@ -76,7 +76,7 @@ func Result(val interface{}, args ...interface{}) {
 		eval.ReportError("too many arguments")
 		return
 	}
-	e, ok := eval.Current().(*design.MethodExpr)
+	e, ok := eval.Current().(*expr.MethodExpr)
 	if !ok {
 		eval.IncompatibleDSL()
 		return
@@ -135,15 +135,15 @@ func StreamingResult(val interface{}, args ...interface{}) {
 		eval.ReportError("too many arguments")
 		return
 	}
-	e, ok := eval.Current().(*design.MethodExpr)
+	e, ok := eval.Current().(*expr.MethodExpr)
 	if !ok {
 		eval.IncompatibleDSL()
 		return
 	}
 	e.Result = methodDSL("Result", val, args...)
-	if e.Stream == design.ClientStreamKind {
-		e.Stream = design.BidirectionalStreamKind
+	if e.Stream == expr.ClientStreamKind {
+		e.Stream = expr.BidirectionalStreamKind
 	} else {
-		e.Stream = design.ServerStreamKind
+		e.Stream = expr.ServerStreamKind
 	}
 }

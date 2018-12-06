@@ -3,7 +3,7 @@ package dsl_test
 import (
 	"testing"
 
-	"goa.design/goa/design"
+	"goa.design/goa/expr"
 	. "goa.design/goa/dsl"
 	"goa.design/goa/eval"
 )
@@ -15,13 +15,13 @@ func TestMethod(t *testing.T) {
 	)
 	cases := map[string]struct {
 		DSL    func()
-		Assert func(t *testing.T, s []*design.MethodExpr)
+		Assert func(t *testing.T, s []*expr.MethodExpr)
 	}{
 		"a": {
 			func() {
 				Method("a", func() {})
 			},
-			func(t *testing.T, methods []*design.MethodExpr) {
+			func(t *testing.T, methods []*expr.MethodExpr) {
 				if len(methods) != 1 {
 					t.Fatalf("a: expected 1 method, got %d", len(methods))
 				}
@@ -40,7 +40,7 @@ func TestMethod(t *testing.T) {
 					})
 				})
 			},
-			func(t *testing.T, methods []*design.MethodExpr) {
+			func(t *testing.T, methods []*expr.MethodExpr) {
 				if len(methods) != 1 {
 					t.Fatalf("b: expected 1 method, got %d", len(methods))
 				}
@@ -62,12 +62,12 @@ func TestMethod(t *testing.T) {
 				Method("c", func() {
 					Payload(func() {
 						Description(desc)
-						Attribute("required", design.String)
+						Attribute("required", expr.String)
 						Required("required")
 					})
 				})
 			},
-			func(t *testing.T, methods []*design.MethodExpr) {
+			func(t *testing.T, methods []*expr.MethodExpr) {
 				if len(methods) != 1 {
 					t.Fatalf("b: expected 1 method, got %d", len(methods))
 				}
@@ -82,7 +82,7 @@ func TestMethod(t *testing.T) {
 				if payload.Description != desc {
 					t.Errorf("c: expected payload description '%s' to match '%s' ", desc, payload.Description)
 				}
-				obj := design.AsObject(payload.Type)
+				obj := expr.AsObject(payload.Type)
 				if att := obj.Attribute("required"); att == nil {
 					t.Errorf("c: expected a payload field with key required")
 				}
@@ -96,7 +96,7 @@ func TestMethod(t *testing.T) {
 	for k, tc := range cases {
 		t.Run(k, func(t *testing.T) {
 			eval.Context = &eval.DSLContext{}
-			serviceExpr := &design.ServiceExpr{}
+			serviceExpr := &expr.ServiceExpr{}
 			eval.Execute(tc.DSL, serviceExpr)
 			if eval.Context.Errors != nil {
 				t.Errorf("%s: Service DSL failed unexpectedly with %s", k, eval.Context.Errors)

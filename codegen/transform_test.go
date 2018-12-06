@@ -3,40 +3,40 @@ package codegen
 import (
 	"testing"
 
-	"goa.design/goa/design"
+	"goa.design/goa/expr"
 )
 
 var (
-	SimpleObj     = require(object("a", design.String, "b", design.Int), "a")
-	RequiredObj   = require(object("a", design.String, "b", design.Int), "a", "b")
-	DefaultObj    = defaulta(require(object("a", SimpleArray.Type, "b", design.Int), "a"), "a", []string{"foo", "bar"}, "b", 42)
-	SuperObj      = require(object("a", design.String, "b", design.Int, "c", design.Boolean), "a")
-	SimpleArray   = array(design.String)
-	SimpleMap     = mapa(design.String, design.Int)
-	NestedMap     = mapa(design.String, SimpleMap.Type)
-	NestedMap2    = mapa(design.String, NestedMap.Type)
-	MapArray      = mapa(design.String, array(mapa(design.String, mapa(design.String, design.Int).Type).Type).Type)
-	ArrayObj      = object("a", design.String, "b", SimpleArray.Type)
-	ArrayObj2     = object("a", design.String, "b", array(ArrayObj.Type).Type)
+	SimpleObj     = require(object("a", expr.String, "b", expr.Int), "a")
+	RequiredObj   = require(object("a", expr.String, "b", expr.Int), "a", "b")
+	DefaultObj    = defaulta(require(object("a", SimpleArray.Type, "b", expr.Int), "a"), "a", []string{"foo", "bar"}, "b", 42)
+	SuperObj      = require(object("a", expr.String, "b", expr.Int, "c", expr.Boolean), "a")
+	SimpleArray   = array(expr.String)
+	SimpleMap     = mapa(expr.String, expr.Int)
+	NestedMap     = mapa(expr.String, SimpleMap.Type)
+	NestedMap2    = mapa(expr.String, NestedMap.Type)
+	MapArray      = mapa(expr.String, array(mapa(expr.String, mapa(expr.String, expr.Int).Type).Type).Type)
+	ArrayObj      = object("a", expr.String, "b", SimpleArray.Type)
+	ArrayObj2     = object("a", expr.String, "b", array(ArrayObj.Type).Type)
 	CompositeObj  = defaulta(require(object("aa", SimpleArray.Type, "bb", SimpleObj.Type), "bb"), "aa", []string{"foo", "bar"})
 	ObjArray      = array(RequiredObj.Type)
-	ObjMap        = mapa(design.String, SimpleObj.Type)
-	UserType      = object("ut", &design.UserTypeExpr{TypeName: "User", AttributeExpr: SimpleObj})
-	ArrayUserType = array(&design.UserTypeExpr{TypeName: "User", AttributeExpr: RequiredObj})
-	SimpleObjMap  = object("a", design.String, "b", mapa(design.String, design.Int).Type)
+	ObjMap        = mapa(expr.String, SimpleObj.Type)
+	UserType      = object("ut", &expr.UserTypeExpr{TypeName: "User", AttributeExpr: SimpleObj})
+	ArrayUserType = array(&expr.UserTypeExpr{TypeName: "User", AttributeExpr: RequiredObj})
+	SimpleObjMap  = object("a", expr.String, "b", mapa(expr.String, expr.Int).Type)
 	NestedObjMap  = object("a", SimpleMap.Type, "b", NestedMap2.Type)
-	SimpleMapObj  = mapa(design.String, SimpleObjMap.Type)
-	NestedMapObj  = mapa(design.String, NestedObjMap.Type)
+	SimpleMapObj  = mapa(expr.String, SimpleObjMap.Type)
+	NestedMapObj  = mapa(expr.String, NestedObjMap.Type)
 
-	DefaultPointerObj = pointer(defaulta(object("Int64", design.Int64, "Uint32", design.UInt32, "Float64", design.Float64, "String", design.String, "Bytes", design.Bytes), "Int64", 100, "Uint32", 1, "Float64", 1.0, "String", "foo", "Bytes", []byte{0, 1, 2}))
-	NonRequiredObj    = object("Int64", design.Int64, "Uint32", design.UInt32, "Float64", design.Float64, "String", design.String, "Bytes", design.Bytes)
+	DefaultPointerObj = pointer(defaulta(object("Int64", expr.Int64, "Uint32", expr.UInt32, "Float64", expr.Float64, "String", expr.String, "Bytes", expr.Bytes), "Int64", 100, "Uint32", 1, "Float64", 1.0, "String", "foo", "Bytes", []byte{0, 1, 2}))
+	NonRequiredObj    = object("Int64", expr.Int64, "Uint32", expr.UInt32, "Float64", expr.Float64, "String", expr.String, "Bytes", expr.Bytes)
 
-	ExternalAttrsSource = object("Int64", design.Int64, "Foo", design.String)
-	ExternalAttrsTarget = object("Int64", design.Int64, "Foo:Bar", design.String)
+	ExternalAttrsSource = object("Int64", expr.Int64, "Foo", expr.String)
+	ExternalAttrsTarget = object("Int64", expr.Int64, "Foo:Bar", expr.String)
 
-	ObjWithMetadata = withMetadata(object("a", SimpleMap.Type, "b", design.Int), "a", metadata("struct:field:name", "Apple"))
+	ObjWithMeta = withMeta(object("a", SimpleMap.Type, "b", expr.Int), "a", meta("struct:field:name", "Apple"))
 
-	recursiveObjMap = mapa(design.String, objRecursive(&design.UserTypeExpr{TypeName: "Recursive", AttributeExpr: object("a", design.String, "b", design.Int)}).Type)
+	recursiveObjMap = mapa(expr.String, objRecursive(&expr.UserTypeExpr{TypeName: "Recursive", AttributeExpr: object("a", expr.String, "b", expr.Int)}).Type)
 )
 
 func TestGoTypeTransform(t *testing.T) {
@@ -46,7 +46,7 @@ func TestGoTypeTransform(t *testing.T) {
 	)
 	cases := []struct {
 		Name           string
-		Source, Target *design.AttributeExpr
+		Source, Target *expr.AttributeExpr
 		Unmarshal      bool
 		TargetPkg      string
 
@@ -111,12 +111,12 @@ func TestGoTypeTransform(t *testing.T) {
 		{"target-package-unmarshal", ArrayUserType, ArrayUserType, true, "tpkg", objTargetPkgUnmarshalCode},
 		{"target-package-marshal", ArrayUserType, ArrayUserType, false, "tpkg", objTargetPkgCode},
 
-		{"with-metadata", ObjWithMetadata, ObjWithMetadata, true, "", objWithMetadataCode},
+		{"with-meta", ObjWithMeta, ObjWithMeta, true, "", objWithMetaCode},
 	}
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
-			src := &design.UserTypeExpr{TypeName: "SourceType", AttributeExpr: c.Source}
-			tgt := &design.UserTypeExpr{TypeName: "TargetType", AttributeExpr: c.Target}
+			src := &expr.UserTypeExpr{TypeName: "SourceType", AttributeExpr: c.Source}
+			tgt := &expr.UserTypeExpr{TypeName: "TargetType", AttributeExpr: c.Target}
 			code, _, err := GoTypeTransform(src, tgt, sourceVar, targetVar, "", c.TargetPkg, c.Unmarshal, NewNameScope())
 			if err != nil {
 				t.Fatal(err)
@@ -129,13 +129,13 @@ func TestGoTypeTransform(t *testing.T) {
 	}
 }
 
-func require(att *design.AttributeExpr, names ...string) *design.AttributeExpr {
-	att.Validation = &design.ValidationExpr{Required: names}
+func require(att *expr.AttributeExpr, names ...string) *expr.AttributeExpr {
+	att.Validation = &expr.ValidationExpr{Required: names}
 	return att
 }
 
-func defaulta(att *design.AttributeExpr, vals ...interface{}) *design.AttributeExpr {
-	obj := att.Type.(*design.Object)
+func defaulta(att *expr.AttributeExpr, vals ...interface{}) *expr.AttributeExpr {
+	obj := att.Type.(*expr.Object)
 	for i := 0; i < len(vals); i += 2 {
 		name := vals[i].(string)
 		obj.Attribute(name).DefaultValue = vals[i+1]
@@ -143,38 +143,38 @@ func defaulta(att *design.AttributeExpr, vals ...interface{}) *design.AttributeE
 	return att
 }
 
-func object(params ...interface{}) *design.AttributeExpr {
-	obj := design.Object{}
+func object(params ...interface{}) *expr.AttributeExpr {
+	obj := expr.Object{}
 	for i := 0; i < len(params); i += 2 {
 		name := params[i].(string)
-		typ := params[i+1].(design.DataType)
-		obj = append(obj, &design.NamedAttributeExpr{Name: name, Attribute: &design.AttributeExpr{Type: typ}})
+		typ := params[i+1].(expr.DataType)
+		obj = append(obj, &expr.NamedAttributeExpr{Name: name, Attribute: &expr.AttributeExpr{Type: typ}})
 	}
-	return &design.AttributeExpr{Type: &obj}
+	return &expr.AttributeExpr{Type: &obj}
 }
 
-func array(dt design.DataType) *design.AttributeExpr {
-	elem := &design.AttributeExpr{Type: dt}
-	return &design.AttributeExpr{Type: &design.Array{ElemType: elem}}
+func array(dt expr.DataType) *expr.AttributeExpr {
+	elem := &expr.AttributeExpr{Type: dt}
+	return &expr.AttributeExpr{Type: &expr.Array{ElemType: elem}}
 }
 
-func mapa(keyt, elemt design.DataType) *design.AttributeExpr {
-	key := &design.AttributeExpr{Type: keyt}
-	elem := &design.AttributeExpr{Type: elemt}
-	return &design.AttributeExpr{Type: &design.Map{KeyType: key, ElemType: elem}}
+func mapa(keyt, elemt expr.DataType) *expr.AttributeExpr {
+	key := &expr.AttributeExpr{Type: keyt}
+	elem := &expr.AttributeExpr{Type: elemt}
+	return &expr.AttributeExpr{Type: &expr.Map{KeyType: key, ElemType: elem}}
 }
 
-func objRecursive(ut *design.UserTypeExpr) *design.UserTypeExpr {
-	obj := ut.AttributeExpr.Type.(*design.Object)
+func objRecursive(ut *expr.UserTypeExpr) *expr.UserTypeExpr {
+	obj := ut.AttributeExpr.Type.(*expr.Object)
 	if obj == nil {
 		return nil
 	}
-	*obj = append(*obj, &design.NamedAttributeExpr{Name: "rec", Attribute: &design.AttributeExpr{Type: ut}})
+	*obj = append(*obj, &expr.NamedAttributeExpr{Name: "rec", Attribute: &expr.AttributeExpr{Type: ut}})
 	return ut
 }
 
-func withMetadata(att *design.AttributeExpr, vals ...interface{}) *design.AttributeExpr {
-	obj := design.AsObject(att.Type)
+func withMeta(att *expr.AttributeExpr, vals ...interface{}) *expr.AttributeExpr {
+	obj := expr.AsObject(att.Type)
 	if obj == nil {
 		return nil
 	}
@@ -184,12 +184,12 @@ func withMetadata(att *design.AttributeExpr, vals ...interface{}) *design.Attrib
 		if a == nil {
 			continue
 		}
-		a.Metadata = vals[i+1].(map[string][]string)
+		a.Meta = vals[i+1].(map[string][]string)
 	}
 	return att
 }
 
-func metadata(vals ...string) map[string][]string {
+func meta(vals ...string) map[string][]string {
 	m := make(map[string][]string)
 	for i := 0; i < len(vals); i += 2 {
 		key := vals[i]
@@ -202,7 +202,7 @@ func metadata(vals ...string) map[string][]string {
 	return m
 }
 
-func pointer(src *design.AttributeExpr, seen ...map[string]struct{}) *design.AttributeExpr {
+func pointer(src *expr.AttributeExpr, seen ...map[string]struct{}) *expr.AttributeExpr {
 	var s map[string]struct{}
 	if len(seen) > 0 {
 		s = seen[0]
@@ -210,23 +210,23 @@ func pointer(src *design.AttributeExpr, seen ...map[string]struct{}) *design.Att
 		s = make(map[string]struct{})
 		seen = append(seen, s)
 	}
-	att := design.DupAtt(src)
+	att := expr.DupAtt(src)
 	switch actual := att.Type.(type) {
-	case design.Primitive:
+	case expr.Primitive:
 		att.ForcePointer = true
-	case design.UserType:
+	case expr.UserType:
 		if _, ok := s[actual.ID()]; ok {
 			return att
 		}
 		s[actual.ID()] = struct{}{}
-		pointer(actual.(design.UserType).Attribute(), seen...)
-	case *design.Object:
+		pointer(actual.(expr.UserType).Attribute(), seen...)
+	case *expr.Object:
 		for _, nat := range *actual {
 			nat.Attribute = pointer(nat.Attribute, seen...)
 		}
-	case *design.Array:
+	case *expr.Array:
 		actual.ElemType = pointer(actual.ElemType, seen...)
-	case *design.Map:
+	case *expr.Map:
 		actual.KeyType = pointer(actual.KeyType, seen...)
 		actual.ElemType = pointer(actual.ElemType, seen...)
 	}
@@ -711,7 +711,7 @@ const objTargetPkgCode = `func transform() {
 }
 `
 
-const objWithMetadataCode = `func transform() {
+const objWithMetaCode = `func transform() {
 	target := &TargetType{
 		B: source.B,
 	}

@@ -1,7 +1,6 @@
 package design
 
-import . "goa.design/goa/http/design"
-import . "goa.design/goa/http/dsl"
+import . "goa.design/goa/dsl"
 
 var _ = Service("sommelier", func() {
 	Description("The sommelier service retrieves bottles given a set of criteria.")

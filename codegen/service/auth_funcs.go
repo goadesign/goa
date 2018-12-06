@@ -6,12 +6,12 @@ import (
 	"strings"
 
 	"goa.design/goa/codegen"
-	"goa.design/goa/design"
+	"goa.design/goa/expr"
 )
 
 // AuthFuncsFile returns a file that contains a dummy implementation of the
 // authorization functions needed to instantiate the service endpoints.
-func AuthFuncsFile(genpkg string, root *design.RootExpr) *codegen.File {
+func AuthFuncsFile(genpkg string, root *expr.RootExpr) *codegen.File {
 	var (
 		apiPkg   = strings.ToLower(codegen.Goify(root.API.Name, false))
 		rootPath = "."

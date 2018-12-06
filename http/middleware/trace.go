@@ -202,11 +202,12 @@ func (d *tracedDoer) Do(r *http.Request) (*http.Response, error) {
 }
 
 // Log logs the trace ID when present then the values passed as argument.
-func (l *tracedLogger) Log(keyvals ...interface{}) {
+func (l *tracedLogger) Log(keyvals ...interface{}) error {
 	if l.traceID == "" {
 		l.logger.Log(keyvals...)
-		return
+		return nil
 	}
 	keyvals = append([]interface{}{"trace", l.traceID}, keyvals...)
 	l.logger.Log(keyvals)
+	return nil
 }

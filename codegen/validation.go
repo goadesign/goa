@@ -7,7 +7,7 @@ import (
 	"strings"
 	"text/template"
 
-	"goa.design/goa/design"
+	"goa.design/goa/expr"
 )
 
 var (
@@ -46,15 +46,15 @@ func init() {
 // does not consider "Required" validations. This is necessary to know whether
 // validation code should be generated for types that don't use pointers to
 // define required fields.
-func HasValidations(att *design.AttributeExpr, ignoreRequired bool) bool {
+func HasValidations(att *expr.AttributeExpr, ignoreRequired bool) bool {
 	if att.Validation != nil {
 		if !ignoreRequired || !att.Validation.HasRequiredOnly() {
 			return true
 		}
 	}
-	if o := design.AsObject(att.Type); o != nil {
+	if o := expr.AsObject(att.Type); o != nil {
 		for _, catt := range *o {
-			seen := make(map[*design.AttributeExpr]struct{})
+			seen := make(map[*expr.AttributeExpr]struct{})
 			seen[att] = struct{}{}
 			if hasValidationsRecurse(catt.Attribute, ignoreRequired, seen) {
 				return true
@@ -93,18 +93,18 @@ func HasValidations(att *design.AttributeExpr, ignoreRequired bool) bool {
 //
 // context is used to produce helpful messages in case of error.
 //
-func ValidationCode(att *design.AttributeExpr, req, ptr, def bool, target, context string) string {
+func ValidationCode(att *expr.AttributeExpr, req, ptr, def bool, target, context string) string {
 	validation := att.Validation
 	if validation == nil {
 		return ""
 	}
 	var (
 		kind            = att.Type.Kind()
-		isNativePointer = kind == design.BytesKind || kind == design.AnyKind
+		isNativePointer = kind == expr.BytesKind || kind == expr.AnyKind
 		isPointer       = ptr || (!req && (att.DefaultValue == nil || !def))
 		tval            = target
 	)
-	if isPointer && design.IsPrimitive(att.Type) && !isNativePointer {
+	if isPointer && expr.IsPrimitive(att.Type) && !isNativePointer {
 		tval = "*" + tval
 	}
 	data := map[string]interface{}{
@@ -113,9 +113,9 @@ func ValidationCode(att *design.AttributeExpr, req, ptr, def bool, target, conte
 		"context":   context,
 		"target":    target,
 		"targetVal": tval,
-		"string":    kind == design.StringKind,
-		"array":     design.IsArray(att.Type),
-		"map":       design.IsMap(att.Type),
+		"string":    kind == expr.StringKind,
+		"array":     expr.IsArray(att.Type),
+		"map":       expr.IsMap(att.Type),
 	}
 	runTemplate := func(tmpl *template.Template, data interface{}) string {
 		var buf bytes.Buffer
@@ -177,13 +177,13 @@ func ValidationCode(att *design.AttributeExpr, req, ptr, def bool, target, conte
 	}
 	if req := validation.Required; len(req) > 0 {
 		for _, r := range req {
-			reqAtt := design.AsObject(att.Type).Attribute(r)
+			reqAtt := expr.AsObject(att.Type).Attribute(r)
 			if reqAtt == nil {
 				continue
 			}
-			if !ptr && design.IsPrimitive(reqAtt.Type) &&
-				reqAtt.Type.Kind() != design.BytesKind &&
-				reqAtt.Type.Kind() != design.AnyKind {
+			if !ptr && expr.IsPrimitive(reqAtt.Type) &&
+				reqAtt.Type.Kind() != expr.BytesKind &&
+				reqAtt.Type.Kind() != expr.AnyKind {
 
 				continue
 			}
@@ -199,18 +199,18 @@ func ValidationCode(att *design.AttributeExpr, req, ptr, def bool, target, conte
 // the given attribute and its children recursively against the value held by
 // the variable named target. See ValidationCode for a description of the
 // arguments and their effects.
-func RecursiveValidationCode(att *design.AttributeExpr, req, ptr, def bool, target string) string {
+func RecursiveValidationCode(att *expr.AttributeExpr, req, ptr, def bool, target string) string {
 	seen := make(map[string]*bytes.Buffer)
 	return recurseValidationCode(att, req, ptr, def, target, target, seen).String()
 }
 
-func hasValidationsRecurse(att *design.AttributeExpr, ignoreRequired bool, seen map[*design.AttributeExpr]struct{}) bool {
+func hasValidationsRecurse(att *expr.AttributeExpr, ignoreRequired bool, seen map[*expr.AttributeExpr]struct{}) bool {
 	if att.Validation != nil {
 		if !ignoreRequired || !att.Validation.HasRequiredOnly() {
 			return true
 		}
 	}
-	if o := design.AsObject(att.Type); o != nil {
+	if o := expr.AsObject(att.Type); o != nil {
 		for _, catt := range *o {
 			if _, ok := seen[catt.Attribute]; ok {
 				continue // break infinite recursions
@@ -224,14 +224,14 @@ func hasValidationsRecurse(att *design.AttributeExpr, ignoreRequired bool, seen 
 	return false
 }
 
-func recurseValidationCode(att *design.AttributeExpr, req, ptr, def bool, target, context string, seen map[string]*bytes.Buffer) *bytes.Buffer {
+func recurseValidationCode(att *expr.AttributeExpr, req, ptr, def bool, target, context string, seen map[string]*bytes.Buffer) *bytes.Buffer {
 	var (
 		buf   = new(bytes.Buffer)
 		first = true
 	)
 
 	// Break infinite recursions
-	if ut, ok := att.Type.(design.UserType); ok {
+	if ut, ok := att.Type.(expr.UserType); ok {
 		if buf, ok := seen[ut.ID()]; ok {
 			return buf
 		}
@@ -244,7 +244,7 @@ func recurseValidationCode(att *design.AttributeExpr, req, ptr, def bool, target
 		first = false
 	}
 
-	if o := design.AsObject(att.Type); o != nil {
+	if o := expr.AsObject(att.Type); o != nil {
 		for _, nat := range *o {
 			n := nat.Name
 			catt := nat.Attribute
@@ -258,11 +258,11 @@ func recurseValidationCode(att *design.AttributeExpr, req, ptr, def bool, target
 				buf.WriteString(validation)
 			}
 		}
-	} else if a := design.AsArray(att.Type); a != nil {
+	} else if a := expr.AsArray(att.Type); a != nil {
 		val := recurseValidationCode(a.ElemType, true, false, def, "e", context+"[*]", seen).String()
 		if val != "" {
 			switch a.ElemType.Type.(type) {
-			case design.UserType:
+			case expr.UserType:
 				// For user and result types, call the Validate method
 				var buf bytes.Buffer
 				if err := userValT.Execute(&buf, map[string]interface{}{"target": "e"}); err != nil {
@@ -283,12 +283,12 @@ func recurseValidationCode(att *design.AttributeExpr, req, ptr, def bool, target
 				panic(err) // bug
 			}
 		}
-	} else if m := design.AsMap(att.Type); m != nil {
+	} else if m := expr.AsMap(att.Type); m != nil {
 		keyVal := recurseValidationCode(m.KeyType, true, false, def, "k", context+".key", seen).String()
 		valueVal := recurseValidationCode(m.ElemType, true, false, def, "v", context+"[key]", seen).String()
 		if keyVal != "" || valueVal != "" {
 			if keyVal != "" {
-				if _, ok := m.KeyType.Type.(design.UserType); ok {
+				if _, ok := m.KeyType.Type.(expr.UserType); ok {
 					var buf bytes.Buffer
 					if err := userValT.Execute(&buf, map[string]interface{}{"target": "k"}); err != nil {
 						panic(err) // bug
@@ -299,7 +299,7 @@ func recurseValidationCode(att *design.AttributeExpr, req, ptr, def bool, target
 				}
 			}
 			if valueVal != "" {
-				if _, ok := m.ElemType.Type.(design.UserType); ok {
+				if _, ok := m.ElemType.Type.(expr.UserType); ok {
 					var buf bytes.Buffer
 					if err := userValT.Execute(&buf, map[string]interface{}{"target": "v"}); err != nil {
 						panic(err) // bug
@@ -327,15 +327,15 @@ func recurseValidationCode(att *design.AttributeExpr, req, ptr, def bool, target
 	return buf
 }
 
-func recurseAttribute(att, catt *design.AttributeExpr, n, target, context string, ptr, def bool, seen map[string]*bytes.Buffer) string {
+func recurseAttribute(att, catt *expr.AttributeExpr, n, target, context string, ptr, def bool, seen map[string]*bytes.Buffer) string {
 	var validation string
-	if ut, ok := catt.Type.(design.UserType); ok {
+	if ut, ok := catt.Type.(expr.UserType); ok {
 		// We need to check empirically whether there are validations to be
 		// generated, we can't just generate and check whether something was
 		// generated to avoid infinite recursions.
 		hasValidations := false
 		done := errors.New("done")
-		Walk(ut.Attribute(), func(a *design.AttributeExpr) error {
+		Walk(ut.Attribute(), func(a *expr.AttributeExpr) error {
 			if a.Validation != nil {
 				if ptr {
 					hasValidations = true
@@ -352,8 +352,8 @@ func recurseAttribute(att, catt *design.AttributeExpr, n, target, context string
 					return done
 				}
 				for _, name := range a.Validation.Required {
-					att := design.AsObject(a.Type).Attribute(name)
-					if att != nil && !design.IsPrimitive(att.Type) {
+					att := expr.AsObject(a.Type).Attribute(name)
+					if att != nil && !expr.IsPrimitive(att.Type) {
 						hasValidations = true
 						return done
 					}
@@ -364,7 +364,7 @@ func recurseAttribute(att, catt *design.AttributeExpr, n, target, context string
 		if hasValidations {
 			var buf bytes.Buffer
 			tgt := fmt.Sprintf("%s.%s", target, GoifyAtt(catt, n, true))
-			if design.IsArray(catt.Type) {
+			if expr.IsArray(catt.Type) {
 				buf.Write(recurseValidationCode(catt, att.IsRequired(n), ptr, def, tgt, context, seen).Bytes())
 			} else {
 				if err := userValT.Execute(&buf, map[string]interface{}{"target": tgt}); err != nil {
@@ -385,7 +385,7 @@ func recurseAttribute(att, catt *design.AttributeExpr, n, target, context string
 		).String()
 	}
 	if validation != "" {
-		if design.IsObject(catt.Type) {
+		if expr.IsObject(catt.Type) {
 			validation = fmt.Sprintf("if %s.%s != nil {\n%s\n}",
 				target, GoifyAtt(catt, n, true), validation)
 		}

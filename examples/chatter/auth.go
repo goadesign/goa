@@ -16,7 +16,7 @@ var (
 	// ErrInvalidToken is the error returned when the JWT token is invalid.
 	ErrInvalidToken error = chattersvc.Unauthorized("invalid token")
 
-	// ErrInvalidScopes is the error returned when the scopes provided in
+	// ErrInvalidTokenScopes is the error returned when the scopes provided in
 	// the JWT token claims are invalid.
 	ErrInvalidTokenScopes error = chattersvc.InvalidScopes("invalid scopes in token")
 

@@ -8,7 +8,7 @@ import (
 
 	"goa.design/goa/codegen"
 	"goa.design/goa/codegen/service/testdata"
-	"goa.design/goa/design"
+	"goa.design/goa/expr"
 )
 
 func TestViews(t *testing.T) {
@@ -26,10 +26,10 @@ func TestViews(t *testing.T) {
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
 			codegen.RunDSL(t, c.DSL)
-			if len(design.Root.Services) != 1 {
-				t.Fatalf("got %d services, expected 1", len(design.Root.Services))
+			if len(expr.Root.Services) != 1 {
+				t.Fatalf("got %d services, expected 1", len(expr.Root.Services))
 			}
-			fs := ViewsFile("goa.design/goa/example", design.Root.Services[0])
+			fs := ViewsFile("goa.design/goa/example", expr.Root.Services[0])
 			if fs == nil {
 				t.Fatalf("got nil file, expected not nil")
 			}

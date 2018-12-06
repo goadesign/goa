@@ -1,11 +1,10 @@
 package design
 
 import (
-	. "goa.design/goa/http/design"
-	. "goa.design/goa/http/dsl"
+	. "goa.design/goa/dsl"
 )
 
-var _ = API("multiauth", func() {
+var _ = API("multi_auth", func() {
 	Title("Security Example API")
 	Description("This API demonstrates the use of the goa security DSL")
 	Docs(func() { // Documentation links

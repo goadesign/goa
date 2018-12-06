@@ -35,6 +35,9 @@ type (
 		// SkipExist indicates whether the file should be skipped if one
 		// already exists at the given path.
 		SkipExist bool
+		// FinalizeFunc is called after the file has been generated. It
+		// is given the absolute path to the file as argument.
+		FinalizeFunc func(string) error
 	}
 
 	// A SectionTemplate is a template and accompanying render data. The
@@ -104,6 +107,13 @@ func (f *File) Render(dir string) (string, error) {
 	// Format Go source files
 	if filepath.Ext(path) == ".go" {
 		if err := finalizeGoSource(path); err != nil {
+			return "", err
+		}
+	}
+
+	// Run finalizer if any
+	if f.FinalizeFunc != nil {
+		if err := f.FinalizeFunc(path); err != nil {
 			return "", err
 		}
 	}

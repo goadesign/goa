@@ -3,38 +3,38 @@ package codegen
 import (
 	"testing"
 
-	"goa.design/goa/design"
+	"goa.design/goa/expr"
 )
 
 func TestGoTypeDef(t *testing.T) {
 	var (
-		simpleArray = array(design.Boolean)
-		simpleMap   = mapa(design.Int, design.String)
-		requiredObj = require(object("IntField", design.Int, "StringField", design.String), "IntField", "StringField")
-		defaultObj  = defaulta(object("IntField", design.Int, "StringField", design.String), "IntField", 1, "StringField", "foo")
-		ut          = &design.UserTypeExpr{AttributeExpr: &design.AttributeExpr{Type: design.Boolean}, TypeName: "UserType"}
-		rt          = &design.ResultTypeExpr{UserTypeExpr: &design.UserTypeExpr{AttributeExpr: &design.AttributeExpr{Type: design.Boolean}, TypeName: "ResultType"}, Identifier: "application/vnd.goa.example", Views: nil}
-		userType    = &design.AttributeExpr{Type: ut}
-		resultType  = &design.AttributeExpr{Type: rt}
-		mixedObj    = require(object("IntField", design.Int, "ArrayField", simpleArray.Type, "MapField", simpleMap.Type, "UserTypeField", ut), "IntField", "ArrayField", "MapField", "UserTypeField")
+		simpleArray = array(expr.Boolean)
+		simpleMap   = mapa(expr.Int, expr.String)
+		requiredObj = require(object("IntField", expr.Int, "StringField", expr.String), "IntField", "StringField")
+		defaultObj  = defaulta(object("IntField", expr.Int, "StringField", expr.String), "IntField", 1, "StringField", "foo")
+		ut          = &expr.UserTypeExpr{AttributeExpr: &expr.AttributeExpr{Type: expr.Boolean}, TypeName: "UserType"}
+		rt          = &expr.ResultTypeExpr{UserTypeExpr: &expr.UserTypeExpr{AttributeExpr: &expr.AttributeExpr{Type: expr.Boolean}, TypeName: "ResultType"}, Identifier: "application/vnd.goa.example", Views: nil}
+		userType    = &expr.AttributeExpr{Type: ut}
+		resultType  = &expr.AttributeExpr{Type: rt}
+		mixedObj    = require(object("IntField", expr.Int, "ArrayField", simpleArray.Type, "MapField", simpleMap.Type, "UserTypeField", ut), "IntField", "ArrayField", "MapField", "UserTypeField")
 	)
 	cases := map[string]struct {
-		att        *design.AttributeExpr
+		att        *expr.AttributeExpr
 		usedefault bool
 		expected   string
 	}{
-		"BooleanKind": {&design.AttributeExpr{Type: design.Boolean}, true, "bool"},
-		"IntKind":     {&design.AttributeExpr{Type: design.Int}, true, "int"},
-		"Int32Kind":   {&design.AttributeExpr{Type: design.Int32}, true, "int32"},
-		"Int64Kind":   {&design.AttributeExpr{Type: design.Int64}, true, "int64"},
-		"UIntKind":    {&design.AttributeExpr{Type: design.UInt}, true, "uint"},
-		"UInt32Kind":  {&design.AttributeExpr{Type: design.UInt32}, true, "uint32"},
-		"UInt64Kind":  {&design.AttributeExpr{Type: design.UInt64}, true, "uint64"},
-		"Float32Kind": {&design.AttributeExpr{Type: design.Float32}, true, "float32"},
-		"Float64Kind": {&design.AttributeExpr{Type: design.Float64}, true, "float64"},
-		"StringKind":  {&design.AttributeExpr{Type: design.String}, true, "string"},
-		"BytesKind":   {&design.AttributeExpr{Type: design.Bytes}, true, "[]byte"},
-		"AnyKind":     {&design.AttributeExpr{Type: design.Any}, true, "interface{}"},
+		"BooleanKind": {&expr.AttributeExpr{Type: expr.Boolean}, true, "bool"},
+		"IntKind":     {&expr.AttributeExpr{Type: expr.Int}, true, "int"},
+		"Int32Kind":   {&expr.AttributeExpr{Type: expr.Int32}, true, "int32"},
+		"Int64Kind":   {&expr.AttributeExpr{Type: expr.Int64}, true, "int64"},
+		"UIntKind":    {&expr.AttributeExpr{Type: expr.UInt}, true, "uint"},
+		"UInt32Kind":  {&expr.AttributeExpr{Type: expr.UInt32}, true, "uint32"},
+		"UInt64Kind":  {&expr.AttributeExpr{Type: expr.UInt64}, true, "uint64"},
+		"Float32Kind": {&expr.AttributeExpr{Type: expr.Float32}, true, "float32"},
+		"Float64Kind": {&expr.AttributeExpr{Type: expr.Float64}, true, "float64"},
+		"StringKind":  {&expr.AttributeExpr{Type: expr.String}, true, "string"},
+		"BytesKind":   {&expr.AttributeExpr{Type: expr.Bytes}, true, "[]byte"},
+		"AnyKind":     {&expr.AttributeExpr{Type: expr.Any}, true, "interface{}"},
 
 		"Array":          {simpleArray, true, "[]bool"},
 		"Map":            {simpleMap, true, "map[int]string"},
@@ -58,21 +58,21 @@ func TestGoTypeDef(t *testing.T) {
 
 func TestGoNativeTypeName(t *testing.T) {
 	cases := map[string]struct {
-		dataType design.DataType
+		dataType expr.DataType
 		expected string
 	}{
-		"BooleanKind": {design.Boolean, "bool"},
-		"IntKind":     {design.Int, "int"},
-		"Int32Kind":   {design.Int32, "int32"},
-		"Int64Kind":   {design.Int64, "int64"},
-		"UIntKind":    {design.UInt, "uint"},
-		"UInt32Kind":  {design.UInt32, "uint32"},
-		"UInt64Kind":  {design.UInt64, "uint64"},
-		"Float32Kind": {design.Float32, "float32"},
-		"Float64Kind": {design.Float64, "float64"},
-		"StringKind":  {design.String, "string"},
-		"BytesKind":   {design.Bytes, "[]byte"},
-		"AnyKind":     {design.Any, "interface{}"},
+		"BooleanKind": {expr.Boolean, "bool"},
+		"IntKind":     {expr.Int, "int"},
+		"Int32Kind":   {expr.Int32, "int32"},
+		"Int64Kind":   {expr.Int64, "int64"},
+		"UIntKind":    {expr.UInt, "uint"},
+		"UInt32Kind":  {expr.UInt32, "uint32"},
+		"UInt64Kind":  {expr.UInt64, "uint64"},
+		"Float32Kind": {expr.Float32, "float32"},
+		"Float64Kind": {expr.Float64, "float64"},
+		"StringKind":  {expr.String, "string"},
+		"BytesKind":   {expr.Bytes, "[]byte"},
+		"AnyKind":     {expr.Any, "interface{}"},
 	}
 
 	for k, tc := range cases {

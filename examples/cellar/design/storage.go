@@ -1,7 +1,6 @@
 package design
 
-import . "goa.design/goa/http/design"
-import . "goa.design/goa/http/dsl"
+import . "goa.design/goa/dsl"
 
 var _ = Service("storage", func() {
 	Description("The storage service makes it possible to view, add or remove wine bottles.")

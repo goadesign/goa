@@ -4,7 +4,7 @@ import (
 	"path/filepath"
 
 	"goa.design/goa/codegen"
-	"goa.design/goa/design"
+	"goa.design/goa/expr"
 )
 
 const (
@@ -13,7 +13,7 @@ const (
 )
 
 // ClientFile returns the client file for the given service.
-func ClientFile(service *design.ServiceExpr) *codegen.File {
+func ClientFile(service *expr.ServiceExpr) *codegen.File {
 	path := filepath.Join(codegen.Gendir, codegen.SnakeCase(service.Name), "client.go")
 	data := endpointData(service)
 	svc := Services.Get(service.Name)

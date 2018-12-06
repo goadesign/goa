@@ -1,8 +1,8 @@
 package dsl
 
 import (
-	"goa.design/goa/design"
 	"goa.design/goa/eval"
+	"goa.design/goa/expr"
 )
 
 // Server describes a single process listening for client requests. The DSL
@@ -57,15 +57,15 @@ import (
 //       })
 //   })
 //
-func Server(name string, fn ...func()) *design.ServerExpr {
+func Server(name string, fn ...func()) *expr.ServerExpr {
 	if len(fn) > 1 {
 		eval.ReportError("too many arguments given to Server")
 	}
-	api, ok := eval.Current().(*design.APIExpr)
+	api, ok := eval.Current().(*expr.APIExpr)
 	if !ok {
 		eval.IncompatibleDSL()
 	}
-	server := &design.ServerExpr{Name: name}
+	server := &expr.ServerExpr{Name: name}
 	if len(fn) > 0 {
 		eval.Execute(fn[0], server)
 	}
@@ -88,7 +88,7 @@ func Server(name string, fn ...func()) *design.ServerExpr {
 //    })
 //
 func Services(svcs ...string) {
-	s, ok := eval.Current().(*design.ServerExpr)
+	s, ok := eval.Current().(*expr.ServerExpr)
 	if !ok {
 		eval.IncompatibleDSL()
 		return
@@ -117,15 +117,15 @@ func Services(svcs ...string) {
 //    })
 //
 func Host(name string, fn func()) {
-	s, ok := eval.Current().(*design.ServerExpr)
+	s, ok := eval.Current().(*expr.ServerExpr)
 	if !ok {
 		eval.IncompatibleDSL()
 		return
 	}
-	host := &design.HostExpr{
+	host := &expr.HostExpr{
 		Name:       name,
 		ServerName: s.Name,
-		Variables:  &design.AttributeExpr{Type: &design.Object{}},
+		Variables:  &expr.AttributeExpr{Type: &expr.Object{}},
 	}
 	eval.Execute(fn, host)
 	s.Hosts = append(s.Hosts, host)
@@ -157,12 +157,12 @@ func Host(name string, fn func()) {
 //    })
 //
 func URI(uri string) {
-	h, ok := eval.Current().(*design.HostExpr)
+	h, ok := eval.Current().(*expr.HostExpr)
 	if !ok {
 		eval.IncompatibleDSL()
 		return
 	}
-	h.URIs = append(h.URIs, design.URIExpr(uri))
+	h.URIs = append(h.URIs, expr.URIExpr(uri))
 }
 
 // Variable defines a server host URI variable.
@@ -193,7 +193,7 @@ func URI(uri string) {
 //    })
 //
 func Variable(name string, args ...interface{}) {
-	if _, ok := eval.Current().(*design.HostExpr); !ok {
+	if _, ok := eval.Current().(*expr.HostExpr); !ok {
 		eval.IncompatibleDSL()
 		return
 	}

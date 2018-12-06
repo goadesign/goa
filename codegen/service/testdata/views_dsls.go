@@ -1,7 +1,6 @@
 package testdata
 
 import (
-	. "goa.design/goa/design"
 	. "goa.design/goa/dsl"
 )
 

@@ -1,7 +1,7 @@
 package dsl
 
 import (
-	"goa.design/goa/design"
+	"goa.design/goa/expr"
 	"goa.design/goa/eval"
 )
 
@@ -73,7 +73,7 @@ func Payload(val interface{}, args ...interface{}) {
 	if len(args) > 2 {
 		eval.ReportError("too many arguments")
 	}
-	e, ok := eval.Current().(*design.MethodExpr)
+	e, ok := eval.Current().(*expr.MethodExpr)
 	if !ok {
 		eval.IncompatibleDSL()
 		return
@@ -128,36 +128,36 @@ func StreamingPayload(val interface{}, args ...interface{}) {
 	if len(args) > 2 {
 		eval.ReportError("too many arguments")
 	}
-	e, ok := eval.Current().(*design.MethodExpr)
+	e, ok := eval.Current().(*expr.MethodExpr)
 	if !ok {
 		eval.IncompatibleDSL()
 		return
 	}
 	e.StreamingPayload = methodDSL("StreamingPayload", val, args...)
-	if e.Stream == design.ServerStreamKind {
-		e.Stream = design.BidirectionalStreamKind
+	if e.Stream == expr.ServerStreamKind {
+		e.Stream = expr.BidirectionalStreamKind
 	} else {
-		e.Stream = design.ClientStreamKind
+		e.Stream = expr.ClientStreamKind
 	}
 }
 
-func methodDSL(suffix string, p interface{}, args ...interface{}) *design.AttributeExpr {
+func methodDSL(suffix string, p interface{}, args ...interface{}) *expr.AttributeExpr {
 	var (
-		att *design.AttributeExpr
+		att *expr.AttributeExpr
 		fn  func()
 	)
 	switch actual := p.(type) {
 	case func():
 		fn = actual
-		att = &design.AttributeExpr{Type: &design.Object{}}
-	case design.UserType:
+		att = &expr.AttributeExpr{Type: &expr.Object{}}
+	case expr.UserType:
 		if len(args) == 0 {
 			// Do not duplicate type if it is not customized
-			return &design.AttributeExpr{Type: actual}
+			return &expr.AttributeExpr{Type: actual}
 		}
-		att = &design.AttributeExpr{Type: design.Dup(actual)}
-	case design.DataType:
-		att = &design.AttributeExpr{Type: actual}
+		att = &expr.AttributeExpr{Type: expr.Dup(actual)}
+	case expr.DataType:
+		att = &expr.AttributeExpr{Type: actual}
 	default:
 		eval.ReportError("invalid %s argument, must be a type or a function", suffix)
 		return nil
@@ -175,9 +175,9 @@ func methodDSL(suffix string, p interface{}, args ...interface{}) *design.Attrib
 	}
 	if fn != nil {
 		eval.Execute(fn, att)
-		if obj, ok := att.Type.(*design.Object); ok {
+		if obj, ok := att.Type.(*expr.Object); ok {
 			if len(*obj) == 0 {
-				att.Type = design.Empty
+				att.Type = expr.Empty
 			}
 		}
 	}

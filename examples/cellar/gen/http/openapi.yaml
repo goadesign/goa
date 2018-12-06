@@ -33,11 +33,11 @@ paths:
         "400":
           description: Bad Request response.
           schema:
-            $ref: '#/definitions/PickNoCriteriaResponseBody'
+            $ref: '#/definitions/pick_no_criteria_response_body'
         "404":
           description: Not Found response.
           schema:
-            $ref: '#/definitions/PickNoMatchResponseBody'
+            $ref: '#/definitions/pick_no_match_response_body'
       schemes:
       - http
   /storage:
@@ -106,7 +106,7 @@ paths:
         "404":
           description: Not Found response.
           schema:
-            $ref: '#/definitions/ShowNotFoundResponseBody'
+            $ref: '#/definitions/show_not_found_response_body'
             required:
             - message
             - id
@@ -175,7 +175,7 @@ paths:
         items:
           type: string
         collectionFormat: multi
-      - name: MultiUpdateRequestBody
+      - name: multi_update_request_body
         in: body
         required: true
         schema:
@@ -338,35 +338,6 @@ definitions:
       varietal: Syrah
     required:
     - varietal
-  PickNoCriteriaResponseBody:
-    title: PickNoCriteriaResponseBody
-    type: string
-    description: Missing criteria
-    example: Rerum ut libero tempore optio corporis quam.
-  PickNoMatchResponseBody:
-    title: PickNoMatchResponseBody
-    type: string
-    description: No bottle matched given criteria
-    example: Quas exercitationem.
-  ShowNotFoundResponseBody:
-    title: ShowNotFoundResponseBody
-    type: object
-    properties:
-      id:
-        type: string
-        description: ID of missing bottle
-        example: Molestiae possimus voluptas aliquam.
-      message:
-        type: string
-        description: Message of error
-        example: bottle 1 not found
-    description: Bottle not found
-    example:
-      id: Quam beatae veniam quaerat sint voluptate error.
-      message: bottle 1 not found
-    required:
-    - message
-    - id
   SommelierPickRequestBody:
     title: SommelierPickRequestBody
     type: object
@@ -883,3 +854,32 @@ definitions:
       name: Longoria
     required:
     - name
+  pick_no_criteria_response_body:
+    title: pick_no_criteria_response_body
+    type: string
+    description: Missing criteria
+    example: Rerum ut libero tempore optio corporis quam.
+  pick_no_match_response_body:
+    title: pick_no_match_response_body
+    type: string
+    description: No bottle matched given criteria
+    example: Quas exercitationem.
+  show_not_found_response_body:
+    title: show_not_found_response_body
+    type: object
+    properties:
+      id:
+        type: string
+        description: ID of missing bottle
+        example: Molestiae possimus voluptas aliquam.
+      message:
+        type: string
+        description: Message of error
+        example: bottle 1 not found
+    description: Bottle not found
+    example:
+      id: Quam beatae veniam quaerat sint voluptate error.
+      message: bottle 1 not found
+    required:
+    - message
+    - id

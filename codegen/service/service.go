@@ -5,11 +5,11 @@ import (
 	"path/filepath"
 
 	"goa.design/goa/codegen"
-	"goa.design/goa/design"
+	"goa.design/goa/expr"
 )
 
 // File returns the service file for the given service.
-func File(genpkg string, service *design.ServiceExpr) *codegen.File {
+func File(genpkg string, service *expr.ServiceExpr) *codegen.File {
 	path := filepath.Join(codegen.Gendir, codegen.SnakeCase(service.Name), "service.go")
 	svc := Services.Get(service.Name)
 	header := codegen.Header(
@@ -78,7 +78,7 @@ func File(genpkg string, service *design.ServiceExpr) *codegen.File {
 
 	var errorTypes []*UserTypeData
 	for _, et := range svc.ErrorTypes {
-		if et.Type == design.ErrorResult {
+		if et.Type == expr.ErrorResult {
 			continue
 		}
 		if _, ok := seen[et.Name]; !ok {
@@ -92,7 +92,7 @@ func File(genpkg string, service *design.ServiceExpr) *codegen.File {
 	}
 
 	for _, et := range errorTypes {
-		if et.Type == design.ErrorResult {
+		if et.Type == expr.ErrorResult {
 			continue
 		}
 		sections = append(sections, &codegen.SectionTemplate{
@@ -155,10 +155,10 @@ func File(genpkg string, service *design.ServiceExpr) *codegen.File {
 }
 
 func errorName(et *UserTypeData) string {
-	obj := design.AsObject(et.Type)
+	obj := expr.AsObject(et.Type)
 	if obj != nil {
 		for _, att := range *obj {
-			if _, ok := att.Attribute.Metadata["struct:error:name"]; ok {
+			if _, ok := att.Attribute.Meta["struct:error:name"]; ok {
 				return fmt.Sprintf("e.%s", codegen.Goify(att.Name, true))
 			}
 		}
