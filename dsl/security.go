@@ -1,8 +1,8 @@
 package dsl
 
 import (
-	"goa.design/goa/design"
 	"goa.design/goa/eval"
+	"goa.design/goa/expr"
 )
 
 // BasicAuthSecurity defines a basic authentication security scheme.
@@ -18,7 +18,7 @@ import (
 //         Description("Use your own password!")
 //     })
 //
-func BasicAuthSecurity(name string, fn ...func()) *design.SchemeExpr {
+func BasicAuthSecurity(name string, fn ...func()) *expr.SchemeExpr {
 	if _, ok := eval.Current().(eval.TopExpr); !ok {
 		eval.IncompatibleDSL()
 		return nil
@@ -28,20 +28,20 @@ func BasicAuthSecurity(name string, fn ...func()) *design.SchemeExpr {
 		return nil
 	}
 
-	expr := &design.SchemeExpr{
-		Kind:       design.BasicAuthKind,
+	e := &expr.SchemeExpr{
+		Kind:       expr.BasicAuthKind,
 		SchemeName: name,
 	}
 
 	if len(fn) != 0 {
-		if !eval.Execute(fn[0], expr) {
+		if !eval.Execute(fn[0], e) {
 			return nil
 		}
 	}
 
-	design.Root.Schemes = append(design.Root.Schemes, expr)
+	expr.Root.Schemes = append(expr.Root.Schemes, e)
 
-	return expr
+	return e
 }
 
 // APIKeySecurity defines an API key security scheme where a key must be
@@ -58,7 +58,7 @@ func BasicAuthSecurity(name string, fn ...func()) *design.SchemeExpr {
 //          Description("Shared secret")
 //    })
 //
-func APIKeySecurity(name string, fn ...func()) *design.SchemeExpr {
+func APIKeySecurity(name string, fn ...func()) *expr.SchemeExpr {
 	if _, ok := eval.Current().(eval.TopExpr); !ok {
 		eval.IncompatibleDSL()
 		return nil
@@ -68,20 +68,20 @@ func APIKeySecurity(name string, fn ...func()) *design.SchemeExpr {
 		return nil
 	}
 
-	expr := &design.SchemeExpr{
-		Kind:       design.APIKeyKind,
+	e := &expr.SchemeExpr{
+		Kind:       expr.APIKeyKind,
 		SchemeName: name,
 	}
 
 	if len(fn) != 0 {
-		if !eval.Execute(fn[0], expr) {
+		if !eval.Execute(fn[0], e) {
 			return nil
 		}
 	}
 
-	design.Root.Schemes = append(design.Root.Schemes, expr)
+	expr.Root.Schemes = append(expr.Root.Schemes, e)
 
-	return expr
+	return e
 }
 
 // OAuth2Security defines an OAuth2 security scheme. The DSL provided as second
@@ -103,7 +103,7 @@ func APIKeySecurity(name string, fn ...func()) *design.SchemeExpr {
 //        Scope("api:read", "Read access")
 //    })
 //
-func OAuth2Security(name string, fn ...func()) *design.SchemeExpr {
+func OAuth2Security(name string, fn ...func()) *expr.SchemeExpr {
 	if _, ok := eval.Current().(eval.TopExpr); !ok {
 		eval.IncompatibleDSL()
 		return nil
@@ -113,20 +113,20 @@ func OAuth2Security(name string, fn ...func()) *design.SchemeExpr {
 		return nil
 	}
 
-	expr := &design.SchemeExpr{
+	e := &expr.SchemeExpr{
 		SchemeName: name,
-		Kind:       design.OAuth2Kind,
+		Kind:       expr.OAuth2Kind,
 	}
 
 	if len(fn) != 0 {
-		if !eval.Execute(fn[0], expr) {
+		if !eval.Execute(fn[0], e) {
 			return nil
 		}
 	}
 
-	design.Root.Schemes = append(design.Root.Schemes, expr)
+	expr.Root.Schemes = append(expr.Root.Schemes, e)
 
-	return expr
+	return e
 }
 
 // JWTSecurity defines an HTTP security scheme where a JWT is passed in the
@@ -151,7 +151,7 @@ func OAuth2Security(name string, fn ...func()) *design.SchemeExpr {
 //        Scope("system:read", "Read anything in there")
 //    })
 //
-func JWTSecurity(name string, fn ...func()) *design.SchemeExpr {
+func JWTSecurity(name string, fn ...func()) *expr.SchemeExpr {
 	if _, ok := eval.Current().(eval.TopExpr); !ok {
 		eval.IncompatibleDSL()
 		return nil
@@ -161,22 +161,22 @@ func JWTSecurity(name string, fn ...func()) *design.SchemeExpr {
 		return nil
 	}
 
-	expr := &design.SchemeExpr{
+	e := &expr.SchemeExpr{
 		SchemeName: name,
-		Kind:       design.JWTKind,
+		Kind:       expr.JWTKind,
 		In:         "header",
 		Name:       "Authorization",
 	}
 
 	if len(fn) != 0 {
-		if !eval.Execute(fn[0], expr) {
+		if !eval.Execute(fn[0], e) {
 			return nil
 		}
 	}
 
-	design.Root.Schemes = append(design.Root.Schemes, expr)
+	expr.Root.Schemes = append(expr.Root.Schemes, e)
 
-	return expr
+	return e
 }
 
 // Security defines authentication requirements to access a service or a service
@@ -240,15 +240,15 @@ func Security(args ...interface{}) {
 		}
 	}
 
-	var schemes []*design.SchemeExpr
+	var schemes []*expr.SchemeExpr
 	{
-		schemes = make([]*design.SchemeExpr, len(args))
+		schemes = make([]*expr.SchemeExpr, len(args))
 		for i, arg := range args {
 			switch val := arg.(type) {
 			case string:
-				for _, s := range design.Root.Schemes {
+				for _, s := range expr.Root.Schemes {
 					if s.SchemeName == val {
-						schemes[i] = design.DupScheme(s)
+						schemes[i] = expr.DupScheme(s)
 						break
 					}
 				}
@@ -256,8 +256,8 @@ func Security(args ...interface{}) {
 					eval.ReportError("security scheme %q not found", val)
 					return
 				}
-			case *design.SchemeExpr:
-				schemes[i] = design.DupScheme(val)
+			case *expr.SchemeExpr:
+				schemes[i] = expr.DupScheme(val)
 			default:
 				eval.InvalidArgError("security scheme or security scheme name", val)
 				return
@@ -265,7 +265,7 @@ func Security(args ...interface{}) {
 		}
 	}
 
-	security := &design.SecurityExpr{Schemes: schemes}
+	security := &expr.SecurityExpr{Schemes: schemes}
 	if dsl != nil {
 		if !eval.Execute(dsl, security) {
 			return
@@ -274,9 +274,11 @@ func Security(args ...interface{}) {
 
 	current := eval.Current()
 	switch actual := current.(type) {
-	case *design.MethodExpr:
+	case *expr.MethodExpr:
 		actual.Requirements = append(actual.Requirements, security)
-	case *design.ServiceExpr:
+	case *expr.ServiceExpr:
+		actual.Requirements = append(actual.Requirements, security)
+	case *expr.APIExpr:
 		actual.Requirements = append(actual.Requirements, security)
 	default:
 		eval.IncompatibleDSL()
@@ -288,15 +290,15 @@ func Security(args ...interface{}) {
 //
 // NoSecurity must appear in Method.
 func NoSecurity() {
-	security := &design.SecurityExpr{
-		Schemes: []*design.SchemeExpr{
-			{Kind: design.NoKind},
+	security := &expr.SecurityExpr{
+		Schemes: []*expr.SchemeExpr{
+			&expr.SchemeExpr{Kind: expr.NoKind},
 		},
 	}
 
 	current := eval.Current()
 	switch actual := current.(type) {
-	case *design.MethodExpr:
+	case *expr.MethodExpr:
 		actual.Requirements = append(actual.Requirements, security)
 	default:
 		eval.IncompatibleDSL()
@@ -328,8 +330,19 @@ func NoSecurity() {
 //    })
 //
 func Username(name string, args ...interface{}) {
-	args = useDSL(args, func() { Metadata("security:username") })
+	args = useDSL(args, func() { Meta("security:username") })
 	Attribute(name, args...)
+}
+
+// UsernameField is syntactic sugar to define a username attribute with the
+// "rpc:tag" meta set with the value of the first argument.
+//
+// UsernameField takes the same arguments as Username with the addition of the
+// tag value as the first argument.
+//
+func UsernameField(tag interface{}, name string, args ...interface{}) {
+	args = useDSL(args, func() { Meta("security:username") })
+	Field(tag, name, args...)
 }
 
 // Password defines the attribute used to provide the password to an endpoint
@@ -356,8 +369,19 @@ func Username(name string, args ...interface{}) {
 //    })
 //
 func Password(name string, args ...interface{}) {
-	args = useDSL(args, func() { Metadata("security:password") })
+	args = useDSL(args, func() { Meta("security:password") })
 	Attribute(name, args...)
+}
+
+// PasswordField is syntactic sugar to define a password attribute with the
+// "rpc:tag" meta set with the value of the first argument.
+//
+// PasswordField takes the same arguments as Password with the addition of the
+// tag value as the first argument.
+//
+func PasswordField(tag interface{}, name string, args ...interface{}) {
+	args = useDSL(args, func() { Meta("security:password") })
+	Field(tag, name, args...)
 }
 
 // APIKey defines the attribute used to provide the API key to an endpoint
@@ -399,8 +423,19 @@ func Password(name string, args ...interface{}) {
 //    })
 //
 func APIKey(scheme, name string, args ...interface{}) {
-	args = useDSL(args, func() { Metadata("security:apikey:"+scheme, scheme) })
+	args = useDSL(args, func() { Meta("security:apikey:"+scheme, scheme) })
 	Attribute(name, args...)
+}
+
+// APIKeyField is syntactic sugar to define an API key attribute with the
+// "rpc:tag" meta set with the value of the first argument.
+//
+// APIKeyField takes the same arguments as APIKey with the addition of the
+// tag value as the first argument.
+//
+func APIKeyField(tag interface{}, scheme, name string, args ...interface{}) {
+	args = useDSL(args, func() { Meta("security:apikey:"+scheme, scheme) })
+	Field(tag, name, args...)
 }
 
 // AccessToken defines the attribute used to provide the access token to an
@@ -428,8 +463,19 @@ func APIKey(scheme, name string, args ...interface{}) {
 //    })
 //
 func AccessToken(name string, args ...interface{}) {
-	args = useDSL(args, func() { Metadata("security:accesstoken") })
+	args = useDSL(args, func() { Meta("security:accesstoken") })
 	Attribute(name, args...)
+}
+
+// AccessTokenField is syntactic sugar to define an access token attribute with the
+// "rpc:tag" meta set with the value of the first argument.
+//
+// AccessTokenField takes the same arguments as AccessToken with the addition of the
+// tag value as the first argument.
+//
+func AccessTokenField(tag interface{}, name string, args ...interface{}) {
+	args = useDSL(args, func() { Meta("security:accesstoken") })
+	Field(tag, name, args...)
 }
 
 // Token defines the attribute used to provide the JWT to an endpoint secured
@@ -455,8 +501,19 @@ func AccessToken(name string, args ...interface{}) {
 //    })
 //
 func Token(name string, args ...interface{}) {
-	args = useDSL(args, func() { Metadata("security:token") })
+	args = useDSL(args, func() { Meta("security:token") })
 	Attribute(name, args...)
+}
+
+// TokenField is syntactic sugar to define a JWT token attribute with the
+// "rpc:tag" meta set with the value of the first argument.
+//
+// TokenField takes the same arguments as Token with the addition of the
+// tag value as the first argument.
+//
+func TokenField(tag interface{}, name string, args ...interface{}) {
+	args = useDSL(args, func() { Meta("security:token") })
+	Field(tag, name, args...)
 }
 
 // Scope has two uses: in JWTSecurity or OAuth2Security it defines a scope
@@ -483,13 +540,13 @@ func Token(name string, args ...interface{}) {
 //
 func Scope(name string, desc ...string) {
 	switch current := eval.Current().(type) {
-	case *design.SecurityExpr:
+	case *expr.SecurityExpr:
 		if len(desc) >= 1 {
 			eval.ReportError("too many arguments")
 			return
 		}
 		current.Scopes = append(current.Scopes, name)
-	case *design.SchemeExpr:
+	case *expr.SchemeExpr:
 		if len(desc) > 1 {
 			eval.ReportError("too many arguments")
 			return
@@ -499,7 +556,7 @@ func Scope(name string, desc ...string) {
 			d = desc[0]
 		}
 		current.Scopes = append(current.Scopes,
-			&design.ScopeExpr{Name: name, Description: d})
+			&expr.ScopeExpr{Name: name, Description: d})
 	default:
 		eval.IncompatibleDSL()
 	}
@@ -513,17 +570,17 @@ func Scope(name string, desc ...string) {
 // AuthorizationCodeFlow accepts three arguments: the authorization, token and
 // refresh URLs.
 func AuthorizationCodeFlow(authorizationURL, tokenURL, refreshURL string) {
-	current, ok := eval.Current().(*design.SchemeExpr)
+	current, ok := eval.Current().(*expr.SchemeExpr)
 	if !ok {
 		eval.IncompatibleDSL()
 		return
 	}
-	if current.Kind != design.OAuth2Kind {
+	if current.Kind != expr.OAuth2Kind {
 		eval.ReportError("cannot specify flow for non-oauth2 security scheme.")
 		return
 	}
-	current.Flows = append(current.Flows, &design.FlowExpr{
-		Kind:             design.AuthorizationCodeFlowKind,
+	current.Flows = append(current.Flows, &expr.FlowExpr{
+		Kind:             expr.AuthorizationCodeFlowKind,
 		AuthorizationURL: authorizationURL,
 		TokenURL:         tokenURL,
 		RefreshURL:       refreshURL,
@@ -537,17 +594,17 @@ func AuthorizationCodeFlow(authorizationURL, tokenURL, refreshURL string) {
 //
 // ImplicitFlow accepts two arguments: the authorization and refresh URLs.
 func ImplicitFlow(authorizationURL, refreshURL string) {
-	current, ok := eval.Current().(*design.SchemeExpr)
+	current, ok := eval.Current().(*expr.SchemeExpr)
 	if !ok {
 		eval.IncompatibleDSL()
 		return
 	}
-	if current.Kind != design.OAuth2Kind {
+	if current.Kind != expr.OAuth2Kind {
 		eval.ReportError("cannot specify flow for non-oauth2 security scheme.")
 		return
 	}
-	current.Flows = append(current.Flows, &design.FlowExpr{
-		Kind:             design.ImplicitFlowKind,
+	current.Flows = append(current.Flows, &expr.FlowExpr{
+		Kind:             expr.ImplicitFlowKind,
 		AuthorizationURL: authorizationURL,
 		RefreshURL:       refreshURL,
 	})
@@ -560,17 +617,17 @@ func ImplicitFlow(authorizationURL, refreshURL string) {
 //
 // PasswordFlow accepts two arguments: the token and refresh URLs.
 func PasswordFlow(tokenURL, refreshURL string) {
-	current, ok := eval.Current().(*design.SchemeExpr)
+	current, ok := eval.Current().(*expr.SchemeExpr)
 	if !ok {
 		eval.IncompatibleDSL()
 		return
 	}
-	if current.Kind != design.OAuth2Kind {
+	if current.Kind != expr.OAuth2Kind {
 		eval.ReportError("cannot specify flow for non-oauth2 security scheme.")
 		return
 	}
-	current.Flows = append(current.Flows, &design.FlowExpr{
-		Kind:       design.PasswordFlowKind,
+	current.Flows = append(current.Flows, &expr.FlowExpr{
+		Kind:       expr.PasswordFlowKind,
 		TokenURL:   tokenURL,
 		RefreshURL: refreshURL,
 	})
@@ -583,24 +640,24 @@ func PasswordFlow(tokenURL, refreshURL string) {
 //
 // ClientCredentialsFlow accepts two arguments: the token and refresh URLs.
 func ClientCredentialsFlow(tokenURL, refreshURL string) {
-	current, ok := eval.Current().(*design.SchemeExpr)
+	current, ok := eval.Current().(*expr.SchemeExpr)
 	if !ok {
 		eval.IncompatibleDSL()
 		return
 	}
-	if current.Kind != design.OAuth2Kind {
+	if current.Kind != expr.OAuth2Kind {
 		eval.ReportError("cannot specify flow for non-oauth2 security scheme.")
 		return
 	}
-	current.Flows = append(current.Flows, &design.FlowExpr{
-		Kind:       design.ClientCredentialsFlowKind,
+	current.Flows = append(current.Flows, &expr.FlowExpr{
+		Kind:       expr.ClientCredentialsFlowKind,
 		TokenURL:   tokenURL,
 		RefreshURL: refreshURL,
 	})
 }
 
 func securitySchemeRedefined(name string) bool {
-	for _, s := range design.Root.Schemes {
+	for _, s := range expr.Root.Schemes {
 		if s.SchemeName == name {
 			eval.ReportError("cannot redefine security scheme with name %q", name)
 			return true

@@ -5,36 +5,36 @@ import (
 	"sort"
 	"strings"
 
-	"goa.design/goa/design"
+	"goa.design/goa/expr"
 )
 
 // GoNativeTypeName returns the Go built-in type corresponding to the given
 // primitive type. GoNativeType panics if t is not a primitive type.
-func GoNativeTypeName(t design.DataType) string {
+func GoNativeTypeName(t expr.DataType) string {
 	switch t.Kind() {
-	case design.BooleanKind:
+	case expr.BooleanKind:
 		return "bool"
-	case design.IntKind:
+	case expr.IntKind:
 		return "int"
-	case design.Int32Kind:
+	case expr.Int32Kind:
 		return "int32"
-	case design.Int64Kind:
+	case expr.Int64Kind:
 		return "int64"
-	case design.UIntKind:
+	case expr.UIntKind:
 		return "uint"
-	case design.UInt32Kind:
+	case expr.UInt32Kind:
 		return "uint32"
-	case design.UInt64Kind:
+	case expr.UInt64Kind:
 		return "uint64"
-	case design.Float32Kind:
+	case expr.Float32Kind:
 		return "float32"
-	case design.Float64Kind:
+	case expr.Float64Kind:
 		return "float64"
-	case design.StringKind:
+	case expr.StringKind:
 		return "string"
-	case design.BytesKind:
+	case expr.BytesKind:
 		return "[]byte"
-	case design.AnyKind:
+	case expr.AnyKind:
 		return "interface{}"
 	default:
 		panic(fmt.Sprintf("cannot compute native Go type for %T", t)) // bug
@@ -42,17 +42,17 @@ func GoNativeTypeName(t design.DataType) string {
 }
 
 // AttributeTags computes the struct field tags from its metadata if any.
-func AttributeTags(parent, att *design.AttributeExpr) string {
+func AttributeTags(parent, att *expr.AttributeExpr) string {
 	var elems []string
-	keys := make([]string, len(att.Metadata))
+	keys := make([]string, len(att.Meta))
 	i := 0
-	for k := range att.Metadata {
+	for k := range att.Meta {
 		keys[i] = k
 		i++
 	}
 	sort.Strings(keys)
 	for _, key := range keys {
-		val := att.Metadata[key]
+		val := att.Meta[key]
 		if strings.HasPrefix(key, "struct:tag:") {
 			name := key[11:]
 			value := strings.Join(val, ",")

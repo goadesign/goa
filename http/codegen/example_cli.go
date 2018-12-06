@@ -6,16 +6,15 @@ import (
 	"strings"
 
 	"goa.design/goa/codegen"
-	"goa.design/goa/design"
-	httpdesign "goa.design/goa/http/design"
+	"goa.design/goa/expr"
 )
 
 // ExampleCLI returns an example client tool main implementation.
-func ExampleCLI(genpkg string, root *httpdesign.RootExpr) []*codegen.File {
-	files := make([]*codegen.File, len(design.Root.API.Servers))
-	for i, svr := range design.Root.API.Servers {
+func ExampleCLI(genpkg string, root *expr.RootExpr) []*codegen.File {
+	files := make([]*codegen.File, len(root.API.Servers))
+	for i, svr := range root.API.Servers {
 		pkg := codegen.SnakeCase(codegen.Goify(svr.Name, true))
-		apiPkg := strings.ToLower(codegen.Goify(root.Design.API.Name, false))
+		apiPkg := strings.ToLower(codegen.Goify(root.API.Name, false))
 		path := filepath.Join("cmd", pkg+"-cli", "main.go")
 		if _, err := os.Stat(path); !os.IsNotExist(err) {
 			return nil // file already exists, skip it.
@@ -44,7 +43,7 @@ func ExampleCLI(genpkg string, root *httpdesign.RootExpr) []*codegen.File {
 		for i, svc := range svr.Services {
 			svcdata[i] = HTTPServices.Get(svc)
 		}
-		vars := design.AsObject(svr.Hosts[0].Variables.Type)
+		vars := expr.AsObject(svr.Hosts[0].Variables.Type)
 		var variables []map[string]interface{}
 		if len(*vars) > 0 {
 			variables = make([]map[string]interface{}, len(*vars))

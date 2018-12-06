@@ -10,7 +10,7 @@ import (
 	"strings"
 
 	"goa.design/goa/codegen"
-	"goa.design/goa/design"
+	"goa.design/goa/expr"
 )
 
 // ConvertData contains the info needed to render convert and create functions.
@@ -127,14 +127,14 @@ func getExternalTypeInfo(external interface{}) (string, string, error) {
 
 // ConvertFile returns the file containing the conversion and creation functions
 // if any.
-func ConvertFile(root *design.RootExpr, service *design.ServiceExpr) (*codegen.File, error) {
+func ConvertFile(root *expr.RootExpr, service *expr.ServiceExpr) (*codegen.File, error) {
 	// Filter conversion and creation functions that are relevant for this
 	// service
 	svc := Services.Get(service.Name)
-	var conversions, creations []*design.TypeMap
+	var conversions, creations []*expr.TypeMap
 	for _, c := range root.Conversions {
 		for _, m := range service.Methods {
-			if ut, ok := m.Payload.Type.(design.UserType); ok {
+			if ut, ok := m.Payload.Type.(expr.UserType); ok {
 				if ut.Name() == c.User.Name() {
 					conversions = append(conversions, c)
 					break
@@ -142,7 +142,7 @@ func ConvertFile(root *design.RootExpr, service *design.ServiceExpr) (*codegen.F
 			}
 		}
 		for _, m := range service.Methods {
-			if ut, ok := m.Result.Type.(design.UserType); ok {
+			if ut, ok := m.Result.Type.(expr.UserType); ok {
 				if ut.Name() == c.User.Name() {
 					conversions = append(conversions, c)
 					break
@@ -158,7 +158,7 @@ func ConvertFile(root *design.RootExpr, service *design.ServiceExpr) (*codegen.F
 	}
 	for _, c := range root.Creations {
 		for _, m := range service.Methods {
-			if ut, ok := m.Payload.Type.(design.UserType); ok {
+			if ut, ok := m.Payload.Type.(expr.UserType); ok {
 				if ut.Name() == c.User.Name() {
 					creations = append(creations, c)
 					break
@@ -166,7 +166,7 @@ func ConvertFile(root *design.RootExpr, service *design.ServiceExpr) (*codegen.F
 			}
 		}
 		for _, m := range service.Methods {
-			if ut, ok := m.Result.Type.(design.UserType); ok {
+			if ut, ok := m.Result.Type.(expr.UserType); ok {
 				if ut.Name() == c.User.Name() {
 					creations = append(creations, c)
 					break
@@ -222,7 +222,7 @@ func ConvertFile(root *design.RootExpr, service *design.ServiceExpr) (*codegen.F
 
 	// Build conversion sections if any
 	for _, c := range conversions {
-		var dt design.DataType
+		var dt expr.DataType
 		if err := buildDesignType(&dt, reflect.TypeOf(c.External), c.User); err != nil {
 			return nil, err
 		}
@@ -237,12 +237,12 @@ func ConvertFile(root *design.RootExpr, service *design.ServiceExpr) (*codegen.F
 		base := "ConvertTo" + t.Name()
 		name := uniquify(base, names)
 		ref := t.String()
-		if design.IsObject(c.User) {
+		if expr.IsObject(c.User) {
 			ref = "*" + ref
 		}
 		data := ConvertData{
 			Name:            name,
-			ReceiverTypeRef: svc.Scope.GoTypeRef(&design.AttributeExpr{Type: c.User}),
+			ReceiverTypeRef: svc.Scope.GoTypeRef(&expr.AttributeExpr{Type: c.User}),
 			TypeName:        t.Name(),
 			TypeRef:         ref,
 			Code:            code,
@@ -256,7 +256,7 @@ func ConvertFile(root *design.RootExpr, service *design.ServiceExpr) (*codegen.F
 
 	// Build creation sections if any
 	for _, c := range creations {
-		var dt design.DataType
+		var dt expr.DataType
 		if err := buildDesignType(&dt, reflect.TypeOf(c.External), c.User); err != nil {
 			return nil, err
 		}
@@ -271,12 +271,12 @@ func ConvertFile(root *design.RootExpr, service *design.ServiceExpr) (*codegen.F
 		base := "CreateFrom" + t.Name()
 		name := uniquify(base, names)
 		ref := t.String()
-		if design.IsObject(c.User) {
+		if expr.IsObject(c.User) {
 			ref = "*" + ref
 		}
 		data := ConvertData{
 			Name:            name,
-			ReceiverTypeRef: svc.Scope.GoTypeRef(&design.AttributeExpr{Type: c.User}),
+			ReceiverTypeRef: svc.Scope.GoTypeRef(&expr.AttributeExpr{Type: c.User}),
 			TypeRef:         ref,
 			Code:            code,
 		}
@@ -323,7 +323,7 @@ func uniquify(base string, taken map[string]struct{}) string {
 
 type dtRec struct {
 	path string
-	seen map[string]design.DataType
+	seen map[string]expr.DataType
 }
 
 func (r dtRec) append(p string) dtRec {
@@ -335,7 +335,7 @@ func (r dtRec) append(p string) dtRec {
 // ref is the user type the data type being built is converted to or created
 // from. It's used to compute the non-generated type field names and can be nil
 // if no matching attribute exists.
-func buildDesignType(dt *design.DataType, t reflect.Type, ref design.DataType, recs ...dtRec) error {
+func buildDesignType(dt *expr.DataType, t reflect.Type, ref expr.DataType, recs ...dtRec) error {
 	// check compatibility
 	if ref != nil {
 		if err := compatible(ref, t); err != nil {
@@ -353,77 +353,77 @@ func buildDesignType(dt *design.DataType, t reflect.Type, ref design.DataType, r
 		}
 	} else {
 		rec.path = "<value>"
-		rec.seen = make(map[string]design.DataType)
+		rec.seen = make(map[string]expr.DataType)
 	}
 
 	switch t.Kind() {
 	case reflect.Bool:
-		*dt = design.Boolean
+		*dt = expr.Boolean
 
 	case reflect.Int:
-		*dt = design.Int
+		*dt = expr.Int
 
 	case reflect.Int32:
-		*dt = design.Int32
+		*dt = expr.Int32
 
 	case reflect.Int64:
-		*dt = design.Int64
+		*dt = expr.Int64
 
 	case reflect.Uint:
-		*dt = design.UInt
+		*dt = expr.UInt
 
 	case reflect.Uint32:
-		*dt = design.UInt32
+		*dt = expr.UInt32
 
 	case reflect.Uint64:
-		*dt = design.UInt64
+		*dt = expr.UInt64
 
 	case reflect.Float32:
-		*dt = design.Float32
+		*dt = expr.Float32
 
 	case reflect.Float64:
-		*dt = design.Float64
+		*dt = expr.Float64
 
 	case reflect.String:
-		*dt = design.String
+		*dt = expr.String
 
 	case reflect.Slice:
 		e := t.Elem()
 		if e.Kind() == reflect.Uint8 {
-			*dt = design.Bytes
+			*dt = expr.Bytes
 			return nil
 		}
-		var eref design.DataType
+		var eref expr.DataType
 		if ref != nil {
-			eref = design.AsArray(ref).ElemType.Type
+			eref = expr.AsArray(ref).ElemType.Type
 		}
-		var elem design.DataType
+		var elem expr.DataType
 		if err := buildDesignType(&elem, e, eref, rec.append("[0]")); err != nil {
 			return fmt.Errorf("%s", err)
 		}
-		*dt = &design.Array{ElemType: &design.AttributeExpr{Type: elem}}
+		*dt = &expr.Array{ElemType: &expr.AttributeExpr{Type: elem}}
 
 	case reflect.Map:
-		var kref, vref design.DataType
+		var kref, vref expr.DataType
 		if ref != nil {
-			m := design.AsMap(ref)
+			m := expr.AsMap(ref)
 			kref = m.KeyType.Type
 			vref = m.ElemType.Type
 		}
-		var kt design.DataType
+		var kt expr.DataType
 		if err := buildDesignType(&kt, t.Key(), kref, rec.append(".key")); err != nil {
 			return fmt.Errorf("%s", err)
 		}
-		var vt design.DataType
+		var vt expr.DataType
 		if err := buildDesignType(&vt, t.Elem(), vref, rec.append(".value")); err != nil {
 			return fmt.Errorf("%s", err)
 		}
-		*dt = &design.Map{KeyType: &design.AttributeExpr{Type: kt}, ElemType: &design.AttributeExpr{Type: vt}}
+		*dt = &expr.Map{KeyType: &expr.AttributeExpr{Type: kt}, ElemType: &expr.AttributeExpr{Type: vt}}
 
 	case reflect.Struct:
-		var oref *design.Object
+		var oref *expr.Object
 		if ref != nil {
-			oref = design.AsObject(ref)
+			oref = expr.AsObject(ref)
 		}
 
 		// Build list of fields that should not be ignored.
@@ -433,7 +433,7 @@ func buildDesignType(dt *design.DataType, t reflect.Type, ref design.DataType, r
 			atn, _ := attributeName(oref, f.Name)
 			if oref != nil {
 				if at := oref.Attribute(atn); at != nil {
-					if m := at.Metadata["struct.field.external"]; len(m) > 0 {
+					if m := at.Meta["struct.field.external"]; len(m) > 0 {
 						if m[0] == "-" {
 							continue
 						}
@@ -444,11 +444,11 @@ func buildDesignType(dt *design.DataType, t reflect.Type, ref design.DataType, r
 		}
 
 		// Avoid infinite recursions
-		obj := design.Object(make([]*design.NamedAttributeExpr, len(fields)))
-		ut := &design.UserTypeExpr{
-			AttributeExpr: &design.AttributeExpr{
-				Type:     &obj,
-				Metadata: map[string][]string{"goa.external": nil},
+		obj := expr.Object(make([]*expr.NamedAttributeExpr, len(fields)))
+		ut := &expr.UserTypeExpr{
+			AttributeExpr: &expr.AttributeExpr{
+				Type: &obj,
+				Meta: map[string][]string{"goa.external": nil},
 			},
 			TypeName: t.Name(),
 		}
@@ -458,22 +458,22 @@ func buildDesignType(dt *design.DataType, t reflect.Type, ref design.DataType, r
 		for i, f := range fields {
 			recf := rec.append("." + f.Name)
 			atn, fn := attributeName(oref, f.Name)
-			var aref design.DataType
+			var aref expr.DataType
 			if oref != nil {
 				if at := oref.Attribute(atn); at != nil {
 					aref = at.Type
 				}
 			}
-			var fdt design.DataType
+			var fdt expr.DataType
 			if f.Type.Kind() == reflect.Ptr {
 				if err := buildDesignType(&fdt, f.Type.Elem(), aref, recf); err != nil {
 					return fmt.Errorf("%q.%s: %s", t.Name(), f.Name, err)
 				}
-				if design.IsArray(fdt) {
-					return fmt.Errorf("%s: field of type pointer to slice are not supported, use slice instead", recf.path)
+				if expr.IsArray(fdt) {
+					return fmt.Errorf("%s: field of type pointer to slice are not supported, use slice instead", rec.path)
 				}
-				if design.IsMap(fdt) {
-					return fmt.Errorf("%s: field of type pointer to map are not supported, use map instead", recf.path)
+				if expr.IsMap(fdt) {
+					return fmt.Errorf("%s: field of type pointer to map are not supported, use map instead", rec.path)
 				}
 			} else if f.Type.Kind() == reflect.Struct {
 				return fmt.Errorf("%s: fields of type struct must use pointers", recf.path)
@@ -489,16 +489,16 @@ func buildDesignType(dt *design.DataType, t reflect.Type, ref design.DataType, r
 			if fn != "" {
 				name = name + ":" + fn
 			}
-			obj[i] = &design.NamedAttributeExpr{
+			obj[i] = &expr.NamedAttributeExpr{
 				Name: name,
-				Attribute: &design.AttributeExpr{
-					Type:     fdt,
-					Metadata: map[string][]string{"goa.external": nil},
+				Attribute: &expr.AttributeExpr{
+					Type: fdt,
+					Meta: map[string][]string{"goa.external": nil},
 				},
 			}
 		}
 		if len(required) > 0 {
-			ut.Validation = &design.ValidationExpr{Required: required}
+			ut.Validation = &expr.ValidationExpr{Required: required}
 		}
 		return nil
 
@@ -507,24 +507,24 @@ func buildDesignType(dt *design.DataType, t reflect.Type, ref design.DataType, r
 		if err := buildDesignType(dt, t.Elem(), ref, rec); err != nil {
 			return err
 		}
-		if !design.IsObject(*dt) {
+		if !expr.IsObject(*dt) {
 			return fmt.Errorf("%s: only pointer to struct can be converted", rec.path)
 		}
 	default:
-		*dt = design.Any
+		*dt = expr.Any
 	}
 	return nil
 }
 
 // attributeName computes the name of the attribute for the given field name and
 // object that must contain the matching attribute.
-func attributeName(obj *design.Object, name string) (string, string) {
+func attributeName(obj *expr.Object, name string) (string, string) {
 	if obj == nil {
 		return name, ""
 	}
-	// first look for a "struct.field.external" metadata
+	// first look for a "struct.field.external" meta
 	for _, nat := range *obj {
-		if m := nat.Attribute.Metadata["struct.field.external"]; len(m) > 0 {
+		if m := nat.Attribute.Meta["struct.field.external"]; len(m) > 0 {
 			if m[0] == name {
 				return nat.Name, name
 			}
@@ -602,7 +602,7 @@ func (r compRec) append(p string) compRec {
 
 // compatible checks the user and external type definitions map recursively . It
 // returns nil if they do, an error otherwise.
-func compatible(from design.DataType, to reflect.Type, recs ...compRec) error {
+func compatible(from expr.DataType, to reflect.Type, recs ...compRec) error {
 	// deference if needed
 	if to.Kind() == reflect.Ptr {
 		return compatible(from, to.Elem(), recs...)
@@ -625,41 +625,41 @@ func compatible(from design.DataType, to reflect.Type, recs ...compRec) error {
 	}
 	rec.seen[from.Hash()+"-"+toName] = struct{}{}
 
-	if design.IsArray(from) {
+	if expr.IsArray(from) {
 		if to.Kind() != reflect.Slice {
 			return fmt.Errorf("types don't match: %s must be a slice", rec.path)
 		}
 		return compatible(
-			design.AsArray(from).ElemType.Type,
+			expr.AsArray(from).ElemType.Type,
 			to.Elem(),
 			rec.append("[0]"),
 		)
 	}
 
-	if design.IsMap(from) {
+	if expr.IsMap(from) {
 		if to.Kind() != reflect.Map {
 			return fmt.Errorf("types don't match: %s is not a map", rec.path)
 		}
 		if err := compatible(
-			design.AsMap(from).ElemType.Type,
+			expr.AsMap(from).ElemType.Type,
 			to.Elem(),
 			rec.append(".value"),
 		); err != nil {
 			return err
 		}
 		return compatible(
-			design.AsMap(from).KeyType.Type,
+			expr.AsMap(from).KeyType.Type,
 			to.Key(),
 			rec.append(".key"),
 		)
 	}
 
-	if design.IsObject(from) {
+	if expr.IsObject(from) {
 		if to.Kind() != reflect.Struct {
 			return fmt.Errorf("types don't match: %s is a %s, expected a struct", rec.path, toName)
 		}
-		obj := design.AsObject(from)
-		ma := design.NewMappedAttributeExpr(&design.AttributeExpr{Type: obj})
+		obj := expr.AsObject(from)
+		ma := expr.NewMappedAttributeExpr(&expr.AttributeExpr{Type: obj})
 		for _, nat := range *obj {
 			var (
 				fname string
@@ -667,7 +667,7 @@ func compatible(from design.DataType, to reflect.Type, recs ...compRec) error {
 				field reflect.StructField
 			)
 			{
-				if ef, k := nat.Attribute.Metadata["struct.field.external"]; k {
+				if ef, k := nat.Attribute.Meta["struct.field.external"]; k {
 					fname = ef[0]
 					if fname == "-" {
 						continue
@@ -696,11 +696,11 @@ func compatible(from design.DataType, to reflect.Type, recs ...compRec) error {
 	}
 
 	if isPrimitive(to) {
-		var dt design.DataType
+		var dt expr.DataType
 		if err := buildDesignType(&dt, to, nil); err != nil {
 			return err
 		}
-		if design.Equal(dt, from) {
+		if expr.Equal(dt, from) {
 			return nil
 		}
 	}

@@ -8,21 +8,20 @@ import (
 	"strings"
 
 	"goa.design/goa/codegen"
-	"goa.design/goa/design"
-	httpdesign "goa.design/goa/http/design"
+	"goa.design/goa/expr"
 )
 
 // ExampleServerFiles returns and example main and dummy service
 // implementations.
-func ExampleServerFiles(genpkg string, root *httpdesign.RootExpr) []*codegen.File {
+func ExampleServerFiles(genpkg string, root *expr.RootExpr) []*codegen.File {
 	var fw []*codegen.File
-	for _, svc := range root.HTTPServices {
+	for _, svc := range root.API.HTTP.Services {
 		f := dummyServiceFile(genpkg, root, svc)
 		if f != nil {
 			fw = append(fw, f)
 		}
 	}
-	for _, svr := range root.Design.API.Servers {
+	for _, svr := range root.API.Servers {
 		if m := exampleMain(genpkg, root, svr); m != nil {
 			fw = append(fw, m)
 		}
@@ -31,10 +30,10 @@ func ExampleServerFiles(genpkg string, root *httpdesign.RootExpr) []*codegen.Fil
 }
 
 // dummyServiceFile returns a dummy implementation of the given service.
-func dummyServiceFile(genpkg string, root *httpdesign.RootExpr, svc *httpdesign.ServiceExpr) *codegen.File {
+func dummyServiceFile(genpkg string, root *expr.RootExpr, svc *expr.HTTPServiceExpr) *codegen.File {
 	path := codegen.SnakeCase(svc.Name()) + ".go"
 	data := HTTPServices.Get(svc.Name())
-	apiPkg := strings.ToLower(codegen.Goify(root.Design.API.Name, false))
+	apiPkg := strings.ToLower(codegen.Goify(root.API.Name, false))
 	sections := []*codegen.SectionTemplate{
 		codegen.Header("", apiPkg, []*codegen.ImportSpec{
 			{Path: "context"},
@@ -77,7 +76,7 @@ func dummyServiceFile(genpkg string, root *httpdesign.RootExpr, svc *httpdesign.
 	}
 }
 
-func exampleMain(genpkg string, root *httpdesign.RootExpr, svr *design.ServerExpr) *codegen.File {
+func exampleMain(genpkg string, root *expr.RootExpr, svr *expr.ServerExpr) *codegen.File {
 	pkg := codegen.SnakeCase(codegen.Goify(svr.Name, true))
 	mainPath := filepath.Join("cmd", pkg, "main.go")
 	idx := strings.LastIndex(genpkg, string(os.PathSeparator))
@@ -85,7 +84,7 @@ func exampleMain(genpkg string, root *httpdesign.RootExpr, svr *design.ServerExp
 	if idx > 0 {
 		rootPath = genpkg[:idx]
 	}
-	apiPkg := strings.ToLower(codegen.Goify(root.Design.API.Name, false))
+	apiPkg := strings.ToLower(codegen.Goify(root.API.Name, false))
 	specs := []*codegen.ImportSpec{
 		{Path: "context"},
 		{Path: "flag"},
@@ -102,7 +101,7 @@ func exampleMain(genpkg string, root *httpdesign.RootExpr, svr *design.ServerExp
 		{Path: rootPath, Name: apiPkg},
 	}
 
-	for _, svc := range root.HTTPServices {
+	for _, svc := range root.API.HTTP.Services {
 		pkgName := HTTPServices.Get(svc.Name()).Service.PkgName
 		specs = append(specs, &codegen.ImportSpec{
 			Path: path.Join(genpkg, "http", codegen.SnakeCase(svc.Name()), "server"),
@@ -123,7 +122,7 @@ func exampleMain(genpkg string, root *httpdesign.RootExpr, svr *design.ServerExp
 		specs = append(specs, &codegen.ImportSpec{Path: "github.com/gorilla/websocket"})
 	}
 	// URIs have been validated by DSL.
-	u, _ := url.Parse(string(root.Design.API.Servers[0].Hosts[0].URIs[0]))
+	u, _ := url.Parse(string(root.API.Servers[0].Hosts[0].URIs[0]))
 	data := map[string]interface{}{
 		"Services":    svcdata,
 		"APIPkg":      apiPkg,
@@ -132,70 +131,128 @@ func exampleMain(genpkg string, root *httpdesign.RootExpr, svr *design.ServerExp
 
 	// Service Main sections
 	sections = append(sections, &codegen.SectionTemplate{
-		Name:    "service-main-start",
-		Source:  mainStartT,
+		Name:   "service-main-start",
+		Source: mainStartT,
+		Data:   data,
+	})
+
+	sections = append(sections, &codegen.SectionTemplate{
+		Name:   "service-main-logger",
+		Source: mainLoggerT,
+		Data:   data,
+	})
+
+	sections = append(sections, &codegen.SectionTemplate{
+		Name:   "service-main-struct",
+		Source: mainStructT,
+		Data:   data,
+	})
+
+	sections = append(sections, &codegen.SectionTemplate{
+		Name:   "service-main-endpoints",
+		Source: mainEndpointsT,
+		Data:   data,
+	})
+
+	sections = append(sections, &codegen.SectionTemplate{
+		Name:   "service-main-encoding",
+		Source: mainEncodingT,
+		Data:   data,
+	})
+
+	sections = append(sections, &codegen.SectionTemplate{
+		Name:   "service-main-mux",
+		Source: mainMuxT,
+		Data:   data,
+	})
+
+	sections = append(sections, &codegen.SectionTemplate{
+		Name:    "service-main-server-init",
+		Source:  mainServerInitT,
 		Data:    data,
 		FuncMap: map[string]interface{}{"needStream": needStream},
 	})
 
 	sections = append(sections, &codegen.SectionTemplate{
-		Name:    "service-main-logger",
-		Source:  mainLoggerT,
-		Data:    data,
-		FuncMap: map[string]interface{}{"needStream": needStream},
+		Name:   "service-main-middleware",
+		Source: mainMiddlewareT,
+		Data:   data,
 	})
 
 	sections = append(sections, &codegen.SectionTemplate{
-		Name:    "service-main-struct",
-		Source:  mainStructT,
-		Data:    data,
-		FuncMap: map[string]interface{}{"needStream": needStream},
+		Name:   "service-main-http",
+		Source: mainHTTPT,
+		Data:   data,
 	})
 
 	sections = append(sections, &codegen.SectionTemplate{
-		Name:    "service-main-endpoints",
-		Source:  mainEndpointsT,
-		Data:    data,
-		FuncMap: map[string]interface{}{"needStream": needStream},
+		Name:   "service-main-end",
+		Source: mainEndT,
+		Data:   data,
 	})
 
 	sections = append(sections, &codegen.SectionTemplate{
-		Name:    "service-main-mux",
-		Source:  mainEncoderMuxT,
-		Data:    data,
-		FuncMap: map[string]interface{}{"needStream": needStream},
+		Name:   "service-main-errorhandler",
+		Source: mainErrorHandlerT,
+		Data:   data,
 	})
 
-	sections = append(sections, &codegen.SectionTemplate{
-		Name:    "service-main-middleware",
-		Source:  mainMiddlewareT,
-		Data:    data,
-		FuncMap: map[string]interface{}{"needStream": needStream},
-	})
+	return &codegen.File{Path: mainPath, SectionTemplates: sections, SkipExist: true}
+}
 
-	sections = append(sections, &codegen.SectionTemplate{
-		Name:    "service-main-http",
-		Source:  mainHTTPT,
-		Data:    data,
-		FuncMap: map[string]interface{}{"needStream": needStream},
-	})
+// dummyMultipart returns a dummy implementation of the multipart decoders
+// and encoders.
+func dummyMultipart(genpkg string, root *expr.RootExpr) *codegen.File {
+	mpath := "multipart.go"
+	if _, err := os.Stat(mpath); !os.IsNotExist(err) {
+		return nil // file already exists, skip it.
+	}
+	var (
+		sections []*codegen.SectionTemplate
+		mustGen  bool
 
-	sections = append(sections, &codegen.SectionTemplate{
-		Name:    "service-main-end",
-		Source:  mainEndT,
-		Data:    data,
-		FuncMap: map[string]interface{}{"needStream": needStream},
-	})
-
-	sections = append(sections, &codegen.SectionTemplate{
-		Name:    "service-main-errorhandler",
-		Source:  mainErrorHandlerT,
-		Data:    data,
-		FuncMap: map[string]interface{}{"needStream": needStream},
-	})
-
+		apiPkg = strings.ToLower(codegen.Goify(root.API.Name, false))
+	)
+	{
+		specs := []*codegen.ImportSpec{
+			{Path: "mime/multipart"},
+		}
+		for _, svc := range root.API.HTTP.Services {
+			pkgName := HTTPServices.Get(svc.Name()).Service.PkgName
+			specs = append(specs, &codegen.ImportSpec{
+				Path: path.Join(genpkg, codegen.SnakeCase(svc.Name())),
+				Name: pkgName,
+			})
+		}
+		header := codegen.Header("", apiPkg, specs)
+		sections = []*codegen.SectionTemplate{header}
+		for _, svc := range root.API.HTTP.Services {
+			data := HTTPServices.Get(svc.Name())
+			for _, e := range data.Endpoints {
+				if e.MultipartRequestDecoder != nil {
+					mustGen = true
+					sections = append(sections, &codegen.SectionTemplate{
+						Name:   "dummy-multipart-request-decoder",
+						Source: dummyMultipartRequestDecoderImplT,
+						Data:   e.MultipartRequestDecoder,
+					})
+				}
+				if e.MultipartRequestEncoder != nil {
+					mustGen = true
+					sections = append(sections, &codegen.SectionTemplate{
+						Name:   "dummy-multipart-request-encoder",
+						Source: dummyMultipartRequestEncoderImplT,
+						Data:   e.MultipartRequestEncoder,
+					})
+				}
+			}
+		}
+	}
+	if !mustGen {
+		return nil
+	}
 	return &codegen.File{
-		Path:             mainPath,
+		Path:             mpath,
 		SectionTemplates: sections,
 		SkipExist:        true,
 	}
@@ -326,7 +383,7 @@ const mainEndpointsT = `
 `
 
 // input: map[string]interface{}{"Services":[]ServiceData, "APIPkg": string, "DefaultHost": string}
-const mainEncoderMuxT = `
+const mainEncodingT = `
 	// Provide the transport specific request decoder and response encoder.
 	// The goa http package has built-in support for JSON, XML and gob.
 	// Other encodings can be used by providing the corresponding functions,
@@ -335,12 +392,20 @@ const mainEncoderMuxT = `
 		dec = goahttp.RequestDecoder
 		enc = goahttp.ResponseEncoder
 	)
+`
+
+// input: map[string]interface{}{"Services":[]ServiceData, "APIPkg": string, "DefaultHost": string}
+const mainMuxT = `
 	// Build the service HTTP request multiplexer and configure it to serve
 	// HTTP requests to the service endpoints.
 	var mux goahttp.Muxer
 	{
 		mux = goahttp.NewMuxer()
 	}
+`
+
+// input: map[string]interface{}{"Services":[]ServiceData, "APIPkg": string, "DefaultHost": string}
+const mainServerInitT = `
 	// Wrap the endpoints with the transport specific layers. The generated
 	// server packages contains code generated from the design which maps
 	// the service input and output data structures to HTTP requests and
@@ -366,7 +431,7 @@ const mainEncoderMuxT = `
 	// Configure the mux.
 	{{- range .Services }}
 	{{ .Service.PkgName }}svr.Mount(mux{{ if .Endpoints }}, {{ .Service.VarName }}Server{{ end }})
-	{{- end }} 
+	{{- end }}
 `
 
 // input: map[string]interface{}{"Services":[]ServiceData, "APIPkg": string, "DefaultHost": string}

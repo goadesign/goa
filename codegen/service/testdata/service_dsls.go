@@ -1,7 +1,6 @@
 package testdata
 
 import (
-	. "goa.design/goa/design"
 	. "goa.design/goa/dsl"
 )
 
@@ -204,7 +203,7 @@ var ResultWithOtherResultMethodDSL = func() {
 var ForceGenerateTypeDSL = func() {
 	var _ = Type("ForcedType", func() {
 		Attribute("a", String)
-		Metadata("type:generate:force")
+		Meta("type:generate:force")
 	})
 	Service("ForceGenerateType", func() {
 		Method("A", func() {})
@@ -214,7 +213,7 @@ var ForceGenerateTypeDSL = func() {
 var ForceGenerateTypeExplicitDSL = func() {
 	var _ = Type("ForcedType", func() {
 		Attribute("a", String)
-		Metadata("type:generate:force", "ForceGenerateTypeExplicit")
+		Meta("type:generate:force", "ForceGenerateTypeExplicit")
 	})
 	Service("ForceGenerateTypeExplicit", func() {
 		Method("A", func() {})

@@ -4,8 +4,8 @@ import (
 	"testing"
 
 	"goa.design/goa/codegen"
+	"goa.design/goa/expr"
 	"goa.design/goa/http/codegen/testdata"
-	httpdesign "goa.design/goa/http/design"
 )
 
 func TestServerMultipartFuncType(t *testing.T) {
@@ -23,7 +23,7 @@ func TestServerMultipartFuncType(t *testing.T) {
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
 			RunHTTPDSL(t, c.DSL)
-			fs := ServerFiles(genpkg, httpdesign.Root)
+			fs := ServerFiles(genpkg, expr.Root)
 			if len(fs) != 2 {
 				t.Fatalf("got %d files, expected two", len(fs))
 			}
@@ -54,7 +54,7 @@ func TestClientMultipartFuncType(t *testing.T) {
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
 			RunHTTPDSL(t, c.DSL)
-			fs := ClientFiles(genpkg, httpdesign.Root)
+			fs := ClientFiles(genpkg, expr.Root)
 			if len(fs) != 2 {
 				t.Fatalf("got %d files, expected two", len(fs))
 			}
@@ -87,7 +87,7 @@ func TestServerMultipartNewFunc(t *testing.T) {
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
 			RunHTTPDSL(t, c.DSL)
-			fs := ServerFiles(genpkg, httpdesign.Root)
+			fs := ServerFiles(genpkg, expr.Root)
 			if len(fs) != 2 {
 				t.Fatalf("got %d files, expected two", len(fs))
 			}
@@ -120,7 +120,7 @@ func TestClientMultipartNewFunc(t *testing.T) {
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
 			RunHTTPDSL(t, c.DSL)
-			fs := ClientFiles(genpkg, httpdesign.Root)
+			fs := ClientFiles(genpkg, expr.Root)
 			if len(fs) != 2 {
 				t.Fatalf("got %d files, expected two", len(fs))
 			}

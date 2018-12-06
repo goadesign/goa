@@ -1,5 +1,6 @@
-http/design/response.go
 ^examples/.*
+dsl/http.go
+expr/http_response.go
 codegen/service/testing/.*
 http/codegen/testing/.*
 http/middleware/trace.go

@@ -1,7 +1,7 @@
 package dsl
 
 import (
-	"goa.design/goa/design"
+	"goa.design/goa/expr"
 	"goa.design/goa/eval"
 )
 
@@ -17,9 +17,9 @@ import (
 //       version of the field name
 //
 // This algorithm does not apply if the attribute is equipped with the
-// "struct.field.external" metadata. In this case the matching is done by
-// looking up the field with a name corresponding to the value of the metadata.
-// If the value of the metadata is "-" the attribute isn't matched and no
+// "struct.field.external" meta. In this case the matching is done by
+// looking up the field with a name corresponding to the value of the meta.
+// If the value of the meta is "-" the attribute isn't matched and no
 // conversion code is generated for it. In all other cases it is an error if no
 // match is found or if the matching field type does not correspond to the
 // attribute type.
@@ -47,11 +47,11 @@ import (
 //        Attribute("name", String, func() {
 //            // The "name" attribute is matched to the external
 //            // type "MyName" field.
-//            Metadata("struct.field.external", "MyName")
+//            Meta("struct.field.external", "MyName")
 //        })
 //        Attribute("vineyard", String, func() {
 //            // The "vineyard" attribute is not converted.
-//            Metadata("struct.field.external", "-")
+//            Meta("struct.field.external", "-")
 //        })
 //    })
 //
@@ -68,22 +68,22 @@ import (
 //    }
 //
 func ConvertTo(obj interface{}) {
-	var ut design.UserType
+	var ut expr.UserType
 	switch actual := eval.Current().(type) {
-	case *design.AttributeExpr:
-		for _, t := range design.Root.Types {
+	case *expr.AttributeExpr:
+		for _, t := range expr.Root.Types {
 			if t.Attribute() == actual {
 				ut = t
 			}
 		}
-	case *design.ResultTypeExpr:
+	case *expr.ResultTypeExpr:
 		ut = actual
 	default:
 		eval.IncompatibleDSL()
 		return
 	}
-	design.Root.Conversions =
-		append(design.Root.Conversions, &design.TypeMap{User: ut, External: obj})
+	expr.Root.Conversions =
+		append(expr.Root.Conversions, &expr.TypeMap{User: ut, External: obj})
 }
 
 // CreateFrom specifies an external type that instances of the generated struct
@@ -99,9 +99,9 @@ func ConvertTo(obj interface{}) {
 //       version of the field name
 //
 // This algorithm does not apply if the attribute is equipped with the
-// "struct.field.external" metadata. In this case the matching is done by
-// looking up the field with a name corresponding to the value of the metadata.
-// If the value of the metadata is "-" the attribute isn't matched and no
+// "struct.field.external" meta. In this case the matching is done by
+// looking up the field with a name corresponding to the value of the meta.
+// If the value of the meta is "-" the attribute isn't matched and no
 // conversion code is generated for it. In all other cases it is an error if no
 // match is found or if the matching field type does not correspond to the
 // attribute type.
@@ -127,12 +127,12 @@ func ConvertTo(obj interface{}) {
 //        Attribute("name", String, func() {
 //            // The "name" attribute is matched to the external
 //            // type "MyName" field.
-//            Metadata("struct.field.external", "MyName")
+//            Meta("struct.field.external", "MyName")
 //        })
 //        Attribute("vineyard", String, func() {
 //            // The "vineyard" attribute is not initialized by the
 //            // generated constructor method.
-//            Metadata("struct.field.external", "-")
+//            Meta("struct.field.external", "-")
 //        })
 //    })
 //
@@ -149,20 +149,20 @@ func ConvertTo(obj interface{}) {
 //    }
 //
 func CreateFrom(obj interface{}) {
-	var ut design.UserType
+	var ut expr.UserType
 	switch actual := eval.Current().(type) {
-	case *design.AttributeExpr:
-		for _, t := range design.Root.Types {
+	case *expr.AttributeExpr:
+		for _, t := range expr.Root.Types {
 			if t.Attribute() == actual {
 				ut = t
 			}
 		}
-	case *design.ResultTypeExpr:
+	case *expr.ResultTypeExpr:
 		ut = actual
 	default:
 		eval.IncompatibleDSL()
 		return
 	}
-	design.Root.Creations =
-		append(design.Root.Creations, &design.TypeMap{User: ut, External: obj})
+	expr.Root.Creations =
+		append(expr.Root.Creations, &expr.TypeMap{User: ut, External: obj})
 }

@@ -1,8 +1,8 @@
 package dsl
 
 import (
-	"goa.design/goa/design"
 	"goa.design/goa/eval"
+	"goa.design/goa/expr"
 )
 
 // Service defines a group of remotely accessible methods that are hosted
@@ -52,16 +52,16 @@ import (
 //        })
 //    })
 //
-func Service(name string, fn func()) *design.ServiceExpr {
+func Service(name string, fn func()) *expr.ServiceExpr {
 	if _, ok := eval.Current().(eval.TopExpr); !ok {
 		eval.IncompatibleDSL()
 		return nil
 	}
-	if s := design.Root.Service(name); s != nil {
-		eval.ReportError("service %#q is defined twice", name)
+	if s := expr.Root.Service(name); s != nil {
+		eval.ReportError("service %#v is defined twice", name)
 		return nil
 	}
-	s := &design.ServiceExpr{Name: name, DSLFunc: fn}
-	design.Root.Services = append(design.Root.Services, s)
+	s := &expr.ServiceExpr{Name: name, DSLFunc: fn}
+	expr.Root.Services = append(expr.Root.Services, s)
 	return s
 }

@@ -7,9 +7,7 @@ import (
 	"strconv"
 
 	"goa.design/goa/codegen"
-	"goa.design/goa/design"
-
-	httpdesign "goa.design/goa/http/design"
+	"goa.design/goa/expr"
 )
 
 type (
@@ -127,8 +125,8 @@ func (s *Schema) JSON() ([]byte, error) {
 }
 
 // APISchema produces the API JSON hyper schema.
-func APISchema(api *design.APIExpr, r *httpdesign.RootExpr) *Schema {
-	for _, res := range r.HTTPServices {
+func APISchema(api *expr.APIExpr, r *expr.RootExpr) *Schema {
+	for _, res := range r.API.HTTP.Services {
 		GenerateServiceDefinition(api, res)
 	}
 	href := string(api.Servers[0].Hosts[0].URIs[0])
@@ -161,7 +159,7 @@ func APISchema(api *design.APIExpr, r *httpdesign.RootExpr) *Schema {
 
 // GenerateServiceDefinition produces the JSON schema corresponding to the given
 // service. It stores the results in cachedSchema.
-func GenerateServiceDefinition(api *design.APIExpr, res *httpdesign.ServiceExpr) {
+func GenerateServiceDefinition(api *expr.APIExpr, res *expr.HTTPServiceExpr) {
 	s := NewSchema()
 	s.Description = res.Description()
 	s.Type = Object
@@ -169,7 +167,7 @@ func GenerateServiceDefinition(api *design.APIExpr, res *httpdesign.ServiceExpr)
 	Definitions[res.Name()] = s
 	for _, a := range res.HTTPEndpoints {
 		var requestSchema *Schema
-		if a.MethodExpr.Payload.Type != design.Empty {
+		if a.MethodExpr.Payload.Type != expr.Empty {
 			requestSchema = AttributeTypeSchema(api, a.MethodExpr.Payload)
 			requestSchema.Description = a.Name() + " payload"
 		}
@@ -177,7 +175,7 @@ func GenerateServiceDefinition(api *design.APIExpr, res *httpdesign.ServiceExpr)
 		var identifier string
 		for _, resp := range a.Responses {
 			dt := resp.Body.Type
-			if mt := dt.(*design.ResultTypeExpr); mt != nil {
+			if mt := dt.(*expr.ResultTypeExpr); mt != nil {
 				if identifier == "" {
 					identifier = mt.Identifier
 				} else {
@@ -220,14 +218,14 @@ func GenerateServiceDefinition(api *design.APIExpr, res *httpdesign.ServiceExpr)
 
 // ResultTypeRef produces the JSON reference to the media type definition with
 // the given view.
-func ResultTypeRef(api *design.APIExpr, mt *design.ResultTypeExpr, view string) string {
+func ResultTypeRef(api *expr.APIExpr, mt *expr.ResultTypeExpr, view string) string {
 	return ResultTypeRefWithPrefix(api, mt, view, "")
 }
 
 // ResultTypeRefWithPrefix produces the JSON reference to the media type definition with
 // the given view and adds the provided prefix to the type name
-func ResultTypeRefWithPrefix(api *design.APIExpr, mt *design.ResultTypeExpr, view string, prefix string) string {
-	projected, err := design.Project(mt, view)
+func ResultTypeRefWithPrefix(api *expr.APIExpr, mt *expr.ResultTypeExpr, view string, prefix string) string {
+	projected, err := expr.Project(mt, view)
 	if err != nil {
 		panic(fmt.Sprintf("failed to project media type %#v: %s", mt.Identifier, err)) // bug
 	}
@@ -240,7 +238,7 @@ func ResultTypeRefWithPrefix(api *design.APIExpr, mt *design.ResultTypeExpr, vie
 }
 
 // TypeRef produces the JSON reference to the type definition.
-func TypeRef(api *design.APIExpr, ut *design.UserTypeExpr) string {
+func TypeRef(api *expr.APIExpr, ut *expr.UserTypeExpr) string {
 	if _, ok := Definitions[ut.TypeName]; !ok {
 		GenerateTypeDefinition(api, ut)
 	}
@@ -249,8 +247,11 @@ func TypeRef(api *design.APIExpr, ut *design.UserTypeExpr) string {
 
 // TypeRefWithPrefix produces the JSON reference to the type definition and adds the provided prefix
 // to the type name
-func TypeRefWithPrefix(api *design.APIExpr, ut *design.UserTypeExpr, prefix string) string {
-	typeName := codegen.Goify(prefix, true) + ut.TypeName
+func TypeRefWithPrefix(api *expr.APIExpr, ut *expr.UserTypeExpr, prefix string) string {
+	typeName := ut.TypeName
+	if prefix != "" {
+		typeName = codegen.Goify(prefix, true) + codegen.Goify(ut.TypeName, true)
+	}
 	if _, ok := Definitions[typeName]; !ok {
 		GenerateTypeDefinitionWithName(api, ut, typeName)
 	}
@@ -260,7 +261,7 @@ func TypeRefWithPrefix(api *design.APIExpr, ut *design.UserTypeExpr, prefix stri
 
 // GenerateResultTypeDefinition produces the JSON schema corresponding to the
 // given media type and given view.
-func GenerateResultTypeDefinition(api *design.APIExpr, mt *design.ResultTypeExpr, view string) {
+func GenerateResultTypeDefinition(api *expr.APIExpr, mt *expr.ResultTypeExpr, view string) {
 	if _, ok := Definitions[mt.TypeName]; ok {
 		return
 	}
@@ -272,13 +273,13 @@ func GenerateResultTypeDefinition(api *design.APIExpr, mt *design.ResultTypeExpr
 
 // GenerateTypeDefinition produces the JSON schema corresponding to the given
 // type.
-func GenerateTypeDefinition(api *design.APIExpr, ut *design.UserTypeExpr) {
+func GenerateTypeDefinition(api *expr.APIExpr, ut *expr.UserTypeExpr) {
 	GenerateTypeDefinitionWithName(api, ut, ut.TypeName)
 }
 
 // GenerateTypeDefinitionWithName produces the JSON schema corresponding to the given
 // type with provided type name.
-func GenerateTypeDefinitionWithName(api *design.APIExpr, ut *design.UserTypeExpr, typeName string) {
+func GenerateTypeDefinitionWithName(api *expr.APIExpr, ut *expr.UserTypeExpr, typeName string) {
 	if _, ok := Definitions[typeName]; ok {
 		return
 	}
@@ -290,56 +291,56 @@ func GenerateTypeDefinitionWithName(api *design.APIExpr, ut *design.UserTypeExpr
 }
 
 // TypeSchema produces the JSON schema corresponding to the given data type.
-func TypeSchema(api *design.APIExpr, t design.DataType) *Schema {
+func TypeSchema(api *expr.APIExpr, t expr.DataType) *Schema {
 	return TypeSchemaWithPrefix(api, t, "")
 }
 
 // TypeSchemaWithPrefix produces the JSON schema corresponding to the given data type
 // and adds the provided prefix to the type name
-func TypeSchemaWithPrefix(api *design.APIExpr, t design.DataType, prefix string) *Schema {
+func TypeSchemaWithPrefix(api *expr.APIExpr, t expr.DataType, prefix string) *Schema {
 	s := NewSchema()
 	switch actual := t.(type) {
-	case design.Primitive:
+	case expr.Primitive:
 		if name := actual.Name(); name != "any" {
 			s.Type = Type(actual.Name())
 		}
 		switch actual.Kind() {
-		case design.IntKind, design.Int64Kind,
-			design.UIntKind, design.UInt64Kind:
+		case expr.IntKind, expr.Int64Kind,
+			expr.UIntKind, expr.UInt64Kind:
 			s.Type = Type("integer")
 			s.Format = "int64"
-		case design.Int32Kind, design.UInt32Kind:
+		case expr.Int32Kind, expr.UInt32Kind:
 			s.Type = Type("integer")
 			s.Format = "int32"
-		case design.Float32Kind:
+		case expr.Float32Kind:
 			s.Type = Type("number")
 			s.Format = "float"
-		case design.Float64Kind:
+		case expr.Float64Kind:
 			s.Type = Type("number")
 			s.Format = "double"
-		case design.BytesKind:
+		case expr.BytesKind:
 			s.Type = Type("string")
 			s.Format = "byte"
 		}
-	case *design.Array:
+	case *expr.Array:
 		s.Type = Array
 		s.Items = NewSchema()
 		buildAttributeSchema(api, s.Items, actual.ElemType)
-	case *design.Object:
+	case *expr.Object:
 		s.Type = Object
 		for _, nat := range *actual {
 			prop := NewSchema()
 			buildAttributeSchema(api, prop, nat.Attribute)
 			s.Properties[nat.Name] = prop
 		}
-	case *design.Map:
+	case *expr.Map:
 		s.Type = Object
 		s.AdditionalProperties = true
-	case *design.UserTypeExpr:
+	case *expr.UserTypeExpr:
 		s.Ref = TypeRefWithPrefix(api, actual, prefix)
-	case *design.ResultTypeExpr:
+	case *expr.ResultTypeExpr:
 		// Use "default" view by default
-		s.Ref = ResultTypeRefWithPrefix(api, actual, design.DefaultView, prefix)
+		s.Ref = ResultTypeRefWithPrefix(api, actual, expr.DefaultView, prefix)
 	}
 	return s
 }
@@ -451,7 +452,7 @@ func (s *Schema) Dup() *Schema {
 
 // buildAttributeSchema initializes the given JSON schema that corresponds to
 // the given attribute.
-func buildAttributeSchema(api *design.APIExpr, s *Schema, at *design.AttributeExpr) *Schema {
+func buildAttributeSchema(api *expr.APIExpr, s *Schema, at *expr.AttributeExpr) *Schema {
 	s.Merge(TypeSchema(api, at.Type))
 	if s.Ref != "" {
 		// Ref is exclusive with other fields
@@ -466,7 +467,7 @@ func buildAttributeSchema(api *design.APIExpr, s *Schema, at *design.AttributeEx
 }
 
 // initAttributeValidation initializes validation rules for an attribute.
-func initAttributeValidation(s *Schema, at *design.AttributeExpr) {
+func initAttributeValidation(s *Schema, at *expr.AttributeExpr) {
 	val := at.Validation
 	if val == nil {
 		return
@@ -481,14 +482,14 @@ func initAttributeValidation(s *Schema, at *design.AttributeExpr) {
 		s.Maximum = val.Maximum
 	}
 	if val.MinLength != nil {
-		if _, ok := at.Type.(*design.Array); ok {
+		if _, ok := at.Type.(*expr.Array); ok {
 			s.MinItems = val.MinLength
 		} else {
 			s.MinLength = val.MinLength
 		}
 	}
 	if val.MaxLength != nil {
-		if _, ok := at.Type.(*design.Array); ok {
+		if _, ok := at.Type.(*expr.Array); ok {
 			s.MaxItems = val.MaxLength
 		} else {
 			s.MaxLength = val.MaxLength
@@ -498,13 +499,13 @@ func initAttributeValidation(s *Schema, at *design.AttributeExpr) {
 }
 
 // AttributeTypeSchema produces the JSON schema corresponding to the given attribute.
-func AttributeTypeSchema(api *design.APIExpr, at *design.AttributeExpr) *Schema {
+func AttributeTypeSchema(api *expr.APIExpr, at *expr.AttributeExpr) *Schema {
 	return AttributeTypeSchemaWithPrefix(api, at, "")
 }
 
 // AttributeTypeSchemaWithPrefix produces the JSON schema corresponding to the given attribute
 // and adds the provided prefix to the type name
-func AttributeTypeSchemaWithPrefix(api *design.APIExpr, at *design.AttributeExpr, prefix string) *Schema {
+func AttributeTypeSchemaWithPrefix(api *expr.APIExpr, at *expr.AttributeExpr, prefix string) *Schema {
 	s := TypeSchemaWithPrefix(api, at.Type, prefix)
 	initAttributeValidation(s, at)
 	return s
@@ -549,16 +550,16 @@ func toString(val interface{}) string {
 
 // toSchemaHrefs produces hrefs that replace the path wildcards with JSON
 // schema references when appropriate.
-func toSchemaHrefs(r *httpdesign.RouteExpr) []string {
+func toSchemaHrefs(r *expr.RouteExpr) []string {
 	paths := r.FullPaths()
 	res := make([]string, len(paths))
 	for i, path := range paths {
-		params := design.ExtractWildcards(path)
+		params := expr.ExtractRouteWildcards(path)
 		args := make([]interface{}, len(params))
 		for j, p := range params {
 			args[j] = fmt.Sprintf("/{%s}", p)
 		}
-		tmpl := design.WildcardRegex.ReplaceAllLiteralString(path, "%s")
+		tmpl := expr.HTTPWildcardRegex.ReplaceAllLiteralString(path, "%s")
 		res[i] = fmt.Sprintf(tmpl, args...)
 	}
 	return res
@@ -581,9 +582,9 @@ func propertiesFromDefs(definitions map[string]*Schema, path string) map[string]
 
 // buildResultTypeSchema initializes s as the JSON schema representing mt for the
 // given view.
-func buildResultTypeSchema(api *design.APIExpr, mt *design.ResultTypeExpr, view string, s *Schema) {
+func buildResultTypeSchema(api *expr.APIExpr, mt *expr.ResultTypeExpr, view string, s *Schema) {
 	s.Media = &Media{Type: mt.Identifier}
-	projected, err := design.Project(mt, view)
+	projected, err := expr.Project(mt, view)
 	if err != nil {
 		panic(fmt.Sprintf("failed to project media type %#v: %s", mt.Identifier, err)) // bug
 	}

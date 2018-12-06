@@ -128,7 +128,7 @@ func NewPickCriteria(body *PickRequestBody) *sommelier.Criteria {
 	return v
 }
 
-// Validate runs the validations defined on StoredBottleResponse
+// Validate runs the validations defined on StoredBottleResponse.
 func (body *StoredBottleResponse) Validate() (err error) {
 	if body.Winery == nil {
 		err = goa.MergeErrors(err, goa.MissingFieldError("winery", "body"))
@@ -167,7 +167,7 @@ func (body *StoredBottleResponse) Validate() (err error) {
 	return
 }
 
-// Validate runs the validations defined on ComponentResponse
+// Validate runs the validations defined on ComponentResponse.
 func (body *ComponentResponse) Validate() (err error) {
 	err = goa.MergeErrors(err, goa.ValidatePattern("body.varietal", body.Varietal, "[A-Za-z' ]+"))
 	if utf8.RuneCountInString(body.Varietal) > 100 {

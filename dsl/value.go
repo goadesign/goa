@@ -1,6 +1,6 @@
 package dsl
 
-import "goa.design/goa/design"
+import "goa.design/goa/expr"
 import "goa.design/goa/eval"
 
 // Value sets the example value.
@@ -17,12 +17,12 @@ import "goa.design/goa/eval"
 //	})
 //
 func Value(val interface{}) {
-	switch expr := eval.Current().(type) {
-	case *design.ExampleExpr:
-		if v, ok := val.(design.Val); ok {
+	switch e := eval.Current().(type) {
+	case *expr.ExampleExpr:
+		if v, ok := val.(expr.Val); ok {
 			val = map[string]interface{}(v)
 		}
-		expr.Value = val
+		e.Value = val
 	default:
 		eval.IncompatibleDSL()
 	}

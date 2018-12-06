@@ -1,7 +1,6 @@
 package design
 
-import . "goa.design/goa/http/design"
-import . "goa.design/goa/http/dsl"
+import . "goa.design/goa/dsl"
 
 var _ = API("divider", func() {
 	Title("Divider Service")
@@ -50,6 +49,7 @@ var _ = Service("divider", func() {
 	Method("divide", func() {
 		Payload(FloatOperands)
 		Result(Float64)
+
 		HTTP(func() {
 			GET("/div/{a}/{b}")
 			Response(StatusOK)

@@ -4,8 +4,8 @@ import (
 	"testing"
 
 	"goa.design/goa/codegen"
+	"goa.design/goa/expr"
 	"goa.design/goa/http/codegen/testdata"
-	httpdesign "goa.design/goa/http/design"
 )
 
 func TestHandlerInit(t *testing.T) {
@@ -24,7 +24,7 @@ func TestHandlerInit(t *testing.T) {
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
 			RunHTTPDSL(t, c.DSL)
-			fs := ServerFiles(genpkg, httpdesign.Root)
+			fs := ServerFiles(genpkg, expr.Root)
 			if len(fs) != 2 {
 				t.Fatalf("got %d files, expected two", len(fs))
 			}

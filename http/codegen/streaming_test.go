@@ -4,8 +4,8 @@ import (
 	"testing"
 
 	"goa.design/goa/codegen"
+	"goa.design/goa/expr"
 	"goa.design/goa/http/codegen/testdata"
-	httpdesign "goa.design/goa/http/design"
 )
 
 type (
@@ -193,7 +193,7 @@ func TestServerStreaming(t *testing.T) {
 		}},
 	}
 
-	filesFn := func() []*codegen.File { return ServerFiles("", httpdesign.Root) }
+	filesFn := func() []*codegen.File { return ServerFiles("", expr.Root) }
 	runTests(t, cases, filesFn)
 }
 
@@ -368,7 +368,7 @@ func TestClientStreaming(t *testing.T) {
 			{"client-stream-recv", &testdata.BidirectionalStreamingUserTypeMapClientStreamRecvCode},
 		}},
 	}
-	filesFn := func() []*codegen.File { return ClientFiles("", httpdesign.Root) }
+	filesFn := func() []*codegen.File { return ClientFiles("", expr.Root) }
 	runTests(t, cases, filesFn)
 }
 

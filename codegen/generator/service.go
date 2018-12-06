@@ -5,7 +5,7 @@ import (
 
 	"goa.design/goa/codegen"
 	"goa.design/goa/codegen/service"
-	"goa.design/goa/design"
+	"goa.design/goa/expr"
 	"goa.design/goa/eval"
 )
 
@@ -16,7 +16,7 @@ func Service(genpkg string, roots []eval.Root) ([]*codegen.File, error) {
 	var files []*codegen.File
 	for _, root := range roots {
 		switch r := root.(type) {
-		case *design.RootExpr:
+		case *expr.RootExpr:
 			for _, s := range r.Services {
 				// Make sure service is first so name scope is
 				// properly initialized.

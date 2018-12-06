@@ -43,7 +43,7 @@ paths:
         "401":
           description: Unauthorized response.
           schema:
-            $ref: '#/definitions/SecureUnauthorizedResponseBody'
+            $ref: '#/definitions/secure_unauthorized_response_body'
       schemes:
       - grpc
       - http
@@ -79,7 +79,7 @@ paths:
         "401":
           description: Unauthorized response.
           schema:
-            $ref: '#/definitions/DoublySecureUnauthorizedResponseBody'
+            $ref: '#/definitions/doubly_secure_unauthorized_response_body'
       schemes:
       - grpc
       - http
@@ -120,7 +120,7 @@ paths:
         "401":
           description: Unauthorized response.
           schema:
-            $ref: '#/definitions/AlsoDoublySecureUnauthorizedResponseBody'
+            $ref: '#/definitions/also_doubly_secure_unauthorized_response_body'
       schemes:
       - grpc
       - http
@@ -144,33 +144,33 @@ paths:
         "401":
           description: Unauthorized response.
           schema:
-            $ref: '#/definitions/SigninUnauthorizedResponseBody'
+            $ref: '#/definitions/signin_unauthorized_response_body'
       schemes:
       - grpc
       - http
       security:
       - basic: []
 definitions:
-  AlsoDoublySecureUnauthorizedResponseBody:
-    title: AlsoDoublySecureUnauthorizedResponseBody
+  also_doubly_secure_unauthorized_response_body:
+    title: also_doubly_secure_unauthorized_response_body
     type: string
     description: Credentials are invalid
-    example: Eligendi qui recusandae officia dolores a maxime.
-  DoublySecureUnauthorizedResponseBody:
-    title: DoublySecureUnauthorizedResponseBody
+    example: Maxime ipsam esse et.
+  doubly_secure_unauthorized_response_body:
+    title: doubly_secure_unauthorized_response_body
     type: string
     description: Credentials are invalid
-    example: Eveniet maxime.
-  SecureUnauthorizedResponseBody:
-    title: SecureUnauthorizedResponseBody
+    example: Itaque accusamus enim.
+  secure_unauthorized_response_body:
+    title: secure_unauthorized_response_body
     type: string
     description: Credentials are invalid
-    example: Ab vel rem.
-  SigninUnauthorizedResponseBody:
-    title: SigninUnauthorizedResponseBody
+    example: Accusantium voluptatem alias corrupti voluptates a.
+  signin_unauthorized_response_body:
+    title: signin_unauthorized_response_body
     type: string
     description: Credentials are invalid
-    example: Et neque.
+    example: Tenetur est et.
 securityDefinitions:
   api_key:
     type: apiKey

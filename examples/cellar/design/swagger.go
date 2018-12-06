@@ -1,6 +1,6 @@
 package design
 
-import . "goa.design/goa/http/dsl"
+import . "goa.design/goa/dsl"
 
 var _ = Service("swagger", func() {
 	Description("The swagger service serves the API swagger definition.")

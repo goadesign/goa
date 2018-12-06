@@ -1,8 +1,7 @@
 package design
 
 import (
-	. "goa.design/goa/http/design"
-	. "goa.design/goa/http/dsl"
+	. "goa.design/goa/dsl"
 )
 
 var _ = API("chatter", func() {

@@ -4,14 +4,14 @@ import (
 	"path/filepath"
 
 	"goa.design/goa/codegen"
-	httpdesign "goa.design/goa/http/design"
+	"goa.design/goa/expr"
 )
 
 // ServerTypeFiles returns the HTTP transport type files.
-func ServerTypeFiles(genpkg string, root *httpdesign.RootExpr) []*codegen.File {
-	fw := make([]*codegen.File, len(root.HTTPServices))
+func ServerTypeFiles(genpkg string, root *expr.RootExpr) []*codegen.File {
+	fw := make([]*codegen.File, len(root.API.HTTP.Services))
 	seen := make(map[string]struct{})
-	for i, r := range root.HTTPServices {
+	for i, r := range root.API.HTTP.Services {
 		fw[i] = serverType(genpkg, r, seen)
 	}
 	return fw
@@ -42,7 +42,7 @@ func ServerTypeFiles(genpkg string, root *httpdesign.RootExpr) []*codegen.File {
 //   * Response body fields (if the body is a struct) and header variables hold
 //     pointers when not required and have no default value.
 //
-func serverType(genpkg string, svc *httpdesign.ServiceExpr, seen map[string]struct{}) *codegen.File {
+func serverType(genpkg string, svc *expr.HTTPServiceExpr, seen map[string]struct{}) *codegen.File {
 	var (
 		path  string
 		rdata = HTTPServices.Get(svc.Name())
@@ -247,7 +247,7 @@ func {{ .Name }}({{ range .ServerArgs }}{{ .Name }} {{.TypeRef }}, {{ end }}) {{
 `
 
 // input: TypeData
-const validateT = `{{ printf "Validate runs the validations defined on %s" .Name | comment }}
+const validateT = `{{ printf "Validate runs the validations defined on %s." .VarName | comment }}
 func (body {{ .Ref }}) Validate() (err error) {
 	{{ .ValidateDef }}
 	return

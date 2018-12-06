@@ -41,11 +41,11 @@ paths:
         "400":
           description: Bad Request response.
           schema:
-            $ref: '#/definitions/DividerDivideDivByZeroResponseBody'
+            $ref: '#/definitions/Dividerdivide_div_by_zero_response_body'
         "504":
           description: Gateway Timeout response.
           schema:
-            $ref: '#/definitions/DividerDivideTimeoutResponseBody'
+            $ref: '#/definitions/Dividerdivide_timeout_response_body'
       schemes:
       - grpc
       - http
@@ -75,20 +75,20 @@ paths:
         "400":
           description: Bad Request response.
           schema:
-            $ref: '#/definitions/DividerIntegerDivideDivByZeroResponseBody'
+            $ref: '#/definitions/Dividerinteger_divide_div_by_zero_response_body'
         "417":
           description: Expectation Failed response.
           schema:
-            $ref: '#/definitions/DividerIntegerDivideHasRemainderResponseBody'
+            $ref: '#/definitions/Dividerinteger_divide_has_remainder_response_body'
         "504":
           description: Gateway Timeout response.
           schema:
-            $ref: '#/definitions/DividerIntegerDivideTimeoutResponseBody'
+            $ref: '#/definitions/Dividerinteger_divide_timeout_response_body'
       schemes:
       - grpc
       - http
 definitions:
-  DividerDivideDivByZeroResponseBody:
+  Dividerdivide_div_by_zero_response_body:
     title: 'Mediatype identifier: application/vnd.goa.error; view=default'
     type: object
     properties:
@@ -133,7 +133,7 @@ definitions:
     - temporary
     - timeout
     - fault
-  DividerDivideTimeoutResponseBody:
+  Dividerdivide_timeout_response_body:
     title: 'Mediatype identifier: application/vnd.goa.error; view=default'
     type: object
     properties:
@@ -178,7 +178,7 @@ definitions:
     - temporary
     - timeout
     - fault
-  DividerIntegerDivideDivByZeroResponseBody:
+  Dividerinteger_divide_div_by_zero_response_body:
     title: 'Mediatype identifier: application/vnd.goa.error; view=default'
     type: object
     properties:
@@ -223,7 +223,7 @@ definitions:
     - temporary
     - timeout
     - fault
-  DividerIntegerDivideHasRemainderResponseBody:
+  Dividerinteger_divide_has_remainder_response_body:
     title: 'Mediatype identifier: application/vnd.goa.error; view=default'
     type: object
     properties:
@@ -268,7 +268,7 @@ definitions:
     - temporary
     - timeout
     - fault
-  DividerIntegerDivideTimeoutResponseBody:
+  Dividerinteger_divide_timeout_response_body:
     title: 'Mediatype identifier: application/vnd.goa.error; view=default'
     type: object
     properties:

@@ -4,14 +4,14 @@ import (
 	"path/filepath"
 
 	"goa.design/goa/codegen"
-	httpdesign "goa.design/goa/http/design"
+	"goa.design/goa/expr"
 )
 
 // ClientTypeFiles returns the HTTP transport client types files.
-func ClientTypeFiles(genpkg string, root *httpdesign.RootExpr) []*codegen.File {
-	fw := make([]*codegen.File, len(root.HTTPServices))
+func ClientTypeFiles(genpkg string, root *expr.RootExpr) []*codegen.File {
+	fw := make([]*codegen.File, len(root.API.HTTP.Services))
 	seen := make(map[string]struct{})
-	for i, svc := range root.HTTPServices {
+	for i, svc := range root.API.HTTP.Services {
 		fw[i] = clientType(genpkg, svc, seen)
 	}
 	return fw
@@ -42,7 +42,7 @@ func ClientTypeFiles(genpkg string, root *httpdesign.RootExpr) []*codegen.File {
 //   * Response header variables hold pointers when not required and have no
 //     default value.
 //
-func clientType(genpkg string, svc *httpdesign.ServiceExpr, seen map[string]struct{}) *codegen.File {
+func clientType(genpkg string, svc *expr.HTTPServiceExpr, seen map[string]struct{}) *codegen.File {
 	var (
 		path  string
 		rdata = HTTPServices.Get(svc.Name())

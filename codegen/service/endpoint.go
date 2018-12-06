@@ -6,7 +6,7 @@ import (
 	"strings"
 
 	"goa.design/goa/codegen"
-	"goa.design/goa/design"
+	"goa.design/goa/expr"
 )
 
 type (
@@ -67,7 +67,7 @@ const (
 )
 
 // EndpointFile returns the endpoint file for the given service.
-func EndpointFile(genpkg string, service *design.ServiceExpr) *codegen.File {
+func EndpointFile(genpkg string, service *expr.ServiceExpr) *codegen.File {
 	path := filepath.Join(codegen.Gendir, codegen.SnakeCase(service.Name), "endpoints.go")
 	svc := Services.Get(service.Name)
 	data := endpointData(service)
@@ -123,7 +123,7 @@ func EndpointFile(genpkg string, service *design.ServiceExpr) *codegen.File {
 	return &codegen.File{Path: path, SectionTemplates: sections}
 }
 
-func endpointData(service *design.ServiceExpr) *EndpointsData {
+func endpointData(service *expr.ServiceExpr) *EndpointsData {
 	svc := Services.Get(service.Name)
 	methods := make([]*EndpointMethodData, len(svc.Methods))
 	var schemes []string

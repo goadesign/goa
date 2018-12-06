@@ -8,9 +8,9 @@ import (
 
 	"goa.design/goa/codegen"
 	"goa.design/goa/codegen/service/testdata"
-	"goa.design/goa/design"
 	"goa.design/goa/dsl"
 	"goa.design/goa/eval"
+	"goa.design/goa/expr"
 )
 
 type (
@@ -88,22 +88,22 @@ func TestDesignType(t *testing.T) {
 	cases := []struct {
 		Name         string
 		From         interface{}
-		ExpectedType design.DataType
+		ExpectedType expr.DataType
 		ExpectedErr  string
 	}{
-		{"bool", false, design.Boolean, ""},
-		{"int", 0, design.Int, ""},
-		{"int32", int32(0), design.Int32, ""},
-		{"int64", int64(0), design.Int64, ""},
-		{"uint", uint(0), design.UInt, ""},
-		{"uint32", uint32(0), design.UInt32, ""},
-		{"uint64", uint64(0), design.UInt64, ""},
-		{"float32", float32(0.0), design.Float32, ""},
-		{"float64", 0.0, design.Float64, ""},
-		{"string", "", design.String, ""},
-		{"bytes", []byte{}, design.Bytes, ""},
-		{"array", []string{}, dsl.ArrayOf(design.String), ""},
-		{"map", map[string]string{}, dsl.MapOf(design.String, design.String), ""},
+		{"bool", false, expr.Boolean, ""},
+		{"int", 0, expr.Int, ""},
+		{"int32", int32(0), expr.Int32, ""},
+		{"int64", int64(0), expr.Int64, ""},
+		{"uint", uint(0), expr.UInt, ""},
+		{"uint32", uint32(0), expr.UInt32, ""},
+		{"uint64", uint64(0), expr.UInt64, ""},
+		{"float32", float32(0.0), expr.Float32, ""},
+		{"float64", 0.0, expr.Float64, ""},
+		{"string", "", expr.String, ""},
+		{"bytes", []byte{}, expr.Bytes, ""},
+		{"array", []string{}, dsl.ArrayOf(expr.String), ""},
+		{"map", map[string]string{}, dsl.MapOf(expr.String, expr.String), ""},
 		{"object", objT{}, obj, ""},
 		{"array-object", []objT{{}}, dsl.ArrayOf(obj), ""},
 
@@ -115,7 +115,7 @@ func TestDesignType(t *testing.T) {
 	}
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
-			var dt design.DataType
+			var dt expr.DataType
 			err := buildDesignType(&dt, reflect.TypeOf(c.From), nil)
 
 			// We didn't expect an error
@@ -123,7 +123,7 @@ func TestDesignType(t *testing.T) {
 				if err != nil {
 					// but got one
 					t.Errorf("got error %s, expected none", err)
-				} else if !design.Equal(dt, c.ExpectedType) {
+				} else if !expr.Equal(dt, c.ExpectedType) {
 					t.Errorf("got %v expected %v", dt, c.ExpectedType)
 				}
 			}
@@ -145,24 +145,24 @@ func TestDesignType(t *testing.T) {
 func TestCompatible(t *testing.T) {
 	cases := []struct {
 		Name        string
-		From        design.DataType
+		From        expr.DataType
 		To          interface{}
 		ExpectedErr string
 	}{
-		{"bool", design.Boolean, false, ""},
-		{"int", design.Int, 0, ""},
-		{"int32", design.Int32, int32(0), ""},
-		{"int64", design.Int64, int64(0), ""},
-		{"uint", design.UInt, uint(0), ""},
-		{"uint32", design.UInt32, uint32(0), ""},
-		{"uint64", design.UInt64, uint64(0), ""},
-		{"float32", design.Float32, float32(0.0), ""},
-		{"float64", design.Float64, 0.0, ""},
-		{"string", design.String, "", ""},
-		{"bytes", design.Bytes, []byte{}, ""},
-		{"array", dsl.ArrayOf(design.String), []string{}, ""},
-		{"map", dsl.MapOf(design.String, design.String), map[string]string{}, ""},
-		{"map-interface", dsl.MapOf(design.String, design.Any), map[string]interface{}{}, ""},
+		{"bool", expr.Boolean, false, ""},
+		{"int", expr.Int, 0, ""},
+		{"int32", expr.Int32, int32(0), ""},
+		{"int64", expr.Int64, int64(0), ""},
+		{"uint", expr.UInt, uint(0), ""},
+		{"uint32", expr.UInt32, uint32(0), ""},
+		{"uint64", expr.UInt64, uint64(0), ""},
+		{"float32", expr.Float32, float32(0.0), ""},
+		{"float64", expr.Float64, 0.0, ""},
+		{"string", expr.String, "", ""},
+		{"bytes", expr.Bytes, []byte{}, ""},
+		{"array", dsl.ArrayOf(expr.String), []string{}, ""},
+		{"map", dsl.MapOf(expr.String, expr.String), map[string]string{}, ""},
+		{"map-interface", dsl.MapOf(expr.String, expr.Any), map[string]interface{}{}, ""},
 		{"object", obj, objT{}, ""},
 		{"object-mapped", objMapped, objT{}, ""},
 		{"object-ignored", objIgnored, objT{}, ""},
@@ -170,12 +170,12 @@ func TestCompatible(t *testing.T) {
 		{"object-recursive", objRecursive(), objRecursiveT{}, ""},
 		{"array-object", dsl.ArrayOf(obj), []objT{{}}, ""},
 
-		{"invalid-primitive", design.String, 0, "types don't match: type of <value> is int but type of corresponding attribute is string"},
-		{"invalid-int", design.Int, 0.0, "types don't match: type of <value> is float64 but type of corresponding attribute is int"},
-		{"invalid-float32", design.Float32, 0, "types don't match: type of <value> is int but type of corresponding attribute is float32"},
-		{"invalid-array", dsl.ArrayOf(design.String), []int{0}, "types don't match: type of <value>[0] is int but type of corresponding attribute is string"},
-		{"invalid-map-key", dsl.MapOf(design.String, design.String), map[int]string{0: ""}, "types don't match: type of <value>.key is int but type of corresponding attribute is string"},
-		{"invalid-map-val", dsl.MapOf(design.String, design.String), map[string]int{"": 0}, "types don't match: type of <value>.value is int but type of corresponding attribute is string"},
+		{"invalid-primitive", expr.String, 0, "types don't match: type of <value> is int but type of corresponding attribute is string"},
+		{"invalid-int", expr.Int, 0.0, "types don't match: type of <value> is float64 but type of corresponding attribute is int"},
+		{"invalid-float32", expr.Float32, 0, "types don't match: type of <value> is int but type of corresponding attribute is float32"},
+		{"invalid-array", dsl.ArrayOf(expr.String), []int{0}, "types don't match: type of <value>[0] is int but type of corresponding attribute is string"},
+		{"invalid-map-key", dsl.MapOf(expr.String, expr.String), map[int]string{0: ""}, "types don't match: type of <value>.key is int but type of corresponding attribute is string"},
+		{"invalid-map-val", dsl.MapOf(expr.String, expr.String), map[string]int{"": 0}, "types don't match: type of <value>.value is int but type of corresponding attribute is string"},
 		{"invalid-obj", obj, "", "types don't match: <value> is a string, expected a struct"},
 		{"invalid-obj-2", obj, objT2{}, "types don't match: type of <value>.Bar is string but type of corresponding attribute is int"},
 		{"invalid-obj-3", obj, objT3{}, "types don't match: type of <value>.Goo is int but type of corresponding attribute is float32"},
@@ -276,14 +276,14 @@ func TestConvertFile(t *testing.T) {
 }
 
 // runDSL returns the DSL root resulting from running the given DSL.
-func runDSL(t *testing.T, dsl func()) *design.RootExpr {
+func runDSL(t *testing.T, dsl func()) *expr.RootExpr {
 	// reset all roots and codegen data structures
 	Services = make(ServicesData)
 	eval.Reset()
-	design.Root = new(design.RootExpr)
-	eval.Register(design.Root)
-	design.Root.API = &design.APIExpr{Name: "test api"}
-	design.Root.API.Servers = []*design.ServerExpr{design.Root.API.DefaultServer()}
+	expr.Root = new(expr.RootExpr)
+	eval.Register(expr.Root)
+	expr.Root.API = expr.NewAPIExpr("test api", func() {})
+	expr.Root.API.Servers = []*expr.ServerExpr{expr.Root.API.DefaultServer()}
 
 	// run DSL (first pass)
 	if !eval.Execute(dsl, nil) {
@@ -296,58 +296,60 @@ func runDSL(t *testing.T, dsl func()) *design.RootExpr {
 	}
 
 	// return generated root
-	return design.Root
+	return expr.Root
 }
 
 // Test fixtures
 
-var obj = &design.UserTypeExpr{
-	AttributeExpr: &design.AttributeExpr{
-		Type: &design.Object{
-			{"Foo", &design.AttributeExpr{Type: design.String}},
-			{"Bar", &design.AttributeExpr{Type: design.Int}},
-			{"Baz", &design.AttributeExpr{Type: design.Boolean}},
-			{"Goo", &design.AttributeExpr{Type: design.Float32}},
-			{"Goo2", &design.AttributeExpr{Type: design.UInt}},
+var obj = &expr.UserTypeExpr{
+	AttributeExpr: &expr.AttributeExpr{
+		Type: &expr.Object{
+			{"Foo", &expr.AttributeExpr{Type: expr.String}},
+			{"Bar", &expr.AttributeExpr{Type: expr.Int}},
+			{"Baz", &expr.AttributeExpr{Type: expr.Boolean}},
+			{"Goo", &expr.AttributeExpr{Type: expr.Float32}},
+			{"Goo2", &expr.AttributeExpr{Type: expr.UInt}},
 		},
 	},
 	TypeName: "objT",
 }
 
-var objMapped = &design.UserTypeExpr{
-	AttributeExpr: &design.AttributeExpr{
-		Type: &design.Object{
-			{"Foo", &design.AttributeExpr{Type: design.String}},
-			{"Bar", &design.AttributeExpr{Type: design.Int}},
-			{"mapped", &design.AttributeExpr{Type: design.Boolean, Metadata: design.MetadataExpr{"struct.field.external": []string{"Baz"}}}},
+var objMapped = &expr.UserTypeExpr{
+	AttributeExpr: &expr.AttributeExpr{
+		Type: &expr.Object{
+			{"Foo", &expr.AttributeExpr{Type: expr.String}},
+			{"Bar", &expr.AttributeExpr{Type: expr.Int}},
+			{"mapped", &expr.AttributeExpr{Type: expr.Boolean, Meta: expr.MetaExpr{"struct.field.external": []string{"Baz"}}}},
 		},
 	},
 	TypeName: "objT",
 }
 
-var objIgnored = &design.UserTypeExpr{
-	AttributeExpr: &design.AttributeExpr{
-		Type: &design.Object{
-			{"Foo", &design.AttributeExpr{Type: design.String}},
-			{"Bar", &design.AttributeExpr{Type: design.Int}},
-			{"ignored", &design.AttributeExpr{Type: design.Boolean, Metadata: design.MetadataExpr{"struct.field.external": []string{"-"}}}},
+var objIgnored = &expr.UserTypeExpr{
+	AttributeExpr: &expr.AttributeExpr{
+		Type: &expr.Object{
+			{"Foo", &expr.AttributeExpr{Type: expr.String}},
+			{"Bar", &expr.AttributeExpr{Type: expr.Int}},
+			{"ignored", &expr.AttributeExpr{Type: expr.Boolean, Meta: expr.MetaExpr{"struct.field.external": []string{"-"}}}},
 		},
 	},
 	TypeName: "objT",
 }
 
-func objRecursive() *design.UserTypeExpr {
-	res := &design.UserTypeExpr{
-		AttributeExpr: &design.AttributeExpr{
-			Type: &design.Object{
-				{"Foo", &design.AttributeExpr{Type: design.String}},
-				{"Bar", &design.AttributeExpr{Type: design.Int}},
+func objRecursive() *expr.UserTypeExpr {
+	res := &expr.UserTypeExpr{
+		AttributeExpr: &expr.AttributeExpr{
+			Type: &expr.Object{
+				{"Foo", &expr.AttributeExpr{Type: expr.String}},
+				{"Bar", &expr.AttributeExpr{Type: expr.Int}},
 			},
 		},
 		TypeName: "objRecursiveT",
 	}
-	obj := res.AttributeExpr.Type.(*design.Object)
-	*obj = append(*obj, &design.NamedAttributeExpr{"Rec", &design.AttributeExpr{Type: res}})
+	obj := res.AttributeExpr.Type.(*expr.Object)
+	*obj = append(*obj, &expr.NamedAttributeExpr{
+		Name:      "Rec",
+		Attribute: &expr.AttributeExpr{Type: res}})
 
 	return res
 }

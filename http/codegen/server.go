@@ -8,28 +8,32 @@ import (
 
 	"goa.design/goa/codegen"
 	"goa.design/goa/codegen/service"
-	"goa.design/goa/design"
-	httpdesign "goa.design/goa/http/design"
+	"goa.design/goa/expr"
 )
 
 // ServerFiles returns all the server HTTP transport files.
-func ServerFiles(genpkg string, root *httpdesign.RootExpr) []*codegen.File {
-	fw := make([]*codegen.File, 2*len(root.HTTPServices))
-	for i, svc := range root.HTTPServices {
+func ServerFiles(genpkg string, root *expr.RootExpr) []*codegen.File {
+	fw := make([]*codegen.File, 2*len(root.API.HTTP.Services))
+	for i, svc := range root.API.HTTP.Services {
 		fw[i] = server(genpkg, svc)
 	}
-	for i, r := range root.HTTPServices {
-		fw[i+len(root.HTTPServices)] = serverEncodeDecode(genpkg, r)
+	for i, r := range root.API.HTTP.Services {
+		fw[i+len(root.API.HTTP.Services)] = serverEncodeDecode(genpkg, r)
 	}
 	return fw
 }
 
-// server returns the files defining the HTTP server.
-func server(genpkg string, svc *httpdesign.ServiceExpr) *codegen.File {
+// server returns the file implementing the HTTP server.
+func server(genpkg string, svc *expr.HTTPServiceExpr) *codegen.File {
 	path := filepath.Join(codegen.Gendir, "http", codegen.SnakeCase(svc.Name()), "server", "server.go")
 	data := HTTPServices.Get(svc.Name())
 	title := fmt.Sprintf("%s HTTP server", svc.Name())
-	funcs := map[string]interface{}{"join": func(ss []string, s string) string { return strings.Join(ss, s) }}
+	funcs := map[string]interface{}{
+		"join": func(ss []string, s string) string { return strings.Join(ss, s) },
+		"streamingEndpointExists": streamingEndpointExists,
+		"upgradeParams":           upgradeParams,
+		"viewedServerBody":        viewedServerBody,
+	}
 	sections := []*codegen.SectionTemplate{
 		codegen.Header(title, "server", []*codegen.ImportSpec{
 			{Path: "context"},
@@ -69,14 +73,7 @@ func server(genpkg string, svc *httpdesign.ServiceExpr) *codegen.File {
 		}
 	}
 
-	sections = append(sections, &codegen.SectionTemplate{
-		Name:   "server-init",
-		Source: serverInitT,
-		Data:   data,
-		FuncMap: map[string]interface{}{
-			"streamingEndpointExists": streamingEndpointExists,
-		},
-	})
+	sections = append(sections, &codegen.SectionTemplate{Name: "server-init", Source: serverInitT, Data: data, FuncMap: funcs})
 	sections = append(sections, &codegen.SectionTemplate{Name: "server-service", Source: serverServiceT, Data: data})
 	sections = append(sections, &codegen.SectionTemplate{Name: "server-use", Source: serverUseT, Data: data})
 	sections = append(sections, &codegen.SectionTemplate{Name: "server-mount", Source: serverMountT, Data: data})
@@ -91,43 +88,17 @@ func server(genpkg string, svc *httpdesign.ServiceExpr) *codegen.File {
 	for _, e := range data.Endpoints {
 		if e.ServerStream != nil {
 			if e.ServerStream.SendTypeRef != "" {
-				sections = append(sections, &codegen.SectionTemplate{
-					Name:   "server-stream-send",
-					Source: streamSendT,
-					Data:   e.ServerStream,
-					FuncMap: map[string]interface{}{
-						"upgradeParams":    upgradeParams,
-						"viewedServerBody": viewedServerBody,
-					},
-				})
+				sections = append(sections, &codegen.SectionTemplate{Name: "server-stream-send", Source: streamSendT, Data: e.ServerStream, FuncMap: funcs})
 			}
 			switch e.ServerStream.Kind {
-			case design.ClientStreamKind, design.BidirectionalStreamKind:
-				sections = append(sections, &codegen.SectionTemplate{
-					Name:   "server-stream-recv",
-					Source: streamRecvT,
-					Data:   e.ServerStream,
-					FuncMap: map[string]interface{}{
-						"upgradeParams": upgradeParams,
-					},
-				})
+			case expr.ClientStreamKind, expr.BidirectionalStreamKind:
+				sections = append(sections, &codegen.SectionTemplate{Name: "server-stream-recv", Source: streamRecvT, Data: e.ServerStream, FuncMap: funcs})
 			}
 			if e.ServerStream.MustClose {
-				sections = append(sections, &codegen.SectionTemplate{
-					Name:   "server-stream-close",
-					Source: streamCloseT,
-					Data:   e.ServerStream,
-					FuncMap: map[string]interface{}{
-						"upgradeParams": upgradeParams,
-					},
-				})
+				sections = append(sections, &codegen.SectionTemplate{Name: "server-stream-close", Source: streamCloseT, Data: e.ServerStream, FuncMap: funcs})
 			}
 			if e.Method.ViewedResult != nil && e.Method.ViewedResult.ViewName == "" {
-				sections = append(sections, &codegen.SectionTemplate{
-					Name:   "server-stream-set-view",
-					Source: streamSetViewT,
-					Data:   e.ServerStream,
-				})
+				sections = append(sections, &codegen.SectionTemplate{Name: "server-stream-set-view", Source: streamSetViewT, Data: e.ServerStream})
 			}
 		}
 	}
@@ -137,7 +108,7 @@ func server(genpkg string, svc *httpdesign.ServiceExpr) *codegen.File {
 
 // serverEncodeDecode returns the file defining the HTTP server encoding and
 // decoding logic.
-func serverEncodeDecode(genpkg string, svc *httpdesign.ServiceExpr) *codegen.File {
+func serverEncodeDecode(genpkg string, svc *expr.HTTPServiceExpr) *codegen.File {
 	path := filepath.Join(codegen.Gendir, "http", codegen.SnakeCase(svc.Name()), "server", "encode_decode.go")
 	data := HTTPServices.Get(svc.Name())
 	title := fmt.Sprintf("%s HTTP server encoders and decoders", svc.Name())
@@ -216,10 +187,10 @@ func streamingEndpointExists(sd *ServiceData) bool {
 	return false
 }
 
-func transTmplFuncs(s *httpdesign.ServiceExpr) map[string]interface{} {
+func transTmplFuncs(s *expr.HTTPServiceExpr) map[string]interface{} {
 	return map[string]interface{}{
-		"goTypeRef": func(dt design.DataType) string {
-			return service.Services.Get(s.Name()).Scope.GoTypeRef(&design.AttributeExpr{Type: dt})
+		"goTypeRef": func(dt expr.DataType) string {
+			return service.Services.Get(s.Name()).Scope.GoTypeRef(&expr.AttributeExpr{Type: dt})
 		},
 		"conversionData":       conversionData,
 		"headerConversionData": headerConversionData,
@@ -230,7 +201,7 @@ func transTmplFuncs(s *httpdesign.ServiceExpr) map[string]interface{} {
 
 // conversionData creates a template context suitable for executing the
 // "type_conversion" template.
-func conversionData(varName, name string, dt design.DataType) map[string]interface{} {
+func conversionData(varName, name string, dt expr.DataType) map[string]interface{} {
 	return map[string]interface{}{
 		"VarName": varName,
 		"Name":    name,
@@ -240,7 +211,7 @@ func conversionData(varName, name string, dt design.DataType) map[string]interfa
 
 // headerConversionData produces the template data suitable for executing the
 // "header_conversion" template.
-func headerConversionData(dt design.DataType, varName string, required bool, target string) map[string]interface{} {
+func headerConversionData(dt expr.DataType, varName string, required bool, target string) map[string]interface{} {
 	return map[string]interface{}{
 		"Type":     dt,
 		"VarName":  varName,
@@ -251,16 +222,16 @@ func headerConversionData(dt design.DataType, varName string, required bool, tar
 
 // printValue generates the Go code for a literal string containing the given
 // value. printValue panics if the data type is not a primitive or an array.
-func printValue(dt design.DataType, v interface{}) string {
+func printValue(dt expr.DataType, v interface{}) string {
 	switch actual := dt.(type) {
-	case *design.Array:
+	case *expr.Array:
 		val := reflect.ValueOf(v)
 		elems := make([]string, val.Len())
 		for i := 0; i < val.Len(); i++ {
 			elems[i] = printValue(actual.ElemType.Type, val.Index(i).Interface())
 		}
 		return strings.Join(elems, ", ")
-	case design.Primitive:
+	case expr.Primitive:
 		return fmt.Sprintf("%v", v)
 	default:
 		panic("unsupported type value " + dt.Name()) // bug
