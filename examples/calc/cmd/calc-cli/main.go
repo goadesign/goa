@@ -5,61 +5,74 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
-	"net/http"
 	"net/url"
 	"os"
 	"strings"
-	"time"
 
-	cli "goa.design/goa/examples/calc/gen/http/cli/calc"
-	goahttp "goa.design/goa/http"
+	"goa.design/goa"
 )
 
 func main() {
 	var (
-		addr = flag.String("url", "http://localhost:8000/calc", "`URL` to service host")
+		hostF = flag.String("host", "development", "Server host (valid values: development, production)")
+		addrF = flag.String("url", "", "URL to service host")
 
-		verbose = flag.Bool("verbose", false, "Print request and response details")
-		v       = flag.Bool("v", false, "Print request and response details")
-		timeout = flag.Int("timeout", 30, "Maximum number of `seconds` to wait for response")
+		versionF = flag.String("version", "v1", "API version")
+		verboseF = flag.Bool("verbose", false, "Print request and response details")
+		vF       = flag.Bool("v", false, "Print request and response details")
+		timeoutF = flag.Int("timeout", 30, "Maximum number of seconds to wait for response")
 	)
 	flag.Usage = usage
 	flag.Parse()
+	var (
+		addr    string
+		timeout int
+		debug   bool
+	)
+	{
+		addr = *addrF
+		if addr == "" {
+			switch *hostF {
+			case "development":
+				addr = "http://localhost:8000/calc"
+			case "production":
+				addr = "https://{version}.goa.design/calc"
+				addr = strings.Replace(addr, "{version}", *versionF, -1)
+			default:
+				fmt.Fprintf(os.Stderr, "invalid host argument: %q (valid hosts: development|production", *hostF)
+			}
+		}
+		timeout = *timeoutF
+		debug = *verboseF || *vF
+	}
 
 	var (
 		scheme string
 		host   string
-		debug  bool
 	)
 	{
-		u, err := url.Parse(*addr)
+		u, err := url.Parse(addr)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "invalid URL %#v: %s", *addr, err)
+			fmt.Fprintf(os.Stderr, "invalid URL %#v: %s", addr, err)
 			os.Exit(1)
 		}
 		scheme = u.Scheme
 		host = u.Host
-		debug = *verbose || *v
 	}
-
 	var (
-		doer goahttp.Doer
+		endpoint goa.Endpoint
+		payload  interface{}
+		err      error
 	)
 	{
-		doer = &http.Client{Timeout: time.Duration(*timeout) * time.Second}
-		if debug {
-			doer = goahttp.NewDebugDoer(doer)
+		switch scheme {
+		case "http", "https":
+			endpoint, payload, err = doHTTP(scheme, host, timeout, debug)
+		default:
+			fmt.Fprintf(os.Stderr, "invalid scheme: %q (valid schemes: grpc|http)", scheme)
+			os.Exit(1)
 		}
 	}
-
-	endpoint, payload, err := cli.ParseEndpoint(
-		scheme,
-		host,
-		doer,
-		goahttp.RequestEncoder,
-		goahttp.ResponseDecoder,
-		debug,
-	)
 	if err != nil {
 		if err == flag.ErrHelp {
 			os.Exit(0)
@@ -70,11 +83,6 @@ func main() {
 	}
 
 	data, err := endpoint(context.Background(), payload)
-
-	if debug {
-		doer.(goahttp.DebugDoer).Fprint(os.Stderr)
-	}
-
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err.Error())
 		os.Exit(1)
@@ -87,14 +95,15 @@ func main() {
 }
 
 func usage() {
-	fmt.Fprintf(os.Stderr, `%s is a command line client for the calc server.
+	fmt.Fprintf(os.Stderr, `%s is a command line client for the calc API.
 
 Usage:
-    %s [-url URL][-timeout SECONDS][-verbose|-v] SERVICE ENDPOINT [flags]
+    %s [-url URL][-timeout SECONDS][-verbose|-v][-version VERSION] SERVICE ENDPOINT [flags]
 
-    -url URL:    specify service URL (http://localhost:8000/calc)
+    -url URL:    specify service URL (http://localhost:8080)
     -timeout:    maximum number of seconds to wait for response (30)
     -verbose|-v: print request and response details (false)
+    -version:    API version (v1)
 
 Commands:
 %s
@@ -103,7 +112,7 @@ Additional help:
 
 Example:
 %s
-`, os.Args[0], os.Args[0], indent(cli.UsageCommands()), os.Args[0], indent(cli.UsageExamples()))
+`, os.Args[0], os.Args[0], indent(httpUsageCommands()), os.Args[0], indent(httpUsageExamples()))
 }
 
 func indent(s string) string {
