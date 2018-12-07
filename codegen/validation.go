@@ -49,7 +49,7 @@ func init() {
 //
 // context is used to produce helpful messages in case of error.
 //
-func ValidationCode(an expr.AttributeAnalyzer, target, context string) string {
+func ValidationCode(an AttributeAnalyzer, target, context string) string {
 	att := an.Attribute()
 	validation := att.Validation
 	if validation == nil {
@@ -157,12 +157,12 @@ func ValidationCode(an expr.AttributeAnalyzer, target, context string) string {
 // RecursiveValidationCode produces Go code that runs the validations defined in
 // the given attribute and its children recursively against the value held by
 // the variable named target.
-func RecursiveValidationCode(an expr.AttributeAnalyzer, target string) string {
+func RecursiveValidationCode(an AttributeAnalyzer, target string) string {
 	seen := make(map[string]*bytes.Buffer)
 	return recurseValidationCode(an, target, target, seen).String()
 }
 
-func recurseValidationCode(an expr.AttributeAnalyzer, target, context string, seen map[string]*bytes.Buffer) *bytes.Buffer {
+func recurseValidationCode(an AttributeAnalyzer, target, context string, seen map[string]*bytes.Buffer) *bytes.Buffer {
 	var (
 		buf   = new(bytes.Buffer)
 		first = true
@@ -184,10 +184,10 @@ func recurseValidationCode(an expr.AttributeAnalyzer, target, context string, se
 		first = false
 	}
 
-	runUserValT := func(ut expr.UserType, target string) string {
+	runUserValT := func(name, target string) string {
 		var buf bytes.Buffer
 		data := map[string]interface{}{
-			"name":   Goify(ut.Name(), true),
+			"name":   Goify(name, true),
 			"target": target,
 		}
 		if err := userValT.Execute(&buf, data); err != nil {
@@ -209,18 +209,14 @@ func recurseValidationCode(an expr.AttributeAnalyzer, target, context string, se
 			}
 		}
 	} else if a := expr.AsArray(att.Type); a != nil {
-		elemAn := expr.NewAttributeAnalyzer(a.ElemType,
-			&expr.AttributeProperties{
-				Required:   true,
-				Pointer:    false,
-				UseDefault: prop.UseDefault,
-			})
+		elemAn := an.Dup(a.ElemType, true)
+		elemAn.SetProperties(true, false, prop.DefaultPointer, prop.UseDefault)
 		val := recurseValidationCode(elemAn, "e", context+"[*]", seen).String()
 		if val != "" {
-			switch dt := a.ElemType.Type.(type) {
+			switch a.ElemType.Type.(type) {
 			case expr.UserType:
 				// For user and result types, call the Validate method
-				val = runUserValT(dt, "e")
+				val = runUserValT(elemAn.Name(false), "e")
 			}
 			data := map[string]interface{}{
 				"target":     target,
@@ -236,31 +232,23 @@ func recurseValidationCode(an expr.AttributeAnalyzer, target, context string, se
 			}
 		}
 	} else if m := expr.AsMap(att.Type); m != nil {
-		keyAn := expr.NewAttributeAnalyzer(m.KeyType,
-			&expr.AttributeProperties{
-				Required:   true,
-				Pointer:    false,
-				UseDefault: prop.UseDefault,
-			})
+		keyAn := an.Dup(m.KeyType, true)
+		keyAn.SetProperties(true, false, prop.DefaultPointer, prop.UseDefault)
 		keyVal := recurseValidationCode(keyAn, "k", context+".key", seen).String()
-		elemAn := expr.NewAttributeAnalyzer(m.ElemType,
-			&expr.AttributeProperties{
-				Required:   true,
-				Pointer:    false,
-				UseDefault: prop.UseDefault,
-			})
+		elemAn := an.Dup(m.ElemType, true)
+		elemAn.SetProperties(true, false, prop.DefaultPointer, prop.UseDefault)
 		valueVal := recurseValidationCode(elemAn, "v", context+"[key]", seen).String()
 		if keyVal != "" || valueVal != "" {
 			if keyVal != "" {
-				if ut, ok := m.KeyType.Type.(expr.UserType); ok {
-					keyVal = runUserValT(ut, "k")
+				if _, ok := m.KeyType.Type.(expr.UserType); ok {
+					keyVal = runUserValT(keyAn.Name(false), "k")
 				} else {
 					keyVal = "\n" + keyVal
 				}
 			}
 			if valueVal != "" {
-				if ut, ok := m.ElemType.Type.(expr.UserType); ok {
-					valueVal = runUserValT(ut, "v")
+				if _, ok := m.ElemType.Type.(expr.UserType); ok {
+					valueVal = runUserValT(elemAn.Name(false), "v")
 				} else {
 					valueVal = "\n" + valueVal
 				}
@@ -283,7 +271,7 @@ func recurseValidationCode(an expr.AttributeAnalyzer, target, context string, se
 	return buf
 }
 
-func recurseAttribute(an expr.AttributeAnalyzer, nat *expr.NamedAttributeExpr, target, context string, seen map[string]*bytes.Buffer) string {
+func recurseAttribute(an AttributeAnalyzer, nat *expr.NamedAttributeExpr, target, context string, seen map[string]*bytes.Buffer) string {
 	var (
 		validation string
 
@@ -326,13 +314,8 @@ func recurseAttribute(an expr.AttributeAnalyzer, nat *expr.NamedAttributeExpr, t
 			var buf bytes.Buffer
 			tgt := fmt.Sprintf("%s.%s", target, GoifyAtt(nat.Attribute, nat.Name, true))
 			if expr.IsArray(nat.Attribute.Type) {
-				a := expr.NewAttributeAnalyzer(nat.Attribute,
-					&expr.AttributeProperties{
-						Required:   att.IsRequired(nat.Name),
-						UseDefault: prop.UseDefault,
-						Pointer:    prop.Pointer,
-					})
-				buf.Write(recurseValidationCode(a, tgt, context, seen).Bytes())
+				an = an.Dup(nat.Attribute, att.IsRequired(nat.Name))
+				buf.Write(recurseValidationCode(an, tgt, context, seen).Bytes())
 			} else {
 				if err := userValT.Execute(&buf, map[string]interface{}{"name": Goify(ut.Name(), true), "target": tgt}); err != nil {
 					panic(err) // bug
@@ -341,14 +324,9 @@ func recurseAttribute(an expr.AttributeAnalyzer, nat *expr.NamedAttributeExpr, t
 			validation = buf.String()
 		}
 	} else {
-		a := expr.NewAttributeAnalyzer(nat.Attribute,
-			&expr.AttributeProperties{
-				Required:   att.IsRequired(nat.Name),
-				Pointer:    prop.Pointer,
-				UseDefault: prop.UseDefault,
-			})
+		an = an.Dup(nat.Attribute, att.IsRequired(nat.Name))
 		validation = recurseValidationCode(
-			a,
+			an,
 			fmt.Sprintf("%s.%s", target, GoifyAtt(nat.Attribute, nat.Name, true)),
 			fmt.Sprintf("%s.%s", context, nat.Name),
 			seen,

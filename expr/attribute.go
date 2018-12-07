@@ -30,37 +30,6 @@ type (
 		DefaultValue interface{}
 		// UserExample set in DSL or computed in Finalize
 		UserExamples []*ExampleExpr
-		// ForcePointer if true indicates that the field must be a pointer even though
-		// it has required attributes or a default value.
-		ForcePointer bool
-	}
-
-	// AttributeAnalyzer analyzes an attribute and its sub-attributes.
-	AttributeAnalyzer interface {
-		// IsPointer returns true if the attribute being analyzed is a pointer.
-		IsPointer() bool
-		// Attribute returns the attribute being analyzed.
-		Attribute() *AttributeExpr
-		// SetAttribute sets the attribute to analyze.
-		SetAttribute(a *AttributeExpr)
-		// Properties returns the attribute properties used in analysis.
-		Properties() *AttributeProperties
-		// SetProperties sets the attribute properties for analysis.
-		SetProperties(p *AttributeProperties)
-	}
-
-	// AttributeProperties contains properties that affect how the attribute
-	// is stored (i.e. pointer or non-pointer).
-	AttributeProperties struct {
-		// Pointer if true indicates that the attribute is a pointer even if
-		// required or has a default value (except array and map types which are
-		// always non-pointers)
-		Pointer bool
-		// UseDefault if true indicates that the attribute is a non-pointer if it
-		// has a default value.
-		UseDefault bool
-		// Required if true indicates that the attribute is required.
-		Required bool
 	}
 
 	// ExampleExpr represents an example.
@@ -121,14 +90,6 @@ type (
 	// ValidationFormat is the type used to enumerate the possible string
 	// formats.
 	ValidationFormat string
-
-	// Analyzer implements the AttributeAnalyzer interface.
-	Analyzer struct {
-		// AttributeExpr is the attribute being analyzed.
-		AttributeExpr *AttributeExpr
-		// AttributeProperties is the set of attribute properties.
-		AttributeProperties *AttributeProperties
-	}
 )
 
 const (
@@ -354,7 +315,7 @@ func (a *AttributeExpr) IsRequired(attName string) bool {
 func (a *AttributeExpr) IsRequiredNoDefault(attName string) bool {
 	for _, name := range a.AllRequired() {
 		if name == attName {
-			return AsObject(a.Type).Attribute(name).DefaultValue == nil
+			return a.GetDefault(name) == nil
 		}
 	}
 	return false
@@ -363,9 +324,6 @@ func (a *AttributeExpr) IsRequiredNoDefault(attName string) bool {
 // IsPrimitivePointer returns true if the field generated for the given
 // attribute should be a pointer to a primitive type. The receiver attribute must
 // be an object.
-//
-// If ForcePointer is set to true on the resulting attribute, then
-// IsPrimitivePointer returns true.
 //
 // If useDefault is true and the attribute has a default value then
 // IsPrimitivePointer returns false. This makes it possible to differentiate
@@ -388,9 +346,6 @@ func (a *AttributeExpr) IsPrimitivePointer(attName string, useDefault bool) bool
 		return false
 	}
 	if IsPrimitive(att.Type) {
-		if att.ForcePointer {
-			return true
-		}
 		return att.Type.Kind() != BytesKind && att.Type.Kind() != AnyKind &&
 			!a.IsRequired(attName) && (!a.HasDefaultValue(attName) || !useDefault)
 	}
@@ -418,10 +373,15 @@ func (a *AttributeExpr) HasTag(tag string) bool {
 // HasDefaultValue returns true if the attribute with the given name has a
 // default value.
 func (a *AttributeExpr) HasDefaultValue(attName string) bool {
+	return a.GetDefault(attName) != nil
+}
+
+// GetDefault gets the default for the attribute.
+func (a *AttributeExpr) GetDefault(attName string) interface{} {
 	if o := AsObject(a.Type); o != nil {
-		return o.Attribute(attName).DefaultValue != nil
+		return o.Attribute(attName).DefaultValue
 	}
-	return false
+	return nil
 }
 
 // SetDefault sets the default for the attribute. It also converts HashVal
@@ -716,48 +676,4 @@ func (a *AttributeExpr) IsSupportedValidationFormat(vf ValidationFormat) bool {
 		return true
 	}
 	return false
-}
-
-// NewAttributeAnalyzer returns a new attribute analyzer.
-func NewAttributeAnalyzer(att *AttributeExpr, p *AttributeProperties) AttributeAnalyzer {
-	return &Analyzer{AttributeExpr: att, AttributeProperties: p}
-}
-
-// IsPointer checks if the attribute is a pointer.
-//
-// The following table shows how the attribute properties affect the return
-// value
-//
-//    Pointer | UseDefault | Required | IsPointer
-//       T    |      F     |     F    |     T
-//       T    |      T     |     F    |     T
-//       T    |      F     |     T    |     T
-//       F    |      T     |     F    |     F if default value exists / T otherwise
-//       F    |      T     |     T    |     F
-//       F    |      F     |     T    |     F
-//
-func (a *Analyzer) IsPointer() bool {
-	return a.AttributeProperties.Pointer ||
-		(!a.AttributeProperties.Required &&
-			(a.AttributeExpr.DefaultValue == nil || !a.AttributeProperties.UseDefault))
-}
-
-// Attribute returns the inner attribute expression.
-func (a *Analyzer) Attribute() *AttributeExpr {
-	return a.AttributeExpr
-}
-
-// SetAttribute sets the attribute to analyze.
-func (a *Analyzer) SetAttribute(att *AttributeExpr) {
-	a.AttributeExpr = att
-}
-
-// Properties returns the attribute properties used in analysis.
-func (a *Analyzer) Properties() *AttributeProperties {
-	return a.AttributeProperties
-}
-
-// SetProperties sets the attribute properties for analysis.
-func (a *Analyzer) SetProperties(p *AttributeProperties) {
-	a.AttributeProperties = p
 }

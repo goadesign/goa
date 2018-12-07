@@ -8,48 +8,73 @@ import (
 
 func TestGoTypeDef(t *testing.T) {
 	var (
-		simpleArray = array(expr.Boolean)
-		simpleMap   = mapa(expr.Int, expr.String)
-		requiredObj = require(object("IntField", expr.Int, "StringField", expr.String), "IntField", "StringField")
-		defaultObj  = defaulta(object("IntField", expr.Int, "StringField", expr.String), "IntField", 1, "StringField", "foo")
-		ut          = &expr.UserTypeExpr{AttributeExpr: &expr.AttributeExpr{Type: expr.Boolean}, TypeName: "UserType"}
-		rt          = &expr.ResultTypeExpr{UserTypeExpr: &expr.UserTypeExpr{AttributeExpr: &expr.AttributeExpr{Type: expr.Boolean}, TypeName: "ResultType"}, Identifier: "application/vnd.goa.example", Views: nil}
-		userType    = &expr.AttributeExpr{Type: ut}
-		resultType  = &expr.AttributeExpr{Type: rt}
-		mixedObj    = require(object("IntField", expr.Int, "ArrayField", simpleArray.Type, "MapField", simpleMap.Type, "UserTypeField", ut), "IntField", "ArrayField", "MapField", "UserTypeField")
+		simpleArray = &expr.AttributeExpr{
+			Type: &expr.Array{ElemType: &expr.AttributeExpr{Type: expr.Boolean}}}
+		simpleMap = &expr.AttributeExpr{
+			Type: &expr.Map{
+				KeyType:  &expr.AttributeExpr{Type: expr.Int},
+				ElemType: &expr.AttributeExpr{Type: expr.String},
+			}}
+		requiredObj = &expr.AttributeExpr{
+			Type: &expr.Object{
+				{"IntField", &expr.AttributeExpr{Type: expr.Int}},
+				{"StringField", &expr.AttributeExpr{Type: expr.String}},
+			},
+			Validation: &expr.ValidationExpr{Required: []string{"IntField", "StringField"}}}
+		defaultObj = &expr.AttributeExpr{
+			Type: &expr.Object{
+				{"IntField", &expr.AttributeExpr{Type: expr.Int, DefaultValue: 1}},
+				{"StringField", &expr.AttributeExpr{Type: expr.String, DefaultValue: "foo"}},
+			}}
+		ut         = &expr.UserTypeExpr{AttributeExpr: &expr.AttributeExpr{Type: expr.Boolean}, TypeName: "UserType"}
+		rt         = &expr.ResultTypeExpr{UserTypeExpr: &expr.UserTypeExpr{AttributeExpr: &expr.AttributeExpr{Type: expr.Boolean}, TypeName: "ResultType"}, Identifier: "application/vnd.goa.example", Views: nil}
+		userType   = &expr.AttributeExpr{Type: ut}
+		resultType = &expr.AttributeExpr{Type: rt}
+		mixedObj   = &expr.AttributeExpr{
+			Type: &expr.Object{
+				{"IntField", &expr.AttributeExpr{Type: expr.Int}},
+				{"ArrayField", simpleArray},
+				{"MapField", simpleMap},
+				{"UserTypeField", userType},
+			},
+			Validation: &expr.ValidationExpr{Required: []string{"IntField", "ArrayField", "MapField", "UserTypeField"}}}
 	)
 	cases := map[string]struct {
 		att        *expr.AttributeExpr
+		pointer    bool
+		defaultPtr bool
 		usedefault bool
 		expected   string
 	}{
-		"BooleanKind": {&expr.AttributeExpr{Type: expr.Boolean}, true, "bool"},
-		"IntKind":     {&expr.AttributeExpr{Type: expr.Int}, true, "int"},
-		"Int32Kind":   {&expr.AttributeExpr{Type: expr.Int32}, true, "int32"},
-		"Int64Kind":   {&expr.AttributeExpr{Type: expr.Int64}, true, "int64"},
-		"UIntKind":    {&expr.AttributeExpr{Type: expr.UInt}, true, "uint"},
-		"UInt32Kind":  {&expr.AttributeExpr{Type: expr.UInt32}, true, "uint32"},
-		"UInt64Kind":  {&expr.AttributeExpr{Type: expr.UInt64}, true, "uint64"},
-		"Float32Kind": {&expr.AttributeExpr{Type: expr.Float32}, true, "float32"},
-		"Float64Kind": {&expr.AttributeExpr{Type: expr.Float64}, true, "float64"},
-		"StringKind":  {&expr.AttributeExpr{Type: expr.String}, true, "string"},
-		"BytesKind":   {&expr.AttributeExpr{Type: expr.Bytes}, true, "[]byte"},
-		"AnyKind":     {&expr.AttributeExpr{Type: expr.Any}, true, "interface{}"},
+		"BooleanKind": {&expr.AttributeExpr{Type: expr.Boolean}, false, false, true, "bool"},
+		"IntKind":     {&expr.AttributeExpr{Type: expr.Int}, false, false, true, "int"},
+		"Int32Kind":   {&expr.AttributeExpr{Type: expr.Int32}, false, false, true, "int32"},
+		"Int64Kind":   {&expr.AttributeExpr{Type: expr.Int64}, false, false, true, "int64"},
+		"UIntKind":    {&expr.AttributeExpr{Type: expr.UInt}, false, false, true, "uint"},
+		"UInt32Kind":  {&expr.AttributeExpr{Type: expr.UInt32}, false, false, true, "uint32"},
+		"UInt64Kind":  {&expr.AttributeExpr{Type: expr.UInt64}, false, false, true, "uint64"},
+		"Float32Kind": {&expr.AttributeExpr{Type: expr.Float32}, false, false, true, "float32"},
+		"Float64Kind": {&expr.AttributeExpr{Type: expr.Float64}, false, false, true, "float64"},
+		"StringKind":  {&expr.AttributeExpr{Type: expr.String}, false, false, true, "string"},
+		"BytesKind":   {&expr.AttributeExpr{Type: expr.Bytes}, false, false, true, "[]byte"},
+		"AnyKind":     {&expr.AttributeExpr{Type: expr.Any}, false, false, true, "interface{}"},
 
-		"Array":          {simpleArray, true, "[]bool"},
-		"Map":            {simpleMap, true, "map[int]string"},
-		"UserTypeExpr":   {userType, true, "UserType"},
-		"ResultTypeExpr": {resultType, true, "ResultType"},
+		"Array":          {simpleArray, false, false, true, "[]bool"},
+		"Map":            {simpleMap, false, false, true, "map[int]string"},
+		"UserTypeExpr":   {userType, false, false, true, "UserType"},
+		"ResultTypeExpr": {resultType, false, false, true, "ResultType"},
 
-		"Object":          {requiredObj, true, "struct {\n\tIntField int\n\tStringField string\n}"},
-		"ObjDefault":      {defaultObj, true, "struct {\n\tIntField int\n\tStringField string\n}"},
-		"ObjDefaultNoDef": {defaultObj, false, "struct {\n\tIntField *int\n\tStringField *string\n}"},
-		"ObjMixed":        {mixedObj, true, "struct {\n\tIntField int\n\tArrayField []bool\n\tMapField map[int]string\n\tUserTypeField UserType\n}"},
+		"Object":          {requiredObj, false, false, true, "struct {\n\tIntField int\n\tStringField string\n}"},
+		"ObjDefault":      {defaultObj, false, false, true, "struct {\n\tIntField int\n\tStringField string\n}"},
+		"ObjDefaultPtr":   {defaultObj, false, true, true, "struct {\n\tIntField *int\n\tStringField *string\n}"},
+		"ObjDefaultNoDef": {defaultObj, false, false, false, "struct {\n\tIntField *int\n\tStringField *string\n}"},
+		"ObjMixed":        {mixedObj, false, false, true, "struct {\n\tIntField int\n\tArrayField []bool\n\tMapField map[int]string\n\tUserTypeField UserType\n}"},
+		"ObjMixedPointer": {mixedObj, true, false, true, "struct {\n\tIntField *int\n\tArrayField []bool\n\tMapField map[int]string\n\tUserTypeField *UserType\n}"},
 	}
 
 	for k, tc := range cases {
 		scope := NewNameScope()
-		actual := scope.GoTypeDef(tc.att, tc.usedefault)
+		actual := scope.GoTypeDef(NewAttributeAnalyzer(tc.att, true, tc.pointer, tc.defaultPtr, tc.usedefault, "", scope))
 		if actual != tc.expected {
 			t.Errorf("%s: got %#v, expected %#v", k, actual, tc.expected)
 		}

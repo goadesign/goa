@@ -185,19 +185,20 @@ func DecodeRateRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.De
 		)
 		{
 			queryRaw := r.URL.Query()
-			if len(queryRaw) != 0 {
-				query = make(map[uint32][]string, len(queryRaw))
-				for keyRaw, val := range queryRaw {
-					var key uint32
-					{
-						v, err2 := strconv.ParseUint(keyRaw, 10, 32)
-						if err2 != nil {
-							err = goa.MergeErrors(err, goa.InvalidFieldTypeError("key", keyRaw, "unsigned integer"))
-						}
-						key = uint32(v)
+			if len(queryRaw) == 0 {
+				err = goa.MergeErrors(err, goa.MissingFieldError("query", "query string"))
+			}
+			query = make(map[uint32][]string, len(queryRaw))
+			for keyRaw, val := range queryRaw {
+				var key uint32
+				{
+					v, err2 := strconv.ParseUint(keyRaw, 10, 32)
+					if err2 != nil {
+						err = goa.MergeErrors(err, goa.InvalidFieldTypeError("key", keyRaw, "unsigned integer"))
 					}
-					query[key] = val
+					key = uint32(v)
 				}
+				query[key] = val
 			}
 		}
 		if err != nil {
@@ -305,9 +306,9 @@ func NewStorageMultiUpdateDecoder(mux goahttp.Muxer, storageMultiUpdateDecoderFn
 	}
 }
 
-// marshalWineryViewToWineryResponseTiny builds a value of type
+// marshalStorageviewsWineryViewToWineryResponseTiny builds a value of type
 // *WineryResponseTiny from a value of type *storageviews.WineryView.
-func marshalWineryViewToWineryResponseTiny(v *storageviews.WineryView) *WineryResponseTiny {
+func marshalStorageviewsWineryViewToWineryResponseTiny(v *storageviews.WineryView) *WineryResponseTiny {
 	res := &WineryResponseTiny{
 		Name: *v.Name,
 	}
@@ -315,9 +316,9 @@ func marshalWineryViewToWineryResponseTiny(v *storageviews.WineryView) *WineryRe
 	return res
 }
 
-// marshalWineryViewToWineryResponseBodyTiny builds a value of type
+// marshalStorageviewsWineryViewToWineryResponseBodyTiny builds a value of type
 // *WineryResponseBodyTiny from a value of type *storageviews.WineryView.
-func marshalWineryViewToWineryResponseBodyTiny(v *storageviews.WineryView) *WineryResponseBodyTiny {
+func marshalStorageviewsWineryViewToWineryResponseBodyTiny(v *storageviews.WineryView) *WineryResponseBodyTiny {
 	res := &WineryResponseBodyTiny{
 		Name: *v.Name,
 	}
@@ -325,9 +326,9 @@ func marshalWineryViewToWineryResponseBodyTiny(v *storageviews.WineryView) *Wine
 	return res
 }
 
-// unmarshalWineryRequestBodyToWinery builds a value of type *storage.Winery
-// from a value of type *WineryRequestBody.
-func unmarshalWineryRequestBodyToWinery(v *WineryRequestBody) *storage.Winery {
+// unmarshalWineryRequestBodyToStorageWinery builds a value of type
+// *storage.Winery from a value of type *WineryRequestBody.
+func unmarshalWineryRequestBodyToStorageWinery(v *WineryRequestBody) *storage.Winery {
 	res := &storage.Winery{
 		Name:    *v.Name,
 		Region:  *v.Region,

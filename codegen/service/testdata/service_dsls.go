@@ -72,6 +72,35 @@ var MultipleMethodsDSL = func() {
 	})
 }
 
+var WithDefaultDSL = func() {
+	Service("WithDefault", func() {
+		Method("A", func() {
+			Payload(func() {
+				Attribute("IntField", Int, func() {
+					Default(1)
+				})
+				Attribute("StringField", String, func() {
+					Default("foo")
+				})
+				Attribute("OptionalField", String)
+				Attribute("RequiredField", Float32)
+				Required("RequiredField")
+			})
+			Result(func() {
+				Attribute("IntField", Int, func() {
+					Default(1)
+				})
+				Attribute("StringField", String, func() {
+					Default("foo")
+				})
+				Attribute("OptionalField", String)
+				Attribute("RequiredField", Float32)
+				Required("RequiredField")
+			})
+		})
+	})
+}
+
 var EmptyMethodDSL = func() {
 	Service("Empty", func() {
 		Method("Empty", func() {

@@ -87,7 +87,7 @@ func sectionCodeWithPrefix(t *testing.T, section *SectionTemplate, prefix string
 // FormatTestCode formats the given Go code. The code must correspond to the
 // content of a valid Go source file (i.e. start with "package")
 func FormatTestCode(t *testing.T, code string) string {
-	tmp := createTempFile(t, code)
+	tmp := CreateTempFile(t, code)
 	defer os.Remove(tmp)
 	if err := finalizeGoSource(tmp); err != nil {
 		t.Fatal(err)
@@ -103,14 +103,14 @@ func FormatTestCode(t *testing.T, code string) string {
 // otherwise degrades to using the dmp package.
 func Diff(t *testing.T, s1, s2 string) string {
 	_, err := exec.LookPath("diff")
-	supportsDiff := err == nil
+	supportsDiff := (err == nil)
 	if !supportsDiff {
 		dmp := diffmatchpatch.New()
 		diffs := dmp.DiffMain(s1, s2, false)
 		return dmp.DiffPrettyText(diffs)
 	}
-	left := createTempFile(t, s1)
-	right := createTempFile(t, s2)
+	left := CreateTempFile(t, s1)
+	right := CreateTempFile(t, s2)
 	defer os.Remove(left)
 	defer os.Remove(right)
 	cmd := exec.Command("diff", left, right)
@@ -118,7 +118,21 @@ func Diff(t *testing.T, s1, s2 string) string {
 	return strings.Replace(string(diffb), "\t", " ␉ ", -1)
 }
 
-func createTempFile(t *testing.T, content string) string {
+// NewUseDefaultAnalyzer returns an attribute analyzer which uses non-pointers
+// for attributes with default values. It is used only in tests.
+func NewUseDefaultAnalyzer(dt expr.DataType, pkg string, scope *NameScope) AttributeAnalyzer {
+	return NewAttributeAnalyzer(&expr.AttributeExpr{Type: dt}, true, false, false, true, pkg, scope)
+}
+
+// NewPointerAnalyzer returns an attribute analyzer which uses pointers for all
+// attributes.
+func NewPointerAnalyzer(dt expr.DataType, pkg string, scope *NameScope) AttributeAnalyzer {
+	return NewAttributeAnalyzer(&expr.AttributeExpr{Type: dt}, false, true, false, false, pkg, scope)
+}
+
+// CreateTempFile creates a temporary file and writes the given content.
+// It is used only for testing.
+func CreateTempFile(t *testing.T, content string) string {
 	f, err := ioutil.TempFile("", "")
 	if err != nil {
 		t.Fatal(err)

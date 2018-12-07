@@ -84,7 +84,7 @@ func NewStoredBottleResponseCollection(res sommelierviews.StoredBottleCollection
 			Rating:      val.Rating,
 		}
 		if val.Winery != nil {
-			body[i].Winery = marshalWineryViewToWineryResponseTiny(val.Winery)
+			body[i].Winery = marshalSommelierviewsWineryViewToWineryResponseTiny(val.Winery)
 		}
 		if val.Composition != nil {
 			body[i].Composition = make([]*ComponentResponse, len(val.Composition))

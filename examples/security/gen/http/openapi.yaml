@@ -43,7 +43,7 @@ paths:
         "401":
           description: Unauthorized response.
           schema:
-            $ref: '#/definitions/secure_unauthorized_response_body'
+            $ref: '#/definitions/SecuredServiceSecureUnauthorizedResponseBody'
       schemes:
       - grpc
       - http
@@ -79,7 +79,7 @@ paths:
         "401":
           description: Unauthorized response.
           schema:
-            $ref: '#/definitions/doubly_secure_unauthorized_response_body'
+            $ref: '#/definitions/SecuredServiceDoublySecureUnauthorizedResponseBody'
       schemes:
       - grpc
       - http
@@ -120,7 +120,7 @@ paths:
         "401":
           description: Unauthorized response.
           schema:
-            $ref: '#/definitions/also_doubly_secure_unauthorized_response_body'
+            $ref: '#/definitions/SecuredServiceAlsoDoublySecureUnauthorizedResponseBody'
       schemes:
       - grpc
       - http
@@ -144,30 +144,30 @@ paths:
         "401":
           description: Unauthorized response.
           schema:
-            $ref: '#/definitions/signin_unauthorized_response_body'
+            $ref: '#/definitions/SecuredServiceSigninUnauthorizedResponseBody'
       schemes:
       - grpc
       - http
       security:
       - basic: []
 definitions:
-  also_doubly_secure_unauthorized_response_body:
-    title: also_doubly_secure_unauthorized_response_body
+  SecuredServiceAlsoDoublySecureUnauthorizedResponseBody:
+    title: SecuredServiceAlsoDoublySecureUnauthorizedResponseBody
     type: string
     description: Credentials are invalid
     example: Maxime ipsam esse et.
-  doubly_secure_unauthorized_response_body:
-    title: doubly_secure_unauthorized_response_body
+  SecuredServiceDoublySecureUnauthorizedResponseBody:
+    title: SecuredServiceDoublySecureUnauthorizedResponseBody
     type: string
     description: Credentials are invalid
     example: Itaque accusamus enim.
-  secure_unauthorized_response_body:
-    title: secure_unauthorized_response_body
+  SecuredServiceSecureUnauthorizedResponseBody:
+    title: SecuredServiceSecureUnauthorizedResponseBody
     type: string
     description: Credentials are invalid
     example: Accusantium voluptatem alias corrupti voluptates a.
-  signin_unauthorized_response_body:
-    title: signin_unauthorized_response_body
+  SecuredServiceSigninUnauthorizedResponseBody:
+    title: SecuredServiceSigninUnauthorizedResponseBody
     type: string
     description: Credentials are invalid
     example: Tenetur est et.

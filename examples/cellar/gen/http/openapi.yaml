@@ -33,11 +33,11 @@ paths:
         "400":
           description: Bad Request response.
           schema:
-            $ref: '#/definitions/pick_no_criteria_response_body'
+            $ref: '#/definitions/SommelierPickNoCriteriaResponseBody'
         "404":
           description: Not Found response.
           schema:
-            $ref: '#/definitions/pick_no_match_response_body'
+            $ref: '#/definitions/SommelierPickNoMatchResponseBody'
       schemes:
       - http
   /storage:
@@ -106,7 +106,7 @@ paths:
         "404":
           description: Not Found response.
           schema:
-            $ref: '#/definitions/show_not_found_response_body'
+            $ref: '#/definitions/StorageShowNotFoundResponseBody'
             required:
             - message
             - id
@@ -338,6 +338,16 @@ definitions:
       varietal: Syrah
     required:
     - varietal
+  SommelierPickNoCriteriaResponseBody:
+    title: SommelierPickNoCriteriaResponseBody
+    type: string
+    description: Missing criteria
+    example: Rerum ut libero tempore optio corporis quam.
+  SommelierPickNoMatchResponseBody:
+    title: SommelierPickNoMatchResponseBody
+    type: string
+    description: No bottle matched given criteria
+    example: Quas exercitationem.
   SommelierPickRequestBody:
     title: SommelierPickRequestBody
     type: object
@@ -605,6 +615,25 @@ definitions:
           url: http://www.longoriawine.com/
     required:
     - bottles
+  StorageShowNotFoundResponseBody:
+    title: StorageShowNotFoundResponseBody
+    type: object
+    properties:
+      id:
+        type: string
+        description: ID of missing bottle
+        example: Molestiae possimus voluptas aliquam.
+      message:
+        type: string
+        description: Message of error
+        example: bottle 1 not found
+    description: Bottle not found
+    example:
+      id: Quam beatae veniam quaerat sint voluptate error.
+      message: bottle 1 not found
+    required:
+    - message
+    - id
   StorageShowResponseBody:
     title: 'Mediatype identifier: application/vnd.cellar.stored-bottle; view=default'
     type: object
@@ -854,32 +883,3 @@ definitions:
       name: Longoria
     required:
     - name
-  pick_no_criteria_response_body:
-    title: pick_no_criteria_response_body
-    type: string
-    description: Missing criteria
-    example: Rerum ut libero tempore optio corporis quam.
-  pick_no_match_response_body:
-    title: pick_no_match_response_body
-    type: string
-    description: No bottle matched given criteria
-    example: Quas exercitationem.
-  show_not_found_response_body:
-    title: show_not_found_response_body
-    type: object
-    properties:
-      id:
-        type: string
-        description: ID of missing bottle
-        example: Molestiae possimus voluptas aliquam.
-      message:
-        type: string
-        description: Message of error
-        example: bottle 1 not found
-    description: Bottle not found
-    example:
-      id: Quam beatae veniam quaerat sint voluptate error.
-      message: bottle 1 not found
-    required:
-    - message
-    - id
