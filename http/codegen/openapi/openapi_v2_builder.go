@@ -438,7 +438,7 @@ func responseSpecFromExpr(s *V2, root *expr.RootExpr, r *expr.HTTPResponseExpr, 
 		schema = NewSchema()
 		schema.Ref = ResultTypeRefWithPrefix(root.API, mt, view, typeNamePrefix)
 	} else if r.Body.Type != expr.Empty {
-		schema = AttributeTypeSchema(root.API, r.Body)
+		schema = AttributeTypeSchemaWithPrefix(root.API, r.Body, typeNamePrefix)
 	}
 	headers, err := headersFromExpr(r.Headers)
 	if err != nil {
