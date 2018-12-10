@@ -3,6 +3,7 @@ package codegen
 import (
 	"bytes"
 	"fmt"
+	"go/build"
 	"os"
 	"path/filepath"
 	"strings"
@@ -35,7 +36,7 @@ func CommandLine() string {
 
 	if len(os.Args) > 1 {
 		args := make([]string, len(os.Args)-1)
-		gopaths := filepath.SplitList(os.Getenv("GOPATH"))
+		gopaths := filepath.SplitList(envOr("GOPATH", build.Default.GOPATH))
 		for i, a := range os.Args[1:] {
 			for _, p := range gopaths {
 				p = "=" + p
@@ -57,6 +58,15 @@ func CommandLine() string {
 
 	cmd := fmt.Sprintf("$ %s %s", rawcmd, param)
 	return strings.Replace(cmd, " --", "\n\t--", -1)
+}
+
+// Copied from go/build/build.go
+func envOr(name, def string) string {
+	s := os.Getenv(name)
+	if s == "" {
+		return def
+	}
+	return s
 }
 
 // Comment produces line comments by concatenating the given strings and producing 80 characters

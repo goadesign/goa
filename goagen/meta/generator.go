@@ -82,9 +82,6 @@ func NewGenerator(genfunc string, imports []*codegen.ImportSpec, flags map[strin
 // Generate compiles and runs the generator and returns the generated filenames.
 func (m *Generator) Generate() ([]string, error) {
 	// Sanity checks
-	if os.Getenv("GOPATH") == "" {
-		return nil, fmt.Errorf("GOPATH not set")
-	}
 	if m.OutDir == "" {
 		return nil, fmt.Errorf("missing output directory flag")
 	}
