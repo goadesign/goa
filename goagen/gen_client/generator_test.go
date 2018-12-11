@@ -11,7 +11,7 @@ import (
 	"github.com/goadesign/goa/design"
 	"github.com/goadesign/goa/dslengine"
 	"github.com/goadesign/goa/goagen/codegen"
-	"github.com/goadesign/goa/goagen/gen_client"
+	genclient "github.com/goadesign/goa/goagen/gen_client"
 	"github.com/goadesign/goa/version"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"

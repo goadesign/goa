@@ -8,7 +8,7 @@ import (
 
 	"github.com/goadesign/goa/design"
 	"github.com/goadesign/goa/goagen/codegen"
-	"github.com/goadesign/goa/goagen/gen_controller"
+	gencontroller "github.com/goadesign/goa/goagen/gen_controller"
 	"github.com/goadesign/goa/version"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"

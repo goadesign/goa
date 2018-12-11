@@ -8,7 +8,7 @@ import (
 	"strings"
 
 	"github.com/goadesign/goa/design"
-	"github.com/goadesign/goa/goagen/gen_main"
+	genmain "github.com/goadesign/goa/goagen/gen_main"
 	"github.com/goadesign/goa/version"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"

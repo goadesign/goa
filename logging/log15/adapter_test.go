@@ -4,7 +4,7 @@ import (
 	"context"
 
 	"github.com/goadesign/goa"
-	"github.com/goadesign/goa/logging/log15"
+	goalog15 "github.com/goadesign/goa/logging/log15"
 	"github.com/inconshreveable/log15"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
