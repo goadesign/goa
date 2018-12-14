@@ -8,7 +8,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
-	"github.com/armon/go-metrics"
+	metrics "github.com/armon/go-metrics"
 )
 
 var _ = Describe("Metrics", func() {

@@ -89,23 +89,6 @@ var _ = Describe("Run", func() {
 		genWorkspace.Delete()
 	})
 
-	Context("with no GOPATH environment variable", func() {
-		var gopath string
-
-		BeforeEach(func() {
-			gopath = os.Getenv("GOPATH")
-			os.Setenv("GOPATH", "")
-		})
-
-		AfterEach(func() {
-			os.Setenv("GOPATH", gopath)
-		})
-
-		It("fails with a useful error message", func() {
-			Ω(compileError).Should(MatchError("GOPATH not set"))
-		})
-	})
-
 	Context("with an invalid GOPATH environment variable", func() {
 		var gopath string
 		const invalidPath = "DOES NOT EXIST"
