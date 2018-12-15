@@ -100,7 +100,7 @@ func (g *Generator) Generate() (_ []string, err error) {
 
 	// YAML
 	var yamlSource interface{}
-	if err = json.Unmarshal(rawJSON, &yamlSource); err != nil {
+	if err = yaml.Unmarshal(rawJSON, &yamlSource); err != nil {
 		return nil, err
 	}
 
