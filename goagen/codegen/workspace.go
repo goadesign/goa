@@ -406,7 +406,7 @@ func PackageName(path string) (string, error) {
 	return pkgNames[0], nil
 }
 
-// Copeied from cmd/go/internal/modload/init.go.
+// Copied from cmd/go/internal/modload/init.go.
 var altConfigs = []string{
 	"Gopkg.lock",
 
@@ -422,7 +422,7 @@ var altConfigs = []string{
 	".git/config",
 }
 
-// Copeied from cmd/go/internal/modload/init.go.
+// Copied from cmd/go/internal/modload/init.go.
 func findModuleRoot(dir, limit string, legacyConfigOK bool) (root, file string) {
 	dir = filepath.Clean(dir)
 	dir1 := dir
