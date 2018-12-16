@@ -14,6 +14,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"runtime"
+	"strconv"
 	"strings"
 	"text/template"
 
@@ -29,6 +30,8 @@ type (
 		Path string
 		// gopath is the original GOPATH
 		gopath string
+		// isModuleMode indicates whether the Module mode is enabled.
+		isModuleMode bool
 	}
 
 	// Package represents a temporary Go package
@@ -104,19 +107,32 @@ func WorkspaceFor(source string) (*Workspace, error) {
 	if err != nil {
 		sourcePath = source
 	}
-	for _, gp := range filepath.SplitList(gopaths) {
-		gopath, err := filepath.Abs(gp)
-		if err != nil {
-			gopath = gp
+	if os.Getenv("GO111MODULE") != "on" { // GOPATH mode
+		for _, gp := range filepath.SplitList(gopaths) {
+			gopath, err := filepath.Abs(gp)
+			if err != nil {
+				gopath = gp
+			}
+			if filepath.HasPrefix(sourcePath, gopath) {
+				return &Workspace{
+					gopath:       gopaths,
+					isModuleMode: false,
+					Path:         gopath,
+				}, nil
+			}
 		}
-		if filepath.HasPrefix(sourcePath, gopath) {
+	}
+	if os.Getenv("GO111MODULE") != "off" { // Module mode
+		root, _ := findModuleRoot(sourcePath, "", false)
+		if root != "" {
 			return &Workspace{
-				gopath: gopaths,
-				Path:   gopath,
+				gopath:       gopaths,
+				isModuleMode: true,
+				Path:         root,
 			}, nil
 		}
 	}
-	return nil, fmt.Errorf(`Go source file "%s" not in Go workspace, adjust GOPATH %s`, source, gopaths)
+	return nil, fmt.Errorf(`Go source file "%s" not in Go workspace, adjust GOPATH %s or use modules`, source, gopaths)
 }
 
 // Delete deletes the workspace temporary directory.
@@ -164,7 +180,11 @@ func PackageFor(source string) (*Package, error) {
 	if err != nil {
 		return nil, err
 	}
-	path, err := filepath.Rel(filepath.Join(w.Path, "src"), filepath.Dir(source))
+	basepath := filepath.Join(w.Path, "src") // GOPATH mode.
+	if w.isModuleMode {
+		basepath = w.Path // Module mode.
+	}
+	path, err := filepath.Rel(basepath, filepath.Dir(source))
 	if err != nil {
 		return nil, err
 	}
@@ -173,7 +193,11 @@ func PackageFor(source string) (*Package, error) {
 
 // Abs returns the absolute path to the package source directory
 func (p *Package) Abs() string {
-	return filepath.Join(p.Workspace.Path, "src", p.Path)
+	elem := "src" // GOPATH mode.
+	if p.Workspace.isModuleMode {
+		elem = "" // Module mode.
+	}
+	return filepath.Join(p.Workspace.Path, elem, p.Path)
 }
 
 // CreateSourceFile creates a Go source file in the given package. If the file
@@ -316,15 +340,29 @@ func PackagePath(path string) (string, error) {
 	if err != nil {
 		absPath = path
 	}
-	gopaths := filepath.SplitList(os.Getenv("GOPATH"))
-	for _, gopath := range gopaths {
-		if gp, err := filepath.Abs(gopath); err == nil {
-			gopath = gp
+	gopaths := filepath.SplitList(envOr("GOPATH", build.Default.GOPATH))
+	if os.Getenv("GO111MODULE") != "on" { // GOPATH mode
+		for _, gopath := range gopaths {
+			if gp, err := filepath.Abs(gopath); err == nil {
+				gopath = gp
+			}
+			if filepath.HasPrefix(absPath, gopath) {
+				base := filepath.FromSlash(gopath + "/src")
+				rel, err := filepath.Rel(base, absPath)
+				return filepath.ToSlash(rel), err
+			}
 		}
-		if filepath.HasPrefix(absPath, gopath) {
-			base := filepath.FromSlash(gopath + "/src")
-			rel, err := filepath.Rel(base, absPath)
-			return filepath.ToSlash(rel), err
+	}
+	if os.Getenv("GO111MODULE") != "off" { // Module mode
+		root, file := findModuleRoot(absPath, "", false)
+		if root != "" {
+			content, err := ioutil.ReadFile(filepath.Join(root, file))
+			if err == nil {
+				p := modulePath(content)
+				base := filepath.FromSlash(root)
+				rel, err := filepath.Rel(base, absPath)
+				return filepath.ToSlash(filepath.Join(p, rel)), err
+			}
 		}
 	}
 	return "", fmt.Errorf("%s does not contain a Go package", absPath)
@@ -366,6 +404,107 @@ func PackageName(path string) (string, error) {
 		return "", fmt.Errorf("no Go package found in %s", path)
 	}
 	return pkgNames[0], nil
+}
+
+// Copied from cmd/go/internal/modload/init.go.
+var altConfigs = []string{
+	"Gopkg.lock",
+
+	"GLOCKFILE",
+	"Godeps/Godeps.json",
+	"dependencies.tsv",
+	"glide.lock",
+	"vendor.conf",
+	"vendor.yml",
+	"vendor/manifest",
+	"vendor/vendor.json",
+
+	".git/config",
+}
+
+// Copied from cmd/go/internal/modload/init.go.
+func findModuleRoot(dir, limit string, legacyConfigOK bool) (root, file string) {
+	dir = filepath.Clean(dir)
+	dir1 := dir
+	limit = filepath.Clean(limit)
+
+	// Look for enclosing go.mod.
+	for {
+		if fi, err := os.Stat(filepath.Join(dir, "go.mod")); err == nil && !fi.IsDir() {
+			return dir, "go.mod"
+		}
+		if dir == limit {
+			break
+		}
+		d := filepath.Dir(dir)
+		if d == dir {
+			break
+		}
+		dir = d
+	}
+
+	// Failing that, look for enclosing alternate version config.
+	if legacyConfigOK {
+		dir = dir1
+		for {
+			for _, name := range altConfigs {
+				if fi, err := os.Stat(filepath.Join(dir, name)); err == nil && !fi.IsDir() {
+					return dir, name
+				}
+			}
+			if dir == limit {
+				break
+			}
+			d := filepath.Dir(dir)
+			if d == dir {
+				break
+			}
+			dir = d
+		}
+	}
+
+	return "", ""
+}
+
+// Copied from cmd/go/internal/modfile/read.go
+var (
+	slashSlash = []byte("//")
+	moduleStr  = []byte("module")
+)
+
+// Copied from cmd/go/internal/modfile/read.go
+func modulePath(mod []byte) string {
+	for len(mod) > 0 {
+		line := mod
+		mod = nil
+		if i := bytes.IndexByte(line, '\n'); i >= 0 {
+			line, mod = line[:i], line[i+1:]
+		}
+		if i := bytes.Index(line, slashSlash); i >= 0 {
+			line = line[:i]
+		}
+		line = bytes.TrimSpace(line)
+		if !bytes.HasPrefix(line, moduleStr) {
+			continue
+		}
+		line = line[len(moduleStr):]
+		n := len(line)
+		line = bytes.TrimSpace(line)
+		if len(line) == n || len(line) == 0 {
+			continue
+		}
+
+		if line[0] == '"' || line[0] == '`' {
+			p, err := strconv.Unquote(string(line))
+			if err != nil {
+				return "" // malformed quoted string or multiline module path
+			}
+			return p
+		}
+
+		return string(line)
+	}
+	return "" // missing module path
 }
 
 const (
