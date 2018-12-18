@@ -13,88 +13,25 @@ import (
 
 	"github.com/go-openapi/loads"
 	"goa.design/goa/http/codegen/openapi"
-
-	"goa.design/goa/expr"
+	"goa.design/goa/http/codegen/testdata"
 )
 
 var update = flag.Bool("update", false, "update .golden files")
 
-func newDesign(httpSvcs ...*expr.HTTPServiceExpr) *expr.RootExpr {
-	openapi.Definitions = make(map[string]*openapi.Schema)
-	a := expr.NewAPIExpr("test", func() {})
-	a.Servers = []*expr.ServerExpr{a.DefaultServer()}
-	a.Servers[0].Hosts[0].URIs = []expr.URIExpr{expr.URIExpr("https://goa.design")}
-	a.HTTP.Services = httpSvcs
-
-	services := make([]*expr.ServiceExpr, len(httpSvcs))
-	for i, r := range httpSvcs {
-		services[i] = r.ServiceExpr
-	}
-	return &expr.RootExpr{API: a, Services: services}
-}
-
-func newService(endpoints ...*expr.HTTPEndpointExpr) *expr.HTTPServiceExpr {
-	s := &expr.ServiceExpr{
-		Name: "testService",
-	}
-	res := &expr.HTTPServiceExpr{
-		ServiceExpr:   s,
-		Paths:         []string{"/"},
-		HTTPEndpoints: endpoints,
-	}
-	for _, ep := range endpoints {
-		ep.MethodExpr.Service = s
-		ep.Service = res
-		ep.Prepare()
-		ep.Finalize()
-		s.Methods = append(s.Methods, ep.MethodExpr)
-	}
-	return res
-}
-
-func newSimpleEndpoint() *expr.HTTPEndpointExpr {
-	method := &expr.MethodExpr{
-		Name: "testEndpoint",
-		Payload: &expr.AttributeExpr{
-			Type: &expr.UserTypeExpr{
-				AttributeExpr: &expr.AttributeExpr{Type: expr.String},
-			}},
-		Result: &expr.AttributeExpr{
-			Type: &expr.UserTypeExpr{
-				AttributeExpr: &expr.AttributeExpr{Type: expr.String},
-			}},
-	}
-	route := &expr.RouteExpr{Method: "GET", Path: "/"}
-	ep := &expr.HTTPEndpointExpr{
-		MethodExpr: method,
-		Routes:     []*expr.RouteExpr{route},
-		Headers:    expr.NewEmptyMappedAttributeExpr(),
-		Params:     expr.NewEmptyMappedAttributeExpr(),
-	}
-	route.Endpoint = ep
-	return ep
-}
-
 func TestOpenAPI(t *testing.T) {
-	const (
-		invalidURL = "http://[::1]:namedport"
-	)
-	var (
-		simple  = newDesign(newService(newSimpleEndpoint()))
-		empty   = newDesign()
-		invalid = newDesign()
-	)
-	invalid.API.Servers[0].Hosts[0].URIs[0] = invalidURL
 	cases := map[string]struct {
-		Root  *expr.RootExpr
+		DSL   func()
 		Error bool
 	}{
-		"empty":   {Root: empty, Error: false},
-		"valid":   {Root: simple, Error: false},
-		"invalid": {Root: invalid, Error: true},
+		"empty":   {DSL: testdata.EmptyDSL, Error: false},
+		"valid":   {DSL: testdata.SimpleDSL, Error: false},
+		"invalid": {DSL: testdata.InvalidDSL, Error: true},
 	}
 	for k, c := range cases {
-		_, err := OpenAPIFiles(c.Root)
+		// Reset global variables
+		openapi.Definitions = make(map[string]*openapi.Schema)
+		root := RunHTTPDSL(t, c.DSL)
+		_, err := OpenAPIFiles(root)
 		if err != nil && !c.Error {
 			t.Errorf("%s: unexpected error %s", k, err)
 		}
@@ -105,10 +42,10 @@ func TestOpenAPI(t *testing.T) {
 }
 
 func TestOutputPath(t *testing.T) {
-	var (
-		simple = newDesign(newService(newSimpleEndpoint()))
-	)
-	o, err := OpenAPIFiles(simple)
+	// Reset global variables
+	openapi.Definitions = make(map[string]*openapi.Schema)
+	root := RunHTTPDSL(t, testdata.SimpleDSL)
+	o, err := OpenAPIFiles(root)
 	if err != nil {
 		t.Fatalf("OpenAPI failed with %s", err)
 	}
@@ -129,19 +66,22 @@ func TestSections(t *testing.T) {
 		genPkg = "goa.design/goa"
 	)
 	var (
-		empty  = newDesign()
-		simple = newDesign(newService(newSimpleEndpoint()))
+		goldenPath = filepath.Join("testdata", "openapi_v2", t.Name())
 	)
 	cases := []struct {
 		Name string
-		Root *expr.RootExpr
+		DSL  func()
 	}{
-		{"empty", empty},
-		{"valid", simple},
+		{"empty", testdata.EmptyDSL},
+		{"valid", testdata.SimpleDSL},
+		{"multiple-services", testdata.MultipleServicesDSL},
 	}
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
-			oFiles, err := OpenAPIFiles(c.Root)
+			// Reset global variables
+			openapi.Definitions = make(map[string]*openapi.Schema)
+			root := RunHTTPDSL(t, c.DSL)
+			oFiles, err := OpenAPIFiles(root)
 			if err != nil {
 				t.Fatalf("OpenAPI failed with %s", err)
 			}
@@ -167,6 +107,153 @@ func TestSections(t *testing.T) {
 					if err := validateSwagger(buf.Bytes()); err != nil {
 						t.Errorf("invalid swagger: %s", err)
 					}
+
+					golden := filepath.Join(goldenPath, fmt.Sprintf("%s_%s.golden", c.Name, tname))
+					if *update {
+						if err := ioutil.WriteFile(golden, buf.Bytes(), 0644); err != nil {
+							t.Fatalf("failed to update golden file: %s", err)
+						}
+					}
+
+					want, err := ioutil.ReadFile(golden)
+					if err != nil {
+						t.Fatalf("failed to read golden file: %s", err)
+					}
+					if !bytes.Equal(buf.Bytes(), want) {
+						t.Errorf("result do not match the golden file:\n--BEGIN--\n%s\n--END--\n", buf.Bytes())
+					}
+				})
+			}
+		})
+	}
+}
+
+func TestValidations(t *testing.T) {
+	var (
+		goldenPath = filepath.Join("testdata", "openapi_v2", t.Name())
+	)
+	cases := []struct {
+		Name string
+		DSL  func()
+	}{
+		{"string", testdata.StringValidationDSL},
+		{"integer", testdata.IntValidationDSL},
+		{"array", testdata.ArrayValidationDSL},
+	}
+	for _, c := range cases {
+		t.Run(c.Name, func(t *testing.T) {
+			// Reset global variables
+			openapi.Definitions = make(map[string]*openapi.Schema)
+			root := RunHTTPDSL(t, c.DSL)
+			oFiles, err := OpenAPIFiles(root)
+			if err != nil {
+				t.Fatalf("OpenAPI failed with %s", err)
+			}
+			if len(oFiles) == 0 {
+				t.Fatalf("No swagger files")
+			}
+			for i, o := range oFiles {
+				tname := fmt.Sprintf("file%d", i)
+				s := o.SectionTemplates
+				t.Run(tname, func(t *testing.T) {
+					if len(s) != 1 {
+						t.Fatalf("expected 1 section, got %d", len(s))
+					}
+					if s[0].Source == "" {
+						t.Fatalf("empty section template")
+					}
+					if s[0].Data == nil {
+						t.Fatalf("nil data")
+					}
+					var buf bytes.Buffer
+					tmpl := template.Must(template.New("openapi").Funcs(s[0].FuncMap).Parse(s[0].Source))
+					err = tmpl.Execute(&buf, s[0].Data)
+					if err != nil {
+						t.Fatalf("failed to render template: %s", err)
+					}
+					if err := validateSwagger(buf.Bytes()); err != nil {
+						t.Fatalf("invalid swagger: %s", err)
+					}
+
+					golden := filepath.Join(goldenPath, fmt.Sprintf("%s_%s.golden", c.Name, tname))
+					if *update {
+						if err := ioutil.WriteFile(golden, buf.Bytes(), 0644); err != nil {
+							t.Fatalf("failed to update golden file: %s", err)
+						}
+					}
+
+					want, err := ioutil.ReadFile(golden)
+					if err != nil {
+						t.Fatalf("failed to read golden file: %s", err)
+					}
+					if !bytes.Equal(buf.Bytes(), want) {
+						t.Errorf("result do not match the golden file:\n--BEGIN--\n%s\n--END--\n", buf.Bytes())
+					}
+				})
+			}
+		})
+	}
+}
+
+func TestExtensions(t *testing.T) {
+	var (
+		goldenPath = filepath.Join("testdata", "openapi_v2", t.Name())
+	)
+	cases := []struct {
+		Name string
+		DSL  func()
+	}{
+		{"endpoint", testdata.ExtensionDSL},
+	}
+	for _, c := range cases {
+		t.Run(c.Name, func(t *testing.T) {
+			// Reset global variables
+			openapi.Definitions = make(map[string]*openapi.Schema)
+			root := RunHTTPDSL(t, c.DSL)
+			oFiles, err := OpenAPIFiles(root)
+			if err != nil {
+				t.Fatalf("OpenAPI failed with %s", err)
+			}
+			if len(oFiles) == 0 {
+				t.Fatalf("No swagger files")
+			}
+			for i, o := range oFiles {
+				tname := fmt.Sprintf("file%d", i)
+				s := o.SectionTemplates
+				t.Run(tname, func(t *testing.T) {
+					if len(s) != 1 {
+						t.Fatalf("expected 1 section, got %d", len(s))
+					}
+					if s[0].Source == "" {
+						t.Fatalf("empty section template")
+					}
+					if s[0].Data == nil {
+						t.Fatalf("nil data")
+					}
+					var buf bytes.Buffer
+					tmpl := template.Must(template.New("openapi").Funcs(s[0].FuncMap).Parse(s[0].Source))
+					err = tmpl.Execute(&buf, s[0].Data)
+					if err != nil {
+						t.Fatalf("failed to render template: %s", err)
+					}
+					if err := validateSwagger(buf.Bytes()); err != nil {
+						t.Fatalf("invalid swagger: %s", err)
+					}
+
+					golden := filepath.Join(goldenPath, fmt.Sprintf("%s_%s.golden", c.Name, tname))
+					if *update {
+						if err := ioutil.WriteFile(golden, buf.Bytes(), 0644); err != nil {
+							t.Fatalf("failed to update golden file: %s", err)
+						}
+					}
+
+					want, err := ioutil.ReadFile(golden)
+					if err != nil {
+						t.Fatalf("failed to read golden file: %s", err)
+					}
+					if !bytes.Equal(buf.Bytes(), want) {
+						t.Errorf("result do not match the golden file:\n--BEGIN--\n%s\n--END--\n", buf.Bytes())
+					}
 				})
 			}
 		})
@@ -183,258 +270,4 @@ func validateSwagger(b []byte) error {
 		return errors.New("nil swagger")
 	}
 	return nil
-}
-
-func TestValidations(t *testing.T) {
-	var (
-		goldenPath = filepath.Join("testdata", "openapi_v2", t.Name())
-		newInt     = func(v int) *int { return &v }
-		newFloat64 = func(v float64) *float64 { return &v }
-	)
-	cases := []struct {
-		Name     string
-		Endpoint *expr.HTTPEndpointExpr
-	}{
-		{"string", newEndpointSimpleValidation(expr.String,
-			&expr.ValidationExpr{
-				MinLength: newInt(0),
-				MaxLength: newInt(42),
-			}),
-		},
-		{"integer", newEndpointSimpleValidation(expr.Int,
-			&expr.ValidationExpr{
-				Minimum: newFloat64(0),
-				Maximum: newFloat64(42),
-			}),
-		},
-		{"array", newEndpointComplexValidation(
-			&expr.ValidationExpr{
-				MinLength: newInt(0),
-				MaxLength: newInt(42),
-			}),
-		},
-	}
-	for _, c := range cases {
-		t.Run(c.Name, func(t *testing.T) {
-			root := newDesign(newService(c.Endpoint))
-			oFiles, err := OpenAPIFiles(root)
-			if err != nil {
-				t.Fatalf("OpenAPI failed with %s", err)
-			}
-			if len(oFiles) == 0 {
-				t.Fatalf("No swagger files")
-			}
-			for i, o := range oFiles {
-				tname := fmt.Sprintf("file%d", i)
-				s := o.SectionTemplates
-				t.Run(tname, func(t *testing.T) {
-					if len(s) != 1 {
-						t.Fatalf("expected 1 section, got %d", len(s))
-					}
-					if s[0].Source == "" {
-						t.Fatalf("empty section template")
-					}
-					if s[0].Data == nil {
-						t.Fatalf("nil data")
-					}
-					var buf bytes.Buffer
-					tmpl := template.Must(template.New("openapi").Funcs(s[0].FuncMap).Parse(s[0].Source))
-					err = tmpl.Execute(&buf, s[0].Data)
-					if err != nil {
-						t.Fatalf("failed to render template: %s", err)
-					}
-					if err := validateSwagger(buf.Bytes()); err != nil {
-						t.Fatalf("invalid swagger: %s", err)
-					}
-
-					golden := filepath.Join(goldenPath, fmt.Sprintf("%s_%s.golden", c.Name, tname))
-					if *update {
-						if err := ioutil.WriteFile(golden, buf.Bytes(), 0644); err != nil {
-							t.Fatalf("failed to update golden file: %s", err)
-						}
-					}
-
-					want, err := ioutil.ReadFile(golden)
-					if err != nil {
-						t.Fatalf("failed to read golden file: %s", err)
-					}
-					if !bytes.Equal(buf.Bytes(), want) {
-						t.Errorf("result do not match the golden file:\n--BEGIN--\n%s\n--END--\n", buf.Bytes())
-					}
-				})
-			}
-		})
-	}
-}
-
-func newEndpointSimpleValidation(typ expr.Primitive, validation *expr.ValidationExpr) *expr.HTTPEndpointExpr {
-	route := &expr.RouteExpr{Method: "POST", Path: "/"}
-	ep := &expr.HTTPEndpointExpr{
-		MethodExpr: &expr.MethodExpr{
-			Name:    "testEndpoint",
-			Payload: &expr.AttributeExpr{},
-			Result: &expr.AttributeExpr{
-				Type:         typ,
-				UserExamples: []*expr.ExampleExpr{{}},
-				Validation:   validation,
-			},
-		},
-		Body: &expr.AttributeExpr{
-			Type:         typ,
-			UserExamples: []*expr.ExampleExpr{{}},
-			Validation:   validation,
-		},
-		Routes:    []*expr.RouteExpr{route},
-		Responses: []*expr.HTTPResponseExpr{},
-	}
-	route.Endpoint = ep
-	return ep
-}
-
-func newEndpointComplexValidation(validation *expr.ValidationExpr) *expr.HTTPEndpointExpr {
-	route := &expr.RouteExpr{Method: "POST", Path: "/"}
-	ep := &expr.HTTPEndpointExpr{
-		MethodExpr: &expr.MethodExpr{
-			Name:    "testEndpoint",
-			Payload: &expr.AttributeExpr{},
-			Result: &expr.AttributeExpr{
-				Type:         expr.String,
-				UserExamples: []*expr.ExampleExpr{{}},
-				Validation:   validation,
-			},
-		},
-		Body: &expr.AttributeExpr{
-			Type: &expr.Array{
-				ElemType: &expr.AttributeExpr{
-					Type: &expr.Object{
-						{
-							Name: "foo",
-							Attribute: &expr.AttributeExpr{
-								Type: &expr.Array{
-									ElemType: &expr.AttributeExpr{
-										Type:         expr.String,
-										Validation:   validation,
-										UserExamples: []*expr.ExampleExpr{{}},
-									},
-								},
-								UserExamples: []*expr.ExampleExpr{{}},
-								Validation:   validation,
-							},
-						},
-						{
-							Name: "bar",
-							Attribute: &expr.AttributeExpr{
-								Type: &expr.Array{
-									ElemType: &expr.AttributeExpr{
-										Type: &expr.UserTypeExpr{
-											TypeName: "bar",
-											AttributeExpr: &expr.AttributeExpr{
-												Type:         expr.String,
-												UserExamples: []*expr.ExampleExpr{{}},
-												Validation:   validation,
-											},
-										},
-										UserExamples: []*expr.ExampleExpr{{}},
-									},
-								},
-								UserExamples: []*expr.ExampleExpr{{}},
-								Validation:   validation,
-							},
-						},
-					},
-					UserExamples: []*expr.ExampleExpr{{}},
-				},
-			},
-			Validation: validation,
-		},
-		Routes:    []*expr.RouteExpr{route},
-		Responses: []*expr.HTTPResponseExpr{},
-	}
-	route.Endpoint = ep
-	return ep
-}
-
-func TestExtensions(t *testing.T) {
-	var (
-		goldenPath = filepath.Join("testdata", "openapi_v2", t.Name())
-	)
-	cases := []struct {
-		Name     string
-		Endpoint *expr.HTTPEndpointExpr
-	}{
-		{"endpoint", newEndpointExtensions(expr.String,
-			expr.MetaExpr{
-				"swagger:extension:x-test-foo": []string{"bar"},
-			},
-		)},
-	}
-	for _, c := range cases {
-		t.Run(c.Name, func(t *testing.T) {
-			root := newDesign(newService(c.Endpoint))
-			oFiles, err := OpenAPIFiles(root)
-			if err != nil {
-				t.Fatalf("OpenAPI failed with %s", err)
-			}
-			if len(oFiles) == 0 {
-				t.Fatalf("No swagger files")
-			}
-			for i, o := range oFiles {
-				tname := fmt.Sprintf("file%d", i)
-				s := o.SectionTemplates
-				t.Run(tname, func(t *testing.T) {
-					if len(s) != 1 {
-						t.Fatalf("expected 1 section, got %d", len(s))
-					}
-					if s[0].Source == "" {
-						t.Fatalf("empty section template")
-					}
-					if s[0].Data == nil {
-						t.Fatalf("nil data")
-					}
-					var buf bytes.Buffer
-					tmpl := template.Must(template.New("openapi").Funcs(s[0].FuncMap).Parse(s[0].Source))
-					err = tmpl.Execute(&buf, s[0].Data)
-					if err != nil {
-						t.Fatalf("failed to render template: %s", err)
-					}
-					if err := validateSwagger(buf.Bytes()); err != nil {
-						t.Fatalf("invalid swagger: %s", err)
-					}
-
-					golden := filepath.Join(goldenPath, fmt.Sprintf("%s_%s.golden", c.Name, tname))
-					if *update {
-						if err := ioutil.WriteFile(golden, buf.Bytes(), 0644); err != nil {
-							t.Fatalf("failed to update golden file: %s", err)
-						}
-					}
-
-					want, err := ioutil.ReadFile(golden)
-					if err != nil {
-						t.Fatalf("failed to read golden file: %s", err)
-					}
-					if !bytes.Equal(buf.Bytes(), want) {
-						t.Errorf("result do not match the golden file:\n--BEGIN--\n%s\n--END--\n", buf.Bytes())
-					}
-				})
-			}
-		})
-	}
-}
-
-func newEndpointExtensions(typ expr.Primitive, meta expr.MetaExpr) *expr.HTTPEndpointExpr {
-	route := &expr.RouteExpr{Method: "POST", Path: "/"}
-	ep := &expr.HTTPEndpointExpr{
-		MethodExpr: &expr.MethodExpr{
-			Name:    "testEndpoint",
-			Payload: &expr.AttributeExpr{Type: expr.Empty},
-			Result: &expr.AttributeExpr{
-				Type: expr.Empty,
-			},
-		},
-		Routes:    []*expr.RouteExpr{route},
-		Responses: []*expr.HTTPResponseExpr{},
-		Meta:      meta,
-	}
-	route.Endpoint = ep
-	return ep
 }
