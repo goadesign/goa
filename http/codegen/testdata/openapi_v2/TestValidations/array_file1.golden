@@ -2,6 +2,14 @@ swagger: "2.0"
 info:
   version: ""
 host: goa.design
+consumes:
+- application/json
+- application/xml
+- application/gob
+produces:
+- application/json
+- application/xml
+- application/gob
 paths:
   /:
     post:
@@ -16,24 +24,7 @@ paths:
         schema:
           type: array
           items:
-            type: object
-            properties:
-              bar:
-                type: array
-                items:
-                  $ref: '#/definitions/bar'
-                minItems: 0
-                maxItems: 42
-              foo:
-                type: array
-                items:
-                  type: string
-                  minLength: 0
-                  maxLength: 42
-                minItems: 0
-                maxItems: 42
-          minItems: 0
-          maxItems: 42
+            $ref: '#/definitions/foobarRequestBody'
       responses:
         "200":
           description: OK response.
@@ -44,8 +35,42 @@ paths:
       schemes:
       - https
 definitions:
-  bar:
-    title: bar
-    type: string
-    minLength: 0
-    maxLength: 42
+  barRequestBody:
+    title: barRequestBody
+    type: object
+    properties:
+      string:
+        type: string
+        example: ""
+        minLength: 0
+        maxLength: 42
+    example:
+      string: ""
+  foobarRequestBody:
+    title: foobarRequestBody
+    type: object
+    properties:
+      bar:
+        type: array
+        items:
+          $ref: '#/definitions/barRequestBody'
+        example:
+        - string: ""
+        - string: ""
+        minItems: 0
+        maxItems: 42
+      foo:
+        type: array
+        items:
+          type: string
+          example: Beatae non id consequatur.
+        example: []
+        minItems: 0
+        maxItems: 42
+    example:
+      bar:
+      - string: ""
+      - string: ""
+      foo:
+      - Repudiandae sit.
+      - Asperiores fuga qui rem qui earum eos.
