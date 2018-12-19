@@ -1,18 +1,20 @@
 package codegen
 
 import (
-	"goa.design/goa/codegen"
 	"goa.design/goa/expr"
 )
 
 type (
-	protobufAttribute struct{}
+	protobufAnalyzer struct {
+		*expr.Analyzer
+	}
 )
 
-// newProtoBufAttributeHelper returns an AttributeHelper for protocol buffer
-// types.
-func newProtoBufAttributeHelper() codegen.AttributeHelper {
-	return &protobufAttribute{}
+// newProtoBufAnalyzer returns an attribute analyzer for protocol buffer types.
+func newProtoBufAnalyzer(att *expr.AttributeExpr, p *expr.AttributeProperties) expr.AttributeAnalyzer {
+	return &protobufAnalyzer{
+		Analyzer: &expr.Analyzer{AttributeExpr: att, AttributeProperties: p},
+	}
 }
 
 // IsPointer returns true if the given attribute expression is a pointer type.
@@ -20,6 +22,6 @@ func newProtoBufAttributeHelper() codegen.AttributeHelper {
 // In proto3 syntax, primitive fields are always non-pointers even when
 // optional or has default values.
 //
-func (p *protobufAttribute) IsPointer(att *expr.AttributeExpr, required, pointer, useDefault bool) bool {
+func (p *protobufAnalyzer) IsPointer() bool {
 	return false
 }

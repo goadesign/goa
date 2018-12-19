@@ -21,6 +21,9 @@ var (
 	// validateTypeCodeTmpl is the template used to render the code to
 	// validate a projected type or a viewed result type.
 	validateTypeCodeTmpl = template.Must(template.New("validateType").Funcs(template.FuncMap{"goify": codegen.Goify}).Parse(validateTypeT))
+	// projProperty is the set of attribute properties used in analyzing a projected
+	// type.
+	projProperty = &expr.AttributeProperties{Required: false, Pointer: true, UseDefault: false}
 )
 
 type (
@@ -1272,7 +1275,11 @@ func buildValidations(projected *expr.AttributeExpr, scope *codegen.NameScope) [
 						}
 					}
 				}
-				data["Validate"] = codegen.RecursiveValidationCode(&expr.AttributeExpr{Type: o, Validation: rt.Validation}, false, true, false, "result")
+				an := expr.NewAttributeAnalyzer(
+					&expr.AttributeExpr{Type: o, Validation: rt.Validation},
+					projProperty,
+				)
+				data["Validate"] = codegen.RecursiveValidationCode(an, "result")
 				data["Fields"] = fields
 			}
 			if err := validateTypeCodeTmpl.Execute(&buf, data); err != nil {
@@ -1289,11 +1296,12 @@ func buildValidations(projected *expr.AttributeExpr, scope *codegen.NameScope) [
 		// for a user type or a result type with single view, we generate only one validation
 		// function containing the validation logic
 		name := "Validate" + tname
+		an := expr.NewAttributeAnalyzer(projected, projProperty)
 		validations = append(validations, &ValidateData{
 			Name:        name,
 			Description: fmt.Sprintf("%s runs the validations defined on %s.", name, tname),
 			Ref:         ref,
-			Validate:    codegen.RecursiveValidationCode(projected, false, true, false, "result"),
+			Validate:    codegen.RecursiveValidationCode(an, "result"),
 		})
 	}
 	return validations
