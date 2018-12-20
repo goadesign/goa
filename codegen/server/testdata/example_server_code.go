@@ -6,7 +6,7 @@ const (
 	// service.
 	var (
 		hostF     = flag.String("host", "localhost", "Server host (valid values: localhost)")
-		domainF   = flag.String("domain", "", "Host domain name (overrides host domain specified in service design")
+		domainF   = flag.String("domain", "", "Host domain name (overrides host domain specified in service design)")
 		httpPortF = flag.String("http-port", "", "HTTP port (overrides host HTTP port specified in service design)")
 		secureF   = flag.Bool("secure", false, "Use secure scheme (https or grpcs)")
 		dbgF      = flag.Bool("debug", false, "Log request and response bodies")
@@ -69,6 +69,8 @@ const (
 			if *httpPortF != "" {
 				h := strings.Split(u.Host, ":")[0]
 				u.Host = h + ":" + *httpPortF
+			} else if u.Port() == "" {
+				u.Host += ":80"
 			}
 			handleHTTPServer(ctx, u, serviceEndpoints, &wg, errc, logger, *dbgF)
 		}
@@ -92,7 +94,7 @@ const (
 	// service.
 	var (
 		hostF     = flag.String("host", "dev", "Server host (valid values: dev)")
-		domainF   = flag.String("domain", "", "Host domain name (overrides host domain specified in service design")
+		domainF   = flag.String("domain", "", "Host domain name (overrides host domain specified in service design)")
 		httpPortF = flag.String("http-port", "", "HTTP port (overrides host HTTP port specified in service design)")
 		secureF   = flag.Bool("secure", false, "Use secure scheme (https or grpcs)")
 		dbgF      = flag.Bool("debug", false, "Log request and response bodies")
@@ -155,6 +157,8 @@ const (
 			if *httpPortF != "" {
 				h := strings.Split(u.Host, ":")[0]
 				u.Host = h + ":" + *httpPortF
+			} else if u.Port() == "" {
+				u.Host += ":80"
 			}
 			handleHTTPServer(ctx, u, serviceEndpoints, &wg, errc, logger, *dbgF)
 		}
@@ -175,6 +179,8 @@ const (
 			if *httpPortF != "" {
 				h := strings.Split(u.Host, ":")[0]
 				u.Host = h + ":" + *httpPortF
+			} else if u.Port() == "" {
+				u.Host += ":443"
 			}
 			handleHTTPServer(ctx, u, serviceEndpoints, &wg, errc, logger, *dbgF)
 		}
@@ -198,7 +204,7 @@ const (
 	// service.
 	var (
 		hostF     = flag.String("host", "dev", "Server host (valid values: dev)")
-		domainF   = flag.String("domain", "", "Host domain name (overrides host domain specified in service design")
+		domainF   = flag.String("domain", "", "Host domain name (overrides host domain specified in service design)")
 		httpPortF = flag.String("http-port", "", "HTTP port (overrides host HTTP port specified in service design)")
 		int_F     = flag.String("int", "1", "")
 		uintF     = flag.String("uint", "1", "")
@@ -279,6 +285,8 @@ const (
 			if *httpPortF != "" {
 				h := strings.Split(u.Host, ":")[0]
 				u.Host = h + ":" + *httpPortF
+			} else if u.Port() == "" {
+				u.Host += ":80"
 			}
 			handleHTTPServer(ctx, u, serviceEndpoints, &wg, errc, logger, *dbgF)
 		}
@@ -308,6 +316,8 @@ const (
 			if *httpPortF != "" {
 				h := strings.Split(u.Host, ":")[0]
 				u.Host = h + ":" + *httpPortF
+			} else if u.Port() == "" {
+				u.Host += ":443"
 			}
 			handleHTTPServer(ctx, u, serviceEndpoints, &wg, errc, logger, *dbgF)
 		}
@@ -326,12 +336,94 @@ const (
 }
 `
 
+	ServerHostingServiceWithFileServerServerMainCode = `func main() {
+	// Define command line flags, add any other flag required to configure the
+	// service.
+	var (
+		hostF     = flag.String("host", "svc", "Server host (valid values: svc)")
+		domainF   = flag.String("domain", "", "Host domain name (overrides host domain specified in service design)")
+		httpPortF = flag.String("http-port", "", "HTTP port (overrides host HTTP port specified in service design)")
+		secureF   = flag.Bool("secure", false, "Use secure scheme (https or grpcs)")
+		dbgF      = flag.Bool("debug", false, "Log request and response bodies")
+	)
+	flag.Parse()
+	// Setup logger and goa log adapter. Replace logger with your own using
+	// your log package of choice. The goa.design/middleware/logging/...
+	// packages define log adapters for common log packages.
+	var (
+		logger *log.Logger
+	)
+	{
+		logger = log.New(os.Stderr, "[serverhostingservicewithfileserver] ", log.Ltime)
+	}
+	// Initialize the services.
+	var ()
+	{
+	}
+	// Wrap the services in endpoints that can be invoked from other services
+	// potentially running in different processes.
+	var ()
+	{
+	}
+	// Create channel used by both the signal handler and server goroutines
+	// to notify the main goroutine when to stop the server.
+	errc := make(chan error)
+
+	// Setup interrupt handler. This optional step configures the process so
+	// that SIGINT and SIGTERM signals cause the services to stop gracefully.
+	go func() {
+		c := make(chan os.Signal, 1)
+		signal.Notify(c, os.Interrupt)
+		errc <- fmt.Errorf("%s", <-c)
+	}()
+
+	var wg sync.WaitGroup
+	ctx, cancel := context.WithCancel(context.Background())
+	// Start the servers and send errors (if any) to the error channel.
+	switch *hostF {
+	case "svc":
+		{
+			addr := "http://localhost:80"
+			u, err := url.Parse(addr)
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "invalid URL %#v: %s", addr, err)
+				os.Exit(1)
+			}
+			if *secureF {
+				u.Scheme = "https"
+			}
+			if *domainF != "" {
+				u.Host = *domainF
+			}
+			if *httpPortF != "" {
+				h := strings.Split(u.Host, ":")[0]
+				u.Host = h + ":" + *httpPortF
+			} else if u.Port() == "" {
+				u.Host += ":80"
+			}
+			handleHTTPServer(ctx, u, &wg, errc, logger, *dbgF)
+		}
+
+	default:
+		fmt.Fprintf(os.Stderr, "invalid host argument: %q (valid hosts: svc)", *hostF)
+	}
+	// Wait for signal.
+	logger.Printf("exiting (%v)", <-errc)
+
+	// Send cancellation signal to the goroutines.
+	cancel()
+
+	wg.Wait()
+	logger.Println("exited")
+}
+`
+
 	ServerHostingServiceSubsetServerMainCode = `func main() {
 	// Define command line flags, add any other flag required to configure the
 	// service.
 	var (
 		hostF     = flag.String("host", "dev", "Server host (valid values: dev)")
-		domainF   = flag.String("domain", "", "Host domain name (overrides host domain specified in service design")
+		domainF   = flag.String("domain", "", "Host domain name (overrides host domain specified in service design)")
 		httpPortF = flag.String("http-port", "", "HTTP port (overrides host HTTP port specified in service design)")
 		secureF   = flag.Bool("secure", false, "Use secure scheme (https or grpcs)")
 		dbgF      = flag.Bool("debug", false, "Log request and response bodies")
@@ -394,6 +486,8 @@ const (
 			if *httpPortF != "" {
 				h := strings.Split(u.Host, ":")[0]
 				u.Host = h + ":" + *httpPortF
+			} else if u.Port() == "" {
+				u.Host += ":80"
 			}
 			handleHTTPServer(ctx, u, serviceEndpoints, &wg, errc, logger, *dbgF)
 		}
@@ -417,7 +511,7 @@ const (
 	// service.
 	var (
 		hostF     = flag.String("host", "dev", "Server host (valid values: dev)")
-		domainF   = flag.String("domain", "", "Host domain name (overrides host domain specified in service design")
+		domainF   = flag.String("domain", "", "Host domain name (overrides host domain specified in service design)")
 		httpPortF = flag.String("http-port", "", "HTTP port (overrides host HTTP port specified in service design)")
 		secureF   = flag.Bool("secure", false, "Use secure scheme (https or grpcs)")
 		dbgF      = flag.Bool("debug", false, "Log request and response bodies")
@@ -484,6 +578,8 @@ const (
 			if *httpPortF != "" {
 				h := strings.Split(u.Host, ":")[0]
 				u.Host = h + ":" + *httpPortF
+			} else if u.Port() == "" {
+				u.Host += ":80"
 			}
 			handleHTTPServer(ctx, u, serviceEndpoints, anotherServiceEndpoints, &wg, errc, logger, *dbgF)
 		}
@@ -507,7 +603,7 @@ const (
 	// service.
 	var (
 		hostF     = flag.String("host", "dev", "Server host (valid values: dev, stage)")
-		domainF   = flag.String("domain", "", "Host domain name (overrides host domain specified in service design")
+		domainF   = flag.String("domain", "", "Host domain name (overrides host domain specified in service design)")
 		httpPortF = flag.String("http-port", "", "HTTP port (overrides host HTTP port specified in service design)")
 		secureF   = flag.Bool("secure", false, "Use secure scheme (https or grpcs)")
 		dbgF      = flag.Bool("debug", false, "Log request and response bodies")
@@ -570,6 +666,8 @@ const (
 			if *httpPortF != "" {
 				h := strings.Split(u.Host, ":")[0]
 				u.Host = h + ":" + *httpPortF
+			} else if u.Port() == "" {
+				u.Host += ":80"
 			}
 			handleHTTPServer(ctx, u, serviceEndpoints, &wg, errc, logger, *dbgF)
 		}
@@ -591,6 +689,8 @@ const (
 			if *httpPortF != "" {
 				h := strings.Split(u.Host, ":")[0]
 				u.Host = h + ":" + *httpPortF
+			} else if u.Port() == "" {
+				u.Host += ":443"
 			}
 			handleHTTPServer(ctx, u, serviceEndpoints, &wg, errc, logger, *dbgF)
 		}
@@ -614,7 +714,7 @@ const (
 	// service.
 	var (
 		hostF     = flag.String("host", "dev", "Server host (valid values: dev, stage)")
-		domainF   = flag.String("domain", "", "Host domain name (overrides host domain specified in service design")
+		domainF   = flag.String("domain", "", "Host domain name (overrides host domain specified in service design)")
 		httpPortF = flag.String("http-port", "", "HTTP port (overrides host HTTP port specified in service design)")
 		versionF  = flag.String("version", "v1", "Version (valid values: v1, v2)")
 		domainF   = flag.String("domain", "test", "Domain")
@@ -694,6 +794,8 @@ const (
 			if *httpPortF != "" {
 				h := strings.Split(u.Host, ":")[0]
 				u.Host = h + ":" + *httpPortF
+			} else if u.Port() == "" {
+				u.Host += ":80"
 			}
 			handleHTTPServer(ctx, u, serviceEndpoints, &wg, errc, logger, *dbgF)
 		}
@@ -717,6 +819,8 @@ const (
 			if *httpPortF != "" {
 				h := strings.Split(u.Host, ":")[0]
 				u.Host = h + ":" + *httpPortF
+			} else if u.Port() == "" {
+				u.Host += ":443"
 			}
 			handleHTTPServer(ctx, u, serviceEndpoints, &wg, errc, logger, *dbgF)
 		}

@@ -77,6 +77,17 @@ var SingleServerSingleHostWithVariablesDSL = func() {
 	})
 }
 
+var ServerHostingServiceWithFileServerDSL = func() {
+	API("ServerHostingServiceWithFileServer", func() {
+		Server("SingleHost", func() {
+			Services("Service")
+		})
+	})
+	Service("Service", func() {
+		Files("/file.json", "path.json")
+	})
+}
+
 var ServerHostingServiceSubsetDSL = func() {
 	API("ServerHostingServiceSubset", func() {
 		Server("SingleHost", func() {

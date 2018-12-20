@@ -84,6 +84,8 @@ func main() {
 			if *httpPortF != "" {
 				h := strings.Split(u.Host, ":")[0]
 				u.Host = h + ":" + *httpPortF
+			} else if u.Port() == "" {
+				u.Host += ":80"
 			}
 			handleHTTPServer(ctx, u, calcEndpoints, &wg, errc, logger, *dbgF)
 		}
@@ -106,6 +108,8 @@ func main() {
 			if *httpPortF != "" {
 				h := strings.Split(u.Host, ":")[0]
 				u.Host = h + ":" + *httpPortF
+			} else if u.Port() == "" {
+				u.Host += ":443"
 			}
 			handleHTTPServer(ctx, u, calcEndpoints, &wg, errc, logger, *dbgF)
 		}

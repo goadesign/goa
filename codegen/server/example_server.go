@@ -123,7 +123,7 @@ const (
 	{{ comment "Define command line flags, add any other flag required to configure the service." }}
 	var(
 		hostF = flag.String("host", {{ printf "%q" .Server.DefaultHost.Name }}, "Server host (valid values: {{ (join .Server.AvailableHosts ", ") }})")
-		domainF = flag.String("domain", "", "Host domain name (overrides host domain specified in service design")
+		domainF = flag.String("domain", "", "Host domain name (overrides host domain specified in service design)")
 	{{- range .Server.Transports }}
 	{{ .Type }}PortF = flag.String("{{ .Type }}-port", "", "{{ .Name }} port (overrides host {{ .Name }} port specified in service design)")
 	{{- end }}
@@ -240,8 +240,10 @@ const (
 			if *{{ $u.Transport.Type }}PortF != "" {
 				h := strings.Split(u.Host, ":")[0]
 				u.Host = h + ":" + *{{ $u.Transport.Type }}PortF
+			} else if u.Port() == "" {
+				u.Host += ":{{ $u.Port }}"
 			}
-			handle{{ toUpper $u.Transport.Name }}Server(ctx, u, {{ range $.Services }}{{ .VarName }}Endpoints, {{ end }}&wg, errc, logger, *dbgF)
+			handle{{ toUpper $u.Transport.Name }}Server(ctx, u, {{ range $.Services }}{{ if .Methods }}{{ .VarName }}Endpoints, {{ end }}{{ end }}&wg, errc, logger, *dbgF)
 		}
 	{{ end }}{{- end }}
 {{- end }}

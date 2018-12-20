@@ -77,6 +77,9 @@ type (
 		URL string
 		// Scheme is the URL scheme.
 		Scheme string
+		// Port is the default port for the scheme.
+		// http - 80, https - 443, grpc - 8080, grpcs - 8443
+		Port string
 		// Transport is the transport type for the URL.
 		Transport *TransportData
 	}
@@ -222,6 +225,7 @@ func buildHostData(host *expr.HostExpr) *HostData {
 			var (
 				t      *TransportData
 				scheme string
+				port   string
 
 				ustr = string(uv)
 			)
@@ -233,9 +237,11 @@ func buildHostData(host *expr.HostExpr) *HostData {
 				switch {
 				case strings.HasPrefix(ustr, "https"):
 					scheme = "https"
+					port = "443"
 					t = &TransportData{Type: TransportHTTP, Name: "HTTP"}
 				case strings.HasPrefix(ustr, "http"):
 					scheme = "http"
+					port = "80"
 					t = &TransportData{Type: TransportHTTP, Name: "HTTP"}
 				case strings.HasPrefix(ustr, "grpcs"):
 					// Not implemented
@@ -250,6 +256,7 @@ func buildHostData(host *expr.HostExpr) *HostData {
 			uris[i] = &URIData{
 				Scheme:    scheme,
 				URL:       ustr,
+				Port:      port,
 				Transport: t,
 			}
 		}

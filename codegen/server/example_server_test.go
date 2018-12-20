@@ -6,6 +6,7 @@ import (
 
 	"goa.design/goa/codegen"
 	"goa.design/goa/codegen/server/testdata"
+	"goa.design/goa/codegen/service"
 	"goa.design/goa/expr"
 )
 
@@ -18,6 +19,7 @@ func TestExampleServerFiles(t *testing.T) {
 		{"no-server", testdata.NoServerDSL, testdata.NoServerServerMainCode},
 		{"single-server-single-host", testdata.SingleServerSingleHostDSL, testdata.SingleServerSingleHostServerMainCode},
 		{"single-server-single-host-with-variables", testdata.SingleServerSingleHostWithVariablesDSL, testdata.SingleServerSingleHostWithVariablesServerMainCode},
+		{"server-hosting-service-with-file-server", testdata.ServerHostingServiceWithFileServerDSL, testdata.ServerHostingServiceWithFileServerServerMainCode},
 		{"server-hosting-service-subset", testdata.ServerHostingServiceSubsetDSL, testdata.ServerHostingServiceSubsetServerMainCode},
 		{"server-hosting-multiple-services", testdata.ServerHostingMultipleServicesDSL, testdata.ServerHostingMultipleServicesServerMainCode},
 		{"single-server-multiple-hosts", testdata.SingleServerMultipleHostsDSL, testdata.SingleServerMultipleHostsServerMainCode},
@@ -26,6 +28,7 @@ func TestExampleServerFiles(t *testing.T) {
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
 			// reset global variable
+			service.Services = make(service.ServicesData)
 			Servers = make(ServersData)
 			codegen.RunDSL(t, c.DSL)
 			fs := ExampleServerFiles("", expr.Root)

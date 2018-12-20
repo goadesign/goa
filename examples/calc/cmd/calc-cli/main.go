@@ -98,9 +98,10 @@ func usage() {
 	fmt.Fprintf(os.Stderr, `%s is a command line client for the calc API.
 
 Usage:
-    %s [-url URL][-timeout SECONDS][-verbose|-v][-version VERSION] SERVICE ENDPOINT [flags]
+    %s [-host HOST][-url URL][-timeout SECONDS][-verbose|-v][-version VERSION] SERVICE ENDPOINT [flags]
 
-    -url URL:    specify service URL (http://localhost:8080)
+    -host HOST:  server host (development). valid values: development, production
+    -url URL:    specify service URL overriding host URL (http://localhost:8080)
     -timeout:    maximum number of seconds to wait for response (30)
     -verbose|-v: print request and response details (false)
     -version:    API version (v1)

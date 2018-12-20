@@ -111,6 +111,7 @@ func dummyMultipartFile(genpkg string, root *expr.RootExpr, svc *expr.HTTPServic
 	}
 	var (
 		sections []*codegen.SectionTemplate
+		mustGen  bool
 
 		apiPkg = strings.ToLower(codegen.Goify(root.API.Name, false))
 	)
@@ -126,10 +127,8 @@ func dummyMultipartFile(genpkg string, root *expr.RootExpr, svc *expr.HTTPServic
 		})
 		sections = []*codegen.SectionTemplate{codegen.Header("", apiPkg, specs)}
 		for _, e := range data.Endpoints {
-			if e.MultipartRequestDecoder == nil && e.MultipartRequestEncoder == nil {
-				return nil
-			}
 			if e.MultipartRequestDecoder != nil {
+				mustGen = true
 				sections = append(sections, &codegen.SectionTemplate{
 					Name:   "dummy-multipart-request-decoder",
 					Source: dummyMultipartRequestDecoderImplT,
@@ -137,6 +136,7 @@ func dummyMultipartFile(genpkg string, root *expr.RootExpr, svc *expr.HTTPServic
 				})
 			}
 			if e.MultipartRequestEncoder != nil {
+				mustGen = true
 				sections = append(sections, &codegen.SectionTemplate{
 					Name:   "dummy-multipart-request-encoder",
 					Source: dummyMultipartRequestEncoderImplT,
@@ -144,6 +144,9 @@ func dummyMultipartFile(genpkg string, root *expr.RootExpr, svc *expr.HTTPServic
 				})
 			}
 		}
+	}
+	if !mustGen {
+		return nil
 	}
 	return &codegen.File{
 		Path:             mpath,
@@ -182,7 +185,7 @@ func {{ .FuncName }}(mw *multipart.Writer, p {{ .Payload.Ref }}) error {
 
 	// input: map[string]interface{}{"APIPkg":string, "Services":[]*ServiceData}
 	httpSvrStartT = `{{ comment "handleHTTPServer starts configures and starts a HTTP server on the given URL. It shuts down the server if any error is received in the error channel." }}
-func handleHTTPServer(ctx context.Context, u *url.URL{{ range $.Services }}, {{ .Service.VarName }}Endpoints *{{ .Service.PkgName }}.Endpoints{{ end }}, wg *sync.WaitGroup, errc chan error, logger *log.Logger, debug bool) {
+func handleHTTPServer(ctx context.Context, u *url.URL{{ range $.Services }}{{ if .Service.Methods }}, {{ .Service.VarName }}Endpoints *{{ .Service.PkgName }}.Endpoints{{ end }}{{ end }}, wg *sync.WaitGroup, errc chan error, logger *log.Logger, debug bool) {
 `
 
 	httpSvrLoggerT = `
