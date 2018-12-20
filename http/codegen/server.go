@@ -15,7 +15,7 @@ import (
 func ServerFiles(genpkg string, root *expr.RootExpr) []*codegen.File {
 	fw := make([]*codegen.File, 2*len(root.API.HTTP.Services))
 	for i, svc := range root.API.HTTP.Services {
-		fw[i] = server(genpkg, svc)
+		fw[i] = serverFile(genpkg, svc)
 	}
 	for i, r := range root.API.HTTP.Services {
 		fw[i+len(root.API.HTTP.Services)] = serverEncodeDecode(genpkg, r)
@@ -24,7 +24,7 @@ func ServerFiles(genpkg string, root *expr.RootExpr) []*codegen.File {
 }
 
 // server returns the file implementing the HTTP server.
-func server(genpkg string, svc *expr.HTTPServiceExpr) *codegen.File {
+func serverFile(genpkg string, svc *expr.HTTPServiceExpr) *codegen.File {
 	path := filepath.Join(codegen.Gendir, "http", codegen.SnakeCase(svc.Name()), "server", "server.go")
 	data := HTTPServices.Get(svc.Name())
 	title := fmt.Sprintf("%s HTTP server", svc.Name())

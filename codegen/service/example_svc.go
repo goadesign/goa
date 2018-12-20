@@ -11,7 +11,7 @@ import (
 
 type (
 	// basicEndpointData contains the data needed to render a basic endpoint
-	// implementation in the exanoke service file.
+	// implementation in the example service file.
 	basicEndpointData struct {
 		*MethodData
 		// ServiceVarName is the service variable name.
@@ -127,12 +127,14 @@ func (s *{{ .ServiceVarName }}srvc) {{ .VarName }}(ctx context.Context{{ if .Pay
 {{- if and (and .ResultFullRef .ResultIsStruct) (not .ServerStream) }}
   res = &{{ .ResultFullName }}{}
 {{- end }}
-{{- if .ResultView }}
-  {{- if .ServerStream }}
-  stream.SetView({{ printf "%q" .Result.View }})
-  {{- else }}
-  view = {{ printf "%q" .ResultView }}
-  {{- end }}
+{{- if .ViewedResult }}
+	{{- if not .ViewedResult.ViewName }}
+		{{- if .ServerStream }}
+			stream.SetView({{ printf "%q" .ResultView }})
+		{{- else }}
+			view = {{ printf "%q" .ResultView }}
+		{{- end }}
+	{{- end }}
 {{- end }}
   s.logger.Print("{{ .ServiceVarName }}.{{ .Name }}")
   return

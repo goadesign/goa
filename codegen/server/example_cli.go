@@ -83,6 +83,7 @@ func exampleCLIMain(genpkg string, root *expr.RootExpr, svr *expr.ServerExpr) *c
 			},
 			FuncMap: map[string]interface{}{
 				"toUpper": strings.ToUpper,
+				"join":    strings.Join,
 			},
 		},
 	}
@@ -120,6 +121,21 @@ const (
 			case {{ printf "%q" $h.Name }}:
 				addr = {{ printf "%q" ($h.DefaultURL $.Server.DefaultTransport.Type) }}
 			{{- range $h.Variables }}
+				{{- if .Values }}
+					var {{ .VarName }}Seen bool
+					{
+						for _, v := range []string{ {{ range $v := .Values }}"{{ $v }}",{{ end }} } {
+							if v == *{{ .VarName }}F {
+								{{ .VarName }}Seen = true
+								break
+							}
+						}
+					}
+					if !{{ .VarName }}Seen {
+						fmt.Fprintf(os.Stderr, "invalid value for URL '{{ .Name }}' variable: %q (valid values: {{ join .Values "," }})", *{{ .VarName }}F)
+						os.Exit(1)
+					}
+				{{- end }}
 				addr = strings.Replace(addr, {{ printf "\"{%s}\"" .Name }}, *{{ .VarName }}F, -1)
 			{{- end }}
 		{{- end }}
@@ -193,9 +209,10 @@ func usage() {
   fmt.Fprintf(os.Stderr, ` + "`" + `%s is a command line client for the {{ .APIName }} API.
 
 Usage:
-    %s [-url URL][-timeout SECONDS][-verbose|-v]{{ range .Server.Variables }}[-{{ .Name }} {{ toUpper .Name }}]{{ end }} SERVICE ENDPOINT [flags]
+    %s [-host HOST][-url URL][-timeout SECONDS][-verbose|-v]{{ range .Server.Variables }}[-{{ .Name }} {{ toUpper .Name }}]{{ end }} SERVICE ENDPOINT [flags]
 
-    -url URL:    specify service URL (http://localhost:8080)
+    -host HOST:  server host ({{ .Server.DefaultHost.Name }}). valid values: {{ (join .Server.AvailableHosts ", ") }}
+    -url URL:    specify service URL overriding host URL (http://localhost:8080)
     -timeout:    maximum number of seconds to wait for response (30)
     -verbose|-v: print request and response details (false)
 	{{- range .Server.Variables }}

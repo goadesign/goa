@@ -1,6 +1,8 @@
 package server
 
 import (
+	"fmt"
+	"strconv"
 	"strings"
 
 	"goa.design/goa/codegen"
@@ -61,7 +63,12 @@ type (
 		// DefaultValue is the default value for the variable. It is set to the
 		// default value defined in the variable attribute if exists, or else set
 		// to the first value in the enum expression.
-		DefaultValue interface{}
+		DefaultValue string
+		// Values is the list of allowed values for the variable. The values can
+		// only be primitives. We convert the primitives into string type so that
+		// we could use them to replace the URL variables in the example
+		// generation.
+		Values []string
 	}
 
 	// URIData contains the data about a URL.
@@ -187,7 +194,7 @@ func buildServerData(svr *expr.ServerExpr) *Data {
 				// only HTTP and gRPC are supported right now.
 				break
 			}
-			if expr.Root.API.HTTP.Service(svc) != nil {
+			if expr.Root.API.HTTP.Service(svc) != nil && !seenHTTP {
 				transports = append(transports, &TransportData{Type: TransportHTTP, Name: "HTTP"})
 				foundTrans[TransportHTTP] = struct{}{}
 			}
@@ -257,16 +264,19 @@ func buildHostData(host *expr.HostExpr) *HostData {
 			variables = make([]*VariableData, len(*vars))
 			for i, v := range *vars {
 				def := v.Attribute.DefaultValue
+				var values []string
 				if def == nil {
+					def = v.Attribute.Validation.Values[0]
 					// DSL ensures v.Attribute has either a
 					// default value or an enum validation
-					def = v.Attribute.Validation.Values[0]
+					values = convertToString(v.Attribute.Validation.Values...)
 				}
 				variables[i] = &VariableData{
 					Name:         v.Name,
 					Description:  v.Attribute.Description,
 					VarName:      codegen.Goify(v.Name, false),
-					DefaultValue: def,
+					DefaultValue: convertToString(def)[0],
+					Values:       values,
 				}
 			}
 		}
@@ -278,4 +288,36 @@ func buildHostData(host *expr.HostExpr) *HostData {
 		URIs:        uris,
 		Variables:   variables,
 	}
+}
+
+// convertToString converts primitive type to a string.
+func convertToString(vals ...interface{}) []string {
+	str := make([]string, len(vals))
+	for i, v := range vals {
+		switch t := v.(type) {
+		case bool:
+			str[i] = strconv.FormatBool(t)
+		case int:
+			str[i] = strconv.Itoa(t)
+		case int32:
+			str[i] = strconv.FormatInt(int64(t), 10)
+		case int64:
+			str[i] = strconv.FormatInt(t, 10)
+		case uint:
+			str[i] = strconv.FormatUint(uint64(t), 10)
+		case uint32:
+			str[i] = strconv.FormatUint(uint64(t), 10)
+		case uint64:
+			str[i] = strconv.FormatUint(t, 10)
+		case float32:
+			str[i] = strconv.FormatFloat(float64(t), 'f', -1, 32)
+		case float64:
+			str[i] = strconv.FormatFloat(t, 'f', -1, 64)
+		case string:
+			str[i] = t
+		default:
+			panic(fmt.Sprintf("invalid value type %q to convert to string", t))
+		}
+	}
+	return str
 }

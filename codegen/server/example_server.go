@@ -128,7 +128,7 @@ const (
 	{{ .Type }}PortF = flag.String("{{ .Type }}-port", "", "{{ .Name }} port (overrides host {{ .Name }} port specified in service design)")
 	{{- end }}
 	{{- range .Server.Variables }}
-		{{ .VarName }}F = flag.String({{ printf "%q" .Name }}, {{ printf "%q" .DefaultValue }}, {{ printf "%q" .Description }})
+	{{ .VarName }}F = flag.String({{ printf "%q" .Name }}, {{ printf "%q" .DefaultValue }}, "{{ .Description }}{{ if .Values }} (valid values: {{ join .Values ", " }}){{ end }}")
 	{{- end }}
 		secureF = flag.Bool("secure", false, "Use secure scheme (https or grpcs)")
 		dbgF  = flag.Bool("debug", false, "Log request and response bodies")
@@ -209,6 +209,21 @@ const (
 		{
 			addr := {{ printf "%q" $u.URL }}
 			{{- range $h.Variables }}
+				{{- if .Values }}
+					var {{ .VarName }}Seen bool
+					{
+						for _, v := range []string{ {{ range $v := .Values }}"{{ $v }}",{{ end }} } {
+							if v == *{{ .VarName }}F {
+								{{ .VarName }}Seen = true
+								break
+							}
+						}
+					}
+					if !{{ .VarName }}Seen {
+						fmt.Fprintf(os.Stderr, "invalid value for URL '{{ .Name }}' variable: %q (valid values: {{ join .Values "," }})", *{{ .VarName }}F)
+						os.Exit(1)
+					}
+				{{- end }}
 				addr = strings.Replace(addr, {{ printf "\"{%s}\"" .Name }}, *{{ .VarName }}F, -1)
 			{{- end }}
 			u, err := url.Parse(addr)

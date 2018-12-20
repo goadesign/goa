@@ -12,9 +12,11 @@ import (
 // ExampleCLIFiles returns an example client tool HTTP implementation for each
 // server expression.
 func ExampleCLIFiles(genpkg string, root *expr.RootExpr) []*codegen.File {
-	files := make([]*codegen.File, len(root.API.Servers))
-	for i, svr := range root.API.Servers {
-		files[i] = exampleCLI(genpkg, root, svr)
+	var files []*codegen.File
+	for _, svr := range root.API.Servers {
+		if f := exampleCLI(genpkg, root, svr); f != nil {
+			files = append(files, f)
+		}
 	}
 	return files
 }
