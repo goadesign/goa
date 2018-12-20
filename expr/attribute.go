@@ -35,6 +35,34 @@ type (
 		ForcePointer bool
 	}
 
+	// AttributeAnalyzer analyzes an attribute and its sub-attributes.
+	AttributeAnalyzer interface {
+		// IsPointer returns true if the attribute being analyzed is a pointer.
+		IsPointer() bool
+		// Attribute returns the attribute being analyzed.
+		Attribute() *AttributeExpr
+		// SetAttribute sets the attribute to analyze.
+		SetAttribute(a *AttributeExpr)
+		// Properties returns the attribute properties used in analysis.
+		Properties() *AttributeProperties
+		// SetProperties sets the attribute properties for analysis.
+		SetProperties(p *AttributeProperties)
+	}
+
+	// AttributeProperties contains properties that affect how the attribute
+	// is stored (i.e. pointer or non-pointer).
+	AttributeProperties struct {
+		// Pointer if true indicates that the attribute is a pointer even if
+		// required or has a default value (except array and map types which are
+		// always non-pointers)
+		Pointer bool
+		// UseDefault if true indicates that the attribute is a non-pointer if it
+		// has a default value.
+		UseDefault bool
+		// Required if true indicates that the attribute is required.
+		Required bool
+	}
+
 	// ExampleExpr represents an example.
 	ExampleExpr struct {
 		// Summary is the example short summary.
@@ -93,6 +121,14 @@ type (
 	// ValidationFormat is the type used to enumerate the possible string
 	// formats.
 	ValidationFormat string
+
+	// Analyzer implements the AttributeAnalyzer interface.
+	Analyzer struct {
+		// AttributeExpr is the attribute being analyzed.
+		AttributeExpr *AttributeExpr
+		// AttributeProperties is the set of attribute properties.
+		AttributeProperties *AttributeProperties
+	}
 )
 
 const (
@@ -678,4 +714,48 @@ func (a *AttributeExpr) IsSupportedValidationFormat(vf ValidationFormat) bool {
 		return true
 	}
 	return false
+}
+
+// NewAttributeAnalyzer returns a new attribute analyzer.
+func NewAttributeAnalyzer(att *AttributeExpr, p *AttributeProperties) AttributeAnalyzer {
+	return &Analyzer{AttributeExpr: att, AttributeProperties: p}
+}
+
+// IsPointer checks if the attribute is a pointer.
+//
+// The following table shows how the attribute properties affect the return
+// value
+//
+//    Pointer | UseDefault | Required | IsPointer
+//       T    |      F     |     F    |     T
+//       T    |      T     |     F    |     T
+//       T    |      F     |     T    |     T
+//       F    |      T     |     F    |     F if default value exists / T otherwise
+//       F    |      T     |     T    |     F
+//       F    |      F     |     T    |     F
+//
+func (a *Analyzer) IsPointer() bool {
+	return a.AttributeProperties.Pointer ||
+		(!a.AttributeProperties.Required &&
+			(a.AttributeExpr.DefaultValue == nil || !a.AttributeProperties.UseDefault))
+}
+
+// Attribute returns the inner attribute expression.
+func (a *Analyzer) Attribute() *AttributeExpr {
+	return a.AttributeExpr
+}
+
+// SetAttribute sets the attribute to analyze.
+func (a *Analyzer) SetAttribute(att *AttributeExpr) {
+	a.AttributeExpr = att
+}
+
+// Properties returns the attribute properties used in analysis.
+func (a *Analyzer) Properties() *AttributeProperties {
+	return a.AttributeProperties
+}
+
+// SetProperties sets the attribute properties for analysis.
+func (a *Analyzer) SetProperties(p *AttributeProperties) {
+	a.AttributeProperties = p
 }

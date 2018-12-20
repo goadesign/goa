@@ -55,6 +55,19 @@ const (
 
 // Enum adds a "enum" validation to the attribute.
 // See http://json-schema.org/latest/json-schema-validation.html#anchor76.
+//
+// Example:
+//
+//    Attribute("string", String, func() {
+//        Enum("this", "that", "and this")
+//    })
+//
+//    Attribute("array", ArrayOf(Int), func() {
+//		    Elem(func() {
+//		        Enum(1, 2, 3, 4, 5)  // Sets possible values for array elements
+//		    })
+//    })
+//
 func Enum(vals ...interface{}) {
 	if a, ok := eval.Current().(*expr.AttributeExpr); ok {
 		for i, v := range vals {
@@ -129,6 +142,11 @@ func Enum(vals ...interface{}) {
 //
 // FormatRFC1123: RFC1123 date time
 //
+// Example:
+//
+//    Attribute("created_at", String, func() {
+//        Format(FormatDateTime)
+//    })
 func Format(f expr.ValidationFormat) {
 	if a, ok := eval.Current().(*expr.AttributeExpr); ok {
 		if !a.IsSupportedValidationFormat(f) {
@@ -147,6 +165,13 @@ func Format(f expr.ValidationFormat) {
 
 // Pattern adds a "pattern" validation to the attribute.
 // See http://json-schema.org/latest/json-schema-validation.html#anchor33.
+//
+// Example:
+//
+//    Attribute("pattern", String, func() {
+//        Pattern("^[A-Z].*[0-9]$")
+//    })
+//
 func Pattern(p string) {
 	if a, ok := eval.Current().(*expr.AttributeExpr); ok {
 		if a.Type != nil && a.Type.Kind() != expr.StringKind {
@@ -167,6 +192,13 @@ func Pattern(p string) {
 
 // Minimum adds a "minimum" validation to the attribute.
 // See http://json-schema.org/latest/json-schema-validation.html#anchor21.
+//
+// Example:
+//
+//    Attribute("integer", Int, func() {
+//        Minimum(100)
+//    })
+//
 func Minimum(val interface{}) {
 	if a, ok := eval.Current().(*expr.AttributeExpr); ok {
 		if a.Type != nil &&
@@ -202,6 +234,13 @@ func Minimum(val interface{}) {
 
 // Maximum adds a "maximum" validation to the attribute.
 // See http://json-schema.org/latest/json-schema-validation.html#anchor17.
+//
+// Example:
+//
+//    Attribute("integer", Int, func() {
+//        Maximum(100)
+//    })
+//
 func Maximum(val interface{}) {
 	if a, ok := eval.Current().(*expr.AttributeExpr); ok {
 		if a.Type != nil &&
@@ -237,6 +276,19 @@ func Maximum(val interface{}) {
 
 // MinLength adds a "minItems" validation to the attribute.
 // See http://json-schema.org/latest/json-schema-validation.html#anchor45.
+//
+// Example:
+//
+//    Attribute("map", MapOf(String, String), func() {
+//        MinLength(10)      // min key-values in map
+//        Key(func() {
+//            MinLength(1)   // min length of map key
+//        })
+//        Elem(func() {
+//            MinLength(5)   // min length of map elements
+//        })
+//    })
+//
 func MinLength(val int) {
 	if a, ok := eval.Current().(*expr.AttributeExpr); ok {
 		if a.Type != nil {
@@ -259,6 +311,16 @@ func MinLength(val int) {
 
 // MaxLength adds a "maxItems" validation to the attribute.
 // See http://json-schema.org/latest/json-schema-validation.html#anchor42.
+//
+// Example:
+//
+//    Attribute("array", ArrayOf(String), func() {
+//        MaxLength(200)    // max array length
+//        Elem(func() {
+//            MaxLength(5)  // max length of each array element
+//        })
+//    })
+//
 func MaxLength(val int) {
 	if a, ok := eval.Current().(*expr.AttributeExpr); ok {
 		if a.Type != nil {
@@ -281,6 +343,15 @@ func MaxLength(val int) {
 
 // Required adds a "required" validation to the attribute.
 // See http://json-schema.org/latest/json-schema-validation.html#anchor61.
+//
+// Example:
+//
+//    var _ = Type("MyType", func() {
+//        Attribute("string", String)
+//        Attribute("int", Integer)
+//        Required("string", "int")
+//    })
+//
 func Required(names ...string) {
 	var at *expr.AttributeExpr
 

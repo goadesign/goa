@@ -43,67 +43,68 @@ type ChatSummaryView struct {
 	SentAt *string
 }
 
-// Validate runs the validations defined on the viewed result type
-// ChatSummaryCollection.
-func (result ChatSummaryCollection) Validate() (err error) {
+// ValidateChatSummaryCollection runs the validations defined on the viewed
+// result type ChatSummaryCollection.
+func ValidateChatSummaryCollection(result ChatSummaryCollection) (err error) {
 	switch result.View {
 	case "tiny":
-		err = result.Projected.ValidateTiny()
+		err = ValidateChatSummaryCollectionViewTiny(result.Projected)
 	case "default", "":
-		err = result.Projected.Validate()
+		err = ValidateChatSummaryCollectionView(result.Projected)
 	default:
 		err = goa.InvalidEnumValueError("view", result.View, []interface{}{"tiny", "default"})
 	}
 	return
 }
 
-// Validate runs the validations defined on the viewed result type ChatSummary.
-func (result *ChatSummary) Validate() (err error) {
+// ValidateChatSummary runs the validations defined on the viewed result type
+// ChatSummary.
+func ValidateChatSummary(result *ChatSummary) (err error) {
 	switch result.View {
 	case "tiny":
-		err = result.Projected.ValidateTiny()
+		err = ValidateChatSummaryViewTiny(result.Projected)
 	case "default", "":
-		err = result.Projected.Validate()
+		err = ValidateChatSummaryView(result.Projected)
 	default:
 		err = goa.InvalidEnumValueError("view", result.View, []interface{}{"tiny", "default"})
 	}
 	return
 }
 
-// ValidateTiny runs the validations defined on ChatSummaryCollectionView using
-// the "tiny" view.
-func (result ChatSummaryCollectionView) ValidateTiny() (err error) {
+// ValidateChatSummaryCollectionViewTiny runs the validations defined on
+// ChatSummaryCollectionView using the "tiny" view.
+func ValidateChatSummaryCollectionViewTiny(result ChatSummaryCollectionView) (err error) {
 	for _, item := range result {
-		if err2 := item.ValidateTiny(); err2 != nil {
+		if err2 := ValidateChatSummaryViewTiny(item); err2 != nil {
 			err = goa.MergeErrors(err, err2)
 		}
 	}
 	return
 }
 
-// Validate runs the validations defined on ChatSummaryCollectionView using the
-// "default" view.
-func (result ChatSummaryCollectionView) Validate() (err error) {
+// ValidateChatSummaryCollectionView runs the validations defined on
+// ChatSummaryCollectionView using the "default" view.
+func ValidateChatSummaryCollectionView(result ChatSummaryCollectionView) (err error) {
 	for _, item := range result {
-		if err2 := item.Validate(); err2 != nil {
+		if err2 := ValidateChatSummaryView(item); err2 != nil {
 			err = goa.MergeErrors(err, err2)
 		}
 	}
 	return
 }
 
-// ValidateTiny runs the validations defined on ChatSummaryView using the
-// "tiny" view.
-func (result *ChatSummaryView) ValidateTiny() (err error) {
+// ValidateChatSummaryViewTiny runs the validations defined on ChatSummaryView
+// using the "tiny" view.
+func ValidateChatSummaryViewTiny(result *ChatSummaryView) (err error) {
 	if result.Message == nil {
 		err = goa.MergeErrors(err, goa.MissingFieldError("message", "result"))
 	}
 	return
 }
 
-// Validate runs the validations defined on ChatSummaryView using the "default"
-// view.
-func (result *ChatSummaryView) Validate() (err error) {
+// ValidateChatSummaryView runs the validations defined on ChatSummaryView
+// using the "default" view.
+func ValidateChatSummaryView(result *ChatSummaryView) (err error) {
 	if result.Message == nil {
 		err = goa.MergeErrors(err, goa.MissingFieldError("message", "result"))
 	}

@@ -21,6 +21,9 @@ var (
 	// validateTypeCodeTmpl is the template used to render the code to
 	// validate a projected type or a viewed result type.
 	validateTypeCodeTmpl = template.Must(template.New("validateType").Funcs(template.FuncMap{"goify": codegen.Goify}).Parse(validateTypeT))
+	// projProperty is the set of attribute properties used in analyzing a projected
+	// type.
+	projProperty = &expr.AttributeProperties{Required: false, Pointer: true, UseDefault: false}
 )
 
 type (
@@ -502,7 +505,8 @@ func (d ServicesData) analyze(service *expr.ServiceExpr) *Data {
 					m.ViewedResult = vrt
 				} else {
 					projected := seenProj[rt.ID()]
-					vrt := buildViewedResultType(e.Result, projected.Type, scope, viewspkg)
+					projAtt := &expr.AttributeExpr{Type: projected.Type}
+					vrt := buildViewedResultType(e.Result, projAtt, scope, viewspkg)
 					viewedRTs = append(viewedRTs, vrt)
 					seenViewed[vrt.Name] = vrt
 					m.ViewedResult = vrt
@@ -944,7 +948,7 @@ func buildProjectedType(projected, att *expr.AttributeExpr, scope *codegen.NameS
 
 // buildViewedResultType builds a viewed result type from the given result type
 // and projected type.
-func buildViewedResultType(att *expr.AttributeExpr, projected expr.UserType, scope *codegen.NameScope, viewspkg string) *ViewedResultTypeData {
+func buildViewedResultType(att, projected *expr.AttributeExpr, scope *codegen.NameScope, viewspkg string) *ViewedResultTypeData {
 	rt := att.Type.(*expr.ResultTypeExpr)
 	var (
 		views    []*ViewData
@@ -975,15 +979,16 @@ func buildViewedResultType(att *expr.AttributeExpr, projected expr.UserType, sco
 
 	// build validation data
 	data = map[string]interface{}{
-		"ArgVar":   "result",
-		"Source":   "result",
-		"Views":    views,
-		"IsViewed": true,
+		"Projected": scope.GoTypeName(projected),
+		"ArgVar":    "result",
+		"Source":    "result",
+		"Views":     views,
+		"IsViewed":  true,
 	}
 	if err := validateTypeCodeTmpl.Execute(&buf, data); err != nil {
 		panic(err) // bug
 	}
-	name := "Validate"
+	name := "Validate" + resvar
 	validate = &ValidateData{
 		Name:        name,
 		Description: fmt.Sprintf("%s runs the validations defined on the viewed result type %s.", name, resvar),
@@ -1001,7 +1006,7 @@ func buildViewedResultType(att *expr.AttributeExpr, projected expr.UserType, sco
 		"ReturnTypeRef": vresref,
 		"IsCollection":  isarr,
 		"TargetType":    scope.GoFullTypeName(att, viewspkg),
-		"InitName":      "new" + scope.GoTypeName(&expr.AttributeExpr{Type: projected}),
+		"InitName":      "new" + scope.GoTypeName(projected),
 	}
 	if err := initTypeCodeTmpl.Execute(&buf, data); err != nil {
 		panic(err) // bug
@@ -1041,15 +1046,15 @@ func buildViewedResultType(att *expr.AttributeExpr, projected expr.UserType, sco
 	}
 	buf.Reset()
 
-	projected = wrapProjected(projected)
+	projT := wrapProjected(projected.Type.(expr.UserType))
 	return &ViewedResultTypeData{
 		UserTypeData: &UserTypeData{
 			Name:        resvar,
 			Description: fmt.Sprintf("%s is the viewed result type that is projected based on a view.", resvar),
 			VarName:     resvar,
-			Def:         scope.GoTypeDef(projected.Attribute(), true),
+			Def:         scope.GoTypeDef(projT.Attribute(), true),
 			Ref:         resref,
-			Type:        projected,
+			Type:        projT,
 		},
 		FullName:     scope.GoFullTypeName(att, viewspkg),
 		FullRef:      vresref,
@@ -1224,25 +1229,28 @@ func buildValidations(projected *expr.AttributeExpr, scope *codegen.NameScope) [
 	if rt, isrt := projected.Type.(*expr.ResultTypeExpr); isrt {
 		// for result types we create a validation function containing view
 		// specific validation logic for each view
-		isarr := expr.IsArray(projected.Type)
+		arr := expr.AsArray(projected.Type)
 		for _, view := range rt.Views {
 			var (
 				data map[string]interface{}
 				buf  bytes.Buffer
 			)
 			data = map[string]interface{}{
+				"Projected":    tname,
 				"ArgVar":       "result",
 				"Source":       "result",
-				"IsCollection": isarr,
+				"IsCollection": arr != nil,
 			}
-			name := "Validate"
+			name := "Validate" + tname
+			var vn string
 			if view.Name != "default" {
-				name += codegen.Goify(view.Name, true)
+				vn = codegen.Goify(view.Name, true)
+				name += vn
 			}
-			if isarr {
+			if arr != nil {
 				// dealing with an array type
 				data["Source"] = "item"
-				data["ValidateVar"] = name
+				data["ValidateVar"] = "Validate" + scope.GoTypeName(arr.ElemType) + vn
 			} else {
 				o := &expr.Object{}
 				sobj := expr.AsObject(projected.Type)
@@ -1259,7 +1267,7 @@ func buildValidations(projected *expr.AttributeExpr, scope *codegen.NameScope) [
 							}
 							fields = append(fields, map[string]interface{}{
 								"Name":        n.Name,
-								"ValidateVar": "Validate" + codegen.Goify(vw, true),
+								"ValidateVar": "Validate" + scope.GoTypeName(attr) + codegen.Goify(vw, true),
 								"IsRequired":  rt2.Attribute().IsRequired(n.Name),
 							})
 						} else {
@@ -1267,7 +1275,11 @@ func buildValidations(projected *expr.AttributeExpr, scope *codegen.NameScope) [
 						}
 					}
 				}
-				data["Validate"] = codegen.RecursiveValidationCode(&expr.AttributeExpr{Type: o, Validation: rt.Validation}, false, true, false, "result")
+				an := expr.NewAttributeAnalyzer(
+					&expr.AttributeExpr{Type: o, Validation: rt.Validation},
+					projProperty,
+				)
+				data["Validate"] = codegen.RecursiveValidationCode(an, "result")
 				data["Fields"] = fields
 			}
 			if err := validateTypeCodeTmpl.Execute(&buf, data); err != nil {
@@ -1283,12 +1295,13 @@ func buildValidations(projected *expr.AttributeExpr, scope *codegen.NameScope) [
 	} else {
 		// for a user type or a result type with single view, we generate only one validation
 		// function containing the validation logic
-		name := "Validate"
+		name := "Validate" + tname
+		an := expr.NewAttributeAnalyzer(projected, projProperty)
 		validations = append(validations, &ValidateData{
 			Name:        name,
 			Description: fmt.Sprintf("%s runs the validations defined on %s.", name, tname),
 			Ref:         ref,
-			Validate:    codegen.RecursiveValidationCode(projected, false, true, false, "result"),
+			Validate:    codegen.RecursiveValidationCode(an, "result"),
 		})
 	}
 	return validations
@@ -1419,7 +1432,7 @@ return {{ .ReturnVar }}`
 switch {{ .ArgVar }}.View {
 	{{- range .Views }}
 case {{ printf "%q" .Name }}{{ if eq .Name "default" }}, ""{{ end }}:
-	err = {{ $.ArgVar }}.Projected.Validate{{ if ne .Name "default" }}{{ goify .Name true }}{{ end }}()
+	err = Validate{{ $.Projected }}{{ if ne .Name "default" }}{{ goify .Name true }}{{ end }}({{ $.ArgVar }}.Projected)
 	{{- end }}
 default:
 	err = goa.InvalidEnumValueError("view", {{ .Source }}.View, []interface{}{ {{ range .Views }}{{ printf "%q" .Name }}, {{ end }} })
@@ -1427,7 +1440,7 @@ default:
 {{- else -}}
 	{{- if .IsCollection -}}
 for _, {{ $.Source }} := range {{ $.ArgVar }} {
-	if err2 := {{ $.Source }}.{{ .ValidateVar }}(); err2 != nil {
+	if err2 := {{ .ValidateVar }}({{ $.Source }}); err2 != nil {
 		err = goa.MergeErrors(err, err2)
 	}
 }
@@ -1440,7 +1453,7 @@ if {{ $.Source }}.{{ goify .Name true }} == nil {
 }
 			{{- end }}
 if {{ $.Source }}.{{ goify .Name true }} != nil {
-	if err2 := {{ $.Source }}.{{ goify .Name true }}.{{ .ValidateVar }}(); err2 != nil {
+	if err2 := {{ .ValidateVar }}({{ $.Source }}.{{ goify .Name true }}); err2 != nil {
 		err = goa.MergeErrors(err, err2)
 	}
 }

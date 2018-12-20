@@ -225,6 +225,15 @@ func MapOf(k, v interface{}, fn ...func()) *expr.Map {
 }
 
 // Key makes it possible to specify validations for map keys.
+//
+// Example:
+//
+//    Attribute("map", MapOf(String, Int), func() {
+//        Key(func() {
+//            Format(FormatDateTime) // map keys are timestamps
+//        })
+//    })
+//
 func Key(fn func()) {
 	at, ok := eval.Current().(*expr.AttributeExpr)
 	if !ok {
@@ -239,6 +248,22 @@ func Key(fn func()) {
 }
 
 // Elem makes it possible to specify validations for array and map values.
+//
+// Example:
+//
+//    Attribute("array", ArrayOf(Int), func() {
+//        Elem(func() {
+//            Enum(1, 2, 3, 4, 5) // list possible values for array elements
+//        })
+//    })
+//
+//    Attribute("map", MapOf(String, Int), func() {
+//        Elem(func() {
+//            Minimum(1)
+//            Maximum(100)
+//        })
+//    })
+//
 func Elem(fn func()) {
 	at, ok := eval.Current().(*expr.AttributeExpr)
 	if !ok {
