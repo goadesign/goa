@@ -122,7 +122,7 @@ func (g *Generator) Cleanup() {
 
 func jsonToYAML(rawJSON []byte) ([]byte, error) {
 	var yamlSource interface{}
-	if err := json.Unmarshal(rawJSON, &yamlSource); err != nil {
+	if err := yaml.Unmarshal(rawJSON, &yamlSource); err != nil {
 		return nil, err
 	}
 
