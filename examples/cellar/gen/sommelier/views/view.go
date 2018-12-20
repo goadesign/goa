@@ -65,45 +65,45 @@ type ComponentView struct {
 	Percentage *uint32
 }
 
-// Validate runs the validations defined on the viewed result type
-// StoredBottleCollection.
-func (result StoredBottleCollection) Validate() (err error) {
+// ValidateStoredBottleCollection runs the validations defined on the viewed
+// result type StoredBottleCollection.
+func ValidateStoredBottleCollection(result StoredBottleCollection) (err error) {
 	switch result.View {
 	case "default", "":
-		err = result.Projected.Validate()
+		err = ValidateStoredBottleCollectionView(result.Projected)
 	case "tiny":
-		err = result.Projected.ValidateTiny()
+		err = ValidateStoredBottleCollectionViewTiny(result.Projected)
 	default:
 		err = goa.InvalidEnumValueError("view", result.View, []interface{}{"default", "tiny"})
 	}
 	return
 }
 
-// Validate runs the validations defined on StoredBottleCollectionView using
-// the "default" view.
-func (result StoredBottleCollectionView) Validate() (err error) {
+// ValidateStoredBottleCollectionView runs the validations defined on
+// StoredBottleCollectionView using the "default" view.
+func ValidateStoredBottleCollectionView(result StoredBottleCollectionView) (err error) {
 	for _, item := range result {
-		if err2 := item.Validate(); err2 != nil {
+		if err2 := ValidateStoredBottleView(item); err2 != nil {
 			err = goa.MergeErrors(err, err2)
 		}
 	}
 	return
 }
 
-// ValidateTiny runs the validations defined on StoredBottleCollectionView
-// using the "tiny" view.
-func (result StoredBottleCollectionView) ValidateTiny() (err error) {
+// ValidateStoredBottleCollectionViewTiny runs the validations defined on
+// StoredBottleCollectionView using the "tiny" view.
+func ValidateStoredBottleCollectionViewTiny(result StoredBottleCollectionView) (err error) {
 	for _, item := range result {
-		if err2 := item.ValidateTiny(); err2 != nil {
+		if err2 := ValidateStoredBottleViewTiny(item); err2 != nil {
 			err = goa.MergeErrors(err, err2)
 		}
 	}
 	return
 }
 
-// Validate runs the validations defined on StoredBottleView using the
-// "default" view.
-func (result *StoredBottleView) Validate() (err error) {
+// ValidateStoredBottleView runs the validations defined on StoredBottleView
+// using the "default" view.
+func ValidateStoredBottleView(result *StoredBottleView) (err error) {
 	if result.ID == nil {
 		err = goa.MergeErrors(err, goa.MissingFieldError("id", "result"))
 	}
@@ -130,7 +130,7 @@ func (result *StoredBottleView) Validate() (err error) {
 	}
 	for _, e := range result.Composition {
 		if e != nil {
-			if err2 := e.Validate(); err2 != nil {
+			if err2 := ValidateComponentView(e); err2 != nil {
 				err = goa.MergeErrors(err, err2)
 			}
 		}
@@ -151,16 +151,16 @@ func (result *StoredBottleView) Validate() (err error) {
 		}
 	}
 	if result.Winery != nil {
-		if err2 := result.Winery.ValidateTiny(); err2 != nil {
+		if err2 := ValidateWineryViewTiny(result.Winery); err2 != nil {
 			err = goa.MergeErrors(err, err2)
 		}
 	}
 	return
 }
 
-// ValidateTiny runs the validations defined on StoredBottleView using the
-// "tiny" view.
-func (result *StoredBottleView) ValidateTiny() (err error) {
+// ValidateStoredBottleViewTiny runs the validations defined on
+// StoredBottleView using the "tiny" view.
+func ValidateStoredBottleViewTiny(result *StoredBottleView) (err error) {
 	if result.ID == nil {
 		err = goa.MergeErrors(err, goa.MissingFieldError("id", "result"))
 	}
@@ -173,15 +173,16 @@ func (result *StoredBottleView) ValidateTiny() (err error) {
 		}
 	}
 	if result.Winery != nil {
-		if err2 := result.Winery.ValidateTiny(); err2 != nil {
+		if err2 := ValidateWineryViewTiny(result.Winery); err2 != nil {
 			err = goa.MergeErrors(err, err2)
 		}
 	}
 	return
 }
 
-// Validate runs the validations defined on WineryView using the "default" view.
-func (result *WineryView) Validate() (err error) {
+// ValidateWineryView runs the validations defined on WineryView using the
+// "default" view.
+func ValidateWineryView(result *WineryView) (err error) {
 	if result.Name == nil {
 		err = goa.MergeErrors(err, goa.MissingFieldError("name", "result"))
 	}
@@ -203,17 +204,17 @@ func (result *WineryView) Validate() (err error) {
 	return
 }
 
-// ValidateTiny runs the validations defined on WineryView using the "tiny"
-// view.
-func (result *WineryView) ValidateTiny() (err error) {
+// ValidateWineryViewTiny runs the validations defined on WineryView using the
+// "tiny" view.
+func ValidateWineryViewTiny(result *WineryView) (err error) {
 	if result.Name == nil {
 		err = goa.MergeErrors(err, goa.MissingFieldError("name", "result"))
 	}
 	return
 }
 
-// Validate runs the validations defined on ComponentView.
-func (result *ComponentView) Validate() (err error) {
+// ValidateComponentView runs the validations defined on ComponentView.
+func ValidateComponentView(result *ComponentView) (err error) {
 	if result.Varietal != nil {
 		err = goa.MergeErrors(err, goa.ValidatePattern("result.varietal", *result.Varietal, "[A-Za-z' ]+"))
 	}

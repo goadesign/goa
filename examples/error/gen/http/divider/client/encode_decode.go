@@ -88,7 +88,7 @@ func DecodeIntegerDivideResponse(decoder func(*http.Response) goahttp.Decoder, r
 			if err != nil {
 				return nil, goahttp.ErrDecodingError("divider", "integer_divide", err)
 			}
-			err = body.Validate()
+			err = ValidateIntegerDivideHasRemainderResponseBody(&body)
 			if err != nil {
 				return nil, goahttp.ErrValidationError("divider", "integer_divide", err)
 			}
@@ -102,7 +102,7 @@ func DecodeIntegerDivideResponse(decoder func(*http.Response) goahttp.Decoder, r
 			if err != nil {
 				return nil, goahttp.ErrDecodingError("divider", "integer_divide", err)
 			}
-			err = body.Validate()
+			err = ValidateIntegerDivideDivByZeroResponseBody(&body)
 			if err != nil {
 				return nil, goahttp.ErrValidationError("divider", "integer_divide", err)
 			}
@@ -116,7 +116,7 @@ func DecodeIntegerDivideResponse(decoder func(*http.Response) goahttp.Decoder, r
 			if err != nil {
 				return nil, goahttp.ErrDecodingError("divider", "integer_divide", err)
 			}
-			err = body.Validate()
+			err = ValidateIntegerDivideTimeoutResponseBody(&body)
 			if err != nil {
 				return nil, goahttp.ErrValidationError("divider", "integer_divide", err)
 			}
@@ -196,7 +196,7 @@ func DecodeDivideResponse(decoder func(*http.Response) goahttp.Decoder, restoreB
 			if err != nil {
 				return nil, goahttp.ErrDecodingError("divider", "divide", err)
 			}
-			err = body.Validate()
+			err = ValidateDivideDivByZeroResponseBody(&body)
 			if err != nil {
 				return nil, goahttp.ErrValidationError("divider", "divide", err)
 			}
@@ -210,7 +210,7 @@ func DecodeDivideResponse(decoder func(*http.Response) goahttp.Decoder, restoreB
 			if err != nil {
 				return nil, goahttp.ErrDecodingError("divider", "divide", err)
 			}
-			err = body.Validate()
+			err = ValidateDivideTimeoutResponseBody(&body)
 			if err != nil {
 				return nil, goahttp.ErrValidationError("divider", "divide", err)
 			}

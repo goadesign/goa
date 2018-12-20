@@ -301,7 +301,7 @@ func (s *summaryClientStream) CloseAndRecv() (chattersvc.ChatSummaryCollection, 
 	}
 	res := NewSummaryChatSummaryCollectionOK(body)
 	vres := chattersvcviews.ChatSummaryCollection{res, "default"}
-	if err := vres.Validate(); err != nil {
+	if err := chattersvcviews.ValidateChatSummaryCollection(vres); err != nil {
 		return rv, goahttp.ErrValidationError("chatter", "summary", err)
 	}
 	return chattersvc.NewChatSummaryCollection(vres), nil
@@ -364,7 +364,7 @@ func (s *historyClientStream) Recv() (*chattersvc.ChatSummary, error) {
 	}
 	res := NewHistoryChatSummaryOK(&body)
 	vres := &chattersvcviews.ChatSummary{res, s.view}
-	if err := vres.Validate(); err != nil {
+	if err := chattersvcviews.ValidateChatSummary(vres); err != nil {
 		return rv, goahttp.ErrValidationError("chatter", "history", err)
 	}
 	return chattersvc.NewChatSummary(vres), nil

@@ -66,7 +66,7 @@ func ViewsFile(genpkg string, service *expr.ServiceExpr) *codegen.File {
 
 // input: ValidateData
 const validateT = `{{ comment .Description }}
-func (result {{ .Ref }}) {{ .Name }}() (err error) {
+func {{ .Name }}(result {{ .Ref }}) (err error) {
 	{{ .Validate }}
   return
 }

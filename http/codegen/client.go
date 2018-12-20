@@ -516,7 +516,7 @@ func {{ .ResponseDecoder }}(decoder func(*http.Response) goahttp.Decoder, restor
 				{{- end }}
 			vres := {{ if not $.Method.ViewedResult.IsCollection }}&{{ end }}{{ $.Method.ViewedResult.ViewsPkg}}.{{ $.Method.ViewedResult.VarName }}{p, view}
 			{{- if .ClientBody }}
-				if err = vres.Validate(); err != nil {
+				if err = {{ $.Method.ViewedResult.ViewsPkg}}.Validate{{ $.Method.Result }}(vres); err != nil {
 					return nil, goahttp.ErrValidationError("{{ $.ServiceName }}", "{{ $.Method.Name }}", err)
 				}
 			{{- end }}
@@ -736,7 +736,7 @@ func (c *{{ .ClientStream.VarName }}) Recv() ({{ .Result.Ref }}, error) {
 		return nil, err
 	}
 	{{- if .Method.ViewedResult }}
-	if err := &vres.Validate(); err != nil {
+	if err := {{ .Method.ViewedResult.ViewsPkg }}.Validate{{ .Result.Name }}(vres); err != nil {
 		return nil, goahttp.ErrValidationError("{{ $.ServiceName }}", "{{ $.Method.Name }}", err)
 	}
 	return {{ $.ServicePkgName }}.{{ .Method.ViewedResult.ResultInit.Name }}(vres), nil

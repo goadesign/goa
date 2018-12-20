@@ -54,7 +54,7 @@ func BuildAddPayload(storageAddBody string) (*storage.Bottle, error) {
 			err = goa.MergeErrors(err, goa.InvalidLengthError("body.name", body.Name, utf8.RuneCountInString(body.Name), 100, false))
 		}
 		if body.Winery != nil {
-			if err2 := body.Winery.Validate(); err2 != nil {
+			if err2 := ValidateWineryRequestBody(body.Winery); err2 != nil {
 				err = goa.MergeErrors(err, err2)
 			}
 		}
@@ -66,7 +66,7 @@ func BuildAddPayload(storageAddBody string) (*storage.Bottle, error) {
 		}
 		for _, e := range body.Composition {
 			if e != nil {
-				if err2 := e.Validate(); err2 != nil {
+				if err2 := ValidateComponentRequestBody(e); err2 != nil {
 					err = goa.MergeErrors(err, err2)
 				}
 			}
@@ -180,7 +180,7 @@ func BuildMultiUpdatePayload(storageMultiUpdateBody string, storageMultiUpdateId
 		}
 		for _, e := range body.Bottles {
 			if e != nil {
-				if err2 := e.Validate(); err2 != nil {
+				if err2 := ValidateBottleRequestBody(e); err2 != nil {
 					err = goa.MergeErrors(err, err2)
 				}
 			}
