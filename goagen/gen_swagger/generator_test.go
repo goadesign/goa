@@ -36,3 +36,22 @@ var _ = Describe("NewGenerator", func() {
 		})
 	})
 })
+
+var _ = Describe("jsonToYAML", func() {
+	var rawYAML []byte
+	var err error
+
+	Context("with JSON which has a number type value", func() {
+		BeforeEach(func() {
+
+			rawYAML, _ = genswagger.JSONToYAML(
+				[]byte(`{"id":1234567}`),
+			)
+		})
+
+		It("converts JSON to YAML and keeps right number type", func() {
+			Ω(string(rawYAML)).Should(Equal("id: 1234567\n"))
+			Ω(err).ShouldNot(HaveOccurred())
+		})
+	})
+})
