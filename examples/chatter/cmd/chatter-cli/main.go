@@ -7,76 +7,72 @@ import (
 	"flag"
 	"fmt"
 	"io"
-	"net/http"
 	"net/url"
 	"os"
 	"os/signal"
 	"strings"
-	"time"
 
-	"github.com/gorilla/websocket"
+	"goa.design/goa"
 	chattersvc "goa.design/goa/examples/chatter/gen/chatter"
-	cli "goa.design/goa/examples/chatter/gen/http/cli/chatter"
-	goahttp "goa.design/goa/http"
 )
 
 func main() {
 	var (
-		addr    = flag.String("url", "http://localhost:8080", "`URL` to service host")
-		verbose = flag.Bool("verbose", false, "Print request and response details")
-		v       = flag.Bool("v", false, "Print request and response details")
-		timeout = flag.Int("timeout", 30, "Maximum number of `seconds` to wait for response")
+		hostF = flag.String("host", "localhost", "Server host (valid values: localhost)")
+		addrF = flag.String("url", "", "URL to service host")
+
+		verboseF = flag.Bool("verbose", false, "Print request and response details")
+		vF       = flag.Bool("v", false, "Print request and response details")
+		timeoutF = flag.Int("timeout", 30, "Maximum number of seconds to wait for response")
 	)
 	flag.Usage = usage
 	flag.Parse()
+	var (
+		addr    string
+		timeout int
+		debug   bool
+	)
+	{
+		addr = *addrF
+		if addr == "" {
+			switch *hostF {
+			case "localhost":
+				addr = "http://localhost:80"
+			default:
+				fmt.Fprintf(os.Stderr, "invalid host argument: %q (valid hosts: localhost", *hostF)
+			}
+		}
+		timeout = *timeoutF
+		debug = *verboseF || *vF
+	}
 
 	var (
 		scheme string
 		host   string
-		debug  bool
 	)
 	{
-		u, err := url.Parse(*addr)
+		u, err := url.Parse(addr)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "invalid URL %#v: %s", *addr, err)
+			fmt.Fprintf(os.Stderr, "invalid URL %#v: %s", addr, err)
 			os.Exit(1)
 		}
 		scheme = u.Scheme
 		host = u.Host
-		if scheme == "" {
-			scheme = "http"
-		}
-		debug = *verbose || *v
 	}
-
 	var (
-		doer goahttp.Doer
+		endpoint goa.Endpoint
+		payload  interface{}
+		err      error
 	)
 	{
-		doer = &http.Client{Timeout: time.Duration(*timeout) * time.Second}
-		if debug {
-			doer = goahttp.NewDebugDoer(doer)
+		switch scheme {
+		case "http", "https":
+			endpoint, payload, err = doHTTP(scheme, host, timeout, debug)
+		default:
+			fmt.Fprintf(os.Stderr, "invalid scheme: %q (valid schemes: grpc|http)", scheme)
+			os.Exit(1)
 		}
 	}
-
-	var (
-		dialer       *websocket.Dialer
-		connConfigFn goahttp.ConnConfigureFunc
-	)
-	{
-		dialer = websocket.DefaultDialer
-	}
-
-	endpoint, payload, err := cli.ParseEndpoint(
-		scheme,
-		host,
-		doer,
-		goahttp.RequestEncoder,
-		goahttp.ResponseDecoder,
-		debug,
-		dialer,
-		connConfigFn,
-	)
 	if err != nil {
 		if err == flag.ErrHelp {
 			os.Exit(0)
@@ -87,11 +83,6 @@ func main() {
 	}
 
 	data, err := endpoint(context.Background(), payload)
-
-	if debug {
-		doer.(goahttp.DebugDoer).Fprint(os.Stderr)
-	}
-
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err.Error())
 		os.Exit(1)
@@ -176,9 +167,10 @@ func usage() {
 	fmt.Fprintf(os.Stderr, `%s is a command line client for the chatter API.
 
 Usage:
-    %s [-url URL][-timeout SECONDS][-verbose|-v] SERVICE ENDPOINT [flags]
+    %s [-host HOST][-url URL][-timeout SECONDS][-verbose|-v] SERVICE ENDPOINT [flags]
 
-    -url URL:    specify service URL (http://localhost:8080)
+    -host HOST:  server host (localhost). valid values: localhost
+    -url URL:    specify service URL overriding host URL (http://localhost:8080)
     -timeout:    maximum number of seconds to wait for response (30)
     -verbose|-v: print request and response details (false)
 
@@ -189,7 +181,7 @@ Additional help:
 
 Example:
 %s
-`, os.Args[0], os.Args[0], indent(cli.UsageCommands()), os.Args[0], indent(cli.UsageExamples()))
+`, os.Args[0], os.Args[0], indent(httpUsageCommands()), os.Args[0], indent(httpUsageExamples()))
 }
 
 func indent(s string) string {

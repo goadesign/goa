@@ -7,7 +7,7 @@ var _ = Service("swagger", func() {
 	HTTP(func() {
 		Path("/swagger")
 	})
-	Files("/swagger.json", "../../gen/http/openapi.json", func() {
+	Files("/swagger.json", "gen/http/openapi.json", func() {
 		Description("JSON document containing the API swagger definition")
 	})
 })
