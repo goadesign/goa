@@ -40,6 +40,17 @@ func (p *protobufAttribute) Field(name string, firstUpper bool) string {
 	return protoBufifyAtt(p.Attribute, name, firstUpper)
 }
 
+// protoBufContext returns a contextual attribute for the protocol buffer type.
+func protoBufContext(att *expr.AttributeExpr, pkg string, scope *codegen.NameScope) *codegen.ContextualAttribute {
+	return &codegen.ContextualAttribute{
+		Attribute: &protobufAttribute{
+			GoAttribute: codegen.NewGoAttribute(att, pkg, scope).(*codegen.GoAttribute),
+		},
+		NonPointer: true,
+		UseDefault: true,
+	}
+}
+
 // makeProtoBufMessage recursively transforms the given attribute expression
 // to generate a valid protocol buffer message definition in the proto file.
 // A protocol buffer message is always a user type in goa v2.
@@ -185,7 +196,7 @@ func protoBufFullMessageName(att *expr.AttributeExpr, pkg string, s *codegen.Nam
 	case expr.CompositeExpr:
 		return protoBufFullMessageName(actual.Attribute(), pkg, s)
 	default:
-		panic(fmt.Sprintf("data type is not a user type %T", actual)) // bug
+		panic(fmt.Sprintf("data type is not a user type: received type %T", actual)) // bug
 	}
 }
 

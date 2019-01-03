@@ -53,8 +53,8 @@ var _ = Service("calc", func() {
 		// Here the payload is an object that consists of two fields.
 		Payload(func() {
 			// Attribute describes an object field
-			Attribute("a", Int, "Left operand")
-			Attribute("b", Int, "Right operand")
+			Field(1, "a", Int, "Left operand")
+			Field(2, "b", Int, "Right operand")
 			Required("a", "b")
 		})
 
@@ -70,6 +70,13 @@ var _ = Service("calc", func() {
 			// Responses use a "200 OK" HTTP status.
 			// The result is encoded in the response body.
 			Response(StatusOK)
+		})
+
+		// GRPC describes the gRPC transport mapping.
+		GRPC(func() {
+			// Responses use a "OK" gRPC code.
+			// The result is encoded in the response message.
+			Response(CodeOK)
 		})
 	})
 

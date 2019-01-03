@@ -31,6 +31,16 @@ var _ = Service("divider", func() {
 		Response("timeout", StatusGatewayTimeout)
 	})
 
+	GRPC(func() {
+		// Use gRPC status code "InvalidArgument" for "div_by_zero"
+		// errors.
+		Response("div_by_zero", CodeInvalidArgument)
+
+		// Use gRPC status code "DeadlineExceeded" for "timeout"
+		// errors.
+		Response("timeout", CodeDeadlineExceeded)
+	})
+
 	Method("integer_divide", func() {
 		Payload(IntOperands)
 		Result(Int)
@@ -44,6 +54,11 @@ var _ = Service("divider", func() {
 			Response(StatusOK)
 			Response("has_remainder", StatusExpectationFailed)
 		})
+
+		GRPC(func() {
+			Response(CodeOK)
+			Response("has_remainder", CodeUnknown)
+		})
 	})
 
 	Method("divide", func() {
@@ -54,17 +69,21 @@ var _ = Service("divider", func() {
 			GET("/div/{a}/{b}")
 			Response(StatusOK)
 		})
+
+		GRPC(func() {
+			Response(CodeOK)
+		})
 	})
 })
 
 var IntOperands = Type("IntOperands", func() {
-	Attribute("a", Int, "Left operand")
-	Attribute("b", Int, "Right operand")
+	Field(1, "a", Int, "Left operand")
+	Field(2, "b", Int, "Right operand")
 	Required("a", "b")
 })
 
 var FloatOperands = Type("FloatOperands", func() {
-	Attribute("a", Float64, "Left operand")
-	Attribute("b", Float64, "Right operand")
+	Field(1, "a", Float64, "Left operand")
+	Field(2, "b", Float64, "Right operand")
 	Required("a", "b")
 })

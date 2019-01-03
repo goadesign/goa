@@ -6,6 +6,7 @@ import (
 	"goa.design/goa/codegen/service"
 	"goa.design/goa/eval"
 	"goa.design/goa/expr"
+	grpccodegen "goa.design/goa/grpc/codegen"
 	httpcodegen "goa.design/goa/http/codegen"
 )
 
@@ -49,6 +50,20 @@ func Example(genpkg string, roots []eval.Root) ([]*codegen.File, error) {
 				files = append(files, fs...)
 			}
 			if fs := httpcodegen.ExampleCLIFiles(genpkg, r); len(fs) != 0 {
+				files = append(files, fs...)
+			}
+		}
+
+		// GRPC
+		if len(r.API.GRPC.Services) > 0 {
+			svcs := make([]string, 0, len(r.API.GRPC.Services))
+			for _, s := range r.API.GRPC.Services {
+				svcs = append(svcs, s.Name())
+			}
+			if fs := grpccodegen.ExampleServerFiles(genpkg, r); len(fs) > 0 {
+				files = append(files, fs...)
+			}
+			if fs := grpccodegen.ExampleCLIFiles(genpkg, r); len(fs) > 0 {
 				files = append(files, fs...)
 			}
 		}

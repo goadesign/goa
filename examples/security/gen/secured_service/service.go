@@ -18,7 +18,7 @@ import (
 // credentials.
 type Service interface {
 	// Creates a valid JWT
-	Signin(context.Context, *SigninPayload) (err error)
+	Signin(context.Context, *SigninPayload) (res *Creds, err error)
 	// This action is secured with the jwt scheme
 	Secure(context.Context, *SecurePayload) (res string, err error)
 	// This action is secured with the jwt scheme and also requires an API key
@@ -59,22 +59,32 @@ type SigninPayload struct {
 	Password string
 }
 
+// Creds is the result type of the secured_service service signin method.
+type Creds struct {
+	// JWT token
+	JWT string
+	// API Key
+	APIKey string
+	// OAuth2 token
+	OauthToken string
+}
+
 // SecurePayload is the payload type of the secured_service service secure
 // method.
 type SecurePayload struct {
 	// Whether to force auth failure even with a valid JWT
 	Fail *bool
 	// JWT used for authentication
-	Token *string
+	Token string
 }
 
 // DoublySecurePayload is the payload type of the secured_service service
 // doubly_secure method.
 type DoublySecurePayload struct {
 	// API key
-	Key *string
+	Key string
 	// JWT used for authentication
-	Token *string
+	Token string
 }
 
 // AlsoDoublySecurePayload is the payload type of the secured_service service
@@ -94,6 +104,9 @@ type AlsoDoublySecurePayload struct {
 // Credentials are invalid
 type Unauthorized string
 
+// Token scopes are invalid
+type InvalidScopes string
+
 // Error returns an error description.
 func (e Unauthorized) Error() string {
 	return "Credentials are invalid"
@@ -102,4 +115,14 @@ func (e Unauthorized) Error() string {
 // ErrorName returns "unauthorized".
 func (e Unauthorized) ErrorName() string {
 	return "unauthorized"
+}
+
+// Error returns an error description.
+func (e InvalidScopes) Error() string {
+	return "Token scopes are invalid"
+}
+
+// ErrorName returns "invalid-scopes".
+func (e InvalidScopes) ErrorName() string {
+	return "invalid-scopes"
 }

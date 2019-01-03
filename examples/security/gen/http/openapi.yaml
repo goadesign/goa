@@ -33,7 +33,7 @@ paths:
       - name: Authorization
         in: header
         description: JWT used for authentication
-        required: false
+        required: true
         type: string
       responses:
         "200":
@@ -44,6 +44,10 @@ paths:
           description: Unauthorized response.
           schema:
             $ref: '#/definitions/SecuredServiceSecureUnauthorizedResponseBody'
+        "403":
+          description: Forbidden response.
+          schema:
+            $ref: '#/definitions/SecuredServiceSecureInvalidScopesResponseBody'
       schemes:
       - grpc
       - http
@@ -64,12 +68,12 @@ paths:
       - name: k
         in: query
         description: API key
-        required: false
+        required: true
         type: string
       - name: Authorization
         in: header
         description: JWT used for authentication
-        required: false
+        required: true
         type: string
       responses:
         "200":
@@ -80,6 +84,10 @@ paths:
           description: Unauthorized response.
           schema:
             $ref: '#/definitions/SecuredServiceDoublySecureUnauthorizedResponseBody'
+        "403":
+          description: Forbidden response.
+          schema:
+            $ref: '#/definitions/SecuredServiceDoublySecureInvalidScopesResponseBody'
       schemes:
       - grpc
       - http
@@ -121,6 +129,10 @@ paths:
           description: Unauthorized response.
           schema:
             $ref: '#/definitions/SecuredServiceAlsoDoublySecureUnauthorizedResponseBody'
+        "403":
+          description: Forbidden response.
+          schema:
+            $ref: '#/definitions/SecuredServiceAlsoDoublySecureInvalidScopesResponseBody'
       schemes:
       - grpc
       - http
@@ -139,8 +151,14 @@ paths:
       description: Creates a valid JWT
       operationId: secured_service#signin
       responses:
-        "204":
-          description: No Content response.
+        "200":
+          description: OK response.
+          schema:
+            $ref: '#/definitions/SecuredServiceSigninResponseBody'
+            required:
+            - jwt
+            - api_key
+            - oauth_token
         "401":
           description: Unauthorized response.
           schema:
@@ -151,26 +169,65 @@ paths:
       security:
       - basic: []
 definitions:
+  SecuredServiceAlsoDoublySecureInvalidScopesResponseBody:
+    title: SecuredServiceAlsoDoublySecureInvalidScopesResponseBody
+    type: string
+    description: Token scopes are invalid
+    example: Ut voluptatem magni perferendis unde.
   SecuredServiceAlsoDoublySecureUnauthorizedResponseBody:
     title: SecuredServiceAlsoDoublySecureUnauthorizedResponseBody
     type: string
     description: Credentials are invalid
-    example: Maxime ipsam esse et.
+    example: Nam non consequuntur numquam voluptatum temporibus aut.
+  SecuredServiceDoublySecureInvalidScopesResponseBody:
+    title: SecuredServiceDoublySecureInvalidScopesResponseBody
+    type: string
+    description: Token scopes are invalid
+    example: Accusantium deserunt consequatur ut modi.
   SecuredServiceDoublySecureUnauthorizedResponseBody:
     title: SecuredServiceDoublySecureUnauthorizedResponseBody
     type: string
     description: Credentials are invalid
-    example: Itaque accusamus enim.
+    example: Qui eligendi ut.
+  SecuredServiceSecureInvalidScopesResponseBody:
+    title: SecuredServiceSecureInvalidScopesResponseBody
+    type: string
+    description: Token scopes are invalid
+    example: Modi asperiores nihil aspernatur.
   SecuredServiceSecureUnauthorizedResponseBody:
     title: SecuredServiceSecureUnauthorizedResponseBody
     type: string
     description: Credentials are invalid
-    example: Accusantium voluptatem alias corrupti voluptates a.
+    example: Voluptatem ducimus est et alias numquam.
+  SecuredServiceSigninResponseBody:
+    title: SecuredServiceSigninResponseBody
+    type: object
+    properties:
+      api_key:
+        type: string
+        description: API Key
+        example: abcdef12345
+      jwt:
+        type: string
+        description: JWT token
+        example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiYWRtaW4iOnRydWV9.TJVA95OrM7E2cBab30RMHrHDcEfxjoYZgeFONFh7HgQ
+      oauth_token:
+        type: string
+        description: OAuth2 token
+        example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiYWRtaW4iOnRydWV9.TJVA95OrM7E2cBab30RMHrHDcEfxjoYZgeFONFh7HgQ
+    example:
+      api_key: abcdef12345
+      jwt: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiYWRtaW4iOnRydWV9.TJVA95OrM7E2cBab30RMHrHDcEfxjoYZgeFONFh7HgQ
+      oauth_token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiYWRtaW4iOnRydWV9.TJVA95OrM7E2cBab30RMHrHDcEfxjoYZgeFONFh7HgQ
+    required:
+    - jwt
+    - api_key
+    - oauth_token
   SecuredServiceSigninUnauthorizedResponseBody:
     title: SecuredServiceSigninUnauthorizedResponseBody
     type: string
     description: Credentials are invalid
-    example: Tenetur est et.
+    example: Veniam quis nulla officiis id rerum.
 securityDefinitions:
   api_key:
     type: apiKey

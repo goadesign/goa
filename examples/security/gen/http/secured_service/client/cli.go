@@ -47,11 +47,9 @@ func BuildSecurePayload(securedServiceSecureFail string, securedServiceSecureTok
 			}
 		}
 	}
-	var token *string
+	var token string
 	{
-		if securedServiceSecureToken != "" {
-			token = &securedServiceSecureToken
-		}
+		token = securedServiceSecureToken
 	}
 	if err != nil {
 		return nil, err
@@ -66,17 +64,13 @@ func BuildSecurePayload(securedServiceSecureFail string, securedServiceSecureTok
 // BuildDoublySecurePayload builds the payload for the secured_service
 // doubly_secure endpoint from CLI flags.
 func BuildDoublySecurePayload(securedServiceDoublySecureKey string, securedServiceDoublySecureToken string) (*securedservice.DoublySecurePayload, error) {
-	var key *string
+	var key string
 	{
-		if securedServiceDoublySecureKey != "" {
-			key = &securedServiceDoublySecureKey
-		}
+		key = securedServiceDoublySecureKey
 	}
-	var token *string
+	var token string
 	{
-		if securedServiceDoublySecureToken != "" {
-			token = &securedServiceDoublySecureToken
-		}
+		token = securedServiceDoublySecureToken
 	}
 	payload := &securedservice.DoublySecurePayload{
 		Key:   key,

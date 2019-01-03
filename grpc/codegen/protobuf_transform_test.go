@@ -159,13 +159,7 @@ func newGoaContextAttr(dt expr.DataType, pkg string, scope *codegen.NameScope) *
 func newProtoContextAttr(dt expr.DataType, pkg string, scope *codegen.NameScope) *codegen.ContextualAttribute {
 	att := &expr.AttributeExpr{Type: expr.Dup(dt)}
 	makeProtoBufMessage(att, dt.Name(), scope)
-	return &codegen.ContextualAttribute{
-		Attribute: &protobufAttribute{
-			GoAttribute: codegen.NewGoAttribute(att, pkg, scope).(*codegen.GoAttribute),
-		},
-		NonPointer: true,
-		UseDefault: true,
-	}
+	return protoBufContext(att, pkg, scope)
 }
 
 const (

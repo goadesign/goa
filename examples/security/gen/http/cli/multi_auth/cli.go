@@ -52,11 +52,11 @@ func ParseEndpoint(
 
 		securedServiceSecureFlags     = flag.NewFlagSet("secure", flag.ExitOnError)
 		securedServiceSecureFailFlag  = securedServiceSecureFlags.String("fail", "", "")
-		securedServiceSecureTokenFlag = securedServiceSecureFlags.String("token", "", "")
+		securedServiceSecureTokenFlag = securedServiceSecureFlags.String("token", "REQUIRED", "")
 
 		securedServiceDoublySecureFlags     = flag.NewFlagSet("doubly-secure", flag.ExitOnError)
-		securedServiceDoublySecureKeyFlag   = securedServiceDoublySecureFlags.String("key", "", "")
-		securedServiceDoublySecureTokenFlag = securedServiceDoublySecureFlags.String("token", "", "")
+		securedServiceDoublySecureKeyFlag   = securedServiceDoublySecureFlags.String("key", "REQUIRED", "")
+		securedServiceDoublySecureTokenFlag = securedServiceDoublySecureFlags.String("token", "REQUIRED", "")
 
 		securedServiceAlsoDoublySecureFlags          = flag.NewFlagSet("also-doubly-secure", flag.ExitOnError)
 		securedServiceAlsoDoublySecureKeyFlag        = securedServiceAlsoDoublySecureFlags.String("key", "", "")
@@ -201,7 +201,7 @@ This action is secured with the jwt scheme
     -token STRING: 
 
 Example:
-    `+os.Args[0]+` secured-service secure --fail true --token "Tempore aut animi officiis."
+    `+os.Args[0]+` secured-service secure --fail true --token "Quae deleniti molestiae."
 `, os.Args[0])
 }
 
@@ -228,6 +228,6 @@ This action is secured with the jwt scheme and also requires an API key header.
     -password STRING: Password used to perform signin
 
 Example:
-    `+os.Args[0]+` secured-service also-doubly-secure --key "abcdef12345" --oauth-token "Praesentium minus possimus ab asperiores." --token "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiYWRtaW4iOnRydWV9.TJVA95OrM7E2cBab30RMHrHDcEfxjoYZgeFONFh7HgQ" --username "user" --password "password"
+    `+os.Args[0]+` secured-service also-doubly-secure --key "abcdef12345" --oauth-token "Qui debitis facilis ut ut." --token "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiYWRtaW4iOnRydWV9.TJVA95OrM7E2cBab30RMHrHDcEfxjoYZgeFONFh7HgQ" --username "user" --password "password"
 `, os.Args[0])
 }
