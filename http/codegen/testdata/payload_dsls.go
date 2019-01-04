@@ -1916,6 +1916,44 @@ var PayloadBodyPrimitiveFieldArrayUserDSL = func() {
 	})
 }
 
+var PayloadExtendBodyPrimitiveFieldArrayUserDSL = func() {
+	var Ext = Type("Ext", func() {
+		Attribute("b", String)
+	})
+	var PayloadType = Type("PayloadType", func() {
+		Extend(Ext)
+		Attribute("a", ArrayOf(String))
+	})
+	Service("ServiceBodyPrimitiveArrayUser", func() {
+		Method("MethodBodyPrimitiveArrayUser", func() {
+			Payload(PayloadType)
+			HTTP(func() {
+				POST("/")
+				Body("a")
+			})
+		})
+	})
+}
+
+var PayloadExtendBodyPrimitiveFieldStringDSL = func() {
+	var Ext = Type("Ext", func() {
+		Attribute("b", String)
+	})
+	var PayloadType = Type("PayloadType", func() {
+		Extend(Ext)
+		Attribute("a", ArrayOf(String))
+	})
+	Service("ServiceBodyPrimitiveArrayUser", func() {
+		Method("MethodBodyPrimitiveArrayUser", func() {
+			Payload(PayloadType)
+			HTTP(func() {
+				POST("/")
+				Body("b")
+			})
+		})
+	})
+}
+
 var PayloadBodyPrimitiveFieldArrayUserValidateDSL = func() {
 	var PayloadType = Type("PayloadType", func() {
 		Attribute("a", ArrayOf(String), func() {

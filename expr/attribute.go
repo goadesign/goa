@@ -260,19 +260,21 @@ func (a *AttributeExpr) Finalize() {
 	if ut, ok := a.Type.(UserType); ok {
 		ut.Attribute().Finalize()
 	}
-	for _, ref := range a.References {
-		ru, ok := ref.(UserType)
-		if !ok {
-			continue
+	if IsObject(a.Type) {
+		for _, ref := range a.References {
+			ru, ok := ref.(UserType)
+			if !ok {
+				continue
+			}
+			a.Inherit(ru.Attribute())
 		}
-		a.Inherit(ru.Attribute())
-	}
-	for _, base := range a.Bases {
-		ru, ok := base.(UserType)
-		if !ok {
-			continue
+		for _, base := range a.Bases {
+			ru, ok := base.(UserType)
+			if !ok {
+				continue
+			}
+			a.Merge(ru.Attribute())
 		}
-		a.Merge(ru.Attribute())
 	}
 }
 
