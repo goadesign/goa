@@ -807,6 +807,9 @@ func initAttrFromDesign(att, patt *AttributeExpr) {
 	if att.DefaultValue == nil {
 		att.DefaultValue = patt.DefaultValue
 	}
+	if att.Meta == nil {
+		att.Meta = patt.Meta
+	}
 }
 
 // findKey finds the given key in the endpoint expression and returns the

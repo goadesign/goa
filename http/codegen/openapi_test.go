@@ -75,6 +75,7 @@ func TestSections(t *testing.T) {
 		{"empty", testdata.EmptyDSL},
 		{"valid", testdata.SimpleDSL},
 		{"multiple-services", testdata.MultipleServicesDSL},
+		{"explicit-view", testdata.ExplicitViewDSL},
 	}
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {

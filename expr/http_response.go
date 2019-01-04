@@ -220,6 +220,9 @@ func (r *HTTPResponseExpr) Finalize(a *HTTPEndpointExpr, svcAtt *AttributeExpr) 
 				}
 			}
 		}
+		if r.Body.Meta == nil {
+			r.Body.Meta = svcAtt.Meta
+		}
 	}
 }
 
