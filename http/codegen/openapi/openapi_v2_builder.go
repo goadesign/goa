@@ -556,7 +556,7 @@ func buildPathFromExpr(s *V2, root *expr.RootExpr, h *expr.HostExpr, route *expr
 			return err
 		}
 		params = append(params, paramsFromHeaders(endpoint)...)
-
+		produces := []string{}
 		responses := make(map[string]*Response, len(endpoint.Responses))
 		for _, r := range endpoint.Responses {
 			if endpoint.MethodExpr.IsStreaming() {
@@ -573,6 +573,9 @@ func buildPathFromExpr(s *V2, root *expr.RootExpr, h *expr.HostExpr, route *expr
 				return err
 			}
 			responses[strconv.Itoa(r.StatusCode)] = resp
+			if r.ContentType != "" {
+				produces = append(produces, r.ContentType)
+			}
 		}
 		for _, er := range endpoint.HTTPErrors {
 			resp, err := responseSpecFromExpr(s, root, er.Response, endpoint.Service.Name())
@@ -655,6 +658,7 @@ func buildPathFromExpr(s *V2, root *expr.RootExpr, h *expr.HostExpr, route *expr
 			ExternalDocs: docsFromExpr(endpoint.MethodExpr.Docs),
 			OperationID:  operationID,
 			Parameters:   params,
+			Produces:     produces,
 			Responses:    responses,
 			Schemes:      schemes,
 			Deprecated:   false,

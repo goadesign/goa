@@ -814,8 +814,7 @@ func Tag(name, value string) {
 	res.Tag = [2]string{name, value}
 }
 
-// ContentType sets the value of the Content-Type response header. By default
-// the ID of the result type is used.
+// ContentType sets the value of the Content-Type response header.
 //
 // ContentType may appear in a ResultType or a Response expression.
 // ContentType accepts one argument: the mime type as defined by RFC 6838.

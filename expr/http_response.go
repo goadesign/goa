@@ -224,6 +224,12 @@ func (r *HTTPResponseExpr) Finalize(a *HTTPEndpointExpr, svcAtt *AttributeExpr) 
 			r.Body.Meta = svcAtt.Meta
 		}
 	}
+	// Set response content type if empty and if set in the result type
+	if r.ContentType == "" {
+		if rt, ok := svcAtt.Type.(*ResultTypeExpr); ok && rt.ContentType != "" {
+			r.ContentType = rt.ContentType
+		}
+	}
 }
 
 // Dup creates a copy of the response expression.

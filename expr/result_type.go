@@ -26,7 +26,7 @@ type (
 		// Identifier is the RFC 6838 result type media type identifier.
 		Identifier string
 		// ContentType identifies the value written to the response
-		// "Content-Type" header. Defaults to Identifier.
+		// "Content-Type" header.
 		ContentType string
 		// Views list the supported views indexed by name.
 		Views []*ViewExpr

@@ -761,6 +761,36 @@ func EncodeMethodExplicitBodyUserResultMultipleViewResponse(encoder func(context
 }
 `
 
+var ExplicitContentTypeResultEncodeCode = `// EncodeMethodExplicitContentTypeResultResponse returns an encoder for
+// responses returned by the ServiceExplicitContentTypeResult
+// MethodExplicitContentTypeResult endpoint.
+func EncodeMethodExplicitContentTypeResultResponse(encoder func(context.Context, http.ResponseWriter) goahttp.Encoder) func(context.Context, http.ResponseWriter, interface{}) error {
+	return func(ctx context.Context, w http.ResponseWriter, v interface{}) error {
+		res := v.(*serviceexplicitcontenttyperesultviews.Resulttype)
+		ctx = context.WithValue(ctx, goahttp.ContentTypeKey, "application/custom+json")
+		enc := encoder(ctx, w)
+		body := NewMethodExplicitContentTypeResultResponseBody(res.Projected)
+		w.WriteHeader(http.StatusNoContent)
+		return enc.Encode(body)
+	}
+}
+`
+
+var ExplicitContentTypeResponseEncodeCode = `// EncodeMethodExplicitContentTypeResponseResponse returns an encoder for
+// responses returned by the ServiceExplicitContentTypeResponse
+// MethodExplicitContentTypeResponse endpoint.
+func EncodeMethodExplicitContentTypeResponseResponse(encoder func(context.Context, http.ResponseWriter) goahttp.Encoder) func(context.Context, http.ResponseWriter, interface{}) error {
+	return func(ctx context.Context, w http.ResponseWriter, v interface{}) error {
+		res := v.(*serviceexplicitcontenttyperesponseviews.Resulttype)
+		ctx = context.WithValue(ctx, goahttp.ContentTypeKey, "application/custom+json")
+		enc := encoder(ctx, w)
+		body := NewMethodExplicitContentTypeResponseResponseBody(res.Projected)
+		w.WriteHeader(http.StatusOK)
+		return enc.Encode(body)
+	}
+}
+`
+
 var ResultBodyPrimitiveStringEncodeCode = `// EncodeMethodBodyPrimitiveStringResponse returns an encoder for responses
 // returned by the ServiceBodyPrimitiveString MethodBodyPrimitiveString
 // endpoint.

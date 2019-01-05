@@ -536,13 +536,6 @@ func (e *HTTPEndpointExpr) Finalize() {
 		if r.Body == nil {
 			r.Body = httpResponseBody(e, r)
 		}
-
-		// Initialize response content type if result is media type.
-		if r.Body.Type != Empty && r.ContentType == "" {
-			if mt, ok := r.Body.Type.(*ResultTypeExpr); ok {
-				r.ContentType = mt.Identifier
-			}
-		}
 	}
 
 	// Lookup undefined HTTP errors in API.
