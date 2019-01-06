@@ -10,10 +10,13 @@ import (
 
 func TestProtoBufTransform(t *testing.T) {
 	root := codegen.RunDSL(t, ctestdata.TestTypesDSL)
+	scope := codegen.NewNameScope()
+	nestedPrimitive := &expr.AttributeExpr{Type: expr.Int}
+	makeProtoBufMessage(nestedPrimitive, "NestedPrimitive", scope)
 	var (
-		scope = codegen.NewNameScope()
-
 		// types to test
+		primitive = expr.Int
+
 		simple   = root.UserType("Simple")
 		required = root.UserType("Required")
 		defaultT = root.UserType("Default")
@@ -32,6 +35,7 @@ func TestProtoBufTransform(t *testing.T) {
 		customField = root.UserType("CompositeWithCustomField")
 
 		// attribute analyzers used in test cases
+		primitiveGoa   = codegen.NewUseDefaultAnalyzer(primitive, "", scope)
 		simpleGoa      = codegen.NewUseDefaultAnalyzer(simple, "", scope)
 		requiredGoa    = codegen.NewUseDefaultAnalyzer(required, "", scope)
 		defaultTGoa    = codegen.NewUseDefaultAnalyzer(defaultT, "", scope)
@@ -46,19 +50,20 @@ func TestProtoBufTransform(t *testing.T) {
 		compositeGoa   = codegen.NewUseDefaultAnalyzer(composite, "", scope)
 		customFieldGoa = codegen.NewUseDefaultAnalyzer(customField, "", scope)
 
-		simpleProto      = newProtoAnalyzer(simple, "", scope)
-		requiredProto    = newProtoAnalyzer(required, "", scope)
-		defaultTProto    = newProtoAnalyzer(defaultT, "", scope)
-		simpleMapProto   = newProtoAnalyzer(simpleMap, "", scope)
-		nestedMapProto   = newProtoAnalyzer(nestedMap, "", scope)
-		arrayMapProto    = newProtoAnalyzer(arrayMap, "", scope)
-		simpleArrayProto = newProtoAnalyzer(simpleArray, "", scope)
-		nestedArrayProto = newProtoAnalyzer(nestedArray, "", scope)
-		mapArrayProto    = newProtoAnalyzer(mapArray, "", scope)
-		typeArrayProto   = newProtoAnalyzer(typeArray, "", scope)
-		recursiveProto   = newProtoAnalyzer(recursive, "", scope)
-		compositeProto   = newProtoAnalyzer(composite, "", scope)
-		customFieldProto = newProtoAnalyzer(customField, "", scope)
+		nestedPrimitiveProto = newProtoAnalyzer(nestedPrimitive.Type, "", scope)
+		simpleProto          = newProtoAnalyzer(simple, "", scope)
+		requiredProto        = newProtoAnalyzer(required, "", scope)
+		defaultTProto        = newProtoAnalyzer(defaultT, "", scope)
+		simpleMapProto       = newProtoAnalyzer(simpleMap, "", scope)
+		nestedMapProto       = newProtoAnalyzer(nestedMap, "", scope)
+		arrayMapProto        = newProtoAnalyzer(arrayMap, "", scope)
+		simpleArrayProto     = newProtoAnalyzer(simpleArray, "", scope)
+		nestedArrayProto     = newProtoAnalyzer(nestedArray, "", scope)
+		mapArrayProto        = newProtoAnalyzer(mapArray, "", scope)
+		typeArrayProto       = newProtoAnalyzer(typeArray, "", scope)
+		recursiveProto       = newProtoAnalyzer(recursive, "", scope)
+		compositeProto       = newProtoAnalyzer(composite, "", scope)
+		customFieldProto     = newProtoAnalyzer(customField, "", scope)
 	)
 
 	tc := map[string][]struct {
@@ -70,6 +75,7 @@ func TestProtoBufTransform(t *testing.T) {
 	}{
 		// test cases to transform goa type to protocol buffer type
 		"to-protobuf-type": {
+			{"primitive-to-nested-primitive", primitiveGoa, nestedPrimitiveProto, true, primitiveGoaToNestedPrimitiveProtoCode},
 			{"simple-to-simple", simpleGoa, simpleProto, true, simpleGoaToSimpleProtoCode},
 			{"simple-to-required", simpleGoa, requiredProto, true, simpleGoaToRequiredProtoCode},
 			{"required-to-simple", requiredGoa, simpleProto, true, requiredGoaToSimpleProtoCode},
@@ -94,6 +100,7 @@ func TestProtoBufTransform(t *testing.T) {
 
 		// test cases to transform protocol buffer type to goa type
 		"to-goa-type": {
+			{"nested-primitive-to-primitive", nestedPrimitiveProto, primitiveGoa, false, nestedPrimitiveProtoToPrimitiveGoaCode},
 			{"simple-to-simple", simpleProto, simpleGoa, false, simpleProtoToSimpleGoaCode},
 			{"simple-to-required", simpleProto, requiredGoa, false, simpleProtoToRequiredGoaCode},
 			{"required-to-simple", requiredProto, simpleGoa, false, requiredProtoToSimpleGoaCode},
@@ -141,6 +148,12 @@ func newProtoAnalyzer(dt expr.DataType, pkg string, scope *codegen.NameScope) co
 }
 
 const (
+	primitiveGoaToNestedPrimitiveProtoCode = `func transform() {
+	target := &NestedPrimitive{}
+	target.Field = int32(source)
+}
+`
+
 	simpleGoaToSimpleProtoCode = `func transform() {
 	target := &Simple{
 		RequiredString: source.RequiredString,
@@ -212,21 +225,23 @@ const (
 	nestedMapGoaToNestedMapProtoCode = `func transform() {
 	target := &NestedMap{}
 	if source.NestedMap != nil {
-		target.NestedMap.Field = make(map[float64]*MapOfSint32MapOfDoubleUint64, len(source.NestedMap))
+		target.NestedMap = make(map[float64]*MapOfSint32MapOfDoubleUint64, len(source.NestedMap))
 		for key, val := range source.NestedMap {
 			tk := key
+			tvc := &MapOfSint32MapOfDoubleUint64{}
 			tvc.Field = make(map[int32]*MapOfDoubleUint64, len(val))
 			for key, val := range val {
 				tk := int32(key)
-				tvb := make(map[float64]uint64, len(val))
+				tvb := &MapOfDoubleUint64{}
+				tvb.Field = make(map[float64]uint64, len(val))
 				for key, val := range val {
 					tk := key
 					tv := val
-					tvb[tk] = tv
+					tvb.Field[tk] = tv
 				}
 				tvc.Field[tk] = tvb
 			}
-			target.NestedMap.Field[tk] = tvc
+			target.NestedMap[tk] = tvc
 		}
 	}
 }
@@ -235,14 +250,15 @@ const (
 	arrayMapGoaToArrayMapProtoCode = `func transform() {
 	target := &ArrayMap{}
 	if source.ArrayMap != nil {
-		target.ArrayMap.Field = make(map[uint32]*ArrayOfFloat, len(source.ArrayMap))
+		target.ArrayMap = make(map[uint32]*ArrayOfFloat, len(source.ArrayMap))
 		for key, val := range source.ArrayMap {
 			tk := key
-			tv := make([]float32, len(val))
+			tv := &ArrayOfFloat{}
+			tv.Field = make([]float32, len(val))
 			for i, val := range val {
-				tv[i] = val
+				tv.Field[i] = val
 			}
-			target.ArrayMap.Field[tk] = tv
+			target.ArrayMap[tk] = tv
 		}
 	}
 }
@@ -262,13 +278,15 @@ const (
 	nestedArrayGoaToNestedArrayProtoCode = `func transform() {
 	target := &NestedArray{}
 	if source.NestedArray != nil {
-		target.NestedArray.Field = make([]*ArrayOfArrayOfDouble, len(source.NestedArray))
+		target.NestedArray = make([]*ArrayOfArrayOfDouble, len(source.NestedArray))
 		for i, val := range source.NestedArray {
-			target.NestedArray.Field[i].Field = make([]*ArrayOfDouble, len(val))
+			target.NestedArray[i] = &ArrayOfArrayOfDouble{}
+			target.NestedArray[i].Field = make([]*ArrayOfDouble, len(val))
 			for j, val := range val {
-				target.NestedArray.Field[i].Field[j] = make([]float64, len(val))
+				target.NestedArray[i].Field[j] = &ArrayOfDouble{}
+				target.NestedArray[i].Field[j].Field = make([]float64, len(val))
 				for k, val := range val {
-					target.NestedArray.Field[i].Field[j][k] = val
+					target.NestedArray[i].Field[j].Field[k] = val
 				}
 			}
 		}
@@ -296,13 +314,14 @@ const (
 	mapArrayGoaToMapArrayProtoCode = `func transform() {
 	target := &MapArray{}
 	if source.MapArray != nil {
-		target.MapArray.Field = make([]*MapOfSint32String, len(source.MapArray))
+		target.MapArray = make([]*MapOfSint32String, len(source.MapArray))
 		for i, val := range source.MapArray {
-			target.MapArray.Field[i] = make(map[int32]string, len(val))
+			target.MapArray[i] = &MapOfSint32String{}
+			target.MapArray[i].Field = make(map[int32]string, len(val))
 			for key, val := range val {
 				tk := int32(key)
 				tv := val
-				target.MapArray.Field[i][tk] = tv
+				target.MapArray[i].Field[tk] = tv
 			}
 		}
 	}
@@ -367,6 +386,11 @@ const (
 	for i, val := range source.MyArray {
 		target.Array[i] = val
 	}
+}
+`
+
+	nestedPrimitiveProtoToPrimitiveGoaCode = `func transform() {
+	target := int(source.Field)
 }
 `
 

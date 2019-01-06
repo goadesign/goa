@@ -63,7 +63,7 @@ func (p *protobufAnalyzer) Dup(att *expr.AttributeExpr, required bool) codegen.A
 // A protocol buffer message is always a user type in goa v2.
 //
 // NOTE: Protocol buffer does not provide native support for nested
-// arrays/maps (See https://github.com/protocolbuffers/protobuf/issues/4596)
+// arrays/maps (See grpc/docs/FAQ.md)
 //
 // makeProtoBufMessage ensures the resulting attribute is a user type. If the
 // given attribute type is a primitive, array, or a map, it wraps the given
