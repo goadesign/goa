@@ -284,23 +284,20 @@ func handleHTTPServer(ctx context.Context, u *url.URL{{ range $.Services }}{{ if
 			}
 		{{- end }}
 
-			logger.Printf("listening on %q", u.Host)
+			logger.Printf("HTTP server listening on %q", u.Host)
 			errc <- srv.ListenAndServe()
 		}()
 
-		for {
-			select {
-			case <-ctx.Done():
-				logger.Printf("shutting down server at %q", u.Host)
+		select {
+		case <-ctx.Done():
+			logger.Printf("shutting down HTTP server at %q", u.Host)
 
-				{{ comment "Shutdown gracefully with a 30s timeout." }}
-        ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
-        defer cancel()
+			{{ comment "Shutdown gracefully with a 30s timeout." }}
+			ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
+			defer cancel()
 
-        srv.Shutdown(ctx)
-				return
-			default:
-			}
+			srv.Shutdown(ctx)
+			return
 		}
 	}()
 }
