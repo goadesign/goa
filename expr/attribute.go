@@ -656,7 +656,7 @@ func (v *ValidationExpr) HasRequiredOnly() bool {
 	if v.Format != "" || v.Pattern != "" {
 		return false
 	}
-	if (v.Minimum != nil) || (v.Maximum != nil) || (v.MaxLength != nil) {
+	if (v.Minimum != nil) || (v.Maximum != nil) || (v.MinLength != nil) || (v.MaxLength != nil) {
 		return false
 	}
 	return true
