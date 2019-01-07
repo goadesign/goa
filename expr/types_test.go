@@ -517,12 +517,19 @@ func TestPrimitiveIsCompatible(t *testing.T) {
 		f64  = float64(20.2)
 		s    = string("string")
 		bs   = []byte("bytes")
+		ss   = []string{"foo", "bar"}
+		is   = []int{1, 2}
 	)
 	cases := map[string]struct {
 		p        Primitive
 		values   []interface{}
 		expected bool
 	}{
+		"any": {
+			p:        Any,
+			values:   []interface{}{b},
+			expected: true,
+		},
 		"boolean compatible": {
 			p:        Boolean,
 			values:   []interface{}{b},
@@ -631,6 +638,11 @@ func TestPrimitiveIsCompatible(t *testing.T) {
 		"bytes not compatible": {
 			p:        Bytes,
 			values:   []interface{}{b, i, i8, i16, i32, ui, ui8, ui16, ui32, i64, ui64, f32, f64},
+			expected: false,
+		},
+		"not supported types": {
+			p:        Boolean,
+			values:   []interface{}{ss, is},
 			expected: false,
 		},
 	}
