@@ -329,7 +329,7 @@ func (e *HTTPEndpointExpr) Validate() error {
 	}
 
 	// Validate definitions of params, headers and bodies against definition of payload
-	if e.MethodExpr.Payload.Type == Empty {
+	if isEmpty(e.MethodExpr.Payload) {
 		if e.MapQueryParams != nil {
 			verr.Add(e, "MapParams is set but Payload is not defined")
 		}
@@ -607,9 +607,7 @@ func (e *HTTPEndpointExpr) validateParams() *eval.ValidationErrors {
 			verr.Merge(nat.Attribute.Validate(ctx, e))
 		}
 	}
-	if e.MethodExpr.Payload == nil {
-		verr.Add(e, "Parameters are defined but Payload is not defined")
-	} else {
+	if e.MethodExpr.Payload != nil {
 		switch e.MethodExpr.Payload.Type.(type) {
 		case *Object:
 			for _, nat := range pparams {
@@ -830,8 +828,13 @@ func findKey(e *HTTPEndpointExpr, keyAtt string) (string, string) {
 	return "", "header"
 }
 
+// isEmpty returns true if an attribute is Empty type and it has no bases and
+// references, or if an attribute is an empty object.
 func isEmpty(a *AttributeExpr) bool {
 	if a.Type == Empty {
+		if len(a.Bases) != 0 || len(a.References) != 0 {
+			return false
+		}
 		return true
 	}
 	obj := AsObject(a.Type)
