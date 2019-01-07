@@ -10,10 +10,9 @@ import (
 
 func TestProtoBufTransform(t *testing.T) {
 	root := codegen.RunDSL(t, ctestdata.TestTypesDSL)
-	scope := codegen.NewNameScope()
-	nestedPrimitive := &expr.AttributeExpr{Type: expr.Int}
-	makeProtoBufMessage(nestedPrimitive, "NestedPrimitive", scope)
 	var (
+		scope = codegen.NewNameScope()
+
 		// types to test
 		primitive = expr.Int
 
@@ -34,6 +33,9 @@ func TestProtoBufTransform(t *testing.T) {
 		composite   = root.UserType("Composite")
 		customField = root.UserType("CompositeWithCustomField")
 
+		resultType = root.UserType("ResultType")
+		rtCol      = root.UserType("ResultTypeCollection")
+
 		// attribute analyzers used in test cases
 		primitiveGoa   = codegen.NewUseDefaultAnalyzer(primitive, "", scope)
 		simpleGoa      = codegen.NewUseDefaultAnalyzer(simple, "", scope)
@@ -49,21 +51,25 @@ func TestProtoBufTransform(t *testing.T) {
 		recursiveGoa   = codegen.NewUseDefaultAnalyzer(recursive, "", scope)
 		compositeGoa   = codegen.NewUseDefaultAnalyzer(composite, "", scope)
 		customFieldGoa = codegen.NewUseDefaultAnalyzer(customField, "", scope)
+		resultTypeGoa  = codegen.NewUseDefaultAnalyzer(resultType, "", scope)
+		rtColGoa       = codegen.NewUseDefaultAnalyzer(rtCol, "", scope)
 
-		nestedPrimitiveProto = newProtoAnalyzer(nestedPrimitive.Type, "", scope)
-		simpleProto          = newProtoAnalyzer(simple, "", scope)
-		requiredProto        = newProtoAnalyzer(required, "", scope)
-		defaultTProto        = newProtoAnalyzer(defaultT, "", scope)
-		simpleMapProto       = newProtoAnalyzer(simpleMap, "", scope)
-		nestedMapProto       = newProtoAnalyzer(nestedMap, "", scope)
-		arrayMapProto        = newProtoAnalyzer(arrayMap, "", scope)
-		simpleArrayProto     = newProtoAnalyzer(simpleArray, "", scope)
-		nestedArrayProto     = newProtoAnalyzer(nestedArray, "", scope)
-		mapArrayProto        = newProtoAnalyzer(mapArray, "", scope)
-		typeArrayProto       = newProtoAnalyzer(typeArray, "", scope)
-		recursiveProto       = newProtoAnalyzer(recursive, "", scope)
-		compositeProto       = newProtoAnalyzer(composite, "", scope)
-		customFieldProto     = newProtoAnalyzer(customField, "", scope)
+		primitiveProto   = newProtoAnalyzer(primitive, "", scope)
+		simpleProto      = newProtoAnalyzer(simple, "", scope)
+		requiredProto    = newProtoAnalyzer(required, "", scope)
+		defaultTProto    = newProtoAnalyzer(defaultT, "", scope)
+		simpleMapProto   = newProtoAnalyzer(simpleMap, "", scope)
+		nestedMapProto   = newProtoAnalyzer(nestedMap, "", scope)
+		arrayMapProto    = newProtoAnalyzer(arrayMap, "", scope)
+		simpleArrayProto = newProtoAnalyzer(simpleArray, "", scope)
+		nestedArrayProto = newProtoAnalyzer(nestedArray, "", scope)
+		mapArrayProto    = newProtoAnalyzer(mapArray, "", scope)
+		typeArrayProto   = newProtoAnalyzer(typeArray, "", scope)
+		recursiveProto   = newProtoAnalyzer(recursive, "", scope)
+		compositeProto   = newProtoAnalyzer(composite, "", scope)
+		customFieldProto = newProtoAnalyzer(customField, "", scope)
+		resultTypeProto  = newProtoAnalyzer(resultType, "", scope)
+		rtColProto       = newProtoAnalyzer(rtCol, "", scope)
 	)
 
 	tc := map[string][]struct {
@@ -75,7 +81,7 @@ func TestProtoBufTransform(t *testing.T) {
 	}{
 		// test cases to transform goa type to protocol buffer type
 		"to-protobuf-type": {
-			{"primitive-to-nested-primitive", primitiveGoa, nestedPrimitiveProto, true, primitiveGoaToNestedPrimitiveProtoCode},
+			{"primitive-to-primitive", primitiveGoa, primitiveProto, true, primitiveGoaToPrimitiveProtoCode},
 			{"simple-to-simple", simpleGoa, simpleProto, true, simpleGoaToSimpleProtoCode},
 			{"simple-to-required", simpleGoa, requiredProto, true, simpleGoaToRequiredProtoCode},
 			{"required-to-simple", requiredGoa, simpleProto, true, requiredGoaToSimpleProtoCode},
@@ -96,11 +102,13 @@ func TestProtoBufTransform(t *testing.T) {
 			{"recursive-to-recursive", recursiveGoa, recursiveProto, true, recursiveGoaToRecursiveProtoCode},
 			{"composite-to-custom-field", compositeGoa, customFieldProto, true, compositeGoaToCustomFieldProtoCode},
 			{"custom-field-to-composite", customFieldGoa, compositeProto, true, customFieldGoaToCompositeProtoCode},
+			{"result-type-to-result-type", resultTypeGoa, resultTypeProto, true, resultTypeGoaToResultTypeProtoCode},
+			{"result-type-collection-to-result-type-collection", rtColGoa, rtColProto, true, rtColGoaToRTColProtoCode},
 		},
 
 		// test cases to transform protocol buffer type to goa type
 		"to-goa-type": {
-			{"nested-primitive-to-primitive", nestedPrimitiveProto, primitiveGoa, false, nestedPrimitiveProtoToPrimitiveGoaCode},
+			{"primitive-to-primitive", primitiveProto, primitiveGoa, false, primitiveProtoToPrimitiveGoaCode},
 			{"simple-to-simple", simpleProto, simpleGoa, false, simpleProtoToSimpleGoaCode},
 			{"simple-to-required", simpleProto, requiredGoa, false, simpleProtoToRequiredGoaCode},
 			{"required-to-simple", requiredProto, simpleGoa, false, requiredProtoToSimpleGoaCode},
@@ -121,6 +129,8 @@ func TestProtoBufTransform(t *testing.T) {
 			{"recursive-to-recursive", recursiveProto, recursiveGoa, false, recursiveProtoToRecursiveGoaCode},
 			{"composite-to-custom-field", compositeProto, customFieldGoa, false, compositeProtoToCustomFieldGoaCode},
 			{"custom-field-to-composite", customFieldProto, compositeGoa, false, customFieldProtoToCompositeGoaCode},
+			{"result-type-to-result-type", resultTypeProto, resultTypeGoa, false, resultTypeProtoToResultTypeGoaCode},
+			{"result-type-collection-to-result-type-collection", rtColProto, rtColGoa, false, rtColProtoToRTColGoaCode},
 		},
 	}
 	for name, cases := range tc {
@@ -148,8 +158,8 @@ func newProtoAnalyzer(dt expr.DataType, pkg string, scope *codegen.NameScope) co
 }
 
 const (
-	primitiveGoaToNestedPrimitiveProtoCode = `func transform() {
-	target := &NestedPrimitive{}
+	primitiveGoaToPrimitiveProtoCode = `func transform() {
+	target := &Int{}
 	target.Field = int32(source)
 }
 `
@@ -389,7 +399,45 @@ const (
 }
 `
 
-	nestedPrimitiveProtoToPrimitiveGoaCode = `func transform() {
+	resultTypeGoaToResultTypeProtoCode = `func transform() {
+	target := &ResultType{}
+	if source.Int != nil {
+		target.Int = int32(*source.Int)
+	}
+	if source.Map != nil {
+		target.Map_ = make(map[int32]string, len(source.Map))
+		for key, val := range source.Map {
+			tk := int32(key)
+			tv := val
+			target.Map_[tk] = tv
+		}
+	}
+}
+`
+
+	rtColGoaToRTColProtoCode = `func transform() {
+	target := &ResultTypeCollection{}
+	if source.Collection != nil {
+		target.Collection = make([]*ResultType, len(source.Collection))
+		for i, val := range source.Collection {
+			target.Collection[i] = &ResultType{}
+			if val.Int != nil {
+				target.Collection[i].Int = int32(*val.Int)
+			}
+			if val.Map != nil {
+				target.Collection[i].Map_ = make(map[int32]string, len(val.Map))
+				for key, val := range val.Map {
+					tk := int32(key)
+					tv := val
+					target.Collection[i].Map_[tk] = tv
+				}
+			}
+		}
+	}
+}
+`
+
+	primitiveProtoToPrimitiveGoaCode = `func transform() {
 	target := int(source.Field)
 }
 `
@@ -609,6 +657,40 @@ const (
 	target.Array = make([]string, len(source.MyArray))
 	for i, val := range source.MyArray {
 		target.Array[i] = val
+	}
+}
+`
+
+	resultTypeProtoToResultTypeGoaCode = `func transform() {
+	target := &ResultType{}
+	int_ptr := int(source.Int)
+	target.Int = &int_ptr
+	if source.Map_ != nil {
+		target.Map = make(map[int]string, len(source.Map_))
+		for key, val := range source.Map_ {
+			tk := int(key)
+			tv := val
+			target.Map[tk] = tv
+		}
+	}
+}
+`
+
+	rtColProtoToRTColGoaCode = `func transform() {
+	target := &ResultTypeCollection{}
+	target.Collection = make([]*ResultType, len(source.Collection))
+	for i, val := range source.Collection {
+		target.Collection[i] = &ResultType{}
+		int_ptr := int(val.Int)
+		target.Collection[i].Int = &int_ptr
+		if val.Map_ != nil {
+			target.Collection[i].Map = make(map[int]string, len(val.Map_))
+			for key, val := range val.Map_ {
+				tk := int(key)
+				tv := val
+				target.Collection[i].Map[tk] = tv
+			}
+		}
 	}
 }
 `

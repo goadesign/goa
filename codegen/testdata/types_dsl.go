@@ -124,11 +124,18 @@ var TestTypesDSL = func() {
 			Required("required_string")
 		})
 
-		_ = ResultType("application/vnd.goa.example", func() {
+		RT = ResultType("application/vnd.goa.example", func() {
 			TypeName("ResultType")
 			Attributes(func() {
 				Attribute("int", Int)
 				Attribute("map", MapOf(Int, String))
+			})
+		})
+
+		_ = ResultType("application/vnd.goa.collection", func() {
+			TypeName("ResultTypeCollection")
+			Attributes(func() {
+				Attribute("collection", CollectionOf(RT))
 			})
 		})
 	)

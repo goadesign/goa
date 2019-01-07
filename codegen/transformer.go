@@ -34,6 +34,11 @@ type (
 		// transformation. It returns an error if source and target are not
 		// compatible for transformation.
 		TransformHelpers(source, target AttributeAnalyzer, seen ...map[string]*TransformFunctionData) (tfds []*TransformFunctionData, err error)
+		// MakeCompatible checks whether source and target attributes are
+		// compatible for transformation and returns an error if not. If no error
+		// is returned, it returns the source and target attributes that are
+		// compatible.
+		MakeCompatible(source, target AttributeAnalyzer, ta *TransformAttrs, suffix string) (src, tgt AttributeAnalyzer, newTA *TransformAttrs, err error)
 		// HelperName returns the name for the transform function to transform
 		// source to the target attribute.
 		HelperName(source, target AttributeAnalyzer) string
@@ -153,6 +158,17 @@ func AppendHelpers(oldH, newH []*TransformFunctionData) []*TransformFunctionData
 		}
 	}
 	return oldH
+}
+
+// MakeCompatible checks whether source and target attributes are
+// compatible for transformation and returns an error if not. If no error
+// is returned, it returns the source and target attributes that are
+// compatible.
+func (t *AttributeTransformer) MakeCompatible(source, target AttributeAnalyzer, ta *TransformAttrs, suffix string) (src, tgt AttributeAnalyzer, newTA *TransformAttrs, err error) {
+	if err = IsCompatible(source.Attribute().Type, target.Attribute().Type, ta.SourceVar+suffix, ta.TargetVar+suffix); err != nil {
+		return source, target, ta, err
+	}
+	return source, target, ta, nil
 }
 
 // HelperName returns the name for the transform function.

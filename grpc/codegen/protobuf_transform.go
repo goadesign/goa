@@ -158,6 +158,9 @@ func (p *protoBufTransformer) TransformArray(source, target codegen.AttributeAna
 				NewVar:    ta.NewVar,
 			}
 		}
+		if err := codegen.IsCompatible(source.Attribute().Type, target.Attribute().Type, ta.SourceVar+"[0]", ta.TargetVar+"[0]"); err != nil {
+			return "", err
+		}
 	}
 
 	data := map[string]interface{}{
@@ -233,6 +236,9 @@ func (p *protoBufTransformer) TransformMap(source, target codegen.AttributeAnaly
 				NewVar:    ta.NewVar,
 			}
 		}
+		if err := codegen.IsCompatible(sourceElem.Attribute().Type, targetElem.Attribute().Type, ta.SourceVar+"[*]", ta.TargetVar+"[*]"); err != nil {
+			return "", err
+		}
 	}
 	data := map[string]interface{}{
 		"Transformer": p,
@@ -255,21 +261,32 @@ func (p *protoBufTransformer) TransformMap(source, target codegen.AttributeAnaly
 	return code, nil
 }
 
+// MakeCompatible checks whether source and target attributes are
+// compatible for transformation and returns an error if not. If no error
+// is returned, it returns the source and target attributes that are
+// compatible.
+func (p *protoBufTransformer) MakeCompatible(source, target codegen.AttributeAnalyzer, ta *codegen.TransformAttrs, suffix string) (src, tgt codegen.AttributeAnalyzer, newTA *codegen.TransformAttrs, err error) {
+	src = source
+	tgt = target
+	if err = codegen.IsCompatible(src.Attribute().Type, tgt.Attribute().Type, ta.SourceVar+suffix, ta.TargetVar+suffix); err != nil {
+		if p.proto {
+			tgtAtt := unwrapAttr(expr.DupAtt(target.Attribute()))
+			tgt = target.Dup(tgtAtt, true)
+		} else {
+			srcAtt := unwrapAttr(expr.DupAtt(source.Attribute()))
+			src = source.Dup(srcAtt, true)
+		}
+		if err = codegen.IsCompatible(src.Attribute().Type, tgt.Attribute().Type, ta.SourceVar, ta.TargetVar); err != nil {
+			return src, tgt, ta, err
+		}
+	}
+	return src, tgt, ta, nil
+}
+
 // TransformHelpers returns the transform functions required to transform
 // source attribute to target attribute. It returns an error if source and
 // target are incompatible.
 func (p *protoBufTransformer) TransformHelpers(source, target codegen.AttributeAnalyzer, seen ...map[string]*codegen.TransformFunctionData) ([]*codegen.TransformFunctionData, error) {
-	sourceType := source.Attribute().Type
-	targetType := target.Attribute().Type
-	if err := codegen.IsCompatible(sourceType, targetType, "", ""); err != nil {
-		if p.proto {
-			tAtt := unwrapAttr(expr.DupAtt(target.Attribute()))
-			target = target.Dup(tAtt, true)
-		} else {
-			sAtt := unwrapAttr(expr.DupAtt(source.Attribute()))
-			source = source.Dup(sAtt, true)
-		}
-	}
 	return codegen.GoTransformHelpers(source, target, p, seen...)
 }
 

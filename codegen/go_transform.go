@@ -58,7 +58,6 @@ func (g *GoTransformer) TransformAttribute(source, target AttributeAnalyzer, ta 
 // primitve type to target attribute of primitive type. It returns an error
 // if source and target are not compatible for transformation.
 func (g *GoTransformer) TransformPrimitive(source, target AttributeAnalyzer, ta *TransformAttrs) (string, error) {
-	fmt.Println("go")
 	var code string
 	assign := "="
 	if ta.NewVar {
@@ -99,7 +98,7 @@ func (g *GoTransformer) TransformMap(source, target AttributeAnalyzer, ta *Trans
 // source attribute to target attribute. It returns an error if source and
 // target are incompatible.
 func (g *GoTransformer) TransformHelpers(source, target AttributeAnalyzer, seen ...map[string]*TransformFunctionData) ([]*TransformFunctionData, error) {
-	return GoTransformHelpers(source, target, g)
+	return GoTransformHelpers(source, target, g, seen...)
 }
 
 // GoTransform produces Go code that initializes the data structure defined
@@ -237,16 +236,15 @@ func GoObjectTransform(source, target AttributeAnalyzer, ta *TransformAttrs, t T
 	// struct fields
 	var err error
 	walkMatches(source, target, func(srcMatt, tgtMatt *expr.MappedAttributeExpr, srcc, tgtc AttributeAnalyzer, n string) {
-		srccAtt := srcc.Attribute()
-		tgtcAtt := tgtc.Attribute()
-		if err = IsCompatible(srccAtt.Type, tgtcAtt.Type, ta.SourceVar, ta.TargetVar); err != nil {
+		if srcc, tgtc, ta, err = t.MakeCompatible(srcc, tgtc, ta, ""); err != nil {
 			return
 		}
 
 		var (
 			code string
 
-			newTA = &TransformAttrs{
+			srccAtt = srcc.Attribute()
+			newTA   = &TransformAttrs{
 				SourceVar: ta.SourceVar + "." + srcc.Identifier(srcMatt.ElemName(n), true),
 				TargetVar: ta.TargetVar + "." + tgtc.Identifier(tgtMatt.ElemName(n), true),
 				NewVar:    false,
@@ -256,6 +254,7 @@ func GoObjectTransform(source, target AttributeAnalyzer, ta *TransformAttrs, t T
 			_, ok := srccAtt.Type.(expr.UserType)
 			switch {
 			case expr.IsArray(srccAtt.Type):
+
 				code, err = t.TransformArray(srcc, tgtc, newTA)
 			case expr.IsMap(srccAtt.Type):
 				code, err = t.TransformMap(srcc, tgtc, newTA)
@@ -415,15 +414,17 @@ func GoTransformHelpers(source, target AttributeAnalyzer, t Transformer, seen ..
 		err error
 
 		ta = &TransformAttrs{}
+	)
+	if source, target, ta, err = t.MakeCompatible(source, target, ta, ""); err != nil {
+		return nil, err
+	}
+
+	var (
+		helpers []*TransformFunctionData
 
 		sourceType = source.Attribute().Type
 		targetType = target.Attribute().Type
 	)
-	if err = IsCompatible(sourceType, targetType, ta.SourceVar, ta.TargetVar); err != nil {
-		return nil, err
-	}
-
-	var helpers []*TransformFunctionData
 	{
 		// Do not generate a transform function for the top most user type.
 		switch {
@@ -442,11 +443,14 @@ func GoTransformHelpers(source, target AttributeAnalyzer, t Transformer, seen ..
 				source = source.Dup(sm.KeyType, true)
 				target = target.Dup(tm.KeyType, true)
 				other, err = t.TransformHelpers(source, target, seen...)
-				helpers = AppendHelpers(helpers, other)
+				helpers = append(helpers, other...)
 			}
 		case expr.IsObject(sourceType):
 			walkMatches(source, target, func(srcMatt, tgtMatt *expr.MappedAttributeExpr, srcc, tgtc AttributeAnalyzer, n string) {
 				if err != nil {
+					return
+				}
+				if srcc, tgtc, ta, err = t.MakeCompatible(srcc, tgtc, ta, ""); err != nil {
 					return
 				}
 				h, err2 := collectHelpers(srcc, tgtc, t, seen...)
@@ -454,7 +458,7 @@ func GoTransformHelpers(source, target AttributeAnalyzer, t Transformer, seen ..
 					err = err2
 					return
 				}
-				helpers = AppendHelpers(helpers, h)
+				helpers = append(helpers, h...)
 			})
 		}
 	}
@@ -481,7 +485,7 @@ func collectHelpers(source, target AttributeAnalyzer, t Transformer, seen ...map
 		if err != nil {
 			return nil, err
 		}
-		data = AppendHelpers(data, helpers)
+		data = append(data, helpers...)
 	case expr.IsMap(sourceType):
 		source = source.Dup(expr.AsMap(sourceType).KeyType, true)
 		target = target.Dup(expr.AsMap(targetType).KeyType, true)
@@ -489,14 +493,14 @@ func collectHelpers(source, target AttributeAnalyzer, t Transformer, seen ...map
 		if err != nil {
 			return nil, err
 		}
-		data = AppendHelpers(data, helpers)
+		data = append(data, helpers...)
 		source = source.Dup(expr.AsMap(sourceType).ElemType, true)
 		target = target.Dup(expr.AsMap(targetType).ElemType, true)
 		helpers, err = t.TransformHelpers(source, target, seen...)
 		if err != nil {
 			return nil, err
 		}
-		data = AppendHelpers(data, helpers)
+		data = append(data, helpers...)
 	case expr.IsObject(sourceType):
 		if ut, ok := sourceType.(expr.UserType); ok {
 			name := t.HelperName(source, target)
@@ -526,7 +530,7 @@ func collectHelpers(source, target AttributeAnalyzer, t Transformer, seen ...map
 				Code:          code,
 			}
 			s[name] = tfd
-			data = AppendHelpers(data, []*TransformFunctionData{tfd})
+			data = append(data, tfd)
 		}
 
 		// collect helpers
@@ -538,7 +542,7 @@ func collectHelpers(source, target AttributeAnalyzer, t Transformer, seen ...map
 				if err != nil {
 					return
 				}
-				data = AppendHelpers(data, helpers)
+				data = append(data, helpers...)
 			})
 		}
 		if err != nil {
@@ -638,9 +642,9 @@ for {{ $loopVar }}, val := range {{ .SourceVar }} {
 `
 
 	transformGoMapTmpl = `{{ .TargetVar }} {{ if .NewVar }}:={{ else }}={{ end }} make(map[{{ .KeyTypeRef }}]{{ .ElemTypeRef }}, len({{ .SourceVar }}))
+{{- $loopVar := loopVar .TargetMap }}
 for key, val := range {{ .SourceVar }} {
   {{ transformAttribute .SourceKey .TargetKey "key" "tk" true .Transformer -}}
-	{{ $loopVar := loopVar .TargetMap -}}
   {{ transformAttribute .SourceElem .TargetElem "val" (printf "tv%s" $loopVar) true .Transformer -}}
   {{ .TargetVar }}[tk] = {{ printf "tv%s" $loopVar }}
 }

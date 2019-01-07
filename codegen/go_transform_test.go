@@ -35,6 +35,9 @@ func TestGoTransform(t *testing.T) {
 		composite   = root.UserType("Composite")
 		customField = root.UserType("CompositeWithCustomField")
 
+		resultType = root.UserType("ResultType")
+		rtCol      = root.UserType("ResultTypeCollection")
+
 		// attribute analyzers used in test cases
 		simpleUseDefault         = NewUseDefaultAnalyzer(simple, "", scope)
 		requiredUseDefault       = NewUseDefaultAnalyzer(required, "", scope)
@@ -56,6 +59,8 @@ func TestGoTransform(t *testing.T) {
 		compositeUseDefault      = NewUseDefaultAnalyzer(composite, "", scope)
 		customFieldUseDefault    = NewUseDefaultAnalyzer(customField, "", scope)
 		customFieldPkgUseDefault = NewUseDefaultAnalyzer(customField, "mypkg", scope)
+		resultTypeUseDefault     = NewUseDefaultAnalyzer(resultType, "", scope)
+		rtColUseDefault          = NewUseDefaultAnalyzer(rtCol, "", scope)
 
 		simplePointer        = NewPointerAnalyzer(simple, "", scope)
 		requiredPointer      = NewPointerAnalyzer(required, "", scope)
@@ -113,6 +118,8 @@ func TestGoTransform(t *testing.T) {
 			{"composite-to-custom-field", compositeUseDefault, customFieldUseDefault, srcTgtUseDefaultCompositeToCustomFieldCode},
 			{"custom-field-to-composite", customFieldUseDefault, compositeUseDefault, srcTgtUseDefaultCustomFieldToCompositeCode},
 			{"composite-to-custom-field-pkg", compositeUseDefault, customFieldPkgUseDefault, srcTgtUseDefaultCompositeToCustomFieldPkgCode},
+			{"result-type-to-result-type", resultTypeUseDefault, resultTypeUseDefault, srcTgtUseDefaultResultTypeToResultTypeCode},
+			{"result-type-collection-to-result-type-collection", rtColUseDefault, rtColUseDefault, srcTgtUseDefaultRTColToRTColCode},
 		},
 
 		// source type uses pointers for all fields, target type uses default
@@ -608,6 +615,42 @@ const (
 		target.MyArray = make([]string, len(source.Array))
 		for i, val := range source.Array {
 			target.MyArray[i] = val
+		}
+	}
+}
+`
+
+	srcTgtUseDefaultResultTypeToResultTypeCode = `func transform() {
+	target := &ResultType{
+		Int: source.Int,
+	}
+	if source.Map != nil {
+		target.Map = make(map[int]string, len(source.Map))
+		for key, val := range source.Map {
+			tk := key
+			tv := val
+			target.Map[tk] = tv
+		}
+	}
+}
+`
+
+	srcTgtUseDefaultRTColToRTColCode = `func transform() {
+	target := &ResultTypeCollection{}
+	if source.Collection != nil {
+		target.Collection = make([]*ResultType, len(source.Collection))
+		for i, val := range source.Collection {
+			target.Collection[i] = &ResultType{
+				Int: val.Int,
+			}
+			if val.Map != nil {
+				target.Collection[i].Map = make(map[int]string, len(val.Map))
+				for key, val := range val.Map {
+					tk := key
+					tv := val
+					target.Collection[i].Map[tk] = tv
+				}
+			}
 		}
 	}
 }
