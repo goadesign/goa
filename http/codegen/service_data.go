@@ -274,6 +274,9 @@ type (
 		// Headers provides information about the headers in the
 		// response.
 		Headers []*HeaderData
+		// ContentType contains the value of the response
+		// "Content-Type" header.
+		ContentType string
 		// ErrorHeader contains the value of the response "goa-error"
 		// header if any.
 		ErrorHeader string
@@ -1477,6 +1480,7 @@ func buildResponses(e *expr.HTTPEndpointExpr, result *expr.AttributeExpr, viewed
 					StatusCode:   statusCodeToHTTPConst(resp.StatusCode),
 					Description:  resp.Description,
 					Headers:      headersData,
+					ContentType:  resp.ContentType,
 					ServerBody:   serverBodyData,
 					ClientBody:   clientBodyData,
 					ResultInit:   init,

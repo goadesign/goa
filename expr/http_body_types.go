@@ -179,7 +179,11 @@ func buildHTTPResponseBody(name string, attr *AttributeExpr, resp *HTTPResponseE
 	appendSuffix(userType.Attribute().Type, suffix)
 	rt, isrt := attr.Type.(*ResultTypeExpr)
 	if !isrt {
-		return &AttributeExpr{Type: userType, Validation: userType.Validation}
+		return &AttributeExpr{
+			Type:       userType,
+			Validation: userType.Validation,
+			Meta:       attr.Meta,
+		}
 	}
 	views := make([]*ViewExpr, len(rt.Views))
 	for i, v := range rt.Views {
@@ -200,7 +204,11 @@ func buildHTTPResponseBody(name string, attr *AttributeExpr, resp *HTTPResponseE
 	for _, v := range views {
 		v.Parent = nmt
 	}
-	return &AttributeExpr{Type: nmt, Validation: userType.Validation}
+	return &AttributeExpr{
+		Type:       nmt,
+		Validation: userType.Validation,
+		Meta:       attr.Meta,
+	}
 }
 
 // buildBodyTypeName concatenates the given strings to generate the

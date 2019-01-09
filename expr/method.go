@@ -205,6 +205,9 @@ func (m *MethodExpr) Finalize() {
 		m.Result = &AttributeExpr{Type: Empty}
 	} else {
 		m.Result.Finalize()
+		if rt, ok := m.Result.Type.(*ResultTypeExpr); ok {
+			rt.Finalize()
+		}
 	}
 	for _, e := range m.Errors {
 		e.Finalize()
