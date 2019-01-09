@@ -32,7 +32,7 @@ good design where the service business logic concerns are expressed and
 implemented separately from the transport logic.
 
 The goa DSL consists of Go functions so that it may be extended easily to avoid
-repetion and promote standards. The design code itself can easily be shared
+repetition and promote standards. The design code itself can easily be shared
 across multiple services by simply importing the corresponding Go package again
 promoting reuse and standardization across service boundaries.
 
