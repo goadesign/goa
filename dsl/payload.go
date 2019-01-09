@@ -1,8 +1,8 @@
 package dsl
 
 import (
-	"goa.design/goa/expr"
 	"goa.design/goa/eval"
+	"goa.design/goa/expr"
 )
 
 // Payload defines the data type of an method input. Payload also makes the
