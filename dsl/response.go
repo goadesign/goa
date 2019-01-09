@@ -76,6 +76,16 @@ import (
 //
 //            Response("an_error", StatusConflict) // Override default of 400
 //        })
+//
+//        GRPC(func() {
+//            Response(CodeOK, func() {
+//                Metadata("taskHref") // map "taskHref" attribute to metadata, all others to message
+//            })
+//
+//            Response("an_error", CodeInternal, func() {
+//                Description("Error returned for internal errors")
+//            })
+//        })
 //    })
 //
 func Response(val interface{}, args ...interface{}) {
@@ -87,6 +97,14 @@ func Response(val interface{}, args ...interface{}) {
 			return
 		}
 		if e := httpError(name, t, args...); e != nil {
+			t.Errors = append(t.Errors, e)
+		}
+	case *expr.GRPCExpr:
+		if !ok {
+			eval.InvalidArgError("name of error", val)
+			return
+		}
+		if e := grpcError(name, t, args...); e != nil {
 			t.Errors = append(t.Errors, e)
 		}
 	case *expr.HTTPServiceExpr:
@@ -116,6 +134,31 @@ func Response(val interface{}, args ...interface{}) {
 			eval.Execute(fn, resp)
 		}
 		t.Responses = append(t.Responses, resp)
+	case *expr.GRPCServiceExpr:
+		if !ok {
+			eval.InvalidArgError("name of error", val)
+			return
+		}
+		if e := grpcError(name, t, args...); e != nil {
+			t.GRPCErrors = append(t.GRPCErrors, e)
+		}
+	case *expr.GRPCEndpointExpr:
+		if ok {
+			// error response
+			if e := grpcError(name, t, args...); e != nil {
+				t.GRPCErrors = append(t.GRPCErrors, e)
+			}
+			return
+		}
+		code, fn := parseResponseArgs(val, args...)
+		resp := &expr.GRPCResponseExpr{
+			StatusCode: code,
+			Parent:     t,
+		}
+		if fn != nil {
+			eval.Execute(fn, resp)
+		}
+		t.Response = resp
 	default:
 		eval.IncompatibleDSL()
 	}
@@ -130,8 +173,39 @@ func Code(code int) {
 	switch t := eval.Current().(type) {
 	case *expr.HTTPResponseExpr:
 		t.StatusCode = code
+	case *expr.GRPCResponseExpr:
+		t.StatusCode = code
 	default:
 		eval.IncompatibleDSL()
+	}
+}
+
+func grpcError(n string, p eval.Expression, args ...interface{}) *expr.GRPCErrorExpr {
+	if len(args) == 0 {
+		eval.ReportError("not enough arguments, use Response(name, status), Response(name, status, func()) or Response(name, func())")
+		return nil
+	}
+	var (
+		code int
+		fn   func()
+		val  interface{}
+	)
+	val = args[0]
+	args = args[1:]
+	code, fn = parseResponseArgs(val, args...)
+	if code == 0 {
+		code = CodeUnknown
+	}
+	resp := &expr.GRPCResponseExpr{
+		StatusCode: code,
+		Parent:     p,
+	}
+	if fn != nil {
+		eval.Execute(fn, resp)
+	}
+	return &expr.GRPCErrorExpr{
+		Name:     n,
+		Response: resp,
 	}
 }
 

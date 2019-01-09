@@ -140,7 +140,8 @@ const (
 			{{- end }}
 		{{- end }}
 			default:
-				fmt.Fprintf(os.Stderr, "invalid host argument: %q (valid hosts: {{ join .Server.AvailableHosts "|" }}", *hostF)
+				fmt.Fprintf(os.Stderr, "invalid host argument: %q (valid hosts: {{ join .Server.AvailableHosts "|" }})", *hostF)
+				os.Exit(1)
 			}
 		}
 		timeout = *timeoutF

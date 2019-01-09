@@ -237,6 +237,11 @@ func (m *MethodExpr) IsStreaming() bool {
 	return m.Stream != 0 && m.Stream != NoStreamKind
 }
 
+// IsPayloadStreaming determines whether the method streams payload.
+func (m *MethodExpr) IsPayloadStreaming() bool {
+	return m.Stream == ClientStreamKind || m.Stream == BidirectionalStreamKind
+}
+
 // helper function that duplicates just enough of a security expression so that
 // its scheme names can be overridden without affecting the original.
 func copyReqs(reqs []*SecurityExpr) []*SecurityExpr {

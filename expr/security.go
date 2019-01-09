@@ -105,6 +105,18 @@ func (s *SecurityExpr) EvalName() string {
 	return "Security" + suffix
 }
 
+// DupRequirement creates a copy of the given security requirement.
+func DupRequirement(req *SecurityExpr) *SecurityExpr {
+	dup := &SecurityExpr{
+		Scopes:  req.Scopes,
+		Schemes: make([]*SchemeExpr, 0, len(req.Schemes)),
+	}
+	for _, s := range req.Schemes {
+		dup.Schemes = append(dup.Schemes, DupScheme(s))
+	}
+	return dup
+}
+
 // DupScheme creates a copy of the given scheme expression.
 func DupScheme(sch *SchemeExpr) *SchemeExpr {
 	dup := SchemeExpr{
