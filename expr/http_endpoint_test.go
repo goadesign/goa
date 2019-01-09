@@ -43,7 +43,7 @@ func TestEndpointValidation(t *testing.T) {
 		"endpoint-body-as-missed-payload-prop": {
 			DSL: testdata.EndpointBodyAsMissedPayloadProp,
 			Errors: []string{
-				"\"name\" is not found in result type in service \"Service\" HTTP endpoint \"Method\"",
+				"Request type does not have an attribute named \"name\" in service \"Service\" HTTP endpoint \"Method\"",
 			},
 		},
 		"endpoint-body-extend-payload": {

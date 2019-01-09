@@ -3620,6 +3620,29 @@ func DecodeMethodBodyPrimitiveArrayUserRequest(mux goahttp.Muxer, decoder func(*
 }
 `
 
+var PayloadBodyPrimitiveFieldStringDecodeCode = `// DecodeMethodBodyPrimitiveArrayUserRequest returns a decoder for requests
+// sent to the ServiceBodyPrimitiveArrayUser MethodBodyPrimitiveArrayUser
+// endpoint.
+func DecodeMethodBodyPrimitiveArrayUserRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) (interface{}, error) {
+	return func(r *http.Request) (interface{}, error) {
+		var (
+			body string
+			err  error
+		)
+		err = decoder(r).Decode(&body)
+		if err != nil {
+			if err == io.EOF {
+				return nil, goa.MissingPayloadError()
+			}
+			return nil, goa.DecodePayloadError(err.Error())
+		}
+		payload := NewMethodBodyPrimitiveArrayUserPayloadType(body)
+
+		return payload, nil
+	}
+}
+`
+
 var PayloadBodyPrimitiveFieldArrayUserValidateDecodeCode = `// DecodeMethodBodyPrimitiveArrayUserValidateRequest returns a decoder for
 // requests sent to the ServiceBodyPrimitiveArrayUserValidate
 // MethodBodyPrimitiveArrayUserValidate endpoint.
