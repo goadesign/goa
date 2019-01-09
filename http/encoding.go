@@ -17,6 +17,10 @@ const (
 	// request Accept-Type header. The value may be used by encoders and
 	// decoders to implement a content type negotiation algorithm.
 	AcceptTypeKey contextKey = iota + 1
+	// ContentTypeKey is the context key used to store the value of the HTTP
+	// response Content-Type header when explicitly set in the DSL. The value
+	// may be used by encoders to set the header appropriately.
+	ContentTypeKey
 )
 
 type (
@@ -75,15 +79,17 @@ func RequestDecoder(r *http.Request) Decoder {
 	}
 }
 
-// ResponseEncoder returns a HTTP response encoder leveraging the mime type set in the context under
-// the AcceptTypeKey if any. The encoder supports the following mime types:
+// ResponseEncoder returns a HTTP response encoder leveraging the mime type
+// set in the context under the AcceptTypeKey or the ContentTypeKey if any.
+// The encoder supports the following mime types:
 //
 //     * application/json using package encoding/json
 //     * application/xml using package encoding/xml
 //     * application/gob using package encoding/gob
 //
-// ResponseEncoder defaults to the JSON encoder if the context AcceptTypeKey value does not match
-// any of the supported mime types or is missing altogether.
+// ResponseEncoder defaults to the JSON encoder if the context AcceptTypeKey or
+// ContentTypeKey value does not match any of the supported mime types or is
+// missing altogether.
 func ResponseEncoder(ctx context.Context, w http.ResponseWriter) Encoder {
 	negotiate := func(a string) (Encoder, string) {
 		switch a {
@@ -98,21 +104,52 @@ func ResponseEncoder(ctx context.Context, w http.ResponseWriter) Encoder {
 		return nil, ""
 	}
 	var accept string
-	if a := ctx.Value(AcceptTypeKey); a != nil {
-		accept = a.(string)
+	{
+		if a := ctx.Value(AcceptTypeKey); a != nil {
+			accept = a.(string)
+		}
+	}
+	var ct string
+	{
+		if a := ctx.Value(ContentTypeKey); a != nil {
+			ct = a.(string)
+		}
 	}
 	var (
 		enc Encoder
 		mt  string
+		err error
 	)
-	if enc, mt = negotiate(accept); enc == nil {
-		// attempt to normalize
-		if mt, _, err := mime.ParseMediaType(accept); err == nil {
-			enc, mt = negotiate(mt)
+	{
+		if ct != "" {
+			// If content type explicitly set in the DSL, infer the response encoder
+			// from the content type context key.
+			if mt, _, err = mime.ParseMediaType(ct); err == nil {
+				switch {
+				case ct == "application/json" || strings.HasSuffix(ct, "+json"):
+					enc = json.NewEncoder(w)
+				case ct == "application/xml" || strings.HasSuffix(ct, "+xml"):
+					enc = xml.NewEncoder(w)
+				case ct == "application/gob" || strings.HasSuffix(ct, "+gob"):
+					enc = gob.NewEncoder(w)
+				default:
+					enc = json.NewEncoder(w)
+				}
+			}
+			SetContentType(w, mt)
+			return enc
 		}
-	}
-	if enc == nil {
-		enc, mt = negotiate("")
+		// If Accept header exists in the request, infer the response encoder
+		// from the header value.
+		if enc, mt = negotiate(accept); enc == nil {
+			// attempt to normalize
+			if mt, _, err = mime.ParseMediaType(accept); err == nil {
+				enc, mt = negotiate(mt)
+			}
+		}
+		if enc == nil {
+			enc, mt = negotiate("")
+		}
 	}
 	SetContentType(w, mt)
 	return enc

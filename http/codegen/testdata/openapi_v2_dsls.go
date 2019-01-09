@@ -70,6 +70,80 @@ var MultipleServicesDSL = func() {
 	})
 }
 
+var MultipleViewsDSL = func() {
+	var ResultT = ResultType("application/json", func() {
+		ContentType("application/vnd.custom+json")
+		TypeName("Result")
+		Attributes(func() {
+			Attribute("string", String, func() {
+				Example("")
+			})
+			Attribute("int", Int, func() {
+				Example(1)
+			})
+		})
+		View("default", func() {
+			Attribute("string")
+			Attribute("int")
+		})
+		View("tiny", func() {
+			Attribute("string")
+		})
+	})
+	Service("testService", func() {
+		Method("testEndpointDefault", func() {
+			Result(ResultT)
+			HTTP(func() {
+				GET("/")
+				Response(StatusOK, func() {
+					ContentType("application/custom+json")
+				})
+			})
+		})
+		Method("testEndpointTiny", func() {
+			Result(ResultT)
+			HTTP(func() {
+				GET("/tiny")
+			})
+		})
+	})
+}
+
+var ExplicitViewDSL = func() {
+	var ResultT = ResultType("application/json", func() {
+		TypeName("Result")
+		Attributes(func() {
+			Attribute("string", String, func() {
+				Example("")
+			})
+			Attribute("int", Int, func() {
+				Example(1)
+			})
+		})
+		View("tiny", func() {
+			Attribute("string")
+		})
+	})
+	Service("testService", func() {
+		Method("testEndpointDefault", func() {
+			Result(ResultT, func() {
+				View("default")
+			})
+			HTTP(func() {
+				GET("/")
+			})
+		})
+		Method("testEndpointTiny", func() {
+			Result(ResultT, func() {
+				View("tiny")
+			})
+			HTTP(func() {
+				GET("/tiny")
+			})
+		})
+	})
+}
+
 var InvalidDSL = func() {
 	var _ = API("test", func() {
 		Server("test", func() {

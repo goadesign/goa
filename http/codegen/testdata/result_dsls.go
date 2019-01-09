@@ -771,6 +771,40 @@ var ExplicitBodyUserResultMultipleViewsDSL = func() {
 	})
 }
 
+var ExplicitContentTypeResultDSL = func() {
+	var ResultType = ResultType("ResultType", func() {
+		ContentType("application/custom+json")
+		Attribute("a", String)
+		Attribute("b", String)
+	})
+	Service("ServiceExplicitContentTypeResult", func() {
+		Method("MethodExplicitContentTypeResult", func() {
+			Result(ResultType)
+			HTTP(func() {
+				POST("/")
+			})
+		})
+	})
+}
+
+var ExplicitContentTypeResponseDSL = func() {
+	var ResultType = ResultType("ResultType", func() {
+		Attribute("a", String)
+		Attribute("b", String)
+	})
+	Service("ServiceExplicitContentTypeResponse", func() {
+		Method("MethodExplicitContentTypeResponse", func() {
+			Result(ResultType)
+			HTTP(func() {
+				POST("/")
+				Response(StatusOK, func() {
+					ContentType("application/custom+json")
+				})
+			})
+		})
+	})
+}
+
 var ResultBodyArrayStringDSL = func() {
 	Service("ServiceBodyArrayString", func() {
 		Method("MethodBodyArrayString", func() {

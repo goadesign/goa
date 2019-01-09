@@ -1064,6 +1064,9 @@ func {{ .ResponseEncoder }}(encoder func(context.Context, http.ResponseWriter) g
 			res := v.({{ .Result.Ref }})
 		{{- end }}
 		{{- range .Result.Responses }}
+			{{- if .ContentType }}
+				ctx = context.WithValue(ctx, goahttp.ContentTypeKey, "{{ .ContentType }}")
+			{{- end }}
 			{{- if .TagName }}
 				{{- if .TagPointer }}
 					if res.{{ if .ViewedResult }}Projected.{{ end }}{{ .TagName }} != nil && *res.{{ if .ViewedResult }}Projected.{{ end }}{{ .TagName }} == {{ printf "%q" .TagValue }} {
