@@ -574,7 +574,16 @@ func buildPathFromExpr(s *V2, root *expr.RootExpr, h *expr.HostExpr, route *expr
 			}
 			responses[strconv.Itoa(r.StatusCode)] = resp
 			if r.ContentType != "" {
-				produces = append(produces, r.ContentType)
+				foundCT := false
+				for _, ct := range produces {
+					if ct == r.ContentType {
+						foundCT = true
+						break
+					}
+				}
+				if !foundCT {
+					produces = append(produces, r.ContentType)
+				}
 			}
 		}
 		for _, er := range endpoint.HTTPErrors {
