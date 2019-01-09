@@ -94,6 +94,7 @@ func TestDecode(t *testing.T) {
 		{"query-string-default", testdata.PayloadQueryStringDefaultDSL, testdata.PayloadQueryStringDefaultDecodeCode},
 		{"query-string-default-validate", testdata.PayloadQueryStringDefaultValidateDSL, testdata.PayloadQueryStringDefaultValidateDecodeCode},
 		{"query-primitive-string-default", testdata.PayloadQueryPrimitiveStringDefaultDSL, testdata.PayloadQueryPrimitiveStringDefaultDecodeCode},
+		{"query-string-extended-payload", testdata.PayloadExtendedQueryStringDSL, testdata.PayloadExtendedQueryStringDecodeCode},
 
 		{"path-string", testdata.PayloadPathStringDSL, testdata.PayloadPathStringDecodeCode},
 		{"path-string-validate", testdata.PayloadPathStringValidateDSL, testdata.PayloadPathStringValidateDecodeCode},

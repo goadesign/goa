@@ -1290,6 +1290,23 @@ var PayloadQueryPrimitiveStringDefaultDSL = func() {
 	})
 }
 
+var PayloadExtendedQueryStringDSL = func() {
+	var UT = Type("UserType", func() {
+		Attribute("q", String)
+	})
+	Service("ServiceQueryStringExtendedPayload", func() {
+		Method("MethodQueryStringExtendedPayload", func() {
+			Payload(func() {
+				Extend(UT)
+			})
+			HTTP(func() {
+				GET("/")
+				Param("q")
+			})
+		})
+	})
+}
+
 var PayloadPathStringDSL = func() {
 	Service("ServicePathString", func() {
 		Method("MethodPathString", func() {
