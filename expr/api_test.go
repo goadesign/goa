@@ -129,3 +129,19 @@ func TestApiExpr_Hash(t *testing.T) {
 		}
 	}
 }
+
+func TestLicenseExprEvalName(t *testing.T) {
+	cases := map[string]struct {
+		name     string
+		expected string
+	}{
+		"foo": {name: "foo", expected: "License foo"},
+	}
+
+	for k, tc := range cases {
+		license := LicenseExpr{Name: tc.name}
+		if actual := license.EvalName(); actual != tc.expected {
+			t.Errorf("%s: got %#v, expected %#v", k, actual, tc.expected)
+		}
+	}
+}
