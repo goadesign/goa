@@ -7,6 +7,52 @@ import (
 	"goa.design/goa/eval"
 )
 
+func TestTaggedAttribute(t *testing.T) {
+	cases := map[string]struct {
+		a        *AttributeExpr
+		expected string
+	}{
+		"tagged attribute": {
+			a: &AttributeExpr{
+				Type: &Object{
+					&NamedAttributeExpr{
+						Name: "Foo",
+						Attribute: &AttributeExpr{
+							Meta: MetaExpr{
+								"foo": []string{"foo"},
+							},
+						},
+					},
+				},
+			},
+			expected: "Foo",
+		},
+		"not object": {
+			a: &AttributeExpr{
+				Type: Boolean,
+			},
+			expected: "",
+		},
+		"no meta": {
+			a: &AttributeExpr{
+				Type: &Object{
+					&NamedAttributeExpr{
+						Name:      "foo",
+						Attribute: &AttributeExpr{},
+					},
+				},
+			},
+			expected: "",
+		},
+	}
+
+	for k, tc := range cases {
+		if actual := TaggedAttribute(tc.a, "foo"); tc.expected != actual {
+			t.Errorf("%s: got %#v, expected %#v", k, actual, tc.expected)
+		}
+	}
+}
+
 func TestAttributeExprValidate(t *testing.T) {
 	var (
 		ctx           = "ctx"
