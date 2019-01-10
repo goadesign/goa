@@ -22,6 +22,12 @@ type (
 		// in a map.
 		Hash() string
 	}
+
+	// Scoper is the interface implemented by the objects that must use
+	// name scope to generate unique names.
+	Scoper interface {
+		Scope() *NameScope
+	}
 )
 
 // NewNameScope creates an empty name scope.
@@ -94,29 +100,27 @@ done:
 // GoTypeDef returns the Go code that defines a Go type which matches the data
 // structure definition (the part that comes after `type foo`).
 //
-// ptr if true indicates that the attributes (even the required ones) are
-// stored as pointers
+// ptr if true indicates that the attribute must be stored in a pointer
+// (except array and map types which are always non-pointers)
 //
-// defPtr if true indicates that the attributes with default values
-// must be pointers (except object types which are always pointers)
-//
-func (s *NameScope) GoTypeDef(an AttributeAnalyzer) string {
-	att := an.Attribute()
+// useDefault if true indicates that the attribute must not be a pointer
+// if it has a default value.
+func (s *NameScope) GoTypeDef(att *expr.AttributeExpr, ptr, useDefault bool) string {
 	switch actual := att.Type.(type) {
 	case expr.Primitive:
 		return GoNativeTypeName(actual)
 	case *expr.Array:
-		d := s.GoTypeDef(an.Dup(actual.ElemType, true))
+		d := s.GoTypeDef(actual.ElemType, ptr, useDefault)
 		if expr.IsObject(actual.ElemType.Type) {
 			d = "*" + d
 		}
 		return "[]" + d
 	case *expr.Map:
-		keyDef := s.GoTypeDef(an.Dup(actual.KeyType, true))
+		keyDef := s.GoTypeDef(actual.KeyType, ptr, useDefault)
 		if expr.IsObject(actual.KeyType.Type) {
 			keyDef = "*" + keyDef
 		}
-		elemDef := s.GoTypeDef(an.Dup(actual.ElemType, true))
+		elemDef := s.GoTypeDef(actual.ElemType, ptr, useDefault)
 		if expr.IsObject(actual.ElemType.Type) {
 			elemDef = "*" + elemDef
 		}
@@ -136,9 +140,10 @@ func (s *NameScope) GoTypeDef(an AttributeAnalyzer) string {
 			)
 			{
 				fn = GoifyAtt(at, name, true)
-				newAn := an.Dup(at, att.IsRequired(name))
-				tdef = s.GoTypeDef(newAn)
-				if expr.IsObject(at.Type) || (newAn.IsPointer() && expr.IsPrimitive(at.Type)) {
+				tdef = s.GoTypeDef(at, ptr, useDefault)
+				if expr.IsObject(at.Type) ||
+					att.IsPrimitivePointer(name, useDefault) ||
+					(ptr && expr.IsPrimitive(at.Type) && at.Type.Kind() != expr.AnyKind && at.Type.Kind() != expr.BytesKind) {
 					tdef = "*" + tdef
 				}
 				if at.Description != "" {
@@ -199,7 +204,7 @@ func (s *NameScope) GoFullTypeName(att *expr.AttributeExpr, pkg string) string {
 			s.GoFullTypeRef(actual.KeyType, pkg),
 			s.GoFullTypeRef(actual.ElemType, pkg))
 	case *expr.Object:
-		return s.GoTypeDef(NewAttributeAnalyzer(att, false, false, false, false, pkg, s))
+		return s.GoTypeDef(att, false, false)
 	case expr.UserType:
 		if actual == expr.ErrorResult {
 			return "goa.ServiceError"

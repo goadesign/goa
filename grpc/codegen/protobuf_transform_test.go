@@ -37,45 +37,45 @@ func TestProtoBufTransform(t *testing.T) {
 		rtCol      = root.UserType("ResultTypeCollection")
 
 		// attribute analyzers used in test cases
-		primitiveGoa   = codegen.NewUseDefaultAnalyzer(primitive, "", scope)
-		simpleGoa      = codegen.NewUseDefaultAnalyzer(simple, "", scope)
-		requiredGoa    = codegen.NewUseDefaultAnalyzer(required, "", scope)
-		defaultTGoa    = codegen.NewUseDefaultAnalyzer(defaultT, "", scope)
-		simpleMapGoa   = codegen.NewUseDefaultAnalyzer(simpleMap, "", scope)
-		nestedMapGoa   = codegen.NewUseDefaultAnalyzer(nestedMap, "", scope)
-		arrayMapGoa    = codegen.NewUseDefaultAnalyzer(arrayMap, "", scope)
-		simpleArrayGoa = codegen.NewUseDefaultAnalyzer(simpleArray, "", scope)
-		nestedArrayGoa = codegen.NewUseDefaultAnalyzer(nestedArray, "", scope)
-		mapArrayGoa    = codegen.NewUseDefaultAnalyzer(mapArray, "", scope)
-		typeArrayGoa   = codegen.NewUseDefaultAnalyzer(typeArray, "", scope)
-		recursiveGoa   = codegen.NewUseDefaultAnalyzer(recursive, "", scope)
-		compositeGoa   = codegen.NewUseDefaultAnalyzer(composite, "", scope)
-		customFieldGoa = codegen.NewUseDefaultAnalyzer(customField, "", scope)
-		resultTypeGoa  = codegen.NewUseDefaultAnalyzer(resultType, "", scope)
-		rtColGoa       = codegen.NewUseDefaultAnalyzer(rtCol, "", scope)
+		primitiveGoa   = newGoaContextAttr(primitive, "", scope)
+		simpleGoa      = newGoaContextAttr(simple, "", scope)
+		requiredGoa    = newGoaContextAttr(required, "", scope)
+		defaultTGoa    = newGoaContextAttr(defaultT, "", scope)
+		simpleMapGoa   = newGoaContextAttr(simpleMap, "", scope)
+		nestedMapGoa   = newGoaContextAttr(nestedMap, "", scope)
+		arrayMapGoa    = newGoaContextAttr(arrayMap, "", scope)
+		simpleArrayGoa = newGoaContextAttr(simpleArray, "", scope)
+		nestedArrayGoa = newGoaContextAttr(nestedArray, "", scope)
+		mapArrayGoa    = newGoaContextAttr(mapArray, "", scope)
+		typeArrayGoa   = newGoaContextAttr(typeArray, "", scope)
+		recursiveGoa   = newGoaContextAttr(recursive, "", scope)
+		compositeGoa   = newGoaContextAttr(composite, "", scope)
+		customFieldGoa = newGoaContextAttr(customField, "", scope)
+		resultTypeGoa  = newGoaContextAttr(resultType, "", scope)
+		rtColGoa       = newGoaContextAttr(rtCol, "", scope)
 
-		primitiveProto   = newProtoAnalyzer(primitive, "", scope)
-		simpleProto      = newProtoAnalyzer(simple, "", scope)
-		requiredProto    = newProtoAnalyzer(required, "", scope)
-		defaultTProto    = newProtoAnalyzer(defaultT, "", scope)
-		simpleMapProto   = newProtoAnalyzer(simpleMap, "", scope)
-		nestedMapProto   = newProtoAnalyzer(nestedMap, "", scope)
-		arrayMapProto    = newProtoAnalyzer(arrayMap, "", scope)
-		simpleArrayProto = newProtoAnalyzer(simpleArray, "", scope)
-		nestedArrayProto = newProtoAnalyzer(nestedArray, "", scope)
-		mapArrayProto    = newProtoAnalyzer(mapArray, "", scope)
-		typeArrayProto   = newProtoAnalyzer(typeArray, "", scope)
-		recursiveProto   = newProtoAnalyzer(recursive, "", scope)
-		compositeProto   = newProtoAnalyzer(composite, "", scope)
-		customFieldProto = newProtoAnalyzer(customField, "", scope)
-		resultTypeProto  = newProtoAnalyzer(resultType, "", scope)
-		rtColProto       = newProtoAnalyzer(rtCol, "", scope)
+		primitiveProto   = newProtoContextAttr(primitive, "", scope)
+		simpleProto      = newProtoContextAttr(simple, "", scope)
+		requiredProto    = newProtoContextAttr(required, "", scope)
+		defaultTProto    = newProtoContextAttr(defaultT, "", scope)
+		simpleMapProto   = newProtoContextAttr(simpleMap, "", scope)
+		nestedMapProto   = newProtoContextAttr(nestedMap, "", scope)
+		arrayMapProto    = newProtoContextAttr(arrayMap, "", scope)
+		simpleArrayProto = newProtoContextAttr(simpleArray, "", scope)
+		nestedArrayProto = newProtoContextAttr(nestedArray, "", scope)
+		mapArrayProto    = newProtoContextAttr(mapArray, "", scope)
+		typeArrayProto   = newProtoContextAttr(typeArray, "", scope)
+		recursiveProto   = newProtoContextAttr(recursive, "", scope)
+		compositeProto   = newProtoContextAttr(composite, "", scope)
+		customFieldProto = newProtoContextAttr(customField, "", scope)
+		resultTypeProto  = newProtoContextAttr(resultType, "", scope)
+		rtColProto       = newProtoContextAttr(rtCol, "", scope)
 	)
 
 	tc := map[string][]struct {
 		Name    string
-		Source  codegen.AttributeAnalyzer
-		Target  codegen.AttributeAnalyzer
+		Source  *codegen.ContextualAttribute
+		Target  *codegen.ContextualAttribute
 		ToProto bool
 		Code    string
 	}{
@@ -151,10 +151,21 @@ func TestProtoBufTransform(t *testing.T) {
 	}
 }
 
-func newProtoAnalyzer(dt expr.DataType, pkg string, scope *codegen.NameScope) codegen.AttributeAnalyzer {
+func newGoaContextAttr(dt expr.DataType, pkg string, scope *codegen.NameScope) *codegen.ContextualAttribute {
+	att := codegen.NewGoAttribute(&expr.AttributeExpr{Type: dt}, pkg, scope)
+	return codegen.NewUseDefaultContext(att)
+}
+
+func newProtoContextAttr(dt expr.DataType, pkg string, scope *codegen.NameScope) *codegen.ContextualAttribute {
 	att := &expr.AttributeExpr{Type: expr.Dup(dt)}
 	makeProtoBufMessage(att, dt.Name(), scope)
-	return newProtoBufAnalyzer(att, true, pkg, scope)
+	return &codegen.ContextualAttribute{
+		Attribute: &protobufAttribute{
+			GoAttribute: codegen.NewGoAttribute(att, pkg, scope).(*codegen.GoAttribute),
+		},
+		NonPointer: true,
+		UseDefault: true,
+	}
 }
 
 const (

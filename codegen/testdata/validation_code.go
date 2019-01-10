@@ -52,23 +52,6 @@ const (
 }
 `
 
-	IntegerDefaultPointerValidationCode = `func Validate() (err error) {
-	if target.RequiredInteger < 1 {
-		err = goa.MergeErrors(err, goa.InvalidRangeError("target.required_integer", target.RequiredInteger, 1, true))
-	}
-	if target.DefaultInteger != nil {
-		if !(*target.DefaultInteger == 1 || *target.DefaultInteger == 5 || *target.DefaultInteger == 10 || *target.DefaultInteger == 100) {
-			err = goa.MergeErrors(err, goa.InvalidEnumValueError("target.default_integer", *target.DefaultInteger, []interface{}{1, 5, 10, 100}))
-		}
-	}
-	if target.Integer != nil {
-		if *target.Integer > 100 {
-			err = goa.MergeErrors(err, goa.InvalidRangeError("target.integer", *target.Integer, 100, false))
-		}
-	}
-}
-`
-
 	FloatRequiredValidationCode = `func Validate() (err error) {
 	if target.RequiredFloat < 1 {
 		err = goa.MergeErrors(err, goa.InvalidRangeError("target.required_float", target.RequiredFloat, 1, true))

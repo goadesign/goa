@@ -42,39 +42,37 @@ func TestGoTypeDef(t *testing.T) {
 	cases := map[string]struct {
 		att        *expr.AttributeExpr
 		pointer    bool
-		defaultPtr bool
 		usedefault bool
 		expected   string
 	}{
-		"BooleanKind": {&expr.AttributeExpr{Type: expr.Boolean}, false, false, true, "bool"},
-		"IntKind":     {&expr.AttributeExpr{Type: expr.Int}, false, false, true, "int"},
-		"Int32Kind":   {&expr.AttributeExpr{Type: expr.Int32}, false, false, true, "int32"},
-		"Int64Kind":   {&expr.AttributeExpr{Type: expr.Int64}, false, false, true, "int64"},
-		"UIntKind":    {&expr.AttributeExpr{Type: expr.UInt}, false, false, true, "uint"},
-		"UInt32Kind":  {&expr.AttributeExpr{Type: expr.UInt32}, false, false, true, "uint32"},
-		"UInt64Kind":  {&expr.AttributeExpr{Type: expr.UInt64}, false, false, true, "uint64"},
-		"Float32Kind": {&expr.AttributeExpr{Type: expr.Float32}, false, false, true, "float32"},
-		"Float64Kind": {&expr.AttributeExpr{Type: expr.Float64}, false, false, true, "float64"},
-		"StringKind":  {&expr.AttributeExpr{Type: expr.String}, false, false, true, "string"},
-		"BytesKind":   {&expr.AttributeExpr{Type: expr.Bytes}, false, false, true, "[]byte"},
-		"AnyKind":     {&expr.AttributeExpr{Type: expr.Any}, false, false, true, "interface{}"},
+		"BooleanKind": {&expr.AttributeExpr{Type: expr.Boolean}, false, true, "bool"},
+		"IntKind":     {&expr.AttributeExpr{Type: expr.Int}, false, true, "int"},
+		"Int32Kind":   {&expr.AttributeExpr{Type: expr.Int32}, false, true, "int32"},
+		"Int64Kind":   {&expr.AttributeExpr{Type: expr.Int64}, false, true, "int64"},
+		"UIntKind":    {&expr.AttributeExpr{Type: expr.UInt}, false, true, "uint"},
+		"UInt32Kind":  {&expr.AttributeExpr{Type: expr.UInt32}, false, true, "uint32"},
+		"UInt64Kind":  {&expr.AttributeExpr{Type: expr.UInt64}, false, true, "uint64"},
+		"Float32Kind": {&expr.AttributeExpr{Type: expr.Float32}, false, true, "float32"},
+		"Float64Kind": {&expr.AttributeExpr{Type: expr.Float64}, false, true, "float64"},
+		"StringKind":  {&expr.AttributeExpr{Type: expr.String}, false, true, "string"},
+		"BytesKind":   {&expr.AttributeExpr{Type: expr.Bytes}, false, true, "[]byte"},
+		"AnyKind":     {&expr.AttributeExpr{Type: expr.Any}, false, true, "interface{}"},
 
-		"Array":          {simpleArray, false, false, true, "[]bool"},
-		"Map":            {simpleMap, false, false, true, "map[int]string"},
-		"UserTypeExpr":   {userType, false, false, true, "UserType"},
-		"ResultTypeExpr": {resultType, false, false, true, "ResultType"},
+		"Array":          {simpleArray, false, true, "[]bool"},
+		"Map":            {simpleMap, false, true, "map[int]string"},
+		"UserTypeExpr":   {userType, false, true, "UserType"},
+		"ResultTypeExpr": {resultType, false, true, "ResultType"},
 
-		"Object":          {requiredObj, false, false, true, "struct {\n\tIntField int\n\tStringField string\n}"},
-		"ObjDefault":      {defaultObj, false, false, true, "struct {\n\tIntField int\n\tStringField string\n}"},
-		"ObjDefaultPtr":   {defaultObj, false, true, true, "struct {\n\tIntField *int\n\tStringField *string\n}"},
-		"ObjDefaultNoDef": {defaultObj, false, false, false, "struct {\n\tIntField *int\n\tStringField *string\n}"},
-		"ObjMixed":        {mixedObj, false, false, true, "struct {\n\tIntField int\n\tArrayField []bool\n\tMapField map[int]string\n\tUserTypeField UserType\n}"},
-		"ObjMixedPointer": {mixedObj, true, false, true, "struct {\n\tIntField *int\n\tArrayField []bool\n\tMapField map[int]string\n\tUserTypeField *UserType\n}"},
+		"Object":          {requiredObj, false, true, "struct {\n\tIntField int\n\tStringField string\n}"},
+		"ObjDefault":      {defaultObj, false, true, "struct {\n\tIntField int\n\tStringField string\n}"},
+		"ObjDefaultNoDef": {defaultObj, false, false, "struct {\n\tIntField *int\n\tStringField *string\n}"},
+		"ObjMixed":        {mixedObj, false, true, "struct {\n\tIntField int\n\tArrayField []bool\n\tMapField map[int]string\n\tUserTypeField UserType\n}"},
+		"ObjMixedPointer": {mixedObj, true, true, "struct {\n\tIntField *int\n\tArrayField []bool\n\tMapField map[int]string\n\tUserTypeField *UserType\n}"},
 	}
 
 	for k, tc := range cases {
 		scope := NewNameScope()
-		actual := scope.GoTypeDef(NewAttributeAnalyzer(tc.att, true, tc.pointer, tc.defaultPtr, tc.usedefault, "", scope))
+		actual := scope.GoTypeDef(tc.att, tc.pointer, tc.usedefault)
 		if actual != tc.expected {
 			t.Errorf("%s: got %#v, expected %#v", k, actual, tc.expected)
 		}

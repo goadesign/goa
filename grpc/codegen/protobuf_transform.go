@@ -3,30 +3,21 @@ package codegen
 import (
 	"bytes"
 	"fmt"
+	"strings"
 
 	"goa.design/goa/codegen"
 	"goa.design/goa/expr"
 )
 
-// protoBufTransformer implements the codegen.Transformer interface
-// to transform Go types to protocol buffer generated Go types.
-type protoBufTransformer struct {
-	*codegen.GoTransformer
-	// proto if true indicates target type is a protocol buffer type.
-	proto bool
-	// targetInit is the initialization code for the target type for nested
-	// map and array types.
-	targetInit string
-}
-
-// protoBufTransform transforms Go type to protocol buffer Go type and
-// vice versa.
+// protoBufTransform produces Go code to initialize a data structure defined
+// by target from an instance of data structure defined by source. The source
+// or target is a protocol buffer type.
 //
 // source, target are the source and target attributes used in transformation
 //
 // `proto` param if true indicates that the target is a protocol buffer type
 //
-func protoBufTransform(source, target codegen.AttributeAnalyzer, sourceVar, targetVar string, proto bool) (string, []*codegen.TransformFunctionData, error) {
+func protoBufTransform(source, target *codegen.ContextualAttribute, sourceVar, targetVar string, proto bool) (string, []*codegen.TransformFunctionData, error) {
 	var prefix string
 	{
 		prefix = "protobuf"
@@ -35,55 +26,50 @@ func protoBufTransform(source, target codegen.AttributeAnalyzer, sourceVar, targ
 		}
 	}
 	p := &protoBufTransformer{
-		GoTransformer: codegen.NewGoTransformer(prefix).(*codegen.GoTransformer),
-		proto:         proto,
+		helperPrefix: prefix,
+		proto:        proto,
 	}
-	return codegen.Transform(source, target, sourceVar, targetVar, p)
-}
 
-// TransformAttribute returns the code to transform source attribute to
-// target attribute. It returns an error if source and target are not
-// compatible for transformation.
-func (p *protoBufTransformer) TransformAttribute(source, target codegen.AttributeAnalyzer, ta *codegen.TransformAttrs) (string, error) {
-	var (
-		code string
-		err  error
-
-		sourceType = source.Attribute().Type
-		targetType = target.Attribute().Type
-	)
-	{
-		switch {
-		case expr.IsArray(sourceType):
-			code, err = p.TransformArray(source, target, ta)
-		case expr.IsMap(sourceType):
-			code, err = p.TransformMap(source, target, ta)
-		case expr.IsObject(sourceType):
-			if expr.IsPrimitive(targetType) {
-				code, err = p.TransformPrimitive(source, target, ta)
-			} else {
-				code, err = p.TransformObject(source, target, ta)
-			}
-		default:
-			code, err = p.TransformPrimitive(source, target, ta)
-		}
-	}
+	code, err := p.Transform(source, target, &codegen.TransformAttrs{SourceVar: sourceVar, TargetVar: targetVar, NewVar: true})
 	if err != nil {
-		return "", err
+		return "", nil, err
 	}
-	return code, nil
+
+	funcs, err := codegen.GoTransformHelpers(source, target, p, prefix)
+	if err != nil {
+		return "", nil, err
+	}
+
+	return strings.TrimRight(code, "\n"), funcs, nil
 }
 
-// TransformPrimitive returns the code to transform source attribute of
-// primitive type to target attribute of primitive type. It returns an error
-// if source and target are not compatible for transformation.
-func (p *protoBufTransformer) TransformPrimitive(source, target codegen.AttributeAnalyzer, ta *codegen.TransformAttrs) (string, error) {
-	var code string
-	srcAtt := source.Attribute()
-	tgtAtt := target.Attribute()
+// protoBufTransformer implements the codegen.Transformer interface
+// to transform Go types to protocol buffer generated Go types.
+type protoBufTransformer struct {
+	// helperPrefix is the prefix for the helper function names.
+	helperPrefix string
+	// proto if true indicates target type is a protocol buffer type.
+	proto bool
+	// targetInit is the initialization code for the target type for nested
+	// map and array types.
+	targetInit string
+}
+
+// Transform returns the code to initialize a target data structure from an
+// instance of source data structure. It returns an error if source and target
+// are not compatible for transformation (different types, fields of
+// different type).
+func (p *protoBufTransformer) Transform(source, target *codegen.ContextualAttribute, ta *codegen.TransformAttrs) (string, error) {
+	var (
+		initCode string
+		err      error
+
+		srcAtt = source.Attribute.Expr()
+		tgtAtt = target.Attribute.Expr()
+	)
 	if err := codegen.IsCompatible(srcAtt.Type, tgtAtt.Type, ta.SourceVar, ta.TargetVar); err != nil {
 		if p.proto {
-			code += fmt.Sprintf("%s := &%s{}\n", ta.TargetVar, target.Name(true))
+			initCode += fmt.Sprintf("%s := &%s{}\n", ta.TargetVar, target.Attribute.Name())
 			ta.TargetVar += ".Field"
 			ta.NewVar = false
 			tgtAtt = unwrapAttr(expr.DupAtt(tgtAtt))
@@ -94,39 +80,109 @@ func (p *protoBufTransformer) TransformPrimitive(source, target codegen.Attribut
 		if err = codegen.IsCompatible(srcAtt.Type, tgtAtt.Type, ta.SourceVar, ta.TargetVar); err != nil {
 			return "", err
 		}
+		source = source.Dup(srcAtt, true)
+		target = target.Dup(tgtAtt, true)
 	}
-	assign := "="
-	if ta.NewVar {
-		assign = ":="
+
+	var (
+		code string
+
+		sourceType = source.Attribute.Expr().Type
+	)
+	{
+		switch {
+		case expr.IsArray(sourceType):
+			code, err = p.TransformArray(source, target, ta)
+		case expr.IsMap(sourceType):
+			code, err = p.TransformMap(source, target, ta)
+		case expr.IsObject(sourceType):
+			code, err = p.TransformObject(source, target, ta)
+		default:
+			assign := "="
+			if ta.NewVar {
+				assign = ":="
+			}
+			srcField := p.ConvertType(source.Attribute, target.Attribute, ta.SourceVar)
+			code = fmt.Sprintf("%s %s %s\n", ta.TargetVar, assign, srcField)
+		}
 	}
-	srcField, _ := p.ConvertType(ta.SourceVar, srcAtt.Type)
-	code += fmt.Sprintf("%s %s %s\n", ta.TargetVar, assign, srcField)
-	return code, nil
+	if err != nil {
+		return "", err
+	}
+	return initCode + code, nil
 }
 
-// TransformObject returns the code to transform source attribute of object
+// MakeCompatible checks whether source and target attributes are
+// compatible for transformation and returns an error if not. If no error
+// is returned, it returns the source and target attributes that are
+// compatible.
+func (p *protoBufTransformer) MakeCompatible(source, target *codegen.ContextualAttribute, ta *codegen.TransformAttrs, suffix string) (src, tgt *codegen.ContextualAttribute, newTA *codegen.TransformAttrs, err error) {
+	src = source
+	tgt = target
+	if err = codegen.IsCompatible(
+		src.Attribute.Expr().Type,
+		tgt.Attribute.Expr().Type,
+		ta.SourceVar+suffix, ta.TargetVar+suffix); err != nil {
+		if p.proto {
+			tgtAtt := unwrapAttr(expr.DupAtt(target.Attribute.Expr()))
+			tgt = target.Dup(tgtAtt, true)
+		} else {
+			srcAtt := unwrapAttr(expr.DupAtt(source.Attribute.Expr()))
+			src = source.Dup(srcAtt, true)
+		}
+		if err = codegen.IsCompatible(
+			src.Attribute.Expr().Type,
+			tgt.Attribute.Expr().Type,
+			ta.SourceVar, ta.TargetVar); err != nil {
+			return src, tgt, ta, err
+		}
+	}
+	return src, tgt, ta, nil
+}
+
+// ConvertType produces code to initialize a target type from a source type
+// held by sourceVar.
+// NOTE: For Int and UInt kinds, protocol buffer Go compiler generates
+// int32 and uint32 respectively whereas goa v2 generates int and uint.
+func (p *protoBufTransformer) ConvertType(source, target codegen.Attributor, sourceVar string) string {
+	typ := source.Expr().Type
+	if _, ok := typ.(expr.UserType); ok {
+		// return a function name for the conversion
+		return fmt.Sprintf("%s(%s)", codegen.HelperName(source, target, p.helperPrefix), sourceVar)
+	}
+
+	if typ.Kind() != expr.IntKind && typ.Kind() != expr.UIntKind {
+		return sourceVar
+	}
+	if p.proto {
+		return fmt.Sprintf("%s(%s)", protoBufNativeGoTypeName(typ), sourceVar)
+	}
+	return fmt.Sprintf("%s(%s)", codegen.GoNativeTypeName(typ), sourceVar)
+}
+
+// transformObject returns the code to transform source attribute of object
 // type to target attribute of object type. It returns an error if source
 // and target are not compatible for transformation.
-func (p *protoBufTransformer) TransformObject(source, target codegen.AttributeAnalyzer, ta *codegen.TransformAttrs) (string, error) {
+func (p *protoBufTransformer) TransformObject(source, target *codegen.ContextualAttribute, ta *codegen.TransformAttrs) (string, error) {
 	return codegen.GoObjectTransform(source, target, ta, p)
 }
 
-// TransformArray returns the code to transform source attribute of array
+// transformArray returns the code to transform source attribute of array
 // type to target attribute of array type. It returns an error if source
 // and target are not compatible for transformation.
-func (p *protoBufTransformer) TransformArray(source, target codegen.AttributeAnalyzer, ta *codegen.TransformAttrs) (string, error) {
-	sourceArr := expr.AsArray(source.Attribute().Type)
+func (p *protoBufTransformer) TransformArray(source, target *codegen.ContextualAttribute, ta *codegen.TransformAttrs) (string, error) {
+	sourceArr := expr.AsArray(source.Attribute.Expr().Type)
 	if sourceArr == nil {
-		return "", fmt.Errorf("source is not an array type: received %T", source.Attribute().Type)
+		return "", fmt.Errorf("source is not an array type: received %T", source.Attribute.Expr().Type)
 	}
-	targetArr := expr.AsArray(target.Attribute().Type)
+	targetArr := expr.AsArray(target.Attribute.Expr().Type)
 	if targetArr == nil {
-		return "", fmt.Errorf("target is not an array type: received %T", target.Attribute().Type)
+		return "", fmt.Errorf("target is not an array type: received %T", target.Attribute.Expr().Type)
 	}
 
 	source = source.Dup(sourceArr.ElemType, true)
 	target = target.Dup(targetArr.ElemType, true)
-	targetRef := target.Ref(true)
+	targetRef := target.Attribute.Ref()
 
 	var code string
 
@@ -144,9 +200,9 @@ func (p *protoBufTransformer) TransformArray(source, target codegen.AttributeAna
 			NewVar:    false,
 		}
 	}
-	if err := codegen.IsCompatible(source.Attribute().Type, target.Attribute().Type, ta.SourceVar+"[0]", ta.TargetVar+"[0]"); err != nil {
+	if err := codegen.IsCompatible(source.Attribute.Expr().Type, target.Attribute.Expr().Type, ta.SourceVar+"[0]", ta.TargetVar+"[0]"); err != nil {
 		if p.proto {
-			p.targetInit = target.Name(true)
+			p.targetInit = target.Attribute.Name()
 			tAtt := unwrapAttr(expr.DupAtt(targetArr.ElemType))
 			target = target.Dup(tAtt, true)
 		} else {
@@ -158,7 +214,7 @@ func (p *protoBufTransformer) TransformArray(source, target codegen.AttributeAna
 				NewVar:    ta.NewVar,
 			}
 		}
-		if err := codegen.IsCompatible(source.Attribute().Type, target.Attribute().Type, ta.SourceVar+"[0]", ta.TargetVar+"[0]"); err != nil {
+		if err := codegen.IsCompatible(source.Attribute.Expr().Type, target.Attribute.Expr().Type, ta.SourceVar+"[0]", ta.TargetVar+"[0]"); err != nil {
 			return "", err
 		}
 	}
@@ -180,12 +236,12 @@ func (p *protoBufTransformer) TransformArray(source, target codegen.AttributeAna
 	return code, nil
 }
 
-// TransformMap returns the code to transform source attribute of map
+// transformMap returns the code to transform source attribute of map
 // type to target attribute of map type. It returns an error if source
 // and target are not compatible for transformation.
-func (p *protoBufTransformer) TransformMap(source, target codegen.AttributeAnalyzer, ta *codegen.TransformAttrs) (string, error) {
-	sourceType := source.Attribute().Type
-	targetType := target.Attribute().Type
+func (p *protoBufTransformer) TransformMap(source, target *codegen.ContextualAttribute, ta *codegen.TransformAttrs) (string, error) {
+	sourceType := source.Attribute.Expr().Type
+	targetType := target.Attribute.Expr().Type
 	sourceMap := expr.AsMap(sourceType)
 	if sourceMap == nil {
 		return "", fmt.Errorf("source is not a map type: received %T", sourceType)
@@ -199,12 +255,12 @@ func (p *protoBufTransformer) TransformMap(source, target codegen.AttributeAnaly
 	// about unwrapping.
 	sourceKey := source.Dup(sourceMap.KeyType, true)
 	targetKey := target.Dup(targetMap.KeyType, true)
-	if err := codegen.IsCompatible(sourceKey.Attribute().Type, targetKey.Attribute().Type, ta.SourceVar+"[key]", ta.TargetVar+"[key]"); err != nil {
+	if err := codegen.IsCompatible(sourceKey.Attribute.Expr().Type, targetKey.Attribute.Expr().Type, ta.SourceVar+"[key]", ta.TargetVar+"[key]"); err != nil {
 		return "", err
 	}
 	sourceElem := source.Dup(sourceMap.ElemType, true)
 	targetElem := target.Dup(targetMap.ElemType, true)
-	targetElemRef := targetElem.Ref(true)
+	targetElemRef := targetElem.Attribute.Ref()
 
 	var code string
 
@@ -224,7 +280,7 @@ func (p *protoBufTransformer) TransformMap(source, target codegen.AttributeAnaly
 	}
 	if err := codegen.IsCompatible(sourceMap.ElemType.Type, targetMap.ElemType.Type, ta.SourceVar+"[*]", ta.TargetVar+"[*]"); err != nil {
 		if p.proto {
-			p.targetInit = targetElem.Name(true)
+			p.targetInit = targetElem.Attribute.Name()
 			tAtt := unwrapAttr(expr.DupAtt(targetMap.ElemType))
 			targetElem = target.Dup(tAtt, true)
 		} else {
@@ -236,13 +292,13 @@ func (p *protoBufTransformer) TransformMap(source, target codegen.AttributeAnaly
 				NewVar:    ta.NewVar,
 			}
 		}
-		if err := codegen.IsCompatible(sourceElem.Attribute().Type, targetElem.Attribute().Type, ta.SourceVar+"[*]", ta.TargetVar+"[*]"); err != nil {
+		if err := codegen.IsCompatible(sourceElem.Attribute.Expr().Type, targetElem.Attribute.Expr().Type, ta.SourceVar+"[*]", ta.TargetVar+"[*]"); err != nil {
 			return "", err
 		}
 	}
 	data := map[string]interface{}{
 		"Transformer": p,
-		"KeyTypeRef":  targetKey.Ref(true),
+		"KeyTypeRef":  targetKey.Attribute.Ref(),
 		"ElemTypeRef": targetElemRef,
 		"SourceKey":   sourceKey,
 		"TargetKey":   targetKey,
@@ -259,47 +315,4 @@ func (p *protoBufTransformer) TransformMap(source, target codegen.AttributeAnaly
 	}
 	code += buf.String()
 	return code, nil
-}
-
-// MakeCompatible checks whether source and target attributes are
-// compatible for transformation and returns an error if not. If no error
-// is returned, it returns the source and target attributes that are
-// compatible.
-func (p *protoBufTransformer) MakeCompatible(source, target codegen.AttributeAnalyzer, ta *codegen.TransformAttrs, suffix string) (src, tgt codegen.AttributeAnalyzer, newTA *codegen.TransformAttrs, err error) {
-	src = source
-	tgt = target
-	if err = codegen.IsCompatible(src.Attribute().Type, tgt.Attribute().Type, ta.SourceVar+suffix, ta.TargetVar+suffix); err != nil {
-		if p.proto {
-			tgtAtt := unwrapAttr(expr.DupAtt(target.Attribute()))
-			tgt = target.Dup(tgtAtt, true)
-		} else {
-			srcAtt := unwrapAttr(expr.DupAtt(source.Attribute()))
-			src = source.Dup(srcAtt, true)
-		}
-		if err = codegen.IsCompatible(src.Attribute().Type, tgt.Attribute().Type, ta.SourceVar, ta.TargetVar); err != nil {
-			return src, tgt, ta, err
-		}
-	}
-	return src, tgt, ta, nil
-}
-
-// TransformHelpers returns the transform functions required to transform
-// source attribute to target attribute. It returns an error if source and
-// target are incompatible.
-func (p *protoBufTransformer) TransformHelpers(source, target codegen.AttributeAnalyzer, seen ...map[string]*codegen.TransformFunctionData) ([]*codegen.TransformFunctionData, error) {
-	return codegen.GoTransformHelpers(source, target, p, seen...)
-}
-
-// ConvertType converts varn to type typ.
-// NOTE: For Int and UInt kinds, protocol buffer Go compiler generates
-// int32 and uint32 respectively whereas goa v2 generates int and uint.
-func (p *protoBufTransformer) ConvertType(varn string, typ expr.DataType) (string, bool) {
-	if typ.Kind() != expr.IntKind && typ.Kind() != expr.UIntKind {
-		return varn, false
-	}
-
-	if p.proto {
-		return fmt.Sprintf("%s(%s)", protoBufNativeGoTypeName(typ), varn), true
-	}
-	return fmt.Sprintf("%s(%s)", codegen.GoNativeTypeName(typ), varn), true
 }

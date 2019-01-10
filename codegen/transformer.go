@@ -2,49 +2,107 @@ package codegen
 
 import (
 	"fmt"
-	"strings"
 
 	"goa.design/goa/expr"
 )
 
 type (
-	// Transformer transforms a source attribute to a target attribute.
+	// Transformer produces code that initializes data structure defined by
+	// target from an instance of the data structure described by source. The
+	// data structures can be objects, arrays or maps. The algorithm matches
+	// object fields by name and ignores object fields in target that don't
+	// have a match in source.
 	Transformer interface {
-		// TransformAttribute returns the code to transform source attribute to
-		// target attribute. It returns an error if source and target are not
-		// compatible for transformation.
-		TransformAttribute(source, target AttributeAnalyzer, ta *TransformAttrs) (code string, err error)
-		// TransformPrimitive returns the code to transform source attribute of
-		// primitve type to target attribute of primitive type. It returns an error
-		// if source and target are not compatible for transformation.
-		TransformPrimitive(source, target AttributeAnalyzer, ta *TransformAttrs) (code string, err error)
-		// TransformObject returns the code to transform source attribute of object
-		// type to target attribute of object type. It returns an error if source
-		// and target are not compatible for transformation.
-		TransformObject(source, target AttributeAnalyzer, ta *TransformAttrs) (code string, err error)
-		// TransformArray returns the code to transform source attribute of array
-		// type to target attribute of array type. It returns an error if source
-		// and target are not compatible for transformation.
-		TransformArray(source, target AttributeAnalyzer, ta *TransformAttrs) (code string, err error)
-		// TransformMap returns the code to transform source attribute of map
-		// type to target attribute of map type. It returns an error if source
-		// and target are not compatible for transformation.
-		TransformMap(source, target AttributeAnalyzer, ta *TransformAttrs) (code string, err error)
-		// TransformHelpers returns the helper functions that assist in the
-		// transformation. It returns an error if source and target are not
-		// compatible for transformation.
-		TransformHelpers(source, target AttributeAnalyzer, seen ...map[string]*TransformFunctionData) (tfds []*TransformFunctionData, err error)
-		// MakeCompatible checks whether source and target attributes are
-		// compatible for transformation and returns an error if not. If no error
-		// is returned, it returns the source and target attributes that are
-		// compatible.
-		MakeCompatible(source, target AttributeAnalyzer, ta *TransformAttrs, suffix string) (src, tgt AttributeAnalyzer, newTA *TransformAttrs, err error)
-		// HelperName returns the name for the transform function to transform
-		// source to the target attribute.
-		HelperName(source, target AttributeAnalyzer) string
-		// ConvertType adds type conversion code (if any) against varn based on
-		// the attribute type.
-		ConvertType(varn string, typ expr.DataType) (string, bool)
+		// Transform returns the code that initializes data structure defined by
+		// target attribute from an instance of the data structure defined by
+		// source. It leverages mapped attributes so that attribute names may use
+		// the "name:elem" syntax to define the name of the design attribute and
+		// the name of the corresponding generated field. It returns an error
+		// if target is not compatible with source (different type, fields of
+		// different type etc).
+		Transform(source, target *ContextualAttribute, ta *TransformAttrs) (code string, err error)
+		// TransformObject returns the code to initialize a target data structure
+		// defined by object type from an instance of source data structure defined
+		// by an object type. The algorithm matches object fields by name and
+		// ignores object fields in target that don't have a match in source.
+		// It returns an error if source and target are different types or have
+		// fields of different types.
+		TransformObject(source, target *ContextualAttribute, ta *TransformAttrs) (code string, err error)
+		// TransformArray returns the code to initialize a target array from a
+		// source array. It returns an error if source and target are not arrays
+		// and have fields of different types in the array element.
+		TransformArray(source, target *ContextualAttribute, ta *TransformAttrs) (code string, err error)
+		// TransformMap returns the code to initialize a target map from a
+		// source map. It returns an error if source and target are not maps
+		// and have fields of different types in the map key and element.
+		TransformMap(source, target *ContextualAttribute, ta *TransformAttrs) (code string, err error)
+		// MakeCompatible checks whether target is compatible with the source
+		// (same type, fields of different type, etc) and returns an error if
+		// target cannot be made compatible to the source. If no error, it returns
+		// the compatible source and target attributes with the updated transform
+		// attributes to make them compatible.
+		MakeCompatible(source, target *ContextualAttribute, ta *TransformAttrs, suffix string) (src, tgt *ContextualAttribute, newTA *TransformAttrs, err error)
+		Converter
+	}
+
+	// Referencer refers to a type.
+	Referencer interface {
+		// Name returns the type name.
+		Name() string
+		// Ref returns the reference to the type.
+		Ref() string
+	}
+
+	// Definer generates code that defines a type.
+	Definer interface {
+		// Def returns the code defining a type. Pointer and useDefault paramerters
+		// are used to determine if the type fields must be a pointer.
+		Def(pointer, useDefault bool) string
+	}
+
+	// Attributor is the interface implemented by code generators to generate
+	// code for an attribute type.
+	Attributor interface {
+		Scoper
+		Referencer
+		Definer
+		// Field produces a valid field name for the attribute type.
+		Field(name string, firstUpper bool) string
+		// Expr returns the underlying attribute expression.
+		Expr() *expr.AttributeExpr
+		// Dup creates a copy of the attributor by setting the underlying
+		// attribute expression.
+		Dup(*expr.AttributeExpr) Attributor
+	}
+
+	// Converter is the interface implemented by code generators to generate
+	// code to convert source attribute type to a target attribute type.
+	Converter interface {
+		// ConvertType produces code to initialze target attribute type from a
+		// source attribute type held by variable in sourceVar. It is not a
+		// recursive function.
+		ConvertType(source, target Attributor, sourceVar string) (code string)
+	}
+
+	// ContextualAttribute determines how an attribute behaves based on certain
+	// properties during code generation.
+	ContextualAttribute struct {
+		// Attribute is the attribute expression for which the code is generated.
+		Attribute Attributor
+		// NonPointer if true indicates that the attribute type is not generated
+		// as a pointer irrespective of whether the attribue is required or has
+		// a default value.
+		NonPointer bool
+		// Pointer if true indicates that the attribute type is generated as a
+		// pointer even if the attribute is required or has a default value.
+		// Array and map types are are always non-pointers. Object types are always
+		// pointers.
+		Pointer bool
+		// UseDefault if true indicates that attribute type must be a non-pointer
+		// if it has a default value except object type which is always a pointer.
+		UseDefault bool
+		// Required if true indicates that the attribute is required.
+		Required bool
 	}
 
 	// TransformAttrs are the attributes that help in the transformation.
@@ -55,16 +113,6 @@ type (
 		// NewVar is used to determine the assignment operator to initialize
 		// TargetVar.
 		NewVar bool
-	}
-
-	// AttributeTransformer defines the fields to transform a source attribute
-	// to a target attribute.
-	AttributeTransformer struct {
-		// HelperPrefix is the prefix for the helper functions generated during
-		// the transformation. The helper functions are named based on this
-		// pattern - <HelperPrefix><SourceTypeName>To<TargetTypeName>. If no prefix
-		// specified, "transform" is used as a prefix by default.
-		HelperPrefix string
 	}
 
 	// TransformFunctionData describes a helper function used to transform
@@ -92,29 +140,61 @@ type (
 	}
 )
 
-// Transform transforms source attribute to target attribute with the given
-// transformer and returns the transformation code and the helper functions
-// used in the transformation. It returns an error if source and target
-// attributes are not compatible for transformation.
-//
-// source, target are the source and target attributes used in transformation
-//
-// sourceVar and targetVar are the variable names used in the transformation
-//
-// t is the Transformer
-//
-func Transform(source, target AttributeAnalyzer, sourceVar, targetVar string, t Transformer) (string, []*TransformFunctionData, error) {
-	code, err := t.TransformAttribute(source, target, &TransformAttrs{SourceVar: sourceVar, TargetVar: targetVar, NewVar: true})
-	if err != nil {
-		return "", nil, err
-	}
+// NewGoContextAttr returns a default Go contextual attribute that produces Go
+// code.
+func NewGoContextAttr(att *expr.AttributeExpr, pkg string, scope *NameScope) *ContextualAttribute {
+	return &ContextualAttribute{Attribute: NewGoAttribute(att, pkg, scope)}
+}
 
-	funcs, err := t.TransformHelpers(source, target)
-	if err != nil {
-		return "", nil, err
+// IsPointer checks if the attribute type is a pointer. It returns false
+// if attribute type is an array, map, byte array, or an interface. If Pointer
+// property is true, IsPointer returns true. If NonPointer property is true,
+// IsPointer returns false. If both Pointer and NonPointer are false, the
+// following table shows how the attribute properties affect the return value
+//
+//    UseDefault | Required | IsPointer
+//         T     |     T    |     T
+//         F     |     F    |     T
+//         T     |     F    |     F if default value exists, else T
+//         F     |     T    |     T
+//
+func (c *ContextualAttribute) IsPointer() bool {
+	if dt := c.Attribute.Expr().Type.Kind(); dt == expr.BytesKind || dt == expr.AnyKind {
+		return false
 	}
+	if c.NonPointer {
+		return false
+	}
+	if c.Pointer {
+		return true
+	}
+	return !c.Required && c.DefaultValue() == nil
+}
 
-	return strings.TrimRight(code, "\n"), funcs, nil
+// DefaultValue returns the default value of the attribute type if UseDefault
+// is true. It returns nil otherwise.
+func (c *ContextualAttribute) DefaultValue() interface{} {
+	if c.UseDefault {
+		return c.Attribute.Expr().DefaultValue
+	}
+	return nil
+}
+
+// Def returns the attribute type definition.
+func (c *ContextualAttribute) Def() string {
+	return c.Attribute.Def(c.Pointer, c.UseDefault)
+}
+
+// Dup creates a shallow copy of the contextual attribute with the given
+// attributor and its requiredness.
+func (c *ContextualAttribute) Dup(attr *expr.AttributeExpr, required bool) *ContextualAttribute {
+	return &ContextualAttribute{
+		Attribute:  c.Attribute.Dup(attr),
+		Required:   required,
+		NonPointer: c.NonPointer,
+		Pointer:    c.Pointer,
+		UseDefault: c.UseDefault,
+	}
 }
 
 // IsCompatible returns an error if a and b are not both objects, both arrays,
@@ -160,36 +240,19 @@ func AppendHelpers(oldH, newH []*TransformFunctionData) []*TransformFunctionData
 	return oldH
 }
 
-// MakeCompatible checks whether source and target attributes are
-// compatible for transformation and returns an error if not. If no error
-// is returned, it returns the source and target attributes that are
-// compatible.
-func (t *AttributeTransformer) MakeCompatible(source, target AttributeAnalyzer, ta *TransformAttrs, suffix string) (src, tgt AttributeAnalyzer, newTA *TransformAttrs, err error) {
-	if err = IsCompatible(source.Attribute().Type, target.Attribute().Type, ta.SourceVar+suffix, ta.TargetVar+suffix); err != nil {
-		return source, target, ta, err
-	}
-	return source, target, ta, nil
-}
-
-// HelperName returns the name for the transform function.
-func (t *AttributeTransformer) HelperName(source, target AttributeAnalyzer) string {
+// HelperName returns the transformation function name to initialize a target
+// user type from an instance of a source user type.
+func HelperName(source, target Attributor, prefix string) string {
 	var (
-		sname  string
-		tname  string
-		prefix string
+		sname string
+		tname string
 	)
 	{
-		sname = Goify(source.Name(true), true)
-		tname = Goify(target.Name(true), true)
-		prefix = t.HelperPrefix
+		sname = Goify(source.Name(), true)
+		tname = Goify(target.Name(), true)
 		if prefix == "" {
 			prefix = "transform"
 		}
 	}
 	return Goify(prefix+sname+"To"+tname, false)
-}
-
-// ConvertType converts varn to type typ.
-func (t *AttributeTransformer) ConvertType(varn string, typ expr.DataType) (string, bool) {
-	return varn, false
 }

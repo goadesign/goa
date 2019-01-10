@@ -230,11 +230,9 @@ func ConvertFile(root *expr.RootExpr, service *expr.ServiceExpr) (*codegen.File,
 		t := reflect.TypeOf(c.External)
 		tgtPkg := t.String()
 		tgtPkg = tgtPkg[:strings.Index(tgtPkg, ".")]
-		srcAn := TypeAnalyzer(&expr.AttributeExpr{Type: c.User}, "", svc.Scope)
-		tgtAn := codegen.NewAttributeAnalyzer(
-			&expr.AttributeExpr{Type: dt},
-			false, false, false, false, tgtPkg, svc.Scope)
-		code, tf, err := codegen.GoTransform(srcAn, tgtAn, "t", "v", "transform")
+		srcCA := TypeContext(&expr.AttributeExpr{Type: c.User}, "", svc.Scope)
+		tgtCA := codegen.NewGoContextAttr(&expr.AttributeExpr{Type: dt}, tgtPkg, svc.Scope)
+		code, tf, err := codegen.GoTransform(srcCA, tgtCA, "t", "v", "transform")
 		if err != nil {
 			return nil, err
 		}
@@ -247,7 +245,7 @@ func ConvertFile(root *expr.RootExpr, service *expr.ServiceExpr) (*codegen.File,
 		}
 		data := ConvertData{
 			Name:            name,
-			ReceiverTypeRef: svc.Scope.GoTypeRef(&expr.AttributeExpr{Type: c.User}),
+			ReceiverTypeRef: srcCA.Attribute.Ref(),
 			TypeName:        t.Name(),
 			TypeRef:         ref,
 			Code:            code,
@@ -268,11 +266,9 @@ func ConvertFile(root *expr.RootExpr, service *expr.ServiceExpr) (*codegen.File,
 		t := reflect.TypeOf(c.External)
 		srcPkg := t.String()
 		srcPkg = srcPkg[:strings.Index(srcPkg, ".")]
-		srcAn := codegen.NewAttributeAnalyzer(
-			&expr.AttributeExpr{Type: dt},
-			false, false, false, false, srcPkg, svc.Scope)
-		tgtAn := TypeAnalyzer(&expr.AttributeExpr{Type: c.User}, "", svc.Scope)
-		code, tf, err := codegen.GoTransform(srcAn, tgtAn, "v", "temp", "transform")
+		srcCA := codegen.NewGoContextAttr(&expr.AttributeExpr{Type: dt}, srcPkg, svc.Scope)
+		tgtCA := TypeContext(&expr.AttributeExpr{Type: c.User}, "", svc.Scope)
+		code, tf, err := codegen.GoTransform(srcCA, tgtCA, "v", "temp", "transform")
 		if err != nil {
 			return nil, err
 		}
@@ -285,7 +281,7 @@ func ConvertFile(root *expr.RootExpr, service *expr.ServiceExpr) (*codegen.File,
 		}
 		data := ConvertData{
 			Name:            name,
-			ReceiverTypeRef: svc.Scope.GoTypeRef(&expr.AttributeExpr{Type: c.User}),
+			ReceiverTypeRef: tgtCA.Attribute.Ref(),
 			TypeRef:         ref,
 			Code:            code,
 		}

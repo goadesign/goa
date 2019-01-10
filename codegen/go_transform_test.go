@@ -4,7 +4,18 @@ import (
 	"testing"
 
 	"goa.design/goa/codegen/testdata"
+	"goa.design/goa/expr"
 )
+
+func defaultContext(typ expr.DataType, pkg string, scope *NameScope) *ContextualAttribute {
+	att := NewGoAttribute(&expr.AttributeExpr{Type: typ}, pkg, scope)
+	return NewUseDefaultContext(att)
+}
+
+func pointerContext(typ expr.DataType, pkg string, scope *NameScope) *ContextualAttribute {
+	att := NewGoAttribute(&expr.AttributeExpr{Type: typ}, pkg, scope)
+	return NewPointerContext(att)
+}
 
 func TestGoTransform(t *testing.T) {
 	root := RunDSL(t, testdata.TestTypesDSL)
@@ -39,44 +50,44 @@ func TestGoTransform(t *testing.T) {
 		rtCol      = root.UserType("ResultTypeCollection")
 
 		// attribute analyzers used in test cases
-		simpleUseDefault         = NewUseDefaultAnalyzer(simple, "", scope)
-		requiredUseDefault       = NewUseDefaultAnalyzer(required, "", scope)
-		superUseDefault          = NewUseDefaultAnalyzer(super, "", scope)
-		defaultTUseDefault       = NewUseDefaultAnalyzer(defaultT, "", scope)
-		simpleMapUseDefault      = NewUseDefaultAnalyzer(simpleMap, "", scope)
-		requiredMapUseDefault    = NewUseDefaultAnalyzer(requiredMap, "", scope)
-		defaultMapUseDefault     = NewUseDefaultAnalyzer(defaultMap, "", scope)
-		nestedMapUseDefault      = NewUseDefaultAnalyzer(nestedMap, "", scope)
-		typeMapUseDefault        = NewUseDefaultAnalyzer(typeMap, "", scope)
-		arrayMapUseDefault       = NewUseDefaultAnalyzer(arrayMap, "", scope)
-		simpleArrayUseDefault    = NewUseDefaultAnalyzer(simpleArray, "", scope)
-		requiredArrayUseDefault  = NewUseDefaultAnalyzer(requiredArray, "", scope)
-		defaultArrayUseDefault   = NewUseDefaultAnalyzer(defaultArray, "", scope)
-		nestedArrayUseDefault    = NewUseDefaultAnalyzer(nestedArray, "", scope)
-		typeArrayUseDefault      = NewUseDefaultAnalyzer(typeArray, "", scope)
-		mapArrayUseDefault       = NewUseDefaultAnalyzer(mapArray, "", scope)
-		recursiveUseDefault      = NewUseDefaultAnalyzer(recursive, "", scope)
-		compositeUseDefault      = NewUseDefaultAnalyzer(composite, "", scope)
-		customFieldUseDefault    = NewUseDefaultAnalyzer(customField, "", scope)
-		customFieldPkgUseDefault = NewUseDefaultAnalyzer(customField, "mypkg", scope)
-		resultTypeUseDefault     = NewUseDefaultAnalyzer(resultType, "", scope)
-		rtColUseDefault          = NewUseDefaultAnalyzer(rtCol, "", scope)
+		simpleUseDefault         = defaultContext(simple, "", scope)
+		requiredUseDefault       = defaultContext(required, "", scope)
+		superUseDefault          = defaultContext(super, "", scope)
+		defaultTUseDefault       = defaultContext(defaultT, "", scope)
+		simpleMapUseDefault      = defaultContext(simpleMap, "", scope)
+		requiredMapUseDefault    = defaultContext(requiredMap, "", scope)
+		defaultMapUseDefault     = defaultContext(defaultMap, "", scope)
+		nestedMapUseDefault      = defaultContext(nestedMap, "", scope)
+		typeMapUseDefault        = defaultContext(typeMap, "", scope)
+		arrayMapUseDefault       = defaultContext(arrayMap, "", scope)
+		simpleArrayUseDefault    = defaultContext(simpleArray, "", scope)
+		requiredArrayUseDefault  = defaultContext(requiredArray, "", scope)
+		defaultArrayUseDefault   = defaultContext(defaultArray, "", scope)
+		nestedArrayUseDefault    = defaultContext(nestedArray, "", scope)
+		typeArrayUseDefault      = defaultContext(typeArray, "", scope)
+		mapArrayUseDefault       = defaultContext(mapArray, "", scope)
+		recursiveUseDefault      = defaultContext(recursive, "", scope)
+		compositeUseDefault      = defaultContext(composite, "", scope)
+		customFieldUseDefault    = defaultContext(customField, "", scope)
+		customFieldPkgUseDefault = defaultContext(customField, "mypkg", scope)
+		resultTypeUseDefault     = defaultContext(resultType, "", scope)
+		rtColUseDefault          = defaultContext(rtCol, "", scope)
 
-		simplePointer        = NewPointerAnalyzer(simple, "", scope)
-		requiredPointer      = NewPointerAnalyzer(required, "", scope)
-		superPointer         = NewPointerAnalyzer(super, "", scope)
-		defaultTPointer      = NewPointerAnalyzer(defaultT, "", scope)
-		requiredMapPointer   = NewPointerAnalyzer(requiredMap, "", scope)
-		defaultMapPointer    = NewPointerAnalyzer(defaultMap, "", scope)
-		requiredArrayPointer = NewPointerAnalyzer(requiredArray, "", scope)
-		defaultArrayPointer  = NewPointerAnalyzer(defaultArray, "", scope)
-		recursivePointer     = NewPointerAnalyzer(recursive, "", scope)
-		customFieldPointer   = NewPointerAnalyzer(customField, "", scope)
+		simplePointer        = pointerContext(simple, "", scope)
+		requiredPointer      = pointerContext(required, "", scope)
+		superPointer         = pointerContext(super, "", scope)
+		defaultTPointer      = pointerContext(defaultT, "", scope)
+		requiredMapPointer   = pointerContext(requiredMap, "", scope)
+		defaultMapPointer    = pointerContext(defaultMap, "", scope)
+		requiredArrayPointer = pointerContext(requiredArray, "", scope)
+		defaultArrayPointer  = pointerContext(defaultArray, "", scope)
+		recursivePointer     = pointerContext(recursive, "", scope)
+		customFieldPointer   = pointerContext(customField, "", scope)
 	)
 	tc := map[string][]struct {
 		Name   string
-		Source AttributeAnalyzer
-		Target AttributeAnalyzer
+		Source *ContextualAttribute
+		Target *ContextualAttribute
 		Code   string
 	}{
 		// source and target type use default

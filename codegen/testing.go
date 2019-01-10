@@ -118,16 +118,26 @@ func Diff(t *testing.T, s1, s2 string) string {
 	return strings.Replace(string(diffb), "\t", " ␉ ", -1)
 }
 
-// NewUseDefaultAnalyzer returns an attribute analyzer which uses non-pointers
+// NewUseDefaultContext returns a contextual attribute which uses non-pointers
 // for attributes with default values. It is used only in tests.
-func NewUseDefaultAnalyzer(dt expr.DataType, pkg string, scope *NameScope) AttributeAnalyzer {
-	return NewAttributeAnalyzer(&expr.AttributeExpr{Type: dt}, true, false, false, true, pkg, scope)
+func NewUseDefaultContext(att Attributor) *ContextualAttribute {
+	return &ContextualAttribute{
+		Attribute:  att,
+		Required:   true,
+		Pointer:    false,
+		UseDefault: true,
+	}
 }
 
-// NewPointerAnalyzer returns an attribute analyzer which uses pointers for all
+// NewPointerContext returns a contextual attribute which uses pointers for all
 // attributes.
-func NewPointerAnalyzer(dt expr.DataType, pkg string, scope *NameScope) AttributeAnalyzer {
-	return NewAttributeAnalyzer(&expr.AttributeExpr{Type: dt}, false, true, false, false, pkg, scope)
+func NewPointerContext(att Attributor) *ContextualAttribute {
+	return &ContextualAttribute{
+		Attribute:  att,
+		Required:   false,
+		Pointer:    true,
+		UseDefault: false,
+	}
 }
 
 // CreateTempFile creates a temporary file and writes the given content.
