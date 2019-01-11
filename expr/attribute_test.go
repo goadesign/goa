@@ -571,3 +571,81 @@ func TestAttributeExprHasDefaultValue(t *testing.T) {
 		}
 	}
 }
+
+func TestValidationExprHasRequiredOnly(t *testing.T) {
+	var (
+		values    = []interface{}{"foo"}
+		pattern   = "^foo$"
+		minimum   = 1.1
+		maximum   = 2.2
+		minLength = 2
+		maxLength = 3
+	)
+	cases := map[string]struct {
+		values    []interface{}
+		format    ValidationFormat
+		pattern   string
+		minimum   *float64
+		maximum   *float64
+		minLength *int
+		maxLength *int
+		expected  bool
+	}{
+		"has required only": {
+			expected: true,
+		},
+		"values is not nil": {
+			values:   values,
+			expected: false,
+		},
+		"format is not empty": {
+			format:   FormatDate,
+			expected: false,
+		},
+		"pattern is not empty": {
+			pattern:  pattern,
+			expected: false,
+		},
+		"minimum is not nil": {
+			minimum:  &minimum,
+			expected: false,
+		},
+		"maximum is not nil": {
+			maximum:  &maximum,
+			expected: false,
+		},
+		"min length is not nil": {
+			minLength: &minLength,
+			expected:  false,
+		},
+		"max length is not nil": {
+			maxLength: &maxLength,
+			expected:  false,
+		},
+		"complex validation": {
+			values:    values,
+			format:    FormatDate,
+			pattern:   pattern,
+			minimum:   &minimum,
+			maximum:   &maximum,
+			minLength: &minLength,
+			maxLength: &maxLength,
+			expected:  false,
+		},
+	}
+
+	for k, tc := range cases {
+		validation := &ValidationExpr{
+			Values:    tc.values,
+			Format:    tc.format,
+			Pattern:   tc.pattern,
+			Minimum:   tc.minimum,
+			Maximum:   tc.maximum,
+			MinLength: tc.minLength,
+			MaxLength: tc.maxLength,
+		}
+		if actual := validation.HasRequiredOnly(); tc.expected != actual {
+			t.Errorf("%s: got %#v, expected %#v", k, actual, tc.expected)
+		}
+	}
+}
