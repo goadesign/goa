@@ -114,7 +114,7 @@ For example:
     })
 
     var _ = Service("name", func() {
-    		Method("name", func() {
+        Method("name", func() {
            Payload(PayloadType)
            Result(ResultType)       // has attributes rp1 and rp2
            Error("name")
@@ -135,7 +135,8 @@ For example:
                        Attribute("rp2") // rp2 present in gRPC response message
                    })
                })
-               Response("name", CodeInternal)
+               Response("name", CodeInternal) // responds with error message
+                                              // defined by error "name"
            })
     	  })
     })

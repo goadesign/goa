@@ -23,7 +23,7 @@ import (
 //
 // Headers accepts one argument: Either a function listing the headers (both
 // HTTP and gRPC) or a user type which must be an object and whose attributes
-// define the headers (only HTTP).
+// define the headers (HTTP only).
 //
 // Example:
 //

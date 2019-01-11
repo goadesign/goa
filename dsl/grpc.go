@@ -58,7 +58,7 @@ const (
 // appear in the request or response types. The functions may also define new
 // attributes or override the existing request or response type attributes.
 //
-// GRPC must appear in a Service or a Method expression.
+// GRPC must appear in a API, Service or a Method expression.
 //
 // GRPC accepts a single argument which is the defining DSL function.
 //
@@ -106,16 +106,16 @@ func GRPC(fn func()) {
 
 // Message describes a gRPC request or response message.
 //
-// Message must appear in a Method gRPC endpoint expression to define the
-// attributes that must appear in a request or in a gRPC response expression
-// to define the attributes that must appear in a response message.
+// Message must appear in a gRPC method expression to define the
+// attributes that must appear in a request message or in a gRPC response
+// expression to define the attributes that must appear in a response message.
 // If Message is absent then the request message is built using the method
-// Payload expression and the response message is build using the method
-// Result expression.
+// payload expression and the response message is built using the method
+// result expression.
 //
 // Message accepts one argument of function type which lists the attributes
-// that must be present in the message. For example, the Message DSL can be
-// defined on the gRPC endpoint expression listing the security attributes
+// that must be present in the message. For example, the Message function can
+// be defined on the gRPC method expression listing the security attributes
 // to appear in the request message instead of sending them in the gRPC
 // metadata by default. The attributes listed in the function inherit the
 // properties (description, type, meta, validations etc.) of the request or
@@ -154,10 +154,10 @@ func GRPC(fn func()) {
 //         })
 //     })
 //
-// If the method Payload/Result type is a primitive, array, or a map the
+// If the method payload/result type is a primitive, array, or a map the
 // request/response message by default contains one attribute with name
 // "field", "rpc:tag" set to 1, and the type set to the type of the
-// method Payload/Result. The function argument can also be used to set
+// method payload/result. The function argument can also be used to set
 // the message field name to something other than "field".
 //
 // Example:
@@ -169,7 +169,8 @@ func GRPC(fn func()) {
 //             Response(CodeOK, func()
 //                 Message(func() {
 //                     Attribute("sum") // Response message has one field with
-//                                      // name "sum" instead of "field"
+//                                      // name "sum" instead of the default
+//                                      // "field"
 //                 })
 //             })
 //         })
@@ -210,9 +211,9 @@ func Message(fn func()) {
 // Metadata must appear in a gRPC endpoint expression to describe gRPC request
 // metadata.
 //
-// Security attributes in the method Payload are automatically added to the
+// Security attributes in the method payload are automatically added to the
 // request metadata unless specified explicitly in request message using
-// Message DSL. All other attributes in method Payload are added to the
+// Message function. All other attributes in method payload are added to the
 // request message unless specified explicitly using Metadata (in which case
 // will be added to the metadata).
 //
@@ -220,7 +221,7 @@ func Message(fn func()) {
 // that must be set in the request metadata instead of the message.
 // If Metadata is set in the gRPC endpoint expression, it inherits the
 // attribute properties (description, type, meta, validations etc.) from the
-// method Payload.
+// method payload.
 //
 // Example:
 //
@@ -271,7 +272,7 @@ func Metadata(fn func()) {
 // that must be set in the trailer response metadata instead of the message.
 // If Trailers is set in the gRPC response expression, it inherits the
 // attribute properties (description, type, meta, validations etc.) from the
-// method Result.
+// method result.
 //
 // Example:
 //
