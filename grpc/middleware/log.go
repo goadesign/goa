@@ -7,6 +7,7 @@ import (
 	"encoding/base64"
 	"fmt"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
 	"io"
 	"log"
@@ -19,7 +20,7 @@ type (
 	Logger interface {
 		// Log creates a log entry using a sequence of alternating keys
 		// and values.
-		Log(keyvals ...interface{})
+		Log(keyvals ...interface{}) error
 	}
 
 	// adapter is a thin wrapper around the stdlib logger that adapts it to
@@ -38,10 +39,18 @@ type (
 // response gRPC status code, message length (in bytes), and timing information.
 func Log(l Logger) grpc.UnaryServerInterceptor {
 	return grpc.UnaryServerInterceptor(func(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (resp interface{}, err error) {
-		reqID := ctx.Value(RequestIDKey)
-		if reqID == nil {
-			reqID = shortID()
+		var reqID string
+		{
+			md, ok := metadata.FromIncomingContext(ctx)
+			if !ok {
+				md = metadata.MD{}
+			}
+			reqID = MetadataValue(md, RequestIDMetadataKey)
+			if reqID == "" {
+				reqID = shortID()
+			}
 		}
+
 		started := time.Now()
 
 		// before executing rpc
@@ -65,7 +74,7 @@ func NewLogger(l *log.Logger) Logger {
 	return &adapter{l}
 }
 
-func (a *adapter) Log(keyvals ...interface{}) {
+func (a *adapter) Log(keyvals ...interface{}) error {
 	n := (len(keyvals) + 1) / 2
 	if len(keyvals)%2 != 0 {
 		keyvals = append(keyvals, "MISSING")
@@ -79,6 +88,7 @@ func (a *adapter) Log(keyvals ...interface{}) {
 		fm.WriteString(fmt.Sprintf(" %s=%%+v", k))
 	}
 	a.Logger.Printf(fm.String(), vals...)
+	return nil
 }
 
 // shortID produces a " unique" 6 bytes long string.

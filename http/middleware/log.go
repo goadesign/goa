@@ -7,6 +7,8 @@ import (
 	"net"
 	"net/http"
 	"time"
+
+	"goa.design/goa/middleware"
 )
 
 type (
@@ -38,7 +40,7 @@ type (
 func Log(l Logger) func(h http.Handler) http.Handler {
 	return func(h http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			reqID := r.Context().Value(RequestIDKey)
+			reqID := r.Context().Value(middleware.RequestIDKey)
 			if reqID == nil {
 				reqID = shortID()
 			}
