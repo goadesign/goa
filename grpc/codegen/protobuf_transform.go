@@ -1,7 +1,6 @@
 package codegen
 
 import (
-	"bytes"
 	"fmt"
 	"strings"
 
@@ -228,12 +227,11 @@ func (p *protoBufTransformer) TransformArray(source, target *codegen.ContextualA
 		"TargetVar":   ta.TargetVar,
 		"NewVar":      ta.NewVar,
 	}
-	var buf bytes.Buffer
-	if err := codegen.TransformGoArrayT.Execute(&buf, data); err != nil {
+	c, err := codegen.RunGoArrayTemplate(data)
+	if err != nil {
 		return "", err
 	}
-	code += buf.String()
-	return code, nil
+	return code + c, nil
 }
 
 // transformMap returns the code to transform source attribute of map
@@ -309,10 +307,9 @@ func (p *protoBufTransformer) TransformMap(source, target *codegen.ContextualAtt
 		"NewVar":      ta.NewVar,
 		"TargetMap":   targetMap,
 	}
-	var buf bytes.Buffer
-	if err := codegen.TransformGoMapT.Execute(&buf, data); err != nil {
+	c, err := codegen.RunGoMapTemplate(data)
+	if err != nil {
 		return "", err
 	}
-	code += buf.String()
-	return code, nil
+	return code + c, nil
 }

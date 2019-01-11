@@ -10,21 +10,21 @@ import (
 )
 
 var (
-	// TransformGoArrayT is the template to generate Go array transformation
+	// transformGoArrayT is the template to generate Go array transformation
 	// code.
-	TransformGoArrayT *template.Template
+	transformGoArrayT *template.Template
 	// TransformGoMapT is the template to generate Go map transformation
 	// code.
-	TransformGoMapT *template.Template
+	transformGoMapT *template.Template
 )
 
 // NOTE: can't initialize inline because https://github.com/golang/go/issues/1817
 func init() {
-	TransformGoArrayT = template.Must(template.New("transformGoArray").Funcs(template.FuncMap{
+	transformGoArrayT = template.Must(template.New("transformGoArray").Funcs(template.FuncMap{
 		"transformAttribute": transformAttributeHelper,
 		"loopVar":            arrayLoopVar,
 	}).Parse(transformGoArrayTmpl))
-	TransformGoMapT = template.Must(template.New("transformGoMap").Funcs(template.FuncMap{
+	transformGoMapT = template.Must(template.New("transformGoMap").Funcs(template.FuncMap{
 		"transformAttribute": transformAttributeHelper,
 		"loopVar":            mapLoopVar,
 	}).Parse(transformGoMapTmpl))
@@ -389,8 +389,13 @@ func (g *goTransformer) TransformArray(source, target *ContextualAttribute, ta *
 		"TargetVar":   ta.TargetVar,
 		"NewVar":      ta.NewVar,
 	}
+	return RunGoArrayTemplate(data)
+}
+
+// RunGoArrayTemplate runs the template to generate Go array code.
+func RunGoArrayTemplate(data map[string]interface{}) (string, error) {
 	var buf bytes.Buffer
-	if err := TransformGoArrayT.Execute(&buf, data); err != nil {
+	if err := transformGoArrayT.Execute(&buf, data); err != nil {
 		return "", err
 	}
 	return buf.String(), nil
@@ -437,8 +442,13 @@ func (g *goTransformer) TransformMap(source, target *ContextualAttribute, ta *Tr
 		"NewVar":      ta.NewVar,
 		"TargetMap":   targetMap,
 	}
+	return RunGoMapTemplate(data)
+}
+
+// RunGoMapTemplate runs the template to generate Go map code.
+func RunGoMapTemplate(data map[string]interface{}) (string, error) {
 	var buf bytes.Buffer
-	if err := TransformGoMapT.Execute(&buf, data); err != nil {
+	if err := transformGoMapT.Execute(&buf, data); err != nil {
 		return "", err
 	}
 	return buf.String(), nil
