@@ -95,7 +95,23 @@ func GoTransform(source, target *ContextualAttribute, sourceVar, targetVar, pref
 	return strings.TrimRight(code, "\n"), funcs, nil
 }
 
-// GoObjectTransform TODO
+// GoObjectTransform produces Go code that initializes the data structure
+// defined by target object type from an instance of the data structure
+// defined by source object type. The algorithm matches object fields by
+// name and ignores object fields in target that don't have a match in source.
+// The matching and generated code leverage mapped attributes so that attribute
+// names may use the "name:elem" syntax to define the name of the design
+// attribute and the name of the corresponding generated Go struct field.
+// The function returns an error if source or target are not object types
+// or has fields of different types.
+//
+// source and target are the attributes of object type used in the
+// transformation
+//
+// ta is the transform attributes used in the transformation code
+//
+// t is the transformer used to transform source to target
+//
 func GoObjectTransform(source, target *ContextualAttribute, ta *TransformAttrs, t Transformer) (string, error) {
 	if t := source.Attribute.Expr().Type; !expr.IsObject(t) {
 		return "", fmt.Errorf("source is not an object type: received %T", t)
