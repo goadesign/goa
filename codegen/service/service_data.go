@@ -1491,9 +1491,9 @@ func walkViewAttrs(obj *expr.Object, view *expr.ViewExpr, walker func(name strin
 
 const (
 	initTypeCodeT = `{{- if or .ToResult .ToViewed -}}
-  var {{ .ReturnVar }} {{ .ReturnTypeRef }}
-  switch {{ if .ToResult }}{{ .ArgVar }}.View{{ else }}view{{ end }} {
-  {{- range .Views }}
+	var {{ .ReturnVar }} {{ .ReturnTypeRef }}
+	switch {{ if .ToResult }}{{ .ArgVar }}.View{{ else }}view{{ end }} {
+	{{- range .Views }}
 		case {{ printf "%q" .Name }}{{ if eq .Name "default" }}, ""{{ end }}:
 			{{- if $.ToViewed }}
 				p := {{ $.InitName }}{{ if ne .Name "default" }}{{ goify .Name true }}{{ end }}({{ $.ArgVar }})
@@ -1501,8 +1501,8 @@ const (
 			{{- else }}
 				{{ $.ReturnVar }} = {{ $.InitName }}{{ if ne .Name "default" }}{{ goify .Name true }}{{ end }}({{ $.ArgVar }}.Projected)
 			{{- end }}
-  {{- end }}
-  }
+	{{- end }}
+	}
 {{- else if .IsCollection -}}
 	{{ .ReturnVar }} := make({{ .TargetType }}, len({{ .ArgVar }}))
 	for i, n := range {{ .ArgVar }} {
@@ -1510,11 +1510,11 @@ const (
 	}
 {{- else -}}
 	{{ .Code }}
-  {{- range .Fields }}
+	{{- range .Fields }}
 		if {{ $.Source }}.{{ .VarName }} != nil {
 			{{ $.Target }}.{{ .VarName }} = {{ .FieldInit }}({{ $.Source }}.{{ .VarName }})
 		}
-  {{- end }}
+	{{- end }}
 {{- end }}
 return {{ .ReturnVar }}`
 

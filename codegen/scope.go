@@ -23,8 +23,7 @@ type (
 		Hash() string
 	}
 
-	// Scoper is the interface implemented by the objects that must use
-	// name scope to generate unique names.
+	// Scoper provides a scope for generating unique names.
 	Scoper interface {
 		Scope() *NameScope
 	}

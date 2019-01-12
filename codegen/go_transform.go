@@ -30,6 +30,38 @@ func init() {
 	}).Parse(transformGoMapTmpl))
 }
 
+type (
+	// GoAttribute represents an attribute type that produces Go code.
+	GoAttribute struct {
+		// Attribute is the underlying attribute expression.
+		Attribute *expr.AttributeExpr
+		// Pkg is the package name where the attribute type exists.
+		Pkg string
+		// NameScope is the named scope to produce unique reference to the attribute.
+		NameScope *NameScope
+	}
+
+	// goTransformer is a Transformer that generates Go code for converting a
+	// data structure represented as an attribute expression into a different data
+	// structure also represented as an attribute expression.
+	goTransformer struct {
+		// helperPrefix is the prefix for the helper functions generated during
+		// the transformation. The helper functions are named based on this
+		// pattern - <helperPrefix><SourceTypeName>To<TargetTypeName>. If no prefix
+		// specified, "transform" is used as a prefix by default.
+		helperPrefix string
+	}
+)
+
+// NewGoAttribute returns an attribute that produces Go code.
+func NewGoAttribute(att *expr.AttributeExpr, pkg string, scope *NameScope) Attributor {
+	return &GoAttribute{
+		Attribute: att,
+		Pkg:       pkg,
+		NameScope: scope,
+	}
+}
+
 // GoTransform produces Go code that initializes the data structure defined
 // by target from an instance of the data structure described by source.
 // The data structures can be objects, arrays or maps. The algorithm
@@ -271,15 +303,40 @@ func GoTransformHelpers(source, target *ContextualAttribute, t Transformer, pref
 	return helpers, nil
 }
 
-// goTransformer is a Transformer that generates Go code for converting a
-// data structure represented as an attribute expression into a different data
-// structure also represented as an attribute expression.
-type goTransformer struct {
-	// helperPrefix is the prefix for the helper functions generated during
-	// the transformation. The helper functions are named based on this
-	// pattern - <helperPrefix><SourceTypeName>To<TargetTypeName>. If no prefix
-	// specified, "transform" is used as a prefix by default.
-	helperPrefix string
+// Name returns a valid Go type name for the attribute.
+func (g *GoAttribute) Name() string {
+	return g.NameScope.GoFullTypeName(g.Attribute, g.Pkg)
+}
+
+// Ref returns a valid Go reference to the attribute.
+func (g *GoAttribute) Ref() string {
+	return g.NameScope.GoFullTypeRef(g.Attribute, g.Pkg)
+}
+
+// Scope returns the name scope.
+func (g *GoAttribute) Scope() *NameScope {
+	return g.NameScope
+}
+
+// Expr returns the underlying attribute expression.
+func (g *GoAttribute) Expr() *expr.AttributeExpr {
+	return g.Attribute
+}
+
+// Dup creates a copy of GoAttribute by setting the underlying attribute
+// expression.
+func (g *GoAttribute) Dup(att *expr.AttributeExpr) Attributor {
+	return &GoAttribute{Attribute: att, Pkg: g.Pkg, NameScope: g.NameScope}
+}
+
+// Field returns a valid Go field name for the attribute.
+func (g *GoAttribute) Field(name string, firstUpper bool) string {
+	return GoifyAtt(g.Attribute, name, firstUpper)
+}
+
+// Def returns a valid Go definition for the attribute.
+func (g *GoAttribute) Def(pointer, useDefault bool) string {
+	return g.NameScope.GoTypeDef(g.Attribute, pointer, useDefault)
 }
 
 // MakeCompatible checks if target can be transformed to source.
@@ -452,61 +509,6 @@ func RunGoMapTemplate(data map[string]interface{}) (string, error) {
 		return "", err
 	}
 	return buf.String(), nil
-}
-
-// GoAttribute represents an attribute type that produces Go code.
-type GoAttribute struct {
-	// Attribute is the underlying attribute expression.
-	Attribute *expr.AttributeExpr
-	// Pkg is the package name where the attribute type exists.
-	Pkg string
-	// NameScope is the named scope to produce unique reference to the attribute.
-	NameScope *NameScope
-}
-
-// NewGoAttribute returns an attribute that produces Go code.
-func NewGoAttribute(att *expr.AttributeExpr, pkg string, scope *NameScope) Attributor {
-	return &GoAttribute{
-		Attribute: att,
-		Pkg:       pkg,
-		NameScope: scope,
-	}
-}
-
-// Name returns a valid Go type name for the attribute.
-func (g *GoAttribute) Name() string {
-	return g.NameScope.GoFullTypeName(g.Attribute, g.Pkg)
-}
-
-// Ref returns a valid Go reference to the attribute.
-func (g *GoAttribute) Ref() string {
-	return g.NameScope.GoFullTypeRef(g.Attribute, g.Pkg)
-}
-
-// Scope returns the name scope.
-func (g *GoAttribute) Scope() *NameScope {
-	return g.NameScope
-}
-
-// Expr returns the underlying attribute expression.
-func (g *GoAttribute) Expr() *expr.AttributeExpr {
-	return g.Attribute
-}
-
-// Dup creates a copy of GoAttribute by setting the underlying attribute
-// expression.
-func (g *GoAttribute) Dup(att *expr.AttributeExpr) Attributor {
-	return &GoAttribute{Attribute: att, Pkg: g.Pkg, NameScope: g.NameScope}
-}
-
-// Field returns a valid Go field name for the attribute.
-func (g *GoAttribute) Field(name string, firstUpper bool) string {
-	return GoifyAtt(g.Attribute, name, firstUpper)
-}
-
-// Def returns a valid Go definition for the attribute.
-func (g *GoAttribute) Def(pointer, useDefault bool) string {
-	return g.NameScope.GoTypeDef(g.Attribute, pointer, useDefault)
 }
 
 // collectHelpers recursively traverses the given attributes and return the
