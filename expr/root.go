@@ -129,6 +129,25 @@ func (r *RootExpr) WalkSets(walk eval.SetWalker) {
 	walk(httpsvcs)
 	walk(httpepts)
 	walk(httpsvrs)
+
+	// GRPC services and endpoints
+	grpcsvcs := make(eval.ExpressionSet, len(r.API.GRPC.Services))
+	sort.SliceStable(r.API.GRPC.Services, func(i, j int) bool {
+		if r.API.GRPC.Services[j].ParentName == r.API.GRPC.Services[i].Name() {
+			return true
+		}
+		return false
+	})
+	var grpcepts eval.ExpressionSet
+	for i, svc := range r.API.GRPC.Services {
+		grpcsvcs[i] = svc
+		for _, e := range svc.GRPCEndpoints {
+			grpcepts = append(grpcepts, e)
+		}
+	}
+	walk(eval.ExpressionSet{r.API.GRPC})
+	walk(grpcsvcs)
+	walk(grpcepts)
 }
 
 // DependsOn returns nil, the core DSL has no dependency.
@@ -246,4 +265,30 @@ func (m MetaExpr) Dup() MetaExpr {
 		d[k] = v
 	}
 	return d
+}
+
+// Merge merges src meta expression with m. If meta has intersecting set of
+// keys on both m and src, then the values for those keys in src is appended
+// to the values of the keys in m if not already existing.
+func (m MetaExpr) Merge(src MetaExpr) {
+	for k, vals := range src {
+		if mvals, ok := m[k]; ok {
+			var found bool
+			for _, v := range vals {
+				found = false
+				for _, mv := range mvals {
+					if mv == v {
+						found = true
+						break
+					}
+				}
+				if !found {
+					mvals = append(mvals, v)
+				}
+			}
+			m[k] = mvals
+		} else {
+			m[k] = vals
+		}
+	}
 }

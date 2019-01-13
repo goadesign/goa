@@ -38,6 +38,9 @@ type (
 		Requirements []*SecurityExpr
 		// HTTP contains the HTTP specific API level expressions.
 		HTTP *HTTPExpr
+		// GRPC contains the gRPC specific API level expressions.
+		GRPC *GRPCExpr
+
 		// random generator used to build examples for the API types.
 		random *Random
 	}
@@ -74,6 +77,7 @@ func NewAPIExpr(name string, dsl func()) *APIExpr {
 	return &APIExpr{
 		Name:    name,
 		HTTP:    new(HTTPExpr),
+		GRPC:    new(GRPCExpr),
 		DSLFunc: dsl,
 	}
 }

@@ -8,7 +8,7 @@ import (
 
 // RunHTTPDSL returns the http DSL root resulting from running the given DSL.
 func RunHTTPDSL(t *testing.T, dsl func()) *RootExpr {
-	setupHTTPDSLRun()
+	setupDSLRun()
 
 	// run DSL (first pass)
 	if !eval.Execute(dsl, nil) {
@@ -26,7 +26,7 @@ func RunHTTPDSL(t *testing.T, dsl func()) *RootExpr {
 
 // RunInvalidHTTPDSL returns the error resulting from running the given DSL.
 func RunInvalidHTTPDSL(t *testing.T, dsl func()) error {
-	setupHTTPDSLRun()
+	setupDSLRun()
 
 	// run DSL (first pass)
 	if !eval.Execute(dsl, nil) {
@@ -44,7 +44,25 @@ func RunInvalidHTTPDSL(t *testing.T, dsl func()) error {
 	return nil
 }
 
-func setupHTTPDSLRun() {
+// RunGRPCDSL returns the gRPC DSL root resulting from running the given DSL.
+func RunGRPCDSL(t *testing.T, dsl func()) *RootExpr {
+	setupDSLRun()
+
+	// run DSL (first pass)
+	if !eval.Execute(dsl, nil) {
+		t.Fatal(eval.Context.Error())
+	}
+
+	// run DSL (second pass)
+	if err := eval.RunDSL(); err != nil {
+		t.Fatal(err)
+	}
+
+	// return generated root
+	return Root
+}
+
+func setupDSLRun() {
 	// reset all roots and codegen data structures
 	eval.Reset()
 	Root = new(RootExpr)
