@@ -5,6 +5,7 @@ import (
 	"net/url"
 	"regexp"
 	"sort"
+	"strings"
 
 	"goa.design/goa/eval"
 )
@@ -177,8 +178,20 @@ func (h *HostExpr) Attribute() *AttributeExpr {
 func (h *HostExpr) Schemes() []string {
 	schemes := make(map[string]struct{})
 	for _, uri := range h.URIs {
-		if u, err := url.Parse(string(uri)); err == nil && u.Scheme != "" {
-			schemes[u.Scheme] = struct{}{}
+		ustr := string(uri)
+		// Did not use url package to find scheme because the url may
+		// contain params (i.e. http://{version}.example.com) which needs
+		// substition for url.Parse to succeed. Also URIs in host must have
+		// a scheme otherwise validations would have failed.
+		switch {
+		case strings.HasPrefix(ustr, "https"):
+			schemes["https"] = struct{}{}
+		case strings.HasPrefix(ustr, "http"):
+			schemes["http"] = struct{}{}
+		case strings.HasPrefix(ustr, "grpcs"):
+			schemes["grpcs"] = struct{}{}
+		case strings.HasPrefix(ustr, "grpc"):
+			schemes["grpc"] = struct{}{}
 		}
 	}
 	ss := make([]string, len(schemes))
