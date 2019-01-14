@@ -827,7 +827,7 @@ var PayloadBodyUserInnerConstructorCode = `// NewMethodBodyUserInnerPayloadType 
 func NewMethodBodyUserInnerPayloadType(body *MethodBodyUserInnerRequestBody) *servicebodyuserinner.PayloadType {
 	v := &servicebodyuserinner.PayloadType{}
 	if body.Inner != nil {
-		v.Inner = unmarshalInnerTypeRequestBodyToInnerType(body.Inner)
+		v.Inner = unmarshalInnerTypeRequestBodyToServicebodyuserinnerInnerType(body.Inner)
 	}
 	return v
 }
@@ -839,7 +839,7 @@ var PayloadBodyUserInnerDefaultConstructorCode = `// NewMethodBodyUserInnerDefau
 func NewMethodBodyUserInnerDefaultPayloadType(body *MethodBodyUserInnerDefaultRequestBody) *servicebodyuserinnerdefault.PayloadType {
 	v := &servicebodyuserinnerdefault.PayloadType{}
 	if body.Inner != nil {
-		v.Inner = unmarshalInnerTypeRequestBodyToInnerType(body.Inner)
+		v.Inner = unmarshalInnerTypeRequestBodyToServicebodyuserinnerdefaultInnerType(body.Inner)
 	}
 	return v
 }
@@ -883,7 +883,9 @@ var PayloadBodyInlineRecursiveUserConstructorCode = `// NewMethodBodyInlineRecur
 // endpoint payload.
 func NewMethodBodyInlineRecursiveUserPayloadType(body *MethodBodyInlineRecursiveUserRequestBody, a string, b *string) *servicebodyinlinerecursiveuser.PayloadType {
 	v := &servicebodyinlinerecursiveuser.PayloadType{}
-	v.C = unmarshalPayloadTypeRequestBodyToPayloadType(body.C)
+	if body.C != nil {
+		v.C = unmarshalPayloadTypeRequestBodyToServicebodyinlinerecursiveuserPayloadType(body.C)
+	}
 	v.A = a
 	v.B = b
 	return v

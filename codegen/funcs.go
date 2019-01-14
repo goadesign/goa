@@ -85,6 +85,87 @@ func Add(a, b int) int { return a + b }
 // Casing exceptions
 var toLower = map[string]string{"OAuth": "oauth"}
 
+// CamelCase produces the CamelCase version of the given string. It removes any
+// non letter and non digit character.
+//
+// If firstUpper is true the first letter of the string is capitalized else
+// the first letter is in lowercase.
+// If acronym is true and a part of the string is a common acronym
+//  then it keeps the part capitalized (firstUpper = true)
+// (e.g. APIVersion) or lowercase (firstUpper = false) (e.g. apiVersion).
+func CamelCase(name string, firstUpper bool, acronym bool) string {
+	if name == "" {
+		return ""
+	}
+
+	runes := []rune(name)
+	// remove trailing invalid identifiers (makes code below simpler)
+	runes = removeTrailingInvalid(runes)
+
+	// all characters are invalid
+	if len(runes) == 0 {
+		return ""
+	}
+
+	w, i := 0, 0 // index of start of word, scan
+	for i+1 <= len(runes) {
+		eow := false // whether we hit the end of a word
+
+		// remove leading invalid identifiers
+		runes = removeInvalidAtIndex(i, runes)
+
+		if i+1 == len(runes) {
+			eow = true
+		} else if !validIdentifier(runes[i]) {
+			// get rid of it
+			runes = append(runes[:i], runes[i+1:]...)
+		} else if runes[i+1] == '_' {
+			// underscore; shift the remainder forward over any run of underscores
+			eow = true
+			n := 1
+			for i+n+1 < len(runes) && runes[i+n+1] == '_' {
+				n++
+			}
+			copy(runes[i+1:], runes[i+n+1:])
+			runes = runes[:len(runes)-n]
+		} else if isLower(runes[i]) && !isLower(runes[i+1]) {
+			// lower->non-lower
+			eow = true
+		}
+		i++
+		if !eow {
+			continue
+		}
+
+		// [w,i] is a word.
+		word := string(runes[w:i])
+		// is it one of our initialisms?
+		if u := strings.ToUpper(word); acronym && commonInitialisms[u] {
+			if firstUpper {
+				u = strings.ToUpper(u)
+			} else if w == 0 {
+				u = strings.ToLower(u)
+			}
+
+			// All the common initialisms are ASCII,
+			// so we can replace the bytes exactly.
+			copy(runes[w:], []rune(u))
+		} else if w > 0 && strings.ToLower(word) == word {
+			// already all lowercase, and not the first word, so uppercase the first character.
+			runes[w] = unicode.ToUpper(runes[w])
+		} else if w == 0 && strings.ToLower(word) == word && firstUpper {
+			runes[w] = unicode.ToUpper(runes[w])
+		}
+		if w == 0 && !firstUpper {
+			runes[w] = unicode.ToLower(runes[w])
+		}
+		//advance to next word
+		w = i
+	}
+
+	return string(runes)
+}
+
 // SnakeCase produces the snake_case version of the given CamelCase string.
 func SnakeCase(name string) string {
 	for u, l := range toLower {
@@ -173,3 +254,77 @@ func runeSpacePos(r []rune) int {
 	}
 	return len(r)
 }
+
+// isLower returns true if the character is considered a lower case character
+// when transforming word into CamelCase.
+func isLower(r rune) bool {
+	return unicode.IsDigit(r) || unicode.IsLower(r)
+}
+
+// validIdentifier returns true if the rune is a letter or number
+func validIdentifier(r rune) bool {
+	return unicode.IsLetter(r) || unicode.IsDigit(r)
+}
+
+// removeTrailingInvalid removes trailing invalid identifiers from runes.
+func removeTrailingInvalid(runes []rune) []rune {
+	valid := len(runes) - 1
+	for ; valid >= 0 && !validIdentifier(runes[valid]); valid-- {
+	}
+
+	return runes[0 : valid+1]
+}
+
+// removeInvalidAtIndex removes consecutive invalid identifiers from runes starting at index i.
+func removeInvalidAtIndex(i int, runes []rune) []rune {
+	valid := i
+	for ; valid < len(runes) && !validIdentifier(runes[valid]); valid++ {
+	}
+
+	return append(runes[:i], runes[valid:]...)
+}
+
+var (
+	// common words who need to keep their
+	commonInitialisms = map[string]bool{
+		"API":   true,
+		"ASCII": true,
+		"CPU":   true,
+		"CSS":   true,
+		"DNS":   true,
+		"EOF":   true,
+		"GUID":  true,
+		"HTML":  true,
+		"HTTP":  true,
+		"HTTPS": true,
+		"ID":    true,
+		"IP":    true,
+		"JMES":  true,
+		"JSON":  true,
+		"JWT":   true,
+		"LHS":   true,
+		"OK":    true,
+		"QPS":   true,
+		"RAM":   true,
+		"RHS":   true,
+		"RPC":   true,
+		"SLA":   true,
+		"SMTP":  true,
+		"SQL":   true,
+		"SSH":   true,
+		"TCP":   true,
+		"TLS":   true,
+		"TTL":   true,
+		"UDP":   true,
+		"UI":    true,
+		"UID":   true,
+		"UUID":  true,
+		"URI":   true,
+		"URL":   true,
+		"UTF8":  true,
+		"VM":    true,
+		"XML":   true,
+		"XSRF":  true,
+		"XSS":   true,
+	}
+)

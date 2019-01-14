@@ -1,9 +1,9 @@
 package testdata
 
-var PayloadBodyUserInnerDefaultTransformCode1 = `// unmarshalInnerTypeRequestBodyToInnerType builds a value of type
-// *servicebodyuserinnerdefault.InnerType from a value of type
+var PayloadBodyUserInnerDefaultTransformCode1 = `// unmarshalInnerTypeRequestBodyToServicebodyuserinnerdefaultInnerType builds a
+// value of type *servicebodyuserinnerdefault.InnerType from a value of type
 // *InnerTypeRequestBody.
-func unmarshalInnerTypeRequestBodyToInnerType(v *InnerTypeRequestBody) *servicebodyuserinnerdefault.InnerType {
+func unmarshalInnerTypeRequestBodyToServicebodyuserinnerdefaultInnerType(v *InnerTypeRequestBody) *servicebodyuserinnerdefault.InnerType {
 	if v == nil {
 		return nil
 	}
@@ -24,10 +24,10 @@ func unmarshalInnerTypeRequestBodyToInnerType(v *InnerTypeRequestBody) *serviceb
 }
 `
 
-var PayloadBodyUserInnerDefaultTransformCode2 = `// unmarshalInnerTypeRequestBodyToInnerType builds a value of type
-// *servicebodyuserinnerdefault.InnerType from a value of type
+var PayloadBodyUserInnerDefaultTransformCode2 = `// unmarshalInnerTypeRequestBodyToServicebodyuserinnerdefaultInnerType builds a
+// value of type *servicebodyuserinnerdefault.InnerType from a value of type
 // *InnerTypeRequestBody.
-func unmarshalInnerTypeRequestBodyToInnerType(v *InnerTypeRequestBody) *servicebodyuserinnerdefault.InnerType {
+func unmarshalInnerTypeRequestBodyToServicebodyuserinnerdefaultInnerType(v *InnerTypeRequestBody) *servicebodyuserinnerdefault.InnerType {
 	if v == nil {
 		return nil
 	}
@@ -48,38 +48,42 @@ func unmarshalInnerTypeRequestBodyToInnerType(v *InnerTypeRequestBody) *serviceb
 }
 `
 
-var PayloadBodyInlineRecursiveUserTransformCode1 = `// unmarshalPayloadTypeRequestBodyToPayloadType builds a value of type
-// *servicebodyinlinerecursiveuser.PayloadType from a value of type
-// *PayloadTypeRequestBody.
-func unmarshalPayloadTypeRequestBodyToPayloadType(v *PayloadTypeRequestBody) *servicebodyinlinerecursiveuser.PayloadType {
+var PayloadBodyInlineRecursiveUserTransformCode1 = `// unmarshalPayloadTypeRequestBodyToServicebodyinlinerecursiveuserPayloadType
+// builds a value of type *servicebodyinlinerecursiveuser.PayloadType from a
+// value of type *PayloadTypeRequestBody.
+func unmarshalPayloadTypeRequestBodyToServicebodyinlinerecursiveuserPayloadType(v *PayloadTypeRequestBody) *servicebodyinlinerecursiveuser.PayloadType {
 	res := &servicebodyinlinerecursiveuser.PayloadType{
 		A: *v.A,
 		B: v.B,
 	}
-	res.C = unmarshalPayloadTypeRequestBodyToPayloadType(v.C)
+	if v.C != nil {
+		res.C = unmarshalPayloadTypeRequestBodyToServicebodyinlinerecursiveuserPayloadType(v.C)
+	}
 
 	return res
 }
 `
 
-var PayloadBodyInlineRecursiveUserTransformCode2 = `// unmarshalPayloadTypeRequestBodyToPayloadType builds a value of type
-// *servicebodyinlinerecursiveuser.PayloadType from a value of type
-// *PayloadTypeRequestBody.
-func unmarshalPayloadTypeRequestBodyToPayloadType(v *PayloadTypeRequestBody) *servicebodyinlinerecursiveuser.PayloadType {
+var PayloadBodyInlineRecursiveUserTransformCode2 = `// unmarshalPayloadTypeRequestBodyToServicebodyinlinerecursiveuserPayloadType
+// builds a value of type *servicebodyinlinerecursiveuser.PayloadType from a
+// value of type *PayloadTypeRequestBody.
+func unmarshalPayloadTypeRequestBodyToServicebodyinlinerecursiveuserPayloadType(v *PayloadTypeRequestBody) *servicebodyinlinerecursiveuser.PayloadType {
 	res := &servicebodyinlinerecursiveuser.PayloadType{
 		A: *v.A,
 		B: v.B,
 	}
-	res.C = unmarshalPayloadTypeRequestBodyToPayloadType(v.C)
+	if v.C != nil {
+		res.C = unmarshalPayloadTypeRequestBodyToServicebodyinlinerecursiveuserPayloadType(v.C)
+	}
 
 	return res
 }
 `
 
-var PayloadBodyUserInnerDefaultTransformCodeCLI1 = `// marshalInnerTypeRequestBodyToInnerType builds a value of type
-// *servicebodyuserinnerdefault.InnerType from a value of type
+var PayloadBodyUserInnerDefaultTransformCodeCLI1 = `// marshalInnerTypeRequestBodyToServicebodyuserinnerdefaultInnerType builds a
+// value of type *servicebodyuserinnerdefault.InnerType from a value of type
 // *InnerTypeRequestBody.
-func marshalInnerTypeRequestBodyToInnerType(v *InnerTypeRequestBody) *servicebodyuserinnerdefault.InnerType {
+func marshalInnerTypeRequestBodyToServicebodyuserinnerdefaultInnerType(v *InnerTypeRequestBody) *servicebodyuserinnerdefault.InnerType {
 	if v == nil {
 		return nil
 	}
@@ -92,10 +96,10 @@ func marshalInnerTypeRequestBodyToInnerType(v *InnerTypeRequestBody) *servicebod
 }
 `
 
-var PayloadBodyUserInnerDefaultTransformCodeCLI2 = `// marshalInnerTypeToInnerTypeRequestBody builds a value of type
-// *InnerTypeRequestBody from a value of type
+var PayloadBodyUserInnerDefaultTransformCodeCLI2 = `// marshalServicebodyuserinnerdefaultInnerTypeToInnerTypeRequestBody builds a
+// value of type *InnerTypeRequestBody from a value of type
 // *servicebodyuserinnerdefault.InnerType.
-func marshalInnerTypeToInnerTypeRequestBody(v *servicebodyuserinnerdefault.InnerType) *InnerTypeRequestBody {
+func marshalServicebodyuserinnerdefaultInnerTypeToInnerTypeRequestBody(v *servicebodyuserinnerdefault.InnerType) *InnerTypeRequestBody {
 	if v == nil {
 		return nil
 	}
@@ -108,33 +112,29 @@ func marshalInnerTypeToInnerTypeRequestBody(v *servicebodyuserinnerdefault.Inner
 }
 `
 
-var PayloadBodyInlineRecursiveUserTransformCodeCLI1 = `// marshalPayloadTypeRequestBodyToPayloadType builds a value of type
-// *servicebodyinlinerecursiveuser.PayloadType from a value of type
-// *PayloadTypeRequestBody.
-func marshalPayloadTypeRequestBodyToPayloadType(v *PayloadTypeRequestBody) *servicebodyinlinerecursiveuser.PayloadType {
+var PayloadBodyInlineRecursiveUserTransformCodeCLI1 = `// marshalPayloadTypeRequestBodyToServicebodyinlinerecursiveuserPayloadType
+// builds a value of type *servicebodyinlinerecursiveuser.PayloadType from a
+// value of type *PayloadTypeRequestBody.
+func marshalPayloadTypeRequestBodyToServicebodyinlinerecursiveuserPayloadType(v *PayloadTypeRequestBody) *servicebodyinlinerecursiveuser.PayloadType {
 	res := &servicebodyinlinerecursiveuser.PayloadType{
 		A: v.A,
 		B: v.B,
 	}
-	if v.C != nil {
-		res.C = marshalPayloadTypeRequestBodyToPayloadType(v.C)
-	}
+	res.C = marshalPayloadTypeRequestBodyToServicebodyinlinerecursiveuserPayloadType(v.C)
 
 	return res
 }
 `
 
-var PayloadBodyInlineRecursiveUserTransformCodeCLI2 = `// marshalPayloadTypeToPayloadTypeRequestBody builds a value of type
-// *PayloadTypeRequestBody from a value of type
+var PayloadBodyInlineRecursiveUserTransformCodeCLI2 = `// marshalServicebodyinlinerecursiveuserPayloadTypeToPayloadTypeRequestBody
+// builds a value of type *PayloadTypeRequestBody from a value of type
 // *servicebodyinlinerecursiveuser.PayloadType.
-func marshalPayloadTypeToPayloadTypeRequestBody(v *servicebodyinlinerecursiveuser.PayloadType) *PayloadTypeRequestBody {
+func marshalServicebodyinlinerecursiveuserPayloadTypeToPayloadTypeRequestBody(v *servicebodyinlinerecursiveuser.PayloadType) *PayloadTypeRequestBody {
 	res := &PayloadTypeRequestBody{
 		A: v.A,
 		B: v.B,
 	}
-	if v.C != nil {
-		res.C = marshalPayloadTypeToPayloadTypeRequestBody(v.C)
-	}
+	res.C = marshalServicebodyinlinerecursiveuserPayloadTypeToPayloadTypeRequestBody(v.C)
 
 	return res
 }

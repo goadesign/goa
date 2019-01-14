@@ -216,7 +216,8 @@ func ConvertFile(root *expr.RootExpr, service *expr.ServiceExpr) (*codegen.File,
 	}
 
 	var (
-		names      = map[string]struct{}{}
+		names = map[string]struct{}{}
+
 		transFuncs []*codegen.TransformFunctionData
 	)
 
@@ -229,11 +230,13 @@ func ConvertFile(root *expr.RootExpr, service *expr.ServiceExpr) (*codegen.File,
 		t := reflect.TypeOf(c.External)
 		tgtPkg := t.String()
 		tgtPkg = tgtPkg[:strings.Index(tgtPkg, ".")]
-		code, tf, err := codegen.GoTypeTransform(c.User, dt, "t", "v", "", tgtPkg, false, svc.Scope)
+		srcCA := TypeContext(&expr.AttributeExpr{Type: c.User}, "", svc.Scope)
+		tgtCA := codegen.NewGoContextAttr(&expr.AttributeExpr{Type: dt}, tgtPkg, svc.Scope)
+		code, tf, err := codegen.GoTransform(srcCA, tgtCA, "t", "v", "transform")
 		if err != nil {
 			return nil, err
 		}
-		transFuncs = append(transFuncs, tf...)
+		transFuncs = codegen.AppendHelpers(transFuncs, tf)
 		base := "ConvertTo" + t.Name()
 		name := uniquify(base, names)
 		ref := t.String()
@@ -242,7 +245,7 @@ func ConvertFile(root *expr.RootExpr, service *expr.ServiceExpr) (*codegen.File,
 		}
 		data := ConvertData{
 			Name:            name,
-			ReceiverTypeRef: svc.Scope.GoTypeRef(&expr.AttributeExpr{Type: c.User}),
+			ReceiverTypeRef: srcCA.Attribute.Ref(),
 			TypeName:        t.Name(),
 			TypeRef:         ref,
 			Code:            code,
@@ -263,11 +266,13 @@ func ConvertFile(root *expr.RootExpr, service *expr.ServiceExpr) (*codegen.File,
 		t := reflect.TypeOf(c.External)
 		srcPkg := t.String()
 		srcPkg = srcPkg[:strings.Index(srcPkg, ".")]
-		code, tf, err := codegen.GoTypeTransform(dt, c.User, "v", "temp", srcPkg, "", false, svc.Scope)
+		srcCA := codegen.NewGoContextAttr(&expr.AttributeExpr{Type: dt}, srcPkg, svc.Scope)
+		tgtCA := TypeContext(&expr.AttributeExpr{Type: c.User}, "", svc.Scope)
+		code, tf, err := codegen.GoTransform(srcCA, tgtCA, "v", "temp", "transform")
 		if err != nil {
 			return nil, err
 		}
-		transFuncs = append(transFuncs, tf...)
+		transFuncs = codegen.AppendHelpers(transFuncs, tf)
 		base := "CreateFrom" + t.Name()
 		name := uniquify(base, names)
 		ref := t.String()
@@ -276,7 +281,7 @@ func ConvertFile(root *expr.RootExpr, service *expr.ServiceExpr) (*codegen.File,
 		}
 		data := ConvertData{
 			Name:            name,
-			ReceiverTypeRef: svc.Scope.GoTypeRef(&expr.AttributeExpr{Type: c.User}),
+			ReceiverTypeRef: tgtCA.Attribute.Ref(),
 			TypeRef:         ref,
 			Code:            code,
 		}
@@ -446,11 +451,8 @@ func buildDesignType(dt *expr.DataType, t reflect.Type, ref expr.DataType, recs 
 		// Avoid infinite recursions
 		obj := expr.Object(make([]*expr.NamedAttributeExpr, len(fields)))
 		ut := &expr.UserTypeExpr{
-			AttributeExpr: &expr.AttributeExpr{
-				Type: &obj,
-				Meta: map[string][]string{"goa.external": nil},
-			},
-			TypeName: t.Name(),
+			AttributeExpr: &expr.AttributeExpr{Type: &obj},
+			TypeName:      t.Name(),
 		}
 		*dt = ut
 		rec.seen[t.Name()] = ut
@@ -490,11 +492,8 @@ func buildDesignType(dt *expr.DataType, t reflect.Type, ref expr.DataType, recs 
 				name = name + ":" + fn
 			}
 			obj[i] = &expr.NamedAttributeExpr{
-				Name: name,
-				Attribute: &expr.AttributeExpr{
-					Type: fdt,
-					Meta: map[string][]string{"goa.external": nil},
-				},
+				Name:      name,
+				Attribute: &expr.AttributeExpr{Type: fdt},
 			}
 		}
 		if len(required) > 0 {

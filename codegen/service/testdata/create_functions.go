@@ -104,7 +104,7 @@ var CreateObjectCode = `// CreateFromObjectT initializes t from the fields of v
 func (t *ObjectType) CreateFromObjectT(v *testdata.ObjectT) {
 	temp := &ObjectType{}
 	if v.Object != nil {
-		temp.Object = marshalObjectFieldTExtToObjectField(v.Object)
+		temp.Object = transformTestdataObjectFieldTToObjectField(v.Object)
 	}
 	*t = *temp
 }
@@ -114,7 +114,7 @@ var CreateObjectRequiredCode = `// CreateFromObjectT initializes t from the fiel
 func (t *ObjectType) CreateFromObjectT(v *testdata.ObjectT) {
 	temp := &ObjectType{}
 	if v.Object != nil {
-		temp.Object = marshalObjectFieldTExtToObjectField(v.Object)
+		temp.Object = transformTestdataObjectFieldTToObjectField(v.Object)
 	}
 	*t = *temp
 }
@@ -124,7 +124,7 @@ var CreateObjectExtraCode = `// CreateFromObjectExtraT initializes t from the fi
 func (t *ObjectType) CreateFromObjectExtraT(v *testdata.ObjectExtraT) {
 	temp := &ObjectType{}
 	if v.Object != nil {
-		temp.Object = marshalObjectFieldTExtToObjectField(v.Object)
+		temp.Object = transformTestdataObjectFieldTToObjectField(v.Object)
 	}
 	*t = *temp
 }

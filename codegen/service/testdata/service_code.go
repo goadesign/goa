@@ -104,6 +104,40 @@ type Child struct {
 }
 `
 
+const WithDefault = `
+// Service is the WithDefault service interface.
+type Service interface {
+	// A implements A.
+	A(context.Context, *APayload) (res *AResult, err error)
+}
+
+// ServiceName is the name of the service as defined in the design. This is the
+// same value that is set in the endpoint request contexts under the ServiceKey
+// key.
+const ServiceName = "WithDefault"
+
+// MethodNames lists the service method names as defined in the design. These
+// are the same values that are set in the endpoint request contexts under the
+// MethodKey key.
+var MethodNames = [1]string{"A"}
+
+// APayload is the payload type of the WithDefault service A method.
+type APayload struct {
+	IntField      int
+	StringField   string
+	OptionalField *string
+	RequiredField float32
+}
+
+// AResult is the result type of the WithDefault service A method.
+type AResult struct {
+	IntField      int
+	StringField   string
+	OptionalField *string
+	RequiredField float32
+}
+`
+
 const EmptyMethod = `
 // Service is the Empty service interface.
 type Service interface {

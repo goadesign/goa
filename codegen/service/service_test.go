@@ -22,6 +22,7 @@ func TestService(t *testing.T) {
 		{"no-payload-no-result", testdata.EmptyMethodDSL, testdata.EmptyMethod},
 		{"payload-no-result", testdata.EmptyResultMethodDSL, testdata.EmptyResultMethod},
 		{"no-payload-result", testdata.EmptyPayloadMethodDSL, testdata.EmptyPayloadMethod},
+		{"payload-result-with-default", testdata.WithDefaultDSL, testdata.WithDefault},
 		{"result-with-multiple-views", testdata.MultipleMethodsResultMultipleViewsDSL, testdata.MultipleMethodsResultMultipleViews},
 		{"result-collection-multiple-views", testdata.ResultCollectionMultipleViewsMethodDSL, testdata.ResultCollectionMultipleViewsMethod},
 		{"result-with-other-result", testdata.ResultWithOtherResultMethodDSL, testdata.ResultWithOtherResultMethod},

@@ -95,7 +95,7 @@ const BodyUserInnerInitCode = `// NewMethodBodyUserInnerRequestBody builds the H
 func NewMethodBodyUserInnerRequestBody(p *servicebodyuserinner.PayloadType) *MethodBodyUserInnerRequestBody {
 	body := &MethodBodyUserInnerRequestBody{}
 	if p.Inner != nil {
-		body.Inner = marshalInnerTypeToInnerTypeRequestBody(p.Inner)
+		body.Inner = marshalServicebodyuserinnerInnerTypeToInnerTypeRequestBody(p.Inner)
 	}
 	return body
 }
