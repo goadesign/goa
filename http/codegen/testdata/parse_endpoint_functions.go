@@ -555,7 +555,7 @@ func BuildMethodMultiPayloadPayload(serviceMultiMethodMultiPayloadBody string, s
 	}
 	v := &servicemulti.MethodMultiPayloadPayload{}
 	if body.C != nil {
-		v.C = marshalUserTypeRequestBodyToUserType(body.C)
+		v.C = marshalUserTypeRequestBodyToServicemultiUserType(body.C)
 	}
 	v.B = b
 	v.A = a
@@ -1001,13 +1001,6 @@ func BuildMethodMapQueryObjectPayload(serviceMapQueryObjectMethodMapQueryObjectB
 		err = json.Unmarshal([]byte(serviceMapQueryObjectMethodMapQueryObjectC), &c)
 		if err != nil {
 			return nil, fmt.Errorf("invalid JSON for c, example of valid JSON:\n%s", "'{\n      \"1484745265794365762\": [\n         \"Similique aspernatur.\",\n         \"Error explicabo.\",\n         \"Minima cumque voluptatem et distinctio aliquam.\",\n         \"Blanditiis ut eaque.\"\n      ],\n      \"4925854623691091547\": [\n         \"Eos aut ipsam.\",\n         \"Aliquam tempora.\"\n      ],\n      \"7174751143827362498\": [\n         \"Facilis minus explicabo nemo eos vel repellat.\",\n         \"Voluptatum magni aperiam qui.\"\n      ]\n   }'")
-		}
-		err = goa.MergeErrors(err, goa.ValidatePattern("c.a", c.A, "patterna"))
-		if c.B != nil {
-			err = goa.MergeErrors(err, goa.ValidatePattern("c.b", *c.B, "patternb"))
-		}
-		if err != nil {
-			return nil, err
 		}
 	}
 	if err != nil {

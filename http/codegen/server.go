@@ -1147,16 +1147,16 @@ const responseT = `{{ define "response" -}}
 	{{- end }}
 	{{- range .Headers }}
 		{{- $initDef := and (or .Pointer .Slice) .DefaultValue (not $.TagName) }}
-		{{- $checkNil := and (or (not .Required) $initDef) (not $.TagName) }}
+		{{- $checkNil := and (or .Pointer .Slice (eq .Type.Name "bytes") (eq .Type.Name "any") $initDef) (not $.TagName) }}
 		{{- if $checkNil }}
 	if res.{{ if $.ViewedResult }}Projected.{{ end }}{{ .FieldName }} != nil {
 		{{- end }}
 
 		{{- if eq .Type.Name "string" }}
-	w.Header().Set("{{ .Name }}", {{ if or (not .Required) $.ViewedResult }}*{{ end }}res{{ if $.ViewedResult }}.Projected{{ end }}{{ if .FieldName }}.{{ .FieldName }}{{ end }})
+	w.Header().Set("{{ .Name }}", {{ if or .Pointer $.ViewedResult }}*{{ end }}res{{ if $.ViewedResult }}.Projected{{ end }}{{ if .FieldName }}.{{ .FieldName }}{{ end }})
 		{{- else }}
 	val := res{{ if $.ViewedResult }}.Projected{{ end }}{{ if .FieldName }}.{{ .FieldName }}{{ end }}
-	{{ template "header_conversion" (headerConversionData .Type (printf "%ss" .VarName) .Required "val") }}
+	{{ template "header_conversion" (headerConversionData .Type (printf "%ss" .VarName) (not .Pointer) "val") }}
 	w.Header().Set("{{ .Name }}", {{ .VarName }}s)
 		{{- end }}
 

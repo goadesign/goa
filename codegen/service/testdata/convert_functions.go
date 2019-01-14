@@ -96,11 +96,9 @@ func (t *ArrayStringType) ConvertToArrayStringT() *testdata.ArrayStringT {
 var ConvertArrayStringRequiredCode = `// ConvertToArrayStringT creates an instance of ArrayStringT initialized from t.
 func (t *ArrayStringType) ConvertToArrayStringT() *testdata.ArrayStringT {
 	v := &testdata.ArrayStringT{}
-	if t.ArrayString != nil {
-		v.ArrayString = make([]string, len(t.ArrayString))
-		for i, val := range t.ArrayString {
-			v.ArrayString[i] = val
-		}
+	v.ArrayString = make([]string, len(t.ArrayString))
+	for i, val := range t.ArrayString {
+		v.ArrayString[i] = val
 	}
 	return v
 }
@@ -109,9 +107,7 @@ func (t *ArrayStringType) ConvertToArrayStringT() *testdata.ArrayStringT {
 var ConvertObjectCode = `// ConvertToObjectT creates an instance of ObjectT initialized from t.
 func (t *ObjectType) ConvertToObjectT() *testdata.ObjectT {
 	v := &testdata.ObjectT{}
-	if t.Object != nil {
-		v.Object = marshalObjectFieldToObjectFieldTExt(t.Object)
-	}
+	v.Object = transformObjectFieldToTestdataObjectFieldT(t.Object)
 	return v
 }
 `
@@ -119,16 +115,14 @@ func (t *ObjectType) ConvertToObjectT() *testdata.ObjectT {
 var ConvertObjectRequiredCode = `// ConvertToObjectT creates an instance of ObjectT initialized from t.
 func (t *ObjectType) ConvertToObjectT() *testdata.ObjectT {
 	v := &testdata.ObjectT{}
-	if t.Object != nil {
-		v.Object = marshalObjectFieldToObjectFieldTExt(t.Object)
-	}
+	v.Object = transformObjectFieldToTestdataObjectFieldT(t.Object)
 	return v
 }
 `
 
-var ConvertObjectHelperCode = `// marshalObjectFieldToObjectFieldTExt builds a value of type
+var ConvertObjectHelperCode = `// transformObjectFieldToTestdataObjectFieldT builds a value of type
 // *testdata.ObjectFieldT from a value of type *ObjectField.
-func marshalObjectFieldToObjectFieldTExt(v *ObjectField) *testdata.ObjectFieldT {
+func transformObjectFieldToTestdataObjectFieldT(v *ObjectField) *testdata.ObjectFieldT {
 	res := &testdata.ObjectFieldT{
 		Bytes: v.Bytes,
 	}
@@ -181,9 +175,9 @@ func marshalObjectFieldToObjectFieldTExt(v *ObjectField) *testdata.ObjectFieldT 
 }
 `
 
-var ConvertObjectRequiredHelperCode = `// marshalObjectFieldToObjectFieldTExt builds a value of type
+var ConvertObjectRequiredHelperCode = `// transformObjectFieldToTestdataObjectFieldT builds a value of type
 // *testdata.ObjectFieldT from a value of type *ObjectField.
-func marshalObjectFieldToObjectFieldTExt(v *ObjectField) *testdata.ObjectFieldT {
+func transformObjectFieldToTestdataObjectFieldT(v *ObjectField) *testdata.ObjectFieldT {
 	res := &testdata.ObjectFieldT{
 		Bool:    v.Bool,
 		Int:     v.Int,
@@ -197,19 +191,15 @@ func marshalObjectFieldToObjectFieldTExt(v *ObjectField) *testdata.ObjectFieldT 
 		Bytes:   v.Bytes,
 		String:  v.String,
 	}
-	if v.Array != nil {
-		res.Array = make([]bool, len(v.Array))
-		for i, val := range v.Array {
-			res.Array[i] = val
-		}
+	res.Array = make([]bool, len(v.Array))
+	for i, val := range v.Array {
+		res.Array[i] = val
 	}
-	if v.Map != nil {
-		res.Map = make(map[string]bool, len(v.Map))
-		for key, val := range v.Map {
-			tk := key
-			tv := val
-			res.Map[tk] = tv
-		}
+	res.Map = make(map[string]bool, len(v.Map))
+	for key, val := range v.Map {
+		tk := key
+		tv := val
+		res.Map[tk] = tv
 	}
 
 	return res

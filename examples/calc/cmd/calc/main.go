@@ -20,7 +20,7 @@ func main() {
 	// service.
 	var (
 		hostF     = flag.String("host", "development", "Server host (valid values: development, production)")
-		domainF   = flag.String("domain", "", "Host domain name (overrides host domain specified in service design")
+		domainF   = flag.String("domain", "", "Host domain name (overrides host domain specified in service design)")
 		httpPortF = flag.String("http-port", "", "HTTP port (overrides host HTTP port specified in service design)")
 		versionF  = flag.String("version", "v1", "API version")
 		secureF   = flag.Bool("secure", false, "Use secure scheme (https or grpcs)")

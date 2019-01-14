@@ -237,6 +237,9 @@ func ValidateWineryViewTiny(result *WineryView) (err error) {
 
 // ValidateComponentView runs the validations defined on ComponentView.
 func ValidateComponentView(result *ComponentView) (err error) {
+	if result.Varietal == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("varietal", "result"))
+	}
 	if result.Varietal != nil {
 		err = goa.MergeErrors(err, goa.ValidatePattern("result.varietal", *result.Varietal, "[A-Za-z' ]+"))
 	}

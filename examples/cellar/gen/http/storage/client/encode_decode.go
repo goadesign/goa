@@ -524,9 +524,9 @@ func DecodeMultiUpdateResponse(decoder func(*http.Response) goahttp.Decoder, res
 	}
 }
 
-// unmarshalWineryResponseToWineryView builds a value of type
+// unmarshalWineryResponseToStorageviewsWineryView builds a value of type
 // *storageviews.WineryView from a value of type *WineryResponse.
-func unmarshalWineryResponseToWineryView(v *WineryResponse) *storageviews.WineryView {
+func unmarshalWineryResponseToStorageviewsWineryView(v *WineryResponse) *storageviews.WineryView {
 	res := &storageviews.WineryView{
 		Name:    v.Name,
 		Region:  v.Region,
@@ -537,9 +537,9 @@ func unmarshalWineryResponseToWineryView(v *WineryResponse) *storageviews.Winery
 	return res
 }
 
-// unmarshalWineryResponseBodyToWineryView builds a value of type
+// unmarshalWineryResponseBodyToStorageviewsWineryView builds a value of type
 // *storageviews.WineryView from a value of type *WineryResponseBody.
-func unmarshalWineryResponseBodyToWineryView(v *WineryResponseBody) *storageviews.WineryView {
+func unmarshalWineryResponseBodyToStorageviewsWineryView(v *WineryResponseBody) *storageviews.WineryView {
 	res := &storageviews.WineryView{
 		Name:    v.Name,
 		Region:  v.Region,
@@ -550,9 +550,9 @@ func unmarshalWineryResponseBodyToWineryView(v *WineryResponseBody) *storageview
 	return res
 }
 
-// marshalWineryToWineryRequestBody builds a value of type *WineryRequestBody
-// from a value of type *storage.Winery.
-func marshalWineryToWineryRequestBody(v *storage.Winery) *WineryRequestBody {
+// marshalStorageWineryToWineryRequestBody builds a value of type
+// *WineryRequestBody from a value of type *storage.Winery.
+func marshalStorageWineryToWineryRequestBody(v *storage.Winery) *WineryRequestBody {
 	res := &WineryRequestBody{
 		Name:    v.Name,
 		Region:  v.Region,
@@ -563,9 +563,9 @@ func marshalWineryToWineryRequestBody(v *storage.Winery) *WineryRequestBody {
 	return res
 }
 
-// marshalWineryRequestBodyToWinery builds a value of type *storage.Winery from
-// a value of type *WineryRequestBody.
-func marshalWineryRequestBodyToWinery(v *WineryRequestBody) *storage.Winery {
+// marshalWineryRequestBodyToStorageWinery builds a value of type
+// *storage.Winery from a value of type *WineryRequestBody.
+func marshalWineryRequestBodyToStorageWinery(v *WineryRequestBody) *storage.Winery {
 	res := &storage.Winery{
 		Name:    v.Name,
 		Region:  v.Region,
