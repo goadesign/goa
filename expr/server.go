@@ -119,7 +119,7 @@ var validSchemes = map[string]struct{}{"http": {}, "https": {}, "grpc": {}, "grp
 func (h *HostExpr) Validate() error {
 	verr := new(eval.ValidationErrors)
 	if len(h.URIs) == 0 {
-		verr.Add(h, "host must defined at least one URI.")
+		verr.Add(h, "host must defined at least one URI")
 	}
 	for _, u := range h.URIs {
 		vu := WildcardRegex.ReplaceAllString(string(u), "/w")
