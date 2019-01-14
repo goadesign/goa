@@ -1,7 +1,7 @@
 package testdata
 
 const UnaryRPCsProtoCode = `// Service is the ServiceUnaryRPCs service interface.
-service serviceUnaryRPCs {
+service ServiceUnaryRPCs {
 	// MethodUnaryRPCA implements MethodUnaryRPCA.
 	rpc MethodUnaryRPCA (MethodUnaryRPCARequest) returns (MethodUnaryRPCAResponse);
 	// MethodUnaryRPCB implements MethodUnaryRPCB.
@@ -30,7 +30,7 @@ message MethodUnaryRPCBResponse {
 `
 
 const UnaryRPCNoPayloadProtoCode = `// Service is the ServiceUnaryRPCNoPayload service interface.
-service serviceUnaryRPCNoPayload {
+service ServiceUnaryRPCNoPayload {
 	// MethodUnaryRPCNoPayload implements MethodUnaryRPCNoPayload.
 	rpc MethodUnaryRPCNoPayload (MethodUnaryRPCNoPayloadRequest) returns (MethodUnaryRPCNoPayloadResponse);
 }
@@ -44,7 +44,7 @@ message MethodUnaryRPCNoPayloadResponse {
 `
 
 const UnaryRPCNoResultProtoCode = `// Service is the ServiceUnaryRPCNoResult service interface.
-service serviceUnaryRPCNoResult {
+service ServiceUnaryRPCNoResult {
 	// MethodUnaryRPCNoResult implements MethodUnaryRPCNoResult.
 	rpc MethodUnaryRPCNoResult (MethodUnaryRPCNoResultRequest) returns (MethodUnaryRPCNoResultResponse);
 }
@@ -58,7 +58,7 @@ message MethodUnaryRPCNoResultResponse {
 `
 
 const ServerStreamingRPCProtoCode = `// Service is the ServiceServerStreamingRPC service interface.
-service serviceServerStreamingRPC {
+service ServiceServerStreamingRPC {
 	// MethodServerStreamingRPC implements MethodServerStreamingRPC.
 	rpc MethodServerStreamingRPC (MethodServerStreamingRPCRequest) returns (stream MethodServerStreamingRPCResponse);
 }
@@ -73,7 +73,7 @@ message MethodServerStreamingRPCResponse {
 `
 
 const ClientStreamingRPCProtoCode = `// Service is the ServiceClientStreamingRPC service interface.
-service serviceClientStreamingRPC {
+service ServiceClientStreamingRPC {
 	// MethodClientStreamingRPC implements MethodClientStreamingRPC.
 	rpc MethodClientStreamingRPC (stream MethodClientStreamingRPCStreamingRequest) returns (MethodClientStreamingRPCResponse);
 }
@@ -88,7 +88,7 @@ message MethodClientStreamingRPCResponse {
 `
 
 const BidirectionalStreamingRPCProtoCode = `// Service is the ServiceBidirectionalStreamingRPC service interface.
-service serviceBidirectionalStreamingRPC {
+service ServiceBidirectionalStreamingRPC {
 	// MethodBidirectionalStreamingRPC implements MethodBidirectionalStreamingRPC.
 	rpc MethodBidirectionalStreamingRPC (stream MethodBidirectionalStreamingRPCStreamingRequest) returns (stream MethodBidirectionalStreamingRPCResponse);
 }
@@ -100,6 +100,24 @@ message MethodBidirectionalStreamingRPCStreamingRequest {
 message MethodBidirectionalStreamingRPCResponse {
 	sint32 a = 1;
 	string b = 2;
+}
+`
+
+const MessageWithServiceNameProtoCode = `// Service is the MyNameConflicts service interface.
+service MyNameConflicts {
+	// MyNameConflictsMethod implements MyNameConflictsMethod.
+	rpc MyNameConflictsMethod (MyNameConflictsMethodRequest) returns (MyNameConflictsMethodResponse);
+}
+
+message MyNameConflictsMethodRequest {
+	MyNameConflicts2 conflict = 1;
+}
+
+message MyNameConflicts2 {
+	bool boolean_field = 1;
+}
+
+message MyNameConflictsMethodResponse {
 }
 `
 

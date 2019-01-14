@@ -51,8 +51,10 @@ type (
 		// TransformHelpers is the list of transform functions required by the
 		// constructors.
 		TransformHelpers []*codegen.TransformFunctionData
-		Validations      []*ValidationData
-		Scope            *codegen.NameScope
+		// Validations is the validation logic for gRPC messages.
+		Validations []*ValidationData
+		// Scope is the name scope for protocol buffers
+		Scope *codegen.NameScope
 	}
 
 	// EndpointData contains the data used to render the code related to
@@ -397,13 +399,14 @@ func (d ServicesData) analyze(gs *expr.GRPCServiceExpr) *ServiceData {
 		seen    map[string]struct{}
 		svcVarN string
 
-		svc = service.Services.Get(gs.Name())
+		svc   = service.Services.Get(gs.Name())
+		scope = codegen.NewNameScope()
 	)
 	{
-		svcVarN = codegen.Goify(svc.Name, true)
+		svcVarN = scope.HashedUnique(gs.ServiceExpr, codegen.Goify(svc.Name, true))
 		sd = &ServiceData{
 			Service:             svc,
-			Name:                codegen.Goify(svc.Name, false),
+			Name:                svcVarN,
 			Description:         svc.Description,
 			PkgName:             pbPkgName,
 			ServerStruct:        "Server",
@@ -413,7 +416,7 @@ func (d ServicesData) analyze(gs *expr.GRPCServiceExpr) *ServiceData {
 			ServerInterface:     svcVarN + "Server",
 			ClientInterface:     svcVarN + "Client",
 			ClientInterfaceInit: fmt.Sprintf("%s.New%sClient", pbPkgName, svcVarN),
-			Scope:               codegen.NewNameScope(),
+			Scope:               scope,
 		}
 		seen = make(map[string]struct{})
 	}

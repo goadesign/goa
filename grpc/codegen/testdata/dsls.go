@@ -451,3 +451,18 @@ var MessageWithSecurityAttrsDSL = func() {
 		})
 	})
 }
+
+var MessageWithServiceNameDSL = func() {
+	var UT = Type("MyNameConflicts", func() {
+		Field(1, "BooleanField", Boolean)
+	})
+	var Request = Type("Request", func() {
+		Field(1, "conflict", UT)
+	})
+	Service("MyNameConflicts", func() {
+		Method("MyNameConflictsMethod", func() {
+			Payload(Request)
+			GRPC(func() {})
+		})
+	})
+}
