@@ -403,7 +403,7 @@ func (d ServicesData) analyze(gs *expr.GRPCServiceExpr) *ServiceData {
 		svcVarN = codegen.Goify(svc.Name, true)
 		sd = &ServiceData{
 			Service:             svc,
-			Name:                svc.Name,
+			Name:                codegen.Goify(svc.Name, false),
 			Description:         svc.Description,
 			PkgName:             pbPkgName,
 			ServerStruct:        "Server",
@@ -421,11 +421,11 @@ func (d ServicesData) analyze(gs *expr.GRPCServiceExpr) *ServiceData {
 		en := protoBufify(e.Name(), true)
 
 		// convert request and response types to protocol buffer message types
-		makeProtoBufMessage(e.Request, en+"Request", svc.Scope)
+		makeProtoBufMessage(e.Request, en+"Request", sd.Scope)
 		if e.MethodExpr.StreamingPayload.Type != expr.Empty {
-			makeProtoBufMessage(e.StreamingRequest, en+"StreamingRequest", svc.Scope)
+			makeProtoBufMessage(e.StreamingRequest, en+"StreamingRequest", sd.Scope)
 		}
-		makeProtoBufMessage(e.Response.Message, en+"Response", svc.Scope)
+		makeProtoBufMessage(e.Response.Message, en+"Response", sd.Scope)
 
 		// collect all the nested messages and return the top-level message
 		collect := func(att *expr.AttributeExpr) *service.UserTypeData {
@@ -590,11 +590,18 @@ func collectMessages(at *expr.AttributeExpr, sd *ServiceData, seen map[string]st
 		}
 		name := protoBufMessageName(at, sd.Scope)
 		ref := protoBufGoFullTypeRef(at, sd.PkgName, sd.Scope)
+		att := dt.Attribute()
+		if rt, ok := dt.(*expr.ResultTypeExpr); ok {
+			if a := unwrapAttr(expr.DupAtt(rt.Attribute())); expr.IsArray(a.Type) {
+				// result type collection
+				att = &expr.AttributeExpr{Type: expr.AsObject(rt)}
+			}
+		}
 		data = append(data, &service.UserTypeData{
 			Name:        dt.Name(),
 			VarName:     name,
 			Description: dt.Attribute().Description,
-			Def:         protoBufMessageDef(dt.Attribute(), sd.Scope),
+			Def:         protoBufMessageDef(att, sd.Scope),
 			Ref:         ref,
 			Type:        dt,
 		})
@@ -609,7 +616,7 @@ func collectMessages(at *expr.AttributeExpr, sd *ServiceData, seen map[string]st
 			})
 		}
 		seen[dt.Name()] = struct{}{}
-		data = append(data, collect(dt.Attribute())...)
+		data = append(data, collect(att)...)
 	case *expr.Object:
 		for _, nat := range *dt {
 			data = append(data, collect(nat.Attribute)...)

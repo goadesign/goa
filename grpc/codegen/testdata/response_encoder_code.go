@@ -1,5 +1,13 @@
 package testdata
 
+const EmptyResultResponseEncoderCode = `// EncodeMethodUnaryRPCNoResultResponse encodes responses from the
+// "ServiceUnaryRPCNoResult" service "MethodUnaryRPCNoResult" endpoint.
+func EncodeMethodUnaryRPCNoResultResponse(ctx context.Context, v interface{}, hdr, trlr *metadata.MD) (interface{}, error) {
+	resp := NewMethodUnaryRPCNoResultResponse()
+	return resp, nil
+}
+`
+
 const ResultWithViewsResponseEncoderCode = `// EncodeMethodMessageUserTypeWithNestedUserTypesResponse encodes responses
 // from the "ServiceMessageUserTypeWithNestedUserTypes" service
 // "MethodMessageUserTypeWithNestedUserTypes" endpoint.

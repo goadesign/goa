@@ -43,11 +43,10 @@ func (s *Server) MethodUnaryRPCNoResult(ctx context.Context, message *pb.MethodU
 }
 `
 
-const UnaryRPCWithErrorsServerInterfaceCode = `// MethodUnaryRPCWithErrorsNoResult implements the
-// "MethodUnaryRPCWithErrorsNoResult" method in
-// pb.ServiceUnaryRPCWithErrorsNoResultServer interface.
-func (s *Server) MethodUnaryRPCWithErrorsNoResult(ctx context.Context, message *pb.MethodUnaryRPCWithErrorsNoResultRequest) (*pb.MethodUnaryRPCWithErrorsNoResultResponse, error) {
-	resp, err := s.MethodUnaryRPCWithErrorsNoResultH.Handle(ctx, message)
+const UnaryRPCWithErrorsServerInterfaceCode = `// MethodUnaryRPCWithErrors implements the "MethodUnaryRPCWithErrors" method in
+// pb.ServiceUnaryRPCWithErrorsServer interface.
+func (s *Server) MethodUnaryRPCWithErrors(ctx context.Context, message *pb.MethodUnaryRPCWithErrorsRequest) (*pb.MethodUnaryRPCWithErrorsResponse, error) {
+	resp, err := s.MethodUnaryRPCWithErrorsH.Handle(ctx, message)
 	if err != nil {
 		if en, ok := err.(ErrorNamer); ok {
 			switch en.ErrorName() {
@@ -61,7 +60,7 @@ func (s *Server) MethodUnaryRPCWithErrorsNoResult(ctx context.Context, message *
 		}
 		return nil, goagrpc.EncodeError(err)
 	}
-	return resp.(*pb.MethodUnaryRPCWithErrorsNoResultResponse), nil
+	return resp.(*pb.MethodUnaryRPCWithErrorsResponse), nil
 }
 `
 

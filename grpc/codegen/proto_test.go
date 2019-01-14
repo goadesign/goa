@@ -54,6 +54,7 @@ func TestMessageDefSection(t *testing.T) {
 		{"user-type-with-primitives", testdata.MessageUserTypeWithPrimitivesDSL, testdata.MessageUserTypeWithPrimitivesMessageCode},
 		{"user-type-with-nested-user-types", testdata.MessageUserTypeWithNestedUserTypesDSL, testdata.MessageUserTypeWithNestedUserTypesCode},
 		{"result-type-collection", testdata.MessageResultTypeCollectionDSL, testdata.MessageResultTypeCollectionCode},
+		{"user-type-with-collection", testdata.MessageUserTypeWithCollectionDSL, testdata.MessageUserTypeWithCollectionCode},
 		{"array", testdata.MessageArrayDSL, testdata.MessageArrayCode},
 		{"map", testdata.MessageMapDSL, testdata.MessageMapCode},
 		{"primitive", testdata.MessagePrimitiveDSL, testdata.MessagePrimitiveCode},

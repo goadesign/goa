@@ -53,8 +53,8 @@ var UnaryRPCNoResultDSL = func() {
 }
 
 var UnaryRPCWithErrorsDSL = func() {
-	Service("ServiceUnaryRPCWithErrorsNoResult", func() {
-		Method("MethodUnaryRPCWithErrorsNoResult", func() {
+	Service("ServiceUnaryRPCWithErrors", func() {
+		Method("MethodUnaryRPCWithErrors", func() {
 			Payload(String)
 			Result(String)
 			Error("timeout")
@@ -313,6 +313,31 @@ var MessageResultTypeCollectionDSL = func() {
 	Service("ServiceMessageUserTypeWithNestedUserTypes", func() {
 		Method("MethodMessageUserTypeWithNestedUserTypes", func() {
 			Result(CollectionOf(RT))
+			GRPC(func() {})
+		})
+	})
+}
+
+var MessageUserTypeWithCollectionDSL = func() {
+	var RT = ResultType("application/vnd.goa.rt", func() {
+		TypeName("RT")
+		Attributes(func() {
+			Attribute("IntField", Int, func() {
+				Meta("rpc:tag", "1")
+			})
+		})
+	})
+	var ResultT = ResultType("application/vnd.goa.resultt", func() {
+		TypeName("ResultT")
+		Attributes(func() {
+			Attribute("CollectionField", CollectionOf(RT), func() {
+				Meta("rpc:tag", "1")
+			})
+		})
+	})
+	Service("ServiceMessageUserTypeWithPrimitives", func() {
+		Method("MethodMessageUserTypeWithPrimitives", func() {
+			Result(ResultT)
 			GRPC(func() {})
 		})
 	})

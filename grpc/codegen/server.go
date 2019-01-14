@@ -393,7 +393,7 @@ func Encode{{ .Method.VarName }}Response(ctx context.Context, v interface{}, hdr
 	}
 	result := vres.Projected
 	(*hdr).Append("goa-view", vres.View)
-{{- else }}
+{{- else if .ResultRef }}
 	result, ok := v.({{ .ResultRef }})
 	if !ok {
 		return nil, goagrpc.ErrInvalidType("{{ .ServiceName }}", "{{ .Method.Name }}", "{{ .ResultRef }}", v)
@@ -406,7 +406,7 @@ func Encode{{ .Method.VarName }}Response(ctx context.Context, v interface{}, hdr
 {{- range .Response.Trailers }}
 	{{ template "metadata_encoder" (metadataEncodeDecodeData . "(*trlr)") }}
 {{- end }}
-	return {{ if .ResultRef }}resp{{ else }}nil{{ end }}, nil
+	return resp, nil
 }
 
 {{- define "metadata_encoder" }}
