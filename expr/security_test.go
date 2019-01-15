@@ -205,10 +205,23 @@ func TestSchemeExprType(t *testing.T) {
 	}
 
 	for k, tc := range cases {
-		f := &SchemeExpr{Kind: tc.kind}
-		if actual := f.Type(); actual != tc.expected {
-			t.Errorf("%s: got %#v, expected %#v", k, actual, tc.expected)
-		}
+		func() {
+			// panic recover
+			defer func() {
+				if k != "NoKind" {
+					return
+				}
+
+				if recover() == nil {
+					t.Errorf("should have panicked!")
+				}
+			}()
+
+			f := &SchemeExpr{Kind: tc.kind}
+			if actual := f.Type(); actual != tc.expected {
+				t.Errorf("%s: got %#v, expected %#v", k, actual, tc.expected)
+			}
+		}()
 	}
 }
 
