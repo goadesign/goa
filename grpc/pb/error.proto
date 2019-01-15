@@ -1,0 +1,26 @@
+syntax = "proto3";
+
+// NOTE: If there are any changes to this file, run the protoc command as
+// below from the pb directory to compile and generte the error.pb.go file.
+//
+// $ protoc -I . error.proto --go_out=plugins=grpc:.
+
+package goa.pb;
+
+// ErrorResponse message defines the error encoded in the gRPC response that
+// correspond to the errors created by the generated code. This is mainly
+// intended for the clients to decode error responses.
+message ErrorResponse {
+  // name is the name for that class of errors.
+  string name = 1;
+  // id is the unique error instance identifier.
+  string id = 2;
+  // msg describes the specific error occurrence.
+  string msg = 3;
+  // temporary indicates whether the error is temporary.
+  bool temporary = 4;
+  // timeout indicates whether the error is a timeout.
+  bool timeout = 5;
+  // fault indicates whether the error is a server-side fault.
+  bool fault = 6;
+}

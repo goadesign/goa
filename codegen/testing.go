@@ -59,6 +59,15 @@ func SectionCode(t *testing.T, section *SectionTemplate) string {
 	return sectionCodeWithPrefix(t, section, "package foo\n")
 }
 
+// SectionsCode generates and formats the code for the given sections.
+func SectionsCode(t *testing.T, sections []*SectionTemplate) string {
+	codes := make([]string, len(sections))
+	for i, section := range sections {
+		codes[i] = sectionCodeWithPrefix(t, section, "package foo\n")
+	}
+	return strings.Join(codes, "\n")
+}
+
 // SectionCodeFromImportsAndMethods generates and formats the code for given import and method definition sections.
 func SectionCodeFromImportsAndMethods(t *testing.T, importSection *SectionTemplate, methodSection *SectionTemplate) string {
 	var code bytes.Buffer

@@ -15,7 +15,6 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/url"
-	"strings"
 
 	securedservice "goa.design/goa/examples/security/gen/secured_service"
 	goahttp "goa.design/goa/http"
@@ -70,8 +69,21 @@ func DecodeSigninResponse(decoder func(*http.Response) goahttp.Decoder, restoreB
 			defer resp.Body.Close()
 		}
 		switch resp.StatusCode {
-		case http.StatusNoContent:
-			return nil, nil
+		case http.StatusOK:
+			var (
+				body SigninResponseBody
+				err  error
+			)
+			err = decoder(resp).Decode(&body)
+			if err != nil {
+				return nil, goahttp.ErrDecodingError("secured_service", "signin", err)
+			}
+			err = ValidateSigninResponseBody(&body)
+			if err != nil {
+				return nil, goahttp.ErrValidationError("secured_service", "signin", err)
+			}
+			res := NewSigninCredsOK(&body)
+			return res, nil
 		case http.StatusUnauthorized:
 			var (
 				body SigninUnauthorizedResponseBody
@@ -112,13 +124,7 @@ func EncodeSecureRequest(encoder func(*http.Request) goahttp.Encoder) func(*http
 		if !ok {
 			return goahttp.ErrInvalidType("secured_service", "secure", "*securedservice.SecurePayload", v)
 		}
-		if p.Token != nil {
-			if !strings.Contains(*p.Token, " ") {
-				req.Header.Set("Authorization", "Bearer "+*p.Token)
-			} else {
-				req.Header.Set("Authorization", *p.Token)
-			}
-		}
+		req.Header.Set("Authorization", p.Token)
 		values := req.URL.Query()
 		if p.Fail != nil {
 			values.Add("fail", fmt.Sprintf("%v", *p.Fail))
@@ -132,6 +138,7 @@ func EncodeSecureRequest(encoder func(*http.Request) goahttp.Encoder) func(*http
 // secured_service secure endpoint. restoreBody controls whether the response
 // body should be restored after having been read.
 // DecodeSecureResponse may return the following errors:
+//	- "invalid-scopes" (type securedservice.InvalidScopes): http.StatusForbidden
 //	- "unauthorized" (type securedservice.Unauthorized): http.StatusUnauthorized
 //	- error: internal error
 func DecodeSecureResponse(decoder func(*http.Response) goahttp.Decoder, restoreBody bool) func(*http.Response) (interface{}, error) {
@@ -159,6 +166,16 @@ func DecodeSecureResponse(decoder func(*http.Response) goahttp.Decoder, restoreB
 				return nil, goahttp.ErrDecodingError("secured_service", "secure", err)
 			}
 			return body, nil
+		case http.StatusForbidden:
+			var (
+				body SecureInvalidScopesResponseBody
+				err  error
+			)
+			err = decoder(resp).Decode(&body)
+			if err != nil {
+				return nil, goahttp.ErrDecodingError("secured_service", "secure", err)
+			}
+			return nil, NewSecureInvalidScopes(body)
 		case http.StatusUnauthorized:
 			var (
 				body SecureUnauthorizedResponseBody
@@ -199,17 +216,9 @@ func EncodeDoublySecureRequest(encoder func(*http.Request) goahttp.Encoder) func
 		if !ok {
 			return goahttp.ErrInvalidType("secured_service", "doubly_secure", "*securedservice.DoublySecurePayload", v)
 		}
-		if p.Token != nil {
-			if !strings.Contains(*p.Token, " ") {
-				req.Header.Set("Authorization", "Bearer "+*p.Token)
-			} else {
-				req.Header.Set("Authorization", *p.Token)
-			}
-		}
+		req.Header.Set("Authorization", p.Token)
 		values := req.URL.Query()
-		if p.Key != nil {
-			values.Add("k", *p.Key)
-		}
+		values.Add("k", p.Key)
 		req.URL.RawQuery = values.Encode()
 		return nil
 	}
@@ -219,6 +228,7 @@ func EncodeDoublySecureRequest(encoder func(*http.Request) goahttp.Encoder) func
 // secured_service doubly_secure endpoint. restoreBody controls whether the
 // response body should be restored after having been read.
 // DecodeDoublySecureResponse may return the following errors:
+//	- "invalid-scopes" (type securedservice.InvalidScopes): http.StatusForbidden
 //	- "unauthorized" (type securedservice.Unauthorized): http.StatusUnauthorized
 //	- error: internal error
 func DecodeDoublySecureResponse(decoder func(*http.Response) goahttp.Decoder, restoreBody bool) func(*http.Response) (interface{}, error) {
@@ -246,6 +256,16 @@ func DecodeDoublySecureResponse(decoder func(*http.Response) goahttp.Decoder, re
 				return nil, goahttp.ErrDecodingError("secured_service", "doubly_secure", err)
 			}
 			return body, nil
+		case http.StatusForbidden:
+			var (
+				body DoublySecureInvalidScopesResponseBody
+				err  error
+			)
+			err = decoder(resp).Decode(&body)
+			if err != nil {
+				return nil, goahttp.ErrDecodingError("secured_service", "doubly_secure", err)
+			}
+			return nil, NewDoublySecureInvalidScopes(body)
 		case http.StatusUnauthorized:
 			var (
 				body DoublySecureUnauthorizedResponseBody
@@ -288,11 +308,7 @@ func EncodeAlsoDoublySecureRequest(encoder func(*http.Request) goahttp.Encoder) 
 			return goahttp.ErrInvalidType("secured_service", "also_doubly_secure", "*securedservice.AlsoDoublySecurePayload", v)
 		}
 		if p.Token != nil {
-			if !strings.Contains(*p.Token, " ") {
-				req.Header.Set("Authorization", "Bearer "+*p.Token)
-			} else {
-				req.Header.Set("Authorization", *p.Token)
-			}
+			req.Header.Set("Authorization", *p.Token)
 		}
 		values := req.URL.Query()
 		if p.Key != nil {
@@ -315,6 +331,7 @@ func EncodeAlsoDoublySecureRequest(encoder func(*http.Request) goahttp.Encoder) 
 // the secured_service also_doubly_secure endpoint. restoreBody controls
 // whether the response body should be restored after having been read.
 // DecodeAlsoDoublySecureResponse may return the following errors:
+//	- "invalid-scopes" (type securedservice.InvalidScopes): http.StatusForbidden
 //	- "unauthorized" (type securedservice.Unauthorized): http.StatusUnauthorized
 //	- error: internal error
 func DecodeAlsoDoublySecureResponse(decoder func(*http.Response) goahttp.Decoder, restoreBody bool) func(*http.Response) (interface{}, error) {
@@ -342,6 +359,16 @@ func DecodeAlsoDoublySecureResponse(decoder func(*http.Response) goahttp.Decoder
 				return nil, goahttp.ErrDecodingError("secured_service", "also_doubly_secure", err)
 			}
 			return body, nil
+		case http.StatusForbidden:
+			var (
+				body AlsoDoublySecureInvalidScopesResponseBody
+				err  error
+			)
+			err = decoder(resp).Decode(&body)
+			if err != nil {
+				return nil, goahttp.ErrDecodingError("secured_service", "also_doubly_secure", err)
+			}
+			return nil, NewAlsoDoublySecureInvalidScopes(body)
 		case http.StatusUnauthorized:
 			var (
 				body AlsoDoublySecureUnauthorizedResponseBody

@@ -43,8 +43,13 @@ var _ = Service("secured_service", func() {
 	Description("The secured service exposes endpoints that require valid authorization credentials.")
 
 	Error("unauthorized", String, "Credentials are invalid")
+
 	HTTP(func() {
 		Response("unauthorized", StatusUnauthorized)
+	})
+
+	GRPC(func() {
+		Response("unauthorized", CodeUnauthenticated)
 	})
 
 	Method("signin", func() {
@@ -55,107 +60,171 @@ var _ = Service("secured_service", func() {
 
 		Payload(func() {
 			Description("Credentials used to authenticate to retrieve JWT token")
-			Username("username", String, "Username used to perform signin", func() {
+			UsernameField(1, "username", String, "Username used to perform signin", func() {
 				Example("user")
 			})
-			Password("password", String, "Password used to perform signin", func() {
+			PasswordField(2, "password", String, "Password used to perform signin", func() {
 				Example("password")
 			})
 			Required("username", "password")
 		})
 
+		Result(Creds)
+
 		HTTP(func() {
 			POST("/signin")
 			// Use Authorization header to provide basic auth value.
-			Response(StatusNoContent)
+			Response(StatusOK)
+		})
+
+		GRPC(func() {
+			Response(CodeOK)
 		})
 	})
 
 	Method("secure", func() {
 		Description("This action is secured with the jwt scheme")
+
 		Security(JWTAuth, func() { // Use JWT to auth requests to this endpoint.
 			Scope("api:read") // Enforce presence of "api:read" scope in JWT claims.
 		})
+
 		Payload(func() {
-			Attribute("fail", Boolean, func() {
+			Field(1, "fail", Boolean, func() {
 				Description("Whether to force auth failure even with a valid JWT")
 			})
-			Token("token", String, func() {
+			TokenField(2, "token", String, func() {
 				Description("JWT used for authentication")
 			})
+			Required("token")
 		})
-		Result(String, func() {
-			Example("JWT secured data")
-		})
+
+		Result(String)
+
+		Error("invalid-scopes", String, "Token scopes are invalid")
+
 		HTTP(func() {
 			GET("/secure")
 			Param("fail")
 			Response(StatusOK)
+			Response("invalid-scopes", StatusForbidden)
+		})
+
+		GRPC(func() {
+			Response(CodeOK)
+			Response("invalid-scopes", CodeUnauthenticated)
 		})
 	})
 
 	Method("doubly_secure", func() {
 		Description("This action is secured with the jwt scheme and also requires an API key query string.")
+
 		Security(JWTAuth, APIKeyAuth, func() { // Use JWT and an API key to secure this endpoint.
 			Scope("api:read")  // Enforce presence of both "api:read"
 			Scope("api:write") // and "api:write" scopes in JWT claims.
 		})
+
 		Payload(func() {
-			APIKey("api_key", "key", String, func() {
+			APIKeyField(1, "api_key", "key", String, func() {
 				Description("API key")
 				Example("abcdef12345")
 			})
-			Token("token", String, func() {
+			TokenField(2, "token", String, func() {
 				Description("JWT used for authentication")
 				Example("eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiYWRtaW4iOnRydWV9.TJVA95OrM7E2cBab30RMHrHDcEfxjoYZgeFONFh7HgQ")
 			})
+			Required("key", "token")
 		})
-		Result(String, func() {
-			Example("JWT secured data")
-		})
+
+		Result(String)
+
+		Error("invalid-scopes", String, "Token scopes are invalid")
+
 		HTTP(func() {
 			PUT("/secure")
-			Param("key:k")
+			Param("key:k") // API key "key" sent in query parameter "k"
 			Response(StatusOK)
+			Response("invalid-scopes", StatusForbidden)
+		})
+
+		GRPC(func() {
+			Message(func() {
+				Attribute("key") // API key "key" sent in request message
+			})
+			Response(CodeOK)
+			Response("invalid-scopes", CodeUnauthenticated)
 		})
 	})
 
 	Method("also_doubly_secure", func() {
 		Description("This action is secured with the jwt scheme and also requires an API key header.")
+
 		Security(JWTAuth, APIKeyAuth, func() { // Use JWT and an API key to secure this endpoint.
 			Scope("api:read")  // Enforce presence of both "api:read"
 			Scope("api:write") // and "api:write" scopes in JWT claims.
 		})
+
 		Security(OAuth2Auth, BasicAuth, func() {
 			Scope("api:read")  // Enforce presence of both "api:read"
 			Scope("api:write") // and "api:write" scopes in OAuth2 claims.
 		})
+
 		Payload(func() {
-			Username("username", String, "Username used to perform signin", func() {
+			UsernameField(1, "username", String, "Username used to perform signin", func() {
 				Example("user")
 			})
-			Password("password", String, "Password used to perform signin", func() {
+			PasswordField(2, "password", String, "Password used to perform signin", func() {
 				Example("password")
 			})
-			APIKey("api_key", "key", String, func() {
+			APIKeyField(3, "api_key", "key", String, func() {
 				Description("API key")
 				Example("abcdef12345")
 			})
-			Token("token", String, func() {
+			TokenField(4, "token", String, func() {
 				Description("JWT used for authentication")
 				Example("eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiYWRtaW4iOnRydWV9.TJVA95OrM7E2cBab30RMHrHDcEfxjoYZgeFONFh7HgQ")
 			})
-			AccessToken("oauth_token", String)
+			AccessTokenField(5, "oauth_token", String)
 		})
-		Result(String, func() {
-			Example("JWT secured data")
-		})
+
+		Result(String)
+
+		Error("invalid-scopes", String, "Token scopes are invalid")
+
 		HTTP(func() {
 			POST("/secure")
-			Header("token:Authorization")
-			Param("key:k")
-			Param("oauth_token:oauth")
+			Header("token:Authorization") // JWT token passed in "Authorization" header
+			Param("key:k")                // API key "key" sent in query parameter "k"
+			Param("oauth_token:oauth")    // OAuth token sent in query parameter "oauth"
 			Response(StatusOK)
+			Response("invalid-scopes", StatusForbidden)
+		})
+
+		GRPC(func() {
+			Message(func() {
+				Attribute("username") // "username" sent in request message
+				Attribute("password") // "password" sent in request message
+				Attribute("key")      // API key "key" sent in request message
+			})
+			Metadata(func() {
+				Attribute("oauth_token:oauth") // OAuth token sent in request metadata key "oauth"
+			})
+			Response(CodeOK)
+			Response("invalid-scopes", CodeUnauthenticated)
 		})
 	})
+})
+
+// Creds defines the credentials to use for authenticating to service methods.
+var Creds = Type("Creds", func() {
+	Field(1, "jwt", String, "JWT token", func() {
+		Example("eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiYWRtaW4iOnRydWV9.TJVA95OrM7E2cBab30RMHrHDcEfxjoYZgeFONFh7HgQ")
+	})
+	Field(2, "api_key", String, "API Key", func() {
+		Example("abcdef12345")
+	})
+	Field(3, "oauth_token", String, "OAuth2 token", func() {
+		Example("eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiYWRtaW4iOnRydWV9.TJVA95OrM7E2cBab30RMHrHDcEfxjoYZgeFONFh7HgQ")
+	})
+	Required("jwt", "api_key", "oauth_token")
 })

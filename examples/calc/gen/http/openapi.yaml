@@ -50,4 +50,6 @@ paths:
             type: file
       schemes:
       - grpc
+      - grpcs
       - http
+      - https

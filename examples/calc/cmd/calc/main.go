@@ -22,6 +22,7 @@ func main() {
 		hostF     = flag.String("host", "development", "Server host (valid values: development, production)")
 		domainF   = flag.String("domain", "", "Host domain name (overrides host domain specified in service design)")
 		httpPortF = flag.String("http-port", "", "HTTP port (overrides host HTTP port specified in service design)")
+		grpcPortF = flag.String("grpc-port", "", "gRPC port (overrides host gRPC port specified in service design)")
 		versionF  = flag.String("version", "v1", "API version")
 		secureF   = flag.Bool("secure", false, "Use secure scheme (https or grpcs)")
 		dbgF      = flag.Bool("debug", false, "Log request and response bodies")
@@ -90,6 +91,28 @@ func main() {
 			handleHTTPServer(ctx, u, calcEndpoints, &wg, errc, logger, *dbgF)
 		}
 
+		{
+			addr := "grpc://localhost:8080"
+			u, err := url.Parse(addr)
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "invalid URL %#v: %s", addr, err)
+				os.Exit(1)
+			}
+			if *secureF {
+				u.Scheme = "grpcs"
+			}
+			if *domainF != "" {
+				u.Host = *domainF
+			}
+			if *grpcPortF != "" {
+				h := strings.Split(u.Host, ":")[0]
+				u.Host = h + ":" + *grpcPortF
+			} else if u.Port() == "" {
+				u.Host += ":8080"
+			}
+			handleGRPCServer(ctx, u, calcEndpoints, &wg, errc, logger, *dbgF)
+		}
+
 	case "production":
 		{
 			addr := "https://{version}.goa.design/calc"
@@ -112,6 +135,29 @@ func main() {
 				u.Host += ":443"
 			}
 			handleHTTPServer(ctx, u, calcEndpoints, &wg, errc, logger, *dbgF)
+		}
+
+		{
+			addr := "grpcs://{version}.goa.design"
+			addr = strings.Replace(addr, "{version}", *versionF, -1)
+			u, err := url.Parse(addr)
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "invalid URL %#v: %s", addr, err)
+				os.Exit(1)
+			}
+			if *secureF {
+				u.Scheme = "grpcs"
+			}
+			if *domainF != "" {
+				u.Host = *domainF
+			}
+			if *grpcPortF != "" {
+				h := strings.Split(u.Host, ":")[0]
+				u.Host = h + ":" + *grpcPortF
+			} else if u.Port() == "" {
+				u.Host += ":8443"
+			}
+			handleGRPCServer(ctx, u, calcEndpoints, &wg, errc, logger, *dbgF)
 		}
 
 	default:

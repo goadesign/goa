@@ -133,24 +133,33 @@ func GoObjectTransform(source, target *ContextualAttribute, ta *TransformAttrs, 
 			tgtField := tgtc.Attribute.Field(tgtMatt.ElemName(n), true)
 			srcPtr := srcc.IsPointer()
 			tgtPtr := tgtc.IsPointer()
-			deref := ""
-			if srcPtr && !tgtPtr {
-				deref = "*"
+			srcFieldConv := t.ConvertType(srcc.Attribute, tgtc.Attribute, srcField)
+			switch {
+			case srcPtr && !tgtPtr:
+				srcFieldConv = t.ConvertType(srcc.Attribute, tgtc.Attribute, "*"+srcField)
 				if !srcc.Required {
-					srcFieldConv := t.ConvertType(srcc.Attribute, tgtc.Attribute, "*"+srcField)
 					postInitCode += fmt.Sprintf("if %s != nil {\n\t%s.%s = %s\n}\n", srcField, ta.TargetVar, tgtField, srcFieldConv)
 					return
 				}
-			} else if !srcPtr && tgtPtr {
-				deref = "&"
+			case !srcPtr && tgtPtr:
+				if srcField != srcFieldConv {
+					// type conversion required. Add it in postinit code.
+					tgtName := tgtc.Attribute.Field(tgtMatt.ElemName(n), false)
+					postInitCode += fmt.Sprintf("%sptr := %s\n%s.%s = &%sptr\n", tgtName, srcFieldConv, ta.TargetVar, tgtField, tgtName)
+					return
+				}
+				srcFieldConv = fmt.Sprintf("&%s", srcField)
+			case srcPtr && tgtPtr:
+				srcFieldConv = t.ConvertType(srcc.Attribute, tgtc.Attribute, "*"+srcField)
+				if "*"+srcField != srcFieldConv {
+					// type conversion required. Add it in postinit code.
+					tgtName := tgtc.Attribute.Field(tgtMatt.ElemName(n), false)
+					postInitCode += fmt.Sprintf("%sptr := %s\n%s.%s = &%sptr\n", tgtName, srcFieldConv, ta.TargetVar, tgtField, tgtName)
+					return
+				}
+				srcFieldConv = srcField
 			}
-			if srcFieldConv := t.ConvertType(srcc.Attribute, tgtc.Attribute, srcField); srcField != srcFieldConv {
-				// type conversion required. Add it in postinit code.
-				tgtName := tgtc.Attribute.Field(tgtMatt.ElemName(n), false)
-				postInitCode += fmt.Sprintf("%sptr := %s\n%s.%s = %s%sptr\n", tgtName, srcFieldConv, ta.TargetVar, tgtField, deref, tgtName)
-				return
-			}
-			initCode += fmt.Sprintf("\n%s: %s%s,", tgtField, deref, srcField)
+			initCode += fmt.Sprintf("\n%s: %s,", tgtField, srcFieldConv)
 		})
 		if initCode != "" {
 			initCode += "\n"
@@ -174,21 +183,20 @@ func GoObjectTransform(source, target *ContextualAttribute, ta *TransformAttrs, 
 	// struct fields
 	var err error
 	walkMatches(source, target, func(srcMatt, tgtMatt *expr.MappedAttributeExpr, srcc, tgtc *ContextualAttribute, n string) {
-		if srcc, tgtc, ta, err = t.MakeCompatible(srcc, tgtc, ta, ""); err != nil {
-			return
-		}
-
 		var (
 			code string
 
-			srccAtt = srcc.Attribute.Expr()
-			newTA   = &TransformAttrs{
+			newTA = &TransformAttrs{
 				SourceVar: ta.SourceVar + "." + srcc.Attribute.Field(srcMatt.ElemName(n), true),
 				TargetVar: ta.TargetVar + "." + tgtc.Attribute.Field(tgtMatt.ElemName(n), true),
 				NewVar:    false,
 			}
 		)
 		{
+			if srcc, tgtc, newTA, err = t.MakeCompatible(srcc, tgtc, newTA, ""); err != nil {
+				return
+			}
+			srccAtt := srcc.Attribute.Expr()
 			_, ok := srccAtt.Type.(expr.UserType)
 			switch {
 			case expr.IsArray(srccAtt.Type):
@@ -215,7 +223,7 @@ func GoObjectTransform(source, target *ContextualAttribute, ta *TransformAttrs, 
 		var checkNil bool
 		{
 			checkNil = srcc.IsPointer()
-			if !checkNil && !expr.IsPrimitive(srccAtt.Type) {
+			if !checkNil && !expr.IsPrimitive(srcc.Attribute.Expr().Type) {
 				if !srcc.Required && srcc.DefaultValue() == nil {
 					checkNil = true
 				}

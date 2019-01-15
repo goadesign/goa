@@ -1,0 +1,69 @@
+// Code generated with goa v2.0.0-wip, DO NOT EDIT.
+//
+// secured_service protocol buffer definition
+//
+// Command:
+// $ goa gen goa.design/goa/examples/security/design -o
+// $(GOPATH)/src/goa.design/goa/examples/security
+
+syntax = "proto3";
+
+package pb;
+
+// The secured service exposes endpoints that require valid authorization
+// credentials.
+service secured_service {
+	// Creates a valid JWT
+	rpc Signin (SigninRequest) returns (SigninResponse);
+	// This action is secured with the jwt scheme
+	rpc Secure (SecureRequest) returns (SecureResponse);
+	// This action is secured with the jwt scheme and also requires an API key
+// query string.
+	rpc DoublySecure (DoublySecureRequest) returns (DoublySecureResponse);
+	// This action is secured with the jwt scheme and also requires an API key
+// header.
+	rpc AlsoDoublySecure (AlsoDoublySecureRequest) returns (AlsoDoublySecureResponse);
+}
+
+message SigninRequest {
+}
+
+message SigninResponse {
+	// JWT token
+	string jwt = 1;
+	// API Key
+	string api_key = 2;
+	// OAuth2 token
+	string oauth_token = 3;
+}
+
+message SecureRequest {
+	// Whether to force auth failure even with a valid JWT
+	bool fail = 1;
+}
+
+message SecureResponse {
+	string field = 1;
+}
+
+message DoublySecureRequest {
+	// API key
+	string key = 1;
+}
+
+message DoublySecureResponse {
+	string field = 1;
+}
+
+message AlsoDoublySecureRequest {
+	// Username used to perform signin
+	string username = 1;
+	// Password used to perform signin
+	string password = 2;
+	// API key
+	string key = 3;
+}
+
+message AlsoDoublySecureResponse {
+	string field = 1;
+}

@@ -118,25 +118,32 @@ func (p *protoBufTransformer) Transform(source, target *codegen.ContextualAttrib
 func (p *protoBufTransformer) MakeCompatible(source, target *codegen.ContextualAttribute, ta *codegen.TransformAttrs, suffix string) (src, tgt *codegen.ContextualAttribute, newTA *codegen.TransformAttrs, err error) {
 	src = source
 	tgt = target
+	newTA = &codegen.TransformAttrs{
+		SourceVar: ta.SourceVar,
+		TargetVar: ta.TargetVar,
+		NewVar:    ta.NewVar,
+	}
 	if err = codegen.IsCompatible(
 		src.Attribute.Expr().Type,
 		tgt.Attribute.Expr().Type,
 		ta.SourceVar+suffix, ta.TargetVar+suffix); err != nil {
 		if p.proto {
+			p.targetInit = target.Attribute.Name()
 			tgtAtt := unwrapAttr(expr.DupAtt(target.Attribute.Expr()))
 			tgt = target.Dup(tgtAtt, true)
 		} else {
 			srcAtt := unwrapAttr(expr.DupAtt(source.Attribute.Expr()))
 			src = source.Dup(srcAtt, true)
+			newTA.SourceVar += ".Field"
 		}
 		if err = codegen.IsCompatible(
 			src.Attribute.Expr().Type,
 			tgt.Attribute.Expr().Type,
-			ta.SourceVar, ta.TargetVar); err != nil {
-			return src, tgt, ta, err
+			newTA.SourceVar, newTA.TargetVar); err != nil {
+			return src, tgt, newTA, err
 		}
 	}
-	return src, tgt, ta, nil
+	return src, tgt, newTA, nil
 }
 
 // ConvertType produces code to initialize a target type from a source type
@@ -198,6 +205,7 @@ func (p *protoBufTransformer) TransformArray(source, target *codegen.ContextualA
 			TargetVar: ta.TargetVar + ".Field",
 			NewVar:    false,
 		}
+		p.targetInit = ""
 	}
 	if err := codegen.IsCompatible(source.Attribute.Expr().Type, target.Attribute.Expr().Type, ta.SourceVar+"[0]", ta.TargetVar+"[0]"); err != nil {
 		if p.proto {
@@ -275,6 +283,7 @@ func (p *protoBufTransformer) TransformMap(source, target *codegen.ContextualAtt
 			TargetVar: ta.TargetVar + ".Field",
 			NewVar:    false,
 		}
+		p.targetInit = ""
 	}
 	if err := codegen.IsCompatible(sourceMap.ElemType.Type, targetMap.ElemType.Type, ta.SourceVar+"[*]", ta.TargetVar+"[*]"); err != nil {
 		if p.proto {

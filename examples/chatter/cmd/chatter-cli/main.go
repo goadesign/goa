@@ -39,7 +39,8 @@ func main() {
 			case "localhost":
 				addr = "http://localhost:80"
 			default:
-				fmt.Fprintf(os.Stderr, "invalid host argument: %q (valid hosts: localhost", *hostF)
+				fmt.Fprintf(os.Stderr, "invalid host argument: %q (valid hosts: localhost)", *hostF)
+				os.Exit(1)
 			}
 		}
 		timeout = *timeoutF
@@ -68,6 +69,8 @@ func main() {
 		switch scheme {
 		case "http", "https":
 			endpoint, payload, err = doHTTP(scheme, host, timeout, debug)
+		case "grpc":
+			endpoint, payload, err = doGRPC(scheme, host, timeout, debug)
 		default:
 			fmt.Fprintf(os.Stderr, "invalid scheme: %q (valid schemes: grpc|http)", scheme)
 			os.Exit(1)

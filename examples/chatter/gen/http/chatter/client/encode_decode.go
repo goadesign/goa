@@ -14,7 +14,6 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/url"
-	"strings"
 
 	chattersvc "goa.design/goa/examples/chatter/gen/chatter"
 	chattersvcviews "goa.design/goa/examples/chatter/gen/chatter/views"
@@ -127,11 +126,7 @@ func EncodeEchoerRequest(encoder func(*http.Request) goahttp.Encoder) func(*http
 		if !ok {
 			return goahttp.ErrInvalidType("chatter", "echoer", "*chattersvc.EchoerPayload", v)
 		}
-		if !strings.Contains(p.Token, " ") {
-			req.Header.Set("Authorization", "Bearer "+p.Token)
-		} else {
-			req.Header.Set("Authorization", p.Token)
-		}
+		req.Header.Set("Authorization", p.Token)
 		return nil
 	}
 }
@@ -225,11 +220,7 @@ func EncodeListenerRequest(encoder func(*http.Request) goahttp.Encoder) func(*ht
 		if !ok {
 			return goahttp.ErrInvalidType("chatter", "listener", "*chattersvc.ListenerPayload", v)
 		}
-		if !strings.Contains(p.Token, " ") {
-			req.Header.Set("Authorization", "Bearer "+p.Token)
-		} else {
-			req.Header.Set("Authorization", p.Token)
-		}
+		req.Header.Set("Authorization", p.Token)
 		return nil
 	}
 }
@@ -315,11 +306,7 @@ func EncodeSummaryRequest(encoder func(*http.Request) goahttp.Encoder) func(*htt
 		if !ok {
 			return goahttp.ErrInvalidType("chatter", "summary", "*chattersvc.SummaryPayload", v)
 		}
-		if !strings.Contains(p.Token, " ") {
-			req.Header.Set("Authorization", "Bearer "+p.Token)
-		} else {
-			req.Header.Set("Authorization", p.Token)
-		}
+		req.Header.Set("Authorization", p.Token)
 		return nil
 	}
 }
@@ -420,11 +407,7 @@ func EncodeHistoryRequest(encoder func(*http.Request) goahttp.Encoder) func(*htt
 		if !ok {
 			return goahttp.ErrInvalidType("chatter", "history", "*chattersvc.HistoryPayload", v)
 		}
-		if !strings.Contains(p.Token, " ") {
-			req.Header.Set("Authorization", "Bearer "+p.Token)
-		} else {
-			req.Header.Set("Authorization", p.Token)
-		}
+		req.Header.Set("Authorization", p.Token)
 		values := req.URL.Query()
 		if p.View != nil {
 			values.Add("view", *p.View)

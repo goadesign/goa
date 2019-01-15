@@ -205,7 +205,8 @@ const (
 	switch *hostF {
 {{- range $h := .Server.Hosts }}
 	case {{ printf "%q" $h.Name }}:
-	{{- range $u := $h.URIs }}{{- if or (eq $u.Scheme "http") (eq $u.Scheme "https") }}
+	{{- range $u := $h.URIs }}
+		{{- if $.Server.HasTransport $u.Transport.Type }}
 		{
 			addr := {{ printf "%q" $u.URL }}
 			{{- range $h.Variables }}
@@ -245,7 +246,8 @@ const (
 			}
 			handle{{ toUpper $u.Transport.Name }}Server(ctx, u, {{ range $.Services }}{{ if .Methods }}{{ .VarName }}Endpoints, {{ end }}{{ end }}&wg, errc, logger, *dbgF)
 		}
-	{{ end }}{{- end }}
+	{{- end }}
+	{{ end }}
 {{- end }}
 	default:
 		fmt.Fprintf(os.Stderr, "invalid host argument: %q (valid hosts: {{ join .Server.AvailableHosts "|" }})", *hostF)
