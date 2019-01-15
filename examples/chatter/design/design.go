@@ -38,6 +38,11 @@ var _ = Service("chatter", func() {
 			Response(StatusOK)
 			Response("unauthorized", StatusUnauthorized)
 		})
+
+		GRPC(func() {
+			Response(CodeOK)
+			Response("unauthorized", CodeUnauthenticated)
+		})
 	})
 
 	Method("echoer", func() { // bidirectional streaming example
@@ -67,6 +72,12 @@ var _ = Service("chatter", func() {
 			Response("unauthorized", StatusUnauthorized)
 			Response("invalid-scopes", StatusForbidden)
 		})
+
+		GRPC(func() {
+			Response(CodeOK)
+			Response("unauthorized", CodeUnauthenticated)
+			Response("invalid-scopes", CodeUnauthenticated)
+		})
 	})
 
 	Method("listener", func() { // streaming payload example (server doesn't respond)
@@ -93,6 +104,12 @@ var _ = Service("chatter", func() {
 			Response(StatusOK)
 			Response("unauthorized", StatusUnauthorized)
 			Response("invalid-scopes", StatusForbidden)
+		})
+
+		GRPC(func() {
+			Response(CodeOK)
+			Response("unauthorized", CodeUnauthenticated)
+			Response("invalid-scopes", CodeUnauthenticated)
 		})
 	})
 
@@ -125,6 +142,12 @@ var _ = Service("chatter", func() {
 			Response("unauthorized", StatusUnauthorized)
 			Response("invalid-scopes", StatusForbidden)
 		})
+
+		GRPC(func() {
+			Response(CodeOK)
+			Response("unauthorized", CodeUnauthenticated)
+			Response("invalid-scopes", CodeUnauthenticated)
+		})
 	})
 
 	Method("history", func() { // streaming result example
@@ -154,6 +177,15 @@ var _ = Service("chatter", func() {
 			Response("unauthorized", StatusUnauthorized)
 			Response("invalid-scopes", StatusForbidden)
 		})
+
+		GRPC(func() {
+			Metadata(func() {
+				Attribute("view")
+			})
+			Response(CodeOK)
+			Response("unauthorized", CodeUnauthenticated)
+			Response("invalid-scopes", CodeUnauthenticated)
+		})
 	})
 })
 
@@ -172,9 +204,9 @@ var JWTAuth = JWTSecurity("jwt", func() {
 var ChatSummary = ResultType("application/vnd.goa.summary", func() {
 	TypeName("ChatSummary")
 	Attributes(func() {
-		Attribute("message", String, "Message sent to the server")
-		Attribute("length", Int, "Length of the message sent")
-		Attribute("sent_at", String, "Time at which the message was sent", func() {
+		Field(1, "message", String, "Message sent to the server")
+		Field(2, "length", Int, "Length of the message sent")
+		Field(3, "sent_at", String, "Time at which the message was sent", func() {
 			Format(FormatDateTime)
 		})
 		Required("message")

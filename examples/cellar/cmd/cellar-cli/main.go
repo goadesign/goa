@@ -37,7 +37,8 @@ func main() {
 			case "goa.design":
 				addr = "https://goa.design/cellar"
 			default:
-				fmt.Fprintf(os.Stderr, "invalid host argument: %q (valid hosts: localhost|goa.design", *hostF)
+				fmt.Fprintf(os.Stderr, "invalid host argument: %q (valid hosts: localhost|goa.design)", *hostF)
+				os.Exit(1)
 			}
 		}
 		timeout = *timeoutF

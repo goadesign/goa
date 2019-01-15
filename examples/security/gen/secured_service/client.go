@@ -33,12 +33,19 @@ func NewClient(signin, secure, doublySecure, alsoDoublySecure goa.Endpoint) *Cli
 }
 
 // Signin calls the "signin" endpoint of the "secured_service" service.
-func (c *Client) Signin(ctx context.Context, p *SigninPayload) (err error) {
-	_, err = c.SigninEndpoint(ctx, p)
-	return
+func (c *Client) Signin(ctx context.Context, p *SigninPayload) (res *Creds, err error) {
+	var ires interface{}
+	ires, err = c.SigninEndpoint(ctx, p)
+	if err != nil {
+		return
+	}
+	return ires.(*Creds), nil
 }
 
 // Secure calls the "secure" endpoint of the "secured_service" service.
+// Secure may return the following errors:
+//	- "invalid-scopes" (type InvalidScopes)
+//	- error: internal error
 func (c *Client) Secure(ctx context.Context, p *SecurePayload) (res string, err error) {
 	var ires interface{}
 	ires, err = c.SecureEndpoint(ctx, p)
@@ -50,6 +57,9 @@ func (c *Client) Secure(ctx context.Context, p *SecurePayload) (res string, err 
 
 // DoublySecure calls the "doubly_secure" endpoint of the "secured_service"
 // service.
+// DoublySecure may return the following errors:
+//	- "invalid-scopes" (type InvalidScopes)
+//	- error: internal error
 func (c *Client) DoublySecure(ctx context.Context, p *DoublySecurePayload) (res string, err error) {
 	var ires interface{}
 	ires, err = c.DoublySecureEndpoint(ctx, p)
@@ -61,6 +71,9 @@ func (c *Client) DoublySecure(ctx context.Context, p *DoublySecurePayload) (res 
 
 // AlsoDoublySecure calls the "also_doubly_secure" endpoint of the
 // "secured_service" service.
+// AlsoDoublySecure may return the following errors:
+//	- "invalid-scopes" (type InvalidScopes)
+//	- error: internal error
 func (c *Client) AlsoDoublySecure(ctx context.Context, p *AlsoDoublySecurePayload) (res string, err error) {
 	var ires interface{}
 	ires, err = c.AlsoDoublySecureEndpoint(ctx, p)

@@ -39,7 +39,8 @@ func main() {
 				addr = "https://{version}.goa.design/calc"
 				addr = strings.Replace(addr, "{version}", *versionF, -1)
 			default:
-				fmt.Fprintf(os.Stderr, "invalid host argument: %q (valid hosts: development|production", *hostF)
+				fmt.Fprintf(os.Stderr, "invalid host argument: %q (valid hosts: development|production)", *hostF)
+				os.Exit(1)
 			}
 		}
 		timeout = *timeoutF
@@ -68,8 +69,10 @@ func main() {
 		switch scheme {
 		case "http", "https":
 			endpoint, payload, err = doHTTP(scheme, host, timeout, debug)
+		case "grpc", "grpcs":
+			endpoint, payload, err = doGRPC(scheme, host, timeout, debug)
 		default:
-			fmt.Fprintf(os.Stderr, "invalid scheme: %q (valid schemes: grpc|http)", scheme)
+			fmt.Fprintf(os.Stderr, "invalid scheme: %q (valid schemes: grpc|grpcs|http|https)", scheme)
 			os.Exit(1)
 		}
 	}

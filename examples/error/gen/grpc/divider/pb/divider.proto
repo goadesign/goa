@@ -1,0 +1,41 @@
+// Code generated with goa v2.0.0-wip, DO NOT EDIT.
+//
+// divider protocol buffer definition
+//
+// Command:
+// $ goa gen goa.design/goa/examples/error/design -o
+// $(GOPATH)/src/goa.design/goa/examples/error
+
+syntax = "proto3";
+
+package pb;
+
+// Service is the divider service interface.
+service divider {
+	// IntegerDivide implements integer_divide.
+	rpc IntegerDivide (IntegerDivideRequest) returns (IntegerDivideResponse);
+	// Divide implements divide.
+	rpc Divide (DivideRequest) returns (DivideResponse);
+}
+
+message IntegerDivideRequest {
+	// Left operand
+	sint32 a = 1;
+	// Right operand
+	sint32 b = 2;
+}
+
+message IntegerDivideResponse {
+	sint32 field = 1;
+}
+
+message DivideRequest {
+	// Left operand
+	double a = 1;
+	// Right operand
+	double b = 2;
+}
+
+message DivideResponse {
+	double field = 1;
+}

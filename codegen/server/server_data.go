@@ -145,6 +145,16 @@ func (s *Data) DefaultTransport() *TransportData {
 	return nil // bug
 }
 
+// HasTransport checks if the server supports the given transport.
+func (s *Data) HasTransport(transport Transport) bool {
+	for _, t := range s.Transports {
+		if t.Type == transport {
+			return true
+		}
+	}
+	return false
+}
+
 // DefaultURL returns the first URL defined for the given transport in a host.
 func (h *HostData) DefaultURL(transport Transport) string {
 	for _, u := range h.URIs {
@@ -198,8 +208,12 @@ func buildServerData(svr *expr.ServerExpr) *Data {
 				break
 			}
 			if expr.Root.API.HTTP.Service(svc) != nil && !seenHTTP {
-				transports = append(transports, &TransportData{Type: TransportHTTP, Name: "HTTP"})
+				transports = append(transports, newHTTPTransport())
 				foundTrans[TransportHTTP] = struct{}{}
+			}
+			if expr.Root.API.GRPC.Service(svc) != nil && !seenGRPC {
+				transports = append(transports, newGRPCTransport())
+				foundTrans[TransportGRPC] = struct{}{}
 			}
 		}
 	}
@@ -238,15 +252,19 @@ func buildHostData(host *expr.HostExpr) *HostData {
 				case strings.HasPrefix(ustr, "https"):
 					scheme = "https"
 					port = "443"
-					t = &TransportData{Type: TransportHTTP, Name: "HTTP"}
+					t = newHTTPTransport()
 				case strings.HasPrefix(ustr, "http"):
 					scheme = "http"
 					port = "80"
-					t = &TransportData{Type: TransportHTTP, Name: "HTTP"}
+					t = newHTTPTransport()
 				case strings.HasPrefix(ustr, "grpcs"):
-					// Not implemented
+					scheme = "grpcs"
+					port = "8443"
+					t = newGRPCTransport()
 				case strings.HasPrefix(ustr, "grpc"):
-					// Not implemented
+					scheme = "grpc"
+					port = "8080"
+					t = newGRPCTransport()
 
 					// No need for default case here because we only support the above
 					// possibilites for the scheme. Invalid scheme would have failed
@@ -327,4 +345,12 @@ func convertToString(vals ...interface{}) []string {
 		}
 	}
 	return str
+}
+
+func newHTTPTransport() *TransportData {
+	return &TransportData{Type: TransportHTTP, Name: "HTTP"}
+}
+
+func newGRPCTransport() *TransportData {
+	return &TransportData{Type: TransportGRPC, Name: "gRPC"}
 }

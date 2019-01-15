@@ -56,25 +56,6 @@ func exampleCLI(genpkg string, root *expr.RootExpr, svr *expr.ServerExpr) *codeg
 	for i, svc := range svr.Services {
 		svcData[i] = HTTPServices.Get(svc)
 	}
-	vars := expr.AsObject(svr.Hosts[0].Variables.Type)
-	var variables []map[string]interface{}
-	if len(*vars) > 0 {
-		variables = make([]map[string]interface{}, len(*vars))
-		for i, v := range *vars {
-			def := v.Attribute.DefaultValue
-			if def == nil {
-				// DSL ensures v.Attribute has either a
-				// default value or an enum validation
-				def = v.Attribute.Validation.Values[0]
-			}
-			variables[i] = map[string]interface{}{
-				"Name":         v.Name,
-				"Description":  v.Attribute.Description,
-				"VarName":      codegen.Goify(v.Name, false),
-				"DefaultValue": def,
-			}
-		}
-	}
 	sections := []*codegen.SectionTemplate{
 		codegen.Header("", "main", specs),
 		&codegen.SectionTemplate{Name: "cli-http-start", Source: httpCLIStartT},
