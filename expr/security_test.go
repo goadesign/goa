@@ -233,3 +233,81 @@ func TestSecurityExprEvalName(t *testing.T) {
 		}
 	}
 }
+
+func TestSchemeExprValidate(t *testing.T) {
+	var (
+		tokenURL         = "http://example.com/token"
+		authorizationURL = "http://example.com/auth"
+		refreshURL       = "http://example.com/refresh"
+		invalidURL       = "http://%"
+		escapeError      = url.EscapeError("%")
+		parseError       = url.Error{Op: "parse", URL: invalidURL, Err: escapeError}
+		validFlow        = &FlowExpr{
+			TokenURL:         tokenURL,
+			AuthorizationURL: authorizationURL,
+			RefreshURL:       refreshURL,
+		}
+		invalidTokenURLFlow = &FlowExpr{
+			TokenURL:         invalidURL,
+			AuthorizationURL: authorizationURL,
+			RefreshURL:       refreshURL,
+		}
+		invalidAuthorizationURLFlow = &FlowExpr{
+			TokenURL:         tokenURL,
+			AuthorizationURL: invalidURL,
+			RefreshURL:       refreshURL,
+		}
+		errInvalidTokenURL         = fmt.Errorf("invalid token URL %q: %s", invalidURL, parseError.Error())
+		errInvalidAuthorizationURL = fmt.Errorf("invalid authorization URL %q: %s", invalidURL, parseError.Error())
+	)
+	cases := map[string]struct {
+		flows    []*FlowExpr
+		expected *eval.ValidationErrors
+	}{
+		"no error": {
+			flows: []*FlowExpr{
+				validFlow,
+			},
+			expected: &eval.ValidationErrors{
+				Errors: []error{},
+			},
+		},
+		"single error": {
+			flows: []*FlowExpr{
+				invalidTokenURLFlow,
+			},
+			expected: &eval.ValidationErrors{
+				Errors: []error{
+					errInvalidTokenURL,
+				},
+			},
+		},
+		"multiple errors": {
+			flows: []*FlowExpr{
+				invalidTokenURLFlow,
+				invalidAuthorizationURLFlow,
+			},
+			expected: &eval.ValidationErrors{
+				Errors: []error{
+					errInvalidTokenURL,
+					errInvalidAuthorizationURL,
+				},
+			},
+		},
+	}
+
+	for k, tc := range cases {
+		s := SchemeExpr{
+			Flows: tc.flows,
+		}
+		if actual := s.Validate(); len(tc.expected.Errors) != len(actual.Errors) {
+			t.Errorf("%s: expected the number of error values to match %d got %d ", k, len(tc.expected.Errors), len(actual.Errors))
+		} else {
+			for i, err := range actual.Errors {
+				if err.Error() != tc.expected.Errors[i].Error() {
+					t.Errorf("%s: got %#v, expected %#v at index %d", k, err, tc.expected.Errors[i], i)
+				}
+			}
+		}
+	}
+}
