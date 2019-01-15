@@ -30,6 +30,7 @@ func TestFlowExprEvalName(t *testing.T) {
 }
 
 func TestFlowExprType(t *testing.T) {
+	var noKind FlowKind
 	cases := map[string]struct {
 		kind     FlowKind
 		expected string
@@ -50,13 +51,30 @@ func TestFlowExprType(t *testing.T) {
 			kind:     ClientCredentialsFlowKind,
 			expected: "client_credentials",
 		},
+		"no kind": {
+			kind:     noKind,
+			expected: "", // should have panicked!
+		},
 	}
 
 	for k, tc := range cases {
-		f := &FlowExpr{Kind: tc.kind}
-		if actual := f.Type(); actual != tc.expected {
-			t.Errorf("%s: got %#v, expected %#v", k, actual, tc.expected)
-		}
+		func() {
+			// panic recover
+			defer func() {
+				if k != "no kind" {
+					return
+				}
+
+				if recover() == nil {
+					t.Errorf("should have panicked!")
+				}
+			}()
+
+			f := &FlowExpr{Kind: tc.kind}
+			if actual := f.Type(); actual != tc.expected {
+				t.Errorf("%s: got %#v, expected %#v", k, actual, tc.expected)
+			}
+		}()
 	}
 }
 
