@@ -1,5 +1,10 @@
 syntax = "proto3";
 
+// NOTE: If there are any changes to this file, run the protoc command as
+// below from the pb directory to compile and generte the error.pb.go file.
+//
+// $ protoc -I . error.proto --go_out=plugins=grpc:.
+
 package goa.pb;
 
 // ErrorResponse message defines the error encoded in the gRPC response that
