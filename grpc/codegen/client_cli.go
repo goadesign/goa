@@ -377,6 +377,9 @@ func makeFlags(e *EndpointData, args []*InitArgData) ([]*flagData, *buildFunctio
 			Pointer:  arg.Pointer,
 		})
 	}
+	if e.Method.PayloadRef == "" {
+		return flags, nil
+	}
 	if e.Request.ServerConvert != nil {
 		pinit = e.Request.ServerConvert.Init
 	}
