@@ -194,9 +194,8 @@ const (
 	target := &Simple{
 		RequiredString: source.RequiredString,
 		DefaultBool:    source.DefaultBool,
+		Integer:        int32(source.Integer),
 	}
-	integerptr := int32(source.Integer)
-	target.Integer = integerptr
 }
 `
 
@@ -218,9 +217,8 @@ const (
 	target := &Simple{
 		RequiredString: source.RequiredString,
 		DefaultBool:    source.DefaultBool,
+		Integer:        int32(source.Integer),
 	}
-	integerptr := int32(source.Integer)
-	target.Integer = integerptr
 }
 `
 
@@ -387,9 +385,8 @@ const (
 	customFieldGoaToCompositeProtoCode = `func transform() {
 	target := &Composite{
 		RequiredString: source.MyString,
+		DefaultInt:     int32(source.MyInt),
 	}
-	defaultIntptr := int32(source.MyInt)
-	target.DefaultInt = defaultIntptr
 	target.Type = svcSimpleToSimple(source.MyType)
 	target.Map_ = make(map[int32]string, len(source.MyMap))
 	for key, val := range source.MyMap {
@@ -423,18 +420,19 @@ const (
 	rtColGoaToRTColProtoCode = `func transform() {
 	target := &ResultTypeCollection{}
 	if source.Collection != nil {
-		target.Collection = make([]*ResultType, len(source.Collection))
+		target.Collection = &ResultTypeCollection{}
+		target.Collection.Field = make([]*ResultType, len(source.Collection))
 		for i, val := range source.Collection {
-			target.Collection[i] = &ResultType{}
+			target.Collection.Field[i] = &ResultType{}
 			if val.Int != nil {
-				target.Collection[i].Int = int32(*val.Int)
+				target.Collection.Field[i].Int = int32(*val.Int)
 			}
 			if val.Map != nil {
-				target.Collection[i].Map_ = make(map[int32]string, len(val.Map))
+				target.Collection.Field[i].Map_ = make(map[int32]string, len(val.Map))
 				for key, val := range val.Map {
 					tk := int32(key)
 					tv := val
-					target.Collection[i].Map_[tk] = tv
+					target.Collection.Field[i].Map_[tk] = tv
 				}
 			}
 		}
@@ -461,9 +459,8 @@ const (
 	target := &Required{
 		RequiredString: source.RequiredString,
 		DefaultBool:    source.DefaultBool,
+		Integer:        int(source.Integer),
 	}
-	integerptr := int(source.Integer)
-	target.Integer = integerptr
 }
 `
 
@@ -481,9 +478,8 @@ const (
 	target := &Default{
 		RequiredString: source.RequiredString,
 		DefaultBool:    source.DefaultBool,
+		Integer:        int(source.Integer),
 	}
-	integerptr := int(source.Integer)
-	target.Integer = integerptr
 }
 `
 
@@ -623,9 +619,8 @@ const (
 	compositeProtoToCustomFieldGoaCode = `func transform() {
 	target := &CompositeWithCustomField{
 		MyString: source.RequiredString,
+		MyInt:    int(source.DefaultInt),
 	}
-	myIntptr := int(source.DefaultInt)
-	target.MyInt = myIntptr
 	if source.Type != nil {
 		target.MyType = protobufSimpleToSimple(source.Type)
 	}
@@ -683,8 +678,8 @@ const (
 
 	rtColProtoToRTColGoaCode = `func transform() {
 	target := &ResultTypeCollection{}
-	target.Collection = make([]*ResultType, len(source.Collection))
-	for i, val := range source.Collection {
+	target.Collection = make([]*ResultType, len(source.Collection.Field))
+	for i, val := range source.Collection.Field {
 		target.Collection[i] = &ResultType{}
 		int_ptr := int(val.Int)
 		target.Collection[i].Int = &int_ptr
