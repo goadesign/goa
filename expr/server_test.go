@@ -165,7 +165,6 @@ func TestHostExprValidate(t *testing.T) {
 		}
 		if actual := h.Validate().(*eval.ValidationErrors); len(tc.expected.Errors) != len(actual.Errors) {
 			t.Errorf("%s: expected the number of error values to match %d got %d ", k, len(tc.expected.Errors), len(actual.Errors))
-			t.Errorf(actual.Error())
 		} else {
 			for i, err := range actual.Errors {
 				if err.Error() != tc.expected.Errors[i].Error() {
