@@ -717,7 +717,7 @@ func buildRequestConvertData(request, payload *codegen.ContextualAttribute, md [
 //
 // svr param indicates that the convert data is generated for server side.
 func buildResponseConvertData(response, result *codegen.ContextualAttribute, hdrs, trlrs []*MetadataData, e *expr.GRPCEndpointExpr, sd *ServiceData, svr bool) *ConvertData {
-	if e.MethodExpr.IsStreaming() {
+	if e.MethodExpr.IsStreaming() || (!svr && isEmpty(e.MethodExpr.Result.Type)) {
 		return nil
 	}
 

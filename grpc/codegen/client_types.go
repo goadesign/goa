@@ -86,6 +86,13 @@ func clientType(genpkg string, svc *expr.GRPCServiceExpr, seen map[string]struct
 			Data:   data,
 		})
 	}
+	for _, h := range sd.TransformHelpers {
+		sections = append(sections, &codegen.SectionTemplate{
+			Name:   "client-transform-helper",
+			Source: transformHelperT,
+			Data:   h,
+		})
+	}
 
 	return &codegen.File{Path: path, SectionTemplates: sections}
 }
