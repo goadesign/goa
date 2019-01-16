@@ -15,7 +15,7 @@ import (
 
 // NewSigninRequest builds the gRPC request type from the payload of the
 // "signin" endpoint of the "secured_service" service.
-func NewSigninRequest(payload *securedservice.SigninPayload) *pb.SigninRequest {
+func NewSigninRequest() *pb.SigninRequest {
 	message := &pb.SigninRequest{}
 	return message
 }

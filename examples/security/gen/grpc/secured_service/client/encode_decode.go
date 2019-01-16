@@ -37,7 +37,7 @@ func EncodeSigninRequest(ctx context.Context, v interface{}, md *metadata.MD) (i
 	}
 	(*md).Append("username", payload.Username)
 	(*md).Append("password", payload.Password)
-	return NewSigninRequest(payload), nil
+	return NewSigninRequest(), nil
 }
 
 // DecodeSigninResponse decodes responses from the secured_service signin

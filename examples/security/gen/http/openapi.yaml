@@ -49,7 +49,6 @@ paths:
           schema:
             $ref: '#/definitions/SecuredServiceSecureInvalidScopesResponseBody'
       schemes:
-      - grpc
       - http
       security:
       - jwt: []
@@ -89,7 +88,6 @@ paths:
           schema:
             $ref: '#/definitions/SecuredServiceDoublySecureInvalidScopesResponseBody'
       schemes:
-      - grpc
       - http
       security:
       - api_key: []
@@ -134,7 +132,6 @@ paths:
           schema:
             $ref: '#/definitions/SecuredServiceAlsoDoublySecureInvalidScopesResponseBody'
       schemes:
-      - grpc
       - http
       security:
       - api_key: []
@@ -164,7 +161,6 @@ paths:
           schema:
             $ref: '#/definitions/SecuredServiceSigninUnauthorizedResponseBody'
       schemes:
-      - grpc
       - http
       security:
       - basic: []

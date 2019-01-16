@@ -16,11 +16,10 @@ import (
 // NewIntegerDivideRequest builds the gRPC request type from the payload of the
 // "integer_divide" endpoint of the "divider" service.
 func NewIntegerDivideRequest(payload *dividersvc.IntOperands) *pb.IntegerDivideRequest {
-	message := &pb.IntegerDivideRequest{}
-	aptr := int32(payload.A)
-	message.A = aptr
-	bptr := int32(payload.B)
-	message.B = bptr
+	message := &pb.IntegerDivideRequest{
+		A: int32(payload.A),
+		B: int32(payload.B),
+	}
 	return message
 }
 

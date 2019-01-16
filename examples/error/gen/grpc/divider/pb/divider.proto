@@ -11,7 +11,7 @@ syntax = "proto3";
 package pb;
 
 // Service is the divider service interface.
-service divider {
+service Divider {
 	// IntegerDivide implements integer_divide.
 	rpc IntegerDivide (IntegerDivideRequest) returns (IntegerDivideResponse);
 	// Divide implements divide.

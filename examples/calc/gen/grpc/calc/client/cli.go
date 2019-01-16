@@ -31,10 +31,9 @@ func BuildAddPayload(calcAddMessage string) (*calcsvc.AddPayload, error) {
 	if err != nil {
 		return nil, err
 	}
-	payload := &calcsvc.AddPayload{}
-	aptr := int(message.A)
-	payload.A = aptr
-	bptr := int(message.B)
-	payload.B = bptr
+	payload := &calcsvc.AddPayload{
+		A: int(message.A),
+		B: int(message.B),
+	}
 	return payload, nil
 }
