@@ -158,6 +158,9 @@ func endpointParser(genpkg string, root *expr.RootExpr, svr *expr.ServerExpr, da
 	}
 	for _, svc := range root.API.GRPC.Services {
 		sd := GRPCServices.Get(svc.Name())
+		if sd == nil {
+			continue
+		}
 		specs = append(specs, &codegen.ImportSpec{
 			Path: filepath.Join(genpkg, "grpc", codegen.SnakeCase(sd.Service.Name), "client"),
 			Name: sd.Service.PkgName + "c",
