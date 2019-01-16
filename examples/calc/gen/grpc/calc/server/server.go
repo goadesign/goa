@@ -46,6 +46,8 @@ func NewAddHandler(endpoint goa.Endpoint, h goagrpc.UnaryHandler) goagrpc.UnaryH
 
 // Add implements the "Add" method in pb.CalcServer interface.
 func (s *Server) Add(ctx context.Context, message *pb.AddRequest) (*pb.AddResponse, error) {
+	ctx = context.WithValue(ctx, goa.MethodKey, "add")
+	ctx = context.WithValue(ctx, goa.ServiceKey, "calc")
 	resp, err := s.AddH.Handle(ctx, message)
 	if err != nil {
 		return nil, goagrpc.EncodeError(err)

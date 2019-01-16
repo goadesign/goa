@@ -95,7 +95,7 @@ func (c *Client) Listener() goa.Endpoint {
 		inv := goagrpc.NewInvoker(
 			BuildListenerFunc(c.grpccli, c.opts...),
 			EncodeListenerRequest,
-			nil)
+			DecodeListenerResponse)
 		res, err := inv.Invoke(ctx, v)
 		if err != nil {
 			return nil, goagrpc.DecodeError(err)

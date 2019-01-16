@@ -54,6 +54,8 @@ func NewSigninHandler(endpoint goa.Endpoint, h goagrpc.UnaryHandler) goagrpc.Una
 
 // Signin implements the "Signin" method in pb.SecuredServiceServer interface.
 func (s *Server) Signin(ctx context.Context, message *pb.SigninRequest) (*pb.SigninResponse, error) {
+	ctx = context.WithValue(ctx, goa.MethodKey, "signin")
+	ctx = context.WithValue(ctx, goa.ServiceKey, "secured_service")
 	resp, err := s.SigninH.Handle(ctx, message)
 	if err != nil {
 		if en, ok := err.(ErrorNamer); ok {
@@ -78,6 +80,8 @@ func NewSecureHandler(endpoint goa.Endpoint, h goagrpc.UnaryHandler) goagrpc.Una
 
 // Secure implements the "Secure" method in pb.SecuredServiceServer interface.
 func (s *Server) Secure(ctx context.Context, message *pb.SecureRequest) (*pb.SecureResponse, error) {
+	ctx = context.WithValue(ctx, goa.MethodKey, "secure")
+	ctx = context.WithValue(ctx, goa.ServiceKey, "secured_service")
 	resp, err := s.SecureH.Handle(ctx, message)
 	if err != nil {
 		if en, ok := err.(ErrorNamer); ok {
@@ -105,6 +109,8 @@ func NewDoublySecureHandler(endpoint goa.Endpoint, h goagrpc.UnaryHandler) goagr
 // DoublySecure implements the "DoublySecure" method in pb.SecuredServiceServer
 // interface.
 func (s *Server) DoublySecure(ctx context.Context, message *pb.DoublySecureRequest) (*pb.DoublySecureResponse, error) {
+	ctx = context.WithValue(ctx, goa.MethodKey, "doubly_secure")
+	ctx = context.WithValue(ctx, goa.ServiceKey, "secured_service")
 	resp, err := s.DoublySecureH.Handle(ctx, message)
 	if err != nil {
 		if en, ok := err.(ErrorNamer); ok {
@@ -132,6 +138,8 @@ func NewAlsoDoublySecureHandler(endpoint goa.Endpoint, h goagrpc.UnaryHandler) g
 // AlsoDoublySecure implements the "AlsoDoublySecure" method in
 // pb.SecuredServiceServer interface.
 func (s *Server) AlsoDoublySecure(ctx context.Context, message *pb.AlsoDoublySecureRequest) (*pb.AlsoDoublySecureResponse, error) {
+	ctx = context.WithValue(ctx, goa.MethodKey, "also_doubly_secure")
+	ctx = context.WithValue(ctx, goa.ServiceKey, "secured_service")
 	resp, err := s.AlsoDoublySecureH.Handle(ctx, message)
 	if err != nil {
 		if en, ok := err.(ErrorNamer); ok {

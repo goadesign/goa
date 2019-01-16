@@ -81,6 +81,8 @@ func NewLoginHandler(endpoint goa.Endpoint, h goagrpc.UnaryHandler) goagrpc.Unar
 
 // Login implements the "Login" method in pb.ChatterServer interface.
 func (s *Server) Login(ctx context.Context, message *pb.LoginRequest) (*pb.LoginResponse, error) {
+	ctx = context.WithValue(ctx, goa.MethodKey, "login")
+	ctx = context.WithValue(ctx, goa.ServiceKey, "chatter")
 	resp, err := s.LoginH.Handle(ctx, message)
 	if err != nil {
 		if en, ok := err.(ErrorNamer); ok {
@@ -105,7 +107,10 @@ func NewEchoerHandler(endpoint goa.Endpoint, h goagrpc.StreamHandler) goagrpc.St
 
 // Echoer implements the "Echoer" method in pb.ChatterServer interface.
 func (s *Server) Echoer(stream pb.Chatter_EchoerServer) error {
-	p, err := s.EchoerH.Decode(stream.Context(), nil)
+	ctx := stream.Context()
+	ctx = context.WithValue(ctx, goa.MethodKey, "echoer")
+	ctx = context.WithValue(ctx, goa.ServiceKey, "chatter")
+	p, err := s.EchoerH.Decode(ctx, nil)
 	if err != nil {
 		if en, ok := err.(ErrorNamer); ok {
 			switch en.ErrorName() {
@@ -121,7 +126,7 @@ func (s *Server) Echoer(stream pb.Chatter_EchoerServer) error {
 		Stream:  &echoerServerStream{stream: stream},
 		Payload: p.(*chattersvc.EchoerPayload),
 	}
-	err = s.EchoerH.Handle(stream.Context(), ep)
+	err = s.EchoerH.Handle(ctx, ep)
 	if err != nil {
 		if en, ok := err.(ErrorNamer); ok {
 			switch en.ErrorName() {
@@ -147,7 +152,10 @@ func NewListenerHandler(endpoint goa.Endpoint, h goagrpc.StreamHandler) goagrpc.
 
 // Listener implements the "Listener" method in pb.ChatterServer interface.
 func (s *Server) Listener(stream pb.Chatter_ListenerServer) error {
-	p, err := s.ListenerH.Decode(stream.Context(), nil)
+	ctx := stream.Context()
+	ctx = context.WithValue(ctx, goa.MethodKey, "listener")
+	ctx = context.WithValue(ctx, goa.ServiceKey, "chatter")
+	p, err := s.ListenerH.Decode(ctx, nil)
 	if err != nil {
 		if en, ok := err.(ErrorNamer); ok {
 			switch en.ErrorName() {
@@ -163,7 +171,7 @@ func (s *Server) Listener(stream pb.Chatter_ListenerServer) error {
 		Stream:  &listenerServerStream{stream: stream},
 		Payload: p.(*chattersvc.ListenerPayload),
 	}
-	err = s.ListenerH.Handle(stream.Context(), ep)
+	err = s.ListenerH.Handle(ctx, ep)
 	if err != nil {
 		if en, ok := err.(ErrorNamer); ok {
 			switch en.ErrorName() {
@@ -189,7 +197,10 @@ func NewSummaryHandler(endpoint goa.Endpoint, h goagrpc.StreamHandler) goagrpc.S
 
 // Summary implements the "Summary" method in pb.ChatterServer interface.
 func (s *Server) Summary(stream pb.Chatter_SummaryServer) error {
-	p, err := s.SummaryH.Decode(stream.Context(), nil)
+	ctx := stream.Context()
+	ctx = context.WithValue(ctx, goa.MethodKey, "summary")
+	ctx = context.WithValue(ctx, goa.ServiceKey, "chatter")
+	p, err := s.SummaryH.Decode(ctx, nil)
 	if err != nil {
 		if en, ok := err.(ErrorNamer); ok {
 			switch en.ErrorName() {
@@ -205,7 +216,7 @@ func (s *Server) Summary(stream pb.Chatter_SummaryServer) error {
 		Stream:  &summaryServerStream{stream: stream},
 		Payload: p.(*chattersvc.SummaryPayload),
 	}
-	err = s.SummaryH.Handle(stream.Context(), ep)
+	err = s.SummaryH.Handle(ctx, ep)
 	if err != nil {
 		if en, ok := err.(ErrorNamer); ok {
 			switch en.ErrorName() {
@@ -231,7 +242,10 @@ func NewHistoryHandler(endpoint goa.Endpoint, h goagrpc.StreamHandler) goagrpc.S
 
 // History implements the "History" method in pb.ChatterServer interface.
 func (s *Server) History(message *pb.HistoryRequest, stream pb.Chatter_HistoryServer) error {
-	p, err := s.HistoryH.Decode(stream.Context(), message)
+	ctx := stream.Context()
+	ctx = context.WithValue(ctx, goa.MethodKey, "history")
+	ctx = context.WithValue(ctx, goa.ServiceKey, "chatter")
+	p, err := s.HistoryH.Decode(ctx, message)
 	if err != nil {
 		if en, ok := err.(ErrorNamer); ok {
 			switch en.ErrorName() {
@@ -247,7 +261,7 @@ func (s *Server) History(message *pb.HistoryRequest, stream pb.Chatter_HistorySe
 		Stream:  &historyServerStream{stream: stream},
 		Payload: p.(*chattersvc.HistoryPayload),
 	}
-	err = s.HistoryH.Handle(stream.Context(), ep)
+	err = s.HistoryH.Handle(ctx, ep)
 	if err != nil {
 		if en, ok := err.(ErrorNamer); ok {
 			switch en.ErrorName() {
