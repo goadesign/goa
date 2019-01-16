@@ -184,16 +184,17 @@ func GoObjectTransform(source, target *ContextualAttribute, ta *TransformAttrs, 
 	var err error
 	walkMatches(source, target, func(srcMatt, tgtMatt *expr.MappedAttributeExpr, srcc, tgtc *ContextualAttribute, n string) {
 		var (
-			code string
+			code  string
+			newTA *TransformAttrs
 
-			newTA = &TransformAttrs{
+			ta = &TransformAttrs{
 				SourceVar: ta.SourceVar + "." + srcc.Attribute.Field(srcMatt.ElemName(n), true),
 				TargetVar: ta.TargetVar + "." + tgtc.Attribute.Field(tgtMatt.ElemName(n), true),
 				NewVar:    false,
 			}
 		)
 		{
-			if srcc, tgtc, newTA, err = t.MakeCompatible(srcc, tgtc, newTA, ""); err != nil {
+			if srcc, tgtc, newTA, err = t.MakeCompatible(srcc, tgtc, ta, ""); err != nil {
 				return
 			}
 			srccAtt := srcc.Attribute.Expr()
@@ -230,7 +231,7 @@ func GoObjectTransform(source, target *ContextualAttribute, ta *TransformAttrs, 
 			}
 		}
 		if code != "" && checkNil {
-			code = fmt.Sprintf("if %s != nil {\n\t%s}\n", newTA.SourceVar, code)
+			code = fmt.Sprintf("if %s != nil {\n\t%s}\n", ta.SourceVar, code)
 		}
 
 		// Default value handling. We need to handle default values if the target
@@ -238,11 +239,11 @@ func GoObjectTransform(source, target *ContextualAttribute, ta *TransformAttrs, 
 		// non-pointers) and has a default value set.
 		if tdef := tgtc.DefaultValue(); tdef != nil {
 			if srcc.IsPointer() {
-				code += fmt.Sprintf("if %s == nil {\n\t", newTA.SourceVar)
+				code += fmt.Sprintf("if %s == nil {\n\t", ta.SourceVar)
 				if tgtc.IsPointer() {
-					code += fmt.Sprintf("var tmp %s = %#v\n\t%s = &tmp\n", tgtc.Def(), tdef, newTA.TargetVar)
+					code += fmt.Sprintf("var tmp %s = %#v\n\t%s = &tmp\n", tgtc.Def(), tdef, ta.TargetVar)
 				} else {
-					code += fmt.Sprintf("%s = %#v\n", newTA.TargetVar, tdef)
+					code += fmt.Sprintf("%s = %#v\n", ta.TargetVar, tdef)
 				}
 				code += "}\n"
 			}
