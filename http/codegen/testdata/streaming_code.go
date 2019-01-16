@@ -81,7 +81,6 @@ func (s *StreamingResultMethodServerStream) Send(v *streamingresultservice.UserT
 
 var StreamingResultServerStreamCloseCode = `// Close closes the "StreamingResultMethod" endpoint websocket connection.
 func (s *StreamingResultMethodServerStream) Close() error {
-	defer s.conn.Close()
 	var err error
 	// Upgrade the HTTP connection to a websocket connection only once. Connection
 	// upgrade is done here so that authorization logic in the endpoint is executed
@@ -107,7 +106,7 @@ func (s *StreamingResultMethodServerStream) Close() error {
 	); err != nil {
 		return err
 	}
-	return nil
+	return s.conn.Close()
 }
 `
 
@@ -234,7 +233,6 @@ func (c *Client) StreamingResultMethod() goa.Endpoint {
 var StreamingResultWithViewsServerStreamCloseCode = `// Close closes the "StreamingResultWithViewsMethod" endpoint websocket
 // connection.
 func (s *StreamingResultWithViewsMethodServerStream) Close() error {
-	defer s.conn.Close()
 	var err error
 	// Upgrade the HTTP connection to a websocket connection only once. Connection
 	// upgrade is done here so that authorization logic in the endpoint is executed
@@ -260,7 +258,7 @@ func (s *StreamingResultWithViewsMethodServerStream) Close() error {
 	); err != nil {
 		return err
 	}
-	return nil
+	return s.conn.Close()
 }
 `
 
@@ -1182,7 +1180,6 @@ func (s *StreamingPayloadNoResultMethodServerStream) Recv() (string, error) {
 var StreamingPayloadNoResultServerStreamCloseCode = `// Close closes the "StreamingPayloadNoResultMethod" endpoint websocket
 // connection.
 func (s *StreamingPayloadNoResultMethodServerStream) Close() error {
-	defer s.conn.Close()
 	var err error
 	// Upgrade the HTTP connection to a websocket connection only once. Connection
 	// upgrade is done here so that authorization logic in the endpoint is executed
@@ -1208,7 +1205,7 @@ func (s *StreamingPayloadNoResultMethodServerStream) Close() error {
 	); err != nil {
 		return err
 	}
-	return nil
+	return s.conn.Close()
 }
 `
 
@@ -1222,13 +1219,12 @@ func (s *StreamingPayloadNoResultMethodClientStream) Send(v string) error {
 var StreamingPayloadNoResultClientStreamCloseCode = `// Close closes the "StreamingPayloadNoResultMethod" endpoint websocket
 // connection.
 func (s *StreamingPayloadNoResultMethodClientStream) Close() error {
-	defer s.conn.Close()
 	var err error
 	// Send a nil payload to the server implying client closing connection.
 	if err = s.conn.WriteJSON(nil); err != nil {
 		return err
 	}
-	return nil
+	return s.conn.Close()
 }
 `
 
@@ -2153,7 +2149,6 @@ func (s *BidirectionalStreamingMethodServerStream) Recv() (*bidirectionalstreami
 var BidirectionalStreamingServerStreamCloseCode = `// Close closes the "BidirectionalStreamingMethod" endpoint websocket
 // connection.
 func (s *BidirectionalStreamingMethodServerStream) Close() error {
-	defer s.conn.Close()
 	var err error
 	// Upgrade the HTTP connection to a websocket connection only once. Connection
 	// upgrade is done here so that authorization logic in the endpoint is executed
@@ -2179,7 +2174,7 @@ func (s *BidirectionalStreamingMethodServerStream) Close() error {
 	); err != nil {
 		return err
 	}
-	return nil
+	return s.conn.Close()
 }
 `
 
@@ -2247,13 +2242,12 @@ func (s *BidirectionalStreamingMethodClientStream) Recv() (*bidirectionalstreami
 var BidirectionalStreamingClientStreamCloseCode = `// Close closes the "BidirectionalStreamingMethod" endpoint websocket
 // connection.
 func (s *BidirectionalStreamingMethodClientStream) Close() error {
-	defer s.conn.Close()
 	var err error
 	// Send a nil payload to the server implying client closing connection.
 	if err = s.conn.WriteJSON(nil); err != nil {
 		return err
 	}
-	return nil
+	return s.conn.Close()
 }
 `
 
@@ -2304,7 +2298,6 @@ func NewBidirectionalStreamingNoPayloadMethodHandler(
 var BidirectionalStreamingNoPayloadServerStreamCloseCode = `// Close closes the "BidirectionalStreamingNoPayloadMethod" endpoint websocket
 // connection.
 func (s *BidirectionalStreamingNoPayloadMethodServerStream) Close() error {
-	defer s.conn.Close()
 	var err error
 	// Upgrade the HTTP connection to a websocket connection only once. Connection
 	// upgrade is done here so that authorization logic in the endpoint is executed
@@ -2330,7 +2323,7 @@ func (s *BidirectionalStreamingNoPayloadMethodServerStream) Close() error {
 	); err != nil {
 		return err
 	}
-	return nil
+	return s.conn.Close()
 }
 `
 
@@ -2394,13 +2387,12 @@ func (s *BidirectionalStreamingNoPayloadMethodClientStream) Recv() (*bidirection
 var BidirectionalStreamingNoPayloadClientStreamCloseCode = `// Close closes the "BidirectionalStreamingNoPayloadMethod" endpoint websocket
 // connection.
 func (s *BidirectionalStreamingNoPayloadMethodClientStream) Close() error {
-	defer s.conn.Close()
 	var err error
 	// Send a nil payload to the server implying client closing connection.
 	if err = s.conn.WriteJSON(nil); err != nil {
 		return err
 	}
-	return nil
+	return s.conn.Close()
 }
 `
 
@@ -2481,7 +2473,6 @@ func (s *BidirectionalStreamingResultWithViewsMethodServerStream) Recv() (float3
 var BidirectionalStreamingResultWithViewsServerStreamCloseCode = `// Close closes the "BidirectionalStreamingResultWithViewsMethod" endpoint
 // websocket connection.
 func (s *BidirectionalStreamingResultWithViewsMethodServerStream) Close() error {
-	defer s.conn.Close()
 	var err error
 	// Upgrade the HTTP connection to a websocket connection only once. Connection
 	// upgrade is done here so that authorization logic in the endpoint is executed
@@ -2507,7 +2498,7 @@ func (s *BidirectionalStreamingResultWithViewsMethodServerStream) Close() error 
 	); err != nil {
 		return err
 	}
-	return nil
+	return s.conn.Close()
 }
 `
 
@@ -2555,13 +2546,12 @@ func (s *BidirectionalStreamingResultWithViewsMethodClientStream) Recv() (*bidir
 var BidirectionalStreamingResultWithViewsClientStreamCloseCode = `// Close closes the "BidirectionalStreamingResultWithViewsMethod" endpoint
 // websocket connection.
 func (s *BidirectionalStreamingResultWithViewsMethodClientStream) Close() error {
-	defer s.conn.Close()
 	var err error
 	// Send a nil payload to the server implying client closing connection.
 	if err = s.conn.WriteJSON(nil); err != nil {
 		return err
 	}
-	return nil
+	return s.conn.Close()
 }
 `
 

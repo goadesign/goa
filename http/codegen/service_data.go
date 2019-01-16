@@ -2819,7 +2819,6 @@ func (s *{{ .VarName }}) {{ .RecvName }}() ({{ .RecvTypeRef }}, error) {
 	// input: StreamData
 	streamCloseT = `{{ printf "Close closes the %q endpoint websocket connection." .Endpoint.Method.Name | comment }}
 func (s *{{ .VarName }}) Close() error {
-	defer s.conn.Close()
 	var err error
 {{- if eq .Type "server" }}
 	{{- template "websocket_upgrade" (upgradeParams .Endpoint "Close") }}
@@ -2836,7 +2835,7 @@ func (s *{{ .VarName }}) Close() error {
     return err
   }
 {{- end }}
-	return nil
+	return s.conn.Close()
 }
 ` + upgradeT
 
