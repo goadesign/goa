@@ -23,7 +23,6 @@ paths:
           schema:
             $ref: '#/definitions/TestServiceTestEndpointDefaultResponseBody'
       schemes:
-      - grpc
       - http
   /tiny:
     get:
@@ -37,7 +36,6 @@ paths:
           schema:
             $ref: '#/definitions/TestServiceTestEndpointTinyResponseBodyTiny'
       schemes:
-      - grpc
       - http
 definitions:
   TestServiceTestEndpointDefaultResponseBody:

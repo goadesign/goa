@@ -47,7 +47,6 @@ paths:
           schema:
             $ref: '#/definitions/Dividerdivide_timeout_response_body'
       schemes:
-      - grpc
       - http
   /idiv/{a}/{b}:
     get:
@@ -85,7 +84,6 @@ paths:
           schema:
             $ref: '#/definitions/Dividerinteger_divide_timeout_response_body'
       schemes:
-      - grpc
       - http
 definitions:
   Dividerdivide_div_by_zero_response_body:

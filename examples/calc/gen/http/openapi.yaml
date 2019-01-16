@@ -37,7 +37,6 @@ paths:
             type: integer
             format: int64
       schemes:
-      - grpc
       - http
   /swagger.json:
     get:
@@ -49,7 +48,5 @@ paths:
           schema:
             type: file
       schemes:
-      - grpc
-      - grpcs
       - http
       - https
