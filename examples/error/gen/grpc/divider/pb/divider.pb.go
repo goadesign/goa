@@ -37,7 +37,7 @@ func (m *IntegerDivideRequest) Reset()         { *m = IntegerDivideRequest{} }
 func (m *IntegerDivideRequest) String() string { return proto.CompactTextString(m) }
 func (*IntegerDivideRequest) ProtoMessage()    {}
 func (*IntegerDivideRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_divider_4f953390f970ad1e, []int{0}
+	return fileDescriptor_divider_7a99dab6f8f91d55, []int{0}
 }
 func (m *IntegerDivideRequest) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_IntegerDivideRequest.Unmarshal(m, b)
@@ -82,7 +82,7 @@ func (m *IntegerDivideResponse) Reset()         { *m = IntegerDivideResponse{} }
 func (m *IntegerDivideResponse) String() string { return proto.CompactTextString(m) }
 func (*IntegerDivideResponse) ProtoMessage()    {}
 func (*IntegerDivideResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_divider_4f953390f970ad1e, []int{1}
+	return fileDescriptor_divider_7a99dab6f8f91d55, []int{1}
 }
 func (m *IntegerDivideResponse) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_IntegerDivideResponse.Unmarshal(m, b)
@@ -123,7 +123,7 @@ func (m *DivideRequest) Reset()         { *m = DivideRequest{} }
 func (m *DivideRequest) String() string { return proto.CompactTextString(m) }
 func (*DivideRequest) ProtoMessage()    {}
 func (*DivideRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_divider_4f953390f970ad1e, []int{2}
+	return fileDescriptor_divider_7a99dab6f8f91d55, []int{2}
 }
 func (m *DivideRequest) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_DivideRequest.Unmarshal(m, b)
@@ -168,7 +168,7 @@ func (m *DivideResponse) Reset()         { *m = DivideResponse{} }
 func (m *DivideResponse) String() string { return proto.CompactTextString(m) }
 func (*DivideResponse) ProtoMessage()    {}
 func (*DivideResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_divider_4f953390f970ad1e, []int{3}
+	return fileDescriptor_divider_7a99dab6f8f91d55, []int{3}
 }
 func (m *DivideResponse) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_DivideResponse.Unmarshal(m, b)
@@ -230,7 +230,7 @@ func NewDividerClient(cc *grpc.ClientConn) DividerClient {
 
 func (c *dividerClient) IntegerDivide(ctx context.Context, in *IntegerDivideRequest, opts ...grpc.CallOption) (*IntegerDivideResponse, error) {
 	out := new(IntegerDivideResponse)
-	err := c.cc.Invoke(ctx, "/pb.divider/IntegerDivide", in, out, opts...)
+	err := c.cc.Invoke(ctx, "/pb.Divider/IntegerDivide", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -239,7 +239,7 @@ func (c *dividerClient) IntegerDivide(ctx context.Context, in *IntegerDivideRequ
 
 func (c *dividerClient) Divide(ctx context.Context, in *DivideRequest, opts ...grpc.CallOption) (*DivideResponse, error) {
 	out := new(DivideResponse)
-	err := c.cc.Invoke(ctx, "/pb.divider/Divide", in, out, opts...)
+	err := c.cc.Invoke(ctx, "/pb.Divider/Divide", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -268,7 +268,7 @@ func _Divider_IntegerDivide_Handler(srv interface{}, ctx context.Context, dec fu
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/pb.divider/IntegerDivide",
+		FullMethod: "/pb.Divider/IntegerDivide",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(DividerServer).IntegerDivide(ctx, req.(*IntegerDivideRequest))
@@ -286,7 +286,7 @@ func _Divider_Divide_Handler(srv interface{}, ctx context.Context, dec func(inte
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/pb.divider/Divide",
+		FullMethod: "/pb.Divider/Divide",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(DividerServer).Divide(ctx, req.(*DivideRequest))
@@ -295,7 +295,7 @@ func _Divider_Divide_Handler(srv interface{}, ctx context.Context, dec func(inte
 }
 
 var _Divider_serviceDesc = grpc.ServiceDesc{
-	ServiceName: "pb.divider",
+	ServiceName: "pb.Divider",
 	HandlerType: (*DividerServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{
@@ -311,10 +311,10 @@ var _Divider_serviceDesc = grpc.ServiceDesc{
 	Metadata: "divider.proto",
 }
 
-func init() { proto.RegisterFile("divider.proto", fileDescriptor_divider_4f953390f970ad1e) }
+func init() { proto.RegisterFile("divider.proto", fileDescriptor_divider_7a99dab6f8f91d55) }
 
-var fileDescriptor_divider_4f953390f970ad1e = []byte{
-	// 180 bytes of a gzipped FileDescriptorProto
+var fileDescriptor_divider_7a99dab6f8f91d55 = []byte{
+	// 181 bytes of a gzipped FileDescriptorProto
 	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xe2, 0xe2, 0x4d, 0xc9, 0x2c, 0xcb,
 	0x4c, 0x49, 0x2d, 0xd2, 0x2b, 0x28, 0xca, 0x2f, 0xc9, 0x17, 0x62, 0x2a, 0x48, 0x52, 0x32, 0xe2,
 	0x12, 0xf1, 0xcc, 0x2b, 0x49, 0x4d, 0x4f, 0x2d, 0x72, 0x01, 0xcb, 0x05, 0xa5, 0x16, 0x96, 0xa6,
@@ -322,9 +322,9 @@ var fileDescriptor_divider_4f953390f970ad1e = []byte{
 	0x82, 0x78, 0x49, 0x12, 0x4c, 0x10, 0x5e, 0x92, 0x92, 0x2e, 0x97, 0x28, 0x9a, 0x9e, 0xe2, 0x82,
 	0xfc, 0xbc, 0xe2, 0x54, 0x21, 0x11, 0x2e, 0xd6, 0xb4, 0xcc, 0xd4, 0x9c, 0x14, 0xa8, 0x46, 0x08,
 	0x47, 0x49, 0x9b, 0x8b, 0x17, 0x87, 0xd9, 0x8c, 0x28, 0x66, 0x33, 0x82, 0xcc, 0x56, 0xe3, 0xe2,
-	0xc3, 0x67, 0x28, 0x23, 0xd4, 0x50, 0xa3, 0x06, 0x46, 0x2e, 0x76, 0xa8, 0x6f, 0x84, 0x5c, 0xb8,
-	0x78, 0x51, 0xdc, 0x23, 0x24, 0xa1, 0x57, 0x90, 0xa4, 0x87, 0xcd, 0x5b, 0x52, 0x92, 0x58, 0x64,
-	0xa0, 0xf6, 0xe8, 0x73, 0xb1, 0x41, 0xb5, 0x0b, 0x82, 0x14, 0xa1, 0xea, 0x13, 0x42, 0x16, 0x82,
-	0x68, 0x48, 0x62, 0x03, 0x87, 0xa2, 0x31, 0x20, 0x00, 0x00, 0xff, 0xff, 0x86, 0x54, 0x79, 0x00,
-	0x56, 0x01, 0x00, 0x00,
+	0xc3, 0x67, 0x28, 0x23, 0xd4, 0x50, 0xa3, 0x06, 0x46, 0x2e, 0x76, 0x88, 0xc2, 0x22, 0x21, 0x17,
+	0x2e, 0x5e, 0x14, 0xf7, 0x08, 0x49, 0xe8, 0x15, 0x24, 0xe9, 0x61, 0xf3, 0x96, 0x94, 0x24, 0x16,
+	0x19, 0xa8, 0x3d, 0xfa, 0x5c, 0x6c, 0x50, 0xed, 0x82, 0x20, 0x45, 0xa8, 0xfa, 0x84, 0x90, 0x85,
+	0x20, 0x1a, 0x92, 0xd8, 0xc0, 0xa1, 0x68, 0x0c, 0x08, 0x00, 0x00, 0xff, 0xff, 0x95, 0xd8, 0xa4,
+	0x98, 0x56, 0x01, 0x00, 0x00,
 }

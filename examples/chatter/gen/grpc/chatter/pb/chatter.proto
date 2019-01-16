@@ -11,7 +11,7 @@ syntax = "proto3";
 package pb;
 
 // The chatter service implements a simple client and server chat.
-service chatter {
+service Chatter {
 	// Creates a valid JWT token for auth to chat.
 	rpc Login (LoginRequest) returns (LoginResponse);
 	// Echoes the message sent by the client.

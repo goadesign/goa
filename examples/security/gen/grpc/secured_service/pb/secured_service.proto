@@ -12,7 +12,7 @@ package pb;
 
 // The secured service exposes endpoints that require valid authorization
 // credentials.
-service secured_service {
+service SecuredService {
 	// Creates a valid JWT
 	rpc Signin (SigninRequest) returns (SigninResponse);
 	// This action is secured with the jwt scheme

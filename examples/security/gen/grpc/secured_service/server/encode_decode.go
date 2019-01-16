@@ -51,19 +51,10 @@ func DecodeSigninRequest(ctx context.Context, v interface{}, md metadata.MD) (in
 		}
 	}
 	var (
-		message *pb.SigninRequest
-		ok      bool
-	)
-	{
-		if message, ok = v.(*pb.SigninRequest); !ok {
-			return nil, goagrpc.ErrInvalidType("secured_service", "signin", "*pb.SigninRequest", v)
-		}
-	}
-	var (
 		payload *securedservice.SigninPayload
 	)
 	{
-		payload = NewSigninPayload(message, username, password)
+		payload = NewSigninPayload(username, password)
 	}
 	return payload, err
 }

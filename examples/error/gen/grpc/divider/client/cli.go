@@ -32,11 +32,10 @@ func BuildIntegerDividePayload(dividerIntegerDivideMessage string) (*dividersvc.
 	if err != nil {
 		return nil, err
 	}
-	payload := &dividersvc.IntOperands{}
-	aptr := int(message.A)
-	payload.A = aptr
-	bptr := int(message.B)
-	payload.B = bptr
+	payload := &dividersvc.IntOperands{
+		A: int(message.A),
+		B: int(message.B),
+	}
 	return payload, nil
 }
 
