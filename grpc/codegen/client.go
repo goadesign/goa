@@ -139,7 +139,7 @@ func clientEncodeDecode(genpkg string, svc *expr.GRPCServiceExpr) *codegen.File 
 					FuncMap: fm,
 				})
 			}
-			if e.ResultRef != "" {
+			if e.ResultRef != "" || e.ClientStream != nil {
 				sections = append(sections, &codegen.SectionTemplate{
 					Name:    "response-decoder",
 					Source:  responseDecoderT,
@@ -190,7 +190,7 @@ func (c *{{ .ClientStruct }}) {{ .Method.VarName }}() goa.Endpoint {
 		inv := goagrpc.NewInvoker(
 			Build{{ .Method.VarName }}Func(c.grpccli, c.opts...),
 			{{ if .PayloadRef }}Encode{{ .Method.VarName }}Request{{ else }}nil{{ end }},
-			{{ if .ResultRef }}Decode{{ .Method.VarName }}Response{{ else }}nil{{ end }})
+			{{ if or .ResultRef .ClientStream }}Decode{{ .Method.VarName }}Response{{ else }}nil{{ end }})
 		res, err := inv.Invoke(ctx, v)
 		if err != nil {
 			return nil, goagrpc.DecodeError(err)

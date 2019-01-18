@@ -101,6 +101,23 @@ func (c *Client) MethodClientStreamingRPC() goa.Endpoint {
 }
 `
 
+const ClientStreamingNoResultClientEndpointInitCode = `// MethodClientStreamingNoResult calls the "MethodClientStreamingNoResult"
+// function in pb.ServiceClientStreamingNoResultClient interface.
+func (c *Client) MethodClientStreamingNoResult() goa.Endpoint {
+	return func(ctx context.Context, v interface{}) (interface{}, error) {
+		inv := goagrpc.NewInvoker(
+			BuildMethodClientStreamingNoResultFunc(c.grpccli, c.opts...),
+			nil,
+			DecodeMethodClientStreamingNoResultResponse)
+		res, err := inv.Invoke(ctx, v)
+		if err != nil {
+			return nil, goagrpc.DecodeError(err)
+		}
+		return res, nil
+	}
+}
+`
+
 const ClientStreamingRPCWithPayloadClientEndpointInitCode = `// MethodClientStreamingRPCWithPayload calls the
 // "MethodClientStreamingRPCWithPayload" function in
 // pb.ServiceClientStreamingRPCWithPayloadClient interface.

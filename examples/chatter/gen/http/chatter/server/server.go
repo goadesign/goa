@@ -521,7 +521,6 @@ func (s *echoerServerStream) Recv() (string, error) {
 
 // Close closes the "echoer" endpoint websocket connection.
 func (s *echoerServerStream) Close() error {
-	defer s.conn.Close()
 	var err error
 	// Upgrade the HTTP connection to a websocket connection only once. Connection
 	// upgrade is done here so that authorization logic in the endpoint is executed
@@ -547,7 +546,7 @@ func (s *echoerServerStream) Close() error {
 	); err != nil {
 		return err
 	}
-	return nil
+	return s.conn.Close()
 }
 
 // Recv reads instances of "string" from the "listener" endpoint websocket
@@ -587,7 +586,6 @@ func (s *listenerServerStream) Recv() (string, error) {
 
 // Close closes the "listener" endpoint websocket connection.
 func (s *listenerServerStream) Close() error {
-	defer s.conn.Close()
 	var err error
 	// Upgrade the HTTP connection to a websocket connection only once. Connection
 	// upgrade is done here so that authorization logic in the endpoint is executed
@@ -613,7 +611,7 @@ func (s *listenerServerStream) Close() error {
 	); err != nil {
 		return err
 	}
-	return nil
+	return s.conn.Close()
 }
 
 // SendAndClose streams instances of "chattersvc.ChatSummaryCollection" to the
@@ -696,7 +694,6 @@ func (s *historyServerStream) Send(v *chattersvc.ChatSummary) error {
 
 // Close closes the "history" endpoint websocket connection.
 func (s *historyServerStream) Close() error {
-	defer s.conn.Close()
 	var err error
 	// Upgrade the HTTP connection to a websocket connection only once. Connection
 	// upgrade is done here so that authorization logic in the endpoint is executed
@@ -722,7 +719,7 @@ func (s *historyServerStream) Close() error {
 	); err != nil {
 		return err
 	}
-	return nil
+	return s.conn.Close()
 }
 
 // SetView sets the view to render the chattersvc.ChatSummary type before
