@@ -678,17 +678,19 @@ const (
 
 	rtColProtoToRTColGoaCode = `func transform() {
 	target := &ResultTypeCollection{}
-	target.Collection = make([]*ResultType, len(source.Collection.Field))
-	for i, val := range source.Collection.Field {
-		target.Collection[i] = &ResultType{}
-		int_ptr := int(val.Int)
-		target.Collection[i].Int = &int_ptr
-		if val.Map_ != nil {
-			target.Collection[i].Map = make(map[int]string, len(val.Map_))
-			for key, val := range val.Map_ {
-				tk := int(key)
-				tv := val
-				target.Collection[i].Map[tk] = tv
+	if source.Collection != nil {
+		target.Collection = make([]*ResultType, len(source.Collection.Field))
+		for i, val := range source.Collection.Field {
+			target.Collection[i] = &ResultType{}
+			int_ptr := int(val.Int)
+			target.Collection[i].Int = &int_ptr
+			if val.Map_ != nil {
+				target.Collection[i].Map = make(map[int]string, len(val.Map_))
+				for key, val := range val.Map_ {
+					tk := int(key)
+					tv := val
+					target.Collection[i].Map[tk] = tv
+				}
 			}
 		}
 	}

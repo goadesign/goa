@@ -79,8 +79,8 @@ func (p *protoBufTransformer) Transform(source, target *codegen.ContextualAttrib
 		if err = codegen.IsCompatible(srcAtt.Type, tgtAtt.Type, ta.SourceVar, ta.TargetVar); err != nil {
 			return "", err
 		}
-		source = source.Dup(srcAtt, true)
-		target = target.Dup(tgtAtt, true)
+		source = source.Dup(srcAtt, source.Required)
+		target = target.Dup(tgtAtt, target.Required)
 	}
 
 	var (
@@ -130,10 +130,10 @@ func (p *protoBufTransformer) MakeCompatible(source, target *codegen.ContextualA
 		if p.proto {
 			p.targetInit = target.Attribute.Name()
 			tgtAtt := unwrapAttr(expr.DupAtt(target.Attribute.Expr()))
-			tgt = target.Dup(tgtAtt, true)
+			tgt = target.Dup(tgtAtt, target.Required)
 		} else {
 			srcAtt := unwrapAttr(expr.DupAtt(source.Attribute.Expr()))
-			src = source.Dup(srcAtt, true)
+			src = source.Dup(srcAtt, source.Required)
 			newTA.SourceVar += ".Field"
 		}
 		if err = codegen.IsCompatible(

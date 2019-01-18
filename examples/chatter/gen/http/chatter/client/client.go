@@ -189,13 +189,12 @@ func (s *echoerClientStream) Send(v string) error {
 
 // Close closes the "echoer" endpoint websocket connection.
 func (s *echoerClientStream) Close() error {
-	defer s.conn.Close()
 	var err error
 	// Send a nil payload to the server implying client closing connection.
 	if err = s.conn.WriteJSON(nil); err != nil {
 		return err
 	}
-	return nil
+	return s.conn.Close()
 }
 
 // Listener returns an endpoint that makes HTTP requests to the chatter service
@@ -237,13 +236,12 @@ func (s *listenerClientStream) Send(v string) error {
 
 // Close closes the "listener" endpoint websocket connection.
 func (s *listenerClientStream) Close() error {
-	defer s.conn.Close()
 	var err error
 	// Send a nil payload to the server implying client closing connection.
 	if err = s.conn.WriteJSON(nil); err != nil {
 		return err
 	}
-	return nil
+	return s.conn.Close()
 }
 
 // Summary returns an endpoint that makes HTTP requests to the chatter service

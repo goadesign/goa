@@ -234,7 +234,13 @@ func (s *{{ .ServerStruct }}) {{ .Method.VarName }}(
 	{{- if not .Method.StreamingPayload }}message {{ .Request.Message.Ref }}{{ if .ServerStream }}, {{ end }}{{ end }}
 	{{- if .ServerStream }}stream {{ .ServerStream.Interface }}{{ end }}) {{ if .ServerStream }}error{{ else if .Response.Message }}({{ .Response.Message.Ref }},	error{{ if .Response.Message }}){{ end }}{{ end }} {
 {{- if .ServerStream }}
-	p, err := s.{{ .Method.VarName }}H.Decode(stream.Context(), {{ if .Method.StreamingPayload }}nil{{ else }}message{{ end }})
+	ctx := stream.Context()
+{{- end }}
+	ctx = context.WithValue(ctx, goa.MethodKey, {{ printf "%q" .Method.Name }})
+	ctx = context.WithValue(ctx, goa.ServiceKey, {{ printf "%q" .ServiceName }})
+
+{{- if .ServerStream }}
+	p, err := s.{{ .Method.VarName }}H.Decode(ctx, {{ if .Method.StreamingPayload }}nil{{ else }}message{{ end }})
 	{{- template "handle_error" . }}
 	ep := &{{ .ServicePkgName }}.{{ .Method.VarName }}EndpointInput{
 		Stream: &{{ .ServerStream.VarName }}{stream: stream},
@@ -242,7 +248,7 @@ func (s *{{ .ServerStruct }}) {{ .Method.VarName }}(
 		Payload: p.({{ .PayloadRef }}),
 	{{- end }}
 	}
-	err = s.{{ .Method.VarName }}H.Handle(stream.Context(), ep)
+	err = s.{{ .Method.VarName }}H.Handle(ctx, ep)
 {{- else }}
 	resp, err := s.{{ .Method.VarName }}H.Handle(ctx, message)
 {{- end }}

@@ -99,6 +99,13 @@ func EncodeListenerRequest(ctx context.Context, v interface{}, md *metadata.MD) 
 	return nil, nil
 }
 
+// DecodeListenerResponse decodes responses from the chatter listener endpoint.
+func DecodeListenerResponse(ctx context.Context, v interface{}, hdr, trlr metadata.MD) (interface{}, error) {
+	return &listenerClientStream{
+		stream: v.(pb.Chatter_ListenerClient),
+	}, nil
+}
+
 // BuildSummaryFunc builds the remote method to invoke for "chatter" service
 // "summary" endpoint.
 func BuildSummaryFunc(grpccli pb.ChatterClient, cliopts ...grpc.CallOption) goagrpc.RemoteFunc {

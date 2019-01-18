@@ -87,8 +87,10 @@ func (h *unaryHandler) Handle(ctx context.Context, reqpb interface{}) (interface
 	}
 
 	var (
-		respb     interface{}
-		hdr, trlr metadata.MD
+		respb interface{}
+
+		hdr  = metadata.MD{}
+		trlr = metadata.MD{}
 	)
 	{
 		if h.encoder != nil {

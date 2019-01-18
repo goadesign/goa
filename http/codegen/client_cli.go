@@ -164,6 +164,9 @@ func endpointParser(genpkg string, root *expr.RootExpr, svr *expr.ServerExpr, da
 	for _, sv := range svr.Services {
 		svc := root.Service(sv)
 		sd := HTTPServices.Get(svc.Name)
+		if sd == nil {
+			continue
+		}
 		specs = append(specs, &codegen.ImportSpec{
 			Path: genpkg + "/http/" + codegen.SnakeCase(sd.Service.Name) + "/client",
 			Name: sd.Service.PkgName + "c",

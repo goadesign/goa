@@ -50,6 +50,8 @@ func NewIntegerDivideHandler(endpoint goa.Endpoint, h goagrpc.UnaryHandler) goag
 // IntegerDivide implements the "IntegerDivide" method in pb.DividerServer
 // interface.
 func (s *Server) IntegerDivide(ctx context.Context, message *pb.IntegerDivideRequest) (*pb.IntegerDivideResponse, error) {
+	ctx = context.WithValue(ctx, goa.MethodKey, "integer_divide")
+	ctx = context.WithValue(ctx, goa.ServiceKey, "divider")
 	resp, err := s.IntegerDivideH.Handle(ctx, message)
 	if err != nil {
 		if en, ok := err.(ErrorNamer); ok {
@@ -78,6 +80,8 @@ func NewDivideHandler(endpoint goa.Endpoint, h goagrpc.UnaryHandler) goagrpc.Una
 
 // Divide implements the "Divide" method in pb.DividerServer interface.
 func (s *Server) Divide(ctx context.Context, message *pb.DivideRequest) (*pb.DivideResponse, error) {
+	ctx = context.WithValue(ctx, goa.MethodKey, "divide")
+	ctx = context.WithValue(ctx, goa.ServiceKey, "divider")
 	resp, err := s.DivideH.Handle(ctx, message)
 	if err != nil {
 		if en, ok := err.(ErrorNamer); ok {
