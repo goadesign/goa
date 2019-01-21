@@ -34,10 +34,16 @@ PROTOC="protoc-$(PROTOC_VERSION)-linux-x86_64"
 PROTOC_EXEC="$(PROTOC)/bin/protoc"
 GOBIN="$(GOPATH)/bin"
 else
-	ifeq ($(GOOS),windows)
+	ifeq ($(GOOS),darwin)
+PROTOC="protoc-$(PROTOC_VERSION)-osx-x86_64"
+PROTOC_EXEC="$(PROTOC)/bin/protoc"
+GOBIN="$(GOPATH)/bin"
+	else
+		ifeq ($(GOOS),windows)
 PROTOC="protoc-$(PROTOC_VERSION)-win32"
 PROTOC_EXEC="$(PROTOC)\bin\protoc.exe"
 GOBIN="$(GOPATH)\bin"
+		endif
 	endif
 endif
 depend:
