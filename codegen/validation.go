@@ -314,7 +314,7 @@ func recurseAttribute(ca *ContextualAttribute, nat *expr.NamedAttributeExpr, tar
 			if expr.IsArray(nat.Attribute.Type) {
 				buf.Write(recurseValidationCode(ca, tgt, context, seen).Bytes())
 			} else {
-				if err := userValT.Execute(&buf, map[string]interface{}{"name": Goify(ut.Name(), true), "target": tgt}); err != nil {
+				if err := userValT.Execute(&buf, map[string]interface{}{"name": Goify(ca.Attribute.Name(), true), "target": tgt}); err != nil {
 					panic(err) // bug
 				}
 			}
