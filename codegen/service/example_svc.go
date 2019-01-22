@@ -27,6 +27,9 @@ type (
 		// ResultView is the view to render the result. It is set only if the
 		// result type uses views.
 		ResultView string
+		// StreamInterface is the stream interface in the service package used
+		// by the endpoint implementation.
+		StreamInterface string
 	}
 )
 
@@ -95,6 +98,9 @@ func basicEndpointSection(m *expr.MethodExpr, svcData *Data) *codegen.SectionTem
 			ed.ResultView = view
 		}
 	}
+	if md.ServerStream != nil {
+		ed.StreamInterface = svcData.PkgName + "." + md.ServerStream.Interface
+	}
 	return &codegen.SectionTemplate{
 		Name:   "basic-endpoint",
 		Source: endpointT,
@@ -120,7 +126,7 @@ func New{{ .StructName }}(logger *log.Logger) {{ .PkgName }}.Service {
 	// input: basicEndpointData
 	endpointT = `{{ comment .Description }}
 {{- if .ServerStream }}
-func (s *{{ .ServiceVarName }}srvc) {{ .VarName }}(ctx context.Context{{ if .PayloadFullRef }}, p {{ .PayloadFullRef }}{{ end }}, stream {{ .ServerStream.Interface }}) (err error) {
+func (s *{{ .ServiceVarName }}srvc) {{ .VarName }}(ctx context.Context{{ if .PayloadFullRef }}, p {{ .PayloadFullRef }}{{ end }}, stream {{ .StreamInterface }}) (err error) {
 {{- else }}
 func (s *{{ .ServiceVarName }}srvc) {{ .VarName }}(ctx context.Context{{ if .PayloadFullRef }}, p {{ .PayloadFullRef }}{{ end }}) ({{ if .ResultFullRef }}res {{ .ResultFullRef }}, {{ if .ViewedResult }}{{ if not .ViewedResult.ViewName }}view string, {{ end }}{{ end }} {{ end }}err error) {
 {{- end }}
