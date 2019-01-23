@@ -24,6 +24,105 @@ func TestServerExprEvalName(t *testing.T) {
 	}
 }
 
+func TestServerExprValidate(t *testing.T) {
+	const (
+		foo = "foo"
+		bar = "bar"
+	)
+	var (
+		validURI  = URIExpr("http://example.com")
+		validURIs = []URIExpr{
+			validURI,
+		}
+		errNoURI            = fmt.Errorf("host must defined at least one URI")
+		errServiceUndefined = fmt.Errorf("service %q undefined", bar)
+	)
+
+	cases := map[string]struct {
+		hosts    []*HostExpr
+		services []string
+		expected *eval.ValidationErrors
+	}{
+		"no error": {
+			hosts: []*HostExpr{
+				{
+					URIs: validURIs,
+				},
+			},
+			services: []string{
+				foo,
+			},
+			expected: &eval.ValidationErrors{
+				Errors: []error{},
+			},
+		},
+		"error only in hosts": {
+			hosts: []*HostExpr{
+				{
+					URIs: []URIExpr{},
+				},
+			},
+			expected: &eval.ValidationErrors{
+				Errors: []error{
+					errNoURI,
+				},
+			},
+		},
+		"error only in services": {
+			services: []string{
+				bar,
+			},
+			expected: &eval.ValidationErrors{
+				Errors: []error{
+					errServiceUndefined,
+				},
+			},
+		},
+		"error in both": {
+			hosts: []*HostExpr{
+				{
+					URIs: []URIExpr{},
+				},
+			},
+			services: []string{
+				bar,
+			},
+			expected: &eval.ValidationErrors{
+				Errors: []error{
+					errNoURI,
+					errServiceUndefined,
+				},
+			},
+		},
+	}
+
+	services := Root.Services
+	Root.Services = []*ServiceExpr{
+		{
+			Name: foo,
+		},
+	}
+	defer func() {
+		Root.Services = services
+	}()
+
+	for k, tc := range cases {
+		s := ServerExpr{
+			Hosts:    tc.hosts,
+			Services: tc.services,
+		}
+		if actual := s.Validate().(*eval.ValidationErrors); len(tc.expected.Errors) != len(actual.Errors) {
+			t.Errorf("%s: expected the number of error values to match %d got %d ", k, len(tc.expected.Errors), len(actual.Errors))
+		} else {
+			for i, err := range actual.Errors {
+				if err.Error() != tc.expected.Errors[i].Error() {
+					t.Errorf("%s: got %#v, expected %#v at index %d", k, err, tc.expected.Errors[i], i)
+				}
+			}
+		}
+	}
+}
+
 func TestHostExprValidate(t *testing.T) {
 	const (
 		foo = "foo"
@@ -165,7 +264,6 @@ func TestHostExprValidate(t *testing.T) {
 		}
 		if actual := h.Validate().(*eval.ValidationErrors); len(tc.expected.Errors) != len(actual.Errors) {
 			t.Errorf("%s: expected the number of error values to match %d got %d ", k, len(tc.expected.Errors), len(actual.Errors))
-			t.Errorf(actual.Error())
 		} else {
 			for i, err := range actual.Errors {
 				if err.Error() != tc.expected.Errors[i].Error() {
