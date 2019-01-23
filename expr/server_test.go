@@ -78,7 +78,7 @@ func TestServerExprValidate(t *testing.T) {
 				},
 			},
 		},
-		"error only both": {
+		"error in both": {
 			hosts: []*HostExpr{
 				{
 					URIs: []URIExpr{},
