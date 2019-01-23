@@ -197,7 +197,7 @@ type ErrorNamer interface {
 // streamStructTypeT renders the server and client struct types that
 // implements the client and server service stream interfaces.
 // input: StreamData
-const streamStructTypeT = `{{ printf "%s implements the %s.%s interface." .VarName .ServiceInterface | comment }}
+const streamStructTypeT = `{{ printf "%s implements the %s interface." .VarName .ServiceInterface | comment }}
 type {{ .VarName }} struct {
 	stream {{ .Interface }}
 {{- if .Endpoint.Method.ViewedResult }}

@@ -608,16 +608,14 @@ func collectMessages(at *expr.AttributeExpr, sd *ServiceData, seen map[string]st
 			Ref:         ref,
 			Type:        dt,
 		})
-		ca := protoBufContext(at, "", sd.Scope)
-		if vDef := codegen.RecursiveValidationCode(ca, "message"); vDef != "" {
-			sd.Validations = append(sd.Validations, &ValidationData{
-				Name:    "Validate" + name,
-				Def:     vDef,
-				ArgName: "message",
-				SrcName: name,
-				SrcRef:  ref,
-			})
-		}
+		ca := protoBufContext(att, "", sd.Scope)
+		sd.Validations = append(sd.Validations, &ValidationData{
+			Name:    "Validate" + name,
+			Def:     codegen.RecursiveValidationCode(ca, "message"),
+			ArgName: "message",
+			SrcName: name,
+			SrcRef:  ref,
+		})
 		seen[dt.Name()] = struct{}{}
 		data = append(data, collect(att)...)
 	case *expr.Object:

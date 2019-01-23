@@ -1,7 +1,7 @@
 package testdata
 
 var ServerStreamingServerStructCode = `// MethodServerStreamingUserTypeRPCServerStream implements the
-// serviceserverstreamingusertyperpc.MethodServerStreamingUserTypeRPCServerStream.%!s(MISSING)
+// serviceserverstreamingusertyperpc.MethodServerStreamingUserTypeRPCServerStream
 // interface.
 type MethodServerStreamingUserTypeRPCServerStream struct {
 	stream pb.ServiceServerStreamingUserTypeRPC_MethodServerStreamingUserTypeRPCServer
@@ -23,7 +23,7 @@ var ServerStreamingServerCloseCode = `func (s *MethodServerStreamingUserTypeRPCS
 `
 
 var ServerStreamingClientStructCode = `// MethodServerStreamingUserTypeRPCClientStream implements the
-// serviceserverstreamingusertyperpc.MethodServerStreamingUserTypeRPCClientStream.%!s(MISSING)
+// serviceserverstreamingusertyperpc.MethodServerStreamingUserTypeRPCClientStream
 // interface.
 type MethodServerStreamingUserTypeRPCClientStream struct {
 	stream pb.ServiceServerStreamingUserTypeRPC_MethodServerStreamingUserTypeRPCClient
@@ -49,7 +49,7 @@ var ServerStreamingClientCloseCode = `func (s *MethodServerStreamingUserTypeRPCC
 `
 
 var ServerStreamingResultWithViewsServerStructCode = `// MethodServerStreamingUserTypeRPCServerStream implements the
-// serviceserverstreamingusertyperpc.MethodServerStreamingUserTypeRPCServerStream.%!s(MISSING)
+// serviceserverstreamingusertyperpc.MethodServerStreamingUserTypeRPCServerStream
 // interface.
 type MethodServerStreamingUserTypeRPCServerStream struct {
 	stream pb.ServiceServerStreamingUserTypeRPC_MethodServerStreamingUserTypeRPCServer
@@ -73,7 +73,7 @@ func (s *MethodServerStreamingUserTypeRPCServerStream) SetView(view string) {
 `
 
 var ServerStreamingResultWithViewsClientStructCode = `// MethodServerStreamingUserTypeRPCClientStream implements the
-// serviceserverstreamingusertyperpc.MethodServerStreamingUserTypeRPCClientStream.%!s(MISSING)
+// serviceserverstreamingusertyperpc.MethodServerStreamingUserTypeRPCClientStream
 // interface.
 type MethodServerStreamingUserTypeRPCClientStream struct {
 	stream pb.ServiceServerStreamingUserTypeRPC_MethodServerStreamingUserTypeRPCClient
@@ -187,8 +187,7 @@ func (s *MethodServerStreamingMapClientStream) Recv() (map[string]*serviceserver
 `
 
 var ClientStreamingServerStructCode = `// MethodClientStreamingRPCServerStream implements the
-// serviceclientstreamingrpc.MethodClientStreamingRPCServerStream.%!s(MISSING)
-// interface.
+// serviceclientstreamingrpc.MethodClientStreamingRPCServerStream interface.
 type MethodClientStreamingRPCServerStream struct {
 	stream pb.ServiceClientStreamingRPC_MethodClientStreamingRPCServer
 }
@@ -215,8 +214,7 @@ func (s *MethodClientStreamingRPCServerStream) Recv() (int, error) {
 `
 
 var ClientStreamingClientStructCode = `// MethodClientStreamingRPCClientStream implements the
-// serviceclientstreamingrpc.MethodClientStreamingRPCClientStream.%!s(MISSING)
-// interface.
+// serviceclientstreamingrpc.MethodClientStreamingRPCClientStream interface.
 type MethodClientStreamingRPCClientStream struct {
 	stream pb.ServiceClientStreamingRPC_MethodClientStreamingRPCClient
 }
@@ -243,7 +241,7 @@ func (s *MethodClientStreamingRPCClientStream) CloseAndRecv() (string, error) {
 `
 
 var BidirectionalStreamingServerStructCode = `// MethodBidirectionalStreamingRPCServerStream implements the
-// servicebidirectionalstreamingrpc.MethodBidirectionalStreamingRPCServerStream.%!s(MISSING)
+// servicebidirectionalstreamingrpc.MethodBidirectionalStreamingRPCServerStream
 // interface.
 type MethodBidirectionalStreamingRPCServerStream struct {
 	stream pb.ServiceBidirectionalStreamingRPC_MethodBidirectionalStreamingRPCServer
@@ -279,7 +277,7 @@ var BidirectionalStreamingServerCloseCode = `func (s *MethodBidirectionalStreami
 `
 
 var BidirectionalStreamingClientStructCode = `// MethodBidirectionalStreamingRPCClientStream implements the
-// servicebidirectionalstreamingrpc.MethodBidirectionalStreamingRPCClientStream.%!s(MISSING)
+// servicebidirectionalstreamingrpc.MethodBidirectionalStreamingRPCClientStream
 // interface.
 type MethodBidirectionalStreamingRPCClientStream struct {
 	stream pb.ServiceBidirectionalStreamingRPC_MethodBidirectionalStreamingRPCClient
