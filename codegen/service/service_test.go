@@ -26,6 +26,7 @@ func TestService(t *testing.T) {
 		{"result-with-multiple-views", testdata.MultipleMethodsResultMultipleViewsDSL, testdata.MultipleMethodsResultMultipleViews},
 		{"result-collection-multiple-views", testdata.ResultCollectionMultipleViewsMethodDSL, testdata.ResultCollectionMultipleViewsMethod},
 		{"result-with-other-result", testdata.ResultWithOtherResultMethodDSL, testdata.ResultWithOtherResultMethod},
+		{"result-with-result-collection", testdata.ResultWithResultCollectionMethodDSL, testdata.ResultWithResultCollectionMethod},
 		{"service-level-error", testdata.ServiceErrorDSL, testdata.ServiceError},
 		{"force-generate-type", testdata.ForceGenerateTypeDSL, testdata.ForceGenerateType},
 		{"force-generate-type-explicit", testdata.ForceGenerateTypeExplicitDSL, testdata.ForceGenerateTypeExplicit},

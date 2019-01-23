@@ -683,6 +683,255 @@ func newMultipleViews2ViewTiny(res *MultipleViews2) *resultwithotherresultviews.
 }
 `
 
+const ResultWithResultCollectionMethod = `
+// Service is the ResultWithResultTypeCollection service interface.
+type Service interface {
+	// A implements A.
+	// The "view" return value must have one of the following views
+	//	- "default"
+	//	- "extended"
+	//	- "tiny"
+	A(context.Context) (res *RT, view string, err error)
+}
+
+// ServiceName is the name of the service as defined in the design. This is the
+// same value that is set in the endpoint request contexts under the ServiceKey
+// key.
+const ServiceName = "ResultWithResultTypeCollection"
+
+// MethodNames lists the service method names as defined in the design. These
+// are the same values that are set in the endpoint request contexts under the
+// MethodKey key.
+var MethodNames = [1]string{"A"}
+
+// RT is the result type of the ResultWithResultTypeCollection service A method.
+type RT struct {
+	A RT2Collection
+}
+
+type RT2Collection []*RT2
+
+type RT2 struct {
+	C string
+	D int
+	E *string
+}
+
+// NewRT initializes result type RT from viewed result type RT.
+func NewRT(vres *resultwithresulttypecollectionviews.RT) *RT {
+	var res *RT
+	switch vres.View {
+	case "default", "":
+		res = newRT(vres.Projected)
+	case "extended":
+		res = newRTExtended(vres.Projected)
+	case "tiny":
+		res = newRTTiny(vres.Projected)
+	}
+	return res
+}
+
+// NewViewedRT initializes viewed result type RT from result type RT using the
+// given view.
+func NewViewedRT(res *RT, view string) *resultwithresulttypecollectionviews.RT {
+	var vres *resultwithresulttypecollectionviews.RT
+	switch view {
+	case "default", "":
+		p := newRTView(res)
+		vres = &resultwithresulttypecollectionviews.RT{p, "default"}
+	case "extended":
+		p := newRTViewExtended(res)
+		vres = &resultwithresulttypecollectionviews.RT{p, "extended"}
+	case "tiny":
+		p := newRTViewTiny(res)
+		vres = &resultwithresulttypecollectionviews.RT{p, "tiny"}
+	}
+	return vres
+}
+
+// newRT converts projected type RT to service type RT.
+func newRT(vres *resultwithresulttypecollectionviews.RTView) *RT {
+	res := &RT{}
+	if vres.A != nil {
+		res.A = newRT2Collection(vres.A)
+	}
+	return res
+}
+
+// newRTExtended converts projected type RT to service type RT.
+func newRTExtended(vres *resultwithresulttypecollectionviews.RTView) *RT {
+	res := &RT{}
+	if vres.A != nil {
+		res.A = newRT2CollectionExtended(vres.A)
+	}
+	return res
+}
+
+// newRTTiny converts projected type RT to service type RT.
+func newRTTiny(vres *resultwithresulttypecollectionviews.RTView) *RT {
+	res := &RT{}
+	if vres.A != nil {
+		res.A = newRT2CollectionTiny(vres.A)
+	}
+	return res
+}
+
+// newRTView projects result type RT into projected type RTView using the
+// "default" view.
+func newRTView(res *RT) *resultwithresulttypecollectionviews.RTView {
+	vres := &resultwithresulttypecollectionviews.RTView{}
+	if res.A != nil {
+		vres.A = newRT2CollectionView(res.A)
+	}
+	return vres
+}
+
+// newRTViewExtended projects result type RT into projected type RTView using
+// the "extended" view.
+func newRTViewExtended(res *RT) *resultwithresulttypecollectionviews.RTView {
+	vres := &resultwithresulttypecollectionviews.RTView{}
+	if res.A != nil {
+		vres.A = newRT2CollectionViewExtended(res.A)
+	}
+	return vres
+}
+
+// newRTViewTiny projects result type RT into projected type RTView using the
+// "tiny" view.
+func newRTViewTiny(res *RT) *resultwithresulttypecollectionviews.RTView {
+	vres := &resultwithresulttypecollectionviews.RTView{}
+	if res.A != nil {
+		vres.A = newRT2CollectionViewTiny(res.A)
+	}
+	return vres
+}
+
+// newRT2Collection converts projected type RT2Collection to service type
+// RT2Collection.
+func newRT2Collection(vres resultwithresulttypecollectionviews.RT2CollectionView) RT2Collection {
+	res := make(RT2Collection, len(vres))
+	for i, n := range vres {
+		res[i] = newRT2(n)
+	}
+	return res
+}
+
+// newRT2CollectionExtended converts projected type RT2Collection to service
+// type RT2Collection.
+func newRT2CollectionExtended(vres resultwithresulttypecollectionviews.RT2CollectionView) RT2Collection {
+	res := make(RT2Collection, len(vres))
+	for i, n := range vres {
+		res[i] = newRT2Extended(n)
+	}
+	return res
+}
+
+// newRT2CollectionTiny converts projected type RT2Collection to service type
+// RT2Collection.
+func newRT2CollectionTiny(vres resultwithresulttypecollectionviews.RT2CollectionView) RT2Collection {
+	res := make(RT2Collection, len(vres))
+	for i, n := range vres {
+		res[i] = newRT2Tiny(n)
+	}
+	return res
+}
+
+// newRT2CollectionView projects result type RT2Collection into projected type
+// RT2CollectionView using the "default" view.
+func newRT2CollectionView(res RT2Collection) resultwithresulttypecollectionviews.RT2CollectionView {
+	vres := make(resultwithresulttypecollectionviews.RT2CollectionView, len(res))
+	for i, n := range res {
+		vres[i] = newRT2View(n)
+	}
+	return vres
+}
+
+// newRT2CollectionViewExtended projects result type RT2Collection into
+// projected type RT2CollectionView using the "extended" view.
+func newRT2CollectionViewExtended(res RT2Collection) resultwithresulttypecollectionviews.RT2CollectionView {
+	vres := make(resultwithresulttypecollectionviews.RT2CollectionView, len(res))
+	for i, n := range res {
+		vres[i] = newRT2ViewExtended(n)
+	}
+	return vres
+}
+
+// newRT2CollectionViewTiny projects result type RT2Collection into projected
+// type RT2CollectionView using the "tiny" view.
+func newRT2CollectionViewTiny(res RT2Collection) resultwithresulttypecollectionviews.RT2CollectionView {
+	vres := make(resultwithresulttypecollectionviews.RT2CollectionView, len(res))
+	for i, n := range res {
+		vres[i] = newRT2ViewTiny(n)
+	}
+	return vres
+}
+
+// newRT2 converts projected type RT2 to service type RT2.
+func newRT2(vres *resultwithresulttypecollectionviews.RT2View) *RT2 {
+	res := &RT2{}
+	if vres.C != nil {
+		res.C = *vres.C
+	}
+	if vres.D != nil {
+		res.D = *vres.D
+	}
+	return res
+}
+
+// newRT2Extended converts projected type RT2 to service type RT2.
+func newRT2Extended(vres *resultwithresulttypecollectionviews.RT2View) *RT2 {
+	res := &RT2{
+		E: vres.E,
+	}
+	if vres.C != nil {
+		res.C = *vres.C
+	}
+	if vres.D != nil {
+		res.D = *vres.D
+	}
+	return res
+}
+
+// newRT2Tiny converts projected type RT2 to service type RT2.
+func newRT2Tiny(vres *resultwithresulttypecollectionviews.RT2View) *RT2 {
+	res := &RT2{}
+	if vres.D != nil {
+		res.D = *vres.D
+	}
+	return res
+}
+
+// newRT2View projects result type RT2 into projected type RT2View using the
+// "default" view.
+func newRT2View(res *RT2) *resultwithresulttypecollectionviews.RT2View {
+	vres := &resultwithresulttypecollectionviews.RT2View{
+		C: &res.C,
+		D: &res.D,
+	}
+	return vres
+}
+
+// newRT2ViewExtended projects result type RT2 into projected type RT2View
+// using the "extended" view.
+func newRT2ViewExtended(res *RT2) *resultwithresulttypecollectionviews.RT2View {
+	vres := &resultwithresulttypecollectionviews.RT2View{
+		C: &res.C,
+		D: &res.D,
+		E: res.E,
+	}
+	return vres
+}
+
+// newRT2ViewTiny projects result type RT2 into projected type RT2View using
+// the "tiny" view.
+func newRT2ViewTiny(res *RT2) *resultwithresulttypecollectionviews.RT2View {
+	vres := &resultwithresulttypecollectionviews.RT2View{
+		D: &res.D,
+	}
+	return vres
+}
+`
+
 const ForceGenerateType = `
 // Service is the ForceGenerateType service interface.
 type Service interface {
