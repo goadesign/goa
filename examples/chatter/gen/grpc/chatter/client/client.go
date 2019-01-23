@@ -25,27 +25,24 @@ type Client struct {
 	opts    []grpc.CallOption
 }
 
-// echoerClientStream implements the chattersvc.EchoerClientStream.%!s(MISSING)
-// interface.
+// echoerClientStream implements the chattersvc.EchoerClientStream interface.
 type echoerClientStream struct {
 	stream pb.Chatter_EchoerClient
 }
 
-// listenerClientStream implements the
-// chattersvc.ListenerClientStream.%!s(MISSING) interface.
+// listenerClientStream implements the chattersvc.ListenerClientStream
+// interface.
 type listenerClientStream struct {
 	stream pb.Chatter_ListenerClient
 }
 
-// summaryClientStream implements the
-// chattersvc.SummaryClientStream.%!s(MISSING) interface.
+// summaryClientStream implements the chattersvc.SummaryClientStream interface.
 type summaryClientStream struct {
 	stream pb.Chatter_SummaryClient
 	view   string
 }
 
-// historyClientStream implements the
-// chattersvc.HistoryClientStream.%!s(MISSING) interface.
+// historyClientStream implements the chattersvc.HistoryClientStream interface.
 type historyClientStream struct {
 	stream pb.Chatter_HistoryClient
 	view   string

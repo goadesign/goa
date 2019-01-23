@@ -33,27 +33,24 @@ type ErrorNamer interface {
 	ErrorName() string
 }
 
-// echoerServerStream implements the chattersvc.EchoerServerStream.%!s(MISSING)
-// interface.
+// echoerServerStream implements the chattersvc.EchoerServerStream interface.
 type echoerServerStream struct {
 	stream pb.Chatter_EchoerServer
 }
 
-// listenerServerStream implements the
-// chattersvc.ListenerServerStream.%!s(MISSING) interface.
+// listenerServerStream implements the chattersvc.ListenerServerStream
+// interface.
 type listenerServerStream struct {
 	stream pb.Chatter_ListenerServer
 }
 
-// summaryServerStream implements the
-// chattersvc.SummaryServerStream.%!s(MISSING) interface.
+// summaryServerStream implements the chattersvc.SummaryServerStream interface.
 type summaryServerStream struct {
 	stream pb.Chatter_SummaryServer
 	view   string
 }
 
-// historyServerStream implements the
-// chattersvc.HistoryServerStream.%!s(MISSING) interface.
+// historyServerStream implements the chattersvc.HistoryServerStream interface.
 type historyServerStream struct {
 	stream pb.Chatter_HistoryServer
 	view   string
