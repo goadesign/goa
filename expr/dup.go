@@ -41,13 +41,17 @@ func (d *dupper) DupAttribute(att *AttributeExpr) *AttributeExpr {
 	if att.Validation != nil {
 		valDup = att.Validation.Dup()
 	}
+	var metaDup MetaExpr
+	if att.Meta != nil {
+		metaDup = att.Meta.Dup()
+	}
 	dup := AttributeExpr{
 		Type:         d.DupType(att.Type),
 		Description:  att.Description,
 		References:   att.References,
 		Bases:        att.Bases,
 		Validation:   valDup,
-		Meta:         att.Meta,
+		Meta:         metaDup,
 		DefaultValue: att.DefaultValue,
 		DSLFunc:      att.DSLFunc,
 		UserExamples: att.UserExamples,
