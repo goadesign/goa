@@ -695,8 +695,9 @@ var PayloadBodyQueryObjectValidateConstructorCode = `// NewMethodBodyQueryObject
 // ServiceBodyQueryObjectValidate service MethodBodyQueryObjectValidate
 // endpoint payload.
 func NewMethodBodyQueryObjectValidatePayload(body *MethodBodyQueryObjectValidateRequestBody, b string) *servicebodyqueryobjectvalidate.MethodBodyQueryObjectValidatePayload {
-	v := &servicebodyqueryobjectvalidate.MethodBodyQueryObjectValidatePayload{
-		A: *body.A,
+	v := &servicebodyqueryobjectvalidate.MethodBodyQueryObjectValidatePayload{}
+	if body.A != nil {
+		v.A = *body.A
 	}
 	v.B = b
 	return v
@@ -718,8 +719,9 @@ var PayloadBodyQueryUserValidateConstructorCode = `// NewMethodBodyQueryUserVali
 // ServiceBodyQueryUserValidate service MethodBodyQueryUserValidate endpoint
 // payload.
 func NewMethodBodyQueryUserValidatePayloadType(body *MethodBodyQueryUserValidateRequestBody, b string) *servicebodyqueryuservalidate.PayloadType {
-	v := &servicebodyqueryuservalidate.PayloadType{
-		A: *body.A,
+	v := &servicebodyqueryuservalidate.PayloadType{}
+	if body.A != nil {
+		v.A = *body.A
 	}
 	v.B = b
 	return v
@@ -741,8 +743,9 @@ var PayloadBodyPathObjectValidateConstructorCode = `// NewMethodBodyPathObjectVa
 // ServiceBodyPathObjectValidate service MethodBodyPathObjectValidate endpoint
 // payload.
 func NewMethodBodyPathObjectValidatePayload(body *MethodBodyPathObjectValidateRequestBody, b string) *servicebodypathobjectvalidate.MethodBodyPathObjectValidatePayload {
-	v := &servicebodypathobjectvalidate.MethodBodyPathObjectValidatePayload{
-		A: *body.A,
+	v := &servicebodypathobjectvalidate.MethodBodyPathObjectValidatePayload{}
+	if body.A != nil {
+		v.A = *body.A
 	}
 	v.B = b
 	return v
@@ -764,8 +767,9 @@ var PayloadBodyPathUserValidateConstructorCode = `// NewMethodUserBodyPathValida
 // ServiceBodyPathUserValidate service MethodUserBodyPathValidate endpoint
 // payload.
 func NewMethodUserBodyPathValidatePayloadType(body *MethodUserBodyPathValidateRequestBody, b string) *servicebodypathuservalidate.PayloadType {
-	v := &servicebodypathuservalidate.PayloadType{
-		A: *body.A,
+	v := &servicebodypathuservalidate.PayloadType{}
+	if body.A != nil {
+		v.A = *body.A
 	}
 	v.B = b
 	return v
@@ -788,8 +792,9 @@ var PayloadBodyQueryPathObjectValidateConstructorCode = `// NewMethodBodyQueryPa
 // ServiceBodyQueryPathObjectValidate service MethodBodyQueryPathObjectValidate
 // endpoint payload.
 func NewMethodBodyQueryPathObjectValidatePayload(body *MethodBodyQueryPathObjectValidateRequestBody, c string, b string) *servicebodyquerypathobjectvalidate.MethodBodyQueryPathObjectValidatePayload {
-	v := &servicebodyquerypathobjectvalidate.MethodBodyQueryPathObjectValidatePayload{
-		A: *body.A,
+	v := &servicebodyquerypathobjectvalidate.MethodBodyQueryPathObjectValidatePayload{}
+	if body.A != nil {
+		v.A = *body.A
 	}
 	v.C = c
 	v.B = b
@@ -813,8 +818,9 @@ var PayloadBodyQueryPathUserValidateConstructorCode = `// NewMethodBodyQueryPath
 // ServiceBodyQueryPathUserValidate service MethodBodyQueryPathUserValidate
 // endpoint payload.
 func NewMethodBodyQueryPathUserValidatePayloadType(body *MethodBodyQueryPathUserValidateRequestBody, c string, b string) *servicebodyquerypathuservalidate.PayloadType {
-	v := &servicebodyquerypathuservalidate.PayloadType{
-		A: *body.A,
+	v := &servicebodyquerypathuservalidate.PayloadType{}
+	if body.A != nil {
+		v.A = *body.A
 	}
 	v.C = c
 	v.B = b
@@ -851,8 +857,10 @@ func NewMethodBodyInlineArrayUserElemType(body []*ElemTypeRequestBody) []*servic
 	v := make([]*servicebodyinlinearrayuser.ElemType, len(body))
 	for i, val := range body {
 		v[i] = &servicebodyinlinearrayuser.ElemType{
-			A: *val.A,
 			B: val.B,
+		}
+		if val.A != nil {
+			v[i].A = *val.A
 		}
 	}
 	return v
@@ -865,12 +873,16 @@ func NewMethodBodyInlineMapUserMapKeyTypeElemType(body map[*KeyTypeRequestBody]*
 	v := make(map[*servicebodyinlinemapuser.KeyType]*servicebodyinlinemapuser.ElemType, len(body))
 	for key, val := range body {
 		tk := &servicebodyinlinemapuser.KeyType{
-			A: *key.A,
 			B: key.B,
 		}
+		if key.A != nil {
+			tk.A = *key.A
+		}
 		tv := &servicebodyinlinemapuser.ElemType{
-			A: *val.A,
 			B: val.B,
+		}
+		if val.A != nil {
+			tv.A = *val.A
 		}
 		v[tk] = tv
 	}

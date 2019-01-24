@@ -85,8 +85,9 @@ func EncodePickError(encoder func(context.Context, http.ResponseWriter) goahttp.
 // marshalSommelierviewsWineryViewToWineryResponseTiny builds a value of type
 // *WineryResponseTiny from a value of type *sommelierviews.WineryView.
 func marshalSommelierviewsWineryViewToWineryResponseTiny(v *sommelierviews.WineryView) *WineryResponseTiny {
-	res := &WineryResponseTiny{
-		Name: *v.Name,
+	res := &WineryResponseTiny{}
+	if v.Name != nil {
+		res.Name = *v.Name
 	}
 
 	return res

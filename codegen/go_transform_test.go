@@ -669,8 +669,10 @@ const (
 
 	srcAllPtrsTgtUseDefaultSimpleToSimpleCode = `func transform() {
 	target := &Simple{
-		RequiredString: *source.RequiredString,
-		Integer:        source.Integer,
+		Integer: source.Integer,
+	}
+	if source.RequiredString != nil {
+		target.RequiredString = *source.RequiredString
 	}
 	if source.DefaultBool != nil {
 		target.DefaultBool = *source.DefaultBool
@@ -682,8 +684,9 @@ const (
 `
 
 	srcAllPtrsTgtUseDefaultSimpleToRequiredCode = `func transform() {
-	target := &Required{
-		RequiredString: *source.RequiredString,
+	target := &Required{}
+	if source.RequiredString != nil {
+		target.RequiredString = *source.RequiredString
 	}
 	if source.DefaultBool != nil {
 		target.DefaultBool = *source.DefaultBool
@@ -699,9 +702,13 @@ const (
 
 	srcAllPtrsTgtUseDefaultRequiredToSimpleCode = `func transform() {
 	target := &Simple{
-		RequiredString: *source.RequiredString,
-		DefaultBool:    *source.DefaultBool,
-		Integer:        source.Integer,
+		Integer: source.Integer,
+	}
+	if source.RequiredString != nil {
+		target.RequiredString = *source.RequiredString
+	}
+	if source.DefaultBool != nil {
+		target.DefaultBool = *source.DefaultBool
 	}
 	if source.DefaultBool == nil {
 		target.DefaultBool = true
@@ -711,8 +718,10 @@ const (
 
 	srcAllPtrsTgtUseDefaultSimpleToSuperCode = `func transform() {
 	target := &Super{
-		RequiredString: *source.RequiredString,
-		Integer:        source.Integer,
+		Integer: source.Integer,
+	}
+	if source.RequiredString != nil {
+		target.RequiredString = *source.RequiredString
 	}
 	if source.DefaultBool != nil {
 		target.DefaultBool = *source.DefaultBool
@@ -725,8 +734,10 @@ const (
 
 	srcAllPtrsTgtUseDefaultSuperToSimpleCode = `func transform() {
 	target := &Simple{
-		RequiredString: *source.RequiredString,
-		Integer:        source.Integer,
+		Integer: source.Integer,
+	}
+	if source.RequiredString != nil {
+		target.RequiredString = *source.RequiredString
 	}
 	if source.DefaultBool != nil {
 		target.DefaultBool = *source.DefaultBool
@@ -738,8 +749,9 @@ const (
 `
 
 	srcAllPtrsTgtUseDefaultSimpleToDefaultCode = `func transform() {
-	target := &Default{
-		RequiredString: *source.RequiredString,
+	target := &Default{}
+	if source.RequiredString != nil {
+		target.RequiredString = *source.RequiredString
 	}
 	if source.DefaultBool != nil {
 		target.DefaultBool = *source.DefaultBool

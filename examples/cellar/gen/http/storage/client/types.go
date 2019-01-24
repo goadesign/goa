@@ -294,9 +294,12 @@ func NewShowStoredBottleOK(body *ShowResponseBody) *storageviews.StoredBottleVie
 
 // NewShowNotFound builds a storage service show endpoint not_found error.
 func NewShowNotFound(body *ShowNotFoundResponseBody) *storage.NotFound {
-	v := &storage.NotFound{
-		Message: *body.Message,
-		ID:      *body.ID,
+	v := &storage.NotFound{}
+	if body.Message != nil {
+		v.Message = *body.Message
+	}
+	if body.ID != nil {
+		v.ID = *body.ID
 	}
 	return v
 }

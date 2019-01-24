@@ -154,9 +154,12 @@ type BottleRequestBody struct {
 func NewStoredBottleResponseTinyCollection(res storageviews.StoredBottleCollectionView) StoredBottleResponseTinyCollection {
 	body := make([]*StoredBottleResponseTiny, len(res))
 	for i, val := range res {
-		body[i] = &StoredBottleResponseTiny{
-			ID:   *val.ID,
-			Name: *val.Name,
+		body[i] = &StoredBottleResponseTiny{}
+		if val.ID != nil {
+			body[i].ID = *val.ID
+		}
+		if val.Name != nil {
+			body[i].Name = *val.Name
 		}
 		if val.Winery != nil {
 			body[i].Winery = marshalStorageviewsWineryViewToWineryResponseTiny(val.Winery)
@@ -169,11 +172,17 @@ func NewStoredBottleResponseTinyCollection(res storageviews.StoredBottleCollecti
 // "show" endpoint of the "storage" service.
 func NewShowResponseBody(res *storageviews.StoredBottleView) *ShowResponseBody {
 	body := &ShowResponseBody{
-		ID:          *res.ID,
-		Name:        *res.Name,
-		Vintage:     *res.Vintage,
 		Description: res.Description,
 		Rating:      res.Rating,
+	}
+	if res.ID != nil {
+		body.ID = *res.ID
+	}
+	if res.Name != nil {
+		body.Name = *res.Name
+	}
+	if res.Vintage != nil {
+		body.Vintage = *res.Vintage
 	}
 	if res.Winery != nil {
 		body.Winery = marshalStorageviewsWineryViewToWineryResponseBodyTiny(res.Winery)
@@ -182,8 +191,10 @@ func NewShowResponseBody(res *storageviews.StoredBottleView) *ShowResponseBody {
 		body.Composition = make([]*ComponentResponseBody, len(res.Composition))
 		for i, val := range res.Composition {
 			body.Composition[i] = &ComponentResponseBody{
-				Varietal:   *val.Varietal,
 				Percentage: val.Percentage,
+			}
+			if val.Varietal != nil {
+				body.Composition[i].Varietal = *val.Varietal
 			}
 		}
 	}
@@ -193,9 +204,12 @@ func NewShowResponseBody(res *storageviews.StoredBottleView) *ShowResponseBody {
 // NewShowResponseBodyTiny builds the HTTP response body from the result of the
 // "show" endpoint of the "storage" service.
 func NewShowResponseBodyTiny(res *storageviews.StoredBottleView) *ShowResponseBodyTiny {
-	body := &ShowResponseBodyTiny{
-		ID:   *res.ID,
-		Name: *res.Name,
+	body := &ShowResponseBodyTiny{}
+	if res.ID != nil {
+		body.ID = *res.ID
+	}
+	if res.Name != nil {
+		body.Name = *res.Name
 	}
 	if res.Winery != nil {
 		body.Winery = marshalStorageviewsWineryViewToWineryResponseBodyTiny(res.Winery)
@@ -224,10 +238,14 @@ func NewShowPayload(id string, view *string) *storage.ShowPayload {
 // NewAddBottle builds a storage service add endpoint payload.
 func NewAddBottle(body *AddRequestBody) *storage.Bottle {
 	v := &storage.Bottle{
-		Name:        *body.Name,
-		Vintage:     *body.Vintage,
 		Description: body.Description,
 		Rating:      body.Rating,
+	}
+	if body.Name != nil {
+		v.Name = *body.Name
+	}
+	if body.Vintage != nil {
+		v.Vintage = *body.Vintage
 	}
 	if body.Winery != nil {
 		v.Winery = unmarshalWineryRequestBodyToStorageWinery(body.Winery)
@@ -236,8 +254,10 @@ func NewAddBottle(body *AddRequestBody) *storage.Bottle {
 		v.Composition = make([]*storage.Component, len(body.Composition))
 		for i, val := range body.Composition {
 			v.Composition[i] = &storage.Component{
-				Varietal:   *val.Varietal,
 				Percentage: val.Percentage,
+			}
+			if val.Varietal != nil {
+				v.Composition[i].Varietal = *val.Varietal
 			}
 		}
 	}
@@ -256,10 +276,14 @@ func NewMultiAddBottle(body []*BottleRequestBody) []*storage.Bottle {
 	v := make([]*storage.Bottle, len(body))
 	for i, val := range body {
 		v[i] = &storage.Bottle{
-			Name:        *val.Name,
-			Vintage:     *val.Vintage,
 			Description: val.Description,
 			Rating:      val.Rating,
+		}
+		if val.Name != nil {
+			v[i].Name = *val.Name
+		}
+		if val.Vintage != nil {
+			v[i].Vintage = *val.Vintage
 		}
 		if val.Winery != nil {
 			v[i].Winery = unmarshalWineryRequestBodyToStorageWinery(val.Winery)
@@ -268,8 +292,10 @@ func NewMultiAddBottle(body []*BottleRequestBody) []*storage.Bottle {
 			v[i].Composition = make([]*storage.Component, len(val.Composition))
 			for j, val := range val.Composition {
 				v[i].Composition[j] = &storage.Component{
-					Varietal:   *val.Varietal,
 					Percentage: val.Percentage,
+				}
+				if val.Varietal != nil {
+					v[i].Composition[j].Varietal = *val.Varietal
 				}
 			}
 		}
@@ -284,10 +310,14 @@ func NewMultiUpdatePayload(body *MultiUpdateRequestBody, ids []string) *storage.
 		v.Bottles = make([]*storage.Bottle, len(body.Bottles))
 		for i, val := range body.Bottles {
 			v.Bottles[i] = &storage.Bottle{
-				Name:        *val.Name,
-				Vintage:     *val.Vintage,
 				Description: val.Description,
 				Rating:      val.Rating,
+			}
+			if val.Name != nil {
+				v.Bottles[i].Name = *val.Name
+			}
+			if val.Vintage != nil {
+				v.Bottles[i].Vintage = *val.Vintage
 			}
 			if val.Winery != nil {
 				v.Bottles[i].Winery = unmarshalWineryRequestBodyToStorageWinery(val.Winery)
@@ -296,8 +326,10 @@ func NewMultiUpdatePayload(body *MultiUpdateRequestBody, ids []string) *storage.
 				v.Bottles[i].Composition = make([]*storage.Component, len(val.Composition))
 				for j, val := range val.Composition {
 					v.Bottles[i].Composition[j] = &storage.Component{
-						Varietal:   *val.Varietal,
 						Percentage: val.Percentage,
+					}
+					if val.Varietal != nil {
+						v.Bottles[i].Composition[j].Varietal = *val.Varietal
 					}
 				}
 			}

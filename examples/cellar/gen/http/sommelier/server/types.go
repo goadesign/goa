@@ -77,11 +77,17 @@ func NewStoredBottleResponseCollection(res sommelierviews.StoredBottleCollection
 	body := make([]*StoredBottleResponse, len(res))
 	for i, val := range res {
 		body[i] = &StoredBottleResponse{
-			ID:          *val.ID,
-			Name:        *val.Name,
-			Vintage:     *val.Vintage,
 			Description: val.Description,
 			Rating:      val.Rating,
+		}
+		if val.ID != nil {
+			body[i].ID = *val.ID
+		}
+		if val.Name != nil {
+			body[i].Name = *val.Name
+		}
+		if val.Vintage != nil {
+			body[i].Vintage = *val.Vintage
 		}
 		if val.Winery != nil {
 			body[i].Winery = marshalSommelierviewsWineryViewToWineryResponseTiny(val.Winery)
@@ -90,8 +96,10 @@ func NewStoredBottleResponseCollection(res sommelierviews.StoredBottleCollection
 			body[i].Composition = make([]*ComponentResponse, len(val.Composition))
 			for j, val := range val.Composition {
 				body[i].Composition[j] = &ComponentResponse{
-					Varietal:   *val.Varietal,
 					Percentage: val.Percentage,
+				}
+				if val.Varietal != nil {
+					body[i].Composition[j].Varietal = *val.Varietal
 				}
 			}
 		}

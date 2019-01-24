@@ -59,10 +59,15 @@ type AlsoDoublySecureUnauthorizedResponseBody string
 // NewSigninCredsOK builds a "secured_service" service "signin" endpoint result
 // from a HTTP "OK" response.
 func NewSigninCredsOK(body *SigninResponseBody) *securedservice.Creds {
-	v := &securedservice.Creds{
-		JWT:        *body.JWT,
-		APIKey:     *body.APIKey,
-		OauthToken: *body.OauthToken,
+	v := &securedservice.Creds{}
+	if body.JWT != nil {
+		v.JWT = *body.JWT
+	}
+	if body.APIKey != nil {
+		v.APIKey = *body.APIKey
+	}
+	if body.OauthToken != nil {
+		v.OauthToken = *body.OauthToken
 	}
 	return v
 }

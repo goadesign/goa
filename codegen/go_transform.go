@@ -137,10 +137,8 @@ func GoObjectTransform(source, target *ContextualAttribute, ta *TransformAttrs, 
 			switch {
 			case srcPtr && !tgtPtr:
 				srcFieldConv = t.ConvertType(srcc.Attribute, tgtc.Attribute, "*"+srcField)
-				if !srcc.Required {
-					postInitCode += fmt.Sprintf("if %s != nil {\n\t%s.%s = %s\n}\n", srcField, ta.TargetVar, tgtField, srcFieldConv)
-					return
-				}
+				postInitCode += fmt.Sprintf("if %s != nil {\n\t%s.%s = %s\n}\n", srcField, ta.TargetVar, tgtField, srcFieldConv)
+				return
 			case !srcPtr && tgtPtr:
 				if srcField != srcFieldConv {
 					// type conversion required. Add it in postinit code.
