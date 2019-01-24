@@ -49,13 +49,14 @@ func DecodeLoginRequest(ctx context.Context, v interface{}, md metadata.MD) (int
 			password = vals[0]
 		}
 	}
-	var (
-		payload *chattersvc.LoginPayload
-	)
+	if err != nil {
+		return nil, err
+	}
+	var payload *chattersvc.LoginPayload
 	{
 		payload = NewLoginPayload(user, password)
 	}
-	return payload, err
+	return payload, nil
 }
 
 // DecodeEchoerRequest decodes requests sent to "chatter" service "echoer"
@@ -72,9 +73,10 @@ func DecodeEchoerRequest(ctx context.Context, v interface{}, md metadata.MD) (in
 			token = vals[0]
 		}
 	}
-	var (
-		payload *chattersvc.EchoerPayload
-	)
+	if err != nil {
+		return nil, err
+	}
+	var payload *chattersvc.EchoerPayload
 	{
 		payload = NewEchoerPayload(token)
 		if strings.Contains(payload.Token, " ") {
@@ -83,7 +85,7 @@ func DecodeEchoerRequest(ctx context.Context, v interface{}, md metadata.MD) (in
 			payload.Token = cred
 		}
 	}
-	return payload, err
+	return payload, nil
 }
 
 // DecodeListenerRequest decodes requests sent to "chatter" service "listener"
@@ -100,9 +102,10 @@ func DecodeListenerRequest(ctx context.Context, v interface{}, md metadata.MD) (
 			token = vals[0]
 		}
 	}
-	var (
-		payload *chattersvc.ListenerPayload
-	)
+	if err != nil {
+		return nil, err
+	}
+	var payload *chattersvc.ListenerPayload
 	{
 		payload = NewListenerPayload(token)
 		if strings.Contains(payload.Token, " ") {
@@ -111,7 +114,7 @@ func DecodeListenerRequest(ctx context.Context, v interface{}, md metadata.MD) (
 			payload.Token = cred
 		}
 	}
-	return payload, err
+	return payload, nil
 }
 
 // DecodeSummaryRequest decodes requests sent to "chatter" service "summary"
@@ -128,9 +131,10 @@ func DecodeSummaryRequest(ctx context.Context, v interface{}, md metadata.MD) (i
 			token = vals[0]
 		}
 	}
-	var (
-		payload *chattersvc.SummaryPayload
-	)
+	if err != nil {
+		return nil, err
+	}
+	var payload *chattersvc.SummaryPayload
 	{
 		payload = NewSummaryPayload(token)
 		if strings.Contains(payload.Token, " ") {
@@ -139,7 +143,7 @@ func DecodeSummaryRequest(ctx context.Context, v interface{}, md metadata.MD) (i
 			payload.Token = cred
 		}
 	}
-	return payload, err
+	return payload, nil
 }
 
 // DecodeHistoryRequest decodes requests sent to "chatter" service "history"
@@ -160,9 +164,10 @@ func DecodeHistoryRequest(ctx context.Context, v interface{}, md metadata.MD) (i
 			token = vals[0]
 		}
 	}
-	var (
-		payload *chattersvc.HistoryPayload
-	)
+	if err != nil {
+		return nil, err
+	}
+	var payload *chattersvc.HistoryPayload
 	{
 		payload = NewHistoryPayload(view, token)
 		if strings.Contains(payload.Token, " ") {
@@ -171,5 +176,5 @@ func DecodeHistoryRequest(ctx context.Context, v interface{}, md metadata.MD) (i
 			payload.Token = cred
 		}
 	}
-	return payload, err
+	return payload, nil
 }

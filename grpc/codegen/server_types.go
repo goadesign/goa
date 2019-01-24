@@ -33,8 +33,8 @@ func serverType(genpkg string, svc *expr.GRPCServiceExpr, seen map[string]struct
 	)
 	{
 		collect := func(c *ConvertData) {
-			if c.Init != nil {
-				initData = append(initData, c.Init)
+			if len(c.Inits) > 0 {
+				initData = append(initData, c.Inits...)
 			}
 		}
 

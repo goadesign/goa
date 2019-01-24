@@ -8,17 +8,40 @@ func EncodeMethodUnaryRPCNoResultResponse(ctx context.Context, v interface{}, hd
 }
 `
 
-const ResultWithViewsResponseEncoderCode = `// EncodeMethodMessageUserTypeWithNestedUserTypesResponse encodes responses
-// from the "ServiceMessageUserTypeWithNestedUserTypes" service
-// "MethodMessageUserTypeWithNestedUserTypes" endpoint.
-func EncodeMethodMessageUserTypeWithNestedUserTypesResponse(ctx context.Context, v interface{}, hdr, trlr *metadata.MD) (interface{}, error) {
-	vres, ok := v.(*servicemessageusertypewithnestedusertypesviews.RecursiveT)
+const ResultWithViewsResponseEncoderCode = `// EncodeMethodMessageResultTypeWithViewsResponse encodes responses from the
+// "ServiceMessageResultTypeWithViews" service
+// "MethodMessageResultTypeWithViews" endpoint.
+func EncodeMethodMessageResultTypeWithViewsResponse(ctx context.Context, v interface{}, hdr, trlr *metadata.MD) (interface{}, error) {
+	vres, ok := v.(*servicemessageresulttypewithviewsviews.RT)
 	if !ok {
-		return nil, goagrpc.ErrInvalidType("ServiceMessageUserTypeWithNestedUserTypes", "MethodMessageUserTypeWithNestedUserTypes", "*servicemessageusertypewithnestedusertypesviews.RecursiveT", v)
+		return nil, goagrpc.ErrInvalidType("ServiceMessageResultTypeWithViews", "MethodMessageResultTypeWithViews", "*servicemessageresulttypewithviewsviews.RT", v)
 	}
 	result := vres.Projected
 	(*hdr).Append("goa-view", vres.View)
-	resp := NewMethodMessageUserTypeWithNestedUserTypesResponse(result)
+	var resp *pb.MethodMessageResultTypeWithViewsResponse
+	{
+		switch vres.View {
+		case "default", "":
+			resp = NewMethodMessageResultTypeWithViewsResponse(result)
+		case "tiny":
+			resp = NewMethodMessageResultTypeWithViewsResponseTiny(result)
+		}
+	}
+	return resp, nil
+}
+`
+
+const ResultWithExplicitViewResponseEncoderCode = `// EncodeMethodMessageResultTypeWithExplicitViewResponse encodes responses from
+// the "ServiceMessageResultTypeWithExplicitView" service
+// "MethodMessageResultTypeWithExplicitView" endpoint.
+func EncodeMethodMessageResultTypeWithExplicitViewResponse(ctx context.Context, v interface{}, hdr, trlr *metadata.MD) (interface{}, error) {
+	vres, ok := v.(*servicemessageresulttypewithexplicitviewviews.RT)
+	if !ok {
+		return nil, goagrpc.ErrInvalidType("ServiceMessageResultTypeWithExplicitView", "MethodMessageResultTypeWithExplicitView", "*servicemessageresulttypewithexplicitviewviews.RT", v)
+	}
+	result := vres.Projected
+	(*hdr).Append("goa-view", vres.View)
+	resp := NewMethodMessageResultTypeWithExplicitViewResponseTiny(result)
 	return resp, nil
 }
 `
@@ -77,7 +100,15 @@ func EncodeMethodMessageUserTypeWithNestedUserTypesResponse(ctx context.Context,
 	}
 	result := vres.Projected
 	(*hdr).Append("goa-view", vres.View)
-	resp := NewRTCollection(result)
+	var resp *pb.RTCollection
+	{
+		switch vres.View {
+		case "default", "":
+			resp = NewRTCollection(result)
+		case "tiny":
+			resp = NewRTCollectionTiny(result)
+		}
+	}
 	return resp, nil
 }
 `

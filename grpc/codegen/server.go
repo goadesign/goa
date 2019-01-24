@@ -77,6 +77,9 @@ func server(genpkg string, svc *expr.GRPCServiceExpr) *codegen.File {
 					Name:   "server-stream-send",
 					Source: streamSendT,
 					Data:   e.ServerStream,
+					FuncMap: map[string]interface{}{
+						"viewedInit": viewedInit,
+					},
 				})
 			}
 			if e.Method.StreamKind == expr.ClientStreamKind || e.Method.StreamKind == expr.BidirectionalStreamKind {
@@ -135,6 +138,7 @@ func serverEncodeDecode(genpkg string, svc *expr.GRPCServiceExpr) *codegen.File 
 				FuncMap: map[string]interface{}{
 					"typeConversionData":       typeConversionData,
 					"metadataEncodeDecodeData": metadataEncodeDecodeData,
+					"viewedInit":               viewedInit,
 				},
 			})
 		}
@@ -177,6 +181,17 @@ func metadataEncodeDecodeData(md *MetadataData, vname string) map[string]interfa
 		"Metadata": md,
 		"VarName":  vname,
 	}
+}
+
+// viewedInit returns the constructor that uses the given view for rendering.
+// This is used by templates.
+func viewedInit(inits []*InitData, view string) *InitData {
+	for _, i := range inits {
+		if i.View == view {
+			return i
+		}
+	}
+	panic("view not found in inits: " + view) // bug
 }
 
 // input: ServiceData
@@ -339,33 +354,31 @@ func Decode{{ .Method.VarName }}Request(ctx context.Context, v interface{}, md m
 		{{- end }}
 	{{- end }}
 	}
+	if err != nil {
+		return nil, err
+	}
 {{- end }}
 {{- if and (not .Method.StreamingPayload) (not (isEmpty .Request.Message.Type)) }}
 	var (
 		message {{ .Request.ServerConvert.SrcRef }}
 		ok bool
-	{{- if not .Request.Metadata }}
-		err error
-	{{- end }}
 	)
 	{
 		if message, ok = v.({{ .Request.ServerConvert.SrcRef }}); !ok {
 			return nil, goagrpc.ErrInvalidType("{{ .ServiceName }}", "{{ .Method.Name }}", "{{ .Request.Message.Ref }}", v)
 		}
 	{{- if .Request.ServerConvert.Validation }}
-		err = {{ .Request.ServerConvert.Validation.Name }}(message)
+		if err {{ if .Request.Metadata }}={{ else }}:={{ end }} {{ .Request.ServerConvert.Validation.Name }}(message); err != nil {
+			return nil, err
+		}
 	{{- end }}
 	}
 {{- end }}
-	var (
-		payload {{ .PayloadRef }}
-	{{- if and (not .Request.Metadata) .Method.StreamingPayload }}
-		err error
-	{{- end }}
-	)
+	var payload {{ .PayloadRef }}
 	{
 		{{- if .Request.ServerConvert }}
-			payload = {{ .Request.ServerConvert.Init.Name }}({{ range .Request.ServerConvert.Init.Args }}{{ .Name }}, {{ end }})
+			{{- $init := (index .Request.ServerConvert.Inits 0) }}
+			payload = {{ $init.Name }}({{ range $init.Args }}{{ .Name }}, {{ end }})
 		{{- else }}
 			payload = {{ (index .Request.Metadata 0).VarName }}
 		{{- end }}
@@ -385,7 +398,7 @@ func Decode{{ .Method.VarName }}Request(ctx context.Context, v interface{}, md m
 	{{- end }}
 {{- end }}
 	}
-	return payload, err
+	return payload, nil
 }
 ` + convertStringToTypeT
 
@@ -399,13 +412,31 @@ func Encode{{ .Method.VarName }}Response(ctx context.Context, v interface{}, hdr
 	}
 	result := vres.Projected
 	(*hdr).Append("goa-view", vres.View)
-{{- else if .ResultRef }}
-	result, ok := v.({{ .ResultRef }})
-	if !ok {
-		return nil, goagrpc.ErrInvalidType("{{ .ServiceName }}", "{{ .Method.Name }}", "{{ .ResultRef }}", v)
-	}
+	{{- if .Method.ViewedResult.ViewName }}
+		{{- $init := (index .Response.ServerConvert.Inits 0) }}
+		resp := {{ $init.Name }}({{ range $init.Args }}{{ .Name }}, {{ end }})
+	{{- else }}
+		var resp {{ .Response.ServerConvert.TgtRef }}
+		{
+			switch vres.View {
+			{{- range .Method.ViewedResult.Views }}
+				case {{ printf "%q" .Name }}{{ if eq .Name "default" }}, ""{{ end }}:
+					{{- $init := (viewedInit $.Response.ServerConvert.Inits .Name) }}
+					resp = {{ $init.Name }}({{ range $init.Args }}{{ .Name }}, {{ end }})
+			{{- end }}
+			}
+		}
+	{{- end }}
+{{- else }}
+	{{- if .ResultRef }}
+		result, ok := v.({{ .ResultRef }})
+		if !ok {
+			return nil, goagrpc.ErrInvalidType("{{ .ServiceName }}", "{{ .Method.Name }}", "{{ .ResultRef }}", v)
+		}
+	{{- end }}
+	{{- $init := (index .Response.ServerConvert.Inits 0) }}
+	resp := {{ $init.Name }}({{ range $init.Args }}{{ .Name }}, {{ end }})
 {{- end }}
-	resp := {{ .Response.ServerConvert.Init.Name }}({{ range .Response.ServerConvert.Init.Args }}{{ .Name }}, {{ end }})
 {{- range .Response.Headers }}
 	{{ template "metadata_encoder" (metadataEncodeDecodeData . "(*hdr)") }}
 {{- end }}

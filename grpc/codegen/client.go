@@ -78,6 +78,9 @@ func client(genpkg string, svc *expr.GRPCServiceExpr) *codegen.File {
 					Name:   "client-stream-send",
 					Source: streamSendT,
 					Data:   e.ClientStream,
+					FuncMap: map[string]interface{}{
+						"viewedInit": viewedInit,
+					},
 				})
 			}
 			if e.ServerStream.MustClose {
@@ -264,12 +267,15 @@ func Decode{{ .Method.VarName }}Response(ctx context.Context, v interface{}, hdr
 		return nil, goagrpc.ErrInvalidType("{{ .ServiceName }}", "{{ .Method.Name }}", "{{ .Response.ClientConvert.SrcRef }}", v)
 	}
 	{{- if .Response.ClientConvert.Validation }}
-		err = {{ .Response.ClientConvert.Validation.Name }}(message)
+		err {{ if or .Response.Headers .Response.Trailers }}={{ else }}:={{ end }} {{ .Response.ClientConvert.Validation.Name }}(message)
+		if err != nil {
+			return nil, err
+		}
 	{{- end }}
-	res := {{ .Response.ClientConvert.Init.Name }}({{ range .Response.ClientConvert.Init.Args }}{{ .Name }}, {{ end }})
+	{{- $init := (index .Response.ClientConvert.Inits 0) }}
+	res := {{ $init.Name }}({{ range $init.Args }}{{ .Name }}, {{ end }})
 	{{- if .ViewedResultRef }}
-		vres := {{ if not .Method.ViewedResult.IsCollection }}&{{ end }}{{ .Method.ViewedResult.FullName }}{Projected: res}
-		vres.View = view
+		vres := {{ if not .Method.ViewedResult.IsCollection }}&{{ end }}{{ .Method.ViewedResult.FullName }}{Projected: res, View: view}
 		return {{ .ServicePkgName }}.{{ .Method.ViewedResult.ResultInit.Name }}({{ range .Method.ViewedResult.ResultInit.Args}}{{ .Name }}, {{ end }}), nil
 	{{- else }}
 		return res, nil
@@ -372,7 +378,8 @@ func Encode{{ .Method.VarName }}Request(ctx context.Context, v interface{}, md *
 	{{- end }}
 {{- end }}
 {{- if .Request.ClientConvert }}
-	return {{ .Request.ClientConvert.Init.Name }}({{ range .Request.ClientConvert.Init.Args }}{{ .Name }}, {{ end }}), nil
+	{{- $init := (index .Request.ClientConvert.Inits 0) }}
+	return {{ $init.Name }}({{ range $init.Args }}{{ .Name }}, {{ end }}), nil
 {{- else }}
 	return nil, nil
 {{- end }}

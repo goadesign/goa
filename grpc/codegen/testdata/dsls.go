@@ -303,11 +303,67 @@ var MessageUserTypeWithNestedUserTypesDSL = func() {
 	})
 }
 
+var MessageResultTypeWithViewsDSL = func() {
+	var RT = ResultType("application/vnd.goa.rt", func() {
+		TypeName("RT")
+		Attributes(func() {
+			Field(1, "IntField", Int)
+			Field(2, "StringField", String)
+		})
+		View("default", func() {
+			Attribute("IntField")
+			Attribute("StringField")
+		})
+		View("tiny", func() {
+			Attribute("IntField")
+		})
+	})
+	Service("ServiceMessageResultTypeWithViews", func() {
+		Method("MethodMessageResultTypeWithViews", func() {
+			Result(RT)
+			GRPC(func() {})
+		})
+	})
+}
+
+var MessageResultTypeWithExplicitViewDSL = func() {
+	var RT = ResultType("application/vnd.goa.rt", func() {
+		TypeName("RT")
+		Attributes(func() {
+			Field(1, "IntField", Int)
+			Field(2, "StringField", String)
+		})
+		View("default", func() {
+			Attribute("IntField")
+			Attribute("StringField")
+		})
+		View("tiny", func() {
+			Attribute("IntField")
+		})
+	})
+	Service("ServiceMessageResultTypeWithExplicitView", func() {
+		Method("MethodMessageResultTypeWithExplicitView", func() {
+			Result(RT, func() {
+				View("tiny")
+			})
+			GRPC(func() {})
+		})
+	})
+}
+
 var MessageResultTypeCollectionDSL = func() {
 	var RT = ResultType("application/vnd.goa.rt", func() {
 		TypeName("RT")
 		Attributes(func() {
 			Field(1, "IntField", Int)
+			Field(2, "StringField", String)
+		})
+		View("default", func() {
+			Attribute("IntField")
+			Attribute("StringField")
+		})
+		View("tiny", func() {
+			Attribute("IntField")
 		})
 	})
 	Service("ServiceMessageUserTypeWithNestedUserTypes", func() {

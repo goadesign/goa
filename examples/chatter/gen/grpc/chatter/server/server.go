@@ -335,7 +335,15 @@ func (s *summaryServerStream) Recv() (string, error) {
 // gRPC stream.
 func (s *historyServerStream) Send(res *chattersvc.ChatSummary) error {
 	vres := chattersvc.NewViewedChatSummary(res, s.view)
-	v := NewHistoryResponse(vres.Projected)
+	var v *pb.HistoryResponse
+	{
+		switch s.view {
+		case "tiny":
+			v = NewHistoryResponseTiny(vres.Projected)
+		case "default", "":
+			v = NewHistoryResponse(vres.Projected)
+		}
+	}
 	return s.stream.Send(v)
 }
 

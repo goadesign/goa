@@ -34,20 +34,17 @@ func DecodeIntegerDivideRequest(ctx context.Context, v interface{}, md metadata.
 	var (
 		message *pb.IntegerDivideRequest
 		ok      bool
-		err     error
 	)
 	{
 		if message, ok = v.(*pb.IntegerDivideRequest); !ok {
 			return nil, goagrpc.ErrInvalidType("divider", "integer_divide", "*pb.IntegerDivideRequest", v)
 		}
 	}
-	var (
-		payload *dividersvc.IntOperands
-	)
+	var payload *dividersvc.IntOperands
 	{
 		payload = NewIntOperands(message)
 	}
-	return payload, err
+	return payload, nil
 }
 
 // EncodeDivideResponse encodes responses from the "divider" service "divide"
@@ -67,18 +64,15 @@ func DecodeDivideRequest(ctx context.Context, v interface{}, md metadata.MD) (in
 	var (
 		message *pb.DivideRequest
 		ok      bool
-		err     error
 	)
 	{
 		if message, ok = v.(*pb.DivideRequest); !ok {
 			return nil, goagrpc.ErrInvalidType("divider", "divide", "*pb.DivideRequest", v)
 		}
 	}
-	var (
-		payload *dividersvc.FloatOperands
-	)
+	var payload *dividersvc.FloatOperands
 	{
 		payload = NewFloatOperands(message)
 	}
-	return payload, err
+	return payload, nil
 }

@@ -225,7 +225,9 @@ type (
 		// to transform the source type to a target type. If the source or target
 		// type is a goa result type, we generate one constructor for every view
 		// defined in the result type.
-		Init       *InitData
+		Inits []*InitData
+		// Validation contains the data required to render the validation function
+		// to validate the initialized type.
 		Validation *ValidationData
 	}
 
@@ -261,6 +263,8 @@ type (
 		ReturnIsStruct bool
 		// Code is the transformation code.
 		Code string
+		// View is the view name using which the constructor is rendered.
+		View string
 	}
 
 	// InitArgData represents a single constructor argument.
@@ -748,7 +752,7 @@ func buildRequestConvertData(request, payload *codegen.ContextualAttribute, md [
 			SrcRef:     request.Attribute.Ref(),
 			TgtName:    payload.Attribute.Name(),
 			TgtRef:     payload.Attribute.Ref(),
-			Init:       data,
+			Inits:      []*InitData{data},
 			Validation: addValidation(request.Attribute.Expr(), sd),
 		}
 	}
@@ -767,7 +771,7 @@ func buildRequestConvertData(request, payload *codegen.ContextualAttribute, md [
 		SrcRef:  payload.Attribute.Ref(),
 		TgtName: request.Attribute.Name(),
 		TgtRef:  request.Attribute.Ref(),
-		Init:    data,
+		Inits:   []*InitData{data},
 	}
 }
 
@@ -786,24 +790,43 @@ func buildResponseConvertData(response, result *codegen.ContextualAttribute, hdr
 
 	var (
 		svc = sd.Service
+		md  = svc.Method(e.Name())
 	)
 
 	if svr {
 		// server side
 
-		var (
-			data *InitData
-		)
+		var inits []*InitData
 		{
-			data = buildInitData(result, response, "result", "message", true, sd)
-			data.Description = fmt.Sprintf("%s builds the gRPC response type from the result of the %q endpoint of the %q service.", data.Name, e.Name(), svc.Name)
+			if md.ViewedResult != nil {
+				if v, ok := e.MethodExpr.Result.Meta["view"]; ok && len(v) > 0 {
+					// Design explicitly sets the view to render the result.
+					// We generate only one constructor which uses the result type projected
+					// using the specified view.
+					inits = append(inits, buildViewedInitData(result, response, "result", "message", e, sd, v[0]))
+				} else {
+					// If a method result uses views (i.e., a result type), we generate
+					// one constructor for every view defined in the result type. The
+					// constructor names are suffixed with the name of the view
+					// (except for "default" view).
+					// NOTE: a required attribute in the result type may not be present
+					// in all its views
+					for _, view := range md.ViewedResult.Views {
+						inits = append(inits, buildViewedInitData(result, response, "result", "message", e, sd, view.Name))
+					}
+				}
+			} else {
+				data := buildInitData(result, response, "result", "message", true, sd)
+				data.Description = fmt.Sprintf("%s builds the gRPC response type from the result of the %q endpoint of the %q service.", data.Name, e.Name(), svc.Name)
+				inits = []*InitData{data}
+			}
 		}
 		return &ConvertData{
 			SrcName: result.Attribute.Name(),
 			SrcRef:  result.Attribute.Ref(),
 			TgtName: response.Attribute.Name(),
 			TgtRef:  response.Attribute.Ref(),
-			Init:    data,
+			Inits:   inits,
 		}
 	}
 
@@ -847,14 +870,65 @@ func buildResponseConvertData(response, result *codegen.ContextualAttribute, hdr
 		SrcRef:     response.Attribute.Ref(),
 		TgtName:    result.Attribute.Name(),
 		TgtRef:     result.Attribute.Ref(),
-		Init:       data,
+		Inits:      []*InitData{data},
 		Validation: addValidation(response.Attribute.Expr(), sd),
 	}
 }
 
+// buildViewedInitData builds the transformation code to convert a projected
+// result to a response message. It projects the result type with the given
+// view before generating the transform code.
+func buildViewedInitData(result, response *codegen.ContextualAttribute, resultVar, responseVar string, e *expr.GRPCEndpointExpr, sd *ServiceData, view string) *InitData {
+	var (
+		svc  = sd.Service
+		name = result.Attribute.Name()
+		ref  = result.Attribute.Ref()
+	)
+
+	if view != "" {
+		// project result type
+		att := result.Attribute.Expr()
+		att = expr.DupAtt(att)
+		if rt, ok := att.Type.(*expr.ResultTypeExpr); ok {
+			var err error
+			rt, err = expr.Project(rt, view)
+			if err != nil {
+				panic(err)
+			}
+			att.Type = rt
+		}
+		result = result.Dup(att, result.Required)
+	}
+
+	// build constructor data
+	var data *InitData
+	{
+		data = buildInitData(result, response, resultVar, responseVar, true, sd)
+		if view != "" && view != expr.DefaultView {
+			data.Name += codegen.Goify(view, true)
+		}
+		if view != "" {
+			data.Description = fmt.Sprintf("%s builds the gRPC response type from the result of the %q endpoint of the %q service using the %q view.", data.Name, e.Name(), svc.Name, view)
+		} else {
+			data.Description = fmt.Sprintf("%s builds the gRPC response type from the result of the %q endpoint of the %q service.", data.Name, e.Name(), svc.Name)
+		}
+		data.Args = []*InitArgData{
+			&InitArgData{
+				Name:     resultVar,
+				Ref:      resultVar,
+				TypeName: name,
+				TypeRef:  ref,
+				Example:  result.Attribute.Expr().Example(expr.Root.API.Random()),
+			},
+		}
+		data.View = view
+	}
+	return data
+}
+
 // buildInitData builds the transformation code to convert source to target.
 //
-// source, target are the source and target contextual attributesr used in the
+// source, target are the source and target contextual attributes used in the
 // transformation
 //
 // sourceVar, targetVar are the source and target variable names used in the
@@ -977,12 +1051,35 @@ func buildStreamData(e *expr.GRPCEndpointExpr, sd *ServiceData, svr bool) *Strea
 			if e.MethodExpr.Result.Type != expr.Empty {
 				sendName = md.ServerStream.SendName
 				sendRef = ed.ResultRef
+				var inits []*InitData
+				{
+					if md.ViewedResult != nil {
+						if v, ok := e.MethodExpr.Result.Meta["view"]; ok && len(v) > 0 {
+							// Design explicitly sets the view to render the result.
+							// We generate only one constructor which uses the result type projected
+							// using the specified view.
+							inits = append(inits, buildViewedInitData(result, response, resVar, "v", e, sd, v[0]))
+						} else {
+							// If a method result uses views (i.e., a result type), we generate
+							// one constructor for every view defined in the result type. The
+							// constructor names are suffixed with the name of the view
+							// (except for "default" view).
+							// NOTE: a required attribute in the result type may not be present
+							// in all its views
+							for _, view := range md.ViewedResult.Views {
+								inits = append(inits, buildViewedInitData(result, response, resVar, "v", e, sd, view.Name))
+							}
+						}
+					} else {
+						inits = []*InitData{buildInitData(result, response, resVar, "v", true, sd)}
+					}
+				}
 				sendType = &ConvertData{
 					SrcName: result.Attribute.Name(),
 					SrcRef:  result.Attribute.Ref(),
 					TgtName: response.Attribute.Name(),
 					TgtRef:  response.Attribute.Ref(),
-					Init:    buildInitData(result, response, resVar, "v", true, sd),
+					Inits:   inits,
 				}
 			}
 			if e.MethodExpr.StreamingPayload.Type != expr.Empty {
@@ -993,7 +1090,7 @@ func buildStreamData(e *expr.GRPCEndpointExpr, sd *ServiceData, svr bool) *Strea
 					SrcRef:     request.Attribute.Ref(),
 					TgtName:    spayload.Attribute.Name(),
 					TgtRef:     spayload.Attribute.Ref(),
-					Init:       buildInitData(request, spayload, "v", "spayload", false, sd),
+					Inits:      []*InitData{buildInitData(request, spayload, "v", "spayload", false, sd)},
 					Validation: addValidation(request.Attribute.Expr(), sd),
 				}
 			}
@@ -1011,7 +1108,7 @@ func buildStreamData(e *expr.GRPCEndpointExpr, sd *ServiceData, svr bool) *Strea
 					SrcRef:  spayload.Attribute.Ref(),
 					TgtName: request.Attribute.Name(),
 					TgtRef:  request.Attribute.Ref(),
-					Init:    buildInitData(spayload, request, "spayload", "v", true, sd),
+					Inits:   []*InitData{buildInitData(spayload, request, "spayload", "v", true, sd)},
 				}
 			}
 			if e.MethodExpr.Result.Type != expr.Empty {
@@ -1022,7 +1119,7 @@ func buildStreamData(e *expr.GRPCEndpointExpr, sd *ServiceData, svr bool) *Strea
 					SrcRef:     response.Attribute.Ref(),
 					TgtName:    result.Attribute.Name(),
 					TgtRef:     result.Attribute.Ref(),
-					Init:       buildInitData(response, result, "v", resVar, false, sd),
+					Inits:      []*InitData{buildInitData(response, result, "v", resVar, false, sd)},
 					Validation: addValidation(response.Attribute.Expr(), sd),
 				}
 			}
@@ -1156,11 +1253,25 @@ func (s *{{ .VarName }}) {{ .SendName }}(res {{ .SendRef }}) error {
 {{- if and .Endpoint.Method.ViewedResult (eq .Type "server") }}
 	{{- if .Endpoint.Method.ViewedResult.ViewName }}
 		vres := {{ .Endpoint.ServicePkgName }}.{{ .Endpoint.Method.ViewedResult.Init.Name }}(res, {{ printf "%q" .Endpoint.Method.ViewedResult.ViewName }})
+		{{- $init := (index .SendConvert.Inits 0) }}
+		v := {{ $init.Name }}(vres.Projected)
 	{{- else }}
 		vres := {{ .Endpoint.ServicePkgName }}.{{ .Endpoint.Method.ViewedResult.Init.Name }}(res, s.view)
+		var v {{ .SendConvert.TgtRef }}
+		{
+			switch s.view {
+			{{- range .Endpoint.Method.ViewedResult.Views }}
+				case {{ printf "%q" .Name }}{{ if eq .Name "default" }}, ""{{ end }}:
+					{{- $init := (viewedInit $.SendConvert.Inits .Name) }}
+					v = {{ $init.Name }}(vres.Projected)
+			{{- end }}
+			}
+		}
 	{{- end }}
+{{- else }}
+	{{- $init := (index .SendConvert.Inits 0) }}
+	v := {{ $init.Name }}(res)
 {{- end }}
-	v := {{ .SendConvert.Init.Name }}({{ if and .Endpoint.Method.ViewedResult (eq .Type "server") }}vres.Projected{{ else }}res{{ end }})
 	return s.stream.{{ .SendName }}(v)
 }
 `
@@ -1175,12 +1286,13 @@ func (s *{{ .VarName }}) {{ .RecvName }}() ({{ .RecvRef }}, error) {
 	if err != nil {
 		return res, err
 	}
+{{- $init := (index .RecvConvert.Inits 0) }}
 {{- if and .Endpoint.Method.ViewedResult (eq .Type "client") }}
-	proj := {{ .RecvConvert.Init.Name }}({{ range .RecvConvert.Init.Args }}{{ .Name }}, {{ end }})
+	proj := {{ $init.Name }}({{ range $init.Args }}{{ .Name }}, {{ end }})
 	vres := {{ if not .Endpoint.Method.ViewedResult.IsCollection }}&{{ end }}{{ .Endpoint.Method.ViewedResult.FullName }}{Projected: proj, View: {{ if .Endpoint.Method.ViewedResult.ViewName }}"{{ .Endpoint.Method.ViewedResult.ViewName }}"{{ else }}s.view{{ end }} }
 	return {{ .Endpoint.ServicePkgName }}.{{ .Endpoint.Method.ViewedResult.ResultInit.Name }}(vres), nil
 {{- else }}
-	return {{ .RecvConvert.Init.Name }}({{ range .RecvConvert.Init.Args }}{{ .Name }}, {{ end }}), nil
+	return {{ $init.Name }}({{ range $init.Args }}{{ .Name }}, {{ end }}), nil
 {{- end }}
 }
 `

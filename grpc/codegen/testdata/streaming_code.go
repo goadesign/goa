@@ -61,7 +61,15 @@ var ServerStreamingResultWithViewsServerSendCode = `// Send streams instances of
 // the "MethodServerStreamingUserTypeRPC" endpoint gRPC stream.
 func (s *MethodServerStreamingUserTypeRPCServerStream) Send(res *serviceserverstreamingusertyperpc.ResultType) error {
 	vres := serviceserverstreamingusertyperpc.NewViewedResultType(res, s.view)
-	v := NewMethodServerStreamingUserTypeRPCResponse(vres.Projected)
+	var v *pb.MethodServerStreamingUserTypeRPCResponse
+	{
+		switch s.view {
+		case "default", "":
+			v = NewMethodServerStreamingUserTypeRPCResponse(vres.Projected)
+		case "tiny":
+			v = NewMethodServerStreamingUserTypeRPCResponseTiny(vres.Projected)
+		}
+	}
 	return s.stream.Send(v)
 }
 `
@@ -106,7 +114,7 @@ var ServerStreamingResultCollectionWithExplicitViewServerSendCode = `// Send str
 // stream.
 func (s *MethodServerStreamingResultTypeCollectionWithExplicitViewServerStream) Send(res serviceserverstreamingresulttypecollectionwithexplicitview.ResultTypeCollection) error {
 	vres := serviceserverstreamingresulttypecollectionwithexplicitview.NewViewedResultTypeCollection(res, "tiny")
-	v := NewResultTypeCollection(vres.Projected)
+	v := NewResultTypeCollectionTiny(vres.Projected)
 	return s.stream.Send(v)
 }
 `

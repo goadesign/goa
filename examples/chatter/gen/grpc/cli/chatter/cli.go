@@ -232,6 +232,6 @@ Returns the chat messages sent to the server.
     -token STRING: 
 
 Example:
-    `+os.Args[0]+` chatter history --view "Et tempora temporibus eligendi." --token "Excepturi quia soluta."
+    `+os.Args[0]+` chatter history --view "Minima voluptatum." --token "Est quibusdam voluptate nulla autem quisquam dolorum."
 `, os.Args[0])
 }

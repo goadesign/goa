@@ -72,6 +72,8 @@ func NewSummaryPayload(token string) *chattersvc.SummaryPayload {
 	return payload
 }
 
+// NewChatSummaryCollection builds the gRPC response type from the result of
+// the "summary" endpoint of the "chatter" service using the "default" view.
 func NewChatSummaryCollection(vresult chattersvcviews.ChatSummaryCollectionView) *pb.ChatSummaryCollection {
 	v := &pb.ChatSummaryCollection{}
 	v.Field = make([]*pb.ChatSummary, len(vresult))
@@ -103,6 +105,17 @@ func NewHistoryPayload(view string, token string) *chattersvc.HistoryPayload {
 	return payload
 }
 
+// NewHistoryResponseTiny builds the gRPC response type from the result of the
+// "history" endpoint of the "chatter" service using the "tiny" view.
+func NewHistoryResponseTiny(vresult *chattersvcviews.ChatSummaryView) *pb.HistoryResponse {
+	v := &pb.HistoryResponse{
+		Message_: *vresult.Message,
+	}
+	return v
+}
+
+// NewHistoryResponse builds the gRPC response type from the result of the
+// "history" endpoint of the "chatter" service using the "default" view.
 func NewHistoryResponse(vresult *chattersvcviews.ChatSummaryView) *pb.HistoryResponse {
 	v := &pb.HistoryResponse{
 		Message_: *vresult.Message,

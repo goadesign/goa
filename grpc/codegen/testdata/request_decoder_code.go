@@ -7,20 +7,17 @@ func DecodeMethodMessageUserTypeWithNestedUserTypesRequest(ctx context.Context, 
 	var (
 		message *pb.MethodMessageUserTypeWithNestedUserTypesRequest
 		ok      bool
-		err     error
 	)
 	{
 		if message, ok = v.(*pb.MethodMessageUserTypeWithNestedUserTypesRequest); !ok {
 			return nil, goagrpc.ErrInvalidType("ServiceMessageUserTypeWithNestedUserTypes", "MethodMessageUserTypeWithNestedUserTypes", "*pb.MethodMessageUserTypeWithNestedUserTypesRequest", v)
 		}
 	}
-	var (
-		payload *servicemessageusertypewithnestedusertypes.UT
-	)
+	var payload *servicemessageusertypewithnestedusertypes.UT
 	{
 		payload = NewUT(message)
 	}
-	return payload, err
+	return payload, nil
 }
 `
 
@@ -30,20 +27,20 @@ func DecodeMethodUnaryRPCNoResultRequest(ctx context.Context, v interface{}, md 
 	var (
 		message *pb.MethodUnaryRPCNoResultRequest
 		ok      bool
-		err     error
 	)
 	{
 		if message, ok = v.(*pb.MethodUnaryRPCNoResultRequest); !ok {
 			return nil, goagrpc.ErrInvalidType("ServiceUnaryRPCNoResult", "MethodUnaryRPCNoResult", "*pb.MethodUnaryRPCNoResultRequest", v)
 		}
+		if err := ValidateMethodUnaryRPCNoResultRequest(message); err != nil {
+			return nil, err
+		}
 	}
-	var (
-		payload []string
-	)
+	var payload []string
 	{
 		payload = NewMethodUnaryRPCNoResultRequest(message)
 	}
-	return payload, err
+	return payload, nil
 }
 `
 
@@ -53,20 +50,20 @@ func DecodeMethodMessageMapRequest(ctx context.Context, v interface{}, md metada
 	var (
 		message *pb.MethodMessageMapRequest
 		ok      bool
-		err     error
 	)
 	{
 		if message, ok = v.(*pb.MethodMessageMapRequest); !ok {
 			return nil, goagrpc.ErrInvalidType("ServiceMessageMap", "MethodMessageMap", "*pb.MethodMessageMapRequest", v)
 		}
+		if err := ValidateMethodMessageMapRequest(message); err != nil {
+			return nil, err
+		}
 	}
-	var (
-		payload map[int]*servicemessagemap.UT
-	)
+	var payload map[int]*servicemessagemap.UT
 	{
 		payload = NewMethodMessageMapRequest(message)
 	}
-	return payload, err
+	return payload, nil
 }
 `
 
@@ -76,20 +73,17 @@ func DecodeMethodServerStreamingRPCRequest(ctx context.Context, v interface{}, m
 	var (
 		message *pb.MethodServerStreamingRPCRequest
 		ok      bool
-		err     error
 	)
 	{
 		if message, ok = v.(*pb.MethodServerStreamingRPCRequest); !ok {
 			return nil, goagrpc.ErrInvalidType("ServiceServerStreamingRPC", "MethodServerStreamingRPC", "*pb.MethodServerStreamingRPCRequest", v)
 		}
 	}
-	var (
-		payload int
-	)
+	var payload int
 	{
 		payload = NewMethodServerStreamingRPCRequest(message)
 	}
-	return payload, err
+	return payload, nil
 }
 `
 
@@ -114,13 +108,14 @@ func DecodeMethodClientStreamingRPCWithPayloadRequest(ctx context.Context, v int
 			goaPayload = int(v)
 		}
 	}
-	var (
-		payload int
-	)
+	if err != nil {
+		return nil, err
+	}
+	var payload int
 	{
 		payload = goaPayload
 	}
-	return payload, err
+	return payload, nil
 }
 `
 
@@ -148,13 +143,14 @@ func DecodeMethodBidirectionalStreamingRPCWithPayloadRequest(ctx context.Context
 			b = vals[0]
 		}
 	}
-	var (
-		payload *servicebidirectionalstreamingrpcwithpayload.Payload
-	)
+	if err != nil {
+		return nil, err
+	}
+	var payload *servicebidirectionalstreamingrpcwithpayload.Payload
 	{
 		payload = NewPayload(a, b)
 	}
-	return payload, err
+	return payload, nil
 }
 `
 
@@ -177,6 +173,9 @@ func DecodeMethodMessageWithMetadataRequest(ctx context.Context, v interface{}, 
 			inMetadata = &pv
 		}
 	}
+	if err != nil {
+		return nil, err
+	}
 	var (
 		message *pb.MethodMessageWithMetadataRequest
 		ok      bool
@@ -186,13 +185,11 @@ func DecodeMethodMessageWithMetadataRequest(ctx context.Context, v interface{}, 
 			return nil, goagrpc.ErrInvalidType("ServiceMessageWithMetadata", "MethodMessageWithMetadata", "*pb.MethodMessageWithMetadataRequest", v)
 		}
 	}
-	var (
-		payload *servicemessagewithmetadata.RequestUT
-	)
+	var payload *servicemessagewithmetadata.RequestUT
 	{
 		payload = NewRequestUT(message, inMetadata)
 	}
-	return payload, err
+	return payload, nil
 }
 `
 
@@ -220,6 +217,9 @@ func DecodeMethodMessageWithSecurityRequest(ctx context.Context, v interface{}, 
 			password = vals[0]
 		}
 	}
+	if err != nil {
+		return nil, err
+	}
 	var (
 		message *pb.MethodMessageWithSecurityRequest
 		ok      bool
@@ -229,9 +229,7 @@ func DecodeMethodMessageWithSecurityRequest(ctx context.Context, v interface{}, 
 			return nil, goagrpc.ErrInvalidType("ServiceMessageWithSecurity", "MethodMessageWithSecurity", "*pb.MethodMessageWithSecurityRequest", v)
 		}
 	}
-	var (
-		payload *servicemessagewithsecurity.RequestUT
-	)
+	var payload *servicemessagewithsecurity.RequestUT
 	{
 		payload = NewRequestUT(message, token, key, username, password)
 		if payload.Token != nil {
@@ -242,6 +240,6 @@ func DecodeMethodMessageWithSecurityRequest(ctx context.Context, v interface{}, 
 			}
 		}
 	}
-	return payload, err
+	return payload, nil
 }
 `
