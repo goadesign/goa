@@ -384,7 +384,7 @@ func makeFlags(e *EndpointData, args []*InitArgData) ([]*flagData, *buildFunctio
 		return flags, nil
 	}
 	if e.Request.ServerConvert != nil {
-		pinit = e.Request.ServerConvert.Inits[0]
+		pinit = e.Request.ServerConvert.Init
 	}
 	return flags, &buildFunctionData{
 		Name:         "Build" + e.Method.VarName + "Payload",

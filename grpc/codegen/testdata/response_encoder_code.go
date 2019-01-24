@@ -18,15 +18,7 @@ func EncodeMethodMessageResultTypeWithViewsResponse(ctx context.Context, v inter
 	}
 	result := vres.Projected
 	(*hdr).Append("goa-view", vres.View)
-	var resp *pb.MethodMessageResultTypeWithViewsResponse
-	{
-		switch vres.View {
-		case "default", "":
-			resp = NewMethodMessageResultTypeWithViewsResponse(result)
-		case "tiny":
-			resp = NewMethodMessageResultTypeWithViewsResponseTiny(result)
-		}
-	}
+	resp := NewMethodMessageResultTypeWithViewsResponse(result)
 	return resp, nil
 }
 `
@@ -41,7 +33,7 @@ func EncodeMethodMessageResultTypeWithExplicitViewResponse(ctx context.Context, 
 	}
 	result := vres.Projected
 	(*hdr).Append("goa-view", vres.View)
-	resp := NewMethodMessageResultTypeWithExplicitViewResponseTiny(result)
+	resp := NewMethodMessageResultTypeWithExplicitViewResponse(result)
 	return resp, nil
 }
 `
@@ -100,15 +92,7 @@ func EncodeMethodMessageUserTypeWithNestedUserTypesResponse(ctx context.Context,
 	}
 	result := vres.Projected
 	(*hdr).Append("goa-view", vres.View)
-	var resp *pb.RTCollection
-	{
-		switch vres.View {
-		case "default", "":
-			resp = NewRTCollection(result)
-		case "tiny":
-			resp = NewRTCollectionTiny(result)
-		}
-	}
+	resp := NewRTCollection(result)
 	return resp, nil
 }
 `
