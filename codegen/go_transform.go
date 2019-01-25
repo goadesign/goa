@@ -190,12 +190,13 @@ func GoObjectTransform(source, target *ContextualAttribute, ta *TransformAttrs, 
 				TargetVar: ta.TargetVar + "." + tgtc.Attribute.Field(tgtMatt.ElemName(n), true),
 				NewVar:    false,
 			}
+			srccAtt = srcc.Attribute.Expr()
 		)
 		{
 			if srcc, tgtc, newTA, err = t.MakeCompatible(srcc, tgtc, ta, ""); err != nil {
 				return
 			}
-			srccAtt := srcc.Attribute.Expr()
+			srccAtt = srcc.Attribute.Expr()
 			_, ok := srccAtt.Type.(expr.UserType)
 			switch {
 			case expr.IsArray(srccAtt.Type):
@@ -221,12 +222,9 @@ func GoObjectTransform(source, target *ContextualAttribute, ta *TransformAttrs, 
 		// and to avoid derefencing nil.
 		var checkNil bool
 		{
-			checkNil = srcc.IsPointer()
-			if !checkNil && !expr.IsPrimitive(srcc.Attribute.Expr().Type) {
-				if !srcc.Required && srcc.DefaultValue() == nil {
-					checkNil = true
-				}
-			}
+			isRef := srcc.IsPointer()
+			marshalNonPrimitive := !expr.IsPrimitive(srccAtt.Type) && srcc.UseDefault && tgtc.UseDefault
+			checkNil = isRef || marshalNonPrimitive
 		}
 		if code != "" && checkNil {
 			code = fmt.Sprintf("if %s != nil {\n\t%s}\n", ta.SourceVar, code)

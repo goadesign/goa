@@ -126,7 +126,9 @@ func marshalPayloadTypeRequestBodyToServicebodyinlinerecursiveuserPayloadType(v 
 		A: v.A,
 		B: v.B,
 	}
-	res.C = marshalPayloadTypeRequestBodyToServicebodyinlinerecursiveuserPayloadType(v.C)
+	if v.C != nil {
+		res.C = marshalPayloadTypeRequestBodyToServicebodyinlinerecursiveuserPayloadType(v.C)
+	}
 
 	return res
 }
@@ -140,7 +142,9 @@ func marshalServicebodyinlinerecursiveuserPayloadTypeToPayloadTypeRequestBody(v 
 		A: v.A,
 		B: v.B,
 	}
-	res.C = marshalServicebodyinlinerecursiveuserPayloadTypeToPayloadTypeRequestBody(v.C)
+	if v.C != nil {
+		res.C = marshalServicebodyinlinerecursiveuserPayloadTypeToPayloadTypeRequestBody(v.C)
+	}
 
 	return res
 }

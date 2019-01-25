@@ -247,9 +247,7 @@ func NewAddBottle(body *AddRequestBody) *storage.Bottle {
 	if body.Vintage != nil {
 		v.Vintage = *body.Vintage
 	}
-	if body.Winery != nil {
-		v.Winery = unmarshalWineryRequestBodyToStorageWinery(body.Winery)
-	}
+	v.Winery = unmarshalWineryRequestBodyToStorageWinery(body.Winery)
 	if body.Composition != nil {
 		v.Composition = make([]*storage.Component, len(body.Composition))
 		for i, val := range body.Composition {
@@ -285,9 +283,7 @@ func NewMultiAddBottle(body []*BottleRequestBody) []*storage.Bottle {
 		if val.Vintage != nil {
 			v[i].Vintage = *val.Vintage
 		}
-		if val.Winery != nil {
-			v[i].Winery = unmarshalWineryRequestBodyToStorageWinery(val.Winery)
-		}
+		v[i].Winery = unmarshalWineryRequestBodyToStorageWinery(val.Winery)
 		if val.Composition != nil {
 			v[i].Composition = make([]*storage.Component, len(val.Composition))
 			for j, val := range val.Composition {
@@ -306,31 +302,27 @@ func NewMultiAddBottle(body []*BottleRequestBody) []*storage.Bottle {
 // NewMultiUpdatePayload builds a storage service multi_update endpoint payload.
 func NewMultiUpdatePayload(body *MultiUpdateRequestBody, ids []string) *storage.MultiUpdatePayload {
 	v := &storage.MultiUpdatePayload{}
-	if body.Bottles != nil {
-		v.Bottles = make([]*storage.Bottle, len(body.Bottles))
-		for i, val := range body.Bottles {
-			v.Bottles[i] = &storage.Bottle{
-				Description: val.Description,
-				Rating:      val.Rating,
-			}
-			if val.Name != nil {
-				v.Bottles[i].Name = *val.Name
-			}
-			if val.Vintage != nil {
-				v.Bottles[i].Vintage = *val.Vintage
-			}
-			if val.Winery != nil {
-				v.Bottles[i].Winery = unmarshalWineryRequestBodyToStorageWinery(val.Winery)
-			}
-			if val.Composition != nil {
-				v.Bottles[i].Composition = make([]*storage.Component, len(val.Composition))
-				for j, val := range val.Composition {
-					v.Bottles[i].Composition[j] = &storage.Component{
-						Percentage: val.Percentage,
-					}
-					if val.Varietal != nil {
-						v.Bottles[i].Composition[j].Varietal = *val.Varietal
-					}
+	v.Bottles = make([]*storage.Bottle, len(body.Bottles))
+	for i, val := range body.Bottles {
+		v.Bottles[i] = &storage.Bottle{
+			Description: val.Description,
+			Rating:      val.Rating,
+		}
+		if val.Name != nil {
+			v.Bottles[i].Name = *val.Name
+		}
+		if val.Vintage != nil {
+			v.Bottles[i].Vintage = *val.Vintage
+		}
+		v.Bottles[i].Winery = unmarshalWineryRequestBodyToStorageWinery(val.Winery)
+		if val.Composition != nil {
+			v.Bottles[i].Composition = make([]*storage.Component, len(val.Composition))
+			for j, val := range val.Composition {
+				v.Bottles[i].Composition[j] = &storage.Component{
+					Percentage: val.Percentage,
+				}
+				if val.Varietal != nil {
+					v.Bottles[i].Composition[j].Varietal = *val.Varietal
 				}
 			}
 		}

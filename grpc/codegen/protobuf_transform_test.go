@@ -387,16 +387,22 @@ const (
 		RequiredString: source.MyString,
 		DefaultInt:     int32(source.MyInt),
 	}
-	target.Type = svcSimpleToSimple(source.MyType)
-	target.Map_ = make(map[int32]string, len(source.MyMap))
-	for key, val := range source.MyMap {
-		tk := int32(key)
-		tv := val
-		target.Map_[tk] = tv
+	if source.MyType != nil {
+		target.Type = svcSimpleToSimple(source.MyType)
 	}
-	target.Array = make([]string, len(source.MyArray))
-	for i, val := range source.MyArray {
-		target.Array[i] = val
+	if source.MyMap != nil {
+		target.Map_ = make(map[int32]string, len(source.MyMap))
+		for key, val := range source.MyMap {
+			tk := int32(key)
+			tv := val
+			target.Map_[tk] = tv
+		}
+	}
+	if source.MyArray != nil {
+		target.Array = make([]string, len(source.MyArray))
+		for i, val := range source.MyArray {
+			target.Array[i] = val
+		}
 	}
 }
 `
@@ -647,16 +653,22 @@ const (
 	}
 	defaultIntptr := int(source.MyInt)
 	target.DefaultInt = &defaultIntptr
-	target.Type = protobufSimpleToSimple(source.MyType)
-	target.Map = make(map[int]string, len(source.MyMap))
-	for key, val := range source.MyMap {
-		tk := int(key)
-		tv := val
-		target.Map[tk] = tv
+	if source.MyType != nil {
+		target.Type = protobufSimpleToSimple(source.MyType)
 	}
-	target.Array = make([]string, len(source.MyArray))
-	for i, val := range source.MyArray {
-		target.Array[i] = val
+	if source.MyMap != nil {
+		target.Map = make(map[int]string, len(source.MyMap))
+		for key, val := range source.MyMap {
+			tk := int(key)
+			tv := val
+			target.Map[tk] = tv
+		}
+	}
+	if source.MyArray != nil {
+		target.Array = make([]string, len(source.MyArray))
+		for i, val := range source.MyArray {
+			target.Array[i] = val
+		}
 	}
 }
 `
