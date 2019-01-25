@@ -37,14 +37,3 @@ func MetadataValue(md metadata.MD, key string) string {
 	}
 	return ""
 }
-
-// WithSpan returns a metadata containing the given trace, span and parent span
-// IDs.
-func WithSpan(md metadata.MD, traceID, spanID, parentID string) metadata.MD {
-	if parentID != "" {
-		md.Set(ParentSpanIDMetadataKey, parentID)
-	}
-	md.Set(TraceIDMetadataKey, traceID)
-	md.Set(SpanIDMetadataKey, spanID)
-	return md
-}

@@ -6,21 +6,9 @@ type (
 )
 
 const (
-	// TraceIDKey is the request context key used to store the current Trace
-	// ID if any.
-	TraceIDKey ctxKey = iota + 1
-
-	// TraceSpanIDKey is the request context key used to store the current
-	// trace span ID if any.
-	TraceSpanIDKey
-
-	// TraceParentSpanIDKey is the request context key used to store the current
-	// trace parent span ID if any.
-	TraceParentSpanIDKey
-
 	// RequestMethodKey is the request context key used to store r.Method created by
 	// the PopulateRequestContext middleware.
-	RequestMethodKey
+	RequestMethodKey ctxKey = iota + 1
 
 	// RequestURIKey is the request context key used to store r.RequestURI created by
 	// the PopulateRequestContext middleware.
