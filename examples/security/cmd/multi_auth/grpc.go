@@ -11,7 +11,8 @@ import (
 	"goa.design/goa/examples/security/gen/grpc/secured_service/pb"
 	securedservicesvr "goa.design/goa/examples/security/gen/grpc/secured_service/server"
 	securedservice "goa.design/goa/examples/security/gen/secured_service"
-	"goa.design/goa/grpc/middleware"
+	goagrpcmiddleware "goa.design/goa/grpc/middleware"
+	"goa.design/goa/middleware"
 	"google.golang.org/grpc"
 )
 
@@ -42,8 +43,8 @@ func handleGRPCServer(ctx context.Context, u *url.URL, securedServiceEndpoints *
 
 	// Initialize gRPC server with the middleware.
 	srv := grpc.NewServer(grpcmiddleware.WithUnaryServerChain(
-		middleware.RequestID(),
-		middleware.Log(adapter),
+		goagrpcmiddleware.UnaryRequestID(),
+		goagrpcmiddleware.UnaryServerLog(adapter),
 	))
 
 	// Register the servers.

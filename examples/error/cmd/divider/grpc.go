@@ -11,7 +11,8 @@ import (
 	dividersvc "goa.design/goa/examples/error/gen/divider"
 	"goa.design/goa/examples/error/gen/grpc/divider/pb"
 	dividersvcsvr "goa.design/goa/examples/error/gen/grpc/divider/server"
-	"goa.design/goa/grpc/middleware"
+	goagrpcmiddleware "goa.design/goa/grpc/middleware"
+	"goa.design/goa/middleware"
 	"google.golang.org/grpc"
 )
 
@@ -42,8 +43,8 @@ func handleGRPCServer(ctx context.Context, u *url.URL, dividerEndpoints *divider
 
 	// Initialize gRPC server with the middleware.
 	srv := grpc.NewServer(grpcmiddleware.WithUnaryServerChain(
-		middleware.RequestID(),
-		middleware.Log(adapter),
+		goagrpcmiddleware.UnaryRequestID(),
+		goagrpcmiddleware.UnaryServerLog(adapter),
 	))
 
 	// Register the servers.

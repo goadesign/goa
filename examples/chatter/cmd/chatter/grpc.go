@@ -11,7 +11,8 @@ import (
 	chattersvc "goa.design/goa/examples/chatter/gen/chatter"
 	"goa.design/goa/examples/chatter/gen/grpc/chatter/pb"
 	chattersvcsvr "goa.design/goa/examples/chatter/gen/grpc/chatter/server"
-	"goa.design/goa/grpc/middleware"
+	goagrpcmiddleware "goa.design/goa/grpc/middleware"
+	"goa.design/goa/middleware"
 	"google.golang.org/grpc"
 )
 
@@ -42,8 +43,8 @@ func handleGRPCServer(ctx context.Context, u *url.URL, chatterEndpoints *chatter
 
 	// Initialize gRPC server with the middleware.
 	srv := grpc.NewServer(grpcmiddleware.WithUnaryServerChain(
-		middleware.RequestID(),
-		middleware.Log(adapter),
+		goagrpcmiddleware.UnaryRequestID(),
+		goagrpcmiddleware.UnaryServerLog(adapter),
 	))
 
 	// Register the servers.

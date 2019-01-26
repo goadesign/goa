@@ -56,7 +56,7 @@ func StreamServerTrace(opts ...middleware.TraceOption) grpc.StreamServerIntercep
 	o := middleware.NewTraceOptions(opts...)
 	return grpc.StreamServerInterceptor(func(srv interface{}, ss grpc.ServerStream, info *grpc.StreamServerInfo, handler grpc.StreamHandler) error {
 		ctx := withTrace(ss.Context(), o)
-		wss := NewWrappedServerStream(ctx)
+		wss := NewWrappedServerStream(ctx, ss)
 		return handler(srv, wss)
 	})
 }

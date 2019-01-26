@@ -13,7 +13,8 @@ import (
 	chattersvc "goa.design/goa/examples/chatter/gen/chatter"
 	chattersvcsvr "goa.design/goa/examples/chatter/gen/http/chatter/server"
 	goahttp "goa.design/goa/http"
-	"goa.design/goa/http/middleware"
+	httpmiddleware "goa.design/goa/http/middleware"
+	"goa.design/goa/middleware"
 )
 
 // handleHTTPServer starts configures and starts a HTTP server on the given
@@ -65,10 +66,10 @@ func handleHTTPServer(ctx context.Context, u *url.URL, chatterEndpoints *chatter
 	var handler http.Handler = mux
 	{
 		if debug {
-			handler = middleware.Debug(mux, os.Stdout)(handler)
+			handler = httpmiddleware.Debug(mux, os.Stdout)(handler)
 		}
-		handler = middleware.Log(adapter)(handler)
-		handler = middleware.RequestID()(handler)
+		handler = httpmiddleware.Log(adapter)(handler)
+		handler = httpmiddleware.RequestID()(handler)
 	}
 
 	// Start HTTP server using default configuration, change the code to

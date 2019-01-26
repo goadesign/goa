@@ -5,12 +5,12 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
-	"regexp"
 	"strings"
 	"sync"
 	"testing"
 
 	"github.com/pkg/errors"
+	"goa.design/goa/middleware/xray"
 )
 
 func TestRecordError(t *testing.T) {
@@ -32,7 +32,7 @@ func TestRecordError(t *testing.T) {
 		"wrappedTwice": {wrappedTwice, inner + ": " + cause + ": " + errMsg, true},
 	}
 	for k, c := range cases {
-		s := Segment{Mutex: &sync.Mutex{}}
+		s := xray.Segment{Mutex: &sync.Mutex{}}
 		s.RecordError(c.Error)
 		w := s.Cause.Exceptions[0]
 		if w.Message != c.Message {
@@ -55,11 +55,11 @@ func TestRecordResponse(t *testing.T) {
 
 	cases := map[string]struct {
 		Response Res
-		Request  *Request
+		Request  *xray.Request
 	}{
 		"with-HTTP.Request": {
 			Response: Res{Status: http.StatusOK, Body: "hello"},
-			Request:  &Request{Method: "GET"},
+			Request:  &xray.Request{Method: "GET"},
 		},
 		"without-HTTP.Request": {
 			Response: Res{Status: http.StatusOK, Body: "hello"},
@@ -79,9 +79,9 @@ func TestRecordResponse(t *testing.T) {
 		// to stay backwards compatible with go1.7, we set ContentLength manually
 		resp.ContentLength = int64(len(c.Response.Body))
 
-		s := Segment{Mutex: &sync.Mutex{}}
+		s := HTTPSegment{Segment: &xray.Segment{Mutex: &sync.Mutex{}}}
 		if c.Request != nil {
-			s.HTTP = &HTTP{Request: c.Request}
+			s.HTTP = &xray.HTTP{Request: c.Request}
 		}
 
 		s.RecordResponse(resp)
@@ -120,11 +120,11 @@ func TestRecordRequest(t *testing.T) {
 
 	cases := map[string]struct {
 		Request  Req
-		Response *Response
+		Response *xray.Response
 	}{
 		"with-HTTP.Response": {
 			Request:  Req{method, reqURL.Host, ip, remoteAddr, remoteHost, userAgent, reqURL},
-			Response: &Response{Status: 200},
+			Response: &xray.Response{Status: 200},
 		},
 		"without-HTTP.Response": {
 			Request:  Req{method, reqURL.Host, ip, remoteAddr, remoteHost, userAgent, reqURL},
@@ -139,9 +139,11 @@ func TestRecordRequest(t *testing.T) {
 		req.RemoteAddr = c.Request.RemoteAddr
 		req.Host = c.Request.Host
 
-		s := Segment{Mutex: &sync.Mutex{}}
+		s := &HTTPSegment{
+			Segment: &xray.Segment{Mutex: &sync.Mutex{}},
+		}
 		if c.Response != nil {
-			s.HTTP = &HTTP{Response: c.Response}
+			s.HTTP = &xray.HTTP{Response: c.Response}
 		}
 
 		s.RecordRequest(req, "remote")
@@ -177,42 +179,6 @@ func TestRecordRequest(t *testing.T) {
 	}
 }
 
-func TestNewSubsegment(t *testing.T) {
-	var (
-		name   = "sub"
-		s      = &Segment{Mutex: &sync.Mutex{}}
-		before = now()
-		ss     = s.NewSubsegment(name)
-	)
-	if s.counter != 1 {
-		t.Errorf("counter not incremented after call to Subsegment")
-	}
-	if len(s.Subsegments) != 1 {
-		t.Fatalf("invalid count of subsegments, expected 1 got %d", len(s.Subsegments))
-	}
-	if s.Subsegments[0] != ss {
-		t.Errorf("invalid subsegments element, expected %v - got %v", name, s.Subsegments[0])
-	}
-	if ss.ID == "" {
-		t.Errorf("subsegment ID not initialized")
-	}
-	if !regexp.MustCompile("[0-9a-f]{16}").MatchString(ss.ID) {
-		t.Errorf("invalid subsegment ID, got %v", ss.ID)
-	}
-	if ss.Name != name {
-		t.Errorf("invalid subsegemnt name, expected %s got %s", name, ss.Name)
-	}
-	if ss.StartTime < before {
-		t.Errorf("invalid subsegment StartAt, expected at least %v, got %v", before, ss.StartTime)
-	}
-	if !ss.InProgress {
-		t.Errorf("subsegemnt not in progress")
-	}
-	if ss.Parent != s {
-		t.Errorf("invalid subsegment parent, expected %v, got %v", s, ss.Parent)
-	}
-}
-
 // TestRace starts two goroutines and races them to call Segment's public function. In this way, when tests are run
 // with the -race flag, race conditions will be detected.
 func TestRace(t *testing.T) {
@@ -227,7 +193,9 @@ func TestRace(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to connect to daemon - %s", err)
 	}
-	s := NewSegment("hello", NewTraceID(), NewID(), conn)
+	s := &HTTPSegment{
+		Segment: xray.NewSegment("hello", xray.NewTraceID(), xray.NewID(), conn),
+	}
 
 	wg := &sync.WaitGroup{}
 	raceFct := func() {

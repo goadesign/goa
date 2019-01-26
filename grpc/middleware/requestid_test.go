@@ -11,6 +11,12 @@ import (
 	"google.golang.org/grpc/metadata"
 )
 
+type (
+	testServerStream struct {
+		grpc.ServerStream
+	}
+)
+
 func TestUnaryRequestID(t *testing.T) {
 	var (
 		unary = &grpc.UnaryServerInfo{
@@ -114,7 +120,7 @@ func TestStreamRequestID(t *testing.T) {
 	}{
 		{
 			name:   "default",
-			stream: grpcm.NewWrappedServerStream(context.Background()),
+			stream: grpcm.NewWrappedServerStream(context.Background(), &testServerStream{}),
 			handler: func(srv interface{}, stream grpc.ServerStream) error {
 				md, ok := metadata.FromIncomingContext(stream.Context())
 				if !ok {
@@ -128,7 +134,7 @@ func TestStreamRequestID(t *testing.T) {
 		},
 		{
 			name:   "ignore-request-id-metadata",
-			stream: grpcm.NewWrappedServerStream(populateRequestID(id)),
+			stream: grpcm.NewWrappedServerStream(populateRequestID(id), &testServerStream{}),
 			handler: func(srv interface{}, stream grpc.ServerStream) error {
 				md, ok := metadata.FromIncomingContext(stream.Context())
 				if !ok {
@@ -145,7 +151,7 @@ func TestStreamRequestID(t *testing.T) {
 			options: []middleware.RequestIDOption{
 				grpcm.UseXRequestIDMetadataOption(true),
 			},
-			stream: grpcm.NewWrappedServerStream(populateRequestID(id)),
+			stream: grpcm.NewWrappedServerStream(populateRequestID(id), &testServerStream{}),
 			handler: func(srv interface{}, stream grpc.ServerStream) error {
 				md, ok := metadata.FromIncomingContext(stream.Context())
 				if !ok {
@@ -163,7 +169,7 @@ func TestStreamRequestID(t *testing.T) {
 				grpcm.UseXRequestIDMetadataOption(true),
 				grpcm.XRequestMetadataLimitOption(2),
 			},
-			stream: grpcm.NewWrappedServerStream(populateRequestID(id)),
+			stream: grpcm.NewWrappedServerStream(populateRequestID(id), &testServerStream{}),
 			handler: func(srv interface{}, stream grpc.ServerStream) error {
 				md, ok := metadata.FromIncomingContext(stream.Context())
 				if !ok {

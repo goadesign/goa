@@ -12,7 +12,8 @@ import (
 	calcsvc "goa.design/goa/examples/calc/gen/calc"
 	calcsvcsvr "goa.design/goa/examples/calc/gen/http/calc/server"
 	goahttp "goa.design/goa/http"
-	"goa.design/goa/http/middleware"
+	httpmiddleware "goa.design/goa/http/middleware"
+	"goa.design/goa/middleware"
 )
 
 // handleHTTPServer starts configures and starts a HTTP server on the given
@@ -63,10 +64,10 @@ func handleHTTPServer(ctx context.Context, u *url.URL, calcEndpoints *calcsvc.En
 	var handler http.Handler = mux
 	{
 		if debug {
-			handler = middleware.Debug(mux, os.Stdout)(handler)
+			handler = httpmiddleware.Debug(mux, os.Stdout)(handler)
 		}
-		handler = middleware.Log(adapter)(handler)
-		handler = middleware.RequestID()(handler)
+		handler = httpmiddleware.Log(adapter)(handler)
+		handler = httpmiddleware.RequestID()(handler)
 	}
 
 	// Start HTTP server using default configuration, change the code to

@@ -18,9 +18,10 @@ type (
 )
 
 // NewWrappedServerStream returns a new wrapped grpc ServerStream.
-func NewWrappedServerStream(ctx context.Context) *WrappedServerStream {
+func NewWrappedServerStream(ctx context.Context, ss grpc.ServerStream) *WrappedServerStream {
 	return &WrappedServerStream{
-		ctx: ctx,
+		ctx:          ctx,
+		ServerStream: ss,
 	}
 }
 

@@ -139,7 +139,7 @@ func TestStreamServerTrace(t *testing.T) {
 				md.Set(grpcm.ParentSpanIDMetadataKey, c.ParentSpanID)
 			}
 			ctx := metadata.NewIncomingContext(context.Background(), md)
-			wss := grpcm.NewWrappedServerStream(ctx)
+			wss := grpcm.NewWrappedServerStream(ctx, &testServerStream{})
 
 			err := grpcm.StreamServerTrace(
 				grpcm.SamplingPercent(c.Rate),

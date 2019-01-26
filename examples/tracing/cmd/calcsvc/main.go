@@ -14,8 +14,9 @@ import (
 	calcsvc "goa.design/goa/examples/calc/gen/calc"
 	calcsvcsvr "goa.design/goa/examples/calc/gen/http/calc/server"
 	goahttp "goa.design/goa/http"
-	"goa.design/goa/http/middleware"
+	httpmiddleware "goa.design/goa/http/middleware"
 	"goa.design/goa/http/middleware/xray"
+	"goa.design/goa/middleware"
 )
 
 func main() {
@@ -93,16 +94,16 @@ func main() {
 	var handler http.Handler = mux
 	{
 		if *dbg {
-			handler = middleware.Debug(mux, os.Stdout)(handler)
+			handler = httpmiddleware.Debug(mux, os.Stdout)(handler)
 		}
-		handler = middleware.Log(adapter)(handler)
+		handler = httpmiddleware.Log(adapter)(handler)
 		xrayHndlr, err := xray.New("calc", *daemon)
 		if err != nil {
 			logger.Printf("[WARN] cannot connect to xray daemon %s: %s", *daemon, err)
 		}
 		// Wrap the Xray and the tracing handler. The order is very important.
 		handler = xrayHndlr(handler)
-		handler = middleware.Trace()(handler)
+		handler = httpmiddleware.Trace()(handler)
 	}
 
 	// Create channel used by both the signal handler and server goroutines

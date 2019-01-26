@@ -11,7 +11,8 @@ import (
 	calcsvc "goa.design/goa/examples/calc/gen/calc"
 	"goa.design/goa/examples/calc/gen/grpc/calc/pb"
 	calcsvcsvr "goa.design/goa/examples/calc/gen/grpc/calc/server"
-	"goa.design/goa/grpc/middleware"
+	goagrpcmiddleware "goa.design/goa/grpc/middleware"
+	"goa.design/goa/middleware"
 	"google.golang.org/grpc"
 )
 
@@ -42,8 +43,8 @@ func handleGRPCServer(ctx context.Context, u *url.URL, calcEndpoints *calcsvc.En
 
 	// Initialize gRPC server with the middleware.
 	srv := grpc.NewServer(grpcmiddleware.WithUnaryServerChain(
-		middleware.RequestID(),
-		middleware.Log(adapter),
+		goagrpcmiddleware.UnaryRequestID(),
+		goagrpcmiddleware.UnaryServerLog(adapter),
 	))
 
 	// Register the servers.

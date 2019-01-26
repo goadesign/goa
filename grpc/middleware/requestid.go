@@ -52,7 +52,7 @@ func StreamRequestID(options ...middleware.RequestIDOption) grpc.StreamServerInt
 	o := middleware.NewRequestIDOptions(options...)
 	return grpc.StreamServerInterceptor(func(srv interface{}, ss grpc.ServerStream, info *grpc.StreamServerInfo, handler grpc.StreamHandler) error {
 		ctx := generateRequestID(ss.Context(), o)
-		wss := NewWrappedServerStream(ctx)
+		wss := NewWrappedServerStream(ctx, ss)
 		return handler(srv, wss)
 	})
 }
