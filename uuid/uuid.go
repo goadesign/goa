@@ -9,7 +9,7 @@ import (
 	"database/sql/driver"
 	"fmt"
 
-	uuid "github.com/satori/go.uuid"
+	uuid "github.com/gofrs/uuid"
 )
 
 // FromString Wrapper around the real FromString

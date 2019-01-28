@@ -7,8 +7,8 @@ import (
 	"math/rand"
 	"time"
 
+	uuid "github.com/gofrs/uuid"
 	"github.com/manveru/faker"
-	uuid "github.com/satori/go.uuid"
 )
 
 // RandomGenerator generates consistent random values of different types given a seed.

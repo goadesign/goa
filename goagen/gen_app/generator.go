@@ -151,7 +151,7 @@ func (g *Generator) generateContexts() (err error) {
 		codegen.SimpleImport("time"),
 		codegen.SimpleImport("unicode/utf8"),
 		codegen.SimpleImport("github.com/goadesign/goa"),
-		codegen.NewImport("uuid", "github.com/satori/go.uuid"),
+		codegen.NewImport("uuid", "github.com/gofrs/uuid"),
 		codegen.SimpleImport("context"),
 	}
 	g.API.IterateResources(func(r *design.ResourceDefinition) error {
@@ -244,7 +244,7 @@ func (g *Generator) generateControllers() (err error) {
 		codegen.SimpleImport("regexp"),
 		codegen.SimpleImport("strconv"),
 		codegen.SimpleImport("time"),
-		codegen.NewImport("uuid", "github.com/satori/go.uuid"),
+		codegen.NewImport("uuid", "github.com/gofrs/uuid"),
 	}
 	encoders, err := BuildEncoders(g.API.Produces, true)
 	if err != nil {
@@ -448,7 +448,7 @@ func (g *Generator) generateMediaTypes() (err error) {
 		codegen.SimpleImport("fmt"),
 		codegen.SimpleImport("time"),
 		codegen.SimpleImport("unicode/utf8"),
-		codegen.NewImport("uuid", "github.com/satori/go.uuid"),
+		codegen.NewImport("uuid", "github.com/gofrs/uuid"),
 	}
 	for _, v := range g.API.MediaTypes {
 		imports = codegen.AttributeImports(v.AttributeDefinition, imports, nil)
@@ -496,7 +496,7 @@ func (g *Generator) generateUserTypes() (err error) {
 		codegen.SimpleImport("time"),
 		codegen.SimpleImport("unicode/utf8"),
 		codegen.SimpleImport("github.com/goadesign/goa"),
-		codegen.NewImport("uuid", "github.com/satori/go.uuid"),
+		codegen.NewImport("uuid", "github.com/gofrs/uuid"),
 	}
 	for _, v := range g.API.Types {
 		imports = codegen.AttributeImports(v.AttributeDefinition, imports, nil)
