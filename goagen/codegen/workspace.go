@@ -188,7 +188,7 @@ func PackageFor(source string) (*Package, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &Package{Workspace: w, Path: path}, nil
+	return &Package{Workspace: w, Path: filepath.ToSlash(path)}, nil
 }
 
 // Abs returns the absolute path to the package source directory
