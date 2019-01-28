@@ -5,7 +5,7 @@
 
 package uuid
 
-import "github.com/satori/go.uuid"
+import "github.com/gofrs/uuid"
 
 // FromString Wrapper around the real FromString
 func FromString(input string) (UUID, error) {

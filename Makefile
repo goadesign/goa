@@ -17,7 +17,6 @@ DIRS=$(shell go list -f {{.Dir}} ./...)
 DEPEND=\
 	github.com/go-openapi/loads \
 	github.com/goadesign/goa-cellar \
-	github.com/goadesign/goa.design/tools/godoc2md \
 	github.com/goadesign/goa.design/tools/mdc \
 	github.com/golang/lint/golint \
 	github.com/fzipp/gocyclo \

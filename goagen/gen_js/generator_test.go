@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"github.com/goadesign/goa/design"
-	"github.com/goadesign/goa/goagen/gen_js"
+	genjs "github.com/goadesign/goa/goagen/gen_js"
 	"github.com/goadesign/goa/version"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"

@@ -9,7 +9,7 @@ import (
 
 	"github.com/goadesign/goa/design"
 	"github.com/goadesign/goa/dslengine"
-	"github.com/goadesign/goa/goagen/gen_schema"
+	genschema "github.com/goadesign/goa/goagen/gen_schema"
 )
 
 type (

@@ -1,6 +1,6 @@
 // +build js
 
-//This part is copied from github.com/satori/go.uuid but some feature uses non gopherjs compliants calls
+//This part is copied from github.com/gofrs/uuid but some feature uses non gopherjs compliants calls
 //Since goa only needs a subset of the features the js copies them in here
 
 package uuid

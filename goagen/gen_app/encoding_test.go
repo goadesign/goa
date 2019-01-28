@@ -2,7 +2,7 @@ package genapp_test
 
 import (
 	"github.com/goadesign/goa/design"
-	"github.com/goadesign/goa/goagen/gen_app"
+	genapp "github.com/goadesign/goa/goagen/gen_app"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )

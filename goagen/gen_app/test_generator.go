@@ -96,7 +96,7 @@ func (g *Generator) generateResourceTest() error {
 		codegen.SimpleImport("github.com/goadesign/goa"),
 		codegen.SimpleImport("github.com/goadesign/goa/goatest"),
 		codegen.SimpleImport("context"),
-		codegen.NewImport("uuid", "github.com/satori/go.uuid"),
+		codegen.NewImport("uuid", "github.com/gofrs/uuid"),
 	}
 
 	return g.API.IterateResources(func(res *design.ResourceDefinition) (err error) {
