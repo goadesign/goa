@@ -15,6 +15,9 @@ func DecodeMethodMessageResultTypeWithViewsResponse(ctx context.Context, v inter
 	}
 	res := NewRTView(message)
 	vres := &servicemessageresulttypewithviewsviews.RT{Projected: res, View: view}
+	if err := servicemessageresulttypewithviewsviews.ValidateRT(vres); err != nil {
+		return nil, err
+	}
 	return servicemessageresulttypewithviews.NewRT(vres), nil
 }
 `
@@ -35,6 +38,9 @@ func DecodeMethodMessageResultTypeWithExplicitViewResponse(ctx context.Context, 
 	}
 	res := NewRTView(message)
 	vres := &servicemessageresulttypewithexplicitviewviews.RT{Projected: res, View: view}
+	if err := servicemessageresulttypewithexplicitviewviews.ValidateRT(vres); err != nil {
+		return nil, err
+	}
 	return servicemessageresulttypewithexplicitview.NewRT(vres), nil
 }
 `
@@ -46,8 +52,7 @@ func DecodeMethodMessageArrayResponse(ctx context.Context, v interface{}, hdr, t
 	if !ok {
 		return nil, goagrpc.ErrInvalidType("ServiceMessageArray", "MethodMessageArray", "*pb.MethodMessageArrayResponse", v)
 	}
-	err := ValidateMethodMessageArrayResponse(message)
-	if err != nil {
+	if err := ValidateMethodMessageArrayResponse(message); err != nil {
 		return nil, err
 	}
 	res := NewMethodMessageArrayResponse(message)
@@ -126,6 +131,9 @@ func DecodeMethodMessageUserTypeWithNestedUserTypesResponse(ctx context.Context,
 	}
 	res := NewRTCollection(message)
 	vres := servicemessageusertypewithnestedusertypesviews.RTCollection{Projected: res, View: view}
+	if err := servicemessageusertypewithnestedusertypesviews.ValidateRTCollection(vres); err != nil {
+		return nil, err
+	}
 	return servicemessageusertypewithnestedusertypes.NewRTCollection(vres), nil
 }
 `
