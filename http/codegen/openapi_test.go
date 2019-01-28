@@ -106,7 +106,8 @@ func TestSections(t *testing.T) {
 					if err != nil {
 						t.Fatalf("failed to render template: %s", err)
 					}
-					if err := validateSwagger(buf.Bytes()); err != nil {
+					bufbytes := bytes.Replace(buf.Bytes(), []byte("\r\n"), []byte("\n"), -1)
+					if err := validateSwagger(bufbytes); err != nil {
 						t.Errorf("invalid swagger: %s", err)
 					}
 
@@ -121,8 +122,9 @@ func TestSections(t *testing.T) {
 					if err != nil {
 						t.Fatalf("failed to read golden file: %s", err)
 					}
-					if !bytes.Equal(buf.Bytes(), want) {
-						t.Errorf("result do not match the golden file:\n--BEGIN--\n%s\n--END--\n", buf.Bytes())
+					want = bytes.Replace(want, []byte("\r\n"), []byte("\n"), -1)
+					if !bytes.Equal(bufbytes, want) {
+						t.Errorf("result do not match the golden file:\n--BEGIN--\n%s\n--END--\n", bufbytes)
 					}
 				})
 			}
@@ -173,7 +175,8 @@ func TestValidations(t *testing.T) {
 					if err != nil {
 						t.Fatalf("failed to render template: %s", err)
 					}
-					if err := validateSwagger(buf.Bytes()); err != nil {
+					bufbytes := bytes.Replace(buf.Bytes(), []byte("\r\n"), []byte("\n"), -1)
+					if err := validateSwagger(bufbytes); err != nil {
 						t.Fatalf("invalid swagger: %s", err)
 					}
 
@@ -188,8 +191,9 @@ func TestValidations(t *testing.T) {
 					if err != nil {
 						t.Fatalf("failed to read golden file: %s", err)
 					}
-					if !bytes.Equal(buf.Bytes(), want) {
-						t.Errorf("result do not match the golden file:\n--BEGIN--\n%s\n--END--\n", buf.Bytes())
+					want = bytes.Replace(want, []byte("\r\n"), []byte("\n"), -1)
+					if !bytes.Equal(bufbytes, want) {
+						t.Errorf("result do not match the golden file:\n--BEGIN--\n%s\n--END--\n", bufbytes)
 					}
 				})
 			}
@@ -238,7 +242,8 @@ func TestExtensions(t *testing.T) {
 					if err != nil {
 						t.Fatalf("failed to render template: %s", err)
 					}
-					if err := validateSwagger(buf.Bytes()); err != nil {
+					bufbytes := bytes.Replace(buf.Bytes(), []byte("\r\n"), []byte("\n"), -1)
+					if err := validateSwagger(bufbytes); err != nil {
 						t.Fatalf("invalid swagger: %s", err)
 					}
 
@@ -253,8 +258,9 @@ func TestExtensions(t *testing.T) {
 					if err != nil {
 						t.Fatalf("failed to read golden file: %s", err)
 					}
-					if !bytes.Equal(buf.Bytes(), want) {
-						t.Errorf("result do not match the golden file:\n--BEGIN--\n%s\n--END--\n", buf.Bytes())
+					want = bytes.Replace(want, []byte("\r\n"), []byte("\n"), -1)
+					if !bytes.Equal(bufbytes, want) {
+						t.Errorf("result do not match the golden file:\n--BEGIN--\n%s\n--END--\n", bufbytes)
 					}
 				})
 			}
