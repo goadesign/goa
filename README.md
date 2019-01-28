@@ -10,6 +10,8 @@ unique design-first approach.
 [![Godoc](https://godoc.org/github.com/goadesign/goa?status.svg)](http://godoc.org/github.com/goadesign/goa)
 [![Slack](https://img.shields.io/badge/slack-gophers-orange.svg?style=flat)](https://gophers.slack.com/messages/goa/)
 
+*goa v1.4.1 released! [Release Notes](https://goa.design/blog/008-v_1_4_1/)*
+
 ## V2
 
 [goa v2](https://github.com/goadesign/goa/tree/v2) is currently in beta:
@@ -87,7 +89,7 @@ versions with the same `X` component without having to make changes.
 Releases are tagged with the corresponding version number. There is also a branch for each major
 version (only `v1` at the moment). The recommended practice is to vendor the stable branch.
 
-Current Release: `v1.4.0`
+Current Release: `v1.4.1`
 Stable Branch: `v1`
 
 ## Teaser
