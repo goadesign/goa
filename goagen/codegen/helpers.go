@@ -59,6 +59,15 @@ func CommandLine() string {
 	return strings.Replace(cmd, " --", "\n\t--", -1)
 }
 
+// Copied from go/build/build.go
+func envOr(name, def string) string {
+	s := os.Getenv(name)
+	if s == "" {
+		return def
+	}
+	return s
+}
+
 // Comment produces line comments by concatenating the given strings and producing 80 characters
 // long lines starting with "//"
 func Comment(elems ...string) string {

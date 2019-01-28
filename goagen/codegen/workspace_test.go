@@ -13,11 +13,20 @@ import (
 	. "github.com/onsi/gomega"
 )
 
+func abs(elems ...string) string {
+	r, err := filepath.Abs(filepath.Join(append([]string{""}, elems...)...))
+	if err != nil {
+		panic("abs: " + err.Error())
+	}
+	return r
+}
+
 var _ = Describe("Workspace", func() {
 	Describe("WorkspaceFor", func() {
 		oldGOPATH := build.Default.GOPATH
+		xx := abs("xx")
 		BeforeEach(func() {
-			os.Setenv("GOPATH", "/xx")
+			os.Setenv("GOPATH", xx)
 		})
 		AfterEach(func() {
 			os.Setenv("GOPATH", oldGOPATH)
@@ -51,9 +60,9 @@ var _ = Describe("Workspace", func() {
 
 				Context("inside GOPATH", func() {
 					It("should return a GOPATH mode workspace", func() {
-						workspace, err := codegen.WorkspaceFor("/xx/bar/xx/42")
+						workspace, err := codegen.WorkspaceFor(abs("", "xx", "bar", "xx", "42"))
 						Ω(err).ShouldNot(HaveOccurred())
-						Expect(workspace.Path).To(Equal("/xx"))
+						Expect(workspace.Path).To(Equal(xx))
 					})
 				})
 
@@ -127,9 +136,9 @@ var _ = Describe("Workspace", func() {
 
 				Context("inside GOPATH", func() {
 					It("should return a GOPATH mode workspace", func() {
-						workspace, err := codegen.WorkspaceFor("/xx/bar/xx/42")
+						workspace, err := codegen.WorkspaceFor(abs("", "xx", "bar", "xx", "42"))
 						Ω(err).ShouldNot(HaveOccurred())
-						Expect(workspace.Path).To(Equal("/xx"))
+						Expect(workspace.Path).To(Equal(xx))
 					})
 				})
 
@@ -144,8 +153,8 @@ var _ = Describe("Workspace", func() {
 					})
 
 					It("should return an error", func() {
-						_, err := codegen.WorkspaceFor("/bar/xx/42")
-						Ω(err).Should(Equal(fmt.Errorf(`Go source file "/bar/xx/42" not in Go workspace, adjust GOPATH %s or use modules`, gopath)))
+						_, err := codegen.WorkspaceFor(abs("", "bar", "xx", "42"))
+						Ω(err).Should(Equal(fmt.Errorf(`Go source file "%s" not in Go workspace, adjust GOPATH %s or use modules`, abs("", "bar", "xx", "42"), gopath)))
 					})
 				})
 			})
@@ -163,9 +172,9 @@ var _ = Describe("Workspace", func() {
 
 				Context("inside GOPATH", func() {
 					It("should return a GOPATH mode workspace", func() {
-						workspace, err := codegen.WorkspaceFor("/xx/bar/xx/42")
+						workspace, err := codegen.WorkspaceFor(abs("xx", "bar", "xx", "42"))
 						Ω(err).ShouldNot(HaveOccurred())
-						Expect(workspace.Path).To(Equal("/xx"))
+						Expect(workspace.Path).To(Equal(abs("xx")))
 					})
 				})
 
@@ -180,8 +189,8 @@ var _ = Describe("Workspace", func() {
 					})
 
 					It("should return an error", func() {
-						_, err := codegen.WorkspaceFor("/bar/xx/42")
-						Ω(err).Should(Equal(fmt.Errorf(`Go source file "/bar/xx/42" not in Go workspace, adjust GOPATH %s or use modules`, gopath)))
+						_, err := codegen.WorkspaceFor(abs("bar", "xx", "42"))
+						Ω(err).Should(Equal(fmt.Errorf(`Go source file "%s" not in Go workspace, adjust GOPATH %s or use modules`, abs("bar", "xx", "42"), gopath)))
 					})
 				})
 			})
@@ -197,8 +206,8 @@ var _ = Describe("Workspace", func() {
 
 				Context("inside GOPATH", func() {
 					It("should return an error", func() {
-						_, err := codegen.WorkspaceFor("/bar/xx/42")
-						Ω(err).Should(Equal(fmt.Errorf(`Go source file "/bar/xx/42" not in Go workspace, adjust GOPATH /xx or use modules`)))
+						_, err := codegen.WorkspaceFor(abs("bar", "xx", "42"))
+						Ω(err).Should(Equal(fmt.Errorf(`Go source file "%s" not in Go workspace, adjust GOPATH %s or use modules`, abs("bar", "xx", "42"), abs("xx"))))
 					})
 				})
 
@@ -213,8 +222,8 @@ var _ = Describe("Workspace", func() {
 					})
 
 					It("should return an error", func() {
-						_, err := codegen.WorkspaceFor("/bar/xx/42")
-						Ω(err).Should(Equal(fmt.Errorf(`Go source file "/bar/xx/42" not in Go workspace, adjust GOPATH %s or use modules`, gopath)))
+						_, err := codegen.WorkspaceFor(abs("bar", "xx", "42"))
+						Ω(err).Should(Equal(fmt.Errorf(`Go source file "%s" not in Go workspace, adjust GOPATH %s or use modules`, abs("bar", "xx", "42"), gopath)))
 					})
 				})
 			})
@@ -230,9 +239,9 @@ var _ = Describe("Workspace", func() {
 
 				Context("inside GOPATH", func() {
 					It("should return a GOPATH mode workspace", func() {
-						workspace, err := codegen.WorkspaceFor("/xx/bar/xx/42")
+						workspace, err := codegen.WorkspaceFor(abs("xx", "bar", "xx", "42"))
 						Ω(err).ShouldNot(HaveOccurred())
-						Expect(workspace.Path).To(Equal("/xx"))
+						Expect(workspace.Path).To(Equal(abs("xx")))
 					})
 				})
 
@@ -247,8 +256,8 @@ var _ = Describe("Workspace", func() {
 					})
 
 					It("should return an error", func() {
-						_, err := codegen.WorkspaceFor("/bar/xx/42")
-						Ω(err).Should(Equal(fmt.Errorf(`Go source file "/bar/xx/42" not in Go workspace, adjust GOPATH %s or use modules`, gopath)))
+						_, err := codegen.WorkspaceFor(abs("bar", "xx", "42"))
+						Ω(err).Should(Equal(fmt.Errorf(`Go source file "%s" not in Go workspace, adjust GOPATH %s or use modules`, abs("bar", "xx", "42"), gopath)))
 					})
 				})
 			})
@@ -258,7 +267,7 @@ var _ = Describe("Workspace", func() {
 	Describe("PackageFor", func() {
 		oldGOPATH := build.Default.GOPATH
 		BeforeEach(func() {
-			os.Setenv("GOPATH", "/xx")
+			os.Setenv("GOPATH", abs("xx"))
 		})
 		AfterEach(func() {
 			os.Setenv("GOPATH", oldGOPATH)
@@ -292,7 +301,7 @@ var _ = Describe("Workspace", func() {
 
 				Context("inside GOPATH", func() {
 					It("should return a GOPATH mode package", func() {
-						pkg, err := codegen.PackageFor("/xx/src/bar/xx/42")
+						pkg, err := codegen.PackageFor(abs("xx", "src", "bar", "xx", "42"))
 						Ω(err).ShouldNot(HaveOccurred())
 						Expect(pkg.Path).To(Equal("bar/xx"))
 					})
@@ -309,9 +318,9 @@ var _ = Describe("Workspace", func() {
 					})
 
 					It("should return a Module mode package", func() {
-						abs, err := filepath.Abs(".")
+						ab, err := filepath.Abs(".")
 						Ω(err).ShouldNot(HaveOccurred())
-						pkg, err := codegen.PackageFor(filepath.Join(abs, "bar/xx/42"))
+						pkg, err := codegen.PackageFor(abs(ab, "bar", "xx", "42"))
 						Ω(err).ShouldNot(HaveOccurred())
 						Expect(pkg.Path).To(Equal("bar/xx"))
 					})
@@ -329,9 +338,9 @@ var _ = Describe("Workspace", func() {
 
 				Context("inside GOPATH", func() {
 					It("should return a Module mode package", func() {
-						abs, err := filepath.Abs(".")
+						ab, err := filepath.Abs(".")
 						Ω(err).ShouldNot(HaveOccurred())
-						pkg, err := codegen.PackageFor(filepath.Join(abs, "bar/xx/42"))
+						pkg, err := codegen.PackageFor(abs(ab, "bar", "xx", "42"))
 						Ω(err).ShouldNot(HaveOccurred())
 						Expect(pkg.Path).To(Equal("bar/xx"))
 					})
@@ -348,9 +357,9 @@ var _ = Describe("Workspace", func() {
 					})
 
 					It("should return a Module mode package", func() {
-						abs, err := filepath.Abs(".")
+						ab, err := filepath.Abs(".")
 						Ω(err).ShouldNot(HaveOccurred())
-						pkg, err := codegen.PackageFor(filepath.Join(abs, "bar/xx/42"))
+						pkg, err := codegen.PackageFor(abs(ab, "bar", "xx", "42"))
 						Ω(err).ShouldNot(HaveOccurred())
 						Expect(pkg.Path).To(Equal("bar/xx"))
 					})
@@ -368,7 +377,7 @@ var _ = Describe("Workspace", func() {
 
 				Context("inside GOPATH", func() {
 					It("should return a GOPATH mode package", func() {
-						pkg, err := codegen.PackageFor("/xx/src/bar/xx/42")
+						pkg, err := codegen.PackageFor(abs("xx", "src", "bar", "xx", "42"))
 						Ω(err).ShouldNot(HaveOccurred())
 						Expect(pkg.Path).To(Equal("bar/xx"))
 					})
@@ -385,8 +394,8 @@ var _ = Describe("Workspace", func() {
 					})
 
 					It("should return an error", func() {
-						_, err := codegen.PackageFor("/bar/xx/42")
-						Ω(err).Should(Equal(fmt.Errorf(`Go source file "/bar/xx/42" not in Go workspace, adjust GOPATH %s or use modules`, gopath)))
+						_, err := codegen.PackageFor(abs("bar", "xx", "42"))
+						Ω(err).Should(Equal(fmt.Errorf(`Go source file "%s" not in Go workspace, adjust GOPATH %s or use modules`, abs("bar", "xx", "42"), gopath)))
 					})
 				})
 			})
@@ -404,7 +413,7 @@ var _ = Describe("Workspace", func() {
 
 				Context("inside GOPATH", func() {
 					It("should return a GOPATH mode package", func() {
-						pkg, err := codegen.PackageFor("/xx/src/bar/xx/42")
+						pkg, err := codegen.PackageFor(abs("xx", "src", "bar", "xx", "42"))
 						Ω(err).ShouldNot(HaveOccurred())
 						Expect(pkg.Path).To(Equal("bar/xx"))
 					})
@@ -421,8 +430,8 @@ var _ = Describe("Workspace", func() {
 					})
 
 					It("should return an error", func() {
-						_, err := codegen.PackageFor("/bar/xx/42")
-						Ω(err).Should(Equal(fmt.Errorf(`Go source file "/bar/xx/42" not in Go workspace, adjust GOPATH %s or use modules`, gopath)))
+						_, err := codegen.PackageFor(abs("bar", "xx", "42"))
+						Ω(err).Should(Equal(fmt.Errorf(`Go source file "%s" not in Go workspace, adjust GOPATH %s or use modules`, abs("bar", "xx", "42"), gopath)))
 					})
 				})
 			})
@@ -438,8 +447,8 @@ var _ = Describe("Workspace", func() {
 
 				Context("inside GOPATH", func() {
 					It("should return an error", func() {
-						_, err := codegen.PackageFor("/bar/xx/42")
-						Ω(err).Should(Equal(fmt.Errorf(`Go source file "/bar/xx/42" not in Go workspace, adjust GOPATH /xx or use modules`)))
+						_, err := codegen.PackageFor(abs("bar", "xx", "42"))
+						Ω(err).Should(Equal(fmt.Errorf(`Go source file "%s" not in Go workspace, adjust GOPATH %s or use modules`, abs("bar", "xx", "42"), abs("xx"))))
 					})
 				})
 
@@ -454,8 +463,8 @@ var _ = Describe("Workspace", func() {
 					})
 
 					It("should return an error", func() {
-						_, err := codegen.PackageFor("/bar/xx/42")
-						Ω(err).Should(Equal(fmt.Errorf(`Go source file "/bar/xx/42" not in Go workspace, adjust GOPATH %s or use modules`, gopath)))
+						_, err := codegen.PackageFor(abs("bar", "xx", "42"))
+						Ω(err).Should(Equal(fmt.Errorf(`Go source file "%s" not in Go workspace, adjust GOPATH %s or use modules`, abs("bar", "xx", "42"), gopath)))
 					})
 				})
 			})
@@ -471,7 +480,7 @@ var _ = Describe("Workspace", func() {
 
 				Context("inside GOPATH", func() {
 					It("should return a GOPATH mode package", func() {
-						pkg, err := codegen.PackageFor("/xx/src/bar/xx/42")
+						pkg, err := codegen.PackageFor(abs("xx", "src", "bar", "xx", "42"))
 						Ω(err).ShouldNot(HaveOccurred())
 						Expect(pkg.Path).To(Equal("bar/xx"))
 					})
@@ -488,8 +497,8 @@ var _ = Describe("Workspace", func() {
 					})
 
 					It("should return an error", func() {
-						_, err := codegen.PackageFor("/bar/xx/42")
-						Ω(err).Should(Equal(fmt.Errorf(`Go source file "/bar/xx/42" not in Go workspace, adjust GOPATH %s or use modules`, gopath)))
+						_, err := codegen.PackageFor(abs("bar", "xx", "42"))
+						Ω(err).Should(Equal(fmt.Errorf(`Go source file "%s" not in Go workspace, adjust GOPATH %s or use modules`, abs("bar", "xx", "42"), gopath)))
 					})
 				})
 			})
@@ -519,9 +528,9 @@ var _ = Describe("Workspace", func() {
 
 		Context("inside GOPATH", func() {
 			It("should return the absolute path to the GOPATH directory", func() {
-				pkg, err := codegen.PackageFor("/xx/src/bar/xx/42")
+				pkg, err := codegen.PackageFor(abs("xx", "src", "bar", "xx", "42"))
 				Ω(err).ShouldNot(HaveOccurred())
-				Expect(pkg.Abs()).To(Equal("/xx/src/bar/xx"))
+				Expect(pkg.Abs()).To(Equal(abs("xx", "src", "bar", "xx")))
 			})
 		})
 
@@ -536,11 +545,11 @@ var _ = Describe("Workspace", func() {
 			})
 
 			It("should return the absolute path to the Module directory", func() {
-				abs, err := filepath.Abs(".")
+				ab, err := filepath.Abs(".")
 				Ω(err).ShouldNot(HaveOccurred())
-				pkg, err := codegen.PackageFor(filepath.Join(abs, "bar/xx/42"))
+				pkg, err := codegen.PackageFor(abs(ab, "bar", "xx", "42"))
 				Ω(err).ShouldNot(HaveOccurred())
-				Expect(pkg.Abs()).To(Equal(filepath.Join(abs, "bar/xx")))
+				Expect(pkg.Abs()).To(Equal(abs(ab, "bar", "xx")))
 			})
 		})
 	})
@@ -548,7 +557,7 @@ var _ = Describe("Workspace", func() {
 	Describe("PackagePath", func() {
 		oldGOPATH := build.Default.GOPATH
 		BeforeEach(func() {
-			os.Setenv("GOPATH", "/xx")
+			os.Setenv("GOPATH", abs("xx"))
 		})
 		AfterEach(func() {
 			os.Setenv("GOPATH", oldGOPATH)
@@ -582,7 +591,7 @@ var _ = Describe("Workspace", func() {
 
 				Context("inside GOPATH", func() {
 					It("should return a GOPATH mode package path", func() {
-						p, err := codegen.PackagePath("/xx/src/bar/xx/42")
+						p, err := codegen.PackagePath(abs("xx", "src", "bar", "xx", "42"))
 						Ω(err).ShouldNot(HaveOccurred())
 						Expect(p).To(Equal("bar/xx/42"))
 					})
@@ -599,9 +608,9 @@ var _ = Describe("Workspace", func() {
 					})
 
 					It("should return a Module mode package path", func() {
-						abs, err := filepath.Abs(".")
+						ab, err := filepath.Abs(".")
 						Ω(err).ShouldNot(HaveOccurred())
-						p, err := codegen.PackagePath(filepath.Join(abs, "bar/xx/42"))
+						p, err := codegen.PackagePath(abs(ab, "bar", "xx", "42"))
 						Ω(err).ShouldNot(HaveOccurred())
 						Expect(p).To(Equal("bar/xx/42"))
 					})
@@ -619,9 +628,9 @@ var _ = Describe("Workspace", func() {
 
 				Context("inside GOPATH", func() {
 					It("should return a Module mode package path", func() {
-						abs, err := filepath.Abs(".")
+						ab, err := filepath.Abs(".")
 						Ω(err).ShouldNot(HaveOccurred())
-						p, err := codegen.PackagePath(filepath.Join(abs, "bar/xx/42"))
+						p, err := codegen.PackagePath(abs(ab, "bar", "xx", "42"))
 						Ω(err).ShouldNot(HaveOccurred())
 						Expect(p).To(Equal("bar/xx/42"))
 					})
@@ -638,9 +647,9 @@ var _ = Describe("Workspace", func() {
 					})
 
 					It("should return a Module mode package path", func() {
-						abs, err := filepath.Abs(".")
+						ab, err := filepath.Abs(".")
 						Ω(err).ShouldNot(HaveOccurred())
-						p, err := codegen.PackagePath(filepath.Join(abs, "bar/xx/42"))
+						p, err := codegen.PackagePath(abs(ab, "bar", "xx", "42"))
 						Ω(err).ShouldNot(HaveOccurred())
 						Expect(p).To(Equal("bar/xx/42"))
 					})
@@ -658,7 +667,7 @@ var _ = Describe("Workspace", func() {
 
 				Context("inside GOPATH", func() {
 					It("should return a GOPATH mode package path", func() {
-						p, err := codegen.PackagePath("/xx/src/bar/xx/42")
+						p, err := codegen.PackagePath(abs("xx", "src", "bar", "xx", "42"))
 						Ω(err).ShouldNot(HaveOccurred())
 						Expect(p).To(Equal("bar/xx/42"))
 					})
@@ -675,8 +684,8 @@ var _ = Describe("Workspace", func() {
 					})
 
 					It("should return an error", func() {
-						_, err := codegen.PackagePath("/bar/xx/42")
-						Ω(err).Should(Equal(fmt.Errorf("/bar/xx/42 does not contain a Go package")))
+						_, err := codegen.PackagePath(abs("bar", "xx", "42"))
+						Ω(err).Should(Equal(fmt.Errorf("%s does not contain a Go package", abs("bar", "xx", "42"))))
 					})
 				})
 			})
@@ -694,7 +703,7 @@ var _ = Describe("Workspace", func() {
 
 				Context("inside GOPATH", func() {
 					It("should return a GOPATH mode package path", func() {
-						p, err := codegen.PackagePath("/xx/src/bar/xx/42")
+						p, err := codegen.PackagePath(abs("xx", "src", "bar", "xx", "42"))
 						Ω(err).ShouldNot(HaveOccurred())
 						Expect(p).To(Equal("bar/xx/42"))
 					})
@@ -711,8 +720,8 @@ var _ = Describe("Workspace", func() {
 					})
 
 					It("should return an error", func() {
-						_, err := codegen.PackagePath("/bar/xx/42")
-						Ω(err).Should(Equal(fmt.Errorf("/bar/xx/42 does not contain a Go package")))
+						_, err := codegen.PackagePath(abs("bar", "xx", "42"))
+						Ω(err).Should(Equal(fmt.Errorf("%s does not contain a Go package", abs("bar", "xx", "42"))))
 					})
 				})
 			})
@@ -728,8 +737,8 @@ var _ = Describe("Workspace", func() {
 
 				Context("inside GOPATH", func() {
 					It("should return an error", func() {
-						_, err := codegen.PackagePath("/bar/xx/42")
-						Ω(err).Should(Equal(fmt.Errorf("/bar/xx/42 does not contain a Go package")))
+						_, err := codegen.PackagePath(abs("bar", "xx", "42"))
+						Ω(err).Should(Equal(fmt.Errorf("%s does not contain a Go package", abs("bar", "xx", "42"))))
 					})
 				})
 
@@ -744,8 +753,8 @@ var _ = Describe("Workspace", func() {
 					})
 
 					It("should return an error", func() {
-						_, err := codegen.PackagePath("/bar/xx/42")
-						Ω(err).Should(Equal(fmt.Errorf("/bar/xx/42 does not contain a Go package")))
+						_, err := codegen.PackagePath(abs("bar", "xx", "42"))
+						Ω(err).Should(Equal(fmt.Errorf("%s does not contain a Go package", abs("bar", "xx", "42"))))
 					})
 				})
 			})
@@ -761,7 +770,7 @@ var _ = Describe("Workspace", func() {
 
 				Context("inside GOPATH", func() {
 					It("should return a GOPATH mode package path", func() {
-						p, err := codegen.PackagePath("/xx/src/bar/xx/42")
+						p, err := codegen.PackagePath(abs("xx", "src", "bar", "xx", "42"))
 						Ω(err).ShouldNot(HaveOccurred())
 						Expect(p).To(Equal("bar/xx/42"))
 					})
@@ -778,8 +787,8 @@ var _ = Describe("Workspace", func() {
 					})
 
 					It("should return an error", func() {
-						_, err := codegen.PackagePath("/bar/xx/42")
-						Ω(err).Should(Equal(fmt.Errorf("/bar/xx/42 does not contain a Go package")))
+						_, err := codegen.PackagePath(abs("bar", "xx", "42"))
+						Ω(err).Should(Equal(fmt.Errorf("%s does not contain a Go package", abs("bar", "xx", "42"))))
 					})
 				})
 			})
