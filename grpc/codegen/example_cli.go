@@ -41,7 +41,7 @@ func exampleCLI(genpkg string, root *expr.RootExpr, svr *expr.ServerExpr) *codeg
 		specs []*codegen.ImportSpec
 	)
 	{
-		idx := strings.LastIndex(genpkg, string(os.PathSeparator))
+		idx := strings.LastIndex(filepath.FromSlash(genpkg), string(os.PathSeparator))
 		rootPath := "."
 		if idx > 0 {
 			rootPath = genpkg[:idx]

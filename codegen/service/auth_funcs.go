@@ -3,6 +3,7 @@ package service
 import (
 	"os"
 	"path"
+	"path/filepath"
 	"strings"
 
 	"goa.design/goa/codegen"
@@ -15,13 +16,13 @@ func AuthFuncsFile(genpkg string, root *expr.RootExpr) *codegen.File {
 	var (
 		apiPkg   = strings.ToLower(codegen.Goify(root.API.Name, false))
 		rootPath = "."
-		filepath = "auth.go"
+		mainPath = "auth.go"
 	)
 	{
-		if _, err := os.Stat(filepath); !os.IsNotExist(err) {
+		if _, err := os.Stat(mainPath); !os.IsNotExist(err) {
 			return nil // file already exists, skip it.
 		}
-		idx := strings.LastIndex(genpkg, string(os.PathSeparator))
+		idx := strings.LastIndex(filepath.FromSlash(genpkg), string(os.PathSeparator))
 		if idx > 0 {
 			rootPath = genpkg[:idx]
 		}
@@ -65,7 +66,7 @@ func AuthFuncsFile(genpkg string, root *expr.RootExpr) *codegen.File {
 	}
 
 	return &codegen.File{
-		Path:             filepath,
+		Path:             mainPath,
 		SectionTemplates: sections,
 		SkipExist:        true,
 	}

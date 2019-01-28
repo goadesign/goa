@@ -40,7 +40,7 @@ func exampleServer(genpkg string, root *expr.RootExpr, svr *expr.ServerExpr) *co
 		specs []*codegen.ImportSpec
 	)
 	{
-		idx := strings.LastIndex(genpkg, string(os.PathSeparator))
+		idx := strings.LastIndex(filepath.FromSlash(genpkg), string(os.PathSeparator))
 		rootPath := "."
 		if idx > 0 {
 			rootPath = genpkg[:idx]
