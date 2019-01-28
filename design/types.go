@@ -18,7 +18,7 @@ import (
 	"time"
 
 	"github.com/goadesign/goa/dslengine"
-	uuid "github.com/satori/go.uuid"
+	uuid "github.com/gofrs/uuid"
 )
 
 // DefaultView is the name of the default view.
