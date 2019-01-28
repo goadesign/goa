@@ -1,6 +1,9 @@
 package codegen
 
-import "fmt"
+import (
+	"fmt"
+	"path/filepath"
+)
 
 type (
 	// ImportSpec defines a generated import statement.
@@ -25,7 +28,7 @@ func SimpleImport(path string) *ImportSpec {
 // Code returns the Go import statement for the ImportSpec.
 func (s *ImportSpec) Code() string {
 	if len(s.Name) > 0 {
-		return fmt.Sprintf(`%s "%s"`, s.Name, s.Path)
+		return fmt.Sprintf(`%s "%s"`, s.Name, filepath.ToSlash(s.Path))
 	}
-	return fmt.Sprintf(`"%s"`, s.Path)
+	return fmt.Sprintf(`"%s"`, filepath.ToSlash(s.Path))
 }
