@@ -788,6 +788,7 @@ func buildResponseConvertData(response, result *codegen.ContextualAttribute, hdr
 
 	var (
 		svc = sd.Service
+		md  = svc.Method(e.Name())
 	)
 
 	if svr {
@@ -795,6 +796,13 @@ func buildResponseConvertData(response, result *codegen.ContextualAttribute, hdr
 
 		var data *InitData
 		{
+			if md.ViewedResult != nil {
+				// If gRPC endpoint returns a viewed result type, do not factor in
+				// required values when generating transformation code because a
+				// required attribute may not exist on all the views.
+				result = result.Dup(result.Attribute.Expr(), result.Required)
+				result.NonRequired = true
+			}
 			data = buildInitData(result, response, "result", "message", true, sd)
 			data.Description = fmt.Sprintf("%s builds the gRPC response type from the result of the %q endpoint of the %q service.", data.Name, e.Name(), svc.Name)
 		}
@@ -977,6 +985,13 @@ func buildStreamData(e *expr.GRPCEndpointExpr, sd *ServiceData, svr bool) *Strea
 			if e.MethodExpr.Result.Type != expr.Empty {
 				sendName = md.ServerStream.SendName
 				sendRef = ed.ResultRef
+				if md.ViewedResult != nil {
+					// If streaming result is a viewed result type, do not factor in
+					// required values when generating transformation code because a
+					// required attribute may not exist on all the views.
+					result = result.Dup(result.Attribute.Expr(), result.Required)
+					result.NonRequired = true
+				}
 				sendType = &ConvertData{
 					SrcName: result.Attribute.Name(),
 					SrcRef:  result.Attribute.Ref(),

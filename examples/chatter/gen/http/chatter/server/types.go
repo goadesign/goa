@@ -88,11 +88,9 @@ func NewChatSummaryResponseCollection(res chattersvcviews.ChatSummaryCollectionV
 	body := make([]*ChatSummaryResponse, len(res))
 	for i, val := range res {
 		body[i] = &ChatSummaryResponse{
-			Length: val.Length,
-			SentAt: val.SentAt,
-		}
-		if val.Message != nil {
-			body[i].Message = *val.Message
+			Message: *val.Message,
+			Length:  val.Length,
+			SentAt:  val.SentAt,
 		}
 	}
 	return body
@@ -101,9 +99,8 @@ func NewChatSummaryResponseCollection(res chattersvcviews.ChatSummaryCollectionV
 // NewHistoryResponseBodyTiny builds the HTTP response body from the result of
 // the "history" endpoint of the "chatter" service.
 func NewHistoryResponseBodyTiny(res *chattersvcviews.ChatSummaryView) *HistoryResponseBodyTiny {
-	body := &HistoryResponseBodyTiny{}
-	if res.Message != nil {
-		body.Message = *res.Message
+	body := &HistoryResponseBodyTiny{
+		Message: *res.Message,
 	}
 	return body
 }
@@ -112,11 +109,9 @@ func NewHistoryResponseBodyTiny(res *chattersvcviews.ChatSummaryView) *HistoryRe
 // "history" endpoint of the "chatter" service.
 func NewHistoryResponseBody(res *chattersvcviews.ChatSummaryView) *HistoryResponseBody {
 	body := &HistoryResponseBody{
-		Length: res.Length,
-		SentAt: res.SentAt,
-	}
-	if res.Message != nil {
-		body.Message = *res.Message
+		Message: *res.Message,
+		Length:  res.Length,
+		SentAt:  res.SentAt,
 	}
 	return body
 }

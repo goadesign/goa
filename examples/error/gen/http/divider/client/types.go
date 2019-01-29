@@ -105,24 +105,13 @@ type DivideTimeoutResponseBody struct {
 // NewIntegerDivideHasRemainder builds a divider service integer_divide
 // endpoint has_remainder error.
 func NewIntegerDivideHasRemainder(body *IntegerDivideHasRemainderResponseBody) *goa.ServiceError {
-	v := &goa.ServiceError{}
-	if body.Name != nil {
-		v.Name = *body.Name
-	}
-	if body.ID != nil {
-		v.ID = *body.ID
-	}
-	if body.Message != nil {
-		v.Message = *body.Message
-	}
-	if body.Temporary != nil {
-		v.Temporary = *body.Temporary
-	}
-	if body.Timeout != nil {
-		v.Timeout = *body.Timeout
-	}
-	if body.Fault != nil {
-		v.Fault = *body.Fault
+	v := &goa.ServiceError{
+		Name:      *body.Name,
+		ID:        *body.ID,
+		Message:   *body.Message,
+		Temporary: *body.Temporary,
+		Timeout:   *body.Timeout,
+		Fault:     *body.Fault,
 	}
 	return v
 }
@@ -130,24 +119,13 @@ func NewIntegerDivideHasRemainder(body *IntegerDivideHasRemainderResponseBody) *
 // NewIntegerDivideDivByZero builds a divider service integer_divide endpoint
 // div_by_zero error.
 func NewIntegerDivideDivByZero(body *IntegerDivideDivByZeroResponseBody) *goa.ServiceError {
-	v := &goa.ServiceError{}
-	if body.Name != nil {
-		v.Name = *body.Name
-	}
-	if body.ID != nil {
-		v.ID = *body.ID
-	}
-	if body.Message != nil {
-		v.Message = *body.Message
-	}
-	if body.Temporary != nil {
-		v.Temporary = *body.Temporary
-	}
-	if body.Timeout != nil {
-		v.Timeout = *body.Timeout
-	}
-	if body.Fault != nil {
-		v.Fault = *body.Fault
+	v := &goa.ServiceError{
+		Name:      *body.Name,
+		ID:        *body.ID,
+		Message:   *body.Message,
+		Temporary: *body.Temporary,
+		Timeout:   *body.Timeout,
+		Fault:     *body.Fault,
 	}
 	return v
 }
@@ -155,24 +133,13 @@ func NewIntegerDivideDivByZero(body *IntegerDivideDivByZeroResponseBody) *goa.Se
 // NewIntegerDivideTimeout builds a divider service integer_divide endpoint
 // timeout error.
 func NewIntegerDivideTimeout(body *IntegerDivideTimeoutResponseBody) *goa.ServiceError {
-	v := &goa.ServiceError{}
-	if body.Name != nil {
-		v.Name = *body.Name
-	}
-	if body.ID != nil {
-		v.ID = *body.ID
-	}
-	if body.Message != nil {
-		v.Message = *body.Message
-	}
-	if body.Temporary != nil {
-		v.Temporary = *body.Temporary
-	}
-	if body.Timeout != nil {
-		v.Timeout = *body.Timeout
-	}
-	if body.Fault != nil {
-		v.Fault = *body.Fault
+	v := &goa.ServiceError{
+		Name:      *body.Name,
+		ID:        *body.ID,
+		Message:   *body.Message,
+		Temporary: *body.Temporary,
+		Timeout:   *body.Timeout,
+		Fault:     *body.Fault,
 	}
 	return v
 }
@@ -180,48 +147,26 @@ func NewIntegerDivideTimeout(body *IntegerDivideTimeoutResponseBody) *goa.Servic
 // NewDivideDivByZero builds a divider service divide endpoint div_by_zero
 // error.
 func NewDivideDivByZero(body *DivideDivByZeroResponseBody) *goa.ServiceError {
-	v := &goa.ServiceError{}
-	if body.Name != nil {
-		v.Name = *body.Name
-	}
-	if body.ID != nil {
-		v.ID = *body.ID
-	}
-	if body.Message != nil {
-		v.Message = *body.Message
-	}
-	if body.Temporary != nil {
-		v.Temporary = *body.Temporary
-	}
-	if body.Timeout != nil {
-		v.Timeout = *body.Timeout
-	}
-	if body.Fault != nil {
-		v.Fault = *body.Fault
+	v := &goa.ServiceError{
+		Name:      *body.Name,
+		ID:        *body.ID,
+		Message:   *body.Message,
+		Temporary: *body.Temporary,
+		Timeout:   *body.Timeout,
+		Fault:     *body.Fault,
 	}
 	return v
 }
 
 // NewDivideTimeout builds a divider service divide endpoint timeout error.
 func NewDivideTimeout(body *DivideTimeoutResponseBody) *goa.ServiceError {
-	v := &goa.ServiceError{}
-	if body.Name != nil {
-		v.Name = *body.Name
-	}
-	if body.ID != nil {
-		v.ID = *body.ID
-	}
-	if body.Message != nil {
-		v.Message = *body.Message
-	}
-	if body.Temporary != nil {
-		v.Temporary = *body.Temporary
-	}
-	if body.Timeout != nil {
-		v.Timeout = *body.Timeout
-	}
-	if body.Fault != nil {
-		v.Fault = *body.Fault
+	v := &goa.ServiceError{
+		Name:      *body.Name,
+		ID:        *body.ID,
+		Message:   *body.Message,
+		Temporary: *body.Temporary,
+		Timeout:   *body.Timeout,
+		Fault:     *body.Fault,
 	}
 	return v
 }

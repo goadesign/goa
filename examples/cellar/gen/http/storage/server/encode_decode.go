@@ -309,9 +309,8 @@ func NewStorageMultiUpdateDecoder(mux goahttp.Muxer, storageMultiUpdateDecoderFn
 // marshalStorageviewsWineryViewToWineryResponseTiny builds a value of type
 // *WineryResponseTiny from a value of type *storageviews.WineryView.
 func marshalStorageviewsWineryViewToWineryResponseTiny(v *storageviews.WineryView) *WineryResponseTiny {
-	res := &WineryResponseTiny{}
-	if v.Name != nil {
-		res.Name = *v.Name
+	res := &WineryResponseTiny{
+		Name: *v.Name,
 	}
 
 	return res
@@ -320,9 +319,8 @@ func marshalStorageviewsWineryViewToWineryResponseTiny(v *storageviews.WineryVie
 // marshalStorageviewsWineryViewToWineryResponseBodyTiny builds a value of type
 // *WineryResponseBodyTiny from a value of type *storageviews.WineryView.
 func marshalStorageviewsWineryViewToWineryResponseBodyTiny(v *storageviews.WineryView) *WineryResponseBodyTiny {
-	res := &WineryResponseBodyTiny{}
-	if v.Name != nil {
-		res.Name = *v.Name
+	res := &WineryResponseBodyTiny{
+		Name: *v.Name,
 	}
 
 	return res
@@ -332,16 +330,10 @@ func marshalStorageviewsWineryViewToWineryResponseBodyTiny(v *storageviews.Winer
 // *storage.Winery from a value of type *WineryRequestBody.
 func unmarshalWineryRequestBodyToStorageWinery(v *WineryRequestBody) *storage.Winery {
 	res := &storage.Winery{
-		URL: v.URL,
-	}
-	if v.Name != nil {
-		res.Name = *v.Name
-	}
-	if v.Region != nil {
-		res.Region = *v.Region
-	}
-	if v.Country != nil {
-		res.Country = *v.Country
+		Name:    *v.Name,
+		Region:  *v.Region,
+		Country: *v.Country,
+		URL:     v.URL,
 	}
 
 	return res

@@ -691,10 +691,8 @@ const (
 
 	srcAllPtrsTgtUseDefaultSimpleToSimpleCode = `func transform() {
 	target := &Simple{
-		Integer: source.Integer,
-	}
-	if source.RequiredString != nil {
-		target.RequiredString = *source.RequiredString
+		RequiredString: *source.RequiredString,
+		Integer:        source.Integer,
 	}
 	if source.DefaultBool != nil {
 		target.DefaultBool = *source.DefaultBool
@@ -706,9 +704,8 @@ const (
 `
 
 	srcAllPtrsTgtUseDefaultSimpleToRequiredCode = `func transform() {
-	target := &Required{}
-	if source.RequiredString != nil {
-		target.RequiredString = *source.RequiredString
+	target := &Required{
+		RequiredString: *source.RequiredString,
 	}
 	if source.DefaultBool != nil {
 		target.DefaultBool = *source.DefaultBool
@@ -724,26 +721,17 @@ const (
 
 	srcAllPtrsTgtUseDefaultRequiredToSimpleCode = `func transform() {
 	target := &Simple{
-		Integer: source.Integer,
-	}
-	if source.RequiredString != nil {
-		target.RequiredString = *source.RequiredString
-	}
-	if source.DefaultBool != nil {
-		target.DefaultBool = *source.DefaultBool
-	}
-	if source.DefaultBool == nil {
-		target.DefaultBool = true
+		RequiredString: *source.RequiredString,
+		DefaultBool:    *source.DefaultBool,
+		Integer:        source.Integer,
 	}
 }
 `
 
 	srcAllPtrsTgtUseDefaultSimpleToSuperCode = `func transform() {
 	target := &Super{
-		Integer: source.Integer,
-	}
-	if source.RequiredString != nil {
-		target.RequiredString = *source.RequiredString
+		RequiredString: *source.RequiredString,
+		Integer:        source.Integer,
 	}
 	if source.DefaultBool != nil {
 		target.DefaultBool = *source.DefaultBool
@@ -756,10 +744,8 @@ const (
 
 	srcAllPtrsTgtUseDefaultSuperToSimpleCode = `func transform() {
 	target := &Simple{
-		Integer: source.Integer,
-	}
-	if source.RequiredString != nil {
-		target.RequiredString = *source.RequiredString
+		RequiredString: *source.RequiredString,
+		Integer:        source.Integer,
 	}
 	if source.DefaultBool != nil {
 		target.DefaultBool = *source.DefaultBool
@@ -771,18 +757,14 @@ const (
 `
 
 	srcAllPtrsTgtUseDefaultSimpleToDefaultCode = `func transform() {
-	target := &Default{}
-	if source.RequiredString != nil {
-		target.RequiredString = *source.RequiredString
+	target := &Default{
+		RequiredString: *source.RequiredString,
 	}
 	if source.DefaultBool != nil {
 		target.DefaultBool = *source.DefaultBool
 	}
 	if source.Integer != nil {
 		target.Integer = *source.Integer
-	}
-	if source.RequiredString == nil {
-		target.RequiredString = "foo"
 	}
 	if source.DefaultBool == nil {
 		target.DefaultBool = true
@@ -811,13 +793,11 @@ const (
 
 	srcAllPtrsTgtUseDefaultRequiredMapToMapCode = `func transform() {
 	target := &SimpleMap{}
-	if source.Simple != nil {
-		target.Simple = make(map[string]int, len(source.Simple))
-		for key, val := range source.Simple {
-			tk := key
-			tv := val
-			target.Simple[tk] = tv
-		}
+	target.Simple = make(map[string]int, len(source.Simple))
+	for key, val := range source.Simple {
+		tk := key
+		tv := val
+		target.Simple[tk] = tv
 	}
 }
 `
@@ -837,16 +817,11 @@ const (
 
 	srcAllPtrsTgtUseDefaultRequiredMapToDefaultMapCode = `func transform() {
 	target := &DefaultMap{}
-	if source.Simple != nil {
-		target.Simple = make(map[string]int, len(source.Simple))
-		for key, val := range source.Simple {
-			tk := key
-			tv := val
-			target.Simple[tk] = tv
-		}
-	}
-	if source.Simple == nil {
-		target.Simple = map[string]int{"foo": 1}
+	target.Simple = make(map[string]int, len(source.Simple))
+	for key, val := range source.Simple {
+		tk := key
+		tv := val
+		target.Simple[tk] = tv
 	}
 }
 `
@@ -877,14 +852,9 @@ const (
 
 	srcAllPtrsTgtUseDefaultRequiredArrayToDefaultArrayCode = `func transform() {
 	target := &DefaultArray{}
-	if source.StringArray != nil {
-		target.StringArray = make([]string, len(source.StringArray))
-		for i, val := range source.StringArray {
-			target.StringArray[i] = val
-		}
-	}
-	if source.StringArray == nil {
-		target.StringArray = []string{"foo", "bar"}
+	target.StringArray = make([]string, len(source.StringArray))
+	for i, val := range source.StringArray {
+		target.StringArray[i] = val
 	}
 }
 `
@@ -905,22 +875,16 @@ const (
 		RequiredString: source.MyString,
 		DefaultInt:     source.MyInt,
 	}
-	if source.MyType != nil {
-		target.Type = transformSimpleToSimple(source.MyType)
+	target.Type = transformSimpleToSimple(source.MyType)
+	target.Map = make(map[int]string, len(source.MyMap))
+	for key, val := range source.MyMap {
+		tk := key
+		tv := val
+		target.Map[tk] = tv
 	}
-	if source.MyMap != nil {
-		target.Map = make(map[int]string, len(source.MyMap))
-		for key, val := range source.MyMap {
-			tk := key
-			tv := val
-			target.Map[tk] = tv
-		}
-	}
-	if source.MyArray != nil {
-		target.Array = make([]string, len(source.MyArray))
-		for i, val := range source.MyArray {
-			target.Array[i] = val
-		}
+	target.Array = make([]string, len(source.MyArray))
+	for i, val := range source.MyArray {
+		target.Array[i] = val
 	}
 }
 `

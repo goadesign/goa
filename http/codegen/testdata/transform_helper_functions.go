@@ -7,15 +7,11 @@ func unmarshalInnerTypeRequestBodyToServicebodyuserinnerdefaultInnerType(v *Inne
 	if v == nil {
 		return nil
 	}
-	res := &servicebodyuserinnerdefault.InnerType{}
-	if v.A != nil {
-		res.A = *v.A
+	res := &servicebodyuserinnerdefault.InnerType{
+		A: *v.A,
 	}
 	if v.B != nil {
 		res.B = *v.B
-	}
-	if v.A == nil {
-		res.A = "defaulta"
 	}
 	if v.B == nil {
 		res.B = "defaultb"
@@ -32,15 +28,11 @@ func unmarshalInnerTypeRequestBodyToServicebodyuserinnerdefaultInnerType(v *Inne
 	if v == nil {
 		return nil
 	}
-	res := &servicebodyuserinnerdefault.InnerType{}
-	if v.A != nil {
-		res.A = *v.A
+	res := &servicebodyuserinnerdefault.InnerType{
+		A: *v.A,
 	}
 	if v.B != nil {
 		res.B = *v.B
-	}
-	if v.A == nil {
-		res.A = "defaulta"
 	}
 	if v.B == nil {
 		res.B = "defaultb"
@@ -55,14 +47,10 @@ var PayloadBodyInlineRecursiveUserTransformCode1 = `// unmarshalPayloadTypeReque
 // value of type *PayloadTypeRequestBody.
 func unmarshalPayloadTypeRequestBodyToServicebodyinlinerecursiveuserPayloadType(v *PayloadTypeRequestBody) *servicebodyinlinerecursiveuser.PayloadType {
 	res := &servicebodyinlinerecursiveuser.PayloadType{
+		A: *v.A,
 		B: v.B,
 	}
-	if v.A != nil {
-		res.A = *v.A
-	}
-	if v.C != nil {
-		res.C = unmarshalPayloadTypeRequestBodyToServicebodyinlinerecursiveuserPayloadType(v.C)
-	}
+	res.C = unmarshalPayloadTypeRequestBodyToServicebodyinlinerecursiveuserPayloadType(v.C)
 
 	return res
 }
@@ -73,14 +61,10 @@ var PayloadBodyInlineRecursiveUserTransformCode2 = `// unmarshalPayloadTypeReque
 // value of type *PayloadTypeRequestBody.
 func unmarshalPayloadTypeRequestBodyToServicebodyinlinerecursiveuserPayloadType(v *PayloadTypeRequestBody) *servicebodyinlinerecursiveuser.PayloadType {
 	res := &servicebodyinlinerecursiveuser.PayloadType{
+		A: *v.A,
 		B: v.B,
 	}
-	if v.A != nil {
-		res.A = *v.A
-	}
-	if v.C != nil {
-		res.C = unmarshalPayloadTypeRequestBodyToServicebodyinlinerecursiveuserPayloadType(v.C)
-	}
+	res.C = unmarshalPayloadTypeRequestBodyToServicebodyinlinerecursiveuserPayloadType(v.C)
 
 	return res
 }

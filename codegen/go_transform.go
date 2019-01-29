@@ -137,8 +137,10 @@ func GoObjectTransform(source, target *ContextualAttribute, ta *TransformAttrs, 
 			switch {
 			case srcPtr && !tgtPtr:
 				srcFieldConv = t.ConvertType(srcc.Attribute, tgtc.Attribute, "*"+srcField)
-				postInitCode += fmt.Sprintf("if %s != nil {\n\t%s.%s = %s\n}\n", srcField, ta.TargetVar, tgtField, srcFieldConv)
-				return
+				if !srcc.IsRequired() {
+					postInitCode += fmt.Sprintf("if %s != nil {\n\t%s.%s = %s\n}\n", srcField, ta.TargetVar, tgtField, srcFieldConv)
+					return
+				}
 			case !srcPtr && tgtPtr:
 				if srcField != srcFieldConv {
 					// type conversion required. Add it in postinit code.
@@ -222,7 +224,7 @@ func GoObjectTransform(source, target *ContextualAttribute, ta *TransformAttrs, 
 		// and to avoid derefencing nil.
 		var checkNil bool
 		{
-			isRef := srcc.IsPointer()
+			isRef := !expr.IsPrimitive(srccAtt.Type) && !srcc.IsRequired() || srcc.IsPointer() && expr.IsPrimitive(srccAtt.Type)
 			marshalNonPrimitive := !expr.IsPrimitive(srccAtt.Type) && srcc.UseDefault && tgtc.UseDefault
 			checkNil = isRef || marshalNonPrimitive
 		}
@@ -234,7 +236,7 @@ func GoObjectTransform(source, target *ContextualAttribute, ta *TransformAttrs, 
 		// type uses default values (i.e. attributes with default values are
 		// non-pointers) and has a default value set.
 		if tdef := tgtc.DefaultValue(); tdef != nil {
-			if srcc.IsPointer() {
+			if srcc.IsPointer() && !srcc.IsRequired() {
 				code += fmt.Sprintf("if %s == nil {\n\t", ta.SourceVar)
 				if tgtc.IsPointer() {
 					code += fmt.Sprintf("var tmp %s = %#v\n\t%s = &tmp\n", tgtc.Def(), tdef, ta.TargetVar)
@@ -584,7 +586,7 @@ func collectHelpers(source, target *ContextualAttribute, t Transformer, prefix s
 			if err != nil {
 				return nil, err
 			}
-			if !source.Required {
+			if !source.IsRequired() {
 				code = "if v == nil {\n\treturn nil\n}\n" + code
 			}
 			tfd := &TransformFunctionData{

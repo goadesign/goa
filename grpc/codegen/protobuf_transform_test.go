@@ -53,6 +53,7 @@ func TestProtoBufTransform(t *testing.T) {
 		customFieldGoa = newGoaContextAttr(customField, "", scope)
 		resultTypeGoa  = newGoaContextAttr(resultType, "", scope)
 		rtColGoa       = newGoaContextAttr(rtCol, "", scope)
+		requiredPtrGoa = pointerContext(required, "", scope)
 
 		primitiveProto   = newProtoContextAttr(primitive, "", scope)
 		simpleProto      = newProtoContextAttr(simple, "", scope)
@@ -87,6 +88,7 @@ func TestProtoBufTransform(t *testing.T) {
 			{"required-to-simple", requiredGoa, simpleProto, true, requiredGoaToSimpleProtoCode},
 			{"simple-to-default", simpleGoa, defaultTProto, true, simpleGoaToDefaultProtoCode},
 			{"default-to-simple", defaultTGoa, simpleProto, true, defaultGoaToSimpleProtoCode},
+			{"required-ptr-to-simple", requiredPtrGoa, simpleProto, true, requiredPtrGoaToSimpleProtoCode},
 
 			// maps
 			{"map-to-map", simpleMapGoa, simpleMapProto, true, simpleMapGoaToSimpleMapProtoCode},
@@ -114,6 +116,7 @@ func TestProtoBufTransform(t *testing.T) {
 			{"required-to-simple", requiredProto, simpleGoa, false, requiredProtoToSimpleGoaCode},
 			{"simple-to-default", simpleProto, defaultTGoa, false, simpleProtoToDefaultGoaCode},
 			{"default-to-simple", defaultTProto, simpleGoa, false, defaultProtoToSimpleGoaCode},
+			{"simple-to-required-ptr", simpleProto, requiredPtrGoa, false, simpleProtoToRequiredPtrGoaCode},
 
 			// maps
 			{"map-to-map", simpleMapProto, simpleMapGoa, false, simpleMapProtoToSimpleMapGoaCode},
@@ -154,6 +157,13 @@ func TestProtoBufTransform(t *testing.T) {
 func newGoaContextAttr(dt expr.DataType, pkg string, scope *codegen.NameScope) *codegen.ContextualAttribute {
 	att := codegen.NewGoAttribute(&expr.AttributeExpr{Type: dt}, pkg, scope)
 	return codegen.NewUseDefaultContext(att)
+}
+
+func pointerContext(typ expr.DataType, pkg string, scope *codegen.NameScope) *codegen.ContextualAttribute {
+	att := codegen.NewGoAttribute(&expr.AttributeExpr{Type: typ}, pkg, scope)
+	ca := codegen.NewPointerContext(att)
+	ca.NonRequired = true
+	return ca
 }
 
 func newProtoContextAttr(dt expr.DataType, pkg string, scope *codegen.NameScope) *codegen.ContextualAttribute {
@@ -218,6 +228,23 @@ const (
 		RequiredString: source.RequiredString,
 		DefaultBool:    source.DefaultBool,
 		Integer:        int32(source.Integer),
+	}
+}
+`
+
+	requiredPtrGoaToSimpleProtoCode = `func transform() {
+	target := &Simple{}
+	if source.RequiredString != nil {
+		target.RequiredString = *source.RequiredString
+	}
+	if source.DefaultBool != nil {
+		target.DefaultBool = *source.DefaultBool
+	}
+	if source.Integer != nil {
+		target.Integer = int32(*source.Integer)
+	}
+	if source.DefaultBool == nil {
+		target.DefaultBool = true
 	}
 }
 `
@@ -493,6 +520,16 @@ const (
 	target := &Simple{
 		RequiredString: source.RequiredString,
 		DefaultBool:    source.DefaultBool,
+	}
+	integerptr := int(source.Integer)
+	target.Integer = &integerptr
+}
+`
+
+	simpleProtoToRequiredPtrGoaCode = `func transform() {
+	target := &Required{
+		RequiredString: &source.RequiredString,
+		DefaultBool:    &source.DefaultBool,
 	}
 	integerptr := int(source.Integer)
 	target.Integer = &integerptr
