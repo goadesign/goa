@@ -92,7 +92,7 @@ func NewWorkspace(prefix string) (*Workspace, error) {
 	os.MkdirAll(filepath.Join(dir, "bin"), 0755)
 
 	// setup GOPATH
-	gopath := os.Getenv("GOPATH")
+	gopath := envOr("GOPATH", build.Default.GOPATH)
 	os.Setenv("GOPATH", fmt.Sprintf("%s%c%s", dir, os.PathListSeparator, gopath))
 
 	// we're done
@@ -101,7 +101,7 @@ func NewWorkspace(prefix string) (*Workspace, error) {
 
 // WorkspaceFor returns the Go workspace for the given Go source file.
 func WorkspaceFor(source string) (*Workspace, error) {
-	gopaths := os.Getenv("GOPATH")
+	gopaths := envOr("GOPATH", build.Default.GOPATH)
 	// We use absolute paths so that in particular on Windows the case gets normalized
 	sourcePath, err := filepath.Abs(source)
 	if err != nil {
@@ -371,7 +371,7 @@ func PackagePath(path string) (string, error) {
 // PackageSourcePath returns the absolute path to the given package source.
 func PackageSourcePath(pkg string) (string, error) {
 	buildCtx := build.Default
-	buildCtx.GOPATH = os.Getenv("GOPATH") // Reevaluate each time to be nice to tests
+	buildCtx.GOPATH = envOr("GOPATH", build.Default.GOPATH) // Reevaluate each time to be nice to tests
 	wd, err := os.Getwd()
 	if err != nil {
 		wd = "."

@@ -1,7 +1,11 @@
 package codegen_test
 
 import (
+	"fmt"
+	"go/build"
 	"os"
+	"path/filepath"
+	"runtime"
 
 	"github.com/goadesign/goa/goagen/codegen"
 
@@ -32,31 +36,76 @@ var _ = Describe("Helpers", func() {
 	})
 
 	Describe("CommandLine", func() {
-		oldGOPATH, oldArgs := os.Getenv("GOPATH"), os.Args
-		BeforeEach(func() {
-			os.Setenv("GOPATH", "/xx")
+		Context("with exported GOPATH", func() {
+			oldGOPATH, oldArgs := build.Default.GOPATH, os.Args
+			BeforeEach(func() {
+				os.Setenv("GOPATH", "/xx")
+			})
+			AfterEach(func() {
+				os.Setenv("GOPATH", oldGOPATH)
+				os.Args = oldArgs
+			})
+
+			It("should not touch free arguments", func() {
+				os.Args = []string{"foo", "/xx/bar/xx/42"}
+
+				Expect(codegen.CommandLine()).To(Equal("$ foo /xx/bar/xx/42"))
+			})
+
+			It("should replace GOPATH one match only in a long option", func() {
+				os.Args = []string{"foo", "--opt=/xx/bar/xx/42"}
+
+				Expect(codegen.CommandLine()).To(Equal("$ foo\n\t--opt=$(GOPATH)/bar/xx/42"))
+			})
+
+			It("should not replace GOPATH if a match is not at the beginning of a long option", func() {
+				os.Args = []string{"foo", "--opt=/bar/xx/42"}
+
+				Expect(codegen.CommandLine()).To(Equal("$ foo\n\t--opt=/bar/xx/42"))
+			})
 		})
-		AfterEach(func() {
-			os.Setenv("GOPATH", oldGOPATH)
-			os.Args = oldArgs
-		})
 
-		It("should not touch free arguments", func() {
-			os.Args = []string{"foo", "/xx/bar/xx/42"}
+		Context("with default GOPATH", func() {
+			oldGOPATH, oldArgs := build.Default.GOPATH, os.Args
+			BeforeEach(func() {
+				os.Setenv("GOPATH", defaultGOPATH()) // Simulate a situation with no GOPATH exported.
+			})
+			AfterEach(func() {
+				os.Setenv("GOPATH", oldGOPATH)
+				os.Args = oldArgs
+			})
 
-			Expect(codegen.CommandLine()).To(Equal("$ foo /xx/bar/xx/42"))
-		})
+			It("should not touch free arguments", func() {
+				os.Args = []string{"foo", "/xx/bar/xx/42"}
 
-		It("should replace GOPATH one match only in a long option", func() {
-			os.Args = []string{"foo", "--opt=/xx/bar/xx/42"}
+				Expect(codegen.CommandLine()).To(Equal("$ foo /xx/bar/xx/42"))
+			})
 
-			Expect(codegen.CommandLine()).To(Equal("$ foo\n\t--opt=$(GOPATH)/bar/xx/42"))
-		})
+			It("should replace GOPATH one match only in a long option", func() {
+				os.Args = []string{"foo", fmt.Sprintf("--opt=%s/bar/xx/42", defaultGOPATH())}
 
-		It("should not replace GOPATH if a match is not at the beginning of a long option", func() {
-			os.Args = []string{"foo", "--opt=/bar/xx/42"}
-
-			Expect(codegen.CommandLine()).To(Equal("$ foo\n\t--opt=/bar/xx/42"))
+				Expect(codegen.CommandLine()).To(Equal("$ foo\n\t--opt=$(GOPATH)/bar/xx/42"))
+			})
 		})
 	})
 })
+
+// Copied from go/build/build.go
+func defaultGOPATH() string {
+	env := "HOME"
+	if runtime.GOOS == "windows" {
+		env = "USERPROFILE"
+	} else if runtime.GOOS == "plan9" {
+		env = "home"
+	}
+	if home := os.Getenv(env); home != "" {
+		def := filepath.Join(home, "go")
+		if filepath.Clean(def) == filepath.Clean(runtime.GOROOT()) {
+			// Don't set the default GOPATH to GOROOT,
+			// as that will trigger warnings from the go tool.
+			return ""
+		}
+		return def
+	}
+	return ""
+}

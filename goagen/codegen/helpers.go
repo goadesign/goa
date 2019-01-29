@@ -3,6 +3,7 @@ package codegen
 import (
 	"bytes"
 	"fmt"
+	"go/build"
 	"os"
 	"path/filepath"
 	"strings"
@@ -35,7 +36,7 @@ func CommandLine() string {
 
 	if len(os.Args) > 1 {
 		args := make([]string, len(os.Args)-1)
-		gopaths := filepath.SplitList(os.Getenv("GOPATH"))
+		gopaths := filepath.SplitList(envOr("GOPATH", build.Default.GOPATH))
 		for i, a := range os.Args[1:] {
 			for _, p := range gopaths {
 				p = "=" + p
