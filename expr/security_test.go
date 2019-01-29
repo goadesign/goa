@@ -202,6 +202,10 @@ func TestSchemeExprType(t *testing.T) {
 			kind:     JWTKind,
 			expected: "JWT",
 		},
+		"NoKind": {
+			kind:     NoKind,
+			expected: "", // should have panicked!
+		},
 	}
 
 	for k, tc := range cases {
