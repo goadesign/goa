@@ -339,30 +339,27 @@ func Decode{{ .Method.VarName }}Request(ctx context.Context, v interface{}, md m
 		{{- end }}
 	{{- end }}
 	}
+	if err != nil {
+		return nil, err
+	}
 {{- end }}
 {{- if and (not .Method.StreamingPayload) (not (isEmpty .Request.Message.Type)) }}
 	var (
 		message {{ .Request.ServerConvert.SrcRef }}
 		ok bool
-	{{- if not .Request.Metadata }}
-		err error
-	{{- end }}
 	)
 	{
 		if message, ok = v.({{ .Request.ServerConvert.SrcRef }}); !ok {
 			return nil, goagrpc.ErrInvalidType("{{ .ServiceName }}", "{{ .Method.Name }}", "{{ .Request.Message.Ref }}", v)
 		}
 	{{- if .Request.ServerConvert.Validation }}
-		err = {{ .Request.ServerConvert.Validation.Name }}(message)
+		if err {{ if .Request.Metadata }}={{ else }}:={{ end }} {{ .Request.ServerConvert.Validation.Name }}(message); err != nil {
+			return nil, err
+		}
 	{{- end }}
 	}
 {{- end }}
-	var (
-		payload {{ .PayloadRef }}
-	{{- if and (not .Request.Metadata) .Method.StreamingPayload }}
-		err error
-	{{- end }}
-	)
+	var payload {{ .PayloadRef }}
 	{
 		{{- if .Request.ServerConvert }}
 			payload = {{ .Request.ServerConvert.Init.Name }}({{ range .Request.ServerConvert.Init.Args }}{{ .Name }}, {{ end }})
@@ -385,7 +382,7 @@ func Decode{{ .Method.VarName }}Request(ctx context.Context, v interface{}, md m
 	{{- end }}
 {{- end }}
 	}
-	return payload, err
+	return payload, nil
 }
 ` + convertStringToTypeT
 

@@ -32,18 +32,15 @@ func DecodeAddRequest(ctx context.Context, v interface{}, md metadata.MD) (inter
 	var (
 		message *pb.AddRequest
 		ok      bool
-		err     error
 	)
 	{
 		if message, ok = v.(*pb.AddRequest); !ok {
 			return nil, goagrpc.ErrInvalidType("calc", "add", "*pb.AddRequest", v)
 		}
 	}
-	var (
-		payload *calcsvc.AddPayload
-	)
+	var payload *calcsvc.AddPayload
 	{
 		payload = NewAddPayload(message)
 	}
-	return payload, err
+	return payload, nil
 }

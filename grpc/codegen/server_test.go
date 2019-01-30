@@ -85,7 +85,8 @@ func TestResponseEncoder(t *testing.T) {
 		Code string
 	}{
 		{"empty-result", testdata.UnaryRPCNoResultDSL, testdata.EmptyResultResponseEncoderCode},
-		{"result-with-views", testdata.MessageUserTypeWithNestedUserTypesDSL, testdata.ResultWithViewsResponseEncoderCode},
+		{"result-with-views", testdata.MessageResultTypeWithViewsDSL, testdata.ResultWithViewsResponseEncoderCode},
+		{"result-with-explicit-view", testdata.MessageResultTypeWithExplicitViewDSL, testdata.ResultWithExplicitViewResponseEncoderCode},
 		{"result-array", testdata.MessageArrayDSL, testdata.ResultArrayResponseEncoderCode},
 		{"result-primitive", testdata.UnaryRPCNoPayloadDSL, testdata.ResultPrimitiveResponseEncoderCode},
 		{"result-with-metadata", testdata.MessageWithMetadataDSL, testdata.ResultWithMetadataResponseEncoderCode},

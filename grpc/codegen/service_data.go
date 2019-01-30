@@ -51,7 +51,8 @@ type (
 		// TransformHelpers is the list of transform functions required by the
 		// constructors.
 		TransformHelpers []*codegen.TransformFunctionData
-		// Validations is the validation logic for gRPC messages.
+		// Validations contain the data to generate the validation functions to
+		// validate the initialized type.
 		Validations []*ValidationData
 		// Scope is the name scope for protocol buffers
 		Scope *codegen.NameScope
@@ -220,9 +221,13 @@ type (
 		TgtName string
 		// TgtRef is the fully qualified reference to the target type.
 		TgtRef string
-		// Init contains the data required to render the constructor if any
-		// to transform the source type to a target type.
-		Init       *InitData
+		// Inits contain the data required to render the constructor if any
+		// to transform the source type to a target type. If the source or target
+		// type is a goa result type, we generate one constructor for every view
+		// defined in the result type.
+		Init *InitData
+		// Validation contains the data required to render the validation function
+		// to validate the initialized type.
 		Validation *ValidationData
 	}
 
@@ -380,16 +385,6 @@ func (sd *ServiceData) HasStreamingEndpoint() bool {
 		}
 	}
 	return false
-}
-
-// ValidationFor returns the validation data (if any) for the given message.
-func (sd *ServiceData) ValidationFor(name string) *ValidationData {
-	for _, v := range sd.Validations {
-		if v.SrcName == name {
-			return v
-		}
-	}
-	return nil
 }
 
 // analyze creates the data necessary to render the code of the given service.
@@ -591,8 +586,6 @@ func collectMessages(at *expr.AttributeExpr, sd *ServiceData, seen map[string]st
 		if _, ok := seen[dt.Name()]; ok {
 			return nil
 		}
-		name := protoBufMessageName(at, sd.Scope)
-		ref := protoBufGoFullTypeRef(at, sd.PkgName, sd.Scope)
 		att := dt.Attribute()
 		if rt, ok := dt.(*expr.ResultTypeExpr); ok {
 			if a := unwrapAttr(expr.DupAtt(rt.Attribute())); expr.IsArray(a.Type) {
@@ -602,19 +595,11 @@ func collectMessages(at *expr.AttributeExpr, sd *ServiceData, seen map[string]st
 		}
 		data = append(data, &service.UserTypeData{
 			Name:        dt.Name(),
-			VarName:     name,
+			VarName:     protoBufMessageName(at, sd.Scope),
 			Description: dt.Attribute().Description,
 			Def:         protoBufMessageDef(att, sd.Scope),
-			Ref:         ref,
+			Ref:         protoBufGoFullTypeRef(at, sd.PkgName, sd.Scope),
 			Type:        dt,
-		})
-		ca := protoBufContext(att, "", sd.Scope)
-		sd.Validations = append(sd.Validations, &ValidationData{
-			Name:    "Validate" + name,
-			Def:     codegen.RecursiveValidationCode(ca, "message"),
-			ArgName: "message",
-			SrcName: name,
-			SrcRef:  ref,
 		})
 		seen[dt.Name()] = struct{}{}
 		data = append(data, collect(att)...)
@@ -629,6 +614,92 @@ func collectMessages(at *expr.AttributeExpr, sd *ServiceData, seen map[string]st
 		data = append(data, collect(dt.ElemType)...)
 	}
 	return
+}
+
+// addValidation adds a validation function (if any) for the given user type
+// and recurses through the user type adding other validation functions
+// (if any).
+func addValidation(att *expr.AttributeExpr, sd *ServiceData) *ValidationData {
+	ut, ok := att.Type.(expr.UserType)
+	if !ok {
+		return nil
+	}
+	name := protoBufGoTypeName(att, sd.Scope)
+	ref := protoBufGoFullTypeRef(att, sd.PkgName, sd.Scope)
+	for _, n := range sd.Validations {
+		if n.SrcName == name {
+			return n
+		}
+	}
+	att = ut.Attribute()
+	if rt, ok := ut.(*expr.ResultTypeExpr); ok {
+		if a := unwrapAttr(expr.DupAtt(rt.Attribute())); expr.IsArray(a.Type) {
+			// result type collection
+			att = &expr.AttributeExpr{Type: expr.AsObject(rt)}
+		}
+	}
+	ca := protoBufContext(att, "", sd.Scope)
+	if def := codegen.RecursiveValidationCode(ca, "message"); def != "" {
+		v := &ValidationData{
+			Name:    "Validate" + name,
+			Def:     def,
+			ArgName: "message",
+			SrcName: name,
+			SrcRef:  ref,
+		}
+		sd.Validations = append(sd.Validations, v)
+		collectValidations(ca, sd)
+		return v
+	}
+	return nil
+}
+
+// collectValidations recurses through the attribute and collects the
+// validation functions.
+func collectValidations(ca *codegen.ContextualAttribute, sd *ServiceData, seen ...map[string]struct{}) {
+	var s map[string]struct{}
+	if len(seen) > 0 {
+		s = seen[0]
+	} else {
+		s = make(map[string]struct{})
+	}
+	switch dt := ca.Attribute.Expr().Type.(type) {
+	case expr.UserType:
+		name := protoBufMessageName(ca.Attribute.Expr(), sd.Scope)
+		if _, ok := s[name]; ok {
+			return
+		}
+		for _, n := range sd.Validations {
+			if n.SrcName == name {
+				return
+			}
+		}
+		s[name] = struct{}{}
+		sd.Validations = append(sd.Validations, &ValidationData{
+			Name:    "Validate" + name,
+			Def:     codegen.RecursiveValidationCode(ca, "message"),
+			ArgName: "message",
+			SrcName: name,
+			SrcRef:  protoBufGoFullTypeRef(ca.Attribute.Expr(), sd.PkgName, sd.Scope),
+		})
+		att := dt.Attribute()
+		if rt, ok := dt.(*expr.ResultTypeExpr); ok {
+			if a := unwrapAttr(expr.DupAtt(rt.Attribute())); expr.IsArray(a.Type) {
+				// result type collection
+				att = &expr.AttributeExpr{Type: expr.AsObject(rt)}
+			}
+		}
+		collectValidations(ca.Dup(att, ca.Required), sd, seen...)
+	case *expr.Object:
+		for _, nat := range *dt {
+			collectValidations(ca.Dup(nat.Attribute, ca.Attribute.Expr().IsRequired(nat.Name)), sd, seen...)
+		}
+	case *expr.Array:
+		collectValidations(ca.Dup(dt.ElemType, true), sd, seen...)
+	case *expr.Map:
+		collectValidations(ca.Dup(dt.KeyType, true), sd, seen...)
+		collectValidations(ca.Dup(dt.ElemType, true), sd, seen...)
+	}
 }
 
 // buildRequestConvertData builds the convert data for the server and client
@@ -655,13 +726,9 @@ func buildRequestConvertData(request, payload *codegen.ContextualAttribute, md [
 
 	if svr {
 		// server side
-		var (
-			data        *InitData
-			validations *ValidationData
-		)
+		var data *InitData
 		{
 			data = buildInitData(request, payload, "message", "payload", false, sd)
-			validations = sd.ValidationFor(protoBufMessageName(request.Attribute.Expr(), sd.Scope))
 			data.Description = fmt.Sprintf("%s builds the payload of the %q endpoint of the %q service from the gRPC request type.", data.Name, e.Name(), svc.Name)
 			for _, m := range md {
 				// pass the metadata as arguments to payload constructor in server
@@ -684,7 +751,7 @@ func buildRequestConvertData(request, payload *codegen.ContextualAttribute, md [
 			TgtName:    payload.Attribute.Name(),
 			TgtRef:     payload.Attribute.Ref(),
 			Init:       data,
-			Validation: validations,
+			Validation: addValidation(request.Attribute.Expr(), sd),
 		}
 	}
 
@@ -721,15 +788,21 @@ func buildResponseConvertData(response, result *codegen.ContextualAttribute, hdr
 
 	var (
 		svc = sd.Service
+		md  = svc.Method(e.Name())
 	)
 
 	if svr {
 		// server side
 
-		var (
-			data *InitData
-		)
+		var data *InitData
 		{
+			if md.ViewedResult != nil {
+				// If gRPC endpoint returns a viewed result type, do not factor in
+				// required values when generating transformation code because a
+				// required attribute may not exist on all the views.
+				result = result.Dup(result.Attribute.Expr(), result.Required)
+				result.OverrideRequired = true
+			}
 			data = buildInitData(result, response, "result", "message", true, sd)
 			data.Description = fmt.Sprintf("%s builds the gRPC response type from the result of the %q endpoint of the %q service.", data.Name, e.Name(), svc.Name)
 		}
@@ -744,9 +817,7 @@ func buildResponseConvertData(response, result *codegen.ContextualAttribute, hdr
 
 	// client side
 
-	var (
-		data *InitData
-	)
+	var data *InitData
 	{
 		data = buildInitData(response, result, "message", "result", false, sd)
 		data.Description = fmt.Sprintf("%s builds the result type of the %q endpoint of the %q service from the gRPC response type.", data.Name, e.Name(), svc.Name)
@@ -785,13 +856,13 @@ func buildResponseConvertData(response, result *codegen.ContextualAttribute, hdr
 		TgtName:    result.Attribute.Name(),
 		TgtRef:     result.Attribute.Ref(),
 		Init:       data,
-		Validation: sd.ValidationFor(protoBufMessageName(response.Attribute.Expr(), sd.Scope)),
+		Validation: addValidation(response.Attribute.Expr(), sd),
 	}
 }
 
 // buildInitData builds the transformation code to convert source to target.
 //
-// source, target are the source and target contextual attributesr used in the
+// source, target are the source and target contextual attributes used in the
 // transformation
 //
 // sourceVar, targetVar are the source and target variable names used in the
@@ -914,6 +985,13 @@ func buildStreamData(e *expr.GRPCEndpointExpr, sd *ServiceData, svr bool) *Strea
 			if e.MethodExpr.Result.Type != expr.Empty {
 				sendName = md.ServerStream.SendName
 				sendRef = ed.ResultRef
+				if md.ViewedResult != nil {
+					// If streaming result is a viewed result type, do not factor in
+					// required values when generating transformation code because a
+					// required attribute may not exist on all the views.
+					result = result.Dup(result.Attribute.Expr(), result.Required)
+					result.OverrideRequired = true
+				}
 				sendType = &ConvertData{
 					SrcName: result.Attribute.Name(),
 					SrcRef:  result.Attribute.Ref(),
@@ -931,7 +1009,7 @@ func buildStreamData(e *expr.GRPCEndpointExpr, sd *ServiceData, svr bool) *Strea
 					TgtName:    spayload.Attribute.Name(),
 					TgtRef:     spayload.Attribute.Ref(),
 					Init:       buildInitData(request, spayload, "v", "spayload", false, sd),
-					Validation: sd.ValidationFor(protoBufMessageName(request.Attribute.Expr(), sd.Scope)),
+					Validation: addValidation(request.Attribute.Expr(), sd),
 				}
 			}
 			mustClose = md.ServerStream.MustClose
@@ -960,7 +1038,7 @@ func buildStreamData(e *expr.GRPCEndpointExpr, sd *ServiceData, svr bool) *Strea
 					TgtName:    result.Attribute.Name(),
 					TgtRef:     result.Attribute.Ref(),
 					Init:       buildInitData(response, result, "v", resVar, false, sd),
-					Validation: sd.ValidationFor(protoBufMessageName(response.Attribute.Expr(), sd.Scope)),
+					Validation: addValidation(response.Attribute.Expr(), sd),
 				}
 			}
 			mustClose = md.ClientStream.MustClose

@@ -176,6 +176,7 @@ message RTCollection {
 
 message RT {
 	sint32 int_field = 1;
+	string string_field = 2;
 }
 `
 

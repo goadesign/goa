@@ -83,7 +83,8 @@ func TestResponseDecoder(t *testing.T) {
 		DSL  func()
 		Code string
 	}{
-		{"result-with-views", testdata.MessageUserTypeWithNestedUserTypesDSL, testdata.ResultWithViewsResponseDecoderCode},
+		{"result-with-views", testdata.MessageResultTypeWithViewsDSL, testdata.ResultWithViewsResponseDecoderCode},
+		{"result-with-explicit-view", testdata.MessageResultTypeWithExplicitViewDSL, testdata.ResultWithExplicitViewResponseDecoderCode},
 		{"result-array", testdata.MessageArrayDSL, testdata.ResultArrayResponseDecoderCode},
 		{"result-primitive", testdata.UnaryRPCNoPayloadDSL, testdata.ResultPrimitiveResponseDecoderCode},
 		{"result-with-metadata", testdata.MessageWithMetadataDSL, testdata.ResultWithMetadataResponseDecoderCode},

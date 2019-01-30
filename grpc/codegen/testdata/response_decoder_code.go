@@ -1,23 +1,47 @@
 package testdata
 
-const ResultWithViewsResponseDecoderCode = `// DecodeMethodMessageUserTypeWithNestedUserTypesResponse decodes responses
-// from the ServiceMessageUserTypeWithNestedUserTypes
-// MethodMessageUserTypeWithNestedUserTypes endpoint.
-func DecodeMethodMessageUserTypeWithNestedUserTypesResponse(ctx context.Context, v interface{}, hdr, trlr metadata.MD) (interface{}, error) {
+const ResultWithViewsResponseDecoderCode = `// DecodeMethodMessageResultTypeWithViewsResponse decodes responses from the
+// ServiceMessageResultTypeWithViews MethodMessageResultTypeWithViews endpoint.
+func DecodeMethodMessageResultTypeWithViewsResponse(ctx context.Context, v interface{}, hdr, trlr metadata.MD) (interface{}, error) {
 	var view string
 	{
 		if vals := hdr.Get("goa-view"); len(vals) > 0 {
 			view = vals[0]
 		}
 	}
-	message, ok := v.(*pb.MethodMessageUserTypeWithNestedUserTypesResponse)
+	message, ok := v.(*pb.MethodMessageResultTypeWithViewsResponse)
 	if !ok {
-		return nil, goagrpc.ErrInvalidType("ServiceMessageUserTypeWithNestedUserTypes", "MethodMessageUserTypeWithNestedUserTypes", "*pb.MethodMessageUserTypeWithNestedUserTypesResponse", v)
+		return nil, goagrpc.ErrInvalidType("ServiceMessageResultTypeWithViews", "MethodMessageResultTypeWithViews", "*pb.MethodMessageResultTypeWithViewsResponse", v)
 	}
-	res := NewRecursiveTView(message)
-	vres := &servicemessageusertypewithnestedusertypesviews.RecursiveT{Projected: res}
-	vres.View = view
-	return servicemessageusertypewithnestedusertypes.NewRecursiveT(vres), nil
+	res := NewRTView(message)
+	vres := &servicemessageresulttypewithviewsviews.RT{Projected: res, View: view}
+	if err := servicemessageresulttypewithviewsviews.ValidateRT(vres); err != nil {
+		return nil, err
+	}
+	return servicemessageresulttypewithviews.NewRT(vres), nil
+}
+`
+
+const ResultWithExplicitViewResponseDecoderCode = `// DecodeMethodMessageResultTypeWithExplicitViewResponse decodes responses from
+// the ServiceMessageResultTypeWithExplicitView
+// MethodMessageResultTypeWithExplicitView endpoint.
+func DecodeMethodMessageResultTypeWithExplicitViewResponse(ctx context.Context, v interface{}, hdr, trlr metadata.MD) (interface{}, error) {
+	var view string
+	{
+		if vals := hdr.Get("goa-view"); len(vals) > 0 {
+			view = vals[0]
+		}
+	}
+	message, ok := v.(*pb.MethodMessageResultTypeWithExplicitViewResponse)
+	if !ok {
+		return nil, goagrpc.ErrInvalidType("ServiceMessageResultTypeWithExplicitView", "MethodMessageResultTypeWithExplicitView", "*pb.MethodMessageResultTypeWithExplicitViewResponse", v)
+	}
+	res := NewRTView(message)
+	vres := &servicemessageresulttypewithexplicitviewviews.RT{Projected: res, View: view}
+	if err := servicemessageresulttypewithexplicitviewviews.ValidateRT(vres); err != nil {
+		return nil, err
+	}
+	return servicemessageresulttypewithexplicitview.NewRT(vres), nil
 }
 `
 
@@ -27,6 +51,9 @@ func DecodeMethodMessageArrayResponse(ctx context.Context, v interface{}, hdr, t
 	message, ok := v.(*pb.MethodMessageArrayResponse)
 	if !ok {
 		return nil, goagrpc.ErrInvalidType("ServiceMessageArray", "MethodMessageArray", "*pb.MethodMessageArrayResponse", v)
+	}
+	if err := ValidateMethodMessageArrayResponse(message); err != nil {
+		return nil, err
 	}
 	res := NewMethodMessageArrayResponse(message)
 	return res, nil
@@ -103,8 +130,10 @@ func DecodeMethodMessageUserTypeWithNestedUserTypesResponse(ctx context.Context,
 		return nil, goagrpc.ErrInvalidType("ServiceMessageUserTypeWithNestedUserTypes", "MethodMessageUserTypeWithNestedUserTypes", "*pb.RTCollection", v)
 	}
 	res := NewRTCollection(message)
-	vres := servicemessageusertypewithnestedusertypesviews.RTCollection{Projected: res}
-	vres.View = view
+	vres := servicemessageusertypewithnestedusertypesviews.RTCollection{Projected: res, View: view}
+	if err := servicemessageusertypewithnestedusertypesviews.ValidateRTCollection(vres); err != nil {
+		return nil, err
+	}
 	return servicemessageusertypewithnestedusertypes.NewRTCollection(vres), nil
 }
 `
