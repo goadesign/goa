@@ -13,9 +13,6 @@ func unmarshalInnerTypeRequestBodyToServicebodyuserinnerdefaultInnerType(v *Inne
 	if v.B != nil {
 		res.B = *v.B
 	}
-	if v.A == nil {
-		res.A = "defaulta"
-	}
 	if v.B == nil {
 		res.B = "defaultb"
 	}
@@ -37,9 +34,6 @@ func unmarshalInnerTypeRequestBodyToServicebodyuserinnerdefaultInnerType(v *Inne
 	if v.B != nil {
 		res.B = *v.B
 	}
-	if v.A == nil {
-		res.A = "defaulta"
-	}
 	if v.B == nil {
 		res.B = "defaultb"
 	}
@@ -56,9 +50,7 @@ func unmarshalPayloadTypeRequestBodyToServicebodyinlinerecursiveuserPayloadType(
 		A: *v.A,
 		B: v.B,
 	}
-	if v.C != nil {
-		res.C = unmarshalPayloadTypeRequestBodyToServicebodyinlinerecursiveuserPayloadType(v.C)
-	}
+	res.C = unmarshalPayloadTypeRequestBodyToServicebodyinlinerecursiveuserPayloadType(v.C)
 
 	return res
 }
@@ -72,9 +64,7 @@ func unmarshalPayloadTypeRequestBodyToServicebodyinlinerecursiveuserPayloadType(
 		A: *v.A,
 		B: v.B,
 	}
-	if v.C != nil {
-		res.C = unmarshalPayloadTypeRequestBodyToServicebodyinlinerecursiveuserPayloadType(v.C)
-	}
+	res.C = unmarshalPayloadTypeRequestBodyToServicebodyinlinerecursiveuserPayloadType(v.C)
 
 	return res
 }
@@ -120,7 +110,9 @@ func marshalPayloadTypeRequestBodyToServicebodyinlinerecursiveuserPayloadType(v 
 		A: v.A,
 		B: v.B,
 	}
-	res.C = marshalPayloadTypeRequestBodyToServicebodyinlinerecursiveuserPayloadType(v.C)
+	if v.C != nil {
+		res.C = marshalPayloadTypeRequestBodyToServicebodyinlinerecursiveuserPayloadType(v.C)
+	}
 
 	return res
 }
@@ -134,7 +126,9 @@ func marshalServicebodyinlinerecursiveuserPayloadTypeToPayloadTypeRequestBody(v 
 		A: v.A,
 		B: v.B,
 	}
-	res.C = marshalServicebodyinlinerecursiveuserPayloadTypeToPayloadTypeRequestBody(v.C)
+	if v.C != nil {
+		res.C = marshalServicebodyinlinerecursiveuserPayloadTypeToPayloadTypeRequestBody(v.C)
+	}
 
 	return res
 }

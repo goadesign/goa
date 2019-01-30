@@ -883,9 +883,7 @@ var PayloadBodyInlineRecursiveUserConstructorCode = `// NewMethodBodyInlineRecur
 // endpoint payload.
 func NewMethodBodyInlineRecursiveUserPayloadType(body *MethodBodyInlineRecursiveUserRequestBody, a string, b *string) *servicebodyinlinerecursiveuser.PayloadType {
 	v := &servicebodyinlinerecursiveuser.PayloadType{}
-	if body.C != nil {
-		v.C = unmarshalPayloadTypeRequestBodyToServicebodyinlinerecursiveuserPayloadType(body.C)
-	}
+	v.C = unmarshalPayloadTypeRequestBodyToServicebodyinlinerecursiveuserPayloadType(body.C)
 	v.A = a
 	v.B = b
 	return v

@@ -263,13 +263,17 @@ func Decode{{ .Method.VarName }}Response(ctx context.Context, v interface{}, hdr
 	if !ok {
 		return nil, goagrpc.ErrInvalidType("{{ .ServiceName }}", "{{ .Method.Name }}", "{{ .Response.ClientConvert.SrcRef }}", v)
 	}
-	{{- if .Response.ClientConvert.Validation }}
-		err = {{ .Response.ClientConvert.Validation.Name }}(message)
+	{{- if and .Response.ClientConvert.Validation (not .ViewedResultRef) }}
+		if err {{ if or .Response.Headers .Response.Trailers }}={{ else }}:={{ end }} {{ .Response.ClientConvert.Validation.Name }}(message); err != nil {
+			return nil, err
+		}
 	{{- end }}
 	res := {{ .Response.ClientConvert.Init.Name }}({{ range .Response.ClientConvert.Init.Args }}{{ .Name }}, {{ end }})
 	{{- if .ViewedResultRef }}
-		vres := {{ if not .Method.ViewedResult.IsCollection }}&{{ end }}{{ .Method.ViewedResult.FullName }}{Projected: res}
-		vres.View = view
+		vres := {{ if not .Method.ViewedResult.IsCollection }}&{{ end }}{{ .Method.ViewedResult.FullName }}{Projected: res, View: view}
+		if err {{ if or .Response.Headers .Response.Trailers }}={{ else }}:={{ end }} {{ .Method.ViewedResult.ViewsPkg }}.Validate{{ .Method.Result }}(vres); err != nil {
+			return nil, err
+		}
 		return {{ .ServicePkgName }}.{{ .Method.ViewedResult.ResultInit.Name }}({{ range .Method.ViewedResult.ResultInit.Args}}{{ .Name }}, {{ end }}), nil
 	{{- else }}
 		return res, nil

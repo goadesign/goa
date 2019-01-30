@@ -91,8 +91,13 @@ type (
 		Attribute Attributor
 		// NonPointer if true indicates that the attribute type is not generated
 		// as a pointer irrespective of whether the attribue is required or has
-		// a default value.
+		// a default value (expect object types which are always pointers). It
+		// ignores the Pointer, Required, and UseDefault properties when computing
+		// whether the attribute is a pointer.
 		NonPointer bool
+		// OverrideRequired if true ignores the Required property and always
+		// returns false for the requiredness of the attribute.
+		OverrideRequired bool
 		// Pointer if true indicates that the attribute type is generated as a
 		// pointer even if the attribute is required or has a default value.
 		// Array and map types are are always non-pointers. Object types are always
@@ -168,7 +173,7 @@ func (c *ContextualAttribute) IsPointer() bool {
 	if c.Pointer {
 		return true
 	}
-	return !c.Required && c.DefaultValue() == nil
+	return !c.IsRequired() && c.DefaultValue() == nil
 }
 
 // DefaultValue returns the default value of the attribute type if UseDefault
@@ -180,6 +185,17 @@ func (c *ContextualAttribute) DefaultValue() interface{} {
 	return nil
 }
 
+// IsRequired checks if the attribute is a required attribute.
+// If OverrideRequired property is set to true it returns false irrespective
+// of the Required property. If OverrideRequired property is false it returns
+// the value of the Required property.
+func (c *ContextualAttribute) IsRequired() bool {
+	if c.OverrideRequired {
+		return false
+	}
+	return c.Required
+}
+
 // Def returns the attribute type definition.
 func (c *ContextualAttribute) Def() string {
 	return c.Attribute.Def(c.Pointer, c.UseDefault)
@@ -189,11 +205,12 @@ func (c *ContextualAttribute) Def() string {
 // attributor and its requiredness.
 func (c *ContextualAttribute) Dup(attr *expr.AttributeExpr, required bool) *ContextualAttribute {
 	return &ContextualAttribute{
-		Attribute:  c.Attribute.Dup(attr),
-		Required:   required,
-		NonPointer: c.NonPointer,
-		Pointer:    c.Pointer,
-		UseDefault: c.UseDefault,
+		Attribute:        c.Attribute.Dup(attr),
+		Required:         required,
+		NonPointer:       c.NonPointer,
+		OverrideRequired: c.OverrideRequired,
+		Pointer:          c.Pointer,
+		UseDefault:       c.UseDefault,
 	}
 }
 

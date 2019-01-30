@@ -105,9 +105,7 @@ func NewPickStoredBottleCollectionOK(body PickResponseBody) sommelierviews.Store
 			Description: val.Description,
 			Rating:      val.Rating,
 		}
-		if val.Winery != nil {
-			v[i].Winery = unmarshalWineryResponseToSommelierviewsWineryView(val.Winery)
-		}
+		v[i].Winery = unmarshalWineryResponseToSommelierviewsWineryView(val.Winery)
 		if val.Composition != nil {
 			v[i].Composition = make([]*sommelierviews.ComponentView, len(val.Composition))
 			for j, val := range val.Composition {

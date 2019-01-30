@@ -76,8 +76,9 @@ func NewChatSummaryCollection(vresult chattersvcviews.ChatSummaryCollectionView)
 	v := &pb.ChatSummaryCollection{}
 	v.Field = make([]*pb.ChatSummary, len(vresult))
 	for i, val := range vresult {
-		v.Field[i] = &pb.ChatSummary{
-			Message_: *val.Message,
+		v.Field[i] = &pb.ChatSummary{}
+		if val.Message != nil {
+			v.Field[i].Message_ = *val.Message
 		}
 		if val.Length != nil {
 			v.Field[i].Length = int32(*val.Length)
@@ -104,8 +105,9 @@ func NewHistoryPayload(view string, token string) *chattersvc.HistoryPayload {
 }
 
 func NewHistoryResponse(vresult *chattersvcviews.ChatSummaryView) *pb.HistoryResponse {
-	v := &pb.HistoryResponse{
-		Message_: *vresult.Message,
+	v := &pb.HistoryResponse{}
+	if vresult.Message != nil {
+		v.Message_ = *vresult.Message
 	}
 	if vresult.Length != nil {
 		v.Length = int32(*vresult.Length)
