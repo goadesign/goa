@@ -275,7 +275,7 @@ func TestMethodExprValidate(t *testing.T) {
 	}
 }
 
-func TestMethodExpr_EvalName(t *testing.T) {
+func TestMethodExprEvalName(t *testing.T) {
 	cases := map[string]struct {
 		name     string
 		service  *ServiceExpr
