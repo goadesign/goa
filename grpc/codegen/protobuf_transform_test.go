@@ -162,7 +162,7 @@ func newGoaContextAttr(dt expr.DataType, pkg string, scope *codegen.NameScope) *
 func pointerContext(typ expr.DataType, pkg string, scope *codegen.NameScope) *codegen.ContextualAttribute {
 	att := codegen.NewGoAttribute(&expr.AttributeExpr{Type: typ}, pkg, scope)
 	ca := codegen.NewPointerContext(att)
-	ca.NonRequired = true
+	ca.OverrideRequired = true
 	return ca
 }
 

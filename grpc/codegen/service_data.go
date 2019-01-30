@@ -801,7 +801,7 @@ func buildResponseConvertData(response, result *codegen.ContextualAttribute, hdr
 				// required values when generating transformation code because a
 				// required attribute may not exist on all the views.
 				result = result.Dup(result.Attribute.Expr(), result.Required)
-				result.NonRequired = true
+				result.OverrideRequired = true
 			}
 			data = buildInitData(result, response, "result", "message", true, sd)
 			data.Description = fmt.Sprintf("%s builds the gRPC response type from the result of the %q endpoint of the %q service.", data.Name, e.Name(), svc.Name)
@@ -990,7 +990,7 @@ func buildStreamData(e *expr.GRPCEndpointExpr, sd *ServiceData, svr bool) *Strea
 					// required values when generating transformation code because a
 					// required attribute may not exist on all the views.
 					result = result.Dup(result.Attribute.Expr(), result.Required)
-					result.NonRequired = true
+					result.OverrideRequired = true
 				}
 				sendType = &ConvertData{
 					SrcName: result.Attribute.Name(),
