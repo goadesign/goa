@@ -2,26 +2,24 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"net/url"
 	"os"
 	"sync"
 	"time"
 
-	cellar "goa.design/goa/examples/cellar"
-	sommeliersvr "goa.design/goa/examples/cellar/gen/http/sommelier/server"
-	storagesvr "goa.design/goa/examples/cellar/gen/http/storage/server"
-	swaggersvr "goa.design/goa/examples/cellar/gen/http/swagger/server"
-	sommelier "goa.design/goa/examples/cellar/gen/sommelier"
-	storage "goa.design/goa/examples/cellar/gen/storage"
+	calcsvc "goa.design/goa/examples/calc/gen/calc"
+	calcsvcsvr "goa.design/goa/examples/calc/gen/http/calc/server"
 	goahttp "goa.design/goa/http"
 	httpmiddleware "goa.design/goa/http/middleware"
+	"goa.design/goa/http/middleware/xray"
 	"goa.design/goa/middleware"
 )
 
 // handleHTTPServer starts configures and starts a HTTP server on the given
 // URL. It shuts down the server if any error is received in the error channel.
-func handleHTTPServer(ctx context.Context, u *url.URL, sommelierEndpoints *sommelier.Endpoints, storageEndpoints *storage.Endpoints, wg *sync.WaitGroup, errc chan error, logger middleware.Logger, debug bool) {
+func handleHTTPServer(ctx context.Context, u *url.URL, calcEndpoints *calcsvc.Endpoints, wg *sync.WaitGroup, errc chan error, logger middleware.Logger, debug bool, daemon string) {
 
 	// Provide the transport specific request decoder and response encoder.
 	// The goa http package has built-in support for JSON, XML and gob.
@@ -44,20 +42,14 @@ func handleHTTPServer(ctx context.Context, u *url.URL, sommelierEndpoints *somme
 	// the service input and output data structures to HTTP requests and
 	// responses.
 	var (
-		sommelierServer *sommeliersvr.Server
-		storageServer   *storagesvr.Server
-		swaggerServer   *swaggersvr.Server
+		calcServer *calcsvcsvr.Server
 	)
 	{
 		eh := errorHandler(logger)
-		sommelierServer = sommeliersvr.New(sommelierEndpoints, mux, dec, enc, eh)
-		storageServer = storagesvr.New(storageEndpoints, mux, dec, enc, eh, cellar.StorageMultiAddDecoderFunc, cellar.StorageMultiUpdateDecoderFunc)
-		swaggerServer = swaggersvr.New(nil, mux, dec, enc, eh)
+		calcServer = calcsvcsvr.New(calcEndpoints, mux, dec, enc, eh)
 	}
 	// Configure the mux.
-	sommeliersvr.Mount(mux, sommelierServer)
-	storagesvr.Mount(mux, storageServer)
-	swaggersvr.Mount(mux)
+	calcsvcsvr.Mount(mux, calcServer)
 
 	// Wrap the multiplexer with additional middlewares. Middlewares mounted
 	// here apply to all the service endpoints.
@@ -68,20 +60,18 @@ func handleHTTPServer(ctx context.Context, u *url.URL, sommelierEndpoints *somme
 		}
 		handler = httpmiddleware.Log(logger)(handler)
 		handler = httpmiddleware.RequestID()(handler)
+		xrayHndlr, err := xray.New("calc", daemon)
+		if err != nil {
+			logger.Log("error", "cannot connect to xray daemon", "daemon", daemon, "err", err)
+		}
+		// Wrap the Xray and the tracing handler. The order is very important.
+		handler = xrayHndlr(handler)
+		handler = httpmiddleware.Trace()(handler)
 	}
 
 	// Start HTTP server using default configuration, change the code to
 	// configure the server as required by your service.
 	srv := &http.Server{Addr: u.Host, Handler: handler}
-	for _, m := range sommelierServer.Mounts {
-		logger.Log("msg", "serving HTTP", "mount", m.Method, "verb", m.Verb, "path", m.Pattern)
-	}
-	for _, m := range storageServer.Mounts {
-		logger.Log("msg", "serving HTTP", "mount", m.Method, "verb", m.Verb, "path", m.Pattern)
-	}
-	for _, m := range swaggerServer.Mounts {
-		logger.Log("msg", "serving HTTP", "mount", m.Method, "verb", m.Verb, "path", m.Pattern)
-	}
 
 	(*wg).Add(1)
 	go func() {
@@ -89,13 +79,17 @@ func handleHTTPServer(ctx context.Context, u *url.URL, sommelierEndpoints *somme
 
 		// Start HTTP server in a separate goroutine.
 		go func() {
-			logger.Log("msg", "HTTP server listening", "host", u.Host)
+			for _, m := range calcServer.Mounts {
+				logger.Log("msg", fmt.Sprintf("file %q mounted on %s %s", m.Method, m.Verb, m.Pattern))
+			}
+
+			logger.Log("msg", fmt.Sprintf("HTTP server listening on %q", u.Host))
 			errc <- srv.ListenAndServe()
 		}()
 
 		select {
 		case <-ctx.Done():
-			logger.Log("msg", "shutting down HTTP server", "host", u.Host)
+			logger.Log("msg", fmt.Sprintf("shutting down HTTP server at %q", u.Host))
 
 			// Shutdown gracefully with a 30s timeout.
 			ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
@@ -114,6 +108,6 @@ func errorHandler(logger middleware.Logger) func(context.Context, http.ResponseW
 	return func(ctx context.Context, w http.ResponseWriter, err error) {
 		id := ctx.Value(middleware.RequestIDKey).(string)
 		w.Write([]byte("[" + id + "] encoding: " + err.Error()))
-		logger.Log("msg", "error handler", "id", id, "err", err.Error())
+		logger.Log("error", err.Error(), "id", id)
 	}
 }

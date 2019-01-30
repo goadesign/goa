@@ -13,6 +13,7 @@ import (
 
 	divider "goa.design/goa/examples/error"
 	dividersvc "goa.design/goa/examples/error/gen/divider"
+	"goa.design/goa/middleware"
 )
 
 func main() {
@@ -27,14 +28,16 @@ func main() {
 		dbgF      = flag.Bool("debug", false, "Log request and response bodies")
 	)
 	flag.Parse()
-	// Setup logger and goa log adapter. Replace logger with your own using
-	// your log package of choice. The goa.design/middleware/logging/...
-	// packages define log adapters for common log packages.
+	// Setup logger and goa log adapter. Replace logger with your own using your
+	// log package of choice. The goa.design/goa/middleware package define packages
+	// define log adapters for common log packages.
 	var (
-		logger *log.Logger
+		logger  *log.Logger
+		adapter middleware.Logger
 	)
 	{
 		logger = log.New(os.Stderr, "[divider] ", log.Ltime)
+		adapter = middleware.NewLogger(logger)
 	}
 	// Initialize the services.
 	var (
@@ -87,7 +90,7 @@ func main() {
 			} else if u.Port() == "" {
 				u.Host += ":80"
 			}
-			handleHTTPServer(ctx, u, dividerEndpoints, &wg, errc, logger, *dbgF)
+			handleHTTPServer(ctx, u, dividerEndpoints, &wg, errc, adapter, *dbgF)
 		}
 
 		{
@@ -109,7 +112,7 @@ func main() {
 			} else if u.Port() == "" {
 				u.Host += ":8080"
 			}
-			handleGRPCServer(ctx, u, dividerEndpoints, &wg, errc, logger, *dbgF)
+			handleGRPCServer(ctx, u, dividerEndpoints, &wg, errc, adapter, *dbgF)
 		}
 
 	default:

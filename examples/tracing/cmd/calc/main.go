@@ -27,6 +27,7 @@ func main() {
 		versionF  = flag.String("version", "v1", "API version")
 		secureF   = flag.Bool("secure", false, "Use secure scheme (https or grpcs)")
 		dbgF      = flag.Bool("debug", false, "Log request and response bodies")
+		daemonF   = flag.String("daemon", "127.0.0.1:2000", "X-Ray daemon address")
 	)
 	flag.Parse()
 	// Setup logger and goa log adapter. Replace logger with your own using your
@@ -91,7 +92,7 @@ func main() {
 			} else if u.Port() == "" {
 				u.Host += ":80"
 			}
-			handleHTTPServer(ctx, u, calcEndpoints, &wg, errc, adapter, *dbgF)
+			handleHTTPServer(ctx, u, calcEndpoints, &wg, errc, adapter, *dbgF, *daemonF)
 		}
 
 		{
@@ -113,7 +114,7 @@ func main() {
 			} else if u.Port() == "" {
 				u.Host += ":8080"
 			}
-			handleGRPCServer(ctx, u, calcEndpoints, &wg, errc, adapter, *dbgF)
+			handleGRPCServer(ctx, u, calcEndpoints, &wg, errc, adapter, *dbgF, *daemonF)
 		}
 
 	case "production":
@@ -137,7 +138,7 @@ func main() {
 			} else if u.Port() == "" {
 				u.Host += ":443"
 			}
-			handleHTTPServer(ctx, u, calcEndpoints, &wg, errc, adapter, *dbgF)
+			handleHTTPServer(ctx, u, calcEndpoints, &wg, errc, adapter, *dbgF, *daemonF)
 		}
 
 		{
@@ -160,7 +161,7 @@ func main() {
 			} else if u.Port() == "" {
 				u.Host += ":8443"
 			}
-			handleGRPCServer(ctx, u, calcEndpoints, &wg, errc, adapter, *dbgF)
+			handleGRPCServer(ctx, u, calcEndpoints, &wg, errc, adapter, *dbgF, *daemonF)
 		}
 
 	default:

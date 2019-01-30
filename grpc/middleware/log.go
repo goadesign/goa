@@ -7,6 +7,7 @@ import (
 	"io"
 	"time"
 
+	"github.com/golang/protobuf/proto"
 	"goa.design/goa/middleware"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
@@ -39,17 +40,58 @@ func UnaryServerLog(l middleware.Logger) grpc.UnaryServerInterceptor {
 
 		// before executing rpc
 		l.Log("id", reqID,
-			"method", info.FullMethod)
+			"method", info.FullMethod,
+			"bytes", messageLength(req))
 
 		// invoke rpc
-		h, err := handler(ctx, req)
+		resp, err = handler(ctx, req)
 
 		// after executing rpc
 		s, _ := status.FromError(err)
 		l.Log("id", reqID,
 			"status", s.Code(),
+			"bytes", messageLength(resp),
 			"time", time.Since(started).String())
-		return h, err
+		return resp, err
+	})
+}
+
+// StreamServerLog returns a middleware that logs incoming streaming gRPC
+// requests and responses. The middleware uses the request ID set by the
+// RequestID middleware or creates a short unique request ID if missing for
+// each incoming request and logs it with the request and corresponding
+// response details.
+func StreamServerLog(l middleware.Logger) grpc.StreamServerInterceptor {
+	return grpc.StreamServerInterceptor(func(srv interface{}, ss grpc.ServerStream, info *grpc.StreamServerInfo, handler grpc.StreamHandler) error {
+		var reqID string
+		{
+			md, ok := metadata.FromIncomingContext(ss.Context())
+			if !ok {
+				md = metadata.MD{}
+			}
+			reqID = MetadataValue(md, RequestIDMetadataKey)
+			if reqID == "" {
+				reqID = shortID()
+			}
+		}
+
+		started := time.Now()
+
+		// before executing rpc
+		l.Log("id", reqID,
+			"method", info.FullMethod,
+			"msg", "started stream")
+
+		// invoke rpc
+		err := handler(srv, ss)
+
+		// after executing rpc
+		s, _ := status.FromError(err)
+		l.Log("id", reqID,
+			"status", s.Code(),
+			"msg", "completed stream",
+			"time", time.Since(started).String())
+		return err
 	})
 }
 
@@ -59,4 +101,14 @@ func shortID() string {
 	b := make([]byte, 6)
 	io.ReadFull(rand.Reader, b)
 	return base64.RawURLEncoding.EncodeToString(b)
+}
+
+func messageLength(msg interface{}) int64 {
+	var length int64
+	{
+		if m, ok := msg.(proto.Message); ok {
+			length = int64(proto.Size(m))
+		}
+	}
+	return length
 }

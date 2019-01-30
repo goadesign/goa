@@ -48,6 +48,7 @@ func exampleSvrMain(genpkg string, root *expr.RootExpr, svr *expr.ServerExpr) *c
 		{Path: "sync"},
 		{Path: "time"},
 		{Path: rootPath, Name: apiPkg},
+		{Path: "goa.design/goa/middleware"},
 	}
 
 	svrData := Servers.Get(svr)
@@ -137,14 +138,14 @@ const (
 `
 
 	// input: map[string]interface{"APIPkg": string}
-	mainLoggerT = `// Setup logger and goa log adapter. Replace logger with your own using
-	// your log package of choice. The goa.design/middleware/logging/...
-	// packages define log adapters for common log packages.
+	mainLoggerT = `{{ comment "Setup logger and goa log adapter. Replace logger with your own using your log package of choice. The goa.design/goa/middleware package define packages define log adapters for common log packages." }}
 	var (
 		logger *log.Logger
+		adapter middleware.Logger
 	)
 	{
 		logger = log.New(os.Stderr, "[{{ .APIPkg }}] ", log.Ltime)
+		adapter = middleware.NewLogger(logger)
 	}
 `
 
@@ -244,7 +245,7 @@ const (
 			} else if u.Port() == "" {
 				u.Host += ":{{ $u.Port }}"
 			}
-			handle{{ toUpper $u.Transport.Name }}Server(ctx, u, {{ range $.Services }}{{ if .Methods }}{{ .VarName }}Endpoints, {{ end }}{{ end }}&wg, errc, logger, *dbgF)
+			handle{{ toUpper $u.Transport.Name }}Server(ctx, u, {{ range $.Services }}{{ if .Methods }}{{ .VarName }}Endpoints, {{ end }}{{ end }}&wg, errc, adapter, *dbgF)
 		}
 	{{- end }}
 	{{ end }}

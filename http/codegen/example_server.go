@@ -45,7 +45,8 @@ func exampleServer(genpkg string, root *expr.RootExpr, svr *expr.ServerExpr) *co
 		{Path: "sync"},
 		{Path: "time"},
 		{Path: "goa.design/goa/http", Name: "goahttp"},
-		{Path: "goa.design/goa/http/middleware"},
+		{Path: "goa.design/goa/middleware"},
+		{Path: "goa.design/goa/http/middleware", Name: "httpmiddleware"},
 		{Path: "github.com/gorilla/websocket"},
 		{Path: rootPath, Name: apiPkg},
 	}
@@ -76,7 +77,6 @@ func exampleServer(genpkg string, root *expr.RootExpr, svr *expr.ServerExpr) *co
 				"Services": svcdata,
 			},
 		},
-		&codegen.SectionTemplate{Name: "server-http-logger", Source: httpSvrLoggerT},
 		&codegen.SectionTemplate{Name: "server-http-encoding", Source: httpSvrEncodingT},
 		&codegen.SectionTemplate{Name: "server-http-mux", Source: httpSvrMuxT},
 		&codegen.SectionTemplate{
@@ -185,18 +185,7 @@ func {{ .FuncName }}(mw *multipart.Writer, p {{ .Payload.Ref }}) error {
 
 	// input: map[string]interface{}{"Services":[]*ServiceData}
 	httpSvrStartT = `{{ comment "handleHTTPServer starts configures and starts a HTTP server on the given URL. It shuts down the server if any error is received in the error channel." }}
-func handleHTTPServer(ctx context.Context, u *url.URL{{ range $.Services }}{{ if .Service.Methods }}, {{ .Service.VarName }}Endpoints *{{ .Service.PkgName }}.Endpoints{{ end }}{{ end }}, wg *sync.WaitGroup, errc chan error, logger *log.Logger, debug bool) {
-`
-
-	httpSvrLoggerT = `
-	// Setup logger and goa log adapter. Replace logger with your own using
-	// your log package of choice.
-	var (
-		adapter middleware.Logger
-	)
-	{
-		adapter = middleware.NewLogger(logger)
-	}
+func handleHTTPServer(ctx context.Context, u *url.URL{{ range $.Services }}{{ if .Service.Methods }}, {{ .Service.VarName }}Endpoints *{{ .Service.PkgName }}.Endpoints{{ end }}{{ end }}, wg *sync.WaitGroup, errc chan error, logger middleware.Logger, debug bool) {
 `
 
 	httpSvrEncodingT = `
@@ -255,10 +244,10 @@ func handleHTTPServer(ctx context.Context, u *url.URL{{ range $.Services }}{{ if
 	var handler http.Handler = mux
 	{
 		if debug {
-			handler = middleware.Debug(mux, os.Stdout)(handler)
+			handler = httpmiddleware.Debug(mux, os.Stdout)(handler)
 		}
-		handler = middleware.Log(adapter)(handler)
-		handler = middleware.RequestID()(handler)
+		handler = httpmiddleware.Log(logger)(handler)
+		handler = httpmiddleware.RequestID()(handler)
 	}
 `
 
@@ -268,29 +257,25 @@ func handleHTTPServer(ctx context.Context, u *url.URL{{ range $.Services }}{{ if
 	// configure the server as required by your service.
 	srv := &http.Server{Addr: u.Host, Handler: handler}
 
+	{{- range .Services }}
+		for _, m := range {{ .Service.VarName }}Server.Mounts {
+			logger.Log("msg", "serving HTTP", "mount", m.Method, "verb", m.Verb, "path", m.Pattern)
+		}
+	{{- end }}
+
 	(*wg).Add(1)
 	go func() {
 		defer (*wg).Done()
 
 		{{ comment "Start HTTP server in a separate goroutine." }}
 		go func() {
-		{{- range .Services }}
-			for _, m := range {{ .Service.VarName }}Server.Mounts {
-				{{- if .FileServers }}
-				logger.Printf("file %q mounted on %s %s", m.Method, m.Verb, m.Pattern)
-				{{- else }}
-				logger.Printf("method %q mounted on %s %s", m.Method, m.Verb, m.Pattern)
-				{{- end }}
-			}
-		{{- end }}
-
-			logger.Printf("HTTP server listening on %q", u.Host)
+			logger.Log("msg", "HTTP server listening", "host", u.Host)
 			errc <- srv.ListenAndServe()
 		}()
 
 		select {
 		case <-ctx.Done():
-			logger.Printf("shutting down HTTP server at %q", u.Host)
+			logger.Log("msg", "shutting down HTTP server", "host", u.Host)
 
 			{{ comment "Shutdown gracefully with a 30s timeout." }}
 			ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
@@ -307,11 +292,11 @@ func handleHTTPServer(ctx context.Context, u *url.URL{{ range $.Services }}{{ if
 // errorHandler returns a function that writes and logs the given error.
 // The function also writes and logs the error unique ID so that it's possible
 // to correlate.
-func errorHandler(logger *log.Logger) func(context.Context, http.ResponseWriter, error) {
+func errorHandler(logger middleware.Logger) func(context.Context, http.ResponseWriter, error) {
 	return func(ctx context.Context, w http.ResponseWriter, err error) {
 		id := ctx.Value(middleware.RequestIDKey).(string)
 		w.Write([]byte("[" + id + "] encoding: " + err.Error()))
-		logger.Printf("[%s] ERROR: %s", id, err.Error())
+		logger.Log("msg", "error handler", "id", id, "err", err.Error())
 	}
 }
 `

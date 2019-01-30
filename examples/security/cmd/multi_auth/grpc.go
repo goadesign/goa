@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"log"
 	"net"
 	"net/url"
 	"sync"
@@ -18,17 +17,7 @@ import (
 
 // handleGRPCServer starts configures and starts a gRPC server on the given
 // URL. It shuts down the server if any error is received in the error channel.
-func handleGRPCServer(ctx context.Context, u *url.URL, securedServiceEndpoints *securedservice.Endpoints, wg *sync.WaitGroup, errc chan error, logger *log.Logger, debug bool) {
-
-	// Setup goa log adapter. Replace logger with your own using your
-	// log package of choice. The goa.design/middleware/logging/...
-	// packages define log adapters for common log packages.
-	var (
-		adapter middleware.Logger
-	)
-	{
-		adapter = middleware.NewLogger(logger)
-	}
+func handleGRPCServer(ctx context.Context, u *url.URL, securedServiceEndpoints *securedservice.Endpoints, wg *sync.WaitGroup, errc chan error, logger middleware.Logger, debug bool) {
 
 	// Wrap the endpoints with the transport specific layers. The generated
 	// server packages contains code generated from the design which maps
@@ -42,13 +31,21 @@ func handleGRPCServer(ctx context.Context, u *url.URL, securedServiceEndpoints *
 	}
 
 	// Initialize gRPC server with the middleware.
-	srv := grpc.NewServer(grpcmiddleware.WithUnaryServerChain(
-		goagrpcmiddleware.UnaryRequestID(),
-		goagrpcmiddleware.UnaryServerLog(adapter),
-	))
+	srv := grpc.NewServer(
+		grpcmiddleware.WithUnaryServerChain(
+			goagrpcmiddleware.UnaryRequestID(),
+			goagrpcmiddleware.UnaryServerLog(logger),
+		),
+	)
 
 	// Register the servers.
 	pb.RegisterSecuredServiceServer(srv, securedServiceServer)
+
+	for svc, info := range srv.GetServiceInfo() {
+		for _, m := range info.Methods {
+			logger.Log("msg", "serving gRPC method", "method", svc+"/"+m.Name)
+		}
+	}
 
 	(*wg).Add(1)
 	go func() {
@@ -60,13 +57,13 @@ func handleGRPCServer(ctx context.Context, u *url.URL, securedServiceEndpoints *
 			if err != nil {
 				errc <- err
 			}
-			logger.Printf("gRPC server listening on %q", u.Host)
+			logger.Log("msg", "gRPC server listening", "host", u.Host)
 			errc <- srv.Serve(lis)
 		}()
 
 		select {
 		case <-ctx.Done():
-			logger.Printf("shutting down gRPC server at %q", u.Host)
+			logger.Log("msg", "shutting down gRPC server", "host", u.Host)
 			srv.Stop()
 			return
 		}

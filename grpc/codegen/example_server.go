@@ -52,7 +52,8 @@ func exampleServer(genpkg string, root *expr.RootExpr, svr *expr.ServerExpr) *co
 			{Path: "net/url"},
 			{Path: "os"},
 			{Path: "sync"},
-			{Path: "goa.design/goa/grpc/middleware"},
+			{Path: "goa.design/goa/middleware"},
+			{Path: "goa.design/goa/grpc/middleware", Name: "goagrpcmiddleware"},
 			{Path: "google.golang.org/grpc"},
 			{Path: "github.com/grpc-ecosystem/go-grpc-middleware", Name: "grpcmiddleware"},
 			{Path: "goa.design/goa/grpc", Name: "goagrpc"},
@@ -91,7 +92,6 @@ func exampleServer(genpkg string, root *expr.RootExpr, svr *expr.ServerExpr) *co
 					"Services": svcdata,
 				},
 			},
-			&codegen.SectionTemplate{Name: "server-grpc-logger", Source: grpcSvrLoggerT},
 			&codegen.SectionTemplate{
 				Name:   "server-grpc-init",
 				Source: grpcSvrInitT,
@@ -106,7 +106,8 @@ func exampleServer(genpkg string, root *expr.RootExpr, svr *expr.ServerExpr) *co
 					"Services": svcdata,
 				},
 				FuncMap: map[string]interface{}{
-					"goify": codegen.Goify,
+					"goify":      codegen.Goify,
+					"needStream": needStream,
 				},
 			},
 			&codegen.SectionTemplate{
@@ -121,22 +122,23 @@ func exampleServer(genpkg string, root *expr.RootExpr, svr *expr.ServerExpr) *co
 	return &codegen.File{Path: mainPath, SectionTemplates: sections, SkipExist: true}
 }
 
+// needStream returns true if at least one method in the defined services
+// uses stream for sending payload/result.
+func needStream(data []*ServiceData) bool {
+	for _, svc := range data {
+		for _, e := range svc.Endpoints {
+			if e.ServerStream != nil || e.ClientStream != nil {
+				return true
+			}
+		}
+	}
+	return false
+}
+
 const (
 	// input: map[string]interface{}{"Services":[]*ServiceData}
 	grpcSvrStartT = `{{ comment "handleGRPCServer starts configures and starts a gRPC server on the given URL. It shuts down the server if any error is received in the error channel." }}
-func handleGRPCServer(ctx context.Context, u *url.URL{{ range $.Services }}{{ if .Service.Methods }}, {{ .Service.VarName }}Endpoints *{{ .Service.PkgName }}.Endpoints{{ end }}{{ end }}, wg *sync.WaitGroup, errc chan error, logger *log.Logger, debug bool) {
-`
-
-	grpcSvrLoggerT = `
-	// Setup goa log adapter. Replace logger with your own using your
-  // log package of choice. The goa.design/middleware/logging/...
-  // packages define log adapters for common log packages.
-  var (
-    adapter middleware.Logger
-  )
-  {
-    adapter = middleware.NewLogger(logger)
-  }
+func handleGRPCServer(ctx context.Context, u *url.URL{{ range $.Services }}{{ if .Service.Methods }}, {{ .Service.VarName }}Endpoints *{{ .Service.PkgName }}.Endpoints{{ end }}{{ end }}, wg *sync.WaitGroup, errc chan error, logger middleware.Logger, debug bool) {
 `
 
 	// input: map[string]interface{}{"Services":[]*ServiceData}
@@ -164,15 +166,29 @@ func handleGRPCServer(ctx context.Context, u *url.URL{{ range $.Services }}{{ if
 	// input: map[string]interface{}{"Services":[]*ServiceData}
 	grpcRegisterSvrT = `
 	// Initialize gRPC server with the middleware.
-	srv := grpc.NewServer(grpcmiddleware.WithUnaryServerChain(
-		middleware.RequestID(),
-		middleware.Log(adapter),
-	))
+	srv := grpc.NewServer(
+		grpcmiddleware.WithUnaryServerChain(
+			goagrpcmiddleware.UnaryRequestID(),
+			goagrpcmiddleware.UnaryServerLog(logger),
+		),
+	{{- if needStream .Services }}
+		grpcmiddleware.WithStreamServerChain(
+			goagrpcmiddleware.StreamRequestID(),
+			goagrpcmiddleware.StreamServerLog(logger),
+		),
+	{{- end }}
+	)
 
 	// Register the servers.
 	{{- range .Services }}
 	{{ .PkgName }}.Register{{ goify .Service.VarName true }}Server(srv, {{ .Service.VarName }}Server)
 	{{- end }}
+
+	for svc, info := range srv.GetServiceInfo() {
+		for _, m := range info.Methods {
+			logger.Log("msg", "serving gRPC method", "method", svc + "/" + m.Name)
+		}
+	}
 `
 
 	// input: map[string]interface{}{"Services":[]*ServiceData}
@@ -187,13 +203,13 @@ func handleGRPCServer(ctx context.Context, u *url.URL{{ range $.Services }}{{ if
 			if err != nil {
 				errc <- err
 			}
-			logger.Printf("gRPC server listening on %q", u.Host)
+			logger.Log("msg", "gRPC server listening", "host", u.Host)
 			errc <- srv.Serve(lis)
 		}()
 
 		select {
 		case <-ctx.Done():
-			logger.Printf("shutting down gRPC server at %q", u.Host)
+			logger.Log("msg", "shutting down gRPC server", "host", u.Host)
 			srv.Stop()
 			return
 		}
