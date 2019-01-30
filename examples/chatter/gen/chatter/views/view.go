@@ -43,6 +43,33 @@ type ChatSummaryView struct {
 	SentAt *string
 }
 
+var (
+	// ChatSummaryCollectionMap is a map with view names as key and the fields
+	// rendered in the view as values.
+	ChatSummaryCollectionMap = map[string][]string{
+		"tiny": []string{
+			"Message",
+		},
+		"default": []string{
+			"Message",
+			"Length",
+			"SentAt",
+		},
+	}
+	// ChatSummaryMap is a map with view names as key and the fields rendered in
+	// the view as values.
+	ChatSummaryMap = map[string][]string{
+		"tiny": []string{
+			"Message",
+		},
+		"default": []string{
+			"Message",
+			"Length",
+			"SentAt",
+		},
+	}
+)
+
 // ValidateChatSummaryCollection runs the validations defined on the viewed
 // result type ChatSummaryCollection.
 func ValidateChatSummaryCollection(result ChatSummaryCollection) (err error) {

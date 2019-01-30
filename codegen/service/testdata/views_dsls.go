@@ -168,3 +168,28 @@ var ResultWithRecursiveResultTypeDSL = func() {
 		})
 	})
 }
+
+var ResultWithCustomFieldsDSL = func() {
+	var RT = ResultType("application/vnd.result", func() {
+		TypeName("RT")
+		Attributes(func() {
+			Attribute("a", String, func() {
+				Meta("struct:field:name", "CustomA")
+			})
+			Attribute("b", Int)
+			Required("a", "b")
+		})
+		View("default", func() {
+			Attribute("a")
+			Attribute("b")
+		})
+		View("tiny", func() {
+			Attribute("a")
+		})
+	})
+	Service("ResultWithCustomFields", func() {
+		Method("A", func() {
+			Result(RT)
+		})
+	})
+}

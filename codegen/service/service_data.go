@@ -300,6 +300,10 @@ type (
 		Name string
 		// Description is the view description.
 		Description string
+		// Fields is the list of fields rendered in the view.
+		Fields []string
+		// TypeVarName is the Go variable name of the type that defines the view.
+		TypeVarName string
 	}
 
 	// ProjectedTypeData contains the data used to generate a projected type for
@@ -325,6 +329,8 @@ type (
 		TypeInits []*InitData
 		// ViewsPkg is the views package name.
 		ViewsPkg string
+		// Views lists the views defined on the projected type.
+		Views []*ViewData
 	}
 
 	// InitData contains the data to render a constructor.
@@ -1001,6 +1007,7 @@ func buildProjectedType(projected, att *expr.AttributeExpr, viewspkg string, sco
 		projections []*InitData
 		typeInits   []*InitData
 		validations []*ValidateData
+		views       []*ViewData
 
 		varname = viewScope.GoTypeName(projected)
 		pt      = projected.Type.(expr.UserType)
@@ -1009,6 +1016,7 @@ func buildProjectedType(projected, att *expr.AttributeExpr, viewspkg string, sco
 		if _, isrt := pt.(*expr.ResultTypeExpr); isrt {
 			typeInits = buildTypeInits(projected, att, viewspkg, scope, viewScope)
 			projections = buildProjections(projected, att, viewspkg, scope, viewScope)
+			views = buildViews(att.Type.(*expr.ResultTypeExpr), viewScope)
 		}
 		validations = buildValidations(projected, viewScope)
 	}
@@ -1025,7 +1033,27 @@ func buildProjectedType(projected, att *expr.AttributeExpr, viewspkg string, sco
 		TypeInits:   typeInits,
 		Validations: validations,
 		ViewsPkg:    viewspkg,
+		Views:       views,
 	}
+}
+
+// buildViews builds the view data for all the views in the given result type.
+func buildViews(rt *expr.ResultTypeExpr, viewScope *codegen.NameScope) []*ViewData {
+	views := make([]*ViewData, len(rt.Views))
+	for i, view := range rt.Views {
+		vatt := expr.AsObject(view.AttributeExpr.Type)
+		fields := make([]string, len(*vatt))
+		for j, nat := range *vatt {
+			fields[j] = codegen.GoifyAtt(nat.Attribute, nat.Name, true)
+		}
+		views[i] = &ViewData{
+			Name:        view.Name,
+			Description: view.Description,
+			Fields:      fields,
+			TypeVarName: viewScope.GoTypeName(&expr.AttributeExpr{Type: rt}),
+		}
+	}
+	return views
 }
 
 // buildViewedResultType builds a viewed result type from the given result type
@@ -1046,10 +1074,7 @@ func buildViewedResultType(att, projected *expr.AttributeExpr, viewspkg string, 
 		if v, ok := att.Meta["view"]; ok && len(v) > 0 {
 			viewName = v[0]
 		}
-		views = make([]*ViewData, 0, len(rt.Views))
-		for _, view := range rt.Views {
-			views = append(views, &ViewData{Name: view.Name, Description: view.Description})
-		}
+		views = buildViews(rt, viewScope)
 	}
 
 	// build validation data
