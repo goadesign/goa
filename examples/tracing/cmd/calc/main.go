@@ -13,7 +13,6 @@ import (
 
 	calc "goa.design/goa/examples/calc"
 	calcsvc "goa.design/goa/examples/calc/gen/calc"
-	"goa.design/goa/middleware"
 )
 
 func main() {
@@ -30,17 +29,15 @@ func main() {
 		daemonF   = flag.String("daemon", "127.0.0.1:2000", "X-Ray daemon address")
 	)
 	flag.Parse()
-	// Setup logger and goa log adapter. Replace logger with your own using your
-	// log package of choice. The goa.design/goa/middleware package define packages
-	// define log adapters for common log packages.
+
+	// Setup logger. Replace logger with your own log package of choice.
 	var (
-		logger  *log.Logger
-		adapter middleware.Logger
+		logger *log.Logger
 	)
 	{
 		logger = log.New(os.Stderr, "[calc] ", log.Ltime)
-		adapter = middleware.NewLogger(logger)
 	}
+
 	// Initialize the services.
 	var (
 		calcSvc calcsvc.Service
@@ -48,6 +45,7 @@ func main() {
 	{
 		calcSvc = calc.NewCalc(logger)
 	}
+
 	// Wrap the services in endpoints that can be invoked from other services
 	// potentially running in different processes.
 	var (
@@ -56,6 +54,7 @@ func main() {
 	{
 		calcEndpoints = calcsvc.NewEndpoints(calcSvc)
 	}
+
 	// Create channel used by both the signal handler and server goroutines
 	// to notify the main goroutine when to stop the server.
 	errc := make(chan error)
@@ -92,7 +91,7 @@ func main() {
 			} else if u.Port() == "" {
 				u.Host += ":80"
 			}
-			handleHTTPServer(ctx, u, calcEndpoints, &wg, errc, adapter, *dbgF, *daemonF)
+			handleHTTPServer(ctx, u, calcEndpoints, &wg, errc, logger, *dbgF, *daemonF)
 		}
 
 		{
@@ -114,7 +113,7 @@ func main() {
 			} else if u.Port() == "" {
 				u.Host += ":8080"
 			}
-			handleGRPCServer(ctx, u, calcEndpoints, &wg, errc, adapter, *dbgF, *daemonF)
+			handleGRPCServer(ctx, u, calcEndpoints, &wg, errc, logger, *dbgF, *daemonF)
 		}
 
 	case "production":
@@ -138,7 +137,7 @@ func main() {
 			} else if u.Port() == "" {
 				u.Host += ":443"
 			}
-			handleHTTPServer(ctx, u, calcEndpoints, &wg, errc, adapter, *dbgF, *daemonF)
+			handleHTTPServer(ctx, u, calcEndpoints, &wg, errc, logger, *dbgF, *daemonF)
 		}
 
 		{
@@ -161,7 +160,7 @@ func main() {
 			} else if u.Port() == "" {
 				u.Host += ":8443"
 			}
-			handleGRPCServer(ctx, u, calcEndpoints, &wg, errc, adapter, *dbgF, *daemonF)
+			handleGRPCServer(ctx, u, calcEndpoints, &wg, errc, logger, *dbgF, *daemonF)
 		}
 
 	default:

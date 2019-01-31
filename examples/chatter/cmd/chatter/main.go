@@ -13,7 +13,6 @@ import (
 
 	chatter "goa.design/goa/examples/chatter"
 	chattersvc "goa.design/goa/examples/chatter/gen/chatter"
-	"goa.design/goa/middleware"
 )
 
 func main() {
@@ -28,17 +27,15 @@ func main() {
 		dbgF      = flag.Bool("debug", false, "Log request and response bodies")
 	)
 	flag.Parse()
-	// Setup logger and goa log adapter. Replace logger with your own using your
-	// log package of choice. The goa.design/goa/middleware package define packages
-	// define log adapters for common log packages.
+
+	// Setup logger. Replace logger with your own log package of choice.
 	var (
-		logger  *log.Logger
-		adapter middleware.Logger
+		logger *log.Logger
 	)
 	{
 		logger = log.New(os.Stderr, "[chatter] ", log.Ltime)
-		adapter = middleware.NewLogger(logger)
 	}
+
 	// Initialize the services.
 	var (
 		chatterSvc chattersvc.Service
@@ -46,6 +43,7 @@ func main() {
 	{
 		chatterSvc = chatter.NewChatter(logger)
 	}
+
 	// Wrap the services in endpoints that can be invoked from other services
 	// potentially running in different processes.
 	var (
@@ -54,6 +52,7 @@ func main() {
 	{
 		chatterEndpoints = chattersvc.NewEndpoints(chatterSvc)
 	}
+
 	// Create channel used by both the signal handler and server goroutines
 	// to notify the main goroutine when to stop the server.
 	errc := make(chan error)
@@ -68,6 +67,7 @@ func main() {
 
 	var wg sync.WaitGroup
 	ctx, cancel := context.WithCancel(context.Background())
+
 	// Start the servers and send errors (if any) to the error channel.
 	switch *hostF {
 	case "localhost":
@@ -90,7 +90,7 @@ func main() {
 			} else if u.Port() == "" {
 				u.Host += ":80"
 			}
-			handleHTTPServer(ctx, u, chatterEndpoints, &wg, errc, adapter, *dbgF)
+			handleHTTPServer(ctx, u, chatterEndpoints, &wg, errc, logger, *dbgF)
 		}
 
 		{
@@ -112,12 +112,13 @@ func main() {
 			} else if u.Port() == "" {
 				u.Host += ":8080"
 			}
-			handleGRPCServer(ctx, u, chatterEndpoints, &wg, errc, adapter, *dbgF)
+			handleGRPCServer(ctx, u, chatterEndpoints, &wg, errc, logger, *dbgF)
 		}
 
 	default:
 		fmt.Fprintf(os.Stderr, "invalid host argument: %q (valid hosts: localhost)", *hostF)
 	}
+
 	// Wait for signal.
 	logger.Printf("exiting (%v)", <-errc)
 

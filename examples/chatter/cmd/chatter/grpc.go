@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"log"
 	"net"
 	"net/url"
 	"sync"
@@ -10,14 +11,22 @@ import (
 	chattersvc "goa.design/goa/examples/chatter/gen/chatter"
 	"goa.design/goa/examples/chatter/gen/grpc/chatter/pb"
 	chattersvcsvr "goa.design/goa/examples/chatter/gen/grpc/chatter/server"
-	goagrpcmiddleware "goa.design/goa/grpc/middleware"
+	grpcmdlwr "goa.design/goa/grpc/middleware"
 	"goa.design/goa/middleware"
 	"google.golang.org/grpc"
 )
 
 // handleGRPCServer starts configures and starts a gRPC server on the given
 // URL. It shuts down the server if any error is received in the error channel.
-func handleGRPCServer(ctx context.Context, u *url.URL, chatterEndpoints *chattersvc.Endpoints, wg *sync.WaitGroup, errc chan error, logger middleware.Logger, debug bool) {
+func handleGRPCServer(ctx context.Context, u *url.URL, chatterEndpoints *chattersvc.Endpoints, wg *sync.WaitGroup, errc chan error, logger *log.Logger, debug bool) {
+
+	// Setup goa log adapter.
+	var (
+		adapter middleware.Logger
+	)
+	{
+		adapter = middleware.NewLogger(logger)
+	}
 
 	// Wrap the endpoints with the transport specific layers. The generated
 	// server packages contains code generated from the design which maps
@@ -33,12 +42,12 @@ func handleGRPCServer(ctx context.Context, u *url.URL, chatterEndpoints *chatter
 	// Initialize gRPC server with the middleware.
 	srv := grpc.NewServer(
 		grpcmiddleware.WithUnaryServerChain(
-			goagrpcmiddleware.UnaryRequestID(),
-			goagrpcmiddleware.UnaryServerLog(logger),
+			grpcmdlwr.UnaryRequestID(),
+			grpcmdlwr.UnaryServerLog(adapter),
 		),
 		grpcmiddleware.WithStreamServerChain(
-			goagrpcmiddleware.StreamRequestID(),
-			goagrpcmiddleware.StreamServerLog(logger),
+			grpcmdlwr.StreamRequestID(),
+			grpcmdlwr.StreamServerLog(adapter),
 		),
 	)
 
@@ -47,7 +56,7 @@ func handleGRPCServer(ctx context.Context, u *url.URL, chatterEndpoints *chatter
 
 	for svc, info := range srv.GetServiceInfo() {
 		for _, m := range info.Methods {
-			logger.Log("msg", "serving gRPC method", "method", svc+"/"+m.Name)
+			logger.Printf("serving gRPC method %s", svc+"/"+m.Name)
 		}
 	}
 
@@ -61,13 +70,13 @@ func handleGRPCServer(ctx context.Context, u *url.URL, chatterEndpoints *chatter
 			if err != nil {
 				errc <- err
 			}
-			logger.Log("msg", "gRPC server listening", "host", u.Host)
+			logger.Printf("gRPC server listening on %q", u.Host)
 			errc <- srv.Serve(lis)
 		}()
 
 		select {
 		case <-ctx.Done():
-			logger.Log("msg", "shutting down gRPC server", "host", u.Host)
+			logger.Printf("shutting down gRPC server at %q", u.Host)
 			srv.Stop()
 			return
 		}

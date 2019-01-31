@@ -16,7 +16,6 @@ import (
 	cellar "goa.design/goa/examples/cellar"
 	sommelier "goa.design/goa/examples/cellar/gen/sommelier"
 	storage "goa.design/goa/examples/cellar/gen/storage"
-	"goa.design/goa/middleware"
 )
 
 func main() {
@@ -30,16 +29,13 @@ func main() {
 		dbgF      = flag.Bool("debug", false, "Log request and response bodies")
 	)
 	flag.Parse()
-	// Setup logger and goa log adapter. Replace logger with your own using your
-	// log package of choice. The goa.design/goa/middleware package define packages
-	// define log adapters for common log packages.
+
+	// Setup logger. Replace logger with your own log package of choice.
 	var (
-		logger  *log.Logger
-		adapter middleware.Logger
+		logger *log.Logger
 	)
 	{
 		logger = log.New(os.Stderr, "[cellar] ", log.Ltime)
-		adapter = middleware.NewLogger(logger)
 	}
 
 	// Initialize service dependencies such as databases.
@@ -68,6 +64,7 @@ func main() {
 			logger.Fatalf("error creating database: %s", err)
 		}
 	}
+
 	// Wrap the services in endpoints that can be invoked from other services
 	// potentially running in different processes.
 	var (
@@ -78,6 +75,7 @@ func main() {
 		sommelierEndpoints = sommelier.NewEndpoints(sommelierSvc)
 		storageEndpoints = storage.NewEndpoints(storageSvc)
 	}
+
 	// Create channel used by both the signal handler and server goroutines
 	// to notify the main goroutine when to stop the server.
 	errc := make(chan error)
@@ -114,7 +112,7 @@ func main() {
 			} else if u.Port() == "" {
 				u.Host += ":80"
 			}
-			handleHTTPServer(ctx, u, sommelierEndpoints, storageEndpoints, &wg, errc, adapter, *dbgF)
+			handleHTTPServer(ctx, u, sommelierEndpoints, storageEndpoints, &wg, errc, logger, *dbgF)
 		}
 
 	case "goa.design":
@@ -137,7 +135,7 @@ func main() {
 			} else if u.Port() == "" {
 				u.Host += ":443"
 			}
-			handleHTTPServer(ctx, u, sommelierEndpoints, storageEndpoints, &wg, errc, adapter, *dbgF)
+			handleHTTPServer(ctx, u, sommelierEndpoints, storageEndpoints, &wg, errc, logger, *dbgF)
 		}
 
 	default:

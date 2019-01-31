@@ -25,7 +25,7 @@ DEPEND=\
 
 all: lint gen test
 
-travis: depend all
+travis: depend all build-examples clean
 
 # Install protoc
 GOOS=$(shell go env GOOS)
@@ -84,6 +84,30 @@ gen:
 	goa example goa.design/goa/examples/error/design     -o $(GOPATH)/src/goa.design/goa/examples/error    && \
 	goa gen     goa.design/goa/examples/security/design  -o $(GOPATH)/src/goa.design/goa/examples/security && \
 	goa example goa.design/goa/examples/security/design  -o $(GOPATH)/src/goa.design/goa/examples/security
+
+build-examples:
+	@cd $(GOPATH)/src/goa.design/goa/examples/calc && \
+		go build ./cmd/calc && go build ./cmd/calc-cli
+	@cd $(GOPATH)/src/goa.design/goa/examples/cellar && \
+		go build ./cmd/cellar && go build ./cmd/cellar-cli
+	@cd $(GOPATH)/src/goa.design/goa/examples/chatter && \
+		go build ./cmd/chatter && go build ./cmd/chatter-cli
+	@cd $(GOPATH)/src/goa.design/goa/examples/error && \
+		go build ./cmd/divider && go build ./cmd/divider-cli
+	@cd $(GOPATH)/src/goa.design/goa/examples/security && \
+		go build ./cmd/multi_auth && go build ./cmd/multi_auth-cli
+
+clean:
+	@cd $(GOPATH)/src/goa.design/goa/examples/calc && \
+		rm calc calc-cli
+	@cd $(GOPATH)/src/goa.design/goa/examples/cellar && \
+		rm cellar cellar-cli
+	@cd $(GOPATH)/src/goa.design/goa/examples/chatter && \
+		rm chatter chatter-cli
+	@cd $(GOPATH)/src/goa.design/goa/examples/error && \
+		rm divider divider-cli
+	@cd $(GOPATH)/src/goa.design/goa/examples/security && \
+		rm multi_auth multi_auth-cli
 
 test:
 	go test ./...

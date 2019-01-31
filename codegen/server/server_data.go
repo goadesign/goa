@@ -207,15 +207,11 @@ func buildServerData(svr *expr.ServerExpr) *Data {
 				// only HTTP and gRPC are supported right now.
 				break
 			}
-			if expr.Root.API.HTTP.Service(svc) != nil &&
-				hostsSupportTransport(svr.Hosts, string(TransportHTTP)) &&
-				!seenHTTP {
+			if expr.Root.API.HTTP.Service(svc) != nil && !seenHTTP {
 				transports = append(transports, newHTTPTransport())
 				foundTrans[TransportHTTP] = struct{}{}
 			}
-			if expr.Root.API.GRPC.Service(svc) != nil &&
-				hostsSupportTransport(svr.Hosts, string(TransportGRPC)) &&
-				!seenGRPC {
+			if expr.Root.API.GRPC.Service(svc) != nil && !seenGRPC {
 				transports = append(transports, newGRPCTransport())
 				foundTrans[TransportGRPC] = struct{}{}
 			}
@@ -357,17 +353,4 @@ func newHTTPTransport() *TransportData {
 
 func newGRPCTransport() *TransportData {
 	return &TransportData{Type: TransportGRPC, Name: "gRPC"}
-}
-
-// hostsSupportTransport returns true if the given transport is supported by
-// at least one of the hosts.
-func hostsSupportTransport(hosts []*expr.HostExpr, transport string) bool {
-	for _, h := range hosts {
-		for _, s := range h.Schemes() {
-			if strings.HasPrefix(s, transport) {
-				return true
-			}
-		}
-	}
-	return false
 }

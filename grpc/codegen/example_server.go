@@ -53,7 +53,7 @@ func exampleServer(genpkg string, root *expr.RootExpr, svr *expr.ServerExpr) *co
 			{Path: "os"},
 			{Path: "sync"},
 			{Path: "goa.design/goa/middleware"},
-			{Path: "goa.design/goa/grpc/middleware", Name: "goagrpcmiddleware"},
+			{Path: "goa.design/goa/grpc/middleware", Name: "grpcmdlwr"},
 			{Path: "google.golang.org/grpc"},
 			{Path: "github.com/grpc-ecosystem/go-grpc-middleware", Name: "grpcmiddleware"},
 			{Path: "goa.design/goa/grpc", Name: "goagrpc"},
@@ -92,6 +92,7 @@ func exampleServer(genpkg string, root *expr.RootExpr, svr *expr.ServerExpr) *co
 					"Services": svcdata,
 				},
 			},
+			&codegen.SectionTemplate{Name: "server-grpc-logger", Source: grpcSvrLoggerT},
 			&codegen.SectionTemplate{
 				Name:   "server-grpc-init",
 				Source: grpcSvrInitT,
@@ -138,8 +139,18 @@ func needStream(data []*ServiceData) bool {
 const (
 	// input: map[string]interface{}{"Services":[]*ServiceData}
 	grpcSvrStartT = `{{ comment "handleGRPCServer starts configures and starts a gRPC server on the given URL. It shuts down the server if any error is received in the error channel." }}
-func handleGRPCServer(ctx context.Context, u *url.URL{{ range $.Services }}{{ if .Service.Methods }}, {{ .Service.VarName }}Endpoints *{{ .Service.PkgName }}.Endpoints{{ end }}{{ end }}, wg *sync.WaitGroup, errc chan error, logger middleware.Logger, debug bool) {
+func handleGRPCServer(ctx context.Context, u *url.URL{{ range $.Services }}{{ if .Service.Methods }}, {{ .Service.VarName }}Endpoints *{{ .Service.PkgName }}.Endpoints{{ end }}{{ end }}, wg *sync.WaitGroup, errc chan error, logger *log.Logger, debug bool) {
 `
+
+	grpcSvrLoggerT = `
+	// Setup goa log adapter.
+  var (
+    adapter middleware.Logger
+  )
+  {
+    adapter = middleware.NewLogger(logger)
+  }
+	`
 
 	// input: map[string]interface{}{"Services":[]*ServiceData}
 	grpcSvrInitT = `
@@ -168,13 +179,13 @@ func handleGRPCServer(ctx context.Context, u *url.URL{{ range $.Services }}{{ if
 	// Initialize gRPC server with the middleware.
 	srv := grpc.NewServer(
 		grpcmiddleware.WithUnaryServerChain(
-			goagrpcmiddleware.UnaryRequestID(),
-			goagrpcmiddleware.UnaryServerLog(logger),
+			grpcmdlwr.UnaryRequestID(),
+			grpcmdlwr.UnaryServerLog(adapter),
 		),
 	{{- if needStream .Services }}
 		grpcmiddleware.WithStreamServerChain(
-			goagrpcmiddleware.StreamRequestID(),
-			goagrpcmiddleware.StreamServerLog(logger),
+			grpcmdlwr.StreamRequestID(),
+			grpcmdlwr.StreamServerLog(adapter),
 		),
 	{{- end }}
 	)
@@ -186,7 +197,7 @@ func handleGRPCServer(ctx context.Context, u *url.URL{{ range $.Services }}{{ if
 
 	for svc, info := range srv.GetServiceInfo() {
 		for _, m := range info.Methods {
-			logger.Log("msg", "serving gRPC method", "method", svc + "/" + m.Name)
+			logger.Printf("serving gRPC method %s", svc + "/" + m.Name)
 		}
 	}
 `
@@ -203,13 +214,13 @@ func handleGRPCServer(ctx context.Context, u *url.URL{{ range $.Services }}{{ if
 			if err != nil {
 				errc <- err
 			}
-			logger.Log("msg", "gRPC server listening", "host", u.Host)
+			logger.Printf("gRPC server listening on %q", u.Host)
 			errc <- srv.Serve(lis)
 		}()
 
 		select {
 		case <-ctx.Done():
-			logger.Log("msg", "shutting down gRPC server", "host", u.Host)
+			logger.Printf("shutting down gRPC server at %q", u.Host)
 			srv.Stop()
 			return
 		}

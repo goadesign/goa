@@ -13,17 +13,15 @@ const (
 		dbgF      = flag.Bool("debug", false, "Log request and response bodies")
 	)
 	flag.Parse()
-	// Setup logger and goa log adapter. Replace logger with your own using your
-	// log package of choice. The goa.design/goa/middleware package define packages
-	// define log adapters for common log packages.
+
+	// Setup logger. Replace logger with your own log package of choice.
 	var (
-		logger  *log.Logger
-		adapter middleware.Logger
+		logger *log.Logger
 	)
 	{
 		logger = log.New(os.Stderr, "[testapi] ", log.Ltime)
-		adapter = middleware.NewLogger(logger)
 	}
+
 	// Initialize the services.
 	var (
 		serviceSvc service.Service
@@ -31,6 +29,7 @@ const (
 	{
 		serviceSvc = testapi.NewService(logger)
 	}
+
 	// Wrap the services in endpoints that can be invoked from other services
 	// potentially running in different processes.
 	var (
@@ -39,6 +38,7 @@ const (
 	{
 		serviceEndpoints = service.NewEndpoints(serviceSvc)
 	}
+
 	// Create channel used by both the signal handler and server goroutines
 	// to notify the main goroutine when to stop the server.
 	errc := make(chan error)
@@ -53,6 +53,7 @@ const (
 
 	var wg sync.WaitGroup
 	ctx, cancel := context.WithCancel(context.Background())
+
 	// Start the servers and send errors (if any) to the error channel.
 	switch *hostF {
 	case "localhost":
@@ -75,7 +76,7 @@ const (
 			} else if u.Port() == "" {
 				u.Host += ":80"
 			}
-			handleHTTPServer(ctx, u, serviceEndpoints, &wg, errc, adapter, *dbgF)
+			handleHTTPServer(ctx, u, serviceEndpoints, &wg, errc, logger, *dbgF)
 		}
 
 		{
@@ -97,12 +98,13 @@ const (
 			} else if u.Port() == "" {
 				u.Host += ":8080"
 			}
-			handleGRPCServer(ctx, u, serviceEndpoints, &wg, errc, adapter, *dbgF)
+			handleGRPCServer(ctx, u, serviceEndpoints, &wg, errc, logger, *dbgF)
 		}
 
 	default:
 		fmt.Fprintf(os.Stderr, "invalid host argument: %q (valid hosts: localhost)", *hostF)
 	}
+
 	// Wait for signal.
 	logger.Printf("exiting (%v)", <-errc)
 
@@ -126,17 +128,15 @@ const (
 		dbgF      = flag.Bool("debug", false, "Log request and response bodies")
 	)
 	flag.Parse()
-	// Setup logger and goa log adapter. Replace logger with your own using your
-	// log package of choice. The goa.design/goa/middleware package define packages
-	// define log adapters for common log packages.
+
+	// Setup logger. Replace logger with your own log package of choice.
 	var (
-		logger  *log.Logger
-		adapter middleware.Logger
+		logger *log.Logger
 	)
 	{
 		logger = log.New(os.Stderr, "[singleserversinglehost] ", log.Ltime)
-		adapter = middleware.NewLogger(logger)
 	}
+
 	// Initialize the services.
 	var (
 		serviceSvc service.Service
@@ -144,6 +144,7 @@ const (
 	{
 		serviceSvc = singleserversinglehost.NewService(logger)
 	}
+
 	// Wrap the services in endpoints that can be invoked from other services
 	// potentially running in different processes.
 	var (
@@ -152,6 +153,7 @@ const (
 	{
 		serviceEndpoints = service.NewEndpoints(serviceSvc)
 	}
+
 	// Create channel used by both the signal handler and server goroutines
 	// to notify the main goroutine when to stop the server.
 	errc := make(chan error)
@@ -166,6 +168,7 @@ const (
 
 	var wg sync.WaitGroup
 	ctx, cancel := context.WithCancel(context.Background())
+
 	// Start the servers and send errors (if any) to the error channel.
 	switch *hostF {
 	case "dev":
@@ -188,7 +191,7 @@ const (
 			} else if u.Port() == "" {
 				u.Host += ":80"
 			}
-			handleHTTPServer(ctx, u, serviceEndpoints, &wg, errc, adapter, *dbgF)
+			handleHTTPServer(ctx, u, serviceEndpoints, &wg, errc, logger, *dbgF)
 		}
 
 		{
@@ -210,7 +213,7 @@ const (
 			} else if u.Port() == "" {
 				u.Host += ":443"
 			}
-			handleHTTPServer(ctx, u, serviceEndpoints, &wg, errc, adapter, *dbgF)
+			handleHTTPServer(ctx, u, serviceEndpoints, &wg, errc, logger, *dbgF)
 		}
 
 		{
@@ -232,12 +235,13 @@ const (
 			} else if u.Port() == "" {
 				u.Host += ":8080"
 			}
-			handleGRPCServer(ctx, u, serviceEndpoints, &wg, errc, adapter, *dbgF)
+			handleGRPCServer(ctx, u, serviceEndpoints, &wg, errc, logger, *dbgF)
 		}
 
 	default:
 		fmt.Fprintf(os.Stderr, "invalid host argument: %q (valid hosts: dev)", *hostF)
 	}
+
 	// Wait for signal.
 	logger.Printf("exiting (%v)", <-errc)
 
@@ -269,17 +273,15 @@ const (
 		dbgF      = flag.Bool("debug", false, "Log request and response bodies")
 	)
 	flag.Parse()
-	// Setup logger and goa log adapter. Replace logger with your own using your
-	// log package of choice. The goa.design/goa/middleware package define packages
-	// define log adapters for common log packages.
+
+	// Setup logger. Replace logger with your own log package of choice.
 	var (
-		logger  *log.Logger
-		adapter middleware.Logger
+		logger *log.Logger
 	)
 	{
 		logger = log.New(os.Stderr, "[singleserversinglehostwithvariables] ", log.Ltime)
-		adapter = middleware.NewLogger(logger)
 	}
+
 	// Initialize the services.
 	var (
 		serviceSvc service.Service
@@ -287,6 +289,7 @@ const (
 	{
 		serviceSvc = singleserversinglehostwithvariables.NewService(logger)
 	}
+
 	// Wrap the services in endpoints that can be invoked from other services
 	// potentially running in different processes.
 	var (
@@ -295,6 +298,7 @@ const (
 	{
 		serviceEndpoints = service.NewEndpoints(serviceSvc)
 	}
+
 	// Create channel used by both the signal handler and server goroutines
 	// to notify the main goroutine when to stop the server.
 	errc := make(chan error)
@@ -309,6 +313,7 @@ const (
 
 	var wg sync.WaitGroup
 	ctx, cancel := context.WithCancel(context.Background())
+
 	// Start the servers and send errors (if any) to the error channel.
 	switch *hostF {
 	case "dev":
@@ -340,7 +345,7 @@ const (
 			} else if u.Port() == "" {
 				u.Host += ":80"
 			}
-			handleHTTPServer(ctx, u, serviceEndpoints, &wg, errc, adapter, *dbgF)
+			handleHTTPServer(ctx, u, serviceEndpoints, &wg, errc, logger, *dbgF)
 		}
 
 		{
@@ -371,12 +376,13 @@ const (
 			} else if u.Port() == "" {
 				u.Host += ":443"
 			}
-			handleHTTPServer(ctx, u, serviceEndpoints, &wg, errc, adapter, *dbgF)
+			handleHTTPServer(ctx, u, serviceEndpoints, &wg, errc, logger, *dbgF)
 		}
 
 	default:
 		fmt.Fprintf(os.Stderr, "invalid host argument: %q (valid hosts: dev)", *hostF)
 	}
+
 	// Wait for signal.
 	logger.Printf("exiting (%v)", <-errc)
 
@@ -399,26 +405,15 @@ const (
 		dbgF      = flag.Bool("debug", false, "Log request and response bodies")
 	)
 	flag.Parse()
-	// Setup logger and goa log adapter. Replace logger with your own using your
-	// log package of choice. The goa.design/goa/middleware package define packages
-	// define log adapters for common log packages.
+
+	// Setup logger. Replace logger with your own log package of choice.
 	var (
-		logger  *log.Logger
-		adapter middleware.Logger
+		logger *log.Logger
 	)
 	{
 		logger = log.New(os.Stderr, "[serverhostingservicewithfileserver] ", log.Ltime)
-		adapter = middleware.NewLogger(logger)
 	}
-	// Initialize the services.
-	var ()
-	{
-	}
-	// Wrap the services in endpoints that can be invoked from other services
-	// potentially running in different processes.
-	var ()
-	{
-	}
+
 	// Create channel used by both the signal handler and server goroutines
 	// to notify the main goroutine when to stop the server.
 	errc := make(chan error)
@@ -433,6 +428,7 @@ const (
 
 	var wg sync.WaitGroup
 	ctx, cancel := context.WithCancel(context.Background())
+
 	// Start the servers and send errors (if any) to the error channel.
 	switch *hostF {
 	case "svc":
@@ -455,12 +451,13 @@ const (
 			} else if u.Port() == "" {
 				u.Host += ":80"
 			}
-			handleHTTPServer(ctx, u, &wg, errc, adapter, *dbgF)
+			handleHTTPServer(ctx, u, &wg, errc, logger, *dbgF)
 		}
 
 	default:
 		fmt.Fprintf(os.Stderr, "invalid host argument: %q (valid hosts: svc)", *hostF)
 	}
+
 	// Wait for signal.
 	logger.Printf("exiting (%v)", <-errc)
 
@@ -479,21 +476,20 @@ const (
 		hostF     = flag.String("host", "dev", "Server host (valid values: dev)")
 		domainF   = flag.String("domain", "", "Host domain name (overrides host domain specified in service design)")
 		httpPortF = flag.String("http-port", "", "HTTP port (overrides host HTTP port specified in service design)")
+		grpcPortF = flag.String("grpc-port", "", "gRPC port (overrides host gRPC port specified in service design)")
 		secureF   = flag.Bool("secure", false, "Use secure scheme (https or grpcs)")
 		dbgF      = flag.Bool("debug", false, "Log request and response bodies")
 	)
 	flag.Parse()
-	// Setup logger and goa log adapter. Replace logger with your own using your
-	// log package of choice. The goa.design/goa/middleware package define packages
-	// define log adapters for common log packages.
+
+	// Setup logger. Replace logger with your own log package of choice.
 	var (
-		logger  *log.Logger
-		adapter middleware.Logger
+		logger *log.Logger
 	)
 	{
 		logger = log.New(os.Stderr, "[serverhostingservicesubset] ", log.Ltime)
-		adapter = middleware.NewLogger(logger)
 	}
+
 	// Initialize the services.
 	var (
 		serviceSvc service.Service
@@ -501,6 +497,7 @@ const (
 	{
 		serviceSvc = serverhostingservicesubset.NewService(logger)
 	}
+
 	// Wrap the services in endpoints that can be invoked from other services
 	// potentially running in different processes.
 	var (
@@ -509,6 +506,7 @@ const (
 	{
 		serviceEndpoints = service.NewEndpoints(serviceSvc)
 	}
+
 	// Create channel used by both the signal handler and server goroutines
 	// to notify the main goroutine when to stop the server.
 	errc := make(chan error)
@@ -523,6 +521,7 @@ const (
 
 	var wg sync.WaitGroup
 	ctx, cancel := context.WithCancel(context.Background())
+
 	// Start the servers and send errors (if any) to the error channel.
 	switch *hostF {
 	case "dev":
@@ -545,12 +544,35 @@ const (
 			} else if u.Port() == "" {
 				u.Host += ":80"
 			}
-			handleHTTPServer(ctx, u, serviceEndpoints, &wg, errc, adapter, *dbgF)
+			handleHTTPServer(ctx, u, serviceEndpoints, &wg, errc, logger, *dbgF)
+		}
+
+		{
+			addr := "grpc://localhost:8080"
+			u, err := url.Parse(addr)
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "invalid URL %#v: %s", addr, err)
+				os.Exit(1)
+			}
+			if *secureF {
+				u.Scheme = "grpcs"
+			}
+			if *domainF != "" {
+				u.Host = *domainF
+			}
+			if *grpcPortF != "" {
+				h := strings.Split(u.Host, ":")[0]
+				u.Host = h + ":" + *grpcPortF
+			} else if u.Port() == "" {
+				u.Host += ":8080"
+			}
+			handleGRPCServer(ctx, u, serviceEndpoints, &wg, errc, logger, *dbgF)
 		}
 
 	default:
 		fmt.Fprintf(os.Stderr, "invalid host argument: %q (valid hosts: dev)", *hostF)
 	}
+
 	// Wait for signal.
 	logger.Printf("exiting (%v)", <-errc)
 
@@ -569,21 +591,20 @@ const (
 		hostF     = flag.String("host", "dev", "Server host (valid values: dev)")
 		domainF   = flag.String("domain", "", "Host domain name (overrides host domain specified in service design)")
 		httpPortF = flag.String("http-port", "", "HTTP port (overrides host HTTP port specified in service design)")
+		grpcPortF = flag.String("grpc-port", "", "gRPC port (overrides host gRPC port specified in service design)")
 		secureF   = flag.Bool("secure", false, "Use secure scheme (https or grpcs)")
 		dbgF      = flag.Bool("debug", false, "Log request and response bodies")
 	)
 	flag.Parse()
-	// Setup logger and goa log adapter. Replace logger with your own using your
-	// log package of choice. The goa.design/goa/middleware package define packages
-	// define log adapters for common log packages.
+
+	// Setup logger. Replace logger with your own log package of choice.
 	var (
-		logger  *log.Logger
-		adapter middleware.Logger
+		logger *log.Logger
 	)
 	{
 		logger = log.New(os.Stderr, "[serverhostingmultipleservices] ", log.Ltime)
-		adapter = middleware.NewLogger(logger)
 	}
+
 	// Initialize the services.
 	var (
 		serviceSvc        service.Service
@@ -593,6 +614,7 @@ const (
 		serviceSvc = serverhostingmultipleservices.NewService(logger)
 		anotherServiceSvc = serverhostingmultipleservices.NewAnotherService(logger)
 	}
+
 	// Wrap the services in endpoints that can be invoked from other services
 	// potentially running in different processes.
 	var (
@@ -603,6 +625,7 @@ const (
 		serviceEndpoints = service.NewEndpoints(serviceSvc)
 		anotherServiceEndpoints = anotherservice.NewEndpoints(anotherServiceSvc)
 	}
+
 	// Create channel used by both the signal handler and server goroutines
 	// to notify the main goroutine when to stop the server.
 	errc := make(chan error)
@@ -617,6 +640,7 @@ const (
 
 	var wg sync.WaitGroup
 	ctx, cancel := context.WithCancel(context.Background())
+
 	// Start the servers and send errors (if any) to the error channel.
 	switch *hostF {
 	case "dev":
@@ -639,12 +663,35 @@ const (
 			} else if u.Port() == "" {
 				u.Host += ":80"
 			}
-			handleHTTPServer(ctx, u, serviceEndpoints, anotherServiceEndpoints, &wg, errc, adapter, *dbgF)
+			handleHTTPServer(ctx, u, serviceEndpoints, anotherServiceEndpoints, &wg, errc, logger, *dbgF)
+		}
+
+		{
+			addr := "grpc://localhost:8080"
+			u, err := url.Parse(addr)
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "invalid URL %#v: %s", addr, err)
+				os.Exit(1)
+			}
+			if *secureF {
+				u.Scheme = "grpcs"
+			}
+			if *domainF != "" {
+				u.Host = *domainF
+			}
+			if *grpcPortF != "" {
+				h := strings.Split(u.Host, ":")[0]
+				u.Host = h + ":" + *grpcPortF
+			} else if u.Port() == "" {
+				u.Host += ":8080"
+			}
+			handleGRPCServer(ctx, u, serviceEndpoints, anotherServiceEndpoints, &wg, errc, logger, *dbgF)
 		}
 
 	default:
 		fmt.Fprintf(os.Stderr, "invalid host argument: %q (valid hosts: dev)", *hostF)
 	}
+
 	// Wait for signal.
 	logger.Printf("exiting (%v)", <-errc)
 
@@ -667,17 +714,15 @@ const (
 		dbgF      = flag.Bool("debug", false, "Log request and response bodies")
 	)
 	flag.Parse()
-	// Setup logger and goa log adapter. Replace logger with your own using your
-	// log package of choice. The goa.design/goa/middleware package define packages
-	// define log adapters for common log packages.
+
+	// Setup logger. Replace logger with your own log package of choice.
 	var (
-		logger  *log.Logger
-		adapter middleware.Logger
+		logger *log.Logger
 	)
 	{
 		logger = log.New(os.Stderr, "[singleservermultiplehosts] ", log.Ltime)
-		adapter = middleware.NewLogger(logger)
 	}
+
 	// Initialize the services.
 	var (
 		serviceSvc service.Service
@@ -685,6 +730,7 @@ const (
 	{
 		serviceSvc = singleservermultiplehosts.NewService(logger)
 	}
+
 	// Wrap the services in endpoints that can be invoked from other services
 	// potentially running in different processes.
 	var (
@@ -693,6 +739,7 @@ const (
 	{
 		serviceEndpoints = service.NewEndpoints(serviceSvc)
 	}
+
 	// Create channel used by both the signal handler and server goroutines
 	// to notify the main goroutine when to stop the server.
 	errc := make(chan error)
@@ -707,6 +754,7 @@ const (
 
 	var wg sync.WaitGroup
 	ctx, cancel := context.WithCancel(context.Background())
+
 	// Start the servers and send errors (if any) to the error channel.
 	switch *hostF {
 	case "dev":
@@ -729,7 +777,7 @@ const (
 			} else if u.Port() == "" {
 				u.Host += ":80"
 			}
-			handleHTTPServer(ctx, u, serviceEndpoints, &wg, errc, adapter, *dbgF)
+			handleHTTPServer(ctx, u, serviceEndpoints, &wg, errc, logger, *dbgF)
 		}
 
 	case "stage":
@@ -752,12 +800,13 @@ const (
 			} else if u.Port() == "" {
 				u.Host += ":443"
 			}
-			handleHTTPServer(ctx, u, serviceEndpoints, &wg, errc, adapter, *dbgF)
+			handleHTTPServer(ctx, u, serviceEndpoints, &wg, errc, logger, *dbgF)
 		}
 
 	default:
 		fmt.Fprintf(os.Stderr, "invalid host argument: %q (valid hosts: dev|stage)", *hostF)
 	}
+
 	// Wait for signal.
 	logger.Printf("exiting (%v)", <-errc)
 
@@ -783,17 +832,15 @@ const (
 		dbgF      = flag.Bool("debug", false, "Log request and response bodies")
 	)
 	flag.Parse()
-	// Setup logger and goa log adapter. Replace logger with your own using your
-	// log package of choice. The goa.design/goa/middleware package define packages
-	// define log adapters for common log packages.
+
+	// Setup logger. Replace logger with your own log package of choice.
 	var (
-		logger  *log.Logger
-		adapter middleware.Logger
+		logger *log.Logger
 	)
 	{
 		logger = log.New(os.Stderr, "[singleservermultiplehostswithvariables] ", log.Ltime)
-		adapter = middleware.NewLogger(logger)
 	}
+
 	// Initialize the services.
 	var (
 		serviceSvc service.Service
@@ -801,6 +848,7 @@ const (
 	{
 		serviceSvc = singleservermultiplehostswithvariables.NewService(logger)
 	}
+
 	// Wrap the services in endpoints that can be invoked from other services
 	// potentially running in different processes.
 	var (
@@ -809,6 +857,7 @@ const (
 	{
 		serviceEndpoints = service.NewEndpoints(serviceSvc)
 	}
+
 	// Create channel used by both the signal handler and server goroutines
 	// to notify the main goroutine when to stop the server.
 	errc := make(chan error)
@@ -823,6 +872,7 @@ const (
 
 	var wg sync.WaitGroup
 	ctx, cancel := context.WithCancel(context.Background())
+
 	// Start the servers and send errors (if any) to the error channel.
 	switch *hostF {
 	case "dev":
@@ -859,7 +909,7 @@ const (
 			} else if u.Port() == "" {
 				u.Host += ":80"
 			}
-			handleHTTPServer(ctx, u, serviceEndpoints, &wg, errc, adapter, *dbgF)
+			handleHTTPServer(ctx, u, serviceEndpoints, &wg, errc, logger, *dbgF)
 		}
 
 	case "stage":
@@ -884,12 +934,13 @@ const (
 			} else if u.Port() == "" {
 				u.Host += ":443"
 			}
-			handleHTTPServer(ctx, u, serviceEndpoints, &wg, errc, adapter, *dbgF)
+			handleHTTPServer(ctx, u, serviceEndpoints, &wg, errc, logger, *dbgF)
 		}
 
 	default:
 		fmt.Fprintf(os.Stderr, "invalid host argument: %q (valid hosts: dev|stage)", *hostF)
 	}
+
 	// Wait for signal.
 	logger.Printf("exiting (%v)", <-errc)
 

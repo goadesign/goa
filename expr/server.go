@@ -88,6 +88,22 @@ func (s *ServerExpr) Finalize() {
 			URIs:        []URIExpr{"http://localhost:80", "grpc://localhost:8080"},
 		}}
 	}
+	for _, svc := range s.Services {
+		hasHTTP := Root.API.HTTP.Service(svc) != nil
+		hasGRPC := Root.API.GRPC.Service(svc) != nil
+		for _, h := range s.Hosts {
+			if hasHTTP && !h.HasHTTPScheme() {
+				// if a service defines HTTP transport make sure the host defines a
+				// default HTTP server if not already defined.
+				h.URIs = append(h.URIs, URIExpr("http://localhost:80"))
+			}
+			if hasGRPC && !h.HasGRPCScheme() {
+				// if a service defines gRPC transport make sure the host defines a
+				// default gRPC server if not already defined.
+				h.URIs = append(h.URIs, URIExpr("grpc://localhost:8080"))
+			}
+		}
+	}
 	for _, h := range s.Hosts {
 		h.Finalize()
 	}
@@ -202,6 +218,32 @@ func (h *HostExpr) Schemes() []string {
 	}
 	sort.Strings(ss)
 	return ss
+}
+
+// HasHTTPScheme returns true if at least one of the URIs in the host
+// expression define "http" or "https" scheme.
+func (h *HostExpr) HasHTTPScheme() bool {
+	for _, s := range []string{"http", "https"} {
+		for _, sch := range h.Schemes() {
+			if s == sch {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+// HasGRPCScheme returns true if at least one of the URIs in the host
+// expression define "grpc" or "grpcs" scheme.
+func (h *HostExpr) HasGRPCScheme() bool {
+	for _, s := range []string{"grpc", "grpcs"} {
+		for _, sch := range h.Schemes() {
+			if s == sch {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 // Params return the names of the parameters used in URI if any.
