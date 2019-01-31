@@ -7,6 +7,13 @@ import (
 	"goa.design/goa/expr"
 )
 
+type viewedType struct {
+	// Name is the type name.
+	Name string
+	// Views is the view data for all views defined in the type.
+	Views []*ViewData
+}
+
 // ViewsFile returns the views file for the given service to render result
 // types (if any) using the defined views.
 func ViewsFile(genpkg string, service *expr.ServiceExpr) *codegen.File {
@@ -42,6 +49,39 @@ func ViewsFile(genpkg string, service *expr.ServiceExpr) *codegen.File {
 			})
 		}
 
+		// generate a map for result types with view name as key and the fields
+		// rendered in the view as value.
+		var (
+			rtdata []*viewedType
+			seen   = make(map[string]struct{})
+		)
+		{
+			for _, t := range svc.ViewedResultTypes {
+				name := t.Views[0].TypeVarName
+				if _, ok := seen[name]; !ok {
+					rtdata = append(rtdata, &viewedType{Name: name, Views: t.Views})
+					seen[name] = struct{}{}
+				}
+			}
+			for _, t := range svc.ProjectedTypes {
+				if len(t.Views) == 0 {
+					continue
+				}
+				name := t.Views[0].TypeVarName
+				if _, ok := seen[name]; !ok {
+					rtdata = append(rtdata, &viewedType{Name: name, Views: t.Views})
+					seen[name] = struct{}{}
+				}
+			}
+		}
+		sections = append(sections, &codegen.SectionTemplate{
+			Name:   "viewed-type-map",
+			Source: viewedMapT,
+			Data: map[string]interface{}{
+				"ViewedTypes": rtdata,
+			},
+		})
+
 		// validations
 		for _, t := range svc.ViewedResultTypes {
 			sections = append(sections, &codegen.SectionTemplate{
@@ -70,4 +110,21 @@ func {{ .Name }}(result {{ .Ref }}) (err error) {
 	{{ .Validate }}
   return
 }
+`
+
+// input: map[string]interface{}{"ViewedTypes": []*viewedType}
+const viewedMapT = `var (
+{{- range .ViewedTypes }}
+	{{ printf "%sMap is a map of attribute names in result type %s indexed by view name." .Name .Name | comment }}
+	{{ .Name }}Map = map[string][]string{
+	{{- range .Views }}
+		"{{ .Name }}": []string{
+			{{- range $n := .Attributes }}
+				"{{ $n }}",
+			{{- end }}
+		},
+	{{- end }}
+	}
+{{- end }}
+)
 `
