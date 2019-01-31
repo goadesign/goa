@@ -16,15 +16,15 @@ import (
 	sommelier "goa.design/goa/examples/cellar/gen/sommelier"
 	storage "goa.design/goa/examples/cellar/gen/storage"
 	goahttp "goa.design/goa/http"
-	"goa.design/goa/http/middleware"
+	httpmiddleware "goa.design/goa/http/middleware"
+	"goa.design/goa/middleware"
 )
 
 // handleHTTPServer starts configures and starts a HTTP server on the given
 // URL. It shuts down the server if any error is received in the error channel.
 func handleHTTPServer(ctx context.Context, u *url.URL, sommelierEndpoints *sommelier.Endpoints, storageEndpoints *storage.Endpoints, wg *sync.WaitGroup, errc chan error, logger *log.Logger, debug bool) {
 
-	// Setup logger and goa log adapter. Replace logger with your own using
-	// your log package of choice.
+	// Setup goa log adapter.
 	var (
 		adapter middleware.Logger
 	)
@@ -73,15 +73,24 @@ func handleHTTPServer(ctx context.Context, u *url.URL, sommelierEndpoints *somme
 	var handler http.Handler = mux
 	{
 		if debug {
-			handler = middleware.Debug(mux, os.Stdout)(handler)
+			handler = httpmiddleware.Debug(mux, os.Stdout)(handler)
 		}
-		handler = middleware.Log(adapter)(handler)
-		handler = middleware.RequestID()(handler)
+		handler = httpmiddleware.Log(adapter)(handler)
+		handler = httpmiddleware.RequestID()(handler)
 	}
 
 	// Start HTTP server using default configuration, change the code to
 	// configure the server as required by your service.
 	srv := &http.Server{Addr: u.Host, Handler: handler}
+	for _, m := range sommelierServer.Mounts {
+		logger.Printf("HTTP %q mounted on %s %s", m.Method, m.Verb, m.Pattern)
+	}
+	for _, m := range storageServer.Mounts {
+		logger.Printf("HTTP %q mounted on %s %s", m.Method, m.Verb, m.Pattern)
+	}
+	for _, m := range swaggerServer.Mounts {
+		logger.Printf("HTTP %q mounted on %s %s", m.Method, m.Verb, m.Pattern)
+	}
 
 	(*wg).Add(1)
 	go func() {
@@ -89,16 +98,6 @@ func handleHTTPServer(ctx context.Context, u *url.URL, sommelierEndpoints *somme
 
 		// Start HTTP server in a separate goroutine.
 		go func() {
-			for _, m := range sommelierServer.Mounts {
-				logger.Printf("method %q mounted on %s %s", m.Method, m.Verb, m.Pattern)
-			}
-			for _, m := range storageServer.Mounts {
-				logger.Printf("method %q mounted on %s %s", m.Method, m.Verb, m.Pattern)
-			}
-			for _, m := range swaggerServer.Mounts {
-				logger.Printf("file %q mounted on %s %s", m.Method, m.Verb, m.Pattern)
-			}
-
 			logger.Printf("HTTP server listening on %q", u.Host)
 			errc <- srv.ListenAndServe()
 		}()

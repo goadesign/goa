@@ -45,7 +45,8 @@ func exampleServer(genpkg string, root *expr.RootExpr, svr *expr.ServerExpr) *co
 		{Path: "sync"},
 		{Path: "time"},
 		{Path: "goa.design/goa/http", Name: "goahttp"},
-		{Path: "goa.design/goa/http/middleware"},
+		{Path: "goa.design/goa/middleware"},
+		{Path: "goa.design/goa/http/middleware", Name: "httpmdlwr"},
 		{Path: "github.com/gorilla/websocket"},
 		{Path: rootPath, Name: apiPkg},
 	}
@@ -189,15 +190,14 @@ func handleHTTPServer(ctx context.Context, u *url.URL{{ range $.Services }}{{ if
 `
 
 	httpSvrLoggerT = `
-	// Setup logger and goa log adapter. Replace logger with your own using
-	// your log package of choice.
+	// Setup goa log adapter.
 	var (
 		adapter middleware.Logger
 	)
 	{
 		adapter = middleware.NewLogger(logger)
 	}
-`
+	`
 
 	httpSvrEncodingT = `
 	// Provide the transport specific request decoder and response encoder.
@@ -255,10 +255,10 @@ func handleHTTPServer(ctx context.Context, u *url.URL{{ range $.Services }}{{ if
 	var handler http.Handler = mux
 	{
 		if debug {
-			handler = middleware.Debug(mux, os.Stdout)(handler)
+			handler = httpmdlwr.Debug(mux, os.Stdout)(handler)
 		}
-		handler = middleware.Log(adapter)(handler)
-		handler = middleware.RequestID()(handler)
+		handler = httpmdlwr.Log(adapter)(handler)
+		handler = httpmdlwr.RequestID()(handler)
 	}
 `
 
@@ -268,22 +268,18 @@ func handleHTTPServer(ctx context.Context, u *url.URL{{ range $.Services }}{{ if
 	// configure the server as required by your service.
 	srv := &http.Server{Addr: u.Host, Handler: handler}
 
+	{{- range .Services }}
+		for _, m := range {{ .Service.VarName }}Server.Mounts {
+			logger.Printf("HTTP %q mounted on %s %s", m.Method, m.Verb, m.Pattern)
+		}
+	{{- end }}
+
 	(*wg).Add(1)
 	go func() {
 		defer (*wg).Done()
 
 		{{ comment "Start HTTP server in a separate goroutine." }}
 		go func() {
-		{{- range .Services }}
-			for _, m := range {{ .Service.VarName }}Server.Mounts {
-				{{- if .FileServers }}
-				logger.Printf("file %q mounted on %s %s", m.Method, m.Verb, m.Pattern)
-				{{- else }}
-				logger.Printf("method %q mounted on %s %s", m.Method, m.Verb, m.Pattern)
-				{{- end }}
-			}
-		{{- end }}
-
 			logger.Printf("HTTP server listening on %q", u.Host)
 			errc <- srv.ListenAndServe()
 		}()

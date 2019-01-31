@@ -14,7 +14,7 @@ func ServerFiles(genpkg string, root *expr.RootExpr) []*codegen.File {
 	svcLen := len(root.API.GRPC.Services)
 	fw := make([]*codegen.File, 2*svcLen)
 	for i, svc := range root.API.GRPC.Services {
-		fw[i] = server(genpkg, svc)
+		fw[i] = serverFile(genpkg, svc)
 	}
 	for i, svc := range root.API.GRPC.Services {
 		fw[i+svcLen] = serverEncodeDecode(genpkg, svc)
@@ -22,8 +22,8 @@ func ServerFiles(genpkg string, root *expr.RootExpr) []*codegen.File {
 	return fw
 }
 
-// server returns the files defining the gRPC server.
-func server(genpkg string, svc *expr.GRPCServiceExpr) *codegen.File {
+// serverFile returns the files defining the gRPC server.
+func serverFile(genpkg string, svc *expr.GRPCServiceExpr) *codegen.File {
 	path := filepath.Join(codegen.Gendir, "grpc", codegen.SnakeCase(svc.Name()), "server", "server.go")
 	data := GRPCServices.Get(svc.Name())
 	title := fmt.Sprintf("%s GRPC server", svc.Name())

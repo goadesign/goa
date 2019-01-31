@@ -5,8 +5,7 @@ const (
 // URL. It shuts down the server if any error is received in the error channel.
 func handleHTTPServer(ctx context.Context, u *url.URL, serviceEndpoints *service.Endpoints, wg *sync.WaitGroup, errc chan error, logger *log.Logger, debug bool) {
 
-	// Setup logger and goa log adapter. Replace logger with your own using
-	// your log package of choice.
+	// Setup goa log adapter.
 	var (
 		adapter middleware.Logger
 	)
@@ -49,15 +48,18 @@ func handleHTTPServer(ctx context.Context, u *url.URL, serviceEndpoints *service
 	var handler http.Handler = mux
 	{
 		if debug {
-			handler = middleware.Debug(mux, os.Stdout)(handler)
+			handler = httpmdlwr.Debug(mux, os.Stdout)(handler)
 		}
-		handler = middleware.Log(adapter)(handler)
-		handler = middleware.RequestID()(handler)
+		handler = httpmdlwr.Log(adapter)(handler)
+		handler = httpmdlwr.RequestID()(handler)
 	}
 
 	// Start HTTP server using default configuration, change the code to
 	// configure the server as required by your service.
 	srv := &http.Server{Addr: u.Host, Handler: handler}
+	for _, m := range serviceServer.Mounts {
+		logger.Printf("HTTP %q mounted on %s %s", m.Method, m.Verb, m.Pattern)
+	}
 
 	(*wg).Add(1)
 	go func() {
@@ -65,10 +67,6 @@ func handleHTTPServer(ctx context.Context, u *url.URL, serviceEndpoints *service
 
 		// Start HTTP server in a separate goroutine.
 		go func() {
-			for _, m := range serviceServer.Mounts {
-				logger.Printf("method %q mounted on %s %s", m.Method, m.Verb, m.Pattern)
-			}
-
 			logger.Printf("HTTP server listening on %q", u.Host)
 			errc <- srv.ListenAndServe()
 		}()
@@ -103,8 +101,7 @@ func errorHandler(logger *log.Logger) func(context.Context, http.ResponseWriter,
 // URL. It shuts down the server if any error is received in the error channel.
 func handleHTTPServer(ctx context.Context, u *url.URL, wg *sync.WaitGroup, errc chan error, logger *log.Logger, debug bool) {
 
-	// Setup logger and goa log adapter. Replace logger with your own using
-	// your log package of choice.
+	// Setup goa log adapter.
 	var (
 		adapter middleware.Logger
 	)
@@ -147,15 +144,18 @@ func handleHTTPServer(ctx context.Context, u *url.URL, wg *sync.WaitGroup, errc 
 	var handler http.Handler = mux
 	{
 		if debug {
-			handler = middleware.Debug(mux, os.Stdout)(handler)
+			handler = httpmdlwr.Debug(mux, os.Stdout)(handler)
 		}
-		handler = middleware.Log(adapter)(handler)
-		handler = middleware.RequestID()(handler)
+		handler = httpmdlwr.Log(adapter)(handler)
+		handler = httpmdlwr.RequestID()(handler)
 	}
 
 	// Start HTTP server using default configuration, change the code to
 	// configure the server as required by your service.
 	srv := &http.Server{Addr: u.Host, Handler: handler}
+	for _, m := range serviceServer.Mounts {
+		logger.Printf("HTTP %q mounted on %s %s", m.Method, m.Verb, m.Pattern)
+	}
 
 	(*wg).Add(1)
 	go func() {
@@ -163,10 +163,6 @@ func handleHTTPServer(ctx context.Context, u *url.URL, wg *sync.WaitGroup, errc 
 
 		// Start HTTP server in a separate goroutine.
 		go func() {
-			for _, m := range serviceServer.Mounts {
-				logger.Printf("file %q mounted on %s %s", m.Method, m.Verb, m.Pattern)
-			}
-
 			logger.Printf("HTTP server listening on %q", u.Host)
 			errc <- srv.ListenAndServe()
 		}()
@@ -201,8 +197,7 @@ func errorHandler(logger *log.Logger) func(context.Context, http.ResponseWriter,
 // URL. It shuts down the server if any error is received in the error channel.
 func handleHTTPServer(ctx context.Context, u *url.URL, serviceEndpoints *service.Endpoints, wg *sync.WaitGroup, errc chan error, logger *log.Logger, debug bool) {
 
-	// Setup logger and goa log adapter. Replace logger with your own using
-	// your log package of choice.
+	// Setup goa log adapter.
 	var (
 		adapter middleware.Logger
 	)
@@ -245,15 +240,18 @@ func handleHTTPServer(ctx context.Context, u *url.URL, serviceEndpoints *service
 	var handler http.Handler = mux
 	{
 		if debug {
-			handler = middleware.Debug(mux, os.Stdout)(handler)
+			handler = httpmdlwr.Debug(mux, os.Stdout)(handler)
 		}
-		handler = middleware.Log(adapter)(handler)
-		handler = middleware.RequestID()(handler)
+		handler = httpmdlwr.Log(adapter)(handler)
+		handler = httpmdlwr.RequestID()(handler)
 	}
 
 	// Start HTTP server using default configuration, change the code to
 	// configure the server as required by your service.
 	srv := &http.Server{Addr: u.Host, Handler: handler}
+	for _, m := range serviceServer.Mounts {
+		logger.Printf("HTTP %q mounted on %s %s", m.Method, m.Verb, m.Pattern)
+	}
 
 	(*wg).Add(1)
 	go func() {
@@ -261,10 +259,6 @@ func handleHTTPServer(ctx context.Context, u *url.URL, serviceEndpoints *service
 
 		// Start HTTP server in a separate goroutine.
 		go func() {
-			for _, m := range serviceServer.Mounts {
-				logger.Printf("method %q mounted on %s %s", m.Method, m.Verb, m.Pattern)
-			}
-
 			logger.Printf("HTTP server listening on %q", u.Host)
 			errc <- srv.ListenAndServe()
 		}()
@@ -299,8 +293,7 @@ func errorHandler(logger *log.Logger) func(context.Context, http.ResponseWriter,
 // URL. It shuts down the server if any error is received in the error channel.
 func handleHTTPServer(ctx context.Context, u *url.URL, serviceEndpoints *service.Endpoints, anotherServiceEndpoints *anotherservice.Endpoints, wg *sync.WaitGroup, errc chan error, logger *log.Logger, debug bool) {
 
-	// Setup logger and goa log adapter. Replace logger with your own using
-	// your log package of choice.
+	// Setup goa log adapter.
 	var (
 		adapter middleware.Logger
 	)
@@ -346,15 +339,21 @@ func handleHTTPServer(ctx context.Context, u *url.URL, serviceEndpoints *service
 	var handler http.Handler = mux
 	{
 		if debug {
-			handler = middleware.Debug(mux, os.Stdout)(handler)
+			handler = httpmdlwr.Debug(mux, os.Stdout)(handler)
 		}
-		handler = middleware.Log(adapter)(handler)
-		handler = middleware.RequestID()(handler)
+		handler = httpmdlwr.Log(adapter)(handler)
+		handler = httpmdlwr.RequestID()(handler)
 	}
 
 	// Start HTTP server using default configuration, change the code to
 	// configure the server as required by your service.
 	srv := &http.Server{Addr: u.Host, Handler: handler}
+	for _, m := range serviceServer.Mounts {
+		logger.Printf("HTTP %q mounted on %s %s", m.Method, m.Verb, m.Pattern)
+	}
+	for _, m := range anotherServiceServer.Mounts {
+		logger.Printf("HTTP %q mounted on %s %s", m.Method, m.Verb, m.Pattern)
+	}
 
 	(*wg).Add(1)
 	go func() {
@@ -362,13 +361,6 @@ func handleHTTPServer(ctx context.Context, u *url.URL, serviceEndpoints *service
 
 		// Start HTTP server in a separate goroutine.
 		go func() {
-			for _, m := range serviceServer.Mounts {
-				logger.Printf("method %q mounted on %s %s", m.Method, m.Verb, m.Pattern)
-			}
-			for _, m := range anotherServiceServer.Mounts {
-				logger.Printf("method %q mounted on %s %s", m.Method, m.Verb, m.Pattern)
-			}
-
 			logger.Printf("HTTP server listening on %q", u.Host)
 			errc <- srv.ListenAndServe()
 		}()

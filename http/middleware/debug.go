@@ -12,6 +12,7 @@ import (
 	"strings"
 
 	goahttp "goa.design/goa/http"
+	"goa.design/goa/middleware"
 )
 
 // responseDupper tees the response to a buffer and a response writer.
@@ -29,7 +30,7 @@ func Debug(mux goahttp.Muxer, w io.Writer) func(http.Handler) http.Handler {
 		return http.HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {
 			buf := &bytes.Buffer{}
 			// Request ID
-			reqID := r.Context().Value(RequestIDKey)
+			reqID := r.Context().Value(middleware.RequestIDKey)
 			if reqID == nil {
 				reqID = shortID()
 			}
