@@ -1,20 +1,18 @@
 package xray
 
 import (
-	"context"
 	"encoding/json"
 	"errors"
 	"net"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
-	"regexp"
 	"strings"
-	"sync"
 	"testing"
 	"time"
 
-	"goa.design/goa/http/middleware"
+	"goa.design/goa/middleware"
+	"goa.design/goa/middleware/xray"
 )
 
 const (
@@ -137,9 +135,9 @@ func TestMiddleware(t *testing.T) {
 			req, _ = http.NewRequest(c.Request.Method, c.Request.URL.String(), nil)
 			rw     = httptest.NewRecorder()
 			h      = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-				s := r.Context().Value(SegKey)
+				s := r.Context().Value(xray.SegKey)
 				if c.Segment.Exception != "" && s != nil {
-					s.(*Segment).RecordError(errors.New(c.Segment.Exception))
+					s.(*xray.Segment).RecordError(errors.New(c.Segment.Exception))
 				}
 				w.WriteHeader(c.Response.Status)
 			})
@@ -162,12 +160,12 @@ func TestMiddleware(t *testing.T) {
 		js := readUDP(t, func() {
 			m(h).ServeHTTP(rw, req)
 		})
-		var s *Segment
+		var s *xray.Segment
 		elems := strings.Split(js, "\n")
 		if len(elems) != 2 {
 			t.Fatalf("%s: invalid number of lines, expected 2 got %d: %v", k, len(elems), elems)
 		}
-		if elems[0] != udpHeader[:len(udpHeader)-1] {
+		if elems[0] != xray.UDPHeader[:len(xray.UDPHeader)-1] {
 			t.Errorf("%s: invalid header, got %s", k, elems[0])
 		}
 		err = json.Unmarshal([]byte(elems[1]), &s)
@@ -231,126 +229,6 @@ func TestMiddleware(t *testing.T) {
 			t.Errorf("%s: Error is invalid, expected %v got %v", k, c.Segment.Error, s.Error)
 		}
 	}
-}
-
-func TestNewID(t *testing.T) {
-	id := NewID()
-	if len(id) != 16 {
-		t.Errorf("invalid ID length, expected 16 got %d", len(id))
-	}
-	if !regexp.MustCompile("[0-9a-f]{16}").MatchString(id) {
-		t.Errorf("invalid ID format, should be hexadecimal, got %s", id)
-	}
-	if id == NewID() {
-		t.Errorf("ids not unique")
-	}
-}
-
-func TestNewTraceID(t *testing.T) {
-	id := NewTraceID()
-	if len(id) != 35 {
-		t.Errorf("invalid ID length, expected 35 got %d", len(id))
-	}
-	if !regexp.MustCompile("1-[0-9a-f]{8}-[0-9a-f]{16}").MatchString(id) {
-		t.Errorf("invalid Trace ID format, got %s", id)
-	}
-	if id == NewTraceID() {
-		t.Errorf("trace ids not unique")
-	}
-}
-
-func TestPeriodicallyRedialingConn(t *testing.T) {
-
-	t.Run("dial fails, returns error immediately", func(t *testing.T) {
-		dialErr := errors.New("dialErr")
-		_, err := periodicallyRedialingConn(context.Background(), time.Millisecond, func() (net.Conn, error) {
-			return nil, dialErr
-		})
-		if err != dialErr {
-			t.Fatalf("Unexpected err, got %q, expected %q", err, dialErr)
-		}
-	})
-	t.Run("connection gets replaced by new one", func(t *testing.T) {
-		var (
-			firstConn  = &net.UDPConn{}
-			secondConn = &net.UnixConn{}
-			callCount  = 0
-		)
-		wgCheckFirstConnection := sync.WaitGroup{}
-		wgCheckFirstConnection.Add(1)
-		wgThirdDial := sync.WaitGroup{}
-		wgThirdDial.Add(1)
-		dial := func() (net.Conn, error) {
-			callCount++
-			if callCount == 1 {
-				return firstConn, nil
-			}
-			wgCheckFirstConnection.Wait()
-			if callCount == 3 {
-				wgThirdDial.Done()
-			}
-			return secondConn, nil
-		}
-
-		ctx, cancel := context.WithCancel(context.Background())
-		defer cancel()
-		conn, err := periodicallyRedialingConn(ctx, time.Millisecond, dial)
-		if err != nil {
-			t.Fatalf("Expected nil err but got: %v", err)
-		}
-
-		if c := conn(); c != firstConn {
-			t.Fatalf("Unexpected first connection: got %#v, expected %#v", c, firstConn)
-		}
-		wgCheckFirstConnection.Done()
-
-		// by the time the 3rd dial happens, we know conn() should be returning the second connection
-		wgThirdDial.Wait()
-
-		if c := conn(); c != secondConn {
-			t.Fatalf("Unexpected second connection: got %#v, expected %#v", c, secondConn)
-		}
-	})
-	t.Run("connection not replaced if dial errored", func(t *testing.T) {
-		var (
-			firstConn = &net.UDPConn{}
-			callCount = 0
-		)
-		wgCheckFirstConnection := sync.WaitGroup{}
-		wgCheckFirstConnection.Add(1)
-		wgThirdDial := sync.WaitGroup{}
-		wgThirdDial.Add(1)
-		dial := func() (net.Conn, error) {
-			callCount++
-			if callCount == 1 {
-				return firstConn, nil
-			}
-			wgCheckFirstConnection.Wait()
-			if callCount == 3 {
-				wgThirdDial.Done()
-			}
-			return nil, errors.New("dialErr")
-		}
-
-		ctx, cancel := context.WithCancel(context.Background())
-		defer cancel()
-		conn, err := periodicallyRedialingConn(ctx, time.Millisecond, dial)
-		if err != nil {
-			t.Fatalf("Expected nil err but got: %v", err)
-		}
-
-		if c := conn(); c != firstConn {
-			t.Fatalf("Unexpected first connection: got %#v, expected %#v", c, firstConn)
-		}
-		wgCheckFirstConnection.Done()
-
-		// by the time the 3rd dial happens, we know the second dial was processed, and shouldn't have replaced conn()
-		wgThirdDial.Wait()
-
-		if c := conn(); c != firstConn {
-			t.Fatalf("Connection unexpectedly replaced: got %#v, expected %#v", c, firstConn)
-		}
-	})
 }
 
 // readUDP calls sender, reads and returns UDP messages received on udplisten.

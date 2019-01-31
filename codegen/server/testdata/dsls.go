@@ -8,6 +8,7 @@ var NoServerDSL = func() {
 			HTTP(func() {
 				GET("/")
 			})
+			GRPC(func() {})
 		})
 	})
 }
@@ -19,6 +20,7 @@ var SingleServerSingleHostDSL = func() {
 			Host("dev", func() {
 				URI("http://example:8090")
 				URI("https://example:80")
+				URI("grpc://example:8080")
 			})
 		})
 	})
@@ -27,6 +29,7 @@ var SingleServerSingleHostDSL = func() {
 			HTTP(func() {
 				GET("/")
 			})
+			GRPC(func() {})
 		})
 	})
 }
@@ -102,6 +105,7 @@ var ServerHostingServiceSubsetDSL = func() {
 			HTTP(func() {
 				GET("/")
 			})
+			GRPC(func() {})
 		})
 	})
 	Service("IgnoredService", func() {
@@ -109,6 +113,7 @@ var ServerHostingServiceSubsetDSL = func() {
 			HTTP(func() {
 				GET("/")
 			})
+			GRPC(func() {})
 		})
 	})
 }
@@ -127,6 +132,7 @@ var ServerHostingMultipleServicesDSL = func() {
 			HTTP(func() {
 				GET("/")
 			})
+			GRPC(func() {})
 		})
 	})
 	Service("AnotherService", func() {
@@ -134,6 +140,7 @@ var ServerHostingMultipleServicesDSL = func() {
 			HTTP(func() {
 				GET("/")
 			})
+			GRPC(func() {})
 		})
 	})
 }

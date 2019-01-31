@@ -48,6 +48,7 @@ func exampleSvrMain(genpkg string, root *expr.RootExpr, svr *expr.ServerExpr) *c
 		{Path: "sync"},
 		{Path: "time"},
 		{Path: rootPath, Name: apiPkg},
+		{Path: "goa.design/goa/middleware"},
 	}
 
 	svrData := Servers.Get(svr)
@@ -89,12 +90,18 @@ func exampleSvrMain(genpkg string, root *expr.RootExpr, svr *expr.ServerExpr) *c
 				"APIPkg":   apiPkg,
 				"Services": svcData,
 			},
+			FuncMap: map[string]interface{}{
+				"mustInitServices": mustInitServices,
+			},
 		},
 		&codegen.SectionTemplate{
 			Name:   "server-main-endpoints",
 			Source: mainEndpointsT,
 			Data: map[string]interface{}{
 				"Services": svcData,
+			},
+			FuncMap: map[string]interface{}{
+				"mustInitServices": mustInitServices,
 			},
 		},
 		&codegen.SectionTemplate{Name: "server-main-interrupts", Source: mainInterruptsT},
@@ -117,9 +124,21 @@ func exampleSvrMain(genpkg string, root *expr.RootExpr, svr *expr.ServerExpr) *c
 	return &codegen.File{Path: mainPath, SectionTemplates: sections, SkipExist: true}
 }
 
+// mustInitServices returns true if at least one of the services defines methods.
+// It is used by the template to initialize service variables.
+func mustInitServices(data []*service.Data) bool {
+	for _, svc := range data {
+		if len(svc.Methods) > 0 {
+			return true
+		}
+	}
+	return false
+}
+
 const (
 	// input: map[string]interface{"Server": *ServerData}
-	mainStartT = `func main() {
+	mainStartT = `
+func main() {
 	{{ comment "Define command line flags, add any other flag required to configure the service." }}
 	var(
 		hostF = flag.String("host", {{ printf "%q" .Server.DefaultHost.Name }}, "Server host (valid values: {{ (join .Server.AvailableHosts ", ") }})")
@@ -137,9 +156,8 @@ const (
 `
 
 	// input: map[string]interface{"APIPkg": string}
-	mainLoggerT = `// Setup logger and goa log adapter. Replace logger with your own using
-	// your log package of choice. The goa.design/middleware/logging/...
-	// packages define log adapters for common log packages.
+	mainLoggerT = `
+	{{ comment "Setup logger. Replace logger with your own log package of choice." }}
 	var (
 		logger *log.Logger
 	)
@@ -149,7 +167,9 @@ const (
 `
 
 	// input: map[string]interface{"APIPkg": string, "Services": []*service.Data}
-	mainSvcsT = `{{ comment "Initialize the services." }}
+	mainSvcsT = `
+{{- if mustInitServices .Services }}
+	{{ comment "Initialize the services." }}
 	var (
 	{{- range .Services }}
 		{{- if .Methods }}
@@ -164,10 +184,13 @@ const (
 		{{- end }}
 	{{- end }}
 	}
+{{- end }}
 `
 
 	// input: map[string]interface{"Services": []*service.Data}
-	mainEndpointsT = `{{ comment "Wrap the services in endpoints that can be invoked from other services potentially running in different processes." }}
+	mainEndpointsT = `
+{{- if mustInitServices .Services }}
+	{{ comment "Wrap the services in endpoints that can be invoked from other services potentially running in different processes." }}
 	var (
 	{{- range .Services }}
 		{{- if .Methods }}
@@ -182,9 +205,11 @@ const (
 		{{- end }}
 	{{- end }}
 	}
+{{- end }}
 `
 
-	mainInterruptsT = `// Create channel used by both the signal handler and server goroutines
+	mainInterruptsT = `
+	// Create channel used by both the signal handler and server goroutines
 	// to notify the main goroutine when to stop the server.
 	errc := make(chan error)
 
@@ -201,7 +226,8 @@ const (
 `
 
 	// input: map[string]interface{"Server": *Data, "Services": []*service.Data}
-	mainServerHndlrT = `{{ comment "Start the servers and send errors (if any) to the error channel." }}
+	mainServerHndlrT = `
+	{{ comment "Start the servers and send errors (if any) to the error channel." }}
 	switch *hostF {
 {{- range $h := .Server.Hosts }}
 	case {{ printf "%q" $h.Name }}:
@@ -254,7 +280,8 @@ const (
 	}
 `
 
-	mainEndT = `{{ comment "Wait for signal." }}
+	mainEndT = `
+	{{ comment "Wait for signal." }}
 	logger.Printf("exiting (%v)", <-errc)
 
 	{{ comment "Send cancellation signal to the goroutines." }}

@@ -70,6 +70,7 @@ func (d *cliInvoker) Invoke(ctx context.Context, req interface{}) (interface{}, 
 			}
 		}
 	}
+
 	ctx = metadata.NewOutgoingContext(ctx, md)
 
 	var (

@@ -1,84 +1,98 @@
 package middleware
 
 import (
-	"bytes"
 	"context"
 	"crypto/rand"
 	"encoding/base64"
-	"fmt"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/status"
 	"io"
-	"log"
 	"time"
+
+	"github.com/golang/protobuf/proto"
+	"goa.design/goa/middleware"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/metadata"
+	"google.golang.org/grpc/status"
 )
 
-type (
-	// Logger is the logging interface used by the middleware to produce
-	// log entries.
-	Logger interface {
-		// Log creates a log entry using a sequence of alternating keys
-		// and values.
-		Log(keyvals ...interface{})
-	}
-
-	// adapter is a thin wrapper around the stdlib logger that adapts it to
-	// the Logger interface.
-	adapter struct {
-		*log.Logger
-	}
-)
-
-// Log returns a middleware that logs incoming gRPC requests and outgoing
-// responses. The middleware uses the request ID set by the RequestID middleware
-// or creates a short unique request ID if missing for each incoming request and
-// logs it with the request and corresponding response details.
+// UnaryServerLog returns a middleware that logs incoming gRPC requests
+// and outgoing responses. The middleware uses the request ID set by
+// the RequestID middleware or creates a short unique request ID if
+// missing for each incoming request and logs it with the request and
+// corresponding response details.
 //
 // The middleware logs the incoming requests gRPC method. It also logs the
 // response gRPC status code, message length (in bytes), and timing information.
-func Log(l Logger) grpc.UnaryServerInterceptor {
+func UnaryServerLog(l middleware.Logger) grpc.UnaryServerInterceptor {
 	return grpc.UnaryServerInterceptor(func(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (resp interface{}, err error) {
-		reqID := ctx.Value(RequestIDKey)
-		if reqID == nil {
-			reqID = shortID()
+		var reqID string
+		{
+			md, ok := metadata.FromIncomingContext(ctx)
+			if !ok {
+				md = metadata.MD{}
+			}
+			reqID = MetadataValue(md, RequestIDMetadataKey)
+			if reqID == "" {
+				reqID = shortID()
+			}
 		}
+
 		started := time.Now()
 
 		// before executing rpc
 		l.Log("id", reqID,
-			"method", info.FullMethod)
+			"method", info.FullMethod,
+			"bytes", messageLength(req))
 
 		// invoke rpc
-		h, err := handler(ctx, req)
+		resp, err = handler(ctx, req)
 
 		// after executing rpc
 		s, _ := status.FromError(err)
 		l.Log("id", reqID,
 			"status", s.Code(),
+			"bytes", messageLength(resp),
 			"time", time.Since(started).String())
-		return h, err
+		return resp, err
 	})
 }
 
-// NewLogger creates a Logger backed by a stdlib logger.
-func NewLogger(l *log.Logger) Logger {
-	return &adapter{l}
-}
+// StreamServerLog returns a middleware that logs incoming streaming gRPC
+// requests and responses. The middleware uses the request ID set by the
+// RequestID middleware or creates a short unique request ID if missing for
+// each incoming request and logs it with the request and corresponding
+// response details.
+func StreamServerLog(l middleware.Logger) grpc.StreamServerInterceptor {
+	return grpc.StreamServerInterceptor(func(srv interface{}, ss grpc.ServerStream, info *grpc.StreamServerInfo, handler grpc.StreamHandler) error {
+		var reqID string
+		{
+			md, ok := metadata.FromIncomingContext(ss.Context())
+			if !ok {
+				md = metadata.MD{}
+			}
+			reqID = MetadataValue(md, RequestIDMetadataKey)
+			if reqID == "" {
+				reqID = shortID()
+			}
+		}
 
-func (a *adapter) Log(keyvals ...interface{}) {
-	n := (len(keyvals) + 1) / 2
-	if len(keyvals)%2 != 0 {
-		keyvals = append(keyvals, "MISSING")
-	}
-	var fm bytes.Buffer
-	vals := make([]interface{}, n)
-	for i := 0; i < len(keyvals); i += 2 {
-		k := keyvals[i]
-		v := keyvals[i+1]
-		vals[i/2] = v
-		fm.WriteString(fmt.Sprintf(" %s=%%+v", k))
-	}
-	a.Logger.Printf(fm.String(), vals...)
+		started := time.Now()
+
+		// before executing rpc
+		l.Log("id", reqID,
+			"method", info.FullMethod,
+			"msg", "started stream")
+
+		// invoke rpc
+		err := handler(srv, ss)
+
+		// after executing rpc
+		s, _ := status.FromError(err)
+		l.Log("id", reqID,
+			"status", s.Code(),
+			"msg", "completed stream",
+			"time", time.Since(started).String())
+		return err
+	})
 }
 
 // shortID produces a " unique" 6 bytes long string.
@@ -87,4 +101,14 @@ func shortID() string {
 	b := make([]byte, 6)
 	io.ReadFull(rand.Reader, b)
 	return base64.RawURLEncoding.EncodeToString(b)
+}
+
+func messageLength(msg interface{}) int64 {
+	var length int64
+	{
+		if m, ok := msg.(proto.Message); ok {
+			length = int64(proto.Size(m))
+		}
+	}
+	return length
 }

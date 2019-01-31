@@ -28,15 +28,15 @@ func main() {
 		dbgF      = flag.Bool("debug", false, "Log request and response bodies")
 	)
 	flag.Parse()
-	// Setup logger and goa log adapter. Replace logger with your own using
-	// your log package of choice. The goa.design/middleware/logging/...
-	// packages define log adapters for common log packages.
+
+	// Setup logger. Replace logger with your own log package of choice.
 	var (
 		logger *log.Logger
 	)
 	{
 		logger = log.New(os.Stderr, "[calc] ", log.Ltime)
 	}
+
 	// Initialize the services.
 	var (
 		calcSvc calcsvc.Service
@@ -44,6 +44,7 @@ func main() {
 	{
 		calcSvc = calc.NewCalc(logger)
 	}
+
 	// Wrap the services in endpoints that can be invoked from other services
 	// potentially running in different processes.
 	var (
@@ -52,6 +53,7 @@ func main() {
 	{
 		calcEndpoints = calcsvc.NewEndpoints(calcSvc)
 	}
+
 	// Create channel used by both the signal handler and server goroutines
 	// to notify the main goroutine when to stop the server.
 	errc := make(chan error)
@@ -66,6 +68,7 @@ func main() {
 
 	var wg sync.WaitGroup
 	ctx, cancel := context.WithCancel(context.Background())
+
 	// Start the servers and send errors (if any) to the error channel.
 	switch *hostF {
 	case "development":
@@ -163,6 +166,7 @@ func main() {
 	default:
 		fmt.Fprintf(os.Stderr, "invalid host argument: %q (valid hosts: development|production)", *hostF)
 	}
+
 	// Wait for signal.
 	logger.Printf("exiting (%v)", <-errc)
 

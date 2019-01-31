@@ -4,7 +4,8 @@ import (
 	"net/http"
 	"testing"
 
-	"goa.design/goa/http/middleware"
+	httpm "goa.design/goa/http/middleware"
+	"goa.design/goa/middleware"
 )
 
 type (
@@ -56,7 +57,7 @@ func TestRequestID(t *testing.T) {
 			},
 		},
 		{"generate without header",
-			[]middleware.RequestIDOption{middleware.UseXRequestIDHeaderOption(true)},
+			[]middleware.RequestIDOption{httpm.UseXRequestIDHeaderOption(true)},
 			makeRequest(""),
 			func(_ http.ResponseWriter, r *http.Request) {
 				id := getRequestID(r)
@@ -66,7 +67,7 @@ func TestRequestID(t *testing.T) {
 			},
 		},
 		{"accept header",
-			[]middleware.RequestIDOption{middleware.UseXRequestIDHeaderOption(true)},
+			[]middleware.RequestIDOption{httpm.UseXRequestIDHeaderOption(true)},
 			makeRequest("accept+header"),
 			func(_ http.ResponseWriter, r *http.Request) {
 				id := getRequestID(r)
@@ -77,8 +78,8 @@ func TestRequestID(t *testing.T) {
 		},
 		{"truncate header",
 			[]middleware.RequestIDOption{
-				middleware.UseXRequestIDHeaderOption(true),
-				middleware.XRequestHeaderLimitOption(3),
+				httpm.UseXRequestIDHeaderOption(true),
+				httpm.XRequestHeaderLimitOption(3),
 			},
 			makeRequest("too long for length limit"),
 			func(_ http.ResponseWriter, r *http.Request) {
@@ -89,7 +90,7 @@ func TestRequestID(t *testing.T) {
 			},
 		},
 	} {
-		middleware.RequestID(tc.options...)(
+		httpm.RequestID(tc.options...)(
 			&requestIDTestHandler{tc.name, tc.handler}).ServeHTTP(ignored, tc.request)
 	}
 }
