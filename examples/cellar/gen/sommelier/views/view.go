@@ -65,6 +65,58 @@ type ComponentView struct {
 	Percentage *uint32
 }
 
+var (
+	// StoredBottleCollectionMap is a map of attribute names in result type
+	// StoredBottleCollection indexed by view name.
+	StoredBottleCollectionMap = map[string][]string{
+		"default": []string{
+			"id",
+			"name",
+			"winery",
+			"vintage",
+			"composition",
+			"description",
+			"rating",
+		},
+		"tiny": []string{
+			"id",
+			"name",
+			"winery",
+		},
+	}
+	// StoredBottleMap is a map of attribute names in result type StoredBottle
+	// indexed by view name.
+	StoredBottleMap = map[string][]string{
+		"default": []string{
+			"id",
+			"name",
+			"winery",
+			"vintage",
+			"composition",
+			"description",
+			"rating",
+		},
+		"tiny": []string{
+			"id",
+			"name",
+			"winery",
+		},
+	}
+	// WineryMap is a map of attribute names in result type Winery indexed by view
+	// name.
+	WineryMap = map[string][]string{
+		"default": []string{
+			"name",
+			"region",
+			"country",
+			"url",
+		},
+		"tiny": []string{
+			"name",
+		},
+	}
+)
+
 // ValidateStoredBottleCollection runs the validations defined on the viewed
 // result type StoredBottleCollection.
 func ValidateStoredBottleCollection(result StoredBottleCollection) (err error) {

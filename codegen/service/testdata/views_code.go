@@ -14,6 +14,20 @@ type ResultTypeView struct {
 	B *string
 }
 
+var (
+	// ResultTypeMap is a map of attribute names in result type ResultType indexed
+	// by view name.
+	ResultTypeMap = map[string][]string{
+		"default": []string{
+			"a",
+			"b",
+		},
+		"tiny": []string{
+			"a",
+		},
+	}
+)
+
 // ValidateResultType runs the validations defined on the viewed result type
 // ResultType.
 func ValidateResultType(result *ResultType) (err error) {
@@ -67,6 +81,31 @@ type ResultTypeView struct {
 	A *string
 	B *string
 }
+
+var (
+	// ResultTypeCollectionMap is a map of attribute names in result type
+	// ResultTypeCollection indexed by view name.
+	ResultTypeCollectionMap = map[string][]string{
+		"default": []string{
+			"a",
+			"b",
+		},
+		"tiny": []string{
+			"a",
+		},
+	}
+	// ResultTypeMap is a map of attribute names in result type ResultType indexed
+	// by view name.
+	ResultTypeMap = map[string][]string{
+		"default": []string{
+			"a",
+			"b",
+		},
+		"tiny": []string{
+			"a",
+		},
+	}
+)
 
 // ValidateResultTypeCollection runs the validations defined on the viewed
 // result type ResultTypeCollection.
@@ -145,6 +184,20 @@ type UserTypeView struct {
 	A *string
 }
 
+var (
+	// ResultTypeMap is a map of attribute names in result type ResultType indexed
+	// by view name.
+	ResultTypeMap = map[string][]string{
+		"default": []string{
+			"a",
+			"b",
+		},
+		"tiny": []string{
+			"a",
+		},
+	}
+)
+
 // ValidateResultType runs the validations defined on the viewed result type
 // ResultType.
 func ValidateResultType(result *ResultType) (err error) {
@@ -217,6 +270,46 @@ type RT3View struct {
 	Y map[int]*UserTypeView
 	Z *string
 }
+
+var (
+	// RTMap is a map of attribute names in result type RT indexed by view name.
+	RTMap = map[string][]string{
+		"default": []string{
+			"a",
+			"b",
+			"c",
+		},
+		"tiny": []string{
+			"b",
+			"c",
+		},
+	}
+	// RT2Map is a map of attribute names in result type RT2 indexed by view name.
+	RT2Map = map[string][]string{
+		"default": []string{
+			"c",
+			"d",
+		},
+		"extended": []string{
+			"c",
+			"d",
+			"e",
+		},
+		"tiny": []string{
+			"d",
+		},
+	}
+	// RT3Map is a map of attribute names in result type RT3 indexed by view name.
+	RT3Map = map[string][]string{
+		"default": []string{
+			"x",
+			"y",
+		},
+		"tiny": []string{
+			"x",
+		},
+	}
+)
 
 // ValidateRT runs the validations defined on the viewed result type RT.
 func ValidateRT(result *RT) (err error) {
@@ -339,6 +432,18 @@ type RTView struct {
 	A *RTView
 }
 
+var (
+	// RTMap is a map of attribute names in result type RT indexed by view name.
+	RTMap = map[string][]string{
+		"default": []string{
+			"a",
+		},
+		"tiny": []string{
+			"a",
+		},
+	}
+)
+
 // ValidateRT runs the validations defined on the viewed result type RT.
 func ValidateRT(result *RT) (err error) {
 	switch result.View {
@@ -376,6 +481,68 @@ func ValidateRTViewTiny(result *RTView) (err error) {
 		if err2 := ValidateRTView(result.A); err2 != nil {
 			err = goa.MergeErrors(err, err2)
 		}
+	}
+	return
+}
+`
+
+const ResultWithCustomFieldsCode = `// RT is the viewed result type that is projected based on a view.
+type RT struct {
+	// Type to project
+	Projected *RTView
+	// View to render
+	View string
+}
+
+// RTView is a type that runs validations on a projected type.
+type RTView struct {
+	CustomA *string
+	B       *int
+}
+
+var (
+	// RTMap is a map of attribute names in result type RT indexed by view name.
+	RTMap = map[string][]string{
+		"default": []string{
+			"a",
+			"b",
+		},
+		"tiny": []string{
+			"a",
+		},
+	}
+)
+
+// ValidateRT runs the validations defined on the viewed result type RT.
+func ValidateRT(result *RT) (err error) {
+	switch result.View {
+	case "default", "":
+		err = ValidateRTView(result.Projected)
+	case "tiny":
+		err = ValidateRTViewTiny(result.Projected)
+	default:
+		err = goa.InvalidEnumValueError("view", result.View, []interface{}{"default", "tiny"})
+	}
+	return
+}
+
+// ValidateRTView runs the validations defined on RTView using the "default"
+// view.
+func ValidateRTView(result *RTView) (err error) {
+	if result.CustomA == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("a", "result"))
+	}
+	if result.B == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("b", "result"))
+	}
+	return
+}
+
+// ValidateRTViewTiny runs the validations defined on RTView using the "tiny"
+// view.
+func ValidateRTViewTiny(result *RTView) (err error) {
+	if result.CustomA == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("a", "result"))
 	}
 	return
 }
