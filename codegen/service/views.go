@@ -115,12 +115,12 @@ func {{ .Name }}(result {{ .Ref }}) (err error) {
 // input: map[string]interface{}{"ViewedTypes": []*viewedType}
 const viewedMapT = `var (
 {{- range .ViewedTypes }}
-	{{ printf "%sMap is a map with view names as key and the fields rendered in the view as values." .Name | comment }}
+	{{ printf "%sMap is a map of attribute names in result type %s indexed by view name." .Name .Name | comment }}
 	{{ .Name }}Map = map[string][]string{
 	{{- range .Views }}
 		"{{ .Name }}": []string{
-			{{- range $f := .Fields }}
-				"{{ $f }}",
+			{{- range $n := .Attributes }}
+				"{{ $n }}",
 			{{- end }}
 		},
 	{{- end }}

@@ -300,8 +300,8 @@ type (
 		Name string
 		// Description is the view description.
 		Description string
-		// Fields is the list of fields rendered in the view.
-		Fields []string
+		// Attributes is the list of attributes rendered in the view.
+		Attributes []string
 		// TypeVarName is the Go variable name of the type that defines the view.
 		TypeVarName string
 	}
@@ -1042,14 +1042,14 @@ func buildViews(rt *expr.ResultTypeExpr, viewScope *codegen.NameScope) []*ViewDa
 	views := make([]*ViewData, len(rt.Views))
 	for i, view := range rt.Views {
 		vatt := expr.AsObject(view.AttributeExpr.Type)
-		fields := make([]string, len(*vatt))
+		attrs := make([]string, len(*vatt))
 		for j, nat := range *vatt {
-			fields[j] = codegen.GoifyAtt(nat.Attribute, nat.Name, true)
+			attrs[j] = nat.Name
 		}
 		views[i] = &ViewData{
 			Name:        view.Name,
 			Description: view.Description,
-			Fields:      fields,
+			Attributes:  attrs,
 			TypeVarName: viewScope.GoTypeName(&expr.AttributeExpr{Type: rt}),
 		}
 	}

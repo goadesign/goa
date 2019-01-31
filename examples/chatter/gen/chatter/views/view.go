@@ -44,28 +44,28 @@ type ChatSummaryView struct {
 }
 
 var (
-	// ChatSummaryCollectionMap is a map with view names as key and the fields
-	// rendered in the view as values.
+	// ChatSummaryCollectionMap is a map of attribute names in result type
+	// ChatSummaryCollection indexed by view name.
 	ChatSummaryCollectionMap = map[string][]string{
 		"tiny": []string{
-			"Message",
+			"message",
 		},
 		"default": []string{
-			"Message",
-			"Length",
-			"SentAt",
+			"message",
+			"length",
+			"sent_at",
 		},
 	}
-	// ChatSummaryMap is a map with view names as key and the fields rendered in
-	// the view as values.
+	// ChatSummaryMap is a map of attribute names in result type ChatSummary
+	// indexed by view name.
 	ChatSummaryMap = map[string][]string{
 		"tiny": []string{
-			"Message",
+			"message",
 		},
 		"default": []string{
-			"Message",
-			"Length",
-			"SentAt",
+			"message",
+			"length",
+			"sent_at",
 		},
 	}
 )

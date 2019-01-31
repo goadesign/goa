@@ -15,15 +15,15 @@ type ResultTypeView struct {
 }
 
 var (
-	// ResultTypeMap is a map with view names as key and the fields rendered in the
-	// view as values.
+	// ResultTypeMap is a map of attribute names in result type ResultType indexed
+	// by view name.
 	ResultTypeMap = map[string][]string{
 		"default": []string{
-			"A",
-			"B",
+			"a",
+			"b",
 		},
 		"tiny": []string{
-			"A",
+			"a",
 		},
 	}
 )
@@ -83,26 +83,26 @@ type ResultTypeView struct {
 }
 
 var (
-	// ResultTypeCollectionMap is a map with view names as key and the fields
-	// rendered in the view as values.
+	// ResultTypeCollectionMap is a map of attribute names in result type
+	// ResultTypeCollection indexed by view name.
 	ResultTypeCollectionMap = map[string][]string{
 		"default": []string{
-			"A",
-			"B",
+			"a",
+			"b",
 		},
 		"tiny": []string{
-			"A",
+			"a",
 		},
 	}
-	// ResultTypeMap is a map with view names as key and the fields rendered in the
-	// view as values.
+	// ResultTypeMap is a map of attribute names in result type ResultType indexed
+	// by view name.
 	ResultTypeMap = map[string][]string{
 		"default": []string{
-			"A",
-			"B",
+			"a",
+			"b",
 		},
 		"tiny": []string{
-			"A",
+			"a",
 		},
 	}
 )
@@ -185,15 +185,15 @@ type UserTypeView struct {
 }
 
 var (
-	// ResultTypeMap is a map with view names as key and the fields rendered in the
-	// view as values.
+	// ResultTypeMap is a map of attribute names in result type ResultType indexed
+	// by view name.
 	ResultTypeMap = map[string][]string{
 		"default": []string{
-			"A",
-			"B",
+			"a",
+			"b",
 		},
 		"tiny": []string{
-			"A",
+			"a",
 		},
 	}
 )
@@ -272,44 +272,41 @@ type RT3View struct {
 }
 
 var (
-	// RTMap is a map with view names as key and the fields rendered in the view as
-	// values.
+	// RTMap is a map of attribute names in result type RT indexed by view name.
 	RTMap = map[string][]string{
 		"default": []string{
-			"A",
-			"B",
-			"C",
+			"a",
+			"b",
+			"c",
 		},
 		"tiny": []string{
-			"B",
-			"C",
+			"b",
+			"c",
 		},
 	}
-	// RT2Map is a map with view names as key and the fields rendered in the view
-	// as values.
+	// RT2Map is a map of attribute names in result type RT2 indexed by view name.
 	RT2Map = map[string][]string{
 		"default": []string{
-			"C",
-			"D",
+			"c",
+			"d",
 		},
 		"extended": []string{
-			"C",
-			"D",
-			"E",
+			"c",
+			"d",
+			"e",
 		},
 		"tiny": []string{
-			"D",
+			"d",
 		},
 	}
-	// RT3Map is a map with view names as key and the fields rendered in the view
-	// as values.
+	// RT3Map is a map of attribute names in result type RT3 indexed by view name.
 	RT3Map = map[string][]string{
 		"default": []string{
-			"X",
-			"Y",
+			"x",
+			"y",
 		},
 		"tiny": []string{
-			"X",
+			"x",
 		},
 	}
 )
@@ -436,14 +433,13 @@ type RTView struct {
 }
 
 var (
-	// RTMap is a map with view names as key and the fields rendered in the view as
-	// values.
+	// RTMap is a map of attribute names in result type RT indexed by view name.
 	RTMap = map[string][]string{
 		"default": []string{
-			"A",
+			"a",
 		},
 		"tiny": []string{
-			"A",
+			"a",
 		},
 	}
 )
@@ -505,15 +501,14 @@ type RTView struct {
 }
 
 var (
-	// RTMap is a map with view names as key and the fields rendered in the view as
-	// values.
+	// RTMap is a map of attribute names in result type RT indexed by view name.
 	RTMap = map[string][]string{
 		"default": []string{
-			"CustomA",
-			"B",
+			"a",
+			"b",
 		},
 		"tiny": []string{
-			"CustomA",
+			"a",
 		},
 	}
 )

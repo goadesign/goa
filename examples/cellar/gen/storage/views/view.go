@@ -74,53 +74,53 @@ type ComponentView struct {
 }
 
 var (
-	// StoredBottleCollectionMap is a map with view names as key and the fields
-	// rendered in the view as values.
+	// StoredBottleCollectionMap is a map of attribute names in result type
+	// StoredBottleCollection indexed by view name.
 	StoredBottleCollectionMap = map[string][]string{
 		"default": []string{
-			"ID",
-			"Name",
-			"Winery",
-			"Vintage",
-			"Composition",
-			"Description",
-			"Rating",
+			"id",
+			"name",
+			"winery",
+			"vintage",
+			"composition",
+			"description",
+			"rating",
 		},
 		"tiny": []string{
-			"ID",
-			"Name",
-			"Winery",
+			"id",
+			"name",
+			"winery",
 		},
 	}
-	// StoredBottleMap is a map with view names as key and the fields rendered in
-	// the view as values.
+	// StoredBottleMap is a map of attribute names in result type StoredBottle
+	// indexed by view name.
 	StoredBottleMap = map[string][]string{
 		"default": []string{
-			"ID",
-			"Name",
-			"Winery",
-			"Vintage",
-			"Composition",
-			"Description",
-			"Rating",
+			"id",
+			"name",
+			"winery",
+			"vintage",
+			"composition",
+			"description",
+			"rating",
 		},
 		"tiny": []string{
-			"ID",
-			"Name",
-			"Winery",
+			"id",
+			"name",
+			"winery",
 		},
 	}
-	// WineryMap is a map with view names as key and the fields rendered in the
-	// view as values.
+	// WineryMap is a map of attribute names in result type Winery indexed by view
+	// name.
 	WineryMap = map[string][]string{
 		"default": []string{
-			"Name",
-			"Region",
-			"Country",
-			"URL",
+			"name",
+			"region",
+			"country",
+			"url",
 		},
 		"tiny": []string{
-			"Name",
+			"name",
 		},
 	}
 )
