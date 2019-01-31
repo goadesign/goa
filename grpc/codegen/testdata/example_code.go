@@ -195,6 +195,46 @@ func handleGRPCServer(ctx context.Context, u *url.URL, serviceEndpoints *service
 }
 `
 
+const ExampleCLIImport = `import (
+	"fmt"
+	cli "grpc/cli/testapi"
+	"os"
+
+	"goa.design/goa"
+	"google.golang.org/grpc"
+)
+`
+
+const ExampleSingleHostCLIImport = `import (
+	"fmt"
+	cli "grpc/cli/single_host"
+	"os"
+
+	"goa.design/goa"
+	"google.golang.org/grpc"
+)
+`
+
+const ExamplePkgPathCLIImport = `import (
+	"fmt"
+	cli "my/pkg/path/grpc/cli/testapi"
+	"os"
+
+	"goa.design/goa"
+	"google.golang.org/grpc"
+)
+`
+
+const ExampleSingleHostPkgPathCLIImport = `import (
+	"fmt"
+	cli "my/pkg/path/grpc/cli/single_host"
+	"os"
+
+	"goa.design/goa"
+	"google.golang.org/grpc"
+)
+`
+
 const ExampleCLICode = `func doGRPC(scheme, host string, timeout int, debug bool) (goa.Endpoint, interface{}, error) {
 	conn, err := grpc.Dial(host, grpc.WithInsecure())
 	if err != nil {
