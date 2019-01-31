@@ -2,6 +2,7 @@ package codegen
 
 import (
 	"os"
+	"path"
 	"path/filepath"
 	"strings"
 
@@ -41,7 +42,8 @@ func exampleCLI(genpkg string, root *expr.RootExpr, svr *expr.ServerExpr) *codeg
 		specs []*codegen.ImportSpec
 	)
 	{
-		idx := strings.LastIndex(genpkg, string(os.PathSeparator))
+		// genpkg is created by path.Join so the separator is / regardless of operating system
+		idx := strings.LastIndex(genpkg, "/")
 		rootPath := "."
 		if idx > 0 {
 			rootPath = genpkg[:idx]
@@ -57,7 +59,7 @@ func exampleCLI(genpkg string, root *expr.RootExpr, svr *expr.ServerExpr) *codeg
 			{Path: "goa.design/goa"},
 			{Path: "goa.design/goa/grpc", Name: "goagrpc"},
 			{Path: rootPath, Name: apiPkg},
-			{Path: filepath.Join(genpkg, "grpc", "cli", pkg), Name: "cli"},
+			{Path: path.Join(genpkg, "grpc", "cli", pkg), Name: "cli"},
 		}
 	}
 
