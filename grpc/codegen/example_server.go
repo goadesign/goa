@@ -2,6 +2,7 @@ package codegen
 
 import (
 	"os"
+	"path"
 	"path/filepath"
 	"strings"
 
@@ -62,15 +63,15 @@ func exampleServer(genpkg string, root *expr.RootExpr, svr *expr.ServerExpr) *co
 		for _, svc := range root.API.GRPC.Services {
 			pkgName := GRPCServices.Get(svc.Name()).Service.PkgName
 			specs = append(specs, &codegen.ImportSpec{
-				Path: filepath.Join(genpkg, "grpc", codegen.SnakeCase(svc.Name()), "server"),
+				Path: path.Join(genpkg, "grpc", codegen.SnakeCase(svc.Name()), "server"),
 				Name: pkgName + "svr",
 			})
 			specs = append(specs, &codegen.ImportSpec{
-				Path: filepath.Join(genpkg, codegen.SnakeCase(svc.Name())),
+				Path: path.Join(genpkg, codegen.SnakeCase(svc.Name())),
 				Name: pkgName,
 			})
 			specs = append(specs, &codegen.ImportSpec{
-				Path: filepath.Join(genpkg, "grpc", codegen.SnakeCase(svc.Name()), pbPkgName),
+				Path: path.Join(genpkg, "grpc", codegen.SnakeCase(svc.Name()), pbPkgName),
 			})
 		}
 	}

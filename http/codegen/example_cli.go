@@ -30,7 +30,8 @@ func exampleCLI(genpkg string, root *expr.RootExpr, svr *expr.ServerExpr) *codeg
 	if _, err := os.Stat(path); !os.IsNotExist(err) {
 		return nil // file already exists, skip it.
 	}
-	idx := strings.LastIndex(genpkg, string(os.PathSeparator))
+	// genpkg is created by path.Join so the separator is / regardless of operating system
+	idx := strings.LastIndex(genpkg, "/")
 	rootPath := "."
 	if idx > 0 {
 		rootPath = genpkg[:idx]

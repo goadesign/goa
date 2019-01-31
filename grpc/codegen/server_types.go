@@ -1,6 +1,7 @@
 package codegen
 
 import (
+	"path"
 	"path/filepath"
 
 	"goa.design/goa/codegen"
@@ -25,7 +26,7 @@ func ServerTypeFiles(genpkg string, root *expr.RootExpr) []*codegen.File {
 // to prevent duplicate code generation.
 func serverType(genpkg string, svc *expr.GRPCServiceExpr, seen map[string]struct{}) *codegen.File {
 	var (
-		path      string
+		fpath     string
 		initData  []*InitData
 		validated []*ValidationData
 
@@ -38,7 +39,7 @@ func serverType(genpkg string, svc *expr.GRPCServiceExpr, seen map[string]struct
 			}
 		}
 
-		path = filepath.Join(codegen.Gendir, "grpc", codegen.SnakeCase(svc.Name()), "server", "types.go")
+		fpath = filepath.Join(codegen.Gendir, "grpc", codegen.SnakeCase(svc.Name()), "server", "types.go")
 		for _, a := range svc.GRPCEndpoints {
 			ed := sd.Endpoint(a.Name())
 			if c := ed.Request.ServerConvert; c != nil {
@@ -66,9 +67,9 @@ func serverType(genpkg string, svc *expr.GRPCServiceExpr, seen map[string]struct
 		[]*codegen.ImportSpec{
 			{Path: "unicode/utf8"},
 			{Path: "goa.design/goa", Name: "goa"},
-			{Path: filepath.Join(genpkg, codegen.SnakeCase(svc.Name())), Name: sd.Service.PkgName},
-			{Path: filepath.Join(genpkg, codegen.SnakeCase(svc.Name()), "views"), Name: sd.Service.ViewsPkg},
-			{Path: filepath.Join(genpkg, "grpc", codegen.SnakeCase(svc.Name()), pbPkgName)},
+			{Path: path.Join(genpkg, codegen.SnakeCase(svc.Name())), Name: sd.Service.PkgName},
+			{Path: path.Join(genpkg, codegen.SnakeCase(svc.Name()), "views"), Name: sd.Service.ViewsPkg},
+			{Path: path.Join(genpkg, "grpc", codegen.SnakeCase(svc.Name()), pbPkgName)},
 		},
 	)
 	sections := []*codegen.SectionTemplate{header}
@@ -94,7 +95,7 @@ func serverType(genpkg string, svc *expr.GRPCServiceExpr, seen map[string]struct
 		})
 	}
 
-	return &codegen.File{Path: path, SectionTemplates: sections}
+	return &codegen.File{Path: fpath, SectionTemplates: sections}
 }
 
 // input: TransformFunctionData
