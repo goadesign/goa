@@ -12,14 +12,13 @@ import (
 	"goa.design/goa/examples/basic/gen/grpc/calc/pb"
 	calcsvcsvr "goa.design/goa/examples/basic/gen/grpc/calc/server"
 	grpcmdlwr "goa.design/goa/grpc/middleware"
-	"goa.design/goa/grpc/middleware/xray"
 	"goa.design/goa/middleware"
 	"google.golang.org/grpc"
 )
 
 // handleGRPCServer starts configures and starts a gRPC server on the given
 // URL. It shuts down the server if any error is received in the error channel.
-func handleGRPCServer(ctx context.Context, u *url.URL, calcEndpoints *calcsvc.Endpoints, wg *sync.WaitGroup, errc chan error, logger *log.Logger, debug bool, daemon string) {
+func handleGRPCServer(ctx context.Context, u *url.URL, calcEndpoints *calcsvc.Endpoints, wg *sync.WaitGroup, errc chan error, logger *log.Logger, debug bool) {
 
 	// Setup goa log adapter.
 	var (
@@ -40,18 +39,11 @@ func handleGRPCServer(ctx context.Context, u *url.URL, calcEndpoints *calcsvc.En
 		calcServer = calcsvcsvr.New(calcEndpoints, nil)
 	}
 
-	xm, err := xray.NewUnaryServer("calc", daemon)
-	if err != nil {
-		logger.Printf("[WARN] cannot connect to xray daemon %s: %s", daemon, err)
-	}
 	// Initialize gRPC server with the middleware.
 	srv := grpc.NewServer(
 		grpcmiddleware.WithUnaryServerChain(
 			grpcmdlwr.UnaryRequestID(),
 			grpcmdlwr.UnaryServerLog(adapter),
-			// Mount the trace and X-Ray middleware. Order is very important.
-			grpcmdlwr.UnaryServerTrace(),
-			xm,
 		),
 	)
 

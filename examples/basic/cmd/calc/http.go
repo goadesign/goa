@@ -13,13 +13,12 @@ import (
 	calcsvcsvr "goa.design/goa/examples/basic/gen/http/calc/server"
 	goahttp "goa.design/goa/http"
 	httpmdlwr "goa.design/goa/http/middleware"
-	"goa.design/goa/http/middleware/xray"
 	"goa.design/goa/middleware"
 )
 
 // handleHTTPServer starts configures and starts a HTTP server on the given
 // URL. It shuts down the server if any error is received in the error channel.
-func handleHTTPServer(ctx context.Context, u *url.URL, calcEndpoints *calcsvc.Endpoints, wg *sync.WaitGroup, errc chan error, logger *log.Logger, debug bool, daemon string) {
+func handleHTTPServer(ctx context.Context, u *url.URL, calcEndpoints *calcsvc.Endpoints, wg *sync.WaitGroup, errc chan error, logger *log.Logger, debug bool) {
 
 	// Setup goa log adapter.
 	var (
@@ -68,13 +67,6 @@ func handleHTTPServer(ctx context.Context, u *url.URL, calcEndpoints *calcsvc.En
 		}
 		handler = httpmdlwr.Log(adapter)(handler)
 		handler = httpmdlwr.RequestID()(handler)
-		xrayHndlr, err := xray.New("calc", daemon)
-		if err != nil {
-			logger.Printf("[WARN] cannot connect to xray daemon %s: %s", daemon, err)
-		}
-		// Wrap the Xray and the tracing handler. The order is very important.
-		handler = xrayHndlr(handler)
-		handler = httpmdlwr.Trace()(handler)
 	}
 
 	// Start HTTP server using default configuration, change the code to

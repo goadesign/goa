@@ -26,7 +26,6 @@ func main() {
 		versionF  = flag.String("version", "v1", "API version")
 		secureF   = flag.Bool("secure", false, "Use secure scheme (https or grpcs)")
 		dbgF      = flag.Bool("debug", false, "Log request and response bodies")
-		daemonF   = flag.String("daemon", "127.0.0.1:2000", "X-Ray daemon address")
 	)
 	flag.Parse()
 
@@ -69,6 +68,7 @@ func main() {
 
 	var wg sync.WaitGroup
 	ctx, cancel := context.WithCancel(context.Background())
+
 	// Start the servers and send errors (if any) to the error channel.
 	switch *hostF {
 	case "development":
@@ -91,7 +91,7 @@ func main() {
 			} else if u.Port() == "" {
 				u.Host += ":80"
 			}
-			handleHTTPServer(ctx, u, calcEndpoints, &wg, errc, logger, *dbgF, *daemonF)
+			handleHTTPServer(ctx, u, calcEndpoints, &wg, errc, logger, *dbgF)
 		}
 
 		{
@@ -113,7 +113,7 @@ func main() {
 			} else if u.Port() == "" {
 				u.Host += ":8080"
 			}
-			handleGRPCServer(ctx, u, calcEndpoints, &wg, errc, logger, *dbgF, *daemonF)
+			handleGRPCServer(ctx, u, calcEndpoints, &wg, errc, logger, *dbgF)
 		}
 
 	case "production":
@@ -137,7 +137,7 @@ func main() {
 			} else if u.Port() == "" {
 				u.Host += ":443"
 			}
-			handleHTTPServer(ctx, u, calcEndpoints, &wg, errc, logger, *dbgF, *daemonF)
+			handleHTTPServer(ctx, u, calcEndpoints, &wg, errc, logger, *dbgF)
 		}
 
 		{
@@ -160,12 +160,13 @@ func main() {
 			} else if u.Port() == "" {
 				u.Host += ":8443"
 			}
-			handleGRPCServer(ctx, u, calcEndpoints, &wg, errc, logger, *dbgF, *daemonF)
+			handleGRPCServer(ctx, u, calcEndpoints, &wg, errc, logger, *dbgF)
 		}
 
 	default:
 		fmt.Fprintf(os.Stderr, "invalid host argument: %q (valid hosts: development|production)", *hostF)
 	}
+
 	// Wait for signal.
 	logger.Printf("exiting (%v)", <-errc)
 

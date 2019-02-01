@@ -11,22 +11,20 @@ import (
 	"strings"
 	"sync"
 
-	calc "goa.design/goa/examples/basic"
-	calcsvc "goa.design/goa/examples/basic/gen/calc"
+	chatter "goa.design/goa/examples/streaming"
+	chattersvc "goa.design/goa/examples/streaming/gen/chatter"
 )
 
 func main() {
 	// Define command line flags, add any other flag required to configure the
 	// service.
 	var (
-		hostF     = flag.String("host", "development", "Server host (valid values: development, production)")
+		hostF     = flag.String("host", "localhost", "Server host (valid values: localhost)")
 		domainF   = flag.String("domain", "", "Host domain name (overrides host domain specified in service design)")
 		httpPortF = flag.String("http-port", "", "HTTP port (overrides host HTTP port specified in service design)")
 		grpcPortF = flag.String("grpc-port", "", "gRPC port (overrides host gRPC port specified in service design)")
-		versionF  = flag.String("version", "v1", "API version")
 		secureF   = flag.Bool("secure", false, "Use secure scheme (https or grpcs)")
 		dbgF      = flag.Bool("debug", false, "Log request and response bodies")
-		daemonF   = flag.String("daemon", "127.0.0.1:2000", "X-Ray daemon address")
 	)
 	flag.Parse()
 
@@ -35,24 +33,24 @@ func main() {
 		logger *log.Logger
 	)
 	{
-		logger = log.New(os.Stderr, "[calc] ", log.Ltime)
+		logger = log.New(os.Stderr, "[chatter] ", log.Ltime)
 	}
 
 	// Initialize the services.
 	var (
-		calcSvc calcsvc.Service
+		chatterSvc chattersvc.Service
 	)
 	{
-		calcSvc = calc.NewCalc(logger)
+		chatterSvc = chatter.NewChatter(logger)
 	}
 
 	// Wrap the services in endpoints that can be invoked from other services
 	// potentially running in different processes.
 	var (
-		calcEndpoints *calcsvc.Endpoints
+		chatterEndpoints *chattersvc.Endpoints
 	)
 	{
-		calcEndpoints = calcsvc.NewEndpoints(calcSvc)
+		chatterEndpoints = chattersvc.NewEndpoints(chatterSvc)
 	}
 
 	// Create channel used by both the signal handler and server goroutines
@@ -69,11 +67,12 @@ func main() {
 
 	var wg sync.WaitGroup
 	ctx, cancel := context.WithCancel(context.Background())
+
 	// Start the servers and send errors (if any) to the error channel.
 	switch *hostF {
-	case "development":
+	case "localhost":
 		{
-			addr := "http://localhost:8000/calc"
+			addr := "http://localhost:80"
 			u, err := url.Parse(addr)
 			if err != nil {
 				fmt.Fprintf(os.Stderr, "invalid URL %#v: %s", addr, err)
@@ -91,7 +90,7 @@ func main() {
 			} else if u.Port() == "" {
 				u.Host += ":80"
 			}
-			handleHTTPServer(ctx, u, calcEndpoints, &wg, errc, logger, *dbgF, *daemonF)
+			handleHTTPServer(ctx, u, chatterEndpoints, &wg, errc, logger, *dbgF)
 		}
 
 		{
@@ -113,59 +112,13 @@ func main() {
 			} else if u.Port() == "" {
 				u.Host += ":8080"
 			}
-			handleGRPCServer(ctx, u, calcEndpoints, &wg, errc, logger, *dbgF, *daemonF)
-		}
-
-	case "production":
-		{
-			addr := "https://{version}.goa.design/calc"
-			addr = strings.Replace(addr, "{version}", *versionF, -1)
-			u, err := url.Parse(addr)
-			if err != nil {
-				fmt.Fprintf(os.Stderr, "invalid URL %#v: %s", addr, err)
-				os.Exit(1)
-			}
-			if *secureF {
-				u.Scheme = "https"
-			}
-			if *domainF != "" {
-				u.Host = *domainF
-			}
-			if *httpPortF != "" {
-				h := strings.Split(u.Host, ":")[0]
-				u.Host = h + ":" + *httpPortF
-			} else if u.Port() == "" {
-				u.Host += ":443"
-			}
-			handleHTTPServer(ctx, u, calcEndpoints, &wg, errc, logger, *dbgF, *daemonF)
-		}
-
-		{
-			addr := "grpcs://{version}.goa.design"
-			addr = strings.Replace(addr, "{version}", *versionF, -1)
-			u, err := url.Parse(addr)
-			if err != nil {
-				fmt.Fprintf(os.Stderr, "invalid URL %#v: %s", addr, err)
-				os.Exit(1)
-			}
-			if *secureF {
-				u.Scheme = "grpcs"
-			}
-			if *domainF != "" {
-				u.Host = *domainF
-			}
-			if *grpcPortF != "" {
-				h := strings.Split(u.Host, ":")[0]
-				u.Host = h + ":" + *grpcPortF
-			} else if u.Port() == "" {
-				u.Host += ":8443"
-			}
-			handleGRPCServer(ctx, u, calcEndpoints, &wg, errc, logger, *dbgF, *daemonF)
+			handleGRPCServer(ctx, u, chatterEndpoints, &wg, errc, logger, *dbgF)
 		}
 
 	default:
-		fmt.Fprintf(os.Stderr, "invalid host argument: %q (valid hosts: development|production)", *hostF)
+		fmt.Fprintf(os.Stderr, "invalid host argument: %q (valid hosts: localhost)", *hostF)
 	}
+
 	// Wait for signal.
 	logger.Printf("exiting (%v)", <-errc)
 

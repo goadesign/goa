@@ -5,11 +5,10 @@ import (
 	"os"
 	"time"
 
+	"github.com/gorilla/websocket"
 	"goa.design/goa"
-	cli "goa.design/goa/examples/basic/gen/http/cli/calc"
+	cli "goa.design/goa/examples/streaming/gen/http/cli/chatter"
 	goahttp "goa.design/goa/http"
-	"goa.design/goa/http/middleware"
-	"goa.design/goa/http/middleware/xray"
 )
 
 func doHTTP(scheme, host string, timeout int, debug bool) (goa.Endpoint, interface{}, error) {
@@ -22,11 +21,15 @@ func doHTTP(scheme, host string, timeout int, debug bool) (goa.Endpoint, interfa
 			doer = goahttp.NewDebugDoer(doer)
 			doer.(goahttp.DebugDoer).Fprint(os.Stderr)
 		}
-		// Wrap doer with X-Ray and trace client middleware. Order is very important.
-		doer = xray.WrapDoer(doer)
-		doer = middleware.WrapDoer(doer)
 	}
 
+	var (
+		dialer       *websocket.Dialer
+		connConfigFn goahttp.ConnConfigureFunc
+	)
+	{
+		dialer = websocket.DefaultDialer
+	}
 	return cli.ParseEndpoint(
 		scheme,
 		host,
@@ -34,6 +37,8 @@ func doHTTP(scheme, host string, timeout int, debug bool) (goa.Endpoint, interfa
 		goahttp.RequestEncoder,
 		goahttp.ResponseDecoder,
 		debug,
+		dialer,
+		connConfigFn,
 	)
 }
 func httpUsageCommands() string {

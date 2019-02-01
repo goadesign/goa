@@ -8,18 +8,17 @@ import (
 	"sync"
 
 	grpcmiddleware "github.com/grpc-ecosystem/go-grpc-middleware"
-	calcsvc "goa.design/goa/examples/basic/gen/calc"
-	"goa.design/goa/examples/basic/gen/grpc/calc/pb"
-	calcsvcsvr "goa.design/goa/examples/basic/gen/grpc/calc/server"
+	chattersvc "goa.design/goa/examples/streaming/gen/chatter"
+	"goa.design/goa/examples/streaming/gen/grpc/chatter/pb"
+	chattersvcsvr "goa.design/goa/examples/streaming/gen/grpc/chatter/server"
 	grpcmdlwr "goa.design/goa/grpc/middleware"
-	"goa.design/goa/grpc/middleware/xray"
 	"goa.design/goa/middleware"
 	"google.golang.org/grpc"
 )
 
 // handleGRPCServer starts configures and starts a gRPC server on the given
 // URL. It shuts down the server if any error is received in the error channel.
-func handleGRPCServer(ctx context.Context, u *url.URL, calcEndpoints *calcsvc.Endpoints, wg *sync.WaitGroup, errc chan error, logger *log.Logger, debug bool, daemon string) {
+func handleGRPCServer(ctx context.Context, u *url.URL, chatterEndpoints *chattersvc.Endpoints, wg *sync.WaitGroup, errc chan error, logger *log.Logger, debug bool) {
 
 	// Setup goa log adapter.
 	var (
@@ -34,29 +33,26 @@ func handleGRPCServer(ctx context.Context, u *url.URL, calcEndpoints *calcsvc.En
 	// the service input and output data structures to gRPC requests and
 	// responses.
 	var (
-		calcServer *calcsvcsvr.Server
+		chatterServer *chattersvcsvr.Server
 	)
 	{
-		calcServer = calcsvcsvr.New(calcEndpoints, nil)
+		chatterServer = chattersvcsvr.New(chatterEndpoints, nil, nil)
 	}
 
-	xm, err := xray.NewUnaryServer("calc", daemon)
-	if err != nil {
-		logger.Printf("[WARN] cannot connect to xray daemon %s: %s", daemon, err)
-	}
 	// Initialize gRPC server with the middleware.
 	srv := grpc.NewServer(
 		grpcmiddleware.WithUnaryServerChain(
 			grpcmdlwr.UnaryRequestID(),
 			grpcmdlwr.UnaryServerLog(adapter),
-			// Mount the trace and X-Ray middleware. Order is very important.
-			grpcmdlwr.UnaryServerTrace(),
-			xm,
+		),
+		grpcmiddleware.WithStreamServerChain(
+			grpcmdlwr.StreamRequestID(),
+			grpcmdlwr.StreamServerLog(adapter),
 		),
 	)
 
 	// Register the servers.
-	pb.RegisterCalcServer(srv, calcServer)
+	pb.RegisterChatterServer(srv, chatterServer)
 
 	for svc, info := range srv.GetServiceInfo() {
 		for _, m := range info.Methods {
