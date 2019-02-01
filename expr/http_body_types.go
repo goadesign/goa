@@ -12,16 +12,20 @@ import (
 // by removing the attributes of the method payload used to define headers and
 // parameters.
 func httpRequestBody(a *HTTPEndpointExpr) *AttributeExpr {
+	const suffix = "RequestBody"
+	var (
+		name = concat(a.Name(), "Request", "Body")
+	)
 	if a.Body != nil {
+		a.Body = DupAtt(a.Body)
+		renameType(a.Body, name, suffix)
 		return a.Body
 	}
 
-	const suffix = "RequestBody"
 	var (
 		payload   = a.MethodExpr.Payload
 		headers   = a.Headers
 		params    = a.Params
-		name      = concat(a.Name(), "Request", "Body")
 		userField string
 		passField string
 	)

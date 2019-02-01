@@ -525,13 +525,9 @@ func (e *HTTPEndpointExpr) Finalize() {
 	init(e.Params)
 	init(e.Headers)
 
+	e.Body = httpRequestBody(e)
 	if e.Body != nil {
 		e.Body.Finalize()
-	}
-
-	if e.Body == nil {
-		// No explicit body, compute it
-		e.Body = httpRequestBody(e)
 	}
 
 	e.StreamingBody = httpStreamingBody(e)
