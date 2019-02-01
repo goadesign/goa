@@ -140,18 +140,22 @@ func serverEncodeDecode(genpkg string, svc *expr.HTTPServiceExpr) *codegen.File 
 			})
 		}
 		if e.Payload.Ref != "" {
+			fm := transTmplFuncs(svc)
+			fm["mapQueryDecodeData"] = mapQueryDecodeData
 			sections = append(sections, &codegen.SectionTemplate{
 				Name:    "request-decoder",
 				Source:  requestDecoderT,
-				FuncMap: transTmplFuncs(svc),
+				FuncMap: fm,
 				Data:    e,
 			})
 		}
 		if e.MultipartRequestDecoder != nil {
+			fm := transTmplFuncs(svc)
+			fm["mapQueryDecodeData"] = mapQueryDecodeData
 			sections = append(sections, &codegen.SectionTemplate{
 				Name:    "multipart-request-decoder",
 				Source:  multipartRequestDecoderT,
-				FuncMap: transTmplFuncs(svc),
+				FuncMap: fm,
 				Data:    e.MultipartRequestDecoder,
 			})
 		}
@@ -247,6 +251,15 @@ func viewedServerBody(sbd []*TypeData, view string) *TypeData {
 		}
 	}
 	panic("view not found in server body types: " + view)
+}
+
+func mapQueryDecodeData(dt expr.DataType, varName string, inc int) map[string]interface{} {
+	return map[string]interface{}{
+		"Type":      dt,
+		"VarName":   varName,
+		"Loop":      string(97 + inc),
+		"Increment": inc + 1,
+	}
 }
 
 // input: ServiceData
@@ -638,18 +651,6 @@ const requestParamsHeadersT = `{{- define "request_params_headers" }}
 		{{- end }}
 	}
 
-	{{- else if .MapStringSlice }}
-		{{ .VarName }} = r.URL.Query()
-		{{- if .Required }}
-		if len({{ .VarName }}) == 0 {
-			err = goa.MergeErrors(err, goa.MissingFieldError("{{ .Name }}", "query string"))
-		}
-		{{- else if .DefaultValue }}
-		if len({{ .VarName }}) == 0 {
-			{{ .VarName }} = {{ printf "%#v" .DefaultValue }}
-		}
-		{{- end }}
-
 	{{- else if .Map }}
 	{
 		{{ .VarName }}Raw := r.URL.Query()
@@ -667,15 +668,11 @@ const requestParamsHeadersT = `{{- define "request_params_headers" }}
 		{{- else if not .Required }}
 		if len({{ .VarName }}Raw) != 0 {
 		{{- end }}
-		{{- if eq .Type.ElemType.Type.Name "array" }}
-			{{- if eq .Type.ElemType.Type.ElemType.Type.Name "string" }}
-			{{- template "map_key_conversion" . }}
-			{{- else }}
-			{{- template "map_slice_conversion" . }}
-			{{- end }}
-		{{- else }}
-			{{- template "map_conversion" . }}
-		{{- end }}
+		for keyRaw, valRaw := range {{ .VarName }}Raw {
+			if strings.HasPrefix(keyRaw, "{{ .Name }}[") {
+				{{- template "map_conversion" (mapQueryDecodeData .Type .VarName 0) }}
+			}
+		}
 		{{- if or .DefaultValue (not .Required) }}
 		}
 		{{- end }}
@@ -698,15 +695,11 @@ const requestParamsHeadersT = `{{- define "request_params_headers" }}
 		{{- else if not .Required }}
 		if len({{ .VarName }}Raw) != 0 {
 		{{- end }}
-		{{- if eq .Type.ElemType.Type.Name "array" }}
-			{{- if eq .Type.ElemType.Type.ElemType.Type.Name "string" }}
-			{{- template "map_key_conversion" . }}
-			{{- else }}
-			{{- template "map_slice_conversion" . }}
-			{{- end }}
-		{{- else }}
-			{{- template "map_conversion" . }}
-		{{- end }}
+		for keyRaw, valRaw := range {{ .VarName }}Raw {
+			if strings.HasPrefix(keyRaw, "{{ .Name }}[") {
+				{{- template "map_conversion" (mapQueryDecodeData .Type .VarName 0) }}
+			}
+		}
 		{{- if or .DefaultValue (not .Required) }}
 		}
 		{{- end }}
@@ -841,60 +834,43 @@ const requestParamsHeadersT = `{{- define "request_params_headers" }}
 	}
 {{- end }}
 
-{{- define "map_key_conversion" }}
-	{{ .VarName }} = make({{ goTypeRef .Type }}, len({{ .VarName }}Raw))
-	for keyRaw, val := range {{ .VarName }}Raw {
-		var key {{ goTypeRef .Type.KeyType.Type }}
-		{
-		{{- template "type_conversion" (conversionData "key" (printf "%q" "query") .Type.KeyType.Type) }}
-		}
-		{{ .VarName }}[key] = val
-	}
-{{- end }}
-
-{{- define "map_slice_conversion" }}
-	{{ .VarName }} = make({{ goTypeRef .Type }}, len({{ .VarName }}Raw))
-	for key{{ if not (eq .Type.KeyType.Type.Name "string") }}Raw{{ end }}, valRaw := range {{ .VarName }}Raw {
-
-		{{- if not (eq .Type.KeyType.Type.Name "string") }}
-		var key {{ goTypeRef .Type.KeyType.Type }}
-		{
-			{{- template "type_conversion" (conversionData "key" (printf "%q" "query") .Type.KeyType.Type) }}
-		}
-		{{- end }}
-		var val {{ goTypeRef .Type.ElemType.Type }}
-		{
-		{{- template "slice_conversion" (conversionData "val" (printf "%q" "query") .Type.ElemType.Type) }}
-		}
-		{{ .VarName }}[key] = val
-	}
-{{- end }}
-
 {{- define "map_conversion" }}
-	{{ .VarName }} = make({{ goTypeRef .Type }}, len({{ .VarName }}Raw))
-	for key{{ if not (eq .Type.KeyType.Type.Name "string") }}Raw{{ end }}, va := range {{ .VarName }}Raw {
-
-		{{- if not (eq .Type.KeyType.Type.Name "string") }}
-		var key {{ goTypeRef .Type.KeyType.Type }}
-		{
-			{{- if eq .Type.KeyType.Type.Name "string" }}
-			key = keyRaw
-			{{- else }}
-			{{- template "type_conversion" (conversionData "key" (printf "%q" "query") .Type.KeyType.Type) }}
-			{{- end }}
-		}
+	if {{ .VarName }} == nil {
+		{{ .VarName }} = make({{ goTypeRef .Type }})
+	}
+	var key{{ .Loop }} {{ goTypeRef .Type.KeyType.Type }}
+	{
+		openIdx := strings.IndexRune(keyRaw, '[')
+		closeIdx := strings.IndexRune(keyRaw, ']')
+	{{- if eq .Type.KeyType.Type.Name "string" }}
+		key{{ .Loop }} = keyRaw[openIdx+1 : closeIdx]
+	{{- else }}
+		key{{ .Loop }}Raw := keyRaw[openIdx+1 : closeIdx]
+		{{- template "type_conversion" (conversionData (printf "key%s" .Loop) (printf "%q" "query") .Type.KeyType.Type) }}
+	{{- end }}
+		keyRaw = keyRaw[closeIdx+1:]
+	}
+	{{- if eq .Type.ElemType.Type.Name "string" }}
+		{{ .VarName }}[key{{ .Loop }}] = valRaw[0]
+	{{- else if eq .Type.ElemType.Type.Name "array" }}
+		{{- if eq .Type.ElemType.Type.ElemType.Type.Name "string" }}
+			{{ .VarName }}[key{{ .Loop }}] = valRaw
+		{{- else }}
+			var val {{ goTypeRef .Type.ElemType.Type }}
+			{
+				{{- template "slice_conversion" (conversionData "val" (printf "%q" "query") .Type.ElemType.Type) }}
+			}
+			{{ .VarName }}[key{{ .Loop }}] = val
 		{{- end }}
+	{{- else if eq .Type.ElemType.Type.Name "map" }}
+		{{- template "map_conversion" (mapQueryDecodeData .Type.ElemType.Type (printf "%s[key%s]" .VarName .Loop) 1) }}
+	{{- else }}
 		var val {{ goTypeRef .Type.ElemType.Type }}
 		{
-			{{- if eq .Type.ElemType.Type.Name "string" }}
-			val = va[0]
-			{{- else }}
-			valRaw := va[0]
 			{{- template "type_conversion" (conversionData "val" (printf "%q" "query") .Type.ElemType.Type) }}
-			{{- end }}
 		}
-		{{ .VarName }}[key] = val
-	}
+		{{ .VarName }}[key{{ .Loop }}] = val
+	{{- end }}
 {{- end }}
 
 {{- define "type_conversion" }}

@@ -425,14 +425,26 @@ func makeFlags(e *EndpointData, args []*InitArgData) ([]*flagData, *buildFunctio
 }
 
 func jsonExample(v interface{}) string {
-	// In JSON, keys must be a string. But goa allows map keys to be anything.
+	b, err := json.MarshalIndent(jsonify(v), "   ", "   ")
+	ex := "?"
+	if err == nil {
+		ex = string(b)
+	}
+	if strings.Contains(ex, "\n") {
+		ex = "'" + strings.Replace(ex, "'", "\\'", -1) + "'"
+	}
+	return ex
+}
+
+func jsonify(v interface{}) interface{} {
 	r := reflect.ValueOf(v)
+	// In JSON, keys must be a string. But goa allows map keys to be anything.
 	if r.Kind() == reflect.Map {
 		keys := r.MapKeys()
-		if keys[0].Kind() != reflect.String {
-			a := make(map[string]interface{}, len(keys))
-			var kstr string
-			for _, k := range keys {
+		a := make(map[string]interface{}, len(keys))
+		for _, k := range keys {
+			kstr := k.String()
+			if k.Kind() != reflect.String {
 				switch t := k.Interface().(type) {
 				case bool:
 					kstr = strconv.FormatBool(t)
@@ -446,23 +458,19 @@ func jsonExample(v interface{}) string {
 					kstr = strconv.FormatFloat(float64(t), 'f', -1, 32)
 				case float64:
 					kstr = strconv.FormatFloat(t, 'f', -1, 64)
-				default:
-					kstr = k.String()
 				}
-				a[kstr] = r.MapIndex(k).Interface()
 			}
-			v = a
+			a[kstr] = r.MapIndex(k).Interface()
 		}
+		if r.MapIndex(keys[0]).Kind() == reflect.Map {
+			// if nested map, jsonify inner map
+			for key, val := range a {
+				a[key] = jsonify(val)
+			}
+		}
+		v = a
 	}
-	b, err := json.MarshalIndent(v, "   ", "   ")
-	ex := "?"
-	if err == nil {
-		ex = string(b)
-	}
-	if strings.Contains(ex, "\n") {
-		ex = "'" + strings.Replace(ex, "'", "\\'", -1) + "'"
-	}
-	return ex
+	return v
 }
 
 func goify(terms ...string) string {

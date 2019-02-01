@@ -575,58 +575,85 @@ func (e *HTTPEndpointExpr) validateParams() *eval.ValidationErrors {
 		return nil
 	}
 
+	// We have to figure out the actual type for the params because the actual
+	// type is initialized only during the finalize phase. In the validation
+	// phase, all param types are string type by default unless specified
+	// expliclty.
+	init := func(ma *MappedAttributeExpr) *MappedAttributeExpr {
+		ma = DupMappedAtt(ma)
+		payload := AsObject(e.MethodExpr.Payload.Type)
+		for _, nat := range *AsObject(ma.Type) {
+			var patt *AttributeExpr
+			if payload != nil {
+				patt = payload.Attribute(nat.Name)
+			} else {
+				patt = e.MethodExpr.Payload
+			}
+			if patt != nil {
+				nat.Attribute.Type = patt.Type
+			}
+		}
+		return ma
+	}
+
 	var (
-		pparams = *AsObject(e.PathParams().Type)
-		qparams = *AsObject(e.QueryParams().Type)
+		pparams = init(e.PathParams())
+		qparams = init(e.QueryParams())
 	)
 	verr := new(eval.ValidationErrors)
-	for _, nat := range pparams {
-		if IsObject(nat.Attribute.Type) {
-			verr.Add(e, "path parameter %s cannot be an object, path parameter types must be primitive, array or map (query string only)", nat.Name)
-		} else if IsMap(nat.Attribute.Type) {
-			verr.Add(e, "path parameter %s cannot be a map, path parameter types must be primitive or array", nat.Name)
-		} else if arr := AsArray(nat.Attribute.Type); arr != nil {
+	WalkMappedAttr(pparams, func(name, _ string, a *AttributeExpr) error {
+		switch {
+		case IsObject(a.Type):
+			verr.Add(e, "path parameter %s cannot be an object, path parameter types must be primitive, array or map (query string only)", name)
+		case IsMap(a.Type):
+			verr.Add(e, "path parameter %s cannot be a map, path parameter types must be primitive or array", name)
+		case IsArray(a.Type):
+			arr := AsArray(a.Type)
 			if !IsPrimitive(arr.ElemType.Type) {
-				verr.Add(e, "elements of array path parameter %s must be primitive", nat.Name)
+				verr.Add(e, "elements of array path parameter %s must be primitive", name)
 			}
-		} else {
-			ctx := fmt.Sprintf("path parameter %s", nat.Name)
-			verr.Merge(nat.Attribute.Validate(ctx, e))
+		default:
+			ctx := fmt.Sprintf("path parameter %s", name)
+			verr.Merge(a.Validate(ctx, e))
 		}
-	}
-	for _, nat := range qparams {
-		if IsObject(nat.Attribute.Type) {
-			verr.Add(e, "query parameter %s cannot be an object, query parameter types must be primitive, array or map (query string only)", nat.Name)
-		} else if arr := AsArray(nat.Attribute.Type); arr != nil {
+		return nil
+	})
+	WalkMappedAttr(qparams, func(name, _ string, a *AttributeExpr) error {
+		switch {
+		case IsObject(a.Type):
+			verr.Add(e, "query parameter %s cannot be an object, query parameter types must be primitive, array or map (query string only)", name)
+		case IsArray(a.Type):
+			arr := AsArray(a.Type)
 			if !IsPrimitive(arr.ElemType.Type) {
-				verr.Add(e, "elements of array query parameter %s must be primitive", nat.Name)
+				verr.Add(e, "elements of array query parameter %s must be primitive", name)
 			}
-		} else {
-			ctx := fmt.Sprintf("query parameter %s", nat.Name)
-			verr.Merge(nat.Attribute.Validate(ctx, e))
+		default:
+			ctx := fmt.Sprintf("query parameter %s", name)
+			verr.Merge(a.Validate(ctx, e))
 		}
-	}
+		return nil
+	})
 	if e.MethodExpr.Payload != nil {
 		switch e.MethodExpr.Payload.Type.(type) {
 		case *Object:
-			for _, nat := range pparams {
-				name := strings.Split(nat.Name, ":")[0]
+			WalkMappedAttr(pparams, func(name, _ string, a *AttributeExpr) error {
 				if e.MethodExpr.Payload.Find(name) == nil {
-					verr.Add(e, "Path parameter %q not found in payload.", nat.Name)
+					verr.Add(e, "Path parameter %q not found in payload.", name)
 				}
-			}
-			for _, nat := range qparams {
-				name := strings.Split(nat.Name, ":")[0]
+				return nil
+			})
+			WalkMappedAttr(qparams, func(name, _ string, a *AttributeExpr) error {
 				if e.MethodExpr.Payload.Find(name) == nil {
-					verr.Add(e, "Querys string parameter %q not found in payload.", nat.Name)
+					verr.Add(e, "Querys string parameter %q not found in payload.", name)
 				}
-			}
+				return nil
+			})
 		case *Array:
-			if len(pparams)+len(qparams) > 1 {
+			if len(*AsObject(pparams.Type))+len(*AsObject(qparams.Type)) > 1 {
 				verr.Add(e, "Payload type is array but HTTP endpoint defines multiple parameters. At most one parameter must be defined and it must be an array.")
 			}
 		case *Map:
-			if len(pparams)+len(qparams) > 1 {
+			if len(*AsObject(pparams.Type))+len(*AsObject(qparams.Type)) > 1 {
 				verr.Add(e, "Payload type is map but HTTP endpoint defines multiple parameters. At most one query string parameter must be defined and it must be a map.")
 			}
 		}
@@ -812,15 +839,20 @@ func initAttrFromDesign(att, patt *AttributeExpr) {
 // isEmpty returns true if an attribute is Empty type and it has no bases and
 // references, or if an attribute is an empty object.
 func isEmpty(a *AttributeExpr) bool {
-	if a.Type == Empty {
-		if len(a.Bases) != 0 || len(a.References) != 0 {
+	if !IsObject(a.Type) {
+		return false
+	}
+	if obj := AsObject(a.Type); obj != nil && len(*obj) != 0 {
+		return false
+	}
+	if len(a.Bases) != 0 || len(a.References) != 0 {
+		return false
+	}
+	if ut, ok := a.Type.(UserType); ok {
+		uatt := ut.Attribute()
+		if len(uatt.Bases) != 0 || len(uatt.References) != 0 {
 			return false
 		}
-		return true
 	}
-	obj := AsObject(a.Type)
-	if obj != nil {
-		return len(*obj) == 0
-	}
-	return false
+	return true
 }

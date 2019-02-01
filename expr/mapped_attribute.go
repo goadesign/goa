@@ -4,13 +4,23 @@ import (
 	"strings"
 )
 
-// MappedAttributeExpr is an attribute expression of type object that map the
-// object keys to external names (e.g. HTTP header names).
-type MappedAttributeExpr struct {
-	*AttributeExpr
-	nameMap    map[string]string
-	reverseMap map[string]string
-}
+type (
+	// MappedAttributeExpr is an attribute expression of type object that map the
+	// object keys to external names (e.g. HTTP header names).
+	MappedAttributeExpr struct {
+		*AttributeExpr
+		nameMap    map[string]string
+		reverseMap map[string]string
+	}
+
+	// MappedAttributeWalker is the type of functions given to WalkMappedAttr.
+	//
+	// name is the name of the attribute
+	// elem the name of the corresponding transport element
+	// a is the corresponding attribute expression
+	//
+	MappedAttributeWalker func(name, elem string, a *AttributeExpr) error
+)
 
 // NewEmptyMappedAttributeExpr creates an empty mapped attribute expression.
 func NewEmptyMappedAttributeExpr() *MappedAttributeExpr {
@@ -91,6 +101,20 @@ func DupMappedAtt(ma *MappedAttributeExpr) *MappedAttributeExpr {
 		nameMap:       nameMap,
 		reverseMap:    reverseMap,
 	}
+}
+
+// WalkMappedAttr iterates over the mapped attributes. It calls the given
+// function giving each attribute as it iterates. WalkMappedAttr stops if there
+// is no more attribute to iterate over or if the iterator function returns an
+// error in which case it returns the error.
+func WalkMappedAttr(ma *MappedAttributeExpr, it MappedAttributeWalker) error {
+	o := AsObject(ma.Type)
+	for _, nat := range *o {
+		if err := it(nat.Name, ma.ElemName(nat.Name), nat.Attribute); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // Map records the element name of one of the child attributes.

@@ -1229,6 +1229,38 @@ var PayloadQueryPrimitiveMapBoolArrayBoolValidateDSL = func() {
 	})
 }
 
+var PayloadQueryMapStringMapIntStringValidateDSL = func() {
+	Service("ServiceQueryMapStringMapIntStringValidate", func() {
+		Method("MethodQueryMapStringMapIntStringValidate", func() {
+			Payload(MapOf(String, MapOf(Int, String)), func() {
+				Key(func() {
+					Enum("foo")
+				})
+			})
+			HTTP(func() {
+				GET("/")
+				Param("q")
+			})
+		})
+	})
+}
+
+var PayloadQueryMapIntMapStringArrayIntValidateDSL = func() {
+	Service("ServiceQueryMapIntMapStringArrayIntValidate", func() {
+		Method("MethodQueryMapIntMapStringArrayIntValidate", func() {
+			Payload(MapOf(Int, MapOf(String, ArrayOf(Int))), func() {
+				Key(func() {
+					Enum(1, 2, 3)
+				})
+			})
+			HTTP(func() {
+				GET("/")
+				Param("q")
+			})
+		})
+	})
+}
+
 var PayloadQueryStringMappedDSL = func() {
 	Service("ServiceQueryStringMapped", func() {
 		Method("MethodQueryStringMapped", func() {
