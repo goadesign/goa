@@ -462,10 +462,6 @@ func Params(args interface{}) {
 //                                       // path and query string parameters.
 //                                       // Query string "v" maps to attribute
 //                                       // "version" of ShowPayload.
-//                    Param("csrf", String) // HTTP only parameter not defined in
-//                                          // ShowPayload
-//                    Required("crsf")   // Params makes it possible to list the
-//                                       // required parameters.
 //                })
 //            })
 //        })

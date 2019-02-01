@@ -877,7 +877,10 @@ func EncodeMethodQueryMapStringStringRequest(encoder func(*http.Request) goahttp
 			return goahttp.ErrInvalidType("ServiceQueryMapStringString", "MethodQueryMapStringString", "*servicequerymapstringstring.MethodQueryMapStringStringPayload", v)
 		}
 		values := req.URL.Query()
-		values.Add("q", fmt.Sprintf("%v", p.Q))
+		for k, value := range p.Q {
+			key := fmt.Sprintf("q[%s]", k)
+			values.Add(key, value)
+		}
 		req.URL.RawQuery = values.Encode()
 		return nil
 	}
@@ -894,7 +897,10 @@ func EncodeMethodQueryMapStringStringValidateRequest(encoder func(*http.Request)
 			return goahttp.ErrInvalidType("ServiceQueryMapStringStringValidate", "MethodQueryMapStringStringValidate", "*servicequerymapstringstringvalidate.MethodQueryMapStringStringValidatePayload", v)
 		}
 		values := req.URL.Query()
-		values.Add("q", fmt.Sprintf("%v", p.Q))
+		for k, value := range p.Q {
+			key := fmt.Sprintf("q[%s]", k)
+			values.Add(key, value)
+		}
 		req.URL.RawQuery = values.Encode()
 		return nil
 	}
@@ -910,7 +916,11 @@ func EncodeMethodQueryMapStringBoolRequest(encoder func(*http.Request) goahttp.E
 			return goahttp.ErrInvalidType("ServiceQueryMapStringBool", "MethodQueryMapStringBool", "*servicequerymapstringbool.MethodQueryMapStringBoolPayload", v)
 		}
 		values := req.URL.Query()
-		values.Add("q", fmt.Sprintf("%v", p.Q))
+		for k, value := range p.Q {
+			key := fmt.Sprintf("q[%s]", k)
+			valueStr := strconv.FormatBool(value)
+			values.Add(key, valueStr)
+		}
 		req.URL.RawQuery = values.Encode()
 		return nil
 	}
@@ -927,7 +937,11 @@ func EncodeMethodQueryMapStringBoolValidateRequest(encoder func(*http.Request) g
 			return goahttp.ErrInvalidType("ServiceQueryMapStringBoolValidate", "MethodQueryMapStringBoolValidate", "*servicequerymapstringboolvalidate.MethodQueryMapStringBoolValidatePayload", v)
 		}
 		values := req.URL.Query()
-		values.Add("q", fmt.Sprintf("%v", p.Q))
+		for k, value := range p.Q {
+			key := fmt.Sprintf("q[%s]", k)
+			valueStr := strconv.FormatBool(value)
+			values.Add(key, valueStr)
+		}
 		req.URL.RawQuery = values.Encode()
 		return nil
 	}
@@ -943,7 +957,11 @@ func EncodeMethodQueryMapBoolStringRequest(encoder func(*http.Request) goahttp.E
 			return goahttp.ErrInvalidType("ServiceQueryMapBoolString", "MethodQueryMapBoolString", "*servicequerymapboolstring.MethodQueryMapBoolStringPayload", v)
 		}
 		values := req.URL.Query()
-		values.Add("q", fmt.Sprintf("%v", p.Q))
+		for kRaw, value := range p.Q {
+			k := strconv.FormatBool(kRaw)
+			key := fmt.Sprintf("q[%s]", k)
+			values.Add(key, value)
+		}
 		req.URL.RawQuery = values.Encode()
 		return nil
 	}
@@ -960,7 +978,11 @@ func EncodeMethodQueryMapBoolStringValidateRequest(encoder func(*http.Request) g
 			return goahttp.ErrInvalidType("ServiceQueryMapBoolStringValidate", "MethodQueryMapBoolStringValidate", "*servicequerymapboolstringvalidate.MethodQueryMapBoolStringValidatePayload", v)
 		}
 		values := req.URL.Query()
-		values.Add("q", fmt.Sprintf("%v", p.Q))
+		for kRaw, value := range p.Q {
+			k := strconv.FormatBool(kRaw)
+			key := fmt.Sprintf("q[%s]", k)
+			values.Add(key, value)
+		}
 		req.URL.RawQuery = values.Encode()
 		return nil
 	}
@@ -976,7 +998,12 @@ func EncodeMethodQueryMapBoolBoolRequest(encoder func(*http.Request) goahttp.Enc
 			return goahttp.ErrInvalidType("ServiceQueryMapBoolBool", "MethodQueryMapBoolBool", "*servicequerymapboolbool.MethodQueryMapBoolBoolPayload", v)
 		}
 		values := req.URL.Query()
-		values.Add("q", fmt.Sprintf("%v", p.Q))
+		for kRaw, value := range p.Q {
+			k := strconv.FormatBool(kRaw)
+			key := fmt.Sprintf("q[%s]", k)
+			valueStr := strconv.FormatBool(value)
+			values.Add(key, valueStr)
+		}
 		req.URL.RawQuery = values.Encode()
 		return nil
 	}
@@ -993,7 +1020,12 @@ func EncodeMethodQueryMapBoolBoolValidateRequest(encoder func(*http.Request) goa
 			return goahttp.ErrInvalidType("ServiceQueryMapBoolBoolValidate", "MethodQueryMapBoolBoolValidate", "*servicequerymapboolboolvalidate.MethodQueryMapBoolBoolValidatePayload", v)
 		}
 		values := req.URL.Query()
-		values.Add("q", fmt.Sprintf("%v", p.Q))
+		for kRaw, value := range p.Q {
+			k := strconv.FormatBool(kRaw)
+			key := fmt.Sprintf("q[%s]", k)
+			valueStr := strconv.FormatBool(value)
+			values.Add(key, valueStr)
+		}
 		req.URL.RawQuery = values.Encode()
 		return nil
 	}
@@ -1010,7 +1042,10 @@ func EncodeMethodQueryMapStringArrayStringRequest(encoder func(*http.Request) go
 			return goahttp.ErrInvalidType("ServiceQueryMapStringArrayString", "MethodQueryMapStringArrayString", "*servicequerymapstringarraystring.MethodQueryMapStringArrayStringPayload", v)
 		}
 		values := req.URL.Query()
-		values.Add("q", fmt.Sprintf("%v", p.Q))
+		for k, value := range p.Q {
+			key := fmt.Sprintf("q[%s]", k)
+			values[key] = value
+		}
 		req.URL.RawQuery = values.Encode()
 		return nil
 	}
@@ -1027,7 +1062,10 @@ func EncodeMethodQueryMapStringArrayStringValidateRequest(encoder func(*http.Req
 			return goahttp.ErrInvalidType("ServiceQueryMapStringArrayStringValidate", "MethodQueryMapStringArrayStringValidate", "*servicequerymapstringarraystringvalidate.MethodQueryMapStringArrayStringValidatePayload", v)
 		}
 		values := req.URL.Query()
-		values.Add("q", fmt.Sprintf("%v", p.Q))
+		for k, value := range p.Q {
+			key := fmt.Sprintf("q[%s]", k)
+			values[key] = value
+		}
 		req.URL.RawQuery = values.Encode()
 		return nil
 	}
@@ -1044,7 +1082,13 @@ func EncodeMethodQueryMapStringArrayBoolRequest(encoder func(*http.Request) goah
 			return goahttp.ErrInvalidType("ServiceQueryMapStringArrayBool", "MethodQueryMapStringArrayBool", "*servicequerymapstringarraybool.MethodQueryMapStringArrayBoolPayload", v)
 		}
 		values := req.URL.Query()
-		values.Add("q", fmt.Sprintf("%v", p.Q))
+		for k, value := range p.Q {
+			key := fmt.Sprintf("q[%s]", k)
+			for _, val := range value {
+				valStr := strconv.FormatBool(val)
+				values.Add(key, valStr)
+			}
+		}
 		req.URL.RawQuery = values.Encode()
 		return nil
 	}
@@ -1061,7 +1105,13 @@ func EncodeMethodQueryMapStringArrayBoolValidateRequest(encoder func(*http.Reque
 			return goahttp.ErrInvalidType("ServiceQueryMapStringArrayBoolValidate", "MethodQueryMapStringArrayBoolValidate", "*servicequerymapstringarrayboolvalidate.MethodQueryMapStringArrayBoolValidatePayload", v)
 		}
 		values := req.URL.Query()
-		values.Add("q", fmt.Sprintf("%v", p.Q))
+		for k, value := range p.Q {
+			key := fmt.Sprintf("q[%s]", k)
+			for _, val := range value {
+				valStr := strconv.FormatBool(val)
+				values.Add(key, valStr)
+			}
+		}
 		req.URL.RawQuery = values.Encode()
 		return nil
 	}
@@ -1078,7 +1128,11 @@ func EncodeMethodQueryMapBoolArrayStringRequest(encoder func(*http.Request) goah
 			return goahttp.ErrInvalidType("ServiceQueryMapBoolArrayString", "MethodQueryMapBoolArrayString", "*servicequerymapboolarraystring.MethodQueryMapBoolArrayStringPayload", v)
 		}
 		values := req.URL.Query()
-		values.Add("q", fmt.Sprintf("%v", p.Q))
+		for kRaw, value := range p.Q {
+			k := strconv.FormatBool(kRaw)
+			key := fmt.Sprintf("q[%s]", k)
+			values[key] = value
+		}
 		req.URL.RawQuery = values.Encode()
 		return nil
 	}
@@ -1095,7 +1149,11 @@ func EncodeMethodQueryMapBoolArrayStringValidateRequest(encoder func(*http.Reque
 			return goahttp.ErrInvalidType("ServiceQueryMapBoolArrayStringValidate", "MethodQueryMapBoolArrayStringValidate", "*servicequerymapboolarraystringvalidate.MethodQueryMapBoolArrayStringValidatePayload", v)
 		}
 		values := req.URL.Query()
-		values.Add("q", fmt.Sprintf("%v", p.Q))
+		for kRaw, value := range p.Q {
+			k := strconv.FormatBool(kRaw)
+			key := fmt.Sprintf("q[%s]", k)
+			values[key] = value
+		}
 		req.URL.RawQuery = values.Encode()
 		return nil
 	}
@@ -1111,7 +1169,14 @@ func EncodeMethodQueryMapBoolArrayBoolRequest(encoder func(*http.Request) goahtt
 			return goahttp.ErrInvalidType("ServiceQueryMapBoolArrayBool", "MethodQueryMapBoolArrayBool", "*servicequerymapboolarraybool.MethodQueryMapBoolArrayBoolPayload", v)
 		}
 		values := req.URL.Query()
-		values.Add("q", fmt.Sprintf("%v", p.Q))
+		for kRaw, value := range p.Q {
+			k := strconv.FormatBool(kRaw)
+			key := fmt.Sprintf("q[%s]", k)
+			for _, val := range value {
+				valStr := strconv.FormatBool(val)
+				values.Add(key, valStr)
+			}
+		}
 		req.URL.RawQuery = values.Encode()
 		return nil
 	}
@@ -1128,7 +1193,14 @@ func EncodeMethodQueryMapBoolArrayBoolValidateRequest(encoder func(*http.Request
 			return goahttp.ErrInvalidType("ServiceQueryMapBoolArrayBoolValidate", "MethodQueryMapBoolArrayBoolValidate", "*servicequerymapboolarrayboolvalidate.MethodQueryMapBoolArrayBoolValidatePayload", v)
 		}
 		values := req.URL.Query()
-		values.Add("q", fmt.Sprintf("%v", p.Q))
+		for kRaw, value := range p.Q {
+			k := strconv.FormatBool(kRaw)
+			key := fmt.Sprintf("q[%s]", k)
+			for _, val := range value {
+				valStr := strconv.FormatBool(val)
+				values.Add(key, valStr)
+			}
+		}
 		req.URL.RawQuery = values.Encode()
 		return nil
 	}
@@ -1217,6 +1289,10 @@ func EncodeMethodQueryPrimitiveMapStringArrayStringValidateRequest(encoder func(
 			return goahttp.ErrInvalidType("ServiceQueryPrimitiveMapStringArrayStringValidate", "MethodQueryPrimitiveMapStringArrayStringValidate", "map[string][]string", v)
 		}
 		values := req.URL.Query()
+		for k, value := range p {
+			key := fmt.Sprintf("q[%s]", k)
+			values[key] = value
+		}
 		req.URL.RawQuery = values.Encode()
 		return nil
 	}
@@ -1233,6 +1309,11 @@ func EncodeMethodQueryPrimitiveMapStringBoolValidateRequest(encoder func(*http.R
 			return goahttp.ErrInvalidType("ServiceQueryPrimitiveMapStringBoolValidate", "MethodQueryPrimitiveMapStringBoolValidate", "map[string]bool", v)
 		}
 		values := req.URL.Query()
+		for k, value := range p {
+			key := fmt.Sprintf("q[%s]", k)
+			valueStr := strconv.FormatBool(value)
+			values.Add(key, valueStr)
+		}
 		req.URL.RawQuery = values.Encode()
 		return nil
 	}
@@ -1249,6 +1330,65 @@ func EncodeMethodQueryPrimitiveMapBoolArrayBoolValidateRequest(encoder func(*htt
 			return goahttp.ErrInvalidType("ServiceQueryPrimitiveMapBoolArrayBoolValidate", "MethodQueryPrimitiveMapBoolArrayBoolValidate", "map[bool][]bool", v)
 		}
 		values := req.URL.Query()
+		for kRaw, value := range p {
+			k := strconv.FormatBool(kRaw)
+			key := fmt.Sprintf("q[%s]", k)
+			for _, val := range value {
+				valStr := strconv.FormatBool(val)
+				values.Add(key, valStr)
+			}
+		}
+		req.URL.RawQuery = values.Encode()
+		return nil
+	}
+}
+`
+
+var PayloadQueryMapStringMapIntStringValidateEncodeCode = `// EncodeMethodQueryMapStringMapIntStringValidateRequest returns an encoder for
+// requests sent to the ServiceQueryMapStringMapIntStringValidate
+// MethodQueryMapStringMapIntStringValidate server.
+func EncodeMethodQueryMapStringMapIntStringValidateRequest(encoder func(*http.Request) goahttp.Encoder) func(*http.Request, interface{}) error {
+	return func(req *http.Request, v interface{}) error {
+		p, ok := v.(map[string]map[int]string)
+		if !ok {
+			return goahttp.ErrInvalidType("ServiceQueryMapStringMapIntStringValidate", "MethodQueryMapStringMapIntStringValidate", "map[string]map[int]string", v)
+		}
+		values := req.URL.Query()
+		for k, value := range p {
+			key := fmt.Sprintf("q[%s]", k)
+			for kRaw, value := range value {
+				k := strconv.Itoa(kRaw)
+				key = fmt.Sprintf("%s[%s]", key, k)
+				values.Add(key, value)
+			}
+		}
+		req.URL.RawQuery = values.Encode()
+		return nil
+	}
+}
+`
+
+var PayloadQueryMapIntMapStringArrayIntValidateEncodeCode = `// EncodeMethodQueryMapIntMapStringArrayIntValidateRequest returns an encoder
+// for requests sent to the ServiceQueryMapIntMapStringArrayIntValidate
+// MethodQueryMapIntMapStringArrayIntValidate server.
+func EncodeMethodQueryMapIntMapStringArrayIntValidateRequest(encoder func(*http.Request) goahttp.Encoder) func(*http.Request, interface{}) error {
+	return func(req *http.Request, v interface{}) error {
+		p, ok := v.(map[int]map[string][]int)
+		if !ok {
+			return goahttp.ErrInvalidType("ServiceQueryMapIntMapStringArrayIntValidate", "MethodQueryMapIntMapStringArrayIntValidate", "map[int]map[string][]int", v)
+		}
+		values := req.URL.Query()
+		for kRaw, value := range p {
+			k := strconv.Itoa(kRaw)
+			key := fmt.Sprintf("q[%s]", k)
+			for k, value := range value {
+				key = fmt.Sprintf("%s[%s]", key, k)
+				for _, val := range value {
+					valStr := strconv.Itoa(val)
+					values.Add(key, valStr)
+				}
+			}
+		}
 		req.URL.RawQuery = values.Encode()
 		return nil
 	}

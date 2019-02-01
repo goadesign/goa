@@ -152,17 +152,25 @@ func NewServiceMultipartWithParamMethodMultipartWithParamDecoder(mux goahttp.Mux
 				if len(cRaw) == 0 {
 					err = goa.MergeErrors(err, goa.MissingFieldError("c", "query string"))
 				}
-				c = make(map[int][]string, len(cRaw))
-				for keyRaw, val := range cRaw {
-					var key int
-					{
-						v, err2 := strconv.ParseInt(keyRaw, 10, strconv.IntSize)
-						if err2 != nil {
-							err = goa.MergeErrors(err, goa.InvalidFieldTypeError("key", keyRaw, "integer"))
+				for keyRaw, valRaw := range cRaw {
+					if strings.HasPrefix(keyRaw, "c[") {
+						if c == nil {
+							c = make(map[int][]string)
 						}
-						key = int(v)
+						var keya int
+						{
+							openIdx := strings.IndexRune(keyRaw, '[')
+							closeIdx := strings.IndexRune(keyRaw, ']')
+							keyaRaw := keyRaw[openIdx+1 : closeIdx]
+							v, err2 := strconv.ParseInt(keyaRaw, 10, strconv.IntSize)
+							if err2 != nil {
+								err = goa.MergeErrors(err, goa.InvalidFieldTypeError("keya", keyaRaw, "integer"))
+							}
+							keya = int(v)
+							keyRaw = keyRaw[closeIdx+1:]
+						}
+						c[keya] = valRaw
 					}
-					c[key] = val
 				}
 			}
 			if err != nil {
@@ -205,17 +213,25 @@ func NewServiceMultipartWithParamsAndHeadersMethodMultipartWithParamsAndHeadersD
 				if len(cRaw) == 0 {
 					err = goa.MergeErrors(err, goa.MissingFieldError("c", "query string"))
 				}
-				c = make(map[int][]string, len(cRaw))
-				for keyRaw, val := range cRaw {
-					var key int
-					{
-						v, err2 := strconv.ParseInt(keyRaw, 10, strconv.IntSize)
-						if err2 != nil {
-							err = goa.MergeErrors(err, goa.InvalidFieldTypeError("key", keyRaw, "integer"))
+				for keyRaw, valRaw := range cRaw {
+					if strings.HasPrefix(keyRaw, "c[") {
+						if c == nil {
+							c = make(map[int][]string)
 						}
-						key = int(v)
+						var keya int
+						{
+							openIdx := strings.IndexRune(keyRaw, '[')
+							closeIdx := strings.IndexRune(keyRaw, ']')
+							keyaRaw := keyRaw[openIdx+1 : closeIdx]
+							v, err2 := strconv.ParseInt(keyaRaw, 10, strconv.IntSize)
+							if err2 != nil {
+								err = goa.MergeErrors(err, goa.InvalidFieldTypeError("keya", keyaRaw, "integer"))
+							}
+							keya = int(v)
+							keyRaw = keyRaw[closeIdx+1:]
+						}
+						c[keya] = valRaw
 					}
-					c[key] = val
 				}
 			}
 			bRaw := r.Header.Get("Authorization")

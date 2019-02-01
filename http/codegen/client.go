@@ -171,7 +171,11 @@ func clientEncodeDecode(genpkg string, svc *expr.HTTPServiceExpr) *codegen.File 
 				Source: requestEncoderT,
 				FuncMap: map[string]interface{}{
 					"typeConversionData": typeConversionData,
-					"isBearer":           isBearer,
+					"mapConversionData":  mapConversionData,
+					"goTypeRef": func(dt expr.DataType) string {
+						return service.Services.Get(svc.Name()).Scope.GoTypeRef(&expr.AttributeExpr{Type: dt})
+					},
+					"isBearer": isBearer,
 				},
 				Data: e,
 			})
@@ -209,6 +213,16 @@ func typeConversionData(dt expr.DataType, varName string, target string) map[str
 		"Type":    dt,
 		"VarName": varName,
 		"Target":  target,
+	}
+}
+
+func mapConversionData(dt expr.DataType, varName, sourceVar, sourceField string, newVar bool) map[string]interface{} {
+	return map[string]interface{}{
+		"Type":        dt,
+		"VarName":     varName,
+		"SourceVar":   sourceVar,
+		"SourceField": sourceField,
+		"NewVar":      newVar,
 	}
 }
 
@@ -394,13 +408,15 @@ func {{ .RequestEncoder }}(encoder func(*http.Request) goahttp.Encoder) func(*ht
 				{{ template "type_conversion" (typeConversionData .Type.ElemType.Type "valueStr" "value") }}
 				values.Add("{{ .Name }}", valueStr)
 			}
+		{{- else if .Map }}
+			{{- template "map_conversion" (mapConversionData .Type .Name "p" .FieldName true) }}
 		{{- else if .FieldName }}
 			{{- if .Pointer }}
 		if p.{{ .FieldName }} != nil {
 			{{- end }}
 		values.Add("{{ .Name }}",
 			{{- if eq .Type.Name "bytes" }} string(
-			{{- else if not (eq .Type.Name "string") }} fmt.Sprintf("%v", 
+			{{- else if not (eq .Type.Name "string") }} fmt.Sprintf("%v",
 			{{- end }}
 			{{- if .Pointer }}*{{ end }}p.{{ .FieldName }}
 			{{- if or (eq .Type.Name "bytes") (not (eq .Type.Name "string")) }})
@@ -446,6 +462,32 @@ func {{ .RequestEncoder }}(encoder func(*http.Request) goahttp.Encoder) func(*ht
 	}
 }
 
+{{- define "map_conversion" }}
+  for k{{ if not (eq .Type.KeyType.Type.Name "string") }}Raw{{ end }}, value := range {{ .SourceVar }}{{ if .SourceField }}.{{ .SourceField }}{{ end }} {
+		{{- if not (eq .Type.KeyType.Type.Name "string") }}
+			{{- template "type_conversion" (typeConversionData .Type.KeyType.Type "k" "kRaw") }}
+		{{- end }}
+		key {{ if .NewVar }}:={{ else }}={{ end }} fmt.Sprintf("{{ .VarName }}[%s]", {{ if not .NewVar }}key, {{ end }}k)
+		{{- if eq .Type.ElemType.Type.Name "string" }}
+			values.Add(key, value)
+		{{- else if eq .Type.ElemType.Type.Name "map" }}
+			{{- template "map_conversion" (mapConversionData .Type.ElemType.Type "%s" "value" "" false) }}
+		{{- else if eq .Type.ElemType.Type.Name "array" }}
+			{{- if eq .Type.ElemType.Type.ElemType.Type.Name "string" }}
+				values[key] = value
+			{{- else }}
+				for _, val := range value {
+					{{ template "type_conversion" (typeConversionData .Type.ElemType.Type.ElemType.Type "valStr" "val") }}
+					values.Add(key, valStr)
+				}
+			{{- end }}
+		{{- else }}
+			{{ template "type_conversion" (typeConversionData .Type.ElemType.Type "valueStr" "value") }}
+			values.Add(key, valueStr)
+		{{- end }}
+	}
+{{- end }}
+
 {{- define "type_conversion" }}
   {{- if eq .Type.Name "boolean" -}}
     {{ .VarName }} := strconv.FormatBool({{ .Target }})
@@ -472,7 +514,7 @@ func {{ .RequestEncoder }}(encoder func(*http.Request) goahttp.Encoder) func(*ht
   {{- else if eq .Type.Name "any" -}}
     {{ .VarName }} := fmt.Sprintf("%v", {{ .Target }})
   {{- else }}
-    // unsupported type {{ .Type.Name }} for header field {{ .FieldName }}
+    // unsupported type {{ .Type.Name }} for field {{ .FieldName }}
   {{- end }}
 {{- end }}
 `
