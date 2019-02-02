@@ -58,3 +58,49 @@ func TestCanonicalIdentifier(t *testing.T) {
 		}
 	}
 }
+
+func TestViewExprEvalName(t *testing.T) {
+	var (
+		result = &ResultTypeExpr{
+			UserTypeExpr: &UserTypeExpr{
+				AttributeExpr: &AttributeExpr{},
+			},
+		}
+	)
+	cases := map[string]struct {
+		name     string
+		parent   *ResultTypeExpr
+		expected string
+	}{
+		"empty name and empty parent": {
+			name:     "",
+			parent:   nil,
+			expected: "unnamed view",
+		},
+		"name only": {
+			name:     "foo",
+			parent:   nil,
+			expected: `view "foo"`,
+		},
+		"parent only": {
+			name:     "",
+			parent:   result,
+			expected: "unnamed view of attribute",
+		},
+		"both name and parent": {
+			name:     "foo",
+			parent:   result,
+			expected: `view "foo" of attribute`,
+		},
+	}
+
+	for k, tc := range cases {
+		view := ViewExpr{
+			Name:   tc.name,
+			Parent: tc.parent,
+		}
+		if actual := view.EvalName(); actual != tc.expected {
+			t.Errorf("%s: got %#v, expected %#v", k, actual, tc.expected)
+		}
+	}
+}
