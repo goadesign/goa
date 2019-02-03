@@ -283,7 +283,7 @@ containing the implementation for a HTTP handler that serves the `openapi.json`
 file.
 
 All we need to do is mount the handler on the service mux. Add the corresponding
-import statement to `cmd/calcsvc/main.go`:
+import statement to `cmd/calcsvc/calcsvc.go`:
 
 ```go
 import openapisvr "calcsvc/gen/http/openapi/server"
