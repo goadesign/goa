@@ -13,8 +13,7 @@ install:
   - set PATH=%PATH%;c:\MinGW\bin;%GOPATH%\bin
 
 build_script:
-  - make depend
-  - make test
+  - make travis
 
 test: off
 
