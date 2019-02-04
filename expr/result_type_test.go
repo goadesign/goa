@@ -4,6 +4,42 @@ import (
 	"testing"
 )
 
+func TestResultTypeExprView(t *testing.T) {
+	var (
+		viewFoo = &ViewExpr{
+			Name: "foo",
+		}
+		viewBar = &ViewExpr{
+			Name: "bar",
+		}
+	)
+	cases := map[string]struct {
+		name     string
+		expected *ViewExpr
+	}{
+		"exist": {
+			name:     "foo",
+			expected: viewFoo,
+		},
+		"not exist": {
+			name:     "baz",
+			expected: nil,
+		},
+	}
+
+	for k, tc := range cases {
+		r := ResultTypeExpr{
+			Views: []*ViewExpr{
+				viewFoo,
+				viewBar,
+			},
+		}
+		if actual := r.View(tc.name); actual != tc.expected {
+			t.Errorf("%s: got %#v, expected %#v", k, actual, tc.expected)
+		}
+	}
+}
+
 func TestResultTypeExprIsError(t *testing.T) {
 	cases := map[string]struct {
 		identifier string
