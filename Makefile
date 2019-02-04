@@ -99,27 +99,32 @@ build-examples:
 
 clean:
 	@cd $(GOPATH)/src/goa.design/goa/examples/calc && \
-		rm calc calc-cli
+		rm -f calc calc-cli
 	@cd $(GOPATH)/src/goa.design/goa/examples/cellar && \
-		rm cellar cellar-cli
+		rm -f cellar cellar-cli
 	@cd $(GOPATH)/src/goa.design/goa/examples/chatter && \
-		rm chatter chatter-cli
+		rm -f chatter chatter-cli
 	@cd $(GOPATH)/src/goa.design/goa/examples/error && \
-		rm divider divider-cli
+		rm -f divider divider-cli
 	@cd $(GOPATH)/src/goa.design/goa/examples/security && \
-		rm multi_auth multi_auth-cli
+		rm -f multi_auth multi_auth-cli
 
 test:
 	go test ./...
 
+ifeq ($(GOOS),windows)
+PLUGINS_BRANCH="$(GOPATH)\src\goa.design\plugins"
+else
+PLUGINS_BRANCH="$(GOPATH)/src/goa.design/plugins"
+endif
 test-plugins:
 	@if [ -z $(GOA_BRANCH) ]; then\
 		GOA_BRANCH=$$(git rev-parse --abbrev-ref HEAD); \
 	fi
 	@if [ ! -d "$(GOPATH)/src/goa.design/plugins" ]; then\
-		git clone https://github.com/goadesign/plugins.git $(GOPATH)/src/goa.design/plugins; \
+		git clone https://github.com/goadesign/plugins.git $(PLUGINS_BRANCH); \
 	fi
-	@cd $(GOPATH)/src/goa.design/plugins && git checkout $(GOA_BRANCH) || echo "Using master branch in plugins repo" && \
+	@cd $(PLUGINS_BRANCH) && git checkout $(GOA_BRANCH) || echo "Using master branch in plugins repo" && \
 	make -k || (echo "Tests in plugin repo (https://github.com/goadesign/plugins) failed" \
                   "due to changes in goa repo (branch: $(GOA_BRANCH))!" \
                   "Create a branch with name '$(GOA_BRANCH)' in the plugin repo and fix these errors." && exit 1)
