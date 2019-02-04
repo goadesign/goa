@@ -346,3 +346,55 @@ func TestSchemeExprValidate(t *testing.T) {
 		}
 	}
 }
+
+func TestSchemeKindString(t *testing.T) {
+	var unknownKind SchemeKind
+	cases := map[string]struct {
+		kind     SchemeKind
+		expected string
+	}{
+		"basic auth": {
+			kind:     BasicAuthKind,
+			expected: "Basic",
+		},
+		"api key": {
+			kind:     APIKeyKind,
+			expected: "APIKey",
+		},
+		"jwt": {
+			kind:     JWTKind,
+			expected: "JWT",
+		},
+		"oauth2": {
+			kind:     OAuth2Kind,
+			expected: "OAuth2",
+		},
+		"no kind": {
+			kind:     NoKind,
+			expected: "None",
+		},
+		"unknown kind": {
+			kind:     unknownKind,
+			expected: "", // should have panicked!
+		},
+	}
+
+	for k, tc := range cases {
+		func() {
+			// panic recover
+			defer func() {
+				if k != "unknown kind" {
+					return
+				}
+
+				if recover() == nil {
+					t.Errorf("should have panicked!")
+				}
+			}()
+
+			if actual := tc.kind.String(); actual != tc.expected {
+				t.Errorf("%s: got %#v, expected %#v", k, actual, tc.expected)
+			}
+		}()
+	}
+}
