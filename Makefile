@@ -125,6 +125,6 @@ test-plugins:
 		git clone https://github.com/goadesign/plugins.git $(PLUGINS_BRANCH); \
 	fi
 	@cd $(PLUGINS_BRANCH) && git checkout $(GOA_BRANCH) || echo "Using master branch in plugins repo" && \
-	make -k || (echo "Tests in plugin repo (https://github.com/goadesign/plugins) failed" \
+	make -k test-plugins || (echo "Tests in plugin repo (https://github.com/goadesign/plugins) failed" \
                   "due to changes in goa repo (branch: $(GOA_BRANCH))!" \
                   "Create a branch with name '$(GOA_BRANCH)' in the plugin repo and fix these errors." && exit 1)
