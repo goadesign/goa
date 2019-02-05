@@ -72,6 +72,7 @@ gen:
 	rm -rf $(GOPATH)/src/goa.design/goa/examples/basic/cmd              && \
 	rm -rf $(GOPATH)/src/goa.design/goa/examples/cellar/cmd/cellar-cli  && \
 	rm -rf $(GOPATH)/src/goa.design/goa/examples/error/cmd              && \
+	rm -rf $(GOPATH)/src/goa.design/goa/examples/multipart/cmd          && \
 	rm -rf $(GOPATH)/src/goa.design/goa/examples/security/cmd           && \
 	rm -rf $(GOPATH)/src/goa.design/goa/examples/streaming/cmd/chatter  && \
 	goa gen     goa.design/goa/examples/basic/design      -o $(GOPATH)/src/goa.design/goa/examples/basic     && \
@@ -80,6 +81,8 @@ gen:
 	goa example goa.design/goa/examples/cellar/design    -o $(GOPATH)/src/goa.design/goa/examples/cellar   && \
 	goa gen     goa.design/goa/examples/error/design     -o $(GOPATH)/src/goa.design/goa/examples/error    && \
 	goa example goa.design/goa/examples/error/design     -o $(GOPATH)/src/goa.design/goa/examples/error    && \
+	goa gen     goa.design/goa/examples/multipart/design -o $(GOPATH)/src/goa.design/goa/examples/multipart && \
+	goa example goa.design/goa/examples/multipart/design -o $(GOPATH)/src/goa.design/goa/examples/multipart && \
 	goa gen     goa.design/goa/examples/security/design  -o $(GOPATH)/src/goa.design/goa/examples/security && \
 	goa example goa.design/goa/examples/security/design  -o $(GOPATH)/src/goa.design/goa/examples/security && \
 	goa gen     goa.design/goa/examples/streaming/design -o $(GOPATH)/src/goa.design/goa/examples/streaming  && \
@@ -92,6 +95,8 @@ build-examples:
 		go build ./cmd/cellar && go build ./cmd/cellar-cli
 	@cd $(GOPATH)/src/goa.design/goa/examples/error && \
 		go build ./cmd/divider && go build ./cmd/divider-cli
+	@cd $(GOPATH)/src/goa.design/goa/examples/multipart && \
+		go build ./cmd/resume && go build ./cmd/resume-cli
 	@cd $(GOPATH)/src/goa.design/goa/examples/security && \
 		go build ./cmd/multi_auth && go build ./cmd/multi_auth-cli
 	@cd $(GOPATH)/src/goa.design/goa/examples/streaming && \
@@ -104,6 +109,8 @@ clean:
 		rm -f cellar cellar-cli
 	@cd $(GOPATH)/src/goa.design/goa/examples/error && \
 		rm -f divider divider-cli
+	@cd $(GOPATH)/src/goa.design/goa/examples/multipart && \
+		rm -f resume resume-cli
 	@cd $(GOPATH)/src/goa.design/goa/examples/security && \
 		rm -f multi_auth multi_auth-cli
 	@cd $(GOPATH)/src/goa.design/goa/examples/streaming && \
