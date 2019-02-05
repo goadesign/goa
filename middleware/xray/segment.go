@@ -146,7 +146,7 @@ type (
 // NewSegment creates a new segment that gets written to the given connection
 // on close.
 func NewSegment(name, traceID, spanID string, conn net.Conn) *Segment {
-	s := &Segment{
+	return &Segment{
 		Mutex:      &sync.Mutex{},
 		Name:       name,
 		TraceID:    traceID,
@@ -155,8 +155,6 @@ func NewSegment(name, traceID, spanID string, conn net.Conn) *Segment {
 		InProgress: true,
 		conn:       conn,
 	}
-	s.flush() // notify X-Ray about the in-progress segment
-	return s
 }
 
 // RecordRequest traces a request.
@@ -261,7 +259,6 @@ func (s *Segment) NewSubsegment(name string) *Segment {
 		Parent:     s,
 		conn:       s.conn,
 	}
-	sub.flush() // notify X-Ray about the in-progress segment
 	return sub
 }
 
@@ -275,6 +272,7 @@ func (s *Segment) NewSubsegment(name string) *Segment {
 //
 func (s *Segment) Capture(name string, fn func()) {
 	sub := s.NewSubsegment(name)
+	sub.SubmitInProgressSegment()
 	defer sub.Close()
 	fn()
 }
@@ -343,6 +341,18 @@ func (s *Segment) Close() {
 	s.EndTime = now()
 	s.InProgress = false
 	s.flush()
+}
+
+// SubmitInProgressSegment sends this in-progress segment to the AWS X-Ray daemon.
+// https://docs.aws.amazon.com/xray/latest/devguide/xray-api-segmentdocuments.html#api-segmentdocuments-subsegments
+// This should be called no more than one time for this segment.
+func (s *Segment) SubmitInProgressSegment() {
+	s.Lock()
+	defer s.Unlock()
+
+	if s.InProgress {
+		s.flush()
+	}
 }
 
 // flush sends the segment to the AWS X-Ray daemon.

@@ -47,10 +47,6 @@ func TestWrapDoer(t *testing.T) {
 
 		// add an xray segment to the context
 		xrayConn := NewTestNetConn()
-		xrayConn.Expect("Write", func(b []byte) (int, error) {
-			Expect(b).To(ContainSubstring(`"in_progress":true`))
-			return len(b), nil
-		})
 		segment := NewSegment(segmentName, traceID, spanID, xrayConn)
 		ctx = WithSegment(ctx, segment)
 
@@ -116,10 +112,6 @@ func TestWrapDoer(t *testing.T) {
 
 		// add an xray segment to the context
 		xrayConn := NewTestNetConn()
-		xrayConn.Expect("Write", func(b []byte) (int, error) {
-			Expect(b).To(ContainSubstring(`"in_progress":true`))
-			return len(b), nil
-		})
 		segment := NewSegment(segmentName, traceID, spanID, xrayConn)
 		ctx = WithSegment(ctx, segment)
 

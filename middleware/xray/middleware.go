@@ -124,10 +124,10 @@ func newSegment(ctx context.Context, traceID, name string, req *http.Request, c 
 
 	s := NewSegment(name, traceID, spanID, c)
 	s.RecordRequest(req, "")
-
 	if parentID != "" {
 		s.ParentID = parentID
 	}
+	s.SubmitInProgressSegment()
 
 	return s
 }
