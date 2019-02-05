@@ -59,7 +59,7 @@ func TestTransportExample(t *testing.T) {
 	// Setting context on request
 	req = req.WithContext(ctx)
 
-	js := readUDP(t, func() {
+	messages := readUDP(t, 1, func() {
 		resp, err := httpClient.Do(req)
 		if err != nil {
 			t.Fatalf("failed to make request - %s", err)
@@ -68,6 +68,7 @@ func TestTransportExample(t *testing.T) {
 			t.Errorf("HTTP Response Status is invalid, expected %d got %d", http.StatusOK, resp.StatusCode)
 		}
 	})
+	js := messages[0]
 
 	//
 	// Verify
@@ -225,7 +226,7 @@ func TestTransport(t *testing.T) {
 			req.Host = c.Request.Host
 		}
 
-		js := readUDP(t, func() {
+		messages := readUDP(t, 1, func() {
 			resp, err := WrapTransport(rt).RoundTrip(req)
 			if c.Segment.Exception == "" && err != nil {
 				t.Errorf("%s: Expected no error got %s", k, err)
@@ -234,6 +235,7 @@ func TestTransport(t *testing.T) {
 				t.Errorf("%s: Response Status is invalid, expected %d got %d", k, c.Response.Status, resp.StatusCode)
 			}
 		})
+		js := messages[0]
 
 		var s *Segment
 		elems := strings.Split(js, "\n")

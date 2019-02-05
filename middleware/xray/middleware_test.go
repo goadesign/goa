@@ -161,9 +161,16 @@ func TestMiddleware(t *testing.T) {
 			req.Host = c.Request.Host
 		}
 
-		js := readUDP(t, func() {
+		messages := readUDP(t, 2, func() {
 			m(h)(ctx, goa.ContextResponse(ctx), req)
 		})
+
+		// expect the first message is just "in_progress:true"
+		if !strings.Contains(messages[0], `"in_progress":true`) {
+			t.Fatalf("%s: expected first segment to be in_progress got: %q", k, messages[0])
+		}
+
+		js := messages[1]
 
 		var s *Segment
 		elems := strings.Split(js, "\n")
@@ -357,9 +364,9 @@ func TestPeriodicallyRedialingConn(t *testing.T) {
 }
 
 // readUDP calls sender, reads and returns UDP messages received on udplisten.
-func readUDP(t *testing.T, sender func()) string {
+func readUDP(t *testing.T, expectedMessages int, sender func()) []string {
 	var (
-		readChan = make(chan string)
+		readChan = make(chan []string)
 		msg      = make([]byte, 1024*32)
 	)
 	resAddr, err := net.ResolveUDPAddr("udp", udplisten)
@@ -373,8 +380,14 @@ func readUDP(t *testing.T, sender func()) string {
 
 	go func() {
 		listener.SetReadDeadline(time.Now().Add(time.Second))
-		n, _, _ := listener.ReadFrom(msg)
-		readChan <- string(msg[0:n])
+
+		// read the expected number of messages
+		var messages []string
+		for i := 0; i < expectedMessages; i++ {
+			n, _, _ := listener.ReadFrom(msg)
+			messages = append(messages, string(msg[0:n]))
+		}
+		readChan <- messages
 	}()
 
 	sender()

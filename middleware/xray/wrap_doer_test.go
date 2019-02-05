@@ -47,6 +47,10 @@ func TestWrapDoer(t *testing.T) {
 
 		// add an xray segment to the context
 		xrayConn := NewTestNetConn()
+		xrayConn.Expect("Write", func(b []byte) (int, error) {
+			Expect(b).To(ContainSubstring(`"in_progress":true`))
+			return len(b), nil
+		})
 		segment := NewSegment(segmentName, traceID, spanID, xrayConn)
 		ctx = WithSegment(ctx, segment)
 
@@ -56,6 +60,26 @@ func TestWrapDoer(t *testing.T) {
 			return &http.Response{StatusCode: 123}, nil
 		})
 
+		// "in_progress":true segment
+		xrayConn.Expect("Write", func(b []byte) (int, error) {
+			lines := strings.Split(string(b), "\n")
+			Expect(lines).To(HaveLen(2))
+			Expect(lines[0]).To(Equal(`{"format": "json", "version": 1}`))
+
+			var s Segment
+			Expect(json.Unmarshal([]byte(lines[1]), &s)).To(Succeed())
+			Expect(s).To(MatchFields(IgnoreMissing|IgnoreExtras, Fields{
+				"Name":       Equal("somehost:80"),
+				"Type":       Equal("subsegment"),
+				"ID":         SatisfyAll(Not(BeEmpty()), Not(Equal(segment.ID))), // randomly generated
+				"TraceID":    Equal(traceID),
+				"ParentID":   Equal(spanID),
+				"InProgress": BeTrue(),
+			}))
+			return len(b), nil
+		})
+
+		// final "in_progress":false segment
 		xrayConn.Expect("Write", func(b []byte) (int, error) {
 			lines := strings.Split(string(b), "\n")
 			Expect(lines).To(HaveLen(2))
@@ -76,6 +100,7 @@ func TestWrapDoer(t *testing.T) {
 					"Request":  Equal(&Request{Method: "GET", URL: "http://somehost:80/path"}),
 					"Response": Equal(&Response{Status: 123}),
 				})),
+				"InProgress": BeFalse(),
 			}))
 			return len(b), nil
 		})
@@ -91,6 +116,10 @@ func TestWrapDoer(t *testing.T) {
 
 		// add an xray segment to the context
 		xrayConn := NewTestNetConn()
+		xrayConn.Expect("Write", func(b []byte) (int, error) {
+			Expect(b).To(ContainSubstring(`"in_progress":true`))
+			return len(b), nil
+		})
 		segment := NewSegment(segmentName, traceID, spanID, xrayConn)
 		ctx = WithSegment(ctx, segment)
 
@@ -102,6 +131,26 @@ func TestWrapDoer(t *testing.T) {
 			return nil, requestErr
 		})
 
+		// "in_progress":true segment
+		xrayConn.Expect("Write", func(b []byte) (int, error) {
+			lines := strings.Split(string(b), "\n")
+			Expect(lines).To(HaveLen(2))
+			Expect(lines[0]).To(Equal(`{"format": "json", "version": 1}`))
+
+			var s Segment
+			Expect(json.Unmarshal([]byte(lines[1]), &s)).To(Succeed())
+			Expect(s).To(MatchFields(IgnoreMissing|IgnoreExtras, Fields{
+				"Name":       Equal("somehost:80"),
+				"Type":       Equal("subsegment"),
+				"ID":         SatisfyAll(Not(BeEmpty()), Not(Equal(segment.ID))), // randomly generated
+				"TraceID":    Equal(traceID),
+				"ParentID":   Equal(spanID),
+				"InProgress": BeTrue(),
+			}))
+			return len(b), nil
+		})
+
+		// final "in_progress":false segment
 		xrayConn.Expect("Write", func(b []byte) (int, error) {
 			lines := strings.Split(string(b), "\n")
 			Expect(lines).To(HaveLen(2))
@@ -122,6 +171,7 @@ func TestWrapDoer(t *testing.T) {
 					"Request":  Equal(&Request{Method: "GET", URL: "http://somehost:80/path"}),
 					"Response": BeNil(),
 				})),
+				"InProgress": BeFalse(),
 			}))
 			return len(b), nil
 		})

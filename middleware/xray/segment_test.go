@@ -180,9 +180,13 @@ func TestRecordRequest(t *testing.T) {
 }
 
 func TestNewSubsegment(t *testing.T) {
+	conn, err := net.Dial("udp", udplisten)
+	if err != nil {
+		t.Fatalf("failed to connect to daemon - %s", err)
+	}
 	var (
 		name   = "sub"
-		s      = &Segment{Mutex: &sync.Mutex{}}
+		s      = &Segment{Mutex: &sync.Mutex{}, conn: conn}
 		before = now()
 		ss     = s.NewSubsegment(name)
 	)
