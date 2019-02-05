@@ -61,16 +61,11 @@ type (
 		Annotations map[string]interface{} `json:"annotations,omitempty"`
 		// Metadata contains the segment metadata.
 		Metadata map[string]map[string]interface{} `json:"metadata,omitempty"`
-		// Subsegments contains all the subsegments.
-		Subsegments []*Segment `json:"subsegments,omitempty"`
 		// Parent is the subsegment parent, it's nil for the root
 		// segment.
 		Parent *Segment `json:"-"`
 		// conn is the UDP client to the X-Ray daemon.
 		conn net.Conn
-		// counter keeps track of the number of subsegments that have not
-		// completed yet.
-		counter int
 	}
 
 	// HTTP describes a HTTP request.
@@ -267,8 +262,6 @@ func (s *Segment) NewSubsegment(name string) *Segment {
 		conn:       s.conn,
 	}
 	sub.flush() // notify X-Ray about the in-progress segment
-	s.Subsegments = append(s.Subsegments, sub)
-	s.counter++
 	return sub
 }
 
@@ -349,12 +342,7 @@ func (s *Segment) Close() {
 
 	s.EndTime = now()
 	s.InProgress = false
-	if s.Parent != nil {
-		s.Parent.decrementCounter()
-	}
-	if s.counter <= 0 {
-		s.flush()
-	}
+	s.flush()
 }
 
 // flush sends the segment to the AWS X-Ray daemon.
@@ -375,18 +363,6 @@ func (s *Segment) recordStatusCode(statusCode int) {
 		s.Fault = true
 	case statusCode >= 500:
 		s.Error = true
-	}
-}
-
-// decrementCounter decrements the segment counter and flushes it if it's 0.
-func (s *Segment) decrementCounter() {
-	s.Lock()
-	defer s.Unlock()
-
-	s.counter--
-	if s.counter <= 0 && s.EndTime != 0 {
-		// Segment is closed and last subsegment closed, flush it
-		s.flush()
 	}
 }
 

@@ -190,15 +190,6 @@ func TestNewSubsegment(t *testing.T) {
 		before = now()
 		ss     = s.NewSubsegment(name)
 	)
-	if s.counter != 1 {
-		t.Errorf("counter not incremented after call to Subsegment")
-	}
-	if len(s.Subsegments) != 1 {
-		t.Fatalf("invalid count of subsegments, expected 1 got %d", len(s.Subsegments))
-	}
-	if s.Subsegments[0] != ss {
-		t.Errorf("invalid subsegments element, expected %v - got %v", name, s.Subsegments[0])
-	}
 	if ss.ID == "" {
 		t.Errorf("subsegment ID not initialized")
 	}
