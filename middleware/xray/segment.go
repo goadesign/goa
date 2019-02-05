@@ -151,7 +151,7 @@ type (
 // NewSegment creates a new segment that gets written to the given connection
 // on close.
 func NewSegment(name, traceID, spanID string, conn net.Conn) *Segment {
-	return &Segment{
+	s := &Segment{
 		Mutex:      &sync.Mutex{},
 		Name:       name,
 		TraceID:    traceID,
@@ -160,6 +160,8 @@ func NewSegment(name, traceID, spanID string, conn net.Conn) *Segment {
 		InProgress: true,
 		conn:       conn,
 	}
+	s.flush() // notify X-Ray about the in-progress segment
+	return s
 }
 
 // RecordRequest traces a request.
@@ -264,6 +266,7 @@ func (s *Segment) NewSubsegment(name string) *Segment {
 		Parent:     s,
 		conn:       s.conn,
 	}
+	sub.flush() // notify X-Ray about the in-progress segment
 	s.Subsegments = append(s.Subsegments, sub)
 	s.counter++
 	return sub
