@@ -1,6 +1,7 @@
 package codegen
 
 import (
+	"bytes"
 	"testing"
 
 	"goa.design/goa/codegen"
@@ -53,6 +54,33 @@ func TestBodyTypeInit(t *testing.T) {
 			fs := clientType(genpkg, expr.Root.API.HTTP.Services[0], make(map[string]struct{}))
 			section := fs.SectionTemplates[c.SectionIndex]
 			code := codegen.SectionCode(t, section)
+			if code != c.Code {
+				t.Errorf("invalid code, got:\n%s\ngot vs. expected:\n%s", code, codegen.Diff(t, code, c.Code))
+			}
+		})
+	}
+}
+
+func TestClientTypes(t *testing.T) {
+	const genpkg = "gen"
+	cases := []struct {
+		Name string
+		DSL  func()
+		Code string
+	}{
+		{"multiple-methods", testdata.MultipleMethodsDSL, MultipleMethodsClientTypesFile},
+	}
+	for _, c := range cases {
+		t.Run(c.Name, func(t *testing.T) {
+			RunHTTPDSL(t, c.DSL)
+			fs := clientType(genpkg, expr.Root.API.HTTP.Services[0], make(map[string]struct{}))
+			var buf bytes.Buffer
+			for _, s := range fs.SectionTemplates[1:] {
+				if err := s.Write(&buf); err != nil {
+					t.Fatal(err)
+				}
+			}
+			code := codegen.FormatTestCode(t, "package foo\n"+buf.String())
 			if code != c.Code {
 				t.Errorf("invalid code, got:\n%s\ngot vs. expected:\n%s", code, codegen.Diff(t, code, c.Code))
 			}
@@ -151,5 +179,56 @@ func NewMethodExplicitBodyUserResultMultipleViewResulttypemultipleviewsOK(body *
 	}
 	res.C = c
 	return res
+}
+`
+
+const MultipleMethodsClientTypesFile = `// MethodARequestBody is the type of the "ServiceMultipleMethods" service
+// "MethodA" endpoint HTTP request body.
+type MethodARequestBody struct {
+	A *string ` + "`" + `form:"a,omitempty" json:"a,omitempty" xml:"a,omitempty"` + "`" + `
+}
+
+// MethodBRequestBody is the type of the "ServiceMultipleMethods" service
+// "MethodB" endpoint HTTP request body.
+type MethodBRequestBody struct {
+	A string               ` + "`" + `form:"a" json:"a" xml:"a"` + "`" + `
+	B *string              ` + "`" + `form:"b,omitempty" json:"b,omitempty" xml:"b,omitempty"` + "`" + `
+	C *APayloadRequestBody ` + "`" + `form:"c" json:"c" xml:"c"` + "`" + `
+}
+
+// APayloadRequestBody is used to define fields on request body types.
+type APayloadRequestBody struct {
+	A *string ` + "`" + `form:"a,omitempty" json:"a,omitempty" xml:"a,omitempty"` + "`" + `
+}
+
+// NewMethodARequestBody builds the HTTP request body from the payload of the
+// "MethodA" endpoint of the "ServiceMultipleMethods" service.
+func NewMethodARequestBody(p *servicemultiplemethods.APayload) *MethodARequestBody {
+	body := &MethodARequestBody{
+		A: p.A,
+	}
+	return body
+}
+
+// NewMethodBRequestBody builds the HTTP request body from the payload of the
+// "MethodB" endpoint of the "ServiceMultipleMethods" service.
+func NewMethodBRequestBody(p *servicemultiplemethods.PayloadType) *MethodBRequestBody {
+	body := &MethodBRequestBody{
+		A: p.A,
+		B: p.B,
+	}
+	if p.C != nil {
+		body.C = marshalServicemultiplemethodsAPayloadToAPayloadRequestBody(p.C)
+	}
+	return body
+}
+
+// ValidateAPayloadRequestBody runs the validations defined on
+// APayloadRequestBody
+func ValidateAPayloadRequestBody(body *APayloadRequestBody) (err error) {
+	if body.A != nil {
+		err = goa.MergeErrors(err, goa.ValidatePattern("body.a", *body.A, "patterna"))
+	}
+	return
 }
 `

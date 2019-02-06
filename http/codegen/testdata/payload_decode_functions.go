@@ -3509,7 +3509,7 @@ var PayloadBodyNestedUserDecodeCode = `// DecodeMethodBodyUserRequest returns a 
 func DecodeMethodBodyUserRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) (interface{}, error) {
 	return func(r *http.Request) (interface{}, error) {
 		var (
-			body NestedType
+			body MethodBodyUserRequestBody
 			err  error
 		)
 		err = decoder(r).Decode(&body)
@@ -3519,7 +3519,7 @@ func DecodeMethodBodyUserRequest(mux goahttp.Muxer, decoder func(*http.Request) 
 			}
 			return nil, goa.DecodePayloadError(err.Error())
 		}
-		err = ValidateNestedType(&body)
+		err = ValidateMethodBodyUserRequestBody(&body)
 		if err != nil {
 			return nil, err
 		}
