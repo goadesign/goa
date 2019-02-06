@@ -2,7 +2,7 @@ package service
 
 import (
 	"os"
-	"path/filepath"
+	"path"
 	"strings"
 
 	"goa.design/goa/codegen"
@@ -47,8 +47,8 @@ func ExampleServiceFiles(genpkg string, root *expr.RootExpr) []*codegen.File {
 
 // exampleServiceFile returns a basic implementation of the given service.
 func exampleServiceFile(genpkg string, root *expr.RootExpr, svc *expr.ServiceExpr) *codegen.File {
-	path := codegen.SnakeCase(svc.Name) + ".go"
-	if _, err := os.Stat(path); !os.IsNotExist(err) {
+	fpath := codegen.SnakeCase(svc.Name) + ".go"
+	if _, err := os.Stat(fpath); !os.IsNotExist(err) {
 		return nil // file already exists, skip it.
 	}
 	data := Services.Get(svc.Name)
@@ -57,7 +57,7 @@ func exampleServiceFile(genpkg string, root *expr.RootExpr, svc *expr.ServiceExp
 		codegen.Header("", apiPkg, []*codegen.ImportSpec{
 			{Path: "context"},
 			{Path: "log"},
-			{Path: filepath.Join(genpkg, codegen.SnakeCase(svc.Name)), Name: data.PkgName},
+			{Path: path.Join(genpkg, codegen.SnakeCase(svc.Name)), Name: data.PkgName},
 		}),
 		{Name: "basic-service-struct", Source: svcStructT, Data: data},
 		{Name: "basic-service-init", Source: svcInitT, Data: data},
@@ -67,7 +67,7 @@ func exampleServiceFile(genpkg string, root *expr.RootExpr, svc *expr.ServiceExp
 	}
 
 	return &codegen.File{
-		Path:             path,
+		Path:             fpath,
 		SectionTemplates: sections,
 		SkipExist:        true,
 	}

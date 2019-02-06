@@ -3,6 +3,7 @@ package codegen
 import (
 	"encoding/json"
 	"fmt"
+	"path"
 	"path/filepath"
 	"reflect"
 	"strconv"
@@ -145,7 +146,7 @@ func ClientCLIFiles(genpkg string, root *expr.RootExpr) []*codegen.File {
 // builds the client endpoint and payload necessary to perform a request.
 func endpointParser(genpkg string, root *expr.RootExpr, svr *expr.ServerExpr, data []*commandData) *codegen.File {
 	pkg := codegen.SnakeCase(codegen.Goify(svr.Name, true))
-	path := filepath.Join(codegen.Gendir, "grpc", "cli", pkg, "cli.go")
+	fpath := filepath.Join(codegen.Gendir, "grpc", "cli", pkg, "cli.go")
 	title := fmt.Sprintf("%s gRPC client CLI support package", root.API.Name)
 	specs := []*codegen.ImportSpec{
 		{Path: "context"},
@@ -162,11 +163,11 @@ func endpointParser(genpkg string, root *expr.RootExpr, svr *expr.ServerExpr, da
 			continue
 		}
 		specs = append(specs, &codegen.ImportSpec{
-			Path: filepath.Join(genpkg, "grpc", codegen.SnakeCase(sd.Service.Name), "client"),
+			Path: path.Join(genpkg, "grpc", codegen.SnakeCase(sd.Service.Name), "client"),
 			Name: sd.Service.PkgName + "c",
 		})
 		specs = append(specs, &codegen.ImportSpec{
-			Path: filepath.Join(genpkg, "grpc", codegen.SnakeCase(sd.Service.Name), pbPkgName),
+			Path: path.Join(genpkg, "grpc", codegen.SnakeCase(sd.Service.Name), pbPkgName),
 		})
 	}
 	usages := make([]string, len(data))
@@ -206,7 +207,7 @@ func endpointParser(genpkg string, root *expr.RootExpr, svr *expr.ServerExpr, da
 		})
 	}
 
-	return &codegen.File{Path: path, SectionTemplates: sections}
+	return &codegen.File{Path: fpath, SectionTemplates: sections}
 }
 
 func printDescription(desc string) string {
@@ -218,14 +219,14 @@ func printDescription(desc string) string {
 // payloadBuilders returns the file that contains the payload constructors that
 // use flag values as arguments.
 func payloadBuilders(genpkg string, svc *expr.GRPCServiceExpr, data *commandData) *codegen.File {
-	path := filepath.Join(codegen.Gendir, "grpc", codegen.SnakeCase(svc.Name()), "client", "cli.go")
+	fpath := filepath.Join(codegen.Gendir, "grpc", codegen.SnakeCase(svc.Name()), "client", "cli.go")
 	title := fmt.Sprintf("%s gRPC client CLI support package", svc.Name())
 	sd := GRPCServices.Get(svc.Name())
 	specs := []*codegen.ImportSpec{
 		{Path: "encoding/json"},
 		{Path: "fmt"},
-		{Path: filepath.Join(genpkg, codegen.SnakeCase(svc.Name())), Name: sd.Service.PkgName},
-		{Path: filepath.Join(genpkg, "grpc", codegen.SnakeCase(svc.Name()), pbPkgName)},
+		{Path: path.Join(genpkg, codegen.SnakeCase(svc.Name())), Name: sd.Service.PkgName},
+		{Path: path.Join(genpkg, "grpc", codegen.SnakeCase(svc.Name()), pbPkgName)},
 	}
 	sections := []*codegen.SectionTemplate{
 		codegen.Header(title, "client", specs),
@@ -240,7 +241,7 @@ func payloadBuilders(genpkg string, svc *expr.GRPCServiceExpr, data *commandData
 		}
 	}
 
-	return &codegen.File{Path: path, SectionTemplates: sections}
+	return &codegen.File{Path: fpath, SectionTemplates: sections}
 }
 
 // buildCommandData builds the data needed by the templates to render the CLI

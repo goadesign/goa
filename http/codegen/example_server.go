@@ -30,7 +30,8 @@ func ExampleServerFiles(genpkg string, root *expr.RootExpr) []*codegen.File {
 func exampleServer(genpkg string, root *expr.RootExpr, svr *expr.ServerExpr) *codegen.File {
 	pkg := codegen.SnakeCase(codegen.Goify(svr.Name, true))
 	fpath := filepath.Join("cmd", pkg, "http.go")
-	idx := strings.LastIndex(genpkg, string(os.PathSeparator))
+	// genpkg is created by path.Join so the separator is / regardless of operating system
+	idx := strings.LastIndex(genpkg, "/")
 	rootPath := "."
 	if idx > 0 {
 		rootPath = genpkg[:idx]
