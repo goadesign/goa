@@ -372,100 +372,132 @@ func TestAttributeExprIsRequiredNoDefault(t *testing.T) {
 }
 
 func TestAttributeExprIsPrimitivePointer(t *testing.T) {
+	var (
+		attributeBoolean = AttributeExpr{
+			Type: Boolean,
+		}
+		attributeObject = AttributeExpr{
+			Type: &Object{
+				&NamedAttributeExpr{
+					Name: "foo",
+					Attribute: &AttributeExpr{
+						Type: String,
+					},
+				},
+				&NamedAttributeExpr{
+					Name: "bar",
+					Attribute: &AttributeExpr{
+						Type: &Array{
+							ElemType: &AttributeExpr{
+								Type: String,
+							},
+						},
+					},
+				},
+				&NamedAttributeExpr{
+					Name: "baz",
+					Attribute: &AttributeExpr{
+						Type: Bytes,
+					},
+				},
+				&NamedAttributeExpr{
+					Name: "qux",
+					Attribute: &AttributeExpr{
+						Type: Any,
+					},
+				},
+				&NamedAttributeExpr{
+					Name: "quux",
+					Attribute: &AttributeExpr{
+						Type: String,
+					},
+				},
+				&NamedAttributeExpr{
+					Name: "corge",
+					Attribute: &AttributeExpr{
+						Type:         String,
+						DefaultValue: "default",
+					},
+				},
+			},
+			Validation: &ValidationExpr{
+				Required: []string{"quux"},
+			},
+		}
+	)
 	cases := map[string]struct {
+		attribute  AttributeExpr
 		attName    string
 		useDefault bool
 		expected   bool
 	}{
 		"primitive pointer": {
+			attribute:  attributeObject,
 			attName:    "foo",
 			useDefault: false,
 			expected:   true,
 		},
 		"no attribute": {
+			attribute:  attributeObject,
 			attName:    "zoo",
 			useDefault: false,
 			expected:   false,
 		},
 		"not primitive": {
+			attribute:  attributeObject,
 			attName:    "bar",
 			useDefault: false,
 			expected:   false,
 		},
 		"primitive but bytes": {
+			attribute:  attributeObject,
 			attName:    "baz",
 			useDefault: false,
 			expected:   false,
 		},
 		"primitive but any": {
+			attribute:  attributeObject,
 			attName:    "qux",
 			useDefault: false,
 			expected:   false,
 		},
 		"primitive but required": {
+			attribute:  attributeObject,
 			attName:    "quux",
 			useDefault: false,
 			expected:   false,
 		},
 		"primitive but default value": {
+			attribute:  attributeObject,
 			attName:    "corge",
 			useDefault: true,
 			expected:   false,
 		},
+		"non object": {
+			attribute:  attributeBoolean,
+			attName:    "",    // should have panicked!
+			useDefault: false, // should have panicked!
+			expected:   false, // should have panicked!
+		},
 	}
 
-	attribute := AttributeExpr{
-		Type: &Object{
-			&NamedAttributeExpr{
-				Name: "foo",
-				Attribute: &AttributeExpr{
-					Type: String,
-				},
-			},
-			&NamedAttributeExpr{
-				Name: "bar",
-				Attribute: &AttributeExpr{
-					Type: &Array{
-						ElemType: &AttributeExpr{
-							Type: String,
-						},
-					},
-				},
-			},
-			&NamedAttributeExpr{
-				Name: "baz",
-				Attribute: &AttributeExpr{
-					Type: Bytes,
-				},
-			},
-			&NamedAttributeExpr{
-				Name: "qux",
-				Attribute: &AttributeExpr{
-					Type: Any,
-				},
-			},
-			&NamedAttributeExpr{
-				Name: "quux",
-				Attribute: &AttributeExpr{
-					Type: String,
-				},
-			},
-			&NamedAttributeExpr{
-				Name: "corge",
-				Attribute: &AttributeExpr{
-					Type:         String,
-					DefaultValue: "default",
-				},
-			},
-		},
-		Validation: &ValidationExpr{
-			Required: []string{"quux"},
-		},
-	}
 	for k, tc := range cases {
-		if actual := attribute.IsPrimitivePointer(tc.attName, tc.useDefault); tc.expected != actual {
-			t.Errorf("%s: got %#v, expected %#v", k, actual, tc.expected)
-		}
+		func() {
+			// panic recover
+			defer func() {
+				if k != "non object" {
+					return
+				}
+
+				if recover() == nil {
+					t.Errorf("should have panicked!")
+				}
+			}()
+
+			if actual := tc.attribute.IsPrimitivePointer(tc.attName, tc.useDefault); tc.expected != actual {
+				t.Errorf("%s: got %#v, expected %#v", k, actual, tc.expected)
+			}
+		}()
 	}
 }
 
