@@ -2,6 +2,7 @@ package codegen
 
 import (
 	"fmt"
+	"path"
 	"path/filepath"
 
 	"goa.design/goa/codegen"
@@ -24,7 +25,7 @@ func ServerFiles(genpkg string, root *expr.RootExpr) []*codegen.File {
 
 // serverFile returns the files defining the gRPC server.
 func serverFile(genpkg string, svc *expr.GRPCServiceExpr) *codegen.File {
-	path := filepath.Join(codegen.Gendir, "grpc", codegen.SnakeCase(svc.Name()), "server", "server.go")
+	fpath := filepath.Join(codegen.Gendir, "grpc", codegen.SnakeCase(svc.Name()), "server", "server.go")
 	data := GRPCServices.Get(svc.Name())
 	title := fmt.Sprintf("%s GRPC server", svc.Name())
 	sections := []*codegen.SectionTemplate{
@@ -33,9 +34,9 @@ func serverFile(genpkg string, svc *expr.GRPCServiceExpr) *codegen.File {
 			{Path: "goa.design/goa"},
 			{Path: "google.golang.org/grpc/codes"},
 			{Path: "goa.design/goa/grpc", Name: "goagrpc"},
-			{Path: filepath.Join(genpkg, codegen.SnakeCase(svc.Name())), Name: data.Service.PkgName},
-			{Path: filepath.Join(genpkg, codegen.SnakeCase(svc.Name()), "views"), Name: data.Service.ViewsPkg},
-			{Path: filepath.Join(genpkg, "grpc", codegen.SnakeCase(svc.Name()), pbPkgName)},
+			{Path: path.Join(genpkg, codegen.SnakeCase(svc.Name())), Name: data.Service.PkgName},
+			{Path: path.Join(genpkg, codegen.SnakeCase(svc.Name()), "views"), Name: data.Service.ViewsPkg},
+			{Path: path.Join(genpkg, "grpc", codegen.SnakeCase(svc.Name()), pbPkgName)},
 		}),
 	}
 
@@ -102,13 +103,13 @@ func serverFile(genpkg string, svc *expr.GRPCServiceExpr) *codegen.File {
 			}
 		}
 	}
-	return &codegen.File{Path: path, SectionTemplates: sections}
+	return &codegen.File{Path: fpath, SectionTemplates: sections}
 }
 
 // serverEncodeDecode returns the file defining the gRPC server encoding and
 // decoding logic.
 func serverEncodeDecode(genpkg string, svc *expr.GRPCServiceExpr) *codegen.File {
-	path := filepath.Join(codegen.Gendir, "grpc", codegen.SnakeCase(svc.Name()), "server", "encode_decode.go")
+	fpath := filepath.Join(codegen.Gendir, "grpc", codegen.SnakeCase(svc.Name()), "server", "encode_decode.go")
 	data := GRPCServices.Get(svc.Name())
 	title := fmt.Sprintf("%s GRPC server encoders and decoders", svc.Name())
 	sections := []*codegen.SectionTemplate{
@@ -120,9 +121,9 @@ func serverEncodeDecode(genpkg string, svc *expr.GRPCServiceExpr) *codegen.File 
 			{Path: "google.golang.org/grpc/metadata"},
 			{Path: "goa.design/goa", Name: "goa"},
 			{Path: "goa.design/goa/grpc", Name: "goagrpc"},
-			{Path: filepath.Join(genpkg, codegen.SnakeCase(svc.Name())), Name: data.Service.PkgName},
-			{Path: filepath.Join(genpkg, codegen.SnakeCase(svc.Name()), "views"), Name: data.Service.ViewsPkg},
-			{Path: filepath.Join(genpkg, "grpc", codegen.SnakeCase(svc.Name()), pbPkgName)},
+			{Path: path.Join(genpkg, codegen.SnakeCase(svc.Name())), Name: data.Service.PkgName},
+			{Path: path.Join(genpkg, codegen.SnakeCase(svc.Name()), "views"), Name: data.Service.ViewsPkg},
+			{Path: path.Join(genpkg, "grpc", codegen.SnakeCase(svc.Name()), pbPkgName)},
 		}),
 	}
 
@@ -149,7 +150,7 @@ func serverEncodeDecode(genpkg string, svc *expr.GRPCServiceExpr) *codegen.File 
 			})
 		}
 	}
-	return &codegen.File{Path: path, SectionTemplates: sections}
+	return &codegen.File{Path: fpath, SectionTemplates: sections}
 }
 
 func transTmplFuncs(s *expr.GRPCServiceExpr) map[string]interface{} {

@@ -2,6 +2,7 @@ package server
 
 import (
 	"os"
+	"path"
 	"path/filepath"
 	"strings"
 
@@ -30,7 +31,8 @@ func exampleSvrMain(genpkg string, root *expr.RootExpr, svr *expr.ServerExpr) *c
 	if _, err := os.Stat(mainPath); !os.IsNotExist(err) {
 		return nil // file already exists, skip it.
 	}
-	idx := strings.LastIndex(genpkg, string(os.PathSeparator))
+	// genpkg is created by path.Join so the separator is / regardless of operating system
+	idx := strings.LastIndex(genpkg, string("/"))
 	rootPath := "."
 	if idx > 0 {
 		rootPath = genpkg[:idx]
@@ -59,7 +61,7 @@ func exampleSvrMain(genpkg string, root *expr.RootExpr, svr *expr.ServerExpr) *c
 		sd := service.Services.Get(svc)
 		svcData[i] = sd
 		specs = append(specs, &codegen.ImportSpec{
-			Path: filepath.Join(genpkg, codegen.SnakeCase(svc)),
+			Path: path.Join(genpkg, codegen.SnakeCase(svc)),
 			Name: sd.PkgName,
 		})
 	}

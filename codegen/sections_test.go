@@ -35,10 +35,43 @@ import (
 )
 
 `
+
+		pathImportHeader = `package testpackage
+
+import 	"import/with/slashes"
+
+`
+
+		pathImportsHeader = `package testpackage
+
+import (
+	"import/with/slashes"
+	"other/import/with/slashes"
+)
+
+`
+
+		pathNamedImportHeader = `package testpackage
+
+import 	myname "import/with/slashes"
+
+`
+		pathNamedImportsHeader = `package testpackage
+
+import (
+	myname "import/with/slashes"
+	myothername "other/import/with/slashes"
+)
+
+`
 	)
 	var (
-		imprt   = []*ImportSpec{{Path: "test"}}
-		imports = append(imprt, &ImportSpec{Path: "other"})
+		imprt            = []*ImportSpec{{Path: "test"}}
+		imports          = append(imprt, &ImportSpec{Path: "other"})
+		pathImport       = []*ImportSpec{{Path: "import/with/slashes"}}
+		pathImports      = append(pathImport, &ImportSpec{Path: "other/import/with/slashes"})
+		pathNamedImport  = []*ImportSpec{{Name: "myname", Path: "import/with/slashes"}}
+		pathNamedImports = append(pathNamedImport, &ImportSpec{Name: "myothername", Path: "other/import/with/slashes"})
 	)
 	cases := map[string]struct {
 		Title    string
@@ -49,6 +82,10 @@ import (
 		"title":         {Title: title, Expected: titleHeader},
 		"single-import": {Imports: imprt, Expected: singleImportHeader},
 		"many-imports":  {Imports: imports, Expected: manyImportsHeader},
+		"path-import":   {Imports: pathImport, Expected: pathImportHeader},
+		"path-imports":  {Imports: pathImports, Expected: pathImportsHeader},
+		"path-named-import":   {Imports: pathNamedImport, Expected: pathNamedImportHeader},
+		"path-named-imports":  {Imports: pathNamedImports, Expected: pathNamedImportsHeader},
 	}
 	for k, tc := range cases {
 		buf := new(bytes.Buffer)
