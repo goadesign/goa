@@ -98,7 +98,7 @@ build-examples:
 	@cd $(GOPATH)/src/goa.design/goa/examples/multipart && \
 		go build ./cmd/resume && go build ./cmd/resume-cli
 	@cd $(GOPATH)/src/goa.design/goa/examples/security && \
-		go build ./cmd/multi_auth && go build ./cmd/multi_auth-cli
+		go build ./cmd/secured_service && go build ./cmd/secured_service-cli
 	@cd $(GOPATH)/src/goa.design/goa/examples/streaming && \
 		go build ./cmd/chatter && go build ./cmd/chatter-cli
 
@@ -112,7 +112,7 @@ clean:
 	@cd $(GOPATH)/src/goa.design/goa/examples/multipart && \
 		rm -f resume resume-cli
 	@cd $(GOPATH)/src/goa.design/goa/examples/security && \
-		rm -f multi_auth multi_auth-cli
+		rm -f secured_service secured_service-cli
 	@cd $(GOPATH)/src/goa.design/goa/examples/streaming && \
 		rm -f chatter chatter-cli
 
