@@ -66,6 +66,9 @@ type (
 		Parent *Segment `json:"-"`
 		// conn is the UDP client to the X-Ray daemon.
 		conn net.Conn
+		// submittedInProgressSegment indicates if we have already sent
+		// an "in-progress" copy of this segment to the X-Ray daemon.
+		submittedInProgressSegment bool
 	}
 
 	// HTTP describes a HTTP request.
@@ -344,11 +347,18 @@ func (s *Segment) Close() {
 }
 
 // SubmitInProgressSegment sends this in-progress segment to the AWS X-Ray daemon.
+// This way, the segment will be immediately visible in the UI, with status "Pending".
+// When this segment is closed, the final version will overwrite any in-progress version.
 // https://docs.aws.amazon.com/xray/latest/devguide/xray-api-segmentdocuments.html#api-segmentdocuments-subsegments
-// This should be called no more than one time for this segment.
+// This method should be called no more than once for this segment. Subsequent calls will have no effect.
 func (s *Segment) SubmitInProgressSegment() {
 	s.Lock()
 	defer s.Unlock()
+
+	if s.submittedInProgressSegment {
+		return
+	}
+	s.submittedInProgressSegment = true
 
 	if s.InProgress {
 		s.flush()
