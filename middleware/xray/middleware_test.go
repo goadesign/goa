@@ -165,26 +165,14 @@ func TestMiddleware(t *testing.T) {
 			m(h)(ctx, goa.ContextResponse(ctx), req)
 		})
 
-		// expect the first message is just "in_progress:true"
-		if !strings.Contains(messages[0], `"in_progress":true`) {
-			t.Fatalf("%s: expected first segment to be in_progress got: %q", k, messages[0])
+		// expect the first message is InProgress
+		s := extractSegment(t, messages[0])
+		if !s.InProgress {
+			t.Fatalf("%s: expected first segment to be InProgress but it was not", k)
 		}
 
-		js := messages[1]
-
-		var s *Segment
-		elems := strings.Split(js, "\n")
-		if len(elems) != 2 {
-			t.Fatalf("%s: invalid number of lines, expected 2 got %d: %v", k, len(elems), elems)
-		}
-		if elems[0] != udpHeader[:len(udpHeader)-1] {
-			t.Errorf("%s: invalid header, got %s", k, elems[0])
-		}
-		err = json.Unmarshal([]byte(elems[1]), &s)
-		if err != nil {
-			t.Fatal(err)
-		}
-
+		// second message
+		s = extractSegment(t, messages[1])
 		if s.Name != "service" {
 			t.Errorf("%s: unexpected segment name, expected service - got %s", k, s.Name)
 		}
@@ -364,6 +352,7 @@ func TestPeriodicallyRedialingConn(t *testing.T) {
 }
 
 // readUDP calls sender, reads and returns UDP messages received on udplisten.
+// Verifies that exactly the expected number of messages are received.
 func readUDP(t *testing.T, expectedMessages int, sender func()) []string {
 	var (
 		readChan = make(chan []string)
@@ -379,13 +368,21 @@ func readUDP(t *testing.T, expectedMessages int, sender func()) []string {
 	}
 
 	go func() {
-		listener.SetReadDeadline(time.Now().Add(time.Second))
-
-		// read the expected number of messages
+		listener.SetReadDeadline(time.Now().Add(500 * time.Millisecond))
 		var messages []string
-		for i := 0; i < expectedMessages; i++ {
-			n, _, _ := listener.ReadFrom(msg)
+		for {
+			n, _, err := listener.ReadFrom(msg)
+			if err != nil {
+				if !strings.HasSuffix(err.Error(), "i/o timeout") {
+					t.Errorf("expected final timeout error but got: %s", err)
+				}
+				break // we're done
+			}
 			messages = append(messages, string(msg[0:n]))
+		}
+		if len(messages) != expectedMessages {
+			t.Errorf("unexpected number of messages, expected %d got %d. All messages:\n%s",
+				expectedMessages, len(messages), strings.Join(messages, "\n"))
 		}
 		readChan <- messages
 	}()
@@ -399,4 +396,23 @@ func readUDP(t *testing.T, expectedMessages int, sender func()) []string {
 	}()
 
 	return <-readChan
+}
+
+// extractSegment returns the unmarshalled segment JSON from a readUDP response.
+func extractSegment(t *testing.T, js string) *Segment {
+	t.Helper()
+
+	var s *Segment
+	elems := strings.Split(js, "\n")
+	if len(elems) != 2 {
+		t.Fatalf("invalid number of lines, expected 2 got %d: %v", len(elems), elems)
+	}
+	if elems[0] != udpHeader[:len(udpHeader)-1] {
+		t.Errorf("invalid header, got %s", elems[0])
+	}
+	err := json.Unmarshal([]byte(elems[1]), &s)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return s
 }

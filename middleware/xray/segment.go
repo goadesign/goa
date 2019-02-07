@@ -349,8 +349,10 @@ func (s *Segment) Close() {
 // SubmitInProgressSegment sends this in-progress segment to the AWS X-Ray daemon.
 // This way, the segment will be immediately visible in the UI, with status "Pending".
 // When this segment is closed, the final version will overwrite any in-progress version.
-// https://docs.aws.amazon.com/xray/latest/devguide/xray-api-segmentdocuments.html#api-segmentdocuments-subsegments
 // This method should be called no more than once for this segment. Subsequent calls will have no effect.
+//
+// See the `in_progress` docs:
+//     https://docs.aws.amazon.com/xray/latest/devguide/xray-api-segmentdocuments.html#api-segmentdocuments-fields
 func (s *Segment) SubmitInProgressSegment() {
 	s.Lock()
 	defer s.Unlock()

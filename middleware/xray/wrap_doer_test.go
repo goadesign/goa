@@ -64,7 +64,7 @@ func TestWrapDoer(t *testing.T) {
 
 			var s Segment
 			Expect(json.Unmarshal([]byte(lines[1]), &s)).To(Succeed())
-			Expect(s).To(MatchFields(IgnoreMissing|IgnoreExtras, Fields{
+			Expect(s).To(MatchFields(IgnoreExtras, Fields{
 				"Name":       Equal("somehost:80"),
 				"Type":       Equal("subsegment"),
 				"ID":         SatisfyAll(Not(BeEmpty()), Not(Equal(segment.ID))), // randomly generated
@@ -84,7 +84,7 @@ func TestWrapDoer(t *testing.T) {
 			var s Segment
 			err := json.Unmarshal([]byte(lines[1]), &s)
 			Expect(err).To(Succeed())
-			Expect(s).To(MatchFields(IgnoreMissing|IgnoreExtras, Fields{
+			Expect(s).To(MatchFields(IgnoreExtras, Fields{
 				"Name":      Equal("somehost:80"),
 				"Namespace": Equal("remote"),
 				"Type":      Equal("subsegment"),
@@ -131,7 +131,7 @@ func TestWrapDoer(t *testing.T) {
 
 			var s Segment
 			Expect(json.Unmarshal([]byte(lines[1]), &s)).To(Succeed())
-			Expect(s).To(MatchFields(IgnoreMissing|IgnoreExtras, Fields{
+			Expect(s).To(MatchFields(IgnoreExtras, Fields{
 				"Name":       Equal("somehost:80"),
 				"Type":       Equal("subsegment"),
 				"ID":         SatisfyAll(Not(BeEmpty()), Not(Equal(segment.ID))), // randomly generated
@@ -151,7 +151,7 @@ func TestWrapDoer(t *testing.T) {
 			var s Segment
 			err := json.Unmarshal([]byte(lines[1]), &s)
 			Expect(err).To(Succeed())
-			Expect(s).To(MatchFields(IgnoreMissing|IgnoreExtras, Fields{
+			Expect(s).To(MatchFields(IgnoreExtras, Fields{
 				"Name":      Equal("somehost:80"),
 				"Namespace": Equal("remote"),
 				"Type":      Equal("subsegment"),

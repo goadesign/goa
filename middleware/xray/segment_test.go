@@ -179,7 +179,7 @@ func TestRecordRequest(t *testing.T) {
 	}
 }
 
-func TestNewSubsegment(t *testing.T) {
+func TestSegment_NewSubsegment(t *testing.T) {
 	conn, err := net.Dial("udp", udplisten)
 	if err != nil {
 		t.Fatalf("failed to connect to daemon - %s", err)
@@ -190,6 +190,9 @@ func TestNewSubsegment(t *testing.T) {
 		before = now()
 		ss     = s.NewSubsegment(name)
 	)
+	if ss.submittedInProgressSegment {
+		t.Errorf("subsegment submittedInProgressSegment should initially be false")
+	}
 	if ss.ID == "" {
 		t.Errorf("subsegment ID not initialized")
 	}
@@ -208,6 +211,71 @@ func TestNewSubsegment(t *testing.T) {
 	if ss.Parent != s {
 		t.Errorf("invalid subsegment parent, expected %v, got %v", s, ss.Parent)
 	}
+}
+
+func TestSegment_SubmitInProgressSegment(t *testing.T) {
+	t.Run("call twice then close -- second call is ignored", func(t *testing.T) {
+		conn, err := net.Dial("udp", udplisten)
+		if err != nil {
+			t.Fatalf("failed to connect to daemon - %s", err)
+		}
+
+		segment := NewSegment("hello", NewTraceID(), NewID(), conn)
+
+		// call SubmitInProgressSegment() twice, then Close it
+		messages := readUDP(t, 2, func() {
+			segment.Namespace = "1"
+			segment.SubmitInProgressSegment()
+			segment.Namespace = "2"
+			segment.SubmitInProgressSegment() // should have no effect
+			segment.Namespace = "3"
+			segment.Close()
+		})
+
+		// verify the In-Progress segment
+		s := extractSegment(t, messages[0])
+		if !s.InProgress {
+			t.Errorf("expected segment to be InProgress, but it's not")
+		}
+		if s.Namespace != "1" {
+			t.Errorf("unexpected segment namespace, expected %q got %q", "1", s.Namespace)
+		}
+
+		// verify the final segment (the second In-Progress segment would not have been sent)
+		s = extractSegment(t, messages[1])
+		if s.InProgress {
+			t.Errorf("expected segment to not be InProgress, but it is")
+		}
+		if s.Namespace != "3" {
+			t.Errorf("unexpected segment namespace, expected %q got %q", "3", s.Namespace)
+		}
+	})
+
+	t.Run("calling after already Closed -- no effect", func(t *testing.T) {
+		conn, err := net.Dial("udp", udplisten)
+		if err != nil {
+			t.Fatalf("failed to connect to daemon - %s", err)
+		}
+
+		segment := NewSegment("hello", NewTraceID(), NewID(), conn)
+
+		// Close(), then call SubmitInProgressSegment(), only expect 1 segment written
+		messages := readUDP(t, 1, func() {
+			segment.Namespace = "1"
+			segment.Close()
+			segment.Namespace = "2"
+			segment.SubmitInProgressSegment() // should have no effect
+		})
+
+		// verify the In-Progress segment
+		s := extractSegment(t, messages[0])
+		if s.InProgress {
+			t.Errorf("expected segment to be closed, but it is still InProgress")
+		}
+		if s.Namespace != "1" {
+			t.Errorf("unexpected segment namespace, expected %q got %q", "1", s.Namespace)
+		}
+	})
 }
 
 // TestRace starts two goroutines and races them to call Segment's public function. In this way, when tests are run
@@ -232,6 +300,7 @@ func TestRace(t *testing.T) {
 		s.RecordResponse(resp)
 		s.RecordContextResponse(ctx)
 		s.RecordError(rErr)
+		s.SubmitInProgressSegment()
 
 		sub := s.NewSubsegment("sub")
 		s.Capture("sub2", func() {})

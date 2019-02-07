@@ -1,7 +1,6 @@
 package xray
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
 	"net"
@@ -68,23 +67,16 @@ func TestTransportExample(t *testing.T) {
 			t.Errorf("HTTP Response Status is invalid, expected %d got %d", http.StatusOK, resp.StatusCode)
 		}
 	})
-	// skip the first message, having `"in_progress":true`
-	js := messages[1]
+
+	// expect the first message is InProgress
+	s := extractSegment(t, messages[0])
+	if !s.InProgress {
+		t.Fatalf("expected first segment to be InProgress but it was not")
+	}
 
 	//
 	// Verify
-	var s *Segment
-	elems := strings.Split(js, "\n")
-	if len(elems) != 2 {
-		t.Fatalf("invalid number of lines, expected 2 got %d: %v", len(elems), elems)
-	}
-	if elems[0] != udpHeader[:len(udpHeader)-1] {
-		t.Errorf("invalid header, got %s", elems[0])
-	}
-	err = json.Unmarshal([]byte(elems[1]), &s)
-	if err != nil {
-		t.Fatal(err)
-	}
+	s = extractSegment(t, messages[1])
 	url, _ := url.Parse(server.URL)
 	if s.Name != url.Host {
 		t.Errorf("unexpected segment name, expected %q - got %q", url.Host, s.Name)
@@ -236,22 +228,14 @@ func TestTransport(t *testing.T) {
 				t.Errorf("%s: Response Status is invalid, expected %d got %d", k, c.Response.Status, resp.StatusCode)
 			}
 		})
-		// skip the first message, having `"in_progress":true`
-		js := messages[1]
-
-		var s *Segment
-		elems := strings.Split(js, "\n")
-		if len(elems) != 2 {
-			t.Fatalf("%s: invalid number of lines, expected 2 got %d: %v", k, len(elems), elems)
-		}
-		if elems[0] != udpHeader[:len(udpHeader)-1] {
-			t.Errorf("%s: invalid header, got %s", k, elems[0])
-		}
-		err = json.Unmarshal([]byte(elems[1]), &s)
-		if err != nil {
-			t.Fatal(err)
+		// expect the first message is InProgress
+		s := extractSegment(t, messages[0])
+		if !s.InProgress {
+			t.Errorf("%s: expected first segment to be InProgress but it was not", k)
 		}
 
+		// second message
+		s = extractSegment(t, messages[1])
 		if s.Name != host {
 			t.Errorf("%s: unexpected segment name, expected %q - got %q", k, host, s.Name)
 		}
