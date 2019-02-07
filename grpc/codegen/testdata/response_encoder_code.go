@@ -82,6 +82,26 @@ func EncodeMethodMessageWithMetadataResponse(ctx context.Context, v interface{},
 }
 `
 
+const ResultWithValidateResponseEncoderCode = `// EncodeMethodMessageWithValidateResponse encodes responses from the
+// "ServiceMessageWithValidate" service "MethodMessageWithValidate" endpoint.
+func EncodeMethodMessageWithValidateResponse(ctx context.Context, v interface{}, hdr, trlr *metadata.MD) (interface{}, error) {
+	result, ok := v.(*servicemessagewithvalidate.ResponseUT)
+	if !ok {
+		return nil, goagrpc.ErrInvalidType("ServiceMessageWithValidate", "MethodMessageWithValidate", "*servicemessagewithvalidate.ResponseUT", v)
+	}
+	resp := NewMethodMessageWithValidateResponse(result)
+
+	if res.InHeader != nil {
+		(*hdr).Append("Location", fmt.Sprintf("%v", *p.InHeader))
+	}
+
+	if res.InTrailer != nil {
+		(*trlr).Append("InTrailer", fmt.Sprintf("%v", *p.InTrailer))
+	}
+	return resp, nil
+}
+`
+
 const ResultCollectionResponseEncoderCode = `// EncodeMethodMessageUserTypeWithNestedUserTypesResponse encodes responses
 // from the "ServiceMessageUserTypeWithNestedUserTypes" service
 // "MethodMessageUserTypeWithNestedUserTypes" endpoint.

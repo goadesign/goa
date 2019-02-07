@@ -90,6 +90,20 @@ func EncodeMethodMessageWithMetadataRequest(ctx context.Context, v interface{}, 
 }
 `
 
+const PayloadWithValidateRequestEncoderCode = `// EncodeMethodMessageWithValidateRequest encodes requests sent to
+// ServiceMessageWithValidate MethodMessageWithValidate endpoint.
+func EncodeMethodMessageWithValidateRequest(ctx context.Context, v interface{}, md *metadata.MD) (interface{}, error) {
+	payload, ok := v.(*servicemessagewithvalidate.RequestUT)
+	if !ok {
+		return nil, goagrpc.ErrInvalidType("ServiceMessageWithValidate", "MethodMessageWithValidate", "*servicemessagewithvalidate.RequestUT", v)
+	}
+	if payload.InMetadata != nil {
+		(*md).Append("Authorization", fmt.Sprintf("%v", *payload.InMetadata))
+	}
+	return NewMethodMessageWithValidateRequest(payload), nil
+}
+`
+
 const PayloadWithSecurityAttrsRequestEncoderCode = `// EncodeMethodMessageWithSecurityRequest encodes requests sent to
 // ServiceMessageWithSecurity MethodMessageWithSecurity endpoint.
 func EncodeMethodMessageWithSecurityRequest(ctx context.Context, v interface{}, md *metadata.MD) (interface{}, error) {

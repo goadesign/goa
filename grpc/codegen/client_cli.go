@@ -145,66 +145,68 @@ func ClientCLIFiles(genpkg string, root *expr.RootExpr) []*codegen.File {
 // endpointParser returns the file that implements the command line parser that
 // builds the client endpoint and payload necessary to perform a request.
 func endpointParser(genpkg string, root *expr.RootExpr, svr *expr.ServerExpr, data []*commandData) *codegen.File {
-	pkg := codegen.SnakeCase(codegen.Goify(svr.Name, true))
-	fpath := filepath.Join(codegen.Gendir, "grpc", "cli", pkg, "cli.go")
-	title := fmt.Sprintf("%s gRPC client CLI support package", root.API.Name)
-	specs := []*codegen.ImportSpec{
-		{Path: "context"},
-		{Path: "flag"},
-		{Path: "fmt"},
-		{Path: "os"},
-		{Path: "goa.design/goa", Name: "goa"},
-		{Path: "goa.design/goa/grpc", Name: "goagrpc"},
-		{Path: "google.golang.org/grpc", Name: "grpc"},
-	}
-	for _, svc := range root.API.GRPC.Services {
-		sd := GRPCServices.Get(svc.Name())
-		if sd == nil {
-			continue
+	var (
+		fpath    string
+		sections []*codegen.SectionTemplate
+	)
+	{
+		pkg := codegen.SnakeCase(codegen.Goify(svr.Name, true))
+		fpath = filepath.Join(codegen.Gendir, "grpc", "cli", pkg, "cli.go")
+		specs := []*codegen.ImportSpec{
+			{Path: "context"},
+			{Path: "flag"},
+			{Path: "fmt"},
+			{Path: "os"},
+			{Path: "goa.design/goa", Name: "goa"},
+			{Path: "goa.design/goa/grpc", Name: "goagrpc"},
+			{Path: "google.golang.org/grpc", Name: "grpc"},
 		}
-		specs = append(specs, &codegen.ImportSpec{
-			Path: path.Join(genpkg, "grpc", codegen.SnakeCase(sd.Service.Name), "client"),
-			Name: sd.Service.PkgName + "c",
-		})
-		specs = append(specs, &codegen.ImportSpec{
-			Path: path.Join(genpkg, "grpc", codegen.SnakeCase(sd.Service.Name), pbPkgName),
-		})
-	}
-	usages := make([]string, len(data))
-	var examples []string
-	for i, cmd := range data {
-		subs := make([]string, len(cmd.Subcommands))
-		for i, s := range cmd.Subcommands {
-			subs[i] = s.Name
+		for _, svc := range root.API.GRPC.Services {
+			sd := GRPCServices.Get(svc.Name())
+			if sd == nil {
+				continue
+			}
+			specs = append(specs, &codegen.ImportSpec{
+				Path: path.Join(genpkg, "grpc", codegen.SnakeCase(sd.Service.Name), "client"),
+				Name: sd.Service.PkgName + "c",
+			})
+			specs = append(specs, &codegen.ImportSpec{
+				Path: path.Join(genpkg, "grpc", codegen.SnakeCase(sd.Service.Name), pbPkgName),
+				Name: codegen.SnakeCase(svc.Name()) + pbPkgName,
+			})
 		}
-		var lp, rp string
-		if len(subs) > 1 {
-			lp = "("
-			rp = ")"
+		usages := make([]string, len(data))
+		var examples []string
+		for i, cmd := range data {
+			subs := make([]string, len(cmd.Subcommands))
+			for i, s := range cmd.Subcommands {
+				subs[i] = s.Name
+			}
+			var lp, rp string
+			if len(subs) > 1 {
+				lp = "("
+				rp = ")"
+			}
+			usages[i] = fmt.Sprintf("%s %s%s%s", cmd.Name, lp, strings.Join(subs, "|"), rp)
+			if i < 5 {
+				examples = append(examples, cmd.Example)
+			}
 		}
-		usages[i] = fmt.Sprintf("%s %s%s%s", cmd.Name, lp, strings.Join(subs, "|"), rp)
-		if i < 5 {
-			examples = append(examples, cmd.Example)
-		}
-	}
 
-	sections := []*codegen.SectionTemplate{
-		codegen.Header(title, "cli", specs),
-		{Source: usageT, Data: usages},
-		{Source: exampleT, Data: examples},
-	}
-	sections = append(sections, &codegen.SectionTemplate{
-		Name:   "parse-endpoint",
-		Source: parseT,
-		Data:   data,
-	})
-	for _, cmd := range data {
-		sections = append(sections, &codegen.SectionTemplate{
-			Name:    "cli-command-usage",
-			Source:  commandUsageT,
-			Data:    cmd,
-			FuncMap: map[string]interface{}{"printDescription": printDescription},
-		})
+		sections = []*codegen.SectionTemplate{
+			codegen.Header(svr.Name+" gRPC client CLI support package", "cli", specs),
+			{Source: usageT, Data: usages},
+			{Source: exampleT, Data: examples},
+			&codegen.SectionTemplate{Name: "parse-endpoint", Source: parseT, Data: data},
+		}
+		for _, cmd := range data {
+			sections = append(sections, &codegen.SectionTemplate{
+				Name:    "cli-command-usage",
+				Source:  commandUsageT,
+				Data:    cmd,
+				FuncMap: map[string]interface{}{"printDescription": printDescription},
+			})
+		}
 	}
 
 	return &codegen.File{Path: fpath, SectionTemplates: sections}
@@ -219,28 +221,33 @@ func printDescription(desc string) string {
 // payloadBuilders returns the file that contains the payload constructors that
 // use flag values as arguments.
 func payloadBuilders(genpkg string, svc *expr.GRPCServiceExpr, data *commandData) *codegen.File {
-	fpath := filepath.Join(codegen.Gendir, "grpc", codegen.SnakeCase(svc.Name()), "client", "cli.go")
-	title := fmt.Sprintf("%s gRPC client CLI support package", svc.Name())
-	sd := GRPCServices.Get(svc.Name())
-	specs := []*codegen.ImportSpec{
-		{Path: "encoding/json"},
-		{Path: "fmt"},
-		{Path: path.Join(genpkg, codegen.SnakeCase(svc.Name())), Name: sd.Service.PkgName},
-		{Path: path.Join(genpkg, "grpc", codegen.SnakeCase(svc.Name()), pbPkgName)},
-	}
-	sections := []*codegen.SectionTemplate{
-		codegen.Header(title, "client", specs),
-	}
-	for _, sub := range data.Subcommands {
-		if sub.BuildFunction != nil {
-			sections = append(sections, &codegen.SectionTemplate{
-				Name:   "cli-build-payload",
-				Source: buildPayloadT,
-				Data:   sub.BuildFunction,
-			})
+	var (
+		fpath    string
+		sections []*codegen.SectionTemplate
+
+		sd = GRPCServices.Get(svc.Name())
+	)
+	{
+		svcName := codegen.SnakeCase(svc.Name())
+		fpath = filepath.Join(codegen.Gendir, "grpc", svcName, "client", "cli.go")
+		sections = []*codegen.SectionTemplate{
+			codegen.Header(svc.Name()+" gRPC client CLI support package", "client", []*codegen.ImportSpec{
+				{Path: "encoding/json"},
+				{Path: "fmt"},
+				{Path: filepath.Join(genpkg, svcName), Name: sd.Service.PkgName},
+				{Path: filepath.Join(genpkg, "grpc", svcName, pbPkgName), Name: sd.PkgName},
+			}),
+		}
+		for _, sub := range data.Subcommands {
+			if sub.BuildFunction != nil {
+				sections = append(sections, &codegen.SectionTemplate{
+					Name:   "cli-build-payload",
+					Source: buildPayloadT,
+					Data:   sub.BuildFunction,
+				})
+			}
 		}
 	}
-
 	return &codegen.File{Path: fpath, SectionTemplates: sections}
 }
 
@@ -746,7 +753,7 @@ func {{ .Name }}({{ range .FormalParams }}{{ . }} string, {{ end }}) ({{ .Result
 {{- end }}
 {{- range .Fields }}
 	{{- if .VarName }}
-		var {{ .VarName }} {{ if .Pointer }}*{{ end }}{{ .TypeName }}
+		var {{ .VarName }} {{ .TypeName }}
 		{
 			{{ .Init }}
 		}
