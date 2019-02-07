@@ -8,7 +8,9 @@
 
 syntax = "proto3";
 
-package pb;
+package calc;
+
+option go_package = "calcpb";
 
 // The calc service performs operations on numbers
 service Calc {

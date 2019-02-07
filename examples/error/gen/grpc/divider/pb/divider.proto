@@ -8,7 +8,9 @@
 
 syntax = "proto3";
 
-package pb;
+package divider;
+
+option go_package = "dividerpb";
 
 // Service is the divider service interface.
 service Divider {

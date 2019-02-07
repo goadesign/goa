@@ -8,7 +8,7 @@ import (
 	"sync"
 
 	grpcmiddleware "github.com/grpc-ecosystem/go-grpc-middleware"
-	"goa.design/goa/examples/security/gen/grpc/secured_service/pb"
+	secured_servicepb "goa.design/goa/examples/security/gen/grpc/secured_service/pb"
 	securedservicesvr "goa.design/goa/examples/security/gen/grpc/secured_service/server"
 	securedservice "goa.design/goa/examples/security/gen/secured_service"
 	grpcmdlwr "goa.design/goa/grpc/middleware"
@@ -48,7 +48,7 @@ func handleGRPCServer(ctx context.Context, u *url.URL, securedServiceEndpoints *
 	)
 
 	// Register the servers.
-	pb.RegisterSecuredServiceServer(srv, securedServiceServer)
+	secured_servicepb.RegisterSecuredServiceServer(srv, securedServiceServer)
 
 	for svc, info := range srv.GetServiceInfo() {
 		for _, m := range info.Methods {

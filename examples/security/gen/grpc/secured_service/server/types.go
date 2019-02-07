@@ -9,7 +9,7 @@
 package server
 
 import (
-	"goa.design/goa/examples/security/gen/grpc/secured_service/pb"
+	secured_servicepb "goa.design/goa/examples/security/gen/grpc/secured_service/pb"
 	securedservice "goa.design/goa/examples/security/gen/secured_service"
 )
 
@@ -24,8 +24,8 @@ func NewSigninPayload(username string, password string) *securedservice.SigninPa
 
 // NewSigninResponse builds the gRPC response type from the result of the
 // "signin" endpoint of the "secured_service" service.
-func NewSigninResponse(result *securedservice.Creds) *pb.SigninResponse {
-	message := &pb.SigninResponse{
+func NewSigninResponse(result *securedservice.Creds) *secured_servicepb.SigninResponse {
+	message := &secured_servicepb.SigninResponse{
 		Jwt:        result.JWT,
 		ApiKey:     result.APIKey,
 		OauthToken: result.OauthToken,
@@ -35,7 +35,7 @@ func NewSigninResponse(result *securedservice.Creds) *pb.SigninResponse {
 
 // NewSecurePayload builds the payload of the "secure" endpoint of the
 // "secured_service" service from the gRPC request type.
-func NewSecurePayload(message *pb.SecureRequest, token string) *securedservice.SecurePayload {
+func NewSecurePayload(message *secured_servicepb.SecureRequest, token string) *securedservice.SecurePayload {
 	payload := &securedservice.SecurePayload{
 		Fail: &message.Fail,
 	}
@@ -45,15 +45,15 @@ func NewSecurePayload(message *pb.SecureRequest, token string) *securedservice.S
 
 // NewSecureResponse builds the gRPC response type from the result of the
 // "secure" endpoint of the "secured_service" service.
-func NewSecureResponse(result string) *pb.SecureResponse {
-	message := &pb.SecureResponse{}
+func NewSecureResponse(result string) *secured_servicepb.SecureResponse {
+	message := &secured_servicepb.SecureResponse{}
 	message.Field = result
 	return message
 }
 
 // NewDoublySecurePayload builds the payload of the "doubly_secure" endpoint of
 // the "secured_service" service from the gRPC request type.
-func NewDoublySecurePayload(message *pb.DoublySecureRequest, token string) *securedservice.DoublySecurePayload {
+func NewDoublySecurePayload(message *secured_servicepb.DoublySecureRequest, token string) *securedservice.DoublySecurePayload {
 	payload := &securedservice.DoublySecurePayload{
 		Key: message.Key,
 	}
@@ -63,29 +63,29 @@ func NewDoublySecurePayload(message *pb.DoublySecureRequest, token string) *secu
 
 // NewDoublySecureResponse builds the gRPC response type from the result of the
 // "doubly_secure" endpoint of the "secured_service" service.
-func NewDoublySecureResponse(result string) *pb.DoublySecureResponse {
-	message := &pb.DoublySecureResponse{}
+func NewDoublySecureResponse(result string) *secured_servicepb.DoublySecureResponse {
+	message := &secured_servicepb.DoublySecureResponse{}
 	message.Field = result
 	return message
 }
 
 // NewAlsoDoublySecurePayload builds the payload of the "also_doubly_secure"
 // endpoint of the "secured_service" service from the gRPC request type.
-func NewAlsoDoublySecurePayload(message *pb.AlsoDoublySecureRequest, oauthToken string, token string) *securedservice.AlsoDoublySecurePayload {
+func NewAlsoDoublySecurePayload(message *secured_servicepb.AlsoDoublySecureRequest, oauthToken *string, token *string) *securedservice.AlsoDoublySecurePayload {
 	payload := &securedservice.AlsoDoublySecurePayload{
 		Username: &message.Username,
 		Password: &message.Password,
 		Key:      &message.Key,
 	}
-	payload.OauthToken = &oauthToken
-	payload.Token = &token
+	payload.OauthToken = oauthToken
+	payload.Token = token
 	return payload
 }
 
 // NewAlsoDoublySecureResponse builds the gRPC response type from the result of
 // the "also_doubly_secure" endpoint of the "secured_service" service.
-func NewAlsoDoublySecureResponse(result string) *pb.AlsoDoublySecureResponse {
-	message := &pb.AlsoDoublySecureResponse{}
+func NewAlsoDoublySecureResponse(result string) *secured_servicepb.AlsoDoublySecureResponse {
+	message := &secured_servicepb.AlsoDoublySecureResponse{}
 	message.Field = result
 	return message
 }

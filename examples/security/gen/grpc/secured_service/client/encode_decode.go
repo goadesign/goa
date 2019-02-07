@@ -11,7 +11,7 @@ package client
 import (
 	"context"
 
-	"goa.design/goa/examples/security/gen/grpc/secured_service/pb"
+	secured_servicepb "goa.design/goa/examples/security/gen/grpc/secured_service/pb"
 	securedservice "goa.design/goa/examples/security/gen/secured_service"
 	goagrpc "goa.design/goa/grpc"
 	"google.golang.org/grpc"
@@ -20,12 +20,12 @@ import (
 
 // BuildSigninFunc builds the remote method to invoke for "secured_service"
 // service "signin" endpoint.
-func BuildSigninFunc(grpccli pb.SecuredServiceClient, cliopts ...grpc.CallOption) goagrpc.RemoteFunc {
+func BuildSigninFunc(grpccli secured_servicepb.SecuredServiceClient, cliopts ...grpc.CallOption) goagrpc.RemoteFunc {
 	return func(ctx context.Context, reqpb interface{}, opts ...grpc.CallOption) (interface{}, error) {
 		for _, opt := range cliopts {
 			opts = append(opts, opt)
 		}
-		return grpccli.Signin(ctx, reqpb.(*pb.SigninRequest), opts...)
+		return grpccli.Signin(ctx, reqpb.(*secured_servicepb.SigninRequest), opts...)
 	}
 }
 
@@ -43,9 +43,9 @@ func EncodeSigninRequest(ctx context.Context, v interface{}, md *metadata.MD) (i
 // DecodeSigninResponse decodes responses from the secured_service signin
 // endpoint.
 func DecodeSigninResponse(ctx context.Context, v interface{}, hdr, trlr metadata.MD) (interface{}, error) {
-	message, ok := v.(*pb.SigninResponse)
+	message, ok := v.(*secured_servicepb.SigninResponse)
 	if !ok {
-		return nil, goagrpc.ErrInvalidType("secured_service", "signin", "*pb.SigninResponse", v)
+		return nil, goagrpc.ErrInvalidType("secured_service", "signin", "*secured_servicepb.SigninResponse", v)
 	}
 	res := NewCreds(message)
 	return res, nil
@@ -53,12 +53,12 @@ func DecodeSigninResponse(ctx context.Context, v interface{}, hdr, trlr metadata
 
 // BuildSecureFunc builds the remote method to invoke for "secured_service"
 // service "secure" endpoint.
-func BuildSecureFunc(grpccli pb.SecuredServiceClient, cliopts ...grpc.CallOption) goagrpc.RemoteFunc {
+func BuildSecureFunc(grpccli secured_servicepb.SecuredServiceClient, cliopts ...grpc.CallOption) goagrpc.RemoteFunc {
 	return func(ctx context.Context, reqpb interface{}, opts ...grpc.CallOption) (interface{}, error) {
 		for _, opt := range cliopts {
 			opts = append(opts, opt)
 		}
-		return grpccli.Secure(ctx, reqpb.(*pb.SecureRequest), opts...)
+		return grpccli.Secure(ctx, reqpb.(*secured_servicepb.SecureRequest), opts...)
 	}
 }
 
@@ -75,9 +75,9 @@ func EncodeSecureRequest(ctx context.Context, v interface{}, md *metadata.MD) (i
 // DecodeSecureResponse decodes responses from the secured_service secure
 // endpoint.
 func DecodeSecureResponse(ctx context.Context, v interface{}, hdr, trlr metadata.MD) (interface{}, error) {
-	message, ok := v.(*pb.SecureResponse)
+	message, ok := v.(*secured_servicepb.SecureResponse)
 	if !ok {
-		return nil, goagrpc.ErrInvalidType("secured_service", "secure", "*pb.SecureResponse", v)
+		return nil, goagrpc.ErrInvalidType("secured_service", "secure", "*secured_servicepb.SecureResponse", v)
 	}
 	res := NewSecureResponse(message)
 	return res, nil
@@ -85,12 +85,12 @@ func DecodeSecureResponse(ctx context.Context, v interface{}, hdr, trlr metadata
 
 // BuildDoublySecureFunc builds the remote method to invoke for
 // "secured_service" service "doubly_secure" endpoint.
-func BuildDoublySecureFunc(grpccli pb.SecuredServiceClient, cliopts ...grpc.CallOption) goagrpc.RemoteFunc {
+func BuildDoublySecureFunc(grpccli secured_servicepb.SecuredServiceClient, cliopts ...grpc.CallOption) goagrpc.RemoteFunc {
 	return func(ctx context.Context, reqpb interface{}, opts ...grpc.CallOption) (interface{}, error) {
 		for _, opt := range cliopts {
 			opts = append(opts, opt)
 		}
-		return grpccli.DoublySecure(ctx, reqpb.(*pb.DoublySecureRequest), opts...)
+		return grpccli.DoublySecure(ctx, reqpb.(*secured_servicepb.DoublySecureRequest), opts...)
 	}
 }
 
@@ -108,9 +108,9 @@ func EncodeDoublySecureRequest(ctx context.Context, v interface{}, md *metadata.
 // DecodeDoublySecureResponse decodes responses from the secured_service
 // doubly_secure endpoint.
 func DecodeDoublySecureResponse(ctx context.Context, v interface{}, hdr, trlr metadata.MD) (interface{}, error) {
-	message, ok := v.(*pb.DoublySecureResponse)
+	message, ok := v.(*secured_servicepb.DoublySecureResponse)
 	if !ok {
-		return nil, goagrpc.ErrInvalidType("secured_service", "doubly_secure", "*pb.DoublySecureResponse", v)
+		return nil, goagrpc.ErrInvalidType("secured_service", "doubly_secure", "*secured_servicepb.DoublySecureResponse", v)
 	}
 	res := NewDoublySecureResponse(message)
 	return res, nil
@@ -118,12 +118,12 @@ func DecodeDoublySecureResponse(ctx context.Context, v interface{}, hdr, trlr me
 
 // BuildAlsoDoublySecureFunc builds the remote method to invoke for
 // "secured_service" service "also_doubly_secure" endpoint.
-func BuildAlsoDoublySecureFunc(grpccli pb.SecuredServiceClient, cliopts ...grpc.CallOption) goagrpc.RemoteFunc {
+func BuildAlsoDoublySecureFunc(grpccli secured_servicepb.SecuredServiceClient, cliopts ...grpc.CallOption) goagrpc.RemoteFunc {
 	return func(ctx context.Context, reqpb interface{}, opts ...grpc.CallOption) (interface{}, error) {
 		for _, opt := range cliopts {
 			opts = append(opts, opt)
 		}
-		return grpccli.AlsoDoublySecure(ctx, reqpb.(*pb.AlsoDoublySecureRequest), opts...)
+		return grpccli.AlsoDoublySecure(ctx, reqpb.(*secured_servicepb.AlsoDoublySecureRequest), opts...)
 	}
 }
 
@@ -146,9 +146,9 @@ func EncodeAlsoDoublySecureRequest(ctx context.Context, v interface{}, md *metad
 // DecodeAlsoDoublySecureResponse decodes responses from the secured_service
 // also_doubly_secure endpoint.
 func DecodeAlsoDoublySecureResponse(ctx context.Context, v interface{}, hdr, trlr metadata.MD) (interface{}, error) {
-	message, ok := v.(*pb.AlsoDoublySecureResponse)
+	message, ok := v.(*secured_servicepb.AlsoDoublySecureResponse)
 	if !ok {
-		return nil, goagrpc.ErrInvalidType("secured_service", "also_doubly_secure", "*pb.AlsoDoublySecureResponse", v)
+		return nil, goagrpc.ErrInvalidType("secured_service", "also_doubly_secure", "*secured_servicepb.AlsoDoublySecureResponse", v)
 	}
 	res := NewAlsoDoublySecureResponse(message)
 	return res, nil
