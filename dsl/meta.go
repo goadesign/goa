@@ -44,7 +44,9 @@ import (
 //        Attribute("message", String, "Error returned.", func() {
 //            Meta("struct:error:name")
 //        })
-//        Attribute("occurred_at", DateTime, "Time error occurred.")
+//        Attribute("occurred_at", String, "Time error occurred.", func() {
+//            Format(FormatDateTime)
+//        })
 //    })
 //
 //    var _ = Service("MyService", func() {

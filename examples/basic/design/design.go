@@ -53,7 +53,9 @@ var _ = Service("calc", func() {
 		// Here the payload is an object that consists of two fields.
 		Payload(func() {
 			// Attribute describes an object field
-			Field(1, "a", Int, "Left operand")
+			Attribute("a", Int, "Left operand", func() {
+				Meta("rpc:tag", "1")
+			})
 			Field(2, "b", Int, "Right operand")
 			Required("a", "b")
 		})
