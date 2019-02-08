@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"goa.design/goa"
-	cli "goa.design/goa/examples/calc/gen/http/cli/calc"
+	cli "goa.design/goa/examples/basic/gen/http/cli/calc"
 	goahttp "goa.design/goa/http"
 	"goa.design/goa/http/middleware"
 	"goa.design/goa/http/middleware/xray"

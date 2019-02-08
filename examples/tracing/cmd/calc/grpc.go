@@ -8,9 +8,9 @@ import (
 	"sync"
 
 	grpcmiddleware "github.com/grpc-ecosystem/go-grpc-middleware"
-	calcsvc "goa.design/goa/examples/calc/gen/calc"
-	"goa.design/goa/examples/calc/gen/grpc/calc/pb"
-	calcsvcsvr "goa.design/goa/examples/calc/gen/grpc/calc/server"
+	calcsvc "goa.design/goa/examples/basic/gen/calc"
+	"goa.design/goa/examples/basic/gen/grpc/calc/pb"
+	calcsvcsvr "goa.design/goa/examples/basic/gen/grpc/calc/server"
 	grpcmdlwr "goa.design/goa/grpc/middleware"
 	"goa.design/goa/grpc/middleware/xray"
 	"goa.design/goa/middleware"

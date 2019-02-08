@@ -1,0 +1,76 @@
+// Code generated with goa v2.0.0-wip, DO NOT EDIT.
+//
+// chatter protocol buffer definition
+//
+// Command:
+// $ goa gen goa.design/goa/examples/streaming/design -o
+// $(GOPATH)/src/goa.design/goa/examples/streaming
+
+syntax = "proto3";
+
+package pb;
+
+// The chatter service implements a simple client and server chat.
+service Chatter {
+	// Creates a valid JWT token for auth to chat.
+	rpc Login (LoginRequest) returns (LoginResponse);
+	// Echoes the message sent by the client.
+	rpc Echoer (stream EchoerStreamingRequest) returns (stream EchoerResponse);
+	// Listens to the messages sent by the client.
+	rpc Listener (stream ListenerStreamingRequest) returns (ListenerResponse);
+	// Summarizes the chat messages sent by the client.
+	rpc Summary (stream SummaryStreamingRequest) returns (ChatSummaryCollection);
+	// Returns the chat messages sent to the server.
+	rpc History (HistoryRequest) returns (stream HistoryResponse);
+}
+
+message LoginRequest {
+}
+
+message LoginResponse {
+	string field = 1;
+}
+
+message EchoerStreamingRequest {
+	string field = 1;
+}
+
+message EchoerResponse {
+	string field = 1;
+}
+
+message ListenerStreamingRequest {
+	string field = 1;
+}
+
+message ListenerResponse {
+}
+
+message SummaryStreamingRequest {
+	string field = 1;
+}
+
+message ChatSummaryCollection {
+	repeated ChatSummary field = 1;
+}
+
+message ChatSummary {
+	// Message sent to the server
+	string message_ = 1;
+	// Length of the message sent
+	sint32 length = 2;
+	// Time at which the message was sent
+	string sent_at = 3;
+}
+
+message HistoryRequest {
+}
+
+message HistoryResponse {
+	// Message sent to the server
+	string message_ = 1;
+	// Length of the message sent
+	sint32 length = 2;
+	// Time at which the message was sent
+	string sent_at = 3;
+}

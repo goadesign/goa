@@ -9,8 +9,8 @@ import (
 	"sync"
 	"time"
 
-	calcsvc "goa.design/goa/examples/calc/gen/calc"
-	calcsvcsvr "goa.design/goa/examples/calc/gen/http/calc/server"
+	calcsvc "goa.design/goa/examples/basic/gen/calc"
+	calcsvcsvr "goa.design/goa/examples/basic/gen/http/calc/server"
 	goahttp "goa.design/goa/http"
 	httpmdlwr "goa.design/goa/http/middleware"
 	"goa.design/goa/http/middleware/xray"

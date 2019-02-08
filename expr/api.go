@@ -119,13 +119,17 @@ func (a *APIExpr) DefaultServer() *ServerExpr {
 	for i, svc := range Root.Services {
 		svcs[i] = svc.Name
 	}
+	name := a.Name
+	if len(svcs) > 0 {
+		name = svcs[0]
+	}
 	return &ServerExpr{
-		Name:        a.Name,
-		Description: "Default server for " + a.Name,
+		Name:        name,
+		Description: "Default server for " + name,
 		Services:    svcs,
 		Hosts: []*HostExpr{{
 			Name:       "localhost",
-			ServerName: a.Name,
+			ServerName: name,
 			URIs:       []URIExpr{URIExpr("http://localhost:80"), URIExpr("grpc://localhost:8080")},
 		}},
 	}

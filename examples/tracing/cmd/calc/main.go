@@ -11,8 +11,8 @@ import (
 	"strings"
 	"sync"
 
-	calc "goa.design/goa/examples/calc"
-	calcsvc "goa.design/goa/examples/calc/gen/calc"
+	calc "goa.design/goa/examples/basic"
+	calcsvc "goa.design/goa/examples/basic/gen/calc"
 )
 
 func main() {
