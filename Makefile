@@ -69,45 +69,52 @@ lint:
 gen:
 	@cd cmd/goa && \
 	go install && \
-	rm -rf $(GOPATH)/src/goa.design/goa/examples/calc/cmd              && \
-	rm -rf $(GOPATH)/src/goa.design/goa/examples/cellar/cmd/cellar-cli && \
-	rm -rf $(GOPATH)/src/goa.design/goa/examples/chatter/cmd/chatter   && \
-	rm -rf $(GOPATH)/src/goa.design/goa/examples/error/cmd             && \
-	rm -rf $(GOPATH)/src/goa.design/goa/examples/security/cmd          && \
-	goa gen     goa.design/goa/examples/calc/design      -o $(GOPATH)/src/goa.design/goa/examples/calc     && \
-	goa example goa.design/goa/examples/calc/design      -o $(GOPATH)/src/goa.design/goa/examples/calc     && \
+	rm -rf $(GOPATH)/src/goa.design/goa/examples/basic/cmd              && \
+	rm -rf $(GOPATH)/src/goa.design/goa/examples/cellar/cmd/cellar-cli  && \
+	rm -rf $(GOPATH)/src/goa.design/goa/examples/error/cmd              && \
+	rm -rf $(GOPATH)/src/goa.design/goa/examples/multipart/cmd          && \
+	rm -rf $(GOPATH)/src/goa.design/goa/examples/security/cmd           && \
+	rm -rf $(GOPATH)/src/goa.design/goa/examples/streaming/cmd/chatter  && \
+	goa gen     goa.design/goa/examples/basic/design      -o $(GOPATH)/src/goa.design/goa/examples/basic     && \
+	goa example goa.design/goa/examples/basic/design      -o $(GOPATH)/src/goa.design/goa/examples/basic     && \
 	goa gen     goa.design/goa/examples/cellar/design    -o $(GOPATH)/src/goa.design/goa/examples/cellar   && \
 	goa example goa.design/goa/examples/cellar/design    -o $(GOPATH)/src/goa.design/goa/examples/cellar   && \
-	goa gen     goa.design/goa/examples/chatter/design   -o $(GOPATH)/src/goa.design/goa/examples/chatter  && \
-	goa example goa.design/goa/examples/chatter/design   -o $(GOPATH)/src/goa.design/goa/examples/chatter  && \
 	goa gen     goa.design/goa/examples/error/design     -o $(GOPATH)/src/goa.design/goa/examples/error    && \
 	goa example goa.design/goa/examples/error/design     -o $(GOPATH)/src/goa.design/goa/examples/error    && \
+	goa gen     goa.design/goa/examples/multipart/design -o $(GOPATH)/src/goa.design/goa/examples/multipart && \
+	goa example goa.design/goa/examples/multipart/design -o $(GOPATH)/src/goa.design/goa/examples/multipart && \
 	goa gen     goa.design/goa/examples/security/design  -o $(GOPATH)/src/goa.design/goa/examples/security && \
-	goa example goa.design/goa/examples/security/design  -o $(GOPATH)/src/goa.design/goa/examples/security
+	goa example goa.design/goa/examples/security/design  -o $(GOPATH)/src/goa.design/goa/examples/security && \
+	goa gen     goa.design/goa/examples/streaming/design -o $(GOPATH)/src/goa.design/goa/examples/streaming  && \
+	goa example goa.design/goa/examples/streaming/design -o $(GOPATH)/src/goa.design/goa/examples/streaming
 
 build-examples:
-	@cd $(GOPATH)/src/goa.design/goa/examples/calc && \
+	@cd $(GOPATH)/src/goa.design/goa/examples/basic && \
 		go build ./cmd/calc && go build ./cmd/calc-cli
 	@cd $(GOPATH)/src/goa.design/goa/examples/cellar && \
 		go build ./cmd/cellar && go build ./cmd/cellar-cli
-	@cd $(GOPATH)/src/goa.design/goa/examples/chatter && \
-		go build ./cmd/chatter && go build ./cmd/chatter-cli
 	@cd $(GOPATH)/src/goa.design/goa/examples/error && \
 		go build ./cmd/divider && go build ./cmd/divider-cli
+	@cd $(GOPATH)/src/goa.design/goa/examples/multipart && \
+		go build ./cmd/resume && go build ./cmd/resume-cli
 	@cd $(GOPATH)/src/goa.design/goa/examples/security && \
-		go build ./cmd/multi_auth && go build ./cmd/multi_auth-cli
+		go build ./cmd/secured_service && go build ./cmd/secured_service-cli
+	@cd $(GOPATH)/src/goa.design/goa/examples/streaming && \
+		go build ./cmd/chatter && go build ./cmd/chatter-cli
 
 clean:
-	@cd $(GOPATH)/src/goa.design/goa/examples/calc && \
+	@cd $(GOPATH)/src/goa.design/goa/examples/basic && \
 		rm -f calc calc-cli
 	@cd $(GOPATH)/src/goa.design/goa/examples/cellar && \
 		rm -f cellar cellar-cli
-	@cd $(GOPATH)/src/goa.design/goa/examples/chatter && \
-		rm -f chatter chatter-cli
 	@cd $(GOPATH)/src/goa.design/goa/examples/error && \
 		rm -f divider divider-cli
+	@cd $(GOPATH)/src/goa.design/goa/examples/multipart && \
+		rm -f resume resume-cli
 	@cd $(GOPATH)/src/goa.design/goa/examples/security && \
-		rm -f multi_auth multi_auth-cli
+		rm -f secured_service secured_service-cli
+	@cd $(GOPATH)/src/goa.design/goa/examples/streaming && \
+		rm -f chatter chatter-cli
 
 test:
 	go test ./...

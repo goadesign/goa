@@ -13,6 +13,7 @@ import (
 	"io"
 	"net/http"
 	"strconv"
+	"strings"
 
 	goa "goa.design/goa"
 	storage "goa.design/goa/examples/cellar/gen/storage"
@@ -188,17 +189,25 @@ func DecodeRateRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.De
 			if len(queryRaw) == 0 {
 				err = goa.MergeErrors(err, goa.MissingFieldError("query", "query string"))
 			}
-			query = make(map[uint32][]string, len(queryRaw))
-			for keyRaw, val := range queryRaw {
-				var key uint32
-				{
-					v, err2 := strconv.ParseUint(keyRaw, 10, 32)
-					if err2 != nil {
-						err = goa.MergeErrors(err, goa.InvalidFieldTypeError("key", keyRaw, "unsigned integer"))
+			for keyRaw, valRaw := range queryRaw {
+				if strings.HasPrefix(keyRaw, "query[") {
+					if query == nil {
+						query = make(map[uint32][]string)
 					}
-					key = uint32(v)
+					var keya uint32
+					{
+						openIdx := strings.IndexRune(keyRaw, '[')
+						closeIdx := strings.IndexRune(keyRaw, ']')
+						keyaRaw := keyRaw[openIdx+1 : closeIdx]
+						v, err2 := strconv.ParseUint(keyaRaw, 10, 32)
+						if err2 != nil {
+							err = goa.MergeErrors(err, goa.InvalidFieldTypeError("keya", keyaRaw, "unsigned integer"))
+						}
+						keya = uint32(v)
+						keyRaw = keyRaw[closeIdx+1:]
+					}
+					query[keya] = valRaw
 				}
-				query[key] = val
 			}
 		}
 		if err != nil {
