@@ -48,7 +48,7 @@ paths:
             type: array
             items:
               type: integer
-              example: 1119650286328513290
+              example: 6588713156643713584
               format: int64
       schemes:
       - http
@@ -60,14 +60,14 @@ definitions:
       institution:
         type: string
         description: Name of the institution
-        example: Est et nesciunt.
+        example: Et consequatur ad.
       major:
         type: string
         description: Major name
-        example: Sed asperiores quos.
+        example: Et ipsa.
     example:
-      institution: Provident in dolorum consequuntur.
-      major: Maxime enim.
+      institution: Et officiis consectetur quidem quod sapiente quia.
+      major: Rerum beatae.
     required:
     - institution
     - major
@@ -78,14 +78,14 @@ definitions:
       institution:
         type: string
         description: Name of the institution
-        example: Sapiente facilis et.
+        example: Reprehenderit molestiae placeat perspiciatis rerum.
       major:
         type: string
         description: Major name
-        example: Distinctio at amet velit et sequi atque.
+        example: Aliquam ratione alias.
     example:
-      institution: Velit est.
-      major: Occaecati omnis ratione perferendis quo consequatur.
+      institution: Doloremque est est et placeat dolorum deserunt.
+      major: Consectetur quasi sed qui.
     required:
     - institution
     - major
@@ -96,20 +96,20 @@ definitions:
       company:
         type: string
         description: Name of the company
-        example: Pariatur at.
+        example: Sequi nihil et doloremque quidem fugit delectus.
       duration:
         type: integer
         description: Duration (in years) in the company
-        example: 7996747508154647781
+        example: 7991684391525051755
         format: int64
       role:
         type: string
         description: Name of the role in the company
-        example: Consequatur qui voluptatem aut adipisci.
+        example: Necessitatibus officiis similique facilis sapiente.
     example:
-      company: Dolorum id deleniti aut.
-      duration: 295893699218251583
-      role: Unde nesciunt similique vitae sit et quo.
+      company: Ut quod quaerat.
+      duration: 2762064478437738550
+      role: Et hic itaque quis voluptatem ducimus est.
     required:
     - company
     - role
@@ -121,20 +121,20 @@ definitions:
       company:
         type: string
         description: Name of the company
-        example: Totam omnis sunt molestiae magni totam numquam.
+        example: Ducimus quo hic aut cumque dicta autem.
       duration:
         type: integer
         description: Duration (in years) in the company
-        example: 2708610669982169212
+        example: 485875295432613167
         format: int64
       role:
         type: string
         description: Name of the role in the company
-        example: Ut dolorem sit.
+        example: Ut voluptas fuga ipsa expedita aut.
     example:
-      company: Dignissimos qui rerum officiis ut.
-      duration: 5756769045444272210
-      role: Velit voluptas.
+      company: Nisi quis voluptas non aut quas.
+      duration: 6887616300691749277
+      role: Pariatur et.
     required:
     - company
     - role
@@ -149,47 +149,46 @@ definitions:
           $ref: '#/definitions/EducationRequestBody'
         description: Education section in the resume
         example:
-        - institution: Error accusantium autem asperiores reprehenderit dolorem.
-          major: Id ipsam consectetur omnis earum eos.
-        - institution: Error accusantium autem asperiores reprehenderit dolorem.
-          major: Id ipsam consectetur omnis earum eos.
+        - institution: Qui ut voluptates libero consectetur in.
+          major: Aliquid nesciunt harum exercitationem qui reprehenderit.
+        - institution: Qui ut voluptates libero consectetur in.
+          major: Aliquid nesciunt harum exercitationem qui reprehenderit.
       experience:
         type: array
         items:
           $ref: '#/definitions/ExperienceRequestBody'
         description: Experience section in the resume
         example:
-        - company: Qui repellat eveniet dignissimos et reiciendis.
-          duration: 9027220452237938752
-          role: Quia hic.
-        - company: Qui repellat eveniet dignissimos et reiciendis.
-          duration: 9027220452237938752
-          role: Quia hic.
-        - company: Qui repellat eveniet dignissimos et reiciendis.
-          duration: 9027220452237938752
-          role: Quia hic.
+        - company: Consectetur ut.
+          duration: 9021502551841493030
+          role: Pariatur ad accusantium.
+        - company: Consectetur ut.
+          duration: 9021502551841493030
+          role: Pariatur ad accusantium.
       name:
         type: string
         description: Name in the resume
-        example: Ut ut quod.
+        example: Dolorem quae voluptatum ex at doloribus assumenda.
     example:
       education:
-      - institution: Error accusantium autem asperiores reprehenderit dolorem.
-        major: Id ipsam consectetur omnis earum eos.
-      - institution: Error accusantium autem asperiores reprehenderit dolorem.
-        major: Id ipsam consectetur omnis earum eos.
-      - institution: Error accusantium autem asperiores reprehenderit dolorem.
-        major: Id ipsam consectetur omnis earum eos.
-      - institution: Error accusantium autem asperiores reprehenderit dolorem.
-        major: Id ipsam consectetur omnis earum eos.
+      - institution: Qui ut voluptates libero consectetur in.
+        major: Aliquid nesciunt harum exercitationem qui reprehenderit.
+      - institution: Qui ut voluptates libero consectetur in.
+        major: Aliquid nesciunt harum exercitationem qui reprehenderit.
       experience:
-      - company: Qui repellat eveniet dignissimos et reiciendis.
-        duration: 9027220452237938752
-        role: Quia hic.
-      - company: Qui repellat eveniet dignissimos et reiciendis.
-        duration: 9027220452237938752
-        role: Quia hic.
-      name: Quia illum.
+      - company: Consectetur ut.
+        duration: 9021502551841493030
+        role: Pariatur ad accusantium.
+      - company: Consectetur ut.
+        duration: 9021502551841493030
+        role: Pariatur ad accusantium.
+      - company: Consectetur ut.
+        duration: 9021502551841493030
+        role: Pariatur ad accusantium.
+      - company: Consectetur ut.
+        duration: 9021502551841493030
+        role: Pariatur ad accusantium.
+      name: Exercitationem non minima.
     required:
     - name
   ResumeStoredResumeResponseCollection:
@@ -200,48 +199,90 @@ definitions:
     description: ListResponseBody is the result type for an array of StoredResumeResponse
       (default view)
     example:
-    - created_at: Vel aliquid maiores.
+    - created_at: Tempore quidem animi nihil.
       education:
-      - institution: Voluptas quos.
-        major: Dolores necessitatibus vel tempora voluptatem voluptas earum.
-      - institution: Voluptas quos.
-        major: Dolores necessitatibus vel tempora voluptatem voluptas earum.
+      - institution: Mollitia dolores sequi sed veritatis totam omnis.
+        major: Repellendus et et aut sint.
+      - institution: Mollitia dolores sequi sed veritatis totam omnis.
+        major: Repellendus et et aut sint.
       experience:
-      - company: Repudiandae hic explicabo et incidunt dolorem nulla.
-        duration: 1592962344307484117
-        role: Magnam consectetur quisquam minima mollitia.
-      - company: Repudiandae hic explicabo et incidunt dolorem nulla.
-        duration: 1592962344307484117
-        role: Magnam consectetur quisquam minima mollitia.
-      - company: Repudiandae hic explicabo et incidunt dolorem nulla.
-        duration: 1592962344307484117
-        role: Magnam consectetur quisquam minima mollitia.
-      - company: Repudiandae hic explicabo et incidunt dolorem nulla.
-        duration: 1592962344307484117
-        role: Magnam consectetur quisquam minima mollitia.
-      id: 6124869648451687649
-      name: Aut suscipit et in voluptatem asperiores.
-    - created_at: Vel aliquid maiores.
+      - company: Aut rem.
+        duration: 5176619058752078184
+        role: Consequuntur quam est commodi cumque eaque quisquam.
+      - company: Aut rem.
+        duration: 5176619058752078184
+        role: Consequuntur quam est commodi cumque eaque quisquam.
+      - company: Aut rem.
+        duration: 5176619058752078184
+        role: Consequuntur quam est commodi cumque eaque quisquam.
+      - company: Aut rem.
+        duration: 5176619058752078184
+        role: Consequuntur quam est commodi cumque eaque quisquam.
+      id: 47036700361575944
+      name: Assumenda sed.
+    - created_at: Tempore quidem animi nihil.
       education:
-      - institution: Voluptas quos.
-        major: Dolores necessitatibus vel tempora voluptatem voluptas earum.
-      - institution: Voluptas quos.
-        major: Dolores necessitatibus vel tempora voluptatem voluptas earum.
+      - institution: Mollitia dolores sequi sed veritatis totam omnis.
+        major: Repellendus et et aut sint.
+      - institution: Mollitia dolores sequi sed veritatis totam omnis.
+        major: Repellendus et et aut sint.
       experience:
-      - company: Repudiandae hic explicabo et incidunt dolorem nulla.
-        duration: 1592962344307484117
-        role: Magnam consectetur quisquam minima mollitia.
-      - company: Repudiandae hic explicabo et incidunt dolorem nulla.
-        duration: 1592962344307484117
-        role: Magnam consectetur quisquam minima mollitia.
-      - company: Repudiandae hic explicabo et incidunt dolorem nulla.
-        duration: 1592962344307484117
-        role: Magnam consectetur quisquam minima mollitia.
-      - company: Repudiandae hic explicabo et incidunt dolorem nulla.
-        duration: 1592962344307484117
-        role: Magnam consectetur quisquam minima mollitia.
-      id: 6124869648451687649
-      name: Aut suscipit et in voluptatem asperiores.
+      - company: Aut rem.
+        duration: 5176619058752078184
+        role: Consequuntur quam est commodi cumque eaque quisquam.
+      - company: Aut rem.
+        duration: 5176619058752078184
+        role: Consequuntur quam est commodi cumque eaque quisquam.
+      - company: Aut rem.
+        duration: 5176619058752078184
+        role: Consequuntur quam est commodi cumque eaque quisquam.
+      - company: Aut rem.
+        duration: 5176619058752078184
+        role: Consequuntur quam est commodi cumque eaque quisquam.
+      id: 47036700361575944
+      name: Assumenda sed.
+    - created_at: Tempore quidem animi nihil.
+      education:
+      - institution: Mollitia dolores sequi sed veritatis totam omnis.
+        major: Repellendus et et aut sint.
+      - institution: Mollitia dolores sequi sed veritatis totam omnis.
+        major: Repellendus et et aut sint.
+      experience:
+      - company: Aut rem.
+        duration: 5176619058752078184
+        role: Consequuntur quam est commodi cumque eaque quisquam.
+      - company: Aut rem.
+        duration: 5176619058752078184
+        role: Consequuntur quam est commodi cumque eaque quisquam.
+      - company: Aut rem.
+        duration: 5176619058752078184
+        role: Consequuntur quam est commodi cumque eaque quisquam.
+      - company: Aut rem.
+        duration: 5176619058752078184
+        role: Consequuntur quam est commodi cumque eaque quisquam.
+      id: 47036700361575944
+      name: Assumenda sed.
+    - created_at: Tempore quidem animi nihil.
+      education:
+      - institution: Mollitia dolores sequi sed veritatis totam omnis.
+        major: Repellendus et et aut sint.
+      - institution: Mollitia dolores sequi sed veritatis totam omnis.
+        major: Repellendus et et aut sint.
+      experience:
+      - company: Aut rem.
+        duration: 5176619058752078184
+        role: Consequuntur quam est commodi cumque eaque quisquam.
+      - company: Aut rem.
+        duration: 5176619058752078184
+        role: Consequuntur quam est commodi cumque eaque quisquam.
+      - company: Aut rem.
+        duration: 5176619058752078184
+        role: Consequuntur quam est commodi cumque eaque quisquam.
+      - company: Aut rem.
+        duration: 5176619058752078184
+        role: Consequuntur quam est commodi cumque eaque quisquam.
+      id: 47036700361575944
+      name: Assumenda sed.
   StoredResumeResponse:
     title: 'Mediatype identifier: application/vnd.goa.resume; view=default'
     type: object
@@ -249,65 +290,67 @@ definitions:
       created_at:
         type: string
         description: Time when resume was created
-        example: Quia neque occaecati saepe voluptatibus.
+        example: Est ut aut doloribus et eveniet autem.
       education:
         type: array
         items:
           $ref: '#/definitions/EducationResponse'
         description: Education section in the resume
         example:
-        - institution: Voluptas quos.
-          major: Dolores necessitatibus vel tempora voluptatem voluptas earum.
-        - institution: Voluptas quos.
-          major: Dolores necessitatibus vel tempora voluptatem voluptas earum.
+        - institution: Mollitia dolores sequi sed veritatis totam omnis.
+          major: Repellendus et et aut sint.
+        - institution: Mollitia dolores sequi sed veritatis totam omnis.
+          major: Repellendus et et aut sint.
+        - institution: Mollitia dolores sequi sed veritatis totam omnis.
+          major: Repellendus et et aut sint.
+        - institution: Mollitia dolores sequi sed veritatis totam omnis.
+          major: Repellendus et et aut sint.
       experience:
         type: array
         items:
           $ref: '#/definitions/ExperienceResponse'
         description: Experience section in the resume
         example:
-        - company: Repudiandae hic explicabo et incidunt dolorem nulla.
-          duration: 1592962344307484117
-          role: Magnam consectetur quisquam minima mollitia.
-        - company: Repudiandae hic explicabo et incidunt dolorem nulla.
-          duration: 1592962344307484117
-          role: Magnam consectetur quisquam minima mollitia.
-        - company: Repudiandae hic explicabo et incidunt dolorem nulla.
-          duration: 1592962344307484117
-          role: Magnam consectetur quisquam minima mollitia.
-        - company: Repudiandae hic explicabo et incidunt dolorem nulla.
-          duration: 1592962344307484117
-          role: Magnam consectetur quisquam minima mollitia.
+        - company: Aut rem.
+          duration: 5176619058752078184
+          role: Consequuntur quam est commodi cumque eaque quisquam.
+        - company: Aut rem.
+          duration: 5176619058752078184
+          role: Consequuntur quam est commodi cumque eaque quisquam.
+        - company: Aut rem.
+          duration: 5176619058752078184
+          role: Consequuntur quam est commodi cumque eaque quisquam.
       id:
         type: integer
         description: ID of the resume
-        example: 1901607628517323986
+        example: 8198932393410705726
         format: int64
       name:
         type: string
         description: Name in the resume
-        example: Omnis nesciunt.
+        example: Quae sunt aut qui corporis molestiae.
     description: StoredResumeResponse result type (default view)
     example:
-      created_at: Aut atque numquam cum omnis illum.
+      created_at: Voluptate quam.
       education:
-      - institution: Voluptas quos.
-        major: Dolores necessitatibus vel tempora voluptatem voluptas earum.
-      - institution: Voluptas quos.
-        major: Dolores necessitatibus vel tempora voluptatem voluptas earum.
-      - institution: Voluptas quos.
-        major: Dolores necessitatibus vel tempora voluptatem voluptas earum.
-      - institution: Voluptas quos.
-        major: Dolores necessitatibus vel tempora voluptatem voluptas earum.
+      - institution: Mollitia dolores sequi sed veritatis totam omnis.
+        major: Repellendus et et aut sint.
+      - institution: Mollitia dolores sequi sed veritatis totam omnis.
+        major: Repellendus et et aut sint.
+      - institution: Mollitia dolores sequi sed veritatis totam omnis.
+        major: Repellendus et et aut sint.
       experience:
-      - company: Repudiandae hic explicabo et incidunt dolorem nulla.
-        duration: 1592962344307484117
-        role: Magnam consectetur quisquam minima mollitia.
-      - company: Repudiandae hic explicabo et incidunt dolorem nulla.
-        duration: 1592962344307484117
-        role: Magnam consectetur quisquam minima mollitia.
-      id: 8445392892696100585
-      name: Et delectus est sed.
+      - company: Aut rem.
+        duration: 5176619058752078184
+        role: Consequuntur quam est commodi cumque eaque quisquam.
+      - company: Aut rem.
+        duration: 5176619058752078184
+        role: Consequuntur quam est commodi cumque eaque quisquam.
+      - company: Aut rem.
+        duration: 5176619058752078184
+        role: Consequuntur quam est commodi cumque eaque quisquam.
+      id: 3919877609510640762
+      name: Perspiciatis at.
     required:
     - id
     - name

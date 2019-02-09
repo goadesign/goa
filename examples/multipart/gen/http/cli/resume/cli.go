@@ -15,7 +15,7 @@ import (
 	"os"
 
 	goa "goa.design/goa"
-	resumec "goa.design/goa/examples/multipart/gen/http/resume/client"
+	resumesvcc "goa.design/goa/examples/multipart/gen/http/resume/client"
 	goahttp "goa.design/goa/http"
 )
 
@@ -42,7 +42,7 @@ func ParseEndpoint(
 	enc func(*http.Request) goahttp.Encoder,
 	dec func(*http.Response) goahttp.Decoder,
 	restore bool,
-	resumeAddEncoderFn resumec.ResumeAddEncoderFunc,
+	resumeAddEncoderFn resumesvcc.ResumeAddEncoderFunc,
 ) (goa.Endpoint, interface{}, error) {
 	var (
 		resumeFlags = flag.NewFlagSet("resume", flag.ContinueOnError)
@@ -119,14 +119,14 @@ func ParseEndpoint(
 	{
 		switch svcn {
 		case "resume":
-			c := resumec.NewClient(scheme, host, doer, enc, dec, restore)
+			c := resumesvcc.NewClient(scheme, host, doer, enc, dec, restore)
 			switch epn {
 			case "list":
 				endpoint = c.List()
 				data = nil
 			case "add":
 				endpoint = c.Add(resumeAddEncoderFn)
-				data, err = resumec.BuildAddPayload(*resumeAddBodyFlag)
+				data, err = resumesvcc.BuildAddPayload(*resumeAddBodyFlag)
 			}
 		}
 	}
@@ -172,142 +172,102 @@ Example:
       {
          "education": [
             {
-               "institution": "Error accusantium autem asperiores reprehenderit dolorem.",
-               "major": "Id ipsam consectetur omnis earum eos."
+               "institution": "Qui ut voluptates libero consectetur in.",
+               "major": "Aliquid nesciunt harum exercitationem qui reprehenderit."
             },
             {
-               "institution": "Error accusantium autem asperiores reprehenderit dolorem.",
-               "major": "Id ipsam consectetur omnis earum eos."
+               "institution": "Qui ut voluptates libero consectetur in.",
+               "major": "Aliquid nesciunt harum exercitationem qui reprehenderit."
             }
          ],
          "experience": [
             {
-               "company": "Qui repellat eveniet dignissimos et reiciendis.",
-               "duration": 9027220452237938752,
-               "role": "Quia hic."
+               "company": "Consectetur ut.",
+               "duration": 9021502551841493030,
+               "role": "Pariatur ad accusantium."
             },
             {
-               "company": "Qui repellat eveniet dignissimos et reiciendis.",
-               "duration": 9027220452237938752,
-               "role": "Quia hic."
-            },
-            {
-               "company": "Qui repellat eveniet dignissimos et reiciendis.",
-               "duration": 9027220452237938752,
-               "role": "Quia hic."
-            },
-            {
-               "company": "Qui repellat eveniet dignissimos et reiciendis.",
-               "duration": 9027220452237938752,
-               "role": "Quia hic."
+               "company": "Consectetur ut.",
+               "duration": 9021502551841493030,
+               "role": "Pariatur ad accusantium."
             }
          ],
-         "name": "Similique ipsum enim voluptas."
+         "name": "Earum rem."
       },
       {
          "education": [
             {
-               "institution": "Error accusantium autem asperiores reprehenderit dolorem.",
-               "major": "Id ipsam consectetur omnis earum eos."
+               "institution": "Qui ut voluptates libero consectetur in.",
+               "major": "Aliquid nesciunt harum exercitationem qui reprehenderit."
             },
             {
-               "institution": "Error accusantium autem asperiores reprehenderit dolorem.",
-               "major": "Id ipsam consectetur omnis earum eos."
+               "institution": "Qui ut voluptates libero consectetur in.",
+               "major": "Aliquid nesciunt harum exercitationem qui reprehenderit."
             }
          ],
          "experience": [
             {
-               "company": "Qui repellat eveniet dignissimos et reiciendis.",
-               "duration": 9027220452237938752,
-               "role": "Quia hic."
+               "company": "Consectetur ut.",
+               "duration": 9021502551841493030,
+               "role": "Pariatur ad accusantium."
             },
             {
-               "company": "Qui repellat eveniet dignissimos et reiciendis.",
-               "duration": 9027220452237938752,
-               "role": "Quia hic."
-            },
-            {
-               "company": "Qui repellat eveniet dignissimos et reiciendis.",
-               "duration": 9027220452237938752,
-               "role": "Quia hic."
-            },
-            {
-               "company": "Qui repellat eveniet dignissimos et reiciendis.",
-               "duration": 9027220452237938752,
-               "role": "Quia hic."
+               "company": "Consectetur ut.",
+               "duration": 9021502551841493030,
+               "role": "Pariatur ad accusantium."
             }
          ],
-         "name": "Similique ipsum enim voluptas."
+         "name": "Earum rem."
       },
       {
          "education": [
             {
-               "institution": "Error accusantium autem asperiores reprehenderit dolorem.",
-               "major": "Id ipsam consectetur omnis earum eos."
+               "institution": "Qui ut voluptates libero consectetur in.",
+               "major": "Aliquid nesciunt harum exercitationem qui reprehenderit."
             },
             {
-               "institution": "Error accusantium autem asperiores reprehenderit dolorem.",
-               "major": "Id ipsam consectetur omnis earum eos."
+               "institution": "Qui ut voluptates libero consectetur in.",
+               "major": "Aliquid nesciunt harum exercitationem qui reprehenderit."
             }
          ],
          "experience": [
             {
-               "company": "Qui repellat eveniet dignissimos et reiciendis.",
-               "duration": 9027220452237938752,
-               "role": "Quia hic."
+               "company": "Consectetur ut.",
+               "duration": 9021502551841493030,
+               "role": "Pariatur ad accusantium."
             },
             {
-               "company": "Qui repellat eveniet dignissimos et reiciendis.",
-               "duration": 9027220452237938752,
-               "role": "Quia hic."
-            },
-            {
-               "company": "Qui repellat eveniet dignissimos et reiciendis.",
-               "duration": 9027220452237938752,
-               "role": "Quia hic."
-            },
-            {
-               "company": "Qui repellat eveniet dignissimos et reiciendis.",
-               "duration": 9027220452237938752,
-               "role": "Quia hic."
+               "company": "Consectetur ut.",
+               "duration": 9021502551841493030,
+               "role": "Pariatur ad accusantium."
             }
          ],
-         "name": "Similique ipsum enim voluptas."
+         "name": "Earum rem."
       },
       {
          "education": [
             {
-               "institution": "Error accusantium autem asperiores reprehenderit dolorem.",
-               "major": "Id ipsam consectetur omnis earum eos."
+               "institution": "Qui ut voluptates libero consectetur in.",
+               "major": "Aliquid nesciunt harum exercitationem qui reprehenderit."
             },
             {
-               "institution": "Error accusantium autem asperiores reprehenderit dolorem.",
-               "major": "Id ipsam consectetur omnis earum eos."
+               "institution": "Qui ut voluptates libero consectetur in.",
+               "major": "Aliquid nesciunt harum exercitationem qui reprehenderit."
             }
          ],
          "experience": [
             {
-               "company": "Qui repellat eveniet dignissimos et reiciendis.",
-               "duration": 9027220452237938752,
-               "role": "Quia hic."
+               "company": "Consectetur ut.",
+               "duration": 9021502551841493030,
+               "role": "Pariatur ad accusantium."
             },
             {
-               "company": "Qui repellat eveniet dignissimos et reiciendis.",
-               "duration": 9027220452237938752,
-               "role": "Quia hic."
-            },
-            {
-               "company": "Qui repellat eveniet dignissimos et reiciendis.",
-               "duration": 9027220452237938752,
-               "role": "Quia hic."
-            },
-            {
-               "company": "Qui repellat eveniet dignissimos et reiciendis.",
-               "duration": 9027220452237938752,
-               "role": "Quia hic."
+               "company": "Consectetur ut.",
+               "duration": 9021502551841493030,
+               "role": "Pariatur ad accusantium."
             }
          ],
-         "name": "Similique ipsum enim voluptas."
+         "name": "Earum rem."
       }
    ]'
 `, os.Args[0])

@@ -234,8 +234,8 @@ func payloadBuilders(genpkg string, svc *expr.GRPCServiceExpr, data *commandData
 			codegen.Header(svc.Name()+" gRPC client CLI support package", "client", []*codegen.ImportSpec{
 				{Path: "encoding/json"},
 				{Path: "fmt"},
-				{Path: filepath.Join(genpkg, svcName), Name: sd.Service.PkgName},
-				{Path: filepath.Join(genpkg, "grpc", svcName, pbPkgName), Name: sd.PkgName},
+				{Path: path.Join(genpkg, svcName), Name: sd.Service.PkgName},
+				{Path: path.Join(genpkg, "grpc", svcName, pbPkgName), Name: sd.PkgName},
 			}),
 		}
 		for _, sub := range data.Subcommands {

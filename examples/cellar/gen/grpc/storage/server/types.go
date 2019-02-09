@@ -329,6 +329,9 @@ func ValidateComponent(message *storagepb.Component) (err error) {
 
 // ValidateShowResponse runs the validations defined on ShowResponse.
 func ValidateShowResponse(message *storagepb.ShowResponse) (err error) {
+	if message.Winery == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("winery", "message"))
+	}
 	if utf8.RuneCountInString(message.Name) > 100 {
 		err = goa.MergeErrors(err, goa.InvalidLengthError("message.name", message.Name, utf8.RuneCountInString(message.Name), 100, false))
 	}
