@@ -6,12 +6,12 @@
 // $ goa gen goa.design/goa/examples/multipart/design -o
 // $(GOPATH)/src/goa.design/goa/examples/multipart
 
-package resume
+package resumesvc
 
 import (
 	"context"
 
-	resumeviews "goa.design/goa/examples/multipart/gen/resume/views"
+	resumesvcviews "goa.design/goa/examples/multipart/gen/resume/views"
 )
 
 // The storage service makes it possible to add resumes using multipart.
@@ -77,7 +77,7 @@ type Resume struct {
 
 // NewStoredResumeCollection initializes result type StoredResumeCollection
 // from viewed result type StoredResumeCollection.
-func NewStoredResumeCollection(vres resumeviews.StoredResumeCollection) StoredResumeCollection {
+func NewStoredResumeCollection(vres resumesvcviews.StoredResumeCollection) StoredResumeCollection {
 	var res StoredResumeCollection
 	switch vres.View {
 	case "default", "":
@@ -89,19 +89,19 @@ func NewStoredResumeCollection(vres resumeviews.StoredResumeCollection) StoredRe
 // NewViewedStoredResumeCollection initializes viewed result type
 // StoredResumeCollection from result type StoredResumeCollection using the
 // given view.
-func NewViewedStoredResumeCollection(res StoredResumeCollection, view string) resumeviews.StoredResumeCollection {
-	var vres resumeviews.StoredResumeCollection
+func NewViewedStoredResumeCollection(res StoredResumeCollection, view string) resumesvcviews.StoredResumeCollection {
+	var vres resumesvcviews.StoredResumeCollection
 	switch view {
 	case "default", "":
 		p := newStoredResumeCollectionView(res)
-		vres = resumeviews.StoredResumeCollection{p, "default"}
+		vres = resumesvcviews.StoredResumeCollection{p, "default"}
 	}
 	return vres
 }
 
 // newStoredResumeCollection converts projected type StoredResumeCollection to
 // service type StoredResumeCollection.
-func newStoredResumeCollection(vres resumeviews.StoredResumeCollectionView) StoredResumeCollection {
+func newStoredResumeCollection(vres resumesvcviews.StoredResumeCollectionView) StoredResumeCollection {
 	res := make(StoredResumeCollection, len(vres))
 	for i, n := range vres {
 		res[i] = newStoredResume(n)
@@ -111,8 +111,8 @@ func newStoredResumeCollection(vres resumeviews.StoredResumeCollectionView) Stor
 
 // newStoredResumeCollectionView projects result type StoredResumeCollection
 // into projected type StoredResumeCollectionView using the "default" view.
-func newStoredResumeCollectionView(res StoredResumeCollection) resumeviews.StoredResumeCollectionView {
-	vres := make(resumeviews.StoredResumeCollectionView, len(res))
+func newStoredResumeCollectionView(res StoredResumeCollection) resumesvcviews.StoredResumeCollectionView {
+	vres := make(resumesvcviews.StoredResumeCollectionView, len(res))
 	for i, n := range res {
 		vres[i] = newStoredResumeView(n)
 	}
@@ -121,7 +121,7 @@ func newStoredResumeCollectionView(res StoredResumeCollection) resumeviews.Store
 
 // newStoredResume converts projected type StoredResume to service type
 // StoredResume.
-func newStoredResume(vres *resumeviews.StoredResumeView) *StoredResume {
+func newStoredResume(vres *resumesvcviews.StoredResumeView) *StoredResume {
 	res := &StoredResume{}
 	if vres.ID != nil {
 		res.ID = *vres.ID
@@ -156,16 +156,16 @@ func newStoredResume(vres *resumeviews.StoredResumeView) *StoredResume {
 
 // newStoredResumeView projects result type StoredResume into projected type
 // StoredResumeView using the "default" view.
-func newStoredResumeView(res *StoredResume) *resumeviews.StoredResumeView {
-	vres := &resumeviews.StoredResumeView{
+func newStoredResumeView(res *StoredResume) *resumesvcviews.StoredResumeView {
+	vres := &resumesvcviews.StoredResumeView{
 		ID:        &res.ID,
 		CreatedAt: &res.CreatedAt,
 		Name:      &res.Name,
 	}
 	if res.Experience != nil {
-		vres.Experience = make([]*resumeviews.ExperienceView, len(res.Experience))
+		vres.Experience = make([]*resumesvcviews.ExperienceView, len(res.Experience))
 		for i, val := range res.Experience {
-			vres.Experience[i] = &resumeviews.ExperienceView{
+			vres.Experience[i] = &resumesvcviews.ExperienceView{
 				Company:  &val.Company,
 				Role:     &val.Role,
 				Duration: &val.Duration,
@@ -173,9 +173,9 @@ func newStoredResumeView(res *StoredResume) *resumeviews.StoredResumeView {
 		}
 	}
 	if res.Education != nil {
-		vres.Education = make([]*resumeviews.EducationView, len(res.Education))
+		vres.Education = make([]*resumesvcviews.EducationView, len(res.Education))
 		for i, val := range res.Education {
-			vres.Education[i] = &resumeviews.EducationView{
+			vres.Education[i] = &resumesvcviews.EducationView{
 				Institution: &val.Institution,
 				Major:       &val.Major,
 			}

@@ -13,8 +13,8 @@ import (
 	"net/http"
 
 	goa "goa.design/goa"
-	resume "goa.design/goa/examples/multipart/gen/resume"
-	resumeviews "goa.design/goa/examples/multipart/gen/resume/views"
+	resumesvc "goa.design/goa/examples/multipart/gen/resume"
+	resumesvcviews "goa.design/goa/examples/multipart/gen/resume/views"
 	goahttp "goa.design/goa/http"
 )
 
@@ -22,7 +22,7 @@ import (
 // list endpoint.
 func EncodeListResponse(encoder func(context.Context, http.ResponseWriter) goahttp.Encoder) func(context.Context, http.ResponseWriter, interface{}) error {
 	return func(ctx context.Context, w http.ResponseWriter, v interface{}) error {
-		res := v.(resumeviews.StoredResumeCollection)
+		res := v.(resumesvcviews.StoredResumeCollection)
 		enc := encoder(ctx, w)
 		body := NewStoredResumeResponseCollection(res.Projected)
 		w.WriteHeader(http.StatusOK)
@@ -46,7 +46,7 @@ func EncodeAddResponse(encoder func(context.Context, http.ResponseWriter) goahtt
 // endpoint.
 func DecodeAddRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) (interface{}, error) {
 	return func(r *http.Request) (interface{}, error) {
-		var payload []*resume.Resume
+		var payload []*resumesvc.Resume
 		if err := decoder(r).Decode(&payload); err != nil {
 			return nil, goa.DecodePayloadError(err.Error())
 		}
@@ -64,7 +64,7 @@ func NewResumeAddDecoder(mux goahttp.Muxer, resumeAddDecoderFn ResumeAddDecoderF
 			if merr != nil {
 				return merr
 			}
-			p := v.(*[]*resume.Resume)
+			p := v.(*[]*resumesvc.Resume)
 			if err := resumeAddDecoderFn(mr, p); err != nil {
 				return err
 			}

@@ -72,6 +72,7 @@ func exampleServer(genpkg string, root *expr.RootExpr, svr *expr.ServerExpr) *co
 			})
 			specs = append(specs, &codegen.ImportSpec{
 				Path: path.Join(genpkg, "grpc", codegen.SnakeCase(svc.Name()), pbPkgName),
+				Name: codegen.SnakeCase(svc.Name()) + pbPkgName,
 			})
 		}
 	}
@@ -80,9 +81,11 @@ func exampleServer(genpkg string, root *expr.RootExpr, svr *expr.ServerExpr) *co
 		sections []*codegen.SectionTemplate
 	)
 	{
-		svcdata := make([]*ServiceData, len(svr.Services))
-		for i, svc := range svr.Services {
-			svcdata[i] = GRPCServices.Get(svc)
+		var svcdata []*ServiceData
+		for _, svc := range svr.Services {
+			if data := GRPCServices.Get(svc); data != nil {
+				svcdata = append(svcdata, data)
+			}
 		}
 		sections = []*codegen.SectionTemplate{
 			codegen.Header("", "main", specs),

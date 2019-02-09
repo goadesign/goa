@@ -8,6 +8,23 @@ import (
 	"goa.design/goa/expr"
 )
 
+// protoBufTransformer implements the codegen.Transformer interface
+// to transform Go types to protocol buffer generated Go types.
+type protoBufTransformer struct {
+	// helperPrefix is the prefix for the helper function names.
+	helperPrefix string
+	// proto if true indicates target type is a protocol buffer type.
+	proto bool
+	// targetInit is the initialization code for the target type for nested
+	// map and array types.
+	targetInit string
+	// wrapped indicates whether the source or target is in a wrapped state.
+	// See grpc/docs/FAQ.md. `wrapped` is true and `proto` is true indicates
+	// the target attribute is in wrapped state. `wrapped` is true and `proto`
+	// is false indicates the source attribute is in wrapped state.
+	wrapped bool
+}
+
 // protoBufTransform produces Go code to initialize a data structure defined
 // by target from an instance of data structure defined by source. The source
 // or target is a protocol buffer type.
@@ -42,18 +59,6 @@ func protoBufTransform(source, target *codegen.ContextualAttribute, sourceVar, t
 	return strings.TrimRight(code, "\n"), funcs, nil
 }
 
-// protoBufTransformer implements the codegen.Transformer interface
-// to transform Go types to protocol buffer generated Go types.
-type protoBufTransformer struct {
-	// helperPrefix is the prefix for the helper function names.
-	helperPrefix string
-	// proto if true indicates target type is a protocol buffer type.
-	proto bool
-	// targetInit is the initialization code for the target type for nested
-	// map and array types.
-	targetInit string
-}
-
 // Transform returns the code to initialize a target data structure from an
 // instance of source data structure. It returns an error if source and target
 // are not compatible for transformation (different types, fields of
@@ -62,25 +67,25 @@ func (p *protoBufTransformer) Transform(source, target *codegen.ContextualAttrib
 	var (
 		initCode string
 		err      error
-
-		srcAtt = source.Attribute.Expr()
-		tgtAtt = target.Attribute.Expr()
+		srcAtt   = source.Attribute.Expr()
+		tgtAtt   = target.Attribute.Expr()
 	)
+
 	if err := codegen.IsCompatible(srcAtt.Type, tgtAtt.Type, ta.SourceVar, ta.TargetVar); err != nil {
 		if p.proto {
 			initCode += fmt.Sprintf("%s := &%s{}\n", ta.TargetVar, target.Attribute.Name())
 			ta.TargetVar += ".Field"
 			ta.NewVar = false
 			tgtAtt = unwrapAttr(expr.DupAtt(tgtAtt))
+			target = target.Dup(tgtAtt, target.Required)
 		} else {
 			srcAtt = unwrapAttr(expr.DupAtt(srcAtt))
+			source = source.Dup(srcAtt, source.Required)
 			ta.SourceVar += ".Field"
 		}
 		if err = codegen.IsCompatible(srcAtt.Type, tgtAtt.Type, ta.SourceVar, ta.TargetVar); err != nil {
 			return "", err
 		}
-		source = source.Dup(srcAtt, source.Required)
-		target = target.Dup(tgtAtt, target.Required)
 	}
 
 	var (
@@ -118,11 +123,6 @@ func (p *protoBufTransformer) Transform(source, target *codegen.ContextualAttrib
 func (p *protoBufTransformer) MakeCompatible(source, target *codegen.ContextualAttribute, ta *codegen.TransformAttrs, suffix string) (src, tgt *codegen.ContextualAttribute, newTA *codegen.TransformAttrs, err error) {
 	src = source
 	tgt = target
-	newTA = &codegen.TransformAttrs{
-		SourceVar: ta.SourceVar,
-		TargetVar: ta.TargetVar,
-		NewVar:    ta.NewVar,
-	}
 	if err = codegen.IsCompatible(
 		src.Attribute.Expr().Type,
 		tgt.Attribute.Expr().Type,
@@ -134,16 +134,16 @@ func (p *protoBufTransformer) MakeCompatible(source, target *codegen.ContextualA
 		} else {
 			srcAtt := unwrapAttr(expr.DupAtt(source.Attribute.Expr()))
 			src = source.Dup(srcAtt, source.Required)
-			newTA.SourceVar += ".Field"
 		}
+		p.wrapped = true
 		if err = codegen.IsCompatible(
 			src.Attribute.Expr().Type,
 			tgt.Attribute.Expr().Type,
-			newTA.SourceVar, newTA.TargetVar); err != nil {
-			return src, tgt, newTA, err
+			ta.SourceVar, ta.TargetVar); err != nil {
+			return src, tgt, ta, err
 		}
 	}
-	return src, tgt, newTA, nil
+	return src, tgt, ta, nil
 }
 
 // ConvertType produces code to initialize a target type from a source type
@@ -190,7 +190,10 @@ func (p *protoBufTransformer) TransformArray(source, target *codegen.ContextualA
 	target = target.Dup(targetArr.ElemType, true)
 	targetRef := target.Attribute.Ref()
 
-	var code string
+	var (
+		code string
+		err  error
+	)
 
 	// If targetInit is set, the target array element is in a nested state.
 	// See grpc/docs/FAQ.md.
@@ -200,30 +203,26 @@ func (p *protoBufTransformer) TransformArray(source, target *codegen.ContextualA
 			assign = ":="
 		}
 		code = fmt.Sprintf("%s %s &%s{}\n", ta.TargetVar, assign, p.targetInit)
-		ta = &codegen.TransformAttrs{
-			SourceVar: ta.SourceVar,
-			TargetVar: ta.TargetVar + ".Field",
-			NewVar:    false,
-		}
 		p.targetInit = ""
 	}
-	if err := codegen.IsCompatible(source.Attribute.Expr().Type, target.Attribute.Expr().Type, ta.SourceVar+"[0]", ta.TargetVar+"[0]"); err != nil {
+	if p.wrapped {
 		if p.proto {
-			p.targetInit = target.Attribute.Name()
-			tAtt := unwrapAttr(expr.DupAtt(targetArr.ElemType))
-			target = target.Dup(tAtt, true)
+			ta = &codegen.TransformAttrs{
+				SourceVar: ta.SourceVar,
+				TargetVar: ta.TargetVar + ".Field",
+				NewVar:    false,
+			}
 		} else {
-			sAtt := unwrapAttr(expr.DupAtt(sourceArr.ElemType))
-			source = source.Dup(sAtt, true)
 			ta = &codegen.TransformAttrs{
 				SourceVar: ta.SourceVar + ".Field",
 				TargetVar: ta.TargetVar,
 				NewVar:    ta.NewVar,
 			}
 		}
-		if err := codegen.IsCompatible(source.Attribute.Expr().Type, target.Attribute.Expr().Type, ta.SourceVar+"[0]", ta.TargetVar+"[0]"); err != nil {
-			return "", err
-		}
+		p.wrapped = false
+	}
+	if source, target, ta, err = p.MakeCompatible(source, target, ta, "[0]"); err != nil {
+		return "", err
 	}
 
 	data := map[string]interface{}{
@@ -268,7 +267,10 @@ func (p *protoBufTransformer) TransformMap(source, target *codegen.ContextualAtt
 	targetElem := target.Dup(targetMap.ElemType, true)
 	targetElemRef := targetElem.Attribute.Ref()
 
-	var code string
+	var (
+		code string
+		err  error
+	)
 
 	// If targetInit is set, the target map element is in a nested state.
 	// See grpc/docs/FAQ.md.
@@ -278,30 +280,27 @@ func (p *protoBufTransformer) TransformMap(source, target *codegen.ContextualAtt
 			assign = ":="
 		}
 		code = fmt.Sprintf("%s %s &%s{}\n", ta.TargetVar, assign, p.targetInit)
-		ta = &codegen.TransformAttrs{
-			SourceVar: ta.SourceVar,
-			TargetVar: ta.TargetVar + ".Field",
-			NewVar:    false,
-		}
 		p.targetInit = ""
 	}
-	if err := codegen.IsCompatible(sourceMap.ElemType.Type, targetMap.ElemType.Type, ta.SourceVar+"[*]", ta.TargetVar+"[*]"); err != nil {
+	if p.wrapped {
 		if p.proto {
-			p.targetInit = targetElem.Attribute.Name()
-			tAtt := unwrapAttr(expr.DupAtt(targetMap.ElemType))
-			targetElem = target.Dup(tAtt, true)
+			ta = &codegen.TransformAttrs{
+				SourceVar: ta.SourceVar,
+				TargetVar: ta.TargetVar + ".Field",
+				NewVar:    false,
+			}
 		} else {
-			sAtt := unwrapAttr(expr.DupAtt(sourceMap.ElemType))
-			sourceElem = source.Dup(sAtt, true)
 			ta = &codegen.TransformAttrs{
 				SourceVar: ta.SourceVar + ".Field",
 				TargetVar: ta.TargetVar,
 				NewVar:    ta.NewVar,
 			}
 		}
-		if err := codegen.IsCompatible(sourceElem.Attribute.Expr().Type, targetElem.Attribute.Expr().Type, ta.SourceVar+"[*]", ta.TargetVar+"[*]"); err != nil {
-			return "", err
-		}
+		p.wrapped = false
+	}
+
+	if sourceElem, targetElem, ta, err = p.MakeCompatible(sourceElem, targetElem, ta, "[*]"); err != nil {
+		return "", err
 	}
 	data := map[string]interface{}{
 		"Transformer": p,

@@ -26,7 +26,6 @@ func ClientTypeFiles(genpkg string, root *expr.RootExpr) []*codegen.File {
 // to prevent duplicate code generation.
 func clientType(genpkg string, svc *expr.GRPCServiceExpr, seen map[string]struct{}) *codegen.File {
 	var (
-		fpath     string
 		initData  []*InitData
 		validated []*ValidationData
 
@@ -38,8 +37,6 @@ func clientType(genpkg string, svc *expr.GRPCServiceExpr, seen map[string]struct
 				initData = append(initData, c.Init)
 			}
 		}
-
-		fpath = filepath.Join(codegen.Gendir, "grpc", codegen.SnakeCase(svc.Name()), "client", "types.go")
 		for _, a := range svc.GRPCEndpoints {
 			ed := sd.Endpoint(a.Name())
 			if c := ed.Request.ClientConvert; c != nil {
@@ -57,42 +54,49 @@ func clientType(genpkg string, svc *expr.GRPCServiceExpr, seen map[string]struct
 				}
 			}
 		}
-
 		for _, v := range sd.Validations {
 			validated = append(validated, v)
 		}
 	}
 
-	header := codegen.Header(svc.Name()+" gRPC client types", "client",
-		[]*codegen.ImportSpec{
-			{Path: "unicode/utf8"},
-			{Path: "goa.design/goa", Name: "goa"},
-			{Path: path.Join(genpkg, codegen.SnakeCase(svc.Name())), Name: sd.Service.PkgName},
-			{Path: path.Join(genpkg, codegen.SnakeCase(svc.Name()), "views"), Name: sd.Service.ViewsPkg},
-			{Path: path.Join(genpkg, "grpc", codegen.SnakeCase(svc.Name()), pbPkgName)},
-		},
+	var (
+		fpath    string
+		sections []*codegen.SectionTemplate
 	)
-	sections := []*codegen.SectionTemplate{header}
-	for _, init := range initData {
-		sections = append(sections, &codegen.SectionTemplate{
-			Name:   "client-type-init",
-			Source: typeInitT,
-			Data:   init,
-		})
-	}
-	for _, data := range validated {
-		sections = append(sections, &codegen.SectionTemplate{
-			Name:   "client-validate",
-			Source: validateT,
-			Data:   data,
-		})
-	}
-	for _, h := range sd.TransformHelpers {
-		sections = append(sections, &codegen.SectionTemplate{
-			Name:   "client-transform-helper",
-			Source: transformHelperT,
-			Data:   h,
-		})
+	{
+		svcName := codegen.SnakeCase(svc.Name())
+		fpath = filepath.Join(codegen.Gendir, "grpc", svcName, "client", "types.go")
+		sections = []*codegen.SectionTemplate{
+			codegen.Header(svc.Name()+" gRPC client types", "client",
+				[]*codegen.ImportSpec{
+					{Path: "unicode/utf8"},
+					{Path: "goa.design/goa", Name: "goa"},
+					{Path: path.Join(genpkg, svcName), Name: sd.Service.PkgName},
+					{Path: path.Join(genpkg, svcName, "views"), Name: sd.Service.ViewsPkg},
+					{Path: path.Join(genpkg, "grpc", svcName, pbPkgName), Name: sd.PkgName},
+				}),
+		}
+		for _, init := range initData {
+			sections = append(sections, &codegen.SectionTemplate{
+				Name:   "client-type-init",
+				Source: typeInitT,
+				Data:   init,
+			})
+		}
+		for _, data := range validated {
+			sections = append(sections, &codegen.SectionTemplate{
+				Name:   "client-validate",
+				Source: validateT,
+				Data:   data,
+			})
+		}
+		for _, h := range sd.TransformHelpers {
+			sections = append(sections, &codegen.SectionTemplate{
+				Name:   "client-transform-helper",
+				Source: transformHelperT,
+				Data:   h,
+			})
+		}
 	}
 
 	return &codegen.File{Path: fpath, SectionTemplates: sections}

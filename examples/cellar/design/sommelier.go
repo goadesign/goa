@@ -20,5 +20,10 @@ var _ = Service("sommelier", func() {
 			Response("no_criteria", StatusBadRequest)
 			Response("no_match", StatusNotFound)
 		})
+		GRPC(func() {
+			Response(CodeOK)
+			Response("no_criteria", CodeInvalidArgument)
+			Response("no_match", CodeNotFound)
+		})
 	})
 })

@@ -9,7 +9,7 @@ import (
 
 	grpcmiddleware "github.com/grpc-ecosystem/go-grpc-middleware"
 	dividersvc "goa.design/goa/examples/error/gen/divider"
-	"goa.design/goa/examples/error/gen/grpc/divider/pb"
+	dividerpb "goa.design/goa/examples/error/gen/grpc/divider/pb"
 	dividersvcsvr "goa.design/goa/examples/error/gen/grpc/divider/server"
 	grpcmdlwr "goa.design/goa/grpc/middleware"
 	"goa.design/goa/middleware"
@@ -48,7 +48,7 @@ func handleGRPCServer(ctx context.Context, u *url.URL, dividerEndpoints *divider
 	)
 
 	// Register the servers.
-	pb.RegisterDividerServer(srv, dividerServer)
+	dividerpb.RegisterDividerServer(srv, dividerServer)
 
 	for svc, info := range srv.GetServiceInfo() {
 		for _, m := range info.Methods {

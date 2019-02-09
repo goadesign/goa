@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"goa.design/goa"
-	cli "goa.design/goa/examples/security/gen/http/cli/secured_service"
+	cli "goa.design/goa/examples/security/gen/http/cli/multi_auth"
 	goahttp "goa.design/goa/http"
 )
 

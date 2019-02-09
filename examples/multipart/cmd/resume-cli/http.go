@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"goa.design/goa"
-	api "goa.design/goa/examples/multipart"
+	resume "goa.design/goa/examples/multipart"
 	cli "goa.design/goa/examples/multipart/gen/http/cli/resume"
 	goahttp "goa.design/goa/http"
 )
@@ -30,7 +30,7 @@ func doHTTP(scheme, host string, timeout int, debug bool) (goa.Endpoint, interfa
 		goahttp.RequestEncoder,
 		goahttp.ResponseDecoder,
 		debug,
-		api.ResumeAddEncoderFunc,
+		resume.ResumeAddEncoderFunc,
 	)
 }
 func httpUsageCommands() string {

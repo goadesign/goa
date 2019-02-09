@@ -478,6 +478,51 @@ var MessageWithMetadataDSL = func() {
 	})
 }
 
+var MessageWithValidateDSL = func() {
+	var UTLevel1 = Type("UTLevel1", func() {
+		Field(1, "Int32Field", Int32)
+		Field(2, "Int64Field", Int64)
+		Required("Int32Field", "Int64Field")
+	})
+	var RequestUT = Type("RequestUT", func() {
+		Field(1, "BooleanField", Boolean)
+		Field(2, "InMetadata", Int, func() {
+			Maximum(100)
+		})
+		Field(3, "UTLevel1", UTLevel1)
+		Required("UTLevel1")
+	})
+	var ResponseUT = Type("ResponseUT", func() {
+		Field(1, "InTrailer", Boolean, func() {
+			Enum(true)
+		})
+		Field(2, "InHeader", Int, func() {
+			Minimum(1)
+		})
+		Field(3, "UTLevel1", UTLevel1)
+		Required("UTLevel1")
+	})
+	Service("ServiceMessageWithValidate", func() {
+		Method("MethodMessageWithValidate", func() {
+			Payload(RequestUT)
+			Result(ResponseUT)
+			GRPC(func() {
+				Metadata(func() {
+					Attribute("InMetadata:Authorization")
+				})
+				Response(CodeOK, func() {
+					Headers(func() {
+						Attribute("InHeader:Location")
+					})
+					Trailers(func() {
+						Attribute("InTrailer")
+					})
+				})
+			})
+		})
+	})
+}
+
 var MessageWithSecurityAttrsDSL = func() {
 	var JWTAuth = JWTSecurity("jwt", func() {
 		Scope("api:read", "Read-only access")

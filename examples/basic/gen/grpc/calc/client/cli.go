@@ -13,13 +13,13 @@ import (
 	"fmt"
 
 	calcsvc "goa.design/goa/examples/basic/gen/calc"
-	"goa.design/goa/examples/basic/gen/grpc/calc/pb"
+	calcpb "goa.design/goa/examples/basic/gen/grpc/calc/pb"
 )
 
 // BuildAddPayload builds the payload for the calc add endpoint from CLI flags.
 func BuildAddPayload(calcAddMessage string) (*calcsvc.AddPayload, error) {
 	var err error
-	var message pb.AddRequest
+	var message calcpb.AddRequest
 	{
 		if calcAddMessage != "" {
 			err = json.Unmarshal([]byte(calcAddMessage), &message)

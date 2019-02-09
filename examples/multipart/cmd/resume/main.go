@@ -11,8 +11,8 @@ import (
 	"strings"
 	"sync"
 
-	api "goa.design/goa/examples/multipart"
-	resume "goa.design/goa/examples/multipart/gen/resume"
+	resume "goa.design/goa/examples/multipart"
+	resumesvc "goa.design/goa/examples/multipart/gen/resume"
 )
 
 func main() {
@@ -32,24 +32,24 @@ func main() {
 		logger *log.Logger
 	)
 	{
-		logger = log.New(os.Stderr, "[api] ", log.Ltime)
+		logger = log.New(os.Stderr, "[resume] ", log.Ltime)
 	}
 
 	// Initialize the services.
 	var (
-		resumeSvc resume.Service
+		resumeSvc resumesvc.Service
 	)
 	{
-		resumeSvc = api.NewResume(logger)
+		resumeSvc = resume.NewResume(logger)
 	}
 
 	// Wrap the services in endpoints that can be invoked from other services
 	// potentially running in different processes.
 	var (
-		resumeEndpoints *resume.Endpoints
+		resumeEndpoints *resumesvc.Endpoints
 	)
 	{
-		resumeEndpoints = resume.NewEndpoints(resumeSvc)
+		resumeEndpoints = resumesvc.NewEndpoints(resumeSvc)
 	}
 
 	// Create channel used by both the signal handler and server goroutines

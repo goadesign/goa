@@ -1,7 +1,6 @@
 package codegen
 
 import (
-	"fmt"
 	"path"
 	"path/filepath"
 
@@ -25,75 +24,82 @@ func ClientFiles(genpkg string, root *expr.RootExpr) []*codegen.File {
 
 // client returns the files defining the gRPC client.
 func client(genpkg string, svc *expr.GRPCServiceExpr) *codegen.File {
-	fpath := filepath.Join(codegen.Gendir, "grpc", codegen.SnakeCase(svc.Name()), "client", "client.go")
-	data := GRPCServices.Get(svc.Name())
-	title := fmt.Sprintf("%s GRPC client", svc.Name())
-	sections := []*codegen.SectionTemplate{
-		codegen.Header(title, "client", []*codegen.ImportSpec{
-			{Path: "context"},
-			{Path: "google.golang.org/grpc"},
-			{Path: "goa.design/goa", Name: "goa"},
-			{Path: "goa.design/goa/grpc", Name: "goagrpc"},
-			{Path: path.Join(genpkg, codegen.SnakeCase(svc.Name())), Name: data.Service.PkgName},
-			{Path: path.Join(genpkg, codegen.SnakeCase(svc.Name()), "views"), Name: data.Service.ViewsPkg},
-			{Path: path.Join(genpkg, "grpc", codegen.SnakeCase(svc.Name()), pbPkgName)},
-		}),
-	}
-	sections = append(sections, &codegen.SectionTemplate{
-		Name:   "client-struct",
-		Source: clientStructT,
-		Data:   data,
-	})
-	for _, e := range data.Endpoints {
-		if e.ClientStream != nil {
+	var (
+		fpath    string
+		sections []*codegen.SectionTemplate
+
+		data = GRPCServices.Get(svc.Name())
+	)
+	{
+		svcName := codegen.SnakeCase(svc.Name())
+		fpath = filepath.Join(codegen.Gendir, "grpc", svcName, "client", "client.go")
+		sections = []*codegen.SectionTemplate{
+			codegen.Header(svc.Name()+" gRPC client", "client", []*codegen.ImportSpec{
+				{Path: "context"},
+				{Path: "google.golang.org/grpc"},
+				{Path: "goa.design/goa", Name: "goa"},
+				{Path: "goa.design/goa/grpc", Name: "goagrpc"},
+				{Path: path.Join(genpkg, svcName), Name: data.Service.PkgName},
+				{Path: path.Join(genpkg, svcName, "views"), Name: data.Service.ViewsPkg},
+				{Path: path.Join(genpkg, "grpc", svcName, pbPkgName), Name: data.PkgName},
+			}),
+		}
+		sections = append(sections, &codegen.SectionTemplate{
+			Name:   "client-struct",
+			Source: clientStructT,
+			Data:   data,
+		})
+		for _, e := range data.Endpoints {
+			if e.ClientStream != nil {
+				sections = append(sections, &codegen.SectionTemplate{
+					Name:   "client-stream-struct-type",
+					Source: streamStructTypeT,
+					Data:   e.ClientStream,
+				})
+			}
+		}
+		sections = append(sections, &codegen.SectionTemplate{
+			Name:   "client-init",
+			Source: clientInitT,
+			Data:   data,
+		})
+		for _, e := range data.Endpoints {
 			sections = append(sections, &codegen.SectionTemplate{
-				Name:   "client-stream-struct-type",
-				Source: streamStructTypeT,
-				Data:   e.ClientStream,
+				Name:   "client-endpoint-init",
+				Source: clientEndpointInitT,
+				Data:   e,
 			})
 		}
-	}
-	sections = append(sections, &codegen.SectionTemplate{
-		Name:   "client-init",
-		Source: clientInitT,
-		Data:   data,
-	})
-	for _, e := range data.Endpoints {
-		sections = append(sections, &codegen.SectionTemplate{
-			Name:   "client-endpoint-init",
-			Source: clientEndpointInitT,
-			Data:   e,
-		})
-	}
-	for _, e := range data.Endpoints {
-		if e.ClientStream != nil {
-			if e.ClientStream.RecvConvert != nil {
-				sections = append(sections, &codegen.SectionTemplate{
-					Name:   "client-stream-recv",
-					Source: streamRecvT,
-					Data:   e.ClientStream,
-				})
-			}
-			if e.Method.StreamKind == expr.ClientStreamKind || e.Method.StreamKind == expr.BidirectionalStreamKind {
-				sections = append(sections, &codegen.SectionTemplate{
-					Name:   "client-stream-send",
-					Source: streamSendT,
-					Data:   e.ClientStream,
-				})
-			}
-			if e.ServerStream.MustClose {
-				sections = append(sections, &codegen.SectionTemplate{
-					Name:   "client-stream-close",
-					Source: streamCloseT,
-					Data:   e.ClientStream,
-				})
-			}
-			if e.Method.ViewedResult != nil && e.Method.ViewedResult.ViewName == "" {
-				sections = append(sections, &codegen.SectionTemplate{
-					Name:   "client-stream-set-view",
-					Source: streamSetViewT,
-					Data:   e.ClientStream,
-				})
+		for _, e := range data.Endpoints {
+			if e.ClientStream != nil {
+				if e.ClientStream.RecvConvert != nil {
+					sections = append(sections, &codegen.SectionTemplate{
+						Name:   "client-stream-recv",
+						Source: streamRecvT,
+						Data:   e.ClientStream,
+					})
+				}
+				if e.Method.StreamKind == expr.ClientStreamKind || e.Method.StreamKind == expr.BidirectionalStreamKind {
+					sections = append(sections, &codegen.SectionTemplate{
+						Name:   "client-stream-send",
+						Source: streamSendT,
+						Data:   e.ClientStream,
+					})
+				}
+				if e.ServerStream.MustClose {
+					sections = append(sections, &codegen.SectionTemplate{
+						Name:   "client-stream-close",
+						Source: streamCloseT,
+						Data:   e.ClientStream,
+					})
+				}
+				if e.Method.ViewedResult != nil && e.Method.ViewedResult.ViewName == "" {
+					sections = append(sections, &codegen.SectionTemplate{
+						Name:   "client-stream-set-view",
+						Source: streamSetViewT,
+						Data:   e.ClientStream,
+					})
+				}
 			}
 		}
 	}
@@ -108,7 +114,8 @@ func clientEncodeDecode(genpkg string, svc *expr.GRPCServiceExpr) *codegen.File 
 		data = GRPCServices.Get(svc.Name())
 	)
 	{
-		fpath = filepath.Join(codegen.Gendir, "grpc", codegen.SnakeCase(svc.Name()), "client", "encode_decode.go")
+		svcName := codegen.SnakeCase(svc.Name())
+		fpath = filepath.Join(codegen.Gendir, "grpc", svcName, "client", "encode_decode.go")
 		sections = []*codegen.SectionTemplate{
 			codegen.Header(svc.Name()+" gRPC client encoders and decoders", "client", []*codegen.ImportSpec{
 				{Path: "context"},
@@ -117,9 +124,9 @@ func clientEncodeDecode(genpkg string, svc *expr.GRPCServiceExpr) *codegen.File 
 				{Path: "google.golang.org/grpc/metadata"},
 				{Path: "goa.design/goa", Name: "goa"},
 				{Path: "goa.design/goa/grpc", Name: "goagrpc"},
-				{Path: path.Join(genpkg, codegen.SnakeCase(svc.Name())), Name: data.Service.PkgName},
-				{Path: path.Join(genpkg, codegen.SnakeCase(svc.Name()), "views"), Name: data.Service.ViewsPkg},
-				{Path: path.Join(genpkg, "grpc", codegen.SnakeCase(svc.Name()), pbPkgName)},
+				{Path: path.Join(genpkg, svcName), Name: data.Service.PkgName},
+				{Path: path.Join(genpkg, svcName, "views"), Name: data.Service.ViewsPkg},
+				{Path: path.Join(genpkg, "grpc", svcName, pbPkgName), Name: data.PkgName},
 			}),
 		}
 		fm := transTmplFuncs(svc)

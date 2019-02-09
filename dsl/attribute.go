@@ -3,8 +3,8 @@ package dsl
 import (
 	"fmt"
 
-	"goa.design/goa/expr"
 	"goa.design/goa/eval"
+	"goa.design/goa/expr"
 )
 
 // Attribute describes a field of an object.
@@ -189,10 +189,12 @@ func Attribute(name string, args ...interface{}) {
 //
 func Field(tag interface{}, name string, args ...interface{}) {
 	fn := func() { Meta("rpc:tag", fmt.Sprintf("%v", tag)) }
-	if d, ok := args[len(args)-1].(func()); ok {
-		old := fn
-		fn = func() { d(); old() }
-		args = args[:len(args)-1]
+	if len(args) > 0 {
+		if d, ok := args[len(args)-1].(func()); ok {
+			old := fn
+			fn = func() { d(); old() }
+			args = args[:len(args)-1]
+		}
 	}
 	Attribute(name, append(args, fn)...)
 }

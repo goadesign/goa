@@ -14,7 +14,7 @@ import (
 	"net/http"
 
 	goa "goa.design/goa"
-	resume "goa.design/goa/examples/multipart/gen/resume"
+	resumesvc "goa.design/goa/examples/multipart/gen/resume"
 	goahttp "goa.design/goa/http"
 )
 
@@ -38,7 +38,7 @@ type Client struct {
 
 // ResumeAddEncoderFunc is the type to encode multipart request for the
 // "resume" service "add" endpoint.
-type ResumeAddEncoderFunc func(*multipart.Writer, []*resume.Resume) error
+type ResumeAddEncoderFunc func(*multipart.Writer, []*resumesvc.Resume) error
 
 // NewClient instantiates HTTP clients for all the resume service servers.
 func NewClient(

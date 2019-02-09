@@ -5,7 +5,7 @@ import (
 	"os"
 
 	"goa.design/goa"
-	cli "goa.design/goa/examples/security/gen/grpc/cli/secured_service"
+	cli "goa.design/goa/examples/cellar/gen/grpc/cli/cellar"
 	"google.golang.org/grpc"
 )
 

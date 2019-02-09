@@ -168,7 +168,7 @@ func pointerContext(typ expr.DataType, pkg string, scope *codegen.NameScope) *co
 
 func newProtoContextAttr(dt expr.DataType, pkg string, scope *codegen.NameScope) *codegen.ContextualAttribute {
 	att := &expr.AttributeExpr{Type: expr.Dup(dt)}
-	makeProtoBufMessage(att, dt.Name(), scope)
+	att = makeProtoBufMessage(att, dt.Name(), scope)
 	return protoBufContext(att, pkg, scope)
 }
 
@@ -552,14 +552,14 @@ const (
 	nestedMapProtoToNestedMapGoaCode = `func transform() {
 	target := &NestedMap{}
 	if source.NestedMap != nil {
-		target.NestedMap = make(map[float64]map[int]map[float64]uint64, len(source.NestedMap.Field))
-		for key, val := range source.NestedMap.Field {
+		target.NestedMap = make(map[float64]map[int]map[float64]uint64, len(source.NestedMap))
+		for key, val := range source.NestedMap {
 			tk := key
 			tvc := make(map[int]map[float64]uint64, len(val.Field))
 			for key, val := range val.Field {
 				tk := int(key)
-				tvb := make(map[float64]uint64, len(val))
-				for key, val := range val {
+				tvb := make(map[float64]uint64, len(val.Field))
+				for key, val := range val.Field {
 					tk := key
 					tv := val
 					tvb[tk] = tv
@@ -575,11 +575,11 @@ const (
 	arrayMapProtoToArrayMapGoaCode = `func transform() {
 	target := &ArrayMap{}
 	if source.ArrayMap != nil {
-		target.ArrayMap = make(map[uint32][]float32, len(source.ArrayMap.Field))
-		for key, val := range source.ArrayMap.Field {
+		target.ArrayMap = make(map[uint32][]float32, len(source.ArrayMap))
+		for key, val := range source.ArrayMap {
 			tk := key
-			tv := make([]float32, len(val))
-			for i, val := range val {
+			tv := make([]float32, len(val.Field))
+			for i, val := range val.Field {
 				tv[i] = val
 			}
 			target.ArrayMap[tk] = tv
@@ -602,12 +602,12 @@ const (
 	nestedArrayProtoToNestedArrayGoaCode = `func transform() {
 	target := &NestedArray{}
 	if source.NestedArray != nil {
-		target.NestedArray = make([][][]float64, len(source.NestedArray.Field))
-		for i, val := range source.NestedArray.Field {
+		target.NestedArray = make([][][]float64, len(source.NestedArray))
+		for i, val := range source.NestedArray {
 			target.NestedArray[i] = make([][]float64, len(val.Field))
 			for j, val := range val.Field {
-				target.NestedArray[i][j] = make([]float64, len(val))
-				for k, val := range val {
+				target.NestedArray[i][j] = make([]float64, len(val.Field))
+				for k, val := range val.Field {
 					target.NestedArray[i][j][k] = val
 				}
 			}
@@ -636,10 +636,10 @@ const (
 	mapArrayProtoToMapArrayGoaCode = `func transform() {
 	target := &MapArray{}
 	if source.MapArray != nil {
-		target.MapArray = make([]map[int]string, len(source.MapArray.Field))
-		for i, val := range source.MapArray.Field {
-			target.MapArray[i] = make(map[int]string, len(val))
-			for key, val := range val {
+		target.MapArray = make([]map[int]string, len(source.MapArray))
+		for i, val := range source.MapArray {
+			target.MapArray[i] = make(map[int]string, len(val.Field))
+			for key, val := range val.Field {
 				tk := int(key)
 				tv := val
 				target.MapArray[i][tk] = tv

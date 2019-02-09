@@ -70,7 +70,11 @@ func NameMap(encoded string) (string, string) {
 // WalkSets returns the expressions in order of evaluation.
 func (r *RootExpr) WalkSets(walk eval.SetWalker) {
 	if r.API == nil {
-		r.API = NewAPIExpr("API", func() {})
+		name := "API"
+		if len(r.Services) > 0 {
+			name = r.Services[0].Name
+		}
+		r.API = NewAPIExpr(name, func() {})
 	}
 
 	// Top level API DSL
