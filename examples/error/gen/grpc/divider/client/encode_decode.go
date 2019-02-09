@@ -12,7 +12,7 @@ import (
 	"context"
 
 	dividersvc "goa.design/goa/examples/error/gen/divider"
-	"goa.design/goa/examples/error/gen/grpc/divider/pb"
+	dividerpb "goa.design/goa/examples/error/gen/grpc/divider/pb"
 	goagrpc "goa.design/goa/grpc"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
@@ -20,12 +20,12 @@ import (
 
 // BuildIntegerDivideFunc builds the remote method to invoke for "divider"
 // service "integer_divide" endpoint.
-func BuildIntegerDivideFunc(grpccli pb.DividerClient, cliopts ...grpc.CallOption) goagrpc.RemoteFunc {
+func BuildIntegerDivideFunc(grpccli dividerpb.DividerClient, cliopts ...grpc.CallOption) goagrpc.RemoteFunc {
 	return func(ctx context.Context, reqpb interface{}, opts ...grpc.CallOption) (interface{}, error) {
 		for _, opt := range cliopts {
 			opts = append(opts, opt)
 		}
-		return grpccli.IntegerDivide(ctx, reqpb.(*pb.IntegerDivideRequest), opts...)
+		return grpccli.IntegerDivide(ctx, reqpb.(*dividerpb.IntegerDivideRequest), opts...)
 	}
 }
 
@@ -42,9 +42,9 @@ func EncodeIntegerDivideRequest(ctx context.Context, v interface{}, md *metadata
 // DecodeIntegerDivideResponse decodes responses from the divider
 // integer_divide endpoint.
 func DecodeIntegerDivideResponse(ctx context.Context, v interface{}, hdr, trlr metadata.MD) (interface{}, error) {
-	message, ok := v.(*pb.IntegerDivideResponse)
+	message, ok := v.(*dividerpb.IntegerDivideResponse)
 	if !ok {
-		return nil, goagrpc.ErrInvalidType("divider", "integer_divide", "*pb.IntegerDivideResponse", v)
+		return nil, goagrpc.ErrInvalidType("divider", "integer_divide", "*dividerpb.IntegerDivideResponse", v)
 	}
 	res := NewIntegerDivideResponse(message)
 	return res, nil
@@ -52,12 +52,12 @@ func DecodeIntegerDivideResponse(ctx context.Context, v interface{}, hdr, trlr m
 
 // BuildDivideFunc builds the remote method to invoke for "divider" service
 // "divide" endpoint.
-func BuildDivideFunc(grpccli pb.DividerClient, cliopts ...grpc.CallOption) goagrpc.RemoteFunc {
+func BuildDivideFunc(grpccli dividerpb.DividerClient, cliopts ...grpc.CallOption) goagrpc.RemoteFunc {
 	return func(ctx context.Context, reqpb interface{}, opts ...grpc.CallOption) (interface{}, error) {
 		for _, opt := range cliopts {
 			opts = append(opts, opt)
 		}
-		return grpccli.Divide(ctx, reqpb.(*pb.DivideRequest), opts...)
+		return grpccli.Divide(ctx, reqpb.(*dividerpb.DivideRequest), opts...)
 	}
 }
 
@@ -72,9 +72,9 @@ func EncodeDivideRequest(ctx context.Context, v interface{}, md *metadata.MD) (i
 
 // DecodeDivideResponse decodes responses from the divider divide endpoint.
 func DecodeDivideResponse(ctx context.Context, v interface{}, hdr, trlr metadata.MD) (interface{}, error) {
-	message, ok := v.(*pb.DivideResponse)
+	message, ok := v.(*dividerpb.DivideResponse)
 	if !ok {
-		return nil, goagrpc.ErrInvalidType("divider", "divide", "*pb.DivideResponse", v)
+		return nil, goagrpc.ErrInvalidType("divider", "divide", "*dividerpb.DivideResponse", v)
 	}
 	res := NewDivideResponse(message)
 	return res, nil

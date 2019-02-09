@@ -396,6 +396,7 @@ func (d ServicesData) analyze(gs *expr.GRPCServiceExpr) *ServiceData {
 
 		svc   = service.Services.Get(gs.Name())
 		scope = codegen.NewNameScope()
+		pkg   = codegen.SnakeCase(codegen.Goify(svc.Name, false)) + pbPkgName
 	)
 	{
 		svcVarN = scope.HashedUnique(gs.ServiceExpr, codegen.Goify(svc.Name, true))
@@ -403,14 +404,14 @@ func (d ServicesData) analyze(gs *expr.GRPCServiceExpr) *ServiceData {
 			Service:             svc,
 			Name:                svcVarN,
 			Description:         svc.Description,
-			PkgName:             pbPkgName,
+			PkgName:             pkg,
 			ServerStruct:        "Server",
 			ClientStruct:        "Client",
 			ServerInit:          "New",
 			ClientInit:          "NewClient",
 			ServerInterface:     svcVarN + "Server",
 			ClientInterface:     svcVarN + "Client",
-			ClientInterfaceInit: fmt.Sprintf("%s.New%sClient", pbPkgName, svcVarN),
+			ClientInterfaceInit: fmt.Sprintf("%s.New%sClient", pkg, svcVarN),
 			Scope:               scope,
 		}
 		seen = make(map[string]struct{})
@@ -419,11 +420,11 @@ func (d ServicesData) analyze(gs *expr.GRPCServiceExpr) *ServiceData {
 		en := protoBufify(e.Name(), true)
 
 		// convert request and response types to protocol buffer message types
-		makeProtoBufMessage(e.Request, en+"Request", sd.Scope)
+		e.Request = makeProtoBufMessage(e.Request, en+"Request", sd.Scope)
 		if e.MethodExpr.StreamingPayload.Type != expr.Empty {
-			makeProtoBufMessage(e.StreamingRequest, en+"StreamingRequest", sd.Scope)
+			e.StreamingRequest = makeProtoBufMessage(e.StreamingRequest, en+"StreamingRequest", sd.Scope)
 		}
-		makeProtoBufMessage(e.Response.Message, en+"Response", sd.Scope)
+		e.Response.Message = makeProtoBufMessage(e.Response.Message, en+"Response", sd.Scope)
 
 		// collect all the nested messages and return the top-level message
 		collect := func(att *expr.AttributeExpr) *service.UserTypeData {
@@ -711,9 +712,10 @@ func collectValidations(ca *codegen.ContextualAttribute, sd *ServiceData, seen .
 //
 // svr param indicates that the convert data is generated for server side.
 func buildRequestConvertData(request, payload *codegen.ContextualAttribute, md []*MetadataData, e *expr.GRPCEndpointExpr, sd *ServiceData, svr bool) *ConvertData {
-	// Server-side: No need to build convert data if payload is not an object
-	// type and request message is empty.
-	if (svr && isEmpty(e.Request.Type) && !expr.IsObject(e.MethodExpr.Payload.Type)) ||
+	// Server-side: No need to build convert data if payload is empty or payload
+	// is not an object type and endpoint streams payload (the payload is
+	// encoded in metadata under "goa-payload" in this case).
+	if (svr && (isEmpty(e.MethodExpr.Payload.Type) || !expr.IsObject(e.MethodExpr.Payload.Type) && e.MethodExpr.IsPayloadStreaming())) ||
 		// Client-side: No need to build convert data if streaming payload since
 		// all attributes in method payload is encoded into request metadata.
 		(!svr && e.MethodExpr.IsPayloadStreaming()) {
@@ -1078,9 +1080,10 @@ func extractMetadata(a *expr.MappedAttributeExpr, service *codegen.ContextualAtt
 			fieldName string
 			pointer   bool
 
-			arr = expr.AsArray(c.Type)
-			mp  = expr.AsMap(c.Type)
-			ca  = service.Dup(c, required)
+			arr     = expr.AsArray(c.Type)
+			mp      = expr.AsMap(c.Type)
+			ca      = service.Dup(c, required)
+			typeRef = scope.GoTypeRef(c)
 		)
 		{
 			varn = scope.Unique(codegen.Goify(name, false))
@@ -1088,6 +1091,9 @@ func extractMetadata(a *expr.MappedAttributeExpr, service *codegen.ContextualAtt
 			fieldName = codegen.Goify(name, true)
 			if !expr.IsObject(service.Attribute.Expr().Type) {
 				fieldName = ""
+			}
+			if pointer = a.IsPrimitivePointer(name, true); pointer {
+				typeRef = "*" + typeRef
 			}
 		}
 		metadata = append(metadata, &MetadataData{
@@ -1099,7 +1105,7 @@ func extractMetadata(a *expr.MappedAttributeExpr, service *codegen.ContextualAtt
 			Required:      required,
 			Type:          c.Type,
 			TypeName:      scope.GoTypeName(c),
-			TypeRef:       scope.GoTypeRef(c),
+			TypeRef:       typeRef,
 			Pointer:       pointer,
 			Slice:         arr != nil,
 			StringSlice:   arr != nil && arr.ElemType.Type.Kind() == expr.StringKind,
@@ -1147,7 +1153,7 @@ func {{ .Name }}({{ range .Args }}{{ .Name }} {{ .TypeRef }}, {{ end }}) {{ .Ret
 {{- if .ReturnIsStruct }}
 	{{- range .Args }}
 		{{- if .FieldName }}
-			{{ $.ReturnVarName }}.{{ .FieldName }} = {{ if .Pointer }}&{{ end }}{{ .Name }}
+			{{ $.ReturnVarName }}.{{ .FieldName }} = {{ .Name }}
 		{{- end }}
 	{{- end }}
 {{- end }}

@@ -8,7 +8,9 @@
 
 syntax = "proto3";
 
-package pb;
+package multi_auth;
+
+option go_package = "secured_servicepb";
 
 // The secured service exposes endpoints that require valid authorization
 // credentials.

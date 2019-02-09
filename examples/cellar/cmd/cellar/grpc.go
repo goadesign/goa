@@ -8,9 +8,12 @@ import (
 	"sync"
 
 	grpcmiddleware "github.com/grpc-ecosystem/go-grpc-middleware"
-	"goa.design/goa/examples/security/gen/grpc/secured_service/pb"
-	securedservicesvr "goa.design/goa/examples/security/gen/grpc/secured_service/server"
-	securedservice "goa.design/goa/examples/security/gen/secured_service"
+	sommelierpb "goa.design/goa/examples/cellar/gen/grpc/sommelier/pb"
+	sommeliersvr "goa.design/goa/examples/cellar/gen/grpc/sommelier/server"
+	storagepb "goa.design/goa/examples/cellar/gen/grpc/storage/pb"
+	storagesvr "goa.design/goa/examples/cellar/gen/grpc/storage/server"
+	sommelier "goa.design/goa/examples/cellar/gen/sommelier"
+	storage "goa.design/goa/examples/cellar/gen/storage"
 	grpcmdlwr "goa.design/goa/grpc/middleware"
 	"goa.design/goa/middleware"
 	"google.golang.org/grpc"
@@ -18,7 +21,7 @@ import (
 
 // handleGRPCServer starts configures and starts a gRPC server on the given
 // URL. It shuts down the server if any error is received in the error channel.
-func handleGRPCServer(ctx context.Context, u *url.URL, securedServiceEndpoints *securedservice.Endpoints, wg *sync.WaitGroup, errc chan error, logger *log.Logger, debug bool) {
+func handleGRPCServer(ctx context.Context, u *url.URL, sommelierEndpoints *sommelier.Endpoints, storageEndpoints *storage.Endpoints, wg *sync.WaitGroup, errc chan error, logger *log.Logger, debug bool) {
 
 	// Setup goa log adapter.
 	var (
@@ -33,10 +36,12 @@ func handleGRPCServer(ctx context.Context, u *url.URL, securedServiceEndpoints *
 	// the service input and output data structures to gRPC requests and
 	// responses.
 	var (
-		securedServiceServer *securedservicesvr.Server
+		sommelierServer *sommeliersvr.Server
+		storageServer   *storagesvr.Server
 	)
 	{
-		securedServiceServer = securedservicesvr.New(securedServiceEndpoints, nil)
+		sommelierServer = sommeliersvr.New(sommelierEndpoints, nil)
+		storageServer = storagesvr.New(storageEndpoints, nil)
 	}
 
 	// Initialize gRPC server with the middleware.
@@ -48,7 +53,8 @@ func handleGRPCServer(ctx context.Context, u *url.URL, securedServiceEndpoints *
 	)
 
 	// Register the servers.
-	pb.RegisterSecuredServiceServer(srv, securedServiceServer)
+	sommelierpb.RegisterSommelierServer(srv, sommelierServer)
+	storagepb.RegisterStorageServer(srv, storageServer)
 
 	for svc, info := range srv.GetServiceInfo() {
 		for _, m := range info.Methods {

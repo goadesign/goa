@@ -172,6 +172,9 @@ func (r *GRPCResponseExpr) Finalize(a *GRPCEndpointExpr, svcAtt *AttributeExpr) 
 				if resObj.Attribute(nat.Name) == nil {
 					resObj.Set(nat.Name, nat.Attribute)
 				}
+				if svcAtt.IsRequired(nat.Name) {
+					r.Message.Validation.AddRequired(nat.Name)
+				}
 			}
 		}
 		for _, nat := range *AsObject(r.Message.Type) {

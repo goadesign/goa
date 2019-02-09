@@ -10,8 +10,8 @@ package client
 
 import (
 	goa "goa.design/goa"
-	resume "goa.design/goa/examples/multipart/gen/resume"
-	resumeviews "goa.design/goa/examples/multipart/gen/resume/views"
+	resumesvc "goa.design/goa/examples/multipart/gen/resume"
+	resumesvcviews "goa.design/goa/examples/multipart/gen/resume/views"
 )
 
 // ListResponseBody is the type of the "resume" service "list" endpoint HTTP
@@ -80,7 +80,7 @@ type EducationRequestBody struct {
 
 // NewResumeRequestBody builds the HTTP request body from the payload of the
 // "add" endpoint of the "resume" service.
-func NewResumeRequestBody(p []*resume.Resume) []*ResumeRequestBody {
+func NewResumeRequestBody(p []*resumesvc.Resume) []*ResumeRequestBody {
 	body := make([]*ResumeRequestBody, len(p))
 	for i, val := range p {
 		body[i] = &ResumeRequestBody{
@@ -111,25 +111,25 @@ func NewResumeRequestBody(p []*resume.Resume) []*ResumeRequestBody {
 
 // NewListStoredResumeCollectionOK builds a "resume" service "list" endpoint
 // result from a HTTP "OK" response.
-func NewListStoredResumeCollectionOK(body ListResponseBody) resumeviews.StoredResumeCollectionView {
-	v := make([]*resumeviews.StoredResumeView, len(body))
+func NewListStoredResumeCollectionOK(body ListResponseBody) resumesvcviews.StoredResumeCollectionView {
+	v := make([]*resumesvcviews.StoredResumeView, len(body))
 	for i, val := range body {
-		v[i] = &resumeviews.StoredResumeView{
+		v[i] = &resumesvcviews.StoredResumeView{
 			ID:        val.ID,
 			CreatedAt: val.CreatedAt,
 			Name:      val.Name,
 		}
-		v[i].Experience = make([]*resumeviews.ExperienceView, len(val.Experience))
+		v[i].Experience = make([]*resumesvcviews.ExperienceView, len(val.Experience))
 		for j, val := range val.Experience {
-			v[i].Experience[j] = &resumeviews.ExperienceView{
+			v[i].Experience[j] = &resumesvcviews.ExperienceView{
 				Company:  val.Company,
 				Role:     val.Role,
 				Duration: val.Duration,
 			}
 		}
-		v[i].Education = make([]*resumeviews.EducationView, len(val.Education))
+		v[i].Education = make([]*resumesvcviews.EducationView, len(val.Education))
 		for j, val := range val.Education {
-			v[i].Education[j] = &resumeviews.EducationView{
+			v[i].Education[j] = &resumesvcviews.EducationView{
 				Institution: val.Institution,
 				Major:       val.Major,
 			}

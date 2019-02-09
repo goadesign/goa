@@ -25,81 +25,83 @@ func ServerFiles(genpkg string, root *expr.RootExpr) []*codegen.File {
 
 // serverFile returns the files defining the gRPC server.
 func serverFile(genpkg string, svc *expr.GRPCServiceExpr) *codegen.File {
-	fpath := filepath.Join(codegen.Gendir, "grpc", codegen.SnakeCase(svc.Name()), "server", "server.go")
-	data := GRPCServices.Get(svc.Name())
-	title := fmt.Sprintf("%s GRPC server", svc.Name())
-	sections := []*codegen.SectionTemplate{
-		codegen.Header(title, "server", []*codegen.ImportSpec{
-			{Path: "context"},
-			{Path: "goa.design/goa"},
-			{Path: "google.golang.org/grpc/codes"},
-			{Path: "goa.design/goa/grpc", Name: "goagrpc"},
-			{Path: path.Join(genpkg, codegen.SnakeCase(svc.Name())), Name: data.Service.PkgName},
-			{Path: path.Join(genpkg, codegen.SnakeCase(svc.Name()), "views"), Name: data.Service.ViewsPkg},
-			{Path: path.Join(genpkg, "grpc", codegen.SnakeCase(svc.Name()), pbPkgName)},
-		}),
-	}
+	var (
+		fpath    string
+		sections []*codegen.SectionTemplate
 
-	sections = append(sections, &codegen.SectionTemplate{
-		Name:   "server-struct",
-		Source: serverStructT,
-		Data:   data,
-	})
-	for _, e := range data.Endpoints {
-		if e.ServerStream != nil {
+		data = GRPCServices.Get(svc.Name())
+	)
+	{
+		svcName := codegen.SnakeCase(svc.Name())
+		fpath = filepath.Join(codegen.Gendir, "grpc", svcName, "server", "server.go")
+		sections = []*codegen.SectionTemplate{
+			codegen.Header(svc.Name()+" gRPC server", "server", []*codegen.ImportSpec{
+				{Path: "context"},
+				{Path: "goa.design/goa"},
+				{Path: "google.golang.org/grpc/codes"},
+				{Path: "goa.design/goa/grpc", Name: "goagrpc"},
+				{Path: path.Join(genpkg, svcName), Name: data.Service.PkgName},
+				{Path: path.Join(genpkg, svcName, "views"), Name: data.Service.ViewsPkg},
+				{Path: path.Join(genpkg, "grpc", svcName, pbPkgName), Name: data.PkgName},
+			}),
+			&codegen.SectionTemplate{Name: "server-struct", Source: serverStructT, Data: data},
+		}
+		for _, e := range data.Endpoints {
+			if e.ServerStream != nil {
+				sections = append(sections, &codegen.SectionTemplate{
+					Name:   "server-stream-struct-type",
+					Source: streamStructTypeT,
+					Data:   e.ServerStream,
+				})
+			}
+		}
+		sections = append(sections, &codegen.SectionTemplate{
+			Name:   "server-init",
+			Source: serverInitT,
+			Data:   data,
+		})
+		for _, e := range data.Endpoints {
 			sections = append(sections, &codegen.SectionTemplate{
-				Name:   "server-stream-struct-type",
-				Source: streamStructTypeT,
-				Data:   e.ServerStream,
+				Name:   "handler-init",
+				Source: handlerInitT,
+				Data:   e,
+			})
+			sections = append(sections, &codegen.SectionTemplate{
+				Name:   "server-grpc-interface",
+				Source: serverGRPCInterfaceT,
+				Data:   e,
 			})
 		}
-	}
-	sections = append(sections, &codegen.SectionTemplate{
-		Name:   "server-init",
-		Source: serverInitT,
-		Data:   data,
-	})
-	for _, e := range data.Endpoints {
-		sections = append(sections, &codegen.SectionTemplate{
-			Name:   "handler-init",
-			Source: handlerInitT,
-			Data:   e,
-		})
-		sections = append(sections, &codegen.SectionTemplate{
-			Name:   "server-grpc-interface",
-			Source: serverGRPCInterfaceT,
-			Data:   e,
-		})
-	}
-	for _, e := range data.Endpoints {
-		if e.ServerStream != nil {
-			if e.ServerStream.SendConvert != nil {
-				sections = append(sections, &codegen.SectionTemplate{
-					Name:   "server-stream-send",
-					Source: streamSendT,
-					Data:   e.ServerStream,
-				})
-			}
-			if e.Method.StreamKind == expr.ClientStreamKind || e.Method.StreamKind == expr.BidirectionalStreamKind {
-				sections = append(sections, &codegen.SectionTemplate{
-					Name:   "server-stream-recv",
-					Source: streamRecvT,
-					Data:   e.ServerStream,
-				})
-			}
-			if e.ServerStream.MustClose {
-				sections = append(sections, &codegen.SectionTemplate{
-					Name:   "server-stream-close",
-					Source: streamCloseT,
-					Data:   e.ServerStream,
-				})
-			}
-			if e.Method.ViewedResult != nil && e.Method.ViewedResult.ViewName == "" {
-				sections = append(sections, &codegen.SectionTemplate{
-					Name:   "server-stream-set-view",
-					Source: streamSetViewT,
-					Data:   e.ServerStream,
-				})
+		for _, e := range data.Endpoints {
+			if e.ServerStream != nil {
+				if e.ServerStream.SendConvert != nil {
+					sections = append(sections, &codegen.SectionTemplate{
+						Name:   "server-stream-send",
+						Source: streamSendT,
+						Data:   e.ServerStream,
+					})
+				}
+				if e.Method.StreamKind == expr.ClientStreamKind || e.Method.StreamKind == expr.BidirectionalStreamKind {
+					sections = append(sections, &codegen.SectionTemplate{
+						Name:   "server-stream-recv",
+						Source: streamRecvT,
+						Data:   e.ServerStream,
+					})
+				}
+				if e.ServerStream.MustClose {
+					sections = append(sections, &codegen.SectionTemplate{
+						Name:   "server-stream-close",
+						Source: streamCloseT,
+						Data:   e.ServerStream,
+					})
+				}
+				if e.Method.ViewedResult != nil && e.Method.ViewedResult.ViewName == "" {
+					sections = append(sections, &codegen.SectionTemplate{
+						Name:   "server-stream-set-view",
+						Source: streamSetViewT,
+						Data:   e.ServerStream,
+					})
+				}
 			}
 		}
 	}
@@ -109,45 +111,53 @@ func serverFile(genpkg string, svc *expr.GRPCServiceExpr) *codegen.File {
 // serverEncodeDecode returns the file defining the gRPC server encoding and
 // decoding logic.
 func serverEncodeDecode(genpkg string, svc *expr.GRPCServiceExpr) *codegen.File {
-	fpath := filepath.Join(codegen.Gendir, "grpc", codegen.SnakeCase(svc.Name()), "server", "encode_decode.go")
-	data := GRPCServices.Get(svc.Name())
-	title := fmt.Sprintf("%s GRPC server encoders and decoders", svc.Name())
-	sections := []*codegen.SectionTemplate{
-		codegen.Header(title, "server", []*codegen.ImportSpec{
-			{Path: "context"},
-			{Path: "strings"},
-			{Path: "strconv"},
-			{Path: "google.golang.org/grpc"},
-			{Path: "google.golang.org/grpc/metadata"},
-			{Path: "goa.design/goa", Name: "goa"},
-			{Path: "goa.design/goa/grpc", Name: "goagrpc"},
-			{Path: path.Join(genpkg, codegen.SnakeCase(svc.Name())), Name: data.Service.PkgName},
-			{Path: path.Join(genpkg, codegen.SnakeCase(svc.Name()), "views"), Name: data.Service.ViewsPkg},
-			{Path: path.Join(genpkg, "grpc", codegen.SnakeCase(svc.Name()), pbPkgName)},
-		}),
-	}
+	var (
+		fpath    string
+		sections []*codegen.SectionTemplate
 
-	for _, e := range data.Endpoints {
-		if e.Response.ServerConvert != nil {
-			sections = append(sections, &codegen.SectionTemplate{
-				Name:   "response-encoder",
-				Source: responseEncoderT,
-				Data:   e,
-				FuncMap: map[string]interface{}{
-					"typeConversionData":       typeConversionData,
-					"metadataEncodeDecodeData": metadataEncodeDecodeData,
-				},
-			})
+		data = GRPCServices.Get(svc.Name())
+	)
+	{
+		svcName := codegen.SnakeCase(svc.Name())
+		fpath = filepath.Join(codegen.Gendir, "grpc", svcName, "server", "encode_decode.go")
+		title := fmt.Sprintf("%s gRPC server encoders and decoders", svc.Name())
+		sections = []*codegen.SectionTemplate{
+			codegen.Header(title, "server", []*codegen.ImportSpec{
+				{Path: "context"},
+				{Path: "strings"},
+				{Path: "strconv"},
+				{Path: "google.golang.org/grpc"},
+				{Path: "google.golang.org/grpc/metadata"},
+				{Path: "goa.design/goa", Name: "goa"},
+				{Path: "goa.design/goa/grpc", Name: "goagrpc"},
+				{Path: path.Join(genpkg, svcName), Name: data.Service.PkgName},
+				{Path: path.Join(genpkg, svcName, "views"), Name: data.Service.ViewsPkg},
+				{Path: path.Join(genpkg, "grpc", svcName, pbPkgName), Name: data.PkgName},
+			}),
 		}
-		if e.PayloadRef != "" {
-			fm := transTmplFuncs(svc)
-			fm["isEmpty"] = isEmpty
-			sections = append(sections, &codegen.SectionTemplate{
-				Name:    "request-decoder",
-				Source:  requestDecoderT,
-				Data:    e,
-				FuncMap: fm,
-			})
+
+		for _, e := range data.Endpoints {
+			if e.Response.ServerConvert != nil {
+				sections = append(sections, &codegen.SectionTemplate{
+					Name:   "response-encoder",
+					Source: responseEncoderT,
+					Data:   e,
+					FuncMap: map[string]interface{}{
+						"typeConversionData":       typeConversionData,
+						"metadataEncodeDecodeData": metadataEncodeDecodeData,
+					},
+				})
+			}
+			if e.PayloadRef != "" {
+				fm := transTmplFuncs(svc)
+				fm["isEmpty"] = isEmpty
+				sections = append(sections, &codegen.SectionTemplate{
+					Name:    "request-decoder",
+					Source:  requestDecoderT,
+					Data:    e,
+					FuncMap: fm,
+				})
+			}
 		}
 	}
 	return &codegen.File{Path: fpath, SectionTemplates: sections}
@@ -222,7 +232,7 @@ func {{ .ServerInit }}(e *{{ .Service.PkgName }}.Endpoints{{ if .HasUnaryEndpoin
 const handlerInitT = `{{ printf "New%sHandler creates a gRPC handler which serves the %q service %q endpoint." .Method.VarName .ServiceName .Method.Name | comment }}
 func New{{ .Method.VarName }}Handler(endpoint goa.Endpoint, h goagrpc.{{ if .ServerStream }}Stream{{ else }}Unary{{ end }}Handler) goagrpc.{{ if .ServerStream }}Stream{{ else }}Unary{{ end }}Handler {
 	if h == nil {
-		h = goagrpc.New{{ if .ServerStream }}Stream{{ else }}Unary{{ end }}Handler(endpoint, Decode{{ .Method.VarName }}Request{{ if not .ServerStream }}, Encode{{ .Method.VarName }}Response{{ end }})
+		h = goagrpc.New{{ if .ServerStream }}Stream{{ else }}Unary{{ end }}Handler(endpoint, {{ if .Method.Payload }}Decode{{ .Method.VarName }}Request{{ else }}nil{{ end }}{{ if not .ServerStream }}, Encode{{ .Method.VarName }}Response{{ end }})
 	}
 	return h
 }
@@ -295,7 +305,7 @@ func Decode{{ .Method.VarName }}Request(ctx context.Context, v interface{}, md m
 				}
 			{{- else }}
 				if vals := md.Get({{ printf "%q" .Name }}); len(vals) > 0 {
-					{{ .VarName }} = vals[0]
+					{{ .VarName }} = {{ if .Pointer }}&{{ end }}vals[0]
 				}
 			{{- end }}
 		{{- else if .StringSlice }}

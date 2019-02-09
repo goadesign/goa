@@ -9,7 +9,7 @@ import (
 
 	grpcmiddleware "github.com/grpc-ecosystem/go-grpc-middleware"
 	calcsvc "goa.design/goa/examples/basic/gen/calc"
-	"goa.design/goa/examples/basic/gen/grpc/calc/pb"
+	calcpb "goa.design/goa/examples/basic/gen/grpc/calc/pb"
 	calcsvcsvr "goa.design/goa/examples/basic/gen/grpc/calc/server"
 	grpcmdlwr "goa.design/goa/grpc/middleware"
 	"goa.design/goa/grpc/middleware/xray"
@@ -56,7 +56,7 @@ func handleGRPCServer(ctx context.Context, u *url.URL, calcEndpoints *calcsvc.En
 	)
 
 	// Register the servers.
-	pb.RegisterCalcServer(srv, calcServer)
+	calcpb.RegisterCalcServer(srv, calcServer)
 
 	for svc, info := range srv.GetServiceInfo() {
 		for _, m := range info.Methods {

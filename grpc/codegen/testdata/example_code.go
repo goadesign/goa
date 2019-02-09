@@ -32,7 +32,7 @@ func handleGRPCServer(ctx context.Context, u *url.URL, serviceEndpoints *service
 	)
 
 	// Register the servers.
-	pb.RegisterServiceServer(srv, serviceServer)
+	servicepb.RegisterServiceServer(srv, serviceServer)
 
 	for svc, info := range srv.GetServiceInfo() {
 		for _, m := range info.Methods {
@@ -96,7 +96,7 @@ func handleGRPCServer(ctx context.Context, u *url.URL, serviceEndpoints *service
 	)
 
 	// Register the servers.
-	pb.RegisterServiceServer(srv, serviceServer)
+	servicepb.RegisterServiceServer(srv, serviceServer)
 
 	for svc, info := range srv.GetServiceInfo() {
 		for _, m := range info.Methods {
@@ -162,8 +162,8 @@ func handleGRPCServer(ctx context.Context, u *url.URL, serviceEndpoints *service
 	)
 
 	// Register the servers.
-	pb.RegisterServiceServer(srv, serviceServer)
-	pb.RegisterAnotherServiceServer(srv, anotherServiceServer)
+	servicepb.RegisterServiceServer(srv, serviceServer)
+	another_servicepb.RegisterAnotherServiceServer(srv, anotherServiceServer)
 
 	for svc, info := range srv.GetServiceInfo() {
 		for _, m := range info.Methods {

@@ -12,7 +12,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"goa.design/goa/examples/security/gen/grpc/secured_service/pb"
+	secured_servicepb "goa.design/goa/examples/security/gen/grpc/secured_service/pb"
 	securedservice "goa.design/goa/examples/security/gen/secured_service"
 )
 
@@ -37,7 +37,7 @@ func BuildSigninPayload(securedServiceSigninUsername string, securedServiceSigni
 // endpoint from CLI flags.
 func BuildSecurePayload(securedServiceSecureMessage string, securedServiceSecureToken string) (*securedservice.SecurePayload, error) {
 	var err error
-	var message pb.SecureRequest
+	var message secured_servicepb.SecureRequest
 	{
 		if securedServiceSecureMessage != "" {
 			err = json.Unmarshal([]byte(securedServiceSecureMessage), &message)
@@ -64,7 +64,7 @@ func BuildSecurePayload(securedServiceSecureMessage string, securedServiceSecure
 // doubly_secure endpoint from CLI flags.
 func BuildDoublySecurePayload(securedServiceDoublySecureMessage string, securedServiceDoublySecureToken string) (*securedservice.DoublySecurePayload, error) {
 	var err error
-	var message pb.DoublySecureRequest
+	var message secured_servicepb.DoublySecureRequest
 	{
 		if securedServiceDoublySecureMessage != "" {
 			err = json.Unmarshal([]byte(securedServiceDoublySecureMessage), &message)
@@ -91,7 +91,7 @@ func BuildDoublySecurePayload(securedServiceDoublySecureMessage string, securedS
 // also_doubly_secure endpoint from CLI flags.
 func BuildAlsoDoublySecurePayload(securedServiceAlsoDoublySecureMessage string, securedServiceAlsoDoublySecureOauthToken string, securedServiceAlsoDoublySecureToken string) (*securedservice.AlsoDoublySecurePayload, error) {
 	var err error
-	var message pb.AlsoDoublySecureRequest
+	var message secured_servicepb.AlsoDoublySecureRequest
 	{
 		if securedServiceAlsoDoublySecureMessage != "" {
 			err = json.Unmarshal([]byte(securedServiceAlsoDoublySecureMessage), &message)

@@ -18,13 +18,16 @@ var _ = Service("storage", func() {
 			GET("/")
 			Response(StatusOK)
 		})
+		GRPC(func() {
+			Response(CodeOK)
+		})
 	})
 
 	Method("show", func() {
 		Description("Show bottle by ID")
 		Payload(func() {
-			Attribute("id", String, "ID of bottle to show")
-			Attribute("view", String, "View to render", func() {
+			Field(1, "id", String, "ID of bottle to show")
+			Field(2, "view", String, "View to render", func() {
 				Enum("default", "tiny")
 			})
 			Required("id")
@@ -37,6 +40,13 @@ var _ = Service("storage", func() {
 			Response(StatusOK)
 			Response("not_found", StatusNotFound)
 		})
+		GRPC(func() {
+			Metadata(func() {
+				Attribute("view")
+			})
+			Response(CodeOK)
+			Response("not_found", CodeNotFound)
+		})
 	})
 
 	Method("add", func() {
@@ -47,18 +57,24 @@ var _ = Service("storage", func() {
 			POST("/")
 			Response(StatusCreated)
 		})
+		GRPC(func() {
+			Response(CodeOK)
+		})
 	})
 
 	Method("remove", func() {
 		Description("Remove bottle from storage")
 		Payload(func() {
-			Attribute("id", String, "ID of bottle to remove")
+			Field(1, "id", String, "ID of bottle to remove")
 			Required("id")
 		})
 		Error("not_found", NotFound, "Bottle not found")
 		HTTP(func() {
 			DELETE("/{id}")
 			Response(StatusNoContent)
+		})
+		GRPC(func() {
+			Response(CodeOK)
 		})
 	})
 
@@ -70,6 +86,9 @@ var _ = Service("storage", func() {
 			MapParams()
 			Response(StatusOK)
 		})
+		GRPC(func() {
+			Response(CodeOK)
+		})
 	})
 
 	Method("multi_add", func() {
@@ -80,13 +99,16 @@ var _ = Service("storage", func() {
 			POST("/multi_add")
 			MultipartRequest()
 		})
+		GRPC(func() {
+			Response(CodeOK)
+		})
 	})
 
 	Method("multi_update", func() {
 		Description("Update bottles with the given IDs. This is a multipart request and each part has field name 'bottle' and contains the encoded bottle info to be updated. The IDs in the query parameter is mapped to each part in the request.")
 		Payload(func() {
-			Attribute("ids", ArrayOf(String), "IDs of the bottles to be updated")
-			Attribute("bottles", ArrayOf(Bottle), "Array of bottle info that matches the ids attribute")
+			Field(1, "ids", ArrayOf(String), "IDs of the bottles to be updated")
+			Field(2, "bottles", ArrayOf(Bottle), "Array of bottle info that matches the ids attribute")
 			Required("ids", "bottles")
 		})
 		HTTP(func() {
@@ -94,6 +116,9 @@ var _ = Service("storage", func() {
 			Param("ids")
 			MultipartRequest()
 			Response(StatusNoContent)
+		})
+		GRPC(func() {
+			Response(CodeOK)
 		})
 	})
 })

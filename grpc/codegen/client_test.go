@@ -56,6 +56,7 @@ func TestRequestEncoder(t *testing.T) {
 		{"payload-primitive-with-streaming-payload", testdata.ClientStreamingRPCWithPayloadDSL, testdata.PayloadPrimitiveWithStreamingPayloadRequestEncoderCode},
 		{"payload-user-type-with-streaming-payload", testdata.BidirectionalStreamingRPCWithPayloadDSL, testdata.PayloadUserTypeWithStreamingPayloadRequestEncoderCode},
 		{"payload-with-metadata", testdata.MessageWithMetadataDSL, testdata.PayloadWithMetadataRequestEncoderCode},
+		{"payload-with-validate", testdata.MessageWithValidateDSL, testdata.PayloadWithValidateRequestEncoderCode},
 		{"payload-with-security-attributes", testdata.MessageWithSecurityAttrsDSL, testdata.PayloadWithSecurityAttrsRequestEncoderCode},
 	}
 	for _, c := range cases {
@@ -88,6 +89,7 @@ func TestResponseDecoder(t *testing.T) {
 		{"result-array", testdata.MessageArrayDSL, testdata.ResultArrayResponseDecoderCode},
 		{"result-primitive", testdata.UnaryRPCNoPayloadDSL, testdata.ResultPrimitiveResponseDecoderCode},
 		{"result-with-metadata", testdata.MessageWithMetadataDSL, testdata.ResultWithMetadataResponseDecoderCode},
+		{"result-with-validate", testdata.MessageWithValidateDSL, testdata.ResultWithValidateResponseDecoderCode},
 		{"result-collection", testdata.MessageResultTypeCollectionDSL, testdata.ResultCollectionResponseDecoderCode},
 	}
 	for _, c := range cases {

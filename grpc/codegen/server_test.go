@@ -44,6 +44,40 @@ func TestServerGRPCInterface(t *testing.T) {
 	}
 }
 
+func TestServerHandlerInit(t *testing.T) {
+	cases := []struct {
+		Name string
+		DSL  func()
+		Code string
+	}{
+		{"unary-rpcs", testdata.UnaryRPCsDSL, testdata.UnaryRPCsServerHandlerInitCode},
+		{"unary-rpc-no-payload", testdata.UnaryRPCNoPayloadDSL, testdata.UnaryRPCNoPayloadServerHandlerInitCode},
+		{"unary-rpc-no-result", testdata.UnaryRPCNoResultDSL, testdata.UnaryRPCNoResultServerHandlerInitCode},
+		{"server-streaming-rpc", testdata.ServerStreamingRPCDSL, testdata.ServerStreamingRPCServerHandlerInitCode},
+		{"client-streaming-rpc", testdata.ClientStreamingRPCDSL, testdata.ClientStreamingRPCServerHandlerInitCode},
+		{"client-streaming-rpc-with-payload", testdata.ClientStreamingRPCWithPayloadDSL, testdata.ClientStreamingRPCWithPayloadServerHandlerInitCode},
+		{"bidirectional-streaming-rpc", testdata.BidirectionalStreamingRPCDSL, testdata.BidirectionalStreamingRPCServerHandlerInitCode},
+		{"bidirectional-streaming-rpc-with-payload", testdata.BidirectionalStreamingRPCWithPayloadDSL, testdata.BidirectionalStreamingRPCWithPayloadServerHandlerInitCode},
+	}
+	for _, c := range cases {
+		t.Run(c.Name, func(t *testing.T) {
+			RunGRPCDSL(t, c.DSL)
+			fs := ServerFiles("", expr.Root)
+			if len(fs) != 2 {
+				t.Fatalf("got %d files, expected two", len(fs))
+			}
+			sections := fs[0].Section("handler-init")
+			if len(sections) == 0 {
+				t.Fatalf("got zero sections, expected at least one")
+			}
+			code := codegen.SectionsCode(t, sections)
+			if code != c.Code {
+				t.Errorf("%s: got\n%s\ngot vs. expected:\n%s", c.Name, code, codegen.Diff(t, code, c.Code))
+			}
+		})
+	}
+}
+
 func TestRequestDecoder(t *testing.T) {
 	cases := []struct {
 		Name string
@@ -57,6 +91,7 @@ func TestRequestDecoder(t *testing.T) {
 		{"payload-primitive-with-streaming-payload", testdata.ClientStreamingRPCWithPayloadDSL, testdata.PayloadPrimitiveWithStreamingPayloadRequestDecoderCode},
 		{"payload-user-type-with-streaming-payload", testdata.BidirectionalStreamingRPCWithPayloadDSL, testdata.PayloadUserTypeWithStreamingPayloadRequestDecoderCode},
 		{"payload-with-metadata", testdata.MessageWithMetadataDSL, testdata.PayloadWithMetadataRequestDecoderCode},
+		{"payload-with-validate", testdata.MessageWithValidateDSL, testdata.PayloadWithValidateRequestDecoderCode},
 		{"payload-with-security-attributes", testdata.MessageWithSecurityAttrsDSL, testdata.PayloadWithSecurityAttrsRequestDecoderCode},
 	}
 	for _, c := range cases {
@@ -90,6 +125,7 @@ func TestResponseEncoder(t *testing.T) {
 		{"result-array", testdata.MessageArrayDSL, testdata.ResultArrayResponseEncoderCode},
 		{"result-primitive", testdata.UnaryRPCNoPayloadDSL, testdata.ResultPrimitiveResponseEncoderCode},
 		{"result-with-metadata", testdata.MessageWithMetadataDSL, testdata.ResultWithMetadataResponseEncoderCode},
+		{"result-with-validate", testdata.MessageWithValidateDSL, testdata.ResultWithValidateResponseEncoderCode},
 		{"result-collection", testdata.MessageResultTypeCollectionDSL, testdata.ResultCollectionResponseEncoderCode},
 	}
 	for _, c := range cases {

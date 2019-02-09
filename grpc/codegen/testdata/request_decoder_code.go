@@ -5,12 +5,12 @@ const PayloadUserTypeRequestDecoderCode = `// DecodeMethodMessageUserTypeWithNes
 // "MethodMessageUserTypeWithNestedUserTypes" endpoint.
 func DecodeMethodMessageUserTypeWithNestedUserTypesRequest(ctx context.Context, v interface{}, md metadata.MD) (interface{}, error) {
 	var (
-		message *pb.MethodMessageUserTypeWithNestedUserTypesRequest
+		message *service_message_user_type_with_nested_user_typespb.MethodMessageUserTypeWithNestedUserTypesRequest
 		ok      bool
 	)
 	{
-		if message, ok = v.(*pb.MethodMessageUserTypeWithNestedUserTypesRequest); !ok {
-			return nil, goagrpc.ErrInvalidType("ServiceMessageUserTypeWithNestedUserTypes", "MethodMessageUserTypeWithNestedUserTypes", "*pb.MethodMessageUserTypeWithNestedUserTypesRequest", v)
+		if message, ok = v.(*service_message_user_type_with_nested_user_typespb.MethodMessageUserTypeWithNestedUserTypesRequest); !ok {
+			return nil, goagrpc.ErrInvalidType("ServiceMessageUserTypeWithNestedUserTypes", "MethodMessageUserTypeWithNestedUserTypes", "*service_message_user_type_with_nested_user_typespb.MethodMessageUserTypeWithNestedUserTypesRequest", v)
 		}
 	}
 	var payload *servicemessageusertypewithnestedusertypes.UT
@@ -25,12 +25,12 @@ const PayloadArrayRequestDecoderCode = `// DecodeMethodUnaryRPCNoResultRequest d
 // "ServiceUnaryRPCNoResult" service "MethodUnaryRPCNoResult" endpoint.
 func DecodeMethodUnaryRPCNoResultRequest(ctx context.Context, v interface{}, md metadata.MD) (interface{}, error) {
 	var (
-		message *pb.MethodUnaryRPCNoResultRequest
+		message *service_unaryrpc_no_resultpb.MethodUnaryRPCNoResultRequest
 		ok      bool
 	)
 	{
-		if message, ok = v.(*pb.MethodUnaryRPCNoResultRequest); !ok {
-			return nil, goagrpc.ErrInvalidType("ServiceUnaryRPCNoResult", "MethodUnaryRPCNoResult", "*pb.MethodUnaryRPCNoResultRequest", v)
+		if message, ok = v.(*service_unaryrpc_no_resultpb.MethodUnaryRPCNoResultRequest); !ok {
+			return nil, goagrpc.ErrInvalidType("ServiceUnaryRPCNoResult", "MethodUnaryRPCNoResult", "*service_unaryrpc_no_resultpb.MethodUnaryRPCNoResultRequest", v)
 		}
 		if err := ValidateMethodUnaryRPCNoResultRequest(message); err != nil {
 			return nil, err
@@ -48,12 +48,12 @@ const PayloadMapRequestDecoderCode = `// DecodeMethodMessageMapRequest decodes r
 // service "MethodMessageMap" endpoint.
 func DecodeMethodMessageMapRequest(ctx context.Context, v interface{}, md metadata.MD) (interface{}, error) {
 	var (
-		message *pb.MethodMessageMapRequest
+		message *service_message_mappb.MethodMessageMapRequest
 		ok      bool
 	)
 	{
-		if message, ok = v.(*pb.MethodMessageMapRequest); !ok {
-			return nil, goagrpc.ErrInvalidType("ServiceMessageMap", "MethodMessageMap", "*pb.MethodMessageMapRequest", v)
+		if message, ok = v.(*service_message_mappb.MethodMessageMapRequest); !ok {
+			return nil, goagrpc.ErrInvalidType("ServiceMessageMap", "MethodMessageMap", "*service_message_mappb.MethodMessageMapRequest", v)
 		}
 		if err := ValidateMethodMessageMapRequest(message); err != nil {
 			return nil, err
@@ -71,12 +71,12 @@ const PayloadPrimitiveRequestDecoderCode = `// DecodeMethodServerStreamingRPCReq
 // "ServiceServerStreamingRPC" service "MethodServerStreamingRPC" endpoint.
 func DecodeMethodServerStreamingRPCRequest(ctx context.Context, v interface{}, md metadata.MD) (interface{}, error) {
 	var (
-		message *pb.MethodServerStreamingRPCRequest
+		message *service_server_streamingrpcpb.MethodServerStreamingRPCRequest
 		ok      bool
 	)
 	{
-		if message, ok = v.(*pb.MethodServerStreamingRPCRequest); !ok {
-			return nil, goagrpc.ErrInvalidType("ServiceServerStreamingRPC", "MethodServerStreamingRPC", "*pb.MethodServerStreamingRPCRequest", v)
+		if message, ok = v.(*service_server_streamingrpcpb.MethodServerStreamingRPCRequest); !ok {
+			return nil, goagrpc.ErrInvalidType("ServiceServerStreamingRPC", "MethodServerStreamingRPC", "*service_server_streamingrpcpb.MethodServerStreamingRPCRequest", v)
 		}
 	}
 	var payload int
@@ -124,8 +124,8 @@ const PayloadUserTypeWithStreamingPayloadRequestDecoderCode = `// DecodeMethodBi
 // "MethodBidirectionalStreamingRPCWithPayload" endpoint.
 func DecodeMethodBidirectionalStreamingRPCWithPayloadRequest(ctx context.Context, v interface{}, md metadata.MD) (interface{}, error) {
 	var (
-		a   int
-		b   string
+		a   *int
+		b   *string
 		err error
 	)
 	{
@@ -140,7 +140,7 @@ func DecodeMethodBidirectionalStreamingRPCWithPayloadRequest(ctx context.Context
 			a = &pv
 		}
 		if vals := md.Get("b"); len(vals) > 0 {
-			b = vals[0]
+			b = &vals[0]
 		}
 	}
 	if err != nil {
@@ -158,7 +158,7 @@ const PayloadWithMetadataRequestDecoderCode = `// DecodeMethodMessageWithMetadat
 // "ServiceMessageWithMetadata" service "MethodMessageWithMetadata" endpoint.
 func DecodeMethodMessageWithMetadataRequest(ctx context.Context, v interface{}, md metadata.MD) (interface{}, error) {
 	var (
-		inMetadata int
+		inMetadata *int
 		err        error
 	)
 	{
@@ -177,15 +177,62 @@ func DecodeMethodMessageWithMetadataRequest(ctx context.Context, v interface{}, 
 		return nil, err
 	}
 	var (
-		message *pb.MethodMessageWithMetadataRequest
+		message *service_message_with_metadatapb.MethodMessageWithMetadataRequest
 		ok      bool
 	)
 	{
-		if message, ok = v.(*pb.MethodMessageWithMetadataRequest); !ok {
-			return nil, goagrpc.ErrInvalidType("ServiceMessageWithMetadata", "MethodMessageWithMetadata", "*pb.MethodMessageWithMetadataRequest", v)
+		if message, ok = v.(*service_message_with_metadatapb.MethodMessageWithMetadataRequest); !ok {
+			return nil, goagrpc.ErrInvalidType("ServiceMessageWithMetadata", "MethodMessageWithMetadata", "*service_message_with_metadatapb.MethodMessageWithMetadataRequest", v)
 		}
 	}
 	var payload *servicemessagewithmetadata.RequestUT
+	{
+		payload = NewRequestUT(message, inMetadata)
+	}
+	return payload, nil
+}
+`
+
+const PayloadWithValidateRequestDecoderCode = `// DecodeMethodMessageWithValidateRequest decodes requests sent to
+// "ServiceMessageWithValidate" service "MethodMessageWithValidate" endpoint.
+func DecodeMethodMessageWithValidateRequest(ctx context.Context, v interface{}, md metadata.MD) (interface{}, error) {
+	var (
+		inMetadata *int
+		err        error
+	)
+	{
+		if vals := md.Get("Authorization"); len(vals) > 0 {
+			inMetadataRaw = vals[0]
+
+			v, err2 := strconv.ParseInt(inMetadataRaw, 10, strconv.IntSize)
+			if err2 != nil {
+				err = goa.MergeErrors(err, goa.InvalidFieldTypeError("inMetadata", inMetadataRaw, "integer"))
+			}
+			pv := int(v)
+			inMetadata = &pv
+		}
+		if inMetadata != nil {
+			if *inMetadata > 100 {
+				err = goa.MergeErrors(err, goa.InvalidRangeError("inMetadata", *inMetadata, 100, false))
+			}
+		}
+	}
+	if err != nil {
+		return nil, err
+	}
+	var (
+		message *service_message_with_validatepb.MethodMessageWithValidateRequest
+		ok      bool
+	)
+	{
+		if message, ok = v.(*service_message_with_validatepb.MethodMessageWithValidateRequest); !ok {
+			return nil, goagrpc.ErrInvalidType("ServiceMessageWithValidate", "MethodMessageWithValidate", "*service_message_with_validatepb.MethodMessageWithValidateRequest", v)
+		}
+		if err = ValidateMethodMessageWithValidateRequest(message); err != nil {
+			return nil, err
+		}
+	}
+	var payload *servicemessagewithvalidate.RequestUT
 	{
 		payload = NewRequestUT(message, inMetadata)
 	}
@@ -197,36 +244,36 @@ const PayloadWithSecurityAttrsRequestDecoderCode = `// DecodeMethodMessageWithSe
 // "ServiceMessageWithSecurity" service "MethodMessageWithSecurity" endpoint.
 func DecodeMethodMessageWithSecurityRequest(ctx context.Context, v interface{}, md metadata.MD) (interface{}, error) {
 	var (
-		token    string
-		key      string
-		username string
-		password string
+		token    *string
+		key      *string
+		username *string
+		password *string
 		err      error
 	)
 	{
 		if vals := md.Get("authorization"); len(vals) > 0 {
-			token = vals[0]
+			token = &vals[0]
 		}
 		if vals := md.Get("authorization"); len(vals) > 0 {
-			key = vals[0]
+			key = &vals[0]
 		}
 		if vals := md.Get("username"); len(vals) > 0 {
-			username = vals[0]
+			username = &vals[0]
 		}
 		if vals := md.Get("password"); len(vals) > 0 {
-			password = vals[0]
+			password = &vals[0]
 		}
 	}
 	if err != nil {
 		return nil, err
 	}
 	var (
-		message *pb.MethodMessageWithSecurityRequest
+		message *service_message_with_securitypb.MethodMessageWithSecurityRequest
 		ok      bool
 	)
 	{
-		if message, ok = v.(*pb.MethodMessageWithSecurityRequest); !ok {
-			return nil, goagrpc.ErrInvalidType("ServiceMessageWithSecurity", "MethodMessageWithSecurity", "*pb.MethodMessageWithSecurityRequest", v)
+		if message, ok = v.(*service_message_with_securitypb.MethodMessageWithSecurityRequest); !ok {
+			return nil, goagrpc.ErrInvalidType("ServiceMessageWithSecurity", "MethodMessageWithSecurity", "*service_message_with_securitypb.MethodMessageWithSecurityRequest", v)
 		}
 	}
 	var payload *servicemessagewithsecurity.RequestUT

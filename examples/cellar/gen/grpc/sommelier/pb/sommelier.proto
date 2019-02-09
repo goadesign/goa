@@ -1,0 +1,67 @@
+// Code generated with goa v2.0.0-wip, DO NOT EDIT.
+//
+// sommelier protocol buffer definition
+//
+// Command:
+// $ goa gen goa.design/goa/examples/cellar/design -o
+// $(GOPATH)/src/goa.design/goa/examples/cellar
+
+syntax = "proto3";
+
+package cellar;
+
+option go_package = "sommelierpb";
+
+// The sommelier service retrieves bottles given a set of criteria.
+service Sommelier {
+	// Pick implements pick.
+	rpc Pick (PickRequest) returns (StoredBottleCollection);
+}
+
+message PickRequest {
+	// Name of bottle to pick
+	string name = 1;
+	// Varietals in preference order
+	repeated string varietal = 2;
+	// Winery of bottle to pick
+	string winery = 3;
+}
+
+message StoredBottleCollection {
+	repeated StoredBottle field = 1;
+}
+// A StoredBottle describes a bottle retrieved by the storage service.
+message StoredBottle {
+	// ID is the unique id of the bottle.
+	string id = 8;
+	// Name of bottle
+	string name = 1;
+	// Winery that produces wine
+	Winery winery = 2;
+	// Vintage of bottle
+	uint32 vintage = 3;
+	// Composition is the list of grape varietals and associated percentage.
+	repeated Component composition = 4;
+	// Description of bottle
+	string description = 5;
+	// Rating of bottle from 1 (worst) to 5 (best)
+	uint32 rating = 6;
+}
+
+message Winery {
+	// Name of winery
+	string name = 1;
+	// Region of winery
+	string region = 2;
+	// Country of winery
+	string country = 3;
+	// Winery website URL
+	string url = 4;
+}
+
+message Component {
+	// Grape varietal
+	string varietal = 1;
+	// Percentage of varietal in wine
+	uint32 percentage = 2;
+}

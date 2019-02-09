@@ -62,11 +62,12 @@ func protoBufContext(att *expr.AttributeExpr, pkg string, scope *codegen.NameSco
 // given attribute type is a primitive, array, or a map, it wraps the given
 // attribute under an attribute with name "field" and RPC tag number 1. For,
 // nested arrays/maps, the inner array/map is wrapped into a user type.
-func makeProtoBufMessage(att *expr.AttributeExpr, tname string, scope *codegen.NameScope) {
+func makeProtoBufMessage(att *expr.AttributeExpr, tname string, scope *codegen.NameScope) *expr.AttributeExpr {
+	att = expr.DupAtt(att)
 	switch dt := att.Type.(type) {
 	case expr.Primitive:
 		wrapAttr(att, tname)
-		return
+		return att
 	case expr.UserType:
 		if dt == expr.Empty {
 			// Empty type must generate a message definition
@@ -74,7 +75,7 @@ func makeProtoBufMessage(att *expr.AttributeExpr, tname string, scope *codegen.N
 				TypeName:      tname,
 				AttributeExpr: &expr.AttributeExpr{Type: &expr.Object{}},
 			}
-			return
+			return att
 		} else if rt, ok := dt.(*expr.ResultTypeExpr); ok && expr.IsArray(rt) {
 			// result type collection
 			wrapAttr(att, tname)
@@ -90,6 +91,7 @@ func makeProtoBufMessage(att *expr.AttributeExpr, tname string, scope *codegen.N
 	// wrap nested arrays/maps
 	n := ""
 	makeProtoBufMessageR(att, &n, scope)
+	return att
 }
 
 // makeProtoBufMessageR is the recursive implementation of makeProtoBufMessage.

@@ -11,41 +11,41 @@ package client
 import (
 	goa "goa.design/goa"
 	chattersvcviews "goa.design/goa/examples/streaming/gen/chatter/views"
-	"goa.design/goa/examples/streaming/gen/grpc/chatter/pb"
+	chatterpb "goa.design/goa/examples/streaming/gen/grpc/chatter/pb"
 )
 
 // NewLoginRequest builds the gRPC request type from the payload of the "login"
 // endpoint of the "chatter" service.
-func NewLoginRequest() *pb.LoginRequest {
-	message := &pb.LoginRequest{}
+func NewLoginRequest() *chatterpb.LoginRequest {
+	message := &chatterpb.LoginRequest{}
 	return message
 }
 
 // NewLoginResponse builds the result type of the "login" endpoint of the
 // "chatter" service from the gRPC response type.
-func NewLoginResponse(message *pb.LoginResponse) string {
+func NewLoginResponse(message *chatterpb.LoginResponse) string {
 	result := message.Field
 	return result
 }
 
-func NewEchoerResponse(v *pb.EchoerResponse) string {
+func NewEchoerResponse(v *chatterpb.EchoerResponse) string {
 	result := v.Field
 	return result
 }
 
-func NewEchoerStreamingRequest(spayload string) *pb.EchoerStreamingRequest {
-	v := &pb.EchoerStreamingRequest{}
+func NewEchoerStreamingRequest(spayload string) *chatterpb.EchoerStreamingRequest {
+	v := &chatterpb.EchoerStreamingRequest{}
 	v.Field = spayload
 	return v
 }
 
-func NewListenerStreamingRequest(spayload string) *pb.ListenerStreamingRequest {
-	v := &pb.ListenerStreamingRequest{}
+func NewListenerStreamingRequest(spayload string) *chatterpb.ListenerStreamingRequest {
+	v := &chatterpb.ListenerStreamingRequest{}
 	v.Field = spayload
 	return v
 }
 
-func NewChatSummaryCollection(v *pb.ChatSummaryCollection) chattersvcviews.ChatSummaryCollectionView {
+func NewChatSummaryCollection(v *chatterpb.ChatSummaryCollection) chattersvcviews.ChatSummaryCollectionView {
 	vresult := make([]*chattersvcviews.ChatSummaryView, len(v.Field))
 	for i, val := range v.Field {
 		vresult[i] = &chattersvcviews.ChatSummaryView{
@@ -58,20 +58,20 @@ func NewChatSummaryCollection(v *pb.ChatSummaryCollection) chattersvcviews.ChatS
 	return vresult
 }
 
-func NewSummaryStreamingRequest(spayload string) *pb.SummaryStreamingRequest {
-	v := &pb.SummaryStreamingRequest{}
+func NewSummaryStreamingRequest(spayload string) *chatterpb.SummaryStreamingRequest {
+	v := &chatterpb.SummaryStreamingRequest{}
 	v.Field = spayload
 	return v
 }
 
 // NewHistoryRequest builds the gRPC request type from the payload of the
 // "history" endpoint of the "chatter" service.
-func NewHistoryRequest() *pb.HistoryRequest {
-	message := &pb.HistoryRequest{}
+func NewHistoryRequest() *chatterpb.HistoryRequest {
+	message := &chatterpb.HistoryRequest{}
 	return message
 }
 
-func NewChatSummaryView(v *pb.HistoryResponse) *chattersvcviews.ChatSummaryView {
+func NewChatSummaryView(v *chatterpb.HistoryResponse) *chattersvcviews.ChatSummaryView {
 	vresult := &chattersvcviews.ChatSummaryView{
 		Message: &v.Message_,
 		SentAt:  &v.SentAt,
@@ -83,7 +83,7 @@ func NewChatSummaryView(v *pb.HistoryResponse) *chattersvcviews.ChatSummaryView 
 
 // ValidateChatSummaryCollection runs the validations defined on
 // ChatSummaryCollection.
-func ValidateChatSummaryCollection(message *pb.ChatSummaryCollection) (err error) {
+func ValidateChatSummaryCollection(message *chatterpb.ChatSummaryCollection) (err error) {
 	for _, e := range message.Field {
 		if e != nil {
 			if err2 := ValidateChatSummary(e); err2 != nil {
@@ -95,14 +95,14 @@ func ValidateChatSummaryCollection(message *pb.ChatSummaryCollection) (err error
 }
 
 // ValidateChatSummary runs the validations defined on ChatSummary.
-func ValidateChatSummary(message *pb.ChatSummary) (err error) {
+func ValidateChatSummary(message *chatterpb.ChatSummary) (err error) {
 	err = goa.MergeErrors(err, goa.ValidateFormat("message.sent_at", message.SentAt, goa.FormatDateTime))
 
 	return
 }
 
 // ValidateHistoryResponse runs the validations defined on HistoryResponse.
-func ValidateHistoryResponse(message *pb.HistoryResponse) (err error) {
+func ValidateHistoryResponse(message *chatterpb.HistoryResponse) (err error) {
 	err = goa.MergeErrors(err, goa.ValidateFormat("message.sent_at", message.SentAt, goa.FormatDateTime))
 
 	return

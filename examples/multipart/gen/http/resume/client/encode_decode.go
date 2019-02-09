@@ -16,8 +16,8 @@ import (
 	"net/http"
 	"net/url"
 
-	resume "goa.design/goa/examples/multipart/gen/resume"
-	resumeviews "goa.design/goa/examples/multipart/gen/resume/views"
+	resumesvc "goa.design/goa/examples/multipart/gen/resume"
+	resumesvcviews "goa.design/goa/examples/multipart/gen/resume/views"
 	goahttp "goa.design/goa/http"
 )
 
@@ -65,11 +65,11 @@ func DecodeListResponse(decoder func(*http.Response) goahttp.Decoder, restoreBod
 			}
 			p := NewListStoredResumeCollectionOK(body)
 			view := "default"
-			vres := resumeviews.StoredResumeCollection{p, view}
-			if err = resumeviews.ValidateStoredResumeCollection(vres); err != nil {
+			vres := resumesvcviews.StoredResumeCollection{p, view}
+			if err = resumesvcviews.ValidateStoredResumeCollection(vres); err != nil {
 				return nil, goahttp.ErrValidationError("resume", "list", err)
 			}
-			res := resume.NewStoredResumeCollection(vres)
+			res := resumesvc.NewStoredResumeCollection(vres)
 			return res, nil
 		default:
 			body, _ := ioutil.ReadAll(resp.Body)
@@ -97,9 +97,9 @@ func (c *Client) BuildAddRequest(ctx context.Context, v interface{}) (*http.Requ
 // server.
 func EncodeAddRequest(encoder func(*http.Request) goahttp.Encoder) func(*http.Request, interface{}) error {
 	return func(req *http.Request, v interface{}) error {
-		p, ok := v.([]*resume.Resume)
+		p, ok := v.([]*resumesvc.Resume)
 		if !ok {
-			return goahttp.ErrInvalidType("resume", "add", "[]*resume.Resume", v)
+			return goahttp.ErrInvalidType("resume", "add", "[]*resumesvc.Resume", v)
 		}
 		if err := encoder(req).Encode(p); err != nil {
 			return goahttp.ErrEncodingError("resume", "add", err)
@@ -115,7 +115,7 @@ func NewResumeAddEncoder(encoderFn ResumeAddEncoderFunc) func(r *http.Request) g
 		body := &bytes.Buffer{}
 		mw := multipart.NewWriter(body)
 		return goahttp.EncodingFunc(func(v interface{}) error {
-			p := v.([]*resume.Resume)
+			p := v.([]*resumesvc.Resume)
 			if err := encoderFn(mw, p); err != nil {
 				return err
 			}

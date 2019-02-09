@@ -13,14 +13,14 @@ import (
 	"fmt"
 
 	dividersvc "goa.design/goa/examples/error/gen/divider"
-	"goa.design/goa/examples/error/gen/grpc/divider/pb"
+	dividerpb "goa.design/goa/examples/error/gen/grpc/divider/pb"
 )
 
 // BuildIntegerDividePayload builds the payload for the divider integer_divide
 // endpoint from CLI flags.
 func BuildIntegerDividePayload(dividerIntegerDivideMessage string) (*dividersvc.IntOperands, error) {
 	var err error
-	var message pb.IntegerDivideRequest
+	var message dividerpb.IntegerDivideRequest
 	{
 		if dividerIntegerDivideMessage != "" {
 			err = json.Unmarshal([]byte(dividerIntegerDivideMessage), &message)
@@ -43,7 +43,7 @@ func BuildIntegerDividePayload(dividerIntegerDivideMessage string) (*dividersvc.
 // CLI flags.
 func BuildDividePayload(dividerDivideMessage string) (*dividersvc.FloatOperands, error) {
 	var err error
-	var message pb.DivideRequest
+	var message dividerpb.DivideRequest
 	{
 		if dividerDivideMessage != "" {
 			err = json.Unmarshal([]byte(dividerDivideMessage), &message)

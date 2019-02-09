@@ -9,9 +9,9 @@ import (
 	"sync"
 	"time"
 
-	api "goa.design/goa/examples/multipart"
-	resumesvr "goa.design/goa/examples/multipart/gen/http/resume/server"
-	resume "goa.design/goa/examples/multipart/gen/resume"
+	resume "goa.design/goa/examples/multipart"
+	resumesvcsvr "goa.design/goa/examples/multipart/gen/http/resume/server"
+	resumesvc "goa.design/goa/examples/multipart/gen/resume"
 	goahttp "goa.design/goa/http"
 	httpmdlwr "goa.design/goa/http/middleware"
 	"goa.design/goa/middleware"
@@ -19,7 +19,7 @@ import (
 
 // handleHTTPServer starts configures and starts a HTTP server on the given
 // URL. It shuts down the server if any error is received in the error channel.
-func handleHTTPServer(ctx context.Context, u *url.URL, resumeEndpoints *resume.Endpoints, wg *sync.WaitGroup, errc chan error, logger *log.Logger, debug bool) {
+func handleHTTPServer(ctx context.Context, u *url.URL, resumeEndpoints *resumesvc.Endpoints, wg *sync.WaitGroup, errc chan error, logger *log.Logger, debug bool) {
 
 	// Setup goa log adapter.
 	var (
@@ -50,14 +50,14 @@ func handleHTTPServer(ctx context.Context, u *url.URL, resumeEndpoints *resume.E
 	// the service input and output data structures to HTTP requests and
 	// responses.
 	var (
-		resumeServer *resumesvr.Server
+		resumeServer *resumesvcsvr.Server
 	)
 	{
 		eh := errorHandler(logger)
-		resumeServer = resumesvr.New(resumeEndpoints, mux, dec, enc, eh, api.ResumeAddDecoderFunc)
+		resumeServer = resumesvcsvr.New(resumeEndpoints, mux, dec, enc, eh, resume.ResumeAddDecoderFunc)
 	}
 	// Configure the mux.
-	resumesvr.Mount(mux, resumeServer)
+	resumesvcsvr.Mount(mux, resumeServer)
 
 	// Wrap the multiplexer with additional middlewares. Middlewares mounted
 	// here apply to all the service endpoints.

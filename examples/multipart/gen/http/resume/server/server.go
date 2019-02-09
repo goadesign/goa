@@ -14,7 +14,7 @@ import (
 	"net/http"
 
 	goa "goa.design/goa"
-	resume "goa.design/goa/examples/multipart/gen/resume"
+	resumesvc "goa.design/goa/examples/multipart/gen/resume"
 	goahttp "goa.design/goa/http"
 )
 
@@ -44,11 +44,11 @@ type MountPoint struct {
 
 // ResumeAddDecoderFunc is the type to decode multipart request for the
 // "resume" service "add" endpoint.
-type ResumeAddDecoderFunc func(*multipart.Reader, *[]*resume.Resume) error
+type ResumeAddDecoderFunc func(*multipart.Reader, *[]*resumesvc.Resume) error
 
 // New instantiates HTTP handlers for all the resume service endpoints.
 func New(
-	e *resume.Endpoints,
+	e *resumesvc.Endpoints,
 	mux goahttp.Muxer,
 	dec func(*http.Request) goahttp.Decoder,
 	enc func(context.Context, http.ResponseWriter) goahttp.Encoder,
