@@ -119,17 +119,13 @@ func (a *APIExpr) DefaultServer() *ServerExpr {
 	for i, svc := range Root.Services {
 		svcs[i] = svc.Name
 	}
-	name := a.Name
-	if len(svcs) > 0 {
-		name = svcs[0]
-	}
 	return &ServerExpr{
-		Name:        name,
-		Description: "Default server for " + name,
+		Name:        a.Name,
+		Description: "Default server for " + a.Name,
 		Services:    svcs,
 		Hosts: []*HostExpr{{
 			Name:       "localhost",
-			ServerName: name,
+			ServerName: a.Name,
 			URIs:       []URIExpr{URIExpr("http://localhost:80"), URIExpr("grpc://localhost:8080")},
 		}},
 	}
@@ -145,6 +141,9 @@ func (a *APIExpr) Hash() string { return "_api_+" + a.Name }
 func (a *APIExpr) Finalize() {
 	if a.Name == "" {
 		a.Name = "api"
+		if len(Root.Services) > 0 {
+			a.Name = Root.Services[0].Name
+		}
 	}
 	if len(a.Servers) == 0 {
 		a.Servers = []*ServerExpr{a.DefaultServer()}
