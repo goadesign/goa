@@ -222,12 +222,12 @@ func TestSegment_SubmitInProgressSegment(t *testing.T) {
 
 		segment := NewSegment("hello", NewTraceID(), NewID(), conn)
 
-		// call SubmitInProgressSegment() twice, then Close it
+		// call SubmitInProgress() twice, then Close it
 		messages := readUDP(t, 2, func() {
 			segment.Namespace = "1"
-			segment.SubmitInProgressSegment()
+			segment.SubmitInProgress()
 			segment.Namespace = "2"
-			segment.SubmitInProgressSegment() // should have no effect
+			segment.SubmitInProgress() // should have no effect
 			segment.Namespace = "3"
 			segment.Close()
 		})
@@ -259,12 +259,12 @@ func TestSegment_SubmitInProgressSegment(t *testing.T) {
 
 		segment := NewSegment("hello", NewTraceID(), NewID(), conn)
 
-		// Close(), then call SubmitInProgressSegment(), only expect 1 segment written
+		// Close(), then call SubmitInProgress(), only expect 1 segment written
 		messages := readUDP(t, 1, func() {
 			segment.Namespace = "1"
 			segment.Close()
 			segment.Namespace = "2"
-			segment.SubmitInProgressSegment() // should have no effect
+			segment.SubmitInProgress() // should have no effect
 		})
 
 		// verify the In-Progress segment
@@ -300,7 +300,7 @@ func TestRace(t *testing.T) {
 		s.RecordResponse(resp)
 		s.RecordContextResponse(ctx)
 		s.RecordError(rErr)
-		s.SubmitInProgressSegment()
+		s.SubmitInProgress()
 
 		sub := s.NewSubsegment("sub")
 		s.Capture("sub2", func() {})

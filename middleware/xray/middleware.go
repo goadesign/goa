@@ -127,7 +127,7 @@ func newSegment(ctx context.Context, traceID, name string, req *http.Request, c 
 	if parentID != "" {
 		s.ParentID = parentID
 	}
-	s.SubmitInProgressSegment()
+	s.SubmitInProgress()
 
 	return s
 }

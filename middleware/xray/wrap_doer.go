@@ -30,7 +30,7 @@ func (r *wrapDoer) Do(ctx context.Context, req *http.Request) (*http.Response, e
 
 	sub := s.NewSubsegment(req.URL.Host)
 	sub.RecordRequest(req, "remote")
-	sub.SubmitInProgressSegment()
+	sub.SubmitInProgress()
 	defer sub.Close()
 
 	// update the context with the latest segment

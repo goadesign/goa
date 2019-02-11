@@ -31,7 +31,7 @@ func (t *xrayTransport) RoundTrip(req *http.Request) (*http.Response, error) {
 
 	sub := s.NewSubsegment(req.URL.Host)
 	sub.RecordRequest(req, "remote")
-	sub.SubmitInProgressSegment()
+	sub.SubmitInProgress()
 	defer sub.Close()
 
 	resp, err := t.wrapped.RoundTrip(req)
