@@ -213,7 +213,7 @@ func TestSegment_NewSubsegment(t *testing.T) {
 	}
 }
 
-func TestSegment_SubmitInProgressSegment(t *testing.T) {
+func TestSegment_SubmitInProgress(t *testing.T) {
 	t.Run("call twice then close -- second call is ignored", func(t *testing.T) {
 		conn, err := net.Dial("udp", udplisten)
 		if err != nil {
