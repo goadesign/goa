@@ -46,6 +46,15 @@ const (
 //     }
 //     return
 //
+// An X-Ray trace is limited to 500 KB of segment data (JSON) being submitted
+// for it. See: https://aws.amazon.com/xray/pricing/
+//
+// Traces running for multiple minutes may encounter additional dynamic limits,
+// resulting in the trace being limited to less than 500 KB. The workaround is
+// to send less data -- fewer segments, subsegments, annotations, or metadata.
+// And perhaps split up a single large trace into several different traces.
+//
+// Besides those varying size limitations, a trace may be open for up to 7 days.
 func New(service, daemon string) (goa.Middleware, error) {
 	connection, err := periodicallyRedialingConn(context.Background(), time.Minute, func() (net.Conn, error) {
 		return net.Dial("udp", daemon)
