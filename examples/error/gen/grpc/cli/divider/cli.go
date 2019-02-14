@@ -56,7 +56,7 @@ func ParseEndpoint(cc *grpc.ClientConn, opts ...grpc.CallOption) (goa.Endpoint, 
 		return nil, nil, err
 	}
 
-	if len(os.Args) < flag.NFlag()+3 {
+	if flag.NArg() < 2 { // two non flag args are required: SERVICE and ENDPOINT (aka COMMAND)
 		return nil, nil, fmt.Errorf("not enough arguments")
 	}
 
@@ -65,7 +65,7 @@ func ParseEndpoint(cc *grpc.ClientConn, opts ...grpc.CallOption) (goa.Endpoint, 
 		svcf *flag.FlagSet
 	)
 	{
-		svcn = os.Args[1+flag.NFlag()]
+		svcn = flag.Arg(0)
 		switch svcn {
 		case "divider":
 			svcf = dividerFlags
@@ -73,7 +73,7 @@ func ParseEndpoint(cc *grpc.ClientConn, opts ...grpc.CallOption) (goa.Endpoint, 
 			return nil, nil, fmt.Errorf("unknown service %q", svcn)
 		}
 	}
-	if err := svcf.Parse(os.Args[2+flag.NFlag():]); err != nil {
+	if err := svcf.Parse(flag.Args()[1:]); err != nil {
 		return nil, nil, err
 	}
 
@@ -82,7 +82,7 @@ func ParseEndpoint(cc *grpc.ClientConn, opts ...grpc.CallOption) (goa.Endpoint, 
 		epf *flag.FlagSet
 	)
 	{
-		epn = os.Args[2+flag.NFlag()+svcf.NFlag()]
+		epn = svcf.Arg(0)
 		switch svcn {
 		case "divider":
 			switch epn {
@@ -101,8 +101,8 @@ func ParseEndpoint(cc *grpc.ClientConn, opts ...grpc.CallOption) (goa.Endpoint, 
 	}
 
 	// Parse endpoint flags if any
-	if len(os.Args) > 2+flag.NFlag()+svcf.NFlag() {
-		if err := epf.Parse(os.Args[3+flag.NFlag()+svcf.NFlag():]); err != nil {
+	if svcf.NArg() > 1 {
+		if err := epf.Parse(svcf.Args()[1:]); err != nil {
 			return nil, nil, err
 		}
 	}
