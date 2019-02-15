@@ -10,6 +10,7 @@ package client
 
 import (
 	"context"
+	"io"
 	"net/http"
 
 	goa "goa.design/goa"
@@ -304,6 +305,9 @@ func (s *summaryClientStream) CloseAndRecv() (chattersvc.ChatSummaryCollection, 
 		return rv, err
 	}
 	if err = s.stream.RecvMsg(&body); err != nil {
+		if err == io.EOF {
+			s.stream.Close()
+		}
 		return rv, err
 	}
 	res := NewSummaryChatSummaryCollectionOK(body)
@@ -371,6 +375,9 @@ func (s *historyClientStream) Recv() (*chattersvc.ChatSummary, error) {
 		err  error
 	)
 	if err = s.stream.RecvMsg(&body); err != nil {
+		if err == io.EOF {
+			s.stream.Close()
+		}
 		return rv, err
 	}
 	res := NewHistoryChatSummaryOK(&body)

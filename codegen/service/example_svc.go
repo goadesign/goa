@@ -126,7 +126,7 @@ func New{{ .StructName }}(logger *log.Logger) {{ .PkgName }}.Service {
 	// input: basicEndpointData
 	endpointT = `{{ comment .Description }}
 {{- if .ServerStream }}
-func (s *{{ .ServiceVarName }}srvc) {{ .VarName }}(ctx context.Context{{ if .PayloadFullRef }}, p {{ .PayloadFullRef }}{{ end }}, stream {{ .StreamInterface }}) (err error) {
+func (s *{{ .ServiceVarName }}srvc) {{ .VarName }}({{ if .PayloadFullRef }}p {{ .PayloadFullRef }}, {{ end }}stream {{ .StreamInterface }}) (err error) {
 {{- else }}
 func (s *{{ .ServiceVarName }}srvc) {{ .VarName }}(ctx context.Context{{ if .PayloadFullRef }}, p {{ .PayloadFullRef }}{{ end }}) ({{ if .ResultFullRef }}res {{ .ResultFullRef }}, {{ if .ViewedResult }}{{ if not .ViewedResult.ViewName }}view string, {{ end }}{{ end }} {{ end }}err error) {
 {{- end }}

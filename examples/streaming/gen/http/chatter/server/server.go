@@ -251,7 +251,6 @@ func NewEchoerHandler(
 			return
 		}
 
-		stream.SetContext(ctx)
 		v := &chattersvc.EchoerEndpointInput{
 			Stream: &echoerServerStream{
 				stream:       stream,
@@ -316,7 +315,6 @@ func NewListenerHandler(
 			return
 		}
 
-		stream.SetContext(ctx)
 		v := &chattersvc.ListenerEndpointInput{
 			Stream: &listenerServerStream{
 				stream:       stream,
@@ -381,7 +379,6 @@ func NewSummaryHandler(
 			return
 		}
 
-		stream.SetContext(ctx)
 		v := &chattersvc.SummaryEndpointInput{
 			Stream: &summaryServerStream{
 				stream:       stream,
@@ -446,7 +443,6 @@ func NewHistoryHandler(
 			return
 		}
 
-		stream.SetContext(ctx)
 		v := &chattersvc.HistoryEndpointInput{
 			Stream: &historyServerStream{
 				stream:       stream,

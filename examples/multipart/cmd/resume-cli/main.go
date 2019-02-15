@@ -60,11 +60,13 @@ func main() {
 		endpoint goa.Endpoint
 		payload  interface{}
 		err      error
+
+		ctx = context.Background()
 	)
 	{
 		switch scheme {
 		case "http", "https":
-			endpoint, payload, err = doHTTP(scheme, host, timeout, debug)
+			endpoint, payload, err = doHTTP(ctx, scheme, host, timeout, debug)
 		default:
 			fmt.Fprintf(os.Stderr, "invalid scheme: %q (valid schemes: grpc|http)", scheme)
 			os.Exit(1)
@@ -79,7 +81,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	data, err := endpoint(context.Background(), payload)
+	data, err := endpoint(ctx, payload)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err.Error())
 		os.Exit(1)
