@@ -6,6 +6,7 @@ import (
 	"encoding/gob"
 	"encoding/json"
 	"encoding/xml"
+	"io"
 	"io/ioutil"
 	"mime"
 	"net/http"
@@ -86,6 +87,7 @@ func RequestDecoder(r *http.Request) Decoder {
 //     * application/json using package encoding/json
 //     * application/xml using package encoding/xml
 //     * application/gob using package encoding/gob
+//     * text/html for strings
 //
 // ResponseEncoder defaults to the JSON encoder if the context AcceptTypeKey or
 // ContentTypeKey value does not match any of the supported mime types or is
@@ -100,6 +102,8 @@ func ResponseEncoder(ctx context.Context, w http.ResponseWriter) Encoder {
 			return xml.NewEncoder(w), "application/xml"
 		case "application/gob":
 			return gob.NewEncoder(w), "application/gob"
+		case "text/html":
+			return newTextHtmlEncoder(w), "text/html"
 		}
 		return nil, ""
 	}
@@ -132,6 +136,8 @@ func ResponseEncoder(ctx context.Context, w http.ResponseWriter) Encoder {
 					enc = xml.NewEncoder(w)
 				case ct == "application/gob" || strings.HasSuffix(ct, "+gob"):
 					enc = gob.NewEncoder(w)
+				case ct == "text/html" || strings.HasSuffix(ct, "+html"):
+					enc = newTextHtmlEncoder(w)
 				default:
 					enc = json.NewEncoder(w)
 				}
@@ -169,6 +175,7 @@ func RequestEncoder(r *http.Request) Encoder {
 //   * application/json using package encoding/json (default)
 //   * application/xml using package encoding/xml
 //   * application/gob using package encoding/gob
+//   * text/html for strings
 //
 func ResponseDecoder(resp *http.Response) Decoder {
 	ct := resp.Header.Get("Content-Type")
@@ -185,6 +192,8 @@ func ResponseDecoder(resp *http.Response) Decoder {
 		return xml.NewDecoder(resp.Body)
 	case ct == "application/gob" || strings.HasSuffix(ct, "+gob"):
 		return gob.NewDecoder(resp.Body)
+	case ct == "text/html" || strings.HasSuffix(ct, "+html"):
+		return newTextHtmlDecoder(resp.Body)
 	default:
 		return json.NewDecoder(resp.Body)
 	}
@@ -235,4 +244,46 @@ func SetContentType(w http.ResponseWriter, ct string) {
 		suffix = "+xml"
 	}
 	w.Header().Set("Content-Type", h+suffix)
+}
+
+func newTextHtmlEncoder(w io.Writer) Encoder {
+	return &textHtmlEncoder{w}
+}
+
+type textHtmlEncoder struct {
+	w io.Writer
+}
+
+func (e *textHtmlEncoder) Encode(v interface{}) error {
+	var b []byte
+
+	strptr, isstrptr := v.(*string)
+	if isstrptr {
+		b = []byte(*strptr)
+	} else {
+		b = []byte(v.(string))
+	}
+
+	_, err := e.w.Write(b)
+	return err
+}
+
+func newTextHtmlDecoder(r io.Reader) Decoder {
+	return &textHtmlDecoder{r}
+}
+
+type textHtmlDecoder struct {
+	r io.Reader
+}
+
+func (e *textHtmlDecoder) Decode(v interface{}) error {
+	strptr := v.(*string)
+	b, err := ioutil.ReadAll(e.r)
+	if err != nil {
+		return err
+	}
+
+	*strptr = string(b)
+
+	return nil
 }
