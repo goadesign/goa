@@ -5,6 +5,7 @@ var ServerStreamingServerStructCode = `// MethodServerStreamingUserTypeRPCServer
 // interface.
 type MethodServerStreamingUserTypeRPCServerStream struct {
 	stream service_server_streaming_user_typerpcpb.ServiceServerStreamingUserTypeRPC_MethodServerStreamingUserTypeRPCServer
+	ctx    context.Context
 }
 `
 
@@ -23,11 +24,26 @@ var ServerStreamingServerCloseCode = `func (s *MethodServerStreamingUserTypeRPCS
 }
 `
 
+var ServerStreamingServerContextCode = `// Context returns the stream context for "MethodServerStreamingUserTypeRPC"
+// endpoint.
+func (s *MethodServerStreamingUserTypeRPCServerStream) Context() context.Context {
+	return s.ctx
+}
+`
+
+var ServerStreamingServerSetContextCode = `// SetContext updates the stream context for "MethodServerStreamingUserTypeRPC"
+// endpoint.
+func (s *MethodServerStreamingUserTypeRPCServerStream) SetContext(ctx context.Context) {
+	s.ctx = ctx
+}
+`
+
 var ServerStreamingClientStructCode = `// MethodServerStreamingUserTypeRPCClientStream implements the
 // serviceserverstreamingusertyperpc.MethodServerStreamingUserTypeRPCClientStream
 // interface.
 type MethodServerStreamingUserTypeRPCClientStream struct {
 	stream service_server_streaming_user_typerpcpb.ServiceServerStreamingUserTypeRPC_MethodServerStreamingUserTypeRPCClient
+	ctx    context.Context
 }
 `
 
@@ -50,11 +66,26 @@ var ServerStreamingClientCloseCode = `func (s *MethodServerStreamingUserTypeRPCC
 }
 `
 
+var ServerStreamingClientContextCode = `// Context returns the stream context for "MethodServerStreamingUserTypeRPC"
+// endpoint.
+func (s *MethodServerStreamingUserTypeRPCClientStream) Context() context.Context {
+	return s.ctx
+}
+`
+
+var ServerStreamingClientSetContextCode = `// SetContext updates the stream context for "MethodServerStreamingUserTypeRPC"
+// endpoint.
+func (s *MethodServerStreamingUserTypeRPCClientStream) SetContext(ctx context.Context) {
+	s.ctx = ctx
+}
+`
+
 var ServerStreamingResultWithViewsServerStructCode = `// MethodServerStreamingUserTypeRPCServerStream implements the
 // serviceserverstreamingusertyperpc.MethodServerStreamingUserTypeRPCServerStream
 // interface.
 type MethodServerStreamingUserTypeRPCServerStream struct {
 	stream service_server_streaming_user_typerpcpb.ServiceServerStreamingUserTypeRPC_MethodServerStreamingUserTypeRPCServer
+	ctx    context.Context
 	view   string
 }
 `
@@ -80,6 +111,7 @@ var ServerStreamingResultWithViewsClientStructCode = `// MethodServerStreamingUs
 // interface.
 type MethodServerStreamingUserTypeRPCClientStream struct {
 	stream service_server_streaming_user_typerpcpb.ServiceServerStreamingUserTypeRPC_MethodServerStreamingUserTypeRPCClient
+	ctx    context.Context
 	view   string
 }
 `
@@ -202,6 +234,7 @@ var ClientStreamingServerStructCode = `// MethodClientStreamingRPCServerStream i
 // serviceclientstreamingrpc.MethodClientStreamingRPCServerStream interface.
 type MethodClientStreamingRPCServerStream struct {
 	stream service_client_streamingrpcpb.ServiceClientStreamingRPC_MethodClientStreamingRPCServer
+	ctx    context.Context
 }
 `
 
@@ -231,6 +264,7 @@ var ClientStreamingClientStructCode = `// MethodClientStreamingRPCClientStream i
 // serviceclientstreamingrpc.MethodClientStreamingRPCClientStream interface.
 type MethodClientStreamingRPCClientStream struct {
 	stream service_client_streamingrpcpb.ServiceClientStreamingRPC_MethodClientStreamingRPCClient
+	ctx    context.Context
 }
 `
 
@@ -261,6 +295,7 @@ var BidirectionalStreamingServerStructCode = `// MethodBidirectionalStreamingRPC
 // interface.
 type MethodBidirectionalStreamingRPCServerStream struct {
 	stream service_bidirectional_streamingrpcpb.ServiceBidirectionalStreamingRPC_MethodBidirectionalStreamingRPCServer
+	ctx    context.Context
 	view   string
 }
 `
@@ -299,6 +334,7 @@ var BidirectionalStreamingClientStructCode = `// MethodBidirectionalStreamingRPC
 // interface.
 type MethodBidirectionalStreamingRPCClientStream struct {
 	stream service_bidirectional_streamingrpcpb.ServiceBidirectionalStreamingRPC_MethodBidirectionalStreamingRPCClient
+	ctx    context.Context
 	view   string
 }
 `

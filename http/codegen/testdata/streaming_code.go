@@ -11,6 +11,7 @@ func NewStreamingResultMethodHandler(
 	eh func(context.Context, http.ResponseWriter, error),
 	up goahttp.Upgrader,
 	connConfigFn goahttp.ConnConfigureFunc,
+	stream goahttp.Streamer,
 ) http.Handler {
 	var (
 		decodeRequest = DecodeStreamingResultMethodRequest(mux, dec)
@@ -30,6 +31,7 @@ func NewStreamingResultMethodHandler(
 
 		v := &streamingresultservice.StreamingResultMethodEndpointInput{
 			Stream: &StreamingResultMethodServerStream{
+				stream:       stream,
 				upgrader:     up,
 				connConfigFn: connConfigFn,
 				w:            w,
@@ -65,17 +67,14 @@ func (s *StreamingResultMethodServerStream) Send(v *streamingresultservice.UserT
 		if err != nil {
 			return
 		}
-		if s.connConfigFn != nil {
-			conn = s.connConfigFn(conn)
-		}
-		s.conn = conn
+		s.stream.WithConn(conn, s.connConfigFn)
 	})
 	if err != nil {
 		return err
 	}
 	res := v
 	body := NewStreamingResultMethodResponseBody(res)
-	return s.conn.WriteJSON(body)
+	return s.stream.SendMsg(body)
 }
 `
 
@@ -91,22 +90,12 @@ func (s *StreamingResultMethodServerStream) Close() error {
 		if err != nil {
 			return
 		}
-		if s.connConfigFn != nil {
-			conn = s.connConfigFn(conn)
-		}
-		s.conn = conn
+		s.stream.WithConn(conn, s.connConfigFn)
 	})
 	if err != nil {
 		return err
 	}
-	if err = s.conn.WriteControl(
-		websocket.CloseMessage,
-		websocket.FormatCloseMessage(websocket.CloseNormalClosure, "server closing connection"),
-		time.Now().Add(time.Second),
-	); err != nil {
-		return err
-	}
-	return s.conn.Close()
+	return s.stream.Close()
 }
 `
 
@@ -125,10 +114,7 @@ func (s *StreamingResultWithViewsMethodServerStream) Send(v *streamingresultwith
 		if err != nil {
 			return
 		}
-		if s.connConfigFn != nil {
-			conn = s.connConfigFn(conn)
-		}
-		s.conn = conn
+		s.stream.WithConn(conn, s.connConfigFn)
 	})
 	if err != nil {
 		return err
@@ -143,7 +129,7 @@ func (s *StreamingResultWithViewsMethodServerStream) Send(v *streamingresultwith
 	case "default", "":
 		body = NewStreamingResultWithViewsMethodResponseBody(res.Projected)
 	}
-	return s.conn.WriteJSON(body)
+	return s.stream.SendMsg(body)
 }
 `
 
@@ -166,6 +152,7 @@ func NewStreamingResultNoPayloadMethodHandler(
 	eh func(context.Context, http.ResponseWriter, error),
 	up goahttp.Upgrader,
 	connConfigFn goahttp.ConnConfigureFunc,
+	stream goahttp.Streamer,
 ) http.Handler {
 	var (
 		encodeError = goahttp.ErrorEncoder(enc)
@@ -177,6 +164,7 @@ func NewStreamingResultNoPayloadMethodHandler(
 
 		v := &streamingresultnopayloadservice.StreamingResultNoPayloadMethodEndpointInput{
 			Stream: &StreamingResultNoPayloadMethodServerStream{
+				stream:       stream,
 				upgrader:     up,
 				connConfigFn: connConfigFn,
 				w:            w,
@@ -214,17 +202,16 @@ func (c *Client) StreamingResultMethod() goa.Endpoint {
 		if err != nil {
 			return nil, err
 		}
-		conn, resp, err := c.dialer.Dial(req.URL.String(), req.Header)
+		conn, resp, err := c.dialer.DialContext(ctx, req.URL.String(), req.Header)
 		if err != nil {
 			if resp != nil {
 				return decodeResponse(resp)
 			}
 			return nil, goahttp.ErrRequestError("StreamingResultService", "StreamingResultMethod", err)
 		}
-		if c.connConfigFn != nil {
-			conn = c.connConfigFn(conn)
-		}
-		stream := &StreamingResultMethodClientStream{conn: conn}
+		c.stream.SetContext(ctx)
+		c.stream.WithConn(conn, c.connConfigFn)
+		stream := &StreamingResultMethodClientStream{stream: c.stream}
 		return stream, nil
 	}
 }
@@ -243,22 +230,12 @@ func (s *StreamingResultWithViewsMethodServerStream) Close() error {
 		if err != nil {
 			return
 		}
-		if s.connConfigFn != nil {
-			conn = s.connConfigFn(conn)
-		}
-		s.conn = conn
+		s.stream.WithConn(conn, s.connConfigFn)
 	})
 	if err != nil {
 		return err
 	}
-	if err = s.conn.WriteControl(
-		websocket.CloseMessage,
-		websocket.FormatCloseMessage(websocket.CloseNormalClosure, "server closing connection"),
-		time.Now().Add(time.Second),
-	); err != nil {
-		return err
-	}
-	return s.conn.Close()
+	return s.stream.Close()
 }
 `
 
@@ -270,12 +247,10 @@ func (s *StreamingResultMethodClientStream) Recv() (*streamingresultservice.User
 		body StreamingResultMethodResponseBody
 		err  error
 	)
-	err = s.conn.ReadJSON(&body)
-	if websocket.IsCloseError(err, websocket.CloseNormalClosure) {
-		s.conn.Close()
-		return rv, io.EOF
-	}
-	if err != nil {
+	if err = s.stream.RecvMsg(&body); err != nil {
+		if err == io.EOF {
+			s.stream.Close()
+		}
 		return rv, err
 	}
 	res := NewStreamingResultMethodUserTypeOK(&body)
@@ -300,17 +275,16 @@ func (c *Client) StreamingResultWithViewsMethod() goa.Endpoint {
 		if err != nil {
 			return nil, err
 		}
-		conn, resp, err := c.dialer.Dial(req.URL.String(), req.Header)
+		conn, resp, err := c.dialer.DialContext(ctx, req.URL.String(), req.Header)
 		if err != nil {
 			if resp != nil {
 				return decodeResponse(resp)
 			}
 			return nil, goahttp.ErrRequestError("StreamingResultWithViewsService", "StreamingResultWithViewsMethod", err)
 		}
-		if c.connConfigFn != nil {
-			conn = c.connConfigFn(conn)
-		}
-		stream := &StreamingResultWithViewsMethodClientStream{conn: conn}
+		c.stream.SetContext(ctx)
+		c.stream.WithConn(conn, c.connConfigFn)
+		stream := &StreamingResultWithViewsMethodClientStream{stream: c.stream}
 		view := resp.Header.Get("goa-view")
 		stream.SetView(view)
 		return stream, nil
@@ -326,12 +300,10 @@ func (s *StreamingResultWithViewsMethodClientStream) Recv() (*streamingresultwit
 		body StreamingResultWithViewsMethodResponseBody
 		err  error
 	)
-	err = s.conn.ReadJSON(&body)
-	if websocket.IsCloseError(err, websocket.CloseNormalClosure) {
-		s.conn.Close()
-		return rv, io.EOF
-	}
-	if err != nil {
+	if err = s.stream.RecvMsg(&body); err != nil {
+		if err == io.EOF {
+			s.stream.Close()
+		}
 		return rv, err
 	}
 	res := NewStreamingResultWithViewsMethodUsertypeOK(&body)
@@ -367,17 +339,16 @@ func (c *Client) StreamingResultWithExplicitViewMethod() goa.Endpoint {
 		if err != nil {
 			return nil, err
 		}
-		conn, resp, err := c.dialer.Dial(req.URL.String(), req.Header)
+		conn, resp, err := c.dialer.DialContext(ctx, req.URL.String(), req.Header)
 		if err != nil {
 			if resp != nil {
 				return decodeResponse(resp)
 			}
 			return nil, goahttp.ErrRequestError("StreamingResultWithExplicitViewService", "StreamingResultWithExplicitViewMethod", err)
 		}
-		if c.connConfigFn != nil {
-			conn = c.connConfigFn(conn)
-		}
-		stream := &StreamingResultWithExplicitViewMethodClientStream{conn: conn}
+		c.stream.SetContext(ctx)
+		c.stream.WithConn(conn, c.connConfigFn)
+		stream := &StreamingResultWithExplicitViewMethodClientStream{stream: c.stream}
 		return stream, nil
 	}
 }
@@ -392,12 +363,10 @@ func (s *StreamingResultWithExplicitViewMethodClientStream) Recv() (*streamingre
 		body StreamingResultWithExplicitViewMethodResponseBody
 		err  error
 	)
-	err = s.conn.ReadJSON(&body)
-	if websocket.IsCloseError(err, websocket.CloseNormalClosure) {
-		s.conn.Close()
-		return rv, io.EOF
-	}
-	if err != nil {
+	if err = s.stream.RecvMsg(&body); err != nil {
+		if err == io.EOF {
+			s.stream.Close()
+		}
 		return rv, err
 	}
 	res := NewStreamingResultWithExplicitViewMethodUsertypeOK(&body)
@@ -422,17 +391,14 @@ func (s *StreamingResultWithExplicitViewMethodServerStream) Send(v *streamingres
 		if err != nil {
 			return
 		}
-		if s.connConfigFn != nil {
-			conn = s.connConfigFn(conn)
-		}
-		s.conn = conn
+		s.stream.WithConn(conn, s.connConfigFn)
 	})
 	if err != nil {
 		return err
 	}
 	res := streamingresultwithexplicitviewservice.NewViewedUsertype(v, "extended")
 	body := NewStreamingResultWithExplicitViewMethodResponseBodyExtended(res.Projected)
-	return s.conn.WriteJSON(body)
+	return s.stream.SendMsg(body)
 }
 `
 
@@ -452,10 +418,7 @@ func (s *StreamingResultCollectionWithViewsMethodServerStream) Send(v streamingr
 		if err != nil {
 			return
 		}
-		if s.connConfigFn != nil {
-			conn = s.connConfigFn(conn)
-		}
-		s.conn = conn
+		s.stream.WithConn(conn, s.connConfigFn)
 	})
 	if err != nil {
 		return err
@@ -470,7 +433,7 @@ func (s *StreamingResultCollectionWithViewsMethodServerStream) Send(v streamingr
 	case "default", "":
 		body = NewUsertypeResponseCollection(res.Projected)
 	}
-	return s.conn.WriteJSON(body)
+	return s.stream.SendMsg(body)
 }
 `
 
@@ -492,12 +455,10 @@ func (s *StreamingResultCollectionWithViewsMethodClientStream) Recv() (streaming
 		body StreamingResultCollectionWithViewsMethodResponseBody
 		err  error
 	)
-	err = s.conn.ReadJSON(&body)
-	if websocket.IsCloseError(err, websocket.CloseNormalClosure) {
-		s.conn.Close()
-		return rv, io.EOF
-	}
-	if err != nil {
+	if err = s.stream.RecvMsg(&body); err != nil {
+		if err == io.EOF {
+			s.stream.Close()
+		}
 		return rv, err
 	}
 	res := NewStreamingResultCollectionWithViewsMethodUsertypeCollectionOK(body)
@@ -531,17 +492,14 @@ func (s *StreamingResultCollectionWithExplicitViewMethodServerStream) Send(v str
 		if err != nil {
 			return
 		}
-		if s.connConfigFn != nil {
-			conn = s.connConfigFn(conn)
-		}
-		s.conn = conn
+		s.stream.WithConn(conn, s.connConfigFn)
 	})
 	if err != nil {
 		return err
 	}
 	res := streamingresultcollectionwithexplicitviewservice.NewViewedUsertypeCollection(v, "tiny")
 	body := NewUsertypeResponseTinyCollection(res.Projected)
-	return s.conn.WriteJSON(body)
+	return s.stream.SendMsg(body)
 }
 `
 
@@ -562,17 +520,16 @@ func (c *Client) StreamingResultCollectionWithExplicitViewMethod() goa.Endpoint 
 		if err != nil {
 			return nil, err
 		}
-		conn, resp, err := c.dialer.Dial(req.URL.String(), req.Header)
+		conn, resp, err := c.dialer.DialContext(ctx, req.URL.String(), req.Header)
 		if err != nil {
 			if resp != nil {
 				return decodeResponse(resp)
 			}
 			return nil, goahttp.ErrRequestError("StreamingResultCollectionWithExplicitViewService", "StreamingResultCollectionWithExplicitViewMethod", err)
 		}
-		if c.connConfigFn != nil {
-			conn = c.connConfigFn(conn)
-		}
-		stream := &StreamingResultCollectionWithExplicitViewMethodClientStream{conn: conn}
+		c.stream.SetContext(ctx)
+		c.stream.WithConn(conn, c.connConfigFn)
+		stream := &StreamingResultCollectionWithExplicitViewMethodClientStream{stream: c.stream}
 		return stream, nil
 	}
 }
@@ -588,12 +545,10 @@ func (s *StreamingResultCollectionWithExplicitViewMethodClientStream) Recv() (st
 		body StreamingResultCollectionWithExplicitViewMethodResponseBody
 		err  error
 	)
-	err = s.conn.ReadJSON(&body)
-	if websocket.IsCloseError(err, websocket.CloseNormalClosure) {
-		s.conn.Close()
-		return rv, io.EOF
-	}
-	if err != nil {
+	if err = s.stream.RecvMsg(&body); err != nil {
+		if err == io.EOF {
+			s.stream.Close()
+		}
 		return rv, err
 	}
 	res := NewStreamingResultCollectionWithExplicitViewMethodUsertypeCollectionOK(body)
@@ -618,16 +573,13 @@ func (s *StreamingResultPrimitiveMethodServerStream) Send(v string) error {
 		if err != nil {
 			return
 		}
-		if s.connConfigFn != nil {
-			conn = s.connConfigFn(conn)
-		}
-		s.conn = conn
+		s.stream.WithConn(conn, s.connConfigFn)
 	})
 	if err != nil {
 		return err
 	}
 	res := v
-	return s.conn.WriteJSON(res)
+	return s.stream.SendMsg(res)
 }
 `
 
@@ -639,12 +591,10 @@ func (s *StreamingResultPrimitiveMethodClientStream) Recv() (string, error) {
 		body string
 		err  error
 	)
-	err = s.conn.ReadJSON(&body)
-	if websocket.IsCloseError(err, websocket.CloseNormalClosure) {
-		s.conn.Close()
-		return rv, io.EOF
-	}
-	if err != nil {
+	if err = s.stream.RecvMsg(&body); err != nil {
+		if err == io.EOF {
+			s.stream.Close()
+		}
 		return rv, err
 	}
 	return body, nil
@@ -664,16 +614,13 @@ func (s *StreamingResultPrimitiveArrayMethodServerStream) Send(v []int32) error 
 		if err != nil {
 			return
 		}
-		if s.connConfigFn != nil {
-			conn = s.connConfigFn(conn)
-		}
-		s.conn = conn
+		s.stream.WithConn(conn, s.connConfigFn)
 	})
 	if err != nil {
 		return err
 	}
 	res := v
-	return s.conn.WriteJSON(res)
+	return s.stream.SendMsg(res)
 }
 `
 
@@ -685,12 +632,10 @@ func (s *StreamingResultPrimitiveArrayMethodClientStream) Recv() ([]int32, error
 		body []int32
 		err  error
 	)
-	err = s.conn.ReadJSON(&body)
-	if websocket.IsCloseError(err, websocket.CloseNormalClosure) {
-		s.conn.Close()
-		return rv, io.EOF
-	}
-	if err != nil {
+	if err = s.stream.RecvMsg(&body); err != nil {
+		if err == io.EOF {
+			s.stream.Close()
+		}
 		return rv, err
 	}
 	return body, nil
@@ -710,16 +655,13 @@ func (s *StreamingResultPrimitiveMapMethodServerStream) Send(v map[int32]string)
 		if err != nil {
 			return
 		}
-		if s.connConfigFn != nil {
-			conn = s.connConfigFn(conn)
-		}
-		s.conn = conn
+		s.stream.WithConn(conn, s.connConfigFn)
 	})
 	if err != nil {
 		return err
 	}
 	res := v
-	return s.conn.WriteJSON(res)
+	return s.stream.SendMsg(res)
 }
 `
 
@@ -731,12 +673,10 @@ func (s *StreamingResultPrimitiveMapMethodClientStream) Recv() (map[int32]string
 		body map[int32]string
 		err  error
 	)
-	err = s.conn.ReadJSON(&body)
-	if websocket.IsCloseError(err, websocket.CloseNormalClosure) {
-		s.conn.Close()
-		return rv, io.EOF
-	}
-	if err != nil {
+	if err = s.stream.RecvMsg(&body); err != nil {
+		if err == io.EOF {
+			s.stream.Close()
+		}
 		return rv, err
 	}
 	return body, nil
@@ -756,17 +696,14 @@ func (s *StreamingResultUserTypeArrayMethodServerStream) Send(v []*streamingresu
 		if err != nil {
 			return
 		}
-		if s.connConfigFn != nil {
-			conn = s.connConfigFn(conn)
-		}
-		s.conn = conn
+		s.stream.WithConn(conn, s.connConfigFn)
 	})
 	if err != nil {
 		return err
 	}
 	res := v
 	body := NewUserTypeResponse(res)
-	return s.conn.WriteJSON(body)
+	return s.stream.SendMsg(body)
 }
 `
 
@@ -778,12 +715,10 @@ func (s *StreamingResultUserTypeArrayMethodClientStream) Recv() ([]*streamingres
 		body StreamingResultUserTypeArrayMethodResponseBody
 		err  error
 	)
-	err = s.conn.ReadJSON(&body)
-	if websocket.IsCloseError(err, websocket.CloseNormalClosure) {
-		s.conn.Close()
-		return rv, io.EOF
-	}
-	if err != nil {
+	if err = s.stream.RecvMsg(&body); err != nil {
+		if err == io.EOF {
+			s.stream.Close()
+		}
 		return rv, err
 	}
 	res := NewStreamingResultUserTypeArrayMethodUserTypeOK(body)
@@ -805,17 +740,14 @@ func (s *StreamingResultUserTypeMapMethodServerStream) Send(v map[string]*stream
 		if err != nil {
 			return
 		}
-		if s.connConfigFn != nil {
-			conn = s.connConfigFn(conn)
-		}
-		s.conn = conn
+		s.stream.WithConn(conn, s.connConfigFn)
 	})
 	if err != nil {
 		return err
 	}
 	res := v
 	body := NewMapStringUserTypeResponse(res)
-	return s.conn.WriteJSON(body)
+	return s.stream.SendMsg(body)
 }
 `
 
@@ -828,12 +760,10 @@ func (s *StreamingResultUserTypeMapMethodClientStream) Recv() (map[string]*strea
 		body StreamingResultUserTypeMapMethodResponseBody
 		err  error
 	)
-	err = s.conn.ReadJSON(&body)
-	if websocket.IsCloseError(err, websocket.CloseNormalClosure) {
-		s.conn.Close()
-		return rv, io.EOF
-	}
-	if err != nil {
+	if err = s.stream.RecvMsg(&body); err != nil {
+		if err == io.EOF {
+			s.stream.Close()
+		}
 		return rv, err
 	}
 	res := NewStreamingResultUserTypeMapMethodMapStringUserTypeOK(body)
@@ -853,17 +783,16 @@ func (c *Client) StreamingResultNoPayloadMethod() goa.Endpoint {
 		if err != nil {
 			return nil, err
 		}
-		conn, resp, err := c.dialer.Dial(req.URL.String(), req.Header)
+		conn, resp, err := c.dialer.DialContext(ctx, req.URL.String(), req.Header)
 		if err != nil {
 			if resp != nil {
 				return decodeResponse(resp)
 			}
 			return nil, goahttp.ErrRequestError("StreamingResultNoPayloadService", "StreamingResultNoPayloadMethod", err)
 		}
-		if c.connConfigFn != nil {
-			conn = c.connConfigFn(conn)
-		}
-		stream := &StreamingResultNoPayloadMethodClientStream{conn: conn}
+		c.stream.SetContext(ctx)
+		c.stream.WithConn(conn, c.connConfigFn)
+		stream := &StreamingResultNoPayloadMethodClientStream{stream: c.stream}
 		return stream, nil
 	}
 }
@@ -880,6 +809,7 @@ func NewStreamingPayloadMethodHandler(
 	eh func(context.Context, http.ResponseWriter, error),
 	up goahttp.Upgrader,
 	connConfigFn goahttp.ConnConfigureFunc,
+	stream goahttp.Streamer,
 ) http.Handler {
 	var (
 		decodeRequest = DecodeStreamingPayloadMethodRequest(mux, dec)
@@ -899,6 +829,7 @@ func NewStreamingPayloadMethodHandler(
 
 		v := &streamingpayloadservice.StreamingPayloadMethodEndpointInput{
 			Stream: &StreamingPayloadMethodServerStream{
+				stream:       stream,
 				upgrader:     up,
 				connConfigFn: connConfigFn,
 				w:            w,
@@ -925,10 +856,10 @@ var StreamingPayloadServerStreamSendCode = `// SendAndClose streams instances of
 // "StreamingPayloadMethod" endpoint websocket connection and closes the
 // connection.
 func (s *StreamingPayloadMethodServerStream) SendAndClose(v *streamingpayloadservice.UserType) error {
-	defer s.conn.Close()
+	defer s.stream.Close()
 	res := v
 	body := NewStreamingPayloadMethodResponseBody(res)
-	return s.conn.WriteJSON(body)
+	return s.stream.SendMsg(body)
 }
 `
 
@@ -949,15 +880,12 @@ func (s *StreamingPayloadMethodServerStream) Recv() (*streamingpayloadservice.Re
 		if err != nil {
 			return
 		}
-		if s.connConfigFn != nil {
-			conn = s.connConfigFn(conn)
-		}
-		s.conn = conn
+		s.stream.WithConn(conn, s.connConfigFn)
 	})
 	if err != nil {
 		return rv, err
 	}
-	if err = s.conn.ReadJSON(&msg); err != nil {
+	if err = s.stream.RecvMsg(&msg); err != nil {
 		return rv, err
 	}
 	if msg == nil {
@@ -984,17 +912,16 @@ func (c *Client) StreamingPayloadMethod() goa.Endpoint {
 		if err != nil {
 			return nil, err
 		}
-		conn, resp, err := c.dialer.Dial(req.URL.String(), req.Header)
+		conn, resp, err := c.dialer.DialContext(ctx, req.URL.String(), req.Header)
 		if err != nil {
 			if resp != nil {
 				return decodeResponse(resp)
 			}
 			return nil, goahttp.ErrRequestError("StreamingPayloadService", "StreamingPayloadMethod", err)
 		}
-		if c.connConfigFn != nil {
-			conn = c.connConfigFn(conn)
-		}
-		stream := &StreamingPayloadMethodClientStream{conn: conn}
+		c.stream.SetContext(ctx)
+		c.stream.WithConn(conn, c.connConfigFn)
+		stream := &StreamingPayloadMethodClientStream{stream: c.stream}
 		return stream, nil
 	}
 }
@@ -1004,7 +931,7 @@ var StreamingPayloadClientStreamSendCode = `// Send streams instances of "stream
 // "StreamingPayloadMethod" endpoint websocket connection.
 func (s *StreamingPayloadMethodClientStream) Send(v *streamingpayloadservice.Request) error {
 	body := NewStreamingPayloadMethodStreamingBody(v)
-	return s.conn.WriteJSON(body)
+	return s.stream.SendMsg(body)
 }
 `
 
@@ -1017,17 +944,15 @@ func (s *StreamingPayloadMethodClientStream) CloseAndRecv() (*streamingpayloadse
 		body StreamingPayloadMethodResponseBody
 		err  error
 	)
-	defer s.conn.Close()
+	defer s.stream.Close()
 	// Send a nil payload to the server implying end of message
-	if err = s.conn.WriteJSON(nil); err != nil {
+	if err = s.stream.SendMsg(nil); err != nil {
 		return rv, err
 	}
-	err = s.conn.ReadJSON(&body)
-	if websocket.IsCloseError(err, websocket.CloseNormalClosure) {
-		s.conn.Close()
-		return rv, io.EOF
-	}
-	if err != nil {
+	if err = s.stream.RecvMsg(&body); err != nil {
+		if err == io.EOF {
+			s.stream.Close()
+		}
 		return rv, err
 	}
 	res := NewStreamingPayloadMethodUserTypeOK(&body)
@@ -1046,6 +971,7 @@ func NewStreamingPayloadNoPayloadMethodHandler(
 	eh func(context.Context, http.ResponseWriter, error),
 	up goahttp.Upgrader,
 	connConfigFn goahttp.ConnConfigureFunc,
+	stream goahttp.Streamer,
 ) http.Handler {
 	var (
 		encodeError = goahttp.ErrorEncoder(enc)
@@ -1057,6 +983,7 @@ func NewStreamingPayloadNoPayloadMethodHandler(
 
 		v := &streamingpayloadnopayloadservice.StreamingPayloadNoPayloadMethodEndpointInput{
 			Stream: &StreamingPayloadNoPayloadMethodServerStream{
+				stream:       stream,
 				upgrader:     up,
 				connConfigFn: connConfigFn,
 				w:            w,
@@ -1090,17 +1017,16 @@ func (c *Client) StreamingPayloadNoPayloadMethod() goa.Endpoint {
 		if err != nil {
 			return nil, err
 		}
-		conn, resp, err := c.dialer.Dial(req.URL.String(), req.Header)
+		conn, resp, err := c.dialer.DialContext(ctx, req.URL.String(), req.Header)
 		if err != nil {
 			if resp != nil {
 				return decodeResponse(resp)
 			}
 			return nil, goahttp.ErrRequestError("StreamingPayloadNoPayloadService", "StreamingPayloadNoPayloadMethod", err)
 		}
-		if c.connConfigFn != nil {
-			conn = c.connConfigFn(conn)
-		}
-		stream := &StreamingPayloadNoPayloadMethodClientStream{conn: conn}
+		c.stream.SetContext(ctx)
+		c.stream.WithConn(conn, c.connConfigFn)
+		stream := &StreamingPayloadNoPayloadMethodClientStream{stream: c.stream}
 		return stream, nil
 	}
 }
@@ -1110,7 +1036,7 @@ var StreamingPayloadNoPayloadClientStreamSendCode = `// Send streams instances o
 // "StreamingPayloadNoPayloadMethod" endpoint websocket connection.
 func (s *StreamingPayloadNoPayloadMethodClientStream) Send(v *streamingpayloadnopayloadservice.Request) error {
 	body := NewStreamingPayloadNoPayloadMethodStreamingBody(v)
-	return s.conn.WriteJSON(body)
+	return s.stream.SendMsg(body)
 }
 `
 
@@ -1123,17 +1049,15 @@ func (s *StreamingPayloadNoPayloadMethodClientStream) CloseAndRecv() (*streaming
 		body StreamingPayloadNoPayloadMethodResponseBody
 		err  error
 	)
-	defer s.conn.Close()
+	defer s.stream.Close()
 	// Send a nil payload to the server implying end of message
-	if err = s.conn.WriteJSON(nil); err != nil {
+	if err = s.stream.SendMsg(nil); err != nil {
 		return rv, err
 	}
-	err = s.conn.ReadJSON(&body)
-	if websocket.IsCloseError(err, websocket.CloseNormalClosure) {
-		s.conn.Close()
-		return rv, io.EOF
-	}
-	if err != nil {
+	if err = s.stream.RecvMsg(&body); err != nil {
+		if err == io.EOF {
+			s.stream.Close()
+		}
 		return rv, err
 	}
 	res := NewStreamingPayloadNoPayloadMethodUserTypeOK(&body)
@@ -1158,15 +1082,12 @@ func (s *StreamingPayloadNoResultMethodServerStream) Recv() (string, error) {
 		if err != nil {
 			return
 		}
-		if s.connConfigFn != nil {
-			conn = s.connConfigFn(conn)
-		}
-		s.conn = conn
+		s.stream.WithConn(conn, s.connConfigFn)
 	})
 	if err != nil {
 		return rv, err
 	}
-	if err = s.conn.ReadJSON(&msg); err != nil {
+	if err = s.stream.RecvMsg(&msg); err != nil {
 		return rv, err
 	}
 	if msg == nil {
@@ -1190,29 +1111,19 @@ func (s *StreamingPayloadNoResultMethodServerStream) Close() error {
 		if err != nil {
 			return
 		}
-		if s.connConfigFn != nil {
-			conn = s.connConfigFn(conn)
-		}
-		s.conn = conn
+		s.stream.WithConn(conn, s.connConfigFn)
 	})
 	if err != nil {
 		return err
 	}
-	if err = s.conn.WriteControl(
-		websocket.CloseMessage,
-		websocket.FormatCloseMessage(websocket.CloseNormalClosure, "server closing connection"),
-		time.Now().Add(time.Second),
-	); err != nil {
-		return err
-	}
-	return s.conn.Close()
+	return s.stream.Close()
 }
 `
 
 var StreamingPayloadNoResultClientStreamSendCode = `// Send streams instances of "string" to the "StreamingPayloadNoResultMethod"
 // endpoint websocket connection.
 func (s *StreamingPayloadNoResultMethodClientStream) Send(v string) error {
-	return s.conn.WriteJSON(v)
+	return s.stream.SendMsg(v)
 }
 `
 
@@ -1221,10 +1132,10 @@ var StreamingPayloadNoResultClientStreamCloseCode = `// Close closes the "Stream
 func (s *StreamingPayloadNoResultMethodClientStream) Close() error {
 	var err error
 	// Send a nil payload to the server implying client closing connection.
-	if err = s.conn.WriteJSON(nil); err != nil {
+	if err = s.stream.SendMsg(nil); err != nil {
 		return err
 	}
-	return s.conn.Close()
+	return s.stream.Close()
 }
 `
 
@@ -1233,7 +1144,7 @@ var StreamingPayloadResultWithViewsServerStreamSendCode = `// SendAndClose strea
 // "StreamingPayloadResultWithViewsMethod" endpoint websocket connection and
 // closes the connection.
 func (s *StreamingPayloadResultWithViewsMethodServerStream) SendAndClose(v *streamingpayloadresultwithviewsservice.Usertype) error {
-	defer s.conn.Close()
+	defer s.stream.Close()
 	res := streamingpayloadresultwithviewsservice.NewViewedUsertype(v, s.view)
 	var body interface{}
 	switch s.view {
@@ -1244,7 +1155,7 @@ func (s *StreamingPayloadResultWithViewsMethodServerStream) SendAndClose(v *stre
 	case "default", "":
 		body = NewStreamingPayloadResultWithViewsMethodResponseBody(res.Projected)
 	}
-	return s.conn.WriteJSON(body)
+	return s.stream.SendMsg(body)
 }
 `
 
@@ -1265,15 +1176,12 @@ func (s *StreamingPayloadResultWithViewsMethodServerStream) Recv() (float32, err
 		if err != nil {
 			return
 		}
-		if s.connConfigFn != nil {
-			conn = s.connConfigFn(conn)
-		}
-		s.conn = conn
+		s.stream.WithConn(conn, s.connConfigFn)
 	})
 	if err != nil {
 		return rv, err
 	}
-	if err = s.conn.ReadJSON(&msg); err != nil {
+	if err = s.stream.RecvMsg(&msg); err != nil {
 		return rv, err
 	}
 	if msg == nil {
@@ -1295,7 +1203,7 @@ func (s *StreamingPayloadResultWithViewsMethodServerStream) SetView(view string)
 var StreamingPayloadResultWithViewsClientStreamSendCode = `// Send streams instances of "float32" to the
 // "StreamingPayloadResultWithViewsMethod" endpoint websocket connection.
 func (s *StreamingPayloadResultWithViewsMethodClientStream) Send(v float32) error {
-	return s.conn.WriteJSON(v)
+	return s.stream.SendMsg(v)
 }
 `
 
@@ -1309,17 +1217,15 @@ func (s *StreamingPayloadResultWithViewsMethodClientStream) CloseAndRecv() (*str
 		body StreamingPayloadResultWithViewsMethodResponseBody
 		err  error
 	)
-	defer s.conn.Close()
+	defer s.stream.Close()
 	// Send a nil payload to the server implying end of message
-	if err = s.conn.WriteJSON(nil); err != nil {
+	if err = s.stream.SendMsg(nil); err != nil {
 		return rv, err
 	}
-	err = s.conn.ReadJSON(&body)
-	if websocket.IsCloseError(err, websocket.CloseNormalClosure) {
-		s.conn.Close()
-		return rv, io.EOF
-	}
-	if err != nil {
+	if err = s.stream.RecvMsg(&body); err != nil {
+		if err == io.EOF {
+			s.stream.Close()
+		}
 		return rv, err
 	}
 	res := NewStreamingPayloadResultWithViewsMethodUsertypeOK(&body)
@@ -1343,10 +1249,10 @@ var StreamingPayloadResultWithExplicitViewServerStreamSendCode = `// SendAndClos
 // "StreamingPayloadResultWithExplicitViewMethod" endpoint websocket connection
 // and closes the connection.
 func (s *StreamingPayloadResultWithExplicitViewMethodServerStream) SendAndClose(v *streamingpayloadresultwithexplicitviewservice.Usertype) error {
-	defer s.conn.Close()
+	defer s.stream.Close()
 	res := streamingpayloadresultwithexplicitviewservice.NewViewedUsertype(v, "extended")
 	body := NewStreamingPayloadResultWithExplicitViewMethodResponseBodyExtended(res.Projected)
-	return s.conn.WriteJSON(body)
+	return s.stream.SendMsg(body)
 }
 `
 
@@ -1367,15 +1273,12 @@ func (s *StreamingPayloadResultWithExplicitViewMethodServerStream) Recv() (float
 		if err != nil {
 			return
 		}
-		if s.connConfigFn != nil {
-			conn = s.connConfigFn(conn)
-		}
-		s.conn = conn
+		s.stream.WithConn(conn, s.connConfigFn)
 	})
 	if err != nil {
 		return rv, err
 	}
-	if err = s.conn.ReadJSON(&msg); err != nil {
+	if err = s.stream.RecvMsg(&msg); err != nil {
 		return rv, err
 	}
 	if msg == nil {
@@ -1389,7 +1292,7 @@ func (s *StreamingPayloadResultWithExplicitViewMethodServerStream) Recv() (float
 var StreamingPayloadResultWithExplicitViewClientStreamSendCode = `// Send streams instances of "float32" to the
 // "StreamingPayloadResultWithExplicitViewMethod" endpoint websocket connection.
 func (s *StreamingPayloadResultWithExplicitViewMethodClientStream) Send(v float32) error {
-	return s.conn.WriteJSON(v)
+	return s.stream.SendMsg(v)
 }
 `
 
@@ -1403,17 +1306,15 @@ func (s *StreamingPayloadResultWithExplicitViewMethodClientStream) CloseAndRecv(
 		body StreamingPayloadResultWithExplicitViewMethodResponseBody
 		err  error
 	)
-	defer s.conn.Close()
+	defer s.stream.Close()
 	// Send a nil payload to the server implying end of message
-	if err = s.conn.WriteJSON(nil); err != nil {
+	if err = s.stream.SendMsg(nil); err != nil {
 		return rv, err
 	}
-	err = s.conn.ReadJSON(&body)
-	if websocket.IsCloseError(err, websocket.CloseNormalClosure) {
-		s.conn.Close()
-		return rv, io.EOF
-	}
-	if err != nil {
+	if err = s.stream.RecvMsg(&body); err != nil {
+		if err == io.EOF {
+			s.stream.Close()
+		}
 		return rv, err
 	}
 	res := NewStreamingPayloadResultWithExplicitViewMethodUsertypeOK(&body)
@@ -1430,7 +1331,7 @@ var StreamingPayloadResultCollectionWithViewsServerStreamSendCode = `// SendAndC
 // "StreamingPayloadResultCollectionWithViewsMethod" endpoint websocket
 // connection and closes the connection.
 func (s *StreamingPayloadResultCollectionWithViewsMethodServerStream) SendAndClose(v streamingpayloadresultcollectionwithviewsservice.UsertypeCollection) error {
-	defer s.conn.Close()
+	defer s.stream.Close()
 	res := streamingpayloadresultcollectionwithviewsservice.NewViewedUsertypeCollection(v, s.view)
 	var body interface{}
 	switch s.view {
@@ -1441,7 +1342,7 @@ func (s *StreamingPayloadResultCollectionWithViewsMethodServerStream) SendAndClo
 	case "default", "":
 		body = NewUsertypeResponseCollection(res.Projected)
 	}
-	return s.conn.WriteJSON(body)
+	return s.stream.SendMsg(body)
 }
 `
 
@@ -1463,15 +1364,12 @@ func (s *StreamingPayloadResultCollectionWithViewsMethodServerStream) Recv() (in
 		if err != nil {
 			return
 		}
-		if s.connConfigFn != nil {
-			conn = s.connConfigFn(conn)
-		}
-		s.conn = conn
+		s.stream.WithConn(conn, s.connConfigFn)
 	})
 	if err != nil {
 		return rv, err
 	}
-	if err = s.conn.ReadJSON(&msg); err != nil {
+	if err = s.stream.RecvMsg(&msg); err != nil {
 		return rv, err
 	}
 	if msg == nil {
@@ -1495,7 +1393,7 @@ var StreamingPayloadResultCollectionWithViewsClientStreamSendCode = `// Send str
 // "StreamingPayloadResultCollectionWithViewsMethod" endpoint websocket
 // connection.
 func (s *StreamingPayloadResultCollectionWithViewsMethodClientStream) Send(v interface{}) error {
-	return s.conn.WriteJSON(v)
+	return s.stream.SendMsg(v)
 }
 `
 
@@ -1510,17 +1408,15 @@ func (s *StreamingPayloadResultCollectionWithViewsMethodClientStream) CloseAndRe
 		body StreamingPayloadResultCollectionWithViewsMethodResponseBody
 		err  error
 	)
-	defer s.conn.Close()
+	defer s.stream.Close()
 	// Send a nil payload to the server implying end of message
-	if err = s.conn.WriteJSON(nil); err != nil {
+	if err = s.stream.SendMsg(nil); err != nil {
 		return rv, err
 	}
-	err = s.conn.ReadJSON(&body)
-	if websocket.IsCloseError(err, websocket.CloseNormalClosure) {
-		s.conn.Close()
-		return rv, io.EOF
-	}
-	if err != nil {
+	if err = s.stream.RecvMsg(&body); err != nil {
+		if err == io.EOF {
+			s.stream.Close()
+		}
 		return rv, err
 	}
 	res := NewStreamingPayloadResultCollectionWithViewsMethodUsertypeCollectionOK(body)
@@ -1545,10 +1441,10 @@ var StreamingPayloadResultCollectionWithExplicitViewServerStreamSendCode = `// S
 // to the "StreamingPayloadResultCollectionWithExplicitViewMethod" endpoint
 // websocket connection and closes the connection.
 func (s *StreamingPayloadResultCollectionWithExplicitViewMethodServerStream) SendAndClose(v streamingpayloadresultcollectionwithexplicitviewservice.UsertypeCollection) error {
-	defer s.conn.Close()
+	defer s.stream.Close()
 	res := streamingpayloadresultcollectionwithexplicitviewservice.NewViewedUsertypeCollection(v, "tiny")
 	body := NewUsertypeResponseTinyCollection(res.Projected)
-	return s.conn.WriteJSON(body)
+	return s.stream.SendMsg(body)
 }
 `
 
@@ -1570,15 +1466,12 @@ func (s *StreamingPayloadResultCollectionWithExplicitViewMethodServerStream) Rec
 		if err != nil {
 			return
 		}
-		if s.connConfigFn != nil {
-			conn = s.connConfigFn(conn)
-		}
-		s.conn = conn
+		s.stream.WithConn(conn, s.connConfigFn)
 	})
 	if err != nil {
 		return rv, err
 	}
-	if err = s.conn.ReadJSON(&msg); err != nil {
+	if err = s.stream.RecvMsg(&msg); err != nil {
 		return rv, err
 	}
 	if msg == nil {
@@ -1593,7 +1486,7 @@ var StreamingPayloadResultCollectionWithExplicitViewClientStreamSendCode = `// S
 // "StreamingPayloadResultCollectionWithExplicitViewMethod" endpoint websocket
 // connection.
 func (s *StreamingPayloadResultCollectionWithExplicitViewMethodClientStream) Send(v interface{}) error {
-	return s.conn.WriteJSON(v)
+	return s.stream.SendMsg(v)
 }
 `
 
@@ -1608,17 +1501,15 @@ func (s *StreamingPayloadResultCollectionWithExplicitViewMethodClientStream) Clo
 		body StreamingPayloadResultCollectionWithExplicitViewMethodResponseBody
 		err  error
 	)
-	defer s.conn.Close()
+	defer s.stream.Close()
 	// Send a nil payload to the server implying end of message
-	if err = s.conn.WriteJSON(nil); err != nil {
+	if err = s.stream.SendMsg(nil); err != nil {
 		return rv, err
 	}
-	err = s.conn.ReadJSON(&body)
-	if websocket.IsCloseError(err, websocket.CloseNormalClosure) {
-		s.conn.Close()
-		return rv, io.EOF
-	}
-	if err != nil {
+	if err = s.stream.RecvMsg(&body); err != nil {
+		if err == io.EOF {
+			s.stream.Close()
+		}
 		return rv, err
 	}
 	res := NewStreamingPayloadResultCollectionWithExplicitViewMethodUsertypeCollectionOK(body)
@@ -1634,9 +1525,9 @@ var StreamingPayloadPrimitiveServerStreamSendCode = `// SendAndClose streams ins
 // "StreamingPayloadPrimitiveMethod" endpoint websocket connection and closes
 // the connection.
 func (s *StreamingPayloadPrimitiveMethodServerStream) SendAndClose(v string) error {
-	defer s.conn.Close()
+	defer s.stream.Close()
 	res := v
-	return s.conn.WriteJSON(res)
+	return s.stream.SendMsg(res)
 }
 `
 
@@ -1657,15 +1548,12 @@ func (s *StreamingPayloadPrimitiveMethodServerStream) Recv() (string, error) {
 		if err != nil {
 			return
 		}
-		if s.connConfigFn != nil {
-			conn = s.connConfigFn(conn)
-		}
-		s.conn = conn
+		s.stream.WithConn(conn, s.connConfigFn)
 	})
 	if err != nil {
 		return rv, err
 	}
-	if err = s.conn.ReadJSON(&msg); err != nil {
+	if err = s.stream.RecvMsg(&msg); err != nil {
 		return rv, err
 	}
 	if msg == nil {
@@ -1679,7 +1567,7 @@ func (s *StreamingPayloadPrimitiveMethodServerStream) Recv() (string, error) {
 var StreamingPayloadPrimitiveClientStreamSendCode = `// Send streams instances of "string" to the "StreamingPayloadPrimitiveMethod"
 // endpoint websocket connection.
 func (s *StreamingPayloadPrimitiveMethodClientStream) Send(v string) error {
-	return s.conn.WriteJSON(v)
+	return s.stream.SendMsg(v)
 }
 `
 
@@ -1692,17 +1580,15 @@ func (s *StreamingPayloadPrimitiveMethodClientStream) CloseAndRecv() (string, er
 		body string
 		err  error
 	)
-	defer s.conn.Close()
+	defer s.stream.Close()
 	// Send a nil payload to the server implying end of message
-	if err = s.conn.WriteJSON(nil); err != nil {
+	if err = s.stream.SendMsg(nil); err != nil {
 		return rv, err
 	}
-	err = s.conn.ReadJSON(&body)
-	if websocket.IsCloseError(err, websocket.CloseNormalClosure) {
-		s.conn.Close()
-		return rv, io.EOF
-	}
-	if err != nil {
+	if err = s.stream.RecvMsg(&body); err != nil {
+		if err == io.EOF {
+			s.stream.Close()
+		}
 		return rv, err
 	}
 	return body, nil
@@ -1713,9 +1599,9 @@ var StreamingPayloadPrimitiveArrayServerStreamSendCode = `// SendAndClose stream
 // "StreamingPayloadPrimitiveArrayMethod" endpoint websocket connection and
 // closes the connection.
 func (s *StreamingPayloadPrimitiveArrayMethodServerStream) SendAndClose(v []string) error {
-	defer s.conn.Close()
+	defer s.stream.Close()
 	res := v
-	return s.conn.WriteJSON(res)
+	return s.stream.SendMsg(res)
 }
 `
 
@@ -1736,15 +1622,12 @@ func (s *StreamingPayloadPrimitiveArrayMethodServerStream) Recv() ([]int32, erro
 		if err != nil {
 			return
 		}
-		if s.connConfigFn != nil {
-			conn = s.connConfigFn(conn)
-		}
-		s.conn = conn
+		s.stream.WithConn(conn, s.connConfigFn)
 	})
 	if err != nil {
 		return rv, err
 	}
-	if err = s.conn.ReadJSON(&msg); err != nil {
+	if err = s.stream.RecvMsg(&msg); err != nil {
 		return rv, err
 	}
 	if msg == nil {
@@ -1758,7 +1641,7 @@ func (s *StreamingPayloadPrimitiveArrayMethodServerStream) Recv() ([]int32, erro
 var StreamingPayloadPrimitiveArrayClientStreamSendCode = `// Send streams instances of "[]int32" to the
 // "StreamingPayloadPrimitiveArrayMethod" endpoint websocket connection.
 func (s *StreamingPayloadPrimitiveArrayMethodClientStream) Send(v []int32) error {
-	return s.conn.WriteJSON(v)
+	return s.stream.SendMsg(v)
 }
 `
 
@@ -1771,17 +1654,15 @@ func (s *StreamingPayloadPrimitiveArrayMethodClientStream) CloseAndRecv() ([]str
 		body []string
 		err  error
 	)
-	defer s.conn.Close()
+	defer s.stream.Close()
 	// Send a nil payload to the server implying end of message
-	if err = s.conn.WriteJSON(nil); err != nil {
+	if err = s.stream.SendMsg(nil); err != nil {
 		return rv, err
 	}
-	err = s.conn.ReadJSON(&body)
-	if websocket.IsCloseError(err, websocket.CloseNormalClosure) {
-		s.conn.Close()
-		return rv, io.EOF
-	}
-	if err != nil {
+	if err = s.stream.RecvMsg(&body); err != nil {
+		if err == io.EOF {
+			s.stream.Close()
+		}
 		return rv, err
 	}
 	return body, nil
@@ -1792,9 +1673,9 @@ var StreamingPayloadPrimitiveMapServerStreamSendCode = `// SendAndClose streams 
 // "StreamingPayloadPrimitiveMapMethod" endpoint websocket connection and
 // closes the connection.
 func (s *StreamingPayloadPrimitiveMapMethodServerStream) SendAndClose(v map[int]int) error {
-	defer s.conn.Close()
+	defer s.stream.Close()
 	res := v
-	return s.conn.WriteJSON(res)
+	return s.stream.SendMsg(res)
 }
 `
 
@@ -1815,15 +1696,12 @@ func (s *StreamingPayloadPrimitiveMapMethodServerStream) Recv() (map[string]int3
 		if err != nil {
 			return
 		}
-		if s.connConfigFn != nil {
-			conn = s.connConfigFn(conn)
-		}
-		s.conn = conn
+		s.stream.WithConn(conn, s.connConfigFn)
 	})
 	if err != nil {
 		return rv, err
 	}
-	if err = s.conn.ReadJSON(&msg); err != nil {
+	if err = s.stream.RecvMsg(&msg); err != nil {
 		return rv, err
 	}
 	if msg == nil {
@@ -1837,7 +1715,7 @@ func (s *StreamingPayloadPrimitiveMapMethodServerStream) Recv() (map[string]int3
 var StreamingPayloadPrimitiveMapClientStreamSendCode = `// Send streams instances of "map[string]int32" to the
 // "StreamingPayloadPrimitiveMapMethod" endpoint websocket connection.
 func (s *StreamingPayloadPrimitiveMapMethodClientStream) Send(v map[string]int32) error {
-	return s.conn.WriteJSON(v)
+	return s.stream.SendMsg(v)
 }
 `
 
@@ -1850,17 +1728,15 @@ func (s *StreamingPayloadPrimitiveMapMethodClientStream) CloseAndRecv() (map[int
 		body map[int]int
 		err  error
 	)
-	defer s.conn.Close()
+	defer s.stream.Close()
 	// Send a nil payload to the server implying end of message
-	if err = s.conn.WriteJSON(nil); err != nil {
+	if err = s.stream.SendMsg(nil); err != nil {
 		return rv, err
 	}
-	err = s.conn.ReadJSON(&body)
-	if websocket.IsCloseError(err, websocket.CloseNormalClosure) {
-		s.conn.Close()
-		return rv, io.EOF
-	}
-	if err != nil {
+	if err = s.stream.RecvMsg(&body); err != nil {
+		if err == io.EOF {
+			s.stream.Close()
+		}
 		return rv, err
 	}
 	return body, nil
@@ -1871,9 +1747,9 @@ var StreamingPayloadUserTypeArrayServerStreamSendCode = `// SendAndClose streams
 // "StreamingPayloadUserTypeArrayMethod" endpoint websocket connection and
 // closes the connection.
 func (s *StreamingPayloadUserTypeArrayMethodServerStream) SendAndClose(v string) error {
-	defer s.conn.Close()
+	defer s.stream.Close()
 	res := v
-	return s.conn.WriteJSON(res)
+	return s.stream.SendMsg(res)
 }
 `
 
@@ -1895,15 +1771,12 @@ func (s *StreamingPayloadUserTypeArrayMethodServerStream) Recv() ([]*streamingpa
 		if err != nil {
 			return
 		}
-		if s.connConfigFn != nil {
-			conn = s.connConfigFn(conn)
-		}
-		s.conn = conn
+		s.stream.WithConn(conn, s.connConfigFn)
 	})
 	if err != nil {
 		return rv, err
 	}
-	if err = s.conn.ReadJSON(&msg); err != nil {
+	if err = s.stream.RecvMsg(&msg); err != nil {
 		return rv, err
 	}
 	if msg == nil {
@@ -1919,7 +1792,7 @@ var StreamingPayloadUserTypeArrayClientStreamSendCode = `// Send streams instanc
 // "StreamingPayloadUserTypeArrayMethod" endpoint websocket connection.
 func (s *StreamingPayloadUserTypeArrayMethodClientStream) Send(v []*streamingpayloadusertypearrayservice.RequestType) error {
 	body := NewRequestType(v)
-	return s.conn.WriteJSON(body)
+	return s.stream.SendMsg(body)
 }
 `
 
@@ -1932,17 +1805,15 @@ func (s *StreamingPayloadUserTypeArrayMethodClientStream) CloseAndRecv() (string
 		body string
 		err  error
 	)
-	defer s.conn.Close()
+	defer s.stream.Close()
 	// Send a nil payload to the server implying end of message
-	if err = s.conn.WriteJSON(nil); err != nil {
+	if err = s.stream.SendMsg(nil); err != nil {
 		return rv, err
 	}
-	err = s.conn.ReadJSON(&body)
-	if websocket.IsCloseError(err, websocket.CloseNormalClosure) {
-		s.conn.Close()
-		return rv, io.EOF
-	}
-	if err != nil {
+	if err = s.stream.RecvMsg(&body); err != nil {
+		if err == io.EOF {
+			s.stream.Close()
+		}
 		return rv, err
 	}
 	return body, nil
@@ -1953,9 +1824,9 @@ var StreamingPayloadUserTypeMapServerStreamSendCode = `// SendAndClose streams i
 // "StreamingPayloadUserTypeMapMethod" endpoint websocket connection and closes
 // the connection.
 func (s *StreamingPayloadUserTypeMapMethodServerStream) SendAndClose(v []string) error {
-	defer s.conn.Close()
+	defer s.stream.Close()
 	res := v
-	return s.conn.WriteJSON(res)
+	return s.stream.SendMsg(res)
 }
 `
 
@@ -1977,15 +1848,12 @@ func (s *StreamingPayloadUserTypeMapMethodServerStream) Recv() (map[string]*stre
 		if err != nil {
 			return
 		}
-		if s.connConfigFn != nil {
-			conn = s.connConfigFn(conn)
-		}
-		s.conn = conn
+		s.stream.WithConn(conn, s.connConfigFn)
 	})
 	if err != nil {
 		return rv, err
 	}
-	if err = s.conn.ReadJSON(&msg); err != nil {
+	if err = s.stream.RecvMsg(&msg); err != nil {
 		return rv, err
 	}
 	if msg == nil {
@@ -2001,7 +1869,7 @@ var StreamingPayloadUserTypeMapClientStreamSendCode = `// Send streams instances
 // "StreamingPayloadUserTypeMapMethod" endpoint websocket connection.
 func (s *StreamingPayloadUserTypeMapMethodClientStream) Send(v map[string]*streamingpayloadusertypemapservice.RequestType) error {
 	body := NewMapStringRequestType(v)
-	return s.conn.WriteJSON(body)
+	return s.stream.SendMsg(body)
 }
 `
 
@@ -2014,17 +1882,15 @@ func (s *StreamingPayloadUserTypeMapMethodClientStream) CloseAndRecv() ([]string
 		body []string
 		err  error
 	)
-	defer s.conn.Close()
+	defer s.stream.Close()
 	// Send a nil payload to the server implying end of message
-	if err = s.conn.WriteJSON(nil); err != nil {
+	if err = s.stream.SendMsg(nil); err != nil {
 		return rv, err
 	}
-	err = s.conn.ReadJSON(&body)
-	if websocket.IsCloseError(err, websocket.CloseNormalClosure) {
-		s.conn.Close()
-		return rv, io.EOF
-	}
-	if err != nil {
+	if err = s.stream.RecvMsg(&body); err != nil {
+		if err == io.EOF {
+			s.stream.Close()
+		}
 		return rv, err
 	}
 	return body, nil
@@ -2042,6 +1908,7 @@ func NewBidirectionalStreamingMethodHandler(
 	eh func(context.Context, http.ResponseWriter, error),
 	up goahttp.Upgrader,
 	connConfigFn goahttp.ConnConfigureFunc,
+	stream goahttp.Streamer,
 ) http.Handler {
 	var (
 		decodeRequest = DecodeBidirectionalStreamingMethodRequest(mux, dec)
@@ -2061,6 +1928,7 @@ func NewBidirectionalStreamingMethodHandler(
 
 		v := &bidirectionalstreamingservice.BidirectionalStreamingMethodEndpointInput{
 			Stream: &BidirectionalStreamingMethodServerStream{
+				stream:       stream,
 				upgrader:     up,
 				connConfigFn: connConfigFn,
 				w:            w,
@@ -2096,17 +1964,14 @@ func (s *BidirectionalStreamingMethodServerStream) Send(v *bidirectionalstreamin
 		if err != nil {
 			return
 		}
-		if s.connConfigFn != nil {
-			conn = s.connConfigFn(conn)
-		}
-		s.conn = conn
+		s.stream.WithConn(conn, s.connConfigFn)
 	})
 	if err != nil {
 		return err
 	}
 	res := v
 	body := NewBidirectionalStreamingMethodResponseBody(res)
-	return s.conn.WriteJSON(body)
+	return s.stream.SendMsg(body)
 }
 `
 
@@ -2127,15 +1992,12 @@ func (s *BidirectionalStreamingMethodServerStream) Recv() (*bidirectionalstreami
 		if err != nil {
 			return
 		}
-		if s.connConfigFn != nil {
-			conn = s.connConfigFn(conn)
-		}
-		s.conn = conn
+		s.stream.WithConn(conn, s.connConfigFn)
 	})
 	if err != nil {
 		return rv, err
 	}
-	if err = s.conn.ReadJSON(&msg); err != nil {
+	if err = s.stream.RecvMsg(&msg); err != nil {
 		return rv, err
 	}
 	if msg == nil {
@@ -2159,22 +2021,12 @@ func (s *BidirectionalStreamingMethodServerStream) Close() error {
 		if err != nil {
 			return
 		}
-		if s.connConfigFn != nil {
-			conn = s.connConfigFn(conn)
-		}
-		s.conn = conn
+		s.stream.WithConn(conn, s.connConfigFn)
 	})
 	if err != nil {
 		return err
 	}
-	if err = s.conn.WriteControl(
-		websocket.CloseMessage,
-		websocket.FormatCloseMessage(websocket.CloseNormalClosure, "server closing connection"),
-		time.Now().Add(time.Second),
-	); err != nil {
-		return err
-	}
-	return s.conn.Close()
+	return s.stream.Close()
 }
 `
 
@@ -2195,17 +2047,16 @@ func (c *Client) BidirectionalStreamingMethod() goa.Endpoint {
 		if err != nil {
 			return nil, err
 		}
-		conn, resp, err := c.dialer.Dial(req.URL.String(), req.Header)
+		conn, resp, err := c.dialer.DialContext(ctx, req.URL.String(), req.Header)
 		if err != nil {
 			if resp != nil {
 				return decodeResponse(resp)
 			}
 			return nil, goahttp.ErrRequestError("BidirectionalStreamingService", "BidirectionalStreamingMethod", err)
 		}
-		if c.connConfigFn != nil {
-			conn = c.connConfigFn(conn)
-		}
-		stream := &BidirectionalStreamingMethodClientStream{conn: conn}
+		c.stream.SetContext(ctx)
+		c.stream.WithConn(conn, c.connConfigFn)
+		stream := &BidirectionalStreamingMethodClientStream{stream: c.stream}
 		return stream, nil
 	}
 }
@@ -2215,7 +2066,7 @@ var BidirectionalStreamingClientStreamSendCode = `// Send streams instances of "
 // "BidirectionalStreamingMethod" endpoint websocket connection.
 func (s *BidirectionalStreamingMethodClientStream) Send(v *bidirectionalstreamingservice.Request) error {
 	body := NewBidirectionalStreamingMethodStreamingBody(v)
-	return s.conn.WriteJSON(body)
+	return s.stream.SendMsg(body)
 }
 `
 
@@ -2227,11 +2078,7 @@ func (s *BidirectionalStreamingMethodClientStream) Recv() (*bidirectionalstreami
 		body BidirectionalStreamingMethodResponseBody
 		err  error
 	)
-	err = s.conn.ReadJSON(&body)
-	if websocket.IsCloseError(err, websocket.CloseNormalClosure) {
-		return rv, io.EOF
-	}
-	if err != nil {
+	if err = s.stream.RecvMsg(&body); err != nil {
 		return rv, err
 	}
 	res := NewBidirectionalStreamingMethodUserTypeOK(&body)
@@ -2244,10 +2091,10 @@ var BidirectionalStreamingClientStreamCloseCode = `// Close closes the "Bidirect
 func (s *BidirectionalStreamingMethodClientStream) Close() error {
 	var err error
 	// Send a nil payload to the server implying client closing connection.
-	if err = s.conn.WriteJSON(nil); err != nil {
+	if err = s.stream.SendMsg(nil); err != nil {
 		return err
 	}
-	return s.conn.Close()
+	return s.stream.Close()
 }
 `
 
@@ -2263,6 +2110,7 @@ func NewBidirectionalStreamingNoPayloadMethodHandler(
 	eh func(context.Context, http.ResponseWriter, error),
 	up goahttp.Upgrader,
 	connConfigFn goahttp.ConnConfigureFunc,
+	stream goahttp.Streamer,
 ) http.Handler {
 	var (
 		encodeError = goahttp.ErrorEncoder(enc)
@@ -2274,6 +2122,7 @@ func NewBidirectionalStreamingNoPayloadMethodHandler(
 
 		v := &bidirectionalstreamingnopayloadservice.BidirectionalStreamingNoPayloadMethodEndpointInput{
 			Stream: &BidirectionalStreamingNoPayloadMethodServerStream{
+				stream:       stream,
 				upgrader:     up,
 				connConfigFn: connConfigFn,
 				w:            w,
@@ -2308,22 +2157,12 @@ func (s *BidirectionalStreamingNoPayloadMethodServerStream) Close() error {
 		if err != nil {
 			return
 		}
-		if s.connConfigFn != nil {
-			conn = s.connConfigFn(conn)
-		}
-		s.conn = conn
+		s.stream.WithConn(conn, s.connConfigFn)
 	})
 	if err != nil {
 		return err
 	}
-	if err = s.conn.WriteControl(
-		websocket.CloseMessage,
-		websocket.FormatCloseMessage(websocket.CloseNormalClosure, "server closing connection"),
-		time.Now().Add(time.Second),
-	); err != nil {
-		return err
-	}
-	return s.conn.Close()
+	return s.stream.Close()
 }
 `
 
@@ -2339,17 +2178,16 @@ func (c *Client) BidirectionalStreamingNoPayloadMethod() goa.Endpoint {
 		if err != nil {
 			return nil, err
 		}
-		conn, resp, err := c.dialer.Dial(req.URL.String(), req.Header)
+		conn, resp, err := c.dialer.DialContext(ctx, req.URL.String(), req.Header)
 		if err != nil {
 			if resp != nil {
 				return decodeResponse(resp)
 			}
 			return nil, goahttp.ErrRequestError("BidirectionalStreamingNoPayloadService", "BidirectionalStreamingNoPayloadMethod", err)
 		}
-		if c.connConfigFn != nil {
-			conn = c.connConfigFn(conn)
-		}
-		stream := &BidirectionalStreamingNoPayloadMethodClientStream{conn: conn}
+		c.stream.SetContext(ctx)
+		c.stream.WithConn(conn, c.connConfigFn)
+		stream := &BidirectionalStreamingNoPayloadMethodClientStream{stream: c.stream}
 		return stream, nil
 	}
 }
@@ -2359,7 +2197,7 @@ var BidirectionalStreamingNoPayloadClientStreamSendCode = `// Send streams insta
 // to the "BidirectionalStreamingNoPayloadMethod" endpoint websocket connection.
 func (s *BidirectionalStreamingNoPayloadMethodClientStream) Send(v *bidirectionalstreamingnopayloadservice.Request) error {
 	body := NewBidirectionalStreamingNoPayloadMethodStreamingBody(v)
-	return s.conn.WriteJSON(body)
+	return s.stream.SendMsg(body)
 }
 `
 
@@ -2372,11 +2210,7 @@ func (s *BidirectionalStreamingNoPayloadMethodClientStream) Recv() (*bidirection
 		body BidirectionalStreamingNoPayloadMethodResponseBody
 		err  error
 	)
-	err = s.conn.ReadJSON(&body)
-	if websocket.IsCloseError(err, websocket.CloseNormalClosure) {
-		return rv, io.EOF
-	}
-	if err != nil {
+	if err = s.stream.RecvMsg(&body); err != nil {
 		return rv, err
 	}
 	res := NewBidirectionalStreamingNoPayloadMethodUserTypeOK(&body)
@@ -2389,10 +2223,10 @@ var BidirectionalStreamingNoPayloadClientStreamCloseCode = `// Close closes the 
 func (s *BidirectionalStreamingNoPayloadMethodClientStream) Close() error {
 	var err error
 	// Send a nil payload to the server implying client closing connection.
-	if err = s.conn.WriteJSON(nil); err != nil {
+	if err = s.stream.SendMsg(nil); err != nil {
 		return err
 	}
-	return s.conn.Close()
+	return s.stream.Close()
 }
 `
 
@@ -2412,10 +2246,7 @@ func (s *BidirectionalStreamingResultWithViewsMethodServerStream) Send(v *bidire
 		if err != nil {
 			return
 		}
-		if s.connConfigFn != nil {
-			conn = s.connConfigFn(conn)
-		}
-		s.conn = conn
+		s.stream.WithConn(conn, s.connConfigFn)
 	})
 	if err != nil {
 		return err
@@ -2430,7 +2261,7 @@ func (s *BidirectionalStreamingResultWithViewsMethodServerStream) Send(v *bidire
 	case "default", "":
 		body = NewBidirectionalStreamingResultWithViewsMethodResponseBody(res.Projected)
 	}
-	return s.conn.WriteJSON(body)
+	return s.stream.SendMsg(body)
 }
 `
 
@@ -2451,15 +2282,12 @@ func (s *BidirectionalStreamingResultWithViewsMethodServerStream) Recv() (float3
 		if err != nil {
 			return
 		}
-		if s.connConfigFn != nil {
-			conn = s.connConfigFn(conn)
-		}
-		s.conn = conn
+		s.stream.WithConn(conn, s.connConfigFn)
 	})
 	if err != nil {
 		return rv, err
 	}
-	if err = s.conn.ReadJSON(&msg); err != nil {
+	if err = s.stream.RecvMsg(&msg); err != nil {
 		return rv, err
 	}
 	if msg == nil {
@@ -2483,22 +2311,12 @@ func (s *BidirectionalStreamingResultWithViewsMethodServerStream) Close() error 
 		if err != nil {
 			return
 		}
-		if s.connConfigFn != nil {
-			conn = s.connConfigFn(conn)
-		}
-		s.conn = conn
+		s.stream.WithConn(conn, s.connConfigFn)
 	})
 	if err != nil {
 		return err
 	}
-	if err = s.conn.WriteControl(
-		websocket.CloseMessage,
-		websocket.FormatCloseMessage(websocket.CloseNormalClosure, "server closing connection"),
-		time.Now().Add(time.Second),
-	); err != nil {
-		return err
-	}
-	return s.conn.Close()
+	return s.stream.Close()
 }
 `
 
@@ -2514,7 +2332,7 @@ func (s *BidirectionalStreamingResultWithViewsMethodServerStream) SetView(view s
 var BidirectionalStreamingResultWithViewsClientStreamSendCode = `// Send streams instances of "float32" to the
 // "BidirectionalStreamingResultWithViewsMethod" endpoint websocket connection.
 func (s *BidirectionalStreamingResultWithViewsMethodClientStream) Send(v float32) error {
-	return s.conn.WriteJSON(v)
+	return s.stream.SendMsg(v)
 }
 `
 
@@ -2527,11 +2345,7 @@ func (s *BidirectionalStreamingResultWithViewsMethodClientStream) Recv() (*bidir
 		body BidirectionalStreamingResultWithViewsMethodResponseBody
 		err  error
 	)
-	err = s.conn.ReadJSON(&body)
-	if websocket.IsCloseError(err, websocket.CloseNormalClosure) {
-		return rv, io.EOF
-	}
-	if err != nil {
+	if err = s.stream.RecvMsg(&body); err != nil {
 		return rv, err
 	}
 	res := NewBidirectionalStreamingResultWithViewsMethodUsertypeOK(&body)
@@ -2548,10 +2362,10 @@ var BidirectionalStreamingResultWithViewsClientStreamCloseCode = `// Close close
 func (s *BidirectionalStreamingResultWithViewsMethodClientStream) Close() error {
 	var err error
 	// Send a nil payload to the server implying client closing connection.
-	if err = s.conn.WriteJSON(nil); err != nil {
+	if err = s.stream.SendMsg(nil); err != nil {
 		return err
 	}
-	return s.conn.Close()
+	return s.stream.Close()
 }
 `
 
@@ -2577,17 +2391,14 @@ func (s *BidirectionalStreamingResultWithExplicitViewMethodServerStream) Send(v 
 		if err != nil {
 			return
 		}
-		if s.connConfigFn != nil {
-			conn = s.connConfigFn(conn)
-		}
-		s.conn = conn
+		s.stream.WithConn(conn, s.connConfigFn)
 	})
 	if err != nil {
 		return err
 	}
 	res := bidirectionalstreamingresultwithexplicitviewservice.NewViewedUsertype(v, "extended")
 	body := NewBidirectionalStreamingResultWithExplicitViewMethodResponseBodyExtended(res.Projected)
-	return s.conn.WriteJSON(body)
+	return s.stream.SendMsg(body)
 }
 `
 
@@ -2609,15 +2420,12 @@ func (s *BidirectionalStreamingResultWithExplicitViewMethodServerStream) Recv() 
 		if err != nil {
 			return
 		}
-		if s.connConfigFn != nil {
-			conn = s.connConfigFn(conn)
-		}
-		s.conn = conn
+		s.stream.WithConn(conn, s.connConfigFn)
 	})
 	if err != nil {
 		return rv, err
 	}
-	if err = s.conn.ReadJSON(&msg); err != nil {
+	if err = s.stream.RecvMsg(&msg); err != nil {
 		return rv, err
 	}
 	if msg == nil {
@@ -2632,7 +2440,7 @@ var BidirectionalStreamingResultWithExplicitViewClientStreamSendCode = `// Send 
 // "BidirectionalStreamingResultWithExplicitViewMethod" endpoint websocket
 // connection.
 func (s *BidirectionalStreamingResultWithExplicitViewMethodClientStream) Send(v float32) error {
-	return s.conn.WriteJSON(v)
+	return s.stream.SendMsg(v)
 }
 `
 
@@ -2646,11 +2454,7 @@ func (s *BidirectionalStreamingResultWithExplicitViewMethodClientStream) Recv() 
 		body BidirectionalStreamingResultWithExplicitViewMethodResponseBody
 		err  error
 	)
-	err = s.conn.ReadJSON(&body)
-	if websocket.IsCloseError(err, websocket.CloseNormalClosure) {
-		return rv, io.EOF
-	}
-	if err != nil {
+	if err = s.stream.RecvMsg(&body); err != nil {
 		return rv, err
 	}
 	res := NewBidirectionalStreamingResultWithExplicitViewMethodUsertypeOK(&body)
@@ -2679,10 +2483,7 @@ func (s *BidirectionalStreamingResultCollectionWithViewsMethodServerStream) Send
 		if err != nil {
 			return
 		}
-		if s.connConfigFn != nil {
-			conn = s.connConfigFn(conn)
-		}
-		s.conn = conn
+		s.stream.WithConn(conn, s.connConfigFn)
 	})
 	if err != nil {
 		return err
@@ -2697,7 +2498,7 @@ func (s *BidirectionalStreamingResultCollectionWithViewsMethodServerStream) Send
 	case "default", "":
 		body = NewUsertypeResponseCollection(res.Projected)
 	}
-	return s.conn.WriteJSON(body)
+	return s.stream.SendMsg(body)
 }
 `
 
@@ -2719,15 +2520,12 @@ func (s *BidirectionalStreamingResultCollectionWithViewsMethodServerStream) Recv
 		if err != nil {
 			return
 		}
-		if s.connConfigFn != nil {
-			conn = s.connConfigFn(conn)
-		}
-		s.conn = conn
+		s.stream.WithConn(conn, s.connConfigFn)
 	})
 	if err != nil {
 		return rv, err
 	}
-	if err = s.conn.ReadJSON(&msg); err != nil {
+	if err = s.stream.RecvMsg(&msg); err != nil {
 		return rv, err
 	}
 	if msg == nil {
@@ -2752,7 +2550,7 @@ var BidirectionalStreamingResultCollectionWithViewsClientStreamSendCode = `// Se
 // "BidirectionalStreamingResultCollectionWithViewsMethod" endpoint websocket
 // connection.
 func (s *BidirectionalStreamingResultCollectionWithViewsMethodClientStream) Send(v interface{}) error {
-	return s.conn.WriteJSON(v)
+	return s.stream.SendMsg(v)
 }
 `
 
@@ -2766,11 +2564,7 @@ func (s *BidirectionalStreamingResultCollectionWithViewsMethodClientStream) Recv
 		body BidirectionalStreamingResultCollectionWithViewsMethodResponseBody
 		err  error
 	)
-	err = s.conn.ReadJSON(&body)
-	if websocket.IsCloseError(err, websocket.CloseNormalClosure) {
-		return rv, io.EOF
-	}
-	if err != nil {
+	if err = s.stream.RecvMsg(&body); err != nil {
 		return rv, err
 	}
 	res := NewBidirectionalStreamingResultCollectionWithViewsMethodUsertypeCollectionOK(body)
@@ -2805,17 +2599,14 @@ func (s *BidirectionalStreamingResultCollectionWithExplicitViewMethodServerStrea
 		if err != nil {
 			return
 		}
-		if s.connConfigFn != nil {
-			conn = s.connConfigFn(conn)
-		}
-		s.conn = conn
+		s.stream.WithConn(conn, s.connConfigFn)
 	})
 	if err != nil {
 		return err
 	}
 	res := bidirectionalstreamingresultcollectionwithexplicitviewservice.NewViewedUsertypeCollection(v, "tiny")
 	body := NewUsertypeResponseTinyCollection(res.Projected)
-	return s.conn.WriteJSON(body)
+	return s.stream.SendMsg(body)
 }
 `
 
@@ -2837,15 +2628,12 @@ func (s *BidirectionalStreamingResultCollectionWithExplicitViewMethodServerStrea
 		if err != nil {
 			return
 		}
-		if s.connConfigFn != nil {
-			conn = s.connConfigFn(conn)
-		}
-		s.conn = conn
+		s.stream.WithConn(conn, s.connConfigFn)
 	})
 	if err != nil {
 		return rv, err
 	}
-	if err = s.conn.ReadJSON(&msg); err != nil {
+	if err = s.stream.RecvMsg(&msg); err != nil {
 		return rv, err
 	}
 	if msg == nil {
@@ -2860,7 +2648,7 @@ var BidirectionalStreamingResultCollectionWithExplicitViewClientStreamSendCode =
 // "BidirectionalStreamingResultCollectionWithExplicitViewMethod" endpoint
 // websocket connection.
 func (s *BidirectionalStreamingResultCollectionWithExplicitViewMethodClientStream) Send(v interface{}) error {
-	return s.conn.WriteJSON(v)
+	return s.stream.SendMsg(v)
 }
 `
 
@@ -2874,11 +2662,7 @@ func (s *BidirectionalStreamingResultCollectionWithExplicitViewMethodClientStrea
 		body BidirectionalStreamingResultCollectionWithExplicitViewMethodResponseBody
 		err  error
 	)
-	err = s.conn.ReadJSON(&body)
-	if websocket.IsCloseError(err, websocket.CloseNormalClosure) {
-		return rv, io.EOF
-	}
-	if err != nil {
+	if err = s.stream.RecvMsg(&body); err != nil {
 		return rv, err
 	}
 	res := NewBidirectionalStreamingResultCollectionWithExplicitViewMethodUsertypeCollectionOK(body)
@@ -2903,16 +2687,13 @@ func (s *BidirectionalStreamingPrimitiveMethodServerStream) Send(v string) error
 		if err != nil {
 			return
 		}
-		if s.connConfigFn != nil {
-			conn = s.connConfigFn(conn)
-		}
-		s.conn = conn
+		s.stream.WithConn(conn, s.connConfigFn)
 	})
 	if err != nil {
 		return err
 	}
 	res := v
-	return s.conn.WriteJSON(res)
+	return s.stream.SendMsg(res)
 }
 `
 
@@ -2933,15 +2714,12 @@ func (s *BidirectionalStreamingPrimitiveMethodServerStream) Recv() (string, erro
 		if err != nil {
 			return
 		}
-		if s.connConfigFn != nil {
-			conn = s.connConfigFn(conn)
-		}
-		s.conn = conn
+		s.stream.WithConn(conn, s.connConfigFn)
 	})
 	if err != nil {
 		return rv, err
 	}
-	if err = s.conn.ReadJSON(&msg); err != nil {
+	if err = s.stream.RecvMsg(&msg); err != nil {
 		return rv, err
 	}
 	if msg == nil {
@@ -2955,7 +2733,7 @@ func (s *BidirectionalStreamingPrimitiveMethodServerStream) Recv() (string, erro
 var BidirectionalStreamingPrimitiveClientStreamSendCode = `// Send streams instances of "string" to the
 // "BidirectionalStreamingPrimitiveMethod" endpoint websocket connection.
 func (s *BidirectionalStreamingPrimitiveMethodClientStream) Send(v string) error {
-	return s.conn.WriteJSON(v)
+	return s.stream.SendMsg(v)
 }
 `
 
@@ -2967,11 +2745,7 @@ func (s *BidirectionalStreamingPrimitiveMethodClientStream) Recv() (string, erro
 		body string
 		err  error
 	)
-	err = s.conn.ReadJSON(&body)
-	if websocket.IsCloseError(err, websocket.CloseNormalClosure) {
-		return rv, io.EOF
-	}
-	if err != nil {
+	if err = s.stream.RecvMsg(&body); err != nil {
 		return rv, err
 	}
 	return body, nil
@@ -2991,16 +2765,13 @@ func (s *BidirectionalStreamingPrimitiveArrayMethodServerStream) Send(v []string
 		if err != nil {
 			return
 		}
-		if s.connConfigFn != nil {
-			conn = s.connConfigFn(conn)
-		}
-		s.conn = conn
+		s.stream.WithConn(conn, s.connConfigFn)
 	})
 	if err != nil {
 		return err
 	}
 	res := v
-	return s.conn.WriteJSON(res)
+	return s.stream.SendMsg(res)
 }
 `
 
@@ -3021,15 +2792,12 @@ func (s *BidirectionalStreamingPrimitiveArrayMethodServerStream) Recv() ([]int32
 		if err != nil {
 			return
 		}
-		if s.connConfigFn != nil {
-			conn = s.connConfigFn(conn)
-		}
-		s.conn = conn
+		s.stream.WithConn(conn, s.connConfigFn)
 	})
 	if err != nil {
 		return rv, err
 	}
-	if err = s.conn.ReadJSON(&msg); err != nil {
+	if err = s.stream.RecvMsg(&msg); err != nil {
 		return rv, err
 	}
 	if msg == nil {
@@ -3043,7 +2811,7 @@ func (s *BidirectionalStreamingPrimitiveArrayMethodServerStream) Recv() ([]int32
 var BidirectionalStreamingPrimitiveArrayClientStreamSendCode = `// Send streams instances of "[]int32" to the
 // "BidirectionalStreamingPrimitiveArrayMethod" endpoint websocket connection.
 func (s *BidirectionalStreamingPrimitiveArrayMethodClientStream) Send(v []int32) error {
-	return s.conn.WriteJSON(v)
+	return s.stream.SendMsg(v)
 }
 `
 
@@ -3055,11 +2823,7 @@ func (s *BidirectionalStreamingPrimitiveArrayMethodClientStream) Recv() ([]strin
 		body []string
 		err  error
 	)
-	err = s.conn.ReadJSON(&body)
-	if websocket.IsCloseError(err, websocket.CloseNormalClosure) {
-		return rv, io.EOF
-	}
-	if err != nil {
+	if err = s.stream.RecvMsg(&body); err != nil {
 		return rv, err
 	}
 	return body, nil
@@ -3079,16 +2843,13 @@ func (s *BidirectionalStreamingPrimitiveMapMethodServerStream) Send(v map[int]in
 		if err != nil {
 			return
 		}
-		if s.connConfigFn != nil {
-			conn = s.connConfigFn(conn)
-		}
-		s.conn = conn
+		s.stream.WithConn(conn, s.connConfigFn)
 	})
 	if err != nil {
 		return err
 	}
 	res := v
-	return s.conn.WriteJSON(res)
+	return s.stream.SendMsg(res)
 }
 `
 
@@ -3109,15 +2870,12 @@ func (s *BidirectionalStreamingPrimitiveMapMethodServerStream) Recv() (map[strin
 		if err != nil {
 			return
 		}
-		if s.connConfigFn != nil {
-			conn = s.connConfigFn(conn)
-		}
-		s.conn = conn
+		s.stream.WithConn(conn, s.connConfigFn)
 	})
 	if err != nil {
 		return rv, err
 	}
-	if err = s.conn.ReadJSON(&msg); err != nil {
+	if err = s.stream.RecvMsg(&msg); err != nil {
 		return rv, err
 	}
 	if msg == nil {
@@ -3131,7 +2889,7 @@ func (s *BidirectionalStreamingPrimitiveMapMethodServerStream) Recv() (map[strin
 var BidirectionalStreamingPrimitiveMapClientStreamSendCode = `// Send streams instances of "map[string]int32" to the
 // "BidirectionalStreamingPrimitiveMapMethod" endpoint websocket connection.
 func (s *BidirectionalStreamingPrimitiveMapMethodClientStream) Send(v map[string]int32) error {
-	return s.conn.WriteJSON(v)
+	return s.stream.SendMsg(v)
 }
 `
 
@@ -3143,11 +2901,7 @@ func (s *BidirectionalStreamingPrimitiveMapMethodClientStream) Recv() (map[int]i
 		body map[int]int
 		err  error
 	)
-	err = s.conn.ReadJSON(&body)
-	if websocket.IsCloseError(err, websocket.CloseNormalClosure) {
-		return rv, io.EOF
-	}
-	if err != nil {
+	if err = s.stream.RecvMsg(&body); err != nil {
 		return rv, err
 	}
 	return body, nil
@@ -3168,17 +2922,14 @@ func (s *BidirectionalStreamingUserTypeArrayMethodServerStream) Send(v []*bidire
 		if err != nil {
 			return
 		}
-		if s.connConfigFn != nil {
-			conn = s.connConfigFn(conn)
-		}
-		s.conn = conn
+		s.stream.WithConn(conn, s.connConfigFn)
 	})
 	if err != nil {
 		return err
 	}
 	res := v
 	body := NewResultTypeResponse(res)
-	return s.conn.WriteJSON(body)
+	return s.stream.SendMsg(body)
 }
 `
 
@@ -3200,15 +2951,12 @@ func (s *BidirectionalStreamingUserTypeArrayMethodServerStream) Recv() ([]*bidir
 		if err != nil {
 			return
 		}
-		if s.connConfigFn != nil {
-			conn = s.connConfigFn(conn)
-		}
-		s.conn = conn
+		s.stream.WithConn(conn, s.connConfigFn)
 	})
 	if err != nil {
 		return rv, err
 	}
-	if err = s.conn.ReadJSON(&msg); err != nil {
+	if err = s.stream.RecvMsg(&msg); err != nil {
 		return rv, err
 	}
 	if msg == nil {
@@ -3224,7 +2972,7 @@ var BidirectionalStreamingUserTypeArrayClientStreamSendCode = `// Send streams i
 // "BidirectionalStreamingUserTypeArrayMethod" endpoint websocket connection.
 func (s *BidirectionalStreamingUserTypeArrayMethodClientStream) Send(v []*bidirectionalstreamingusertypearrayservice.RequestType) error {
 	body := NewRequestType(v)
-	return s.conn.WriteJSON(body)
+	return s.stream.SendMsg(body)
 }
 `
 
@@ -3237,11 +2985,7 @@ func (s *BidirectionalStreamingUserTypeArrayMethodClientStream) Recv() ([]*bidir
 		body BidirectionalStreamingUserTypeArrayMethodResponseBody
 		err  error
 	)
-	err = s.conn.ReadJSON(&body)
-	if websocket.IsCloseError(err, websocket.CloseNormalClosure) {
-		return rv, io.EOF
-	}
-	if err != nil {
+	if err = s.stream.RecvMsg(&body); err != nil {
 		return rv, err
 	}
 	res := NewBidirectionalStreamingUserTypeArrayMethodResultTypeOK(body)
@@ -3263,17 +3007,14 @@ func (s *BidirectionalStreamingUserTypeMapMethodServerStream) Send(v map[string]
 		if err != nil {
 			return
 		}
-		if s.connConfigFn != nil {
-			conn = s.connConfigFn(conn)
-		}
-		s.conn = conn
+		s.stream.WithConn(conn, s.connConfigFn)
 	})
 	if err != nil {
 		return err
 	}
 	res := v
 	body := NewMapStringResultTypeResponse(res)
-	return s.conn.WriteJSON(body)
+	return s.stream.SendMsg(body)
 }
 `
 
@@ -3295,15 +3036,12 @@ func (s *BidirectionalStreamingUserTypeMapMethodServerStream) Recv() (map[string
 		if err != nil {
 			return
 		}
-		if s.connConfigFn != nil {
-			conn = s.connConfigFn(conn)
-		}
-		s.conn = conn
+		s.stream.WithConn(conn, s.connConfigFn)
 	})
 	if err != nil {
 		return rv, err
 	}
-	if err = s.conn.ReadJSON(&msg); err != nil {
+	if err = s.stream.RecvMsg(&msg); err != nil {
 		return rv, err
 	}
 	if msg == nil {
@@ -3319,7 +3057,7 @@ var BidirectionalStreamingUserTypeMapClientStreamSendCode = `// Send streams ins
 // "BidirectionalStreamingUserTypeMapMethod" endpoint websocket connection.
 func (s *BidirectionalStreamingUserTypeMapMethodClientStream) Send(v map[string]*bidirectionalstreamingusertypemapservice.RequestType) error {
 	body := NewMapStringRequestType(v)
-	return s.conn.WriteJSON(body)
+	return s.stream.SendMsg(body)
 }
 `
 
@@ -3332,11 +3070,7 @@ func (s *BidirectionalStreamingUserTypeMapMethodClientStream) Recv() (map[string
 		body BidirectionalStreamingUserTypeMapMethodResponseBody
 		err  error
 	)
-	err = s.conn.ReadJSON(&body)
-	if websocket.IsCloseError(err, websocket.CloseNormalClosure) {
-		return rv, io.EOF
-	}
-	if err != nil {
+	if err = s.stream.RecvMsg(&body); err != nil {
 		return rv, err
 	}
 	res := NewBidirectionalStreamingUserTypeMapMethodMapStringResultTypeOK(body)

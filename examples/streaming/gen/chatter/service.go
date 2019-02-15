@@ -11,6 +11,7 @@ package chattersvc
 import (
 	"context"
 
+	"goa.design/goa"
 	chattersvcviews "goa.design/goa/examples/streaming/gen/chatter/views"
 	"goa.design/goa/security"
 )
@@ -20,16 +21,16 @@ type Service interface {
 	// Creates a valid JWT token for auth to chat.
 	Login(context.Context, *LoginPayload) (res string, err error)
 	// Echoes the message sent by the client.
-	Echoer(context.Context, *EchoerPayload, EchoerServerStream) (err error)
+	Echoer(*EchoerPayload, EchoerServerStream) (err error)
 	// Listens to the messages sent by the client.
-	Listener(context.Context, *ListenerPayload, ListenerServerStream) (err error)
+	Listener(*ListenerPayload, ListenerServerStream) (err error)
 	// Summarizes the chat messages sent by the client.
-	Summary(context.Context, *SummaryPayload, SummaryServerStream) (err error)
+	Summary(*SummaryPayload, SummaryServerStream) (err error)
 	// Returns the chat messages sent to the server.
 	// The "view" return value must have one of the following views
 	//	- "tiny"
 	//	- "default"
-	History(context.Context, *HistoryPayload, HistoryServerStream) (err error)
+	History(*HistoryPayload, HistoryServerStream) (err error)
 }
 
 // Auther defines the authorization functions to be implemented by the service.
@@ -59,6 +60,7 @@ type EchoerServerStream interface {
 	Recv() (string, error)
 	// Close closes the stream.
 	Close() error
+	goa.Contextualizer
 }
 
 // EchoerClientStream is the interface a "echoer" endpoint client stream must
@@ -70,6 +72,7 @@ type EchoerClientStream interface {
 	Recv() (string, error)
 	// Close closes the stream.
 	Close() error
+	goa.Contextualizer
 }
 
 // ListenerServerStream is the interface a "listener" endpoint server stream
@@ -79,6 +82,7 @@ type ListenerServerStream interface {
 	Recv() (string, error)
 	// Close closes the stream.
 	Close() error
+	goa.Contextualizer
 }
 
 // ListenerClientStream is the interface a "listener" endpoint client stream
@@ -88,6 +92,7 @@ type ListenerClientStream interface {
 	Send(string) error
 	// Close closes the stream.
 	Close() error
+	goa.Contextualizer
 }
 
 // SummaryServerStream is the interface a "summary" endpoint server stream must
@@ -98,6 +103,7 @@ type SummaryServerStream interface {
 	SendAndClose(ChatSummaryCollection) error
 	// Recv reads instances of "string" from the stream.
 	Recv() (string, error)
+	goa.Contextualizer
 }
 
 // SummaryClientStream is the interface a "summary" endpoint client stream must
@@ -108,6 +114,7 @@ type SummaryClientStream interface {
 	// CloseAndRecv stops sending messages to the stream and reads instances of
 	// "ChatSummaryCollection" from the stream.
 	CloseAndRecv() (ChatSummaryCollection, error)
+	goa.Contextualizer
 }
 
 // HistoryServerStream is the interface a "history" endpoint server stream must
@@ -119,6 +126,7 @@ type HistoryServerStream interface {
 	Close() error
 	// SetView sets the view used to render the result before streaming.
 	SetView(view string)
+	goa.Contextualizer
 }
 
 // HistoryClientStream is the interface a "history" endpoint client stream must
@@ -126,6 +134,7 @@ type HistoryServerStream interface {
 type HistoryClientStream interface {
 	// Recv reads instances of "ChatSummary" from the stream.
 	Recv() (*ChatSummary, error)
+	goa.Contextualizer
 }
 
 // Credentials used to authenticate to retrieve JWT token

@@ -36,23 +36,27 @@ type ErrorNamer interface {
 // echoerServerStream implements the chattersvc.EchoerServerStream interface.
 type echoerServerStream struct {
 	stream chatterpb.Chatter_EchoerServer
+	ctx    context.Context
 }
 
 // listenerServerStream implements the chattersvc.ListenerServerStream
 // interface.
 type listenerServerStream struct {
 	stream chatterpb.Chatter_ListenerServer
+	ctx    context.Context
 }
 
 // summaryServerStream implements the chattersvc.SummaryServerStream interface.
 type summaryServerStream struct {
 	stream chatterpb.Chatter_SummaryServer
+	ctx    context.Context
 	view   string
 }
 
 // historyServerStream implements the chattersvc.HistoryServerStream interface.
 type historyServerStream struct {
 	stream chatterpb.Chatter_HistoryServer
+	ctx    context.Context
 	view   string
 }
 
@@ -120,7 +124,7 @@ func (s *Server) Echoer(stream chatterpb.Chatter_EchoerServer) error {
 		return goagrpc.EncodeError(err)
 	}
 	ep := &chattersvc.EchoerEndpointInput{
-		Stream:  &echoerServerStream{stream: stream},
+		Stream:  &echoerServerStream{ctx: ctx, stream: stream},
 		Payload: p.(*chattersvc.EchoerPayload),
 	}
 	err = s.EchoerH.Handle(ctx, ep)
@@ -166,7 +170,7 @@ func (s *Server) Listener(stream chatterpb.Chatter_ListenerServer) error {
 		return goagrpc.EncodeError(err)
 	}
 	ep := &chattersvc.ListenerEndpointInput{
-		Stream:  &listenerServerStream{stream: stream},
+		Stream:  &listenerServerStream{ctx: ctx, stream: stream},
 		Payload: p.(*chattersvc.ListenerPayload),
 	}
 	err = s.ListenerH.Handle(ctx, ep)
@@ -211,7 +215,7 @@ func (s *Server) Summary(stream chatterpb.Chatter_SummaryServer) error {
 		return goagrpc.EncodeError(err)
 	}
 	ep := &chattersvc.SummaryEndpointInput{
-		Stream:  &summaryServerStream{stream: stream},
+		Stream:  &summaryServerStream{ctx: ctx, stream: stream},
 		Payload: p.(*chattersvc.SummaryPayload),
 	}
 	err = s.SummaryH.Handle(ctx, ep)
@@ -256,7 +260,7 @@ func (s *Server) History(message *chatterpb.HistoryRequest, stream chatterpb.Cha
 		return goagrpc.EncodeError(err)
 	}
 	ep := &chattersvc.HistoryEndpointInput{
-		Stream:  &historyServerStream{stream: stream},
+		Stream:  &historyServerStream{ctx: ctx, stream: stream},
 		Payload: p.(*chattersvc.HistoryPayload),
 	}
 	err = s.HistoryH.Handle(ctx, ep)
@@ -297,6 +301,16 @@ func (s *echoerServerStream) Close() error {
 	return nil
 }
 
+// Context returns the stream context for "echoer" endpoint.
+func (s *echoerServerStream) Context() context.Context {
+	return s.ctx
+}
+
+// SetContext updates the stream context for "echoer" endpoint.
+func (s *echoerServerStream) SetContext(ctx context.Context) {
+	s.ctx = ctx
+}
+
 // Recv reads instances of "chatterpb.ListenerStreamingRequest" from the
 // "listener" endpoint gRPC stream.
 func (s *listenerServerStream) Recv() (string, error) {
@@ -311,6 +325,16 @@ func (s *listenerServerStream) Recv() (string, error) {
 func (s *listenerServerStream) Close() error {
 	// nothing to do here
 	return nil
+}
+
+// Context returns the stream context for "listener" endpoint.
+func (s *listenerServerStream) Context() context.Context {
+	return s.ctx
+}
+
+// SetContext updates the stream context for "listener" endpoint.
+func (s *listenerServerStream) SetContext(ctx context.Context) {
+	s.ctx = ctx
 }
 
 // SendAndClose streams instances of "chatterpb.ChatSummaryCollection" to the
@@ -332,6 +356,16 @@ func (s *summaryServerStream) Recv() (string, error) {
 	return NewSummaryStreamingRequest(v), nil
 }
 
+// Context returns the stream context for "summary" endpoint.
+func (s *summaryServerStream) Context() context.Context {
+	return s.ctx
+}
+
+// SetContext updates the stream context for "summary" endpoint.
+func (s *summaryServerStream) SetContext(ctx context.Context) {
+	s.ctx = ctx
+}
+
 // Send streams instances of "chatterpb.HistoryResponse" to the "history"
 // endpoint gRPC stream.
 func (s *historyServerStream) Send(res *chattersvc.ChatSummary) error {
@@ -348,4 +382,14 @@ func (s *historyServerStream) Close() error {
 // SetView sets the view.
 func (s *historyServerStream) SetView(view string) {
 	s.view = view
+}
+
+// Context returns the stream context for "history" endpoint.
+func (s *historyServerStream) Context() context.Context {
+	return s.ctx
+}
+
+// SetContext updates the stream context for "history" endpoint.
+func (s *historyServerStream) SetContext(ctx context.Context) {
+	s.ctx = ctx
 }

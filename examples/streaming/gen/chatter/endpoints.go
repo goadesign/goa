@@ -114,7 +114,8 @@ func NewEchoerEndpoint(s Service, authJWTFn security.AuthJWTFunc) goa.Endpoint {
 		if err != nil {
 			return nil, err
 		}
-		return nil, s.Echoer(ctx, ep.Payload, ep.Stream)
+		ep.Stream.SetContext(ctx)
+		return nil, s.Echoer(ep.Payload, ep.Stream)
 	}
 }
 
@@ -133,7 +134,8 @@ func NewListenerEndpoint(s Service, authJWTFn security.AuthJWTFunc) goa.Endpoint
 		if err != nil {
 			return nil, err
 		}
-		return nil, s.Listener(ctx, ep.Payload, ep.Stream)
+		ep.Stream.SetContext(ctx)
+		return nil, s.Listener(ep.Payload, ep.Stream)
 	}
 }
 
@@ -152,7 +154,8 @@ func NewSummaryEndpoint(s Service, authJWTFn security.AuthJWTFunc) goa.Endpoint 
 		if err != nil {
 			return nil, err
 		}
-		return nil, s.Summary(ctx, ep.Payload, ep.Stream)
+		ep.Stream.SetContext(ctx)
+		return nil, s.Summary(ep.Payload, ep.Stream)
 	}
 }
 
@@ -171,6 +174,7 @@ func NewHistoryEndpoint(s Service, authJWTFn security.AuthJWTFunc) goa.Endpoint 
 		if err != nil {
 			return nil, err
 		}
-		return nil, s.History(ctx, ep.Payload, ep.Stream)
+		ep.Stream.SetContext(ctx)
+		return nil, s.History(ep.Payload, ep.Stream)
 	}
 }

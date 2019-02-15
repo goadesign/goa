@@ -38,9 +38,13 @@ func TestStreaming(t *testing.T) {
 			{"server-stream-send", &testdata.ServerStreamingServerSendCode},
 			{"server-stream-close", &testdata.ServerStreamingServerCloseCode},
 			{"server-stream-set-view", nil},
+			{"server-stream-context", &testdata.ServerStreamingServerContextCode},
+			{"server-stream-set-context", &testdata.ServerStreamingServerSetContextCode},
 			{"client-stream-struct-type", &testdata.ServerStreamingClientStructCode},
 			{"client-stream-recv", &testdata.ServerStreamingClientRecvCode},
 			{"client-stream-close", &testdata.ServerStreamingClientCloseCode},
+			{"client-stream-context", &testdata.ServerStreamingClientContextCode},
+			{"client-stream-set-context", &testdata.ServerStreamingClientSetContextCode},
 		}},
 		{"server-streaming-result-with-views", testdata.ServerStreamingResultWithViewsDSL, []*sectionExpectation{
 			{"server-stream-struct-type", &testdata.ServerStreamingResultWithViewsServerStructCode},

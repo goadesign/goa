@@ -10,10 +10,8 @@ package client
 
 import (
 	"context"
-	"io"
 	"net/http"
 
-	"github.com/gorilla/websocket"
 	goa "goa.design/goa"
 	chattersvc "goa.design/goa/examples/streaming/gen/chatter"
 	chattersvcviews "goa.design/goa/examples/streaming/gen/chatter/views"
@@ -50,31 +48,32 @@ type Client struct {
 	decoder      func(*http.Response) goahttp.Decoder
 	dialer       goahttp.Dialer
 	connConfigFn goahttp.ConnConfigureFunc
+	stream       goahttp.Streamer
 }
 
 // echoerClientStream implements the chattersvc.EchoerClientStream interface.
 type echoerClientStream struct {
-	// conn is the underlying websocket connection.
-	conn *websocket.Conn
+	// stream is the HTTP stream interface.
+	stream goahttp.Streamer
 }
 
 // listenerClientStream implements the chattersvc.ListenerClientStream
 // interface.
 type listenerClientStream struct {
-	// conn is the underlying websocket connection.
-	conn *websocket.Conn
+	// stream is the HTTP stream interface.
+	stream goahttp.Streamer
 }
 
 // summaryClientStream implements the chattersvc.SummaryClientStream interface.
 type summaryClientStream struct {
-	// conn is the underlying websocket connection.
-	conn *websocket.Conn
+	// stream is the HTTP stream interface.
+	stream goahttp.Streamer
 }
 
 // historyClientStream implements the chattersvc.HistoryClientStream interface.
 type historyClientStream struct {
-	// conn is the underlying websocket connection.
-	conn *websocket.Conn
+	// stream is the HTTP stream interface.
+	stream goahttp.Streamer
 	// view is the view to render  result type before sending to the websocket
 	// connection.
 	view string
@@ -90,6 +89,7 @@ func NewClient(
 	restoreBody bool,
 	dialer goahttp.Dialer,
 	connConfigFn goahttp.ConnConfigureFunc,
+	stream goahttp.Streamer,
 ) *Client {
 	return &Client{
 		LoginDoer:           doer,
@@ -104,6 +104,7 @@ func NewClient(
 		encoder:             enc,
 		dialer:              dialer,
 		connConfigFn:        connConfigFn,
+		stream:              stream,
 	}
 }
 
@@ -148,17 +149,16 @@ func (c *Client) Echoer() goa.Endpoint {
 		if err != nil {
 			return nil, err
 		}
-		conn, resp, err := c.dialer.Dial(req.URL.String(), req.Header)
+		conn, resp, err := c.dialer.DialContext(ctx, req.URL.String(), req.Header)
 		if err != nil {
 			if resp != nil {
 				return decodeResponse(resp)
 			}
 			return nil, goahttp.ErrRequestError("chatter", "echoer", err)
 		}
-		if c.connConfigFn != nil {
-			conn = c.connConfigFn(conn)
-		}
-		stream := &echoerClientStream{conn: conn}
+		c.stream.SetContext(ctx)
+		c.stream.WithConn(conn, c.connConfigFn)
+		stream := &echoerClientStream{stream: c.stream}
 		return stream, nil
 	}
 }
@@ -171,11 +171,7 @@ func (s *echoerClientStream) Recv() (string, error) {
 		body string
 		err  error
 	)
-	err = s.conn.ReadJSON(&body)
-	if websocket.IsCloseError(err, websocket.CloseNormalClosure) {
-		return rv, io.EOF
-	}
-	if err != nil {
+	if err = s.stream.RecvMsg(&body); err != nil {
 		return rv, err
 	}
 	return body, nil
@@ -184,17 +180,27 @@ func (s *echoerClientStream) Recv() (string, error) {
 // Send streams instances of "string" to the "echoer" endpoint websocket
 // connection.
 func (s *echoerClientStream) Send(v string) error {
-	return s.conn.WriteJSON(v)
+	return s.stream.SendMsg(v)
 }
 
 // Close closes the "echoer" endpoint websocket connection.
 func (s *echoerClientStream) Close() error {
 	var err error
 	// Send a nil payload to the server implying client closing connection.
-	if err = s.conn.WriteJSON(nil); err != nil {
+	if err = s.stream.SendMsg(nil); err != nil {
 		return err
 	}
-	return s.conn.Close()
+	return s.stream.Close()
+}
+
+// Context returns the stream context for "echoer" endpoint.
+func (s *echoerClientStream) Context() context.Context {
+	return s.stream.Context()
+}
+
+// SetContext updates the stream context for "echoer" endpoint.
+func (s *echoerClientStream) SetContext(ctx context.Context) {
+	s.stream.SetContext(ctx)
 }
 
 // Listener returns an endpoint that makes HTTP requests to the chatter service
@@ -213,17 +219,16 @@ func (c *Client) Listener() goa.Endpoint {
 		if err != nil {
 			return nil, err
 		}
-		conn, resp, err := c.dialer.Dial(req.URL.String(), req.Header)
+		conn, resp, err := c.dialer.DialContext(ctx, req.URL.String(), req.Header)
 		if err != nil {
 			if resp != nil {
 				return decodeResponse(resp)
 			}
 			return nil, goahttp.ErrRequestError("chatter", "listener", err)
 		}
-		if c.connConfigFn != nil {
-			conn = c.connConfigFn(conn)
-		}
-		stream := &listenerClientStream{conn: conn}
+		c.stream.SetContext(ctx)
+		c.stream.WithConn(conn, c.connConfigFn)
+		stream := &listenerClientStream{stream: c.stream}
 		return stream, nil
 	}
 }
@@ -231,17 +236,27 @@ func (c *Client) Listener() goa.Endpoint {
 // Send streams instances of "string" to the "listener" endpoint websocket
 // connection.
 func (s *listenerClientStream) Send(v string) error {
-	return s.conn.WriteJSON(v)
+	return s.stream.SendMsg(v)
 }
 
 // Close closes the "listener" endpoint websocket connection.
 func (s *listenerClientStream) Close() error {
 	var err error
 	// Send a nil payload to the server implying client closing connection.
-	if err = s.conn.WriteJSON(nil); err != nil {
+	if err = s.stream.SendMsg(nil); err != nil {
 		return err
 	}
-	return s.conn.Close()
+	return s.stream.Close()
+}
+
+// Context returns the stream context for "listener" endpoint.
+func (s *listenerClientStream) Context() context.Context {
+	return s.stream.Context()
+}
+
+// SetContext updates the stream context for "listener" endpoint.
+func (s *listenerClientStream) SetContext(ctx context.Context) {
+	s.stream.SetContext(ctx)
 }
 
 // Summary returns an endpoint that makes HTTP requests to the chatter service
@@ -260,17 +275,16 @@ func (c *Client) Summary() goa.Endpoint {
 		if err != nil {
 			return nil, err
 		}
-		conn, resp, err := c.dialer.Dial(req.URL.String(), req.Header)
+		conn, resp, err := c.dialer.DialContext(ctx, req.URL.String(), req.Header)
 		if err != nil {
 			if resp != nil {
 				return decodeResponse(resp)
 			}
 			return nil, goahttp.ErrRequestError("chatter", "summary", err)
 		}
-		if c.connConfigFn != nil {
-			conn = c.connConfigFn(conn)
-		}
-		stream := &summaryClientStream{conn: conn}
+		c.stream.SetContext(ctx)
+		c.stream.WithConn(conn, c.connConfigFn)
+		stream := &summaryClientStream{stream: c.stream}
 		return stream, nil
 	}
 }
@@ -284,17 +298,12 @@ func (s *summaryClientStream) CloseAndRecv() (chattersvc.ChatSummaryCollection, 
 		body SummaryResponseBody
 		err  error
 	)
-	defer s.conn.Close()
+	defer s.stream.Close()
 	// Send a nil payload to the server implying end of message
-	if err = s.conn.WriteJSON(nil); err != nil {
+	if err = s.stream.SendMsg(nil); err != nil {
 		return rv, err
 	}
-	err = s.conn.ReadJSON(&body)
-	if websocket.IsCloseError(err, websocket.CloseNormalClosure) {
-		s.conn.Close()
-		return rv, io.EOF
-	}
-	if err != nil {
+	if err = s.stream.RecvMsg(&body); err != nil {
 		return rv, err
 	}
 	res := NewSummaryChatSummaryCollectionOK(body)
@@ -308,7 +317,17 @@ func (s *summaryClientStream) CloseAndRecv() (chattersvc.ChatSummaryCollection, 
 // Send streams instances of "string" to the "summary" endpoint websocket
 // connection.
 func (s *summaryClientStream) Send(v string) error {
-	return s.conn.WriteJSON(v)
+	return s.stream.SendMsg(v)
+}
+
+// Context returns the stream context for "summary" endpoint.
+func (s *summaryClientStream) Context() context.Context {
+	return s.stream.Context()
+}
+
+// SetContext updates the stream context for "summary" endpoint.
+func (s *summaryClientStream) SetContext(ctx context.Context) {
+	s.stream.SetContext(ctx)
 }
 
 // History returns an endpoint that makes HTTP requests to the chatter service
@@ -327,17 +346,16 @@ func (c *Client) History() goa.Endpoint {
 		if err != nil {
 			return nil, err
 		}
-		conn, resp, err := c.dialer.Dial(req.URL.String(), req.Header)
+		conn, resp, err := c.dialer.DialContext(ctx, req.URL.String(), req.Header)
 		if err != nil {
 			if resp != nil {
 				return decodeResponse(resp)
 			}
 			return nil, goahttp.ErrRequestError("chatter", "history", err)
 		}
-		if c.connConfigFn != nil {
-			conn = c.connConfigFn(conn)
-		}
-		stream := &historyClientStream{conn: conn}
+		c.stream.SetContext(ctx)
+		c.stream.WithConn(conn, c.connConfigFn)
+		stream := &historyClientStream{stream: c.stream}
 		view := resp.Header.Get("goa-view")
 		stream.SetView(view)
 		return stream, nil
@@ -352,12 +370,7 @@ func (s *historyClientStream) Recv() (*chattersvc.ChatSummary, error) {
 		body HistoryResponseBody
 		err  error
 	)
-	err = s.conn.ReadJSON(&body)
-	if websocket.IsCloseError(err, websocket.CloseNormalClosure) {
-		s.conn.Close()
-		return rv, io.EOF
-	}
-	if err != nil {
+	if err = s.stream.RecvMsg(&body); err != nil {
 		return rv, err
 	}
 	res := NewHistoryChatSummaryOK(&body)
@@ -372,4 +385,14 @@ func (s *historyClientStream) Recv() (*chattersvc.ChatSummary, error) {
 // endpoint websocket connection.
 func (s *historyClientStream) SetView(view string) {
 	s.view = view
+}
+
+// Context returns the stream context for "history" endpoint.
+func (s *historyClientStream) Context() context.Context {
+	return s.stream.Context()
+}
+
+// SetContext updates the stream context for "history" endpoint.
+func (s *historyClientStream) SetContext(ctx context.Context) {
+	s.stream.SetContext(ctx)
 }

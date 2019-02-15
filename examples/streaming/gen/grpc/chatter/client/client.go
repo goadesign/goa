@@ -28,23 +28,27 @@ type Client struct {
 // echoerClientStream implements the chattersvc.EchoerClientStream interface.
 type echoerClientStream struct {
 	stream chatterpb.Chatter_EchoerClient
+	ctx    context.Context
 }
 
 // listenerClientStream implements the chattersvc.ListenerClientStream
 // interface.
 type listenerClientStream struct {
 	stream chatterpb.Chatter_ListenerClient
+	ctx    context.Context
 }
 
 // summaryClientStream implements the chattersvc.SummaryClientStream interface.
 type summaryClientStream struct {
 	stream chatterpb.Chatter_SummaryClient
+	ctx    context.Context
 	view   string
 }
 
 // historyClientStream implements the chattersvc.HistoryClientStream interface.
 type historyClientStream struct {
 	stream chatterpb.Chatter_HistoryClient
+	ctx    context.Context
 	view   string
 }
 
@@ -154,6 +158,16 @@ func (s *echoerClientStream) Close() error {
 	return nil
 }
 
+// Context returns the stream context for "echoer" endpoint.
+func (s *echoerClientStream) Context() context.Context {
+	return s.ctx
+}
+
+// SetContext updates the stream context for "echoer" endpoint.
+func (s *echoerClientStream) SetContext(ctx context.Context) {
+	s.ctx = ctx
+}
+
 // Send streams instances of "chatterpb.ListenerStreamingRequest" to the
 // "listener" endpoint gRPC stream.
 func (s *listenerClientStream) Send(res string) error {
@@ -164,6 +178,16 @@ func (s *listenerClientStream) Send(res string) error {
 func (s *listenerClientStream) Close() error {
 	// nothing to do here
 	return nil
+}
+
+// Context returns the stream context for "listener" endpoint.
+func (s *listenerClientStream) Context() context.Context {
+	return s.ctx
+}
+
+// SetContext updates the stream context for "listener" endpoint.
+func (s *listenerClientStream) SetContext(ctx context.Context) {
+	s.ctx = ctx
 }
 
 // CloseAndRecv reads instances of "chatterpb.ChatSummaryCollection" from the
@@ -184,6 +208,16 @@ func (s *summaryClientStream) CloseAndRecv() (chattersvc.ChatSummaryCollection, 
 func (s *summaryClientStream) Send(res string) error {
 	v := NewSummaryStreamingRequest(res)
 	return s.stream.Send(v)
+}
+
+// Context returns the stream context for "summary" endpoint.
+func (s *summaryClientStream) Context() context.Context {
+	return s.ctx
+}
+
+// SetContext updates the stream context for "summary" endpoint.
+func (s *summaryClientStream) SetContext(ctx context.Context) {
+	s.ctx = ctx
 }
 
 // Recv reads instances of "chatterpb.HistoryResponse" from the "history"
@@ -207,4 +241,14 @@ func (s *historyClientStream) Close() error {
 // SetView sets the view.
 func (s *historyClientStream) SetView(view string) {
 	s.view = view
+}
+
+// Context returns the stream context for "history" endpoint.
+func (s *historyClientStream) Context() context.Context {
+	return s.ctx
+}
+
+// SetContext updates the stream context for "history" endpoint.
+func (s *historyClientStream) SetContext(ctx context.Context) {
+	s.ctx = ctx
 }

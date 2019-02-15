@@ -102,6 +102,16 @@ func serverFile(genpkg string, svc *expr.GRPCServiceExpr) *codegen.File {
 						Data:   e.ServerStream,
 					})
 				}
+				sections = append(sections, &codegen.SectionTemplate{
+					Name:   "server-stream-context",
+					Source: streamContextT,
+					Data:   e.ServerStream,
+				})
+				sections = append(sections, &codegen.SectionTemplate{
+					Name:   "server-stream-set-context",
+					Source: streamSetContextT,
+					Data:   e.ServerStream,
+				})
 			}
 		}
 	}
@@ -205,18 +215,6 @@ type ErrorNamer interface {
 }
 `
 
-// streamStructTypeT renders the server and client struct types that
-// implements the client and server service stream interfaces.
-// input: StreamData
-const streamStructTypeT = `{{ printf "%s implements the %s interface." .VarName .ServiceInterface | comment }}
-type {{ .VarName }} struct {
-	stream {{ .Interface }}
-{{- if .Endpoint.Method.ViewedResult }}
-	view string
-{{- end }}
-}
-`
-
 // input: ServiceData
 const serverInitT = `{{ printf "%s instantiates the server struct with the %s service endpoints." .ServerInit .Service.Name | comment }}
 func {{ .ServerInit }}(e *{{ .Service.PkgName }}.Endpoints{{ if .HasUnaryEndpoint }}, uh goagrpc.UnaryHandler{{ end }}{{ if .HasStreamingEndpoint }}, sh goagrpc.StreamHandler{{ end }}) *{{ .ServerStruct }} {
@@ -254,7 +252,7 @@ func (s *{{ .ServerStruct }}) {{ .Method.VarName }}(
 	p, err := s.{{ .Method.VarName }}H.Decode(ctx, {{ if .Method.StreamingPayload }}nil{{ else }}message{{ end }})
 	{{- template "handle_error" . }}
 	ep := &{{ .ServicePkgName }}.{{ .Method.VarName }}EndpointInput{
-		Stream: &{{ .ServerStream.VarName }}{stream: stream},
+		Stream: &{{ .ServerStream.VarName }}{ctx: ctx, stream: stream},
 	{{- if .PayloadRef }}
 		Payload: p.({{ .PayloadRef }}),
 	{{- end }}

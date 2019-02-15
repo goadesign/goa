@@ -391,7 +391,7 @@ func errorHandler(logger *log.Logger) func(context.Context, http.ResponseWriter,
 }
 `
 
-	ExampleCLICode = `func doHTTP(scheme, host string, timeout int, debug bool) (goa.Endpoint, interface{}, error) {
+	ExampleCLICode = `func doHTTP(ctx context.Context, scheme, host string, timeout int, debug bool) (goa.Endpoint, interface{}, error) {
 	var (
 		doer goahttp.Doer
 	)
@@ -410,6 +410,48 @@ func errorHandler(logger *log.Logger) func(context.Context, http.ResponseWriter,
 		goahttp.RequestEncoder,
 		goahttp.ResponseDecoder,
 		debug,
+	)
+}
+func httpUsageCommands() string {
+	return cli.UsageCommands()
+}
+
+func httpUsageExamples() string {
+	return cli.UsageExamples()
+}
+`
+
+	StreamingExampleCLICode = `func doHTTP(ctx context.Context, scheme, host string, timeout int, debug bool) (goa.Endpoint, interface{}, error) {
+	var (
+		doer goahttp.Doer
+	)
+	{
+		doer = &http.Client{Timeout: time.Duration(timeout) * time.Second}
+		if debug {
+			doer = goahttp.NewDebugDoer(doer)
+			doer.(goahttp.DebugDoer).Fprint(os.Stderr)
+		}
+	}
+
+	var (
+		dialer       *websocket.Dialer
+		connConfigFn goahttp.ConnConfigureFunc
+		stream       *goahttp.ClientStream
+	)
+	{
+		dialer = websocket.DefaultDialer
+		stream = goahttp.NewClientStream(ctx)
+	}
+	return cli.ParseEndpoint(
+		scheme,
+		host,
+		doer,
+		goahttp.RequestEncoder,
+		goahttp.ResponseDecoder,
+		debug,
+		dialer,
+		connConfigFn,
+		stream,
 	)
 }
 func httpUsageCommands() string {

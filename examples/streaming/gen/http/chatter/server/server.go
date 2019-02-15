@@ -13,7 +13,6 @@ import (
 	"io"
 	"net/http"
 	"sync"
-	"time"
 
 	"github.com/gorilla/websocket"
 	goa "goa.design/goa"
@@ -59,8 +58,8 @@ type echoerServerStream struct {
 	w http.ResponseWriter
 	// r is the HTTP request.
 	r *http.Request
-	// conn is the underlying websocket connection.
-	conn *websocket.Conn
+	// stream is the HTTP stream interface.
+	stream goahttp.Streamer
 }
 
 // listenerServerStream implements the chattersvc.ListenerServerStream
@@ -75,8 +74,8 @@ type listenerServerStream struct {
 	w http.ResponseWriter
 	// r is the HTTP request.
 	r *http.Request
-	// conn is the underlying websocket connection.
-	conn *websocket.Conn
+	// stream is the HTTP stream interface.
+	stream goahttp.Streamer
 }
 
 // summaryServerStream implements the chattersvc.SummaryServerStream interface.
@@ -90,8 +89,8 @@ type summaryServerStream struct {
 	w http.ResponseWriter
 	// r is the HTTP request.
 	r *http.Request
-	// conn is the underlying websocket connection.
-	conn *websocket.Conn
+	// stream is the HTTP stream interface.
+	stream goahttp.Streamer
 }
 
 // historyServerStream implements the chattersvc.HistoryServerStream interface.
@@ -105,8 +104,8 @@ type historyServerStream struct {
 	w http.ResponseWriter
 	// r is the HTTP request.
 	r *http.Request
-	// conn is the underlying websocket connection.
-	conn *websocket.Conn
+	// stream is the HTTP stream interface.
+	stream goahttp.Streamer
 	// view is the view to render chattersvc.ChatSummary result type before sending
 	// to the websocket connection.
 	view string
@@ -121,6 +120,7 @@ func New(
 	eh func(context.Context, http.ResponseWriter, error),
 	up goahttp.Upgrader,
 	connConfigFn goahttp.ConnConfigureFunc,
+	stream goahttp.Streamer,
 ) *Server {
 	return &Server{
 		Mounts: []*MountPoint{
@@ -131,10 +131,10 @@ func New(
 			{"History", "GET", "/history"},
 		},
 		Login:    NewLoginHandler(e.Login, mux, dec, enc, eh),
-		Echoer:   NewEchoerHandler(e.Echoer, mux, dec, enc, eh, up, connConfigFn),
-		Listener: NewListenerHandler(e.Listener, mux, dec, enc, eh, up, connConfigFn),
-		Summary:  NewSummaryHandler(e.Summary, mux, dec, enc, eh, up, connConfigFn),
-		History:  NewHistoryHandler(e.History, mux, dec, enc, eh, up, connConfigFn),
+		Echoer:   NewEchoerHandler(e.Echoer, mux, dec, enc, eh, up, connConfigFn, stream),
+		Listener: NewListenerHandler(e.Listener, mux, dec, enc, eh, up, connConfigFn, stream),
+		Summary:  NewSummaryHandler(e.Summary, mux, dec, enc, eh, up, connConfigFn, stream),
+		History:  NewHistoryHandler(e.History, mux, dec, enc, eh, up, connConfigFn, stream),
 	}
 }
 
@@ -233,6 +233,7 @@ func NewEchoerHandler(
 	eh func(context.Context, http.ResponseWriter, error),
 	up goahttp.Upgrader,
 	connConfigFn goahttp.ConnConfigureFunc,
+	stream goahttp.Streamer,
 ) http.Handler {
 	var (
 		decodeRequest = DecodeEchoerRequest(mux, dec)
@@ -250,8 +251,10 @@ func NewEchoerHandler(
 			return
 		}
 
+		stream.SetContext(ctx)
 		v := &chattersvc.EchoerEndpointInput{
 			Stream: &echoerServerStream{
+				stream:       stream,
 				upgrader:     up,
 				connConfigFn: connConfigFn,
 				w:            w,
@@ -295,6 +298,7 @@ func NewListenerHandler(
 	eh func(context.Context, http.ResponseWriter, error),
 	up goahttp.Upgrader,
 	connConfigFn goahttp.ConnConfigureFunc,
+	stream goahttp.Streamer,
 ) http.Handler {
 	var (
 		decodeRequest = DecodeListenerRequest(mux, dec)
@@ -312,8 +316,10 @@ func NewListenerHandler(
 			return
 		}
 
+		stream.SetContext(ctx)
 		v := &chattersvc.ListenerEndpointInput{
 			Stream: &listenerServerStream{
+				stream:       stream,
 				upgrader:     up,
 				connConfigFn: connConfigFn,
 				w:            w,
@@ -357,6 +363,7 @@ func NewSummaryHandler(
 	eh func(context.Context, http.ResponseWriter, error),
 	up goahttp.Upgrader,
 	connConfigFn goahttp.ConnConfigureFunc,
+	stream goahttp.Streamer,
 ) http.Handler {
 	var (
 		decodeRequest = DecodeSummaryRequest(mux, dec)
@@ -374,8 +381,10 @@ func NewSummaryHandler(
 			return
 		}
 
+		stream.SetContext(ctx)
 		v := &chattersvc.SummaryEndpointInput{
 			Stream: &summaryServerStream{
+				stream:       stream,
 				upgrader:     up,
 				connConfigFn: connConfigFn,
 				w:            w,
@@ -419,6 +428,7 @@ func NewHistoryHandler(
 	eh func(context.Context, http.ResponseWriter, error),
 	up goahttp.Upgrader,
 	connConfigFn goahttp.ConnConfigureFunc,
+	stream goahttp.Streamer,
 ) http.Handler {
 	var (
 		decodeRequest = DecodeHistoryRequest(mux, dec)
@@ -436,8 +446,10 @@ func NewHistoryHandler(
 			return
 		}
 
+		stream.SetContext(ctx)
 		v := &chattersvc.HistoryEndpointInput{
 			Stream: &historyServerStream{
+				stream:       stream,
 				upgrader:     up,
 				connConfigFn: connConfigFn,
 				w:            w,
@@ -472,16 +484,13 @@ func (s *echoerServerStream) Send(v string) error {
 		if err != nil {
 			return
 		}
-		if s.connConfigFn != nil {
-			conn = s.connConfigFn(conn)
-		}
-		s.conn = conn
+		s.stream.WithConn(conn, s.connConfigFn)
 	})
 	if err != nil {
 		return err
 	}
 	res := v
-	return s.conn.WriteJSON(res)
+	return s.stream.SendMsg(res)
 }
 
 // Recv reads instances of "string" from the "echoer" endpoint websocket
@@ -501,15 +510,12 @@ func (s *echoerServerStream) Recv() (string, error) {
 		if err != nil {
 			return
 		}
-		if s.connConfigFn != nil {
-			conn = s.connConfigFn(conn)
-		}
-		s.conn = conn
+		s.stream.WithConn(conn, s.connConfigFn)
 	})
 	if err != nil {
 		return rv, err
 	}
-	if err = s.conn.ReadJSON(&msg); err != nil {
+	if err = s.stream.RecvMsg(&msg); err != nil {
 		return rv, err
 	}
 	if msg == nil {
@@ -531,22 +537,22 @@ func (s *echoerServerStream) Close() error {
 		if err != nil {
 			return
 		}
-		if s.connConfigFn != nil {
-			conn = s.connConfigFn(conn)
-		}
-		s.conn = conn
+		s.stream.WithConn(conn, s.connConfigFn)
 	})
 	if err != nil {
 		return err
 	}
-	if err = s.conn.WriteControl(
-		websocket.CloseMessage,
-		websocket.FormatCloseMessage(websocket.CloseNormalClosure, "server closing connection"),
-		time.Now().Add(time.Second),
-	); err != nil {
-		return err
-	}
-	return s.conn.Close()
+	return s.stream.Close()
+}
+
+// Context returns the stream context for "echoer" endpoint.
+func (s *echoerServerStream) Context() context.Context {
+	return s.stream.Context()
+}
+
+// SetContext updates the stream context for "echoer" endpoint.
+func (s *echoerServerStream) SetContext(ctx context.Context) {
+	s.stream.SetContext(ctx)
 }
 
 // Recv reads instances of "string" from the "listener" endpoint websocket
@@ -566,15 +572,12 @@ func (s *listenerServerStream) Recv() (string, error) {
 		if err != nil {
 			return
 		}
-		if s.connConfigFn != nil {
-			conn = s.connConfigFn(conn)
-		}
-		s.conn = conn
+		s.stream.WithConn(conn, s.connConfigFn)
 	})
 	if err != nil {
 		return rv, err
 	}
-	if err = s.conn.ReadJSON(&msg); err != nil {
+	if err = s.stream.RecvMsg(&msg); err != nil {
 		return rv, err
 	}
 	if msg == nil {
@@ -596,31 +599,31 @@ func (s *listenerServerStream) Close() error {
 		if err != nil {
 			return
 		}
-		if s.connConfigFn != nil {
-			conn = s.connConfigFn(conn)
-		}
-		s.conn = conn
+		s.stream.WithConn(conn, s.connConfigFn)
 	})
 	if err != nil {
 		return err
 	}
-	if err = s.conn.WriteControl(
-		websocket.CloseMessage,
-		websocket.FormatCloseMessage(websocket.CloseNormalClosure, "server closing connection"),
-		time.Now().Add(time.Second),
-	); err != nil {
-		return err
-	}
-	return s.conn.Close()
+	return s.stream.Close()
+}
+
+// Context returns the stream context for "listener" endpoint.
+func (s *listenerServerStream) Context() context.Context {
+	return s.stream.Context()
+}
+
+// SetContext updates the stream context for "listener" endpoint.
+func (s *listenerServerStream) SetContext(ctx context.Context) {
+	s.stream.SetContext(ctx)
 }
 
 // SendAndClose streams instances of "chattersvc.ChatSummaryCollection" to the
 // "summary" endpoint websocket connection and closes the connection.
 func (s *summaryServerStream) SendAndClose(v chattersvc.ChatSummaryCollection) error {
-	defer s.conn.Close()
+	defer s.stream.Close()
 	res := chattersvc.NewViewedChatSummaryCollection(v, "default")
 	body := NewChatSummaryResponseCollection(res.Projected)
-	return s.conn.WriteJSON(body)
+	return s.stream.SendMsg(body)
 }
 
 // Recv reads instances of "string" from the "summary" endpoint websocket
@@ -640,15 +643,12 @@ func (s *summaryServerStream) Recv() (string, error) {
 		if err != nil {
 			return
 		}
-		if s.connConfigFn != nil {
-			conn = s.connConfigFn(conn)
-		}
-		s.conn = conn
+		s.stream.WithConn(conn, s.connConfigFn)
 	})
 	if err != nil {
 		return rv, err
 	}
-	if err = s.conn.ReadJSON(&msg); err != nil {
+	if err = s.stream.RecvMsg(&msg); err != nil {
 		return rv, err
 	}
 	if msg == nil {
@@ -656,6 +656,16 @@ func (s *summaryServerStream) Recv() (string, error) {
 	}
 	body := *msg
 	return body, nil
+}
+
+// Context returns the stream context for "summary" endpoint.
+func (s *summaryServerStream) Context() context.Context {
+	return s.stream.Context()
+}
+
+// SetContext updates the stream context for "summary" endpoint.
+func (s *summaryServerStream) SetContext(ctx context.Context) {
+	s.stream.SetContext(ctx)
 }
 
 // Send streams instances of "chattersvc.ChatSummary" to the "history" endpoint
@@ -673,10 +683,7 @@ func (s *historyServerStream) Send(v *chattersvc.ChatSummary) error {
 		if err != nil {
 			return
 		}
-		if s.connConfigFn != nil {
-			conn = s.connConfigFn(conn)
-		}
-		s.conn = conn
+		s.stream.WithConn(conn, s.connConfigFn)
 	})
 	if err != nil {
 		return err
@@ -689,7 +696,7 @@ func (s *historyServerStream) Send(v *chattersvc.ChatSummary) error {
 	case "default", "":
 		body = NewHistoryResponseBody(res.Projected)
 	}
-	return s.conn.WriteJSON(body)
+	return s.stream.SendMsg(body)
 }
 
 // Close closes the "history" endpoint websocket connection.
@@ -704,26 +711,26 @@ func (s *historyServerStream) Close() error {
 		if err != nil {
 			return
 		}
-		if s.connConfigFn != nil {
-			conn = s.connConfigFn(conn)
-		}
-		s.conn = conn
+		s.stream.WithConn(conn, s.connConfigFn)
 	})
 	if err != nil {
 		return err
 	}
-	if err = s.conn.WriteControl(
-		websocket.CloseMessage,
-		websocket.FormatCloseMessage(websocket.CloseNormalClosure, "server closing connection"),
-		time.Now().Add(time.Second),
-	); err != nil {
-		return err
-	}
-	return s.conn.Close()
+	return s.stream.Close()
 }
 
 // SetView sets the view to render the chattersvc.ChatSummary type before
 // sending to the "history" endpoint websocket connection.
 func (s *historyServerStream) SetView(view string) {
 	s.view = view
+}
+
+// Context returns the stream context for "history" endpoint.
+func (s *historyServerStream) Context() context.Context {
+	return s.stream.Context()
+}
+
+// SetContext updates the stream context for "history" endpoint.
+func (s *historyServerStream) SetContext(ctx context.Context) {
+	s.stream.SetContext(ctx)
 }

@@ -2629,8 +2629,8 @@ type {{ .VarName }} struct {
 	{{ comment "r is the HTTP request." }}
 	r *http.Request
 {{- end }}
-	{{ comment "conn is the underlying websocket connection." }}
-	conn *websocket.Conn
+	{{ comment "stream is the HTTP stream interface." }}
+	stream goahttp.Streamer
 	{{- if .Endpoint.Method.ViewedResult }}
 		{{- if not .Endpoint.Method.ViewedResult.ViewName }}
 	{{ printf "view is the view to render %s result type before sending to the websocket connection." .SendTypeName | comment }}
@@ -2650,7 +2650,7 @@ func (s *{{ .VarName }}) {{ .SendName }}(v {{ .SendTypeRef }}) error {
 		var err error
 		{{- template "websocket_upgrade" (upgradeParams .Endpoint .SendName) }}
 	{{- else }} {{/* SendAndClose */}}
-		defer s.conn.Close()
+		defer	s.stream.Close()
 	{{- end }}
 	{{- if .Endpoint.Method.ViewedResult }}
 		{{- if .Endpoint.Method.ViewedResult.ViewName }}
@@ -2681,19 +2681,19 @@ func (s *{{ .VarName }}) {{ .SendName }}(v {{ .SendTypeRef }}) error {
 			{{- else }}
 				body := {{ (index .Response.ServerBody 0).Init.Name }}({{ range (index .Response.ServerBody 0).Init.ServerArgs }}{{ .Ref }}, {{ end }})
 			{{- end }}
-			return s.conn.WriteJSON(body)
+			return s.stream.SendMsg(body)
 		{{- else }}
-			return s.conn.WriteJSON(res)
+			return s.stream.SendMsg(res)
 		{{- end }}
 	{{- else }}
-		return s.conn.WriteJSON(res)
+		return s.stream.SendMsg(res)
 	{{- end }}
 {{- else }}
 	{{- if .Payload.Init }}
 		body := {{ .Payload.Init.Name }}(v)
-		return s.conn.WriteJSON(body)
+		return s.stream.SendMsg(body)
 	{{- else }}
-		return s.conn.WriteJSON(v)
+		return s.stream.SendMsg(v)
 	{{- end }}
 {{- end }}
 }
@@ -2715,7 +2715,7 @@ func (s *{{ .VarName }}) {{ .RecvName }}() ({{ .RecvTypeRef }}, error) {
 	)
 {{- if eq .Type "server" }}
 	{{- template "websocket_upgrade" (upgradeParams .Endpoint .RecvName) }}
-	if err = s.conn.ReadJSON(&msg); err != nil {
+	if err = s.stream.RecvMsg(&msg); err != nil {
 		return rv, err
 	}
 	if msg == nil {
@@ -2735,20 +2735,18 @@ func (s *{{ .VarName }}) {{ .RecvName }}() ({{ .RecvTypeRef }}, error) {
 	{{- end }}
 {{- else }} {{/* client side code */}}
 	{{- if eq .RecvName "CloseAndRecv" }}
-		defer s.conn.Close()
+		defer s.stream.Close()
 		{{ comment "Send a nil payload to the server implying end of message" }}
-		if err = s.conn.WriteJSON(nil); err != nil {
+		if err = s.stream.SendMsg(nil); err != nil {
 			return rv, err
 		}
 	{{- end }}
-	err = s.conn.ReadJSON(&body)
-	if websocket.IsCloseError(err, websocket.CloseNormalClosure) {
+	if err = s.stream.RecvMsg(&body); err != nil {
 		{{- if not .MustClose }}
-			s.conn.Close()
+			if err == io.EOF {
+				s.stream.Close()
+			}
 		{{- end }}
-		return rv, io.EOF
-	}
-	if err != nil {
 		return rv, err
 	}
 	{{- if and .Response.ClientBody.ValidateRef (not .Endpoint.Method.ViewedResult) }}
@@ -2803,10 +2801,7 @@ func (s *{{ .VarName }}) {{ .RecvName }}() ({{ .RecvTypeRef }}, error) {
 		if err != nil {
 			return
 		}
-		if s.connConfigFn != nil {
-			conn = s.connConfigFn(conn)
-		}
-		s.conn = conn
+		s.stream.WithConn(conn, s.connConfigFn)
 	})
 	if err != nil {
 		return {{ if eq .Function "Recv" }}rv, {{ end }}err
@@ -2822,20 +2817,13 @@ func (s *{{ .VarName }}) Close() error {
 	var err error
 {{- if eq .Type "server" }}
 	{{- template "websocket_upgrade" (upgradeParams .Endpoint "Close") }}
-	if err = s.conn.WriteControl(
-		websocket.CloseMessage,
-		websocket.FormatCloseMessage(websocket.CloseNormalClosure, "server closing connection"),
-		time.Now().Add(time.Second),
-	); err != nil {
-		return err
-	}
 {{- else }} {{/* client side code */}}
 	{{ comment "Send a nil payload to the server implying client closing connection." }}
-  if err = s.conn.WriteJSON(nil); err != nil {
+  if err = s.stream.SendMsg(nil); err != nil {
     return err
   }
 {{- end }}
-	return s.conn.Close()
+	return s.stream.Close()
 }
 ` + upgradeT
 
@@ -2845,6 +2833,24 @@ func (s *{{ .VarName }}) Close() error {
 	streamSetViewT = `{{ printf "SetView sets the view to render the %s type before sending to the %q endpoint websocket connection." .SendTypeName .Endpoint.Method.Name | comment }}
 func (s *{{ .VarName }}) SetView(view string) {
 	s.view = view
+}
+`
+
+	// streamContextT renders the function implementing the Context method in
+	// stream interface.
+	// input: StreamData
+	streamContextT = `{{ printf "Context returns the stream context for %q endpoint." .Endpoint.Method.Name | comment }}
+func (s *{{ .VarName }}) Context() context.Context {
+  return s.stream.Context()
+}
+`
+
+	// streamSetContextT renders the function implementing the SetContext method in
+	// stream interface.
+	// input: StreamData
+	streamSetContextT = `{{ printf "SetContext updates the stream context for %q endpoint." .Endpoint.Method.Name | comment }}
+func (s *{{ .VarName }}) SetContext(ctx context.Context) {
+  s.stream.SetContext(ctx)
 }
 `
 )

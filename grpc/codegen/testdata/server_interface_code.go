@@ -85,7 +85,7 @@ func (s *Server) MethodServerStreamingRPC(message *service_server_streamingrpcpb
 		return goagrpc.EncodeError(err)
 	}
 	ep := &serviceserverstreamingrpc.MethodServerStreamingRPCEndpointInput{
-		Stream:  &MethodServerStreamingRPCServerStream{stream: stream},
+		Stream:  &MethodServerStreamingRPCServerStream{ctx: ctx, stream: stream},
 		Payload: p.(int),
 	}
 	err = s.MethodServerStreamingRPCH.Handle(ctx, ep)
@@ -107,7 +107,7 @@ func (s *Server) MethodClientStreamingRPC(stream service_client_streamingrpcpb.S
 		return goagrpc.EncodeError(err)
 	}
 	ep := &serviceclientstreamingrpc.MethodClientStreamingRPCEndpointInput{
-		Stream: &MethodClientStreamingRPCServerStream{stream: stream},
+		Stream: &MethodClientStreamingRPCServerStream{ctx: ctx, stream: stream},
 	}
 	err = s.MethodClientStreamingRPCH.Handle(ctx, ep)
 	if err != nil {
@@ -130,7 +130,7 @@ func (s *Server) MethodClientStreamingRPCWithPayload(stream service_client_strea
 		return goagrpc.EncodeError(err)
 	}
 	ep := &serviceclientstreamingrpcwithpayload.MethodClientStreamingRPCWithPayloadEndpointInput{
-		Stream:  &MethodClientStreamingRPCWithPayloadServerStream{stream: stream},
+		Stream:  &MethodClientStreamingRPCWithPayloadServerStream{ctx: ctx, stream: stream},
 		Payload: p.(int),
 	}
 	err = s.MethodClientStreamingRPCWithPayloadH.Handle(ctx, ep)
@@ -154,7 +154,7 @@ func (s *Server) MethodBidirectionalStreamingRPC(stream service_bidirectional_st
 		return goagrpc.EncodeError(err)
 	}
 	ep := &servicebidirectionalstreamingrpc.MethodBidirectionalStreamingRPCEndpointInput{
-		Stream: &MethodBidirectionalStreamingRPCServerStream{stream: stream},
+		Stream: &MethodBidirectionalStreamingRPCServerStream{ctx: ctx, stream: stream},
 	}
 	err = s.MethodBidirectionalStreamingRPCH.Handle(ctx, ep)
 	if err != nil {
@@ -177,7 +177,7 @@ func (s *Server) MethodBidirectionalStreamingRPCWithPayload(stream service_bidir
 		return goagrpc.EncodeError(err)
 	}
 	ep := &servicebidirectionalstreamingrpcwithpayload.MethodBidirectionalStreamingRPCWithPayloadEndpointInput{
-		Stream:  &MethodBidirectionalStreamingRPCWithPayloadServerStream{stream: stream},
+		Stream:  &MethodBidirectionalStreamingRPCWithPayloadServerStream{ctx: ctx, stream: stream},
 		Payload: p.(*servicebidirectionalstreamingrpcwithpayload.Payload),
 	}
 	err = s.MethodBidirectionalStreamingRPCWithPayloadH.Handle(ctx, ep)
@@ -211,7 +211,7 @@ func (s *Server) MethodBidirectionalStreamingRPCWithErrors(stream service_bidire
 		return goagrpc.EncodeError(err)
 	}
 	ep := &servicebidirectionalstreamingrpcwitherrors.MethodBidirectionalStreamingRPCWithErrorsEndpointInput{
-		Stream: &MethodBidirectionalStreamingRPCWithErrorsServerStream{stream: stream},
+		Stream: &MethodBidirectionalStreamingRPCWithErrorsServerStream{ctx: ctx, stream: stream},
 	}
 	err = s.MethodBidirectionalStreamingRPCWithErrorsH.Handle(ctx, ep)
 	if err != nil {

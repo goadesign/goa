@@ -127,6 +127,8 @@ func client(genpkg string, svc *expr.HTTPServiceExpr) *codegen.File {
 					Data:   e.ClientStream,
 				})
 			}
+			sections = append(sections, &codegen.SectionTemplate{Name: "client-stream-context", Source: streamContextT, Data: e.ClientStream})
+			sections = append(sections, &codegen.SectionTemplate{Name: "client-stream-set-context", Source: streamSetContextT, Data: e.ClientStream})
 		}
 	}
 
@@ -257,6 +259,7 @@ type {{ .ClientStruct }} struct {
 	{{- if streamingEndpointExists . }}
 	dialer goahttp.Dialer
 	connConfigFn goahttp.ConnConfigureFunc
+	stream goahttp.Streamer
 	{{- end }}
 }
 `
@@ -273,6 +276,7 @@ func New{{ .ClientStruct }}(
 	{{- if streamingEndpointExists . }}
 	dialer goahttp.Dialer,
 	connConfigFn goahttp.ConnConfigureFunc,
+	stream goahttp.Streamer,
 	{{- end }}
 ) *{{ .ClientStruct }} {
 	return &{{ .ClientStruct }}{
@@ -287,6 +291,7 @@ func New{{ .ClientStruct }}(
 		{{- if streamingEndpointExists . }}
 		dialer: dialer,
 		connConfigFn: connConfigFn,
+		stream: stream,
 		{{- end }}
 	}
 }
@@ -318,17 +323,16 @@ func (c *{{ .ClientStruct }}) {{ .EndpointInit }}({{ if .MultipartRequestEncoder
 	{{- end }}
 
 	{{- if .ClientStream }}
-		conn, resp, err := c.dialer.Dial(req.URL.String(), req.Header)
+		conn, resp, err := c.dialer.DialContext(ctx, req.URL.String(), req.Header)
 		if err != nil {
 			if resp != nil {
 				return decodeResponse(resp)
 			}
 			return nil, goahttp.ErrRequestError("{{ .ServiceName }}", "{{ .Method.Name }}", err)
 		}
-		if c.connConfigFn != nil {
-			conn = c.connConfigFn(conn)
-		}
-		stream := &{{ .ClientStream.VarName }}{conn: conn}
+		c.stream.SetContext(ctx)
+		c.stream.WithConn(conn, c.connConfigFn)
+		stream := &{{ .ClientStream.VarName }}{stream: c.stream}
 		{{- if .Method.ViewedResult }}
 			{{- if not .Method.ViewedResult.ViewName }}
 		view := resp.Header.Get("goa-view")

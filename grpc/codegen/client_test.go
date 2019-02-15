@@ -91,6 +91,10 @@ func TestResponseDecoder(t *testing.T) {
 		{"result-with-metadata", testdata.MessageWithMetadataDSL, testdata.ResultWithMetadataResponseDecoderCode},
 		{"result-with-validate", testdata.MessageWithValidateDSL, testdata.ResultWithValidateResponseDecoderCode},
 		{"result-collection", testdata.MessageResultTypeCollectionDSL, testdata.ResultCollectionResponseDecoderCode},
+		{"server-streaming", testdata.ServerStreamingUserTypeDSL, testdata.ServerStreamingResponseDecoderCode},
+		{"server-streaming-result-with-views", testdata.ServerStreamingResultWithViewsDSL, testdata.ServerStreamingResultWithViewsResponseDecoderCode},
+		{"client-streaming", testdata.ClientStreamingRPCDSL, testdata.ClientStreamingResponseDecoderCode},
+		{"bidirectional-streaming", testdata.BidirectionalStreamingRPCDSL, testdata.BidirectionalStreamingResponseDecoderCode},
 	}
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {

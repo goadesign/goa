@@ -55,7 +55,7 @@ func handleHTTPServer(ctx context.Context, u *url.URL, chatterEndpoints *chatter
 	{
 		eh := errorHandler(logger)
 		upgrader := &websocket.Upgrader{}
-		chatterServer = chattersvcsvr.New(chatterEndpoints, mux, dec, enc, eh, upgrader, nil)
+		chatterServer = chattersvcsvr.New(chatterEndpoints, mux, dec, enc, eh, upgrader, nil, goahttp.NewServerStream(ctx))
 	}
 	// Configure the mux.
 	chattersvcsvr.Mount(mux, chatterServer)

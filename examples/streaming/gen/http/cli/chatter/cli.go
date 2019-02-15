@@ -44,6 +44,7 @@ func ParseEndpoint(
 	restore bool,
 	dialer goahttp.Dialer,
 	connConfigFn goahttp.ConnConfigureFunc,
+	stream goahttp.Streamer,
 ) (goa.Endpoint, interface{}, error) {
 	var (
 		chatterFlags = flag.NewFlagSet("chatter", flag.ContinueOnError)
@@ -144,7 +145,7 @@ func ParseEndpoint(
 	{
 		switch svcn {
 		case "chatter":
-			c := chattersvcc.NewClient(scheme, host, doer, enc, dec, restore, dialer, connConfigFn)
+			c := chattersvcc.NewClient(scheme, host, doer, enc, dec, restore, dialer, connConfigFn, stream)
 			switch epn {
 			case "login":
 				endpoint = c.Login()

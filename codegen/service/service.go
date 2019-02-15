@@ -199,7 +199,7 @@ type Service interface {
 		{{- end }}
 	{{- end }}
 	{{- if .ServerStream }}
-		{{ .VarName }}(context.Context{{ if .Payload }}, {{ .PayloadRef }}{{ end }}, {{ .ServerStream.Interface }}) (err error)
+		{{ .VarName }}({{ if .Payload }}{{ .PayloadRef }}, {{ end }}{{ .ServerStream.Interface }}) (err error)
 	{{- else }}
 		{{ .VarName }}(context.Context{{ if .Payload }}, {{ .PayloadRef }}{{ end }}) ({{ if .Result }}res {{ .ResultRef }}, {{ if .ViewedResult }}{{ if not .ViewedResult.ViewName }}view string, {{ end }}{{ end }}{{ end }}err error)
 	{{- end }}
@@ -251,6 +251,7 @@ type {{ .Stream.Interface }} interface {
 		{{ comment "SetView sets the view used to render the result before streaming." }}
 		SetView(view string)
 	{{- end }}
+	goa.Contextualizer
 }
 {{- end }}
 `

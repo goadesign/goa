@@ -1169,6 +1169,19 @@ func {{ .Name }}({{ .ArgName }} {{ .SrcRef }}) (err error) {
 }
 `
 
+// streamStructTypeT renders the server and client struct types that
+// implements the client and server service stream interfaces.
+// input: StreamData
+const streamStructTypeT = `{{ printf "%s implements the %s interface." .VarName .ServiceInterface | comment }}
+type {{ .VarName }} struct {
+  stream {{ .Interface }}
+	ctx context.Context
+{{- if .Endpoint.Method.ViewedResult }}
+  view string
+{{- end }}
+}
+`
+
 // streamSendT renders the function implementing the Send method in
 // stream interface.
 // input: StreamData
@@ -1217,10 +1230,28 @@ func (s *{{ .VarName }}) Close() error {
 `
 
 // streamSetViewT renders the function implementing the SetView method in
-// server stream interface.
+// stream interface.
 // input: StreamData
 const streamSetViewT = `{{ printf "SetView sets the view." | comment }}
 func (s *{{ .VarName }}) SetView(view string) {
 	s.view = view
+}
+`
+
+// streamContextT renders the function implementing the Context method in
+// stream interface.
+// input: StreamData
+const streamContextT = `{{ printf "Context returns the stream context for %q endpoint." .Endpoint.Method.Name | comment }}
+func (s *{{ .VarName }}) Context() context.Context {
+  return s.ctx
+}
+`
+
+// streamSetContextT renders the function implementing the SetContext method in
+// stream interface.
+// input: StreamData
+const streamSetContextT = `{{ printf "SetContext updates the stream context for %q endpoint." .Endpoint.Method.Name | comment }}
+func (s *{{ .VarName }}) SetContext(ctx context.Context) {
+  s.ctx = ctx
 }
 `

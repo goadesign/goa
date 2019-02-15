@@ -195,7 +195,8 @@ func (e *Endpoints) Use(m func(goa.Endpoint) goa.Endpoint) {
 func NewStreamingResultMethodEndpoint(s Service) goa.Endpoint {
 	return func(ctx context.Context, req interface{}) (interface{}, error) {
 		ep := req.(*StreamingResultMethodEndpointInput)
-		return nil, s.StreamingResultMethod(ctx, ep.Payload, ep.Stream)
+		ep.Stream.SetContext(ctx)
+		return nil, s.StreamingResultMethod(ep.Payload, ep.Stream)
 	}
 }
 `
@@ -234,7 +235,8 @@ func (e *Endpoints) Use(m func(goa.Endpoint) goa.Endpoint) {
 func NewStreamingResultNoPayloadMethodEndpoint(s Service) goa.Endpoint {
 	return func(ctx context.Context, req interface{}) (interface{}, error) {
 		ep := req.(*StreamingResultNoPayloadMethodEndpointInput)
-		return nil, s.StreamingResultNoPayloadMethod(ctx, ep.Stream)
+		ep.Stream.SetContext(ctx)
+		return nil, s.StreamingResultNoPayloadMethod(ep.Stream)
 	}
 }
 `
@@ -275,7 +277,8 @@ func (e *Endpoints) Use(m func(goa.Endpoint) goa.Endpoint) {
 func NewStreamingResultWithViewsMethodEndpoint(s Service) goa.Endpoint {
 	return func(ctx context.Context, req interface{}) (interface{}, error) {
 		ep := req.(*StreamingResultWithViewsMethodEndpointInput)
-		return nil, s.StreamingResultWithViewsMethod(ctx, ep.Payload, ep.Stream)
+		ep.Stream.SetContext(ctx)
+		return nil, s.StreamingResultWithViewsMethod(ep.Payload, ep.Stream)
 	}
 }
 `
@@ -315,7 +318,8 @@ func (e *Endpoints) Use(m func(goa.Endpoint) goa.Endpoint) {
 func NewStreamingPayloadMethodEndpoint(s Service) goa.Endpoint {
 	return func(ctx context.Context, req interface{}) (interface{}, error) {
 		ep := req.(*StreamingPayloadMethodEndpointInput)
-		return nil, s.StreamingPayloadMethod(ctx, ep.Payload, ep.Stream)
+		ep.Stream.SetContext(ctx)
+		return nil, s.StreamingPayloadMethod(ep.Payload, ep.Stream)
 	}
 }
 `
@@ -354,7 +358,8 @@ func (e *Endpoints) Use(m func(goa.Endpoint) goa.Endpoint) {
 func NewStreamingPayloadNoPayloadMethodEndpoint(s Service) goa.Endpoint {
 	return func(ctx context.Context, req interface{}) (interface{}, error) {
 		ep := req.(*StreamingPayloadNoPayloadMethodEndpointInput)
-		return nil, s.StreamingPayloadNoPayloadMethod(ctx, ep.Stream)
+		ep.Stream.SetContext(ctx)
+		return nil, s.StreamingPayloadNoPayloadMethod(ep.Stream)
 	}
 }
 `
@@ -393,7 +398,8 @@ func (e *Endpoints) Use(m func(goa.Endpoint) goa.Endpoint) {
 func NewStreamingPayloadNoResultMethodEndpoint(s Service) goa.Endpoint {
 	return func(ctx context.Context, req interface{}) (interface{}, error) {
 		ep := req.(*StreamingPayloadNoResultMethodEndpointInput)
-		return nil, s.StreamingPayloadNoResultMethod(ctx, ep.Stream)
+		ep.Stream.SetContext(ctx)
+		return nil, s.StreamingPayloadNoResultMethod(ep.Stream)
 	}
 }
 `
@@ -434,7 +440,8 @@ func (e *Endpoints) Use(m func(goa.Endpoint) goa.Endpoint) {
 func NewBidirectionalStreamingMethodEndpoint(s Service) goa.Endpoint {
 	return func(ctx context.Context, req interface{}) (interface{}, error) {
 		ep := req.(*BidirectionalStreamingMethodEndpointInput)
-		return nil, s.BidirectionalStreamingMethod(ctx, ep.Payload, ep.Stream)
+		ep.Stream.SetContext(ctx)
+		return nil, s.BidirectionalStreamingMethod(ep.Payload, ep.Stream)
 	}
 }
 `
@@ -474,7 +481,8 @@ func (e *Endpoints) Use(m func(goa.Endpoint) goa.Endpoint) {
 func NewBidirectionalStreamingNoPayloadMethodEndpoint(s Service) goa.Endpoint {
 	return func(ctx context.Context, req interface{}) (interface{}, error) {
 		ep := req.(*BidirectionalStreamingNoPayloadMethodEndpointInput)
-		return nil, s.BidirectionalStreamingNoPayloadMethod(ctx, ep.Stream)
+		ep.Stream.SetContext(ctx)
+		return nil, s.BidirectionalStreamingNoPayloadMethod(ep.Stream)
 	}
 }
 `

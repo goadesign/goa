@@ -168,12 +168,14 @@ const (
 		endpoint goa.Endpoint
 		payload interface{}
 		err error
+
+		ctx = context.Background()
 	)
 	{
 		switch scheme {
 	{{- range $t := .Server.Transports }}
 		case "{{ $t.Type }}", "{{ $t.Type }}s":
-			endpoint, payload, err = do{{ toUpper $t.Name }}(scheme, host, timeout, debug)
+			endpoint, payload, err = do{{ toUpper $t.Name }}(ctx, scheme, host, timeout, debug)
 	{{- end }}
 		default:
 			fmt.Fprintf(os.Stderr, "invalid scheme: %q (valid schemes: {{ join .Server.Schemes "|" }})", scheme)
@@ -191,7 +193,7 @@ const (
 `
 
 	cliMainEndT = `
-	data, err := endpoint(context.Background(), payload)
+	data, err := endpoint(ctx, payload)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err.Error())
 		os.Exit(1)

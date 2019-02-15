@@ -15,10 +15,18 @@ const (
 )
 
 type (
+	// Contextualizer defines the behavior of something in a context.
+	Contextualizer interface {
+		// Context returns the underlying context.
+		Context() context.Context
+		// SetContext updates the underlying context with the given context.
+		SetContext(context.Context)
+	}
+
+	// Endpoint exposes service methods to remote clients independently of the
+	// underlying transport.
+	Endpoint func(ctx context.Context, request interface{}) (response interface{}, err error)
+
 	// private type used to define context keys.
 	contextKey int
 )
-
-// Endpoint exposes service methods to remote clients independently of the
-// underlying transport.
-type Endpoint func(ctx context.Context, request interface{}) (response interface{}, err error)

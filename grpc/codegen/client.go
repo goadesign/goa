@@ -100,6 +100,16 @@ func client(genpkg string, svc *expr.GRPCServiceExpr) *codegen.File {
 						Data:   e.ClientStream,
 					})
 				}
+				sections = append(sections, &codegen.SectionTemplate{
+					Name:   "client-stream-context",
+					Source: streamContextT,
+					Data:   e.ClientStream,
+				})
+				sections = append(sections, &codegen.SectionTemplate{
+					Name:   "client-stream-set-context",
+					Source: streamSetContextT,
+					Data:   e.ClientStream,
+				})
 			}
 		}
 	}
@@ -261,6 +271,7 @@ func Decode{{ .Method.VarName }}Response(ctx context.Context, v interface{}, hdr
 {{- end }}
 {{- if .ServerStream }}
 	return &{{ .ClientStream.VarName }}{
+		ctx: ctx,
 		stream: v.({{ .ClientStream.Interface }}),
 	{{- if .ViewedResultRef }}
 		view: view,

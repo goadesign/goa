@@ -102,7 +102,7 @@ func needStreaming(data []*ServiceData) bool {
 }
 
 const (
-	httpCLIStartT = `func doHTTP(scheme, host string, timeout int, debug bool) (goa.Endpoint, interface{}, error) {
+	httpCLIStartT = `func doHTTP(ctx context.Context, scheme, host string, timeout int, debug bool) (goa.Endpoint, interface{}, error) {
 	var (
 		doer goahttp.Doer
 	)
@@ -120,9 +120,11 @@ const (
 	var (
     dialer *websocket.Dialer
 		connConfigFn goahttp.ConnConfigureFunc
+		stream *goahttp.ClientStream
   )
   {
     dialer = websocket.DefaultDialer
+		stream = goahttp.NewClientStream(ctx)
   }
 	{{- end }}
 `
@@ -138,6 +140,7 @@ const (
 		{{- if needStreaming .Services }}
 		dialer,
 		connConfigFn,
+		stream,
 		{{- end }}
 		{{- range .Services }}
 			{{- range .Endpoints }}

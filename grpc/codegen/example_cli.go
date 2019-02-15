@@ -77,7 +77,7 @@ func exampleCLI(genpkg string, root *expr.RootExpr, svr *expr.ServerExpr) *codeg
 }
 
 const (
-	grpcCLIDoT = `func doGRPC(scheme, host string, timeout int, debug bool) (goa.Endpoint, interface{}, error) {
+	grpcCLIDoT = `func doGRPC(ctx context.Context, scheme, host string, timeout int, debug bool) (goa.Endpoint, interface{}, error) {
 	conn, err := grpc.Dial(host, grpc.WithInsecure())
 	if err != nil {
     fmt.Fprintln(os.Stderr, fmt.Sprintf("could not connect to gRPC server at %s: %v", host, err))

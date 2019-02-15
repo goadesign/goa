@@ -29,7 +29,7 @@ func serverFile(genpkg string, svc *expr.HTTPServiceExpr) *codegen.File {
 	data := HTTPServices.Get(svc.Name())
 	title := fmt.Sprintf("%s HTTP server", svc.Name())
 	funcs := map[string]interface{}{
-		"join": func(ss []string, s string) string { return strings.Join(ss, s) },
+		"join":                    func(ss []string, s string) string { return strings.Join(ss, s) },
 		"streamingEndpointExists": streamingEndpointExists,
 		"upgradeParams":           upgradeParams,
 		"viewedServerBody":        viewedServerBody,
@@ -100,6 +100,8 @@ func serverFile(genpkg string, svc *expr.HTTPServiceExpr) *codegen.File {
 			if e.Method.ViewedResult != nil && e.Method.ViewedResult.ViewName == "" {
 				sections = append(sections, &codegen.SectionTemplate{Name: "server-stream-set-view", Source: streamSetViewT, Data: e.ServerStream})
 			}
+			sections = append(sections, &codegen.SectionTemplate{Name: "server-stream-context", Source: streamContextT, Data: e.ServerStream})
+			sections = append(sections, &codegen.SectionTemplate{Name: "server-stream-set-context", Source: streamSetContextT, Data: e.ServerStream})
 		}
 	}
 
@@ -301,6 +303,7 @@ func {{ .ServerInit }}(
 	{{- if streamingEndpointExists . }}
 	up goahttp.Upgrader,
 	connConfigFn goahttp.ConnConfigureFunc,
+	stream goahttp.Streamer,
 	{{- end }}
 	{{- range .Endpoints }}
 		{{- if .MultipartRequestDecoder }}
@@ -323,7 +326,7 @@ func {{ .ServerInit }}(
 			{{- end }}
 		},
 		{{- range .Endpoints }}
-		{{ .Method.VarName }}: {{ .HandlerInit }}(e.{{ .Method.VarName }}, mux, {{ if .MultipartRequestDecoder }}{{ .MultipartRequestDecoder.InitName }}(mux, {{ .MultipartRequestDecoder.VarName }}){{ else }}dec{{ end }}, enc, eh{{ if .ServerStream }}, up, connConfigFn{{ end }}),
+		{{ .Method.VarName }}: {{ .HandlerInit }}(e.{{ .Method.VarName }}, mux, {{ if .MultipartRequestDecoder }}{{ .MultipartRequestDecoder.InitName }}(mux, {{ .MultipartRequestDecoder.VarName }}){{ else }}dec{{ end }}, enc, eh{{ if .ServerStream }}, up, connConfigFn, stream{{ end }}),
 		{{- end }}
 	}
 }
@@ -412,6 +415,7 @@ func {{ .HandlerInit }}(
 	{{- if .ServerStream }}
 	up goahttp.Upgrader,
 	connConfigFn goahttp.ConnConfigureFunc,
+	stream goahttp.Streamer,
 	{{- end }}
 ) http.Handler {
 	var (
@@ -445,6 +449,7 @@ func {{ .HandlerInit }}(
 	{{ if .ServerStream }}
 		v := &{{ .ServicePkgName }}.{{ .Method.ServerStream.EndpointStruct }}{
 			Stream: &{{ .ServerStream.VarName }}{
+				stream: stream,
 				upgrader: up,
 				connConfigFn: connConfigFn,
 				w: w,

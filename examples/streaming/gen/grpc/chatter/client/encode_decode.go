@@ -74,6 +74,7 @@ func EncodeEchoerRequest(ctx context.Context, v interface{}, md *metadata.MD) (i
 // DecodeEchoerResponse decodes responses from the chatter echoer endpoint.
 func DecodeEchoerResponse(ctx context.Context, v interface{}, hdr, trlr metadata.MD) (interface{}, error) {
 	return &echoerClientStream{
+		ctx:    ctx,
 		stream: v.(chatterpb.Chatter_EchoerClient),
 	}, nil
 }
@@ -102,6 +103,7 @@ func EncodeListenerRequest(ctx context.Context, v interface{}, md *metadata.MD) 
 // DecodeListenerResponse decodes responses from the chatter listener endpoint.
 func DecodeListenerResponse(ctx context.Context, v interface{}, hdr, trlr metadata.MD) (interface{}, error) {
 	return &listenerClientStream{
+		ctx:    ctx,
 		stream: v.(chatterpb.Chatter_ListenerClient),
 	}, nil
 }
@@ -136,6 +138,7 @@ func DecodeSummaryResponse(ctx context.Context, v interface{}, hdr, trlr metadat
 		}
 	}
 	return &summaryClientStream{
+		ctx:    ctx,
 		stream: v.(chatterpb.Chatter_SummaryClient),
 		view:   view,
 	}, nil
@@ -174,6 +177,7 @@ func DecodeHistoryResponse(ctx context.Context, v interface{}, hdr, trlr metadat
 		}
 	}
 	return &historyClientStream{
+		ctx:    ctx,
 		stream: v.(chatterpb.Chatter_HistoryClient),
 		view:   view,
 	}, nil

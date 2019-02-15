@@ -196,6 +196,7 @@ func handleGRPCServer(ctx context.Context, u *url.URL, serviceEndpoints *service
 `
 
 const ExampleCLIImport = `import (
+	"context"
 	"fmt"
 	cli "grpc/cli/testapi"
 	"os"
@@ -206,6 +207,7 @@ const ExampleCLIImport = `import (
 `
 
 const ExampleSingleHostCLIImport = `import (
+	"context"
 	"fmt"
 	cli "grpc/cli/single_host"
 	"os"
@@ -216,6 +218,7 @@ const ExampleSingleHostCLIImport = `import (
 `
 
 const ExamplePkgPathCLIImport = `import (
+	"context"
 	"fmt"
 	cli "my/pkg/path/grpc/cli/testapi"
 	"os"
@@ -226,6 +229,7 @@ const ExamplePkgPathCLIImport = `import (
 `
 
 const ExampleSingleHostPkgPathCLIImport = `import (
+	"context"
 	"fmt"
 	cli "my/pkg/path/grpc/cli/single_host"
 	"os"
@@ -235,7 +239,7 @@ const ExampleSingleHostPkgPathCLIImport = `import (
 )
 `
 
-const ExampleCLICode = `func doGRPC(scheme, host string, timeout int, debug bool) (goa.Endpoint, interface{}, error) {
+const ExampleCLICode = `func doGRPC(ctx context.Context, scheme, host string, timeout int, debug bool) (goa.Endpoint, interface{}, error) {
 	conn, err := grpc.Dial(host, grpc.WithInsecure())
 	if err != nil {
 		fmt.Fprintln(os.Stderr, fmt.Sprintf("could not connect to gRPC server at %s: %v", host, err))

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"net/http"
 	"os"
 	"time"
@@ -11,7 +12,7 @@ import (
 	goahttp "goa.design/goa/http"
 )
 
-func doHTTP(scheme, host string, timeout int, debug bool) (goa.Endpoint, interface{}, error) {
+func doHTTP(ctx context.Context, scheme, host string, timeout int, debug bool) (goa.Endpoint, interface{}, error) {
 	var (
 		doer goahttp.Doer
 	)
@@ -26,9 +27,11 @@ func doHTTP(scheme, host string, timeout int, debug bool) (goa.Endpoint, interfa
 	var (
 		dialer       *websocket.Dialer
 		connConfigFn goahttp.ConnConfigureFunc
+		stream       *goahttp.ClientStream
 	)
 	{
 		dialer = websocket.DefaultDialer
+		stream = goahttp.NewClientStream(ctx)
 	}
 	return cli.ParseEndpoint(
 		scheme,
@@ -39,6 +42,7 @@ func doHTTP(scheme, host string, timeout int, debug bool) (goa.Endpoint, interfa
 		debug,
 		dialer,
 		connConfigFn,
+		stream,
 	)
 }
 func httpUsageCommands() string {

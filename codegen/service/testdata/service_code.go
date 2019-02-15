@@ -980,7 +980,7 @@ const StreamingResultMethod = `
 // Service is the StreamingResultService service interface.
 type Service interface {
 	// StreamingResultMethod implements StreamingResultMethod.
-	StreamingResultMethod(context.Context, *APayload, StreamingResultMethodServerStream) (err error)
+	StreamingResultMethod(*APayload, StreamingResultMethodServerStream) (err error)
 }
 
 // ServiceName is the name of the service as defined in the design. This is the
@@ -1000,6 +1000,7 @@ type StreamingResultMethodServerStream interface {
 	Send(*AResult) error
 	// Close closes the stream.
 	Close() error
+	goa.Contextualizer
 }
 
 // StreamingResultMethodClientStream is the interface a "StreamingResultMethod"
@@ -1007,6 +1008,7 @@ type StreamingResultMethodServerStream interface {
 type StreamingResultMethodClientStream interface {
 	// Recv reads instances of "AResult" from the stream.
 	Recv() (*AResult, error)
+	goa.Contextualizer
 }
 
 // APayload is the payload type of the StreamingResultService service
@@ -1037,7 +1039,7 @@ type Service interface {
 	// The "view" return value must have one of the following views
 	//	- "default"
 	//	- "tiny"
-	StreamingResultWithViewsMethod(context.Context, string, StreamingResultWithViewsMethodServerStream) (err error)
+	StreamingResultWithViewsMethod(string, StreamingResultWithViewsMethodServerStream) (err error)
 }
 
 // ServiceName is the name of the service as defined in the design. This is the
@@ -1059,6 +1061,7 @@ type StreamingResultWithViewsMethodServerStream interface {
 	Close() error
 	// SetView sets the view used to render the result before streaming.
 	SetView(view string)
+	goa.Contextualizer
 }
 
 // StreamingResultWithViewsMethodClientStream is the interface a
@@ -1066,6 +1069,7 @@ type StreamingResultWithViewsMethodServerStream interface {
 type StreamingResultWithViewsMethodClientStream interface {
 	// Recv reads instances of "MultipleViews" from the stream.
 	Recv() (*MultipleViews, error)
+	goa.Contextualizer
 }
 
 // MultipleViews is the result type of the StreamingResultWithViewsService
@@ -1147,7 +1151,7 @@ const StreamingResultWithExplicitViewMethod = `
 type Service interface {
 	// StreamingResultWithExplicitViewMethod implements
 	// StreamingResultWithExplicitViewMethod.
-	StreamingResultWithExplicitViewMethod(context.Context, []int32, StreamingResultWithExplicitViewMethodServerStream) (err error)
+	StreamingResultWithExplicitViewMethod([]int32, StreamingResultWithExplicitViewMethodServerStream) (err error)
 }
 
 // ServiceName is the name of the service as defined in the design. This is the
@@ -1167,6 +1171,7 @@ type StreamingResultWithExplicitViewMethodServerStream interface {
 	Send(*MultipleViews) error
 	// Close closes the stream.
 	Close() error
+	goa.Contextualizer
 }
 
 // StreamingResultWithExplicitViewMethodClientStream is the interface a
@@ -1174,6 +1179,7 @@ type StreamingResultWithExplicitViewMethodServerStream interface {
 type StreamingResultWithExplicitViewMethodClientStream interface {
 	// Recv reads instances of "MultipleViews" from the stream.
 	Recv() (*MultipleViews, error)
+	goa.Contextualizer
 }
 
 // MultipleViews is the result type of the
@@ -1255,7 +1261,7 @@ const StreamingResultNoPayloadMethod = `
 // Service is the StreamingResultNoPayloadService service interface.
 type Service interface {
 	// StreamingResultNoPayloadMethod implements StreamingResultNoPayloadMethod.
-	StreamingResultNoPayloadMethod(context.Context, StreamingResultNoPayloadMethodServerStream) (err error)
+	StreamingResultNoPayloadMethod(StreamingResultNoPayloadMethodServerStream) (err error)
 }
 
 // ServiceName is the name of the service as defined in the design. This is the
@@ -1275,6 +1281,7 @@ type StreamingResultNoPayloadMethodServerStream interface {
 	Send(*AResult) error
 	// Close closes the stream.
 	Close() error
+	goa.Contextualizer
 }
 
 // StreamingResultNoPayloadMethodClientStream is the interface a
@@ -1282,6 +1289,7 @@ type StreamingResultNoPayloadMethodServerStream interface {
 type StreamingResultNoPayloadMethodClientStream interface {
 	// Recv reads instances of "AResult" from the stream.
 	Recv() (*AResult, error)
+	goa.Contextualizer
 }
 
 // AResult is the result type of the StreamingResultNoPayloadService service
@@ -1299,7 +1307,7 @@ const StreamingPayloadMethod = `
 // Service is the StreamingPayloadService service interface.
 type Service interface {
 	// StreamingPayloadMethod implements StreamingPayloadMethod.
-	StreamingPayloadMethod(context.Context, *BPayload, StreamingPayloadMethodServerStream) (err error)
+	StreamingPayloadMethod(*BPayload, StreamingPayloadMethodServerStream) (err error)
 }
 
 // ServiceName is the name of the service as defined in the design. This is the
@@ -1319,6 +1327,7 @@ type StreamingPayloadMethodServerStream interface {
 	SendAndClose(*AResult) error
 	// Recv reads instances of "APayload" from the stream.
 	Recv() (*APayload, error)
+	goa.Contextualizer
 }
 
 // StreamingPayloadMethodClientStream is the interface a
@@ -1329,6 +1338,7 @@ type StreamingPayloadMethodClientStream interface {
 	// CloseAndRecv stops sending messages to the stream and reads instances of
 	// "AResult" from the stream.
 	CloseAndRecv() (*AResult, error)
+	goa.Contextualizer
 }
 
 // BPayload is the payload type of the StreamingPayloadService service
@@ -1376,7 +1386,7 @@ const StreamingPayloadNoPayloadMethod = `
 // Service is the StreamingPayloadNoPayloadService service interface.
 type Service interface {
 	// StreamingPayloadNoPayloadMethod implements StreamingPayloadNoPayloadMethod.
-	StreamingPayloadNoPayloadMethod(context.Context, StreamingPayloadNoPayloadMethodServerStream) (err error)
+	StreamingPayloadNoPayloadMethod(StreamingPayloadNoPayloadMethodServerStream) (err error)
 }
 
 // ServiceName is the name of the service as defined in the design. This is the
@@ -1396,6 +1406,7 @@ type StreamingPayloadNoPayloadMethodServerStream interface {
 	SendAndClose(string) error
 	// Recv reads instances of "interface{}" from the stream.
 	Recv() (interface{}, error)
+	goa.Contextualizer
 }
 
 // StreamingPayloadNoPayloadMethodClientStream is the interface a
@@ -1406,6 +1417,7 @@ type StreamingPayloadNoPayloadMethodClientStream interface {
 	// CloseAndRecv stops sending messages to the stream and reads instances of
 	// "string" from the stream.
 	CloseAndRecv() (string, error)
+	goa.Contextualizer
 }
 `
 
@@ -1413,7 +1425,7 @@ const StreamingPayloadNoResultMethod = `
 // Service is the StreamingPayloadNoResultService service interface.
 type Service interface {
 	// StreamingPayloadNoResultMethod implements StreamingPayloadNoResultMethod.
-	StreamingPayloadNoResultMethod(context.Context, StreamingPayloadNoResultMethodServerStream) (err error)
+	StreamingPayloadNoResultMethod(StreamingPayloadNoResultMethodServerStream) (err error)
 }
 
 // ServiceName is the name of the service as defined in the design. This is the
@@ -1433,6 +1445,7 @@ type StreamingPayloadNoResultMethodServerStream interface {
 	Recv() (int, error)
 	// Close closes the stream.
 	Close() error
+	goa.Contextualizer
 }
 
 // StreamingPayloadNoResultMethodClientStream is the interface a
@@ -1442,6 +1455,7 @@ type StreamingPayloadNoResultMethodClientStream interface {
 	Send(int) error
 	// Close closes the stream.
 	Close() error
+	goa.Contextualizer
 }
 `
 
@@ -1453,7 +1467,7 @@ type Service interface {
 	// The "view" return value must have one of the following views
 	//	- "default"
 	//	- "tiny"
-	StreamingPayloadResultWithViewsMethod(context.Context, StreamingPayloadResultWithViewsMethodServerStream) (err error)
+	StreamingPayloadResultWithViewsMethod(StreamingPayloadResultWithViewsMethodServerStream) (err error)
 }
 
 // ServiceName is the name of the service as defined in the design. This is the
@@ -1475,6 +1489,7 @@ type StreamingPayloadResultWithViewsMethodServerStream interface {
 	Recv() (*APayload, error)
 	// SetView sets the view used to render the result before streaming.
 	SetView(view string)
+	goa.Contextualizer
 }
 
 // StreamingPayloadResultWithViewsMethodClientStream is the interface a
@@ -1485,6 +1500,7 @@ type StreamingPayloadResultWithViewsMethodClientStream interface {
 	// CloseAndRecv stops sending messages to the stream and reads instances of
 	// "MultipleViews" from the stream.
 	CloseAndRecv() (*MultipleViews, error)
+	goa.Contextualizer
 }
 
 // APayload is the streaming payload type of the
@@ -1579,7 +1595,7 @@ const StreamingPayloadResultWithExplicitViewMethod = `
 type Service interface {
 	// StreamingPayloadResultWithExplicitViewMethod implements
 	// StreamingPayloadResultWithExplicitViewMethod.
-	StreamingPayloadResultWithExplicitViewMethod(context.Context, StreamingPayloadResultWithExplicitViewMethodServerStream) (err error)
+	StreamingPayloadResultWithExplicitViewMethod(StreamingPayloadResultWithExplicitViewMethodServerStream) (err error)
 }
 
 // ServiceName is the name of the service as defined in the design. This is the
@@ -1600,6 +1616,7 @@ type StreamingPayloadResultWithExplicitViewMethodServerStream interface {
 	SendAndClose(*MultipleViews) error
 	// Recv reads instances of "[]string" from the stream.
 	Recv() ([]string, error)
+	goa.Contextualizer
 }
 
 // StreamingPayloadResultWithExplicitViewMethodClientStream is the interface a
@@ -1611,6 +1628,7 @@ type StreamingPayloadResultWithExplicitViewMethodClientStream interface {
 	// CloseAndRecv stops sending messages to the stream and reads instances of
 	// "MultipleViews" from the stream.
 	CloseAndRecv() (*MultipleViews, error)
+	goa.Contextualizer
 }
 
 // MultipleViews is the result type of the
@@ -1692,7 +1710,7 @@ const BidirectionalStreamingMethod = `
 // Service is the BidirectionalStreamingService service interface.
 type Service interface {
 	// BidirectionalStreamingMethod implements BidirectionalStreamingMethod.
-	BidirectionalStreamingMethod(context.Context, *BPayload, BidirectionalStreamingMethodServerStream) (err error)
+	BidirectionalStreamingMethod(*BPayload, BidirectionalStreamingMethodServerStream) (err error)
 }
 
 // ServiceName is the name of the service as defined in the design. This is the
@@ -1714,6 +1732,7 @@ type BidirectionalStreamingMethodServerStream interface {
 	Recv() (*APayload, error)
 	// Close closes the stream.
 	Close() error
+	goa.Contextualizer
 }
 
 // BidirectionalStreamingMethodClientStream is the interface a
@@ -1725,6 +1744,7 @@ type BidirectionalStreamingMethodClientStream interface {
 	Recv() (*AResult, error)
 	// Close closes the stream.
 	Close() error
+	goa.Contextualizer
 }
 
 // BPayload is the payload type of the BidirectionalStreamingService service
@@ -1773,7 +1793,7 @@ const BidirectionalStreamingNoPayloadMethod = `
 type Service interface {
 	// BidirectionalStreamingNoPayloadMethod implements
 	// BidirectionalStreamingNoPayloadMethod.
-	BidirectionalStreamingNoPayloadMethod(context.Context, BidirectionalStreamingNoPayloadMethodServerStream) (err error)
+	BidirectionalStreamingNoPayloadMethod(BidirectionalStreamingNoPayloadMethodServerStream) (err error)
 }
 
 // ServiceName is the name of the service as defined in the design. This is the
@@ -1795,6 +1815,7 @@ type BidirectionalStreamingNoPayloadMethodServerStream interface {
 	Recv() (string, error)
 	// Close closes the stream.
 	Close() error
+	goa.Contextualizer
 }
 
 // BidirectionalStreamingNoPayloadMethodClientStream is the interface a
@@ -1806,6 +1827,7 @@ type BidirectionalStreamingNoPayloadMethodClientStream interface {
 	Recv() (int, error)
 	// Close closes the stream.
 	Close() error
+	goa.Contextualizer
 }
 `
 
@@ -1818,7 +1840,7 @@ type Service interface {
 	// The "view" return value must have one of the following views
 	//	- "default"
 	//	- "tiny"
-	BidirectionalStreamingResultWithViewsMethod(context.Context, BidirectionalStreamingResultWithViewsMethodServerStream) (err error)
+	BidirectionalStreamingResultWithViewsMethod(BidirectionalStreamingResultWithViewsMethodServerStream) (err error)
 }
 
 // ServiceName is the name of the service as defined in the design. This is the
@@ -1843,6 +1865,7 @@ type BidirectionalStreamingResultWithViewsMethodServerStream interface {
 	Close() error
 	// SetView sets the view used to render the result before streaming.
 	SetView(view string)
+	goa.Contextualizer
 }
 
 // BidirectionalStreamingResultWithViewsMethodClientStream is the interface a
@@ -1855,6 +1878,7 @@ type BidirectionalStreamingResultWithViewsMethodClientStream interface {
 	Recv() (*MultipleViews, error)
 	// Close closes the stream.
 	Close() error
+	goa.Contextualizer
 }
 
 // APayload is the streaming payload type of the
@@ -1949,7 +1973,7 @@ const BidirectionalStreamingResultWithExplicitViewMethod = `
 type Service interface {
 	// BidirectionalStreamingResultWithExplicitViewMethod implements
 	// BidirectionalStreamingResultWithExplicitViewMethod.
-	BidirectionalStreamingResultWithExplicitViewMethod(context.Context, BidirectionalStreamingResultWithExplicitViewMethodServerStream) (err error)
+	BidirectionalStreamingResultWithExplicitViewMethod(BidirectionalStreamingResultWithExplicitViewMethodServerStream) (err error)
 }
 
 // ServiceName is the name of the service as defined in the design. This is the
@@ -1972,6 +1996,7 @@ type BidirectionalStreamingResultWithExplicitViewMethodServerStream interface {
 	Recv() ([][]byte, error)
 	// Close closes the stream.
 	Close() error
+	goa.Contextualizer
 }
 
 // BidirectionalStreamingResultWithExplicitViewMethodClientStream is the
@@ -1984,6 +2009,7 @@ type BidirectionalStreamingResultWithExplicitViewMethodClientStream interface {
 	Recv() (*MultipleViews, error)
 	// Close closes the stream.
 	Close() error
+	goa.Contextualizer
 }
 
 // MultipleViews is the result type of the

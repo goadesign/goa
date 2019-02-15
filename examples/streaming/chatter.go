@@ -43,7 +43,7 @@ func (s *chatterSvc) Login(ctx context.Context, p *chattersvc.LoginPayload) (res
 
 // Echoes the message sent by the client.
 // NOTE: An example for bidirectional streaming.
-func (s *chatterSvc) Echoer(ctx context.Context, p *chattersvc.EchoerPayload, stream chattersvc.EchoerServerStream) (err error) {
+func (s *chatterSvc) Echoer(p *chattersvc.EchoerPayload, stream chattersvc.EchoerServerStream) (err error) {
 	s.logger.Printf("authentication successful")
 	for {
 		str, err := stream.Recv()
@@ -64,7 +64,7 @@ func (s *chatterSvc) Echoer(ctx context.Context, p *chattersvc.EchoerPayload, st
 // Listens to the messages sent by the client.
 // NOTE: An example for payload streaming where server does not respond with a
 // result type.
-func (s *chatterSvc) Listener(ctx context.Context, p *chattersvc.ListenerPayload, stream chattersvc.ListenerServerStream) (err error) {
+func (s *chatterSvc) Listener(p *chattersvc.ListenerPayload, stream chattersvc.ListenerServerStream) (err error) {
 	s.logger.Printf("authentication successful")
 	for {
 		str, err := stream.Recv()
@@ -82,7 +82,7 @@ func (s *chatterSvc) Listener(ctx context.Context, p *chattersvc.ListenerPayload
 // Summarizes the messages sent by the client.
 // NOTE: An example for payload streaming where server responds with a result
 // type.
-func (s *chatterSvc) Summary(ctx context.Context, p *chattersvc.SummaryPayload, stream chattersvc.SummaryServerStream) (err error) {
+func (s *chatterSvc) Summary(p *chattersvc.SummaryPayload, stream chattersvc.SummaryServerStream) (err error) {
 	var summary chattersvc.ChatSummaryCollection
 	s.logger.Printf("authentication successful")
 	for {
@@ -102,7 +102,7 @@ func (s *chatterSvc) Summary(ctx context.Context, p *chattersvc.SummaryPayload, 
 
 // Returns the chat messages sent to the server.
 // NOTE: An example for result streaming.
-func (s *chatterSvc) History(ctx context.Context, p *chattersvc.HistoryPayload, stream chattersvc.HistoryServerStream) (err error) {
+func (s *chatterSvc) History(p *chattersvc.HistoryPayload, stream chattersvc.HistoryServerStream) (err error) {
 	s.logger.Printf("authentication successful")
 	stream.SetView("default")
 	if p.View != nil {
