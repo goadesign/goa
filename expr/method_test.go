@@ -275,7 +275,7 @@ func TestMethodExprValidate(t *testing.T) {
 	}
 }
 
-func TestMethodExpr_EvalName(t *testing.T) {
+func TestMethodExprEvalName(t *testing.T) {
 	cases := map[string]struct {
 		name     string
 		service  *ServiceExpr
@@ -289,6 +289,38 @@ func TestMethodExpr_EvalName(t *testing.T) {
 	for k, tc := range cases {
 		m := MethodExpr{Name: tc.name, Service: tc.service}
 		if actual := m.EvalName(); actual != tc.expected {
+			t.Errorf("%s: got %#v, expected %#v", k, actual, tc.expected)
+		}
+	}
+}
+
+func TestMethodExprIsPayloadStreaming(t *testing.T) {
+	cases := map[string]struct {
+		stream   StreamKind
+		expected bool
+	}{
+		"no stream": {
+			stream:   NoStreamKind,
+			expected: false,
+		},
+		"client stream": {
+			stream:   ClientStreamKind,
+			expected: true,
+		},
+		"server stream": {
+			stream:   ServerStreamKind,
+			expected: false,
+		},
+		"BidirectionalStreamKind": {
+			stream:   BidirectionalStreamKind,
+			expected: true,
+		},
+	}
+	for k, tc := range cases {
+		m := MethodExpr{
+			Stream: tc.stream,
+		}
+		if actual := m.IsPayloadStreaming(); actual != tc.expected {
 			t.Errorf("%s: got %#v, expected %#v", k, actual, tc.expected)
 		}
 	}
