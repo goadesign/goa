@@ -684,10 +684,9 @@ func TestValidationExprHasRequiredOnly(t *testing.T) {
 
 func TestAttributeExprEvalName(t *testing.T) {
 	cases := map[string]struct {
-		name     string
 		expected string
 	}{
-		"parrot": {name: "parrot", expected: "attribute"},
+		"testcase": {expected: "attribute"},
 	}
 	for key, testcase := range cases {
 		attribute := AttributeExpr{}
