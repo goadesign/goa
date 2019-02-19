@@ -69,11 +69,14 @@ func (s *HTTPSegment) WriteHeader(code int) {
 // and calls the corresponding ResponseWriter method.
 func (s *HTTPSegment) Write(p []byte) (int, error) {
 	s.Lock()
-	defer s.Unlock()
 	n, err := s.ResponseWriter.Write(p)
+	s.Unlock()
 	if err != nil {
 		s.RecordError(err)
 	}
+
+	s.Lock()
+	defer s.Unlock()
 	if s.HTTP == nil {
 		s.HTTP = &xray.HTTP{}
 	}
