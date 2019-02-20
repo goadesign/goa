@@ -6,6 +6,7 @@ import (
 	"encoding/gob"
 	"encoding/json"
 	"encoding/xml"
+	"fmt"
 	"io"
 	"io/ioutil"
 	"mime"
@@ -103,7 +104,7 @@ func ResponseEncoder(ctx context.Context, w http.ResponseWriter) Encoder {
 		case "application/gob":
 			return gob.NewEncoder(w), "application/gob"
 		case "text/html":
-			return newTextHtmlEncoder(w), "text/html"
+			return newTextHTMLEncoder(w), "text/html"
 		}
 		return nil, ""
 	}
@@ -137,7 +138,7 @@ func ResponseEncoder(ctx context.Context, w http.ResponseWriter) Encoder {
 				case ct == "application/gob" || strings.HasSuffix(ct, "+gob"):
 					enc = gob.NewEncoder(w)
 				case ct == "text/html" || strings.HasSuffix(ct, "+html"):
-					enc = newTextHtmlEncoder(w)
+					enc = newTextHTMLEncoder(w)
 				default:
 					enc = json.NewEncoder(w)
 				}
@@ -193,7 +194,7 @@ func ResponseDecoder(resp *http.Response) Decoder {
 	case ct == "application/gob" || strings.HasSuffix(ct, "+gob"):
 		return gob.NewDecoder(resp.Body)
 	case ct == "text/html" || strings.HasSuffix(ct, "+html"):
-		return newTextHtmlDecoder(resp.Body)
+		return newTextHTMLDecoder(resp.Body)
 	default:
 		return json.NewDecoder(resp.Body)
 	}
@@ -246,44 +247,55 @@ func SetContentType(w http.ResponseWriter, ct string) {
 	w.Header().Set("Content-Type", h+suffix)
 }
 
-func newTextHtmlEncoder(w io.Writer) Encoder {
-	return &textHtmlEncoder{w}
+func newTextHTMLEncoder(w io.Writer) Encoder {
+	return &textHTMLEncoder{w}
 }
 
-type textHtmlEncoder struct {
+type textHTMLEncoder struct {
 	w io.Writer
 }
 
-func (e *textHtmlEncoder) Encode(v interface{}) error {
-	var b []byte
+func (e *textHTMLEncoder) Encode(v interface{}) error {
+	var err error
 
-	strptr, isstrptr := v.(*string)
-	if isstrptr {
-		b = []byte(*strptr)
-	} else {
-		b = []byte(v.(string))
+	switch c := v.(type) {
+	case string:
+		_, err = e.w.Write([]byte(c))
+	case *string:
+		_, err = e.w.Write([]byte(*c))
+	case []byte:
+		_, err = e.w.Write(c)
+	case *[]byte:
+		_, err = e.w.Write(*c)
+	default:
+		err = fmt.Errorf("can't encode %T as text/html", c)
 	}
 
-	_, err := e.w.Write(b)
 	return err
 }
 
-func newTextHtmlDecoder(r io.Reader) Decoder {
-	return &textHtmlDecoder{r}
+func newTextHTMLDecoder(r io.Reader) Decoder {
+	return &textHTMLDecoder{r}
 }
 
-type textHtmlDecoder struct {
+type textHTMLDecoder struct {
 	r io.Reader
 }
 
-func (e *textHtmlDecoder) Decode(v interface{}) error {
-	strptr := v.(*string)
+func (e *textHTMLDecoder) Decode(v interface{}) error {
 	b, err := ioutil.ReadAll(e.r)
 	if err != nil {
 		return err
 	}
 
-	*strptr = string(b)
+	switch c := v.(type) {
+	case *string:
+		*c = string(b)
+	case *[]byte:
+		*c = []byte(string(b))
+	default:
+		err = fmt.Errorf("can't decode text/html to %T", c)
+	}
 
-	return nil
+	return err
 }
