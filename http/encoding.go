@@ -261,12 +261,10 @@ func (e *textHTMLEncoder) Encode(v interface{}) error {
 	switch c := v.(type) {
 	case string:
 		_, err = e.w.Write([]byte(c))
-	case *string:
+	case *string: // v may be a string pointer when the Response Body is set to the field of a custom response type.
 		_, err = e.w.Write([]byte(*c))
 	case []byte:
 		_, err = e.w.Write(c)
-	case *[]byte:
-		_, err = e.w.Write(*c)
 	default:
 		err = fmt.Errorf("can't encode %T as text/html", c)
 	}
