@@ -29,6 +29,7 @@ func doHTTP(scheme, host string, timeout int, debug bool) (goa.Endpoint, interfa
 		debug,
 	)
 }
+
 func httpUsageCommands() string {
 	return cli.UsageCommands()
 }

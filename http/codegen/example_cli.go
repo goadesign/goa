@@ -123,7 +123,7 @@ const (
   {
     dialer = websocket.DefaultDialer
   }
-	{{- end }}
+	{{ end }}
 `
 
 	// input: map[string]interface{}{"Services": []*ServiceData}
@@ -149,7 +149,8 @@ const (
 }
 `
 
-	httpCLIUsageT = `func httpUsageCommands() string {
+	httpCLIUsageT = `
+func httpUsageCommands() string {
   return cli.UsageCommands()
 }
 

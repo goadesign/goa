@@ -318,7 +318,7 @@ func (c *{{ .ClientStruct }}) {{ .EndpointInit }}({{ if .MultipartRequestEncoder
 	{{- end }}
 
 	{{- if .ClientStream }}
-		conn, resp, err := c.dialer.Dial(req.URL.String(), req.Header)
+		conn, resp, err := c.dialer.DialContext(ctx, req.URL.String(), req.Header)
 		if err != nil {
 			if resp != nil {
 				return decodeResponse(resp)

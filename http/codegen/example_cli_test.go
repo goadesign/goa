@@ -20,6 +20,7 @@ func TestExampleCLIFiles(t *testing.T) {
 		{"no-server", ctestdata.NoServerDSL, testdata.ExampleCLICode},
 		{"server-hosting-service-subset", ctestdata.ServerHostingServiceSubsetDSL, testdata.ExampleCLICode},
 		{"server-hosting-multiple-services", ctestdata.ServerHostingMultipleServicesDSL, testdata.ExampleCLICode},
+		{"streaming", testdata.StreamingResultDSL, testdata.StreamingExampleCLICode},
 	}
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {

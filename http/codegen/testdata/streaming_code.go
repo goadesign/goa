@@ -214,7 +214,7 @@ func (c *Client) StreamingResultMethod() goa.Endpoint {
 		if err != nil {
 			return nil, err
 		}
-		conn, resp, err := c.dialer.Dial(req.URL.String(), req.Header)
+		conn, resp, err := c.dialer.DialContext(ctx, req.URL.String(), req.Header)
 		if err != nil {
 			if resp != nil {
 				return decodeResponse(resp)
@@ -300,7 +300,7 @@ func (c *Client) StreamingResultWithViewsMethod() goa.Endpoint {
 		if err != nil {
 			return nil, err
 		}
-		conn, resp, err := c.dialer.Dial(req.URL.String(), req.Header)
+		conn, resp, err := c.dialer.DialContext(ctx, req.URL.String(), req.Header)
 		if err != nil {
 			if resp != nil {
 				return decodeResponse(resp)
@@ -367,7 +367,7 @@ func (c *Client) StreamingResultWithExplicitViewMethod() goa.Endpoint {
 		if err != nil {
 			return nil, err
 		}
-		conn, resp, err := c.dialer.Dial(req.URL.String(), req.Header)
+		conn, resp, err := c.dialer.DialContext(ctx, req.URL.String(), req.Header)
 		if err != nil {
 			if resp != nil {
 				return decodeResponse(resp)
@@ -562,7 +562,7 @@ func (c *Client) StreamingResultCollectionWithExplicitViewMethod() goa.Endpoint 
 		if err != nil {
 			return nil, err
 		}
-		conn, resp, err := c.dialer.Dial(req.URL.String(), req.Header)
+		conn, resp, err := c.dialer.DialContext(ctx, req.URL.String(), req.Header)
 		if err != nil {
 			if resp != nil {
 				return decodeResponse(resp)
@@ -853,7 +853,7 @@ func (c *Client) StreamingResultNoPayloadMethod() goa.Endpoint {
 		if err != nil {
 			return nil, err
 		}
-		conn, resp, err := c.dialer.Dial(req.URL.String(), req.Header)
+		conn, resp, err := c.dialer.DialContext(ctx, req.URL.String(), req.Header)
 		if err != nil {
 			if resp != nil {
 				return decodeResponse(resp)
@@ -984,7 +984,7 @@ func (c *Client) StreamingPayloadMethod() goa.Endpoint {
 		if err != nil {
 			return nil, err
 		}
-		conn, resp, err := c.dialer.Dial(req.URL.String(), req.Header)
+		conn, resp, err := c.dialer.DialContext(ctx, req.URL.String(), req.Header)
 		if err != nil {
 			if resp != nil {
 				return decodeResponse(resp)
@@ -1090,7 +1090,7 @@ func (c *Client) StreamingPayloadNoPayloadMethod() goa.Endpoint {
 		if err != nil {
 			return nil, err
 		}
-		conn, resp, err := c.dialer.Dial(req.URL.String(), req.Header)
+		conn, resp, err := c.dialer.DialContext(ctx, req.URL.String(), req.Header)
 		if err != nil {
 			if resp != nil {
 				return decodeResponse(resp)
@@ -2195,7 +2195,7 @@ func (c *Client) BidirectionalStreamingMethod() goa.Endpoint {
 		if err != nil {
 			return nil, err
 		}
-		conn, resp, err := c.dialer.Dial(req.URL.String(), req.Header)
+		conn, resp, err := c.dialer.DialContext(ctx, req.URL.String(), req.Header)
 		if err != nil {
 			if resp != nil {
 				return decodeResponse(resp)
@@ -2339,7 +2339,7 @@ func (c *Client) BidirectionalStreamingNoPayloadMethod() goa.Endpoint {
 		if err != nil {
 			return nil, err
 		}
-		conn, resp, err := c.dialer.Dial(req.URL.String(), req.Header)
+		conn, resp, err := c.dialer.DialContext(ctx, req.URL.String(), req.Header)
 		if err != nil {
 			if resp != nil {
 				return decodeResponse(resp)

@@ -148,7 +148,7 @@ func (c *Client) Echoer() goa.Endpoint {
 		if err != nil {
 			return nil, err
 		}
-		conn, resp, err := c.dialer.Dial(req.URL.String(), req.Header)
+		conn, resp, err := c.dialer.DialContext(ctx, req.URL.String(), req.Header)
 		if err != nil {
 			if resp != nil {
 				return decodeResponse(resp)
@@ -213,7 +213,7 @@ func (c *Client) Listener() goa.Endpoint {
 		if err != nil {
 			return nil, err
 		}
-		conn, resp, err := c.dialer.Dial(req.URL.String(), req.Header)
+		conn, resp, err := c.dialer.DialContext(ctx, req.URL.String(), req.Header)
 		if err != nil {
 			if resp != nil {
 				return decodeResponse(resp)
@@ -260,7 +260,7 @@ func (c *Client) Summary() goa.Endpoint {
 		if err != nil {
 			return nil, err
 		}
-		conn, resp, err := c.dialer.Dial(req.URL.String(), req.Header)
+		conn, resp, err := c.dialer.DialContext(ctx, req.URL.String(), req.Header)
 		if err != nil {
 			if resp != nil {
 				return decodeResponse(resp)
@@ -327,7 +327,7 @@ func (c *Client) History() goa.Endpoint {
 		if err != nil {
 			return nil, err
 		}
-		conn, resp, err := c.dialer.Dial(req.URL.String(), req.Header)
+		conn, resp, err := c.dialer.DialContext(ctx, req.URL.String(), req.Header)
 		if err != nil {
 			if resp != nil {
 				return decodeResponse(resp)

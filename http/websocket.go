@@ -1,6 +1,7 @@
 package http
 
 import (
+	"context"
 	"net/http"
 
 	"github.com/gorilla/websocket"
@@ -15,8 +16,8 @@ type (
 
 	// Dialer creates a websocket connection to a given URL.
 	Dialer interface {
-		// Dial creates a client connection to the websocket server.
-		Dial(url string, h http.Header) (*websocket.Conn, *http.Response, error)
+		// DialContext creates a client connection to the websocket server.
+		DialContext(ctx context.Context, url string, h http.Header) (*websocket.Conn, *http.Response, error)
 	}
 
 	// ConnConfigureFunc is used to configure a websocket connection with
