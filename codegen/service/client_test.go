@@ -2,6 +2,8 @@ package service
 
 import (
 	"bytes"
+	"fmt"
+	"go/format"
 	"testing"
 
 	"goa.design/goa/codegen"
@@ -41,7 +43,12 @@ func TestClient(t *testing.T) {
 					t.Fatal(err)
 				}
 			}
-			code := buf.String()
+			bs, err := format.Source(buf.Bytes())
+			if err != nil {
+				fmt.Println(buf.String())
+				t.Fatal(err)
+			}
+			code := string(bs)
 			if code != c.Code {
 				t.Errorf("%s: got\n%s\ngot vs expected\n:%s", c.Name, code, codegen.Diff(t, code, c.Code))
 			}
