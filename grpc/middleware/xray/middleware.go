@@ -62,7 +62,13 @@ func NewUnaryServer(service, daemon string) (grpc.UnaryServerInterceptor, error)
 			s.ParentID = parentID.(string)
 		}
 		ctx = context.WithValue(ctx, xray.SegKey, s.Segment)
-		return handler(ctx, req)
+		resp, err = handler(ctx, req)
+		if err != nil {
+			s.RecordError(err)
+		} else {
+			s.RecordResponse(resp)
+		}
+		return resp, err
 	}), nil
 }
 
@@ -94,7 +100,11 @@ func NewStreamServer(service, daemon string) (grpc.StreamServerInterceptor, erro
 		}
 		ctx = context.WithValue(ctx, xray.SegKey, s.Segment)
 		wss := grpcm.NewWrappedServerStream(ctx, ss)
-		return handler(srv, wss)
+		err := handler(srv, wss)
+		if err != nil {
+			s.RecordError(err)
+		}
+		return err
 	}), nil
 }
 

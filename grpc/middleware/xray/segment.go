@@ -68,11 +68,22 @@ func (s *GRPCSegment) RecordError(err error) {
 		s.HTTP = &xray.HTTP{}
 	}
 
-	st, _ := status.FromError(err)
-	code := st.Code()
+	var (
+		code   codes.Code
+		length int64
+	)
+	{
+		st, ok := status.FromError(err)
+		if ok {
+			code = st.Code()
+			length = messageLength(st.Proto())
+		} else {
+			code = codes.Unknown
+		}
+	}
 	s.HTTP.Response = &xray.Response{
 		Status:        int(code),
-		ContentLength: messageLength(st.Proto()),
+		ContentLength: length,
 	}
 
 	switch code {
