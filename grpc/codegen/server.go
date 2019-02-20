@@ -205,18 +205,6 @@ type ErrorNamer interface {
 }
 `
 
-// streamStructTypeT renders the server and client struct types that
-// implements the client and server service stream interfaces.
-// input: StreamData
-const streamStructTypeT = `{{ printf "%s implements the %s interface." .VarName .ServiceInterface | comment }}
-type {{ .VarName }} struct {
-	stream {{ .Interface }}
-{{- if .Endpoint.Method.ViewedResult }}
-	view string
-{{- end }}
-}
-`
-
 // input: ServiceData
 const serverInitT = `{{ printf "%s instantiates the server struct with the %s service endpoints." .ServerInit .Service.Name | comment }}
 func {{ .ServerInit }}(e *{{ .Service.PkgName }}.Endpoints{{ if .HasUnaryEndpoint }}, uh goagrpc.UnaryHandler{{ end }}{{ if .HasStreamingEndpoint }}, sh goagrpc.StreamHandler{{ end }}) *{{ .ServerStruct }} {

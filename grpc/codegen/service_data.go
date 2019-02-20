@@ -1169,6 +1169,18 @@ func {{ .Name }}({{ .ArgName }} {{ .SrcRef }}) (err error) {
 }
 `
 
+// streamStructTypeT renders the server and client struct types that
+// implements the client and server service stream interfaces.
+// input: StreamData
+const streamStructTypeT = `{{ printf "%s implements the %s interface." .VarName .ServiceInterface | comment }}
+type {{ .VarName }} struct {
+	stream {{ .Interface }}
+{{- if .Endpoint.Method.ViewedResult }}
+	view string
+{{- end }}
+}
+`
+
 // streamSendT renders the function implementing the Send method in
 // stream interface.
 // input: StreamData
