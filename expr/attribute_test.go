@@ -681,3 +681,18 @@ func TestValidationExprHasRequiredOnly(t *testing.T) {
 		}
 	}
 }
+
+func TestAttributeExprEvalName(t *testing.T) {
+	cases := map[string]struct {
+		expected string
+	}{
+		"testcase": {expected: "attribute"},
+	}
+	for key, testcase := range cases {
+		attribute := AttributeExpr{}
+		if actual := attribute.EvalName(); actual != testcase.expected {
+			t.Errorf("%s: got %#v, expected %#v", key, actual, testcase.expected)
+		}
+	}
+
+}
