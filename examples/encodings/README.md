@@ -1,7 +1,7 @@
 # goa v2 Encodings Example
 
 This simple example demonstrates HTTP responses with the 'text/html' content type encoding.  It consists of a simple
-endpoint concatenates strings.
+endpoint that concatenates strings.
 
 ## Design
 
