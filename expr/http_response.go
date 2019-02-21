@@ -139,6 +139,17 @@ func (r *HTTPResponseExpr) Validate(e *HTTPEndpointExpr) *eval.ValidationErrors 
 	if isrt {
 		inview = " all views in"
 	}
+
+	// text/html can only encode strings so make sure there isn't an explicit conflict with the content-type and response.
+	if r.ContentType == "text/html" {
+		if e.MethodExpr.Result.Type != nil && e.MethodExpr.Result.Type != String && e.MethodExpr.Result.Type != Bytes && r.Body == nil {
+			verr.Add(r, "Result type must be String or Bytes when ContentType is 'text/html'")
+		}
+		if r.Body != nil && r.Body.Type != String && r.Body.Type != Bytes {
+			verr.Add(r, "Result type must be String or Bytes when ContentType is 'text/html'")
+		}
+	}
+
 	hasAttribute := func(name string) bool {
 		if !IsObject(e.MethodExpr.Result.Type) {
 			return false

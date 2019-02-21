@@ -6,6 +6,8 @@ import (
 	"encoding/gob"
 	"encoding/json"
 	"encoding/xml"
+	"fmt"
+	"io"
 	"io/ioutil"
 	"mime"
 	"net/http"
@@ -86,6 +88,7 @@ func RequestDecoder(r *http.Request) Decoder {
 //     * application/json using package encoding/json
 //     * application/xml using package encoding/xml
 //     * application/gob using package encoding/gob
+//     * text/html for strings
 //
 // ResponseEncoder defaults to the JSON encoder if the context AcceptTypeKey or
 // ContentTypeKey value does not match any of the supported mime types or is
@@ -100,6 +103,8 @@ func ResponseEncoder(ctx context.Context, w http.ResponseWriter) Encoder {
 			return xml.NewEncoder(w), "application/xml"
 		case "application/gob":
 			return gob.NewEncoder(w), "application/gob"
+		case "text/html":
+			return newTextHTMLEncoder(w), "text/html"
 		}
 		return nil, ""
 	}
@@ -132,6 +137,8 @@ func ResponseEncoder(ctx context.Context, w http.ResponseWriter) Encoder {
 					enc = xml.NewEncoder(w)
 				case ct == "application/gob" || strings.HasSuffix(ct, "+gob"):
 					enc = gob.NewEncoder(w)
+				case ct == "text/html" || strings.HasSuffix(ct, "+html"):
+					enc = newTextHTMLEncoder(w)
 				default:
 					enc = json.NewEncoder(w)
 				}
@@ -169,6 +176,7 @@ func RequestEncoder(r *http.Request) Encoder {
 //   * application/json using package encoding/json (default)
 //   * application/xml using package encoding/xml
 //   * application/gob using package encoding/gob
+//   * text/html for strings
 //
 func ResponseDecoder(resp *http.Response) Decoder {
 	ct := resp.Header.Get("Content-Type")
@@ -185,6 +193,8 @@ func ResponseDecoder(resp *http.Response) Decoder {
 		return xml.NewDecoder(resp.Body)
 	case ct == "application/gob" || strings.HasSuffix(ct, "+gob"):
 		return gob.NewDecoder(resp.Body)
+	case ct == "text/html" || strings.HasSuffix(ct, "+html"):
+		return newTextHTMLDecoder(resp.Body)
 	default:
 		return json.NewDecoder(resp.Body)
 	}
@@ -235,4 +245,55 @@ func SetContentType(w http.ResponseWriter, ct string) {
 		suffix = "+xml"
 	}
 	w.Header().Set("Content-Type", h+suffix)
+}
+
+func newTextHTMLEncoder(w io.Writer) Encoder {
+	return &textHTMLEncoder{w}
+}
+
+type textHTMLEncoder struct {
+	w io.Writer
+}
+
+func (e *textHTMLEncoder) Encode(v interface{}) error {
+	var err error
+
+	switch c := v.(type) {
+	case string:
+		_, err = e.w.Write([]byte(c))
+	case *string: // v may be a string pointer when the Response Body is set to the field of a custom response type.
+		_, err = e.w.Write([]byte(*c))
+	case []byte:
+		_, err = e.w.Write(c)
+	default:
+		err = fmt.Errorf("can't encode %T as text/html", c)
+	}
+
+	return err
+}
+
+func newTextHTMLDecoder(r io.Reader) Decoder {
+	return &textHTMLDecoder{r}
+}
+
+type textHTMLDecoder struct {
+	r io.Reader
+}
+
+func (e *textHTMLDecoder) Decode(v interface{}) error {
+	b, err := ioutil.ReadAll(e.r)
+	if err != nil {
+		return err
+	}
+
+	switch c := v.(type) {
+	case *string:
+		*c = string(b)
+	case *[]byte:
+		*c = []byte(string(b))
+	default:
+		err = fmt.Errorf("can't decode text/html to %T", c)
+	}
+
+	return err
 }
