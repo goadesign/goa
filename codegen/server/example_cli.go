@@ -197,7 +197,7 @@ const (
 		os.Exit(1)
 	}
 
-	if data != nil && !debug {
+	if data != nil {
 		m, _ := json.MarshalIndent(data, "", "    ")
 		fmt.Println(string(m))
 	}
