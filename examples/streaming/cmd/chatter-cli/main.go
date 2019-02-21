@@ -91,7 +91,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	if data != nil && !debug {
+	if data != nil {
 		switch stream := data.(type) {
 		case chattersvc.EchoerClientStream:
 			// bidirectional streaming

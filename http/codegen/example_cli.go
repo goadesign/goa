@@ -1,12 +1,11 @@
 package codegen
 
 import (
+	"goa.design/goa/codegen"
+	"goa.design/goa/expr"
 	"os"
 	"path/filepath"
 	"strings"
-
-	"goa.design/goa/codegen"
-	"goa.design/goa/expr"
 )
 
 // ExampleCLIFiles returns an example client tool HTTP implementation for each
@@ -110,7 +109,6 @@ const (
 		doer = &http.Client{Timeout: time.Duration(timeout) * time.Second}
 		if debug {
 			doer = goahttp.NewDebugDoer(doer)
-			doer.(goahttp.DebugDoer).Fprint(os.Stderr)
 		}
 	}
 `
