@@ -17,6 +17,7 @@ func TestServerTypes(t *testing.T) {
 		Code string
 	}{
 		{"multiple-methods", testdata.MultipleMethodsDSL, MultipleMethodsServerTypesFile},
+		{"payload-extend-validate", testdata.PayloadExtendedValidateDSL, PayloadExtendedValidateServerTypesFile},
 	}
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
@@ -110,6 +111,35 @@ func ValidateMethodBRequestBody(body *MethodBRequestBody) (err error) {
 func ValidateAPayloadRequestBody(body *APayloadRequestBody) (err error) {
 	if body.A != nil {
 		err = goa.MergeErrors(err, goa.ValidatePattern("body.a", *body.A, "patterna"))
+	}
+	return
+}
+`
+
+const PayloadExtendedValidateServerTypesFile = `// MethodQueryStringExtendedValidatePayloadRequestBody is the type of the
+// "ServiceQueryStringExtendedValidatePayload" service
+// "MethodQueryStringExtendedValidatePayload" endpoint HTTP request body.
+type MethodQueryStringExtendedValidatePayloadRequestBody struct {
+	Body *string ` + "`" + `form:"body,omitempty" json:"body,omitempty" xml:"body,omitempty"` + "`" + `
+}
+
+// NewMethodQueryStringExtendedValidatePayloadPayload builds a
+// ServiceQueryStringExtendedValidatePayload service
+// MethodQueryStringExtendedValidatePayload endpoint payload.
+func NewMethodQueryStringExtendedValidatePayloadPayload(body *MethodQueryStringExtendedValidatePayloadRequestBody, q string, h int) *servicequerystringextendedvalidatepayload.MethodQueryStringExtendedValidatePayloadPayload {
+	v := &servicequerystringextendedvalidatepayload.MethodQueryStringExtendedValidatePayloadPayload{
+		Body: *body.Body,
+	}
+	v.Q = q
+	v.H = h
+	return v
+}
+
+// ValidateMethodQueryStringExtendedValidatePayloadRequestBody runs the
+// validations defined on MethodQueryStringExtendedValidatePayloadRequestBody
+func ValidateMethodQueryStringExtendedValidatePayloadRequestBody(body *MethodQueryStringExtendedValidatePayloadRequestBody) (err error) {
+	if body.Body == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("body", "body"))
 	}
 	return
 }
