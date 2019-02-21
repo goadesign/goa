@@ -525,9 +525,18 @@ func (e *HTTPEndpointExpr) Finalize() {
 	init(e.Params)
 	init(e.Headers)
 
-	e.Body = httpRequestBody(e)
 	if e.Body != nil {
+		// rename type to add RequestBody suffix so that we don't end with
+		// duplicate type definitions - https://github.com/goadesign/goa/issues/1969
+		e.Body = httpRequestBody(e)
 		e.Body.Finalize()
+	} else {
+		// Compute body from the payload expression
+		e.Body = httpRequestBody(e)
+		// Don't call e.Body.Finalize() after computing the body because the
+		// payload expression might define bases and references which will be
+		// added to the body even when design explicitly maps them to headers or
+		// params.
 	}
 
 	e.StreamingBody = httpStreamingBody(e)
