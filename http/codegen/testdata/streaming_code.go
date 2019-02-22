@@ -28,10 +28,15 @@ func NewStreamingResultMethodHandler(
 			return
 		}
 
+		var cancel context.CancelFunc
+		{
+			ctx, cancel = context.WithCancel(ctx)
+		}
 		v := &streamingresultservice.StreamingResultMethodEndpointInput{
 			Stream: &StreamingResultMethodServerStream{
 				upgrader:     up,
 				connConfigFn: connConfigFn,
+				cancel:       cancel,
 				w:            w,
 				r:            r,
 			},
@@ -66,7 +71,7 @@ func (s *StreamingResultMethodServerStream) Send(v *streamingresultservice.UserT
 			return
 		}
 		if s.connConfigFn != nil {
-			conn = s.connConfigFn(conn)
+			conn = s.connConfigFn(conn, s.cancel)
 		}
 		s.conn = conn
 	})
@@ -92,7 +97,7 @@ func (s *StreamingResultMethodServerStream) Close() error {
 			return
 		}
 		if s.connConfigFn != nil {
-			conn = s.connConfigFn(conn)
+			conn = s.connConfigFn(conn, s.cancel)
 		}
 		s.conn = conn
 	})
@@ -126,7 +131,7 @@ func (s *StreamingResultWithViewsMethodServerStream) Send(v *streamingresultwith
 			return
 		}
 		if s.connConfigFn != nil {
-			conn = s.connConfigFn(conn)
+			conn = s.connConfigFn(conn, s.cancel)
 		}
 		s.conn = conn
 	})
@@ -175,10 +180,15 @@ func NewStreamingResultNoPayloadMethodHandler(
 		ctx = context.WithValue(ctx, goa.MethodKey, "StreamingResultNoPayloadMethod")
 		ctx = context.WithValue(ctx, goa.ServiceKey, "StreamingResultNoPayloadService")
 
+		var cancel context.CancelFunc
+		{
+			ctx, cancel = context.WithCancel(ctx)
+		}
 		v := &streamingresultnopayloadservice.StreamingResultNoPayloadMethodEndpointInput{
 			Stream: &StreamingResultNoPayloadMethodServerStream{
 				upgrader:     up,
 				connConfigFn: connConfigFn,
+				cancel:       cancel,
 				w:            w,
 				r:            r,
 			},
@@ -214,6 +224,10 @@ func (c *Client) StreamingResultMethod() goa.Endpoint {
 		if err != nil {
 			return nil, err
 		}
+		var cancel context.CancelFunc
+		{
+			ctx, cancel = context.WithCancel(ctx)
+		}
 		conn, resp, err := c.dialer.DialContext(ctx, req.URL.String(), req.Header)
 		if err != nil {
 			if resp != nil {
@@ -221,8 +235,8 @@ func (c *Client) StreamingResultMethod() goa.Endpoint {
 			}
 			return nil, goahttp.ErrRequestError("StreamingResultService", "StreamingResultMethod", err)
 		}
-		if c.connConfigFn != nil {
-			conn = c.connConfigFn(conn)
+		if c.StreamingResultMethodConfigFn != nil {
+			conn = c.StreamingResultMethodConfigFn(conn, cancel)
 		}
 		stream := &StreamingResultMethodClientStream{conn: conn}
 		return stream, nil
@@ -244,7 +258,7 @@ func (s *StreamingResultWithViewsMethodServerStream) Close() error {
 			return
 		}
 		if s.connConfigFn != nil {
-			conn = s.connConfigFn(conn)
+			conn = s.connConfigFn(conn, s.cancel)
 		}
 		s.conn = conn
 	})
@@ -300,6 +314,10 @@ func (c *Client) StreamingResultWithViewsMethod() goa.Endpoint {
 		if err != nil {
 			return nil, err
 		}
+		var cancel context.CancelFunc
+		{
+			ctx, cancel = context.WithCancel(ctx)
+		}
 		conn, resp, err := c.dialer.DialContext(ctx, req.URL.String(), req.Header)
 		if err != nil {
 			if resp != nil {
@@ -307,8 +325,8 @@ func (c *Client) StreamingResultWithViewsMethod() goa.Endpoint {
 			}
 			return nil, goahttp.ErrRequestError("StreamingResultWithViewsService", "StreamingResultWithViewsMethod", err)
 		}
-		if c.connConfigFn != nil {
-			conn = c.connConfigFn(conn)
+		if c.StreamingResultWithViewsMethodConfigFn != nil {
+			conn = c.StreamingResultWithViewsMethodConfigFn(conn, cancel)
 		}
 		stream := &StreamingResultWithViewsMethodClientStream{conn: conn}
 		view := resp.Header.Get("goa-view")
@@ -367,6 +385,10 @@ func (c *Client) StreamingResultWithExplicitViewMethod() goa.Endpoint {
 		if err != nil {
 			return nil, err
 		}
+		var cancel context.CancelFunc
+		{
+			ctx, cancel = context.WithCancel(ctx)
+		}
 		conn, resp, err := c.dialer.DialContext(ctx, req.URL.String(), req.Header)
 		if err != nil {
 			if resp != nil {
@@ -374,8 +396,8 @@ func (c *Client) StreamingResultWithExplicitViewMethod() goa.Endpoint {
 			}
 			return nil, goahttp.ErrRequestError("StreamingResultWithExplicitViewService", "StreamingResultWithExplicitViewMethod", err)
 		}
-		if c.connConfigFn != nil {
-			conn = c.connConfigFn(conn)
+		if c.StreamingResultWithExplicitViewMethodConfigFn != nil {
+			conn = c.StreamingResultWithExplicitViewMethodConfigFn(conn, cancel)
 		}
 		stream := &StreamingResultWithExplicitViewMethodClientStream{conn: conn}
 		return stream, nil
@@ -423,7 +445,7 @@ func (s *StreamingResultWithExplicitViewMethodServerStream) Send(v *streamingres
 			return
 		}
 		if s.connConfigFn != nil {
-			conn = s.connConfigFn(conn)
+			conn = s.connConfigFn(conn, s.cancel)
 		}
 		s.conn = conn
 	})
@@ -453,7 +475,7 @@ func (s *StreamingResultCollectionWithViewsMethodServerStream) Send(v streamingr
 			return
 		}
 		if s.connConfigFn != nil {
-			conn = s.connConfigFn(conn)
+			conn = s.connConfigFn(conn, s.cancel)
 		}
 		s.conn = conn
 	})
@@ -532,7 +554,7 @@ func (s *StreamingResultCollectionWithExplicitViewMethodServerStream) Send(v str
 			return
 		}
 		if s.connConfigFn != nil {
-			conn = s.connConfigFn(conn)
+			conn = s.connConfigFn(conn, s.cancel)
 		}
 		s.conn = conn
 	})
@@ -562,6 +584,10 @@ func (c *Client) StreamingResultCollectionWithExplicitViewMethod() goa.Endpoint 
 		if err != nil {
 			return nil, err
 		}
+		var cancel context.CancelFunc
+		{
+			ctx, cancel = context.WithCancel(ctx)
+		}
 		conn, resp, err := c.dialer.DialContext(ctx, req.URL.String(), req.Header)
 		if err != nil {
 			if resp != nil {
@@ -569,8 +595,8 @@ func (c *Client) StreamingResultCollectionWithExplicitViewMethod() goa.Endpoint 
 			}
 			return nil, goahttp.ErrRequestError("StreamingResultCollectionWithExplicitViewService", "StreamingResultCollectionWithExplicitViewMethod", err)
 		}
-		if c.connConfigFn != nil {
-			conn = c.connConfigFn(conn)
+		if c.StreamingResultCollectionWithExplicitViewMethodConfigFn != nil {
+			conn = c.StreamingResultCollectionWithExplicitViewMethodConfigFn(conn, cancel)
 		}
 		stream := &StreamingResultCollectionWithExplicitViewMethodClientStream{conn: conn}
 		return stream, nil
@@ -619,7 +645,7 @@ func (s *StreamingResultPrimitiveMethodServerStream) Send(v string) error {
 			return
 		}
 		if s.connConfigFn != nil {
-			conn = s.connConfigFn(conn)
+			conn = s.connConfigFn(conn, s.cancel)
 		}
 		s.conn = conn
 	})
@@ -665,7 +691,7 @@ func (s *StreamingResultPrimitiveArrayMethodServerStream) Send(v []int32) error 
 			return
 		}
 		if s.connConfigFn != nil {
-			conn = s.connConfigFn(conn)
+			conn = s.connConfigFn(conn, s.cancel)
 		}
 		s.conn = conn
 	})
@@ -711,7 +737,7 @@ func (s *StreamingResultPrimitiveMapMethodServerStream) Send(v map[int32]string)
 			return
 		}
 		if s.connConfigFn != nil {
-			conn = s.connConfigFn(conn)
+			conn = s.connConfigFn(conn, s.cancel)
 		}
 		s.conn = conn
 	})
@@ -757,7 +783,7 @@ func (s *StreamingResultUserTypeArrayMethodServerStream) Send(v []*streamingresu
 			return
 		}
 		if s.connConfigFn != nil {
-			conn = s.connConfigFn(conn)
+			conn = s.connConfigFn(conn, s.cancel)
 		}
 		s.conn = conn
 	})
@@ -806,7 +832,7 @@ func (s *StreamingResultUserTypeMapMethodServerStream) Send(v map[string]*stream
 			return
 		}
 		if s.connConfigFn != nil {
-			conn = s.connConfigFn(conn)
+			conn = s.connConfigFn(conn, s.cancel)
 		}
 		s.conn = conn
 	})
@@ -853,6 +879,10 @@ func (c *Client) StreamingResultNoPayloadMethod() goa.Endpoint {
 		if err != nil {
 			return nil, err
 		}
+		var cancel context.CancelFunc
+		{
+			ctx, cancel = context.WithCancel(ctx)
+		}
 		conn, resp, err := c.dialer.DialContext(ctx, req.URL.String(), req.Header)
 		if err != nil {
 			if resp != nil {
@@ -860,8 +890,8 @@ func (c *Client) StreamingResultNoPayloadMethod() goa.Endpoint {
 			}
 			return nil, goahttp.ErrRequestError("StreamingResultNoPayloadService", "StreamingResultNoPayloadMethod", err)
 		}
-		if c.connConfigFn != nil {
-			conn = c.connConfigFn(conn)
+		if c.StreamingResultNoPayloadMethodConfigFn != nil {
+			conn = c.StreamingResultNoPayloadMethodConfigFn(conn, cancel)
 		}
 		stream := &StreamingResultNoPayloadMethodClientStream{conn: conn}
 		return stream, nil
@@ -897,10 +927,15 @@ func NewStreamingPayloadMethodHandler(
 			return
 		}
 
+		var cancel context.CancelFunc
+		{
+			ctx, cancel = context.WithCancel(ctx)
+		}
 		v := &streamingpayloadservice.StreamingPayloadMethodEndpointInput{
 			Stream: &StreamingPayloadMethodServerStream{
 				upgrader:     up,
 				connConfigFn: connConfigFn,
+				cancel:       cancel,
 				w:            w,
 				r:            r,
 			},
@@ -950,7 +985,7 @@ func (s *StreamingPayloadMethodServerStream) Recv() (*streamingpayloadservice.Re
 			return
 		}
 		if s.connConfigFn != nil {
-			conn = s.connConfigFn(conn)
+			conn = s.connConfigFn(conn, s.cancel)
 		}
 		s.conn = conn
 	})
@@ -984,6 +1019,10 @@ func (c *Client) StreamingPayloadMethod() goa.Endpoint {
 		if err != nil {
 			return nil, err
 		}
+		var cancel context.CancelFunc
+		{
+			ctx, cancel = context.WithCancel(ctx)
+		}
 		conn, resp, err := c.dialer.DialContext(ctx, req.URL.String(), req.Header)
 		if err != nil {
 			if resp != nil {
@@ -991,8 +1030,8 @@ func (c *Client) StreamingPayloadMethod() goa.Endpoint {
 			}
 			return nil, goahttp.ErrRequestError("StreamingPayloadService", "StreamingPayloadMethod", err)
 		}
-		if c.connConfigFn != nil {
-			conn = c.connConfigFn(conn)
+		if c.StreamingPayloadMethodConfigFn != nil {
+			conn = c.StreamingPayloadMethodConfigFn(conn, cancel)
 		}
 		stream := &StreamingPayloadMethodClientStream{conn: conn}
 		return stream, nil
@@ -1055,10 +1094,15 @@ func NewStreamingPayloadNoPayloadMethodHandler(
 		ctx = context.WithValue(ctx, goa.MethodKey, "StreamingPayloadNoPayloadMethod")
 		ctx = context.WithValue(ctx, goa.ServiceKey, "StreamingPayloadNoPayloadService")
 
+		var cancel context.CancelFunc
+		{
+			ctx, cancel = context.WithCancel(ctx)
+		}
 		v := &streamingpayloadnopayloadservice.StreamingPayloadNoPayloadMethodEndpointInput{
 			Stream: &StreamingPayloadNoPayloadMethodServerStream{
 				upgrader:     up,
 				connConfigFn: connConfigFn,
+				cancel:       cancel,
 				w:            w,
 				r:            r,
 			},
@@ -1090,6 +1134,10 @@ func (c *Client) StreamingPayloadNoPayloadMethod() goa.Endpoint {
 		if err != nil {
 			return nil, err
 		}
+		var cancel context.CancelFunc
+		{
+			ctx, cancel = context.WithCancel(ctx)
+		}
 		conn, resp, err := c.dialer.DialContext(ctx, req.URL.String(), req.Header)
 		if err != nil {
 			if resp != nil {
@@ -1097,8 +1145,8 @@ func (c *Client) StreamingPayloadNoPayloadMethod() goa.Endpoint {
 			}
 			return nil, goahttp.ErrRequestError("StreamingPayloadNoPayloadService", "StreamingPayloadNoPayloadMethod", err)
 		}
-		if c.connConfigFn != nil {
-			conn = c.connConfigFn(conn)
+		if c.StreamingPayloadNoPayloadMethodConfigFn != nil {
+			conn = c.StreamingPayloadNoPayloadMethodConfigFn(conn, cancel)
 		}
 		stream := &StreamingPayloadNoPayloadMethodClientStream{conn: conn}
 		return stream, nil
@@ -1159,7 +1207,7 @@ func (s *StreamingPayloadNoResultMethodServerStream) Recv() (string, error) {
 			return
 		}
 		if s.connConfigFn != nil {
-			conn = s.connConfigFn(conn)
+			conn = s.connConfigFn(conn, s.cancel)
 		}
 		s.conn = conn
 	})
@@ -1191,7 +1239,7 @@ func (s *StreamingPayloadNoResultMethodServerStream) Close() error {
 			return
 		}
 		if s.connConfigFn != nil {
-			conn = s.connConfigFn(conn)
+			conn = s.connConfigFn(conn, s.cancel)
 		}
 		s.conn = conn
 	})
@@ -1266,7 +1314,7 @@ func (s *StreamingPayloadResultWithViewsMethodServerStream) Recv() (float32, err
 			return
 		}
 		if s.connConfigFn != nil {
-			conn = s.connConfigFn(conn)
+			conn = s.connConfigFn(conn, s.cancel)
 		}
 		s.conn = conn
 	})
@@ -1368,7 +1416,7 @@ func (s *StreamingPayloadResultWithExplicitViewMethodServerStream) Recv() (float
 			return
 		}
 		if s.connConfigFn != nil {
-			conn = s.connConfigFn(conn)
+			conn = s.connConfigFn(conn, s.cancel)
 		}
 		s.conn = conn
 	})
@@ -1464,7 +1512,7 @@ func (s *StreamingPayloadResultCollectionWithViewsMethodServerStream) Recv() (in
 			return
 		}
 		if s.connConfigFn != nil {
-			conn = s.connConfigFn(conn)
+			conn = s.connConfigFn(conn, s.cancel)
 		}
 		s.conn = conn
 	})
@@ -1571,7 +1619,7 @@ func (s *StreamingPayloadResultCollectionWithExplicitViewMethodServerStream) Rec
 			return
 		}
 		if s.connConfigFn != nil {
-			conn = s.connConfigFn(conn)
+			conn = s.connConfigFn(conn, s.cancel)
 		}
 		s.conn = conn
 	})
@@ -1658,7 +1706,7 @@ func (s *StreamingPayloadPrimitiveMethodServerStream) Recv() (string, error) {
 			return
 		}
 		if s.connConfigFn != nil {
-			conn = s.connConfigFn(conn)
+			conn = s.connConfigFn(conn, s.cancel)
 		}
 		s.conn = conn
 	})
@@ -1737,7 +1785,7 @@ func (s *StreamingPayloadPrimitiveArrayMethodServerStream) Recv() ([]int32, erro
 			return
 		}
 		if s.connConfigFn != nil {
-			conn = s.connConfigFn(conn)
+			conn = s.connConfigFn(conn, s.cancel)
 		}
 		s.conn = conn
 	})
@@ -1816,7 +1864,7 @@ func (s *StreamingPayloadPrimitiveMapMethodServerStream) Recv() (map[string]int3
 			return
 		}
 		if s.connConfigFn != nil {
-			conn = s.connConfigFn(conn)
+			conn = s.connConfigFn(conn, s.cancel)
 		}
 		s.conn = conn
 	})
@@ -1896,7 +1944,7 @@ func (s *StreamingPayloadUserTypeArrayMethodServerStream) Recv() ([]*streamingpa
 			return
 		}
 		if s.connConfigFn != nil {
-			conn = s.connConfigFn(conn)
+			conn = s.connConfigFn(conn, s.cancel)
 		}
 		s.conn = conn
 	})
@@ -1978,7 +2026,7 @@ func (s *StreamingPayloadUserTypeMapMethodServerStream) Recv() (map[string]*stre
 			return
 		}
 		if s.connConfigFn != nil {
-			conn = s.connConfigFn(conn)
+			conn = s.connConfigFn(conn, s.cancel)
 		}
 		s.conn = conn
 	})
@@ -2059,10 +2107,15 @@ func NewBidirectionalStreamingMethodHandler(
 			return
 		}
 
+		var cancel context.CancelFunc
+		{
+			ctx, cancel = context.WithCancel(ctx)
+		}
 		v := &bidirectionalstreamingservice.BidirectionalStreamingMethodEndpointInput{
 			Stream: &BidirectionalStreamingMethodServerStream{
 				upgrader:     up,
 				connConfigFn: connConfigFn,
+				cancel:       cancel,
 				w:            w,
 				r:            r,
 			},
@@ -2097,7 +2150,7 @@ func (s *BidirectionalStreamingMethodServerStream) Send(v *bidirectionalstreamin
 			return
 		}
 		if s.connConfigFn != nil {
-			conn = s.connConfigFn(conn)
+			conn = s.connConfigFn(conn, s.cancel)
 		}
 		s.conn = conn
 	})
@@ -2128,7 +2181,7 @@ func (s *BidirectionalStreamingMethodServerStream) Recv() (*bidirectionalstreami
 			return
 		}
 		if s.connConfigFn != nil {
-			conn = s.connConfigFn(conn)
+			conn = s.connConfigFn(conn, s.cancel)
 		}
 		s.conn = conn
 	})
@@ -2160,7 +2213,7 @@ func (s *BidirectionalStreamingMethodServerStream) Close() error {
 			return
 		}
 		if s.connConfigFn != nil {
-			conn = s.connConfigFn(conn)
+			conn = s.connConfigFn(conn, s.cancel)
 		}
 		s.conn = conn
 	})
@@ -2195,6 +2248,10 @@ func (c *Client) BidirectionalStreamingMethod() goa.Endpoint {
 		if err != nil {
 			return nil, err
 		}
+		var cancel context.CancelFunc
+		{
+			ctx, cancel = context.WithCancel(ctx)
+		}
 		conn, resp, err := c.dialer.DialContext(ctx, req.URL.String(), req.Header)
 		if err != nil {
 			if resp != nil {
@@ -2202,8 +2259,8 @@ func (c *Client) BidirectionalStreamingMethod() goa.Endpoint {
 			}
 			return nil, goahttp.ErrRequestError("BidirectionalStreamingService", "BidirectionalStreamingMethod", err)
 		}
-		if c.connConfigFn != nil {
-			conn = c.connConfigFn(conn)
+		if c.BidirectionalStreamingMethodConfigFn != nil {
+			conn = c.BidirectionalStreamingMethodConfigFn(conn, cancel)
 		}
 		stream := &BidirectionalStreamingMethodClientStream{conn: conn}
 		return stream, nil
@@ -2272,10 +2329,15 @@ func NewBidirectionalStreamingNoPayloadMethodHandler(
 		ctx = context.WithValue(ctx, goa.MethodKey, "BidirectionalStreamingNoPayloadMethod")
 		ctx = context.WithValue(ctx, goa.ServiceKey, "BidirectionalStreamingNoPayloadService")
 
+		var cancel context.CancelFunc
+		{
+			ctx, cancel = context.WithCancel(ctx)
+		}
 		v := &bidirectionalstreamingnopayloadservice.BidirectionalStreamingNoPayloadMethodEndpointInput{
 			Stream: &BidirectionalStreamingNoPayloadMethodServerStream{
 				upgrader:     up,
 				connConfigFn: connConfigFn,
+				cancel:       cancel,
 				w:            w,
 				r:            r,
 			},
@@ -2309,7 +2371,7 @@ func (s *BidirectionalStreamingNoPayloadMethodServerStream) Close() error {
 			return
 		}
 		if s.connConfigFn != nil {
-			conn = s.connConfigFn(conn)
+			conn = s.connConfigFn(conn, s.cancel)
 		}
 		s.conn = conn
 	})
@@ -2339,6 +2401,10 @@ func (c *Client) BidirectionalStreamingNoPayloadMethod() goa.Endpoint {
 		if err != nil {
 			return nil, err
 		}
+		var cancel context.CancelFunc
+		{
+			ctx, cancel = context.WithCancel(ctx)
+		}
 		conn, resp, err := c.dialer.DialContext(ctx, req.URL.String(), req.Header)
 		if err != nil {
 			if resp != nil {
@@ -2346,8 +2412,8 @@ func (c *Client) BidirectionalStreamingNoPayloadMethod() goa.Endpoint {
 			}
 			return nil, goahttp.ErrRequestError("BidirectionalStreamingNoPayloadService", "BidirectionalStreamingNoPayloadMethod", err)
 		}
-		if c.connConfigFn != nil {
-			conn = c.connConfigFn(conn)
+		if c.BidirectionalStreamingNoPayloadMethodConfigFn != nil {
+			conn = c.BidirectionalStreamingNoPayloadMethodConfigFn(conn, cancel)
 		}
 		stream := &BidirectionalStreamingNoPayloadMethodClientStream{conn: conn}
 		return stream, nil
@@ -2413,7 +2479,7 @@ func (s *BidirectionalStreamingResultWithViewsMethodServerStream) Send(v *bidire
 			return
 		}
 		if s.connConfigFn != nil {
-			conn = s.connConfigFn(conn)
+			conn = s.connConfigFn(conn, s.cancel)
 		}
 		s.conn = conn
 	})
@@ -2452,7 +2518,7 @@ func (s *BidirectionalStreamingResultWithViewsMethodServerStream) Recv() (float3
 			return
 		}
 		if s.connConfigFn != nil {
-			conn = s.connConfigFn(conn)
+			conn = s.connConfigFn(conn, s.cancel)
 		}
 		s.conn = conn
 	})
@@ -2484,7 +2550,7 @@ func (s *BidirectionalStreamingResultWithViewsMethodServerStream) Close() error 
 			return
 		}
 		if s.connConfigFn != nil {
-			conn = s.connConfigFn(conn)
+			conn = s.connConfigFn(conn, s.cancel)
 		}
 		s.conn = conn
 	})
@@ -2578,7 +2644,7 @@ func (s *BidirectionalStreamingResultWithExplicitViewMethodServerStream) Send(v 
 			return
 		}
 		if s.connConfigFn != nil {
-			conn = s.connConfigFn(conn)
+			conn = s.connConfigFn(conn, s.cancel)
 		}
 		s.conn = conn
 	})
@@ -2610,7 +2676,7 @@ func (s *BidirectionalStreamingResultWithExplicitViewMethodServerStream) Recv() 
 			return
 		}
 		if s.connConfigFn != nil {
-			conn = s.connConfigFn(conn)
+			conn = s.connConfigFn(conn, s.cancel)
 		}
 		s.conn = conn
 	})
@@ -2680,7 +2746,7 @@ func (s *BidirectionalStreamingResultCollectionWithViewsMethodServerStream) Send
 			return
 		}
 		if s.connConfigFn != nil {
-			conn = s.connConfigFn(conn)
+			conn = s.connConfigFn(conn, s.cancel)
 		}
 		s.conn = conn
 	})
@@ -2720,7 +2786,7 @@ func (s *BidirectionalStreamingResultCollectionWithViewsMethodServerStream) Recv
 			return
 		}
 		if s.connConfigFn != nil {
-			conn = s.connConfigFn(conn)
+			conn = s.connConfigFn(conn, s.cancel)
 		}
 		s.conn = conn
 	})
@@ -2806,7 +2872,7 @@ func (s *BidirectionalStreamingResultCollectionWithExplicitViewMethodServerStrea
 			return
 		}
 		if s.connConfigFn != nil {
-			conn = s.connConfigFn(conn)
+			conn = s.connConfigFn(conn, s.cancel)
 		}
 		s.conn = conn
 	})
@@ -2838,7 +2904,7 @@ func (s *BidirectionalStreamingResultCollectionWithExplicitViewMethodServerStrea
 			return
 		}
 		if s.connConfigFn != nil {
-			conn = s.connConfigFn(conn)
+			conn = s.connConfigFn(conn, s.cancel)
 		}
 		s.conn = conn
 	})
@@ -2904,7 +2970,7 @@ func (s *BidirectionalStreamingPrimitiveMethodServerStream) Send(v string) error
 			return
 		}
 		if s.connConfigFn != nil {
-			conn = s.connConfigFn(conn)
+			conn = s.connConfigFn(conn, s.cancel)
 		}
 		s.conn = conn
 	})
@@ -2934,7 +3000,7 @@ func (s *BidirectionalStreamingPrimitiveMethodServerStream) Recv() (string, erro
 			return
 		}
 		if s.connConfigFn != nil {
-			conn = s.connConfigFn(conn)
+			conn = s.connConfigFn(conn, s.cancel)
 		}
 		s.conn = conn
 	})
@@ -2992,7 +3058,7 @@ func (s *BidirectionalStreamingPrimitiveArrayMethodServerStream) Send(v []string
 			return
 		}
 		if s.connConfigFn != nil {
-			conn = s.connConfigFn(conn)
+			conn = s.connConfigFn(conn, s.cancel)
 		}
 		s.conn = conn
 	})
@@ -3022,7 +3088,7 @@ func (s *BidirectionalStreamingPrimitiveArrayMethodServerStream) Recv() ([]int32
 			return
 		}
 		if s.connConfigFn != nil {
-			conn = s.connConfigFn(conn)
+			conn = s.connConfigFn(conn, s.cancel)
 		}
 		s.conn = conn
 	})
@@ -3080,7 +3146,7 @@ func (s *BidirectionalStreamingPrimitiveMapMethodServerStream) Send(v map[int]in
 			return
 		}
 		if s.connConfigFn != nil {
-			conn = s.connConfigFn(conn)
+			conn = s.connConfigFn(conn, s.cancel)
 		}
 		s.conn = conn
 	})
@@ -3110,7 +3176,7 @@ func (s *BidirectionalStreamingPrimitiveMapMethodServerStream) Recv() (map[strin
 			return
 		}
 		if s.connConfigFn != nil {
-			conn = s.connConfigFn(conn)
+			conn = s.connConfigFn(conn, s.cancel)
 		}
 		s.conn = conn
 	})
@@ -3169,7 +3235,7 @@ func (s *BidirectionalStreamingUserTypeArrayMethodServerStream) Send(v []*bidire
 			return
 		}
 		if s.connConfigFn != nil {
-			conn = s.connConfigFn(conn)
+			conn = s.connConfigFn(conn, s.cancel)
 		}
 		s.conn = conn
 	})
@@ -3201,7 +3267,7 @@ func (s *BidirectionalStreamingUserTypeArrayMethodServerStream) Recv() ([]*bidir
 			return
 		}
 		if s.connConfigFn != nil {
-			conn = s.connConfigFn(conn)
+			conn = s.connConfigFn(conn, s.cancel)
 		}
 		s.conn = conn
 	})
@@ -3264,7 +3330,7 @@ func (s *BidirectionalStreamingUserTypeMapMethodServerStream) Send(v map[string]
 			return
 		}
 		if s.connConfigFn != nil {
-			conn = s.connConfigFn(conn)
+			conn = s.connConfigFn(conn, s.cancel)
 		}
 		s.conn = conn
 	})
@@ -3296,7 +3362,7 @@ func (s *BidirectionalStreamingUserTypeMapMethodServerStream) Recv() (map[string
 			return
 		}
 		if s.connConfigFn != nil {
-			conn = s.connConfigFn(conn)
+			conn = s.connConfigFn(conn, s.cancel)
 		}
 		s.conn = conn
 	})

@@ -256,7 +256,11 @@ type {{ .ClientStruct }} struct {
 	decoder    func(*http.Response) goahttp.Decoder
 	{{- if streamingEndpointExists . }}
 	dialer goahttp.Dialer
-	connConfigFn goahttp.ConnConfigureFunc
+		{{- range .Endpoints }}
+			{{- if .ServerStream }}
+				{{ .Method.Name }}ConfigFn goahttp.ConnConfigureFunc
+			{{- end }}
+		{{- end }}
 	{{- end }}
 }
 `
@@ -272,7 +276,11 @@ func New{{ .ClientStruct }}(
 	restoreBody bool,
 	{{- if streamingEndpointExists . }}
 	dialer goahttp.Dialer,
-	connConfigFn goahttp.ConnConfigureFunc,
+		{{- range .Endpoints }}
+			{{- if .ServerStream }}
+				{{ .Method.Name }}ConfigFn goahttp.ConnConfigureFunc,
+			{{- end }}
+		{{- end }}
 	{{- end }}
 ) *{{ .ClientStruct }} {
 	return &{{ .ClientStruct }}{
@@ -286,7 +294,11 @@ func New{{ .ClientStruct }}(
 		encoder:           enc,
 		{{- if streamingEndpointExists . }}
 		dialer: dialer,
-		connConfigFn: connConfigFn,
+			{{- range .Endpoints }}
+				{{- if .ServerStream }}
+					{{ .Method.Name }}ConfigFn: {{ .Method.Name }}ConfigFn,
+				{{- end }}
+			{{- end }}
 		{{- end }}
 	}
 }
@@ -318,6 +330,10 @@ func (c *{{ .ClientStruct }}) {{ .EndpointInit }}({{ if .MultipartRequestEncoder
 	{{- end }}
 
 	{{- if .ClientStream }}
+		var cancel context.CancelFunc
+		{
+			ctx, cancel = context.WithCancel(ctx)
+		}
 		conn, resp, err := c.dialer.DialContext(ctx, req.URL.String(), req.Header)
 		if err != nil {
 			if resp != nil {
@@ -325,8 +341,8 @@ func (c *{{ .ClientStruct }}) {{ .EndpointInit }}({{ if .MultipartRequestEncoder
 			}
 			return nil, goahttp.ErrRequestError("{{ .ServiceName }}", "{{ .Method.Name }}", err)
 		}
-		if c.connConfigFn != nil {
-			conn = c.connConfigFn(conn)
+		if c.{{ .Method.Name }}ConfigFn != nil {
+			conn = c.{{ .Method.Name }}ConfigFn(conn, cancel)
 		}
 		stream := &{{ .ClientStream.VarName }}{conn: conn}
 		{{- if .Method.ViewedResult }}

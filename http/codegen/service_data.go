@@ -2624,6 +2624,8 @@ type {{ .VarName }} struct {
 	upgrader goahttp.Upgrader
 	{{ comment "connConfigFn is the websocket connection configurer." }}
 	connConfigFn goahttp.ConnConfigureFunc
+	{{ comment "cancel is the context cancellation function which cancels the request context when invoked." }}
+	cancel context.CancelFunc
 	{{ comment "w is the HTTP response writer used in upgrading the connection." }}
 	w http.ResponseWriter
 	{{ comment "r is the HTTP request." }}
@@ -2804,7 +2806,7 @@ func (s *{{ .VarName }}) {{ .RecvName }}() ({{ .RecvTypeRef }}, error) {
 			return
 		}
 		if s.connConfigFn != nil {
-			conn = s.connConfigFn(conn)
+			conn = s.connConfigFn(conn, s.cancel)
 		}
 		s.conn = conn
 	})

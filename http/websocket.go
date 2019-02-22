@@ -21,6 +21,7 @@ type (
 	}
 
 	// ConnConfigureFunc is used to configure a websocket connection with
-	// custom handlers.
-	ConnConfigureFunc func(*websocket.Conn) *websocket.Conn
+	// custom handlers. The cancel function cancels the request context when
+	// invoked in the configure function.
+	ConnConfigureFunc func(conn *websocket.Conn, cancel context.CancelFunc) *websocket.Conn
 )

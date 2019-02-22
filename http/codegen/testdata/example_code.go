@@ -434,8 +434,7 @@ func httpUsageExamples() string {
 	}
 
 	var (
-		dialer       *websocket.Dialer
-		connConfigFn goahttp.ConnConfigureFunc
+		dialer *websocket.Dialer
 	)
 	{
 		dialer = websocket.DefaultDialer
@@ -449,7 +448,7 @@ func httpUsageExamples() string {
 		goahttp.ResponseDecoder,
 		debug,
 		dialer,
-		connConfigFn,
+		nil,
 	)
 }
 

@@ -29,7 +29,7 @@ func serverFile(genpkg string, svc *expr.HTTPServiceExpr) *codegen.File {
 	data := HTTPServices.Get(svc.Name())
 	title := fmt.Sprintf("%s HTTP server", svc.Name())
 	funcs := map[string]interface{}{
-		"join": func(ss []string, s string) string { return strings.Join(ss, s) },
+		"join":                    func(ss []string, s string) string { return strings.Join(ss, s) },
 		"streamingEndpointExists": streamingEndpointExists,
 		"upgradeParams":           upgradeParams,
 		"viewedServerBody":        viewedServerBody,
@@ -184,11 +184,17 @@ func serverEncodeDecode(genpkg string, svc *expr.HTTPServiceExpr) *codegen.File 
 // the service defines a streaming payload or result.
 func streamingEndpointExists(sd *ServiceData) bool {
 	for _, e := range sd.Endpoints {
-		if e.ServerStream != nil || e.ClientStream != nil {
+		if isStreamingEndpoint(e) {
 			return true
 		}
 	}
 	return false
+}
+
+// isStreamingEndpoint returns true if the endpoint defines a streaming payload
+// or result.
+func isStreamingEndpoint(ed *EndpointData) bool {
+	return ed.ServerStream != nil || ed.ClientStream != nil
 }
 
 func transTmplFuncs(s *expr.HTTPServiceExpr) map[string]interface{} {
@@ -300,7 +306,11 @@ func {{ .ServerInit }}(
 	eh func(context.Context, http.ResponseWriter, error),
 	{{- if streamingEndpointExists . }}
 	up goahttp.Upgrader,
-	connConfigFn goahttp.ConnConfigureFunc,
+		{{- range .Endpoints }}
+			{{- if .ServerStream }}
+				{{ .Method.Name }}ConfigFn goahttp.ConnConfigureFunc,
+			{{- end }}
+		{{- end }}
 	{{- end }}
 	{{- range .Endpoints }}
 		{{- if .MultipartRequestDecoder }}
@@ -323,7 +333,7 @@ func {{ .ServerInit }}(
 			{{- end }}
 		},
 		{{- range .Endpoints }}
-		{{ .Method.VarName }}: {{ .HandlerInit }}(e.{{ .Method.VarName }}, mux, {{ if .MultipartRequestDecoder }}{{ .MultipartRequestDecoder.InitName }}(mux, {{ .MultipartRequestDecoder.VarName }}){{ else }}dec{{ end }}, enc, eh{{ if .ServerStream }}, up, connConfigFn{{ end }}),
+		{{ .Method.VarName }}: {{ .HandlerInit }}(e.{{ .Method.VarName }}, mux, {{ if .MultipartRequestDecoder }}{{ .MultipartRequestDecoder.InitName }}(mux, {{ .MultipartRequestDecoder.VarName }}){{ else }}dec{{ end }}, enc, eh{{ if .ServerStream }}, up, {{ .Method.Name }}ConfigFn{{ end }}),
 		{{- end }}
 	}
 }
@@ -443,10 +453,15 @@ func {{ .HandlerInit }}(
 	{{- end }}
 
 	{{ if .ServerStream }}
+		var cancel context.CancelFunc
+		{
+			ctx, cancel = context.WithCancel(ctx)
+		}
 		v := &{{ .ServicePkgName }}.{{ .Method.ServerStream.EndpointStruct }}{
 			Stream: &{{ .ServerStream.VarName }}{
 				upgrader: up,
 				connConfigFn: connConfigFn,
+				cancel: cancel,
 				w: w,
 				r: r,
 			},
