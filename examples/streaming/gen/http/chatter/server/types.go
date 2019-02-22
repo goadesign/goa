@@ -18,6 +18,16 @@ import (
 // endpoint HTTP response body.
 type ChatSummaryResponseCollection []*ChatSummaryResponse
 
+// SubscribeResponseBody is the type of the "chatter" service "subscribe"
+// endpoint HTTP response body.
+type SubscribeResponseBody struct {
+	// Message sent to the server
+	Message string `form:"message" json:"message" xml:"message"`
+	Action  string `form:"action" json:"action" xml:"action"`
+	// Time at which the message was added
+	AddedAt string `form:"added_at" json:"added_at" xml:"added_at"`
+}
+
 // HistoryResponseBodyTiny is the type of the "chatter" service "history"
 // endpoint HTTP response body.
 type HistoryResponseBodyTiny struct {
@@ -33,7 +43,7 @@ type HistoryResponseBody struct {
 	// Length of the message sent
 	Length *int `form:"length,omitempty" json:"length,omitempty" xml:"length,omitempty"`
 	// Time at which the message was sent
-	SentAt *string `form:"sent_at,omitempty" json:"sent_at,omitempty" xml:"sent_at,omitempty"`
+	SentAt string `form:"sent_at" json:"sent_at" xml:"sent_at"`
 }
 
 // LoginUnauthorizedResponseBody is the type of the "chatter" service "login"
@@ -64,6 +74,14 @@ type SummaryInvalidScopesResponseBody string
 // "summary" endpoint HTTP response body for the "unauthorized" error.
 type SummaryUnauthorizedResponseBody string
 
+// SubscribeInvalidScopesResponseBody is the type of the "chatter" service
+// "subscribe" endpoint HTTP response body for the "invalid-scopes" error.
+type SubscribeInvalidScopesResponseBody string
+
+// SubscribeUnauthorizedResponseBody is the type of the "chatter" service
+// "subscribe" endpoint HTTP response body for the "unauthorized" error.
+type SubscribeUnauthorizedResponseBody string
+
 // HistoryInvalidScopesResponseBody is the type of the "chatter" service
 // "history" endpoint HTTP response body for the "invalid-scopes" error.
 type HistoryInvalidScopesResponseBody string
@@ -79,7 +97,7 @@ type ChatSummaryResponse struct {
 	// Length of the message sent
 	Length *int `form:"length,omitempty" json:"length,omitempty" xml:"length,omitempty"`
 	// Time at which the message was sent
-	SentAt *string `form:"sent_at,omitempty" json:"sent_at,omitempty" xml:"sent_at,omitempty"`
+	SentAt string `form:"sent_at" json:"sent_at" xml:"sent_at"`
 }
 
 // NewChatSummaryResponseCollection builds the HTTP response body from the
@@ -90,8 +108,19 @@ func NewChatSummaryResponseCollection(res chattersvcviews.ChatSummaryCollectionV
 		body[i] = &ChatSummaryResponse{
 			Message: *val.Message,
 			Length:  val.Length,
-			SentAt:  val.SentAt,
+			SentAt:  *val.SentAt,
 		}
+	}
+	return body
+}
+
+// NewSubscribeResponseBody builds the HTTP response body from the result of
+// the "subscribe" endpoint of the "chatter" service.
+func NewSubscribeResponseBody(res *chattersvc.Event) *SubscribeResponseBody {
+	body := &SubscribeResponseBody{
+		Message: res.Message,
+		Action:  res.Action,
+		AddedAt: res.AddedAt,
 	}
 	return body
 }
@@ -111,7 +140,7 @@ func NewHistoryResponseBody(res *chattersvcviews.ChatSummaryView) *HistoryRespon
 	body := &HistoryResponseBody{
 		Message: *res.Message,
 		Length:  res.Length,
-		SentAt:  res.SentAt,
+		SentAt:  *res.SentAt,
 	}
 	return body
 }
@@ -165,6 +194,20 @@ func NewSummaryUnauthorizedResponseBody(res chattersvc.Unauthorized) SummaryUnau
 	return body
 }
 
+// NewSubscribeInvalidScopesResponseBody builds the HTTP response body from the
+// result of the "subscribe" endpoint of the "chatter" service.
+func NewSubscribeInvalidScopesResponseBody(res chattersvc.InvalidScopes) SubscribeInvalidScopesResponseBody {
+	body := SubscribeInvalidScopesResponseBody(res)
+	return body
+}
+
+// NewSubscribeUnauthorizedResponseBody builds the HTTP response body from the
+// result of the "subscribe" endpoint of the "chatter" service.
+func NewSubscribeUnauthorizedResponseBody(res chattersvc.Unauthorized) SubscribeUnauthorizedResponseBody {
+	body := SubscribeUnauthorizedResponseBody(res)
+	return body
+}
+
 // NewHistoryInvalidScopesResponseBody builds the HTTP response body from the
 // result of the "history" endpoint of the "chatter" service.
 func NewHistoryInvalidScopesResponseBody(res chattersvc.InvalidScopes) HistoryInvalidScopesResponseBody {
@@ -205,6 +248,13 @@ func NewSummaryPayload(token string) *chattersvc.SummaryPayload {
 	}
 }
 
+// NewSubscribePayload builds a chatter service subscribe endpoint payload.
+func NewSubscribePayload(token string) *chattersvc.SubscribePayload {
+	return &chattersvc.SubscribePayload{
+		Token: token,
+	}
+}
+
 // NewHistoryPayload builds a chatter service history endpoint payload.
 func NewHistoryPayload(view *string, token string) *chattersvc.HistoryPayload {
 	return &chattersvc.HistoryPayload{
@@ -216,8 +266,7 @@ func NewHistoryPayload(view *string, token string) *chattersvc.HistoryPayload {
 // ValidateChatSummaryResponse runs the validations defined on
 // ChatSummaryResponse
 func ValidateChatSummaryResponse(body *ChatSummaryResponse) (err error) {
-	if body.SentAt != nil {
-		err = goa.MergeErrors(err, goa.ValidateFormat("body.sent_at", *body.SentAt, goa.FormatDateTime))
-	}
+	err = goa.MergeErrors(err, goa.ValidateFormat("body.sent_at", body.SentAt, goa.FormatDateTime))
+
 	return
 }

@@ -237,6 +237,62 @@ func EncodeSummaryError(encoder func(context.Context, http.ResponseWriter) goaht
 	}
 }
 
+// DecodeSubscribeRequest returns a decoder for requests sent to the chatter
+// subscribe endpoint.
+func DecodeSubscribeRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) (interface{}, error) {
+	return func(r *http.Request) (interface{}, error) {
+		var (
+			token string
+			err   error
+		)
+		token = r.Header.Get("Authorization")
+		if token == "" {
+			err = goa.MergeErrors(err, goa.MissingFieldError("Authorization", "header"))
+		}
+		if err != nil {
+			return nil, err
+		}
+		payload := NewSubscribePayload(token)
+		if strings.Contains(payload.Token, " ") {
+			// Remove authorization scheme prefix (e.g. "Bearer")
+			cred := strings.SplitN(payload.Token, " ", 2)[1]
+			payload.Token = cred
+		}
+
+		return payload, nil
+	}
+}
+
+// EncodeSubscribeError returns an encoder for errors returned by the subscribe
+// chatter endpoint.
+func EncodeSubscribeError(encoder func(context.Context, http.ResponseWriter) goahttp.Encoder) func(context.Context, http.ResponseWriter, error) error {
+	encodeError := goahttp.ErrorEncoder(encoder)
+	return func(ctx context.Context, w http.ResponseWriter, v error) error {
+		en, ok := v.(ErrorNamer)
+		if !ok {
+			return encodeError(ctx, w, v)
+		}
+		switch en.ErrorName() {
+		case "invalid-scopes":
+			res := v.(chattersvc.InvalidScopes)
+			enc := encoder(ctx, w)
+			body := NewSubscribeInvalidScopesResponseBody(res)
+			w.Header().Set("goa-error", "invalid-scopes")
+			w.WriteHeader(http.StatusForbidden)
+			return enc.Encode(body)
+		case "unauthorized":
+			res := v.(chattersvc.Unauthorized)
+			enc := encoder(ctx, w)
+			body := NewSubscribeUnauthorizedResponseBody(res)
+			w.Header().Set("goa-error", "unauthorized")
+			w.WriteHeader(http.StatusUnauthorized)
+			return enc.Encode(body)
+		default:
+			return encodeError(ctx, w, v)
+		}
+	}
+}
+
 // DecodeHistoryRequest returns a decoder for requests sent to the chatter
 // history endpoint.
 func DecodeHistoryRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) (interface{}, error) {

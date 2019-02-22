@@ -24,7 +24,7 @@ import (
 //    command (subcommand1|subcommand2|...)
 //
 func UsageCommands() string {
-	return `chatter (login|echoer|listener|summary|history)
+	return `chatter (login|echoer|listener|summary|subscribe|history)
 `
 }
 
@@ -43,7 +43,11 @@ func ParseEndpoint(
 	dec func(*http.Response) goahttp.Decoder,
 	restore bool,
 	dialer goahttp.Dialer,
-	connConfigFn goahttp.ConnConfigureFunc,
+	chatterEchoerConfigFn goahttp.ConnConfigureFunc,
+	chatterListenerConfigFn goahttp.ConnConfigureFunc,
+	chatterSummaryConfigFn goahttp.ConnConfigureFunc,
+	chatterSubscribeConfigFn goahttp.ConnConfigureFunc,
+	chatterHistoryConfigFn goahttp.ConnConfigureFunc,
 ) (goa.Endpoint, interface{}, error) {
 	var (
 		chatterFlags = flag.NewFlagSet("chatter", flag.ContinueOnError)
@@ -61,6 +65,9 @@ func ParseEndpoint(
 		chatterSummaryFlags     = flag.NewFlagSet("summary", flag.ExitOnError)
 		chatterSummaryTokenFlag = chatterSummaryFlags.String("token", "REQUIRED", "")
 
+		chatterSubscribeFlags     = flag.NewFlagSet("subscribe", flag.ExitOnError)
+		chatterSubscribeTokenFlag = chatterSubscribeFlags.String("token", "REQUIRED", "")
+
 		chatterHistoryFlags     = flag.NewFlagSet("history", flag.ExitOnError)
 		chatterHistoryViewFlag  = chatterHistoryFlags.String("view", "", "")
 		chatterHistoryTokenFlag = chatterHistoryFlags.String("token", "REQUIRED", "")
@@ -70,6 +77,7 @@ func ParseEndpoint(
 	chatterEchoerFlags.Usage = chatterEchoerUsage
 	chatterListenerFlags.Usage = chatterListenerUsage
 	chatterSummaryFlags.Usage = chatterSummaryUsage
+	chatterSubscribeFlags.Usage = chatterSubscribeUsage
 	chatterHistoryFlags.Usage = chatterHistoryUsage
 
 	if err := flag.CommandLine.Parse(os.Args[1:]); err != nil {
@@ -118,6 +126,9 @@ func ParseEndpoint(
 			case "summary":
 				epf = chatterSummaryFlags
 
+			case "subscribe":
+				epf = chatterSubscribeFlags
+
 			case "history":
 				epf = chatterHistoryFlags
 
@@ -144,7 +155,7 @@ func ParseEndpoint(
 	{
 		switch svcn {
 		case "chatter":
-			c := chattersvcc.NewClient(scheme, host, doer, enc, dec, restore, dialer, connConfigFn)
+			c := chattersvcc.NewClient(scheme, host, doer, enc, dec, restore, dialer, chatterEchoerConfigFn, chatterListenerConfigFn, chatterSummaryConfigFn, chatterSubscribeConfigFn, chatterHistoryConfigFn)
 			switch epn {
 			case "login":
 				endpoint = c.Login()
@@ -158,6 +169,9 @@ func ParseEndpoint(
 			case "summary":
 				endpoint = c.Summary()
 				data, err = chattersvcc.BuildSummaryPayload(*chatterSummaryTokenFlag)
+			case "subscribe":
+				endpoint = c.Subscribe()
+				data, err = chattersvcc.BuildSubscribePayload(*chatterSubscribeTokenFlag)
 			case "history":
 				endpoint = c.History()
 				data, err = chattersvcc.BuildHistoryPayload(*chatterHistoryViewFlag, *chatterHistoryTokenFlag)
@@ -182,6 +196,7 @@ COMMAND:
     echoer: Echoes the message sent by the client.
     listener: Listens to the messages sent by the client.
     summary: Summarizes the chat messages sent by the client.
+    subscribe: Subscribe to events sent when new chat messages are added.
     history: Returns the chat messages sent to the server.
 
 Additional help:
@@ -207,7 +222,7 @@ Echoes the message sent by the client.
     -token STRING: 
 
 Example:
-    `+os.Args[0]+` chatter echoer --token "Recusandae voluptatem recusandae qui aut omnis est."
+    `+os.Args[0]+` chatter echoer --token "Eum non minus adipisci perspiciatis."
 `, os.Args[0])
 }
 
@@ -218,7 +233,7 @@ Listens to the messages sent by the client.
     -token STRING: 
 
 Example:
-    `+os.Args[0]+` chatter listener --token "Sit tempore soluta rerum iste."
+    `+os.Args[0]+` chatter listener --token "Cumque cupiditate aperiam suscipit enim."
 `, os.Args[0])
 }
 
@@ -229,7 +244,18 @@ Summarizes the chat messages sent by the client.
     -token STRING: 
 
 Example:
-    `+os.Args[0]+` chatter summary --token "Saepe nesciunt eum officiis voluptatem."
+    `+os.Args[0]+` chatter summary --token "Iusto aut saepe."
+`, os.Args[0])
+}
+
+func chatterSubscribeUsage() {
+	fmt.Fprintf(os.Stderr, `%s [flags] chatter subscribe -token STRING
+
+Subscribe to events sent when new chat messages are added.
+    -token STRING: 
+
+Example:
+    `+os.Args[0]+` chatter subscribe --token "Doloribus est est enim blanditiis amet quis."
 `, os.Args[0])
 }
 
@@ -241,6 +267,6 @@ Returns the chat messages sent to the server.
     -token STRING: 
 
 Example:
-    `+os.Args[0]+` chatter history --view "Quas soluta rerum voluptatum." --token "Quidem et sint cupiditate at aut."
+    `+os.Args[0]+` chatter history --view "Temporibus eligendi qui excepturi quia soluta error." --token "Minima voluptatum."
 `, os.Args[0])
 }

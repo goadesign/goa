@@ -22,12 +22,12 @@ func doHTTP(scheme, host string, timeout int, debug bool) (goa.Endpoint, interfa
 	}
 
 	var (
-		dialer       *websocket.Dialer
-		connConfigFn goahttp.ConnConfigureFunc
+		dialer *websocket.Dialer
 	)
 	{
 		dialer = websocket.DefaultDialer
 	}
+
 	return cli.ParseEndpoint(
 		scheme,
 		host,
@@ -36,9 +36,14 @@ func doHTTP(scheme, host string, timeout int, debug bool) (goa.Endpoint, interfa
 		goahttp.ResponseDecoder,
 		debug,
 		dialer,
-		connConfigFn,
+		nil,
+		nil,
+		nil,
+		nil,
+		nil,
 	)
 }
+
 func httpUsageCommands() string {
 	return cli.UsageCommands()
 }

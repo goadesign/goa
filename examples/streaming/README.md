@@ -65,9 +65,28 @@ check check check
 ]
 ```
 
+### `subscribe` Endpoint
+
+This endpoint illustrates **streaming result**. The client sends a
+payload defined in `Payload` DSL containing the JWT token. Once auth succeeds,
+the server establishes a stream through which it sends events to the client
+when a new message is added. The subscription ends when the client goes away
+or the server shuts down.
+
+```
+$ ./chatter_cli chatter subscribe --token $JWT_TOKEN
+# Now send messages to server in a separate `chatter_cli` process by calling
+# the `summary`, `listener`, or `echoer` endpoints.
+{
+    "Message": "hello",
+    "Action": "added",
+    "AddedAt": "2018-08-14T12:32:30-07:00"
+}
+```
+
 ### `history` Endpoint
 
-This endpoint illustrates **streaming result**. The client sends a payload
+This endpoint illustrates **streaming result** with views. The client sends a
 payload defined in `Payload` DSL containing the JWT token and an optional
 "view" parameter. Once auth succeeds, the server streams all the
 messages sent by the client rendered using the optional "view" parameter.
@@ -134,27 +153,18 @@ var (
     ReadBufferSize: 512,
     WriteBufferSize: 512,
   }
-  myConnConfigurer := func(conn *websocket.Conn) *websocket.Conn {
-    conn.SetReadDeadline(time.Now()+time.Minute*2)
-    return conn
-  }
-  chatterServer = chattersvcsvr.New(chatterEndpoints, mux, dec, enc, eh, myUpgrader, myConnConfigurer)
+  chatterServer = chattersvcsvr.New(chatterEndpoints, mux, dec, enc, eh, myUpgrader, nil, nil, nil, nil)
 }
 
 // In client main.go
 
 var (
   myDialer         *websocket.Dialer
-  myConnConfigurer goahttp.ConnConfigureFunc
 )
 {
   myDialer = websocket.Dialer{
     ReadBufferSize: 512,
     WriteBufferSize: 512,
-  }
-  myConnConfigurer := func(conn *websocket.Conn) *websocket.Conn {
-    conn.SetReadDeadline(time.Now()+time.Minute*2)
-    return conn
   }
 }
 
@@ -166,9 +176,17 @@ endpoint, payload, err := cli.ParseEndpoint(
   goahttp.ResponseDecoder,
   debug,
   myDialer,
-  myConnConfigurer,
+  nil,
+  nil,
+  nil,
+  nil,
 )
 ```
+
+Check out the `pingPonger` defined in `cmd/chatter/http.go` on how to use
+`ConnConfigureFunc` to customize the websocket connection to send periodic
+pings to the client and cancel the request if the client does not respond
+with a pong.
 
 ## Gotchas
 

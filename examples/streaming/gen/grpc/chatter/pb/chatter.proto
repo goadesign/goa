@@ -22,6 +22,8 @@ service Chatter {
 	rpc Listener (stream ListenerStreamingRequest) returns (ListenerResponse);
 	// Summarizes the chat messages sent by the client.
 	rpc Summary (stream SummaryStreamingRequest) returns (ChatSummaryCollection);
+	// Subscribe to events sent when new chat messages are added.
+	rpc Subscribe (SubscribeRequest) returns (stream SubscribeResponse);
 	// Returns the chat messages sent to the server.
 	rpc History (HistoryRequest) returns (stream HistoryResponse);
 }
@@ -63,6 +65,17 @@ message ChatSummary {
 	sint32 length = 2;
 	// Time at which the message was sent
 	string sent_at = 3;
+}
+
+message SubscribeRequest {
+}
+
+message SubscribeResponse {
+	// Message sent to the server
+	string message_ = 1;
+	string action = 2;
+	// Time at which the message was added
+	string added_at = 3;
 }
 
 message HistoryRequest {

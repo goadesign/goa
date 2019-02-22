@@ -17,11 +17,12 @@ import (
 
 // Endpoints wraps the "chatter" service endpoints.
 type Endpoints struct {
-	Login    goa.Endpoint
-	Echoer   goa.Endpoint
-	Listener goa.Endpoint
-	Summary  goa.Endpoint
-	History  goa.Endpoint
+	Login     goa.Endpoint
+	Echoer    goa.Endpoint
+	Listener  goa.Endpoint
+	Summary   goa.Endpoint
+	Subscribe goa.Endpoint
+	History   goa.Endpoint
 }
 
 // EchoerEndpointInput is the input type of "echoer" endpoint that holds the
@@ -51,6 +52,15 @@ type SummaryEndpointInput struct {
 	Stream SummaryServerStream
 }
 
+// SubscribeEndpointInput is the input type of "subscribe" endpoint that holds
+// the method payload and the server stream.
+type SubscribeEndpointInput struct {
+	// Payload is the method payload.
+	Payload *SubscribePayload
+	// Stream is the server stream used by the "subscribe" method to send data.
+	Stream SubscribeServerStream
+}
+
 // HistoryEndpointInput is the input type of "history" endpoint that holds the
 // method payload and the server stream.
 type HistoryEndpointInput struct {
@@ -65,11 +75,12 @@ func NewEndpoints(s Service) *Endpoints {
 	// Casting service to Auther interface
 	a := s.(Auther)
 	return &Endpoints{
-		Login:    NewLoginEndpoint(s, a.BasicAuth),
-		Echoer:   NewEchoerEndpoint(s, a.JWTAuth),
-		Listener: NewListenerEndpoint(s, a.JWTAuth),
-		Summary:  NewSummaryEndpoint(s, a.JWTAuth),
-		History:  NewHistoryEndpoint(s, a.JWTAuth),
+		Login:     NewLoginEndpoint(s, a.BasicAuth),
+		Echoer:    NewEchoerEndpoint(s, a.JWTAuth),
+		Listener:  NewListenerEndpoint(s, a.JWTAuth),
+		Summary:   NewSummaryEndpoint(s, a.JWTAuth),
+		Subscribe: NewSubscribeEndpoint(s, a.JWTAuth),
+		History:   NewHistoryEndpoint(s, a.JWTAuth),
 	}
 }
 
@@ -79,6 +90,7 @@ func (e *Endpoints) Use(m func(goa.Endpoint) goa.Endpoint) {
 	e.Echoer = m(e.Echoer)
 	e.Listener = m(e.Listener)
 	e.Summary = m(e.Summary)
+	e.Subscribe = m(e.Subscribe)
 	e.History = m(e.History)
 }
 
@@ -153,6 +165,25 @@ func NewSummaryEndpoint(s Service, authJWTFn security.AuthJWTFunc) goa.Endpoint 
 			return nil, err
 		}
 		return nil, s.Summary(ctx, ep.Payload, ep.Stream)
+	}
+}
+
+// NewSubscribeEndpoint returns an endpoint function that calls the method
+// "subscribe" of service "chatter".
+func NewSubscribeEndpoint(s Service, authJWTFn security.AuthJWTFunc) goa.Endpoint {
+	return func(ctx context.Context, req interface{}) (interface{}, error) {
+		ep := req.(*SubscribeEndpointInput)
+		var err error
+		sc := security.JWTScheme{
+			Name:           "jwt",
+			Scopes:         []string{"stream:read", "stream:write"},
+			RequiredScopes: []string{"stream:write"},
+		}
+		ctx, err = authJWTFn(ctx, ep.Payload.Token, &sc)
+		if err != nil {
+			return nil, err
+		}
+		return nil, s.Subscribe(ctx, ep.Payload, ep.Stream)
 	}
 }
 

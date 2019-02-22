@@ -150,7 +150,40 @@ var _ = Service("chatter", func() {
 		})
 	})
 
-	Method("history", func() { // streaming result example
+	Method("subscribe", func() { // streaming result example
+		Description("Subscribe to events sent when new chat messages are added.")
+
+		Security(JWTAuth, func() {
+			Scope("stream:write")
+		})
+
+		Payload(func() {
+			Token("token", String, func() {
+				Description("JWT used for authentication")
+			})
+			Required("token")
+		})
+
+		StreamingResult(Event)
+
+		Error("unauthorized", String)
+		Error("invalid-scopes", String)
+
+		HTTP(func() {
+			GET("/subscribe")
+			Response(StatusOK)
+			Response("unauthorized", StatusUnauthorized)
+			Response("invalid-scopes", StatusForbidden)
+		})
+
+		GRPC(func() {
+			Response(CodeOK)
+			Response("unauthorized", CodeUnauthenticated)
+			Response("invalid-scopes", CodeUnauthenticated)
+		})
+	})
+
+	Method("history", func() { // streaming result with views example
 		Description("Returns the chat messages sent to the server.")
 
 		Security(JWTAuth, func() {
@@ -209,9 +242,20 @@ var ChatSummary = ResultType("application/vnd.goa.summary", func() {
 		Field(3, "sent_at", String, "Time at which the message was sent", func() {
 			Format(FormatDateTime)
 		})
-		Required("message")
+		Required("message", "sent_at")
 	})
 	View("tiny", func() {
 		Attribute("message")
 	})
+})
+
+var Event = Type("Event", func() {
+	Field(1, "message", String, "Message sent to the server")
+	Field(2, "action", String, func() {
+		Enum("added")
+	})
+	Field(3, "added_at", String, "Time at which the message was added", func() {
+		Format(FormatDateTime)
+	})
+	Required("message", "action", "added_at")
 })
