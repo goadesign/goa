@@ -130,6 +130,34 @@ func TestApiExpr_Hash(t *testing.T) {
 	}
 }
 
+func TestDocsExprEvalName(t *testing.T) {
+	cases := map[string]struct {
+		url      string
+		expected string
+	}{
+		"parrot": {url: "http://parrot.com", expected: "Documentation http://parrot.com"},
+	}
+	for key, testcase := range cases {
+		docExpr := DocExpr{URL: testcase.url}
+		if actual := docExpr.EvalName(); actual != tc.expected {
+			t.Errorf("%s: got %#v, expected %#v", k, actual, tc.expected)
+		}
+	}
+}
+func TestContactExprEvalName(t *testing.T) {
+	cases := map[string]struct {
+		url      string
+		expected string
+	}{
+		"parrot": {name: "parrot@email.com", expected: "Contact parrot@email.com"},
+	}
+	for key, testcase := range cases {
+		contactExpr := ContactExpr{Name: testcase.name}
+		if actual := contactExpr.EvalName(); actual != tc.expected {
+			t.Errorf("%s: got %#v, expected %#v", k, actual, tc.expected)
+		}
+	}
+}
 func TestLicenseExprEvalName(t *testing.T) {
 	cases := map[string]struct {
 		name     string
