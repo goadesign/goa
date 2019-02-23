@@ -14,16 +14,17 @@ The first step is to install the Go distribution. Please follow the steps descri
 Once Go is installed and the [GOPATH](https://github.com/golang/go/wiki/SettingGOPATH) environment variable is set, clone goa:
 ```bash
 cd $GOPATH/src
-mkdir -p github.com/goadesign
-cd github.com/goadesign
+mkdir -p goa.design
+cd goa.design
 git clone https://github.com/goadesign/goa
+cd goa
+git checkout v2
 ```
 
 ## 3. Install goa dependencies
 
 Bring in all the Go packages goa depends on:
 ```bash
-cd goa
 go get -v -u ./...
 ```
 
