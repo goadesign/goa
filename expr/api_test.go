@@ -135,26 +135,26 @@ func TestDocsExprEvalName(t *testing.T) {
 		url      string
 		expected string
 	}{
-		"parrot": {url: "http://parrot.com", expected: "Documentation http://parrot.com"},
+		"test": {url: "http://parrot.com", expected: "Documentation http://parrot.com"},
 	}
 	for key, testcase := range cases {
-		docExpr := DocExpr{URL: testcase.url}
-		if actual := docExpr.EvalName(); actual != tc.expected {
-			t.Errorf("%s: got %#v, expected %#v", k, actual, tc.expected)
+		docExpr := DocsExpr{URL: testcase.url}
+		if actual := docExpr.EvalName(); actual != testcase.expected {
+			t.Errorf("%s: got %#v, expected %#v", key, actual, testcase.expected)
 		}
 	}
 }
 func TestContactExprEvalName(t *testing.T) {
 	cases := map[string]struct {
-		url      string
+		name     string
 		expected string
 	}{
-		"parrot": {name: "parrot@email.com", expected: "Contact parrot@email.com"},
+		"test": {name: "parrot@email.com", expected: "Contact parrot@email.com"},
 	}
 	for key, testcase := range cases {
 		contactExpr := ContactExpr{Name: testcase.name}
-		if actual := contactExpr.EvalName(); actual != tc.expected {
-			t.Errorf("%s: got %#v, expected %#v", k, actual, tc.expected)
+		if actual := contactExpr.EvalName(); actual != testcase.expected {
+			t.Errorf("%s: got %#v, expected %#v", key, actual, testcase.expected)
 		}
 	}
 }
