@@ -9,7 +9,7 @@ The first step is to install the Go distribution. Please follow the steps descri
 
 ## 2. Clone goa
 
-    Note: This step requires `git`. Installing `git` is outside the scope of this document.
+> Note: This step requires git. Installing git is outside the scope of this document.
 
 Once Go is installed and the [GOPATH](https://github.com/golang/go/wiki/SettingGOPATH) environment variable is set, clone goa:
 ```bash
