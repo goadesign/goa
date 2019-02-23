@@ -136,7 +136,10 @@ func TestDocsExprEvalName(t *testing.T) {
 		expected    string
 		description string
 	}{
-		"test": {url: "http://parrot.com", description: "A website for a parrot API", expected: "Documentation http://parrot.com"},
+		"test, only with url":       {url: "http://parrot.com", expected: "Documentation http://parrot.com"},
+		"test, description and url": {url: "http://parrot.com", description: "A website for a parrot API", expected: "Documentation http://parrot.com"},
+		"test, only description":    {description: "A website for a parrot API", expected: "Documentation "},
+		"test, empty url":           {url: "", expected: "Documentation "},
 	}
 	for k, tc := range cases {
 		docExpr := DocsExpr{URL: tc.url, Description: tc.description}
@@ -152,7 +155,11 @@ func TestContactExprEvalName(t *testing.T) {
 		url      string
 		expected string
 	}{
-		"test": {name: "parrot", email: "parrot@gopher.com", url: "https://parrot.com", expected: "Contact parrot"},
+		"test, only with name":   {name: "parrot", expected: "Contact parrot"},
+		"test, name and email":   {name: "parrot", email: "parrot@gopher.com", expected: "Contact parrot"},
+		"test, name and url":     {name: "parrot", url: "https://parrot.com", expected: "Contact parrot"},
+		"test, name, url, email": {name: "parrot", email: "parrot@gopher.com", url: "https://parrot.com", expected: "Contact parrot"},
+		"test, empty name":       {name: "", expected: "Contact "},
 	}
 	for k, tc := range cases {
 		contactExpr := ContactExpr{Name: tc.name, Email: tc.email, URL: tc.url}
