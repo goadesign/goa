@@ -132,29 +132,32 @@ func TestApiExpr_Hash(t *testing.T) {
 
 func TestDocsExprEvalName(t *testing.T) {
 	cases := map[string]struct {
-		url      string
-		expected string
+		url         string
+		expected    string
+		description string
 	}{
-		"test": {url: "http://parrot.com", expected: "Documentation http://parrot.com"},
+		"test": {url: "http://parrot.com", description: "A website for a parrot API", expected: "Documentation http://parrot.com"},
 	}
-	for key, testcase := range cases {
-		docExpr := DocsExpr{URL: testcase.url}
-		if actual := docExpr.EvalName(); actual != testcase.expected {
-			t.Errorf("%s: got %#v, expected %#v", key, actual, testcase.expected)
+	for k, tc := range cases {
+		docExpr := DocsExpr{URL: tc.url, Description: tc.description}
+		if actual := docExpr.EvalName(); actual != tc.expected {
+			t.Errorf("%s: got %#v, expected %#v", k, actual, tc.expected)
 		}
 	}
 }
 func TestContactExprEvalName(t *testing.T) {
 	cases := map[string]struct {
 		name     string
+		email    string
+		url      string
 		expected string
 	}{
-		"test": {name: "parrot@email.com", expected: "Contact parrot@email.com"},
+		"test": {name: "parrot", email: "parrot@gopher.com", url: "https://parrot.com", expected: "Contact parrot"},
 	}
-	for key, testcase := range cases {
-		contactExpr := ContactExpr{Name: testcase.name}
-		if actual := contactExpr.EvalName(); actual != testcase.expected {
-			t.Errorf("%s: got %#v, expected %#v", key, actual, testcase.expected)
+	for k, tc := range cases {
+		contactExpr := ContactExpr{Name: tc.name, Email: tc.email, URL: tc.url}
+		if actual := contactExpr.EvalName(); actual != tc.expected {
+			t.Errorf("%s: got %#v, expected %#v", k, actual, tc.expected)
 		}
 	}
 }
