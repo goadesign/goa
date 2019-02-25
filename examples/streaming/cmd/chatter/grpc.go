@@ -46,6 +46,7 @@ func handleGRPCServer(ctx context.Context, u *url.URL, chatterEndpoints *chatter
 			grpcmdlwr.UnaryServerLog(adapter),
 		),
 		grpcmiddleware.WithStreamServerChain(
+			grpcmdlwr.StreamCanceler(ctx),
 			grpcmdlwr.StreamRequestID(),
 			grpcmdlwr.StreamServerLog(adapter),
 		),
@@ -77,7 +78,7 @@ func handleGRPCServer(ctx context.Context, u *url.URL, chatterEndpoints *chatter
 		select {
 		case <-ctx.Done():
 			logger.Printf("shutting down gRPC server at %q", u.Host)
-			srv.Stop()
+			srv.GracefulStop()
 			return
 		}
 	}()
