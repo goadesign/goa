@@ -132,8 +132,6 @@ func (s *chatterSvc) Summary(ctx context.Context, p *chattersvc.SummaryPayload, 
 	var summary chattersvc.ChatSummaryCollection
 	s.logger.Printf("authentication successful")
 
-
-
 	// Receive from the stream in a separate go routine so we can listen for and handle GracefulStops.
 	strCh := make(chan string)
 	errCh := make(chan error)
