@@ -183,10 +183,9 @@ func TestRecordRequest(t *testing.T) {
 // with the -race flag, race conditions will be detected.
 func TestRace(t *testing.T) {
 	var (
-		udplisten = "127.0.0.1:62111"
-		rErr      = errors.New("oh no")
-		req, _    = http.NewRequest("GET", "https://goa.design", nil)
-		resp      = httptest.NewRecorder().Result()
+		rErr   = errors.New("oh no")
+		req, _ = http.NewRequest("GET", "https://goa.design", nil)
+		resp   = httptest.NewRecorder().Result()
 	)
 
 	conn, err := net.Dial("udp", udplisten)
@@ -202,6 +201,7 @@ func TestRace(t *testing.T) {
 		s.RecordRequest(req, "")
 		s.RecordResponse(resp)
 		s.RecordError(rErr)
+		s.SubmitInProgress()
 
 		sub := s.NewSubsegment("sub")
 		s.Capture("sub2", func() {})

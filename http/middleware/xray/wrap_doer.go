@@ -32,13 +32,13 @@ func (r *xrayDoer) Do(req *http.Request) (*http.Response, error) {
 	s := seg.(*xray.Segment)
 	sub := s.NewSubsegment(req.URL.Host)
 	hs := &HTTPSegment{Segment: sub}
+	hs.RecordRequest(req, "remote")
+	hs.SubmitInProgress()
 	defer hs.Close()
 
 	// update the context with the latest segment
 	ctx = middleware.WithSpan(ctx, hs.TraceID, hs.ID, hs.ParentID)
 	req = req.WithContext(context.WithValue(ctx, xray.SegKey, hs.Segment))
-
-	hs.RecordRequest(req, "remote")
 	resp, err := r.wrapped.Do(req)
 	if err != nil {
 		hs.RecordError(err)

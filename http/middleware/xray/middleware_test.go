@@ -1,15 +1,12 @@
 package xray
 
 import (
-	"encoding/json"
 	"errors"
-	"net"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
 	"strings"
 	"testing"
-	"time"
 
 	"goa.design/goa/middleware"
 	"goa.design/goa/middleware/xray"
@@ -17,7 +14,7 @@ import (
 
 const (
 	// udp host:port used to run test server
-	udplisten = "127.0.0.1:62111"
+	udplisten = "127.0.0.1:62112"
 )
 
 func TestNew(t *testing.T) {
@@ -157,22 +154,18 @@ func TestMiddleware(t *testing.T) {
 			req.Host = c.Request.Host
 		}
 		req = req.WithContext(ctx)
-		js := readUDP(t, func() {
+		messages := xray.ReadUDP(t, udplisten, 2, func() {
 			m(h).ServeHTTP(rw, req)
 		})
-		var s *xray.Segment
-		elems := strings.Split(js, "\n")
-		if len(elems) != 2 {
-			t.Fatalf("%s: invalid number of lines, expected 2 got %d: %v", k, len(elems), elems)
-		}
-		if elems[0] != xray.UDPHeader[:len(xray.UDPHeader)-1] {
-			t.Errorf("%s: invalid header, got %s", k, elems[0])
-		}
-		err = json.Unmarshal([]byte(elems[1]), &s)
-		if err != nil {
-			t.Fatal(err)
+
+		// expect the first message is InProgress
+		s := xray.ExtractSegment(t, messages[0])
+		if !s.InProgress {
+			t.Fatalf("%s: expected first segment to be InProgress but it was not", k)
 		}
 
+		// second message
+		s = xray.ExtractSegment(t, messages[1])
 		if s.Name != "service" {
 			t.Errorf("%s: unexpected segment name, expected service - got %s", k, s.Name)
 		}
@@ -229,36 +222,4 @@ func TestMiddleware(t *testing.T) {
 			t.Errorf("%s: Error is invalid, expected %v got %v", k, c.Segment.Error, s.Error)
 		}
 	}
-}
-
-// readUDP calls sender, reads and returns UDP messages received on udplisten.
-func readUDP(t *testing.T, sender func()) string {
-	var (
-		readChan = make(chan string)
-		msg      = make([]byte, 1024*32)
-	)
-	resAddr, err := net.ResolveUDPAddr("udp", udplisten)
-	if err != nil {
-		t.Fatal(err)
-	}
-	listener, err := net.ListenUDP("udp", resAddr)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	go func() {
-		listener.SetReadDeadline(time.Now().Add(time.Second))
-		n, _, _ := listener.ReadFrom(msg)
-		readChan <- string(msg[0:n])
-	}()
-
-	sender()
-
-	defer func() {
-		if err := listener.Close(); err != nil {
-			t.Fatal(err)
-		}
-	}()
-
-	return <-readChan
 }
