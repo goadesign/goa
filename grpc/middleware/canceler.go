@@ -2,12 +2,12 @@ package middleware
 
 import (
 	"context"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
 	"sync"
 	"sync/atomic"
 
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 // StreamCanceler provides a middleware that can be used to gracefully stop streaming requests.
@@ -37,7 +37,7 @@ import (
 //
 func StreamCanceler(ctx context.Context) grpc.StreamServerInterceptor {
 	var (
-		cancels = map[*context.CancelFunc]struct{}{}
+		cancels   = map[*context.CancelFunc]struct{}{}
 		cancelMu  = new(sync.Mutex)
 		canceling uint32
 	)
