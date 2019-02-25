@@ -110,7 +110,6 @@ const (
 		doer = &http.Client{Timeout: time.Duration(timeout) * time.Second}
 		if debug {
 			doer = goahttp.NewDebugDoer(doer)
-			doer.(goahttp.DebugDoer).Fprint(os.Stderr)
 		}
 	}
 `

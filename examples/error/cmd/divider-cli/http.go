@@ -2,7 +2,6 @@ package main
 
 import (
 	"net/http"
-	"os"
 	"time"
 
 	"goa.design/goa"
@@ -18,7 +17,6 @@ func doHTTP(scheme, host string, timeout int, debug bool) (goa.Endpoint, interfa
 		doer = &http.Client{Timeout: time.Duration(timeout) * time.Second}
 		if debug {
 			doer = goahttp.NewDebugDoer(doer)
-			doer.(goahttp.DebugDoer).Fprint(os.Stderr)
 		}
 	}
 

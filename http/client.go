@@ -7,6 +7,7 @@ import (
 	"io/ioutil"
 	"net"
 	"net/http"
+	"os"
 	"sort"
 	"strings"
 )
@@ -83,6 +84,8 @@ func (dd *debugDoer) Do(req *http.Request) (*http.Response, error) {
 	req.Body = ioutil.NopCloser(bytes.NewBuffer(reqb))
 	dd.Request = req
 
+	dd.Fprint(os.Stderr)
+
 	return resp, err
 }
 
@@ -107,6 +110,7 @@ func (dd *debugDoer) Fprint(w io.Writer) {
 
 	b, _ := ioutil.ReadAll(dd.Request.Body)
 	if len(b) > 0 {
+		dd.Request.Body = ioutil.NopCloser(bytes.NewBuffer(b)) // reset the request body
 		buf.WriteByte('\n')
 		buf.Write(b)
 	}
@@ -130,6 +134,7 @@ func (dd *debugDoer) Fprint(w io.Writer) {
 
 	rb, _ := ioutil.ReadAll(dd.Response.Body) // this is reading from a memory buffer so safe to ignore errors
 	if len(rb) > 0 {
+		dd.Response.Body = ioutil.NopCloser(bytes.NewBuffer(rb)) // reset the response body
 		buf.WriteByte('\n')
 		buf.Write(rb)
 	}

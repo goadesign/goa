@@ -76,7 +76,7 @@ const (
 		os.Exit(1)
 	}
 
-	if data != nil && !debug {
+	if data != nil {
 		m, _ := json.MarshalIndent(data, "", "    ")
 		fmt.Println(string(m))
 	}
@@ -186,7 +186,7 @@ func indent(s string) string {
 		os.Exit(1)
 	}
 
-	if data != nil && !debug {
+	if data != nil {
 		m, _ := json.MarshalIndent(data, "", "    ")
 		fmt.Println(string(m))
 	}
@@ -312,7 +312,7 @@ func indent(s string) string {
 		os.Exit(1)
 	}
 
-	if data != nil && !debug {
+	if data != nil {
 		m, _ := json.MarshalIndent(data, "", "    ")
 		fmt.Println(string(m))
 	}
@@ -431,7 +431,7 @@ func indent(s string) string {
 		os.Exit(1)
 	}
 
-	if data != nil && !debug {
+	if data != nil {
 		m, _ := json.MarshalIndent(data, "", "    ")
 		fmt.Println(string(m))
 	}
@@ -560,7 +560,7 @@ func indent(s string) string {
 		os.Exit(1)
 	}
 
-	if data != nil && !debug {
+	if data != nil {
 		m, _ := json.MarshalIndent(data, "", "    ")
 		fmt.Println(string(m))
 	}
