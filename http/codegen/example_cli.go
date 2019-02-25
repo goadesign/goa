@@ -1,11 +1,12 @@
 package codegen
 
 import (
-	"goa.design/goa/codegen"
-	"goa.design/goa/expr"
 	"os"
 	"path/filepath"
 	"strings"
+
+	"goa.design/goa/codegen"
+	"goa.design/goa/expr"
 )
 
 // ExampleCLIFiles returns an example client tool HTTP implementation for each
