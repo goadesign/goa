@@ -67,7 +67,7 @@ func StreamCanceler(ctx context.Context) grpc.StreamServerInterceptor {
 		cancelMu.Unlock()
 
 		// invoke rpc
-		err := handler(srv, &ctxServerStream{cctx, ss})
+		err := handler(srv, NewWrappedServerStream(cctx, ss))
 
 		// remove the cancel function
 		cancelMu.Lock()
@@ -76,13 +76,4 @@ func StreamCanceler(ctx context.Context) grpc.StreamServerInterceptor {
 
 		return err
 	})
-}
-
-type ctxServerStream struct {
-	ctx context.Context
-	grpc.ServerStream
-}
-
-func (c *ctxServerStream) Context() context.Context {
-	return c.ctx
 }
