@@ -71,40 +71,40 @@ func TestWrapDoer(t *testing.T) {
 			// expect the first message is InProgress
 			s := xray.ExtractSegment(t, messages[0])
 			if !s.InProgress {
-				t.Fatalf("%s: expected first segment to be InProgress but it was not", tc.Name)
+				t.Fatal("expected first segment to be InProgress but it was not")
 			}
 
 			// second message
 			s = xray.ExtractSegment(t, messages[1])
 			if s.Name != host {
-				t.Fatalf("%s: unexpected segment name: expected %q, got %q", tc.Name, host, s.Name)
+				t.Fatalf("unexpected segment name: expected %q, got %q", host, s.Name)
 			}
 			if s.Type != "subsegment" {
-				t.Fatalf("%s: unexpected segment type: expected \"subsegment\", got %q", tc.Name, s.Type)
+				t.Fatalf("unexpected segment type: expected \"subsegment\", got %q", s.Type)
 			}
 			if s.ID == "" {
-				t.Fatalf("%s: unexpected segment ID: expected non-empty string, got empty string", tc.Name)
+				t.Fatal("unexpected segment ID: expected non-empty string, got empty string")
 			}
 			if s.TraceID != traceID {
-				t.Fatalf("%s: unexpected segment trace ID: expected %q, got %q", tc.Name, traceID, s.TraceID)
+				t.Fatalf("unexpected segment trace ID: expected %q, got %q", traceID, s.TraceID)
 			}
 			if s.ParentID != spanID {
-				t.Fatalf("%s: unexpected segment parent ID: expected %q, got %q", tc.Name, spanID, s.ParentID)
+				t.Fatalf("unexpected segment parent ID: expected %q, got %q", spanID, s.ParentID)
 			}
 			if s.Namespace != "remote" {
-				t.Fatalf("%s: unexpected segment namespace: expected \"remote\", got %q", tc.Name, s.Namespace)
+				t.Fatalf("unexpected segment namespace: expected \"remote\", got %q", s.Namespace)
 			}
 			if s.HTTP.Request.Method != verb {
-				t.Fatalf("%s: unexpected segment HTTP method: expected %q, got %q", tc.Name, verb, s.HTTP.Request.Method)
+				t.Fatalf("unexpected segment HTTP method: expected %q, got %q", verb, s.HTTP.Request.Method)
 			}
 			if s.HTTP.Request.URL != url {
-				t.Fatalf("%s: unexpected segment HTTP URL: expected %q, got %q", tc.Name, verb, s.HTTP.Request.Method)
+				t.Fatalf("unexpected segment HTTP URL: expected %q, got %q", verb, s.HTTP.Request.Method)
 			}
 			if s.Cause == nil && tc.Error {
-				t.Errorf("%s: invalid exception, expected non-nil Cause but got nil Cause", tc.Name)
+				t.Error("invalid exception, expected non-nil Cause but got nil Cause")
 			}
 			if s.Error != tc.Error {
-				t.Errorf("%s: Error is invalid, expected %v got %v", tc.Name, tc.Error, s.Error)
+				t.Errorf("Error is invalid, expected %v got %v", tc.Error, s.Error)
 			}
 		})
 	}
