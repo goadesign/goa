@@ -64,16 +64,18 @@ func TestNewUnaryServer(t *testing.T) {
 		"not-ok": {"1002.0.0.0:62111", false},
 	}
 	for k, c := range cases {
-		m, err := NewUnaryServer("", c.Daemon)
-		if err == nil && !c.Success {
-			t.Errorf("%s: expected failure but err is nil", k)
-		}
-		if err != nil && c.Success {
-			t.Errorf("%s: unexpected error %s", k, err)
-		}
-		if m == nil && c.Success {
-			t.Errorf("%s: middleware is nil", k)
-		}
+		t.Run(k, func(t *testing.T) {
+			m, err := NewUnaryServer("", c.Daemon)
+			if err == nil && !c.Success {
+				t.Error("expected failure but err is nil")
+			}
+			if err != nil && c.Success {
+				t.Errorf("unexpected error %s", err)
+			}
+			if m == nil && c.Success {
+				t.Error("middleware is nil")
+			}
+		})
 	}
 }
 
@@ -86,16 +88,18 @@ func TestNewStreamServer(t *testing.T) {
 		"not-ok": {"1002.0.0.0:62111", false},
 	}
 	for k, c := range cases {
-		m, err := NewStreamServer("", c.Daemon)
-		if err == nil && !c.Success {
-			t.Errorf("%s: expected failure but err is nil", k)
-		}
-		if err != nil && c.Success {
-			t.Errorf("%s: unexpected error %s", k, err)
-		}
-		if m == nil && c.Success {
-			t.Errorf("%s: middleware is nil", k)
-		}
+		t.Run(k, func(t *testing.T) {
+			m, err := NewStreamServer("", c.Daemon)
+			if err == nil && !c.Success {
+				t.Error("expected failure but err is nil")
+			}
+			if err != nil && c.Success {
+				t.Errorf("unexpected error %s", err)
+			}
+			if m == nil && c.Success {
+				t.Error("middleware is nil")
+			}
+		})
 	}
 }
 
@@ -142,103 +146,105 @@ func TestUnaryServerMiddleware(t *testing.T) {
 		},
 	}
 	for k, c := range cases {
-		m, err := NewUnaryServer("service", udplisten)
-		if err != nil {
-			t.Fatalf("%s: failed to create middleware: %s", k, err)
-		}
-		handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-			if c.Segment.Error {
-				return nil, c.Segment.Exception
+		t.Run(k, func(t *testing.T) {
+			m, err := NewUnaryServer("service", udplisten)
+			if err != nil {
+				t.Fatalf("failed to create middleware: %s", err)
 			}
-			return &wrappers.StringValue{Value: "response"}, nil
-		}
+			handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+				if c.Segment.Error {
+					return nil, c.Segment.Exception
+				}
+				return &wrappers.StringValue{Value: "response"}, nil
+			}
 
-		ctx := context.Background()
-		expMsgs := 0 // expected number of X-Ray segments sent
-		if c.Trace.TraceID != "" {
-			ctx = middleware.WithSpan(ctx, c.Trace.TraceID, c.Trace.SpanID, c.Trace.ParentID)
-			expMsgs = 2
-		}
-		if c.Request.UserAgent != "" {
-			md := metadata.MD{}
-			md.Set("user-agent", c.Request.UserAgent)
-			ctx = metadata.NewIncomingContext(ctx, md)
-		}
-		if c.Request.RemoteAddr != "" {
-			ctx = peer.NewContext(ctx, &peer.Peer{Addr: &mockAddr{c.Request.RemoteAddr}})
-		}
+			ctx := context.Background()
+			expMsgs := 0 // expected number of X-Ray segments sent
+			if c.Trace.TraceID != "" {
+				ctx = middleware.WithSpan(ctx, c.Trace.TraceID, c.Trace.SpanID, c.Trace.ParentID)
+				expMsgs = 2
+			}
+			if c.Request.UserAgent != "" {
+				md := metadata.MD{}
+				md.Set("user-agent", c.Request.UserAgent)
+				ctx = metadata.NewIncomingContext(ctx, md)
+			}
+			if c.Request.RemoteAddr != "" {
+				ctx = peer.NewContext(ctx, &peer.Peer{Addr: &mockAddr{c.Request.RemoteAddr}})
+			}
 
-		messages := xray.ReadUDP(t, udplisten, expMsgs, func() {
-			m(ctx, &wrappers.StringValue{Value: "request"}, unary, handler)
+			messages := xray.ReadUDP(t, udplisten, expMsgs, func() {
+				m(ctx, &wrappers.StringValue{Value: "request"}, unary, handler)
+			})
+			if expMsgs == 0 {
+				return
+			}
+
+			// expect the first message is InProgress
+			s := xray.ExtractSegment(t, messages[0])
+			if !s.InProgress {
+				t.Fatal("expected first segment to be InProgress but it was not")
+			}
+
+			// second message
+			s = xray.ExtractSegment(t, messages[1])
+			if s.Name != "service" {
+				t.Errorf("unexpected segment name, expected \"service\" - got %q", s.Name)
+			}
+			if s.Type != "" {
+				t.Errorf("expected Type to be empty but got %q", s.Type)
+			}
+			if s.ID != c.Trace.SpanID {
+				t.Errorf("unexpected segment ID, expected %q - got %q", c.Trace.SpanID, s.ID)
+			}
+			if s.TraceID != c.Trace.TraceID {
+				t.Errorf("unexpected trace ID, expected %q - got %q", c.Trace.TraceID, s.TraceID)
+			}
+			if s.ParentID != c.Trace.ParentID {
+				t.Errorf("unexpected parent ID, expected %q - got %q", c.Trace.ParentID, s.ParentID)
+			}
+			if s.StartTime == 0 {
+				t.Error("StartTime is 0")
+			}
+			if s.EndTime == 0 {
+				t.Error("EndTime is 0")
+			}
+			if s.StartTime > s.EndTime {
+				t.Errorf("StartTime (%v) is after EndTime (%v)", s.StartTime, s.EndTime)
+			}
+			if s.HTTP == nil {
+				t.Fatal("HTTP field is nil")
+			}
+			if s.HTTP.Request == nil {
+				t.Fatal("HTTP Request field is nil")
+			}
+			if s.HTTP.Request.ClientIP != c.Request.ClientIP {
+				t.Errorf("HTTP Request ClientIP is invalid, expected IP %q got %q", c.Request.ClientIP, s.HTTP.Request.ClientIP)
+			}
+			if s.HTTP.Request.UserAgent != c.Request.UserAgent {
+				t.Errorf("HTTP Request UserAgent is invalid, expected %q got %q", c.Request.UserAgent, s.HTTP.Request.UserAgent)
+			}
+			if c.Segment.Exception == nil {
+				if s.HTTP.Response == nil {
+					t.Fatal("HTTP Response field is nil")
+				}
+				if s.HTTP.Response.Status != int(c.Response.Status) {
+					t.Fatalf("HTTP Response is invalid, expected %d, got %d", s.HTTP.Response.Status, int(c.Response.Status))
+				}
+				if s.HTTP.Response.ContentLength == 0 {
+					t.Fatal("HTTP Response Content Length is invalid, expected greater than zero, got zero")
+				}
+			}
+			if s.Cause == nil && c.Segment.Exception != nil {
+				t.Errorf("Exception is invalid, expected %q but got nil Cause", c.Segment.Exception.Error())
+			}
+			if s.Cause != nil && s.Cause.Exceptions[0].Message != c.Segment.Exception.Error() {
+				t.Errorf("Exception is invalid, expected %q got %q", c.Segment.Exception.Error(), s.Cause.Exceptions[0].Message)
+			}
+			if s.Error != c.Segment.Error {
+				t.Errorf("Error is invalid, expected %v got %v", c.Segment.Error, s.Error)
+			}
 		})
-		if expMsgs == 0 {
-			continue
-		}
-
-		// expect the first message is InProgress
-		s := xray.ExtractSegment(t, messages[0])
-		if !s.InProgress {
-			t.Fatalf("%s: expected first segment to be InProgress but it was not", k)
-		}
-
-		// second message
-		s = xray.ExtractSegment(t, messages[1])
-		if s.Name != "service" {
-			t.Errorf("%s: unexpected segment name, expected \"service\" - got %q", k, s.Name)
-		}
-		if s.Type != "" {
-			t.Errorf("%s: expected Type to be empty but got %q", k, s.Type)
-		}
-		if s.ID != c.Trace.SpanID {
-			t.Errorf("%s: unexpected segment ID, expected %q - got %q", k, c.Trace.SpanID, s.ID)
-		}
-		if s.TraceID != c.Trace.TraceID {
-			t.Errorf("%s: unexpected trace ID, expected %q - got %q", k, c.Trace.TraceID, s.TraceID)
-		}
-		if s.ParentID != c.Trace.ParentID {
-			t.Errorf("%s: unexpected parent ID, expected %q - got %q", k, c.Trace.ParentID, s.ParentID)
-		}
-		if s.StartTime == 0 {
-			t.Errorf("%s: StartTime is 0", k)
-		}
-		if s.EndTime == 0 {
-			t.Errorf("%s: EndTime is 0", k)
-		}
-		if s.StartTime > s.EndTime {
-			t.Errorf("%s: StartTime (%v) is after EndTime (%v)", k, s.StartTime, s.EndTime)
-		}
-		if s.HTTP == nil {
-			t.Fatalf("%s: HTTP field is nil", k)
-		}
-		if s.HTTP.Request == nil {
-			t.Fatalf("%s: HTTP Request field is nil", k)
-		}
-		if s.HTTP.Request.ClientIP != c.Request.ClientIP {
-			t.Errorf("%s: HTTP Request ClientIP is invalid, expected IP %q got %q", k, c.Request.ClientIP, s.HTTP.Request.ClientIP)
-		}
-		if s.HTTP.Request.UserAgent != c.Request.UserAgent {
-			t.Errorf("%s: HTTP Request UserAgent is invalid, expected %q got %q", k, c.Request.UserAgent, s.HTTP.Request.UserAgent)
-		}
-		if c.Segment.Exception == nil {
-			if s.HTTP.Response == nil {
-				t.Fatalf("%s: HTTP Response field is nil", k)
-			}
-			if s.HTTP.Response.Status != int(c.Response.Status) {
-				t.Fatalf("%s: HTTP Response is invalid, expected %d, got %d", k, s.HTTP.Response.Status, int(c.Response.Status))
-			}
-			if s.HTTP.Response.ContentLength == 0 {
-				t.Fatalf("%s: HTTP Response Content Length is invalid, expected greater than zero, got zero", k)
-			}
-		}
-		if s.Cause == nil && c.Segment.Exception != nil {
-			t.Errorf("%s: Exception is invalid, expected %q but got nil Cause", k, c.Segment.Exception.Error())
-		}
-		if s.Cause != nil && s.Cause.Exceptions[0].Message != c.Segment.Exception.Error() {
-			t.Errorf("%s: Exception is invalid, expected %q got %q", k, c.Segment.Exception.Error(), s.Cause.Exceptions[0].Message)
-		}
-		if s.Error != c.Segment.Error {
-			t.Errorf("%s: Error is invalid, expected %v got %v", k, c.Segment.Error, s.Error)
-		}
 	}
 }
 
@@ -285,104 +291,106 @@ func TestStreamServerMiddleware(t *testing.T) {
 		},
 	}
 	for k, c := range cases {
-		m, err := NewStreamServer("service", udplisten)
-		if err != nil {
-			t.Fatalf("%s: failed to create middleware: %s", k, err)
-		}
-		handler := func(srv interface{}, stream grpc.ServerStream) error {
-			if c.Segment.Error {
-				return c.Segment.Exception
+		t.Run(k, func(t *testing.T) {
+			m, err := NewStreamServer("service", udplisten)
+			if err != nil {
+				t.Fatalf("failed to create middleware: %s", err)
 			}
-			return nil
-		}
+			handler := func(srv interface{}, stream grpc.ServerStream) error {
+				if c.Segment.Error {
+					return c.Segment.Exception
+				}
+				return nil
+			}
 
-		ctx := context.Background()
-		expMsgs := 0 // expected number of X-Ray segments sent
-		if c.Trace.TraceID != "" {
-			ctx = middleware.WithSpan(ctx, c.Trace.TraceID, c.Trace.SpanID, c.Trace.ParentID)
-			expMsgs = 2
-		}
-		if c.Request.UserAgent != "" {
-			md := metadata.MD{}
-			md.Set("user-agent", c.Request.UserAgent)
-			ctx = metadata.NewIncomingContext(ctx, md)
-		}
-		if c.Request.RemoteAddr != "" {
-			ctx = peer.NewContext(ctx, &peer.Peer{Addr: &mockAddr{c.Request.RemoteAddr}})
-		}
-		wss := grpcm.NewWrappedServerStream(ctx, &testServerStream{})
+			ctx := context.Background()
+			expMsgs := 0 // expected number of X-Ray segments sent
+			if c.Trace.TraceID != "" {
+				ctx = middleware.WithSpan(ctx, c.Trace.TraceID, c.Trace.SpanID, c.Trace.ParentID)
+				expMsgs = 2
+			}
+			if c.Request.UserAgent != "" {
+				md := metadata.MD{}
+				md.Set("user-agent", c.Request.UserAgent)
+				ctx = metadata.NewIncomingContext(ctx, md)
+			}
+			if c.Request.RemoteAddr != "" {
+				ctx = peer.NewContext(ctx, &peer.Peer{Addr: &mockAddr{c.Request.RemoteAddr}})
+			}
+			wss := grpcm.NewWrappedServerStream(ctx, &testServerStream{})
 
-		messages := xray.ReadUDP(t, udplisten, expMsgs, func() {
-			m(nil, wss, streamInfo, handler)
+			messages := xray.ReadUDP(t, udplisten, expMsgs, func() {
+				m(nil, wss, streamInfo, handler)
+			})
+			if expMsgs == 0 {
+				return
+			}
+
+			// expect the first message is InProgress
+			s := xray.ExtractSegment(t, messages[0])
+			if !s.InProgress {
+				t.Fatal("expected first segment to be InProgress but it was not")
+			}
+
+			// second message
+			s = xray.ExtractSegment(t, messages[1])
+			if s.Name != "service" {
+				t.Errorf("unexpected segment name, expected \"service\" - got %q", s.Name)
+			}
+			if s.Type != "" {
+				t.Errorf("expected Type to be empty but got %q", s.Type)
+			}
+			if s.ID != c.Trace.SpanID {
+				t.Errorf("unexpected segment ID, expected %q - got %q", c.Trace.SpanID, s.ID)
+			}
+			if s.TraceID != c.Trace.TraceID {
+				t.Errorf("unexpected trace ID, expected %q - got %q", c.Trace.TraceID, s.TraceID)
+			}
+			if s.ParentID != c.Trace.ParentID {
+				t.Errorf("unexpected parent ID, expected %q - got %q", c.Trace.ParentID, s.ParentID)
+			}
+			if s.StartTime == 0 {
+				t.Error("StartTime is 0")
+			}
+			if s.EndTime == 0 {
+				t.Error("EndTime is 0")
+			}
+			if s.StartTime > s.EndTime {
+				t.Errorf("StartTime (%v) is after EndTime (%v)", s.StartTime, s.EndTime)
+			}
+			if s.HTTP == nil {
+				t.Fatal("HTTP field is nil")
+			}
+			if s.HTTP.Request == nil {
+				t.Fatal("HTTP Request field is nil")
+			}
+			if s.HTTP.Request.ClientIP != c.Request.ClientIP {
+				t.Errorf("HTTP Request ClientIP is invalid, expected IP %q got %q", c.Request.ClientIP, s.HTTP.Request.ClientIP)
+			}
+			if s.HTTP.Request.UserAgent != c.Request.UserAgent {
+				t.Errorf("HTTP Request UserAgent is invalid, expected %q got %q", c.Request.UserAgent, s.HTTP.Request.UserAgent)
+			}
+			if c.Segment.Exception == nil {
+				if s.HTTP.Response == nil {
+					t.Fatalf("HTTP Response field is nil")
+				}
+				if s.HTTP.Response.Status != int(c.Response.Status) {
+					t.Fatalf("HTTP Response is invalid, expected %d, got %d", s.HTTP.Response.Status, int(c.Response.Status))
+				}
+				if s.HTTP.Response.ContentLength != 0 {
+					t.Fatal("HTTP Response Content Length is invalid, expected zero, got non-zero")
+				}
+			}
+			if s.Cause == nil && c.Segment.Exception != nil {
+				t.Errorf("Exception is invalid, expected %q but got nil Cause", c.Segment.Exception.Error())
+			}
+			if s.Cause != nil && s.Cause.Exceptions[0].Message != c.Segment.Exception.Error() {
+				t.Errorf("Exception is invalid, expected %q got %q", c.Segment.Exception.Error(), s.Cause.Exceptions[0].Message)
+			}
+			if s.Error != c.Segment.Error {
+				t.Errorf("Error is invalid, expected %v got %v", c.Segment.Error, s.Error)
+			}
 		})
-		if expMsgs == 0 {
-			continue
-		}
-
-		// expect the first message is InProgress
-		s := xray.ExtractSegment(t, messages[0])
-		if !s.InProgress {
-			t.Fatalf("%s: expected first segment to be InProgress but it was not", k)
-		}
-
-		// second message
-		s = xray.ExtractSegment(t, messages[1])
-		if s.Name != "service" {
-			t.Errorf("%s: unexpected segment name, expected \"service\" - got %q", k, s.Name)
-		}
-		if s.Type != "" {
-			t.Errorf("%s: expected Type to be empty but got %q", k, s.Type)
-		}
-		if s.ID != c.Trace.SpanID {
-			t.Errorf("%s: unexpected segment ID, expected %q - got %q", k, c.Trace.SpanID, s.ID)
-		}
-		if s.TraceID != c.Trace.TraceID {
-			t.Errorf("%s: unexpected trace ID, expected %q - got %q", k, c.Trace.TraceID, s.TraceID)
-		}
-		if s.ParentID != c.Trace.ParentID {
-			t.Errorf("%s: unexpected parent ID, expected %q - got %q", k, c.Trace.ParentID, s.ParentID)
-		}
-		if s.StartTime == 0 {
-			t.Errorf("%s: StartTime is 0", k)
-		}
-		if s.EndTime == 0 {
-			t.Errorf("%s: EndTime is 0", k)
-		}
-		if s.StartTime > s.EndTime {
-			t.Errorf("%s: StartTime (%v) is after EndTime (%v)", k, s.StartTime, s.EndTime)
-		}
-		if s.HTTP == nil {
-			t.Fatalf("%s: HTTP field is nil", k)
-		}
-		if s.HTTP.Request == nil {
-			t.Fatalf("%s: HTTP Request field is nil", k)
-		}
-		if s.HTTP.Request.ClientIP != c.Request.ClientIP {
-			t.Errorf("%s: HTTP Request ClientIP is invalid, expected IP %q got %q", k, c.Request.ClientIP, s.HTTP.Request.ClientIP)
-		}
-		if s.HTTP.Request.UserAgent != c.Request.UserAgent {
-			t.Errorf("%s: HTTP Request UserAgent is invalid, expected %q got %q", k, c.Request.UserAgent, s.HTTP.Request.UserAgent)
-		}
-		if c.Segment.Exception == nil {
-			if s.HTTP.Response == nil {
-				t.Fatalf("%s: HTTP Response field is nil", k)
-			}
-			if s.HTTP.Response.Status != int(c.Response.Status) {
-				t.Fatalf("%s: HTTP Response is invalid, expected %d, got %d", k, s.HTTP.Response.Status, int(c.Response.Status))
-			}
-			if s.HTTP.Response.ContentLength != 0 {
-				t.Fatalf("%s: HTTP Response Content Length is invalid, expected zero, got non-zero", k)
-			}
-		}
-		if s.Cause == nil && c.Segment.Exception != nil {
-			t.Errorf("%s: Exception is invalid, expected %q but got nil Cause", k, c.Segment.Exception.Error())
-		}
-		if s.Cause != nil && s.Cause.Exceptions[0].Message != c.Segment.Exception.Error() {
-			t.Errorf("%s: Exception is invalid, expected %q got %q", k, c.Segment.Exception.Error(), s.Cause.Exceptions[0].Message)
-		}
-		if s.Error != c.Segment.Error {
-			t.Errorf("%s: Error is invalid, expected %v got %v", k, c.Segment.Error, s.Error)
-		}
 	}
 }
 
@@ -438,37 +446,37 @@ func TestUnaryClient(t *testing.T) {
 			// expect the first message is InProgress
 			s := xray.ExtractSegment(t, messages[0])
 			if !s.InProgress {
-				t.Fatalf("%s: expected first segment to be InProgress but it was not", tc.Name)
+				t.Fatal("expected first segment to be InProgress but it was not")
 			}
 
 			// second message
 			s = xray.ExtractSegment(t, messages[1])
 			if s.Name != host {
-				t.Fatalf("%s: unexpected segment name: expected %q, got %q", tc.Name, host, s.Name)
+				t.Errorf("unexpected segment name: expected %q, got %q", host, s.Name)
 			}
 			if s.Type != "subsegment" {
-				t.Fatalf("%s: unexpected segment type: expected \"subsegment\", got %q", tc.Name, s.Type)
+				t.Errorf("unexpected segment type: expected \"subsegment\", got %q", s.Type)
 			}
 			if s.ID == "" {
-				t.Fatalf("%s: unexpected segment ID: expected non-empty string, got empty string", tc.Name)
+				t.Error("unexpected segment ID: expected non-empty string, got empty string")
 			}
 			if s.TraceID != traceID {
-				t.Fatalf("%s: unexpected segment trace ID: expected %q, got %q", tc.Name, traceID, s.TraceID)
+				t.Errorf("unexpected segment trace ID: expected %q, got %q", traceID, s.TraceID)
 			}
 			if s.ParentID != spanID {
-				t.Fatalf("%s: unexpected segment parent ID: expected %q, got %q", tc.Name, spanID, s.ParentID)
+				t.Errorf("unexpected segment parent ID: expected %q, got %q", spanID, s.ParentID)
 			}
 			if s.Namespace != "remote" {
-				t.Fatalf("%s: unexpected segment namespace: expected \"remote\", got %q", tc.Name, s.Namespace)
+				t.Errorf("unexpected segment namespace: expected \"remote\", got %q", s.Namespace)
 			}
 			if s.HTTP.Request.Method != "GRPC" {
-				t.Fatalf("%s: unexpected segment HTTP method: expected \"GRPC\", got %q", tc.Name, s.HTTP.Request.Method)
+				t.Errorf("unexpected segment HTTP method: expected \"GRPC\", got %q", s.HTTP.Request.Method)
 			}
 			if s.Cause == nil && tc.Error {
-				t.Errorf("%s: invalid exception, expected non-nil Cause but got nil Cause", tc.Name)
+				t.Error("invalid exception, expected non-nil Cause but got nil Cause")
 			}
 			if s.Error != tc.Error {
-				t.Errorf("%s: Error is invalid, expected %v got %v", tc.Name, tc.Error, s.Error)
+				t.Errorf("Error is invalid, expected %v got %v", tc.Error, s.Error)
 			}
 		})
 	}
@@ -524,37 +532,37 @@ func TestStreamClient(t *testing.T) {
 			// expect the first message is InProgress
 			s := xray.ExtractSegment(t, messages[0])
 			if !s.InProgress {
-				t.Fatalf("%s: expected first segment to be InProgress but it was not", tc.Name)
+				t.Fatal("expected first segment to be InProgress but it was not")
 			}
 
 			// second message
 			s = xray.ExtractSegment(t, messages[1])
 			if s.Name != host {
-				t.Fatalf("%s: unexpected segment name: expected %q, got %q", tc.Name, host, s.Name)
+				t.Errorf("unexpected segment name: expected %q, got %q", host, s.Name)
 			}
 			if s.Type != "subsegment" {
-				t.Fatalf("%s: unexpected segment type: expected \"subsegment\", got %q", tc.Name, s.Type)
+				t.Errorf("unexpected segment type: expected \"subsegment\", got %q", s.Type)
 			}
 			if s.ID == "" {
-				t.Fatalf("%s: unexpected segment ID: expected non-empty string, got empty string", tc.Name)
+				t.Error("unexpected segment ID: expected non-empty string, got empty string")
 			}
 			if s.TraceID != traceID {
-				t.Fatalf("%s: unexpected segment trace ID: expected %q, got %q", tc.Name, traceID, s.TraceID)
+				t.Errorf("unexpected segment trace ID: expected %q, got %q", traceID, s.TraceID)
 			}
 			if s.ParentID != spanID {
-				t.Fatalf("%s: unexpected segment parent ID: expected %q, got %q", tc.Name, spanID, s.ParentID)
+				t.Errorf("unexpected segment parent ID: expected %q, got %q", spanID, s.ParentID)
 			}
 			if s.Namespace != "remote" {
-				t.Fatalf("%s: unexpected segment namespace: expected \"remote\", got %q", tc.Name, s.Namespace)
+				t.Errorf("unexpected segment namespace: expected \"remote\", got %q", s.Namespace)
 			}
 			if s.HTTP.Request.Method != "GRPC" {
-				t.Fatalf("%s: unexpected segment HTTP method: expected \"GRPC\", got %q", tc.Name, s.HTTP.Request.Method)
+				t.Errorf("unexpected segment HTTP method: expected \"GRPC\", got %q", s.HTTP.Request.Method)
 			}
 			if s.Cause == nil && tc.Error {
-				t.Errorf("%s: invalid exception, expected non-nil Cause but got nil Cause", tc.Name)
+				t.Error("invalid exception, expected non-nil Cause but got nil Cause")
 			}
 			if s.Error != tc.Error {
-				t.Errorf("%s: Error is invalid, expected %v got %v", tc.Name, tc.Error, s.Error)
+				t.Errorf("Error is invalid, expected %v got %v", tc.Error, s.Error)
 			}
 		})
 	}
