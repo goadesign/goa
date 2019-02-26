@@ -40,6 +40,6 @@ go install .
 
 Finally to make sure everything is properly setup run the tests:
 ```bash
-cd $GOPATH/src/github.com/goadesign/goa
+cd $GOPATH/src/goa.design/goa
 make
 ```
