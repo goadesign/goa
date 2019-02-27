@@ -45,17 +45,40 @@ func (s *chatterSvc) Login(ctx context.Context, p *chattersvc.LoginPayload) (res
 // NOTE: An example for bidirectional streaming.
 func (s *chatterSvc) Echoer(ctx context.Context, p *chattersvc.EchoerPayload, stream chattersvc.EchoerServerStream) (err error) {
 	s.logger.Printf("authentication successful")
-	for {
-		str, err := stream.Recv()
-		if err == io.EOF {
-			break
+
+	// Receive from the stream in a separate go routine so we can listen for and handle GracefulStops.
+	strCh := make(chan string)
+	errCh := make(chan error)
+	go func() {
+		for {
+			str, err := stream.Recv()
+			if err != nil {
+				if err != io.EOF {
+					errCh <- err
+				}
+				close(strCh)
+				close(errCh)
+				return
+			}
+			strCh <- str
 		}
-		if err != nil {
-			return err
-		}
-		s.storeMessage(str)
-		if err = stream.Send(str); err != nil {
-			return err
+	}()
+
+	// Listen for context cancellation and stream input simultaneously.
+	for done := false; !done; {
+		select {
+		case str := <-strCh:
+			s.storeMessage(str)
+			if err = stream.Send(str); err != nil {
+				return err
+			}
+		case err := <-errCh:
+			if err != nil {
+				return err
+			}
+			done = true
+		case <-ctx.Done():
+			done = true
 		}
 	}
 	return stream.Close()
@@ -66,17 +89,40 @@ func (s *chatterSvc) Echoer(ctx context.Context, p *chattersvc.EchoerPayload, st
 // result type.
 func (s *chatterSvc) Listener(ctx context.Context, p *chattersvc.ListenerPayload, stream chattersvc.ListenerServerStream) (err error) {
 	s.logger.Printf("authentication successful")
-	for {
-		str, err := stream.Recv()
-		if err == io.EOF {
-			break
+
+	// Receive from the stream in a separate go routine so we can listen for and handle GracefulStops.
+	strCh := make(chan string)
+	errCh := make(chan error)
+	go func() {
+		for {
+			str, err := stream.Recv()
+			if err != nil {
+				if err != io.EOF {
+					errCh <- err
+				}
+				close(strCh)
+				close(errCh)
+				return
+			}
+			strCh <- str
 		}
-		if err != nil {
-			return err
+	}()
+
+	// Listen for context cancellation and stream input simultaneously.
+	for done := false; !done; {
+		select {
+		case str := <-strCh:
+			s.storeMessage(str)
+		case err := <-errCh:
+			if err != nil {
+				return err
+			}
+			done = true
+		case <-ctx.Done():
+			done = true
 		}
-		s.storeMessage(str)
 	}
-	return nil
+	return stream.Close()
 }
 
 // Summarizes the messages sent by the client.
@@ -85,17 +131,40 @@ func (s *chatterSvc) Listener(ctx context.Context, p *chattersvc.ListenerPayload
 func (s *chatterSvc) Summary(ctx context.Context, p *chattersvc.SummaryPayload, stream chattersvc.SummaryServerStream) (err error) {
 	var summary chattersvc.ChatSummaryCollection
 	s.logger.Printf("authentication successful")
-	for {
-		str, err := stream.Recv()
-		if err == io.EOF {
-			break
+
+	// Receive from the stream in a separate go routine so we can listen for and handle GracefulStops.
+	strCh := make(chan string)
+	errCh := make(chan error)
+	go func() {
+		for {
+			str, err := stream.Recv()
+			if err != nil {
+				if err != io.EOF {
+					errCh <- err
+				}
+				close(strCh)
+				close(errCh)
+				return
+			}
+			strCh <- str
 		}
-		if err != nil {
-			return err
+	}()
+
+	// Listen for context cancellation and stream input simultaneously.
+	for done := false; !done; {
+		select {
+		case str := <-strCh:
+			s.storeMessage(str)
+			lastMsg := s.storedMessages[len(s.storedMessages)-1]
+			summary = append(summary, lastMsg)
+		case err := <-errCh:
+			if err != nil {
+				return err
+			}
+			done = true
+		case <-ctx.Done():
+			done = true
 		}
-		s.storeMessage(str)
-		lastMsg := s.storedMessages[len(s.storedMessages)-1]
-		summary = append(summary, lastMsg)
 	}
 	return stream.SendAndClose(summary)
 }
