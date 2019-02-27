@@ -74,6 +74,9 @@ func StreamCanceler(ctx context.Context) grpc.StreamServerInterceptor {
 		delete(cancels, &cancel)
 		cancelMu.Unlock()
 
+		// cleanup the WithCancel
+		cancel()
+
 		return err
 	})
 }
