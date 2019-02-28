@@ -11,7 +11,7 @@ import (
 )
 
 // Example iterates through the roots and returns files that implement an
-// example service and client.
+// example service, server, and client.
 func Example(genpkg string, roots []eval.Root) ([]*codegen.File, error) {
 	var files []*codegen.File
 	for _, root := range roots {

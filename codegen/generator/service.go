@@ -5,13 +5,13 @@ import (
 
 	"goa.design/goa/codegen"
 	"goa.design/goa/codegen/service"
-	"goa.design/goa/expr"
 	"goa.design/goa/eval"
+	"goa.design/goa/expr"
 )
 
-// Service iterates through the roots and returns the files needed to render the
-// service code. It returns an error if the roots slice does not include a goa
-// design.
+// Service iterates through the roots and returns the files needed to render
+// the service code. It returns an error if the roots slice does not include
+// a goa design.
 func Service(genpkg string, roots []eval.Root) ([]*codegen.File, error) {
 	var files []*codegen.File
 	for _, root := range roots {

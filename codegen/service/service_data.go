@@ -27,8 +27,14 @@ type (
 	// ServicesData encapsulates the data computed from the service designs.
 	ServicesData map[string]*Data
 
-	// Data contains the data used to render the code related to a
-	// single service.
+	// RequirementsData is the list of security requirements.
+	RequirementsData []*RequirementData
+
+	// SchemesData is the list of security schemes.
+	SchemesData []*SchemeData
+
+	// Data contains the data used to render the code related to a single
+	// service.
 	Data struct {
 		// Name is the service name.
 		Name string
@@ -36,37 +42,35 @@ type (
 		Description string
 		// StructName is the service struct name.
 		StructName string
-		// VarName is the service variable name (first letter in
-		// lowercase).
+		// VarName is the service variable name (first letter in lowercase).
 		VarName string
-		// PkgName is the name of the package containing the generated
-		// service code.
+		// PkgName is the name of the package containing the generated service
+		// code.
 		PkgName string
-		// ViewsPkg is the name of the package containing the view types.
+		// ViewsPkg is the name of the package containing the projected and viewed
+		// result types.
 		ViewsPkg string
 		// Methods lists the service interface methods.
 		Methods []*MethodData
-		// Schemes is the list of security schemes required by the
-		// service methods.
-		Schemes []*SchemeData
-		// UserTypes lists the type definitions that the service
-		// depends on.
-		UserTypes []*UserTypeData
-		// ErrorTypes lists the error type definitions that the service
-		// depends on.
-		ErrorTypes []*UserTypeData
-		// Errors list the information required to generate error init
-		// functions.
-		ErrorInits []*ErrorInitData
-		// ProjectedTypes lists the types which uses pointers for all fields to
-		// define view specific validation logic.
-		ProjectedTypes []*ProjectedTypeData
-		// ViewedResultTypes lists all the viewed method result types.
-		ViewedResultTypes []*ViewedResultTypeData
+		// Schemes is the list of security schemes required by the service methods.
+		Schemes SchemesData
 		// Scope initialized with all the service types.
 		Scope *codegen.NameScope
 		// ViewScope initialized with all the viewed types.
 		ViewScope *codegen.NameScope
+
+		// userTypes lists the type definitions that the service depends on.
+		userTypes []*UserTypeData
+		// errorTypes lists the error type definitions that the service depends on.
+		errorTypes []*UserTypeData
+		// errorInits list the information required to generate error init
+		// functions.
+		errorInits []*ErrorInitData
+		// projectedTypes lists the types which uses pointers for all fields to
+		// define view specific validation logic.
+		projectedTypes []*ProjectedTypeData
+		// viewedResultTypes lists all the viewed method result types.
+		viewedResultTypes []*ViewedResultTypeData
 	}
 
 	// ErrorInitData describes an error returned by a service method of type
@@ -132,10 +136,10 @@ type (
 		Errors []*ErrorInitData
 		// Requirements contains the security requirements for the
 		// method.
-		Requirements []*RequirementData
+		Requirements RequirementsData
 		// Schemes contains the security schemes types used by the
 		// method.
-		Schemes []string
+		Schemes SchemesData
 		// ViewedResult contains the data required to generate the code handling
 		// views if any.
 		ViewedResult *ViewedResultTypeData
@@ -194,7 +198,7 @@ type (
 		Scopes []string
 	}
 
-	// UserTypeData contains the data describing a data type.
+	// UserTypeData contains the data describing a user-defined type.
 	UserTypeData struct {
 		// Name is the type name.
 		Name string
@@ -333,7 +337,8 @@ type (
 		Views []*ViewData
 	}
 
-	// InitData contains the data to render a constructor.
+	// InitData contains the data to render a constructor to initialize service
+	// types from viewed result types and vice versa.
 	InitData struct {
 		// Name is the name of the constructor function.
 		Name string
@@ -357,7 +362,8 @@ type (
 		Ref string
 	}
 
-	// ValidateData contains data to render a validate function.
+	// ValidateData contains data to render a validate function to validate a
+	// projected type or a viewed result type based on views.
 	ValidateData struct {
 		// Name is the validation function name.
 		Name string
@@ -370,28 +376,6 @@ type (
 		Validate string
 	}
 )
-
-// TypeContext returns a contextual attribute for service types.
-// Service types are Go types and uses non-pointers to hold attributes
-// having default values.
-func TypeContext(att *expr.AttributeExpr, pkg string, scope *codegen.NameScope) *codegen.ContextualAttribute {
-	return &codegen.ContextualAttribute{
-		Attribute:  codegen.NewGoAttribute(att, pkg, scope),
-		Required:   true,
-		UseDefault: true,
-	}
-}
-
-// ProjectedTypeContext returns a contextual attribute for a projected type.
-// Projected types are Go types that uses pointers for all attributes
-// (even the required ones).
-func ProjectedTypeContext(att *expr.AttributeExpr, pkg string, scope *codegen.NameScope) *codegen.ContextualAttribute {
-	return &codegen.ContextualAttribute{
-		Attribute:  codegen.NewGoAttribute(att, pkg, scope),
-		Pointer:    true,
-		UseDefault: true,
-	}
-}
 
 // Get retrieves the data for the service with the given name computing it if
 // needed. It returns nil if there is no service with the given name.
@@ -418,13 +402,12 @@ func (s *Data) Method(name string) *MethodData {
 	return nil
 }
 
-// Scheme returns the scheme data with the given scheme name in the
-// security requirements.
-func Scheme(reqs []*RequirementData, name string) *SchemeData {
-	for _, req := range reqs {
-		for _, sch := range req.Schemes {
-			if sch.SchemeName == name {
-				return sch
+// Scheme returns the scheme data with the given scheme name.
+func (r RequirementsData) Scheme(name string) *SchemeData {
+	for _, req := range r {
+		for _, s := range req.Schemes {
+			if s.SchemeName == name {
+				return s
 			}
 		}
 	}
@@ -455,11 +438,11 @@ func (s *SchemeData) Dup() *SchemeData {
 	}
 }
 
-// AppendScheme appends a scheme data to schemes only if it doesn't exist.
-func AppendScheme(s []*SchemeData, d *SchemeData) []*SchemeData {
+// Append appends a scheme data to schemes only if it doesn't exist.
+func (s SchemesData) Append(d *SchemeData) SchemesData {
 	found := false
 	for _, se := range s {
-		if se.Name == d.Name {
+		if se.SchemeName == d.SchemeName {
 			found = true
 			break
 		}
@@ -577,7 +560,7 @@ func (d ServicesData) analyze(service *expr.ServiceExpr) *Data {
 
 	var (
 		methods []*MethodData
-		schemes []*SchemeData
+		schemes SchemesData
 	)
 	{
 		methods = make([]*MethodData, len(service.Methods))
@@ -596,19 +579,8 @@ func (d ServicesData) analyze(service *expr.ServiceExpr) *Data {
 				}
 			}
 			methods[i] = m
-			for _, r := range m.Requirements {
-				for _, s := range r.Schemes {
-					found := false
-					for _, s2 := range schemes {
-						if s.SchemeName == s2.SchemeName {
-							found = true
-							break
-						}
-					}
-					if !found {
-						schemes = append(schemes, s)
-					}
-				}
+			for _, s := range m.Schemes {
+				schemes = schemes.Append(s)
 			}
 		}
 	}
@@ -632,17 +604,38 @@ func (d ServicesData) analyze(service *expr.ServiceExpr) *Data {
 		ViewsPkg:          viewspkg,
 		Methods:           methods,
 		Schemes:           schemes,
-		UserTypes:         types,
-		ErrorTypes:        errTypes,
-		ErrorInits:        errorInits,
-		ProjectedTypes:    projTypes,
-		ViewedResultTypes: viewedRTs,
 		Scope:             scope,
 		ViewScope:         viewScope,
+		errorTypes:        errTypes,
+		errorInits:        errorInits,
+		userTypes:         types,
+		projectedTypes:    projTypes,
+		viewedResultTypes: viewedRTs,
 	}
 	d[service.Name] = data
 
 	return data
+}
+
+// typeContext returns a contextual attribute for service types. Service types
+// are Go types and uses non-pointers to hold attributes having default values.
+func typeContext(att *expr.AttributeExpr, pkg string, scope *codegen.NameScope) *codegen.ContextualAttribute {
+	return &codegen.ContextualAttribute{
+		Attribute:  codegen.NewGoAttribute(att, pkg, scope),
+		Required:   true,
+		UseDefault: true,
+	}
+}
+
+// projectedTypeContext returns a contextual attribute for a projected type.
+// Projected types are Go types that uses pointers for all attributes (even the
+// required ones).
+func projectedTypeContext(att *expr.AttributeExpr, pkg string, scope *codegen.NameScope) *codegen.ContextualAttribute {
+	return &codegen.ContextualAttribute{
+		Attribute:  codegen.NewGoAttribute(att, pkg, scope),
+		Pointer:    true,
+		UseDefault: true,
+	}
 }
 
 // collectTypes recurses through the attribute to gather all user types and
@@ -719,8 +712,8 @@ func buildMethodData(m *expr.MethodExpr, svcPkgName string, service *expr.Servic
 		resultDesc   string
 		resultEx     interface{}
 		errors       []*ErrorInitData
-		reqs         []*RequirementData
-		schemes      []string
+		reqs         RequirementsData
+		schemes      SchemesData
 		svrStream    *StreamData
 		cliStream    *StreamData
 	)
@@ -821,19 +814,11 @@ func buildMethodData(m *expr.MethodExpr, svcPkgName string, service *expr.Servic
 		}
 	}
 	for _, req := range m.Requirements {
-		var rs []*SchemeData
+		var rs SchemesData
 		for _, s := range req.Schemes {
-			rs = append(rs, buildSchemeData(s, m))
-			found := false
-			for _, es := range schemes {
-				if es == s.Kind.String() {
-					found = true
-					break
-				}
-			}
-			if !found {
-				schemes = append(schemes, s.Kind.String())
-			}
+			sch := buildSchemeData(s, m)
+			rs = rs.Append(sch)
+			schemes = schemes.Append(sch)
 		}
 		reqs = append(reqs, &RequirementData{Schemes: rs, Scopes: req.Scopes})
 	}
@@ -965,7 +950,7 @@ func collectProjectedTypes(projected, att *expr.AttributeExpr, viewspkg string, 
 		if pd, ok := seen[dt.ID()]; ok {
 			// a projected type is already created for this user type. We change the
 			// attribute type to this seen projected type. The seen projected type
-			// can be nil if the attribute type has a ciruclar type definition in
+			// can be nil if the attribute type has a circular type definition in
 			// which case we don't change the attribute type until the projected type
 			// is created during the recursion.
 			if pd != nil {
@@ -1265,8 +1250,8 @@ func buildTypeInits(projected, att *expr.AttributeExpr, viewspkg string, scope, 
 				code    string
 				helpers []*codegen.TransformFunctionData
 
-				srcCA  = ProjectedTypeContext(src, viewspkg, viewScope)
-				tgtCA  = TypeContext(att, "", scope)
+				srcCA  = projectedTypeContext(src, viewspkg, viewScope)
+				tgtCA  = typeContext(att, "", scope)
 				resvar = scope.GoTypeName(att)
 			)
 			{
@@ -1344,8 +1329,8 @@ func buildProjections(projected, att *expr.AttributeExpr, viewspkg string, scope
 			code    string
 			helpers []*codegen.TransformFunctionData
 
-			srcCA = TypeContext(att, "", scope)
-			tgtCA = ProjectedTypeContext(tgt, viewspkg, viewScope)
+			srcCA = typeContext(att, "", scope)
+			tgtCA = projectedTypeContext(tgt, viewspkg, viewScope)
 			tname = scope.GoTypeName(projected)
 		)
 		{
@@ -1429,7 +1414,7 @@ func buildValidations(projected *expr.AttributeExpr, scope *codegen.NameScope) [
 							o.Set(name, attr)
 						}
 					})
-					ca = ProjectedTypeContext(&expr.AttributeExpr{Type: o, Validation: rt.Validation}, "", scope)
+					ca = projectedTypeContext(&expr.AttributeExpr{Type: o, Validation: rt.Validation}, "", scope)
 				}
 				data["Validate"] = codegen.RecursiveValidationCode(ca, "result")
 				data["Fields"] = fields
@@ -1451,7 +1436,7 @@ func buildValidations(projected *expr.AttributeExpr, scope *codegen.NameScope) [
 		// for a user type or a result type with single view, we generate only one validation
 		// function containing the validation logic
 		name := "Validate" + tname
-		ca := ProjectedTypeContext(ut.Attribute(), "", scope)
+		ca := projectedTypeContext(ut.Attribute(), "", scope)
 		validations = append(validations, &ValidateData{
 			Name:        name,
 			Description: fmt.Sprintf("%s runs the validations defined on %s.", name, tname),

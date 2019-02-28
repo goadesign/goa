@@ -2,12 +2,9 @@ package codegen
 
 import (
 	"bytes"
-	"fmt"
 	"os"
 	"strings"
 	"unicode"
-
-	"goa.design/goa/pkg"
 )
 
 // TemplateFuncs lists common template helper functions.
@@ -16,20 +13,6 @@ func TemplateFuncs() map[string]interface{} {
 		"commandLine": CommandLine,
 		"comment":     Comment,
 	}
-}
-
-// CheckVersion returns an error if the ver is empty, contains an incorrect value or
-// a version number that is not compatible with the version of this repo.
-func CheckVersion(ver string) error {
-	compat, err := pkg.Compatible(ver)
-	if err != nil {
-		return err
-	}
-	if !compat {
-		return fmt.Errorf("version mismatch: using goa %s to generate code that compiles with goa %s",
-			ver, pkg.Version())
-	}
-	return nil
 }
 
 // CommandLine return the command used to run this process.
@@ -44,8 +27,8 @@ func CommandLine() string {
 	return cmdl
 }
 
-// Comment produces line comments by concatenating the given strings and producing 80 characters
-// long lines starting with "//"
+// Comment produces line comments by concatenating the given strings and
+// producing 80 characters long lines starting with "//".
 func Comment(elems ...string) string {
 	var lines []string
 	for _, e := range elems {
@@ -80,7 +63,7 @@ func Indent(s, prefix string) string {
 }
 
 // Add adds two integers and returns the sum of the two.
-func Add(a, b int) int { return a + b }
+//func Add(a, b int) int { return a + b }
 
 // Casing exceptions
 var toLower = map[string]string{"OAuth": "oauth"}
@@ -90,8 +73,9 @@ var toLower = map[string]string{"OAuth": "oauth"}
 //
 // If firstUpper is true the first letter of the string is capitalized else
 // the first letter is in lowercase.
+//
 // If acronym is true and a part of the string is a common acronym
-//  then it keeps the part capitalized (firstUpper = true)
+// then it keeps the part capitalized (firstUpper = true)
 // (e.g. APIVersion) or lowercase (firstUpper = false) (e.g. apiVersion).
 func CamelCase(name string, firstUpper bool, acronym bool) string {
 	if name == "" {

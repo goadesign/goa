@@ -904,7 +904,7 @@ func buildPayloadData(e *expr.HTTPEndpointExpr, sd *ServiceData) *PayloadData {
 		ep        = svc.Method(e.MethodExpr.Name)
 		svrBody   = httpContext(e.Body, "", sd.Scope, true, true)
 		cliBody   = httpContext(e.Body, "", sd.Scope, true, false)
-		payloadCA = service.TypeContext(e.MethodExpr.Payload, svc.PkgName, svc.Scope)
+		payloadCA = serviceTypeContext(e.MethodExpr.Payload, svc.PkgName, svc.Scope)
 
 		request       *RequestData
 		mapQueryParam *ParamData
@@ -1242,7 +1242,7 @@ func buildResultData(e *expr.HTTPEndpointExpr, sd *ServiceData) *ResultData {
 		svc      = sd.Service
 		ep       = svc.Method(e.MethodExpr.Name)
 		result   = e.MethodExpr.Result
-		resultCA = service.TypeContext(result, svc.PkgName, svc.Scope)
+		resultCA = serviceTypeContext(result, svc.PkgName, svc.Scope)
 
 		name string
 		ref  string
@@ -1269,7 +1269,12 @@ func buildResultData(e *expr.HTTPEndpointExpr, sd *ServiceData) *ResultData {
 		viewed := false
 		if ep.ViewedResult != nil {
 			result = expr.AsObject(ep.ViewedResult.Type).Attribute("projected")
-			resultCA = service.ProjectedTypeContext(result, svc.ViewsPkg, svc.ViewScope)
+			// create projected type context
+			resultCA = &codegen.ContextualAttribute{
+				Attribute:  codegen.NewGoAttribute(result, svc.ViewsPkg, svc.ViewScope),
+				Pointer:    true,
+				UseDefault: true,
+			}
 			viewed = true
 		}
 		responses = buildResponses(e, resultCA, viewed, sd)
@@ -1541,7 +1546,7 @@ func buildErrorsData(e *expr.HTTPEndpointExpr, sd *ServiceData) []*ErrorGroupDat
 		var (
 			init    *InitData
 			body    = v.Response.Body.Type
-			errCA   = service.TypeContext(v.ErrorExpr.AttributeExpr, svc.PkgName, svc.Scope)
+			errCA   = serviceTypeContext(v.ErrorExpr.AttributeExpr, svc.PkgName, svc.Scope)
 			svrBody = httpContext(v.Response.Body, "", sd.Scope, false, true)
 			cliBody = httpContext(v.Response.Body, "", sd.Scope, false, false)
 		)
@@ -1722,7 +1727,7 @@ func buildStreamData(ed *EndpointData, e *expr.HTTPEndpointExpr, sd *ServiceData
 		md         = ed.Method
 		svc        = sd.Service
 		spayload   = m.StreamingPayload
-		spayloadCA = service.TypeContext(spayload, svc.PkgName, svc.Scope)
+		spayloadCA = serviceTypeContext(spayload, svc.PkgName, svc.Scope)
 	)
 	{
 		svrSendTypeName = ed.Result.Name
@@ -2362,6 +2367,17 @@ func attributeTypeData(attCA *codegen.ContextualAttribute, req, server bool, rd 
 		ValidateDef: validate,
 		ValidateRef: validateRef,
 		Example:     att.Example(expr.Root.API.Random()),
+	}
+}
+
+// serviceTypeContext returns a contextual attribute for service types. Service
+// types are Go types and uses non-pointers to hold attributes having default
+// values.
+func serviceTypeContext(att *expr.AttributeExpr, pkg string, scope *codegen.NameScope) *codegen.ContextualAttribute {
+	return &codegen.ContextualAttribute{
+		Attribute:  codegen.NewGoAttribute(att, pkg, scope),
+		Required:   true,
+		UseDefault: true,
 	}
 }
 

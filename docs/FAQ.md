@@ -1,6 +1,6 @@
 # When are validations defined in the design enforced?
 
-There is a trade-off between perfomance and robustness wrt enforcing the validations
+There is a trade-off between performance and robustness wrt enforcing the validations
 defined in the service design. goa trusts that the user code does the right thing
 and only validates external data ("input"). This means goa validates incoming 
 requests server side and responses client side. This way your code is always
