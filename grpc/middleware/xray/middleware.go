@@ -191,27 +191,27 @@ func StreamClient(host string) grpc.StreamClientInterceptor {
 }
 
 func (c *xrayStreamClientWrapper) SendMsg(m interface{}) error {
-	err := c.ClientStream.SendMsg(m)
-	if err != nil {
+	if err := c.ClientStream.SendMsg(m); err != nil {
 		c.s.RecordError(err)
+		return err
 	}
-	return err
+	return nil
 }
 
 func (c *xrayStreamClientWrapper) RecvMsg(m interface{}) error {
-	err := c.ClientStream.RecvMsg(m)
-	if err != nil {
+	if err := c.ClientStream.RecvMsg(m); err != nil {
 		c.s.RecordError(err)
+		return err
 	}
-	return err
+	return nil
 }
 
 func (c *xrayStreamClientWrapper) CloseSend() error {
-	err := c.ClientStream.CloseSend()
-	if err != nil {
+	if err := c.ClientStream.CloseSend(); err != nil {
 		c.s.RecordError(err)
+		return err
 	}
-	return err
+	return nil
 }
 
 func (c *xrayStreamClientWrapper) Header() (metadata.MD, error) {
