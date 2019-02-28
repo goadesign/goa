@@ -15,7 +15,7 @@ import (
 // The type of an attribute can be one of:
 //
 // * The primitive types Boolean, Float32, Float64, Int, Int32, Int64, UInt,
-//   UInt32, UInt64, String or Bytes.
+// UInt32, UInt64, String or Bytes.
 //
 // * A user type defined via the Type function.
 //
@@ -24,10 +24,10 @@ import (
 // * An map defined using the MapOf function.
 //
 // * An object defined inline using Attribute to define the type fields
-//   recursively.
+// recursively.
 //
 // * The special type Any to indicate that the attribute may take any of the
-//   types listed above.
+// types listed above.
 //
 // Attribute must appear in ResultType, Type, Attribute or Attributes.
 //

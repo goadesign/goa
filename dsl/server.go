@@ -75,7 +75,7 @@ func Server(name string, fn ...func()) *expr.ServerExpr {
 
 // Services sets the list of services implemented by a server.
 //
-// Services must appear in a Server expression
+// Services must appear in a Server expression.
 //
 // Services takes one or more strings as argument corresponding to service
 // names.

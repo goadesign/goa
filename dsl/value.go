@@ -11,10 +11,10 @@ import "goa.design/goa/eval"
 //
 // Example:
 //
-//	Example("A simple bottle", func() {
-//		Description("This bottle has an ID set to 1")
-//		Value(Val{"ID": 1})
-//	})
+//    Example("A simple bottle", func() {
+//        Description("This bottle has an ID set to 1")
+//        Value(Val{"ID": 1})
+//    })
 //
 func Value(val interface{}) {
 	switch e := eval.Current().(type) {

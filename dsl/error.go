@@ -64,9 +64,9 @@ func Error(name string, args ...interface{}) {
 // Example:
 //
 //    var _ = Service("divider", func() {
-//         Error("request_timeout", func() {
-//                 Temporary()
-//         })
+//        Error("request_timeout", func() {
+//            Temporary()
+//        })
 //    })
 func Temporary() {
 	attr, ok := eval.Current().(*expr.AttributeExpr)
@@ -89,9 +89,9 @@ func Temporary() {
 // Example:
 //
 //    var _ = Service("divider", func() {
-//	   Error("request_timeout", func() {
-//		   Timeout()
-//	   })
+//        Error("request_timeout", func() {
+//            Timeout()
+//        })
 //    })
 func Timeout() {
 	attr, ok := eval.Current().(*expr.AttributeExpr)

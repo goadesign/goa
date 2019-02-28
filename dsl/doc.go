@@ -1,8 +1,8 @@
 /*
-Package dsl implements the goa DSL used to define HTTP APIs.
+Package dsl implements the goa DSL used to define HTTP and gRPC APIs.
 
 The HTTP DSL adds a "HTTP" function to the DSL constructs that require HTTP
-specific information. These include the API, Service, Method and Error DSLs.
+specific information. These include the API, Service, Method, and Error DSLs.
 
 For example:
 
@@ -16,7 +16,7 @@ For example:
     })
 
 The HTTP function defines the mapping of the data type attributes used
-in the generic DSL to HTTP parameters (for requests), headers and body fields.
+in the generic DSL to HTTP parameters (for requests), headers, and body fields.
 
 For example:
 
@@ -49,7 +49,7 @@ For example:
         })
     })
 
-By default the payload, result and error type attributes define the request and
+By default the payload, result, and error type attributes define the request and
 response body fields respectively. Any attribute that is not explicitly mapped
 is used to define the request or response body. The default response status code
 is 200 OK for response types other than Empty and 204 NoContent for the Empty
