@@ -31,11 +31,11 @@ type (
 		// remote service. It is only initialized for the root segment.
 		ParentID string `json:"parent_id,omitempty"`
 		// StartTime is the segment start time.
-		StartTime float64 `json:"start_time,omitempty"`
+		StartTime float64 `json:"start_time"`
 		// EndTime is the segment end time.
 		EndTime float64 `json:"end_time,omitempty"`
 		// InProgress is true if the segment hasn't completed yet.
-		InProgress bool `json:"in_progress"`
+		InProgress bool `json:"in_progress,omitempty"`
 		// HTTP contains the HTTP request and response information and is
 		// only initialized for the root segment.
 		HTTP *HTTP `json:"http,omitempty"`
@@ -45,15 +45,15 @@ type (
 		// Error is true when a request causes an internal error. It is
 		// automatically set by Close when the response status code is
 		// 500 or more.
-		Error bool `json:"error"`
+		Error bool `json:"error,omitempty"`
 		// Fault is true when a request results in an error that is due
 		// to the user. Typically it should be set when the response
 		// status code is between 400 and 500 (but not 429).
-		Fault bool `json:"fault"`
+		Fault bool `json:"fault,omitempty"`
 		// Throttle is true when a request is throttled. It is set to
 		// true when the segment closes and the response status code is
 		// 429. Client code may set it to true manually as well.
-		Throttle bool `json:"throttle"`
+		Throttle bool `json:"throttle,omitempty"`
 		// Annotations contains the segment annotations.
 		Annotations map[string]interface{} `json:"annotations,omitempty"`
 		// Metadata contains the segment metadata.
@@ -68,6 +68,9 @@ type (
 		// counter keeps track of the number of subsegments that have not
 		// completed yet.
 		counter int
+		// submitInProgressSegment sends an "in-progress" copy of this segment to
+		// X-Ray daemon only once.
+		submitInProgressSegment sync.Once
 	}
 
 	// HTTP describes a HTTP request.
@@ -174,8 +177,6 @@ func (s *Segment) NewSubsegment(name string) *Segment {
 		Parent:     s,
 		conn:       s.conn,
 	}
-	s.Subsegments = append(s.Subsegments, sub)
-	s.counter++
 	return sub
 }
 
@@ -223,6 +224,7 @@ func (s *Segment) RecordError(e error) {
 //
 func (s *Segment) Capture(name string, fn func()) {
 	sub := s.NewSubsegment(name)
+	sub.SubmitInProgress()
 	defer sub.Close()
 	fn()
 }
@@ -290,12 +292,26 @@ func (s *Segment) Close() {
 
 	s.EndTime = now()
 	s.InProgress = false
-	if s.Parent != nil {
-		s.Parent.decrementCounter()
-	}
-	if s.counter <= 0 {
-		s.flush()
-	}
+	s.flush()
+}
+
+// SubmitInProgress sends this in-progress segment to the AWS X-Ray daemon.
+// This way, the segment will be immediately visible in the UI, with status
+// "Pending". When this segment is closed, the final version will overwrite
+// any in-progress version. This method should be called no more than once
+// for this segment. Subsequent calls will have no effect.
+//
+// See the `in_progress` docs:
+//     https://docs.aws.amazon.com/xray/latest/devguide/xray-api-segmentdocuments.html#api-segmentdocuments-fields
+func (s *Segment) SubmitInProgress() {
+	s.Lock()
+	defer s.Unlock()
+
+	s.submitInProgressSegment.Do(func() {
+		if s.InProgress {
+			s.flush()
+		}
+	})
 }
 
 // flush sends the segment to the AWS X-Ray daemon.
@@ -303,18 +319,6 @@ func (s *Segment) flush() {
 	b, _ := json.Marshal(s)
 	// append so we make only one call to Write to be goroutine-safe
 	s.conn.Write(append([]byte(UDPHeader), b...))
-}
-
-// decrementCounter decrements the segment counter and flushes it if it's 0.
-func (s *Segment) decrementCounter() {
-	s.Lock()
-	defer s.Unlock()
-
-	s.counter--
-	if s.counter <= 0 && s.EndTime != 0 {
-		// Segment is closed and last subsegment closed, flush it
-		s.flush()
-	}
 }
 
 // exceptionData creates an Exception from an error.
