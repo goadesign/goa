@@ -58,8 +58,9 @@ const (
 
 // EndpointFile returns the endpoint file for the given service.
 func EndpointFile(genpkg string, service *expr.ServiceExpr) *codegen.File {
-	path := filepath.Join(codegen.Gendir, codegen.SnakeCase(service.Name), "endpoints.go")
 	svc := Services.Get(service.Name)
+	svcName := codegen.SnakeCase(svc.VarName)
+	path := filepath.Join(codegen.Gendir, svcName, "endpoints.go")
 	data := endpointData(service)
 	var (
 		sections []*codegen.SectionTemplate
@@ -71,7 +72,7 @@ func EndpointFile(genpkg string, service *expr.ServiceExpr) *codegen.File {
 				{Path: "fmt"},
 				{Name: "goa", Path: "goa.design/goa"},
 				{Path: "goa.design/goa/security"},
-				{Path: genpkg + "/" + codegen.SnakeCase(service.Name) + "/" + "views", Name: svc.ViewsPkg},
+				{Path: genpkg + "/" + svcName + "/" + "views", Name: svc.ViewsPkg},
 			})
 		def := &codegen.SectionTemplate{
 			Name:   "endpoints-struct",

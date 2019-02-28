@@ -61,7 +61,7 @@ func exampleSvrMain(genpkg string, root *expr.RootExpr, svr *expr.ServerExpr) *c
 		sd := service.Services.Get(svc)
 		svcData[i] = sd
 		specs = append(specs, &codegen.ImportSpec{
-			Path: path.Join(genpkg, codegen.SnakeCase(svc)),
+			Path: path.Join(genpkg, codegen.SnakeCase(sd.VarName)),
 			Name: sd.PkgName,
 		})
 	}
