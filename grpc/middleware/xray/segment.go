@@ -30,9 +30,7 @@ func (s *GRPCSegment) RecordRequest(ctx context.Context, method string, req inte
 	}
 
 	s.Namespace = namespace
-	if req != nil {
-		s.HTTP.Request = requestData(ctx, method, req)
-	}
+	s.HTTP.Request = requestData(ctx, method, req)
 }
 
 // RecordResponse traces a response.
@@ -44,16 +42,9 @@ func (s *GRPCSegment) RecordResponse(resp interface{}) {
 		s.HTTP = &xray.HTTP{}
 	}
 
-	var length int64
-	{
-		if resp != nil {
-			length = messageLength(resp)
-		}
-	}
-
 	s.HTTP.Response = &xray.Response{
 		Status:        int(codes.OK),
-		ContentLength: length,
+		ContentLength: messageLength(resp),
 	}
 }
 

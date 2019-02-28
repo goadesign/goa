@@ -10,7 +10,16 @@ import (
 	"goa.design/goa/middleware"
 	"goa.design/goa/middleware/xray"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/metadata"
 )
+
+// xrayStreamClientWrapper wraps the gRPC client stream to intercept stream
+// messages from the server and record errors if any.
+type xrayStreamClientWrapper struct {
+	grpc.ClientStream
+
+	s *GRPCSegment
+}
 
 // NewUnaryServer returns a server middleware that sends AWS X-Ray segments
 // to the daemon running at the given address. It stores the request segment
@@ -38,6 +47,22 @@ import (
 //     }
 //     return
 //
+// An X-Ray trace is limited to 500 KB of segment data (JSON) being submitted
+// for it. See: https://aws.amazon.com/xray/pricing/
+//
+// Traces running for multiple minutes may encounter additional dynamic limits,
+// resulting in the trace being limited to less than 500 KB. The workaround is
+// to send less data -- fewer segments, subsegments, annotations, or metadata.
+// And perhaps split up a single large trace into several different traces.
+//
+// Here are some observations of the relationship between trace duration and
+// the number of bytes that could be sent successfully:
+//   - 49 seconds: 543 KB
+//   - 2.4 minutes: 51 KB
+//   - 6.8 minutes: 14 KB
+//   - 1.4 hours:   14 KB
+//
+// Besides those varying size limitations, a trace may be open for up to 7 days.
 func NewUnaryServer(service, daemon string) (grpc.UnaryServerInterceptor, error) {
 	connection, err := xray.Connect(context.Background(), time.Minute, func() (net.Conn, error) {
 		return net.Dial("udp", daemon)
@@ -61,6 +86,7 @@ func NewUnaryServer(service, daemon string) (grpc.UnaryServerInterceptor, error)
 		if parentID != nil {
 			s.ParentID = parentID.(string)
 		}
+		s.SubmitInProgress()
 		ctx = context.WithValue(ctx, xray.SegKey, s.Segment)
 		resp, err = handler(ctx, req)
 		if err != nil {
@@ -98,11 +124,14 @@ func NewStreamServer(service, daemon string) (grpc.StreamServerInterceptor, erro
 		if parentID != nil {
 			s.ParentID = parentID.(string)
 		}
+		s.SubmitInProgress()
 		ctx = context.WithValue(ctx, xray.SegKey, s.Segment)
 		wss := grpcm.NewWrappedServerStream(ctx, ss)
 		err := handler(srv, wss)
 		if err != nil {
 			s.RecordError(err)
+		} else {
+			s.RecordResponse(nil)
 		}
 		return err
 	}), nil
@@ -119,12 +148,13 @@ func UnaryClient(host string) grpc.UnaryClientInterceptor {
 			return invoker(ctx, method, req, reply, cc, opts...)
 		}
 		s := seg.(*xray.Segment)
-		sub := GRPCSegment{s.NewSubsegment(host)}
+		sub := &GRPCSegment{s.NewSubsegment(host)}
 		defer sub.Close()
 
 		// update the context with the latest segment
 		ctx = middleware.WithSpan(ctx, sub.TraceID, sub.ID, sub.ParentID)
 		sub.RecordRequest(ctx, method, req, "remote")
+		sub.SubmitInProgress()
 		err := invoker(ctx, method, req, reply, cc, opts...)
 		if err != nil {
 			sub.RecordError(err)
@@ -143,18 +173,51 @@ func StreamClient(host string) grpc.StreamClientInterceptor {
 			return streamer(ctx, desc, cc, method, opts...)
 		}
 		s := seg.(*xray.Segment)
-		sub := GRPCSegment{s.NewSubsegment(host)}
+		sub := &GRPCSegment{s.NewSubsegment(host)}
 		defer sub.Close()
 
 		// update the context with the latest segment
 		ctx = middleware.WithSpan(ctx, sub.TraceID, sub.ID, sub.ParentID)
 		sub.RecordRequest(ctx, method, nil, "remote")
+		sub.SubmitInProgress()
 		cs, err := streamer(ctx, desc, cc, method, opts...)
 		if err != nil {
 			sub.RecordError(err)
 		} else {
 			sub.RecordResponse(nil)
 		}
-		return cs, err
+		return &xrayStreamClientWrapper{cs, sub}, err
 	})
+}
+
+func (c *xrayStreamClientWrapper) SendMsg(m interface{}) error {
+	if err := c.ClientStream.SendMsg(m); err != nil {
+		c.s.RecordError(err)
+		return err
+	}
+	return nil
+}
+
+func (c *xrayStreamClientWrapper) RecvMsg(m interface{}) error {
+	if err := c.ClientStream.RecvMsg(m); err != nil {
+		c.s.RecordError(err)
+		return err
+	}
+	return nil
+}
+
+func (c *xrayStreamClientWrapper) CloseSend() error {
+	if err := c.ClientStream.CloseSend(); err != nil {
+		c.s.RecordError(err)
+		return err
+	}
+	return nil
+}
+
+func (c *xrayStreamClientWrapper) Header() (metadata.MD, error) {
+	h, err := c.ClientStream.Header()
+	if err != nil {
+		c.s.RecordError(err)
+	}
+	return h, err
 }
