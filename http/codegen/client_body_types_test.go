@@ -68,7 +68,7 @@ func TestClientTypes(t *testing.T) {
 		DSL  func()
 		Code string
 	}{
-		{"mixed-payload-attrs", testdata.MixedPayloadInBodyDSL, MixedPayloadInBodyServerTypesFile},
+		{"mixed-payload-attrs", testdata.MixedPayloadInBodyDSL, MixedPayloadInBodyClientTypesFile},
 		{"multiple-methods", testdata.MultipleMethodsDSL, MultipleMethodsClientTypesFile},
 	}
 	for _, c := range cases {
@@ -183,7 +183,7 @@ func NewMethodExplicitBodyUserResultMultipleViewResulttypemultipleviewsOK(body *
 }
 `
 
-const MixedPayloadInBodyClientTypesFile = `// MethodARequestBody is the type of the "ServiceMixedPayloadInBody" service
+const MixedPayloadInBodyClientTypesFile = `// MethodARequestBody is the type of the "ServiceMixedPayloadInBody" service
 // "MethodA" endpoint HTTP request body.
 type MethodARequestBody struct {
 	Any    interface{}          ` + "`" + `form:"any,omitempty" json:"any,omitempty" xml:"any,omitempty"` + "`" + `
