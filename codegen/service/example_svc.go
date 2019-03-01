@@ -3,7 +3,6 @@ package service
 import (
 	"os"
 	"path"
-	"strings"
 
 	"goa.design/goa/codegen"
 	"goa.design/goa/expr"
