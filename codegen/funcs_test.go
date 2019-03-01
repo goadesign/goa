@@ -2,6 +2,8 @@ package codegen
 
 import (
 	"testing"
+
+	"goa.design/goa/expr"
 )
 
 func TestWrapText(t *testing.T) {
@@ -64,5 +66,39 @@ func TestWrapText(t *testing.T) {
 		if actual != tc.expected {
 			t.Errorf("%s: got `%s`, expected `%s`", k, actual, tc.expected)
 		}
+	}
+}
+
+func TestAPIPkg(t *testing.T) {
+	cases := map[string]struct {
+		root     *expr.RootExpr
+		expected string
+	}{
+		"distinct-API-name": {
+			root: &expr.RootExpr{
+				API: &expr.APIExpr{Name: "API"},
+				Services: []*expr.ServiceExpr{
+					{Name: "Service"},
+				},
+			},
+			expected: "api",
+		},
+		"conflicting-API-name": {
+			root: &expr.RootExpr{
+				API: &expr.APIExpr{Name: "Service"},
+				Services: []*expr.ServiceExpr{
+					{Name: "Service"},
+				},
+			},
+			expected: "serviceapi",
+		},
+	}
+	for k, tc := range cases {
+		t.Run(k, func(t *testing.T) {
+			got := APIPkg(tc.root)
+			if got != tc.expected {
+				t.Errorf("invalid API pkg name: got %q, expected %q", got, tc.expected)
+			}
+		})
 	}
 }

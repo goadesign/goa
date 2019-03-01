@@ -28,7 +28,7 @@ func exampleServer(genpkg string, root *expr.RootExpr, svr *expr.ServerExpr) *co
 		apiPkg   string
 	)
 	{
-		apiPkg = strings.ToLower(codegen.Goify(root.API.Name, false))
+		apiPkg = codegen.APIPkg(root)
 		pkg := codegen.SnakeCase(codegen.Goify(svr.Name, true))
 		mainPath = filepath.Join("cmd", pkg, "grpc.go")
 		if _, err := os.Stat(mainPath); !os.IsNotExist(err) {

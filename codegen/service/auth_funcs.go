@@ -13,7 +13,7 @@ import (
 // authorization functions needed to instantiate the service endpoints.
 func AuthFuncsFile(genpkg string, root *expr.RootExpr) *codegen.File {
 	var (
-		apiPkg   = strings.ToLower(codegen.Goify(root.API.Name, false))
+		apiPkg   = codegen.APIPkg(root)
 		rootPath = "."
 		filepath = "auth.go"
 	)

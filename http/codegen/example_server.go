@@ -36,7 +36,7 @@ func exampleServer(genpkg string, root *expr.RootExpr, svr *expr.ServerExpr) *co
 	if idx > 0 {
 		rootPath = genpkg[:idx]
 	}
-	apiPkg := strings.ToLower(codegen.Goify(root.API.Name, false))
+	apiPkg := codegen.APIPkg(root)
 	specs := []*codegen.ImportSpec{
 		{Path: "context"},
 		{Path: "log"},
@@ -116,7 +116,7 @@ func dummyMultipartFile(genpkg string, root *expr.RootExpr, svc *expr.HTTPServic
 		sections []*codegen.SectionTemplate
 		mustGen  bool
 
-		apiPkg = strings.ToLower(codegen.Goify(root.API.Name, false))
+		apiPkg = codegen.APIPkg(root)
 	)
 	{
 		specs := []*codegen.ImportSpec{

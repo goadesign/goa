@@ -37,7 +37,7 @@ func exampleSvrMain(genpkg string, root *expr.RootExpr, svr *expr.ServerExpr) *c
 	if idx > 0 {
 		rootPath = genpkg[:idx]
 	}
-	apiPkg := strings.ToLower(codegen.Goify(root.API.Name, false))
+	apiPkg := codegen.APIPkg(root)
 	specs := []*codegen.ImportSpec{
 		{Path: "context"},
 		{Path: "flag"},
