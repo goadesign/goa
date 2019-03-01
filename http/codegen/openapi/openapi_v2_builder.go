@@ -127,7 +127,7 @@ func ExtensionsFromExpr(mdata expr.MetaExpr) map[string]interface{} {
 		if chunks[0] != "swagger" || chunks[1] != "extension" {
 			continue
 		}
-		if strings.HasPrefix(chunks[2], "x-") != true {
+		if !strings.HasPrefix(chunks[2], "x-") {
 			continue
 		}
 		val := value[0]
@@ -657,9 +657,7 @@ func buildPathFromExpr(s *V2, root *expr.RootExpr, h *expr.HostExpr, route *expr
 				requirement[s.SchemeName] = []string{}
 				switch s.Kind {
 				case expr.OAuth2Kind:
-					for _, scope := range req.Scopes {
-						requirement[s.SchemeName] = append(requirement[s.SchemeName], scope)
-					}
+					requirement[s.SchemeName] = append(requirement[s.SchemeName], req.Scopes...)
 				case expr.JWTKind:
 					lines := make([]string, 0, len(req.Scopes))
 					for _, scope := range req.Scopes {
@@ -727,16 +725,6 @@ func buildPathFromExpr(s *V2, root *expr.RootExpr, h *expr.HostExpr, route *expr
 		p.Extensions = ExtensionsFromExpr(route.Endpoint.Meta)
 	}
 	return nil
-}
-
-func scopesList(scopes []string) string {
-	sort.Strings(scopes)
-
-	var lines []string
-	for _, scope := range scopes {
-		lines = append(lines, fmt.Sprintf("  * `%s`", scope))
-	}
-	return strings.Join(lines, "\n")
 }
 
 func docsFromExpr(docs *expr.DocsExpr) *ExternalDocs {

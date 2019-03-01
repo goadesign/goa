@@ -30,8 +30,7 @@ func ClientTypeFiles(genpkg string, root *expr.RootExpr) []*codegen.File {
 // to prevent duplicate code generation.
 func clientType(genpkg string, svc *expr.GRPCServiceExpr, seen map[string]struct{}) *codegen.File {
 	var (
-		initData  []*InitData
-		validated []*ValidationData
+		initData []*InitData
 
 		sd = GRPCServices.Get(svc.Name())
 	)
@@ -57,9 +56,6 @@ func clientType(genpkg string, svc *expr.GRPCServiceExpr, seen map[string]struct
 					collect(c)
 				}
 			}
-		}
-		for _, v := range sd.validations {
-			validated = append(validated, v)
 		}
 	}
 
@@ -87,7 +83,7 @@ func clientType(genpkg string, svc *expr.GRPCServiceExpr, seen map[string]struct
 				Data:   init,
 			})
 		}
-		for _, data := range validated {
+		for _, data := range sd.validations {
 			sections = append(sections, &codegen.SectionTemplate{
 				Name:   "client-validate",
 				Source: validateT,
