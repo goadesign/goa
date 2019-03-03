@@ -706,17 +706,17 @@ func TestArrayIsCompatible(t *testing.T) {
 
 func TestObjectRename(t *testing.T) {
 	cases := map[string]struct {
-		n, m     string
+		old, new string
 		expected []string
 	}{
 		"renamed": {
-			n:        "foo",
-			m:        "qux",
+			old:      "foo",
+			new:      "qux",
 			expected: []string{"qux", "bar"},
 		},
 		"unmatched": {
-			n:        "baz",
-			m:        "qux",
+			old:      "baz",
+			new:      "qux",
 			expected: []string{"foo", "bar"},
 		},
 	}
@@ -736,7 +736,7 @@ func TestObjectRename(t *testing.T) {
 				},
 			},
 		}
-		object.Rename(tc.n, tc.m)
+		object.Rename(tc.old, tc.new)
 		for _, s := range tc.expected {
 			if att := object.Attribute(s); att == nil {
 				t.Errorf("%s: %s not found", k, s)
