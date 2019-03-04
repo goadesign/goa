@@ -49,6 +49,16 @@ type MountPoint struct {
 	Pattern string
 }
 
+// ConnConfigurer holds the websocket connection configurer functions for the
+// streaming endpoints in "chatter" service.
+type ConnConfigurer struct {
+	EchoerFn    goahttp.ConnConfigureFunc
+	ListenerFn  goahttp.ConnConfigureFunc
+	SummaryFn   goahttp.ConnConfigureFunc
+	SubscribeFn goahttp.ConnConfigureFunc
+	HistoryFn   goahttp.ConnConfigureFunc
+}
+
 // echoerServerStream implements the chattersvc.EchoerServerStream interface.
 type echoerServerStream struct {
 	once sync.Once
@@ -152,12 +162,11 @@ func New(
 	enc func(context.Context, http.ResponseWriter) goahttp.Encoder,
 	eh func(context.Context, http.ResponseWriter, error),
 	up goahttp.Upgrader,
-	echoerConfigFn goahttp.ConnConfigureFunc,
-	listenerConfigFn goahttp.ConnConfigureFunc,
-	summaryConfigFn goahttp.ConnConfigureFunc,
-	subscribeConfigFn goahttp.ConnConfigureFunc,
-	historyConfigFn goahttp.ConnConfigureFunc,
+	cfn *ConnConfigurer,
 ) *Server {
+	if cfn == nil {
+		cfn = &ConnConfigurer{}
+	}
 	return &Server{
 		Mounts: []*MountPoint{
 			{"Login", "POST", "/login"},
@@ -168,11 +177,23 @@ func New(
 			{"History", "GET", "/history"},
 		},
 		Login:     NewLoginHandler(e.Login, mux, dec, enc, eh),
-		Echoer:    NewEchoerHandler(e.Echoer, mux, dec, enc, eh, up, echoerConfigFn),
-		Listener:  NewListenerHandler(e.Listener, mux, dec, enc, eh, up, listenerConfigFn),
-		Summary:   NewSummaryHandler(e.Summary, mux, dec, enc, eh, up, summaryConfigFn),
-		Subscribe: NewSubscribeHandler(e.Subscribe, mux, dec, enc, eh, up, subscribeConfigFn),
-		History:   NewHistoryHandler(e.History, mux, dec, enc, eh, up, historyConfigFn),
+		Echoer:    NewEchoerHandler(e.Echoer, mux, dec, enc, eh, up, cfn.EchoerFn),
+		Listener:  NewListenerHandler(e.Listener, mux, dec, enc, eh, up, cfn.ListenerFn),
+		Summary:   NewSummaryHandler(e.Summary, mux, dec, enc, eh, up, cfn.SummaryFn),
+		Subscribe: NewSubscribeHandler(e.Subscribe, mux, dec, enc, eh, up, cfn.SubscribeFn),
+		History:   NewHistoryHandler(e.History, mux, dec, enc, eh, up, cfn.HistoryFn),
+	}
+}
+
+// NewConnConfigurer initializes the websocket connection configurer function
+// with fn for all the streaming endpoints in "chatter" service.
+func NewConnConfigurer(fn goahttp.ConnConfigureFunc) *ConnConfigurer {
+	return &ConnConfigurer{
+		EchoerFn:    fn,
+		ListenerFn:  fn,
+		SummaryFn:   fn,
+		SubscribeFn: fn,
+		HistoryFn:   fn,
 	}
 }
 

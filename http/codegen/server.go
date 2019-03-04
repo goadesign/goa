@@ -56,6 +56,17 @@ func serverFile(genpkg string, svc *expr.HTTPServiceExpr) *codegen.File {
 	sections = append(sections, &codegen.SectionTemplate{Name: "server-struct", Source: serverStructT, Data: data})
 	sections = append(sections, &codegen.SectionTemplate{Name: "server-mountpoint", Source: mountPointStructT, Data: data})
 
+	// public types
+	if streamingEndpointExists(data) {
+		sections = append(sections, &codegen.SectionTemplate{
+			Name:   "server-stream-conn-configurer-struct",
+			Source: streamConnConfigurerStructT,
+			Data:   data,
+			FuncMap: map[string]interface{}{
+				"isStreamingEndpoint": isStreamingEndpoint,
+			},
+		})
+	}
 	for _, e := range data.Endpoints {
 		if e.MultipartRequestDecoder != nil {
 			sections = append(sections, &codegen.SectionTemplate{
@@ -64,6 +75,10 @@ func serverFile(genpkg string, svc *expr.HTTPServiceExpr) *codegen.File {
 				Data:   e.MultipartRequestDecoder,
 			})
 		}
+	}
+
+	// private types
+	for _, e := range data.Endpoints {
 		if e.ServerStream != nil {
 			sections = append(sections, &codegen.SectionTemplate{
 				Name:   "server-stream-struct-type",
@@ -74,6 +89,16 @@ func serverFile(genpkg string, svc *expr.HTTPServiceExpr) *codegen.File {
 	}
 
 	sections = append(sections, &codegen.SectionTemplate{Name: "server-init", Source: serverInitT, Data: data, FuncMap: funcs})
+	if streamingEndpointExists(data) {
+		sections = append(sections, &codegen.SectionTemplate{
+			Name:   "server-stream-conn-configurer-struct-init",
+			Source: streamConnConfigurerStructInitT,
+			Data:   data,
+			FuncMap: map[string]interface{}{
+				"isStreamingEndpoint": isStreamingEndpoint,
+			},
+		})
+	}
 	sections = append(sections, &codegen.SectionTemplate{Name: "server-service", Source: serverServiceT, Data: data})
 	sections = append(sections, &codegen.SectionTemplate{Name: "server-use", Source: serverUseT, Data: data})
 	sections = append(sections, &codegen.SectionTemplate{Name: "server-mount", Source: serverMountT, Data: data})
@@ -178,23 +203,6 @@ func serverEncodeDecode(genpkg string, svc *expr.HTTPServiceExpr) *codegen.File 
 	}
 
 	return &codegen.File{Path: path, SectionTemplates: sections}
-}
-
-// streamingEndpointExists returns true if at least one of the endpoints in
-// the service defines a streaming payload or result.
-func streamingEndpointExists(sd *ServiceData) bool {
-	for _, e := range sd.Endpoints {
-		if isStreamingEndpoint(e) {
-			return true
-		}
-	}
-	return false
-}
-
-// isStreamingEndpoint returns true if the endpoint defines a streaming payload
-// or result.
-func isStreamingEndpoint(ed *EndpointData) bool {
-	return ed.ServerStream != nil || ed.ClientStream != nil
 }
 
 func transTmplFuncs(s *expr.HTTPServiceExpr) map[string]interface{} {
@@ -306,11 +314,7 @@ func {{ .ServerInit }}(
 	eh func(context.Context, http.ResponseWriter, error),
 	{{- if streamingEndpointExists . }}
 	up goahttp.Upgrader,
-		{{- range .Endpoints }}
-			{{- if .ServerStream }}
-				{{ .Method.Name }}ConfigFn goahttp.ConnConfigureFunc,
-			{{- end }}
-		{{- end }}
+	cfn *ConnConfigurer,
 	{{- end }}
 	{{- range .Endpoints }}
 		{{- if .MultipartRequestDecoder }}
@@ -318,6 +322,9 @@ func {{ .ServerInit }}(
 		{{- end }}
 	{{- end }}
 ) *{{ .ServerStruct }} {
+	if cfn == nil {
+		cfn = &ConnConfigurer{}
+	}
 	return &{{ .ServerStruct }}{
 		Mounts: []*{{ .MountPointStruct }}{
 			{{- range $e := .Endpoints }}
@@ -333,7 +340,7 @@ func {{ .ServerInit }}(
 			{{- end }}
 		},
 		{{- range .Endpoints }}
-		{{ .Method.VarName }}: {{ .HandlerInit }}(e.{{ .Method.VarName }}, mux, {{ if .MultipartRequestDecoder }}{{ .MultipartRequestDecoder.InitName }}(mux, {{ .MultipartRequestDecoder.VarName }}){{ else }}dec{{ end }}, enc, eh{{ if .ServerStream }}, up, {{ .Method.Name }}ConfigFn{{ end }}),
+		{{ .Method.VarName }}: {{ .HandlerInit }}(e.{{ .Method.VarName }}, mux, {{ if .MultipartRequestDecoder }}{{ .MultipartRequestDecoder.InitName }}(mux, {{ .MultipartRequestDecoder.VarName }}){{ else }}dec{{ end }}, enc, eh{{ if .ServerStream }}, up, cfn.{{ .Method.VarName }}Fn{{ end }}),
 		{{- end }}
 	}
 }

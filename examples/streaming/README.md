@@ -30,7 +30,7 @@ $ export JWT_TOKEN=`echo $_`
 
 ### `listener` Endpoint
 
-This endpoint illustrates **streaming payload**. The client sends a payload
+This endpoint illustrates a **streaming payload**. The client sends a payload
 defined in `Payload` DSL containing the JWT token. Once auth succeeds, the
 client streams the payload defined in `StreamingPayload` DSL to the server.
 The server patiently listens until the client stops sending the payload.
@@ -67,11 +67,11 @@ check check check
 
 ### `subscribe` Endpoint
 
-This endpoint illustrates **streaming result**. The client sends a
-payload defined in `Payload` DSL containing the JWT token. Once auth succeeds,
-the server establishes a stream through which it sends events to the client
-when a new message is added. The subscription ends when the client goes away
-or the server shuts down.
+This endpoint illustrates a **streaming result**. The client sends a payload
+defined in the `Payload` DSL and that contains a JWT token. Once auth succeeds,
+the server establishes a stream. The sends messages to the client using the
+stream. The subscription ends when the client goes away or the server shuts
+down.
 
 ```
 $ ./chatter_cli chatter subscribe --token $JWT_TOKEN
@@ -86,10 +86,11 @@ $ ./chatter_cli chatter subscribe --token $JWT_TOKEN
 
 ### `history` Endpoint
 
-This endpoint illustrates **streaming result** with views. The client sends a
-payload defined in `Payload` DSL containing the JWT token and an optional
-"view" parameter. Once auth succeeds, the server streams all the
-messages sent by the client rendered using the optional "view" parameter.
+This endpoint illustrates a **streaming result** with views. The client sends
+a payload defined in the `Payload` DSL and that contains a JWT token and an
+optional "view" parameter. Once auth succeeds, the server sends results to the
+client using the stream. Each result struct is first projected to the view
+matching the "view" parameter.
 
 ```
 $ ./chatter_cli chatter history --token $JWT_TOKEN --view tiny
@@ -117,7 +118,7 @@ $ ./chatter_cli chatter history --token $JWT_TOKEN --view tiny
 
 ### `echoer` Endpoint
 
-This endpoint illustrates **bidirectional streaming**. The client sends a
+This endpoint illustrates a **bidirectional streaming**. The client sends a
 payload defined in `Payload` DSL containing the JWT token. Once auth
 succeeds, the client and server communicates via the stream until one of them
 quits. The server simply echoes the client messages.
@@ -183,7 +184,7 @@ endpoint, payload, err := cli.ParseEndpoint(
 )
 ```
 
-Check out the `pingPonger` defined in `cmd/chatter/http.go` on how to use
+Check out the `pingPonger` defined in `cmd/chatter/http.go` for how to use
 `ConnConfigureFunc` to customize the websocket connection to send periodic
 pings to the client and cancel the request if the client does not respond
 with a pong.

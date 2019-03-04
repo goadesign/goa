@@ -48,16 +48,22 @@ type Client struct {
 	// decoding so they can be read again.
 	RestoreResponseBody bool
 
-	scheme            string
-	host              string
-	encoder           func(*http.Request) goahttp.Encoder
-	decoder           func(*http.Response) goahttp.Decoder
-	dialer            goahttp.Dialer
-	echoerConfigFn    goahttp.ConnConfigureFunc
-	listenerConfigFn  goahttp.ConnConfigureFunc
-	summaryConfigFn   goahttp.ConnConfigureFunc
-	subscribeConfigFn goahttp.ConnConfigureFunc
-	historyConfigFn   goahttp.ConnConfigureFunc
+	scheme     string
+	host       string
+	encoder    func(*http.Request) goahttp.Encoder
+	decoder    func(*http.Response) goahttp.Decoder
+	dialer     goahttp.Dialer
+	configurer *ConnConfigurer
+}
+
+// ConnConfigurer holds the websocket connection configurer functions for the
+// streaming endpoints in "chatter" service.
+type ConnConfigurer struct {
+	EchoerFn    goahttp.ConnConfigureFunc
+	ListenerFn  goahttp.ConnConfigureFunc
+	SummaryFn   goahttp.ConnConfigureFunc
+	SubscribeFn goahttp.ConnConfigureFunc
+	HistoryFn   goahttp.ConnConfigureFunc
 }
 
 // echoerClientStream implements the chattersvc.EchoerClientStream interface.
@@ -104,12 +110,11 @@ func NewClient(
 	dec func(*http.Response) goahttp.Decoder,
 	restoreBody bool,
 	dialer goahttp.Dialer,
-	echoerConfigFn goahttp.ConnConfigureFunc,
-	listenerConfigFn goahttp.ConnConfigureFunc,
-	summaryConfigFn goahttp.ConnConfigureFunc,
-	subscribeConfigFn goahttp.ConnConfigureFunc,
-	historyConfigFn goahttp.ConnConfigureFunc,
+	cfn *ConnConfigurer,
 ) *Client {
+	if cfn == nil {
+		cfn = &ConnConfigurer{}
+	}
 	return &Client{
 		LoginDoer:           doer,
 		EchoerDoer:          doer,
@@ -123,11 +128,19 @@ func NewClient(
 		decoder:             dec,
 		encoder:             enc,
 		dialer:              dialer,
-		echoerConfigFn:      echoerConfigFn,
-		listenerConfigFn:    listenerConfigFn,
-		summaryConfigFn:     summaryConfigFn,
-		subscribeConfigFn:   subscribeConfigFn,
-		historyConfigFn:     historyConfigFn,
+		configurer:          cfn,
+	}
+}
+
+// NewConnConfigurer initializes the websocket connection configurer function
+// with fn for all the streaming endpoints in "chatter" service.
+func NewConnConfigurer(fn goahttp.ConnConfigureFunc) *ConnConfigurer {
+	return &ConnConfigurer{
+		EchoerFn:    fn,
+		ListenerFn:  fn,
+		SummaryFn:   fn,
+		SubscribeFn: fn,
+		HistoryFn:   fn,
 	}
 }
 
@@ -183,8 +196,8 @@ func (c *Client) Echoer() goa.Endpoint {
 			}
 			return nil, goahttp.ErrRequestError("chatter", "echoer", err)
 		}
-		if c.echoerConfigFn != nil {
-			conn = c.echoerConfigFn(conn, cancel)
+		if c.configurer.EchoerFn != nil {
+			conn = c.configurer.EchoerFn(conn, cancel)
 		}
 		stream := &echoerClientStream{conn: conn}
 		return stream, nil
@@ -252,8 +265,8 @@ func (c *Client) Listener() goa.Endpoint {
 			}
 			return nil, goahttp.ErrRequestError("chatter", "listener", err)
 		}
-		if c.listenerConfigFn != nil {
-			conn = c.listenerConfigFn(conn, cancel)
+		if c.configurer.ListenerFn != nil {
+			conn = c.configurer.ListenerFn(conn, cancel)
 		}
 		stream := &listenerClientStream{conn: conn}
 		return stream, nil
@@ -303,8 +316,8 @@ func (c *Client) Summary() goa.Endpoint {
 			}
 			return nil, goahttp.ErrRequestError("chatter", "summary", err)
 		}
-		if c.summaryConfigFn != nil {
-			conn = c.summaryConfigFn(conn, cancel)
+		if c.configurer.SummaryFn != nil {
+			conn = c.configurer.SummaryFn(conn, cancel)
 		}
 		stream := &summaryClientStream{conn: conn}
 		return stream, nil
@@ -374,8 +387,8 @@ func (c *Client) Subscribe() goa.Endpoint {
 			}
 			return nil, goahttp.ErrRequestError("chatter", "subscribe", err)
 		}
-		if c.subscribeConfigFn != nil {
-			conn = c.subscribeConfigFn(conn, cancel)
+		if c.configurer.SubscribeFn != nil {
+			conn = c.configurer.SubscribeFn(conn, cancel)
 		}
 		stream := &subscribeClientStream{conn: conn}
 		return stream, nil
@@ -433,8 +446,8 @@ func (c *Client) History() goa.Endpoint {
 			}
 			return nil, goahttp.ErrRequestError("chatter", "history", err)
 		}
-		if c.historyConfigFn != nil {
-			conn = c.historyConfigFn(conn, cancel)
+		if c.configurer.HistoryFn != nil {
+			conn = c.configurer.HistoryFn(conn, cancel)
 		}
 		stream := &historyClientStream{conn: conn}
 		view := resp.Header.Get("goa-view")

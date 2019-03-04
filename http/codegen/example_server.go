@@ -157,17 +157,6 @@ func dummyMultipartFile(genpkg string, root *expr.RootExpr, svc *expr.HTTPServic
 	}
 }
 
-// needStream returns true if at least one method in the defined services
-// uses stream for sending payload/result.
-func needStream(data []*ServiceData) bool {
-	for _, svc := range data {
-		if streamingEndpointExists(svc) {
-			return true
-		}
-	}
-	return false
-}
-
 const (
 	// input: MultipartData
 	dummyMultipartRequestDecoderImplT = `{{ printf "%s implements the multipart decoder for service %q endpoint %q. The decoder must populate the argument p after encoding." .FuncName .ServiceName .MethodName | comment }}
@@ -238,7 +227,7 @@ func handleHTTPServer(ctx context.Context, u *url.URL{{ range $.Services }}{{ if
 	{{- end }}
 	{{- range .Services }}
 		{{-  if .Endpoints }}
-		{{ .Service.VarName }}Server = {{ .Service.PkgName }}svr.New({{ .Service.VarName }}Endpoints, mux, dec, enc, eh{{ if needStream $.Services }}, upgrader{{ range .Endpoints }}{{ if .ServerStream }}, nil{{ end }}{{ end }}{{ end }}{{ range .Endpoints }}{{ if .MultipartRequestDecoder }}, {{ $.APIPkg }}.{{ .MultipartRequestDecoder.FuncName }}{{ end }}{{ end }})
+		{{ .Service.VarName }}Server = {{ .Service.PkgName }}svr.New({{ .Service.VarName }}Endpoints, mux, dec, enc, eh{{ if needStream $.Services }}, upgrader, nil{{ end }}{{ range .Endpoints }}{{ if .MultipartRequestDecoder }}, {{ $.APIPkg }}.{{ .MultipartRequestDecoder.FuncName }}{{ end }}{{ end }})
 		{{-  else }}
 		{{ .Service.VarName }}Server = {{ .Service.PkgName }}svr.New(nil, mux, dec, enc, eh)
 		{{-  end }}

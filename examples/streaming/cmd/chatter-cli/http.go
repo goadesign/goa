@@ -37,10 +37,6 @@ func doHTTP(scheme, host string, timeout int, debug bool) (goa.Endpoint, interfa
 		debug,
 		dialer,
 		nil,
-		nil,
-		nil,
-		nil,
-		nil,
 	)
 }
 

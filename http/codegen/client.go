@@ -52,6 +52,16 @@ func client(genpkg string, svc *expr.HTTPServiceExpr) *codegen.File {
 			"streamingEndpointExists": streamingEndpointExists,
 		},
 	})
+	if streamingEndpointExists(data) {
+		sections = append(sections, &codegen.SectionTemplate{
+			Name:   "client-stream-conn-configurer-struct",
+			Source: streamConnConfigurerStructT,
+			Data:   data,
+			FuncMap: map[string]interface{}{
+				"isStreamingEndpoint": isStreamingEndpoint,
+			},
+		})
+	}
 	for _, e := range data.Endpoints {
 		if e.ClientStream != nil {
 			sections = append(sections, &codegen.SectionTemplate{
@@ -80,6 +90,17 @@ func client(genpkg string, svc *expr.HTTPServiceExpr) *codegen.File {
 			"streamingEndpointExists": streamingEndpointExists,
 		},
 	})
+
+	if streamingEndpointExists(data) {
+		sections = append(sections, &codegen.SectionTemplate{
+			Name:   "client-stream-conn-configurer-struct-init",
+			Source: streamConnConfigurerStructInitT,
+			Data:   data,
+			FuncMap: map[string]interface{}{
+				"isStreamingEndpoint": isStreamingEndpoint,
+			},
+		})
+	}
 
 	for _, e := range data.Endpoints {
 		sections = append(sections, &codegen.SectionTemplate{
@@ -256,11 +277,7 @@ type {{ .ClientStruct }} struct {
 	decoder    func(*http.Response) goahttp.Decoder
 	{{- if streamingEndpointExists . }}
 	dialer goahttp.Dialer
-		{{- range .Endpoints }}
-			{{- if .ServerStream }}
-				{{ .Method.Name }}ConfigFn goahttp.ConnConfigureFunc
-			{{- end }}
-		{{- end }}
+	configurer *ConnConfigurer
 	{{- end }}
 }
 `
@@ -276,13 +293,12 @@ func New{{ .ClientStruct }}(
 	restoreBody bool,
 	{{- if streamingEndpointExists . }}
 	dialer goahttp.Dialer,
-		{{- range .Endpoints }}
-			{{- if .ServerStream }}
-				{{ .Method.Name }}ConfigFn goahttp.ConnConfigureFunc,
-			{{- end }}
-		{{- end }}
+	cfn *ConnConfigurer,
 	{{- end }}
 ) *{{ .ClientStruct }} {
+	if cfn == nil {
+		cfn = &ConnConfigurer{}
+	}
 	return &{{ .ClientStruct }}{
 		{{- range .Endpoints }}
 		{{ .Method.VarName }}Doer: doer,
@@ -294,11 +310,7 @@ func New{{ .ClientStruct }}(
 		encoder:           enc,
 		{{- if streamingEndpointExists . }}
 		dialer: dialer,
-			{{- range .Endpoints }}
-				{{- if .ServerStream }}
-					{{ .Method.Name }}ConfigFn: {{ .Method.Name }}ConfigFn,
-				{{- end }}
-			{{- end }}
+		configurer: cfn,
 		{{- end }}
 	}
 }
@@ -341,8 +353,8 @@ func (c *{{ .ClientStruct }}) {{ .EndpointInit }}({{ if .MultipartRequestEncoder
 			}
 			return nil, goahttp.ErrRequestError("{{ .ServiceName }}", "{{ .Method.Name }}", err)
 		}
-		if c.{{ .Method.Name }}ConfigFn != nil {
-			conn = c.{{ .Method.Name }}ConfigFn(conn, cancel)
+		if c.configurer.{{ .Method.VarName }}Fn != nil {
+			conn = c.configurer.{{ .Method.VarName }}Fn(conn, cancel)
 		}
 		stream := &{{ .ClientStream.VarName }}{conn: conn}
 		{{- if .Method.ViewedResult }}

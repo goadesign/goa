@@ -1,5 +1,21 @@
 package testdata
 
+var MixedEndpointsConnConfigurerStructCode = `// ConnConfigurer holds the websocket connection configurer functions for the
+// streaming endpoints in "StreamingResultService" service.
+type ConnConfigurer struct {
+	StreamingResultMethodFn goahttp.ConnConfigureFunc
+}
+`
+
+var MixedEndpointsConnConfigurerInitCode = `// NewConnConfigurer initializes the websocket connection configurer function
+// with fn for all the streaming endpoints in "StreamingResultService" service.
+func NewConnConfigurer(fn goahttp.ConnConfigureFunc) *ConnConfigurer {
+	return &ConnConfigurer{
+		StreamingResultMethodFn: fn,
+	}
+}
+`
+
 var StreamingResultServerHandlerInitCode = `// NewStreamingResultMethodHandler creates a HTTP handler which loads the HTTP
 // request and calls the "StreamingResultService" service
 // "StreamingResultMethod" endpoint.
@@ -235,8 +251,8 @@ func (c *Client) StreamingResultMethod() goa.Endpoint {
 			}
 			return nil, goahttp.ErrRequestError("StreamingResultService", "StreamingResultMethod", err)
 		}
-		if c.StreamingResultMethodConfigFn != nil {
-			conn = c.StreamingResultMethodConfigFn(conn, cancel)
+		if c.configurer.StreamingResultMethodFn != nil {
+			conn = c.configurer.StreamingResultMethodFn(conn, cancel)
 		}
 		stream := &StreamingResultMethodClientStream{conn: conn}
 		return stream, nil
@@ -325,8 +341,8 @@ func (c *Client) StreamingResultWithViewsMethod() goa.Endpoint {
 			}
 			return nil, goahttp.ErrRequestError("StreamingResultWithViewsService", "StreamingResultWithViewsMethod", err)
 		}
-		if c.StreamingResultWithViewsMethodConfigFn != nil {
-			conn = c.StreamingResultWithViewsMethodConfigFn(conn, cancel)
+		if c.configurer.StreamingResultWithViewsMethodFn != nil {
+			conn = c.configurer.StreamingResultWithViewsMethodFn(conn, cancel)
 		}
 		stream := &StreamingResultWithViewsMethodClientStream{conn: conn}
 		view := resp.Header.Get("goa-view")
@@ -396,8 +412,8 @@ func (c *Client) StreamingResultWithExplicitViewMethod() goa.Endpoint {
 			}
 			return nil, goahttp.ErrRequestError("StreamingResultWithExplicitViewService", "StreamingResultWithExplicitViewMethod", err)
 		}
-		if c.StreamingResultWithExplicitViewMethodConfigFn != nil {
-			conn = c.StreamingResultWithExplicitViewMethodConfigFn(conn, cancel)
+		if c.configurer.StreamingResultWithExplicitViewMethodFn != nil {
+			conn = c.configurer.StreamingResultWithExplicitViewMethodFn(conn, cancel)
 		}
 		stream := &StreamingResultWithExplicitViewMethodClientStream{conn: conn}
 		return stream, nil
@@ -595,8 +611,8 @@ func (c *Client) StreamingResultCollectionWithExplicitViewMethod() goa.Endpoint 
 			}
 			return nil, goahttp.ErrRequestError("StreamingResultCollectionWithExplicitViewService", "StreamingResultCollectionWithExplicitViewMethod", err)
 		}
-		if c.StreamingResultCollectionWithExplicitViewMethodConfigFn != nil {
-			conn = c.StreamingResultCollectionWithExplicitViewMethodConfigFn(conn, cancel)
+		if c.configurer.StreamingResultCollectionWithExplicitViewMethodFn != nil {
+			conn = c.configurer.StreamingResultCollectionWithExplicitViewMethodFn(conn, cancel)
 		}
 		stream := &StreamingResultCollectionWithExplicitViewMethodClientStream{conn: conn}
 		return stream, nil
@@ -890,8 +906,8 @@ func (c *Client) StreamingResultNoPayloadMethod() goa.Endpoint {
 			}
 			return nil, goahttp.ErrRequestError("StreamingResultNoPayloadService", "StreamingResultNoPayloadMethod", err)
 		}
-		if c.StreamingResultNoPayloadMethodConfigFn != nil {
-			conn = c.StreamingResultNoPayloadMethodConfigFn(conn, cancel)
+		if c.configurer.StreamingResultNoPayloadMethodFn != nil {
+			conn = c.configurer.StreamingResultNoPayloadMethodFn(conn, cancel)
 		}
 		stream := &StreamingResultNoPayloadMethodClientStream{conn: conn}
 		return stream, nil
@@ -1030,8 +1046,8 @@ func (c *Client) StreamingPayloadMethod() goa.Endpoint {
 			}
 			return nil, goahttp.ErrRequestError("StreamingPayloadService", "StreamingPayloadMethod", err)
 		}
-		if c.StreamingPayloadMethodConfigFn != nil {
-			conn = c.StreamingPayloadMethodConfigFn(conn, cancel)
+		if c.configurer.StreamingPayloadMethodFn != nil {
+			conn = c.configurer.StreamingPayloadMethodFn(conn, cancel)
 		}
 		stream := &StreamingPayloadMethodClientStream{conn: conn}
 		return stream, nil
@@ -1145,8 +1161,8 @@ func (c *Client) StreamingPayloadNoPayloadMethod() goa.Endpoint {
 			}
 			return nil, goahttp.ErrRequestError("StreamingPayloadNoPayloadService", "StreamingPayloadNoPayloadMethod", err)
 		}
-		if c.StreamingPayloadNoPayloadMethodConfigFn != nil {
-			conn = c.StreamingPayloadNoPayloadMethodConfigFn(conn, cancel)
+		if c.configurer.StreamingPayloadNoPayloadMethodFn != nil {
+			conn = c.configurer.StreamingPayloadNoPayloadMethodFn(conn, cancel)
 		}
 		stream := &StreamingPayloadNoPayloadMethodClientStream{conn: conn}
 		return stream, nil
@@ -2259,8 +2275,8 @@ func (c *Client) BidirectionalStreamingMethod() goa.Endpoint {
 			}
 			return nil, goahttp.ErrRequestError("BidirectionalStreamingService", "BidirectionalStreamingMethod", err)
 		}
-		if c.BidirectionalStreamingMethodConfigFn != nil {
-			conn = c.BidirectionalStreamingMethodConfigFn(conn, cancel)
+		if c.configurer.BidirectionalStreamingMethodFn != nil {
+			conn = c.configurer.BidirectionalStreamingMethodFn(conn, cancel)
 		}
 		stream := &BidirectionalStreamingMethodClientStream{conn: conn}
 		return stream, nil
@@ -2412,8 +2428,8 @@ func (c *Client) BidirectionalStreamingNoPayloadMethod() goa.Endpoint {
 			}
 			return nil, goahttp.ErrRequestError("BidirectionalStreamingNoPayloadService", "BidirectionalStreamingNoPayloadMethod", err)
 		}
-		if c.BidirectionalStreamingNoPayloadMethodConfigFn != nil {
-			conn = c.BidirectionalStreamingNoPayloadMethodConfigFn(conn, cancel)
+		if c.configurer.BidirectionalStreamingNoPayloadMethodFn != nil {
+			conn = c.configurer.BidirectionalStreamingNoPayloadMethodFn(conn, cancel)
 		}
 		stream := &BidirectionalStreamingNoPayloadMethodClientStream{conn: conn}
 		return stream, nil

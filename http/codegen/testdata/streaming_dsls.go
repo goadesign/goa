@@ -4,6 +4,24 @@ import (
 	. "goa.design/goa/dsl"
 )
 
+var MixedEndpointsDSL = func() {
+	Service("MixedEndpoints", func() {
+		Method("NonStreaming", func() {
+			HTTP(func() {
+				GET("/")
+				Response(StatusOK)
+			})
+		})
+		Method("Streaming", func() {
+			StreamingResult(Int)
+			HTTP(func() {
+				GET("/")
+				Response(StatusOK)
+			})
+		})
+	})
+}
+
 var StreamingResultDSL = func() {
 	var Request = Type("Request", func() {
 		Attribute("x", String)
