@@ -21,6 +21,7 @@ func TestServerInit(t *testing.T) {
 		{"file server", testdata.ServerFileServerDSL, testdata.ServerFileServerConstructorCode, 3},
 		{"mixed", testdata.ServerMixedDSL, testdata.ServerMixedConstructorCode, 3},
 		{"multipart", testdata.ServerMultipartDSL, testdata.ServerMultipartConstructorCode, 4},
+		{"streaming", testdata.StreamingResultDSL, testdata.ServerStreamingConstructorCode, 5},
 	}
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {

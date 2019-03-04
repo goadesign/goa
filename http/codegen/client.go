@@ -296,9 +296,11 @@ func New{{ .ClientStruct }}(
 	cfn *ConnConfigurer,
 	{{- end }}
 ) *{{ .ClientStruct }} {
+{{- if streamingEndpointExists . }}
 	if cfn == nil {
 		cfn = &ConnConfigurer{}
 	}
+{{- end }}
 	return &{{ .ClientStruct }}{
 		{{- range .Endpoints }}
 		{{ .Method.VarName }}Doer: doer,

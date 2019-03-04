@@ -322,9 +322,11 @@ func {{ .ServerInit }}(
 		{{- end }}
 	{{- end }}
 ) *{{ .ServerStruct }} {
+{{- if streamingEndpointExists . }}
 	if cfn == nil {
 		cfn = &ConnConfigurer{}
 	}
+{{- end }}
 	return &{{ .ServerStruct }}{
 		Mounts: []*{{ .MountPointStruct }}{
 			{{- range $e := .Endpoints }}
