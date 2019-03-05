@@ -656,6 +656,68 @@ func TestPrimitiveIsCompatible(t *testing.T) {
 	}
 }
 
+func TestPrimitiveHash(t *testing.T) {
+	cases := map[string]struct {
+		p        Primitive
+		expected string
+	}{
+		"boolean": {
+			p:        Boolean,
+			expected: "boolean",
+		},
+		"int": {
+			p:        Int,
+			expected: "int",
+		},
+		"int32": {
+			p:        Int32,
+			expected: "int32",
+		},
+		"int64": {
+			p:        Int64,
+			expected: "int64",
+		},
+		"uInt": {
+			p:        UInt,
+			expected: "uint",
+		},
+		"uInt32": {
+			p:        UInt32,
+			expected: "uint32",
+		},
+		"uInt64": {
+			p:        UInt64,
+			expected: "uint64",
+		},
+		"float32": {
+			p:        Float32,
+			expected: "float32",
+		},
+		"float64": {
+			p:        Float64,
+			expected: "float64",
+		},
+		"string": {
+			p:        String,
+			expected: "string",
+		},
+		"bytes": {
+			p:        Bytes,
+			expected: "bytes",
+		},
+		"any": {
+			p:        Any,
+			expected: "any",
+		},
+	}
+
+	for k, tc := range cases {
+		if actual := tc.p.Hash(); tc.expected != actual {
+			t.Errorf("%s: got %#v, expected %#v", k, actual, tc.expected)
+		}
+	}
+}
+
 func TestArrayIsCompatible(t *testing.T) {
 	var (
 		b  = true
