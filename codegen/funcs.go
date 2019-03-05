@@ -62,9 +62,6 @@ func Indent(s, prefix string) string {
 	return string(res)
 }
 
-// Add adds two integers and returns the sum of the two.
-//func Add(a, b int) int { return a + b }
-
 // Casing exceptions
 var toLower = map[string]string{"OAuth": "oauth"}
 
