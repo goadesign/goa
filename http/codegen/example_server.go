@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"goa.design/goa/codegen"
+	"goa.design/goa/codegen/server"
 	"goa.design/goa/expr"
 )
 
@@ -28,15 +29,8 @@ func ExampleServerFiles(genpkg string, root *expr.RootExpr) []*codegen.File {
 
 // exampleServer returns an example HTTP server implementation.
 func exampleServer(genpkg string, root *expr.RootExpr, svr *expr.ServerExpr) *codegen.File {
-	pkg := codegen.SnakeCase(codegen.Goify(svr.Name, true))
-	fpath := filepath.Join("cmd", pkg, "http.go")
-	// genpkg is created by path.Join so the separator is / regardless of operating system
-	idx := strings.LastIndex(genpkg, "/")
-	rootPath := "."
-	if idx > 0 {
-		rootPath = genpkg[:idx]
-	}
-	apiPkg := codegen.APIPkg(root)
+	svrdata := server.Servers.Get(svr)
+	fpath := filepath.Join("cmd", svrdata.Dir, "http.go")
 	specs := []*codegen.ImportSpec{
 		{Path: "context"},
 		{Path: "log"},
@@ -49,21 +43,36 @@ func exampleServer(genpkg string, root *expr.RootExpr, svr *expr.ServerExpr) *co
 		{Path: "goa.design/goa/middleware"},
 		{Path: "goa.design/goa/http/middleware", Name: "httpmdlwr"},
 		{Path: "github.com/gorilla/websocket"},
-		{Path: rootPath, Name: apiPkg},
 	}
 
+	scope := codegen.NewNameScope()
 	for _, svc := range root.API.HTTP.Services {
 		sd := HTTPServices.Get(svc.Name())
 		svcName := codegen.SnakeCase(sd.Service.VarName)
 		specs = append(specs, &codegen.ImportSpec{
 			Path: path.Join(genpkg, "http", svcName, "server"),
-			Name: sd.Service.PkgName + "svr",
+			Name: scope.Unique(sd.Service.PkgName + "svr"),
 		})
 		specs = append(specs, &codegen.ImportSpec{
 			Path: path.Join(genpkg, svcName),
-			Name: sd.Service.PkgName,
+			Name: scope.Unique(sd.Service.PkgName),
 		})
 	}
+
+	var (
+		rootPath string
+		apiPkg   string
+	)
+	{
+		// genpkg is created by path.Join so the separator is / regardless of operating system
+		idx := strings.LastIndex(genpkg, string("/"))
+		rootPath = "."
+		if idx > 0 {
+			rootPath = genpkg[:idx]
+		}
+		apiPkg = scope.Unique(strings.ToLower(codegen.Goify(root.API.Name, false)), "api")
+	}
+	specs = append(specs, &codegen.ImportSpec{Path: rootPath, Name: apiPkg})
 
 	svcdata := make([]*ServiceData, len(svr.Services))
 	for i, svc := range svr.Services {
@@ -116,7 +125,7 @@ func dummyMultipartFile(genpkg string, root *expr.RootExpr, svc *expr.HTTPServic
 		sections []*codegen.SectionTemplate
 		mustGen  bool
 
-		apiPkg = codegen.APIPkg(root)
+		scope = codegen.NewNameScope()
 	)
 	{
 		specs := []*codegen.ImportSpec{
@@ -125,8 +134,10 @@ func dummyMultipartFile(genpkg string, root *expr.RootExpr, svc *expr.HTTPServic
 		data := HTTPServices.Get(svc.Name())
 		specs = append(specs, &codegen.ImportSpec{
 			Path: path.Join(genpkg, codegen.SnakeCase(data.Service.VarName)),
-			Name: data.Service.PkgName,
+			Name: scope.Unique(data.Service.PkgName, "svc"),
 		})
+
+		apiPkg := scope.Unique(strings.ToLower(codegen.Goify(root.API.Name, false)), "api")
 		sections = []*codegen.SectionTemplate{codegen.Header("", apiPkg, specs)}
 		for _, e := range data.Endpoints {
 			if e.MultipartRequestDecoder != nil {

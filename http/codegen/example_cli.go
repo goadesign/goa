@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"goa.design/goa/codegen"
+	"goa.design/goa/codegen/server"
 	"goa.design/goa/expr"
 )
 
@@ -24,17 +25,25 @@ func ExampleCLIFiles(genpkg string, root *expr.RootExpr) []*codegen.File {
 // exampleCLI returns an example client tool HTTP implementation for the given
 // server expression.
 func exampleCLI(genpkg string, root *expr.RootExpr, svr *expr.ServerExpr) *codegen.File {
-	pkg := codegen.SnakeCase(codegen.Goify(svr.Name, true))
-	apiPkg := strings.ToLower(codegen.Goify(root.API.Name, false))
-	path := filepath.Join("cmd", pkg+"-cli", "http.go")
+	svrdata := server.Servers.Get(svr)
+	path := filepath.Join("cmd", svrdata.Dir+"-cli", "http.go")
 	if _, err := os.Stat(path); !os.IsNotExist(err) {
 		return nil // file already exists, skip it.
 	}
-	// genpkg is created by path.Join so the separator is / regardless of operating system
-	idx := strings.LastIndex(genpkg, "/")
-	rootPath := "."
-	if idx > 0 {
-		rootPath = genpkg[:idx]
+	var (
+		rootPath string
+		apiPkg   string
+
+		scope = codegen.NewNameScope()
+	)
+	{
+		// genpkg is created by path.Join so the separator is / regardless of operating system
+		idx := strings.LastIndex(genpkg, string("/"))
+		rootPath = "."
+		if idx > 0 {
+			rootPath = genpkg[:idx]
+		}
+		apiPkg = scope.Unique(strings.ToLower(codegen.Goify(root.API.Name, false)), "api")
 	}
 	specs := []*codegen.ImportSpec{
 		{Path: "context"},
@@ -49,7 +58,7 @@ func exampleCLI(genpkg string, root *expr.RootExpr, svr *expr.ServerExpr) *codeg
 		{Path: "github.com/gorilla/websocket"},
 		{Path: "goa.design/goa"},
 		{Path: "goa.design/goa/http", Name: "goahttp"},
-		{Path: genpkg + "/http/cli/" + pkg, Name: "cli"},
+		{Path: genpkg + "/http/cli/" + svrdata.Dir, Name: "cli"},
 		{Path: rootPath, Name: apiPkg},
 	}
 

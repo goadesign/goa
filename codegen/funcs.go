@@ -6,7 +6,6 @@ import (
 	"strings"
 	"unicode"
 
-	"goa.design/goa/expr"
 	"goa.design/goa/pkg"
 )
 
@@ -219,22 +218,6 @@ func WrapText(text string, maxChars int) string {
 		}
 	}
 	return res[:len(res)-1]
-}
-
-// APIPkg returns the name of the API package for the given root.
-func APIPkg(root *expr.RootExpr) string {
-	pkg := strings.ToLower(Goify(root.API.Name, false))
-	for _, s := range root.Services {
-		// When API DSL is not specified in the design, goa generates a default API
-		// expression with same name as the first service in the design. We need to
-		// make sure we the API package name does not conflict with the service
-		// package name in this case.
-		if strings.ToLower(Goify(s.Name, false)) == pkg {
-			pkg += "api"
-			break
-		}
-	}
-	return pkg
 }
 
 func runeSpacePosRev(r []rune) int {

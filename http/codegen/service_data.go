@@ -666,7 +666,7 @@ func (d ServicesData) analyze(hs *expr.HTTPServiceExpr) *ServiceData {
 					for j, arg := range params {
 						att := pathParamsObj.Attribute(arg)
 						pointer := a.Params.IsPrimitivePointer(arg, false)
-						name := rd.Scope.Unique(codegen.Goify(arg, false))
+						name := rd.Scope.Name(codegen.Goify(arg, false))
 						var vcode string
 						if att.Validation != nil {
 							ca := httpContext(att, "", rd.Scope, true, true)
@@ -2152,7 +2152,7 @@ func extractPathParams(a *expr.MappedAttributeExpr, serviceCA *codegen.Contextua
 	var params []*ParamData
 	codegen.WalkMappedAttr(a, func(name, elem string, required bool, c *expr.AttributeExpr) error {
 		var (
-			varn = scope.Unique(codegen.Goify(name, false))
+			varn = scope.Name(codegen.Goify(name, false))
 			arr  = expr.AsArray(c.Type)
 			ca   = serviceCA.Dup(c, true)
 		)
@@ -2189,7 +2189,7 @@ func extractQueryParams(a *expr.MappedAttributeExpr, serviceCA *codegen.Contextu
 	var params []*ParamData
 	codegen.WalkMappedAttr(a, func(name, elem string, required bool, c *expr.AttributeExpr) error {
 		var (
-			varn    = scope.Unique(codegen.Goify(name, false))
+			varn    = scope.Name(codegen.Goify(name, false))
 			arr     = expr.AsArray(c.Type)
 			mp      = expr.AsMap(c.Type)
 			typeRef = scope.GoTypeRef(c)
@@ -2251,7 +2251,7 @@ func extractHeaders(a *expr.MappedAttributeExpr, serviceCA *codegen.ContextualAt
 			hattrCA = serviceCA.Dup(hattr, required)
 		}
 		var (
-			varn    = scope.Unique(codegen.Goify(name, false))
+			varn    = scope.Name(codegen.Goify(name, false))
 			arr     = expr.AsArray(hattr.Type)
 			typeRef = scope.GoTypeRef(hattr)
 

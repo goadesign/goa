@@ -34,6 +34,8 @@ type (
 		Variables []*VariableData
 		// Transports is the list of transports defined in the server.
 		Transports []*TransportData
+		// Dir is the directory name for the generated client and server examples.
+		Dir string
 	}
 
 	// HostData contains the data about a single host in a server.
@@ -225,6 +227,7 @@ func buildServerData(svr *expr.ServerExpr) *Data {
 		Hosts:       hosts,
 		Variables:   variables,
 		Transports:  transports,
+		Dir:         codegen.SnakeCase(codegen.Goify(svr.Name, true)),
 	}
 }
 

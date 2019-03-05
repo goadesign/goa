@@ -24,8 +24,9 @@ func CLIFiles(genpkg string, root *expr.RootExpr) []*codegen.File {
 // exampleCLIMain returns an example client tool main implementation for the
 // given server expression.
 func exampleCLIMain(genpkg string, root *expr.RootExpr, svr *expr.ServerExpr) *codegen.File {
-	pkg := codegen.SnakeCase(codegen.Goify(svr.Name, true))
-	path := filepath.Join("cmd", pkg+"-cli", "main.go")
+	svrdata := Servers.Get(svr)
+
+	path := filepath.Join("cmd", svrdata.Dir+"-cli", "main.go")
 	if _, err := os.Stat(path); !os.IsNotExist(err) {
 		return nil // file already exists, skip it.
 	}
@@ -39,14 +40,13 @@ func exampleCLIMain(genpkg string, root *expr.RootExpr, svr *expr.ServerExpr) *c
 		{Path: "strings"},
 		{Path: "goa.design/goa"},
 	}
-	svrData := Servers.Get(svr)
 	sections := []*codegen.SectionTemplate{
 		codegen.Header("", "main", specs),
 		&codegen.SectionTemplate{
 			Name:   "cli-main-start",
 			Source: cliMainStartT,
 			Data: map[string]interface{}{
-				"Server": svrData,
+				"Server": svrdata,
 			},
 			FuncMap: map[string]interface{}{
 				"join": strings.Join,
@@ -56,7 +56,7 @@ func exampleCLIMain(genpkg string, root *expr.RootExpr, svr *expr.ServerExpr) *c
 			Name:   "cli-main-var-init",
 			Source: cliMainVarInitT,
 			Data: map[string]interface{}{
-				"Server": svrData,
+				"Server": svrdata,
 			},
 			FuncMap: map[string]interface{}{
 				"join": strings.Join,
@@ -66,7 +66,7 @@ func exampleCLIMain(genpkg string, root *expr.RootExpr, svr *expr.ServerExpr) *c
 			Name:   "cli-main-endpoint-init",
 			Source: cliMainEndpointInitT,
 			Data: map[string]interface{}{
-				"Server": svrData,
+				"Server": svrdata,
 			},
 			FuncMap: map[string]interface{}{
 				"join":    strings.Join,
@@ -79,7 +79,7 @@ func exampleCLIMain(genpkg string, root *expr.RootExpr, svr *expr.ServerExpr) *c
 			Source: cliMainUsageT,
 			Data: map[string]interface{}{
 				"APIName": root.API.Name,
-				"Server":  svrData,
+				"Server":  svrdata,
 			},
 			FuncMap: map[string]interface{}{
 				"toUpper": strings.ToUpper,

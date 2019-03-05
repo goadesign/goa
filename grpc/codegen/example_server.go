@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"goa.design/goa/codegen"
+	"goa.design/goa/codegen/server"
 	"goa.design/goa/expr"
 )
 
@@ -25,12 +26,11 @@ func ExampleServerFiles(genpkg string, root *expr.RootExpr) []*codegen.File {
 func exampleServer(genpkg string, root *expr.RootExpr, svr *expr.ServerExpr) *codegen.File {
 	var (
 		mainPath string
-		apiPkg   string
+
+		svrdata = server.Servers.Get(svr)
 	)
 	{
-		apiPkg = codegen.APIPkg(root)
-		pkg := codegen.SnakeCase(codegen.Goify(svr.Name, true))
-		mainPath = filepath.Join("cmd", pkg, "grpc.go")
+		mainPath = filepath.Join("cmd", svrdata.Dir, "grpc.go")
 		if _, err := os.Stat(mainPath); !os.IsNotExist(err) {
 			return nil // file already exists, skip it.
 		}
@@ -38,13 +38,10 @@ func exampleServer(genpkg string, root *expr.RootExpr, svr *expr.ServerExpr) *co
 
 	var (
 		specs []*codegen.ImportSpec
+
+		scope = codegen.NewNameScope()
 	)
 	{
-		idx := strings.LastIndex(genpkg, string(os.PathSeparator))
-		rootPath := "."
-		if idx > 0 {
-			rootPath = genpkg[:idx]
-		}
 		specs = []*codegen.ImportSpec{
 			{Path: "context"},
 			{Path: "log"},
@@ -57,25 +54,39 @@ func exampleServer(genpkg string, root *expr.RootExpr, svr *expr.ServerExpr) *co
 			{Path: "google.golang.org/grpc"},
 			{Path: "github.com/grpc-ecosystem/go-grpc-middleware", Name: "grpcmiddleware"},
 			{Path: "goa.design/goa/grpc", Name: "goagrpc"},
-			{Path: rootPath, Name: apiPkg},
 		}
 		for _, svc := range root.API.GRPC.Services {
 			sd := GRPCServices.Get(svc.Name())
 			svcName := codegen.SnakeCase(sd.Service.VarName)
 			specs = append(specs, &codegen.ImportSpec{
 				Path: path.Join(genpkg, "grpc", svcName, "server"),
-				Name: sd.Service.PkgName + "svr",
+				Name: scope.Unique(pkgName + "svr"),
 			})
 			specs = append(specs, &codegen.ImportSpec{
 				Path: path.Join(genpkg, svcName),
-				Name: sd.Service.PkgName,
+				Name: scope.Unique(sd.Service.PkgName),
 			})
 			specs = append(specs, &codegen.ImportSpec{
 				Path: path.Join(genpkg, "grpc", svcName, pbPkgName),
-				Name: svcName + pbPkgName,
+				Name: scope.Unique(svcName + pbPkgName),
 			})
 		}
 	}
+
+	var (
+		rootPath string
+		apiPkg   string
+	)
+	{
+		// genpkg is created by path.Join so the separator is / regardless of operating system
+		idx := strings.LastIndex(genpkg, string("/"))
+		rootPath = "."
+		if idx > 0 {
+			rootPath = genpkg[:idx]
+		}
+		apiPkg = scope.Unique(strings.ToLower(codegen.Goify(root.API.Name, false)), "api")
+	}
+	specs = append(specs, &codegen.ImportSpec{Path: rootPath, Name: apiPkg})
 
 	var (
 		sections []*codegen.SectionTemplate
