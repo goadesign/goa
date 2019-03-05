@@ -74,8 +74,10 @@ func (d *cliInvoker) Invoke(ctx context.Context, req interface{}) (interface{}, 
 	ctx = metadata.NewOutgoingContext(ctx, md)
 
 	var (
-		respb     interface{}
-		hdr, trlr metadata.MD
+		respb interface{}
+
+		hdr  = metadata.MD{}
+		trlr = metadata.MD{}
 	)
 	{
 		// Invoke remote method

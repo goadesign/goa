@@ -30,7 +30,7 @@ $ export JWT_TOKEN=`echo $_`
 
 ### `listener` Endpoint
 
-This endpoint illustrates **streaming payload**. The client sends a payload
+This endpoint illustrates a **streaming payload**. The client sends a payload
 defined in `Payload` DSL containing the JWT token. Once auth succeeds, the
 client streams the payload defined in `StreamingPayload` DSL to the server.
 The server patiently listens until the client stops sending the payload.
@@ -65,12 +65,32 @@ check check check
 ]
 ```
 
+### `subscribe` Endpoint
+
+This endpoint illustrates a **streaming result**. The client sends a payload
+defined in the `Payload` DSL and that contains a JWT token. Once auth succeeds,
+the server establishes a stream. The sends messages to the client using the
+stream. The subscription ends when the client goes away or the server shuts
+down.
+
+```
+$ ./chatter_cli chatter subscribe --token $JWT_TOKEN
+# Now send messages to server in a separate `chatter_cli` process by calling
+# the `summary`, `listener`, or `echoer` endpoints.
+{
+    "Message": "hello",
+    "Action": "added",
+    "AddedAt": "2018-08-14T12:32:30-07:00"
+}
+```
+
 ### `history` Endpoint
 
-This endpoint illustrates **streaming result**. The client sends a payload
-payload defined in `Payload` DSL containing the JWT token and an optional
-"view" parameter. Once auth succeeds, the server streams all the
-messages sent by the client rendered using the optional "view" parameter.
+This endpoint illustrates a **streaming result** with views. The client sends
+a payload defined in the `Payload` DSL and that contains a JWT token and an
+optional "view" parameter. Once auth succeeds, the server sends results to the
+client using the stream. Each result struct is first projected to the view
+matching the "view" parameter.
 
 ```
 $ ./chatter_cli chatter history --token $JWT_TOKEN --view tiny
@@ -98,7 +118,7 @@ $ ./chatter_cli chatter history --token $JWT_TOKEN --view tiny
 
 ### `echoer` Endpoint
 
-This endpoint illustrates **bidirectional streaming**. The client sends a
+This endpoint illustrates a **bidirectional streaming**. The client sends a
 payload defined in `Payload` DSL containing the JWT token. Once auth
 succeeds, the client and server communicates via the stream until one of them
 quits. The server simply echoes the client messages.
@@ -115,9 +135,11 @@ stop repeating me
 ## Customizing HTTP Websocket Connections
 
 goa v2 uses [gorilla websocket](https://godoc.org/github.com/gorilla/websocket)
-underneath to implement streaming via websocket in the HTTP transport layer.
-By default, goa v2 uses the default [`Upgrader`](https://godoc.org/github.com/gorilla/websocket#Upgrader)
-server side to upgrade HTTP connection to a websocket connection and the [`DefaultDialer`](https://godoc.org/github.com/gorilla/websocket#pkg-variables)
+underneath to implement streaming via websocket in the HTTP transport layer.  By
+default, goa v2 uses the default
+[`Upgrader`](https://godoc.org/github.com/gorilla/websocket#Upgrader) server
+side to upgrade HTTP connection to a websocket connection and the
+[`DefaultDialer`](https://godoc.org/github.com/gorilla/websocket#pkg-variables)
 client side to dial a websocket connection.
 
 Developers can use custom Upgrader and Dialer as shown below
@@ -130,31 +152,33 @@ var (
 )
 {
   eh := ErrorHandler(logger)
+
+  // my custom websocket Upgrader
   myUpgrader := &websocket.Upgrader{
     ReadBufferSize: 512,
     WriteBufferSize: 512,
   }
-  myConnConfigurer := func(conn *websocket.Conn) *websocket.Conn {
-    conn.SetReadDeadline(time.Now()+time.Minute*2)
-    return conn
-  }
-  chatterServer = chattersvcsvr.New(chatterEndpoints, mux, dec, enc, eh, myUpgrader, myConnConfigurer)
+
+  // pass a ConnConfigureFunc type as an argument to apply the connection
+  // configurer to all the streaming endpoints
+  chatterConfigurer := chattersvcsvr.NewConnConfigurer(myConfigurerFn)
+  // or override the connection configurer for a specific streaming endpoint
+  chatterConfigurer.SubscribeFn = mySubscriberConfigurerFn
+
+  chatterServer = chattersvcsvr.New(chatterEndpoints, mux, dec, enc, eh, myUpgrader, chatterConfigurer)
 }
 
 // In client main.go
 
 var (
-  myDialer         *websocket.Dialer
-  myConnConfigurer goahttp.ConnConfigureFunc
+  myDialer          *websocket.Dialer
+  chatterConfigurer *chattersvcclient.ConnConfigurer
 )
 {
+  chatterConfigurer = chattersvcclient.NewConnConfigurer(myConfigurerFn)
   myDialer = websocket.Dialer{
     ReadBufferSize: 512,
     WriteBufferSize: 512,
-  }
-  myConnConfigurer := func(conn *websocket.Conn) *websocket.Conn {
-    conn.SetReadDeadline(time.Now()+time.Minute*2)
-    return conn
   }
 }
 
@@ -166,9 +190,14 @@ endpoint, payload, err := cli.ParseEndpoint(
   goahttp.ResponseDecoder,
   debug,
   myDialer,
-  myConnConfigurer,
+  chatterConfigurer,
 )
 ```
+
+Check out the `pingPonger` defined in `cmd/chatter/http.go` for how to use
+`ConnConfigureFunc` to customize the websocket connection to send periodic
+pings to the client and cancel the request if the client does not respond
+with a pong.
 
 ## Gotchas
 

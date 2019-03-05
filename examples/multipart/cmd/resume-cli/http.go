@@ -31,6 +31,7 @@ func doHTTP(scheme, host string, timeout int, debug bool) (goa.Endpoint, interfa
 		resume.ResumeAddEncoderFunc,
 	)
 }
+
 func httpUsageCommands() string {
 	return cli.UsageCommands()
 }

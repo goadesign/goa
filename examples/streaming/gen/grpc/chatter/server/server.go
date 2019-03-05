@@ -20,11 +20,12 @@ import (
 
 // Server implements the chatterpb.ChatterServer interface.
 type Server struct {
-	LoginH    goagrpc.UnaryHandler
-	EchoerH   goagrpc.StreamHandler
-	ListenerH goagrpc.StreamHandler
-	SummaryH  goagrpc.StreamHandler
-	HistoryH  goagrpc.StreamHandler
+	LoginH     goagrpc.UnaryHandler
+	EchoerH    goagrpc.StreamHandler
+	ListenerH  goagrpc.StreamHandler
+	SummaryH   goagrpc.StreamHandler
+	SubscribeH goagrpc.StreamHandler
+	HistoryH   goagrpc.StreamHandler
 }
 
 // ErrorNamer is an interface implemented by generated error structs that
@@ -50,6 +51,12 @@ type summaryServerStream struct {
 	view   string
 }
 
+// subscribeServerStream implements the chattersvc.SubscribeServerStream
+// interface.
+type subscribeServerStream struct {
+	stream chatterpb.Chatter_SubscribeServer
+}
+
 // historyServerStream implements the chattersvc.HistoryServerStream interface.
 type historyServerStream struct {
 	stream chatterpb.Chatter_HistoryServer
@@ -59,11 +66,12 @@ type historyServerStream struct {
 // New instantiates the server struct with the chatter service endpoints.
 func New(e *chattersvc.Endpoints, uh goagrpc.UnaryHandler, sh goagrpc.StreamHandler) *Server {
 	return &Server{
-		LoginH:    NewLoginHandler(e.Login, uh),
-		EchoerH:   NewEchoerHandler(e.Echoer, sh),
-		ListenerH: NewListenerHandler(e.Listener, sh),
-		SummaryH:  NewSummaryHandler(e.Summary, sh),
-		HistoryH:  NewHistoryHandler(e.History, sh),
+		LoginH:     NewLoginHandler(e.Login, uh),
+		EchoerH:    NewEchoerHandler(e.Echoer, sh),
+		ListenerH:  NewListenerHandler(e.Listener, sh),
+		SummaryH:   NewSummaryHandler(e.Summary, sh),
+		SubscribeH: NewSubscribeHandler(e.Subscribe, sh),
+		HistoryH:   NewHistoryHandler(e.History, sh),
 	}
 }
 
@@ -229,6 +237,52 @@ func (s *Server) Summary(stream chatterpb.Chatter_SummaryServer) error {
 	return nil
 }
 
+// NewSubscribeHandler creates a gRPC handler which serves the "chatter"
+// service "subscribe" endpoint.
+func NewSubscribeHandler(endpoint goa.Endpoint, h goagrpc.StreamHandler) goagrpc.StreamHandler {
+	if h == nil {
+		h = goagrpc.NewStreamHandler(endpoint, DecodeSubscribeRequest)
+	}
+	return h
+}
+
+// Subscribe implements the "Subscribe" method in chatterpb.ChatterServer
+// interface.
+func (s *Server) Subscribe(message *chatterpb.SubscribeRequest, stream chatterpb.Chatter_SubscribeServer) error {
+	ctx := stream.Context()
+	ctx = context.WithValue(ctx, goa.MethodKey, "subscribe")
+	ctx = context.WithValue(ctx, goa.ServiceKey, "chatter")
+	p, err := s.SubscribeH.Decode(ctx, message)
+	if err != nil {
+		if en, ok := err.(ErrorNamer); ok {
+			switch en.ErrorName() {
+			case "unauthorized":
+				return goagrpc.NewStatusError(codes.Unauthenticated, err)
+			case "invalid-scopes":
+				return goagrpc.NewStatusError(codes.Unauthenticated, err)
+			}
+		}
+		return goagrpc.EncodeError(err)
+	}
+	ep := &chattersvc.SubscribeEndpointInput{
+		Stream:  &subscribeServerStream{stream: stream},
+		Payload: p.(*chattersvc.SubscribePayload),
+	}
+	err = s.SubscribeH.Handle(ctx, ep)
+	if err != nil {
+		if en, ok := err.(ErrorNamer); ok {
+			switch en.ErrorName() {
+			case "unauthorized":
+				return goagrpc.NewStatusError(codes.Unauthenticated, err)
+			case "invalid-scopes":
+				return goagrpc.NewStatusError(codes.Unauthenticated, err)
+			}
+		}
+		return goagrpc.EncodeError(err)
+	}
+	return nil
+}
+
 // NewHistoryHandler creates a gRPC handler which serves the "chatter" service
 // "history" endpoint.
 func NewHistoryHandler(endpoint goa.Endpoint, h goagrpc.StreamHandler) goagrpc.StreamHandler {
@@ -330,6 +384,18 @@ func (s *summaryServerStream) Recv() (string, error) {
 		return res, err
 	}
 	return NewSummaryStreamingRequest(v), nil
+}
+
+// Send streams instances of "chatterpb.SubscribeResponse" to the "subscribe"
+// endpoint gRPC stream.
+func (s *subscribeServerStream) Send(res *chattersvc.Event) error {
+	v := NewSubscribeResponse(res)
+	return s.stream.Send(v)
+}
+
+func (s *subscribeServerStream) Close() error {
+	// nothing to do here
+	return nil
 }
 
 // Send streams instances of "chatterpb.HistoryResponse" to the "history"

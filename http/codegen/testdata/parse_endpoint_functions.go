@@ -502,6 +502,125 @@ func ParseEndpoint(
 }
 `
 
+var StreamingParseCode = `// ParseEndpoint returns the endpoint and payload as specified on the command
+// line.
+func ParseEndpoint(
+	scheme, host string,
+	doer goahttp.Doer,
+	enc func(*http.Request) goahttp.Encoder,
+	dec func(*http.Response) goahttp.Decoder,
+	restore bool,
+	dialer goahttp.Dialer,
+	streamingServiceAConfigurer *streamingserviceac.ConnConfigurer,
+	streamingServiceBConfigurer *streamingservicebc.ConnConfigurer,
+) (goa.Endpoint, interface{}, error) {
+	var (
+		streamingServiceAFlags = flag.NewFlagSet("streaming-servicea", flag.ContinueOnError)
+
+		streamingServiceAMethodFlags = flag.NewFlagSet("method", flag.ExitOnError)
+
+		streamingServiceBFlags = flag.NewFlagSet("streaming-serviceb", flag.ContinueOnError)
+
+		streamingServiceBMethodFlags = flag.NewFlagSet("method", flag.ExitOnError)
+	)
+	streamingServiceAFlags.Usage = streamingServiceAUsage
+	streamingServiceAMethodFlags.Usage = streamingServiceAMethodUsage
+
+	streamingServiceBFlags.Usage = streamingServiceBUsage
+	streamingServiceBMethodFlags.Usage = streamingServiceBMethodUsage
+
+	if err := flag.CommandLine.Parse(os.Args[1:]); err != nil {
+		return nil, nil, err
+	}
+
+	if flag.NArg() < 2 { // two non flag args are required: SERVICE and ENDPOINT (aka COMMAND)
+		return nil, nil, fmt.Errorf("not enough arguments")
+	}
+
+	var (
+		svcn string
+		svcf *flag.FlagSet
+	)
+	{
+		svcn = flag.Arg(0)
+		switch svcn {
+		case "streaming-servicea":
+			svcf = streamingServiceAFlags
+		case "streaming-serviceb":
+			svcf = streamingServiceBFlags
+		default:
+			return nil, nil, fmt.Errorf("unknown service %q", svcn)
+		}
+	}
+	if err := svcf.Parse(flag.Args()[1:]); err != nil {
+		return nil, nil, err
+	}
+
+	var (
+		epn string
+		epf *flag.FlagSet
+	)
+	{
+		epn = svcf.Arg(0)
+		switch svcn {
+		case "streaming-servicea":
+			switch epn {
+			case "method":
+				epf = streamingServiceAMethodFlags
+
+			}
+
+		case "streaming-serviceb":
+			switch epn {
+			case "method":
+				epf = streamingServiceBMethodFlags
+
+			}
+
+		}
+	}
+	if epf == nil {
+		return nil, nil, fmt.Errorf("unknown %q endpoint %q", svcn, epn)
+	}
+
+	// Parse endpoint flags if any
+	if svcf.NArg() > 1 {
+		if err := epf.Parse(svcf.Args()[1:]); err != nil {
+			return nil, nil, err
+		}
+	}
+
+	var (
+		data     interface{}
+		endpoint goa.Endpoint
+		err      error
+	)
+	{
+		switch svcn {
+		case "streaming-servicea":
+			c := streamingserviceac.NewClient(scheme, host, doer, enc, dec, restore, dialer, streamingServiceAConfigurer)
+			switch epn {
+			case "method":
+				endpoint = c.Method()
+				data = nil
+			}
+		case "streaming-serviceb":
+			c := streamingservicebc.NewClient(scheme, host, doer, enc, dec, restore, dialer, streamingServiceBConfigurer)
+			switch epn {
+			case "method":
+				endpoint = c.Method()
+				data = nil
+			}
+		}
+	}
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return endpoint, data, nil
+}
+`
+
 var MultiSimpleBuildCode = `// BuildMethodMultiSimplePayloadPayload builds the payload for the
 // ServiceMultiSimple1 MethodMultiSimplePayload endpoint from CLI flags.
 func BuildMethodMultiSimplePayloadPayload(serviceMultiSimple1MethodMultiSimplePayloadBody string) (*servicemultisimple1.MethodMultiSimplePayloadPayload, error) {

@@ -95,6 +95,23 @@ func NewSummaryStreamingRequest(v *chatterpb.SummaryStreamingRequest) string {
 	return spayload
 }
 
+// NewSubscribePayload builds the payload of the "subscribe" endpoint of the
+// "chatter" service from the gRPC request type.
+func NewSubscribePayload(token string) *chattersvc.SubscribePayload {
+	payload := &chattersvc.SubscribePayload{}
+	payload.Token = token
+	return payload
+}
+
+func NewSubscribeResponse(result *chattersvc.Event) *chatterpb.SubscribeResponse {
+	v := &chatterpb.SubscribeResponse{
+		Message_: result.Message,
+		Action:   result.Action,
+		AddedAt:  result.AddedAt,
+	}
+	return v
+}
+
 // NewHistoryPayload builds the payload of the "history" endpoint of the
 // "chatter" service from the gRPC request type.
 func NewHistoryPayload(view *string, token string) *chattersvc.HistoryPayload {
@@ -134,6 +151,16 @@ func ValidateChatSummaryCollection(message *chatterpb.ChatSummaryCollection) (er
 // ValidateChatSummary runs the validations defined on ChatSummary.
 func ValidateChatSummary(message *chatterpb.ChatSummary) (err error) {
 	err = goa.MergeErrors(err, goa.ValidateFormat("message.sent_at", message.SentAt, goa.FormatDateTime))
+
+	return
+}
+
+// ValidateSubscribeResponse runs the validations defined on SubscribeResponse.
+func ValidateSubscribeResponse(message *chatterpb.SubscribeResponse) (err error) {
+	if !(message.Action == "added") {
+		err = goa.MergeErrors(err, goa.InvalidEnumValueError("message.action", message.Action, []interface{}{"added"}))
+	}
+	err = goa.MergeErrors(err, goa.ValidateFormat("message.added_at", message.AddedAt, goa.FormatDateTime))
 
 	return
 }

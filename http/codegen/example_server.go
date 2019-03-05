@@ -157,17 +157,6 @@ func dummyMultipartFile(genpkg string, root *expr.RootExpr, svc *expr.HTTPServic
 	}
 }
 
-// needStream returns true if at least one method in the defined services
-// uses stream for sending payload/result.
-func needStream(data []*ServiceData) bool {
-	for _, svc := range data {
-		if streamingEndpointExists(svc) {
-			return true
-		}
-	}
-	return false
-}
-
 const (
 	// input: MultipartData
 	dummyMultipartRequestDecoderImplT = `{{ printf "%s implements the multipart decoder for service %q endpoint %q. The decoder must populate the argument p after encoding." .FuncName .ServiceName .MethodName | comment }}

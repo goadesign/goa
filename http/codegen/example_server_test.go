@@ -22,6 +22,7 @@ func TestExampleServerFiles(t *testing.T) {
 		{"server-hosting-service-with-file-server", ctestdata.ServerHostingServiceWithFileServerDSL, testdata.ServerHostingServiceWithFileServerHandlerCode},
 		{"server-hosting-service-subset", ctestdata.ServerHostingServiceSubsetDSL, testdata.ServerHostingServiceSubsetServerHandleCode},
 		{"server-hosting-multiple-services", ctestdata.ServerHostingMultipleServicesDSL, testdata.ServerHostingMultipleServicesServerHandleCode},
+		{"streaming", testdata.StreamingMultipleServicesDSL, testdata.StreamingServerHandleCode},
 	}
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {

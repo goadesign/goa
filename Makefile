@@ -74,7 +74,6 @@ gen:
 	rm -rf $(GOPATH)/src/goa.design/goa/examples/error/cmd              && \
 	rm -rf $(GOPATH)/src/goa.design/goa/examples/multipart/cmd          && \
 	rm -rf $(GOPATH)/src/goa.design/goa/examples/security/cmd           && \
-	rm -rf $(GOPATH)/src/goa.design/goa/examples/streaming/cmd/chatter  && \
 	goa gen     goa.design/goa/examples/basic/design      -o $(GOPATH)/src/goa.design/goa/examples/basic     && \
 	goa example goa.design/goa/examples/basic/design      -o $(GOPATH)/src/goa.design/goa/examples/basic     && \
 	goa gen     goa.design/goa/examples/cellar/design    -o $(GOPATH)/src/goa.design/goa/examples/cellar   && \

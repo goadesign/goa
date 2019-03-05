@@ -135,6 +135,9 @@ func ValidateChatSummaryView(result *ChatSummaryView) (err error) {
 	if result.Message == nil {
 		err = goa.MergeErrors(err, goa.MissingFieldError("message", "result"))
 	}
+	if result.SentAt == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("sent_at", "result"))
+	}
 	if result.SentAt != nil {
 		err = goa.MergeErrors(err, goa.ValidateFormat("result.sent_at", *result.SentAt, goa.FormatDateTime))
 	}

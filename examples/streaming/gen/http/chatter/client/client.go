@@ -36,6 +36,10 @@ type Client struct {
 	// endpoint.
 	SummaryDoer goahttp.Doer
 
+	// Subscribe Doer is the HTTP client used to make requests to the subscribe
+	// endpoint.
+	SubscribeDoer goahttp.Doer
+
 	// History Doer is the HTTP client used to make requests to the history
 	// endpoint.
 	HistoryDoer goahttp.Doer
@@ -44,12 +48,22 @@ type Client struct {
 	// decoding so they can be read again.
 	RestoreResponseBody bool
 
-	scheme       string
-	host         string
-	encoder      func(*http.Request) goahttp.Encoder
-	decoder      func(*http.Response) goahttp.Decoder
-	dialer       goahttp.Dialer
-	connConfigFn goahttp.ConnConfigureFunc
+	scheme     string
+	host       string
+	encoder    func(*http.Request) goahttp.Encoder
+	decoder    func(*http.Response) goahttp.Decoder
+	dialer     goahttp.Dialer
+	configurer *ConnConfigurer
+}
+
+// ConnConfigurer holds the websocket connection configurer functions for the
+// streaming endpoints in "chatter" service.
+type ConnConfigurer struct {
+	EchoerFn    goahttp.ConnConfigureFunc
+	ListenerFn  goahttp.ConnConfigureFunc
+	SummaryFn   goahttp.ConnConfigureFunc
+	SubscribeFn goahttp.ConnConfigureFunc
+	HistoryFn   goahttp.ConnConfigureFunc
 }
 
 // echoerClientStream implements the chattersvc.EchoerClientStream interface.
@@ -67,6 +81,13 @@ type listenerClientStream struct {
 
 // summaryClientStream implements the chattersvc.SummaryClientStream interface.
 type summaryClientStream struct {
+	// conn is the underlying websocket connection.
+	conn *websocket.Conn
+}
+
+// subscribeClientStream implements the chattersvc.SubscribeClientStream
+// interface.
+type subscribeClientStream struct {
 	// conn is the underlying websocket connection.
 	conn *websocket.Conn
 }
@@ -89,13 +110,17 @@ func NewClient(
 	dec func(*http.Response) goahttp.Decoder,
 	restoreBody bool,
 	dialer goahttp.Dialer,
-	connConfigFn goahttp.ConnConfigureFunc,
+	cfn *ConnConfigurer,
 ) *Client {
+	if cfn == nil {
+		cfn = &ConnConfigurer{}
+	}
 	return &Client{
 		LoginDoer:           doer,
 		EchoerDoer:          doer,
 		ListenerDoer:        doer,
 		SummaryDoer:         doer,
+		SubscribeDoer:       doer,
 		HistoryDoer:         doer,
 		RestoreResponseBody: restoreBody,
 		scheme:              scheme,
@@ -103,7 +128,19 @@ func NewClient(
 		decoder:             dec,
 		encoder:             enc,
 		dialer:              dialer,
-		connConfigFn:        connConfigFn,
+		configurer:          cfn,
+	}
+}
+
+// NewConnConfigurer initializes the websocket connection configurer function
+// with fn for all the streaming endpoints in "chatter" service.
+func NewConnConfigurer(fn goahttp.ConnConfigureFunc) *ConnConfigurer {
+	return &ConnConfigurer{
+		EchoerFn:    fn,
+		ListenerFn:  fn,
+		SummaryFn:   fn,
+		SubscribeFn: fn,
+		HistoryFn:   fn,
 	}
 }
 
@@ -148,15 +185,19 @@ func (c *Client) Echoer() goa.Endpoint {
 		if err != nil {
 			return nil, err
 		}
-		conn, resp, err := c.dialer.Dial(req.URL.String(), req.Header)
+		var cancel context.CancelFunc
+		{
+			ctx, cancel = context.WithCancel(ctx)
+		}
+		conn, resp, err := c.dialer.DialContext(ctx, req.URL.String(), req.Header)
 		if err != nil {
 			if resp != nil {
 				return decodeResponse(resp)
 			}
 			return nil, goahttp.ErrRequestError("chatter", "echoer", err)
 		}
-		if c.connConfigFn != nil {
-			conn = c.connConfigFn(conn)
+		if c.configurer.EchoerFn != nil {
+			conn = c.configurer.EchoerFn(conn, cancel)
 		}
 		stream := &echoerClientStream{conn: conn}
 		return stream, nil
@@ -213,15 +254,19 @@ func (c *Client) Listener() goa.Endpoint {
 		if err != nil {
 			return nil, err
 		}
-		conn, resp, err := c.dialer.Dial(req.URL.String(), req.Header)
+		var cancel context.CancelFunc
+		{
+			ctx, cancel = context.WithCancel(ctx)
+		}
+		conn, resp, err := c.dialer.DialContext(ctx, req.URL.String(), req.Header)
 		if err != nil {
 			if resp != nil {
 				return decodeResponse(resp)
 			}
 			return nil, goahttp.ErrRequestError("chatter", "listener", err)
 		}
-		if c.connConfigFn != nil {
-			conn = c.connConfigFn(conn)
+		if c.configurer.ListenerFn != nil {
+			conn = c.configurer.ListenerFn(conn, cancel)
 		}
 		stream := &listenerClientStream{conn: conn}
 		return stream, nil
@@ -260,15 +305,19 @@ func (c *Client) Summary() goa.Endpoint {
 		if err != nil {
 			return nil, err
 		}
-		conn, resp, err := c.dialer.Dial(req.URL.String(), req.Header)
+		var cancel context.CancelFunc
+		{
+			ctx, cancel = context.WithCancel(ctx)
+		}
+		conn, resp, err := c.dialer.DialContext(ctx, req.URL.String(), req.Header)
 		if err != nil {
 			if resp != nil {
 				return decodeResponse(resp)
 			}
 			return nil, goahttp.ErrRequestError("chatter", "summary", err)
 		}
-		if c.connConfigFn != nil {
-			conn = c.connConfigFn(conn)
+		if c.configurer.SummaryFn != nil {
+			conn = c.configurer.SummaryFn(conn, cancel)
 		}
 		stream := &summaryClientStream{conn: conn}
 		return stream, nil
@@ -311,6 +360,65 @@ func (s *summaryClientStream) Send(v string) error {
 	return s.conn.WriteJSON(v)
 }
 
+// Subscribe returns an endpoint that makes HTTP requests to the chatter
+// service subscribe server.
+func (c *Client) Subscribe() goa.Endpoint {
+	var (
+		encodeRequest  = EncodeSubscribeRequest(c.encoder)
+		decodeResponse = DecodeSubscribeResponse(c.decoder, c.RestoreResponseBody)
+	)
+	return func(ctx context.Context, v interface{}) (interface{}, error) {
+		req, err := c.BuildSubscribeRequest(ctx, v)
+		if err != nil {
+			return nil, err
+		}
+		err = encodeRequest(req, v)
+		if err != nil {
+			return nil, err
+		}
+		var cancel context.CancelFunc
+		{
+			ctx, cancel = context.WithCancel(ctx)
+		}
+		conn, resp, err := c.dialer.DialContext(ctx, req.URL.String(), req.Header)
+		if err != nil {
+			if resp != nil {
+				return decodeResponse(resp)
+			}
+			return nil, goahttp.ErrRequestError("chatter", "subscribe", err)
+		}
+		if c.configurer.SubscribeFn != nil {
+			conn = c.configurer.SubscribeFn(conn, cancel)
+		}
+		stream := &subscribeClientStream{conn: conn}
+		return stream, nil
+	}
+}
+
+// Recv reads instances of "chattersvc.Event" from the "subscribe" endpoint
+// websocket connection.
+func (s *subscribeClientStream) Recv() (*chattersvc.Event, error) {
+	var (
+		rv   *chattersvc.Event
+		body SubscribeResponseBody
+		err  error
+	)
+	err = s.conn.ReadJSON(&body)
+	if websocket.IsCloseError(err, websocket.CloseNormalClosure) {
+		s.conn.Close()
+		return rv, io.EOF
+	}
+	if err != nil {
+		return rv, err
+	}
+	err = ValidateSubscribeResponseBody(&body)
+	if err != nil {
+		return rv, err
+	}
+	res := NewSubscribeEventOK(&body)
+	return res, nil
+}
+
 // History returns an endpoint that makes HTTP requests to the chatter service
 // history server.
 func (c *Client) History() goa.Endpoint {
@@ -327,15 +435,19 @@ func (c *Client) History() goa.Endpoint {
 		if err != nil {
 			return nil, err
 		}
-		conn, resp, err := c.dialer.Dial(req.URL.String(), req.Header)
+		var cancel context.CancelFunc
+		{
+			ctx, cancel = context.WithCancel(ctx)
+		}
+		conn, resp, err := c.dialer.DialContext(ctx, req.URL.String(), req.Header)
 		if err != nil {
 			if resp != nil {
 				return decodeResponse(resp)
 			}
 			return nil, goahttp.ErrRequestError("chatter", "history", err)
 		}
-		if c.connConfigFn != nil {
-			conn = c.connConfigFn(conn)
+		if c.configurer.HistoryFn != nil {
+			conn = c.configurer.HistoryFn(conn, cancel)
 		}
 		stream := &historyClientStream{conn: conn}
 		view := resp.Header.Get("goa-view")

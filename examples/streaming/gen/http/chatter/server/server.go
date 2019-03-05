@@ -23,12 +23,13 @@ import (
 
 // Server lists the chatter service endpoint HTTP handlers.
 type Server struct {
-	Mounts   []*MountPoint
-	Login    http.Handler
-	Echoer   http.Handler
-	Listener http.Handler
-	Summary  http.Handler
-	History  http.Handler
+	Mounts    []*MountPoint
+	Login     http.Handler
+	Echoer    http.Handler
+	Listener  http.Handler
+	Summary   http.Handler
+	Subscribe http.Handler
+	History   http.Handler
 }
 
 // ErrorNamer is an interface implemented by generated error structs that
@@ -48,6 +49,16 @@ type MountPoint struct {
 	Pattern string
 }
 
+// ConnConfigurer holds the websocket connection configurer functions for the
+// streaming endpoints in "chatter" service.
+type ConnConfigurer struct {
+	EchoerFn    goahttp.ConnConfigureFunc
+	ListenerFn  goahttp.ConnConfigureFunc
+	SummaryFn   goahttp.ConnConfigureFunc
+	SubscribeFn goahttp.ConnConfigureFunc
+	HistoryFn   goahttp.ConnConfigureFunc
+}
+
 // echoerServerStream implements the chattersvc.EchoerServerStream interface.
 type echoerServerStream struct {
 	once sync.Once
@@ -55,6 +66,9 @@ type echoerServerStream struct {
 	upgrader goahttp.Upgrader
 	// connConfigFn is the websocket connection configurer.
 	connConfigFn goahttp.ConnConfigureFunc
+	// cancel is the context cancellation function which cancels the request
+	// context when invoked.
+	cancel context.CancelFunc
 	// w is the HTTP response writer used in upgrading the connection.
 	w http.ResponseWriter
 	// r is the HTTP request.
@@ -71,6 +85,9 @@ type listenerServerStream struct {
 	upgrader goahttp.Upgrader
 	// connConfigFn is the websocket connection configurer.
 	connConfigFn goahttp.ConnConfigureFunc
+	// cancel is the context cancellation function which cancels the request
+	// context when invoked.
+	cancel context.CancelFunc
 	// w is the HTTP response writer used in upgrading the connection.
 	w http.ResponseWriter
 	// r is the HTTP request.
@@ -86,6 +103,28 @@ type summaryServerStream struct {
 	upgrader goahttp.Upgrader
 	// connConfigFn is the websocket connection configurer.
 	connConfigFn goahttp.ConnConfigureFunc
+	// cancel is the context cancellation function which cancels the request
+	// context when invoked.
+	cancel context.CancelFunc
+	// w is the HTTP response writer used in upgrading the connection.
+	w http.ResponseWriter
+	// r is the HTTP request.
+	r *http.Request
+	// conn is the underlying websocket connection.
+	conn *websocket.Conn
+}
+
+// subscribeServerStream implements the chattersvc.SubscribeServerStream
+// interface.
+type subscribeServerStream struct {
+	once sync.Once
+	// upgrader is the websocket connection upgrader.
+	upgrader goahttp.Upgrader
+	// connConfigFn is the websocket connection configurer.
+	connConfigFn goahttp.ConnConfigureFunc
+	// cancel is the context cancellation function which cancels the request
+	// context when invoked.
+	cancel context.CancelFunc
 	// w is the HTTP response writer used in upgrading the connection.
 	w http.ResponseWriter
 	// r is the HTTP request.
@@ -101,6 +140,9 @@ type historyServerStream struct {
 	upgrader goahttp.Upgrader
 	// connConfigFn is the websocket connection configurer.
 	connConfigFn goahttp.ConnConfigureFunc
+	// cancel is the context cancellation function which cancels the request
+	// context when invoked.
+	cancel context.CancelFunc
 	// w is the HTTP response writer used in upgrading the connection.
 	w http.ResponseWriter
 	// r is the HTTP request.
@@ -120,21 +162,38 @@ func New(
 	enc func(context.Context, http.ResponseWriter) goahttp.Encoder,
 	eh func(context.Context, http.ResponseWriter, error),
 	up goahttp.Upgrader,
-	connConfigFn goahttp.ConnConfigureFunc,
+	cfn *ConnConfigurer,
 ) *Server {
+	if cfn == nil {
+		cfn = &ConnConfigurer{}
+	}
 	return &Server{
 		Mounts: []*MountPoint{
 			{"Login", "POST", "/login"},
 			{"Echoer", "GET", "/echoer"},
 			{"Listener", "GET", "/listener"},
 			{"Summary", "GET", "/summary"},
+			{"Subscribe", "GET", "/subscribe"},
 			{"History", "GET", "/history"},
 		},
-		Login:    NewLoginHandler(e.Login, mux, dec, enc, eh),
-		Echoer:   NewEchoerHandler(e.Echoer, mux, dec, enc, eh, up, connConfigFn),
-		Listener: NewListenerHandler(e.Listener, mux, dec, enc, eh, up, connConfigFn),
-		Summary:  NewSummaryHandler(e.Summary, mux, dec, enc, eh, up, connConfigFn),
-		History:  NewHistoryHandler(e.History, mux, dec, enc, eh, up, connConfigFn),
+		Login:     NewLoginHandler(e.Login, mux, dec, enc, eh),
+		Echoer:    NewEchoerHandler(e.Echoer, mux, dec, enc, eh, up, cfn.EchoerFn),
+		Listener:  NewListenerHandler(e.Listener, mux, dec, enc, eh, up, cfn.ListenerFn),
+		Summary:   NewSummaryHandler(e.Summary, mux, dec, enc, eh, up, cfn.SummaryFn),
+		Subscribe: NewSubscribeHandler(e.Subscribe, mux, dec, enc, eh, up, cfn.SubscribeFn),
+		History:   NewHistoryHandler(e.History, mux, dec, enc, eh, up, cfn.HistoryFn),
+	}
+}
+
+// NewConnConfigurer initializes the websocket connection configurer function
+// with fn for all the streaming endpoints in "chatter" service.
+func NewConnConfigurer(fn goahttp.ConnConfigureFunc) *ConnConfigurer {
+	return &ConnConfigurer{
+		EchoerFn:    fn,
+		ListenerFn:  fn,
+		SummaryFn:   fn,
+		SubscribeFn: fn,
+		HistoryFn:   fn,
 	}
 }
 
@@ -147,6 +206,7 @@ func (s *Server) Use(m func(http.Handler) http.Handler) {
 	s.Echoer = m(s.Echoer)
 	s.Listener = m(s.Listener)
 	s.Summary = m(s.Summary)
+	s.Subscribe = m(s.Subscribe)
 	s.History = m(s.History)
 }
 
@@ -156,6 +216,7 @@ func Mount(mux goahttp.Muxer, h *Server) {
 	MountEchoerHandler(mux, h.Echoer)
 	MountListenerHandler(mux, h.Listener)
 	MountSummaryHandler(mux, h.Summary)
+	MountSubscribeHandler(mux, h.Subscribe)
 	MountHistoryHandler(mux, h.History)
 }
 
@@ -250,10 +311,15 @@ func NewEchoerHandler(
 			return
 		}
 
+		var cancel context.CancelFunc
+		{
+			ctx, cancel = context.WithCancel(ctx)
+		}
 		v := &chattersvc.EchoerEndpointInput{
 			Stream: &echoerServerStream{
 				upgrader:     up,
 				connConfigFn: connConfigFn,
+				cancel:       cancel,
 				w:            w,
 				r:            r,
 			},
@@ -312,10 +378,15 @@ func NewListenerHandler(
 			return
 		}
 
+		var cancel context.CancelFunc
+		{
+			ctx, cancel = context.WithCancel(ctx)
+		}
 		v := &chattersvc.ListenerEndpointInput{
 			Stream: &listenerServerStream{
 				upgrader:     up,
 				connConfigFn: connConfigFn,
+				cancel:       cancel,
 				w:            w,
 				r:            r,
 			},
@@ -374,14 +445,86 @@ func NewSummaryHandler(
 			return
 		}
 
+		var cancel context.CancelFunc
+		{
+			ctx, cancel = context.WithCancel(ctx)
+		}
 		v := &chattersvc.SummaryEndpointInput{
 			Stream: &summaryServerStream{
 				upgrader:     up,
 				connConfigFn: connConfigFn,
+				cancel:       cancel,
 				w:            w,
 				r:            r,
 			},
 			Payload: payload.(*chattersvc.SummaryPayload),
+		}
+		_, err = endpoint(ctx, v)
+
+		if err != nil {
+			if _, ok := err.(websocket.HandshakeError); ok {
+				return
+			}
+			if err := encodeError(ctx, w, err); err != nil {
+				eh(ctx, w, err)
+			}
+			return
+		}
+	})
+}
+
+// MountSubscribeHandler configures the mux to serve the "chatter" service
+// "subscribe" endpoint.
+func MountSubscribeHandler(mux goahttp.Muxer, h http.Handler) {
+	f, ok := h.(http.HandlerFunc)
+	if !ok {
+		f = func(w http.ResponseWriter, r *http.Request) {
+			h.ServeHTTP(w, r)
+		}
+	}
+	mux.Handle("GET", "/subscribe", f)
+}
+
+// NewSubscribeHandler creates a HTTP handler which loads the HTTP request and
+// calls the "chatter" service "subscribe" endpoint.
+func NewSubscribeHandler(
+	endpoint goa.Endpoint,
+	mux goahttp.Muxer,
+	dec func(*http.Request) goahttp.Decoder,
+	enc func(context.Context, http.ResponseWriter) goahttp.Encoder,
+	eh func(context.Context, http.ResponseWriter, error),
+	up goahttp.Upgrader,
+	connConfigFn goahttp.ConnConfigureFunc,
+) http.Handler {
+	var (
+		decodeRequest = DecodeSubscribeRequest(mux, dec)
+		encodeError   = EncodeSubscribeError(enc)
+	)
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		ctx := context.WithValue(r.Context(), goahttp.AcceptTypeKey, r.Header.Get("Accept"))
+		ctx = context.WithValue(ctx, goa.MethodKey, "subscribe")
+		ctx = context.WithValue(ctx, goa.ServiceKey, "chatter")
+		payload, err := decodeRequest(r)
+		if err != nil {
+			if err := encodeError(ctx, w, err); err != nil {
+				eh(ctx, w, err)
+			}
+			return
+		}
+
+		var cancel context.CancelFunc
+		{
+			ctx, cancel = context.WithCancel(ctx)
+		}
+		v := &chattersvc.SubscribeEndpointInput{
+			Stream: &subscribeServerStream{
+				upgrader:     up,
+				connConfigFn: connConfigFn,
+				cancel:       cancel,
+				w:            w,
+				r:            r,
+			},
+			Payload: payload.(*chattersvc.SubscribePayload),
 		}
 		_, err = endpoint(ctx, v)
 
@@ -436,10 +579,15 @@ func NewHistoryHandler(
 			return
 		}
 
+		var cancel context.CancelFunc
+		{
+			ctx, cancel = context.WithCancel(ctx)
+		}
 		v := &chattersvc.HistoryEndpointInput{
 			Stream: &historyServerStream{
 				upgrader:     up,
 				connConfigFn: connConfigFn,
+				cancel:       cancel,
 				w:            w,
 				r:            r,
 			},
@@ -473,7 +621,7 @@ func (s *echoerServerStream) Send(v string) error {
 			return
 		}
 		if s.connConfigFn != nil {
-			conn = s.connConfigFn(conn)
+			conn = s.connConfigFn(conn, s.cancel)
 		}
 		s.conn = conn
 	})
@@ -502,7 +650,7 @@ func (s *echoerServerStream) Recv() (string, error) {
 			return
 		}
 		if s.connConfigFn != nil {
-			conn = s.connConfigFn(conn)
+			conn = s.connConfigFn(conn, s.cancel)
 		}
 		s.conn = conn
 	})
@@ -532,7 +680,7 @@ func (s *echoerServerStream) Close() error {
 			return
 		}
 		if s.connConfigFn != nil {
-			conn = s.connConfigFn(conn)
+			conn = s.connConfigFn(conn, s.cancel)
 		}
 		s.conn = conn
 	})
@@ -567,7 +715,7 @@ func (s *listenerServerStream) Recv() (string, error) {
 			return
 		}
 		if s.connConfigFn != nil {
-			conn = s.connConfigFn(conn)
+			conn = s.connConfigFn(conn, s.cancel)
 		}
 		s.conn = conn
 	})
@@ -597,7 +745,7 @@ func (s *listenerServerStream) Close() error {
 			return
 		}
 		if s.connConfigFn != nil {
-			conn = s.connConfigFn(conn)
+			conn = s.connConfigFn(conn, s.cancel)
 		}
 		s.conn = conn
 	})
@@ -641,7 +789,7 @@ func (s *summaryServerStream) Recv() (string, error) {
 			return
 		}
 		if s.connConfigFn != nil {
-			conn = s.connConfigFn(conn)
+			conn = s.connConfigFn(conn, s.cancel)
 		}
 		s.conn = conn
 	})
@@ -656,6 +804,62 @@ func (s *summaryServerStream) Recv() (string, error) {
 	}
 	body := *msg
 	return body, nil
+}
+
+// Send streams instances of "chattersvc.Event" to the "subscribe" endpoint
+// websocket connection.
+func (s *subscribeServerStream) Send(v *chattersvc.Event) error {
+	var err error
+	// Upgrade the HTTP connection to a websocket connection only once. Connection
+	// upgrade is done here so that authorization logic in the endpoint is executed
+	// before calling the actual service method which may call Send().
+	s.once.Do(func() {
+		var conn *websocket.Conn
+		conn, err = s.upgrader.Upgrade(s.w, s.r, nil)
+		if err != nil {
+			return
+		}
+		if s.connConfigFn != nil {
+			conn = s.connConfigFn(conn, s.cancel)
+		}
+		s.conn = conn
+	})
+	if err != nil {
+		return err
+	}
+	res := v
+	body := NewSubscribeResponseBody(res)
+	return s.conn.WriteJSON(body)
+}
+
+// Close closes the "subscribe" endpoint websocket connection.
+func (s *subscribeServerStream) Close() error {
+	var err error
+	// Upgrade the HTTP connection to a websocket connection only once. Connection
+	// upgrade is done here so that authorization logic in the endpoint is executed
+	// before calling the actual service method which may call Close().
+	s.once.Do(func() {
+		var conn *websocket.Conn
+		conn, err = s.upgrader.Upgrade(s.w, s.r, nil)
+		if err != nil {
+			return
+		}
+		if s.connConfigFn != nil {
+			conn = s.connConfigFn(conn, s.cancel)
+		}
+		s.conn = conn
+	})
+	if err != nil {
+		return err
+	}
+	if err = s.conn.WriteControl(
+		websocket.CloseMessage,
+		websocket.FormatCloseMessage(websocket.CloseNormalClosure, "server closing connection"),
+		time.Now().Add(time.Second),
+	); err != nil {
+		return err
+	}
+	return s.conn.Close()
 }
 
 // Send streams instances of "chattersvc.ChatSummary" to the "history" endpoint
@@ -674,7 +878,7 @@ func (s *historyServerStream) Send(v *chattersvc.ChatSummary) error {
 			return
 		}
 		if s.connConfigFn != nil {
-			conn = s.connConfigFn(conn)
+			conn = s.connConfigFn(conn, s.cancel)
 		}
 		s.conn = conn
 	})
@@ -705,7 +909,7 @@ func (s *historyServerStream) Close() error {
 			return
 		}
 		if s.connConfigFn != nil {
-			conn = s.connConfigFn(conn)
+			conn = s.connConfigFn(conn, s.cancel)
 		}
 		s.conn = conn
 	})

@@ -141,6 +141,35 @@ func DecodeSummaryResponse(ctx context.Context, v interface{}, hdr, trlr metadat
 	}, nil
 }
 
+// BuildSubscribeFunc builds the remote method to invoke for "chatter" service
+// "subscribe" endpoint.
+func BuildSubscribeFunc(grpccli chatterpb.ChatterClient, cliopts ...grpc.CallOption) goagrpc.RemoteFunc {
+	return func(ctx context.Context, reqpb interface{}, opts ...grpc.CallOption) (interface{}, error) {
+		for _, opt := range cliopts {
+			opts = append(opts, opt)
+		}
+		return grpccli.Subscribe(ctx, reqpb.(*chatterpb.SubscribeRequest), opts...)
+	}
+}
+
+// EncodeSubscribeRequest encodes requests sent to chatter subscribe endpoint.
+func EncodeSubscribeRequest(ctx context.Context, v interface{}, md *metadata.MD) (interface{}, error) {
+	payload, ok := v.(*chattersvc.SubscribePayload)
+	if !ok {
+		return nil, goagrpc.ErrInvalidType("chatter", "subscribe", "*chattersvc.SubscribePayload", v)
+	}
+	(*md).Append("authorization", payload.Token)
+	return NewSubscribeRequest(), nil
+}
+
+// DecodeSubscribeResponse decodes responses from the chatter subscribe
+// endpoint.
+func DecodeSubscribeResponse(ctx context.Context, v interface{}, hdr, trlr metadata.MD) (interface{}, error) {
+	return &subscribeClientStream{
+		stream: v.(chatterpb.Chatter_SubscribeClient),
+	}, nil
+}
+
 // BuildHistoryFunc builds the remote method to invoke for "chatter" service
 // "history" endpoint.
 func BuildHistoryFunc(grpccli chatterpb.ChatterClient, cliopts ...grpc.CallOption) goagrpc.RemoteFunc {
