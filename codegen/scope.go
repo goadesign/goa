@@ -31,14 +31,10 @@ type (
 
 // NewNameScope creates an empty name scope.
 func NewNameScope() *NameScope {
-	ns := &NameScope{
+	return &NameScope{
 		names:  make(map[string]string),
 		counts: make(map[string]int),
 	}
-	if expr.Root.API != nil {
-		ns.HashedUnique(expr.Root.API, expr.Root.API.Name)
-	}
-	return ns
 }
 
 // HashedUnique builds the unique name for key using name and - if not unique -
