@@ -704,6 +704,47 @@ func TestArrayIsCompatible(t *testing.T) {
 	}
 }
 
+func TestObjectRename(t *testing.T) {
+	cases := map[string]struct {
+		old, new string
+		expected []string
+	}{
+		"renamed": {
+			old:      "foo",
+			new:      "qux",
+			expected: []string{"qux", "bar"},
+		},
+		"unmatched": {
+			old:      "baz",
+			new:      "qux",
+			expected: []string{"foo", "bar"},
+		},
+	}
+
+	for k, tc := range cases {
+		object := &Object{
+			&NamedAttributeExpr{
+				Name: "foo",
+				Attribute: &AttributeExpr{
+					Type: String,
+				},
+			},
+			&NamedAttributeExpr{
+				Name: "bar",
+				Attribute: &AttributeExpr{
+					Type: String,
+				},
+			},
+		}
+		object.Rename(tc.old, tc.new)
+		for _, s := range tc.expected {
+			if att := object.Attribute(s); att == nil {
+				t.Errorf("%s: %s not found", k, s)
+			}
+		}
+	}
+}
+
 func TestObjectIsCompatible(t *testing.T) {
 	var (
 		b = true
