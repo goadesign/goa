@@ -28,6 +28,11 @@ func SummaryChatterPath() string {
 	return "/summary"
 }
 
+// SubscribeChatterPath returns the URL path to the chatter service subscribe HTTP endpoint.
+func SubscribeChatterPath() string {
+	return "/subscribe"
+}
+
 // HistoryChatterPath returns the URL path to the chatter service history HTTP endpoint.
 func HistoryChatterPath() string {
 	return "/history"

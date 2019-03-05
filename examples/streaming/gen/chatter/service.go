@@ -25,6 +25,8 @@ type Service interface {
 	Listener(context.Context, *ListenerPayload, ListenerServerStream) (err error)
 	// Summarizes the chat messages sent by the client.
 	Summary(context.Context, *SummaryPayload, SummaryServerStream) (err error)
+	// Subscribe to events sent when new chat messages are added.
+	Subscribe(context.Context, *SubscribePayload, SubscribeServerStream) (err error)
 	// Returns the chat messages sent to the server.
 	// The "view" return value must have one of the following views
 	//	- "tiny"
@@ -48,7 +50,7 @@ const ServiceName = "chatter"
 // MethodNames lists the service method names as defined in the design. These
 // are the same values that are set in the endpoint request contexts under the
 // MethodKey key.
-var MethodNames = [5]string{"login", "echoer", "listener", "summary", "history"}
+var MethodNames = [6]string{"login", "echoer", "listener", "summary", "subscribe", "history"}
 
 // EchoerServerStream is the interface a "echoer" endpoint server stream must
 // satisfy.
@@ -110,6 +112,22 @@ type SummaryClientStream interface {
 	CloseAndRecv() (ChatSummaryCollection, error)
 }
 
+// SubscribeServerStream is the interface a "subscribe" endpoint server stream
+// must satisfy.
+type SubscribeServerStream interface {
+	// Send streams instances of "Event".
+	Send(*Event) error
+	// Close closes the stream.
+	Close() error
+}
+
+// SubscribeClientStream is the interface a "subscribe" endpoint client stream
+// must satisfy.
+type SubscribeClientStream interface {
+	// Recv reads instances of "Event" from the stream.
+	Recv() (*Event, error)
+}
+
 // HistoryServerStream is the interface a "history" endpoint server stream must
 // satisfy.
 type HistoryServerStream interface {
@@ -156,6 +174,21 @@ type SummaryPayload struct {
 // method.
 type ChatSummaryCollection []*ChatSummary
 
+// SubscribePayload is the payload type of the chatter service subscribe method.
+type SubscribePayload struct {
+	// JWT used for authentication
+	Token string
+}
+
+// Event is the result type of the chatter service subscribe method.
+type Event struct {
+	// Message sent to the server
+	Message string
+	Action  string
+	// Time at which the message was added
+	AddedAt string
+}
+
 // HistoryPayload is the payload type of the chatter service history method.
 type HistoryPayload struct {
 	// JWT used for authentication
@@ -171,7 +204,7 @@ type ChatSummary struct {
 	// Length of the message sent
 	Length *int
 	// Time at which the message was sent
-	SentAt *string
+	SentAt string
 }
 
 // Credentials are invalid
@@ -311,10 +344,12 @@ func newChatSummaryTiny(vres *chattersvcviews.ChatSummaryView) *ChatSummary {
 func newChatSummary(vres *chattersvcviews.ChatSummaryView) *ChatSummary {
 	res := &ChatSummary{
 		Length: vres.Length,
-		SentAt: vres.SentAt,
 	}
 	if vres.Message != nil {
 		res.Message = *vres.Message
+	}
+	if vres.SentAt != nil {
+		res.SentAt = *vres.SentAt
 	}
 	return res
 }
@@ -334,7 +369,7 @@ func newChatSummaryView(res *ChatSummary) *chattersvcviews.ChatSummaryView {
 	vres := &chattersvcviews.ChatSummaryView{
 		Message: &res.Message,
 		Length:  res.Length,
-		SentAt:  res.SentAt,
+		SentAt:  &res.SentAt,
 	}
 	return vres
 }

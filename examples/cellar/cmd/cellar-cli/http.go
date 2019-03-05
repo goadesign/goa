@@ -32,6 +32,7 @@ func doHTTP(scheme, host string, timeout int, debug bool) (goa.Endpoint, interfa
 		cellar.StorageMultiUpdateEncoderFunc,
 	)
 }
+
 func httpUsageCommands() string {
 	return cli.UsageCommands()
 }

@@ -67,7 +67,7 @@ func exampleCLI(genpkg string, root *expr.RootExpr, svr *expr.ServerExpr) *codeg
 				"Services": svcData,
 			},
 			FuncMap: map[string]interface{}{
-				"needStreaming": needStreaming,
+				"needStream": needStream,
 			},
 		},
 		&codegen.SectionTemplate{
@@ -78,7 +78,7 @@ func exampleCLI(genpkg string, root *expr.RootExpr, svr *expr.ServerExpr) *codeg
 				"APIPkg":   apiPkg,
 			},
 			FuncMap: map[string]interface{}{
-				"needStreaming": needStreaming,
+				"needStream": needStream,
 			},
 		},
 		&codegen.SectionTemplate{Name: "cli-http-usage", Source: httpCLIUsageT},
@@ -88,17 +88,6 @@ func exampleCLI(genpkg string, root *expr.RootExpr, svr *expr.ServerExpr) *codeg
 		SectionTemplates: sections,
 		SkipExist:        true,
 	}
-}
-
-// needStreaming returns true if at least one endpoint in the service
-// uses stream for sending payload/result.
-func needStreaming(data []*ServiceData) bool {
-	for _, s := range data {
-		if streamingEndpointExists(s) {
-			return true
-		}
-	}
-	return false
 }
 
 const (
@@ -115,15 +104,14 @@ const (
 `
 
 	// input: map[string]interface{}{"Services": []*ServiceData}
-	httpCLIStreamingT = `{{- if needStreaming .Services }}
+	httpCLIStreamingT = `{{- if needStream .Services }}
 	var (
     dialer *websocket.Dialer
-		connConfigFn goahttp.ConnConfigureFunc
   )
   {
     dialer = websocket.DefaultDialer
   }
-	{{- end }}
+	{{ end }}
 `
 
 	// input: map[string]interface{}{"Services": []*ServiceData}
@@ -134,9 +122,11 @@ const (
 		goahttp.RequestEncoder,
 		goahttp.ResponseDecoder,
 		debug,
-		{{- if needStreaming .Services }}
+		{{- if needStream .Services }}
 		dialer,
-		connConfigFn,
+			{{- range .Services }}
+				nil,
+			{{- end }}
 		{{- end }}
 		{{- range .Services }}
 			{{- range .Endpoints }}
@@ -149,7 +139,8 @@ const (
 }
 `
 
-	httpCLIUsageT = `func httpUsageCommands() string {
+	httpCLIUsageT = `
+func httpUsageCommands() string {
   return cli.UsageCommands()
 }
 

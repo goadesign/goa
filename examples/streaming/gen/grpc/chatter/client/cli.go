@@ -65,6 +65,18 @@ func BuildSummaryPayload(chatterSummaryToken string) (*chattersvc.SummaryPayload
 	return payload, nil
 }
 
+// BuildSubscribePayload builds the payload for the chatter subscribe endpoint
+// from CLI flags.
+func BuildSubscribePayload(chatterSubscribeToken string) (*chattersvc.SubscribePayload, error) {
+	var token string
+	{
+		token = chatterSubscribeToken
+	}
+	payload := &chattersvc.SubscribePayload{}
+	payload.Token = token
+	return payload, nil
+}
+
 // BuildHistoryPayload builds the payload for the chatter history endpoint from
 // CLI flags.
 func BuildHistoryPayload(chatterHistoryView string, chatterHistoryToken string) (*chattersvc.HistoryPayload, error) {

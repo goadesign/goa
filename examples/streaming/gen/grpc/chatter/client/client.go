@@ -42,6 +42,12 @@ type summaryClientStream struct {
 	view   string
 }
 
+// subscribeClientStream implements the chattersvc.SubscribeClientStream
+// interface.
+type subscribeClientStream struct {
+	stream chatterpb.Chatter_SubscribeClient
+}
+
 // historyClientStream implements the chattersvc.HistoryClientStream interface.
 type historyClientStream struct {
 	stream chatterpb.Chatter_HistoryClient
@@ -108,6 +114,22 @@ func (c *Client) Summary() goa.Endpoint {
 			BuildSummaryFunc(c.grpccli, c.opts...),
 			EncodeSummaryRequest,
 			DecodeSummaryResponse)
+		res, err := inv.Invoke(ctx, v)
+		if err != nil {
+			return nil, goagrpc.DecodeError(err)
+		}
+		return res, nil
+	}
+}
+
+// Subscribe calls the "Subscribe" function in chatterpb.ChatterClient
+// interface.
+func (c *Client) Subscribe() goa.Endpoint {
+	return func(ctx context.Context, v interface{}) (interface{}, error) {
+		inv := goagrpc.NewInvoker(
+			BuildSubscribeFunc(c.grpccli, c.opts...),
+			EncodeSubscribeRequest,
+			DecodeSubscribeResponse)
 		res, err := inv.Invoke(ctx, v)
 		if err != nil {
 			return nil, goagrpc.DecodeError(err)
@@ -184,6 +206,22 @@ func (s *summaryClientStream) CloseAndRecv() (chattersvc.ChatSummaryCollection, 
 func (s *summaryClientStream) Send(res string) error {
 	v := NewSummaryStreamingRequest(res)
 	return s.stream.Send(v)
+}
+
+// Recv reads instances of "chatterpb.SubscribeResponse" from the "subscribe"
+// endpoint gRPC stream.
+func (s *subscribeClientStream) Recv() (*chattersvc.Event, error) {
+	var res *chattersvc.Event
+	v, err := s.stream.Recv()
+	if err != nil {
+		return res, err
+	}
+	return NewEvent(v), nil
+}
+
+func (s *subscribeClientStream) Close() error {
+	// nothing to do here
+	return nil
 }
 
 // Recv reads instances of "chatterpb.HistoryResponse" from the "history"

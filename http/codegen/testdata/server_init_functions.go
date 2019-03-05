@@ -95,3 +95,26 @@ func New(
 	}
 }
 `
+
+var ServerStreamingConstructorCode = `// New instantiates HTTP handlers for all the StreamingResultService service
+// endpoints.
+func New(
+	e *streamingresultservice.Endpoints,
+	mux goahttp.Muxer,
+	dec func(*http.Request) goahttp.Decoder,
+	enc func(context.Context, http.ResponseWriter) goahttp.Encoder,
+	eh func(context.Context, http.ResponseWriter, error),
+	up goahttp.Upgrader,
+	cfn *ConnConfigurer,
+) *Server {
+	if cfn == nil {
+		cfn = &ConnConfigurer{}
+	}
+	return &Server{
+		Mounts: []*MountPoint{
+			{"StreamingResultMethod", "GET", "/"},
+		},
+		StreamingResultMethod: NewStreamingResultMethodHandler(e.StreamingResultMethod, mux, dec, enc, eh, up, cfn.StreamingResultMethodFn),
+	}
+}
+`

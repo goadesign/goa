@@ -2531,6 +2531,34 @@ func upgradeParams(e *EndpointData, fn string) map[string]interface{} {
 	}
 }
 
+// needStream returns true if at least one method in the defined services
+// uses stream for sending payload/result.
+func needStream(data []*ServiceData) bool {
+	for _, svc := range data {
+		if streamingEndpointExists(svc) {
+			return true
+		}
+	}
+	return false
+}
+
+// streamingEndpointExists returns true if at least one of the endpoints in
+// the service defines a streaming payload or result.
+func streamingEndpointExists(sd *ServiceData) bool {
+	for _, e := range sd.Endpoints {
+		if isStreamingEndpoint(e) {
+			return true
+		}
+	}
+	return false
+}
+
+// isStreamingEndpoint returns true if the endpoint defines a streaming payload
+// or result.
+func isStreamingEndpoint(ed *EndpointData) bool {
+	return ed.ServerStream != nil || ed.ClientStream != nil
+}
+
 const (
 	// pathInitT is the template used to render the code of path constructors.
 	pathInitT = `
@@ -2624,6 +2652,8 @@ type {{ .VarName }} struct {
 	upgrader goahttp.Upgrader
 	{{ comment "connConfigFn is the websocket connection configurer." }}
 	connConfigFn goahttp.ConnConfigureFunc
+	{{ comment "cancel is the context cancellation function which cancels the request context when invoked." }}
+	cancel context.CancelFunc
 	{{ comment "w is the HTTP response writer used in upgrading the connection." }}
 	w http.ResponseWriter
 	{{ comment "r is the HTTP request." }}
@@ -2637,6 +2667,35 @@ type {{ .VarName }} struct {
 	view string
 		{{- end }}
 	{{- end }}
+}
+`
+
+	// streamConnConfigurerStructT generates the struct type that holds the
+	// websocket connection configurers for all the streaming endpoints in the
+	// service.
+	// input: ServiceData
+	streamConnConfigurerStructT = `{{ printf "ConnConfigurer holds the websocket connection configurer functions for the streaming endpoints in %q service." .Service.Name | comment }}
+type ConnConfigurer struct {
+{{- range .Endpoints }}
+	{{- if isStreamingEndpoint . }}
+		{{ .Method.VarName }}Fn goahttp.ConnConfigureFunc
+	{{- end }}
+{{- end }}
+}
+`
+
+	// streamConnConfigurerStructInitT generates the constructor function to
+	// initialize the websocket connection configurer struct.
+	// input: ServiceData
+	streamConnConfigurerStructInitT = `{{ printf "NewConnConfigurer initializes the websocket connection configurer function with fn for all the streaming endpoints in %q service." .Service.Name | comment }}
+func NewConnConfigurer(fn goahttp.ConnConfigureFunc) *ConnConfigurer {
+	return &ConnConfigurer{
+{{- range .Endpoints }}
+	{{- if isStreamingEndpoint . }}
+		{{ .Method.VarName}}Fn: fn,
+	{{- end }}
+{{- end }}
+	}
 }
 `
 
@@ -2804,7 +2863,7 @@ func (s *{{ .VarName }}) {{ .RecvName }}() ({{ .RecvTypeRef }}, error) {
 			return
 		}
 		if s.connConfigFn != nil {
-			conn = s.connConfigFn(conn)
+			conn = s.connConfigFn(conn, s.cancel)
 		}
 		s.conn = conn
 	})

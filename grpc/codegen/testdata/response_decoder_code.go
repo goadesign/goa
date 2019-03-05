@@ -193,3 +193,53 @@ func DecodeMethodMessageUserTypeWithNestedUserTypesResponse(ctx context.Context,
 	return servicemessageusertypewithnestedusertypes.NewRTCollection(vres), nil
 }
 `
+
+const ServerStreamingResponseDecoderCode = `// DecodeMethodServerStreamingUserTypeRPCResponse decodes responses from the
+// ServiceServerStreamingUserTypeRPC MethodServerStreamingUserTypeRPC endpoint.
+func DecodeMethodServerStreamingUserTypeRPCResponse(ctx context.Context, v interface{}, hdr, trlr metadata.MD) (interface{}, error) {
+	return &MethodServerStreamingUserTypeRPCClientStream{
+		stream: v.(service_server_streaming_user_typerpcpb.ServiceServerStreamingUserTypeRPC_MethodServerStreamingUserTypeRPCClient),
+	}, nil
+}
+`
+
+const ServerStreamingResultWithViewsResponseDecoderCode = `// DecodeMethodServerStreamingUserTypeRPCResponse decodes responses from the
+// ServiceServerStreamingUserTypeRPC MethodServerStreamingUserTypeRPC endpoint.
+func DecodeMethodServerStreamingUserTypeRPCResponse(ctx context.Context, v interface{}, hdr, trlr metadata.MD) (interface{}, error) {
+	var view string
+	{
+		if vals := hdr.Get("goa-view"); len(vals) > 0 {
+			view = vals[0]
+		}
+	}
+	return &MethodServerStreamingUserTypeRPCClientStream{
+		stream: v.(service_server_streaming_user_typerpcpb.ServiceServerStreamingUserTypeRPC_MethodServerStreamingUserTypeRPCClient),
+		view:   view,
+	}, nil
+}
+`
+
+const ClientStreamingResponseDecoderCode = `// DecodeMethodClientStreamingRPCResponse decodes responses from the
+// ServiceClientStreamingRPC MethodClientStreamingRPC endpoint.
+func DecodeMethodClientStreamingRPCResponse(ctx context.Context, v interface{}, hdr, trlr metadata.MD) (interface{}, error) {
+	return &MethodClientStreamingRPCClientStream{
+		stream: v.(service_client_streamingrpcpb.ServiceClientStreamingRPC_MethodClientStreamingRPCClient),
+	}, nil
+}
+`
+
+const BidirectionalStreamingResponseDecoderCode = `// DecodeMethodBidirectionalStreamingRPCResponse decodes responses from the
+// ServiceBidirectionalStreamingRPC MethodBidirectionalStreamingRPC endpoint.
+func DecodeMethodBidirectionalStreamingRPCResponse(ctx context.Context, v interface{}, hdr, trlr metadata.MD) (interface{}, error) {
+	var view string
+	{
+		if vals := hdr.Get("goa-view"); len(vals) > 0 {
+			view = vals[0]
+		}
+	}
+	return &MethodBidirectionalStreamingRPCClientStream{
+		stream: v.(service_bidirectional_streamingrpcpb.ServiceBidirectionalStreamingRPC_MethodBidirectionalStreamingRPCClient),
+		view:   view,
+	}, nil
+}
+`

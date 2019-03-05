@@ -23,7 +23,7 @@ import (
 //    command (subcommand1|subcommand2|...)
 //
 func UsageCommands() string {
-	return `chatter (login|echoer|listener|summary|history)
+	return `chatter (login|echoer|listener|summary|subscribe|history)
 `
 }
 
@@ -52,6 +52,9 @@ func ParseEndpoint(cc *grpc.ClientConn, opts ...grpc.CallOption) (goa.Endpoint, 
 		chatterSummaryFlags     = flag.NewFlagSet("summary", flag.ExitOnError)
 		chatterSummaryTokenFlag = chatterSummaryFlags.String("token", "REQUIRED", "")
 
+		chatterSubscribeFlags     = flag.NewFlagSet("subscribe", flag.ExitOnError)
+		chatterSubscribeTokenFlag = chatterSubscribeFlags.String("token", "REQUIRED", "")
+
 		chatterHistoryFlags     = flag.NewFlagSet("history", flag.ExitOnError)
 		chatterHistoryViewFlag  = chatterHistoryFlags.String("view", "", "")
 		chatterHistoryTokenFlag = chatterHistoryFlags.String("token", "REQUIRED", "")
@@ -61,6 +64,7 @@ func ParseEndpoint(cc *grpc.ClientConn, opts ...grpc.CallOption) (goa.Endpoint, 
 	chatterEchoerFlags.Usage = chatterEchoerUsage
 	chatterListenerFlags.Usage = chatterListenerUsage
 	chatterSummaryFlags.Usage = chatterSummaryUsage
+	chatterSubscribeFlags.Usage = chatterSubscribeUsage
 	chatterHistoryFlags.Usage = chatterHistoryUsage
 
 	if err := flag.CommandLine.Parse(os.Args[1:]); err != nil {
@@ -109,6 +113,9 @@ func ParseEndpoint(cc *grpc.ClientConn, opts ...grpc.CallOption) (goa.Endpoint, 
 			case "summary":
 				epf = chatterSummaryFlags
 
+			case "subscribe":
+				epf = chatterSubscribeFlags
+
 			case "history":
 				epf = chatterHistoryFlags
 
@@ -149,6 +156,9 @@ func ParseEndpoint(cc *grpc.ClientConn, opts ...grpc.CallOption) (goa.Endpoint, 
 			case "summary":
 				endpoint = c.Summary()
 				data, err = chattersvcc.BuildSummaryPayload(*chatterSummaryTokenFlag)
+			case "subscribe":
+				endpoint = c.Subscribe()
+				data, err = chattersvcc.BuildSubscribePayload(*chatterSubscribeTokenFlag)
 			case "history":
 				endpoint = c.History()
 				data, err = chattersvcc.BuildHistoryPayload(*chatterHistoryViewFlag, *chatterHistoryTokenFlag)
@@ -173,6 +183,7 @@ COMMAND:
     echoer: Echoes the message sent by the client.
     listener: Listens to the messages sent by the client.
     summary: Summarizes the chat messages sent by the client.
+    subscribe: Subscribe to events sent when new chat messages are added.
     history: Returns the chat messages sent to the server.
 
 Additional help:
@@ -198,7 +209,7 @@ Echoes the message sent by the client.
     -token STRING: 
 
 Example:
-    `+os.Args[0]+` chatter echoer --token "Laudantium est consectetur ut."
+    `+os.Args[0]+` chatter echoer --token "Laboriosam ipsam."
 `, os.Args[0])
 }
 
@@ -209,7 +220,7 @@ Listens to the messages sent by the client.
     -token STRING: 
 
 Example:
-    `+os.Args[0]+` chatter listener --token "Unde ea recusandae."
+    `+os.Args[0]+` chatter listener --token "Ea nesciunt maxime molestias natus laboriosam."
 `, os.Args[0])
 }
 
@@ -220,7 +231,18 @@ Summarizes the chat messages sent by the client.
     -token STRING: 
 
 Example:
-    `+os.Args[0]+` chatter summary --token "Ullam quia neque quis qui quia optio."
+    `+os.Args[0]+` chatter summary --token "Ut esse quaerat."
+`, os.Args[0])
+}
+
+func chatterSubscribeUsage() {
+	fmt.Fprintf(os.Stderr, `%s [flags] chatter subscribe -token STRING
+
+Subscribe to events sent when new chat messages are added.
+    -token STRING: 
+
+Example:
+    `+os.Args[0]+` chatter subscribe --token "Quibusdam aliquid in sequi mollitia debitis."
 `, os.Args[0])
 }
 
@@ -232,6 +254,6 @@ Returns the chat messages sent to the server.
     -token STRING: 
 
 Example:
-    `+os.Args[0]+` chatter history --view "Et tempora temporibus eligendi." --token "Excepturi quia soluta."
+    `+os.Args[0]+` chatter history --view "Voluptas tempora repudiandae." --token "Aut quaerat earum."
 `, os.Args[0])
 }

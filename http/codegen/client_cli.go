@@ -56,6 +56,8 @@ type (
 		// MultipartRequestEncoder is the data necessary to render
 		// multipart request encoder.
 		MultipartRequestEncoder *MultipartData
+		// NeedStream if true passes websocket specific arguments to the CLI.
+		NeedStream bool
 	}
 
 	flagData struct {
@@ -362,6 +364,7 @@ func buildSubcommandData(svc *ServiceData, e *EndpointData) *subcommandData {
 		MethodVarName: e.Method.VarName,
 		BuildFunction: buildFunction,
 		Conversion:    conversion,
+		NeedStream:    isStreamingEndpoint(e),
 	}
 	if e.MultipartRequestEncoder != nil {
 		sub.MultipartRequestEncoder = e.MultipartRequestEncoder
@@ -678,7 +681,11 @@ func ParseEndpoint(
 	restore bool,
 	{{- if streamingCmdExists . }}
 	dialer goahttp.Dialer,
-	connConfigFn goahttp.ConnConfigureFunc,
+		{{- range . }}
+			{{- if .NeedStream }}
+				{{ .VarName }}Configurer *{{ .PkgName }}.ConnConfigurer,
+			{{- end }}
+		{{- end }}
 	{{- end }}
 	{{- range $c := . }}
 	{{- range .Subcommands }}
@@ -770,9 +777,9 @@ func ParseEndpoint(
 	)
 	{
 		switch svcn {
-	{{- range . }}
+			{{- range . }}
 		case "{{ .Name }}":
-			c := {{ .PkgName }}.NewClient(scheme, host, doer, enc, dec, restore{{ if .NeedStream }}, dialer, connConfigFn{{- end }})
+			c := {{ .PkgName }}.NewClient(scheme, host, doer, enc, dec, restore{{ if .NeedStream }}, dialer, {{ .VarName }}Configurer{{ end }})
 			switch epn {
 		{{- $pkgName := .PkgName }}{{ range .Subcommands }}
 			case "{{ .Name }}":

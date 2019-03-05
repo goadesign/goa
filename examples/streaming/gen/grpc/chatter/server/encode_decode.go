@@ -146,6 +146,35 @@ func DecodeSummaryRequest(ctx context.Context, v interface{}, md metadata.MD) (i
 	return payload, nil
 }
 
+// DecodeSubscribeRequest decodes requests sent to "chatter" service
+// "subscribe" endpoint.
+func DecodeSubscribeRequest(ctx context.Context, v interface{}, md metadata.MD) (interface{}, error) {
+	var (
+		token string
+		err   error
+	)
+	{
+		if vals := md.Get("authorization"); len(vals) == 0 {
+			err = goa.MergeErrors(err, goa.MissingFieldError("authorization", "metadata"))
+		} else {
+			token = vals[0]
+		}
+	}
+	if err != nil {
+		return nil, err
+	}
+	var payload *chattersvc.SubscribePayload
+	{
+		payload = NewSubscribePayload(token)
+		if strings.Contains(payload.Token, " ") {
+			// Remove authorization scheme prefix (e.g. "Bearer")
+			cred := strings.SplitN(payload.Token, " ", 2)[1]
+			payload.Token = cred
+		}
+	}
+	return payload, nil
+}
+
 // DecodeHistoryRequest decodes requests sent to "chatter" service "history"
 // endpoint.
 func DecodeHistoryRequest(ctx context.Context, v interface{}, md metadata.MD) (interface{}, error) {

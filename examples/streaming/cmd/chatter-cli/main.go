@@ -148,7 +148,7 @@ func main() {
 			} else {
 				prettyPrint(p)
 			}
-		case chattersvc.HistoryClientStream:
+		case chattersvc.SubscribeClientStream:
 			// result streaming
 			for {
 				p, err := stream.Recv()
@@ -156,7 +156,21 @@ func main() {
 					break
 				}
 				if err != nil {
-					fmt.Println(fmt.Errorf("Error reading from stream: %s", err))
+					fmt.Println(fmt.Errorf("Error reading from stream: %v", err))
+					break
+				}
+				prettyPrint(p)
+			}
+		case chattersvc.HistoryClientStream:
+			// result streaming with views
+			for {
+				p, err := stream.Recv()
+				if err == io.EOF {
+					break
+				}
+				if err != nil {
+					fmt.Println(fmt.Errorf("Error reading from stream: %v", err))
+					break
 				}
 				prettyPrint(p)
 			}

@@ -30,6 +30,11 @@ type (
 
 func TestServerStreaming(t *testing.T) {
 	cases := []*testCase{
+		{"mixed-endpoints", testdata.StreamingResultDSL, []*sectionExpectation{
+			{"server-stream-conn-configurer-struct", &testdata.MixedEndpointsConnConfigurerStructCode},
+			{"server-stream-conn-configurer-struct-init", &testdata.MixedEndpointsConnConfigurerInitCode},
+		}},
+
 		// streaming result
 		{"streaming-result", testdata.StreamingResultDSL, []*sectionExpectation{
 			{"server-handler-init", &testdata.StreamingResultServerHandlerInitCode},
@@ -199,6 +204,11 @@ func TestServerStreaming(t *testing.T) {
 
 func TestClientStreaming(t *testing.T) {
 	cases := []*testCase{
+		{"mixed-endpoints", testdata.StreamingResultDSL, []*sectionExpectation{
+			{"client-stream-conn-configurer-struct", &testdata.MixedEndpointsConnConfigurerStructCode},
+			{"client-stream-conn-configurer-struct-init", &testdata.MixedEndpointsConnConfigurerInitCode},
+		}},
+
 		// streaming result
 		{"streaming-result", testdata.StreamingResultDSL, []*sectionExpectation{
 			{"client-endpoint-init", &testdata.StreamingResultClientEndpointCode},
