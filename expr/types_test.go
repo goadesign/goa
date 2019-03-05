@@ -677,15 +677,15 @@ func TestPrimitiveHash(t *testing.T) {
 			p:        Int64,
 			expected: "int64",
 		},
-		"uInt": {
+		"uint": {
 			p:        UInt,
 			expected: "uint",
 		},
-		"uInt32": {
+		"uint32": {
 			p:        UInt32,
 			expected: "uint32",
 		},
-		"uInt64": {
+		"uint64": {
 			p:        UInt64,
 			expected: "uint64",
 		},
