@@ -12,7 +12,7 @@ import (
 type (
 	// HTTPServiceExpr describes a HTTP service. It defines both a result
 	// type and a set of endpoints that can be executed through HTTP
-	// requests. HTTPServiceExpr embeds a HTTPServiceExpr and adds HTTP specific
+	// requests. HTTPServiceExpr embeds a ServiceExpr and adds HTTP specific
 	// properties.
 	HTTPServiceExpr struct {
 		eval.DSLFunc
@@ -95,17 +95,6 @@ func (svc *HTTPServiceExpr) CanonicalEndpoint() *HTTPEndpointExpr {
 		name = "show"
 	}
 	return svc.Endpoint(name)
-}
-
-// URITemplate returns a URI template to this service.
-// The result is the empty string if the service does not have a "show" endpoint
-// and does not define a different canonical endpoint.
-func (svc *HTTPServiceExpr) URITemplate() string {
-	ca := svc.CanonicalEndpoint()
-	if ca == nil || len(ca.Routes) == 0 {
-		return ""
-	}
-	return ca.Routes[0].FullPaths()[0]
 }
 
 // FullPaths computes the base paths to the service endpoints concatenating the

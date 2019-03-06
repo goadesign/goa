@@ -1,15 +1,3 @@
-/*
-Package expr defines types which are used to describe the data structures used
-by both the request and response messages used by services.
-
-There are primitive types corresponding to scalar values (bool, string, integers
-and numbers), array types which represent a collection of items, map types which
-represent maps of key/value pairs and object types describing data structures
-with fields.
-
-The package also defines user types which can also be result types. A result
-type is a user type used to described response messages that defines views.
-*/
 package expr
 
 import (
@@ -70,23 +58,22 @@ type (
 	// their own types.
 	UserType interface {
 		DataType
+		eval.Expression
+		// Finalizes the underlying type.
+		eval.Finalizer
+		// Provides the underlying type and validations.
+		CompositeExpr
 		// ID returns the identifier for the user type.
 		ID() string
 		// Rename changes the type name to the given value.
 		Rename(string)
-		// Attribute provides the underlying type and validations.
-		Attribute() *AttributeExpr
 		// SetAttribute updates the underlying attribute.
 		SetAttribute(*AttributeExpr)
 		// Dup makes a shallow copy of the type and assigns its
 		// attribute with att.
 		Dup(att *AttributeExpr) UserType
-		// EvalName returns the name reported by the DSL engine.
-		EvalName() string
 		// Validate checks that the user type expression is consistent.
 		Validate(ctx string, parent eval.Expression) *eval.ValidationErrors
-		// Finalize finalizes the underlying type.
-		Finalize()
 	}
 
 	// ArrayVal is the type used to set the default value for arrays.

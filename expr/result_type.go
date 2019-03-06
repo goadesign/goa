@@ -21,7 +21,7 @@ type (
 	// types also define views which describe which fields and links to
 	// render when building the response body for the corresponding view.
 	ResultTypeExpr struct {
-		// A result type is a type
+		// A result type is a user type
 		*UserTypeExpr
 		// Identifier is the RFC 6838 result type media type identifier.
 		Identifier string
@@ -166,30 +166,6 @@ func (m *ResultTypeExpr) View(name string) *ViewExpr {
 	return nil
 }
 
-// IsError returns true if the result type is implemented via a goa struct.
-func (m *ResultTypeExpr) IsError() bool {
-	base, params, err := mime.ParseMediaType(m.Identifier)
-	if err != nil {
-		panic("invalid result type identifier " + m.Identifier) // bug
-	}
-	delete(params, "view")
-	return mime.FormatMediaType(base, params) == ErrorResult.Identifier
-}
-
-// ComputeViews returns the result type views recursing as necessary if the result
-// type is a collection.
-func (m *ResultTypeExpr) ComputeViews() []*ViewExpr {
-	if m.Views != nil {
-		return m.Views
-	}
-	if a, ok := m.Type.(*Array); ok {
-		if mt, ok := a.ElemType.Type.(*ResultTypeExpr); ok {
-			return mt.ComputeViews()
-		}
-	}
-	return nil
-}
-
 // HasMultipleViews returns true if the result type has more than one view.
 func (m *ResultTypeExpr) HasMultipleViews() bool {
 	return len(m.Views) > 1
@@ -283,7 +259,6 @@ func projectSingle(m *ResultTypeExpr, view string, seen ...map[string]*Attribute
 				ut = &UserTypeExpr{
 					AttributeExpr: DupAtt(rt.Attribute()),
 					TypeName:      rt.TypeName,
-					Service:       rt.Service,
 				}
 			}
 		}

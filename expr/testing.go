@@ -7,6 +7,7 @@ import (
 )
 
 // RunHTTPDSL returns the http DSL root resulting from running the given DSL.
+// Used only in tests.
 func RunHTTPDSL(t *testing.T, dsl func()) *RootExpr {
 	setupDSLRun()
 
@@ -25,6 +26,7 @@ func RunHTTPDSL(t *testing.T, dsl func()) *RootExpr {
 }
 
 // RunInvalidHTTPDSL returns the error resulting from running the given DSL.
+// It is used only in tests.
 func RunInvalidHTTPDSL(t *testing.T, dsl func()) error {
 	setupDSLRun()
 
@@ -45,6 +47,7 @@ func RunInvalidHTTPDSL(t *testing.T, dsl func()) error {
 }
 
 // RunGRPCDSL returns the gRPC DSL root resulting from running the given DSL.
+// Used only in tests.
 func RunGRPCDSL(t *testing.T, dsl func()) *RootExpr {
 	setupDSLRun()
 
