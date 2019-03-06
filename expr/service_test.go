@@ -79,9 +79,11 @@ func TestServiceExprError(t *testing.T) {
 		},
 	}
 	for k, tc := range cases {
-		if actual := s.Error(tc.name); actual != tc.expected {
-			t.Errorf("%s: got %#v, expected %#v", k, actual, tc.expected)
-		}
+		t.Run(k, func(t *testing.T) {
+			if actual := s.Error(tc.name); actual != tc.expected {
+				t.Errorf("got %#v, expected %#v", actual, tc.expected)
+			}
+		})
 	}
 }
 
