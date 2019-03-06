@@ -720,9 +720,9 @@ func (d ServicesData) analyze(hs *expr.HTTPServiceExpr) *ServiceData {
 		payload := buildPayloadData(a, rd)
 
 		var (
-			hsch  []*service.SchemeData
-			bosch []*service.SchemeData
-			qsch  []*service.SchemeData
+			hsch  service.SchemesData
+			bosch service.SchemesData
+			qsch  service.SchemesData
 			basch *service.SchemeData
 		)
 		{
@@ -734,11 +734,11 @@ func (d ServicesData) analyze(hs *expr.HTTPServiceExpr) *ServiceData {
 					default:
 						switch s.In {
 						case "query":
-							qsch = appendUnique(qsch, s)
+							qsch.Append(s)
 						case "header":
-							hsch = appendUnique(hsch, s)
+							hsch.Append(s)
 						default:
-							bosch = appendUnique(bosch, s)
+							bosch.Append(s)
 						}
 					}
 				}
@@ -2471,20 +2471,6 @@ func unmarshal(source, target *codegen.ContextualAttribute, sourceVar, targetVar
 //
 func marshal(source, target *codegen.ContextualAttribute, sourceVar, targetVar string) (string, []*codegen.TransformFunctionData, error) {
 	return codegen.GoTransform(source, target, sourceVar, targetVar, "marshal")
-}
-
-func appendUnique(s []*service.SchemeData, d *service.SchemeData) []*service.SchemeData {
-	found := false
-	for _, se := range s {
-		if se.Name == d.Name {
-			found = true
-			break
-		}
-	}
-	if found {
-		return s
-	}
-	return append(s, d)
 }
 
 // needConversion returns true if the type needs to be converted from a string.
