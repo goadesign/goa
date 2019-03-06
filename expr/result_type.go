@@ -14,12 +14,8 @@ const (
 )
 
 type (
-	// ResultTypeExpr describes the rendering of a service using field and
-	// link definitions. A field corresponds to a single member of the result
-	// type, it has a name and a type as well as optional validation rules.
-	// A link has a name and a URL that points to a related service. Result
-	// types also define views which describe which fields and links to
-	// render when building the response body for the corresponding view.
+	// ResultTypeExpr is a user type which describes views used to
+	// render responses.
 	ResultTypeExpr struct {
 		// A result type is a user type
 		*UserTypeExpr
@@ -32,10 +28,10 @@ type (
 		Views []*ViewExpr
 	}
 
-	// ViewExpr defines which fields and links to render when building a
-	// response. The view is an object whose field names must match the
-	// names of the parent result type field names. The field definitions are
-	// inherited from the parent result type but may be overridden.
+	// ViewExpr defines which fields to render when building a response. The view
+	// is an object whose field names must match the names of the parent result
+	// type field names. The field definitions are inherited from the parent
+	// result type but may be overridden.
 	ViewExpr struct {
 		// Set of properties included in view
 		*AttributeExpr
@@ -200,8 +196,7 @@ func (m *ResultTypeExpr) Finalize() {
 }
 
 // Project creates a ResultTypeExpr containing the fields defined in the view
-// expression of m named after the view argument. Project also returns a links
-// object created after the link expression of m if there is one.
+// expression of m named after the view argument.
 //
 // The resulting result type defines a default view. The result type identifier is
 // computed by adding a parameter called "view" to the original identifier. The
