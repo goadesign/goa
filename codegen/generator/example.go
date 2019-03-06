@@ -2,7 +2,7 @@ package generator
 
 import (
 	"goa.design/goa/codegen"
-	"goa.design/goa/codegen/server"
+	"goa.design/goa/codegen/example"
 	"goa.design/goa/codegen/service"
 	"goa.design/goa/eval"
 	"goa.design/goa/expr"
@@ -31,12 +31,12 @@ func Example(genpkg string, roots []eval.Root) ([]*codegen.File, error) {
 		}
 
 		// server main
-		if fs := server.ExampleServerFiles(genpkg, r); len(fs) != 0 {
+		if fs := example.ServerFiles(genpkg, r); len(fs) != 0 {
 			files = append(files, fs...)
 		}
 
 		// CLI main
-		if fs := server.ExampleCLIFiles(genpkg, r); len(fs) != 0 {
+		if fs := example.CLIFiles(genpkg, r); len(fs) != 0 {
 			files = append(files, fs...)
 		}
 

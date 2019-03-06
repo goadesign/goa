@@ -1,11 +1,11 @@
-package server
+package example
 
 import (
 	"bytes"
 	"testing"
 
 	"goa.design/goa/codegen"
-	"goa.design/goa/codegen/server/testdata"
+	"goa.design/goa/codegen/example/testdata"
 	"goa.design/goa/codegen/service"
 	"goa.design/goa/expr"
 )
@@ -31,7 +31,7 @@ func TestExampleServerFiles(t *testing.T) {
 			service.Services = make(service.ServicesData)
 			Servers = make(ServersData)
 			codegen.RunDSL(t, c.DSL)
-			fs := ExampleServerFiles("", expr.Root)
+			fs := ServerFiles("", expr.Root)
 			if len(fs) == 0 {
 				t.Fatalf("got 0 files, expected 1")
 			}
