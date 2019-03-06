@@ -56,23 +56,29 @@ func TestServiceExprError(t *testing.T) {
 		name     string
 		expected *ErrorExpr
 	}{
-		"exist": {
+		"exist in service": {
 			name:     "foo",
 			expected: errorFoo,
 		},
+		"exist in root": {
+			name:     "bar",
+			expected: errorBar,
+		},
 		"not exist": {
-			name:     "baz",
+			name:     "qux",
 			expected: nil,
 		},
 	}
 
+	Root.Errors = []*ErrorExpr{
+		errorBar,
+	}
+	s := ServiceExpr{
+		Errors: []*ErrorExpr{
+			errorFoo,
+		},
+	}
 	for k, tc := range cases {
-		s := ServiceExpr{
-			Errors: []*ErrorExpr{
-				errorFoo,
-				errorBar,
-			},
-		}
 		if actual := s.Error(tc.name); actual != tc.expected {
 			t.Errorf("%s: got %#v, expected %#v", k, actual, tc.expected)
 		}
