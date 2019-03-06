@@ -5,8 +5,8 @@ import (
 	"testing"
 
 	"goa.design/goa/codegen"
-	"goa.design/goa/codegen/server"
-	ctestdata "goa.design/goa/codegen/server/testdata"
+	"goa.design/goa/codegen/example"
+	ctestdata "goa.design/goa/codegen/example/testdata"
 	"goa.design/goa/codegen/service"
 	"goa.design/goa/expr"
 	"goa.design/goa/http/codegen/testdata"
@@ -29,7 +29,7 @@ func TestExampleServerFiles(t *testing.T) {
 			// reset global variable
 			HTTPServices = make(ServicesData)
 			service.Services = make(service.ServicesData)
-			server.Servers = make(server.ServersData)
+			example.Servers = make(example.ServersData)
 			codegen.RunDSL(t, c.DSL)
 			fs := ExampleServerFiles("", expr.Root)
 			if len(fs) == 0 {

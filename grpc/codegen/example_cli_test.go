@@ -5,8 +5,8 @@ import (
 	"testing"
 
 	"goa.design/goa/codegen"
-	cserver "goa.design/goa/codegen/server"
-	ctestdata "goa.design/goa/codegen/server/testdata"
+	"goa.design/goa/codegen/example"
+	ctestdata "goa.design/goa/codegen/example/testdata"
 	"goa.design/goa/expr"
 	"goa.design/goa/grpc/codegen/testdata"
 )
@@ -28,7 +28,7 @@ func TestExampleCLIFiles(t *testing.T) {
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
 			// reset global variable
-			cserver.Servers = make(cserver.ServersData)
+			example.Servers = make(example.ServersData)
 			codegen.RunDSL(t, c.DSL)
 			fs := ExampleCLIFiles(c.PkgPath, expr.Root)
 			if len(fs) == 0 {

@@ -13,8 +13,8 @@ import (
 	"goa.design/goa/expr"
 )
 
-// ConvertData contains the info needed to render convert and create functions.
-type ConvertData struct {
+// convertData contains the info needed to render convert and create functions.
+type convertData struct {
 	// Name is the name of the function.
 	Name string
 	// ReceiverTypeRef is a reference to the receiver type.
@@ -149,7 +149,7 @@ func ConvertFile(root *expr.RootExpr, service *expr.ServiceExpr) (*codegen.File,
 				}
 			}
 		}
-		for _, t := range svc.UserTypes {
+		for _, t := range svc.userTypes {
 			if c.User.Name() == t.Name {
 				conversions = append(conversions, c)
 				break
@@ -173,7 +173,7 @@ func ConvertFile(root *expr.RootExpr, service *expr.ServiceExpr) (*codegen.File,
 				}
 			}
 		}
-		for _, t := range svc.UserTypes {
+		for _, t := range svc.userTypes {
 			if c.User.Name() == t.Name {
 				creations = append(creations, c)
 				break
@@ -230,7 +230,7 @@ func ConvertFile(root *expr.RootExpr, service *expr.ServiceExpr) (*codegen.File,
 		t := reflect.TypeOf(c.External)
 		tgtPkg := t.String()
 		tgtPkg = tgtPkg[:strings.Index(tgtPkg, ".")]
-		srcCA := TypeContext(&expr.AttributeExpr{Type: c.User}, "", svc.Scope)
+		srcCA := typeContext(&expr.AttributeExpr{Type: c.User}, "", svc.Scope)
 		tgtCA := codegen.NewGoContextAttr(&expr.AttributeExpr{Type: dt}, tgtPkg, svc.Scope)
 		code, tf, err := codegen.GoTransform(srcCA, tgtCA, "t", "v", "transform")
 		if err != nil {
@@ -243,7 +243,7 @@ func ConvertFile(root *expr.RootExpr, service *expr.ServiceExpr) (*codegen.File,
 		if expr.IsObject(c.User) {
 			ref = "*" + ref
 		}
-		data := ConvertData{
+		data := convertData{
 			Name:            name,
 			ReceiverTypeRef: srcCA.Attribute.Ref(),
 			TypeName:        t.Name(),
@@ -267,7 +267,7 @@ func ConvertFile(root *expr.RootExpr, service *expr.ServiceExpr) (*codegen.File,
 		srcPkg := t.String()
 		srcPkg = srcPkg[:strings.Index(srcPkg, ".")]
 		srcCA := codegen.NewGoContextAttr(&expr.AttributeExpr{Type: dt}, srcPkg, svc.Scope)
-		tgtCA := TypeContext(&expr.AttributeExpr{Type: c.User}, "", svc.Scope)
+		tgtCA := typeContext(&expr.AttributeExpr{Type: c.User}, "", svc.Scope)
 		code, tf, err := codegen.GoTransform(srcCA, tgtCA, "v", "temp", "transform")
 		if err != nil {
 			return nil, err
@@ -279,7 +279,7 @@ func ConvertFile(root *expr.RootExpr, service *expr.ServiceExpr) (*codegen.File,
 		if expr.IsObject(c.User) {
 			ref = "*" + ref
 		}
-		data := ConvertData{
+		data := convertData{
 			Name:            name,
 			ReceiverTypeRef: tgtCA.Attribute.Ref(),
 			TypeRef:         ref,
@@ -707,7 +707,7 @@ func compatible(from expr.DataType, to reflect.Type, recs ...compRec) error {
 	return fmt.Errorf("types don't match: type of %s is %s but type of corresponding attribute is %s", rec.path, toName, from.Name())
 }
 
-// input: ConvertData
+// input: convertData
 const convertT = `{{ printf "%s creates an instance of %s initialized from t." .Name .TypeName | comment }}
 func (t {{ .ReceiverTypeRef }}) {{ .Name }}() {{ .TypeRef }} {
     {{ .Code }}
@@ -715,7 +715,7 @@ func (t {{ .ReceiverTypeRef }}) {{ .Name }}() {{ .TypeRef }} {
 }
 `
 
-// input: ConvertData
+// input: convertData
 const createT = `{{ printf "%s initializes t from the fields of v" .Name | comment }}
 func (t {{ .ReceiverTypeRef }}) {{ .Name }}(v {{ .TypeRef }}) {
 	{{ .Code }}

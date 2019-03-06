@@ -8,8 +8,8 @@ import (
 )
 
 const (
-	// ClientStructName is the name of the generated client data structure.
-	ClientStructName = "Client"
+	// clientStructName is the name of the generated client data structure.
+	clientStructName = "Client"
 )
 
 // ClientFile returns the client file for the given service.
@@ -49,7 +49,7 @@ func ClientFile(service *expr.ServiceExpr) *codegen.File {
 	return &codegen.File{Path: path, SectionTemplates: sections}
 }
 
-// input: EndpointsData
+// input: endpointsData
 const serviceClientT = `// {{ .ClientVarName }} is the {{ printf "%q" .Name }} service client.
 type {{ .ClientVarName }} struct {
 {{- range .Methods}}
@@ -58,7 +58,7 @@ type {{ .ClientVarName }} struct {
 }
 `
 
-// input: EndpointsData
+// input: endpointsData
 const serviceClientInitT = `{{ printf "New%s initializes a %q service client given the endpoints." .ClientVarName .Name | comment }}
 func New{{ .ClientVarName }}({{ .ClientInitArgs }} goa.Endpoint) *{{ .ClientVarName }} {
 	return &{{ .ClientVarName }}{
@@ -69,7 +69,7 @@ func New{{ .ClientVarName }}({{ .ClientInitArgs }} goa.Endpoint) *{{ .ClientVarN
 }
 `
 
-// input: EndpointsData
+// input: endpointsData
 const serviceClientMethodT = `
 {{ printf "%s calls the %q endpoint of the %q service." .VarName .Name .ServiceName | comment }}
 {{- if .Errors }}

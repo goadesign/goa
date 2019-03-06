@@ -14,11 +14,11 @@ type viewedType struct {
 	Views []*ViewData
 }
 
-// ViewsFile returns the views file for the given service to render result
-// types (if any) using the defined views.
+// ViewsFile returns the views file for the given service which contains
+// logic to render result types using the defined views.
 func ViewsFile(genpkg string, service *expr.ServiceExpr) *codegen.File {
 	svc := Services.Get(service.Name)
-	if len(svc.ProjectedTypes) == 0 {
+	if len(svc.projectedTypes) == 0 {
 		return nil
 	}
 	path := filepath.Join(codegen.Gendir, codegen.SnakeCase(service.Name), "views", "view.go")
@@ -34,14 +34,14 @@ func ViewsFile(genpkg string, service *expr.ServiceExpr) *codegen.File {
 		sections = []*codegen.SectionTemplate{header}
 
 		// type definitions
-		for _, t := range svc.ViewedResultTypes {
+		for _, t := range svc.viewedResultTypes {
 			sections = append(sections, &codegen.SectionTemplate{
 				Name:   "viewed-result-type",
 				Source: userTypeT,
 				Data:   t.UserTypeData,
 			})
 		}
-		for _, t := range svc.ProjectedTypes {
+		for _, t := range svc.projectedTypes {
 			sections = append(sections, &codegen.SectionTemplate{
 				Name:   "projected-type",
 				Source: userTypeT,
@@ -56,14 +56,14 @@ func ViewsFile(genpkg string, service *expr.ServiceExpr) *codegen.File {
 			seen   = make(map[string]struct{})
 		)
 		{
-			for _, t := range svc.ViewedResultTypes {
+			for _, t := range svc.viewedResultTypes {
 				name := t.Views[0].TypeVarName
 				if _, ok := seen[name]; !ok {
 					rtdata = append(rtdata, &viewedType{Name: name, Views: t.Views})
 					seen[name] = struct{}{}
 				}
 			}
-			for _, t := range svc.ProjectedTypes {
+			for _, t := range svc.projectedTypes {
 				if len(t.Views) == 0 {
 					continue
 				}
@@ -83,14 +83,14 @@ func ViewsFile(genpkg string, service *expr.ServiceExpr) *codegen.File {
 		})
 
 		// validations
-		for _, t := range svc.ViewedResultTypes {
+		for _, t := range svc.viewedResultTypes {
 			sections = append(sections, &codegen.SectionTemplate{
 				Name:   "validate-viewed-result-type",
 				Source: validateT,
 				Data:   t.Validate,
 			})
 		}
-		for _, t := range svc.ProjectedTypes {
+		for _, t := range svc.projectedTypes {
 			for _, v := range t.Validations {
 				sections = append(sections, &codegen.SectionTemplate{
 					Name:   "validate-projected-type",

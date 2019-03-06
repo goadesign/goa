@@ -286,6 +286,13 @@ func DecodeMethodMessageWithSecurityRequest(ctx context.Context, v interface{}, 
 				payload.Token = &cred
 			}
 		}
+		if payload.Key != nil {
+			if strings.Contains(*payload.Key, " ") {
+				// Remove authorization scheme prefix (e.g. "Bearer")
+				cred := strings.SplitN(*payload.Key, " ", 2)[1]
+				payload.Key = &cred
+			}
+		}
 	}
 	return payload, nil
 }
