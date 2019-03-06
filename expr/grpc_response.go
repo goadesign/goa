@@ -7,8 +7,8 @@ import (
 )
 
 type (
-	// GRPCResponseExpr defines a gRPC response including its status code
-	// and result type.
+	// GRPCResponseExpr defines a gRPC response including its status code, result
+	// type, and metadata.
 	GRPCResponseExpr struct {
 		// gRPC status code
 		StatusCode int
@@ -37,8 +37,7 @@ func (r *GRPCResponseExpr) EvalName() string {
 	return "gRPC response" + suffix
 }
 
-// Prepare makes sure the response is initialized even if not done explicitly
-// by
+// Prepare makes sure the response message and metadata are initialized.
 func (r *GRPCResponseExpr) Prepare() {
 	if r.Message == nil {
 		r.Message = &AttributeExpr{Type: Empty}

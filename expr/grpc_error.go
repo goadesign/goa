@@ -10,8 +10,7 @@ type (
 	GRPCErrorExpr struct {
 		// ErrorExpr is the underlying goa design error expression.
 		*ErrorExpr
-		// Name of error, we need a separate copy of the name to match it
-		// up with the appropriate ErrorExpr.
+		// Name of error to match it up with the appropriate ErrorExpr.
 		Name string
 		// Response is the corresponding gRPC response.
 		Response *GRPCResponseExpr

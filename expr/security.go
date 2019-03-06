@@ -87,7 +87,7 @@ type (
 		RefreshURL string
 	}
 
-	// A ScopeExpr defines a scope name and description.
+	// ScopeExpr defines a security scope.
 	ScopeExpr struct {
 		// Name of the scope.
 		Name string

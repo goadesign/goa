@@ -14,14 +14,10 @@ const (
 )
 
 type (
-	// ResultTypeExpr describes the rendering of a service using field and
-	// link definitions. A field corresponds to a single member of the result
-	// type, it has a name and a type as well as optional validation rules.
-	// A link has a name and a URL that points to a related service. Result
-	// types also define views which describe which fields and links to
-	// render when building the response body for the corresponding view.
+	// ResultTypeExpr is a user type which describes views used to
+	// render responses.
 	ResultTypeExpr struct {
-		// A result type is a type
+		// A result type is a user type
 		*UserTypeExpr
 		// Identifier is the RFC 6838 result type media type identifier.
 		Identifier string
@@ -32,10 +28,10 @@ type (
 		Views []*ViewExpr
 	}
 
-	// ViewExpr defines which fields and links to render when building a
-	// response. The view is an object whose field names must match the
-	// names of the parent result type field names. The field definitions are
-	// inherited from the parent result type but may be overridden.
+	// ViewExpr defines which fields to render when building a response. The view
+	// is an object whose field names must match the names of the parent result
+	// type field names. The field definitions are inherited from the parent
+	// result type but may be overridden.
 	ViewExpr struct {
 		// Set of properties included in view
 		*AttributeExpr
@@ -166,30 +162,6 @@ func (m *ResultTypeExpr) View(name string) *ViewExpr {
 	return nil
 }
 
-// IsError returns true if the result type is implemented via a goa struct.
-func (m *ResultTypeExpr) IsError() bool {
-	base, params, err := mime.ParseMediaType(m.Identifier)
-	if err != nil {
-		panic("invalid result type identifier " + m.Identifier) // bug
-	}
-	delete(params, "view")
-	return mime.FormatMediaType(base, params) == ErrorResult.Identifier
-}
-
-// ComputeViews returns the result type views recursing as necessary if the result
-// type is a collection.
-func (m *ResultTypeExpr) ComputeViews() []*ViewExpr {
-	if m.Views != nil {
-		return m.Views
-	}
-	if a, ok := m.Type.(*Array); ok {
-		if mt, ok := a.ElemType.Type.(*ResultTypeExpr); ok {
-			return mt.ComputeViews()
-		}
-	}
-	return nil
-}
-
 // HasMultipleViews returns true if the result type has more than one view.
 func (m *ResultTypeExpr) HasMultipleViews() bool {
 	return len(m.Views) > 1
@@ -224,8 +196,7 @@ func (m *ResultTypeExpr) Finalize() {
 }
 
 // Project creates a ResultTypeExpr containing the fields defined in the view
-// expression of m named after the view argument. Project also returns a links
-// object created after the link expression of m if there is one.
+// expression of m named after the view argument.
 //
 // The resulting result type defines a default view. The result type identifier is
 // computed by adding a parameter called "view" to the original identifier. The
@@ -283,7 +254,6 @@ func projectSingle(m *ResultTypeExpr, view string, seen ...map[string]*Attribute
 				ut = &UserTypeExpr{
 					AttributeExpr: DupAtt(rt.Attribute()),
 					TypeName:      rt.TypeName,
-					Service:       rt.Service,
 				}
 			}
 		}

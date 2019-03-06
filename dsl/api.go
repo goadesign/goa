@@ -34,6 +34,12 @@ import (
 //            Description("doc description")
 //            URL("doc URL")
 //        })
+//        Server("addersvr", func() {
+//            Host("development", func() {
+//                URI("http://localhost:80")
+//                URI("grpc://localhost:8080")
+//            })
+//        })
 //    }
 //
 func API(name string, fn func()) *expr.APIExpr {

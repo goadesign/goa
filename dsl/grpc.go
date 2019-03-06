@@ -86,7 +86,7 @@ const (
 //                 Attribute("token")
 //             })
 //             Response(CodeOK)     // gRPC success response
-//             Response("unauthenticated", CodeUnauthenticated) // grpc error
+//             Response("unauthenticated", CodeUnauthenticated) // gRPC error
 //         })
 //     })
 //

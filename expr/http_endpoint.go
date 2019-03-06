@@ -10,14 +10,14 @@ import (
 )
 
 type (
-	// HTTPEndpointExpr describes a service endpoint. It embeds a
-	// MethodExpr and adds HTTP specific properties.
+	// HTTPEndpointExpr describes a HTTP endpoint. It embeds a MethodExpr and
+	// adds HTTP specific properties.
 	//
 	// It defines both an HTTP endpoint and the shape of HTTP requests and
 	// responses made to that endpoint. The shape of requests is defined via
-	// "parameters", there are path parameters (i.e. portions of the URL
-	// that define parameter values), query string parameters and a payload
-	// parameter (request body).
+	// "parameters", there are path parameters (i.e. portions of the URL that
+	// define parameter values), query string parameters and a payload parameter
+	// (request body).
 	HTTPEndpointExpr struct {
 		eval.DSLFunc
 		// MethodExpr is the underlying method expression.
