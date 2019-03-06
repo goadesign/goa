@@ -1,4 +1,4 @@
-package server
+package example
 
 import (
 	"os"
@@ -9,9 +9,9 @@ import (
 	"goa.design/goa/expr"
 )
 
-// ExampleCLIFiles returns example client tool main implementation for each
-// server expression in the design.
-func ExampleCLIFiles(genpkg string, root *expr.RootExpr) []*codegen.File {
+// CLIFiles returns example client tool main implementation for each server
+// expression in the design.
+func CLIFiles(genpkg string, root *expr.RootExpr) []*codegen.File {
 	var fw []*codegen.File
 	for _, svr := range root.API.Servers {
 		if m := exampleCLIMain(genpkg, root, svr); m != nil {

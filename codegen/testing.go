@@ -139,7 +139,7 @@ func NewUseDefaultContext(att Attributor) *ContextualAttribute {
 }
 
 // NewPointerContext returns a contextual attribute which uses pointers for all
-// attributes.
+// attributes. It is used only in tests.
 func NewPointerContext(att Attributor) *ContextualAttribute {
 	return &ContextualAttribute{
 		Attribute:  att,

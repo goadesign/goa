@@ -10,9 +10,9 @@ import (
 )
 
 type (
-	// EndpointsData contains the data necessary to render the
+	// endpointsData contains the data necessary to render the
 	// service endpoints struct template.
-	EndpointsData struct {
+	endpointsData struct {
 		// Name is the service name.
 		Name string
 		// Description is the service description.
@@ -24,16 +24,16 @@ type (
 		// ServiceVarName is the service interface name.
 		ServiceVarName string
 		// Methods lists the endpoint struct methods.
-		Methods []*EndpointMethodData
+		Methods []*endpointMethodData
 		// ClientInitArgs lists the arguments needed to instantiate the client.
 		ClientInitArgs string
 		// Schemes contains the security schemes types used by the
-		// method.
-		Schemes []string
+		// all the endpoints.
+		Schemes SchemesData
 	}
 
-	// EndpointMethodData describes a single endpoint method.
-	EndpointMethodData struct {
+	// endpointMethodData describes a single endpoint method.
+	endpointMethodData struct {
 		*MethodData
 		// ArgName is the name of the argument used to initialize the client
 		// struct method field.
@@ -44,26 +44,16 @@ type (
 		ServiceName string
 		// ServiceVarName is the name of the owner service Go interface.
 		ServiceVarName string
-		// Errors list the possible errors defined in the design if any.
-		Errors []*ErrorInitData
-		// Requirements list the security requirements that apply to the
-		// endpoint. One requirement contains a list of schemes, the
-		// incoming requests must validate at least one scheme in each
-		// requirement to be authorized.
-		Requirements []*RequirementData
-		// Schemes contains the security schemes types used by the
-		// method.
-		Schemes []string
 	}
 )
 
 const (
-	// EndpointsStructName is the name of the generated endpoints data
+	// endpointsStructName is the name of the generated endpoints data
 	// structure.
-	EndpointsStructName = "Endpoints"
+	endpointsStructName = "Endpoints"
 
-	// ServiceInterfaceName is the name of the generated service interface.
-	ServiceInterfaceName = "Service"
+	// serviceInterfaceName is the name of the generated service interface.
+	serviceInterfaceName = "Service"
 )
 
 // EndpointFile returns the endpoint file for the given service.
@@ -123,57 +113,41 @@ func EndpointFile(genpkg string, service *expr.ServiceExpr) *codegen.File {
 	return &codegen.File{Path: path, SectionTemplates: sections}
 }
 
-func endpointData(service *expr.ServiceExpr) *EndpointsData {
+func endpointData(service *expr.ServiceExpr) *endpointsData {
 	svc := Services.Get(service.Name)
-	methods := make([]*EndpointMethodData, len(svc.Methods))
-	var schemes []string
+	methods := make([]*endpointMethodData, len(svc.Methods))
 	names := make([]string, len(svc.Methods))
 	for i, m := range svc.Methods {
-		methods[i] = &EndpointMethodData{
+		methods[i] = &endpointMethodData{
 			MethodData:     m,
 			ArgName:        codegen.Goify(m.VarName, false),
 			ServiceName:    svc.Name,
-			ServiceVarName: ServiceInterfaceName,
-			ClientVarName:  ClientStructName,
-			Errors:         m.Errors,
-			Requirements:   m.Requirements,
-			Schemes:        m.Schemes,
+			ServiceVarName: serviceInterfaceName,
+			ClientVarName:  clientStructName,
 		}
 		names[i] = codegen.Goify(m.VarName, false)
-		for _, s := range m.Schemes {
-			found := false
-			for _, s2 := range schemes {
-				if s == s2 {
-					found = true
-					break
-				}
-			}
-			if !found {
-				schemes = append(schemes, s)
-			}
-		}
 	}
-	desc := fmt.Sprintf("%s wraps the %q service endpoints.", EndpointsStructName, service.Name)
-	return &EndpointsData{
+	desc := fmt.Sprintf("%s wraps the %q service endpoints.", endpointsStructName, service.Name)
+	return &endpointsData{
 		Name:           service.Name,
 		Description:    desc,
-		VarName:        EndpointsStructName,
-		ClientVarName:  ClientStructName,
-		ServiceVarName: ServiceInterfaceName,
+		VarName:        endpointsStructName,
+		ClientVarName:  clientStructName,
+		ServiceVarName: serviceInterfaceName,
 		ClientInitArgs: strings.Join(names, ", "),
 		Methods:        methods,
-		Schemes:        schemes,
+		Schemes:        svc.Schemes,
 	}
 }
 
-func payloadVar(e *EndpointMethodData) string {
+func payloadVar(e *endpointMethodData) string {
 	if e.ServerStream != nil {
 		return "ep.Payload"
 	}
 	return "p"
 }
 
-// input: EndpointsData
+// input: endpointsData
 const serviceEndpointsT = `{{ comment .Description }}
 type {{ .VarName }} struct {
 {{- range .Methods}}
@@ -182,7 +156,7 @@ type {{ .VarName }} struct {
 }
 `
 
-// input: EndpointsData
+// input: endpointsData
 const serviceEndpointsInitT = `{{ printf "New%s wraps the methods of the %q service with endpoints." .VarName .Name | comment }}
 func New{{ .VarName }}(s {{ .ServiceVarName }}) *{{ .VarName }} {
 {{- if .Schemes }}
@@ -191,13 +165,13 @@ func New{{ .VarName }}(s {{ .ServiceVarName }}) *{{ .VarName }} {
 {{- end }}
 	return &{{ .VarName }}{
 {{- range .Methods }}
-		{{ .VarName }}: New{{ .VarName }}Endpoint(s{{ range .Schemes }}, a.{{ . }}Auth{{ end }}),
+		{{ .VarName }}: New{{ .VarName }}Endpoint(s{{ range .Schemes }}, a.{{ .Type }}Auth{{ end }}),
 {{- end }}
 	}
 }
 `
 
-// input: EndpointMethodData
+// input: endpointMethodData
 const serviceEndpointInputStructT = `{{ printf "%s is the input type of %q endpoint that holds the method payload and the server stream." .ServerStream.EndpointStruct .Name | comment }}
 type {{ .ServerStream.EndpointStruct }} struct {
 {{- if .PayloadRef }}
@@ -209,9 +183,9 @@ type {{ .ServerStream.EndpointStruct }} struct {
 }
 `
 
-// input: EndpointMethodData
+// input: endpointMethodData
 const serviceEndpointMethodT = `{{ printf "New%sEndpoint returns an endpoint function that calls the method %q of service %q." .VarName .Name .ServiceName | comment }}
-func New{{ .VarName }}Endpoint(s {{ .ServiceVarName }}{{ range .Schemes }}, auth{{ . }}Fn security.Auth{{ . }}Func{{ end }}) goa.Endpoint {
+func New{{ .VarName }}Endpoint(s {{ .ServiceVarName }}{{ range .Schemes }}, auth{{ .Type }}Fn security.Auth{{ .Type }}Func{{ end }}) goa.Endpoint {
 	return func(ctx context.Context, req interface{}) (interface{}, error) {
 {{- if .ServerStream }}
 		ep := req.(*{{ .ServerStream.EndpointStruct }})
@@ -337,7 +311,7 @@ func New{{ .VarName }}Endpoint(s {{ .ServiceVarName }}{{ range .Schemes }}, auth
 }
 `
 
-// input: EndpointMethodData
+// input: endpointMethodData
 const serviceEndpointsUseT = `{{ printf "Use applies the given middleware to all the %q service endpoints." .Name | comment }}
 func (e *{{ .VarName }}) Use(m func(goa.Endpoint) goa.Endpoint) {
 {{- range .Methods }}

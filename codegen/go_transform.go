@@ -53,7 +53,7 @@ type (
 	}
 )
 
-// NewGoAttribute returns an attribute that produces Go code.
+// NewGoAttribute returns an Attributor that produces Go code.
 func NewGoAttribute(att *expr.AttributeExpr, pkg string, scope *NameScope) Attributor {
 	return &GoAttribute{
 		Attribute: att,
@@ -102,7 +102,7 @@ func GoTransform(source, target *ContextualAttribute, sourceVar, targetVar, pref
 // The matching and generated code leverage mapped attributes so that attribute
 // names may use the "name:elem" syntax to define the name of the design
 // attribute and the name of the corresponding generated Go struct field.
-// The function returns an error if source or target are not object types
+// The function returns an error if source or target is not object type
 // or has fields of different types.
 //
 // source and target are the attributes of object type used in the

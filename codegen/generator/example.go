@@ -2,7 +2,7 @@ package generator
 
 import (
 	"goa.design/goa/codegen"
-	"goa.design/goa/codegen/server"
+	"goa.design/goa/codegen/example"
 	"goa.design/goa/codegen/service"
 	"goa.design/goa/eval"
 	"goa.design/goa/expr"
@@ -11,7 +11,7 @@ import (
 )
 
 // Example iterates through the roots and returns files that implement an
-// example service and client.
+// example service, server, and client.
 func Example(genpkg string, roots []eval.Root) ([]*codegen.File, error) {
 	var files []*codegen.File
 	for _, root := range roots {
@@ -31,12 +31,12 @@ func Example(genpkg string, roots []eval.Root) ([]*codegen.File, error) {
 		}
 
 		// server main
-		if fs := server.ExampleServerFiles(genpkg, r); len(fs) != 0 {
+		if fs := example.ServerFiles(genpkg, r); len(fs) != 0 {
 			files = append(files, fs...)
 		}
 
 		// CLI main
-		if fs := server.ExampleCLIFiles(genpkg, r); len(fs) != 0 {
+		if fs := example.CLIFiles(genpkg, r); len(fs) != 0 {
 			files = append(files, fs...)
 		}
 

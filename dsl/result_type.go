@@ -376,7 +376,7 @@ func Reference(t expr.DataType) {
 //    })
 //
 //    var UpdateBottlePayload = Type("UpatePayload", func() {
-//        Atribute("id", String, "ID of bottle to update")
+//        Attribute("id", String, "ID of bottle to update")
 //        Extend(CreateBottlePayload) // Adds attributes "name" and "vintage"
 //    })
 //

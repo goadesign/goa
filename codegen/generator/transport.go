@@ -12,7 +12,7 @@ import (
 
 // Transport iterates through the roots and returns the files needed to render
 // the transport code. It returns an error if the roots slice does not include
-// at least one transport design roots.
+// at least one transport design.
 func Transport(genpkg string, roots []eval.Root) ([]*codegen.File, error) {
 	var files []*codegen.File
 	for _, root := range roots {
@@ -38,7 +38,7 @@ func Transport(genpkg string, roots []eval.Root) ([]*codegen.File, error) {
 		files = append(files, grpccodegen.ClientCLIFiles(genpkg, r)...)
 	}
 	if len(files) == 0 {
-		return nil, fmt.Errorf("transport: no HTTP design found")
+		return nil, fmt.Errorf("transport: no HTTP/gRPC design found")
 	}
 	return files, nil
 }

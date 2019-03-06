@@ -459,7 +459,7 @@ func (d ServicesData) analyze(gs *expr.GRPCServiceExpr) *ServiceData {
 			request *RequestData
 			reqMD   []*MetadataData
 
-			payload = service.TypeContext(e.MethodExpr.Payload, svc.PkgName, svc.Scope)
+			payload = serviceTypeContext(e.MethodExpr.Payload, svc.PkgName, svc.Scope)
 			req     = protoBufContext(e.Request, sd.PkgName, sd.Scope)
 		)
 		{
@@ -530,19 +530,20 @@ func (d ServicesData) analyze(gs *expr.GRPCServiceExpr) *ServiceData {
 
 		// gather security requirements
 		var (
-			msgSch []*service.SchemeData
-			metSch []*service.SchemeData
+			msgSch service.SchemesData
+			metSch service.SchemesData
 		)
 		{
 			for _, req := range e.Requirements {
 				for _, sch := range req.Schemes {
-					s := service.Scheme(md.Requirements, sch.SchemeName).Dup()
+					s := md.Requirements.Scheme(sch.SchemeName).Dup()
 					s.In = sch.In
+					fmt.Println(s.In)
 					switch s.In {
 					case "message":
-						msgSch = service.AppendScheme(msgSch, s)
+						msgSch = msgSch.Append(s)
 					default:
-						metSch = service.AppendScheme(metSch, s)
+						metSch = metSch.Append(s)
 					}
 				}
 			}
@@ -969,7 +970,7 @@ func buildStreamData(e *expr.GRPCEndpointExpr, sd *ServiceData, svr bool) *Strea
 		svc      = sd.Service
 		ed       = sd.Endpoint(e.Name())
 		md       = ed.Method
-		spayload = service.TypeContext(e.MethodExpr.StreamingPayload, svc.PkgName, svc.Scope)
+		spayload = serviceTypeContext(e.MethodExpr.StreamingPayload, svc.PkgName, svc.Scope)
 		result   = resultContext(e, sd)
 		request  = protoBufContext(e.StreamingRequest, sd.PkgName, sd.Scope)
 		response = protoBufContext(e.Response.Message, sd.PkgName, sd.Scope)
@@ -1123,6 +1124,17 @@ func extractMetadata(a *expr.MappedAttributeExpr, service *codegen.ContextualAtt
 	return metadata
 }
 
+// serviceTypeContext returns a contextual attribute for service types. Service
+// types are Go types and uses non-pointers to hold attributes having default
+// values.
+func serviceTypeContext(att *expr.AttributeExpr, pkg string, scope *codegen.NameScope) *codegen.ContextualAttribute {
+	return &codegen.ContextualAttribute{
+		Attribute:  codegen.NewGoAttribute(att, pkg, scope),
+		Required:   true,
+		UseDefault: true,
+	}
+}
+
 // resultContext returns the contextual attributer for the result of the given
 // endpoint.
 func resultContext(e *expr.GRPCEndpointExpr, sd *ServiceData) *codegen.ContextualAttribute {
@@ -1130,9 +1142,14 @@ func resultContext(e *expr.GRPCEndpointExpr, sd *ServiceData) *codegen.Contextua
 	md := svc.Method(e.Name())
 	if md.ViewedResult != nil {
 		vresAtt := expr.AsObject(md.ViewedResult.Type).Attribute("projected")
-		return service.ProjectedTypeContext(vresAtt, svc.ViewsPkg, svc.ViewScope)
+		// return projected type context
+		return &codegen.ContextualAttribute{
+			Attribute:  codegen.NewGoAttribute(vresAtt, svc.ViewsPkg, svc.ViewScope),
+			Pointer:    true,
+			UseDefault: true,
+		}
 	}
-	return service.TypeContext(e.MethodExpr.Result, svc.PkgName, svc.Scope)
+	return serviceTypeContext(e.MethodExpr.Result, svc.PkgName, svc.Scope)
 }
 
 // isEmpty returns true if given type is empty.
