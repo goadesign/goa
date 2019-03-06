@@ -67,7 +67,8 @@ func (a *AttributeExpr) Example(r *Random) interface{} {
 	return a.Type.Example(r)
 }
 
-// NewLength returns an int that validates the generator attribute length validations if any.
+// NewLength returns an int that validates the generator attribute length
+// validations if any.
 func NewLength(a *AttributeExpr, r *Random) int {
 	if hasLengthValidation(a) {
 		minlength, maxlength := math.Inf(1), math.Inf(-1)

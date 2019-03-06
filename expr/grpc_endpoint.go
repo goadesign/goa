@@ -7,7 +7,7 @@ import (
 )
 
 type (
-	// GRPCEndpointExpr describes a service endpoint. It embeds a MethodExpr
+	// GRPCEndpointExpr describes a gRPC endpoint. It embeds a MethodExpr
 	// and adds gRPC specific properties.
 	GRPCEndpointExpr struct {
 		eval.DSLFunc

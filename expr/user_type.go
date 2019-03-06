@@ -1,14 +1,12 @@
 package expr
 
 type (
-	// UserTypeExpr is the struct used to describe user defined types.
+	// UserTypeExpr describes user defined types.
 	UserTypeExpr struct {
-		// A user type expression is a field expression.
+		// The embedded attribute expression.
 		*AttributeExpr
 		// Name of type
 		TypeName string
-		// Service this type is the default type for if any
-		Service *ServiceExpr
 	}
 )
 
@@ -20,7 +18,7 @@ func NewUserTypeExpr(name string, fn func()) *UserTypeExpr {
 	}
 }
 
-// ID returns the type name of the user type.
+// ID returns the identifier (type name) for the user type.
 func (u *UserTypeExpr) ID() string {
 	return u.Name()
 }
@@ -66,7 +64,6 @@ func (u *UserTypeExpr) Dup(att *AttributeExpr) UserType {
 	return &UserTypeExpr{
 		AttributeExpr: att,
 		TypeName:      u.TypeName,
-		Service:       u.Service,
 	}
 }
 

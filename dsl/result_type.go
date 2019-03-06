@@ -145,20 +145,36 @@ func TypeName(name string) {
 //
 // Examples:
 //
-//	View("default", func() {
-//		// "id" and "name" must be result type attributes
-//		Attribute("id")
-//		Attribute("name")
-//	})
+//    var MyResultType = ResultType("application/vnd.goa.my", func() {
+//        Attributes(func() {
+//            Attribute("id", String)
+//            Attribute("name", String)
+//            Attribute("origin", OriginResult)
+//        })
 //
-//	View("extended", func() {
-//		Attribute("id")
-//		Attribute("name")
-//		Attribute("origin", func() {
-//			// Use view "extended" to render attribute "origin"
-//			View("extended")
-//		})
-//	})
+//        View("default", func() {
+//            // "id" and "name" must be result type attributes
+//            Attribute("id")
+//            Attribute("name")
+//        })
+//
+//        View("extended", func() {
+//            Attribute("id")
+//            Attribute("name")
+//            Attribute("origin", func() {
+//                // Use view "extended" to render attribute "origin"
+//                View("extended")
+//            })
+//        })
+//    })
+//
+//    Result(MyResultType, func() {
+//        View("extended")
+//    })
+//
+//    Result(CollectionOf(MyResultType), func() {
+//        View("default")
+//    })
 //
 func View(name string, adsl ...func()) {
 	switch e := eval.Current().(type) {
@@ -226,13 +242,22 @@ func View(name string, adsl ...func()) {
 //     var DivisionResult = ResultType("application/vnd.goa.divresult", func() {
 //         Attributes(func() {
 //             Attribute("value", Float64)
+//             Attribute("remainder", Int)
 //         })
 //         View("default", func() {
+//             Attribute("value")
+//             Attribute("remainder")
+//         })
+//         View("tiny", func() {
 //             Attribute("value")
 //         })
 //     })
 //
 //     var MultiResults = CollectionOf(DivisionResult)
+//
+//     var TinyMultiResults = CollectionOf(DivisionResult, func() {
+//         View("tiny")  // use "tiny" view to render the collection elements
+//     })
 //
 func CollectionOf(v interface{}, adsl ...func()) *expr.ResultTypeExpr {
 	var m *expr.ResultTypeExpr

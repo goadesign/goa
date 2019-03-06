@@ -40,31 +40,6 @@ func TestResultTypeExprView(t *testing.T) {
 	}
 }
 
-func TestResultTypeExprIsError(t *testing.T) {
-	cases := map[string]struct {
-		identifier string
-		expected   bool
-	}{
-		"error": {
-			identifier: "application/vnd.goa.error",
-			expected:   true,
-		},
-		"not error": {
-			identifier: "application/vnd.goa.foo",
-			expected:   false,
-		},
-	}
-
-	for k, tc := range cases {
-		r := ResultTypeExpr{
-			Identifier: tc.identifier,
-		}
-		if actual := r.IsError(); tc.expected != actual {
-			t.Errorf("%s: got %#v, expected %#v", k, actual, tc.expected)
-		}
-	}
-}
-
 func TestCanonicalIdentifier(t *testing.T) {
 	cases := map[string]struct {
 		identifier string
