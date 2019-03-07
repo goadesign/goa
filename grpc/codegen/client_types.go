@@ -8,7 +8,11 @@ import (
 	"goa.design/goa/expr"
 )
 
-// ClientTypeFiles returns the gRPC transport type files.
+// ClientTypeFiles returns the types file for every gRPC service that contain
+// constructors to transform:
+//
+//   * service payload types into protocol buffer request message types
+//   * protocol buffer response message types into service result types
 func ClientTypeFiles(genpkg string, root *expr.RootExpr) []*codegen.File {
 	fw := make([]*codegen.File, len(root.API.GRPC.Services))
 	seen := make(map[string]struct{})
@@ -54,7 +58,7 @@ func clientType(genpkg string, svc *expr.GRPCServiceExpr, seen map[string]struct
 				}
 			}
 		}
-		for _, v := range sd.Validations {
+		for _, v := range sd.validations {
 			validated = append(validated, v)
 		}
 	}
@@ -90,7 +94,7 @@ func clientType(genpkg string, svc *expr.GRPCServiceExpr, seen map[string]struct
 				Data:   data,
 			})
 		}
-		for _, h := range sd.TransformHelpers {
+		for _, h := range sd.transformHelpers {
 			sections = append(sections, &codegen.SectionTemplate{
 				Name:   "client-transform-helper",
 				Source: transformHelperT,

@@ -10,7 +10,6 @@ import (
 type (
 	// WrappedServerStream overrides the Context() method of the
 	// grpc.ServerStream interface.
-	// See https://github.com/grpc/grpc-go/issues/1114
 	WrappedServerStream struct {
 		grpc.ServerStream
 		ctx context.Context

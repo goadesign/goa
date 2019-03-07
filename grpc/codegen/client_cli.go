@@ -115,7 +115,8 @@ type (
 	}
 )
 
-// ClientCLIFiles returns the client gRPC CLI support file.
+// ClientCLIFiles returns the CLI files to make gRPC requests using the
+// command-line client.
 func ClientCLIFiles(genpkg string, root *expr.RootExpr) []*codegen.File {
 	var (
 		data []*commandData
