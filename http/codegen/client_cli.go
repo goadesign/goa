@@ -1,6 +1,7 @@
 package codegen
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"path/filepath"
@@ -9,100 +10,28 @@ import (
 	"strings"
 
 	"goa.design/goa/codegen"
+	"goa.design/goa/codegen/server"
 	"goa.design/goa/expr"
 )
-
-type (
-	buildFunctionData struct {
-		// Name is the build payload function name.
-		Name string
-		// ActualParams is the list of passed build function parameters.
-		ActualParams []string
-		// FormalParams is the list of build function formal parameter
-		// names.
-		FormalParams []string
-		// ServiceName is the name of the service.
-		ServiceName string
-		// MethodName is the name of the method.
-		MethodName string
-		// ResultType is the fully qualified payload type name.
-		ResultType string
-		// Fields describes the payload fields.
-		Fields []*fieldData
-		// PayloadInit contains the data needed to render the function
-		// body.
-		PayloadInit *InitData
-		// CheckErr is true if the payload initialization code requires
-		// an "err error" variable that must be checked.
-		CheckErr bool
-		// Args contains the data needed to build payload.
-		Args []*InitArgData
-	}
-
-	fieldData struct {
-		// Name is the field name, e.g. "Vintage"
-		Name string
-		// VarName is the name of the local variable holding the field
-		// value, e.g. "vintage"
-		VarName string
-		// TypeName is the name of the type.
-		TypeName string
-		// Init is the code initializing the variable.
-		Init string
-		// Pointer is true if the variable needs to be declared as a
-		// pointer.
-		Pointer bool
-	}
-)
-
 
 // ClientCLIFiles returns the client HTTP CLI support file.
 func ClientCLIFiles(genpkg string, root *expr.RootExpr) []*codegen.File {
 	var (
-		data []*codegen.CommandData
+		data []*server.CommandData
 		svcs []*expr.HTTPServiceExpr
-		buildFunctionsByService = map[string][]*buildFunctionData{}
 	)
 	for _, svc := range root.API.HTTP.Services {
 		sd := HTTPServices.Get(svc.Name())
 		if len(sd.Endpoints) > 0 {
+			command := buildCommandData(sd)
 
-			endpoints := make([]*codegen.EndpointInfo, len(sd.Endpoints))
-			for i, e := range sd.Endpoints {
-				flags, buildFunction := buildFlags(sd, e)
-
-				endpoints[i] = &codegen.EndpointInfo {
-					Name: e.Method.Name,
-					Description: e.Method.Description,
-					Payload: e.Method.Payload,
-					VarName: e.Method.VarName,
-					Flags: flags,
-				}
-				if buildFunction != nil {
-					endpoints[i].BuildFunction = &codegen.BuildFunctionInfo{
-						Name: buildFunction.Name,
-						ActualParams: buildFunction.ActualParams,
-					}
-
-					// keep track of any buildFunctions so we can create the payload file
-					buildFunctionsByService[svc.Name()] = append(buildFunctionsByService[svc.Name()], buildFunction)
-				}
-				if e.MultipartRequestEncoder != nil {
-					endpoints[i].MultipartRequestEncoder = &codegen.MultipartInfo {
-						FuncName: e.MultipartRequestEncoder.FuncName,
-						VarName: e.MultipartRequestEncoder.VarName,
-					}
-				}
+			for _, e := range sd.Endpoints {
+				command.Subcommands = append(command.Subcommands, buildSubcommandData(sd, e))
 			}
 
-			si := codegen.ServiceInfo {
-				Name: sd.Service.Name,
-				Description: sd.Service.Description,
-				PkgName: sd.Service.PkgName,
-				Endpoints: endpoints,
-			}
+			command.Example = command.Subcommands[0].Example
 
-			data = append(data, codegen.BuildCLICommandData(si, streamingEndpointExists(sd)))
+			data = append(data, command)
 			svcs = append(svcs, svc)
 		}
 	}
@@ -114,15 +43,31 @@ func ClientCLIFiles(genpkg string, root *expr.RootExpr) []*codegen.File {
 	for _, svr := range root.API.Servers {
 		files = append(files, endpointParser(genpkg, root, svr, data))
 	}
-	for svcName, buildFunctions := range buildFunctionsByService {
-		files = append(files, payloadBuilders(genpkg, svcName, buildFunctions))
+	for i, svc := range svcs {
+		files = append(files, payloadBuilders(genpkg, svc.Name(), data[i]))
 	}
 	return files
 }
 
+func buildCommandData(sd *ServiceData) *server.CommandData {
+	return server.BuildCommandData(sd.Service.Name, sd.Service.Description, sd.Service.PkgName, streamingEndpointExists(sd))
+}
+
+func buildSubcommandData(sd *ServiceData, e *EndpointData) *server.SubcommandData {
+	flags, buildFunction := buildFlags(sd, e)
+
+	sub := server.BuildSubcommandData(sd.Service.Name, e.Method, buildFunction, flags)
+	if e.MultipartRequestEncoder != nil {
+		sub.MultipartVarName = e.MultipartRequestEncoder.VarName
+		sub.MultipartFuncName = e.MultipartRequestEncoder.FuncName
+	}
+
+	return sub
+}
+
 // endpointParser returns the file that implements the command line parser that
 // builds the client endpoint and payload necessary to perform a request.
-func endpointParser(genpkg string, root *expr.RootExpr, svr *expr.ServerExpr, data []*codegen.CommandData) *codegen.File {
+func endpointParser(genpkg string, root *expr.RootExpr, svr *expr.ServerExpr, data []*server.CommandData) *codegen.File {
 	pkg := codegen.SnakeCase(codegen.Goify(svr.Name, true))
 	path := filepath.Join(codegen.Gendir, "http", "cli", pkg, "cli.go")
 	title := fmt.Sprintf("%s HTTP client CLI support package", svr.Name)
@@ -149,12 +94,38 @@ func endpointParser(genpkg string, root *expr.RootExpr, svr *expr.ServerExpr, da
 		})
 	}
 
-	return codegen.EndpointParser(title, path, specs, data, "HTTP")
+	var flagsCode bytes.Buffer
+	err := server.EndpointParserFlagsSection(data).Write(&flagsCode)
+	if err != nil {
+		panic(err)
+	}
+
+	sections := []*codegen.SectionTemplate{
+		codegen.Header(title, "cli", specs),
+		server.EndpointParserUsagesSection(data),
+		server.EndpointParserExamplesSection(data),
+		{
+			Name:   "parse-endpoint",
+			Source: parseEndpointT,
+			Data: struct {
+				FlagsCode string
+				Commands  []*server.CommandData
+			}{
+				flagsCode.String(),
+				data,
+			},
+			FuncMap: map[string]interface{}{
+				"streamingCmdExists": streamingCmdExists,
+			},
+		},
+	}
+	sections = append(sections, server.EndpointParserCommandUsageSections(data)...)
+	return &codegen.File{Path: path, SectionTemplates: sections}
 }
 
 // payloadBuilders returns the file that contains the payload constructors that
 // use flag values as arguments.
-func payloadBuilders(genpkg string, svcName string, buildFunctions []*buildFunctionData) *codegen.File {
+func payloadBuilders(genpkg string, svcName string, data *server.CommandData) *codegen.File {
 	path := filepath.Join(codegen.Gendir, "http", codegen.SnakeCase(svcName), "client", "cli.go")
 	title := fmt.Sprintf("%s HTTP client CLI support package", svcName)
 	sd := HTTPServices.Get(svcName)
@@ -172,21 +143,19 @@ func payloadBuilders(genpkg string, svcName string, buildFunctions []*buildFunct
 	sections := []*codegen.SectionTemplate{
 		codegen.Header(title, "client", specs),
 	}
-	for _, buildFunction := range buildFunctions {
-		sections = append(sections, &codegen.SectionTemplate{
-			Name:   "cli-build-payload",
-			Source: buildPayloadT,
-			Data:   buildFunction,
-		})
+	for _, sub := range data.Subcommands {
+		if sub.BuildFunction != nil {
+			sections = append(sections, server.PayloadBuilderSection(sub.BuildFunction))
+		}
 	}
 
 	return &codegen.File{Path: path, SectionTemplates: sections}
 }
 
-func buildFlags(svc *ServiceData, e *EndpointData) ([]*codegen.FlagData, *buildFunctionData) {
+func buildFlags(svc *ServiceData, e *EndpointData) ([]*server.FlagData, *server.BuildFunctionData) {
 	var (
-		flags []*codegen.FlagData
-		buildFunction *buildFunctionData
+		flags         []*server.FlagData
+		buildFunction *server.BuildFunctionData
 	)
 
 	svcn := svc.Service.Name
@@ -198,10 +167,10 @@ func buildFlags(svc *ServiceData, e *EndpointData) ([]*codegen.FlagData, *buildF
 			flags, buildFunction = makeFlags(e, args)
 		} else if e.Payload.Ref != "" {
 			ex := jsonExample(e.Method.PayloadEx)
-			fn := codegen.GoifyTerms(svcn, en, "p")
-			flags = append(flags, &codegen.FlagData{
+			fn := server.GoifyTerms(svcn, en, "p")
+			flags = append(flags, &server.FlagData{
 				Name:        "p",
-				Type:        codegen.FlagType(e.Method.PayloadRef),
+				Type:        server.FlagType(e.Method.PayloadRef),
 				FullName:    fn,
 				Description: e.Method.PayloadDesc,
 				Required:    true,
@@ -213,14 +182,20 @@ func buildFlags(svc *ServiceData, e *EndpointData) ([]*codegen.FlagData, *buildF
 	return flags, buildFunction
 }
 
-func makeFlags(e *EndpointData, args []*InitArgData) ([]*codegen.FlagData, *buildFunctionData) {
+func makeFlags(e *EndpointData, args []*InitArgData) ([]*server.FlagData, *server.BuildFunctionData) {
 	var (
-		fdata  []*fieldData
-		flags  = make([]*codegen.FlagData, len(args))
-		params = make([]string, len(args))
-		check  bool
+		fdata     []*server.FieldData
+		flags     = make([]*server.FlagData, len(args))
+		params    = make([]string, len(args))
+		pInitArgs = make([]*server.PayloadInitArgData, len(args))
+		check     bool
 	)
 	for i, arg := range args {
+		pInitArgs[i] = &server.PayloadInitArgData{
+			Name:      arg.Name,
+			FieldName: arg.FieldName,
+		}
+
 		f := argToFlag(e.ServiceName, e.Method.Name, arg)
 		flags[i] = f
 		params[i] = f.FullName
@@ -236,7 +211,7 @@ func makeFlags(e *EndpointData, args []*InitArgData) ([]*codegen.FlagData, *buil
 			// using its address.
 			tn = arg.TypeName
 		}
-		fdata = append(fdata, &fieldData{
+		fdata = append(fdata, &server.FieldData{
 			Name:     arg.Name,
 			VarName:  arg.Name,
 			TypeName: tn,
@@ -244,17 +219,26 @@ func makeFlags(e *EndpointData, args []*InitArgData) ([]*codegen.FlagData, *buil
 			Pointer:  arg.Pointer,
 		})
 	}
-	return flags, &buildFunctionData{
-		Name:         "Build" + e.Method.VarName + "Payload",
-		ActualParams: params,
-		FormalParams: params,
-		ServiceName:  e.ServiceName,
-		MethodName:   e.Method.Name,
-		ResultType:   e.Payload.Ref,
-		Fields:       fdata,
-		PayloadInit:  e.Payload.Request.PayloadInit,
-		CheckErr:     check,
-		Args:         args,
+
+	pInit := server.PayloadInitData{
+		Code:                e.Payload.Request.PayloadInit.ClientCode,
+		ReturnTypeAttribute: e.Payload.Request.PayloadInit.ReturnTypeAttribute,
+		ReturnIsStruct:      e.Payload.Request.PayloadInit.ReturnIsStruct,
+		ReturnTypeName:      e.Payload.Request.PayloadInit.ReturnTypeName,
+		Args:                pInitArgs,
+	}
+
+	return flags, &server.BuildFunctionData{
+		Name:           "Build" + e.Method.VarName + "Payload",
+		ActualParams:   params,
+		FormalParams:   params,
+		ServiceName:    e.ServiceName,
+		MethodName:     e.Method.Name,
+		ResultType:     e.Payload.Ref,
+		ReturnTypeName: e.Payload.Ref, // TODO:TIM pick one or the other.
+		Fields:         fdata,
+		PayloadInit:    &pInit,
+		CheckErr:       check,
 	}
 }
 
@@ -330,10 +314,10 @@ func fieldLoadCode(actual, fType string, arg *InitArgData) (string, bool) {
 			code = arg.Name + " = " + ref + actual
 		} else {
 			ex := jsonExample(arg.Example)
-			code, check = codegen.ConversionCode(actual, arg.Name, arg.TypeName, !arg.Required && arg.DefaultValue == nil)
+			code, check = server.ConversionCode(actual, arg.Name, arg.TypeName, !arg.Required && arg.DefaultValue == nil)
 			if check {
 				code += "\nif err != nil {\n"
-				if codegen.FlagType(arg.TypeName) == "JSON" {
+				if server.FlagType(arg.TypeName) == "JSON" {
 					code += fmt.Sprintf(`return nil, fmt.Errorf("invalid JSON for %s, example of valid JSON:\n%%s", %q)`,
 						arg.Name, ex)
 				} else {
@@ -350,13 +334,13 @@ func fieldLoadCode(actual, fType string, arg *InitArgData) (string, bool) {
 	return fmt.Sprintf("%s%s%s", startIf, code, endIf), check
 }
 
-func argToFlag(svcn, en string, arg *InitArgData) *codegen.FlagData {
+func argToFlag(svcn, en string, arg *InitArgData) *server.FlagData {
 	ex := jsonExample(arg.Example)
-	fn := codegen.GoifyTerms(svcn, en, arg.Name)
-	return &codegen.FlagData{
+	fn := server.GoifyTerms(svcn, en, arg.Name)
+	return &server.FlagData{
 		Name:        codegen.KebabCase(arg.Name),
 		VarName:     codegen.Goify(arg.Name, false),
-		Type:        codegen.FlagType(arg.TypeName),
+		Type:        server.FlagType(arg.TypeName),
 		FullName:    fn,
 		Description: arg.Description,
 		Required:    arg.Required,
@@ -364,57 +348,68 @@ func argToFlag(svcn, en string, arg *InitArgData) *codegen.FlagData {
 	}
 }
 
-// input: buildFunctionData
-const buildPayloadT = `{{ printf "%s builds the payload for the %s %s endpoint from CLI flags." .Name .ServiceName .MethodName | comment }}
-func {{ .Name }}({{ range .FormalParams }}{{ . }} string, {{ end }}) ({{ .ResultType }}, error) {
-	{{- if .CheckErr }}
-	var err error
+// streamingCmdExists returns true if at least one command in the list of commands
+// uses stream for sending payload/result.
+func streamingCmdExists(data []*server.CommandData) bool {
+	for _, c := range data {
+		if c.NeedStream {
+			return true
+		}
+	}
+	return false
+}
+
+const parseEndpointT = `// ParseEndpoint returns the endpoint and payload as specified on the command
+// line.
+func ParseEndpoint(
+	scheme, host string,
+	doer goahttp.Doer,
+	enc func(*http.Request) goahttp.Encoder,
+	dec func(*http.Response) goahttp.Decoder,
+	restore bool,
+	{{- if streamingCmdExists .Commands }}
+	dialer goahttp.Dialer,
+	connConfigFn goahttp.ConnConfigureFunc,
 	{{- end }}
-	{{- range .Fields }}
-		{{- if .VarName }}
-	var {{ .VarName }} {{ if .Pointer }}*{{ end }}{{ .TypeName }}
+	{{- range $c := .Commands }}
+	{{- range .Subcommands }}
+		{{- if .MultipartVarName }}
+	{{ .MultipartVarName }} {{ $c.PkgName }}.{{ .MultipartFuncName }},
+		{{- end }}
+	{{- end }}
+	{{- end }}
+) (goa.Endpoint, interface{}, error) {
+	{{ .FlagsCode }}
+    var (
+		data     interface{}
+		endpoint goa.Endpoint
+		err      error
+	)
 	{
-		{{ .Init }}
-	}
+		switch svcn {
+	{{- range .Commands }}
+		case "{{ .Name }}":
+			c := {{ .PkgName }}.NewClient(scheme, host, doer, enc, dec, restore{{ if .NeedStream }}, dialer, connConfigFn{{- end }})	
+			switch epn {
+		{{- $pkgName := .PkgName }}{{ range .Subcommands }}
+			case "{{ .Name }}":
+				endpoint = c.{{ .MethodVarName }}({{ if .MultipartVarName }}{{ .MultipartVarName }}{{ end }})
+			{{- if .BuildFunction }}
+				data, err = {{ $pkgName}}.{{ .BuildFunction.Name }}({{ range .BuildFunction.ActualParams }}*{{ . }}Flag, {{ end }})
+			{{- else if .Conversion }}
+				{{ .Conversion }}
+			{{- else }}
+				data = nil
+			{{- end }}
 		{{- end }}
+			}
 	{{- end }}
-	{{- if .CheckErr }}
+		}
+	}
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
-	{{- end }}
-	{{- with .PayloadInit }}
 
-		{{- if .ClientCode }}
-	{{ .ClientCode }}
-			{{- if .ReturnTypeAttribute }}
-	res := &{{ .ReturnTypeName }}{
-		{{ .ReturnTypeAttribute }}: v,
-	}
-			{{- end }}
-			{{- if .ReturnIsStruct }}
-				{{- range $.Args }}
-					{{- if .FieldName }}
-	{{ if $.PayloadInit.ReturnTypeAttribute }}res{{ else }}v{{ end }}.{{ .FieldName }} = {{ .Name }}
-				{{- end }}
-			{{- end }}
-		{{- end }}
-	return {{ if .ReturnTypeAttribute }}res{{ else }}v{{ end }}, nil
-
-		{{- else }}
-
-			{{- if .ReturnIsStruct }}
-	payload := &{{ .ReturnTypeName }}{
-				{{- range $.Args }}
-					{{- if .FieldName }}
-		{{ .FieldName }}: {{ .Name }},
-					{{- end }}
-				{{- end }}
-	}
-	return payload, nil
-			{{-  end }}
-
-		{{- end }}
-	{{- end }}
+	return endpoint, data, nil
 }
 `

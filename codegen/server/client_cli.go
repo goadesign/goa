@@ -1,41 +1,14 @@
-package codegen
+package server
 
 import (
 	"fmt"
-	"strings"
-
+	"goa.design/goa/codegen"
+	"goa.design/goa/codegen/service"
 	"goa.design/goa/expr"
+	"strings"
 )
 
 type (
-	// ServiceInfo contains data about the service to be rendered
-	ServiceInfo struct {
-		Name string
-		Description string
-		PkgName string
-		Endpoints []*EndpointInfo
-	}
-
-	// EndpointInfo contains data about the endpoint to be rendered
-	EndpointInfo struct {
-		Name string
-		Description string
-		Payload string
-		VarName string
-		Flags []*FlagData
-		BuildFunction *BuildFunctionInfo
-		MultipartRequestEncoder *MultipartInfo
-	}
-
-	// MultipartInfo contains the data needed to render multipart
-	// encoder/decoder.
-	MultipartInfo struct {
-		// FuncName is the name used to generate function type.
-		FuncName string
-		// VarName is the name of the variable referring to the function.
-		VarName string
-	}
-
 	// CommandData contains the data needed to render a command
 	CommandData struct {
 		// Name of command e.g. "cellar-storage"
@@ -71,16 +44,17 @@ type (
 		MethodVarName string
 		// BuildFunction contains the data for the payload build
 		// function if any. Exclusive with Conversion.
-		BuildFunction *BuildFunctionInfo
+		BuildFunction *BuildFunctionData
 		// Conversion contains the flag value to payload conversion
 		// function if any. Exclusive with BuildFunction.
 		Conversion string
 		// Example is a valid command invocation, starting with the
 		// command name.
 		Example string
-		// MultipartRequestEncoder is the data necessary to render
-		// multipart request encoder.
-		MultipartRequestEncoder *MultipartInfo
+		// MultipartFuncName is the function name used to render a multipart request encoder.
+		MultipartFuncName string
+		// MultipartFuncName is the variable name used to render a multipart request encoder.
+		MultipartVarName string
 	}
 
 	// FlagData contains the data needed to render a flag
@@ -101,31 +75,148 @@ type (
 		Example string
 	}
 
-	// BuildFunctionInfo contains the data needed to render a build function
-	BuildFunctionInfo struct {
+	// BuildFunctionData contains the data needed to render a build function
+	BuildFunctionData struct {
 		// Name is the build payload function name.
 		Name string
+		// Description describes the payload function.
+		Description string
 		// ActualParams is the list of passed build function parameters.
 		ActualParams []string
+		// FormalParams is the list of build function formal parameter
+		// names.
+		FormalParams []string
+		// ServiceName is the name of the service.
+		ServiceName string
+		// MethodName is the name of the method.
+		MethodName string
+		// ResultType is the fully qualified payload type name.
+		ResultType string
+		// ReturnTypeName is the same as ResultType
+		ReturnTypeName string
+		// Fields describes the payload fields.
+		Fields []*FieldData
+		// PayloadInit contains the data needed to render the function
+		// body.
+		PayloadInit *PayloadInitData
+		// CheckErr is true if the payload initialization code requires
+		// an "err error" variable that must be checked.
+		CheckErr bool
+	}
+
+	// FieldData contains the data needed to render a field
+	FieldData struct {
+		// Name is the field name, e.g. "Vintage"
+		Name string
+		// VarName is the name of the local variable holding the field
+		// value, e.g. "vintage"
+		VarName string
+		// TypeName is the name of the type.
+		TypeName string
+		// Init is the code initializing the variable.
+		Init string
+		// Pointer is true if the variable needs to be declared as a
+		// pointer.
+		Pointer bool
+	}
+
+	// PayloadInitData contains the data needed to render payload initializers
+	PayloadInitData struct {
+		Code                string
+		ReturnTypeAttribute string
+		ReturnIsStruct      bool
+		ReturnTypeName      string
+		Args                []*PayloadInitArgData
+	}
+
+	// PayloadInitArgData contains the data needed to render payload initlization args
+	PayloadInitArgData struct {
+		Name      string
+		FieldName string
 	}
 )
 
-// streamingCmdExists returns true if at least one command in the list of commands
-// uses stream for sending payload/result.
-func streamingCmdExists(data []*CommandData) bool {
-	for _, c := range data {
-		if c.NeedStream {
-			return true
-		}
+// BuildCommandData builds the data needed by the templates to render the CLI
+// parsing of the service command.
+func BuildCommandData(name, description, pkgName string, needsStream bool) *CommandData {
+	if description == "" {
+		description = fmt.Sprintf("Make requests to the %q service", name)
 	}
-	return false
+	return &CommandData{
+		Name:        codegen.KebabCase(name),
+		VarName:     codegen.Goify(name, false),
+		Description: description,
+		PkgName:     pkgName + "c",
+		NeedStream:  needsStream,
+	}
 }
 
-// EndpointParser returns the file that implements the command line parser that
-// builds the client endpoint and payload necessary to perform a request.
-func EndpointParser(title, path string, specs []*ImportSpec, data []*CommandData, protocol string) *File {
+// BuildSubcommandData builds the data needed by the templates to render the CLI
+// parsing of the service subcommand.
+func BuildSubcommandData(svcName string, m *service.MethodData, buildFunction *BuildFunctionData, flags []*FlagData) *SubcommandData {
+	var (
+		name        string
+		fullName    string
+		description string
+
+		conversion string
+	)
+	{
+		en := m.Name
+		name = codegen.KebabCase(en)
+		fullName = GoifyTerms(svcName, en)
+		description = m.Description
+		if description == "" {
+			description = fmt.Sprintf("Make request to the %q endpoint", m.Name)
+		}
+
+		if buildFunction == nil && len(flags) > 0 {
+			// No build function, just convert the arg to the body type
+			var convPre, convSuff string
+			target := "data"
+			if FlagType(m.Payload) == "JSON" {
+				target = "val"
+				convPre = fmt.Sprintf("var val %s\n", m.Payload)
+				convSuff = "\ndata = val"
+			}
+			conv, check := ConversionCode(
+				"*"+flags[0].FullName+"Flag",
+				target,
+				m.Payload,
+				false,
+			)
+			conversion = convPre + conv + convSuff
+			if check {
+				conversion = "var err error\n" + conversion
+				conversion += "\nif err != nil {\n"
+				if FlagType(m.Payload) == "JSON" {
+					conversion += fmt.Sprintf(`return nil, nil, fmt.Errorf("invalid JSON for %s, example of valid JSON:\n%%s", %q)`,
+						flags[0].FullName+"Flag", flags[0].Example)
+				} else {
+					conversion += fmt.Sprintf(`return nil, nil, fmt.Errorf("invalid value for %s, must be %s")`,
+						flags[0].FullName+"Flag", flags[0].Type)
+				}
+				conversion += "\n}"
+			}
+		}
+	}
+	sub := &SubcommandData{
+		Name:          name,
+		FullName:      fullName,
+		Description:   description,
+		Flags:         flags,
+		MethodVarName: m.VarName,
+		BuildFunction: buildFunction,
+		Conversion:    conversion,
+	}
+	generateExample(sub, svcName)
+
+	return sub
+}
+
+// EndpointParserUsagesSection builds a section template that can be used to generate the endpoint usages code.
+func EndpointParserUsagesSection(data []*CommandData) *codegen.SectionTemplate {
 	usages := make([]string, len(data))
-	var examples []string
 	for i, cmd := range data {
 		subs := make([]string, len(cmd.Subcommands))
 		for i, s := range cmd.Subcommands {
@@ -137,174 +228,82 @@ func EndpointParser(title, path string, specs []*ImportSpec, data []*CommandData
 			rp = ")"
 		}
 		usages[i] = fmt.Sprintf("%s %s%s%s", cmd.Name, lp, strings.Join(subs, "|"), rp)
+	}
+
+	return &codegen.SectionTemplate{Source: usageT, Data: usages}
+}
+
+// EndpointParserExamplesSection builds a section template that can be used to generate the endpoint examples code.
+func EndpointParserExamplesSection(data []*CommandData) *codegen.SectionTemplate {
+	var examples []string
+	for i, cmd := range data {
 		if i < 5 {
 			examples = append(examples, cmd.Example)
 		}
 	}
 
-	sections := []*SectionTemplate{
-		Header(title, "cli", specs),
-		{Source: usageT, Data: usages},
-		{Source: exampleT, Data: examples},
+	return &codegen.SectionTemplate{Source: exampleT, Data: examples}
+}
+
+// EndpointParserFlagsSection builds a section template that can be used to generate the endpoint flags code.
+func EndpointParserFlagsSection(data []*CommandData) *codegen.SectionTemplate {
+	return &codegen.SectionTemplate{
+		Name:    "parse-endpoint-flags",
+		Source:  parseFlagsT,
+		Data:    data,
+		FuncMap: map[string]interface{}{"printDescription": printDescription},
 	}
-	sections = append(sections, &SectionTemplate{
-		Name:   "parse-endpoint",
-		Source: parseT,
-		Data:   data,
-		FuncMap: map[string]interface{}{
-			"streamingCmdExists": streamingCmdExists,
-			"protocolHTTP": func() bool { return protocol == "HTTP" },
-			"protocolGRPC": func() bool { return protocol == "GRPC" },
-		},
-	})
-	for _, cmd := range data {
-		sections = append(sections, &SectionTemplate{
+}
+
+// EndpointParserCommandUsageSections builds the section templates that can be used to generate the endpoint command usage code.
+func EndpointParserCommandUsageSections(data []*CommandData) []*codegen.SectionTemplate {
+	sections := make([]*codegen.SectionTemplate, len(data))
+
+	for i, cmd := range data {
+		sections[i] = &codegen.SectionTemplate{
 			Name:    "cli-command-usage",
 			Source:  commandUsageT,
 			Data:    cmd,
 			FuncMap: map[string]interface{}{"printDescription": printDescription},
-		})
+		}
 	}
 
-	return &File{Path: path, SectionTemplates: sections}
+	return sections
 }
 
-func printDescription(desc string) string {
-	res := strings.Replace(desc, "`", "`+\"`\"+`", -1)
-	res = strings.Replace(res, "\n", "\n\t", -1)
-	return res
-}
-
-// BuildCLICommandData builds the data needed by the templates to render the CLI
-// parsing of the service command.
-func BuildCLICommandData(svc ServiceInfo, needsStream bool) *CommandData {
-	var (
-		name        string
-		description string
-		subcommands []*SubcommandData
-		example     string
-	)
-	{
-		name = svc.Name
-		description = svc.Description
-		if description == "" {
-			description = fmt.Sprintf("Make requests to the %q service", name)
-		}
-		subcommands = make([]*SubcommandData, len(svc.Endpoints))
-		for i, e := range svc.Endpoints {
-			subcommands[i] = buildSubcommandData(svc.Name, e)
-		}
-		if len(subcommands) > 0 {
-			example = subcommands[0].Example
-		}
+// PayloadBuilderSection builds the section template that can be used to generate the payload builder code.
+func PayloadBuilderSection(buildFunction *BuildFunctionData) *codegen.SectionTemplate {
+	return &codegen.SectionTemplate{
+		Name:   "cli-build-payload",
+		Source: buildPayloadT,
+		Data:   buildFunction,
 	}
-	return &CommandData{
-		Name:        KebabCase(name),
-		VarName:     Goify(name, false),
-		Description: description,
-		Subcommands: subcommands,
-		Example:     example,
-		PkgName:     svc.PkgName + "c",
-		NeedStream:  needsStream,
-	}
-}
-
-func buildSubcommandData(svcName string, e *EndpointInfo) *SubcommandData {
-	var (
-		name          string
-		fullName      string
-		description   string
-
-		conversion    string
-	)
-	{
-		en := e.Name
-		name = KebabCase(en)
-		fullName = GoifyTerms(svcName, en)
-		description = e.Description
-		if description == "" {
-			description = fmt.Sprintf("Make request to the %q endpoint", e.Name)
-		}
-
-		if e.BuildFunction == nil && len(e.Flags) > 0 {
-			// No build function, just convert the arg to the body type
-			var convPre, convSuff string
-			target := "data"
-			if FlagType(e.Payload) == "JSON" {
-				target = "val"
-				convPre = fmt.Sprintf("var val %s\n", e.Payload)
-				convSuff = "\ndata = val"
-			}
-			conv, check := ConversionCode(
-				"*"+e.Flags[0].FullName+"Flag",
-				target,
-				e.Payload,
-				false,
-			)
-			conversion = convPre + conv + convSuff
-			if check {
-				conversion = "var err error\n" + conversion
-				conversion += "\nif err != nil {\n"
-				if FlagType(e.Payload) == "JSON" {
-					conversion += fmt.Sprintf(`return nil, nil, fmt.Errorf("invalid JSON for %s, example of valid JSON:\n%%s", %q)`,
-						e.Flags[0].FullName+"Flag", e.Flags[0].Example)
-				} else {
-					conversion += fmt.Sprintf(`return nil, nil, fmt.Errorf("invalid value for %s, must be %s")`,
-						e.Flags[0].FullName+"Flag", e.Flags[0].Type)
-				}
-				conversion += "\n}"
-			}
-		}
-	}
-	sub := &SubcommandData{
-		Name:          name,
-		FullName:      fullName,
-		Description:   description,
-		Flags:         e.Flags,
-		MethodVarName: e.VarName,
-		BuildFunction: e.BuildFunction,
-		Conversion:    conversion,
-	}
-	if e.MultipartRequestEncoder != nil {
-		sub.MultipartRequestEncoder = e.MultipartRequestEncoder
-	}
-	generateExample(sub, svcName)
-
-	return sub
-}
-
-func generateExample(sub *SubcommandData, svc string) {
-	ex := KebabCase(svc) + " " + KebabCase(sub.Name)
-	for _, f := range sub.Flags {
-		ex += " --" + f.Name + " " + f.Example
-	}
-	sub.Example = ex
 }
 
 // GoifyTerms makes valid go identifiers out of the supplied terms
 func GoifyTerms(terms ...string) string {
-	res := Goify(terms[0], false)
+	res := codegen.Goify(terms[0], false)
 	if len(terms) == 1 {
 		return res
 	}
 	for _, t := range terms[1:] {
-		res += Goify(t, true)
+		res += codegen.Goify(t, true)
 	}
 	return res
 }
 
 var (
-	boolN    = GoNativeTypeName(expr.Boolean)
-	intN     = GoNativeTypeName(expr.Int)
-	int32N   = GoNativeTypeName(expr.Int32)
-	int64N   = GoNativeTypeName(expr.Int64)
-	uintN    = GoNativeTypeName(expr.UInt)
-	uint32N  = GoNativeTypeName(expr.UInt32)
-	uint64N  = GoNativeTypeName(expr.UInt64)
-	float32N = GoNativeTypeName(expr.Float32)
-	float64N = GoNativeTypeName(expr.Float64)
-	stringN  = GoNativeTypeName(expr.String)
-	bytesN   = GoNativeTypeName(expr.Bytes)
+	boolN    = codegen.GoNativeTypeName(expr.Boolean)
+	intN     = codegen.GoNativeTypeName(expr.Int)
+	int32N   = codegen.GoNativeTypeName(expr.Int32)
+	int64N   = codegen.GoNativeTypeName(expr.Int64)
+	uintN    = codegen.GoNativeTypeName(expr.UInt)
+	uint32N  = codegen.GoNativeTypeName(expr.UInt32)
+	uint64N  = codegen.GoNativeTypeName(expr.UInt64)
+	float32N = codegen.GoNativeTypeName(expr.Float32)
+	float64N = codegen.GoNativeTypeName(expr.Float64)
+	stringN  = codegen.GoNativeTypeName(expr.String)
+	bytesN   = codegen.GoNativeTypeName(expr.Bytes)
 )
 
 // ConversionCode produces the code that converts the string stored in the
@@ -390,6 +389,20 @@ func FlagType(tname string) string {
 	}
 }
 
+func printDescription(desc string) string {
+	res := strings.Replace(desc, "`", "`+\"`\"+`", -1)
+	res = strings.Replace(res, "\n", "\n\t", -1)
+	return res
+}
+
+func generateExample(sub *SubcommandData, svc string) {
+	ex := codegen.KebabCase(svc) + " " + codegen.KebabCase(sub.Name)
+	for _, f := range sub.Flags {
+		ex += " --" + f.Name + " " + f.Example
+	}
+	sub.Example = ex
+}
+
 // input: []string
 const usageT = `// UsageCommands returns the set of commands and sub-commands using the format
 //
@@ -410,31 +423,7 @@ func UsageExamples() string {
 `
 
 // input: []commandData
-const parseT = `// ParseEndpoint returns the endpoint and payload as specified on the command
-// line.
-{{- if protocolHTTP }}
-func ParseEndpoint(
-	scheme, host string,
-	doer goahttp.Doer,
-	enc func(*http.Request) goahttp.Encoder,
-	dec func(*http.Response) goahttp.Decoder,
-	restore bool,
-	{{- if streamingCmdExists . }}
-	dialer goahttp.Dialer,
-	connConfigFn goahttp.ConnConfigureFunc,
-	{{- end }}
-	{{- range $c := . }}
-	{{- range .Subcommands }}
-		{{- if .MultipartRequestEncoder }}
-	{{ .MultipartRequestEncoder.VarName }} {{ $c.PkgName }}.{{ .MultipartRequestEncoder.FuncName }},
-		{{- end }}
-	{{- end }}
-{{- end }}
-) (goa.Endpoint, interface{}, error) {
-{{- else if protocolGRPC }}
-func ParseEndpoint(cc *grpc.ClientConn, opts ...grpc.CallOption) (goa.Endpoint, interface{}, error) {
-{{- end }}
-	var (
+const parseFlagsT = `var (
 		{{- range . }}
 		{{ .VarName }}Flags = flag.NewFlagSet("{{ .Name }}", flag.ContinueOnError)
 		{{ range .Subcommands }}
@@ -508,43 +497,6 @@ func ParseEndpoint(cc *grpc.ClientConn, opts ...grpc.CallOption) (goa.Endpoint, 
 			return nil, nil, err
 		}
 	}
-
-	var (
-		data     interface{}
-		endpoint goa.Endpoint
-		err      error
-	)
-	{
-		switch svcn {
-	{{- range . }}
-		case "{{ .Name }}":
-			{{- if protocolHTTP }}
-			c := {{ .PkgName }}.NewClient(scheme, host, doer, enc, dec, restore{{ if .NeedStream }}, dialer, connConfigFn{{- end }})
-			{{- else if protocolGRPC }}
-			c := {{ .PkgName }}.NewClient(cc, opts...)
-			{{- end }}
-			switch epn {
-		{{- $pkgName := .PkgName }}{{ range .Subcommands }}
-			case "{{ .Name }}":
-				endpoint = c.{{ .MethodVarName }}({{ if .MultipartRequestEncoder }}{{ .MultipartRequestEncoder.VarName }}{{ end }})
-			{{- if .BuildFunction }}
-				data, err = {{ $pkgName}}.{{ .BuildFunction.Name }}({{ range .BuildFunction.ActualParams }}*{{ . }}Flag, {{ end }})
-			{{- else if .Conversion }}
-				{{ .Conversion }}
-			{{- else }}
-				data = nil
-			{{- end }}
-		{{- end }}
-			}
-	{{- end }}
-		}
-	}
-	if err != nil {
-		return nil, nil, err
-	}
-
-	return endpoint, data, nil
-}
 `
 
 // input: commandData
@@ -578,4 +530,59 @@ Example:
 ` + "`" + `, os.Args[0])
 }
 {{ end }}
+`
+
+// input: buildFunctionData
+const buildPayloadT = `{{ printf "%s builds the payload for the %s %s endpoint from CLI flags." .Name .ServiceName .MethodName | comment }}
+func {{ .Name }}({{ range .FormalParams }}{{ . }} string, {{ end }}) ({{ .ResultType }}, error) {
+	{{- if .CheckErr }}
+	var err error
+	{{- end }}
+	{{- range .Fields }}
+		{{- if .VarName }}
+	var {{ .VarName }} {{ if .Pointer }}*{{ end }}{{ .TypeName }}
+	{
+		{{ .Init }}
+	}
+		{{- end }}
+	{{- end }}
+	{{- if .CheckErr }}
+	if err != nil {
+		return nil, err
+	}
+	{{- end }}
+	{{- with .PayloadInit }}
+
+		{{- if .Code }}
+	{{ .Code }}
+			{{- if .ReturnTypeAttribute }}
+	res := &{{ .ReturnTypeName }}{
+		{{ .ReturnTypeAttribute }}: v,
+	}
+			{{- end }}
+			{{- if .ReturnIsStruct }}
+				{{- range .Args }}
+					{{- if .FieldName }}
+	{{ if $.PayloadInit.ReturnTypeAttribute }}res{{ else }}v{{ end }}.{{ .FieldName }} = {{ .Name }}
+				{{- end }}
+			{{- end }}
+		{{- end }}
+	return {{ if .ReturnTypeAttribute }}res{{ else }}v{{ end }}, nil
+
+		{{- else }}
+			{{- if .ReturnIsStruct }}
+	payload := &{{ .ReturnTypeName }}{
+				{{- range .Args }}
+					{{- if .FieldName }}
+		{{ .FieldName }}: {{ .Name }},
+					{{- end }}
+				{{- end }}
+	}
+	return payload, nil
+			{{-  end }}
+
+		{{- end }}
+
+	{{- end }}
+}
 `
