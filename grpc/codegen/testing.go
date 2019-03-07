@@ -10,6 +10,7 @@ import (
 )
 
 // RunGRPCDSL returns the GRPC DSL root resulting from running the given DSL.
+// It is used only in tests.
 func RunGRPCDSL(t *testing.T, dsl func()) *expr.RootExpr {
 	// reset all roots and codegen data structures
 	service.Services = make(service.ServicesData)

@@ -9,7 +9,10 @@ import (
 	"goa.design/goa/expr"
 )
 
-// ClientFiles returns all the client gRPC transport files.
+// ClientFiles returns the client implementation for every gRPC service. The
+// files include the client which invokes the protoc-generated gRPC client
+// and encoders and decoders to transform protocol buffer types and gRPC
+// metadata into goa types and vice versa.
 func ClientFiles(genpkg string, root *expr.RootExpr) []*codegen.File {
 	svcLen := len(root.API.GRPC.Services)
 	fw := make([]*codegen.File, 2*svcLen)

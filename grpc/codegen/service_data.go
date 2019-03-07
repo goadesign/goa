@@ -9,11 +9,12 @@ import (
 )
 
 // GRPCServices holds the data computed from the design needed to generate the
-// transport code of the services.
+// transport code of the gRPC services.
 var GRPCServices = make(ServicesData)
 
 type (
-	// ServicesData encapsulates the data computed from the expr.
+	// ServicesData contains the data computed from the gRPC service expressions
+	// indexed by service name.
 	ServicesData map[string]*ServiceData
 
 	// ServiceData contains the data used to render the code related to a
@@ -48,14 +49,15 @@ type (
 		// ClientInterfaceInit is the name of the client constructor function in
 		// the generated pb.go package.
 		ClientInterfaceInit string
-		// TransformHelpers is the list of transform functions required by the
-		// constructors.
-		TransformHelpers []*codegen.TransformFunctionData
-		// Validations contain the data to generate the validation functions to
-		// validate the initialized type.
-		Validations []*ValidationData
 		// Scope is the name scope for protocol buffers
 		Scope *codegen.NameScope
+
+		// transformHelpers is the list of transform functions required by the
+		// constructors.
+		transformHelpers []*codegen.TransformFunctionData
+		// validations contain the data to generate the validation functions to
+		// validate the initialized type.
+		validations []*ValidationData
 	}
 
 	// EndpointData contains the data used to render the code related to
@@ -355,8 +357,8 @@ func (d ServicesData) Get(name string) *ServiceData {
 	return d[name]
 }
 
-// Endpoint returns the service method transport data for the endpoint with the
-// given name, nil if there isn't one.
+// Endpoint returns the endoint data for the endpoint with the given name, nil
+// if there isn't one.
 func (sd *ServiceData) Endpoint(name string) *EndpointData {
 	for _, ed := range sd.Endpoints {
 		if ed.Method.Name == name {
@@ -538,7 +540,6 @@ func (d ServicesData) analyze(gs *expr.GRPCServiceExpr) *ServiceData {
 				for _, sch := range req.Schemes {
 					s := md.Requirements.Scheme(sch.SchemeName).Dup()
 					s.In = sch.In
-					fmt.Println(s.In)
 					switch s.In {
 					case "message":
 						msgSch = msgSch.Append(s)
@@ -628,7 +629,7 @@ func addValidation(att *expr.AttributeExpr, sd *ServiceData) *ValidationData {
 	}
 	name := protoBufGoTypeName(att, sd.Scope)
 	ref := protoBufGoFullTypeRef(att, sd.PkgName, sd.Scope)
-	for _, n := range sd.Validations {
+	for _, n := range sd.validations {
 		if n.SrcName == name {
 			return n
 		}
@@ -649,7 +650,7 @@ func addValidation(att *expr.AttributeExpr, sd *ServiceData) *ValidationData {
 			SrcName: name,
 			SrcRef:  ref,
 		}
-		sd.Validations = append(sd.Validations, v)
+		sd.validations = append(sd.validations, v)
 		collectValidations(ca, sd)
 		return v
 	}
@@ -671,13 +672,13 @@ func collectValidations(ca *codegen.ContextualAttribute, sd *ServiceData, seen .
 		if _, ok := s[name]; ok {
 			return
 		}
-		for _, n := range sd.Validations {
+		for _, n := range sd.validations {
 			if n.SrcName == name {
 				return
 			}
 		}
 		s[name] = struct{}{}
-		sd.Validations = append(sd.Validations, &ValidationData{
+		sd.validations = append(sd.validations, &ValidationData{
 			Name:    "Validate" + name,
 			Def:     codegen.RecursiveValidationCode(ca, "message"),
 			ArgName: "message",
@@ -898,7 +899,7 @@ func buildInitData(source, target *codegen.ContextualAttribute, sourceVar, targe
 			fmt.Println(err.Error()) // TBD validate DSL so errors are not possible
 			return nil
 		}
-		sd.TransformHelpers = codegen.AppendHelpers(sd.TransformHelpers, helpers)
+		sd.transformHelpers = codegen.AppendHelpers(sd.transformHelpers, helpers)
 		if (!proto && !isEmpty(source.Attribute.Expr().Type)) || (proto && !isEmpty(target.Attribute.Expr().Type)) {
 			args = []*InitArgData{
 				&InitArgData{

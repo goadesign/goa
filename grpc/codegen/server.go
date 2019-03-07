@@ -10,7 +10,10 @@ import (
 	"goa.design/goa/expr"
 )
 
-// ServerFiles returns all the server gRPC transport files.
+// ServerFiles returns all the server files for every gRPC service. The files
+// contain the server which implements the generated gRPC server interface and
+// encoders and decoders to transform protocol buffer types and gRPC metadata
+// into goa types and vice versa.
 func ServerFiles(genpkg string, root *expr.RootExpr) []*codegen.File {
 	svcLen := len(root.API.GRPC.Services)
 	fw := make([]*codegen.File, 2*svcLen)

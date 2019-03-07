@@ -10,8 +10,7 @@ import (
 	"goa.design/goa/expr"
 )
 
-// ExampleServerFiles returns and example main and dummy service
-// implementations.
+// ExampleServerFiles returns an example gRPC server implementation.
 func ExampleServerFiles(genpkg string, root *expr.RootExpr) []*codegen.File {
 	var fw []*codegen.File
 	for _, svr := range root.API.Servers {
