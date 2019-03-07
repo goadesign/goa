@@ -1,3 +1,5 @@
+// Package openapi produces OpenAPI Specification 2.0 (https://github.com/OAI/OpenAPI-Specification/blob/master/versions/2.0.md)
+// for the HTTP endpoints.
 package openapi
 
 import (

@@ -13,21 +13,27 @@ import (
 // Inspired from https://github.com/go-kit/kit/blob/1c17eccf28596f5a2c59314f7923ca66301b90e4/transport/grpc/server.go
 
 type (
-	// UnaryHandler handles a unary gRPC request. The request and response types
-	// are gRPC message types.
+	// UnaryHandler handles a unary RPC. The request and response types are
+	// protocol buffer message types.
 	UnaryHandler interface {
+		// Handle handles a unary RPC.
+		//
+		// It takes a protocol buffer message type and returns a protocol buffer
+		// message type and any error when executing the RPC.
 		Handle(ctx context.Context, reqpb interface{}) (respb interface{}, err error)
 	}
 
-	// StreamHandler handles a streaming gRPC request. The stream may be
-	// client-side, server-side, or bidirectional.
+	// StreamHandler handles a streaming RPC. The stream may be client-side,
+	// server-side, or bidirectional.
 	StreamHandler interface {
-		// Handle serves a gRPC request. stream consists of the gRPC endpoint server
-		// stream interface and the goa endpoint payload type.
-		Handle(ctx context.Context, stream interface{}) (err error)
-		// Decode decodes the request message and incoming metadata to the
-		// goa type. For client-side and bidirectional streams, the request
-		// message will be nil.
+		// Handle handles a streaming RPC.
+		//
+		// input contains the goa endpoint payload type (if any) and goa generated
+		// endpoint stream interface.
+		Handle(ctx context.Context, input interface{}) (err error)
+		// Decode decodes the protocol buffer message type and incoming metadata to
+		// the goa type. For client-side and bidirectional streams, the request
+		// message type will be nil.
 		Decode(ctx context.Context, reqpb interface{}) (req interface{}, err error)
 	}
 

@@ -1,3 +1,4 @@
+// Package pkg deals with versioning for goa.
 package pkg
 
 import (
