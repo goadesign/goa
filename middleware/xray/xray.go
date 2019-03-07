@@ -1,3 +1,5 @@
+// Package xray contains the AWS X-Ray segment document type populated by the
+// transport-specific X-Ray middleware.
 package xray
 
 import (
