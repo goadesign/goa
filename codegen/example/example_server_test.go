@@ -7,6 +7,7 @@ import (
 	"goa.design/goa/codegen"
 	"goa.design/goa/codegen/example/testdata"
 	"goa.design/goa/codegen/service"
+	ctestdata "goa.design/goa/codegen/service/testdata"
 	"goa.design/goa/expr"
 )
 
@@ -24,6 +25,7 @@ func TestExampleServerFiles(t *testing.T) {
 		{"server-hosting-multiple-services", testdata.ServerHostingMultipleServicesDSL, testdata.ServerHostingMultipleServicesServerMainCode},
 		{"single-server-multiple-hosts", testdata.SingleServerMultipleHostsDSL, testdata.SingleServerMultipleHostsServerMainCode},
 		{"single-server-multiple-hosts-with-variables", testdata.SingleServerMultipleHostsWithVariablesDSL, testdata.SingleServerMultipleHostsWithVariablesServerMainCode},
+		{"service-name-with-spaces", ctestdata.NamesWithSpacesDSL, testdata.NamesWithSpacesServerMainCode},
 	}
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {

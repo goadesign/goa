@@ -26,9 +26,9 @@ func ProtoFiles(genpkg string, root *expr.RootExpr) []*codegen.File {
 }
 
 func protoFile(genpkg string, api *expr.APIExpr, svc *expr.GRPCServiceExpr) *codegen.File {
-	svcName := codegen.SnakeCase(svc.Name())
-	path := filepath.Join(codegen.Gendir, "grpc", svcName, pbPkgName, svcName+".proto")
 	data := GRPCServices.Get(svc.Name())
+	svcName := codegen.SnakeCase(data.Service.VarName)
+	path := filepath.Join(codegen.Gendir, "grpc", svcName, pbPkgName, svcName+".proto")
 
 	title := fmt.Sprintf("%s protocol buffer definition", svc.Name())
 	sections := []*codegen.SectionTemplate{

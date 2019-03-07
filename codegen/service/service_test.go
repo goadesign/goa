@@ -17,6 +17,7 @@ func TestService(t *testing.T) {
 		DSL  func()
 		Code string
 	}{
+		{"service-name-with-spaces", testdata.NamesWithSpacesDSL, testdata.NamesWithSpaces},
 		{"single", testdata.SingleMethodDSL, testdata.SingleMethod},
 		{"multiple", testdata.MultipleMethodsDSL, testdata.MultipleMethods},
 		{"no-payload-no-result", testdata.EmptyMethodDSL, testdata.EmptyMethod},

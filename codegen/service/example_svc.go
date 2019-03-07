@@ -47,17 +47,18 @@ func ExampleServiceFiles(genpkg string, root *expr.RootExpr) []*codegen.File {
 
 // exampleServiceFile returns a basic implementation of the given service.
 func exampleServiceFile(genpkg string, root *expr.RootExpr, svc *expr.ServiceExpr) *codegen.File {
-	fpath := codegen.SnakeCase(svc.Name) + ".go"
+	data := Services.Get(svc.Name)
+	svcName := codegen.SnakeCase(data.VarName)
+	fpath := svcName + ".go"
 	if _, err := os.Stat(fpath); !os.IsNotExist(err) {
 		return nil // file already exists, skip it.
 	}
-	data := Services.Get(svc.Name)
 	apiPkg := strings.ToLower(codegen.Goify(root.API.Name, false))
 	sections := []*codegen.SectionTemplate{
 		codegen.Header("", apiPkg, []*codegen.ImportSpec{
 			{Path: "context"},
 			{Path: "log"},
-			{Path: path.Join(genpkg, codegen.SnakeCase(svc.Name)), Name: data.PkgName},
+			{Path: path.Join(genpkg, svcName), Name: data.PkgName},
 		}),
 		{Name: "basic-service-struct", Source: svcStructT, Data: data},
 		{Name: "basic-service-init", Source: svcInitT, Data: data},

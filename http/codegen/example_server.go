@@ -53,14 +53,15 @@ func exampleServer(genpkg string, root *expr.RootExpr, svr *expr.ServerExpr) *co
 	}
 
 	for _, svc := range root.API.HTTP.Services {
-		pkgName := HTTPServices.Get(svc.Name()).Service.PkgName
+		sd := HTTPServices.Get(svc.Name())
+		svcName := codegen.SnakeCase(sd.Service.VarName)
 		specs = append(specs, &codegen.ImportSpec{
-			Path: path.Join(genpkg, "http", codegen.SnakeCase(svc.Name()), "server"),
-			Name: pkgName + "svr",
+			Path: path.Join(genpkg, "http", svcName, "server"),
+			Name: sd.Service.PkgName + "svr",
 		})
 		specs = append(specs, &codegen.ImportSpec{
-			Path: path.Join(genpkg, codegen.SnakeCase(svc.Name())),
-			Name: pkgName,
+			Path: path.Join(genpkg, svcName),
+			Name: sd.Service.PkgName,
 		})
 	}
 
@@ -122,10 +123,9 @@ func dummyMultipartFile(genpkg string, root *expr.RootExpr, svc *expr.HTTPServic
 			{Path: "mime/multipart"},
 		}
 		data := HTTPServices.Get(svc.Name())
-		pkgName := data.Service.PkgName
 		specs = append(specs, &codegen.ImportSpec{
-			Path: path.Join(genpkg, codegen.SnakeCase(svc.Name())),
-			Name: pkgName,
+			Path: path.Join(genpkg, codegen.SnakeCase(data.Service.VarName)),
+			Name: data.Service.PkgName,
 		})
 		sections = []*codegen.SectionTemplate{codegen.Header("", apiPkg, specs)}
 		for _, e := range data.Endpoints {
