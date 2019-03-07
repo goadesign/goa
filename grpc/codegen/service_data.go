@@ -540,7 +540,6 @@ func (d ServicesData) analyze(gs *expr.GRPCServiceExpr) *ServiceData {
 				for _, sch := range req.Schemes {
 					s := md.Requirements.Scheme(sch.SchemeName).Dup()
 					s.In = sch.In
-					fmt.Println(s.In)
 					switch s.In {
 					case "message":
 						msgSch = msgSch.Append(s)
