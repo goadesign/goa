@@ -2,17 +2,11 @@ package codegen
 
 import (
 	"bytes"
-	"encoding/json"
-	"fmt"
-	"path"
-	"path/filepath"
-	"reflect"
-	"strconv"
-	"strings"
-
 	"goa.design/goa/codegen"
 	"goa.design/goa/codegen/server"
 	"goa.design/goa/expr"
+	"path"
+	"path/filepath"
 )
 
 // ClientCLIFiles returns the client gRPC CLI support file.
@@ -170,10 +164,10 @@ func makeFlags(e *EndpointData, args []*InitArgData) ([]*server.FlagData, *serve
 			FieldName: arg.FieldName,
 		}
 
-		f := argToFlag(e.ServiceName, e.Method.Name, arg)
+		f := server.NewFlagData(e.ServiceName, e.Method.Name, arg.Name, arg.TypeName, arg.Description, arg.Required, arg.Example)
 		flags[i] = f
 		params[i] = f.FullName
-		code, chek := fieldLoadCode(f.FullName, f.Type, arg)
+		code, chek := server.FieldLoadCode(f, arg.Name, arg.TypeName, arg.Validate, arg.DefaultValue)
 		check = check || chek
 		tn := arg.TypeRef
 		if f.Type == "JSON" {
@@ -213,104 +207,6 @@ func makeFlags(e *EndpointData, args []*InitArgData) ([]*server.FlagData, *serve
 		Fields:       fdata,
 		PayloadInit:  pinit,
 		CheckErr:     check,
-	}
-}
-
-func jsonExample(v interface{}) string {
-	// In JSON, keys must be a string. But goa allows map keys to be anything.
-	r := reflect.ValueOf(v)
-	if r.Kind() == reflect.Map {
-		keys := r.MapKeys()
-		if keys[0].Kind() != reflect.String {
-			a := make(map[string]interface{}, len(keys))
-			var kstr string
-			for _, k := range keys {
-				switch t := k.Interface().(type) {
-				case bool:
-					kstr = strconv.FormatBool(t)
-				case int32:
-					kstr = strconv.FormatInt(int64(t), 10)
-				case int64:
-					kstr = strconv.FormatInt(t, 10)
-				case int:
-					kstr = strconv.Itoa(t)
-				case float32:
-					kstr = strconv.FormatFloat(float64(t), 'f', -1, 32)
-				case float64:
-					kstr = strconv.FormatFloat(t, 'f', -1, 64)
-				default:
-					kstr = k.String()
-				}
-				a[kstr] = r.MapIndex(k).Interface()
-			}
-			v = a
-		}
-	}
-	b, err := json.MarshalIndent(v, "   ", "   ")
-	ex := "?"
-	if err == nil {
-		ex = string(b)
-	}
-	if strings.Contains(ex, "\n") {
-		ex = "'" + strings.Replace(ex, "'", "\\'", -1) + "'"
-	}
-	return ex
-}
-
-// fieldLoadCode returns the code of the build payload function that initializes
-// one of the payload object fields. It returns the initialization code and a
-// boolean indicating whether the code requires an "err" variable.
-func fieldLoadCode(actual, fType string, arg *InitArgData) (string, bool) {
-	var (
-		code    string
-		check   bool
-		startIf string
-		endIf   string
-	)
-	{
-		if !arg.Required {
-			startIf = fmt.Sprintf("if %s != \"\" {\n", actual)
-			endIf = "\n}"
-		}
-		if arg.TypeName == codegen.GoNativeTypeName(expr.String) {
-			ref := "&"
-			if arg.Required || arg.DefaultValue != nil {
-				ref = ""
-			}
-			code = arg.Name + " = " + ref + actual
-		} else {
-			ex := jsonExample(arg.Example)
-			code, check = server.ConversionCode(actual, arg.Name, arg.TypeName, !arg.Required && arg.DefaultValue == nil)
-			if check {
-				code += "\nif err != nil {\n"
-				if server.FlagType(arg.TypeName) == "JSON" {
-					code += fmt.Sprintf(`return nil, fmt.Errorf("invalid JSON for %s, example of valid JSON:\n%%s", %q)`,
-						arg.Name, ex)
-				} else {
-					code += fmt.Sprintf(`err = fmt.Errorf("invalid value for %s, must be %s")`,
-						arg.Name, fType)
-				}
-				code += "\n}"
-			}
-			if arg.Validate != "" {
-				code += "\n" + arg.Validate + "\n" + "if err != nil {\n\treturn nil, err\n}"
-			}
-		}
-	}
-	return fmt.Sprintf("%s%s%s", startIf, code, endIf), check
-}
-
-func argToFlag(svcn, en string, arg *InitArgData) *server.FlagData {
-	ex := jsonExample(arg.Example)
-	fn := server.GoifyTerms(svcn, en, arg.Name)
-	return &server.FlagData{
-		Name:        codegen.KebabCase(arg.Name),
-		VarName:     codegen.Goify(arg.Name, false),
-		Type:        server.FlagType(arg.TypeName),
-		FullName:    fn,
-		Description: arg.Description,
-		Required:    arg.Required,
-		Example:     ex,
 	}
 }
 

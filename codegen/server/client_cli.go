@@ -1,10 +1,13 @@
 package server
 
 import (
+	"encoding/json"
 	"fmt"
 	"goa.design/goa/codegen"
 	"goa.design/goa/codegen/service"
 	"goa.design/goa/expr"
+	"reflect"
+	"strconv"
 	"strings"
 )
 
@@ -164,7 +167,7 @@ func BuildSubcommandData(svcName string, m *service.MethodData, buildFunction *B
 	{
 		en := m.Name
 		name = codegen.KebabCase(en)
-		fullName = GoifyTerms(svcName, en)
+		fullName = goifyTerms(svcName, en)
 		description = m.Description
 		if description == "" {
 			description = fmt.Sprintf("Make request to the %q endpoint", m.Name)
@@ -174,12 +177,12 @@ func BuildSubcommandData(svcName string, m *service.MethodData, buildFunction *B
 			// No build function, just convert the arg to the body type
 			var convPre, convSuff string
 			target := "data"
-			if FlagType(m.Payload) == "JSON" {
+			if flagType(m.Payload) == "JSON" {
 				target = "val"
 				convPre = fmt.Sprintf("var val %s\n", m.Payload)
 				convSuff = "\ndata = val"
 			}
-			conv, check := ConversionCode(
+			conv, check := conversionCode(
 				"*"+flags[0].FullName+"Flag",
 				target,
 				m.Payload,
@@ -189,7 +192,7 @@ func BuildSubcommandData(svcName string, m *service.MethodData, buildFunction *B
 			if check {
 				conversion = "var err error\n" + conversion
 				conversion += "\nif err != nil {\n"
-				if FlagType(m.Payload) == "JSON" {
+				if flagType(m.Payload) == "JSON" {
 					conversion += fmt.Sprintf(`return nil, nil, fmt.Errorf("invalid JSON for %s, example of valid JSON:\n%%s", %q)`,
 						flags[0].FullName+"Flag", flags[0].Example)
 				} else {
@@ -280,16 +283,116 @@ func PayloadBuilderSection(buildFunction *BuildFunctionData) *codegen.SectionTem
 	}
 }
 
-// GoifyTerms makes valid go identifiers out of the supplied terms
-func GoifyTerms(terms ...string) string {
-	res := codegen.Goify(terms[0], false)
-	if len(terms) == 1 {
-		return res
+// NewFlagData creates a new FlagData from the given argument attributes
+func NewFlagData(svcn, en string, name, typeName, description string, required bool, example interface{}) *FlagData {
+	ex := jsonExample(example)
+	fn := goifyTerms(svcn, en, name)
+	return &FlagData{
+		Name:        codegen.KebabCase(name),
+		VarName:     codegen.Goify(name, false),
+		Type:        flagType(typeName),
+		FullName:    fn,
+		Description: description,
+		Required:    required,
+		Example:     ex,
 	}
-	for _, t := range terms[1:] {
-		res += codegen.Goify(t, true)
+}
+
+// FieldLoadCode returns the code of the build payload function that initializes
+// one of the payload object fields. It returns the initialization code and a
+// boolean indicating whether the code requires an "err" variable.
+func FieldLoadCode(f *FlagData, argName, argTypeName, validate string, defaultValue interface{}) (string, bool) {
+	var (
+		code    string
+		check   bool
+		startIf string
+		endIf   string
+	)
+	{
+		if !f.Required {
+			startIf = fmt.Sprintf("if %s != \"\" {\n", f.FullName)
+			endIf = "\n}"
+		}
+		if argTypeName == codegen.GoNativeTypeName(expr.String) {
+			ref := "&"
+			if f.Required || defaultValue != nil {
+				ref = ""
+			}
+			code = argName + " = " + ref + f.FullName
+		} else {
+			ex := f.Example
+			code, check = conversionCode(f.FullName, argName, argTypeName, !f.Required && defaultValue == nil)
+			if check {
+				code += "\nif err != nil {\n"
+				if flagType(argTypeName) == "JSON" {
+					code += fmt.Sprintf(`return nil, fmt.Errorf("invalid JSON for %s, example of valid JSON:\n%%s", %q)`,
+						argName, ex)
+				} else {
+					code += fmt.Sprintf(`err = fmt.Errorf("invalid value for %s, must be %s")`,
+						argName, f.Type)
+				}
+				code += "\n}"
+			}
+			if validate != "" {
+				code += "\n" + validate + "\n" + "if err != nil {\n\treturn nil, err\n}"
+			}
+		}
 	}
-	return res
+	return fmt.Sprintf("%s%s%s", startIf, code, endIf), check
+}
+
+// flagType calculates the type of a flag
+func flagType(tname string) string {
+	switch tname {
+	case boolN, intN, int32N, int64N, uintN, uint32N, uint64N, float32N, float64N, stringN:
+		return strings.ToUpper(tname)
+	case bytesN:
+		return "STRING"
+	default: // Any, Array, Map, Object, User
+		return "JSON"
+	}
+}
+
+// jsonExample generates a json example
+func jsonExample(v interface{}) string {
+	// In JSON, keys must be a string. But goa allows map keys to be anything.
+	r := reflect.ValueOf(v)
+	if r.Kind() == reflect.Map {
+		keys := r.MapKeys()
+		if keys[0].Kind() != reflect.String {
+			a := make(map[string]interface{}, len(keys))
+			var kstr string
+			for _, k := range keys {
+				switch t := k.Interface().(type) {
+				case bool:
+					kstr = strconv.FormatBool(t)
+				case int32:
+					kstr = strconv.FormatInt(int64(t), 10)
+				case int64:
+					kstr = strconv.FormatInt(t, 10)
+				case int:
+					kstr = strconv.Itoa(t)
+				case float32:
+					kstr = strconv.FormatFloat(float64(t), 'f', -1, 32)
+				case float64:
+					kstr = strconv.FormatFloat(t, 'f', -1, 64)
+				default:
+					kstr = k.String()
+				}
+				a[kstr] = r.MapIndex(k).Interface()
+			}
+			v = a
+		}
+	}
+	b, err := json.MarshalIndent(v, "   ", "   ")
+	ex := "?"
+	if err == nil {
+		ex = string(b)
+	}
+	if strings.Contains(ex, "\n") {
+		ex = "'" + strings.Replace(ex, "'", "\\'", -1) + "'"
+	}
+	return ex
 }
 
 var (
@@ -306,16 +409,16 @@ var (
 	bytesN   = codegen.GoNativeTypeName(expr.Bytes)
 )
 
-// ConversionCode produces the code that converts the string stored in the
+// conversionCode produces the code that converts the string stored in the
 // variable "from" to the value stored in the variable "to" of type typeName.
-func ConversionCode(from, to, typeName string, pointer bool) (string, bool) {
+func conversionCode(from, to, typeName string, pointer bool) (string, bool) {
 	var (
 		parse    string
 		cast     string
 		checkErr bool
 	)
 	target := to
-	needCast := typeName != stringN && typeName != bytesN && FlagType(typeName) != "JSON"
+	needCast := typeName != stringN && typeName != bytesN && flagType(typeName) != "JSON"
 	decl := ""
 	if needCast && pointer {
 		target = "val"
@@ -377,16 +480,16 @@ func ConversionCode(from, to, typeName string, pointer bool) (string, bool) {
 	return parse, checkErr
 }
 
-// FlagType calculates the type of a flag
-func FlagType(tname string) string {
-	switch tname {
-	case boolN, intN, int32N, int64N, uintN, uint32N, uint64N, float32N, float64N, stringN:
-		return strings.ToUpper(tname)
-	case bytesN:
-		return "STRING"
-	default: // Any, Array, Map, Object, User
-		return "JSON"
+// goifyTerms makes valid go identifiers out of the supplied terms
+func goifyTerms(terms ...string) string {
+	res := codegen.Goify(terms[0], false)
+	if len(terms) == 1 {
+		return res
 	}
+	for _, t := range terms[1:] {
+		res += codegen.Goify(t, true)
+	}
+	return res
 }
 
 func printDescription(desc string) string {
