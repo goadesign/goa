@@ -32,7 +32,7 @@ func serverFile(genpkg string, svc *expr.GRPCServiceExpr) *codegen.File {
 		data = GRPCServices.Get(svc.Name())
 	)
 	{
-		svcName := codegen.SnakeCase(svc.Name())
+		svcName := codegen.SnakeCase(data.Service.VarName)
 		fpath = filepath.Join(codegen.Gendir, "grpc", svcName, "server", "server.go")
 		sections = []*codegen.SectionTemplate{
 			codegen.Header(svc.Name()+" gRPC server", "server", []*codegen.ImportSpec{
@@ -118,7 +118,7 @@ func serverEncodeDecode(genpkg string, svc *expr.GRPCServiceExpr) *codegen.File 
 		data = GRPCServices.Get(svc.Name())
 	)
 	{
-		svcName := codegen.SnakeCase(svc.Name())
+		svcName := codegen.SnakeCase(data.Service.VarName)
 		fpath = filepath.Join(codegen.Gendir, "grpc", svcName, "server", "encode_decode.go")
 		title := fmt.Sprintf("%s gRPC server encoders and decoders", svc.Name())
 		sections = []*codegen.SectionTemplate{

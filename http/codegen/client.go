@@ -23,8 +23,9 @@ func ClientFiles(genpkg string, root *expr.RootExpr) []*codegen.File {
 
 // client returns the client HTTP transport file
 func client(genpkg string, svc *expr.HTTPServiceExpr) *codegen.File {
-	path := filepath.Join(codegen.Gendir, "http", codegen.SnakeCase(svc.Name()), "client", "client.go")
 	data := HTTPServices.Get(svc.Name())
+	svcName := codegen.SnakeCase(data.Service.VarName)
+	path := filepath.Join(codegen.Gendir, "http", svcName, "client", "client.go")
 	title := fmt.Sprintf("%s client HTTP transport", svc.Name())
 	sections := []*codegen.SectionTemplate{
 		codegen.Header(title, "client", []*codegen.ImportSpec{
@@ -40,8 +41,8 @@ func client(genpkg string, svc *expr.HTTPServiceExpr) *codegen.File {
 			{Path: "github.com/gorilla/websocket"},
 			{Path: "goa.design/goa", Name: "goa"},
 			{Path: "goa.design/goa/http", Name: "goahttp"},
-			{Path: genpkg + "/" + codegen.SnakeCase(svc.Name()), Name: data.Service.PkgName},
-			{Path: genpkg + "/" + codegen.SnakeCase(svc.Name()) + "/" + "views", Name: data.Service.ViewsPkg},
+			{Path: genpkg + "/" + svcName, Name: data.Service.PkgName},
+			{Path: genpkg + "/" + svcName + "/" + "views", Name: data.Service.ViewsPkg},
 		}),
 	}
 	sections = append(sections, &codegen.SectionTemplate{
@@ -157,8 +158,9 @@ func client(genpkg string, svc *expr.HTTPServiceExpr) *codegen.File {
 // clientEncodeDecode returns the file containing the HTTP client encoding and
 // decoding logic.
 func clientEncodeDecode(genpkg string, svc *expr.HTTPServiceExpr) *codegen.File {
-	path := filepath.Join(codegen.Gendir, "http", codegen.SnakeCase(svc.Name()), "client", "encode_decode.go")
 	data := HTTPServices.Get(svc.Name())
+	svcName := codegen.SnakeCase(data.Service.VarName)
+	path := filepath.Join(codegen.Gendir, "http", svcName, "client", "encode_decode.go")
 	title := fmt.Sprintf("%s HTTP client encoders and decoders", svc.Name())
 	sections := []*codegen.SectionTemplate{
 		codegen.Header(title, "client", []*codegen.ImportSpec{
@@ -175,8 +177,8 @@ func clientEncodeDecode(genpkg string, svc *expr.HTTPServiceExpr) *codegen.File 
 			{Path: "unicode/utf8"},
 			{Path: "goa.design/goa", Name: "goa"},
 			{Path: "goa.design/goa/http", Name: "goahttp"},
-			{Path: genpkg + "/" + codegen.SnakeCase(svc.Name()), Name: data.Service.PkgName},
-			{Path: genpkg + "/" + codegen.SnakeCase(svc.Name()) + "/" + "views", Name: data.Service.ViewsPkg},
+			{Path: genpkg + "/" + svcName, Name: data.Service.PkgName},
+			{Path: genpkg + "/" + svcName + "/" + "views", Name: data.Service.ViewsPkg},
 		}),
 	}
 

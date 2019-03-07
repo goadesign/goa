@@ -503,3 +503,30 @@ var BidirectionalStreamingResultWithExplicitViewMethodDSL = func() {
 		})
 	})
 }
+
+var NamesWithSpacesDSL = func() {
+	API("API With Spaces", func() {
+		Server("Server With Spaces", func() {
+			Services("Service With Spaces")
+		})
+	})
+	var APayload = Type("Payload With Space", func() {
+		Attribute("String", String)
+	})
+	var AResult = ResultType("application/vnd.goa.result", func() {
+		TypeName("Result With Space")
+		Attributes(func() {
+			Attribute("Int", Int)
+		})
+	})
+	Service("Service With Spaces", func() {
+		Method("Method With Spaces", func() {
+			Payload(APayload)
+			Result(AResult)
+			HTTP(func() {
+				GET("/")
+			})
+			GRPC(func() {})
+		})
+	})
+}

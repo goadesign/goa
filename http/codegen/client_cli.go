@@ -170,7 +170,7 @@ func endpointParser(genpkg string, root *expr.RootExpr, svr *expr.ServerExpr, da
 			continue
 		}
 		specs = append(specs, &codegen.ImportSpec{
-			Path: genpkg + "/http/" + codegen.SnakeCase(sd.Service.Name) + "/client",
+			Path: genpkg + "/http/" + codegen.SnakeCase(sd.Service.VarName) + "/client",
 			Name: sd.Service.PkgName + "c",
 		})
 	}
@@ -226,9 +226,9 @@ func printDescription(desc string) string {
 // payloadBuilders returns the file that contains the payload constructors that
 // use flag values as arguments.
 func payloadBuilders(genpkg string, svc *expr.HTTPServiceExpr, data *commandData) *codegen.File {
-	path := filepath.Join(codegen.Gendir, "http", codegen.SnakeCase(svc.Name()), "client", "cli.go")
-	title := fmt.Sprintf("%s HTTP client CLI support package", svc.Name())
 	sd := HTTPServices.Get(svc.Name())
+	path := filepath.Join(codegen.Gendir, "http", codegen.SnakeCase(sd.Service.VarName), "client", "cli.go")
+	title := fmt.Sprintf("%s HTTP client CLI support package", svc.Name())
 	specs := []*codegen.ImportSpec{
 		{Path: "encoding/json"},
 		{Path: "fmt"},
@@ -238,7 +238,7 @@ func payloadBuilders(genpkg string, svc *expr.HTTPServiceExpr, data *commandData
 		{Path: "unicode/utf8"},
 		{Path: "goa.design/goa", Name: "goa"},
 		{Path: "goa.design/goa/http", Name: "goahttp"},
-		{Path: genpkg + "/" + codegen.SnakeCase(svc.Name()), Name: sd.Service.PkgName},
+		{Path: genpkg + "/" + codegen.SnakeCase(sd.Service.VarName), Name: sd.Service.PkgName},
 	}
 	sections := []*codegen.SectionTemplate{
 		codegen.Header(title, "client", specs),

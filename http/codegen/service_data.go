@@ -826,7 +826,7 @@ func (d ServicesData) analyze(hs *expr.HTTPServiceExpr) *ServiceData {
 			ad.MultipartRequestDecoder = &MultipartData{
 				FuncName:    fmt.Sprintf("%s%sDecoderFunc", svc.StructName, ep.VarName),
 				InitName:    fmt.Sprintf("New%s%sDecoder", svc.StructName, ep.VarName),
-				VarName:     fmt.Sprintf("%s%sDecoderFn", svc.Name, ep.VarName),
+				VarName:     fmt.Sprintf("%s%sDecoderFn", svc.VarName, ep.VarName),
 				ServiceName: svc.Name,
 				MethodName:  ep.Name,
 				Payload:     ad.Payload,
@@ -834,7 +834,7 @@ func (d ServicesData) analyze(hs *expr.HTTPServiceExpr) *ServiceData {
 			ad.MultipartRequestEncoder = &MultipartData{
 				FuncName:    fmt.Sprintf("%s%sEncoderFunc", svc.StructName, ep.VarName),
 				InitName:    fmt.Sprintf("New%s%sEncoder", svc.StructName, ep.VarName),
-				VarName:     fmt.Sprintf("%s%sEncoderFn", svc.Name, ep.VarName),
+				VarName:     fmt.Sprintf("%s%sEncoderFn", svc.VarName, ep.VarName),
 				ServiceName: svc.Name,
 				MethodName:  ep.Name,
 				Payload:     ad.Payload,

@@ -10,8 +10,9 @@ import (
 
 // File returns the service file for the given service.
 func File(genpkg string, service *expr.ServiceExpr) *codegen.File {
-	path := filepath.Join(codegen.Gendir, codegen.SnakeCase(service.Name), "service.go")
 	svc := Services.Get(service.Name)
+	svcName := codegen.SnakeCase(svc.VarName)
+	path := filepath.Join(codegen.Gendir, svcName, "service.go")
 	header := codegen.Header(
 		service.Name+" service",
 		svc.PkgName,
@@ -19,7 +20,7 @@ func File(genpkg string, service *expr.ServiceExpr) *codegen.File {
 			{Path: "context"},
 			{Path: "goa.design/goa"},
 			{Path: "goa.design/goa/security"},
-			{Path: genpkg + "/" + codegen.SnakeCase(service.Name) + "/" + "views", Name: svc.ViewsPkg},
+			{Path: genpkg + "/" + svcName + "/" + "views", Name: svc.ViewsPkg},
 		})
 	def := &codegen.SectionTemplate{
 		Name:   "service",

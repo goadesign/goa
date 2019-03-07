@@ -163,16 +163,17 @@ func endpointParser(genpkg string, root *expr.RootExpr, svr *expr.ServerExpr, da
 		}
 		for _, svc := range root.API.GRPC.Services {
 			sd := GRPCServices.Get(svc.Name())
+			svcName := codegen.SnakeCase(sd.Service.VarName)
 			if sd == nil {
 				continue
 			}
 			specs = append(specs, &codegen.ImportSpec{
-				Path: path.Join(genpkg, "grpc", codegen.SnakeCase(sd.Service.Name), "client"),
+				Path: path.Join(genpkg, "grpc", svcName, "client"),
 				Name: sd.Service.PkgName + "c",
 			})
 			specs = append(specs, &codegen.ImportSpec{
-				Path: path.Join(genpkg, "grpc", codegen.SnakeCase(sd.Service.Name), pbPkgName),
-				Name: codegen.SnakeCase(svc.Name()) + pbPkgName,
+				Path: path.Join(genpkg, "grpc", svcName, pbPkgName),
+				Name: svcName + pbPkgName,
 			})
 		}
 		usages := make([]string, len(data))
@@ -228,7 +229,7 @@ func payloadBuilders(genpkg string, svc *expr.GRPCServiceExpr, data *commandData
 		sd = GRPCServices.Get(svc.Name())
 	)
 	{
-		svcName := codegen.SnakeCase(svc.Name())
+		svcName := codegen.SnakeCase(sd.Service.VarName)
 		fpath = filepath.Join(codegen.Gendir, "grpc", svcName, "client", "cli.go")
 		sections = []*codegen.SectionTemplate{
 			codegen.Header(svc.Name()+" gRPC client CLI support package", "client", []*codegen.ImportSpec{
