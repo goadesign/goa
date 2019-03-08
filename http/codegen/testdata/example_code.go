@@ -71,17 +71,14 @@ func handleHTTPServer(ctx context.Context, u *url.URL, serviceEndpoints *service
 			errc <- srv.ListenAndServe()
 		}()
 
-		select {
-		case <-ctx.Done():
-			logger.Printf("shutting down HTTP server at %q", u.Host)
+		<-ctx.Done()
+		logger.Printf("shutting down HTTP server at %q", u.Host)
 
-			// Shutdown gracefully with a 30s timeout.
-			ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
-			defer cancel()
+		// Shutdown gracefully with a 30s timeout.
+		ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
+		defer cancel()
 
-			srv.Shutdown(ctx)
-			return
-		}
+		srv.Shutdown(ctx)
 	}()
 }
 
@@ -167,17 +164,14 @@ func handleHTTPServer(ctx context.Context, u *url.URL, wg *sync.WaitGroup, errc 
 			errc <- srv.ListenAndServe()
 		}()
 
-		select {
-		case <-ctx.Done():
-			logger.Printf("shutting down HTTP server at %q", u.Host)
+		<-ctx.Done()
+		logger.Printf("shutting down HTTP server at %q", u.Host)
 
-			// Shutdown gracefully with a 30s timeout.
-			ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
-			defer cancel()
+		// Shutdown gracefully with a 30s timeout.
+		ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
+		defer cancel()
 
-			srv.Shutdown(ctx)
-			return
-		}
+		srv.Shutdown(ctx)
 	}()
 }
 
@@ -263,17 +257,14 @@ func handleHTTPServer(ctx context.Context, u *url.URL, serviceEndpoints *service
 			errc <- srv.ListenAndServe()
 		}()
 
-		select {
-		case <-ctx.Done():
-			logger.Printf("shutting down HTTP server at %q", u.Host)
+		<-ctx.Done()
+		logger.Printf("shutting down HTTP server at %q", u.Host)
 
-			// Shutdown gracefully with a 30s timeout.
-			ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
-			defer cancel()
+		// Shutdown gracefully with a 30s timeout.
+		ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
+		defer cancel()
 
-			srv.Shutdown(ctx)
-			return
-		}
+		srv.Shutdown(ctx)
 	}()
 }
 
@@ -365,17 +356,14 @@ func handleHTTPServer(ctx context.Context, u *url.URL, serviceEndpoints *service
 			errc <- srv.ListenAndServe()
 		}()
 
-		select {
-		case <-ctx.Done():
-			logger.Printf("shutting down HTTP server at %q", u.Host)
+		<-ctx.Done()
+		logger.Printf("shutting down HTTP server at %q", u.Host)
 
-			// Shutdown gracefully with a 30s timeout.
-			ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
-			defer cancel()
+		// Shutdown gracefully with a 30s timeout.
+		ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
+		defer cancel()
 
-			srv.Shutdown(ctx)
-			return
-		}
+		srv.Shutdown(ctx)
 	}()
 }
 
@@ -468,17 +456,14 @@ func handleHTTPServer(ctx context.Context, u *url.URL, streamingServiceAEndpoint
 			errc <- srv.ListenAndServe()
 		}()
 
-		select {
-		case <-ctx.Done():
-			logger.Printf("shutting down HTTP server at %q", u.Host)
+		<-ctx.Done()
+		logger.Printf("shutting down HTTP server at %q", u.Host)
 
-			// Shutdown gracefully with a 30s timeout.
-			ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
-			defer cancel()
+		// Shutdown gracefully with a 30s timeout.
+		ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
+		defer cancel()
 
-			srv.Shutdown(ctx)
-			return
-		}
+		srv.Shutdown(ctx)
 	}()
 }
 
