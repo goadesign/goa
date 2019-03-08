@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"goa.design/goa/codegen"
+	"goa.design/goa/codegen/example"
 	"goa.design/goa/expr"
 )
 
@@ -65,11 +66,13 @@ func exampleCLI(genpkg string, root *expr.RootExpr, svr *expr.ServerExpr) *codeg
 
 	var (
 		sections []*codegen.SectionTemplate
+
+		svrdata = example.Servers.Get(svr)
 	)
 	{
 		sections = []*codegen.SectionTemplate{
 			codegen.Header("", "main", specs),
-			&codegen.SectionTemplate{Name: "do-grpc-cli", Source: grpcCLIDoT},
+			&codegen.SectionTemplate{Name: "do-grpc-cli", Source: grpcCLIDoT, Data: svrdata},
 		}
 	}
 
@@ -85,6 +88,7 @@ const (
 	return cli.ParseEndpoint(conn)
 }
 
+{{ if eq .DefaultTransport.Type "grpc" }}
 func grpcUsageCommands() string {
 	return cli.UsageCommands()
 }
@@ -92,5 +96,6 @@ func grpcUsageCommands() string {
 func grpcUsageExamples() string {
 	return cli.UsageExamples()
 }
+{{- end }}
 `
 )

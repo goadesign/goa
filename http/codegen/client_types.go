@@ -242,10 +242,3 @@ func {{ .Name }}({{- range .ClientArgs }}{{ .Name }} {{ .TypeRef }}, {{ end }}) 
 	{{ end -}}
 }
 `
-
-// input: service.InitData
-const viewedResultTypeInitT = `{{ comment .Description }}
-func {{ .Name }}({{ range .Args }}{{ .Name }} {{ .Ref }}, {{ end }}) {{ .ReturnRef }} {
-  {{ .Code }}
-}
-`

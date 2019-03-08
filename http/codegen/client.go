@@ -793,29 +793,3 @@ func {{ .InitName }}(encoderFn {{ .FuncName }}) func(r *http.Request) goahttp.En
 	}
 }
 `
-
-// input: EndpointData
-const clientStreamRecvT = `{{ printf "Recv receives a %s type from the %q endpoint websocket connection." .Result.Name .Method.Name | comment }}
-func (c *{{ .ClientStream.VarName }}) Recv() ({{ .Result.Ref }}, error) {
-	{{- if .Method.ViewedResult }}
-	var vres {{ .Method.ViewedResult.ViewsPkg }}.{{ .Result.Name }}
-	{{- else }}
-	var res {{ .Result.Name }}
-	{{- end }}
-	err := c.conn.ReadJSON(&{{ if .Method.ViewedResult }}vres{{ else }}res{{ end }})
-	if websocket.IsCloseError(err, goahttp.NormalSocketCloseErrors...) {
-		return nil, io.EOF
-	}
-	if err != nil {
-		return nil, err
-	}
-	{{- if .Method.ViewedResult }}
-	if err := {{ .Method.ViewedResult.ViewsPkg }}.Validate{{ .Result.Name }}(vres); err != nil {
-		return nil, goahttp.ErrValidationError("{{ $.ServiceName }}", "{{ $.Method.Name }}", err)
-	}
-	return {{ $.ServicePkgName }}.{{ .Method.ViewedResult.ResultInit.Name }}(vres), nil
-	{{- else }}
-	return &res, nil
-	{{- end }}
-}
-`

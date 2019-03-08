@@ -105,14 +105,14 @@ type (
 		BasicScheme *service.SchemeData
 		// HeaderSchemes lists all the security requirement schemes that
 		// apply to the method and are encoded in the request header.
-		HeaderSchemes []*service.SchemeData
+		HeaderSchemes service.SchemesData
 		// BodySchemes lists all the security requirement schemes that
 		// apply to the method and are encoded in the request body.
-		BodySchemes []*service.SchemeData
+		BodySchemes service.SchemesData
 		// QuerySchemes lists all the security requirement schemes that
 		// apply to the method and are encoded in the request query
 		// string.
-		QuerySchemes []*service.SchemeData
+		QuerySchemes service.SchemesData
 
 		// server
 
@@ -734,11 +734,11 @@ func (d ServicesData) analyze(hs *expr.HTTPServiceExpr) *ServiceData {
 					default:
 						switch s.In {
 						case "query":
-							qsch.Append(s)
+							qsch = qsch.Append(s)
 						case "header":
-							hsch.Append(s)
+							hsch = hsch.Append(s)
 						default:
-							bosch.Append(s)
+							bosch = bosch.Append(s)
 						}
 					}
 				}

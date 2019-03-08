@@ -12,13 +12,6 @@ import (
 	"goa.design/goa/http/codegen/openapi"
 )
 
-type (
-	// openAPI is the OpenAPI spec file implementation.
-	openAPI struct {
-		spec *openapi.V2
-	}
-)
-
 // OpenAPIFiles returns the files for the OpenAPIFile spec of the given HTTP API.
 func OpenAPIFiles(root *expr.RootExpr) ([]*codegen.File, error) {
 	jsonPath := filepath.Join(codegen.Gendir, "http", "openapi.json")

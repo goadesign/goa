@@ -373,13 +373,13 @@ func Decode{{ .Method.VarName }}Request(ctx context.Context, v interface{}, md m
 		{{- if not .CredRequired }}
 			if payload.{{ .CredField }} != nil {
 		{{- end }}
-			if strings.Contains({{ if .CredPointer }}*{{ end }}payload.{{ .CredField }}, " ") {
-				// Remove authorization scheme prefix (e.g. "Bearer")
-				cred := strings.SplitN({{ if .CredPointer }}*{{ end }}payload.{{ .CredField }}, " ", 2)[1]
-				payload.{{ .CredField }} = {{ if .CredPointer }}&{{ end }}cred
-			}
-		{{- if not .CredRequired }}
+		if strings.Contains({{ if .CredPointer }}*{{ end }}payload.{{ .CredField }}, " ") {
+			// Remove authorization scheme prefix (e.g. "Bearer")
+			cred := strings.SplitN({{ if .CredPointer }}*{{ end }}payload.{{ .CredField }}, " ", 2)[1]
+			payload.{{ .CredField }} = {{ if .CredPointer }}&{{ end }}cred
 		}
+		{{- if not .CredRequired }}
+			}
 		{{- end }}
 	{{- end }}
 {{- end }}

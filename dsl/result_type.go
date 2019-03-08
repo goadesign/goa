@@ -440,10 +440,6 @@ func buildView(name string, mt *expr.ResultTypeExpr, at *expr.AttributeExpr) (*e
 	if o == nil {
 		return nil, fmt.Errorf("invalid view DSL")
 	}
-	mto := expr.AsObject(mt.Type)
-	if mto == nil {
-		mto = expr.AsObject(mt.Type.(*expr.Array).ElemType.Type)
-	}
 	for _, nat := range *o {
 		n := nat.Name
 		cat := nat.Attribute

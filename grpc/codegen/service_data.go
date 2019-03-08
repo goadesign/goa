@@ -83,10 +83,10 @@ type (
 		Response *ResponseData
 		// MetadataSchemes lists all the security requirement schemes that
 		// apply to the method and are encoded in the request metadata.
-		MetadataSchemes []*service.SchemeData
+		MetadataSchemes service.SchemesData
 		// MessageSchemes lists all the security requirement schemes that
 		// apply to the method and are encoded in the request message.
-		MessageSchemes []*service.SchemeData
+		MessageSchemes service.SchemesData
 		// Errors describes the method gRPC errors.
 		Errors []*ErrorData
 
@@ -1094,7 +1094,7 @@ func extractMetadata(a *expr.MappedAttributeExpr, service *codegen.ContextualAtt
 			if !expr.IsObject(service.Attribute.Expr().Type) {
 				fieldName = ""
 			}
-			if pointer = a.IsPrimitivePointer(name, true); pointer {
+			if a.IsPrimitivePointer(name, true) {
 				typeRef = "*" + typeRef
 			}
 		}

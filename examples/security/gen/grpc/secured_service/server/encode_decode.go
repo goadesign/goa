@@ -207,6 +207,13 @@ func DecodeAlsoDoublySecureRequest(ctx context.Context, v interface{}, md metada
 				payload.Token = &cred
 			}
 		}
+		if payload.OauthToken != nil {
+			if strings.Contains(*payload.OauthToken, " ") {
+				// Remove authorization scheme prefix (e.g. "Bearer")
+				cred := strings.SplitN(*payload.OauthToken, " ", 2)[1]
+				payload.OauthToken = &cred
+			}
+		}
 	}
 	return payload, nil
 }
