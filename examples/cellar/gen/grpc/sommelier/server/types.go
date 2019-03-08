@@ -20,17 +20,17 @@ import (
 // NewCriteria builds the payload of the "pick" endpoint of the "sommelier"
 // service from the gRPC request type.
 func NewCriteria(message *sommelierpb.PickRequest) *sommelier.Criteria {
-	payload := &sommelier.Criteria{
+	v := &sommelier.Criteria{
 		Name:   &message.Name,
 		Winery: &message.Winery,
 	}
 	if message.Varietal != nil {
-		payload.Varietal = make([]string, len(message.Varietal))
+		v.Varietal = make([]string, len(message.Varietal))
 		for i, val := range message.Varietal {
-			payload.Varietal[i] = val
+			v.Varietal[i] = val
 		}
 	}
-	return payload
+	return v
 }
 
 // NewStoredBottleCollection builds the gRPC response type from the result of

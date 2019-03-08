@@ -175,7 +175,6 @@ func makeFlags(e *EndpointData, args []*InitArgData) ([]*cli.FlagData, *cli.Buil
 			VarName:  arg.Name,
 			TypeName: tn,
 			Init:     code,
-			Pointer:  arg.Pointer,
 		})
 	}
 	if e.Method.PayloadRef == "" {
