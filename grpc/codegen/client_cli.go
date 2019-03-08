@@ -182,9 +182,9 @@ func makeFlags(e *EndpointData, args []*InitArgData) ([]*cli.FlagData, *cli.Buil
 	}
 	if e.Request.ServerConvert != nil {
 		pinit = &cli.PayloadInitData{
-			Code:                e.Request.ServerConvert.Init.Code,
-			ReturnIsStruct:      e.Request.ServerConvert.Init.ReturnIsStruct,
-			Args:                pInitArgs,
+			Code:           e.Request.ServerConvert.Init.Code,
+			ReturnIsStruct: e.Request.ServerConvert.Init.ReturnIsStruct,
+			Args:           pInitArgs,
 		}
 	}
 

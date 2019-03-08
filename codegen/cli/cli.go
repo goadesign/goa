@@ -267,11 +267,11 @@ func FlagsCode(data []*CommandData) string {
 // CommandUsage builds the section templates that can be used to generate the endpoint command usage code.
 func CommandUsage(data *CommandData) *codegen.SectionTemplate {
 	return &codegen.SectionTemplate{
-			Name:    "cli-command-usage",
-			Source:  commandUsageT,
-			Data:    data,
-			FuncMap: map[string]interface{}{"printDescription": printDescription},
-		}
+		Name:    "cli-command-usage",
+		Source:  commandUsageT,
+		Data:    data,
+		FuncMap: map[string]interface{}{"printDescription": printDescription},
+	}
 }
 
 // PayloadBuilderSection builds the section template that can be used to generate the payload builder code.

@@ -11,10 +11,10 @@ import (
 type commandData struct {
 	*cli.CommandData
 	Subcommands []*subcommandData
-	NeedStream bool
+	NeedStream  bool
 }
 
-type subcommandData  struct {
+type subcommandData struct {
 	*cli.SubcommandData
 	// MultipartFuncName is the function name used to render a multipart request encoder.
 	MultipartFuncName string
@@ -62,7 +62,7 @@ func ClientCLIFiles(genpkg string, root *expr.RootExpr) []*codegen.File {
 func buildCommandData(sd *ServiceData) *commandData {
 	return &commandData{
 		CommandData: cli.BuildCommandData(sd.Service),
-		NeedStream: streamingEndpointExists(sd),
+		NeedStream:  streamingEndpointExists(sd),
 	}
 }
 
@@ -235,15 +235,15 @@ func makeFlags(e *EndpointData, args []*InitArgData) ([]*cli.FlagData, *cli.Buil
 	}
 
 	return flags, &cli.BuildFunctionData{
-		Name:           "Build" + e.Method.VarName + "Payload",
-		ActualParams:   params,
-		FormalParams:   params,
-		ServiceName:    e.ServiceName,
-		MethodName:     e.Method.Name,
-		ResultType:     e.Payload.Ref,
-		Fields:         fdata,
-		PayloadInit:    &pInit,
-		CheckErr:       check,
+		Name:         "Build" + e.Method.VarName + "Payload",
+		ActualParams: params,
+		FormalParams: params,
+		ServiceName:  e.ServiceName,
+		MethodName:   e.Method.Name,
+		ResultType:   e.Payload.Ref,
+		Fields:       fdata,
+		PayloadInit:  &pInit,
+		CheckErr:     check,
 	}
 }
 
