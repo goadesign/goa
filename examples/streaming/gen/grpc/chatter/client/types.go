@@ -10,6 +10,7 @@ package client
 
 import (
 	goa "goa.design/goa"
+	chattersvc "goa.design/goa/examples/streaming/gen/chatter"
 	chattersvcviews "goa.design/goa/examples/streaming/gen/chatter/views"
 	chatterpb "goa.design/goa/examples/streaming/gen/grpc/chatter/pb"
 )
@@ -64,6 +65,22 @@ func NewSummaryStreamingRequest(spayload string) *chatterpb.SummaryStreamingRequ
 	return v
 }
 
+// NewSubscribeRequest builds the gRPC request type from the payload of the
+// "subscribe" endpoint of the "chatter" service.
+func NewSubscribeRequest() *chatterpb.SubscribeRequest {
+	message := &chatterpb.SubscribeRequest{}
+	return message
+}
+
+func NewEvent(v *chatterpb.SubscribeResponse) *chattersvc.Event {
+	result := &chattersvc.Event{
+		Message: v.Message_,
+		Action:  v.Action,
+		AddedAt: v.AddedAt,
+	}
+	return result
+}
+
 // NewHistoryRequest builds the gRPC request type from the payload of the
 // "history" endpoint of the "chatter" service.
 func NewHistoryRequest() *chatterpb.HistoryRequest {
@@ -97,6 +114,16 @@ func ValidateChatSummaryCollection(message *chatterpb.ChatSummaryCollection) (er
 // ValidateChatSummary runs the validations defined on ChatSummary.
 func ValidateChatSummary(message *chatterpb.ChatSummary) (err error) {
 	err = goa.MergeErrors(err, goa.ValidateFormat("message.sent_at", message.SentAt, goa.FormatDateTime))
+
+	return
+}
+
+// ValidateSubscribeResponse runs the validations defined on SubscribeResponse.
+func ValidateSubscribeResponse(message *chatterpb.SubscribeResponse) (err error) {
+	if !(message.Action == "added") {
+		err = goa.MergeErrors(err, goa.InvalidEnumValueError("message.action", message.Action, []interface{}{"added"}))
+	}
+	err = goa.MergeErrors(err, goa.ValidateFormat("message.added_at", message.AddedAt, goa.FormatDateTime))
 
 	return
 }

@@ -58,6 +58,115 @@ func RunDSL() error {
 	return nil
 }
 
+// Execute runs the given DSL to initialize the given expression. It returns
+// true on success. It returns false and appends to Context.Errors on failure.
+// Note that Run takes care of calling Execute on all expressions that implement
+// Source. This function is intended for use by expressions that run the DSL at
+// declaration time rather than store the DSL for execution by the dsl engine
+// (usually simple independent expressions). The DSL should use ReportError to
+// record DSL execution errors.
+func Execute(fn func(), def Expression) bool {
+	if fn == nil {
+		return true
+	}
+	var startCount int
+	if Context.Errors != nil {
+		startCount = len(Context.Errors.(MultiError))
+	}
+	Context.Stack = append(Context.Stack, def)
+	fn()
+	Context.Stack = Context.Stack[:len(Context.Stack)-1]
+	var endCount int
+	if Context.Errors != nil {
+		endCount = len(Context.Errors.(MultiError))
+	}
+	return endCount <= startCount
+}
+
+// Current returns the expression whose DSL is currently being executed.
+// As a special case Current returns Top when the execution stack is empty.
+func Current() Expression {
+	current := Context.Stack.Current()
+	if current == nil {
+		return Top
+	}
+	return current
+}
+
+// ReportError records a DSL error for reporting post DSL execution. It accepts
+// a format and values a la fmt.Printf.
+func ReportError(fm string, vals ...interface{}) {
+	var suffix string
+	if cur := Context.Stack.Current(); cur != nil {
+		if name := cur.EvalName(); name != "" {
+			suffix = fmt.Sprintf(" in %s", name)
+		}
+	} else {
+		suffix = " (top level)"
+	}
+	err := fmt.Errorf(fm+suffix, vals...)
+	file, line := computeErrorLocation()
+	Context.Record(&Error{
+		GoError: err,
+		File:    file,
+		Line:    line,
+	})
+}
+
+// IncompatibleDSL should be called by DSL functions when they are invoked in an
+// incorrect context (e.g. "Params" in "Service").
+func IncompatibleDSL() {
+	elems := strings.Split(caller(), ".")
+	ReportError("invalid use of %s", elems[len(elems)-1])
+}
+
+// InvalidArgError records an invalid argument error. It is used by DSL
+// functions that take dynamic arguments.
+func InvalidArgError(expected string, actual interface{}) {
+	ReportError("cannot use %#v (type %s) as type %s", actual, reflect.TypeOf(actual), expected)
+}
+
+// ValidationErrors records the errors encountered when running Validate.
+type ValidationErrors struct {
+	Errors      []error
+	Expressions []Expression
+}
+
+// Error implements the error interface.
+func (verr *ValidationErrors) Error() string {
+	msg := make([]string, len(verr.Errors))
+	for i, err := range verr.Errors {
+		msg[i] = fmt.Sprintf("%s: %s", verr.Expressions[i].EvalName(), err)
+	}
+	return strings.Join(msg, "\n")
+}
+
+// Merge merges validation errors into the target.
+func (verr *ValidationErrors) Merge(err *ValidationErrors) {
+	if err == nil {
+		return
+	}
+	verr.Errors = append(verr.Errors, err.Errors...)
+	verr.Expressions = append(verr.Expressions, err.Expressions...)
+}
+
+// Add adds a validation error to the target.
+func (verr *ValidationErrors) Add(def Expression, format string, vals ...interface{}) {
+	verr.AddError(def, fmt.Errorf(format, vals...))
+}
+
+// AddError adds a validation error to the target. It "flattens" validation
+// errors so that the recorded errors are never ValidationErrors themselves.
+func (verr *ValidationErrors) AddError(def Expression, err error) {
+	if v, ok := err.(*ValidationErrors); ok {
+		verr.Errors = append(verr.Errors, v.Errors...)
+		verr.Expressions = append(verr.Expressions, v.Expressions...)
+		return
+	}
+	verr.Errors = append(verr.Errors, err)
+	verr.Expressions = append(verr.Expressions, def)
+}
+
 // runSet executes the DSL for all expressions in the given set. The expression
 // DSLs may append to the set as they execute.
 func runSet(set ExpressionSet) error {
@@ -125,115 +234,6 @@ func finalizeSet(set ExpressionSet) error {
 		}
 	}
 	return nil
-}
-
-// Execute runs the given DSL to initialize the given expression. It returns
-// true on success. It returns false and appends to Context.Errors on failure.
-// Note that Run takes care of calling Execute on all expressions that implement
-// Source. This function is intended for use by expressions that run the DSL at
-// declaration time rather than store the DSL for execution by the dsl engine
-// (usually simple independent expressions). The DSL should use ReportError to
-// record DSL execution errors.
-func Execute(fn func(), def Expression) bool {
-	if fn == nil {
-		return true
-	}
-	var startCount int
-	if Context.Errors != nil {
-		startCount = len(Context.Errors.(MultiError))
-	}
-	Context.Stack = append(Context.Stack, def)
-	fn()
-	Context.Stack = Context.Stack[:len(Context.Stack)-1]
-	var endCount int
-	if Context.Errors != nil {
-		endCount = len(Context.Errors.(MultiError))
-	}
-	return endCount <= startCount
-}
-
-// Current returns the expression whose DSL is currently being executed.
-// As a special case Current returns Top when the execution stack is empty.
-func Current() Expression {
-	current := Context.Stack.Current()
-	if current == nil {
-		return Top
-	}
-	return current
-}
-
-// ReportError records a DSL error for reporting post DSL execution.  It accepts
-// a format and values a la fmt.Printf.
-func ReportError(fm string, vals ...interface{}) {
-	var suffix string
-	if cur := Context.Stack.Current(); cur != nil {
-		if name := cur.EvalName(); name != "" {
-			suffix = fmt.Sprintf(" in %s", name)
-		}
-	} else {
-		suffix = " (top level)"
-	}
-	err := fmt.Errorf(fm+suffix, vals...)
-	file, line := computeErrorLocation()
-	Context.Record(&Error{
-		GoError: err,
-		File:    file,
-		Line:    line,
-	})
-}
-
-// IncompatibleDSL should be called by DSL functions when they are invoked in an
-// incorrect context (e.g. "Params" in "Service").
-func IncompatibleDSL() {
-	elems := strings.Split(caller(), ".")
-	ReportError("invalid use of %s", elems[len(elems)-1])
-}
-
-// InvalidArgError records an invalid argument error.  It is used by DSL
-// functions that take dynamic arguments.
-func InvalidArgError(expected string, actual interface{}) {
-	ReportError("cannot use %#v (type %s) as type %s", actual, reflect.TypeOf(actual), expected)
-}
-
-// ValidationErrors records the errors encountered when running Validate.
-type ValidationErrors struct {
-	Errors      []error
-	Expressions []Expression
-}
-
-// Error implements the error interface.
-func (verr *ValidationErrors) Error() string {
-	msg := make([]string, len(verr.Errors))
-	for i, err := range verr.Errors {
-		msg[i] = fmt.Sprintf("%s: %s", verr.Expressions[i].EvalName(), err)
-	}
-	return strings.Join(msg, "\n")
-}
-
-// Merge merges validation errors into the target.
-func (verr *ValidationErrors) Merge(err *ValidationErrors) {
-	if err == nil {
-		return
-	}
-	verr.Errors = append(verr.Errors, err.Errors...)
-	verr.Expressions = append(verr.Expressions, err.Expressions...)
-}
-
-// Add adds a validation error to the target.
-func (verr *ValidationErrors) Add(def Expression, format string, vals ...interface{}) {
-	verr.AddError(def, fmt.Errorf(format, vals...))
-}
-
-// AddError adds a validation error to the target. It "flattens" validation
-// errors so that the recorded errors are never ValidationErrors themselves.
-func (verr *ValidationErrors) AddError(def Expression, err error) {
-	if v, ok := err.(*ValidationErrors); ok {
-		verr.Errors = append(verr.Errors, v.Errors...)
-		verr.Expressions = append(verr.Expressions, v.Expressions...)
-		return
-	}
-	verr.Errors = append(verr.Errors, err)
-	verr.Expressions = append(verr.Expressions, def)
 }
 
 // caller returns the name of calling function.

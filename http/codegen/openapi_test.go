@@ -62,9 +62,6 @@ func TestOutputPath(t *testing.T) {
 }
 
 func TestSections(t *testing.T) {
-	const (
-		genPkg = "goa.design/goa"
-	)
 	var (
 		goldenPath = filepath.Join("testdata", "openapi_v2", t.Name())
 	)

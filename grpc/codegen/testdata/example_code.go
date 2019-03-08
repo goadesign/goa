@@ -54,12 +54,9 @@ func handleGRPCServer(ctx context.Context, u *url.URL, serviceEndpoints *service
 			errc <- srv.Serve(lis)
 		}()
 
-		select {
-		case <-ctx.Done():
-			logger.Printf("shutting down gRPC server at %q", u.Host)
-			srv.Stop()
-			return
-		}
+		<-ctx.Done()
+		logger.Printf("shutting down gRPC server at %q", u.Host)
+		srv.Stop()
 	}()
 }
 `
@@ -118,12 +115,9 @@ func handleGRPCServer(ctx context.Context, u *url.URL, serviceEndpoints *service
 			errc <- srv.Serve(lis)
 		}()
 
-		select {
-		case <-ctx.Done():
-			logger.Printf("shutting down gRPC server at %q", u.Host)
-			srv.Stop()
-			return
-		}
+		<-ctx.Done()
+		logger.Printf("shutting down gRPC server at %q", u.Host)
+		srv.Stop()
 	}()
 }
 `
@@ -185,12 +179,9 @@ func handleGRPCServer(ctx context.Context, u *url.URL, serviceEndpoints *service
 			errc <- srv.Serve(lis)
 		}()
 
-		select {
-		case <-ctx.Done():
-			logger.Printf("shutting down gRPC server at %q", u.Host)
-			srv.Stop()
-			return
-		}
+		<-ctx.Done()
+		logger.Printf("shutting down gRPC server at %q", u.Host)
+		srv.Stop()
 	}()
 }
 `
@@ -241,13 +232,5 @@ const ExampleCLICode = `func doGRPC(scheme, host string, timeout int, debug bool
 		fmt.Fprintln(os.Stderr, fmt.Sprintf("could not connect to gRPC server at %s: %v", host, err))
 	}
 	return cli.ParseEndpoint(conn)
-}
-
-func grpcUsageCommands() string {
-	return cli.UsageCommands()
-}
-
-func grpcUsageExamples() string {
-	return cli.UsageExamples()
 }
 `

@@ -95,14 +95,14 @@ func Payload(val interface{}, args ...interface{}) {
 //    Method("upper", func() {
 //        Payload(func() {
 //            Token("token", String, func() {
-//					      Description("JWT used for authentication")
-//						})
-//				})
+//                Description("JWT used for authentication")
+//            })
+//        })
 //        StreamingPayload(String)
 //    })
 //
 //    // Method streaming payload is a stream of string with validation set
-//		// on each
+//    // on each
 //    Method("upper"), func() {
 //        StreamingPayload(String, "string to convert to uppercase", func() {
 //            Pattern("^[a-z]")

@@ -23,8 +23,9 @@ func ClientFiles(genpkg string, root *expr.RootExpr) []*codegen.File {
 
 // client returns the client HTTP transport file
 func client(genpkg string, svc *expr.HTTPServiceExpr) *codegen.File {
-	path := filepath.Join(codegen.Gendir, "http", codegen.SnakeCase(svc.Name()), "client", "client.go")
 	data := HTTPServices.Get(svc.Name())
+	svcName := codegen.SnakeCase(data.Service.VarName)
+	path := filepath.Join(codegen.Gendir, "http", svcName, "client", "client.go")
 	title := fmt.Sprintf("%s client HTTP transport", svc.Name())
 	sections := []*codegen.SectionTemplate{
 		codegen.Header(title, "client", []*codegen.ImportSpec{
@@ -40,8 +41,8 @@ func client(genpkg string, svc *expr.HTTPServiceExpr) *codegen.File {
 			{Path: "github.com/gorilla/websocket"},
 			{Path: "goa.design/goa", Name: "goa"},
 			{Path: "goa.design/goa/http", Name: "goahttp"},
-			{Path: genpkg + "/" + codegen.SnakeCase(svc.Name()), Name: data.Service.PkgName},
-			{Path: genpkg + "/" + codegen.SnakeCase(svc.Name()) + "/" + "views", Name: data.Service.ViewsPkg},
+			{Path: genpkg + "/" + svcName, Name: data.Service.PkgName},
+			{Path: genpkg + "/" + svcName + "/" + "views", Name: data.Service.ViewsPkg},
 		}),
 	}
 	sections = append(sections, &codegen.SectionTemplate{
@@ -52,6 +53,16 @@ func client(genpkg string, svc *expr.HTTPServiceExpr) *codegen.File {
 			"streamingEndpointExists": streamingEndpointExists,
 		},
 	})
+	if streamingEndpointExists(data) {
+		sections = append(sections, &codegen.SectionTemplate{
+			Name:   "client-stream-conn-configurer-struct",
+			Source: streamConnConfigurerStructT,
+			Data:   data,
+			FuncMap: map[string]interface{}{
+				"isStreamingEndpoint": isStreamingEndpoint,
+			},
+		})
+	}
 	for _, e := range data.Endpoints {
 		if e.ClientStream != nil {
 			sections = append(sections, &codegen.SectionTemplate{
@@ -80,6 +91,17 @@ func client(genpkg string, svc *expr.HTTPServiceExpr) *codegen.File {
 			"streamingEndpointExists": streamingEndpointExists,
 		},
 	})
+
+	if streamingEndpointExists(data) {
+		sections = append(sections, &codegen.SectionTemplate{
+			Name:   "client-stream-conn-configurer-struct-init",
+			Source: streamConnConfigurerStructInitT,
+			Data:   data,
+			FuncMap: map[string]interface{}{
+				"isStreamingEndpoint": isStreamingEndpoint,
+			},
+		})
+	}
 
 	for _, e := range data.Endpoints {
 		sections = append(sections, &codegen.SectionTemplate{
@@ -136,8 +158,9 @@ func client(genpkg string, svc *expr.HTTPServiceExpr) *codegen.File {
 // clientEncodeDecode returns the file containing the HTTP client encoding and
 // decoding logic.
 func clientEncodeDecode(genpkg string, svc *expr.HTTPServiceExpr) *codegen.File {
-	path := filepath.Join(codegen.Gendir, "http", codegen.SnakeCase(svc.Name()), "client", "encode_decode.go")
 	data := HTTPServices.Get(svc.Name())
+	svcName := codegen.SnakeCase(data.Service.VarName)
+	path := filepath.Join(codegen.Gendir, "http", svcName, "client", "encode_decode.go")
 	title := fmt.Sprintf("%s HTTP client encoders and decoders", svc.Name())
 	sections := []*codegen.SectionTemplate{
 		codegen.Header(title, "client", []*codegen.ImportSpec{
@@ -154,8 +177,8 @@ func clientEncodeDecode(genpkg string, svc *expr.HTTPServiceExpr) *codegen.File 
 			{Path: "unicode/utf8"},
 			{Path: "goa.design/goa", Name: "goa"},
 			{Path: "goa.design/goa/http", Name: "goahttp"},
-			{Path: genpkg + "/" + codegen.SnakeCase(svc.Name()), Name: data.Service.PkgName},
-			{Path: genpkg + "/" + codegen.SnakeCase(svc.Name()) + "/" + "views", Name: data.Service.ViewsPkg},
+			{Path: genpkg + "/" + svcName, Name: data.Service.PkgName},
+			{Path: genpkg + "/" + svcName + "/" + "views", Name: data.Service.ViewsPkg},
 		}),
 	}
 
@@ -256,7 +279,7 @@ type {{ .ClientStruct }} struct {
 	decoder    func(*http.Response) goahttp.Decoder
 	{{- if streamingEndpointExists . }}
 	dialer goahttp.Dialer
-	connConfigFn goahttp.ConnConfigureFunc
+	configurer *ConnConfigurer
 	{{- end }}
 }
 `
@@ -272,9 +295,14 @@ func New{{ .ClientStruct }}(
 	restoreBody bool,
 	{{- if streamingEndpointExists . }}
 	dialer goahttp.Dialer,
-	connConfigFn goahttp.ConnConfigureFunc,
+	cfn *ConnConfigurer,
 	{{- end }}
 ) *{{ .ClientStruct }} {
+{{- if streamingEndpointExists . }}
+	if cfn == nil {
+		cfn = &ConnConfigurer{}
+	}
+{{- end }}
 	return &{{ .ClientStruct }}{
 		{{- range .Endpoints }}
 		{{ .Method.VarName }}Doer: doer,
@@ -286,7 +314,7 @@ func New{{ .ClientStruct }}(
 		encoder:           enc,
 		{{- if streamingEndpointExists . }}
 		dialer: dialer,
-		connConfigFn: connConfigFn,
+		configurer: cfn,
 		{{- end }}
 	}
 }
@@ -318,15 +346,19 @@ func (c *{{ .ClientStruct }}) {{ .EndpointInit }}({{ if .MultipartRequestEncoder
 	{{- end }}
 
 	{{- if .ClientStream }}
-		conn, resp, err := c.dialer.Dial(req.URL.String(), req.Header)
+		var cancel context.CancelFunc
+		{
+			ctx, cancel = context.WithCancel(ctx)
+		}
+		conn, resp, err := c.dialer.DialContext(ctx, req.URL.String(), req.Header)
 		if err != nil {
 			if resp != nil {
 				return decodeResponse(resp)
 			}
 			return nil, goahttp.ErrRequestError("{{ .ServiceName }}", "{{ .Method.Name }}", err)
 		}
-		if c.connConfigFn != nil {
-			conn = c.connConfigFn(conn)
+		if c.configurer.{{ .Method.VarName }}Fn != nil {
+			conn = c.configurer.{{ .Method.VarName }}Fn(conn, cancel)
 		}
 		stream := &{{ .ClientStream.VarName }}{conn: conn}
 		{{- if .Method.ViewedResult }}
@@ -759,31 +791,5 @@ func {{ .InitName }}(encoderFn {{ .FuncName }}) func(r *http.Request) goahttp.En
 			return mw.Close()
 		})
 	}
-}
-`
-
-// input: EndpointData
-const clientStreamRecvT = `{{ printf "Recv receives a %s type from the %q endpoint websocket connection." .Result.Name .Method.Name | comment }}
-func (c *{{ .ClientStream.VarName }}) Recv() ({{ .Result.Ref }}, error) {
-	{{- if .Method.ViewedResult }}
-	var vres {{ .Method.ViewedResult.ViewsPkg }}.{{ .Result.Name }}
-	{{- else }}
-	var res {{ .Result.Name }}
-	{{- end }}
-	err := c.conn.ReadJSON(&{{ if .Method.ViewedResult }}vres{{ else }}res{{ end }})
-	if websocket.IsCloseError(err, goahttp.NormalSocketCloseErrors...) {
-		return nil, io.EOF
-	}
-	if err != nil {
-		return nil, err
-	}
-	{{- if .Method.ViewedResult }}
-	if err := {{ .Method.ViewedResult.ViewsPkg }}.Validate{{ .Result.Name }}(vres); err != nil {
-		return nil, goahttp.ErrValidationError("{{ $.ServiceName }}", "{{ $.Method.Name }}", err)
-	}
-	return {{ $.ServicePkgName }}.{{ .Method.ViewedResult.ResultInit.Name }}(vres), nil
-	{{- else }}
-	return &res, nil
-	{{- end }}
 }
 `

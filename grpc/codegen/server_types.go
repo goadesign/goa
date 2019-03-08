@@ -8,7 +8,11 @@ import (
 	"goa.design/goa/expr"
 )
 
-// ServerTypeFiles returns the gRPC transport type files.
+// ServerTypeFiles returns the types file for every gRPC service that contain
+// constructors to transform:
+//
+//   * protocol buffer request message types into service payload types
+//   * service result types into protocol buffer response message types
 func ServerTypeFiles(genpkg string, root *expr.RootExpr) []*codegen.File {
 	fw := make([]*codegen.File, len(root.API.GRPC.Services))
 	seen := make(map[string]struct{})
@@ -26,8 +30,7 @@ func ServerTypeFiles(genpkg string, root *expr.RootExpr) []*codegen.File {
 // to prevent duplicate code generation.
 func serverType(genpkg string, svc *expr.GRPCServiceExpr, seen map[string]struct{}) *codegen.File {
 	var (
-		initData  []*InitData
-		validated []*ValidationData
+		initData []*InitData
 
 		sd = GRPCServices.Get(svc.Name())
 	)
@@ -54,9 +57,6 @@ func serverType(genpkg string, svc *expr.GRPCServiceExpr, seen map[string]struct
 				}
 			}
 		}
-		for _, v := range sd.Validations {
-			validated = append(validated, v)
-		}
 	}
 
 	var (
@@ -64,7 +64,7 @@ func serverType(genpkg string, svc *expr.GRPCServiceExpr, seen map[string]struct
 		sections []*codegen.SectionTemplate
 	)
 	{
-		svcName := codegen.SnakeCase(svc.Name())
+		svcName := codegen.SnakeCase(sd.Service.VarName)
 		fpath = filepath.Join(codegen.Gendir, "grpc", svcName, "server", "types.go")
 		sections = []*codegen.SectionTemplate{
 			codegen.Header(svc.Name()+" gRPC server types", "server",
@@ -83,14 +83,14 @@ func serverType(genpkg string, svc *expr.GRPCServiceExpr, seen map[string]struct
 				Data:   init,
 			})
 		}
-		for _, data := range validated {
+		for _, data := range sd.validations {
 			sections = append(sections, &codegen.SectionTemplate{
 				Name:   "server-validate",
 				Source: validateT,
 				Data:   data,
 			})
 		}
-		for _, h := range sd.TransformHelpers {
+		for _, h := range sd.transformHelpers {
 			sections = append(sections, &codegen.SectionTemplate{
 				Name:   "server-transform-helper",
 				Source: transformHelperT,

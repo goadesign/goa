@@ -1,5 +1,76 @@
 package testdata
 
+const NamesWithSpaces = `
+// Service is the Service With Spaces service interface.
+type Service interface {
+	// MethodWithSpaces implements Method With Spaces.
+	MethodWithSpaces(context.Context, *PayloadWithSpace) (res *ResultWithSpace, err error)
+}
+
+// ServiceName is the name of the service as defined in the design. This is the
+// same value that is set in the endpoint request contexts under the ServiceKey
+// key.
+const ServiceName = "Service With Spaces"
+
+// MethodNames lists the service method names as defined in the design. These
+// are the same values that are set in the endpoint request contexts under the
+// MethodKey key.
+var MethodNames = [1]string{"Method With Spaces"}
+
+// PayloadWithSpace is the payload type of the Service With Spaces service
+// Method With Spaces method.
+type PayloadWithSpace struct {
+	String *string
+}
+
+// ResultWithSpace is the result type of the Service With Spaces service Method
+// With Spaces method.
+type ResultWithSpace struct {
+	Int *int
+}
+
+// NewResultWithSpace initializes result type ResultWithSpace from viewed
+// result type ResultWithSpace.
+func NewResultWithSpace(vres *servicewithspacesviews.ResultWithSpace) *ResultWithSpace {
+	var res *ResultWithSpace
+	switch vres.View {
+	case "default", "":
+		res = newResultWithSpace(vres.Projected)
+	}
+	return res
+}
+
+// NewViewedResultWithSpace initializes viewed result type ResultWithSpace from
+// result type ResultWithSpace using the given view.
+func NewViewedResultWithSpace(res *ResultWithSpace, view string) *servicewithspacesviews.ResultWithSpace {
+	var vres *servicewithspacesviews.ResultWithSpace
+	switch view {
+	case "default", "":
+		p := newResultWithSpaceView(res)
+		vres = &servicewithspacesviews.ResultWithSpace{p, "default"}
+	}
+	return vres
+}
+
+// newResultWithSpace converts projected type ResultWithSpace to service type
+// ResultWithSpace.
+func newResultWithSpace(vres *servicewithspacesviews.ResultWithSpaceView) *ResultWithSpace {
+	res := &ResultWithSpace{
+		Int: vres.Int,
+	}
+	return res
+}
+
+// newResultWithSpaceView projects result type ResultWithSpace into projected
+// type ResultWithSpaceView using the "default" view.
+func newResultWithSpaceView(res *ResultWithSpace) *servicewithspacesviews.ResultWithSpaceView {
+	vres := &servicewithspacesviews.ResultWithSpaceView{
+		Int: res.Int,
+	}
+	return vres
+}
+`
+
 const SingleMethod = `
 // Service is the SingleMethod service interface.
 type Service interface {

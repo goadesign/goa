@@ -8,7 +8,11 @@ import (
 	"goa.design/goa/expr"
 )
 
-// ClientTypeFiles returns the gRPC transport type files.
+// ClientTypeFiles returns the types file for every gRPC service that contain
+// constructors to transform:
+//
+//   * service payload types into protocol buffer request message types
+//   * protocol buffer response message types into service result types
 func ClientTypeFiles(genpkg string, root *expr.RootExpr) []*codegen.File {
 	fw := make([]*codegen.File, len(root.API.GRPC.Services))
 	seen := make(map[string]struct{})
@@ -26,8 +30,7 @@ func ClientTypeFiles(genpkg string, root *expr.RootExpr) []*codegen.File {
 // to prevent duplicate code generation.
 func clientType(genpkg string, svc *expr.GRPCServiceExpr, seen map[string]struct{}) *codegen.File {
 	var (
-		initData  []*InitData
-		validated []*ValidationData
+		initData []*InitData
 
 		sd = GRPCServices.Get(svc.Name())
 	)
@@ -54,9 +57,6 @@ func clientType(genpkg string, svc *expr.GRPCServiceExpr, seen map[string]struct
 				}
 			}
 		}
-		for _, v := range sd.Validations {
-			validated = append(validated, v)
-		}
 	}
 
 	var (
@@ -64,7 +64,7 @@ func clientType(genpkg string, svc *expr.GRPCServiceExpr, seen map[string]struct
 		sections []*codegen.SectionTemplate
 	)
 	{
-		svcName := codegen.SnakeCase(svc.Name())
+		svcName := codegen.SnakeCase(sd.Service.VarName)
 		fpath = filepath.Join(codegen.Gendir, "grpc", svcName, "client", "types.go")
 		sections = []*codegen.SectionTemplate{
 			codegen.Header(svc.Name()+" gRPC client types", "client",
@@ -83,14 +83,14 @@ func clientType(genpkg string, svc *expr.GRPCServiceExpr, seen map[string]struct
 				Data:   init,
 			})
 		}
-		for _, data := range validated {
+		for _, data := range sd.validations {
 			sections = append(sections, &codegen.SectionTemplate{
 				Name:   "client-validate",
 				Source: validateT,
 				Data:   data,
 			})
 		}
-		for _, h := range sd.TransformHelpers {
+		for _, h := range sd.transformHelpers {
 			sections = append(sections, &codegen.SectionTemplate{
 				Name:   "client-transform-helper",
 				Source: transformHelperT,

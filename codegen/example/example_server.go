@@ -1,4 +1,4 @@
-package server
+package example
 
 import (
 	"os"
@@ -11,9 +11,9 @@ import (
 	"goa.design/goa/expr"
 )
 
-// ExampleServerFiles returns an example server main implementation for every
-// server expression in the service design.
-func ExampleServerFiles(genpkg string, root *expr.RootExpr) []*codegen.File {
+// ServerFiles returns an example server main implementation for every server
+// expression in the service design.
+func ServerFiles(genpkg string, root *expr.RootExpr) []*codegen.File {
 	var fw []*codegen.File
 	for _, svr := range root.API.Servers {
 		if m := exampleSvrMain(genpkg, root, svr); m != nil {
@@ -61,7 +61,7 @@ func exampleSvrMain(genpkg string, root *expr.RootExpr, svr *expr.ServerExpr) *c
 		sd := service.Services.Get(svc)
 		svcData[i] = sd
 		specs = append(specs, &codegen.ImportSpec{
-			Path: path.Join(genpkg, codegen.SnakeCase(svc)),
+			Path: path.Join(genpkg, codegen.SnakeCase(sd.VarName)),
 			Name: sd.PkgName,
 		})
 	}

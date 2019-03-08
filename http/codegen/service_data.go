@@ -105,14 +105,14 @@ type (
 		BasicScheme *service.SchemeData
 		// HeaderSchemes lists all the security requirement schemes that
 		// apply to the method and are encoded in the request header.
-		HeaderSchemes []*service.SchemeData
+		HeaderSchemes service.SchemesData
 		// BodySchemes lists all the security requirement schemes that
 		// apply to the method and are encoded in the request body.
-		BodySchemes []*service.SchemeData
+		BodySchemes service.SchemesData
 		// QuerySchemes lists all the security requirement schemes that
 		// apply to the method and are encoded in the request query
 		// string.
-		QuerySchemes []*service.SchemeData
+		QuerySchemes service.SchemesData
 
 		// server
 
@@ -720,9 +720,9 @@ func (d ServicesData) analyze(hs *expr.HTTPServiceExpr) *ServiceData {
 		payload := buildPayloadData(a, rd)
 
 		var (
-			hsch  []*service.SchemeData
-			bosch []*service.SchemeData
-			qsch  []*service.SchemeData
+			hsch  service.SchemesData
+			bosch service.SchemesData
+			qsch  service.SchemesData
 			basch *service.SchemeData
 		)
 		{
@@ -734,11 +734,11 @@ func (d ServicesData) analyze(hs *expr.HTTPServiceExpr) *ServiceData {
 					default:
 						switch s.In {
 						case "query":
-							qsch = appendUnique(qsch, s)
+							qsch = qsch.Append(s)
 						case "header":
-							hsch = appendUnique(hsch, s)
+							hsch = hsch.Append(s)
 						default:
-							bosch = appendUnique(bosch, s)
+							bosch = bosch.Append(s)
 						}
 					}
 				}
@@ -826,7 +826,7 @@ func (d ServicesData) analyze(hs *expr.HTTPServiceExpr) *ServiceData {
 			ad.MultipartRequestDecoder = &MultipartData{
 				FuncName:    fmt.Sprintf("%s%sDecoderFunc", svc.StructName, ep.VarName),
 				InitName:    fmt.Sprintf("New%s%sDecoder", svc.StructName, ep.VarName),
-				VarName:     fmt.Sprintf("%s%sDecoderFn", svc.Name, ep.VarName),
+				VarName:     fmt.Sprintf("%s%sDecoderFn", svc.VarName, ep.VarName),
 				ServiceName: svc.Name,
 				MethodName:  ep.Name,
 				Payload:     ad.Payload,
@@ -834,7 +834,7 @@ func (d ServicesData) analyze(hs *expr.HTTPServiceExpr) *ServiceData {
 			ad.MultipartRequestEncoder = &MultipartData{
 				FuncName:    fmt.Sprintf("%s%sEncoderFunc", svc.StructName, ep.VarName),
 				InitName:    fmt.Sprintf("New%s%sEncoder", svc.StructName, ep.VarName),
-				VarName:     fmt.Sprintf("%s%sEncoderFn", svc.Name, ep.VarName),
+				VarName:     fmt.Sprintf("%s%sEncoderFn", svc.VarName, ep.VarName),
 				ServiceName: svc.Name,
 				MethodName:  ep.Name,
 				Payload:     ad.Payload,
@@ -904,7 +904,7 @@ func buildPayloadData(e *expr.HTTPEndpointExpr, sd *ServiceData) *PayloadData {
 		ep        = svc.Method(e.MethodExpr.Name)
 		svrBody   = httpContext(e.Body, "", sd.Scope, true, true)
 		cliBody   = httpContext(e.Body, "", sd.Scope, true, false)
-		payloadCA = service.TypeContext(e.MethodExpr.Payload, svc.PkgName, svc.Scope)
+		payloadCA = serviceTypeContext(e.MethodExpr.Payload, svc.PkgName, svc.Scope)
 
 		request       *RequestData
 		mapQueryParam *ParamData
@@ -1242,7 +1242,7 @@ func buildResultData(e *expr.HTTPEndpointExpr, sd *ServiceData) *ResultData {
 		svc      = sd.Service
 		ep       = svc.Method(e.MethodExpr.Name)
 		result   = e.MethodExpr.Result
-		resultCA = service.TypeContext(result, svc.PkgName, svc.Scope)
+		resultCA = serviceTypeContext(result, svc.PkgName, svc.Scope)
 
 		name string
 		ref  string
@@ -1269,7 +1269,12 @@ func buildResultData(e *expr.HTTPEndpointExpr, sd *ServiceData) *ResultData {
 		viewed := false
 		if ep.ViewedResult != nil {
 			result = expr.AsObject(ep.ViewedResult.Type).Attribute("projected")
-			resultCA = service.ProjectedTypeContext(result, svc.ViewsPkg, svc.ViewScope)
+			// create projected type context
+			resultCA = &codegen.ContextualAttribute{
+				Attribute:  codegen.NewGoAttribute(result, svc.ViewsPkg, svc.ViewScope),
+				Pointer:    true,
+				UseDefault: true,
+			}
 			viewed = true
 		}
 		responses = buildResponses(e, resultCA, viewed, sd)
@@ -1541,7 +1546,7 @@ func buildErrorsData(e *expr.HTTPEndpointExpr, sd *ServiceData) []*ErrorGroupDat
 		var (
 			init    *InitData
 			body    = v.Response.Body.Type
-			errCA   = service.TypeContext(v.ErrorExpr.AttributeExpr, svc.PkgName, svc.Scope)
+			errCA   = serviceTypeContext(v.ErrorExpr.AttributeExpr, svc.PkgName, svc.Scope)
 			svrBody = httpContext(v.Response.Body, "", sd.Scope, false, true)
 			cliBody = httpContext(v.Response.Body, "", sd.Scope, false, false)
 		)
@@ -1722,7 +1727,7 @@ func buildStreamData(ed *EndpointData, e *expr.HTTPEndpointExpr, sd *ServiceData
 		md         = ed.Method
 		svc        = sd.Service
 		spayload   = m.StreamingPayload
-		spayloadCA = service.TypeContext(spayload, svc.PkgName, svc.Scope)
+		spayloadCA = serviceTypeContext(spayload, svc.PkgName, svc.Scope)
 	)
 	{
 		svrSendTypeName = ed.Result.Name
@@ -2365,6 +2370,17 @@ func attributeTypeData(attCA *codegen.ContextualAttribute, req, server bool, rd 
 	}
 }
 
+// serviceTypeContext returns a contextual attribute for service types. Service
+// types are Go types and uses non-pointers to hold attributes having default
+// values.
+func serviceTypeContext(att *expr.AttributeExpr, pkg string, scope *codegen.NameScope) *codegen.ContextualAttribute {
+	return &codegen.ContextualAttribute{
+		Attribute:  codegen.NewGoAttribute(att, pkg, scope),
+		Required:   true,
+		UseDefault: true,
+	}
+}
+
 // httpAttribute implements the Attributor interface that produces Go code.
 // It overrides the Definer interface to produce type definition with
 // encoding tags.
@@ -2457,20 +2473,6 @@ func marshal(source, target *codegen.ContextualAttribute, sourceVar, targetVar s
 	return codegen.GoTransform(source, target, sourceVar, targetVar, "marshal")
 }
 
-func appendUnique(s []*service.SchemeData, d *service.SchemeData) []*service.SchemeData {
-	found := false
-	for _, se := range s {
-		if se.Name == d.Name {
-			found = true
-			break
-		}
-	}
-	if found {
-		return s
-	}
-	return append(s, d)
-}
-
 // needConversion returns true if the type needs to be converted from a string.
 func needConversion(dt expr.DataType) bool {
 	if dt == expr.Empty {
@@ -2529,6 +2531,34 @@ func upgradeParams(e *EndpointData, fn string) map[string]interface{} {
 		"ViewedResult": e.Method.ViewedResult,
 		"Function":     fn,
 	}
+}
+
+// needStream returns true if at least one method in the defined services
+// uses stream for sending payload/result.
+func needStream(data []*ServiceData) bool {
+	for _, svc := range data {
+		if streamingEndpointExists(svc) {
+			return true
+		}
+	}
+	return false
+}
+
+// streamingEndpointExists returns true if at least one of the endpoints in
+// the service defines a streaming payload or result.
+func streamingEndpointExists(sd *ServiceData) bool {
+	for _, e := range sd.Endpoints {
+		if isStreamingEndpoint(e) {
+			return true
+		}
+	}
+	return false
+}
+
+// isStreamingEndpoint returns true if the endpoint defines a streaming payload
+// or result.
+func isStreamingEndpoint(ed *EndpointData) bool {
+	return ed.ServerStream != nil || ed.ClientStream != nil
 }
 
 const (
@@ -2624,6 +2654,8 @@ type {{ .VarName }} struct {
 	upgrader goahttp.Upgrader
 	{{ comment "connConfigFn is the websocket connection configurer." }}
 	connConfigFn goahttp.ConnConfigureFunc
+	{{ comment "cancel is the context cancellation function which cancels the request context when invoked." }}
+	cancel context.CancelFunc
 	{{ comment "w is the HTTP response writer used in upgrading the connection." }}
 	w http.ResponseWriter
 	{{ comment "r is the HTTP request." }}
@@ -2637,6 +2669,35 @@ type {{ .VarName }} struct {
 	view string
 		{{- end }}
 	{{- end }}
+}
+`
+
+	// streamConnConfigurerStructT generates the struct type that holds the
+	// websocket connection configurers for all the streaming endpoints in the
+	// service.
+	// input: ServiceData
+	streamConnConfigurerStructT = `{{ printf "ConnConfigurer holds the websocket connection configurer functions for the streaming endpoints in %q service." .Service.Name | comment }}
+type ConnConfigurer struct {
+{{- range .Endpoints }}
+	{{- if isStreamingEndpoint . }}
+		{{ .Method.VarName }}Fn goahttp.ConnConfigureFunc
+	{{- end }}
+{{- end }}
+}
+`
+
+	// streamConnConfigurerStructInitT generates the constructor function to
+	// initialize the websocket connection configurer struct.
+	// input: ServiceData
+	streamConnConfigurerStructInitT = `{{ printf "NewConnConfigurer initializes the websocket connection configurer function with fn for all the streaming endpoints in %q service." .Service.Name | comment }}
+func NewConnConfigurer(fn goahttp.ConnConfigureFunc) *ConnConfigurer {
+	return &ConnConfigurer{
+{{- range .Endpoints }}
+	{{- if isStreamingEndpoint . }}
+		{{ .Method.VarName}}Fn: fn,
+	{{- end }}
+{{- end }}
+	}
 }
 `
 
@@ -2804,7 +2865,7 @@ func (s *{{ .VarName }}) {{ .RecvName }}() ({{ .RecvTypeRef }}, error) {
 			return
 		}
 		if s.connConfigFn != nil {
-			conn = s.connConfigFn(conn)
+			conn = s.connConfigFn(conn, s.cancel)
 		}
 		s.conn = conn
 	})

@@ -7,7 +7,6 @@ import (
 
 func TestHeader(t *testing.T) {
 	const (
-		pack          = "testpackage"
 		title         = "test title"
 		noTitleHeader = `package testpackage
 
@@ -78,14 +77,14 @@ import (
 		Imports  []*ImportSpec
 		Expected string
 	}{
-		"no-title":      {Expected: noTitleHeader},
-		"title":         {Title: title, Expected: titleHeader},
-		"single-import": {Imports: imprt, Expected: singleImportHeader},
-		"many-imports":  {Imports: imports, Expected: manyImportsHeader},
-		"path-import":   {Imports: pathImport, Expected: pathImportHeader},
-		"path-imports":  {Imports: pathImports, Expected: pathImportsHeader},
-		"path-named-import":   {Imports: pathNamedImport, Expected: pathNamedImportHeader},
-		"path-named-imports":  {Imports: pathNamedImports, Expected: pathNamedImportsHeader},
+		"no-title":           {Expected: noTitleHeader},
+		"title":              {Title: title, Expected: titleHeader},
+		"single-import":      {Imports: imprt, Expected: singleImportHeader},
+		"many-imports":       {Imports: imports, Expected: manyImportsHeader},
+		"path-import":        {Imports: pathImport, Expected: pathImportHeader},
+		"path-imports":       {Imports: pathImports, Expected: pathImportsHeader},
+		"path-named-import":  {Imports: pathNamedImport, Expected: pathNamedImportHeader},
+		"path-named-imports": {Imports: pathNamedImports, Expected: pathNamedImportsHeader},
 	}
 	for k, tc := range cases {
 		buf := new(bytes.Buffer)

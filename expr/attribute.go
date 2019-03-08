@@ -216,7 +216,8 @@ func (a *AttributeExpr) Validate(ctx string, parent eval.Expression) *eval.Valid
 	return verr
 }
 
-// Finalize merges base type attributes and finalize the Type attribute.
+// Finalize merges base and reference type attributes and finalizes the Type
+// attribute.
 func (a *AttributeExpr) Finalize() {
 	if ut, ok := a.Type.(UserType); ok {
 		ut.Attribute().Finalize()
@@ -376,7 +377,9 @@ func (a *AttributeExpr) HasDefaultValue(attName string) bool {
 	return a.GetDefault(attName) != nil
 }
 
-// GetDefault gets the default for the attribute.
+// GetDefault gets the default value for the child attribute with the given
+// name. It returns nil if the child attribute with the given name does not
+// exist or if the child attribute does not have a default value.
 func (a *AttributeExpr) GetDefault(attName string) interface{} {
 	if o := AsObject(a.Type); o != nil {
 		return o.Attribute(attName).DefaultValue
@@ -397,9 +400,9 @@ func (a *AttributeExpr) SetDefault(def interface{}) {
 	}
 }
 
-// Find finds an attribute with the given name in the object and any
-// extended attribute expr. If the attribute is not a user
-// type or object, Find returns nil.
+// Find finds a child attribute with the given name in the attribute and
+// its bases and references. If the parent attribute is not an object, it
+// returns nil.
 func (a *AttributeExpr) Find(name string) *AttributeExpr {
 	findAttrFn := func(typ DataType) *AttributeExpr {
 		switch t := typ.(type) {
@@ -425,7 +428,7 @@ func (a *AttributeExpr) Find(name string) *AttributeExpr {
 }
 
 // Delete removes an attribute with the given name. It does nothing if the
-// attribute expression is not a user type or object.
+// attribute expression is not an object type.
 func (a *AttributeExpr) Delete(name string) {
 	switch t := a.Type.(type) {
 	case UserType:
@@ -550,11 +553,6 @@ func (a *ExampleExpr) EvalName() string {
 	return `example "` + a.Summary + `"`
 }
 
-// Context returns the generic definition name used in error messages.
-func (v *ValidationExpr) Context() string {
-	return "validation"
-}
-
 // Merge merges other into v.
 func (v *ValidationExpr) Merge(other *ValidationExpr) {
 	if v.Values == nil {
@@ -581,7 +579,7 @@ func (v *ValidationExpr) Merge(other *ValidationExpr) {
 	v.AddRequired(other.Required...)
 }
 
-// AddRequired merges the required fields from other into v
+// AddRequired merges the required fields into v.
 func (v *ValidationExpr) AddRequired(required ...string) {
 	for _, r := range required {
 		found := false
@@ -597,7 +595,7 @@ func (v *ValidationExpr) AddRequired(required ...string) {
 	}
 }
 
-// RemoveRequired removes the given field from the list of required fields
+// RemoveRequired removes the given field from the list of required fields.
 func (v *ValidationExpr) RemoveRequired(required string) {
 	for i, r := range v.Required {
 		if required == r {
@@ -627,9 +625,7 @@ func (v *ValidationExpr) Dup() *ValidationExpr {
 	var req []string
 	if len(v.Required) > 0 {
 		req = make([]string, len(v.Required))
-		for i, r := range v.Required {
-			req[i] = r
-		}
+		copy(req, v.Required)
 	}
 	return &ValidationExpr{
 		Values:    v.Values,

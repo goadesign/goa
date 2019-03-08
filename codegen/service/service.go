@@ -10,8 +10,9 @@ import (
 
 // File returns the service file for the given service.
 func File(genpkg string, service *expr.ServiceExpr) *codegen.File {
-	path := filepath.Join(codegen.Gendir, codegen.SnakeCase(service.Name), "service.go")
 	svc := Services.Get(service.Name)
+	svcName := codegen.SnakeCase(svc.VarName)
+	path := filepath.Join(codegen.Gendir, svcName, "service.go")
 	header := codegen.Header(
 		service.Name+" service",
 		svc.PkgName,
@@ -19,7 +20,7 @@ func File(genpkg string, service *expr.ServiceExpr) *codegen.File {
 			{Path: "context"},
 			{Path: "goa.design/goa"},
 			{Path: "goa.design/goa/security"},
-			{Path: genpkg + "/" + codegen.SnakeCase(service.Name) + "/" + "views", Name: svc.ViewsPkg},
+			{Path: genpkg + "/" + svcName + "/" + "views", Name: svc.ViewsPkg},
 		})
 	def := &codegen.SectionTemplate{
 		Name:   "service",
@@ -66,7 +67,7 @@ func File(genpkg string, service *expr.ServiceExpr) *codegen.File {
 		}
 	}
 
-	for _, ut := range svc.UserTypes {
+	for _, ut := range svc.userTypes {
 		if _, ok := seen[ut.Name]; !ok {
 			sections = append(sections, &codegen.SectionTemplate{
 				Name:   "service-user-type",
@@ -77,7 +78,7 @@ func File(genpkg string, service *expr.ServiceExpr) *codegen.File {
 	}
 
 	var errorTypes []*UserTypeData
-	for _, et := range svc.ErrorTypes {
+	for _, et := range svc.errorTypes {
 		if et.Type == expr.ErrorResult {
 			continue
 		}
@@ -102,7 +103,7 @@ func File(genpkg string, service *expr.ServiceExpr) *codegen.File {
 			Data:    et,
 		})
 	}
-	for _, er := range svc.ErrorInits {
+	for _, er := range svc.errorInits {
 		sections = append(sections, &codegen.SectionTemplate{
 			Name:   "error-init-func",
 			Source: errorInitT,
@@ -111,7 +112,7 @@ func File(genpkg string, service *expr.ServiceExpr) *codegen.File {
 	}
 
 	// transform result type functions
-	for _, t := range svc.ViewedResultTypes {
+	for _, t := range svc.viewedResultTypes {
 		sections = append(sections, &codegen.SectionTemplate{
 			Name:   "viewed-result-type-to-service-result-type",
 			Source: typeInitT,
@@ -124,7 +125,7 @@ func File(genpkg string, service *expr.ServiceExpr) *codegen.File {
 		})
 	}
 	var projh []*codegen.TransformFunctionData
-	for _, t := range svc.ProjectedTypes {
+	for _, t := range svc.projectedTypes {
 		for _, i := range t.TypeInits {
 			projh = codegen.AppendHelpers(projh, i.Helpers)
 			sections = append(sections, &codegen.SectionTemplate{

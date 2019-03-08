@@ -10,7 +10,10 @@ import (
 	"goa.design/goa/expr"
 )
 
-// ServerFiles returns all the server gRPC transport files.
+// ServerFiles returns all the server files for every gRPC service. The files
+// contain the server which implements the generated gRPC server interface and
+// encoders and decoders to transform protocol buffer types and gRPC metadata
+// into goa types and vice versa.
 func ServerFiles(genpkg string, root *expr.RootExpr) []*codegen.File {
 	svcLen := len(root.API.GRPC.Services)
 	fw := make([]*codegen.File, 2*svcLen)
@@ -32,7 +35,7 @@ func serverFile(genpkg string, svc *expr.GRPCServiceExpr) *codegen.File {
 		data = GRPCServices.Get(svc.Name())
 	)
 	{
-		svcName := codegen.SnakeCase(svc.Name())
+		svcName := codegen.SnakeCase(data.Service.VarName)
 		fpath = filepath.Join(codegen.Gendir, "grpc", svcName, "server", "server.go")
 		sections = []*codegen.SectionTemplate{
 			codegen.Header(svc.Name()+" gRPC server", "server", []*codegen.ImportSpec{
@@ -118,7 +121,7 @@ func serverEncodeDecode(genpkg string, svc *expr.GRPCServiceExpr) *codegen.File 
 		data = GRPCServices.Get(svc.Name())
 	)
 	{
-		svcName := codegen.SnakeCase(svc.Name())
+		svcName := codegen.SnakeCase(data.Service.VarName)
 		fpath = filepath.Join(codegen.Gendir, "grpc", svcName, "server", "encode_decode.go")
 		title := fmt.Sprintf("%s gRPC server encoders and decoders", svc.Name())
 		sections = []*codegen.SectionTemplate{
@@ -202,18 +205,6 @@ type {{ .ServerStruct }} struct {
 // exposes the name of the error as defined in the expr.
 type ErrorNamer interface {
   ErrorName() string
-}
-`
-
-// streamStructTypeT renders the server and client struct types that
-// implements the client and server service stream interfaces.
-// input: StreamData
-const streamStructTypeT = `{{ printf "%s implements the %s interface." .VarName .ServiceInterface | comment }}
-type {{ .VarName }} struct {
-	stream {{ .Interface }}
-{{- if .Endpoint.Method.ViewedResult }}
-	view string
-{{- end }}
 }
 `
 
@@ -382,13 +373,13 @@ func Decode{{ .Method.VarName }}Request(ctx context.Context, v interface{}, md m
 		{{- if not .CredRequired }}
 			if payload.{{ .CredField }} != nil {
 		{{- end }}
-			if strings.Contains({{ if .CredPointer }}*{{ end }}payload.{{ .CredField }}, " ") {
-				// Remove authorization scheme prefix (e.g. "Bearer")
-				cred := strings.SplitN({{ if .CredPointer }}*{{ end }}payload.{{ .CredField }}, " ", 2)[1]
-				payload.{{ .CredField }} = {{ if .CredPointer }}&{{ end }}cred
-			}
-		{{- if not .CredRequired }}
+		if strings.Contains({{ if .CredPointer }}*{{ end }}payload.{{ .CredField }}, " ") {
+			// Remove authorization scheme prefix (e.g. "Bearer")
+			cred := strings.SplitN({{ if .CredPointer }}*{{ end }}payload.{{ .CredField }}, " ", 2)[1]
+			payload.{{ .CredField }} = {{ if .CredPointer }}&{{ end }}cred
 		}
+		{{- if not .CredRequired }}
+			}
 		{{- end }}
 	{{- end }}
 {{- end }}

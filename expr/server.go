@@ -179,8 +179,7 @@ func (h *HostExpr) EvalName() string {
 	return fmt.Sprintf("host %q of server %q", h.Name, h.ServerName)
 }
 
-// Attribute returns the variables attribute. This implements the CompositeExpr
-// interface.
+// Attribute returns the variables attribute.
 func (h *HostExpr) Attribute() *AttributeExpr {
 	if h.Variables == nil {
 		h.Variables = &AttributeExpr{Type: &Object{}}

@@ -54,7 +54,7 @@ func ClientCLIFiles(genpkg string, root *expr.RootExpr) []*codegen.File {
 		files = append(files, endpointParser(genpkg, root, svr, data))
 	}
 	for i, svc := range svcs {
-		files = append(files, payloadBuilders(genpkg, svc.Name(), data[i].CommandData))
+		files = append(files, payloadBuilders(genpkg, svc, data[i].CommandData))
 	}
 	return files
 }
@@ -103,7 +103,7 @@ func endpointParser(genpkg string, root *expr.RootExpr, svr *expr.ServerExpr, da
 			continue
 		}
 		specs = append(specs, &codegen.ImportSpec{
-			Path: genpkg + "/http/" + codegen.SnakeCase(sd.Service.Name) + "/client",
+			Path: genpkg + "/http/" + codegen.SnakeCase(sd.Service.VarName) + "/client",
 			Name: sd.Service.PkgName + "c",
 		})
 	}
@@ -140,10 +140,10 @@ func endpointParser(genpkg string, root *expr.RootExpr, svr *expr.ServerExpr, da
 
 // payloadBuilders returns the file that contains the payload constructors that
 // use flag values as arguments.
-func payloadBuilders(genpkg string, svcName string, data *cli.CommandData) *codegen.File {
-	path := filepath.Join(codegen.Gendir, "http", codegen.SnakeCase(svcName), "client", "cli.go")
-	title := fmt.Sprintf("%s HTTP client CLI support package", svcName)
-	sd := HTTPServices.Get(svcName)
+func payloadBuilders(genpkg string, svc *expr.HTTPServiceExpr, data *cli.CommandData) *codegen.File {
+	sd := HTTPServices.Get(svc.Name())
+	path := filepath.Join(codegen.Gendir, "http", codegen.SnakeCase(sd.Service.VarName), "client", "cli.go")
+	title := fmt.Sprintf("%s HTTP client CLI support package", svc.Name())
 	specs := []*codegen.ImportSpec{
 		{Path: "encoding/json"},
 		{Path: "fmt"},
@@ -153,7 +153,7 @@ func payloadBuilders(genpkg string, svcName string, data *cli.CommandData) *code
 		{Path: "unicode/utf8"},
 		{Path: "goa.design/goa", Name: "goa"},
 		{Path: "goa.design/goa/http", Name: "goahttp"},
-		{Path: genpkg + "/" + codegen.SnakeCase(svcName), Name: sd.Service.PkgName},
+		{Path: genpkg + "/" + codegen.SnakeCase(sd.Service.VarName), Name: sd.Service.PkgName},
 	}
 	sections := []*codegen.SectionTemplate{
 		codegen.Header(title, "client", specs),
@@ -268,7 +268,11 @@ func ParseEndpoint(
 	restore bool,
 	{{- if streamingCmdExists .Commands }}
 	dialer goahttp.Dialer,
-	connConfigFn goahttp.ConnConfigureFunc,
+		{{- range .Commands }}
+			{{- if .NeedStream }}
+				{{ .VarName }}Configurer *{{ .PkgName }}.ConnConfigurer,
+			{{- end }}
+		{{- end }}
 	{{- end }}
 	{{- range $c := .Commands }}
 	{{- range .Subcommands }}
@@ -288,7 +292,7 @@ func ParseEndpoint(
 		switch svcn {
 	{{- range .Commands }}
 		case "{{ .Name }}":
-			c := {{ .PkgName }}.NewClient(scheme, host, doer, enc, dec, restore{{ if .NeedStream }}, dialer, connConfigFn{{- end }})	
+			c := {{ .PkgName }}.NewClient(scheme, host, doer, enc, dec, restore{{ if .NeedStream }}, dialer, {{ .VarName }}Configurer{{ end }})
 			switch epn {
 		{{- $pkgName := .PkgName }}{{ range .Subcommands }}
 			case "{{ .Name }}":

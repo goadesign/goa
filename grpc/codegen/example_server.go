@@ -10,8 +10,7 @@ import (
 	"goa.design/goa/expr"
 )
 
-// ExampleServerFiles returns and example main and dummy service
-// implementations.
+// ExampleServerFiles returns an example gRPC server implementation.
 func ExampleServerFiles(genpkg string, root *expr.RootExpr) []*codegen.File {
 	var fw []*codegen.File
 	for _, svr := range root.API.Servers {
@@ -61,18 +60,19 @@ func exampleServer(genpkg string, root *expr.RootExpr, svr *expr.ServerExpr) *co
 			{Path: rootPath, Name: apiPkg},
 		}
 		for _, svc := range root.API.GRPC.Services {
-			pkgName := GRPCServices.Get(svc.Name()).Service.PkgName
+			sd := GRPCServices.Get(svc.Name())
+			svcName := codegen.SnakeCase(sd.Service.VarName)
 			specs = append(specs, &codegen.ImportSpec{
-				Path: path.Join(genpkg, "grpc", codegen.SnakeCase(svc.Name()), "server"),
-				Name: pkgName + "svr",
+				Path: path.Join(genpkg, "grpc", svcName, "server"),
+				Name: sd.Service.PkgName + "svr",
 			})
 			specs = append(specs, &codegen.ImportSpec{
-				Path: path.Join(genpkg, codegen.SnakeCase(svc.Name())),
-				Name: pkgName,
+				Path: path.Join(genpkg, svcName),
+				Name: sd.Service.PkgName,
 			})
 			specs = append(specs, &codegen.ImportSpec{
-				Path: path.Join(genpkg, "grpc", codegen.SnakeCase(svc.Name()), pbPkgName),
-				Name: codegen.SnakeCase(svc.Name()) + pbPkgName,
+				Path: path.Join(genpkg, "grpc", svcName, pbPkgName),
+				Name: svcName + pbPkgName,
 			})
 		}
 	}
@@ -222,12 +222,9 @@ func handleGRPCServer(ctx context.Context, u *url.URL{{ range $.Services }}{{ if
 			errc <- srv.Serve(lis)
 		}()
 
-		select {
-		case <-ctx.Done():
-			logger.Printf("shutting down gRPC server at %q", u.Host)
-			srv.Stop()
-			return
-		}
+		<-ctx.Done()
+		logger.Printf("shutting down gRPC server at %q", u.Host)
+		srv.Stop()
   }()
 }
 `

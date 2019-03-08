@@ -169,8 +169,35 @@ func (s *chatterSvc) Summary(ctx context.Context, p *chattersvc.SummaryPayload, 
 	return stream.SendAndClose(summary)
 }
 
-// Returns the chat messages sent to the server.
+// Subscribe to events sent when new chat messages are added or deleted.
 // NOTE: An example for result streaming.
+func (s *chatterSvc) Subscribe(ctx context.Context, p *chattersvc.SubscribePayload, stream chattersvc.SubscribeServerStream) (err error) {
+	s.logger.Printf("authentication successful")
+	old := s.storedMessages
+	done := false
+	for {
+		select {
+		case <-ctx.Done():
+			done = true
+			break
+		default:
+			if ev := diff(s.storedMessages, old); ev != nil {
+				old = s.storedMessages
+				if err := stream.Send(ev); err != nil {
+					return err
+				}
+			}
+		}
+		if done {
+			break
+		}
+	}
+	s.logger.Printf("subscription ended")
+	return stream.Close()
+}
+
+// Returns the chat messages sent to the server.
+// NOTE: An example for result streaming with views.
 func (s *chatterSvc) History(ctx context.Context, p *chattersvc.HistoryPayload, stream chattersvc.HistoryServerStream) (err error) {
 	s.logger.Printf("authentication successful")
 	stream.SetView("default")
@@ -193,6 +220,24 @@ func (s *chatterSvc) storeMessage(message string) {
 	s.storedMessages = append(s.storedMessages, &chattersvc.ChatSummary{
 		Message: message,
 		Length:  &mlen,
-		SentAt:  &sentAt,
+		SentAt:  sentAt,
 	})
+}
+
+// A very basic function to figure out if chat messages were added.
+func diff(new, old []*chattersvc.ChatSummary) *chattersvc.Event {
+	m := make(map[string]struct{})
+	for _, c := range old {
+		m[c.Message] = struct{}{}
+	}
+	for _, c := range new {
+		if _, ok := m[c.Message]; !ok {
+			return &chattersvc.Event{
+				Message: c.Message,
+				Action:  "added",
+				AddedAt: c.SentAt,
+			}
+		}
+	}
+	return nil
 }

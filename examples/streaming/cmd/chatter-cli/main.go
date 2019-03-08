@@ -101,7 +101,7 @@ func main() {
 			for scanner.Scan() {
 				p := scanner.Text()
 				if err := stream.Send(p); err != nil {
-					fmt.Println(fmt.Errorf("Error sending into stream: %s", err))
+					fmt.Println(fmt.Errorf("error sending into stream: %s", err))
 					os.Exit(1)
 				}
 				d, err := stream.Recv()
@@ -109,12 +109,12 @@ func main() {
 					break
 				}
 				if err != nil {
-					fmt.Println(fmt.Errorf("Error reading from stream: %s", err))
+					fmt.Println(fmt.Errorf("error reading from stream: %s", err))
 				}
 				prettyPrint(d)
 			}
 			if err := stream.Close(); err != nil {
-				fmt.Println(fmt.Errorf("Error closing stream: %s", err))
+				fmt.Println(fmt.Errorf("error closing stream: %s", err))
 			}
 		case chattersvc.ListenerClientStream:
 			// payload streaming (no server response)
@@ -124,12 +124,12 @@ func main() {
 			for scanner.Scan() {
 				p := scanner.Text()
 				if err := stream.Send(p); err != nil {
-					fmt.Println(fmt.Errorf("Error sending into stream: %s", err))
+					fmt.Println(fmt.Errorf("error sending into stream: %s", err))
 					os.Exit(1)
 				}
 			}
 			if err := stream.Close(); err != nil {
-				fmt.Println(fmt.Errorf("Error closing stream: %s", err))
+				fmt.Println(fmt.Errorf("error closing stream: %s", err))
 			}
 		case chattersvc.SummaryClientStream:
 			// payload streaming (server responds with a result type)
@@ -139,16 +139,16 @@ func main() {
 			for scanner.Scan() {
 				p := scanner.Text()
 				if err := stream.Send(p); err != nil {
-					fmt.Println(fmt.Errorf("Error sending into stream: %s", err))
+					fmt.Println(fmt.Errorf("error sending into stream: %s", err))
 					os.Exit(1)
 				}
 			}
 			if p, err := stream.CloseAndRecv(); err != nil {
-				fmt.Println(fmt.Errorf("Error closing stream: %s", err))
+				fmt.Println(fmt.Errorf("error closing stream: %s", err))
 			} else {
 				prettyPrint(p)
 			}
-		case chattersvc.HistoryClientStream:
+		case chattersvc.SubscribeClientStream:
 			// result streaming
 			for {
 				p, err := stream.Recv()
@@ -156,7 +156,20 @@ func main() {
 					break
 				}
 				if err != nil {
-					fmt.Println(fmt.Errorf("Error reading from stream: %s", err))
+					fmt.Println(fmt.Errorf("error reading from stream: %v", err))
+					break
+				}
+				prettyPrint(p)
+			}
+		case chattersvc.HistoryClientStream:
+			// result streaming with views
+			for {
+				p, err := stream.Recv()
+				if err == io.EOF {
+					break
+				}
+				if err != nil {
+					fmt.Println(fmt.Errorf("error reading from stream: %v", err))
 				}
 				prettyPrint(p)
 			}

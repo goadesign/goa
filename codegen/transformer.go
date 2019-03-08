@@ -60,8 +60,8 @@ type (
 		Def(pointer, useDefault bool) string
 	}
 
-	// Attributor is the interface implemented by code generators to generate
-	// code for an attribute type.
+	// Attributor defines the code generated for an attribute type. It is
+	// implemented by code generators.
 	Attributor interface {
 		Scoper
 		Referencer
@@ -75,8 +75,8 @@ type (
 		Dup(*expr.AttributeExpr) Attributor
 	}
 
-	// Converter is the interface implemented by code generators to generate
-	// code to convert source attribute type to a target attribute type.
+	// Converter generates code to convert source attribute type to a target
+	// attribute type. It is implemented by code generators.
 	Converter interface {
 		// ConvertType produces code to initialze target attribute type from a
 		// source attribute type held by variable in sourceVar. It is not a
@@ -90,7 +90,7 @@ type (
 		// Attribute is the attribute expression for which the code is generated.
 		Attribute Attributor
 		// NonPointer if true indicates that the attribute type is not generated
-		// as a pointer irrespective of whether the attribue is required or has
+		// as a pointer irrespective of whether the attribute is required or has
 		// a default value (expect object types which are always pointers). It
 		// ignores the Pointer, Required, and UseDefault properties when computing
 		// whether the attribute is a pointer.

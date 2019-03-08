@@ -25,11 +25,12 @@ func ServerFiles(genpkg string, root *expr.RootExpr) []*codegen.File {
 
 // server returns the file implementing the HTTP server.
 func serverFile(genpkg string, svc *expr.HTTPServiceExpr) *codegen.File {
-	path := filepath.Join(codegen.Gendir, "http", codegen.SnakeCase(svc.Name()), "server", "server.go")
 	data := HTTPServices.Get(svc.Name())
+	svcName := codegen.SnakeCase(data.Service.VarName)
+	path := filepath.Join(codegen.Gendir, "http", svcName, "server", "server.go")
 	title := fmt.Sprintf("%s HTTP server", svc.Name())
 	funcs := map[string]interface{}{
-		"join": func(ss []string, s string) string { return strings.Join(ss, s) },
+		"join":                    func(ss []string, s string) string { return strings.Join(ss, s) },
 		"streamingEndpointExists": streamingEndpointExists,
 		"upgradeParams":           upgradeParams,
 		"viewedServerBody":        viewedServerBody,
@@ -48,14 +49,25 @@ func serverFile(genpkg string, svc *expr.HTTPServiceExpr) *codegen.File {
 			{Path: "github.com/gorilla/websocket"},
 			{Path: "goa.design/goa", Name: "goa"},
 			{Path: "goa.design/goa/http", Name: "goahttp"},
-			{Path: genpkg + "/" + codegen.SnakeCase(svc.Name()), Name: data.Service.PkgName},
-			{Path: genpkg + "/" + codegen.SnakeCase(svc.Name()) + "/" + "views", Name: data.Service.ViewsPkg},
+			{Path: genpkg + "/" + svcName, Name: data.Service.PkgName},
+			{Path: genpkg + "/" + svcName + "/" + "views", Name: data.Service.ViewsPkg},
 		}),
 	}
 
 	sections = append(sections, &codegen.SectionTemplate{Name: "server-struct", Source: serverStructT, Data: data})
 	sections = append(sections, &codegen.SectionTemplate{Name: "server-mountpoint", Source: mountPointStructT, Data: data})
 
+	// public types
+	if streamingEndpointExists(data) {
+		sections = append(sections, &codegen.SectionTemplate{
+			Name:   "server-stream-conn-configurer-struct",
+			Source: streamConnConfigurerStructT,
+			Data:   data,
+			FuncMap: map[string]interface{}{
+				"isStreamingEndpoint": isStreamingEndpoint,
+			},
+		})
+	}
 	for _, e := range data.Endpoints {
 		if e.MultipartRequestDecoder != nil {
 			sections = append(sections, &codegen.SectionTemplate{
@@ -64,6 +76,10 @@ func serverFile(genpkg string, svc *expr.HTTPServiceExpr) *codegen.File {
 				Data:   e.MultipartRequestDecoder,
 			})
 		}
+	}
+
+	// private types
+	for _, e := range data.Endpoints {
 		if e.ServerStream != nil {
 			sections = append(sections, &codegen.SectionTemplate{
 				Name:   "server-stream-struct-type",
@@ -74,6 +90,16 @@ func serverFile(genpkg string, svc *expr.HTTPServiceExpr) *codegen.File {
 	}
 
 	sections = append(sections, &codegen.SectionTemplate{Name: "server-init", Source: serverInitT, Data: data, FuncMap: funcs})
+	if streamingEndpointExists(data) {
+		sections = append(sections, &codegen.SectionTemplate{
+			Name:   "server-stream-conn-configurer-struct-init",
+			Source: streamConnConfigurerStructInitT,
+			Data:   data,
+			FuncMap: map[string]interface{}{
+				"isStreamingEndpoint": isStreamingEndpoint,
+			},
+		})
+	}
 	sections = append(sections, &codegen.SectionTemplate{Name: "server-service", Source: serverServiceT, Data: data})
 	sections = append(sections, &codegen.SectionTemplate{Name: "server-use", Source: serverUseT, Data: data})
 	sections = append(sections, &codegen.SectionTemplate{Name: "server-mount", Source: serverMountT, Data: data})
@@ -109,8 +135,9 @@ func serverFile(genpkg string, svc *expr.HTTPServiceExpr) *codegen.File {
 // serverEncodeDecode returns the file defining the HTTP server encoding and
 // decoding logic.
 func serverEncodeDecode(genpkg string, svc *expr.HTTPServiceExpr) *codegen.File {
-	path := filepath.Join(codegen.Gendir, "http", codegen.SnakeCase(svc.Name()), "server", "encode_decode.go")
 	data := HTTPServices.Get(svc.Name())
+	svcName := codegen.SnakeCase(data.Service.VarName)
+	path := filepath.Join(codegen.Gendir, "http", svcName, "server", "encode_decode.go")
 	title := fmt.Sprintf("%s HTTP server encoders and decoders", svc.Name())
 	sections := []*codegen.SectionTemplate{
 		codegen.Header(title, "server", []*codegen.ImportSpec{
@@ -125,8 +152,8 @@ func serverEncodeDecode(genpkg string, svc *expr.HTTPServiceExpr) *codegen.File 
 			{Path: "unicode/utf8"},
 			{Path: "goa.design/goa", Name: "goa"},
 			{Path: "goa.design/goa/http", Name: "goahttp"},
-			{Path: genpkg + "/" + codegen.SnakeCase(svc.Name()), Name: data.Service.PkgName},
-			{Path: genpkg + "/" + codegen.SnakeCase(svc.Name()) + "/" + "views", Name: data.Service.ViewsPkg},
+			{Path: genpkg + "/" + svcName, Name: data.Service.PkgName},
+			{Path: genpkg + "/" + svcName + "/" + "views", Name: data.Service.ViewsPkg},
 		}),
 	}
 
@@ -178,17 +205,6 @@ func serverEncodeDecode(genpkg string, svc *expr.HTTPServiceExpr) *codegen.File 
 	}
 
 	return &codegen.File{Path: path, SectionTemplates: sections}
-}
-
-// streamingEndpointExists returns true if at least one of the endpoints in
-// the service defines a streaming payload or result.
-func streamingEndpointExists(sd *ServiceData) bool {
-	for _, e := range sd.Endpoints {
-		if e.ServerStream != nil || e.ClientStream != nil {
-			return true
-		}
-	}
-	return false
 }
 
 func transTmplFuncs(s *expr.HTTPServiceExpr) map[string]interface{} {
@@ -300,7 +316,7 @@ func {{ .ServerInit }}(
 	eh func(context.Context, http.ResponseWriter, error),
 	{{- if streamingEndpointExists . }}
 	up goahttp.Upgrader,
-	connConfigFn goahttp.ConnConfigureFunc,
+	cfn *ConnConfigurer,
 	{{- end }}
 	{{- range .Endpoints }}
 		{{- if .MultipartRequestDecoder }}
@@ -308,6 +324,11 @@ func {{ .ServerInit }}(
 		{{- end }}
 	{{- end }}
 ) *{{ .ServerStruct }} {
+{{- if streamingEndpointExists . }}
+	if cfn == nil {
+		cfn = &ConnConfigurer{}
+	}
+{{- end }}
 	return &{{ .ServerStruct }}{
 		Mounts: []*{{ .MountPointStruct }}{
 			{{- range $e := .Endpoints }}
@@ -323,7 +344,7 @@ func {{ .ServerInit }}(
 			{{- end }}
 		},
 		{{- range .Endpoints }}
-		{{ .Method.VarName }}: {{ .HandlerInit }}(e.{{ .Method.VarName }}, mux, {{ if .MultipartRequestDecoder }}{{ .MultipartRequestDecoder.InitName }}(mux, {{ .MultipartRequestDecoder.VarName }}){{ else }}dec{{ end }}, enc, eh{{ if .ServerStream }}, up, connConfigFn{{ end }}),
+		{{ .Method.VarName }}: {{ .HandlerInit }}(e.{{ .Method.VarName }}, mux, {{ if .MultipartRequestDecoder }}{{ .MultipartRequestDecoder.InitName }}(mux, {{ .MultipartRequestDecoder.VarName }}){{ else }}dec{{ end }}, enc, eh{{ if .ServerStream }}, up, cfn.{{ .Method.VarName }}Fn{{ end }}),
 		{{- end }}
 	}
 }
@@ -443,10 +464,15 @@ func {{ .HandlerInit }}(
 	{{- end }}
 
 	{{ if .ServerStream }}
+		var cancel context.CancelFunc
+		{
+			ctx, cancel = context.WithCancel(ctx)
+		}
 		v := &{{ .ServicePkgName }}.{{ .Method.ServerStream.EndpointStruct }}{
 			Stream: &{{ .ServerStream.VarName }}{
 				upgrader: up,
 				connConfigFn: connConfigFn,
+				cancel: cancel,
 				w: w,
 				r: r,
 			},

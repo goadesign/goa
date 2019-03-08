@@ -16,21 +16,23 @@ import (
 
 // Client is the "chatter" service client.
 type Client struct {
-	LoginEndpoint    goa.Endpoint
-	EchoerEndpoint   goa.Endpoint
-	ListenerEndpoint goa.Endpoint
-	SummaryEndpoint  goa.Endpoint
-	HistoryEndpoint  goa.Endpoint
+	LoginEndpoint     goa.Endpoint
+	EchoerEndpoint    goa.Endpoint
+	ListenerEndpoint  goa.Endpoint
+	SummaryEndpoint   goa.Endpoint
+	SubscribeEndpoint goa.Endpoint
+	HistoryEndpoint   goa.Endpoint
 }
 
 // NewClient initializes a "chatter" service client given the endpoints.
-func NewClient(login, echoer, listener, summary, history goa.Endpoint) *Client {
+func NewClient(login, echoer, listener, summary, subscribe, history goa.Endpoint) *Client {
 	return &Client{
-		LoginEndpoint:    login,
-		EchoerEndpoint:   echoer,
-		ListenerEndpoint: listener,
-		SummaryEndpoint:  summary,
-		HistoryEndpoint:  history,
+		LoginEndpoint:     login,
+		EchoerEndpoint:    echoer,
+		ListenerEndpoint:  listener,
+		SummaryEndpoint:   summary,
+		SubscribeEndpoint: subscribe,
+		HistoryEndpoint:   history,
 	}
 }
 
@@ -83,6 +85,20 @@ func (c *Client) Summary(ctx context.Context, p *SummaryPayload) (res SummaryCli
 		return
 	}
 	return ires.(SummaryClientStream), nil
+}
+
+// Subscribe calls the "subscribe" endpoint of the "chatter" service.
+// Subscribe may return the following errors:
+//	- "unauthorized" (type Unauthorized)
+//	- "invalid-scopes" (type InvalidScopes)
+//	- error: internal error
+func (c *Client) Subscribe(ctx context.Context, p *SubscribePayload) (res SubscribeClientStream, err error) {
+	var ires interface{}
+	ires, err = c.SubscribeEndpoint(ctx, p)
+	if err != nil {
+		return
+	}
+	return ires.(SubscribeClientStream), nil
 }
 
 // History calls the "history" endpoint of the "chatter" service.

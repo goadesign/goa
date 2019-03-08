@@ -43,6 +43,50 @@ func TestServiceExprMethod(t *testing.T) {
 	}
 }
 
+func TestServiceExprError(t *testing.T) {
+	var (
+		errorFoo = &ErrorExpr{
+			Name: "foo",
+		}
+		errorBar = &ErrorExpr{
+			Name: "bar",
+		}
+	)
+	cases := map[string]struct {
+		name     string
+		expected *ErrorExpr
+	}{
+		"exist in service": {
+			name:     "foo",
+			expected: errorFoo,
+		},
+		"exist in root": {
+			name:     "bar",
+			expected: errorBar,
+		},
+		"not exist": {
+			name:     "qux",
+			expected: nil,
+		},
+	}
+
+	Root.Errors = []*ErrorExpr{
+		errorBar,
+	}
+	s := ServiceExpr{
+		Errors: []*ErrorExpr{
+			errorFoo,
+		},
+	}
+	for k, tc := range cases {
+		t.Run(k, func(t *testing.T) {
+			if actual := s.Error(tc.name); actual != tc.expected {
+				t.Errorf("got %#v, expected %#v", actual, tc.expected)
+			}
+		})
+	}
+}
+
 func TestServiceExprValidate(t *testing.T) {
 	const (
 		identifier = "result"

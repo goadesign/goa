@@ -53,14 +53,15 @@ func exampleServer(genpkg string, root *expr.RootExpr, svr *expr.ServerExpr) *co
 	}
 
 	for _, svc := range root.API.HTTP.Services {
-		pkgName := HTTPServices.Get(svc.Name()).Service.PkgName
+		sd := HTTPServices.Get(svc.Name())
+		svcName := codegen.SnakeCase(sd.Service.VarName)
 		specs = append(specs, &codegen.ImportSpec{
-			Path: path.Join(genpkg, "http", codegen.SnakeCase(svc.Name()), "server"),
-			Name: pkgName + "svr",
+			Path: path.Join(genpkg, "http", svcName, "server"),
+			Name: sd.Service.PkgName + "svr",
 		})
 		specs = append(specs, &codegen.ImportSpec{
-			Path: path.Join(genpkg, codegen.SnakeCase(svc.Name())),
-			Name: pkgName,
+			Path: path.Join(genpkg, svcName),
+			Name: sd.Service.PkgName,
 		})
 	}
 
@@ -122,10 +123,9 @@ func dummyMultipartFile(genpkg string, root *expr.RootExpr, svc *expr.HTTPServic
 			{Path: "mime/multipart"},
 		}
 		data := HTTPServices.Get(svc.Name())
-		pkgName := data.Service.PkgName
 		specs = append(specs, &codegen.ImportSpec{
-			Path: path.Join(genpkg, codegen.SnakeCase(svc.Name())),
-			Name: pkgName,
+			Path: path.Join(genpkg, codegen.SnakeCase(data.Service.VarName)),
+			Name: data.Service.PkgName,
 		})
 		sections = []*codegen.SectionTemplate{codegen.Header("", apiPkg, specs)}
 		for _, e := range data.Endpoints {
@@ -155,17 +155,6 @@ func dummyMultipartFile(genpkg string, root *expr.RootExpr, svc *expr.HTTPServic
 		SectionTemplates: sections,
 		SkipExist:        true,
 	}
-}
-
-// needStream returns true if at least one method in the defined services
-// uses stream for sending payload/result.
-func needStream(data []*ServiceData) bool {
-	for _, svc := range data {
-		if streamingEndpointExists(svc) {
-			return true
-		}
-	}
-	return false
 }
 
 const (
@@ -285,17 +274,14 @@ func handleHTTPServer(ctx context.Context, u *url.URL{{ range $.Services }}{{ if
 			errc <- srv.ListenAndServe()
 		}()
 
-		select {
-		case <-ctx.Done():
-			logger.Printf("shutting down HTTP server at %q", u.Host)
+		<-ctx.Done()
+		logger.Printf("shutting down HTTP server at %q", u.Host)
 
-			{{ comment "Shutdown gracefully with a 30s timeout." }}
-			ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
-			defer cancel()
+		{{ comment "Shutdown gracefully with a 30s timeout." }}
+		ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
+		defer cancel()
 
-			srv.Shutdown(ctx)
-			return
-		}
+		srv.Shutdown(ctx)
 	}()
 }
 `

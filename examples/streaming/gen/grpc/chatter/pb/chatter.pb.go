@@ -33,7 +33,7 @@ func (m *LoginRequest) Reset()         { *m = LoginRequest{} }
 func (m *LoginRequest) String() string { return proto.CompactTextString(m) }
 func (*LoginRequest) ProtoMessage()    {}
 func (*LoginRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_chatter_32ec94044f82ef30, []int{0}
+	return fileDescriptor_chatter_9aa614f709dd440d, []int{0}
 }
 func (m *LoginRequest) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_LoginRequest.Unmarshal(m, b)
@@ -64,7 +64,7 @@ func (m *LoginResponse) Reset()         { *m = LoginResponse{} }
 func (m *LoginResponse) String() string { return proto.CompactTextString(m) }
 func (*LoginResponse) ProtoMessage()    {}
 func (*LoginResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_chatter_32ec94044f82ef30, []int{1}
+	return fileDescriptor_chatter_9aa614f709dd440d, []int{1}
 }
 func (m *LoginResponse) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_LoginResponse.Unmarshal(m, b)
@@ -102,7 +102,7 @@ func (m *EchoerStreamingRequest) Reset()         { *m = EchoerStreamingRequest{}
 func (m *EchoerStreamingRequest) String() string { return proto.CompactTextString(m) }
 func (*EchoerStreamingRequest) ProtoMessage()    {}
 func (*EchoerStreamingRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_chatter_32ec94044f82ef30, []int{2}
+	return fileDescriptor_chatter_9aa614f709dd440d, []int{2}
 }
 func (m *EchoerStreamingRequest) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_EchoerStreamingRequest.Unmarshal(m, b)
@@ -140,7 +140,7 @@ func (m *EchoerResponse) Reset()         { *m = EchoerResponse{} }
 func (m *EchoerResponse) String() string { return proto.CompactTextString(m) }
 func (*EchoerResponse) ProtoMessage()    {}
 func (*EchoerResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_chatter_32ec94044f82ef30, []int{3}
+	return fileDescriptor_chatter_9aa614f709dd440d, []int{3}
 }
 func (m *EchoerResponse) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_EchoerResponse.Unmarshal(m, b)
@@ -178,7 +178,7 @@ func (m *ListenerStreamingRequest) Reset()         { *m = ListenerStreamingReque
 func (m *ListenerStreamingRequest) String() string { return proto.CompactTextString(m) }
 func (*ListenerStreamingRequest) ProtoMessage()    {}
 func (*ListenerStreamingRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_chatter_32ec94044f82ef30, []int{4}
+	return fileDescriptor_chatter_9aa614f709dd440d, []int{4}
 }
 func (m *ListenerStreamingRequest) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_ListenerStreamingRequest.Unmarshal(m, b)
@@ -215,7 +215,7 @@ func (m *ListenerResponse) Reset()         { *m = ListenerResponse{} }
 func (m *ListenerResponse) String() string { return proto.CompactTextString(m) }
 func (*ListenerResponse) ProtoMessage()    {}
 func (*ListenerResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_chatter_32ec94044f82ef30, []int{5}
+	return fileDescriptor_chatter_9aa614f709dd440d, []int{5}
 }
 func (m *ListenerResponse) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_ListenerResponse.Unmarshal(m, b)
@@ -246,7 +246,7 @@ func (m *SummaryStreamingRequest) Reset()         { *m = SummaryStreamingRequest
 func (m *SummaryStreamingRequest) String() string { return proto.CompactTextString(m) }
 func (*SummaryStreamingRequest) ProtoMessage()    {}
 func (*SummaryStreamingRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_chatter_32ec94044f82ef30, []int{6}
+	return fileDescriptor_chatter_9aa614f709dd440d, []int{6}
 }
 func (m *SummaryStreamingRequest) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_SummaryStreamingRequest.Unmarshal(m, b)
@@ -284,7 +284,7 @@ func (m *ChatSummaryCollection) Reset()         { *m = ChatSummaryCollection{} }
 func (m *ChatSummaryCollection) String() string { return proto.CompactTextString(m) }
 func (*ChatSummaryCollection) ProtoMessage()    {}
 func (*ChatSummaryCollection) Descriptor() ([]byte, []int) {
-	return fileDescriptor_chatter_32ec94044f82ef30, []int{7}
+	return fileDescriptor_chatter_9aa614f709dd440d, []int{7}
 }
 func (m *ChatSummaryCollection) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_ChatSummaryCollection.Unmarshal(m, b)
@@ -327,7 +327,7 @@ func (m *ChatSummary) Reset()         { *m = ChatSummary{} }
 func (m *ChatSummary) String() string { return proto.CompactTextString(m) }
 func (*ChatSummary) ProtoMessage()    {}
 func (*ChatSummary) Descriptor() ([]byte, []int) {
-	return fileDescriptor_chatter_32ec94044f82ef30, []int{8}
+	return fileDescriptor_chatter_9aa614f709dd440d, []int{8}
 }
 func (m *ChatSummary) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_ChatSummary.Unmarshal(m, b)
@@ -368,6 +368,92 @@ func (m *ChatSummary) GetSentAt() string {
 	return ""
 }
 
+type SubscribeRequest struct {
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
+}
+
+func (m *SubscribeRequest) Reset()         { *m = SubscribeRequest{} }
+func (m *SubscribeRequest) String() string { return proto.CompactTextString(m) }
+func (*SubscribeRequest) ProtoMessage()    {}
+func (*SubscribeRequest) Descriptor() ([]byte, []int) {
+	return fileDescriptor_chatter_9aa614f709dd440d, []int{9}
+}
+func (m *SubscribeRequest) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_SubscribeRequest.Unmarshal(m, b)
+}
+func (m *SubscribeRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_SubscribeRequest.Marshal(b, m, deterministic)
+}
+func (dst *SubscribeRequest) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_SubscribeRequest.Merge(dst, src)
+}
+func (m *SubscribeRequest) XXX_Size() int {
+	return xxx_messageInfo_SubscribeRequest.Size(m)
+}
+func (m *SubscribeRequest) XXX_DiscardUnknown() {
+	xxx_messageInfo_SubscribeRequest.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_SubscribeRequest proto.InternalMessageInfo
+
+type SubscribeResponse struct {
+	// Message sent to the server
+	Message_ string `protobuf:"bytes,1,opt,name=message_,json=message,proto3" json:"message_,omitempty"`
+	Action   string `protobuf:"bytes,2,opt,name=action,proto3" json:"action,omitempty"`
+	// Time at which the message was added
+	AddedAt              string   `protobuf:"bytes,3,opt,name=added_at,json=addedAt,proto3" json:"added_at,omitempty"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
+}
+
+func (m *SubscribeResponse) Reset()         { *m = SubscribeResponse{} }
+func (m *SubscribeResponse) String() string { return proto.CompactTextString(m) }
+func (*SubscribeResponse) ProtoMessage()    {}
+func (*SubscribeResponse) Descriptor() ([]byte, []int) {
+	return fileDescriptor_chatter_9aa614f709dd440d, []int{10}
+}
+func (m *SubscribeResponse) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_SubscribeResponse.Unmarshal(m, b)
+}
+func (m *SubscribeResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_SubscribeResponse.Marshal(b, m, deterministic)
+}
+func (dst *SubscribeResponse) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_SubscribeResponse.Merge(dst, src)
+}
+func (m *SubscribeResponse) XXX_Size() int {
+	return xxx_messageInfo_SubscribeResponse.Size(m)
+}
+func (m *SubscribeResponse) XXX_DiscardUnknown() {
+	xxx_messageInfo_SubscribeResponse.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_SubscribeResponse proto.InternalMessageInfo
+
+func (m *SubscribeResponse) GetMessage_() string {
+	if m != nil {
+		return m.Message_
+	}
+	return ""
+}
+
+func (m *SubscribeResponse) GetAction() string {
+	if m != nil {
+		return m.Action
+	}
+	return ""
+}
+
+func (m *SubscribeResponse) GetAddedAt() string {
+	if m != nil {
+		return m.AddedAt
+	}
+	return ""
+}
+
 type HistoryRequest struct {
 	XXX_NoUnkeyedLiteral struct{} `json:"-"`
 	XXX_unrecognized     []byte   `json:"-"`
@@ -378,7 +464,7 @@ func (m *HistoryRequest) Reset()         { *m = HistoryRequest{} }
 func (m *HistoryRequest) String() string { return proto.CompactTextString(m) }
 func (*HistoryRequest) ProtoMessage()    {}
 func (*HistoryRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_chatter_32ec94044f82ef30, []int{9}
+	return fileDescriptor_chatter_9aa614f709dd440d, []int{11}
 }
 func (m *HistoryRequest) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_HistoryRequest.Unmarshal(m, b)
@@ -414,7 +500,7 @@ func (m *HistoryResponse) Reset()         { *m = HistoryResponse{} }
 func (m *HistoryResponse) String() string { return proto.CompactTextString(m) }
 func (*HistoryResponse) ProtoMessage()    {}
 func (*HistoryResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_chatter_32ec94044f82ef30, []int{10}
+	return fileDescriptor_chatter_9aa614f709dd440d, []int{12}
 }
 func (m *HistoryResponse) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_HistoryResponse.Unmarshal(m, b)
@@ -465,6 +551,8 @@ func init() {
 	proto.RegisterType((*SummaryStreamingRequest)(nil), "chatter.SummaryStreamingRequest")
 	proto.RegisterType((*ChatSummaryCollection)(nil), "chatter.ChatSummaryCollection")
 	proto.RegisterType((*ChatSummary)(nil), "chatter.ChatSummary")
+	proto.RegisterType((*SubscribeRequest)(nil), "chatter.SubscribeRequest")
+	proto.RegisterType((*SubscribeResponse)(nil), "chatter.SubscribeResponse")
 	proto.RegisterType((*HistoryRequest)(nil), "chatter.HistoryRequest")
 	proto.RegisterType((*HistoryResponse)(nil), "chatter.HistoryResponse")
 }
@@ -489,6 +577,8 @@ type ChatterClient interface {
 	Listener(ctx context.Context, opts ...grpc.CallOption) (Chatter_ListenerClient, error)
 	// Summarizes the chat messages sent by the client.
 	Summary(ctx context.Context, opts ...grpc.CallOption) (Chatter_SummaryClient, error)
+	// Subscribe to events sent when new chat messages are added.
+	Subscribe(ctx context.Context, in *SubscribeRequest, opts ...grpc.CallOption) (Chatter_SubscribeClient, error)
 	// Returns the chat messages sent to the server.
 	History(ctx context.Context, in *HistoryRequest, opts ...grpc.CallOption) (Chatter_HistoryClient, error)
 }
@@ -609,8 +699,40 @@ func (x *chatterSummaryClient) CloseAndRecv() (*ChatSummaryCollection, error) {
 	return m, nil
 }
 
+func (c *chatterClient) Subscribe(ctx context.Context, in *SubscribeRequest, opts ...grpc.CallOption) (Chatter_SubscribeClient, error) {
+	stream, err := c.cc.NewStream(ctx, &_Chatter_serviceDesc.Streams[3], "/chatter.Chatter/Subscribe", opts...)
+	if err != nil {
+		return nil, err
+	}
+	x := &chatterSubscribeClient{stream}
+	if err := x.ClientStream.SendMsg(in); err != nil {
+		return nil, err
+	}
+	if err := x.ClientStream.CloseSend(); err != nil {
+		return nil, err
+	}
+	return x, nil
+}
+
+type Chatter_SubscribeClient interface {
+	Recv() (*SubscribeResponse, error)
+	grpc.ClientStream
+}
+
+type chatterSubscribeClient struct {
+	grpc.ClientStream
+}
+
+func (x *chatterSubscribeClient) Recv() (*SubscribeResponse, error) {
+	m := new(SubscribeResponse)
+	if err := x.ClientStream.RecvMsg(m); err != nil {
+		return nil, err
+	}
+	return m, nil
+}
+
 func (c *chatterClient) History(ctx context.Context, in *HistoryRequest, opts ...grpc.CallOption) (Chatter_HistoryClient, error) {
-	stream, err := c.cc.NewStream(ctx, &_Chatter_serviceDesc.Streams[3], "/chatter.Chatter/History", opts...)
+	stream, err := c.cc.NewStream(ctx, &_Chatter_serviceDesc.Streams[4], "/chatter.Chatter/History", opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -651,6 +773,8 @@ type ChatterServer interface {
 	Listener(Chatter_ListenerServer) error
 	// Summarizes the chat messages sent by the client.
 	Summary(Chatter_SummaryServer) error
+	// Subscribe to events sent when new chat messages are added.
+	Subscribe(*SubscribeRequest, Chatter_SubscribeServer) error
 	// Returns the chat messages sent to the server.
 	History(*HistoryRequest, Chatter_HistoryServer) error
 }
@@ -755,6 +879,27 @@ func (x *chatterSummaryServer) Recv() (*SummaryStreamingRequest, error) {
 	return m, nil
 }
 
+func _Chatter_Subscribe_Handler(srv interface{}, stream grpc.ServerStream) error {
+	m := new(SubscribeRequest)
+	if err := stream.RecvMsg(m); err != nil {
+		return err
+	}
+	return srv.(ChatterServer).Subscribe(m, &chatterSubscribeServer{stream})
+}
+
+type Chatter_SubscribeServer interface {
+	Send(*SubscribeResponse) error
+	grpc.ServerStream
+}
+
+type chatterSubscribeServer struct {
+	grpc.ServerStream
+}
+
+func (x *chatterSubscribeServer) Send(m *SubscribeResponse) error {
+	return x.ServerStream.SendMsg(m)
+}
+
 func _Chatter_History_Handler(srv interface{}, stream grpc.ServerStream) error {
 	m := new(HistoryRequest)
 	if err := stream.RecvMsg(m); err != nil {
@@ -803,6 +948,11 @@ var _Chatter_serviceDesc = grpc.ServiceDesc{
 			ClientStreams: true,
 		},
 		{
+			StreamName:    "Subscribe",
+			Handler:       _Chatter_Subscribe_Handler,
+			ServerStreams: true,
+		},
+		{
 			StreamName:    "History",
 			Handler:       _Chatter_History_Handler,
 			ServerStreams: true,
@@ -811,32 +961,36 @@ var _Chatter_serviceDesc = grpc.ServiceDesc{
 	Metadata: "chatter.proto",
 }
 
-func init() { proto.RegisterFile("chatter.proto", fileDescriptor_chatter_32ec94044f82ef30) }
+func init() { proto.RegisterFile("chatter.proto", fileDescriptor_chatter_9aa614f709dd440d) }
 
-var fileDescriptor_chatter_32ec94044f82ef30 = []byte{
-	// 378 bytes of a gzipped FileDescriptorProto
-	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xac, 0x53, 0x4d, 0x4f, 0xc2, 0x40,
-	0x10, 0x4d, 0x21, 0xb4, 0x30, 0x08, 0xe2, 0x84, 0x8f, 0xd2, 0x83, 0x62, 0x13, 0x4d, 0xe3, 0x01,
-	0x09, 0x26, 0x1e, 0x4d, 0xb4, 0xd1, 0x18, 0x83, 0x17, 0x38, 0x69, 0x62, 0x48, 0xc1, 0xb5, 0x6d,
-	0xd2, 0x76, 0xb1, 0xbb, 0x1c, 0xf8, 0xbf, 0xfe, 0x10, 0x23, 0xdd, 0x6d, 0x91, 0x8f, 0xc8, 0xc1,
-	0xe3, 0x9b, 0x7d, 0xf3, 0x66, 0x67, 0xdf, 0x5b, 0xa8, 0x4c, 0x3d, 0x87, 0x73, 0x12, 0x77, 0x67,
-	0x31, 0xe5, 0x14, 0x35, 0x01, 0xcd, 0x2a, 0x1c, 0x0c, 0xa8, 0xeb, 0x47, 0x43, 0xf2, 0x39, 0x27,
-	0x8c, 0x9b, 0x67, 0x50, 0x11, 0x98, 0xcd, 0x68, 0xc4, 0x08, 0xd6, 0xa1, 0xf0, 0xe1, 0x93, 0xe0,
-	0x5d, 0x57, 0x3a, 0x8a, 0x55, 0x1a, 0x26, 0xc0, 0xec, 0x42, 0xf3, 0x7e, 0xea, 0x51, 0x12, 0x8f,
-	0x78, 0x4c, 0x9c, 0xd0, 0x8f, 0x5c, 0x21, 0xb0, 0x83, 0x7f, 0x0e, 0xd5, 0x84, 0xff, 0x87, 0x6e,
-	0x0f, 0xf4, 0x81, 0xcf, 0x38, 0x89, 0xf6, 0x56, 0x46, 0xa8, 0xc9, 0x0e, 0xa9, 0x6d, 0x5e, 0x42,
-	0x6b, 0x34, 0x0f, 0x43, 0x27, 0x5e, 0xec, 0x29, 0x62, 0x43, 0xc3, 0xf6, 0x1c, 0x2e, 0x9a, 0x6c,
-	0x1a, 0x04, 0x64, 0xca, 0x7d, 0x1a, 0xe1, 0x45, 0x46, 0xcf, 0x5b, 0xe5, 0x7e, 0xbd, 0x2b, 0x9f,
-	0x71, 0x85, 0x2e, 0x45, 0x5e, 0xa0, 0xbc, 0x52, 0xc5, 0x36, 0x14, 0x43, 0xc2, 0x98, 0xe3, 0x92,
-	0xb1, 0x18, 0xa6, 0x09, 0x8c, 0x4d, 0x50, 0x03, 0x12, 0xb9, 0xdc, 0xd3, 0x73, 0x1d, 0xc5, 0x3a,
-	0x1a, 0x0a, 0x84, 0x2d, 0xd0, 0x18, 0x89, 0xf8, 0xd8, 0xe1, 0x7a, 0x7e, 0xd9, 0xa1, 0xfe, 0xc0,
-	0x5b, 0x6e, 0xd6, 0xa0, 0xfa, 0xe8, 0x33, 0x4e, 0xe3, 0x85, 0xf4, 0xe9, 0x0d, 0x0e, 0xd3, 0x8a,
-	0x78, 0xd1, 0x7f, 0x1c, 0xd8, 0xff, 0xca, 0x81, 0x66, 0x27, 0xab, 0xe2, 0x35, 0x14, 0x96, 0x91,
-	0xc0, 0x46, 0xba, 0xfd, 0x6a, 0x64, 0x8c, 0xe6, 0x7a, 0x59, 0xdc, 0xe7, 0x01, 0xd4, 0xc4, 0x73,
-	0x3c, 0x49, 0x19, 0xdb, 0x43, 0x63, 0xb4, 0xd6, 0x08, 0x52, 0xc3, 0x52, 0x7a, 0x0a, 0x3e, 0x41,
-	0x51, 0x3a, 0x8c, 0xa7, 0xd9, 0xac, 0x1d, 0x31, 0x31, 0xda, 0x1b, 0x94, 0x4c, 0x0d, 0x9f, 0x41,
-	0x93, 0xfe, 0x74, 0x52, 0xde, 0x8e, 0xac, 0x18, 0xc7, 0xdb, 0xdc, 0xce, 0xc2, 0x61, 0x29, 0x78,
-	0x03, 0x9a, 0x70, 0x01, 0xb3, 0x15, 0x7e, 0x3b, 0x65, 0xe8, 0x9b, 0x07, 0xc9, 0x75, 0x7a, 0xca,
-	0x5d, 0xf9, 0xb5, 0x24, 0x0e, 0x67, 0x93, 0x89, 0xba, 0xfc, 0x9a, 0x57, 0xdf, 0x01, 0x00, 0x00,
-	0xff, 0xff, 0xe3, 0x19, 0x66, 0x9a, 0xab, 0x03, 0x00, 0x00,
+var fileDescriptor_chatter_9aa614f709dd440d = []byte{
+	// 436 bytes of a gzipped FileDescriptorProto
+	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0x94, 0x54, 0x5d, 0x8f, 0x93, 0x40,
+	0x14, 0x0d, 0x36, 0x0b, 0xcb, 0xad, 0x5b, 0x77, 0x6f, 0x76, 0x5b, 0xca, 0x83, 0x56, 0x12, 0x0d,
+	0xf1, 0xa1, 0x36, 0x6b, 0xe2, 0xa3, 0xc9, 0x8a, 0x1a, 0x63, 0xea, 0x0b, 0x7d, 0xd2, 0xc4, 0x34,
+	0x03, 0x8c, 0x40, 0x02, 0x4c, 0x65, 0xa6, 0x0f, 0xfd, 0x4b, 0xfe, 0x4a, 0x53, 0x98, 0x01, 0xfa,
+	0xa5, 0xf5, 0xf1, 0xdc, 0x39, 0xf7, 0x1c, 0xee, 0xbd, 0x27, 0xc0, 0x55, 0x98, 0x10, 0x21, 0x68,
+	0x39, 0x5d, 0x95, 0x4c, 0x30, 0x34, 0x24, 0x74, 0x06, 0xf0, 0x78, 0xce, 0xe2, 0xb4, 0xf0, 0xe9,
+	0xaf, 0x35, 0xe5, 0xc2, 0x79, 0x01, 0x57, 0x12, 0xf3, 0x15, 0x2b, 0x38, 0xc5, 0x5b, 0xb8, 0xf8,
+	0x99, 0xd2, 0x2c, 0xb2, 0xb4, 0x89, 0xe6, 0x9a, 0x7e, 0x0d, 0x9c, 0x29, 0x0c, 0x3f, 0x86, 0x09,
+	0xa3, 0xe5, 0x42, 0x94, 0x94, 0xe4, 0x69, 0x11, 0x4b, 0x81, 0x13, 0xfc, 0x97, 0x30, 0xa8, 0xf9,
+	0xff, 0xd0, 0x9d, 0x81, 0x35, 0x4f, 0xb9, 0xa0, 0xc5, 0xd9, 0xca, 0x08, 0xd7, 0xaa, 0x43, 0x69,
+	0x3b, 0xaf, 0x61, 0xb4, 0x58, 0xe7, 0x39, 0x29, 0x37, 0x67, 0x8a, 0x78, 0x70, 0xe7, 0x25, 0x44,
+	0xc8, 0x26, 0x8f, 0x65, 0x19, 0x0d, 0x45, 0xca, 0x0a, 0x7c, 0xd5, 0xd2, 0x7b, 0x6e, 0xff, 0xfe,
+	0x76, 0xaa, 0xd6, 0xd8, 0xa1, 0x2b, 0x91, 0x6f, 0xd0, 0xef, 0x54, 0x71, 0x0c, 0x97, 0x39, 0xe5,
+	0x9c, 0xc4, 0x74, 0x29, 0xcd, 0x0c, 0x89, 0x71, 0x08, 0x7a, 0x46, 0x8b, 0x58, 0x24, 0xd6, 0xa3,
+	0x89, 0xe6, 0xde, 0xf8, 0x12, 0xe1, 0x08, 0x0c, 0x4e, 0x0b, 0xb1, 0x24, 0xc2, 0xea, 0x55, 0x1d,
+	0xfa, 0x16, 0x3e, 0x88, 0xed, 0x90, 0x8b, 0x75, 0xc0, 0xc3, 0x32, 0x0d, 0xa8, 0xba, 0x14, 0x81,
+	0x9b, 0x4e, 0x4d, 0x6e, 0xf5, 0xef, 0xa6, 0xa4, 0x1a, 0xaa, 0x32, 0x35, 0x7d, 0x89, 0xb6, 0x2d,
+	0x24, 0x8a, 0x68, 0xd4, 0xba, 0x1a, 0x15, 0x7e, 0x10, 0xce, 0x35, 0x0c, 0x3e, 0xa7, 0x5c, 0xb0,
+	0x72, 0xa3, 0x4c, 0x7f, 0xc0, 0x93, 0xa6, 0x72, 0x96, 0xe5, 0x7f, 0xcd, 0x79, 0xff, 0xbb, 0x07,
+	0x86, 0x57, 0x6f, 0x18, 0xdf, 0xc2, 0x45, 0x95, 0x44, 0xbc, 0x6b, 0x96, 0xde, 0x4d, 0xaa, 0x3d,
+	0xdc, 0x2f, 0xcb, 0xef, 0xf9, 0x04, 0x7a, 0x1d, 0x35, 0x7c, 0xd6, 0x30, 0x8e, 0x67, 0xd5, 0x1e,
+	0xed, 0x11, 0x94, 0x86, 0xab, 0xcd, 0x34, 0xfc, 0x02, 0x97, 0x2a, 0x58, 0xf8, 0xbc, 0xf5, 0x3a,
+	0x91, 0x4e, 0x7b, 0x7c, 0x40, 0x69, 0xd5, 0xf0, 0x2b, 0x18, 0x2a, 0x16, 0x93, 0x86, 0x77, 0x22,
+	0xa2, 0xf6, 0xd3, 0x63, 0x21, 0x6b, 0x33, 0xe9, 0x6a, 0xf8, 0x01, 0xcc, 0xe6, 0xf4, 0x38, 0xee,
+	0x08, 0xee, 0x46, 0xc4, 0xb6, 0x8f, 0x3d, 0xd5, 0x1f, 0x35, 0xd3, 0xf0, 0x1d, 0x18, 0xf2, 0x96,
+	0xd8, 0x2e, 0x62, 0xf7, 0xde, 0xb6, 0x75, 0xf8, 0xa0, 0xfa, 0xdf, 0xf7, 0xbf, 0x9b, 0xf2, 0x71,
+	0x15, 0x04, 0x7a, 0xf5, 0x5f, 0x79, 0xf3, 0x27, 0x00, 0x00, 0xff, 0xff, 0xc4, 0xa4, 0x4b, 0x78,
+	0x68, 0x04, 0x00, 0x00,
 }

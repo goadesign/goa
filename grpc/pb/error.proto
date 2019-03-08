@@ -5,7 +5,7 @@ syntax = "proto3";
 //
 // $ protoc -I . error.proto --go_out=plugins=grpc:.
 
-package goa.pb;
+package goapb;
 
 // ErrorResponse message defines the error encoded in the gRPC response that
 // correspond to the errors created by the generated code. This is mainly

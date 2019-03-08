@@ -8,7 +8,8 @@ import (
 	"path/filepath"
 )
 
-// ClientCLIFiles returns the client gRPC CLI support file.
+// ClientCLIFiles returns the CLI files to make gRPC requests using the
+// command-line client.
 func ClientCLIFiles(genpkg string, root *expr.RootExpr) []*codegen.File {
 	var (
 		data []*cli.CommandData
@@ -38,7 +39,7 @@ func ClientCLIFiles(genpkg string, root *expr.RootExpr) []*codegen.File {
 		files = append(files, endpointParser(genpkg, root, svr, data))
 	}
 	for i, svc := range svcs {
-		files = append(files, payloadBuilders(genpkg, svc.Name(), data[i]))
+		files = append(files, payloadBuilders(genpkg, svc, data[i]))
 	}
 	return files
 }
@@ -73,13 +74,14 @@ func endpointParser(genpkg string, root *expr.RootExpr, svr *expr.ServerExpr, da
 		if sd == nil {
 			continue
 		}
+		svcName := codegen.SnakeCase(sd.Service.VarName)
 		specs = append(specs, &codegen.ImportSpec{
-			Path: path.Join(genpkg, "grpc", codegen.SnakeCase(sd.Service.Name), "client"),
+			Path: path.Join(genpkg, "grpc", svcName, "client"),
 			Name: sd.Service.PkgName + "c",
 		})
 		specs = append(specs, &codegen.ImportSpec{
-			Path: path.Join(genpkg, "grpc", codegen.SnakeCase(sd.Service.Name), pbPkgName),
-			Name: codegen.SnakeCase(svc.Name()) + pbPkgName,
+			Path: path.Join(genpkg, "grpc", svcName, pbPkgName),
+			Name: svcName + pbPkgName,
 		})
 	}
 
@@ -107,16 +109,16 @@ func endpointParser(genpkg string, root *expr.RootExpr, svr *expr.ServerExpr, da
 
 // payloadBuilders returns the file that contains the payload constructors that
 // use flag values as arguments.
-func payloadBuilders(genpkg string, svcName string, data *cli.CommandData) *codegen.File {
-	svcNameSnakeCase := codegen.SnakeCase(svcName)
-	fpath := filepath.Join(codegen.Gendir, "grpc", svcNameSnakeCase, "client", "cli.go")
-	title := svcName + " gRPC client CLI support package"
-	sd := GRPCServices.Get(svcName)
+func payloadBuilders(genpkg string, svc *expr.GRPCServiceExpr, data *cli.CommandData) *codegen.File {
+	sd := GRPCServices.Get(svc.Name())
+	svcName := codegen.SnakeCase(sd.Service.VarName)
+	fpath := filepath.Join(codegen.Gendir, "grpc", svcName, "client", "cli.go")
+	title := svc.Name() + " gRPC client CLI support package"
 	specs := []*codegen.ImportSpec{
 		{Path: "encoding/json"},
 		{Path: "fmt"},
-		{Path: path.Join(genpkg, svcNameSnakeCase), Name: sd.Service.PkgName},
-		{Path: path.Join(genpkg, "grpc", svcNameSnakeCase, pbPkgName), Name: sd.PkgName},
+		{Path: path.Join(genpkg, svcName), Name: sd.Service.PkgName},
+		{Path: path.Join(genpkg, "grpc", svcName, pbPkgName), Name: sd.PkgName},
 	}
 	sections := []*codegen.SectionTemplate{
 		codegen.Header(title, "client", specs),

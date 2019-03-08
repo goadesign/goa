@@ -656,6 +656,68 @@ func TestPrimitiveIsCompatible(t *testing.T) {
 	}
 }
 
+func TestPrimitiveHash(t *testing.T) {
+	cases := map[string]struct {
+		p        Primitive
+		expected string
+	}{
+		"boolean": {
+			p:        Boolean,
+			expected: "boolean",
+		},
+		"int": {
+			p:        Int,
+			expected: "int",
+		},
+		"int32": {
+			p:        Int32,
+			expected: "int32",
+		},
+		"int64": {
+			p:        Int64,
+			expected: "int64",
+		},
+		"uint": {
+			p:        UInt,
+			expected: "uint",
+		},
+		"uint32": {
+			p:        UInt32,
+			expected: "uint32",
+		},
+		"uint64": {
+			p:        UInt64,
+			expected: "uint64",
+		},
+		"float32": {
+			p:        Float32,
+			expected: "float32",
+		},
+		"float64": {
+			p:        Float64,
+			expected: "float64",
+		},
+		"string": {
+			p:        String,
+			expected: "string",
+		},
+		"bytes": {
+			p:        Bytes,
+			expected: "bytes",
+		},
+		"any": {
+			p:        Any,
+			expected: "any",
+		},
+	}
+
+	for k, tc := range cases {
+		if actual := tc.p.Hash(); tc.expected != actual {
+			t.Errorf("%s: got %#v, expected %#v", k, actual, tc.expected)
+		}
+	}
+}
+
 func TestArrayIsCompatible(t *testing.T) {
 	var (
 		b  = true
@@ -699,6 +761,47 @@ func TestArrayIsCompatible(t *testing.T) {
 		for _, value := range tc.values {
 			if actual := array.IsCompatible(value); tc.expected != actual {
 				t.Errorf("%s: got %#v, expected %#v", k, actual, tc.expected)
+			}
+		}
+	}
+}
+
+func TestObjectRename(t *testing.T) {
+	cases := map[string]struct {
+		old, new string
+		expected []string
+	}{
+		"renamed": {
+			old:      "foo",
+			new:      "qux",
+			expected: []string{"qux", "bar"},
+		},
+		"unmatched": {
+			old:      "baz",
+			new:      "qux",
+			expected: []string{"foo", "bar"},
+		},
+	}
+
+	for k, tc := range cases {
+		object := &Object{
+			&NamedAttributeExpr{
+				Name: "foo",
+				Attribute: &AttributeExpr{
+					Type: String,
+				},
+			},
+			&NamedAttributeExpr{
+				Name: "bar",
+				Attribute: &AttributeExpr{
+					Type: String,
+				},
+			},
+		}
+		object.Rename(tc.old, tc.new)
+		for _, s := range tc.expected {
+			if att := object.Attribute(s); att == nil {
+				t.Errorf("%s: %s not found", k, s)
 			}
 		}
 	}

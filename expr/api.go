@@ -137,7 +137,9 @@ func (a *APIExpr) EvalName() string { return "API " + a.Name }
 // Hash returns a unique hash value for a.
 func (a *APIExpr) Hash() string { return "_api_+" + a.Name }
 
-// Finalize makes sure there's one server definition.
+// Finalize makes sure that the API name is initialized and there is at least
+// one server definition (if none exists, it creates a default server). If API
+// name is empty, it sets the name of the first service definition as API name.
 func (a *APIExpr) Finalize() {
 	if a.Name == "" {
 		a.Name = "api"

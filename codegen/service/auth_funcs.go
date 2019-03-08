@@ -40,10 +40,10 @@ func AuthFuncsFile(genpkg string, root *expr.RootExpr) *codegen.File {
 			{Path: rootPath, Name: apiPkg},
 		}
 		for _, svc := range root.Services {
-			pkgName := Services.Get(svc.Name).PkgName
+			sd := Services.Get(svc.Name)
 			specs = append(specs, &codegen.ImportSpec{
-				Path: path.Join(genpkg, codegen.SnakeCase(svc.Name)),
-				Name: pkgName,
+				Path: path.Join(genpkg, codegen.SnakeCase(sd.VarName)),
+				Name: sd.PkgName,
 			})
 		}
 		header := codegen.Header("", apiPkg, specs)

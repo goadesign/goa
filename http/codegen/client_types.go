@@ -44,16 +44,16 @@ func ClientTypeFiles(genpkg string, root *expr.RootExpr) []*codegen.File {
 //
 func clientType(genpkg string, svc *expr.HTTPServiceExpr, seen map[string]struct{}) *codegen.File {
 	var (
-		path  string
-		rdata = HTTPServices.Get(svc.Name())
+		path    string
+		data    = HTTPServices.Get(svc.Name())
+		svcName = codegen.SnakeCase(data.Service.VarName)
 	)
-	path = filepath.Join(codegen.Gendir, "http", codegen.SnakeCase(svc.Name()), "client", "types.go")
-	sd := HTTPServices.Get(svc.Name())
+	path = filepath.Join(codegen.Gendir, "http", svcName, "client", "types.go")
 	header := codegen.Header(svc.Name()+" HTTP client types", "client",
 		[]*codegen.ImportSpec{
 			{Path: "unicode/utf8"},
-			{Path: genpkg + "/" + codegen.SnakeCase(svc.Name()), Name: sd.Service.PkgName},
-			{Path: genpkg + "/" + codegen.SnakeCase(svc.Name()) + "/" + "views", Name: sd.Service.ViewsPkg},
+			{Path: genpkg + "/" + svcName, Name: data.Service.PkgName},
+			{Path: genpkg + "/" + svcName + "/" + "views", Name: data.Service.ViewsPkg},
 			{Path: "goa.design/goa", Name: "goa"},
 		},
 	)
@@ -67,7 +67,7 @@ func clientType(genpkg string, svc *expr.HTTPServiceExpr, seen map[string]struct
 
 	// request body types
 	for _, a := range svc.HTTPEndpoints {
-		adata := rdata.Endpoint(a.Name())
+		adata := data.Endpoint(a.Name())
 		if data := adata.Payload.Request.ClientBody; data != nil {
 			if data.Def != "" {
 				sections = append(sections, &codegen.SectionTemplate{
@@ -104,7 +104,7 @@ func clientType(genpkg string, svc *expr.HTTPServiceExpr, seen map[string]struct
 
 	// response body types
 	for _, a := range svc.HTTPEndpoints {
-		adata := rdata.Endpoint(a.Name())
+		adata := data.Endpoint(a.Name())
 		for _, resp := range adata.Result.Responses {
 			if data := resp.ClientBody; data != nil {
 				if data.Def != "" {
@@ -123,7 +123,7 @@ func clientType(genpkg string, svc *expr.HTTPServiceExpr, seen map[string]struct
 
 	// error body types
 	for _, a := range svc.HTTPEndpoints {
-		adata := rdata.Endpoint(a.Name())
+		adata := data.Endpoint(a.Name())
 		for _, gerr := range adata.Errors {
 			for _, herr := range gerr.Errors {
 				if data := herr.Response.ClientBody; data != nil {
@@ -142,7 +142,7 @@ func clientType(genpkg string, svc *expr.HTTPServiceExpr, seen map[string]struct
 		}
 	}
 
-	for _, data := range rdata.ClientBodyAttributeTypes {
+	for _, data := range data.ClientBodyAttributeTypes {
 		if data.Def != "" {
 			sections = append(sections, &codegen.SectionTemplate{
 				Name:   "client-body-attributes",
@@ -165,7 +165,7 @@ func clientType(genpkg string, svc *expr.HTTPServiceExpr, seen map[string]struct
 		})
 	}
 
-	for _, adata := range rdata.Endpoints {
+	for _, adata := range data.Endpoints {
 		// response to method result (client)
 		for _, resp := range adata.Result.Responses {
 			if init := resp.ResultInit; init != nil {
@@ -240,12 +240,5 @@ func {{ .Name }}({{- range .ClientArgs }}{{ .Name }} {{ .TypeRef }}, {{ end }}) 
 			}
 		{{- end }}
 	{{ end -}}
-}
-`
-
-// input: service.InitData
-const viewedResultTypeInitT = `{{ comment .Description }}
-func {{ .Name }}({{ range .Args }}{{ .Name }} {{ .Ref }}, {{ end }}) {{ .ReturnRef }} {
-  {{ .Code }}
 }
 `

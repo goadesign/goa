@@ -44,17 +44,17 @@ func ServerTypeFiles(genpkg string, root *expr.RootExpr) []*codegen.File {
 //
 func serverType(genpkg string, svc *expr.HTTPServiceExpr, seen map[string]struct{}) *codegen.File {
 	var (
-		path  string
-		rdata = HTTPServices.Get(svc.Name())
+		path    string
+		data    = HTTPServices.Get(svc.Name())
+		svcName = codegen.SnakeCase(data.Service.VarName)
 	)
-	path = filepath.Join(codegen.Gendir, "http", codegen.SnakeCase(svc.Name()), "server", "types.go")
-	sd := HTTPServices.Get(svc.Name())
+	path = filepath.Join(codegen.Gendir, "http", svcName, "server", "types.go")
 	header := codegen.Header(svc.Name()+" HTTP server types", "server",
 		[]*codegen.ImportSpec{
 			{Path: "unicode/utf8"},
-			{Path: genpkg + "/" + codegen.SnakeCase(svc.Name()), Name: sd.Service.PkgName},
+			{Path: genpkg + "/" + svcName, Name: data.Service.PkgName},
 			{Path: "goa.design/goa", Name: "goa"},
-			{Path: genpkg + "/" + codegen.SnakeCase(svc.Name()) + "/" + "views", Name: sd.Service.ViewsPkg},
+			{Path: genpkg + "/" + svcName + "/" + "views", Name: data.Service.ViewsPkg},
 		},
 	)
 
@@ -67,7 +67,7 @@ func serverType(genpkg string, svc *expr.HTTPServiceExpr, seen map[string]struct
 
 	// request body types
 	for _, a := range svc.HTTPEndpoints {
-		adata := rdata.Endpoint(a.Name())
+		adata := data.Endpoint(a.Name())
 		if data := adata.Payload.Request.ServerBody; data != nil {
 			if data.Def != "" {
 				sections = append(sections, &codegen.SectionTemplate{
@@ -98,24 +98,24 @@ func serverType(genpkg string, svc *expr.HTTPServiceExpr, seen map[string]struct
 
 	// response body types
 	for _, a := range svc.HTTPEndpoints {
-		adata := rdata.Endpoint(a.Name())
+		adata := data.Endpoint(a.Name())
 		for _, resp := range adata.Result.Responses {
-			for _, data := range resp.ServerBody {
-				if generated, ok := sd.ServerTypeNames[data.Name]; ok && !generated {
-					if data.Def != "" && !sd.ServerTypeNames[data.VarName] {
+			for _, tdata := range resp.ServerBody {
+				if generated, ok := data.ServerTypeNames[tdata.Name]; ok && !generated {
+					if tdata.Def != "" && !data.ServerTypeNames[tdata.VarName] {
 						sections = append(sections, &codegen.SectionTemplate{
 							Name:   "response-server-body",
 							Source: typeDeclT,
-							Data:   data,
+							Data:   tdata,
 						})
 					}
-					if data.Init != nil {
-						initData = append(initData, data.Init)
+					if tdata.Init != nil {
+						initData = append(initData, tdata.Init)
 					}
-					if data.ValidateDef != "" {
-						validatedTypes = append(validatedTypes, data)
+					if tdata.ValidateDef != "" {
+						validatedTypes = append(validatedTypes, tdata)
 					}
-					sd.ServerTypeNames[data.Name] = true
+					data.ServerTypeNames[tdata.Name] = true
 				}
 			}
 		}
@@ -123,7 +123,7 @@ func serverType(genpkg string, svc *expr.HTTPServiceExpr, seen map[string]struct
 
 	// error body types
 	for _, a := range svc.HTTPEndpoints {
-		adata := rdata.Endpoint(a.Name())
+		adata := data.Endpoint(a.Name())
 		for _, gerr := range adata.Errors {
 			for _, herr := range gerr.Errors {
 				for _, data := range herr.Response.ServerBody {
@@ -146,17 +146,17 @@ func serverType(genpkg string, svc *expr.HTTPServiceExpr, seen map[string]struct
 	}
 
 	// body attribute types
-	for _, data := range rdata.ServerBodyAttributeTypes {
-		if data.Def != "" {
+	for _, tdata := range data.ServerBodyAttributeTypes {
+		if tdata.Def != "" {
 			sections = append(sections, &codegen.SectionTemplate{
 				Name:   "server-body-attributes",
 				Source: typeDeclT,
-				Data:   data,
+				Data:   tdata,
 			})
 		}
 
-		if data.ValidateDef != "" {
-			validatedTypes = append(validatedTypes, data)
+		if tdata.ValidateDef != "" {
+			validatedTypes = append(validatedTypes, tdata)
 		}
 	}
 
@@ -169,7 +169,7 @@ func serverType(genpkg string, svc *expr.HTTPServiceExpr, seen map[string]struct
 		})
 	}
 
-	for _, adata := range rdata.Endpoints {
+	for _, adata := range data.Endpoints {
 		// request to method payload
 		if init := adata.Payload.Request.PayloadInit; init != nil {
 			sections = append(sections, &codegen.SectionTemplate{

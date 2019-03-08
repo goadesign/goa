@@ -377,6 +377,105 @@ func DecodeSummaryResponse(decoder func(*http.Response) goahttp.Decoder, restore
 	}
 }
 
+// BuildSubscribeRequest instantiates a HTTP request object with method and
+// path set to call the "chatter" service "subscribe" endpoint
+func (c *Client) BuildSubscribeRequest(ctx context.Context, v interface{}) (*http.Request, error) {
+	scheme := c.scheme
+	switch c.scheme {
+	case "http":
+		scheme = "ws"
+	case "https":
+		scheme = "wss"
+	}
+	u := &url.URL{Scheme: scheme, Host: c.host, Path: SubscribeChatterPath()}
+	req, err := http.NewRequest("GET", u.String(), nil)
+	if err != nil {
+		return nil, goahttp.ErrInvalidURL("chatter", "subscribe", u.String(), err)
+	}
+	if ctx != nil {
+		req = req.WithContext(ctx)
+	}
+
+	return req, nil
+}
+
+// EncodeSubscribeRequest returns an encoder for requests sent to the chatter
+// subscribe server.
+func EncodeSubscribeRequest(encoder func(*http.Request) goahttp.Encoder) func(*http.Request, interface{}) error {
+	return func(req *http.Request, v interface{}) error {
+		p, ok := v.(*chattersvc.SubscribePayload)
+		if !ok {
+			return goahttp.ErrInvalidType("chatter", "subscribe", "*chattersvc.SubscribePayload", v)
+		}
+		req.Header.Set("Authorization", p.Token)
+		return nil
+	}
+}
+
+// DecodeSubscribeResponse returns a decoder for responses returned by the
+// chatter subscribe endpoint. restoreBody controls whether the response body
+// should be restored after having been read.
+// DecodeSubscribeResponse may return the following errors:
+//	- "invalid-scopes" (type chattersvc.InvalidScopes): http.StatusForbidden
+//	- "unauthorized" (type chattersvc.Unauthorized): http.StatusUnauthorized
+//	- error: internal error
+func DecodeSubscribeResponse(decoder func(*http.Response) goahttp.Decoder, restoreBody bool) func(*http.Response) (interface{}, error) {
+	return func(resp *http.Response) (interface{}, error) {
+		if restoreBody {
+			b, err := ioutil.ReadAll(resp.Body)
+			if err != nil {
+				return nil, err
+			}
+			resp.Body = ioutil.NopCloser(bytes.NewBuffer(b))
+			defer func() {
+				resp.Body = ioutil.NopCloser(bytes.NewBuffer(b))
+			}()
+		} else {
+			defer resp.Body.Close()
+		}
+		switch resp.StatusCode {
+		case http.StatusOK:
+			var (
+				body SubscribeResponseBody
+				err  error
+			)
+			err = decoder(resp).Decode(&body)
+			if err != nil {
+				return nil, goahttp.ErrDecodingError("chatter", "subscribe", err)
+			}
+			err = ValidateSubscribeResponseBody(&body)
+			if err != nil {
+				return nil, goahttp.ErrValidationError("chatter", "subscribe", err)
+			}
+			res := NewSubscribeEventOK(&body)
+			return res, nil
+		case http.StatusForbidden:
+			var (
+				body SubscribeInvalidScopesResponseBody
+				err  error
+			)
+			err = decoder(resp).Decode(&body)
+			if err != nil {
+				return nil, goahttp.ErrDecodingError("chatter", "subscribe", err)
+			}
+			return nil, NewSubscribeInvalidScopes(body)
+		case http.StatusUnauthorized:
+			var (
+				body SubscribeUnauthorizedResponseBody
+				err  error
+			)
+			err = decoder(resp).Decode(&body)
+			if err != nil {
+				return nil, goahttp.ErrDecodingError("chatter", "subscribe", err)
+			}
+			return nil, NewSubscribeUnauthorized(body)
+		default:
+			body, _ := ioutil.ReadAll(resp.Body)
+			return nil, goahttp.ErrInvalidResponse("chatter", "subscribe", resp.StatusCode, string(body))
+		}
+	}
+}
+
 // BuildHistoryRequest instantiates a HTTP request object with method and path
 // set to call the "chatter" service "history" endpoint
 func (c *Client) BuildHistoryRequest(ctx context.Context, v interface{}) (*http.Request, error) {

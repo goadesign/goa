@@ -59,7 +59,7 @@ func goTypeDef(scope *codegen.NameScope, att *expr.AttributeExpr, ptr, useDefaul
 				fn = codegen.GoifyAtt(at, name, true)
 				tdef = goTypeDef(scope, at, ptr, useDefault)
 				if expr.IsPrimitive(at.Type) {
-					if ptr || mat.IsPrimitivePointer(name, useDefault) {
+					if (ptr || mat.IsPrimitivePointer(name, useDefault)) && at.Type != expr.Bytes && at.Type != expr.Any {
 						tdef = "*" + tdef
 					}
 				} else if expr.IsObject(at.Type) {

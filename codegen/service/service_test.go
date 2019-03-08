@@ -17,6 +17,7 @@ func TestService(t *testing.T) {
 		DSL  func()
 		Code string
 	}{
+		{"service-name-with-spaces", testdata.NamesWithSpacesDSL, testdata.NamesWithSpaces},
 		{"single", testdata.SingleMethodDSL, testdata.SingleMethod},
 		{"multiple", testdata.MultipleMethodsDSL, testdata.MultipleMethods},
 		{"no-payload-no-result", testdata.EmptyMethodDSL, testdata.EmptyMethod},
@@ -38,7 +39,7 @@ func TestService(t *testing.T) {
 		{"streaming-payload-no-payload", testdata.StreamingPayloadNoPayloadMethodDSL, testdata.StreamingPayloadNoPayloadMethod},
 		{"streaming-payload-no-result", testdata.StreamingPayloadNoResultMethodDSL, testdata.StreamingPayloadNoResultMethod},
 		{"streaming-payload-result-with-views", testdata.StreamingPayloadResultWithViewsMethodDSL, testdata.StreamingPayloadResultWithViewsMethod},
-		{"streaming-payload-result-with-explict-view", testdata.StreamingPayloadResultWithExplicitViewMethodDSL, testdata.StreamingPayloadResultWithExplicitViewMethod},
+		{"streaming-payload-result-with-explicit-view", testdata.StreamingPayloadResultWithExplicitViewMethodDSL, testdata.StreamingPayloadResultWithExplicitViewMethod},
 		{"bidirectional-streaming", testdata.BidirectionalStreamingMethodDSL, testdata.BidirectionalStreamingMethod},
 		{"bidirectional-streaming-no-payload", testdata.BidirectionalStreamingNoPayloadMethodDSL, testdata.BidirectionalStreamingNoPayloadMethod},
 		{"bidirectional-streaming-result-with-views", testdata.BidirectionalStreamingResultWithViewsMethodDSL, testdata.BidirectionalStreamingResultWithViewsMethod},

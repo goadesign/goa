@@ -2,7 +2,6 @@ package expr
 
 import (
 	"sort"
-	"strings"
 
 	"goa.design/goa/eval"
 )
@@ -33,7 +32,6 @@ type (
 		Creations []*TypeMap
 		// Schemes list the registered security schemes.
 		Schemes []*SchemeExpr
-
 		// Meta is a set of key/value pairs with semantic that is
 		// specific to each generator.
 		Meta MetaExpr
@@ -51,21 +49,6 @@ type (
 		External interface{}
 	}
 )
-
-// NameMap returns the attribute and transport element name encoded in the given
-// string. The encoding uses a simple "attribute:element" notation which allows
-// to map transport field names (HTTP headers etc.) to underlying attributes.
-// The second element of the encoding is optional in which case both the element
-// and attribute have the same name.
-func NameMap(encoded string) (string, string) {
-	elems := strings.Split(encoded, ":")
-	attName := elems[0]
-	name := attName
-	if len(elems) > 1 {
-		name = elems[1]
-	}
-	return attName, name
-}
 
 // WalkSets returns the expressions in order of evaluation.
 func (r *RootExpr) WalkSets(walk eval.SetWalker) {
@@ -113,10 +96,7 @@ func (r *RootExpr) WalkSets(walk eval.SetWalker) {
 	// HTTP services and endpoints
 	httpsvcs := make(eval.ExpressionSet, len(r.API.HTTP.Services))
 	sort.SliceStable(r.API.HTTP.Services, func(i, j int) bool {
-		if r.API.HTTP.Services[j].ParentName == r.API.HTTP.Services[i].Name() {
-			return true
-		}
-		return false
+		return r.API.HTTP.Services[j].ParentName == r.API.HTTP.Services[i].Name()
 	})
 	var httpepts eval.ExpressionSet
 	var httpsvrs eval.ExpressionSet
@@ -137,10 +117,7 @@ func (r *RootExpr) WalkSets(walk eval.SetWalker) {
 	// GRPC services and endpoints
 	grpcsvcs := make(eval.ExpressionSet, len(r.API.GRPC.Services))
 	sort.SliceStable(r.API.GRPC.Services, func(i, j int) bool {
-		if r.API.GRPC.Services[j].ParentName == r.API.GRPC.Services[i].Name() {
-			return true
-		}
-		return false
+		return r.API.GRPC.Services[j].ParentName == r.API.GRPC.Services[i].Name()
 	})
 	var grpcepts eval.ExpressionSet
 	for i, svc := range r.API.GRPC.Services {
@@ -212,7 +189,7 @@ func (r *RootExpr) Error(name string) *ErrorExpr {
 	return nil
 }
 
-// HTTPService returns the service with the given name if any.
+// HTTPService returns the HTTP service with the given name if any.
 func (r *RootExpr) HTTPService(name string) *HTTPServiceExpr {
 	for _, res := range r.API.HTTP.Services {
 		if res.Name() == name {
@@ -222,8 +199,8 @@ func (r *RootExpr) HTTPService(name string) *HTTPServiceExpr {
 	return nil
 }
 
-// HTTPServiceFor creates a new or returns the existing service definition for the
-// given service.
+// HTTPServiceFor creates a new or returns the existing HTTP service definition
+// for the given service.
 func (r *RootExpr) HTTPServiceFor(s *ServiceExpr) *HTTPServiceExpr {
 	if res := r.HTTPService(s.Name); res != nil {
 		return res

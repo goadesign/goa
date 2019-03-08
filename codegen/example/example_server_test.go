@@ -1,12 +1,13 @@
-package server
+package example
 
 import (
 	"bytes"
 	"testing"
 
 	"goa.design/goa/codegen"
-	"goa.design/goa/codegen/server/testdata"
+	"goa.design/goa/codegen/example/testdata"
 	"goa.design/goa/codegen/service"
+	ctestdata "goa.design/goa/codegen/service/testdata"
 	"goa.design/goa/expr"
 )
 
@@ -24,6 +25,7 @@ func TestExampleServerFiles(t *testing.T) {
 		{"server-hosting-multiple-services", testdata.ServerHostingMultipleServicesDSL, testdata.ServerHostingMultipleServicesServerMainCode},
 		{"single-server-multiple-hosts", testdata.SingleServerMultipleHostsDSL, testdata.SingleServerMultipleHostsServerMainCode},
 		{"single-server-multiple-hosts-with-variables", testdata.SingleServerMultipleHostsWithVariablesDSL, testdata.SingleServerMultipleHostsWithVariablesServerMainCode},
+		{"service-name-with-spaces", ctestdata.NamesWithSpacesDSL, testdata.NamesWithSpacesServerMainCode},
 	}
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
@@ -31,7 +33,7 @@ func TestExampleServerFiles(t *testing.T) {
 			service.Services = make(service.ServicesData)
 			Servers = make(ServersData)
 			codegen.RunDSL(t, c.DSL)
-			fs := ExampleServerFiles("", expr.Root)
+			fs := ServerFiles("", expr.Root)
 			if len(fs) == 0 {
 				t.Fatalf("got 0 files, expected 1")
 			}

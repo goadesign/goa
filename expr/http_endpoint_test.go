@@ -3,7 +3,6 @@ package expr_test
 import (
 	"testing"
 
-	. "goa.design/goa/dsl"
 	"goa.design/goa/eval"
 	"goa.design/goa/expr"
 	"goa.design/goa/expr/testdata"
@@ -123,37 +122,4 @@ func TestEndpointFinalization(t *testing.T) {
 			}
 		})
 	}
-}
-
-var validRouteDSL = func() {
-	Service("ValidRoute", func() {
-		HTTP(func() {
-			Path("/{base_id}")
-		})
-		Method("Method", func() {
-			Payload(func() {
-				Attribute("base_id", String)
-				Attribute("id", String)
-			})
-			HTTP(func() {
-				POST("/{id}")
-			})
-		})
-	})
-}
-
-var duplicateWCRouteDSL = func() {
-	Service("InvalidRoute", func() {
-		HTTP(func() {
-			Path("/{id}")
-		})
-		Method("Method", func() {
-			Payload(func() {
-				Attribute("id", String)
-			})
-			HTTP(func() {
-				POST("/{id}")
-			})
-		})
-	})
 }
