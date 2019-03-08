@@ -1,9 +1,8 @@
 package codegen
 
 import (
-	"bytes"
 	"goa.design/goa/codegen"
-	"goa.design/goa/codegen/server"
+	"goa.design/goa/codegen/cli"
 	"goa.design/goa/expr"
 	"path"
 	"path/filepath"
@@ -12,7 +11,7 @@ import (
 // ClientCLIFiles returns the client gRPC CLI support file.
 func ClientCLIFiles(genpkg string, root *expr.RootExpr) []*codegen.File {
 	var (
-		data []*server.CommandData
+		data []*cli.CommandData
 		svcs []*expr.GRPCServiceExpr
 	)
 	for _, svc := range root.API.GRPC.Services {
@@ -44,19 +43,19 @@ func ClientCLIFiles(genpkg string, root *expr.RootExpr) []*codegen.File {
 	return files
 }
 
-func buildCommandData(sd *ServiceData) *server.CommandData {
-	return server.BuildCommandData(sd.Service.Name, sd.Service.Description, sd.Service.PkgName, false)
+func buildCommandData(sd *ServiceData) *cli.CommandData {
+	return cli.BuildCommandData(sd.Service)
 }
 
-func buildSubcommandData(sd *ServiceData, e *EndpointData) *server.SubcommandData {
+func buildSubcommandData(sd *ServiceData, e *EndpointData) *cli.SubcommandData {
 	flags, buildFunction := buildFlags(sd, e)
 
-	return server.BuildSubcommandData(sd.Service.Name, e.Method, buildFunction, flags)
+	return cli.BuildSubcommandData(sd.Service.Name, e.Method, buildFunction, flags)
 }
 
 // endpointParser returns the file that implements the command line parser that
 // builds the client endpoint and payload necessary to perform a request.
-func endpointParser(genpkg string, root *expr.RootExpr, svr *expr.ServerExpr, data []*server.CommandData) *codegen.File {
+func endpointParser(genpkg string, root *expr.RootExpr, svr *expr.ServerExpr, data []*cli.CommandData) *codegen.File {
 	pkg := codegen.SnakeCase(codegen.Goify(svr.Name, true))
 	fpath := filepath.Join(codegen.Gendir, "grpc", "cli", pkg, "cli.go")
 	title := svr.Name + " gRPC client CLI support package"
@@ -84,36 +83,31 @@ func endpointParser(genpkg string, root *expr.RootExpr, svr *expr.ServerExpr, da
 		})
 	}
 
-	var flagsCode bytes.Buffer
-	err := server.EndpointParserFlagsSection(data).Write(&flagsCode)
-	if err != nil {
-		panic(err)
-	}
-
 	sections := []*codegen.SectionTemplate{
 		codegen.Header(title, "cli", specs),
-		server.EndpointParserUsagesSection(data),
-		server.EndpointParserExamplesSection(data),
+		cli.UsageCommands(data),
+		cli.UsageExamples(data),
 		{
 			Name:   "parse-endpoint",
 			Source: parseEndpointT,
 			Data: struct {
 				FlagsCode string
-				Commands  []*server.CommandData
+				Commands  []*cli.CommandData
 			}{
-				flagsCode.String(),
+				cli.FlagsCode(data),
 				data,
 			},
 		},
 	}
-	sections = append(sections, server.EndpointParserCommandUsageSections(data)...)
-
+	for _, cmd := range data {
+		sections = append(sections, cli.CommandUsage(cmd))
+	}
 	return &codegen.File{Path: fpath, SectionTemplates: sections}
 }
 
 // payloadBuilders returns the file that contains the payload constructors that
 // use flag values as arguments.
-func payloadBuilders(genpkg string, svcName string, data *server.CommandData) *codegen.File {
+func payloadBuilders(genpkg string, svcName string, data *cli.CommandData) *codegen.File {
 	svcNameSnakeCase := codegen.SnakeCase(svcName)
 	fpath := filepath.Join(codegen.Gendir, "grpc", svcNameSnakeCase, "client", "cli.go")
 	title := svcName + " gRPC client CLI support package"
@@ -129,16 +123,16 @@ func payloadBuilders(genpkg string, svcName string, data *server.CommandData) *c
 	}
 	for _, sub := range data.Subcommands {
 		if sub.BuildFunction != nil {
-			sections = append(sections, server.PayloadBuilderSection(sub.BuildFunction))
+			sections = append(sections, cli.PayloadBuilderSection(sub.BuildFunction))
 		}
 	}
 	return &codegen.File{Path: fpath, SectionTemplates: sections}
 }
 
-func buildFlags(svc *ServiceData, e *EndpointData) ([]*server.FlagData, *server.BuildFunctionData) {
+func buildFlags(svc *ServiceData, e *EndpointData) ([]*cli.FlagData, *cli.BuildFunctionData) {
 	var (
-		flags         []*server.FlagData
-		buildFunction *server.BuildFunctionData
+		flags         []*cli.FlagData
+		buildFunction *cli.BuildFunctionData
 	)
 
 	if e.Request != nil {
@@ -149,25 +143,25 @@ func buildFlags(svc *ServiceData, e *EndpointData) ([]*server.FlagData, *server.
 	return flags, buildFunction
 }
 
-func makeFlags(e *EndpointData, args []*InitArgData) ([]*server.FlagData, *server.BuildFunctionData) {
+func makeFlags(e *EndpointData, args []*InitArgData) ([]*cli.FlagData, *cli.BuildFunctionData) {
 	var (
-		fdata     []*server.FieldData
-		flags     = make([]*server.FlagData, len(args))
+		fdata     []*cli.FieldData
+		flags     = make([]*cli.FlagData, len(args))
 		params    = make([]string, len(args))
-		pInitArgs = make([]*server.PayloadInitArgData, len(args))
+		pInitArgs = make([]*cli.PayloadInitArgData, len(args))
 		check     bool
-		pinit     *server.PayloadInitData
+		pinit     *cli.PayloadInitData
 	)
 	for i, arg := range args {
-		pInitArgs[i] = &server.PayloadInitArgData{
+		pInitArgs[i] = &cli.PayloadInitArgData{
 			Name:      arg.Name,
 			FieldName: arg.FieldName,
 		}
 
-		f := server.NewFlagData(e.ServiceName, e.Method.Name, arg.Name, arg.TypeName, arg.Description, arg.Required, arg.Example)
+		f := cli.NewFlagData(e.ServiceName, e.Method.Name, arg.Name, arg.TypeName, arg.Description, arg.Required, arg.Example)
 		flags[i] = f
 		params[i] = f.FullName
-		code, chek := server.FieldLoadCode(f, arg.Name, arg.TypeName, arg.Validate, arg.DefaultValue)
+		code, chek := cli.FieldLoadCode(f, arg.Name, arg.TypeName, arg.Validate, arg.DefaultValue)
 		check = check || chek
 		tn := arg.TypeRef
 		if f.Type == "JSON" {
@@ -176,7 +170,7 @@ func makeFlags(e *EndpointData, args []*InitArgData) ([]*server.FlagData, *serve
 			// using its address.
 			tn = arg.TypeName
 		}
-		fdata = append(fdata, &server.FieldData{
+		fdata = append(fdata, &cli.FieldData{
 			Name:     arg.Name,
 			VarName:  arg.Name,
 			TypeName: tn,
@@ -188,16 +182,14 @@ func makeFlags(e *EndpointData, args []*InitArgData) ([]*server.FlagData, *serve
 		return flags, nil
 	}
 	if e.Request.ServerConvert != nil {
-		pinit = &server.PayloadInitData{
+		pinit = &cli.PayloadInitData{
 			Code:                e.Request.ServerConvert.Init.Code,
-			ReturnTypeAttribute: e.Request.ServerConvert.Init.ReturnTypeRef, // TODO::TIM is this right
 			ReturnIsStruct:      e.Request.ServerConvert.Init.ReturnIsStruct,
-			ReturnTypeName:      e.Request.ServerConvert.Init.ReturnVarName, // TODO::TIM is this right
 			Args:                pInitArgs,
 		}
 	}
 
-	return flags, &server.BuildFunctionData{
+	return flags, &cli.BuildFunctionData{
 		Name:         "Build" + e.Method.VarName + "Payload",
 		ActualParams: params,
 		FormalParams: params,
@@ -223,7 +215,7 @@ func ParseEndpoint(cc *grpc.ClientConn, opts ...grpc.CallOption) (goa.Endpoint, 
 		switch svcn {
 	{{- range .Commands }}
 		case "{{ .Name }}":
-			c := {{ .PkgName }}.NewClient(cc, opts...)	
+			c := {{ .PkgName }}.NewClient(cc, opts...)
 			switch epn {
 		{{- $pkgName := .PkgName }}{{ range .Subcommands }}
 			case "{{ .Name }}":

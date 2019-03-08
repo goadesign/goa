@@ -1,6 +1,7 @@
-package server
+package cli
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"goa.design/goa/codegen"
@@ -95,8 +96,6 @@ type (
 		MethodName string
 		// ResultType is the fully qualified payload type name.
 		ResultType string
-		// ReturnTypeName is the same as ResultType
-		ReturnTypeName string
 		// Fields describes the payload fields.
 		Fields []*FieldData
 		// PayloadInit contains the data needed to render the function
@@ -141,16 +140,16 @@ type (
 
 // BuildCommandData builds the data needed by the templates to render the CLI
 // parsing of the service command.
-func BuildCommandData(name, description, pkgName string, needsStream bool) *CommandData {
+func BuildCommandData(data *service.Data) *CommandData {
+	description := data.Description
 	if description == "" {
-		description = fmt.Sprintf("Make requests to the %q service", name)
+		description = fmt.Sprintf("Make requests to the %q service", data.Name)
 	}
 	return &CommandData{
-		Name:        codegen.KebabCase(name),
-		VarName:     codegen.Goify(name, false),
+		Name:        codegen.KebabCase(data.Name),
+		VarName:     codegen.Goify(data.Name, false),
 		Description: description,
-		PkgName:     pkgName + "c",
-		NeedStream:  needsStream,
+		PkgName:     data.PkgName + "c",
 	}
 }
 
@@ -217,8 +216,8 @@ func BuildSubcommandData(svcName string, m *service.MethodData, buildFunction *B
 	return sub
 }
 
-// EndpointParserUsagesSection builds a section template that can be used to generate the endpoint usages code.
-func EndpointParserUsagesSection(data []*CommandData) *codegen.SectionTemplate {
+// UsageCommands builds a section template that can be used to generate the endpoint usages code.
+func UsageCommands(data []*CommandData) *codegen.SectionTemplate {
 	usages := make([]string, len(data))
 	for i, cmd := range data {
 		subs := make([]string, len(cmd.Subcommands))
@@ -236,8 +235,8 @@ func EndpointParserUsagesSection(data []*CommandData) *codegen.SectionTemplate {
 	return &codegen.SectionTemplate{Source: usageT, Data: usages}
 }
 
-// EndpointParserExamplesSection builds a section template that can be used to generate the endpoint examples code.
-func EndpointParserExamplesSection(data []*CommandData) *codegen.SectionTemplate {
+// UsageExamples builds a section template that can be used to generate the endpoint examples code.
+func UsageExamples(data []*CommandData) *codegen.SectionTemplate {
 	var examples []string
 	for i, cmd := range data {
 		if i < 5 {
@@ -248,30 +247,31 @@ func EndpointParserExamplesSection(data []*CommandData) *codegen.SectionTemplate
 	return &codegen.SectionTemplate{Source: exampleT, Data: examples}
 }
 
-// EndpointParserFlagsSection builds a section template that can be used to generate the endpoint flags code.
-func EndpointParserFlagsSection(data []*CommandData) *codegen.SectionTemplate {
-	return &codegen.SectionTemplate{
+// FlagsCode builds a section template that can be used to generate the endpoint flags code.
+func FlagsCode(data []*CommandData) string {
+	section := codegen.SectionTemplate{
 		Name:    "parse-endpoint-flags",
 		Source:  parseFlagsT,
 		Data:    data,
 		FuncMap: map[string]interface{}{"printDescription": printDescription},
 	}
-}
-
-// EndpointParserCommandUsageSections builds the section templates that can be used to generate the endpoint command usage code.
-func EndpointParserCommandUsageSections(data []*CommandData) []*codegen.SectionTemplate {
-	sections := make([]*codegen.SectionTemplate, len(data))
-
-	for i, cmd := range data {
-		sections[i] = &codegen.SectionTemplate{
-			Name:    "cli-command-usage",
-			Source:  commandUsageT,
-			Data:    cmd,
-			FuncMap: map[string]interface{}{"printDescription": printDescription},
-		}
+	var flagsCode bytes.Buffer
+	err := section.Write(&flagsCode)
+	if err != nil {
+		panic(err)
 	}
 
-	return sections
+	return flagsCode.String()
+}
+
+// CommandUsage builds the section templates that can be used to generate the endpoint command usage code.
+func CommandUsage(data *CommandData) *codegen.SectionTemplate {
+	return &codegen.SectionTemplate{
+			Name:    "cli-command-usage",
+			Source:  commandUsageT,
+			Data:    data,
+			FuncMap: map[string]interface{}{"printDescription": printDescription},
+		}
 }
 
 // PayloadBuilderSection builds the section template that can be used to generate the payload builder code.
