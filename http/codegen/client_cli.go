@@ -8,12 +8,16 @@ import (
 	"path/filepath"
 )
 
+// commandData wraps the common CommandData and adds HTTP-specific fields.
 type commandData struct {
 	*cli.CommandData
+	// Subcommands is the list of endpoint commands.
 	Subcommands []*subcommandData
-	NeedStream  bool
+	// NeedStream if true initializes the websocket dialer.
+	NeedStream bool
 }
 
+// commandData wraps the common SubcommandData and adds HTTP-specific fields.
 type subcommandData struct {
 	*cli.SubcommandData
 	// MultipartFuncName is the function name used to render a multipart request encoder.
@@ -24,6 +28,9 @@ type subcommandData struct {
 
 // ClientCLIFiles returns the client HTTP CLI support file.
 func ClientCLIFiles(genpkg string, root *expr.RootExpr) []*codegen.File {
+	if len(root.API.HTTP.Services) == 0 {
+		return nil
+	}
 	var (
 		data []*commandData
 		svcs []*expr.HTTPServiceExpr
@@ -31,7 +38,10 @@ func ClientCLIFiles(genpkg string, root *expr.RootExpr) []*codegen.File {
 	for _, svc := range root.API.HTTP.Services {
 		sd := HTTPServices.Get(svc.Name())
 		if len(sd.Endpoints) > 0 {
-			command := buildCommandData(sd)
+			command := &commandData{
+				CommandData: cli.BuildCommandData(sd.Service),
+				NeedStream:  streamingEndpointExists(sd),
+			}
 
 			for _, e := range sd.Endpoints {
 				sub := buildSubcommandData(sd, e)
@@ -45,10 +55,6 @@ func ClientCLIFiles(genpkg string, root *expr.RootExpr) []*codegen.File {
 			svcs = append(svcs, svc)
 		}
 	}
-	if len(svcs) == 0 {
-		return nil
-	}
-
 	var files []*codegen.File
 	for _, svr := range root.API.Servers {
 		files = append(files, endpointParser(genpkg, root, svr, data))
@@ -57,13 +63,6 @@ func ClientCLIFiles(genpkg string, root *expr.RootExpr) []*codegen.File {
 		files = append(files, payloadBuilders(genpkg, svc, data[i].CommandData))
 	}
 	return files
-}
-
-func buildCommandData(sd *ServiceData) *commandData {
-	return &commandData{
-		CommandData: cli.BuildCommandData(sd.Service),
-		NeedStream:  streamingEndpointExists(sd),
-	}
 }
 
 func buildSubcommandData(sd *ServiceData, e *EndpointData) *subcommandData {

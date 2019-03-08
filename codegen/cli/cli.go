@@ -1,3 +1,6 @@
+// Package cli contains helpers used by transport-specific command-line client
+// generators for parsing the command-line flags to identify the service and
+// the method to make a request along with the request payload to be sent.
 package cli
 
 import (
@@ -13,7 +16,7 @@ import (
 )
 
 type (
-	// CommandData contains the data needed to render a command
+	// CommandData contains the data needed to render a command.
 	CommandData struct {
 		// Name of command e.g. "cellar-storage"
 		Name string
@@ -30,15 +33,13 @@ type (
 		// PkgName is the service HTTP client package import name,
 		// e.g. "storagec".
 		PkgName string
-		// NeedStream if true passes websocket specific arguments to the CLI.
-		NeedStream bool
 	}
 
-	// SubcommandData contains the data needed to render a subcommand
+	// SubcommandData contains the data needed to render a sub-command.
 	SubcommandData struct {
-		// Name is the subcommand name e.g. "add"
+		// Name is the sub-command name e.g. "add"
 		Name string
-		// FullName is the subcommand full name e.g. "storageAdd"
+		// FullName is the sub-command full name e.g. "storageAdd"
 		FullName string
 		// Description is the help text.
 		Description string
@@ -46,22 +47,17 @@ type (
 		Flags []*FlagData
 		// MethodVarName is the endpoint method name, e.g. "Add"
 		MethodVarName string
-		// BuildFunction contains the data for the payload build
-		// function if any. Exclusive with Conversion.
+		// BuildFunction contains the data to generate a payload builder function
+		// if any. Exclusive with Conversion.
 		BuildFunction *BuildFunctionData
-		// Conversion contains the flag value to payload conversion
-		// function if any. Exclusive with BuildFunction.
+		// Conversion contains the flag value to payload conversion function if
+		// any. Exclusive with BuildFunction.
 		Conversion string
-		// Example is a valid command invocation, starting with the
-		// command name.
+		// Example is a valid command invocation, starting with the command name.
 		Example string
-		// MultipartFuncName is the function name used to render a multipart request encoder.
-		MultipartFuncName string
-		// MultipartFuncName is the variable name used to render a multipart request encoder.
-		MultipartVarName string
 	}
 
-	// FlagData contains the data needed to render a flag
+	// FlagData contains the data needed to render a command-line flag.
 	FlagData struct {
 		// Name is the name of the flag, e.g. "list-vintage"
 		Name string
@@ -79,7 +75,9 @@ type (
 		Example string
 	}
 
-	// BuildFunctionData contains the data needed to render a build function
+	// BuildFunctionData contains the data needed to generate a constructor
+	// function that builds a service method payload type from the command-line
+	// flags.
 	BuildFunctionData struct {
 		// Name is the build payload function name.
 		Name string
@@ -101,12 +99,13 @@ type (
 		// PayloadInit contains the data needed to render the function
 		// body.
 		PayloadInit *PayloadInitData
-		// CheckErr is true if the payload initialization code requires
-		// an "err error" variable that must be checked.
+		// CheckErr is true if the payload initialization code requires an
+		// "err error" variable that must be checked.
 		CheckErr bool
 	}
 
-	// FieldData contains the data needed to render a field
+	// FieldData contains the data needed to generate the code that initializes a
+	// field in the method payload type.
 	FieldData struct {
 		// Name is the field name, e.g. "Vintage"
 		Name string
@@ -122,23 +121,35 @@ type (
 		Pointer bool
 	}
 
-	// PayloadInitData contains the data needed to render payload initializers
+	// PayloadInitData contains the data needed to generate a constructor
+	// function that initializes a service method payload type from the
+	// command-ling arguments.
 	PayloadInitData struct {
-		Code                string
+		// Code is the payload initialization code.
+		Code string
+		// ReturnTypeAttribute if non-empty returns an attribute in the payload
+		// type that describes the shape of the method payload.
 		ReturnTypeAttribute string
-		ReturnIsStruct      bool
-		ReturnTypeName      string
-		Args                []*PayloadInitArgData
+		// ReturnIsStruct if true indicates that the method payload is an object.
+		ReturnIsStruct bool
+		// ReturnTypeName is the fully-qualified name of the payload.
+		ReturnTypeName string
+		// Args is the list of arguments for the constructor.
+		Args []*PayloadInitArgData
 	}
 
-	// PayloadInitArgData contains the data needed to render payload initlization args
+	// PayloadInitArgData contains the data needed to render payload initlization
+	// arguments.
 	PayloadInitArgData struct {
-		Name      string
+		// Name is the argument name.
+		Name string
+		// FieldName is the name of the field in the payload initialized by the
+		// argument.
 		FieldName string
 	}
 )
 
-// BuildCommandData builds the data needed by the templates to render the CLI
+// BuildCommandData builds the data needed by CLI code generators to render the
 // parsing of the service command.
 func BuildCommandData(data *service.Data) *CommandData {
 	description := data.Description
@@ -153,8 +164,8 @@ func BuildCommandData(data *service.Data) *CommandData {
 	}
 }
 
-// BuildSubcommandData builds the data needed by the templates to render the CLI
-// parsing of the service subcommand.
+// BuildSubcommandData builds the data needed by CLI code generators to render
+// the CLI parsing of the service sub-command.
 func BuildSubcommandData(svcName string, m *service.MethodData, buildFunction *BuildFunctionData, flags []*FlagData) *SubcommandData {
 	var (
 		name        string
@@ -216,7 +227,8 @@ func BuildSubcommandData(svcName string, m *service.MethodData, buildFunction *B
 	return sub
 }
 
-// UsageCommands builds a section template that can be used to generate the endpoint usages code.
+// UsageCommands builds a section template that generates a help text showing
+// the list of allowed commands and sub-commands.
 func UsageCommands(data []*CommandData) *codegen.SectionTemplate {
 	usages := make([]string, len(data))
 	for i, cmd := range data {
@@ -235,7 +247,8 @@ func UsageCommands(data []*CommandData) *codegen.SectionTemplate {
 	return &codegen.SectionTemplate{Source: usageT, Data: usages}
 }
 
-// UsageExamples builds a section template that can be used to generate the endpoint examples code.
+// UsageExamples builds a section template that generates a help text showing
+// a valid invocation of the CLI tool.
 func UsageExamples(data []*CommandData) *codegen.SectionTemplate {
 	var examples []string
 	for i, cmd := range data {
@@ -247,7 +260,10 @@ func UsageExamples(data []*CommandData) *codegen.SectionTemplate {
 	return &codegen.SectionTemplate{Source: exampleT, Data: examples}
 }
 
-// FlagsCode builds a section template that can be used to generate the endpoint flags code.
+// FlagsCode returns a string containing the code that parses the command-line
+// flags to infer the command (service), sub-command (method), and the
+// arguments (method payload) invoked by the tool. It panics if any error
+// occurs during the generation of flag parsing code.
 func FlagsCode(data []*CommandData) string {
 	section := codegen.SectionTemplate{
 		Name:    "parse-endpoint-flags",
@@ -264,7 +280,8 @@ func FlagsCode(data []*CommandData) string {
 	return flagsCode.String()
 }
 
-// CommandUsage builds the section templates that can be used to generate the endpoint command usage code.
+// CommandUsage builds the section templates that can be used to generate the
+// endpoint command usage code.
 func CommandUsage(data *CommandData) *codegen.SectionTemplate {
 	return &codegen.SectionTemplate{
 		Name:    "cli-command-usage",
@@ -274,7 +291,8 @@ func CommandUsage(data *CommandData) *codegen.SectionTemplate {
 	}
 }
 
-// PayloadBuilderSection builds the section template that can be used to generate the payload builder code.
+// PayloadBuilderSection builds the section template that can be used to
+// generate the payload builder code.
 func PayloadBuilderSection(buildFunction *BuildFunctionData) *codegen.SectionTemplate {
 	return &codegen.SectionTemplate{
 		Name:   "cli-build-payload",
@@ -283,8 +301,17 @@ func PayloadBuilderSection(buildFunction *BuildFunctionData) *codegen.SectionTem
 	}
 }
 
-// NewFlagData creates a new FlagData from the given argument attributes
-func NewFlagData(svcn, en string, name, typeName, description string, required bool, example interface{}) *FlagData {
+// NewFlagData creates a new FlagData from the given argument attributes.
+//
+// svcn is the service name
+// en is the endpoint name
+// name is the flag name
+// typeName is the flag type
+// description is the flag description
+// required determines if the flag is required
+// example is an example value for the flag
+//
+func NewFlagData(svcn, en, name, typeName, description string, required bool, example interface{}) *FlagData {
 	ex := jsonExample(example)
 	fn := goifyTerms(svcn, en, name)
 	return &FlagData{
@@ -298,9 +325,9 @@ func NewFlagData(svcn, en string, name, typeName, description string, required b
 	}
 }
 
-// FieldLoadCode returns the code of the build payload function that initializes
-// one of the payload object fields. It returns the initialization code and a
-// boolean indicating whether the code requires an "err" variable.
+// FieldLoadCode returns the code used in the build payload function that
+// initializes one of the payload object fields. It returns the initialization
+// code and a boolean indicating whether the code requires an "err" variable.
 func FieldLoadCode(f *FlagData, argName, argTypeName, validate string, defaultValue interface{}) (string, bool) {
 	var (
 		code    string

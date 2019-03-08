@@ -8,50 +8,43 @@ import (
 	"path/filepath"
 )
 
-// ClientCLIFiles returns the CLI files to make gRPC requests using the
-// command-line client.
+// ClientCLIFiles returns the CLI files to generate a command-line client that
+// makes gRPC requests.
 func ClientCLIFiles(genpkg string, root *expr.RootExpr) []*codegen.File {
+	if len(root.API.GRPC.Services) == 0 {
+		return nil
+	}
 	var (
 		data []*cli.CommandData
 		svcs []*expr.GRPCServiceExpr
 	)
-	for _, svc := range root.API.GRPC.Services {
-		sd := GRPCServices.Get(svc.Name())
-		if len(sd.Endpoints) > 0 {
-			command := buildCommandData(sd)
-
-			for _, e := range sd.Endpoints {
-				command.Subcommands = append(command.Subcommands, buildSubcommandData(sd, e))
+	{
+		for _, svc := range root.API.GRPC.Services {
+			if len(svc.GRPCEndpoints) == 0 {
+				continue
 			}
-
+			sd := GRPCServices.Get(svc.Name())
+			command := cli.BuildCommandData(sd.Service)
+			for _, e := range sd.Endpoints {
+				flags, buildFunction := buildFlags(sd, e)
+				subcmd := cli.BuildSubcommandData(sd.Service.Name, e.Method, buildFunction, flags)
+				command.Subcommands = append(command.Subcommands, subcmd)
+			}
 			command.Example = command.Subcommands[0].Example
-
 			data = append(data, command)
 			svcs = append(svcs, svc)
 		}
 	}
-	if len(svcs) == 0 {
-		return nil
-	}
-
 	var files []*codegen.File
-	for _, svr := range root.API.Servers {
-		files = append(files, endpointParser(genpkg, root, svr, data))
-	}
-	for i, svc := range svcs {
-		files = append(files, payloadBuilders(genpkg, svc, data[i]))
+	{
+		for _, svr := range root.API.Servers {
+			files = append(files, endpointParser(genpkg, root, svr, data))
+		}
+		for i, svc := range svcs {
+			files = append(files, payloadBuilders(genpkg, svc, data[i]))
+		}
 	}
 	return files
-}
-
-func buildCommandData(sd *ServiceData) *cli.CommandData {
-	return cli.BuildCommandData(sd.Service)
-}
-
-func buildSubcommandData(sd *ServiceData, e *EndpointData) *cli.SubcommandData {
-	flags, buildFunction := buildFlags(sd, e)
-
-	return cli.BuildSubcommandData(sd.Service.Name, e.Method, buildFunction, flags)
 }
 
 // endpointParser returns the file that implements the command line parser that
@@ -136,12 +129,11 @@ func buildFlags(svc *ServiceData, e *EndpointData) ([]*cli.FlagData, *cli.BuildF
 		flags         []*cli.FlagData
 		buildFunction *cli.BuildFunctionData
 	)
-
-	if e.Request != nil {
-		args := e.Request.CLIArgs
-		flags, buildFunction = makeFlags(e, args)
+	{
+		if e.Request != nil {
+			flags, buildFunction = makeFlags(e, e.Request.CLIArgs)
+		}
 	}
-
 	return flags, buildFunction
 }
 
