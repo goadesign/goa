@@ -275,6 +275,63 @@ func TestMethodExprValidate(t *testing.T) {
 	}
 }
 
+func TestMethodExprError(t *testing.T) {
+	var (
+		errorFoo = &ErrorExpr{
+			Name: "foo",
+		}
+		errorBar = &ErrorExpr{
+			Name: "bar",
+		}
+		errorBaz = &ErrorExpr{
+			Name: "baz",
+		}
+	)
+	cases := map[string]struct {
+		name     string
+		expected *ErrorExpr
+	}{
+		"exist in method": {
+			name:     "foo",
+			expected: errorFoo,
+		},
+		"exist in service": {
+			name:     "bar",
+			expected: errorBar,
+		},
+		"exist in root": {
+			name:     "baz",
+			expected: errorBaz,
+		},
+		"not exist": {
+			name:     "qux",
+			expected: nil,
+		},
+	}
+
+	Root.Errors = []*ErrorExpr{
+		errorBaz,
+	}
+	s := ServiceExpr{
+		Errors: []*ErrorExpr{
+			errorBar,
+		},
+	}
+	m := MethodExpr{
+		Errors: []*ErrorExpr{
+			errorFoo,
+		},
+		Service: &s,
+	}
+	for k, tc := range cases {
+		t.Run(k, func(t *testing.T) {
+			if actual := m.Error(tc.name); actual != tc.expected {
+				t.Errorf("got %#v, expected %#v", actual, tc.expected)
+			}
+		})
+	}
+}
+
 func TestMethodExprEvalName(t *testing.T) {
 	cases := map[string]struct {
 		name     string
