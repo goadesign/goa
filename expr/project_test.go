@@ -149,10 +149,6 @@ func collection(elemType *ResultTypeExpr) *ResultTypeExpr {
 	}
 }
 
-func array(dt DataType) *Array {
-	return &Array{ElemType: &AttributeExpr{Type: dt}}
-}
-
 func resultRecursive(params ...interface{}) *ResultTypeExpr {
 	rt := resultType(params...)
 	recAtt := &NamedAttributeExpr{Name: "rec", Attribute: &AttributeExpr{Type: rt}}

@@ -127,9 +127,6 @@ type (
 		Label string `json:"label,omitempty"`
 	}
 
-	// key is the type used for context keys.
-	key int
-
 	causer interface {
 		Cause() error
 	}

@@ -96,10 +96,7 @@ func (r *RootExpr) WalkSets(walk eval.SetWalker) {
 	// HTTP services and endpoints
 	httpsvcs := make(eval.ExpressionSet, len(r.API.HTTP.Services))
 	sort.SliceStable(r.API.HTTP.Services, func(i, j int) bool {
-		if r.API.HTTP.Services[j].ParentName == r.API.HTTP.Services[i].Name() {
-			return true
-		}
-		return false
+		return r.API.HTTP.Services[j].ParentName == r.API.HTTP.Services[i].Name()
 	})
 	var httpepts eval.ExpressionSet
 	var httpsvrs eval.ExpressionSet
@@ -120,10 +117,7 @@ func (r *RootExpr) WalkSets(walk eval.SetWalker) {
 	// GRPC services and endpoints
 	grpcsvcs := make(eval.ExpressionSet, len(r.API.GRPC.Services))
 	sort.SliceStable(r.API.GRPC.Services, func(i, j int) bool {
-		if r.API.GRPC.Services[j].ParentName == r.API.GRPC.Services[i].Name() {
-			return true
-		}
-		return false
+		return r.API.GRPC.Services[j].ParentName == r.API.GRPC.Services[i].Name()
 	})
 	var grpcepts eval.ExpressionSet
 	for i, svc := range r.API.GRPC.Services {

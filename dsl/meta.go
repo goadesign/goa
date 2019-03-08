@@ -132,9 +132,6 @@ func Meta(name string, value ...string) {
 	}
 
 	switch e := eval.Current().(type) {
-	case expr.CompositeExpr:
-		att := e.Attribute()
-		att.Meta = appendMeta(att.Meta, name, value...)
 	case *expr.RootExpr:
 		e.Meta = appendMeta(e.Meta, name, value...)
 	case *expr.APIExpr:
@@ -157,6 +154,9 @@ func Meta(name string, value ...string) {
 		e.Meta = appendMeta(e.Meta, name, value...)
 	case *expr.HTTPResponseExpr:
 		e.Meta = appendMeta(e.Meta, name, value...)
+	case expr.CompositeExpr:
+		att := e.Attribute()
+		att.Meta = appendMeta(att.Meta, name, value...)
 	default:
 		eval.IncompatibleDSL()
 	}

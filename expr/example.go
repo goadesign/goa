@@ -10,9 +10,8 @@ import (
 )
 
 const (
-	maxAttempts = 500  // Max number of retries to generate valid example.
-	maxLength   = 3    // Max length for array and map examples.
-	maxValue    = 1000 // Max value for integer and float examples.
+	maxAttempts = 500 // Max number of retries to generate valid example.
+	maxLength   = 3   // Max length for array and map examples.
 )
 
 // Example returns the example set on the attribute at design time. If there

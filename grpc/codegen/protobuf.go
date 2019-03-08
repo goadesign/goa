@@ -2,9 +2,10 @@ package codegen
 
 import (
 	"fmt"
-	"goa.design/goa/expr"
 	"strconv"
 	"strings"
+
+	"goa.design/goa/expr"
 
 	"goa.design/goa/codegen"
 )
@@ -268,12 +269,6 @@ func protoBufMessageDef(att *expr.AttributeExpr, s *codegen.NameScope) string {
 	default:
 		panic(fmt.Sprintf("unknown data type %T", actual)) // bug
 	}
-}
-
-// protoBufGoTypeRef returns the Go code that refers to the Go type generated
-// by compiling the protocol buffer (in *.pb.go) for the given attribute.
-func protoBufGoTypeRef(att *expr.AttributeExpr, s *codegen.NameScope) string {
-	return protoBufGoFullTypeRef(att, "", s)
 }
 
 // protoBufGoFullTypeRef returns the Go code qualified with package name that

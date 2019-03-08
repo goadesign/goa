@@ -625,9 +625,7 @@ func (v *ValidationExpr) Dup() *ValidationExpr {
 	var req []string
 	if len(v.Required) > 0 {
 		req = make([]string, len(v.Required))
-		for i, r := range v.Required {
-			req[i] = r
-		}
+		copy(req, v.Required)
 	}
 	return &ValidationExpr{
 		Values:    v.Values,

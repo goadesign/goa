@@ -364,12 +364,12 @@ func (s *Schema) createMergeItems(other *Schema) mergeItems {
 		{&s.DefaultValue, other.DefaultValue, s.DefaultValue == nil},
 		{&s.Title, other.Title, s.Title == ""},
 		{&s.Media, other.Media, s.Media == nil},
-		{&s.ReadOnly, other.ReadOnly, s.ReadOnly == false},
+		{&s.ReadOnly, other.ReadOnly, !s.ReadOnly},
 		{&s.PathStart, other.PathStart, s.PathStart == ""},
 		{&s.Enum, other.Enum, s.Enum == nil},
 		{&s.Format, other.Format, s.Format == ""},
 		{&s.Pattern, other.Pattern, s.Pattern == ""},
-		{&s.AdditionalProperties, other.AdditionalProperties, s.AdditionalProperties == false},
+		{&s.AdditionalProperties, other.AdditionalProperties, !s.AdditionalProperties},
 		{&s.Minimum, other.Minimum, minFloat64(s.Minimum, other.Minimum)},
 		{&s.Maximum, other.Maximum, maxFloat64(s.Maximum, other.Maximum)},
 		{&s.MinLength, other.MinLength, minInt(s.MinLength, other.MinLength)},
@@ -403,13 +403,8 @@ func (s *Schema) Merge(other *Schema) {
 		}
 	}
 
-	for _, l := range other.Links {
-		s.Links = append(s.Links, l)
-	}
-
-	for _, r := range other.Required {
-		s.Required = append(s.Required, r)
-	}
+	s.Links = append(s.Links, other.Links...)
+	s.Required = append(s.Required, other.Required...)
 }
 
 // Dup creates a shallow clone of the given schema.

@@ -272,10 +272,10 @@ func concat(strs ...string) string {
 
 func renameType(att *AttributeExpr, name, suffix string) {
 	rt := att.Type
-	switch rt.(type) {
+	switch rtt := rt.(type) {
 	case UserType:
-		rt.(UserType).Rename(name)
-		appendSuffix(rt.(UserType).Attribute().Type, suffix)
+		rtt.Rename(name)
+		appendSuffix(rtt.Attribute().Type, suffix)
 	case *Object:
 		appendSuffix(rt, suffix)
 	case *Array:

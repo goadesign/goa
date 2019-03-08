@@ -211,9 +211,8 @@ func (r *HTTPResponseExpr) Finalize(a *HTTPEndpointExpr, svcAtt *AttributeExpr) 
 		if body := AsObject(r.Body.Type); body != nil {
 			for _, nat := range *body {
 				n := nat.Name
-				att := nat.Attribute
 				n = strings.Split(n, ":")[0]
-				var patt *AttributeExpr
+				var att, patt *AttributeExpr
 				var required bool
 				if svcObj != nil {
 					att = svcObj.Attribute(n)
