@@ -23,10 +23,10 @@ func BuildLoginPayload(chatterLoginUser string, chatterLoginPassword string) (*c
 	{
 		password = chatterLoginPassword
 	}
-	payload := &chattersvc.LoginPayload{}
-	payload.User = user
-	payload.Password = password
-	return payload, nil
+	v := &chattersvc.LoginPayload{}
+	v.User = user
+	v.Password = password
+	return v, nil
 }
 
 // BuildEchoerPayload builds the payload for the chatter echoer endpoint from
@@ -36,9 +36,9 @@ func BuildEchoerPayload(chatterEchoerToken string) (*chattersvc.EchoerPayload, e
 	{
 		token = chatterEchoerToken
 	}
-	payload := &chattersvc.EchoerPayload{}
-	payload.Token = token
-	return payload, nil
+	v := &chattersvc.EchoerPayload{}
+	v.Token = token
+	return v, nil
 }
 
 // BuildListenerPayload builds the payload for the chatter listener endpoint
@@ -48,9 +48,9 @@ func BuildListenerPayload(chatterListenerToken string) (*chattersvc.ListenerPayl
 	{
 		token = chatterListenerToken
 	}
-	payload := &chattersvc.ListenerPayload{}
-	payload.Token = token
-	return payload, nil
+	v := &chattersvc.ListenerPayload{}
+	v.Token = token
+	return v, nil
 }
 
 // BuildSummaryPayload builds the payload for the chatter summary endpoint from
@@ -60,9 +60,9 @@ func BuildSummaryPayload(chatterSummaryToken string) (*chattersvc.SummaryPayload
 	{
 		token = chatterSummaryToken
 	}
-	payload := &chattersvc.SummaryPayload{}
-	payload.Token = token
-	return payload, nil
+	v := &chattersvc.SummaryPayload{}
+	v.Token = token
+	return v, nil
 }
 
 // BuildSubscribePayload builds the payload for the chatter subscribe endpoint
@@ -72,9 +72,9 @@ func BuildSubscribePayload(chatterSubscribeToken string) (*chattersvc.SubscribeP
 	{
 		token = chatterSubscribeToken
 	}
-	payload := &chattersvc.SubscribePayload{}
-	payload.Token = token
-	return payload, nil
+	v := &chattersvc.SubscribePayload{}
+	v.Token = token
+	return v, nil
 }
 
 // BuildHistoryPayload builds the payload for the chatter history endpoint from
@@ -90,8 +90,8 @@ func BuildHistoryPayload(chatterHistoryView string, chatterHistoryToken string) 
 	{
 		token = chatterHistoryToken
 	}
-	payload := &chattersvc.HistoryPayload{}
-	payload.View = view
-	payload.Token = token
-	return payload, nil
+	v := &chattersvc.HistoryPayload{}
+	v.View = view
+	v.Token = token
+	return v, nil
 }
