@@ -419,14 +419,12 @@ func (d ServicesData) analyze(gs *expr.GRPCServiceExpr) *ServiceData {
 		seen = make(map[string]struct{})
 	}
 	for _, e := range gs.GRPCEndpoints {
-		en := protoBufify(e.Name(), true)
-
 		// convert request and response types to protocol buffer message types
-		e.Request = makeProtoBufMessage(e.Request, en+"Request", sd.Scope)
+		e.Request = makeProtoBufMessage(e.Request, protoBufify(e.Name()+"Request", true), sd.Scope)
 		if e.MethodExpr.StreamingPayload.Type != expr.Empty {
-			e.StreamingRequest = makeProtoBufMessage(e.StreamingRequest, en+"StreamingRequest", sd.Scope)
+			e.StreamingRequest = makeProtoBufMessage(e.StreamingRequest, protoBufify(e.Name()+"StreamingRequest", true), sd.Scope)
 		}
-		e.Response.Message = makeProtoBufMessage(e.Response.Message, en+"Response", sd.Scope)
+		e.Response.Message = makeProtoBufMessage(e.Response.Message, protoBufify(e.Name()+"Response", true), sd.Scope)
 
 		// collect all the nested messages and return the top-level message
 		collect := func(att *expr.AttributeExpr) *service.UserTypeData {
