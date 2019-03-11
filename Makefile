@@ -25,7 +25,7 @@ DEPEND=\
 
 all: lint gen test
 
-travis: depend all build-examples clean
+travis: depend all clean
 
 # Install protoc
 GOOS=$(shell go env GOOS)
@@ -119,18 +119,35 @@ test:
 	go test ./...
 
 ifeq ($(GOOS),windows)
-PLUGINS_BRANCH="$(GOPATH)\src\goa.design\plugins"
+PLUGINS_DIR="$(GOPATH)\src\goa.design\plugins"
 else
-PLUGINS_BRANCH="$(GOPATH)/src/goa.design/plugins"
+PLUGINS_DIR="$(GOPATH)/src/goa.design/plugins"
 endif
 test-plugins:
 	@if [ -z $(GOA_BRANCH) ]; then\
 		GOA_BRANCH=$$(git rev-parse --abbrev-ref HEAD); \
 	fi
 	@if [ ! -d "$(GOPATH)/src/goa.design/plugins" ]; then\
-		git clone https://github.com/goadesign/plugins.git $(PLUGINS_BRANCH); \
+		git clone https://github.com/goadesign/plugins.git $(PLUGINS_DIR); \
 	fi
-	@cd $(PLUGINS_BRANCH) && git checkout $(GOA_BRANCH) || echo "Using master branch in plugins repo" && \
+	@cd $(PLUGINS_DIR) && git checkout $(GOA_BRANCH) || echo "Using master branch in plugins repo" && \
 	make -k test-plugins || (echo "Tests in plugin repo (https://github.com/goadesign/plugins) failed" \
                   "due to changes in goa repo (branch: $(GOA_BRANCH))!" \
                   "Create a branch with name '$(GOA_BRANCH)' in the plugin repo and fix these errors." && exit 1)
+
+ifeq ($(GOOS),windows)
+EXAMPLES_DIR="$(GOPATH)\src\goa.design\examples"
+else
+EXAMPLES_DIR="$(GOPATH)/src/goa.design/examples"
+endif
+test-examples:
+	@if [ -z $(GOA_BRANCH) ]; then\
+		GOA_BRANCH=$$(git rev-parse --abbrev-ref HEAD); \
+	fi
+	@if [ ! -d "$(GOPATH)/src/goa.design/examples" ]; then\
+		git clone https://github.com/goadesign/examples.git $(EXAMPLES_DIR); \
+	fi
+	@cd $(EXAMPLES_DIR) && git checkout $(GOA_BRANCH) || echo "Using master branch in examples repo" && \
+	make -k travis || (echo "Tests in examples repo (https://github.com/goadesign/examples) failed" \
+                  "due to changes in goa repo (branch: $(GOA_BRANCH))!" \
+                  "Create a branch with name '$(GOA_BRANCH)' in the examples repo and fix these errors." && exit 1)

@@ -1,4 +1,3 @@
-^examples[/\].*
 dsl[/\]http.go
 expr[/\]http_response.go
 codegen[/\]service[/\]testing[/\].*
