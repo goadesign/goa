@@ -15,17 +15,17 @@ DIRS=$(shell go list -f {{.Dir}} goa.design/goa/expr/...)
 # Only list test and build dependencies
 # Standard dependencies are installed via go get
 DEPEND=\
-	github.com/sergi/go-diff/diffmatchpatch \
 	golang.org/x/lint/golint \
 	golang.org/x/tools/cmd/goimports \
-	github.com/hashicorp/go-getter \
 	github.com/cheggaaa/pb \
+	github.com/hashicorp/go-getter \
 	github.com/golang/protobuf/protoc-gen-go \
 	github.com/golang/protobuf/proto
+#	github.com/sergi/go-diff/diffmatchpatch \
 
-all: lint gen test
+all: lint test
 
-travis: depend all build-examples clean
+travis: depend all test-examples test-plugins
 
 # Install protoc
 GOOS=$(shell go env GOOS)
@@ -66,71 +66,41 @@ lint:
 		echo "^ - Lint errors!" && echo && exit 1; \
 	fi
 
-gen:
-	@cd cmd/goa && \
-	go install && \
-	rm -rf $(GOPATH)/src/goa.design/goa/examples/basic/cmd              && \
-	rm -rf $(GOPATH)/src/goa.design/goa/examples/cellar/cmd/cellar-cli  && \
-	rm -rf $(GOPATH)/src/goa.design/goa/examples/error/cmd              && \
-	rm -rf $(GOPATH)/src/goa.design/goa/examples/multipart/cmd          && \
-	rm -rf $(GOPATH)/src/goa.design/goa/examples/security/cmd           && \
-	goa gen     goa.design/goa/examples/basic/design      -o $(GOPATH)/src/goa.design/goa/examples/basic     && \
-	goa example goa.design/goa/examples/basic/design      -o $(GOPATH)/src/goa.design/goa/examples/basic     && \
-	goa gen     goa.design/goa/examples/cellar/design    -o $(GOPATH)/src/goa.design/goa/examples/cellar   && \
-	goa example goa.design/goa/examples/cellar/design    -o $(GOPATH)/src/goa.design/goa/examples/cellar   && \
-	goa gen     goa.design/goa/examples/error/design     -o $(GOPATH)/src/goa.design/goa/examples/error    && \
-	goa example goa.design/goa/examples/error/design     -o $(GOPATH)/src/goa.design/goa/examples/error    && \
-	goa gen     goa.design/goa/examples/multipart/design -o $(GOPATH)/src/goa.design/goa/examples/multipart && \
-	goa example goa.design/goa/examples/multipart/design -o $(GOPATH)/src/goa.design/goa/examples/multipart && \
-	goa gen     goa.design/goa/examples/security/design  -o $(GOPATH)/src/goa.design/goa/examples/security && \
-	goa example goa.design/goa/examples/security/design  -o $(GOPATH)/src/goa.design/goa/examples/security && \
-	goa gen     goa.design/goa/examples/streaming/design -o $(GOPATH)/src/goa.design/goa/examples/streaming  && \
-	goa example goa.design/goa/examples/streaming/design -o $(GOPATH)/src/goa.design/goa/examples/streaming
-
-build-examples:
-	@cd $(GOPATH)/src/goa.design/goa/examples/basic && \
-		go build ./cmd/calc && go build ./cmd/calc-cli
-	@cd $(GOPATH)/src/goa.design/goa/examples/cellar && \
-		go build ./cmd/cellar && go build ./cmd/cellar-cli
-	@cd $(GOPATH)/src/goa.design/goa/examples/error && \
-		go build ./cmd/divider && go build ./cmd/divider-cli
-	@cd $(GOPATH)/src/goa.design/goa/examples/multipart && \
-		go build ./cmd/resume && go build ./cmd/resume-cli
-	@cd $(GOPATH)/src/goa.design/goa/examples/security && \
-		go build ./cmd/multi_auth && go build ./cmd/multi_auth-cli
-	@cd $(GOPATH)/src/goa.design/goa/examples/streaming && \
-		go build ./cmd/chatter && go build ./cmd/chatter-cli
-
-clean:
-	@cd $(GOPATH)/src/goa.design/goa/examples/basic && \
-		rm -f calc calc-cli
-	@cd $(GOPATH)/src/goa.design/goa/examples/cellar && \
-		rm -f cellar cellar-cli
-	@cd $(GOPATH)/src/goa.design/goa/examples/error && \
-		rm -f divider divider-cli
-	@cd $(GOPATH)/src/goa.design/goa/examples/multipart && \
-		rm -f resume resume-cli
-	@cd $(GOPATH)/src/goa.design/goa/examples/security && \
-		rm -f multi_auth multi_auth-cli
-	@cd $(GOPATH)/src/goa.design/goa/examples/streaming && \
-		rm -f chatter chatter-cli
-
 test:
 	go test ./...
 
 ifeq ($(GOOS),windows)
-PLUGINS_BRANCH="$(GOPATH)\src\goa.design\plugins"
+EXAMPLES_DIR="$(GOPATH)\src\goa.design\examples"
 else
-PLUGINS_BRANCH="$(GOPATH)/src/goa.design/plugins"
+EXAMPLES_DIR="$(GOPATH)/src/goa.design/examples"
+endif
+test-examples:
+	@if [ -z $(GOA_BRANCH) ]; then\
+		GOA_BRANCH=$$(git rev-parse --abbrev-ref HEAD); \
+	fi
+	@if [ ! -d "$(GOPATH)/src/goa.design/examples" ]; then\
+		git clone https://github.com/goadesign/examples.git $(EXAMPLES_DIR); \
+	fi
+	@cd $(EXAMPLES_DIR) && git checkout $(GOA_BRANCH) || echo "Using master branch in examples repo" && \
+	make -k travis || (echo "Tests in examples repo (https://github.com/goadesign/examples) failed" \
+                  "due to changes in goa repo (branch: $(GOA_BRANCH))!" \
+                  "Create a branch with name '$(GOA_BRANCH)' in the examples repo and fix these errors." && exit 1)
+	@rm -rf "$(GOPATH)/src/goa.design/examples"
+
+ifeq ($(GOOS),windows)
+PLUGINS_DIR="$(GOPATH)\src\goa.design\plugins"
+else
+PLUGINS_DIR="$(GOPATH)/src/goa.design/plugins"
 endif
 test-plugins:
 	@if [ -z $(GOA_BRANCH) ]; then\
 		GOA_BRANCH=$$(git rev-parse --abbrev-ref HEAD); \
 	fi
 	@if [ ! -d "$(GOPATH)/src/goa.design/plugins" ]; then\
-		git clone https://github.com/goadesign/plugins.git $(PLUGINS_BRANCH); \
+		git clone https://github.com/goadesign/plugins.git $(PLUGINS_DIR); \
 	fi
-	@cd $(PLUGINS_BRANCH) && git checkout $(GOA_BRANCH) || echo "Using master branch in plugins repo" && \
+	@cd $(PLUGINS_DIR) && git checkout $(GOA_BRANCH) || echo "Using master branch in plugins repo" && \
 	make -k test-plugins || (echo "Tests in plugin repo (https://github.com/goadesign/plugins) failed" \
                   "due to changes in goa repo (branch: $(GOA_BRANCH))!" \
                   "Create a branch with name '$(GOA_BRANCH)' in the plugin repo and fix these errors." && exit 1)
+	@rm -rf "$(GOPATH)/src/goa.design/plugins"
