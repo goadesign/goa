@@ -74,8 +74,6 @@ func exampleCLI(genpkg string, root *expr.RootExpr, svr *expr.ServerExpr) *codeg
 
 	var (
 		sections []*codegen.SectionTemplate
-
-		svrdata = example.Servers.Get(svr)
 	)
 	{
 		sections = []*codegen.SectionTemplate{

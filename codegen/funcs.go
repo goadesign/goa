@@ -5,8 +5,6 @@ import (
 	"os"
 	"strings"
 	"unicode"
-
-	"goa.design/goa/pkg"
 )
 
 // TemplateFuncs lists common template helper functions.

@@ -6,7 +6,7 @@ import (
 	"strings"
 
 	"goa.design/goa/codegen"
-	"goa.design/goa/codegen/server"
+	"goa.design/goa/codegen/example"
 	"goa.design/goa/expr"
 )
 
@@ -25,7 +25,7 @@ func ExampleCLIFiles(genpkg string, root *expr.RootExpr) []*codegen.File {
 // exampleCLI returns an example client tool HTTP implementation for the given
 // server expression.
 func exampleCLI(genpkg string, root *expr.RootExpr, svr *expr.ServerExpr) *codegen.File {
-	svrdata := server.Servers.Get(svr)
+	svrdata := example.Servers.Get(svr)
 	path := filepath.Join("cmd", svrdata.Dir+"-cli", "http.go")
 	if _, err := os.Stat(path); !os.IsNotExist(err) {
 		return nil // file already exists, skip it.

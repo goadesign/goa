@@ -7,7 +7,7 @@ import (
 	"strings"
 
 	"goa.design/goa/codegen"
-	"goa.design/goa/codegen/server"
+	"goa.design/goa/codegen/example"
 	"goa.design/goa/expr"
 )
 
@@ -27,7 +27,7 @@ func exampleServer(genpkg string, root *expr.RootExpr, svr *expr.ServerExpr) *co
 	var (
 		mainPath string
 
-		svrdata = server.Servers.Get(svr)
+		svrdata = example.Servers.Get(svr)
 	)
 	{
 		mainPath = filepath.Join("cmd", svrdata.Dir, "grpc.go")
@@ -60,7 +60,7 @@ func exampleServer(genpkg string, root *expr.RootExpr, svr *expr.ServerExpr) *co
 			svcName := codegen.SnakeCase(sd.Service.VarName)
 			specs = append(specs, &codegen.ImportSpec{
 				Path: path.Join(genpkg, "grpc", svcName, "server"),
-				Name: scope.Unique(pkgName + "svr"),
+				Name: scope.Unique(sd.Service.PkgName + "svr"),
 			})
 			specs = append(specs, &codegen.ImportSpec{
 				Path: path.Join(genpkg, svcName),

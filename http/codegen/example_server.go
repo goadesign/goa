@@ -7,7 +7,7 @@ import (
 	"strings"
 
 	"goa.design/goa/codegen"
-	"goa.design/goa/codegen/server"
+	"goa.design/goa/codegen/example"
 	"goa.design/goa/expr"
 )
 
@@ -29,7 +29,7 @@ func ExampleServerFiles(genpkg string, root *expr.RootExpr) []*codegen.File {
 
 // exampleServer returns an example HTTP server implementation.
 func exampleServer(genpkg string, root *expr.RootExpr, svr *expr.ServerExpr) *codegen.File {
-	svrdata := server.Servers.Get(svr)
+	svrdata := example.Servers.Get(svr)
 	fpath := filepath.Join("cmd", svrdata.Dir, "http.go")
 	specs := []*codegen.ImportSpec{
 		{Path: "context"},
