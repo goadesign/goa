@@ -15,17 +15,17 @@ DIRS=$(shell go list -f {{.Dir}} goa.design/goa/expr/...)
 # Only list test and build dependencies
 # Standard dependencies are installed via go get
 DEPEND=\
-	github.com/sergi/go-diff/diffmatchpatch \
 	golang.org/x/lint/golint \
 	golang.org/x/tools/cmd/goimports \
 	github.com/hashicorp/go-getter \
-	github.com/cheggaaa/pb \
 	github.com/golang/protobuf/protoc-gen-go \
 	github.com/golang/protobuf/proto
+#	github.com/sergi/go-diff/diffmatchpatch \
+#	github.com/cheggaaa/pb \
 
 all: lint test
 
-travis: depend all clean
+travis: depend all test-examples test-plugins
 
 # Install protoc
 GOOS=$(shell go env GOOS)
@@ -65,34 +65,6 @@ lint:
 	@if [ "`golint ./... | grep -vf .golint_exclude | tee /dev/stderr`" ]; then \
 		echo "^ - Lint errors!" && echo && exit 1; \
 	fi
-
-build-examples:
-	@cd $(GOPATH)/src/goa.design/goa/examples/basic && \
-		go build ./cmd/calc && go build ./cmd/calc-cli
-	@cd $(GOPATH)/src/goa.design/goa/examples/cellar && \
-		go build ./cmd/cellar && go build ./cmd/cellar-cli
-	@cd $(GOPATH)/src/goa.design/goa/examples/error && \
-		go build ./cmd/divider && go build ./cmd/divider-cli
-	@cd $(GOPATH)/src/goa.design/goa/examples/multipart && \
-		go build ./cmd/resume && go build ./cmd/resume-cli
-	@cd $(GOPATH)/src/goa.design/goa/examples/security && \
-		go build ./cmd/multi_auth && go build ./cmd/multi_auth-cli
-	@cd $(GOPATH)/src/goa.design/goa/examples/streaming && \
-		go build ./cmd/chatter && go build ./cmd/chatter-cli
-
-clean:
-	@cd $(GOPATH)/src/goa.design/goa/examples/basic && \
-		rm -f calc calc-cli
-	@cd $(GOPATH)/src/goa.design/goa/examples/cellar && \
-		rm -f cellar cellar-cli
-	@cd $(GOPATH)/src/goa.design/goa/examples/error && \
-		rm -f divider divider-cli
-	@cd $(GOPATH)/src/goa.design/goa/examples/multipart && \
-		rm -f resume resume-cli
-	@cd $(GOPATH)/src/goa.design/goa/examples/security && \
-		rm -f multi_auth multi_auth-cli
-	@cd $(GOPATH)/src/goa.design/goa/examples/streaming && \
-		rm -f chatter chatter-cli
 
 test:
 	go test ./...
