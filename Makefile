@@ -17,11 +17,11 @@ DIRS=$(shell go list -f {{.Dir}} goa.design/goa/expr/...)
 DEPEND=\
 	golang.org/x/lint/golint \
 	golang.org/x/tools/cmd/goimports \
+	github.com/cheggaaa/pb \
 	github.com/hashicorp/go-getter \
 	github.com/golang/protobuf/protoc-gen-go \
 	github.com/golang/protobuf/proto
 #	github.com/sergi/go-diff/diffmatchpatch \
-#	github.com/cheggaaa/pb \
 
 all: lint test
 
