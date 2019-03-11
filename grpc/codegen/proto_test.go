@@ -3,9 +3,9 @@ package codegen
 import (
 	"testing"
 
+	"github.com/allofthesepeople/goa/grpc/codegen/testdata"
 	"goa.design/goa/codegen"
 	"goa.design/goa/expr"
-	"goa.design/goa/grpc/codegen/testdata"
 )
 
 func TestProtoFiles(t *testing.T) {
@@ -21,6 +21,7 @@ func TestProtoFiles(t *testing.T) {
 		{"client-streaming-rpc", testdata.ClientStreamingRPCDSL, testdata.ClientStreamingRPCProtoCode},
 		{"bidirectional-streaming-rpc", testdata.BidirectionalStreamingRPCDSL, testdata.BidirectionalStreamingRPCProtoCode},
 		{"same-service-and-message-name", testdata.MessageWithServiceNameDSL, testdata.MessageWithServiceNameProtoCode},
+		{"method-with-reserved-proto-name", testdata.MethodWithReservedNameDSL, testdata.MethodWithReservedNameProtoCode},
 	}
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
