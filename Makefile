@@ -23,7 +23,7 @@ DEPEND=\
 	github.com/golang/protobuf/protoc-gen-go \
 	github.com/golang/protobuf/proto
 
-all: lint gen test
+all: lint test
 
 travis: depend all clean
 
@@ -65,27 +65,6 @@ lint:
 	@if [ "`golint ./... | grep -vf .golint_exclude | tee /dev/stderr`" ]; then \
 		echo "^ - Lint errors!" && echo && exit 1; \
 	fi
-
-gen:
-	@cd cmd/goa && \
-	go install && \
-	rm -rf $(GOPATH)/src/goa.design/goa/examples/basic/cmd              && \
-	rm -rf $(GOPATH)/src/goa.design/goa/examples/cellar/cmd/cellar-cli  && \
-	rm -rf $(GOPATH)/src/goa.design/goa/examples/error/cmd              && \
-	rm -rf $(GOPATH)/src/goa.design/goa/examples/multipart/cmd          && \
-	rm -rf $(GOPATH)/src/goa.design/goa/examples/security/cmd           && \
-	goa gen     goa.design/goa/examples/basic/design      -o $(GOPATH)/src/goa.design/goa/examples/basic     && \
-	goa example goa.design/goa/examples/basic/design      -o $(GOPATH)/src/goa.design/goa/examples/basic     && \
-	goa gen     goa.design/goa/examples/cellar/design    -o $(GOPATH)/src/goa.design/goa/examples/cellar   && \
-	goa example goa.design/goa/examples/cellar/design    -o $(GOPATH)/src/goa.design/goa/examples/cellar   && \
-	goa gen     goa.design/goa/examples/error/design     -o $(GOPATH)/src/goa.design/goa/examples/error    && \
-	goa example goa.design/goa/examples/error/design     -o $(GOPATH)/src/goa.design/goa/examples/error    && \
-	goa gen     goa.design/goa/examples/multipart/design -o $(GOPATH)/src/goa.design/goa/examples/multipart && \
-	goa example goa.design/goa/examples/multipart/design -o $(GOPATH)/src/goa.design/goa/examples/multipart && \
-	goa gen     goa.design/goa/examples/security/design  -o $(GOPATH)/src/goa.design/goa/examples/security && \
-	goa example goa.design/goa/examples/security/design  -o $(GOPATH)/src/goa.design/goa/examples/security && \
-	goa gen     goa.design/goa/examples/streaming/design -o $(GOPATH)/src/goa.design/goa/examples/streaming  && \
-	goa example goa.design/goa/examples/streaming/design -o $(GOPATH)/src/goa.design/goa/examples/streaming
 
 build-examples:
 	@cd $(GOPATH)/src/goa.design/goa/examples/basic && \
