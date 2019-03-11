@@ -70,23 +70,6 @@ test:
 	go test ./...
 
 ifeq ($(GOOS),windows)
-PLUGINS_DIR="$(GOPATH)\src\goa.design\plugins"
-else
-PLUGINS_DIR="$(GOPATH)/src/goa.design/plugins"
-endif
-test-plugins:
-	@if [ -z $(GOA_BRANCH) ]; then\
-		GOA_BRANCH=$$(git rev-parse --abbrev-ref HEAD); \
-	fi
-	@if [ ! -d "$(GOPATH)/src/goa.design/plugins" ]; then\
-		git clone https://github.com/goadesign/plugins.git $(PLUGINS_DIR); \
-	fi
-	@cd $(PLUGINS_DIR) && git checkout $(GOA_BRANCH) || echo "Using master branch in plugins repo" && \
-	make -k test-plugins || (echo "Tests in plugin repo (https://github.com/goadesign/plugins) failed" \
-                  "due to changes in goa repo (branch: $(GOA_BRANCH))!" \
-                  "Create a branch with name '$(GOA_BRANCH)' in the plugin repo and fix these errors." && exit 1)
-
-ifeq ($(GOOS),windows)
 EXAMPLES_DIR="$(GOPATH)\src\goa.design\examples"
 else
 EXAMPLES_DIR="$(GOPATH)/src/goa.design/examples"
@@ -102,3 +85,22 @@ test-examples:
 	make -k travis || (echo "Tests in examples repo (https://github.com/goadesign/examples) failed" \
                   "due to changes in goa repo (branch: $(GOA_BRANCH))!" \
                   "Create a branch with name '$(GOA_BRANCH)' in the examples repo and fix these errors." && exit 1)
+	@rm -rf "$(GOPATH)/src/goa.design/examples"
+
+ifeq ($(GOOS),windows)
+PLUGINS_DIR="$(GOPATH)\src\goa.design\plugins"
+else
+PLUGINS_DIR="$(GOPATH)/src/goa.design/plugins"
+endif
+test-plugins:
+	@if [ -z $(GOA_BRANCH) ]; then\
+		GOA_BRANCH=$$(git rev-parse --abbrev-ref HEAD); \
+	fi
+	@if [ ! -d "$(GOPATH)/src/goa.design/plugins" ]; then\
+		git clone https://github.com/goadesign/plugins.git $(PLUGINS_DIR); \
+	fi
+	@cd $(PLUGINS_DIR) && git checkout $(GOA_BRANCH) || echo "Using master branch in plugins repo" && \
+	make -k test-plugins || (echo "Tests in plugin repo (https://github.com/goadesign/plugins) failed" \
+                  "due to changes in goa repo (branch: $(GOA_BRANCH))!" \
+                  "Create a branch with name '$(GOA_BRANCH)' in the plugin repo and fix these errors." && exit 1)
+	@rm -rf "$(GOPATH)/src/goa.design/plugins"
