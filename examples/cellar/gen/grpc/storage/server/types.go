@@ -61,11 +61,11 @@ func NewStoredBottleCollection(result storageviews.StoredBottleCollectionView) *
 // NewShowPayload builds the payload of the "show" endpoint of the "storage"
 // service from the gRPC request type.
 func NewShowPayload(message *storagepb.ShowRequest, view *string) *storage.ShowPayload {
-	payload := &storage.ShowPayload{
+	v := &storage.ShowPayload{
 		ID: message.Id,
 	}
-	payload.View = view
-	return payload
+	v.View = view
+	return v
 }
 
 // NewShowResponse builds the gRPC response type from the result of the "show"
@@ -108,25 +108,25 @@ func NewShowResponse(result *storageviews.StoredBottleView) *storagepb.ShowRespo
 // NewBottle builds the payload of the "add" endpoint of the "storage" service
 // from the gRPC request type.
 func NewBottle(message *storagepb.AddRequest) *storage.Bottle {
-	payload := &storage.Bottle{
+	v := &storage.Bottle{
 		Name:        message.Name,
 		Vintage:     message.Vintage,
 		Description: &message.Description,
 		Rating:      &message.Rating,
 	}
 	if message.Winery != nil {
-		payload.Winery = protobufStoragepbWineryToStorageWinery(message.Winery)
+		v.Winery = protobufStoragepbWineryToStorageWinery(message.Winery)
 	}
 	if message.Composition != nil {
-		payload.Composition = make([]*storage.Component, len(message.Composition))
+		v.Composition = make([]*storage.Component, len(message.Composition))
 		for i, val := range message.Composition {
-			payload.Composition[i] = &storage.Component{
+			v.Composition[i] = &storage.Component{
 				Varietal:   val.Varietal,
 				Percentage: &val.Percentage,
 			}
 		}
 	}
-	return payload
+	return v
 }
 
 // NewAddResponse builds the gRPC response type from the result of the "add"
@@ -140,10 +140,10 @@ func NewAddResponse(result string) *storagepb.AddResponse {
 // NewRemovePayload builds the payload of the "remove" endpoint of the
 // "storage" service from the gRPC request type.
 func NewRemovePayload(message *storagepb.RemoveRequest) *storage.RemovePayload {
-	payload := &storage.RemovePayload{
+	v := &storage.RemovePayload{
 		ID: message.Id,
 	}
-	return payload
+	return v
 }
 
 // NewRemoveResponse builds the gRPC response type from the result of the
@@ -156,16 +156,16 @@ func NewRemoveResponse() *storagepb.RemoveResponse {
 // NewRateRequest builds the payload of the "rate" endpoint of the "storage"
 // service from the gRPC request type.
 func NewRateRequest(message *storagepb.RateRequest) map[uint32][]string {
-	payload := make(map[uint32][]string, len(message.Field))
+	v := make(map[uint32][]string, len(message.Field))
 	for key, val := range message.Field {
 		tk := key
 		tv := make([]string, len(val.Field))
 		for i, val := range val.Field {
 			tv[i] = val
 		}
-		payload[tk] = tv
+		v[tk] = tv
 	}
-	return payload
+	return v
 }
 
 // NewRateResponse builds the gRPC response type from the result of the "rate"
@@ -178,28 +178,28 @@ func NewRateResponse() *storagepb.RateResponse {
 // NewMultiAddRequest builds the payload of the "multi_add" endpoint of the
 // "storage" service from the gRPC request type.
 func NewMultiAddRequest(message *storagepb.MultiAddRequest) []*storage.Bottle {
-	payload := make([]*storage.Bottle, len(message.Field))
+	v := make([]*storage.Bottle, len(message.Field))
 	for i, val := range message.Field {
-		payload[i] = &storage.Bottle{
+		v[i] = &storage.Bottle{
 			Name:        val.Name,
 			Vintage:     val.Vintage,
 			Description: &val.Description,
 			Rating:      &val.Rating,
 		}
 		if val.Winery != nil {
-			payload[i].Winery = protobufStoragepbWineryToStorageWinery(val.Winery)
+			v[i].Winery = protobufStoragepbWineryToStorageWinery(val.Winery)
 		}
 		if val.Composition != nil {
-			payload[i].Composition = make([]*storage.Component, len(val.Composition))
+			v[i].Composition = make([]*storage.Component, len(val.Composition))
 			for j, val := range val.Composition {
-				payload[i].Composition[j] = &storage.Component{
+				v[i].Composition[j] = &storage.Component{
 					Varietal:   val.Varietal,
 					Percentage: &val.Percentage,
 				}
 			}
 		}
 	}
-	return payload
+	return v
 }
 
 // NewMultiAddResponse builds the gRPC response type from the result of the
@@ -216,29 +216,29 @@ func NewMultiAddResponse(result []string) *storagepb.MultiAddResponse {
 // NewMultiUpdatePayload builds the payload of the "multi_update" endpoint of
 // the "storage" service from the gRPC request type.
 func NewMultiUpdatePayload(message *storagepb.MultiUpdateRequest) *storage.MultiUpdatePayload {
-	payload := &storage.MultiUpdatePayload{}
+	v := &storage.MultiUpdatePayload{}
 	if message.Ids != nil {
-		payload.Ids = make([]string, len(message.Ids))
+		v.Ids = make([]string, len(message.Ids))
 		for i, val := range message.Ids {
-			payload.Ids[i] = val
+			v.Ids[i] = val
 		}
 	}
 	if message.Bottles != nil {
-		payload.Bottles = make([]*storage.Bottle, len(message.Bottles))
+		v.Bottles = make([]*storage.Bottle, len(message.Bottles))
 		for i, val := range message.Bottles {
-			payload.Bottles[i] = &storage.Bottle{
+			v.Bottles[i] = &storage.Bottle{
 				Name:        val.Name,
 				Vintage:     val.Vintage,
 				Description: &val.Description,
 				Rating:      &val.Rating,
 			}
 			if val.Winery != nil {
-				payload.Bottles[i].Winery = protobufStoragepbWineryToStorageWinery(val.Winery)
+				v.Bottles[i].Winery = protobufStoragepbWineryToStorageWinery(val.Winery)
 			}
 			if val.Composition != nil {
-				payload.Bottles[i].Composition = make([]*storage.Component, len(val.Composition))
+				v.Bottles[i].Composition = make([]*storage.Component, len(val.Composition))
 				for j, val := range val.Composition {
-					payload.Bottles[i].Composition[j] = &storage.Component{
+					v.Bottles[i].Composition[j] = &storage.Component{
 						Varietal:   val.Varietal,
 						Percentage: &val.Percentage,
 					}
@@ -246,7 +246,7 @@ func NewMultiUpdatePayload(message *storagepb.MultiUpdateRequest) *storage.Multi
 			}
 		}
 	}
-	return payload
+	return v
 }
 
 // NewMultiUpdateResponse builds the gRPC response type from the result of the

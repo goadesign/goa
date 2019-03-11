@@ -38,11 +38,11 @@ func BuildShowPayload(storageShowMessage string, storageShowView string) (*stora
 	if err != nil {
 		return nil, err
 	}
-	payload := &storage.ShowPayload{
+	v := &storage.ShowPayload{
 		ID: message.Id,
 	}
-	payload.View = view
-	return payload, nil
+	v.View = view
+	return v, nil
 }
 
 // BuildAddPayload builds the payload for the storage add endpoint from CLI
@@ -61,25 +61,25 @@ func BuildAddPayload(storageAddMessage string) (*storage.Bottle, error) {
 	if err != nil {
 		return nil, err
 	}
-	payload := &storage.Bottle{
+	v := &storage.Bottle{
 		Name:        message.Name,
 		Vintage:     message.Vintage,
 		Description: &message.Description,
 		Rating:      &message.Rating,
 	}
 	if message.Winery != nil {
-		payload.Winery = protobufStoragepbWineryToStorageWinery(message.Winery)
+		v.Winery = protobufStoragepbWineryToStorageWinery(message.Winery)
 	}
 	if message.Composition != nil {
-		payload.Composition = make([]*storage.Component, len(message.Composition))
+		v.Composition = make([]*storage.Component, len(message.Composition))
 		for i, val := range message.Composition {
-			payload.Composition[i] = &storage.Component{
+			v.Composition[i] = &storage.Component{
 				Varietal:   val.Varietal,
 				Percentage: &val.Percentage,
 			}
 		}
 	}
-	return payload, nil
+	return v, nil
 }
 
 // BuildRemovePayload builds the payload for the storage remove endpoint from
@@ -98,10 +98,10 @@ func BuildRemovePayload(storageRemoveMessage string) (*storage.RemovePayload, er
 	if err != nil {
 		return nil, err
 	}
-	payload := &storage.RemovePayload{
+	v := &storage.RemovePayload{
 		ID: message.Id,
 	}
-	return payload, nil
+	return v, nil
 }
 
 // BuildRatePayload builds the payload for the storage rate endpoint from CLI
@@ -120,16 +120,16 @@ func BuildRatePayload(storageRateMessage string) (map[uint32][]string, error) {
 	if err != nil {
 		return nil, err
 	}
-	payload := make(map[uint32][]string, len(message.Field))
+	v := make(map[uint32][]string, len(message.Field))
 	for key, val := range message.Field {
 		tk := key
 		tv := make([]string, len(val.Field))
 		for i, val := range val.Field {
 			tv[i] = val
 		}
-		payload[tk] = tv
+		v[tk] = tv
 	}
-	return payload, nil
+	return v, nil
 }
 
 // BuildMultiAddPayload builds the payload for the storage multi_add endpoint
@@ -148,28 +148,28 @@ func BuildMultiAddPayload(storageMultiAddMessage string) ([]*storage.Bottle, err
 	if err != nil {
 		return nil, err
 	}
-	payload := make([]*storage.Bottle, len(message.Field))
+	v := make([]*storage.Bottle, len(message.Field))
 	for i, val := range message.Field {
-		payload[i] = &storage.Bottle{
+		v[i] = &storage.Bottle{
 			Name:        val.Name,
 			Vintage:     val.Vintage,
 			Description: &val.Description,
 			Rating:      &val.Rating,
 		}
 		if val.Winery != nil {
-			payload[i].Winery = protobufStoragepbWineryToStorageWinery(val.Winery)
+			v[i].Winery = protobufStoragepbWineryToStorageWinery(val.Winery)
 		}
 		if val.Composition != nil {
-			payload[i].Composition = make([]*storage.Component, len(val.Composition))
+			v[i].Composition = make([]*storage.Component, len(val.Composition))
 			for j, val := range val.Composition {
-				payload[i].Composition[j] = &storage.Component{
+				v[i].Composition[j] = &storage.Component{
 					Varietal:   val.Varietal,
 					Percentage: &val.Percentage,
 				}
 			}
 		}
 	}
-	return payload, nil
+	return v, nil
 }
 
 // BuildMultiUpdatePayload builds the payload for the storage multi_update
@@ -188,29 +188,29 @@ func BuildMultiUpdatePayload(storageMultiUpdateMessage string) (*storage.MultiUp
 	if err != nil {
 		return nil, err
 	}
-	payload := &storage.MultiUpdatePayload{}
+	v := &storage.MultiUpdatePayload{}
 	if message.Ids != nil {
-		payload.Ids = make([]string, len(message.Ids))
+		v.Ids = make([]string, len(message.Ids))
 		for i, val := range message.Ids {
-			payload.Ids[i] = val
+			v.Ids[i] = val
 		}
 	}
 	if message.Bottles != nil {
-		payload.Bottles = make([]*storage.Bottle, len(message.Bottles))
+		v.Bottles = make([]*storage.Bottle, len(message.Bottles))
 		for i, val := range message.Bottles {
-			payload.Bottles[i] = &storage.Bottle{
+			v.Bottles[i] = &storage.Bottle{
 				Name:        val.Name,
 				Vintage:     val.Vintage,
 				Description: &val.Description,
 				Rating:      &val.Rating,
 			}
 			if val.Winery != nil {
-				payload.Bottles[i].Winery = protobufStoragepbWineryToStorageWinery(val.Winery)
+				v.Bottles[i].Winery = protobufStoragepbWineryToStorageWinery(val.Winery)
 			}
 			if val.Composition != nil {
-				payload.Bottles[i].Composition = make([]*storage.Component, len(val.Composition))
+				v.Bottles[i].Composition = make([]*storage.Component, len(val.Composition))
 				for j, val := range val.Composition {
-					payload.Bottles[i].Composition[j] = &storage.Component{
+					v.Bottles[i].Composition[j] = &storage.Component{
 						Varietal:   val.Varietal,
 						Percentage: &val.Percentage,
 					}
@@ -218,5 +218,5 @@ func BuildMultiUpdatePayload(storageMultiUpdateMessage string) (*storage.MultiUp
 			}
 		}
 	}
-	return payload, nil
+	return v, nil
 }
