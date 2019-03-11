@@ -3,9 +3,9 @@ package codegen
 import (
 	"testing"
 
-	"github.com/allofthesepeople/goa/grpc/codegen/testdata"
 	"goa.design/goa/codegen"
 	"goa.design/goa/expr"
+	"goa.design/goa/grpc/codegen/testdata"
 )
 
 func TestProtoFiles(t *testing.T) {
