@@ -13,7 +13,7 @@ func DecodeMethodMessageResultTypeWithViewsResponse(ctx context.Context, v inter
 	if !ok {
 		return nil, goagrpc.ErrInvalidType("ServiceMessageResultTypeWithViews", "MethodMessageResultTypeWithViews", "*service_message_result_type_with_viewspb.MethodMessageResultTypeWithViewsResponse", v)
 	}
-	res := NewRTView(message)
+	res := NewMethodMessageResultTypeWithViewsResult(message)
 	vres := &servicemessageresulttypewithviewsviews.RT{Projected: res, View: view}
 	if err := servicemessageresulttypewithviewsviews.ValidateRT(vres); err != nil {
 		return nil, err
@@ -36,7 +36,7 @@ func DecodeMethodMessageResultTypeWithExplicitViewResponse(ctx context.Context, 
 	if !ok {
 		return nil, goagrpc.ErrInvalidType("ServiceMessageResultTypeWithExplicitView", "MethodMessageResultTypeWithExplicitView", "*service_message_result_type_with_explicit_viewpb.MethodMessageResultTypeWithExplicitViewResponse", v)
 	}
-	res := NewRTView(message)
+	res := NewMethodMessageResultTypeWithExplicitViewResult(message)
 	vres := &servicemessageresulttypewithexplicitviewviews.RT{Projected: res, View: view}
 	if err := servicemessageresulttypewithexplicitviewviews.ValidateRT(vres); err != nil {
 		return nil, err
@@ -55,7 +55,7 @@ func DecodeMethodMessageArrayResponse(ctx context.Context, v interface{}, hdr, t
 	if err := ValidateMethodMessageArrayResponse(message); err != nil {
 		return nil, err
 	}
-	res := NewMethodMessageArrayResponse(message)
+	res := NewMethodMessageArrayResult(message)
 	return res, nil
 }
 `
@@ -67,7 +67,7 @@ func DecodeMethodUnaryRPCNoPayloadResponse(ctx context.Context, v interface{}, h
 	if !ok {
 		return nil, goagrpc.ErrInvalidType("ServiceUnaryRPCNoPayload", "MethodUnaryRPCNoPayload", "*service_unaryrpc_no_payloadpb.MethodUnaryRPCNoPayloadResponse", v)
 	}
-	res := NewMethodUnaryRPCNoPayloadResponse(message)
+	res := NewMethodUnaryRPCNoPayloadResult(message)
 	return res, nil
 }
 `
@@ -110,7 +110,7 @@ func DecodeMethodMessageWithMetadataResponse(ctx context.Context, v interface{},
 	if !ok {
 		return nil, goagrpc.ErrInvalidType("ServiceMessageWithMetadata", "MethodMessageWithMetadata", "*service_message_with_metadatapb.MethodMessageWithMetadataResponse", v)
 	}
-	res := NewResponseUT(message, inHeader, inTrailer)
+	res := NewMethodMessageWithMetadataResult(message, inHeader, inTrailer)
 	return res, nil
 }
 `
@@ -166,7 +166,7 @@ func DecodeMethodMessageWithValidateResponse(ctx context.Context, v interface{},
 	if err = ValidateMethodMessageWithValidateResponse(message); err != nil {
 		return nil, err
 	}
-	res := NewResponseUT(message, inHeader, inTrailer)
+	res := NewMethodMessageWithValidateResult(message, inHeader, inTrailer)
 	return res, nil
 }
 `
@@ -185,7 +185,7 @@ func DecodeMethodMessageUserTypeWithNestedUserTypesResponse(ctx context.Context,
 	if !ok {
 		return nil, goagrpc.ErrInvalidType("ServiceMessageUserTypeWithNestedUserTypes", "MethodMessageUserTypeWithNestedUserTypes", "*service_message_user_type_with_nested_user_typespb.RTCollection", v)
 	}
-	res := NewRTCollection(message)
+	res := NewMethodMessageUserTypeWithNestedUserTypesResult(message)
 	vres := servicemessageusertypewithnestedusertypesviews.RTCollection{Projected: res, View: view}
 	if err := servicemessageusertypewithnestedusertypesviews.ValidateRTCollection(vres); err != nil {
 		return nil, err
