@@ -1,6 +1,26 @@
 language: go
+dist: xenial
 go:
 - 1.12.x
+cache:
+  directories:
+    - $HOME/.cache/go-build
+    - $HOME/gopath/pkg
+    - $HOME/gopath/src/bitbucket.org
+    - $HOME/gopath/src/cloud.google.com
+    - $HOME/gopath/src/github.com/aws
+    - $HOME/gopath/src/github.com/golang
+    - $HOME/gopath/src/github.com/googleapis
+    - $HOME/gopath/src/github.com/hashicorp
+    - $HOME/gopath/src/github.com/mitchellh
+    - $HOME/gopath/src/github.com/ulikunitz
+    - $HOME/gopath/src/github.com/cheggaaa
+    - $HOME/gopath/src/github.com/mattn
+    - $HOME/gopath/src/golang.org
+    - $HOME/gopath/src/google.golang.org
+    - $HOME/gopath/src/gopkg.in
+    - $HOME/gopath/src/honnef.co
+    - $HOME/gopath/src/k8s.io
 install:
 - export PATH=${PATH}:${HOME}/gopath/bin
 script:
