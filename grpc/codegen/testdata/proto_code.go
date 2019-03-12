@@ -292,3 +292,16 @@ message MethodMessageWithSecurityRequest {
 message MethodMessageWithSecurityResponse {
 }
 `
+
+const MethodWithReservedNameProtoCode = `// Service is the MethodWithReservedName service interface.
+service MethodWithReservedName {
+	// String implements string.
+	rpc String (StringRequest) returns (StringResponse);
+}
+
+message StringRequest {
+}
+
+message StringResponse {
+}
+`

@@ -567,3 +567,11 @@ var MessageWithServiceNameDSL = func() {
 		})
 	})
 }
+
+var MethodWithReservedNameDSL = func() {
+	Service("MethodWithReservedName", func() {
+		Method("string", func() {
+			GRPC(func() {})
+		})
+	})
+}
