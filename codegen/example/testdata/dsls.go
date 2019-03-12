@@ -13,6 +13,18 @@ var NoServerDSL = func() {
 	})
 }
 
+var SameAPIServiceNameDSL = func() {
+	API("Service", func() {})
+	Service("Service", func() {
+		Method("Method", func() {
+			HTTP(func() {
+				GET("/")
+			})
+			GRPC(func() {})
+		})
+	})
+}
+
 var SingleServerSingleHostDSL = func() {
 	API("SingleServerSingleHost", func() {
 		Server("SingleHost", func() {

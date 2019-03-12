@@ -18,6 +18,7 @@ func TestExampleServerFiles(t *testing.T) {
 		Code string
 	}{
 		{"no-server", testdata.NoServerDSL, testdata.NoServerServerMainCode},
+		{"same-api-service-name", testdata.SameAPIServiceNameDSL, testdata.SameAPIServiceNameServerMainCode},
 		{"single-server-single-host", testdata.SingleServerSingleHostDSL, testdata.SingleServerSingleHostServerMainCode},
 		{"single-server-single-host-with-variables", testdata.SingleServerSingleHostWithVariablesDSL, testdata.SingleServerSingleHostWithVariablesServerMainCode},
 		{"server-hosting-service-with-file-server", testdata.ServerHostingServiceWithFileServerDSL, testdata.ServerHostingServiceWithFileServerServerMainCode},

@@ -1088,7 +1088,7 @@ func extractMetadata(a *expr.MappedAttributeExpr, service *codegen.ContextualAtt
 			typeRef = scope.GoTypeRef(c)
 		)
 		{
-			varn = scope.Unique(codegen.Goify(name, false))
+			varn = scope.Name(codegen.Goify(name, false))
 			pointer = ca.IsPointer() && expr.IsPrimitive(c.Type)
 			fieldName = codegen.Goify(name, true)
 			if !expr.IsObject(service.Attribute.Expr().Type) {
