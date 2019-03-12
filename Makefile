@@ -12,6 +12,18 @@
 #
 DIRS=$(shell go list -f {{.Dir}} goa.design/goa/expr/...)
 
+ifeq ($(GOOS),windows)
+EXAMPLES_DIR="$(GOPATH)\src\goa.design\examples"
+else
+EXAMPLES_DIR="$(GOPATH)/src/goa.design/examples"
+endif
+
+ifeq ($(GOOS),windows)
+PLUGINS_DIR="$(GOPATH)\src\goa.design\plugins"
+else
+PLUGINS_DIR="$(GOPATH)/src/goa.design/plugins"
+endif
+
 # Only list test and build dependencies
 # Standard dependencies are installed via go get
 DEPEND=\
@@ -21,7 +33,6 @@ DEPEND=\
 	github.com/hashicorp/go-getter \
 	github.com/golang/protobuf/protoc-gen-go \
 	github.com/golang/protobuf/proto
-#	github.com/sergi/go-diff/diffmatchpatch \
 
 all: lint test
 
@@ -69,11 +80,6 @@ lint:
 test:
 	go test ./...
 
-ifeq ($(GOOS),windows)
-EXAMPLES_DIR="$(GOPATH)\src\goa.design\examples"
-else
-EXAMPLES_DIR="$(GOPATH)/src/goa.design/examples"
-endif
 test-examples:
 	@if [ -z $(GOA_BRANCH) ]; then\
 		GOA_BRANCH=$$(git rev-parse --abbrev-ref HEAD); \
@@ -87,11 +93,6 @@ test-examples:
                   "Create a branch with name '$(GOA_BRANCH)' in the examples repo and fix these errors." && exit 1)
 	@rm -rf "$(GOPATH)/src/goa.design/examples"
 
-ifeq ($(GOOS),windows)
-PLUGINS_DIR="$(GOPATH)\src\goa.design\plugins"
-else
-PLUGINS_DIR="$(GOPATH)/src/goa.design/plugins"
-endif
 test-plugins:
 	@if [ -z $(GOA_BRANCH) ]; then\
 		GOA_BRANCH=$$(git rev-parse --abbrev-ref HEAD); \
