@@ -26,18 +26,11 @@ func ServerFiles(genpkg string, root *expr.RootExpr) []*codegen.File {
 // exampleSvrMain returns the default main function for the given server
 // expression.
 func exampleSvrMain(genpkg string, root *expr.RootExpr, svr *expr.ServerExpr) *codegen.File {
-	pkg := codegen.SnakeCase(codegen.Goify(svr.Name, true))
-	mainPath := filepath.Join("cmd", pkg, "main.go")
+	svrdata := Servers.Get(svr)
+	mainPath := filepath.Join("cmd", svrdata.Dir, "main.go")
 	if _, err := os.Stat(mainPath); !os.IsNotExist(err) {
 		return nil // file already exists, skip it.
 	}
-	// genpkg is created by path.Join so the separator is / regardless of operating system
-	idx := strings.LastIndex(genpkg, string("/"))
-	rootPath := "."
-	if idx > 0 {
-		rootPath = genpkg[:idx]
-	}
-	apiPkg := strings.ToLower(codegen.Goify(root.API.Name, false))
 	specs := []*codegen.ImportSpec{
 		{Path: "context"},
 		{Path: "flag"},
@@ -49,22 +42,35 @@ func exampleSvrMain(genpkg string, root *expr.RootExpr, svr *expr.ServerExpr) *c
 		{Path: "strings"},
 		{Path: "sync"},
 		{Path: "time"},
-		{Path: rootPath, Name: apiPkg},
 		{Path: "goa.design/goa/middleware"},
 	}
 
-	svrData := Servers.Get(svr)
-
 	// Iterate through services listed in the server expression.
 	svcData := make([]*service.Data, len(svr.Services))
+	scope := codegen.NewNameScope()
 	for i, svc := range svr.Services {
 		sd := service.Services.Get(svc)
 		svcData[i] = sd
 		specs = append(specs, &codegen.ImportSpec{
 			Path: path.Join(genpkg, codegen.SnakeCase(sd.VarName)),
-			Name: sd.PkgName,
+			Name: scope.Unique(sd.PkgName),
 		})
 	}
+
+	var (
+		rootPath string
+		apiPkg   string
+	)
+	{
+		// genpkg is created by path.Join so the separator is / regardless of operating system
+		idx := strings.LastIndex(genpkg, string("/"))
+		rootPath = "."
+		if idx > 0 {
+			rootPath = genpkg[:idx]
+		}
+		apiPkg = scope.Unique(strings.ToLower(codegen.Goify(root.API.Name, false)), "api")
+	}
+	specs = append(specs, &codegen.ImportSpec{Path: rootPath, Name: apiPkg})
 
 	sections := []*codegen.SectionTemplate{
 		codegen.Header("", "main", specs),
@@ -72,7 +78,7 @@ func exampleSvrMain(genpkg string, root *expr.RootExpr, svr *expr.ServerExpr) *c
 			Name:   "server-main-start",
 			Source: mainStartT,
 			Data: map[string]interface{}{
-				"Server": svrData,
+				"Server": svrdata,
 			},
 			FuncMap: map[string]interface{}{
 				"join": strings.Join,
@@ -111,7 +117,7 @@ func exampleSvrMain(genpkg string, root *expr.RootExpr, svr *expr.ServerExpr) *c
 			Name:   "server-main-handler",
 			Source: mainServerHndlrT,
 			Data: map[string]interface{}{
-				"Server":   svrData,
+				"Server":   svrdata,
 				"Services": svcData,
 			},
 			FuncMap: map[string]interface{}{

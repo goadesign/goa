@@ -27,28 +27,36 @@ func ExampleCLIFiles(genpkg string, root *expr.RootExpr) []*codegen.File {
 func exampleCLI(genpkg string, root *expr.RootExpr, svr *expr.ServerExpr) *codegen.File {
 	var (
 		mainPath string
-		apiPkg   string
-		pkg      string
+
+		svrdata = example.Servers.Get(svr)
 	)
 	{
-		apiPkg = strings.ToLower(codegen.Goify(root.API.Name, false))
-		pkg = codegen.SnakeCase(codegen.Goify(svr.Name, true))
-		mainPath = filepath.Join("cmd", pkg+"-cli", "grpc.go")
+		mainPath = filepath.Join("cmd", svrdata.Dir+"-cli", "grpc.go")
 		if _, err := os.Stat(mainPath); !os.IsNotExist(err) {
 			return nil // file already exists, skip it.
 		}
 	}
 
 	var (
-		specs []*codegen.ImportSpec
+		rootPath string
+		apiPkg   string
+
+		scope = codegen.NewNameScope()
 	)
 	{
 		// genpkg is created by path.Join so the separator is / regardless of operating system
-		idx := strings.LastIndex(genpkg, "/")
-		rootPath := "."
+		idx := strings.LastIndex(genpkg, string("/"))
+		rootPath = "."
 		if idx > 0 {
 			rootPath = genpkg[:idx]
 		}
+		apiPkg = scope.Unique(strings.ToLower(codegen.Goify(root.API.Name, false)), "api")
+	}
+
+	var (
+		specs []*codegen.ImportSpec
+	)
+	{
 		specs = []*codegen.ImportSpec{
 			{Path: "context"},
 			{Path: "encoding/json"},
@@ -60,14 +68,12 @@ func exampleCLI(genpkg string, root *expr.RootExpr, svr *expr.ServerExpr) *codeg
 			{Path: "goa.design/goa"},
 			{Path: "goa.design/goa/grpc", Name: "goagrpc"},
 			{Path: rootPath, Name: apiPkg},
-			{Path: path.Join(genpkg, "grpc", "cli", pkg), Name: "cli"},
+			{Path: path.Join(genpkg, "grpc", "cli", svrdata.Dir), Name: "cli"},
 		}
 	}
 
 	var (
 		sections []*codegen.SectionTemplate
-
-		svrdata = example.Servers.Get(svr)
 	)
 	{
 		sections = []*codegen.SectionTemplate{

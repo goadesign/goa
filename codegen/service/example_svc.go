@@ -53,13 +53,15 @@ func exampleServiceFile(genpkg string, root *expr.RootExpr, svc *expr.ServiceExp
 	if _, err := os.Stat(fpath); !os.IsNotExist(err) {
 		return nil // file already exists, skip it.
 	}
-	apiPkg := strings.ToLower(codegen.Goify(root.API.Name, false))
+	scope := codegen.NewNameScope()
+	specs := []*codegen.ImportSpec{
+		{Path: "context"},
+		{Path: "log"},
+		{Path: path.Join(genpkg, codegen.SnakeCase(svc.Name)), Name: scope.Unique(data.PkgName)},
+	}
+	apiPkg := scope.Unique(strings.ToLower(codegen.Goify(root.API.Name, false)), "api")
 	sections := []*codegen.SectionTemplate{
-		codegen.Header("", apiPkg, []*codegen.ImportSpec{
-			{Path: "context"},
-			{Path: "log"},
-			{Path: path.Join(genpkg, svcName), Name: data.PkgName},
-		}),
+		codegen.Header("", apiPkg, specs),
 		{Name: "basic-service-struct", Source: svcStructT, Data: data},
 		{Name: "basic-service-init", Source: svcInitT, Data: data},
 	}
