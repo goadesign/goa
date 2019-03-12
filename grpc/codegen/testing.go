@@ -15,7 +15,7 @@ func RunGRPCDSL(t *testing.T, dsl func()) *expr.RootExpr {
 	// reset all roots and codegen data structures
 	service.Services = make(service.ServicesData)
 	GRPCServices = make(ServicesData)
-	return expr.RunGRPCDSL(t, dsl)
+	return expr.RunDSL(t, dsl)
 }
 
 func sectionCode(t *testing.T, section ...*codegen.SectionTemplate) string {

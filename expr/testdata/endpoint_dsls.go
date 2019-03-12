@@ -148,3 +148,26 @@ var FinalizeEndpointBodyAsPropWithExtendedTypeDSL = func() {
 		})
 	})
 }
+
+var GRPCEndpointWithAnyType = func() {
+	var Recursive = Type("Recursive", func() {
+		Field(1, "invalid_map_key", MapOf(Any, "Recursive"))
+		Field(3, "invalid_array", ArrayOf(ArrayOf(Any)))
+	})
+	var InvalidRT = ResultType("application/vnd.result", func() {
+		TypeName("RT")
+		Attributes(func() {
+			Field(1, "invalid_primitive", Any)
+			Field(2, "invalid_array", ArrayOf(Any))
+		})
+	})
+	Service("Service", func() {
+		Method("Method", func() {
+			Payload(Recursive)
+			Result(CollectionOf(InvalidRT))
+			Error("invalid_error_type", Any)
+			Error("invalid_map_type", MapOf(Int, Any))
+			GRPC(func() {})
+		})
+	})
+}
