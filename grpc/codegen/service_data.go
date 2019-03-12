@@ -887,11 +887,11 @@ func buildInitData(source, target *codegen.ContextualAttribute, sourceVar, targe
 	)
 	{
 		isStruct = expr.IsObject(target.Attribute.Expr().Type)
-		n := sd.Scope.GoTypeName(target.Attribute.Expr())
+		n := protoBufGoTypeName(target.Attribute.Expr(), sd.Scope)
 		if !isStruct {
 			// If target is array, map, or primitive the name will be suffixed with
 			// the definition (e.g int, []string, map[int]string) which is incorrect.
-			n = sd.Scope.GoTypeName(source.Attribute.Expr())
+			n = protoBufGoTypeName(source.Attribute.Expr(), sd.Scope)
 		}
 		name = "New" + n
 		code, helpers, err = protoBufTransform(source, target, sourceVar, targetVar, proto)
