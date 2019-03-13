@@ -10,18 +10,17 @@
 # Meta targets:
 # - "all" is the default target, it runs all the targets in the order above.
 #
-DIRS=$(shell go list -f {{.Dir}} goa.design/goa/expr/...)
+GOOS=$(shell go env GOOS)
+GO_FILES=$(shell find . -type f -name '*.go')
 
 ifeq ($(GOOS),windows)
 EXAMPLES_DIR="$(GOPATH)\src\goa.design\examples"
+PLUGINS_DIR="$(GOPATH)\src\goa.design\plugins"
+GOBIN="$(GOPATH)\bin"
 else
 EXAMPLES_DIR="$(GOPATH)/src/goa.design/examples"
-endif
-
-ifeq ($(GOOS),windows)
-PLUGINS_DIR="$(GOPATH)\src\goa.design\plugins"
-else
 PLUGINS_DIR="$(GOPATH)/src/goa.design/plugins"
+GOBIN="$(GOPATH)/bin"
 endif
 
 # Only list test and build dependencies
@@ -39,22 +38,18 @@ all: lint test
 travis: depend all test-examples test-plugins
 
 # Install protoc
-GOOS=$(shell go env GOOS)
 PROTOC_VERSION="3.6.1"
 ifeq ($(GOOS),linux)
 PROTOC="protoc-$(PROTOC_VERSION)-linux-x86_64"
 PROTOC_EXEC="$(PROTOC)/bin/protoc"
-GOBIN="$(GOPATH)/bin"
 else
 	ifeq ($(GOOS),darwin)
 PROTOC="protoc-$(PROTOC_VERSION)-osx-x86_64"
 PROTOC_EXEC="$(PROTOC)/bin/protoc"
-GOBIN="$(GOPATH)/bin"
 	else
 		ifeq ($(GOOS),windows)
 PROTOC="protoc-$(PROTOC_VERSION)-win32"
 PROTOC_EXEC="$(PROTOC)\bin\protoc.exe"
-GOBIN="$(GOPATH)\bin"
 		endif
 	endif
 endif
@@ -68,11 +63,9 @@ depend:
 	@go get -t -v ./...
 
 lint:
-	@for d in $(DIRS) ; do \
-		if [ "`goimports -l $$d/*.go | tee /dev/stderr`" ]; then \
-			echo "^ - Repo contains improperly formatted go files" && echo && exit 1; \
-		fi \
-	done
+	@if [ "`goimports -l $(GO_FILES) | tee /dev/stderr`" ]; then \
+		echo "^ - Repo contains improperly formatted go files" && echo && exit 1; \
+	fi
 	@if [ "`golint ./... | grep -vf .golint_exclude | tee /dev/stderr`" ]; then \
 		echo "^ - Lint errors!" && echo && exit 1; \
 	fi
@@ -91,7 +84,6 @@ test-examples:
 	make -k travis || (echo "Tests in examples repo (https://github.com/goadesign/examples) failed" \
                   "due to changes in goa repo (branch: $(GOA_BRANCH))!" \
                   "Create a branch with name '$(GOA_BRANCH)' in the examples repo and fix these errors." && exit 1)
-	@rm -rf "$(GOPATH)/src/goa.design/examples"
 
 test-plugins:
 	@if [ -z $(GOA_BRANCH) ]; then\
@@ -104,4 +96,3 @@ test-plugins:
 	make -k test-plugins || (echo "Tests in plugin repo (https://github.com/goadesign/plugins) failed" \
                   "due to changes in goa repo (branch: $(GOA_BRANCH))!" \
                   "Create a branch with name '$(GOA_BRANCH)' in the plugin repo and fix these errors." && exit 1)
-	@rm -rf "$(GOPATH)/src/goa.design/plugins"
