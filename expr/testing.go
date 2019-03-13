@@ -6,9 +6,9 @@ import (
 	"goa.design/goa/eval"
 )
 
-// RunHTTPDSL returns the http DSL root resulting from running the given DSL.
+// RunDSL returns the DSL root resulting from running the given DSL.
 // Used only in tests.
-func RunHTTPDSL(t *testing.T, dsl func()) *RootExpr {
+func RunDSL(t *testing.T, dsl func()) *RootExpr {
 	setupDSLRun()
 
 	// run DSL (first pass)
@@ -25,9 +25,9 @@ func RunHTTPDSL(t *testing.T, dsl func()) *RootExpr {
 	return Root
 }
 
-// RunInvalidHTTPDSL returns the error resulting from running the given DSL.
+// RunInvalidDSL returns the error resulting from running the given DSL.
 // It is used only in tests.
-func RunInvalidHTTPDSL(t *testing.T, dsl func()) error {
+func RunInvalidDSL(t *testing.T, dsl func()) error {
 	setupDSLRun()
 
 	// run DSL (first pass)
@@ -44,25 +44,6 @@ func RunInvalidHTTPDSL(t *testing.T, dsl func()) error {
 	t.Fatal("expected a DSL evaluation error - got none")
 
 	return nil
-}
-
-// RunGRPCDSL returns the gRPC DSL root resulting from running the given DSL.
-// Used only in tests.
-func RunGRPCDSL(t *testing.T, dsl func()) *RootExpr {
-	setupDSLRun()
-
-	// run DSL (first pass)
-	if !eval.Execute(dsl, nil) {
-		t.Fatal(eval.Context.Error())
-	}
-
-	// run DSL (second pass)
-	if err := eval.RunDSL(); err != nil {
-		t.Fatal(err)
-	}
-
-	// return generated root
-	return Root
 }
 
 func setupDSLRun() {

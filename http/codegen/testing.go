@@ -13,7 +13,7 @@ func RunHTTPDSL(t *testing.T, dsl func()) *expr.RootExpr {
 	// reset all roots and codegen data structures
 	service.Services = make(service.ServicesData)
 	HTTPServices = make(ServicesData)
-	return expr.RunHTTPDSL(t, dsl)
+	return expr.RunDSL(t, dsl)
 }
 
 // makeGolden returns a file object used to write test expectations. If
