@@ -25,9 +25,9 @@ func TestHTTPResponseValidation(t *testing.T) {
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
 			if c.Error == "" {
-				expr.RunHTTPDSL(t, c.DSL)
+				expr.RunDSL(t, c.DSL)
 			} else {
-				err := expr.RunInvalidHTTPDSL(t, c.DSL)
+				err := expr.RunInvalidDSL(t, c.DSL)
 				if err.Error() != c.Error {
 					t.Errorf("got error %q, expected %q", err.Error(), c.Error)
 				}

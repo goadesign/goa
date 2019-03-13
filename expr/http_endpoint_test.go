@@ -20,9 +20,9 @@ func TestHTTPRouteValidation(t *testing.T) {
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
 			if c.Error == "" {
-				expr.RunHTTPDSL(t, c.DSL)
+				expr.RunDSL(t, c.DSL)
 			} else {
-				err := expr.RunInvalidHTTPDSL(t, c.DSL)
+				err := expr.RunInvalidDSL(t, c.DSL)
 				if err.Error() != c.Error {
 					t.Errorf("got error %q, expected %q", err.Error(), c.Error)
 				}
@@ -31,7 +31,7 @@ func TestHTTPRouteValidation(t *testing.T) {
 	}
 }
 
-func TestEndpointValidation(t *testing.T) {
+func TestHTTPEndpointValidation(t *testing.T) {
 	cases := map[string]struct {
 		DSL    func()
 		Errors []string
@@ -55,11 +55,11 @@ func TestEndpointValidation(t *testing.T) {
 	for name, c := range cases {
 		t.Run(name, func(t *testing.T) {
 			if c.Errors == nil || len(c.Errors) == 0 {
-				expr.RunHTTPDSL(t, c.DSL)
+				expr.RunDSL(t, c.DSL)
 			} else {
 				var errors []error
 
-				err := expr.RunInvalidHTTPDSL(t, c.DSL)
+				err := expr.RunInvalidDSL(t, c.DSL)
 				if err != nil {
 					if merr, ok := err.(eval.MultiError); ok {
 						for _, e := range merr {
@@ -84,7 +84,7 @@ func TestEndpointValidation(t *testing.T) {
 	}
 }
 
-func TestEndpointFinalization(t *testing.T) {
+func TestHTTPEndpointFinalization(t *testing.T) {
 	cases := map[string]struct {
 		DSL          func()
 		ExpectedBody expr.DataType
@@ -100,7 +100,7 @@ func TestEndpointFinalization(t *testing.T) {
 	}
 	for name, tc := range cases {
 		t.Run(name, func(t *testing.T) {
-			root := expr.RunHTTPDSL(t, tc.DSL)
+			root := expr.RunDSL(t, tc.DSL)
 			e := root.API.HTTP.Services[0].HTTPEndpoints[0]
 
 			if tc.ExpectedBody != nil {
