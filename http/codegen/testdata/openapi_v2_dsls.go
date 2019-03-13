@@ -152,6 +152,13 @@ var InvalidDSL = func() {
 			})
 		})
 	})
+	Service("testService", func() {
+		Method("testEndpoint", func() {
+			HTTP(func() {
+				GET("/")
+			})
+		})
+	})
 }
 
 var EmptyDSL = func() {

@@ -731,6 +731,7 @@ func buildRequestConvertData(request, payload *codegen.ContextualAttribute, md [
 		var data *InitData
 		{
 			data = buildInitData(request, payload, "message", "v", false, sd)
+			data.Name = fmt.Sprintf("New%sPayload", codegen.Goify(e.Name(), true))
 			data.Description = fmt.Sprintf("%s builds the payload of the %q endpoint of the %q service from the gRPC request type.", data.Name, e.Name(), svc.Name)
 			for _, m := range md {
 				// pass the metadata as arguments to payload constructor in server
@@ -822,6 +823,7 @@ func buildResponseConvertData(response, result *codegen.ContextualAttribute, hdr
 	var data *InitData
 	{
 		data = buildInitData(response, result, "message", "result", false, sd)
+		data.Name = fmt.Sprintf("New%sResult", codegen.Goify(e.Name(), true))
 		data.Description = fmt.Sprintf("%s builds the result type of the %q endpoint of the %q service from the gRPC response type.", data.Name, e.Name(), svc.Name)
 		for _, m := range hdrs {
 			// pass the headers as arguments to result constructor in client
@@ -885,11 +887,11 @@ func buildInitData(source, target *codegen.ContextualAttribute, sourceVar, targe
 	)
 	{
 		isStruct = expr.IsObject(target.Attribute.Expr().Type)
-		n := sd.Scope.GoTypeName(target.Attribute.Expr())
+		n := protoBufGoTypeName(target.Attribute.Expr(), sd.Scope)
 		if !isStruct {
 			// If target is array, map, or primitive the name will be suffixed with
 			// the definition (e.g int, []string, map[int]string) which is incorrect.
-			n = sd.Scope.GoTypeName(source.Attribute.Expr())
+			n = protoBufGoTypeName(source.Attribute.Expr(), sd.Scope)
 		}
 		name = "New" + n
 		code, helpers, err = protoBufTransform(source, target, sourceVar, targetVar, proto)

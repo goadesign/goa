@@ -13,8 +13,7 @@ install:
   - set PATH=%PATH%;c:\MinGW\bin;%GOPATH%\bin
 
 build_script:
-  - make travis
-  - if "%APPVEYOR_PULL_REQUEST_HEAD_REPO_BRANCH%" == "" ( make test-plugins GOA_BRANCH="%APPVEYOR_REPO_BRANCH%" ) else ( make test-plugins GOA_BRANCH="%APPVEYOR_PULL_REQUEST_HEAD_REPO_BRANCH%" )
+  - if "%APPVEYOR_PULL_REQUEST_HEAD_REPO_BRANCH%" == "" ( make travis GOA_BRANCH="%APPVEYOR_REPO_BRANCH%" ) else ( make travis GOA_BRANCH="%APPVEYOR_PULL_REQUEST_HEAD_REPO_BRANCH%" )
 
 test: off
 

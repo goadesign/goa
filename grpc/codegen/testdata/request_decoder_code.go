@@ -15,7 +15,7 @@ func DecodeMethodMessageUserTypeWithNestedUserTypesRequest(ctx context.Context, 
 	}
 	var payload *servicemessageusertypewithnestedusertypes.UT
 	{
-		payload = NewUT(message)
+		payload = NewMethodMessageUserTypeWithNestedUserTypesPayload(message)
 	}
 	return payload, nil
 }
@@ -38,7 +38,7 @@ func DecodeMethodUnaryRPCNoResultRequest(ctx context.Context, v interface{}, md 
 	}
 	var payload []string
 	{
-		payload = NewMethodUnaryRPCNoResultRequest(message)
+		payload = NewMethodUnaryRPCNoResultPayload(message)
 	}
 	return payload, nil
 }
@@ -61,7 +61,7 @@ func DecodeMethodMessageMapRequest(ctx context.Context, v interface{}, md metada
 	}
 	var payload map[int]*servicemessagemap.UT
 	{
-		payload = NewMethodMessageMapRequest(message)
+		payload = NewMethodMessageMapPayload(message)
 	}
 	return payload, nil
 }
@@ -81,7 +81,7 @@ func DecodeMethodServerStreamingRPCRequest(ctx context.Context, v interface{}, m
 	}
 	var payload int
 	{
-		payload = NewMethodServerStreamingRPCRequest(message)
+		payload = NewMethodServerStreamingRPCPayload(message)
 	}
 	return payload, nil
 }
@@ -148,7 +148,7 @@ func DecodeMethodBidirectionalStreamingRPCWithPayloadRequest(ctx context.Context
 	}
 	var payload *servicebidirectionalstreamingrpcwithpayload.Payload
 	{
-		payload = NewPayload(a, b)
+		payload = NewMethodBidirectionalStreamingRPCWithPayloadPayload(a, b)
 	}
 	return payload, nil
 }
@@ -187,7 +187,7 @@ func DecodeMethodMessageWithMetadataRequest(ctx context.Context, v interface{}, 
 	}
 	var payload *servicemessagewithmetadata.RequestUT
 	{
-		payload = NewRequestUT(message, inMetadata)
+		payload = NewMethodMessageWithMetadataPayload(message, inMetadata)
 	}
 	return payload, nil
 }
@@ -234,7 +234,7 @@ func DecodeMethodMessageWithValidateRequest(ctx context.Context, v interface{}, 
 	}
 	var payload *servicemessagewithvalidate.RequestUT
 	{
-		payload = NewRequestUT(message, inMetadata)
+		payload = NewMethodMessageWithValidatePayload(message, inMetadata)
 	}
 	return payload, nil
 }
@@ -278,7 +278,7 @@ func DecodeMethodMessageWithSecurityRequest(ctx context.Context, v interface{}, 
 	}
 	var payload *servicemessagewithsecurity.RequestUT
 	{
-		payload = NewRequestUT(message, token, key, username, password)
+		payload = NewMethodMessageWithSecurityPayload(message, token, key, username, password)
 		if payload.Token != nil {
 			if strings.Contains(*payload.Token, " ") {
 				// Remove authorization scheme prefix (e.g. "Bearer")
