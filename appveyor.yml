@@ -10,7 +10,7 @@ clone_folder: c:\gopath\src\goa.design\goa
 install:
   - go version
   - copy c:\MinGW\bin\mingw32-make.exe c:\MinGW\bin\make.exe
-  - set PATH=%PATH%;c:\MinGW\bin;%GOPATH%\bin
+  - set PATH=c:\MinGW\bin;%GOPATH%\bin;%PATH%
 
 build_script:
   - if "%APPVEYOR_PULL_REQUEST_HEAD_REPO_BRANCH%" == "" ( make travis GOA_BRANCH="%APPVEYOR_REPO_BRANCH%" ) else ( make travis GOA_BRANCH="%APPVEYOR_PULL_REQUEST_HEAD_REPO_BRANCH%" )
