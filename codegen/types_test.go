@@ -112,8 +112,8 @@ func TestGoify(t *testing.T) {
 		firstUpper bool
 		expected   string
 	}{
-		"empty":                                             {"", false, ""},
-		"first upper false":                                 {"blue_id", false, "blueID"},
+		"empty":             {"", false, ""},
+		"first upper false": {"blue_id", false, "blueID"},
 		"first upper false normal identifier all lower":     {"blue", false, "blue"},
 		"first upper false and UUID":                        {"blue_uuid", false, "blueUUID"},
 		"first upper true":                                  {"blue_id", true, "BlueID"},
