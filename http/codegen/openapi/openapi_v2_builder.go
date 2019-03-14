@@ -22,6 +22,8 @@ func NewV2(root *expr.RootExpr, h *expr.HostExpr) (*V2, error) {
 	tags := tagsFromExpr(root.Meta)
 	u, err := url.Parse(string(h.URIs[0]))
 	if err != nil {
+		// This should never happen because server expression must have been
+		// validated. If it does, then we must fix server validation.
 		return nil, fmt.Errorf("failed to parse server URL: %s", err)
 	}
 	host := u.Host
@@ -30,10 +32,7 @@ func NewV2(root *expr.RootExpr, h *expr.HostExpr) (*V2, error) {
 	if hasAbsoluteRoutes(root) {
 		basePath = ""
 	}
-	params, err := paramsFromExpr(root.API.HTTP.Params, basePath)
-	if err != nil {
-		return nil, err
-	}
+	params := paramsFromExpr(root.API.HTTP.Params, basePath)
 	var paramMap map[string]*Parameter
 	if len(params) > 0 {
 		paramMap = make(map[string]*Parameter, len(params))
@@ -64,10 +63,7 @@ func NewV2(root *expr.RootExpr, h *expr.HostExpr) (*V2, error) {
 	}
 
 	for _, he := range root.API.HTTP.Errors {
-		res, err := responseSpecFromExpr(s, root, he.Response, "")
-		if err != nil {
-			return nil, err
-		}
+		res := responseSpecFromExpr(s, root, he.Response, "")
 		if s.Responses == nil {
 			s.Responses = make(map[string]*Response)
 		}
@@ -85,23 +81,16 @@ func NewV2(root *expr.RootExpr, h *expr.HostExpr) (*V2, error) {
 			if !mustGenerate(fs.Meta) || !mustGenerate(fs.Service.Meta) {
 				continue
 			}
-			if err := buildPathFromFileServer(s, root, fs); err != nil {
-				return nil, err
-			}
+			buildPathFromFileServer(s, root, fs)
 		}
 		for _, a := range res.HTTPEndpoints {
 			if !mustGenerate(a.Meta) || !mustGenerate(a.MethodExpr.Meta) {
 				continue
 			}
 			for _, route := range a.Routes {
-				if err := buildPathFromExpr(s, root, h, route, basePath); err != nil {
-					return nil, err
-				}
+				buildPathFromExpr(s, root, h, route, basePath)
 			}
 		}
-	}
-	if err != nil {
-		return nil, err
 	}
 	if len(Definitions) > 0 {
 		s.Definitions = make(map[string]*Schema)
@@ -331,9 +320,9 @@ func summaryFromMeta(name string, meta expr.MetaExpr) string {
 	return name
 }
 
-func paramsFromExpr(params *expr.MappedAttributeExpr, path string) ([]*Parameter, error) {
+func paramsFromExpr(params *expr.MappedAttributeExpr, path string) []*Parameter {
 	if params == nil {
-		return nil, nil
+		return nil
 	}
 	var (
 		res       []*Parameter
@@ -354,7 +343,7 @@ func paramsFromExpr(params *expr.MappedAttributeExpr, path string) ([]*Parameter
 		i++
 		return nil
 	})
-	return res, nil
+	return res
 }
 
 func paramsFromHeaders(endpoint *expr.HTTPEndpointExpr) []*Parameter {
@@ -428,7 +417,7 @@ func itemsFromExpr(at *expr.AttributeExpr) *Items {
 	return items
 }
 
-func responseSpecFromExpr(s *V2, root *expr.RootExpr, r *expr.HTTPResponseExpr, typeNamePrefix string) (*Response, error) {
+func responseSpecFromExpr(s *V2, root *expr.RootExpr, r *expr.HTTPResponseExpr, typeNamePrefix string) *Response {
 	var schema *Schema
 	if mt, ok := r.Body.Type.(*expr.ResultTypeExpr); ok {
 		view := expr.DefaultView
@@ -440,10 +429,7 @@ func responseSpecFromExpr(s *V2, root *expr.RootExpr, r *expr.HTTPResponseExpr, 
 	} else if r.Body.Type != expr.Empty {
 		schema = AttributeTypeSchemaWithPrefix(root.API, r.Body, typeNamePrefix)
 	}
-	headers, err := headersFromExpr(r.Headers)
-	if err != nil {
-		return nil, err
-	}
+	headers := headersFromExpr(r.Headers)
 	desc := r.Description
 	if desc == "" {
 		desc = fmt.Sprintf("%s response.", http.StatusText(r.StatusCode))
@@ -453,16 +439,12 @@ func responseSpecFromExpr(s *V2, root *expr.RootExpr, r *expr.HTTPResponseExpr, 
 		Schema:      schema,
 		Headers:     headers,
 		Extensions:  ExtensionsFromExpr(r.Meta),
-	}, nil
+	}
 }
 
-func headersFromExpr(headers *expr.MappedAttributeExpr) (map[string]*Header, error) {
+func headersFromExpr(headers *expr.MappedAttributeExpr) map[string]*Header {
 	if headers == nil {
-		return nil, nil
-	}
-	obj := expr.AsObject(headers.Type)
-	if obj == nil {
-		return nil, fmt.Errorf("invalid headers definition, not an object")
+		return nil
 	}
 	res := make(map[string]*Header)
 	codegen.WalkMappedAttr(headers, func(_, n string, required bool, at *expr.AttributeExpr) error {
@@ -476,12 +458,12 @@ func headersFromExpr(headers *expr.MappedAttributeExpr) (map[string]*Header, err
 		return nil
 	})
 	if len(res) == 0 {
-		return nil, nil
+		return nil
 	}
-	return res, nil
+	return res
 }
 
-func buildPathFromFileServer(s *V2, root *expr.RootExpr, fs *expr.HTTPFileServerExpr) error {
+func buildPathFromFileServer(s *V2, root *expr.RootExpr, fs *expr.HTTPFileServerExpr) {
 	for _, path := range fs.RequestPaths {
 		wcs := expr.ExtractHTTPWildcards(path)
 		var param []*Parameter
@@ -545,11 +527,9 @@ func buildPathFromFileServer(s *V2, root *expr.RootExpr, fs *expr.HTTPFileServer
 		p.Get = operation
 		p.Extensions = ExtensionsFromExpr(fs.Meta)
 	}
-
-	return nil
 }
 
-func buildPathFromExpr(s *V2, root *expr.RootExpr, h *expr.HostExpr, route *expr.RouteExpr, basePath string) error {
+func buildPathFromExpr(s *V2, root *expr.RootExpr, h *expr.HostExpr, route *expr.RouteExpr, basePath string) {
 	endpoint := route.Endpoint
 
 	tagNames := tagNamesFromExpr(endpoint.Service.Meta, endpoint.Meta)
@@ -558,10 +538,7 @@ func buildPathFromExpr(s *V2, root *expr.RootExpr, h *expr.HostExpr, route *expr
 		tagNames = []string{route.Endpoint.Service.Name()}
 	}
 	for _, key := range route.FullPaths() {
-		params, err := paramsFromExpr(endpoint.Params, key)
-		if err != nil {
-			return err
-		}
+		params := paramsFromExpr(endpoint.Params, key)
 		params = append(params, paramsFromHeaders(endpoint)...)
 		produces := []string{}
 		responses := make(map[string]*Response, len(endpoint.Responses))
@@ -575,10 +552,7 @@ func buildPathFromExpr(s *V2, root *expr.RootExpr, h *expr.HostExpr, route *expr
 					r.StatusCode = expr.StatusSwitchingProtocols
 				}
 			}
-			resp, err := responseSpecFromExpr(s, root, r, endpoint.Service.Name())
-			if err != nil {
-				return err
-			}
+			resp := responseSpecFromExpr(s, root, r, endpoint.Service.Name())
 			responses[strconv.Itoa(r.StatusCode)] = resp
 			if r.ContentType != "" {
 				foundCT := false
@@ -594,10 +568,7 @@ func buildPathFromExpr(s *V2, root *expr.RootExpr, h *expr.HostExpr, route *expr
 			}
 		}
 		for _, er := range endpoint.HTTPErrors {
-			resp, err := responseSpecFromExpr(s, root, er.Response, endpoint.Service.Name())
-			if err != nil {
-				return err
-			}
+			resp := responseSpecFromExpr(s, root, er.Response, endpoint.Service.Name())
 			responses[strconv.Itoa(er.Response.StatusCode)] = resp
 		}
 
@@ -724,7 +695,6 @@ func buildPathFromExpr(s *V2, root *expr.RootExpr, h *expr.HostExpr, route *expr
 		}
 		p.Extensions = ExtensionsFromExpr(route.Endpoint.Meta)
 	}
-	return nil
 }
 
 func docsFromExpr(docs *expr.DocsExpr) *ExternalDocs {
