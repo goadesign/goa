@@ -16,11 +16,11 @@ GO_FILES=$(shell find . -type f -name '*.go')
 ifeq ($(GOOS),windows)
 EXAMPLES_DIR="$(GOPATH)\src\goa.design\examples"
 PLUGINS_DIR="$(GOPATH)\src\goa.design\plugins"
-GOBIN="$(GOPATH)\bin"
+GOBIN=$(GOPATH)\bin
 else
-EXAMPLES_DIR="$(GOPATH)/src/goa.design/examples"
-PLUGINS_DIR="$(GOPATH)/src/goa.design/plugins"
-GOBIN="$(GOPATH)/bin"
+EXAMPLES_DIR=$(GOPATH)/src/goa.design/examples
+PLUGINS_DIR=$(GOPATH)/src/goa.design/plugins
+GOBIN=$(GOPATH)/bin
 endif
 
 # Only list test and build dependencies
@@ -38,17 +38,17 @@ all: lint test
 travis: depend all test-examples test-plugins
 
 # Install protoc
-PROTOC_VERSION="3.6.1"
+PROTOC_VERSION=3.6.1
 ifeq ($(GOOS),linux)
-PROTOC="protoc-$(PROTOC_VERSION)-linux-x86_64"
-PROTOC_EXEC="$(PROTOC)/bin/protoc"
+PROTOC=protoc-$(PROTOC_VERSION)-linux-x86_64
+PROTOC_EXEC=$(PROTOC)/bin/protoc
 else
 	ifeq ($(GOOS),darwin)
-PROTOC="protoc-$(PROTOC_VERSION)-osx-x86_64"
-PROTOC_EXEC="$(PROTOC)/bin/protoc"
+PROTOC=protoc-$(PROTOC_VERSION)-osx-x86_64
+PROTOC_EXEC=$(PROTOC)/bin/protoc
 	else
 		ifeq ($(GOOS),windows)
-PROTOC="protoc-$(PROTOC_VERSION)-win32"
+PROTOC=protoc-$(PROTOC_VERSION)-win32
 PROTOC_EXEC="$(PROTOC)\bin\protoc.exe"
 		endif
 	endif
@@ -77,7 +77,7 @@ test-examples:
 	@if [ -z $(GOA_BRANCH) ]; then\
 		GOA_BRANCH=$$(git rev-parse --abbrev-ref HEAD); \
 	fi
-	@if [ ! -d "$(GOPATH)/src/goa.design/examples" ]; then\
+	@if [ ! -d $(EXAMPLES_DIR) ]; then\
 		git clone https://github.com/goadesign/examples.git $(EXAMPLES_DIR); \
 	fi
 	@cd $(EXAMPLES_DIR) && git checkout $(GOA_BRANCH) || echo "Using master branch in examples repo" && \
@@ -89,7 +89,7 @@ test-plugins:
 	@if [ -z $(GOA_BRANCH) ]; then\
 		GOA_BRANCH=$$(git rev-parse --abbrev-ref HEAD); \
 	fi
-	@if [ ! -d "$(GOPATH)/src/goa.design/plugins" ]; then\
+	@if [ ! -d $(PLUGINS_DIR) ]; then\
 		git clone https://github.com/goadesign/plugins.git $(PLUGINS_DIR); \
 	fi
 	@cd $(PLUGINS_DIR) && git checkout $(GOA_BRANCH) || echo "Using master branch in plugins repo" && \
