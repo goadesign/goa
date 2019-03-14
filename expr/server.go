@@ -11,7 +11,7 @@ import (
 )
 
 // WildcardRegex is the regular expression used to capture path parameters.
-var WildcardRegex = regexp.MustCompile(`/{\*?([a-zA-Z0-9_]+)}`)
+var WildcardRegex = regexp.MustCompile(`{\*?([a-zA-Z0-9_]+)}`)
 
 type (
 	// ServerExpr contains a single API host information.
@@ -44,16 +44,6 @@ type (
 	// URIExpr represents a parameterized URI.
 	URIExpr string
 )
-
-// ExtractWildcards returns the names of the wildcards that appear in path.
-func ExtractWildcards(path string) []string {
-	matches := WildcardRegex.FindAllStringSubmatch(path, -1)
-	wcs := make([]string, len(matches))
-	for i, m := range matches {
-		wcs[i] = m[1]
-	}
-	return wcs
-}
 
 // EvalName is the qualified name of the expression.
 func (s *ServerExpr) EvalName() string { return "Server " + s.Name }
