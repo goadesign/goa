@@ -1,11 +1,12 @@
 package codegen
 
 import (
+	"path"
+	"path/filepath"
+
 	"goa.design/goa/codegen"
 	"goa.design/goa/codegen/cli"
 	"goa.design/goa/expr"
-	"path"
-	"path/filepath"
 )
 
 // ClientCLIFiles returns the CLI files to generate a command-line client that

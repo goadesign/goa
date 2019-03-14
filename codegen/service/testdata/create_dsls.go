@@ -1,7 +1,7 @@
 package testdata
 
 import (
-	"goa.design/goa/codegen/service/testdata/alias-external"
+	aliasd "goa.design/goa/codegen/service/testdata/alias-external"
 	"goa.design/goa/codegen/service/testdata/external"
 	. "goa.design/goa/dsl"
 )

@@ -2,10 +2,11 @@ package codegen
 
 import (
 	"fmt"
+	"path/filepath"
+
 	"goa.design/goa/codegen"
 	"goa.design/goa/codegen/cli"
 	"goa.design/goa/expr"
-	"path/filepath"
 )
 
 // commandData wraps the common CommandData and adds HTTP-specific fields.

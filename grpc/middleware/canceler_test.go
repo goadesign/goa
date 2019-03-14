@@ -2,10 +2,11 @@ package middleware_test
 
 import (
 	"context"
+	"testing"
+
 	grpcm "goa.design/goa/grpc/middleware"
 	"goa.design/goa/middleware"
 	"google.golang.org/grpc"
-	"testing"
 )
 
 type (
