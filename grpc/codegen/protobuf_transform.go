@@ -128,14 +128,18 @@ func (p *protoBufTransformer) MakeCompatible(source, target *codegen.ContextualA
 		tgt.Attribute.Expr().Type,
 		ta.SourceVar+suffix, ta.TargetVar+suffix); err != nil {
 		if p.proto {
-			p.targetInit = target.Attribute.Name()
+			if !ta.Helper {
+				p.targetInit = target.Attribute.Name()
+			}
 			tgtAtt := unwrapAttr(expr.DupAtt(target.Attribute.Expr()))
 			tgt = target.Dup(tgtAtt, target.Required)
 		} else {
 			srcAtt := unwrapAttr(expr.DupAtt(source.Attribute.Expr()))
 			src = source.Dup(srcAtt, source.Required)
 		}
-		p.wrapped = true
+		if !ta.Helper {
+			p.wrapped = true
+		}
 		if err = codegen.IsCompatible(
 			src.Attribute.Expr().Type,
 			tgt.Attribute.Expr().Type,

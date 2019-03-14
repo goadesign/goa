@@ -179,8 +179,8 @@ func GoObjectTransform(source, target *ContextualAttribute, ta *TransformAttrs, 
 	buffer.WriteString(fmt.Sprintf("%s %s %s%s{%s}\n", ta.TargetVar, assign, deref, target.Attribute.Name(), initCode))
 	buffer.WriteString(postInitCode)
 
-	// iterate through non-primitive attributes to initialize rest of the
-	// struct fields
+	// iterate through attributes to initialize rest of the struct fields and
+	// handle default values
 	var err error
 	walkMatches(source, target, func(srcMatt, tgtMatt *expr.MappedAttributeExpr, srcc, tgtc *ContextualAttribute, n string) {
 		var (
@@ -271,7 +271,7 @@ func GoTransformHelpers(source, target *ContextualAttribute, t Transformer, pref
 	var (
 		err error
 
-		ta = &TransformAttrs{}
+		ta = &TransformAttrs{Helper: true}
 	)
 	if source, target, ta, err = t.MakeCompatible(source, target, ta, ""); err != nil {
 		return nil, err

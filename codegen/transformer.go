@@ -118,6 +118,9 @@ type (
 		// NewVar is used to determine the assignment operator to initialize
 		// TargetVar.
 		NewVar bool
+		// Helper if true indicates that the attributes are used to generate
+		// helper functions.
+		Helper bool
 	}
 
 	// TransformFunctionData describes a helper function used to transform
