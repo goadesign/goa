@@ -97,6 +97,10 @@ func endpointParser(genpkg string, root *expr.RootExpr, svr *expr.ServerExpr, da
 	}
 	for _, sv := range svr.Services {
 		svc := root.Service(sv)
+		if svc == nil {
+			panic("No HTTP service found for: " + sv)
+		}
+
 		sd := HTTPServices.Get(svc.Name)
 		if sd == nil {
 			continue
