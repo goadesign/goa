@@ -6,7 +6,6 @@ import (
 	"net"
 	"net/http"
 	"testing"
-	//goahttp "goa.design/goa/http"
 
 	"goa.design/goa/middleware/xray"
 )

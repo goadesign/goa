@@ -7,12 +7,13 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"goa.design/goa/codegen"
-	"goa.design/goa/codegen/service"
-	"goa.design/goa/expr"
 	"reflect"
 	"strconv"
 	"strings"
+
+	"goa.design/goa/codegen"
+	"goa.design/goa/codegen/service"
+	"goa.design/goa/expr"
 )
 
 type (

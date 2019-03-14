@@ -5,7 +5,7 @@ import (
 
 	"github.com/golang/protobuf/proto"
 	"goa.design/goa"
-	"goa.design/goa/grpc/pb"
+	goapb "goa.design/goa/grpc/pb"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )

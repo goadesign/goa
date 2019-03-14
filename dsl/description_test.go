@@ -3,8 +3,8 @@ package dsl
 import (
 	"testing"
 
-	"goa.design/goa/expr"
 	"goa.design/goa/eval"
+	"goa.design/goa/expr"
 )
 
 func TestDescription(t *testing.T) {

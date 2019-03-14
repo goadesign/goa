@@ -3,9 +3,9 @@ package dsl_test
 import (
 	"testing"
 
-	"goa.design/goa/expr"
 	. "goa.design/goa/dsl"
 	"goa.design/goa/eval"
+	"goa.design/goa/expr"
 )
 
 func TestMethod(t *testing.T) {
