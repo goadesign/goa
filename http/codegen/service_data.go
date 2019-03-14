@@ -650,7 +650,7 @@ func (d ServicesData) analyze(hs *expr.HTTPServiceExpr) *ServiceData {
 		i := 0
 		for _, r := range a.Routes {
 			for _, rpath := range r.FullPaths() {
-				params := expr.ExtractRouteWildcards(rpath)
+				params := expr.ExtractHTTPWildcards(rpath)
 				var (
 					init *InitData
 				)
