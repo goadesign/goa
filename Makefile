@@ -16,7 +16,7 @@ GO_FILES=$(shell find . -type f -name '*.go')
 ifeq ($(GOOS),windows)
 EXAMPLES_DIR="$(GOPATH)\src\goa.design\examples"
 PLUGINS_DIR="$(GOPATH)\src\goa.design\plugins"
-GOBIN=$(GOPATH)\bin
+GOBIN="$(GOPATH)\bin"
 else
 EXAMPLES_DIR=$(GOPATH)/src/goa.design/examples
 PLUGINS_DIR=$(GOPATH)/src/goa.design/plugins
