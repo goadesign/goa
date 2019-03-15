@@ -1,3 +1,5 @@
+# Contributing to goa
+
 Thank you for your interest in contributing to the goa project! We appreciate
 contributions via submitting Github issues and/or pull requests.
 
@@ -28,6 +30,8 @@ installed using `go get`) to avoid messing with import paths while testing
 your fix.
 3) [Open issues](https://github.com/goadesign/goa/issues) labeled as `good first
 issue` are ideal to understand the source code and make minor contributions.
+Issues labeled `help wanted` are bugs/features that are not currently being
+worked on and contributing to them are most welcome.
 4) Link the issue that the PR intends to solve in the PR description. If an issue
 does not exist, adding a description in the PR that describes the issue and the
 fix is recommended.
