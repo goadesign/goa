@@ -549,7 +549,7 @@ func toSchemaHrefs(r *expr.RouteExpr) []string {
 	paths := r.FullPaths()
 	res := make([]string, len(paths))
 	for i, path := range paths {
-		params := expr.ExtractRouteWildcards(path)
+		params := expr.ExtractHTTPWildcards(path)
 		args := make([]interface{}, len(params))
 		for j, p := range params {
 			args[j] = fmt.Sprintf("/{%s}", p)

@@ -20,23 +20,25 @@ var update = flag.Bool("update", false, "update .golden files")
 
 func TestOpenAPI(t *testing.T) {
 	cases := map[string]struct {
-		DSL   func()
-		Error bool
+		DSL     func()
+		NilSpec bool
 	}{
-		"empty":   {DSL: testdata.EmptyDSL, Error: false},
-		"valid":   {DSL: testdata.SimpleDSL, Error: false},
-		"invalid": {DSL: testdata.InvalidDSL, Error: true},
+		"empty": {DSL: testdata.EmptyDSL, NilSpec: true},
+		"valid": {DSL: testdata.SimpleDSL, NilSpec: false},
 	}
 	for k, c := range cases {
 		// Reset global variables
 		openapi.Definitions = make(map[string]*openapi.Schema)
 		root := RunHTTPDSL(t, c.DSL)
-		_, err := OpenAPIFiles(root)
-		if err != nil && !c.Error {
-			t.Errorf("%s: unexpected error %s", k, err)
+		spec, err := OpenAPIFiles(root)
+		if err != nil {
+			t.Fatalf("OpenAPI failed with %s", err)
 		}
-		if err == nil && c.Error {
-			t.Errorf("%s: expected error", k)
+		if spec == nil && !c.NilSpec {
+			t.Errorf("%s: unexpected specs: got nil, expected non-nil", k)
+		}
+		if spec != nil && c.NilSpec {
+			t.Errorf("%s: unexpected specs: got non-nil, expected nil", k)
 		}
 	}
 }
@@ -99,8 +101,7 @@ func TestSections(t *testing.T) {
 					}
 					var buf bytes.Buffer
 					tmpl := template.Must(template.New("openapi").Funcs(s[0].FuncMap).Parse(s[0].Source))
-					err = tmpl.Execute(&buf, s[0].Data)
-					if err != nil {
+					if err := tmpl.Execute(&buf, s[0].Data); err != nil {
 						t.Fatalf("failed to render template: %s", err)
 					}
 					if err := validateSwagger(buf.Bytes()); err != nil {
@@ -166,8 +167,7 @@ func TestValidations(t *testing.T) {
 					}
 					var buf bytes.Buffer
 					tmpl := template.Must(template.New("openapi").Funcs(s[0].FuncMap).Parse(s[0].Source))
-					err = tmpl.Execute(&buf, s[0].Data)
-					if err != nil {
+					if err := tmpl.Execute(&buf, s[0].Data); err != nil {
 						t.Fatalf("failed to render template: %s", err)
 					}
 					if err := validateSwagger(buf.Bytes()); err != nil {
@@ -231,8 +231,7 @@ func TestExtensions(t *testing.T) {
 					}
 					var buf bytes.Buffer
 					tmpl := template.Must(template.New("openapi").Funcs(s[0].FuncMap).Parse(s[0].Source))
-					err = tmpl.Execute(&buf, s[0].Data)
-					if err != nil {
+					if err := tmpl.Execute(&buf, s[0].Data); err != nil {
 						t.Fatalf("failed to render template: %s", err)
 					}
 					if err := validateSwagger(buf.Bytes()); err != nil {

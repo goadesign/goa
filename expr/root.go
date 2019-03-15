@@ -63,6 +63,13 @@ func (r *RootExpr) WalkSets(walk eval.SetWalker) {
 	// Top level API DSL
 	walk(eval.ExpressionSet{r.API})
 
+	// Servers
+	servers := make(eval.ExpressionSet, len(r.API.Servers))
+	for i, s := range r.API.Servers {
+		servers[i] = s
+	}
+	walk(servers)
+
 	// User types
 	types := make(eval.ExpressionSet, len(r.Types))
 	for i, t := range r.Types {

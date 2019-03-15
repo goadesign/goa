@@ -144,23 +144,6 @@ var ExplicitViewDSL = func() {
 	})
 }
 
-var InvalidDSL = func() {
-	var _ = API("test", func() {
-		Server("test", func() {
-			Host("localhost", func() {
-				URI("http://[::1]:namedport") // invalid URL
-			})
-		})
-	})
-	Service("testService", func() {
-		Method("testEndpoint", func() {
-			HTTP(func() {
-				GET("/")
-			})
-		})
-	})
-}
-
 var EmptyDSL = func() {
 	var _ = API("test", func() {
 		Server("test", func() {

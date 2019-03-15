@@ -10,8 +10,9 @@ import (
 	"goa.design/goa/eval"
 )
 
-// WildcardRegex is the regular expression used to capture path parameters.
-var WildcardRegex = regexp.MustCompile(`/{\*?([a-zA-Z0-9_]+)}`)
+// uriVariableRegex is the regular expression used to capture variables in URI
+// expression.
+var uriVariableRegex = regexp.MustCompile(`{\*?([a-zA-Z0-9_]+)}`)
 
 type (
 	// ServerExpr contains a single API host information.
@@ -44,16 +45,6 @@ type (
 	// URIExpr represents a parameterized URI.
 	URIExpr string
 )
-
-// ExtractWildcards returns the names of the wildcards that appear in path.
-func ExtractWildcards(path string) []string {
-	matches := WildcardRegex.FindAllStringSubmatch(path, -1)
-	wcs := make([]string, len(matches))
-	for i, m := range matches {
-		wcs[i] = m[1]
-	}
-	return wcs
-}
 
 // EvalName is the qualified name of the expression.
 func (s *ServerExpr) EvalName() string { return "Server " + s.Name }
@@ -138,7 +129,7 @@ func (h *HostExpr) Validate() error {
 		verr.Add(h, "host must defined at least one URI")
 	}
 	for _, u := range h.URIs {
-		vu := WildcardRegex.ReplaceAllString(string(u), "/w")
+		vu := uriVariableRegex.ReplaceAllString(string(u), "/w")
 		pu, err := url.Parse(vu)
 		if err != nil {
 			verr.Add(h, "malformed URI %q", u)
