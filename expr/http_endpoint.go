@@ -73,16 +73,6 @@ type (
 	}
 )
 
-// ExtractRouteWildcards returns the names of the wildcards that appear in path.
-func ExtractRouteWildcards(path string) []string {
-	matches := HTTPWildcardRegex.FindAllStringSubmatch(path, -1)
-	wcs := make([]string, len(matches))
-	for i, m := range matches {
-		wcs[i] = m[1]
-	}
-	return wcs
-}
-
 // Name of HTTP endpoint
 func (e *HTTPEndpointExpr) Name() string {
 	return e.MethodExpr.Name
@@ -773,7 +763,7 @@ func (r *RouteExpr) Params() []string {
 	paths := r.FullPaths()
 	var res []string
 	for _, p := range paths {
-		ws := ExtractWildcards(p)
+		ws := ExtractHTTPWildcards(p)
 		for _, w := range ws {
 			found := false
 			for _, r := range res {
