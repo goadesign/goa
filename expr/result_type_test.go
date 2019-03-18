@@ -40,6 +40,50 @@ func TestResultTypeExprView(t *testing.T) {
 	}
 }
 
+func TestResultTypeExprHasMultipleViews(t *testing.T) {
+	var (
+		viewFoo = &ViewExpr{
+			Name: "foo",
+		}
+		viewBar = &ViewExpr{
+			Name: "bar",
+		}
+	)
+	cases := map[string]struct {
+		views    []*ViewExpr
+		expected bool
+	}{
+		"multiple views": {
+			views: []*ViewExpr{
+				viewFoo,
+				viewBar,
+			},
+			expected: true,
+		},
+		"one view": {
+			views: []*ViewExpr{
+				viewFoo,
+			},
+			expected: false,
+		},
+		"no view": {
+			views:    []*ViewExpr{},
+			expected: false,
+		},
+	}
+
+	for k, tc := range cases {
+		t.Run(k, func(t *testing.T) {
+			r := ResultTypeExpr{
+				Views: tc.views,
+			}
+			if actual := r.HasMultipleViews(); actual != tc.expected {
+				t.Errorf("got %#v, expected %#v", actual, tc.expected)
+			}
+		})
+	}
+}
+
 func TestCanonicalIdentifier(t *testing.T) {
 	cases := map[string]struct {
 		identifier string
