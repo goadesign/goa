@@ -20,32 +20,42 @@ const (
 func ProtoFiles(genpkg string, root *expr.RootExpr) []*codegen.File {
 	fw := make([]*codegen.File, len(root.API.GRPC.Services))
 	for i, svc := range root.API.GRPC.Services {
-		fw[i] = protoFile(genpkg, root.API, svc)
+		fw[i] = protoFile(genpkg, svc)
 	}
 	return fw
 }
 
-func protoFile(genpkg string, api *expr.APIExpr, svc *expr.GRPCServiceExpr) *codegen.File {
+func protoFile(genpkg string, svc *expr.GRPCServiceExpr) *codegen.File {
 	data := GRPCServices.Get(svc.Name())
 	svcName := codegen.SnakeCase(data.Service.VarName)
 	path := filepath.Join(codegen.Gendir, "grpc", svcName, pbPkgName, svcName+".proto")
 
-	title := fmt.Sprintf("%s protocol buffer definition", svc.Name())
 	sections := []*codegen.SectionTemplate{
-		header(title, api.Name, svc.Name(), []*codegen.ImportSpec{}),
+		// header comments
 		&codegen.SectionTemplate{
-			Name:   "grpc-service",
-			Source: serviceT,
-			Data:   data,
+			Name:   "proto-header",
+			Source: protoHeaderT,
+			Data: map[string]interface{}{
+				"Title":       fmt.Sprintf("%s protocol buffer definition", svc.Name()),
+				"ToolVersion": pkg.Version(),
+			},
 		},
+		// proto syntax and package
+		&codegen.SectionTemplate{
+			Name:   "proto-start",
+			Source: protoStartT,
+			Data: map[string]interface{}{
+				"ProtoVersion": ProtoVersion,
+				"Pkg":          codegen.SnakeCase(codegen.Goify(svcName, false)),
+			},
+		},
+		// service definition
+		&codegen.SectionTemplate{Name: "grpc-service", Source: serviceT, Data: data},
 	}
 
+	// message definition
 	for _, m := range data.Messages {
-		sections = append(sections, &codegen.SectionTemplate{
-			Name:   "grpc-message",
-			Source: messageT,
-			Data:   m,
-		})
+		sections = append(sections, &codegen.SectionTemplate{Name: "grpc-message", Source: messageT, Data: m})
 	}
 
 	return &codegen.File{
@@ -70,24 +80,8 @@ func protoc(path string) error {
 	return nil
 }
 
-// header returns a proto source file header section template.
-func header(title, pack, gopkg string, imports []*codegen.ImportSpec) *codegen.SectionTemplate {
-	return &codegen.SectionTemplate{
-		Name:   "source-header",
-		Source: headerT,
-		Data: map[string]interface{}{
-			"Title":        title,
-			"ToolVersion":  pkg.Version(),
-			"ProtoVersion": ProtoVersion,
-			"Pkg":          codegen.SnakeCase(codegen.Goify(pack, false)),
-			"GoPkg":        codegen.SnakeCase(codegen.Goify(gopkg, false)),
-			"Imports":      imports,
-		},
-	}
-}
-
 const (
-	headerT = `{{ if .Title -}}
+	protoHeaderT = `{{ if .Title -}}
 // Code generated with goa {{ .ToolVersion }}, DO NOT EDIT.
 //
 // {{ .Title }}
@@ -95,19 +89,19 @@ const (
 // Command:
 {{ comment commandLine }}
 {{- end }}
+`
 
+	protoStartT = `
 syntax = {{ printf "%q" .ProtoVersion }};
 
 package {{ .Pkg }};
 
-option go_package = "{{ .GoPkg }}pb";
-
-{{ range .Imports }}
-import {{ .Code }};
-{{ end }}`
+option go_package = "{{ .Pkg }}pb";
+`
 
 	// input: ServiceData
-	serviceT = `{{ .Description | comment }}
+	serviceT = `
+{{ .Description | comment }}
 service {{ .Name }} {
 	{{- range .Endpoints }}
 	{{ if .Method.Description }}{{ .Method.Description | comment }}{{ end }}

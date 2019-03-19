@@ -34,12 +34,11 @@ func TestProtoFiles(t *testing.T) {
 			if len(sections) < 3 {
 				t.Fatalf("got %d sections, expected at least three", len(sections))
 			}
-			hdrCode := sectionCode(t, sections[0])
 			code := sectionCode(t, sections[1:]...)
 			if code != c.Code {
 				t.Errorf("%s: got\n%s\ngot vs. expected:\n%s", c.Name, code, codegen.Diff(t, code, c.Code))
 			}
-			fpath := codegen.CreateTempFile(t, hdrCode+code)
+			fpath := codegen.CreateTempFile(t, code)
 			if err := protoc(fpath); err != nil {
 				t.Fatalf("error occurred when compiling proto file %q: %s", fpath, err)
 			}
@@ -74,8 +73,8 @@ func TestMessageDefSection(t *testing.T) {
 			if len(sections) < 3 {
 				t.Fatalf("got %d sections, expected at least three", len(sections))
 			}
-			code := sectionCode(t, sections[:1]...)
-			msgCode := sectionCode(t, sections[2:]...)
+			code := sectionCode(t, sections[:2]...)
+			msgCode := sectionCode(t, sections[3:]...)
 			if msgCode != c.Code {
 				t.Errorf("%s: got\n%s\ngot vs. expected:\n%s", c.Name, msgCode, codegen.Diff(t, msgCode, c.Code))
 			}
