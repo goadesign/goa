@@ -57,7 +57,7 @@ func exampleServiceFile(genpkg string, root *expr.RootExpr, svc *expr.ServiceExp
 	specs := []*codegen.ImportSpec{
 		{Path: "context"},
 		{Path: "log"},
-		{Path: path.Join(genpkg, codegen.SnakeCase(svc.Name)), Name: scope.Unique(data.PkgName)},
+		{Path: path.Join(genpkg, codegen.SnakeCase(svcName)), Name: scope.Unique(data.PkgName)},
 	}
 	apiPkg := scope.Unique(strings.ToLower(codegen.Goify(root.API.Name, false)), "api")
 	sections := []*codegen.SectionTemplate{

@@ -1,6 +1,13 @@
 package testdata
 
-const UnaryRPCsProtoCode = `// Service is the ServiceUnaryRPCs service interface.
+const UnaryRPCsProtoCode = `
+syntax = "proto3";
+
+package service_unaryrp_cs;
+
+option go_package = "service_unaryrp_cspb";
+
+// Service is the ServiceUnaryRPCs service interface.
 service ServiceUnaryRPCs {
 	// MethodUnaryRPCA implements MethodUnaryRPCA.
 	rpc MethodUnaryRPCA (MethodUnaryRPCARequest) returns (MethodUnaryRPCAResponse);
@@ -29,7 +36,14 @@ message MethodUnaryRPCBResponse {
 }
 `
 
-const UnaryRPCNoPayloadProtoCode = `// Service is the ServiceUnaryRPCNoPayload service interface.
+const UnaryRPCNoPayloadProtoCode = `
+syntax = "proto3";
+
+package service_unaryrpc_no_payload;
+
+option go_package = "service_unaryrpc_no_payloadpb";
+
+// Service is the ServiceUnaryRPCNoPayload service interface.
 service ServiceUnaryRPCNoPayload {
 	// MethodUnaryRPCNoPayload implements MethodUnaryRPCNoPayload.
 	rpc MethodUnaryRPCNoPayload (MethodUnaryRPCNoPayloadRequest) returns (MethodUnaryRPCNoPayloadResponse);
@@ -43,7 +57,14 @@ message MethodUnaryRPCNoPayloadResponse {
 }
 `
 
-const UnaryRPCNoResultProtoCode = `// Service is the ServiceUnaryRPCNoResult service interface.
+const UnaryRPCNoResultProtoCode = `
+syntax = "proto3";
+
+package service_unaryrpc_no_result;
+
+option go_package = "service_unaryrpc_no_resultpb";
+
+// Service is the ServiceUnaryRPCNoResult service interface.
 service ServiceUnaryRPCNoResult {
 	// MethodUnaryRPCNoResult implements MethodUnaryRPCNoResult.
 	rpc MethodUnaryRPCNoResult (MethodUnaryRPCNoResultRequest) returns (MethodUnaryRPCNoResultResponse);
@@ -57,7 +78,14 @@ message MethodUnaryRPCNoResultResponse {
 }
 `
 
-const ServerStreamingRPCProtoCode = `// Service is the ServiceServerStreamingRPC service interface.
+const ServerStreamingRPCProtoCode = `
+syntax = "proto3";
+
+package service_server_streamingrpc;
+
+option go_package = "service_server_streamingrpcpb";
+
+// Service is the ServiceServerStreamingRPC service interface.
 service ServiceServerStreamingRPC {
 	// MethodServerStreamingRPC implements MethodServerStreamingRPC.
 	rpc MethodServerStreamingRPC (MethodServerStreamingRPCRequest) returns (stream MethodServerStreamingRPCResponse);
@@ -72,7 +100,14 @@ message MethodServerStreamingRPCResponse {
 }
 `
 
-const ClientStreamingRPCProtoCode = `// Service is the ServiceClientStreamingRPC service interface.
+const ClientStreamingRPCProtoCode = `
+syntax = "proto3";
+
+package service_client_streamingrpc;
+
+option go_package = "service_client_streamingrpcpb";
+
+// Service is the ServiceClientStreamingRPC service interface.
 service ServiceClientStreamingRPC {
 	// MethodClientStreamingRPC implements MethodClientStreamingRPC.
 	rpc MethodClientStreamingRPC (stream MethodClientStreamingRPCStreamingRequest) returns (MethodClientStreamingRPCResponse);
@@ -87,7 +122,14 @@ message MethodClientStreamingRPCResponse {
 }
 `
 
-const BidirectionalStreamingRPCProtoCode = `// Service is the ServiceBidirectionalStreamingRPC service interface.
+const BidirectionalStreamingRPCProtoCode = `
+syntax = "proto3";
+
+package service_bidirectional_streamingrpc;
+
+option go_package = "service_bidirectional_streamingrpcpb";
+
+// Service is the ServiceBidirectionalStreamingRPC service interface.
 service ServiceBidirectionalStreamingRPC {
 	// MethodBidirectionalStreamingRPC implements MethodBidirectionalStreamingRPC.
 	rpc MethodBidirectionalStreamingRPC (stream MethodBidirectionalStreamingRPCStreamingRequest) returns (stream MethodBidirectionalStreamingRPCResponse);
@@ -103,7 +145,14 @@ message MethodBidirectionalStreamingRPCResponse {
 }
 `
 
-const MessageWithServiceNameProtoCode = `// Service is the MyNameConflicts service interface.
+const MessageWithServiceNameProtoCode = `
+syntax = "proto3";
+
+package my_name_conflicts;
+
+option go_package = "my_name_conflictspb";
+
+// Service is the MyNameConflicts service interface.
 service MyNameConflicts {
 	// MyNameConflictsMethod implements MyNameConflictsMethod.
 	rpc MyNameConflictsMethod (MyNameConflictsMethodRequest) returns (MyNameConflictsMethodResponse);
@@ -293,7 +342,14 @@ message MethodMessageWithSecurityResponse {
 }
 `
 
-const MethodWithReservedNameProtoCode = `// Service is the MethodWithReservedName service interface.
+const MethodWithReservedNameProtoCode = `
+syntax = "proto3";
+
+package method_with_reserved_name;
+
+option go_package = "method_with_reserved_namepb";
+
+// Service is the MethodWithReservedName service interface.
 service MethodWithReservedName {
 	// String implements string.
 	rpc String (StringRequest) returns (StringResponse);
