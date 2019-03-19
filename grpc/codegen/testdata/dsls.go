@@ -399,6 +399,56 @@ var MessageUserTypeWithCollectionDSL = func() {
 	})
 }
 
+var ResultWithCollectionDSL = func() {
+	var RT = ResultType("application/vnd.goa.rt", func() {
+		TypeName("RT")
+		Attributes(func() {
+			Attribute("IntField", Int, func() {
+				Meta("rpc:tag", "1")
+			})
+		})
+	})
+	var ResultT = ResultType("application/vnd.goa.resultt", func() {
+		TypeName("ResultT")
+		Attributes(func() {
+			Attribute("CollectionField", CollectionOf(RT), func() {
+				Meta("rpc:tag", "1")
+			})
+		})
+	})
+	Service("ServiceResultWithCollection", func() {
+		Method("MethodResultWithCollection", func() {
+			Result(func() {
+				Field(1, "result", ResultT)
+			})
+			GRPC(func() {})
+		})
+	})
+}
+
+var PayloadWithNestedTypesDSL = func() {
+	var AParams = Type("AParams", func() {
+		Field(1, "a", MapOf(String, ArrayOf(String)))
+	})
+	var BParams = Type("BParams", func() {
+		Field(1, "b", MapOf(String, String))
+	})
+	var APayload = Type("APayload", func() {
+		Field(1, "a_params", AParams)
+		Field(2, "b_params", BParams)
+	})
+	Service("ServicePayloadWithNestedTypes", func() {
+		Method("MethodPayloadWithNestedTypes", func() {
+			Payload(func() {
+				Extend(APayload)
+			})
+			GRPC(func() {
+				Response(CodeOK)
+			})
+		})
+	})
+}
+
 var MessageArrayDSL = func() {
 	var UT = Type("UT", func() {
 		Field(1, "ArrayOfPrimitives", ArrayOf(UInt))

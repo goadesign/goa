@@ -603,6 +603,10 @@ func collectHelpers(source, target *ContextualAttribute, t Transformer, prefix s
 		var err error
 		{
 			walkMatches(source, target, func(srcMatt, _ *expr.MappedAttributeExpr, srcc, tgtc *ContextualAttribute, n string) {
+				ta := &TransformAttrs{Helper: true}
+				if srcc, tgtc, ta, err = t.MakeCompatible(srcc, tgtc, ta, ""); err != nil {
+					return
+				}
 				var helpers []*TransformFunctionData
 				helpers, err = collectHelpers(srcc, tgtc, t, prefix, seen...)
 				if err != nil {
