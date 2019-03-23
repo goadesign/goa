@@ -98,6 +98,9 @@ func (s *NameScope) Name(name string) string {
 func (s *NameScope) GoTypeDef(att *expr.AttributeExpr, ptr, useDefault bool) string {
 	switch actual := att.Type.(type) {
 	case expr.Primitive:
+		if t, _ := GetMetaTypeInfo(att); t != "" {
+			return t
+		}
 		return GoNativeTypeName(actual)
 	case *expr.Array:
 		d := s.GoTypeDef(actual.ElemType, ptr, useDefault)
@@ -186,6 +189,9 @@ func (s *NameScope) GoTypeName(att *expr.AttributeExpr) string {
 func (s *NameScope) GoFullTypeName(att *expr.AttributeExpr, pkg string) string {
 	switch actual := att.Type.(type) {
 	case expr.Primitive:
+		if t, _ := GetMetaTypeInfo(att); t != "" {
+			return t
+		}
 		return GoNativeTypeName(actual)
 	case *expr.Array:
 		return "[]" + s.GoFullTypeRef(actual.ElemType, pkg)

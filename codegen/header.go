@@ -18,15 +18,18 @@ func Header(title, pack string, imports []*ImportSpec) *SectionTemplate {
 	}
 }
 
-// AddImport adds an import to a section template that was generated with
+// AddImports adds imports to a section template that was generated with
 // Header.
-func AddImport(section *SectionTemplate, imprt *ImportSpec) {
+func AddImports(section *SectionTemplate, imprts ...*ImportSpec) {
+	if len(imprts) == 0 {
+		return
+	}
 	var specs []*ImportSpec
 	if data, ok := section.Data.(map[string]interface{}); ok {
 		if imports, ok := data["Imports"]; ok {
 			specs = imports.([]*ImportSpec)
 		}
-		data["Imports"] = append(specs, imprt)
+		data["Imports"] = append(specs, imprts...)
 	}
 }
 

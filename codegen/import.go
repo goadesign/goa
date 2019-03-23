@@ -1,6 +1,10 @@
 package codegen
 
-import "fmt"
+import (
+	"fmt"
+
+	"goa.design/goa/expr"
+)
 
 type (
 	// ImportSpec defines a generated import statement.
@@ -28,4 +32,83 @@ func (s *ImportSpec) Code() string {
 		return fmt.Sprintf(`%s "%s"`, s.Name, s.Path)
 	}
 	return fmt.Sprintf(`"%s"`, s.Path)
+}
+
+// GetMetaTypeInfo gets type and import info from an attributes metadata. struct:field:type can have 3 arguments,
+// first being the go type name, second being import path,
+// and third being the name of a qualified import, in case of name collisions.
+func GetMetaTypeInfo(att *expr.AttributeExpr) (typeName string, importS *ImportSpec) {
+	if att == nil {
+		return typeName, importS
+	}
+	if args, ok := att.Meta["struct:field:type"]; ok {
+		if len(args) > 0 {
+			typeName = args[0]
+		}
+		if len(args) > 1 {
+			importS = &ImportSpec{Path: args[1]}
+		}
+		if len(args) > 2 {
+			importS.Name = args[2]
+		}
+	}
+	return typeName, importS
+}
+
+// GetMetaTypeImports parses the attribute for all user defined imports
+func GetMetaTypeImports(att *expr.AttributeExpr) []*ImportSpec {
+	if att == nil {
+		return nil
+	}
+	uniqueImports := make(map[ImportSpec]struct{})
+	_, im := GetMetaTypeInfo(att)
+	if im != nil {
+		uniqueImports[*im] = struct{}{}
+	}
+	switch t := att.Type.(type) {
+	case expr.UserType:
+		for _, im := range GetMetaTypeImports(t.Attribute()) {
+			if im != nil {
+				uniqueImports[*im] = struct{}{}
+			}
+		}
+	case *expr.Array:
+		_, im := GetMetaTypeInfo(t.ElemType)
+		if im != nil {
+			uniqueImports[*im] = struct{}{}
+		}
+	case *expr.Map:
+		_, im := GetMetaTypeInfo(t.ElemType)
+		if im != nil {
+			uniqueImports[*im] = struct{}{}
+		}
+		_, im = GetMetaTypeInfo(t.KeyType)
+		if im != nil {
+			uniqueImports[*im] = struct{}{}
+		}
+	case *expr.Object:
+		for _, key := range *t {
+			if key != nil {
+				_, im := GetMetaTypeInfo(key.Attribute)
+				if im != nil {
+					uniqueImports[*im] = struct{}{}
+				}
+			}
+		}
+	}
+	imports := make([]*ImportSpec, 0)
+	for imp, _ := range uniqueImports {
+		// Copy loop variable into body so next iteration doesnt overwrite its address https://stackoverflow.com/questions/27610039/golang-appending-leaves-only-last-element
+		copy := imp
+		imports = append(imports, &copy)
+	}
+	return imports
+}
+
+func AddServiceMetaTypeImports(header *SectionTemplate, svc *expr.ServiceExpr) {
+	for _, m := range svc.Methods {
+		AddImports(header, GetMetaTypeImports(m.Payload)...)
+		AddImports(header, GetMetaTypeImports(m.StreamingPayload)...)
+		AddImports(header, GetMetaTypeImports(m.Result)...)
+	}
 }

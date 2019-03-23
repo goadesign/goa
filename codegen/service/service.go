@@ -66,7 +66,6 @@ func File(genpkg string, service *expr.ServiceExpr) *codegen.File {
 			}
 		}
 	}
-
 	for _, ut := range svc.userTypes {
 		if _, ok := seen[ut.Name]; !ok {
 			sections = append(sections, &codegen.SectionTemplate{
@@ -153,6 +152,23 @@ func File(genpkg string, service *expr.ServiceExpr) *codegen.File {
 	}
 
 	return &codegen.File{Path: path, SectionTemplates: sections}
+}
+
+func AddServiceDataMetaTypeImports(header *codegen.SectionTemplate, serviceE *expr.ServiceExpr) {
+	codegen.AddServiceMetaTypeImports(header, serviceE)
+	svc := Services.Get(serviceE.Name)
+	for _, ut := range svc.userTypes {
+		codegen.AddImports(header, codegen.GetMetaTypeImports(ut.Type.Attribute())...)
+	}
+	for _, et := range svc.errorTypes {
+		codegen.AddImports(header, codegen.GetMetaTypeImports(et.Type.Attribute())...)
+	}
+	for _, t := range svc.viewedResultTypes {
+		codegen.AddImports(header, codegen.GetMetaTypeImports(t.Type.Attribute())...)
+	}
+	for _, t := range svc.projectedTypes {
+		codegen.AddImports(header, codegen.GetMetaTypeImports(t.Type.Attribute())...)
+	}
 }
 
 func errorName(et *UserTypeData) string {
