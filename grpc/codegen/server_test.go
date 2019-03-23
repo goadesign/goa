@@ -18,6 +18,7 @@ func TestServerGRPCInterface(t *testing.T) {
 		{"unary-rpc-no-payload", testdata.UnaryRPCNoPayloadDSL, testdata.UnaryRPCNoPayloadServerInterfaceCode},
 		{"unary-rpc-no-result", testdata.UnaryRPCNoResultDSL, testdata.UnaryRPCNoResultServerInterfaceCode},
 		{"unary-rpc-with-errors", testdata.UnaryRPCWithErrorsDSL, testdata.UnaryRPCWithErrorsServerInterfaceCode},
+		{"unary-rpc-with-overriding-errors", testdata.UnaryRPCWithOverridingErrorsDSL, testdata.UnaryRPCWithOverridingErrorsServerInterfaceCode},
 		{"server-streaming-rpc", testdata.ServerStreamingRPCDSL, testdata.ServerStreamingRPCServerInterfaceCode},
 		{"client-streaming-rpc", testdata.ClientStreamingRPCDSL, testdata.ClientStreamingRPCServerInterfaceCode},
 		{"client-streaming-rpc-with-payload", testdata.ClientStreamingRPCWithPayloadDSL, testdata.ClientStreamingRPCWithPayloadServerInterfaceCode},
