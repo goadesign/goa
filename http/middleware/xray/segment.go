@@ -1,6 +1,7 @@
 package xray
 
 import (
+	"bufio"
 	"fmt"
 	"net"
 	"net/http"
@@ -85,6 +86,14 @@ func (s *HTTPSegment) Write(p []byte) (int, error) {
 	}
 	s.HTTP.Response.ContentLength = int64(n)
 	return n, err
+}
+
+// Hijack supports the http.Hijacker interface.
+func (s *HTTPSegment) Hijack() (net.Conn, *bufio.ReadWriter, error) {
+	if hijacker, ok := s.ResponseWriter.(http.Hijacker); ok {
+		return hijacker.Hijack()
+	}
+	return nil, nil, fmt.Errorf("xray: inner ResponseWriter cannot be hijacked: %T", s.ResponseWriter)
 }
 
 // recordStatusCode sets Throttle, Fault, Error
