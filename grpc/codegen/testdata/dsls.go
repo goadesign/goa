@@ -69,6 +69,24 @@ var UnaryRPCWithErrorsDSL = func() {
 	})
 }
 
+var UnaryRPCWithOverridingErrorsDSL = func() {
+	Service("ServiceUnaryRPCWithOverridingErrors", func() {
+		Error("overridden")
+		GRPC(func() {
+			Response("overridden", CodeCanceled)
+		})
+		Method("MethodUnaryRPCWithOverridingErrors", func() {
+			Payload(String)
+			Result(String)
+			Error("internal")
+			GRPC(func() {
+				Response("overridden", CodeUnknown)
+				Response("internal", CodeUnknown)
+			})
+		})
+	})
+}
+
 var ServerStreamingRPCDSL = func() {
 	Service("ServiceServerStreamingRPC", func() {
 		Method("MethodServerStreamingRPC", func() {

@@ -74,6 +74,29 @@ func (s *Server) MethodUnaryRPCWithErrors(ctx context.Context, message *service_
 }
 `
 
+const UnaryRPCWithOverridingErrorsServerInterfaceCode = `// MethodUnaryRPCWithOverridingErrors implements the
+// "MethodUnaryRPCWithOverridingErrors" method in
+// service_unaryrpc_with_overriding_errorspb.ServiceUnaryRPCWithOverridingErrorsServer
+// interface.
+func (s *Server) MethodUnaryRPCWithOverridingErrors(ctx context.Context, message *service_unaryrpc_with_overriding_errorspb.MethodUnaryRPCWithOverridingErrorsRequest) (*service_unaryrpc_with_overriding_errorspb.MethodUnaryRPCWithOverridingErrorsResponse, error) {
+	ctx = context.WithValue(ctx, goa.MethodKey, "MethodUnaryRPCWithOverridingErrors")
+	ctx = context.WithValue(ctx, goa.ServiceKey, "ServiceUnaryRPCWithOverridingErrors")
+	resp, err := s.MethodUnaryRPCWithOverridingErrorsH.Handle(ctx, message)
+	if err != nil {
+		if en, ok := err.(ErrorNamer); ok {
+			switch en.ErrorName() {
+			case "overridden":
+				return nil, goagrpc.NewStatusError(codes.Unknown, err)
+			case "internal":
+				return nil, goagrpc.NewStatusError(codes.Unknown, err)
+			}
+		}
+		return nil, goagrpc.EncodeError(err)
+	}
+	return resp.(*service_unaryrpc_with_overriding_errorspb.MethodUnaryRPCWithOverridingErrorsResponse), nil
+}
+`
+
 const ServerStreamingRPCServerInterfaceCode = `// MethodServerStreamingRPC implements the "MethodServerStreamingRPC" method in
 // service_server_streamingrpcpb.ServiceServerStreamingRPCServer interface.
 func (s *Server) MethodServerStreamingRPC(message *service_server_streamingrpcpb.MethodServerStreamingRPCRequest, stream service_server_streamingrpcpb.ServiceServerStreamingRPC_MethodServerStreamingRPCServer) error {
