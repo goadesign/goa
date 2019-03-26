@@ -2,6 +2,7 @@ package xray
 
 import (
 	"context"
+	"io"
 	"net"
 	"testing"
 
@@ -482,6 +483,27 @@ func TestUnaryClient(t *testing.T) {
 	}
 }
 
+type mockClientStream struct {
+	grpc.ClientStream
+	err error
+}
+
+func (cs *mockClientStream) Header() (metadata.MD, error) {
+	return nil, cs.err
+}
+
+func (cs *mockClientStream) SendMsg(m interface{}) error {
+	return cs.err
+}
+
+func (cs *mockClientStream) CloseSend() error {
+	return cs.err
+}
+
+func (cs *mockClientStream) RecvMsg(m interface{}) error {
+	return cs.err
+}
+
 func TestStreamClient(t *testing.T) {
 	var (
 		segmentName = "segmentName1"
@@ -490,23 +512,27 @@ func TestStreamClient(t *testing.T) {
 		host        = "somehost:80"
 	)
 	cases := []struct {
-		Name       string
-		Segment    bool
-		StatusCode codes.Code
-		Error      bool
+		Name         string
+		Segment      bool
+		StatusCode   codes.Code
+		RequestError bool // synchronous error when establishing the stream.
+		StreamError  bool // error during the stream when calling RecvMsg, SendMsg, etc.
+		ClientStream grpc.ClientStream
 	}{
-		{"no segment in context", false, codes.OK, false},
-		{"segment in context", true, codes.OK, false},
-		{"segment in context - failed request", true, codes.InvalidArgument, true},
-		{"segment in context - error", true, codes.Internal, true},
+		{"no segment in context", false, codes.OK, false, false, &mockClientStream{}},
+		{"segment in context", true, codes.OK, false, true, &mockClientStream{err: io.EOF}},
+		{"segment in context - failed request", true, codes.InvalidArgument, true, false, &mockClientStream{}},
+		{"segment in context - error", true, codes.Internal, true, false, &mockClientStream{}},
+		{"segment in context - failed stream", true, codes.OK, false, true, &mockClientStream{err: status.Error(codes.Canceled, "canceled")}},
+		{"segment in context - stream error", true, codes.OK, false, true, &mockClientStream{err: status.Error(codes.Internal, "error")}},
 	}
 	for _, tc := range cases {
 		t.Run(tc.Name, func(t *testing.T) {
 			streamer := func(ctx context.Context, desc *grpc.StreamDesc, cc *grpc.ClientConn, method string, opts ...grpc.CallOption) (grpc.ClientStream, error) {
-				if tc.Error {
+				if tc.RequestError {
 					return nil, status.Error(tc.StatusCode, "error")
 				}
-				return nil, nil
+				return tc.ClientStream, nil
 			}
 
 			ctx := context.Background()
@@ -523,7 +549,19 @@ func TestStreamClient(t *testing.T) {
 			}
 
 			messages := xray.ReadUDP(t, udplisten, expMsgs, func() {
-				StreamClient(host)(ctx, nil, nil, "Test.Test", streamer)
+				cs, err := StreamClient(host)(ctx, nil, nil, "Test.Test", streamer)
+				errored := err != nil
+				if tc.RequestError != errored {
+					t.Errorf("expected request error to be %v, got %v", tc.RequestError, errored)
+				}
+				if err == nil {
+					var msg interface{}
+					err2 := cs.RecvMsg(msg)
+					errored := err2 != nil
+					if tc.StreamError != errored {
+						t.Errorf("expected stream error to be %v, got %v", tc.StreamError, errored)
+					}
+				}
 			})
 			if expMsgs == 0 {
 				return
@@ -558,11 +596,11 @@ func TestStreamClient(t *testing.T) {
 			if s.HTTP.Request.Method != "GRPC" {
 				t.Errorf("unexpected segment HTTP method: expected \"GRPC\", got %q", s.HTTP.Request.Method)
 			}
-			if s.Cause == nil && tc.Error {
+			if s.Cause == nil && (tc.RequestError || tc.StreamError) {
 				t.Error("invalid exception, expected non-nil Cause but got nil Cause")
 			}
-			if s.Error != tc.Error {
-				t.Errorf("Error is invalid, expected %v got %v", tc.Error, s.Error)
+			if s.Error != tc.RequestError && s.Error != tc.StreamError {
+				t.Errorf("Error is invalid, expected %v got %v", tc.RequestError || tc.StreamError, s.Error)
 			}
 		})
 	}
