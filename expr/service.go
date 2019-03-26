@@ -119,6 +119,9 @@ func (e *ErrorExpr) Validate() error {
 					continue
 				}
 				errField = n.Name
+				if !rt.IsRequired(n.Name) || rt.HasDefaultValue(n.Name) {
+					verr.Add(e, "attribute %q with 'struct:error:name' in the meta must be required or have a default value", n.Name)
+				}
 			}
 		}
 		if errField == "" {
