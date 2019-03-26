@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net"
+	"sync"
 	"time"
 
 	grpcm "goa.design/goa/grpc/middleware"
@@ -17,8 +18,9 @@ import (
 // messages from the server and record errors if any.
 type xrayStreamClientWrapper struct {
 	grpc.ClientStream
-
-	s *GRPCSegment
+	s        *GRPCSegment
+	mu       sync.Mutex
+	finished bool
 }
 
 // NewUnaryServer returns a server middleware that sends AWS X-Ray segments
@@ -174,7 +176,6 @@ func StreamClient(host string) grpc.StreamClientInterceptor {
 		}
 		s := seg.(*xray.Segment)
 		sub := &GRPCSegment{s.NewSubsegment(host)}
-		defer sub.Close()
 
 		// update the context with the latest segment
 		ctx = middleware.WithSpan(ctx, sub.TraceID, sub.ID, sub.ParentID)
@@ -183,14 +184,18 @@ func StreamClient(host string) grpc.StreamClientInterceptor {
 		cs, err := streamer(ctx, desc, cc, method, opts...)
 		if err != nil {
 			sub.RecordError(err)
+			sub.Close()
 		}
-		return &xrayStreamClientWrapper{cs, sub}, err
+		return &xrayStreamClientWrapper{
+			ClientStream: cs,
+			s:            sub,
+		}, err
 	})
 }
 
 func (c *xrayStreamClientWrapper) SendMsg(m interface{}) error {
 	if err := c.ClientStream.SendMsg(m); err != nil {
-		c.s.RecordError(err)
+		c.recordErrorAndClose(err)
 		return err
 	}
 	return nil
@@ -198,7 +203,7 @@ func (c *xrayStreamClientWrapper) SendMsg(m interface{}) error {
 
 func (c *xrayStreamClientWrapper) RecvMsg(m interface{}) error {
 	if err := c.ClientStream.RecvMsg(m); err != nil {
-		c.s.RecordError(err)
+		c.recordErrorAndClose(err)
 		return err
 	}
 	return nil
@@ -206,7 +211,7 @@ func (c *xrayStreamClientWrapper) RecvMsg(m interface{}) error {
 
 func (c *xrayStreamClientWrapper) CloseSend() error {
 	if err := c.ClientStream.CloseSend(); err != nil {
-		c.s.RecordError(err)
+		c.recordErrorAndClose(err)
 		return err
 	}
 	return nil
@@ -215,7 +220,18 @@ func (c *xrayStreamClientWrapper) CloseSend() error {
 func (c *xrayStreamClientWrapper) Header() (metadata.MD, error) {
 	h, err := c.ClientStream.Header()
 	if err != nil {
-		c.s.RecordError(err)
+		c.recordErrorAndClose(err)
 	}
 	return h, err
+}
+
+// recordErrorAndClose records the error and closes the segment.
+func (c *xrayStreamClientWrapper) recordErrorAndClose(err error) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	if !c.finished {
+		c.s.RecordError(err)
+		c.s.Close()
+		c.finished = true
+	}
 }
