@@ -183,8 +183,6 @@ func StreamClient(host string) grpc.StreamClientInterceptor {
 		cs, err := streamer(ctx, desc, cc, method, opts...)
 		if err != nil {
 			sub.RecordError(err)
-		} else {
-			sub.RecordResponse(nil)
 		}
 		return &xrayStreamClientWrapper{cs, sub}, err
 	})
