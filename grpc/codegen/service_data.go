@@ -429,8 +429,19 @@ func (d ServicesData) analyze(gs *expr.GRPCServiceExpr) *ServiceData {
 		// collect all the nested messages and return the top-level message
 		collect := func(att *expr.AttributeExpr) *service.UserTypeData {
 			msgs := collectMessages(att, sd, seen)
-			sd.Messages = append(sd.Messages, msgs...)
-			return msgs[0]
+			if len(msgs) > 0 {
+				sd.Messages = append(sd.Messages, msgs...)
+				return msgs[0]
+			}
+			// lookup message in sd.Messages
+			if ut, ok := att.Type.(expr.UserType); ok {
+				for _, t := range sd.Messages {
+					if t.Name == ut.Name() {
+						return t
+					}
+				}
+			}
+			return nil
 		}
 
 		var (

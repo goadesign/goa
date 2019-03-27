@@ -643,3 +643,20 @@ var MethodWithReservedNameDSL = func() {
 		})
 	})
 }
+
+var MultipleMethodsSameResultCollectionDSL = func() {
+	var ResultT = ResultType("application/vnd.goa.result", func() {
+		TypeName("ResultT")
+		Field(1, "BooleanField", Boolean)
+	})
+	Service("MultipleMethodsSameResultCollection", func() {
+		Method("method_a", func() {
+			Result(CollectionOf(ResultT))
+			GRPC(func() {})
+		})
+		Method("method_b", func() {
+			Result(CollectionOf(ResultT))
+			GRPC(func() {})
+		})
+	})
+}

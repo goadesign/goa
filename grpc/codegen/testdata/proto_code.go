@@ -361,3 +361,33 @@ message StringRequest {
 message StringResponse {
 }
 `
+
+const MultipleMethodsSameResultCollectionProtoCode = `
+syntax = "proto3";
+
+package multiple_methods_same_result_collection;
+
+option go_package = "multiple_methods_same_result_collectionpb";
+
+// Service is the MultipleMethodsSameResultCollection service interface.
+service MultipleMethodsSameResultCollection {
+	// MethodA implements method_a.
+	rpc MethodA (MethodARequest) returns (ResultTCollection);
+	// MethodB implements method_b.
+	rpc MethodB (MethodBRequest) returns (ResultTCollection);
+}
+
+message MethodARequest {
+}
+
+message ResultTCollection {
+	repeated ResultT field = 1;
+}
+
+message ResultT {
+	bool boolean_field = 1;
+}
+
+message MethodBRequest {
+}
+`
