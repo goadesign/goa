@@ -121,11 +121,12 @@ They provide an overview of the key concepts, review the
 
 ### `API` Expression
 
-Like in v1 the top level DSL function in v2 is `API`. The `API` DSL lists the
-global properties of the API such as its hostname, its version number etc.
-One change compared to v1 is the use of `Server` instead of `Host` and `Scheme`
-to define API hosts. This provides a more flexible way to list multiple hosts
-and is inline with the OpenAPI v3 spec.
+The `API` DSL lists the global properties of the API such as its hostname, its 
+version number etc. The `Server` DSL makes it possible to define multiple
+servers potentially exposing different sets of services. A single service may
+be exposed by any number (or no) server. If `Server` is omitted then a single
+server is automatically defined that exposes all the services defined in the
+design.
 
 ```go
 var _ = API("cellar", func() {
@@ -163,13 +164,16 @@ all the service methods, more on error responses in the next section.
 // The "account" service.
 var _ = Service("account", func() {
     // Error which applies to all methods.
-    Error(ErrUnauthorized, Unauthorized)
+    Error("Unauthorized", Unauthorized)
 
     // HTTP transport properties.
     HTTP(func() {
         Path("/accounts")
+        // Use HTTP status code "401 Unauthorized" for "Unauthorized" error
+        // responses.
+        Response("Unauthorized", StatusUnauthorized)
     })
-}
+})
 ```
 
 The `HTTP` function makes it possible to define HTTP specific properties such as
@@ -189,8 +193,13 @@ message in gRPC.
         Description("Change account name")
         Payload(UpdateAccount)
         Result(Empty)
-        Error(ErrNotFound)
-        Error(ErrBadRequest, ErrorResult)
+        Error("NotFound")
+        Error("BadRequest")
+
+        HTTP(func() { // Define HTTP status codes for error responses
+            Response("NotFound", StatusNotFound)
+            Response("BadRequest", StatusBadRequest)
+        })
 ```
 
 The payload, result and error types define the input and output *independently
@@ -199,16 +208,15 @@ of the transport*.
 The `HTTP` function defines the mapping of the payload and result type
 attributes to the HTTP request path and query string values as well as the HTTP
 request and response and bodies. The `HTTP` function also defines other HTTP
-specific properties such as the request path, the response HTTP status codes
-etc.
+specific properties such as the request path and the response HTTP status codes.
 
 ```go
     Method("update", func() {
         Description("Change account name")
         Payload(UpdateAccount)
         Result(Empty)
-        Error(ErrNotFound)
-        Error(ErrBadRequest, ErrorResult)
+        Error("NotFound")
+        Error("BadRequest")
 
         // HTTP transport
         HTTP(func() {
@@ -217,9 +225,9 @@ etc.
                 Attribute("name")  // "name" UpdateAccount attribute
                 Required("name")
             })
-            Response(NoContent)
-            Error(ErrNotFound, NotFound)
-            Error(ErrBadRequest, BadRequest, ErrorResult)
+            Response(StatusNoContent)
+            Response("NotFound", StatusNotFound)
+            Response("BadRequest", StatusBadRequest)
         })
     })
 ```
@@ -227,40 +235,40 @@ etc.
 ### Method Payload Type
 
 In the example above the `accountID` HTTP request path parameter is defined by
-the attribute of the `UpdateAccount` type with the same name and so is the body
-attribute `name`.
+the attribute of the `UpdateAccount` type with the same name. The HTTP request
+body is defined as an object which contains the `name` attribute of the
+`UpdateAccount` payload type.
 
 Any attribute that is not explicitly mapped by the `HTTP` function is implicitly
 mapped to request body attributes. This makes it simple to define mappings where
-only one of the fields for the payload type is mapped to a HTTP header, and all
-other fields are mapped to the HTTP request body.
+only one of the fields for the payload type is mapped to a HTTP header for
+example.
 
 The body attributes may also be listed explicitly using the `Body` function.
-This function accepts either a DSL listing the body attributes or the name of a
-request type attribute whose type defines the body as a whole. The latter makes
-it possible to use any arbitrary type to describe request body and not just
-object, for example, the attribute (and thus the body) could be an array.
+This function accepts either a DSL listing the corresponding payloard type
+attributes names or string which corresponds to the name of a single payload
+type attribute that defines the shape of the request body as a whole. The latter
+makes it possible to use arbitrary types to describe the request body.
 
-Implicit request body definition:
+Here is an example of a HTTP mapping that defines the shape of the request body
+implicitly:
 
 ```go
         HTTP(func() {
-            PUT("/{accountID}")    // "accountID" request attribute
-            Response(NoContent)
-            Error(ErrNotFound, NotFound)
-            Error(ErrBadRequest, BadRequest, ErrorResult)
+            PUT("/{accountID}")       // The "accountID" payload type attribute.
+            Response(StatusNoContent) // All other payload type attributes are
+                                      // mapped to the request body.
         })
 ```
 
-Array body definition:
+Another example which uses the name of payload type attribute to define the
+shape of the request body:
 
 ```go
         HTTP(func() {
             PUT("/")
-            Body("names") // Assumes request type has attribute "names"
-            Response(NoContent)
-            Error(ErrNotFound, NotFound)
-            Error(ErrBadRequest, BadRequest, ErrorResult)
+            Body("names") // Assumes payload type has attribute "names"
+            Response(StatusNoContent)
         })
 ```
 
@@ -288,6 +296,16 @@ be given a list of result type attributes in which case the body shape is an
 object or the name of a specific attribute in which case the response body shape
 is dictated by the type of the attribute.
 
+Assuming the following type definition:
+
+```go
+var Account = Type("Account", func() {
+    Attribute("name", String, "Name of account.")
+})
+```
+
+and the following method design:
+
 ```go
     Method("index", func() {
         Description("Index all accounts")
@@ -306,19 +324,20 @@ is dictated by the type of the attribute.
     })
 ```
 
-The example above produces response bodies of the form
-`[{"name"="foo"},{"name"="bar"}]` assuming the type `Account` only has a `name`
-attribute. The same example but with the line defining the response body
-(`Body("accounts")`) removed produces response bodies of the form:
-`{"accounts":[{"name"="foo"},{"name"="bar"}]` since `accounts` isn't used to
-define headers.
+The HTTP response body for requests sent to the "index" method are of the form
+`[{"name"="foo"},{"name"="bar"}]`. The same example but with the line defining
+the response body removed (`Body("accounts")`) produces response bodies of the
+form:
+`{"accounts":[{"name"="foo"},{"name"="bar"}]` since the shape of the response
+body is now an object containing all the attributes of the result type not used
+to defined headers (only `accounts` is left).
 
 ### Data Types
 
-Like in v1, the types supported in the DSL are primitive types, array, map and
-object types (note the change of nomenclature and DSL from `hash` to `map`).
+The types supported in the DSL are primitive types, array, map and object
+types.
 
-The list of primitive types in v2 is:
+The list of primitive types is:
 
 * `Boolean`
 * `Int`, `Int32`, `Int64`, `UInt`, `UInt32`, `UInt64`
@@ -326,7 +345,7 @@ The list of primitive types in v2 is:
 * `String`, `Bytes`
 * `Any` (maps to any type, primitive or not)
 
-Like in v1 arrays can be declared in one of two ways:
+Arrays can be declared in one of two ways:
 
 * `ArrayOf()` which accepts any type or result type and returns a type
 * `CollectionOf()` which accepts result types only and returns a result type
@@ -335,10 +354,11 @@ The result type returned by `CollectionOf` contains the same views as the result
 type given as argument. Each view simply renders an array where each element has
 been projected using the corresponding element view.
 
-Like in v1 the goa DSL makes it possible to define both user and result types
-(called media types in v1). Result types are user types that also define views.
-The DSL for defining user types and result types is the same as in v1 (using
-`Type` and `ResultType` respectively).
+The Goa DSL makes it possible to define both user and result types. Result
+types are user types that also define views. Note that user types (defined
+using the `Type` DSL) may be used in both `Payload` and `Result` DSLs while
+result types (defined using the `ResultType` DSL) may only be used in `Result`
+DSLs.
 
 ### Payload to HTTP request mapping
 
@@ -370,7 +390,7 @@ user provided decoder in the (hopefully rare) cases when that's needed.
 #### Mapping payload with non-object types
 
 When the payload type is a primitive type (i.e. one of String, any of the
-integer of float types, Bool or Bytes), an array or a map then the value is
+integer of float types, Boolean or Bytes), an array or a map then the value is
 loaded from:
 
 * the first URL path parameter defined in the design if any
@@ -551,7 +571,8 @@ Method("rate", func() {
 | ------------------ | --------------------------- | ------------------------------------------------------------------------ |
 | Rate(*RatePayload) | PUT /1 {"a": 0.5, "b": 1.0} | Rate(&RatePayload{ID: 1, Rates: map[string]float64{"a": 0.5, "b": 1.0}}) |
 
-Without `Body` the request body shape would be an object with one key `rates`.
+Without `Body` the request body shape would be an object with a single field
+`rates`.
 
 #### Mapping HTTP element names to attribute names
 
