@@ -1,7 +1,7 @@
 #
 
-![goa logo](https://goa.design/img/goa-logo.svg "goa")
-goa is a framework for building micro-services and APIs in Go using a unique
+![Goa logo](https://goa.design/img/goa-logo.svg "Goa")
+Goa is a framework for building micro-services and APIs in Go using a unique
 design-first approach.
 
 ---
@@ -13,10 +13,10 @@ design-first approach.
 
 ## Overview
 
-goa takes a different approach to building services by making it possible to
+Goa takes a different approach to building services by making it possible to
 describe the *design* of the service API using a simple Go DSL. goa uses the
 description to generate specialized service helper code, client code and
-documentation. goa is extensible via plugins, for example the
+documentation. Goa is extensible via plugins, for example the
 [goakit](https://github.com/goadesign/plugins/tree/master/goakit) plugin
 generates code that leverage the [go-kit](https://github.com/go-kit/kit)
 library.
@@ -31,14 +31,14 @@ possible to expose the same service using multiple transports. It also promotes
 good design where the service business logic concerns are expressed and
 implemented separately from the transport logic.
 
-The goa DSL consists of Go functions so that it may be extended easily to avoid
+The Goa DSL consists of Go functions so that it may be extended easily to avoid
 repetition and promote standards. The design code itself can easily be shared
 across multiple services by simply importing the corresponding Go package again
-promoting reuse and standardization across service boundaries.
+promoting reuse and standardization across services.
 
 ## Code Generation
 
-The goa tool accepts the Go design package import path as input and produces the
+The Goa tool accepts the Go design package import path as input and produces the
 interface as well as the glue that binds the service and client code with the
 underlying transport. The code is specific to the API so that for example there
 is no need to cast or "bind" any data structure prior to using the request
@@ -96,6 +96,9 @@ import . "goa.design/goa/dsl"
 var _ = API("calc", func() {
         Title("Calculator Service")
         Description("HTTP service for adding numbers, a goa teaser")
+        Server("calc", func() {
+		Host("localhost", func() { URI("http://localhost:8088") })
+        })
 })
 
 // Service describes a service
@@ -152,8 +155,8 @@ gen
 └── http
     ├── calc
     │   ├── client
-    │   │   ├── client.go
     │   │   ├── cli.go
+    │   │   ├── client.go
     │   │   ├── encode_decode.go
     │   │   ├── paths.go
     │   │   └── types.go
@@ -163,10 +166,12 @@ gen
     │       ├── server.go
     │       └── types.go
     ├── cli
-    │   └── cli.go
-    └── openapi.json
+    │   └── calc
+    │       └── cli.go
+    ├── openapi.json
+    └── openapi.yaml
 
-6 directories, 14 files
+7 directories, 15 files
 ```
 
 * `calc` contains the service endpoints and interface as well as a service
@@ -182,9 +187,12 @@ and client. These examples provide a good starting point:
 
 ``` text
 goa example calcsvc/design
+
 calc.go
-cmd/calccli/main.go
-cmd/calcsvc/main.go
+cmd/calc-cli/http.go
+cmd/calc-cli/main.go
+cmd/calc/http.go
+cmd/calc/main.go
 ```
 
 The tool generated the `main` functions for two commands: one that runs the
@@ -192,7 +200,7 @@ server and one the client. The tool also generated a dummy service
 implementation that prints a log message. Again note that the `example` command
 is intended to generate just that: an *example*, in particular it is not
 intended to be re-run each time the design changes (as opposed to the `gen`
-command which should be re-run each time the desgin changes).
+command which should be re-run each time the design changes).
 
 Let's implement our service by providing a proper implementation for the `add`
 method. goa generated a payload struct for the `add` method that contains both
@@ -202,7 +210,7 @@ request so all we have to do is to perform the actual sum. Edit the file
 
 ```go
 // Add returns the sum of attributes a and b of p.
-func (s *calcsvcSvc) Add(ctx context.Context, p *calcsvc.AddPayload) (int, error) {
+func (s *calcsrvc) Add(ctx context.Context, p *calcsvc.AddPayload) (res int, err error) {
         return p.A + p.B, nil
 }
 ```
@@ -214,44 +222,44 @@ specification and a client tool.
 
 Now let's compile and run the service:
 
-``` bash
-cd $GOPATH/src/calcsvc/cmd/calcsvc
+```bash
+cd $GOPATH/src/calcsvc/cmd/calc
 go build
-./calcsvc
-[calc] 04:27:45 [INFO] service "calc" method "Add" mounted on GET /add/{a}/{b}
-[calc] 04:27:45 [INFO] listening on :8080
+./calc
+[calcapi] 16:10:47 HTTP "Add" mounted on GET /add/{a}/{b}
+[calcapi] 16:10:47 HTTP server listening on "localhost:8088"
 ```
 
 Open a new console and compile the generated CLI tool:
 
-``` bash
-cd $GOPATH/src/calcsvc/cmd/calccli
+```bash
+cd $GOPATH/src/calcsvc/cmd/calc-cli
 go build
 ```
 
 and run it:
 
-``` bash
-./calccli -a 1 -b 2
+```bash
+./calc-cli calc add -a 1 -b 2
 3
 ```
 
 The tool includes contextual help:
 
 ``` bash
-./calccli --help
+./calc-cli --help
 ```
 
 Help is also available on each command:
 
 ``` bash
-./calccli calc add --help
+./calc-cli calc add --help
 ```
 
 Now let's see how robust our code is and try to use non integer values:
 
 ``` bash
-./calccli calc add -a 1 -b foo
+./calc-cli calc add -a 1 -b foo
 invalid value for b, must be INT
 run './calccli --help' for detailed usage.
 ```
@@ -278,12 +286,12 @@ var _ = Service("openapi", func() {
 })
 ```
 
-Re-run `goa gen calcsvc/design` and note the new directory `gen/openapi`
-containing the implementation for a HTTP handler that serves the `openapi.json`
-file.
+Re-run `goa gen calcsvc/design` and note the new directory `gen/openapi` and
+`gen/http/openapi` which contain the implementation for a HTTP handler that
+serves the `openapi.json` file.
 
 All we need to do is mount the handler on the service mux. Add the corresponding
-import statement to `cmd/calcsvc/calcsvc.go`:
+import statement to `cmd/calc/http.go`:
 
 ```go
 import openapisvr "calcsvc/gen/http/openapi/server"
@@ -301,16 +309,17 @@ with CTRL-C. Rebuild and re-run it then make requests to the newly added
 `/swagger.json` endpoint:
 
 ``` bash
-^C[calc] 05:04:28 exiting (interrupt)
-[calc] 05:04:28 exited
+^C[calcapi] 16:17:37 exiting (interrupt)
+[calcapi] 16:17:37 shutting down HTTP server at "localhost:8088"
+[calcapi] 16:17:37 exited
 go build
-./calcsvc
+./calc
 ```
 
 In a different console:
 
 ``` bash
-curl localhost:8080/swagger.json
+curl localhost:8088/swagger.json
 {"swagger":"2.0","info":{"title":"Calculator Service","description":...
 ```
 
@@ -327,13 +336,14 @@ There is also a [FAQ](https://github.com/goadesign/goa/blob/v2/docs/FAQ.md) and
 a document describing
 [error handling](https://github.com/goadesign/goa/blob/v2/docs/ErrorHandling.md).
 
+If you are coming from v1 you may also want to read the 
+[Upgrading](https://github.com/goadesign/goa/blob/v2/docs/Upgrading.md) document.
+
 ### Examples
 
-The [examples](https://github.com/goadesign/goa/tree/v2/examples) directory
+The [examples](https://github.com/goadesign/goa/tree/master/examples) directory
 contains simple examples illustrating basic concepts.
 
 ## Contributing
 
-Did you fix a bug? write docs or additional tests? or implement some new awesome
-functionality? You're a rock star!! Just make sure that `make` succeeds (or that
-TravisCI is green) and send a PR over.
+See [CONTRIBUTING](https://github.com/goadesign/goa/blob/v2/CONTRIBUTING.md).
