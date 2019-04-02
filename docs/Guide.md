@@ -245,7 +245,7 @@ only one of the fields for the payload type is mapped to a HTTP header for
 example.
 
 The body attributes may also be listed explicitly using the `Body` function.
-This function accepts either a DSL listing the corresponding payloard type
+This function accepts either a DSL listing the corresponding payload type
 attributes names or string which corresponds to the name of a single payload
 type attribute that defines the shape of the request body as a whole. The latter
 makes it possible to use arbitrary types to describe the request body.
@@ -325,10 +325,10 @@ and the following method design:
 ```
 
 The HTTP response body for requests sent to the "index" method are of the form
-`[{"name"="foo"},{"name"="bar"}]`. The same example but with the line defining
+`[{"name":"foo"},{"name":"bar"}]`. The same example but with the line defining
 the response body removed (`Body("accounts")`) produces response bodies of the
 form:
-`{"accounts":[{"name"="foo"},{"name"="bar"}]` since the shape of the response
+`{"accounts":[{"name":"foo"},{"name":"bar"}]` since the shape of the response
 body is now an object containing all the attributes of the result type not used
 to defined headers (only `accounts` is left).
 

@@ -341,7 +341,7 @@ If you are coming from v1 you may also want to read the
 
 ### Examples
 
-The [examples](https://github.com/goadesign/goa/tree/master/examples) directory
+The [examples](https://github.com/goadesign/examples) directory
 contains simple examples illustrating basic concepts.
 
 ## Contributing
