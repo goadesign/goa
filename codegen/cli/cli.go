@@ -466,6 +466,7 @@ func conversionCode(from, to, typeName string, pointer bool) (string, bool) {
 		checkErr = true
 	case int64N:
 		parse = fmt.Sprintf("%s, err %s= strconv.ParseInt(%s, 10, 64)", target, decl, from)
+		checkErr = true
 	case uintN:
 		parse = fmt.Sprintf("var v uint64\nv, err = strconv.ParseUint(%s, 10, 64)", from)
 		cast = fmt.Sprintf("%s %s= uint(v)", target, decl)
