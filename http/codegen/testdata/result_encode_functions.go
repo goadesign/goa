@@ -753,6 +753,20 @@ func EncodeMethodExplicitBodyUserResultMultipleViewResponse(encoder func(context
 }
 `
 
+var ExplicitBodyResultCollectionEncodeCode = `// EncodeMethodExplicitBodyResultCollectionResponse returns an encoder for
+// responses returned by the ServiceExplicitBodyResultCollection
+// MethodExplicitBodyResultCollection endpoint.
+func EncodeMethodExplicitBodyResultCollectionResponse(encoder func(context.Context, http.ResponseWriter) goahttp.Encoder) func(context.Context, http.ResponseWriter, interface{}) error {
+	return func(ctx context.Context, w http.ResponseWriter, v interface{}) error {
+		res := v.(*serviceexplicitbodyresultcollection.MethodExplicitBodyResultCollectionResult)
+		enc := encoder(ctx, w)
+		body := NewResulttypeCollection(res)
+		w.WriteHeader(http.StatusOK)
+		return enc.Encode(body)
+	}
+}
+`
+
 var ExplicitContentTypeResultEncodeCode = `// EncodeMethodExplicitContentTypeResultResponse returns an encoder for
 // responses returned by the ServiceExplicitContentTypeResult
 // MethodExplicitContentTypeResult endpoint.
