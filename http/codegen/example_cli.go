@@ -62,9 +62,11 @@ func exampleCLI(genpkg string, root *expr.RootExpr, svr *expr.ServerExpr) *codeg
 		{Path: rootPath, Name: apiPkg},
 	}
 
-	svcData := make([]*ServiceData, len(svr.Services))
-	for i, svc := range svr.Services {
-		svcData[i] = HTTPServices.Get(svc)
+	var svcData []*ServiceData
+	for _, svc := range svr.Services {
+		if data := HTTPServices.Get(svc); data != nil {
+			svcData = append(svcData, data)
+		}
 	}
 	sections := []*codegen.SectionTemplate{
 		codegen.Header("", "main", specs),

@@ -74,9 +74,11 @@ func exampleServer(genpkg string, root *expr.RootExpr, svr *expr.ServerExpr) *co
 	}
 	specs = append(specs, &codegen.ImportSpec{Path: rootPath, Name: apiPkg})
 
-	svcdata := make([]*ServiceData, len(svr.Services))
-	for i, svc := range svr.Services {
-		svcdata[i] = HTTPServices.Get(svc)
+	var svcdata []*ServiceData
+	for _, svc := range svr.Services {
+		if data := HTTPServices.Get(svc); data != nil {
+			svcdata = append(svcdata, data)
+		}
 	}
 
 	sections := []*codegen.SectionTemplate{
