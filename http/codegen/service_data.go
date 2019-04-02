@@ -2045,7 +2045,12 @@ func buildResponseBodyType(bodyCA, attCA *codegen.ContextualAttribute, e *expr.H
 				// generate validation code for unmarshaled type (client-side).
 				validateDef = codegen.RecursiveValidationCode(bodyCA, "body")
 				if validateDef != "" {
-					validateRef = fmt.Sprintf("err = Validate%s(&body)", varname)
+					target := "&body"
+					if expr.IsArray(ut) {
+						// result type collection
+						target = "body"
+					}
+					validateRef = fmt.Sprintf("err = Validate%s(%s)", varname, target)
 				}
 			}
 		} else if !expr.IsPrimitive(body.Type) && mustInit {

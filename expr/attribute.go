@@ -220,7 +220,7 @@ func (a *AttributeExpr) Validate(ctx string, parent eval.Expression) *eval.Valid
 // attribute.
 func (a *AttributeExpr) Finalize() {
 	if ut, ok := a.Type.(UserType); ok {
-		ut.Attribute().Finalize()
+		ut.Finalize()
 	}
 	if IsObject(a.Type) {
 		for _, ref := range a.References {

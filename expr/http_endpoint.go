@@ -537,6 +537,7 @@ func (e *HTTPEndpointExpr) Finalize() {
 		if r.Body == nil {
 			r.Body = httpResponseBody(e, r)
 		}
+		r.Body.Finalize()
 	}
 
 	// Lookup undefined HTTP errors in API.

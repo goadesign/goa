@@ -664,6 +664,11 @@ func Body(args ...interface{}) {
 		} else {
 			attr.Meta["origin:attribute"] = []string{a}
 		}
+		if rt, ok := attr.Type.(*expr.ResultTypeExpr); ok {
+			// If the attribute type is a result type add the type to the
+			// GeneratedTypes so that the type's DSLFunc is executed.
+			*expr.Root.GeneratedTypes = append(*expr.Root.GeneratedTypes, rt)
+		}
 	case expr.UserType:
 		attr = &expr.AttributeExpr{Type: a}
 		if len(args) > 1 {
