@@ -18,8 +18,11 @@ const (
 // isn't such a value then Example computes a random value for the attribute
 // using the given random value producer.
 func (a *AttributeExpr) Example(r *Random) interface{} {
-	if len(a.UserExamples) > 0 {
-		return a.UserExamples[0].Value
+	if l := len(a.UserExamples); l > 0 {
+		// Return the last item in the slice so that examples can be overridden
+		// in the DSL. Overridden examples are always appended to the UserExamples
+		// slice.
+		return a.UserExamples[l-1].Value
 	}
 	// randomize array length first, since that's from higher level
 	if hasLengthValidation(a) {
@@ -198,8 +201,7 @@ func byFormat(a *AttributeExpr, r *Random) interface{} {
 
 // byPattern generates a random value that satisfies the pattern.
 //
-// Note: if
-// multiple patterns are given, only one of them is used.
+// Note: if multiple patterns are given, only one of them is used.
 func byPattern(a *AttributeExpr, r *Random) interface{} {
 	if !hasPatternValidation(a) {
 		return false
