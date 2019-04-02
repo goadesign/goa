@@ -180,8 +180,6 @@ var InsertConflict = ResultType("application/vnd.service.insertconflict", func()
                 Attribute("conflict_value", String)
                 Attribute("name", String, "name of error used by goa to encode response", func() {
                         Meta("struct:error:name")
-                Attribute("name", String, "name of error used by goa to encode response", func() {
-                        Metadata("struct:error:name")
                 })
                 Required("conflict_value", "name")
         })
