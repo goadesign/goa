@@ -17,11 +17,6 @@ however the basic principles and value proposition remain identical:
 This document describes the changes and provides some guidelines on how to
 upgrade to v2.
 
-## Where is v1?
-
-The `v1` branch contains the Goa v1 releases and source code. The tag `old-master` points to the
-commit prior to merging the v2 code into the `master` branch.
-
 ## Changes to the DSL
 
 Goa v2 promotes a clean separation of layers by making it possible to design the service APIs
@@ -128,7 +123,7 @@ var _ = API("cellar", func() {
 	Description("HTTP service for managing your wine cellar")
 	Scheme("http")
 	Host("localhost:8080")
-    BasePath("/cellar")
+	BasePath("/cellar")
 })
 ```
 
@@ -260,19 +255,19 @@ v1 action design example:
 Equivalent v2 design:
 
 ```go
-    Method("update", func() {
+	Method("update", func() {
 		Description("Change account name")
-        Payload(func() {
+		Payload(func() {
 			Attribute("accountID", Int, "Account ID")
 			Attribute("name", String, "Account name")
 			Required("name")
 		})
-        Result(Empty)
+		Result(Empty)
 		Error("NotFound")
 		Error("BadRequest")
 
 		HTTP(func() {
 			PUT("/{accountID}")
 		})
-    })
+	})
 ```
