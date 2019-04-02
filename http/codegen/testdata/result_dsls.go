@@ -771,6 +771,29 @@ var ExplicitBodyUserResultMultipleViewsDSL = func() {
 	})
 }
 
+var ExplicitBodyResultCollectionDSL = func() {
+	var ResultType = ResultType("ResultType", func() {
+		Attributes(func() {
+			Attribute("x", String, func() {
+				MinLength(5)
+			})
+		})
+	})
+	Service("ServiceExplicitBodyResultCollection", func() {
+		Method("MethodExplicitBodyResultCollection", func() {
+			Result(func() {
+				Attribute("a", CollectionOf(ResultType))
+			})
+			HTTP(func() {
+				POST("/")
+				Response(StatusOK, func() {
+					Body("a")
+				})
+			})
+		})
+	})
+}
+
 var ExplicitContentTypeResultDSL = func() {
 	var ResultType = ResultType("ResultType", func() {
 		ContentType("application/custom+json")

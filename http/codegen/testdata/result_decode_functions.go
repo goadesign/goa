@@ -172,6 +172,48 @@ func DecodeMethodExplicitBodyUserResultMultipleViewResponse(decoder func(*http.R
 }
 `
 
+var ExplicitBodyResultCollectionDecodeCode = `// DecodeMethodExplicitBodyResultCollectionResponse returns a decoder for
+// responses returned by the ServiceExplicitBodyResultCollection
+// MethodExplicitBodyResultCollection endpoint. restoreBody controls whether
+// the response body should be restored after having been read.
+func DecodeMethodExplicitBodyResultCollectionResponse(decoder func(*http.Response) goahttp.Decoder, restoreBody bool) func(*http.Response) (interface{}, error) {
+	return func(resp *http.Response) (interface{}, error) {
+		if restoreBody {
+			b, err := ioutil.ReadAll(resp.Body)
+			if err != nil {
+				return nil, err
+			}
+			resp.Body = ioutil.NopCloser(bytes.NewBuffer(b))
+			defer func() {
+				resp.Body = ioutil.NopCloser(bytes.NewBuffer(b))
+			}()
+		} else {
+			defer resp.Body.Close()
+		}
+		switch resp.StatusCode {
+		case http.StatusOK:
+			var (
+				body ResulttypeCollection
+				err  error
+			)
+			err = decoder(resp).Decode(&body)
+			if err != nil {
+				return nil, goahttp.ErrDecodingError("ServiceExplicitBodyResultCollection", "MethodExplicitBodyResultCollection", err)
+			}
+			err = ValidateResulttypeCollection(body)
+			if err != nil {
+				return nil, goahttp.ErrValidationError("ServiceExplicitBodyResultCollection", "MethodExplicitBodyResultCollection", err)
+			}
+			res := NewMethodExplicitBodyResultCollectionResultOK(body)
+			return res, nil
+		default:
+			body, _ := ioutil.ReadAll(resp.Body)
+			return nil, goahttp.ErrInvalidResponse("ServiceExplicitBodyResultCollection", "MethodExplicitBodyResultCollection", resp.StatusCode, string(body))
+		}
+	}
+}
+`
+
 var ResultMultipleViewsTagDecodeCode = `// DecodeMethodTagMultipleViewsResponse returns a decoder for responses
 // returned by the ServiceTagMultipleViews MethodTagMultipleViews endpoint.
 // restoreBody controls whether the response body should be restored after
