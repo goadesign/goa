@@ -71,9 +71,8 @@ var Person = MediaType("application/vnd.goa.person", func() {
 		Required("name")
 	})
 	View("default", func() {  // View defines a rendering of the media type.
-		Attribute("id")   // Media types may have multiple views and must
-		Attribute("href") // have a "default" view.
-		Attribute("name")
+		Attribute("name") // Media types may have multiple views and must
+		Attribute("age")  // have a "default" view.
 	})
 })
 ```
