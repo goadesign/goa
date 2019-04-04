@@ -1,24 +1,24 @@
-package expr
+package expr_test
 
 import (
-	"fmt"
 	"testing"
 
-	"goa.design/goa/eval"
+	"goa.design/goa/expr"
+	"goa.design/goa/expr/testdata"
 )
 
 func TestServiceExprMethod(t *testing.T) {
 	var (
-		methodFoo = &MethodExpr{
+		methodFoo = &expr.MethodExpr{
 			Name: "foo",
 		}
-		methodBar = &MethodExpr{
+		methodBar = &expr.MethodExpr{
 			Name: "bar",
 		}
 	)
 	cases := map[string]struct {
 		name     string
-		expected *MethodExpr
+		expected *expr.MethodExpr
 	}{
 		"exist": {
 			name:     "foo",
@@ -31,8 +31,8 @@ func TestServiceExprMethod(t *testing.T) {
 	}
 
 	for k, tc := range cases {
-		s := ServiceExpr{
-			Methods: []*MethodExpr{
+		s := expr.ServiceExpr{
+			Methods: []*expr.MethodExpr{
 				methodFoo,
 				methodBar,
 			},
@@ -45,16 +45,16 @@ func TestServiceExprMethod(t *testing.T) {
 
 func TestServiceExprError(t *testing.T) {
 	var (
-		errorFoo = &ErrorExpr{
+		errorFoo = &expr.ErrorExpr{
 			Name: "foo",
 		}
-		errorBar = &ErrorExpr{
+		errorBar = &expr.ErrorExpr{
 			Name: "bar",
 		}
 	)
 	cases := map[string]struct {
 		name     string
-		expected *ErrorExpr
+		expected *expr.ErrorExpr
 	}{
 		"exist in service": {
 			name:     "foo",
@@ -70,11 +70,11 @@ func TestServiceExprError(t *testing.T) {
 		},
 	}
 
-	Root.Errors = []*ErrorExpr{
+	expr.Root.Errors = []*expr.ErrorExpr{
 		errorBar,
 	}
-	s := ServiceExpr{
-		Errors: []*ErrorExpr{
+	s := expr.ServiceExpr{
+		Errors: []*expr.ErrorExpr{
 			errorFoo,
 		},
 	}
@@ -88,227 +88,50 @@ func TestServiceExprError(t *testing.T) {
 }
 
 func TestServiceExprValidate(t *testing.T) {
-	const (
-		identifier = "result"
-	)
-	var (
-		requirements = func(schemes ...*SchemeExpr) []*SecurityExpr {
-			if len(schemes) > 0 {
-				return []*SecurityExpr{{Schemes: schemes}}
-			}
-			return nil
-		}
-		service = func(schemes ...*SchemeExpr) *ServiceExpr {
-			return &ServiceExpr{
-				Name:         "test",
-				Requirements: requirements(schemes...),
-			}
-		}
-		attributeTypeEmpty = func() *AttributeExpr {
-			return &AttributeExpr{
-				Type: Empty,
-			}
-		}
-		attributeTypeNil = func() *AttributeExpr {
-			return &AttributeExpr{
-				Type: nil,
-			}
-		}
-		invalidMethods = func() []*MethodExpr {
-			return []*MethodExpr{
-				{
-					Service: service(),
-					Payload: attributeTypeNil(),
-					Result:  attributeTypeEmpty(),
-					StreamingPayload: &AttributeExpr{
-						Type: Empty,
-					},
-				},
-			}
-		}
-		invalidErrors = func() []*ErrorExpr {
-			return []*ErrorExpr{
-				{
-					AttributeExpr: &AttributeExpr{
-						Type: &ResultTypeExpr{
-							UserTypeExpr: &UserTypeExpr{
-								AttributeExpr: &AttributeExpr{
-									Type: &Object{
-										&NamedAttributeExpr{
-											Name: "foo",
-											Attribute: &AttributeExpr{
-												Meta: MetaExpr{},
-											},
-										},
-									},
-								},
-							},
-							Identifier: identifier,
-						},
-					},
-				},
-			}
-		}
-		errAttributeTypeNil = fmt.Errorf("attribute type is nil")
-		errMissingMetadata  = fmt.Errorf("meta 'struct:error:name' is missing in result type %q", identifier)
-	)
-	cases := map[string]struct {
-		methods  []*MethodExpr
-		errors   []*ErrorExpr
-		expected *eval.ValidationErrors
+	cases := []struct {
+		Name  string
+		DSL   func()
+		Error string
 	}{
-		"no error": {
-			methods: []*MethodExpr{},
-			errors:  []*ErrorExpr{},
-			expected: &eval.ValidationErrors{
-				Errors: []error{},
-			},
-		},
-		"error only in methods": {
-			methods: invalidMethods(),
-			errors:  []*ErrorExpr{},
-			expected: &eval.ValidationErrors{
-				Errors: []error{errAttributeTypeNil},
-			},
-		},
-		"error only in errors": {
-			methods: []*MethodExpr{},
-			errors:  invalidErrors(),
-			expected: &eval.ValidationErrors{
-				Errors: []error{errMissingMetadata},
-			},
-		},
-		"error in both": {
-			methods: invalidMethods(),
-			errors:  invalidErrors(),
-			expected: &eval.ValidationErrors{
-				Errors: []error{
-					errAttributeTypeNil,
-					errMissingMetadata,
-				},
-			},
-		},
+		{"service errors", testdata.ServiceErrorDSL, `attribute: attribute "a" with 'struct:error:name' in the meta must be required in "ServiceError" type`},
 	}
 
-	for k, tc := range cases {
-		s := ServiceExpr{
-			Methods: tc.methods,
-			Errors:  tc.errors,
-		}
-		if actual := s.Validate().(*eval.ValidationErrors); len(tc.expected.Errors) != len(actual.Errors) {
-			t.Errorf("%s: expected the number of error values to match %d got %d ", k, len(tc.expected.Errors), len(actual.Errors))
-			t.Error(actual.Errors)
-		} else {
-			for i, err := range actual.Errors {
-				if err.Error() != tc.expected.Errors[i].Error() {
-					t.Errorf("%s: got %#v, expected %#v at index %d", k, err, tc.expected.Errors[i], i)
-				}
+	for _, tc := range cases {
+		t.Run(tc.Name, func(t *testing.T) {
+			err := expr.RunInvalidDSL(t, tc.DSL)
+			if tc.Error != err.Error() {
+				t.Errorf("invalid error:\ngot:\n%s\n\ngot vs expected:\n%s", err.Error(), expr.Diff(t, err.Error(), tc.Error))
 			}
-		}
+		})
 	}
 }
 
 func TestErrorExprValidate(t *testing.T) {
-	const (
-		identifier = "result"
-	)
-	var (
-		meta = MetaExpr{
-			"struct:error:name": []string{"error1"},
-		}
-		foo = &NamedAttributeExpr{
-			Name: "foo",
-			Attribute: &AttributeExpr{
-				Meta: meta,
-			},
-		}
-		bar = &NamedAttributeExpr{
-			Name: "bar",
-			Attribute: &AttributeExpr{
-				Meta: meta,
-			},
-		}
-		baz = &NamedAttributeExpr{
-			Name: "foo",
-			Attribute: &AttributeExpr{
-				Meta: MetaExpr{},
-			},
-		}
-	)
-	cases := map[string]struct {
-		att      *AttributeExpr
-		expected *eval.ValidationErrors
+	cases := []struct {
+		Name  string
+		DSL   func()
+		Error string
 	}{
-		"no error": {
-			att: &AttributeExpr{
-				Type: &ResultTypeExpr{
-					UserTypeExpr: &UserTypeExpr{
-						AttributeExpr: &AttributeExpr{
-							Type: &Object{
-								foo,
-							},
-						},
-					},
-					Identifier: identifier,
-				},
-			},
-			expected: &eval.ValidationErrors{
-				Errors: []error{},
-			},
-		},
-		"not result type": {
-			att:      &AttributeExpr{Type: Boolean},
-			expected: &eval.ValidationErrors{},
-		},
-		"duplicated meta": {
-			att: &AttributeExpr{
-				Type: &ResultTypeExpr{
-					UserTypeExpr: &UserTypeExpr{
-						AttributeExpr: &AttributeExpr{
-							Type: &Object{
-								foo,
-								bar,
-							},
-						},
-					},
-					Identifier: identifier,
-				},
-			},
-			expected: &eval.ValidationErrors{
-				Errors: []error{fmt.Errorf("meta 'struct:error:name' already set for attribute %q of result type %q", "foo", identifier)},
-			},
-		},
-		"missing meta": {
-			att: &AttributeExpr{
-				Type: &ResultTypeExpr{
-					UserTypeExpr: &UserTypeExpr{
-						AttributeExpr: &AttributeExpr{
-							Type: &Object{
-								baz,
-							},
-						},
-					},
-					Identifier: identifier,
-				},
-			},
-			expected: &eval.ValidationErrors{
-				Errors: []error{fmt.Errorf("meta 'struct:error:name' is missing in result type %q", identifier)},
-			},
+		{"no error", testdata.ValidErrorsDSL, ""},
+		{"invalid-struct-error-name-meta", testdata.InvalidStructErrorNameDSL,
+			`attribute: attribute "a" with 'struct:error:name' in the meta must be required in "ServiceError" type
+attribute: attribute "a" has 'struct:error:name' meta which is already set for attribute "b" in "Error" type
+attribute: attribute "a" with 'struct:error:name' in the meta must be a string in "Error" type
+attribute: attribute "a" with 'struct:error:name' in the meta must be required in "Error" type
+attribute: attribute with 'struct:error:name' in meta is missing in type "ErrorType"
+attribute: attribute with 'struct:error:name' in meta is missing in type "ErrorType"`,
 		},
 	}
-
-	for k, tc := range cases {
-		e := ErrorExpr{
-			AttributeExpr: tc.att,
-		}
-		if actual := e.Validate().(*eval.ValidationErrors); len(tc.expected.Errors) != len(actual.Errors) {
-			t.Errorf("%s: expected the number of error values to match %d got %d ", k, len(tc.expected.Errors), len(actual.Errors))
-		} else {
-			for i, err := range actual.Errors {
-				if err.Error() != tc.expected.Errors[i].Error() {
-					t.Errorf("%s: got %#v, expected %#v at index %d", k, err, tc.expected.Errors[i], i)
+	for _, tc := range cases {
+		t.Run(tc.Name, func(t *testing.T) {
+			if tc.Error == "" {
+				expr.RunDSL(t, tc.DSL)
+			} else {
+				err := expr.RunInvalidDSL(t, tc.DSL)
+				if tc.Error != err.Error() {
+					t.Errorf("invalid error:\ngot:\n%s\n\ngot vs expected:\n%s", err.Error(), expr.Diff(t, err.Error(), tc.Error))
 				}
 			}
-		}
+		})
 	}
 }

@@ -29,6 +29,7 @@ func TestService(t *testing.T) {
 		{"result-with-other-result", testdata.ResultWithOtherResultMethodDSL, testdata.ResultWithOtherResultMethod},
 		{"result-with-result-collection", testdata.ResultWithResultCollectionMethodDSL, testdata.ResultWithResultCollectionMethod},
 		{"service-level-error", testdata.ServiceErrorDSL, testdata.ServiceError},
+		{"custom-errors", testdata.CustomErrorsDSL, testdata.CustomErrors},
 		{"force-generate-type", testdata.ForceGenerateTypeDSL, testdata.ForceGenerateType},
 		{"force-generate-type-explicit", testdata.ForceGenerateTypeExplicitDSL, testdata.ForceGenerateTypeExplicit},
 		{"streaming-result", testdata.StreamingResultMethodDSL, testdata.StreamingResultMethod},

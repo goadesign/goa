@@ -157,10 +157,28 @@ func (m *MethodExpr) Validate() error {
 	if m.Result.Type != Empty {
 		verr.Merge(m.Result.Validate("result", m))
 	}
-	for _, e := range m.Errors {
+	for i, e := range m.Errors {
 		if err := e.Validate(); err != nil {
 			if verrs, ok := err.(*eval.ValidationErrors); ok {
 				verr.Merge(verrs)
+			}
+		}
+		for j, e2 := range m.Errors {
+			// If an object type is used to define more than one errors validate the
+			// presence of struct:error:name meta in the object type.
+			if i != j && e.Type == e2.Type && IsObject(e.Type) {
+				var found bool
+				walkAttribute(e.AttributeExpr, func(name string, att *AttributeExpr) error {
+					if _, ok := att.Meta["struct:error:name"]; ok {
+						found = true
+						return fmt.Errorf("struct:error:name found: stop iteration")
+					}
+					return nil
+				})
+				if !found {
+					verr.Add(e, "attribute with 'struct:error:name' in meta is missing in type %q", e.AttributeExpr.Type.Name())
+					break
+				}
 			}
 		}
 	}
