@@ -53,17 +53,32 @@ var UnaryRPCNoResultDSL = func() {
 }
 
 var UnaryRPCWithErrorsDSL = func() {
+	var ErrorType = Type("ErrorType", func() {
+		Attribute("a", String)
+	})
+	var AnotherError = ResultType("application/vnd.goa.another_error", func() {
+		TypeName("AnotherError")
+		Attributes(func() {
+			Attribute("name", String, func() {
+				Meta("struct:error:name")
+			})
+			Attribute("description", String)
+			Required("name")
+		})
+	})
 	Service("ServiceUnaryRPCWithErrors", func() {
 		Method("MethodUnaryRPCWithErrors", func() {
 			Payload(String)
 			Result(String)
 			Error("timeout")
-			Error("internal")
-			Error("bad_request")
+			Error("internal", AnotherError)
+			Error("bad_request", AnotherError)
+			Error("custom_error", ErrorType)
 			GRPC(func() {
 				Response("timeout", CodeCanceled)
 				Response("internal", CodeUnknown)
 				Response("bad_request", CodeInvalidArgument)
+				Response("custom_error", CodeUnknown)
 			})
 		})
 	})

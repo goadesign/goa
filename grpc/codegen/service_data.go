@@ -425,6 +425,12 @@ func (d ServicesData) analyze(gs *expr.GRPCServiceExpr) *ServiceData {
 			e.StreamingRequest = makeProtoBufMessage(e.StreamingRequest, protoBufify(e.Name()+"StreamingRequest", true), sd.Scope)
 		}
 		e.Response.Message = makeProtoBufMessage(e.Response.Message, protoBufify(e.Name()+"Response", true), sd.Scope)
+		for _, er := range e.GRPCErrors {
+			if er.ErrorExpr.Type == expr.ErrorResult || !expr.IsObject(er.ErrorExpr.Type) {
+				continue
+			}
+			er.Response.Message = makeProtoBufMessage(er.Response.Message, protoBufify(e.Name()+protoBufify(er.Name+"Error", true), true), sd.Scope)
+		}
 
 		// collect all the nested messages and return the top-level message
 		collect := func(att *expr.AttributeExpr) *service.UserTypeData {
@@ -452,6 +458,12 @@ func (d ServicesData) analyze(gs *expr.GRPCServiceExpr) *ServiceData {
 				viewedResultRef = md.ViewedResult.FullRef
 			}
 			errors = buildErrorsData(e, sd)
+			for _, er := range e.GRPCErrors {
+				if er.ErrorExpr.Type == expr.ErrorResult || !expr.IsObject(er.ErrorExpr.Type) {
+					continue
+				}
+				collect(er.Response.Message)
+			}
 		}
 
 		// build request data
@@ -936,8 +948,10 @@ func buildErrorsData(e *expr.GRPCEndpointExpr, sd *ServiceData) []*ErrorData {
 		var responseData *ResponseData
 		{
 			responseData = &ResponseData{
-				StatusCode:  statusCodeToGRPCConst(v.Response.StatusCode),
-				Description: v.Response.Description,
+				StatusCode:    statusCodeToGRPCConst(v.Response.StatusCode),
+				Description:   v.Response.Description,
+				ServerConvert: buildErrorConvertData(v, e, sd, true),
+				ClientConvert: buildErrorConvertData(v, e, sd, false),
 			}
 		}
 		errors = append(errors, &ErrorData{
@@ -947,6 +961,54 @@ func buildErrorsData(e *expr.GRPCEndpointExpr, sd *ServiceData) []*ErrorData {
 		})
 	}
 	return errors
+}
+
+func buildErrorConvertData(ge *expr.GRPCErrorExpr, e *expr.GRPCEndpointExpr, sd *ServiceData, svr bool) *ConvertData {
+	// No need to build transformation functions for default error or non-object
+	// types.
+	if ge.ErrorExpr.Type == expr.ErrorResult || !expr.IsObject(ge.ErrorExpr.Type) {
+		return nil
+	}
+	var (
+		svc  = sd.Service
+		er   = serviceTypeContext(ge.ErrorExpr.AttributeExpr, svc.PkgName, svc.Scope)
+		resp = protoBufContext(ge.Response.Message, sd.PkgName, sd.Scope)
+	)
+
+	if svr {
+		// server side
+
+		var data *InitData
+		{
+			data = buildInitData(er, resp, "er", "message", true, sd)
+			data.Name = fmt.Sprintf("New%s%sError", codegen.Goify(e.Name(), true), codegen.Goify(ge.Name, true))
+			data.Description = fmt.Sprintf("%s builds the gRPC error response type from the error of the %q endpoint of the %q service.", data.Name, e.Name(), svc.Name)
+		}
+		return &ConvertData{
+			SrcName: er.Attribute.Name(),
+			SrcRef:  er.Attribute.Ref(),
+			TgtName: resp.Attribute.Name(),
+			TgtRef:  resp.Attribute.Ref(),
+			Init:    data,
+		}
+	}
+
+	// client side
+
+	var data *InitData
+	{
+		data = buildInitData(resp, er, "message", "er", false, sd)
+		data.Name = fmt.Sprintf("New%s%sError", codegen.Goify(e.Name(), true), codegen.Goify(ge.Name, true))
+		data.Description = fmt.Sprintf("%s builds the error type of the %q endpoint of the %q service from the gRPC error response type.", data.Name, e.Name(), svc.Name)
+	}
+	return &ConvertData{
+		SrcName:    resp.Attribute.Name(),
+		SrcRef:     resp.Attribute.Ref(),
+		TgtName:    er.Attribute.Name(),
+		TgtRef:     er.Attribute.Ref(),
+		Init:       data,
+		Validation: addValidation(er.Attribute.Expr(), sd),
+	}
 }
 
 // buildStreamData builds the StreamData for the server and client streams.
