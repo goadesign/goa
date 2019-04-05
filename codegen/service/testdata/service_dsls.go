@@ -131,6 +131,24 @@ var ServiceErrorDSL = func() {
 	})
 }
 
+var CustomErrorsDSL = func() {
+	var Result = ResultType("application/vnd.goa.error", func() {
+		TypeName("Result")
+		Attribute("a", String)
+		Attribute("b", String, func() {
+			Meta("struct:error:name")
+		})
+		Required("b")
+	})
+	Service("CustomErrors", func() {
+		Method("A", func() {
+			Error("primitive", String, "primitive error description")
+			Error("user_type", APayload, "user type error description")
+			Error("struct_error_name", Result, "struct error name description")
+		})
+	})
+}
+
 var MultipleMethodsResultMultipleViewsDSL = func() {
 	var RTWithViews = ResultType("application/vnd.result.multiple.views", func() {
 		TypeName("MultipleViews")

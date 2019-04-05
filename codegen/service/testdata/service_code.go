@@ -308,6 +308,70 @@ func MakeError(err error) *goa.ServiceError {
 }
 `
 
+const CustomErrors = `
+// Service is the CustomErrors service interface.
+type Service interface {
+	// A implements A.
+	A(context.Context) (err error)
+}
+
+// ServiceName is the name of the service as defined in the design. This is the
+// same value that is set in the endpoint request contexts under the ServiceKey
+// key.
+const ServiceName = "CustomErrors"
+
+// MethodNames lists the service method names as defined in the design. These
+// are the same values that are set in the endpoint request contexts under the
+// MethodKey key.
+var MethodNames = [1]string{"A"}
+
+// primitive error description
+type Primitive string
+
+type APayload struct {
+	IntField      int
+	StringField   string
+	BooleanField  bool
+	BytesField    []byte
+	OptionalField *string
+}
+
+type Result struct {
+	A *string
+	B string
+}
+
+// Error returns an error description.
+func (e Primitive) Error() string {
+	return "primitive error description"
+}
+
+// ErrorName returns "primitive".
+func (e Primitive) ErrorName() string {
+	return "primitive"
+}
+
+// Error returns an error description.
+func (e *APayload) Error() string {
+	return ""
+}
+
+// ErrorName returns "APayload".
+func (e *APayload) ErrorName() string {
+	return "user_type"
+}
+
+// Error returns an error description.
+func (e *Result) Error() string {
+	return ""
+}
+
+// ErrorName returns "Result".
+func (e *Result) ErrorName() string {
+	return e.B
+}
+`
+
 const MultipleMethodsResultMultipleViews = `
 // Service is the MultipleMethodsResultMultipleViews service interface.
 type Service interface {

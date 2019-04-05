@@ -9,23 +9,24 @@ import (
 )
 
 func TestFlowExprEvalName(t *testing.T) {
-	const tokenURL = "http://domain/token"
-	const refreshURL = "http://domain/refresh"
-
-	cases := map[string]struct {
-		tokenURL   string
-		refreshURL string
-		expected   string
+	cases := []struct {
+		name     string
+		kind     FlowKind
+		expected string
 	}{
-		"tokenURL test":   {tokenURL: tokenURL, refreshURL: "", expected: fmt.Sprintf("flow with token URL %q", tokenURL)},
-		"refreshURL test": {tokenURL: "", refreshURL: refreshURL, expected: fmt.Sprintf("flow with refresh URL %q", refreshURL)},
+		{"authorization-code", AuthorizationCodeFlowKind, "flow authorization_code"},
+		{"implicit", ImplicitFlowKind, "flow implicit"},
+		{"client-credentials", ClientCredentialsFlowKind, "flow client_credentials"},
+		{"password", PasswordFlowKind, "flow password"},
 	}
 
-	for k, tc := range cases {
-		fe := &FlowExpr{TokenURL: tc.tokenURL, RefreshURL: tc.refreshURL}
-		if actual := fe.EvalName(); actual != tc.expected {
-			t.Errorf("%s: got %#v, expected %#v", k, actual, tc.expected)
-		}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			fe := &FlowExpr{Kind: tc.kind}
+			if actual := fe.EvalName(); actual != tc.expected {
+				t.Errorf("got %#v, expected %#v", actual, tc.expected)
+			}
+		})
 	}
 }
 

@@ -78,13 +78,6 @@ func (s *ServiceExpr) Hash() string {
 // Validate validates the service methods and errors.
 func (s *ServiceExpr) Validate() error {
 	verr := new(eval.ValidationErrors)
-	for _, m := range s.Methods {
-		if err := m.Validate(); err != nil {
-			if verrs, ok := err.(*eval.ValidationErrors); ok {
-				verr.Merge(verrs)
-			}
-		}
-	}
 	for _, e := range s.Errors {
 		if err := e.Validate(); err != nil {
 			if verrs, ok := err.(*eval.ValidationErrors); ok {
@@ -106,25 +99,22 @@ func (s *ServiceExpr) Finalize() {
 // custom error types.
 func (e *ErrorExpr) Validate() error {
 	verr := new(eval.ValidationErrors)
-	rt, ok := e.AttributeExpr.Type.(*ResultTypeExpr)
-	if !ok {
-		return verr
-	}
-	if o := AsObject(rt); o != nil {
-		var errField string
-		for _, n := range *o {
-			if _, ok := n.Attribute.Meta["struct:error:name"]; ok {
-				if errField != "" {
-					verr.Add(e, "meta 'struct:error:name' already set for attribute %q of result type %q", errField, rt.Identifier)
-					continue
-				}
-				errField = n.Name
+	var errField string
+	walkAttribute(e.AttributeExpr, func(name string, att *AttributeExpr) error {
+		if _, ok := att.Meta["struct:error:name"]; ok {
+			if errField != "" {
+				verr.Add(e, "attribute %q has 'struct:error:name' meta which is already set for attribute %q in %q type", name, errField, e.AttributeExpr.Type.Name())
+			}
+			errField = name
+			if att.Type != String {
+				verr.Add(e, "attribute %q with 'struct:error:name' in the meta must be a string in %q type", name, e.AttributeExpr.Type.Name())
+			}
+			if !e.AttributeExpr.IsRequired(name) {
+				verr.Add(e, "attribute %q with 'struct:error:name' in the meta must be required in %q type", name, e.AttributeExpr.Type.Name())
 			}
 		}
-		if errField == "" {
-			verr.Add(e, "meta 'struct:error:name' is missing in result type %q", rt.Identifier)
-		}
-	}
+		return nil
+	})
 	return verr
 }
 
@@ -133,7 +123,23 @@ func (e *ErrorExpr) Validate() error {
 // Note: this may produce a user type with an attribute that is not an object!
 func (e *ErrorExpr) Finalize() {
 	att := e.AttributeExpr
-	if _, ok := att.Type.(UserType); !ok {
+	switch dt := att.Type.(type) {
+	case UserType:
+		if dt != ErrorResult {
+			// If this type contains an attribute with "struct:error:name" meta
+			// then no need to do anything.
+			for _, nat := range *AsObject(dt) {
+				if _, ok := nat.Attribute.Meta["struct:error:name"]; ok {
+					return
+				}
+			}
+
+			// This type does not have an attribute with "struct:error:name" meta.
+			// It means the type is used by at most one error (otherwise validations
+			// would have failed).
+			dt.Attribute().Meta["struct:error:name"] = []string{e.Name}
+		}
+	default:
 		ut := &UserTypeExpr{
 			AttributeExpr: att,
 			TypeName:      e.Name,

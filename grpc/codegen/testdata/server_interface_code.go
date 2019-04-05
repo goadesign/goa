@@ -61,11 +61,16 @@ func (s *Server) MethodUnaryRPCWithErrors(ctx context.Context, message *service_
 		if en, ok := err.(ErrorNamer); ok {
 			switch en.ErrorName() {
 			case "timeout":
-				return nil, goagrpc.NewStatusError(codes.Canceled, err)
+				return nil, goagrpc.NewStatusError(codes.Canceled, err, goagrpc.NewErrorResponse(err))
 			case "internal":
-				return nil, goagrpc.NewStatusError(codes.Unknown, err)
+				er := err.(*serviceunaryrpcwitherrors.AnotherError)
+				return nil, goagrpc.NewStatusError(codes.Unknown, err, NewMethodUnaryRPCWithErrorsInternalError(er))
 			case "bad_request":
-				return nil, goagrpc.NewStatusError(codes.InvalidArgument, err)
+				er := err.(*serviceunaryrpcwitherrors.AnotherError)
+				return nil, goagrpc.NewStatusError(codes.InvalidArgument, err, NewMethodUnaryRPCWithErrorsBadRequestError(er))
+			case "custom_error":
+				er := err.(*serviceunaryrpcwitherrors.ErrorType)
+				return nil, goagrpc.NewStatusError(codes.Unknown, err, NewMethodUnaryRPCWithErrorsCustomErrorError(er))
 			}
 		}
 		return nil, goagrpc.EncodeError(err)
@@ -86,9 +91,9 @@ func (s *Server) MethodUnaryRPCWithOverridingErrors(ctx context.Context, message
 		if en, ok := err.(ErrorNamer); ok {
 			switch en.ErrorName() {
 			case "overridden":
-				return nil, goagrpc.NewStatusError(codes.Unknown, err)
+				return nil, goagrpc.NewStatusError(codes.Unknown, err, goagrpc.NewErrorResponse(err))
 			case "internal":
-				return nil, goagrpc.NewStatusError(codes.Unknown, err)
+				return nil, goagrpc.NewStatusError(codes.Unknown, err, goagrpc.NewErrorResponse(err))
 			}
 		}
 		return nil, goagrpc.EncodeError(err)
@@ -224,11 +229,11 @@ func (s *Server) MethodBidirectionalStreamingRPCWithErrors(stream service_bidire
 		if en, ok := err.(ErrorNamer); ok {
 			switch en.ErrorName() {
 			case "timeout":
-				return goagrpc.NewStatusError(codes.Canceled, err)
+				return goagrpc.NewStatusError(codes.Canceled, err, goagrpc.NewErrorResponse(err))
 			case "internal":
-				return goagrpc.NewStatusError(codes.Unknown, err)
+				return goagrpc.NewStatusError(codes.Unknown, err, goagrpc.NewErrorResponse(err))
 			case "bad_request":
-				return goagrpc.NewStatusError(codes.InvalidArgument, err)
+				return goagrpc.NewStatusError(codes.InvalidArgument, err, goagrpc.NewErrorResponse(err))
 			}
 		}
 		return goagrpc.EncodeError(err)
@@ -241,11 +246,11 @@ func (s *Server) MethodBidirectionalStreamingRPCWithErrors(stream service_bidire
 		if en, ok := err.(ErrorNamer); ok {
 			switch en.ErrorName() {
 			case "timeout":
-				return goagrpc.NewStatusError(codes.Canceled, err)
+				return goagrpc.NewStatusError(codes.Canceled, err, goagrpc.NewErrorResponse(err))
 			case "internal":
-				return goagrpc.NewStatusError(codes.Unknown, err)
+				return goagrpc.NewStatusError(codes.Unknown, err, goagrpc.NewErrorResponse(err))
 			case "bad_request":
-				return goagrpc.NewStatusError(codes.InvalidArgument, err)
+				return goagrpc.NewStatusError(codes.InvalidArgument, err, goagrpc.NewErrorResponse(err))
 			}
 		}
 		return goagrpc.EncodeError(err)

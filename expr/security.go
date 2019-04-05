@@ -166,25 +166,19 @@ func (s *SchemeExpr) Validate() *eval.ValidationErrors {
 
 // EvalName returns the name of the expression used in error messages.
 func (f *FlowExpr) EvalName() string {
-	if f.TokenURL != "" {
-		return fmt.Sprintf("flow with token URL %q", f.TokenURL)
-	}
-	return fmt.Sprintf("flow with refresh URL %q", f.RefreshURL)
+	return "flow " + f.Type()
 }
 
 // Validate ensures that TokenURL and AuthorizationURL are valid URLs.
 func (f *FlowExpr) Validate() *eval.ValidationErrors {
 	verr := new(eval.ValidationErrors)
-	_, err := url.Parse(f.TokenURL)
-	if err != nil {
+	if _, err := url.Parse(f.TokenURL); err != nil {
 		verr.Add(f, "invalid token URL %q: %s", f.TokenURL, err)
 	}
-	_, err = url.Parse(f.AuthorizationURL)
-	if err != nil {
+	if _, err := url.Parse(f.AuthorizationURL); err != nil {
 		verr.Add(f, "invalid authorization URL %q: %s", f.AuthorizationURL, err)
 	}
-	_, err = url.Parse(f.RefreshURL)
-	if err != nil {
+	if _, err := url.Parse(f.RefreshURL); err != nil {
 		verr.Add(f, "invalid refresh URL %q: %s", f.RefreshURL, err)
 	}
 	return verr
