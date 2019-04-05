@@ -70,10 +70,9 @@ var Person = MediaType("application/vnd.goa.person", func() {
 		Attribute("age", Integer, "Age of person")
 		Required("name")
 	})
-	View("default", func() { // View defines a rendering of the media type.
-		Attribute("id")   // Media types may have multiple views and must
-		Attribute("href") // have a "default" view.
-		Attribute("name")
+	View("default", func() {  // View defines a rendering of the media type.
+		Attribute("name") // Media types may have multiple views and must
+		Attribute("age")  // have a "default" view.
 	})
 })
 ```
@@ -224,7 +223,7 @@ specific errors not already defined at the service level. The transport specific
 payload and result type attributes to transport specific constructs such as HTTP headers, body etc.
 
 * Most of the DSL present in v1 is HTTP specific and thus moved to the [HTTP](https://godoc.org/goa.design/goa/dsl#HTTP) DSL.
-* The [Param](https://godoc.org/goa.design/goa/dsl#Param) an [Header](https://godoc.org/goa.design/goa/dsl#Header) functions 
+* The [Param](https://godoc.org/goa.design/goa/dsl#Param) and [Header](https://godoc.org/goa.design/goa/dsl#Header) functions 
   now need only list the names of attributes of the corresponding method payload or result types.
 * Error responses now use the [Error](https://godoc.org/goa.design/goa/dsl#Error) DSL.
 * HTTP path parameters are now defined using curly braces instead of colons: `/foo/{id}` instead of `/foo/:id`.
