@@ -34,7 +34,7 @@ type (
 // the given error. If the given error is a goa ServiceError, the ErrorResponse
 // message will be set with the corresponding Timeout, Temporary, and Fault
 // characteristics. If the error is not a goa ServiceError, it creates an
-// ErrorResponse message with the Fault characteristic set.
+// ErrorResponse message with the Fault field set to true.
 func NewErrorResponse(err error) *goapb.ErrorResponse {
 	if gerr, ok := err.(*goa.ServiceError); ok {
 		return &goapb.ErrorResponse{

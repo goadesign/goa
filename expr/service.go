@@ -128,27 +128,16 @@ func (e *ErrorExpr) Finalize() {
 		if dt != ErrorResult {
 			// If this type contains an attribute with "struct:error:name" meta
 			// then no need to do anything.
-			var found bool
 			for _, nat := range *AsObject(dt) {
 				if _, ok := nat.Attribute.Meta["struct:error:name"]; ok {
-					found = true
-					break
+					return
 				}
-			}
-			if found {
-				return
 			}
 
 			// This type does not have an attribute with "struct:error:name" meta.
 			// It means the type is used by at most one error (otherwise validations
-			// would have failed). Dup type and add "struct:error:name" meta to
-			// indicate that the type is an error type.
-			dt = Dup(att.Type).(UserType)
-			if dt.Attribute().Meta == nil {
-				dt.Attribute().Meta = MetaExpr{}
-			}
+			// would have failed).
 			dt.Attribute().Meta["struct:error:name"] = []string{e.Name}
-			att.Type = dt
 		}
 	default:
 		ut := &UserTypeExpr{

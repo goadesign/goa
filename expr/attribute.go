@@ -159,6 +159,13 @@ func TaggedAttribute(a *AttributeExpr, tag string) string {
 	return ""
 }
 
+// Prepare initializes the Meta expression.
+func (a *AttributeExpr) Prepare() {
+	if a.Meta == nil {
+		a.Meta = MetaExpr{}
+	}
+}
+
 // Validate tests whether the attribute required fields exist.  Since attributes
 // are unaware of their context, additional context information can be provided
 // to be used in error messages.  The parent definition context is automatically

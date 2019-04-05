@@ -176,7 +176,7 @@ func (m *MethodExpr) Validate() error {
 					return nil
 				})
 				if !found {
-					verr.Add(e, "attribute with 'struct:error:name' in meta is missing in type %q", e.AttributeExpr.Type.Name())
+					verr.Add(e, "type %q is used to define multiple errors and must identify the attribute containing error name. Use Meta with the key 'struct:error:name' on the error name attribute", e.AttributeExpr.Type.Name())
 					break
 				}
 			}

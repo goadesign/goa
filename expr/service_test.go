@@ -118,8 +118,8 @@ func TestErrorExprValidate(t *testing.T) {
 attribute: attribute "a" has 'struct:error:name' meta which is already set for attribute "b" in "Error" type
 attribute: attribute "a" with 'struct:error:name' in the meta must be a string in "Error" type
 attribute: attribute "a" with 'struct:error:name' in the meta must be required in "Error" type
-attribute: attribute with 'struct:error:name' in meta is missing in type "ErrorType"
-attribute: attribute with 'struct:error:name' in meta is missing in type "ErrorType"`,
+attribute: type "ErrorType" is used to define multiple errors and must identify the attribute containing error name. Use Meta with the key 'struct:error:name' on the error name attribute
+attribute: type "ErrorType" is used to define multiple errors and must identify the attribute containing error name. Use Meta with the key 'struct:error:name' on the error name attribute`,
 		},
 	}
 	for _, tc := range cases {
