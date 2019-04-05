@@ -42,6 +42,7 @@ func client(genpkg string, svc *expr.GRPCServiceExpr) *codegen.File {
 				{Path: "google.golang.org/grpc"},
 				{Path: "goa.design/goa", Name: "goa"},
 				{Path: "goa.design/goa/grpc", Name: "goagrpc"},
+				{Path: "goa.design/goa/grpc/pb", Name: "goapb"},
 				{Path: path.Join(genpkg, svcName), Name: data.Service.PkgName},
 				{Path: path.Join(genpkg, svcName, "views"), Name: data.Service.ViewsPkg},
 				{Path: path.Join(genpkg, "grpc", svcName, pbPkgName), Name: data.PkgName},
@@ -204,7 +205,23 @@ func (c *{{ .ClientStruct }}) {{ .Method.VarName }}() goa.Endpoint {
 			{{ if or .ResultRef .ClientStream }}Decode{{ .Method.VarName }}Response{{ else }}nil{{ end }})
 		res, err := inv.Invoke(ctx, v)
 		if err != nil {
-			return nil, goagrpc.DecodeError(err)
+		{{- if .Errors }}
+			resp := goagrpc.DecodeError(err)
+			switch message := resp.(type) {
+			{{- range .Errors }}
+				{{- if .Response.ClientConvert }}
+					case {{ .Response.ClientConvert.SrcRef }}:
+						return nil, {{ .Response.ClientConvert.Init.Name }}({{ range .Response.ClientConvert.Init.Args }}{{ .Name }}, {{ end }})
+				{{- end }}
+			{{- end }}
+			case *goapb.ErrorResponse:
+				return nil, goagrpc.NewServiceError(message)
+			default:
+				return nil, goa.Fault(err.Error())
+			}
+		{{- else }}
+			return nil, goa.Fault(err.Error())
+		{{- end }}
 		}
 		return res, nil
 	}

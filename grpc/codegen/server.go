@@ -265,7 +265,10 @@ func (s *{{ .ServerStruct }}) {{ .Method.VarName }}(
 			switch en.ErrorName() {
 		{{- range .Errors }}
 			case {{ printf "%q" .Name }}:
-				return {{ if not $.ServerStream }}nil, {{ end }}goagrpc.NewStatusError({{ .Response.StatusCode }}, err)
+				{{- if .Response.ServerConvert }}
+					er := err.({{ .Response.ServerConvert.SrcRef }})
+				{{- end }}
+				return {{ if not $.ServerStream }}nil, {{ end }}goagrpc.NewStatusError({{ .Response.StatusCode }}, err, {{ if .Response.ServerConvert }}{{ .Response.ServerConvert.Init.Name }}({{ range .Response.ServerConvert.Init.Args }}{{ .Name }}, {{ end }}){{ else }}goagrpc.NewErrorResponse(err){{ end }})
 		{{- end }}
 			}
 		}

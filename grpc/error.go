@@ -30,7 +30,11 @@ type (
 	}
 )
 
-// NewErrorResponse create a gRPC error response from the given error.
+// NewErrorResponse creates a new ErrorResponse protocol buffer message from
+// the given error. If the given error is a goa ServiceError, the ErrorResponse
+// message will be set with the corresponding Timeout, Temporary, and Fault
+// characteristics. If the error is not a goa ServiceError, it creates an
+// ErrorResponse message with the Fault field set to true.
 func NewErrorResponse(err error) *goapb.ErrorResponse {
 	if gerr, ok := err.(*goa.ServiceError); ok {
 		return &goapb.ErrorResponse{
@@ -45,11 +49,27 @@ func NewErrorResponse(err error) *goapb.ErrorResponse {
 	return NewErrorResponse(goa.Fault(err.Error()))
 }
 
+// NewServiceError returns a goa ServiceError type for the given ErrorResponse
+// message.
+func NewServiceError(resp *goapb.ErrorResponse) *goa.ServiceError {
+	return &goa.ServiceError{
+		Name:      resp.Name,
+		ID:        resp.Id,
+		Message:   resp.Msg,
+		Timeout:   resp.Timeout,
+		Temporary: resp.Temporary,
+		Fault:     resp.Fault,
+	}
+}
+
 // NewStatusError creates a gRPC status error with the error response
-// added to its details.
-func NewStatusError(code codes.Code, err error) error {
+// messages added to its details.
+func NewStatusError(code codes.Code, err error, details ...proto.Message) error {
 	st := status.New(code, err.Error())
-	return errorWithDetails(st, NewErrorResponse(err))
+	if s, err := st.WithDetails(details...); err == nil {
+		return s.Err()
+	}
+	return st.Err()
 }
 
 // EncodeError returns a gRPC status error from the given error with the error
@@ -59,9 +79,11 @@ func NewStatusError(code codes.Code, err error) error {
 // ServiceError or a gRPC status error it returns a gRPC status error with
 // Unknown code and Fault characteristic set.
 func EncodeError(err error) error {
-	resp := NewErrorResponse(err)
 	if st, ok := status.FromError(err); ok {
-		return errorWithDetails(st, resp)
+		if s, err := st.WithDetails(NewErrorResponse(err)); err == nil {
+			return s.Err()
+		}
+		return st.Err()
 	}
 	if gerr, ok := err.(*goa.ServiceError); ok {
 		// goa service error type. Compute the status code from the service error
@@ -79,33 +101,26 @@ func EncodeError(err error) error {
 				code = codes.Unavailable
 			}
 		}
-		return NewStatusError(code, err)
+		return NewStatusError(code, err, NewErrorResponse(err))
 	}
 	// Return an unknown gRPC status error with fault characteristic set.
-	return NewStatusError(codes.Unknown, err)
+	return NewStatusError(codes.Unknown, err, NewErrorResponse(err))
 }
 
-// DecodeError returns a goa ServiceError type from the given gRPC status
-// error. It decodes the gRPC status details to construct the ServiceError
-// type. If no details exist, it simply returns a goa Fault error.
-func DecodeError(err error) *goa.ServiceError {
-	if st, ok := status.FromError(err); ok {
-		if details := st.Details(); len(details) > 0 {
-			for _, d := range details {
-				if resp, ok := d.(*goapb.ErrorResponse); ok {
-					return &goa.ServiceError{
-						Name:      resp.Name,
-						ID:        resp.Id,
-						Message:   resp.Msg,
-						Timeout:   resp.Timeout,
-						Temporary: resp.Temporary,
-						Fault:     resp.Fault,
-					}
-				}
-			}
-		}
+// DecodeError returns the error message encoded in the status details if error
+// is a gRPC status error. It assumes that the error message is encoded as the
+// first item in the details. It returns nil if the error is not a gRPC status
+// error or if no detail is found.
+func DecodeError(err error) proto.Message {
+	st, ok := status.FromError(err)
+	if !ok {
+		return nil
 	}
-	return goa.Fault(err.Error())
+	details := st.Details()
+	if len(details) == 0 {
+		return nil
+	}
+	return details[0].(proto.Message)
 }
 
 // ErrInvalidType is the error returned when the wrong type is given to a
@@ -118,13 +133,4 @@ func ErrInvalidType(svc, m, expected string, actual interface{}) error {
 // Error builds an error message.
 func (c *ClientError) Error() string {
 	return fmt.Sprintf("[%s %s]: %s", c.Service, c.Method, c.Message)
-}
-
-// errorWithDetails adds the given details to the gRPC error status and
-// returns the error.
-func errorWithDetails(st *status.Status, details ...proto.Message) error {
-	if s, err := st.WithDetails(details...); err == nil {
-		return s.Err()
-	}
-	return st.Err()
 }

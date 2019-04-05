@@ -56,6 +56,11 @@ func clientType(genpkg string, svc *expr.GRPCServiceExpr, seen map[string]struct
 					collect(c)
 				}
 			}
+			for _, e := range ed.Errors {
+				if c := e.Response.ClientConvert; c != nil {
+					collect(c)
+				}
+			}
 		}
 	}
 

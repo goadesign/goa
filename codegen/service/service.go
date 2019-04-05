@@ -93,9 +93,6 @@ func File(genpkg string, service *expr.ServiceExpr) *codegen.File {
 	}
 
 	for _, et := range errorTypes {
-		if et.Type == expr.ErrorResult {
-			continue
-		}
 		sections = append(sections, &codegen.SectionTemplate{
 			Name:    "service-error",
 			Source:  errorT,
@@ -163,6 +160,12 @@ func errorName(et *UserTypeData) string {
 				return fmt.Sprintf("e.%s", codegen.Goify(att.Name, true))
 			}
 		}
+	}
+	// if error type is a custom user type and used by at most one error, then
+	// error Finalize should have added "struct:error:name" to the user type
+	// attribute's meta.
+	if v, ok := et.Type.Attribute().Meta["struct:error:name"]; ok {
+		return fmt.Sprintf("%q", v[0])
 	}
 	return fmt.Sprintf("%q", et.Name)
 }
