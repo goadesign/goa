@@ -57,6 +57,8 @@ func fixReservedGo(w string) string {
 var (
 	// reserved golang keywords and package names
 	reservedGo = map[string]bool{
+		// predeclared types
+		"bool":       true,
 		"byte":       true,
 		"complex128": true,
 		"complex64":  true,
@@ -69,10 +71,12 @@ var (
 		"int8":       true,
 		"rune":       true,
 		"string":     true,
+		"uint":       true,
 		"uint16":     true,
 		"uint32":     true,
 		"uint64":     true,
 		"uint8":      true,
+		"uintptr":    true,
 
 		// reserved keywords
 		"break":       true,
@@ -101,6 +105,12 @@ var (
 		"switch":      true,
 		"type":        true,
 		"var":         true,
+
+		// predeclared constants
+		"true":  true,
+		"false": true,
+		"iota":  true,
+		"nil":   true,
 
 		// stdlib and goa packages used by generated code
 		"fmt":  true,
