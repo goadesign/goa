@@ -66,10 +66,14 @@ func TestAttributeExprValidate(t *testing.T) {
 			"view": []string{"foo"},
 		}
 
+		fieldNotExistType      = &Object{}
+		notAResultType         = Boolean
+		viewNotDefinedTypeName = "ViewNotDefinedType"
+
 		errAttributeTypeNil      = fmt.Errorf("attribute type is nil")
-		errRequiredFieldNotExist = fmt.Errorf(`%srequired field %q does not exist`, normalizedCtx, "foo")
-		errViewButNotAResultType = fmt.Errorf("%sdefines a view %v but is not a result type", normalizedCtx, metadata["view"])
-		errTypeNotDefineViewe    = fmt.Errorf("%stype does not define view %q", normalizedCtx, "foo")
+		errRequiredFieldNotExist = fmt.Errorf(`%srequired field %q does not exist in type %s`, normalizedCtx, "foo", fieldNotExistType.Name())
+		errViewButNotAResultType = fmt.Errorf("%sdefines a view %v but type %s is not a result type", normalizedCtx, metadata["view"], notAResultType.Name())
+		errTypeNotDefineView     = fmt.Errorf("%stype %s does not define view %q", normalizedCtx, viewNotDefinedTypeName, "foo")
 	)
 	cases := map[string]struct {
 		typ        DataType
@@ -218,6 +222,7 @@ func TestAttributeExprValidate(t *testing.T) {
 		"type does not define view": {
 			typ: &ResultTypeExpr{
 				UserTypeExpr: &UserTypeExpr{
+					TypeName: viewNotDefinedTypeName,
 					AttributeExpr: &AttributeExpr{
 						Type: Boolean,
 					},
@@ -227,7 +232,7 @@ func TestAttributeExprValidate(t *testing.T) {
 				},
 			},
 			metadata: metadata,
-			expected: &eval.ValidationErrors{Errors: []error{errTypeNotDefineViewe}},
+			expected: &eval.ValidationErrors{Errors: []error{errTypeNotDefineView}},
 		},
 	}
 
