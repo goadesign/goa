@@ -1106,11 +1106,15 @@ func {{ .ErrorEncoder }}(encoder func(context.Context, http.ResponseWriter) goah
 			return encodeError(ctx, w, v)
 		}
 		switch en.ErrorName() {
+	{{- $basicScheme := .BasicScheme }}{{- $realm := .Method.Name }}
 	{{- range $gerr := .Errors }}
 	{{- range $err := .Errors }}
 		case {{ printf "%q" .Name }}:
 			res := v.({{ $err.Ref }})
 			{{- with .Response}}
+				{{- if and $basicScheme (eq .StatusCode "http.StatusUnauthorized") }}
+				w.Header().Set("WWW-Authenticate", "Basic realm=\"{{ $realm }}\"")
+				{{- end }}
 				{{- template "response" . }}
 				{{- if .ServerBody }}
 				return enc.Encode(body)
