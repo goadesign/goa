@@ -227,14 +227,14 @@ func indent(s string) string {
 		addrF = flag.String("url", "", "URL to service host")
 
 		int_F     = flag.String("int", "1", "")
-		uintF     = flag.String("uint", "1", "")
+		uint_F    = flag.String("uint", "1", "")
 		float32_F = flag.String("float32", "1.1", "")
 		int32_F   = flag.String("int32", "1", "")
 		int64_F   = flag.String("int64", "1", "")
 		uint32_F  = flag.String("uint32", "1", "")
 		uint64_F  = flag.String("uint64", "1", "")
 		float64_F = flag.String("float64", "1", "")
-		boolF     = flag.String("bool", "true", "")
+		bool_F    = flag.String("bool", "true", "")
 		verboseF  = flag.Bool("verbose", false, "Print request and response details")
 		vF        = flag.Bool("v", false, "Print request and response details")
 		timeoutF  = flag.Int("timeout", 30, "Maximum number of seconds to wait for response")
@@ -253,14 +253,14 @@ func indent(s string) string {
 			case "dev":
 				addr = "http://example-{int}-{uint}-{float32}:8090"
 				addr = strings.Replace(addr, "{int}", *int_F, -1)
-				addr = strings.Replace(addr, "{uint}", *uintF, -1)
+				addr = strings.Replace(addr, "{uint}", *uint_F, -1)
 				addr = strings.Replace(addr, "{float32}", *float32_F, -1)
 				addr = strings.Replace(addr, "{int32}", *int32_F, -1)
 				addr = strings.Replace(addr, "{int64}", *int64_F, -1)
 				addr = strings.Replace(addr, "{uint32}", *uint32_F, -1)
 				addr = strings.Replace(addr, "{uint64}", *uint64_F, -1)
 				addr = strings.Replace(addr, "{float64}", *float64_F, -1)
-				addr = strings.Replace(addr, "{bool}", *boolF, -1)
+				addr = strings.Replace(addr, "{bool}", *bool_F, -1)
 			default:
 				fmt.Fprintf(os.Stderr, "invalid host argument: %q (valid hosts: dev)", *hostF)
 				os.Exit(1)
