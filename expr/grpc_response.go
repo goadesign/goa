@@ -197,6 +197,12 @@ func (r *GRPCResponseExpr) Finalize(a *GRPCEndpointExpr, svcAtt *AttributeExpr) 
 			initAttrFromDesign(r.Message, svcAtt)
 		}
 	}
+
+	// Set zero value for optional attributes in messages and metadata if not set
+	// already
+	if IsObject(r.Message.Type) {
+		setZero(r.Message)
+	}
 }
 
 // Dup creates a copy of the response expression.

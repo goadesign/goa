@@ -230,9 +230,12 @@ func ConvertFile(root *expr.RootExpr, service *expr.ServiceExpr) (*codegen.File,
 		t := reflect.TypeOf(c.External)
 		tgtPkg := t.String()
 		tgtPkg = tgtPkg[:strings.Index(tgtPkg, ".")]
-		srcCA := typeContext(&expr.AttributeExpr{Type: c.User}, "", svc.Scope)
-		tgtCA := codegen.NewGoContextAttr(&expr.AttributeExpr{Type: dt}, tgtPkg, svc.Scope)
-		code, tf, err := codegen.GoTransform(srcCA, tgtCA, "t", "v", "transform")
+		srcCtx := typeContext("", svc.Scope)
+		tgtCtx := codegen.NewAttributeContext(false, false, false, tgtPkg, svc.Scope)
+		srcAtt := &expr.AttributeExpr{Type: c.User}
+		code, tf, err := codegen.GoTransform(
+			&expr.AttributeExpr{Type: c.User}, &expr.AttributeExpr{Type: dt},
+			"t", "v", srcCtx, tgtCtx, "transform")
 		if err != nil {
 			return nil, err
 		}
@@ -245,7 +248,7 @@ func ConvertFile(root *expr.RootExpr, service *expr.ServiceExpr) (*codegen.File,
 		}
 		data := convertData{
 			Name:            name,
-			ReceiverTypeRef: srcCA.Attribute.Ref(),
+			ReceiverTypeRef: svc.Scope.GoTypeRef(srcAtt),
 			TypeName:        t.Name(),
 			TypeRef:         ref,
 			Code:            code,
@@ -266,9 +269,12 @@ func ConvertFile(root *expr.RootExpr, service *expr.ServiceExpr) (*codegen.File,
 		t := reflect.TypeOf(c.External)
 		srcPkg := t.String()
 		srcPkg = srcPkg[:strings.Index(srcPkg, ".")]
-		srcCA := codegen.NewGoContextAttr(&expr.AttributeExpr{Type: dt}, srcPkg, svc.Scope)
-		tgtCA := typeContext(&expr.AttributeExpr{Type: c.User}, "", svc.Scope)
-		code, tf, err := codegen.GoTransform(srcCA, tgtCA, "v", "temp", "transform")
+		srcCtx := codegen.NewAttributeContext(false, false, false, srcPkg, svc.Scope)
+		tgtCtx := typeContext("", svc.Scope)
+		tgtAtt := &expr.AttributeExpr{Type: c.User}
+		code, tf, err := codegen.GoTransform(
+			&expr.AttributeExpr{Type: dt}, tgtAtt,
+			"v", "temp", srcCtx, tgtCtx, "transform")
 		if err != nil {
 			return nil, err
 		}
@@ -281,7 +287,7 @@ func ConvertFile(root *expr.RootExpr, service *expr.ServiceExpr) (*codegen.File,
 		}
 		data := convertData{
 			Name:            name,
-			ReceiverTypeRef: tgtCA.Attribute.Ref(),
+			ReceiverTypeRef: svc.Scope.GoTypeRef(tgtAtt),
 			TypeRef:         ref,
 			Code:            code,
 		}

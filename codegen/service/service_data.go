@@ -619,23 +619,15 @@ func (d ServicesData) analyze(service *expr.ServiceExpr) *Data {
 
 // typeContext returns a contextual attribute for service types. Service types
 // are Go types and uses non-pointers to hold attributes having default values.
-func typeContext(att *expr.AttributeExpr, pkg string, scope *codegen.NameScope) *codegen.ContextualAttribute {
-	return &codegen.ContextualAttribute{
-		Attribute:  codegen.NewGoAttribute(att, pkg, scope),
-		Required:   true,
-		UseDefault: true,
-	}
+func typeContext(pkg string, scope *codegen.NameScope) *codegen.AttributeContext {
+	return codegen.NewAttributeContext(false, false, true, pkg, scope)
 }
 
 // projectedTypeContext returns a contextual attribute for a projected type.
 // Projected types are Go types that uses pointers for all attributes (even the
 // required ones).
-func projectedTypeContext(att *expr.AttributeExpr, pkg string, scope *codegen.NameScope) *codegen.ContextualAttribute {
-	return &codegen.ContextualAttribute{
-		Attribute:  codegen.NewGoAttribute(att, pkg, scope),
-		Pointer:    true,
-		UseDefault: true,
-	}
+func projectedTypeContext(pkg string, scope *codegen.NameScope) *codegen.AttributeContext {
+	return codegen.NewAttributeContext(true, false, true, pkg, scope)
 }
 
 // collectTypes recurses through the attribute to gather all user types and
@@ -1250,8 +1242,8 @@ func buildTypeInits(projected, att *expr.AttributeExpr, viewspkg string, scope, 
 				code    string
 				helpers []*codegen.TransformFunctionData
 
-				srcCA  = projectedTypeContext(src, viewspkg, viewScope)
-				tgtCA  = typeContext(att, "", scope)
+				srcCtx = projectedTypeContext(viewspkg, viewScope)
+				tgtCtx = typeContext("", scope)
 				resvar = scope.GoTypeName(att)
 			)
 			{
@@ -1259,7 +1251,7 @@ func buildTypeInits(projected, att *expr.AttributeExpr, viewspkg string, scope, 
 				if view.Name != expr.DefaultView {
 					name += codegen.Goify(view.Name, true)
 				}
-				code, helpers = buildConstructorCode(srcCA, tgtCA, "vres", "res", view.Name)
+				code, helpers = buildConstructorCode(src, att, "vres", "res", srcCtx, tgtCtx, view.Name)
 			}
 
 			init = append(init, &InitData{
@@ -1329,16 +1321,16 @@ func buildProjections(projected, att *expr.AttributeExpr, viewspkg string, scope
 			code    string
 			helpers []*codegen.TransformFunctionData
 
-			srcCA = typeContext(att, "", scope)
-			tgtCA = projectedTypeContext(tgt, viewspkg, viewScope)
-			tname = scope.GoTypeName(projected)
+			srcCtx = typeContext("", scope)
+			tgtCtx = projectedTypeContext(viewspkg, viewScope)
+			tname  = scope.GoTypeName(projected)
 		)
 		{
 			name = "new" + tname
 			if view.Name != expr.DefaultView {
 				name += codegen.Goify(view.Name, true)
 			}
-			code, helpers = buildConstructorCode(srcCA, tgtCA, "res", "vres", view.Name)
+			code, helpers = buildConstructorCode(att, tgt, "res", "vres", srcCtx, tgtCtx, view.Name)
 		}
 
 		projections = append(projections, &InitData{
@@ -1391,7 +1383,7 @@ func buildValidations(projected *expr.AttributeExpr, scope *codegen.NameScope) [
 				data["ValidateVar"] = "Validate" + scope.GoTypeName(arr.ElemType) + vn
 			} else {
 				var (
-					ca     *codegen.ContextualAttribute
+					ctx    *codegen.AttributeContext
 					fields []map[string]interface{}
 
 					o = &expr.Object{}
@@ -1414,9 +1406,9 @@ func buildValidations(projected *expr.AttributeExpr, scope *codegen.NameScope) [
 							o.Set(name, attr)
 						}
 					})
-					ca = projectedTypeContext(&expr.AttributeExpr{Type: o, Validation: rt.Validation}, "", scope)
+					ctx = projectedTypeContext("", scope)
 				}
-				data["Validate"] = codegen.RecursiveValidationCode(ca, "result")
+				data["Validate"] = codegen.RecursiveValidationCode(&expr.AttributeExpr{Type: o, Validation: rt.Validation}, ctx, true, "result")
 				data["Fields"] = fields
 			}
 
@@ -1436,12 +1428,12 @@ func buildValidations(projected *expr.AttributeExpr, scope *codegen.NameScope) [
 		// for a user type or a result type with single view, we generate only one validation
 		// function containing the validation logic
 		name := "Validate" + tname
-		ca := projectedTypeContext(ut.Attribute(), "", scope)
+		ctx := projectedTypeContext("", scope)
 		validations = append(validations, &ValidateData{
 			Name:        name,
 			Description: fmt.Sprintf("%s runs the validations defined on %s.", name, tname),
 			Ref:         scope.GoTypeRef(projected),
-			Validate:    codegen.RecursiveValidationCode(ca, "result"),
+			Validate:    codegen.RecursiveValidationCode(ut.Attribute(), ctx, true, "result"),
 		})
 	}
 	return validations
@@ -1457,13 +1449,11 @@ func buildValidations(projected *expr.AttributeExpr, scope *codegen.NameScope) [
 //
 // view is used to generate the constructor function name.
 //
-func buildConstructorCode(source, target *codegen.ContextualAttribute, sourceVar, targetVar, view string) (string, []*codegen.TransformFunctionData) {
+func buildConstructorCode(src, tgt *expr.AttributeExpr, sourceVar, targetVar string, sourceCtx, targetCtx *codegen.AttributeContext, view string) (string, []*codegen.TransformFunctionData) {
 	var (
 		helpers []*codegen.TransformFunctionData
 		buf     bytes.Buffer
 	)
-	src := source.Attribute.Expr()
-	tgt := target.Attribute.Expr()
 	rt := src.Type.(*expr.ResultTypeExpr)
 	arr := expr.AsArray(tgt.Type)
 
@@ -1471,12 +1461,12 @@ func buildConstructorCode(source, target *codegen.ContextualAttribute, sourceVar
 		"ArgVar":       sourceVar,
 		"ReturnVar":    targetVar,
 		"IsCollection": arr != nil,
-		"TargetType":   target.Attribute.Name(),
+		"TargetType":   targetCtx.Scope.Name(tgt, targetCtx.Pkg),
 	}
 
 	if arr != nil {
 		// result type collection
-		init := "new" + target.Attribute.Scope().GoTypeName(arr.ElemType)
+		init := "new" + targetCtx.Scope.Name(arr.ElemType, "")
 		if view != "" && view != expr.DefaultView {
 			init += codegen.Goify(view, true)
 		}
@@ -1505,22 +1495,21 @@ func buildConstructorCode(source, target *codegen.ContextualAttribute, sourceVar
 		err  error
 	)
 	{
-
 		// build code for target with no result types
-		if code, helpers, err = codegen.GoTransform(source, target.Dup(tatt, true), sourceVar, targetVar, "transform"); err != nil {
+		if code, helpers, err = codegen.GoTransform(src, tatt, sourceVar, targetVar, sourceCtx, targetCtx, "transform"); err != nil {
 			panic(err) // bug
 		}
 	}
 	data["Code"] = code
 
 	if view != "" {
-		data["InitName"] = target.Dup(src, true).Attribute.Name()
+		data["InitName"] = targetCtx.Scope.Name(src, "")
 	}
 	fields := make([]map[string]interface{}, 0, len(*targetRTs))
 	// iterate through the result types found in the target and add the
 	// code to initialize them
 	for _, nat := range *targetRTs {
-		finit := "new" + target.Attribute.Scope().GoTypeName(nat.Attribute)
+		finit := "new" + targetCtx.Scope.Name(nat.Attribute, "")
 		if view != "" {
 			v := ""
 			if vatt := rt.View(view).AttributeExpr.Find(nat.Name); vatt != nil {

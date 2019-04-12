@@ -7,16 +7,6 @@ import (
 	"goa.design/goa/expr"
 )
 
-func defaultContext(typ expr.DataType, pkg string, scope *NameScope) *ContextualAttribute {
-	att := NewGoAttribute(&expr.AttributeExpr{Type: typ}, pkg, scope)
-	return NewUseDefaultContext(att)
-}
-
-func pointerContext(typ expr.DataType, pkg string, scope *NameScope) *ContextualAttribute {
-	att := NewGoAttribute(&expr.AttributeExpr{Type: typ}, pkg, scope)
-	return NewPointerContext(att)
-}
-
 func TestGoTransform(t *testing.T) {
 	root := RunDSL(t, testdata.TestTypesDSL)
 	var (
@@ -49,132 +39,104 @@ func TestGoTransform(t *testing.T) {
 		resultType = root.UserType("ResultType")
 		rtCol      = root.UserType("ResultTypeCollection")
 
-		// attribute analyzers used in test cases
-		simpleUseDefault         = defaultContext(simple, "", scope)
-		requiredUseDefault       = defaultContext(required, "", scope)
-		superUseDefault          = defaultContext(super, "", scope)
-		defaultTUseDefault       = defaultContext(defaultT, "", scope)
-		simpleMapUseDefault      = defaultContext(simpleMap, "", scope)
-		requiredMapUseDefault    = defaultContext(requiredMap, "", scope)
-		defaultMapUseDefault     = defaultContext(defaultMap, "", scope)
-		nestedMapUseDefault      = defaultContext(nestedMap, "", scope)
-		typeMapUseDefault        = defaultContext(typeMap, "", scope)
-		arrayMapUseDefault       = defaultContext(arrayMap, "", scope)
-		simpleArrayUseDefault    = defaultContext(simpleArray, "", scope)
-		requiredArrayUseDefault  = defaultContext(requiredArray, "", scope)
-		defaultArrayUseDefault   = defaultContext(defaultArray, "", scope)
-		nestedArrayUseDefault    = defaultContext(nestedArray, "", scope)
-		typeArrayUseDefault      = defaultContext(typeArray, "", scope)
-		mapArrayUseDefault       = defaultContext(mapArray, "", scope)
-		recursiveUseDefault      = defaultContext(recursive, "", scope)
-		compositeUseDefault      = defaultContext(composite, "", scope)
-		customFieldUseDefault    = defaultContext(customField, "", scope)
-		customFieldPkgUseDefault = defaultContext(customField, "mypkg", scope)
-		resultTypeUseDefault     = defaultContext(resultType, "", scope)
-		rtColUseDefault          = defaultContext(rtCol, "", scope)
-
-		simplePointer        = pointerContext(simple, "", scope)
-		requiredPointer      = pointerContext(required, "", scope)
-		superPointer         = pointerContext(super, "", scope)
-		defaultTPointer      = pointerContext(defaultT, "", scope)
-		requiredMapPointer   = pointerContext(requiredMap, "", scope)
-		defaultMapPointer    = pointerContext(defaultMap, "", scope)
-		requiredArrayPointer = pointerContext(requiredArray, "", scope)
-		defaultArrayPointer  = pointerContext(defaultArray, "", scope)
-		recursivePointer     = pointerContext(recursive, "", scope)
-		customFieldPointer   = pointerContext(customField, "", scope)
+		// attribute contexts used in test cases
+		defaultCtx    = NewAttributeContext(false, false, true, "", scope)
+		defaultCtxPkg = NewAttributeContext(false, false, true, "mypkg", scope)
+		pointerCtx    = NewAttributeContext(true, false, false, "", scope)
 	)
 	tc := map[string][]struct {
-		Name   string
-		Source *ContextualAttribute
-		Target *ContextualAttribute
-		Code   string
+		Name      string
+		Source    expr.DataType
+		Target    expr.DataType
+		SourceCtx *AttributeContext
+		TargetCtx *AttributeContext
+		Code      string
 	}{
 		// source and target type use default
 		"source-target-type-use-default": {
-			{"simple-to-simple", simpleUseDefault, simpleUseDefault, srcTgtUseDefaultSimpleToSimpleCode},
-			{"simple-to-required", simpleUseDefault, requiredUseDefault, srcTgtUseDefaultSimpleToRequiredCode},
-			{"required-to-simple", requiredUseDefault, simpleUseDefault, srcTgtUseDefaultRequiredToSimpleCode},
-			{"simple-to-super", simpleUseDefault, superUseDefault, srcTgtUseDefaultSimpleToSuperCode},
-			{"super-to-simple", superUseDefault, simpleUseDefault, srcTgtUseDefaultSuperToSimpleCode},
-			{"simple-to-default", simpleUseDefault, defaultTUseDefault, srcTgtUseDefaultSimpleToDefaultCode},
-			{"default-to-simple", defaultTUseDefault, simpleUseDefault, srcTgtUseDefaultDefaultToSimpleCode},
+			{"simple-to-simple", simple, simple, defaultCtx, defaultCtx, srcTgtUseDefaultSimpleToSimpleCode},
+			{"simple-to-required", simple, required, defaultCtx, defaultCtx, srcTgtUseDefaultSimpleToRequiredCode},
+			{"required-to-simple", required, simple, defaultCtx, defaultCtx, srcTgtUseDefaultRequiredToSimpleCode},
+			{"simple-to-super", simple, super, defaultCtx, defaultCtx, srcTgtUseDefaultSimpleToSuperCode},
+			{"super-to-simple", super, simple, defaultCtx, defaultCtx, srcTgtUseDefaultSuperToSimpleCode},
+			{"simple-to-default", simple, defaultT, defaultCtx, defaultCtx, srcTgtUseDefaultSimpleToDefaultCode},
+			{"default-to-simple", defaultT, simple, defaultCtx, defaultCtx, srcTgtUseDefaultDefaultToSimpleCode},
 
 			// maps
-			{"map-to-map", simpleMapUseDefault, simpleMapUseDefault, srcTgtUseDefaultMapToMapCode},
-			{"map-to-required-map", simpleMapUseDefault, requiredMapUseDefault, srcTgtUseDefaultMapToRequiredMapCode},
-			{"required-map-to-map", requiredMapUseDefault, simpleMapUseDefault, srcTgtUseDefaultRequiredMapToMapCode},
-			{"map-to-default-map", simpleMapUseDefault, defaultMapUseDefault, srcTgtUseDefaultMapToDefaultMapCode},
-			{"default-map-to-map", defaultMapUseDefault, simpleMapUseDefault, srcTgtUseDefaultDefaultMapToMapCode},
-			{"required-map-to-default-map", requiredMapUseDefault, defaultMapUseDefault, srcTgtUseDefaultRequiredMapToDefaultMapCode},
-			{"default-map-to-required-map", defaultMapUseDefault, requiredMapUseDefault, srcTgtUseDefaultDefaultMapToRequiredMapCode},
-			{"nested-map-to-nested-map", nestedMapUseDefault, nestedMapUseDefault, srcTgtUseDefaultNestedMapToNestedMapCode},
-			{"type-map-to-type-map", typeMapUseDefault, typeMapUseDefault, srcTgtUseDefaultTypeMapToTypeMapCode},
-			{"array-map-to-array-map", arrayMapUseDefault, arrayMapUseDefault, srcTgtUseDefaultArrayMapToArrayMapCode},
+			{"map-to-map", simpleMap, simpleMap, defaultCtx, defaultCtx, srcTgtUseDefaultMapToMapCode},
+			{"map-to-required-map", simpleMap, requiredMap, defaultCtx, defaultCtx, srcTgtUseDefaultMapToRequiredMapCode},
+			{"required-map-to-map", requiredMap, simpleMap, defaultCtx, defaultCtx, srcTgtUseDefaultRequiredMapToMapCode},
+			{"map-to-default-map", simpleMap, defaultMap, defaultCtx, defaultCtx, srcTgtUseDefaultMapToDefaultMapCode},
+			{"default-map-to-map", defaultMap, simpleMap, defaultCtx, defaultCtx, srcTgtUseDefaultDefaultMapToMapCode},
+			{"required-map-to-default-map", requiredMap, defaultMap, defaultCtx, defaultCtx, srcTgtUseDefaultRequiredMapToDefaultMapCode},
+			{"default-map-to-required-map", defaultMap, requiredMap, defaultCtx, defaultCtx, srcTgtUseDefaultDefaultMapToRequiredMapCode},
+			{"nested-map-to-nested-map", nestedMap, nestedMap, defaultCtx, defaultCtx, srcTgtUseDefaultNestedMapToNestedMapCode},
+			{"type-map-to-type-map", typeMap, typeMap, defaultCtx, defaultCtx, srcTgtUseDefaultTypeMapToTypeMapCode},
+			{"array-map-to-array-map", arrayMap, arrayMap, defaultCtx, defaultCtx, srcTgtUseDefaultArrayMapToArrayMapCode},
 
 			// arrays
-			{"array-to-array", simpleArrayUseDefault, simpleArrayUseDefault, srcTgtUseDefaultArrayToArrayCode},
-			{"array-to-required-array", simpleArrayUseDefault, requiredArrayUseDefault, srcTgtUseDefaultArrayToRequiredArrayCode},
-			{"required-array-to-array", requiredArrayUseDefault, simpleArrayUseDefault, srcTgtUseDefaultRequiredArrayToArrayCode},
-			{"array-to-default-array", simpleArrayUseDefault, defaultArrayUseDefault, srcTgtUseDefaultArrayToDefaultArrayCode},
-			{"default-array-to-array", defaultArrayUseDefault, simpleArrayUseDefault, srcTgtUseDefaultDefaultArrayToArrayCode},
-			{"required-array-to-default-array", requiredArrayUseDefault, defaultArrayUseDefault, srcTgtUseDefaultRequiredArrayToDefaultArrayCode},
-			{"default-array-to-required-array", defaultArrayUseDefault, requiredArrayUseDefault, srcTgtUseDefaultDefaultArrayToRequiredArrayCode},
-			{"nested-array-to-nested-array", nestedArrayUseDefault, nestedArrayUseDefault, srcTgtUseDefaultNestedArrayToNestedArrayCode},
-			{"type-array-to-type-array", typeArrayUseDefault, typeArrayUseDefault, srcTgtUseDefaultTypeArrayToTypeArrayCode},
-			{"map-array-to-map-array", mapArrayUseDefault, mapArrayUseDefault, srcTgtUseDefaultMapArrayToMapArrayCode},
+			{"array-to-array", simpleArray, simpleArray, defaultCtx, defaultCtx, srcTgtUseDefaultArrayToArrayCode},
+			{"array-to-required-array", simpleArray, requiredArray, defaultCtx, defaultCtx, srcTgtUseDefaultArrayToRequiredArrayCode},
+			{"required-array-to-array", requiredArray, simpleArray, defaultCtx, defaultCtx, srcTgtUseDefaultRequiredArrayToArrayCode},
+			{"array-to-default-array", simpleArray, defaultArray, defaultCtx, defaultCtx, srcTgtUseDefaultArrayToDefaultArrayCode},
+			{"default-array-to-array", defaultArray, simpleArray, defaultCtx, defaultCtx, srcTgtUseDefaultDefaultArrayToArrayCode},
+			{"required-array-to-default-array", requiredArray, defaultArray, defaultCtx, defaultCtx, srcTgtUseDefaultRequiredArrayToDefaultArrayCode},
+			{"default-array-to-required-array", defaultArray, requiredArray, defaultCtx, defaultCtx, srcTgtUseDefaultDefaultArrayToRequiredArrayCode},
+			{"nested-array-to-nested-array", nestedArray, nestedArray, defaultCtx, defaultCtx, srcTgtUseDefaultNestedArrayToNestedArrayCode},
+			{"type-array-to-type-array", typeArray, typeArray, defaultCtx, defaultCtx, srcTgtUseDefaultTypeArrayToTypeArrayCode},
+			{"map-array-to-map-array", mapArray, mapArray, defaultCtx, defaultCtx, srcTgtUseDefaultMapArrayToMapArrayCode},
 
 			// others
-			{"recursive-to-recursive", recursiveUseDefault, recursiveUseDefault, srcTgtUseDefaultRecursiveToRecursiveCode},
-			{"composite-to-custom-field", compositeUseDefault, customFieldUseDefault, srcTgtUseDefaultCompositeToCustomFieldCode},
-			{"custom-field-to-composite", customFieldUseDefault, compositeUseDefault, srcTgtUseDefaultCustomFieldToCompositeCode},
-			{"composite-to-custom-field-pkg", compositeUseDefault, customFieldPkgUseDefault, srcTgtUseDefaultCompositeToCustomFieldPkgCode},
-			{"result-type-to-result-type", resultTypeUseDefault, resultTypeUseDefault, srcTgtUseDefaultResultTypeToResultTypeCode},
-			{"result-type-collection-to-result-type-collection", rtColUseDefault, rtColUseDefault, srcTgtUseDefaultRTColToRTColCode},
+			{"recursive-to-recursive", recursive, recursive, defaultCtx, defaultCtx, srcTgtUseDefaultRecursiveToRecursiveCode},
+			{"composite-to-custom-field", composite, customField, defaultCtx, defaultCtx, srcTgtUseDefaultCompositeToCustomFieldCode},
+			{"custom-field-to-composite", customField, composite, defaultCtx, defaultCtx, srcTgtUseDefaultCustomFieldToCompositeCode},
+			{"composite-to-custom-field-pkg", composite, customField, defaultCtx, defaultCtxPkg, srcTgtUseDefaultCompositeToCustomFieldPkgCode},
+			{"result-type-to-result-type", resultType, resultType, defaultCtx, defaultCtx, srcTgtUseDefaultResultTypeToResultTypeCode},
+			{"result-type-collection-to-result-type-collection", rtCol, rtCol, defaultCtx, defaultCtx, srcTgtUseDefaultRTColToRTColCode},
 		},
 
 		// source type uses pointers for all fields, target type uses default
 		"source-type-all-ptrs-target-type-uses-default": {
-			{"simple-to-simple", simplePointer, simpleUseDefault, srcAllPtrsTgtUseDefaultSimpleToSimpleCode},
-			{"simple-to-required", simplePointer, requiredUseDefault, srcAllPtrsTgtUseDefaultSimpleToRequiredCode},
-			{"required-to-simple", requiredPointer, simpleUseDefault, srcAllPtrsTgtUseDefaultRequiredToSimpleCode},
-			{"simple-to-super", simplePointer, superUseDefault, srcAllPtrsTgtUseDefaultSimpleToSuperCode},
-			{"super-to-simple", superPointer, simpleUseDefault, srcAllPtrsTgtUseDefaultSuperToSimpleCode},
-			{"simple-to-default", simplePointer, defaultTUseDefault, srcAllPtrsTgtUseDefaultSimpleToDefaultCode},
-			{"default-to-simple", defaultTPointer, simpleUseDefault, srcAllPtrsTgtUseDefaultDefaultToSimpleCode},
+			{"simple-to-simple", simple, simple, pointerCtx, defaultCtx, srcAllPtrsTgtUseDefaultSimpleToSimpleCode},
+			{"simple-to-required", simple, required, pointerCtx, defaultCtx, srcAllPtrsTgtUseDefaultSimpleToRequiredCode},
+			{"required-to-simple", required, simple, pointerCtx, defaultCtx, srcAllPtrsTgtUseDefaultRequiredToSimpleCode},
+			{"simple-to-super", simple, super, pointerCtx, defaultCtx, srcAllPtrsTgtUseDefaultSimpleToSuperCode},
+			{"super-to-simple", super, simple, pointerCtx, defaultCtx, srcAllPtrsTgtUseDefaultSuperToSimpleCode},
+			{"simple-to-default", simple, defaultT, pointerCtx, defaultCtx, srcAllPtrsTgtUseDefaultSimpleToDefaultCode},
+			{"default-to-simple", defaultT, simple, pointerCtx, defaultCtx, srcAllPtrsTgtUseDefaultDefaultToSimpleCode},
 
 			// maps
-			{"required-map-to-map", requiredMapPointer, simpleMapUseDefault, srcAllPtrsTgtUseDefaultRequiredMapToMapCode},
-			{"default-map-to-map", defaultMapPointer, simpleMapUseDefault, srcAllPtrsTgtUseDefaultDefaultMapToMapCode},
-			{"required-map-to-default-map", requiredMapPointer, defaultMapUseDefault, srcAllPtrsTgtUseDefaultRequiredMapToDefaultMapCode},
-			{"default-map-to-required-map", defaultMapPointer, requiredMapUseDefault, srcAllPtrsTgtUseDefaultDefaultMapToRequiredMapCode},
+			{"required-map-to-map", requiredMap, simpleMap, pointerCtx, defaultCtx, srcAllPtrsTgtUseDefaultRequiredMapToMapCode},
+			{"default-map-to-map", defaultMap, simpleMap, pointerCtx, defaultCtx, srcAllPtrsTgtUseDefaultDefaultMapToMapCode},
+			{"required-map-to-default-map", requiredMap, defaultMap, pointerCtx, defaultCtx, srcAllPtrsTgtUseDefaultRequiredMapToDefaultMapCode},
+			{"default-map-to-required-map", defaultMap, requiredMap, pointerCtx, defaultCtx, srcAllPtrsTgtUseDefaultDefaultMapToRequiredMapCode},
 
 			// arrays
-			{"default-array-to-array", defaultArrayPointer, simpleArrayUseDefault, srcAllPtrsTgtUseDefaultDefaultArrayToArrayCode},
-			{"required-array-to-default-array", requiredArrayPointer, defaultArrayUseDefault, srcAllPtrsTgtUseDefaultRequiredArrayToDefaultArrayCode},
-			{"default-array-to-required-array", defaultArrayPointer, requiredArrayUseDefault, srcAllPtrsTgtUseDefaultDefaultArrayToRequiredArrayCode},
+			{"default-array-to-array", defaultArray, simpleArray, pointerCtx, defaultCtx, srcAllPtrsTgtUseDefaultDefaultArrayToArrayCode},
+			{"required-array-to-default-array", requiredArray, defaultArray, pointerCtx, defaultCtx, srcAllPtrsTgtUseDefaultRequiredArrayToDefaultArrayCode},
+			{"default-array-to-required-array", defaultArray, requiredArray, pointerCtx, defaultCtx, srcAllPtrsTgtUseDefaultDefaultArrayToRequiredArrayCode},
 
 			// others
-			{"custom-field-to-composite", customFieldPointer, compositeUseDefault, srcAllPtrsTgtUseDefaultCustomFieldToCompositeCode},
+			{"custom-field-to-composite", customField, composite, pointerCtx, defaultCtx, srcAllPtrsTgtUseDefaultCustomFieldToCompositeCode},
 		},
 
 		// source type uses default, target type uses pointers for all fields
 		"source-type-uses-default-target-type-all-ptrs": {
-			{"simple-to-simple", simpleUseDefault, simplePointer, srcUseDefaultTgtAllPtrsSimpleToSimpleCode},
-			{"simple-to-required", simpleUseDefault, requiredPointer, srcUseDefaultTgtAllPtrsSimpleToRequiredCode},
-			{"required-to-simple", requiredUseDefault, simplePointer, srcUseDefaultTgtAllPtrsRequiredToSimpleCode},
-			{"simple-to-default", simpleUseDefault, defaultTPointer, srcUseDefaultTgtAllPtrsSimpleToDefaultCode},
-			{"default-to-simple", defaultTUseDefault, simplePointer, srcUseDefaultTgtAllPtrsDefaultToSimpleCode},
+			{"simple-to-simple", simple, simple, defaultCtx, pointerCtx, srcUseDefaultTgtAllPtrsSimpleToSimpleCode},
+			{"simple-to-required", simple, required, defaultCtx, pointerCtx, srcUseDefaultTgtAllPtrsSimpleToRequiredCode},
+			{"required-to-simple", required, simple, defaultCtx, pointerCtx, srcUseDefaultTgtAllPtrsRequiredToSimpleCode},
+			{"simple-to-default", simple, defaultT, defaultCtx, pointerCtx, srcUseDefaultTgtAllPtrsSimpleToDefaultCode},
+			{"default-to-simple", defaultT, simple, defaultCtx, pointerCtx, srcUseDefaultTgtAllPtrsDefaultToSimpleCode},
 
 			// maps
-			{"map-to-default-map", simpleMapUseDefault, defaultMapPointer, srcUseDefaultTgtAllPtrsMapToDefaultMapCode},
+			{"map-to-default-map", simpleMap, defaultMap, defaultCtx, pointerCtx, srcUseDefaultTgtAllPtrsMapToDefaultMapCode},
 
 			// arrays
-			{"array-to-default-array", simpleArrayUseDefault, defaultArrayPointer, srcUseDefaultTgtAllPtrsArrayToDefaultArrayCode},
+			{"array-to-default-array", simpleArray, defaultArray, defaultCtx, pointerCtx, srcUseDefaultTgtAllPtrsArrayToDefaultArrayCode},
 
 			// others
-			{"recursive-to-recursive", recursiveUseDefault, recursivePointer, srcUseDefaultTgtAllPtrsRecursiveToRecursiveCode},
-			{"composite-to-custom-field", compositeUseDefault, customFieldPointer, srcUseDefaultTgtAllPtrsCompositeToCustomFieldCode},
+			{"recursive-to-recursive", recursive, recursive, defaultCtx, pointerCtx, srcUseDefaultTgtAllPtrsRecursiveToRecursiveCode},
+			{"composite-to-custom-field", composite, customField, defaultCtx, pointerCtx, srcUseDefaultTgtAllPtrsCompositeToCustomFieldCode},
 		},
 	}
 	for name, cases := range tc {
@@ -187,7 +149,7 @@ func TestGoTransform(t *testing.T) {
 					if c.Target == nil {
 						t.Fatal("target type not found in testdata")
 					}
-					code, _, err := GoTransform(c.Source, c.Target, "source", "target", "")
+					code, _, err := GoTransform(&expr.AttributeExpr{Type: c.Source}, &expr.AttributeExpr{Type: c.Target}, "source", "target", c.SourceCtx, c.TargetCtx, "")
 					if err != nil {
 						t.Fatal(err)
 					}

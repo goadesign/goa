@@ -52,7 +52,31 @@ When generating unmarshaling code (server side to unmarshal an incoming request
 or client side to unmarshal a response) the default value is used to set the
 value of missing fields. Note that if the attribute is required then the
 generated code returns an error if the corresponding field is missing. So this
-only applies for non required attributes with default values.
+only applies for non required attributes with default values. For gRPC
+endpoints, the default value behavior when unmarshaling varies because protocol
+buffer v3 sets a default value (i.e. type's zero value) for a missing field
+internally when it encodes the message. See https://developers.google.com/protocol-buffers/docs/proto3#default.
+It is impossible to know whether these zero values are set by the application
+itself or by protocol buffer. Therefore, when unmarshaling a protocol buffer
+message, goa sets the default values only for the optional attributes only if
+the message contains zero values for such fields. Optional attributes of boolean
+type is an exception, i.e., if attributes of boolean type are zero values
+(false), unmarshalling code does not set default values to the corresponding
+target attributes. Attributes that are required and have default values are not
+set with the default values if they are zero values.
+
+# How are optional attributes unmarshalled in gRPC?
+
+Protocol buffer v3 does not differentiate between optional and required
+attributes (see https://developers.google.com/protocol-buffers/docs/proto3#default).
+It is impossible to know whether the zero values are set by the application or
+by protocol buffer. When generating unmarshaling code (server side to unmarshal
+incoming protocol buffer request message or client side to unmarshal incoming
+protocol buffer response message), the optional attributes are set to non-nil
+value only if the corresponding protocol buffer message fields are non-zero
+values. Optional attributes of boolean type is an exception, i.e., if attributes
+of boolean type are zero values (false), unmarshalling code sets the
+corresponding target attributes to the zero values.
 
 # How are views for a result type computed?
 

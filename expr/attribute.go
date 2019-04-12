@@ -28,6 +28,8 @@ type (
 		Meta MetaExpr
 		// Optional member default value
 		DefaultValue interface{}
+		// ZeroValue sets the zero value for the attribute type
+		ZeroValue interface{}
 		// UserExample set in DSL or computed in Finalize
 		UserExamples []*ExampleExpr
 	}

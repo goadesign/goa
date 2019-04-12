@@ -808,7 +808,7 @@ func initAttrFromDesign(att, patt *AttributeExpr) {
 	if patt == nil || patt.Type == Empty {
 		return
 	}
-	att.Type = patt.Type
+	att.Type = Dup(patt.Type)
 	if att.Description == "" {
 		att.Description = patt.Description
 	}
@@ -824,8 +824,8 @@ func initAttrFromDesign(att, patt *AttributeExpr) {
 	if att.UserExamples == nil {
 		att.UserExamples = patt.UserExamples
 	}
-	if att.DefaultValue == nil {
-		att.DefaultValue = patt.DefaultValue
+	if att.ZeroValue == nil {
+		att.DefaultValue = patt.ZeroValue
 	}
 	if att.Meta == nil {
 		att.Meta = patt.Meta

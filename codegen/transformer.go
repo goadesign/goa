@@ -7,120 +7,54 @@ import (
 )
 
 type (
-	// Transformer produces code that initializes data structure defined by
-	// target from an instance of the data structure described by source. The
-	// data structures can be objects, arrays or maps. The algorithm matches
-	// object fields by name and ignores object fields in target that don't
-	// have a match in source.
-	Transformer interface {
-		// Transform returns the code that initializes data structure defined by
-		// target attribute from an instance of the data structure defined by
-		// source. It leverages mapped attributes so that attribute names may use
-		// the "name:elem" syntax to define the name of the design attribute and
-		// the name of the corresponding generated field. It returns an error
-		// if target is not compatible with source (different type, fields of
-		// different type etc).
-		Transform(source, target *ContextualAttribute, ta *TransformAttrs) (code string, err error)
-		// TransformObject returns the code to initialize a target data structure
-		// defined by object type from an instance of source data structure defined
-		// by an object type. The algorithm matches object fields by name and
-		// ignores object fields in target that don't have a match in source.
-		// It returns an error if source and target are different types or have
-		// fields of different types.
-		TransformObject(source, target *ContextualAttribute, ta *TransformAttrs) (code string, err error)
-		// TransformArray returns the code to initialize a target array from a
-		// source array. It returns an error if source and target are not arrays
-		// and have fields of different types in the array element.
-		TransformArray(source, target *ContextualAttribute, ta *TransformAttrs) (code string, err error)
-		// TransformMap returns the code to initialize a target map from a
-		// source map. It returns an error if source and target are not maps
-		// and have fields of different types in the map key and element.
-		TransformMap(source, target *ContextualAttribute, ta *TransformAttrs) (code string, err error)
-		// MakeCompatible checks whether target is compatible with the source
-		// (same type, fields of different type, etc) and returns an error if
-		// target cannot be made compatible to the source. If no error, it returns
-		// the compatible source and target attributes with the updated transform
-		// attributes to make them compatible.
-		MakeCompatible(source, target *ContextualAttribute, ta *TransformAttrs, suffix string) (src, tgt *ContextualAttribute, newTA *TransformAttrs, err error)
-		Converter
-	}
-
-	// Referencer refers to a type.
-	Referencer interface {
-		// Name returns the type name.
-		Name() string
-		// Ref returns the reference to the type.
-		Ref() string
-	}
-
-	// Definer generates code that defines a type.
-	Definer interface {
-		// Def returns the code defining a type. Pointer and useDefault paramerters
-		// are used to determine if the type fields must be a pointer.
-		Def(pointer, useDefault bool) string
-	}
-
-	// Attributor defines the code generated for an attribute type. It is
-	// implemented by code generators.
+	// Attributor defines the behavior of an attribute expression during code
+	// generation.
 	Attributor interface {
 		Scoper
-		Referencer
-		Definer
-		// Field produces a valid field name for the attribute type.
-		Field(name string, firstUpper bool) string
-		// Expr returns the underlying attribute expression.
-		Expr() *expr.AttributeExpr
-		// Dup creates a copy of the attributor by setting the underlying
-		// attribute expression.
-		Dup(*expr.AttributeExpr) Attributor
+		// Name generates a valid name for the given attribute type.
+		Name(att *expr.AttributeExpr, pkg string) string
+		// Ref generates a valid reference to the given attribute type.
+		Ref(att *expr.AttributeExpr, pkg string) string
+		// Field generates a valid data structure field identifier for the given
+		// attribute and field name. If firstUpper is true the field name's first
+		// letter is capitalized.
+		Field(att *expr.AttributeExpr, name string, firstUpper bool) string
 	}
 
-	// Converter generates code to convert source attribute type to a target
-	// attribute type. It is implemented by code generators.
-	Converter interface {
-		// ConvertType produces code to initialze target attribute type from a
-		// source attribute type held by variable in sourceVar. It is not a
-		// recursive function.
-		ConvertType(source, target Attributor, sourceVar string) (code string)
-	}
-
-	// ContextualAttribute determines how an attribute behaves based on certain
-	// properties during code generation.
-	ContextualAttribute struct {
-		// Attribute is the attribute expression for which the code is generated.
-		Attribute Attributor
-		// NonPointer if true indicates that the attribute type is not generated
-		// as a pointer irrespective of whether the attribute is required or has
-		// a default value (expect object types which are always pointers). It
-		// ignores the Pointer, Required, and UseDefault properties when computing
-		// whether the attribute is a pointer.
-		NonPointer bool
-		// OverrideRequired if true ignores the Required property and always
-		// returns false for the requiredness of the attribute.
-		OverrideRequired bool
-		// Pointer if true indicates that the attribute type is generated as a
-		// pointer even if the attribute is required or has a default value.
-		// Array and map types are are always non-pointers. Object types are always
-		// pointers.
+	// AttributeContext contains properties which impacts the code generating
+	// behavior of an attribute.
+	AttributeContext struct {
+		// Pointer if true indicates that the attribute uses pointers to hold
+		// primitive types even if they are required or has a default value.
+		// It ignores UseDefault and IgnoreRequired properties.
 		Pointer bool
-		// UseDefault if true indicates that attribute type must be a non-pointer
-		// if it has a default value except object type which is always a pointer.
+		// IgnoreRequired if true indicates that the attribute uses non-pointers
+		// to hold optional attributes (i.e. attributes that are not required).
+		IgnoreRequired bool
+		// UseDefault if true indicates that the attribute uses non-pointers for
+		// primitive types if they have default value. If false, the attribute with
+		// primitive types are non-pointers if they are required, otherwise they
+		// are pointers.
 		UseDefault bool
-		// Required if true indicates that the attribute is required.
-		Required bool
+		// Pkg is the package name where the attribute type is found.
+		Pkg string
+		// Scope is the attribute scope.
+		Scope Attributor
+	}
+
+	// AttributeScope contains the scope of an attribute. It implements the
+	// Attributor interface.
+	AttributeScope struct {
+		// scope is the name scope for the attribute.
+		scope *NameScope
 	}
 
 	// TransformAttrs are the attributes that help in the transformation.
 	TransformAttrs struct {
-		// SourceVar and TargetVar are the source and target variable names used
-		// in the transformation code.
-		SourceVar, TargetVar string
-		// NewVar is used to determine the assignment operator to initialize
-		// TargetVar.
-		NewVar bool
-		// Helper if true indicates that the attributes are used to generate
-		// helper functions.
-		Helper bool
+		// SourceCtx and TargetCtx are the source and target attribute context.
+		SourceCtx, TargetCtx *AttributeContext
+		// Prefix is the transform function helper prefix.
+		Prefix string
 	}
 
 	// TransformFunctionData describes a helper function used to transform
@@ -148,72 +82,14 @@ type (
 	}
 )
 
-// NewGoContextAttr returns a default Go contextual attribute that produces Go
-// code.
-func NewGoContextAttr(att *expr.AttributeExpr, pkg string, scope *NameScope) *ContextualAttribute {
-	return &ContextualAttribute{Attribute: NewGoAttribute(att, pkg, scope)}
-}
-
-// IsPointer checks if the attribute type is a pointer. It returns false
-// if attribute type is an array, map, byte array, or an interface. If Pointer
-// property is true, IsPointer returns true. If NonPointer property is true,
-// IsPointer returns false. If both Pointer and NonPointer are false, the
-// following table shows how the attribute properties affect the return value
-//
-//    UseDefault | Required | IsPointer
-//         T     |     T    |     T
-//         F     |     F    |     T
-//         T     |     F    |     F if default value exists, else T
-//         F     |     T    |     T
-//
-func (c *ContextualAttribute) IsPointer() bool {
-	if dt := c.Attribute.Expr().Type.Kind(); dt == expr.BytesKind || dt == expr.AnyKind {
-		return false
-	}
-	if c.NonPointer {
-		return false
-	}
-	if c.Pointer {
-		return true
-	}
-	return !c.IsRequired() && c.DefaultValue() == nil
-}
-
-// DefaultValue returns the default value of the attribute type if UseDefault
-// is true. It returns nil otherwise.
-func (c *ContextualAttribute) DefaultValue() interface{} {
-	if c.UseDefault {
-		return c.Attribute.Expr().DefaultValue
-	}
-	return nil
-}
-
-// IsRequired checks if the attribute is a required attribute.
-// If OverrideRequired property is set to true it returns false irrespective
-// of the Required property. If OverrideRequired property is false it returns
-// the value of the Required property.
-func (c *ContextualAttribute) IsRequired() bool {
-	if c.OverrideRequired {
-		return false
-	}
-	return c.Required
-}
-
-// Def returns the attribute type definition.
-func (c *ContextualAttribute) Def() string {
-	return c.Attribute.Def(c.Pointer, c.UseDefault)
-}
-
-// Dup creates a shallow copy of the contextual attribute with the given
-// attributor and its requiredness.
-func (c *ContextualAttribute) Dup(attr *expr.AttributeExpr, required bool) *ContextualAttribute {
-	return &ContextualAttribute{
-		Attribute:        c.Attribute.Dup(attr),
-		Required:         required,
-		NonPointer:       c.NonPointer,
-		OverrideRequired: c.OverrideRequired,
-		Pointer:          c.Pointer,
-		UseDefault:       c.UseDefault,
+// NewAttributeContext initializes an attribute context.
+func NewAttributeContext(pointer, reqIgnore, useDefault bool, pkg string, scope *NameScope) *AttributeContext {
+	return &AttributeContext{
+		Pointer:        pointer,
+		IgnoreRequired: reqIgnore,
+		UseDefault:     useDefault,
+		Pkg:            pkg,
+		Scope:          &AttributeScope{scope: scope},
 	}
 }
 
@@ -260,19 +136,47 @@ func AppendHelpers(oldH, newH []*TransformFunctionData) []*TransformFunctionData
 	return oldH
 }
 
-// HelperName returns the transformation function name to initialize a target
-// user type from an instance of a source user type.
-func HelperName(source, target Attributor, prefix string) string {
-	var (
-		sname string
-		tname string
-	)
-	{
-		sname = Goify(source.Name(), true)
-		tname = Goify(target.Name(), true)
-		if prefix == "" {
-			prefix = "transform"
-		}
+// IsPrimitivePointer returns true if the attribute with the given name is a
+// primitive pointer in the given parent attribute.
+func (a *AttributeContext) IsPrimitivePointer(name string, att *expr.AttributeExpr) bool {
+	if at := att.Find(name); at != nil && at.Type == expr.Any || at.Type == expr.Bytes {
+		return false
 	}
-	return Goify(prefix+sname+"To"+tname, false)
+	if a.Pointer {
+		return true
+	}
+	if a.IgnoreRequired {
+		return false
+	}
+	return att.IsPrimitivePointer(name, a.UseDefault)
+}
+
+// IsRequired returns true if the attribute with given name is a required
+// attribute in the parent. If IgnoreRequired is set to true, IsRequired always
+// returns false.
+func (a *AttributeContext) IsRequired(name string, att *expr.AttributeExpr) bool {
+	if a.IgnoreRequired {
+		return false
+	}
+	return att.IsRequired(name)
+}
+
+// Name returns the type name for the given attribute.
+func (a *AttributeScope) Name(att *expr.AttributeExpr, pkg string) string {
+	return a.scope.GoFullTypeName(att, pkg)
+}
+
+// Ref returns the type name for the given attribute.
+func (a *AttributeScope) Ref(att *expr.AttributeExpr, pkg string) string {
+	return a.scope.GoFullTypeRef(att, pkg)
+}
+
+// Field returns a valid Go struct field name.
+func (a *AttributeScope) Field(att *expr.AttributeExpr, name string, firstUpper bool) string {
+	return GoifyAtt(att, name, firstUpper)
+}
+
+// Scope returns the name scope.
+func (a *AttributeScope) Scope() *NameScope {
+	return a.scope
 }

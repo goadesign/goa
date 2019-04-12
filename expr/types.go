@@ -623,6 +623,48 @@ func (m *Map) MakeMap(raw map[interface{}]interface{}) interface{} {
 	return ma.Interface()
 }
 
+// Depth returns the level of nested maps. For unnested maps, it returns 0.
+func (m *Map) Depth() int {
+	return mapDepth(m.ElemType.Type, 0)
+}
+
+func mapDepth(dt DataType, depth int, seen ...map[string]struct{}) int {
+	if mp := AsMap(dt); mp != nil {
+		depth++
+		depth = mapDepth(mp.ElemType.Type, depth, seen...)
+	} else if ar := AsArray(dt); ar != nil {
+		depth = mapDepth(ar.ElemType.Type, depth, seen...)
+	} else if mo := AsObject(dt); mo != nil {
+		var s map[string]struct{}
+		if len(seen) > 0 {
+			s = seen[0]
+		} else {
+			s = make(map[string]struct{})
+			seen = append(seen, s)
+		}
+		key := dt.Name()
+		if u, ok := dt.(UserType); ok {
+			key = u.ID()
+		}
+		if _, ok := s[key]; ok {
+			return depth
+		}
+		s[key] = struct{}{}
+		var level int
+		for _, nat := range *mo {
+			// if object type has attributes of type map then find out the attribute that has
+			// the deepest level of nested maps
+			lvl := 0
+			lvl = mapDepth(nat.Attribute.Type, lvl, seen...)
+			if lvl > level {
+				level = lvl
+			}
+		}
+		depth += level
+	}
+	return depth
+}
+
 // ToMap converts a MapVal to a map.
 func (m MapVal) ToMap() map[interface{}]interface{} {
 	mp := make(map[interface{}]interface{}, len(m))
