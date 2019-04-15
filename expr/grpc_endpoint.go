@@ -296,7 +296,7 @@ func (e *GRPCEndpointExpr) Finalize() {
 		}
 		for _, nat := range *AsObject(e.Request.Type) {
 			// initialize message attribute
-			patt := pobj.Attribute(nat.Name)
+			patt := DupAtt(pobj.Attribute(nat.Name))
 			initAttrFromDesign(nat.Attribute, patt)
 			if nat.Attribute.Meta == nil {
 				nat.Attribute.Meta = patt.Meta
