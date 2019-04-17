@@ -632,9 +632,6 @@ func BuildMethodMultiSimplePayloadPayload(serviceMultiSimple1MethodMultiSimplePa
 			return nil, fmt.Errorf("invalid JSON for body, example of valid JSON:\n%s", "'{\n      \"a\": false\n   }'")
 		}
 	}
-	if err != nil {
-		return nil, err
-	}
 	v := &servicemultisimple1.MethodMultiSimplePayloadPayload{
 		A: body.A,
 	}
@@ -665,12 +662,9 @@ func BuildMethodMultiPayloadPayload(serviceMultiMethodMultiPayloadBody string, s
 			val, err := strconv.ParseBool(serviceMultiMethodMultiPayloadA)
 			a = &val
 			if err != nil {
-				err = fmt.Errorf("invalid value for a, must be BOOL")
+				return nil, fmt.Errorf("invalid value for a, must be BOOL")
 			}
 		}
-	}
-	if err != nil {
-		return nil, err
 	}
 	v := &servicemulti.MethodMultiPayloadPayload{}
 	if body.C != nil {
@@ -692,12 +686,9 @@ func BuildMethodQueryBoolPayload(serviceQueryBoolMethodQueryBoolQ string) (*serv
 			val, err := strconv.ParseBool(serviceQueryBoolMethodQueryBoolQ)
 			q = &val
 			if err != nil {
-				err = fmt.Errorf("invalid value for q, must be BOOL")
+				return nil, fmt.Errorf("invalid value for q, must be BOOL")
 			}
 		}
-	}
-	if err != nil {
-		return nil, err
 	}
 	payload := &servicequerybool.MethodQueryBoolPayload{
 		Q: q,
@@ -728,9 +719,6 @@ func BuildMethodBodyQueryPathObjectPayload(serviceBodyQueryPathObjectMethodBodyQ
 		if serviceBodyQueryPathObjectMethodBodyQueryPathObjectB != "" {
 			b = &serviceBodyQueryPathObjectMethodBodyQueryPathObjectB
 		}
-	}
-	if err != nil {
-		return nil, err
 	}
 	v := &servicebodyquerypathobject.MethodBodyQueryPathObjectPayload{
 		A: body.A,
@@ -950,9 +938,6 @@ func BuildMethodBodyInlineArrayUserPayload(serviceBodyInlineArrayUserMethodBodyI
 			return nil, fmt.Errorf("invalid JSON for body, example of valid JSON:\n%s", "'[\n      {\n         \"a\": \"patterna\",\n         \"b\": \"patternb\"\n      },\n      {\n         \"a\": \"patterna\",\n         \"b\": \"patternb\"\n      }\n   ]'")
 		}
 	}
-	if err != nil {
-		return nil, err
-	}
 	v := make([]*servicebodyinlinearrayuser.ElemType, len(body))
 	for i, val := range body {
 		v[i] = &servicebodyinlinearrayuser.ElemType{
@@ -974,9 +959,6 @@ func BuildMethodBodyInlineMapUserPayload(serviceBodyInlineMapUserMethodBodyInlin
 		if err != nil {
 			return nil, fmt.Errorf("invalid JSON for body, example of valid JSON:\n%s", "null")
 		}
-	}
-	if err != nil {
-		return nil, err
 	}
 	v := make(map[*servicebodyinlinemapuser.KeyType]*servicebodyinlinemapuser.ElemType, len(body))
 	for key, val := range body {
@@ -1122,9 +1104,6 @@ func BuildMethodMapQueryObjectPayload(serviceMapQueryObjectMethodMapQueryObjectB
 			return nil, fmt.Errorf("invalid JSON for c, example of valid JSON:\n%s", "'{\n      \"1484745265794365762\": [\n         \"Similique aspernatur.\",\n         \"Error explicabo.\",\n         \"Minima cumque voluptatem et distinctio aliquam.\",\n         \"Blanditiis ut eaque.\"\n      ],\n      \"4925854623691091547\": [\n         \"Eos aut ipsam.\",\n         \"Aliquam tempora.\"\n      ],\n      \"7174751143827362498\": [\n         \"Facilis minus explicabo nemo eos vel repellat.\",\n         \"Voluptatum magni aperiam qui.\"\n      ]\n   }'")
 		}
 	}
-	if err != nil {
-		return nil, err
-	}
 	v := &servicemapqueryobject.PayloadType{
 		B: body.B,
 	}
@@ -1146,12 +1125,9 @@ func BuildMethodQueryUInt32Payload(serviceQueryUInt32MethodQueryUInt32Q string) 
 			val := uint32(v)
 			q = &val
 			if err != nil {
-				err = fmt.Errorf("invalid value for q, must be UINT32")
+				return nil, fmt.Errorf("invalid value for q, must be UINT32")
 			}
 		}
-	}
-	if err != nil {
-		return nil, err
 	}
 	payload := &servicequeryuint32.MethodQueryUInt32Payload{
 		Q: q,
@@ -1172,12 +1148,9 @@ func BuildMethodQueryUIntPayload(serviceQueryUIntMethodQueryUIntQ string) (*serv
 			val := uint(v)
 			q = &val
 			if err != nil {
-				err = fmt.Errorf("invalid value for q, must be UINT")
+				return nil, fmt.Errorf("invalid value for q, must be UINT")
 			}
 		}
-	}
-	if err != nil {
-		return nil, err
 	}
 	payload := &servicequeryuint.MethodQueryUIntPayload{
 		Q: q,
@@ -1245,9 +1218,6 @@ func BuildMethodBodyPrimitiveArrayUserPayload(serviceBodyPrimitiveArrayUserMetho
 				return nil, fmt.Errorf("invalid JSON for a, example of valid JSON:\n%s", "'[\n      \"Perspiciatis repellendus harum et est.\",\n      \"Nisi quibusdam nisi sint sunt beatae.\"\n   ]'")
 			}
 		}
-	}
-	if err != nil {
-		return nil, err
 	}
 	payload := &servicebodyprimitivearrayuser.PayloadType{
 		A: a,
