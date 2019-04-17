@@ -184,8 +184,10 @@ func protobufServiceResultWithCollectionpbResultTToServiceresultwithcollectionRe
 		res.CollectionField = make([]*serviceresultwithcollection.RT, len(v.CollectionField.Field))
 		for i, val := range v.CollectionField.Field {
 			res.CollectionField[i] = &serviceresultwithcollection.RT{}
-			intFieldptr := int(val.IntField)
-			res.CollectionField[i].IntField = &intFieldptr
+			if val.IntField != 0 {
+				intFieldptr := int(val.IntField)
+				res.CollectionField[i].IntField = &intFieldptr
+			}
 		}
 	}
 

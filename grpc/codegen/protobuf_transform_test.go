@@ -20,127 +20,120 @@ func TestProtoBufTransform(t *testing.T) {
 		required = root.UserType("Required")
 		defaultT = root.UserType("Default")
 
-		simpleMap = root.UserType("SimpleMap")
-		nestedMap = root.UserType("NestedMap")
-		arrayMap  = root.UserType("ArrayMap")
+		simpleMap  = root.UserType("SimpleMap")
+		nestedMap  = root.UserType("NestedMap")
+		arrayMap   = root.UserType("ArrayMap")
+		defaultMap = root.UserType("DefaultMap")
 
-		simpleArray = root.UserType("SimpleArray")
-		nestedArray = root.UserType("NestedArray")
-		mapArray    = root.UserType("MapArray")
-		typeArray   = root.UserType("TypeArray")
+		simpleArray  = root.UserType("SimpleArray")
+		nestedArray  = root.UserType("NestedArray")
+		mapArray     = root.UserType("MapArray")
+		typeArray    = root.UserType("TypeArray")
+		defaultArray = root.UserType("DefaultArray")
 
 		recursive   = root.UserType("Recursive")
 		composite   = root.UserType("Composite")
 		customField = root.UserType("CompositeWithCustomField")
+		optional    = root.UserType("Optional")
+		defaults    = root.UserType("WithDefaults")
 
 		resultType = root.UserType("ResultType")
 		rtCol      = root.UserType("ResultTypeCollection")
 
-		// attribute analyzers used in test cases
-		primitiveGoa   = newGoaContextAttr(primitive, "", scope)
-		simpleGoa      = newGoaContextAttr(simple, "", scope)
-		requiredGoa    = newGoaContextAttr(required, "", scope)
-		defaultTGoa    = newGoaContextAttr(defaultT, "", scope)
-		simpleMapGoa   = newGoaContextAttr(simpleMap, "", scope)
-		nestedMapGoa   = newGoaContextAttr(nestedMap, "", scope)
-		arrayMapGoa    = newGoaContextAttr(arrayMap, "", scope)
-		simpleArrayGoa = newGoaContextAttr(simpleArray, "", scope)
-		nestedArrayGoa = newGoaContextAttr(nestedArray, "", scope)
-		mapArrayGoa    = newGoaContextAttr(mapArray, "", scope)
-		typeArrayGoa   = newGoaContextAttr(typeArray, "", scope)
-		recursiveGoa   = newGoaContextAttr(recursive, "", scope)
-		compositeGoa   = newGoaContextAttr(composite, "", scope)
-		customFieldGoa = newGoaContextAttr(customField, "", scope)
-		resultTypeGoa  = newGoaContextAttr(resultType, "", scope)
-		rtColGoa       = newGoaContextAttr(rtCol, "", scope)
-		requiredPtrGoa = pointerContext(required, "", scope)
-
-		primitiveProto   = newProtoContextAttr(primitive, "", scope)
-		simpleProto      = newProtoContextAttr(simple, "", scope)
-		requiredProto    = newProtoContextAttr(required, "", scope)
-		defaultTProto    = newProtoContextAttr(defaultT, "", scope)
-		simpleMapProto   = newProtoContextAttr(simpleMap, "", scope)
-		nestedMapProto   = newProtoContextAttr(nestedMap, "", scope)
-		arrayMapProto    = newProtoContextAttr(arrayMap, "", scope)
-		simpleArrayProto = newProtoContextAttr(simpleArray, "", scope)
-		nestedArrayProto = newProtoContextAttr(nestedArray, "", scope)
-		mapArrayProto    = newProtoContextAttr(mapArray, "", scope)
-		typeArrayProto   = newProtoContextAttr(typeArray, "", scope)
-		recursiveProto   = newProtoContextAttr(recursive, "", scope)
-		compositeProto   = newProtoContextAttr(composite, "", scope)
-		customFieldProto = newProtoContextAttr(customField, "", scope)
-		resultTypeProto  = newProtoContextAttr(resultType, "", scope)
-		rtColProto       = newProtoContextAttr(rtCol, "", scope)
+		// attribute contexts used in test cases
+		svcCtx = serviceTypeContext("", scope)
+		ptrCtx = pointerContext("", scope)
+		pbCtx  = protoBufTypeContext("", scope)
 	)
 
 	tc := map[string][]struct {
 		Name    string
-		Source  *codegen.ContextualAttribute
-		Target  *codegen.ContextualAttribute
+		Source  expr.DataType
+		Target  expr.DataType
 		ToProto bool
+		Ctx     *codegen.AttributeContext
 		Code    string
 	}{
-		// test cases to transform goa type to protocol buffer type
+		// test cases to transform service type to protocol buffer type
 		"to-protobuf-type": {
-			{"primitive-to-primitive", primitiveGoa, primitiveProto, true, primitiveGoaToPrimitiveProtoCode},
-			{"simple-to-simple", simpleGoa, simpleProto, true, simpleGoaToSimpleProtoCode},
-			{"simple-to-required", simpleGoa, requiredProto, true, simpleGoaToRequiredProtoCode},
-			{"required-to-simple", requiredGoa, simpleProto, true, requiredGoaToSimpleProtoCode},
-			{"simple-to-default", simpleGoa, defaultTProto, true, simpleGoaToDefaultProtoCode},
-			{"default-to-simple", defaultTGoa, simpleProto, true, defaultGoaToSimpleProtoCode},
-			{"required-ptr-to-simple", requiredPtrGoa, simpleProto, true, requiredPtrGoaToSimpleProtoCode},
+			{"primitive-to-primitive", primitive, primitive, true, svcCtx, primitiveSvcToPrimitiveProtoCode},
+			{"simple-to-simple", simple, simple, true, svcCtx, simpleSvcToSimpleProtoCode},
+			{"simple-to-required", simple, required, true, svcCtx, simpleSvcToRequiredProtoCode},
+			{"required-to-simple", required, simple, true, svcCtx, requiredSvcToSimpleProtoCode},
+			{"simple-to-default", simple, defaultT, true, svcCtx, simpleSvcToDefaultProtoCode},
+			{"default-to-simple", defaultT, simple, true, svcCtx, defaultSvcToSimpleProtoCode},
+			{"required-ptr-to-simple", required, simple, true, ptrCtx, requiredPtrSvcToSimpleProtoCode},
 
 			// maps
-			{"map-to-map", simpleMapGoa, simpleMapProto, true, simpleMapGoaToSimpleMapProtoCode},
-			{"nested-map-to-nested-map", nestedMapGoa, nestedMapProto, true, nestedMapGoaToNestedMapProtoCode},
-			{"array-map-to-array-map", arrayMapGoa, arrayMapProto, true, arrayMapGoaToArrayMapProtoCode},
+			{"map-to-map", simpleMap, simpleMap, true, svcCtx, simpleMapSvcToSimpleMapProtoCode},
+			{"nested-map-to-nested-map", nestedMap, nestedMap, true, svcCtx, nestedMapSvcToNestedMapProtoCode},
+			{"array-map-to-array-map", arrayMap, arrayMap, true, svcCtx, arrayMapSvcToArrayMapProtoCode},
+			{"default-map-to-default-map", defaultMap, defaultMap, true, svcCtx, defaultMapSvcToDefaultMapProtoCode},
 
 			// arrays
-			{"array-to-array", simpleArrayGoa, simpleArrayProto, true, simpleArrayGoaToSimpleArrayProtoCode},
-			{"nested-array-to-nested-array", nestedArrayGoa, nestedArrayProto, true, nestedArrayGoaToNestedArrayProtoCode},
-			{"type-array-to-type-array", typeArrayGoa, typeArrayProto, true, typeArrayGoaToTypeArrayProtoCode},
-			{"map-array-to-map-array", mapArrayGoa, mapArrayProto, true, mapArrayGoaToMapArrayProtoCode},
+			{"array-to-array", simpleArray, simpleArray, true, svcCtx, simpleArraySvcToSimpleArrayProtoCode},
+			{"nested-array-to-nested-array", nestedArray, nestedArray, true, svcCtx, nestedArraySvcToNestedArrayProtoCode},
+			{"type-array-to-type-array", typeArray, typeArray, true, svcCtx, typeArraySvcToTypeArrayProtoCode},
+			{"map-array-to-map-array", mapArray, mapArray, true, svcCtx, mapArraySvcToMapArrayProtoCode},
+			{"default-array-to-default-array", defaultArray, defaultArray, true, svcCtx, defaultArraySvcToDefaultArrayProtoCode},
 
-			{"recursive-to-recursive", recursiveGoa, recursiveProto, true, recursiveGoaToRecursiveProtoCode},
-			{"composite-to-custom-field", compositeGoa, customFieldProto, true, compositeGoaToCustomFieldProtoCode},
-			{"custom-field-to-composite", customFieldGoa, compositeProto, true, customFieldGoaToCompositeProtoCode},
-			{"result-type-to-result-type", resultTypeGoa, resultTypeProto, true, resultTypeGoaToResultTypeProtoCode},
-			{"result-type-collection-to-result-type-collection", rtColGoa, rtColProto, true, rtColGoaToRTColProtoCode},
+			{"recursive-to-recursive", recursive, recursive, true, svcCtx, recursiveSvcToRecursiveProtoCode},
+			{"composite-to-custom-field", composite, customField, true, svcCtx, compositeSvcToCustomFieldProtoCode},
+			{"custom-field-to-composite", customField, composite, true, svcCtx, customFieldSvcToCompositeProtoCode},
+			{"result-type-to-result-type", resultType, resultType, true, svcCtx, resultTypeSvcToResultTypeProtoCode},
+			{"result-type-collection-to-result-type-collection", rtCol, rtCol, true, svcCtx, rtColSvcToRTColProtoCode},
+			{"optional-to-optional", optional, optional, true, svcCtx, optionalSvcToOptionalProtoCode},
+			{"defaults-to-defaults", defaults, defaults, true, svcCtx, defaultsSvcToDefaultsProtoCode},
 		},
 
-		// test cases to transform protocol buffer type to goa type
-		"to-goa-type": {
-			{"primitive-to-primitive", primitiveProto, primitiveGoa, false, primitiveProtoToPrimitiveGoaCode},
-			{"simple-to-simple", simpleProto, simpleGoa, false, simpleProtoToSimpleGoaCode},
-			{"simple-to-required", simpleProto, requiredGoa, false, simpleProtoToRequiredGoaCode},
-			{"required-to-simple", requiredProto, simpleGoa, false, requiredProtoToSimpleGoaCode},
-			{"simple-to-default", simpleProto, defaultTGoa, false, simpleProtoToDefaultGoaCode},
-			{"default-to-simple", defaultTProto, simpleGoa, false, defaultProtoToSimpleGoaCode},
-			{"simple-to-required-ptr", simpleProto, requiredPtrGoa, false, simpleProtoToRequiredPtrGoaCode},
+		// test cases to transform protocol buffer type to service type
+		"to-service-type": {
+			{"primitive-to-primitive", primitive, primitive, false, svcCtx, primitiveProtoToPrimitiveSvcCode},
+			{"simple-to-simple", simple, simple, false, svcCtx, simpleProtoToSimpleSvcCode},
+			{"simple-to-required", simple, required, false, svcCtx, simpleProtoToRequiredSvcCode},
+			{"required-to-simple", required, simple, false, svcCtx, requiredProtoToSimpleSvcCode},
+			{"simple-to-default", simple, defaultT, false, svcCtx, simpleProtoToDefaultSvcCode},
+			{"default-to-simple", defaultT, simple, false, svcCtx, defaultProtoToSimpleSvcCode},
+			{"simple-to-required-ptr", simple, required, false, ptrCtx, simpleProtoToRequiredPtrSvcCode},
 
 			// maps
-			{"map-to-map", simpleMapProto, simpleMapGoa, false, simpleMapProtoToSimpleMapGoaCode},
-			{"nested-map-to-nested-map", nestedMapProto, nestedMapGoa, false, nestedMapProtoToNestedMapGoaCode},
-			{"array-map-to-array-map", arrayMapProto, arrayMapGoa, false, arrayMapProtoToArrayMapGoaCode},
+			{"map-to-map", simpleMap, simpleMap, false, svcCtx, simpleMapProtoToSimpleMapSvcCode},
+			{"nested-map-to-nested-map", nestedMap, nestedMap, false, svcCtx, nestedMapProtoToNestedMapSvcCode},
+			{"array-map-to-array-map", arrayMap, arrayMap, false, svcCtx, arrayMapProtoToArrayMapSvcCode},
+			{"default-map-to-default-map", defaultMap, defaultMap, false, svcCtx, defaultMapProtoToDefaultMapSvcCode},
 
 			// arrays
-			{"array-to-array", simpleArrayProto, simpleArrayGoa, false, simpleArrayProtoToSimpleArrayGoaCode},
-			{"nested-array-to-nested-array", nestedArrayProto, nestedArrayGoa, false, nestedArrayProtoToNestedArrayGoaCode},
-			{"type-array-to-type-array", typeArrayProto, typeArrayGoa, false, typeArrayProtoToTypeArrayGoaCode},
-			{"map-array-to-map-array", mapArrayProto, mapArrayGoa, false, mapArrayProtoToMapArrayGoaCode},
+			{"array-to-array", simpleArray, simpleArray, false, svcCtx, simpleArrayProtoToSimpleArraySvcCode},
+			{"nested-array-to-nested-array", nestedArray, nestedArray, false, svcCtx, nestedArrayProtoToNestedArraySvcCode},
+			{"type-array-to-type-array", typeArray, typeArray, false, svcCtx, typeArrayProtoToTypeArraySvcCode},
+			{"map-array-to-map-array", mapArray, mapArray, false, svcCtx, mapArrayProtoToMapArraySvcCode},
+			{"default-array-to-default-array", defaultArray, defaultArray, false, svcCtx, defaultArrayProtoToDefaultArraySvcCode},
 
-			{"recursive-to-recursive", recursiveProto, recursiveGoa, false, recursiveProtoToRecursiveGoaCode},
-			{"composite-to-custom-field", compositeProto, customFieldGoa, false, compositeProtoToCustomFieldGoaCode},
-			{"custom-field-to-composite", customFieldProto, compositeGoa, false, customFieldProtoToCompositeGoaCode},
-			{"result-type-to-result-type", resultTypeProto, resultTypeGoa, false, resultTypeProtoToResultTypeGoaCode},
-			{"result-type-collection-to-result-type-collection", rtColProto, rtColGoa, false, rtColProtoToRTColGoaCode},
+			{"recursive-to-recursive", recursive, recursive, false, svcCtx, recursiveProtoToRecursiveSvcCode},
+			{"composite-to-custom-field", composite, customField, false, svcCtx, compositeProtoToCustomFieldSvcCode},
+			{"custom-field-to-composite", customField, composite, false, svcCtx, customFieldProtoToCompositeSvcCode},
+			{"result-type-to-result-type", resultType, resultType, false, svcCtx, resultTypeProtoToResultTypeSvcCode},
+			{"result-type-collection-to-result-type-collection", rtCol, rtCol, false, svcCtx, rtColProtoToRTColSvcCode},
+			{"optional-to-optional", optional, optional, false, svcCtx, optionalProtoToOptionalSvcCode},
+			{"defaults-to-defaults", defaults, defaults, false, svcCtx, defaultsProtoToDefaultsSvcCode},
 		},
 	}
 	for name, cases := range tc {
 		t.Run(name, func(t *testing.T) {
 			for _, c := range cases {
 				t.Run(c.Name, func(t *testing.T) {
-					code, _, err := protoBufTransform(c.Source, c.Target, "source", "target", c.ToProto)
+					source := &expr.AttributeExpr{Type: c.Source}
+					target := &expr.AttributeExpr{Type: c.Target}
+					srcCtx := c.Ctx
+					tgtCtx := c.Ctx
+					if c.ToProto {
+						target = makeProtoBufMessage(expr.DupAtt(target), target.Type.Name(), scope)
+						tgtCtx = pbCtx
+					} else {
+						source = makeProtoBufMessage(expr.DupAtt(source), source.Type.Name(), scope)
+						srcCtx = pbCtx
+					}
+					code, _, err := protoBufTransform(source, target, "source", "target", srcCtx, tgtCtx, c.ToProto)
 					if err != nil {
 						t.Fatal(err)
 					}
@@ -154,32 +147,18 @@ func TestProtoBufTransform(t *testing.T) {
 	}
 }
 
-func newGoaContextAttr(dt expr.DataType, pkg string, scope *codegen.NameScope) *codegen.ContextualAttribute {
-	att := codegen.NewGoAttribute(&expr.AttributeExpr{Type: dt}, pkg, scope)
-	return codegen.NewUseDefaultContext(att)
-}
-
-func pointerContext(typ expr.DataType, pkg string, scope *codegen.NameScope) *codegen.ContextualAttribute {
-	att := codegen.NewGoAttribute(&expr.AttributeExpr{Type: typ}, pkg, scope)
-	ca := codegen.NewPointerContext(att)
-	ca.OverrideRequired = true
-	return ca
-}
-
-func newProtoContextAttr(dt expr.DataType, pkg string, scope *codegen.NameScope) *codegen.ContextualAttribute {
-	att := &expr.AttributeExpr{Type: expr.Dup(dt)}
-	att = makeProtoBufMessage(att, dt.Name(), scope)
-	return protoBufContext(att, pkg, scope)
+func pointerContext(pkg string, scope *codegen.NameScope) *codegen.AttributeContext {
+	return codegen.NewAttributeContext(true, false, true, pkg, scope)
 }
 
 const (
-	primitiveGoaToPrimitiveProtoCode = `func transform() {
+	primitiveSvcToPrimitiveProtoCode = `func transform() {
 	target := &Int{}
 	target.Field = int32(source)
 }
 `
 
-	simpleGoaToSimpleProtoCode = `func transform() {
+	simpleSvcToSimpleProtoCode = `func transform() {
 	target := &Simple{
 		RequiredString: source.RequiredString,
 		DefaultBool:    source.DefaultBool,
@@ -190,7 +169,7 @@ const (
 }
 `
 
-	simpleGoaToRequiredProtoCode = `func transform() {
+	simpleSvcToRequiredProtoCode = `func transform() {
 	target := &Required{
 		RequiredString: source.RequiredString,
 		DefaultBool:    source.DefaultBool,
@@ -200,7 +179,7 @@ const (
 	}
 }
 `
-	requiredGoaToSimpleProtoCode = `func transform() {
+	requiredSvcToSimpleProtoCode = `func transform() {
 	target := &Simple{
 		RequiredString: source.RequiredString,
 		DefaultBool:    source.DefaultBool,
@@ -209,7 +188,7 @@ const (
 }
 `
 
-	simpleGoaToDefaultProtoCode = `func transform() {
+	simpleSvcToDefaultProtoCode = `func transform() {
 	target := &Default{
 		RequiredString: source.RequiredString,
 		DefaultBool:    source.DefaultBool,
@@ -223,7 +202,7 @@ const (
 }
 `
 
-	defaultGoaToSimpleProtoCode = `func transform() {
+	defaultSvcToSimpleProtoCode = `func transform() {
 	target := &Simple{
 		RequiredString: source.RequiredString,
 		DefaultBool:    source.DefaultBool,
@@ -232,7 +211,7 @@ const (
 }
 `
 
-	requiredPtrGoaToSimpleProtoCode = `func transform() {
+	requiredPtrSvcToSimpleProtoCode = `func transform() {
 	target := &Simple{}
 	if source.RequiredString != nil {
 		target.RequiredString = *source.RequiredString
@@ -249,7 +228,7 @@ const (
 }
 `
 
-	simpleMapGoaToSimpleMapProtoCode = `func transform() {
+	simpleMapSvcToSimpleMapProtoCode = `func transform() {
 	target := &SimpleMap{}
 	if source.Simple != nil {
 		target.Simple = make(map[string]int32, len(source.Simple))
@@ -262,7 +241,7 @@ const (
 }
 `
 
-	nestedMapGoaToNestedMapProtoCode = `func transform() {
+	nestedMapSvcToNestedMapProtoCode = `func transform() {
 	target := &NestedMap{}
 	if source.NestedMap != nil {
 		target.NestedMap = make(map[float64]*MapOfSint32MapOfDoubleUint64, len(source.NestedMap))
@@ -287,7 +266,7 @@ const (
 }
 `
 
-	arrayMapGoaToArrayMapProtoCode = `func transform() {
+	arrayMapSvcToArrayMapProtoCode = `func transform() {
 	target := &ArrayMap{}
 	if source.ArrayMap != nil {
 		target.ArrayMap = make(map[uint32]*ArrayOfFloat, len(source.ArrayMap))
@@ -304,7 +283,23 @@ const (
 }
 `
 
-	simpleArrayGoaToSimpleArrayProtoCode = `func transform() {
+	defaultMapSvcToDefaultMapProtoCode = `func transform() {
+	target := &DefaultMap{}
+	if source.Simple != nil {
+		target.Simple = make(map[string]int32, len(source.Simple))
+		for key, val := range source.Simple {
+			tk := key
+			tv := int32(val)
+			target.Simple[tk] = tv
+		}
+	}
+	if len(source.Simple) == 0 {
+		target.Simple = map[string]int{"foo": 1}
+	}
+}
+`
+
+	simpleArraySvcToSimpleArrayProtoCode = `func transform() {
 	target := &SimpleArray{}
 	if source.StringArray != nil {
 		target.StringArray = make([]string, len(source.StringArray))
@@ -315,7 +310,7 @@ const (
 }
 `
 
-	nestedArrayGoaToNestedArrayProtoCode = `func transform() {
+	nestedArraySvcToNestedArrayProtoCode = `func transform() {
 	target := &NestedArray{}
 	if source.NestedArray != nil {
 		target.NestedArray = make([]*ArrayOfArrayOfDouble, len(source.NestedArray))
@@ -334,7 +329,7 @@ const (
 }
 `
 
-	typeArrayGoaToTypeArrayProtoCode = `func transform() {
+	typeArraySvcToTypeArrayProtoCode = `func transform() {
 	target := &TypeArray{}
 	if source.TypeArray != nil {
 		target.TypeArray = make([]*SimpleArray, len(source.TypeArray))
@@ -351,7 +346,7 @@ const (
 }
 `
 
-	mapArrayGoaToMapArrayProtoCode = `func transform() {
+	mapArraySvcToMapArrayProtoCode = `func transform() {
 	target := &MapArray{}
 	if source.MapArray != nil {
 		target.MapArray = make([]*MapOfSint32String, len(source.MapArray))
@@ -368,7 +363,21 @@ const (
 }
 `
 
-	recursiveGoaToRecursiveProtoCode = `func transform() {
+	defaultArraySvcToDefaultArrayProtoCode = `func transform() {
+	target := &DefaultArray{}
+	if source.StringArray != nil {
+		target.StringArray = make([]string, len(source.StringArray))
+		for i, val := range source.StringArray {
+			target.StringArray[i] = val
+		}
+	}
+	if len(source.StringArray) == 0 {
+		target.StringArray = []string{"foo", "bar"}
+	}
+}
+`
+
+	recursiveSvcToRecursiveProtoCode = `func transform() {
 	target := &Recursive{
 		RequiredString: source.RequiredString,
 	}
@@ -378,7 +387,7 @@ const (
 }
 `
 
-	compositeGoaToCustomFieldProtoCode = `func transform() {
+	compositeSvcToCustomFieldProtoCode = `func transform() {
 	target := &CompositeWithCustomField{}
 	if source.RequiredString != nil {
 		target.MyString = *source.RequiredString
@@ -409,7 +418,7 @@ const (
 }
 `
 
-	customFieldGoaToCompositeProtoCode = `func transform() {
+	customFieldSvcToCompositeProtoCode = `func transform() {
 	target := &Composite{
 		RequiredString: source.MyString,
 		DefaultInt:     int32(source.MyInt),
@@ -434,7 +443,7 @@ const (
 }
 `
 
-	resultTypeGoaToResultTypeProtoCode = `func transform() {
+	resultTypeSvcToResultTypeProtoCode = `func transform() {
 	target := &ResultType{}
 	if source.Int != nil {
 		target.Int = int32(*source.Int)
@@ -450,7 +459,7 @@ const (
 }
 `
 
-	rtColGoaToRTColProtoCode = `func transform() {
+	rtColSvcToRTColProtoCode = `func transform() {
 	target := &ResultTypeCollection{}
 	if source.Collection != nil {
 		target.Collection = &ResultTypeCollection{}
@@ -473,22 +482,109 @@ const (
 }
 `
 
-	primitiveProtoToPrimitiveGoaCode = `func transform() {
+	optionalSvcToOptionalProtoCode = `func transform() {
+	target := &Optional{
+		Bytes_: source.Bytes,
+		Any:    source.Any,
+	}
+	if source.Int != nil {
+		target.Int = int32(*source.Int)
+	}
+	if source.Uint != nil {
+		target.Uint = uint32(*source.Uint)
+	}
+	if source.Float != nil {
+		target.Float_ = *source.Float
+	}
+	if source.String != nil {
+		target.String_ = *source.String
+	}
+	if source.Array != nil {
+		target.Array = make([]string, len(source.Array))
+		for i, val := range source.Array {
+			target.Array[i] = val
+		}
+	}
+	if source.Map != nil {
+		target.Map_ = make(map[int32]string, len(source.Map))
+		for key, val := range source.Map {
+			tk := int32(key)
+			tv := val
+			target.Map_[tk] = tv
+		}
+	}
+	if source.UserType != nil {
+		target.UserType = svcOptionalToOptional(source.UserType)
+	}
+}
+`
+
+	defaultsSvcToDefaultsProtoCode = `func transform() {
+	target := &WithDefaults{
+		Int:            int32(source.Int),
+		RequiredInt:    int32(source.RequiredInt),
+		String_:        source.String,
+		RequiredString: source.RequiredString,
+		Bytes_:         source.Bytes,
+		RequiredBytes:  source.RequiredBytes,
+		Any:            source.Any,
+		RequiredAny:    source.RequiredAny,
+	}
+	if source.Array != nil {
+		target.Array = make([]string, len(source.Array))
+		for i, val := range source.Array {
+			target.Array[i] = val
+		}
+	}
+	if len(source.Array) == 0 {
+		target.Array = []string{"foo", "bar"}
+	}
+	if source.RequiredArray != nil {
+		target.RequiredArray = make([]string, len(source.RequiredArray))
+		for i, val := range source.RequiredArray {
+			target.RequiredArray[i] = val
+		}
+	}
+	if source.Map != nil {
+		target.Map_ = make(map[int32]string, len(source.Map))
+		for key, val := range source.Map {
+			tk := int32(key)
+			tv := val
+			target.Map_[tk] = tv
+		}
+	}
+	if len(source.Map) == 0 {
+		target.Map_ = map[int]string{1: "foo"}
+	}
+	if source.RequiredMap != nil {
+		target.RequiredMap = make(map[int32]string, len(source.RequiredMap))
+		for key, val := range source.RequiredMap {
+			tk := int32(key)
+			tv := val
+			target.RequiredMap[tk] = tv
+		}
+	}
+}
+`
+
+	primitiveProtoToPrimitiveSvcCode = `func transform() {
 	target := int(source.Field)
 }
 `
 
-	simpleProtoToSimpleGoaCode = `func transform() {
+	simpleProtoToSimpleSvcCode = `func transform() {
 	target := &Simple{
 		RequiredString: source.RequiredString,
 		DefaultBool:    source.DefaultBool,
 	}
-	integerptr := int(source.Integer)
-	target.Integer = &integerptr
+	if source.Integer != 0 {
+		integerptr := int(source.Integer)
+		target.Integer = &integerptr
+	}
 }
 `
 
-	simpleProtoToRequiredGoaCode = `func transform() {
+	simpleProtoToRequiredSvcCode = `func transform() {
 	target := &Required{
 		RequiredString: source.RequiredString,
 		DefaultBool:    source.DefaultBool,
@@ -497,46 +593,57 @@ const (
 }
 `
 
-	requiredProtoToSimpleGoaCode = `func transform() {
+	requiredProtoToSimpleSvcCode = `func transform() {
 	target := &Simple{
 		RequiredString: source.RequiredString,
 		DefaultBool:    source.DefaultBool,
 	}
-	integerptr := int(source.Integer)
-	target.Integer = &integerptr
+	if source.Integer != 0 {
+		integerptr := int(source.Integer)
+		target.Integer = &integerptr
+	}
 }
 `
 
-	simpleProtoToDefaultGoaCode = `func transform() {
+	simpleProtoToDefaultSvcCode = `func transform() {
 	target := &Default{
 		RequiredString: source.RequiredString,
 		DefaultBool:    source.DefaultBool,
 		Integer:        int(source.Integer),
 	}
+	if source.Integer == 0 {
+		target.Integer = 1
+	}
 }
 `
 
-	defaultProtoToSimpleGoaCode = `func transform() {
+	defaultProtoToSimpleSvcCode = `func transform() {
 	target := &Simple{
 		RequiredString: source.RequiredString,
 		DefaultBool:    source.DefaultBool,
 	}
-	integerptr := int(source.Integer)
-	target.Integer = &integerptr
-}
-`
-
-	simpleProtoToRequiredPtrGoaCode = `func transform() {
-	target := &Required{
-		RequiredString: &source.RequiredString,
-		DefaultBool:    &source.DefaultBool,
+	if source.Integer != 0 {
+		integerptr := int(source.Integer)
+		target.Integer = &integerptr
 	}
-	integerptr := int(source.Integer)
-	target.Integer = &integerptr
 }
 `
 
-	simpleMapProtoToSimpleMapGoaCode = `func transform() {
+	simpleProtoToRequiredPtrSvcCode = `func transform() {
+	target := &Required{
+		DefaultBool: &source.DefaultBool,
+	}
+	if source.RequiredString != "" {
+		target.RequiredString = &source.RequiredString
+	}
+	if source.Integer != 0 {
+		integerptr := int(source.Integer)
+		target.Integer = &integerptr
+	}
+}
+`
+
+	simpleMapProtoToSimpleMapSvcCode = `func transform() {
 	target := &SimpleMap{}
 	if source.Simple != nil {
 		target.Simple = make(map[string]int, len(source.Simple))
@@ -549,7 +656,7 @@ const (
 }
 `
 
-	nestedMapProtoToNestedMapGoaCode = `func transform() {
+	nestedMapProtoToNestedMapSvcCode = `func transform() {
 	target := &NestedMap{}
 	if source.NestedMap != nil {
 		target.NestedMap = make(map[float64]map[int]map[float64]uint64, len(source.NestedMap))
@@ -572,7 +679,7 @@ const (
 }
 `
 
-	arrayMapProtoToArrayMapGoaCode = `func transform() {
+	arrayMapProtoToArrayMapSvcCode = `func transform() {
 	target := &ArrayMap{}
 	if source.ArrayMap != nil {
 		target.ArrayMap = make(map[uint32][]float32, len(source.ArrayMap))
@@ -588,7 +695,23 @@ const (
 }
 `
 
-	simpleArrayProtoToSimpleArrayGoaCode = `func transform() {
+	defaultMapProtoToDefaultMapSvcCode = `func transform() {
+	target := &DefaultMap{}
+	if source.Simple != nil {
+		target.Simple = make(map[string]int, len(source.Simple))
+		for key, val := range source.Simple {
+			tk := key
+			tv := int(val)
+			target.Simple[tk] = tv
+		}
+	}
+	if len(source.Simple) == 0 {
+		target.Simple = map[string]int{"foo": 1}
+	}
+}
+`
+
+	simpleArrayProtoToSimpleArraySvcCode = `func transform() {
 	target := &SimpleArray{}
 	if source.StringArray != nil {
 		target.StringArray = make([]string, len(source.StringArray))
@@ -599,7 +722,7 @@ const (
 }
 `
 
-	nestedArrayProtoToNestedArrayGoaCode = `func transform() {
+	nestedArrayProtoToNestedArraySvcCode = `func transform() {
 	target := &NestedArray{}
 	if source.NestedArray != nil {
 		target.NestedArray = make([][][]float64, len(source.NestedArray))
@@ -616,7 +739,7 @@ const (
 }
 `
 
-	typeArrayProtoToTypeArrayGoaCode = `func transform() {
+	typeArrayProtoToTypeArraySvcCode = `func transform() {
 	target := &TypeArray{}
 	if source.TypeArray != nil {
 		target.TypeArray = make([]*SimpleArray, len(source.TypeArray))
@@ -633,7 +756,7 @@ const (
 }
 `
 
-	mapArrayProtoToMapArrayGoaCode = `func transform() {
+	mapArrayProtoToMapArraySvcCode = `func transform() {
 	target := &MapArray{}
 	if source.MapArray != nil {
 		target.MapArray = make([]map[int]string, len(source.MapArray))
@@ -649,7 +772,21 @@ const (
 }
 `
 
-	recursiveProtoToRecursiveGoaCode = `func transform() {
+	defaultArrayProtoToDefaultArraySvcCode = `func transform() {
+	target := &DefaultArray{}
+	if source.StringArray != nil {
+		target.StringArray = make([]string, len(source.StringArray))
+		for i, val := range source.StringArray {
+			target.StringArray[i] = val
+		}
+	}
+	if len(source.StringArray) == 0 {
+		target.StringArray = []string{"foo", "bar"}
+	}
+}
+`
+
+	recursiveProtoToRecursiveSvcCode = `func transform() {
 	target := &Recursive{
 		RequiredString: source.RequiredString,
 	}
@@ -659,10 +796,13 @@ const (
 }
 `
 
-	compositeProtoToCustomFieldGoaCode = `func transform() {
+	compositeProtoToCustomFieldSvcCode = `func transform() {
 	target := &CompositeWithCustomField{
 		MyString: source.RequiredString,
 		MyInt:    int(source.DefaultInt),
+	}
+	if source.DefaultInt == 0 {
+		target.MyInt = 100
 	}
 	if source.Type != nil {
 		target.MyType = protobufSimpleToSimple(source.Type)
@@ -684,12 +824,15 @@ const (
 }
 `
 
-	customFieldProtoToCompositeGoaCode = `func transform() {
-	target := &Composite{
-		RequiredString: &source.MyString,
+	customFieldProtoToCompositeSvcCode = `func transform() {
+	target := &Composite{}
+	if source.MyString != "" {
+		target.RequiredString = &source.MyString
 	}
-	defaultIntptr := int(source.MyInt)
-	target.DefaultInt = &defaultIntptr
+	if source.MyInt != 0 {
+		defaultIntptr := int(source.MyInt)
+		target.DefaultInt = &defaultIntptr
+	}
 	if source.MyType != nil {
 		target.Type = protobufSimpleToSimple(source.MyType)
 	}
@@ -710,10 +853,12 @@ const (
 }
 `
 
-	resultTypeProtoToResultTypeGoaCode = `func transform() {
+	resultTypeProtoToResultTypeSvcCode = `func transform() {
 	target := &ResultType{}
-	int_ptr := int(source.Int)
-	target.Int = &int_ptr
+	if source.Int != 0 {
+		int_ptr := int(source.Int)
+		target.Int = &int_ptr
+	}
 	if source.Map_ != nil {
 		target.Map = make(map[int]string, len(source.Map_))
 		for key, val := range source.Map_ {
@@ -725,14 +870,16 @@ const (
 }
 `
 
-	rtColProtoToRTColGoaCode = `func transform() {
+	rtColProtoToRTColSvcCode = `func transform() {
 	target := &ResultTypeCollection{}
 	if source.Collection != nil {
 		target.Collection = make([]*ResultType, len(source.Collection.Field))
 		for i, val := range source.Collection.Field {
 			target.Collection[i] = &ResultType{}
-			int_ptr := int(val.Int)
-			target.Collection[i].Int = &int_ptr
+			if val.Int != 0 {
+				int_ptr := int(val.Int)
+				target.Collection[i].Int = &int_ptr
+			}
 			if val.Map_ != nil {
 				target.Collection[i].Map = make(map[int]string, len(val.Map_))
 				for key, val := range val.Map_ {
@@ -741,6 +888,105 @@ const (
 					target.Collection[i].Map[tk] = tv
 				}
 			}
+		}
+	}
+}
+`
+
+	optionalProtoToOptionalSvcCode = `func transform() {
+	target := &Optional{
+		Bytes: source.Bytes_,
+		Any:   source.Any,
+	}
+	if source.Int != 0 {
+		int_ptr := int(source.Int)
+		target.Int = &int_ptr
+	}
+	if source.Uint != 0 {
+		uint_ptr := uint(source.Uint)
+		target.Uint = &uint_ptr
+	}
+	if source.Float_ != 0 {
+		target.Float = &source.Float_
+	}
+	if source.String_ != "" {
+		target.String = &source.String_
+	}
+	if source.Array != nil {
+		target.Array = make([]string, len(source.Array))
+		for i, val := range source.Array {
+			target.Array[i] = val
+		}
+	}
+	if source.Map_ != nil {
+		target.Map = make(map[int]string, len(source.Map_))
+		for key, val := range source.Map_ {
+			tk := int(key)
+			tv := val
+			target.Map[tk] = tv
+		}
+	}
+	if source.UserType != nil {
+		target.UserType = protobufOptionalToOptional(source.UserType)
+	}
+}
+`
+
+	defaultsProtoToDefaultsSvcCode = `func transform() {
+	target := &WithDefaults{
+		Int:            int(source.Int),
+		RequiredInt:    int(source.RequiredInt),
+		String:         source.String_,
+		RequiredString: source.RequiredString,
+		Bytes:          source.Bytes_,
+		RequiredBytes:  source.RequiredBytes,
+		Any:            source.Any,
+		RequiredAny:    source.RequiredAny,
+	}
+	if source.Int == 0 {
+		target.Int = 100
+	}
+	if source.String_ == "" {
+		target.String = "foo"
+	}
+	if len(source.Bytes_) == 0 {
+		target.Bytes = []byte{0x66, 0x6f, 0x6f, 0x62, 0x61, 0x72}
+	}
+	if source.Any == nil {
+		target.Any = "something"
+	}
+	if source.Array != nil {
+		target.Array = make([]string, len(source.Array))
+		for i, val := range source.Array {
+			target.Array[i] = val
+		}
+	}
+	if len(source.Array) == 0 {
+		target.Array = []string{"foo", "bar"}
+	}
+	if source.RequiredArray != nil {
+		target.RequiredArray = make([]string, len(source.RequiredArray))
+		for i, val := range source.RequiredArray {
+			target.RequiredArray[i] = val
+		}
+	}
+	if source.Map_ != nil {
+		target.Map = make(map[int]string, len(source.Map_))
+		for key, val := range source.Map_ {
+			tk := int(key)
+			tv := val
+			target.Map[tk] = tv
+		}
+	}
+	if len(source.Map_) == 0 {
+		target.Map = map[int]string{1: "foo"}
+	}
+	if source.RequiredMap != nil {
+		target.RequiredMap = make(map[int]string, len(source.RequiredMap))
+		for key, val := range source.RequiredMap {
+			tk := int(key)
+			tv := val
+			target.RequiredMap[tk] = tv
 		}
 	}
 }

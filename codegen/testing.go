@@ -127,28 +127,6 @@ func Diff(t *testing.T, s1, s2 string) string {
 	return strings.Replace(string(diffb), "\t", " ␉ ", -1)
 }
 
-// NewUseDefaultContext returns a contextual attribute which uses non-pointers
-// for attributes with default values. It is used only in tests.
-func NewUseDefaultContext(att Attributor) *ContextualAttribute {
-	return &ContextualAttribute{
-		Attribute:  att,
-		Required:   true,
-		Pointer:    false,
-		UseDefault: true,
-	}
-}
-
-// NewPointerContext returns a contextual attribute which uses pointers for all
-// attributes. It is used only in tests.
-func NewPointerContext(att Attributor) *ContextualAttribute {
-	return &ContextualAttribute{
-		Attribute:  att,
-		Required:   false,
-		Pointer:    true,
-		UseDefault: false,
-	}
-}
-
 // CreateTempFile creates a temporary file and writes the given content.
 // It is used only for testing.
 func CreateTempFile(t *testing.T, content string) string {

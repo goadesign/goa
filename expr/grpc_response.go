@@ -178,7 +178,7 @@ func (r *GRPCResponseExpr) Finalize(a *GRPCEndpointExpr, svcAtt *AttributeExpr) 
 		}
 		for _, nat := range *AsObject(r.Message.Type) {
 			// initialize message attribute from method result
-			svcAtt := svcObj.Attribute(nat.Name)
+			svcAtt := DupAtt(svcObj.Attribute(nat.Name))
 			initAttrFromDesign(nat.Attribute, svcAtt)
 			if nat.Attribute.Meta == nil {
 				nat.Attribute.Meta = svcAtt.Meta
@@ -196,6 +196,12 @@ func (r *GRPCResponseExpr) Finalize(a *GRPCEndpointExpr, svcAtt *AttributeExpr) 
 		} else {
 			initAttrFromDesign(r.Message, svcAtt)
 		}
+	}
+
+	// Set zero value for optional attributes in messages and metadata if not set
+	// already
+	if IsObject(r.Message.Type) {
+		setZero(r.Message)
 	}
 }
 
