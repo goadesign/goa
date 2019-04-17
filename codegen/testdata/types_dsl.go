@@ -138,5 +138,57 @@ var TestTypesDSL = func() {
 				Attribute("collection", CollectionOf(RT))
 			})
 		})
+
+		_ = Type("Optional", func() {
+			Attribute("int", Int)
+			Attribute("uint", UInt)
+			Attribute("float", Float32)
+			Attribute("string", String)
+			Attribute("bytes", Bytes)
+			Attribute("any", Any)
+			Attribute("array", ArrayOf(String))
+			Attribute("map", MapOf(Int, String))
+			Attribute("user_type", "Optional")
+		})
+
+		_ = Type("WithDefaults", func() {
+			Attribute("int", Int, func() {
+				Default(100)
+			})
+			Attribute("required_int", Int, func() {
+				Default(99)
+			})
+			Attribute("string", String, func() {
+				Default("foo")
+			})
+			Attribute("required_string", String, func() {
+				Default("bar")
+			})
+			Attribute("bytes", Bytes, func() {
+				Default([]byte("foobar"))
+			})
+			Attribute("required_bytes", Bytes, func() {
+				Default([]byte("foobar_required"))
+			})
+			Attribute("any", Any, func() {
+				Default("something")
+			})
+			Attribute("required_any", Any, func() {
+				Default("anything")
+			})
+			Attribute("array", ArrayOf(String), func() {
+				Default([]string{"foo", "bar"})
+			})
+			Attribute("required_array", ArrayOf(String), func() {
+				Default([]string{"bar", "foo"})
+			})
+			Attribute("map", MapOf(Int, String), func() {
+				Default(map[int]string{1: "foo"})
+			})
+			Attribute("required_map", MapOf(Int, String), func() {
+				Default(map[int]string{2: "bar"})
+			})
+			Required("required_int", "required_string", "required_bytes", "required_any", "required_array", "required_map")
+		})
 	)
 }
