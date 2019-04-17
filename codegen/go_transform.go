@@ -363,6 +363,7 @@ func collectHelpers(source, target *expr.AttributeExpr, req bool, ta *TransformA
 		if err != nil {
 			return nil, err
 		}
+		data = append(data, helpers...)
 	case expr.IsObject(source.Type):
 		if ut, ok := source.Type.(expr.UserType); ok {
 			name := transformHelperName(source, target, ta)

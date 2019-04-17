@@ -147,20 +147,11 @@ func transformObject(source, target *expr.AttributeExpr, sourceVar, targetVar st
 				return
 			}
 			var (
-				srcField, tgtField string
-
-				srcPtr = ta.SourceCtx.IsPrimitivePointer(n, srcMatt.AttributeExpr)
-				tgtPtr = ta.TargetCtx.IsPrimitivePointer(n, tgtMatt.AttributeExpr)
+				srcField = sourceVar + "." + ta.SourceCtx.Scope.Field(srcc, srcMatt.ElemName(n), true)
+				tgtField = ta.TargetCtx.Scope.Field(tgtc, tgtMatt.ElemName(n), true)
+				srcPtr   = ta.SourceCtx.IsPrimitivePointer(n, srcMatt.AttributeExpr)
+				tgtPtr   = ta.TargetCtx.IsPrimitivePointer(n, tgtMatt.AttributeExpr)
 			)
-			{
-				if ta.proto {
-					srcField = sourceVar + "." + codegen.GoifyAtt(srcc, srcMatt.ElemName(n), true)
-					tgtField = protoBufifyAtt(tgtc, tgtMatt.ElemName(n), true)
-				} else {
-					srcField = sourceVar + "." + protoBufifyAtt(srcc, srcMatt.ElemName(n), true)
-					tgtField = codegen.GoifyAtt(tgtc, tgtMatt.ElemName(n), true)
-				}
-			}
 			srcFieldConv := convertType(srcc, tgtc, srcField, ta)
 			switch {
 			case srcPtr && !tgtPtr:
@@ -214,21 +205,11 @@ func transformObject(source, target *expr.AttributeExpr, sourceVar, targetVar st
 	// handle default values
 	var err error
 	walkMatches(source, target, func(srcMatt, tgtMatt *expr.MappedAttributeExpr, srcc, tgtc *expr.AttributeExpr, n string) {
-		var srcField, tgtField string
-		{
-			if ta.proto {
-				srcField = codegen.GoifyAtt(srcc, srcMatt.ElemName(n), true)
-				tgtField = protoBufifyAtt(tgtc, tgtMatt.ElemName(n), true)
-			} else {
-				srcField = protoBufifyAtt(srcc, srcMatt.ElemName(n), true)
-				tgtField = codegen.GoifyAtt(tgtc, tgtMatt.ElemName(n), true)
-			}
-		}
 		var (
 			code string
 
-			srcVar = sourceVar + "." + srcField
-			tgtVar = targetVar + "." + tgtField
+			srcVar = sourceVar + "." + ta.SourceCtx.Scope.Field(srcc, srcMatt.ElemName(n), true)
+			tgtVar = targetVar + "." + ta.TargetCtx.Scope.Field(tgtc, tgtMatt.ElemName(n), true)
 		)
 		{
 			if err = codegen.IsCompatible(srcc.Type, tgtc.Type, "", ""); err != nil {
@@ -283,7 +264,7 @@ func transformObject(source, target *expr.AttributeExpr, sourceVar, targetVar st
 				// uses pointers to hold default values.
 				if ta.SourceCtx.IsPrimitivePointer(n, srcMatt.AttributeExpr) {
 					code += fmt.Sprintf("if %s == nil {\n\t%s = %#v\n}\n", srcVar, tgtVar, tdef)
-				} else if !expr.IsPrimitive(srcc.Type) {
+				} else if !expr.IsPrimitive(srcc.Type) && !srcMatt.IsRequired(n) {
 					code += fmt.Sprintf("if %s {\n\t%s = %#v\n}\n", checkZeroValue(srcc.Type, srcVar, false), tgtVar, tdef)
 				}
 			} else {
@@ -596,6 +577,7 @@ func collectHelpers(source, target *expr.AttributeExpr, req bool, ta *transformA
 		if err != nil {
 			return nil, err
 		}
+		data = append(data, helpers...)
 	case expr.IsObject(source.Type):
 		if ut, ok := source.Type.(expr.UserType); ok {
 			name := transformHelperName(source, target, ta)

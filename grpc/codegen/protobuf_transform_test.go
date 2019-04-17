@@ -34,6 +34,8 @@ func TestProtoBufTransform(t *testing.T) {
 		recursive   = root.UserType("Recursive")
 		composite   = root.UserType("Composite")
 		customField = root.UserType("CompositeWithCustomField")
+		optional    = root.UserType("Optional")
+		defaults    = root.UserType("WithDefaults")
 
 		resultType = root.UserType("ResultType")
 		rtCol      = root.UserType("ResultTypeCollection")
@@ -80,6 +82,8 @@ func TestProtoBufTransform(t *testing.T) {
 			{"custom-field-to-composite", customField, composite, true, svcCtx, customFieldSvcToCompositeProtoCode},
 			{"result-type-to-result-type", resultType, resultType, true, svcCtx, resultTypeSvcToResultTypeProtoCode},
 			{"result-type-collection-to-result-type-collection", rtCol, rtCol, true, svcCtx, rtColSvcToRTColProtoCode},
+			{"optional-to-optional", optional, optional, true, svcCtx, optionalSvcToOptionalProtoCode},
+			{"defaults-to-defaults", defaults, defaults, true, svcCtx, defaultsSvcToDefaultsProtoCode},
 		},
 
 		// test cases to transform protocol buffer type to service type
@@ -110,6 +114,8 @@ func TestProtoBufTransform(t *testing.T) {
 			{"custom-field-to-composite", customField, composite, false, svcCtx, customFieldProtoToCompositeSvcCode},
 			{"result-type-to-result-type", resultType, resultType, false, svcCtx, resultTypeProtoToResultTypeSvcCode},
 			{"result-type-collection-to-result-type-collection", rtCol, rtCol, false, svcCtx, rtColProtoToRTColSvcCode},
+			{"optional-to-optional", optional, optional, false, svcCtx, optionalProtoToOptionalSvcCode},
+			{"defaults-to-defaults", defaults, defaults, false, svcCtx, defaultsProtoToDefaultsSvcCode},
 		},
 	}
 	for name, cases := range tc {
@@ -476,6 +482,91 @@ const (
 }
 `
 
+	optionalSvcToOptionalProtoCode = `func transform() {
+	target := &Optional{
+		Bytes_: source.Bytes,
+		Any:    source.Any,
+	}
+	if source.Int != nil {
+		target.Int = int32(*source.Int)
+	}
+	if source.Uint != nil {
+		target.Uint = uint32(*source.Uint)
+	}
+	if source.Float != nil {
+		target.Float_ = *source.Float
+	}
+	if source.String != nil {
+		target.String_ = *source.String
+	}
+	if source.Array != nil {
+		target.Array = make([]string, len(source.Array))
+		for i, val := range source.Array {
+			target.Array[i] = val
+		}
+	}
+	if source.Map != nil {
+		target.Map_ = make(map[int32]string, len(source.Map))
+		for key, val := range source.Map {
+			tk := int32(key)
+			tv := val
+			target.Map_[tk] = tv
+		}
+	}
+	if source.UserType != nil {
+		target.UserType = svcOptionalToOptional(source.UserType)
+	}
+}
+`
+
+	defaultsSvcToDefaultsProtoCode = `func transform() {
+	target := &WithDefaults{
+		Int:            int32(source.Int),
+		RequiredInt:    int32(source.RequiredInt),
+		String_:        source.String,
+		RequiredString: source.RequiredString,
+		Bytes_:         source.Bytes,
+		RequiredBytes:  source.RequiredBytes,
+		Any:            source.Any,
+		RequiredAny:    source.RequiredAny,
+	}
+	if source.Array != nil {
+		target.Array = make([]string, len(source.Array))
+		for i, val := range source.Array {
+			target.Array[i] = val
+		}
+	}
+	if len(source.Array) == 0 {
+		target.Array = []string{"foo", "bar"}
+	}
+	if source.RequiredArray != nil {
+		target.RequiredArray = make([]string, len(source.RequiredArray))
+		for i, val := range source.RequiredArray {
+			target.RequiredArray[i] = val
+		}
+	}
+	if source.Map != nil {
+		target.Map_ = make(map[int32]string, len(source.Map))
+		for key, val := range source.Map {
+			tk := int32(key)
+			tv := val
+			target.Map_[tk] = tv
+		}
+	}
+	if len(source.Map) == 0 {
+		target.Map_ = map[int]string{1: "foo"}
+	}
+	if source.RequiredMap != nil {
+		target.RequiredMap = make(map[int32]string, len(source.RequiredMap))
+		for key, val := range source.RequiredMap {
+			tk := int32(key)
+			tv := val
+			target.RequiredMap[tk] = tv
+		}
+	}
+}
+`
+
 	primitiveProtoToPrimitiveSvcCode = `func transform() {
 	target := int(source.Field)
 }
@@ -797,6 +888,105 @@ const (
 					target.Collection[i].Map[tk] = tv
 				}
 			}
+		}
+	}
+}
+`
+
+	optionalProtoToOptionalSvcCode = `func transform() {
+	target := &Optional{
+		Bytes: source.Bytes_,
+		Any:   source.Any,
+	}
+	if source.Int != 0 {
+		int_ptr := int(source.Int)
+		target.Int = &int_ptr
+	}
+	if source.Uint != 0 {
+		uint_ptr := uint(source.Uint)
+		target.Uint = &uint_ptr
+	}
+	if source.Float_ != 0 {
+		target.Float = &source.Float_
+	}
+	if source.String_ != "" {
+		target.String = &source.String_
+	}
+	if source.Array != nil {
+		target.Array = make([]string, len(source.Array))
+		for i, val := range source.Array {
+			target.Array[i] = val
+		}
+	}
+	if source.Map_ != nil {
+		target.Map = make(map[int]string, len(source.Map_))
+		for key, val := range source.Map_ {
+			tk := int(key)
+			tv := val
+			target.Map[tk] = tv
+		}
+	}
+	if source.UserType != nil {
+		target.UserType = protobufOptionalToOptional(source.UserType)
+	}
+}
+`
+
+	defaultsProtoToDefaultsSvcCode = `func transform() {
+	target := &WithDefaults{
+		Int:            int(source.Int),
+		RequiredInt:    int(source.RequiredInt),
+		String:         source.String_,
+		RequiredString: source.RequiredString,
+		Bytes:          source.Bytes_,
+		RequiredBytes:  source.RequiredBytes,
+		Any:            source.Any,
+		RequiredAny:    source.RequiredAny,
+	}
+	if source.Int == 0 {
+		target.Int = 100
+	}
+	if source.String_ == "" {
+		target.String = "foo"
+	}
+	if len(source.Bytes_) == 0 {
+		target.Bytes = []byte{0x66, 0x6f, 0x6f, 0x62, 0x61, 0x72}
+	}
+	if source.Any == nil {
+		target.Any = "something"
+	}
+	if source.Array != nil {
+		target.Array = make([]string, len(source.Array))
+		for i, val := range source.Array {
+			target.Array[i] = val
+		}
+	}
+	if len(source.Array) == 0 {
+		target.Array = []string{"foo", "bar"}
+	}
+	if source.RequiredArray != nil {
+		target.RequiredArray = make([]string, len(source.RequiredArray))
+		for i, val := range source.RequiredArray {
+			target.RequiredArray[i] = val
+		}
+	}
+	if source.Map_ != nil {
+		target.Map = make(map[int]string, len(source.Map_))
+		for key, val := range source.Map_ {
+			tk := int(key)
+			tv := val
+			target.Map[tk] = tv
+		}
+	}
+	if len(source.Map_) == 0 {
+		target.Map = map[int]string{1: "foo"}
+	}
+	if source.RequiredMap != nil {
+		target.RequiredMap = make(map[int]string, len(source.RequiredMap))
+		for key, val := range source.RequiredMap {
+			tk := int(key)
+			tv := val
+			target.RequiredMap[tk] = tv
 		}
 	}
 }
