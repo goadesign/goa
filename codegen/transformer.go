@@ -136,6 +136,48 @@ func AppendHelpers(oldH, newH []*TransformFunctionData) []*TransformFunctionData
 	return oldH
 }
 
+// MapDepth returns the level of nested maps. For unnested maps, it returns 0.
+func MapDepth(m *expr.Map) int {
+	return mapDepth(m.ElemType.Type, 0)
+}
+
+func mapDepth(dt expr.DataType, depth int, seen ...map[string]struct{}) int {
+	if mp := expr.AsMap(dt); mp != nil {
+		depth++
+		depth = mapDepth(mp.ElemType.Type, depth, seen...)
+	} else if ar := expr.AsArray(dt); ar != nil {
+		depth = mapDepth(ar.ElemType.Type, depth, seen...)
+	} else if mo := expr.AsObject(dt); mo != nil {
+		var s map[string]struct{}
+		if len(seen) > 0 {
+			s = seen[0]
+		} else {
+			s = make(map[string]struct{})
+			seen = append(seen, s)
+		}
+		key := dt.Name()
+		if u, ok := dt.(expr.UserType); ok {
+			key = u.ID()
+		}
+		if _, ok := s[key]; ok {
+			return depth
+		}
+		s[key] = struct{}{}
+		var level int
+		for _, nat := range *mo {
+			// if object type has attributes of type map then find out the attribute that has
+			// the deepest level of nested maps
+			lvl := 0
+			lvl = mapDepth(nat.Attribute.Type, lvl, seen...)
+			if lvl > level {
+				level = lvl
+			}
+		}
+		depth += level
+	}
+	return depth
+}
+
 // IsPrimitivePointer returns true if the attribute with the given name is a
 // primitive pointer in the given parent attribute.
 func (a *AttributeContext) IsPrimitivePointer(name string, att *expr.AttributeExpr) bool {

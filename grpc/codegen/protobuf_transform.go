@@ -443,7 +443,7 @@ func transformMap(source, target *expr.Map, sourceVar, targetVar string, newVar 
 		"TransformAttrs": ta,
 		"LoopVar":        "",
 	}
-	if depth := target.Depth(); depth > 0 {
+	if depth := codegen.MapDepth(target); depth > 0 {
 		data["LoopVar"] = string(97 + depth)
 	}
 	var buf bytes.Buffer
