@@ -31,7 +31,8 @@ DEPEND=\
 	github.com/cheggaaa/pb \
 	github.com/hashicorp/go-getter \
 	github.com/golang/protobuf/protoc-gen-go \
-	github.com/golang/protobuf/proto
+	github.com/golang/protobuf/proto \
+	honnef.co/go/tools/cmd/staticcheck
 
 all: lint test
 
@@ -68,6 +69,9 @@ lint:
 	fi
 	@if [ "`golint ./... | grep -vf .golint_exclude | tee /dev/stderr`" ]; then \
 		echo "^ - Lint errors!" && echo && exit 1; \
+	fi
+	@if [ "`staticcheck -checks all ./... | grep -v ".pb.go" | tee /dev/stderr`" ]; then \
+		echo "^ - staticcheck errors!" && echo && exit 1; \
 	fi
 
 test:
