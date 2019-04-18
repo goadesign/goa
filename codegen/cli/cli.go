@@ -454,7 +454,10 @@ func conversionCode(from, to, typeName string, pointer bool) (string, bool) {
 	}
 	switch typeName {
 	case boolN:
-		parse = fmt.Sprintf("%s, err %s= strconv.ParseBool(%s)", target, decl, from)
+		if pointer {
+			parse = fmt.Sprintf("var %s bool\n", target)
+		}
+		parse += fmt.Sprintf("%s, err = strconv.ParseBool(%s)", target, from)
 		checkErr = true
 	case intN:
 		parse = fmt.Sprintf("var v int64\nv, err = strconv.ParseInt(%s, 10, 64)", from)

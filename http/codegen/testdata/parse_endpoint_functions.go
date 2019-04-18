@@ -659,7 +659,8 @@ func BuildMethodMultiPayloadPayload(serviceMultiMethodMultiPayloadBody string, s
 	var a *bool
 	{
 		if serviceMultiMethodMultiPayloadA != "" {
-			val, err := strconv.ParseBool(serviceMultiMethodMultiPayloadA)
+			var val bool
+			val, err = strconv.ParseBool(serviceMultiMethodMultiPayloadA)
 			a = &val
 			if err != nil {
 				return nil, fmt.Errorf("invalid value for a, must be BOOL")
@@ -683,7 +684,8 @@ func BuildMethodQueryBoolPayload(serviceQueryBoolMethodQueryBoolQ string) (*serv
 	var q *bool
 	{
 		if serviceQueryBoolMethodQueryBoolQ != "" {
-			val, err := strconv.ParseBool(serviceQueryBoolMethodQueryBoolQ)
+			var val bool
+			val, err = strconv.ParseBool(serviceQueryBoolMethodQueryBoolQ)
 			q = &val
 			if err != nil {
 				return nil, fmt.Errorf("invalid value for q, must be BOOL")

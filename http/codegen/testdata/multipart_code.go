@@ -167,7 +167,6 @@ func NewServiceMultipartWithParamMethodMultipartWithParamDecoder(mux goahttp.Mux
 								err = goa.MergeErrors(err, goa.InvalidFieldTypeError("keya", keyaRaw, "integer"))
 							}
 							keya = int(v)
-							keyRaw = keyRaw[closeIdx+1:]
 						}
 						c[keya] = valRaw
 					}
@@ -228,7 +227,6 @@ func NewServiceMultipartWithParamsAndHeadersMethodMultipartWithParamsAndHeadersD
 								err = goa.MergeErrors(err, goa.InvalidFieldTypeError("keya", keyaRaw, "integer"))
 							}
 							keya = int(v)
-							keyRaw = keyRaw[closeIdx+1:]
 						}
 						c[keya] = valRaw
 					}
