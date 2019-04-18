@@ -65,9 +65,6 @@ type (
 		Parent *Segment `json:"-"`
 		// conn is the UDP client to the X-Ray daemon.
 		conn net.Conn
-		// counter keeps track of the number of subsegments that have not
-		// completed yet.
-		counter int
 		// submitInProgressSegment sends an "in-progress" copy of this segment to
 		// X-Ray daemon only once.
 		submitInProgressSegment sync.Once

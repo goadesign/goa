@@ -1539,7 +1539,6 @@ func DecodeMethodQueryMapStringStringRequest(mux goahttp.Muxer, decoder func(*ht
 							openIdx := strings.IndexRune(keyRaw, '[')
 							closeIdx := strings.IndexRune(keyRaw, ']')
 							keya = keyRaw[openIdx+1 : closeIdx]
-							keyRaw = keyRaw[closeIdx+1:]
 						}
 						q[keya] = valRaw[0]
 					}
@@ -1577,7 +1576,6 @@ func DecodeMethodQueryMapStringStringValidateRequest(mux goahttp.Muxer, decoder 
 						openIdx := strings.IndexRune(keyRaw, '[')
 						closeIdx := strings.IndexRune(keyRaw, ']')
 						keya = keyRaw[openIdx+1 : closeIdx]
-						keyRaw = keyRaw[closeIdx+1:]
 					}
 					q[keya] = valRaw[0]
 				}
@@ -1625,7 +1623,6 @@ func DecodeMethodQueryMapStringBoolRequest(mux goahttp.Muxer, decoder func(*http
 							openIdx := strings.IndexRune(keyRaw, '[')
 							closeIdx := strings.IndexRune(keyRaw, ']')
 							keya = keyRaw[openIdx+1 : closeIdx]
-							keyRaw = keyRaw[closeIdx+1:]
 						}
 						var val bool
 						{
@@ -1674,7 +1671,6 @@ func DecodeMethodQueryMapStringBoolValidateRequest(mux goahttp.Muxer, decoder fu
 						openIdx := strings.IndexRune(keyRaw, '[')
 						closeIdx := strings.IndexRune(keyRaw, ']')
 						keya = keyRaw[openIdx+1 : closeIdx]
-						keyRaw = keyRaw[closeIdx+1:]
 					}
 					var val bool
 					{
@@ -1735,7 +1731,6 @@ func DecodeMethodQueryMapBoolStringRequest(mux goahttp.Muxer, decoder func(*http
 								err = goa.MergeErrors(err, goa.InvalidFieldTypeError("keya", keyaRaw, "boolean"))
 							}
 							keya = v
-							keyRaw = keyRaw[closeIdx+1:]
 						}
 						q[keya] = valRaw[0]
 					}
@@ -1781,7 +1776,6 @@ func DecodeMethodQueryMapBoolStringValidateRequest(mux goahttp.Muxer, decoder fu
 							err = goa.MergeErrors(err, goa.InvalidFieldTypeError("keya", keyaRaw, "boolean"))
 						}
 						keya = v
-						keyRaw = keyRaw[closeIdx+1:]
 					}
 					q[keya] = valRaw[0]
 				}
@@ -1834,7 +1828,6 @@ func DecodeMethodQueryMapBoolBoolRequest(mux goahttp.Muxer, decoder func(*http.R
 								err = goa.MergeErrors(err, goa.InvalidFieldTypeError("keya", keyaRaw, "boolean"))
 							}
 							keya = v
-							keyRaw = keyRaw[closeIdx+1:]
 						}
 						var val bool
 						{
@@ -1888,7 +1881,6 @@ func DecodeMethodQueryMapBoolBoolValidateRequest(mux goahttp.Muxer, decoder func
 							err = goa.MergeErrors(err, goa.InvalidFieldTypeError("keya", keyaRaw, "boolean"))
 						}
 						keya = v
-						keyRaw = keyRaw[closeIdx+1:]
 					}
 					var val bool
 					{
@@ -1944,7 +1936,6 @@ func DecodeMethodQueryMapStringArrayStringRequest(mux goahttp.Muxer, decoder fun
 							openIdx := strings.IndexRune(keyRaw, '[')
 							closeIdx := strings.IndexRune(keyRaw, ']')
 							keya = keyRaw[openIdx+1 : closeIdx]
-							keyRaw = keyRaw[closeIdx+1:]
 						}
 						q[keya] = valRaw
 					}
@@ -1982,7 +1973,6 @@ func DecodeMethodQueryMapStringArrayStringValidateRequest(mux goahttp.Muxer, dec
 						openIdx := strings.IndexRune(keyRaw, '[')
 						closeIdx := strings.IndexRune(keyRaw, ']')
 						keya = keyRaw[openIdx+1 : closeIdx]
-						keyRaw = keyRaw[closeIdx+1:]
 					}
 					q[keya] = valRaw
 				}
@@ -2031,7 +2021,6 @@ func DecodeMethodQueryMapStringArrayBoolRequest(mux goahttp.Muxer, decoder func(
 							openIdx := strings.IndexRune(keyRaw, '[')
 							closeIdx := strings.IndexRune(keyRaw, ']')
 							keya = keyRaw[openIdx+1 : closeIdx]
-							keyRaw = keyRaw[closeIdx+1:]
 						}
 						var val []bool
 						{
@@ -2083,7 +2072,6 @@ func DecodeMethodQueryMapStringArrayBoolValidateRequest(mux goahttp.Muxer, decod
 						openIdx := strings.IndexRune(keyRaw, '[')
 						closeIdx := strings.IndexRune(keyRaw, ']')
 						keya = keyRaw[openIdx+1 : closeIdx]
-						keyRaw = keyRaw[closeIdx+1:]
 					}
 					var val []bool
 					{
@@ -2148,7 +2136,6 @@ func DecodeMethodQueryMapBoolArrayStringRequest(mux goahttp.Muxer, decoder func(
 								err = goa.MergeErrors(err, goa.InvalidFieldTypeError("keya", keyaRaw, "boolean"))
 							}
 							keya = v
-							keyRaw = keyRaw[closeIdx+1:]
 						}
 						q[keya] = valRaw
 					}
@@ -2192,7 +2179,6 @@ func DecodeMethodQueryMapBoolArrayStringValidateRequest(mux goahttp.Muxer, decod
 								err = goa.MergeErrors(err, goa.InvalidFieldTypeError("keya", keyaRaw, "boolean"))
 							}
 							keya = v
-							keyRaw = keyRaw[closeIdx+1:]
 						}
 						q[keya] = valRaw
 					}
@@ -2246,7 +2232,6 @@ func DecodeMethodQueryMapBoolArrayBoolRequest(mux goahttp.Muxer, decoder func(*h
 								err = goa.MergeErrors(err, goa.InvalidFieldTypeError("keya", keyaRaw, "boolean"))
 							}
 							keya = v
-							keyRaw = keyRaw[closeIdx+1:]
 						}
 						var val []bool
 						{
@@ -2303,7 +2288,6 @@ func DecodeMethodQueryMapBoolArrayBoolValidateRequest(mux goahttp.Muxer, decoder
 							err = goa.MergeErrors(err, goa.InvalidFieldTypeError("keya", keyaRaw, "boolean"))
 						}
 						keya = v
-						keyRaw = keyRaw[closeIdx+1:]
 					}
 					var val []bool
 					{
@@ -2497,7 +2481,6 @@ func DecodeMethodQueryPrimitiveMapStringArrayStringValidateRequest(mux goahttp.M
 						openIdx := strings.IndexRune(keyRaw, '[')
 						closeIdx := strings.IndexRune(keyRaw, ']')
 						keya = keyRaw[openIdx+1 : closeIdx]
-						keyRaw = keyRaw[closeIdx+1:]
 					}
 					q[keya] = valRaw
 				}
@@ -2549,7 +2532,6 @@ func DecodeMethodQueryPrimitiveMapStringBoolValidateRequest(mux goahttp.Muxer, d
 						openIdx := strings.IndexRune(keyRaw, '[')
 						closeIdx := strings.IndexRune(keyRaw, ']')
 						keya = keyRaw[openIdx+1 : closeIdx]
-						keyRaw = keyRaw[closeIdx+1:]
 					}
 					var val bool
 					{
@@ -2611,7 +2593,6 @@ func DecodeMethodQueryPrimitiveMapBoolArrayBoolValidateRequest(mux goahttp.Muxer
 							err = goa.MergeErrors(err, goa.InvalidFieldTypeError("keya", keyaRaw, "boolean"))
 						}
 						keya = v
-						keyRaw = keyRaw[closeIdx+1:]
 					}
 					var val []bool
 					{
@@ -2693,7 +2674,6 @@ func DecodeMethodQueryMapStringMapIntStringValidateRequest(mux goahttp.Muxer, de
 							err = goa.MergeErrors(err, goa.InvalidFieldTypeError("keyb", keybRaw, "integer"))
 						}
 						keyb = int(v)
-						keyRaw = keyRaw[closeIdx+1:]
 					}
 					q[keya][keyb] = valRaw[0]
 				}
@@ -2753,7 +2733,6 @@ func DecodeMethodQueryMapIntMapStringArrayIntValidateRequest(mux goahttp.Muxer, 
 						openIdx := strings.IndexRune(keyRaw, '[')
 						closeIdx := strings.IndexRune(keyRaw, ']')
 						keyb = keyRaw[openIdx+1 : closeIdx]
-						keyRaw = keyRaw[closeIdx+1:]
 					}
 					var val []int
 					{
@@ -4450,7 +4429,6 @@ func DecodeMapQueryPrimitivePrimitiveRequest(mux goahttp.Muxer, decoder func(*ht
 						openIdx := strings.IndexRune(keyRaw, '[')
 						closeIdx := strings.IndexRune(keyRaw, ']')
 						keya = keyRaw[openIdx+1 : closeIdx]
-						keyRaw = keyRaw[closeIdx+1:]
 					}
 					query[keya] = valRaw[0]
 				}
@@ -4489,7 +4467,6 @@ func DecodeMapQueryPrimitiveArrayRequest(mux goahttp.Muxer, decoder func(*http.R
 						openIdx := strings.IndexRune(keyRaw, '[')
 						closeIdx := strings.IndexRune(keyRaw, ']')
 						keya = keyRaw[openIdx+1 : closeIdx]
-						keyRaw = keyRaw[closeIdx+1:]
 					}
 					var val []uint
 					{
@@ -4564,7 +4541,6 @@ func DecodeMethodMapQueryObjectRequest(mux goahttp.Muxer, decoder func(*http.Req
 							err = goa.MergeErrors(err, goa.InvalidFieldTypeError("keya", keyaRaw, "integer"))
 						}
 						keya = int(v)
-						keyRaw = keyRaw[closeIdx+1:]
 					}
 					c[keya] = valRaw
 				}
