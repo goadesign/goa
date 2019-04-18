@@ -356,7 +356,7 @@ func FieldLoadCode(f *FlagData, argName, argTypeName, validate string, defaultVa
 					code += fmt.Sprintf(`return nil, fmt.Errorf("invalid JSON for %s, example of valid JSON:\n%%s", %q)`,
 						argName, ex)
 				} else {
-					code += fmt.Sprintf(`err = fmt.Errorf("invalid value for %s, must be %s")`,
+					code += fmt.Sprintf(`return nil, fmt.Errorf("invalid value for %s, must be %s")`,
 						argName, f.Type)
 				}
 				code += "\n}"
@@ -454,7 +454,10 @@ func conversionCode(from, to, typeName string, pointer bool) (string, bool) {
 	}
 	switch typeName {
 	case boolN:
-		parse = fmt.Sprintf("%s, err %s= strconv.ParseBool(%s)", target, decl, from)
+		if pointer {
+			parse = fmt.Sprintf("var %s bool\n", target)
+		}
+		parse += fmt.Sprintf("%s, err = strconv.ParseBool(%s)", target, from)
 		checkErr = true
 	case intN:
 		parse = fmt.Sprintf("var v int64\nv, err = strconv.ParseInt(%s, 10, 64)", from)
@@ -677,11 +680,6 @@ func {{ .Name }}({{ range .FormalParams }}{{ . }} string, {{ end }}) ({{ .Result
 		{{ .Init }}
 	}
 		{{- end }}
-	{{- end }}
-	{{- if .CheckErr }}
-	if err != nil {
-		return nil, err
-	}
 	{{- end }}
 	{{- with .PayloadInit }}
 

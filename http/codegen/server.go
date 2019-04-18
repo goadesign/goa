@@ -275,6 +275,7 @@ func mapQueryDecodeData(dt expr.DataType, varName string, inc int) map[string]in
 		"VarName":   varName,
 		"Loop":      string(97 + inc),
 		"Increment": inc + 1,
+		"Depth":     codegen.MapDepth(expr.AsMap(dt)),
 	}
 }
 
@@ -874,7 +875,9 @@ const requestParamsHeadersT = `{{- define "request_params_headers" }}
 		key{{ .Loop }}Raw := keyRaw[openIdx+1 : closeIdx]
 		{{- template "type_conversion" (conversionData (printf "key%s" .Loop) (printf "%q" "query") .Type.KeyType.Type) }}
 	{{- end }}
-		keyRaw = keyRaw[closeIdx+1:]
+		{{- if gt .Depth 0 }}
+			keyRaw = keyRaw[closeIdx+1:]
+		{{- end }}
 	}
 	{{- if eq .Type.ElemType.Type.Name "string" }}
 		{{ .VarName }}[key{{ .Loop }}] = valRaw[0]

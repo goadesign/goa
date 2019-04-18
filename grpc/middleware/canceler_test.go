@@ -5,7 +5,6 @@ import (
 	"testing"
 
 	grpcm "goa.design/goa/grpc/middleware"
-	"goa.design/goa/middleware"
 	"google.golang.org/grpc"
 )
 
@@ -23,7 +22,6 @@ func TestStreamCanceler(t *testing.T) {
 	)
 	cases := []struct {
 		name    string
-		options []middleware.RequestIDOption
 		stream  grpc.ServerStream
 		handler grpc.StreamHandler
 	}{
