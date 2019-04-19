@@ -1107,30 +1107,40 @@ func buildPayloadData(e *expr.HTTPEndpointExpr, sd *ServiceData) *PayloadData {
 			for _, sc := range r.Schemes {
 				if sc.Type == "Basic" {
 					uatt := e.MethodExpr.Payload.Find(sc.UsernameAttr)
+					uref := svc.Scope.GoTypeRef(uatt)
+					if sc.UsernamePointer {
+						uref = "*" + uref
+					}
 					uarg := &InitArgData{
-						Name:        sc.UsernameAttr,
-						FieldName:   sc.UsernameField,
-						Description: uatt.Description,
-						Ref:         sc.UsernameAttr,
-						Required:    sc.UsernameRequired,
-						TypeName:    svc.Scope.GoTypeName(uatt),
-						TypeRef:     svc.Scope.GoTypeRef(uatt),
-						Pointer:     sc.UsernamePointer,
-						Validate:    codegen.RecursiveValidationCode(uatt, httpsvrctx, sc.UsernameRequired, sc.UsernameAttr),
-						Example:     uatt.Example(expr.Root.API.Random()),
+						Name:         sc.UsernameAttr,
+						FieldName:    sc.UsernameField,
+						FieldPointer: sc.UsernamePointer,
+						Description:  uatt.Description,
+						Ref:          sc.UsernameAttr,
+						Required:     sc.UsernameRequired,
+						TypeName:     svc.Scope.GoTypeName(uatt),
+						TypeRef:      uref,
+						Pointer:      sc.UsernamePointer,
+						Validate:     codegen.RecursiveValidationCode(uatt, httpsvrctx, sc.UsernameRequired, sc.UsernameAttr),
+						Example:      uatt.Example(expr.Root.API.Random()),
 					}
 					patt := e.MethodExpr.Payload.Find(sc.PasswordAttr)
+					pref := svc.Scope.GoTypeRef(patt)
+					if sc.PasswordPointer {
+						pref = "*" + pref
+					}
 					parg := &InitArgData{
-						Name:        sc.PasswordAttr,
-						FieldName:   sc.PasswordField,
-						Description: patt.Description,
-						Ref:         sc.PasswordAttr,
-						Required:    sc.PasswordRequired,
-						TypeName:    svc.Scope.GoTypeName(patt),
-						TypeRef:     svc.Scope.GoTypeRef(patt),
-						Pointer:     sc.PasswordPointer,
-						Validate:    codegen.RecursiveValidationCode(patt, httpsvrctx, sc.PasswordRequired, sc.PasswordAttr),
-						Example:     patt.Example(expr.Root.API.Random()),
+						Name:         sc.PasswordAttr,
+						FieldName:    sc.PasswordField,
+						FieldPointer: sc.PasswordPointer,
+						Description:  patt.Description,
+						Ref:          sc.PasswordAttr,
+						Required:     sc.PasswordRequired,
+						TypeName:     svc.Scope.GoTypeName(patt),
+						TypeRef:      pref,
+						Pointer:      sc.PasswordPointer,
+						Validate:     codegen.RecursiveValidationCode(patt, httpsvrctx, sc.PasswordRequired, sc.PasswordAttr),
+						Example:      patt.Example(expr.Root.API.Random()),
 					}
 					cliArgs = []*InitArgData{uarg, parg}
 					done = true
