@@ -816,6 +816,8 @@ func headers(exp eval.Expression) *expr.MappedAttributeExpr {
 			e.Headers = expr.NewEmptyMappedAttributeExpr()
 		}
 		return e.Headers
+	case *expr.MappedAttributeExpr:
+		return e
 	default:
 		return nil
 	}
@@ -841,6 +843,8 @@ func params(exp eval.Expression) *expr.MappedAttributeExpr {
 			e.Params = expr.NewEmptyMappedAttributeExpr()
 		}
 		return e.Params
+	case *expr.MappedAttributeExpr:
+		return e
 	default:
 		return nil
 	}

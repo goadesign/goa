@@ -854,13 +854,6 @@ const requestParamsHeadersT = `{{- define "request_params_headers" }}
 	{{- end }}
 {{- end }}
 
-{{- define "slice_conversion" }}
-	{{ .VarName }} = make({{ goTypeRef .Type }}, len({{ .VarName }}Raw))
-	for i, rv := range {{ .VarName }}Raw {
-		{{- template "slice_item_conversion" . }}
-	}
-{{- end }}
-
 {{- define "map_conversion" }}
 	if {{ .VarName }} == nil {
 		{{ .VarName }} = make({{ goTypeRef .Type }})
@@ -900,6 +893,14 @@ const requestParamsHeadersT = `{{- define "request_params_headers" }}
 		}
 		{{ .VarName }}[key{{ .Loop }}] = val
 	{{- end }}
+{{- end }}
+` + typeConversionT
+
+const typeConversionT = `{{- define "slice_conversion" }}
+	{{ .VarName }} = make({{ goTypeRef .Type }}, len({{ .VarName }}Raw))
+	for i, rv := range {{ .VarName }}Raw {
+		{{- template "slice_item_conversion" . }}
+	}
 {{- end }}
 
 {{- define "type_conversion" }}
@@ -1151,23 +1152,23 @@ const responseT = `{{ define "response" -}}
 		{{- end }}
 	{{- end }}
 	{{- range .Headers }}
-		{{- $initDef := and (or .Pointer .Slice) .DefaultValue (not $.TagName) }}
-		{{- $checkNil := and (or .Pointer .Slice (eq .Type.Name "bytes") (eq .Type.Name "any") $initDef) (not $.TagName) }}
+		{{- $initDef := and (or .FieldPointer .Slice) .DefaultValue (not $.TagName) }}
+		{{- $checkNil := and (or .FieldPointer .Slice (eq .Type.Name "bytes") (eq .Type.Name "any") $initDef) (not $.TagName) }}
 		{{- if $checkNil }}
 	if res.{{ if $.ViewedResult }}Projected.{{ end }}{{ .FieldName }} != nil {
 		{{- end }}
 
 		{{- if eq .Type.Name "string" }}
-	w.Header().Set("{{ .Name }}", {{ if or .Pointer $.ViewedResult }}*{{ end }}res{{ if $.ViewedResult }}.Projected{{ end }}{{ if .FieldName }}.{{ .FieldName }}{{ end }})
+	w.Header().Set("{{ .CanonicalName }}", {{ if or .FieldPointer $.ViewedResult }}*{{ end }}res{{ if $.ViewedResult }}.Projected{{ end }}{{ if .FieldName }}.{{ .FieldName }}{{ end }})
 		{{- else }}
 	val := res{{ if $.ViewedResult }}.Projected{{ end }}{{ if .FieldName }}.{{ .FieldName }}{{ end }}
-	{{ template "header_conversion" (headerConversionData .Type (printf "%ss" .VarName) (not .Pointer) "val") }}
-	w.Header().Set("{{ .Name }}", {{ .VarName }}s)
+	{{ template "header_conversion" (headerConversionData .Type (printf "%ss" .VarName) (not .FieldPointer) "val") }}
+	w.Header().Set("{{ .CanonicalName }}", {{ .VarName }}s)
 		{{- end }}
 
 		{{- if $initDef }}
 	{{ if $checkNil }} } else { {{ else }}if res{{ if $.ViewedResult }}.Projected{{ end }}.{{ .FieldName }} == nil { {{ end }}
-		w.Header().Set("{{ .Name }}", "{{ printValue .Type .DefaultValue }}")
+		w.Header().Set("{{ .CanonicalName }}", "{{ printValue .Type .DefaultValue }}")
 		{{- end }}
 
 		{{- if or $checkNil $initDef }}
@@ -1251,7 +1252,7 @@ func {{ .InitName }}(mux goahttp.Muxer, {{ .VarName }} {{ .FuncName }}) func(r *
 			{{- if .Payload.Request.PayloadInit }}
 				{{- range .Payload.Request.PayloadInit.ServerArgs }}
 					{{- if .FieldName }}
-			(*p).{{ .FieldName }} = {{ if .Pointer }}&{{ end }}{{ .Name }}
+			(*p).{{ .FieldName }} = {{ if and (not .Pointer) .FieldPointer }}&{{ end }}{{ .Name }}
 					{{- end }}
 				{{- end }}
 			{{- end }}

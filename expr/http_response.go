@@ -240,6 +240,7 @@ func (r *HTTPResponseExpr) Finalize(a *HTTPEndpointExpr, svcAtt *AttributeExpr) 
 			r.ContentType = rt.ContentType
 		}
 	}
+	initAttr(r.Headers, svcAtt)
 }
 
 // Dup creates a copy of the response expression.

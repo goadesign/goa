@@ -710,11 +710,9 @@ func BuildMethodBodyQueryPathObjectPayload(serviceBodyQueryPathObjectMethodBodyQ
 			return nil, fmt.Errorf("invalid JSON for body, example of valid JSON:\n%s", "'{\n      \"a\": \"Ullam aut.\"\n   }'")
 		}
 	}
-	var c *string
+	var c string
 	{
-		if serviceBodyQueryPathObjectMethodBodyQueryPathObjectC != "" {
-			c = &serviceBodyQueryPathObjectMethodBodyQueryPathObjectC
-		}
+		c = serviceBodyQueryPathObjectMethodBodyQueryPathObjectC
 	}
 	var b *string
 	{
@@ -725,7 +723,7 @@ func BuildMethodBodyQueryPathObjectPayload(serviceBodyQueryPathObjectMethodBodyQ
 	v := &servicebodyquerypathobject.MethodBodyQueryPathObjectPayload{
 		A: body.A,
 	}
-	v.C = c
+	v.C = &c
 	v.B = b
 	return v, nil
 }
@@ -1225,5 +1223,71 @@ func BuildMethodBodyPrimitiveArrayUserPayload(serviceBodyPrimitiveArrayUserMetho
 		A: a,
 	}
 	return payload, nil
+}
+`
+
+var WithParamsAndHeadersBlockBuildCode = `// BuildMethodAPayload builds the payload for the
+// ServiceWithParamsAndHeadersBlock MethodA endpoint from CLI flags.
+func BuildMethodAPayload(serviceWithParamsAndHeadersBlockMethodABody string, serviceWithParamsAndHeadersBlockMethodAPath string, serviceWithParamsAndHeadersBlockMethodAOptional string, serviceWithParamsAndHeadersBlockMethodAOptionalButRequiredParam string, serviceWithParamsAndHeadersBlockMethodARequired string, serviceWithParamsAndHeadersBlockMethodAOptionalButRequiredHeader string) (*servicewithparamsandheadersblock.MethodAPayload, error) {
+	var err error
+	var body MethodARequestBody
+	{
+		err = json.Unmarshal([]byte(serviceWithParamsAndHeadersBlockMethodABody), &body)
+		if err != nil {
+			return nil, fmt.Errorf("invalid JSON for body, example of valid JSON:\n%s", "'{\n      \"body\": \"Inventore optio quia ullam aut iste iste.\"\n   }'")
+		}
+	}
+	var path uint
+	{
+		var v uint64
+		v, err = strconv.ParseUint(serviceWithParamsAndHeadersBlockMethodAPath, 10, 64)
+		path = uint(v)
+		if err != nil {
+			return nil, fmt.Errorf("invalid value for path, must be UINT")
+		}
+	}
+	var optional *int
+	{
+		if serviceWithParamsAndHeadersBlockMethodAOptional != "" {
+			var v int64
+			v, err = strconv.ParseInt(serviceWithParamsAndHeadersBlockMethodAOptional, 10, 64)
+			val := int(v)
+			optional = &val
+			if err != nil {
+				return nil, fmt.Errorf("invalid value for optional, must be INT")
+			}
+		}
+	}
+	var optionalButRequiredParam float32
+	{
+		var v float64
+		v, err = strconv.ParseFloat(serviceWithParamsAndHeadersBlockMethodAOptionalButRequiredParam, 32)
+		optionalButRequiredParam = float32(v)
+		if err != nil {
+			return nil, fmt.Errorf("invalid value for optionalButRequiredParam, must be FLOAT32")
+		}
+	}
+	var required string
+	{
+		required = serviceWithParamsAndHeadersBlockMethodARequired
+	}
+	var optionalButRequiredHeader float32
+	{
+		var v float64
+		v, err = strconv.ParseFloat(serviceWithParamsAndHeadersBlockMethodAOptionalButRequiredHeader, 32)
+		optionalButRequiredHeader = float32(v)
+		if err != nil {
+			return nil, fmt.Errorf("invalid value for optionalButRequiredHeader, must be FLOAT32")
+		}
+	}
+	v := &servicewithparamsandheadersblock.MethodAPayload{
+		Body: body.Body,
+	}
+	v.Path = &path
+	v.Optional = optional
+	v.OptionalButRequiredParam = &optionalButRequiredParam
+	v.Required = required
+	v.OptionalButRequiredHeader = &optionalButRequiredHeader
+	return v, nil
 }
 `

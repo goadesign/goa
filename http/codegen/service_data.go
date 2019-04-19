@@ -368,6 +368,9 @@ type (
 		// FieldName is the name of the data structure field that should
 		// be initialized with the argument if any.
 		FieldName string
+		// FieldPointer if true indicates that the data structure field is a
+		// pointer.
+		FieldPointer bool
 		// TypeName is the argument type name.
 		TypeName string
 		// TypeRef is the argument type reference.
@@ -407,6 +410,9 @@ type (
 		// FieldName is the name of the struct field that holds the
 		// param value.
 		FieldName string
+		// FieldPointer if true indicates that the struct field that holds the
+		// param value is a pointer.
+		FieldPointer bool
 		// VarName is the name of the Go variable used to read or
 		// convert the param value.
 		VarName string
@@ -457,6 +463,9 @@ type (
 		// FieldName is the name of the struct field that holds the
 		// header value if any, empty string otherwise.
 		FieldName string
+		// FieldPointer if true indicates that the struct field that holds the
+		// header value is a pointer.
+		FieldPointer bool
 		// VarName is the name of the Go variable used to read or
 		// convert the header value.
 		VarName string
@@ -1044,19 +1053,17 @@ func buildPayloadData(e *expr.HTTPEndpointExpr, sd *ServiceData) *PayloadData {
 		var args []*InitArgData
 		for _, p := range request.PathParams {
 			args = append(args, &InitArgData{
-				Name:        p.VarName,
-				Description: p.Description,
-				Ref:         p.VarName,
-				FieldName:   p.FieldName,
-				TypeName:    p.TypeName,
-				TypeRef:     p.TypeRef,
-				// special case for path params that are not
-				// pointers (because path params never are) but
-				// assigned to fields that are.
-				Pointer:  !p.Required && !p.Pointer && payload.IsPrimitivePointer(p.Name, true),
-				Required: p.Required,
-				Validate: p.Validate,
-				Example:  p.Example,
+				Name:         p.VarName,
+				Description:  p.Description,
+				Ref:          p.VarName,
+				FieldName:    p.FieldName,
+				FieldPointer: p.FieldPointer,
+				TypeName:     p.TypeName,
+				TypeRef:      p.TypeRef,
+				Pointer:      p.Pointer,
+				Required:     p.Required,
+				Validate:     p.Validate,
+				Example:      p.Example,
 			})
 		}
 		for _, p := range request.QueryParams {
@@ -1064,8 +1071,10 @@ func buildPayloadData(e *expr.HTTPEndpointExpr, sd *ServiceData) *PayloadData {
 				Name:         p.VarName,
 				Ref:          p.VarName,
 				FieldName:    p.FieldName,
+				FieldPointer: p.FieldPointer,
 				TypeName:     p.TypeName,
 				TypeRef:      p.TypeRef,
+				Pointer:      p.Pointer,
 				Required:     p.Required,
 				DefaultValue: p.DefaultValue,
 				Validate:     p.Validate,
@@ -1077,8 +1086,10 @@ func buildPayloadData(e *expr.HTTPEndpointExpr, sd *ServiceData) *PayloadData {
 				Name:         h.VarName,
 				Ref:          h.VarName,
 				FieldName:    h.FieldName,
+				FieldPointer: h.FieldPointer,
 				TypeName:     h.TypeName,
 				TypeRef:      h.TypeRef,
+				Pointer:      h.Pointer,
 				Required:     h.Required,
 				DefaultValue: h.DefaultValue,
 				Validate:     h.Validate,
@@ -1453,12 +1464,15 @@ func buildResponses(e *expr.HTTPEndpointExpr, result *expr.AttributeExpr, viewed
 						}
 						for _, h := range headersData {
 							clientArgs = append(clientArgs, &InitArgData{
-								Name:      h.VarName,
-								Ref:       h.VarName,
-								FieldName: h.FieldName,
-								TypeRef:   h.TypeRef,
-								Validate:  h.Validate,
-								Example:   h.Example,
+								Name:         h.VarName,
+								Ref:          h.VarName,
+								FieldName:    h.FieldName,
+								FieldPointer: h.FieldPointer,
+								Required:     h.Required,
+								Pointer:      h.Pointer,
+								TypeRef:      h.TypeRef,
+								Validate:     h.Validate,
+								Example:      h.Example,
 							})
 						}
 					}
@@ -1556,12 +1570,13 @@ func buildErrorsData(e *expr.HTTPEndpointExpr, sd *ServiceData) []*ErrorGroupDat
 				}
 				for _, h := range extractHeaders(v.Response.Headers, v.ErrorExpr.AttributeExpr, svcctx, sd.Scope) {
 					args = append(args, &InitArgData{
-						Name:      h.VarName,
-						Ref:       h.VarName,
-						FieldName: h.FieldName,
-						TypeRef:   h.TypeRef,
-						Validate:  h.Validate,
-						Example:   h.Example,
+						Name:         h.VarName,
+						Ref:          h.VarName,
+						FieldName:    h.FieldName,
+						FieldPointer: h.FieldPointer,
+						TypeRef:      h.TypeRef,
+						Validate:     h.Validate,
+						Example:      h.Example,
 					})
 				}
 			}
@@ -2133,7 +2148,7 @@ func buildResponseBodyType(body, att *expr.AttributeExpr, e *expr.HTTPEndpointEx
 
 func extractPathParams(a *expr.MappedAttributeExpr, service *expr.AttributeExpr, scope *codegen.NameScope) []*ParamData {
 	var params []*ParamData
-	codegen.WalkMappedAttr(a, func(name, elem string, required bool, c *expr.AttributeExpr) error {
+	codegen.WalkMappedAttr(a, func(name, elem string, _ bool, c *expr.AttributeExpr) error {
 		var (
 			varn = scope.Name(codegen.Goify(name, false))
 			arr  = expr.AsArray(c.Type)
@@ -2143,13 +2158,18 @@ func extractPathParams(a *expr.MappedAttributeExpr, service *expr.AttributeExpr,
 		if !expr.IsObject(service.Type) {
 			fieldName = ""
 		}
+		fieldPtr := false
+		if expr.IsObject(service.Type) && service.IsPrimitivePointer(name, true) {
+			fieldPtr = true
+		}
 		params = append(params, &ParamData{
 			Name:           elem,
 			AttributeName:  name,
 			Description:    c.Description,
 			FieldName:      fieldName,
+			FieldPointer:   fieldPtr,
 			VarName:        varn,
-			Required:       required,
+			Required:       true,
 			Type:           c.Type,
 			TypeName:       scope.GoTypeName(c),
 			TypeRef:        scope.GoTypeRef(c),
@@ -2187,11 +2207,16 @@ func extractQueryParams(a *expr.MappedAttributeExpr, service *expr.AttributeExpr
 		if !expr.IsObject(service.Type) {
 			fieldName = ""
 		}
+		fieldPtr := false
+		if expr.IsObject(service.Type) && service.IsPrimitivePointer(name, true) {
+			fieldPtr = true
+		}
 		params = append(params, &ParamData{
 			Name:          elem,
 			AttributeName: name,
 			Description:   c.Description,
 			FieldName:     fieldName,
+			FieldPointer:  fieldPtr,
 			VarName:       varn,
 			Required:      required,
 			Type:          c.Type,
@@ -2217,15 +2242,12 @@ func extractQueryParams(a *expr.MappedAttributeExpr, service *expr.AttributeExpr
 
 func extractHeaders(a *expr.MappedAttributeExpr, svcAtt *expr.AttributeExpr, svcCtx *codegen.AttributeContext, scope *codegen.NameScope) []*HeaderData {
 	var headers []*HeaderData
-	codegen.WalkMappedAttr(a, func(name, elem string, _ bool, _ *expr.AttributeExpr) error {
+	codegen.WalkMappedAttr(a, func(name, elem string, required bool, _ *expr.AttributeExpr) error {
 		var (
-			hattr    *expr.AttributeExpr
-			required bool
+			hattr *expr.AttributeExpr
 		)
 		{
-			required = svcAtt.IsRequired(name)
 			if hattr = svcAtt.Find(name); hattr == nil {
-				required = true
 				hattr = svcAtt
 			}
 		}
@@ -2235,12 +2257,14 @@ func extractHeaders(a *expr.MappedAttributeExpr, svcAtt *expr.AttributeExpr, svc
 			typeRef = scope.GoTypeRef(hattr)
 
 			fieldName string
+			fieldPtr  bool
 			pointer   bool
 		)
 		{
+			pointer = a.IsPrimitivePointer(name, true)
 			if expr.IsObject(svcAtt.Type) {
-				pointer = svcCtx.IsPrimitivePointer(name, svcAtt)
 				fieldName = codegen.Goify(name, true)
+				fieldPtr = svcCtx.IsPrimitivePointer(name, svcAtt)
 			}
 			if pointer {
 				typeRef = "*" + typeRef
@@ -2252,6 +2276,7 @@ func extractHeaders(a *expr.MappedAttributeExpr, svcAtt *expr.AttributeExpr, svc
 			Description:   hattr.Description,
 			CanonicalName: http.CanonicalHeaderKey(elem),
 			FieldName:     fieldName,
+			FieldPointer:  fieldPtr,
 			VarName:       varn,
 			TypeName:      scope.GoTypeName(hattr),
 			TypeRef:       typeRef,
