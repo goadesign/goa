@@ -4,8 +4,6 @@ import (
 	"fmt"
 	"strings"
 
-	"reflect"
-
 	"goa.design/goa/eval"
 	"goa.design/goa/expr"
 )
@@ -386,8 +384,7 @@ func Header(name string, args ...interface{}) {
 // method HTTP expression to define the HTTP endpoint path and query string
 // parameters.
 //
-// Params accepts one argument: Either a function listing the parameters or a
-// user type which must be an object and whose attributes define the parameters.
+// Params accepts one argument which is a function listing the parameters.
 //
 // Example:
 //
@@ -408,20 +405,12 @@ func Params(args interface{}) {
 		eval.IncompatibleDSL()
 		return
 	}
-	if fn, ok := args.(func()); ok {
-		eval.Execute(fn, p)
-		return
-	}
-	t, ok := args.(expr.UserType)
+	fn, ok := args.(func())
 	if !ok {
-		eval.InvalidArgError("function or type", args)
+		eval.InvalidArgError("function", args)
 		return
 	}
-	o := expr.AsObject(t)
-	if o == nil {
-		eval.ReportError("type must be an object but got %s", reflect.TypeOf(args).Name())
-	}
-	p.Merge(expr.NewMappedAttributeExpr(&expr.AttributeExpr{Type: o}))
+	eval.Execute(fn, p)
 }
 
 // Param describes a single HTTP request path or query string parameter.
@@ -817,6 +806,7 @@ func headers(exp eval.Expression) *expr.MappedAttributeExpr {
 		}
 		return e.Headers
 	case *expr.MappedAttributeExpr:
+		fmt.Println(fmt.Sprintf("%#v", e.EvalName()))
 		return e
 	default:
 		return nil
