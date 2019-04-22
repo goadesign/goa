@@ -27,7 +27,6 @@ func init() {
 		"slice":    toSlice,
 		"oneof":    oneof,
 		"constant": constant,
-		"goifyAtt": GoifyAtt,
 		"add":      func(a, b int) int { return a + b },
 		"isset":    func(i interface{}) bool { return i != nil },
 	}
@@ -72,6 +71,7 @@ func ValidationCode(att *expr.AttributeExpr, attCtx *AttributeContext, req bool,
 	}
 	data := map[string]interface{}{
 		"attribute": att,
+		"attCtx":    attCtx,
 		"isPointer": isPointer,
 		"context":   context,
 		"target":    target,
@@ -218,7 +218,8 @@ func recurseValidationCode(att *expr.AttributeExpr, attCtx *AttributeContext, re
 			}
 		}
 	} else if a := expr.AsArray(att.Type); a != nil {
-		ctx := NewAttributeContext(false, attCtx.IgnoreRequired, attCtx.UseDefault, attCtx.Pkg, attCtx.Scope.Scope())
+		ctx := attCtx.Dup()
+		ctx.Pointer = false
 		val := recurseValidationCode(a.ElemType, ctx, true, "e", context+"[*]", seen).String()
 		if val != "" {
 			switch a.ElemType.Type.(type) {
@@ -240,7 +241,8 @@ func recurseValidationCode(att *expr.AttributeExpr, attCtx *AttributeContext, re
 			}
 		}
 	} else if m := expr.AsMap(att.Type); m != nil {
-		ctx := NewAttributeContext(false, attCtx.IgnoreRequired, attCtx.UseDefault, attCtx.Pkg, attCtx.Scope.Scope())
+		ctx := attCtx.Dup()
+		ctx.Pointer = false
 		keyVal := recurseValidationCode(m.KeyType, ctx, true, "k", context+".key", seen).String()
 		valueVal := recurseValidationCode(m.ElemType, ctx, true, "v", context+"[key]", seen).String()
 		if keyVal != "" || valueVal != "" {
@@ -465,7 +467,7 @@ if {{ if .string }}utf8.RuneCountInString({{ $target }}){{ else }}len({{ $target
 }
 {{- end }}`
 
-	requiredValTmpl = `if {{ $.target }}.{{ goifyAtt $.reqAtt .req true }} == nil {
+	requiredValTmpl = `if {{ $.target }}.{{ .attCtx.Scope.Field $.reqAtt .req true }} == nil {
         err = goa.MergeErrors(err, goa.MissingFieldError("{{ .req }}", {{ printf "%q" $.context }}))
 }`
 )

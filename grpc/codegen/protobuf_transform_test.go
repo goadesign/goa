@@ -598,10 +598,8 @@ const (
 		RequiredString: source.RequiredString,
 		DefaultBool:    source.DefaultBool,
 	}
-	if source.Integer != 0 {
-		integerptr := int(source.Integer)
-		target.Integer = &integerptr
-	}
+	integerptr := int(source.Integer)
+	target.Integer = &integerptr
 }
 `
 
@@ -622,19 +620,15 @@ const (
 		RequiredString: source.RequiredString,
 		DefaultBool:    source.DefaultBool,
 	}
-	if source.Integer != 0 {
-		integerptr := int(source.Integer)
-		target.Integer = &integerptr
-	}
+	integerptr := int(source.Integer)
+	target.Integer = &integerptr
 }
 `
 
 	simpleProtoToRequiredPtrSvcCode = `func transform() {
 	target := &Required{
-		DefaultBool: &source.DefaultBool,
-	}
-	if source.RequiredString != "" {
-		target.RequiredString = &source.RequiredString
+		RequiredString: &source.RequiredString,
+		DefaultBool:    &source.DefaultBool,
 	}
 	if source.Integer != 0 {
 		integerptr := int(source.Integer)
@@ -825,9 +819,8 @@ const (
 `
 
 	customFieldProtoToCompositeSvcCode = `func transform() {
-	target := &Composite{}
-	if source.MyString != "" {
-		target.RequiredString = &source.MyString
+	target := &Composite{
+		RequiredString: &source.MyString,
 	}
 	if source.MyInt != 0 {
 		defaultIntptr := int(source.MyInt)
