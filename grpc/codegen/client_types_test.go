@@ -17,6 +17,7 @@ func TestClientTypeFiles(t *testing.T) {
 	}{
 		{"payload-with-nested-types", testdata.PayloadWithNestedTypesDSL, testdata.PayloadWithNestedTypesClientTypeCode},
 		{"result-collection", testdata.ResultWithCollectionDSL, testdata.ResultWithCollectionClientTypeCode},
+		{"with-errors", testdata.UnaryRPCWithErrorsDSL, testdata.WithErrorsClientTypeCode},
 	}
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {

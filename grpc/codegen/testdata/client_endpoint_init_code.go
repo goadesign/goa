@@ -80,8 +80,14 @@ func (c *Client) MethodUnaryRPCWithErrors() goa.Endpoint {
 			resp := goagrpc.DecodeError(err)
 			switch message := resp.(type) {
 			case *service_unaryrpc_with_errorspb.MethodUnaryRPCWithErrorsInternalError:
+				if err := ValidateMethodUnaryRPCWithErrorsInternalError(message); err != nil {
+					return nil, err
+				}
 				return nil, NewMethodUnaryRPCWithErrorsInternalError(message)
 			case *service_unaryrpc_with_errorspb.MethodUnaryRPCWithErrorsBadRequestError:
+				if err := ValidateMethodUnaryRPCWithErrorsBadRequestError(message); err != nil {
+					return nil, err
+				}
 				return nil, NewMethodUnaryRPCWithErrorsBadRequestError(message)
 			case *service_unaryrpc_with_errorspb.MethodUnaryRPCWithErrorsCustomErrorError:
 				return nil, NewMethodUnaryRPCWithErrorsCustomErrorError(message)

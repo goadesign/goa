@@ -61,6 +61,7 @@ var UnaryRPCWithErrorsDSL = func() {
 		Attributes(func() {
 			Attribute("name", String, func() {
 				Meta("struct:error:name")
+				Enum("this", "that")
 			})
 			Attribute("description", String)
 			Required("name")
