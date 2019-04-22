@@ -211,6 +211,11 @@ func (c *{{ .ClientStruct }}) {{ .Method.VarName }}() goa.Endpoint {
 			{{- range .Errors }}
 				{{- if .Response.ClientConvert }}
 					case {{ .Response.ClientConvert.SrcRef }}:
+						{{- if .Response.ClientConvert.Validation }}
+							if err := {{ .Response.ClientConvert.Validation.Name }}(message); err != nil {
+								return nil, err
+							}
+						{{- end }}
 						return nil, {{ .Response.ClientConvert.Init.Name }}({{ range .Response.ClientConvert.Init.Args }}{{ .Name }}, {{ end }})
 				{{- end }}
 			{{- end }}

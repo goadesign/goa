@@ -14,35 +14,6 @@ func NewMethodPayloadWithNestedTypesRequest(payload *servicepayloadwithnestedtyp
 	return message
 }
 
-// ValidateMethodPayloadWithNestedTypesRequest runs the validations defined on
-// MethodPayloadWithNestedTypesRequest.
-func ValidateMethodPayloadWithNestedTypesRequest(message *service_payload_with_nested_typespb.MethodPayloadWithNestedTypesRequest) (err error) {
-	if message.AParams != nil {
-		if err2 := ValidateAParams(message.AParams); err2 != nil {
-			err = goa.MergeErrors(err, err2)
-		}
-	}
-	return
-}
-
-// ValidateAParams runs the validations defined on AParams.
-func ValidateAParams(message *service_payload_with_nested_typespb.AParams) (err error) {
-
-	return
-}
-
-// ValidateArrayOfString runs the validations defined on ArrayOfString.
-func ValidateArrayOfString(message *service_payload_with_nested_typespb.ArrayOfString) (err error) {
-
-	return
-}
-
-// ValidateBParams runs the validations defined on BParams.
-func ValidateBParams(message *service_payload_with_nested_typespb.BParams) (err error) {
-
-	return
-}
-
 // protobufServicePayloadWithNestedTypespbAParamsToServicepayloadwithnestedtypesAParams
 // builds a value of type *servicepayloadwithnestedtypes.AParams from a value
 // of type *service_payload_with_nested_typespb.AParams.
@@ -192,5 +163,78 @@ func protobufServiceResultWithCollectionpbResultTToServiceresultwithcollectionRe
 	}
 
 	return res
+}
+`
+
+const WithErrorsClientTypeCode = `// NewMethodUnaryRPCWithErrorsRequest builds the gRPC request type from the
+// payload of the "MethodUnaryRPCWithErrors" endpoint of the
+// "ServiceUnaryRPCWithErrors" service.
+func NewMethodUnaryRPCWithErrorsRequest(payload string) *service_unaryrpc_with_errorspb.MethodUnaryRPCWithErrorsRequest {
+	message := &service_unaryrpc_with_errorspb.MethodUnaryRPCWithErrorsRequest{}
+	message.Field = payload
+	return message
+}
+
+// NewMethodUnaryRPCWithErrorsResult builds the result type of the
+// "MethodUnaryRPCWithErrors" endpoint of the "ServiceUnaryRPCWithErrors"
+// service from the gRPC response type.
+func NewMethodUnaryRPCWithErrorsResult(message *service_unaryrpc_with_errorspb.MethodUnaryRPCWithErrorsResponse) string {
+	result := message.Field
+	return result
+}
+
+// NewMethodUnaryRPCWithErrorsInternalError builds the error type of the
+// "MethodUnaryRPCWithErrors" endpoint of the "ServiceUnaryRPCWithErrors"
+// service from the gRPC error response type.
+func NewMethodUnaryRPCWithErrorsInternalError(message *service_unaryrpc_with_errorspb.MethodUnaryRPCWithErrorsInternalError) *serviceunaryrpcwitherrors.AnotherError {
+	er := &serviceunaryrpcwitherrors.AnotherError{
+		Name: message.Name,
+	}
+	if message.Description != "" {
+		er.Description = &message.Description
+	}
+	return er
+}
+
+// NewMethodUnaryRPCWithErrorsBadRequestError builds the error type of the
+// "MethodUnaryRPCWithErrors" endpoint of the "ServiceUnaryRPCWithErrors"
+// service from the gRPC error response type.
+func NewMethodUnaryRPCWithErrorsBadRequestError(message *service_unaryrpc_with_errorspb.MethodUnaryRPCWithErrorsBadRequestError) *serviceunaryrpcwitherrors.AnotherError {
+	er := &serviceunaryrpcwitherrors.AnotherError{
+		Name: message.Name,
+	}
+	if message.Description != "" {
+		er.Description = &message.Description
+	}
+	return er
+}
+
+// NewMethodUnaryRPCWithErrorsCustomErrorError builds the error type of the
+// "MethodUnaryRPCWithErrors" endpoint of the "ServiceUnaryRPCWithErrors"
+// service from the gRPC error response type.
+func NewMethodUnaryRPCWithErrorsCustomErrorError(message *service_unaryrpc_with_errorspb.MethodUnaryRPCWithErrorsCustomErrorError) *serviceunaryrpcwitherrors.ErrorType {
+	er := &serviceunaryrpcwitherrors.ErrorType{}
+	if message.A != "" {
+		er.A = &message.A
+	}
+	return er
+}
+
+// ValidateMethodUnaryRPCWithErrorsInternalError runs the validations defined
+// on MethodUnaryRPCWithErrorsInternalError.
+func ValidateMethodUnaryRPCWithErrorsInternalError(message *service_unaryrpc_with_errorspb.MethodUnaryRPCWithErrorsInternalError) (err error) {
+	if !(message.Name == "this" || message.Name == "that") {
+		err = goa.MergeErrors(err, goa.InvalidEnumValueError("message.name", message.Name, []interface{}{"this", "that"}))
+	}
+	return
+}
+
+// ValidateMethodUnaryRPCWithErrorsBadRequestError runs the validations defined
+// on MethodUnaryRPCWithErrorsBadRequestError.
+func ValidateMethodUnaryRPCWithErrorsBadRequestError(message *service_unaryrpc_with_errorspb.MethodUnaryRPCWithErrorsBadRequestError) (err error) {
+	if !(message.Name == "this" || message.Name == "that") {
+		err = goa.MergeErrors(err, goa.InvalidEnumValueError("message.name", message.Name, []interface{}{"this", "that"}))
+	}
+	return
 }
 `
