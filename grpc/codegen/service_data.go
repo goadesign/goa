@@ -246,8 +246,10 @@ type (
 		SrcName string
 		// SrcRef is the fully qualified reference to the type being validated.
 		SrcRef string
-		// Request if true indicates that the validation is for request messages.
-		Request bool
+		// Kind indicates that the validation is for request (server-side),
+		// response (client-side), or both (server and client side) messages.
+		// It is used to generate validation code in the server and client packages.
+		Kind string
 	}
 
 	// InitData contains the data required to render a constructor.
@@ -651,8 +653,15 @@ func addValidation(att *expr.AttributeExpr, sd *ServiceData, req bool) *Validati
 	}
 	name := protoBufGoTypeName(att, sd.Scope)
 	ref := protoBufGoFullTypeRef(att, sd.PkgName, sd.Scope)
+	kind := "client"
+	if req {
+		kind = "server"
+	}
 	for _, n := range sd.validations {
 		if n.SrcName == name {
+			if n.Kind != kind {
+				n.Kind = "both"
+			}
 			return n
 		}
 	}
@@ -671,7 +680,7 @@ func addValidation(att *expr.AttributeExpr, sd *ServiceData, req bool) *Validati
 			ArgName: "message",
 			SrcName: name,
 			SrcRef:  ref,
-			Request: req,
+			Kind:    kind,
 		}
 		sd.validations = append(sd.validations, v)
 		collectValidations(att, ctx, req, sd)
@@ -698,8 +707,15 @@ func collectValidations(att *expr.AttributeExpr, ctx *codegen.AttributeContext, 
 		if _, ok := s[name]; ok {
 			return
 		}
+		kind := "client"
+		if req {
+			kind = "server"
+		}
 		for _, n := range sd.validations {
 			if n.SrcName == name {
+				if n.Kind != kind {
+					n.Kind = "both"
+				}
 				return
 			}
 		}
@@ -710,7 +726,7 @@ func collectValidations(att *expr.AttributeExpr, ctx *codegen.AttributeContext, 
 			ArgName: "message",
 			SrcName: name,
 			SrcRef:  protoBufGoFullTypeRef(att, sd.PkgName, sd.Scope),
-			Request: req,
+			Kind:    kind,
 		})
 		att := dt.Attribute()
 		if rt, ok := dt.(*expr.ResultTypeExpr); ok {
