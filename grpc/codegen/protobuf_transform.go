@@ -166,7 +166,7 @@ func transformObject(source, target *expr.AttributeExpr, sourceVar, targetVar st
 				// we set the optional attribute as nil.
 				// We don't check for zero values for booleans since by default, protocol
 				// buffer sets boolean fields as false.
-				if srcc.Type != expr.Boolean {
+				if !srcMatt.IsRequired(n) && srcc.Type != expr.Boolean {
 					postInitCode += fmt.Sprintf("if %s {\n\t", checkZeroValue(srcc.Type, srcField, true))
 					if srcField != srcFieldConv {
 						// type conversion required. Add it in postinit code.
@@ -176,6 +176,11 @@ func transformObject(source, target *expr.AttributeExpr, sourceVar, targetVar st
 						postInitCode += fmt.Sprintf("%s.%s = &%s", targetVar, tgtField, srcFieldConv)
 					}
 					postInitCode += "\n}\n"
+					return
+				} else if srcField != srcFieldConv {
+					// type conversion required. Add it in postinit code.
+					tgtName := codegen.Goify(tgtField, false)
+					postInitCode += fmt.Sprintf("%sptr := %s\n%s.%s = &%sptr\n", tgtName, srcFieldConv, targetVar, tgtField, tgtName)
 					return
 				}
 				srcFieldConv = "&" + srcFieldConv

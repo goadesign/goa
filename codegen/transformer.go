@@ -203,6 +203,16 @@ func (a *AttributeContext) IsRequired(name string, att *expr.AttributeExpr) bool
 	return att.IsRequired(name)
 }
 
+// Dup creates a shallow copy of the AttributeContext.
+func (a *AttributeContext) Dup() *AttributeContext {
+	return &AttributeContext{
+		Pointer:        a.Pointer,
+		IgnoreRequired: a.IgnoreRequired,
+		UseDefault:     a.UseDefault,
+		Scope:          a.Scope,
+	}
+}
+
 // Name returns the type name for the given attribute.
 func (a *AttributeScope) Name(att *expr.AttributeExpr, pkg string) string {
 	return a.scope.GoFullTypeName(att, pkg)
