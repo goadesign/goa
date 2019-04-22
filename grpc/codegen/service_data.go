@@ -249,7 +249,7 @@ type (
 		// Kind indicates that the validation is for request (server-side),
 		// response (client-side), or both (server and client side) messages.
 		// It is used to generate validation code in the server and client packages.
-		Kind string
+		Kind validateKind
 	}
 
 	// InitData contains the data required to render a constructor.
@@ -338,12 +338,28 @@ type (
 		// for the stream.
 		MustClose bool
 	}
+
+	// validateKind is a type to determine where the validation code is generated
+	// (server, client, or both)
+	validateKind int
 )
 
 const (
 	// pbPkgName is the directory name where the .proto file is generated and
 	// compiled.
 	pbPkgName = "pb"
+)
+
+const (
+	// validateServer generates the validation code for request messages in the
+	// server package.
+	validateServer validateKind = iota + 1
+	// validateClient generates the validation code for response messages in the
+	// client package.
+	validateClient
+	// validateBoth generates the validation code in both server and client
+	// packages.
+	validateBoth
 )
 
 // Get retrieves the transport data for the service with the given name
@@ -653,14 +669,14 @@ func addValidation(att *expr.AttributeExpr, sd *ServiceData, req bool) *Validati
 	}
 	name := protoBufGoTypeName(att, sd.Scope)
 	ref := protoBufGoFullTypeRef(att, sd.PkgName, sd.Scope)
-	kind := "client"
+	kind := validateClient
 	if req {
-		kind = "server"
+		kind = validateServer
 	}
 	for _, n := range sd.validations {
 		if n.SrcName == name {
 			if n.Kind != kind {
-				n.Kind = "both"
+				n.Kind = validateBoth
 			}
 			return n
 		}
@@ -707,14 +723,14 @@ func collectValidations(att *expr.AttributeExpr, ctx *codegen.AttributeContext, 
 		if _, ok := s[name]; ok {
 			return
 		}
-		kind := "client"
+		kind := validateClient
 		if req {
-			kind = "server"
+			kind = validateServer
 		}
 		for _, n := range sd.validations {
 			if n.SrcName == name {
 				if n.Kind != kind {
-					n.Kind = "both"
+					n.Kind = validateBoth
 				}
 				return
 			}

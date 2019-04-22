@@ -89,7 +89,7 @@ func clientType(genpkg string, svc *expr.GRPCServiceExpr, seen map[string]struct
 			})
 		}
 		for _, data := range sd.validations {
-			if data.Kind == "server" {
+			if data.Kind == validateServer {
 				continue
 			}
 			sections = append(sections, &codegen.SectionTemplate{
