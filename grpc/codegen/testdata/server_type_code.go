@@ -194,3 +194,58 @@ func protobufServiceResultWithCollectionpbResultTToServiceresultwithcollectionRe
 	return res
 }
 `
+
+const WithErrorsServerTypeCode = `// NewMethodUnaryRPCWithErrorsPayload builds the payload of the
+// "MethodUnaryRPCWithErrors" endpoint of the "ServiceUnaryRPCWithErrors"
+// service from the gRPC request type.
+func NewMethodUnaryRPCWithErrorsPayload(message *service_unaryrpc_with_errorspb.MethodUnaryRPCWithErrorsRequest) string {
+	v := message.Field
+	return v
+}
+
+// NewMethodUnaryRPCWithErrorsResponse builds the gRPC response type from the
+// result of the "MethodUnaryRPCWithErrors" endpoint of the
+// "ServiceUnaryRPCWithErrors" service.
+func NewMethodUnaryRPCWithErrorsResponse(result string) *service_unaryrpc_with_errorspb.MethodUnaryRPCWithErrorsResponse {
+	message := &service_unaryrpc_with_errorspb.MethodUnaryRPCWithErrorsResponse{}
+	message.Field = result
+	return message
+}
+
+// NewMethodUnaryRPCWithErrorsInternalError builds the gRPC error response type
+// from the error of the "MethodUnaryRPCWithErrors" endpoint of the
+// "ServiceUnaryRPCWithErrors" service.
+func NewMethodUnaryRPCWithErrorsInternalError(er *serviceunaryrpcwitherrors.AnotherError) *service_unaryrpc_with_errorspb.MethodUnaryRPCWithErrorsInternalError {
+	message := &service_unaryrpc_with_errorspb.MethodUnaryRPCWithErrorsInternalError{
+		Name: er.Name,
+	}
+	if er.Description != nil {
+		message.Description = *er.Description
+	}
+	return message
+}
+
+// NewMethodUnaryRPCWithErrorsBadRequestError builds the gRPC error response
+// type from the error of the "MethodUnaryRPCWithErrors" endpoint of the
+// "ServiceUnaryRPCWithErrors" service.
+func NewMethodUnaryRPCWithErrorsBadRequestError(er *serviceunaryrpcwitherrors.AnotherError) *service_unaryrpc_with_errorspb.MethodUnaryRPCWithErrorsBadRequestError {
+	message := &service_unaryrpc_with_errorspb.MethodUnaryRPCWithErrorsBadRequestError{
+		Name: er.Name,
+	}
+	if er.Description != nil {
+		message.Description = *er.Description
+	}
+	return message
+}
+
+// NewMethodUnaryRPCWithErrorsCustomErrorError builds the gRPC error response
+// type from the error of the "MethodUnaryRPCWithErrors" endpoint of the
+// "ServiceUnaryRPCWithErrors" service.
+func NewMethodUnaryRPCWithErrorsCustomErrorError(er *serviceunaryrpcwitherrors.ErrorType) *service_unaryrpc_with_errorspb.MethodUnaryRPCWithErrorsCustomErrorError {
+	message := &service_unaryrpc_with_errorspb.MethodUnaryRPCWithErrorsCustomErrorError{}
+	if er.A != nil {
+		message.A = *er.A
+	}
+	return message
+}
+`
