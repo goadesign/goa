@@ -71,6 +71,8 @@ func APIKeySecurity(name string, fn ...func()) *expr.SchemeExpr {
 	e := &expr.SchemeExpr{
 		Kind:       expr.APIKeyKind,
 		SchemeName: name,
+		In:         "header",
+		Name:       "Authorization",
 	}
 
 	if len(fn) != 0 {

@@ -638,44 +638,67 @@ func (e *HTTPEndpointExpr) validateParams() *eval.ValidationErrors {
 // validateHeaders makes sure headers are of an allowed type and the method
 // payload contains the headers.
 func (e *HTTPEndpointExpr) validateHeaders() *eval.ValidationErrors {
-	headers := AsObject(e.Headers.Type)
-	if len(*headers) == 0 {
-		return nil
-	}
 	verr := new(eval.ValidationErrors)
-	for _, nat := range *headers {
-		if IsObject(nat.Attribute.Type) {
-			verr.Add(e, "header %s cannot be an object, header type must be primitive or array", nat.Name)
-		} else if arr := AsArray(nat.Attribute.Type); arr != nil {
-			if !IsPrimitive(arr.ElemType.Type) {
-				verr.Add(e, "elements of array header %s must be primitive", nat.Name)
+
+	// We have to figure out the actual type for the params because the actual
+	// type is initialized only during the finalize phase. In the validation
+	// phase, all param types are string type by default unless specified
+	// expliclty.
+	init := func(ma *MappedAttributeExpr) *MappedAttributeExpr {
+		ma = DupMappedAtt(ma)
+		payload := AsObject(e.MethodExpr.Payload.Type)
+		for _, nat := range *AsObject(ma.Type) {
+			var patt *AttributeExpr
+			if payload != nil {
+				patt = payload.Attribute(nat.Name)
+			} else {
+				patt = e.MethodExpr.Payload
 			}
-		} else {
-			ctx := fmt.Sprintf("header %s", nat.Name)
-			verr.Merge(nat.Attribute.Validate(ctx, e))
+			if patt != nil {
+				nat.Attribute.Type = patt.Type
+			}
 		}
+		return ma
 	}
-	if e.MethodExpr.Payload == nil {
-		if len(*headers) > 0 {
-			verr.Add(e, "Headers are defined but Payload is not defined")
+
+	headers := init(e.Headers)
+	WalkMappedAttr(headers, func(name, _ string, a *AttributeExpr) error {
+		switch {
+		case IsObject(a.Type):
+			verr.Add(e, "header %s cannot be an object, header type must be primitive or array", name)
+		case IsArray(a.Type):
+			arr := AsArray(a.Type)
+			if !IsPrimitive(arr.ElemType.Type) {
+				verr.Add(e, "elements of array header %s must be primitive", name)
+			}
+		default:
+			ctx := fmt.Sprintf("header %s", name)
+			verr.Merge(a.Validate(ctx, e))
 		}
-	} else {
-		switch e.MethodExpr.Payload.Type.(type) {
-		case *Object:
-			for _, nat := range *headers {
-				name := strings.Split(nat.Name, ":")[0]
-				if e.MethodExpr.Payload.Find(name) == nil {
-					verr.Add(e, "header %q is not found in payload.", nat.Name)
-				}
+		return nil
+	})
+	switch e.MethodExpr.Payload.Type.(type) {
+	case *Object:
+		hasBasicAuth := TaggedAttribute(e.MethodExpr.Payload, "security:username") != ""
+		WalkMappedAttr(headers, func(name, elem string, a *AttributeExpr) error {
+			if e.MethodExpr.Payload.Find(name) == nil {
+				verr.Add(e, "header %q not found in payload.", name)
 			}
-		case *Array:
-			if len(*headers) > 1 {
-				verr.Add(e, "Payload type is array but HTTP endpoint defines multiple headers. At most one header must be defined and it must be an array.")
+			if elem == "Authorization" && hasBasicAuth {
+				// BasicAuth security implicitly sets the Authorization header. If any
+				// payload attribute is mapped to Authorization header, raise a
+				// validation error.
+				verr.Add(e, "Attribute %q is mapped to \"Authorization\" header in the endpoint secured by BasicAuth which also sets \"Authorization\" header. Specify a different header to map attribute %q.", name, name)
 			}
-		case *Map:
-			if len(*headers) > 0 {
-				verr.Add(e, "Payload type is map but HTTP endpoint defines headers. Map payloads can only be decoded from HTTP request bodies or query strings.")
-			}
+			return nil
+		})
+	case *Array:
+		if len(*AsObject(headers.Type)) > 1 {
+			verr.Add(e, "Payload type is array but HTTP endpoint defines multiple headers. At most one header must be defined and it must be an array.")
+		}
+	case *Map:
+		if len(*AsObject(headers.Type)) > 0 {
+			verr.Add(e, "Payload type is map but HTTP endpoint defines headers. Map payloads can only be decoded from HTTP request bodies or query strings.")
 		}
 	}
 	return verr

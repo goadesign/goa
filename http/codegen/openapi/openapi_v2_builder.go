@@ -371,6 +371,20 @@ func paramsFromHeaders(endpoint *expr.HTTPEndpointExpr) []*Parameter {
 		p := paramFor(header, merged.ElemName(n.Name), "header", required)
 		params = append(params, p)
 	}
+
+	// Add basic auth to headers
+	if att := expr.TaggedAttribute(endpoint.MethodExpr.Payload, "security:username"); att != "" {
+		// Basic Auth is always encoded in the Authorization header
+		// https://golang.org/pkg/net/http/#Request.SetBasicAuth
+		params = append(params, &Parameter{
+			In:          "header",
+			Name:        "Authorization",
+			Required:    endpoint.MethodExpr.Payload.IsRequired(att),
+			Description: "Basic Auth security using Basic scheme (https://tools.ietf.org/html/rfc7617)",
+			Type:        "string",
+		})
+	}
+
 	return params
 }
 

@@ -32,7 +32,7 @@ type (
 	// Info provides metadata about the API. The metadata can be used by the clients if needed,
 	// and can be presented in the OpenAPI UI for convenience.
 	Info struct {
-		Title          string                 `json:"title,omitempty" yaml:"title,omitempty"`
+		Title          string                 `json:"title" yaml:"title"`
 		Description    string                 `json:"description,omitempty" yaml:"description,omitempty"`
 		TermsOfService string                 `json:"termsOfService,omitempty" yaml:"termsOfService,omitempty"`
 		Contact        *expr.ContactExpr      `json:"contact,omitempty" yaml:"contact,omitempty"`
