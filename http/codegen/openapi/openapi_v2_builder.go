@@ -158,8 +158,8 @@ func securitySpecFromExpr(root *expr.RootExpr) map[string]*SecurityDefinition {
 			sd.Type = "basic"
 		case expr.APIKeyKind:
 			sd.Type = "apiKey"
-			sd.In = s.In
-			sd.Name = s.Name
+			sd.In = "header"
+			sd.Name = "Authorization"
 		case expr.JWTKind:
 			sd.Type = "apiKey"
 			// OpenAPI V2 spec does not support JWT scheme. Hence we add the scheme
