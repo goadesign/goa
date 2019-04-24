@@ -2168,16 +2168,12 @@ func extractPathParams(a *expr.MappedAttributeExpr, service *expr.AttributeExpr,
 		if !expr.IsObject(service.Type) {
 			fieldName = ""
 		}
-		fieldPtr := false
-		if expr.IsObject(service.Type) && service.IsPrimitivePointer(name, true) {
-			fieldPtr = true
-		}
 		params = append(params, &ParamData{
 			Name:           elem,
 			AttributeName:  name,
 			Description:    c.Description,
 			FieldName:      fieldName,
-			FieldPointer:   fieldPtr,
+			FieldPointer:   expr.IsObject(service.Type) && service.IsPrimitivePointer(name, true),
 			VarName:        varn,
 			Required:       true,
 			Type:           c.Type,
@@ -2217,16 +2213,12 @@ func extractQueryParams(a *expr.MappedAttributeExpr, service *expr.AttributeExpr
 		if !expr.IsObject(service.Type) {
 			fieldName = ""
 		}
-		fieldPtr := false
-		if expr.IsObject(service.Type) && service.IsPrimitivePointer(name, true) {
-			fieldPtr = true
-		}
 		params = append(params, &ParamData{
 			Name:          elem,
 			AttributeName: name,
 			Description:   c.Description,
 			FieldName:     fieldName,
-			FieldPointer:  fieldPtr,
+			FieldPointer:  expr.IsObject(service.Type) && service.IsPrimitivePointer(name, true),
 			VarName:       varn,
 			Required:      required,
 			Type:          c.Type,
@@ -2267,14 +2259,12 @@ func extractHeaders(a *expr.MappedAttributeExpr, svcAtt *expr.AttributeExpr, svc
 			typeRef = scope.GoTypeRef(hattr)
 
 			fieldName string
-			fieldPtr  bool
 			pointer   bool
 		)
 		{
 			pointer = a.IsPrimitivePointer(name, true)
 			if expr.IsObject(svcAtt.Type) {
 				fieldName = codegen.Goify(name, true)
-				fieldPtr = svcCtx.IsPrimitivePointer(name, svcAtt)
 			}
 			if pointer {
 				typeRef = "*" + typeRef
@@ -2286,7 +2276,7 @@ func extractHeaders(a *expr.MappedAttributeExpr, svcAtt *expr.AttributeExpr, svc
 			Description:   hattr.Description,
 			CanonicalName: http.CanonicalHeaderKey(elem),
 			FieldName:     fieldName,
-			FieldPointer:  fieldPtr,
+			FieldPointer:  expr.IsObject(svcAtt.Type) && svcCtx.IsPrimitivePointer(name, svcAtt),
 			VarName:       varn,
 			TypeName:      scope.GoTypeName(hattr),
 			TypeRef:       typeRef,
