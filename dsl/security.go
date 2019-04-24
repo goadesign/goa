@@ -386,7 +386,7 @@ func PasswordField(tag interface{}, name string, args ...interface{}) {
 
 // APIKey defines the attribute used to provide the API key to an endpoint
 // secured with API keys. The parameters and usage of APIKey are the same as the
-// goa DSL Attribute function except that it accepts an extra first argument
+// Attribute function except that it accepts an extra first argument
 // corresponding to the name of the API key security scheme.
 //
 // The generated code produced by goa uses the value of the corresponding
