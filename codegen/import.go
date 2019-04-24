@@ -97,7 +97,7 @@ func GetMetaTypeImports(att *expr.AttributeExpr) []*ImportSpec {
 		}
 	}
 	imports := make([]*ImportSpec, 0)
-	for imp, _ := range uniqueImports {
+	for imp := range uniqueImports {
 		// Copy loop variable into body so next iteration doesnt overwrite its address https://stackoverflow.com/questions/27610039/golang-appending-leaves-only-last-element
 		copy := imp
 		imports = append(imports, &copy)
