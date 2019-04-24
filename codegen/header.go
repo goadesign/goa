@@ -18,9 +18,9 @@ func Header(title, pack string, imports []*ImportSpec) *SectionTemplate {
 	}
 }
 
-// AddImports adds imports to a section template that was generated with
+// AddImport adds imports to a section template that was generated with
 // Header.
-func AddImports(section *SectionTemplate, imprts ...*ImportSpec) {
+func AddImport(section *SectionTemplate, imprts ...*ImportSpec) {
 	if len(imprts) == 0 {
 		return
 	}

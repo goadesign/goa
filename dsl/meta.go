@@ -63,6 +63,21 @@ import (
 //        })
 //    })
 //
+// - "struct:field:type" overrides the Go struct field type specified in the design.
+//		Applicable to attributes only. The import path of the type should be passed in as the second parameter, if needed.
+//		If the default imported package name conflicts with another, you can override that as well with the third parameter.
+//
+//    var MyType = Type("BigOleMessage", func() {
+//        Attribute("type", String, "Type of big payload")
+//				Attribute("bigPayload", String, "Don't parse it if you don't have to",func() {
+//					Meta("struct:field:type","json.RawMessage","encoding/json")
+//				})
+//				Attribute("id", String, func() {
+//					Meta("struct:field:type","bison.ObjectId", "github.com/globalsign/mgo/bson", "bison")
+//				})
+//    })
+//
+//
 // - "struct:tag:xxx" sets a generated Go struct field tag and overrides tags
 // that goa would otherwise set. If the metadata value is a slice then the
 // strings are joined with the space character as separator. Applicable to
