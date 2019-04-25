@@ -224,7 +224,7 @@ func {{ .Name }}({{- range .ClientArgs }}{{ .Name }} {{ .TypeRef }}, {{ end }}) 
 		{{- if .ReturnIsStruct }}
 			{{- range .ClientArgs }}
 				{{- if .FieldName }}
-			{{ if $.ReturnTypeAttribute }}res{{ else }}v{{ end }}.{{ .FieldName }} = {{ if .Pointer }}&{{ end }}{{ .Name }}
+			{{ if $.ReturnTypeAttribute }}res{{ else }}v{{ end }}.{{ .FieldName }} = {{ if and (not .Pointer) .FieldPointer }}&{{ end }}{{ .Name }}
 				{{- end }}
 			{{- end }}
 		{{- end }}
@@ -234,7 +234,7 @@ func {{ .Name }}({{- range .ClientArgs }}{{ .Name }} {{ .TypeRef }}, {{ end }}) 
 			return &{{ .ReturnTypeName }}{
 			{{- range .ClientArgs }}
 				{{- if .FieldName }}
-				{{ .FieldName }}: {{ if .Pointer }}&{{ end }}{{ .Name }},
+				{{ .FieldName }}: {{ if and (not .Pointer) .FieldPointer }}&{{ end }}{{ .Name }},
 				{{- end }}
 			{{- end }}
 			}

@@ -452,8 +452,6 @@ func (e *HTTPEndpointExpr) Validate() error {
 // types so that the response encoding code can properly use the type to infer
 // the response that it needs to build.
 func (e *HTTPEndpointExpr) Finalize() {
-	payload := AsObject(e.MethodExpr.Payload.Type)
-
 	// Initialize Authorization header implicitly defined via security DSL
 	// prior to computing headers and body.
 	if reqLen := len(e.MethodExpr.Requirements); reqLen > 0 {
@@ -492,28 +490,8 @@ func (e *HTTPEndpointExpr) Finalize() {
 
 	// Initialize the HTTP specific attributes with the corresponding
 	// payload attributes.
-	init := func(ma *MappedAttributeExpr) {
-		for _, nat := range *AsObject(ma.Type) {
-			var patt *AttributeExpr
-			var required bool
-			if payload != nil {
-				patt = payload.Attribute(nat.Name)
-				required = e.MethodExpr.Payload.IsRequired(nat.Name)
-			} else {
-				patt = e.MethodExpr.Payload
-				required = true
-			}
-			initAttrFromDesign(nat.Attribute, patt)
-			if required {
-				if ma.Validation == nil {
-					ma.Validation = &ValidationExpr{}
-				}
-				ma.Validation.AddRequired(nat.Name)
-			}
-		}
-	}
-	init(e.Params)
-	init(e.Headers)
+	initAttr(e.Params, e.MethodExpr.Payload)
+	initAttr(e.Headers, e.MethodExpr.Payload)
 
 	if e.Body != nil {
 		// rename type to add RequestBody suffix so that we don't end with
@@ -799,6 +777,30 @@ func (r *RouteExpr) FullPaths() []string {
 // the service and API base paths.
 func (r *RouteExpr) IsAbsolute() bool {
 	return strings.HasPrefix(r.Path, "//")
+}
+
+// initAttr initializes the given mapped attribute with the given service
+// attribute.
+func initAttr(ma *MappedAttributeExpr, svcAtt *AttributeExpr) {
+	svcObj := AsObject(svcAtt.Type)
+	for _, nat := range *AsObject(ma.Type) {
+		var patt *AttributeExpr
+		var required bool
+		if svcObj != nil {
+			patt = svcObj.Attribute(nat.Name)
+			required = svcAtt.IsRequired(nat.Name)
+		} else {
+			patt = svcAtt
+			required = true
+		}
+		initAttrFromDesign(nat.Attribute, patt)
+		if required {
+			if ma.Validation == nil {
+				ma.Validation = &ValidationExpr{}
+			}
+			ma.Validation.AddRequired(nat.Name)
+		}
+	}
 }
 
 // initAttrFromDesign overrides the type of att with the one of patt and

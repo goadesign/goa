@@ -170,6 +170,7 @@ func TestDecode(t *testing.T) {
 		{"multipart-body-user-type", testdata.PayloadMultipartUserTypeDSL, testdata.PayloadMultipartUserTypeDecodeCode},
 		{"multipart-body-array-type", testdata.PayloadMultipartArrayTypeDSL, testdata.PayloadMultipartArrayTypeDecodeCode},
 		{"multipart-body-map-type", testdata.PayloadMultipartMapTypeDSL, testdata.PayloadMultipartMapTypeDecodeCode},
+		{"with-params-and-headers-dsl", testdata.WithParamsAndHeadersBlockDSL, testdata.WithParamsAndHeadersBlockDecodeCode},
 	}
 	golden := makeGolden(t, "testdata/payload_decode_functions.go")
 	if golden != nil {

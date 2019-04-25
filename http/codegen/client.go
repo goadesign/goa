@@ -215,6 +215,11 @@ func clientEncodeDecode(genpkg string, svc *expr.HTTPServiceExpr) *codegen.File 
 				Name:   "response-decoder",
 				Source: responseDecoderT,
 				Data:   e,
+				FuncMap: map[string]interface{}{
+					"goTypeRef": func(dt expr.DataType) string {
+						return service.Services.Get(svc.Name()).Scope.GoTypeRef(&expr.AttributeExpr{Type: dt})
+					},
+				},
 			})
 		}
 	}
@@ -397,19 +402,19 @@ func {{ .RequestEncoder }}(encoder func(*http.Request) goahttp.Encoder) func(*ht
 		}
 	{{- range .Payload.Request.Headers }}
 		{{- if .FieldName }}
-			{{- if .Pointer }}
+			{{- if .FieldPointer }}
 		if p.{{ .FieldName }} != nil {
 			{{- end }}
 			{{- if (and (eq .Name "Authorization") (isBearer $.HeaderSchemes)) }}
-		if !strings.Contains({{ if .Pointer }}*{{ end }}p.{{ .FieldName }}, " ") {
-			req.Header.Set({{ printf "%q" .Name }}, "Bearer "+{{ if .Pointer }}*{{ end }}p.{{ .FieldName }})
+		if !strings.Contains({{ if .FieldPointer }}*{{ end }}p.{{ .FieldName }}, " ") {
+			req.Header.Set({{ printf "%q" .Name }}, "Bearer "+{{ if .FieldPointer }}*{{ end }}p.{{ .FieldName }})
 		} else {
 			{{- end }}
-			req.Header.Set({{ printf "%q" .Name }}, {{ if .Pointer }}*{{ end }}p.{{ .FieldName }})
+			req.Header.Set({{ printf "%q" .Name }}, {{ if .FieldPointer }}*{{ end }}p.{{ .FieldName }})
 			{{- if (and (eq .Name "Authorization") (isBearer $.HeaderSchemes)) }}
 		}
 			{{- end }}
-			{{- if .Pointer }}
+			{{- if .FieldPointer }}
 		}
 			{{- end }}
 		{{- end }}
@@ -443,17 +448,17 @@ func {{ .RequestEncoder }}(encoder func(*http.Request) goahttp.Encoder) func(*ht
 		{{- else if .Map }}
 			{{- template "map_conversion" (mapConversionData .Type .Name "p" .FieldName true) }}
 		{{- else if .FieldName }}
-			{{- if .Pointer }}
+			{{- if .FieldPointer }}
 		if p.{{ .FieldName }} != nil {
 			{{- end }}
 		values.Add("{{ .Name }}",
 			{{- if eq .Type.Name "bytes" }} string(
 			{{- else if not (eq .Type.Name "string") }} fmt.Sprintf("%v",
 			{{- end }}
-			{{- if .Pointer }}*{{ end }}p.{{ .FieldName }}
+			{{- if .FieldPointer }}*{{ end }}p.{{ .FieldName }}
 			{{- if or (eq .Type.Name "bytes") (not (eq .Type.Name "string")) }})
 			{{- end }})
-			{{- if .Pointer }}
+			{{- if .FieldPointer }}
 		}
 			{{- end }}
 		{{- end }}
@@ -467,7 +472,7 @@ func {{ .RequestEncoder }}(encoder func(*http.Request) goahttp.Encoder) func(*ht
 		}
 	{{- else if .Payload.Request.ClientBody }}
 		{{- if .Payload.Request.ClientBody.Init }}
-		body := {{ .Payload.Request.ClientBody.Init.Name }}({{ range .Payload.Request.ClientBody.Init.ClientArgs }}{{ if .Pointer }}&{{ end }}{{ .Name }}, {{ end }})
+		body := {{ .Payload.Request.ClientBody.Init.Name }}({{ range .Payload.Request.ClientBody.Init.ClientArgs }}{{ if .FieldPointer }}&{{ end }}{{ .Name }}, {{ end }})
 		{{- else }}
 		body := p
 		{{- end }}
@@ -654,7 +659,7 @@ func {{ .ResponseDecoder }}(decoder func(*http.Response) goahttp.Decoder, restor
 		}
 	}
 }
-`
+` + typeConversionT
 
 // input: ResponseData
 const singleResponseT = ` {{- if .ClientBody }}
@@ -688,7 +693,7 @@ const singleResponseT = ` {{- if .ClientBody }}
 		{{- range .Headers }}
 
 		{{- if (or (eq .Type.Name "string") (eq .Type.Name "any")) }}
-			{{ .VarName }}Raw := resp.Header.Get("{{ .Name }}")
+			{{ .VarName }}Raw := resp.Header.Get("{{ .CanonicalName }}")
 			{{- if .Required }}
 				if {{ .VarName }}Raw == "" {
 					err = goa.MergeErrors(err, goa.MissingFieldError("{{ .Name }}", "header"))
@@ -717,6 +722,7 @@ const singleResponseT = ` {{- if .ClientBody }}
 			{{- end }}
 
 		{{- else if .Slice }}
+		{
 			{{ .VarName }}Raw := resp.Header["{{ .CanonicalName }}"]
 				{{ if .Required }} if {{ .VarName }}Raw == nil {
 				return nil, goahttp.ErrValidationError("{{ $.ServiceName }}", "{{ $.Method.Name }}", goa.MissingFieldError("{{ .Name }}", "header"))
@@ -735,9 +741,11 @@ const singleResponseT = ` {{- if .ClientBody }}
 			{{- if or .DefaultValue (not .Required) }}
 			}
 			{{- end }}
+		}
 
 		{{- else }}{{/* not string, not any and not slice */}}
-			{{ .VarName }}Raw := resp.Header.Get("{{ .Name }}")
+		{
+			{{ .VarName }}Raw := resp.Header.Get("{{ .CanonicalName }}")
 			{{- if .Required }}
 			if {{ .VarName }}Raw == "" {
 				return nil, goahttp.ErrValidationError("{{ $.ServiceName }}", "{{ $.Method.Name }}", goa.MissingFieldError("{{ .Name }}", "header"))
@@ -756,6 +764,7 @@ const singleResponseT = ` {{- if .ClientBody }}
 			{{- if or .DefaultValue (not .Required) }}
 			}
 			{{- end }}
+		}
 		{{- end }}
 		{{- if .Validate }}
 			{{ .Validate }}

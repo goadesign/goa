@@ -113,13 +113,10 @@ type (
 		// VarName is the name of the local variable holding the field
 		// value, e.g. "vintage"
 		VarName string
-		// TypeName is the name of the type.
-		TypeName string
+		// TypeRef is the reference to the type.
+		TypeRef string
 		// Init is the code initializing the variable.
 		Init string
-		// Pointer is true if the variable needs to be declared as a
-		// pointer.
-		Pointer bool
 	}
 
 	// PayloadInitData contains the data needed to generate a constructor
@@ -144,9 +141,14 @@ type (
 	PayloadInitArgData struct {
 		// Name is the argument name.
 		Name string
+		// Pointer if true indicates that the argument is a pointer.
+		Pointer bool
 		// FieldName is the name of the field in the payload initialized by the
 		// argument.
 		FieldName string
+		// FieldPointer if true indicates that the field in the payload is a
+		// pointer.
+		FieldPointer bool
 	}
 )
 
@@ -675,7 +677,7 @@ func {{ .Name }}({{ range .FormalParams }}{{ . }} string, {{ end }}) ({{ .Result
 	{{- end }}
 	{{- range .Fields }}
 		{{- if .VarName }}
-	var {{ .VarName }} {{ if .Pointer }}*{{ end }}{{ .TypeName }}
+	var {{ .VarName }} {{ .TypeRef }}
 	{
 		{{ .Init }}
 	}
@@ -693,7 +695,7 @@ func {{ .Name }}({{ range .FormalParams }}{{ . }} string, {{ end }}) ({{ .Result
 			{{- if .ReturnIsStruct }}
 				{{- range .Args }}
 					{{- if .FieldName }}
-	{{ if $.PayloadInit.ReturnTypeAttribute }}res{{ else }}v{{ end }}.{{ .FieldName }} = {{ .Name }}
+	{{ if $.PayloadInit.ReturnTypeAttribute }}res{{ else }}v{{ end }}.{{ .FieldName }} = {{ if and (not .Pointer) .FieldPointer }}&{{ end }}{{ .Name }}
 				{{- end }}
 			{{- end }}
 		{{- end }}
@@ -704,7 +706,7 @@ func {{ .Name }}({{ range .FormalParams }}{{ . }} string, {{ end }}) ({{ .Result
 	payload := &{{ .ReturnTypeName }}{
 				{{- range .Args }}
 					{{- if .FieldName }}
-		{{ .FieldName }}: {{ .Name }},
+		{{ .FieldName }}: {{ if and (not .Pointer) .FieldPointer }}&{{ end }}{{ .Name }},
 					{{- end }}
 				{{- end }}
 	}
