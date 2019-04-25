@@ -2,6 +2,53 @@ package expr
 
 import "testing"
 
+func TestUserTypeExprName(t *testing.T) {
+	var (
+		userTypeExprWithoutAttribute = UserTypeExpr{
+			TypeName: "foo",
+		}
+		userTypeExprHasMeta = UserTypeExpr{
+			TypeName: "foo",
+			AttributeExpr: &AttributeExpr{
+				Meta: MetaExpr{
+					"struct:type:name": []string{"bar"},
+				},
+			},
+		}
+		userTypeExprHasAnotherMeta = UserTypeExpr{
+			TypeName: "foo",
+			AttributeExpr: &AttributeExpr{
+				Meta: MetaExpr{
+					"struct:field:name": []string{"baz"},
+				},
+			},
+		}
+	)
+	cases := map[string]struct {
+		userType UserTypeExpr
+		expected string
+	}{
+		"attribute in user type is nill": {
+			userType: userTypeExprWithoutAttribute,
+			expected: "foo",
+		},
+		"user type has meta": {
+			userType: userTypeExprHasMeta,
+			expected: "bar",
+		},
+		"user type has another meta": {
+			userType: userTypeExprHasAnotherMeta,
+			expected: "foo",
+		},
+	}
+
+	for k, tc := range cases {
+		if actual := tc.userType.Name(); actual != tc.expected {
+			t.Errorf("%s: got %#v, expected %#v", k, actual, tc.expected)
+		}
+	}
+}
+
 func TestUserTypeExprIsCompatible(t *testing.T) {
 	var (
 		b = true
