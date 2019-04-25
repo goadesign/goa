@@ -360,6 +360,8 @@ func Required(names ...string) {
 		at = def
 	case *expr.ResultTypeExpr:
 		at = def.AttributeExpr
+	case *expr.MappedAttributeExpr:
+		at = def.AttributeExpr
 	default:
 		eval.IncompatibleDSL()
 		return

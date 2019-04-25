@@ -1,8 +1,6 @@
 package dsl
 
 import (
-	"reflect"
-
 	"goa.design/goa/eval"
 	"goa.design/goa/expr"
 )
@@ -21,9 +19,7 @@ import (
 // To define gRPC response header metadata, Headers must appear in a GRPC
 // response expression.
 //
-// Headers accepts one argument: Either a function listing the headers (both
-// HTTP and gRPC) or a user type which must be an object and whose attributes
-// define the headers (HTTP only).
+// Headers accepts one argument which is a function listing the headers.
 //
 // Example:
 //
@@ -63,18 +59,16 @@ import (
 //     })
 //
 func Headers(args interface{}) {
+	fn, ok := args.(func())
+	if !ok {
+		eval.InvalidArgError("function", args)
+		return
+	}
 	switch e := eval.Current().(type) {
 	case *expr.GRPCResponseExpr:
-		if fn, ok := args.(func()); ok {
-			attr := &expr.AttributeExpr{}
-			if eval.Execute(fn, attr) {
-				e.Headers = expr.NewMappedAttributeExpr(attr)
-			}
-			return
-		}
-		if _, ok := args.(expr.UserType); ok {
-			eval.InvalidArgError("function", args)
-			return
+		attr := &expr.AttributeExpr{}
+		if eval.Execute(fn, attr) {
+			e.Headers = expr.NewMappedAttributeExpr(attr)
 		}
 	default:
 		h := headers(eval.Current())
@@ -82,19 +76,6 @@ func Headers(args interface{}) {
 			eval.IncompatibleDSL()
 			return
 		}
-		if fn, ok := args.(func()); ok {
-			eval.Execute(fn, h)
-			return
-		}
-		t, ok := args.(expr.UserType)
-		if !ok {
-			eval.InvalidArgError("function or type", args)
-			return
-		}
-		o := expr.AsObject(t)
-		if o == nil {
-			eval.ReportError("type must be an object but got %s", reflect.TypeOf(args).Name())
-		}
-		h.Merge(expr.NewMappedAttributeExpr(&expr.AttributeExpr{Type: o}))
+		eval.Execute(fn, h)
 	}
 }

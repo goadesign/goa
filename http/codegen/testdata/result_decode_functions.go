@@ -245,7 +245,7 @@ func DecodeMethodTagMultipleViewsResponse(decoder func(*http.Response) goahttp.D
 			var (
 				c *string
 			)
-			cRaw := resp.Header.Get("c")
+			cRaw := resp.Header.Get("C")
 			if cRaw != "" {
 				c = &cRaw
 			}
@@ -313,6 +313,331 @@ func DecodeMethodEmptyServerResponseWithTagsResponse(decoder func(*http.Response
 		default:
 			body, _ := ioutil.ReadAll(resp.Body)
 			return nil, goahttp.ErrInvalidResponse("ServiceEmptyServerResponseWithTags", "MethodEmptyServerResponseWithTags", resp.StatusCode, string(body))
+		}
+	}
+}
+`
+
+var ResultHeaderStringArrayResponseDecodeCode = `// DecodeMethodAResponse returns a decoder for responses returned by the
+// ServiceHeaderStringArrayResponse MethodA endpoint. restoreBody controls
+// whether the response body should be restored after having been read.
+func DecodeMethodAResponse(decoder func(*http.Response) goahttp.Decoder, restoreBody bool) func(*http.Response) (interface{}, error) {
+	return func(resp *http.Response) (interface{}, error) {
+		if restoreBody {
+			b, err := ioutil.ReadAll(resp.Body)
+			if err != nil {
+				return nil, err
+			}
+			resp.Body = ioutil.NopCloser(bytes.NewBuffer(b))
+			defer func() {
+				resp.Body = ioutil.NopCloser(bytes.NewBuffer(b))
+			}()
+		} else {
+			defer resp.Body.Close()
+		}
+		switch resp.StatusCode {
+		case http.StatusOK:
+			var (
+				array []string
+			)
+			array = resp.Header["Array"]
+
+			res := NewMethodAResultOK(array)
+			return res, nil
+		default:
+			body, _ := ioutil.ReadAll(resp.Body)
+			return nil, goahttp.ErrInvalidResponse("ServiceHeaderStringArrayResponse", "MethodA", resp.StatusCode, string(body))
+		}
+	}
+}
+`
+
+var ResultHeaderStringArrayValidateResponseDecodeCode = `// DecodeMethodAResponse returns a decoder for responses returned by the
+// ServiceHeaderStringArrayValidateResponse MethodA endpoint. restoreBody
+// controls whether the response body should be restored after having been read.
+func DecodeMethodAResponse(decoder func(*http.Response) goahttp.Decoder, restoreBody bool) func(*http.Response) (interface{}, error) {
+	return func(resp *http.Response) (interface{}, error) {
+		if restoreBody {
+			b, err := ioutil.ReadAll(resp.Body)
+			if err != nil {
+				return nil, err
+			}
+			resp.Body = ioutil.NopCloser(bytes.NewBuffer(b))
+			defer func() {
+				resp.Body = ioutil.NopCloser(bytes.NewBuffer(b))
+			}()
+		} else {
+			defer resp.Body.Close()
+		}
+		switch resp.StatusCode {
+		case http.StatusOK:
+			var (
+				array []string
+				err   error
+			)
+			array = resp.Header["Array"]
+
+			if len(array) < 5 {
+				err = goa.MergeErrors(err, goa.InvalidLengthError("array", array, len(array), 5, true))
+			}
+			if err != nil {
+				return nil, goahttp.ErrValidationError("ServiceHeaderStringArrayValidateResponse", "MethodA", err)
+			}
+			res := NewMethodAResultOK(array)
+			return res, nil
+		default:
+			body, _ := ioutil.ReadAll(resp.Body)
+			return nil, goahttp.ErrInvalidResponse("ServiceHeaderStringArrayValidateResponse", "MethodA", resp.StatusCode, string(body))
+		}
+	}
+}
+`
+
+var ResultHeaderArrayResponseDecodeCode = `// DecodeMethodAResponse returns a decoder for responses returned by the
+// ServiceHeaderArrayResponse MethodA endpoint. restoreBody controls whether
+// the response body should be restored after having been read.
+func DecodeMethodAResponse(decoder func(*http.Response) goahttp.Decoder, restoreBody bool) func(*http.Response) (interface{}, error) {
+	return func(resp *http.Response) (interface{}, error) {
+		if restoreBody {
+			b, err := ioutil.ReadAll(resp.Body)
+			if err != nil {
+				return nil, err
+			}
+			resp.Body = ioutil.NopCloser(bytes.NewBuffer(b))
+			defer func() {
+				resp.Body = ioutil.NopCloser(bytes.NewBuffer(b))
+			}()
+		} else {
+			defer resp.Body.Close()
+		}
+		switch resp.StatusCode {
+		case http.StatusOK:
+			var (
+				array []uint
+				err   error
+			)
+			{
+				arrayRaw := resp.Header["Array"]
+
+				if arrayRaw != nil {
+					array = make([]uint, len(arrayRaw))
+					for i, rv := range arrayRaw {
+						v, err2 := strconv.ParseUint(rv, 10, strconv.IntSize)
+						if err2 != nil {
+							err = goa.MergeErrors(err, goa.InvalidFieldTypeError("array", arrayRaw, "array of unsigned integers"))
+						}
+						array[i] = uint(v)
+					}
+				}
+			}
+			if err != nil {
+				return nil, goahttp.ErrValidationError("ServiceHeaderArrayResponse", "MethodA", err)
+			}
+			res := NewMethodAResultOK(array)
+			return res, nil
+		default:
+			body, _ := ioutil.ReadAll(resp.Body)
+			return nil, goahttp.ErrInvalidResponse("ServiceHeaderArrayResponse", "MethodA", resp.StatusCode, string(body))
+		}
+	}
+}
+`
+
+var ResultHeaderArrayValidateResponseDecodeCode = `// DecodeMethodAResponse returns a decoder for responses returned by the
+// ServiceHeaderArrayValidateResponse MethodA endpoint. restoreBody controls
+// whether the response body should be restored after having been read.
+func DecodeMethodAResponse(decoder func(*http.Response) goahttp.Decoder, restoreBody bool) func(*http.Response) (interface{}, error) {
+	return func(resp *http.Response) (interface{}, error) {
+		if restoreBody {
+			b, err := ioutil.ReadAll(resp.Body)
+			if err != nil {
+				return nil, err
+			}
+			resp.Body = ioutil.NopCloser(bytes.NewBuffer(b))
+			defer func() {
+				resp.Body = ioutil.NopCloser(bytes.NewBuffer(b))
+			}()
+		} else {
+			defer resp.Body.Close()
+		}
+		switch resp.StatusCode {
+		case http.StatusOK:
+			var (
+				array []int
+				err   error
+			)
+			{
+				arrayRaw := resp.Header["Array"]
+
+				if arrayRaw != nil {
+					array = make([]int, len(arrayRaw))
+					for i, rv := range arrayRaw {
+						v, err2 := strconv.ParseInt(rv, 10, strconv.IntSize)
+						if err2 != nil {
+							err = goa.MergeErrors(err, goa.InvalidFieldTypeError("array", arrayRaw, "array of integers"))
+						}
+						array[i] = int(v)
+					}
+				}
+			}
+			for _, e := range array {
+				if e < 5 {
+					err = goa.MergeErrors(err, goa.InvalidRangeError("array[*]", e, 5, true))
+				}
+			}
+			if err != nil {
+				return nil, goahttp.ErrValidationError("ServiceHeaderArrayValidateResponse", "MethodA", err)
+			}
+			res := NewMethodAResultOK(array)
+			return res, nil
+		default:
+			body, _ := ioutil.ReadAll(resp.Body)
+			return nil, goahttp.ErrInvalidResponse("ServiceHeaderArrayValidateResponse", "MethodA", resp.StatusCode, string(body))
+		}
+	}
+}
+`
+
+var WithHeadersBlockResponseDecodeCode = `// DecodeMethodAResponse returns a decoder for responses returned by the
+// ServiceWithHeadersBlock MethodA endpoint. restoreBody controls whether the
+// response body should be restored after having been read.
+func DecodeMethodAResponse(decoder func(*http.Response) goahttp.Decoder, restoreBody bool) func(*http.Response) (interface{}, error) {
+	return func(resp *http.Response) (interface{}, error) {
+		if restoreBody {
+			b, err := ioutil.ReadAll(resp.Body)
+			if err != nil {
+				return nil, err
+			}
+			resp.Body = ioutil.NopCloser(bytes.NewBuffer(b))
+			defer func() {
+				resp.Body = ioutil.NopCloser(bytes.NewBuffer(b))
+			}()
+		} else {
+			defer resp.Body.Close()
+		}
+		switch resp.StatusCode {
+		case http.StatusOK:
+			var (
+				required            int
+				optional            *float32
+				optionalButRequired uint
+				err                 error
+			)
+			{
+				requiredRaw := resp.Header.Get("X-Request-Id")
+				if requiredRaw == "" {
+					return nil, goahttp.ErrValidationError("ServiceWithHeadersBlock", "MethodA", goa.MissingFieldError("X-Request-ID", "header"))
+				}
+				v, err2 := strconv.ParseInt(requiredRaw, 10, strconv.IntSize)
+				if err2 != nil {
+					err = goa.MergeErrors(err, goa.InvalidFieldTypeError("required", requiredRaw, "integer"))
+				}
+				required = int(v)
+			}
+			{
+				optionalRaw := resp.Header.Get("Authorization")
+				if optionalRaw != "" {
+					v, err2 := strconv.ParseFloat(optionalRaw, 32)
+					if err2 != nil {
+						err = goa.MergeErrors(err, goa.InvalidFieldTypeError("optional", optionalRaw, "float"))
+					}
+					pv := float32(v)
+					optional = &pv
+				}
+			}
+			{
+				optionalButRequiredRaw := resp.Header.Get("Location")
+				if optionalButRequiredRaw == "" {
+					return nil, goahttp.ErrValidationError("ServiceWithHeadersBlock", "MethodA", goa.MissingFieldError("Location", "header"))
+				}
+				v, err2 := strconv.ParseUint(optionalButRequiredRaw, 10, strconv.IntSize)
+				if err2 != nil {
+					err = goa.MergeErrors(err, goa.InvalidFieldTypeError("optionalButRequired", optionalButRequiredRaw, "unsigned integer"))
+				}
+				optionalButRequired = uint(v)
+			}
+			if err != nil {
+				return nil, goahttp.ErrValidationError("ServiceWithHeadersBlock", "MethodA", err)
+			}
+			res := NewMethodAResultOK(required, optional, optionalButRequired)
+			return res, nil
+		default:
+			body, _ := ioutil.ReadAll(resp.Body)
+			return nil, goahttp.ErrInvalidResponse("ServiceWithHeadersBlock", "MethodA", resp.StatusCode, string(body))
+		}
+	}
+}
+`
+
+var WithHeadersBlockViewedResultResponseDecodeCode = `// DecodeMethodAResponse returns a decoder for responses returned by the
+// ServiceWithHeadersBlockViewedResult MethodA endpoint. restoreBody controls
+// whether the response body should be restored after having been read.
+func DecodeMethodAResponse(decoder func(*http.Response) goahttp.Decoder, restoreBody bool) func(*http.Response) (interface{}, error) {
+	return func(resp *http.Response) (interface{}, error) {
+		if restoreBody {
+			b, err := ioutil.ReadAll(resp.Body)
+			if err != nil {
+				return nil, err
+			}
+			resp.Body = ioutil.NopCloser(bytes.NewBuffer(b))
+			defer func() {
+				resp.Body = ioutil.NopCloser(bytes.NewBuffer(b))
+			}()
+		} else {
+			defer resp.Body.Close()
+		}
+		switch resp.StatusCode {
+		case http.StatusOK:
+			var (
+				required            int
+				optional            *float32
+				optionalButRequired uint
+				err                 error
+			)
+			{
+				requiredRaw := resp.Header.Get("X-Request-Id")
+				if requiredRaw == "" {
+					return nil, goahttp.ErrValidationError("ServiceWithHeadersBlockViewedResult", "MethodA", goa.MissingFieldError("X-Request-ID", "header"))
+				}
+				v, err2 := strconv.ParseInt(requiredRaw, 10, strconv.IntSize)
+				if err2 != nil {
+					err = goa.MergeErrors(err, goa.InvalidFieldTypeError("required", requiredRaw, "integer"))
+				}
+				required = int(v)
+			}
+			{
+				optionalRaw := resp.Header.Get("Authorization")
+				if optionalRaw != "" {
+					v, err2 := strconv.ParseFloat(optionalRaw, 32)
+					if err2 != nil {
+						err = goa.MergeErrors(err, goa.InvalidFieldTypeError("optional", optionalRaw, "float"))
+					}
+					pv := float32(v)
+					optional = &pv
+				}
+			}
+			{
+				optionalButRequiredRaw := resp.Header.Get("Location")
+				if optionalButRequiredRaw == "" {
+					return nil, goahttp.ErrValidationError("ServiceWithHeadersBlockViewedResult", "MethodA", goa.MissingFieldError("Location", "header"))
+				}
+				v, err2 := strconv.ParseUint(optionalButRequiredRaw, 10, strconv.IntSize)
+				if err2 != nil {
+					err = goa.MergeErrors(err, goa.InvalidFieldTypeError("optionalButRequired", optionalButRequiredRaw, "unsigned integer"))
+				}
+				optionalButRequired = uint(v)
+			}
+			if err != nil {
+				return nil, goahttp.ErrValidationError("ServiceWithHeadersBlockViewedResult", "MethodA", err)
+			}
+			p := NewMethodAAResultOK(required, optional, optionalButRequired)
+			view := resp.Header.Get("goa-view")
+			vres := &servicewithheadersblockviewedresultviews.AResult{p, view}
+			res := servicewithheadersblockviewedresult.NewAResult(vres)
+			return res, nil
+		default:
+			body, _ := ioutil.ReadAll(resp.Body)
+			return nil, goahttp.ErrInvalidResponse("ServiceWithHeadersBlockViewedResult", "MethodA", resp.StatusCode, string(body))
 		}
 	}
 }

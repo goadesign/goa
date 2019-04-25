@@ -166,10 +166,10 @@ func makeFlags(e *EndpointData, args []*InitArgData) ([]*cli.FlagData, *cli.Buil
 			tn = arg.TypeName
 		}
 		fdata = append(fdata, &cli.FieldData{
-			Name:     arg.Name,
-			VarName:  arg.Name,
-			TypeName: tn,
-			Init:     code,
+			Name:    arg.Name,
+			VarName: arg.Name,
+			TypeRef: tn,
+			Init:    code,
 		})
 	}
 	if e.Method.PayloadRef == "" {

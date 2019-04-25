@@ -4611,3 +4611,83 @@ func DecodeMethodMultipartMapTypeRequest(mux goahttp.Muxer, decoder func(*http.R
 	}
 }
 `
+
+var WithParamsAndHeadersBlockDecodeCode = `// DecodeMethodARequest returns a decoder for requests sent to the
+// ServiceWithParamsAndHeadersBlock MethodA endpoint.
+func DecodeMethodARequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) (interface{}, error) {
+	return func(r *http.Request) (interface{}, error) {
+		var (
+			body MethodARequestBody
+			err  error
+		)
+		err = decoder(r).Decode(&body)
+		if err != nil {
+			if err == io.EOF {
+				return nil, goa.MissingPayloadError()
+			}
+			return nil, goa.DecodePayloadError(err.Error())
+		}
+
+		var (
+			path                      uint
+			optional                  *int
+			optionalButRequiredParam  float32
+			required                  string
+			optionalButRequiredHeader float32
+
+			params = mux.Vars(r)
+		)
+		{
+			pathRaw := params["path"]
+			v, err2 := strconv.ParseUint(pathRaw, 10, strconv.IntSize)
+			if err2 != nil {
+				err = goa.MergeErrors(err, goa.InvalidFieldTypeError("path", pathRaw, "unsigned integer"))
+			}
+			path = uint(v)
+		}
+		{
+			optionalRaw := r.URL.Query().Get("optional")
+			if optionalRaw != "" {
+				v, err2 := strconv.ParseInt(optionalRaw, 10, strconv.IntSize)
+				if err2 != nil {
+					err = goa.MergeErrors(err, goa.InvalidFieldTypeError("optional", optionalRaw, "integer"))
+				}
+				pv := int(v)
+				optional = &pv
+			}
+		}
+		{
+			optionalButRequiredParamRaw := r.URL.Query().Get("optional_but_required_param")
+			if optionalButRequiredParamRaw == "" {
+				err = goa.MergeErrors(err, goa.MissingFieldError("optional_but_required_param", "query string"))
+			}
+			v, err2 := strconv.ParseFloat(optionalButRequiredParamRaw, 32)
+			if err2 != nil {
+				err = goa.MergeErrors(err, goa.InvalidFieldTypeError("optionalButRequiredParam", optionalButRequiredParamRaw, "float"))
+			}
+			optionalButRequiredParam = float32(v)
+		}
+		required = r.Header.Get("required")
+		if required == "" {
+			err = goa.MergeErrors(err, goa.MissingFieldError("required", "header"))
+		}
+		{
+			optionalButRequiredHeaderRaw := r.Header.Get("optional_but_required_header")
+			if optionalButRequiredHeaderRaw == "" {
+				err = goa.MergeErrors(err, goa.MissingFieldError("optional_but_required_header", "header"))
+			}
+			v, err2 := strconv.ParseFloat(optionalButRequiredHeaderRaw, 32)
+			if err2 != nil {
+				err = goa.MergeErrors(err, goa.InvalidFieldTypeError("optionalButRequiredHeader", optionalButRequiredHeaderRaw, "float"))
+			}
+			optionalButRequiredHeader = float32(v)
+		}
+		if err != nil {
+			return nil, err
+		}
+		payload := NewMethodAPayload(&body, path, optional, optionalButRequiredParam, required, optionalButRequiredHeader)
+
+		return payload, nil
+	}
+}
+`
