@@ -461,7 +461,9 @@ func (e *HTTPEndpointExpr) Finalize() {
 			for _, sch := range dupReq.Schemes {
 				var field string
 				switch sch.Kind {
-				case BasicAuthKind, NoKind:
+				case NoKind:
+					continue
+				case BasicAuthKind:
 					sch.In = "header"
 					sch.Name = "Authorization"
 					continue
