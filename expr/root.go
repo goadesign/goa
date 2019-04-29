@@ -219,16 +219,6 @@ func (r *RootExpr) HTTPServiceFor(s *ServiceExpr) *HTTPServiceExpr {
 	return res
 }
 
-// Scheme returns the security scheme expression with the given name.
-func (r *RootExpr) Scheme(name string) *SchemeExpr {
-	for _, s := range r.Schemes {
-		if name == s.SchemeName {
-			return s
-		}
-	}
-	return nil
-}
-
 // EvalName is the name of the DSL.
 func (r *RootExpr) EvalName() string {
 	return "design"
