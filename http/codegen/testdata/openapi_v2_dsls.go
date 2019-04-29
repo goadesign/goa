@@ -309,8 +309,10 @@ var SecurityDSL = func() {
 	})
 
 	Service("testService", func() {
-		Method("testEndpoint", func() {
-			Security(BasicAuth, OAuth2Auth, JWTAuth, APIKeyAuth)
+		Method("testEndpointA", func() {
+			Security(BasicAuth, OAuth2Auth, JWTAuth, APIKeyAuth, func() {
+				Scope("api:read")
+			})
 			Payload(func() {
 				Username("username", String)
 				Password("password", String)
@@ -324,6 +326,23 @@ var SecurityDSL = func() {
 				Header("oauth_token:Token")
 				Param("key:k")
 				Header("token:X-Authorization")
+			})
+		})
+		Method("testEndpointB", func() {
+			Security(APIKeyAuth)
+			Security(OAuth2Auth, func() {
+				Scope("api:read")
+				Scope("api:write")
+			})
+			Payload(func() {
+				APIKey("api_key", "key", String)
+				AccessToken("oauth_token", String)
+				Required("key", "oauth_token")
+			})
+			HTTP(func() {
+				POST("/")
+				Param("oauth_token:auth")
+				Header("key:Authorization")
 			})
 		})
 	})

@@ -16,11 +16,12 @@ paths:
     get:
       tags:
       - testService
-      summary: testEndpoint testService
-      description: |2
+      summary: testEndpointA testService
+      description: |2-
 
         Required security scopes:
-      operationId: testService#testEndpoint
+          * `api:read`
+      operationId: testService#testEndpointA
       parameters:
       - name: k
         in: query
@@ -45,30 +46,70 @@ paths:
       schemes:
       - http
       security:
-      - api_key: []
-        basic: []
-        jwt: []
-        oauth2: []
+      - _scheme_api_key_query_k: []
+        _scheme_basic_header_Authorization: []
+        _scheme_jwt_header_X-Authorization: []
+        _scheme_oauth2_header_Token:
+        - api:read
+    post:
+      tags:
+      - testService
+      summary: testEndpointB testService
+      operationId: testService#testEndpointB
+      parameters:
+      - name: auth
+        in: query
+        required: true
+        type: string
+      - name: Authorization
+        in: header
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK response.
+      schemes:
+      - http
+      security:
+      - _scheme_api_key_header_Authorization: []
+      - _scheme_oauth2_query_auth:
+        - api:read
+        - api:write
 securityDefinitions:
-  api_key:
+  _scheme_api_key_header_Authorization:
     type: apiKey
     description: Secures endpoint by requiring an API key.
     name: Authorization
     in: header
-  basic:
+  _scheme_api_key_query_k:
+    type: apiKey
+    description: Secures endpoint by requiring an API key.
+    name: k
+    in: query
+  _scheme_basic_header_Authorization:
     type: basic
     description: Basic authentication used to authenticate security principal during
       signin
-  jwt:
+  _scheme_jwt_header_X-Authorization:
     type: apiKey
     description: |-
       Secures endpoint by requiring a valid JWT token retrieved via the signin endpoint. Supports scopes "api:read" and "api:write".
       **Security Scopes**:
         * `api:read`: Read-only access
         * `api:write`: Read and write access
-    name: Authorization
+    name: X-Authorization
     in: header
-  oauth2:
+  _scheme_oauth2_header_Token:
+    type: oauth2
+    description: Secures endpoint by requiring a valid OAuth2 token retrieved via
+      the signin endpoint. Supports scopes "api:read" and "api:write".
+    flow: accessCode
+    authorizationUrl: http://goa.design/authorization
+    tokenUrl: http://goa.design/token
+    scopes:
+      api:read: Read-only access
+      api:write: Read and write access
+  _scheme_oauth2_query_auth:
     type: oauth2
     description: Secures endpoint by requiring a valid OAuth2 token retrieved via
       the signin endpoint. Supports scopes "api:read" and "api:write".

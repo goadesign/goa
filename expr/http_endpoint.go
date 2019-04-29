@@ -462,6 +462,8 @@ func (e *HTTPEndpointExpr) Finalize() {
 				var field string
 				switch sch.Kind {
 				case BasicAuthKind, NoKind:
+					sch.In = "header"
+					sch.Name = "Authorization"
 					continue
 				case APIKeyKind:
 					field = TaggedAttribute(e.MethodExpr.Payload, "security:apikey:"+sch.SchemeName)
