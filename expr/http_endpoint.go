@@ -549,31 +549,17 @@ func (e *HTTPEndpointExpr) validateParams() *eval.ValidationErrors {
 		return nil
 	}
 
+	var (
+		pparams = DupMappedAtt(e.PathParams())
+		qparams = DupMappedAtt(e.QueryParams())
+	)
 	// We have to figure out the actual type for the params because the actual
 	// type is initialized only during the finalize phase. In the validation
 	// phase, all param types are string type by default unless specified
 	// expliclty.
-	init := func(ma *MappedAttributeExpr) *MappedAttributeExpr {
-		ma = DupMappedAtt(ma)
-		payload := AsObject(e.MethodExpr.Payload.Type)
-		for _, nat := range *AsObject(ma.Type) {
-			var patt *AttributeExpr
-			if payload != nil {
-				patt = payload.Attribute(nat.Name)
-			} else {
-				patt = e.MethodExpr.Payload
-			}
-			if patt != nil {
-				nat.Attribute.Type = patt.Type
-			}
-		}
-		return ma
-	}
+	initAttr(pparams, e.MethodExpr.Payload)
+	initAttr(qparams, e.MethodExpr.Payload)
 
-	var (
-		pparams = init(e.PathParams())
-		qparams = init(e.QueryParams())
-	)
 	verr := new(eval.ValidationErrors)
 	WalkMappedAttr(pparams, func(name, _ string, a *AttributeExpr) error {
 		switch {
@@ -584,7 +570,7 @@ func (e *HTTPEndpointExpr) validateParams() *eval.ValidationErrors {
 		case IsArray(a.Type):
 			arr := AsArray(a.Type)
 			if !IsPrimitive(arr.ElemType.Type) {
-				verr.Add(e, "elements of array path parameter %s must be primitive", name)
+				verr.Add(e, "elements of array path parameter %q must be primitive", name)
 			}
 		default:
 			ctx := fmt.Sprintf("path parameter %s", name)
@@ -599,7 +585,7 @@ func (e *HTTPEndpointExpr) validateParams() *eval.ValidationErrors {
 		case IsArray(a.Type):
 			arr := AsArray(a.Type)
 			if !IsPrimitive(arr.ElemType.Type) {
-				verr.Add(e, "elements of array query parameter %s must be primitive", name)
+				verr.Add(e, "elements of array query parameter %q must be primitive", name)
 			}
 		default:
 			ctx := fmt.Sprintf("query parameter %s", name)
@@ -640,39 +626,23 @@ func (e *HTTPEndpointExpr) validateParams() *eval.ValidationErrors {
 func (e *HTTPEndpointExpr) validateHeaders() *eval.ValidationErrors {
 	verr := new(eval.ValidationErrors)
 
-	// We have to figure out the actual type for the params because the actual
+	// We have to figure out the actual type for the headers because the actual
 	// type is initialized only during the finalize phase. In the validation
 	// phase, all param types are string type by default unless specified
-	// expliclty.
-	init := func(ma *MappedAttributeExpr) *MappedAttributeExpr {
-		ma = DupMappedAtt(ma)
-		payload := AsObject(e.MethodExpr.Payload.Type)
-		for _, nat := range *AsObject(ma.Type) {
-			var patt *AttributeExpr
-			if payload != nil {
-				patt = payload.Attribute(nat.Name)
-			} else {
-				patt = e.MethodExpr.Payload
-			}
-			if patt != nil {
-				nat.Attribute.Type = patt.Type
-			}
-		}
-		return ma
-	}
-
-	headers := init(e.Headers)
+	// explicity.
+	headers := DupMappedAtt(e.Headers)
+	initAttr(headers, e.MethodExpr.Payload)
 	WalkMappedAttr(headers, func(name, _ string, a *AttributeExpr) error {
 		switch {
 		case IsObject(a.Type):
-			verr.Add(e, "header %s cannot be an object, header type must be primitive or array", name)
+			verr.Add(e, "header %q cannot be an object, header type must be primitive or array", name)
 		case IsArray(a.Type):
 			arr := AsArray(a.Type)
 			if !IsPrimitive(arr.ElemType.Type) {
-				verr.Add(e, "elements of array header %s must be primitive", name)
+				verr.Add(e, "elements of array header %q must be primitive", name)
 			}
 		default:
-			ctx := fmt.Sprintf("header %s", name)
+			ctx := fmt.Sprintf("header %q", name)
 			verr.Merge(a.Validate(ctx, e))
 		}
 		return nil
