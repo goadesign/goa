@@ -633,7 +633,7 @@ func (e *HTTPEndpointExpr) validateHeaders() *eval.ValidationErrors {
 	// We have to figure out the actual type for the headers because the actual
 	// type is initialized only during the finalize phase. In the validation
 	// phase, all param types are string type by default unless specified
-	// explicity.
+	// explicitly.
 	headers := DupMappedAtt(e.Headers)
 	initAttr(headers, e.MethodExpr.Payload)
 	WalkMappedAttr(headers, func(name, _ string, a *AttributeExpr) error {
