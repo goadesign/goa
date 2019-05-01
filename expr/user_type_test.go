@@ -43,9 +43,11 @@ func TestUserTypeExprName(t *testing.T) {
 	}
 
 	for k, tc := range cases {
-		if actual := tc.userType.Name(); actual != tc.expected {
-			t.Errorf("%s: got %#v, expected %#v", k, actual, tc.expected)
-		}
+		t.Run(k, func(t *testing.T) {
+			if actual := tc.userType.Name(); actual != tc.expected {
+				t.Errorf("got %#v, expected %#v", actual, tc.expected)
+			}
+		})
 	}
 }
 
