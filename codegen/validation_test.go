@@ -3,8 +3,8 @@ package codegen
 import (
 	"testing"
 
-	"goa.design/goa/codegen/testdata"
-	"goa.design/goa/expr"
+	"goa.design/goa/v3/codegen/testdata"
+	"goa.design/goa/v3/expr"
 )
 
 func TestRecursiveValidationCode(t *testing.T) {

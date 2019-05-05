@@ -3,9 +3,9 @@ package codegen
 import (
 	"fmt"
 
-	"goa.design/goa/codegen"
-	"goa.design/goa/codegen/service"
-	"goa.design/goa/expr"
+	"goa.design/goa/v3/codegen"
+	"goa.design/goa/v3/codegen/service"
+	"goa.design/goa/v3/expr"
 )
 
 // GRPCServices holds the data computed from the design needed to generate the

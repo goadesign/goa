@@ -11,8 +11,8 @@ import (
 	"sort"
 	"strings"
 
-	goahttp "goa.design/goa/http"
-	"goa.design/goa/middleware"
+	goahttp "goa.design/goa/v3/http"
+	"goa.design/goa/v3/middleware"
 )
 
 // responseDupper tees the response to a buffer and a response writer.

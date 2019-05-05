@@ -3,9 +3,9 @@ package service
 import (
 	"testing"
 
-	"goa.design/goa/codegen"
-	"goa.design/goa/codegen/service/testdata"
-	"goa.design/goa/expr"
+	"goa.design/goa/v3/codegen"
+	"goa.design/goa/v3/codegen/service/testdata"
+	"goa.design/goa/v3/expr"
 )
 
 func TestSecureEndpointInit(t *testing.T) {

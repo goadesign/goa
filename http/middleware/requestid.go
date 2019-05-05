@@ -4,7 +4,7 @@ import (
 	"context"
 	"net/http"
 
-	"goa.design/goa/middleware"
+	"goa.design/goa/v3/middleware"
 )
 
 // RequestID returns a middleware, which initializes the context with a unique

@@ -5,7 +5,7 @@ import (
 	"net/url"
 	"testing"
 
-	"goa.design/goa/eval"
+	"goa.design/goa/v3/eval"
 )
 
 func TestFlowExprEvalName(t *testing.T) {

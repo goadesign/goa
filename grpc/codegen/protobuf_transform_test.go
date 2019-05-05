@@ -3,9 +3,9 @@ package codegen
 import (
 	"testing"
 
-	"goa.design/goa/codegen"
-	ctestdata "goa.design/goa/codegen/testdata"
-	"goa.design/goa/expr"
+	"goa.design/goa/v3/codegen"
+	ctestdata "goa.design/goa/v3/codegen/testdata"
+	"goa.design/goa/v3/expr"
 )
 
 func TestProtoBufTransform(t *testing.T) {

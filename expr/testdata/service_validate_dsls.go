@@ -1,6 +1,6 @@
 package testdata
 
-import . "goa.design/goa/dsl"
+import . "goa.design/goa/v3/dsl"
 
 var ValidErrorsDSL = func() {
 	var Result = ResultType("application/vnd.goa.error", func() {

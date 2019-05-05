@@ -7,7 +7,7 @@ import (
 	"strings"
 	"text/template"
 
-	"goa.design/goa/expr"
+	"goa.design/goa/v3/expr"
 )
 
 var (

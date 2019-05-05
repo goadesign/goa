@@ -7,7 +7,7 @@ import (
 	"net/http"
 	"testing"
 
-	"goa.design/goa/middleware/xray"
+	"goa.design/goa/v3/middleware/xray"
 )
 
 // testDoer simply tests if the request context is set with X-Ray segment

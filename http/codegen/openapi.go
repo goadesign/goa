@@ -7,9 +7,9 @@ import (
 
 	"gopkg.in/yaml.v2"
 
-	"goa.design/goa/codegen"
-	"goa.design/goa/expr"
-	"goa.design/goa/http/codegen/openapi"
+	"goa.design/goa/v3/codegen"
+	"goa.design/goa/v3/expr"
+	"goa.design/goa/v3/http/codegen/openapi"
 )
 
 // OpenAPIFiles returns the files for the OpenAPIFile spec of the given HTTP API.

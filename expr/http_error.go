@@ -1,7 +1,7 @@
 package expr
 
 import (
-	"goa.design/goa/eval"
+	"goa.design/goa/v3/eval"
 )
 
 type (

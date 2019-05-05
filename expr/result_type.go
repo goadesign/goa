@@ -5,7 +5,7 @@ import (
 	"mime"
 	"strings"
 
-	"goa.design/goa/eval"
+	"goa.design/goa/v3/eval"
 )
 
 const (

@@ -1,7 +1,7 @@
 package dsl
 
-import "goa.design/goa/expr"
-import "goa.design/goa/eval"
+import "goa.design/goa/v3/expr"
+import "goa.design/goa/v3/eval"
 
 // Description sets the expression description.
 //

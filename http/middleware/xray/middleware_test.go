@@ -8,8 +8,8 @@ import (
 	"strings"
 	"testing"
 
-	"goa.design/goa/middleware"
-	"goa.design/goa/middleware/xray"
+	"goa.design/goa/v3/middleware"
+	"goa.design/goa/v3/middleware/xray"
 )
 
 const (

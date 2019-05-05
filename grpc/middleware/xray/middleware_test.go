@@ -7,9 +7,9 @@ import (
 	"testing"
 
 	"github.com/golang/protobuf/ptypes/wrappers"
-	grpcm "goa.design/goa/grpc/middleware"
-	"goa.design/goa/middleware"
-	"goa.design/goa/middleware/xray"
+	grpcm "goa.design/goa/v3/grpc/middleware"
+	"goa.design/goa/v3/middleware"
+	"goa.design/goa/v3/middleware/xray"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"

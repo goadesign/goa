@@ -3,9 +3,9 @@ package codegen
 import (
 	"testing"
 
-	"goa.design/goa/codegen"
-	"goa.design/goa/expr"
-	"goa.design/goa/http/codegen/testdata"
+	"goa.design/goa/v3/codegen"
+	"goa.design/goa/v3/expr"
+	"goa.design/goa/v3/http/codegen/testdata"
 )
 
 func TestServerInit(t *testing.T) {

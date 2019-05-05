@@ -1,8 +1,8 @@
 package dsl
 
 import (
-	"goa.design/goa/eval"
-	"goa.design/goa/expr"
+	"goa.design/goa/v3/eval"
+	"goa.design/goa/v3/expr"
 )
 
 // API defines a network service API. It provides the API name, description and other global

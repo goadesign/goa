@@ -6,7 +6,7 @@ import (
 	"strings"
 
 	"github.com/dimfeld/httppath"
-	"goa.design/goa/eval"
+	"goa.design/goa/v3/eval"
 )
 
 type (

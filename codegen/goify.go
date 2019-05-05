@@ -3,7 +3,7 @@ package codegen
 import (
 	"strings"
 
-	"goa.design/goa/expr"
+	"goa.design/goa/v3/expr"
 )
 
 // Goify makes a valid Go identifier out of any string. It does that by removing

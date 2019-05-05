@@ -3,7 +3,7 @@ package expr
 import (
 	"sort"
 
-	"goa.design/goa/eval"
+	"goa.design/goa/v3/eval"
 )
 
 type (

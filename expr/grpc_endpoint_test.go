@@ -3,9 +3,9 @@ package expr_test
 import (
 	"testing"
 
-	"goa.design/goa/eval"
-	"goa.design/goa/expr"
-	"goa.design/goa/expr/testdata"
+	"goa.design/goa/v3/eval"
+	"goa.design/goa/v3/expr"
+	"goa.design/goa/v3/expr/testdata"
 )
 
 func TestGRPCEndpointValidation(t *testing.T) {

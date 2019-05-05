@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"testing"
 
-	"goa.design/goa/expr"
-	"goa.design/goa/expr/testdata"
+	"goa.design/goa/v3/expr"
+	"goa.design/goa/v3/expr/testdata"
 )
 
 func TestMethodExprValidate(t *testing.T) {

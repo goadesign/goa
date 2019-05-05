@@ -6,8 +6,8 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	httpm "goa.design/goa/http/middleware"
-	"goa.design/goa/middleware"
+	httpm "goa.design/goa/v3/http/middleware"
+	"goa.design/goa/v3/middleware"
 )
 
 type (

@@ -1,5 +1,4 @@
-// Package pkg deals with versioning for goa.
-package pkg
+package goa
 
 import (
 	"fmt"
@@ -9,13 +8,13 @@ import (
 
 const (
 	// Major version number
-	Major = 2
+	Major = 3
 	// Minor version number
 	Minor = 0
 	// Build number
 	Build = 0
 	// Suffix - set to empty string in release tag commits.
-	Suffix = "wip"
+	Suffix = ""
 )
 
 var (
@@ -25,7 +24,10 @@ var (
 
 // Version returns the complete version number.
 func Version() string {
-	return fmt.Sprintf("v%d.%d.%d-%s", Major, Minor, Build, Suffix)
+	if Suffix != "" {
+		return fmt.Sprintf("v%d.%d.%d-%s", Major, Minor, Build, Suffix)
+	}
+	return fmt.Sprintf("v%d.%d.%d", Major, Minor, Build)
 }
 
 // Compatible returns true if Major matches the major version of the given version string.
