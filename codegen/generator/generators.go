@@ -3,8 +3,8 @@ package generator
 import (
 	"fmt"
 
-	"goa.design/goa/codegen"
-	"goa.design/goa/eval"
+	"goa.design/goa/v3/codegen"
+	"goa.design/goa/v3/eval"
 )
 
 // Genfunc is the type of the functions invoked to generate code.

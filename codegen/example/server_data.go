@@ -5,8 +5,8 @@ import (
 	"strconv"
 	"strings"
 
-	"goa.design/goa/codegen"
-	"goa.design/goa/expr"
+	"goa.design/goa/v3/codegen"
+	"goa.design/goa/v3/expr"
 )
 
 // Servers holds the server data needed to generate the example service and

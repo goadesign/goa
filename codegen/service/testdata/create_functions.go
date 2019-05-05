@@ -138,7 +138,7 @@ var CreateAliasConvert = `// Service service type conversion functions
 package service
 
 import (
-	aliasd "goa.design/goa/codegen/service/testdata/alias-external"
+	aliasd "goa.design/goa/v3/codegen/service/testdata/alias-external"
 )
 
 // CreateFromConvertModel initializes t from the fields of v

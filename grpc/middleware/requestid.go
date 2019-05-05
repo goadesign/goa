@@ -3,7 +3,7 @@ package middleware
 import (
 	"context"
 
-	"goa.design/goa/middleware"
+	"goa.design/goa/v3/middleware"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
 )

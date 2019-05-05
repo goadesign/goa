@@ -3,8 +3,8 @@ package dsl
 import (
 	"strings"
 
-	"goa.design/goa/eval"
-	"goa.design/goa/expr"
+	"goa.design/goa/v3/eval"
+	"goa.design/goa/v3/expr"
 )
 
 // Files defines a endpoint that serves static assets via HTTP. The logic for

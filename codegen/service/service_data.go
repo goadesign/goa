@@ -6,8 +6,8 @@ import (
 	"strings"
 	"text/template"
 
-	"goa.design/goa/codegen"
-	"goa.design/goa/expr"
+	"goa.design/goa/v3/codegen"
+	"goa.design/goa/v3/expr"
 )
 
 // Services holds the data computed from the design needed to generate the code

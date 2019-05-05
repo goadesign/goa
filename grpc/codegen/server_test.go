@@ -3,9 +3,9 @@ package codegen
 import (
 	"testing"
 
-	"goa.design/goa/codegen"
-	"goa.design/goa/expr"
-	"goa.design/goa/grpc/codegen/testdata"
+	"goa.design/goa/v3/codegen"
+	"goa.design/goa/v3/expr"
+	"goa.design/goa/v3/grpc/codegen/testdata"
 )
 
 func TestServerGRPCInterface(t *testing.T) {

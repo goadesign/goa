@@ -2,15 +2,19 @@ package main
 
 import (
 	"fmt"
+	"go/parser"
+	"go/token"
 	"io/ioutil"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"runtime"
+	"strconv"
 	"strings"
 
-	"goa.design/goa/codegen"
-	"goa.design/goa/pkg"
+	"goa.design/goa/v3/codegen"
+	"golang.org/x/tools/go/packages"
 )
 
 // Generator is the code generation management data structure.
@@ -23,6 +27,10 @@ type Generator struct {
 
 	// Output is the absolute path to the output directory.
 	Output string
+
+	// DesignVersion is the major component of the Goa version used by the design DSL.
+	// DesignVersion is either 2 or 3.
+	DesignVersion int
 
 	// bin is the filename of the generated generator.
 	bin string
@@ -37,11 +45,43 @@ func NewGenerator(cmd string, path, output string) *Generator {
 	if runtime.GOOS == "windows" {
 		bin += ".exe"
 	}
+
+	var version int
+	{
+		version = 2
+		matched := false
+		pkgs, _ := packages.Load(&packages.Config{Mode: packages.NeedFiles}, path)
+		fset := token.NewFileSet()
+		p := regexp.MustCompile(`goa.design/goa/v(\d+)/dsl`)
+		for _, pkg := range pkgs {
+			for _, gof := range pkg.GoFiles {
+				if bs, err := ioutil.ReadFile(gof); err == nil {
+					if f, err := parser.ParseFile(fset, "", string(bs), parser.ImportsOnly); err == nil {
+						for _, s := range f.Imports {
+							matches := p.FindStringSubmatch(s.Path.Value)
+							if len(matches) == 2 {
+								matched = true
+								version, _ = strconv.Atoi(matches[1]) // We know it's an integer
+							}
+						}
+					}
+				}
+				if matched {
+					break
+				}
+			}
+			if matched {
+				break
+			}
+		}
+	}
+
 	return &Generator{
-		Command:    cmd,
-		DesignPath: path,
-		Output:     output,
-		bin:        bin,
+		Command:       cmd,
+		DesignPath:    path,
+		Output:        output,
+		DesignVersion: version,
+		bin:           bin,
 	}
 }
 
@@ -64,8 +104,13 @@ func (g *Generator) Write(debug bool) error {
 	var sections []*codegen.SectionTemplate
 	{
 		data := map[string]interface{}{
-			"Command":     g.Command,
-			"CleanupDirs": cleanupDirs(g.Command, g.Output),
+			"Command":       g.Command,
+			"CleanupDirs":   cleanupDirs(g.Command, g.Output),
+			"DesignVersion": g.DesignVersion,
+		}
+		ver := ""
+		if g.DesignVersion > 2 {
+			ver = "v" + strconv.Itoa(g.DesignVersion) + "/"
 		}
 		imports := []*codegen.ImportSpec{
 			codegen.SimpleImport("flag"),
@@ -73,10 +118,12 @@ func (g *Generator) Write(debug bool) error {
 			codegen.SimpleImport("os"),
 			codegen.SimpleImport("path/filepath"),
 			codegen.SimpleImport("sort"),
+			codegen.SimpleImport("strconv"),
 			codegen.SimpleImport("strings"),
-			codegen.SimpleImport("goa.design/goa/codegen/generator"),
-			codegen.SimpleImport("goa.design/goa/eval"),
-			codegen.SimpleImport("goa.design/goa/pkg"),
+			codegen.SimpleImport("goa.design/goa/" + ver + "codegen"),
+			codegen.SimpleImport("goa.design/goa/" + ver + "codegen/generator"),
+			codegen.SimpleImport("goa.design/goa/" + ver + "eval"),
+			codegen.NewImport("goa", "goa.design/goa/"+ver+"pkg"),
 			codegen.NewImport("_", g.DesignPath),
 		}
 		sections = []*codegen.SectionTemplate{
@@ -96,23 +143,14 @@ func (g *Generator) Write(debug bool) error {
 
 // Compile compiles the generator.
 func (g *Generator) Compile() error {
-	gobin, err := exec.LookPath("go")
-	if err != nil {
-		return fmt.Errorf(`failed to find a go compiler, looked in "%s"`, os.Getenv("PATH"))
+	goaPkg := "goa.design/goa"
+	if g.DesignVersion > 2 {
+		goaPkg = fmt.Sprintf("goa.design/goa/v%d", g.DesignVersion)
 	}
-	c := exec.Cmd{
-		Path: gobin,
-		Args: []string{gobin, "build", "-o", g.bin},
-		Dir:  g.tmpDir,
+	if err := g.runGoCmd("get", goaPkg); err != nil {
+		return err
 	}
-	out, err := c.CombinedOutput()
-	if err != nil {
-		if len(out) > 0 {
-			return fmt.Errorf(string(out))
-		}
-		return fmt.Errorf("failed to compile generator: %s", err)
-	}
-	return nil
+	return g.runGoCmd("build", "-o", g.bin)
 }
 
 // Run runs the compiled binary and return the output lines.
@@ -140,7 +178,7 @@ func (g *Generator) Run() ([]string, error) {
 		cmdl = fmt.Sprintf("$ %s%s", rawcmd, cmdl)
 	}
 
-	args := []string{"--version=" + pkg.Version(), "--output=" + g.Output, "--cmd=" + cmdl}
+	args := []string{"--version=" + strconv.Itoa(g.DesignVersion), "--output=" + g.Output, "--cmd=" + cmdl}
 	cmd := exec.Command(filepath.Join(g.tmpDir, g.bin), args...)
 	out, err := cmd.CombinedOutput()
 	if err != nil {
@@ -161,6 +199,29 @@ func (g *Generator) Remove() {
 	}
 }
 
+func (g *Generator) runGoCmd(args ...string) error {
+	gobin, err := exec.LookPath("go")
+	if err != nil {
+		return fmt.Errorf(`failed to find a go compiler, looked in "%s"`, os.Getenv("PATH"))
+	}
+	if g.DesignVersion > 2 {
+		os.Setenv("GO111MODULE", "on")
+	}
+	c := exec.Cmd{
+		Path: gobin,
+		Args: append([]string{gobin}, args...),
+		Dir:  g.tmpDir,
+	}
+	out, err := c.CombinedOutput()
+	if err != nil {
+		if len(out) > 0 {
+			return fmt.Errorf(string(out))
+		}
+		return fmt.Errorf("failed to compile generator: %s", err)
+	}
+	return nil
+}
+
 // cleanupDirs returns the names of the directories to delete before generating
 // code.
 func cleanupDirs(cmd, output string) []string {
@@ -176,6 +237,7 @@ const mainT = `func main() {
 		out     = flag.String("output", "", "")
 		version = flag.String("version", "", "")
 		cmdl    = flag.String("cmd", "", "")
+		ver int
 	)
 	{
 		flag.Parse()
@@ -188,10 +250,15 @@ const mainT = `func main() {
 		if *cmdl == "" {
 			fail("missing cmd flag")
 		}
+		v, err := strconv.Atoi(*version)
+		if err != nil {
+			fail("invalid version %s", *version)
+		}
+		ver = v
 	}
 
-	if *version != pkg.Version() {
-		fail("cannot run generator produced by goa version %s and compiled with goa version %s\n", *version, pkg.Version())
+	if ver > goa.Major {
+		fail("cannot run goa %s on design using goa v%s\n", goa.Version(), *version)
 	}
 	if err := eval.Context.Errors; err != nil {
 		fail(err.Error())
@@ -204,7 +271,9 @@ const mainT = `func main() {
 		fail(err.Error())
 	}
 {{- end }}
-
+{{- if gt .DesignVersion 2 }}
+	codegen.DesignVersion = ver
+{{- end }}
 	outputs, err := generator.Generate(*out, {{ printf "%q" .Command }})
 	if err != nil {
 		fail(err.Error())

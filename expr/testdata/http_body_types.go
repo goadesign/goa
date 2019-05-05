@@ -1,6 +1,6 @@
 package testdata
 
-import "goa.design/goa/expr"
+import "goa.design/goa/v3/expr"
 
 var FinalizeEndpointBodyAsExtendedType = &expr.UserTypeExpr{
 	AttributeExpr: &expr.AttributeExpr{

@@ -1,8 +1,8 @@
 package dsl
 
 import (
-	"goa.design/goa/eval"
-	"goa.design/goa/expr"
+	"goa.design/goa/v3/eval"
+	"goa.design/goa/v3/expr"
 )
 
 // Error describes a method error return value. The description includes a

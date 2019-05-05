@@ -1,6 +1,6 @@
 package testdata
 
-import . "goa.design/goa/dsl"
+import . "goa.design/goa/v3/dsl"
 
 var SimpleDSL = func() {
 	var PayloadT = Type("Payload", func() {

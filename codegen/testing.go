@@ -9,8 +9,8 @@ import (
 	"strings"
 	"testing"
 
-	"goa.design/goa/eval"
-	"goa.design/goa/expr"
+	"goa.design/goa/v3/eval"
+	"goa.design/goa/v3/expr"
 
 	"github.com/sergi/go-diff/diffmatchpatch"
 )

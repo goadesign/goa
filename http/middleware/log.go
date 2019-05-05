@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"time"
 
-	"goa.design/goa/middleware"
+	"goa.design/goa/v3/middleware"
 )
 
 // Log returns a middleware that logs incoming HTTP requests and outgoing

@@ -3,7 +3,7 @@ package middleware
 import (
 	"net/http"
 
-	"goa.design/goa/middleware"
+	"goa.design/goa/v3/middleware"
 )
 
 type (

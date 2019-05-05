@@ -5,7 +5,7 @@ package openapi
 import (
 	"encoding/json"
 
-	"goa.design/goa/expr"
+	"goa.design/goa/v3/expr"
 	yaml "gopkg.in/yaml.v2"
 )
 

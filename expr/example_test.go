@@ -7,8 +7,8 @@ import (
 	"testing"
 	"unicode/utf8"
 
-	"goa.design/goa/expr"
-	"goa.design/goa/expr/testdata"
+	"goa.design/goa/v3/expr"
+	"goa.design/goa/v3/expr/testdata"
 )
 
 func TestByPattern(t *testing.T) {

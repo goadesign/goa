@@ -6,9 +6,9 @@ import (
 	"os/exec"
 	"path/filepath"
 
-	"goa.design/goa/codegen"
-	"goa.design/goa/expr"
-	"goa.design/goa/pkg"
+	"goa.design/goa/v3/codegen"
+	"goa.design/goa/v3/expr"
+	goa "goa.design/goa/v3/pkg"
 )
 
 const (
@@ -37,7 +37,7 @@ func protoFile(genpkg string, svc *expr.GRPCServiceExpr) *codegen.File {
 			Source: protoHeaderT,
 			Data: map[string]interface{}{
 				"Title":       fmt.Sprintf("%s protocol buffer definition", svc.Name()),
-				"ToolVersion": pkg.Version(),
+				"ToolVersion": goa.Version(),
 			},
 		},
 		// proto syntax and package

@@ -7,7 +7,7 @@ import (
 	"net/http"
 	"strings"
 
-	"goa.design/goa/middleware/xray"
+	"goa.design/goa/v3/middleware/xray"
 )
 
 type (

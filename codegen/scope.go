@@ -5,7 +5,7 @@ import (
 	"strconv"
 	"strings"
 
-	"goa.design/goa/expr"
+	"goa.design/goa/v3/expr"
 )
 
 type (

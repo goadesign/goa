@@ -1,13 +1,13 @@
 package generator
 
 import (
-	"go/build"
 	"os"
 	"path/filepath"
 	"sort"
 
-	"goa.design/goa/codegen"
-	"goa.design/goa/eval"
+	"goa.design/goa/v3/codegen"
+	"goa.design/goa/v3/eval"
+	"golang.org/x/tools/go/packages"
 )
 
 // Generate runs the code generation algorithms.
@@ -33,11 +33,11 @@ func Generate(dir, cmd string) ([]string, error) {
 		if err := os.MkdirAll(path, 0777); err != nil {
 			return nil, err
 		}
-		pkg, err := build.ImportDir(path, build.FindOnly)
+		pkgs, err := packages.Load(nil, path)
 		if err != nil {
 			return nil, err
 		}
-		genpkg = pkg.ImportPath
+		genpkg = pkgs[0].PkgPath
 	}
 
 	// 3. Retrieve goa generators for given command.

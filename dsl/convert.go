@@ -1,8 +1,8 @@
 package dsl
 
 import (
-	"goa.design/goa/eval"
-	"goa.design/goa/expr"
+	"goa.design/goa/v3/eval"
+	"goa.design/goa/v3/expr"
 )
 
 // ConvertTo specifies an external type that instances of the generated struct

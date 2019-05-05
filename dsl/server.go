@@ -1,8 +1,8 @@
 package dsl
 
 import (
-	"goa.design/goa/eval"
-	"goa.design/goa/expr"
+	"goa.design/goa/v3/eval"
+	"goa.design/goa/v3/expr"
 )
 
 // Server describes a single process listening for client requests. The DSL

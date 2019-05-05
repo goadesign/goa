@@ -6,9 +6,9 @@ import (
 	"os"
 	"strings"
 
-	"goa.design/goa/pkg"
-
 	"flag"
+
+	goa "goa.design/goa/v3/pkg"
 )
 
 func main() {
@@ -24,7 +24,7 @@ func main() {
 
 		switch os.Args[1] {
 		case "version":
-			fmt.Println("goa version " + pkg.Version())
+			fmt.Println("goa version " + goa.Version())
 			os.Exit(0)
 		case "gen", "example":
 			if len(os.Args) == 2 {
@@ -75,7 +75,7 @@ func generate(cmd, path, output string, debug bool) {
 		tmp   *Generator
 	)
 
-	if _, err = build.Import(path, ".", build.IgnoreVendor); err != nil {
+	if _, err = build.Import(path, ".", 0); err != nil {
 		goto fail
 	}
 

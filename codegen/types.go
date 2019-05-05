@@ -5,7 +5,7 @@ import (
 	"sort"
 	"strings"
 
-	"goa.design/goa/expr"
+	"goa.design/goa/v3/expr"
 )
 
 // GoNativeTypeName returns the Go built-in type corresponding to the given

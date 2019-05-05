@@ -4,9 +4,9 @@ import (
 	"bytes"
 	"testing"
 
-	"goa.design/goa/codegen"
-	"goa.design/goa/codegen/example/testdata"
-	"goa.design/goa/expr"
+	"goa.design/goa/v3/codegen"
+	"goa.design/goa/v3/codegen/example/testdata"
+	"goa.design/goa/v3/expr"
 )
 
 func TestExampleCLIFiles(t *testing.T) {

@@ -1,11 +1,9 @@
 # Golang tools artifacts
 **/*.coverprofile
 **/*.test
-vendor
 
 # Executables and test outputs
-_integration_tests/*/**/*.*
-cmd/goagen/goagen
+cmd/goa/goa
 
 # Editor / IDEs cruft
 .idea/
@@ -15,13 +13,5 @@ cmd/goagen/goagen
 *.orig
 *.swp
 
-# OSes cruft
-.DS_Store
-
-# Example outputs
-/examples/account/cmd/*
-/examples/account/account
-/examples/cellar/cmd/cellarsvc/cellar.db
-examples/calc/cmd/calc/calc
-examples/calc/cmd/calc-cli/calc-cli
+# Go module cruft
 go.sum

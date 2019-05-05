@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"testing"
 
-	grpcm "goa.design/goa/grpc/middleware"
-	"goa.design/goa/middleware"
+	grpcm "goa.design/goa/v3/grpc/middleware"
+	"goa.design/goa/v3/middleware"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
 )

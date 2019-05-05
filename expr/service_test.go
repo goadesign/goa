@@ -3,8 +3,8 @@ package expr_test
 import (
 	"testing"
 
-	"goa.design/goa/expr"
-	"goa.design/goa/expr/testdata"
+	"goa.design/goa/v3/expr"
+	"goa.design/goa/v3/expr/testdata"
 )
 
 func TestServiceExprMethod(t *testing.T) {

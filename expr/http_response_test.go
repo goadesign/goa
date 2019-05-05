@@ -3,8 +3,8 @@ package expr_test
 import (
 	"testing"
 
-	. "goa.design/goa/dsl"
-	"goa.design/goa/expr"
+	. "goa.design/goa/v3/dsl"
+	"goa.design/goa/v3/expr"
 )
 
 func TestHTTPResponseValidation(t *testing.T) {

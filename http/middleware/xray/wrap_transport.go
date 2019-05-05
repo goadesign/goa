@@ -4,8 +4,8 @@ import (
 	"context"
 	"net/http"
 
-	"goa.design/goa/middleware"
-	"goa.design/goa/middleware/xray"
+	"goa.design/goa/v3/middleware"
+	"goa.design/goa/v3/middleware/xray"
 )
 
 // xrayTransport wraps an http RoundTripper to add a tracing subsegment of the
