@@ -1,13 +1,13 @@
 package generator
 
 import (
-	"goa.design/goa/codegen"
-	"goa.design/goa/codegen/example"
-	"goa.design/goa/codegen/service"
-	"goa.design/goa/eval"
-	"goa.design/goa/expr"
-	grpccodegen "goa.design/goa/grpc/codegen"
-	httpcodegen "goa.design/goa/http/codegen"
+	"goa.design/goa/v3/codegen"
+	"goa.design/goa/v3/codegen/example"
+	"goa.design/goa/v3/codegen/service"
+	"goa.design/goa/v3/eval"
+	"goa.design/goa/v3/expr"
+	grpccodegen "goa.design/goa/v3/grpc/codegen"
+	httpcodegen "goa.design/goa/v3/http/codegen"
 )
 
 // Example iterates through the roots and returns files that implement an

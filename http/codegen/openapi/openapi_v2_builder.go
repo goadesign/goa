@@ -9,8 +9,8 @@ import (
 	"strconv"
 	"strings"
 
-	"goa.design/goa/codegen"
-	"goa.design/goa/expr"
+	"goa.design/goa/v3/codegen"
+	"goa.design/goa/v3/expr"
 )
 
 // NewV2 returns the OpenAPI v2 specification for the given API.

@@ -191,7 +191,7 @@ const ExampleCLIImport = `import (
 	cli "grpc/cli/testapi"
 	"os"
 
-	"goa.design/goa"
+	goa "goa.design/goa/v3"
 	"google.golang.org/grpc"
 )
 `
@@ -201,7 +201,7 @@ const ExampleSingleHostCLIImport = `import (
 	cli "grpc/cli/single_host"
 	"os"
 
-	"goa.design/goa"
+	goa "goa.design/goa/v3"
 	"google.golang.org/grpc"
 )
 `
@@ -211,7 +211,7 @@ const ExamplePkgPathCLIImport = `import (
 	cli "my/pkg/path/grpc/cli/testapi"
 	"os"
 
-	"goa.design/goa"
+	goa "goa.design/goa/v3"
 	"google.golang.org/grpc"
 )
 `
@@ -221,7 +221,7 @@ const ExampleSingleHostPkgPathCLIImport = `import (
 	cli "my/pkg/path/grpc/cli/single_host"
 	"os"
 
-	"goa.design/goa"
+	goa "goa.design/goa/v3"
 	"google.golang.org/grpc"
 )
 `

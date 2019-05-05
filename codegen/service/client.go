@@ -3,8 +3,8 @@ package service
 import (
 	"path/filepath"
 
-	"goa.design/goa/codegen"
-	"goa.design/goa/expr"
+	"goa.design/goa/v3/codegen"
+	"goa.design/goa/v3/expr"
 )
 
 const (
@@ -24,7 +24,7 @@ func ClientFile(service *expr.ServiceExpr) *codegen.File {
 		header := codegen.Header(service.Name+" client", svc.PkgName,
 			[]*codegen.ImportSpec{
 				{Path: "context"},
-				{Name: "goa", Path: "goa.design/goa"},
+				{Name: "goa", Path: "goa.design/goa/v3"},
 			})
 		def := &codegen.SectionTemplate{
 			Name:   "client-struct",

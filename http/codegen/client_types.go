@@ -3,8 +3,8 @@ package codegen
 import (
 	"path/filepath"
 
-	"goa.design/goa/codegen"
-	"goa.design/goa/expr"
+	"goa.design/goa/v3/codegen"
+	"goa.design/goa/v3/expr"
 )
 
 // ClientTypeFiles returns the HTTP transport client types files.
@@ -54,7 +54,7 @@ func clientType(genpkg string, svc *expr.HTTPServiceExpr, seen map[string]struct
 			{Path: "unicode/utf8"},
 			{Path: genpkg + "/" + svcName, Name: data.Service.PkgName},
 			{Path: genpkg + "/" + svcName + "/" + "views", Name: data.Service.ViewsPkg},
-			{Path: "goa.design/goa", Name: "goa"},
+			{Path: "goa.design/goa/v3", Name: "goa"},
 		},
 	)
 

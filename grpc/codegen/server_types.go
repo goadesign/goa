@@ -4,8 +4,8 @@ import (
 	"path"
 	"path/filepath"
 
-	"goa.design/goa/codegen"
-	"goa.design/goa/expr"
+	"goa.design/goa/v3/codegen"
+	"goa.design/goa/v3/expr"
 )
 
 // ServerTypeFiles returns the types file for every gRPC service that contain
@@ -75,7 +75,7 @@ func serverType(genpkg string, svc *expr.GRPCServiceExpr, seen map[string]struct
 			codegen.Header(svc.Name()+" gRPC server types", "server",
 				[]*codegen.ImportSpec{
 					{Path: "unicode/utf8"},
-					{Path: "goa.design/goa", Name: "goa"},
+					{Path: "goa.design/goa/v3", Name: "goa"},
 					{Path: path.Join(genpkg, svcName), Name: sd.Service.PkgName},
 					{Path: path.Join(genpkg, svcName, "views"), Name: sd.Service.ViewsPkg},
 					{Path: path.Join(genpkg, "grpc", svcName, pbPkgName), Name: sd.PkgName},

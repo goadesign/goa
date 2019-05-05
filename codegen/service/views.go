@@ -3,8 +3,8 @@ package service
 import (
 	"path/filepath"
 
-	"goa.design/goa/codegen"
-	"goa.design/goa/expr"
+	"goa.design/goa/v3/codegen"
+	"goa.design/goa/v3/expr"
 )
 
 type viewedType struct {
@@ -28,7 +28,7 @@ func ViewsFile(genpkg string, service *expr.ServiceExpr) *codegen.File {
 	{
 		header := codegen.Header(service.Name+" views", "views",
 			[]*codegen.ImportSpec{
-				{Path: "goa.design/goa", Name: "goa"},
+				{Path: "goa.design/goa/v3", Name: "goa"},
 				{Path: "unicode/utf8"},
 			})
 		sections = []*codegen.SectionTemplate{header}

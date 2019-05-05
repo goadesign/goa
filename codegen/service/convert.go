@@ -9,8 +9,8 @@ import (
 	"strconv"
 	"strings"
 
-	"goa.design/goa/codegen"
-	"goa.design/goa/expr"
+	"goa.design/goa/v3/codegen"
+	"goa.design/goa/v3/expr"
 )
 
 // convertData contains the info needed to render convert and create functions.
@@ -209,7 +209,7 @@ func ConvertFile(root *expr.RootExpr, service *expr.ServiceExpr) (*codegen.File,
 
 	// Build header section
 	pkgs = append(pkgs, &codegen.ImportSpec{Path: "context"})
-	pkgs = append(pkgs, &codegen.ImportSpec{Path: "goa.design/goa"})
+	pkgs = append(pkgs, &codegen.ImportSpec{Path: "goa.design/goa/v3", Name: "goa"})
 	path := filepath.Join(codegen.Gendir, codegen.SnakeCase(service.Name), "convert.go")
 	sections := []*codegen.SectionTemplate{
 		codegen.Header(service.Name+" service type conversion functions", svc.PkgName, pkgs),

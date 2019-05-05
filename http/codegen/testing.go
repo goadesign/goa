@@ -4,8 +4,8 @@ import (
 	"os"
 	"testing"
 
-	"goa.design/goa/codegen/service"
-	"goa.design/goa/expr"
+	"goa.design/goa/v3/codegen/service"
+	"goa.design/goa/v3/expr"
 )
 
 // RunHTTPDSL returns the HTTP DSL root resulting from running the given DSL.

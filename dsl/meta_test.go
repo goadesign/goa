@@ -3,9 +3,9 @@ package dsl_test
 import (
 	"testing"
 
-	. "goa.design/goa/dsl"
-	"goa.design/goa/eval"
-	"goa.design/goa/expr"
+	. "goa.design/goa/v3/dsl"
+	"goa.design/goa/v3/eval"
+	"goa.design/goa/v3/expr"
 )
 
 func TestMetaData(t *testing.T) {

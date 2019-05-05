@@ -4,9 +4,9 @@ import (
 	"path"
 	"path/filepath"
 
-	"goa.design/goa/codegen"
-	"goa.design/goa/codegen/cli"
-	"goa.design/goa/expr"
+	"goa.design/goa/v3/codegen"
+	"goa.design/goa/v3/codegen/cli"
+	"goa.design/goa/v3/expr"
 )
 
 // ClientCLIFiles returns the CLI files to generate a command-line client that
@@ -59,8 +59,8 @@ func endpointParser(genpkg string, root *expr.RootExpr, svr *expr.ServerExpr, da
 		{Path: "flag"},
 		{Path: "fmt"},
 		{Path: "os"},
-		{Path: "goa.design/goa", Name: "goa"},
-		{Path: "goa.design/goa/grpc", Name: "goagrpc"},
+		{Path: "goa.design/goa/v3", Name: "goa"},
+		{Path: "goa.design/goa/v3/grpc", Name: "goagrpc"},
 		{Path: "google.golang.org/grpc", Name: "grpc"},
 	}
 	for _, svc := range root.API.GRPC.Services {

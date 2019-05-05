@@ -3,7 +3,7 @@ package codegen
 import (
 	"testing"
 
-	"goa.design/goa/expr"
+	"goa.design/goa/v3/expr"
 )
 
 func TestGoTypeDef(t *testing.T) {

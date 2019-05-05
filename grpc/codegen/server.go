@@ -5,9 +5,9 @@ import (
 	"path"
 	"path/filepath"
 
-	"goa.design/goa/codegen"
-	"goa.design/goa/codegen/service"
-	"goa.design/goa/expr"
+	"goa.design/goa/v3/codegen"
+	"goa.design/goa/v3/codegen/service"
+	"goa.design/goa/v3/expr"
 )
 
 // ServerFiles returns all the server files for every gRPC service. The files
@@ -40,9 +40,9 @@ func serverFile(genpkg string, svc *expr.GRPCServiceExpr) *codegen.File {
 		sections = []*codegen.SectionTemplate{
 			codegen.Header(svc.Name()+" gRPC server", "server", []*codegen.ImportSpec{
 				{Path: "context"},
-				{Path: "goa.design/goa"},
+				{Path: "goa.design/goa/v3", Name: "goa"},
 				{Path: "google.golang.org/grpc/codes"},
-				{Path: "goa.design/goa/grpc", Name: "goagrpc"},
+				{Path: "goa.design/goa/v3/grpc", Name: "goagrpc"},
 				{Path: path.Join(genpkg, svcName), Name: data.Service.PkgName},
 				{Path: path.Join(genpkg, svcName, "views"), Name: data.Service.ViewsPkg},
 				{Path: path.Join(genpkg, "grpc", svcName, pbPkgName), Name: data.PkgName},
@@ -131,8 +131,8 @@ func serverEncodeDecode(genpkg string, svc *expr.GRPCServiceExpr) *codegen.File 
 				{Path: "strconv"},
 				{Path: "google.golang.org/grpc"},
 				{Path: "google.golang.org/grpc/metadata"},
-				{Path: "goa.design/goa", Name: "goa"},
-				{Path: "goa.design/goa/grpc", Name: "goagrpc"},
+				{Path: "goa.design/goa/v3", Name: "goa"},
+				{Path: "goa.design/goa/v3/grpc", Name: "goagrpc"},
 				{Path: path.Join(genpkg, svcName), Name: data.Service.PkgName},
 				{Path: path.Join(genpkg, svcName, "views"), Name: data.Service.ViewsPkg},
 				{Path: path.Join(genpkg, "grpc", svcName, pbPkgName), Name: data.PkgName},

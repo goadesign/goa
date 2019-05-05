@@ -5,8 +5,8 @@ import (
 	"path"
 	"strings"
 
-	"goa.design/goa/codegen"
-	"goa.design/goa/expr"
+	"goa.design/goa/v3/codegen"
+	"goa.design/goa/v3/expr"
 )
 
 // AuthFuncsFile returns a file that contains a dummy implementation of the
@@ -27,8 +27,8 @@ func AuthFuncsFile(genpkg string, root *expr.RootExpr) *codegen.File {
 		specs := []*codegen.ImportSpec{
 			{Path: "context"},
 			{Path: "fmt"},
-			{Path: "goa.design/goa", Name: "goa"},
-			{Path: "goa.design/goa/security"},
+			{Path: "goa.design/goa/v3", Name: "goa"},
+			{Path: "goa.design/goa/v3/security"},
 		}
 		for _, svc := range root.Services {
 			sd := Services.Get(svc.Name)

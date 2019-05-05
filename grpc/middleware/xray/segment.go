@@ -5,8 +5,8 @@ import (
 	"net"
 
 	"github.com/golang/protobuf/proto"
-	"goa.design/goa/grpc/middleware"
-	"goa.design/goa/middleware/xray"
+	"goa.design/goa/v3/grpc/middleware"
+	"goa.design/goa/v3/middleware/xray"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/peer"

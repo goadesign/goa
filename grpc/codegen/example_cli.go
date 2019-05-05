@@ -6,9 +6,9 @@ import (
 	"path/filepath"
 	"strings"
 
-	"goa.design/goa/codegen"
-	"goa.design/goa/codegen/example"
-	"goa.design/goa/expr"
+	"goa.design/goa/v3/codegen"
+	"goa.design/goa/v3/codegen/example"
+	"goa.design/goa/v3/expr"
 )
 
 // ExampleCLIFiles returns an example gRPC client tool implementation.
@@ -65,8 +65,8 @@ func exampleCLI(genpkg string, root *expr.RootExpr, svr *expr.ServerExpr) *codeg
 			{Path: "google.golang.org/grpc"},
 			{Path: "os"},
 			{Path: "time"},
-			{Path: "goa.design/goa"},
-			{Path: "goa.design/goa/grpc", Name: "goagrpc"},
+			{Path: "goa.design/goa/v3", Name: "goa"},
+			{Path: "goa.design/goa/v3/grpc", Name: "goagrpc"},
 			{Path: rootPath, Name: apiPkg},
 			{Path: path.Join(genpkg, "grpc", "cli", svrdata.Dir), Name: "cli"},
 		}

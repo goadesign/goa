@@ -56,10 +56,22 @@ generators.
 
 ## Getting Started
 
+The following instructions walk through creating a new Goa project from scratch.
+They assume the use of Go modules so require Go version 1.11 or greater.
+
+Create a mew project:
+
+```bash
+mkdir -p adder/design
+cd adder
+go mod init adder
+```
+
 Install goa:
 
 ```bash
-go get goa.design/goa/...
+go get goa.design/goa/v3
+go get goa.design/goa/v3/...
 ```
 
 Write the service design:
@@ -70,8 +82,8 @@ mkdir -p adder/design
 echo '
 package design
 
-import . "goa.design/goa/expr"
-import . "goa.design/goa/dsl"
+import . "goa.design/goa/v3/expr"
+import . "goa.design/goa/v3/dsl"
 
 var _ = API("adder", func() {
     Server("http://localhost:8080")

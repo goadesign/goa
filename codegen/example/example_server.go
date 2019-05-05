@@ -6,9 +6,9 @@ import (
 	"path/filepath"
 	"strings"
 
-	"goa.design/goa/codegen"
-	"goa.design/goa/codegen/service"
-	"goa.design/goa/expr"
+	"goa.design/goa/v3/codegen"
+	"goa.design/goa/v3/codegen/service"
+	"goa.design/goa/v3/expr"
 )
 
 // ServerFiles returns an example server main implementation for every server
@@ -42,7 +42,7 @@ func exampleSvrMain(genpkg string, root *expr.RootExpr, svr *expr.ServerExpr) *c
 		{Path: "strings"},
 		{Path: "sync"},
 		{Path: "time"},
-		{Path: "goa.design/goa/middleware"},
+		{Path: "goa.design/goa/v3/middleware"},
 	}
 
 	// Iterate through services listed in the server expression.

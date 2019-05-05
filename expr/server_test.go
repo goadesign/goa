@@ -5,7 +5,7 @@ import (
 	"reflect"
 	"testing"
 
-	"goa.design/goa/eval"
+	"goa.design/goa/v3/eval"
 )
 
 func TestServerExprEvalName(t *testing.T) {

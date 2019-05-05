@@ -76,7 +76,7 @@ lint:
 	fi
 
 test:
-	go test ./...
+	env GO111MODULE=on go test ./...
 
 test-examples:
 	@if [ -z $(GOA_BRANCH) ]; then\

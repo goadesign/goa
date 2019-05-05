@@ -6,9 +6,9 @@ import (
 	"go/format"
 	"testing"
 
-	"goa.design/goa/codegen"
-	"goa.design/goa/codegen/service/testdata"
-	"goa.design/goa/expr"
+	"goa.design/goa/v3/codegen"
+	"goa.design/goa/v3/codegen/service/testdata"
+	"goa.design/goa/v3/expr"
 )
 
 func TestViews(t *testing.T) {

@@ -1,7 +1,7 @@
 package testdata
 
 import (
-	. "goa.design/goa/dsl"
+	. "goa.design/goa/v3/dsl"
 )
 
 var PathNoParamDSL = func() {

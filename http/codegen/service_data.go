@@ -9,9 +9,9 @@ import (
 	"strings"
 	"text/template"
 
-	"goa.design/goa/codegen"
-	"goa.design/goa/codegen/service"
-	"goa.design/goa/expr"
+	"goa.design/goa/v3/codegen"
+	"goa.design/goa/v3/codegen/service"
+	"goa.design/goa/v3/expr"
 )
 
 // HTTPServices holds the data computed from the design needed to generate the

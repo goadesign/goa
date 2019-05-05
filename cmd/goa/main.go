@@ -6,7 +6,7 @@ import (
 	"os"
 	"strings"
 
-	"goa.design/goa/pkg"
+	"goa.design/goa/v3/pkg"
 
 	"flag"
 )
@@ -75,7 +75,7 @@ func generate(cmd, path, output string, debug bool) {
 		tmp   *Generator
 	)
 
-	if _, err = build.Import(path, ".", build.IgnoreVendor); err != nil {
+	if _, err = build.Import(path, ".", 0); err != nil {
 		goto fail
 	}
 

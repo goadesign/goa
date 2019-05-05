@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"path/filepath"
 
-	"goa.design/goa/codegen"
-	"goa.design/goa/codegen/cli"
-	"goa.design/goa/expr"
+	"goa.design/goa/v3/codegen"
+	"goa.design/goa/v3/codegen/cli"
+	"goa.design/goa/v3/expr"
 )
 
 // commandData wraps the common CommandData and adds HTTP-specific fields.
@@ -93,8 +93,8 @@ func endpointParser(genpkg string, root *expr.RootExpr, svr *expr.ServerExpr, da
 		{Path: "os"},
 		{Path: "strconv"},
 		{Path: "unicode/utf8"},
-		{Path: "goa.design/goa", Name: "goa"},
-		{Path: "goa.design/goa/http", Name: "goahttp"},
+		{Path: "goa.design/goa/v3", Name: "goa"},
+		{Path: "goa.design/goa/v3/http", Name: "goahttp"},
 	}
 	for _, sv := range svr.Services {
 		svc := root.Service(sv)
@@ -151,8 +151,8 @@ func payloadBuilders(genpkg string, svc *expr.HTTPServiceExpr, data *cli.Command
 		{Path: "os"},
 		{Path: "strconv"},
 		{Path: "unicode/utf8"},
-		{Path: "goa.design/goa", Name: "goa"},
-		{Path: "goa.design/goa/http", Name: "goahttp"},
+		{Path: "goa.design/goa/v3", Name: "goa"},
+		{Path: "goa.design/goa/v3/http", Name: "goahttp"},
 		{Path: genpkg + "/" + codegen.SnakeCase(sd.Service.VarName), Name: sd.Service.PkgName},
 	}
 	sections := []*codegen.SectionTemplate{

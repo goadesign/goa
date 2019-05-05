@@ -7,7 +7,11 @@ import (
 )
 
 func TestVersion(t *testing.T) {
-	if got, expected := Version(), fmt.Sprintf("v%d.%d.%d-%s", Major, Minor, Build, Suffix); got != expected {
+	expected := fmt.Sprintf("v%d.%d.%d", Major, Minor, Build)
+	if Suffix != "" {
+		expected += "-" + Suffix
+	}
+	if got := Version(); got != expected {
 		t.Errorf("invalid version format, %s", got)
 	}
 }

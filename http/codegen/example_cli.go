@@ -5,9 +5,9 @@ import (
 	"path/filepath"
 	"strings"
 
-	"goa.design/goa/codegen"
-	"goa.design/goa/codegen/example"
-	"goa.design/goa/expr"
+	"goa.design/goa/v3/codegen"
+	"goa.design/goa/v3/codegen/example"
+	"goa.design/goa/v3/expr"
 )
 
 // ExampleCLIFiles returns an example client tool HTTP implementation for each
@@ -56,8 +56,8 @@ func exampleCLI(genpkg string, root *expr.RootExpr, svr *expr.ServerExpr) *codeg
 		{Path: "strings"},
 		{Path: "time"},
 		{Path: "github.com/gorilla/websocket"},
-		{Path: "goa.design/goa"},
-		{Path: "goa.design/goa/http", Name: "goahttp"},
+		{Path: "goa.design/goa/v3", Name: "goa"},
+		{Path: "goa.design/goa/v3/http", Name: "goahttp"},
 		{Path: genpkg + "/http/cli/" + svrdata.Dir, Name: "cli"},
 		{Path: rootPath, Name: apiPkg},
 	}

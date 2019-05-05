@@ -5,26 +5,36 @@
 // the transport, endpoint, and business logic layers. The goa package contains
 // middleware, plugins, and other complementary functionality that can be
 // leveraged in tandem with the generated code to implement complete
-// microservices in an efficient manner. By using goa for developing
+// microservices in an efficient manner. By using Goa for developing
 // microservices, implementers don’t have to worry with the documentation
-// getting out of sync from the implementation as goa takes care of generating
+// getting out of sync from the implementation as Goa takes care of generating
 // OpenAPI specifications for HTTP based services and gRPC protocol buffer
 // files for gRPC based services (or both if the service supports both
 // transports). Reviewers can also be assured that the implementation follows
 // the documentation as the code is generated from the same source.
 //
+// Below are simple step by step instructions for creating a new Goa project
+// from scratch. The instructions assume the use of Go modules and therefore
+// require Go version 1.11 or greater.
+//
+// Create a new project:
+//
+//    mkdir calc
+//    cd calc
+//    go mod init calc
+//
 // Install goa:
 //
-//    go get goa.design/goa/...
+//    go get goa.design/goa/v3
+//    go get goa.design/goa/v3/...
 //
 // Write the service design:
 //
-//    cd $GOPATH/src
-//    mkdir -p calc/design
+//    mkdir design
 //    echo '
 //    package design
 //
-//    import . "goa.design/goa/dsl"
+//    import . "goa.design/goa/v3/dsl"
 //
 //    var _ = API("calc", func() {
 //        Server("http://localhost:8080")
@@ -42,7 +52,7 @@
 //            })
 //        })
 //    })
-//    ' > calc/design/design.go
+//    ' > design/design.go
 //
 // Generate the supporting code:
 //

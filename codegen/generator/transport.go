@@ -3,11 +3,11 @@ package generator
 import (
 	"fmt"
 
-	"goa.design/goa/codegen"
-	"goa.design/goa/eval"
-	"goa.design/goa/expr"
-	grpccodegen "goa.design/goa/grpc/codegen"
-	httpcodegen "goa.design/goa/http/codegen"
+	"goa.design/goa/v3/codegen"
+	"goa.design/goa/v3/eval"
+	"goa.design/goa/v3/expr"
+	grpccodegen "goa.design/goa/v3/grpc/codegen"
+	httpcodegen "goa.design/goa/v3/http/codegen"
 )
 
 // Transport iterates through the roots and returns the files needed to render

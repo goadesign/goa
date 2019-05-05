@@ -3,7 +3,7 @@ package expr
 import (
 	"sort"
 
-	"goa.design/goa/eval"
+	"goa.design/goa/v3/eval"
 )
 
 // Root is the root object built by the DSL.
@@ -144,8 +144,8 @@ func (r *RootExpr) DependsOn() []eval.Root { return nil }
 // Packages returns the Go import path to this and the dsl packages.
 func (r *RootExpr) Packages() []string {
 	return []string{
-		"goa.design/goa/expr",
-		"goa.design/goa/dsl",
+		"goa.design/goa/v3/expr",
+		"goa.design/goa/v3/dsl",
 	}
 }
 

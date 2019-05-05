@@ -4,7 +4,7 @@ import (
 	"context"
 	"testing"
 
-	grpcm "goa.design/goa/grpc/middleware"
+	grpcm "goa.design/goa/v3/grpc/middleware"
 	"google.golang.org/grpc"
 )
 

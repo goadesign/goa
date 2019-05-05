@@ -6,7 +6,7 @@ design-first approach.
 
 ---
 [![Build Status](https://travis-ci.org/goadesign/goa.svg?branch=v2)](https://travis-ci.org/goadesign/goa)
-[![Windows Build status](https://ci.appveyor.com/api/projects/status/vixp37loj5i6qmaf/branch/v2?svg=true)](https://ci.appveyor.com/project/RaphaelSimon/goa-oqtis/branch/master)
+[![Windows Build status](https://ci.appveyor.com/api/projects/status/vixp37loj5i6qmaf/branch/v3?svg=true)](https://ci.appveyor.com/project/RaphaelSimon/goa-oqtis/branch/master)
 [![Sourcegraph](https://sourcegraph.com/github.com/goadesign/goa/-/badge.svg)](https://sourcegraph.com/github.com/goadesign/goa?badge)
 [![Godoc](https://godoc.org/goa.design/goa?status.svg)](https://godoc.org/goa.design/goa)
 [![Slack](https://img.shields.io/badge/slack-gophers-orange.svg?style=flat)](https://gophers.slack.com/messages/goa/)
@@ -52,6 +52,12 @@ invoking the client code.
 Assuming you have a working [Go](https://golang.org) setup:
 
 ``` bash
+go get -u goa.design/goa/v3/...@v3.0.0
+```
+
+or, when NOT using Go modules:
+
+```bash
 go get -u goa.design/goa/...
 ```
 
@@ -329,15 +335,15 @@ Consult the following resources to learn more about goa.
 
 ### Docs
 
-The [Getting Started Guide](https://github.com/goadesign/goa/blob/v2/docs/Guide.md) is
+The [Getting Started Guide](https://github.com/goadesign/goa/blob/v3/docs/Guide.md) is
 a great place to start.
 
-There is also a [FAQ](https://github.com/goadesign/goa/blob/v2/docs/FAQ.md) and
+There is also a [FAQ](https://github.com/goadesign/goa/blob/v3/docs/FAQ.md) and
 a document describing
-[error handling](https://github.com/goadesign/goa/blob/v2/docs/ErrorHandling.md).
+[error handling](https://github.com/goadesign/goa/blob/v3/docs/ErrorHandling.md).
 
 If you are coming from v1 you may also want to read the 
-[Upgrading](https://github.com/goadesign/goa/blob/v2/docs/Upgrading.md) document.
+[Upgrading](https://github.com/goadesign/goa/blob/v3/docs/Upgrading.md) document.
 
 ### Examples
 
@@ -346,4 +352,4 @@ contains simple examples illustrating basic concepts.
 
 ## Contributing
 
-See [CONTRIBUTING](https://github.com/goadesign/goa/blob/v2/CONTRIBUTING.md).
+See [CONTRIBUTING](https://github.com/goadesign/goa/blob/v3/CONTRIBUTING.md).

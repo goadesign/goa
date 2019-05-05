@@ -3,7 +3,7 @@ package http
 import (
 	"net/http"
 
-	"goa.design/goa"
+	"goa.design/goa/v3"
 )
 
 type (

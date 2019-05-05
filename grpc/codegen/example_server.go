@@ -6,9 +6,9 @@ import (
 	"path/filepath"
 	"strings"
 
-	"goa.design/goa/codegen"
-	"goa.design/goa/codegen/example"
-	"goa.design/goa/expr"
+	"goa.design/goa/v3/codegen"
+	"goa.design/goa/v3/codegen/example"
+	"goa.design/goa/v3/expr"
 )
 
 // ExampleServerFiles returns an example gRPC server implementation.
@@ -49,11 +49,11 @@ func exampleServer(genpkg string, root *expr.RootExpr, svr *expr.ServerExpr) *co
 			{Path: "net/url"},
 			{Path: "os"},
 			{Path: "sync"},
-			{Path: "goa.design/goa/middleware"},
-			{Path: "goa.design/goa/grpc/middleware", Name: "grpcmdlwr"},
+			{Path: "goa.design/goa/v3/middleware"},
+			{Path: "goa.design/goa/v3/grpc/middleware", Name: "grpcmdlwr"},
 			{Path: "google.golang.org/grpc"},
 			{Path: "github.com/grpc-ecosystem/go-grpc-middleware", Name: "grpcmiddleware"},
-			{Path: "goa.design/goa/grpc", Name: "goagrpc"},
+			{Path: "goa.design/goa/v3/grpc", Name: "goagrpc"},
 		}
 		for _, svc := range root.API.GRPC.Services {
 			sd := GRPCServices.Get(svc.Name())

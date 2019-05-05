@@ -8,7 +8,7 @@ import (
 	"testing"
 
 	"github.com/sergi/go-diff/diffmatchpatch"
-	"goa.design/goa/eval"
+	"goa.design/goa/v3/eval"
 )
 
 // RunDSL returns the DSL root resulting from running the given DSL.

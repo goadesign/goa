@@ -6,9 +6,9 @@ import (
 	"os/exec"
 	"path/filepath"
 
-	"goa.design/goa/codegen"
-	"goa.design/goa/expr"
-	"goa.design/goa/pkg"
+	"goa.design/goa/v3/codegen"
+	"goa.design/goa/v3/expr"
+	"goa.design/goa/v3/pkg"
 )
 
 const (

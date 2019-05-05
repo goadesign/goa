@@ -3,7 +3,7 @@ package codegen
 import (
 	"fmt"
 
-	"goa.design/goa/dsl"
+	"goa.design/goa/v3/dsl"
 )
 
 // statusCodeToGRPCConst produces the standard name for the given gRPC status

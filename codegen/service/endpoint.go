@@ -5,8 +5,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"goa.design/goa/codegen"
-	"goa.design/goa/expr"
+	"goa.design/goa/v3/codegen"
+	"goa.design/goa/v3/expr"
 )
 
 type (
@@ -70,8 +70,8 @@ func EndpointFile(genpkg string, service *expr.ServiceExpr) *codegen.File {
 			[]*codegen.ImportSpec{
 				{Path: "context"},
 				{Path: "fmt"},
-				{Name: "goa", Path: "goa.design/goa"},
-				{Path: "goa.design/goa/security"},
+				{Name: "goa", Path: "goa.design/goa/v3"},
+				{Path: "goa.design/goa/v3/security"},
 				{Path: genpkg + "/" + svcName + "/" + "views", Name: svc.ViewsPkg},
 			})
 		def := &codegen.SectionTemplate{

@@ -9,8 +9,8 @@ import (
 	"runtime"
 	"strings"
 
-	"goa.design/goa/codegen"
-	"goa.design/goa/pkg"
+	"goa.design/goa/v3/codegen"
+	"goa.design/goa/v3/pkg"
 )
 
 // Generator is the code generation management data structure.
@@ -74,9 +74,9 @@ func (g *Generator) Write(debug bool) error {
 			codegen.SimpleImport("path/filepath"),
 			codegen.SimpleImport("sort"),
 			codegen.SimpleImport("strings"),
-			codegen.SimpleImport("goa.design/goa/codegen/generator"),
-			codegen.SimpleImport("goa.design/goa/eval"),
-			codegen.SimpleImport("goa.design/goa/pkg"),
+			codegen.SimpleImport("goa.design/goa/v3/codegen/generator"),
+			codegen.SimpleImport("goa.design/goa/v3/eval"),
+			codegen.SimpleImport("goa.design/goa/v3/pkg"),
 			codegen.NewImport("_", g.DesignPath),
 		}
 		sections = []*codegen.SectionTemplate{
@@ -96,23 +96,10 @@ func (g *Generator) Write(debug bool) error {
 
 // Compile compiles the generator.
 func (g *Generator) Compile() error {
-	gobin, err := exec.LookPath("go")
-	if err != nil {
-		return fmt.Errorf(`failed to find a go compiler, looked in "%s"`, os.Getenv("PATH"))
+	if err := g.runGoCmd("get", fmt.Sprintf("goa.design/goa/v3@%s", pkg.Version())); err != nil {
+		return err
 	}
-	c := exec.Cmd{
-		Path: gobin,
-		Args: []string{gobin, "build", "-o", g.bin},
-		Dir:  g.tmpDir,
-	}
-	out, err := c.CombinedOutput()
-	if err != nil {
-		if len(out) > 0 {
-			return fmt.Errorf(string(out))
-		}
-		return fmt.Errorf("failed to compile generator: %s", err)
-	}
-	return nil
+	return g.runGoCmd("build", "-o", g.bin)
 }
 
 // Run runs the compiled binary and return the output lines.
@@ -159,6 +146,27 @@ func (g *Generator) Remove() {
 		os.RemoveAll(g.tmpDir)
 		g.tmpDir = ""
 	}
+}
+
+func (g *Generator) runGoCmd(args ...string) error {
+	gobin, err := exec.LookPath("go")
+	if err != nil {
+		return fmt.Errorf(`failed to find a go compiler, looked in "%s"`, os.Getenv("PATH"))
+	}
+	os.Setenv("GO111MODULE", "on")
+	c := exec.Cmd{
+		Path: gobin,
+		Args: append([]string{gobin}, args...),
+		Dir:  g.tmpDir,
+	}
+	out, err := c.CombinedOutput()
+	if err != nil {
+		if len(out) > 0 {
+			return fmt.Errorf(string(out))
+		}
+		return fmt.Errorf("failed to compile generator: %s", err)
+	}
+	return nil
 }
 
 // cleanupDirs returns the names of the directories to delete before generating

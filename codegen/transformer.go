@@ -3,7 +3,7 @@ package codegen
 import (
 	"fmt"
 
-	"goa.design/goa/expr"
+	"goa.design/goa/v3/expr"
 )
 
 type (

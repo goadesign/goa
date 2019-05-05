@@ -1,7 +1,7 @@
 package codegen
 
 import (
-	"goa.design/goa/pkg"
+	"goa.design/goa/v3/pkg"
 )
 
 // Header returns a Go source file header section template.

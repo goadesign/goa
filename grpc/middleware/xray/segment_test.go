@@ -8,7 +8,7 @@ import (
 
 	"github.com/golang/protobuf/ptypes/wrappers"
 	"github.com/pkg/errors"
-	"goa.design/goa/middleware/xray"
+	"goa.design/goa/v3/middleware/xray"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/peer"

@@ -6,9 +6,9 @@ import (
 	"path/filepath"
 	"strings"
 
-	"goa.design/goa/codegen"
-	"goa.design/goa/codegen/example"
-	"goa.design/goa/expr"
+	"goa.design/goa/v3/codegen"
+	"goa.design/goa/v3/codegen/example"
+	"goa.design/goa/v3/expr"
 )
 
 // ExampleServerFiles returns an example http service implementation.
@@ -39,9 +39,9 @@ func exampleServer(genpkg string, root *expr.RootExpr, svr *expr.ServerExpr) *co
 		{Path: "os"},
 		{Path: "sync"},
 		{Path: "time"},
-		{Path: "goa.design/goa/http", Name: "goahttp"},
-		{Path: "goa.design/goa/middleware"},
-		{Path: "goa.design/goa/http/middleware", Name: "httpmdlwr"},
+		{Path: "goa.design/goa/v3/http", Name: "goahttp"},
+		{Path: "goa.design/goa/v3/middleware"},
+		{Path: "goa.design/goa/v3/http/middleware", Name: "httpmdlwr"},
 		{Path: "github.com/gorilla/websocket"},
 	}
 

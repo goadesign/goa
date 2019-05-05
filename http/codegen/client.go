@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"path/filepath"
 
-	"goa.design/goa/codegen"
-	"goa.design/goa/codegen/service"
-	"goa.design/goa/expr"
+	"goa.design/goa/v3/codegen"
+	"goa.design/goa/v3/codegen/service"
+	"goa.design/goa/v3/expr"
 )
 
 // ClientFiles returns the client HTTP transport files.
@@ -39,8 +39,8 @@ func client(genpkg string, svc *expr.HTTPServiceExpr) *codegen.File {
 			{Path: "sync"},
 			{Path: "time"},
 			{Path: "github.com/gorilla/websocket"},
-			{Path: "goa.design/goa", Name: "goa"},
-			{Path: "goa.design/goa/http", Name: "goahttp"},
+			{Path: "goa.design/goa/v3", Name: "goa"},
+			{Path: "goa.design/goa/v3/http", Name: "goahttp"},
 			{Path: genpkg + "/" + svcName, Name: data.Service.PkgName},
 			{Path: genpkg + "/" + svcName + "/" + "views", Name: data.Service.ViewsPkg},
 		}),
@@ -175,8 +175,8 @@ func clientEncodeDecode(genpkg string, svc *expr.HTTPServiceExpr) *codegen.File 
 			{Path: "strconv"},
 			{Path: "strings"},
 			{Path: "unicode/utf8"},
-			{Path: "goa.design/goa", Name: "goa"},
-			{Path: "goa.design/goa/http", Name: "goahttp"},
+			{Path: "goa.design/goa/v3", Name: "goa"},
+			{Path: "goa.design/goa/v3/http", Name: "goahttp"},
 			{Path: genpkg + "/" + svcName, Name: data.Service.PkgName},
 			{Path: genpkg + "/" + svcName + "/" + "views", Name: data.Service.ViewsPkg},
 		}),

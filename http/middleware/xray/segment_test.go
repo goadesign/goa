@@ -10,7 +10,7 @@ import (
 	"testing"
 
 	"github.com/pkg/errors"
-	"goa.design/goa/middleware/xray"
+	"goa.design/goa/v3/middleware/xray"
 )
 
 func TestRecordError(t *testing.T) {

@@ -4,12 +4,12 @@ import (
 	"bytes"
 	"testing"
 
-	"goa.design/goa/codegen"
-	"goa.design/goa/codegen/example"
-	ctestdata "goa.design/goa/codegen/example/testdata"
-	"goa.design/goa/codegen/service"
-	"goa.design/goa/expr"
-	"goa.design/goa/grpc/codegen/testdata"
+	"goa.design/goa/v3/codegen"
+	"goa.design/goa/v3/codegen/example"
+	ctestdata "goa.design/goa/v3/codegen/example/testdata"
+	"goa.design/goa/v3/codegen/service"
+	"goa.design/goa/v3/expr"
+	"goa.design/goa/v3/grpc/codegen/testdata"
 )
 
 func TestExampleServerFiles(t *testing.T) {
