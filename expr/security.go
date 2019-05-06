@@ -152,6 +152,11 @@ func (s *SchemeExpr) EvalName() string {
 	return s.Type() + "Security"
 }
 
+// Hash returns a unique hash value for s.
+func (s *SchemeExpr) Hash() string {
+	return fmt.Sprintf("%s_%s_%s", s.SchemeName, s.In, s.Name)
+}
+
 // Validate ensures that the method payload contains attributes required
 // by the scheme.
 func (s *SchemeExpr) Validate() *eval.ValidationErrors {

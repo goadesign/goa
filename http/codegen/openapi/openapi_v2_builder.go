@@ -1,6 +1,5 @@
 package openapi
 
-// New creates a OpenAPI spec from a HTTP root expression.
 import (
 	"encoding/json"
 	"fmt"
@@ -148,54 +147,61 @@ func mustGenerate(meta expr.MetaExpr) bool {
 // security design.
 func securitySpecFromExpr(root *expr.RootExpr) map[string]*SecurityDefinition {
 	sds := make(map[string]*SecurityDefinition)
-	for _, s := range root.Schemes {
-		sd := SecurityDefinition{
-			Description: s.Description,
-			Extensions:  ExtensionsFromExpr(s.Meta),
-		}
-		switch s.Kind {
-		case expr.BasicAuthKind:
-			sd.Type = "basic"
-		case expr.APIKeyKind:
-			sd.Type = "apiKey"
-			sd.In = s.In
-			sd.Name = s.Name
-		case expr.JWTKind:
-			sd.Type = "apiKey"
-			// OpenAPI V2 spec does not support JWT scheme. Hence we add the scheme
-			// information to the description.
-			lines := []string{}
-			for _, scope := range s.Scopes {
-				lines = append(lines, fmt.Sprintf("  * `%s`: %s", scope.Name, scope.Description))
-			}
-			sd.In = s.In
-			sd.Name = s.Name
-			sd.Description += fmt.Sprintf("\n**Security Scopes**:\n%s", strings.Join(lines, "\n"))
-		case expr.OAuth2Kind:
-			sd.Type = "oauth2"
-			if scopesLen := len(s.Scopes); scopesLen > 0 {
-				scopes := make(map[string]string, scopesLen)
-				for _, scope := range s.Scopes {
-					scopes[scope.Name] = scope.Description
+	for _, svc := range root.API.HTTP.Services {
+		for _, e := range svc.HTTPEndpoints {
+			for _, req := range e.Requirements {
+				for _, s := range req.Schemes {
+					sd := SecurityDefinition{
+						Description: s.Description,
+						Extensions:  ExtensionsFromExpr(s.Meta),
+					}
+
+					switch s.Kind {
+					case expr.BasicAuthKind:
+						sd.Type = "basic"
+					case expr.APIKeyKind:
+						sd.Type = "apiKey"
+						sd.In = s.In
+						sd.Name = s.Name
+					case expr.JWTKind:
+						sd.Type = "apiKey"
+						// OpenAPI V2 spec does not support JWT scheme. Hence we add the scheme
+						// information to the description.
+						lines := []string{}
+						for _, scope := range s.Scopes {
+							lines = append(lines, fmt.Sprintf("  * `%s`: %s", scope.Name, scope.Description))
+						}
+						sd.In = s.In
+						sd.Name = s.Name
+						sd.Description += fmt.Sprintf("\n**Security Scopes**:\n%s", strings.Join(lines, "\n"))
+					case expr.OAuth2Kind:
+						sd.Type = "oauth2"
+						if scopesLen := len(s.Scopes); scopesLen > 0 {
+							scopes := make(map[string]string, scopesLen)
+							for _, scope := range s.Scopes {
+								scopes[scope.Name] = scope.Description
+							}
+							sd.Scopes = scopes
+						}
+					}
+					if len(s.Flows) > 0 {
+						switch s.Flows[0].Kind {
+						case expr.AuthorizationCodeFlowKind:
+							sd.Flow = "accessCode"
+						case expr.ImplicitFlowKind:
+							sd.Flow = "implicit"
+						case expr.PasswordFlowKind:
+							sd.Flow = "password"
+						case expr.ClientCredentialsFlowKind:
+							sd.Flow = "application"
+						}
+						sd.AuthorizationURL = s.Flows[0].AuthorizationURL
+						sd.TokenURL = s.Flows[0].TokenURL
+					}
+					sds[s.Hash()] = &sd
 				}
-				sd.Scopes = scopes
 			}
 		}
-		if len(s.Flows) > 0 {
-			switch s.Flows[0].Kind {
-			case expr.AuthorizationCodeFlowKind:
-				sd.Flow = "accessCode"
-			case expr.ImplicitFlowKind:
-				sd.Flow = "implicit"
-			case expr.PasswordFlowKind:
-				sd.Flow = "password"
-			case expr.ClientCredentialsFlowKind:
-				sd.Flow = "application"
-			}
-			sd.AuthorizationURL = s.Flows[0].AuthorizationURL
-			sd.TokenURL = s.Flows[0].TokenURL
-		}
-		sds[s.SchemeName] = &sd
 	}
 	return sds
 }
@@ -371,6 +377,20 @@ func paramsFromHeaders(endpoint *expr.HTTPEndpointExpr) []*Parameter {
 		p := paramFor(header, merged.ElemName(n.Name), "header", required)
 		params = append(params, p)
 	}
+
+	// Add basic auth to headers
+	if att := expr.TaggedAttribute(endpoint.MethodExpr.Payload, "security:username"); att != "" {
+		// Basic Auth is always encoded in the Authorization header
+		// https://golang.org/pkg/net/http/#Request.SetBasicAuth
+		params = append(params, &Parameter{
+			In:          "header",
+			Name:        "Authorization",
+			Required:    endpoint.MethodExpr.Payload.IsRequired(att),
+			Description: "Basic Auth security using Basic scheme (https://tools.ietf.org/html/rfc7617)",
+			Type:        "string",
+		})
+	}
+
 	return params
 }
 
@@ -620,15 +640,14 @@ func buildPathFromExpr(s *V2, root *expr.RootExpr, h *expr.HostExpr, route *expr
 
 		description := endpoint.Description()
 
-		reqs := endpoint.MethodExpr.Requirements
-		requirements := make([]map[string][]string, len(reqs))
-		for i, req := range reqs {
+		requirements := make([]map[string][]string, len(endpoint.Requirements))
+		for i, req := range endpoint.Requirements {
 			requirement := make(map[string][]string)
 			for _, s := range req.Schemes {
-				requirement[s.SchemeName] = []string{}
+				requirement[s.Hash()] = []string{}
 				switch s.Kind {
 				case expr.OAuth2Kind:
-					requirement[s.SchemeName] = append(requirement[s.SchemeName], req.Scopes...)
+					requirement[s.Hash()] = append(requirement[s.Hash()], req.Scopes...)
 				case expr.JWTKind:
 					lines := make([]string, 0, len(req.Scopes))
 					for _, scope := range req.Scopes {
