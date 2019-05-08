@@ -59,7 +59,8 @@ depend:
 	@go install github.com/hashicorp/go-getter/cmd/go-getter && \
 		go-getter https://github.com/google/protobuf/releases/download/v$(PROTOC_VERSION)/$(PROTOC).zip $(PROTOC) && \
 		cp $(PROTOC_EXEC) $(GOBIN) && \
-		rm -r $(PROTOC)
+		rm -r $(PROTOC) && \
+		echo "`protoc --version`"
 	@go install github.com/golang/protobuf/protoc-gen-go
 	@go get -t -v ./...
 
