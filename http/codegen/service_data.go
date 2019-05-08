@@ -2843,7 +2843,9 @@ func (s *{{ .VarName }}) {{ .RecvName }}() ({{ .RecvTypeRef }}, error) {
 func (s *{{ .VarName }}) Close() error {
 	var err error
 {{- if eq .Type "server" }}
-	{{- template "websocket_upgrade" (upgradeParams .Endpoint "Close") }}
+	if s.conn == nil {
+		return nil
+	}
 	if err = s.conn.WriteControl(
 		websocket.CloseMessage,
 		websocket.FormatCloseMessage(websocket.CloseNormalClosure, "server closing connection"),

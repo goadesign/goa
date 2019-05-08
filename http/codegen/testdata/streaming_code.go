@@ -103,22 +103,8 @@ func (s *StreamingResultMethodServerStream) Send(v *streamingresultservice.UserT
 var StreamingResultServerStreamCloseCode = `// Close closes the "StreamingResultMethod" endpoint websocket connection.
 func (s *StreamingResultMethodServerStream) Close() error {
 	var err error
-	// Upgrade the HTTP connection to a websocket connection only once. Connection
-	// upgrade is done here so that authorization logic in the endpoint is executed
-	// before calling the actual service method which may call Close().
-	s.once.Do(func() {
-		var conn *websocket.Conn
-		conn, err = s.upgrader.Upgrade(s.w, s.r, nil)
-		if err != nil {
-			return
-		}
-		if s.connConfigFn != nil {
-			conn = s.connConfigFn(conn, s.cancel)
-		}
-		s.conn = conn
-	})
-	if err != nil {
-		return err
+	if s.conn == nil {
+		return nil
 	}
 	if err = s.conn.WriteControl(
 		websocket.CloseMessage,
@@ -254,6 +240,15 @@ func (c *Client) StreamingResultMethod() goa.Endpoint {
 		if c.configurer.StreamingResultMethodFn != nil {
 			conn = c.configurer.StreamingResultMethodFn(conn, cancel)
 		}
+		go func() {
+			<-ctx.Done()
+			conn.WriteControl(
+				websocket.CloseMessage,
+				websocket.FormatCloseMessage(websocket.CloseNormalClosure, "client closing connection"),
+				time.Now().Add(time.Second),
+			)
+			conn.Close()
+		}()
 		stream := &StreamingResultMethodClientStream{conn: conn}
 		return stream, nil
 	}
@@ -264,22 +259,8 @@ var StreamingResultWithViewsServerStreamCloseCode = `// Close closes the "Stream
 // connection.
 func (s *StreamingResultWithViewsMethodServerStream) Close() error {
 	var err error
-	// Upgrade the HTTP connection to a websocket connection only once. Connection
-	// upgrade is done here so that authorization logic in the endpoint is executed
-	// before calling the actual service method which may call Close().
-	s.once.Do(func() {
-		var conn *websocket.Conn
-		conn, err = s.upgrader.Upgrade(s.w, s.r, nil)
-		if err != nil {
-			return
-		}
-		if s.connConfigFn != nil {
-			conn = s.connConfigFn(conn, s.cancel)
-		}
-		s.conn = conn
-	})
-	if err != nil {
-		return err
+	if s.conn == nil {
+		return nil
 	}
 	if err = s.conn.WriteControl(
 		websocket.CloseMessage,
@@ -344,6 +325,15 @@ func (c *Client) StreamingResultWithViewsMethod() goa.Endpoint {
 		if c.configurer.StreamingResultWithViewsMethodFn != nil {
 			conn = c.configurer.StreamingResultWithViewsMethodFn(conn, cancel)
 		}
+		go func() {
+			<-ctx.Done()
+			conn.WriteControl(
+				websocket.CloseMessage,
+				websocket.FormatCloseMessage(websocket.CloseNormalClosure, "client closing connection"),
+				time.Now().Add(time.Second),
+			)
+			conn.Close()
+		}()
 		stream := &StreamingResultWithViewsMethodClientStream{conn: conn}
 		view := resp.Header.Get("goa-view")
 		stream.SetView(view)
@@ -415,6 +405,15 @@ func (c *Client) StreamingResultWithExplicitViewMethod() goa.Endpoint {
 		if c.configurer.StreamingResultWithExplicitViewMethodFn != nil {
 			conn = c.configurer.StreamingResultWithExplicitViewMethodFn(conn, cancel)
 		}
+		go func() {
+			<-ctx.Done()
+			conn.WriteControl(
+				websocket.CloseMessage,
+				websocket.FormatCloseMessage(websocket.CloseNormalClosure, "client closing connection"),
+				time.Now().Add(time.Second),
+			)
+			conn.Close()
+		}()
 		stream := &StreamingResultWithExplicitViewMethodClientStream{conn: conn}
 		return stream, nil
 	}
@@ -614,6 +613,15 @@ func (c *Client) StreamingResultCollectionWithExplicitViewMethod() goa.Endpoint 
 		if c.configurer.StreamingResultCollectionWithExplicitViewMethodFn != nil {
 			conn = c.configurer.StreamingResultCollectionWithExplicitViewMethodFn(conn, cancel)
 		}
+		go func() {
+			<-ctx.Done()
+			conn.WriteControl(
+				websocket.CloseMessage,
+				websocket.FormatCloseMessage(websocket.CloseNormalClosure, "client closing connection"),
+				time.Now().Add(time.Second),
+			)
+			conn.Close()
+		}()
 		stream := &StreamingResultCollectionWithExplicitViewMethodClientStream{conn: conn}
 		return stream, nil
 	}
@@ -909,6 +917,15 @@ func (c *Client) StreamingResultNoPayloadMethod() goa.Endpoint {
 		if c.configurer.StreamingResultNoPayloadMethodFn != nil {
 			conn = c.configurer.StreamingResultNoPayloadMethodFn(conn, cancel)
 		}
+		go func() {
+			<-ctx.Done()
+			conn.WriteControl(
+				websocket.CloseMessage,
+				websocket.FormatCloseMessage(websocket.CloseNormalClosure, "client closing connection"),
+				time.Now().Add(time.Second),
+			)
+			conn.Close()
+		}()
 		stream := &StreamingResultNoPayloadMethodClientStream{conn: conn}
 		return stream, nil
 	}
@@ -1245,22 +1262,8 @@ var StreamingPayloadNoResultServerStreamCloseCode = `// Close closes the "Stream
 // connection.
 func (s *StreamingPayloadNoResultMethodServerStream) Close() error {
 	var err error
-	// Upgrade the HTTP connection to a websocket connection only once. Connection
-	// upgrade is done here so that authorization logic in the endpoint is executed
-	// before calling the actual service method which may call Close().
-	s.once.Do(func() {
-		var conn *websocket.Conn
-		conn, err = s.upgrader.Upgrade(s.w, s.r, nil)
-		if err != nil {
-			return
-		}
-		if s.connConfigFn != nil {
-			conn = s.connConfigFn(conn, s.cancel)
-		}
-		s.conn = conn
-	})
-	if err != nil {
-		return err
+	if s.conn == nil {
+		return nil
 	}
 	if err = s.conn.WriteControl(
 		websocket.CloseMessage,
@@ -2219,22 +2222,8 @@ var BidirectionalStreamingServerStreamCloseCode = `// Close closes the "Bidirect
 // connection.
 func (s *BidirectionalStreamingMethodServerStream) Close() error {
 	var err error
-	// Upgrade the HTTP connection to a websocket connection only once. Connection
-	// upgrade is done here so that authorization logic in the endpoint is executed
-	// before calling the actual service method which may call Close().
-	s.once.Do(func() {
-		var conn *websocket.Conn
-		conn, err = s.upgrader.Upgrade(s.w, s.r, nil)
-		if err != nil {
-			return
-		}
-		if s.connConfigFn != nil {
-			conn = s.connConfigFn(conn, s.cancel)
-		}
-		s.conn = conn
-	})
-	if err != nil {
-		return err
+	if s.conn == nil {
+		return nil
 	}
 	if err = s.conn.WriteControl(
 		websocket.CloseMessage,
@@ -2377,22 +2366,8 @@ var BidirectionalStreamingNoPayloadServerStreamCloseCode = `// Close closes the 
 // connection.
 func (s *BidirectionalStreamingNoPayloadMethodServerStream) Close() error {
 	var err error
-	// Upgrade the HTTP connection to a websocket connection only once. Connection
-	// upgrade is done here so that authorization logic in the endpoint is executed
-	// before calling the actual service method which may call Close().
-	s.once.Do(func() {
-		var conn *websocket.Conn
-		conn, err = s.upgrader.Upgrade(s.w, s.r, nil)
-		if err != nil {
-			return
-		}
-		if s.connConfigFn != nil {
-			conn = s.connConfigFn(conn, s.cancel)
-		}
-		s.conn = conn
-	})
-	if err != nil {
-		return err
+	if s.conn == nil {
+		return nil
 	}
 	if err = s.conn.WriteControl(
 		websocket.CloseMessage,
@@ -2556,22 +2531,8 @@ var BidirectionalStreamingResultWithViewsServerStreamCloseCode = `// Close close
 // websocket connection.
 func (s *BidirectionalStreamingResultWithViewsMethodServerStream) Close() error {
 	var err error
-	// Upgrade the HTTP connection to a websocket connection only once. Connection
-	// upgrade is done here so that authorization logic in the endpoint is executed
-	// before calling the actual service method which may call Close().
-	s.once.Do(func() {
-		var conn *websocket.Conn
-		conn, err = s.upgrader.Upgrade(s.w, s.r, nil)
-		if err != nil {
-			return
-		}
-		if s.connConfigFn != nil {
-			conn = s.connConfigFn(conn, s.cancel)
-		}
-		s.conn = conn
-	})
-	if err != nil {
-		return err
+	if s.conn == nil {
+		return nil
 	}
 	if err = s.conn.WriteControl(
 		websocket.CloseMessage,
