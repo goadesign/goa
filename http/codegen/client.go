@@ -365,6 +365,17 @@ func (c *{{ .ClientStruct }}) {{ .EndpointInit }}({{ if .MultipartRequestEncoder
 		if c.configurer.{{ .Method.VarName }}Fn != nil {
 			conn = c.configurer.{{ .Method.VarName }}Fn(conn, cancel)
 		}
+	{{- if eq .ClientStream.SendName "" }}
+		go func() {
+			<-ctx.Done()
+			conn.WriteControl(
+				websocket.CloseMessage,
+				websocket.FormatCloseMessage(websocket.CloseNormalClosure, "client closing connection"),
+				time.Now().Add(time.Second),
+			)
+			conn.Close()
+		}()
+	{{- end }}
 		stream := &{{ .ClientStream.VarName }}{conn: conn}
 		{{- if .Method.ViewedResult }}
 			{{- if not .Method.ViewedResult.ViewName }}
