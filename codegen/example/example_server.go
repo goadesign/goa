@@ -42,7 +42,7 @@ func exampleSvrMain(genpkg string, root *expr.RootExpr, svr *expr.ServerExpr) *c
 		{Path: "strings"},
 		{Path: "sync"},
 		{Path: "time"},
-		{Path: "goa.design/goa/v3/middleware"},
+		codegen.GoaImport("middleware"),
 	}
 
 	// Iterate through services listed in the server expression.

@@ -56,8 +56,8 @@ func exampleCLI(genpkg string, root *expr.RootExpr, svr *expr.ServerExpr) *codeg
 		{Path: "strings"},
 		{Path: "time"},
 		{Path: "github.com/gorilla/websocket"},
-		{Path: "goa.design/goa/v3", Name: "goa"},
-		{Path: "goa.design/goa/v3/http", Name: "goahttp"},
+		codegen.GoaImport(""),
+		codegen.GoaNamedImport("http", "goahttp"),
 		{Path: genpkg + "/http/cli/" + svrdata.Dir, Name: "cli"},
 		{Path: rootPath, Name: apiPkg},
 	}

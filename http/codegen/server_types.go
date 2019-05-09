@@ -53,7 +53,7 @@ func serverType(genpkg string, svc *expr.HTTPServiceExpr, seen map[string]struct
 		[]*codegen.ImportSpec{
 			{Path: "unicode/utf8"},
 			{Path: genpkg + "/" + svcName, Name: data.Service.PkgName},
-			{Path: "goa.design/goa/v3", Name: "goa"},
+			codegen.GoaImport(""),
 			{Path: genpkg + "/" + svcName + "/" + "views", Name: data.Service.ViewsPkg},
 		},
 	)

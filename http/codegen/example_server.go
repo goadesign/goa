@@ -39,9 +39,9 @@ func exampleServer(genpkg string, root *expr.RootExpr, svr *expr.ServerExpr) *co
 		{Path: "os"},
 		{Path: "sync"},
 		{Path: "time"},
-		{Path: "goa.design/goa/v3/http", Name: "goahttp"},
-		{Path: "goa.design/goa/v3/middleware"},
-		{Path: "goa.design/goa/v3/http/middleware", Name: "httpmdlwr"},
+		codegen.GoaNamedImport("http", "goahttp"),
+		codegen.GoaNamedImport("http/middleware", "httpmdlwr"),
+		codegen.GoaImport("middleware"),
 		{Path: "github.com/gorilla/websocket"},
 	}
 

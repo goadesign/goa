@@ -28,7 +28,7 @@ func ViewsFile(genpkg string, service *expr.ServiceExpr) *codegen.File {
 	{
 		header := codegen.Header(service.Name+" views", "views",
 			[]*codegen.ImportSpec{
-				{Path: "goa.design/goa/v3", Name: "goa"},
+				codegen.GoaImport(""),
 				{Path: "unicode/utf8"},
 			})
 		sections = []*codegen.SectionTemplate{header}

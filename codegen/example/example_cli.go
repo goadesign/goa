@@ -38,7 +38,7 @@ func exampleCLIMain(genpkg string, root *expr.RootExpr, svr *expr.ServerExpr) *c
 		{Path: "net/url"},
 		{Path: "os"},
 		{Path: "strings"},
-		{Path: "goa.design/goa/v3", Name: "goa"},
+		codegen.GoaImport(""),
 	}
 	sections := []*codegen.SectionTemplate{
 		codegen.Header("", "main", specs),

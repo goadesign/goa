@@ -75,7 +75,7 @@ func clientType(genpkg string, svc *expr.GRPCServiceExpr, seen map[string]struct
 			codegen.Header(svc.Name()+" gRPC client types", "client",
 				[]*codegen.ImportSpec{
 					{Path: "unicode/utf8"},
-					{Path: "goa.design/goa/v3", Name: "goa"},
+					codegen.GoaImport(""),
 					{Path: path.Join(genpkg, svcName), Name: sd.Service.PkgName},
 					{Path: path.Join(genpkg, svcName, "views"), Name: sd.Service.ViewsPkg},
 					{Path: path.Join(genpkg, "grpc", svcName, pbPkgName), Name: sd.PkgName},

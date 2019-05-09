@@ -49,11 +49,11 @@ func exampleServer(genpkg string, root *expr.RootExpr, svr *expr.ServerExpr) *co
 			{Path: "net/url"},
 			{Path: "os"},
 			{Path: "sync"},
-			{Path: "goa.design/goa/v3/middleware"},
-			{Path: "goa.design/goa/v3/grpc/middleware", Name: "grpcmdlwr"},
+			codegen.GoaImport("middleware"),
+			codegen.GoaNamedImport("grpc", "goagrpc"),
+			codegen.GoaNamedImport("grpc/middleware", "grpcmdlwr"),
 			{Path: "google.golang.org/grpc"},
 			{Path: "github.com/grpc-ecosystem/go-grpc-middleware", Name: "grpcmiddleware"},
-			{Path: "goa.design/goa/v3/grpc", Name: "goagrpc"},
 		}
 		for _, svc := range root.API.GRPC.Services {
 			sd := GRPCServices.Get(svc.Name())

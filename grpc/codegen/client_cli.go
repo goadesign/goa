@@ -59,8 +59,8 @@ func endpointParser(genpkg string, root *expr.RootExpr, svr *expr.ServerExpr, da
 		{Path: "flag"},
 		{Path: "fmt"},
 		{Path: "os"},
-		{Path: "goa.design/goa/v3", Name: "goa"},
-		{Path: "goa.design/goa/v3/grpc", Name: "goagrpc"},
+		codegen.GoaImport(""),
+		codegen.GoaNamedImport("grpc", "goagrpc"),
 		{Path: "google.golang.org/grpc", Name: "grpc"},
 	}
 	for _, svc := range root.API.GRPC.Services {

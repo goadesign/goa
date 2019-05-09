@@ -65,8 +65,8 @@ func exampleCLI(genpkg string, root *expr.RootExpr, svr *expr.ServerExpr) *codeg
 			{Path: "google.golang.org/grpc"},
 			{Path: "os"},
 			{Path: "time"},
-			{Path: "goa.design/goa/v3", Name: "goa"},
-			{Path: "goa.design/goa/v3/grpc", Name: "goagrpc"},
+			codegen.GoaImport(""),
+			codegen.GoaNamedImport("grpc", "goagrpc"),
 			{Path: rootPath, Name: apiPkg},
 			{Path: path.Join(genpkg, "grpc", "cli", svrdata.Dir), Name: "cli"},
 		}

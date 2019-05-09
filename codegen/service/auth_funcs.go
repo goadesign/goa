@@ -27,8 +27,8 @@ func AuthFuncsFile(genpkg string, root *expr.RootExpr) *codegen.File {
 		specs := []*codegen.ImportSpec{
 			{Path: "context"},
 			{Path: "fmt"},
-			{Path: "goa.design/goa/v3", Name: "goa"},
-			{Path: "goa.design/goa/v3/security"},
+			codegen.GoaImport(""),
+			codegen.GoaImport("security"),
 		}
 		for _, svc := range root.Services {
 			sd := Services.Get(svc.Name)
