@@ -52,14 +52,30 @@ invoking the client code.
 Assuming you have a working [Go](https://golang.org) setup:
 
 ``` bash
-go get -u goa.design/goa/v3/...@v3.0.0
+export GO111MODULE=on
+go get -u goa.design/goa/v3
+go get -u goa.design/goa/v3/...
 ```
 
-or, when NOT using Go modules:
+or, when NOT using Go modules (this installs Goa v2, see below):
 
 ```bash
 go get -u goa.design/goa/...
 ```
+
+### Goa Versions and Go Module Support
+
+Goa v2 and Goa v3 are functionally the exact same. The only addition provided by
+Goa v3 is Go module support. Goa v3 requires Go v1.11 or above, it also requires
+projects that use Goa to be within modules.
+
+Projects that use Goa v3 use `goa.design/goa/v3` as root package import path
+while projects that use v2 use `goa.design/goa` (projects that use v1 use
+`github.com/goadesign/goa`).
+
+Note that the Goa v3 tool is backwards compatible and can generate code for v2
+designs. This means that you don't need to swap the tool to generate code for
+designs using v2 or v3 (designs using v1 use a different tool altogether).
 
 ### Vendoring
 
@@ -73,6 +89,8 @@ For example if you are using `dep` add the following line to `Gopkg.toml`:
 required = ["goa.design/goa/codegen/generator"]
 ```
 
+This only applies to Goa v2 as vendoring is not used together with Go modules.
+
 ### Stable Versions
 
 goa follows [Semantic Versioning](http://semver.org/) which is a fancy way of
@@ -81,22 +99,31 @@ sure that your code can upgrade to new versions with the same `X` component
 without having to make changes.
 
 Releases are tagged with the corresponding version number. There is also a
-branch for each major version (`v1` and `v2`). The recommended practice is to
-vendor the stable branch.
+branch for each major version (`v1`, `v2` and `v3`).
 
-Current Release: `v2.0.0-wip`
+Current Release: `v3.0.0`
 
 ## Teaser
 
+Note: the instructions below assume Goa v3.
+
 ### 1. Design
 
-Create the file `$GOPATH/src/calcsvc/design/design.go` with the following
+Create a new Goa project:
+
+```bash
+mkdir -p calcsvc/design
+cd calcsvc
+go mod init calcsvc
+```
+
+Create the file `design.go` in the `design` directory with the following
 content:
 
 ```go
 package design
 
-import . "goa.design/goa/dsl"
+import . "goa.design/goa/v3/dsl"
 
 // API describes the global properties of the API server.
 var _ = API("calc", func() {
@@ -143,10 +170,10 @@ values. The API returns the sum of `a` and `b` in the HTTP response body.
 
 ### 2. Implement
 
-Now that the design is done, let's run `goa` on the design package:
+Now that the design is done, let's run `goa` on the design package.
+In the `calcsvc` directory run:
 
 ``` bash
-cd $GOPATH/src/calcsvc
 goa gen calcsvc/design
 ```
 
@@ -186,7 +213,7 @@ gen
   endpoints to HTTP handlers server side and HTTP client methods client side.
   The `http` directory also contains a complete
   [OpenAPI 2.0](https://github.com/OAI/OpenAPI-Specification/blob/master/versions/2.0.md)
-  spec of the service.
+  spec for the service.
 
 The `goa` tool can also generate example implementations for both the service
 and client. These examples provide a good starting point:
@@ -229,7 +256,7 @@ specification and a client tool.
 Now let's compile and run the service:
 
 ```bash
-cd $GOPATH/src/calcsvc/cmd/calc
+cd cmd/calc
 go build
 ./calc
 [calcapi] 16:10:47 HTTP "Add" mounted on GET /add/{a}/{b}
@@ -239,7 +266,7 @@ go build
 Open a new console and compile the generated CLI tool:
 
 ```bash
-cd $GOPATH/src/calcsvc/cmd/calc-cli
+cd calcsvc/cmd/calc-cli
 go build
 ```
 
@@ -342,7 +369,7 @@ There is also a [FAQ](https://github.com/goadesign/goa/blob/v3/docs/FAQ.md) and
 a document describing
 [error handling](https://github.com/goadesign/goa/blob/v3/docs/ErrorHandling.md).
 
-If you are coming from v1 you may also want to read the 
+If you are coming from v1 you may also want to read the
 [Upgrading](https://github.com/goadesign/goa/blob/v3/docs/Upgrading.md) document.
 
 ### Examples
