@@ -673,19 +673,21 @@ func addValidation(att *expr.AttributeExpr, sd *ServiceData, req bool) *Validati
 	if req {
 		kind = validateServer
 	}
-	for _, n := range sd.validations {
-		if n.SrcName == name {
-			if n.Kind != kind {
-				n.Kind = validateBoth
-			}
-			return n
-		}
-	}
 	att = ut.Attribute()
 	if rt, ok := ut.(*expr.ResultTypeExpr); ok {
 		if a := unwrapAttr(expr.DupAtt(rt.Attribute())); expr.IsArray(a.Type) {
 			// result type collection
 			att = &expr.AttributeExpr{Type: expr.AsObject(rt)}
+		}
+	}
+	for _, n := range sd.validations {
+		if n.SrcName == name {
+			if n.Kind != kind {
+				n.Kind = validateBoth
+				ctx := protoBufTypeContext("", sd.Scope)
+				collectValidations(att, ctx, req, sd)
+			}
+			return n
 		}
 	}
 	ctx := protoBufTypeContext("", sd.Scope)
@@ -710,32 +712,23 @@ func addValidation(att *expr.AttributeExpr, sd *ServiceData, req bool) *Validati
 //
 // req if true indicates that the validations are generated for validating
 // request messages.
-func collectValidations(att *expr.AttributeExpr, ctx *codegen.AttributeContext, req bool, sd *ServiceData, seen ...map[string]struct{}) {
-	var s map[string]struct{}
-	if len(seen) > 0 {
-		s = seen[0]
-	} else {
-		s = make(map[string]struct{})
-	}
+func collectValidations(att *expr.AttributeExpr, ctx *codegen.AttributeContext, req bool, sd *ServiceData) {
 	switch dt := att.Type.(type) {
 	case expr.UserType:
 		name := protoBufMessageName(att, sd.Scope)
-		if _, ok := s[name]; ok {
-			return
-		}
 		kind := validateClient
 		if req {
 			kind = validateServer
 		}
 		for _, n := range sd.validations {
 			if n.SrcName == name {
-				if n.Kind != kind {
+				if n.Kind != validateBoth && n.Kind != kind {
 					n.Kind = validateBoth
+					goto collect
 				}
 				return
 			}
 		}
-		s[name] = struct{}{}
 		sd.validations = append(sd.validations, &ValidationData{
 			Name:    "Validate" + name,
 			Def:     codegen.RecursiveValidationCode(att, ctx, true, "message"),
@@ -744,6 +737,7 @@ func collectValidations(att *expr.AttributeExpr, ctx *codegen.AttributeContext, 
 			SrcRef:  protoBufGoFullTypeRef(att, sd.PkgName, sd.Scope),
 			Kind:    kind,
 		})
+	collect:
 		att := dt.Attribute()
 		if rt, ok := dt.(*expr.ResultTypeExpr); ok {
 			if a := unwrapAttr(expr.DupAtt(rt.Attribute())); expr.IsArray(a.Type) {
@@ -751,16 +745,16 @@ func collectValidations(att *expr.AttributeExpr, ctx *codegen.AttributeContext, 
 				att = &expr.AttributeExpr{Type: expr.AsObject(rt)}
 			}
 		}
-		collectValidations(att, ctx, req, sd, seen...)
+		collectValidations(att, ctx, req, sd)
 	case *expr.Object:
 		for _, nat := range *dt {
-			collectValidations(nat.Attribute, ctx, req, sd, seen...)
+			collectValidations(nat.Attribute, ctx, req, sd)
 		}
 	case *expr.Array:
-		collectValidations(dt.ElemType, ctx, req, sd, seen...)
+		collectValidations(dt.ElemType, ctx, req, sd)
 	case *expr.Map:
-		collectValidations(dt.KeyType, ctx, req, sd, seen...)
-		collectValidations(dt.ElemType, ctx, req, sd, seen...)
+		collectValidations(dt.KeyType, ctx, req, sd)
+		collectValidations(dt.ElemType, ctx, req, sd)
 	}
 }
 
