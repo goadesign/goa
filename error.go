@@ -121,7 +121,7 @@ type (
 		// Detail describes the specific error occurrence.
 		Detail string `json:"detail" yaml:"detail" xml:"detail" form:"detail"`
 		// Meta contains additional key/value pairs useful to clients.
-		Meta map[string]interface{} `json:"meta,omitempty" yaml:"meta,omitempty" xml:"meta,omitempty" form:"meta,omitempty"`
+		Meta map[string]interface{} `json:"meta,omitempty" yaml:"meta,omitempty" xml:"-" form:"meta,omitempty"`
 	}
 )
 
