@@ -45,11 +45,11 @@ type ListClientStream interface {
 ```
 
 * `Send` can be called 0 or more times to stream the result instances to the
-	client. If `Send` returns an error then any subsequent call to `Send` will
-	also fail and `Close` does not need to be called.
+  client. If `Send` returns an error then any subsequent call to `Send` will
+  also fail and `Close` does not need to be called.
 * `Close` closes the stream. Any subsequent call to `Send` returns an error.
-* `Recv` reads the next result instance from the stream. It returns `io.EOF`
-	if the server closed the stream.
+* `Recv` reads the next result instance from the stream. It returns `io.EOF` if
+  the server closed the stream.
 
 The `List` method signature in the `Service` interface accepts the server
 stream interface as one of the arguments. The generated goa client returns the

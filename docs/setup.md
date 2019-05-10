@@ -1,17 +1,21 @@
 # Development Setup
 
-This document describes the steps required to setup a development environment for contributing to goa from scratch.
+This document describes the steps required to setup a development environment
+for contributing to goa from scratch.
 
 ## 1. Install Go
 
-The first step is to install the Go distribution. Please follow the steps described in the
-[Go Getting Started guide](https://golang.org/doc/install)
+The first step is to install the Go distribution. Please follow the steps
+described in the [Go Getting Started guide](https://golang.org/doc/install)
 
 ## 2. Clone goa
 
 > Note: This step requires git. Installing git is outside the scope of this document.
 
-Once Go is installed and the [GOPATH](https://github.com/golang/go/wiki/SettingGOPATH) environment variable is set, clone goa:
+Once Go is installed and the
+[GOPATH](https://github.com/golang/go/wiki/SettingGOPATH) environment variable
+is set, clone goa:
+
 ```bash
 cd $GOPATH/src
 mkdir -p goa.design
