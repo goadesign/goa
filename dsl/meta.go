@@ -64,9 +64,9 @@ import (
 //    })
 //
 // - "struct:field:type" overrides the Go struct field type specified in the design, with one caveat;
-//		if the type would have been a pointer (such as its not Required) the new type will also be a pointer.
-//		Applicable to attributes only. The import path of the type should be passed in as the second parameter, if needed.
-//		If the default imported package name conflicts with another, you can override that as well with the third parameter.
+// if the type would have been a pointer (such as its not Required) the new type will also be a pointer.
+// Applicable to attributes only. The import path of the type should be passed in as the second parameter, if needed.
+// If the default imported package name conflicts with another, you can override that as well with the third parameter.
 //
 //    var MyType = Type("BigOleMessage", func() {
 //        Attribute("type", String, "Type of big payload")
