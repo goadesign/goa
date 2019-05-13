@@ -57,17 +57,27 @@ func getMetaTypeInfo(att *expr.AttributeExpr) (typeName string, importS *ImportS
 
 // GetMetaTypeImports parses the attribute for all user defined imports
 func GetMetaTypeImports(att *expr.AttributeExpr) []*ImportSpec {
+	return safelyGetMetaTypeImports(att, nil)
+}
+
+// safelyGetMetaTypeImports parses attributes while keeping track of previous usertypes to avoid infinite recursion
+func safelyGetMetaTypeImports(att *expr.AttributeExpr, seen map[string]struct{}) []*ImportSpec {
 	if att == nil {
 		return nil
 	}
-	uniqueImports := make(map[ImportSpec]struct{})
-	_, im := getMetaTypeInfo(att)
-	if im != nil {
-		uniqueImports[*im] = struct{}{}
+	if seen == nil {
+		seen = make(map[string]struct{})
 	}
+	uniqueImports := make(map[ImportSpec]struct{})
+	imports := make([]*ImportSpec, 0)
+
 	switch t := att.Type.(type) {
 	case expr.UserType:
-		for _, im := range GetMetaTypeImports(t.Attribute()) {
+		if _, wasSeen := seen[t.ID()]; wasSeen {
+			return imports
+		}
+		seen[t.ID()] = struct{}{}
+		for _, im := range safelyGetMetaTypeImports(t.Attribute(), seen) {
 			if im != nil {
 				uniqueImports[*im] = struct{}{}
 			}
@@ -96,7 +106,10 @@ func GetMetaTypeImports(att *expr.AttributeExpr) []*ImportSpec {
 			}
 		}
 	}
-	imports := make([]*ImportSpec, 0)
+	_, im := getMetaTypeInfo(att)
+	if im != nil {
+		uniqueImports[*im] = struct{}{}
+	}
 	for imp := range uniqueImports {
 		// Copy loop variable into body so next iteration doesnt overwrite its address https://stackoverflow.com/questions/27610039/golang-appending-leaves-only-last-element
 		copy := imp
