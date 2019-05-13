@@ -26,6 +26,11 @@ func Service(genpkg string, roots []eval.Root) ([]*codegen.File, error) {
 				if f := service.ViewsFile(genpkg, s); f != nil {
 					files = append(files, f)
 				}
+				for _, f := range files {
+					if len(f.SectionTemplates) > 0 {
+						service.AddServiceDataMetaTypeImports(f.SectionTemplates[0], s)
+					}
+				}
 				f, err := service.ConvertFile(r, s)
 				if err != nil {
 					return nil, err
