@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"goa.design/goa/v3/codegen"
+	"goa.design/goa/v3/codegen/service"
 	"goa.design/goa/v3/eval"
 	"goa.design/goa/v3/expr"
 	grpccodegen "goa.design/goa/v3/grpc/codegen"
@@ -36,6 +37,14 @@ func Transport(genpkg string, roots []eval.Root) ([]*codegen.File, error) {
 		files = append(files, grpccodegen.ServerTypeFiles(genpkg, r)...)
 		files = append(files, grpccodegen.ClientTypeFiles(genpkg, r)...)
 		files = append(files, grpccodegen.ClientCLIFiles(genpkg, r)...)
+
+		for _, f := range files {
+			if len(f.SectionTemplates) > 0 {
+				for _, s := range r.Services {
+					service.AddServiceDataMetaTypeImports(f.SectionTemplates[0], s)
+				}
+			}
+		}
 	}
 	if len(files) == 0 {
 		return nil, fmt.Errorf("transport: no HTTP/gRPC design found")

@@ -59,6 +59,13 @@ func Example(genpkg string, roots []eval.Root) ([]*codegen.File, error) {
 				files = append(files, fs...)
 			}
 		}
+		for _, f := range files {
+			if len(f.SectionTemplates) > 0 {
+				for _, s := range r.Services {
+					service.AddServiceDataMetaTypeImports(f.SectionTemplates[0], s)
+				}
+			}
+		}
 	}
 	return files, nil
 }
