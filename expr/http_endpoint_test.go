@@ -51,6 +51,12 @@ func TestHTTPEndpointValidation(t *testing.T) {
 		"endpoint-body-as-user-type": {
 			DSL: testdata.EndpointBodyAsUserType,
 		},
+		"endpoint-missing-token": {
+			DSL: testdata.EndpointMissingToken,
+			Errors: []string{
+				"service \"Service\" method \"Method\": payload of method \"Method\" of service \"Service\" does not define a JWT attribute, use Token to define one",
+			},
+		},
 	}
 	for name, c := range cases {
 		t.Run(name, func(t *testing.T) {
