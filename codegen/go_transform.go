@@ -145,10 +145,6 @@ func transformObject(source, target *expr.AttributeExpr, sourceVar, targetVar st
 
 	buffer := &bytes.Buffer{}
 	deref := "&"
-	// if the target is a raw struct no need to return a pointer
-	if _, ok := target.Type.(*expr.Object); ok {
-		deref = ""
-	}
 	assign := "="
 	if newVar {
 		assign = ":="
