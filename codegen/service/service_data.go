@@ -1335,7 +1335,7 @@ func buildProjections(projected, att *expr.AttributeExpr, viewspkg string, scope
 
 		projections = append(projections, &InitData{
 			Name:          name,
-			Description:   fmt.Sprintf("%s projects result type %s into projected type %s using the %q view.", name, scope.GoTypeName(att), tname, view.Name),
+			Description:   fmt.Sprintf("%s projects result type %s to projected type %s using the %q view.", name, scope.GoTypeName(att), tname, view.Name),
 			Args:          []*InitArgData{{Name: "res", Ref: scope.GoTypeRef(att)}},
 			ReturnTypeRef: viewScope.GoFullTypeRef(projected, viewspkg),
 			Code:          code,
