@@ -158,6 +158,11 @@ func TaggedAttribute(a *AttributeExpr, tag string) string {
 			return at.Name
 		}
 	}
+	for _, b := range a.Bases {
+		if n := TaggedAttribute(&AttributeExpr{Type: b}, tag); n != "" {
+			return n
+		}
+	}
 	return ""
 }
 
