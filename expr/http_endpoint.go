@@ -228,7 +228,6 @@ func (e *HTTPEndpointExpr) Prepare() {
 // Validate validates the endpoint expression.
 func (e *HTTPEndpointExpr) Validate() error {
 	verr := new(eval.ValidationErrors)
-
 	// Name cannot be empty
 	if e.Name() == "" {
 		verr.Add(e, "Endpoint name cannot be empty")
@@ -321,6 +320,29 @@ func (e *HTTPEndpointExpr) Validate() error {
 	// Validate errors
 	for _, er := range e.HTTPErrors {
 		verr.Merge(er.Validate())
+	}
+
+	// Validate security definitions
+	for _, req := range e.MethodExpr.Requirements {
+		for _, sch := range req.Schemes {
+			var name, msg string
+			switch sch.Kind {
+			case APIKeyKind:
+				name = "security:apikey:" + sch.SchemeName
+				msg = "API key attribute (use APIKey)"
+			case JWTKind:
+				name = "security:token"
+				msg = "JWT token attribute (use Token)"
+			case OAuth2Kind:
+				name = "security:accesstoken"
+				msg = "access token attribute (use AccessToken)"
+			}
+			if name != "" {
+				if f := TaggedAttribute(e.MethodExpr.Payload, name); f == "" {
+					verr.Add(e, "Payload must define %s required by security scheme %q.", msg, sch.SchemeName)
+				}
+			}
+		}
 	}
 
 	// Validate definitions of params, headers and bodies against definition of payload
