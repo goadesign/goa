@@ -124,6 +124,31 @@ var EndpointMissingToken = func() {
 	})
 }
 
+var EndpointExtendToken = func() {
+	var CommonAttributes = Type("Common", func() {
+		Token("token", String)
+	})
+	var Entity = Type("Entity", func() {
+		Extend(CommonAttributes)
+		Attribute("id", String)
+		Attribute("name", String)
+	})
+	var JWT = JWTSecurity("JWT", func() {
+		Scope("api:read", "Read access")
+	})
+	Service("Service", func() {
+		Security(JWT, func() {
+			Scope("api:read")
+		})
+		Method("Method", func() {
+			Payload(Entity)
+			HTTP(func() {
+				POST("/{id}")
+			})
+		})
+	})
+}
+
 var FinalizeEndpointBodyAsExtendedTypeDSL = func() {
 	var EntityData = Type("EntityData", func() {
 		Attribute("name", String)
