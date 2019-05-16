@@ -219,10 +219,14 @@ func Produces(args ...string) {
 	}
 }
 
-// Path defines an API or service base path, i.e. a common path prefix to all
-// the API or service methods. The path may define wildcards (see GET for a
+// Path defines an API or service base path, i.e. a common HTTP path prefix to
+// all the API or service methods. The path may define wildcards (see GET for a
 // description of the wildcard syntax). The corresponding parameters must be
 // described using Params. Multiple base paths may be defined for services.
+//
+// Path must appear in a API HTTP expression or a Service HTTP expression.
+//
+// Path accepts one argument: the HTTP path prefix.
 func Path(val string) {
 	switch def := eval.Current().(type) {
 	case *expr.RootExpr:
@@ -331,15 +335,17 @@ func route(method, path string) *expr.RouteExpr {
 	return r
 }
 
-// Header describes a single HTTP header. The properties (description, type,
-// validation etc.) of a header are inherited from the request or response type
-// attribute with the same name by default.
+// Header describes a single HTTP header or gRPC metadata header. The properties
+// (description, type, validation etc.) of a header are inherited from the
+// request or response type attribute with the same name by default.
 //
 // Header must appear in the API HTTP expression (to define request headers
 // common to all the API endpoints), a specific method HTTP expression (to
-// define request headers), a Result expression (to define the response
-// headers) or an Error expression (to define the error response headers). Header
-// may also appear in a Headers expression.
+// define request headers) or a Response expression (to define the response
+// headers). Header may also appear in a method GRPC expression (to define
+// headers sent in message metadata), or in a Response expression (to define
+// headers sent in result metadata). Finally Header may also appear in a Headers
+// expression.
 //
 // Header accepts the same arguments as the Attribute function. The header name
 // may define a mapping between the attribute name and the HTTP header name when
@@ -692,6 +698,10 @@ func Body(args ...interface{}) {
 
 // Parent sets the name of the parent service. The parent service canonical
 // method path is used as prefix for all the service HTTP endpoint paths.
+//
+// Parent must appear in a Service expression.
+//
+// Parent accepts one argument: the name of the parent service.
 func Parent(name string) {
 	r, ok := eval.Current().(*expr.HTTPServiceExpr)
 	if !ok {
@@ -702,8 +712,14 @@ func Parent(name string) {
 }
 
 // CanonicalMethod sets the name of the service canonical method. The canonical
-// method endpoint path is used to prefix the paths to any child service
-// endpoint. The default value is "show".
+// method endpoint HTTP path is used to prefix the paths to child service
+// endpoints (a child service is a service that uses the Parent function). The
+// default value is "show".
+//
+// CanonicalMethod must appear in the HTTP expresssion of a Service.
+//
+// CanonicalMethod accepts one argument: the name of the canonical service
+// method.
 func CanonicalMethod(name string) {
 	r, ok := eval.Current().(*expr.HTTPServiceExpr)
 	if !ok {
@@ -806,7 +822,6 @@ func headers(exp eval.Expression) *expr.MappedAttributeExpr {
 		}
 		return e.Headers
 	case *expr.MappedAttributeExpr:
-		fmt.Println(fmt.Sprintf("%#v", e.EvalName()))
 		return e
 	default:
 		return nil

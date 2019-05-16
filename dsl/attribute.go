@@ -200,6 +200,10 @@ func Field(tag interface{}, name string, args ...interface{}) {
 }
 
 // Default sets the default value for an attribute.
+//
+// Default must appear in an Attribute DSL.
+//
+// Default takes one parameter: the default value.
 func Default(def interface{}) {
 	a, ok := eval.Current().(*expr.AttributeExpr)
 	if !ok {
@@ -219,37 +223,39 @@ func Default(def interface{}) {
 // where the first argument is a summary describing the example and the second a
 // value provided directly or via a DSL which may also specify a long
 // description. The other syntax accepts a single argument and is equivalent to
-// using the first syntax where the summary is the string "default".
+// using the first syntax where the summary is the string "default". When using
+// a DSL the Value function can be used to provide the example value.
 //
 // If no example is explicitly provided in an attribute expression then a random
 // example is generated unless the "swagger:example" meta is set to "false".
 // See Meta.
 //
-// Example must appear in a Attributes or Attribute expression DSL.
+// Example must appear in a Attributes, Attribute, Params, Param, Headers or
+// Header DSL.
 //
 // Example takes one or two arguments: an optional summary and the example value
 // or defining DSL.
 //
 // Examples:
 //
-//	Params(func() {
-//		Param("ZipCode:zip-code", String, "Zip code filter", func() {
-//			Example("Santa Barbara", "93111")
-//			Example("93117") // same as Example("default", "93117")
-//		})
-//	})
+//    Params(func() {
+//        Param("ZipCode:zip-code", String, "Zip code filter", func() {
+//            Example("Santa Barbara", "93111")
+//            Example("93117") // same as Example("default", "93117")
+//        })
+//    })
 //
-//	Attributes(func() {
-//		Attribute("ID", Int64, "ID is the unique bottle identifier")
-//		Example("The first bottle", func() {
-//			Description("This bottle has an ID set to 1")
-//			Value(Val{"ID": 1})
-//		})
-//		Example("Another bottle", func() {
-//			Description("This bottle has an ID set to 5")
-//			Value(Val{"ID": 5})
-//		})
-//	})
+//    Attributes(func() {
+//        Attribute("ID", Int64, "ID is the unique bottle identifier")
+//        Example("The first bottle", func() {
+//            Description("This bottle has an ID set to 1")
+//            Value(Val{"ID": 1})
+//        })
+//        Example("Another bottle", func() {
+//            Description("This bottle has an ID set to 5")
+//            Value(Val{"ID": 5})
+//        })
+//    })
 //
 func Example(args ...interface{}) {
 	if len(args) == 0 {
