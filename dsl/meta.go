@@ -41,11 +41,13 @@ import (
 // results.
 //
 //    var CustomErrorType = ResultType("application/vnd.goa.error", func() {
-//        Attribute("message", String, "Error returned.", func() {
-//            Meta("struct:error:name")
-//        })
-//        Attribute("occurred_at", String, "Time error occurred.", func() {
-//            Format(FormatDateTime)
+//        Attributes(func() {
+//            Attribute("message", String, "Error returned.", func() {
+//                Meta("struct:error:name")
+//            })
+//            Attribute("occurred_at", String, "Time error occurred.", func() {
+//                Format(FormatDateTime)
+//            })
 //        })
 //    })
 //
@@ -70,12 +72,12 @@ import (
 //
 //    var MyType = Type("BigOleMessage", func() {
 //        Attribute("type", String, "Type of big payload")
-//				Attribute("bigPayload", String, "Don't parse it if you don't have to",func() {
-//					Meta("struct:field:type","json.RawMessage","encoding/json")
-//				})
-//				Attribute("id", String, func() {
-//					Meta("struct:field:type","bison.ObjectId", "github.com/globalsign/mgo/bson", "bison")
-//				})
+//        Attribute("bigPayload", String, "Don't parse it if you don't have to",func() {
+//            Meta("struct:field:type","json.RawMessage","encoding/json")
+//         })
+//         Attribute("id", String, func() {
+//             Meta("struct:field:type","bison.ObjectId", "github.com/globalsign/mgo/bson", "bison")
+//         })
 //    })
 //
 //

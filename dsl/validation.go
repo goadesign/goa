@@ -63,9 +63,9 @@ const (
 //    })
 //
 //    Attribute("array", ArrayOf(Int), func() {
-//		    Elem(func() {
-//		        Enum(1, 2, 3, 4, 5)  // Sets possible values for array elements
-//		    })
+//        Elem(func() {
+//            Enum(1, 2, 3, 4, 5)  // Sets possible values for array elements
+//        })
 //    })
 //
 func Enum(vals ...interface{}) {
