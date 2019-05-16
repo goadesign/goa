@@ -257,8 +257,8 @@ const mainT = `func main() {
 		ver = v
 	}
 
-	if ver > pkg.Major {
-		fail("cannot run goa %s on design using goa v%s\n", pkg.Version(), *version)
+	if ver > goa.Major {
+		fail("cannot run goa %s on design using goa v%s\n", goa.Version(), *version)
 	}
 	if err := eval.Context.Errors; err != nil {
 		fail(err.Error())
