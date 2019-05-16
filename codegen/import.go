@@ -39,6 +39,7 @@ func GoaImport(rel string) *ImportSpec {
 	name := ""
 	if rel == "" {
 		name = "goa"
+		rel = "pkg"
 	}
 	return GoaNamedImport(rel, name)
 }
@@ -47,7 +48,7 @@ func GoaImport(rel string) *ImportSpec {
 func GoaNamedImport(rel, name string) *ImportSpec {
 	root := "goa.design/goa"
 	if DesignVersion > 2 {
-		root += "/v" + strconv.Itoa(DesignVersion) + "/pkg"
+		root += "/v" + strconv.Itoa(DesignVersion)
 	}
 	if rel != "" {
 		rel = "/" + rel

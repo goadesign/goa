@@ -123,7 +123,7 @@ func (g *Generator) Write(debug bool) error {
 			codegen.SimpleImport("goa.design/goa/" + ver + "codegen"),
 			codegen.SimpleImport("goa.design/goa/" + ver + "codegen/generator"),
 			codegen.SimpleImport("goa.design/goa/" + ver + "eval"),
-			codegen.SimpleImport("goa.design/goa/" + ver + "pkg"),
+			codegen.NewImport("goa", "goa.design/goa/"+ver+"pkg"),
 			codegen.NewImport("_", g.DesignPath),
 		}
 		sections = []*codegen.SectionTemplate{
