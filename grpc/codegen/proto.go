@@ -6,7 +6,7 @@ import (
 	"os/exec"
 	"path/filepath"
 
-	goa "goa.design/goa/pkg"
+	goa "goa.design/goa/v3/pkg"
 	"goa.design/goa/v3/codegen"
 	"goa.design/goa/v3/expr"
 )

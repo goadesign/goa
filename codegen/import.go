@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strconv"
 
-	goa "goa.design/goa/pkg"
+	goa "goa.design/goa/v3/pkg"
 	"goa.design/goa/v3/expr"
 )
 
