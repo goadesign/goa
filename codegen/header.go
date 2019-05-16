@@ -1,7 +1,7 @@
 package codegen
 
 import (
-	"goa.design/goa/v3/pkg"
+	goa "goa.design/goa/v3/pkg"
 )
 
 // Header returns a Go source file header section template.
@@ -11,7 +11,7 @@ func Header(title, pack string, imports []*ImportSpec) *SectionTemplate {
 		Source: headerT,
 		Data: map[string]interface{}{
 			"Title":       title,
-			"ToolVersion": pkg.Version(),
+			"ToolVersion": goa.Version(),
 			"Pkg":         pack,
 			"Imports":     imports,
 		},

@@ -4,15 +4,15 @@ import (
 	"fmt"
 	"strconv"
 
+	goa "goa.design/goa/pkg"
 	"goa.design/goa/v3/expr"
-	"goa.design/goa/v3/pkg"
 )
 
 // DesignVersion contains the major component of the version of Goa used to
 // author the design - either 2 or 3. This value is initialized when the
 // generated tool is invoked by retrieving the information passed on the
 // command line by the goa tool.
-var DesignVersion int = pkg.Major
+var DesignVersion = goa.Major
 
 type (
 	// ImportSpec defines a generated import statement.
@@ -47,7 +47,7 @@ func GoaImport(rel string) *ImportSpec {
 func GoaNamedImport(rel, name string) *ImportSpec {
 	root := "goa.design/goa"
 	if DesignVersion > 2 {
-		root += "/v" + strconv.Itoa(DesignVersion)
+		root += "/v" + strconv.Itoa(DesignVersion) + "/pkg"
 	}
 	if rel != "" {
 		rel = "/" + rel

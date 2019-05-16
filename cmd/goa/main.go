@@ -6,9 +6,9 @@ import (
 	"os"
 	"strings"
 
-	"goa.design/goa/v3/pkg"
-
 	"flag"
+
+	goa "goa.design/goa/pkg"
 )
 
 func main() {
@@ -24,7 +24,7 @@ func main() {
 
 		switch os.Args[1] {
 		case "version":
-			fmt.Println("goa version " + pkg.Version())
+			fmt.Println("goa version " + goa.Version())
 			os.Exit(0)
 		case "gen", "example":
 			if len(os.Args) == 2 {

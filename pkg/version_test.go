@@ -1,4 +1,4 @@
-package pkg
+package goa
 
 import (
 	"fmt"

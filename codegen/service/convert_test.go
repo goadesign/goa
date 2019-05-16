@@ -67,11 +67,11 @@ func TestPkgImport(t *testing.T) {
 		Pkg            string
 		ExpectedImport string
 	}{
-		{"root-pkg", cwd, "goa.design/goa/v3", "goa.design/goa/v3"},
+		{"goa-pkg", cwd, "goa.design/goa/v3/pkg", "goa.design/goa/v3/pkg"},
 		{"internal-pkg", cwd, "goa.design/goa/v3/codegen", "goa.design/goa/v3/codegen"},
 		{"vendored-pkg", cwd, "goa.design/goa/vendor/github.com/some/pkg", "github.com/some/pkg"},
 		{"external-pkg", cwd, "github.com/some/pkg", "github.com/some/pkg"},
-		{"gomod-root-pkg", goModCwd, "goa.design/goa/v3", "goa.design/goa/v3"},
+		{"gomod-goa-pkg", goModCwd, "goa.design/goa/v3/pkg", "goa.design/goa/v3/pkg"},
 	}
 	for _, tc := range cases {
 		t.Run(tc.Name, func(t *testing.T) {

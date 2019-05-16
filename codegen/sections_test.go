@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"testing"
 
-	"goa.design/goa/v3/pkg"
+	goa "goa.design/goa/v3/pkg"
 )
 
 func TestHeader(t *testing.T) {
@@ -67,7 +67,7 @@ import (
 
 package testpackage
 
-`, pkg.Version())
+`, goa.Version())
 		imprt            = []*ImportSpec{{Path: "test"}}
 		imports          = append(imprt, &ImportSpec{Path: "other"})
 		pathImport       = []*ImportSpec{{Path: "import/with/slashes"}}
