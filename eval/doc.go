@@ -116,6 +116,6 @@ elect to create default value expressions instead of leaving them nil to avoid
 panics later on).
 
 The package exposes other helper functions such as Execute which allows running
-a DSL function manually.
+a DSL function on demand.
 */
 package eval

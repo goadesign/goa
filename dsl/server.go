@@ -109,7 +109,7 @@ func Services(svcs ...string) {
 //
 // Example:
 //
-//    var _ = Server("calcsvc", func() {
+//    Server("calcsvc", func() {
 //        Host("development", func() {
 //            URI("http://localhost:80/calc")
 //            URI("grpc://localhost:8080")
