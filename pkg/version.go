@@ -1,5 +1,4 @@
-// Package pkg deals with versioning for goa.
-package pkg
+package goa
 
 import (
 	"fmt"

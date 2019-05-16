@@ -4,8 +4,8 @@ import (
 	"fmt"
 
 	"github.com/golang/protobuf/proto"
-	"goa.design/goa/v3"
 	goapb "goa.design/goa/v3/grpc/pb"
+	goa "goa.design/goa/v3/pkg"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
