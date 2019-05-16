@@ -19,8 +19,7 @@ describe the *design* of the service API using a simple Go DSL. goa uses the
 description to generate specialized service helper code, client code and
 documentation. Goa is extensible via plugins, for example the
 [goakit](https://github.com/goadesign/plugins/tree/master/goakit) plugin
-generates code that leverage the [go-kit](https://github.com/go-kit/kit)
-library.
+generates code that leverage the Go kit library.
 
 The service design describes the transport independent layer of the services in
 the form of simple methods that accept a context and a payload and return a
