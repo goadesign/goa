@@ -172,7 +172,7 @@ func ArrayOf(v interface{}, fn ...func()) *expr.Array {
 //        Key(func() {
 //            Minimum(1)           // Validates keys of the map
 //        })
-//        Value(func() {
+//        Elem(func() {
 //            Pattern("[a-zA-Z]+") // Validates values of the map
 //        })
 //    })

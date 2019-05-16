@@ -118,6 +118,8 @@ func ResultType(identifier string, fn func()) *expr.ResultTypeExpr {
 // (result type) given in the DSL and computes a valid Go identifier from it.
 // This function makes it possible to override that and provide a custom name.
 // name must be a valid Go identifier.
+//
+// TypeName must appear in a Type or ResultType expression.
 func TypeName(name string) {
 	switch e := eval.Current().(type) {
 	case expr.UserType:
