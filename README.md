@@ -8,16 +8,15 @@ design-first approach.
 ---
 [![Build Status](https://travis-ci.org/goadesign/goa.svg?branch=v3)](https://travis-ci.org/goadesign/goa)
 [![Windows Build status](https://ci.appveyor.com/api/projects/status/vixp37loj5i6qmaf/branch/v3?svg=true)](https://ci.appveyor.com/project/RaphaelSimon/goa-oqtis/branch/master)
-[![Sourcegraph](https://sourcegraph.com/github.com/goadesign/goa/-/badge.svg)](https://sourcegraph.com/github.com/goadesign/goa?badge)
 [![Godoc](https://godoc.org/goa.design/goa?status.svg)](https://godoc.org/goa.design/goa)
 [![Slack](https://img.shields.io/badge/slack-gophers-orange.svg?style=flat)](https://gophers.slack.com/messages/goa/)
 
-# [Goa v2 and v3 released!!!](https://goa.design/blog/009-v_3_0_0/)
+## [Goa v2 and v3 released!!!](https://goa.design/blog/009-v_3_0_0/)
 
 ## Overview
 
 Goa takes a different approach to building services by making it possible to
-describe the *design* of the service API using a simple Go DSL. goa uses the
+describe the *design* of the service API using a simple Go DSL. Goa uses the
 description to generate specialized service helper code, client code and
 documentation. Goa is extensible via plugins, for example the
 [goakit](https://github.com/goadesign/plugins/tree/master/goakit) plugin
@@ -81,7 +80,7 @@ designs using v2 or v3 (designs using v1 use a different tool altogether).
 
 ### Vendoring
 
-Since goa generates and compiles code vendoring tools are not able to
+Since Goa generates and compiles code vendoring tools are not able to
 automatically identify all the dependencies. In particular the `generator`
 package is only used by the generated code. To alleviate this issue simply add
 `goa.design/goa/codegen/generator` as a required package to the vendor manifest.
@@ -95,7 +94,7 @@ This only applies to Goa v2 as vendoring is not used together with Go modules.
 
 ### Stable Versions
 
-goa follows [Semantic Versioning](http://semver.org/) which is a fancy way of
+Goa follows [Semantic Versioning](http://semver.org/) which is a fancy way of
 saying it publishes releases with version numbers of the form `vX.Y.Z` and makes
 sure that your code can upgrade to new versions with the same `X` component
 without having to make changes.
@@ -238,8 +237,8 @@ intended to be re-run each time the design changes (as opposed to the `gen`
 command which should be re-run each time the design changes).
 
 Let's implement our service by providing a proper implementation for the `add`
-method. goa generated a payload struct for the `add` method that contains both
-fields. goa also generated the transport layer that takes care of decoding the
+method. Goa generated a payload struct for the `add` method that contains both
+fields. Goa also generated the transport layer that takes care of decoding the
 request so all we have to do is to perform the actual sum. Edit the file
 `calc.go` and change the code of the `add` function as follows:
 
@@ -360,7 +359,7 @@ curl localhost:8088/swagger.json
 
 ## Resources
 
-Consult the following resources to learn more about goa.
+Consult the following resources to learn more about Goa.
 
 ### Docs
 
