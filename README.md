@@ -3,6 +3,8 @@
 goa is a framework for building micro-services and REST APIs in Go using a
 unique design-first approach.
 
+## This branch is deprecated, use the [v3 branch](https://github.com/goadesign/goa/tree/v3) for the latest.
+
 ---
 [![Build Status](https://travis-ci.org/goadesign/goa.svg?branch=master)](https://travis-ci.org/goadesign/goa)
 [![Windows Build status](https://ci.appveyor.com/api/projects/status/vixp37loj5i6qmaf/branch/master?svg=true)](https://ci.appveyor.com/project/RaphaelSimon/goa-oqtis/branch/master)
