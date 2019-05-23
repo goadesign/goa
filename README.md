@@ -50,15 +50,23 @@ invoking the client code.
 
 ## Installation
 
-Assuming you have a working [Go](https://golang.org) setup:
+Assuming you have a working [Go](https://golang.org) setup, and are in a
+directory where a `go.mod` file is present:
 
-``` bash
+```bash
 export GO111MODULE=on
 go get -u goa.design/goa/v3
 go get -u goa.design/goa/v3/...
 ```
 
-or, when NOT using Go modules (this installs Goa v2, see below):
+If you don't have a `go.mod` file present, and only want to install the
+Goa command globally:
+
+```bash
+go get -u goa.design/goa/v3/cmd/goa
+```
+
+Alternatively, when NOT using Go modules (this installs Goa v2, see below):
 
 ```bash
 go get -u goa.design/goa/...
