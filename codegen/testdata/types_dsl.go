@@ -124,6 +124,18 @@ var TestTypesDSL = func() {
 			Required("required_string")
 		})
 
+		_ = Type("RecursiveArray", func() {
+			Attribute("required_string", String)
+			Attribute("recursive", ArrayOf("RecursiveArray"))
+			Required("required_string")
+		})
+
+		_ = Type("RecursiveMap", func() {
+			Attribute("required_string", String)
+			Attribute("recursive", MapOf(String, "RecursiveMap"))
+			Required("required_string")
+		})
+
 		RT = ResultType("application/vnd.goa.example", func() {
 			TypeName("ResultType")
 			Attributes(func() {
