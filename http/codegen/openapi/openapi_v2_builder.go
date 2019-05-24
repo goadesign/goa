@@ -685,7 +685,7 @@ func buildPathFromExpr(s *V2, root *expr.RootExpr, h *expr.HostExpr, route *expr
 						if description != "" {
 							description += "\n"
 						}
-						description += fmt.Sprintf("\nRequired security scopes for %s:\n%s", s.SchemeName, strings.Join(lines, "\n"))
+						description += fmt.Sprintf("\n**Required security scopes for %s**:\n%s", s.SchemeName, strings.Join(lines, "\n"))
 					}
 				}
 			}

@@ -19,13 +19,13 @@ paths:
       summary: testEndpointA testService
       description: |2-
 
-        Required security scopes for basic:
+        **Required security scopes for basic**:
           * `api:read`
 
-        Required security scopes for jwt:
+        **Required security scopes for jwt**:
           * `api:read`
 
-        Required security scopes for api_key:
+        **Required security scopes for api_key**:
           * `api:read`
       operationId: testService#testEndpointA
       parameters:
