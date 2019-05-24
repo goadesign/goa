@@ -94,19 +94,19 @@ type (
 )
 
 // Validate returns a non-nil error if scopes does not contain all of
-// OAuth2 scheme's required scopes.
+// Basic scheme's required scopes.
 func (s *BasicScheme) Validate(scopes []string) error {
 	return validateScopes(s.RequiredScopes, scopes)
 }
 
 // Validate returns a non-nil error if scopes does not contain all of
-// Basic scheme's required scopes.
+// APIKey scheme's required scopes.
 func (s *APIKeyScheme) Validate(scopes []string) error {
 	return validateScopes(s.RequiredScopes, scopes)
 }
 
 // Validate returns a non-nil error if scopes does not contain all of
-// APIKey scheme's required scopes.
+// OAuth2 scheme's required scopes.
 func (s *OAuth2Scheme) Validate(scopes []string) error {
 	return validateScopes(s.RequiredScopes, scopes)
 }
