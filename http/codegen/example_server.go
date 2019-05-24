@@ -189,7 +189,7 @@ func {{ .FuncName }}(mw *multipart.Writer, p {{ .Payload.Ref }}) error {
 
 	// input: map[string]interface{}{"Services":[]*ServiceData}
 	httpSvrStartT = `{{ comment "handleHTTPServer starts configures and starts a HTTP server on the given URL. It shuts down the server if any error is received in the error channel." }}
-func handleHTTPServer(ctx context.Context, u *url.URL{{ range $.Services }}{{ if .Service.Methods }}, {{ .Service.VarName }}Endpoints *{{ .Service.PkgName }}.Endpoints{{ end }}{{ end }}, wg *sync.WaitGroup, errc chan error, logger *log.Logger, debug bool) {
+func handleHTTPServer(ctx context.Context, u *url.URL, tlsCertPath *string, tlsKeyPath *string {{ range $.Services }}{{ if .Service.Methods }}, {{ .Service.VarName }}Endpoints *{{ .Service.PkgName }}.Endpoints{{ end }}{{ end }}, wg *sync.WaitGroup, errc chan error, logger *log.Logger, debug bool) {
 `
 
 	httpSvrLoggerT = `
@@ -283,8 +283,13 @@ func handleHTTPServer(ctx context.Context, u *url.URL{{ range $.Services }}{{ if
 
 		{{ comment "Start HTTP server in a separate goroutine." }}
 		go func() {
-			logger.Printf("HTTP server listening on %q", u.Host)
-			errc <- srv.ListenAndServe()
+			if u.Scheme == "https" {
+				logger.Printf("HTTPS server listening with TLS on %q", u.Host)
+				errc <- srv.ListenAndServeTLS(*tlsCertPath, *tlsKeyPath)
+			} else {
+				logger.Printf("HTTP server listening on %q", u.Host)
+				errc <- srv.ListenAndServe()
+			}
 		}()
 
 		<-ctx.Done()

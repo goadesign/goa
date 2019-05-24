@@ -157,10 +157,22 @@ func main() {
 	{{- range .Server.Variables }}
 	{{ .VarName }}F = flag.String({{ printf "%q" .Name }}, {{ printf "%q" .DefaultValue }}, "{{ .Description }}{{ if .Values }} (valid values: {{ join .Values ", " }}){{ end }}")
 	{{- end }}
+		tlsCertPath   = flag.String("tls-cert", "", "TLS certificate file path (required in secure mode)")
+		tlsKeyPath    = flag.String("tls-key", "", "TLS key file path (required in secure mode)")
 		secureF = flag.Bool("secure", false, "Use secure scheme (https or grpcs)")
 		dbgF  = flag.Bool("debug", false, "Log request and response bodies")
 	)
 	flag.Parse()
+
+	if *secureF {
+		// verify required command line arguments are available when in secure mode
+		if *tlsCertPath == "" {
+			exitOnRequiredArgument( "tls-cert")
+		}
+		if *tlsKeyPath == "" {
+			exitOnRequiredArgument( "tls-key")
+		}
+	}
 `
 
 	// input: map[string]interface{"APIPkg": string}
@@ -278,7 +290,7 @@ func main() {
 			} else if u.Port() == "" {
 				u.Host += ":{{ $u.Port }}"
 			}
-			handle{{ toUpper $u.Transport.Name }}Server(ctx, u, {{ range $.Services }}{{ if .Methods }}{{ .VarName }}Endpoints, {{ end }}{{ end }}&wg, errc, logger, *dbgF)
+			handle{{ toUpper $u.Transport.Name }}Server(ctx, u, tlsCertPath, tlsKeyPath, {{ range $.Services }}{{ if .Methods }}{{ .VarName }}Endpoints, {{ end }}{{ end }}&wg, errc, logger, *dbgF)
 		}
 	{{- end }}
 	{{ end }}
@@ -297,6 +309,14 @@ func main() {
 
 	wg.Wait()
 	logger.Println("exited")
+}
+
+func exitOnRequiredArgument(argName string) {
+	fmt.Fprintf(os.Stderr, "missing required argument argument -%s\n\n", argName)
+
+    fmt.Fprintf(os.Stderr, "Usage of %s:\n", os.Args[0])
+    flag.PrintDefaults()
+	os.Exit(2)
 }
 `
 )
