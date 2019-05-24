@@ -9,19 +9,15 @@ import (
 	"goa.design/goa/v3/expr"
 )
 
-var (
-	// transformGoArrayT is the template to generate Go array transformation
-	// code.
-	transformGoArrayT *template.Template
-	// transformGoMapT is the template to generate Go map transformation code.
-	transformGoMapT *template.Template
-)
+var transformGoArrayT, transformGoMapT, transformGoArrayElemT, transformGoMapElemT *template.Template
 
 // NOTE: can't initialize inline because https://github.com/golang/go/issues/1817
 func init() {
-	fm := template.FuncMap{"transformAttribute": transformAttribute}
+	fm := template.FuncMap{"transformAttribute": transformAttribute, "transformHelperName": transformHelperName}
 	transformGoArrayT = template.Must(template.New("transformGoArray").Funcs(fm).Parse(transformGoArrayTmpl))
 	transformGoMapT = template.Must(template.New("transformGoMap").Funcs(fm).Parse(transformGoMapTmpl))
+	transformGoArrayElemT = template.Must(template.New("transformGoArrayElem").Funcs(fm).Parse(transformGoArrayElemTmpl))
+	transformGoMapElemT = template.Must(template.New("transformGoMapElem").Funcs(fm).Parse(transformGoMapElemTmpl))
 }
 
 // GoTransform produces Go code that initializes the data structure defined
@@ -56,7 +52,7 @@ func GoTransform(source, target *expr.AttributeExpr, sourceVar, targetVar string
 		return "", nil, err
 	}
 
-	funcs, err := transformAttributeHelpers(source, target, ta)
+	funcs, err := transformAttributeHelpers(source, target, ta, make(map[string]*TransformFunctionData))
 	if err != nil {
 		return "", nil, err
 	}
@@ -170,9 +166,9 @@ func transformObject(source, target *expr.AttributeExpr, sourceVar, targetVar st
 			_, ok := srcc.Type.(expr.UserType)
 			switch {
 			case expr.IsArray(srcc.Type):
-				code, err = transformArray(expr.AsArray(srcc.Type), expr.AsArray(tgtc.Type), srcVar, tgtVar, false, ta)
+				code, err = transformArrayElem(expr.AsArray(srcc.Type), expr.AsArray(tgtc.Type), srcVar, tgtVar, false, ta)
 			case expr.IsMap(srcc.Type):
-				code, err = transformMap(expr.AsMap(srcc.Type), expr.AsMap(tgtc.Type), srcVar, tgtVar, false, ta)
+				code, err = transformMapElem(expr.AsMap(srcc.Type), expr.AsMap(tgtc.Type), srcVar, tgtVar, false, ta)
 			case ok:
 				code = fmt.Sprintf("%s = %s(%s)\n", tgtVar, transformHelperName(srcc, tgtc, ta), srcVar)
 			case expr.IsObject(srcc.Type):
@@ -245,6 +241,32 @@ func transformArray(source, target *expr.Array, sourceVar, targetVar string, new
 	return buf.String(), nil
 }
 
+// transformArrayElem generates Go code to transform an object field of type array.
+func transformArrayElem(source, target *expr.Array, sourceVar, targetVar string, newVar bool, ta *TransformAttrs) (string, error) {
+	st, tt := source.ElemType.Type, target.ElemType.Type
+	if err := IsCompatible(st, tt, sourceVar+"[0]", targetVar+"[0]"); err != nil {
+		return "", err
+	}
+	if _, ok := st.(expr.UserType); ok {
+		data := map[string]interface{}{
+			"ElemTypeRef":    ta.TargetCtx.Scope.Ref(target.ElemType, ta.TargetCtx.Pkg),
+			"SourceElem":     source.ElemType,
+			"TargetElem":     target.ElemType,
+			"SourceVar":      sourceVar,
+			"TargetVar":      targetVar,
+			"NewVar":         newVar,
+			"TransformAttrs": ta,
+			"LoopVar":        string(105 + strings.Count(targetVar, "[")),
+		}
+		var buf bytes.Buffer
+		if err := transformGoArrayElemT.Execute(&buf, data); err != nil {
+			return "", err
+		}
+		return buf.String(), nil
+	}
+	return transformArray(source, target, sourceVar, targetVar, newVar, ta)
+}
+
 // transformMap generates Go code to transform source map to target map.
 func transformMap(source, target *expr.Map, sourceVar, targetVar string, newVar bool, ta *TransformAttrs) (string, error) {
 	if err := IsCompatible(source.KeyType.Type, target.KeyType.Type, sourceVar+"[key]", targetVar+"[key]"); err != nil {
@@ -276,6 +298,40 @@ func transformMap(source, target *expr.Map, sourceVar, targetVar string, newVar 
 	return buf.String(), nil
 }
 
+// transformMapElem generates Go code to transform an object field of type map.
+func transformMapElem(source, target *expr.Map, sourceVar, targetVar string, newVar bool, ta *TransformAttrs) (string, error) {
+	if err := IsCompatible(source.KeyType.Type, target.KeyType.Type, sourceVar+"[key]", targetVar+"[key]"); err != nil {
+		return "", err
+	}
+	if err := IsCompatible(source.ElemType.Type, target.ElemType.Type, sourceVar+"[*]", targetVar+"[*]"); err != nil {
+		return "", err
+	}
+	if _, ok := target.ElemType.Type.(expr.UserType); ok {
+		data := map[string]interface{}{
+			"KeyTypeRef":     ta.TargetCtx.Scope.Ref(target.KeyType, ta.TargetCtx.Pkg),
+			"ElemTypeRef":    ta.TargetCtx.Scope.Ref(target.ElemType, ta.TargetCtx.Pkg),
+			"SourceKey":      source.KeyType,
+			"TargetKey":      target.KeyType,
+			"SourceElem":     source.ElemType,
+			"TargetElem":     target.ElemType,
+			"SourceVar":      sourceVar,
+			"TargetVar":      targetVar,
+			"NewVar":         newVar,
+			"TransformAttrs": ta,
+			"LoopVar":        "",
+		}
+		if depth := MapDepth(target); depth > 0 {
+			data["LoopVar"] = string(97 + depth)
+		}
+		var buf bytes.Buffer
+		if err := transformGoMapElemT.Execute(&buf, data); err != nil {
+			return "", err
+		}
+		return buf.String(), nil
+	}
+	return transformMap(source, target, sourceVar, targetVar, newVar, ta)
+}
+
 // transformAttributeHelpers returns the Go transform functions and their definitions
 // that may be used in code produced by Transform. It returns an error if source and
 // target are incompatible (different types, fields of different type etc).
@@ -286,7 +342,7 @@ func transformMap(source, target *expr.Map, sourceVar, targetVar string, newVar 
 //
 // seen keeps track of generated transform functions to avoid recursion
 //
-func transformAttributeHelpers(source, target *expr.AttributeExpr, ta *TransformAttrs, seen ...map[string]*TransformFunctionData) ([]*TransformFunctionData, error) {
+func transformAttributeHelpers(source, target *expr.AttributeExpr, ta *TransformAttrs, seen map[string]*TransformFunctionData) ([]*TransformFunctionData, error) {
 	var (
 		helpers []*TransformFunctionData
 		err     error
@@ -297,14 +353,14 @@ func transformAttributeHelpers(source, target *expr.AttributeExpr, ta *Transform
 		case expr.IsArray(source.Type):
 			source = expr.AsArray(source.Type).ElemType
 			target = expr.AsArray(target.Type).ElemType
-			helpers, err = transformAttributeHelpers(source, target, ta, seen...)
+			helpers, err = transformAttributeHelpers(source, target, ta, seen)
 		case expr.IsMap(source.Type):
 			sm := expr.AsMap(source.Type)
 			tm := expr.AsMap(target.Type)
-			helpers, err = transformAttributeHelpers(sm.ElemType, tm.ElemType, ta, seen...)
+			helpers, err = transformAttributeHelpers(sm.ElemType, tm.ElemType, ta, seen)
 			if err == nil {
 				var other []*TransformFunctionData
-				other, err = transformAttributeHelpers(sm.KeyType, tm.KeyType, ta, seen...)
+				other, err = transformAttributeHelpers(sm.KeyType, tm.KeyType, ta, seen)
 				helpers = append(helpers, other...)
 			}
 		case expr.IsObject(source.Type):
@@ -312,7 +368,7 @@ func transformAttributeHelpers(source, target *expr.AttributeExpr, ta *Transform
 				if err != nil {
 					return
 				}
-				h, err2 := collectHelpers(srcc, tgtc, srcMatt.IsRequired(n), ta, seen...)
+				h, err2 := collectHelpers(srcc, tgtc, srcMatt.IsRequired(n), ta, seen)
 				if err2 != nil {
 					err = err2
 					return
@@ -329,73 +385,70 @@ func transformAttributeHelpers(source, target *expr.AttributeExpr, ta *Transform
 
 // collectHelpers recursively traverses the given attributes and return the
 // transform helper functions required to generate the transform code.
-func collectHelpers(source, target *expr.AttributeExpr, req bool, ta *TransformAttrs, seen ...map[string]*TransformFunctionData) ([]*TransformFunctionData, error) {
+func collectHelpers(source, target *expr.AttributeExpr, req bool, ta *TransformAttrs, seen map[string]*TransformFunctionData) ([]*TransformFunctionData, error) {
 	var (
 		data []*TransformFunctionData
 	)
 	switch {
 	case expr.IsArray(source.Type):
-		helpers, err := transformAttributeHelpers(
-			expr.AsArray(source.Type).ElemType,
-			expr.AsArray(target.Type).ElemType,
-			ta, seen...)
-		if err != nil {
-			return nil, err
-		}
-		data = append(data, helpers...)
-	case expr.IsMap(source.Type):
-		helpers, err := transformAttributeHelpers(
-			expr.AsMap(source.Type).KeyType,
-			expr.AsMap(target.Type).KeyType,
-			ta, seen...)
-		if err != nil {
-			return nil, err
-		}
-		data = append(data, helpers...)
-		helpers, err = transformAttributeHelpers(
-			expr.AsMap(source.Type).ElemType,
-			expr.AsMap(target.Type).ElemType,
-			ta, seen...)
-		if err != nil {
-			return nil, err
-		}
-		data = append(data, helpers...)
-	case expr.IsObject(source.Type):
-		if ut, ok := source.Type.(expr.UserType); ok {
-			name := transformHelperName(source, target, ta)
-			var s map[string]*TransformFunctionData
-			if len(seen) > 0 {
-				s = seen[0]
-			} else {
-				s = make(map[string]*TransformFunctionData)
-				seen = append(seen, s)
-			}
-			if _, ok := s[name]; ok {
-				return nil, nil
-			}
-			code, err := transformAttribute(ut.Attribute(), target, "v", "res", true, ta)
+		st, tt := expr.AsArray(source.Type).ElemType, expr.AsArray(target.Type).ElemType
+		if _, ok := st.Type.(expr.UserType); ok {
+			// Handle array of user types explicitly to avoid infinite recursions
+			// when the user type has an attribute of type array of itself.
+			d, err := generateHelper(st, tt, req, ta, seen)
 			if err != nil {
 				return nil, err
 			}
-			if !req {
-				code = "if v == nil {\n\treturn nil\n}\n" + code
+			data = append(data, d)
+		} else {
+			helpers, err := transformAttributeHelpers(st, tt, ta, seen)
+			if err != nil {
+				return nil, err
 			}
-			tfd := &TransformFunctionData{
-				Name:          name,
-				ParamTypeRef:  ta.SourceCtx.Scope.Ref(source, ta.SourceCtx.Pkg),
-				ResultTypeRef: ta.TargetCtx.Scope.Ref(target, ta.TargetCtx.Pkg),
-				Code:          code,
+			data = append(data, helpers...)
+		}
+	case expr.IsMap(source.Type):
+		se, te := expr.AsMap(source.Type).ElemType, expr.AsMap(target.Type).ElemType
+		sk, tk := expr.AsMap(source.Type).KeyType, expr.AsMap(target.Type).KeyType
+		helpers, err := transformAttributeHelpers(sk, tk, ta, seen)
+		if err != nil {
+			return nil, err
+		}
+		data = append(data, helpers...)
+		if _, ok := se.Type.(expr.UserType); ok {
+			// Handle map of user types explicitly to avoid infinite recursions
+			// when the user type has an attribute of type map of itself.
+			d, err := generateHelper(se, te, req, ta, seen)
+			if err != nil {
+				return nil, err
 			}
-			s[name] = tfd
-			data = append(data, tfd)
+			data = append(data, d)
+		} else {
+			helpers, err = transformAttributeHelpers(se, te, ta, seen)
+			if err != nil {
+				return nil, err
+			}
+			data = append(data, helpers...)
+		}
+	case expr.IsObject(source.Type):
+		if _, ok := source.Type.(expr.UserType); ok {
+			d, err := generateHelper(source, target, req, ta, seen)
+			if err != nil {
+				return nil, err
+			}
+			data = append(data, d)
 		}
 
 		// collect helpers
 		var err error
 		{
 			walkMatches(source, target, func(srcMatt, _ *expr.MappedAttributeExpr, srcc, tgtc *expr.AttributeExpr, n string) {
+				name := transformHelperName(source, target, ta)
+				if _, ok := seen[name]; ok {
+					return
+				}
 				var helpers []*TransformFunctionData
-				helpers, err = collectHelpers(srcc, tgtc, srcMatt.IsRequired(n), ta, seen...)
+				helpers, err = collectHelpers(srcc, tgtc, srcMatt.IsRequired(n), ta, seen)
 				if err != nil {
 					return
 				}
@@ -407,6 +460,30 @@ func collectHelpers(source, target *expr.AttributeExpr, req bool, ta *TransformA
 		}
 	}
 	return data, nil
+}
+
+// generateHelper generates the code that transform instances of source into
+// target.
+func generateHelper(source, target *expr.AttributeExpr, req bool, ta *TransformAttrs, seen map[string]*TransformFunctionData) (*TransformFunctionData, error) {
+	name := transformHelperName(source, target, ta)
+	if _, ok := seen[name]; ok {
+		return nil, nil
+	}
+	code, err := transformAttribute(source.Type.(expr.UserType).Attribute(), target, "v", "res", true, ta)
+	if err != nil {
+		return nil, err
+	}
+	if !req {
+		code = "if v == nil {\n\treturn nil\n}\n" + code
+	}
+	tfd := &TransformFunctionData{
+		Name:          name,
+		ParamTypeRef:  ta.SourceCtx.Scope.Ref(source, ta.SourceCtx.Pkg),
+		ResultTypeRef: ta.TargetCtx.Scope.Ref(target, ta.TargetCtx.Pkg),
+		Code:          code,
+	}
+	seen[name] = tfd
+	return tfd, nil
 }
 
 // walkMatches iterates through the source attribute expression and executes
@@ -449,11 +526,24 @@ for {{ .LoopVar }}, val := range {{ .SourceVar }} {
 }
 `
 
+	transformGoArrayElemTmpl = `{{ .TargetVar }} {{ if .NewVar }}:={{ else }}={{ end }} make([]{{ .ElemTypeRef }}, len({{ .SourceVar }}))
+for {{ .LoopVar }}, val := range {{ .SourceVar }} {
+  {{ .TargetVar }}[{{ .LoopVar }}] = {{ transformHelperName .SourceElem .TargetElem .TransformAttrs }}(val)
+}
+`
+
 	transformGoMapTmpl = `{{ .TargetVar }} {{ if .NewVar }}:={{ else }}={{ end }} make(map[{{ .KeyTypeRef }}]{{ .ElemTypeRef }}, len({{ .SourceVar }}))
 for key, val := range {{ .SourceVar }} {
   {{ transformAttribute .SourceKey .TargetKey "key" "tk" true .TransformAttrs -}}
   {{ transformAttribute .SourceElem .TargetElem "val" (printf "tv%s" .LoopVar) true .TransformAttrs -}}
   {{ .TargetVar }}[tk] = {{ printf "tv%s" .LoopVar }}
+}
+`
+
+	transformGoMapElemTmpl = `{{ .TargetVar }} {{ if .NewVar }}:={{ else }}={{ end }} make(map[{{ .KeyTypeRef }}]{{ .ElemTypeRef }}, len({{ .SourceVar }}))
+for key, val := range {{ .SourceVar }} {
+  {{ transformAttribute .SourceKey .TargetKey "key" "tk" true .TransformAttrs -}}
+  {{ .TargetVar }}[tk] = {{ transformHelperName .SourceElem .TargetElem .TransformAttrs }}(val)
 }
 `
 )

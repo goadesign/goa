@@ -442,6 +442,10 @@ func (a *Array) Example(r *Random) interface{} {
 	res := make([]interface{}, count)
 	for i := 0; i < count; i++ {
 		res[i] = a.ElemType.Example(r)
+		if res[i] == nil {
+			// Handle the case of recursive data structures
+			res[i] = make(map[string]interface{})
+		}
 	}
 	return a.MakeSlice(res)
 }
