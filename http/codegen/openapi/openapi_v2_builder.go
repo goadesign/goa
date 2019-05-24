@@ -159,10 +159,28 @@ func securitySpecFromExpr(root *expr.RootExpr) map[string]*SecurityDefinition {
 					switch s.Kind {
 					case expr.BasicAuthKind:
 						sd.Type = "basic"
+						// Generate scopes to add to description
+						lines := []string{}
+						for _, scope := range s.Scopes {
+							lines = append(lines, fmt.Sprintf("  * `%s`: %s", scope.Name, scope.Description))
+						}
+						// Add scope description only if scopes are defined
+						if len(lines) > 0 {
+							sd.Description += fmt.Sprintf("\n**Security Scopes**:\n%s", strings.Join(lines, "\n"))
+						}
 					case expr.APIKeyKind:
 						sd.Type = "apiKey"
 						sd.In = s.In
 						sd.Name = s.Name
+						// Generate scopes to add to description
+						lines := []string{}
+						for _, scope := range s.Scopes {
+							lines = append(lines, fmt.Sprintf("  * `%s`: %s", scope.Name, scope.Description))
+						}
+						// Add scope description only if scopes are defined
+						if len(lines) > 0 {
+							sd.Description += fmt.Sprintf("\n**Security Scopes**:\n%s", strings.Join(lines, "\n"))
+						}
 					case expr.JWTKind:
 						sd.Type = "apiKey"
 						// OpenAPI V2 spec does not support JWT scheme. Hence we add the scheme
@@ -648,7 +666,7 @@ func buildPathFromExpr(s *V2, root *expr.RootExpr, h *expr.HostExpr, route *expr
 				switch s.Kind {
 				case expr.OAuth2Kind:
 					requirement[s.Hash()] = append(requirement[s.Hash()], req.Scopes...)
-				case expr.JWTKind:
+				case expr.BasicAuthKind, expr.APIKeyKind, expr.JWTKind:
 					lines := make([]string, 0, len(req.Scopes))
 					for _, scope := range req.Scopes {
 						lines = append(lines, fmt.Sprintf("  * `%s`", scope))
@@ -656,7 +674,10 @@ func buildPathFromExpr(s *V2, root *expr.RootExpr, h *expr.HostExpr, route *expr
 					if description != "" {
 						description += "\n"
 					}
-					description += fmt.Sprintf("\nRequired security scopes:\n%s", strings.Join(lines, "\n"))
+					// List scopes only if they are defined
+					if len(lines) > 0 {
+						description += fmt.Sprintf("\nRequired security scopes for %s:\n%s", s.SchemeName, strings.Join(lines, "\n"))
+					}
 				}
 			}
 			requirements[i] = requirement

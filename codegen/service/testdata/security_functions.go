@@ -67,6 +67,35 @@ func NewSecureWithRequiredScopesEndpoint(s Service, authJWTFn security.AuthJWTFu
 }
 `
 
+var EndpointWithOptionalRequiredScopesCode = `// NewSecureWithOptionalRequiredScopesEndpoint returns an endpoint function
+// that calls the method "SecureWithOptionalRequiredScopes" of service
+// "EndpointWithOptionalRequiredScopes".
+func NewSecureWithOptionalRequiredScopesEndpoint(s Service, authBasicFn security.AuthBasicFunc) goa.Endpoint {
+	return func(ctx context.Context, req interface{}) (interface{}, error) {
+		p := req.(*SecureWithOptionalRequiredScopesPayload)
+		var err error
+		sc := security.BasicScheme{
+			Name:           "basic",
+			Scopes:         []string{"api:read", "api:write", "api:admin"},
+			RequiredScopes: []string{"api:read", "api:write"},
+		}
+		var user string
+		if p.User != nil {
+			user = *p.User
+		}
+		var pass string
+		if p.Pass != nil {
+			pass = *p.Pass
+		}
+		ctx, err = authBasicFn(ctx, user, pass, &sc)
+		if err != nil {
+			return nil, err
+		}
+		return nil, s.SecureWithOptionalRequiredScopes(ctx, p)
+	}
+}
+`
+
 var EndpointWithAPIKeyOverrideCode = `// NewSecureWithAPIKeyOverrideEndpoint returns an endpoint function that calls
 // the method "SecureWithAPIKeyOverride" of service
 // "EndpointWithAPIKeyOverride".
@@ -75,7 +104,9 @@ func NewSecureWithAPIKeyOverrideEndpoint(s Service, authAPIKeyFn security.AuthAP
 		p := req.(*SecureWithAPIKeyOverridePayload)
 		var err error
 		sc := security.APIKeyScheme{
-			Name: "api_key",
+			Name:           "api_key",
+			Scopes:         []string{"api:read", "api:write", "api:admin"},
+			RequiredScopes: []string{},
 		}
 		var key string
 		if p.Key != nil {

@@ -65,7 +65,7 @@ type (
 		// Name refers to a header or parameter name, based on In's
 		// value.
 		Name string
-		// Scopes lists the JWT or OAuth2 scopes.
+		// Scopes lists the Basic, APIKey, JWT or OAuth2 scopes.
 		Scopes []*ScopeExpr
 		// Flows determine the oauth2 flows supported by this scheme.
 		Flows []*FlowExpr

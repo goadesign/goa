@@ -4,7 +4,11 @@ import (
 	. "goa.design/goa/v3/dsl"
 )
 
-var BasicAuth = BasicAuthSecurity("basic")
+var BasicAuth = BasicAuthSecurity("basic", func() {
+	Scope("api:read", "Read-only access")
+	Scope("api:write", "Read and write access")
+	Scope("api:admin", "Admin access")
+})
 
 var JWTAuth = JWTSecurity("jwt", func() {
 	Scope("api:read", "Read-only access")
@@ -12,7 +16,11 @@ var JWTAuth = JWTSecurity("jwt", func() {
 	Scope("api:admin", "Admin access")
 })
 
-var APIKeyAuth = APIKeySecurity("api_key")
+var APIKeyAuth = APIKeySecurity("api_key", func() {
+	Scope("api:read", "Read-only access")
+	Scope("api:write", "Read and write access")
+	Scope("api:admin", "Admin access")
+})
 
 var OAuth2AuthorizationCode = OAuth2Security("authCode", func() {
 	AuthorizationCodeFlow("/authorization", "/token", "/refresh")
@@ -101,6 +109,24 @@ var EndpointWithRequiredScopesDSL = func() {
 			})
 			Payload(func() {
 				Token("token", String)
+			})
+			HTTP(func() {
+				GET("/")
+			})
+		})
+	})
+}
+
+var EndpointWithOptionalRequiredScopesDSL = func() {
+	Service("EndpointWithOptionalRequiredScopes", func() {
+		Method("SecureWithOptionalRequiredScopes", func() {
+			Security(BasicAuth, func() {
+				Scope("api:read")
+				Scope("api:write")
+			})
+			Payload(func() {
+				Username("user", String)
+				Password("pass", String)
 			})
 			HTTP(func() {
 				GET("/")
