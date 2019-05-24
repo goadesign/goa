@@ -32,9 +32,11 @@ func TestGoTransform(t *testing.T) {
 		typeArray     = root.UserType("TypeArray")
 		mapArray      = root.UserType("MapArray")
 
-		recursive   = root.UserType("Recursive")
-		composite   = root.UserType("Composite")
-		customField = root.UserType("CompositeWithCustomField")
+		recursive      = root.UserType("Recursive")
+		recursiveArray = root.UserType("RecursiveArray")
+		recursiveMap   = root.UserType("RecursiveMap")
+		composite      = root.UserType("Composite")
+		customField    = root.UserType("CompositeWithCustomField")
 
 		resultType = root.UserType("ResultType")
 		rtCol      = root.UserType("ResultTypeCollection")
@@ -88,6 +90,8 @@ func TestGoTransform(t *testing.T) {
 
 			// others
 			{"recursive-to-recursive", recursive, recursive, defaultCtx, defaultCtx, srcTgtUseDefaultRecursiveToRecursiveCode},
+			{"recursiveArray-to-recursiveArray", recursiveArray, recursiveArray, defaultCtx, defaultCtx, srcTgtUseDefaultRecursiveArrayToRecursiveArrayCode},
+			{"recursiveMap-to-recursiveMap", recursiveMap, recursiveMap, defaultCtx, defaultCtx, srcTgtUseDefaultRecursiveMapToRecursiveMapCode},
 			{"composite-to-custom-field", composite, customField, defaultCtx, defaultCtx, srcTgtUseDefaultCompositeToCustomFieldCode},
 			{"custom-field-to-composite", customField, composite, defaultCtx, defaultCtx, srcTgtUseDefaultCustomFieldToCompositeCode},
 			{"composite-to-custom-field-pkg", composite, customField, defaultCtx, defaultCtxPkg, srcTgtUseDefaultCompositeToCustomFieldPkgCode},
@@ -357,16 +361,7 @@ const (
 		target.TypeMap = make(map[string]*SimpleMap, len(source.TypeMap))
 		for key, val := range source.TypeMap {
 			tk := key
-			tvb := &SimpleMap{}
-			if val.Simple != nil {
-				tvb.Simple = make(map[string]int, len(val.Simple))
-				for key, val := range val.Simple {
-					tk := key
-					tv := val
-					tvb.Simple[tk] = tv
-				}
-			}
-			target.TypeMap[tk] = tvb
+			target.TypeMap[tk] = transformSimpleMapToSimpleMap(val)
 		}
 	}
 }
@@ -490,13 +485,7 @@ const (
 	if source.TypeArray != nil {
 		target.TypeArray = make([]*SimpleArray, len(source.TypeArray))
 		for i, val := range source.TypeArray {
-			target.TypeArray[i] = &SimpleArray{}
-			if val.StringArray != nil {
-				target.TypeArray[i].StringArray = make([]string, len(val.StringArray))
-				for j, val := range val.StringArray {
-					target.TypeArray[i].StringArray[j] = val
-				}
-			}
+			target.TypeArray[i] = transformSimpleArrayToSimpleArray(val)
 		}
 	}
 }
@@ -524,6 +513,33 @@ const (
 	}
 	if source.Recursive != nil {
 		target.Recursive = transformRecursiveToRecursive(source.Recursive)
+	}
+}
+`
+
+	srcTgtUseDefaultRecursiveArrayToRecursiveArrayCode = `func transform() {
+	target := &RecursiveArray{
+		RequiredString: source.RequiredString,
+	}
+	if source.Recursive != nil {
+		target.Recursive = make([]*RecursiveArray, len(source.Recursive))
+		for i, val := range source.Recursive {
+			target.Recursive[i] = transformRecursiveArrayToRecursiveArray(val)
+		}
+	}
+}
+`
+
+	srcTgtUseDefaultRecursiveMapToRecursiveMapCode = `func transform() {
+	target := &RecursiveMap{
+		RequiredString: source.RequiredString,
+	}
+	if source.Recursive != nil {
+		target.Recursive = make(map[string]*RecursiveMap, len(source.Recursive))
+		for key, val := range source.Recursive {
+			tk := key
+			target.Recursive[tk] = transformRecursiveMapToRecursiveMap(val)
+		}
 	}
 }
 `
@@ -635,17 +651,7 @@ const (
 	if source.Collection != nil {
 		target.Collection = make([]*ResultType, len(source.Collection))
 		for i, val := range source.Collection {
-			target.Collection[i] = &ResultType{
-				Int: val.Int,
-			}
-			if val.Map != nil {
-				target.Collection[i].Map = make(map[int]string, len(val.Map))
-				for key, val := range val.Map {
-					tk := key
-					tv := val
-					target.Collection[i].Map[tk] = tv
-				}
-			}
+			target.Collection[i] = transformResultTypeToResultType(val)
 		}
 	}
 }
