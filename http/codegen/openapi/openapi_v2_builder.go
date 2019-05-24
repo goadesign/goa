@@ -166,6 +166,9 @@ func securitySpecFromExpr(root *expr.RootExpr) map[string]*SecurityDefinition {
 						}
 						// Add scope description only if scopes are defined
 						if len(lines) > 0 {
+							if sd.Description != "" {
+								sd.Description += "\n"
+							}
 							sd.Description += fmt.Sprintf("\n**Security Scopes**:\n%s", strings.Join(lines, "\n"))
 						}
 					case expr.APIKeyKind:
@@ -179,6 +182,9 @@ func securitySpecFromExpr(root *expr.RootExpr) map[string]*SecurityDefinition {
 						}
 						// Add scope description only if scopes are defined
 						if len(lines) > 0 {
+							if sd.Description != "" {
+								sd.Description += "\n"
+							}
 							sd.Description += fmt.Sprintf("\n**Security Scopes**:\n%s", strings.Join(lines, "\n"))
 						}
 					case expr.JWTKind:
@@ -188,6 +194,9 @@ func securitySpecFromExpr(root *expr.RootExpr) map[string]*SecurityDefinition {
 						lines := []string{}
 						for _, scope := range s.Scopes {
 							lines = append(lines, fmt.Sprintf("  * `%s`: %s", scope.Name, scope.Description))
+						}
+						if sd.Description != "" {
+							sd.Description += "\n"
 						}
 						sd.In = s.In
 						sd.Name = s.Name
@@ -671,11 +680,11 @@ func buildPathFromExpr(s *V2, root *expr.RootExpr, h *expr.HostExpr, route *expr
 					for _, scope := range req.Scopes {
 						lines = append(lines, fmt.Sprintf("  * `%s`", scope))
 					}
-					if description != "" {
-						description += "\n"
-					}
 					// List scopes only if they are defined
 					if len(lines) > 0 {
+						if description != "" {
+							description += "\n"
+						}
 						description += fmt.Sprintf("\nRequired security scopes for %s:\n%s", s.SchemeName, strings.Join(lines, "\n"))
 					}
 				}
