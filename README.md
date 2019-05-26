@@ -9,8 +9,6 @@ unique design-first approach.
 [![Godoc](https://godoc.org/github.com/goadesign/goa?status.svg)](http://godoc.org/github.com/goadesign/goa)
 [![Slack](https://img.shields.io/badge/slack-gophers-orange.svg?style=flat)](https://gophers.slack.com/messages/goa/)
 
-*goa v1.4.1 released! [Release Notes](https://goa.design/blog/008-v_1_4_1/)*
-
 ## Why goa?
 
 goa takes a different approach to building micro-services. Instead of focusing
@@ -62,9 +60,23 @@ the same pattern and was an inspiration to goa.
 
 ## Installation
 
-Assuming you have a working [Go](https://golang.org) setup:
+Goa v1 can be used with Go modules:
+
+```bash
+export GO111MODULE=on
+go mod init <my project>
+go get github.com/goadesign/goa@v1/...
 ```
-go get github.com/goadesign/goa/...
+
+Or without Go modules by cloning the repo first:
+
+```bash
+cd $GOPATH/src
+mkdir -p github.com/goadesign
+cd github.com/goadesign
+git clone https://github.com/goadesign/goa
+cd goa; git checkout v1
+go get -v github.com/goadesign/goa/...
 ```
 
 ### Stable Versions
