@@ -143,6 +143,22 @@ func mustGenerate(meta expr.MetaExpr) bool {
 	return true
 }
 
+// addScopeDescription generates and adds required scopes to the scheme's description.
+func addScopeDescription(scopes []*expr.ScopeExpr, sd *SecurityDefinition) {
+	// Generate scopes to add to description
+	lines := []string{}
+	for _, scope := range scopes {
+		lines = append(lines, fmt.Sprintf("  * `%s`: %s", scope.Name, scope.Description))
+	}
+	// Add scope description only if scopes are defined
+	if len(lines) > 0 {
+		if sd.Description != "" {
+			sd.Description += "\n"
+		}
+		sd.Description += fmt.Sprintf("\n**Security Scopes**:\n%s", strings.Join(lines, "\n"))
+	}
+}
+
 // securitySpecFromExpr generates the OpenAPI security definitions from the
 // security design.
 func securitySpecFromExpr(root *expr.RootExpr) map[string]*SecurityDefinition {
@@ -159,21 +175,19 @@ func securitySpecFromExpr(root *expr.RootExpr) map[string]*SecurityDefinition {
 					switch s.Kind {
 					case expr.BasicAuthKind:
 						sd.Type = "basic"
+						addScopeDescription(s.Scopes, &sd)
 					case expr.APIKeyKind:
 						sd.Type = "apiKey"
 						sd.In = s.In
 						sd.Name = s.Name
+						addScopeDescription(s.Scopes, &sd)
 					case expr.JWTKind:
 						sd.Type = "apiKey"
 						// OpenAPI V2 spec does not support JWT scheme. Hence we add the scheme
 						// information to the description.
-						lines := []string{}
-						for _, scope := range s.Scopes {
-							lines = append(lines, fmt.Sprintf("  * `%s`: %s", scope.Name, scope.Description))
-						}
+						addScopeDescription(s.Scopes, &sd)
 						sd.In = s.In
 						sd.Name = s.Name
-						sd.Description += fmt.Sprintf("\n**Security Scopes**:\n%s", strings.Join(lines, "\n"))
 					case expr.OAuth2Kind:
 						sd.Type = "oauth2"
 						if scopesLen := len(s.Scopes); scopesLen > 0 {
@@ -648,15 +662,18 @@ func buildPathFromExpr(s *V2, root *expr.RootExpr, h *expr.HostExpr, route *expr
 				switch s.Kind {
 				case expr.OAuth2Kind:
 					requirement[s.Hash()] = append(requirement[s.Hash()], req.Scopes...)
-				case expr.JWTKind:
+				case expr.BasicAuthKind, expr.APIKeyKind, expr.JWTKind:
 					lines := make([]string, 0, len(req.Scopes))
 					for _, scope := range req.Scopes {
 						lines = append(lines, fmt.Sprintf("  * `%s`", scope))
 					}
-					if description != "" {
-						description += "\n"
+					// List scopes only if they are defined
+					if len(lines) > 0 {
+						if description != "" {
+							description += "\n"
+						}
+						description += fmt.Sprintf("\n**Required security scopes for %s**:\n%s", s.SchemeName, strings.Join(lines, "\n"))
 					}
-					description += fmt.Sprintf("\nRequired security scopes:\n%s", strings.Join(lines, "\n"))
 				}
 			}
 			requirements[i] = requirement

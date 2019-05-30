@@ -20,6 +20,11 @@ type (
 	BasicScheme struct {
 		// Name is the scheme name defined in the design.
 		Name string
+		// Scopes holds a list of scopes for the scheme.
+		Scopes []string
+		// RequiredScopes holds a list of scopes which are required
+		// by the scheme. It is a subset of Scopes field.
+		RequiredScopes []string
 	}
 
 	// APIKeyScheme represents the API key security scheme.
@@ -27,6 +32,11 @@ type (
 	APIKeyScheme struct {
 		// Name is the scheme name defined in the design.
 		Name string
+		// Scopes holds a list of scopes for the scheme.
+		Scopes []string
+		// RequiredScopes holds a list of scopes which are required
+		// by the scheme. It is a subset of Scopes field.
+		RequiredScopes []string
 	}
 
 	// JWTScheme represents an API key based scheme with support
@@ -82,6 +92,18 @@ type (
 	// scheme of using a JWT token.
 	AuthJWTFunc func(ctx context.Context, token string, s *JWTScheme) (context.Context, error)
 )
+
+// Validate returns a non-nil error if scopes does not contain all of
+// Basic scheme's required scopes.
+func (s *BasicScheme) Validate(scopes []string) error {
+	return validateScopes(s.RequiredScopes, scopes)
+}
+
+// Validate returns a non-nil error if scopes does not contain all of
+// APIKey scheme's required scopes.
+func (s *APIKeyScheme) Validate(scopes []string) error {
+	return validateScopes(s.RequiredScopes, scopes)
+}
 
 // Validate returns a non-nil error if scopes does not contain all of
 // OAuth2 scheme's required scopes.
