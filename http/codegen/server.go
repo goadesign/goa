@@ -1023,7 +1023,7 @@ const typeConversionT = `{{- define "slice_conversion" }}
 			if err2 != nil {
 				err = goa.MergeErrors(err, goa.InvalidFieldTypeError({{ printf "%q" .VarName }}, {{ .VarName}}Raw, "array of unsigned integers"))
 			}
-			{{ .VarName }}[i] = int32(v)
+			{{ .VarName }}[i] = uint32(v)
 		{{- else if eq .Type.ElemType.Type.Name "uint64" }}
 			v, err2 := strconv.ParseUint(rv, 10, 64)
 			if err2 != nil {
