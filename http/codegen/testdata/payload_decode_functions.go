@@ -1083,7 +1083,7 @@ func DecodeMethodQueryArrayUInt32Request(mux goahttp.Muxer, decoder func(*http.R
 					if err2 != nil {
 						err = goa.MergeErrors(err, goa.InvalidFieldTypeError("q", qRaw, "array of unsigned integers"))
 					}
-					q[i] = int32(v)
+					q[i] = uint32(v)
 				}
 			}
 		}
@@ -1117,7 +1117,7 @@ func DecodeMethodQueryArrayUInt32ValidateRequest(mux goahttp.Muxer, decoder func
 				if err2 != nil {
 					err = goa.MergeErrors(err, goa.InvalidFieldTypeError("q", qRaw, "array of unsigned integers"))
 				}
-				q[i] = int32(v)
+				q[i] = uint32(v)
 			}
 		}
 		if len(q) < 1 {
