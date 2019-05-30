@@ -2590,6 +2590,7 @@ var MixedPayloadInBodyDSL = func() {
 		Attribute("array", ArrayOf(Float32))
 		Attribute("map", MapOf(UInt, Any))
 		Attribute("object", BPayload)
+		Attribute("dup_obj", BPayload)
 		Required("array", "object")
 	})
 	Service("ServiceMixedPayloadInBody", func() {
