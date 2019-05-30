@@ -443,7 +443,7 @@ func collectHelpers(source, target *expr.AttributeExpr, req bool, ta *TransformA
 		var err error
 		{
 			walkMatches(source, target, func(srcMatt, _ *expr.MappedAttributeExpr, srcc, tgtc *expr.AttributeExpr, n string) {
-				name := transformHelperName(source, target, ta)
+				name := transformHelperName(srcc, tgtc, ta)
 				if _, ok := seen[name]; ok {
 					return
 				}

@@ -90,8 +90,8 @@ func TestGoTransform(t *testing.T) {
 
 			// others
 			{"recursive-to-recursive", recursive, recursive, defaultCtx, defaultCtx, srcTgtUseDefaultRecursiveToRecursiveCode},
-			{"recursiveArray-to-recursiveArray", recursiveArray, recursiveArray, defaultCtx, defaultCtx, srcTgtUseDefaultRecursiveArrayToRecursiveArrayCode},
-			{"recursiveMap-to-recursiveMap", recursiveMap, recursiveMap, defaultCtx, defaultCtx, srcTgtUseDefaultRecursiveMapToRecursiveMapCode},
+			{"recursive-array-to-recursive-array", recursiveArray, recursiveArray, defaultCtx, defaultCtx, srcTgtUseDefaultRecursiveArrayToRecursiveArrayCode},
+			{"recursive-map-to-recursive-map", recursiveMap, recursiveMap, defaultCtx, defaultCtx, srcTgtUseDefaultRecursiveMapToRecursiveMapCode},
 			{"composite-to-custom-field", composite, customField, defaultCtx, defaultCtx, srcTgtUseDefaultCompositeToCustomFieldCode},
 			{"custom-field-to-composite", customField, composite, defaultCtx, defaultCtx, srcTgtUseDefaultCustomFieldToCompositeCode},
 			{"composite-to-custom-field-pkg", composite, customField, defaultCtx, defaultCtxPkg, srcTgtUseDefaultCompositeToCustomFieldPkgCode},
