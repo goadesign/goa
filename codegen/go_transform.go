@@ -399,7 +399,9 @@ func collectHelpers(source, target *expr.AttributeExpr, req bool, ta *TransformA
 			if err != nil {
 				return nil, err
 			}
-			data = append(data, d)
+			if d != nil {
+				data = append(data, d)
+			}
 		} else {
 			helpers, err := transformAttributeHelpers(st, tt, ta, seen)
 			if err != nil {
@@ -422,7 +424,9 @@ func collectHelpers(source, target *expr.AttributeExpr, req bool, ta *TransformA
 			if err != nil {
 				return nil, err
 			}
-			data = append(data, d)
+			if d != nil {
+				data = append(data, d)
+			}
 		} else {
 			helpers, err = transformAttributeHelpers(se, te, ta, seen)
 			if err != nil {
@@ -436,7 +440,9 @@ func collectHelpers(source, target *expr.AttributeExpr, req bool, ta *TransformA
 			if err != nil {
 				return nil, err
 			}
-			data = append(data, d)
+			if d != nil {
+				data = append(data, d)
+			}
 		}
 
 		// collect helpers
