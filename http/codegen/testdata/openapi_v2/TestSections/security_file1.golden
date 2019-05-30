@@ -19,7 +19,13 @@ paths:
       summary: testEndpointA testService
       description: |2-
 
-        Required security scopes:
+        **Required security scopes for basic**:
+          * `api:read`
+
+        **Required security scopes for jwt**:
+          * `api:read`
+
+        **Required security scopes for api_key**:
           * `api:read`
       operationId: testService#testEndpointA
       parameters:
@@ -94,6 +100,7 @@ securityDefinitions:
     type: apiKey
     description: |-
       Secures endpoint by requiring a valid JWT token retrieved via the signin endpoint. Supports scopes "api:read" and "api:write".
+
       **Security Scopes**:
         * `api:read`: Read-only access
         * `api:write`: Read and write access

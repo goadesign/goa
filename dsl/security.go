@@ -519,7 +519,7 @@ func TokenField(tag interface{}, name string, args ...interface{}) {
 // Scope has two uses: in JWTSecurity or OAuth2Security it defines a scope
 // supported by the scheme. In Security it lists required scopes.
 //
-// Scope must appear in Security, JWTSecurity or OAuth2Security.
+// Scope must appear in Security, BasicSecurity, APIKeySecurity, JWTSecurity or OAuth2Security.
 //
 // Scope accepts one or two arguments: the first argument is the scope name and
 // when used in JWTSecurity or OAuth2Security the second argument is a
