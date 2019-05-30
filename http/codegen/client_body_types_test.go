@@ -191,6 +191,7 @@ type MethodARequestBody struct {
 	Array  []float32            ` + "`" + `form:"array" json:"array" xml:"array"` + "`" + `
 	Map    map[uint]interface{} ` + "`" + `form:"map,omitempty" json:"map,omitempty" xml:"map,omitempty"` + "`" + `
 	Object *BPayloadRequestBody ` + "`" + `form:"object" json:"object" xml:"object"` + "`" + `
+	DupObj *BPayloadRequestBody ` + "`" + `form:"dup_obj,omitempty" json:"dup_obj,omitempty" xml:"dup_obj,omitempty"` + "`" + `
 }
 
 // BPayloadRequestBody is used to define fields on request body types.
@@ -221,6 +222,9 @@ func NewMethodARequestBody(p *servicemixedpayloadinbody.APayload) *MethodAReques
 	}
 	if p.Object != nil {
 		body.Object = marshalServicemixedpayloadinbodyBPayloadToBPayloadRequestBody(p.Object)
+	}
+	if p.DupObj != nil {
+		body.DupObj = marshalServicemixedpayloadinbodyBPayloadToBPayloadRequestBody(p.DupObj)
 	}
 	return body
 }

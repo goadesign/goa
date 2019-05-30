@@ -45,6 +45,7 @@ type MethodARequestBody struct {
 	Array  []float32            ` + "`" + `form:"array,omitempty" json:"array,omitempty" xml:"array,omitempty"` + "`" + `
 	Map    map[uint]interface{} ` + "`" + `form:"map,omitempty" json:"map,omitempty" xml:"map,omitempty"` + "`" + `
 	Object *BPayloadRequestBody ` + "`" + `form:"object,omitempty" json:"object,omitempty" xml:"object,omitempty"` + "`" + `
+	DupObj *BPayloadRequestBody ` + "`" + `form:"dup_obj,omitempty" json:"dup_obj,omitempty" xml:"dup_obj,omitempty"` + "`" + `
 }
 
 // BPayloadRequestBody is used to define fields on request body types.
@@ -72,6 +73,9 @@ func NewMethodAAPayload(body *MethodARequestBody) *servicemixedpayloadinbody.APa
 		}
 	}
 	v.Object = unmarshalBPayloadRequestBodyToServicemixedpayloadinbodyBPayload(body.Object)
+	if body.DupObj != nil {
+		v.DupObj = unmarshalBPayloadRequestBodyToServicemixedpayloadinbodyBPayload(body.DupObj)
+	}
 	return v
 }
 
@@ -85,6 +89,11 @@ func ValidateMethodARequestBody(body *MethodARequestBody) (err error) {
 	}
 	if body.Object != nil {
 		if err2 := ValidateBPayloadRequestBody(body.Object); err2 != nil {
+			err = goa.MergeErrors(err, err2)
+		}
+	}
+	if body.DupObj != nil {
+		if err2 := ValidateBPayloadRequestBody(body.DupObj); err2 != nil {
 			err = goa.MergeErrors(err, err2)
 		}
 	}
