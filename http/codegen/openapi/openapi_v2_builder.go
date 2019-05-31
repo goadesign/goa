@@ -19,7 +19,7 @@ func NewV2(root *expr.RootExpr, h *expr.HostExpr) (*V2, error) {
 		return nil, nil
 	}
 	tags := tagsFromExpr(root.Meta)
-	u, err := url.Parse(h.DefaultURI())
+	u, err := url.Parse(defaultURI(h))
 	if err != nil {
 		// This should never happen because server expression must have been
 		// validated. If it does, then we must fix server validation.
@@ -130,6 +130,32 @@ func ExtensionsFromExpr(mdata expr.MetaExpr) map[string]interface{} {
 		return nil
 	}
 	return extensions
+}
+
+// defaultURI returns the first URI defined in the host. It substitutes any URI
+// parameters with their default values or the first item in their enum.
+func defaultURI(h *expr.HostExpr) string {
+	if len(h.URIs) == 0 {
+		return ""
+	}
+	u := h.URIs[0]
+	ustr := string(u)
+	vars := expr.AsObject(h.Variables.Type)
+	if len(*vars) == 0 {
+		return ustr
+	}
+	for _, p := range u.Params() {
+		for _, v := range *vars {
+			if p == v.Name {
+				def := v.Attribute.DefaultValue
+				if def == nil {
+					def = v.Attribute.Validation.Values[0]
+				}
+				ustr = strings.Replace(ustr, fmt.Sprintf("{%s}", p), fmt.Sprintf("%v", def), -1)
+			}
+		}
+	}
+	return ustr
 }
 
 // mustGenerate returns true if the meta indicates that a OpenAPI specification should be
