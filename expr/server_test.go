@@ -318,35 +318,3 @@ func TestHostExprAttribute(t *testing.T) {
 		}
 	}
 }
-
-func TestHostExprDefaultURI(t *testing.T) {
-	cases := map[string]struct {
-		hostExpr *HostExpr
-		expected string
-	}{
-		"no-variables": {
-			hostExpr: &HostExpr{Name: "default", URIs: []URIExpr{URIExpr("https://goa.design"), URIExpr("grpcs://goa.design")}},
-			expected: "https://goa.design",
-		},
-		"with-variables": {
-			hostExpr: &HostExpr{
-				Name: "default",
-				URIs: []URIExpr{URIExpr("https://{version}.goa.design.{domain}"), URIExpr("grpcs://{version}.goa.design")},
-				Variables: &AttributeExpr{Type: &Object{
-					&NamedAttributeExpr{Name: "version", Attribute: &AttributeExpr{Type: String, DefaultValue: "v1"}},
-					&NamedAttributeExpr{Name: "domain", Attribute: &AttributeExpr{Type: String, Validation: &ValidationExpr{Values: []interface{}{"org", "com"}}}},
-				}},
-			},
-			expected: "https://v1.goa.design.org",
-		},
-	}
-	for k, tc := range cases {
-		t.Run(k, func(t *testing.T) {
-			tc.hostExpr.Finalize()
-			actual := tc.hostExpr.DefaultURI()
-			if actual != tc.expected {
-				t.Errorf("got %#v, expected %#v", actual, tc.expected)
-			}
-		})
-	}
-}
