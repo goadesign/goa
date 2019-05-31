@@ -7,7 +7,7 @@ design-first approach.
 
 ---
 [![Build Status](https://travis-ci.org/goadesign/goa.svg?branch=v3)](https://travis-ci.org/goadesign/goa)
-[![Windows Build status](https://ci.appveyor.com/api/projects/status/vixp37loj5i6qmaf/branch/v3?svg=true)](https://ci.appveyor.com/project/RaphaelSimon/goa-oqtis/branch/master)
+[![Windows Build status](https://ci.appveyor.com/api/projects/status/vixp37loj5i6qmaf/branch/v3?svg=true)](https://ci.appveyor.com/project/RaphaelSimon/goa-oqtis/branch/v3)
 [![Godoc](https://godoc.org/goa.design/goa?status.svg)](https://godoc.org/goa.design/goa)
 [![Slack](https://img.shields.io/badge/slack-gophers-orange.svg?style=flat)](https://gophers.slack.com/messages/goa/)
 
