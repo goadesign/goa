@@ -236,6 +236,33 @@ func (h *HostExpr) HasGRPCScheme() bool {
 	return false
 }
 
+// DefaultURI returns the first URI defined in the host. It substitutes any URI
+// parameters with their default values or the first item in their enum. This
+// method must be used only after the finalize phase.
+func (h *HostExpr) DefaultURI() string {
+	if len(h.URIs) == 0 {
+		return ""
+	}
+	u := h.URIs[0]
+	ustr := string(u)
+	vars := AsObject(h.Variables.Type)
+	if len(*vars) == 0 {
+		return ustr
+	}
+	for _, p := range u.Params() {
+		for _, v := range *vars {
+			if p == v.Name {
+				def := v.Attribute.DefaultValue
+				if def == nil {
+					def = v.Attribute.Validation.Values[0]
+				}
+				ustr = strings.Replace(ustr, fmt.Sprintf("{%s}", p), fmt.Sprintf("%v", def), -1)
+			}
+		}
+	}
+	return ustr
+}
+
 // Params return the names of the parameters used in URI if any.
 func (u URIExpr) Params() []string {
 	r := regexp.MustCompile(`\{([^\{\}]+)\}`)

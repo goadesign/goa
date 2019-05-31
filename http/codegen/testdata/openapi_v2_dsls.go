@@ -347,3 +347,25 @@ var SecurityDSL = func() {
 		})
 	})
 }
+
+var ServerHostWithVariablesDSL = func() {
+	var _ = API("test", func() {
+		Server("test", func() {
+			Host("localhost", func() {
+				URI("https://{version}.goa.design")
+				Variable("version", String, "API Version", func() {
+					Default("v1")
+				})
+			})
+		})
+	})
+	Service("testService", func() {
+		Method("testEndpoint", func() {
+			Payload(Empty)
+			Result(Empty)
+			HTTP(func() {
+				POST("/")
+			})
+		})
+	})
+}
