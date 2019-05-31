@@ -103,6 +103,11 @@ var TestTypesDSL = func() {
 			Attribute("inner", Composite)
 		})
 
+		_ = Type("DeepArray", func() {
+			Attribute("string", String)
+			Attribute("inner", ArrayOf(Composite))
+		})
+
 		_ = Type("CompositeWithCustomField", func() {
 			Attribute("required_string", String, func() {
 				Meta("struct:field:name", "my_string")
