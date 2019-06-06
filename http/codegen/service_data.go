@@ -610,7 +610,7 @@ func (svc *ServiceData) Endpoint(name string) *EndpointData {
 	return nil
 }
 
-func newHTTPServiceData(svc *service.Data) *ServiceData{
+func newHTTPServiceData(svc *service.Data) *ServiceData {
 	// 'c' is reserved as the client's receiver name.
 	scope := codegen.NewNameScope()
 	scope.Unique("c")
@@ -628,7 +628,6 @@ func newHTTPServiceData(svc *service.Data) *ServiceData{
 		Scope:            scope,
 	}
 }
-
 
 // analyze creates the data necessary to render the code of the given service.
 // It records the user types needed by the service definition in userTypes.
