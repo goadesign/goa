@@ -2191,7 +2191,7 @@ func extractPathParams(a *expr.MappedAttributeExpr, service *expr.AttributeExpr,
 			StringSlice:    arr != nil && arr.ElemType.Type.Kind() == expr.StringKind,
 			Map:            false,
 			MapStringSlice: false,
-			Validate:       codegen.RecursiveValidationCode(c, ctx, true, varn),
+			Validate:       codegen.RecursiveValidationCode(c, ctx, true, varn, name),
 			DefaultValue:   c.DefaultValue,
 			Example:        c.Example(expr.Root.API.Random()),
 		})
