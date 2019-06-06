@@ -90,12 +90,22 @@ var TestTypesDSL = func() {
 			Attribute("map_array", ArrayOf(MapOf(Int, String)))
 		})
 
-		_ = Type("Composite", func() {
+		Composite = Type("Composite", func() {
 			Attribute("required_string", String)
 			Attribute("default_int", Int)
 			Attribute("type", Simple)
 			Attribute("map", MapOf(Int, String))
 			Attribute("array", ArrayOf(String))
+		})
+
+		_ = Type("Deep", func() {
+			Attribute("string", String)
+			Attribute("inner", Composite)
+		})
+
+		_ = Type("DeepArray", func() {
+			Attribute("string", String)
+			Attribute("inner", ArrayOf(Composite))
 		})
 
 		_ = Type("CompositeWithCustomField", func() {
