@@ -610,12 +610,12 @@ func (svc *ServiceData) Endpoint(name string) *EndpointData {
 	return nil
 }
 
-// analyze creates the data necessary to render the code of the given service.
-// It records the user types needed by the service definition in userTypes.
-func (d ServicesData) analyze(hs *expr.HTTPServiceExpr) *ServiceData {
-	svc := service.Services.Get(hs.ServiceExpr.Name)
+func newHTTPServiceData(svc *service.Data) *ServiceData{
+	// 'c' is reserved as the client's receiver name.
+	scope := codegen.NewNameScope()
+	scope.Unique("c")
 
-	rd := &ServiceData{
+	return &ServiceData{
 		Service:          svc,
 		ServerStruct:     "Server",
 		MountPointStruct: "MountPoint",
@@ -625,8 +625,16 @@ func (d ServicesData) analyze(hs *expr.HTTPServiceExpr) *ServiceData {
 		ClientStruct:     "Client",
 		ServerTypeNames:  make(map[string]bool),
 		ClientTypeNames:  make(map[string]bool),
-		Scope:            codegen.NewNameScope(),
+		Scope:            scope,
 	}
+}
+
+
+// analyze creates the data necessary to render the code of the given service.
+// It records the user types needed by the service definition in userTypes.
+func (d ServicesData) analyze(hs *expr.HTTPServiceExpr) *ServiceData {
+	svc := service.Services.Get(hs.ServiceExpr.Name)
+	rd := newHTTPServiceData(svc)
 
 	for _, s := range hs.FileServers {
 		paths := make([]string, len(s.RequestPaths))
