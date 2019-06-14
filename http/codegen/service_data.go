@@ -773,7 +773,7 @@ func (d ServicesData) analyze(hs *expr.HTTPServiceExpr) *ServiceData {
 				s.Unique("c") // 'c' is reserved as the client's receiver name.
 				for _, ca := range routes[0].PathInit.ClientArgs {
 					if ca.FieldName != "" {
-						ca.Name = s.Unique(ca.Name, "_")
+						ca.Name = s.Unique(ca.Name)
 						ca.Ref = ca.Name
 						args = append(args, ca)
 					}
