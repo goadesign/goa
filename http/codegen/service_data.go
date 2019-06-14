@@ -610,12 +610,12 @@ func (svc *ServiceData) Endpoint(name string) *EndpointData {
 	return nil
 }
 
-func newHTTPServiceData(svc *service.Data) *ServiceData {
-	// 'c' is reserved as the client's receiver name.
-	scope := codegen.NewNameScope()
-	scope.Unique("c")
+// analyze creates the data necessary to render the code of the given service.
+// It records the user types needed by the service definition in userTypes.
+func (d ServicesData) analyze(hs *expr.HTTPServiceExpr) *ServiceData {
+	svc := service.Services.Get(hs.ServiceExpr.Name)
 
-	return &ServiceData{
+	rd := &ServiceData{
 		Service:          svc,
 		ServerStruct:     "Server",
 		MountPointStruct: "MountPoint",
@@ -625,15 +625,8 @@ func newHTTPServiceData(svc *service.Data) *ServiceData {
 		ClientStruct:     "Client",
 		ServerTypeNames:  make(map[string]bool),
 		ClientTypeNames:  make(map[string]bool),
-		Scope:            scope,
+		Scope:            codegen.NewNameScope(),
 	}
-}
-
-// analyze creates the data necessary to render the code of the given service.
-// It records the user types needed by the service definition in userTypes.
-func (d ServicesData) analyze(hs *expr.HTTPServiceExpr) *ServiceData {
-	svc := service.Services.Get(hs.ServiceExpr.Name)
-	rd := newHTTPServiceData(svc)
 
 	for _, s := range hs.FileServers {
 		paths := make([]string, len(s.RequestPaths))
@@ -2191,7 +2184,7 @@ func extractPathParams(a *expr.MappedAttributeExpr, service *expr.AttributeExpr,
 			StringSlice:    arr != nil && arr.ElemType.Type.Kind() == expr.StringKind,
 			Map:            false,
 			MapStringSlice: false,
-			Validate:       codegen.RecursiveValidationCode(c, ctx, true, varn, name),
+			Validate:       codegen.RecursiveValidationCode(c, ctx, true, varn),
 			DefaultValue:   c.DefaultValue,
 			Example:        c.Example(expr.Root.API.Random()),
 		})

@@ -144,18 +144,18 @@ func NewServiceMultipartWithParamMethodMultipartWithParamDecoder(mux goahttp.Mux
 			}
 
 			var (
-				c2  map[int][]string
+				c   map[int][]string
 				err error
 			)
 			{
-				c2Raw := r.URL.Query()
-				if len(c2Raw) == 0 {
+				cRaw := r.URL.Query()
+				if len(cRaw) == 0 {
 					err = goa.MergeErrors(err, goa.MissingFieldError("c", "query string"))
 				}
-				for keyRaw, valRaw := range c2Raw {
+				for keyRaw, valRaw := range cRaw {
 					if strings.HasPrefix(keyRaw, "c[") {
-						if c2 == nil {
-							c2 = make(map[int][]string)
+						if c == nil {
+							c = make(map[int][]string)
 						}
 						var keya int
 						{
@@ -168,14 +168,14 @@ func NewServiceMultipartWithParamMethodMultipartWithParamDecoder(mux goahttp.Mux
 							}
 							keya = int(v)
 						}
-						c2[keya] = valRaw
+						c[keya] = valRaw
 					}
 				}
 			}
 			if err != nil {
 				return err
 			}
-			(*p).C = c2
+			(*p).C = c
 			return nil
 		})
 	}
@@ -199,7 +199,7 @@ func NewServiceMultipartWithParamsAndHeadersMethodMultipartWithParamsAndHeadersD
 			}
 			var (
 				a   string
-				c2  map[int][]string
+				c   map[int][]string
 				b   *string
 				err error
 
@@ -208,14 +208,14 @@ func NewServiceMultipartWithParamsAndHeadersMethodMultipartWithParamsAndHeadersD
 			a = params["a"]
 			err = goa.MergeErrors(err, goa.ValidatePattern("a", a, "patterna"))
 			{
-				c2Raw := r.URL.Query()
-				if len(c2Raw) == 0 {
+				cRaw := r.URL.Query()
+				if len(cRaw) == 0 {
 					err = goa.MergeErrors(err, goa.MissingFieldError("c", "query string"))
 				}
-				for keyRaw, valRaw := range c2Raw {
+				for keyRaw, valRaw := range cRaw {
 					if strings.HasPrefix(keyRaw, "c[") {
-						if c2 == nil {
-							c2 = make(map[int][]string)
+						if c == nil {
+							c = make(map[int][]string)
 						}
 						var keya int
 						{
@@ -228,7 +228,7 @@ func NewServiceMultipartWithParamsAndHeadersMethodMultipartWithParamsAndHeadersD
 							}
 							keya = int(v)
 						}
-						c2[keya] = valRaw
+						c[keya] = valRaw
 					}
 				}
 			}
@@ -243,7 +243,7 @@ func NewServiceMultipartWithParamsAndHeadersMethodMultipartWithParamsAndHeadersD
 				return err
 			}
 			(*p).A = a
-			(*p).C = c2
+			(*p).C = c
 			(*p).B = b
 			return nil
 		})

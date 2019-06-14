@@ -168,13 +168,9 @@ func ValidationCode(att *expr.AttributeExpr, attCtx *AttributeContext, req bool,
 // attCtx is the Attributor for the given attribute which is used to generate
 // attribute name and reference in the validation code.
 //
-func RecursiveValidationCode(att *expr.AttributeExpr, attCtx *AttributeContext, req bool, target string, context ...string) string {
+func RecursiveValidationCode(att *expr.AttributeExpr, attCtx *AttributeContext, req bool, target string) string {
 	seen := make(map[string]*bytes.Buffer)
-	c := target
-	if len(context) > 0 {
-		c = context[0]
-	}
-	return recurseValidationCode(att, attCtx, req, target, c, seen).String()
+	return recurseValidationCode(att, attCtx, req, target, target, seen).String()
 }
 
 func recurseValidationCode(att *expr.AttributeExpr, attCtx *AttributeContext, req bool, target, context string, seen map[string]*bytes.Buffer) *bytes.Buffer {
