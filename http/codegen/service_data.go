@@ -2564,9 +2564,9 @@ const (
 	// requestInitT is the template used to render the code of HTTP
 	// request constructors.
 	requestInitT = `
-{{- if .PathInit.ClientArgs }}
+{{- if .Args }}
 	var (
-	{{- range .PathInit.ClientArgs }}
+	{{- range .Args }}
 	{{ .Name }} {{ .TypeRef }}
 	{{- end }}
 	)
@@ -2597,7 +2597,7 @@ const (
 			scheme = "wss"
 		}
 	{{- end }}
-	u := &url.URL{Scheme: {{ if .IsStreaming }}scheme{{ else }}c.scheme{{ end }}, Host: c.host, Path: {{ .PathInit.Name }}({{ range .PathInit.ClientArgs }}{{ .Ref }}, {{ end }})}
+	u := &url.URL{Scheme: {{ if .IsStreaming }}scheme{{ else }}c.scheme{{ end }}, Host: c.host, Path: {{ .PathInit.Name }}({{ range .Args }}{{ .Ref }}, {{ end }})}
 	req, err := http.NewRequest("{{ .Verb }}", u.String(), nil)
 	if err != nil {
 		return nil, goahttp.ErrInvalidURL("{{ .ServiceName }}", "{{ .EndpointName }}", u.String(), err)
