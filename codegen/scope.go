@@ -67,9 +67,10 @@ func (s *NameScope) Unique(name string, suffix ...string) string {
 		}
 	}
 	for i := c; ; i++ {
-		if _, ok := s.counts[name+strconv.Itoa(i)]; !ok {
-			s.counts[name+strconv.Itoa(i)]++
-			return name + strconv.Itoa(i)
+		ret := name + strconv.Itoa(i)
+		if _, ok := s.counts[ret]; !ok {
+			s.counts[ret]++
+			return ret
 		}
 	}
 }
