@@ -10,7 +10,7 @@ var (
 	testString = "test string"
 )
 
-func TestTextPlainEncoder_Encode(t *testing.T) {
+func TestTextEncoder_Encode(t *testing.T) {
 	cases := []struct {
 		name  string
 		value interface{}
@@ -19,11 +19,11 @@ func TestTextPlainEncoder_Encode(t *testing.T) {
 		{"string", testString, nil},
 		{"*string", &testString, nil},
 		{"[]byte", []byte(testString), nil},
-		{"other", 123, fmt.Errorf("can't encode int as text/plain")},
+		{"other", 123, fmt.Errorf("can't encode int as content/type")},
 	}
 
 	buffer := bytes.Buffer{}
-	encoder := textPlainEncoder{w: &buffer}
+	encoder := newTextEncoder(&buffer, "content/type")
 
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
@@ -46,12 +46,10 @@ func TestTextPlainEncoder_Encode(t *testing.T) {
 }
 
 func TestTextPlainDecoder_Decode_String(t *testing.T) {
-	buffer := bytes.Buffer{}
-	buffer.WriteString(testString)
-	encoder := textPlainDecoder{r: &buffer}
+	decoder := makeTextDecoder()
 
 	var value string
-	err := encoder.Decode(&value)
+	err := decoder.Decode(&value)
 	if err != nil {
 		t.Errorf("got error %q, expected <nil>", err)
 	}
@@ -61,12 +59,10 @@ func TestTextPlainDecoder_Decode_String(t *testing.T) {
 }
 
 func TestTextPlainDecoder_Decode_Bytes(t *testing.T) {
-	buffer := bytes.Buffer{}
-	buffer.WriteString(testString)
-	encoder := textPlainDecoder{r: &buffer}
+	decoder := makeTextDecoder()
 
 	var value []byte
-	err := encoder.Decode(&value)
+	err := decoder.Decode(&value)
 	if err != nil {
 		t.Errorf("got error %q, expected <nil>", err)
 	}
@@ -76,15 +72,19 @@ func TestTextPlainDecoder_Decode_Bytes(t *testing.T) {
 }
 
 func TestTextPlainDecoder_Decode_Other(t *testing.T) {
-	buffer := bytes.Buffer{}
-	buffer.WriteString(testString)
-	encoder := textPlainDecoder{r: &buffer}
+	decoder := makeTextDecoder()
 
-	expected := fmt.Errorf("can't decode text/plain to *int")
+	expectedErr := fmt.Errorf("can't decode content/type to *int")
 
 	var value int
-	err := encoder.Decode(&value)
-	if err == nil || err.Error() != expected.Error() {
-		t.Errorf("got error %q, expected %q", err, expected)
+	err := decoder.Decode(&value)
+	if err == nil || err.Error() != expectedErr.Error() {
+		t.Errorf("got error %q, expectedErr %q", err, expectedErr)
 	}
+}
+
+func makeTextDecoder() Decoder {
+	buffer := bytes.Buffer{}
+	buffer.WriteString(testString)
+	return newTextDecoder(&buffer, "content/type")
 }
