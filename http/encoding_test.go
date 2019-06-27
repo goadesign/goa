@@ -3,12 +3,45 @@ package http
 import (
 	"bytes"
 	"fmt"
+	"net/http"
 	"testing"
 )
 
 var (
 	testString = "test string"
 )
+
+func TestResponseDecoder(t *testing.T) {
+	cases := []struct {
+		contentType string
+		decoderType string
+	}{
+		{"application/json", "*json.Decoder"},
+		{"+json", "*json.Decoder"},
+		{"application/xml", "*xml.Decoder"},
+		{"+xml", "*xml.Decoder"},
+		{"application/gob", "*gob.Decoder"},
+		{"+gob", "*gob.Decoder"},
+		{"text/html", "*http.textDecoder"},
+		{"+html", "*http.textDecoder"},
+		{"text/plain", "*http.textDecoder"},
+		{"+txt", "*http.textDecoder"},
+	}
+
+	for _, c := range cases {
+		t.Run(c.contentType, func(t *testing.T) {
+			r := &http.Response{
+				Header: map[string][]string{
+					"Content-Type": {c.contentType},
+				},
+			}
+			decoder := ResponseDecoder(r)
+			if c.decoderType != fmt.Sprintf("%T", decoder) {
+				t.Errorf("got decoder type %s, expected %s", fmt.Sprintf("%T", decoder), c.decoderType)
+			}
+		})
+	}
+}
 
 func TestTextEncoder_Encode(t *testing.T) {
 	cases := []struct {
