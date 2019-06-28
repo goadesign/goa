@@ -2,14 +2,55 @@ package http
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"net/http"
+	"net/http/httptest"
 	"testing"
 )
 
 var (
 	testString = "test string"
 )
+
+func TestResponseEncoder(t *testing.T) {
+	cases := []struct {
+		name        string
+		contentType string
+		acceptType  string
+		encoderType string
+	}{
+		{"no ct, no at", "", "", "*json.Encoder"},
+		{"no ct, at json", "", "application/json", "*json.Encoder"},
+		{"no ct, at xml", "", "application/xml", "*xml.Encoder"},
+		{"no ct, at gob", "", "application/gob", "*gob.Encoder"},
+		{"no ct, at html", "", "text/html", "*http.textEncoder"},
+		{"no ct, at plain", "", "text/plain", "*http.textEncoder"},
+		{"ct json", "application/json", "application/gob", "*json.Encoder"},
+		{"ct +json", "+json", "application/gob", "*json.Encoder"},
+		{"ct xml", "application/xml", "application/gob", "*xml.Encoder"},
+		{"ct +xml", "+xml", "application/gob", "*xml.Encoder"},
+		{"ct gob", "application/gob", "application/xml", "*gob.Encoder"},
+		{"ct +gob", "+gob", "application/xml", "*gob.Encoder"},
+		{"ct html", "text/html", "application/gob", "*http.textEncoder"},
+		{"ct +html", "+html", "application/gob", "*http.textEncoder"},
+		{"ct plain", "text/plain", "application/gob", "*http.textEncoder"},
+		{"ct +txt", "+txt", "application/gob", "*http.textEncoder"},
+	}
+
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			ctx := context.Background()
+			ctx = context.WithValue(ctx, AcceptTypeKey, c.acceptType)
+			ctx = context.WithValue(ctx, ContentTypeKey, c.contentType)
+			w := httptest.NewRecorder()
+			encoder := ResponseEncoder(ctx, w)
+			if c.encoderType != fmt.Sprintf("%T", encoder) {
+				t.Errorf("got encoder type %s, expected %s", fmt.Sprintf("%T", encoder), c.encoderType)
+			}
+		})
+	}
+}
 
 func TestResponseDecoder(t *testing.T) {
 	cases := []struct {
