@@ -53,26 +53,26 @@ func (s *NameScope) HashedUnique(key Hasher, name string, suffix ...string) stri
 // name if given name is not unique. If suffixed name is still not unique, a
 // counter value is added to the suffixed name until unique.
 func (s *NameScope) Unique(name string, suffix ...string) string {
-	var (
-		i   int
-		suf string
-	)
-	_, ok := s.counts[name]
+	c, ok := s.counts[name]
 	if !ok {
-		goto done
+		s.counts[name]++
+		return name
 	}
 	if len(suffix) > 0 {
-		suf = suffix[0]
+		name += suffix[0]
+		c, ok = s.counts[name]
+		if !ok {
+			s.counts[name]++
+			return name
+		}
 	}
-	name += suf
-	i, ok = s.counts[name]
-	if !ok {
-		goto done
+	for i := c; ; i++ {
+		ret := name + strconv.Itoa(i)
+		if _, ok := s.counts[ret]; !ok {
+			s.counts[ret]++
+			return ret
+		}
 	}
-	name += strconv.Itoa(i + 1)
-done:
-	s.counts[name] = i + 1
-	return name
 }
 
 // Name returns a unique name for the given name by adding a counter value to
