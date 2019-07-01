@@ -78,6 +78,7 @@ func TestSections(t *testing.T) {
 		{"explicit-view", testdata.ExplicitViewDSL},
 		{"security", testdata.SecurityDSL},
 		{"server-host-with-variables", testdata.ServerHostWithVariablesDSL},
+		{"with-spaces", testdata.WithSpacesDSL},
 	}
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
