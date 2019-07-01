@@ -230,19 +230,15 @@ func ResultTypeRefWithPrefix(api *expr.APIExpr, mt *expr.ResultTypeExpr, view st
 		panic(fmt.Sprintf("failed to project media type %#v: %s", mt.Identifier, err)) // bug
 	}
 	if _, ok := Definitions[projected.TypeName]; !ok {
-		projected.TypeName = codegen.Goify(prefix, true) + projected.TypeName
+		projected.TypeName = codegen.Goify(prefix, true) + codegen.Goify(projected.TypeName, true)
 		GenerateResultTypeDefinition(api, projected, "default")
 	}
-	ref := fmt.Sprintf("#/definitions/%s", projected.TypeName)
-	return ref
+	return fmt.Sprintf("#/definitions/%s", projected.TypeName)
 }
 
 // TypeRef produces the JSON reference to the type definition.
 func TypeRef(api *expr.APIExpr, ut *expr.UserTypeExpr) string {
-	if _, ok := Definitions[ut.TypeName]; !ok {
-		GenerateTypeDefinition(api, ut)
-	}
-	return fmt.Sprintf("#/definitions/%s", ut.TypeName)
+	return TypeRefWithPrefix(api, ut, "")
 }
 
 // TypeRefWithPrefix produces the JSON reference to the type definition and adds the provided prefix
@@ -255,7 +251,6 @@ func TypeRefWithPrefix(api *expr.APIExpr, ut *expr.UserTypeExpr, prefix string) 
 	if _, ok := Definitions[typeName]; !ok {
 		GenerateTypeDefinitionWithName(api, ut, typeName)
 	}
-
 	return fmt.Sprintf("#/definitions/%s", typeName)
 }
 

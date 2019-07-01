@@ -1,0 +1,100 @@
+swagger: "2.0"
+info:
+  title: ""
+  version: ""
+host: localhost:80
+consumes:
+- application/json
+- application/xml
+- application/gob
+produces:
+- application/json
+- application/xml
+- application/gob
+paths:
+  /:
+    post:
+      tags:
+      - test service
+      summary: test endpoint test service
+      operationId: test service#test endpoint
+      parameters:
+      - name: Test EndpointRequestBody
+        in: body
+        required: true
+        schema:
+          $ref: '#/definitions/TestServiceTestEndpointRequestBody'
+      responses:
+        "200":
+          description: OK response.
+          schema:
+            $ref: '#/definitions/TestServiceTestEndpointOKResponseBody'
+        "404":
+          description: Not Found response.
+          schema:
+            $ref: '#/definitions/TestServiceTestEndpointNotFoundResponseBody'
+      schemes:
+      - http
+definitions:
+  TestServiceTestEndpointNotFoundResponseBody:
+    title: 'Mediatype identifier: application/vnd.goa.foobar; view=default'
+    type: object
+    properties:
+      bar:
+        type: array
+        items:
+          $ref: '#/definitions/barResponseBody'
+        example:
+        - string: ""
+        - string: ""
+      foo:
+        type: string
+        example: ""
+    description: Test EndpointNot FoundResponseBody result type (default view)
+    example:
+      bar:
+      - string: ""
+      - string: ""
+      - string: ""
+      - string: ""
+      foo: ""
+  TestServiceTestEndpointOKResponseBody:
+    title: 'Mediatype identifier: application/vnd.goa.foobar; view=default'
+    type: object
+    properties:
+      bar:
+        type: array
+        items:
+          $ref: '#/definitions/barResponseBody'
+        example:
+        - string: ""
+        - string: ""
+        - string: ""
+        - string: ""
+      foo:
+        type: string
+        example: ""
+    description: Test EndpointOKResponseBody result type (default view)
+    example:
+      bar:
+      - string: ""
+      - string: ""
+      foo: ""
+  TestServiceTestEndpointRequestBody:
+    title: TestServiceTestEndpointRequestBody
+    type: object
+    properties:
+      string:
+        type: string
+        example: ""
+    example:
+      string: ""
+  barResponseBody:
+    title: barResponseBody
+    type: object
+    properties:
+      string:
+        type: string
+        example: ""
+    example:
+      string: ""
