@@ -369,3 +369,29 @@ var ServerHostWithVariablesDSL = func() {
 		})
 	})
 }
+
+var WithSpacesDSL = func() {
+	var Bar = Type("bar", func() {
+		Attribute("string", String, func() {
+			Example("")
+		})
+	})
+	var FooBar = ResultType("application/vnd.goa.foobar", func() {
+		TypeName("Foo Bar")
+		Attribute("foo", String, func() {
+			Example("")
+		})
+		Attribute("bar", ArrayOf(Bar))
+	})
+	Service("test service", func() {
+		Method("test endpoint", func() {
+			Payload(Bar)
+			Result(FooBar)
+			HTTP(func() {
+				POST("/")
+				Response(StatusOK)
+				Response(StatusNotFound)
+			})
+		})
+	})
+}
