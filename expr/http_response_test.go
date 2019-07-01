@@ -17,10 +17,12 @@ func TestHTTPResponseValidation(t *testing.T) {
 		{"non empty result", nonEmptyResultEmptyResponseDSL, ""},
 		{"non empty response", emptyResultNonEmptyResponseDSL, ""},
 		{"string result", stringResultResponseWithHeadersDSL, ""},
+		{"string result", stringResultResponseWithTextContentTypeDSL, ""},
 		{"object result", objectResultResponseWithHeadersDSL, ""},
 		{"array result", arrayResultResponseWithHeadersDSL, ""},
 		{"map result", mapResultResponseWithHeadersDSL, ""},
 		{"invalid", emptyResultResponseWithHeadersDSL, `HTTP response of service "EmptyResultResponseWithHeaders" HTTP endpoint "Method": response defines headers but result is empty`},
+		{"not string or []byte", intResultResponseWithTextContentTypeDSL, `HTTP response of service "StringResultResponseWithHeaders" HTTP endpoint "Method": Result type must be String or Bytes when ContentType is 'text/plain'`},
 	}
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
@@ -82,6 +84,20 @@ var stringResultResponseWithHeadersDSL = func() {
 	})
 }
 
+var stringResultResponseWithTextContentTypeDSL = func() {
+	Service("StringResultResponseWithHeaders", func() {
+		Method("Method", func() {
+			Result(String)
+			HTTP(func() {
+				POST("/")
+				Response(func() {
+					ContentType("text/plain")
+				})
+			})
+		})
+	})
+}
+
 var objectResultResponseWithHeadersDSL = func() {
 	Service("ObjectResultResponseWithHeaders", func() {
 		Method("Method", func() {
@@ -137,6 +153,20 @@ var emptyResultResponseWithHeadersDSL = func() {
 				POST("/")
 				Response(func() {
 					Header("foo:Location")
+				})
+			})
+		})
+	})
+}
+
+var intResultResponseWithTextContentTypeDSL = func() {
+	Service("StringResultResponseWithHeaders", func() {
+		Method("Method", func() {
+			Result(Int)
+			HTTP(func() {
+				POST("/")
+				Response(func() {
+					ContentType("text/plain")
 				})
 			})
 		})
