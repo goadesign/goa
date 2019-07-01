@@ -250,7 +250,7 @@ request so all we have to do is to perform the actual sum. Edit the file
 
 ```go
 // Add returns the sum of attributes a and b of p.
-func (s *calcsrvc) Add(ctx context.Context, p *calcsvc.AddPayload) (res int, err error) {
+func (s *calcsrvc) Add(ctx context.Context, p *calc.AddPayload) (res int, err error) {
         return p.A + p.B, nil
 }
 ```
