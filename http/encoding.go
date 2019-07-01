@@ -88,7 +88,7 @@ func RequestDecoder(r *http.Request) Decoder {
 //     * application/json using package encoding/json
 //     * application/xml using package encoding/xml
 //     * application/gob using package encoding/gob
-//     * text/html for strings
+//     * text/html and text/plain for strings
 //
 // ResponseEncoder defaults to the JSON encoder if the context AcceptTypeKey or
 // ContentTypeKey value does not match any of the supported mime types or is
@@ -103,8 +103,8 @@ func ResponseEncoder(ctx context.Context, w http.ResponseWriter) Encoder {
 			return xml.NewEncoder(w), "application/xml"
 		case "application/gob":
 			return gob.NewEncoder(w), "application/gob"
-		case "text/html":
-			return newTextHTMLEncoder(w), "text/html"
+		case "text/html", "text/plain":
+			return newTextEncoder(w, a), a
 		}
 		return nil, ""
 	}
@@ -137,8 +137,9 @@ func ResponseEncoder(ctx context.Context, w http.ResponseWriter) Encoder {
 					enc = xml.NewEncoder(w)
 				case ct == "application/gob" || strings.HasSuffix(ct, "+gob"):
 					enc = gob.NewEncoder(w)
-				case ct == "text/html" || strings.HasSuffix(ct, "+html"):
-					enc = newTextHTMLEncoder(w)
+				case ct == "text/html" || ct == "text/plain" ||
+					strings.HasSuffix(ct, "+html") || strings.HasSuffix(ct, "+txt"):
+					enc = newTextEncoder(w, ct)
 				default:
 					enc = json.NewEncoder(w)
 				}
@@ -176,7 +177,7 @@ func RequestEncoder(r *http.Request) Encoder {
 //   * application/json using package encoding/json (default)
 //   * application/xml using package encoding/xml
 //   * application/gob using package encoding/gob
-//   * text/html for strings
+//   * text/html and text/plain for strings
 //
 func ResponseDecoder(resp *http.Response) Decoder {
 	ct := resp.Header.Get("Content-Type")
@@ -193,8 +194,9 @@ func ResponseDecoder(resp *http.Response) Decoder {
 		return xml.NewDecoder(resp.Body)
 	case ct == "application/gob" || strings.HasSuffix(ct, "+gob"):
 		return gob.NewDecoder(resp.Body)
-	case ct == "text/html" || strings.HasSuffix(ct, "+html"):
-		return newTextHTMLDecoder(resp.Body)
+	case ct == "text/html" || ct == "text/plain" ||
+		strings.HasSuffix(ct, "+html") || strings.HasSuffix(ct, "+txt"):
+		return newTextDecoder(resp.Body, ct)
 	default:
 		return json.NewDecoder(resp.Body)
 	}
@@ -247,15 +249,16 @@ func SetContentType(w http.ResponseWriter, ct string) {
 	w.Header().Set("Content-Type", h+suffix)
 }
 
-func newTextHTMLEncoder(w io.Writer) Encoder {
-	return &textHTMLEncoder{w}
+func newTextEncoder(w io.Writer, ct string) Encoder {
+	return &textEncoder{w, ct}
 }
 
-type textHTMLEncoder struct {
-	w io.Writer
+type textEncoder struct {
+	w  io.Writer
+	ct string
 }
 
-func (e *textHTMLEncoder) Encode(v interface{}) error {
+func (e *textEncoder) Encode(v interface{}) error {
 	var err error
 
 	switch c := v.(type) {
@@ -266,21 +269,22 @@ func (e *textHTMLEncoder) Encode(v interface{}) error {
 	case []byte:
 		_, err = e.w.Write(c)
 	default:
-		err = fmt.Errorf("can't encode %T as text/html", c)
+		err = fmt.Errorf("can't encode %T as %s", c, e.ct)
 	}
 
 	return err
 }
 
-func newTextHTMLDecoder(r io.Reader) Decoder {
-	return &textHTMLDecoder{r}
+func newTextDecoder(r io.Reader, ct string) Decoder {
+	return &textDecoder{r, ct}
 }
 
-type textHTMLDecoder struct {
-	r io.Reader
+type textDecoder struct {
+	r  io.Reader
+	ct string
 }
 
-func (e *textHTMLDecoder) Decode(v interface{}) error {
+func (e *textDecoder) Decode(v interface{}) error {
 	b, err := ioutil.ReadAll(e.r)
 	if err != nil {
 		return err
@@ -292,7 +296,7 @@ func (e *textHTMLDecoder) Decode(v interface{}) error {
 	case *[]byte:
 		*c = []byte(string(b))
 	default:
-		err = fmt.Errorf("can't decode text/html to %T", c)
+		err = fmt.Errorf("can't decode %s to %T", e.ct, c)
 	}
 
 	return err
