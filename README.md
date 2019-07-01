@@ -11,8 +11,6 @@ design-first approach.
 [![Godoc](https://godoc.org/goa.design/goa?status.svg)](https://godoc.org/goa.design/goa)
 [![Slack](https://img.shields.io/badge/slack-gophers-orange.svg?style=flat)](https://gophers.slack.com/messages/goa/)
 
-## [Goa v2 and v3 released!!!](https://goa.design/blog/009-v_3_0_0/)
-
 ## Overview
 
 Goa takes a different approach to building services by making it possible to
