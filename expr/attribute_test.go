@@ -8,23 +8,22 @@ import (
 )
 
 func TestTaggedAttribute(t *testing.T) {
+	tagged := &AttributeExpr{
+		Type: &Object{
+			&NamedAttributeExpr{
+				Name: "Foo",
+				Attribute: &AttributeExpr{
+					Meta: MetaExpr{"foo": []string{"foo"}},
+				},
+			},
+		},
+	}
 	cases := map[string]struct {
 		a        *AttributeExpr
 		expected string
 	}{
 		"tagged attribute": {
-			a: &AttributeExpr{
-				Type: &Object{
-					&NamedAttributeExpr{
-						Name: "Foo",
-						Attribute: &AttributeExpr{
-							Meta: MetaExpr{
-								"foo": []string{"foo"},
-							},
-						},
-					},
-				},
-			},
+			a:        tagged,
 			expected: "Foo",
 		},
 		"not object": {
@@ -37,19 +36,70 @@ func TestTaggedAttribute(t *testing.T) {
 			a: &AttributeExpr{
 				Type: &Object{
 					&NamedAttributeExpr{
-						Name:      "foo",
+						Name:      "Foo",
 						Attribute: &AttributeExpr{},
 					},
 				},
 			},
 			expected: "",
 		},
+		"extended": {
+			a: &AttributeExpr{
+				Type: &Object{
+					&NamedAttributeExpr{
+						Name:      "bar",
+						Attribute: &AttributeExpr{Type: String},
+					},
+				},
+				Bases: []DataType{
+					&UserTypeExpr{
+						TypeName:      "Extended",
+						AttributeExpr: tagged,
+					},
+				},
+			},
+			expected: "Foo",
+		},
+		"recursively extended": {
+			a: &AttributeExpr{
+				Type: &Object{
+					&NamedAttributeExpr{
+						Name:      "bar",
+						Attribute: &AttributeExpr{Type: String},
+					},
+				},
+				Bases: []DataType{
+					&UserTypeExpr{
+						TypeName: "Extended",
+						AttributeExpr: &AttributeExpr{
+							Type: &Object{
+								&NamedAttributeExpr{
+									Name: "foobar",
+									Attribute: &AttributeExpr{
+										Meta: MetaExpr{"foobar": []string{"foobar"}},
+									},
+								},
+							},
+							Bases: []DataType{
+								&UserTypeExpr{
+									TypeName:      "AnotherExtended",
+									AttributeExpr: tagged,
+								},
+							},
+						},
+					},
+				},
+			},
+			expected: "Foo",
+		},
 	}
 
 	for k, tc := range cases {
-		if actual := TaggedAttribute(tc.a, "foo"); tc.expected != actual {
-			t.Errorf("%s: got %#v, expected %#v", k, actual, tc.expected)
-		}
+		t.Run(k, func(t *testing.T) {
+			if actual := TaggedAttribute(tc.a, "foo"); tc.expected != actual {
+				t.Errorf("got %#v, expected %#v", actual, tc.expected)
+			}
+		})
 	}
 }
 
