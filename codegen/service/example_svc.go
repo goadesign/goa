@@ -36,9 +36,21 @@ type (
 // ExampleServiceFiles returns a basic service implementation for every
 // service expression.
 func ExampleServiceFiles(genpkg string, root *expr.RootExpr) []*codegen.File {
+
+	// determine the unique API package name different from the service names
+	scope := codegen.NewNameScope()
+	for _, svc := range root.Services {
+		svc := Services.Get(svc.Name)
+		if svc == nil {
+			panic("unknown service, " + svc.Name) // bug
+		}
+		scope.Unique(svc.PkgName)
+	}
+	apipkg := scope.Unique(strings.ToLower(codegen.Goify(root.API.Name, false)), "api")
+
 	var fw []*codegen.File
 	for _, svc := range root.Services {
-		if f := exampleServiceFile(genpkg, root, svc); f != nil {
+		if f := exampleServiceFile(genpkg, root, svc, apipkg); f != nil {
 			fw = append(fw, f)
 		}
 	}
@@ -46,22 +58,20 @@ func ExampleServiceFiles(genpkg string, root *expr.RootExpr) []*codegen.File {
 }
 
 // exampleServiceFile returns a basic implementation of the given service.
-func exampleServiceFile(genpkg string, root *expr.RootExpr, svc *expr.ServiceExpr) *codegen.File {
+func exampleServiceFile(genpkg string, root *expr.RootExpr, svc *expr.ServiceExpr, apipkg string) *codegen.File {
 	data := Services.Get(svc.Name)
 	svcName := codegen.SnakeCase(data.VarName)
 	fpath := svcName + ".go"
 	if _, err := os.Stat(fpath); !os.IsNotExist(err) {
 		return nil // file already exists, skip it.
 	}
-	scope := codegen.NewNameScope()
 	specs := []*codegen.ImportSpec{
 		{Path: "context"},
 		{Path: "log"},
-		{Path: path.Join(genpkg, codegen.SnakeCase(svcName)), Name: scope.Unique(data.PkgName)},
+		{Path: path.Join(genpkg, codegen.SnakeCase(svcName)), Name: data.PkgName},
 	}
-	apiPkg := scope.Unique(strings.ToLower(codegen.Goify(root.API.Name, false)), "api")
 	sections := []*codegen.SectionTemplate{
-		codegen.Header("", apiPkg, specs),
+		codegen.Header("", apipkg, specs),
 		{Name: "basic-service-struct", Source: svcStructT, Data: data},
 		{Name: "basic-service-init", Source: svcInitT, Data: data},
 	}
