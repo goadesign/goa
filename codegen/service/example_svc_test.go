@@ -5,9 +5,9 @@ import (
 	"reflect"
 	"testing"
 
-	"goa.design/goa/v3/codegen"
-	"goa.design/goa/v3/codegen/service/testdata"
-	"goa.design/goa/v3/expr"
+	"goa.design/goa/codegen"
+	"goa.design/goa/codegen/service/testdata"
+	"goa.design/goa/expr"
 )
 
 func TestExampleServiceFiles(t *testing.T) {
