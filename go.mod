@@ -13,6 +13,7 @@ require (
 	github.com/manveru/gobdd v0.0.0-20131210092515-f1a17fdd710b // indirect
 	github.com/pkg/errors v0.8.1
 	github.com/sergi/go-diff v1.0.0
+	github.com/sirkon/goproxy v1.4.0
 	github.com/smartystreets/goconvey v0.0.0-20190330032615-68dc04aab96a // indirect
 	github.com/zach-klippenstein/goregen v0.0.0-20160303162051-795b5e3961ea
 	golang.org/x/tools v0.0.0-20190506145303-2d16b83fe98c

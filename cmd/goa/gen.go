@@ -13,6 +13,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/sirkon/goproxy/gomod"
 	"goa.design/goa/v3/codegen"
 	"golang.org/x/tools/go/packages"
 )
@@ -141,11 +142,38 @@ func (g *Generator) Write(debug bool) error {
 	return err
 }
 
+func (g *Generator) goaPackage() (string, error) {
+	goaPkg := "goa.design/goa"
+	if g.DesignVersion < 3 {
+		return goaPkg, nil
+	}
+	goaPkg = fmt.Sprintf("goa.design/goa/v%d", g.DesignVersion)
+	if _, err := os.Stat("go.mod"); err != nil {
+		return goaPkg, nil
+	}
+	b, err := ioutil.ReadFile("go.mod")
+	if err != nil {
+		return "", fmt.Errorf("read go.mod error, %v", err)
+	}
+	return parseGoModGoaPackage(goaPkg, b)
+}
+
+func parseGoModGoaPackage(goaPkg string, b []byte) (string, error) {
+	mod, err := gomod.Parse("go.mod", b)
+	if err != nil {
+		return "", fmt.Errorf("read go.mod error, %v", err)
+	}
+	if v, ok := mod.Require[goaPkg]; ok {
+		return goaPkg + "@" + v, nil
+	}
+	return goaPkg, nil
+}
+
 // Compile compiles the generator.
 func (g *Generator) Compile() error {
-	goaPkg := "goa.design/goa"
-	if g.DesignVersion > 2 {
-		goaPkg = fmt.Sprintf("goa.design/goa/v%d", g.DesignVersion)
+	goaPkg, err := g.goaPackage()
+	if err != nil {
+		return err
 	}
 	if err := g.runGoCmd("get", goaPkg); err != nil {
 		return err
