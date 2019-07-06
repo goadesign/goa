@@ -35,11 +35,10 @@ func TestGenerator_goaPackage(t *testing.T) {
 		})
 	}
 }
+
 func TestParseGoModGoaPackage(t *testing.T) {
 	input := `module calc
-
 go 1.12
-
 require (
         github.com/smartystreets/assertions v1.0.0 // indirect
         goa.design/goa/v3 v3.0.3-0.20190704022140-85024ebc66dc
