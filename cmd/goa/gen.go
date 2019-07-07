@@ -142,14 +142,14 @@ func (g *Generator) Write(debug bool) error {
 	return err
 }
 
-const GOMODENVKEY = "GOMOD"
+const goModEnvKey = "GOMOD"
 
 func findGoMod() (string, error) {
-	env := os.Getenv(GOMODENVKEY)
+	env := os.Getenv(goModEnvKey)
 	if _, err := exec.LookPath("go"); err != nil {
 		return env, nil
 	}
-	mod, err := exec.Command("go", "env", GOMODENVKEY).Output()
+	mod, err := exec.Command("go", "env", goModEnvKey).Output()
 	if err != nil {
 		return env, nil
 	}
