@@ -175,7 +175,7 @@ func (g *Generator) goaPackage() (string, error) {
 	return parseGoModGoaPackage(goaPkg, fp)
 }
 
-var reMod = regexp.MustCompile(`(goa\.design/goa/v\d+?)\s+(\S+?)\s*$`)
+var reMod = regexp.MustCompile(`^\s*(?:require )?\s*(goa\.design/goa/v\d+?)\s+([^\/]\S+?)\s*(?:\/\/.+)?$`)
 
 func parseGoModGoaPackage(pkg string, r io.Reader) (string, error) {
 	s := bufio.NewScanner(r)

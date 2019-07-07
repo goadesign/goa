@@ -61,7 +61,7 @@ require (
 )
 `,
 			Package:  "goa.design/goa/v3",
-			Expected: `goa.design/goa/v3@v3.0.3-0.20190704022140-85024ebc66dc`,
+			Expected: "goa.design/goa/v3@v3.0.3-0.20190704022140-85024ebc66dc",
 		},
 		{
 			Name: "not found",
@@ -87,7 +87,53 @@ require (
 )
 `,
 			Package:  "goa.design/goa/v3",
-			Expected: `goa.design/goa/v3@v3.0.3-0.20190704022140-85024ebc66dc`,
+			Expected: "goa.design/goa/v3@v3.0.3-0.20190704022140-85024ebc66dc",
+		},
+		{
+			Name: "with comment",
+			Mod: `module calc
+go 1.12
+replace goa.design/goa/v3 => ../../../goa.design/goa
+require (
+        github.com/ikawaha/kagome v1.0.0 // indirect
+        goa.design/goa/v3 v3.0.3-0.20190704022140-85024ebc66dc // indirect // comment
+        goa.design/plugins/v3 v3.0.1
+)
+`,
+			Package:  "goa.design/goa/v3",
+			Expected: "goa.design/goa/v3@v3.0.3-0.20190704022140-85024ebc66dc",
+		},
+		{
+			Name:     "require with comment",
+			Mod:      " require goa.design/goa/v3 v3.0.3-0.20190704022140-85024ebc66dc// indirect // comment",
+			Package:  "goa.design/goa/v3",
+			Expected: "goa.design/goa/v3@v3.0.3-0.20190704022140-85024ebc66dc",
+		},
+		{
+			Name: "comment out",
+			Mod: `module calc
+go 1.12
+replace goa.design/goa/v3 => ../../../goa.design/goa
+require (
+        github.com/ikawaha/kagome v1.0.0 // indirect
+        // goa.design/goa/v3 v3.0.3-0.20190704022140-85024ebc66dc
+        goa.design/plugins/v3 v3.0.1
+)
+`,
+			Package:  "goa.design/goa/v3",
+			Expected: "goa.design/goa/v3",
+		},
+		{
+			Name:     "without version",
+			Mod:      "     goa.design/goa/v3//v3.0.3-0.20190704022140-85024ebc66dc",
+			Package:  "goa.design/goa/v3",
+			Expected: "goa.design/goa/v3",
+		},
+		{
+			Name:     "different version",
+			Mod:      "goa.design/goa/v2 v2.0.3-0.20190704022140-85024ebc66dc // comment",
+			Package:  "goa.design/goa/v3",
+			Expected: "goa.design/goa/v3",
 		},
 	}
 	for _, c := range cases {
