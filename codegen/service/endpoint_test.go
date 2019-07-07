@@ -18,6 +18,7 @@ func TestEndpoint(t *testing.T) {
 		Code string
 	}{
 		{"single", testdata.SingleEndpointDSL, testdata.SingleEndpoint},
+		{"use", testdata.UseEndpointDSL, testdata.UseEndpoint},
 		{"multiple", testdata.MultipleEndpointsDSL, testdata.MultipleEndpoints},
 		{"no-payload", testdata.NoPayloadEndpointDSL, testdata.NoPayloadEndpoint},
 		{"with-result", testdata.WithResultEndpointDSL, testdata.WithResultEndpoint},
