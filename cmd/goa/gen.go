@@ -142,16 +142,34 @@ func (g *Generator) Write(debug bool) error {
 	return err
 }
 
+const GOMODENVKEY = "GOMOD"
+
+func findGoMod() (string, error) {
+	env := os.Getenv(GOMODENVKEY)
+	if _, err := exec.LookPath("go"); err != nil {
+		return env, nil
+	}
+	mod, err := exec.Command("go", "env", GOMODENVKEY).Output()
+	if err != nil {
+		return env, nil
+	}
+	return strings.TrimSpace(string(mod)), nil
+}
+
 func (g *Generator) goaPackage() (string, error) {
 	goaPkg := "goa.design/goa"
 	if g.DesignVersion < 3 {
 		return goaPkg, nil
 	}
 	goaPkg = fmt.Sprintf("goa.design/goa/v%d", g.DesignVersion)
-	if _, err := os.Stat("go.mod"); err != nil {
+	gomod, err := findGoMod()
+	if err != nil {
+		return "", fmt.Errorf("find go.mod error, %v", err)
+	}
+	if _, err := os.Stat(gomod); err != nil {
 		return goaPkg, nil
 	}
-	b, err := ioutil.ReadFile("go.mod")
+	b, err := ioutil.ReadFile(gomod)
 	if err != nil {
 		return "", fmt.Errorf("read go.mod error, %v", err)
 	}
