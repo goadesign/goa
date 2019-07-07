@@ -473,6 +473,7 @@ func (d ServicesData) analyze(service *expr.ServiceExpr) *Data {
 	)
 	{
 		scope = codegen.NewNameScope()
+		scope.Unique("Use") // Reserve "Use" for Endpoints struct Use method.
 		viewScope = codegen.NewNameScope()
 		pkgName = scope.HashedUnique(service, strings.ToLower(codegen.Goify(service.Name, false)), "svc")
 		viewspkg = pkgName + "views"
@@ -709,7 +710,7 @@ func buildMethodData(m *expr.MethodExpr, svcPkgName string, service *expr.Servic
 		svrStream    *StreamData
 		cliStream    *StreamData
 	)
-	vname = codegen.Goify(m.Name, true)
+	vname = scope.Unique(codegen.Goify(m.Name, true), "Endpoint")
 	desc = m.Description
 	if desc == "" {
 		desc = codegen.Goify(m.Name, true) + " implements " + m.Name + "."

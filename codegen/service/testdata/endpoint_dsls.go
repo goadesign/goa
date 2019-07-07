@@ -15,6 +15,14 @@ var SingleEndpointDSL = func() {
 	})
 }
 
+var UseEndpointDSL = func() {
+	Service("UseEndpoint", func() {
+		Method("Use", func() {
+			Payload(String)
+		})
+	})
+}
+
 var MultipleEndpointsDSL = func() {
 	var BType = Type("BType", func() {
 		Attribute("b", String)
