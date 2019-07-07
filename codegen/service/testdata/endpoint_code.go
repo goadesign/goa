@@ -29,6 +29,33 @@ func NewAEndpoint(s Service) goa.Endpoint {
 }
 `
 
+const UseEndpoint = `// Endpoints wraps the "UseEndpoint" service endpoints.
+type Endpoints struct {
+	UseEndpoint goa.Endpoint
+}
+
+// NewEndpoints wraps the methods of the "UseEndpoint" service with endpoints.
+func NewEndpoints(s Service) *Endpoints {
+	return &Endpoints{
+		UseEndpoint: NewUseEndpointEndpoint(s),
+	}
+}
+
+// Use applies the given middleware to all the "UseEndpoint" service endpoints.
+func (e *Endpoints) Use(m func(goa.Endpoint) goa.Endpoint) {
+	e.UseEndpoint = m(e.UseEndpoint)
+}
+
+// NewUseEndpointEndpoint returns an endpoint function that calls the method
+// "Use" of service "UseEndpoint".
+func NewUseEndpointEndpoint(s Service) goa.Endpoint {
+	return func(ctx context.Context, req interface{}) (interface{}, error) {
+		p := req.(string)
+		return nil, s.UseEndpoint(ctx, p)
+	}
+}
+`
+
 const MultipleEndpoints = `// Endpoints wraps the "MultipleEndpoints" service endpoints.
 type Endpoints struct {
 	B goa.Endpoint
