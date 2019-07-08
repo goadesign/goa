@@ -197,6 +197,7 @@ func (g *Generator) Compile() error {
 	if err != nil {
 		return err
 	}
+	fmt.Println("go get %s", goaPkg)
 	if err := g.runGoCmd("get", goaPkg); err != nil {
 		return err
 	}
