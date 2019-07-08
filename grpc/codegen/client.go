@@ -240,7 +240,10 @@ func Build{{ .Method.VarName }}Func(grpccli {{ .PkgName }}.{{ .ClientInterface }
 		for _, opt := range cliopts {
 			opts = append(opts, opt)
 		}
-		return grpccli.{{ .Method.VarName }}(ctx{{ if not .Method.StreamingPayload }}, reqpb.({{ .Request.ClientConvert.TgtRef }}){{ end }}, opts...)
+		if reqpb != nil {
+			return grpccli.{{ .Method.VarName }}(ctx{{ if not .Method.StreamingPayload }}, reqpb.({{ .Request.ClientConvert.TgtRef }}){{ end }}, opts...)
+		}
+		return grpccli.{{ .Method.VarName }}(ctx{{ if not .Method.StreamingPayload }}, &{{ .Request.ClientConvert.TgtName }}{}{{ end }}, opts...)
 	}
 }
 `
