@@ -10,6 +10,7 @@ import (
 
 	"goa.design/goa/v3/middleware"
 	"goa.design/goa/v3/middleware/xray"
+	"goa.design/goa/v3/middleware/xray/xraytest"
 )
 
 const (
@@ -157,18 +158,18 @@ func TestMiddleware(t *testing.T) {
 				req.Host = c.Request.Host
 			}
 			req = req.WithContext(ctx)
-			messages := xray.ReadUDP(t, udplisten, 2, func() {
+			messages := xraytest.ReadUDP(t, udplisten, 2, func() {
 				m(h).ServeHTTP(rw, req)
 			})
 
 			// expect the first message is InProgress
-			s := xray.ExtractSegment(t, messages[0])
+			s := xraytest.ExtractSegment(t, messages[0])
 			if !s.InProgress {
 				t.Fatal("expected first segment to be InProgress but it was not")
 			}
 
 			// second message
-			s = xray.ExtractSegment(t, messages[1])
+			s = xraytest.ExtractSegment(t, messages[1])
 			if s.Name != "service" {
 				t.Errorf("unexpected segment name, expected service - got %s", s.Name)
 			}

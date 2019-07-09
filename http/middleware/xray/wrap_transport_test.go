@@ -12,6 +12,7 @@ import (
 	"testing"
 
 	"goa.design/goa/v3/middleware/xray"
+	"goa.design/goa/v3/middleware/xray/xraytest"
 )
 
 type mockRoundTripper struct {
@@ -56,7 +57,7 @@ func TestTransportExample(t *testing.T) {
 	// Setting context on request
 	req = req.WithContext(ctx)
 
-	messages := xray.ReadUDP(t, udplisten, 2, func() {
+	messages := xraytest.ReadUDP(t, udplisten, 2, func() {
 		resp, err := httpClient.Do(req)
 		if err != nil {
 			t.Fatalf("failed to make request - %s", err)
@@ -67,13 +68,13 @@ func TestTransportExample(t *testing.T) {
 	})
 
 	// expect the first message is InProgress
-	s := xray.ExtractSegment(t, messages[0])
+	s := xraytest.ExtractSegment(t, messages[0])
 	if !s.InProgress {
 		t.Fatal("expected first segment to be InProgress but it was not")
 	}
 
 	// second message
-	s = xray.ExtractSegment(t, messages[1])
+	s = xraytest.ExtractSegment(t, messages[1])
 	url, _ := url.Parse(server.URL)
 	if s.Name != url.Host {
 		t.Errorf("unexpected segment name, expected %q - got %q", url.Host, s.Name)
@@ -215,7 +216,7 @@ func TestTransport(t *testing.T) {
 				req.Host = c.Request.Host
 			}
 
-			messages := xray.ReadUDP(t, udplisten, 2, func() {
+			messages := xraytest.ReadUDP(t, udplisten, 2, func() {
 				resp, err := WrapTransport(rt).RoundTrip(req)
 				if c.Segment.Exception == "" && err != nil {
 					t.Errorf("expected no error got %s", err)
@@ -226,13 +227,13 @@ func TestTransport(t *testing.T) {
 			})
 
 			// expect the first message is InProgress
-			s := xray.ExtractSegment(t, messages[0])
+			s := xraytest.ExtractSegment(t, messages[0])
 			if !s.InProgress {
 				t.Fatal("expected first segment to be InProgress but it was not")
 			}
 
 			// second message
-			s = xray.ExtractSegment(t, messages[1])
+			s = xraytest.ExtractSegment(t, messages[1])
 			if s.Name != host {
 				t.Errorf("unexpected segment name, expected %q - got %q", host, s.Name)
 			}

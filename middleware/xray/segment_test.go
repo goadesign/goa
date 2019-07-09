@@ -1,10 +1,12 @@
-package xray
+package xray_test
 
 import (
 	"net"
 	"regexp"
-	"sync"
 	"testing"
+
+	"goa.design/goa/v3/middleware/xray"
+	"goa.design/goa/v3/middleware/xray/xraytest"
 )
 
 const (
@@ -19,8 +21,8 @@ func TestSegment_NewSubsegment(t *testing.T) {
 	}
 	var (
 		name   = "sub"
-		s      = &Segment{Mutex: &sync.Mutex{}, conn: conn}
-		before = now()
+		s      = xray.NewSegment("", "", "", conn)
+		before = s.StartTime
 		ss     = s.NewSubsegment(name)
 	)
 	if ss.ID == "" {
@@ -50,10 +52,10 @@ func TestSegment_SubmitInProgress(t *testing.T) {
 			t.Fatalf("failed to connect to daemon - %s", err)
 		}
 
-		segment := NewSegment("hello", NewTraceID(), NewID(), conn)
+		segment := xray.NewSegment("hello", xray.NewTraceID(), xray.NewID(), conn)
 
 		// call SubmitInProgress() twice, then Close it
-		messages := ReadUDP(t, udplisten, 2, func() {
+		messages := xraytest.ReadUDP(t, udplisten, 2, func() {
 			segment.Namespace = "1"
 			segment.SubmitInProgress()
 			segment.Namespace = "2"
@@ -63,7 +65,7 @@ func TestSegment_SubmitInProgress(t *testing.T) {
 		})
 
 		// verify the In-Progress segment
-		s := ExtractSegment(t, messages[0])
+		s := xraytest.ExtractSegment(t, messages[0])
 		if !s.InProgress {
 			t.Errorf("expected segment to be InProgress, but it's not")
 		}
@@ -72,7 +74,7 @@ func TestSegment_SubmitInProgress(t *testing.T) {
 		}
 
 		// verify the final segment (the second In-Progress segment would not have been sent)
-		s = ExtractSegment(t, messages[1])
+		s = xraytest.ExtractSegment(t, messages[1])
 		if s.InProgress {
 			t.Errorf("expected segment to not be InProgress, but it is")
 		}
@@ -87,10 +89,10 @@ func TestSegment_SubmitInProgress(t *testing.T) {
 			t.Fatalf("failed to connect to daemon - %s", err)
 		}
 
-		segment := NewSegment("hello", NewTraceID(), NewID(), conn)
+		segment := xray.NewSegment("hello", xray.NewTraceID(), xray.NewID(), conn)
 
 		// Close(), then call SubmitInProgress(), only expect 1 segment written
-		messages := ReadUDP(t, udplisten, 1, func() {
+		messages := xraytest.ReadUDP(t, udplisten, 1, func() {
 			segment.Namespace = "1"
 			segment.Close()
 			segment.Namespace = "2"
@@ -98,7 +100,7 @@ func TestSegment_SubmitInProgress(t *testing.T) {
 		})
 
 		// verify the In-Progress segment
-		s := ExtractSegment(t, messages[0])
+		s := xraytest.ExtractSegment(t, messages[0])
 		if s.InProgress {
 			t.Errorf("expected segment to be closed, but it is still InProgress")
 		}
