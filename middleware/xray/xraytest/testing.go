@@ -1,3 +1,5 @@
+// Package xraytest contains test helpers for package xray that are used by
+// transport-specific X-Ray middleware tests.
 package xraytest
 
 import (
