@@ -1361,6 +1361,49 @@ var PayloadExtendedValidateDSL = func() {
 	})
 }
 
+var PayloadValidateRecurseDSL = func() {
+	var UTInner = Type("UTInner", func() {
+		Attribute("b", String)
+		Required("b")
+	})
+	var UTOuter = Type("UTOuter", func() {
+		Attribute("a", Int)
+		Attribute("inner", UTInner)
+		Required("a", "inner")
+	})
+	Service("ServicePayloadValidateRecurseValidatePayload", func() {
+		Method("MethodPayloadValidateRecurseValidatePayload", func() {
+			Payload(func() {
+				Extend(UTOuter)
+				Required("q", "body")
+			})
+			HTTP(func() {
+				GET("/")
+			})
+		})
+	})
+}
+
+var PayloadValidateArrayRecurseDSL = func() {
+	var UTInner = Type("UTInner", func() {
+		Attribute("b", String)
+		Required("b")
+	})
+	var UTOuter = Type("UTOuter", func() {
+		Attribute("a", Int)
+		Attribute("inner", ArrayOf(UTInner))
+		Required("a", "inner")
+	})
+	Service("ServicePayloadValidateArrayRecurseValidatePayload", func() {
+		Method("MethodPayloadValidateArrayRecurseValidatePayload", func() {
+			Payload(UTOuter)
+			HTTP(func() {
+				GET("/")
+			})
+		})
+	})
+}
+
 var PayloadPathStringDSL = func() {
 	Service("ServicePathString", func() {
 		Method("MethodPathString", func() {
