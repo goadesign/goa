@@ -222,12 +222,12 @@ func recurseValidationCode(att *expr.AttributeExpr, attCtx *AttributeContext, re
 		ctx.Pointer = false
 		val := recurseValidationCode(a.ElemType, ctx, true, "e", context+"[*]", seen).String()
 
-		switch a.ElemType.Type.(type) {
-		case expr.UserType:
-			// For user and result types, call the Validate method
-			val = runUserValT(attCtx.Scope.Name(a.ElemType, ctx.Pkg), "e")
-		}
 		if val != "" {
+			switch a.ElemType.Type.(type) {
+			case expr.UserType:
+				// For user and result types, call the Validate method
+				val = runUserValT(attCtx.Scope.Name(a.ElemType, ctx.Pkg), "e")
+			}
 			data := map[string]interface{}{
 				"target":     target,
 				"validation": val,
