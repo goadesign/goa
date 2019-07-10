@@ -1,9 +1,11 @@
 package main
 
 import (
+	"bufio"
 	"fmt"
 	"go/parser"
 	"go/token"
+	"io"
 	"io/ioutil"
 	"os"
 	"os/exec"
@@ -141,11 +143,59 @@ func (g *Generator) Write(debug bool) error {
 	return err
 }
 
+const goModEnvKey = "GOMOD"
+
+func findGoMod() string {
+	env := os.Getenv(goModEnvKey)
+	if _, err := exec.LookPath("go"); err != nil {
+		return env
+	}
+	mod, err := exec.Command("go", "env", goModEnvKey).Output()
+	if err != nil {
+		return env
+	}
+	return strings.TrimSpace(string(mod))
+}
+
+func (g *Generator) goaPackage() (string, error) {
+	goaPkg := "goa.design/goa"
+	if g.DesignVersion < 3 {
+		return goaPkg, nil
+	}
+	goaPkg = fmt.Sprintf("goa.design/goa/v%d", g.DesignVersion)
+	path := findGoMod()
+	if _, err := os.Stat(path); err != nil {
+		return goaPkg, nil
+	}
+	fp, err := os.Open(path)
+	if err != nil {
+		return "", err
+	}
+	defer fp.Close()
+	return parseGoModGoaPackage(goaPkg, fp)
+}
+
+var reMod = regexp.MustCompile(`^\s*(?:require )?\s*(goa\.design/goa/v\d+?)\s+([^\/]\S+?)\s*(?:\/\/.+)?$`)
+
+func parseGoModGoaPackage(pkg string, r io.Reader) (string, error) {
+	s := bufio.NewScanner(r)
+	for s.Scan() {
+		match := reMod.FindStringSubmatch(s.Text())
+		if len(match) == 3 && match[1] == pkg {
+			return match[1] + "@" + match[2], nil
+		}
+	}
+	if err := s.Err(); err != nil {
+		return "", fmt.Errorf("scan error, %v", err)
+	}
+	return pkg, nil
+}
+
 // Compile compiles the generator.
 func (g *Generator) Compile() error {
-	goaPkg := "goa.design/goa"
-	if g.DesignVersion > 2 {
-		goaPkg = fmt.Sprintf("goa.design/goa/v%d", g.DesignVersion)
+	goaPkg, err := g.goaPackage()
+	if err != nil {
+		return err
 	}
 	if err := g.runGoCmd("get", goaPkg); err != nil {
 		return err
