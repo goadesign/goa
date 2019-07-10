@@ -224,103 +224,105 @@ const PayloadValidateRecurseFile = `// MethodPayloadValidateRecurseValidatePaylo
 // "ServicePayloadValidateRecurseValidatePayload" service
 // "MethodPayloadValidateRecurseValidatePayload" endpoint HTTP request body.
 type MethodPayloadValidateRecurseValidatePayloadRequestBody struct {
-    A     *int                  ` + "`" + `form:"a,omitempty" json:"a,omitempty" xml:"a,omitempty"` + "`" + `
-    Inner *UTInnerRequestBody ` + "`" + `form:"inner,omitempty" json:"inner,omitempty" xml:"inner,omitempty"` + "`" + `
+	A     *int                ` + "`" + `form:"a,omitempty" json:"a,omitempty" xml:"a,omitempty"` + "`" + `
+	Inner *UTInnerRequestBody ` + "`" + `form:"inner,omitempty" json:"inner,omitempty" xml:"inner,omitempty"` + "`" + `
 }
 
 // UTInnerRequestBody is used to define fields on request body types.
 type UTInnerRequestBody struct {
-    B *string ` + "`" + `form:"b,omitempty" json:"b,omitempty" xml:"b,omitempty"` + "`" + `
+	B *string ` + "`" + `form:"b,omitempty" json:"b,omitempty" xml:"b,omitempty"` + "`" + `
 }
 
 // NewMethodPayloadValidateRecurseValidatePayloadPayload builds a
 // ServicePayloadValidateRecurseValidatePayload service
 // MethodPayloadValidateRecurseValidatePayload endpoint payload.
 func NewMethodPayloadValidateRecurseValidatePayloadPayload(body *MethodPayloadValidateRecurseValidatePayloadRequestBody) *servicepayloadvalidaterecursevalidatepayload.MethodPayloadValidateRecurseValidatePayloadPayload {
-    v := &servicepayloadvalidaterecursevalidatepayload.MethodPayloadValidateRecurseValidatePayloadPayload{
-        A: *body.A,
-    }
-    v.Inner = unmarshalUTInnerRequestBodyToServicepayloadvalidaterecursevalidatepayloadUTInner(body.Inner)
-    return v
+	v := &servicepayloadvalidaterecursevalidatepayload.MethodPayloadValidateRecurseValidatePayloadPayload{
+		A: *body.A,
+	}
+	v.Inner = unmarshalUTInnerRequestBodyToServicepayloadvalidaterecursevalidatepayloadUTInner(body.Inner)
+	return v
 }
 
 // ValidateMethodPayloadValidateRecurseValidatePayloadRequestBody runs the
 // validations defined on MethodPayloadValidateRecurseValidatePayloadRequestBody
 func ValidateMethodPayloadValidateRecurseValidatePayloadRequestBody(body *MethodPayloadValidateRecurseValidatePayloadRequestBody) (err error) {
-    if body.A == nil {
-        err = goa.MergeErrors(err, goa.MissingFieldError("a", "body"))
-    }
-    if body.Inner == nil {
-        err = goa.MergeErrors(err, goa.MissingFieldError("inner", "body"))
-    }
-    if body.Inner != nil {
-        if err2 := ValidateUTInnerRequestBody(body.Inner); err2 != nil {
-            err = goa.MergeErrors(err, err2)
-        }
-    }
-    return
+	if body.A == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("a", "body"))
+	}
+	if body.Inner == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("inner", "body"))
+	}
+	if body.Inner != nil {
+		if err2 := ValidateUTInnerRequestBody(body.Inner); err2 != nil {
+			err = goa.MergeErrors(err, err2)
+		}
+	}
+	return
 }
 
 // ValidateUTInnerRequestBody runs the validations defined on UTInnerRequestBody
 func ValidateUTInnerRequestBody(body *UTInnerRequestBody) (err error) {
-    if body.B == nil {
-        err = goa.MergeErrors(err, goa.MissingFieldError("b", "body"))
-    }
-    return
-}`
+	if body.B == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("b", "body"))
+	}
+	return
+}
+`
 
 const PayloadValidateArrayRecurseFile = `// MethodPayloadValidateArrayRecurseValidatePayloadRequestBody is the type of
 // the "ServicePayloadValidateArrayRecurseValidatePayload" service
 // "MethodPayloadValidateArrayRecurseValidatePayload" endpoint HTTP request
 // body.
 type MethodPayloadValidateArrayRecurseValidatePayloadRequestBody struct {
-    A     *int                  ` + "`" + `form:"a,omitempty" json:"a,omitempty" xml:"a,omitempty"` + "`" + `
-    Inner []*UTInnerRequestBody ` + "`" + `form:"inner,omitempty" json:"inner,omitempty" xml:"inner,omitempty"` + "`" + `
+	A     *int                  ` + "`" + `form:"a,omitempty" json:"a,omitempty" xml:"a,omitempty"` + "`" + `
+	Inner []*UTInnerRequestBody ` + "`" + `form:"inner,omitempty" json:"inner,omitempty" xml:"inner,omitempty"` + "`" + `
 }
 
 // UTInnerRequestBody is used to define fields on request body types.
 type UTInnerRequestBody struct {
-    B *string ` + "`" + `form:"b,omitempty" json:"b,omitempty" xml:"b,omitempty"` + "`" + `
+	B *string ` + "`" + `form:"b,omitempty" json:"b,omitempty" xml:"b,omitempty"` + "`" + `
 }
 
 // NewMethodPayloadValidateArrayRecurseValidatePayloadUTOuter builds a
 // ServicePayloadValidateArrayRecurseValidatePayload service
 // MethodPayloadValidateArrayRecurseValidatePayload endpoint payload.
 func NewMethodPayloadValidateArrayRecurseValidatePayloadUTOuter(body *MethodPayloadValidateArrayRecurseValidatePayloadRequestBody) *servicepayloadvalidatearrayrecursevalidatepayload.UTOuter {
-    v := &servicepayloadvalidatearrayrecursevalidatepayload.UTOuter{
-        A: *body.A,
-    }
-    v.Inner = make([]*servicepayloadvalidatearrayrecursevalidatepayload.UTInner, len(body.Inner))
-    for i, val := range body.Inner {
-        v.Inner[i] = unmarshalUTInnerRequestBodyToServicepayloadvalidatearrayrecursevalidatepayloadUTInner(val)
-    }
-    return v
+	v := &servicepayloadvalidatearrayrecursevalidatepayload.UTOuter{
+		A: *body.A,
+	}
+	v.Inner = make([]*servicepayloadvalidatearrayrecursevalidatepayload.UTInner, len(body.Inner))
+	for i, val := range body.Inner {
+		v.Inner[i] = unmarshalUTInnerRequestBodyToServicepayloadvalidatearrayrecursevalidatepayloadUTInner(val)
+	}
+	return v
 }
 
 // ValidateMethodPayloadValidateArrayRecurseValidatePayloadRequestBody runs the
 // validations defined on
 // MethodPayloadValidateArrayRecurseValidatePayloadRequestBody
 func ValidateMethodPayloadValidateArrayRecurseValidatePayloadRequestBody(body *MethodPayloadValidateArrayRecurseValidatePayloadRequestBody) (err error) {
-    if body.A == nil {
-        err = goa.MergeErrors(err, goa.MissingFieldError("a", "body"))
-    }
-    if body.Inner == nil {
-        err = goa.MergeErrors(err, goa.MissingFieldError("inner", "body"))
-    }
-    for _, e := range body.Inner {
-        if e != nil {
-            if err2 := ValidateUTInnerRequestBody(e); err2 != nil {
-                err = goa.MergeErrors(err, err2)
-            }
-        }
-    }
-    return
+	if body.A == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("a", "body"))
+	}
+	if body.Inner == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("inner", "body"))
+	}
+	for _, e := range body.Inner {
+		if e != nil {
+			if err2 := ValidateUTInnerRequestBody(e); err2 != nil {
+				err = goa.MergeErrors(err, err2)
+			}
+		}
+	}
+	return
 }
 
 // ValidateUTInnerRequestBody runs the validations defined on UTInnerRequestBody
 func ValidateUTInnerRequestBody(body *UTInnerRequestBody) (err error) {
-    if body.B == nil {
-        err = goa.MergeErrors(err, goa.MissingFieldError("b", "body"))
-    }
-    return
-}`
+	if body.B == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("b", "body"))
+	}
+	return
+}
+`
