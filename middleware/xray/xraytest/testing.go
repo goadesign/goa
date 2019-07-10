@@ -1,4 +1,6 @@
-package xray
+// Package xraytest contains test helpers for package xray that are used by
+// transport-specific X-Ray middleware tests.
+package xraytest
 
 import (
 	"encoding/json"
@@ -6,6 +8,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"goa.design/goa/v3/middleware/xray"
 )
 
 // ReadUDP verifies that exactly the expected number of messages are received.
@@ -56,15 +60,15 @@ func ReadUDP(t *testing.T, udplisten string, expectedMessages int, sender func()
 }
 
 // ExtractSegment returns the unmarshalled segment JSON from a ReadUDP response.
-func ExtractSegment(t *testing.T, js string) *Segment {
+func ExtractSegment(t *testing.T, js string) *xray.Segment {
 	t.Helper()
 
-	var s *Segment
+	var s *xray.Segment
 	elems := strings.Split(js, "\n")
 	if len(elems) != 2 {
 		t.Fatalf("invalid number of lines, expected 2 got %d: %v", len(elems), elems)
 	}
-	if elems[0] != UDPHeader[:len(UDPHeader)-1] {
+	if elems[0] != xray.UDPHeader[:len(xray.UDPHeader)-1] {
 		t.Errorf("invalid header, got %s", elems[0])
 	}
 	err := json.Unmarshal([]byte(elems[1]), &s)

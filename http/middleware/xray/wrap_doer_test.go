@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"goa.design/goa/v3/middleware/xray"
+	"goa.design/goa/v3/middleware/xray/xraytest"
 )
 
 // testDoer simply tests if the request context is set with X-Ray segment
@@ -60,7 +61,7 @@ func TestWrapDoer(t *testing.T) {
 			}
 
 			doer := newTestDoer(t, tc.Segment, tc.StatusCode)
-			messages := xray.ReadUDP(t, udplisten, expMsgs, func() {
+			messages := xraytest.ReadUDP(t, udplisten, expMsgs, func() {
 				WrapDoer(doer).Do(req)
 			})
 			if expMsgs == 0 {
@@ -68,13 +69,13 @@ func TestWrapDoer(t *testing.T) {
 			}
 
 			// expect the first message is InProgress
-			s := xray.ExtractSegment(t, messages[0])
+			s := xraytest.ExtractSegment(t, messages[0])
 			if !s.InProgress {
 				t.Fatal("expected first segment to be InProgress but it was not")
 			}
 
 			// second message
-			s = xray.ExtractSegment(t, messages[1])
+			s = xraytest.ExtractSegment(t, messages[1])
 			if s.Name != host {
 				t.Fatalf("unexpected segment name: expected %q, got %q", host, s.Name)
 			}
