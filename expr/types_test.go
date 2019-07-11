@@ -807,6 +807,82 @@ func TestObjectRename(t *testing.T) {
 	}
 }
 
+func TestObjectHash(t *testing.T) {
+	var (
+		attributeInt = &AttributeExpr{
+			Type: Int,
+		}
+		attributeString = &AttributeExpr{
+			Type: String,
+		}
+		attributeArray = &AttributeExpr{
+			Type: &Array{
+				ElemType: attributeString,
+			},
+		}
+		attributeMap = &AttributeExpr{
+			Type: &Map{
+				KeyType:  attributeInt,
+				ElemType: attributeString,
+			},
+		}
+		userType = &UserTypeExpr{
+			AttributeExpr: attributeString,
+			TypeName:      "quux",
+		}
+		namedAttributePrimitive = &NamedAttributeExpr{
+			Name:      "foo",
+			Attribute: attributeInt,
+		}
+		namedAttributeArray = &NamedAttributeExpr{
+			Name:      "bar",
+			Attribute: attributeArray,
+		}
+		namedAttributeMap = &NamedAttributeExpr{
+			Name:      "baz",
+			Attribute: attributeMap,
+		}
+		namedAttributeUserType = &NamedAttributeExpr{
+			Name: "qux",
+			Attribute: &AttributeExpr{
+				Type: userType,
+			},
+		}
+	)
+	cases := map[string]struct {
+		object   Object
+		expected string
+	}{
+		"nil": {
+			object:   nil,
+			expected: "_object_",
+		},
+		"single attribute": {
+			object: Object{
+				namedAttributePrimitive,
+			},
+			expected: "_object_+foo/int",
+		},
+		"multiple attributes": {
+			object: Object{
+				namedAttributePrimitive,
+				namedAttributeArray,
+				namedAttributeMap,
+				namedAttributeUserType,
+			},
+			expected: "_object_+foo/int+bar/_array_+string+baz/_map_+int:string+qux/_type_+quux",
+		},
+	}
+
+	for k, tc := range cases {
+		t.Run(k, func(t *testing.T) {
+			if actual := tc.object.Hash(); actual != tc.expected {
+				t.Errorf("got %#v, expected %#v", actual, tc.expected)
+			}
+		})
+	}
+}
+
 func TestObjectIsCompatible(t *testing.T) {
 	var (
 		b = true
