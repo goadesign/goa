@@ -859,7 +859,7 @@ func EncodeMethodBodyPrimitiveArrayUserResponse(encoder func(context.Context, ht
 	return func(ctx context.Context, w http.ResponseWriter, v interface{}) error {
 		res := v.([]*servicebodyprimitivearrayuser.ResultType)
 		enc := encoder(ctx, w)
-		body := NewResultTypeResponse(res)
+		body := NewMethodBodyPrimitiveArrayUserResponseBody(res)
 		w.WriteHeader(http.StatusNoContent)
 		return enc.Encode(body)
 	}
