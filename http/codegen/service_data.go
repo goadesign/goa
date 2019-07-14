@@ -2090,6 +2090,7 @@ func buildResponseBodyType(body, att *expr.AttributeExpr, e *expr.HTTPEndpointEx
 			var (
 				name    string
 				desc    string
+				rtref   string
 				code    string
 				origin  string
 				err     error
@@ -2099,7 +2100,15 @@ func buildResponseBodyType(body, att *expr.AttributeExpr, e *expr.HTTPEndpointEx
 				svc       = sd.Service
 			)
 			{
-				name = fmt.Sprintf("New%s", codegen.Goify(sd.Scope.GoTypeName(body), true))
+				var rtname string
+				if _, ok := body.Type.(expr.UserType); !ok && !expr.IsPrimitive(body.Type) {
+					rtname = codegen.Goify(e.Name(), true) + "ResponseBody"
+					rtref = rtname
+				} else {
+					rtname = codegen.Goify(sd.Scope.GoTypeName(body), true)
+					rtref = sd.Scope.GoTypeRef(body)
+				}
+				name = fmt.Sprintf("New%s", rtname)
 				desc = fmt.Sprintf("%s builds the HTTP response body from the result of the %q endpoint of the %q service.",
 					name, e.Name(), svc.Name)
 				if view != nil {
@@ -2139,7 +2148,7 @@ func buildResponseBodyType(body, att *expr.AttributeExpr, e *expr.HTTPEndpointEx
 			init = &InitData{
 				Name:                name,
 				Description:         desc,
-				ReturnTypeRef:       sd.Scope.GoTypeRef(body),
+				ReturnTypeRef:       rtref,
 				ReturnTypeAttribute: codegen.Goify(origin, true),
 				ServerCode:          code,
 				ServerArgs:          []*InitArgData{&arg},
