@@ -207,6 +207,8 @@ func New{{ .VarName }}Endpoint(s {{ .ServiceVarName }}{{ range .Schemes }}, auth
 			{{- if eq .Type "Basic" }}
 				sc := security.BasicScheme{
 					Name: {{ printf "%q" .SchemeName }},
+					Scopes: []string{ {{- range .Scopes }}{{ printf "%q" . }}, {{ end }} },
+					RequiredScopes: []string{ {{- range $r.Scopes }}{{ printf "%q" . }}, {{ end }} },
 				}
 				{{- if .UsernamePointer }}
 				var user string
@@ -226,6 +228,8 @@ func New{{ .VarName }}Endpoint(s {{ .ServiceVarName }}{{ range .Schemes }}, auth
 			{{- else if eq .Type "APIKey" }}
 				sc := security.APIKeyScheme{
 					Name: {{ printf "%q" .SchemeName }},
+					Scopes: []string{ {{- range .Scopes }}{{ printf "%q" . }}, {{ end }} },
+					RequiredScopes: []string{ {{- range $r.Scopes }}{{ printf "%q" . }}, {{ end }} },
 				}
 				{{- if $s.CredPointer }}
 				var key string

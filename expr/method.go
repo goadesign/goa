@@ -136,7 +136,7 @@ func (m *MethodExpr) Validate() error {
 			for _, scope := range r.Scopes {
 				found := false
 				for _, s := range r.Schemes {
-					if s.Kind == OAuth2Kind || s.Kind == JWTKind {
+					if s.Kind == BasicAuthKind || s.Kind == APIKeyKind || s.Kind == OAuth2Kind || s.Kind == JWTKind {
 						for _, se := range s.Scopes {
 							if se.Name == scope {
 								found = true

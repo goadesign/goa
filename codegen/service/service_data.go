@@ -855,6 +855,13 @@ func buildSchemeData(s *expr.SchemeExpr, m *expr.MethodExpr) *SchemeData {
 		user := codegen.Goify(userAtt, true)
 		passAtt := expr.TaggedAttribute(m.Payload, "security:password")
 		pass := codegen.Goify(passAtt, true)
+		var scopes []string
+		if len(s.Scopes) > 0 {
+			scopes = make([]string, len(s.Scopes))
+			for i, s := range s.Scopes {
+				scopes[i] = s.Name
+			}
+		}
 		return &SchemeData{
 			Type:             s.Kind.String(),
 			SchemeName:       s.SchemeName,
@@ -866,10 +873,18 @@ func buildSchemeData(s *expr.SchemeExpr, m *expr.MethodExpr) *SchemeData {
 			PasswordField:    pass,
 			PasswordPointer:  m.Payload.IsPrimitivePointer(passAtt, true),
 			PasswordRequired: m.Payload.IsRequired(passAtt),
+			Scopes:           scopes,
 		}
 	case expr.APIKeyKind:
 		if keyAtt := expr.TaggedAttribute(m.Payload, "security:apikey:"+s.SchemeName); keyAtt != "" {
 			key := codegen.Goify(keyAtt, true)
+			var scopes []string
+			if len(s.Scopes) > 0 {
+				scopes = make([]string, len(s.Scopes))
+				for i, s := range s.Scopes {
+					scopes[i] = s.Name
+				}
+			}
 			return &SchemeData{
 				Type:         s.Kind.String(),
 				Name:         s.Name,
@@ -878,6 +893,7 @@ func buildSchemeData(s *expr.SchemeExpr, m *expr.MethodExpr) *SchemeData {
 				CredPointer:  m.Payload.IsPrimitivePointer(keyAtt, true),
 				CredRequired: m.Payload.IsRequired(keyAtt),
 				KeyAttr:      keyAtt,
+				Scopes:       scopes,
 				In:           s.In,
 			}
 		}
