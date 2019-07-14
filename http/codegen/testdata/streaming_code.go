@@ -815,7 +815,7 @@ func (s *StreamingResultUserTypeArrayMethodServerStream) Send(v []*streamingresu
 		return err
 	}
 	res := v
-	body := NewUserTypeResponse(res)
+	body := NewStreamingResultUserTypeArrayMethodResponseBody(res)
 	return s.conn.WriteJSON(body)
 }
 `
@@ -864,7 +864,7 @@ func (s *StreamingResultUserTypeMapMethodServerStream) Send(v map[string]*stream
 		return err
 	}
 	res := v
-	body := NewMapStringUserTypeResponse(res)
+	body := NewStreamingResultUserTypeMapMethodResponseBody(res)
 	return s.conn.WriteJSON(body)
 }
 `
@@ -3220,7 +3220,7 @@ func (s *BidirectionalStreamingUserTypeArrayMethodServerStream) Send(v []*bidire
 		return err
 	}
 	res := v
-	body := NewResultTypeResponse(res)
+	body := NewBidirectionalStreamingUserTypeArrayMethodResponseBody(res)
 	return s.conn.WriteJSON(body)
 }
 `
@@ -3315,7 +3315,7 @@ func (s *BidirectionalStreamingUserTypeMapMethodServerStream) Send(v map[string]
 		return err
 	}
 	res := v
-	body := NewMapStringResultTypeResponse(res)
+	body := NewBidirectionalStreamingUserTypeMapMethodResponseBody(res)
 	return s.conn.WriteJSON(body)
 }
 `
