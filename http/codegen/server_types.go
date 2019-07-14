@@ -102,7 +102,7 @@ func serverType(genpkg string, svc *expr.HTTPServiceExpr, seen map[string]struct
 		for _, resp := range adata.Result.Responses {
 			for _, tdata := range resp.ServerBody {
 				if generated, ok := data.ServerTypeNames[tdata.Name]; ok && !generated {
-					if tdata.Def != "" && !data.ServerTypeNames[tdata.VarName] {
+					if tdata.Def != "" {
 						sections = append(sections, &codegen.SectionTemplate{
 							Name:   "response-server-body",
 							Source: typeDeclT,
