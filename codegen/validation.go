@@ -218,8 +218,11 @@ func recurseValidationCode(att *expr.AttributeExpr, attCtx *AttributeContext, re
 			}
 		}
 	} else if a := expr.AsArray(att.Type); a != nil {
-		ctx := attCtx.Dup()
-		ctx.Pointer = false
+		ctx := attCtx
+		if ctx.Pointer && expr.IsPrimitive(a.ElemType.Type) {
+			ctx = attCtx.Dup()
+			ctx.Pointer = false
+		}
 		val := recurseValidationCode(a.ElemType, ctx, true, "e", context+"[*]", seen).String()
 		if val != "" {
 			switch a.ElemType.Type.(type) {
@@ -284,34 +287,36 @@ func recurseAttribute(att *expr.AttributeExpr, attCtx *AttributeContext, nat *ex
 		// We need to check empirically whether there are validations to be
 		// generated, we can't just generate and check whether something was
 		// generated to avoid infinite recursions.
-		hasValidations := false
-		done := errors.New("done")
-		Walk(ut.Attribute(), func(a *expr.AttributeExpr) error {
-			if a.Validation != nil {
-				if attCtx.Pointer {
-					hasValidations = true
-					return done
-				}
-				// For public data structures there is a case
-				// where there is validation but no actual
-				// validation code: if the validation is a
-				// required validation that applies to
-				// attributes that cannot be nil i.e. primitive
-				// types.
-				if !a.Validation.HasRequiredOnly() {
-					hasValidations = true
-					return done
-				}
-				obj := expr.AsObject(a.Type)
-				for _, name := range a.Validation.Required {
-					if att := obj.Attribute(name); att != nil && !expr.IsPrimitive(att.Type) {
+		hasValidations := attCtx.Pointer && ut.Attribute().Validation != nil
+		if !hasValidations {
+			done := errors.New("done")
+			Walk(ut.Attribute(), func(a *expr.AttributeExpr) error {
+				if a.Validation != nil {
+					if attCtx.Pointer {
 						hasValidations = true
 						return done
 					}
+					// For public data structures there is a case
+					// where there is validation but no actual
+					// validation code: if the validation is a
+					// required validation that applies to
+					// attributes that cannot be nil i.e. primitive
+					// types.
+					if !a.Validation.HasRequiredOnly() {
+						hasValidations = true
+						return done
+					}
+					obj := expr.AsObject(a.Type)
+					for _, name := range a.Validation.Required {
+						if att := obj.Attribute(name); att != nil && !expr.IsPrimitive(att.Type) {
+							hasValidations = true
+							return done
+						}
+					}
 				}
-			}
-			return nil
-		})
+				return nil
+			})
+		}
 		if hasValidations {
 			var buf bytes.Buffer
 			tgt := fmt.Sprintf("%s.%s", target, attCtx.Scope.Field(nat.Attribute, nat.Name, true))
