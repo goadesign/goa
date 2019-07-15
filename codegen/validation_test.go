@@ -16,6 +16,7 @@ func TestRecursiveValidationCode(t *testing.T) {
 		stringT  = root.UserType("String")
 		floatT   = root.UserType("Float")
 		userT    = root.UserType("UserType")
+		arrayUT  = root.UserType("ArrayUserType")
 		arrayT   = root.UserType("Array")
 		mapT     = root.UserType("Map")
 	)
@@ -39,6 +40,7 @@ func TestRecursiveValidationCode(t *testing.T) {
 		{"user-type-required", userT, true, false, false, testdata.UserTypeRequiredValidationCode},
 		{"user-type-pointer", userT, false, true, false, testdata.UserTypePointerValidationCode},
 		{"user-type-default", userT, false, false, true, testdata.UserTypeUseDefaultValidationCode},
+		{"user-type-array-required", arrayUT, true, true, false, testdata.UserTypeArrayValidationCode},
 		{"array-required", arrayT, true, false, false, testdata.ArrayRequiredValidationCode},
 		{"array-pointer", arrayT, false, true, false, testdata.ArrayPointerValidationCode},
 		{"array-use-default", arrayT, false, false, true, testdata.ArrayUseDefaultValidationCode},
