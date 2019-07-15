@@ -220,6 +220,17 @@ const (
 }
 `
 
+	UserTypeArrayValidationCode = `func Validate() (err error) {
+	for _, e := range target.Array {
+		if e != nil {
+			if err2 := ValidateFloat(e); err2 != nil {
+				err = goa.MergeErrors(err, err2)
+			}
+		}
+	}
+}
+`
+
 	ArrayRequiredValidationCode = `func Validate() (err error) {
 	if len(target.RequiredArray) < 5 {
 		err = goa.MergeErrors(err, goa.InvalidLengthError("target.required_array", target.RequiredArray, len(target.RequiredArray), 5, true))
