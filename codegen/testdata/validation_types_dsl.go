@@ -57,6 +57,10 @@ var ValidationTypesDSL = func() {
 			Required("required_integer")
 		})
 
+		_ = Type("ArrayUserType", func() {
+			Attribute("array", ArrayOf(FloatT))
+		})
+
 		_ = Type("Array", func() {
 			Attribute("required_array", ArrayOf(Int), func() {
 				MinLength(5)
