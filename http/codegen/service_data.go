@@ -2385,7 +2385,8 @@ func attributeTypeData(ut expr.UserType, req, ptr, server bool, rd *ServiceData)
 	}
 }
 
-// httpContext returns an attribute context for HTTP attributes.
+// httpContext returns a context for attributes of types used to marshal and
+// unmarshal HTTP requests and responses.
 //
 // pkg is the package name where the body type exists
 //
