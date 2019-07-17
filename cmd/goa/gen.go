@@ -272,8 +272,8 @@ func (g *Generator) runGoCmd(args ...string) error {
 	return nil
 }
 
-// cleanupDirs returns the names of the directories to delete before generating
-// code.
+// cleanupDirs returns the paths of the subdirectories under gendir to delete
+// before generating code.
 func cleanupDirs(cmd, output string) []string {
 	if cmd == "gen" {
 		gendirPath := filepath.Join(output, codegen.Gendir)
