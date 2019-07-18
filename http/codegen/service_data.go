@@ -1664,13 +1664,23 @@ func buildErrorsData(e *expr.HTTPEndpointExpr, sd *ServiceData) []*ErrorGroupDat
 			}
 
 			headers := extractHeaders(v.Response.Headers, v.ErrorExpr.AttributeExpr, svcctx, sd.Scope)
+			var mustValidate bool
+			{
+				for _, h := range headers {
+					if h.Validate != "" || h.Required || needConversion(h.Type) {
+						mustValidate = true
+						break
+					}
+				}
+			}
 			responseData = &ResponseData{
-				StatusCode:  statusCodeToHTTPConst(v.Response.StatusCode),
-				Headers:     headers,
-				ErrorHeader: v.Name,
-				ServerBody:  serverBodyData,
-				ClientBody:  clientBodyData,
-				ResultInit:  init,
+				StatusCode:   statusCodeToHTTPConst(v.Response.StatusCode),
+				Headers:      headers,
+				ErrorHeader:  v.Name,
+				ServerBody:   serverBodyData,
+				ClientBody:   clientBodyData,
+				ResultInit:   init,
+				MustValidate: mustValidate,
 			}
 		}
 
