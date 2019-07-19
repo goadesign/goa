@@ -71,7 +71,7 @@ func RequestDecoder(r *http.Request) Decoder {
 	}
 	switch contentType {
 	case "application/json":
-		return json.NewDecoder(r.Body)
+		json.NewDecoder(r.Body)
 	case "application/gob":
 		return gob.NewDecoder(r.Body)
 	case "application/xml":
@@ -98,7 +98,9 @@ func ResponseEncoder(ctx context.Context, w http.ResponseWriter) Encoder {
 		switch a {
 		case "", "application/json":
 			// default to JSON
-			return json.NewEncoder(w), "application/json"
+			enc := json.NewEncoder(w)
+			enc.SetEscapeHTML(false)
+			return enc, "application/json"
 		case "application/xml":
 			return xml.NewEncoder(w), "application/xml"
 		case "application/gob":
@@ -132,7 +134,9 @@ func ResponseEncoder(ctx context.Context, w http.ResponseWriter) Encoder {
 			if mt, _, err = mime.ParseMediaType(ct); err == nil {
 				switch {
 				case ct == "application/json" || strings.HasSuffix(ct, "+json"):
-					enc = json.NewEncoder(w)
+					newEnc := json.NewEncoder(w)
+					newEnc.SetEscapeHTML(false)
+					enc = newEnc
 				case ct == "application/xml" || strings.HasSuffix(ct, "+xml"):
 					enc = xml.NewEncoder(w)
 				case ct == "application/gob" || strings.HasSuffix(ct, "+gob"):
