@@ -80,11 +80,11 @@ func TestHTTPEndpointValidation(t *testing.T) {
 				}
 
 				if len(c.Errors) != len(errors) {
-					t.Errorf("%s: got %d, expected the number of error values to match %d", name, len(errors), len(c.Errors))
+					t.Errorf("got %d, expected the number of error values to match %d\nerrors:\n%s", len(errors), len(c.Errors), err.Error())
 				} else {
 					for i, err := range errors {
 						if err.Error() != c.Errors[i] {
-							t.Errorf("%s:\ngot \t\t%q,\nexpected\t%q at index %d", name, err.Error(), c.Errors[i], i)
+							t.Errorf("got \t\t%q,\nexpected\t%q at index %d", err.Error(), c.Errors[i], i)
 						}
 					}
 				}
