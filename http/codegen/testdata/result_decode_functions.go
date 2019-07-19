@@ -642,3 +642,87 @@ func DecodeMethodAResponse(decoder func(*http.Response) goahttp.Decoder, restore
 	}
 }
 `
+
+var ValidateErrorResponseTypeDecodeCode = `// DecodeMethodAResponse returns a decoder for responses returned by the
+// ValidateErrorResponseType MethodA endpoint. restoreBody controls whether the
+// response body should be restored after having been read.
+// DecodeMethodAResponse may return the following errors:
+//	- "some_error" (type *validateerrorresponsetype.AError): http.StatusBadRequest
+//	- error: internal error
+func DecodeMethodAResponse(decoder func(*http.Response) goahttp.Decoder, restoreBody bool) func(*http.Response) (interface{}, error) {
+	return func(resp *http.Response) (interface{}, error) {
+		if restoreBody {
+			b, err := ioutil.ReadAll(resp.Body)
+			if err != nil {
+				return nil, err
+			}
+			resp.Body = ioutil.NopCloser(bytes.NewBuffer(b))
+			defer func() {
+				resp.Body = ioutil.NopCloser(bytes.NewBuffer(b))
+			}()
+		} else {
+			defer resp.Body.Close()
+		}
+		switch resp.StatusCode {
+		case http.StatusOK:
+			var (
+				required int
+				err      error
+			)
+			{
+				requiredRaw := resp.Header.Get("X-Request-Id")
+				if requiredRaw == "" {
+					return nil, goahttp.ErrValidationError("ValidateErrorResponseType", "MethodA", goa.MissingFieldError("X-Request-ID", "header"))
+				}
+				v, err2 := strconv.ParseInt(requiredRaw, 10, strconv.IntSize)
+				if err2 != nil {
+					err = goa.MergeErrors(err, goa.InvalidFieldTypeError("required", requiredRaw, "integer"))
+				}
+				required = int(v)
+			}
+			if err != nil {
+				return nil, goahttp.ErrValidationError("ValidateErrorResponseType", "MethodA", err)
+			}
+			p := NewMethodAAResultOK(required)
+			view := "default"
+			vres := &validateerrorresponsetypeviews.AResult{p, view}
+			res := validateerrorresponsetype.NewAResult(vres)
+			return res, nil
+		case http.StatusBadRequest:
+			var (
+				error    string
+				numOccur *int
+				err      error
+			)
+			errorRaw := resp.Header.Get("X-Application-Error")
+			if errorRaw == "" {
+				err = goa.MergeErrors(err, goa.MissingFieldError("X-Application-Error", "header"))
+			}
+			error = errorRaw
+			{
+				numOccurRaw := resp.Header.Get("X-Occur")
+				if numOccurRaw != "" {
+					v, err2 := strconv.ParseInt(numOccurRaw, 10, strconv.IntSize)
+					if err2 != nil {
+						err = goa.MergeErrors(err, goa.InvalidFieldTypeError("numOccur", numOccurRaw, "integer"))
+					}
+					pv := int(v)
+					numOccur = &pv
+				}
+			}
+			if numOccur != nil {
+				if *numOccur < 1 {
+					err = goa.MergeErrors(err, goa.InvalidRangeError("numOccur", *numOccur, 1, true))
+				}
+			}
+			if err != nil {
+				return nil, goahttp.ErrValidationError("ValidateErrorResponseType", "MethodA", err)
+			}
+			return nil, NewMethodASomeError(error, numOccur)
+		default:
+			body, _ := ioutil.ReadAll(resp.Body)
+			return nil, goahttp.ErrInvalidResponse("ValidateErrorResponseType", "MethodA", resp.StatusCode, string(body))
+		}
+	}
+}
+`
