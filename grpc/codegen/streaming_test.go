@@ -40,7 +40,6 @@ func TestStreaming(t *testing.T) {
 			{"server-stream-set-view", nil},
 			{"client-stream-struct-type", &testdata.ServerStreamingClientStructCode},
 			{"client-stream-recv", &testdata.ServerStreamingClientRecvCode},
-			{"client-stream-close", &testdata.ServerStreamingClientCloseCode},
 		}},
 		{"server-streaming-result-with-views", testdata.ServerStreamingResultWithViewsDSL, []*sectionExpectation{
 			{"server-stream-struct-type", &testdata.ServerStreamingResultWithViewsServerStructCode},
