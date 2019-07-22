@@ -1334,8 +1334,13 @@ func (s *{{ .VarName }}) {{ .RecvName }}() ({{ .RecvRef }}, error) {
 // input: StreamData
 const streamCloseT = `
 func (s *{{ .VarName }}) Close() error {
+{{- if eq .Type "client" }}
+	{{ comment "Close the send direction of the stream" }}
+	return s.stream.CloseSend()
+{{- else }}
 	{{ comment "nothing to do here" }}
 	return nil
+{{- end }}
 }
 `
 
