@@ -44,12 +44,6 @@ func (s *MethodServerStreamingUserTypeRPCClientStream) Recv() (*serviceserverstr
 }
 `
 
-var ServerStreamingClientCloseCode = `func (s *MethodServerStreamingUserTypeRPCClientStream) Close() error {
-	// nothing to do here
-	return nil
-}
-`
-
 var ServerStreamingResultWithViewsServerStructCode = `// MethodServerStreamingUserTypeRPCServerStream implements the
 // serviceserverstreamingusertyperpc.MethodServerStreamingUserTypeRPCServerStream
 // interface.
@@ -328,7 +322,7 @@ func (s *MethodBidirectionalStreamingRPCClientStream) Recv() (*servicebidirectio
 `
 
 var BidirectionalStreamingClientCloseCode = `func (s *MethodBidirectionalStreamingRPCClientStream) Close() error {
-	// nothing to do here
-	return nil
+	// Close the send direction of the stream
+	return s.stream.CloseSend()
 }
 `
