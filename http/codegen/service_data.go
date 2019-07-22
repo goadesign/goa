@@ -2073,9 +2073,11 @@ func buildResponseBodyType(body, att *expr.AttributeExpr, e *expr.HTTPEndpointEx
 			def = goTypeDef(sd.Scope, body, !svr, svr)
 			validateRef = codegen.RecursiveValidationCode(body, httpctx, true, "body")
 		} else {
-			// response body is a primitive type.
-			varname = sd.Scope.GoTypeRef(body)
+			// response body is a primitive type. They are used as non-pointers when
+			// encoding/decoding responses.
+			httpctx = httpContext("", sd.Scope, false, true)
 			validateRef = codegen.RecursiveValidationCode(body, httpctx, true, "body")
+			varname = sd.Scope.GoTypeRef(body)
 			desc = body.Description
 		}
 	}

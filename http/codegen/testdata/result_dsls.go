@@ -711,7 +711,9 @@ var EmptyBodyResultMultipleViewsDSL = func() {
 
 var ExplicitBodyPrimitiveResultMultipleViewsDSL = func() {
 	var ResultType = ResultType("ResultTypeMultipleViews", func() {
-		Attribute("a", String)
+		Attribute("a", String, func() {
+			MinLength(5)
+		})
 		Attribute("b", String)
 		Attribute("c", String)
 		View("default", func() {
