@@ -674,7 +674,7 @@ func (d ServicesData) analyze(hs *expr.HTTPServiceExpr) *ServiceData {
 					name := fmt.Sprintf("%s%sPath%s", ep.VarName, svc.StructName, suffix)
 					for j, arg := range params {
 						att := pathParamsObj.Attribute(arg)
-						pointer := a.Params.IsPrimitivePointer(arg, false)
+						pointer := a.Params.IsPrimitivePointer(arg, true)
 						name := rd.Scope.Name(codegen.Goify(arg, false))
 						var vcode string
 						if att.Validation != nil {
