@@ -1390,6 +1390,21 @@ var PayloadPathStringValidateDSL = func() {
 	})
 }
 
+var PayloadPathStringDefaultDSL = func() {
+	Service("ServicePathStringDefault", func() {
+		Method("MethodPathStringDefault", func() {
+			Payload(func() {
+				Attribute("p", String, func() {
+					Default("def")
+				})
+			})
+			HTTP(func() {
+				GET("/{p}")
+			})
+		})
+	})
+}
+
 var PayloadPathArrayStringDSL = func() {
 	Service("ServicePathArrayString", func() {
 		Method("MethodPathArrayString", func() {

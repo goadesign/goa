@@ -598,7 +598,7 @@ func (e *HTTPEndpointExpr) validateParams() *eval.ValidationErrors {
 	})
 	if e.MethodExpr.Payload != nil {
 		switch e.MethodExpr.Payload.Type.(type) {
-		case *Object:
+		case *Object, UserType:
 			WalkMappedAttr(pparams, func(name, _ string, a *AttributeExpr) error {
 				if e.MethodExpr.Payload.Find(name) == nil {
 					verr.Add(e, "Path parameter %q not found in payload.", name)
@@ -607,7 +607,7 @@ func (e *HTTPEndpointExpr) validateParams() *eval.ValidationErrors {
 			})
 			WalkMappedAttr(qparams, func(name, _ string, a *AttributeExpr) error {
 				if e.MethodExpr.Payload.Find(name) == nil {
-					verr.Add(e, "Querys string parameter %q not found in payload.", name)
+					verr.Add(e, "Query string parameter %q not found in payload.", name)
 				}
 				return nil
 			})
@@ -651,7 +651,7 @@ func (e *HTTPEndpointExpr) validateHeaders() *eval.ValidationErrors {
 		return nil
 	})
 	switch e.MethodExpr.Payload.Type.(type) {
-	case *Object:
+	case *Object, UserType:
 		hasBasicAuth := TaggedAttribute(e.MethodExpr.Payload, "security:username") != ""
 		WalkMappedAttr(headers, func(name, elem string, a *AttributeExpr) error {
 			if e.MethodExpr.Payload.Find(name) == nil {
@@ -696,7 +696,7 @@ func (r *RouteExpr) Validate() *eval.ValidationErrors {
 			switch r.Endpoint.MethodExpr.Payload.Type.(type) {
 			case *Map:
 				verr.Add(r, "Route parameters are defined, but method payload is a map. Method payload must be a primitive or an object.")
-			case *Object:
+			case *Object, UserType:
 				for _, p := range rparams {
 					if r.Endpoint.MethodExpr.Payload.Find(p) == nil {
 						verr.Add(r, "Route param %q not found in method payload", p)
