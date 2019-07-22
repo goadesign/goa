@@ -250,14 +250,14 @@ func DecodeMethodTagMultipleViewsResponse(decoder func(*http.Response) goahttp.D
 				c = &cRaw
 			}
 			p := NewMethodTagMultipleViewsResulttypemultipleviewsAccepted(&body, c)
+			tmp := "value"
+			p.B = &tmp
 			view := resp.Header.Get("goa-view")
 			vres := &servicetagmultipleviewsviews.Resulttypemultipleviews{p, view}
 			if err = servicetagmultipleviewsviews.ValidateResulttypemultipleviews(vres); err != nil {
 				return nil, goahttp.ErrValidationError("ServiceTagMultipleViews", "MethodTagMultipleViews", err)
 			}
 			res := servicetagmultipleviews.NewResulttypemultipleviews(vres)
-			tmp := "value"
-			res.B = &tmp
 			return res, nil
 		case http.StatusOK:
 			var (

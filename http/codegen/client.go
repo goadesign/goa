@@ -599,6 +599,10 @@ func {{ .ResponseDecoder }}(decoder func(*http.Response) goahttp.Decoder, restor
 		{{- if .ResultInit }}
 			{{- if .ViewedResult }}
 			p := {{ .ResultInit.Name }}({{ range .ResultInit.ClientArgs }}{{ .Ref }},{{ end }})
+			{{- if .TagName }}
+				tmp := {{ printf "%q" .TagValue }}
+				p.{{ .TagName }} = &tmp
+			{{- end }}
 				{{- if $.Method.ViewedResult.ViewName }}
 			view := {{ printf "%q" $.Method.ViewedResult.ViewName }}
 				{{- else }}
@@ -614,7 +618,7 @@ func {{ .ResponseDecoder }}(decoder func(*http.Response) goahttp.Decoder, restor
 			{{- else }}
 			res := {{ .ResultInit.Name }}({{ range .ResultInit.ClientArgs }}{{ .Ref }},{{ end }})
 			{{- end }}
-			{{- if .TagName }}
+			{{- if and .TagName (not .ViewedResult) }}
 				{{- if .TagPointer }}
 					tmp := {{ printf "%q" .TagValue }}
 					res.{{ .TagName }} = &tmp
