@@ -32,7 +32,8 @@ func serverType(genpkg string, svc *expr.GRPCServiceExpr, seen map[string]struct
 	var (
 		initData []*InitData
 
-		sd = GRPCServices.Get(svc.Name())
+		sd         = GRPCServices.Get(svc.Name())
+		foundInits = make(map[string]struct{})
 	)
 	{
 		collect := func(c *ConvertData) {
@@ -82,11 +83,15 @@ func serverType(genpkg string, svc *expr.GRPCServiceExpr, seen map[string]struct
 				}),
 		}
 		for _, init := range initData {
+			if _, ok := foundInits[init.Name]; ok {
+				continue
+			}
 			sections = append(sections, &codegen.SectionTemplate{
 				Name:   "server-type-init",
 				Source: typeInitT,
 				Data:   init,
 			})
+			foundInits[init.Name] = struct{}{}
 		}
 		for _, data := range sd.validations {
 			if data.Kind == validateClient {
