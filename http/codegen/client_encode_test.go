@@ -182,3 +182,32 @@ func TestClientEncode(t *testing.T) {
 		})
 	}
 }
+
+func TestClientBuildRequest(t *testing.T) {
+	cases := []struct {
+		Name string
+		DSL  func()
+		Code string
+	}{
+		{"path-string", testdata.PayloadPathStringDSL, testdata.PathStringRequestBuildCode},
+		{"path-string-required", testdata.PayloadPathStringValidateDSL, testdata.PathStringRequiredRequestBuildCode},
+		{"path-string-default", testdata.PayloadPathStringDefaultDSL, testdata.PathStringDefaultRequestBuildCode},
+	}
+	for _, c := range cases {
+		t.Run(c.Name, func(t *testing.T) {
+			RunHTTPDSL(t, c.DSL)
+			fs := ClientFiles("", expr.Root)
+			if len(fs) != 2 {
+				t.Fatalf("got %d files, expected two", len(fs))
+			}
+			sections := fs[1].SectionTemplates
+			if len(sections) < 3 {
+				t.Fatalf("got %d sections, expected at least 2", len(sections))
+			}
+			code := codegen.SectionCode(t, sections[1])
+			if code != c.Code {
+				t.Errorf("invalid code, got:\n%s\ngot vs. expected:\n%s", code, codegen.Diff(t, code, c.Code))
+			}
+		})
+	}
+}

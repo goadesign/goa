@@ -674,7 +674,7 @@ func (d ServicesData) analyze(hs *expr.HTTPServiceExpr) *ServiceData {
 					name := fmt.Sprintf("%s%sPath%s", ep.VarName, svc.StructName, suffix)
 					for j, arg := range params {
 						att := pathParamsObj.Attribute(arg)
-						pointer := a.Params.IsPrimitivePointer(arg, false)
+						pointer := a.Params.IsPrimitivePointer(arg, true)
 						name := rd.Scope.Name(codegen.Goify(arg, false))
 						var vcode string
 						if att.Validation != nil {
@@ -2073,9 +2073,11 @@ func buildResponseBodyType(body, att *expr.AttributeExpr, e *expr.HTTPEndpointEx
 			def = goTypeDef(sd.Scope, body, !svr, svr)
 			validateRef = codegen.RecursiveValidationCode(body, httpctx, true, "body")
 		} else {
-			// response body is a primitive type.
-			varname = sd.Scope.GoTypeRef(body)
+			// response body is a primitive type. They are used as non-pointers when
+			// encoding/decoding responses.
+			httpctx = httpContext("", sd.Scope, false, true)
 			validateRef = codegen.RecursiveValidationCode(body, httpctx, true, "body")
+			varname = sd.Scope.GoTypeRef(body)
 			desc = body.Description
 		}
 	}
