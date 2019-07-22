@@ -90,7 +90,7 @@ func client(genpkg string, svc *expr.GRPCServiceExpr) *codegen.File {
 						Data:   e.ClientStream,
 					})
 				}
-				if e.ServerStream.MustClose {
+				if e.ClientStream.MustClose {
 					sections = append(sections, &codegen.SectionTemplate{
 						Name:   "client-stream-close",
 						Source: streamCloseT,
@@ -287,7 +287,7 @@ func Decode{{ .Method.VarName }}Response(ctx context.Context, v interface{}, hdr
     }
   }
 {{- end }}
-{{- if .ServerStream }}
+{{- if .ClientStream }}
 	return &{{ .ClientStream.VarName }}{
 		stream: v.({{ .ClientStream.Interface }}),
 	{{- if .ViewedResultRef }}
