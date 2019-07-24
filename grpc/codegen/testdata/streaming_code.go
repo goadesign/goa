@@ -166,8 +166,8 @@ func (s *MethodServerStreamingArrayClientStream) Recv() ([]int, error) {
 	if err != nil {
 		return res, err
 	}
-	if err := ValidateMethodServerStreamingArrayResponse(v); err != nil {
-		return nil, err
+	if err = ValidateMethodServerStreamingArrayResponse(v); err != nil {
+		return res, err
 	}
 	return NewMethodServerStreamingArrayResponse(v), nil
 }
@@ -191,8 +191,8 @@ func (s *MethodServerStreamingMapClientStream) Recv() (map[string]*serviceserver
 	if err != nil {
 		return res, err
 	}
-	if err := ValidateMethodServerStreamingMapResponse(v); err != nil {
-		return nil, err
+	if err = ValidateMethodServerStreamingMapResponse(v); err != nil {
+		return res, err
 	}
 	return NewMethodServerStreamingMapResponse(v), nil
 }

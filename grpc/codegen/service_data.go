@@ -1325,8 +1325,8 @@ func (s *{{ .VarName }}) {{ .RecvName }}() ({{ .RecvRef }}, error) {
 	return {{ .Endpoint.ServicePkgName }}.{{ .Endpoint.Method.ViewedResult.ResultInit.Name }}(vres), nil
 {{- else }}
 {{- if .RecvConvert.Validation }}
-	if err := {{ .RecvConvert.Validation.Name }}(v); err != nil {
-		return nil, err
+	if err = {{ .RecvConvert.Validation.Name }}(v); err != nil {
+		return res, err
 	}
 {{- end }}
 	return {{ .RecvConvert.Init.Name }}({{ range .RecvConvert.Init.Args }}{{ .Name }}, {{ end }}), nil
