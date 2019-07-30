@@ -32,9 +32,6 @@ func DecodeMethodUnaryRPCNoResultRequest(ctx context.Context, v interface{}, md 
 		if message, ok = v.(*service_unary_rpc_no_resultpb.MethodUnaryRPCNoResultRequest); !ok {
 			return nil, goagrpc.ErrInvalidType("ServiceUnaryRPCNoResult", "MethodUnaryRPCNoResult", "*service_unary_rpc_no_resultpb.MethodUnaryRPCNoResultRequest", v)
 		}
-		if err := ValidateMethodUnaryRPCNoResultRequest(message); err != nil {
-			return nil, err
-		}
 	}
 	var payload []string
 	{
@@ -54,9 +51,6 @@ func DecodeMethodMessageMapRequest(ctx context.Context, v interface{}, md metada
 	{
 		if message, ok = v.(*service_message_mappb.MethodMessageMapRequest); !ok {
 			return nil, goagrpc.ErrInvalidType("ServiceMessageMap", "MethodMessageMap", "*service_message_mappb.MethodMessageMapRequest", v)
-		}
-		if err := ValidateMethodMessageMapRequest(message); err != nil {
-			return nil, err
 		}
 	}
 	var payload map[int]*servicemessagemap.UT

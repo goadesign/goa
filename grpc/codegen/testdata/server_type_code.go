@@ -53,12 +53,6 @@ func ValidateArrayOfString(message *service_payload_with_nested_typespb.ArrayOfS
 	return
 }
 
-// ValidateBParams runs the validations defined on BParams.
-func ValidateBParams(message *service_payload_with_nested_typespb.BParams) (err error) {
-
-	return
-}
-
 // protobufServicePayloadWithNestedTypespbAParamsToServicepayloadwithnestedtypesAParams
 // builds a value of type *servicepayloadwithnestedtypes.AParams from a value
 // of type *service_payload_with_nested_typespb.AParams.
