@@ -3,6 +3,7 @@ package xray
 import (
 	"context"
 	"fmt"
+	"io"
 	"net"
 	"sync"
 	"time"
@@ -230,7 +231,12 @@ func (c *xrayStreamClientWrapper) recordErrorAndClose(err error) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	if !c.finished {
-		c.s.RecordError(err)
+		// io.EOF is normal grpc stream close, not error.
+		if err == io.EOF {
+			c.s.RecordResponse(nil)
+		} else {
+			c.s.RecordError(err)
+		}
 		c.s.Close()
 		c.finished = true
 	}
