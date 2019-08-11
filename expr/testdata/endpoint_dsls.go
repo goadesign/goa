@@ -71,11 +71,12 @@ var EndpointBodyExtendPayload = func() {
 		Method("Method", func() {
 			Payload(func() {
 				Attribute("id", String)
+				Attribute("name", String)
 			})
 			HTTP(func() {
 				POST("/{id}")
 				Body(func() {
-					Attribute("name", String)
+					Attribute("name")
 				})
 			})
 		})
