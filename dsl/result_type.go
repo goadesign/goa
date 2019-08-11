@@ -433,7 +433,8 @@ func Attributes(fn func()) {
 }
 
 // buildView builds a view expression given an attribute and a corresponding
-// result type.
+// result type. The attribute must be an object listing the child attributes
+// that make up the view.
 func buildView(name string, mt *expr.ResultTypeExpr, at *expr.AttributeExpr) (*expr.ViewExpr, error) {
 	if at.Type == nil {
 		return nil, fmt.Errorf("invalid view DSL")
