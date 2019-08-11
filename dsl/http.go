@@ -679,7 +679,7 @@ func Body(args ...interface{}) {
 			eval.ReportError("Body is set but Payload is not defined")
 			return
 		}
-		attr = ref
+		attr = &expr.AttributeExpr{References: []expr.DataType{ref.Type}}
 	default:
 		eval.InvalidArgError("attribute name, user type or DSL", a)
 		return
