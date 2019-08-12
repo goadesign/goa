@@ -1179,11 +1179,10 @@ func buildPayloadData(e *expr.HTTPEndpointExpr, sd *ServiceData) *PayloadData {
 			if err == nil {
 				sd.ServerTransformHelpers = codegen.AppendHelpers(sd.ServerTransformHelpers, helpers)
 			}
-			// The client code for building the method payload from
-			// a request body is used by the CLI tool to build the
-			// payload given to the client endpoint. It differs
-			// because the body type there does not use pointers for
-			// all fields (no need to validate).
+			// The client code for building the method payload from a request
+			// body is used by the CLI tool to build the payload given to the
+			// client endpoint. It differs because the body type there does not
+			// use pointers for all fields (no need to validate).
 			clientCode, helpers, err = marshal(e.Body, pAtt, "body", "v", httpclictx, svcctx)
 			if err == nil {
 				sd.ClientTransformHelpers = codegen.AppendHelpers(sd.ClientTransformHelpers, helpers)
