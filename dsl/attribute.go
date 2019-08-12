@@ -302,6 +302,21 @@ func Example(args ...interface{}) {
 	}
 }
 
+func Zero(args interface{}) {
+	// Check if the values provided are vaild.
+	a, ok := eval.Current().(*expr.AttributeExpr)
+	if !ok {
+		eval.IncompatibleDSL()
+		return
+	}
+	if a.Type != nil && !a.Type.IsCompatible(args) {
+		eval.ReportError("default value %#v is incompatible with attribute of type %s",
+			args, expr.QualifiedTypeName(a.Type))
+		return
+	}
+	a.SetZero(args)
+}
+
 func parseAttributeArgs(baseAttr *expr.AttributeExpr, args ...interface{}) (expr.DataType, string, func()) {
 	var (
 		dataType    expr.DataType

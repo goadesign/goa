@@ -418,6 +418,32 @@ func (a *AttributeExpr) SetDefault(def interface{}) {
 	}
 }
 
+// HazZeroValue returns true if the attribute with the given name has a
+// zero value set.
+func (a *AttributeExpr) HasZeroValue(attName string) bool {
+	return a.GetZeroValue(attName) != nil
+}
+
+func (a *AttributeExpr) GetZeroValue(attName string) interface{} {
+	if o := AsObject(a.Type); o != nil {
+		return o.Attribute(attName).ZeroValue
+	}
+	return nil
+}
+
+// SetZero sets the zero value for the attribute. It also converts HashVal
+// and ArrayVal to map and slice respectively.
+func (a *AttributeExpr) SetZero(def interface{}) {
+	switch actual := def.(type) {
+	case MapVal:
+		a.ZeroValue = actual.ToMap()
+	case ArrayVal:
+		a.ZeroValue = actual.ToSlice()
+	default:
+		a.ZeroValue = actual
+	}
+}
+
 // Find finds a child attribute with the given name in the attribute and
 // its bases and references. If the parent attribute is not an object, it
 // returns nil.
