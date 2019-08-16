@@ -382,12 +382,18 @@ func (p Primitive) Example(r *Random) interface{} {
 	switch p {
 	case Boolean:
 		return r.Bool()
-	case Int, UInt:
+	case Int:
 		return r.Int()
-	case Int32, UInt32:
+	case Int32:
 		return r.Int32()
-	case Int64, UInt64:
+	case Int64:
 		return r.Int64()
+	case UInt:
+		return r.UInt()
+	case UInt32:
+		return r.UInt32()
+	case UInt64:
+		return r.UInt64()
 	case Float32:
 		return r.Float32()
 	case Float64:
@@ -676,10 +682,18 @@ func toReflectType(dtype DataType) reflect.Type {
 	switch dtype.Kind() {
 	case BooleanKind:
 		return reflect.TypeOf(true)
+	case IntKind:
+		return reflect.TypeOf(int(0))
 	case Int32Kind:
 		return reflect.TypeOf(int32(0))
 	case Int64Kind:
 		return reflect.TypeOf(int64(0))
+	case UIntKind:
+		return reflect.TypeOf(uint(0))
+	case UInt32Kind:
+		return reflect.TypeOf(uint32(0))
+	case UInt64Kind:
+		return reflect.TypeOf(uint64(0))
 	case Float32Kind:
 		return reflect.TypeOf(float32(0))
 	case Float64Kind:
