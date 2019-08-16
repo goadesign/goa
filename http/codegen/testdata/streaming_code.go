@@ -36,7 +36,9 @@ func NewStreamingResultMethodHandler(
 		ctx := context.WithValue(r.Context(), goahttp.AcceptTypeKey, r.Header.Get("Accept"))
 		ctx = context.WithValue(ctx, goa.MethodKey, "StreamingResultMethod")
 		ctx = context.WithValue(ctx, goa.ServiceKey, "StreamingResultService")
-		payload, err := decodeRequest(r)
+
+		var err error
+		payload, err = decodeRequest(r)
 		if err != nil {
 			if err := encodeError(ctx, w, err); err != nil {
 				eh(ctx, w, err)
@@ -181,6 +183,8 @@ func NewStreamingResultNoPayloadMethodHandler(
 		ctx := context.WithValue(r.Context(), goahttp.AcceptTypeKey, r.Header.Get("Accept"))
 		ctx = context.WithValue(ctx, goa.MethodKey, "StreamingResultNoPayloadMethod")
 		ctx = context.WithValue(ctx, goa.ServiceKey, "StreamingResultNoPayloadService")
+
+		var err error
 
 		var cancel context.CancelFunc
 		{
@@ -952,7 +956,9 @@ func NewStreamingPayloadMethodHandler(
 		ctx := context.WithValue(r.Context(), goahttp.AcceptTypeKey, r.Header.Get("Accept"))
 		ctx = context.WithValue(ctx, goa.MethodKey, "StreamingPayloadMethod")
 		ctx = context.WithValue(ctx, goa.ServiceKey, "StreamingPayloadService")
-		payload, err := decodeRequest(r)
+
+		var err error
+		payload, err = decodeRequest(r)
 		if err != nil {
 			if err := encodeError(ctx, w, err); err != nil {
 				eh(ctx, w, err)
@@ -1126,6 +1132,8 @@ func NewStreamingPayloadNoPayloadMethodHandler(
 		ctx := context.WithValue(r.Context(), goahttp.AcceptTypeKey, r.Header.Get("Accept"))
 		ctx = context.WithValue(ctx, goa.MethodKey, "StreamingPayloadNoPayloadMethod")
 		ctx = context.WithValue(ctx, goa.ServiceKey, "StreamingPayloadNoPayloadService")
+
+		var err error
 
 		var cancel context.CancelFunc
 		{
@@ -2118,7 +2126,9 @@ func NewBidirectionalStreamingMethodHandler(
 		ctx := context.WithValue(r.Context(), goahttp.AcceptTypeKey, r.Header.Get("Accept"))
 		ctx = context.WithValue(ctx, goa.MethodKey, "BidirectionalStreamingMethod")
 		ctx = context.WithValue(ctx, goa.ServiceKey, "BidirectionalStreamingService")
-		payload, err := decodeRequest(r)
+
+		var err error
+		payload, err = decodeRequest(r)
 		if err != nil {
 			if err := encodeError(ctx, w, err); err != nil {
 				eh(ctx, w, err)
@@ -2333,6 +2343,8 @@ func NewBidirectionalStreamingNoPayloadMethodHandler(
 		ctx := context.WithValue(r.Context(), goahttp.AcceptTypeKey, r.Header.Get("Accept"))
 		ctx = context.WithValue(ctx, goa.MethodKey, "BidirectionalStreamingNoPayloadMethod")
 		ctx = context.WithValue(ctx, goa.ServiceKey, "BidirectionalStreamingNoPayloadService")
+
+		var err error
 
 		var cancel context.CancelFunc
 		{

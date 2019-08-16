@@ -19,6 +19,8 @@ func NewMethodNoPayloadNoResultHandler(
 		ctx = context.WithValue(ctx, goa.MethodKey, "MethodNoPayloadNoResult")
 		ctx = context.WithValue(ctx, goa.ServiceKey, "ServiceNoPayloadNoResult")
 
+		var err error
+
 		res, err := endpoint(ctx, nil)
 
 		if err != nil {
@@ -53,7 +55,9 @@ func NewMethodPayloadNoResultHandler(
 		ctx := context.WithValue(r.Context(), goahttp.AcceptTypeKey, r.Header.Get("Accept"))
 		ctx = context.WithValue(ctx, goa.MethodKey, "MethodPayloadNoResult")
 		ctx = context.WithValue(ctx, goa.ServiceKey, "ServicePayloadNoResult")
-		payload, err := decodeRequest(r)
+
+		var err error
+		payload, err = decodeRequest(r)
 		if err != nil {
 			if err := encodeError(ctx, w, err); err != nil {
 				eh(ctx, w, err)
@@ -95,6 +99,8 @@ func NewMethodNoPayloadResultHandler(
 		ctx = context.WithValue(ctx, goa.MethodKey, "MethodNoPayloadResult")
 		ctx = context.WithValue(ctx, goa.ServiceKey, "ServiceNoPayloadResult")
 
+		var err error
+
 		res, err := endpoint(ctx, nil)
 
 		if err != nil {
@@ -129,7 +135,9 @@ func NewMethodPayloadResultHandler(
 		ctx := context.WithValue(r.Context(), goahttp.AcceptTypeKey, r.Header.Get("Accept"))
 		ctx = context.WithValue(ctx, goa.MethodKey, "MethodPayloadResult")
 		ctx = context.WithValue(ctx, goa.ServiceKey, "ServicePayloadResult")
-		payload, err := decodeRequest(r)
+
+		var err error
+		payload, err = decodeRequest(r)
 		if err != nil {
 			if err := encodeError(ctx, w, err); err != nil {
 				eh(ctx, w, err)
@@ -171,7 +179,9 @@ func NewMethodPayloadResultErrorHandler(
 		ctx := context.WithValue(r.Context(), goahttp.AcceptTypeKey, r.Header.Get("Accept"))
 		ctx = context.WithValue(ctx, goa.MethodKey, "MethodPayloadResultError")
 		ctx = context.WithValue(ctx, goa.ServiceKey, "ServicePayloadResultError")
-		payload, err := decodeRequest(r)
+
+		var err error
+		payload, err = decodeRequest(r)
 		if err != nil {
 			if err := encodeError(ctx, w, err); err != nil {
 				eh(ctx, w, err)
