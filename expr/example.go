@@ -193,6 +193,13 @@ func byFormat(a *AttributeExpr, r *Random) interface{} {
 		FormatCIDR:    "192.168.100.14/24",
 		FormatRegexp:  r.faker.Characters(3) + ".*",
 		FormatRFC1123: time.Unix(int64(r.Int())%1454957045, 0).UTC().Format(time.RFC1123), // to obtain a "fixed" rand
+		FormatUUID: func() string {
+			res, err := regen.Generate(`[0-9A-F]{8}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{12}`)
+			if err != nil {
+				return "12345678-1234-1234-12324-123456789ABC"
+			}
+			return res
+		}(),
 	}[format]; ok {
 		return res
 	}
