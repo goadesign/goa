@@ -4267,17 +4267,17 @@ func DecodeMethodBodyQueryPathObjectRequest(mux goahttp.Muxer, decoder func(*htt
 		}
 
 		var (
-			c string
-			b *string
+			c2 string
+			b  *string
 
 			params = mux.Vars(r)
 		)
-		c = params["c"]
+		c2 = params["c"]
 		bRaw := r.URL.Query().Get("b")
 		if bRaw != "" {
 			b = &bRaw
 		}
-		payload := NewMethodBodyQueryPathObjectPayload(&body, c, b)
+		payload := NewMethodBodyQueryPathObjectPayload(&body, c2, b)
 
 		return payload, nil
 	}
@@ -4306,13 +4306,13 @@ func DecodeMethodBodyQueryPathObjectValidateRequest(mux goahttp.Muxer, decoder f
 		}
 
 		var (
-			c string
-			b string
+			c2 string
+			b  string
 
 			params = mux.Vars(r)
 		)
-		c = params["c"]
-		err = goa.MergeErrors(err, goa.ValidatePattern("c", c, "patternc"))
+		c2 = params["c"]
+		err = goa.MergeErrors(err, goa.ValidatePattern("c2", c2, "patternc"))
 		b = r.URL.Query().Get("b")
 		if b == "" {
 			err = goa.MergeErrors(err, goa.MissingFieldError("b", "query string"))
@@ -4321,7 +4321,7 @@ func DecodeMethodBodyQueryPathObjectValidateRequest(mux goahttp.Muxer, decoder f
 		if err != nil {
 			return nil, err
 		}
-		payload := NewMethodBodyQueryPathObjectValidatePayload(&body, c, b)
+		payload := NewMethodBodyQueryPathObjectValidatePayload(&body, c2, b)
 
 		return payload, nil
 	}
@@ -4345,17 +4345,17 @@ func DecodeMethodBodyQueryPathUserRequest(mux goahttp.Muxer, decoder func(*http.
 		}
 
 		var (
-			c string
-			b *string
+			c2 string
+			b  *string
 
 			params = mux.Vars(r)
 		)
-		c = params["c"]
+		c2 = params["c"]
 		bRaw := r.URL.Query().Get("b")
 		if bRaw != "" {
 			b = &bRaw
 		}
-		payload := NewMethodBodyQueryPathUserPayloadType(&body, c, b)
+		payload := NewMethodBodyQueryPathUserPayloadType(&body, c2, b)
 
 		return payload, nil
 	}
@@ -4384,13 +4384,13 @@ func DecodeMethodBodyQueryPathUserValidateRequest(mux goahttp.Muxer, decoder fun
 		}
 
 		var (
-			c string
-			b string
+			c2 string
+			b  string
 
 			params = mux.Vars(r)
 		)
-		c = params["c"]
-		err = goa.MergeErrors(err, goa.ValidatePattern("c", c, "patternc"))
+		c2 = params["c"]
+		err = goa.MergeErrors(err, goa.ValidatePattern("c2", c2, "patternc"))
 		b = r.URL.Query().Get("b")
 		if b == "" {
 			err = goa.MergeErrors(err, goa.MissingFieldError("b", "query string"))
@@ -4399,7 +4399,7 @@ func DecodeMethodBodyQueryPathUserValidateRequest(mux goahttp.Muxer, decoder fun
 		if err != nil {
 			return nil, err
 		}
-		payload := NewMethodBodyQueryPathUserValidatePayloadType(&body, c, b)
+		payload := NewMethodBodyQueryPathUserValidatePayloadType(&body, c2, b)
 
 		return payload, nil
 	}
