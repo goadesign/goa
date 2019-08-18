@@ -614,7 +614,9 @@ func (svc *ServiceData) Endpoint(name string) *EndpointData {
 // It records the user types needed by the service definition in userTypes.
 func (d ServicesData) analyze(hs *expr.HTTPServiceExpr) *ServiceData {
 	svc := service.Services.Get(hs.ServiceExpr.Name)
-
+	scope := codegen.NewNameScope()
+	scope.Unique("c") // 'c' is reserved as the client's receiver name.
+	scope.Unique("v") // 'v' is reserved as the request builder payload argument name.
 	rd := &ServiceData{
 		Service:          svc,
 		ServerStruct:     "Server",
@@ -625,7 +627,7 @@ func (d ServicesData) analyze(hs *expr.HTTPServiceExpr) *ServiceData {
 		ClientStruct:     "Client",
 		ServerTypeNames:  make(map[string]bool),
 		ClientTypeNames:  make(map[string]bool),
-		Scope:            codegen.NewNameScope(),
+		Scope:            scope,
 	}
 
 	for _, s := range hs.FileServers {
@@ -770,7 +772,6 @@ func (d ServicesData) analyze(hs *expr.HTTPServiceExpr) *ServiceData {
 			{
 				name = fmt.Sprintf("Build%sRequest", ep.VarName)
 				s := codegen.NewNameScope()
-				s.Unique("c") // 'c' is reserved as the client's receiver name.
 				for _, ca := range routes[0].PathInit.ClientArgs {
 					if ca.FieldName != "" {
 						ca.Name = s.Unique(ca.Name)
