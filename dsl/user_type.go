@@ -145,14 +145,13 @@ func ArrayOf(v interface{}, fn ...func()) *expr.Array {
 		}
 	}
 	// never return nil to avoid panics, errors are reported after DSL execution
-	res := &expr.Array{ElemType: &expr.AttributeExpr{Type: expr.String}}
 	if t == nil {
 		eval.ReportError("invalid ArrayOf argument: not a type and not a known user type name")
-		return res
+		return &expr.Array{ElemType: &expr.AttributeExpr{Type: expr.String}}
 	}
 	if len(fn) > 1 {
 		eval.ReportError("ArrayOf: too many arguments")
-		return res
+		return &expr.Array{ElemType: &expr.AttributeExpr{Type: expr.String}}
 	}
 	at := expr.AttributeExpr{Type: t}
 	if len(fn) == 1 {
@@ -197,22 +196,21 @@ func MapOf(k, v interface{}, fn ...func()) *expr.Map {
 		}
 	}
 	// never return nil to avoid panics, errors are reported after DSL execution
-	res := &expr.Map{KeyType: &expr.AttributeExpr{Type: expr.String}, ElemType: &expr.AttributeExpr{Type: expr.String}}
 	if tk == nil {
 		eval.ReportError("invalid MapOf key argument: not a type and not a known user type name")
-		return res
+		return &expr.Map{KeyType: &expr.AttributeExpr{Type: expr.String}, ElemType: &expr.AttributeExpr{Type: expr.String}}
 	}
 	if expr.IsMap(tk) {
 		eval.ReportError("invalid MapOf key type: key type must be a primitive, array, or user type")
-		return res
+		return &expr.Map{KeyType: &expr.AttributeExpr{Type: expr.String}, ElemType: &expr.AttributeExpr{Type: expr.String}}
 	}
 	if tv == nil {
 		eval.ReportError("invalid MapOf value argument: not a type and not a known user type name")
-		return res
+		return &expr.Map{KeyType: &expr.AttributeExpr{Type: expr.String}, ElemType: &expr.AttributeExpr{Type: expr.String}}
 	}
 	if len(fn) > 1 {
 		eval.ReportError("MapOf: too many arguments")
-		return res
+		return &expr.Map{KeyType: &expr.AttributeExpr{Type: expr.String}, ElemType: &expr.AttributeExpr{Type: expr.String}}
 	}
 	kat := expr.AttributeExpr{Type: tk}
 	vat := expr.AttributeExpr{Type: tv}

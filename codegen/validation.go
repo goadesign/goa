@@ -58,6 +58,11 @@ func init() {
 func ValidationCode(att *expr.AttributeExpr, attCtx *AttributeContext, req bool, target, context string) string {
 	validation := att.Validation
 	if validation == nil {
+		if ut, ok := att.Type.(expr.UserType); ok {
+			validation = ut.Attribute().Validation
+		}
+	}
+	if validation == nil {
 		return ""
 	}
 	var (
