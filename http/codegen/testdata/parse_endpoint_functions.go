@@ -701,7 +701,7 @@ func BuildMethodQueryBoolPayload(serviceQueryBoolMethodQueryBoolQ string) (*serv
 
 var BodyQueryPathObjectBuildCode = `// BuildMethodBodyQueryPathObjectPayload builds the payload for the
 // ServiceBodyQueryPathObject MethodBodyQueryPathObject endpoint from CLI flags.
-func BuildMethodBodyQueryPathObjectPayload(serviceBodyQueryPathObjectMethodBodyQueryPathObjectBody string, serviceBodyQueryPathObjectMethodBodyQueryPathObjectC string, serviceBodyQueryPathObjectMethodBodyQueryPathObjectB string) (*servicebodyquerypathobject.MethodBodyQueryPathObjectPayload, error) {
+func BuildMethodBodyQueryPathObjectPayload(serviceBodyQueryPathObjectMethodBodyQueryPathObjectBody string, serviceBodyQueryPathObjectMethodBodyQueryPathObjectC2 string, serviceBodyQueryPathObjectMethodBodyQueryPathObjectB string) (*servicebodyquerypathobject.MethodBodyQueryPathObjectPayload, error) {
 	var err error
 	var body MethodBodyQueryPathObjectRequestBody
 	{
@@ -710,9 +710,9 @@ func BuildMethodBodyQueryPathObjectPayload(serviceBodyQueryPathObjectMethodBodyQ
 			return nil, fmt.Errorf("invalid JSON for body, example of valid JSON:\n%s", "'{\n      \"a\": \"Ullam aut.\"\n   }'")
 		}
 	}
-	var c string
+	var c2 string
 	{
-		c = serviceBodyQueryPathObjectMethodBodyQueryPathObjectC
+		c2 = serviceBodyQueryPathObjectMethodBodyQueryPathObjectC2
 	}
 	var b *string
 	{
@@ -723,7 +723,7 @@ func BuildMethodBodyQueryPathObjectPayload(serviceBodyQueryPathObjectMethodBodyQ
 	v := &servicebodyquerypathobject.MethodBodyQueryPathObjectPayload{
 		A: body.A,
 	}
-	v.C = &c
+	v.C = &c2
 	v.B = b
 	return v, nil
 }
