@@ -35,13 +35,21 @@ func ValidateMethodPayloadWithNestedTypesRequest(message *service_payload_with_n
 
 // ValidateAParams runs the validations defined on AParams.
 func ValidateAParams(message *service_payload_with_nested_typespb.AParams) (err error) {
-
+	for _, v := range message.A {
+		if v != nil {
+			if err2 := ValidateArrayOfString(v); err2 != nil {
+				err = goa.MergeErrors(err, err2)
+			}
+		}
+	}
 	return
 }
 
 // ValidateArrayOfString runs the validations defined on ArrayOfString.
 func ValidateArrayOfString(message *service_payload_with_nested_typespb.ArrayOfString) (err error) {
-
+	if message.Field == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("field", "message"))
+	}
 	return
 }
 
