@@ -40,6 +40,10 @@ type (
 		Pkg string
 		// Scope is the attribute scope.
 		Scope Attributor
+		// UseZero if set to truw will indicate that this attribute will use non pointers
+		// for primitive types if they have a zero value. If it is set to false, they are
+		// pointers.
+		UseZero bool
 	}
 
 	// AttributeScope contains the scope of an attribute. It implements the

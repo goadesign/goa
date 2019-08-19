@@ -36,6 +36,12 @@ var TestTypesDSL = func() {
 			Required("integer")
 		})
 
+		_ = Type("Zero", func() {
+			Attribute("string_with_zero_value", String, func() {
+				Zero("zero_value")
+			})
+		})
+
 		SimpleMap = Type("SimpleMap", func() {
 			Attribute("simple", MapOf(String, Int))
 		})

@@ -200,7 +200,22 @@ func transformObject(source, target *expr.AttributeExpr, sourceVar, targetVar st
 				code += "}\n"
 			}
 		}
+
+		// Zero value handling. We need to handle zero values if the target
+		// type uses zero values and has a zero value set.
+		if zdef := tgtc.ZeroValue; zdef != nil && ta.TargetCtx.UseZero {
+			if (ta.SourceCtx.IsPrimitivePointer(n, srcMatt.AttributeExpr) || !expr.IsPrimitive(srcc.Type)) && !srcMatt.IsRequired(n) {
+				code += fmt.Sprintf("if %s == nil {\n\t", srcVar)
+				if ta.TargetCtx.IsPrimitivePointer(n, tgtMatt.AttributeExpr) && expr.IsPrimitive(tgtc.Type) {
+					code += fmt.Sprintf("var tmp %s = %#v\n\t%s = &tmp\n", GoNativeTypeName(tgtc.Type), zdef, tgtVar)
+				} else {
+					code += fmt.Sprintf("%s = %#v\n", tgtVar, zdef)
+				}
+				code += "}\n"
+			}
+		}
 		buffer.WriteString(code)
+
 	})
 	if err != nil {
 		return "", err

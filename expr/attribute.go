@@ -87,6 +87,8 @@ type (
 		// described at
 		// http://json-schema.org/latest/json-schema-validation.html#anchor61.
 		Required []string
+		// ZeroValue represents the default value that an attribute can have if not set.
+		ZeroValue interface{}
 	}
 
 	// ValidationFormat is the type used to enumerate the possible string

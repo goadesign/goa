@@ -157,6 +157,16 @@ func ValidationCode(att *expr.AttributeExpr, attCtx *AttributeContext, req bool,
 			res = append(res, runTemplate(requiredValT, data))
 		}
 	}
+	// If a ZeroValue is encountered, then make sure we ignore the the min length.
+	if zeroVal := validation.ZeroValue; zeroVal != nil {
+		data["zeroVal"] = zeroVal
+		data["isMinLength"] = false
+		delete(data, "minLength")
+
+		if val := runTemplate(lengthValT, data); val != "" {
+			res = append(res, val)
+		}
+	}
 	return strings.Join(res, "\n")
 }
 

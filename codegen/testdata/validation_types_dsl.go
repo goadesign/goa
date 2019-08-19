@@ -15,6 +15,9 @@ var ValidationTypesDSL = func() {
 			Attribute("integer", Int64, func() {
 				Maximum(100)
 			})
+			Attribute("zero_value_integer", Int, func() {
+				Zero(0)
+			})
 			Required("required_integer")
 		})
 
@@ -28,6 +31,9 @@ var ValidationTypesDSL = func() {
 			})
 			Attribute("float64", Float64, func() {
 				Maximum(100.1)
+			})
+			Attribute("zero_float64", Float64, func() {
+				Zero(0.0)
 			})
 			Required("required_float")
 		})
@@ -44,6 +50,9 @@ var ValidationTypesDSL = func() {
 			})
 			Attribute("string", String, func() {
 				Format(FormatDateTime)
+			})
+			Attribute("zero_value_string", String, func() {
+				Zero("my_zero_value")
 			})
 			Required("required_string")
 		})

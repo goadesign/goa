@@ -130,6 +130,10 @@ func hasMinMaxValidation(a *AttributeExpr) bool {
 	return a.Validation.Minimum != nil || a.Validation.Maximum != nil
 }
 
+func hasZeroValidation(a *AttributeExpr) bool {
+	return a.Validation != nil && a.Validation.ZeroValue != nil
+}
+
 // byLength generates a random size array of examples based on what's given.
 func byLength(a *AttributeExpr, r *Random) interface{} {
 	count := NewLength(a, r)
@@ -315,4 +319,22 @@ func checkMinMaxValue(a *AttributeExpr, example interface{}) bool {
 		}
 	}
 	return true
+}
+
+func checkZeroValue(a *AttributeExpr, example interface{}) bool {
+	if !hasZeroValidation(a) {
+		return true
+	}
+	if zero := a.Validation.ZeroValue; zero != nil {
+		if _, ok := example.(int); ok {
+			return true
+		} else if _, ok := example.(float64); ok {
+			return true
+
+		} else if _, ok := example.(string); ok {
+			return true
+
+		}
+	}
+	return false
 }
