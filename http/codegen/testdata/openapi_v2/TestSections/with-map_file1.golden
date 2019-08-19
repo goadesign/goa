@@ -44,18 +44,18 @@ definitions:
       uint_map:
         type: object
         example:
-          1327458037: Aspernatur quo error explicabo pariatur.
-          3567361935: Aut voluptatum magni aperiam qui aut dicta.
-          4129087957: Voluptatem et distinctio aliquam nihil.
+          2850694428022055785: Aspernatur quo error explicabo pariatur.
+          7660851423302802934: Aut voluptatum magni aperiam qui aut dicta.
+          18090520906013632069: Voluptatem et distinctio aliquam nihil.
         additionalProperties: true
     example:
       int_map:
         6637046600858545825: Debitis sit maiores aperiam autem non ea.
         8306439688927314367: Et nihil excepturi deserunt quasi.
       uint_map:
-        1899188945: Excepturi totam.
-        2361095329: Aut non sunt.
-        3295563366: Aut facilis vel ipsam recusandae.
+        4078477204800321146: Excepturi totam.
+        7077168439692073874: Aut facilis vel ipsam recusandae.
+        14293785648556529023: Aut non sunt.
   TestServiceTestEndpointResponseBody:
     title: TestServiceTestEndpointResponseBody
     type: object

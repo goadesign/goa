@@ -78,7 +78,7 @@ func (r *Random) Float64() float64 {
 
 // UInt produces a random uint value.
 func (r *Random) UInt() uint {
-	return uint(r.UInt32())
+	return uint(r.UInt64())
 }
 
 // UInt32 produces a random uint32 value.

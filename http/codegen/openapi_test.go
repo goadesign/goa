@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"path/filepath"
+	"strings"
 	"testing"
 	"text/template"
 
@@ -266,6 +267,13 @@ func TestExtensions(t *testing.T) {
 func validateSwagger(b []byte) error {
 	doc, err := loads.Analyzed(json.RawMessage(b), "")
 	if err != nil {
+		// go-openapi returns an error when using map keys other than an int or a string
+		// https://github.com/go-openapi/swag/issues/36
+		// Online swagger editor does not complain about these though. So don't return an
+		// error during such cases until the issue above is resolved.
+		if strings.Contains(err.Error(), "types don't match expect map key string or int") {
+			return nil
+		}
 		return err
 	}
 	if doc == nil {
