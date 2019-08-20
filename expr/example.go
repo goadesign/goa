@@ -226,10 +226,6 @@ func byMinMax(a *AttributeExpr, r *Random) interface{} {
 		return nil
 	}
 	var (
-		i    = a.Type.Kind() == IntKind || a.Type.Kind() == UIntKind
-		i32  = a.Type.Kind() == Int32Kind || a.Type.Kind() == UInt32Kind
-		i64  = a.Type.Kind() == Int64Kind || a.Type.Kind() == UInt64Kind
-		f32  = a.Type.Kind() == Float32Kind
 		min  = math.Inf(-1)
 		max  = math.Inf(1)
 		sign = 1
@@ -246,14 +242,20 @@ func byMinMax(a *AttributeExpr, r *Random) interface{} {
 	}
 
 	if math.IsInf(max, 1) {
-		switch {
-		case i:
+		switch a.Type.Kind() {
+		case IntKind:
 			return sign * (r.Int() + int(min))
-		case i32:
+		case Int32Kind:
 			return int32(sign) * (r.Int32() + int32(min))
-		case i64:
+		case Int64Kind:
 			return int64(sign) * (r.Int64() + int64(min))
-		case f32:
+		case UIntKind:
+			return r.UInt() + uint(min)
+		case UInt32Kind:
+			return r.UInt32() + uint32(min)
+		case UInt64Kind:
+			return r.UInt64() + uint64(min)
+		case Float32Kind:
 			return float32(sign) * (r.Float32() + float32(min))
 		default:
 			return float64(sign) * (r.Float64() + min)
@@ -261,27 +263,39 @@ func byMinMax(a *AttributeExpr, r *Random) interface{} {
 	}
 	if min < max {
 		delta := max - min
-		switch {
-		case i:
+		switch a.Type.Kind() {
+		case IntKind:
 			return r.Int()%int(delta) + int(min)
-		case i32:
+		case Int32Kind:
 			return r.Int32()%int32(delta) + int32(min)
-		case i64:
+		case Int64Kind:
 			return r.Int64()%int64(delta) + int64(min)
-		case f32:
+		case UIntKind:
+			return r.UInt()%uint(delta) + uint(min)
+		case UInt32Kind:
+			return r.UInt32()%uint32(delta) + uint32(min)
+		case UInt64Kind:
+			return r.UInt64()%uint64(delta) + uint64(min)
+		case Float32Kind:
 			return r.Float32()*float32(delta) + float32(min)
 		default:
 			return r.Float64()*delta + min
 		}
 	}
-	switch {
-	case i:
+	switch a.Type.Kind() {
+	case IntKind:
 		return int(min)
-	case i32:
+	case Int32Kind:
 		return int32(min)
-	case i64:
+	case Int64Kind:
 		return int64(min)
-	case f32:
+	case UIntKind:
+		return uint(min)
+	case UInt32Kind:
+		return uint32(min)
+	case UInt64Kind:
+		return uint64(min)
+	case Float32Kind:
 		return float32(min)
 	default:
 		return min
