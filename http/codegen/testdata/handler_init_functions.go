@@ -18,7 +18,6 @@ func NewMethodNoPayloadNoResultHandler(
 		ctx := context.WithValue(r.Context(), goahttp.AcceptTypeKey, r.Header.Get("Accept"))
 		ctx = context.WithValue(ctx, goa.MethodKey, "MethodNoPayloadNoResult")
 		ctx = context.WithValue(ctx, goa.ServiceKey, "ServiceNoPayloadNoResult")
-
 		var err error
 
 		res, err := endpoint(ctx, nil)
@@ -55,9 +54,7 @@ func NewMethodPayloadNoResultHandler(
 		ctx := context.WithValue(r.Context(), goahttp.AcceptTypeKey, r.Header.Get("Accept"))
 		ctx = context.WithValue(ctx, goa.MethodKey, "MethodPayloadNoResult")
 		ctx = context.WithValue(ctx, goa.ServiceKey, "ServicePayloadNoResult")
-
-		var err error
-		payload, err = decodeRequest(r)
+		payload, err := decodeRequest(r)
 		if err != nil {
 			if err := encodeError(ctx, w, err); err != nil {
 				eh(ctx, w, err)
@@ -98,7 +95,6 @@ func NewMethodNoPayloadResultHandler(
 		ctx := context.WithValue(r.Context(), goahttp.AcceptTypeKey, r.Header.Get("Accept"))
 		ctx = context.WithValue(ctx, goa.MethodKey, "MethodNoPayloadResult")
 		ctx = context.WithValue(ctx, goa.ServiceKey, "ServiceNoPayloadResult")
-
 		var err error
 
 		res, err := endpoint(ctx, nil)
@@ -135,9 +131,7 @@ func NewMethodPayloadResultHandler(
 		ctx := context.WithValue(r.Context(), goahttp.AcceptTypeKey, r.Header.Get("Accept"))
 		ctx = context.WithValue(ctx, goa.MethodKey, "MethodPayloadResult")
 		ctx = context.WithValue(ctx, goa.ServiceKey, "ServicePayloadResult")
-
-		var err error
-		payload, err = decodeRequest(r)
+		payload, err := decodeRequest(r)
 		if err != nil {
 			if err := encodeError(ctx, w, err); err != nil {
 				eh(ctx, w, err)
@@ -179,9 +173,7 @@ func NewMethodPayloadResultErrorHandler(
 		ctx := context.WithValue(r.Context(), goahttp.AcceptTypeKey, r.Header.Get("Accept"))
 		ctx = context.WithValue(ctx, goa.MethodKey, "MethodPayloadResultError")
 		ctx = context.WithValue(ctx, goa.ServiceKey, "ServicePayloadResultError")
-
-		var err error
-		payload, err = decodeRequest(r)
+		payload, err := decodeRequest(r)
 		if err != nil {
 			if err := encodeError(ctx, w, err); err != nil {
 				eh(ctx, w, err)

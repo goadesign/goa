@@ -454,16 +454,16 @@ func {{ .HandlerInit }}(
 		ctx = context.WithValue(ctx, goa.MethodKey, {{ printf "%q" .Method.Name }})
 		ctx = context.WithValue(ctx, goa.ServiceKey, {{ printf "%q" .ServiceName }})
 
-		var err error
-
 	{{- if .Payload.Ref }}
-		payload, err = decodeRequest(r)
+		payload, err := decodeRequest(r)
 		if err != nil {
 			if err := encodeError(ctx, w, err); err != nil {
 				eh(ctx, w, err)
 			}
 			return
 		}
+	{{- else }}
+		var err error
 	{{- end }}
 
 	{{ if .ServerStream }}
