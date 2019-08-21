@@ -35,13 +35,21 @@ func ValidateMethodPayloadWithNestedTypesRequest(message *service_payload_with_n
 
 // ValidateAParams runs the validations defined on AParams.
 func ValidateAParams(message *service_payload_with_nested_typespb.AParams) (err error) {
-
+	for _, v := range message.A {
+		if v != nil {
+			if err2 := ValidateArrayOfString(v); err2 != nil {
+				err = goa.MergeErrors(err, err2)
+			}
+		}
+	}
 	return
 }
 
 // ValidateArrayOfString runs the validations defined on ArrayOfString.
 func ValidateArrayOfString(message *service_payload_with_nested_typespb.ArrayOfString) (err error) {
-
+	if message.Field == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("field", "message"))
+	}
 	return
 }
 
@@ -198,7 +206,7 @@ func protobufServiceResultWithCollectionpbResultTToServiceresultwithcollectionRe
 const WithErrorsServerTypeCode = `// NewMethodUnaryRPCWithErrorsPayload builds the payload of the
 // "MethodUnaryRPCWithErrors" endpoint of the "ServiceUnaryRPCWithErrors"
 // service from the gRPC request type.
-func NewMethodUnaryRPCWithErrorsPayload(message *service_unaryrpc_with_errorspb.MethodUnaryRPCWithErrorsRequest) string {
+func NewMethodUnaryRPCWithErrorsPayload(message *service_unary_rpc_with_errorspb.MethodUnaryRPCWithErrorsRequest) string {
 	v := message.Field
 	return v
 }
@@ -206,8 +214,8 @@ func NewMethodUnaryRPCWithErrorsPayload(message *service_unaryrpc_with_errorspb.
 // NewMethodUnaryRPCWithErrorsResponse builds the gRPC response type from the
 // result of the "MethodUnaryRPCWithErrors" endpoint of the
 // "ServiceUnaryRPCWithErrors" service.
-func NewMethodUnaryRPCWithErrorsResponse(result string) *service_unaryrpc_with_errorspb.MethodUnaryRPCWithErrorsResponse {
-	message := &service_unaryrpc_with_errorspb.MethodUnaryRPCWithErrorsResponse{}
+func NewMethodUnaryRPCWithErrorsResponse(result string) *service_unary_rpc_with_errorspb.MethodUnaryRPCWithErrorsResponse {
+	message := &service_unary_rpc_with_errorspb.MethodUnaryRPCWithErrorsResponse{}
 	message.Field = result
 	return message
 }
@@ -215,8 +223,8 @@ func NewMethodUnaryRPCWithErrorsResponse(result string) *service_unaryrpc_with_e
 // NewMethodUnaryRPCWithErrorsInternalError builds the gRPC error response type
 // from the error of the "MethodUnaryRPCWithErrors" endpoint of the
 // "ServiceUnaryRPCWithErrors" service.
-func NewMethodUnaryRPCWithErrorsInternalError(er *serviceunaryrpcwitherrors.AnotherError) *service_unaryrpc_with_errorspb.MethodUnaryRPCWithErrorsInternalError {
-	message := &service_unaryrpc_with_errorspb.MethodUnaryRPCWithErrorsInternalError{
+func NewMethodUnaryRPCWithErrorsInternalError(er *serviceunaryrpcwitherrors.AnotherError) *service_unary_rpc_with_errorspb.MethodUnaryRPCWithErrorsInternalError {
+	message := &service_unary_rpc_with_errorspb.MethodUnaryRPCWithErrorsInternalError{
 		Name: er.Name,
 	}
 	if er.Description != nil {
@@ -228,8 +236,8 @@ func NewMethodUnaryRPCWithErrorsInternalError(er *serviceunaryrpcwitherrors.Anot
 // NewMethodUnaryRPCWithErrorsBadRequestError builds the gRPC error response
 // type from the error of the "MethodUnaryRPCWithErrors" endpoint of the
 // "ServiceUnaryRPCWithErrors" service.
-func NewMethodUnaryRPCWithErrorsBadRequestError(er *serviceunaryrpcwitherrors.AnotherError) *service_unaryrpc_with_errorspb.MethodUnaryRPCWithErrorsBadRequestError {
-	message := &service_unaryrpc_with_errorspb.MethodUnaryRPCWithErrorsBadRequestError{
+func NewMethodUnaryRPCWithErrorsBadRequestError(er *serviceunaryrpcwitherrors.AnotherError) *service_unary_rpc_with_errorspb.MethodUnaryRPCWithErrorsBadRequestError {
+	message := &service_unary_rpc_with_errorspb.MethodUnaryRPCWithErrorsBadRequestError{
 		Name: er.Name,
 	}
 	if er.Description != nil {
@@ -241,8 +249,8 @@ func NewMethodUnaryRPCWithErrorsBadRequestError(er *serviceunaryrpcwitherrors.An
 // NewMethodUnaryRPCWithErrorsCustomErrorError builds the gRPC error response
 // type from the error of the "MethodUnaryRPCWithErrors" endpoint of the
 // "ServiceUnaryRPCWithErrors" service.
-func NewMethodUnaryRPCWithErrorsCustomErrorError(er *serviceunaryrpcwitherrors.ErrorType) *service_unaryrpc_with_errorspb.MethodUnaryRPCWithErrorsCustomErrorError {
-	message := &service_unaryrpc_with_errorspb.MethodUnaryRPCWithErrorsCustomErrorError{}
+func NewMethodUnaryRPCWithErrorsCustomErrorError(er *serviceunaryrpcwitherrors.ErrorType) *service_unary_rpc_with_errorspb.MethodUnaryRPCWithErrorsCustomErrorError {
+	message := &service_unary_rpc_with_errorspb.MethodUnaryRPCWithErrorsCustomErrorError{}
 	if er.A != nil {
 		message.A = *er.A
 	}

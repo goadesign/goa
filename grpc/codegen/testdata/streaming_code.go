@@ -4,12 +4,12 @@ var ServerStreamingServerStructCode = `// MethodServerStreamingUserTypeRPCServer
 // serviceserverstreamingusertyperpc.MethodServerStreamingUserTypeRPCServerStream
 // interface.
 type MethodServerStreamingUserTypeRPCServerStream struct {
-	stream service_server_streaming_user_typerpcpb.ServiceServerStreamingUserTypeRPC_MethodServerStreamingUserTypeRPCServer
+	stream service_server_streaming_user_type_rpcpb.ServiceServerStreamingUserTypeRPC_MethodServerStreamingUserTypeRPCServer
 }
 `
 
 var ServerStreamingServerSendCode = `// Send streams instances of
-// "service_server_streaming_user_typerpcpb.MethodServerStreamingUserTypeRPCResponse"
+// "service_server_streaming_user_type_rpcpb.MethodServerStreamingUserTypeRPCResponse"
 // to the "MethodServerStreamingUserTypeRPC" endpoint gRPC stream.
 func (s *MethodServerStreamingUserTypeRPCServerStream) Send(res *serviceserverstreamingusertyperpc.UserType) error {
 	v := NewMethodServerStreamingUserTypeRPCResponse(res)
@@ -27,12 +27,12 @@ var ServerStreamingClientStructCode = `// MethodServerStreamingUserTypeRPCClient
 // serviceserverstreamingusertyperpc.MethodServerStreamingUserTypeRPCClientStream
 // interface.
 type MethodServerStreamingUserTypeRPCClientStream struct {
-	stream service_server_streaming_user_typerpcpb.ServiceServerStreamingUserTypeRPC_MethodServerStreamingUserTypeRPCClient
+	stream service_server_streaming_user_type_rpcpb.ServiceServerStreamingUserTypeRPC_MethodServerStreamingUserTypeRPCClient
 }
 `
 
 var ServerStreamingClientRecvCode = `// Recv reads instances of
-// "service_server_streaming_user_typerpcpb.MethodServerStreamingUserTypeRPCResponse"
+// "service_server_streaming_user_type_rpcpb.MethodServerStreamingUserTypeRPCResponse"
 // from the "MethodServerStreamingUserTypeRPC" endpoint gRPC stream.
 func (s *MethodServerStreamingUserTypeRPCClientStream) Recv() (*serviceserverstreamingusertyperpc.UserType, error) {
 	var res *serviceserverstreamingusertyperpc.UserType
@@ -48,13 +48,13 @@ var ServerStreamingResultWithViewsServerStructCode = `// MethodServerStreamingUs
 // serviceserverstreamingusertyperpc.MethodServerStreamingUserTypeRPCServerStream
 // interface.
 type MethodServerStreamingUserTypeRPCServerStream struct {
-	stream service_server_streaming_user_typerpcpb.ServiceServerStreamingUserTypeRPC_MethodServerStreamingUserTypeRPCServer
+	stream service_server_streaming_user_type_rpcpb.ServiceServerStreamingUserTypeRPC_MethodServerStreamingUserTypeRPCServer
 	view   string
 }
 `
 
 var ServerStreamingResultWithViewsServerSendCode = `// Send streams instances of
-// "service_server_streaming_user_typerpcpb.MethodServerStreamingUserTypeRPCResponse"
+// "service_server_streaming_user_type_rpcpb.MethodServerStreamingUserTypeRPCResponse"
 // to the "MethodServerStreamingUserTypeRPC" endpoint gRPC stream.
 func (s *MethodServerStreamingUserTypeRPCServerStream) Send(res *serviceserverstreamingusertyperpc.ResultType) error {
 	vres := serviceserverstreamingusertyperpc.NewViewedResultType(res, s.view)
@@ -73,13 +73,13 @@ var ServerStreamingResultWithViewsClientStructCode = `// MethodServerStreamingUs
 // serviceserverstreamingusertyperpc.MethodServerStreamingUserTypeRPCClientStream
 // interface.
 type MethodServerStreamingUserTypeRPCClientStream struct {
-	stream service_server_streaming_user_typerpcpb.ServiceServerStreamingUserTypeRPC_MethodServerStreamingUserTypeRPCClient
+	stream service_server_streaming_user_type_rpcpb.ServiceServerStreamingUserTypeRPC_MethodServerStreamingUserTypeRPCClient
 	view   string
 }
 `
 
 var ServerStreamingResultWithViewsClientRecvCode = `// Recv reads instances of
-// "service_server_streaming_user_typerpcpb.MethodServerStreamingUserTypeRPCResponse"
+// "service_server_streaming_user_type_rpcpb.MethodServerStreamingUserTypeRPCResponse"
 // from the "MethodServerStreamingUserTypeRPC" endpoint gRPC stream.
 func (s *MethodServerStreamingUserTypeRPCClientStream) Recv() (*serviceserverstreamingusertyperpc.ResultType, error) {
 	var res *serviceserverstreamingusertyperpc.ResultType
@@ -127,7 +127,7 @@ func (s *MethodServerStreamingResultTypeCollectionWithExplicitViewClientStream) 
 `
 
 var ServerStreamingPrimitiveServerSendCode = `// Send streams instances of
-// "service_server_streamingrpcpb.MethodServerStreamingRPCResponse" to the
+// "service_server_streaming_rpcpb.MethodServerStreamingRPCResponse" to the
 // "MethodServerStreamingRPC" endpoint gRPC stream.
 func (s *MethodServerStreamingRPCServerStream) Send(res string) error {
 	v := NewMethodServerStreamingRPCResponse(res)
@@ -136,7 +136,7 @@ func (s *MethodServerStreamingRPCServerStream) Send(res string) error {
 `
 
 var ServerStreamingPrimitiveClientRecvCode = `// Recv reads instances of
-// "service_server_streamingrpcpb.MethodServerStreamingRPCResponse" from the
+// "service_server_streaming_rpcpb.MethodServerStreamingRPCResponse" from the
 // "MethodServerStreamingRPC" endpoint gRPC stream.
 func (s *MethodServerStreamingRPCClientStream) Recv() (string, error) {
 	var res string
@@ -201,12 +201,12 @@ func (s *MethodServerStreamingMapClientStream) Recv() (map[string]*serviceserver
 var ClientStreamingServerStructCode = `// MethodClientStreamingRPCServerStream implements the
 // serviceclientstreamingrpc.MethodClientStreamingRPCServerStream interface.
 type MethodClientStreamingRPCServerStream struct {
-	stream service_client_streamingrpcpb.ServiceClientStreamingRPC_MethodClientStreamingRPCServer
+	stream service_client_streaming_rpcpb.ServiceClientStreamingRPC_MethodClientStreamingRPCServer
 }
 `
 
 var ClientStreamingServerSendCode = `// SendAndClose streams instances of
-// "service_client_streamingrpcpb.MethodClientStreamingRPCResponse" to the
+// "service_client_streaming_rpcpb.MethodClientStreamingRPCResponse" to the
 // "MethodClientStreamingRPC" endpoint gRPC stream.
 func (s *MethodClientStreamingRPCServerStream) SendAndClose(res string) error {
 	v := NewMethodClientStreamingRPCResponse(res)
@@ -215,7 +215,7 @@ func (s *MethodClientStreamingRPCServerStream) SendAndClose(res string) error {
 `
 
 var ClientStreamingServerRecvCode = `// Recv reads instances of
-// "service_client_streamingrpcpb.MethodClientStreamingRPCStreamingRequest"
+// "service_client_streaming_rpcpb.MethodClientStreamingRPCStreamingRequest"
 // from the "MethodClientStreamingRPC" endpoint gRPC stream.
 func (s *MethodClientStreamingRPCServerStream) Recv() (int, error) {
 	var res int
@@ -230,12 +230,12 @@ func (s *MethodClientStreamingRPCServerStream) Recv() (int, error) {
 var ClientStreamingClientStructCode = `// MethodClientStreamingRPCClientStream implements the
 // serviceclientstreamingrpc.MethodClientStreamingRPCClientStream interface.
 type MethodClientStreamingRPCClientStream struct {
-	stream service_client_streamingrpcpb.ServiceClientStreamingRPC_MethodClientStreamingRPCClient
+	stream service_client_streaming_rpcpb.ServiceClientStreamingRPC_MethodClientStreamingRPCClient
 }
 `
 
 var ClientStreamingClientSendCode = `// Send streams instances of
-// "service_client_streamingrpcpb.MethodClientStreamingRPCStreamingRequest" to
+// "service_client_streaming_rpcpb.MethodClientStreamingRPCStreamingRequest" to
 // the "MethodClientStreamingRPC" endpoint gRPC stream.
 func (s *MethodClientStreamingRPCClientStream) Send(res int) error {
 	v := NewMethodClientStreamingRPCStreamingRequest(res)
@@ -244,7 +244,7 @@ func (s *MethodClientStreamingRPCClientStream) Send(res int) error {
 `
 
 var ClientStreamingClientRecvCode = `// CloseAndRecv reads instances of
-// "service_client_streamingrpcpb.MethodClientStreamingRPCResponse" from the
+// "service_client_streaming_rpcpb.MethodClientStreamingRPCResponse" from the
 // "MethodClientStreamingRPC" endpoint gRPC stream.
 func (s *MethodClientStreamingRPCClientStream) CloseAndRecv() (string, error) {
 	var res string
@@ -260,13 +260,13 @@ var BidirectionalStreamingServerStructCode = `// MethodBidirectionalStreamingRPC
 // servicebidirectionalstreamingrpc.MethodBidirectionalStreamingRPCServerStream
 // interface.
 type MethodBidirectionalStreamingRPCServerStream struct {
-	stream service_bidirectional_streamingrpcpb.ServiceBidirectionalStreamingRPC_MethodBidirectionalStreamingRPCServer
+	stream service_bidirectional_streaming_rpcpb.ServiceBidirectionalStreamingRPC_MethodBidirectionalStreamingRPCServer
 	view   string
 }
 `
 
 var BidirectionalStreamingServerSendCode = `// Send streams instances of
-// "service_bidirectional_streamingrpcpb.MethodBidirectionalStreamingRPCResponse"
+// "service_bidirectional_streaming_rpcpb.MethodBidirectionalStreamingRPCResponse"
 // to the "MethodBidirectionalStreamingRPC" endpoint gRPC stream.
 func (s *MethodBidirectionalStreamingRPCServerStream) Send(res *servicebidirectionalstreamingrpc.ID) error {
 	vres := servicebidirectionalstreamingrpc.NewViewedID(res, "default")
@@ -276,7 +276,7 @@ func (s *MethodBidirectionalStreamingRPCServerStream) Send(res *servicebidirecti
 `
 
 var BidirectionalStreamingServerRecvCode = `// Recv reads instances of
-// "service_bidirectional_streamingrpcpb.MethodBidirectionalStreamingRPCStreamingRequest"
+// "service_bidirectional_streaming_rpcpb.MethodBidirectionalStreamingRPCStreamingRequest"
 // from the "MethodBidirectionalStreamingRPC" endpoint gRPC stream.
 func (s *MethodBidirectionalStreamingRPCServerStream) Recv() (int, error) {
 	var res int
@@ -298,13 +298,13 @@ var BidirectionalStreamingClientStructCode = `// MethodBidirectionalStreamingRPC
 // servicebidirectionalstreamingrpc.MethodBidirectionalStreamingRPCClientStream
 // interface.
 type MethodBidirectionalStreamingRPCClientStream struct {
-	stream service_bidirectional_streamingrpcpb.ServiceBidirectionalStreamingRPC_MethodBidirectionalStreamingRPCClient
+	stream service_bidirectional_streaming_rpcpb.ServiceBidirectionalStreamingRPC_MethodBidirectionalStreamingRPCClient
 	view   string
 }
 `
 
 var BidirectionalStreamingClientSendCode = `// Send streams instances of
-// "service_bidirectional_streamingrpcpb.MethodBidirectionalStreamingRPCStreamingRequest"
+// "service_bidirectional_streaming_rpcpb.MethodBidirectionalStreamingRPCStreamingRequest"
 // to the "MethodBidirectionalStreamingRPC" endpoint gRPC stream.
 func (s *MethodBidirectionalStreamingRPCClientStream) Send(res int) error {
 	v := NewMethodBidirectionalStreamingRPCStreamingRequest(res)
@@ -313,7 +313,7 @@ func (s *MethodBidirectionalStreamingRPCClientStream) Send(res int) error {
 `
 
 var BidirectionalStreamingClientRecvCode = `// Recv reads instances of
-// "service_bidirectional_streamingrpcpb.MethodBidirectionalStreamingRPCResponse"
+// "service_bidirectional_streaming_rpcpb.MethodBidirectionalStreamingRPCResponse"
 // from the "MethodBidirectionalStreamingRPC" endpoint gRPC stream.
 func (s *MethodBidirectionalStreamingRPCClientStream) Recv() (*servicebidirectionalstreamingrpc.ID, error) {
 	var res *servicebidirectionalstreamingrpc.ID

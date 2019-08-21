@@ -75,3 +75,18 @@ func (r *Random) Float32() float32 {
 func (r *Random) Float64() float64 {
 	return r.rand.Float64()
 }
+
+// UInt produces a random uint value.
+func (r *Random) UInt() uint {
+	return uint(r.UInt64())
+}
+
+// UInt32 produces a random uint32 value.
+func (r *Random) UInt32() uint32 {
+	return r.rand.Uint32()
+}
+
+// UInt64 produces a random uint64 value.
+func (r *Random) UInt64() uint64 {
+	return r.rand.Uint64()
+}
