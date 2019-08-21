@@ -515,11 +515,11 @@ func ParseEndpoint(
 	streamingServiceBConfigurer *streamingservicebc.ConnConfigurer,
 ) (goa.Endpoint, interface{}, error) {
 	var (
-		streamingServiceAFlags = flag.NewFlagSet("streaming-servicea", flag.ContinueOnError)
+		streamingServiceAFlags = flag.NewFlagSet("streaming-service-a", flag.ContinueOnError)
 
 		streamingServiceAMethodFlags = flag.NewFlagSet("method", flag.ExitOnError)
 
-		streamingServiceBFlags = flag.NewFlagSet("streaming-serviceb", flag.ContinueOnError)
+		streamingServiceBFlags = flag.NewFlagSet("streaming-service-b", flag.ContinueOnError)
 
 		streamingServiceBMethodFlags = flag.NewFlagSet("method", flag.ExitOnError)
 	)
@@ -544,9 +544,9 @@ func ParseEndpoint(
 	{
 		svcn = flag.Arg(0)
 		switch svcn {
-		case "streaming-servicea":
+		case "streaming-service-a":
 			svcf = streamingServiceAFlags
-		case "streaming-serviceb":
+		case "streaming-service-b":
 			svcf = streamingServiceBFlags
 		default:
 			return nil, nil, fmt.Errorf("unknown service %q", svcn)
@@ -563,14 +563,14 @@ func ParseEndpoint(
 	{
 		epn = svcf.Arg(0)
 		switch svcn {
-		case "streaming-servicea":
+		case "streaming-service-a":
 			switch epn {
 			case "method":
 				epf = streamingServiceAMethodFlags
 
 			}
 
-		case "streaming-serviceb":
+		case "streaming-service-b":
 			switch epn {
 			case "method":
 				epf = streamingServiceBMethodFlags
@@ -597,14 +597,14 @@ func ParseEndpoint(
 	)
 	{
 		switch svcn {
-		case "streaming-servicea":
+		case "streaming-service-a":
 			c := streamingserviceac.NewClient(scheme, host, doer, enc, dec, restore, dialer, streamingServiceAConfigurer)
 			switch epn {
 			case "method":
 				endpoint = c.Method()
 				data = nil
 			}
-		case "streaming-serviceb":
+		case "streaming-service-b":
 			c := streamingservicebc.NewClient(scheme, host, doer, enc, dec, restore, dialer, streamingServiceBConfigurer)
 			switch epn {
 			case "method":

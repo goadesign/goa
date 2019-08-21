@@ -188,7 +188,7 @@ func handleGRPCServer(ctx context.Context, u *url.URL, serviceEndpoints *service
 
 const ExampleCLIImport = `import (
 	"fmt"
-	cli "grpc/cli/testapi"
+	cli "grpc/cli/test_api"
 	"os"
 
 	goa "goa.design/goa/v3/pkg"
@@ -208,7 +208,7 @@ const ExampleSingleHostCLIImport = `import (
 
 const ExamplePkgPathCLIImport = `import (
 	"fmt"
-	cli "my/pkg/path/grpc/cli/testapi"
+	cli "my/pkg/path/grpc/cli/test_api"
 	"os"
 
 	goa "goa.design/goa/v3/pkg"
