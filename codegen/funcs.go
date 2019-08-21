@@ -148,10 +148,18 @@ func CamelCase(name string, firstUpper bool, acronym bool) string {
 }
 
 // SnakeCase produces the snake_case version of the given CamelCase string.
+// News    => news
+// OldNews => old_news
+// CNNNews => cnn_news
 func SnakeCase(name string) string {
+	// Special handling for single "words" starting with multiple upper case letters
 	for u, l := range toLower {
 		name = strings.Replace(name, u, l, -1)
 	}
+
+	// Special handling for dashes to convert them into underscores
+	name = strings.Replace(name, "-", "_", -1)
+
 	var b bytes.Buffer
 	ln := len(name)
 	if ln == 0 {
