@@ -395,3 +395,21 @@ var WithSpacesDSL = func() {
 		})
 	})
 }
+
+var WithMapDSL = func() {
+	Service("test service", func() {
+		Method("test endpoint", func() {
+			Payload(func() {
+				Attribute("int_map", MapOf(Int, String))
+				Attribute("uint_map", MapOf(UInt, String))
+			})
+			Result(func() {
+				Attribute("uint32_map", MapOf(UInt32, String))
+				Attribute("uint64_map", MapOf(UInt64, String))
+			})
+			HTTP(func() {
+				POST("/")
+			})
+		})
+	})
+}

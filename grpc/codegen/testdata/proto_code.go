@@ -3,9 +3,9 @@ package testdata
 const UnaryRPCsProtoCode = `
 syntax = "proto3";
 
-package service_unaryrp_cs;
+package service_unary_rp_cs;
 
-option go_package = "service_unaryrp_cspb";
+option go_package = "service_unary_rp_cspb";
 
 // Service is the ServiceUnaryRPCs service interface.
 service ServiceUnaryRPCs {
@@ -39,9 +39,9 @@ message MethodUnaryRPCBResponse {
 const UnaryRPCNoPayloadProtoCode = `
 syntax = "proto3";
 
-package service_unaryrpc_no_payload;
+package service_unary_rpc_no_payload;
 
-option go_package = "service_unaryrpc_no_payloadpb";
+option go_package = "service_unary_rpc_no_payloadpb";
 
 // Service is the ServiceUnaryRPCNoPayload service interface.
 service ServiceUnaryRPCNoPayload {
@@ -60,9 +60,9 @@ message MethodUnaryRPCNoPayloadResponse {
 const UnaryRPCNoResultProtoCode = `
 syntax = "proto3";
 
-package service_unaryrpc_no_result;
+package service_unary_rpc_no_result;
 
-option go_package = "service_unaryrpc_no_resultpb";
+option go_package = "service_unary_rpc_no_resultpb";
 
 // Service is the ServiceUnaryRPCNoResult service interface.
 service ServiceUnaryRPCNoResult {
@@ -81,9 +81,9 @@ message MethodUnaryRPCNoResultResponse {
 const ServerStreamingRPCProtoCode = `
 syntax = "proto3";
 
-package service_server_streamingrpc;
+package service_server_streaming_rpc;
 
-option go_package = "service_server_streamingrpcpb";
+option go_package = "service_server_streaming_rpcpb";
 
 // Service is the ServiceServerStreamingRPC service interface.
 service ServiceServerStreamingRPC {
@@ -103,9 +103,9 @@ message MethodServerStreamingRPCResponse {
 const ClientStreamingRPCProtoCode = `
 syntax = "proto3";
 
-package service_client_streamingrpc;
+package service_client_streaming_rpc;
 
-option go_package = "service_client_streamingrpcpb";
+option go_package = "service_client_streaming_rpcpb";
 
 // Service is the ServiceClientStreamingRPC service interface.
 service ServiceClientStreamingRPC {
@@ -125,9 +125,9 @@ message MethodClientStreamingRPCResponse {
 const BidirectionalStreamingRPCProtoCode = `
 syntax = "proto3";
 
-package service_bidirectional_streamingrpc;
+package service_bidirectional_streaming_rpc;
 
-option go_package = "service_bidirectional_streamingrpcpb";
+option go_package = "service_bidirectional_streaming_rpcpb";
 
 // Service is the ServiceBidirectionalStreamingRPC service interface.
 service ServiceBidirectionalStreamingRPC {
@@ -249,8 +249,8 @@ message RT {
 const MessageArrayCode = `
 message MethodMessageArrayRequest {
 	repeated uint32 array_of_primitives = 1;
-	repeated ArrayOfBytes twod_array = 2;
-	repeated ArrayOfArrayOfBytes threed_array = 3;
+	repeated ArrayOfBytes two_d_array = 2;
+	repeated ArrayOfArrayOfBytes three_d_array = 3;
 	repeated MapOfStringDouble array_of_maps = 4;
 }
 
@@ -272,8 +272,8 @@ message MethodMessageArrayResponse {
 
 message UT {
 	repeated uint32 array_of_primitives = 1;
-	repeated ArrayOfBytes twod_array = 2;
-	repeated ArrayOfArrayOfBytes threed_array = 3;
+	repeated ArrayOfBytes two_d_array = 2;
+	repeated ArrayOfArrayOfBytes three_d_array = 3;
 	repeated MapOfStringDouble array_of_maps = 4;
 }
 `
@@ -285,7 +285,7 @@ message MethodMessageMapRequest {
 
 message UT {
 	map<uint32, bool> map_of_primitives = 1;
-	map<sint32, ArrayOfUTLevel1> map_of_primitiveut_array = 2;
+	map<sint32, ArrayOfUTLevel1> map_of_primitive_ut_array = 2;
 }
 
 message ArrayOfUTLevel1 {
@@ -302,7 +302,7 @@ message MapOfSint32Uint32 {
 
 message MethodMessageMapResponse {
 	map<uint32, bool> map_of_primitives = 1;
-	map<sint32, ArrayOfUTLevel1> map_of_primitiveut_array = 2;
+	map<sint32, ArrayOfUTLevel1> map_of_primitive_ut_array = 2;
 }
 `
 

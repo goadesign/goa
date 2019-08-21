@@ -19,6 +19,9 @@ const (
 `
 
 	IntegerPointerValidationCode = `func Validate() (err error) {
+	if target.RequiredInteger == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("required_integer", "target"))
+	}
 	if target.RequiredInteger != nil {
 		if *target.RequiredInteger < 1 {
 			err = goa.MergeErrors(err, goa.InvalidRangeError("target.required_integer", *target.RequiredInteger, 1, true))
@@ -70,6 +73,9 @@ const (
 `
 
 	FloatPointerValidationCode = `func Validate() (err error) {
+	if target.RequiredFloat == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("required_float", "target"))
+	}
 	if target.RequiredFloat != nil {
 		if *target.RequiredFloat < 1 {
 			err = goa.MergeErrors(err, goa.InvalidRangeError("target.required_float", *target.RequiredFloat, 1, true))
@@ -123,6 +129,9 @@ const (
 `
 
 	StringPointerValidationCode = `func Validate() (err error) {
+	if target.RequiredString == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("required_string", "target"))
+	}
 	if target.RequiredString != nil {
 		err = goa.MergeErrors(err, goa.ValidatePattern("target.required_string", *target.RequiredString, "^[A-z].*[a-z]$"))
 	}
@@ -165,6 +174,9 @@ const (
 `
 
 	UserTypeRequiredValidationCode = `func Validate() (err error) {
+	if target.RequiredInteger == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("required_integer", "target"))
+	}
 	if target.RequiredInteger != nil {
 		if err2 := ValidateInteger(target.RequiredInteger); err2 != nil {
 			err = goa.MergeErrors(err, err2)
@@ -184,6 +196,9 @@ const (
 `
 
 	UserTypePointerValidationCode = `func Validate() (err error) {
+	if target.RequiredInteger == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("required_integer", "target"))
+	}
 	if target.RequiredInteger != nil {
 		if err2 := ValidateInteger(target.RequiredInteger); err2 != nil {
 			err = goa.MergeErrors(err, err2)
@@ -202,6 +217,9 @@ const (
 }
 `
 	UserTypeUseDefaultValidationCode = `func Validate() (err error) {
+	if target.RequiredInteger == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("required_integer", "target"))
+	}
 	if target.RequiredInteger != nil {
 		if err2 := ValidateInteger(target.RequiredInteger); err2 != nil {
 			err = goa.MergeErrors(err, err2)
@@ -232,6 +250,9 @@ const (
 `
 
 	ArrayRequiredValidationCode = `func Validate() (err error) {
+	if target.RequiredArray == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("required_array", "target"))
+	}
 	if len(target.RequiredArray) < 5 {
 		err = goa.MergeErrors(err, goa.InvalidLengthError("target.required_array", target.RequiredArray, len(target.RequiredArray), 5, true))
 	}
@@ -247,6 +268,9 @@ const (
 `
 
 	ArrayPointerValidationCode = `func Validate() (err error) {
+	if target.RequiredArray == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("required_array", "target"))
+	}
 	if len(target.RequiredArray) < 5 {
 		err = goa.MergeErrors(err, goa.InvalidLengthError("target.required_array", target.RequiredArray, len(target.RequiredArray), 5, true))
 	}
@@ -262,6 +286,9 @@ const (
 `
 
 	ArrayUseDefaultValidationCode = `func Validate() (err error) {
+	if target.RequiredArray == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("required_array", "target"))
+	}
 	if len(target.RequiredArray) < 5 {
 		err = goa.MergeErrors(err, goa.InvalidLengthError("target.required_array", target.RequiredArray, len(target.RequiredArray), 5, true))
 	}
@@ -277,6 +304,9 @@ const (
 `
 
 	MapRequiredValidationCode = `func Validate() (err error) {
+	if target.RequiredMap == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("required_map", "target"))
+	}
 	if len(target.RequiredMap) < 5 {
 		err = goa.MergeErrors(err, goa.InvalidLengthError("target.required_map", target.RequiredMap, len(target.RequiredMap), 5, true))
 	}
@@ -293,6 +323,9 @@ const (
 `
 
 	MapPointerValidationCode = `func Validate() (err error) {
+	if target.RequiredMap == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("required_map", "target"))
+	}
 	if len(target.RequiredMap) < 5 {
 		err = goa.MergeErrors(err, goa.InvalidLengthError("target.required_map", target.RequiredMap, len(target.RequiredMap), 5, true))
 	}
@@ -309,6 +342,9 @@ const (
 `
 
 	MapUseDefaultValidationCode = `func Validate() (err error) {
+	if target.RequiredMap == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("required_map", "target"))
+	}
 	if len(target.RequiredMap) < 5 {
 		err = goa.MergeErrors(err, goa.InvalidLengthError("target.required_map", target.RequiredMap, len(target.RequiredMap), 5, true))
 	}

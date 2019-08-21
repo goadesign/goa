@@ -153,29 +153,30 @@ func SnakeCase(name string) string {
 		name = strings.Replace(name, u, l, -1)
 	}
 	var b bytes.Buffer
-	var lastUnderscore bool
 	ln := len(name)
 	if ln == 0 {
 		return ""
 	}
-	b.WriteRune(unicode.ToLower(rune(name[0])))
+	n := rune(name[0])
+	b.WriteRune(unicode.ToLower(n))
+	lastLower, isLower, lastUnder, isUnder := false, true, false, false
 	for i := 1; i < ln; i++ {
 		r := rune(name[i])
-		nextIsLower := false
-		if i < ln-1 {
-			n := rune(name[i+1])
-			nextIsLower = unicode.IsLower(n) && unicode.IsLetter(n)
-		}
-		if unicode.IsUpper(r) {
-			if !lastUnderscore && nextIsLower {
+		isLower = unicode.IsLower(r) && unicode.IsLetter(r) || unicode.IsDigit(r)
+		isUnder = r == '_'
+		if !isLower && !isUnder {
+			if lastLower && !lastUnder {
 				b.WriteRune('_')
-				lastUnderscore = true
+			} else if ln > i+1 {
+				rn := rune(name[i+1])
+				if unicode.IsLower(rn) && rn != '_' && !lastUnder {
+					b.WriteRune('_')
+				}
 			}
-			b.WriteRune(unicode.ToLower(r))
-		} else {
-			b.WriteRune(r)
-			lastUnderscore = false
 		}
+		b.WriteRune(unicode.ToLower(r))
+		lastLower = isLower
+		lastUnder = isUnder
 	}
 	return b.String()
 }
