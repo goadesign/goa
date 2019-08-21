@@ -13,9 +13,9 @@ const (
 	// Minor version number
 	Minor = 0
 	// Build number
-	Build = 0
+	Build = 4
 	// Suffix - set to empty string in release tag commits.
-	Suffix = "wip"
+	Suffix = ""
 )
 
 var (
@@ -25,7 +25,11 @@ var (
 
 // Version returns the complete version number.
 func Version() string {
-	return fmt.Sprintf("v%d.%d.%d-%s", Major, Minor, Build, Suffix)
+	res := fmt.Sprintf("v%d.%d.%d", Major, Minor, Build)
+	if Suffix != "" {
+		res += "-" + Suffix
+	}
+	return res
 }
 
 // Compatible returns true if Major matches the major version of the given version string.
