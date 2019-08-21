@@ -183,6 +183,7 @@ func NewStreamingResultNoPayloadMethodHandler(
 		ctx := context.WithValue(r.Context(), goahttp.AcceptTypeKey, r.Header.Get("Accept"))
 		ctx = context.WithValue(ctx, goa.MethodKey, "StreamingResultNoPayloadMethod")
 		ctx = context.WithValue(ctx, goa.ServiceKey, "StreamingResultNoPayloadService")
+		var err error
 
 		var cancel context.CancelFunc
 		{
@@ -1130,6 +1131,7 @@ func NewStreamingPayloadNoPayloadMethodHandler(
 		ctx := context.WithValue(r.Context(), goahttp.AcceptTypeKey, r.Header.Get("Accept"))
 		ctx = context.WithValue(ctx, goa.MethodKey, "StreamingPayloadNoPayloadMethod")
 		ctx = context.WithValue(ctx, goa.ServiceKey, "StreamingPayloadNoPayloadService")
+		var err error
 
 		var cancel context.CancelFunc
 		{
@@ -2339,6 +2341,7 @@ func NewBidirectionalStreamingNoPayloadMethodHandler(
 		ctx := context.WithValue(r.Context(), goahttp.AcceptTypeKey, r.Header.Get("Accept"))
 		ctx = context.WithValue(ctx, goa.MethodKey, "BidirectionalStreamingNoPayloadMethod")
 		ctx = context.WithValue(ctx, goa.ServiceKey, "BidirectionalStreamingNoPayloadService")
+		var err error
 
 		var cancel context.CancelFunc
 		{
