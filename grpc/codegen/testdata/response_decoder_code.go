@@ -63,9 +63,9 @@ func DecodeMethodMessageArrayResponse(ctx context.Context, v interface{}, hdr, t
 const ResultPrimitiveResponseDecoderCode = `// DecodeMethodUnaryRPCNoPayloadResponse decodes responses from the
 // ServiceUnaryRPCNoPayload MethodUnaryRPCNoPayload endpoint.
 func DecodeMethodUnaryRPCNoPayloadResponse(ctx context.Context, v interface{}, hdr, trlr metadata.MD) (interface{}, error) {
-	message, ok := v.(*service_unaryrpc_no_payloadpb.MethodUnaryRPCNoPayloadResponse)
+	message, ok := v.(*service_unary_rpc_no_payloadpb.MethodUnaryRPCNoPayloadResponse)
 	if !ok {
-		return nil, goagrpc.ErrInvalidType("ServiceUnaryRPCNoPayload", "MethodUnaryRPCNoPayload", "*service_unaryrpc_no_payloadpb.MethodUnaryRPCNoPayloadResponse", v)
+		return nil, goagrpc.ErrInvalidType("ServiceUnaryRPCNoPayload", "MethodUnaryRPCNoPayload", "*service_unary_rpc_no_payloadpb.MethodUnaryRPCNoPayloadResponse", v)
 	}
 	res := NewMethodUnaryRPCNoPayloadResult(message)
 	return res, nil
@@ -198,7 +198,7 @@ const ServerStreamingResponseDecoderCode = `// DecodeMethodServerStreamingUserTy
 // ServiceServerStreamingUserTypeRPC MethodServerStreamingUserTypeRPC endpoint.
 func DecodeMethodServerStreamingUserTypeRPCResponse(ctx context.Context, v interface{}, hdr, trlr metadata.MD) (interface{}, error) {
 	return &MethodServerStreamingUserTypeRPCClientStream{
-		stream: v.(service_server_streaming_user_typerpcpb.ServiceServerStreamingUserTypeRPC_MethodServerStreamingUserTypeRPCClient),
+		stream: v.(service_server_streaming_user_type_rpcpb.ServiceServerStreamingUserTypeRPC_MethodServerStreamingUserTypeRPCClient),
 	}, nil
 }
 `
@@ -213,7 +213,7 @@ func DecodeMethodServerStreamingUserTypeRPCResponse(ctx context.Context, v inter
 		}
 	}
 	return &MethodServerStreamingUserTypeRPCClientStream{
-		stream: v.(service_server_streaming_user_typerpcpb.ServiceServerStreamingUserTypeRPC_MethodServerStreamingUserTypeRPCClient),
+		stream: v.(service_server_streaming_user_type_rpcpb.ServiceServerStreamingUserTypeRPC_MethodServerStreamingUserTypeRPCClient),
 		view:   view,
 	}, nil
 }
@@ -223,7 +223,7 @@ const ClientStreamingResponseDecoderCode = `// DecodeMethodClientStreamingRPCRes
 // ServiceClientStreamingRPC MethodClientStreamingRPC endpoint.
 func DecodeMethodClientStreamingRPCResponse(ctx context.Context, v interface{}, hdr, trlr metadata.MD) (interface{}, error) {
 	return &MethodClientStreamingRPCClientStream{
-		stream: v.(service_client_streamingrpcpb.ServiceClientStreamingRPC_MethodClientStreamingRPCClient),
+		stream: v.(service_client_streaming_rpcpb.ServiceClientStreamingRPC_MethodClientStreamingRPCClient),
 	}, nil
 }
 `
@@ -238,7 +238,7 @@ func DecodeMethodBidirectionalStreamingRPCResponse(ctx context.Context, v interf
 		}
 	}
 	return &MethodBidirectionalStreamingRPCClientStream{
-		stream: v.(service_bidirectional_streamingrpcpb.ServiceBidirectionalStreamingRPC_MethodBidirectionalStreamingRPCClient),
+		stream: v.(service_bidirectional_streaming_rpcpb.ServiceBidirectionalStreamingRPC_MethodBidirectionalStreamingRPCClient),
 		view:   view,
 	}, nil
 }
