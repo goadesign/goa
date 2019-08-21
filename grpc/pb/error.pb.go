@@ -4,11 +4,10 @@
 package goapb
 
 import (
-	fmt "fmt"
+	"fmt"
+	"math"
 
-	proto "github.com/golang/protobuf/proto"
-
-	math "math"
+	"github.com/golang/protobuf/proto"
 )
 
 // Reference imports to suppress errors if they are not otherwise used.
