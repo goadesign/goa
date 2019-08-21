@@ -18,6 +18,8 @@ func TestSnakeCase(t *testing.T) {
 		"sequential uppers 2":   {"aaAAAa", "aa_aa_aa"},
 		"end sequential uppers": {"aaAA", "aa_aa"},
 		"multiple_uppers":       {"aaAaaAaa", "aa_aaa_aaa"},
+		"dashes":                {"aa-Aaa-Aaa", "aa_aaa_aaa"},
+		"dashes 2":              {"aa-AAaaAA-Aaa", "aa_a_aaa_aa_aaa"},
 		"underscores":           {"aa_Aaa_Aaa", "aa_aaa_aaa"},
 		"underscores 2":         {"aa_AAaaAA_Aaa", "aa_a_aaa_aa_aaa"},
 		"numbers":               {"aa1", "aa1"},
@@ -54,6 +56,36 @@ func TestCamelCase(t *testing.T) {
 	for k, tc := range cases {
 		t.Run(k, func(t *testing.T) {
 			actual := CamelCase(tc.str, tc.firstUpper, tc.useAcronyum)
+			if actual != tc.expected {
+				t.Errorf("got %q, expected %q", actual, tc.expected)
+			}
+		})
+	}
+}
+
+func TestKebabCase(t *testing.T) {
+	cases := map[string]struct {
+		str      string
+		expected string
+	}{
+		"all lower":             {"aaa", "aaa"},
+		"start upper":           {"Aaa", "aaa"},
+		"start upper 2":         {"AAAaa", "aa-aaa"},
+		"mid upper":             {"aAa", "a-aa"},
+		"end upper":             {"aaA", "aa-a"},
+		"sequential uppers":     {"aaAAaa", "aa-a-aaa"},
+		"sequential uppers 2":   {"aaAAAa", "aa-aa-aa"},
+		"end sequential uppers": {"aaAA", "aa-aa"},
+		"multiple_uppers":       {"aaAaaAaa", "aa-aaa-aaa"},
+		"underscores":           {"aa_Aaa_Aaa", "aa-aaa-aaa"},
+		"underscores 2":         {"aa_AAaaAA_Aaa", "aa-a-aaa-aa-aaa"},
+		"dashes":                {"aa-Aaa-Aaa", "aa-aaa-aaa"},
+		"dashes 2":              {"aa-AAaaAA-Aaa", "aa-a-aaa-aa-aaa"},
+		"numbers":               {"aa1", "aa1"},
+	}
+	for k, tc := range cases {
+		t.Run(k, func(t *testing.T) {
+			actual := KebabCase(tc.str)
 			if actual != tc.expected {
 				t.Errorf("got %q, expected %q", actual, tc.expected)
 			}
