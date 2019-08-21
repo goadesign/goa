@@ -440,16 +440,16 @@ func (d ServicesData) analyze(gs *expr.GRPCServiceExpr) *ServiceData {
 	}
 	for _, e := range gs.GRPCEndpoints {
 		// convert request and response types to protocol buffer message types
-		e.Request = makeProtoBufMessage(e.Request, protoBufify(e.Name()+"Request", true), sd.Scope)
+		e.Request = makeProtoBufMessage(e.Request, protoBufify(e.Name()+"_request", true), sd.Scope)
 		if e.MethodExpr.StreamingPayload.Type != expr.Empty {
-			e.StreamingRequest = makeProtoBufMessage(e.StreamingRequest, protoBufify(e.Name()+"StreamingRequest", true), sd.Scope)
+			e.StreamingRequest = makeProtoBufMessage(e.StreamingRequest, protoBufify(e.Name()+"_streaming_request", true), sd.Scope)
 		}
-		e.Response.Message = makeProtoBufMessage(e.Response.Message, protoBufify(e.Name()+"Response", true), sd.Scope)
+		e.Response.Message = makeProtoBufMessage(e.Response.Message, protoBufify(e.Name()+"_response", true), sd.Scope)
 		for _, er := range e.GRPCErrors {
 			if er.ErrorExpr.Type == expr.ErrorResult || !expr.IsObject(er.ErrorExpr.Type) {
 				continue
 			}
-			er.Response.Message = makeProtoBufMessage(er.Response.Message, protoBufify(e.Name()+protoBufify(er.Name+"Error", true), true), sd.Scope)
+			er.Response.Message = makeProtoBufMessage(er.Response.Message, protoBufify(e.Name()+"_"+er.Name+"_error", true), sd.Scope)
 		}
 
 		// collect all the nested messages and return the top-level message

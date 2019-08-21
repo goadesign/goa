@@ -25,12 +25,12 @@ const PayloadArrayRequestDecoderCode = `// DecodeMethodUnaryRPCNoResultRequest d
 // "ServiceUnaryRPCNoResult" service "MethodUnaryRPCNoResult" endpoint.
 func DecodeMethodUnaryRPCNoResultRequest(ctx context.Context, v interface{}, md metadata.MD) (interface{}, error) {
 	var (
-		message *service_unaryrpc_no_resultpb.MethodUnaryRPCNoResultRequest
+		message *service_unary_rpc_no_resultpb.MethodUnaryRPCNoResultRequest
 		ok      bool
 	)
 	{
-		if message, ok = v.(*service_unaryrpc_no_resultpb.MethodUnaryRPCNoResultRequest); !ok {
-			return nil, goagrpc.ErrInvalidType("ServiceUnaryRPCNoResult", "MethodUnaryRPCNoResult", "*service_unaryrpc_no_resultpb.MethodUnaryRPCNoResultRequest", v)
+		if message, ok = v.(*service_unary_rpc_no_resultpb.MethodUnaryRPCNoResultRequest); !ok {
+			return nil, goagrpc.ErrInvalidType("ServiceUnaryRPCNoResult", "MethodUnaryRPCNoResult", "*service_unary_rpc_no_resultpb.MethodUnaryRPCNoResultRequest", v)
 		}
 		if err := ValidateMethodUnaryRPCNoResultRequest(message); err != nil {
 			return nil, err
@@ -71,12 +71,12 @@ const PayloadPrimitiveRequestDecoderCode = `// DecodeMethodServerStreamingRPCReq
 // "ServiceServerStreamingRPC" service "MethodServerStreamingRPC" endpoint.
 func DecodeMethodServerStreamingRPCRequest(ctx context.Context, v interface{}, md metadata.MD) (interface{}, error) {
 	var (
-		message *service_server_streamingrpcpb.MethodServerStreamingRPCRequest
+		message *service_server_streaming_rpcpb.MethodServerStreamingRPCRequest
 		ok      bool
 	)
 	{
-		if message, ok = v.(*service_server_streamingrpcpb.MethodServerStreamingRPCRequest); !ok {
-			return nil, goagrpc.ErrInvalidType("ServiceServerStreamingRPC", "MethodServerStreamingRPC", "*service_server_streamingrpcpb.MethodServerStreamingRPCRequest", v)
+		if message, ok = v.(*service_server_streaming_rpcpb.MethodServerStreamingRPCRequest); !ok {
+			return nil, goagrpc.ErrInvalidType("ServiceServerStreamingRPC", "MethodServerStreamingRPC", "*service_server_streaming_rpcpb.MethodServerStreamingRPCRequest", v)
 		}
 	}
 	var payload int
