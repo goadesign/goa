@@ -47,10 +47,19 @@ func init() {
 // func goaHandler() http.HandleFunc {
 // 	return nil
 // }
+// var mux Muxer
+
 func httpHandlerFunc(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "Hello, Wurld")
 }
-
+func httpHandlerWrite(w http.ResponseWriter, r *http.Request) {
+	// var (
+	mux := NewMuxer()
+	params := mux.Vars(r)
+	// )
+	// params := Muxer.Vars(r)
+	fmt.Fprintf(w, params["name"])
+}
 func httpHandlerFuncTest(w http.ResponseWriter, r *http.Request) {
 	io.WriteString(w, r.RequestURI)
 }

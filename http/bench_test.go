@@ -14,6 +14,14 @@ var (
 )
 var benchRe *regexp.Regexp
 
+const fiveColon = "/:a/:b/:c/:d/:e"
+const fiveBrace = "/{a}/{b}/{c}/{d}/{e}"
+const fiveRoute = "/test/test/test/test/test"
+
+const twentyColon = "/:a/:b/:c/:d/:e/:f/:g/:h/:i/:j/:k/:l/:m/:n/:o/:p/:q/:r/:s/:t"
+const twentyBrace = "/{a}/{b}/{c}/{d}/{e}/{f}/{g}/{h}/{i}/{j}/{k}/{l}/{m}/{n}/{o}/{p}/{q}/{r}/{s}/{t}"
+const twentyRoute = "/a/b/c/d/e/f/g/h/i/j/k/l/m/n/o/p/q/r/s/t"
+
 func isTested(name string) bool {
 	if benchRe == nil {
 		// Get -test.bench flag value (not accessible via flag package)
@@ -75,4 +83,23 @@ func BenchmarkGoa_Param(b *testing.B) {
 	goahttp = loadGoaSingle("GET", "/user/:name", httpHandlerFunc)
 	r, _ := http.NewRequest("GET", "/user/gordon", nil)
 	benchRequest(b, goahttp, r)
+}
+func BenchmarkGoa_Param5(b *testing.B) {
+	router := loadGoaSingle("GET", fiveColon, httpHandlerFunc)
+
+	r, _ := http.NewRequest("GET", fiveRoute, nil)
+	benchRequest(b, router, r)
+}
+func BenchmarkGoa_Param20(b *testing.B) {
+	router := loadGoaSingle("GET", twentyColon, httpHandlerFunc)
+
+	r, _ := http.NewRequest("GET", twentyRoute, nil)
+	benchRequest(b, router, r)
+}
+
+func BenchmarkGoa_ParamWrite(b *testing.B) {
+	router := loadGoaSingle("GET", "/user/:name", httpHandlerWrite)
+
+	r, _ := http.NewRequest("GET", "/user/gordon", nil)
+	benchRequest(b, router, r)
 }
