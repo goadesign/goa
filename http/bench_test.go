@@ -10,12 +10,17 @@ import (
 )
 
 var (
-	ginQuery   http.Handler
-	echoQuery  http.Handler
-	beegoQuery http.Handler
-	bmuxQuery  http.Handler
+	goahttp http.Handler
 )
 var benchRe *regexp.Regexp
+
+const fiveColon = "/:a/:b/:c/:d/:e"
+const fiveBrace = "/{a}/{b}/{c}/{d}/{e}"
+const fiveRoute = "/test/test/test/test/test"
+
+const twentyColon = "/:a/:b/:c/:d/:e/:f/:g/:h/:i/:j/:k/:l/:m/:n/:o/:p/:q/:r/:s/:t"
+const twentyBrace = "/{a}/{b}/{c}/{d}/{e}/{f}/{g}/{h}/{i}/{j}/{k}/{l}/{m}/{n}/{o}/{p}/{q}/{r}/{s}/{t}"
+const twentyRoute = "/a/b/c/d/e/f/g/h/i/j/k/l/m/n/o/p/q/r/s/t"
 
 func isTested(name string) bool {
 	if benchRe == nil {
@@ -59,7 +64,8 @@ func calcMem(name string, load func()) {
 	after := m.HeapAlloc
 	println("   "+name+":", after-before, "Bytes")
 }
-func benchRequest(b *testing.B, router Muxer, r *http.Request) {
+
+func benchRequest(b *testing.B, router http.Handler, r *http.Request) {
 	w := new(mockResponseWriter)
 	u := r.URL
 	rq := u.RawQuery
@@ -73,16 +79,27 @@ func benchRequest(b *testing.B, router Muxer, r *http.Request) {
 		router.ServeHTTP(w, r)
 	}
 }
-func BenchmarkGin_Query_Handler(b *testing.B) {
-	// f, ok := http.HandleFunc.(http.HandlerFunc)
-	// if !ok {
-	// 	f = func(w http.ResponseWriter, r *http.Request) {
-	// 		http.HandleFunc.ServeHTTP(w, r)
-	// 	}
-	// }
-	// mux.Handle("GET", "/add/{a}/{b}", f)
-	mux := NewMuxer()
-	// mux.Handle("GET", "/add/{a}/{b}", nil)
-	r, _ := http.NewRequest("GET", "/add/{a}/{b}", nil)
-	benchRequest(b, mux, r)
+func BenchmarkGoa_Param(b *testing.B) {
+	goahttp = loadGoaSingle("GET", "/user/:name", httpHandlerFunc)
+	r, _ := http.NewRequest("GET", "/user/gordon", nil)
+	benchRequest(b, goahttp, r)
+}
+func BenchmarkGoa_Param5(b *testing.B) {
+	router := loadGoaSingle("GET", fiveColon, httpHandlerFunc)
+
+	r, _ := http.NewRequest("GET", fiveRoute, nil)
+	benchRequest(b, router, r)
+}
+func BenchmarkGoa_Param20(b *testing.B) {
+	router := loadGoaSingle("GET", twentyColon, httpHandlerFunc)
+
+	r, _ := http.NewRequest("GET", twentyRoute, nil)
+	benchRequest(b, router, r)
+}
+
+func BenchmarkGoa_ParamWrite(b *testing.B) {
+	router := loadGoaSingle("GET", "/user/:name", httpHandlerWrite)
+
+	r, _ := http.NewRequest("GET", "/user/gordon", nil)
+	benchRequest(b, router, r)
 }
