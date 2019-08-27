@@ -6,6 +6,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"runtime"
 )
 
 type route struct {
@@ -30,6 +31,18 @@ func (m *mockResponseWriter) WriteString(s string) (n int, err error) {
 	return len(s), nil
 }
 func (m *mockResponseWriter) WriteHeader(int) {}
+func init() {
+
+	runtime.GOMAXPROCS(1)
+
+	// makes logging 'webscale' (ignores them)
+	log.SetOutput(new(mockResponseWriter))
+	nullLogger = log.New(new(mockResponseWriter), "", 0)
+
+	// initBeego()
+	// initGin()
+	// initRevel()
+}
 
 // func goaHandler() http.HandleFunc {
 // 	return nil

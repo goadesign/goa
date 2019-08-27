@@ -59,6 +59,9 @@ func calcMem(name string, load func()) {
 	after := m.HeapAlloc
 	println("   "+name+":", after-before, "Bytes")
 }
+func init() {
+
+}
 func benchRequest(b *testing.B, router Muxer, r *http.Request) {
 	w := new(mockResponseWriter)
 	u := r.URL
@@ -73,7 +76,7 @@ func benchRequest(b *testing.B, router Muxer, r *http.Request) {
 		router.ServeHTTP(w, r)
 	}
 }
-func BenchmarkGin_Query_Handler(b *testing.B) {
+func BenchmarkGoa_Param(b *testing.B) {
 	// f, ok := http.HandleFunc.(http.HandlerFunc)
 	// if !ok {
 	// 	f = func(w http.ResponseWriter, r *http.Request) {
