@@ -10,10 +10,7 @@ import (
 )
 
 var (
-	ginQuery   http.Handler
-	echoQuery  http.Handler
-	beegoQuery http.Handler
-	bmuxQuery  http.Handler
+	goahttp http.Handler
 )
 var benchRe *regexp.Regexp
 
@@ -59,10 +56,8 @@ func calcMem(name string, load func()) {
 	after := m.HeapAlloc
 	println("   "+name+":", after-before, "Bytes")
 }
-func init() {
 
-}
-func benchRequest(b *testing.B, router Muxer, r *http.Request) {
+func benchRequest(b *testing.B, router http.Handler, r *http.Request) {
 	w := new(mockResponseWriter)
 	u := r.URL
 	rq := u.RawQuery
@@ -77,15 +72,7 @@ func benchRequest(b *testing.B, router Muxer, r *http.Request) {
 	}
 }
 func BenchmarkGoa_Param(b *testing.B) {
-	// f, ok := http.HandleFunc.(http.HandlerFunc)
-	// if !ok {
-	// 	f = func(w http.ResponseWriter, r *http.Request) {
-	// 		http.HandleFunc.ServeHTTP(w, r)
-	// 	}
-	// }
-	// mux.Handle("GET", "/add/{a}/{b}", f)
-	mux := NewMuxer()
-	// mux.Handle("GET", "/add/{a}/{b}", nil)
-	r, _ := http.NewRequest("GET", "/add/{a}/{b}", nil)
-	benchRequest(b, mux, r)
+	goahttp = loadGoaSingle("GET", "/user/:name", httpHandlerFunc)
+	r, _ := http.NewRequest("GET", "/user/gordon", nil)
+	benchRequest(b, goahttp, r)
 }
