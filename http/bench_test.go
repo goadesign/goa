@@ -79,6 +79,25 @@ func benchRequest(b *testing.B, router http.Handler, r *http.Request) {
 		router.ServeHTTP(w, r)
 	}
 }
+func benchRoutes(b *testing.B, router http.Handler, routes []route) {
+	w := new(mockResponseWriter)
+	r, _ := http.NewRequest("GET", "/", nil)
+	u := r.URL
+	rq := u.RawQuery
+
+	b.ReportAllocs()
+	b.ResetTimer()
+
+	for i := 0; i < b.N; i++ {
+		for _, route := range routes {
+			r.Method = route.method
+			r.RequestURI = route.path
+			u.Path = route.path
+			u.RawQuery = rq
+			router.ServeHTTP(w, r)
+		}
+	}
+}
 func BenchmarkGoa_Param(b *testing.B) {
 	goahttp = loadGoaSingle("GET", "/user/:name", httpHandlerFunc)
 	r, _ := http.NewRequest("GET", "/user/gordon", nil)

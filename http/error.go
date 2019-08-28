@@ -3,7 +3,7 @@ package http
 import (
 	"net/http"
 
-	goa "goa.design/goa/v3/pkg"
+	goa "github.com/dtmkeng/golang-framework-example/calc/benchmark_test/goa/pkg"
 )
 
 type (

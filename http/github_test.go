@@ -279,14 +279,14 @@ func init() {
 }
 
 // Gin
-func BenchmarkGin_GithubStatic(b *testing.B) {
+func BenchmarkGoa_GithubStatic(b *testing.B) {
 	req, _ := http.NewRequest("GET", "/user/repos", nil)
 	benchRequest(b, githubGoa, req)
 }
-func BenchmarkGin_GithubParam(b *testing.B) {
+func BenchmarkGoa_GithubParam(b *testing.B) {
 	req, _ := http.NewRequest("GET", "/repos/julienschmidt/httprouter/stargazers", nil)
 	benchRequest(b, githubGoa, req)
 }
-func BenchmarkGin_GithubAll(b *testing.B) {
+func BenchmarkGoa_GithubAll(b *testing.B) {
 	benchRoutes(b, githubGoa, githubAPI)
 }
