@@ -7,8 +7,10 @@ require (
 	github.com/dimfeld/httptreemux v5.0.1+incompatible
 	github.com/go-openapi/loads v0.19.2
 	github.com/go-openapi/swag v0.19.5
+	github.com/goadesign/goa v2.0.4+incompatible // indirect
 	github.com/golang/protobuf v1.3.1
 	github.com/google/gxui v0.0.0-20151028112939-f85e0a97b3a4 // indirect
+	github.com/gorilla/mux v1.7.3
 	github.com/gorilla/websocket v1.4.0
 	github.com/manveru/faker v0.0.0-20171103152722-9fbc68a78c4d
 	github.com/manveru/gobdd v0.0.0-20131210092515-f1a17fdd710b // indirect
