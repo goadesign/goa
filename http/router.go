@@ -50,7 +50,6 @@ func init() {
 // var mux Muxer
 
 func httpHandlerFunc(w http.ResponseWriter, r *http.Request) {
-	fmt.Fprintf(w, "Hello, Wurld")
 }
 func httpHandlerWrite(w http.ResponseWriter, r *http.Request) {
 	// var (
