@@ -499,6 +499,9 @@ func responseSpecFromExpr(s *V2, root *expr.RootExpr, r *expr.HTTPResponseExpr, 
 	} else if r.Body.Type != expr.Empty {
 		schema = AttributeTypeSchemaWithPrefix(root.API, r.Body, typeNamePrefix)
 	}
+	if schema != nil {
+		schema.Extensions = ExtensionsFromExpr(r.Meta)
+	}
 	headers := headersFromExpr(r.Headers)
 	desc := r.Description
 	if desc == "" {

@@ -40,8 +40,9 @@ definitions:
     type: object
     properties:
       string:
-        type: string
         example: ""
+        type: string
+        x-test-schema: Payload
     example:
       string: ""
   TestServiceTestEndpointResponseBody:
@@ -49,8 +50,9 @@ definitions:
     type: object
     properties:
       string:
-        type: string
         example: ""
+        type: string
+        x-test-schema: Result
     example:
       string: ""
 tags:

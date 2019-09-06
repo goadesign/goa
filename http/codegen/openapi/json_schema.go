@@ -48,6 +48,9 @@ type (
 
 		// Union
 		AnyOf []*Schema `json:"anyOf,omitempty" yaml:"anyOf,omitempty"`
+
+		// Extensions defines the swagger extensions.
+		Extensions map[string]interface{} `json:"-" yaml:"-"`
 	}
 
 	// Type is the JSON type enum.
@@ -71,6 +74,9 @@ type (
 		ResultType   string  `json:"mediaType,omitempty" yaml:"mediaType,omitempty"`
 		EncType      string  `json:"encType,omitempty" yaml:"encType,omitempty"`
 	}
+
+	// These types are used in marshalJSON() to avoid recursive call of json.Marshal().
+	_Schema Schema
 )
 
 const (
@@ -451,6 +457,7 @@ func buildAttributeSchema(api *expr.APIExpr, s *Schema, at *expr.AttributeExpr) 
 	s.DefaultValue = toStringMap(at.DefaultValue)
 	s.Description = at.Description
 	s.Example = at.Example(api.Random())
+	s.Extensions = ExtensionsFromExpr(at.Meta)
 	initAttributeValidation(s, at)
 
 	return s
@@ -579,4 +586,14 @@ func buildResultTypeSchema(api *expr.APIExpr, mt *expr.ResultTypeExpr, view stri
 		panic(fmt.Sprintf("failed to project media type %#v: %s", mt.Identifier, err)) // bug
 	}
 	buildAttributeSchema(api, s, projected.AttributeExpr)
+}
+
+// MarshalJSON returns the JSON encoding of s.
+func (s *Schema) MarshalJSON() ([]byte, error) {
+	return marshalJSON((*_Schema)(s), s.Extensions)
+}
+
+// MarshalYAML returns value which marshaled in place of the original value
+func (s *Schema) MarshalYAML() (interface{}, error) {
+	return marshalYAML((*_Schema)(s), s.Extensions)
 }
