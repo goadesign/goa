@@ -106,25 +106,34 @@ func NewV2(root *expr.RootExpr, h *expr.HostExpr) (*V2, error) {
 // ExtensionsFromExpr generates swagger extensions from the given meta
 // expression.
 func ExtensionsFromExpr(mdata expr.MetaExpr) map[string]interface{} {
+	return extensionsFromExprWithPrefix(mdata, "swagger:extension:")
+}
+
+// extensionsFromExprWithPrefix generates swagger extensions from
+// the given meta expression with keys starting the given prefix.
+func extensionsFromExprWithPrefix(mdata expr.MetaExpr, prefix string) map[string]interface{} {
+	if !strings.HasSuffix(prefix, ":") {
+		prefix += ":"
+	}
 	extensions := make(map[string]interface{})
 	for key, value := range mdata {
-		chunks := strings.Split(key, ":")
-		if len(chunks) != 3 {
+		if !strings.HasPrefix(key, prefix) {
 			continue
 		}
-		if chunks[0] != "swagger" || chunks[1] != "extension" {
+		name := key[len(prefix):]
+		if strings.Contains(name, ":") {
 			continue
 		}
-		if !strings.HasPrefix(chunks[2], "x-") {
+		if !strings.HasPrefix(name, "x-") {
 			continue
 		}
 		val := value[0]
 		ival := interface{}(val)
 		if err := json.Unmarshal([]byte(val), &ival); err != nil {
-			extensions[chunks[2]] = val
+			extensions[name] = val
 			continue
 		}
-		extensions[chunks[2]] = ival
+		extensions[name] = ival
 	}
 	if len(extensions) == 0 {
 		return nil
@@ -324,6 +333,9 @@ func tagsFromExpr(mdata expr.MetaExpr) (tags []*Tag) {
 		if hasDocs {
 			tag.ExternalDocs = docs
 		}
+
+		extensionsPrefix := fmt.Sprintf("%s:extension:", key)
+		tag.Extensions = extensionsFromExprWithPrefix(mdata, extensionsPrefix)
 
 		tags = append(tags, tag)
 	}
