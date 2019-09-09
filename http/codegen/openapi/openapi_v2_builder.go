@@ -325,6 +325,9 @@ func tagsFromExpr(mdata expr.MetaExpr) (tags []*Tag) {
 			tag.ExternalDocs = docs
 		}
 
+		// FIXME: vendor extensions must be able to be specified for each tags
+		// like Meta("swagger:tag:foo:extension:x-bar", "baz") .
+		// Currently, API level extensions are mixed.
 		tag.Extensions = ExtensionsFromExpr(mdata)
 
 		tags = append(tags, tag)
