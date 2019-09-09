@@ -25,3 +25,9 @@ paths:
       tags:
       - testService
     x-test-foo: bar
+tags:
+- description: Description of Backend
+  externalDocs:
+    description: See more docs here
+    url: http://example.com
+  name: Backend

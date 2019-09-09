@@ -274,6 +274,10 @@ var ExtensionDSL = func() {
 			})
 		})
 		Meta("swagger:extension:x-test-api", "API")
+		Meta("swagger:tag:Backend")
+		Meta("swagger:tag:Backend:desc", "Description of Backend")
+		Meta("swagger:tag:Backend:url", "http://example.com")
+		Meta("swagger:tag:Backend:url:desc", "See more docs here")
 	})
 	Service("testService", func() {
 		Method("testEndpoint", func() {
