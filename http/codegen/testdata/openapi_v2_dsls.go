@@ -273,6 +273,7 @@ var ExtensionDSL = func() {
 				URI("https://goa.design")
 			})
 		})
+		Meta("swagger:extension:x-test-api", "API")
 	})
 	Service("testService", func() {
 		Method("testEndpoint", func() {
