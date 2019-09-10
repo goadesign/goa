@@ -33,11 +33,11 @@ func Generate(dir, cmd string) ([]string, error) {
 		if err := os.MkdirAll(path, 0777); err != nil {
 			return nil, err
 		}
-		pkgs, err := packages.Load(nil, path)
+		pkgs, err := packages.Load(&packages.Config{Mode: packages.NeedName}, base)
 		if err != nil {
 			return nil, err
 		}
-		genpkg = pkgs[0].PkgPath
+		genpkg = pkgs[0].PkgPath + "/" + codegen.Gendir
 	}
 
 	// 3. Retrieve goa generators for given command.
