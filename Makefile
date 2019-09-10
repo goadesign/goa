@@ -28,7 +28,6 @@ endif
 DEPEND=\
 	golang.org/x/lint/golint \
 	golang.org/x/tools/cmd/goimports \
-	github.com/hashicorp/go-getter \
 	github.com/golang/protobuf/protoc-gen-go \
 	github.com/golang/protobuf/proto \
 	honnef.co/go/tools/cmd/staticcheck
@@ -55,12 +54,11 @@ PROTOC_EXEC="$(PROTOC)\bin\protoc.exe"
 endif
 depend:
 	@go get -v $(DEPEND)
-	@go install github.com/hashicorp/go-getter/cmd/go-getter && \
+	@env GO111MODULE=off go get github.com/hashicorp/go-getter/cmd/go-getter && \
 		go-getter https://github.com/google/protobuf/releases/download/v$(PROTOC_VERSION)/$(PROTOC).zip $(PROTOC) && \
 		cp $(PROTOC_EXEC) $(GOBIN) && \
 		rm -r $(PROTOC) && \
 		echo "`protoc --version`"
-	@go install github.com/golang/protobuf/protoc-gen-go
 	@go get -t -v ./...
 
 lint:
