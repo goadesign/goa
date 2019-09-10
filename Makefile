@@ -28,15 +28,13 @@ endif
 DEPEND=\
 	golang.org/x/lint/golint \
 	golang.org/x/tools/cmd/goimports \
-	github.com/cheggaaa/pb \
-	github.com/hashicorp/go-getter \
 	github.com/golang/protobuf/protoc-gen-go \
 	github.com/golang/protobuf/proto \
 	honnef.co/go/tools/cmd/staticcheck
 
 all: lint test
 
-travis: depend all test-examples test-plugins
+travis: depend all #test-examples test-plugins
 
 # Install protoc
 PROTOC_VERSION=3.6.1
@@ -56,12 +54,11 @@ PROTOC_EXEC="$(PROTOC)\bin\protoc.exe"
 endif
 depend:
 	@go get -v $(DEPEND)
-	@go install github.com/hashicorp/go-getter/cmd/go-getter && \
+	@env GO111MODULE=off go get github.com/hashicorp/go-getter/cmd/go-getter && \
 		go-getter https://github.com/google/protobuf/releases/download/v$(PROTOC_VERSION)/$(PROTOC).zip $(PROTOC) && \
 		cp $(PROTOC_EXEC) $(GOBIN) && \
 		rm -r $(PROTOC) && \
 		echo "`protoc --version`"
-	@go install github.com/golang/protobuf/protoc-gen-go
 	@go get -t -v ./...
 
 lint:
@@ -87,7 +84,7 @@ test-examples:
 	fi
 	@cd $(EXAMPLES_DIR) && git checkout $(GOA_BRANCH) || echo "Using master branch in examples repo" && \
 	make -k travis || (echo "Tests in examples repo (https://github.com/goadesign/examples) failed" \
-                  "due to changes in goa repo (branch: $(GOA_BRANCH))!" \
+                  "due to changes in Goa repo (branch: $(GOA_BRANCH))!" \
                   "Create a branch with name '$(GOA_BRANCH)' in the examples repo and fix these errors." && exit 1)
 
 test-plugins:
