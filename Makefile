@@ -28,7 +28,6 @@ endif
 DEPEND=\
 	golang.org/x/lint/golint \
 	golang.org/x/tools/cmd/goimports \
-	github.com/cheggaaa/pb \
 	github.com/hashicorp/go-getter \
 	github.com/golang/protobuf/protoc-gen-go \
 	github.com/golang/protobuf/proto \
