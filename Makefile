@@ -34,7 +34,7 @@ DEPEND=\
 
 all: lint test
 
-travis: depend all #test-examples test-plugins
+travis: depend all test-examples test-plugins
 
 # Install protoc
 PROTOC_VERSION=3.6.1
