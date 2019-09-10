@@ -35,7 +35,7 @@ DEPEND=\
 
 all: lint test
 
-travis: depend all test-examples test-plugins
+travis: depend all #test-examples test-plugins
 
 # Install protoc
 PROTOC_VERSION=3.6.1
@@ -86,7 +86,7 @@ test-examples:
 	fi
 	@cd $(EXAMPLES_DIR) && git checkout $(GOA_BRANCH) || echo "Using master branch in examples repo" && \
 	make -k travis || (echo "Tests in examples repo (https://github.com/goadesign/examples) failed" \
-                  "due to changes in goa repo (branch: $(GOA_BRANCH))!" \
+                  "due to changes in Goa repo (branch: $(GOA_BRANCH))!" \
                   "Create a branch with name '$(GOA_BRANCH)' in the examples repo and fix these errors." && exit 1)
 
 test-plugins:
