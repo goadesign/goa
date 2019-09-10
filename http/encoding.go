@@ -294,7 +294,7 @@ func (e *textDecoder) Decode(v interface{}) error {
 	case *string:
 		*c = string(b)
 	case *[]byte:
-		*c = []byte(string(b))
+		*c = b
 	default:
 		err = fmt.Errorf("can't decode %s to %T", e.ct, c)
 	}
