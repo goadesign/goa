@@ -38,7 +38,7 @@ func Generate(dir, cmd string) ([]string, error) {
 		// We create a temporary Go file to make sure the directory is a valid Go package
 		dummy, err := ioutil.TempFile(path, "temp.*.go")
 		if err != nil {
-		    return nil, err
+			return nil, err
 		}
 		defer os.Remove(dummy.Name())
 		err = ioutil.WriteFile(dummy.Name(), []byte("package gen"), 0644)

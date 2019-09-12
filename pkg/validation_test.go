@@ -45,13 +45,13 @@ func TestValidateFormat(t *testing.T) {
 		format   Format
 		expected error
 	}{
-		"valid date":         {"validDate", validDate, FormatDate, nil},
-		"invalid date":       {"invalidDate", invalidDate, FormatDate, InvalidFormatError("invalidDate", invalidDate, FormatDate, &time.ParseError{Layout: "2006-01-02", Value: invalidDate, LayoutElem: "-", ValueElem: invalidDate[4:]})},
-		"valid date-time":    {"validDateTime", validDateTime, FormatDateTime, nil},
-		"invalid date-time":  {"invalidDateTime", invalidDateTime, FormatDateTime, InvalidFormatError("invalidDateTime", invalidDateTime, FormatDateTime, &time.ParseError{Layout: time.RFC3339, Value: invalidDateTime, LayoutElem: "-", ValueElem: invalidDateTime[4:]})},
-		"valid uuid":         {"validUUID", validUUID, FormatUUID, nil},
-		"invalid uuid":       {"invalidUUID", invalidUUID, FormatUUID, InvalidFormatError("invalidUUID", invalidUUID, FormatUUID, fmt.Errorf("uuid: UUID string too short: %s", invalidUUID))},
-		"valid email":        {"validEmail", validEmail, FormatEmail, nil},
+		"valid date":        {"validDate", validDate, FormatDate, nil},
+		"invalid date":      {"invalidDate", invalidDate, FormatDate, InvalidFormatError("invalidDate", invalidDate, FormatDate, &time.ParseError{Layout: "2006-01-02", Value: invalidDate, LayoutElem: "-", ValueElem: invalidDate[4:]})},
+		"valid date-time":   {"validDateTime", validDateTime, FormatDateTime, nil},
+		"invalid date-time": {"invalidDateTime", invalidDateTime, FormatDateTime, InvalidFormatError("invalidDateTime", invalidDateTime, FormatDateTime, &time.ParseError{Layout: time.RFC3339, Value: invalidDateTime, LayoutElem: "-", ValueElem: invalidDateTime[4:]})},
+		"valid uuid":        {"validUUID", validUUID, FormatUUID, nil},
+		"invalid uuid":      {"invalidUUID", invalidUUID, FormatUUID, InvalidFormatError("invalidUUID", invalidUUID, FormatUUID, fmt.Errorf("uuid: UUID string too short: %s", invalidUUID))},
+		"valid email":       {"validEmail", validEmail, FormatEmail, nil},
 
 		// Re-enable once CircleCI uses Go 1.13
 		// "invalid email":      {"invalidEmail", invalidEmail, FormatEmail, InvalidFormatError("invalidEmail", invalidEmail, FormatEmail, errors.New("mail: missing '@' or angle-addr"))},
