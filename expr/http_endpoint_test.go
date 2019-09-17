@@ -60,6 +60,12 @@ func TestHTTPEndpointValidation(t *testing.T) {
 		"endpoint-missing-token-extend": {
 			DSL: testdata.EndpointExtendToken,
 		},
+		"endpoint-has-parent": {
+			DSL: testdata.EndpointHasParent,
+			Errors: []string{
+				"route GET \"/{child_id}\" of service \"Child\" HTTP endpoint \"Method\": Route param \"parent_id\" not found in method payload\nservice \"Child\" HTTP endpoint \"Method\": Path parameter \"parent_id\" not found in payload.",
+			},
+		},
 	}
 	for name, c := range cases {
 		t.Run(name, func(t *testing.T) {
