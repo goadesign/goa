@@ -132,7 +132,7 @@ const (
 						}
 					}
 					if !{{ .VarName }}Seen {
-						fmt.Fprintf(os.Stderr, "invalid value for URL '{{ .Name }}' variable: %q (valid values: {{ join .Values "," }})", *{{ .VarName }}F)
+						fmt.Fprintf(os.Stderr, "invalid value for URL '{{ .Name }}' variable: %q (valid values: {{ join .Values "," }})\n", *{{ .VarName }}F)
 						os.Exit(1)
 					}
 				{{- end }}
@@ -140,7 +140,7 @@ const (
 			{{- end }}
 		{{- end }}
 			default:
-				fmt.Fprintf(os.Stderr, "invalid host argument: %q (valid hosts: {{ join .Server.AvailableHosts "|" }})", *hostF)
+				fmt.Fprintf(os.Stderr, "invalid host argument: %q (valid hosts: {{ join .Server.AvailableHosts "|" }})\n", *hostF)
 				os.Exit(1)
 			}
 		}
@@ -155,7 +155,7 @@ const (
 	{
 		u, err := url.Parse(addr)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "invalid URL %#v: %s", addr, err)
+			fmt.Fprintf(os.Stderr, "invalid URL %#v: %s\n", addr, err)
 			os.Exit(1)
 		}
 		scheme = u.Scheme
@@ -176,7 +176,7 @@ const (
 			endpoint, payload, err = do{{ toUpper $t.Name }}(scheme, host, timeout, debug)
 	{{- end }}
 		default:
-			fmt.Fprintf(os.Stderr, "invalid scheme: %q (valid schemes: {{ join .Server.Schemes "|" }})", scheme)
+			fmt.Fprintf(os.Stderr, "invalid scheme: %q (valid schemes: {{ join .Server.Schemes "|" }})\n", scheme)
 			os.Exit(1)
 		}
 	}
