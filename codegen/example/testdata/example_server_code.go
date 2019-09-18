@@ -61,7 +61,7 @@ const (
 			addr := "http://localhost:80"
 			u, err := url.Parse(addr)
 			if err != nil {
-				fmt.Fprintf(os.Stderr, "invalid URL %#v: %s", addr, err)
+				fmt.Fprintf(os.Stderr, "invalid URL %#v: %s\n", addr, err)
 				os.Exit(1)
 			}
 			if *secureF {
@@ -83,7 +83,7 @@ const (
 			addr := "grpc://localhost:8080"
 			u, err := url.Parse(addr)
 			if err != nil {
-				fmt.Fprintf(os.Stderr, "invalid URL %#v: %s", addr, err)
+				fmt.Fprintf(os.Stderr, "invalid URL %#v: %s\n", addr, err)
 				os.Exit(1)
 			}
 			if *secureF {
@@ -102,7 +102,7 @@ const (
 		}
 
 	default:
-		fmt.Fprintf(os.Stderr, "invalid host argument: %q (valid hosts: localhost)", *hostF)
+		fmt.Fprintf(os.Stderr, "invalid host argument: %q (valid hosts: localhost)\n", *hostF)
 	}
 
 	// Wait for signal.
@@ -176,7 +176,7 @@ const (
 			addr := "http://localhost:80"
 			u, err := url.Parse(addr)
 			if err != nil {
-				fmt.Fprintf(os.Stderr, "invalid URL %#v: %s", addr, err)
+				fmt.Fprintf(os.Stderr, "invalid URL %#v: %s\n", addr, err)
 				os.Exit(1)
 			}
 			if *secureF {
@@ -198,7 +198,7 @@ const (
 			addr := "grpc://localhost:8080"
 			u, err := url.Parse(addr)
 			if err != nil {
-				fmt.Fprintf(os.Stderr, "invalid URL %#v: %s", addr, err)
+				fmt.Fprintf(os.Stderr, "invalid URL %#v: %s\n", addr, err)
 				os.Exit(1)
 			}
 			if *secureF {
@@ -217,7 +217,7 @@ const (
 		}
 
 	default:
-		fmt.Fprintf(os.Stderr, "invalid host argument: %q (valid hosts: localhost)", *hostF)
+		fmt.Fprintf(os.Stderr, "invalid host argument: %q (valid hosts: localhost)\n", *hostF)
 	}
 
 	// Wait for signal.
@@ -291,7 +291,7 @@ const (
 			addr := "http://example:8090"
 			u, err := url.Parse(addr)
 			if err != nil {
-				fmt.Fprintf(os.Stderr, "invalid URL %#v: %s", addr, err)
+				fmt.Fprintf(os.Stderr, "invalid URL %#v: %s\n", addr, err)
 				os.Exit(1)
 			}
 			if *secureF {
@@ -313,7 +313,7 @@ const (
 			addr := "https://example:80"
 			u, err := url.Parse(addr)
 			if err != nil {
-				fmt.Fprintf(os.Stderr, "invalid URL %#v: %s", addr, err)
+				fmt.Fprintf(os.Stderr, "invalid URL %#v: %s\n", addr, err)
 				os.Exit(1)
 			}
 			if *secureF {
@@ -335,7 +335,7 @@ const (
 			addr := "grpc://example:8080"
 			u, err := url.Parse(addr)
 			if err != nil {
-				fmt.Fprintf(os.Stderr, "invalid URL %#v: %s", addr, err)
+				fmt.Fprintf(os.Stderr, "invalid URL %#v: %s\n", addr, err)
 				os.Exit(1)
 			}
 			if *secureF {
@@ -354,7 +354,7 @@ const (
 		}
 
 	default:
-		fmt.Fprintf(os.Stderr, "invalid host argument: %q (valid hosts: dev)", *hostF)
+		fmt.Fprintf(os.Stderr, "invalid host argument: %q (valid hosts: dev)\n", *hostF)
 	}
 
 	// Wait for signal.
@@ -445,7 +445,7 @@ const (
 			addr = strings.Replace(addr, "{bool}", *bool_F, -1)
 			u, err := url.Parse(addr)
 			if err != nil {
-				fmt.Fprintf(os.Stderr, "invalid URL %#v: %s", addr, err)
+				fmt.Fprintf(os.Stderr, "invalid URL %#v: %s\n", addr, err)
 				os.Exit(1)
 			}
 			if *secureF {
@@ -476,7 +476,7 @@ const (
 			addr = strings.Replace(addr, "{bool}", *bool_F, -1)
 			u, err := url.Parse(addr)
 			if err != nil {
-				fmt.Fprintf(os.Stderr, "invalid URL %#v: %s", addr, err)
+				fmt.Fprintf(os.Stderr, "invalid URL %#v: %s\n", addr, err)
 				os.Exit(1)
 			}
 			if *secureF {
@@ -495,7 +495,7 @@ const (
 		}
 
 	default:
-		fmt.Fprintf(os.Stderr, "invalid host argument: %q (valid hosts: dev)", *hostF)
+		fmt.Fprintf(os.Stderr, "invalid host argument: %q (valid hosts: dev)\n", *hostF)
 	}
 
 	// Wait for signal.
@@ -551,7 +551,7 @@ const (
 			addr := "http://localhost:80"
 			u, err := url.Parse(addr)
 			if err != nil {
-				fmt.Fprintf(os.Stderr, "invalid URL %#v: %s", addr, err)
+				fmt.Fprintf(os.Stderr, "invalid URL %#v: %s\n", addr, err)
 				os.Exit(1)
 			}
 			if *secureF {
@@ -570,7 +570,7 @@ const (
 		}
 
 	default:
-		fmt.Fprintf(os.Stderr, "invalid host argument: %q (valid hosts: svc)", *hostF)
+		fmt.Fprintf(os.Stderr, "invalid host argument: %q (valid hosts: svc)\n", *hostF)
 	}
 
 	// Wait for signal.
@@ -644,7 +644,7 @@ const (
 			addr := "http://example:8090"
 			u, err := url.Parse(addr)
 			if err != nil {
-				fmt.Fprintf(os.Stderr, "invalid URL %#v: %s", addr, err)
+				fmt.Fprintf(os.Stderr, "invalid URL %#v: %s\n", addr, err)
 				os.Exit(1)
 			}
 			if *secureF {
@@ -666,7 +666,7 @@ const (
 			addr := "grpc://localhost:8080"
 			u, err := url.Parse(addr)
 			if err != nil {
-				fmt.Fprintf(os.Stderr, "invalid URL %#v: %s", addr, err)
+				fmt.Fprintf(os.Stderr, "invalid URL %#v: %s\n", addr, err)
 				os.Exit(1)
 			}
 			if *secureF {
@@ -685,7 +685,7 @@ const (
 		}
 
 	default:
-		fmt.Fprintf(os.Stderr, "invalid host argument: %q (valid hosts: dev)", *hostF)
+		fmt.Fprintf(os.Stderr, "invalid host argument: %q (valid hosts: dev)\n", *hostF)
 	}
 
 	// Wait for signal.
@@ -763,7 +763,7 @@ const (
 			addr := "http://example:8090"
 			u, err := url.Parse(addr)
 			if err != nil {
-				fmt.Fprintf(os.Stderr, "invalid URL %#v: %s", addr, err)
+				fmt.Fprintf(os.Stderr, "invalid URL %#v: %s\n", addr, err)
 				os.Exit(1)
 			}
 			if *secureF {
@@ -785,7 +785,7 @@ const (
 			addr := "grpc://localhost:8080"
 			u, err := url.Parse(addr)
 			if err != nil {
-				fmt.Fprintf(os.Stderr, "invalid URL %#v: %s", addr, err)
+				fmt.Fprintf(os.Stderr, "invalid URL %#v: %s\n", addr, err)
 				os.Exit(1)
 			}
 			if *secureF {
@@ -804,7 +804,7 @@ const (
 		}
 
 	default:
-		fmt.Fprintf(os.Stderr, "invalid host argument: %q (valid hosts: dev)", *hostF)
+		fmt.Fprintf(os.Stderr, "invalid host argument: %q (valid hosts: dev)\n", *hostF)
 	}
 
 	// Wait for signal.
@@ -877,7 +877,7 @@ const (
 			addr := "http://example:8090"
 			u, err := url.Parse(addr)
 			if err != nil {
-				fmt.Fprintf(os.Stderr, "invalid URL %#v: %s", addr, err)
+				fmt.Fprintf(os.Stderr, "invalid URL %#v: %s\n", addr, err)
 				os.Exit(1)
 			}
 			if *secureF {
@@ -900,7 +900,7 @@ const (
 			addr := "https://example"
 			u, err := url.Parse(addr)
 			if err != nil {
-				fmt.Fprintf(os.Stderr, "invalid URL %#v: %s", addr, err)
+				fmt.Fprintf(os.Stderr, "invalid URL %#v: %s\n", addr, err)
 				os.Exit(1)
 			}
 			if *secureF {
@@ -919,7 +919,7 @@ const (
 		}
 
 	default:
-		fmt.Fprintf(os.Stderr, "invalid host argument: %q (valid hosts: dev|stage)", *hostF)
+		fmt.Fprintf(os.Stderr, "invalid host argument: %q (valid hosts: dev|stage)\n", *hostF)
 	}
 
 	// Wait for signal.
@@ -1003,13 +1003,13 @@ const (
 				}
 			}
 			if !versionSeen {
-				fmt.Fprintf(os.Stderr, "invalid value for URL 'version' variable: %q (valid values: v1,v2)", *versionF)
+				fmt.Fprintf(os.Stderr, "invalid value for URL 'version' variable: %q (valid values: v1,v2)\n", *versionF)
 				os.Exit(1)
 			}
 			addr = strings.Replace(addr, "{version}", *versionF, -1)
 			u, err := url.Parse(addr)
 			if err != nil {
-				fmt.Fprintf(os.Stderr, "invalid URL %#v: %s", addr, err)
+				fmt.Fprintf(os.Stderr, "invalid URL %#v: %s\n", addr, err)
 				os.Exit(1)
 			}
 			if *secureF {
@@ -1034,7 +1034,7 @@ const (
 			addr = strings.Replace(addr, "{port}", *portF, -1)
 			u, err := url.Parse(addr)
 			if err != nil {
-				fmt.Fprintf(os.Stderr, "invalid URL %#v: %s", addr, err)
+				fmt.Fprintf(os.Stderr, "invalid URL %#v: %s\n", addr, err)
 				os.Exit(1)
 			}
 			if *secureF {
@@ -1053,7 +1053,7 @@ const (
 		}
 
 	default:
-		fmt.Fprintf(os.Stderr, "invalid host argument: %q (valid hosts: dev|stage)", *hostF)
+		fmt.Fprintf(os.Stderr, "invalid host argument: %q (valid hosts: dev|stage)\n", *hostF)
 	}
 
 	// Wait for signal.
@@ -1126,7 +1126,7 @@ const (
 			addr := "http://localhost:80"
 			u, err := url.Parse(addr)
 			if err != nil {
-				fmt.Fprintf(os.Stderr, "invalid URL %#v: %s", addr, err)
+				fmt.Fprintf(os.Stderr, "invalid URL %#v: %s\n", addr, err)
 				os.Exit(1)
 			}
 			if *secureF {
@@ -1148,7 +1148,7 @@ const (
 			addr := "grpc://localhost:8080"
 			u, err := url.Parse(addr)
 			if err != nil {
-				fmt.Fprintf(os.Stderr, "invalid URL %#v: %s", addr, err)
+				fmt.Fprintf(os.Stderr, "invalid URL %#v: %s\n", addr, err)
 				os.Exit(1)
 			}
 			if *secureF {
@@ -1167,7 +1167,7 @@ const (
 		}
 
 	default:
-		fmt.Fprintf(os.Stderr, "invalid host argument: %q (valid hosts: svc)", *hostF)
+		fmt.Fprintf(os.Stderr, "invalid host argument: %q (valid hosts: svc)\n", *hostF)
 	}
 
 	// Wait for signal.
