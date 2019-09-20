@@ -159,9 +159,11 @@ var EndpointHasParent = func() {
 		Method("Method", func() {
 			Payload(func() {
 				Attribute("parent_id", Int)
+				Attribute("query_1", String)
 			})
 			HTTP(func() {
 				GET("/{parent_id}")
+				Param("query_1")
 			})
 		})
 	})
