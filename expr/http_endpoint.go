@@ -177,6 +177,16 @@ func (e *HTTPEndpointExpr) Prepare() {
 			if !e.HasAbsoluteRoutes() {
 				headers.Merge(c.Headers)
 				params.Merge(c.PathParams())
+
+				// Inherit attributes for path params from parent service
+				WalkMappedAttr(c.PathParams(), func(name, _ string, _ *AttributeExpr) error {
+					if att := c.MethodExpr.Payload.Find(name); att != nil {
+						if o := AsObject(e.MethodExpr.Payload.Type); o != nil {
+							o.Set(name, att)
+						}
+					}
+					return nil
+				})
 			}
 		}
 	}
