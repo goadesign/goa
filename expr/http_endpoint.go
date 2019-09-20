@@ -176,7 +176,7 @@ func (e *HTTPEndpointExpr) Prepare() {
 		if c := p.CanonicalEndpoint(); c != nil {
 			if !e.HasAbsoluteRoutes() {
 				headers.Merge(c.Headers)
-				params.Merge(c.Params)
+				params.Merge(c.PathParams())
 			}
 		}
 	}
