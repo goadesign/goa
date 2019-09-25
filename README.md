@@ -65,7 +65,7 @@ Goa v1 can be used with Go modules:
 ```bash
 export GO111MODULE=on
 go mod init <my project>
-go get github.com/goadesign/goa@v1/...
+go get github.com/goadesign/goa/...@v1
 ```
 
 Or without Go modules by cloning the repo first:
