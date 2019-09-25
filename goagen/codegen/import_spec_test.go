@@ -29,7 +29,7 @@ var _ = Describe("AttributeImports", func() {
 				att.Type = object
 				imports = codegen.AttributeImports(att, imports, nil)
 
-				i := []*codegen.ImportSpec{&codegen.ImportSpec{
+				i := []*codegen.ImportSpec{{
 					Path: "encoding/json",
 				},
 				}
@@ -63,7 +63,7 @@ var _ = Describe("AttributeImports", func() {
 				att.Type = po
 				imports = codegen.AttributeImports(att, imports, nil)
 
-				i := []*codegen.ImportSpec{&codegen.ImportSpec{
+				i := []*codegen.ImportSpec{{
 					Path: "encoding/json",
 				},
 				}
@@ -93,7 +93,7 @@ var _ = Describe("AttributeImports", func() {
 				att.Type = hash
 				imports = codegen.AttributeImports(att, imports, nil)
 
-				i := []*codegen.ImportSpec{&codegen.ImportSpec{
+				i := []*codegen.ImportSpec{{
 					Path: "encoding/json",
 				},
 				}
@@ -118,7 +118,7 @@ var _ = Describe("AttributeImports", func() {
 				att.Type = array
 				imports = codegen.AttributeImports(att, imports, nil)
 
-				i := []*codegen.ImportSpec{&codegen.ImportSpec{
+				i := []*codegen.ImportSpec{{
 					Path: "encoding/json",
 				},
 				}
@@ -146,7 +146,7 @@ var _ = Describe("AttributeImports", func() {
 				att = u.AttributeDefinition
 				imports = codegen.AttributeImports(att, imports, nil)
 
-				i := []*codegen.ImportSpec{&codegen.ImportSpec{
+				i := []*codegen.ImportSpec{{
 					Path: "encoding/json",
 				},
 				}
@@ -174,7 +174,7 @@ var _ = Describe("AttributeImports", func() {
 				att = m.AttributeDefinition
 				imports = codegen.AttributeImports(att, imports, nil)
 
-				i := []*codegen.ImportSpec{&codegen.ImportSpec{
+				i := []*codegen.ImportSpec{{
 					Path: "encoding/json",
 				},
 				}

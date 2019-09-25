@@ -156,7 +156,7 @@ var _ = Describe("Finalize ActionDefinition", func() {
 			// create a Resource with responses, Action with no response
 			resource := &design.ResourceDefinition{
 				Responses: map[string]*design.ResponseDefinition{
-					"NotFound": &design.ResponseDefinition{Name: "NotFound", Status: 404},
+					"NotFound": {Name: "NotFound", Status: 404},
 				},
 			}
 			action = &design.ActionDefinition{Parent: resource}

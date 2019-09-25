@@ -1,7 +1,10 @@
 package genjs
 
-import "github.com/goadesign/goa/design"
-import "time"
+import (
+	"time"
+
+	"github.com/goadesign/goa/design"
+)
 
 //Option a generator option definition
 type Option func(*Generator)
