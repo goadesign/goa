@@ -22,37 +22,6 @@ func NewMethodPayloadWithNestedTypesResponse() *service_payload_with_nested_type
 	return message
 }
 
-// ValidateMethodPayloadWithNestedTypesRequest runs the validations defined on
-// MethodPayloadWithNestedTypesRequest.
-func ValidateMethodPayloadWithNestedTypesRequest(message *service_payload_with_nested_typespb.MethodPayloadWithNestedTypesRequest) (err error) {
-	if message.AParams != nil {
-		if err2 := ValidateAParams(message.AParams); err2 != nil {
-			err = goa.MergeErrors(err, err2)
-		}
-	}
-	return
-}
-
-// ValidateAParams runs the validations defined on AParams.
-func ValidateAParams(message *service_payload_with_nested_typespb.AParams) (err error) {
-	for _, v := range message.A {
-		if v != nil {
-			if err2 := ValidateArrayOfString(v); err2 != nil {
-				err = goa.MergeErrors(err, err2)
-			}
-		}
-	}
-	return
-}
-
-// ValidateArrayOfString runs the validations defined on ArrayOfString.
-func ValidateArrayOfString(message *service_payload_with_nested_typespb.ArrayOfString) (err error) {
-	if message.Field == nil {
-		err = goa.MergeErrors(err, goa.MissingFieldError("field", "message"))
-	}
-	return
-}
-
 // protobufServicePayloadWithNestedTypespbAParamsToServicepayloadwithnestedtypesAParams
 // builds a value of type *servicepayloadwithnestedtypes.AParams from a value
 // of type *service_payload_with_nested_typespb.AParams.
