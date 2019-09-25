@@ -951,7 +951,7 @@ func (m *MediaTypeDefinition) projectCollection(view string) (*MediaTypeDefiniti
 			TypeName: pe.TypeName + "Collection",
 		},
 	}
-	p.Views = map[string]*ViewDefinition{"default": &ViewDefinition{
+	p.Views = map[string]*ViewDefinition{"default": {
 		AttributeDefinition: DupAtt(pe.Views["default"].AttributeDefinition),
 		Name:                "default",
 		Parent:              p,
