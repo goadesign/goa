@@ -1037,7 +1037,7 @@ func (c * Client) {{ .Name }}(ctx context.Context, {{ if .DirName }}filename, {{
 	}
 {{ if .DirName }}	p := path.Join("{{ .RequestDir }}", filename)
 {{ end }}	u := url.URL{Host: c.Host, Scheme: scheme, Path: {{ if .DirName }}p{{ else }}"{{ .RequestPath }}"{{ end }}}
-	req, err := http.NewRequest("GET", u.String(), nil)
+	req, err := http.NewRequestWithContext(ctx, "GET", u.String(), nil)
 	if err != nil {
 		return 0, err
 	}
@@ -1146,8 +1146,8 @@ func (c *Client) {{ $funcName }}(ctx context.Context, path string{{ if .Params }
 	{{ end }}	values.Set("{{ .Name }}", {{ .ValueName }})
 {{ if .CheckNil }}	}
 {{ end }}{{ end }}{{ end }}	u.RawQuery = values.Encode()
-{{ end }}{{ if .HasPayload }}	req, err := http.NewRequest({{ $route := index .Routes 0 }}"{{ $route.Verb }}", u.String(), &body)
-{{ else }}	req, err := http.NewRequest({{ $route := index .Routes 0 }}"{{ $route.Verb }}", u.String(), nil)
+{{ end }}{{ if .HasPayload }}	req, err := http.NewRequestWithContext(ctx, {{ $route := index .Routes 0 }}"{{ $route.Verb }}", u.String(), &body)
+{{ else }}	req, err := http.NewRequestWithContext(ctx, {{ $route := index .Routes 0 }}"{{ $route.Verb }}", u.String(), nil)
 {{ end }}	if err != nil {
 		return nil, err
 	}
