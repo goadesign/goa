@@ -2,6 +2,7 @@ package middleware
 
 import (
 	"math"
+	"regexp"
 	"testing"
 )
 
@@ -89,6 +90,24 @@ func TestNewTraceOptions(t *testing.T) {
 					}
 				}()
 				NewTraceOptions(SampleSize(c.SampleSize))
+			}()
+		}
+	}
+
+	// invalid discard
+	{
+		cases := map[string]struct{ Discard *regexp.Regexp }{
+			"nil": {nil},
+		}
+		for k, c := range cases {
+			func() {
+				defer func() {
+					r := recover()
+					if r != "discard cannot be nil" {
+						t.Errorf("DiscardFromTrace(%s): NewTraceOptions did *not* panic as expected: %v", k, r)
+					}
+				}()
+				NewTraceOptions(DiscardFromTrace(c.Discard))
 			}()
 		}
 	}
