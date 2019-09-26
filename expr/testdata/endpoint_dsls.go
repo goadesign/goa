@@ -150,6 +150,39 @@ var EndpointExtendToken = func() {
 	})
 }
 
+var EndpointHasParent = func() {
+	Service("Parent", func() {
+		HTTP(func() {
+			Path("/parents")
+			CanonicalMethod("Method")
+		})
+		Method("Method", func() {
+			Payload(func() {
+				Attribute("parent_id", Int)
+				Attribute("query_1", String)
+			})
+			HTTP(func() {
+				GET("/{parent_id}")
+				Param("query_1")
+			})
+		})
+	})
+	Service("Child", func() {
+		HTTP(func() {
+			Path("/children")
+			Parent("Parent")
+		})
+		Method("Method", func() {
+			Payload(func() {
+				Attribute("child_id", Int)
+			})
+			HTTP(func() {
+				GET("/{child_id}")
+			})
+		})
+	})
+}
+
 var FinalizeEndpointBodyAsExtendedTypeDSL = func() {
 	var EntityData = Type("EntityData", func() {
 		Attribute("name", String)
