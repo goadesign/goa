@@ -182,7 +182,9 @@ func (e *HTTPEndpointExpr) Prepare() {
 				WalkMappedAttr(c.PathParams(), func(name, _ string, _ *AttributeExpr) error {
 					if att := c.MethodExpr.Payload.Find(name); att != nil {
 						if o := AsObject(e.MethodExpr.Payload.Type); o != nil {
-							o.Set(name, att)
+							if o.Attribute(name) == nil {
+								o.Set(name, att)
+							}
 						}
 					}
 					return nil
