@@ -4,6 +4,7 @@ import (
 	"context"
 	"net/http"
 	"net/http/httptest"
+	"regexp"
 	"testing"
 
 	httpm "goa.design/goa/v3/http/middleware"
@@ -26,26 +27,40 @@ func TestMiddleware(t *testing.T) {
 		spanID     = "testSpanID"
 		newTraceID = func() string { return traceID }
 		newID      = func() string { return spanID }
+		discard    = regexp.MustCompile("^/$")
 	)
 
 	cases := map[string]struct {
 		Rate                  int
 		TraceID, ParentSpanID string
+		Discard               *regexp.Regexp
 		// output
 		CtxTraceID, CtxSpanID, CtxParentID string
 	}{
-		"no-trace": {100, "", "", traceID, spanID, ""},
-		"trace":    {100, "trace", "", "trace", spanID, ""},
-		"parent":   {100, "trace", "parent", "trace", spanID, "parent"},
+		"no-trace":             {100, "", "", nil, traceID, spanID, ""},
+		"no-trace-discarded":   {100, "", "", discard, "", "", ""},
+		"trace":                {100, "trace", "", nil, "trace", spanID, ""},
+		"trace-not-discarded":  {100, "trace", "", discard, "trace", spanID, ""},
+		"parent":               {100, "trace", "parent", nil, "trace", spanID, "parent"},
+		"parent-not-discarded": {100, "trace", "parent", discard, "trace", spanID, "parent"},
 
-		"zero-rate-no-trace": {0, "", "", "", "", ""},
-		"zero-rate-trace":    {0, "trace", "", "trace", spanID, ""},
-		"zero-rate-parent":   {0, "trace", "parent", "trace", spanID, "parent"},
+		"zero-rate-no-trace":             {0, "", "", nil, "", "", ""},
+		"zero-rate-trace":                {0, "trace", "", nil, "trace", spanID, ""},
+		"zero-rate-trace-not-discarded":  {0, "trace", "", discard, "trace", spanID, ""},
+		"zero-rate-parent-not-discarded": {0, "trace", "parent", discard, "trace", spanID, "parent"},
 	}
 
 	for k, c := range cases {
+		traceOptions := []middleware.TraceOption{
+			httpm.SamplingPercent(c.Rate),
+			httpm.SpanIDFunc(newID),
+			httpm.TraceIDFunc(newTraceID),
+		}
+		if c.Discard != nil {
+			traceOptions = append(traceOptions, httpm.DiscardFromTrace(c.Discard))
+		}
 		var (
-			m       = httpm.Trace(httpm.SamplingPercent(c.Rate), httpm.SpanIDFunc(newID), httpm.TraceIDFunc(newTraceID))
+			m       = httpm.Trace(traceOptions...)
 			h       = new(testHandler)
 			headers = make(http.Header)
 		)

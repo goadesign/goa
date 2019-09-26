@@ -2,6 +2,7 @@ package middleware
 
 import (
 	"net/http"
+	"regexp"
 
 	"goa.design/goa/v3/middleware"
 )
@@ -38,9 +39,21 @@ func Trace(opts ...middleware.TraceOption) func(http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			// insert a new trace ID only if not already being traced.
 			traceID := r.Header.Get(TraceIDHeader)
-			if traceID == "" && sampler.Sample() {
-				// insert tracing only within sample.
-				traceID = o.TraceID()
+			if traceID == "" {
+				// check for discards only if we do not already have a trace ID and before sampling.
+				var discarded bool
+				if r.URL != nil { // docs imply but do not actually state that URL cannot be nil
+					for _, discard := range o.Discards() {
+						if discard.MatchString(r.URL.Path) {
+							discarded = true
+							break
+						}
+					}
+				}
+				if !discarded && sampler.Sample() {
+					// insert tracing only within sample.
+					traceID = o.TraceID()
+				}
 			}
 			if traceID == "" {
 				h.ServeHTTP(w, r)
@@ -78,6 +91,12 @@ func MaxSamplingRate(r int) middleware.TraceOption {
 // SampleSize is a wrapper for the top-level SampleSize.
 func SampleSize(s int) middleware.TraceOption {
 	return middleware.SampleSize(s)
+}
+
+// DiscardFromTrace adds a regular expression for matching a request path to be discarded from tracing.
+// see middleware.DiscardFromTrace() for more details.
+func DiscardFromTrace(discard *regexp.Regexp) middleware.TraceOption {
+	return middleware.DiscardFromTrace(discard)
 }
 
 // WrapDoer wraps a goa client Doer and sets the trace headers so that the
