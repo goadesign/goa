@@ -699,6 +699,10 @@ func Body(args ...interface{}) {
 // Parent sets the name of the parent service. The parent service canonical
 // method path is used as prefix for all the service HTTP endpoint paths.
 //
+// Attributes of the parent method payload that map to parent path parameters
+// are automatically merged into the child method payload type if not already
+// defined.
+//
 // Parent must appear in a Service expression.
 //
 // Parent accepts one argument: the name of the parent service.
