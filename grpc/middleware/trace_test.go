@@ -3,6 +3,7 @@ package middleware_test
 import (
 	"context"
 	"fmt"
+	"regexp"
 	"testing"
 
 	grpcm "goa.design/goa/grpc/middleware"
@@ -16,6 +17,7 @@ var (
 	spanID     = "testSpanID"
 	newTraceID = func() string { return traceID }
 	newID      = func() string { return spanID }
+	discard    = regexp.MustCompile("Test$")
 )
 
 func TestUnaryServerTrace(t *testing.T) {
@@ -26,16 +28,22 @@ func TestUnaryServerTrace(t *testing.T) {
 	cases := map[string]struct {
 		Rate                  int
 		TraceID, ParentSpanID string
+		Discard               *regexp.Regexp
 		// output
 		CtxTraceID, CtxSpanID, CtxParentID string
 	}{
-		"no-trace": {100, "", "", traceID, spanID, ""},
-		"trace":    {100, "trace", "", "trace", spanID, ""},
-		"parent":   {100, "trace", "parent", "trace", spanID, "parent"},
+		"no-trace":             {100, "", "", nil, traceID, spanID, ""},
+		"no-trace-discarded":   {100, "", "", discard, "", "", ""},
+		"trace":                {100, "trace", "", nil, "trace", spanID, ""},
+		"trace-not-discarded":  {100, "trace", "", discard, "trace", spanID, ""},
+		"parent":               {100, "trace", "parent", nil, "trace", spanID, "parent"},
+		"parent-not-discarded": {100, "trace", "parent", discard, "trace", spanID, "parent"},
 
-		"zero-rate-no-trace": {0, "", "", "", "", ""},
-		"zero-rate-trace":    {0, "trace", "", "trace", spanID, ""},
-		"zero-rate-parent":   {0, "trace", "parent", "trace", spanID, "parent"},
+		"zero-rate-no-trace":             {0, "", "", nil, "", "", ""},
+		"zero-rate-trace":                {0, "trace", "", nil, "trace", spanID, ""},
+		"zero-rate-trace-not-discarded":  {0, "trace", "", discard, "trace", spanID, ""},
+		"zero-rate-parent":               {0, "trace", "parent", nil, "trace", spanID, "parent"},
+		"zero-rate-parent-not-discarded": {0, "trace", "parent", discard, "trace", spanID, "parent"},
 	}
 	for k, c := range cases {
 		t.Run(k, func(t *testing.T) {
@@ -72,11 +80,15 @@ func TestUnaryServerTrace(t *testing.T) {
 				md.Set(grpcm.ParentSpanIDMetadataKey, c.ParentSpanID)
 			}
 			ctx := metadata.NewIncomingContext(context.Background(), md)
-
-			_, err := grpcm.UnaryServerTrace(
+			traceOptions := []middleware.TraceOption{
 				grpcm.SamplingPercent(c.Rate),
 				grpcm.SpanIDFunc(newID),
-				grpcm.TraceIDFunc(newTraceID))(ctx, "request", unary, handler)
+				grpcm.TraceIDFunc(newTraceID),
+			}
+			if c.Discard != nil {
+				traceOptions = append(traceOptions, grpcm.DiscardFromTrace(c.Discard))
+			}
+			_, err := grpcm.UnaryServerTrace(traceOptions...)(ctx, "request", unary, handler)
 			if err != nil {
 				t.Errorf("UnaryServerTrace error: %v", err)
 			}
@@ -92,16 +104,22 @@ func TestStreamServerTrace(t *testing.T) {
 	cases := map[string]struct {
 		Rate                  int
 		TraceID, ParentSpanID string
+		Discard               *regexp.Regexp
 		// output
 		CtxTraceID, CtxSpanID, CtxParentID string
 	}{
-		"no-trace": {100, "", "", traceID, spanID, ""},
-		"trace":    {100, "trace", "", "trace", spanID, ""},
-		"parent":   {100, "trace", "parent", "trace", spanID, "parent"},
+		"no-trace":             {100, "", "", nil, traceID, spanID, ""},
+		"no-trace-discarded":   {100, "", "", discard, "", "", ""},
+		"trace":                {100, "trace", "", nil, "trace", spanID, ""},
+		"trace-not-discarded":  {100, "trace", "", discard, "trace", spanID, ""},
+		"parent":               {100, "trace", "parent", nil, "trace", spanID, "parent"},
+		"parent-not-discarded": {100, "trace", "parent", discard, "trace", spanID, "parent"},
 
-		"zero-rate-no-trace": {0, "", "", "", "", ""},
-		"zero-rate-trace":    {0, "trace", "", "trace", spanID, ""},
-		"zero-rate-parent":   {0, "trace", "parent", "trace", spanID, "parent"},
+		"zero-rate-no-trace":             {0, "", "", nil, "", "", ""},
+		"zero-rate-trace":                {0, "trace", "", nil, "trace", spanID, ""},
+		"zero-rate-trace-not-discarded":  {0, "trace", "", discard, "trace", spanID, ""},
+		"zero-rate-parent":               {0, "trace", "parent", nil, "trace", spanID, "parent"},
+		"zero-rate-parent-not-discarded": {0, "trace", "parent", discard, "trace", spanID, "parent"},
 	}
 	for k, c := range cases {
 		t.Run(k, func(t *testing.T) {
@@ -140,11 +158,15 @@ func TestStreamServerTrace(t *testing.T) {
 			}
 			ctx := metadata.NewIncomingContext(context.Background(), md)
 			wss := grpcm.NewWrappedServerStream(ctx, &testServerStream{})
-
-			err := grpcm.StreamServerTrace(
+			traceOptions := []middleware.TraceOption{
 				grpcm.SamplingPercent(c.Rate),
 				grpcm.SpanIDFunc(newID),
-				grpcm.TraceIDFunc(newTraceID))(nil, wss, stream, handler)
+				grpcm.TraceIDFunc(newTraceID),
+			}
+			if c.Discard != nil {
+				traceOptions = append(traceOptions, grpcm.DiscardFromTrace(c.Discard))
+			}
+			err := grpcm.StreamServerTrace(traceOptions...)(nil, wss, stream, handler)
 			if err != nil {
 				t.Errorf("StreamServerTrace error: %v", err)
 			}

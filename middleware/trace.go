@@ -2,6 +2,7 @@ package middleware
 
 import (
 	"context"
+	"regexp"
 )
 
 type (
@@ -20,6 +21,7 @@ type (
 		samplingPercent int
 		maxSamplingRate int
 		sampleSize      int
+		discards        []*regexp.Regexp
 	}
 
 	// tracedLogger is a logger which logs the trace ID with every log entry
@@ -65,6 +67,12 @@ func (o *TraceOptions) TraceID() string {
 // generates span IDs.
 func (o *TraceOptions) SpanID() string {
 	return o.spanIDFunc()
+}
+
+// Discards returns the list of regular expressions used to match paths to be
+// discarded from tracing.
+func (o *TraceOptions) Discards() []*regexp.Regexp {
+	return o.discards
 }
 
 // TraceIDFunc configures the function used to compute trace IDs. Use this
@@ -124,6 +132,22 @@ func SampleSize(s int) TraceOption {
 	}
 	return func(o *TraceOptions) *TraceOptions {
 		o.sampleSize = s
+		return o
+	}
+}
+
+// DiscardFromTrace adds a regular expression for matching a request path to be discarded from tracing.
+// this is useful for frequent API calls that are not important to trace, such as health checks.
+// the pattern can be a full or partial match and could even support both HTTP and gRPC paths with an
+// OR expression, etc.
+//
+// note that discards can be overridden if the incoming request already has a trace ID.
+func DiscardFromTrace(discard *regexp.Regexp) TraceOption {
+	if discard == nil {
+		panic("discard cannot be nil")
+	}
+	return func(o *TraceOptions) *TraceOptions {
+		o.discards = append(o.discards, discard)
 		return o
 	}
 }
