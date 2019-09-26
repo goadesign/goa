@@ -93,7 +93,7 @@ func SampleSize(s int) middleware.TraceOption {
 	return middleware.SampleSize(s)
 }
 
-// DiscardFromTrace adds a regular expression for matching a request path to be discarded from X-Ray tracing.
+// DiscardFromTrace adds a regular expression for matching a request path to be discarded from tracing.
 // see middleware.DiscardFromTrace() for more details.
 func DiscardFromTrace(discard *regexp.Regexp) middleware.TraceOption {
 	return middleware.DiscardFromTrace(discard)

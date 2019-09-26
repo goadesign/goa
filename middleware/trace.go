@@ -136,7 +136,7 @@ func SampleSize(s int) TraceOption {
 	}
 }
 
-// DiscardFromTrace adds a regular expression for matching a request path to be discarded from X-Ray tracing.
+// DiscardFromTrace adds a regular expression for matching a request path to be discarded from tracing.
 // this is useful for frequent API calls that are not important to trace, such as health checks.
 // the pattern can be a full or partial match and could even support both HTTP and gRPC paths with an
 // OR expression, etc.
