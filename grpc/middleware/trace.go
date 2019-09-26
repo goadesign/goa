@@ -2,6 +2,7 @@ package middleware
 
 import (
 	"context"
+	"regexp"
 
 	"goa.design/goa/middleware"
 	"google.golang.org/grpc"
@@ -36,7 +37,7 @@ const (
 func UnaryServerTrace(opts ...middleware.TraceOption) grpc.UnaryServerInterceptor {
 	o := middleware.NewTraceOptions(opts...)
 	return grpc.UnaryServerInterceptor(func(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (resp interface{}, err error) {
-		ctx = withTrace(ctx, o)
+		ctx = withTrace(ctx, info.FullMethod, o)
 		return handler(ctx, req)
 	})
 }
@@ -55,7 +56,7 @@ func UnaryServerTrace(opts ...middleware.TraceOption) grpc.UnaryServerIntercepto
 func StreamServerTrace(opts ...middleware.TraceOption) grpc.StreamServerInterceptor {
 	o := middleware.NewTraceOptions(opts...)
 	return grpc.StreamServerInterceptor(func(srv interface{}, ss grpc.ServerStream, info *grpc.StreamServerInfo, handler grpc.StreamHandler) error {
-		ctx := withTrace(ss.Context(), o)
+		ctx := withTrace(ss.Context(), info.FullMethod, o)
 		wss := NewWrappedServerStream(ctx, ss)
 		return handler(srv, wss)
 	})
@@ -112,8 +113,14 @@ func SampleSize(s int) middleware.TraceOption {
 	return middleware.SampleSize(s)
 }
 
+// DiscardFromTrace adds a regular expression for matching a request path to be discarded from X-Ray tracing.
+// see middleware.DiscardFromTrace() for more details.
+func DiscardFromTrace(discard *regexp.Regexp) middleware.TraceOption {
+	return middleware.DiscardFromTrace(discard)
+}
+
 // withTrace sets the trace ID, span ID, and parent span ID in the context.
-func withTrace(ctx context.Context, opts *middleware.TraceOptions) context.Context {
+func withTrace(ctx context.Context, fullMethod string, opts *middleware.TraceOptions) context.Context {
 	sampler := opts.NewSampler()
 	md, ok := metadata.FromIncomingContext(ctx)
 	if !ok {
@@ -123,9 +130,18 @@ func withTrace(ctx context.Context, opts *middleware.TraceOptions) context.Conte
 	var traceID string
 	{
 		traceID = MetadataValue(md, TraceIDMetadataKey)
-		if traceID == "" && sampler.Sample() {
-			// insert tracing only within sample.
-			traceID = opts.TraceID()
+		if traceID == "" {
+			var discarded bool
+			for _, discard := range opts.Discards() {
+				if discard.MatchString(fullMethod) {
+					discarded = true
+					break
+				}
+			}
+			if !discarded && sampler.Sample() {
+				// insert tracing only within sample.
+				traceID = opts.TraceID()
+			}
 		}
 	}
 	if traceID == "" {
