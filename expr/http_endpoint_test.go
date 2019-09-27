@@ -60,6 +60,9 @@ func TestHTTPEndpointValidation(t *testing.T) {
 		"endpoint-missing-token-extend": {
 			DSL: testdata.EndpointExtendToken,
 		},
+		"endpoint-has-parent": {
+			DSL: testdata.EndpointHasParent,
+		},
 	}
 	for name, c := range cases {
 		t.Run(name, func(t *testing.T) {
