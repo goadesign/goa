@@ -18,7 +18,7 @@ func NewV2(root *expr.RootExpr, h *expr.HostExpr) (*V2, error) {
 	if root == nil {
 		return nil, nil
 	}
-	tags := tagsFromExpr(root.Meta)
+	tags := tagsFromExpr(root.API.Meta)
 	u, err := url.Parse(defaultURI(h))
 	if err != nil {
 		// This should never happen because server expression must have been
@@ -48,7 +48,7 @@ func NewV2(root *expr.RootExpr, h *expr.HostExpr) (*V2, error) {
 			Contact:        root.API.Contact,
 			License:        root.API.License,
 			Version:        root.API.Version,
-			Extensions:     ExtensionsFromExpr(root.Meta),
+			Extensions:     ExtensionsFromExpr(root.API.Meta),
 		},
 		Host:                host,
 		BasePath:            basePath,
@@ -324,8 +324,6 @@ func tagsFromExpr(mdata expr.MetaExpr) (tags []*Tag) {
 		if hasDocs {
 			tag.ExternalDocs = docs
 		}
-
-		tag.Extensions = ExtensionsFromExpr(mdata)
 
 		tags = append(tags, tag)
 	}

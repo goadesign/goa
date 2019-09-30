@@ -150,8 +150,6 @@ func Meta(name string, value ...string) {
 	}
 
 	switch e := eval.Current().(type) {
-	case *expr.RootExpr:
-		e.Meta = appendMeta(e.Meta, name, value...)
 	case *expr.APIExpr:
 		e.Meta = appendMeta(e.Meta, name, value...)
 	case *expr.AttributeExpr:
