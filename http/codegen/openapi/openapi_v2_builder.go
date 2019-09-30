@@ -325,8 +325,6 @@ func tagsFromExpr(mdata expr.MetaExpr) (tags []*Tag) {
 			tag.ExternalDocs = docs
 		}
 
-		tag.Extensions = ExtensionsFromExpr(mdata)
-
 		tags = append(tags, tag)
 	}
 
