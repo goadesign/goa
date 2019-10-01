@@ -270,11 +270,13 @@ var ExtensionDSL = func() {
 	var PayloadT = Type("Payload", func() {
 		Attribute("string", String, func() {
 			Example("")
+			Meta("swagger:extension:x-test-schema", "Payload")
 		})
 	})
 	var ResultT = Type("Result", func() {
 		Attribute("string", String, func() {
 			Example("")
+			Meta("swagger:extension:x-test-schema", "Result")
 		})
 	})
 	var _ = API("test", func() {
