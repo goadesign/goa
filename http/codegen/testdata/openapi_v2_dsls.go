@@ -287,6 +287,7 @@ var ExtensionDSL = func() {
 				POST("/")
 				Meta("swagger:extension:x-test-foo", "bar")
 			})
+			Meta("swagger:extension:x-test-operation", "Operation")
 		})
 	})
 }
