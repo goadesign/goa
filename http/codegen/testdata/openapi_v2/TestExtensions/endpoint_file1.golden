@@ -27,8 +27,10 @@ paths:
       x-test-operation: Operation
     x-test-foo: bar
 tags:
-- name: Backend
-  description: Description of Backend
+- description: Description of Backend
   externalDocs:
     description: See more docs here
     url: http://example.com
+  name: Backend
+  x-data:
+    foo: bar
