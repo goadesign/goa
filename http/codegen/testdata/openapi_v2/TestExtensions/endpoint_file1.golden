@@ -16,9 +16,17 @@ paths:
   /:
     post:
       operationId: testService#testEndpoint
+      parameters:
+      - in: body
+        name: TestEndpointRequestBody
+        required: true
+        schema:
+          $ref: '#/definitions/TestServiceTestEndpointRequestBody'
       responses:
-        "204":
-          description: No Content response.
+        "200":
+          description: OK response.
+          schema:
+            $ref: '#/definitions/TestServiceTestEndpointResponseBody'
       schemes:
       - https
       summary: testEndpoint testService
@@ -26,6 +34,25 @@ paths:
       - testService
       x-test-operation: Operation
     x-test-foo: bar
+definitions:
+  TestServiceTestEndpointRequestBody:
+    title: TestServiceTestEndpointRequestBody
+    type: object
+    properties:
+      string:
+        type: string
+        example: ""
+    example:
+      string: ""
+  TestServiceTestEndpointResponseBody:
+    title: TestServiceTestEndpointResponseBody
+    type: object
+    properties:
+      string:
+        type: string
+        example: ""
+    example:
+      string: ""
 tags:
 - description: Description of Backend
   externalDocs:
