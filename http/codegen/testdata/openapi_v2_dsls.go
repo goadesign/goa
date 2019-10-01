@@ -267,6 +267,16 @@ var ArrayValidationDSL = func() {
 }
 
 var ExtensionDSL = func() {
+	var PayloadT = Type("Payload", func() {
+		Attribute("string", String, func() {
+			Example("")
+		})
+	})
+	var ResultT = Type("Result", func() {
+		Attribute("string", String, func() {
+			Example("")
+		})
+	})
 	var _ = API("test", func() {
 		Server("test", func() {
 			Host("localhost", func() {
@@ -282,8 +292,8 @@ var ExtensionDSL = func() {
 	})
 	Service("testService", func() {
 		Method("testEndpoint", func() {
-			Payload(Empty)
-			Result(Empty)
+			Payload(PayloadT)
+			Result(ResultT)
 			HTTP(func() {
 				POST("/")
 				Meta("swagger:extension:x-test-foo", "bar")
