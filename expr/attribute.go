@@ -8,7 +8,7 @@ import (
 
 type (
 	// AttributeExpr defines an object field with optional description,
-	// default value and validations.
+	// default and zero values and validations.
 	AttributeExpr struct {
 		// DSLFunc contains the DSL used to initialize the expression.
 		eval.DSLFunc

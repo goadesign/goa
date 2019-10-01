@@ -292,6 +292,26 @@ func transformObject(source, target *expr.AttributeExpr, sourceVar, targetVar st
 				}
 			}
 		}
+		if tdef := tgtc.ZeroValue; tdef != nil && ta.TargetCtx.UseZero {
+			if ta.proto {
+				if ta.SourceCtx.IsPrimitivePointer(n, srcMatt.AttributeExpr) {
+					code += fmt.Sprintf("if %s == nil {\n\t%s = %#v\n}\n", srcVar, tgtVar, tdef)
+				} else if !expr.IsPrimitive(srcc.Type) && !srcMatt.IsRequired(n) {
+					code += fmt.Sprintf("if %s {\n\t%s = %#v\n}\n", checkZeroValue(srcc.Type, srcVar, false), tgtVar, tdef)
+				}
+			} else {
+
+				if !srcMatt.IsRequired(n) && srcc.Type != expr.Boolean {
+					code += fmt.Sprintf("if %s {\n\t", tdef)
+					if ta.TargetCtx.IsPrimitivePointer(n, tgtMatt.AttributeExpr) && expr.IsPrimitive(tgtc.Type) {
+						code += fmt.Sprintf("var tmp %s = %#v\n\t%s = &tmp\n", codegen.GoNativeTypeName(tgtc.Type), tdef, tgtVar)
+					} else {
+						code += fmt.Sprintf("%s = %#v\n", tgtVar, tdef)
+					}
+					code += "}\n"
+				}
+			}
+		}
 		buffer.WriteString(code)
 	})
 	if err != nil {
