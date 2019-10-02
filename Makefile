@@ -1,6 +1,6 @@
 #! /usr/bin/make
 #
-# Makefile for goa v2
+# Makefile for goa v3
 #
 # Targets:
 # - "depend" retrieves the Go packages needed to run the linter and tests
