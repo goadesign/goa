@@ -24,6 +24,7 @@ paths:
       summary: testEndpoint testService
       tags:
       - testService
+      x-test-operation: Operation
     x-test-foo: bar
 tags:
 - name: Backend
