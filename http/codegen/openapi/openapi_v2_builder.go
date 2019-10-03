@@ -566,12 +566,7 @@ func buildPathFromFileServer(s *V2, root *expr.RootExpr, fs *expr.HTTPFileServer
 			Schemes:      schemes,
 		}
 
-		key := expr.HTTPWildcardRegex.ReplaceAllStringFunc(
-			path,
-			func(w string) string {
-				return fmt.Sprintf("/{%s}", w[2:])
-			},
-		)
+		key := expr.HTTPWildcardRegex.ReplaceAllString(path, "/{$1}")
 		if key == "" {
 			key = "/"
 		}
