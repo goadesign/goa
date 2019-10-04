@@ -3,7 +3,7 @@ package openapi
 import (
 	"testing"
 
-	"goa.design/goa/expr"
+	"goa.design/goa/v3/expr"
 )
 
 func TestBuildPathFromFileServer(t *testing.T) {
