@@ -76,6 +76,8 @@ func RequestDecoder(r *http.Request) Decoder {
 		return gob.NewDecoder(r.Body)
 	case "application/xml":
 		return xml.NewDecoder(r.Body)
+	case "text/html", "text/plain":
+		return newTextDecoder(r.Body, contentType)
 	default:
 		return json.NewDecoder(r.Body)
 	}
