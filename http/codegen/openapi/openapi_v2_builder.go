@@ -625,10 +625,19 @@ func buildPathFromExpr(s *V2, root *expr.RootExpr, h *expr.HostExpr, route *expr
 			responses[strconv.Itoa(er.Response.StatusCode)] = resp
 		}
 
+		consumes := []string{}
+		if endpoint.MultipartRequest {
+			consumes = []string{"multipart/form-data"}
+		}
+
 		if endpoint.Body.Type != expr.Empty {
+			in := "body"
+			if endpoint.MultipartRequest {
+				in = "formData"
+			}
 			pp := &Parameter{
 				Name:        endpoint.Body.Type.Name(),
-				In:          "body",
+				In:          in,
 				Description: endpoint.Body.Description,
 				Required:    true,
 				Schema:      AttributeTypeSchemaWithPrefix(root.API, endpoint.Body, codegen.Goify(endpoint.Service.Name(), true)),
@@ -705,6 +714,7 @@ func buildPathFromExpr(s *V2, root *expr.RootExpr, h *expr.HostExpr, route *expr
 			ExternalDocs: docsFromExpr(endpoint.MethodExpr.Docs),
 			OperationID:  operationID,
 			Parameters:   params,
+			Consumes:     consumes,
 			Produces:     produces,
 			Responses:    responses,
 			Schemes:      schemes,
