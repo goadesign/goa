@@ -163,7 +163,7 @@ func DecodeMethodMessageWithMetadataRequest(ctx context.Context, v interface{}, 
 	)
 	{
 		if vals := md.Get("Authorization"); len(vals) > 0 {
-			inMetadataRaw = vals[0]
+			inMetadataRaw := vals[0]
 
 			v, err2 := strconv.ParseInt(inMetadataRaw, 10, strconv.IntSize)
 			if err2 != nil {
@@ -202,7 +202,7 @@ func DecodeMethodMessageWithValidateRequest(ctx context.Context, v interface{}, 
 	)
 	{
 		if vals := md.Get("Authorization"); len(vals) > 0 {
-			inMetadataRaw = vals[0]
+			inMetadataRaw := vals[0]
 
 			v, err2 := strconv.ParseInt(inMetadataRaw, 10, strconv.IntSize)
 			if err2 != nil {
