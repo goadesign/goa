@@ -99,7 +99,7 @@ func DecodeMethodClientStreamingRPCWithPayloadRequest(ctx context.Context, v int
 		if vals := md.Get("goa_payload"); len(vals) == 0 {
 			err = goa.MergeErrors(err, goa.MissingFieldError("goa_payload", "metadata"))
 		} else {
-			goaPayloadRaw = vals[0]
+			goaPayloadRaw := vals[0]
 
 			v, err2 := strconv.ParseInt(goaPayloadRaw, 10, strconv.IntSize)
 			if err2 != nil {
@@ -130,7 +130,7 @@ func DecodeMethodBidirectionalStreamingRPCWithPayloadRequest(ctx context.Context
 	)
 	{
 		if vals := md.Get("a"); len(vals) > 0 {
-			aRaw = vals[0]
+			aRaw := vals[0]
 
 			v, err2 := strconv.ParseInt(aRaw, 10, strconv.IntSize)
 			if err2 != nil {
