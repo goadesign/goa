@@ -1,7 +1,6 @@
 package expr
 
 import (
-	"encoding/json"
 	"fmt"
 	"math"
 	"regexp"
@@ -201,19 +200,7 @@ func byFormat(a *AttributeExpr, r *Random) interface{} {
 			}
 			return res
 		}(),
-		FormatJSON: func() string {
-			b, err := json.Marshal(struct {
-				Name  string `json:"name"`
-				Email string `json:"email"`
-			}{
-				Name:  r.faker.Name(),
-				Email: r.faker.Email(),
-			})
-			if err != nil {
-				return `{"name":"example","email":"mail@example.com"}`
-			}
-			return string(b)
-		}(),
+		FormatJSON: `{"name":"example","email":"mail@example.com"}`,
 	}[format]; ok {
 		return res
 	}
