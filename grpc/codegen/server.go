@@ -329,12 +329,12 @@ func Decode{{ .Method.VarName }}Request(ctx context.Context, v interface{}, md m
 				if vals := md.Get({{ printf "%q" .Name }}); len(vals) == 0 {
 					err = goa.MergeErrors(err, goa.MissingFieldError({{ printf "%q" .Name }}, "metadata"))
 				} else {
-					{{ .VarName }}Raw = vals[0]
+					{{ .VarName }}Raw := vals[0]
 					{{ template "type_conversion" . }}
 				}
 			{{- else }}
 				if vals := md.Get({{ printf "%q" .Name }}); len(vals) > 0 {
-					{{ .VarName }}Raw = vals[0]
+					{{ .VarName }}Raw := vals[0]
 					{{ template "type_conversion" . }}
 				}
 			{{- end }}
