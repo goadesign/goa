@@ -625,7 +625,7 @@ func buildPathFromExpr(s *V2, root *expr.RootExpr, h *expr.HostExpr, route *expr
 			responses[strconv.Itoa(er.Response.StatusCode)] = resp
 		}
 
-		consumes := []string{}
+		var consumes []string
 		if endpoint.MultipartRequest {
 			consumes = []string{"multipart/form-data"}
 		}
