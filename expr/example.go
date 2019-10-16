@@ -200,6 +200,7 @@ func byFormat(a *AttributeExpr, r *Random) interface{} {
 			}
 			return res
 		}(),
+		FormatJSON: `{"name":"example","email":"mail@example.com"}`,
 	}[format]; ok {
 		return res
 	}
