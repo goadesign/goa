@@ -148,7 +148,6 @@ func wrapAttr(att *expr.AttributeExpr, tname string) {
 					},
 				},
 			},
-			Validation: &expr.ValidationExpr{Required: []string{"field"}},
 		}
 	}
 	switch dt := att.Type.(type) {
