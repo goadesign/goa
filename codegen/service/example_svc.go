@@ -40,11 +40,11 @@ func ExampleServiceFiles(genpkg string, root *expr.RootExpr) []*codegen.File {
 	// determine the unique API package name different from the service names
 	scope := codegen.NewNameScope()
 	for _, svc := range root.Services {
-		svc := Services.Get(svc.Name)
-		if svc == nil {
+		s := Services.Get(svc.Name)
+		if s == nil {
 			panic("unknown service, " + svc.Name) // bug
 		}
-		scope.Unique(svc.PkgName)
+		scope.Unique(s.PkgName)
 	}
 	apipkg := scope.Unique(strings.ToLower(codegen.Goify(root.API.Name, false)), "api")
 
