@@ -207,3 +207,40 @@ var SingleServerMultipleHostsWithVariablesDSL = func() {
 		})
 	})
 }
+
+var ConflictWithAPINameAndServiceNamesIncludingMultipartDSL = func() {
+	var _ = API("aloha", func() {
+		Title("conflict with API name and service names including multipart")
+	})
+	var _ = Service("aloha", func() { // same as API name
+		Method("create", func() {
+			Payload(func() {
+				Attribute("price", Int)
+			})
+			HTTP(func() {
+				POST("/aloha")
+				MultipartRequest()
+			})
+		})
+	})
+	var _ = Service("alohaapi", func() { // API name + 'api' suffix
+		Method("create", func() {
+			Payload(func() {
+				Attribute("price", Int)
+			})
+			HTTP(func() {
+				POST("/aloha")
+			})
+		})
+	})
+	var _ = Service("alohaapi1", func() { // API name + 'api' suffix + sequential no.
+		Method("create", func() {
+			Payload(func() {
+				Attribute("price", Int)
+			})
+			HTTP(func() {
+				POST("/aloha")
+			})
+		})
+	})
+}
