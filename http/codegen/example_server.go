@@ -129,6 +129,17 @@ func dummyMultipartFile(genpkg string, root *expr.RootExpr, svc *expr.HTTPServic
 
 		scope = codegen.NewNameScope()
 	)
+	// determine the unique API package name different from the service names
+	for _, svc := range root.Services {
+		s := HTTPServices.Get(svc.Name)
+		if s == nil {
+			panic("unknown http service, " + svc.Name) // bug
+		}
+		if s.Service == nil {
+			panic("unknown service, " + svc.Name) // bug
+		}
+		scope.Unique(s.Service.PkgName)
+	}
 	{
 		specs := []*codegen.ImportSpec{
 			{Path: "mime/multipart"},
