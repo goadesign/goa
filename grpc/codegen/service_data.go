@@ -637,6 +637,9 @@ func collectMessages(at *expr.AttributeExpr, sd *ServiceData, seen map[string]st
 		if _, ok := seen[dt.Name()]; ok {
 			return nil
 		}
+		if prim := getPrimitive(at); prim != nil {
+			return
+		}
 		att := dt.Attribute()
 		if rt, ok := dt.(*expr.ResultTypeExpr); ok {
 			if a := unwrapAttr(expr.DupAtt(rt.Attribute())); expr.IsArray(a.Type) {
@@ -1265,6 +1268,20 @@ func resultContext(e *expr.GRPCEndpointExpr, sd *ServiceData) (*expr.AttributeEx
 		return vresAtt, codegen.NewAttributeContext(true, false, true, svc.ViewsPkg, svc.ViewScope)
 	}
 	return e.MethodExpr.Result, serviceTypeContext(svc.PkgName, svc.Scope)
+}
+
+// getPrimitive returns the primitive expression if the given expression is an alias to one
+func getPrimitive(att *expr.AttributeExpr) *expr.AttributeExpr {
+	if ut, ok := att.Type.(*expr.UserTypeExpr); ok {
+		if _, ok := ut.Type.(expr.Primitive); ok {
+			return ut.AttributeExpr
+		}
+		if len(ut.Bases) > 0 {
+			return nil
+		}
+		return getPrimitive(ut.AttributeExpr)
+	}
+	return nil
 }
 
 // isEmpty returns true if given type is empty.
