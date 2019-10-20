@@ -308,6 +308,33 @@ var MessageUserTypeWithPrimitivesDSL = func() {
 	})
 }
 
+var MessageUserTypeWithAliasMessageDSL = func() {
+	var IntAlias = Type("IntAlias", Int)
+	var PayloadT = Type("PayloadT", func() {
+		Field(1, "IntAliasField", IntAlias)
+		Field(2, "OptionalIntAliasField", IntAlias)
+		Required("IntAliasField")
+	})
+	var ResultT = ResultType("application/vnd.goa.aliast", func() {
+		TypeName("ResultT")
+		Attributes(func() {
+			Attribute("IntAliasField", Int, func() {
+				Meta("rpc:tag", "1")
+			})
+			Attribute("OptionalIntAliasField", Int, func() {
+				Meta("rpc:tag", "2")
+			})
+		})
+	})
+	Service("ServiceMessageUserTypeWithAlias", func() {
+		Method("MethodMessageUserTypeWithAlias", func() {
+			Payload(PayloadT)
+			Result(ResultT)
+			GRPC(func() {})
+		})
+	})
+}
+
 var MessageUserTypeWithNestedUserTypesDSL = func() {
 	var UTLevel2 = Type("UTLevel2", func() {
 		Field(2, "Int64Field", Int64)
@@ -479,6 +506,21 @@ var PayloadWithNestedTypesDSL = func() {
 			GRPC(func() {
 				Response(CodeOK)
 			})
+		})
+	})
+}
+
+var PayloadWithAliasTypeDSL = func() {
+	var IntAlias = Type("IntAlias", Int)
+	var PayloadAliasT = Type("PayloadAliasT", func() {
+		Field(1, "IntAliasField", IntAlias)
+		Field(2, "OptionalIntAliasField", IntAlias)
+		Required("IntAliasField")
+	})
+	Service("ServiceMessageUserTypeWithAlias", func() {
+		Method("MethodMessageUserTypeWithAlias", func() {
+			Payload(PayloadAliasT)
+			GRPC(func() {})
 		})
 	})
 }
