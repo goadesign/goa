@@ -110,6 +110,36 @@ func svcServicepayloadwithnestedtypesBParamsToServicePayloadWithNestedTypespbBPa
 }
 `
 
+const PayloadWithAliasTypeServerTypeCode = `// NewMethodMessageUserTypeWithAliasPayload builds the payload of the
+// "MethodMessageUserTypeWithAlias" endpoint of the
+// "ServiceMessageUserTypeWithAlias" service from the gRPC request type.
+func NewMethodMessageUserTypeWithAliasPayload(message *service_message_user_type_with_aliaspb.MethodMessageUserTypeWithAliasRequest) *servicemessageusertypewithalias.PayloadAliasT {
+	v := &servicemessageusertypewithalias.PayloadAliasT{
+		IntAliasField: servicemessageusertypewithalias.IntAlias(message.IntAliasField),
+	}
+	if message.OptionalIntAliasField != nil {
+		optionalIntAliasFieldptr := servicemessageusertypewithalias.IntAlias(message.OptionalIntAliasField)
+		v.OptionalIntAliasField = &optionalIntAliasFieldptr
+	}
+	v.IntAliasField = protobufServiceMessageUserTypeWithAliaspbIntAliasToServicemessageusertypewithaliasIntAlias(message.IntAliasField)
+	v.OptionalIntAliasField = protobufServiceMessageUserTypeWithAliaspbIntAliasToServicemessageusertypewithaliasIntAlias(message.OptionalIntAliasField)
+	return v
+}
+
+// NewMethodMessageUserTypeWithAliasResponse builds the gRPC response type from
+// the result of the "MethodMessageUserTypeWithAlias" endpoint of the
+// "ServiceMessageUserTypeWithAlias" service.
+func NewMethodMessageUserTypeWithAliasResponse(result *servicemessageusertypewithalias.PayloadAliasT) *service_message_user_type_with_aliaspb.MethodMessageUserTypeWithAliasResponse {
+	message := &service_message_user_type_with_aliaspb.MethodMessageUserTypeWithAliasResponse{
+		IntAliasField: int(result.IntAliasField),
+	}
+	if result.OptionalIntAliasField != nil {
+		message.OptionalIntAliasField = int(*result.OptionalIntAliasField)
+	}
+	return message
+}
+`
+
 const ResultWithCollectionServerTypeCode = `// NewMethodResultWithCollectionResponse builds the gRPC response type from the
 // result of the "MethodResultWithCollection" endpoint of the
 // "ServiceResultWithCollection" service.
