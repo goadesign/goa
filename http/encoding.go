@@ -46,7 +46,127 @@ type (
 
 	// private type used to define context keys.
 	contextKey int
+
+	// DecoderConstructor returns a new decoder.
+	DecoderConstructor func(r io.Reader) Decoder
+
+	// DecoderConstructorSet holds a decoder constructor with the content type
+	// and suffix.
+	DecoderConstructorSet struct {
+		ContentType        string
+		Suffix             string
+		DecoderConstructor DecoderConstructor
+	}
+
+	// EncoderConstructor returns a new encoder.
+	EncoderConstructor func(w http.ResponseWriter) Encoder
+
+	// EncoderConstructorSet holds a encoder constructor with the content type
+	// and suffix.
+	EncoderConstructorSet struct {
+		ContentType        string
+		Suffix             string
+		EncoderConstructor EncoderConstructor
+	}
 )
+
+var (
+	decoderConstructorsContentType = map[string]DecoderConstructor{}
+	decoderConstructorsSuffix      = map[string]DecoderConstructor{}
+
+	encoderConstructorsContentType = map[string]EncoderConstructor{}
+	encoderConstructorsSuffix      = map[string]EncoderConstructor{}
+
+	// DefaultDecoderConstructorSets holds the default decoder
+	// constructor sets.
+	DefaultDecoderConstructorSets = []DecoderConstructorSet{
+		{
+			ContentType: "application/json",
+			Suffix:      "+json",
+			DecoderConstructor: func(r io.Reader) Decoder {
+				return json.NewDecoder(r)
+			},
+		},
+		{
+			ContentType: "application/gob",
+			Suffix:      "+gob",
+			DecoderConstructor: func(r io.Reader) Decoder {
+				return gob.NewDecoder(r)
+			},
+		},
+		{
+			ContentType: "application/xml",
+			Suffix:      "+xml",
+			DecoderConstructor: func(r io.Reader) Decoder {
+				return xml.NewDecoder(r)
+			},
+		},
+		{
+			ContentType: "text/html",
+			Suffix:      "+html",
+			DecoderConstructor: func(r io.Reader) Decoder {
+				return newTextDecoder(r, "text/html")
+			},
+		},
+		{
+			ContentType: "text/plain",
+			Suffix:      "+txt",
+			DecoderConstructor: func(r io.Reader) Decoder {
+				return newTextDecoder(r, "text/plain")
+			},
+		},
+	}
+
+	// DefaultEncoderConstructorSets holds the default encoder
+	// constructor sets.
+	DefaultEncoderConstructorSets = []EncoderConstructorSet{
+		{
+			ContentType: "application/json",
+			Suffix:      "+json",
+			EncoderConstructor: func(w http.ResponseWriter) Encoder {
+				return json.NewEncoder(w)
+			},
+		},
+		{
+			ContentType: "application/gob",
+			Suffix:      "+gob",
+			EncoderConstructor: func(w http.ResponseWriter) Encoder {
+				return gob.NewEncoder(w)
+			},
+		},
+		{
+			ContentType: "application/xml",
+			Suffix:      "+xml",
+			EncoderConstructor: func(w http.ResponseWriter) Encoder {
+				return xml.NewEncoder(w)
+			},
+		},
+		{
+			ContentType: "text/html",
+			Suffix:      "+html",
+			EncoderConstructor: func(w http.ResponseWriter) Encoder {
+				return newTextEncoder(w, "text/html")
+			},
+		},
+		{
+			ContentType: "text/plain",
+			Suffix:      "+txt",
+			EncoderConstructor: func(w http.ResponseWriter) Encoder {
+				return newTextEncoder(w, "text/plain")
+			},
+		},
+	}
+)
+
+func registerDecoderConstructor(constructor DecoderConstructor, contentType, suffix string) {
+	decoderConstructorsContentType[contentType] = constructor
+	decoderConstructorsSuffix[suffix] = constructor
+}
+
+func registerEncoderConstructor(constructor EncoderConstructor, contentType, suffix string) {
+	encoderConstructorsContentType[contentType] = constructor
+	encoderConstructorsSuffix[suffix] = constructor
+}
 
 // RequestDecoder returns a HTTP request body decoder suitable for the given
 // request. The decoder handles the following mime types:
@@ -59,27 +179,27 @@ type (
 // RequestDecoder defaults to the JSON decoder if the request "Content-Type"
 // header does not match any of the supported mime type or is missing
 // altogether.
-func RequestDecoder(r *http.Request) Decoder {
-	contentType := r.Header.Get("Content-Type")
-	if contentType == "" {
-		// default to JSON
-		contentType = "application/json"
-	} else {
-		// sanitize
-		if mediaType, _, err := mime.ParseMediaType(contentType); err == nil {
-			contentType = mediaType
-		}
+var RequestDecoder = NewRequestDecoder(DefaultDecoderConstructorSets)
+
+// NewRequestDecoder creates a HTTP request body decoder suite.
+func NewRequestDecoder(sets []DecoderConstructorSet) func(*http.Request) Decoder {
+	for _, set := range sets {
+		registerDecoderConstructor(set.DecoderConstructor, set.ContentType, set.Suffix)
 	}
-	switch contentType {
-	case "application/json":
-		return json.NewDecoder(r.Body)
-	case "application/gob":
-		return gob.NewDecoder(r.Body)
-	case "application/xml":
-		return xml.NewDecoder(r.Body)
-	case "text/html", "text/plain":
-		return newTextDecoder(r.Body, contentType)
-	default:
+	return func(r *http.Request) Decoder {
+		contentType := r.Header.Get("Content-Type")
+		if contentType == "" {
+			// default to JSON
+			contentType = "application/json"
+		} else {
+			// sanitize
+			if mediaType, _, err := mime.ParseMediaType(contentType); err == nil {
+				contentType = mediaType
+			}
+		}
+		if constructor, ok := decoderConstructorsContentType[contentType]; ok {
+			return constructor(r.Body)
+		}
 		return json.NewDecoder(r.Body)
 	}
 }
@@ -96,74 +216,73 @@ func RequestDecoder(r *http.Request) Decoder {
 // ResponseEncoder defaults to the JSON encoder if the context AcceptTypeKey or
 // ContentTypeKey value does not match any of the supported mime types or is
 // missing altogether.
-func ResponseEncoder(ctx context.Context, w http.ResponseWriter) Encoder {
-	negotiate := func(a string) (Encoder, string) {
-		switch a {
-		case "", "application/json":
-			// default to JSON
-			return json.NewEncoder(w), "application/json"
-		case "application/xml":
-			return xml.NewEncoder(w), "application/xml"
-		case "application/gob":
-			return gob.NewEncoder(w), "application/gob"
-		case "text/html", "text/plain":
-			return newTextEncoder(w, a), a
-		}
-		return nil, ""
+var ResponseEncoder = NewResponseEncoder(DefaultEncoderConstructorSets)
+
+// NewResponseEncoder creates a HTTP response body encoder suite.
+func NewResponseEncoder(sets []EncoderConstructorSet) func(ctx context.Context, w http.ResponseWriter) Encoder {
+	for _, set := range sets {
+		registerEncoderConstructor(set.EncoderConstructor, set.ContentType, set.Suffix)
 	}
-	var accept string
-	{
-		if a := ctx.Value(AcceptTypeKey); a != nil {
-			accept = a.(string)
+	return func(ctx context.Context, w http.ResponseWriter) Encoder {
+		negotiate := func(a string) (Encoder, string) {
+			if a == "" {
+				a = "application/json"
+			}
+			if constructor, ok := encoderConstructorsContentType[a]; ok {
+				return constructor(w), a
+			}
+			return nil, ""
 		}
-	}
-	var ct string
-	{
-		if a := ctx.Value(ContentTypeKey); a != nil {
-			ct = a.(string)
+		var accept string
+		{
+			if a := ctx.Value(AcceptTypeKey); a != nil {
+				accept = a.(string)
+			}
 		}
-	}
-	var (
-		enc Encoder
-		mt  string
-		err error
-	)
-	{
-		if ct != "" {
-			// If content type explicitly set in the DSL, infer the response encoder
-			// from the content type context key.
-			if mt, _, err = mime.ParseMediaType(ct); err == nil {
-				switch {
-				case ct == "application/json" || strings.HasSuffix(ct, "+json"):
-					enc = json.NewEncoder(w)
-				case ct == "application/xml" || strings.HasSuffix(ct, "+xml"):
-					enc = xml.NewEncoder(w)
-				case ct == "application/gob" || strings.HasSuffix(ct, "+gob"):
-					enc = gob.NewEncoder(w)
-				case ct == "text/html" || ct == "text/plain" ||
-					strings.HasSuffix(ct, "+html") || strings.HasSuffix(ct, "+txt"):
-					enc = newTextEncoder(w, ct)
-				default:
-					enc = json.NewEncoder(w)
+		var ct string
+		{
+			if a := ctx.Value(ContentTypeKey); a != nil {
+				ct = a.(string)
+			}
+		}
+		var (
+			enc Encoder
+			mt  string
+			err error
+		)
+		{
+			if ct != "" {
+				// If content type explicitly set in the DSL, infer the response encoder
+				// from the content type context key.
+				if mt, _, err = mime.ParseMediaType(ct); err == nil {
+					if constructor, ok := encoderConstructorsContentType[ct]; ok {
+						enc = constructor(w)
+					}
+					if constructor, ok := encoderConstructorsSuffix[getSuffix(ct)]; ok {
+						enc = constructor(w)
+					}
+					if enc == nil {
+						enc = json.NewEncoder(w)
+					}
+				}
+				SetContentType(w, mt)
+				return enc
+			}
+			// If Accept header exists in the request, infer the response encoder
+			// from the header value.
+			if enc, mt = negotiate(accept); enc == nil {
+				// attempt to normalize
+				if mt, _, err = mime.ParseMediaType(accept); err == nil {
+					enc, mt = negotiate(mt)
 				}
 			}
-			SetContentType(w, mt)
-			return enc
-		}
-		// If Accept header exists in the request, infer the response encoder
-		// from the header value.
-		if enc, mt = negotiate(accept); enc == nil {
-			// attempt to normalize
-			if mt, _, err = mime.ParseMediaType(accept); err == nil {
-				enc, mt = negotiate(mt)
+			if enc == nil {
+				enc, mt = negotiate("")
 			}
 		}
-		if enc == nil {
-			enc, mt = negotiate("")
-		}
+		SetContentType(w, mt)
+		return enc
 	}
-	SetContentType(w, mt)
-	return enc
 }
 
 // RequestEncoder returns a HTTP request encoder.
@@ -182,27 +301,37 @@ func RequestEncoder(r *http.Request) Encoder {
 //   * application/gob using package encoding/gob
 //   * text/html and text/plain for strings
 //
-func ResponseDecoder(resp *http.Response) Decoder {
-	ct := resp.Header.Get("Content-Type")
-	if ct == "" {
+var ResponseDecoder = NewResponseDecoder(DefaultDecoderConstructorSets)
+
+// NewResponseDecoder creates a HTTP response body decoder suite.
+func NewResponseDecoder(sets []DecoderConstructorSet) func(*http.Response) Decoder {
+	for _, set := range sets {
+		registerDecoderConstructor(set.DecoderConstructor, set.ContentType, set.Suffix)
+	}
+	return func(resp *http.Response) Decoder {
+		ct := resp.Header.Get("Content-Type")
+		if ct == "" {
+			return json.NewDecoder(resp.Body)
+		}
+		if mediaType, _, err := mime.ParseMediaType(ct); err == nil {
+			ct = mediaType
+		}
+		if constructor, ok := decoderConstructorsContentType[ct]; ok {
+			return constructor(resp.Body)
+		}
+		if constructor, ok := decoderConstructorsSuffix[getSuffix(ct)]; ok {
+			return constructor(resp.Body)
+		}
 		return json.NewDecoder(resp.Body)
 	}
-	if mediaType, _, err := mime.ParseMediaType(ct); err == nil {
-		ct = mediaType
+}
+
+func getSuffix(s string) string {
+	ss := strings.Split(s, "+")
+	if len(ss) < 2 {
+		return ""
 	}
-	switch {
-	case ct == "application/json" || strings.HasSuffix(ct, "+json"):
-		return json.NewDecoder(resp.Body)
-	case ct == "application/xml" || strings.HasSuffix(ct, "+xml"):
-		return xml.NewDecoder(resp.Body)
-	case ct == "application/gob" || strings.HasSuffix(ct, "+gob"):
-		return gob.NewDecoder(resp.Body)
-	case ct == "text/html" || ct == "text/plain" ||
-		strings.HasSuffix(ct, "+html") || strings.HasSuffix(ct, "+txt"):
-		return newTextDecoder(resp.Body, ct)
-	default:
-		return json.NewDecoder(resp.Body)
-	}
+	return "+" + ss[len(ss)-1]
 }
 
 // ErrorEncoder returns an encoder that encodes errors returned by service
