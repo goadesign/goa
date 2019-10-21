@@ -389,6 +389,14 @@ func (a *AttributeExpr) HasTag(tag string) bool {
 	return false
 }
 
+// GetFieldTag returns the field tag if the attribute is a field.
+func (a *AttributeExpr) GetFieldTag() (tag string, found bool) {
+	if a == nil {
+		return
+	}
+	return a.Meta.GetLast("rpc:tag")
+}
+
 // HasDefaultValue returns true if the attribute with the given name has a
 // default value.
 func (a *AttributeExpr) HasDefaultValue(attName string) bool {
