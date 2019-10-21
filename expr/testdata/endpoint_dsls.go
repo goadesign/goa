@@ -304,4 +304,3 @@ var GRPCEndpointWithReferenceTypes = func() {
 		})
 	})
 }
-

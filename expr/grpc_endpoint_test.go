@@ -36,7 +36,7 @@ service "Service" gRPC endpoint "Method": field number 2 in attribute "key_dup_i
 			},
 		},
 		"endpoint-with-reference-types-field-inheritance": {
-			DSL: testdata.GRPCEndpointWithReferenceTypes,
+			DSL:    testdata.GRPCEndpointWithReferenceTypes,
 			Errors: []string{},
 		},
 	}
