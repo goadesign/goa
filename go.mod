@@ -15,6 +15,7 @@ require (
 	github.com/pkg/errors v0.8.1
 	github.com/sergi/go-diff v1.0.0
 	github.com/smartystreets/goconvey v0.0.0-20190330032615-68dc04aab96a // indirect
+	github.com/stretchr/testify v1.3.0
 	github.com/zach-klippenstein/goregen v0.0.0-20160303162051-795b5e3961ea
 	golang.org/x/tools v0.0.0-20190614205625-5aca471b1d59
 	google.golang.org/grpc v1.20.1
