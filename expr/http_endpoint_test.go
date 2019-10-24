@@ -57,6 +57,12 @@ func TestHTTPEndpointValidation(t *testing.T) {
 				"service \"Service\" method \"Method\": payload of method \"Method\" of service \"Service\" does not define a JWT attribute, use Token to define one",
 			},
 		},
+		"endpoint-missing-token-payload": {
+			DSL: testdata.EndpointMissingTokenPayload,
+			Errors: []string{
+				"service \"Service\" method \"Method\": payload of method \"Method\" of service \"Service\" does not define a JWT attribute, use Token to define one",
+			},
+		},
 		"endpoint-missing-token-extend": {
 			DSL: testdata.EndpointExtendToken,
 		},
