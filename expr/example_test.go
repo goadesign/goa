@@ -59,11 +59,13 @@ func TestExample(t *testing.T) {
 		{"with-example", testdata.WithExampleDSL, "example", ""},
 		{"with-array-example", testdata.WithArrayExampleDSL, []int{1, 2}, ""},
 		{"with-map-example", testdata.WithMapExampleDSL, map[string]int{"name": 1, "value": 2}, ""},
-		{"with-mulitple-examples", testdata.WithMultipleExamplesDSL, 100, ""},
+		{"with-multiple-examples", testdata.WithMultipleExamplesDSL, 100, ""},
 		{"overriding-example", testdata.OverridingExampleDSL, map[string]interface{}{"name": "overridden"}, ""},
 		{"with-extend", testdata.WithExtendExampleDSL, map[string]interface{}{"name": "example"}, ""},
 		{"invalid-example-type", testdata.InvalidExampleTypeDSL, nil, "example value map[int]int{1:1} is incompatible with attribute of type map in attribute"},
 		{"empty-example", testdata.EmptyExampleDSL, nil, "not enough arguments in attribute"},
+		{"hiding-example", testdata.HidingExampleDSL, nil, ""},
+		{"overriding-hidden-examples", testdata.OverridingHiddenExamplesDSL, "example", ""},
 	}
 	r := expr.NewRandom("test")
 	for _, k := range cases {
@@ -75,9 +77,12 @@ func TestExample(t *testing.T) {
 					t.Errorf("invalid example: got %v, expected %v", example, k.Expected)
 				}
 			} else {
-				err := expr.RunInvalidDSL(t, k.DSL)
-				if !strings.Contains(err.Error(), k.Error) {
-					t.Errorf("invalid error: got %q, expected %q", err.Error(), k.Error)
+				if err := expr.RunInvalidDSL(t, k.DSL); err == nil {
+					t.Error("the expected error was not returned")
+				} else {
+					if !strings.Contains(err.Error(), k.Error) {
+						t.Errorf("invalid error: got %q, expected %q", err.Error(), k.Error)
+					}
 				}
 			}
 		})

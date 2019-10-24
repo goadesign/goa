@@ -24,6 +24,11 @@ func (a *AttributeExpr) Example(r *Random) interface{} {
 		// slice.
 		return a.UserExamples[l-1].Value
 	}
+
+	if value, ok := a.Meta.Last("swagger:example"); ok && value == "false" {
+		return nil
+	}
+
 	// randomize array length first, since that's from higher level
 	if hasLengthValidation(a) {
 		return byLength(a, r)
