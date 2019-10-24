@@ -2,7 +2,6 @@ package expr
 
 import (
 	"fmt"
-	"github.com/stretchr/testify/assert"
 	"testing"
 
 	"goa.design/goa/v3/eval"
@@ -88,8 +87,12 @@ func TestMetaExpr_Last(t *testing.T) {
 	for name, tc := range tt {
 		t.Run(name, func(t *testing.T) {
 			value, ok := tc.meta.Last("test:key")
-			assert.Equal(t, tc.value, value)
-			assert.Equal(t, tc.ok, ok)
+			if tc.ok != ok {
+				t.Errorf("expected ok to be %v, got %v", tc.ok, ok)
+			}
+			if tc.value != value {
+				t.Errorf("expected value to be %s, got %s", value, value)
+			}
 		})
 	}
 }

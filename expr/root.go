@@ -278,7 +278,7 @@ func (m MetaExpr) Merge(src MetaExpr) {
 	}
 }
 
-// Return the last value for a specific key, if the key exists and
+// Last returns the last value for a specific key, if the key exists and
 // has values; otherwise return nil, with the "ok" flag set to false.
 func (m MetaExpr) Last(key string) (string, bool) {
 	v, ok := m[key]
