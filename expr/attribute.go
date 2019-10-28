@@ -394,7 +394,7 @@ func (a *AttributeExpr) GetFieldTag() (tag string, found bool) {
 	if a == nil {
 		return
 	}
-	return a.Meta.GetLast("rpc:tag")
+	return a.Meta.Last("rpc:tag")
 }
 
 // HasDefaultValue returns true if the attribute with the given name has a

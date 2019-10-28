@@ -125,6 +125,22 @@ var EndpointMissingToken = func() {
 	})
 }
 
+var EndpointMissingTokenPayload = func() {
+	var JWT = JWTSecurity("JWT", func() {
+		Scope("api:read", "Read access")
+	})
+	Service("Service", func() {
+		Security(JWT, func() {
+			Scope("api:read")
+		})
+		Method("Method", func() {
+			HTTP(func() {
+				POST("/")
+			})
+		})
+	})
+}
+
 var EndpointExtendToken = func() {
 	var CommonAttributes = Type("Common", func() {
 		Token("token", String)

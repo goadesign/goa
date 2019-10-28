@@ -278,13 +278,18 @@ func (m MetaExpr) Merge(src MetaExpr) {
 	}
 }
 
-// GetLast gets the last value of the given tag
-func (m MetaExpr) GetLast(tag string) (value string, found bool) {
-	if t, ok := m[tag]; ok {
-		if len(t) < 1 {
-			return
-		}
-		value, found = t[len(t)-1], ok
+// Last returns the last value for a specific key, if the key exists and has
+// values; otherwise returns an empty string, with the "ok" flag set to false.
+func (m MetaExpr) Last(key string) (string, bool) {
+	v, ok := m[key]
+	if !ok {
+		return "", false
 	}
-	return
+
+	l := len(v)
+	if l < 1 {
+		return "", false
+	}
+
+	return v[l-1], true
 }

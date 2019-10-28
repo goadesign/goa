@@ -43,3 +43,56 @@ func TestRootExprValidate(t *testing.T) {
 		}
 	}
 }
+
+func TestMetaExpr_Last(t *testing.T) {
+	tt := map[string]struct {
+		meta  MetaExpr
+		value string
+		ok    bool
+	}{
+		"no-key": {
+			MetaExpr{},
+			"",
+			false,
+		},
+		"key-no-values": {
+			MetaExpr{
+				"test:key": []string{},
+			},
+			"",
+			false,
+		},
+		"key-with-one-value": {
+			MetaExpr{
+				"test:key": []string{
+					"value-one",
+				},
+			},
+			"value-one",
+			true,
+		},
+		"key-with-multiple-values": {
+			MetaExpr{
+				"test:key": []string{
+					"value-one",
+					"value-two",
+					"value-n",
+				},
+			},
+			"value-n",
+			true,
+		},
+	}
+
+	for name, tc := range tt {
+		t.Run(name, func(t *testing.T) {
+			value, ok := tc.meta.Last("test:key")
+			if tc.ok != ok {
+				t.Errorf("expected ok to be %v, got %v", tc.ok, ok)
+			}
+			if tc.value != value {
+				t.Errorf("expected value to be %s, got %s", value, value)
+			}
+		})
+	}
+}
