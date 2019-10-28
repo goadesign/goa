@@ -389,8 +389,8 @@ func (a *AttributeExpr) HasTag(tag string) bool {
 	return false
 }
 
-// GetFieldTag returns the field tag if the attribute is a field.
-func (a *AttributeExpr) GetFieldTag() (tag string, found bool) {
+// FieldTag returns the field tag if the attribute is a field.
+func (a *AttributeExpr) FieldTag() (tag string, found bool) {
 	if a == nil {
 		return
 	}
