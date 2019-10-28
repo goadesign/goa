@@ -267,3 +267,56 @@ var GRPCEndpointWithAnyType = func() {
 		})
 	})
 }
+
+var GRPCEndpointWithUntaggedFields = func() {
+	var Req = Type("Req", func() {
+		Attribute("req_not_field", String)
+	})
+	var Resp = Type("Resp", func() {
+		Attribute("resp_not_field", String)
+	})
+	Service("Service", func() {
+		Method("Method", func() {
+			Payload(Req)
+			Result(Resp)
+			GRPC(func() {})
+		})
+	})
+}
+
+var GRPCEndpointWithRepeatedFieldTags = func() {
+	var Req = Type("Req", func() {
+		Field(1, "key", String)
+		Field(1, "key_dup_id", String)
+	})
+	var Resp = Type("Resp", func() {
+		Field(2, "key", String)
+		Field(2, "key_dup_id", String)
+	})
+	Service("Service", func() {
+		Method("Method", func() {
+			Payload(Req)
+			Result(Resp)
+			GRPC(func() {})
+		})
+	})
+}
+
+var GRPCEndpointWithReferenceTypes = func() {
+	var EntityReference = Type("EntityReference", func() {
+		Field(1, "name", String)
+	})
+
+	var Entity = Type("Entity", func() {
+		Reference(EntityReference)
+		Field(1, "id", String)
+		Field(2, "name")
+	})
+
+	Service("Service", func() {
+		Method("Method", func() {
+			Payload(Entity)
+			GRPC(func() {})
+		})
+	})
+}
