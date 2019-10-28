@@ -115,7 +115,7 @@ var ServerStreamingRPCDSL = func() {
 
 var ServerStreamingUserTypeDSL = func() {
 	var UT = Type("UserType", func() {
-		Attribute("IntField", Int)
+		Field(1, "IntField", Int)
 	})
 	Service("ServiceServerStreamingUserTypeRPC", func() {
 		Method("MethodServerStreamingUserTypeRPC", func() {
@@ -136,7 +136,7 @@ var ServerStreamingArrayDSL = func() {
 
 var ServerStreamingMapDSL = func() {
 	var UT = Type("UserType", func() {
-		Attribute("IntField", Int)
+		Field(1, "IntField", Int)
 	})
 	Service("ServiceServerStreamingMap", func() {
 		Method("MethodServerStreamingMap", func() {
@@ -150,8 +150,8 @@ var ServerStreamingResultWithViewsDSL = func() {
 	var RT = ResultType("application/vnd.result", func() {
 		TypeName("ResultType")
 		Attributes(func() {
-			Attribute("IntField", Int)
-			Attribute("DoubleField", Float64)
+			Field(1, "IntField", Int)
+			Field(2, "DoubleField", Float64)
 		})
 		View("default", func() {
 			Attribute("IntField")

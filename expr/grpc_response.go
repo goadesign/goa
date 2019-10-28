@@ -113,7 +113,7 @@ func (r *GRPCResponseExpr) Validate(e *GRPCEndpointExpr) *eval.ValidationErrors 
 		case !hasMessage && !hasHeaders && !hasTrailers:
 			// no response message or metadata is defined. Ensure that the method
 			// result attributes have "rpc:tag" set
-			validateRPCTags(robj, e)
+			verr.Merge(validateRPCTags(robj, e))
 		}
 	} else {
 		switch {

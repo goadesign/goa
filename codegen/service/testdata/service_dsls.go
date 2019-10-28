@@ -529,12 +529,12 @@ var NamesWithSpacesDSL = func() {
 		})
 	})
 	var APayload = Type("Payload With Space", func() {
-		Attribute("String", String)
+		Field(1, "String", String)
 	})
 	var AResult = ResultType("application/vnd.goa.result", func() {
 		TypeName("Result With Space")
 		Attributes(func() {
-			Attribute("Int", Int)
+			Field(1, "Int", Int)
 		})
 	})
 	Service("Service With Spaces", func() {
