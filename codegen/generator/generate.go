@@ -12,7 +12,7 @@ import (
 )
 
 // Generate runs the code generation algorithms.
-func Generate(dir, cmd string) ([]string, error) {
+func Generate(dir, cmd string) (outputs []string, err1 error) {
 	// 1. Compute design roots.
 	var roots []eval.Root
 	{
@@ -40,8 +40,16 @@ func Generate(dir, cmd string) ([]string, error) {
 		if err != nil {
 			return nil, err
 		}
-		defer os.Remove(dummy.Name())
-		if err = ioutil.WriteFile(dummy.Name(), []byte("package gen"), 0644); err != nil {
+		defer func() {
+			if err := os.Remove(dummy.Name()); err != nil {
+				outputs = nil
+				err1 = err
+			}
+		}()
+		if _, err = dummy.Write([]byte("package gen")); err != nil {
+			return nil, err
+		}
+		if err = dummy.Close(); err != nil {
 			return nil, err
 		}
 
@@ -97,7 +105,6 @@ func Generate(dir, cmd string) ([]string, error) {
 	}
 
 	// 8. Compute all output filenames.
-	var outputs []string
 	{
 		outputs = make([]string, len(written))
 		cwd, err := os.Getwd()
