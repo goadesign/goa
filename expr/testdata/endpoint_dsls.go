@@ -199,6 +199,47 @@ var EndpointHasParent = func() {
 	})
 }
 
+var EndpointHasParentAndOther = func() {
+	Service("Parent", func() {
+		HTTP(func() {
+			Path("/parents")
+			CanonicalMethod("Method")
+		})
+		Method("Method", func() {
+			Payload(func() {
+				Attribute("parent_id", Int)
+				Attribute("query_1", String)
+			})
+			HTTP(func() {
+				GET("/{parent_id}")
+				Param("query_1")
+			})
+		})
+	})
+	Service("Child", func() {
+		HTTP(func() {
+			Path("/children")
+			Parent("Parent")
+		})
+		Method("Method", func() {
+			HTTP(func() {
+				GET("")
+			})
+		})
+	})
+	Service("Other", func() {
+		HTTP(func() {
+			Path("/others")
+		})
+		Method("Method", func() {
+			HTTP(func() {
+				GET("")
+			})
+		})
+	})
+
+}
+
 var FinalizeEndpointBodyAsExtendedTypeDSL = func() {
 	var EntityData = Type("EntityData", func() {
 		Attribute("name", String)
