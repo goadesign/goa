@@ -181,6 +181,9 @@ func (e *HTTPEndpointExpr) Prepare() {
 				// Inherit attributes for path params from parent service
 				WalkMappedAttr(c.PathParams(), func(name, _ string, _ *AttributeExpr) error {
 					if att := c.MethodExpr.Payload.Find(name); att != nil {
+						if e.MethodExpr.Payload.Type == Empty {
+							e.MethodExpr.Payload.Type = &Object{}
+						}
 						if o := AsObject(e.MethodExpr.Payload.Type); o != nil {
 							if o.Attribute(name) == nil {
 								o.Set(name, att)
