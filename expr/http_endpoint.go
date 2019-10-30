@@ -849,6 +849,9 @@ func isEmpty(a *AttributeExpr) bool {
 		return false
 	}
 	if obj := AsObject(a.Type); obj != nil && len(*obj) != 0 {
+		if a.Type == Empty {
+			panic("Empty should have no attribute") // bug
+		}
 		return false
 	}
 	if len(a.Bases) != 0 || len(a.References) != 0 {
