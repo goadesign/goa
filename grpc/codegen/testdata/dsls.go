@@ -520,6 +520,7 @@ var PayloadWithAliasTypeDSL = func() {
 	Service("ServiceMessageUserTypeWithAlias", func() {
 		Method("MethodMessageUserTypeWithAlias", func() {
 			Payload(PayloadAliasT)
+			Result(PayloadAliasT)
 			GRPC(func() {})
 		})
 	})
