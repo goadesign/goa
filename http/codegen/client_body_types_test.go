@@ -171,7 +171,7 @@ const ExplicitBodyUserResultMultipleViewsInitCode = `// NewMethodExplicitBodyUse
 // a "ServiceExplicitBodyUserResultMultipleView" service
 // "MethodExplicitBodyUserResultMultipleView" endpoint result from a HTTP "OK"
 // response.
-func NewMethodExplicitBodyUserResultMultipleViewResulttypemultipleviewsOK(body *UserType, c *string) *serviceexplicitbodyuserresultmultipleviewviews.ResulttypemultipleviewsView {
+func NewMethodExplicitBodyUserResultMultipleViewResulttypemultipleviewsOK(body *MethodExplicitBodyUserResultMultipleViewResponseBody, c *string) *serviceexplicitbodyuserresultmultipleviewviews.ResulttypemultipleviewsView {
 	v := &serviceexplicitbodyuserresultmultipleviewviews.UserTypeView{
 		X: body.X,
 		Y: body.Y,

@@ -743,7 +743,7 @@ func EncodeMethodExplicitBodyUserResultMultipleViewResponse(encoder func(context
 		res := v.(*serviceexplicitbodyuserresultmultipleviewviews.Resulttypemultipleviews)
 		w.Header().Set("goa-view", res.View)
 		enc := encoder(ctx, w)
-		body := NewUserType(res.Projected)
+		body := NewMethodExplicitBodyUserResultMultipleViewResponseBody(res.Projected)
 		if res.Projected.C != nil {
 			w.Header().Set("Location", *res.Projected.C)
 		}
