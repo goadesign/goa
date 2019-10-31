@@ -121,8 +121,6 @@ func NewMethodMessageUserTypeWithAliasPayload(message *service_message_user_type
 		optionalIntAliasFieldptr := servicemessageusertypewithalias.IntAlias(message.OptionalIntAliasField)
 		v.OptionalIntAliasField = &optionalIntAliasFieldptr
 	}
-	v.IntAliasField = protobufServiceMessageUserTypeWithAliaspbIntAliasToServicemessageusertypewithaliasIntAlias(message.IntAliasField)
-	v.OptionalIntAliasField = protobufServiceMessageUserTypeWithAliaspbIntAliasToServicemessageusertypewithaliasIntAlias(message.OptionalIntAliasField)
 	return v
 }
 

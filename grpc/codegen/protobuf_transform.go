@@ -54,6 +54,8 @@ func init() {
 // `proto` param if true indicates that the target is a protocol buffer type
 //
 func protoBufTransform(source, target *expr.AttributeExpr, sourceVar, targetVar string, sourceCtx, targetCtx *codegen.AttributeContext, proto bool) (string, []*codegen.TransformFunctionData, error) {
+	source = unAlias(source)
+	target = unAlias(target)
 	var prefix string
 	{
 		prefix = "protobuf"
@@ -210,6 +212,8 @@ func transformObject(source, target *expr.AttributeExpr, sourceVar, targetVar st
 	// handle default values
 	var err error
 	walkMatches(source, target, func(srcMatt, tgtMatt *expr.MappedAttributeExpr, srcc, tgtc *expr.AttributeExpr, n string) {
+		srcc = unAlias(srcc)
+		tgtc = unAlias(tgtc)
 		var (
 			code string
 
@@ -446,6 +450,13 @@ func transformMap(source, target *expr.Map, sourceVar, targetVar string, newVar 
 func convertType(source, target *expr.AttributeExpr, sourceVar string, ta *transformAttrs) string {
 	if _, ok := source.Type.(expr.UserType); ok {
 		// return a function name for the conversion
+		sourcePrimitive, targetPrimitive := getPrimitive(source), getPrimitive(target)
+		if sourcePrimitive != nil && targetPrimitive != nil && sourcePrimitive.Type == targetPrimitive.Type {
+			if strings.HasSuffix(ta.TargetCtx.Pkg, "pb") {
+				return fmt.Sprintf("%s(%s)", targetPrimitive.Type.Name(), sourceVar)
+			}
+			return fmt.Sprintf("%s(%s)", ta.TargetCtx.Scope.Ref(target, ta.TargetCtx.Pkg), sourceVar)
+		}
 		return fmt.Sprintf("%s(%s)", transformHelperName(source, target, ta), sourceVar)
 	}
 
@@ -670,6 +681,14 @@ func transformHelperName(source, target *expr.AttributeExpr, ta *transformAttrs)
 		prefix = ta.Prefix
 	}
 	return codegen.Goify(prefix+sname+"To"+tname, false)
+}
+
+// unAlias returns the base AttributeExpr of an aliased one.
+func unAlias(at *expr.AttributeExpr) *expr.AttributeExpr {
+	if prim := getPrimitive(at); prim != nil {
+		return prim
+	}
+	return at
 }
 
 const (
