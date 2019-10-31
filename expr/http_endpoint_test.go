@@ -69,6 +69,9 @@ func TestHTTPEndpointValidation(t *testing.T) {
 		"endpoint-has-parent": {
 			DSL: testdata.EndpointHasParent,
 		},
+		"endpoint-has-parent-and-other": {
+			DSL: testdata.EndpointHasParentAndOther,
+		},
 	}
 	for name, c := range cases {
 		t.Run(name, func(t *testing.T) {
