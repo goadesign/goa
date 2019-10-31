@@ -78,7 +78,7 @@ Releases are tagged with the corresponding version number. There is also a
 branch for each major version (`v1` and `v2`). The recommended practice is to
 vendor the stable branch.
 
-Current Release: `v2.0.5`
+Current Release: `v2.0.7`
 
 ## Teaser
 
