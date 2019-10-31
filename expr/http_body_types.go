@@ -149,8 +149,21 @@ func buildHTTPResponseBody(name string, attr *AttributeExpr, resp *HTTPResponseE
 	if attr == nil || attr.Type == Empty {
 		return &AttributeExpr{Type: Empty}
 	}
+
+	// 0. Handle the case where the body is set explicitely in the design.
+	// We need to create a type with an endpoint specific response body type
+	// name to handle the case where the same type is used by multiple
+	// methods with potentially different result types.
 	if resp.Body != nil {
-		return resp.Body
+		if !IsObject(resp.Body.Type) {
+			return resp.Body
+		}
+		if len(*AsObject(resp.Body.Type)) == 0 {
+			return &AttributeExpr{Type: Empty}
+		}
+		att := DupAtt(resp.Body)
+		renameType(att, name, suffix)
+		return att
 	}
 
 	// 1. If attribute is not an object then check whether there are headers
@@ -165,9 +178,9 @@ func buildHTTPResponseBody(name string, attr *AttributeExpr, resp *HTTPResponseE
 		}
 		return &AttributeExpr{Type: Empty}
 	}
+	body := NewMappedAttributeExpr(attr)
 
 	// 2. Remove header attributes
-	body := NewMappedAttributeExpr(attr)
 	removeAttributes(body, resp.Headers)
 
 	// 3. Return empty type if no attribute left

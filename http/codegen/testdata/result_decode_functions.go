@@ -200,7 +200,7 @@ func DecodeMethodExplicitBodyUserResultMultipleViewResponse(decoder func(*http.R
 		switch resp.StatusCode {
 		case http.StatusOK:
 			var (
-				body UserType
+				body MethodExplicitBodyUserResultMultipleViewResponseBody
 				err  error
 			)
 			err = decoder(resp).Decode(&body)
