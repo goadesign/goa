@@ -69,6 +69,10 @@ func clientType(genpkg string, svc *expr.HTTPServiceExpr, seen map[string]struct
 	for _, a := range svc.HTTPEndpoints {
 		adata := data.Endpoint(a.Name())
 		if data := adata.Payload.Request.ClientBody; data != nil {
+			if _, ok := seen[data.Name]; ok {
+				continue
+			}
+			seen[data.Name] = struct{}{}
 			if data.Def != "" {
 				sections = append(sections, &codegen.SectionTemplate{
 					Name:   "client-request-body",
@@ -85,6 +89,10 @@ func clientType(genpkg string, svc *expr.HTTPServiceExpr, seen map[string]struct
 		}
 		if adata.ClientStream != nil {
 			if data := adata.ClientStream.Payload; data != nil {
+				if _, ok := seen[data.Name]; ok {
+					continue
+				}
+				seen[data.Name] = struct{}{}
 				if data.Def != "" {
 					sections = append(sections, &codegen.SectionTemplate{
 						Name:   "client-request-body",
@@ -107,6 +115,10 @@ func clientType(genpkg string, svc *expr.HTTPServiceExpr, seen map[string]struct
 		adata := data.Endpoint(a.Name())
 		for _, resp := range adata.Result.Responses {
 			if data := resp.ClientBody; data != nil {
+				if _, ok := seen[data.Name]; ok {
+					continue
+				}
+				seen[data.Name] = struct{}{}
 				if data.Def != "" {
 					sections = append(sections, &codegen.SectionTemplate{
 						Name:   "client-response-body",
@@ -127,6 +139,10 @@ func clientType(genpkg string, svc *expr.HTTPServiceExpr, seen map[string]struct
 		for _, gerr := range adata.Errors {
 			for _, herr := range gerr.Errors {
 				if data := herr.Response.ClientBody; data != nil {
+					if _, ok := seen[data.Name]; ok {
+						continue
+					}
+					seen[data.Name] = struct{}{}
 					if data.Def != "" {
 						sections = append(sections, &codegen.SectionTemplate{
 							Name:   "client-error-body",
@@ -143,6 +159,11 @@ func clientType(genpkg string, svc *expr.HTTPServiceExpr, seen map[string]struct
 	}
 
 	for _, data := range data.ClientBodyAttributeTypes {
+		if _, ok := seen[data.Name]; ok {
+			continue
+		}
+		seen[data.Name] = struct{}{}
+
 		if data.Def != "" {
 			sections = append(sections, &codegen.SectionTemplate{
 				Name:   "client-body-attributes",

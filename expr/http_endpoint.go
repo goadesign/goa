@@ -527,9 +527,7 @@ func (e *HTTPEndpointExpr) Finalize() {
 	// Initialize responses parent, headers and body
 	for _, r := range e.Responses {
 		r.Finalize(e, e.MethodExpr.Result)
-		if r.Body == nil {
-			r.Body = httpResponseBody(e, r)
-		}
+		r.Body = httpResponseBody(e, r)
 		r.Body.Finalize()
 	}
 
