@@ -47,7 +47,7 @@ func NewViewedResultWithSpace(res *ResultWithSpace, view string) *servicewithspa
 	switch view {
 	case "default", "":
 		p := newResultWithSpaceView(res)
-		vres = &servicewithspacesviews.ResultWithSpace{p, "default"}
+		vres = &servicewithspacesviews.ResultWithSpace{Projected: p, View: "default"}
 	}
 	return vres
 }
@@ -438,10 +438,10 @@ func NewViewedMultipleViews(res *MultipleViews, view string) *multiplemethodsres
 	switch view {
 	case "default", "":
 		p := newMultipleViewsView(res)
-		vres = &multiplemethodsresultmultipleviewsviews.MultipleViews{p, "default"}
+		vres = &multiplemethodsresultmultipleviewsviews.MultipleViews{Projected: p, View: "default"}
 	case "tiny":
 		p := newMultipleViewsViewTiny(res)
-		vres = &multiplemethodsresultmultipleviewsviews.MultipleViews{p, "tiny"}
+		vres = &multiplemethodsresultmultipleviewsviews.MultipleViews{Projected: p, View: "tiny"}
 	}
 	return vres
 }
@@ -464,7 +464,7 @@ func NewViewedSingleView(res *SingleView, view string) *multiplemethodsresultmul
 	switch view {
 	case "default", "":
 		p := newSingleViewView(res)
-		vres = &multiplemethodsresultmultipleviewsviews.SingleView{p, "default"}
+		vres = &multiplemethodsresultmultipleviewsviews.SingleView{Projected: p, View: "default"}
 	}
 	return vres
 }
@@ -577,10 +577,10 @@ func NewViewedMultipleViewsCollection(res MultipleViewsCollection, view string) 
 	switch view {
 	case "default", "":
 		p := newMultipleViewsCollectionView(res)
-		vres = resultcollectionmultipleviewsmethodviews.MultipleViewsCollection{p, "default"}
+		vres = resultcollectionmultipleviewsmethodviews.MultipleViewsCollection{Projected: p, View: "default"}
 	case "tiny":
 		p := newMultipleViewsCollectionViewTiny(res)
-		vres = resultcollectionmultipleviewsmethodviews.MultipleViewsCollection{p, "tiny"}
+		vres = resultcollectionmultipleviewsmethodviews.MultipleViewsCollection{Projected: p, View: "tiny"}
 	}
 	return vres
 }
@@ -721,10 +721,10 @@ func NewViewedMultipleViews(res *MultipleViews, view string) *resultwithotherres
 	switch view {
 	case "default", "":
 		p := newMultipleViewsView(res)
-		vres = &resultwithotherresultviews.MultipleViews{p, "default"}
+		vres = &resultwithotherresultviews.MultipleViews{Projected: p, View: "default"}
 	case "tiny":
 		p := newMultipleViewsViewTiny(res)
-		vres = &resultwithotherresultviews.MultipleViews{p, "tiny"}
+		vres = &resultwithotherresultviews.MultipleViews{Projected: p, View: "tiny"}
 	}
 	return vres
 }
@@ -873,13 +873,13 @@ func NewViewedRT(res *RT, view string) *resultwithresulttypecollectionviews.RT {
 	switch view {
 	case "default", "":
 		p := newRTView(res)
-		vres = &resultwithresulttypecollectionviews.RT{p, "default"}
+		vres = &resultwithresulttypecollectionviews.RT{Projected: p, View: "default"}
 	case "extended":
 		p := newRTViewExtended(res)
-		vres = &resultwithresulttypecollectionviews.RT{p, "extended"}
+		vres = &resultwithresulttypecollectionviews.RT{Projected: p, View: "extended"}
 	case "tiny":
 		p := newRTViewTiny(res)
-		vres = &resultwithresulttypecollectionviews.RT{p, "tiny"}
+		vres = &resultwithresulttypecollectionviews.RT{Projected: p, View: "tiny"}
 	}
 	return vres
 }
@@ -1230,10 +1230,10 @@ func NewViewedMultipleViews(res *MultipleViews, view string) *streamingresultwit
 	switch view {
 	case "default", "":
 		p := newMultipleViewsView(res)
-		vres = &streamingresultwithviewsserviceviews.MultipleViews{p, "default"}
+		vres = &streamingresultwithviewsserviceviews.MultipleViews{Projected: p, View: "default"}
 	case "tiny":
 		p := newMultipleViewsViewTiny(res)
-		vres = &streamingresultwithviewsserviceviews.MultipleViews{p, "tiny"}
+		vres = &streamingresultwithviewsserviceviews.MultipleViews{Projected: p, View: "tiny"}
 	}
 	return vres
 }
@@ -1339,10 +1339,10 @@ func NewViewedMultipleViews(res *MultipleViews, view string) *streamingresultwit
 	switch view {
 	case "default", "":
 		p := newMultipleViewsView(res)
-		vres = &streamingresultwithexplicitviewserviceviews.MultipleViews{p, "default"}
+		vres = &streamingresultwithexplicitviewserviceviews.MultipleViews{Projected: p, View: "default"}
 	case "tiny":
 		p := newMultipleViewsViewTiny(res)
-		vres = &streamingresultwithexplicitviewserviceviews.MultipleViews{p, "tiny"}
+		vres = &streamingresultwithexplicitviewserviceviews.MultipleViews{Projected: p, View: "tiny"}
 	}
 	return vres
 }
@@ -1661,10 +1661,10 @@ func NewViewedMultipleViews(res *MultipleViews, view string) *streamingpayloadre
 	switch view {
 	case "default", "":
 		p := newMultipleViewsView(res)
-		vres = &streamingpayloadresultwithviewsserviceviews.MultipleViews{p, "default"}
+		vres = &streamingpayloadresultwithviewsserviceviews.MultipleViews{Projected: p, View: "default"}
 	case "tiny":
 		p := newMultipleViewsViewTiny(res)
-		vres = &streamingpayloadresultwithviewsserviceviews.MultipleViews{p, "tiny"}
+		vres = &streamingpayloadresultwithviewsserviceviews.MultipleViews{Projected: p, View: "tiny"}
 	}
 	return vres
 }
@@ -1776,10 +1776,10 @@ func NewViewedMultipleViews(res *MultipleViews, view string) *streamingpayloadre
 	switch view {
 	case "default", "":
 		p := newMultipleViewsView(res)
-		vres = &streamingpayloadresultwithexplicitviewserviceviews.MultipleViews{p, "default"}
+		vres = &streamingpayloadresultwithexplicitviewserviceviews.MultipleViews{Projected: p, View: "default"}
 	case "tiny":
 		p := newMultipleViewsViewTiny(res)
-		vres = &streamingpayloadresultwithexplicitviewserviceviews.MultipleViews{p, "tiny"}
+		vres = &streamingpayloadresultwithexplicitviewserviceviews.MultipleViews{Projected: p, View: "tiny"}
 	}
 	return vres
 }
@@ -2031,10 +2031,10 @@ func NewViewedMultipleViews(res *MultipleViews, view string) *bidirectionalstrea
 	switch view {
 	case "default", "":
 		p := newMultipleViewsView(res)
-		vres = &bidirectionalstreamingresultwithviewsserviceviews.MultipleViews{p, "default"}
+		vres = &bidirectionalstreamingresultwithviewsserviceviews.MultipleViews{Projected: p, View: "default"}
 	case "tiny":
 		p := newMultipleViewsViewTiny(res)
-		vres = &bidirectionalstreamingresultwithviewsserviceviews.MultipleViews{p, "tiny"}
+		vres = &bidirectionalstreamingresultwithviewsserviceviews.MultipleViews{Projected: p, View: "tiny"}
 	}
 	return vres
 }
@@ -2149,10 +2149,10 @@ func NewViewedMultipleViews(res *MultipleViews, view string) *bidirectionalstrea
 	switch view {
 	case "default", "":
 		p := newMultipleViewsView(res)
-		vres = &bidirectionalstreamingresultwithexplicitviewserviceviews.MultipleViews{p, "default"}
+		vres = &bidirectionalstreamingresultwithexplicitviewserviceviews.MultipleViews{Projected: p, View: "default"}
 	case "tiny":
 		p := newMultipleViewsViewTiny(res)
-		vres = &bidirectionalstreamingresultwithexplicitviewserviceviews.MultipleViews{p, "tiny"}
+		vres = &bidirectionalstreamingresultwithexplicitviewserviceviews.MultipleViews{Projected: p, View: "tiny"}
 	}
 	return vres
 }
