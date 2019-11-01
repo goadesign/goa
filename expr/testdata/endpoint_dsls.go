@@ -262,6 +262,8 @@ var FinalizeEndpointBodyAsExtendedTypeDSL = func() {
 }
 
 var FinalizeEndpointBodyAsPropWithExtendedTypeDSL = func() {
+	var OAuth2 = OAuth2Security("authCode")
+
 	var EntityData = Type("EntityData", func() {
 		Attribute("name", String)
 	})
@@ -274,6 +276,7 @@ var FinalizeEndpointBodyAsPropWithExtendedTypeDSL = func() {
 
 	Service("Service", func() {
 		Method("Method", func() {
+			Security(OAuth2)
 			Payload(func() {
 				AccessToken("token", String)
 				Attribute("payload", Entity)

@@ -24,7 +24,12 @@ flow authorization_code: invalid authorization URL "http://^authorization": pars
 flow authorization_code: invalid refresh URL "http://refresh^": parse http://refresh^: invalid character "^" in host name
 service "InvalidSecuritySchemesService" method "InheritedSecureMethod": payload of method "InheritedSecureMethod" of service "InvalidSecuritySchemesService" does not define a OAuth2 access token attribute, use AccessToken to define one
 service "InvalidSecuritySchemesService" method "InheritedSecureMethod": payload of method "InheritedSecureMethod" of service "InvalidSecuritySchemesService" does not define an API key attribute, use APIKey to define one
-service "InvalidSecuritySchemesService" method "InheritedSecureMethod": security scope "not:found" not found in any of the security schemes.`,
+service "InvalidSecuritySchemesService" method "InheritedSecureMethod": security scope "not:found" not found in any of the security schemes.
+service "AnotherInvalidSecuritySchemesService" method "Method": payload of method "Method" of service "AnotherInvalidSecuritySchemesService" defines a username attribute, but no basic auth security scheme exist
+service "AnotherInvalidSecuritySchemesService" method "Method": payload of method "Method" of service "AnotherInvalidSecuritySchemesService" defines a password attribute, but no basic auth security scheme exist
+service "AnotherInvalidSecuritySchemesService" method "Method": payload of method "Method" of service "AnotherInvalidSecuritySchemesService" defines an API key attribute, but no APIKey security scheme exist
+service "AnotherInvalidSecuritySchemesService" method "Method": payload of method "Method" of service "AnotherInvalidSecuritySchemesService" defines a JWT token attribute, but no JWT auth security scheme exist
+service "AnotherInvalidSecuritySchemesService" method "Method": payload of method "Method" of service "AnotherInvalidSecuritySchemesService" defines a OAuth2 access token attribute, but no OAuth2 security scheme exist`,
 		},
 	}
 	for _, tc := range cases {

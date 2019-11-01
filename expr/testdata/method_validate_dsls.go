@@ -39,4 +39,16 @@ var InvalidSecuritySchemesDSL = func() {
 			})
 		})
 	})
+	Service("AnotherInvalidSecuritySchemesService", func() {
+		Method("Method", func() {
+			Payload(func() {
+				Username("user", String)
+				Password("pass", String)
+				APIKey("key_key", "key", String)
+				Token("token", String)
+				AccessToken("access_token", String)
+			})
+			// invalid: missing security scheme
+		})
+	})
 }
