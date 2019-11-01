@@ -613,6 +613,64 @@ func TestAttributeExprHasTag(t *testing.T) {
 	}
 }
 
+func TestAttributeExprHasTagPrefix(t *testing.T) {
+	var (
+		tag    = "security:apikey:api_key"
+		prefix = "security:apikey"
+	)
+	cases := map[string]struct {
+		attribute *AttributeExpr
+		prefix    string
+		expected  bool
+	}{
+		"has tag prefix": {
+			attribute: &AttributeExpr{
+				Type: &Object{
+					&NamedAttributeExpr{
+						Name: "foo",
+						Attribute: &AttributeExpr{
+							Meta: MetaExpr{
+								tag: []string{"key"},
+							},
+						},
+					},
+				},
+			},
+			prefix:   prefix,
+			expected: true,
+		},
+		"attribute expr is nil": {
+			attribute: nil,
+			prefix:    prefix,
+			expected:  false,
+		},
+		"not object": {
+			attribute: &AttributeExpr{
+				Type: String,
+			},
+			prefix:   prefix,
+			expected: false,
+		},
+		"object but has no tag": {
+			attribute: &AttributeExpr{
+				Type: &Object{
+					&NamedAttributeExpr{
+						Name:      "foo",
+						Attribute: &AttributeExpr{},
+					},
+				},
+			},
+			prefix: prefix,
+		},
+	}
+
+	for k, tc := range cases {
+		if actual := tc.attribute.HasTagPrefix(tc.prefix); tc.expected != actual {
+			t.Errorf("%s: got %#v, expected %#v", k, actual, tc.expected)
+		}
+	}
+}
+
 func TestAttributeExprHasDefaultValue(t *testing.T) {
 	var (
 		object = &Object{
