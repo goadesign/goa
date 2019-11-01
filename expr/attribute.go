@@ -2,6 +2,7 @@ package expr
 
 import (
 	"fmt"
+	"strings"
 
 	"goa.design/goa/eval"
 )
@@ -384,6 +385,26 @@ func (a *AttributeExpr) HasTag(tag string) bool {
 	for _, at := range *obj {
 		if _, ok := at.Attribute.Meta[tag]; ok {
 			return true
+		}
+	}
+	return false
+}
+
+// HasTagPrefix returns true if the attribute is an object that has an attribute with
+// the given tag prefix.
+func (a *AttributeExpr) HasTagPrefix(prefix string) bool {
+	if a == nil {
+		return false
+	}
+	obj := AsObject(a.Type)
+	if obj == nil {
+		return false
+	}
+	for _, at := range *obj {
+		for k := range at.Attribute.Meta {
+			if strings.HasPrefix(k, prefix) {
+				return true
+			}
 		}
 	}
 	return false
