@@ -242,7 +242,7 @@ func (s *{{ .ServerStruct }}) {{ .Method.VarName }}(
 	ctx = context.WithValue(ctx, goa.ServiceKey, {{ printf "%q" .ServiceName }})
 
 {{- if .ServerStream }}
-	p, err := s.{{ .Method.VarName }}H.Decode(ctx, {{ if .Method.StreamingPayload }}nil{{ else }}message{{ end }})
+	{{if .PayloadRef }}p{{ else }}_{{ end }}, err := s.{{ .Method.VarName }}H.Decode(ctx, {{ if .Method.StreamingPayload }}nil{{ else }}message{{ end }})
 	{{- template "handle_error" . }}
 	ep := &{{ .ServicePkgName }}.{{ .Method.VarName }}EndpointInput{
 		Stream: &{{ .ServerStream.VarName }}{stream: stream},
