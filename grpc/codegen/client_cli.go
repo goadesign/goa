@@ -59,6 +59,7 @@ func endpointParser(genpkg string, root *expr.RootExpr, svr *expr.ServerExpr, da
 		{Path: "flag"},
 		{Path: "fmt"},
 		{Path: "os"},
+		{Path: "strconv"},
 		codegen.GoaImport(""),
 		codegen.GoaNamedImport("grpc", "goagrpc"),
 		{Path: "google.golang.org/grpc", Name: "grpc"},
@@ -111,6 +112,7 @@ func payloadBuilders(genpkg string, svc *expr.GRPCServiceExpr, data *cli.Command
 	specs := []*codegen.ImportSpec{
 		{Path: "encoding/json"},
 		{Path: "fmt"},
+		{Path: "strconv"},
 		{Path: path.Join(genpkg, svcName), Name: sd.Service.PkgName},
 		{Path: path.Join(genpkg, "grpc", svcName, pbPkgName), Name: sd.PkgName},
 	}
