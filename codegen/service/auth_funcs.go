@@ -1,16 +1,5 @@
 package service
 
-import (
-	"goa.design/goa/codegen"
-	"goa.design/goa/expr"
-)
-
-// AuthFuncsFile returns a file that contains a dummy implementation of the
-// authorization functions needed to instantiate the service endpoints.
-func AuthFuncsFile(genpkg string, root *expr.RootExpr) *codegen.File {
-	return nil
-}
-
 // data: Data
 const dummyAuthFuncsT = `{{ range .Schemes }}
 {{ printf "%sAuth implements the authorization logic for service %q for the %q security scheme." .Type $.Name .SchemeName | comment }}
