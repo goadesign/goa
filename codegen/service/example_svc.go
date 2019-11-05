@@ -68,7 +68,9 @@ func exampleServiceFile(genpkg string, root *expr.RootExpr, svc *expr.ServiceExp
 	specs := []*codegen.ImportSpec{
 		{Path: "context"},
 		{Path: "log"},
+		{Path: "fmt"},
 		{Path: path.Join(genpkg, codegen.SnakeCase(svcName)), Name: data.PkgName},
+		{Path: "goa.design/goa/security"},
 	}
 	sections := []*codegen.SectionTemplate{
 		codegen.Header("", apipkg, specs),
