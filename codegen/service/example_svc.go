@@ -78,6 +78,13 @@ func exampleServiceFile(genpkg string, root *expr.RootExpr, svc *expr.ServiceExp
 	for _, m := range svc.Methods {
 		sections = append(sections, basicEndpointSection(m, data))
 	}
+	if len(data.Schemes) > 0 {
+		sections = append(sections, &codegen.SectionTemplate{
+			Name:   "security-authfuncs",
+			Source: dummyAuthFuncsT,
+			Data:   data,
+		})
+	}
 
 	return &codegen.File{
 		Path:             fpath,
