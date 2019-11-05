@@ -18,6 +18,25 @@ var OAuth2 = OAuth2Security("authCode", func() {
 	Scope("api:read", "Read access")
 })
 
+var ValidSecuritySchemesExtendDSL = func() {
+	var CommonAttr = Type("Common", func() {
+		Attribute("version", String)
+	})
+	var SecurityAttr = Type("Security", func() {
+		Username("user", String)
+		Password("pass", String)
+	})
+	Service("ValidSecuritySchemesExtendService", func() {
+		Method("SecureMethod", func() {
+			Security(BasicAuth)
+			Payload(func() {
+				Extend(CommonAttr)
+				Extend(SecurityAttr)
+			})
+		})
+	})
+}
+
 var InvalidSecuritySchemesDSL = func() {
 	Service("InvalidSecuritySchemesService", func() {
 		Security(OAuth2, APIKeyAuth, func() {
