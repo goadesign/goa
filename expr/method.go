@@ -228,7 +228,9 @@ func hasTag(p *AttributeExpr, tag string) bool {
 		if !ok {
 			continue
 		}
-		return hasTag(ut.Attribute(), tag)
+		if hasTag(ut.Attribute(), tag) {
+			return true
+		}
 	}
 	if ut, ok := p.Type.(UserType); ok {
 		return hasTag(ut.Attribute(), tag)
@@ -248,7 +250,9 @@ func hasTagPrefix(p *AttributeExpr, prefix string) bool {
 		if !ok {
 			continue
 		}
-		return hasTagPrefix(ut.Attribute(), prefix)
+		if hasTagPrefix(ut.Attribute(), prefix) {
+			return true
+		}
 	}
 	if ut, ok := p.Type.(UserType); ok {
 		return hasTagPrefix(ut.Attribute(), prefix)
