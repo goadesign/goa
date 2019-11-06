@@ -14,6 +14,7 @@ func TestMethodExprValidate(t *testing.T) {
 		DSL   func()
 		Error string
 	}{
+		{"valid-security-schemes-extend", testdata.ValidSecuritySchemesExtendDSL, ""},
 		{"invalid-security-schemes", testdata.InvalidSecuritySchemesDSL,
 			`service "InvalidSecuritySchemesService" method "SecureMethod": payload of method "SecureMethod" of service "InvalidSecuritySchemesService" does not define a username attribute, use Username to define one
 service "InvalidSecuritySchemesService" method "SecureMethod": payload of method "SecureMethod" of service "InvalidSecuritySchemesService" does not define a password attribute, use Password to define one
@@ -34,9 +35,13 @@ service "AnotherInvalidSecuritySchemesService" method "Method": payload of metho
 	}
 	for _, tc := range cases {
 		t.Run(tc.Name, func(t *testing.T) {
-			err := expr.RunInvalidDSL(t, tc.DSL)
-			if tc.Error != err.Error() {
-				t.Errorf("invalid error:\ngot:\n%s\n\ngot vs expected:\n%s", err.Error(), expr.Diff(t, err.Error(), tc.Error))
+			if tc.Error == "" {
+				expr.RunDSL(t, tc.DSL)
+			} else {
+				err := expr.RunInvalidDSL(t, tc.DSL)
+				if tc.Error != err.Error() {
+					t.Errorf("invalid error:\ngot:\n%s\n\ngot vs expected:\n%s", err.Error(), expr.Diff(t, err.Error(), tc.Error))
+				}
 			}
 		})
 	}
