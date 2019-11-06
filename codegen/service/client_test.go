@@ -18,12 +18,15 @@ func TestClient(t *testing.T) {
 		Code string
 	}{
 		{"single", testdata.SingleEndpointDSL, testdata.SingleMethodClient},
+		{"use", testdata.UseEndpointDSL, testdata.UseMethodClient},
 		{"multiple", testdata.MultipleEndpointsDSL, testdata.MultipleMethodsClient},
 		{"no-payload", testdata.NoPayloadEndpointDSL, testdata.NoPayloadMethodsClient},
+		{"with-result", testdata.WithResultEndpointDSL, testdata.WithResultMethodClient},
 		{"streaming-result", testdata.StreamingResultMethodDSL, testdata.StreamingResultMethodClient},
 		{"streaming-result-no-payload", testdata.StreamingResultNoPayloadMethodDSL, testdata.StreamingResultNoPayloadMethodClient},
 		{"streaming-payload", testdata.StreamingPayloadMethodDSL, testdata.StreamingPayloadMethodClient},
 		{"streaming-payload-no-payload", testdata.StreamingPayloadNoPayloadMethodDSL, testdata.StreamingPayloadNoPayloadMethodClient},
+		{"streaming-payload-no-result", testdata.StreamingPayloadNoResultMethodDSL, testdata.StreamingPayloadNoResultMethodClient},
 		{"bidirectional-streaming", testdata.BidirectionalStreamingMethodDSL, testdata.BidirectionalStreamingMethodClient},
 		{"bidirectional-streaming-no-payload", testdata.BidirectionalStreamingNoPayloadMethodDSL, testdata.BidirectionalStreamingNoPayloadMethodClient},
 	}
