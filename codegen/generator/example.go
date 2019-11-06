@@ -25,11 +25,6 @@ func Example(genpkg string, roots []eval.Root) ([]*codegen.File, error) {
 			files = append(files, fs...)
 		}
 
-		// example auth file
-		if f := service.AuthFuncsFile(genpkg, r); f != nil {
-			files = append(files, f)
-		}
-
 		// server main
 		if fs := example.ServerFiles(genpkg, r); len(fs) != 0 {
 			files = append(files, fs...)

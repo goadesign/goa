@@ -68,12 +68,21 @@ func exampleServiceFile(genpkg string, root *expr.RootExpr, svc *expr.ServiceExp
 	specs := []*codegen.ImportSpec{
 		{Path: "context"},
 		{Path: "log"},
+		{Path: "fmt"},
 		{Path: path.Join(genpkg, codegen.SnakeCase(svcName)), Name: data.PkgName},
+		{Path: "goa.design/goa/security"},
 	}
 	sections := []*codegen.SectionTemplate{
 		codegen.Header("", apipkg, specs),
 		{Name: "basic-service-struct", Source: svcStructT, Data: data},
 		{Name: "basic-service-init", Source: svcInitT, Data: data},
+	}
+	if len(data.Schemes) > 0 {
+		sections = append(sections, &codegen.SectionTemplate{
+			Name:   "security-authfuncs",
+			Source: dummyAuthFuncsT,
+			Data:   data,
+		})
 	}
 	for _, m := range svc.Methods {
 		sections = append(sections, basicEndpointSection(m, data))
