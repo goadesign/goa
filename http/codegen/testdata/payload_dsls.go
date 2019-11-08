@@ -2646,3 +2646,48 @@ var WithParamsAndHeadersBlockDSL = func() {
 		})
 	})
 }
+
+var MultipleServicesSamePayloadAndResultDSL = func() {
+	Service("ServiceA", func() {
+		Method("list", func() {
+			Payload(func() {
+				Attribute("name", String)
+			})
+			StreamingPayload(func() {
+				Attribute("name", String)
+			})
+			Result(func() {
+				Attribute("id", Int)
+				Attribute("name", String)
+				Required("id", "name")
+			})
+			Error("something_went_wrong")
+			HTTP(func() {
+				GET("/")
+				Response(StatusOK)
+				Response("something_went_wrong", StatusInternalServerError)
+			})
+		})
+	})
+	Service("ServiceB", func() {
+		Method("list", func() {
+			Payload(func() {
+				Attribute("name", String)
+			})
+			StreamingPayload(func() {
+				Attribute("name", String)
+			})
+			Result(func() {
+				Attribute("id", Int)
+				Attribute("name", String)
+				Required("id", "name")
+			})
+			Error("something_went_wrong")
+			HTTP(func() {
+				GET("/")
+				Response(StatusOK)
+				Response("something_went_wrong", StatusInternalServerError)
+			})
+		})
+	})
+}
