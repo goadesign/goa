@@ -19,6 +19,25 @@ func (c *Client) A(ctx context.Context, p *AType) (err error) {
 }
 `
 
+const UseMethodClient = `// Client is the "UseEndpoint" service client.
+type Client struct {
+	UseEndpointEndpoint goa.Endpoint
+}
+
+// NewClient initializes a "UseEndpoint" service client given the endpoints.
+func NewClient(useEndpoint goa.Endpoint) *Client {
+	return &Client{
+		UseEndpointEndpoint: useEndpoint,
+	}
+}
+
+// UseEndpoint calls the "Use" endpoint of the "UseEndpoint" service.
+func (c *Client) UseEndpoint(ctx context.Context, p string) (err error) {
+	_, err = c.UseEndpointEndpoint(ctx, p)
+	return
+}
+`
+
 const MultipleMethodsClient = `// Client is the "MultipleEndpoints" service client.
 type Client struct {
 	BEndpoint goa.Endpoint
@@ -63,6 +82,29 @@ func NewClient(noPayload goa.Endpoint) *Client {
 func (c *Client) NoPayload(ctx context.Context) (err error) {
 	_, err = c.NoPayloadEndpoint(ctx, nil)
 	return
+}
+`
+
+const WithResultMethodClient = `// Client is the "WithResult" service client.
+type Client struct {
+	AEndpoint goa.Endpoint
+}
+
+// NewClient initializes a "WithResult" service client given the endpoints.
+func NewClient(a goa.Endpoint) *Client {
+	return &Client{
+		AEndpoint: a,
+	}
+}
+
+// A calls the "A" endpoint of the "WithResult" service.
+func (c *Client) A(ctx context.Context) (res *Rtype, err error) {
+	var ires interface{}
+	ires, err = c.AEndpoint(ctx, nil)
+	if err != nil {
+		return
+	}
+	return ires.(*Rtype), nil
 }
 `
 
@@ -163,6 +205,31 @@ func (c *Client) StreamingPayloadNoPayloadMethod(ctx context.Context) (res Strea
 		return
 	}
 	return ires.(StreamingPayloadNoPayloadMethodClientStream), nil
+}
+`
+
+const StreamingPayloadNoResultMethodClient = `// Client is the "StreamingPayloadNoResultService" service client.
+type Client struct {
+	StreamingPayloadNoResultMethodEndpoint goa.Endpoint
+}
+
+// NewClient initializes a "StreamingPayloadNoResultService" service client
+// given the endpoints.
+func NewClient(streamingPayloadNoResultMethod goa.Endpoint) *Client {
+	return &Client{
+		StreamingPayloadNoResultMethodEndpoint: streamingPayloadNoResultMethod,
+	}
+}
+
+// StreamingPayloadNoResultMethod calls the "StreamingPayloadNoResultMethod"
+// endpoint of the "StreamingPayloadNoResultService" service.
+func (c *Client) StreamingPayloadNoResultMethod(ctx context.Context) (res StreamingPayloadNoResultMethodClientStream, err error) {
+	var ires interface{}
+	ires, err = c.StreamingPayloadNoResultMethodEndpoint(ctx, nil)
+	if err != nil {
+		return
+	}
+	return ires.(StreamingPayloadNoResultMethodClientStream), nil
 }
 `
 

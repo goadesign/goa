@@ -79,18 +79,22 @@ const serviceClientMethodT = `
 	{{- end }}
 //	- error: internal error
 {{- end }}
-func (c *{{ .ClientVarName }}) {{ .VarName }}(ctx context.Context, {{ if .PayloadRef }}p {{ .PayloadRef }}{{ end }}) ({{ if .ClientStream }}res {{ .ClientStream.Interface }}, {{ else if .ResultRef }}res {{ .ResultRef }}, {{ end }}err error) {
-	{{- if .ResultRef }}
+{{- $resultType := .ResultRef }}
+{{- if .ClientStream }}
+	{{- $resultType = .ClientStream.Interface }}
+{{- end }}
+func (c *{{ .ClientVarName }}) {{ .VarName }}(ctx context.Context, {{ if .PayloadRef }}p {{ .PayloadRef }}{{ end }}) ({{ if $resultType }}res {{ $resultType }}, {{ end }}err error) {
+	{{- if $resultType }}
 	var ires interface{}
 	{{- end }}
-	{{ if .ResultRef }}ires{{ else }}_{{ end }}, err = c.{{ .VarName}}Endpoint(ctx, {{ if .PayloadRef }}p{{ else }}nil{{ end }})
-	{{- if not .ResultRef }}
+	{{ if $resultType }}ires{{ else }}_{{ end }}, err = c.{{ .VarName}}Endpoint(ctx, {{ if .PayloadRef }}p{{ else }}nil{{ end }})
+	{{- if not $resultType }}
 	return
 	{{- else }}
 	if err != nil {
 		return
 	}
-	return ires.({{ if .ClientStream }}{{ .ClientStream.Interface }}{{ else }}{{ .ResultRef }}{{ end }}), nil
+	return ires.({{ $resultType }}), nil
 	{{- end }}
 }
 `
