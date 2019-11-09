@@ -1,25 +1,27 @@
 package expr
 
 type (
-	// UserTypeExpr describes user defined types.
+	// UserTypeExpr describes user defined types. While a given design must
+	// ensure that the names are unique the code used to generate code can
+	// create multiple user types that share the same name (for example because
+	// generated in different packages). UID is always unique and makes it
+	// possible to avoid infinite recursions when traversing the data structures
+	// described by the attribute expression e.g. when computing example values.
 	UserTypeExpr struct {
 		// The embedded attribute expression.
 		*AttributeExpr
 		// Name of type
 		TypeName string
+		// UID of type
+		UID string
 	}
 )
 
-// NewUserTypeExpr creates a user type expression but does not execute the DSL.
-func NewUserTypeExpr(name string, fn func()) *UserTypeExpr {
-	return &UserTypeExpr{
-		TypeName:      name,
-		AttributeExpr: &AttributeExpr{DSLFunc: fn},
-	}
-}
-
-// ID returns the identifier (type name) for the user type.
+// ID returns the unique identifier for the user type.
 func (u *UserTypeExpr) ID() string {
+	if u.UID != "" {
+		return u.UID
+	}
 	return u.Name()
 }
 
@@ -64,6 +66,7 @@ func (u *UserTypeExpr) Dup(att *AttributeExpr) UserType {
 	return &UserTypeExpr{
 		AttributeExpr: att,
 		TypeName:      u.TypeName,
+		UID:           u.UID,
 	}
 }
 
