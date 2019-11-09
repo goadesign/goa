@@ -2524,16 +2524,16 @@ func upgradeParams(e *EndpointData, fn string) map[string]interface{} {
 // uses stream for sending payload/result.
 func needStream(data []*ServiceData) bool {
 	for _, svc := range data {
-		if streamingEndpointExists(svc) {
+		if hasStreaming(svc) {
 			return true
 		}
 	}
 	return false
 }
 
-// streamingEndpointExists returns true if at least one of the endpoints in
+// hasStreaming returns true if at least one of the endpoints in
 // the service defines a streaming payload or result.
-func streamingEndpointExists(sd *ServiceData) bool {
+func hasStreaming(sd *ServiceData) bool {
 	for _, e := range sd.Endpoints {
 		if isStreamingEndpoint(e) {
 			return true

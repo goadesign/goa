@@ -41,7 +41,7 @@ func ClientCLIFiles(genpkg string, root *expr.RootExpr) []*codegen.File {
 		if len(sd.Endpoints) > 0 {
 			command := &commandData{
 				CommandData: cli.BuildCommandData(sd.Service),
-				NeedStream:  streamingEndpointExists(sd),
+				NeedStream:  hasStreaming(sd),
 			}
 
 			for _, e := range sd.Endpoints {
