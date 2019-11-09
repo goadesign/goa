@@ -85,6 +85,7 @@ func httpRequestBody(a *HTTPEndpointExpr) *AttributeExpr {
 	ut := &UserTypeExpr{
 		AttributeExpr: att,
 		TypeName:      name,
+		UID:           a.Service.Name() + "#" + a.Name(),
 	}
 	appendSuffix(ut.Attribute().Type, suffix)
 
@@ -109,6 +110,7 @@ func httpStreamingBody(e *HTTPEndpointExpr) *AttributeExpr {
 	ut := &UserTypeExpr{
 		AttributeExpr: DupAtt(att),
 		TypeName:      concat(e.Name(), "Streaming", "Body"),
+		UID:           concat(e.Service.Name(), e.Name(), "Streaming", "Body"),
 	}
 	appendSuffix(ut.Attribute().Type, suffix)
 
@@ -130,7 +132,7 @@ func httpResponseBody(a *HTTPEndpointExpr, resp *HTTPResponseExpr) *AttributeExp
 		suffix = http.StatusText(resp.StatusCode)
 	}
 	name = a.Name() + suffix
-	return buildHTTPResponseBody(name, a.MethodExpr.Result, resp)
+	return buildHTTPResponseBody(name, a.MethodExpr.Result, resp, a.Service)
 }
 
 // httpErrorResponseBody returns an attribute describing the response body of a
@@ -140,10 +142,10 @@ func httpResponseBody(a *HTTPEndpointExpr, resp *HTTPResponseExpr) *AttributeExp
 // parameters.
 func httpErrorResponseBody(a *HTTPEndpointExpr, v *HTTPErrorExpr) *AttributeExpr {
 	name := a.Name() + "_" + v.ErrorExpr.Name
-	return buildHTTPResponseBody(name, v.ErrorExpr.AttributeExpr, v.Response)
+	return buildHTTPResponseBody(name, v.ErrorExpr.AttributeExpr, v.Response, a.Service)
 }
 
-func buildHTTPResponseBody(name string, attr *AttributeExpr, resp *HTTPResponseExpr) *AttributeExpr {
+func buildHTTPResponseBody(name string, attr *AttributeExpr, resp *HTTPResponseExpr, svc *HTTPServiceExpr) *AttributeExpr {
 	const suffix = "ResponseBody"
 	name = concat(name, "Response", "Body")
 	if attr == nil || attr.Type == Empty {
@@ -192,6 +194,7 @@ func buildHTTPResponseBody(name string, attr *AttributeExpr, resp *HTTPResponseE
 	userType := &UserTypeExpr{
 		AttributeExpr: body.Attribute(),
 		TypeName:      name,
+		UID:           concat(svc.Name(), "#", name),
 	}
 	appendSuffix(userType.Attribute().Type, suffix)
 	rt, isrt := attr.Type.(*ResultTypeExpr)

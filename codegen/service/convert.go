@@ -459,6 +459,7 @@ func buildDesignType(dt *expr.DataType, t reflect.Type, ref expr.DataType, recs 
 		ut := &expr.UserTypeExpr{
 			AttributeExpr: &expr.AttributeExpr{Type: &obj},
 			TypeName:      t.Name(),
+			UID:           t.PkgPath() + "#" + t.Name(),
 		}
 		*dt = ut
 		rec.seen[t.Name()] = ut

@@ -113,6 +113,7 @@ func NewResultTypeExpr(name, identifier string, fn func()) *ResultTypeExpr {
 		UserTypeExpr: &UserTypeExpr{
 			AttributeExpr: &AttributeExpr{Type: &Object{}, DSLFunc: fn},
 			TypeName:      name,
+			UID:           identifier,
 		},
 		Identifier: identifier,
 	}
@@ -260,6 +261,7 @@ func projectSingle(m *ResultTypeExpr, view string, seen ...map[string]*Attribute
 	} else {
 		seen = append(seen, make(map[string]*AttributeExpr))
 	}
+	id := m.projectIdentifier(view)
 	if ut == nil {
 		ut = &UserTypeExpr{
 			AttributeExpr: &AttributeExpr{
@@ -269,9 +271,10 @@ func projectSingle(m *ResultTypeExpr, view string, seen ...map[string]*Attribute
 		}
 	}
 	ut.TypeName = typeName
+	ut.UID = id
 	ut.AttributeExpr.Type = Dup(v.Type)
 	projected := &ResultTypeExpr{
-		Identifier:   m.projectIdentifier(view),
+		Identifier:   id,
 		UserTypeExpr: ut,
 	}
 	projected.Views = []*ViewExpr{{
@@ -303,8 +306,9 @@ func projectCollection(m *ResultTypeExpr, view string, seen ...map[string]*Attri
 	}
 
 	// Build the projected collection with the results
+	id := m.projectIdentifier(view)
 	proj := &ResultTypeExpr{
-		Identifier: m.projectIdentifier(view),
+		Identifier: id,
 		UserTypeExpr: &UserTypeExpr{
 			AttributeExpr: &AttributeExpr{
 				Description:  m.TypeName + " is the result type for an array of " + e.TypeName + " (" + view + " view)",
@@ -312,6 +316,7 @@ func projectCollection(m *ResultTypeExpr, view string, seen ...map[string]*Attri
 				UserExamples: m.UserExamples,
 			},
 			TypeName: pe.TypeName + "Collection",
+			UID:      id,
 		},
 		Views: []*ViewExpr{{
 			AttributeExpr: DupAtt(pe.View("default").AttributeExpr),
