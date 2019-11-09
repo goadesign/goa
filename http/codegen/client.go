@@ -50,10 +50,10 @@ func client(genpkg string, svc *expr.HTTPServiceExpr) *codegen.File {
 		Source: clientStructT,
 		Data:   data,
 		FuncMap: map[string]interface{}{
-			"streamingEndpointExists": streamingEndpointExists,
+			"hasStreaming": hasStreaming,
 		},
 	})
-	if streamingEndpointExists(data) {
+	if hasStreaming(data) {
 		sections = append(sections, &codegen.SectionTemplate{
 			Name:   "client-stream-conn-configurer-struct",
 			Source: streamConnConfigurerStructT,
@@ -88,11 +88,11 @@ func client(genpkg string, svc *expr.HTTPServiceExpr) *codegen.File {
 		Source: clientInitT,
 		Data:   data,
 		FuncMap: map[string]interface{}{
-			"streamingEndpointExists": streamingEndpointExists,
+			"hasStreaming": hasStreaming,
 		},
 	})
 
-	if streamingEndpointExists(data) {
+	if hasStreaming(data) {
 		sections = append(sections, &codegen.SectionTemplate{
 			Name:   "client-stream-conn-configurer-struct-init",
 			Source: streamConnConfigurerStructInitT,
@@ -282,7 +282,7 @@ type {{ .ClientStruct }} struct {
 	host       string
 	encoder    func(*http.Request) goahttp.Encoder
 	decoder    func(*http.Response) goahttp.Decoder
-	{{- if streamingEndpointExists . }}
+	{{- if hasStreaming . }}
 	dialer goahttp.Dialer
 	configurer *ConnConfigurer
 	{{- end }}
@@ -298,12 +298,12 @@ func New{{ .ClientStruct }}(
 	enc func(*http.Request) goahttp.Encoder,
 	dec func(*http.Response) goahttp.Decoder,
 	restoreBody bool,
-	{{- if streamingEndpointExists . }}
+	{{- if hasStreaming . }}
 	dialer goahttp.Dialer,
 	cfn *ConnConfigurer,
 	{{- end }}
 ) *{{ .ClientStruct }} {
-{{- if streamingEndpointExists . }}
+{{- if hasStreaming . }}
 	if cfn == nil {
 		cfn = &ConnConfigurer{}
 	}
@@ -317,7 +317,7 @@ func New{{ .ClientStruct }}(
 		host:              host,
 		decoder:           dec,
 		encoder:           enc,
-		{{- if streamingEndpointExists . }}
+		{{- if hasStreaming . }}
 		dialer: dialer,
 		configurer: cfn,
 		{{- end }}
