@@ -118,3 +118,14 @@ func New(
 	}
 }
 `
+
+var ServerMultipleFilesConstructorCode = `// Mount configures the mux to serve the ServiceFileServer endpoints.
+func Mount(mux goahttp.Muxer) {
+	MountPathToFileJSON(mux, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		http.ServeFile(w, r, "/path/to/file.json")
+	}))
+	MountPathToFileJSON1(mux, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		http.ServeFile(w, r, "/path/to/file.json")
+	}))
+}
+`
