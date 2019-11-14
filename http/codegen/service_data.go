@@ -645,7 +645,7 @@ func (d ServicesData) analyze(hs *expr.HTTPServiceExpr) *ServiceData {
 			pp = expr.ExtractHTTPWildcards(s.RequestPaths[0])[0]
 		}
 		data := &FileServerData{
-			MountHandler: fmt.Sprintf("Mount%s", codegen.Goify(s.FilePath, true)),
+			MountHandler: scope.Unique(fmt.Sprintf("Mount%s", codegen.Goify(s.FilePath, true))),
 			RequestPaths: paths,
 			FilePath:     s.FilePath,
 			IsDir:        s.IsDir(),
