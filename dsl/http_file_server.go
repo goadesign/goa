@@ -55,16 +55,19 @@ func Files(path, filename string, fns ...func()) {
 	if !strings.HasPrefix(path, "/") {
 		path = "/" + path
 	}
-	if s, ok := eval.Current().(*expr.ServiceExpr); ok {
-		r := expr.Root.API.HTTP.ServiceFor(s)
-		server := &expr.HTTPFileServerExpr{
-			Service:      r,
-			RequestPaths: []string{path},
-			FilePath:     filename,
-		}
-		if len(fns) > 0 {
-			eval.Execute(fns[0], server)
-		}
-		r.FileServers = append(r.FileServers, server)
+	s, ok := eval.Current().(*expr.ServiceExpr)
+	if !ok {
+		eval.IncompatibleDSL()
+		return
 	}
+	r := expr.Root.API.HTTP.ServiceFor(s)
+	server := &expr.HTTPFileServerExpr{
+		Service:      r,
+		RequestPaths: []string{path},
+		FilePath:     filename,
+	}
+	if len(fns) > 0 {
+		eval.Execute(fns[0], server)
+	}
+	r.FileServers = append(r.FileServers, server)
 }
