@@ -19,6 +19,7 @@ func RunGRPCDSL(t *testing.T, dsl func()) *expr.RootExpr {
 }
 
 func sectionCode(t *testing.T, section ...*codegen.SectionTemplate) string {
+	t.Helper()
 	var code bytes.Buffer
 	for _, s := range section {
 		if err := s.Write(&code); err != nil {
