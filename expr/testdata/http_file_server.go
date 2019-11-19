@@ -1,7 +1,7 @@
 package testdata
 
 import (
-	. "goa.design/goa/v3/dsl"
+	. "goa.design/goa/dsl"
 )
 
 var FilesValidDSL = func() {

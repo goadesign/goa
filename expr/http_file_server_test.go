@@ -4,8 +4,8 @@ import (
 	"strings"
 	"testing"
 
-	"goa.design/goa/v3/expr"
-	"goa.design/goa/v3/expr/testdata"
+	"goa.design/goa/expr"
+	"goa.design/goa/expr/testdata"
 )
 
 func TestFilesDSL(t *testing.T) {
