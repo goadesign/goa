@@ -14,6 +14,7 @@ import (
 
 // ReadUDP verifies that exactly the expected number of messages are received.
 func ReadUDP(t *testing.T, udplisten string, expectedMessages int, sender func()) []string {
+	t.Helper()
 	var (
 		readChan = make(chan []string)
 		msg      = make([]byte, 1024*32)
