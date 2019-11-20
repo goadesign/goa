@@ -571,6 +571,12 @@ func buildPathFromFileServer(s *V2, root *expr.RootExpr, fs *expr.HTTPFileServer
 			}
 		}
 
+		tagNames := tagNamesFromExpr(fs.Service.Meta, fs.Meta)
+		if len(tagNames) == 0 {
+			// By default tag with service name
+			tagNames = []string{fs.Service.Name()}
+		}
+
 		operation := &Operation{
 			Description:  fs.Description,
 			Summary:      summaryFromMeta(fmt.Sprintf("Download %s", fs.FilePath), fs.Meta),
@@ -579,6 +585,7 @@ func buildPathFromFileServer(s *V2, root *expr.RootExpr, fs *expr.HTTPFileServer
 			Parameters:   param,
 			Responses:    responses,
 			Schemes:      schemes,
+			Tags:         tagNames,
 		}
 
 		key := expr.HTTPWildcardRegex.ReplaceAllString(path, "/{$1}")
