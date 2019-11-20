@@ -169,6 +169,15 @@ var EmptyDSL = func() {
 	})
 }
 
+var FileServiceDSL = func() {
+	var _ = Service("service-name", func() {
+		Files("path1", "filename")
+		Files("path2", "filename", func() {
+			Meta("swagger:tag:user-tag")
+		})
+	})
+}
+
 var StringValidationDSL = func() {
 	var _ = API("test", func() {
 		Server("test", func() {
