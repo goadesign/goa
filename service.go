@@ -372,6 +372,10 @@ func (ctrl *Controller) FileHandler(path, filename string) Handler {
 		}
 	}
 	return func(ctx context.Context, rw http.ResponseWriter, req *http.Request) error {
+		// prevent path traversal
+		if containsDotDot(req.URL.Path) {
+			return ErrNotFound(req.URL.Path)
+		}
 		fname := filename
 		if len(wc) > 0 {
 			if m, ok := ContextRequest(ctx).Params[wc]; ok {
@@ -414,6 +418,20 @@ func (ctrl *Controller) FileHandler(path, filename string) Handler {
 		return nil
 	}
 }
+
+func containsDotDot(v string) bool {
+	if !strings.Contains(v, "..") {
+		return false
+	}
+	for _, ent := range strings.FieldsFunc(v, isSlashRune) {
+		if ent == ".." {
+			return true
+		}
+	}
+	return false
+}
+
+func isSlashRune(r rune) bool { return r == '/' || r == '\\' }
 
 var replacer = strings.NewReplacer(
 	"&", "&amp;",
