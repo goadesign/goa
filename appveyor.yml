@@ -7,6 +7,8 @@ environment:
 
 clone_folder: c:\gopath\src\github.com\goadesign\goa
 
+stack: go 1.13
+
 install:
   - go version
   - go env
