@@ -273,6 +273,11 @@ var ExtensionDSL = func() {
 				URI("https://goa.design")
 			})
 		})
+		Meta("swagger:extension:x-test-api", "API")
+		Meta("swagger:tag:Backend")
+		Meta("swagger:tag:Backend:desc", "Description of Backend")
+		Meta("swagger:tag:Backend:url", "http://example.com")
+		Meta("swagger:tag:Backend:url:desc", "See more docs here")
 	})
 	Service("testService", func() {
 		Method("testEndpoint", func() {
@@ -391,6 +396,24 @@ var WithSpacesDSL = func() {
 				POST("/")
 				Response(StatusOK)
 				Response(StatusNotFound)
+			})
+		})
+	})
+}
+
+var WithMapDSL = func() {
+	Service("test service", func() {
+		Method("test endpoint", func() {
+			Payload(func() {
+				Attribute("int_map", MapOf(Int, String))
+				Attribute("uint_map", MapOf(UInt, String))
+			})
+			Result(func() {
+				Attribute("uint32_map", MapOf(UInt32, String))
+				Attribute("uint64_map", MapOf(UInt64, String))
+			})
+			HTTP(func() {
+				POST("/")
 			})
 		})
 	})

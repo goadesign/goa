@@ -1,7 +1,7 @@
 package testdata
 
 const UnaryRPCsClientEndpointInitCode = `// MethodUnaryRPCA calls the "MethodUnaryRPCA" function in
-// service_unaryrp_cspb.ServiceUnaryRPCsClient interface.
+// service_unary_rp_cspb.ServiceUnaryRPCsClient interface.
 func (c *Client) MethodUnaryRPCA() goa.Endpoint {
 	return func(ctx context.Context, v interface{}) (interface{}, error) {
 		inv := goagrpc.NewInvoker(
@@ -17,7 +17,7 @@ func (c *Client) MethodUnaryRPCA() goa.Endpoint {
 }
 
 // MethodUnaryRPCB calls the "MethodUnaryRPCB" function in
-// service_unaryrp_cspb.ServiceUnaryRPCsClient interface.
+// service_unary_rp_cspb.ServiceUnaryRPCsClient interface.
 func (c *Client) MethodUnaryRPCB() goa.Endpoint {
 	return func(ctx context.Context, v interface{}) (interface{}, error) {
 		inv := goagrpc.NewInvoker(
@@ -34,7 +34,7 @@ func (c *Client) MethodUnaryRPCB() goa.Endpoint {
 `
 
 const UnaryRPCNoPayloadClientEndpointInitCode = `// MethodUnaryRPCNoPayload calls the "MethodUnaryRPCNoPayload" function in
-// service_unaryrpc_no_payloadpb.ServiceUnaryRPCNoPayloadClient interface.
+// service_unary_rpc_no_payloadpb.ServiceUnaryRPCNoPayloadClient interface.
 func (c *Client) MethodUnaryRPCNoPayload() goa.Endpoint {
 	return func(ctx context.Context, v interface{}) (interface{}, error) {
 		inv := goagrpc.NewInvoker(
@@ -51,7 +51,7 @@ func (c *Client) MethodUnaryRPCNoPayload() goa.Endpoint {
 `
 
 const UnaryRPCNoResultClientEndpointInitCode = `// MethodUnaryRPCNoResult calls the "MethodUnaryRPCNoResult" function in
-// service_unaryrpc_no_resultpb.ServiceUnaryRPCNoResultClient interface.
+// service_unary_rpc_no_resultpb.ServiceUnaryRPCNoResultClient interface.
 func (c *Client) MethodUnaryRPCNoResult() goa.Endpoint {
 	return func(ctx context.Context, v interface{}) (interface{}, error) {
 		inv := goagrpc.NewInvoker(
@@ -68,7 +68,7 @@ func (c *Client) MethodUnaryRPCNoResult() goa.Endpoint {
 `
 
 const UnaryRPCWithErrorsClientEndpointInitCode = `// MethodUnaryRPCWithErrors calls the "MethodUnaryRPCWithErrors" function in
-// service_unaryrpc_with_errorspb.ServiceUnaryRPCWithErrorsClient interface.
+// service_unary_rpc_with_errorspb.ServiceUnaryRPCWithErrorsClient interface.
 func (c *Client) MethodUnaryRPCWithErrors() goa.Endpoint {
 	return func(ctx context.Context, v interface{}) (interface{}, error) {
 		inv := goagrpc.NewInvoker(
@@ -79,17 +79,17 @@ func (c *Client) MethodUnaryRPCWithErrors() goa.Endpoint {
 		if err != nil {
 			resp := goagrpc.DecodeError(err)
 			switch message := resp.(type) {
-			case *service_unaryrpc_with_errorspb.MethodUnaryRPCWithErrorsInternalError:
+			case *service_unary_rpc_with_errorspb.MethodUnaryRPCWithErrorsInternalError:
 				if err := ValidateMethodUnaryRPCWithErrorsInternalError(message); err != nil {
 					return nil, err
 				}
 				return nil, NewMethodUnaryRPCWithErrorsInternalError(message)
-			case *service_unaryrpc_with_errorspb.MethodUnaryRPCWithErrorsBadRequestError:
+			case *service_unary_rpc_with_errorspb.MethodUnaryRPCWithErrorsBadRequestError:
 				if err := ValidateMethodUnaryRPCWithErrorsBadRequestError(message); err != nil {
 					return nil, err
 				}
 				return nil, NewMethodUnaryRPCWithErrorsBadRequestError(message)
-			case *service_unaryrpc_with_errorspb.MethodUnaryRPCWithErrorsCustomErrorError:
+			case *service_unary_rpc_with_errorspb.MethodUnaryRPCWithErrorsCustomErrorError:
 				return nil, NewMethodUnaryRPCWithErrorsCustomErrorError(message)
 			case *goapb.ErrorResponse:
 				return nil, goagrpc.NewServiceError(message)
@@ -103,7 +103,7 @@ func (c *Client) MethodUnaryRPCWithErrors() goa.Endpoint {
 `
 
 const ServerStreamingRPCClientEndpointInitCode = `// MethodServerStreamingRPC calls the "MethodServerStreamingRPC" function in
-// service_server_streamingrpcpb.ServiceServerStreamingRPCClient interface.
+// service_server_streaming_rpcpb.ServiceServerStreamingRPCClient interface.
 func (c *Client) MethodServerStreamingRPC() goa.Endpoint {
 	return func(ctx context.Context, v interface{}) (interface{}, error) {
 		inv := goagrpc.NewInvoker(
@@ -120,7 +120,7 @@ func (c *Client) MethodServerStreamingRPC() goa.Endpoint {
 `
 
 const ClientStreamingRPCClientEndpointInitCode = `// MethodClientStreamingRPC calls the "MethodClientStreamingRPC" function in
-// service_client_streamingrpcpb.ServiceClientStreamingRPCClient interface.
+// service_client_streaming_rpcpb.ServiceClientStreamingRPCClient interface.
 func (c *Client) MethodClientStreamingRPC() goa.Endpoint {
 	return func(ctx context.Context, v interface{}) (interface{}, error) {
 		inv := goagrpc.NewInvoker(
@@ -157,7 +157,7 @@ func (c *Client) MethodClientStreamingNoResult() goa.Endpoint {
 
 const ClientStreamingRPCWithPayloadClientEndpointInitCode = `// MethodClientStreamingRPCWithPayload calls the
 // "MethodClientStreamingRPCWithPayload" function in
-// service_client_streamingrpc_with_payloadpb.ServiceClientStreamingRPCWithPayloadClient
+// service_client_streaming_rpc_with_payloadpb.ServiceClientStreamingRPCWithPayloadClient
 // interface.
 func (c *Client) MethodClientStreamingRPCWithPayload() goa.Endpoint {
 	return func(ctx context.Context, v interface{}) (interface{}, error) {
@@ -176,7 +176,7 @@ func (c *Client) MethodClientStreamingRPCWithPayload() goa.Endpoint {
 
 const BidirectionalStreamingRPCClientEndpointInitCode = `// MethodBidirectionalStreamingRPC calls the "MethodBidirectionalStreamingRPC"
 // function in
-// service_bidirectional_streamingrpcpb.ServiceBidirectionalStreamingRPCClient
+// service_bidirectional_streaming_rpcpb.ServiceBidirectionalStreamingRPCClient
 // interface.
 func (c *Client) MethodBidirectionalStreamingRPC() goa.Endpoint {
 	return func(ctx context.Context, v interface{}) (interface{}, error) {
@@ -195,7 +195,7 @@ func (c *Client) MethodBidirectionalStreamingRPC() goa.Endpoint {
 
 const BidirectionalStreamingRPCWithPayloadClientEndpointInitCode = `// MethodBidirectionalStreamingRPCWithPayload calls the
 // "MethodBidirectionalStreamingRPCWithPayload" function in
-// service_bidirectional_streamingrpc_with_payloadpb.ServiceBidirectionalStreamingRPCWithPayloadClient
+// service_bidirectional_streaming_rpc_with_payloadpb.ServiceBidirectionalStreamingRPCWithPayloadClient
 // interface.
 func (c *Client) MethodBidirectionalStreamingRPCWithPayload() goa.Endpoint {
 	return func(ctx context.Context, v interface{}) (interface{}, error) {
@@ -214,7 +214,7 @@ func (c *Client) MethodBidirectionalStreamingRPCWithPayload() goa.Endpoint {
 
 const BidirectionalStreamingRPCWithErrorsClientEndpointInitCode = `// MethodBidirectionalStreamingRPCWithErrors calls the
 // "MethodBidirectionalStreamingRPCWithErrors" function in
-// service_bidirectional_streamingrpc_with_errorspb.ServiceBidirectionalStreamingRPCWithErrorsClient
+// service_bidirectional_streaming_rpc_with_errorspb.ServiceBidirectionalStreamingRPCWithErrorsClient
 // interface.
 func (c *Client) MethodBidirectionalStreamingRPCWithErrors() goa.Endpoint {
 	return func(ctx context.Context, v interface{}) (interface{}, error) {

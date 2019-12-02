@@ -24,7 +24,7 @@ func main() {
 
 		switch os.Args[1] {
 		case "version":
-			fmt.Println("goa version " + goa.Version())
+			fmt.Println("Goa version " + goa.Version())
 			os.Exit(0)
 		case "gen", "example":
 			if len(os.Args) == 2 {

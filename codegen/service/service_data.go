@@ -763,7 +763,7 @@ func buildMethodData(m *expr.MethodExpr, svcPkgName string, service *expr.Servic
 	if m.IsStreaming() {
 		svrStream = &StreamData{
 			Interface:      vname + "ServerStream",
-			VarName:        m.Name + "ServerStream",
+			VarName:        scope.Unique(codegen.Goify(m.Name, true), "ServerStream"),
 			EndpointStruct: vname + "EndpointInput",
 			Kind:           m.Stream,
 			SendName:       "Send",
@@ -774,7 +774,7 @@ func buildMethodData(m *expr.MethodExpr, svcPkgName string, service *expr.Servic
 		}
 		cliStream = &StreamData{
 			Interface:    vname + "ClientStream",
-			VarName:      m.Name + "ClientStream",
+			VarName:      scope.Unique(codegen.Goify(m.Name, true), "ClientStream"),
 			Kind:         m.Stream,
 			RecvName:     "Recv",
 			RecvDesc:     fmt.Sprintf("Recv reads instances of %q from the stream.", rname),

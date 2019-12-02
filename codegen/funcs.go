@@ -148,34 +148,43 @@ func CamelCase(name string, firstUpper bool, acronym bool) string {
 }
 
 // SnakeCase produces the snake_case version of the given CamelCase string.
+// News    => news
+// OldNews => old_news
+// CNNNews => cnn_news
 func SnakeCase(name string) string {
+	// Special handling for single "words" starting with multiple upper case letters
 	for u, l := range toLower {
 		name = strings.Replace(name, u, l, -1)
 	}
+
+	// Special handling for dashes to convert them into underscores
+	name = strings.Replace(name, "-", "_", -1)
+
 	var b bytes.Buffer
-	var lastUnderscore bool
 	ln := len(name)
 	if ln == 0 {
 		return ""
 	}
-	b.WriteRune(unicode.ToLower(rune(name[0])))
+	n := rune(name[0])
+	b.WriteRune(unicode.ToLower(n))
+	lastLower, isLower, lastUnder, isUnder := false, true, false, false
 	for i := 1; i < ln; i++ {
 		r := rune(name[i])
-		nextIsLower := false
-		if i < ln-1 {
-			n := rune(name[i+1])
-			nextIsLower = unicode.IsLower(n) && unicode.IsLetter(n)
-		}
-		if unicode.IsUpper(r) {
-			if !lastUnderscore && nextIsLower {
+		isLower = unicode.IsLower(r) && unicode.IsLetter(r) || unicode.IsDigit(r)
+		isUnder = r == '_'
+		if !isLower && !isUnder {
+			if lastLower && !lastUnder {
 				b.WriteRune('_')
-				lastUnderscore = true
+			} else if ln > i+1 {
+				rn := rune(name[i+1])
+				if unicode.IsLower(rn) && rn != '_' && !lastUnder {
+					b.WriteRune('_')
+				}
 			}
-			b.WriteRune(unicode.ToLower(r))
-		} else {
-			b.WriteRune(r)
-			lastUnderscore = false
 		}
+		b.WriteRune(unicode.ToLower(r))
+		lastLower = isLower
+		lastUnder = isUnder
 	}
 	return b.String()
 }

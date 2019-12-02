@@ -1,12 +1,14 @@
 package middleware
 
 import (
+	"bufio"
 	"bytes"
 	"crypto/rand"
 	"encoding/base64"
 	"fmt"
 	"io"
 	"io/ioutil"
+	"net"
 	"net/http"
 	"sort"
 	"strings"
@@ -114,6 +116,14 @@ func (r *responseDupper) Write(b []byte) (int, error) {
 func (r *responseDupper) WriteHeader(s int) {
 	r.Status = s
 	r.ResponseWriter.WriteHeader(s)
+}
+
+// Hijack supports the http.Hijacker interface.
+func (r *responseDupper) Hijack() (net.Conn, *bufio.ReadWriter, error) {
+	if hijacker, ok := r.ResponseWriter.(http.Hijacker); ok {
+		return hijacker.Hijack()
+	}
+	return nil, nil, fmt.Errorf("debug middleware: inner ResponseWriter cannot be hijacked: %T", r.ResponseWriter)
 }
 
 // shortID produces a " unique" 6 bytes long string.
