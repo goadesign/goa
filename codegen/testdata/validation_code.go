@@ -56,7 +56,6 @@ const (
 
 }
 `
-
 	FloatRequiredValidationCode = `func Validate() (err error) {
 	if target.RequiredFloat < 1 {
 		err = goa.MergeErrors(err, goa.InvalidRangeError("target.required_float", target.RequiredFloat, 1, true))
@@ -175,6 +174,25 @@ const (
 }
 `
 
+	StringUseZeroValidationCode = `func Validate() (err error) {
+	err = goa.MergeErrors(err, goa.ValidatePattern("target.required_string", target.RequiredString, "^[A-z].*[a-z]$"))
+	if utf8.RuneCountInString(target.RequiredString) < 1 {
+		err = goa.MergeErrors(err, goa.InvalidLengthError("target.required_string", target.RequiredString, utf8.RuneCountInString(target.RequiredString), 1, true))
+	}
+	if utf8.RuneCountInString(target.RequiredString) > 10 {
+		err = goa.MergeErrors(err, goa.InvalidLengthError("target.required_string", target.RequiredString, utf8.RuneCountInString(target.RequiredString), 10, false))
+	}
+	if !(target.DefaultString == "foo" || target.DefaultString == "bar") {
+		err = goa.MergeErrors(err, goa.InvalidEnumValueError("target.default_string", target.DefaultString, []interface{}{"foo", "bar"}))
+	}
+	if !(target.ZeroString == "foo"){
+	    err = goa.MergeErrors(err, goa.InvalidEnumValueError("target.zero_value_string", target.ZeroString, []interface{"foo"}))
+	}
+	if target.String != nil {
+		err = goa.MergeErrors(err, goa.ValidateFormat("target.string", *target.String, goa.FormatDateTime))
+	}
+}
+`
 	UserTypeRequiredValidationCode = `func Validate() (err error) {
 	if target.RequiredInteger == nil {
 		err = goa.MergeErrors(err, goa.MissingFieldError("required_integer", "target"))

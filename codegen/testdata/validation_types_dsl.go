@@ -16,7 +16,7 @@ var ValidationTypesDSL = func() {
 				Maximum(100)
 			})
 			Attribute("zero_value_integer", Int, func() {
-				Zero(0)
+				Zero(-100)
 			})
 			Required("required_integer")
 		})
@@ -52,7 +52,7 @@ var ValidationTypesDSL = func() {
 				Format(FormatDateTime)
 			})
 			Attribute("zero_value_string", String, func() {
-				Zero("my_zero_value")
+				Zero("foo")
 			})
 			Required("required_string")
 		})
@@ -60,7 +60,7 @@ var ValidationTypesDSL = func() {
 		_ = Type("UserType", func() {
 			Attribute("required_integer", IntegerT)
 			Attribute("default_string", StringT, func() {
-				Default(struct{ RequiredString, DefaultString, String string }{RequiredString: "Atoz", DefaultString: "bar", String: "2018-12-18T13:22:53.108Z"})
+				Default(struct{ RequiredString, DefaultString, ZeroString, String string }{RequiredString: "Atoz", DefaultString: "bar", ZeroString: "foo", String: "2018-12-18T13:22:53.108Z"})
 			})
 			Attribute("float", FloatT)
 			Required("required_integer")

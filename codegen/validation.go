@@ -487,7 +487,15 @@ if {{ if .string }}utf8.RuneCountInString({{ $target }}){{ else }}len({{ $target
 
 	requiredValTmpl = `if {{ $.target }}.{{ .attCtx.Scope.Field $.reqAtt .req  true }} == nil {
         err = goa.MergeErrors(err, goa.MissingFieldError("{{ .req }}", {{ printf "%q" $.context }}))
-}`
+    }
+    if {{$.zeroVal .string}}len({{ $.target }}) < 0 {
+	    err = goa.MergeErrors(err, goa.InvalidLengthError({{ printf "%q" .context }})
+	}
+
+        if {{$.zeroVal}} < {{.isMinLength -}}
+
+
+`
 
 //	requiredValTmpl = `if {{ $.target }}.{{ .attCtx.Scope.Field $.reqAtt .req  true }} == nil {
 //       err = goa.MergeErrors(err, goa.MissingFieldError("{{ .req }}", {{ printf "%q" $.context }}))
