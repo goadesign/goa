@@ -486,22 +486,13 @@ if {{ if .string }}utf8.RuneCountInString({{ $target }}){{ else }}len({{ $target
 {{- end }}`
 
 	requiredValTmpl = `if {{ $.target }}.{{ .attCtx.Scope.Field $.reqAtt .req  true }} == nil {
-        err = goa.MergeErrors(err, goa.MissingFieldError("{{ .req }}", {{ printf "%q" $.context }}))
-    }
-    if {{$.zeroVal .string}}len({{ $.target }}) < 0 {
-	    err = goa.MergeErrors(err, goa.InvalidLengthError({{ printf "%q" .context }})
+	err = goa.MergeErrors(err, goa.MissingFieldError("{{ .req }}", {{ printf "%q" $.context }}))
 	}
+	if {{$.target}} .{{.zeroVal .string}}len({{ $.target }}) < 0 {
+	    err = goa.MergeErrors(err, goa.InvalidLengthError({{ printf "%q" .context }})
+	}}}
 
-        if {{$.zeroVal}} < {{.isMinLength -}}
-
+	if {{$.target .zeroVal}} < {{.isMinLength -}}
 
 `
-
-//	requiredValTmpl = `if {{ $.target }}.{{ .attCtx.Scope.Field $.reqAtt .req  true }} == nil {
-//       err = goa.MergeErrors(err, goa.MissingFieldError("{{ .req }}", {{ printf "%q" $.context }}))
-//}
-//
-//if {{ $.target }}.{{.zeroVal true}} != nil{
-//    {{- end }}
-//}`
 )
