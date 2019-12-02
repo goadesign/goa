@@ -483,11 +483,12 @@ func (d ServicesData) analyze(service *expr.ServiceExpr) *Data {
 		seenViewed = make(map[string]*ViewedResultTypeData)
 
 		// A function to convert raw object type to user type.
-		makeUserType := func(att *expr.AttributeExpr, name string) {
+		makeUserType := func(att *expr.AttributeExpr, name, id string) {
 			if _, ok := att.Type.(*expr.Object); ok {
 				att.Type = &expr.UserTypeExpr{
 					AttributeExpr: expr.DupAtt(att),
 					TypeName:      name,
+					UID:           id,
 				}
 			}
 			if ut, ok := att.Type.(expr.UserType); ok {
@@ -498,11 +499,11 @@ func (d ServicesData) analyze(service *expr.ServiceExpr) *Data {
 		for _, e := range service.Methods {
 			name := codegen.Goify(e.Name, true)
 			// Create user type for raw object payloads
-			makeUserType(e.Payload, name+"Payload")
+			makeUserType(e.Payload, name+"Payload", service.Name+"#"+name+"Payload")
 			// Create user type for raw object streaming payloads
-			makeUserType(e.StreamingPayload, name+"StreamingPayload")
+			makeUserType(e.StreamingPayload, name+"StreamingPayload", service.Name+"#"+name+"StreamingPayload")
 			// Create user type for raw object results
-			makeUserType(e.Result, name+"Result")
+			makeUserType(e.Result, name+"Result", service.Name+"#"+name+"Result")
 		}
 		recordError := func(er *expr.ErrorExpr) {
 			errTypes = append(errTypes, collectTypes(er.AttributeExpr, scope, seen)...)
@@ -1568,7 +1569,7 @@ const (
 		case {{ printf "%q" .Name }}{{ if eq .Name "default" }}, ""{{ end }}:
 			{{- if $.ToViewed }}
 				p := {{ $.InitName }}{{ if ne .Name "default" }}{{ goify .Name true }}{{ end }}({{ $.ArgVar }})
-				{{ $.ReturnVar }} = {{ if not $.IsCollection }}&{{ end }}{{ $.TargetType }}{ p,  {{ printf "%q" .Name }} }
+				{{ $.ReturnVar }} = {{ if not $.IsCollection }}&{{ end }}{{ $.TargetType }}{Projected: p, View: {{ printf "%q" .Name }} }
 			{{- else }}
 				{{ $.ReturnVar }} = {{ $.InitName }}{{ if ne .Name "default" }}{{ goify .Name true }}{{ end }}({{ $.ArgVar }}.Projected)
 			{{- end }}

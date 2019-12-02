@@ -181,6 +181,9 @@ func (e *HTTPEndpointExpr) Prepare() {
 				// Inherit attributes for path params from parent service
 				WalkMappedAttr(c.PathParams(), func(name, _ string, _ *AttributeExpr) error {
 					if att := c.MethodExpr.Payload.Find(name); att != nil {
+						if e.MethodExpr.Payload.Type == Empty {
+							e.MethodExpr.Payload.Type = &Object{}
+						}
 						if o := AsObject(e.MethodExpr.Payload.Type); o != nil {
 							if o.Attribute(name) == nil {
 								o.Set(name, att)
@@ -527,9 +530,7 @@ func (e *HTTPEndpointExpr) Finalize() {
 	// Initialize responses parent, headers and body
 	for _, r := range e.Responses {
 		r.Finalize(e, e.MethodExpr.Result)
-		if r.Body == nil {
-			r.Body = httpResponseBody(e, r)
-		}
+		r.Body = httpResponseBody(e, r)
 		r.Body.Finalize()
 	}
 
@@ -849,6 +850,9 @@ func isEmpty(a *AttributeExpr) bool {
 		return false
 	}
 	if obj := AsObject(a.Type); obj != nil && len(*obj) != 0 {
+		if a.Type == Empty {
+			panic("Empty should have no attribute") // bug
+		}
 		return false
 	}
 	if len(a.Bases) != 0 || len(a.References) != 0 {

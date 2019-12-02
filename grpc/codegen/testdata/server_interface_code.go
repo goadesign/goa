@@ -130,7 +130,7 @@ func (s *Server) MethodClientStreamingRPC(stream service_client_streaming_rpcpb.
 	ctx := stream.Context()
 	ctx = context.WithValue(ctx, goa.MethodKey, "MethodClientStreamingRPC")
 	ctx = context.WithValue(ctx, goa.ServiceKey, "ServiceClientStreamingRPC")
-	p, err := s.MethodClientStreamingRPCH.Decode(ctx, nil)
+	_, err := s.MethodClientStreamingRPCH.Decode(ctx, nil)
 	if err != nil {
 		return goagrpc.EncodeError(err)
 	}
@@ -177,7 +177,7 @@ func (s *Server) MethodBidirectionalStreamingRPC(stream service_bidirectional_st
 	ctx := stream.Context()
 	ctx = context.WithValue(ctx, goa.MethodKey, "MethodBidirectionalStreamingRPC")
 	ctx = context.WithValue(ctx, goa.ServiceKey, "ServiceBidirectionalStreamingRPC")
-	p, err := s.MethodBidirectionalStreamingRPCH.Decode(ctx, nil)
+	_, err := s.MethodBidirectionalStreamingRPCH.Decode(ctx, nil)
 	if err != nil {
 		return goagrpc.EncodeError(err)
 	}
@@ -224,7 +224,7 @@ func (s *Server) MethodBidirectionalStreamingRPCWithErrors(stream service_bidire
 	ctx := stream.Context()
 	ctx = context.WithValue(ctx, goa.MethodKey, "MethodBidirectionalStreamingRPCWithErrors")
 	ctx = context.WithValue(ctx, goa.ServiceKey, "ServiceBidirectionalStreamingRPCWithErrors")
-	p, err := s.MethodBidirectionalStreamingRPCWithErrorsH.Decode(ctx, nil)
+	_, err := s.MethodBidirectionalStreamingRPCWithErrorsH.Decode(ctx, nil)
 	if err != nil {
 		if en, ok := err.(ErrorNamer); ok {
 			switch en.ErrorName() {

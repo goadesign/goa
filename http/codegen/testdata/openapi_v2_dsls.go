@@ -169,6 +169,15 @@ var EmptyDSL = func() {
 	})
 }
 
+var FileServiceDSL = func() {
+	var _ = Service("service-name", func() {
+		Files("path1", "filename")
+		Files("path2", "filename", func() {
+			Meta("swagger:tag:user-tag")
+		})
+	})
+}
+
 var StringValidationDSL = func() {
 	var _ = API("test", func() {
 		Server("test", func() {
@@ -267,6 +276,18 @@ var ArrayValidationDSL = func() {
 }
 
 var ExtensionDSL = func() {
+	var PayloadT = Type("Payload", func() {
+		Attribute("string", String, func() {
+			Example("")
+			Meta("swagger:extension:x-test-schema", "Payload")
+		})
+	})
+	var ResultT = Type("Result", func() {
+		Attribute("string", String, func() {
+			Example("")
+			Meta("swagger:extension:x-test-schema", "Result")
+		})
+	})
 	var _ = API("test", func() {
 		Server("test", func() {
 			Host("localhost", func() {
@@ -278,15 +299,17 @@ var ExtensionDSL = func() {
 		Meta("swagger:tag:Backend:desc", "Description of Backend")
 		Meta("swagger:tag:Backend:url", "http://example.com")
 		Meta("swagger:tag:Backend:url:desc", "See more docs here")
+		Meta("swagger:tag:Backend:extension:x-data", `{"foo":"bar"}`)
 	})
 	Service("testService", func() {
 		Method("testEndpoint", func() {
-			Payload(Empty)
-			Result(Empty)
+			Payload(PayloadT)
+			Result(ResultT)
 			HTTP(func() {
 				POST("/")
 				Meta("swagger:extension:x-test-foo", "bar")
 			})
+			Meta("swagger:extension:x-test-operation", "Operation")
 		})
 	})
 }

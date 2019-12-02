@@ -40,11 +40,11 @@ func ExampleServiceFiles(genpkg string, root *expr.RootExpr) []*codegen.File {
 	// determine the unique API package name different from the service names
 	scope := codegen.NewNameScope()
 	for _, svc := range root.Services {
-		svc := Services.Get(svc.Name)
-		if svc == nil {
+		s := Services.Get(svc.Name)
+		if s == nil {
 			panic("unknown service, " + svc.Name) // bug
 		}
-		scope.Unique(svc.PkgName)
+		scope.Unique(s.PkgName)
 	}
 	apipkg := scope.Unique(strings.ToLower(codegen.Goify(root.API.Name, false)), "api")
 
@@ -68,12 +68,21 @@ func exampleServiceFile(genpkg string, root *expr.RootExpr, svc *expr.ServiceExp
 	specs := []*codegen.ImportSpec{
 		{Path: "context"},
 		{Path: "log"},
+		{Path: "fmt"},
 		{Path: path.Join(genpkg, codegen.SnakeCase(svcName)), Name: data.PkgName},
+		{Path: "goa.design/goa/v3/security"},
 	}
 	sections := []*codegen.SectionTemplate{
 		codegen.Header("", apipkg, specs),
 		{Name: "basic-service-struct", Source: svcStructT, Data: data},
 		{Name: "basic-service-init", Source: svcInitT, Data: data},
+	}
+	if len(data.Schemes) > 0 {
+		sections = append(sections, &codegen.SectionTemplate{
+			Name:   "security-authfuncs",
+			Source: dummyAuthFuncsT,
+			Data:   data,
+		})
 	}
 	for _, m := range svc.Methods {
 		sections = append(sections, basicEndpointSection(m, data))

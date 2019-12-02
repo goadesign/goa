@@ -17,7 +17,7 @@ Goa takes a different approach to building services by making it possible to
 describe the *design* of the service API using a simple Go DSL. Goa uses the
 description to generate specialized service helper code, client code and
 documentation. Goa is extensible via plugins, for example the
-[goakit](https://github.com/goadesign/plugins/tree/master/goakit) plugin
+[goakit](https://github.com/goadesign/plugins/tree/v3/goakit) plugin
 generates code that leverage the Go kit library.
 
 The service design describes the transport independent layer of the services in
@@ -108,7 +108,7 @@ without having to make changes.
 Releases are tagged with the corresponding version number. There is also a
 branch for each major version (`v1`, `v2` and `v3`).
 
-Current Release: `v3.0.6`
+Current Release: `v3.0.8`
 
 ## Teaser
 

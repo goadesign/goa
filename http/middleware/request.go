@@ -5,7 +5,7 @@ import (
 	"net/http"
 )
 
-// PopulateRequestContext returns a middleware which populates a number of standard HTTP reqeust
+// PopulateRequestContext returns a middleware which populates a number of standard HTTP header
 // values into the request context. Those values may be extracted using the
 // corresponding ContextKey type in this package.
 func PopulateRequestContext() func(http.Handler) http.Handler {

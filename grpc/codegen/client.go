@@ -122,6 +122,7 @@ func clientEncodeDecode(genpkg string, svc *expr.GRPCServiceExpr) *codegen.File 
 		fpath = filepath.Join(codegen.Gendir, "grpc", svcName, "client", "encode_decode.go")
 		sections = []*codegen.SectionTemplate{
 			codegen.Header(svc.Name()+" gRPC client encoders and decoders", "client", []*codegen.ImportSpec{
+				{Path: "fmt"},
 				{Path: "context"},
 				{Path: "strconv"},
 				{Path: "google.golang.org/grpc"},

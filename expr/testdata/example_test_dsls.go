@@ -95,3 +95,24 @@ var EmptyExampleDSL = func() {
 		})
 	})
 }
+
+var HidingExampleDSL = func() {
+	Service("HidingExample", func() {
+		Method("Method", func() {
+			Payload(String, func() {
+				Meta("swagger:example", "false")
+			})
+		})
+	})
+}
+
+var OverridingHiddenExamplesDSL = func() {
+	Service("OverridingHiddenExamples", func() {
+		Meta("swagger:example", "false")
+		Method("Method", func() {
+			Payload(String, func() {
+				Example("example")
+			})
+		})
+	})
+}

@@ -100,7 +100,7 @@ func exampleServer(genpkg string, root *expr.RootExpr, svr *expr.ServerExpr) *co
 				"Services": svcdata,
 				"APIPkg":   apiPkg,
 			},
-			FuncMap: map[string]interface{}{"needStream": needStream},
+			FuncMap: map[string]interface{}{"needStream": needStream, "hasStreaming": hasStreaming},
 		},
 		&codegen.SectionTemplate{Name: "server-http-middleware", Source: httpSvrMiddlewareT},
 		&codegen.SectionTemplate{
@@ -129,6 +129,17 @@ func dummyMultipartFile(genpkg string, root *expr.RootExpr, svc *expr.HTTPServic
 
 		scope = codegen.NewNameScope()
 	)
+	// determine the unique API package name different from the service names
+	for _, svc := range root.Services {
+		s := HTTPServices.Get(svc.Name)
+		if s == nil {
+			panic("unknown http service, " + svc.Name) // bug
+		}
+		if s.Service == nil {
+			panic("unknown service, " + svc.Name) // bug
+		}
+		scope.Unique(s.Service.PkgName)
+	}
 	{
 		specs := []*codegen.ImportSpec{
 			{Path: "mime/multipart"},
@@ -238,9 +249,9 @@ func handleHTTPServer(ctx context.Context, u *url.URL{{ range $.Services }}{{ if
 	{{- if needStream .Services }}
 		upgrader := &websocket.Upgrader{}
 	{{- end }}
-	{{- range .Services }}
+	{{- range $svc := .Services }}
 		{{-  if .Endpoints }}
-		{{ .Service.VarName }}Server = {{ .Service.PkgName }}svr.New({{ .Service.VarName }}Endpoints, mux, dec, enc, eh{{ if needStream $.Services }}, upgrader, nil{{ end }}{{ range .Endpoints }}{{ if .MultipartRequestDecoder }}, {{ $.APIPkg }}.{{ .MultipartRequestDecoder.FuncName }}{{ end }}{{ end }})
+		{{ .Service.VarName }}Server = {{ .Service.PkgName }}svr.New({{ .Service.VarName }}Endpoints, mux, dec, enc, eh{{ if hasStreaming $svc }}, upgrader, nil{{ end }}{{ range .Endpoints }}{{ if .MultipartRequestDecoder }}, {{ $.APIPkg }}.{{ .MultipartRequestDecoder.FuncName }}{{ end }}{{ end }})
 		{{-  else }}
 		{{ .Service.VarName }}Server = {{ .Service.PkgName }}svr.New(nil, mux, dec, enc, eh)
 		{{-  end }}

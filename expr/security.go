@@ -17,7 +17,7 @@ const (
 	BasicAuthKind
 	// APIKeyKind means "apiKey" security scheme.
 	APIKeyKind
-	// JWTKind means an "apiKey" security scheme, with support for
+	// JWTKind means an "JWT" security scheme, with support for
 	// TokenPath and Scopes.
 	JWTKind
 	// NoKind means to have no security for this endpoint.

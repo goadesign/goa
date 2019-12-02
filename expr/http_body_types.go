@@ -85,6 +85,7 @@ func httpRequestBody(a *HTTPEndpointExpr) *AttributeExpr {
 	ut := &UserTypeExpr{
 		AttributeExpr: att,
 		TypeName:      name,
+		UID:           a.Service.Name() + "#" + a.Name(),
 	}
 	appendSuffix(ut.Attribute().Type, suffix)
 
@@ -109,6 +110,7 @@ func httpStreamingBody(e *HTTPEndpointExpr) *AttributeExpr {
 	ut := &UserTypeExpr{
 		AttributeExpr: DupAtt(att),
 		TypeName:      concat(e.Name(), "Streaming", "Body"),
+		UID:           concat(e.Service.Name(), e.Name(), "Streaming", "Body"),
 	}
 	appendSuffix(ut.Attribute().Type, suffix)
 
@@ -130,7 +132,7 @@ func httpResponseBody(a *HTTPEndpointExpr, resp *HTTPResponseExpr) *AttributeExp
 		suffix = http.StatusText(resp.StatusCode)
 	}
 	name = a.Name() + suffix
-	return buildHTTPResponseBody(name, a.MethodExpr.Result, resp)
+	return buildHTTPResponseBody(name, a.MethodExpr.Result, resp, a.Service)
 }
 
 // httpErrorResponseBody returns an attribute describing the response body of a
@@ -140,17 +142,30 @@ func httpResponseBody(a *HTTPEndpointExpr, resp *HTTPResponseExpr) *AttributeExp
 // parameters.
 func httpErrorResponseBody(a *HTTPEndpointExpr, v *HTTPErrorExpr) *AttributeExpr {
 	name := a.Name() + "_" + v.ErrorExpr.Name
-	return buildHTTPResponseBody(name, v.ErrorExpr.AttributeExpr, v.Response)
+	return buildHTTPResponseBody(name, v.ErrorExpr.AttributeExpr, v.Response, a.Service)
 }
 
-func buildHTTPResponseBody(name string, attr *AttributeExpr, resp *HTTPResponseExpr) *AttributeExpr {
+func buildHTTPResponseBody(name string, attr *AttributeExpr, resp *HTTPResponseExpr, svc *HTTPServiceExpr) *AttributeExpr {
 	const suffix = "ResponseBody"
 	name = concat(name, "Response", "Body")
 	if attr == nil || attr.Type == Empty {
 		return &AttributeExpr{Type: Empty}
 	}
+
+	// 0. Handle the case where the body is set explicitely in the design.
+	// We need to create a type with an endpoint specific response body type
+	// name to handle the case where the same type is used by multiple
+	// methods with potentially different result types.
 	if resp.Body != nil {
-		return resp.Body
+		if !IsObject(resp.Body.Type) {
+			return resp.Body
+		}
+		if len(*AsObject(resp.Body.Type)) == 0 {
+			return &AttributeExpr{Type: Empty}
+		}
+		att := DupAtt(resp.Body)
+		renameType(att, name, suffix)
+		return att
 	}
 
 	// 1. If attribute is not an object then check whether there are headers
@@ -165,9 +180,9 @@ func buildHTTPResponseBody(name string, attr *AttributeExpr, resp *HTTPResponseE
 		}
 		return &AttributeExpr{Type: Empty}
 	}
+	body := NewMappedAttributeExpr(attr)
 
 	// 2. Remove header attributes
-	body := NewMappedAttributeExpr(attr)
 	removeAttributes(body, resp.Headers)
 
 	// 3. Return empty type if no attribute left
@@ -179,6 +194,7 @@ func buildHTTPResponseBody(name string, attr *AttributeExpr, resp *HTTPResponseE
 	userType := &UserTypeExpr{
 		AttributeExpr: body.Attribute(),
 		TypeName:      name,
+		UID:           concat(svc.Name(), "#", name),
 	}
 	appendSuffix(userType.Attribute().Type, suffix)
 	rt, isrt := attr.Type.(*ResultTypeExpr)

@@ -67,7 +67,7 @@ func DecodeMethodBodyMultipleViewResponse(decoder func(*http.Response) goahttp.D
 			}
 			p := NewMethodBodyMultipleViewResulttypemultipleviewsOK(&body, c)
 			view := resp.Header.Get("goa-view")
-			vres := &servicebodymultipleviewviews.Resulttypemultipleviews{p, view}
+			vres := &servicebodymultipleviewviews.Resulttypemultipleviews{Projected: p, View: view}
 			if err = servicebodymultipleviewviews.ValidateResulttypemultipleviews(vres); err != nil {
 				return nil, goahttp.ErrValidationError("ServiceBodyMultipleView", "MethodBodyMultipleView", err)
 			}
@@ -110,7 +110,7 @@ func DecodeMethodEmptyBodyResultMultipleViewResponse(decoder func(*http.Response
 			}
 			p := NewMethodEmptyBodyResultMultipleViewResulttypemultipleviewsOK(c)
 			view := resp.Header.Get("goa-view")
-			vres := &serviceemptybodyresultmultipleviewviews.Resulttypemultipleviews{p, view}
+			vres := &serviceemptybodyresultmultipleviewviews.Resulttypemultipleviews{Projected: p, View: view}
 			res := serviceemptybodyresultmultipleview.NewResulttypemultipleviews(vres)
 			return res, nil
 		default:
@@ -165,7 +165,7 @@ func DecodeMethodExplicitBodyPrimitiveResultMultipleViewResponse(decoder func(*h
 			}
 			p := NewMethodExplicitBodyPrimitiveResultMultipleViewResulttypemultipleviewsOK(body, c)
 			view := resp.Header.Get("goa-view")
-			vres := &serviceexplicitbodyprimitiveresultmultipleviewviews.Resulttypemultipleviews{p, view}
+			vres := &serviceexplicitbodyprimitiveresultmultipleviewviews.Resulttypemultipleviews{Projected: p, View: view}
 			if err = serviceexplicitbodyprimitiveresultmultipleviewviews.ValidateResulttypemultipleviews(vres); err != nil {
 				return nil, goahttp.ErrValidationError("ServiceExplicitBodyPrimitiveResultMultipleView", "MethodExplicitBodyPrimitiveResultMultipleView", err)
 			}
@@ -200,7 +200,7 @@ func DecodeMethodExplicitBodyUserResultMultipleViewResponse(decoder func(*http.R
 		switch resp.StatusCode {
 		case http.StatusOK:
 			var (
-				body UserType
+				body MethodExplicitBodyUserResultMultipleViewResponseBody
 				err  error
 			)
 			err = decoder(resp).Decode(&body)
@@ -216,7 +216,7 @@ func DecodeMethodExplicitBodyUserResultMultipleViewResponse(decoder func(*http.R
 			}
 			p := NewMethodExplicitBodyUserResultMultipleViewResulttypemultipleviewsOK(&body, c)
 			view := resp.Header.Get("goa-view")
-			vres := &serviceexplicitbodyuserresultmultipleviewviews.Resulttypemultipleviews{p, view}
+			vres := &serviceexplicitbodyuserresultmultipleviewviews.Resulttypemultipleviews{Projected: p, View: view}
 			if err = serviceexplicitbodyuserresultmultipleviewviews.ValidateResulttypemultipleviews(vres); err != nil {
 				return nil, goahttp.ErrValidationError("ServiceExplicitBodyUserResultMultipleView", "MethodExplicitBodyUserResultMultipleView", err)
 			}
@@ -311,7 +311,7 @@ func DecodeMethodTagMultipleViewsResponse(decoder func(*http.Response) goahttp.D
 			tmp := "value"
 			p.B = &tmp
 			view := resp.Header.Get("goa-view")
-			vres := &servicetagmultipleviewsviews.Resulttypemultipleviews{p, view}
+			vres := &servicetagmultipleviewsviews.Resulttypemultipleviews{Projected: p, View: view}
 			if err = servicetagmultipleviewsviews.ValidateResulttypemultipleviews(vres); err != nil {
 				return nil, goahttp.ErrValidationError("ServiceTagMultipleViews", "MethodTagMultipleViews", err)
 			}
@@ -328,7 +328,7 @@ func DecodeMethodTagMultipleViewsResponse(decoder func(*http.Response) goahttp.D
 			}
 			p := NewMethodTagMultipleViewsResulttypemultipleviewsOK(&body)
 			view := resp.Header.Get("goa-view")
-			vres := &servicetagmultipleviewsviews.Resulttypemultipleviews{p, view}
+			vres := &servicetagmultipleviewsviews.Resulttypemultipleviews{Projected: p, View: view}
 			if err = servicetagmultipleviewsviews.ValidateResulttypemultipleviews(vres); err != nil {
 				return nil, goahttp.ErrValidationError("ServiceTagMultipleViews", "MethodTagMultipleViews", err)
 			}
@@ -690,7 +690,7 @@ func DecodeMethodAResponse(decoder func(*http.Response) goahttp.Decoder, restore
 			}
 			p := NewMethodAAResultOK(required, optional, optionalButRequired)
 			view := resp.Header.Get("goa-view")
-			vres := &servicewithheadersblockviewedresultviews.AResult{p, view}
+			vres := &servicewithheadersblockviewedresultviews.AResult{Projected: p, View: view}
 			res := servicewithheadersblockviewedresult.NewAResult(vres)
 			return res, nil
 		default:
@@ -743,7 +743,7 @@ func DecodeMethodAResponse(decoder func(*http.Response) goahttp.Decoder, restore
 			}
 			p := NewMethodAAResultOK(required)
 			view := "default"
-			vres := &validateerrorresponsetypeviews.AResult{p, view}
+			vres := &validateerrorresponsetypeviews.AResult{Projected: p, View: view}
 			res := validateerrorresponsetype.NewAResult(vres)
 			return res, nil
 		case http.StatusBadRequest:

@@ -126,6 +126,7 @@ import (
 //            Meta("swagger:tag:Backend:desc", "Description of Backend")
 //            Meta("swagger:tag:Backend:url", "http://example.com")
 //            Meta("swagger:tag:Backend:url:desc", "See more docs here")
+//            Meta("swagger:tag:Backend:extension:x-data", `{"foo":"bar"}`)
 //        })
 //    })
 //

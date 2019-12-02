@@ -125,6 +125,22 @@ var EndpointMissingToken = func() {
 	})
 }
 
+var EndpointMissingTokenPayload = func() {
+	var JWT = JWTSecurity("JWT", func() {
+		Scope("api:read", "Read access")
+	})
+	Service("Service", func() {
+		Security(JWT, func() {
+			Scope("api:read")
+		})
+		Method("Method", func() {
+			HTTP(func() {
+				POST("/")
+			})
+		})
+	})
+}
+
 var EndpointExtendToken = func() {
 	var CommonAttributes = Type("Common", func() {
 		Token("token", String)
@@ -183,6 +199,47 @@ var EndpointHasParent = func() {
 	})
 }
 
+var EndpointHasParentAndOther = func() {
+	Service("Parent", func() {
+		HTTP(func() {
+			Path("/parents")
+			CanonicalMethod("Method")
+		})
+		Method("Method", func() {
+			Payload(func() {
+				Attribute("parent_id", Int)
+				Attribute("query_1", String)
+			})
+			HTTP(func() {
+				GET("/{parent_id}")
+				Param("query_1")
+			})
+		})
+	})
+	Service("Child", func() {
+		HTTP(func() {
+			Path("/children")
+			Parent("Parent")
+		})
+		Method("Method", func() {
+			HTTP(func() {
+				GET("")
+			})
+		})
+	})
+	Service("Other", func() {
+		HTTP(func() {
+			Path("/others")
+		})
+		Method("Method", func() {
+			HTTP(func() {
+				GET("")
+			})
+		})
+	})
+
+}
+
 var FinalizeEndpointBodyAsExtendedTypeDSL = func() {
 	var EntityData = Type("EntityData", func() {
 		Attribute("name", String)
@@ -205,6 +262,8 @@ var FinalizeEndpointBodyAsExtendedTypeDSL = func() {
 }
 
 var FinalizeEndpointBodyAsPropWithExtendedTypeDSL = func() {
+	var OAuth2 = OAuth2Security("authCode")
+
 	var EntityData = Type("EntityData", func() {
 		Attribute("name", String)
 	})
@@ -217,6 +276,7 @@ var FinalizeEndpointBodyAsPropWithExtendedTypeDSL = func() {
 
 	Service("Service", func() {
 		Method("Method", func() {
+			Security(OAuth2)
 			Payload(func() {
 				AccessToken("token", String)
 				Attribute("payload", Entity)
@@ -247,6 +307,59 @@ var GRPCEndpointWithAnyType = func() {
 			Result(CollectionOf(InvalidRT))
 			Error("invalid_error_type", Any)
 			Error("invalid_map_type", MapOf(Int, Any))
+			GRPC(func() {})
+		})
+	})
+}
+
+var GRPCEndpointWithUntaggedFields = func() {
+	var Req = Type("Req", func() {
+		Attribute("req_not_field", String)
+	})
+	var Resp = Type("Resp", func() {
+		Attribute("resp_not_field", String)
+	})
+	Service("Service", func() {
+		Method("Method", func() {
+			Payload(Req)
+			Result(Resp)
+			GRPC(func() {})
+		})
+	})
+}
+
+var GRPCEndpointWithRepeatedFieldTags = func() {
+	var Req = Type("Req", func() {
+		Field(1, "key", String)
+		Field(1, "key_dup_id", String)
+	})
+	var Resp = Type("Resp", func() {
+		Field(2, "key", String)
+		Field(2, "key_dup_id", String)
+	})
+	Service("Service", func() {
+		Method("Method", func() {
+			Payload(Req)
+			Result(Resp)
+			GRPC(func() {})
+		})
+	})
+}
+
+var GRPCEndpointWithReferenceTypes = func() {
+	var EntityReference = Type("EntityReference", func() {
+		Field(1, "name", String)
+	})
+
+	var Entity = Type("Entity", func() {
+		Reference(EntityReference)
+		Field(1, "id", String)
+		Field(2, "name")
+	})
+
+	Service("Service", func() {
+		Method("Method", func() {
+			Payload(Entity)
 			GRPC(func() {})
 		})
 	})

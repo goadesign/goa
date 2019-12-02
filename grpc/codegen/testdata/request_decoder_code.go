@@ -32,9 +32,6 @@ func DecodeMethodUnaryRPCNoResultRequest(ctx context.Context, v interface{}, md 
 		if message, ok = v.(*service_unary_rpc_no_resultpb.MethodUnaryRPCNoResultRequest); !ok {
 			return nil, goagrpc.ErrInvalidType("ServiceUnaryRPCNoResult", "MethodUnaryRPCNoResult", "*service_unary_rpc_no_resultpb.MethodUnaryRPCNoResultRequest", v)
 		}
-		if err := ValidateMethodUnaryRPCNoResultRequest(message); err != nil {
-			return nil, err
-		}
 	}
 	var payload []string
 	{
@@ -54,9 +51,6 @@ func DecodeMethodMessageMapRequest(ctx context.Context, v interface{}, md metada
 	{
 		if message, ok = v.(*service_message_mappb.MethodMessageMapRequest); !ok {
 			return nil, goagrpc.ErrInvalidType("ServiceMessageMap", "MethodMessageMap", "*service_message_mappb.MethodMessageMapRequest", v)
-		}
-		if err := ValidateMethodMessageMapRequest(message); err != nil {
-			return nil, err
 		}
 	}
 	var payload map[int]*servicemessagemap.UT
@@ -99,7 +93,7 @@ func DecodeMethodClientStreamingRPCWithPayloadRequest(ctx context.Context, v int
 		if vals := md.Get("goa_payload"); len(vals) == 0 {
 			err = goa.MergeErrors(err, goa.MissingFieldError("goa_payload", "metadata"))
 		} else {
-			goaPayloadRaw = vals[0]
+			goaPayloadRaw := vals[0]
 
 			v, err2 := strconv.ParseInt(goaPayloadRaw, 10, strconv.IntSize)
 			if err2 != nil {
@@ -130,7 +124,7 @@ func DecodeMethodBidirectionalStreamingRPCWithPayloadRequest(ctx context.Context
 	)
 	{
 		if vals := md.Get("a"); len(vals) > 0 {
-			aRaw = vals[0]
+			aRaw := vals[0]
 
 			v, err2 := strconv.ParseInt(aRaw, 10, strconv.IntSize)
 			if err2 != nil {
@@ -163,7 +157,7 @@ func DecodeMethodMessageWithMetadataRequest(ctx context.Context, v interface{}, 
 	)
 	{
 		if vals := md.Get("Authorization"); len(vals) > 0 {
-			inMetadataRaw = vals[0]
+			inMetadataRaw := vals[0]
 
 			v, err2 := strconv.ParseInt(inMetadataRaw, 10, strconv.IntSize)
 			if err2 != nil {
@@ -202,7 +196,7 @@ func DecodeMethodMessageWithValidateRequest(ctx context.Context, v interface{}, 
 	)
 	{
 		if vals := md.Get("Authorization"); len(vals) > 0 {
-			inMetadataRaw = vals[0]
+			inMetadataRaw := vals[0]
 
 			v, err2 := strconv.ParseInt(inMetadataRaw, 10, strconv.IntSize)
 			if err2 != nil {

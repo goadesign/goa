@@ -90,6 +90,35 @@ func TestClientTypes(t *testing.T) {
 	}
 }
 
+func TestClientTypeFiles(t *testing.T) {
+	const genpkg = "gen"
+	cases := []struct {
+		Name  string
+		DSL   func()
+		Codes []string
+	}{
+		{"multiple-services-same-payload-and-result", testdata.MultipleServicesSamePayloadAndResultDSL, MultipleServicesSamePayloadAndResultClientTypesFiles},
+	}
+	for _, c := range cases {
+		t.Run(c.Name, func(t *testing.T) {
+			RunHTTPDSL(t, c.DSL)
+			fw := ClientTypeFiles(genpkg, expr.Root)
+			for i, fs := range fw {
+				var buf bytes.Buffer
+				for _, s := range fs.SectionTemplates[1:] {
+					if err := s.Write(&buf); err != nil {
+						t.Fatal(err)
+					}
+				}
+				code := codegen.FormatTestCode(t, "package foo\n"+buf.String())
+				if code != c.Codes[i] {
+					t.Errorf("invalid code at inded %d, got:\n%s\ngot vs. expected:\n%s", i, code, codegen.Diff(t, code, c.Codes[i]))
+				}
+			}
+		})
+	}
+}
+
 const BodyUserInnerDeclCode = `// MethodBodyUserInnerRequestBody is the type of the "ServiceBodyUserInner"
 // service "MethodBodyUserInner" endpoint HTTP request body.
 type MethodBodyUserInnerRequestBody struct {
@@ -171,7 +200,7 @@ const ExplicitBodyUserResultMultipleViewsInitCode = `// NewMethodExplicitBodyUse
 // a "ServiceExplicitBodyUserResultMultipleView" service
 // "MethodExplicitBodyUserResultMultipleView" endpoint result from a HTTP "OK"
 // response.
-func NewMethodExplicitBodyUserResultMultipleViewResulttypemultipleviewsOK(body *UserType, c *string) *serviceexplicitbodyuserresultmultipleviewviews.ResulttypemultipleviewsView {
+func NewMethodExplicitBodyUserResultMultipleViewResulttypemultipleviewsOK(body *MethodExplicitBodyUserResultMultipleViewResponseBody, c *string) *serviceexplicitbodyuserresultmultipleviewviews.ResulttypemultipleviewsView {
 	v := &serviceexplicitbodyuserresultmultipleviewviews.UserTypeView{
 		X: body.X,
 		Y: body.Y,
@@ -299,3 +328,234 @@ func NewMethodQueryStringExtendedValidatePayloadRequestBody(p *servicequerystrin
 	return body
 }
 `
+
+var MultipleServicesSamePayloadAndResultClientTypesFiles = []string{
+	`// ListRequestBody is the type of the "ServiceA" service "list" endpoint HTTP
+// request body.
+type ListRequestBody struct {
+	Name *string ` + "`" + `form:"name,omitempty" json:"name,omitempty" xml:"name,omitempty"` + "`" + `
+}
+
+// ListStreamingBody is the type of the "ServiceA" service "list" endpoint HTTP
+// request body.
+type ListStreamingBody struct {
+	Name *string ` + "`" + `form:"name,omitempty" json:"name,omitempty" xml:"name,omitempty"` + "`" + `
+}
+
+// ListResponseBody is the type of the "ServiceA" service "list" endpoint HTTP
+// response body.
+type ListResponseBody struct {
+	ID   *int    ` + "`" + `form:"id,omitempty" json:"id,omitempty" xml:"id,omitempty"` + "`" + `
+	Name *string ` + "`" + `form:"name,omitempty" json:"name,omitempty" xml:"name,omitempty"` + "`" + `
+}
+
+// ListSomethingWentWrongResponseBody is the type of the "ServiceA" service
+// "list" endpoint HTTP response body for the "something_went_wrong" error.
+type ListSomethingWentWrongResponseBody struct {
+	// Name is the name of this class of errors.
+	Name *string ` + "`" + `form:"name,omitempty" json:"name,omitempty" xml:"name,omitempty"` + "`" + `
+	// ID is a unique identifier for this particular occurrence of the problem.
+	ID *string ` + "`" + `form:"id,omitempty" json:"id,omitempty" xml:"id,omitempty"` + "`" + `
+	// Message is a human-readable explanation specific to this occurrence of the
+	// problem.
+	Message *string ` + "`" + `form:"message,omitempty" json:"message,omitempty" xml:"message,omitempty"` + "`" + `
+	// Is the error temporary?
+	Temporary *bool ` + "`" + `form:"temporary,omitempty" json:"temporary,omitempty" xml:"temporary,omitempty"` + "`" + `
+	// Is the error a timeout?
+	Timeout *bool ` + "`" + `form:"timeout,omitempty" json:"timeout,omitempty" xml:"timeout,omitempty"` + "`" + `
+	// Is the error a server-side fault?
+	Fault *bool ` + "`" + `form:"fault,omitempty" json:"fault,omitempty" xml:"fault,omitempty"` + "`" + `
+}
+
+// NewListRequestBody builds the HTTP request body from the payload of the
+// "list" endpoint of the "ServiceA" service.
+func NewListRequestBody(p *servicea.ListPayload) *ListRequestBody {
+	body := &ListRequestBody{
+		Name: p.Name,
+	}
+	return body
+}
+
+// NewListStreamingBody builds the HTTP request body from the payload of the
+// "list" endpoint of the "ServiceA" service.
+func NewListStreamingBody(p *servicea.ListStreamingPayload) *ListStreamingBody {
+	body := &ListStreamingBody{
+		Name: p.Name,
+	}
+	return body
+}
+
+// NewListResultOK builds a "ServiceA" service "list" endpoint result from a
+// HTTP "OK" response.
+func NewListResultOK(body *ListResponseBody) *servicea.ListResult {
+	v := &servicea.ListResult{
+		ID:   *body.ID,
+		Name: *body.Name,
+	}
+	return v
+}
+
+// NewListSomethingWentWrong builds a ServiceA service list endpoint
+// something_went_wrong error.
+func NewListSomethingWentWrong(body *ListSomethingWentWrongResponseBody) *goa.ServiceError {
+	v := &goa.ServiceError{
+		Name:      *body.Name,
+		ID:        *body.ID,
+		Message:   *body.Message,
+		Temporary: *body.Temporary,
+		Timeout:   *body.Timeout,
+		Fault:     *body.Fault,
+	}
+	return v
+}
+
+// ValidateListResponseBody runs the validations defined on ListResponseBody
+func ValidateListResponseBody(body *ListResponseBody) (err error) {
+	if body.ID == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("id", "body"))
+	}
+	if body.Name == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("name", "body"))
+	}
+	return
+}
+
+// ValidateListSomethingWentWrongResponseBody runs the validations defined on
+// list_something_went_wrong_response_body
+func ValidateListSomethingWentWrongResponseBody(body *ListSomethingWentWrongResponseBody) (err error) {
+	if body.Name == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("name", "body"))
+	}
+	if body.ID == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("id", "body"))
+	}
+	if body.Message == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("message", "body"))
+	}
+	if body.Temporary == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("temporary", "body"))
+	}
+	if body.Timeout == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("timeout", "body"))
+	}
+	if body.Fault == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("fault", "body"))
+	}
+	return
+}
+`,
+	`// ListRequestBody is the type of the "ServiceB" service "list" endpoint HTTP
+// request body.
+type ListRequestBody struct {
+	Name *string ` + "`" + `form:"name,omitempty" json:"name,omitempty" xml:"name,omitempty"` + "`" + `
+}
+
+// ListStreamingBody is the type of the "ServiceB" service "list" endpoint HTTP
+// request body.
+type ListStreamingBody struct {
+	Name *string ` + "`" + `form:"name,omitempty" json:"name,omitempty" xml:"name,omitempty"` + "`" + `
+}
+
+// ListResponseBody is the type of the "ServiceB" service "list" endpoint HTTP
+// response body.
+type ListResponseBody struct {
+	ID   *int    ` + "`" + `form:"id,omitempty" json:"id,omitempty" xml:"id,omitempty"` + "`" + `
+	Name *string ` + "`" + `form:"name,omitempty" json:"name,omitempty" xml:"name,omitempty"` + "`" + `
+}
+
+// ListSomethingWentWrongResponseBody is the type of the "ServiceB" service
+// "list" endpoint HTTP response body for the "something_went_wrong" error.
+type ListSomethingWentWrongResponseBody struct {
+	// Name is the name of this class of errors.
+	Name *string ` + "`" + `form:"name,omitempty" json:"name,omitempty" xml:"name,omitempty"` + "`" + `
+	// ID is a unique identifier for this particular occurrence of the problem.
+	ID *string ` + "`" + `form:"id,omitempty" json:"id,omitempty" xml:"id,omitempty"` + "`" + `
+	// Message is a human-readable explanation specific to this occurrence of the
+	// problem.
+	Message *string ` + "`" + `form:"message,omitempty" json:"message,omitempty" xml:"message,omitempty"` + "`" + `
+	// Is the error temporary?
+	Temporary *bool ` + "`" + `form:"temporary,omitempty" json:"temporary,omitempty" xml:"temporary,omitempty"` + "`" + `
+	// Is the error a timeout?
+	Timeout *bool ` + "`" + `form:"timeout,omitempty" json:"timeout,omitempty" xml:"timeout,omitempty"` + "`" + `
+	// Is the error a server-side fault?
+	Fault *bool ` + "`" + `form:"fault,omitempty" json:"fault,omitempty" xml:"fault,omitempty"` + "`" + `
+}
+
+// NewListRequestBody builds the HTTP request body from the payload of the
+// "list" endpoint of the "ServiceB" service.
+func NewListRequestBody(p *serviceb.ListPayload) *ListRequestBody {
+	body := &ListRequestBody{
+		Name: p.Name,
+	}
+	return body
+}
+
+// NewListStreamingBody builds the HTTP request body from the payload of the
+// "list" endpoint of the "ServiceB" service.
+func NewListStreamingBody(p *serviceb.ListStreamingPayload) *ListStreamingBody {
+	body := &ListStreamingBody{
+		Name: p.Name,
+	}
+	return body
+}
+
+// NewListResultOK builds a "ServiceB" service "list" endpoint result from a
+// HTTP "OK" response.
+func NewListResultOK(body *ListResponseBody) *serviceb.ListResult {
+	v := &serviceb.ListResult{
+		ID:   *body.ID,
+		Name: *body.Name,
+	}
+	return v
+}
+
+// NewListSomethingWentWrong builds a ServiceB service list endpoint
+// something_went_wrong error.
+func NewListSomethingWentWrong(body *ListSomethingWentWrongResponseBody) *goa.ServiceError {
+	v := &goa.ServiceError{
+		Name:      *body.Name,
+		ID:        *body.ID,
+		Message:   *body.Message,
+		Temporary: *body.Temporary,
+		Timeout:   *body.Timeout,
+		Fault:     *body.Fault,
+	}
+	return v
+}
+
+// ValidateListResponseBody runs the validations defined on ListResponseBody
+func ValidateListResponseBody(body *ListResponseBody) (err error) {
+	if body.ID == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("id", "body"))
+	}
+	if body.Name == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("name", "body"))
+	}
+	return
+}
+
+// ValidateListSomethingWentWrongResponseBody runs the validations defined on
+// list_something_went_wrong_response_body
+func ValidateListSomethingWentWrongResponseBody(body *ListSomethingWentWrongResponseBody) (err error) {
+	if body.Name == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("name", "body"))
+	}
+	if body.ID == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("id", "body"))
+	}
+	if body.Message == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("message", "body"))
+	}
+	if body.Temporary == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("temporary", "body"))
+	}
+	if body.Timeout == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("timeout", "body"))
+	}
+	if body.Fault == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("fault", "body"))
+	}
+	return
+}
+`,
+}

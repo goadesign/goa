@@ -30,10 +30,10 @@ func serverFile(genpkg string, svc *expr.HTTPServiceExpr) *codegen.File {
 	path := filepath.Join(codegen.Gendir, "http", svcName, "server", "server.go")
 	title := fmt.Sprintf("%s HTTP server", svc.Name())
 	funcs := map[string]interface{}{
-		"join":                    func(ss []string, s string) string { return strings.Join(ss, s) },
-		"streamingEndpointExists": streamingEndpointExists,
-		"upgradeParams":           upgradeParams,
-		"viewedServerBody":        viewedServerBody,
+		"join":             func(ss []string, s string) string { return strings.Join(ss, s) },
+		"hasStreaming":     hasStreaming,
+		"upgradeParams":    upgradeParams,
+		"viewedServerBody": viewedServerBody,
 	}
 	sections := []*codegen.SectionTemplate{
 		codegen.Header(title, "server", []*codegen.ImportSpec{
@@ -58,7 +58,7 @@ func serverFile(genpkg string, svc *expr.HTTPServiceExpr) *codegen.File {
 	sections = append(sections, &codegen.SectionTemplate{Name: "server-mountpoint", Source: mountPointStructT, Data: data})
 
 	// public types
-	if streamingEndpointExists(data) {
+	if hasStreaming(data) {
 		sections = append(sections, &codegen.SectionTemplate{
 			Name:   "server-stream-conn-configurer-struct",
 			Source: streamConnConfigurerStructT,
@@ -90,7 +90,7 @@ func serverFile(genpkg string, svc *expr.HTTPServiceExpr) *codegen.File {
 	}
 
 	sections = append(sections, &codegen.SectionTemplate{Name: "server-init", Source: serverInitT, Data: data, FuncMap: funcs})
-	if streamingEndpointExists(data) {
+	if hasStreaming(data) {
 		sections = append(sections, &codegen.SectionTemplate{
 			Name:   "server-stream-conn-configurer-struct-init",
 			Source: streamConnConfigurerStructInitT,
@@ -315,7 +315,7 @@ func {{ .ServerInit }}(
 	dec func(*http.Request) goahttp.Decoder,
 	enc func(context.Context, http.ResponseWriter) goahttp.Encoder,
 	eh func(context.Context, http.ResponseWriter, error),
-	{{- if streamingEndpointExists . }}
+	{{- if hasStreaming . }}
 	up goahttp.Upgrader,
 	cfn *ConnConfigurer,
 	{{- end }}
@@ -325,7 +325,7 @@ func {{ .ServerInit }}(
 		{{- end }}
 	{{- end }}
 ) *{{ .ServerStruct }} {
-{{- if streamingEndpointExists . }}
+{{- if hasStreaming . }}
 	if cfn == nil {
 		cfn = &ConnConfigurer{}
 	}
@@ -358,7 +358,7 @@ func (s *{{ .ServerStruct }}) {{ .ServerService }}() string { return "{{ .Servic
 
 // input: ServiceData
 const serverUseT = `{{ printf "Use wraps the server handlers with the given middleware." | comment }}
-func (s *{{ .ServerStruct }}) Use(m func(http.Handler) http.Handler) { 
+func (s *{{ .ServerStruct }}) Use(m func(http.Handler) http.Handler) {
 {{- range .Endpoints }}
 	s.{{ .Method.VarName }} = m(s.{{ .Method.VarName }})
 {{- end }}
@@ -1217,7 +1217,7 @@ const responseT = `{{ define "response" -}}
 		{{ .VarName }}Slice := make([]string, len({{ .Target }}))
 		for i, e := range {{ .Target }}  {
 			{{ template "header_conversion" (headerConversionData .Type.ElemType.Type "es" true "e") }}
-			{{ .VarName }}Slice[i] = es	
+			{{ .VarName }}Slice[i] = es
 		}
 		{{ .VarName }} := strings.Join({{ .VarName }}Slice, ", ")
 		{{- end }}

@@ -226,7 +226,7 @@ func (r *HTTPResponseExpr) Finalize(a *HTTPEndpointExpr, svcAtt *AttributeExpr) 
 					if r.Body.Validation == nil {
 						r.Body.Validation = &ValidationExpr{}
 					}
-					r.Body.Validation.Required = append(r.Body.Validation.Required, n)
+					r.Body.Validation.AddRequired(n)
 				}
 			}
 		}

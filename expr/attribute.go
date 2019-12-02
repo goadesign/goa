@@ -2,6 +2,7 @@ package expr
 
 import (
 	"fmt"
+	"strings"
 
 	"goa.design/goa/v3/eval"
 )
@@ -389,6 +390,34 @@ func (a *AttributeExpr) HasTag(tag string) bool {
 		}
 	}
 	return false
+}
+
+// HasTagPrefix returns true if the attribute is an object that has an attribute with
+// the given tag prefix.
+func (a *AttributeExpr) HasTagPrefix(prefix string) bool {
+	if a == nil {
+		return false
+	}
+	obj := AsObject(a.Type)
+	if obj == nil {
+		return false
+	}
+	for _, at := range *obj {
+		for k := range at.Attribute.Meta {
+			if strings.HasPrefix(k, prefix) {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+// FieldTag returns the field tag if the attribute is a field.
+func (a *AttributeExpr) FieldTag() (tag string, found bool) {
+	if a == nil {
+		return
+	}
+	return a.Meta.Last("rpc:tag")
 }
 
 // HasDefaultValue returns true if the attribute with the given name has a

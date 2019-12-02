@@ -106,25 +106,34 @@ func NewV2(root *expr.RootExpr, h *expr.HostExpr) (*V2, error) {
 // ExtensionsFromExpr generates swagger extensions from the given meta
 // expression.
 func ExtensionsFromExpr(mdata expr.MetaExpr) map[string]interface{} {
+	return extensionsFromExprWithPrefix(mdata, "swagger:extension:")
+}
+
+// extensionsFromExprWithPrefix generates swagger extensions from
+// the given meta expression with keys starting the given prefix.
+func extensionsFromExprWithPrefix(mdata expr.MetaExpr, prefix string) map[string]interface{} {
+	if !strings.HasSuffix(prefix, ":") {
+		prefix += ":"
+	}
 	extensions := make(map[string]interface{})
 	for key, value := range mdata {
-		chunks := strings.Split(key, ":")
-		if len(chunks) != 3 {
+		if !strings.HasPrefix(key, prefix) {
 			continue
 		}
-		if chunks[0] != "swagger" || chunks[1] != "extension" {
+		name := key[len(prefix):]
+		if strings.Contains(name, ":") {
 			continue
 		}
-		if !strings.HasPrefix(chunks[2], "x-") {
+		if !strings.HasPrefix(name, "x-") {
 			continue
 		}
 		val := value[0]
 		ival := interface{}(val)
 		if err := json.Unmarshal([]byte(val), &ival); err != nil {
-			extensions[chunks[2]] = val
+			extensions[name] = val
 			continue
 		}
-		extensions[chunks[2]] = ival
+		extensions[name] = ival
 	}
 	if len(extensions) == 0 {
 		return nil
@@ -325,6 +334,9 @@ func tagsFromExpr(mdata expr.MetaExpr) (tags []*Tag) {
 			tag.ExternalDocs = docs
 		}
 
+		extensionsPrefix := fmt.Sprintf("%s:extension:", key)
+		tag.Extensions = extensionsFromExprWithPrefix(mdata, extensionsPrefix)
+
 		tags = append(tags, tag)
 	}
 
@@ -487,6 +499,9 @@ func responseSpecFromExpr(s *V2, root *expr.RootExpr, r *expr.HTTPResponseExpr, 
 	} else if r.Body.Type != expr.Empty {
 		schema = AttributeTypeSchemaWithPrefix(root.API, r.Body, typeNamePrefix)
 	}
+	if schema != nil {
+		schema.Extensions = ExtensionsFromExpr(r.Meta)
+	}
 	headers := headersFromExpr(r.Headers)
 	desc := r.Description
 	if desc == "" {
@@ -556,6 +571,12 @@ func buildPathFromFileServer(s *V2, root *expr.RootExpr, fs *expr.HTTPFileServer
 			}
 		}
 
+		tagNames := tagNamesFromExpr(fs.Service.Meta, fs.Meta)
+		if len(tagNames) == 0 {
+			// By default tag with service name
+			tagNames = []string{fs.Service.Name()}
+		}
+
 		operation := &Operation{
 			Description:  fs.Description,
 			Summary:      summaryFromMeta(fmt.Sprintf("Download %s", fs.FilePath), fs.Meta),
@@ -564,14 +585,10 @@ func buildPathFromFileServer(s *V2, root *expr.RootExpr, fs *expr.HTTPFileServer
 			Parameters:   param,
 			Responses:    responses,
 			Schemes:      schemes,
+			Tags:         tagNames,
 		}
 
-		key := expr.HTTPWildcardRegex.ReplaceAllStringFunc(
-			path,
-			func(w string) string {
-				return fmt.Sprintf("/{%s}", w[2:])
-			},
-		)
+		key := expr.HTTPWildcardRegex.ReplaceAllString(path, "/{$1}")
 		if key == "" {
 			key = "/"
 		}
@@ -630,10 +647,19 @@ func buildPathFromExpr(s *V2, root *expr.RootExpr, h *expr.HostExpr, route *expr
 			responses[strconv.Itoa(er.Response.StatusCode)] = resp
 		}
 
+		var consumes []string
+		if endpoint.MultipartRequest {
+			consumes = []string{"multipart/form-data"}
+		}
+
 		if endpoint.Body.Type != expr.Empty {
+			in := "body"
+			if endpoint.MultipartRequest {
+				in = "formData"
+			}
 			pp := &Parameter{
 				Name:        endpoint.Body.Type.Name(),
-				In:          "body",
+				In:          in,
 				Description: endpoint.Body.Description,
 				Required:    true,
 				Schema:      AttributeTypeSchemaWithPrefix(root.API, endpoint.Body, codegen.Goify(endpoint.Service.Name(), true)),
@@ -710,11 +736,12 @@ func buildPathFromExpr(s *V2, root *expr.RootExpr, h *expr.HostExpr, route *expr
 			ExternalDocs: docsFromExpr(endpoint.MethodExpr.Docs),
 			OperationID:  operationID,
 			Parameters:   params,
+			Consumes:     consumes,
 			Produces:     produces,
 			Responses:    responses,
 			Schemes:      schemes,
 			Deprecated:   false,
-			Extensions:   ExtensionsFromExpr(route.Meta),
+			Extensions:   ExtensionsFromExpr(endpoint.MethodExpr.Meta),
 			Security:     requirements,
 		}
 

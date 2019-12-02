@@ -57,11 +57,11 @@ func protoBufTypeContext(pkg string, scope *codegen.NameScope) *codegen.Attribut
 // given attribute type is a primitive, array, or a map, it wraps the given
 // attribute under an attribute with name "field" and RPC tag number 1. For,
 // nested arrays/maps, the inner array/map is wrapped into a user type.
-func makeProtoBufMessage(att *expr.AttributeExpr, tname string, scope *codegen.NameScope) *expr.AttributeExpr {
+func makeProtoBufMessage(att *expr.AttributeExpr, tname string, sd *ServiceData) *expr.AttributeExpr {
 	att = expr.DupAtt(att)
 	switch dt := att.Type.(type) {
 	case expr.Primitive:
-		wrapAttr(att, tname)
+		wrapAttr(att, tname, sd)
 		return att
 	case expr.UserType:
 		if dt == expr.Empty {
@@ -69,37 +69,39 @@ func makeProtoBufMessage(att *expr.AttributeExpr, tname string, scope *codegen.N
 			att.Type = &expr.UserTypeExpr{
 				TypeName:      tname,
 				AttributeExpr: &expr.AttributeExpr{Type: &expr.Object{}},
+				UID:           sd.Name + "#" + tname,
 			}
 			return att
 		} else if rt, ok := dt.(*expr.ResultTypeExpr); ok && expr.IsArray(rt) {
 			// result type collection
-			wrapAttr(att, tname)
+			wrapAttr(att, tname, sd)
 		}
 	case *expr.Array, *expr.Map:
-		wrapAttr(att, tname)
+		wrapAttr(att, tname, sd)
 	case *expr.Object:
 		att.Type = &expr.UserTypeExpr{
 			TypeName:      tname,
 			AttributeExpr: expr.DupAtt(att),
+			UID:           sd.Name + "#" + tname,
 		}
 	}
 	// wrap nested arrays/maps
 	n := ""
-	makeProtoBufMessageR(att, &n, scope)
+	makeProtoBufMessageR(att, &n, sd)
 	return att
 }
 
 // makeProtoBufMessageR is the recursive implementation of makeProtoBufMessage.
-func makeProtoBufMessageR(att *expr.AttributeExpr, tname *string, scope *codegen.NameScope, seen ...map[string]struct{}) {
+func makeProtoBufMessageR(att *expr.AttributeExpr, tname *string, sd *ServiceData, seen ...map[string]struct{}) {
 	wrap := func(att *expr.AttributeExpr, tname string) {
 		switch dt := att.Type.(type) {
 		case *expr.Array:
 			wrapAttr(att, "ArrayOf"+tname+
-				protoBufify(protoBufMessageDef(dt.ElemType, scope), true))
+				protoBufify(protoBufMessageDef(dt.ElemType, sd), true), sd)
 		case *expr.Map:
 			wrapAttr(att, tname+"MapOf"+
-				protoBufify(protoBufMessageDef(dt.KeyType, scope), true)+
-				protoBufify(protoBufMessageDef(dt.ElemType, scope), true))
+				protoBufify(protoBufMessageDef(dt.KeyType, sd), true)+
+				protoBufify(protoBufMessageDef(dt.ElemType, sd), true), sd)
 		}
 	}
 	switch dt := att.Type.(type) {
@@ -116,27 +118,27 @@ func makeProtoBufMessageR(att *expr.AttributeExpr, tname *string, scope *codegen
 		}
 		s[dt.ID()] = struct{}{}
 		if rt, ok := dt.(*expr.ResultTypeExpr); ok && expr.IsArray(rt) {
-			wrapAttr(rt.Attribute(), rt.Name())
+			wrapAttr(rt.Attribute(), rt.Name(), sd)
 		}
-		makeProtoBufMessageR(dt.Attribute(), tname, scope, seen...)
+		makeProtoBufMessageR(dt.Attribute(), tname, sd, seen...)
 	case *expr.Array:
-		makeProtoBufMessageR(dt.ElemType, tname, scope, seen...)
+		makeProtoBufMessageR(dt.ElemType, tname, sd, seen...)
 		wrap(dt.ElemType, *tname)
 	case *expr.Map:
 		// need not worry about map keys because protocol buffer supports
 		// only primitives as map keys.
-		makeProtoBufMessageR(dt.ElemType, tname, scope, seen...)
+		makeProtoBufMessageR(dt.ElemType, tname, sd, seen...)
 		wrap(dt.ElemType, *tname)
 	case *expr.Object:
 		for _, nat := range *dt {
-			makeProtoBufMessageR(nat.Attribute, tname, scope, seen...)
+			makeProtoBufMessageR(nat.Attribute, tname, sd, seen...)
 		}
 	}
 }
 
 // wrapAttr makes the attribute type a user type by wrapping the given
 // attribute into an attribute named "field".
-func wrapAttr(att *expr.AttributeExpr, tname string) {
+func wrapAttr(att *expr.AttributeExpr, tname string, sd *ServiceData) {
 	wrap := func(att *expr.AttributeExpr) *expr.AttributeExpr {
 		return &expr.AttributeExpr{
 			Type: &expr.Object{
@@ -148,7 +150,6 @@ func wrapAttr(att *expr.AttributeExpr, tname string) {
 					},
 				},
 			},
-			Validation: &expr.ValidationExpr{Required: []string{"field"}},
 		}
 	}
 	switch dt := att.Type.(type) {
@@ -161,6 +162,7 @@ func wrapAttr(att *expr.AttributeExpr, tname string) {
 		att.Type = &expr.UserTypeExpr{
 			TypeName:      tname,
 			AttributeExpr: wrap(att),
+			UID:           sd.Name + "#" + tname,
 		}
 	}
 }
@@ -228,16 +230,16 @@ func protoBufGoFullTypeName(att *expr.AttributeExpr, pkg string, s *codegen.Name
 // protoBufMessageDef returns the protocol buffer code that defines a message
 // which matches the data structure definition (the part that comes after
 // `message foo`). The message is defined using the proto3 syntax.
-func protoBufMessageDef(att *expr.AttributeExpr, s *codegen.NameScope) string {
+func protoBufMessageDef(att *expr.AttributeExpr, sd *ServiceData) string {
 	switch actual := att.Type.(type) {
 	case expr.Primitive:
 		return protoBufNativeMessageTypeName(att.Type)
 	case *expr.Array:
-		return "repeated " + protoBufMessageDef(actual.ElemType, s)
+		return "repeated " + protoBufMessageDef(actual.ElemType, sd)
 	case *expr.Map:
-		return fmt.Sprintf("map<%s, %s>", protoBufMessageDef(actual.KeyType, s), protoBufMessageDef(actual.ElemType, s))
+		return fmt.Sprintf("map<%s, %s>", protoBufMessageDef(actual.KeyType, sd), protoBufMessageDef(actual.ElemType, sd))
 	case expr.UserType:
-		return protoBufMessageName(att, s)
+		return protoBufMessageName(att, sd.Scope)
 	case *expr.Object:
 		var ss []string
 		ss = append(ss, " {")
@@ -251,7 +253,7 @@ func protoBufMessageDef(att *expr.AttributeExpr, s *codegen.NameScope) string {
 			{
 				fn = codegen.SnakeCase(protoBufify(nat.Name, false))
 				fnum = rpcTag(nat.Attribute)
-				typ = protoBufMessageDef(nat.Attribute, s)
+				typ = protoBufMessageDef(nat.Attribute, sd)
 				if nat.Attribute.Description != "" {
 					desc = codegen.Comment(nat.Attribute.Description) + "\n\t"
 				}
@@ -387,8 +389,8 @@ func protoBufNativeGoTypeName(t expr.DataType) string {
 // rpcTag returns the unique numbered RPC tag from the given attribute.
 func rpcTag(a *expr.AttributeExpr) uint64 {
 	var tag uint64
-	if t, ok := a.Meta["rpc:tag"]; ok {
-		tn, err := strconv.ParseUint(t[0], 10, 64)
+	if t, ok := a.FieldTag(); ok {
+		tn, err := strconv.ParseUint(t, 10, 64)
 		if err != nil {
 			panic(err) // bug (should catch invalid field numbers in validation)
 		}

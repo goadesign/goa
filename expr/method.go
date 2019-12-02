@@ -99,56 +99,87 @@ func (m *MethodExpr) Prepare() {
 // Validate validates the method payloads, results, and errors (if any).
 func (m *MethodExpr) Validate() error {
 	verr := new(eval.ValidationErrors)
-	if m.Payload.Type != Empty {
-		verr.Merge(m.Payload.Validate("payload", m))
-		// validate security scheme requirements
-		var requirements []*SecurityExpr
-		if len(m.Requirements) > 0 {
-			requirements = m.Requirements
-		} else if len(m.Service.Requirements) > 0 {
-			requirements = m.Service.Requirements
-		}
-		for _, r := range requirements {
-			for _, s := range r.Schemes {
-				verr.Merge(s.Validate())
-				switch s.Kind {
-				case BasicAuthKind:
-					if !hasTag(m.Payload, "security:username") {
-						verr.Add(m, "payload of method %q of service %q does not define a username attribute, use Username to define one", m.Name, m.Service.Name)
-					}
-					if !hasTag(m.Payload, "security:password") {
-						verr.Add(m, "payload of method %q of service %q does not define a password attribute, use Password to define one", m.Name, m.Service.Name)
-					}
-				case APIKeyKind:
-					if !hasTag(m.Payload, "security:apikey:"+s.SchemeName) {
-						verr.Add(m, "payload of method %q of service %q does not define an API key attribute, use APIKey to define one", m.Name, m.Service.Name)
-					}
-				case JWTKind:
-					if !hasTag(m.Payload, "security:token") {
-						verr.Add(m, "payload of method %q of service %q does not define a JWT attribute, use Token to define one", m.Name, m.Service.Name)
-					}
-				case OAuth2Kind:
-					if !hasTag(m.Payload, "security:accesstoken") {
-						verr.Add(m, "payload of method %q of service %q does not define a OAuth2 access token attribute, use AccessToken to define one", m.Name, m.Service.Name)
-					}
+	verr.Merge(m.Payload.Validate("payload", m))
+	// validate security scheme requirements
+	var requirements []*SecurityExpr
+	if len(m.Requirements) > 0 {
+		requirements = m.Requirements
+	} else if len(m.Service.Requirements) > 0 {
+		requirements = m.Service.Requirements
+	}
+	var (
+		hasBasicAuth bool
+		hasAPIKey    bool
+		hasJWT       bool
+		hasOAuth     bool
+	)
+	for _, r := range requirements {
+		for _, s := range r.Schemes {
+			verr.Merge(s.Validate())
+			switch s.Kind {
+			case BasicAuthKind:
+				hasBasicAuth = true
+				if !hasTag(m.Payload, "security:username") {
+					verr.Add(m, "payload of method %q of service %q does not define a username attribute, use Username to define one", m.Name, m.Service.Name)
+				}
+				if !hasTag(m.Payload, "security:password") {
+					verr.Add(m, "payload of method %q of service %q does not define a password attribute, use Password to define one", m.Name, m.Service.Name)
+				}
+			case APIKeyKind:
+				hasAPIKey = true
+				if !hasTag(m.Payload, "security:apikey:"+s.SchemeName) {
+					verr.Add(m, "payload of method %q of service %q does not define an API key attribute, use APIKey to define one", m.Name, m.Service.Name)
+				}
+			case JWTKind:
+				hasJWT = true
+				if !hasTag(m.Payload, "security:token") {
+					verr.Add(m, "payload of method %q of service %q does not define a JWT attribute, use Token to define one", m.Name, m.Service.Name)
+				}
+			case OAuth2Kind:
+				hasOAuth = true
+				if !hasTag(m.Payload, "security:accesstoken") {
+					verr.Add(m, "payload of method %q of service %q does not define a OAuth2 access token attribute, use AccessToken to define one", m.Name, m.Service.Name)
 				}
 			}
-			for _, scope := range r.Scopes {
-				found := false
-				for _, s := range r.Schemes {
-					if s.Kind == BasicAuthKind || s.Kind == APIKeyKind || s.Kind == OAuth2Kind || s.Kind == JWTKind {
-						for _, se := range s.Scopes {
-							if se.Name == scope {
-								found = true
-								break
-							}
+		}
+		for _, scope := range r.Scopes {
+			found := false
+			for _, s := range r.Schemes {
+				if s.Kind == BasicAuthKind || s.Kind == APIKeyKind || s.Kind == OAuth2Kind || s.Kind == JWTKind {
+					for _, se := range s.Scopes {
+						if se.Name == scope {
+							found = true
+							break
 						}
 					}
 				}
-				if !found {
-					verr.Add(m, "security scope %q not found in any of the security schemes.", scope)
-				}
 			}
+			if !found {
+				verr.Add(m, "security scope %q not found in any of the security schemes.", scope)
+			}
+		}
+	}
+	if !hasBasicAuth {
+		if hasTag(m.Payload, "security:username") {
+			verr.Add(m, "payload of method %q of service %q defines a username attribute, but no basic auth security scheme exist", m.Name, m.Service.Name)
+		}
+		if hasTag(m.Payload, "security:password") {
+			verr.Add(m, "payload of method %q of service %q defines a password attribute, but no basic auth security scheme exist", m.Name, m.Service.Name)
+		}
+	}
+	if !hasAPIKey {
+		if hasTagPrefix(m.Payload, "security:apikey") {
+			verr.Add(m, "payload of method %q of service %q defines an API key attribute, but no APIKey security scheme exist", m.Name, m.Service.Name)
+		}
+	}
+	if !hasJWT {
+		if hasTag(m.Payload, "security:token") {
+			verr.Add(m, "payload of method %q of service %q defines a JWT token attribute, but no JWT auth security scheme exist", m.Name, m.Service.Name)
+		}
+	}
+	if !hasOAuth {
+		if hasTag(m.Payload, "security:accesstoken") {
+			verr.Add(m, "payload of method %q of service %q defines a OAuth2 access token attribute, but no OAuth2 security scheme exist", m.Name, m.Service.Name)
 		}
 	}
 	if m.StreamingPayload.Type != Empty {
@@ -197,10 +228,34 @@ func hasTag(p *AttributeExpr, tag string) bool {
 		if !ok {
 			continue
 		}
-		return hasTag(ut.Attribute(), tag)
+		if hasTag(ut.Attribute(), tag) {
+			return true
+		}
 	}
 	if ut, ok := p.Type.(UserType); ok {
 		return hasTag(ut.Attribute(), tag)
+	}
+	return false
+}
+
+// hasTag is a helper function that traverses the given attribute and all its
+// bases recursively looking for an attribute with the given tag meta prefix. This
+// recursion is only needed for attributes that have not been finalized yet.
+func hasTagPrefix(p *AttributeExpr, prefix string) bool {
+	if p.HasTagPrefix(prefix) {
+		return true
+	}
+	for _, base := range p.Bases {
+		ut, ok := base.(UserType)
+		if !ok {
+			continue
+		}
+		if hasTagPrefix(ut.Attribute(), prefix) {
+			return true
+		}
+	}
+	if ut, ok := p.Type.(UserType); ok {
+		return hasTagPrefix(ut.Attribute(), prefix)
 	}
 	return false
 }

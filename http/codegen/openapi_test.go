@@ -72,6 +72,7 @@ func TestSections(t *testing.T) {
 		DSL  func()
 	}{
 		{"empty", testdata.EmptyDSL},
+		{"file-service", testdata.FileServiceDSL},
 		{"valid", testdata.SimpleDSL},
 		{"multiple-services", testdata.MultipleServicesDSL},
 		{"multiple-views", testdata.MultipleViewsDSL},

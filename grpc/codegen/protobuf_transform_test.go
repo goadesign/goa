@@ -11,7 +11,7 @@ import (
 func TestProtoBufTransform(t *testing.T) {
 	root := codegen.RunDSL(t, ctestdata.TestTypesDSL)
 	var (
-		scope = codegen.NewNameScope()
+		sd = &ServiceData{Name: "Service", Scope: codegen.NewNameScope()}
 
 		// types to test
 		primitive = expr.Int
@@ -41,9 +41,9 @@ func TestProtoBufTransform(t *testing.T) {
 		rtCol      = root.UserType("ResultTypeCollection")
 
 		// attribute contexts used in test cases
-		svcCtx = serviceTypeContext("", scope)
-		ptrCtx = pointerContext("", scope)
-		pbCtx  = protoBufTypeContext("", scope)
+		svcCtx = serviceTypeContext("", sd.Scope)
+		ptrCtx = pointerContext("", sd.Scope)
+		pbCtx  = protoBufTypeContext("", sd.Scope)
 	)
 
 	tc := map[string][]struct {
@@ -127,10 +127,10 @@ func TestProtoBufTransform(t *testing.T) {
 					srcCtx := c.Ctx
 					tgtCtx := c.Ctx
 					if c.ToProto {
-						target = makeProtoBufMessage(expr.DupAtt(target), target.Type.Name(), scope)
+						target = makeProtoBufMessage(expr.DupAtt(target), target.Type.Name(), sd)
 						tgtCtx = pbCtx
 					} else {
-						source = makeProtoBufMessage(expr.DupAtt(source), source.Type.Name(), scope)
+						source = makeProtoBufMessage(expr.DupAtt(source), source.Type.Name(), sd)
 						srcCtx = pbCtx
 					}
 					code, _, err := protoBufTransform(source, target, "source", "target", srcCtx, tgtCtx, c.ToProto)
