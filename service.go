@@ -373,7 +373,7 @@ func (ctrl *Controller) FileHandler(path, filename string) Handler {
 	}
 	return func(ctx context.Context, rw http.ResponseWriter, req *http.Request) error {
 		// prevent path traversal
-		if containsDotDot(req.URL.Path) {
+		if attemptsPathTraversal(req.URL.Path, path) {
 			return ErrNotFound(req.URL.Path)
 		}
 		fname := filename
@@ -419,19 +419,31 @@ func (ctrl *Controller) FileHandler(path, filename string) Handler {
 	}
 }
 
-func containsDotDot(v string) bool {
-	if !strings.Contains(v, "..") {
+func attemptsPathTraversal(req string, path string) bool {
+	if !strings.Contains(req, "..") {
+		return false
+	} else {
+		current_path_idx := 0
+		if idx := strings.LastIndex(path, "/*"); idx > -1 && idx < len(path)-1 {
+			req = req[idx+1:]
+		}
+		for _, runeValue := range strings.FieldsFunc(req, isSlashRune) {
+			if runeValue == ".." {
+				current_path_idx--
+				if current_path_idx < 0 {
+					return true
+				}
+			} else {
+				current_path_idx++
+			}
+		}
 		return false
 	}
-	for _, ent := range strings.FieldsFunc(v, isSlashRune) {
-		if ent == ".." {
-			return true
-		}
-	}
-	return false
 }
 
-func isSlashRune(r rune) bool { return r == '/' || r == '\\' }
+func isSlashRune(r rune) bool {
+	return os.IsPathSeparator(uint8(r))
+}
 
 var replacer = strings.NewReplacer(
 	"&", "&amp;",
