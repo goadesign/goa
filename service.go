@@ -372,6 +372,10 @@ func (ctrl *Controller) FileHandler(path, filename string) Handler {
 		}
 	}
 	return func(ctx context.Context, rw http.ResponseWriter, req *http.Request) error {
+		// prevent path traversal
+		if attemptsPathTraversal(req.URL.Path, path) {
+			return ErrNotFound(req.URL.Path)
+		}
 		fname := filename
 		if len(wc) > 0 {
 			if m, ok := ContextRequest(ctx).Params[wc]; ok {
@@ -413,6 +417,32 @@ func (ctrl *Controller) FileHandler(path, filename string) Handler {
 		http.ServeContent(rw, req, d.Name(), d.ModTime(), f)
 		return nil
 	}
+}
+
+func attemptsPathTraversal(req string, path string) bool {
+	if !strings.Contains(req, "..") {
+		return false
+	}
+
+	currentPathIdx := 0
+	if idx := strings.LastIndex(path, "/*"); idx > -1 && idx < len(path)-1 {
+		req = req[idx+1:]
+	}
+	for _, runeValue := range strings.FieldsFunc(req, isSlashRune) {
+		if runeValue == ".." {
+			currentPathIdx--
+			if currentPathIdx < 0 {
+				return true
+			}
+		} else {
+			currentPathIdx++
+		}
+	}
+	return false
+}
+
+func isSlashRune(r rune) bool {
+	return os.IsPathSeparator(uint8(r))
 }
 
 var replacer = strings.NewReplacer(
