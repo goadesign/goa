@@ -422,23 +422,23 @@ func (ctrl *Controller) FileHandler(path, filename string) Handler {
 func attemptsPathTraversal(req string, path string) bool {
 	if !strings.Contains(req, "..") {
 		return false
-	} else {
-		current_path_idx := 0
-		if idx := strings.LastIndex(path, "/*"); idx > -1 && idx < len(path)-1 {
-			req = req[idx+1:]
-		}
-		for _, runeValue := range strings.FieldsFunc(req, isSlashRune) {
-			if runeValue == ".." {
-				current_path_idx--
-				if current_path_idx < 0 {
-					return true
-				}
-			} else {
-				current_path_idx++
-			}
-		}
-		return false
 	}
+
+	currentPathIdx := 0
+	if idx := strings.LastIndex(path, "/*"); idx > -1 && idx < len(path)-1 {
+		req = req[idx+1:]
+	}
+	for _, runeValue := range strings.FieldsFunc(req, isSlashRune) {
+		if runeValue == ".." {
+			currentPathIdx--
+			if currentPathIdx < 0 {
+				return true
+			}
+		} else {
+			currentPathIdx++
+		}
+	}
+	return false
 }
 
 func isSlashRune(r rune) bool {
