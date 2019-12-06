@@ -653,7 +653,11 @@ const requestParamsHeadersT = `{{- define "request_params_headers" }}
 		}
 		{{- else if .DefaultValue }}
 		if {{ .VarName }} == nil {
-			{{ .VarName }} = {{ printf "%#v" .DefaultValue }}
+			{{ .VarName }} = []string{
+                {{- range $i, $v := .DefaultValue }}
+                    {{- if $i }}{{ print ", " }}{{ end }}
+                    {{- printf "%q" $v -}} 
+                {{- end -}} }
 		}
 		{{- end }}
 

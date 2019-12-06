@@ -1291,6 +1291,22 @@ var PayloadQueryStringDefaultDSL = func() {
 	})
 }
 
+var PayloadQueryStringSliceDefaultDSL = func() {
+	Service("ServiceQueryStringSliceDefault", func() {
+		Method("MethodQueryStringSliceDefault", func() {
+			Payload(func() {
+				Attribute("q", ArrayOf(String), func() {
+					Default([]string{"hello", "goodbye"})
+				})
+			})
+			HTTP(func() {
+				GET("/")
+				Param("q")
+			})
+		})
+	})
+}
+
 var PayloadQueryStringDefaultValidateDSL = func() {
 	Service("ServiceQueryStringDefaultValidate", func() {
 		Method("MethodQueryStringDefaultValidate", func() {
