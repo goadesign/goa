@@ -2802,6 +2802,25 @@ func DecodeMethodQueryStringDefaultRequest(mux goahttp.Muxer, decoder func(*http
 }
 `
 
+var PayloadQueryStringSliceDefaultDecodeCode = `// DecodeMethodQueryStringSliceDefaultRequest returns a decoder for requests
+// sent to the ServiceQueryStringSliceDefault MethodQueryStringSliceDefault
+// endpoint.
+func DecodeMethodQueryStringSliceDefaultRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) (interface{}, error) {
+	return func(r *http.Request) (interface{}, error) {
+		var (
+			q []string
+		)
+		q = r.URL.Query()["q"]
+		if q == nil {
+			q = []string{"hello", "goodbye"}
+		}
+		payload := NewMethodQueryStringSliceDefaultPayload(q)
+
+		return payload, nil
+	}
+}
+`
+
 var PayloadQueryStringDefaultValidateDecodeCode = `// DecodeMethodQueryStringDefaultValidateRequest returns a decoder for requests
 // sent to the ServiceQueryStringDefaultValidate
 // MethodQueryStringDefaultValidate endpoint.
