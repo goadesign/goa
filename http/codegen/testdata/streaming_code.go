@@ -51,11 +51,11 @@ func NewStreamingResultMethodHandler(
 		}
 		v := &streamingresultservice.StreamingResultMethodEndpointInput{
 			Stream: &StreamingResultMethodServerStream{
-				upgrader:     upgrader,
-				connConfigFn: configurer,
-				cancel:       cancel,
-				w:            w,
-				r:            r,
+				upgrader:   upgrader,
+				configurer: configurer,
+				cancel:     cancel,
+				w:          w,
+				r:          r,
 			},
 			Payload: payload.(*streamingresultservice.Request),
 		}
@@ -87,8 +87,8 @@ func (s *StreamingResultMethodServerStream) Send(v *streamingresultservice.UserT
 		if err != nil {
 			return
 		}
-		if s.connConfigFn != nil {
-			conn = s.connConfigFn(conn, s.cancel)
+		if s.configurer != nil {
+			conn = s.configurer(conn, s.cancel)
 		}
 		s.conn = conn
 	})
@@ -133,8 +133,8 @@ func (s *StreamingResultWithViewsMethodServerStream) Send(v *streamingresultwith
 		if err != nil {
 			return
 		}
-		if s.connConfigFn != nil {
-			conn = s.connConfigFn(conn, s.cancel)
+		if s.configurer != nil {
+			conn = s.configurer(conn, s.cancel)
 		}
 		s.conn = conn
 	})
@@ -190,11 +190,11 @@ func NewStreamingResultNoPayloadMethodHandler(
 		}
 		v := &streamingresultnopayloadservice.StreamingResultNoPayloadMethodEndpointInput{
 			Stream: &StreamingResultNoPayloadMethodServerStream{
-				upgrader:     upgrader,
-				connConfigFn: configurer,
-				cancel:       cancel,
-				w:            w,
-				r:            r,
+				upgrader:   upgrader,
+				configurer: configurer,
+				cancel:     cancel,
+				w:          w,
+				r:          r,
 			},
 		}
 		_, err = endpoint(ctx, v)
@@ -461,8 +461,8 @@ func (s *StreamingResultWithExplicitViewMethodServerStream) Send(v *streamingres
 		if err != nil {
 			return
 		}
-		if s.connConfigFn != nil {
-			conn = s.connConfigFn(conn, s.cancel)
+		if s.configurer != nil {
+			conn = s.configurer(conn, s.cancel)
 		}
 		s.conn = conn
 	})
@@ -491,8 +491,8 @@ func (s *StreamingResultCollectionWithViewsMethodServerStream) Send(v streamingr
 		if err != nil {
 			return
 		}
-		if s.connConfigFn != nil {
-			conn = s.connConfigFn(conn, s.cancel)
+		if s.configurer != nil {
+			conn = s.configurer(conn, s.cancel)
 		}
 		s.conn = conn
 	})
@@ -570,8 +570,8 @@ func (s *StreamingResultCollectionWithExplicitViewMethodServerStream) Send(v str
 		if err != nil {
 			return
 		}
-		if s.connConfigFn != nil {
-			conn = s.connConfigFn(conn, s.cancel)
+		if s.configurer != nil {
+			conn = s.configurer(conn, s.cancel)
 		}
 		s.conn = conn
 	})
@@ -670,8 +670,8 @@ func (s *StreamingResultPrimitiveMethodServerStream) Send(v string) error {
 		if err != nil {
 			return
 		}
-		if s.connConfigFn != nil {
-			conn = s.connConfigFn(conn, s.cancel)
+		if s.configurer != nil {
+			conn = s.configurer(conn, s.cancel)
 		}
 		s.conn = conn
 	})
@@ -716,8 +716,8 @@ func (s *StreamingResultPrimitiveArrayMethodServerStream) Send(v []int32) error 
 		if err != nil {
 			return
 		}
-		if s.connConfigFn != nil {
-			conn = s.connConfigFn(conn, s.cancel)
+		if s.configurer != nil {
+			conn = s.configurer(conn, s.cancel)
 		}
 		s.conn = conn
 	})
@@ -762,8 +762,8 @@ func (s *StreamingResultPrimitiveMapMethodServerStream) Send(v map[int32]string)
 		if err != nil {
 			return
 		}
-		if s.connConfigFn != nil {
-			conn = s.connConfigFn(conn, s.cancel)
+		if s.configurer != nil {
+			conn = s.configurer(conn, s.cancel)
 		}
 		s.conn = conn
 	})
@@ -808,8 +808,8 @@ func (s *StreamingResultUserTypeArrayMethodServerStream) Send(v []*streamingresu
 		if err != nil {
 			return
 		}
-		if s.connConfigFn != nil {
-			conn = s.connConfigFn(conn, s.cancel)
+		if s.configurer != nil {
+			conn = s.configurer(conn, s.cancel)
 		}
 		s.conn = conn
 	})
@@ -857,8 +857,8 @@ func (s *StreamingResultUserTypeMapMethodServerStream) Send(v map[string]*stream
 		if err != nil {
 			return
 		}
-		if s.connConfigFn != nil {
-			conn = s.connConfigFn(conn, s.cancel)
+		if s.configurer != nil {
+			conn = s.configurer(conn, s.cancel)
 		}
 		s.conn = conn
 	})
@@ -969,11 +969,11 @@ func NewStreamingPayloadMethodHandler(
 		}
 		v := &streamingpayloadservice.StreamingPayloadMethodEndpointInput{
 			Stream: &StreamingPayloadMethodServerStream{
-				upgrader:     upgrader,
-				connConfigFn: configurer,
-				cancel:       cancel,
-				w:            w,
-				r:            r,
+				upgrader:   upgrader,
+				configurer: configurer,
+				cancel:     cancel,
+				w:          w,
+				r:          r,
 			},
 			Payload: payload.(*streamingpayloadservice.Payload),
 		}
@@ -1020,8 +1020,8 @@ func (s *StreamingPayloadMethodServerStream) Recv() (*streamingpayloadservice.Re
 		if err != nil {
 			return
 		}
-		if s.connConfigFn != nil {
-			conn = s.connConfigFn(conn, s.cancel)
+		if s.configurer != nil {
+			conn = s.configurer(conn, s.cancel)
 		}
 		s.conn = conn
 	})
@@ -1137,11 +1137,11 @@ func NewStreamingPayloadNoPayloadMethodHandler(
 		}
 		v := &streamingpayloadnopayloadservice.StreamingPayloadNoPayloadMethodEndpointInput{
 			Stream: &StreamingPayloadNoPayloadMethodServerStream{
-				upgrader:     upgrader,
-				connConfigFn: configurer,
-				cancel:       cancel,
-				w:            w,
-				r:            r,
+				upgrader:   upgrader,
+				configurer: configurer,
+				cancel:     cancel,
+				w:          w,
+				r:          r,
 			},
 		}
 		_, err = endpoint(ctx, v)
@@ -1243,8 +1243,8 @@ func (s *StreamingPayloadNoResultMethodServerStream) Recv() (string, error) {
 		if err != nil {
 			return
 		}
-		if s.connConfigFn != nil {
-			conn = s.connConfigFn(conn, s.cancel)
+		if s.configurer != nil {
+			conn = s.configurer(conn, s.cancel)
 		}
 		s.conn = conn
 	})
@@ -1336,8 +1336,8 @@ func (s *StreamingPayloadResultWithViewsMethodServerStream) Recv() (float32, err
 		if err != nil {
 			return
 		}
-		if s.connConfigFn != nil {
-			conn = s.connConfigFn(conn, s.cancel)
+		if s.configurer != nil {
+			conn = s.configurer(conn, s.cancel)
 		}
 		s.conn = conn
 	})
@@ -1438,8 +1438,8 @@ func (s *StreamingPayloadResultWithExplicitViewMethodServerStream) Recv() (float
 		if err != nil {
 			return
 		}
-		if s.connConfigFn != nil {
-			conn = s.connConfigFn(conn, s.cancel)
+		if s.configurer != nil {
+			conn = s.configurer(conn, s.cancel)
 		}
 		s.conn = conn
 	})
@@ -1534,8 +1534,8 @@ func (s *StreamingPayloadResultCollectionWithViewsMethodServerStream) Recv() (in
 		if err != nil {
 			return
 		}
-		if s.connConfigFn != nil {
-			conn = s.connConfigFn(conn, s.cancel)
+		if s.configurer != nil {
+			conn = s.configurer(conn, s.cancel)
 		}
 		s.conn = conn
 	})
@@ -1641,8 +1641,8 @@ func (s *StreamingPayloadResultCollectionWithExplicitViewMethodServerStream) Rec
 		if err != nil {
 			return
 		}
-		if s.connConfigFn != nil {
-			conn = s.connConfigFn(conn, s.cancel)
+		if s.configurer != nil {
+			conn = s.configurer(conn, s.cancel)
 		}
 		s.conn = conn
 	})
@@ -1728,8 +1728,8 @@ func (s *StreamingPayloadPrimitiveMethodServerStream) Recv() (string, error) {
 		if err != nil {
 			return
 		}
-		if s.connConfigFn != nil {
-			conn = s.connConfigFn(conn, s.cancel)
+		if s.configurer != nil {
+			conn = s.configurer(conn, s.cancel)
 		}
 		s.conn = conn
 	})
@@ -1807,8 +1807,8 @@ func (s *StreamingPayloadPrimitiveArrayMethodServerStream) Recv() ([]int32, erro
 		if err != nil {
 			return
 		}
-		if s.connConfigFn != nil {
-			conn = s.connConfigFn(conn, s.cancel)
+		if s.configurer != nil {
+			conn = s.configurer(conn, s.cancel)
 		}
 		s.conn = conn
 	})
@@ -1886,8 +1886,8 @@ func (s *StreamingPayloadPrimitiveMapMethodServerStream) Recv() (map[string]int3
 		if err != nil {
 			return
 		}
-		if s.connConfigFn != nil {
-			conn = s.connConfigFn(conn, s.cancel)
+		if s.configurer != nil {
+			conn = s.configurer(conn, s.cancel)
 		}
 		s.conn = conn
 	})
@@ -1966,8 +1966,8 @@ func (s *StreamingPayloadUserTypeArrayMethodServerStream) Recv() ([]*streamingpa
 		if err != nil {
 			return
 		}
-		if s.connConfigFn != nil {
-			conn = s.connConfigFn(conn, s.cancel)
+		if s.configurer != nil {
+			conn = s.configurer(conn, s.cancel)
 		}
 		s.conn = conn
 	})
@@ -2048,8 +2048,8 @@ func (s *StreamingPayloadUserTypeMapMethodServerStream) Recv() (map[string]*stre
 		if err != nil {
 			return
 		}
-		if s.connConfigFn != nil {
-			conn = s.connConfigFn(conn, s.cancel)
+		if s.configurer != nil {
+			conn = s.configurer(conn, s.cancel)
 		}
 		s.conn = conn
 	})
@@ -2137,11 +2137,11 @@ func NewBidirectionalStreamingMethodHandler(
 		}
 		v := &bidirectionalstreamingservice.BidirectionalStreamingMethodEndpointInput{
 			Stream: &BidirectionalStreamingMethodServerStream{
-				upgrader:     upgrader,
-				connConfigFn: configurer,
-				cancel:       cancel,
-				w:            w,
-				r:            r,
+				upgrader:   upgrader,
+				configurer: configurer,
+				cancel:     cancel,
+				w:          w,
+				r:          r,
 			},
 			Payload: payload.(*bidirectionalstreamingservice.Payload),
 		}
@@ -2173,8 +2173,8 @@ func (s *BidirectionalStreamingMethodServerStream) Send(v *bidirectionalstreamin
 		if err != nil {
 			return
 		}
-		if s.connConfigFn != nil {
-			conn = s.connConfigFn(conn, s.cancel)
+		if s.configurer != nil {
+			conn = s.configurer(conn, s.cancel)
 		}
 		s.conn = conn
 	})
@@ -2204,8 +2204,8 @@ func (s *BidirectionalStreamingMethodServerStream) Recv() (*bidirectionalstreami
 		if err != nil {
 			return
 		}
-		if s.connConfigFn != nil {
-			conn = s.connConfigFn(conn, s.cancel)
+		if s.configurer != nil {
+			conn = s.configurer(conn, s.cancel)
 		}
 		s.conn = conn
 	})
@@ -2346,11 +2346,11 @@ func NewBidirectionalStreamingNoPayloadMethodHandler(
 		}
 		v := &bidirectionalstreamingnopayloadservice.BidirectionalStreamingNoPayloadMethodEndpointInput{
 			Stream: &BidirectionalStreamingNoPayloadMethodServerStream{
-				upgrader:     upgrader,
-				connConfigFn: configurer,
-				cancel:       cancel,
-				w:            w,
-				r:            r,
+				upgrader:   upgrader,
+				configurer: configurer,
+				cancel:     cancel,
+				w:          w,
+				r:          r,
 			},
 		}
 		_, err = endpoint(ctx, v)
@@ -2475,8 +2475,8 @@ func (s *BidirectionalStreamingResultWithViewsMethodServerStream) Send(v *bidire
 		if err != nil {
 			return
 		}
-		if s.connConfigFn != nil {
-			conn = s.connConfigFn(conn, s.cancel)
+		if s.configurer != nil {
+			conn = s.configurer(conn, s.cancel)
 		}
 		s.conn = conn
 	})
@@ -2514,8 +2514,8 @@ func (s *BidirectionalStreamingResultWithViewsMethodServerStream) Recv() (float3
 		if err != nil {
 			return
 		}
-		if s.connConfigFn != nil {
-			conn = s.connConfigFn(conn, s.cancel)
+		if s.configurer != nil {
+			conn = s.configurer(conn, s.cancel)
 		}
 		s.conn = conn
 	})
@@ -2626,8 +2626,8 @@ func (s *BidirectionalStreamingResultWithExplicitViewMethodServerStream) Send(v 
 		if err != nil {
 			return
 		}
-		if s.connConfigFn != nil {
-			conn = s.connConfigFn(conn, s.cancel)
+		if s.configurer != nil {
+			conn = s.configurer(conn, s.cancel)
 		}
 		s.conn = conn
 	})
@@ -2658,8 +2658,8 @@ func (s *BidirectionalStreamingResultWithExplicitViewMethodServerStream) Recv() 
 		if err != nil {
 			return
 		}
-		if s.connConfigFn != nil {
-			conn = s.connConfigFn(conn, s.cancel)
+		if s.configurer != nil {
+			conn = s.configurer(conn, s.cancel)
 		}
 		s.conn = conn
 	})
@@ -2728,8 +2728,8 @@ func (s *BidirectionalStreamingResultCollectionWithViewsMethodServerStream) Send
 		if err != nil {
 			return
 		}
-		if s.connConfigFn != nil {
-			conn = s.connConfigFn(conn, s.cancel)
+		if s.configurer != nil {
+			conn = s.configurer(conn, s.cancel)
 		}
 		s.conn = conn
 	})
@@ -2768,8 +2768,8 @@ func (s *BidirectionalStreamingResultCollectionWithViewsMethodServerStream) Recv
 		if err != nil {
 			return
 		}
-		if s.connConfigFn != nil {
-			conn = s.connConfigFn(conn, s.cancel)
+		if s.configurer != nil {
+			conn = s.configurer(conn, s.cancel)
 		}
 		s.conn = conn
 	})
@@ -2854,8 +2854,8 @@ func (s *BidirectionalStreamingResultCollectionWithExplicitViewMethodServerStrea
 		if err != nil {
 			return
 		}
-		if s.connConfigFn != nil {
-			conn = s.connConfigFn(conn, s.cancel)
+		if s.configurer != nil {
+			conn = s.configurer(conn, s.cancel)
 		}
 		s.conn = conn
 	})
@@ -2886,8 +2886,8 @@ func (s *BidirectionalStreamingResultCollectionWithExplicitViewMethodServerStrea
 		if err != nil {
 			return
 		}
-		if s.connConfigFn != nil {
-			conn = s.connConfigFn(conn, s.cancel)
+		if s.configurer != nil {
+			conn = s.configurer(conn, s.cancel)
 		}
 		s.conn = conn
 	})
@@ -2952,8 +2952,8 @@ func (s *BidirectionalStreamingPrimitiveMethodServerStream) Send(v string) error
 		if err != nil {
 			return
 		}
-		if s.connConfigFn != nil {
-			conn = s.connConfigFn(conn, s.cancel)
+		if s.configurer != nil {
+			conn = s.configurer(conn, s.cancel)
 		}
 		s.conn = conn
 	})
@@ -2982,8 +2982,8 @@ func (s *BidirectionalStreamingPrimitiveMethodServerStream) Recv() (string, erro
 		if err != nil {
 			return
 		}
-		if s.connConfigFn != nil {
-			conn = s.connConfigFn(conn, s.cancel)
+		if s.configurer != nil {
+			conn = s.configurer(conn, s.cancel)
 		}
 		s.conn = conn
 	})
@@ -3040,8 +3040,8 @@ func (s *BidirectionalStreamingPrimitiveArrayMethodServerStream) Send(v []string
 		if err != nil {
 			return
 		}
-		if s.connConfigFn != nil {
-			conn = s.connConfigFn(conn, s.cancel)
+		if s.configurer != nil {
+			conn = s.configurer(conn, s.cancel)
 		}
 		s.conn = conn
 	})
@@ -3070,8 +3070,8 @@ func (s *BidirectionalStreamingPrimitiveArrayMethodServerStream) Recv() ([]int32
 		if err != nil {
 			return
 		}
-		if s.connConfigFn != nil {
-			conn = s.connConfigFn(conn, s.cancel)
+		if s.configurer != nil {
+			conn = s.configurer(conn, s.cancel)
 		}
 		s.conn = conn
 	})
@@ -3128,8 +3128,8 @@ func (s *BidirectionalStreamingPrimitiveMapMethodServerStream) Send(v map[int]in
 		if err != nil {
 			return
 		}
-		if s.connConfigFn != nil {
-			conn = s.connConfigFn(conn, s.cancel)
+		if s.configurer != nil {
+			conn = s.configurer(conn, s.cancel)
 		}
 		s.conn = conn
 	})
@@ -3158,8 +3158,8 @@ func (s *BidirectionalStreamingPrimitiveMapMethodServerStream) Recv() (map[strin
 		if err != nil {
 			return
 		}
-		if s.connConfigFn != nil {
-			conn = s.connConfigFn(conn, s.cancel)
+		if s.configurer != nil {
+			conn = s.configurer(conn, s.cancel)
 		}
 		s.conn = conn
 	})
@@ -3217,8 +3217,8 @@ func (s *BidirectionalStreamingUserTypeArrayMethodServerStream) Send(v []*bidire
 		if err != nil {
 			return
 		}
-		if s.connConfigFn != nil {
-			conn = s.connConfigFn(conn, s.cancel)
+		if s.configurer != nil {
+			conn = s.configurer(conn, s.cancel)
 		}
 		s.conn = conn
 	})
@@ -3249,8 +3249,8 @@ func (s *BidirectionalStreamingUserTypeArrayMethodServerStream) Recv() ([]*bidir
 		if err != nil {
 			return
 		}
-		if s.connConfigFn != nil {
-			conn = s.connConfigFn(conn, s.cancel)
+		if s.configurer != nil {
+			conn = s.configurer(conn, s.cancel)
 		}
 		s.conn = conn
 	})
@@ -3312,8 +3312,8 @@ func (s *BidirectionalStreamingUserTypeMapMethodServerStream) Send(v map[string]
 		if err != nil {
 			return
 		}
-		if s.connConfigFn != nil {
-			conn = s.connConfigFn(conn, s.cancel)
+		if s.configurer != nil {
+			conn = s.configurer(conn, s.cancel)
 		}
 		s.conn = conn
 	})
@@ -3344,8 +3344,8 @@ func (s *BidirectionalStreamingUserTypeMapMethodServerStream) Recv() (map[string
 		if err != nil {
 			return
 		}
-		if s.connConfigFn != nil {
-			conn = s.connConfigFn(conn, s.cancel)
+		if s.configurer != nil {
+			conn = s.configurer(conn, s.cancel)
 		}
 		s.conn = conn
 	})
