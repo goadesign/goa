@@ -308,16 +308,17 @@ type {{ .MountPointStruct }} struct {
 `
 
 // input: ServiceData
-const serverInitT = `{{ printf "%s instantiates HTTP handlers for all the %s service endpoints." .ServerInit .Service.Name | comment }}
+const serverInitT = `{{ printf "%s instantiates HTTP handlers for all the %s service endpoints using the provided encoder and decoder. The handlers are mounted on the given mux using the HTTP verb and path defined in the design. errhandler is called whenever a response fails to be encoded. formatter is used to format errors returned by the service methods prior to encoding. Both errhandler and formatter are optional and can be nil." .ServerInit .Service.Name | comment }}
 func {{ .ServerInit }}(
 	e *{{ .Service.PkgName }}.Endpoints,
 	mux goahttp.Muxer,
-	dec func(*http.Request) goahttp.Decoder,
-	enc func(context.Context, http.ResponseWriter) goahttp.Encoder,
-	eh func(context.Context, http.ResponseWriter, error),
+	decoder func(*http.Request) goahttp.Decoder,
+	encoder func(context.Context, http.ResponseWriter) goahttp.Encoder,
+	errhandler func(context.Context, http.ResponseWriter, error),
+	formatter func(err error) goahttp.Statuser,
 	{{- if hasStreaming . }}
-	up goahttp.Upgrader,
-	cfn *ConnConfigurer,
+	upgrader goahttp.Upgrader,
+	configurer *ConnConfigurer,
 	{{- end }}
 	{{- range .Endpoints }}
 		{{- if .MultipartRequestDecoder }}
@@ -326,8 +327,8 @@ func {{ .ServerInit }}(
 	{{- end }}
 ) *{{ .ServerStruct }} {
 {{- if hasStreaming . }}
-	if cfn == nil {
-		cfn = &ConnConfigurer{}
+	if configurer == nil {
+		configurer = &ConnConfigurer{}
 	}
 {{- end }}
 	return &{{ .ServerStruct }}{
@@ -345,7 +346,7 @@ func {{ .ServerInit }}(
 			{{- end }}
 		},
 		{{- range .Endpoints }}
-		{{ .Method.VarName }}: {{ .HandlerInit }}(e.{{ .Method.VarName }}, mux, {{ if .MultipartRequestDecoder }}{{ .MultipartRequestDecoder.InitName }}(mux, {{ .MultipartRequestDecoder.VarName }}){{ else }}dec{{ end }}, enc, eh{{ if .ServerStream }}, up, cfn.{{ .Method.VarName }}Fn{{ end }}),
+		{{ .Method.VarName }}: {{ .HandlerInit }}(e.{{ .Method.VarName }}, mux, {{ if .MultipartRequestDecoder }}{{ .MultipartRequestDecoder.InitName }}(mux, {{ .MultipartRequestDecoder.VarName }}){{ else }}decoder{{ end }}, encoder, errhandler, formatter{{ if .ServerStream }}, upgrader, configurer.{{ .Method.VarName }}Fn{{ end }}),
 		{{- end }}
 	}
 }
@@ -428,26 +429,27 @@ const serverHandlerInitT = `{{ printf "%s creates a HTTP handler which loads the
 func {{ .HandlerInit }}(
 	endpoint goa.Endpoint,
 	mux goahttp.Muxer,
-	dec func(*http.Request) goahttp.Decoder,
-	enc func(context.Context, http.ResponseWriter) goahttp.Encoder,
-	eh func(context.Context, http.ResponseWriter, error),
+	decoder func(*http.Request) goahttp.Decoder,
+	encoder func(context.Context, http.ResponseWriter) goahttp.Encoder,
+	errhandler func(context.Context, http.ResponseWriter, error),
+	formatter func(err error) goahttp.Statuser,
 	{{- if .ServerStream }}
-	up goahttp.Upgrader,
-	connConfigFn goahttp.ConnConfigureFunc,
+	upgrader goahttp.Upgrader,
+	configurer goahttp.ConnConfigureFunc,
 	{{- end }}
 ) http.Handler {
 	var (
 		{{- if .ServerStream }}
 			{{- if .Payload.Ref }}
-		decodeRequest  = {{ .RequestDecoder }}(mux, dec)
+		decodeRequest  = {{ .RequestDecoder }}(mux, decoder)
 			{{- end }}
 		{{- else }}
 			{{- if .Payload.Ref }}
-		decodeRequest  = {{ .RequestDecoder }}(mux, dec)
+		decodeRequest  = {{ .RequestDecoder }}(mux, decoder)
 			{{- end }}
-		encodeResponse = {{ .ResponseEncoder }}(enc)
+		encodeResponse = {{ .ResponseEncoder }}(encoder)
 		{{- end }}
-		encodeError    = {{ if .Errors }}{{ .ErrorEncoder }}{{ else }}goahttp.ErrorEncoder{{ end }}(enc)
+		encodeError    = {{ if .Errors }}{{ .ErrorEncoder }}{{ else }}goahttp.ErrorEncoder{{ end }}(encoder, formatter)
 	)
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ctx := context.WithValue(r.Context(), goahttp.AcceptTypeKey, r.Header.Get("Accept"))
@@ -458,7 +460,7 @@ func {{ .HandlerInit }}(
 		payload, err := decodeRequest(r)
 		if err != nil {
 			if err := encodeError(ctx, w, err); err != nil {
-				eh(ctx, w, err)
+				errhandler(ctx, w, err)
 			}
 			return
 		}
@@ -471,8 +473,8 @@ func {{ .HandlerInit }}(
 		}
 		v := &{{ .ServicePkgName }}.{{ .Method.ServerStream.EndpointStruct }}{
 			Stream: &{{ .ServerStream.VarName }}{
-				upgrader: up,
-				connConfigFn: connConfigFn,
+				upgrader: upgrader,
+				connConfigFn: configurer,
 				cancel: cancel,
 				w: w,
 				r: r,
@@ -493,13 +495,13 @@ func {{ .HandlerInit }}(
 			}
 			{{- end }}
 			if err := encodeError(ctx, w, err); err != nil {
-				eh(ctx, w, err)
+				errhandler(ctx, w, err)
 			}
 			return
 		}
 	{{- if not .ServerStream }}
 		if err := encodeResponse(ctx, w, res); err != nil {
-			eh(ctx, w, err)
+			errhandler(ctx, w, err)
 		}
 	{{- end }}
 	})
@@ -1106,8 +1108,8 @@ func {{ .ResponseEncoder }}(encoder func(context.Context, http.ResponseWriter) g
 
 // input: EndpointData
 const errorEncoderT = `{{ printf "%s returns an encoder for errors returned by the %s %s endpoint." .ErrorEncoder .Method.Name .ServiceName | comment }}
-func {{ .ErrorEncoder }}(encoder func(context.Context, http.ResponseWriter) goahttp.Encoder) func(context.Context, http.ResponseWriter, error) error {
-	encodeError := goahttp.ErrorEncoder(encoder)
+func {{ .ErrorEncoder }}(encoder func(context.Context, http.ResponseWriter) goahttp.Encoder, formatter func(err error) goahttp.Statuser) func(context.Context, http.ResponseWriter, error) error {
+	encodeError := goahttp.ErrorEncoder(encoder, formatter)
 	return func(ctx context.Context, w http.ResponseWriter, v error) error {
 		en, ok := v.(ErrorNamer)
 		if !ok {
@@ -1150,7 +1152,16 @@ const responseT = `{{ define "response" -}}
 			{{- end }}
 	}
 		{{- else if (index .ServerBody 0).Init }}
-	body := {{ (index .ServerBody 0).Init.Name }}({{ range (index .ServerBody 0).Init.ServerArgs }}{{ .Ref }}, {{ end }})
+			{{- if .ErrorHeader }}
+	var body interface{}
+	if formatter != nil {
+		body = formatter({{ (index (index .ServerBody 0).Init.ServerArgs 0).Ref }})
+	} else {
+			{{- end }}
+	body {{ if not .ErrorHeader}}:{{ end }}= {{ (index .ServerBody 0).Init.Name }}({{ range (index .ServerBody 0).Init.ServerArgs }}{{ .Ref }}, {{ end }})
+			{{- if .ErrorHeader }}
+	}
+			{{- end }}
 		{{- else }}
 	body := res{{ if $.ViewedResult }}.Projected{{ end }}{{ if .ResultAttr }}.{{ .ResultAttr }}{{ end }}
 		{{- end }}

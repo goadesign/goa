@@ -22,15 +22,16 @@ var StreamingResultServerHandlerInitCode = `// NewStreamingResultMethodHandler c
 func NewStreamingResultMethodHandler(
 	endpoint goa.Endpoint,
 	mux goahttp.Muxer,
-	dec func(*http.Request) goahttp.Decoder,
-	enc func(context.Context, http.ResponseWriter) goahttp.Encoder,
-	eh func(context.Context, http.ResponseWriter, error),
-	up goahttp.Upgrader,
-	connConfigFn goahttp.ConnConfigureFunc,
+	decoder func(*http.Request) goahttp.Decoder,
+	encoder func(context.Context, http.ResponseWriter) goahttp.Encoder,
+	errhandler func(context.Context, http.ResponseWriter, error),
+	formatter func(err error) goahttp.Statuser,
+	upgrader goahttp.Upgrader,
+	configurer goahttp.ConnConfigureFunc,
 ) http.Handler {
 	var (
-		decodeRequest = DecodeStreamingResultMethodRequest(mux, dec)
-		encodeError   = goahttp.ErrorEncoder(enc)
+		decodeRequest = DecodeStreamingResultMethodRequest(mux, decoder)
+		encodeError   = goahttp.ErrorEncoder(encoder, formatter)
 	)
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ctx := context.WithValue(r.Context(), goahttp.AcceptTypeKey, r.Header.Get("Accept"))
@@ -39,7 +40,7 @@ func NewStreamingResultMethodHandler(
 		payload, err := decodeRequest(r)
 		if err != nil {
 			if err := encodeError(ctx, w, err); err != nil {
-				eh(ctx, w, err)
+				errhandler(ctx, w, err)
 			}
 			return
 		}
@@ -50,8 +51,8 @@ func NewStreamingResultMethodHandler(
 		}
 		v := &streamingresultservice.StreamingResultMethodEndpointInput{
 			Stream: &StreamingResultMethodServerStream{
-				upgrader:     up,
-				connConfigFn: connConfigFn,
+				upgrader:     upgrader,
+				connConfigFn: configurer,
 				cancel:       cancel,
 				w:            w,
 				r:            r,
@@ -65,7 +66,7 @@ func NewStreamingResultMethodHandler(
 				return
 			}
 			if err := encodeError(ctx, w, err); err != nil {
-				eh(ctx, w, err)
+				errhandler(ctx, w, err)
 			}
 			return
 		}
@@ -168,14 +169,15 @@ var StreamingResultNoPayloadServerHandlerInitCode = `// NewStreamingResultNoPayl
 func NewStreamingResultNoPayloadMethodHandler(
 	endpoint goa.Endpoint,
 	mux goahttp.Muxer,
-	dec func(*http.Request) goahttp.Decoder,
-	enc func(context.Context, http.ResponseWriter) goahttp.Encoder,
-	eh func(context.Context, http.ResponseWriter, error),
-	up goahttp.Upgrader,
-	connConfigFn goahttp.ConnConfigureFunc,
+	decoder func(*http.Request) goahttp.Decoder,
+	encoder func(context.Context, http.ResponseWriter) goahttp.Encoder,
+	errhandler func(context.Context, http.ResponseWriter, error),
+	formatter func(err error) goahttp.Statuser,
+	upgrader goahttp.Upgrader,
+	configurer goahttp.ConnConfigureFunc,
 ) http.Handler {
 	var (
-		encodeError = goahttp.ErrorEncoder(enc)
+		encodeError = goahttp.ErrorEncoder(encoder, formatter)
 	)
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ctx := context.WithValue(r.Context(), goahttp.AcceptTypeKey, r.Header.Get("Accept"))
@@ -188,8 +190,8 @@ func NewStreamingResultNoPayloadMethodHandler(
 		}
 		v := &streamingresultnopayloadservice.StreamingResultNoPayloadMethodEndpointInput{
 			Stream: &StreamingResultNoPayloadMethodServerStream{
-				upgrader:     up,
-				connConfigFn: connConfigFn,
+				upgrader:     upgrader,
+				connConfigFn: configurer,
 				cancel:       cancel,
 				w:            w,
 				r:            r,
@@ -202,7 +204,7 @@ func NewStreamingResultNoPayloadMethodHandler(
 				return
 			}
 			if err := encodeError(ctx, w, err); err != nil {
-				eh(ctx, w, err)
+				errhandler(ctx, w, err)
 			}
 			return
 		}
@@ -938,15 +940,16 @@ var StreamingPayloadServerHandlerInitCode = `// NewStreamingPayloadMethodHandler
 func NewStreamingPayloadMethodHandler(
 	endpoint goa.Endpoint,
 	mux goahttp.Muxer,
-	dec func(*http.Request) goahttp.Decoder,
-	enc func(context.Context, http.ResponseWriter) goahttp.Encoder,
-	eh func(context.Context, http.ResponseWriter, error),
-	up goahttp.Upgrader,
-	connConfigFn goahttp.ConnConfigureFunc,
+	decoder func(*http.Request) goahttp.Decoder,
+	encoder func(context.Context, http.ResponseWriter) goahttp.Encoder,
+	errhandler func(context.Context, http.ResponseWriter, error),
+	formatter func(err error) goahttp.Statuser,
+	upgrader goahttp.Upgrader,
+	configurer goahttp.ConnConfigureFunc,
 ) http.Handler {
 	var (
-		decodeRequest = DecodeStreamingPayloadMethodRequest(mux, dec)
-		encodeError   = goahttp.ErrorEncoder(enc)
+		decodeRequest = DecodeStreamingPayloadMethodRequest(mux, decoder)
+		encodeError   = goahttp.ErrorEncoder(encoder, formatter)
 	)
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ctx := context.WithValue(r.Context(), goahttp.AcceptTypeKey, r.Header.Get("Accept"))
@@ -955,7 +958,7 @@ func NewStreamingPayloadMethodHandler(
 		payload, err := decodeRequest(r)
 		if err != nil {
 			if err := encodeError(ctx, w, err); err != nil {
-				eh(ctx, w, err)
+				errhandler(ctx, w, err)
 			}
 			return
 		}
@@ -966,8 +969,8 @@ func NewStreamingPayloadMethodHandler(
 		}
 		v := &streamingpayloadservice.StreamingPayloadMethodEndpointInput{
 			Stream: &StreamingPayloadMethodServerStream{
-				upgrader:     up,
-				connConfigFn: connConfigFn,
+				upgrader:     upgrader,
+				connConfigFn: configurer,
 				cancel:       cancel,
 				w:            w,
 				r:            r,
@@ -981,7 +984,7 @@ func NewStreamingPayloadMethodHandler(
 				return
 			}
 			if err := encodeError(ctx, w, err); err != nil {
-				eh(ctx, w, err)
+				errhandler(ctx, w, err)
 			}
 			return
 		}
@@ -1113,14 +1116,15 @@ var StreamingPayloadNoPayloadServerHandlerInitCode = `// NewStreamingPayloadNoPa
 func NewStreamingPayloadNoPayloadMethodHandler(
 	endpoint goa.Endpoint,
 	mux goahttp.Muxer,
-	dec func(*http.Request) goahttp.Decoder,
-	enc func(context.Context, http.ResponseWriter) goahttp.Encoder,
-	eh func(context.Context, http.ResponseWriter, error),
-	up goahttp.Upgrader,
-	connConfigFn goahttp.ConnConfigureFunc,
+	decoder func(*http.Request) goahttp.Decoder,
+	encoder func(context.Context, http.ResponseWriter) goahttp.Encoder,
+	errhandler func(context.Context, http.ResponseWriter, error),
+	formatter func(err error) goahttp.Statuser,
+	upgrader goahttp.Upgrader,
+	configurer goahttp.ConnConfigureFunc,
 ) http.Handler {
 	var (
-		encodeError = goahttp.ErrorEncoder(enc)
+		encodeError = goahttp.ErrorEncoder(encoder, formatter)
 	)
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ctx := context.WithValue(r.Context(), goahttp.AcceptTypeKey, r.Header.Get("Accept"))
@@ -1133,8 +1137,8 @@ func NewStreamingPayloadNoPayloadMethodHandler(
 		}
 		v := &streamingpayloadnopayloadservice.StreamingPayloadNoPayloadMethodEndpointInput{
 			Stream: &StreamingPayloadNoPayloadMethodServerStream{
-				upgrader:     up,
-				connConfigFn: connConfigFn,
+				upgrader:     upgrader,
+				connConfigFn: configurer,
 				cancel:       cancel,
 				w:            w,
 				r:            r,
@@ -1147,7 +1151,7 @@ func NewStreamingPayloadNoPayloadMethodHandler(
 				return
 			}
 			if err := encodeError(ctx, w, err); err != nil {
-				eh(ctx, w, err)
+				errhandler(ctx, w, err)
 			}
 			return
 		}
@@ -2104,15 +2108,16 @@ var BidirectionalStreamingServerHandlerInitCode = `// NewBidirectionalStreamingM
 func NewBidirectionalStreamingMethodHandler(
 	endpoint goa.Endpoint,
 	mux goahttp.Muxer,
-	dec func(*http.Request) goahttp.Decoder,
-	enc func(context.Context, http.ResponseWriter) goahttp.Encoder,
-	eh func(context.Context, http.ResponseWriter, error),
-	up goahttp.Upgrader,
-	connConfigFn goahttp.ConnConfigureFunc,
+	decoder func(*http.Request) goahttp.Decoder,
+	encoder func(context.Context, http.ResponseWriter) goahttp.Encoder,
+	errhandler func(context.Context, http.ResponseWriter, error),
+	formatter func(err error) goahttp.Statuser,
+	upgrader goahttp.Upgrader,
+	configurer goahttp.ConnConfigureFunc,
 ) http.Handler {
 	var (
-		decodeRequest = DecodeBidirectionalStreamingMethodRequest(mux, dec)
-		encodeError   = goahttp.ErrorEncoder(enc)
+		decodeRequest = DecodeBidirectionalStreamingMethodRequest(mux, decoder)
+		encodeError   = goahttp.ErrorEncoder(encoder, formatter)
 	)
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ctx := context.WithValue(r.Context(), goahttp.AcceptTypeKey, r.Header.Get("Accept"))
@@ -2121,7 +2126,7 @@ func NewBidirectionalStreamingMethodHandler(
 		payload, err := decodeRequest(r)
 		if err != nil {
 			if err := encodeError(ctx, w, err); err != nil {
-				eh(ctx, w, err)
+				errhandler(ctx, w, err)
 			}
 			return
 		}
@@ -2132,8 +2137,8 @@ func NewBidirectionalStreamingMethodHandler(
 		}
 		v := &bidirectionalstreamingservice.BidirectionalStreamingMethodEndpointInput{
 			Stream: &BidirectionalStreamingMethodServerStream{
-				upgrader:     up,
-				connConfigFn: connConfigFn,
+				upgrader:     upgrader,
+				connConfigFn: configurer,
 				cancel:       cancel,
 				w:            w,
 				r:            r,
@@ -2147,7 +2152,7 @@ func NewBidirectionalStreamingMethodHandler(
 				return
 			}
 			if err := encodeError(ctx, w, err); err != nil {
-				eh(ctx, w, err)
+				errhandler(ctx, w, err)
 			}
 			return
 		}
@@ -2320,14 +2325,15 @@ var BidirectionalStreamingNoPayloadServerHandlerInitCode = `// NewBidirectionalS
 func NewBidirectionalStreamingNoPayloadMethodHandler(
 	endpoint goa.Endpoint,
 	mux goahttp.Muxer,
-	dec func(*http.Request) goahttp.Decoder,
-	enc func(context.Context, http.ResponseWriter) goahttp.Encoder,
-	eh func(context.Context, http.ResponseWriter, error),
-	up goahttp.Upgrader,
-	connConfigFn goahttp.ConnConfigureFunc,
+	decoder func(*http.Request) goahttp.Decoder,
+	encoder func(context.Context, http.ResponseWriter) goahttp.Encoder,
+	errhandler func(context.Context, http.ResponseWriter, error),
+	formatter func(err error) goahttp.Statuser,
+	upgrader goahttp.Upgrader,
+	configurer goahttp.ConnConfigureFunc,
 ) http.Handler {
 	var (
-		encodeError = goahttp.ErrorEncoder(enc)
+		encodeError = goahttp.ErrorEncoder(encoder, formatter)
 	)
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ctx := context.WithValue(r.Context(), goahttp.AcceptTypeKey, r.Header.Get("Accept"))
@@ -2340,8 +2346,8 @@ func NewBidirectionalStreamingNoPayloadMethodHandler(
 		}
 		v := &bidirectionalstreamingnopayloadservice.BidirectionalStreamingNoPayloadMethodEndpointInput{
 			Stream: &BidirectionalStreamingNoPayloadMethodServerStream{
-				upgrader:     up,
-				connConfigFn: connConfigFn,
+				upgrader:     upgrader,
+				connConfigFn: configurer,
 				cancel:       cancel,
 				w:            w,
 				r:            r,
@@ -2354,7 +2360,7 @@ func NewBidirectionalStreamingNoPayloadMethodHandler(
 				return
 			}
 			if err := encodeError(ctx, w, err); err != nil {
-				eh(ctx, w, err)
+				errhandler(ctx, w, err)
 			}
 			return
 		}

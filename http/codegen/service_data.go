@@ -2640,7 +2640,7 @@ type {{ .VarName }} struct {
 	{{ comment "upgrader is the websocket connection upgrader." }}
 	upgrader goahttp.Upgrader
 	{{ comment "connConfigFn is the websocket connection configurer." }}
-	connConfigFn goahttp.ConnConfigureFunc
+	configurer goahttp.ConnConfigureFunc
 	{{ comment "cancel is the context cancellation function which cancels the request context when invoked." }}
 	cancel context.CancelFunc
 	{{ comment "w is the HTTP response writer used in upgrading the connection." }}
