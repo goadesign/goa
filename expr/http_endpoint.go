@@ -57,6 +57,9 @@ type (
 		// Meta is a set of key/value pairs with semantic that is
 		// specific to each generator, see dsl.Meta.
 		Meta MetaExpr
+		// prepared is true if Prepare has been run. This field is required to
+		// avoid infinite recursions.
+		prepared bool
 	}
 
 	// RouteExpr represents an endpoint route (HTTP endpoint).
@@ -163,6 +166,18 @@ func (e *HTTPEndpointExpr) QueryParams() *MappedAttributeExpr {
 // Prepare computes the request path and query string parameters as well as the
 // headers and body taking into account the inherited values from the service.
 func (e *HTTPEndpointExpr) Prepare() {
+	// Avoid infinite recursions when traversing parents.
+	if e.prepared {
+		return
+	}
+	e.prepared = true
+	if e.Headers == nil {
+		e.Headers = NewEmptyMappedAttributeExpr()
+	}
+	if e.Params == nil {
+		e.Params = NewEmptyMappedAttributeExpr()
+	}
+
 	// Inherit headers and params from parent service and API
 	headers := NewEmptyMappedAttributeExpr()
 	headers.Merge(Root.API.HTTP.Headers)
@@ -174,6 +189,7 @@ func (e *HTTPEndpointExpr) Prepare() {
 
 	if p := e.Service.Parent(); p != nil {
 		if c := p.CanonicalEndpoint(); c != nil {
+			c.Prepare()
 			if !e.HasAbsoluteRoutes() {
 				headers.Merge(c.Headers)
 				params.Merge(c.PathParams())

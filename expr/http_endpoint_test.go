@@ -31,6 +31,69 @@ func TestHTTPRouteValidation(t *testing.T) {
 	}
 }
 
+func TestHTTPEndpointPrepare(t *testing.T) {
+	cases := map[string]struct {
+		DSL     func()
+		Headers []string
+		Params  []string
+		Error   string
+	}{
+		"valid": {
+			DSL:    testdata.ValidRouteDSL,
+			Params: []string{"base_id", "id"},
+		},
+		"with parent": {
+			DSL:     testdata.EndpointWithParentDSL,
+			Headers: []string{"pheader", "header"},
+			Params:  []string{"pparam", "param"},
+		},
+		"with parent revert": {
+			DSL:     testdata.EndpointWithParentRevertDSL,
+			Headers: []string{"pheader", "header"},
+			Params:  []string{"pparam", "param"},
+		},
+		"error": {
+			DSL:   testdata.EndpointRecursiveParentDSL,
+			Error: "service \"Parent\": Parent service Child is also child\nservice \"Child\": Parent service Parent is also child",
+		},
+	}
+	for n, c := range cases {
+		t.Run(n, func(t *testing.T) {
+			if c.Error == "" {
+				root := expr.RunDSL(t, c.DSL)
+				e := root.API.HTTP.Services[len(root.API.HTTP.Services)-1].HTTPEndpoints[0]
+
+				ht := expr.AsObject(e.Headers.AttributeExpr.Type)
+				if len(*ht) != len(c.Headers) {
+					t.Errorf("got %d headers, expected %d", len(*ht), len(c.Headers))
+				} else {
+					for _, n := range c.Headers {
+						if ht.Attribute(n) == nil {
+							t.Errorf("header %q is missing", n)
+						}
+					}
+				}
+
+				pt := expr.AsObject(e.Params.AttributeExpr.Type)
+				if len(*pt) != len(c.Params) {
+					t.Errorf("got %d params, expected %d", len(*pt), len(c.Params))
+				} else {
+					for _, n := range c.Params {
+						if pt.Attribute(n) == nil {
+							t.Errorf("param %q is missing", n)
+						}
+					}
+				}
+			} else {
+				err := expr.RunInvalidDSL(t, c.DSL)
+				if err.Error() != c.Error {
+					t.Errorf("got error %q, expected %q", err.Error(), c.Error)
+				}
+			}
+		})
+	}
+}
+
 func TestHTTPEndpointValidation(t *testing.T) {
 	cases := map[string]struct {
 		DSL    func()
