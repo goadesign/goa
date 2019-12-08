@@ -37,6 +37,91 @@ var DuplicateWCRouteDSL = func() {
 	})
 }
 
+var EndpointWithParentDSL = func() {
+	Service("Parent", func() {
+		Method("show", func() {
+			Payload(func() {
+				Attribute("pparam", String)
+				Attribute("pheader", String)
+			})
+			HTTP(func() {
+				POST("/{pparam}")
+				Header("pheader")
+			})
+		})
+	})
+	Service("Child", func() {
+		HTTP(func() {
+			Parent("Parent")
+		})
+		Method("Method", func() {
+			Payload(func() {
+				Attribute("param", String)
+				Attribute("header", String)
+				Attribute("pheader", String)
+			})
+			HTTP(func() {
+				POST("/{param}")
+				Header("header")
+			})
+		})
+	})
+}
+
+var EndpointWithParentRevertDSL = func() {
+	Service("Child", func() {
+		HTTP(func() {
+			Parent("Parent")
+		})
+		Method("Method", func() {
+			Payload(func() {
+				Attribute("param", String)
+				Attribute("header", String)
+				Attribute("pheader", String)
+			})
+			HTTP(func() {
+				POST("/{param}")
+				Header("header")
+			})
+		})
+	})
+	Service("Parent", func() {
+		Method("show", func() {
+			Payload(func() {
+				Attribute("pparam", String)
+				Attribute("pheader", String)
+			})
+			HTTP(func() {
+				POST("/{pparam}")
+				Header("pheader")
+			})
+		})
+	})
+}
+
+var EndpointRecursiveParentDSL = func() {
+	Service("Parent", func() {
+		HTTP(func() {
+			Parent("Child")
+		})
+		Method("show", func() {
+			HTTP(func() {
+				POST("/")
+			})
+		})
+	})
+	Service("Child", func() {
+		HTTP(func() {
+			Parent("Parent")
+		})
+		Method("show", func() {
+			HTTP(func() {
+				POST("/")
+			})
+		})
+	})
+}
+
 var EndpointBodyAsPayloadProp = func() {
 	Service("Service", func() {
 		Method("Method", func() {
