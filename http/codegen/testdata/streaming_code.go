@@ -22,15 +22,16 @@ var StreamingResultServerHandlerInitCode = `// NewStreamingResultMethodHandler c
 func NewStreamingResultMethodHandler(
 	endpoint goa.Endpoint,
 	mux goahttp.Muxer,
-	dec func(*http.Request) goahttp.Decoder,
-	enc func(context.Context, http.ResponseWriter) goahttp.Encoder,
-	eh func(context.Context, http.ResponseWriter, error),
-	up goahttp.Upgrader,
-	connConfigFn goahttp.ConnConfigureFunc,
+	decoder func(*http.Request) goahttp.Decoder,
+	encoder func(context.Context, http.ResponseWriter) goahttp.Encoder,
+	errhandler func(context.Context, http.ResponseWriter, error),
+	formatter func(err error) goahttp.Statuser,
+	upgrader goahttp.Upgrader,
+	configurer goahttp.ConnConfigureFunc,
 ) http.Handler {
 	var (
-		decodeRequest = DecodeStreamingResultMethodRequest(mux, dec)
-		encodeError   = goahttp.ErrorEncoder(enc)
+		decodeRequest = DecodeStreamingResultMethodRequest(mux, decoder)
+		encodeError   = goahttp.ErrorEncoder(encoder, formatter)
 	)
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ctx := context.WithValue(r.Context(), goahttp.AcceptTypeKey, r.Header.Get("Accept"))
@@ -39,7 +40,7 @@ func NewStreamingResultMethodHandler(
 		payload, err := decodeRequest(r)
 		if err != nil {
 			if err := encodeError(ctx, w, err); err != nil {
-				eh(ctx, w, err)
+				errhandler(ctx, w, err)
 			}
 			return
 		}
@@ -50,11 +51,11 @@ func NewStreamingResultMethodHandler(
 		}
 		v := &streamingresultservice.StreamingResultMethodEndpointInput{
 			Stream: &StreamingResultMethodServerStream{
-				upgrader:     up,
-				connConfigFn: connConfigFn,
-				cancel:       cancel,
-				w:            w,
-				r:            r,
+				upgrader:   upgrader,
+				configurer: configurer,
+				cancel:     cancel,
+				w:          w,
+				r:          r,
 			},
 			Payload: payload.(*streamingresultservice.Request),
 		}
@@ -65,7 +66,7 @@ func NewStreamingResultMethodHandler(
 				return
 			}
 			if err := encodeError(ctx, w, err); err != nil {
-				eh(ctx, w, err)
+				errhandler(ctx, w, err)
 			}
 			return
 		}
@@ -86,8 +87,8 @@ func (s *StreamingResultMethodServerStream) Send(v *streamingresultservice.UserT
 		if err != nil {
 			return
 		}
-		if s.connConfigFn != nil {
-			conn = s.connConfigFn(conn, s.cancel)
+		if s.configurer != nil {
+			conn = s.configurer(conn, s.cancel)
 		}
 		s.conn = conn
 	})
@@ -132,8 +133,8 @@ func (s *StreamingResultWithViewsMethodServerStream) Send(v *streamingresultwith
 		if err != nil {
 			return
 		}
-		if s.connConfigFn != nil {
-			conn = s.connConfigFn(conn, s.cancel)
+		if s.configurer != nil {
+			conn = s.configurer(conn, s.cancel)
 		}
 		s.conn = conn
 	})
@@ -168,14 +169,15 @@ var StreamingResultNoPayloadServerHandlerInitCode = `// NewStreamingResultNoPayl
 func NewStreamingResultNoPayloadMethodHandler(
 	endpoint goa.Endpoint,
 	mux goahttp.Muxer,
-	dec func(*http.Request) goahttp.Decoder,
-	enc func(context.Context, http.ResponseWriter) goahttp.Encoder,
-	eh func(context.Context, http.ResponseWriter, error),
-	up goahttp.Upgrader,
-	connConfigFn goahttp.ConnConfigureFunc,
+	decoder func(*http.Request) goahttp.Decoder,
+	encoder func(context.Context, http.ResponseWriter) goahttp.Encoder,
+	errhandler func(context.Context, http.ResponseWriter, error),
+	formatter func(err error) goahttp.Statuser,
+	upgrader goahttp.Upgrader,
+	configurer goahttp.ConnConfigureFunc,
 ) http.Handler {
 	var (
-		encodeError = goahttp.ErrorEncoder(enc)
+		encodeError = goahttp.ErrorEncoder(encoder, formatter)
 	)
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ctx := context.WithValue(r.Context(), goahttp.AcceptTypeKey, r.Header.Get("Accept"))
@@ -188,11 +190,11 @@ func NewStreamingResultNoPayloadMethodHandler(
 		}
 		v := &streamingresultnopayloadservice.StreamingResultNoPayloadMethodEndpointInput{
 			Stream: &StreamingResultNoPayloadMethodServerStream{
-				upgrader:     up,
-				connConfigFn: connConfigFn,
-				cancel:       cancel,
-				w:            w,
-				r:            r,
+				upgrader:   upgrader,
+				configurer: configurer,
+				cancel:     cancel,
+				w:          w,
+				r:          r,
 			},
 		}
 		_, err = endpoint(ctx, v)
@@ -202,7 +204,7 @@ func NewStreamingResultNoPayloadMethodHandler(
 				return
 			}
 			if err := encodeError(ctx, w, err); err != nil {
-				eh(ctx, w, err)
+				errhandler(ctx, w, err)
 			}
 			return
 		}
@@ -459,8 +461,8 @@ func (s *StreamingResultWithExplicitViewMethodServerStream) Send(v *streamingres
 		if err != nil {
 			return
 		}
-		if s.connConfigFn != nil {
-			conn = s.connConfigFn(conn, s.cancel)
+		if s.configurer != nil {
+			conn = s.configurer(conn, s.cancel)
 		}
 		s.conn = conn
 	})
@@ -489,8 +491,8 @@ func (s *StreamingResultCollectionWithViewsMethodServerStream) Send(v streamingr
 		if err != nil {
 			return
 		}
-		if s.connConfigFn != nil {
-			conn = s.connConfigFn(conn, s.cancel)
+		if s.configurer != nil {
+			conn = s.configurer(conn, s.cancel)
 		}
 		s.conn = conn
 	})
@@ -568,8 +570,8 @@ func (s *StreamingResultCollectionWithExplicitViewMethodServerStream) Send(v str
 		if err != nil {
 			return
 		}
-		if s.connConfigFn != nil {
-			conn = s.connConfigFn(conn, s.cancel)
+		if s.configurer != nil {
+			conn = s.configurer(conn, s.cancel)
 		}
 		s.conn = conn
 	})
@@ -668,8 +670,8 @@ func (s *StreamingResultPrimitiveMethodServerStream) Send(v string) error {
 		if err != nil {
 			return
 		}
-		if s.connConfigFn != nil {
-			conn = s.connConfigFn(conn, s.cancel)
+		if s.configurer != nil {
+			conn = s.configurer(conn, s.cancel)
 		}
 		s.conn = conn
 	})
@@ -714,8 +716,8 @@ func (s *StreamingResultPrimitiveArrayMethodServerStream) Send(v []int32) error 
 		if err != nil {
 			return
 		}
-		if s.connConfigFn != nil {
-			conn = s.connConfigFn(conn, s.cancel)
+		if s.configurer != nil {
+			conn = s.configurer(conn, s.cancel)
 		}
 		s.conn = conn
 	})
@@ -760,8 +762,8 @@ func (s *StreamingResultPrimitiveMapMethodServerStream) Send(v map[int32]string)
 		if err != nil {
 			return
 		}
-		if s.connConfigFn != nil {
-			conn = s.connConfigFn(conn, s.cancel)
+		if s.configurer != nil {
+			conn = s.configurer(conn, s.cancel)
 		}
 		s.conn = conn
 	})
@@ -806,8 +808,8 @@ func (s *StreamingResultUserTypeArrayMethodServerStream) Send(v []*streamingresu
 		if err != nil {
 			return
 		}
-		if s.connConfigFn != nil {
-			conn = s.connConfigFn(conn, s.cancel)
+		if s.configurer != nil {
+			conn = s.configurer(conn, s.cancel)
 		}
 		s.conn = conn
 	})
@@ -855,8 +857,8 @@ func (s *StreamingResultUserTypeMapMethodServerStream) Send(v map[string]*stream
 		if err != nil {
 			return
 		}
-		if s.connConfigFn != nil {
-			conn = s.connConfigFn(conn, s.cancel)
+		if s.configurer != nil {
+			conn = s.configurer(conn, s.cancel)
 		}
 		s.conn = conn
 	})
@@ -938,15 +940,16 @@ var StreamingPayloadServerHandlerInitCode = `// NewStreamingPayloadMethodHandler
 func NewStreamingPayloadMethodHandler(
 	endpoint goa.Endpoint,
 	mux goahttp.Muxer,
-	dec func(*http.Request) goahttp.Decoder,
-	enc func(context.Context, http.ResponseWriter) goahttp.Encoder,
-	eh func(context.Context, http.ResponseWriter, error),
-	up goahttp.Upgrader,
-	connConfigFn goahttp.ConnConfigureFunc,
+	decoder func(*http.Request) goahttp.Decoder,
+	encoder func(context.Context, http.ResponseWriter) goahttp.Encoder,
+	errhandler func(context.Context, http.ResponseWriter, error),
+	formatter func(err error) goahttp.Statuser,
+	upgrader goahttp.Upgrader,
+	configurer goahttp.ConnConfigureFunc,
 ) http.Handler {
 	var (
-		decodeRequest = DecodeStreamingPayloadMethodRequest(mux, dec)
-		encodeError   = goahttp.ErrorEncoder(enc)
+		decodeRequest = DecodeStreamingPayloadMethodRequest(mux, decoder)
+		encodeError   = goahttp.ErrorEncoder(encoder, formatter)
 	)
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ctx := context.WithValue(r.Context(), goahttp.AcceptTypeKey, r.Header.Get("Accept"))
@@ -955,7 +958,7 @@ func NewStreamingPayloadMethodHandler(
 		payload, err := decodeRequest(r)
 		if err != nil {
 			if err := encodeError(ctx, w, err); err != nil {
-				eh(ctx, w, err)
+				errhandler(ctx, w, err)
 			}
 			return
 		}
@@ -966,11 +969,11 @@ func NewStreamingPayloadMethodHandler(
 		}
 		v := &streamingpayloadservice.StreamingPayloadMethodEndpointInput{
 			Stream: &StreamingPayloadMethodServerStream{
-				upgrader:     up,
-				connConfigFn: connConfigFn,
-				cancel:       cancel,
-				w:            w,
-				r:            r,
+				upgrader:   upgrader,
+				configurer: configurer,
+				cancel:     cancel,
+				w:          w,
+				r:          r,
 			},
 			Payload: payload.(*streamingpayloadservice.Payload),
 		}
@@ -981,7 +984,7 @@ func NewStreamingPayloadMethodHandler(
 				return
 			}
 			if err := encodeError(ctx, w, err); err != nil {
-				eh(ctx, w, err)
+				errhandler(ctx, w, err)
 			}
 			return
 		}
@@ -1017,8 +1020,8 @@ func (s *StreamingPayloadMethodServerStream) Recv() (*streamingpayloadservice.Re
 		if err != nil {
 			return
 		}
-		if s.connConfigFn != nil {
-			conn = s.connConfigFn(conn, s.cancel)
+		if s.configurer != nil {
+			conn = s.configurer(conn, s.cancel)
 		}
 		s.conn = conn
 	})
@@ -1113,14 +1116,15 @@ var StreamingPayloadNoPayloadServerHandlerInitCode = `// NewStreamingPayloadNoPa
 func NewStreamingPayloadNoPayloadMethodHandler(
 	endpoint goa.Endpoint,
 	mux goahttp.Muxer,
-	dec func(*http.Request) goahttp.Decoder,
-	enc func(context.Context, http.ResponseWriter) goahttp.Encoder,
-	eh func(context.Context, http.ResponseWriter, error),
-	up goahttp.Upgrader,
-	connConfigFn goahttp.ConnConfigureFunc,
+	decoder func(*http.Request) goahttp.Decoder,
+	encoder func(context.Context, http.ResponseWriter) goahttp.Encoder,
+	errhandler func(context.Context, http.ResponseWriter, error),
+	formatter func(err error) goahttp.Statuser,
+	upgrader goahttp.Upgrader,
+	configurer goahttp.ConnConfigureFunc,
 ) http.Handler {
 	var (
-		encodeError = goahttp.ErrorEncoder(enc)
+		encodeError = goahttp.ErrorEncoder(encoder, formatter)
 	)
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ctx := context.WithValue(r.Context(), goahttp.AcceptTypeKey, r.Header.Get("Accept"))
@@ -1133,11 +1137,11 @@ func NewStreamingPayloadNoPayloadMethodHandler(
 		}
 		v := &streamingpayloadnopayloadservice.StreamingPayloadNoPayloadMethodEndpointInput{
 			Stream: &StreamingPayloadNoPayloadMethodServerStream{
-				upgrader:     up,
-				connConfigFn: connConfigFn,
-				cancel:       cancel,
-				w:            w,
-				r:            r,
+				upgrader:   upgrader,
+				configurer: configurer,
+				cancel:     cancel,
+				w:          w,
+				r:          r,
 			},
 		}
 		_, err = endpoint(ctx, v)
@@ -1147,7 +1151,7 @@ func NewStreamingPayloadNoPayloadMethodHandler(
 				return
 			}
 			if err := encodeError(ctx, w, err); err != nil {
-				eh(ctx, w, err)
+				errhandler(ctx, w, err)
 			}
 			return
 		}
@@ -1239,8 +1243,8 @@ func (s *StreamingPayloadNoResultMethodServerStream) Recv() (string, error) {
 		if err != nil {
 			return
 		}
-		if s.connConfigFn != nil {
-			conn = s.connConfigFn(conn, s.cancel)
+		if s.configurer != nil {
+			conn = s.configurer(conn, s.cancel)
 		}
 		s.conn = conn
 	})
@@ -1332,8 +1336,8 @@ func (s *StreamingPayloadResultWithViewsMethodServerStream) Recv() (float32, err
 		if err != nil {
 			return
 		}
-		if s.connConfigFn != nil {
-			conn = s.connConfigFn(conn, s.cancel)
+		if s.configurer != nil {
+			conn = s.configurer(conn, s.cancel)
 		}
 		s.conn = conn
 	})
@@ -1434,8 +1438,8 @@ func (s *StreamingPayloadResultWithExplicitViewMethodServerStream) Recv() (float
 		if err != nil {
 			return
 		}
-		if s.connConfigFn != nil {
-			conn = s.connConfigFn(conn, s.cancel)
+		if s.configurer != nil {
+			conn = s.configurer(conn, s.cancel)
 		}
 		s.conn = conn
 	})
@@ -1530,8 +1534,8 @@ func (s *StreamingPayloadResultCollectionWithViewsMethodServerStream) Recv() (in
 		if err != nil {
 			return
 		}
-		if s.connConfigFn != nil {
-			conn = s.connConfigFn(conn, s.cancel)
+		if s.configurer != nil {
+			conn = s.configurer(conn, s.cancel)
 		}
 		s.conn = conn
 	})
@@ -1637,8 +1641,8 @@ func (s *StreamingPayloadResultCollectionWithExplicitViewMethodServerStream) Rec
 		if err != nil {
 			return
 		}
-		if s.connConfigFn != nil {
-			conn = s.connConfigFn(conn, s.cancel)
+		if s.configurer != nil {
+			conn = s.configurer(conn, s.cancel)
 		}
 		s.conn = conn
 	})
@@ -1724,8 +1728,8 @@ func (s *StreamingPayloadPrimitiveMethodServerStream) Recv() (string, error) {
 		if err != nil {
 			return
 		}
-		if s.connConfigFn != nil {
-			conn = s.connConfigFn(conn, s.cancel)
+		if s.configurer != nil {
+			conn = s.configurer(conn, s.cancel)
 		}
 		s.conn = conn
 	})
@@ -1803,8 +1807,8 @@ func (s *StreamingPayloadPrimitiveArrayMethodServerStream) Recv() ([]int32, erro
 		if err != nil {
 			return
 		}
-		if s.connConfigFn != nil {
-			conn = s.connConfigFn(conn, s.cancel)
+		if s.configurer != nil {
+			conn = s.configurer(conn, s.cancel)
 		}
 		s.conn = conn
 	})
@@ -1882,8 +1886,8 @@ func (s *StreamingPayloadPrimitiveMapMethodServerStream) Recv() (map[string]int3
 		if err != nil {
 			return
 		}
-		if s.connConfigFn != nil {
-			conn = s.connConfigFn(conn, s.cancel)
+		if s.configurer != nil {
+			conn = s.configurer(conn, s.cancel)
 		}
 		s.conn = conn
 	})
@@ -1962,8 +1966,8 @@ func (s *StreamingPayloadUserTypeArrayMethodServerStream) Recv() ([]*streamingpa
 		if err != nil {
 			return
 		}
-		if s.connConfigFn != nil {
-			conn = s.connConfigFn(conn, s.cancel)
+		if s.configurer != nil {
+			conn = s.configurer(conn, s.cancel)
 		}
 		s.conn = conn
 	})
@@ -2044,8 +2048,8 @@ func (s *StreamingPayloadUserTypeMapMethodServerStream) Recv() (map[string]*stre
 		if err != nil {
 			return
 		}
-		if s.connConfigFn != nil {
-			conn = s.connConfigFn(conn, s.cancel)
+		if s.configurer != nil {
+			conn = s.configurer(conn, s.cancel)
 		}
 		s.conn = conn
 	})
@@ -2104,15 +2108,16 @@ var BidirectionalStreamingServerHandlerInitCode = `// NewBidirectionalStreamingM
 func NewBidirectionalStreamingMethodHandler(
 	endpoint goa.Endpoint,
 	mux goahttp.Muxer,
-	dec func(*http.Request) goahttp.Decoder,
-	enc func(context.Context, http.ResponseWriter) goahttp.Encoder,
-	eh func(context.Context, http.ResponseWriter, error),
-	up goahttp.Upgrader,
-	connConfigFn goahttp.ConnConfigureFunc,
+	decoder func(*http.Request) goahttp.Decoder,
+	encoder func(context.Context, http.ResponseWriter) goahttp.Encoder,
+	errhandler func(context.Context, http.ResponseWriter, error),
+	formatter func(err error) goahttp.Statuser,
+	upgrader goahttp.Upgrader,
+	configurer goahttp.ConnConfigureFunc,
 ) http.Handler {
 	var (
-		decodeRequest = DecodeBidirectionalStreamingMethodRequest(mux, dec)
-		encodeError   = goahttp.ErrorEncoder(enc)
+		decodeRequest = DecodeBidirectionalStreamingMethodRequest(mux, decoder)
+		encodeError   = goahttp.ErrorEncoder(encoder, formatter)
 	)
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ctx := context.WithValue(r.Context(), goahttp.AcceptTypeKey, r.Header.Get("Accept"))
@@ -2121,7 +2126,7 @@ func NewBidirectionalStreamingMethodHandler(
 		payload, err := decodeRequest(r)
 		if err != nil {
 			if err := encodeError(ctx, w, err); err != nil {
-				eh(ctx, w, err)
+				errhandler(ctx, w, err)
 			}
 			return
 		}
@@ -2132,11 +2137,11 @@ func NewBidirectionalStreamingMethodHandler(
 		}
 		v := &bidirectionalstreamingservice.BidirectionalStreamingMethodEndpointInput{
 			Stream: &BidirectionalStreamingMethodServerStream{
-				upgrader:     up,
-				connConfigFn: connConfigFn,
-				cancel:       cancel,
-				w:            w,
-				r:            r,
+				upgrader:   upgrader,
+				configurer: configurer,
+				cancel:     cancel,
+				w:          w,
+				r:          r,
 			},
 			Payload: payload.(*bidirectionalstreamingservice.Payload),
 		}
@@ -2147,7 +2152,7 @@ func NewBidirectionalStreamingMethodHandler(
 				return
 			}
 			if err := encodeError(ctx, w, err); err != nil {
-				eh(ctx, w, err)
+				errhandler(ctx, w, err)
 			}
 			return
 		}
@@ -2168,8 +2173,8 @@ func (s *BidirectionalStreamingMethodServerStream) Send(v *bidirectionalstreamin
 		if err != nil {
 			return
 		}
-		if s.connConfigFn != nil {
-			conn = s.connConfigFn(conn, s.cancel)
+		if s.configurer != nil {
+			conn = s.configurer(conn, s.cancel)
 		}
 		s.conn = conn
 	})
@@ -2199,8 +2204,8 @@ func (s *BidirectionalStreamingMethodServerStream) Recv() (*bidirectionalstreami
 		if err != nil {
 			return
 		}
-		if s.connConfigFn != nil {
-			conn = s.connConfigFn(conn, s.cancel)
+		if s.configurer != nil {
+			conn = s.configurer(conn, s.cancel)
 		}
 		s.conn = conn
 	})
@@ -2320,14 +2325,15 @@ var BidirectionalStreamingNoPayloadServerHandlerInitCode = `// NewBidirectionalS
 func NewBidirectionalStreamingNoPayloadMethodHandler(
 	endpoint goa.Endpoint,
 	mux goahttp.Muxer,
-	dec func(*http.Request) goahttp.Decoder,
-	enc func(context.Context, http.ResponseWriter) goahttp.Encoder,
-	eh func(context.Context, http.ResponseWriter, error),
-	up goahttp.Upgrader,
-	connConfigFn goahttp.ConnConfigureFunc,
+	decoder func(*http.Request) goahttp.Decoder,
+	encoder func(context.Context, http.ResponseWriter) goahttp.Encoder,
+	errhandler func(context.Context, http.ResponseWriter, error),
+	formatter func(err error) goahttp.Statuser,
+	upgrader goahttp.Upgrader,
+	configurer goahttp.ConnConfigureFunc,
 ) http.Handler {
 	var (
-		encodeError = goahttp.ErrorEncoder(enc)
+		encodeError = goahttp.ErrorEncoder(encoder, formatter)
 	)
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ctx := context.WithValue(r.Context(), goahttp.AcceptTypeKey, r.Header.Get("Accept"))
@@ -2340,11 +2346,11 @@ func NewBidirectionalStreamingNoPayloadMethodHandler(
 		}
 		v := &bidirectionalstreamingnopayloadservice.BidirectionalStreamingNoPayloadMethodEndpointInput{
 			Stream: &BidirectionalStreamingNoPayloadMethodServerStream{
-				upgrader:     up,
-				connConfigFn: connConfigFn,
-				cancel:       cancel,
-				w:            w,
-				r:            r,
+				upgrader:   upgrader,
+				configurer: configurer,
+				cancel:     cancel,
+				w:          w,
+				r:          r,
 			},
 		}
 		_, err = endpoint(ctx, v)
@@ -2354,7 +2360,7 @@ func NewBidirectionalStreamingNoPayloadMethodHandler(
 				return
 			}
 			if err := encodeError(ctx, w, err); err != nil {
-				eh(ctx, w, err)
+				errhandler(ctx, w, err)
 			}
 			return
 		}
@@ -2469,8 +2475,8 @@ func (s *BidirectionalStreamingResultWithViewsMethodServerStream) Send(v *bidire
 		if err != nil {
 			return
 		}
-		if s.connConfigFn != nil {
-			conn = s.connConfigFn(conn, s.cancel)
+		if s.configurer != nil {
+			conn = s.configurer(conn, s.cancel)
 		}
 		s.conn = conn
 	})
@@ -2508,8 +2514,8 @@ func (s *BidirectionalStreamingResultWithViewsMethodServerStream) Recv() (float3
 		if err != nil {
 			return
 		}
-		if s.connConfigFn != nil {
-			conn = s.connConfigFn(conn, s.cancel)
+		if s.configurer != nil {
+			conn = s.configurer(conn, s.cancel)
 		}
 		s.conn = conn
 	})
@@ -2620,8 +2626,8 @@ func (s *BidirectionalStreamingResultWithExplicitViewMethodServerStream) Send(v 
 		if err != nil {
 			return
 		}
-		if s.connConfigFn != nil {
-			conn = s.connConfigFn(conn, s.cancel)
+		if s.configurer != nil {
+			conn = s.configurer(conn, s.cancel)
 		}
 		s.conn = conn
 	})
@@ -2652,8 +2658,8 @@ func (s *BidirectionalStreamingResultWithExplicitViewMethodServerStream) Recv() 
 		if err != nil {
 			return
 		}
-		if s.connConfigFn != nil {
-			conn = s.connConfigFn(conn, s.cancel)
+		if s.configurer != nil {
+			conn = s.configurer(conn, s.cancel)
 		}
 		s.conn = conn
 	})
@@ -2722,8 +2728,8 @@ func (s *BidirectionalStreamingResultCollectionWithViewsMethodServerStream) Send
 		if err != nil {
 			return
 		}
-		if s.connConfigFn != nil {
-			conn = s.connConfigFn(conn, s.cancel)
+		if s.configurer != nil {
+			conn = s.configurer(conn, s.cancel)
 		}
 		s.conn = conn
 	})
@@ -2762,8 +2768,8 @@ func (s *BidirectionalStreamingResultCollectionWithViewsMethodServerStream) Recv
 		if err != nil {
 			return
 		}
-		if s.connConfigFn != nil {
-			conn = s.connConfigFn(conn, s.cancel)
+		if s.configurer != nil {
+			conn = s.configurer(conn, s.cancel)
 		}
 		s.conn = conn
 	})
@@ -2848,8 +2854,8 @@ func (s *BidirectionalStreamingResultCollectionWithExplicitViewMethodServerStrea
 		if err != nil {
 			return
 		}
-		if s.connConfigFn != nil {
-			conn = s.connConfigFn(conn, s.cancel)
+		if s.configurer != nil {
+			conn = s.configurer(conn, s.cancel)
 		}
 		s.conn = conn
 	})
@@ -2880,8 +2886,8 @@ func (s *BidirectionalStreamingResultCollectionWithExplicitViewMethodServerStrea
 		if err != nil {
 			return
 		}
-		if s.connConfigFn != nil {
-			conn = s.connConfigFn(conn, s.cancel)
+		if s.configurer != nil {
+			conn = s.configurer(conn, s.cancel)
 		}
 		s.conn = conn
 	})
@@ -2946,8 +2952,8 @@ func (s *BidirectionalStreamingPrimitiveMethodServerStream) Send(v string) error
 		if err != nil {
 			return
 		}
-		if s.connConfigFn != nil {
-			conn = s.connConfigFn(conn, s.cancel)
+		if s.configurer != nil {
+			conn = s.configurer(conn, s.cancel)
 		}
 		s.conn = conn
 	})
@@ -2976,8 +2982,8 @@ func (s *BidirectionalStreamingPrimitiveMethodServerStream) Recv() (string, erro
 		if err != nil {
 			return
 		}
-		if s.connConfigFn != nil {
-			conn = s.connConfigFn(conn, s.cancel)
+		if s.configurer != nil {
+			conn = s.configurer(conn, s.cancel)
 		}
 		s.conn = conn
 	})
@@ -3034,8 +3040,8 @@ func (s *BidirectionalStreamingPrimitiveArrayMethodServerStream) Send(v []string
 		if err != nil {
 			return
 		}
-		if s.connConfigFn != nil {
-			conn = s.connConfigFn(conn, s.cancel)
+		if s.configurer != nil {
+			conn = s.configurer(conn, s.cancel)
 		}
 		s.conn = conn
 	})
@@ -3064,8 +3070,8 @@ func (s *BidirectionalStreamingPrimitiveArrayMethodServerStream) Recv() ([]int32
 		if err != nil {
 			return
 		}
-		if s.connConfigFn != nil {
-			conn = s.connConfigFn(conn, s.cancel)
+		if s.configurer != nil {
+			conn = s.configurer(conn, s.cancel)
 		}
 		s.conn = conn
 	})
@@ -3122,8 +3128,8 @@ func (s *BidirectionalStreamingPrimitiveMapMethodServerStream) Send(v map[int]in
 		if err != nil {
 			return
 		}
-		if s.connConfigFn != nil {
-			conn = s.connConfigFn(conn, s.cancel)
+		if s.configurer != nil {
+			conn = s.configurer(conn, s.cancel)
 		}
 		s.conn = conn
 	})
@@ -3152,8 +3158,8 @@ func (s *BidirectionalStreamingPrimitiveMapMethodServerStream) Recv() (map[strin
 		if err != nil {
 			return
 		}
-		if s.connConfigFn != nil {
-			conn = s.connConfigFn(conn, s.cancel)
+		if s.configurer != nil {
+			conn = s.configurer(conn, s.cancel)
 		}
 		s.conn = conn
 	})
@@ -3211,8 +3217,8 @@ func (s *BidirectionalStreamingUserTypeArrayMethodServerStream) Send(v []*bidire
 		if err != nil {
 			return
 		}
-		if s.connConfigFn != nil {
-			conn = s.connConfigFn(conn, s.cancel)
+		if s.configurer != nil {
+			conn = s.configurer(conn, s.cancel)
 		}
 		s.conn = conn
 	})
@@ -3243,8 +3249,8 @@ func (s *BidirectionalStreamingUserTypeArrayMethodServerStream) Recv() ([]*bidir
 		if err != nil {
 			return
 		}
-		if s.connConfigFn != nil {
-			conn = s.connConfigFn(conn, s.cancel)
+		if s.configurer != nil {
+			conn = s.configurer(conn, s.cancel)
 		}
 		s.conn = conn
 	})
@@ -3306,8 +3312,8 @@ func (s *BidirectionalStreamingUserTypeMapMethodServerStream) Send(v map[string]
 		if err != nil {
 			return
 		}
-		if s.connConfigFn != nil {
-			conn = s.connConfigFn(conn, s.cancel)
+		if s.configurer != nil {
+			conn = s.configurer(conn, s.cancel)
 		}
 		s.conn = conn
 	})
@@ -3338,8 +3344,8 @@ func (s *BidirectionalStreamingUserTypeMapMethodServerStream) Recv() (map[string
 		if err != nil {
 			return
 		}
-		if s.connConfigFn != nil {
-			conn = s.connConfigFn(conn, s.cancel)
+		if s.configurer != nil {
+			conn = s.configurer(conn, s.cancel)
 		}
 		s.conn = conn
 	})
