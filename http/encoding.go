@@ -210,10 +210,13 @@ func ResponseDecoder(resp *http.Response) Decoder {
 // status code and marshals the error struct to the body using the provided
 // encoder. If the error is not a goa ServiceError struct then it is encoded
 // as a permanent internal server error.
-func ErrorEncoder(encoder func(context.Context, http.ResponseWriter) Encoder) func(context.Context, http.ResponseWriter, error) error {
+func ErrorEncoder(encoder func(context.Context, http.ResponseWriter) Encoder, formatter func(err error) Statuser) func(context.Context, http.ResponseWriter, error) error {
 	return func(ctx context.Context, w http.ResponseWriter, err error) error {
 		enc := encoder(ctx, w)
-		resp := NewErrorResponse(err)
+		if formatter == nil {
+			formatter = NewErrorResponse
+		}
+		resp := formatter(err)
 		w.WriteHeader(resp.StatusCode())
 		return enc.Encode(resp)
 	}

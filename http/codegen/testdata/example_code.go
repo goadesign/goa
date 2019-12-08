@@ -38,7 +38,7 @@ func handleHTTPServer(ctx context.Context, u *url.URL, serviceEndpoints *service
 	)
 	{
 		eh := errorHandler(logger)
-		serviceServer = servicesvr.New(serviceEndpoints, mux, dec, enc, eh)
+		serviceServer = servicesvr.New(serviceEndpoints, mux, dec, enc, eh, nil)
 	}
 	// Configure the mux.
 	servicesvr.Mount(mux, serviceServer)
@@ -131,7 +131,7 @@ func handleHTTPServer(ctx context.Context, u *url.URL, wg *sync.WaitGroup, errc 
 	)
 	{
 		eh := errorHandler(logger)
-		serviceServer = servicesvr.New(nil, mux, dec, enc, eh)
+		serviceServer = servicesvr.New(nil, mux, dec, enc, eh, nil)
 	}
 	// Configure the mux.
 	servicesvr.Mount(mux)
@@ -224,7 +224,7 @@ func handleHTTPServer(ctx context.Context, u *url.URL, serviceEndpoints *service
 	)
 	{
 		eh := errorHandler(logger)
-		serviceServer = servicesvr.New(serviceEndpoints, mux, dec, enc, eh)
+		serviceServer = servicesvr.New(serviceEndpoints, mux, dec, enc, eh, nil)
 	}
 	// Configure the mux.
 	servicesvr.Mount(mux, serviceServer)
@@ -318,8 +318,8 @@ func handleHTTPServer(ctx context.Context, u *url.URL, serviceEndpoints *service
 	)
 	{
 		eh := errorHandler(logger)
-		serviceServer = servicesvr.New(serviceEndpoints, mux, dec, enc, eh)
-		anotherServiceServer = anotherservicesvr.New(anotherServiceEndpoints, mux, dec, enc, eh)
+		serviceServer = servicesvr.New(serviceEndpoints, mux, dec, enc, eh, nil)
+		anotherServiceServer = anotherservicesvr.New(anotherServiceEndpoints, mux, dec, enc, eh, nil)
 	}
 	// Configure the mux.
 	servicesvr.Mount(mux, serviceServer)
@@ -418,8 +418,8 @@ func handleHTTPServer(ctx context.Context, u *url.URL, streamingServiceAEndpoint
 	{
 		eh := errorHandler(logger)
 		upgrader := &websocket.Upgrader{}
-		streamingServiceAServer = streamingserviceasvr.New(streamingServiceAEndpoints, mux, dec, enc, eh, upgrader, nil)
-		streamingServiceBServer = streamingservicebsvr.New(streamingServiceBEndpoints, mux, dec, enc, eh, upgrader, nil)
+		streamingServiceAServer = streamingserviceasvr.New(streamingServiceAEndpoints, mux, dec, enc, eh, nil, upgrader, nil)
+		streamingServiceBServer = streamingservicebsvr.New(streamingServiceBEndpoints, mux, dec, enc, eh, nil, upgrader, nil)
 	}
 	// Configure the mux.
 	streamingserviceasvr.Mount(mux, streamingServiceAServer)
