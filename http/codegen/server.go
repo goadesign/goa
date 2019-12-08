@@ -476,7 +476,7 @@ func {{ .HandlerInit }}(
 		v := &{{ .ServicePkgName }}.{{ .Method.ServerStream.EndpointStruct }}{
 			Stream: &{{ .ServerStream.VarName }}{
 				upgrader: upgrader,
-				connConfigFn: configurer,
+				configurer: configurer,
 				cancel: cancel,
 				w: w,
 				r: r,
