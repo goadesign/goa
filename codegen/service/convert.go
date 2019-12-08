@@ -231,7 +231,7 @@ func ConvertFile(root *expr.RootExpr, service *expr.ServiceExpr) (*codegen.File,
 		tgtPkg := t.String()
 		tgtPkg = tgtPkg[:strings.Index(tgtPkg, ".")]
 		srcCtx := typeContext("", svc.Scope)
-		tgtCtx := codegen.NewAttributeContext(false, false, false, tgtPkg, svc.Scope)
+		tgtCtx := codegen.NewAttributeContext(false, false, false, tgtPkg, codegen.NewNameScope())
 		srcAtt := &expr.AttributeExpr{Type: c.User}
 		code, tf, err := codegen.GoTransform(
 			&expr.AttributeExpr{Type: c.User}, &expr.AttributeExpr{Type: dt},
@@ -269,7 +269,7 @@ func ConvertFile(root *expr.RootExpr, service *expr.ServiceExpr) (*codegen.File,
 		t := reflect.TypeOf(c.External)
 		srcPkg := t.String()
 		srcPkg = srcPkg[:strings.Index(srcPkg, ".")]
-		srcCtx := codegen.NewAttributeContext(false, false, false, srcPkg, svc.Scope)
+		srcCtx := codegen.NewAttributeContext(false, false, false, srcPkg, codegen.NewNameScope())
 		tgtCtx := typeContext("", svc.Scope)
 		tgtAtt := &expr.AttributeExpr{Type: c.User}
 		code, tf, err := codegen.GoTransform(
@@ -287,7 +287,7 @@ func ConvertFile(root *expr.RootExpr, service *expr.ServiceExpr) (*codegen.File,
 		}
 		data := convertData{
 			Name:            name,
-			ReceiverTypeRef: svc.Scope.GoTypeRef(tgtAtt),
+			ReceiverTypeRef: codegen.NewNameScope().GoTypeRef(tgtAtt),
 			TypeRef:         ref,
 			Code:            code,
 		}
