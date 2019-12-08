@@ -395,6 +395,7 @@ func NewListResultOK(body *ListResponseBody) *servicea.ListResult {
 		ID:   *body.ID,
 		Name: *body.Name,
 	}
+
 	return v
 }
 
@@ -409,6 +410,7 @@ func NewListSomethingWentWrong(body *ListSomethingWentWrongResponseBody) *goa.Se
 		Timeout:   *body.Timeout,
 		Fault:     *body.Fault,
 	}
+
 	return v
 }
 
@@ -509,6 +511,7 @@ func NewListResultOK(body *ListResponseBody) *serviceb.ListResult {
 		ID:   *body.ID,
 		Name: *body.Name,
 	}
+
 	return v
 }
 
@@ -523,6 +526,7 @@ func NewListSomethingWentWrong(body *ListSomethingWentWrongResponseBody) *goa.Se
 		Timeout:   *body.Timeout,
 		Fault:     *body.Fault,
 	}
+
 	return v
 }
 
@@ -534,7 +538,33 @@ func ValidateListResponseBody(body *ListResponseBody) (err error) {
 	if body.Name == nil {
 		err = goa.MergeErrors(err, goa.MissingFieldError("name", "body"))
 	}
-}`,
+	return
+}
+
+// ValidateListSomethingWentWrongResponseBody runs the validations defined on
+// list_something_went_wrong_response_body
+func ValidateListSomethingWentWrongResponseBody(body *ListSomethingWentWrongResponseBody) (err error) {
+	if body.Name == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("name", "body"))
+	}
+	if body.ID == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("id", "body"))
+	}
+	if body.Message == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("message", "body"))
+	}
+	if body.Temporary == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("temporary", "body"))
+	}
+	if body.Timeout == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("timeout", "body"))
+	}
+	if body.Fault == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("fault", "body"))
+	}
+	return
+}
+`,
 }
 
 const ResultTypeValidateClientTypesFile = `// MethodResultTypeValidateResponseBody is the type of the
@@ -628,30 +658,6 @@ func ValidateRtCollectionResponseBody(body RtCollectionResponseBody) (err error)
 				err = goa.MergeErrors(err, err2)
 			}
 		}
-	}
-	return
-}
-
-// ValidateListSomethingWentWrongResponseBody runs the validations defined on
-// list_something_went_wrong_response_body
-func ValidateListSomethingWentWrongResponseBody(body *ListSomethingWentWrongResponseBody) (err error) {
-	if body.Name == nil {
-		err = goa.MergeErrors(err, goa.MissingFieldError("name", "body"))
-	}
-	if body.ID == nil {
-		err = goa.MergeErrors(err, goa.MissingFieldError("id", "body"))
-	}
-	if body.Message == nil {
-		err = goa.MergeErrors(err, goa.MissingFieldError("message", "body"))
-	}
-	if body.Temporary == nil {
-		err = goa.MergeErrors(err, goa.MissingFieldError("temporary", "body"))
-	}
-	if body.Timeout == nil {
-		err = goa.MergeErrors(err, goa.MissingFieldError("timeout", "body"))
-	}
-	if body.Fault == nil {
-		err = goa.MergeErrors(err, goa.MissingFieldError("fault", "body"))
 	}
 	return
 }
