@@ -7,8 +7,8 @@ import (
 )
 
 type (
-	// ErrorResponse is the data structure encoded in HTTP responses that
-	// correspond to errors created by the generated code. This struct is
+	// ErrorResponse is the default data structure encoded in HTTP responses
+	// that correspond to errors created by the generated code. This struct is
 	// mainly intended for clients to decode error responses.
 	ErrorResponse struct {
 		// Name is a name for that class of errors.
@@ -24,10 +24,18 @@ type (
 		// Fault indicates whether the error is a server-side fault.
 		Fault bool `json:"fault" xml:"fault" form:"fault"`
 	}
+
+	// Statuser is implemented by error response object to provide the response
+	// HTTP status code.
+	Statuser interface {
+		// StatusCode return the HTTP status code used to encode the response
+		// when not defined in the design.
+		StatusCode() int
+	}
 )
 
 // NewErrorResponse creates a HTTP response from the given error.
-func NewErrorResponse(err error) *ErrorResponse {
+func NewErrorResponse(err error) Statuser {
 	if gerr, ok := err.(*goa.ServiceError); ok {
 		return &ErrorResponse{
 			Name:      gerr.Name,
