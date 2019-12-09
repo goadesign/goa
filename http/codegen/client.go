@@ -629,6 +629,8 @@ func {{ .ResponseDecoder }}(decoder func(*http.Response) goahttp.Decoder, restor
 			return res, nil
 		{{- else if .ClientBody }}
 			return body, nil
+		{{- else if .Headers }}
+			return {{ (index .Headers 0).VarName }}, nil
 		{{- else }}
 			return nil, nil
 		{{- end }}
