@@ -376,6 +376,47 @@ func DecodeMethodEmptyServerResponseWithTagsResponse(decoder func(*http.Response
 }
 `
 
+var ResultHeaderStringImplicitResponseDecodeCode = `// DecodeMethodHeaderStringImplicitResponse returns a decoder for responses
+// returned by the ServiceHeaderStringImplicit MethodHeaderStringImplicit
+// endpoint. restoreBody controls whether the response body should be restored
+// after having been read.
+func DecodeMethodHeaderStringImplicitResponse(decoder func(*http.Response) goahttp.Decoder, restoreBody bool) func(*http.Response) (interface{}, error) {
+	return func(resp *http.Response) (interface{}, error) {
+		if restoreBody {
+			b, err := ioutil.ReadAll(resp.Body)
+			if err != nil {
+				return nil, err
+			}
+			resp.Body = ioutil.NopCloser(bytes.NewBuffer(b))
+			defer func() {
+				resp.Body = ioutil.NopCloser(bytes.NewBuffer(b))
+			}()
+		} else {
+			defer resp.Body.Close()
+		}
+		switch resp.StatusCode {
+		case http.StatusOK:
+			var (
+				h   string
+				err error
+			)
+			hRaw := resp.Header.Get("H")
+			if hRaw == "" {
+				err = goa.MergeErrors(err, goa.MissingFieldError("h", "header"))
+			}
+			h = hRaw
+			if err != nil {
+				return nil, goahttp.ErrValidationError("ServiceHeaderStringImplicit", "MethodHeaderStringImplicit", err)
+			}
+			return h, nil
+		default:
+			body, _ := ioutil.ReadAll(resp.Body)
+			return nil, goahttp.ErrInvalidResponse("ServiceHeaderStringImplicit", "MethodHeaderStringImplicit", resp.StatusCode, string(body))
+		}
+	}
+}
+`
+
 var ResultHeaderStringArrayResponseDecodeCode = `// DecodeMethodAResponse returns a decoder for responses returned by the
 // ServiceHeaderStringArrayResponse MethodA endpoint. restoreBody controls
 // whether the response body should be restored after having been read.
