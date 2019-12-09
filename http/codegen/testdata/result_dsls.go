@@ -1073,6 +1073,20 @@ var EmptyServerResponseWithTagsDSL = func() {
 	})
 }
 
+var ResultHeaderStringImplicitDSL = func() {
+	Service("ServiceHeaderStringImplicit", func() {
+		Method("MethodHeaderStringImplicit", func() {
+			Result(String)
+			HTTP(func() {
+				GET("/")
+				Response(StatusOK, func() {
+					Header("h")
+				})
+			})
+		})
+	})
+}
+
 var ResultHeaderStringArrayDSL = func() {
 	Service("ServiceHeaderStringArrayResponse", func() {
 		Method("MethodA", func() {

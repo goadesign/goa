@@ -22,6 +22,7 @@ func TestClientDecode(t *testing.T) {
 		{"explicit-body-result-collection", testdata.ExplicitBodyResultCollectionDSL, testdata.ExplicitBodyResultCollectionDecodeCode},
 		{"tag-result-multiple-views", testdata.ResultMultipleViewsTagDSL, testdata.ResultMultipleViewsTagDecodeCode},
 		{"empty-server-response-with-tags", testdata.EmptyServerResponseWithTagsDSL, testdata.EmptyServerResponseWithTagsDecodeCode},
+		{"header-string-implicit", testdata.ResultHeaderStringImplicitDSL, testdata.ResultHeaderStringImplicitResponseDecodeCode},
 		{"header-string-array", testdata.ResultHeaderStringArrayDSL, testdata.ResultHeaderStringArrayResponseDecodeCode},
 		{"header-string-array-validate", testdata.ResultHeaderStringArrayValidateDSL, testdata.ResultHeaderStringArrayValidateResponseDecodeCode},
 		{"header-array", testdata.ResultHeaderArrayDSL, testdata.ResultHeaderArrayResponseDecodeCode},
