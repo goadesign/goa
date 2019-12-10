@@ -92,6 +92,8 @@ type (
 		Type Transport
 		// Name is the transport name.
 		Name string
+		// Services is the list of services supported by the transport.
+		Services []string
 	}
 
 	// Transport is a type for supported goa transports.
@@ -197,7 +199,9 @@ func buildServerData(svr *expr.ServerExpr) *Data {
 	}
 
 	var (
-		transports []*TransportData
+		transports   []*TransportData
+		httpServices []string
+		grpcServices []string
 
 		foundTrans = make(map[Transport]struct{})
 	)
@@ -205,18 +209,28 @@ func buildServerData(svr *expr.ServerExpr) *Data {
 		for _, svc := range svr.Services {
 			_, seenHTTP := foundTrans[TransportHTTP]
 			_, seenGRPC := foundTrans[TransportGRPC]
-			if seenHTTP && seenGRPC {
-				// only HTTP and gRPC are supported right now.
-				break
+			if expr.Root.API.HTTP.Service(svc) != nil {
+				httpServices = append(httpServices, svc)
+				if !seenHTTP {
+					transports = append(transports, newHTTPTransport())
+					foundTrans[TransportHTTP] = struct{}{}
+				}
 			}
-			if expr.Root.API.HTTP.Service(svc) != nil && !seenHTTP {
-				transports = append(transports, newHTTPTransport())
-				foundTrans[TransportHTTP] = struct{}{}
+			if expr.Root.API.GRPC.Service(svc) != nil {
+				grpcServices = append(grpcServices, svc)
+				if !seenGRPC {
+					transports = append(transports, newGRPCTransport())
+					foundTrans[TransportGRPC] = struct{}{}
+				}
 			}
-			if expr.Root.API.GRPC.Service(svc) != nil && !seenGRPC {
-				transports = append(transports, newGRPCTransport())
-				foundTrans[TransportGRPC] = struct{}{}
-			}
+		}
+	}
+	for _, transport := range transports {
+		switch transport.Type {
+		case TransportHTTP:
+			transport.Services = httpServices
+		case TransportGRPC:
+			transport.Services = grpcServices
 		}
 	}
 	return &Data{

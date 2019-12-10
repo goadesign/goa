@@ -278,7 +278,7 @@ func main() {
 			} else if u.Port() == "" {
 				u.Host += ":{{ $u.Port }}"
 			}
-			handle{{ toUpper $u.Transport.Name }}Server(ctx, u, {{ range $.Services }}{{ if .Methods }}{{ .VarName }}Endpoints, {{ end }}{{ end }}&wg, errc, logger, *dbgF)
+			handle{{ toUpper $u.Transport.Name }}Server(ctx, u, {{ range $t := $.Server.Transports }}{{ if eq $t.Type $u.Transport.Type }}{{ range $s := $t.Services }}{{ range $.Services }}{{ if eq $s .Name }}{{ if .Methods }}{{ .VarName }}Endpoints, {{ end }}{{ end }}{{ end }}{{ end }}{{ end }}{{ end }}&wg, errc, logger, *dbgF)
 		}
 	{{- end }}
 	{{ end }}
