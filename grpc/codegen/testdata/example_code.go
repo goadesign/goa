@@ -40,6 +40,8 @@ func handleGRPCServer(ctx context.Context, u *url.URL, serviceEndpoints *service
 		}
 	}
 
+	// Register the server reflection service on the server.
+	// See https://grpc.github.io/grpc/core/md_doc_server-reflection.html.
 	reflection.Register(srv)
 
 	(*wg).Add(1)
@@ -103,6 +105,8 @@ func handleGRPCServer(ctx context.Context, u *url.URL, serviceEndpoints *service
 		}
 	}
 
+	// Register the server reflection service on the server.
+	// See https://grpc.github.io/grpc/core/md_doc_server-reflection.html.
 	reflection.Register(srv)
 
 	(*wg).Add(1)
@@ -169,6 +173,8 @@ func handleGRPCServer(ctx context.Context, u *url.URL, serviceEndpoints *service
 		}
 	}
 
+	// Register the server reflection service on the server.
+	// See https://grpc.github.io/grpc/core/md_doc_server-reflection.html.
 	reflection.Register(srv)
 
 	(*wg).Add(1)
