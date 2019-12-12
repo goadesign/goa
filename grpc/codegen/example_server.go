@@ -217,6 +217,8 @@ func handleGRPCServer(ctx context.Context, u *url.URL{{ range $.Services }}{{ if
 		}
 	}
 
+	// Register the server reflection service on the server.
+	// See https://grpc.github.io/grpc/core/md_doc_server-reflection.html.
 	reflection.Register(srv)
 `
 
