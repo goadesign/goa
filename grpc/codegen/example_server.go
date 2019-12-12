@@ -52,6 +52,7 @@ func exampleServer(genpkg string, root *expr.RootExpr, svr *expr.ServerExpr) *co
 			{Path: "goa.design/goa/middleware"},
 			{Path: "goa.design/goa/grpc/middleware", Name: "grpcmdlwr"},
 			{Path: "google.golang.org/grpc"},
+			{Path: "google.golang.org/grpc/reflection"},
 			{Path: "github.com/grpc-ecosystem/go-grpc-middleware", Name: "grpcmiddleware"},
 			{Path: "goa.design/goa/grpc", Name: "goagrpc"},
 		}
@@ -215,6 +216,10 @@ func handleGRPCServer(ctx context.Context, u *url.URL{{ range $.Services }}{{ if
 			logger.Printf("serving gRPC method %s", svc + "/" + m.Name)
 		}
 	}
+
+	// Register the server reflection service on the server.
+	// See https://grpc.github.io/grpc/core/md_doc_server-reflection.html.
+	reflection.Register(srv)
 `
 
 	// input: map[string]interface{}{"Services":[]*ServiceData}
