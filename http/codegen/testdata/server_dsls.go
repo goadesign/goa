@@ -159,10 +159,19 @@ var ServerMultipartDSL = func() {
 
 var ServerMultipleFilesDSL = func() {
 	Service("ServiceFileServer", func() {
+		Files("/file.json", "/path/to/file.json")
+		Files("/", "/path/to/file.json")
+		Files("/{wildcard}", "/path/to/folder")
+	})
+}
+
+var ServerMultipleFilesWithPrefixPathDSL = func() {
+	Service("ServiceFileServer", func() {
 		HTTP(func() {
 			Path("/server_file_server")
 		})
 		Files("/file.json", "/path/to/file.json")
 		Files("/", "/path/to/file.json")
+		Files("/{wildcard}", "/path/to/folder")
 	})
 }
