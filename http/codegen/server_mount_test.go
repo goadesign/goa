@@ -16,7 +16,30 @@ func TestServerMount(t *testing.T) {
 		Code       string
 		SectionNum int
 	}{
-		{"multiple files", testdata.ServerMultipleFilesDSL, testdata.ServerMultipleFilesConstructorCode, 6},
+		{
+			Name:       "multiple files constructor",
+			DSL:        testdata.ServerMultipleFilesDSL,
+			Code:       testdata.ServerMultipleFilesConstructorCode,
+			SectionNum: 6,
+		},
+		{
+			Name:       "multiple files mounter",
+			DSL:        testdata.ServerMultipleFilesDSL,
+			Code:       testdata.ServerMultipleFilesMounterCode,
+			SectionNum: 9,
+		},
+		{
+			Name:       "multiple files constructor /w prefix path",
+			DSL:        testdata.ServerMultipleFilesWithPrefixPathDSL,
+			Code:       testdata.ServerMultipleFilesWithPrefixPathConstructorCode,
+			SectionNum: 6,
+		},
+		{
+			Name:       "multiple files mounter /w prefix path",
+			DSL:        testdata.ServerMultipleFilesWithPrefixPathDSL,
+			Code:       testdata.ServerMultipleFilesWithPrefixPathMounterCode,
+			SectionNum: 9,
+		},
 	}
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
