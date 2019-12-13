@@ -703,7 +703,7 @@ func Body(args ...interface{}) {
 // are automatically merged into the child method payload type if not already
 // defined.
 //
-// Parent must appear in a Service expression.
+// Parent must appear in the HTTP expresssion of a Service.
 //
 // Parent accepts one argument: the name of the parent service.
 func Parent(name string) {
