@@ -18,6 +18,7 @@ BUILD=8
 
 GOOS=$(shell go env GOOS)
 GO_FILES=$(shell find . -type f -name '*.go')
+GOPATH=$(shell go env GOPATH)
 
 # Only list test and build dependencies
 # Standard dependencies are installed via go get
@@ -37,17 +38,15 @@ PROTOC_VERSION=3.6.1
 ifeq ($(GOOS),linux)
 PROTOC=protoc-$(PROTOC_VERSION)-linux-x86_64
 PROTOC_EXEC=$(PROTOC)/bin/protoc
-PROTOC_DIR=$(HOME)/go/bin
 else
 	ifeq ($(GOOS),darwin)
 PROTOC=protoc-$(PROTOC_VERSION)-osx-x86_64
 PROTOC_EXEC=$(PROTOC)/bin/protoc
-PROTOC_DIR=$(HOME)/go/bin
 	else
 		ifeq ($(GOOS),windows)
 PROTOC=protoc-$(PROTOC_VERSION)-win32
 PROTOC_EXEC="$(PROTOC)\bin\protoc.exe"
-PROTOC_DIR=$(USERPROFILE)\go\bin
+GOPATH:=$(subst \,/,$(GOPATH))
 		endif
 	endif
 endif
@@ -56,12 +55,13 @@ depend:
 	@echo Installing protoc
 	@env GO111MODULE=off go get github.com/hashicorp/go-getter/cmd/go-getter
 	go-getter https://github.com/google/protobuf/releases/download/v$(PROTOC_VERSION)/$(PROTOC).zip $(PROTOC)
-	@cp $(PROTOC_EXEC) $(PROTOC_DIR) && \
+	@cp $(PROTOC_EXEC) $(GOPATH)/bin && \
 		rm -r $(PROTOC) && \
 		echo "`protoc --version`"
 	@go get -t -v ./...
 
 lint:
+ifneq ($(GOOS),windows)
 	@if [ "`goimports -l $(GO_FILES) | tee /dev/stderr`" ]; then \
 		echo "^ - Repo contains improperly formatted go files" && echo && exit 1; \
 	fi
@@ -71,6 +71,7 @@ lint:
 	@if [ "`staticcheck -checks all ./... | grep -v ".pb.go" | tee /dev/stderr`" ]; then \
 		echo "^ - staticcheck errors!" && echo && exit 1; \
 	fi
+endif
 
 test:
 	env GO111MODULE=on go test ./...
