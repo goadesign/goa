@@ -37,14 +37,17 @@ PROTOC_VERSION=3.6.1
 ifeq ($(GOOS),linux)
 PROTOC=protoc-$(PROTOC_VERSION)-linux-x86_64
 PROTOC_EXEC=$(PROTOC)/bin/protoc
+PROTOC_DIR=$(HOME)/go/bin
 else
 	ifeq ($(GOOS),darwin)
 PROTOC=protoc-$(PROTOC_VERSION)-osx-x86_64
 PROTOC_EXEC=$(PROTOC)/bin/protoc
+PROTOC_DIR=$(HOME)/go/bin
 	else
 		ifeq ($(GOOS),windows)
 PROTOC=protoc-$(PROTOC_VERSION)-win32
 PROTOC_EXEC="$(PROTOC)\bin\protoc.exe"
+PROTOC_DIR=$(USERPROFILE)\go\bin
 		endif
 	endif
 endif
@@ -53,7 +56,7 @@ depend:
 	@echo Installing protoc
 	@env GO111MODULE=off go get github.com/hashicorp/go-getter/cmd/go-getter
 	go-getter https://github.com/google/protobuf/releases/download/v$(PROTOC_VERSION)/$(PROTOC).zip $(PROTOC)
-	@cp $(PROTOC_EXEC) $(HOME)/go/bin && \
+	@cp $(PROTOC_EXEC) $(PROTOC_DIR) && \
 		rm -r $(PROTOC) && \
 		echo "`protoc --version`"
 	@go get -t -v ./...
