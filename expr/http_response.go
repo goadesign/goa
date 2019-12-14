@@ -150,23 +150,28 @@ func (r *HTTPResponseExpr) Validate(e *HTTPEndpointExpr) *eval.ValidationErrors 
 		}
 	}
 
-	hasAttribute := func(name string) bool {
+	resultAttributeType := func(name string) DataType {
 		if !IsObject(e.MethodExpr.Result.Type) {
-			return false
+			return nil
 		}
 		if !isrt {
-			return e.MethodExpr.Result.Find(name) != nil
+			return e.MethodExpr.Result.Find(name).Type
 		}
 		if v, ok := e.MethodExpr.Result.Meta["view"]; ok {
-			return rt.ViewHasAttribute(v[0], name)
+			v := rt.View(v[0])
+			if v == nil {
+				return nil
+			}
+			return v.AttributeExpr.Find(name).Type
 		}
 		for _, v := range rt.Views {
 			if !rt.ViewHasAttribute(v.Name, name) {
-				return false
+				return nil
 			}
 		}
-		return true
+		return e.MethodExpr.Result.Find(name).Type
 	}
+
 	if !r.Headers.IsEmpty() {
 		verr.Merge(r.Headers.Validate("HTTP response headers", r))
 		if e.MethodExpr.Result.Type == Empty {
@@ -174,23 +179,35 @@ func (r *HTTPResponseExpr) Validate(e *HTTPEndpointExpr) *eval.ValidationErrors 
 		} else if IsObject(e.MethodExpr.Result.Type) {
 			mobj := AsObject(r.Headers.Type)
 			for _, h := range *mobj {
-				if !hasAttribute(h.Name) {
+				t := resultAttributeType(h.Name)
+				if t == nil {
 					verr.Add(r, "header %q has no equivalent attribute in%s result type, use notation 'attribute_name:header_name' to identify corresponding result type attribute.", h.Name, inview)
+				}
+				if IsArray(t) {
+					if !IsPrimitive(AsArray(t).ElemType.Type) {
+						verr.Add(e, "attribute %q used in HTTP headers must be a primitive type or an array of primitive types.", h.Name)
+					}
+				} else if !IsPrimitive(t) {
+					verr.Add(e, "attribute %q used in HTTP headers must be a primitive type or an array of primitive types.", h.Name)
 				}
 			}
 		} else if len(*AsObject(r.Headers.Type)) > 1 {
 			verr.Add(r, "response defines more than one header but result type is not an object")
+		} else if IsArray(e.MethodExpr.Result.Type) {
+			if !IsPrimitive(AsArray(e.MethodExpr.Result.Type).ElemType.Type) {
+				verr.Add(e, "Array result is mapped to an HTTP header but is not an array of primitive types.")
+			}
 		}
 	}
 	if r.Body != nil {
 		verr.Merge(r.Body.Validate("HTTP response body", r))
 		if att, ok := r.Body.Meta["origin:attribute"]; ok {
-			if !hasAttribute(att[0]) {
+			if resultAttributeType(att[0]) == nil {
 				verr.Add(r, "body %q has no equivalent attribute in%s result type", att[0], inview)
 			}
 		} else if bobj := AsObject(r.Body.Type); bobj != nil {
 			for _, n := range *bobj {
-				if !hasAttribute(n.Name) {
+				if resultAttributeType(n.Name) == nil {
 					verr.Add(r, "body %q has no equivalent attribute in%s result type", n.Name, inview)
 				}
 			}
