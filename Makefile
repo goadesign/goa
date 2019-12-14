@@ -18,17 +18,6 @@ BUILD=8
 
 GOOS=$(shell go env GOOS)
 GO_FILES=$(shell find . -type f -name '*.go')
-DIR=$(shell pwd)
-
-ifeq ($(GOOS),windows)
-EXAMPLES_DIR="$(GOPATH)\src\goa.design\examples"
-PLUGINS_DIR="$(GOPATH)\src\goa.design\plugins"
-GOBIN="$(GOPATH)\bin"
-else
-EXAMPLES_DIR=$(GOPATH)/src/goa.design/examples
-PLUGINS_DIR=$(GOPATH)/src/goa.design/plugins
-GOBIN=$(GOPATH)/bin
-endif
 
 # Only list test and build dependencies
 # Standard dependencies are installed via go get
