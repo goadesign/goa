@@ -20,6 +20,10 @@ jobs:
       run: echo "##[set-output name=branch;]$(echo ${GITHUB_REF#refs/heads/})"
       id: extract_branch
 
+    - name: Add $GOPATH/bin to PATH
+      run: echo "##[add-path]$HOME/go/bin"
+      id: setup_path
+
     - name: Build
       run: make travis
       env:

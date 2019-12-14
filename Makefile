@@ -61,9 +61,10 @@ PROTOC_EXEC="$(PROTOC)\bin\protoc.exe"
 endif
 depend:
 	@go get -v $(DEPEND)
-	@env GO111MODULE=off go get github.com/hashicorp/go-getter/cmd/go-getter && \
-		go-getter https://github.com/google/protobuf/releases/download/v$(PROTOC_VERSION)/$(PROTOC).zip $(PROTOC) && \
-		cp $(PROTOC_EXEC) $(GOBIN) && \
+	@echo Installing protoc
+	@env GO111MODULE=off go get github.com/hashicorp/go-getter/cmd/go-getter
+	go-getter https://github.com/google/protobuf/releases/download/v$(PROTOC_VERSION)/$(PROTOC).zip $(PROTOC)
+	@cp $(PROTOC_EXEC) $(HOME)/go/bin && \
 		rm -r $(PROTOC) && \
 		echo "`protoc --version`"
 	@go get -t -v ./...
