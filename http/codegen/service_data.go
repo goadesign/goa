@@ -634,7 +634,9 @@ func (d ServicesData) analyze(hs *expr.HTTPServiceExpr) *ServiceData {
 		paths := make([]string, len(s.RequestPaths))
 		for i, p := range s.RequestPaths {
 			idx := strings.LastIndex(p, "/{")
-			if idx > 0 {
+			if idx == 0 {
+				paths[i] = "/"
+			} else if idx > 0 {
 				paths[i] = p[:idx]
 			} else {
 				paths[i] = p

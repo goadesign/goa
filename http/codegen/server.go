@@ -377,11 +377,11 @@ func {{ .MountServer }}(mux goahttp.Muxer{{ if .Endpoints }}, h *{{ .ServerStruc
 	{{ .MountHandler }}(mux, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			upath := path.Clean(r.URL.Path)
 			rpath := upath
-			{{- range .RequestPaths }}
+			{{- range .RequestPaths }}{{ if ne . "/" }}
 			if strings.HasPrefix(upath, "{{ . }}") {
 				rpath = upath[{{ len . }}:]
 			}
-			{{- end }}
+			{{- end }}{{ end }}
 			http.ServeFile(w, r, path.Join({{ printf "%q" .FilePath }}, rpath))
 		}))
 	 	{{- else }}
@@ -413,8 +413,8 @@ const fileServerT = `{{ printf "%s configures the mux to serve GET request made 
 func {{ .MountHandler }}(mux goahttp.Muxer, h http.Handler) {
 	{{- if .IsDir }}
 		{{- range .RequestPaths }}
-	mux.Handle("GET", "{{ . }}/", h.ServeHTTP)
-	mux.Handle("GET", "{{ . }}/*{{ $.PathParam }}", h.ServeHTTP)
+	mux.Handle("GET", "{{ . }}{{if ne . "/"}}/{{end}}", h.ServeHTTP)
+	mux.Handle("GET", "{{ . }}{{if ne . "/"}}/{{end}}*{{ $.PathParam }}", h.ServeHTTP)
 		{{- end }}
 	{{- else }}
 		{{- range .RequestPaths }}
