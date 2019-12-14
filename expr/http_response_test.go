@@ -20,8 +20,10 @@ func TestHTTPResponseValidation(t *testing.T) {
 		{"string result", stringResultResponseWithTextContentTypeDSL, ""},
 		{"object result", objectResultResponseWithHeadersDSL, ""},
 		{"array result", arrayResultResponseWithHeadersDSL, ""},
-		{"map result", mapResultResponseWithHeadersDSL, ""},
+		{"map result", mapResultResponseWithHeadersDSL, `service "MapResultResponseWithHeaders" HTTP endpoint "Method": attribute "foo" used in HTTP headers must be a primitive type or an array of primitive types.`},
 		{"invalid", emptyResultResponseWithHeadersDSL, `HTTP response of service "EmptyResultResponseWithHeaders" HTTP endpoint "Method": response defines headers but result is empty`},
+		{"implicit object in header", implicitObjectResultResponseWithHeadersDSL, `service "ArrayObjectResultResponseWithHeaders" HTTP endpoint "Method": attribute "foo" used in HTTP headers must be a primitive type or an array of primitive types.`},
+		{"array of object in header", arrayObjectResultResponseWithHeadersDSL, `service "ArrayObjectResultResponseWithHeaders" HTTP endpoint "Method": Array result is mapped to an HTTP header but is not an array of primitive types.`},
 		{"not string or []byte", intResultResponseWithTextContentTypeDSL, `HTTP response of service "StringResultResponseWithHeaders" HTTP endpoint "Method": Result type must be String or Bytes when ContentType is 'text/plain'`},
 	}
 	for _, c := range cases {
@@ -104,6 +106,42 @@ var objectResultResponseWithHeadersDSL = func() {
 			Result(func() {
 				Attribute("foo", String)
 			})
+			HTTP(func() {
+				POST("/")
+				Response(func() {
+					Header("foo:Location")
+				})
+			})
+		})
+	})
+}
+
+var implicitObjectResultResponseWithHeadersDSL = func() {
+	Service("ArrayObjectResultResponseWithHeaders", func() {
+		Method("Method", func() {
+			Result(func() {
+				Attribute("foo", func() {
+					Attribute("bar", String)
+					Attribute("baz", String)
+				})
+			})
+			HTTP(func() {
+				POST("/")
+				Response(func() {
+					Header("foo:Location")
+				})
+			})
+		})
+	})
+}
+
+var arrayObjectResultResponseWithHeadersDSL = func() {
+	var Obj = Type("Obj", func() {
+		Attribute("foo", String)
+	})
+	Service("ArrayObjectResultResponseWithHeaders", func() {
+		Method("Method", func() {
+			Result(ArrayOf(Obj))
 			HTTP(func() {
 				POST("/")
 				Response(func() {

@@ -388,6 +388,9 @@ func (e *HTTPEndpointExpr) Validate() error {
 			if hasParams {
 				verr.Add(e, "Payload type is array but HTTP endpoint defines both route or query string parameters and headers. At most one parameter or header must be defined and it must be of type array.")
 			}
+			if !IsPrimitive(AsArray(e.MethodExpr.Payload.Type).ElemType.Type) {
+				verr.Add(e, "Array payloads used in HTTP headers must be of arrays of primitive types.")
+			}
 		}
 		if e.Body != nil && e.Body.Type != Empty {
 			if e.MultipartRequest {
