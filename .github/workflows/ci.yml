@@ -21,7 +21,7 @@ jobs:
       id: extract_branch
 
     - name: Add $GOPATH/bin to PATH
-      run: echo "::add-path::$HOME/go/bin"
+      run: echo "::add-path::$(go env GOPATH)/bin"
       id: setup_path
 
     - name: Build
@@ -50,7 +50,7 @@ jobs:
 
     - name: Add $GOPATH/bin to PATH
       shell: bash
-      run: echo "::add-path::$USERPROFILE\\go\\bin"
+      run: echo "::add-path::$(go env GOPATH)/bin"
       id: setup_path
 
     - name: Build
