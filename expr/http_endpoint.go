@@ -192,18 +192,23 @@ func (e *HTTPEndpointExpr) Prepare() {
 			c.Prepare()
 			if !e.HasAbsoluteRoutes() {
 				headers.Merge(c.Headers)
-				params.Merge(c.PathParams())
+				cpp := c.PathParams()
+				params.Merge(cpp)
 
 				// Inherit attributes for path params from parent service
-				WalkMappedAttr(c.PathParams(), func(name, _ string, _ *AttributeExpr) error {
+				WalkMappedAttr(cpp, func(name, _ string, _ *AttributeExpr) error {
 					if att := c.MethodExpr.Payload.Find(name); att != nil {
 						if e.MethodExpr.Payload.Type == Empty {
 							e.MethodExpr.Payload.Type = &Object{}
 						}
-						if o := AsObject(e.MethodExpr.Payload.Type); o != nil {
-							if o.Attribute(name) == nil {
-								o.Set(name, att)
+						if o := AsObject(e.MethodExpr.Payload.Type); o != nil && o.Attribute(name) == nil {
+							if c.MethodExpr.Payload.IsRequired(name) {
+								if e.MethodExpr.Payload.Validation == nil {
+									e.MethodExpr.Payload.Validation = &ValidationExpr{}
+								}
+								e.MethodExpr.Payload.Validation.Required = append(e.MethodExpr.Payload.Validation.Required, name)
 							}
+							o.Set(name, att)
 						}
 					}
 					return nil
