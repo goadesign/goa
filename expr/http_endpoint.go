@@ -206,7 +206,7 @@ func (e *HTTPEndpointExpr) Prepare() {
 								if e.MethodExpr.Payload.Validation == nil {
 									e.MethodExpr.Payload.Validation = &ValidationExpr{}
 								}
-								e.MethodExpr.Payload.Validation.Required = append(e.MethodExpr.Payload.Validation.Required, name)
+								e.MethodExpr.Payload.Validation.AddRequired(name)
 							}
 							o.Set(name, att)
 						}
