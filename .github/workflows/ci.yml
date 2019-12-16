@@ -1,0 +1,59 @@
+name: Build
+on: [push]
+jobs:
+
+  Linux:
+    name: Linux
+    runs-on: ubuntu-latest
+    steps:
+
+    - name: Set up Go 1.13
+      uses: actions/setup-go@v1
+      with:
+        go-version: 1.13
+      id: go
+
+    - name: Check out code into the Go module directory
+      uses: actions/checkout@v2    
+
+    - name: Extract branch name
+      run: echo "::set-output name=branch::$(echo ${GITHUB_REF#refs/heads/})"
+      id: extract_branch
+
+    - name: Add $GOPATH/bin to PATH
+      run: echo "::add-path::$(go env GOPATH)/bin"
+      id: setup_path
+
+    - name: Build
+      run: make travis
+      env:
+        GOA_BRANCH: ${{ steps.extract_branch.outputs.branch }}
+
+  Windows:
+    name: Windows
+    runs-on: windows-latest
+    steps:
+
+    - name: Set up Go 1.13
+      uses: actions/setup-go@v1
+      with:
+        go-version: 1.13
+      id: go
+
+    - name: Check out code into the Go module directory
+      uses: actions/checkout@v2    
+
+    - name: Extract branch name
+      shell: bash
+      run: echo "::set-output name=branch::$(echo ${GITHUB_REF#refs/heads/})"
+      id: extract_branch
+
+    - name: Add $GOPATH/bin to PATH
+      shell: bash
+      run: echo "::add-path::$(go env GOPATH)/bin"
+      id: setup_path
+
+    - name: Build
+      run: make travis
+      env:
+        GOA_BRANCH: ${{ steps.extract_branch.outputs.branch }}

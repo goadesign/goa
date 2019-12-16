@@ -1,6 +1,7 @@
 package service
 
 import (
+	"go/build"
 	"os"
 	"reflect"
 	"testing"
@@ -59,7 +60,11 @@ func TestCommonPath(t *testing.T) {
 }
 
 func TestPkgImport(t *testing.T) {
-	cwd := os.Getenv("GOPATH") + "/src/goa.design/goa/codegen/service"
+	gopath := os.Getenv("GOPATH")
+	if gopath == "" {
+		gopath = build.Default.GOPATH
+	}
+	cwd := gopath + "/src/goa.design/goa/codegen/service"
 	goModCwd := "/home/user/project/goa/codegen/service"
 	cases := []struct {
 		Name           string
