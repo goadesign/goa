@@ -7,7 +7,8 @@ design-first approach.
 
 ---
 [![Build Status](https://github.com/goadesign/goa/workflows/build/badge.svg?branch=v3)](https://github.com/goadesign/goa/actions?query=branch%3Av3)
-[![Godoc](https://godoc.org/goa.design/goa?status.svg)](https://godoc.org/goa.design/goa)
+[![Godoc Packages](https://img.shields.io/badge/godoc-packages-blue)](https://pkg.go.dev/mod/goa.design/goa/v3?tab=packages)
+[![Godoc DSL](https://img.shields.io/badge/godoc-DSL-blue)](https://pkg.go.dev/goa.design/goa/v3@v3.0.8/dsl?tab=doc)
 [![Slack](https://img.shields.io/badge/slack-gophers-orange.svg?style=flat)](https://gophers.slack.com/messages/goa/)
 
 ## Overview
@@ -47,32 +48,23 @@ invoking the client code.
 
 ## Installation
 
-Assuming you have a working [Go](https://golang.org) setup, and are in a
-directory where a `go.mod` file is present:
+Assuming you have a working [Go](https://golang.org) setup, and are using Go
+modules:
 
 ```bash
-export GO111MODULE=on
-go get -u goa.design/goa/v3
-go get -u goa.design/goa/v3/...
-```
-
-If you don't have a `go.mod` file present, and only want to install the
-Goa command globally:
-
-```bash
-go get -u goa.design/goa/v3/cmd/goa
+env GO111MODULE=on go get -u goa.design/goa/v3/...@v3
 ```
 
 Alternatively, when NOT using Go modules (this installs Goa v2, see below):
 
 ```bash
-go get -u goa.design/goa/...
+env GO111MODULE=off go get -u goa.design/goa/...
 ```
 
 ### Goa Versions and Go Module Support
 
-Goa v2 and Goa v3 are functionally the exact same. The only addition provided by
-Goa v3 is Go module support. Goa v3 requires Go v1.11 or above, it also requires
+Goa v2 and Goa v3 are functionally identical. The only addition in Goa v3 is
+support for Go modules.  Goa v3 requires Go v1.11 or above, it also requires
 projects that use Goa to be within modules.
 
 Projects that use Goa v3 use `goa.design/goa/v3` as root package import path
@@ -83,7 +75,7 @@ Note that the Goa v3 tool is backwards compatible and can generate code for v2
 designs. This means that you don't need to swap the tool to generate code for
 designs using v2 or v3 (designs using v1 use a different tool altogether).
 
-### Vendoring
+#### Vendoring
 
 Since Goa generates and compiles code vendoring tools are not able to
 automatically identify all the dependencies. In particular the `generator`
