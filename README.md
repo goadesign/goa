@@ -6,7 +6,7 @@ Goa is a framework for building micro-services and APIs in Go using a unique
 design-first approach.
 
 ---
-[![Build Status](https://github.com/goadesign/goa/workflows/Build/badge.svg?branch=v3)](https://github.com/goadesign/goa/actions?query=branch%3Av3)
+[![Build Status](https://github.com/goadesign/goa/workflows/build/badge.svg?branch=v3)](https://github.com/goadesign/goa/actions?query=branch%3Av3)
 [![Godoc](https://godoc.org/goa.design/goa?status.svg)](https://godoc.org/goa.design/goa)
 [![Slack](https://img.shields.io/badge/slack-gophers-orange.svg?style=flat)](https://gophers.slack.com/messages/goa/)
 
