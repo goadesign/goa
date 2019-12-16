@@ -1,5 +1,3 @@
-#
-
 ![Goa logo](https://goa.design/img/goa-logo.svg "Goa")
 
 Goa is a framework for building micro-services and APIs in Go using a unique
