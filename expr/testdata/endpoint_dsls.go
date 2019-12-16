@@ -252,15 +252,35 @@ var EndpointExtendToken = func() {
 }
 
 var EndpointHasParent = func() {
+	Service("Ancestor", func() {
+		HTTP(func() {
+			Path("/ancestor")
+			CanonicalMethod("Method")
+		})
+		Method("Method", func() {
+			Payload(func() {
+				Attribute("ancestor_id", Int)
+				Attribute("query_0", String)
+				Required("ancestor_id")
+			})
+			HTTP(func() {
+				GET("/{ancestor_id}")
+				Param("query_0")
+			})
+		})
+
+	})
 	Service("Parent", func() {
 		HTTP(func() {
 			Path("/parents")
 			CanonicalMethod("Method")
+			Parent("Ancestor")
 		})
 		Method("Method", func() {
 			Payload(func() {
 				Attribute("parent_id", Int)
 				Attribute("query_1", String)
+				Required("parent_id")
 			})
 			HTTP(func() {
 				GET("/{parent_id}")
