@@ -168,6 +168,24 @@ func TestHTTPEndpointValidation(t *testing.T) {
 	}
 }
 
+func TestHTTPEndpointParentRequired(t *testing.T) {
+	root := expr.RunDSL(t, testdata.EndpointHasParent)
+	svc := root.Service("Child")
+	if svc == nil {
+		t.Fatal(`unexpected error, service "Child" not found`)
+	}
+	m := svc.Method("Method")
+	if m == nil {
+		t.Fatal(`unexpected error, method "Method" not found`)
+	}
+	if !m.Payload.IsRequired("ancestor_id") {
+		t.Errorf(`expected "ancestor_id" is required, but not so`)
+	}
+	if !m.Payload.IsRequired("parent_id") {
+		t.Errorf(`expected "parent_id" is required, but not so`)
+	}
+}
+
 func TestHTTPEndpointFinalization(t *testing.T) {
 	cases := map[string]struct {
 		DSL          func()
