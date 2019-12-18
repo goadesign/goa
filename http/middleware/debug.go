@@ -62,7 +62,7 @@ func Debug(mux goahttp.Muxer, w io.Writer) func(http.Handler) http.Handler {
 			}
 			sort.Strings(keys)
 			for _, k := range keys {
-				buf.WriteString(fmt.Sprintf("\n> [%s] %s: %s", reqID, k, strings.Join(r.Header[k], ", ")))
+				buf.WriteString(fmt.Sprintf("\n> [%s] %s: %s", reqID, k, params[k]))
 			}
 
 			// Request body
