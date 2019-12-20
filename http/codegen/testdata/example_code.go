@@ -39,6 +39,15 @@ func handleHTTPServer(ctx context.Context, u *url.URL, serviceEndpoints *service
 	{
 		eh := errorHandler(logger)
 		serviceServer = servicesvr.New(serviceEndpoints, mux, dec, enc, eh, nil)
+		if debug {
+			for _, server := range []interface {
+				Use(func(http.Handler) http.Handler)
+			}{
+				serviceServer,
+			} {
+				server.Use(httpmdlwr.Debug(mux, os.Stdout))
+			}
+		}
 	}
 	// Configure the mux.
 	servicesvr.Mount(mux, serviceServer)
@@ -47,9 +56,6 @@ func handleHTTPServer(ctx context.Context, u *url.URL, serviceEndpoints *service
 	// here apply to all the service endpoints.
 	var handler http.Handler = mux
 	{
-		if debug {
-			handler = httpmdlwr.Debug(mux, os.Stdout)(handler)
-		}
 		handler = httpmdlwr.Log(adapter)(handler)
 		handler = httpmdlwr.RequestID()(handler)
 	}
@@ -132,6 +138,15 @@ func handleHTTPServer(ctx context.Context, u *url.URL, wg *sync.WaitGroup, errc 
 	{
 		eh := errorHandler(logger)
 		serviceServer = servicesvr.New(nil, mux, dec, enc, eh, nil)
+		if debug {
+			for _, server := range []interface {
+				Use(func(http.Handler) http.Handler)
+			}{
+				serviceServer,
+			} {
+				server.Use(httpmdlwr.Debug(mux, os.Stdout))
+			}
+		}
 	}
 	// Configure the mux.
 	servicesvr.Mount(mux)
@@ -140,9 +155,6 @@ func handleHTTPServer(ctx context.Context, u *url.URL, wg *sync.WaitGroup, errc 
 	// here apply to all the service endpoints.
 	var handler http.Handler = mux
 	{
-		if debug {
-			handler = httpmdlwr.Debug(mux, os.Stdout)(handler)
-		}
 		handler = httpmdlwr.Log(adapter)(handler)
 		handler = httpmdlwr.RequestID()(handler)
 	}
@@ -225,6 +237,15 @@ func handleHTTPServer(ctx context.Context, u *url.URL, serviceEndpoints *service
 	{
 		eh := errorHandler(logger)
 		serviceServer = servicesvr.New(serviceEndpoints, mux, dec, enc, eh, nil)
+		if debug {
+			for _, server := range []interface {
+				Use(func(http.Handler) http.Handler)
+			}{
+				serviceServer,
+			} {
+				server.Use(httpmdlwr.Debug(mux, os.Stdout))
+			}
+		}
 	}
 	// Configure the mux.
 	servicesvr.Mount(mux, serviceServer)
@@ -233,9 +254,6 @@ func handleHTTPServer(ctx context.Context, u *url.URL, serviceEndpoints *service
 	// here apply to all the service endpoints.
 	var handler http.Handler = mux
 	{
-		if debug {
-			handler = httpmdlwr.Debug(mux, os.Stdout)(handler)
-		}
 		handler = httpmdlwr.Log(adapter)(handler)
 		handler = httpmdlwr.RequestID()(handler)
 	}
@@ -320,6 +338,16 @@ func handleHTTPServer(ctx context.Context, u *url.URL, serviceEndpoints *service
 		eh := errorHandler(logger)
 		serviceServer = servicesvr.New(serviceEndpoints, mux, dec, enc, eh, nil)
 		anotherServiceServer = anotherservicesvr.New(anotherServiceEndpoints, mux, dec, enc, eh, nil)
+		if debug {
+			for _, server := range []interface {
+				Use(func(http.Handler) http.Handler)
+			}{
+				serviceServer,
+				anotherServiceServer,
+			} {
+				server.Use(httpmdlwr.Debug(mux, os.Stdout))
+			}
+		}
 	}
 	// Configure the mux.
 	servicesvr.Mount(mux, serviceServer)
@@ -329,9 +357,6 @@ func handleHTTPServer(ctx context.Context, u *url.URL, serviceEndpoints *service
 	// here apply to all the service endpoints.
 	var handler http.Handler = mux
 	{
-		if debug {
-			handler = httpmdlwr.Debug(mux, os.Stdout)(handler)
-		}
 		handler = httpmdlwr.Log(adapter)(handler)
 		handler = httpmdlwr.RequestID()(handler)
 	}
@@ -420,6 +445,16 @@ func handleHTTPServer(ctx context.Context, u *url.URL, streamingServiceAEndpoint
 		upgrader := &websocket.Upgrader{}
 		streamingServiceAServer = streamingserviceasvr.New(streamingServiceAEndpoints, mux, dec, enc, eh, nil, upgrader, nil)
 		streamingServiceBServer = streamingservicebsvr.New(streamingServiceBEndpoints, mux, dec, enc, eh, nil, upgrader, nil)
+		if debug {
+			for _, server := range []interface {
+				Use(func(http.Handler) http.Handler)
+			}{
+				streamingServiceAServer,
+				streamingServiceBServer,
+			} {
+				server.Use(httpmdlwr.Debug(mux, os.Stdout))
+			}
+		}
 	}
 	// Configure the mux.
 	streamingserviceasvr.Mount(mux, streamingServiceAServer)
@@ -429,9 +464,6 @@ func handleHTTPServer(ctx context.Context, u *url.URL, streamingServiceAEndpoint
 	// here apply to all the service endpoints.
 	var handler http.Handler = mux
 	{
-		if debug {
-			handler = httpmdlwr.Debug(mux, os.Stdout)(handler)
-		}
 		handler = httpmdlwr.Log(adapter)(handler)
 		handler = httpmdlwr.RequestID()(handler)
 	}
