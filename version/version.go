@@ -12,7 +12,7 @@ const (
 	// Minor version number
 	Minor = 4
 	// Build version number
-	Build = 2
+	Build = 3
 )
 
 // String returns the complete version number.
