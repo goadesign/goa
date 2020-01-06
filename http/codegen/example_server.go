@@ -258,15 +258,12 @@ func handleHTTPServer(ctx context.Context, u *url.URL{{ range $.Services }}{{ if
 	{{- end }}
 	{{- if .Services }}
 		if debug {
-			for _, server := range []interface {
-				Use(func(http.Handler) http.Handler)
-			}{
+			servers := goahttp.Servers{
 				{{- range $svc := .Services }}
 				{{ .Service.VarName }}Server,
 				{{- end }}
-			} {
-				server.Use(httpmdlwr.Debug(mux, os.Stdout))
 			}
+			servers.Use(httpmdlwr.Debug(mux, os.Stdout))
 		}
 	{{- end }}
 	}

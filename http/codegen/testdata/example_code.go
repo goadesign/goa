@@ -40,13 +40,10 @@ func handleHTTPServer(ctx context.Context, u *url.URL, serviceEndpoints *service
 		eh := errorHandler(logger)
 		serviceServer = servicesvr.New(serviceEndpoints, mux, dec, enc, eh, nil)
 		if debug {
-			for _, server := range []interface {
-				Use(func(http.Handler) http.Handler)
-			}{
+			servers := goahttp.Servers{
 				serviceServer,
-			} {
-				server.Use(httpmdlwr.Debug(mux, os.Stdout))
 			}
+			servers.Use(httpmdlwr.Debug(mux, os.Stdout))
 		}
 	}
 	// Configure the mux.
@@ -139,13 +136,10 @@ func handleHTTPServer(ctx context.Context, u *url.URL, wg *sync.WaitGroup, errc 
 		eh := errorHandler(logger)
 		serviceServer = servicesvr.New(nil, mux, dec, enc, eh, nil)
 		if debug {
-			for _, server := range []interface {
-				Use(func(http.Handler) http.Handler)
-			}{
+			servers := goahttp.Servers{
 				serviceServer,
-			} {
-				server.Use(httpmdlwr.Debug(mux, os.Stdout))
 			}
+			servers.Use(httpmdlwr.Debug(mux, os.Stdout))
 		}
 	}
 	// Configure the mux.
@@ -238,13 +232,10 @@ func handleHTTPServer(ctx context.Context, u *url.URL, serviceEndpoints *service
 		eh := errorHandler(logger)
 		serviceServer = servicesvr.New(serviceEndpoints, mux, dec, enc, eh, nil)
 		if debug {
-			for _, server := range []interface {
-				Use(func(http.Handler) http.Handler)
-			}{
+			servers := goahttp.Servers{
 				serviceServer,
-			} {
-				server.Use(httpmdlwr.Debug(mux, os.Stdout))
 			}
+			servers.Use(httpmdlwr.Debug(mux, os.Stdout))
 		}
 	}
 	// Configure the mux.
@@ -339,14 +330,11 @@ func handleHTTPServer(ctx context.Context, u *url.URL, serviceEndpoints *service
 		serviceServer = servicesvr.New(serviceEndpoints, mux, dec, enc, eh, nil)
 		anotherServiceServer = anotherservicesvr.New(anotherServiceEndpoints, mux, dec, enc, eh, nil)
 		if debug {
-			for _, server := range []interface {
-				Use(func(http.Handler) http.Handler)
-			}{
+			servers := goahttp.Servers{
 				serviceServer,
 				anotherServiceServer,
-			} {
-				server.Use(httpmdlwr.Debug(mux, os.Stdout))
 			}
+			servers.Use(httpmdlwr.Debug(mux, os.Stdout))
 		}
 	}
 	// Configure the mux.
@@ -446,14 +434,11 @@ func handleHTTPServer(ctx context.Context, u *url.URL, streamingServiceAEndpoint
 		streamingServiceAServer = streamingserviceasvr.New(streamingServiceAEndpoints, mux, dec, enc, eh, nil, upgrader, nil)
 		streamingServiceBServer = streamingservicebsvr.New(streamingServiceBEndpoints, mux, dec, enc, eh, nil, upgrader, nil)
 		if debug {
-			for _, server := range []interface {
-				Use(func(http.Handler) http.Handler)
-			}{
+			servers := goahttp.Servers{
 				streamingServiceAServer,
 				streamingServiceBServer,
-			} {
-				server.Use(httpmdlwr.Debug(mux, os.Stdout))
 			}
+			servers.Use(httpmdlwr.Debug(mux, os.Stdout))
 		}
 	}
 	// Configure the mux.
