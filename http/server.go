@@ -9,7 +9,7 @@ type (
 		Use(func(http.Handler) http.Handler)
 	}
 
-	// Servers is a list of server.
+	// Servers is a list of servers.
 	Servers []Server
 )
 
