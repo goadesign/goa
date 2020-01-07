@@ -256,6 +256,16 @@ func handleHTTPServer(ctx context.Context, u *url.URL{{ range $.Services }}{{ if
 		{{ .Service.VarName }}Server = {{ .Service.PkgName }}svr.New(nil, mux, dec, enc, eh, nil)
 		{{-  end }}
 	{{- end }}
+	{{- if .Services }}
+		if debug {
+			servers := goahttp.Servers{
+				{{- range $svc := .Services }}
+				{{ .Service.VarName }}Server,
+				{{- end }}
+			}
+			servers.Use(httpmdlwr.Debug(mux, os.Stdout))
+		}
+	{{- end }}
 	}
 	// Configure the mux.
 	{{- range .Services }}
@@ -268,9 +278,6 @@ func handleHTTPServer(ctx context.Context, u *url.URL{{ range $.Services }}{{ if
 	// here apply to all the service endpoints.
 	var handler http.Handler = mux
 	{
-		if debug {
-			handler = httpmdlwr.Debug(mux, os.Stdout)(handler)
-		}
 		handler = httpmdlwr.Log(adapter)(handler)
 		handler = httpmdlwr.RequestID()(handler)
 	}
