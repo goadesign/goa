@@ -13,6 +13,8 @@ require (
 	github.com/sergi/go-diff v1.1.0
 	github.com/zach-klippenstein/goregen v0.0.0-20160303162051-795b5e3961ea
 	golang.org/x/tools v0.0.0-20200110213125-a7a6caa82ab2
-	google.golang.org/grpc v1.26.0
+	google.golang.org/grpc v1.20.1
 	gopkg.in/yaml.v2 v2.2.7
 )
+
+replace google.golang.org/grpc => google.golang.org/grpc v1.20.1
