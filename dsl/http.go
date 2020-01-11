@@ -49,7 +49,7 @@ const (
 	StatusPreconditionFailed           = expr.StatusPreconditionFailed
 	StatusRequestEntityTooLarge        = expr.StatusRequestEntityTooLarge
 	StatusRequestURITooLong            = expr.StatusRequestURITooLong
-	StatusUnsupportedResultType        = expr.StatusUnsupportedResultType
+	StatusUnsupportedMediaType         = expr.StatusUnsupportedMediaType
 	StatusRequestedRangeNotSatisfiable = expr.StatusRequestedRangeNotSatisfiable
 	StatusExpectationFailed            = expr.StatusExpectationFailed
 	StatusTeapot                       = expr.StatusTeapot
