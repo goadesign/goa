@@ -25,6 +25,8 @@ func TestHTTPResponseValidation(t *testing.T) {
 		{"implicit object in header", implicitObjectResultResponseWithHeadersDSL, `service "ArrayObjectResultResponseWithHeaders" HTTP endpoint "Method": attribute "foo" used in HTTP headers must be a primitive type or an array of primitive types.`},
 		{"array of object in header", arrayObjectResultResponseWithHeadersDSL, `service "ArrayObjectResultResponseWithHeaders" HTTP endpoint "Method": Array result is mapped to an HTTP header but is not an array of primitive types.`},
 		{"not string or []byte", intResultResponseWithTextContentTypeDSL, `HTTP response of service "StringResultResponseWithHeaders" HTTP endpoint "Method": Result type must be String or Bytes when ContentType is 'text/plain'`},
+		{"missing header result attribute", missingHeaderResultAttributeDSL, `HTTP response of service "MissingHeaderResultAttribute" HTTP endpoint "Method": header "bar" has no equivalent attribute in result type, use notation 'attribute_name:header_name' to identify corresponding result type attribute.
+service "MissingHeaderResultAttribute" HTTP endpoint "Method": attribute "bar" used in HTTP headers must be a primitive type or an array of primitive types.`},
 	}
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
@@ -205,6 +207,22 @@ var intResultResponseWithTextContentTypeDSL = func() {
 				POST("/")
 				Response(func() {
 					ContentType("text/plain")
+				})
+			})
+		})
+	})
+}
+
+var missingHeaderResultAttributeDSL = func() {
+	Service("MissingHeaderResultAttribute", func() {
+		Method("Method", func() {
+			Result(func() {
+				Attribute("foo")
+			})
+			HTTP(func() {
+				POST("/")
+				Response(func() {
+					Header("bar")
 				})
 			})
 		})

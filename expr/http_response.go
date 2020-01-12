@@ -155,7 +155,11 @@ func (r *HTTPResponseExpr) Validate(e *HTTPEndpointExpr) *eval.ValidationErrors 
 			return nil
 		}
 		if !isrt {
-			return e.MethodExpr.Result.Find(name).Type
+			att := e.MethodExpr.Result.Find(name)
+			if att == nil || att.Type == nil {
+				return nil
+			}
+			return att.Type
 		}
 		if v, ok := e.MethodExpr.Result.Meta["view"]; ok {
 			v := rt.View(v[0])
