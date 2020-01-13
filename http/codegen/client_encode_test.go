@@ -99,6 +99,10 @@ func TestClientEncode(t *testing.T) {
 		{"header-string-validate", testdata.PayloadHeaderStringValidateDSL, testdata.PayloadHeaderStringValidateEncodeCode},
 		{"header-array-string", testdata.PayloadHeaderArrayStringDSL, testdata.PayloadHeaderArrayStringEncodeCode},
 		{"header-array-string-validate", testdata.PayloadHeaderArrayStringValidateDSL, testdata.PayloadHeaderArrayStringValidateEncodeCode},
+		{"header-int", testdata.PayloadHeaderIntDSL, testdata.PayloadHeaderIntEncodeCode},
+		{"header-int-validate", testdata.PayloadHeaderIntValidateDSL, testdata.PayloadHeaderIntValidateEncodeCode},
+		{"header-array-int", testdata.PayloadHeaderArrayIntDSL, testdata.PayloadHeaderArrayIntEncodeCode},
+		{"header-array-int-validate", testdata.PayloadHeaderArrayIntValidateDSL, testdata.PayloadHeaderArrayIntValidateEncodeCode},
 
 		{"header-primitive-string-validate", testdata.PayloadHeaderPrimitiveStringValidateDSL, testdata.PayloadHeaderPrimitiveStringValidateEncodeCode},
 		{"header-primitive-bool-validate", testdata.PayloadHeaderPrimitiveBoolValidateDSL, testdata.PayloadHeaderPrimitiveBoolValidateEncodeCode},

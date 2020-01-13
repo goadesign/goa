@@ -1567,6 +1567,66 @@ var PayloadHeaderArrayStringValidateDSL = func() {
 	})
 }
 
+var PayloadHeaderIntDSL = func() {
+	Service("ServiceHeaderInt", func() {
+		Method("MethodHeaderInt", func() {
+			Payload(func() {
+				Attribute("h", Int)
+			})
+			HTTP(func() {
+				GET("/")
+				Header("h")
+			})
+		})
+	})
+}
+
+var PayloadHeaderIntValidateDSL = func() {
+	Service("ServiceHeaderIntValidate", func() {
+		Method("MethodHeaderIntValidate", func() {
+			Payload(func() {
+				Attribute("h", Int, func() {
+					Enum(1, 2)
+				})
+			})
+			HTTP(func() {
+				GET("/")
+				Header("h")
+			})
+		})
+	})
+}
+
+var PayloadHeaderArrayIntDSL = func() {
+	Service("ServiceHeaderArrayInt", func() {
+		Method("MethodHeaderArrayInt", func() {
+			Payload(func() {
+				Attribute("h", ArrayOf(Int))
+			})
+			HTTP(func() {
+				GET("/")
+				Header("h")
+			})
+		})
+	})
+}
+
+var PayloadHeaderArrayIntValidateDSL = func() {
+	Service("ServiceHeaderArrayIntValidate", func() {
+		Method("MethodHeaderArrayIntValidate", func() {
+			Payload(func() {
+				Attribute("h", ArrayOf(Int, func() {
+					Enum(1, 2)
+				}))
+			})
+			HTTP(func() {
+				GET("/")
+				Header("h")
+			})
+		})
+	})
+}
+
 var PayloadHeaderPrimitiveStringValidateDSL = func() {
 	Service("ServiceHeaderPrimitiveStringValidate", func() {
 		Method("MethodHeaderPrimitiveStringValidate", func() {

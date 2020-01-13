@@ -415,19 +415,34 @@ func {{ .RequestEncoder }}(encoder func(*http.Request) goahttp.Encoder) func(*ht
 		{{- if .FieldName }}
 			{{- if .FieldPointer }}
 		if p.{{ .FieldName }} != nil {
+			{{- else }}
+			{
 			{{- end }}
 			{{- if (and (eq .Name "Authorization") (isBearer $.HeaderSchemes)) }}
 		if !strings.Contains({{ if .FieldPointer }}*{{ end }}p.{{ .FieldName }}, " ") {
 			req.Header.Set({{ printf "%q" .Name }}, "Bearer "+{{ if .FieldPointer }}*{{ end }}p.{{ .FieldName }})
 		} else {
 			{{- end }}
-			req.Header.Set({{ printf "%q" .Name }}, {{ if .FieldPointer }}*{{ end }}p.{{ .FieldName }})
+			head := {{ if .FieldPointer }}*{{ end }}p.{{ .FieldName }}
+			{{- if eq .Type.Name "array" }}
+			for _, val := range head {
+				{{- if eq .Type.ElemType.Type.Name "string" }}
+				req.Header.Add({{ printf "%q" .Name }}, val)
+				{{- else }}
+				{{ template "type_conversion" (typeConversionData .Type.ElemType.Type "valStr" "val") }}
+				req.Header.Add({{ printf "%q" .Name }}, valStr)
+				{{- end }}
+			}
+			{{- else if eq .Type.Name "string" }}
+			req.Header.Set({{ printf "%q" .Name }}, head)
+			{{- else }}
+			{{ template "type_conversion" (typeConversionData .Type "headStr" "head") }}
+			req.Header.Set({{ printf "%q" .Name }}, headStr)
+			{{- end }}
 			{{- if (and (eq .Name "Authorization") (isBearer $.HeaderSchemes)) }}
 		}
 			{{- end }}
-			{{- if .FieldPointer }}
 		}
-			{{- end }}
 		{{- end }}
 	{{- end }}
 	{{- if or .Payload.Request.QueryParams }}
