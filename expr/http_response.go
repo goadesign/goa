@@ -48,7 +48,7 @@ const (
 	StatusPreconditionFailed           = 412 // RFC 7232, 4.2
 	StatusRequestEntityTooLarge        = 413 // RFC 7231, 6.5.11
 	StatusRequestURITooLong            = 414 // RFC 7231, 6.5.12
-	StatusUnsupportedResultType        = 415 // RFC 7231, 6.5.13
+	StatusUnsupportedMediaType         = 415 // RFC 7231, 6.5.13
 	StatusRequestedRangeNotSatisfiable = 416 // RFC 7233, 4.4
 	StatusExpectationFailed            = 417 // RFC 7231, 6.5.14
 	StatusTeapot                       = 418 // RFC 7168, 2.3.3
@@ -155,7 +155,11 @@ func (r *HTTPResponseExpr) Validate(e *HTTPEndpointExpr) *eval.ValidationErrors 
 			return nil
 		}
 		if !isrt {
-			return e.MethodExpr.Result.Find(name).Type
+			att := e.MethodExpr.Result.Find(name)
+			if att == nil || att.Type == nil {
+				return nil
+			}
+			return att.Type
 		}
 		if v, ok := e.MethodExpr.Result.Meta["view"]; ok {
 			v := rt.View(v[0])
