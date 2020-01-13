@@ -27,7 +27,8 @@ DEPEND=\
 	golang.org/x/tools/cmd/goimports \
 	github.com/golang/protobuf/protoc-gen-go \
 	github.com/golang/protobuf/proto \
-	honnef.co/go/tools/cmd/staticcheck
+	honnef.co/go/tools/cmd/staticcheck \
+	github.com/hashicorp/go-getter/cmd/go-getter
 
 all: lint test
 
@@ -51,14 +52,15 @@ GOPATH:=$(subst \,/,$(GOPATH))
 	endif
 endif
 depend:
-	@go get -v $(DEPEND)
-	@echo Installing protoc
-	@env GO111MODULE=off go get github.com/hashicorp/go-getter/cmd/go-getter
+	@echo donwloading dependencies
+	@go mod download
+	@go get -v $(DEPEND) # Additional development dependencies
+	@echo installing protoc
 	go-getter https://github.com/google/protobuf/releases/download/v$(PROTOC_VERSION)/$(PROTOC).zip $(PROTOC)
 	@cp $(PROTOC_EXEC) $(GOPATH)/bin && \
 		rm -r $(PROTOC) && \
 		echo "`protoc --version`"
-	@go get -t -v ./...
+	@echo done installing dependencies
 
 lint:
 ifneq ($(GOOS),windows)
