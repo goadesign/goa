@@ -138,11 +138,8 @@ func Attribute(name string, args ...interface{}) {
 
 	var attr *expr.AttributeExpr
 	{
-		for _, ref := range parent.References {
-			if att := expr.AsObject(ref).Attribute(name); att != nil {
-				attr = expr.DupAtt(att)
-				break
-			}
+		if ref := parent.Find(name); ref != nil {
+			attr = expr.DupAtt(ref)
 		}
 
 		dataType, description, fn := parseAttributeArgs(attr, args...)
