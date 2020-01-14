@@ -1589,7 +1589,7 @@ func buildErrorsData(e *expr.HTTPEndpointExpr, sd *ServiceData) []*ErrorGroupDat
 						Name:         h.VarName,
 						Ref:          h.VarName,
 						FieldName:    h.FieldName,
-						FieldPointer: h.FieldPointer,
+						FieldPointer: false,
 						TypeRef:      h.TypeRef,
 						Validate:     h.Validate,
 						Example:      h.Example,
