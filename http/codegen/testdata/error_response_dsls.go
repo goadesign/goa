@@ -45,3 +45,20 @@ var ServiceErrorResponseDSL = func() {
 		})
 	})
 }
+
+var NoBodyErrorResponseDSL = func() {
+	var StringError = Type("StringError", func() { Attribute("header") })
+	Service("ServiceNoBodyErrorResponse", func() {
+		Error("bad_request", StringError)
+		HTTP(func() {
+			Response("bad_request", StatusBadRequest, func() {
+				Header("header")
+			})
+		})
+		Method("MethodServiceErrorResponse", func() {
+			HTTP(func() {
+				GET("/one/two")
+			})
+		})
+	})
+}
