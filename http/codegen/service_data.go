@@ -1637,7 +1637,7 @@ func buildErrorsData(e *expr.HTTPEndpointExpr, sd *ServiceData) []*ErrorGroupDat
 				ClientArgs:          args,
 				ReturnTypeName:      svc.Scope.GoFullTypeName(v.ErrorExpr.AttributeExpr, svc.PkgName),
 				ReturnTypeRef:       svc.Scope.GoFullTypeRef(v.ErrorExpr.AttributeExpr, svc.PkgName),
-				ReturnIsStruct:      isObject,
+				ReturnIsStruct:      expr.IsObject(v.ErrorExpr.Type),
 				ReturnTypeAttribute: codegen.Goify(origin, true),
 				ClientCode:          code,
 			}
@@ -1760,7 +1760,6 @@ func buildStreamData(ed *EndpointData, e *expr.HTTPEndpointExpr, sd *ServiceData
 				var (
 					name       string
 					desc       string
-					isObject   bool
 					serverArgs []*InitArgData
 					serverCode string
 					err        error
@@ -1776,7 +1775,6 @@ func buildStreamData(ed *EndpointData, e *expr.HTTPEndpointExpr, sd *ServiceData
 						name = fmt.Sprintf("New%s%s", n, p)
 					}
 					desc = fmt.Sprintf("%s builds a %s service %s endpoint payload.", name, svc.Name, e.MethodExpr.Name)
-					isObject = expr.IsObject(e.MethodExpr.StreamingPayload.Type)
 					if body != expr.Empty {
 						var (
 							ref    string
@@ -1822,7 +1820,7 @@ func buildStreamData(ed *EndpointData, e *expr.HTTPEndpointExpr, sd *ServiceData
 					ServerArgs:     serverArgs,
 					ReturnTypeName: svc.Scope.GoFullTypeName(e.MethodExpr.StreamingPayload, svc.PkgName),
 					ReturnTypeRef:  svc.Scope.GoFullTypeRef(e.MethodExpr.StreamingPayload, svc.PkgName),
-					ReturnIsStruct: isObject,
+					ReturnIsStruct: expr.IsObject(e.MethodExpr.StreamingPayload.Type),
 					ServerCode:     serverCode,
 				}
 			}
