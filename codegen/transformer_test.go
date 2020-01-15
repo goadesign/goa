@@ -3,7 +3,7 @@ package codegen
 import (
 	"testing"
 
-	"goa.design/goa/v3/expr"
+	"goa.design/goa/expr"
 )
 
 func TestIsPrimitivePointer(t *testing.T) {
