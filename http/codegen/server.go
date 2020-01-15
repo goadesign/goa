@@ -464,6 +464,8 @@ func {{ .HandlerInit }}(
 			}
 			return
 		}
+	{{- else }}
+		var err error
 	{{- end }}
 
 	{{ if .ServerStream }}
