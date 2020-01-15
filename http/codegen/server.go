@@ -1126,6 +1126,8 @@ func {{ .ErrorEncoder }}(encoder func(context.Context, http.ResponseWriter) goah
 				{{- template "response" . }}
 				{{- if .ServerBody }}
 				return enc.Encode(body)
+				{{- else }}
+				return nil
 				{{- end }}
 			{{- end }}
 	{{- end }}
