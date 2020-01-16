@@ -12,6 +12,7 @@ import (
 	"text/template"
 
 	"github.com/go-openapi/loads"
+	"goa.design/goa/codegen"
 	"goa.design/goa/http/codegen/openapi"
 	"goa.design/goa/http/codegen/testdata"
 )
@@ -121,11 +122,12 @@ func TestSections(t *testing.T) {
 					}
 
 					want, err := ioutil.ReadFile(golden)
+					want = bytes.Replace(want, []byte{'\r', '\n'}, []byte{'\n'}, -1)
 					if err != nil {
 						t.Fatalf("failed to read golden file: %s", err)
 					}
 					if !bytes.Equal(buf.Bytes(), want) {
-						t.Errorf("result do not match the golden file:\n--BEGIN--\n%s\n--END--\n", buf.Bytes())
+						t.Errorf("result does not match the golden file, diff:\n%s\nGot bytes:\n%x\nExpected bytes:\n%x\n", codegen.Diff(t, buf.String(), string(want)), buf.Bytes(), want)
 					}
 				})
 			}
@@ -187,6 +189,7 @@ func TestValidations(t *testing.T) {
 					}
 
 					want, err := ioutil.ReadFile(golden)
+					want = bytes.Replace(want, []byte{'\r', '\n'}, []byte{'\n'}, -1)
 					if err != nil {
 						t.Fatalf("failed to read golden file: %s", err)
 					}
@@ -251,6 +254,7 @@ func TestExtensions(t *testing.T) {
 					}
 
 					want, err := ioutil.ReadFile(golden)
+					want = bytes.Replace(want, []byte{'\r', '\n'}, []byte{'\n'}, -1)
 					if err != nil {
 						t.Fatalf("failed to read golden file: %s", err)
 					}
