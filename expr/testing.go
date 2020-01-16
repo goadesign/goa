@@ -14,6 +14,7 @@ import (
 // RunDSL returns the DSL root resulting from running the given DSL.
 // Used only in tests.
 func RunDSL(t *testing.T, dsl func()) *RootExpr {
+	t.Helper()
 	setupDSLRun()
 
 	// run DSL (first pass)
@@ -33,6 +34,7 @@ func RunDSL(t *testing.T, dsl func()) *RootExpr {
 // RunInvalidDSL returns the error resulting from running the given DSL.
 // It is used only in tests.
 func RunInvalidDSL(t *testing.T, dsl func()) error {
+	t.Helper()
 	setupDSLRun()
 
 	// run DSL (first pass)
@@ -73,6 +75,7 @@ func Diff(t *testing.T, s1, s2 string) string {
 // CreateTempFile creates a temporary file and writes the given content.
 // It is used only for testing.
 func CreateTempFile(t *testing.T, content string) string {
+	t.Helper()
 	f, err := ioutil.TempFile("", "")
 	if err != nil {
 		t.Fatal(err)

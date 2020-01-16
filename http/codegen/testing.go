@@ -20,6 +20,7 @@ func RunHTTPDSL(t *testing.T, dsl func()) *expr.RootExpr {
 // makeGolden returns nil then the test should not generate test
 // expectations.
 func makeGolden(t *testing.T, p string) *os.File {
+	t.Helper()
 	if os.Getenv("GOLDEN") == "" {
 		return nil
 	}
