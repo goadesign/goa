@@ -493,7 +493,7 @@ func conversionCode(from, to, typeName string, pointer bool) (string, bool) {
 	case stringN:
 		parse = fmt.Sprintf("%s %s= %s", target, decl, from)
 	case bytesN:
-		parse = fmt.Sprintf("%s %s= string(%s)", target, decl, from)
+		parse = fmt.Sprintf("%s %s= []byte(%s)", target, decl, from)
 	default:
 		parse = fmt.Sprintf("err = json.Unmarshal([]byte(%s), &%s)", from, target)
 		checkErr = true
