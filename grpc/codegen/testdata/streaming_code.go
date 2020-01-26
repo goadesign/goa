@@ -250,6 +250,19 @@ func (s *MethodClientStreamingRPCClientStream) CloseAndRecv() (string, error) {
 }
 `
 
+var ClientStreamingServerNoResultCloseCode = `func (s *MethodClientStreamingNoResultServerStream) Close() error {
+	// synchronize stream
+	return s.stream.SendAndClose(nil)
+}
+`
+
+var ClientStreamingClientNoResultCloseCode = `func (s *MethodClientStreamingNoResultClientStream) Close() error {
+	// synchronize and report any server error
+	_, err := s.stream.CloseAndRecv()
+	return err
+}
+`
+
 var BidirectionalStreamingServerStructCode = `// MethodBidirectionalStreamingRPCServerStream implements the
 // servicebidirectionalstreamingrpc.MethodBidirectionalStreamingRPCServerStream
 // interface.
