@@ -253,6 +253,10 @@ type (
 		// PayloadInit contains the data required to render the
 		// payload constructor used by server code if any.
 		PayloadInit *InitData
+		// PayloadAttr sets the request body from the specified payload type
+		// attribute. This field is set when the design uses Body("name") syntax
+		// to set the request body and the payload type is an object.
+		PayloadAttr string
 		// MustValidate is true if the request body or at least one
 		// parameter or header requires validation.
 		MustValidate bool
@@ -931,6 +935,7 @@ func buildPayloadData(e *expr.HTTPEndpointExpr, sd *ServiceData) *PayloadData {
 			paramsData     = extractPathParams(e.PathParams(), payload, sd.Scope)
 			queryData      = extractQueryParams(e.QueryParams(), payload, sd.Scope)
 			headersData    = extractHeaders(e.Headers, payload, svcctx, sd.Scope)
+			origin         string
 
 			mustValidate bool
 		)
@@ -991,6 +996,14 @@ func buildPayloadData(e *expr.HTTPEndpointExpr, sd *ServiceData) *PayloadData {
 					}
 				}
 			}
+			if e.Body.Type != expr.Empty {
+				// If design uses Body("name") syntax we need to use the
+				// corresponding attribute in the result type for body
+				// transformation.
+				if o, ok := e.Body.Meta["origin:attribute"]; ok {
+					origin = o[0]
+				}
+			}
 		}
 		request = &RequestData{
 			PathParams:   paramsData,
@@ -998,6 +1011,7 @@ func buildPayloadData(e *expr.HTTPEndpointExpr, sd *ServiceData) *PayloadData {
 			Headers:      headersData,
 			ServerBody:   serverBodyData,
 			ClientBody:   clientBodyData,
+			PayloadAttr:  codegen.Goify(origin, true),
 			MustValidate: mustValidate,
 			Multipart:    e.MultipartRequest,
 		}
