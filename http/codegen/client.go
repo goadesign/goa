@@ -500,7 +500,7 @@ func {{ .RequestEncoder }}(encoder func(*http.Request) goahttp.Encoder) func(*ht
 		{{- if .Payload.Request.ClientBody.Init }}
 		body := {{ .Payload.Request.ClientBody.Init.Name }}({{ range .Payload.Request.ClientBody.Init.ClientArgs }}{{ if .FieldPointer }}&{{ end }}{{ .Name }}, {{ end }})
 		{{- else }}
-		body := p
+		body := p{{ if .Payload.Request.PayloadAttr }}.{{ .Payload.Request.PayloadAttr }}{{ end }}
 		{{- end }}
 		if err := encoder(req).Encode(&body); err != nil {
 			return goahttp.ErrEncodingError("{{ .ServiceName }}", "{{ .Method.Name }}", err)
