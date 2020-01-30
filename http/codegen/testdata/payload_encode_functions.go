@@ -1986,7 +1986,7 @@ func EncodeMethodBodyPrimitiveArrayUserRequest(encoder func(*http.Request) goaht
 		if !ok {
 			return goahttp.ErrInvalidType("ServiceBodyPrimitiveArrayUser", "MethodBodyPrimitiveArrayUser", "*servicebodyprimitivearrayuser.PayloadType", v)
 		}
-		body := p
+		body := p.A
 		if err := encoder(req).Encode(&body); err != nil {
 			return goahttp.ErrEncodingError("ServiceBodyPrimitiveArrayUser", "MethodBodyPrimitiveArrayUser", err)
 		}
@@ -2004,7 +2004,7 @@ func EncodeMethodBodyPrimitiveArrayUserValidateRequest(encoder func(*http.Reques
 		if !ok {
 			return goahttp.ErrInvalidType("ServiceBodyPrimitiveArrayUserValidate", "MethodBodyPrimitiveArrayUserValidate", "*servicebodyprimitivearrayuservalidate.PayloadType", v)
 		}
-		body := p
+		body := p.A
 		if err := encoder(req).Encode(&body); err != nil {
 			return goahttp.ErrEncodingError("ServiceBodyPrimitiveArrayUserValidate", "MethodBodyPrimitiveArrayUserValidate", err)
 		}
