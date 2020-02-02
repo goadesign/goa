@@ -517,7 +517,7 @@ type (
 		ValidateRef string
 		// Example is an example value for the type.
 		Example interface{}
-		// View is the view using which the type is rendered.
+		// View is the view used to render the (result) type if any.
 		View string
 	}
 
