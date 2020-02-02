@@ -46,7 +46,9 @@ func TestBodyTypeInit(t *testing.T) {
 		{"body-primitive-array-user-validate", testdata.PayloadBodyPrimitiveArrayUserValidateDSL, 2, BodyPrimitiveArrayUserValidateInitCode},
 		{"result-body-user", testdata.ResultBodyObjectHeaderDSL, 2, ResultBodyObjectHeaderInitCode},
 		{"result-explicit-body-primitive", testdata.ExplicitBodyPrimitiveResultMultipleViewsDSL, 1, ExplicitBodyPrimitiveResultMultipleViewsInitCode},
-		{"result-explicit-body-user-type", testdata.ExplicitBodyUserResultMultipleViewsDSL, 2, ExplicitBodyUserResultMultipleViewsInitCode},
+		{"result-explicit-body-user-type", testdata.ExplicitBodyUserResultMultipleViewsDSL, 3, ExplicitBodyUserResultMultipleViewsInitCode},
+		{"result-explicit-body-object", testdata.ExplicitBodyUserResultObjectDSL, 3, ExplicitBodyObjectInitCode},
+		{"result-explicit-body-object-views", testdata.ExplicitBodyUserResultObjectMultipleViewDSL, 3, ExplicitBodyObjectViewsInitCode},
 	}
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
@@ -213,6 +215,34 @@ func NewMethodExplicitBodyUserResultMultipleViewResulttypemultipleviewsOK(body *
 }
 `
 
+const ExplicitBodyObjectInitCode = `// NewMethodExplicitBodyUserResultObjectResulttypeOK builds a
+// "ServiceExplicitBodyUserResultObject" service
+// "MethodExplicitBodyUserResultObject" endpoint result from a HTTP "OK"
+// response.
+func NewMethodExplicitBodyUserResultObjectResulttypeOK(body *MethodExplicitBodyUserResultObjectResponseBody, c *string, b *string) *serviceexplicitbodyuserresultobjectviews.ResulttypeView {
+	v := &serviceexplicitbodyuserresultobjectviews.ResulttypeView{}
+	if body.A != nil {
+		v.A = unmarshalUserTypeResponseBodyToServiceexplicitbodyuserresultobjectviewsUserTypeView(body.A)
+	}
+	v.C = c
+	v.B = b
+	return v
+}
+`
+
+const ExplicitBodyObjectViewsInitCode = `// NewMethodExplicitBodyUserResultObjectMultipleViewResulttypemultipleviewsOK
+// builds a "ServiceExplicitBodyUserResultObjectMultipleView" service
+// "MethodExplicitBodyUserResultObjectMultipleView" endpoint result from a HTTP
+// "OK" response.
+func NewMethodExplicitBodyUserResultObjectMultipleViewResulttypemultipleviewsOK(body *MethodExplicitBodyUserResultObjectMultipleViewResponseBody, c *string) *serviceexplicitbodyuserresultobjectmultipleviewviews.ResulttypemultipleviewsView {
+	v := &serviceexplicitbodyuserresultobjectmultipleviewviews.ResulttypemultipleviewsView{}
+	if body.A != nil {
+		v.A = unmarshalUserTypeResponseBodyToServiceexplicitbodyuserresultobjectmultipleviewviewsUserTypeView(body.A)
+	}
+	v.C = c
+	return v
+}
+`
 const MixedPayloadInBodyClientTypesFile = `// MethodARequestBody is the type of the "ServiceMixedPayloadInBody" service
 // "MethodA" endpoint HTTP request body.
 type MethodARequestBody struct {

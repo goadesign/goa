@@ -250,6 +250,11 @@ func (r *HTTPResponseExpr) Finalize(a *HTTPEndpointExpr, svcAtt *AttributeExpr) 
 					r.Body.Validation.AddRequired(n)
 				}
 			}
+			// Wrap object with user type to simplify response rendering code.
+			r.Body.Type = &UserTypeExpr{
+				AttributeExpr: DupAtt(r.Body),
+				TypeName:      fmt.Sprintf("%s%sResponseBody", a.Service.Name(), a.Name()),
+			}
 		}
 		if r.Body.Meta == nil {
 			r.Body.Meta = svcAtt.Meta
