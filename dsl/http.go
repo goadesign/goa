@@ -555,6 +555,19 @@ func MultipartRequest() {
 	e.MultipartRequest = true
 }
 
+// AllowOptionalBody indicates that the HTTP request body is not required.
+func AllowOptionalBoby() {
+	e, ok := eval.Current().(*expr.HTTPEndpointExpr)
+	if !ok {
+		eval.IncompatibleDSL()
+		return
+	}
+	if e.MethodExpr.Payload.Meta == nil {
+		e.MethodExpr.Payload.Meta = expr.MetaExpr{}
+	}
+	e.MethodExpr.Payload.Meta["http:optional-body"] = []string{"true"}
+}
+
 // Body describes a HTTP request or response body.
 //
 // Body must appear in a Method HTTP expression to define the request body or in

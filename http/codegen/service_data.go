@@ -183,6 +183,8 @@ type (
 		// DecoderReturnValue is a reference to the decoder return value
 		// if there is no payload constructor (i.e. if Init is nil).
 		DecoderReturnValue string
+		// IsOptional is true if the payload is optional.
+		IsOptional bool
 	}
 
 	// ResultData contains the result information required to generate the
@@ -1262,6 +1264,7 @@ func buildPayloadData(e *expr.HTTPEndpointExpr, sd *ServiceData) *PayloadData {
 		Ref:                ref,
 		Request:            request,
 		DecoderReturnValue: returnValue,
+		IsOptional:         len(payload.Meta["http:optional-body"]) > 0,
 	}
 }
 

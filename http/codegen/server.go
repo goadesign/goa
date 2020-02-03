@@ -535,7 +535,12 @@ func {{ .RequestDecoder }}(mux goahttp.Muxer, decoder func(*http.Request) goahtt
 		err = decoder(r).Decode(&body)
 		if err != nil {
 			if err == io.EOF {
+			{{- if .Payload.IsOptional }}
+				var payload {{.Payload.Ref}}
+				return payload, nil
+			{{- else }}
 				return nil, goa.MissingPayloadError()
+			{{- end }}
 			}
 			return nil, goa.DecodePayloadError(err.Error())
 		}
