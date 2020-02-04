@@ -564,10 +564,10 @@ func AllowOptionalBoby() {
 		eval.IncompatibleDSL()
 		return
 	}
-	if e.MethodExpr.Payload.Meta == nil {
-		e.MethodExpr.Payload.Meta = expr.MetaExpr{}
+	if e.Meta == nil {
+		e.Meta = expr.MetaExpr{}
 	}
-	e.MethodExpr.Payload.Meta["http:optional-body"] = []string{"true"}
+	e.Meta["http:optional-body"] = []string{"true"}
 }
 
 // Body describes a HTTP request or response body.

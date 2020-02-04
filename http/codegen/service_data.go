@@ -1264,7 +1264,7 @@ func buildPayloadData(e *expr.HTTPEndpointExpr, sd *ServiceData) *PayloadData {
 		Ref:                ref,
 		Request:            request,
 		DecoderReturnValue: returnValue,
-		IsOptional:         len(payload.Meta["http:optional-body"]) > 0,
+		IsOptional:         len(e.Meta["http:optional-body"]) > 0,
 	}
 }
 
