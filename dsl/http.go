@@ -556,6 +556,8 @@ func MultipartRequest() {
 }
 
 // AllowOptionalBody indicates that the HTTP request body is not required.
+//
+// AllowOptionalBody must appear in a HTTP endpoint expression.
 func AllowOptionalBoby() {
 	e, ok := eval.Current().(*expr.HTTPEndpointExpr)
 	if !ok {
