@@ -672,7 +672,7 @@ func buildPathFromExpr(s *V2, root *expr.RootExpr, h *expr.HostExpr, route *expr
 				Name:        endpoint.Body.Type.Name(),
 				In:          in,
 				Description: endpoint.Body.Description,
-				Required:    true,
+				Required:    len(endpoint.Meta["http:optional-body"]) == 0,
 				Schema:      AttributeTypeSchemaWithPrefix(root.API, endpoint.Body, codegen.Goify(endpoint.Service.Name(), true)),
 			}
 			params = append(params, pp)
