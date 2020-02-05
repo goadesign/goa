@@ -90,7 +90,7 @@ func exampleCLI(genpkg string, root *expr.RootExpr, svr *expr.ServerExpr) *codeg
 			},
 			FuncMap: map[string]interface{}{
 				"needStream":   needStream,
-				"hasStreaming": hasStreaming,
+				"hasWebSocket": hasWebSocket,
 			},
 		},
 		&codegen.SectionTemplate{Name: "cli-http-usage", Source: httpCLIUsageT},
@@ -137,7 +137,7 @@ const (
 		{{- if needStream .Services }}
 		dialer,
 			{{- range $svc := .Services }}
-				{{- if hasStreaming $svc }}
+				{{- if hasWebSocket $svc }}
 				nil,
 				{{- end }}
 			{{- end }}

@@ -46,32 +46,11 @@ func client(genpkg string, svc *expr.HTTPServiceExpr) *codegen.File {
 		}),
 	}
 	sections = append(sections, &codegen.SectionTemplate{
-		Name:   "client-struct",
-		Source: clientStructT,
-		Data:   data,
-		FuncMap: map[string]interface{}{
-			"hasStreaming": hasStreaming,
-		},
+		Name:    "client-struct",
+		Source:  clientStructT,
+		Data:    data,
+		FuncMap: map[string]interface{}{"hasWebSocket": hasWebSocket},
 	})
-	if hasStreaming(data) {
-		sections = append(sections, &codegen.SectionTemplate{
-			Name:   "client-stream-conn-configurer-struct",
-			Source: streamConnConfigurerStructT,
-			Data:   data,
-			FuncMap: map[string]interface{}{
-				"isStreamingEndpoint": isStreamingEndpoint,
-			},
-		})
-	}
-	for _, e := range data.Endpoints {
-		if e.ClientStream != nil {
-			sections = append(sections, &codegen.SectionTemplate{
-				Name:   "client-stream-struct-type",
-				Source: streamStructTypeT,
-				Data:   e.ClientStream,
-			})
-		}
-	}
 
 	for _, e := range data.Endpoints {
 		if e.MultipartRequestEncoder != nil {
@@ -83,25 +62,14 @@ func client(genpkg string, svc *expr.HTTPServiceExpr) *codegen.File {
 		}
 	}
 
-	sections = append(sections, &codegen.SectionTemplate{
-		Name:   "client-init",
-		Source: clientInitT,
-		Data:   data,
-		FuncMap: map[string]interface{}{
-			"hasStreaming": hasStreaming,
-		},
-	})
+	sections = append(sections, clientStructWSSections(data)...)
 
-	if hasStreaming(data) {
-		sections = append(sections, &codegen.SectionTemplate{
-			Name:   "client-stream-conn-configurer-struct-init",
-			Source: streamConnConfigurerStructInitT,
-			Data:   data,
-			FuncMap: map[string]interface{}{
-				"isStreamingEndpoint": isStreamingEndpoint,
-			},
-		})
-	}
+	sections = append(sections, &codegen.SectionTemplate{
+		Name:    "client-init",
+		Source:  clientInitT,
+		Data:    data,
+		FuncMap: map[string]interface{}{"hasWebSocket": hasWebSocket},
+	})
 
 	for _, e := range data.Endpoints {
 		sections = append(sections, &codegen.SectionTemplate{
@@ -109,48 +77,9 @@ func client(genpkg string, svc *expr.HTTPServiceExpr) *codegen.File {
 			Source: endpointInitT,
 			Data:   e,
 		})
-		if e.ClientStream != nil {
-			if e.ClientStream.RecvTypeRef != "" {
-				sections = append(sections, &codegen.SectionTemplate{
-					Name:   "client-stream-recv",
-					Source: streamRecvT,
-					Data:   e.ClientStream,
-					FuncMap: map[string]interface{}{
-						"upgradeParams": upgradeParams,
-					},
-				})
-			}
-			switch e.ClientStream.Kind {
-			case expr.ClientStreamKind, expr.BidirectionalStreamKind:
-				sections = append(sections, &codegen.SectionTemplate{
-					Name:   "client-stream-send",
-					Source: streamSendT,
-					Data:   e.ClientStream,
-					FuncMap: map[string]interface{}{
-						"upgradeParams":    upgradeParams,
-						"viewedServerBody": viewedServerBody,
-					},
-				})
-			}
-			if e.ClientStream.MustClose {
-				sections = append(sections, &codegen.SectionTemplate{
-					Name:   "client-stream-close",
-					Source: streamCloseT,
-					Data:   e.ClientStream,
-					FuncMap: map[string]interface{}{
-						"upgradeParams": upgradeParams,
-					},
-				})
-			}
-			if e.Method.ViewedResult != nil && e.Method.ViewedResult.ViewName == "" {
-				sections = append(sections, &codegen.SectionTemplate{
-					Name:   "client-stream-set-view",
-					Source: streamSetViewT,
-					Data:   e.ClientStream,
-				})
-			}
-		}
 	}
+
+	sections = append(sections, clientWSSections(data)...)
 
 	return &codegen.File{Path: path, SectionTemplates: sections}
 }
@@ -282,7 +211,7 @@ type {{ .ClientStruct }} struct {
 	host       string
 	encoder    func(*http.Request) goahttp.Encoder
 	decoder    func(*http.Response) goahttp.Decoder
-	{{- if hasStreaming . }}
+	{{- if hasWebSocket . }}
 	dialer goahttp.Dialer
 	configurer *ConnConfigurer
 	{{- end }}
@@ -298,12 +227,12 @@ func New{{ .ClientStruct }}(
 	enc func(*http.Request) goahttp.Encoder,
 	dec func(*http.Response) goahttp.Decoder,
 	restoreBody bool,
-	{{- if hasStreaming . }}
+	{{- if hasWebSocket . }}
 	dialer goahttp.Dialer,
 	cfn *ConnConfigurer,
 	{{- end }}
 ) *{{ .ClientStruct }} {
-{{- if hasStreaming . }}
+{{- if hasWebSocket . }}
 	if cfn == nil {
 		cfn = &ConnConfigurer{}
 	}
@@ -317,7 +246,7 @@ func New{{ .ClientStruct }}(
 		host:              host,
 		decoder:           dec,
 		encoder:           enc,
-		{{- if hasStreaming . }}
+		{{- if hasWebSocket . }}
 		dialer: dialer,
 		configurer: cfn,
 		{{- end }}
