@@ -80,11 +80,11 @@ func serverType(genpkg string, svc *expr.HTTPServiceExpr, seen map[string]struct
 				validatedTypes = append(validatedTypes, data)
 			}
 		}
-		if adata.ServerStream != nil {
-			if data := adata.ServerStream.Payload; data != nil {
+		if adata.ServerWebSocket != nil {
+			if data := adata.ServerWebSocket.Payload; data != nil {
 				if data.Def != "" {
 					sections = append(sections, &codegen.SectionTemplate{
-						Name:   "request-body-type-decl",
+						Name:   "request-stream-payload-type-decl",
 						Source: typeDeclT,
 						Data:   data,
 					})
@@ -178,8 +178,8 @@ func serverType(genpkg string, svc *expr.HTTPServiceExpr, seen map[string]struct
 				Data:   init,
 			})
 		}
-		if adata.ServerStream != nil && adata.ServerStream.Payload != nil {
-			if init := adata.ServerStream.Payload.Init; init != nil {
+		if isWebSocketEndpoint(adata) && adata.ServerWebSocket.Payload != nil {
+			if init := adata.ServerWebSocket.Payload.Init; init != nil {
 				sections = append(sections, &codegen.SectionTemplate{
 					Name:   "server-payload-init",
 					Source: serverTypeInitT,

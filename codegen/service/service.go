@@ -17,18 +17,16 @@ func File(genpkg string, service *expr.ServiceExpr) *codegen.File {
 		service.Name+" service",
 		svc.PkgName,
 		[]*codegen.ImportSpec{
-			{Path: "context"},
+			codegen.SimpleImport("context"),
+			codegen.SimpleImport("io"),
 			codegen.GoaImport(""),
-			codegen.GoaImport("security"),
-			{Path: genpkg + "/" + svcName + "/" + "views", Name: svc.ViewsPkg},
+			codegen.NewImport(svc.ViewsPkg, genpkg+"/"+svcName+"/views"),
 		})
 	def := &codegen.SectionTemplate{
-		Name:   "service",
-		Source: serviceT,
-		Data:   svc,
-		FuncMap: map[string]interface{}{
-			"streamInterfaceFor": streamInterfaceFor,
-		},
+		Name:    "service",
+		Source:  serviceT,
+		Data:    svc,
+		FuncMap: map[string]interface{}{"streamInterfaceFor": streamInterfaceFor},
 	}
 
 	sections := []*codegen.SectionTemplate{header, def}
@@ -222,7 +220,7 @@ type Service interface {
 	{{- if .ServerStream }}
 		{{ .VarName }}(context.Context{{ if .Payload }}, {{ .PayloadRef }}{{ end }}, {{ .ServerStream.Interface }}) (err error)
 	{{- else }}
-		{{ .VarName }}(context.Context{{ if .Payload }}, {{ .PayloadRef }}{{ end }}) ({{ if .Result }}res {{ .ResultRef }}, {{ if .ViewedResult }}{{ if not .ViewedResult.ViewName }}view string, {{ end }}{{ end }}{{ end }}err error)
+		{{ .VarName }}(context.Context{{ if .Payload }}, {{ .PayloadRef }}{{ end }}{{ if .SkipRequestBodyEncodeDecode }}, io.ReadCloser{{ end }}) ({{ if .Result }}res {{ .ResultRef }}, {{ if .SkipResponseBodyEncodeDecode }}body io.ReadCloser, {{ end }}{{ if .ViewedResult }}{{ if not .ViewedResult.ViewName }}view string, {{ end }}{{ end }}{{ end }}err error)
 	{{- end }}
 {{- end }}
 }

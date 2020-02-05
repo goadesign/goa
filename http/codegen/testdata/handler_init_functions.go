@@ -20,9 +20,7 @@ func NewMethodNoPayloadNoResultHandler(
 		ctx = context.WithValue(ctx, goa.MethodKey, "MethodNoPayloadNoResult")
 		ctx = context.WithValue(ctx, goa.ServiceKey, "ServiceNoPayloadNoResult")
 		var err error
-
 		res, err := endpoint(ctx, nil)
-
 		if err != nil {
 			if err := encodeError(ctx, w, err); err != nil {
 				errhandler(ctx, w, err)
@@ -63,9 +61,7 @@ func NewMethodPayloadNoResultHandler(
 			}
 			return
 		}
-
 		res, err := endpoint(ctx, payload)
-
 		if err != nil {
 			if err := encodeError(ctx, w, err); err != nil {
 				errhandler(ctx, w, err)
@@ -99,9 +95,7 @@ func NewMethodNoPayloadResultHandler(
 		ctx = context.WithValue(ctx, goa.MethodKey, "MethodNoPayloadResult")
 		ctx = context.WithValue(ctx, goa.ServiceKey, "ServiceNoPayloadResult")
 		var err error
-
 		res, err := endpoint(ctx, nil)
-
 		if err != nil {
 			if err := encodeError(ctx, w, err); err != nil {
 				errhandler(ctx, w, err)
@@ -142,9 +136,7 @@ func NewMethodPayloadResultHandler(
 			}
 			return
 		}
-
 		res, err := endpoint(ctx, payload)
-
 		if err != nil {
 			if err := encodeError(ctx, w, err); err != nil {
 				errhandler(ctx, w, err)
@@ -185,9 +177,7 @@ func NewMethodPayloadResultErrorHandler(
 			}
 			return
 		}
-
 		res, err := endpoint(ctx, payload)
-
 		if err != nil {
 			if err := encodeError(ctx, w, err); err != nil {
 				errhandler(ctx, w, err)

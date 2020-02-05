@@ -86,8 +86,8 @@ func clientType(genpkg string, svc *expr.HTTPServiceExpr, seen map[string]struct
 				validatedTypes = append(validatedTypes, data)
 			}
 		}
-		if adata.ClientStream != nil {
-			if data := adata.ClientStream.Payload; data != nil {
+		if adata.ClientWebSocket != nil {
+			if data := adata.ClientWebSocket.Payload; data != nil {
 				if _, ok := seen[data.Name]; ok {
 					continue
 				}
