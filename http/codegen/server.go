@@ -31,8 +31,7 @@ func serverFile(genpkg string, svc *expr.HTTPServiceExpr) *codegen.File {
 	title := fmt.Sprintf("%s HTTP server", svc.Name())
 	funcs := map[string]interface{}{
 		"join":             func(ss []string, s string) string { return strings.Join(ss, s) },
-		"hasStreaming":     hasStreaming,
-		"upgradeParams":    upgradeParams,
+		"hasWebSocket":     hasWebSocket,
 		"viewedServerBody": viewedServerBody,
 	}
 	sections := []*codegen.SectionTemplate{
@@ -57,17 +56,6 @@ func serverFile(genpkg string, svc *expr.HTTPServiceExpr) *codegen.File {
 	sections = append(sections, &codegen.SectionTemplate{Name: "server-struct", Source: serverStructT, Data: data})
 	sections = append(sections, &codegen.SectionTemplate{Name: "server-mountpoint", Source: mountPointStructT, Data: data})
 
-	// public types
-	if hasStreaming(data) {
-		sections = append(sections, &codegen.SectionTemplate{
-			Name:   "server-stream-conn-configurer-struct",
-			Source: streamConnConfigurerStructT,
-			Data:   data,
-			FuncMap: map[string]interface{}{
-				"isStreamingEndpoint": isStreamingEndpoint,
-			},
-		})
-	}
 	for _, e := range data.Endpoints {
 		if e.MultipartRequestDecoder != nil {
 			sections = append(sections, &codegen.SectionTemplate{
@@ -78,28 +66,9 @@ func serverFile(genpkg string, svc *expr.HTTPServiceExpr) *codegen.File {
 		}
 	}
 
-	// private types
-	for _, e := range data.Endpoints {
-		if e.ServerStream != nil {
-			sections = append(sections, &codegen.SectionTemplate{
-				Name:   "server-stream-struct-type",
-				Source: streamStructTypeT,
-				Data:   e.ServerStream,
-			})
-		}
-	}
+	sections = append(sections, serverStructWSSections(data)...)
 
 	sections = append(sections, &codegen.SectionTemplate{Name: "server-init", Source: serverInitT, Data: data, FuncMap: funcs})
-	if hasStreaming(data) {
-		sections = append(sections, &codegen.SectionTemplate{
-			Name:   "server-stream-conn-configurer-struct-init",
-			Source: streamConnConfigurerStructInitT,
-			Data:   data,
-			FuncMap: map[string]interface{}{
-				"isStreamingEndpoint": isStreamingEndpoint,
-			},
-		})
-	}
 	sections = append(sections, &codegen.SectionTemplate{Name: "server-service", Source: serverServiceT, Data: data})
 	sections = append(sections, &codegen.SectionTemplate{Name: "server-use", Source: serverUseT, Data: data})
 	sections = append(sections, &codegen.SectionTemplate{Name: "server-mount", Source: serverMountT, Data: data})
@@ -111,23 +80,8 @@ func serverFile(genpkg string, svc *expr.HTTPServiceExpr) *codegen.File {
 	for _, s := range data.FileServers {
 		sections = append(sections, &codegen.SectionTemplate{Name: "server-files", Source: fileServerT, FuncMap: funcs, Data: s})
 	}
-	for _, e := range data.Endpoints {
-		if e.ServerStream != nil {
-			if e.ServerStream.SendTypeRef != "" {
-				sections = append(sections, &codegen.SectionTemplate{Name: "server-stream-send", Source: streamSendT, Data: e.ServerStream, FuncMap: funcs})
-			}
-			switch e.ServerStream.Kind {
-			case expr.ClientStreamKind, expr.BidirectionalStreamKind:
-				sections = append(sections, &codegen.SectionTemplate{Name: "server-stream-recv", Source: streamRecvT, Data: e.ServerStream, FuncMap: funcs})
-			}
-			if e.ServerStream.MustClose {
-				sections = append(sections, &codegen.SectionTemplate{Name: "server-stream-close", Source: streamCloseT, Data: e.ServerStream, FuncMap: funcs})
-			}
-			if e.Method.ViewedResult != nil && e.Method.ViewedResult.ViewName == "" {
-				sections = append(sections, &codegen.SectionTemplate{Name: "server-stream-set-view", Source: streamSetViewT, Data: e.ServerStream})
-			}
-		}
-	}
+
+	sections = append(sections, serverWSSections(data)...)
 
 	return &codegen.File{Path: path, SectionTemplates: sections}
 }
@@ -316,7 +270,7 @@ func {{ .ServerInit }}(
 	encoder func(context.Context, http.ResponseWriter) goahttp.Encoder,
 	errhandler func(context.Context, http.ResponseWriter, error),
 	formatter func(err error) goahttp.Statuser,
-	{{- if hasStreaming . }}
+	{{- if hasWebSocket . }}
 	upgrader goahttp.Upgrader,
 	configurer *ConnConfigurer,
 	{{- end }}
@@ -326,7 +280,7 @@ func {{ .ServerInit }}(
 		{{- end }}
 	{{- end }}
 ) *{{ .ServerStruct }} {
-{{- if hasStreaming . }}
+{{- if hasWebSocket . }}
 	if configurer == nil {
 		configurer = &ConnConfigurer{}
 	}

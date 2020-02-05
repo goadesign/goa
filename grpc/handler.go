@@ -19,8 +19,9 @@ type (
 	UnaryHandler interface {
 		// Handle handles a unary RPC.
 		//
-		// It takes a protocol buffer message type and returns a protocol buffer
-		// message type and any error when executing the RPC.
+		// It takes a protocol buffer message type and returns a
+		// protocol buffer message type and any error when executing the
+		// RPC.
 		Handle(ctx context.Context, reqpb interface{}) (respb interface{}, err error)
 	}
 
@@ -29,12 +30,12 @@ type (
 	StreamHandler interface {
 		// Handle handles a streaming RPC.
 		//
-		// input contains the goa endpoint payload type (if any) and goa generated
-		// endpoint stream interface.
+		// input contains the endpoint payload (if any) and generated
+		// endpoint stream.
 		Handle(ctx context.Context, input interface{}) (err error)
-		// Decode decodes the protocol buffer message type and incoming metadata to
-		// the goa type. For client-side and bidirectional streams, the request
-		// message type will be nil.
+		// Decode decodes the protocol buffer message and metadata to
+		// the service type. For client-side and bidirectional streams,
+		// the message is nil.
 		Decode(ctx context.Context, reqpb interface{}) (req interface{}, err error)
 	}
 
