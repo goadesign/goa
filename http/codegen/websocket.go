@@ -1,8 +1,8 @@
 package codegen
 
 import (
-	"goa.design/goa/v3/codegen"
-	"goa.design/goa/v3/expr"
+	"goa.design/goa/codegen"
+	"goa.design/goa/expr"
 )
 
 // serverStructWSSections return section templates that generate WebSocket
