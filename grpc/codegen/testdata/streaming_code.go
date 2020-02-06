@@ -252,7 +252,7 @@ func (s *MethodClientStreamingRPCClientStream) CloseAndRecv() (string, error) {
 
 var ClientStreamingServerNoResultCloseCode = `func (s *MethodClientStreamingNoResultServerStream) Close() error {
 	// synchronize stream
-	return s.stream.SendAndClose(nil)
+	return s.stream.SendAndClose(&service_client_streaming_no_resultpb.MethodClientStreamingNoResultResponse{})
 }
 `
 
