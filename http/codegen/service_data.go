@@ -2559,7 +2559,7 @@ const (
 		{{- end }}
 	{{- end }}
 	return fmt.Sprintf("{{ .PathFormat }}", {{ range $i, $arg := .Args }}
-	{{- if eq (index $.PathParams $i).Attribute.Type.Name "array" }}strings.Join({{ .Name }}Slice, ", ")
+	{{- if eq (index $.PathParams $i).Attribute.Type.Name "array" }}strings.Join({{ .Name }}Slice, ",")
 	{{- else }}{{ .Name }}
 	{{- end }}, {{ end }})
 {{- else }}
