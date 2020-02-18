@@ -20,6 +20,7 @@ func File(genpkg string, service *expr.ServiceExpr) *codegen.File {
 			codegen.SimpleImport("context"),
 			codegen.SimpleImport("io"),
 			codegen.GoaImport(""),
+			codegen.GoaImport("security"),
 			codegen.NewImport(svc.ViewsPkg, genpkg+"/"+svcName+"/views"),
 		})
 	def := &codegen.SectionTemplate{

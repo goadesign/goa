@@ -351,10 +351,18 @@ func (c *{{ .ClientStruct }}) {{ .RequestInit.Name }}(ctx context.Context, {{ ra
 const requestEncoderT = `{{ printf "%s returns an encoder for requests sent to the %s %s server." .RequestEncoder .ServiceName .Method.Name | comment }}
 func {{ .RequestEncoder }}(encoder func(*http.Request) goahttp.Encoder) func(*http.Request, interface{}) error {
 	return func(req *http.Request, v interface{}) error {
+		{{- if .Method.SkipRequestBodyEncodeDecode }}
+		data, ok := v.(*{{ .ServicePkgName }}.{{ .Method.RequestStruct }})
+		if !ok {
+			return goahttp.ErrInvalidType("{{ .ServiceName }}", "{{ .Method.Name }}", "*{{ .ServicePkgName}}.{{ .Method.RequestStruct }}", v)
+		}
+		p := data.Payload
+		{{- else }}
 		p, ok := v.({{ .Payload.Ref }})
 		if !ok {
 			return goahttp.ErrInvalidType("{{ .ServiceName }}", "{{ .Method.Name }}", "{{ .Payload.Ref }}", v)
 		}
+		{{- end }}
 	{{- range .Payload.Request.Headers }}
 		{{- if .FieldName }}
 			{{- if .FieldPointer }}

@@ -20,6 +20,7 @@ func websocketServerFile(genpkg string, svc *expr.HTTPServiceExpr) *codegen.File
 	sections := []*codegen.SectionTemplate{
 		codegen.Header(title, "server", []*codegen.ImportSpec{
 			{Path: "context"},
+			{Path: "io"},
 			{Path: "net/http"},
 			{Path: "sync"},
 			{Path: "time"},
@@ -50,12 +51,14 @@ func websocketClientFile(genpkg string, svc *expr.HTTPServiceExpr) *codegen.File
 	sections := []*codegen.SectionTemplate{
 		codegen.Header(title, "client", []*codegen.ImportSpec{
 			{Path: "context"},
+			{Path: "io"},
 			{Path: "net/http"},
 			{Path: "sync"},
 			{Path: "time"},
 			{Path: "github.com/gorilla/websocket"},
 			codegen.GoaImport(""),
 			codegen.GoaNamedImport("http", "goahttp"),
+			{Path: genpkg + "/" + svcName + "/" + "views", Name: data.Service.ViewsPkg},
 			{Path: genpkg + "/" + svcName, Name: data.Service.PkgName},
 		}),
 	}

@@ -112,6 +112,8 @@ type (
 		PayloadDesc string
 		// PayloadEx is an example of a valid payload value.
 		PayloadEx interface{}
+		// PayloadDefault is the default value of the payload if any.
+		PayloadDefault interface{}
 		// StreamingPayload is the name of the streaming payload type if any.
 		StreamingPayload string
 		// StreamingPayloadDef is the streaming payload type definition if any.
@@ -778,6 +780,7 @@ func buildMethodData(m *expr.MethodExpr, svcPkgName string, service *expr.Servic
 		PayloadRef:                   payloadRef,
 		PayloadDesc:                  payloadDesc,
 		PayloadEx:                    payloadEx,
+		PayloadDefault:               m.Payload.DefaultValue,
 		Result:                       rname,
 		ResultDef:                    resultDef,
 		ResultRef:                    resultRef,

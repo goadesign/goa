@@ -192,7 +192,7 @@ func buildFlags(svc *ServiceData, e *EndpointData) ([]*cli.FlagData, *cli.BuildF
 			args = append(args, e.Payload.Request.PayloadInit.CLIArgs...)
 			flags, buildFunction = makeFlags(e, args)
 		} else if e.Payload.Ref != "" {
-			flags = append(flags, cli.NewFlagData(svcn, en, "p", e.Method.PayloadRef, e.Method.PayloadDesc, true, e.Method.PayloadEx))
+			flags = append(flags, cli.NewFlagData(svcn, en, "p", e.Method.PayloadRef, e.Method.PayloadDesc, true, e.Method.PayloadEx, e.Method.PayloadDefault))
 		}
 	}
 	if e.Method.SkipRequestBodyEncodeDecode {
@@ -218,7 +218,7 @@ func makeFlags(e *EndpointData, args []*InitArgData) ([]*cli.FlagData, *cli.Buil
 			FieldPointer: arg.FieldPointer,
 		}
 
-		f := cli.NewFlagData(e.ServiceName, e.Method.Name, arg.Name, arg.TypeName, arg.Description, arg.Required, arg.Example)
+		f := cli.NewFlagData(e.ServiceName, e.Method.Name, arg.Name, arg.TypeName, arg.Description, arg.Required, arg.Example, arg.DefaultValue)
 		flags[i] = f
 		params[i] = f.FullName
 		if arg.FieldName == "" && arg.Name != "body" {
@@ -265,7 +265,7 @@ func makeFlags(e *EndpointData, args []*InitArgData) ([]*cli.FlagData, *cli.Buil
 // streamFlag returns the flag used to specify the upload file for endpoints
 // that use SkipRequestBodyEncodeDecode.
 func streamFlag(svcn, en string) *cli.FlagData {
-	return cli.NewFlagData(svcn, en, "stream", "string", "path to file containing the streamed request body", true, "goa.png")
+	return cli.NewFlagData(svcn, en, "stream", "string", "path to file containing the streamed request body", true, "goa.png", nil)
 }
 
 // streamingCmdExists returns true if at least one command in the list of commands
