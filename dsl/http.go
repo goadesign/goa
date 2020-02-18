@@ -784,7 +784,7 @@ func Tag(name, value string) {
 //
 //    var _ = Method("add", func() {
 //	  HTTP(func() {
-//            Response(OK, func() {
+//            Response(StatusOK, func() {
 //                ContentType("application/json")
 //            })
 //        })
