@@ -19,6 +19,7 @@ const (
 	// request Accept-Type header. The value may be used by encoders and
 	// decoders to implement a content type negotiation algorithm.
 	AcceptTypeKey contextKey = iota + 1
+
 	// ContentTypeKey is the context key used to store the value of the HTTP
 	// response Content-Type header when explicitly set in the DSL. The value
 	// may be used by encoders to set the header appropriately.
@@ -205,11 +206,12 @@ func ResponseDecoder(resp *http.Response) Decoder {
 }
 
 // ErrorEncoder returns an encoder that encodes errors returned by service
-// methods. The encoder checks whether the error is a goa ServiceError struct
-// and if so uses the error temporary and timeout fields to infer a proper HTTP
-// status code and marshals the error struct to the body using the provided
-// encoder. If the error is not a goa ServiceError struct then it is encoded
-// as a permanent internal server error.
+// methods. The default encoder checks whether the error is a goa ServiceError
+// struct and if so uses the error temporary and timeout fields to infer a
+// proper HTTP status code and marshals the error struct to the body using the
+// provided encoder. If the error is not a goa ServiceError struct then it is
+// encoded as a permanent internal server error. This behavior as well as the
+// shape of the response can be overridden by providing a non-nil formatter.
 func ErrorEncoder(encoder func(context.Context, http.ResponseWriter) Encoder, formatter func(err error) Statuser) func(context.Context, http.ResponseWriter, error) error {
 	return func(ctx context.Context, w http.ResponseWriter, err error) error {
 		enc := encoder(ctx, w)
@@ -263,9 +265,7 @@ type textEncoder struct {
 	ct string
 }
 
-func (e *textEncoder) Encode(v interface{}) error {
-	var err error
-
+func (e *textEncoder) Encode(v interface{}) (err error) {
 	switch c := v.(type) {
 	case string:
 		_, err = e.w.Write([]byte(c))
@@ -276,8 +276,7 @@ func (e *textEncoder) Encode(v interface{}) error {
 	default:
 		err = fmt.Errorf("can't encode %T as %s", c, e.ct)
 	}
-
-	return err
+	return
 }
 
 func newTextDecoder(r io.Reader, ct string) Decoder {
@@ -294,15 +293,13 @@ func (e *textDecoder) Decode(v interface{}) error {
 	if err != nil {
 		return err
 	}
-
 	switch c := v.(type) {
 	case *string:
 		*c = string(b)
 	case *[]byte:
 		*c = b
 	default:
-		err = fmt.Errorf("can't decode %s to %T", e.ct, c)
+		return fmt.Errorf("can't decode %s to %T", e.ct, c)
 	}
-
-	return err
+	return nil
 }
