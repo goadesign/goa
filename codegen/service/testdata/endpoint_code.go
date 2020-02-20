@@ -192,9 +192,8 @@ type Endpoints struct {
 	StreamingResultMethod goa.Endpoint
 }
 
-// StreamingResultMethodEndpointInput is the input type of
-// "StreamingResultMethod" endpoint that holds the method payload and the
-// server stream.
+// StreamingResultMethodEndpointInput holds both the payload and the server
+// stream of the "StreamingResultMethod" method.
 type StreamingResultMethodEndpointInput struct {
 	// Payload is the method payload.
 	Payload *AType
@@ -232,9 +231,8 @@ type Endpoints struct {
 	StreamingResultNoPayloadMethod goa.Endpoint
 }
 
-// StreamingResultNoPayloadMethodEndpointInput is the input type of
-// "StreamingResultNoPayloadMethod" endpoint that holds the method payload and
-// the server stream.
+// StreamingResultNoPayloadMethodEndpointInput holds both the payload and the
+// server stream of the "StreamingResultNoPayloadMethod" method.
 type StreamingResultNoPayloadMethodEndpointInput struct {
 	// Stream is the server stream used by the "StreamingResultNoPayloadMethod"
 	// method to send data.
@@ -271,9 +269,8 @@ type Endpoints struct {
 	StreamingResultWithViewsMethod goa.Endpoint
 }
 
-// StreamingResultWithViewsMethodEndpointInput is the input type of
-// "StreamingResultWithViewsMethod" endpoint that holds the method payload and
-// the server stream.
+// StreamingResultWithViewsMethodEndpointInput holds both the payload and the
+// server stream of the "StreamingResultWithViewsMethod" method.
 type StreamingResultWithViewsMethodEndpointInput struct {
 	// Payload is the method payload.
 	Payload string
@@ -312,9 +309,8 @@ type Endpoints struct {
 	StreamingPayloadMethod goa.Endpoint
 }
 
-// StreamingPayloadMethodEndpointInput is the input type of
-// "StreamingPayloadMethod" endpoint that holds the method payload and the
-// server stream.
+// StreamingPayloadMethodEndpointInput holds both the payload and the server
+// stream of the "StreamingPayloadMethod" method.
 type StreamingPayloadMethodEndpointInput struct {
 	// Payload is the method payload.
 	Payload *BType
@@ -352,9 +348,8 @@ type Endpoints struct {
 	StreamingPayloadNoPayloadMethod goa.Endpoint
 }
 
-// StreamingPayloadNoPayloadMethodEndpointInput is the input type of
-// "StreamingPayloadNoPayloadMethod" endpoint that holds the method payload and
-// the server stream.
+// StreamingPayloadNoPayloadMethodEndpointInput holds both the payload and the
+// server stream of the "StreamingPayloadNoPayloadMethod" method.
 type StreamingPayloadNoPayloadMethodEndpointInput struct {
 	// Stream is the server stream used by the "StreamingPayloadNoPayloadMethod"
 	// method to send data.
@@ -391,9 +386,8 @@ type Endpoints struct {
 	StreamingPayloadNoResultMethod goa.Endpoint
 }
 
-// StreamingPayloadNoResultMethodEndpointInput is the input type of
-// "StreamingPayloadNoResultMethod" endpoint that holds the method payload and
-// the server stream.
+// StreamingPayloadNoResultMethodEndpointInput holds both the payload and the
+// server stream of the "StreamingPayloadNoResultMethod" method.
 type StreamingPayloadNoResultMethodEndpointInput struct {
 	// Stream is the server stream used by the "StreamingPayloadNoResultMethod"
 	// method to send data.
@@ -430,9 +424,8 @@ type Endpoints struct {
 	BidirectionalStreamingMethod goa.Endpoint
 }
 
-// BidirectionalStreamingMethodEndpointInput is the input type of
-// "BidirectionalStreamingMethod" endpoint that holds the method payload and
-// the server stream.
+// BidirectionalStreamingMethodEndpointInput holds both the payload and the
+// server stream of the "BidirectionalStreamingMethod" method.
 type BidirectionalStreamingMethodEndpointInput struct {
 	// Payload is the method payload.
 	Payload *AType
@@ -472,9 +465,8 @@ type Endpoints struct {
 	BidirectionalStreamingNoPayloadMethod goa.Endpoint
 }
 
-// BidirectionalStreamingNoPayloadMethodEndpointInput is the input type of
-// "BidirectionalStreamingNoPayloadMethod" endpoint that holds the method
-// payload and the server stream.
+// BidirectionalStreamingNoPayloadMethodEndpointInput holds both the payload
+// and the server stream of the "BidirectionalStreamingNoPayloadMethod" method.
 type BidirectionalStreamingNoPayloadMethodEndpointInput struct {
 	// Stream is the server stream used by the
 	// "BidirectionalStreamingNoPayloadMethod" method to send data.
