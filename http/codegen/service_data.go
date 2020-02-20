@@ -130,9 +130,9 @@ type (
 		// MultipartRequestDecoder indicates the request decoder for
 		// multipart content type.
 		MultipartRequestDecoder *MultipartData
-		// ServerStream holds the data to render the server struct which
+		// ServerWebSocket holds the data to render the server struct which
 		// implements the server stream interface.
-		ServerStream *StreamData
+		ServerWebSocket *WebSocketData
 
 		// client
 
@@ -150,9 +150,12 @@ type (
 		// MultipartRequestEncoder indicates the request encoder for
 		// multipart content type.
 		MultipartRequestEncoder *MultipartData
-		// ClientStream holds the data to render the client struct which
+		// ClientWebSocket holds the data to render the client struct which
 		// implements the client stream interface.
-		ClientStream *StreamData
+		ClientWebSocket *WebSocketData
+		// BuildStreamPayload is the name of the function used to create the
+		// payload for endpoints that use SkipRequestBodyEncodeDecode.
+		BuildStreamPayload string
 	}
 
 	// FileServerData lists the data needed to generate file servers.
@@ -539,9 +542,9 @@ type (
 		Payload *PayloadData
 	}
 
-	// StreamData contains the data needed to render struct type that
+	// WebSocketData contains the data needed to render struct type that
 	// implements the server and client stream interfaces.
-	StreamData struct {
+	WebSocketData struct {
 		// VarName is the name of the struct.
 		VarName string
 		// Type is type of the stream (server or client).
@@ -799,19 +802,19 @@ func (d ServicesData) analyze(hs *expr.HTTPServiceExpr) *ServiceData {
 				"Verb":         routes[0].Verb,
 				"IsStreaming":  a.MethodExpr.IsStreaming(),
 			}
+			if a.SkipRequestBodyEncodeDecode {
+				data["RequestStruct"] = svc.PkgName + "." + ep.RequestStruct
+			}
 			var buf bytes.Buffer
 			if err := requestInitTmpl.Execute(&buf, data); err != nil {
 				panic(err) // bug
 			}
+			clientArgs := []*InitArgData{{Name: "v", Ref: "v", TypeRef: "interface{}"}}
 			requestInit = &InitData{
 				Name:        name,
 				Description: fmt.Sprintf("%s instantiates a HTTP request object with method and path set to call the %q service %q endpoint", name, svc.Name, ep.Name),
 				ClientCode:  buf.String(),
-				ClientArgs: []*InitArgData{{
-					Name:    "v",
-					Ref:     "v",
-					TypeRef: "interface{}",
-				}},
+				ClientArgs:  clientArgs,
 			}
 		}
 
@@ -839,7 +842,9 @@ func (d ServicesData) analyze(hs *expr.HTTPServiceExpr) *ServiceData {
 			RequestEncoder:  requestEncoder,
 			ResponseDecoder: fmt.Sprintf("Decode%sResponse", ep.VarName),
 		}
-		buildStreamData(ad, a, rd)
+		if a.MethodExpr.IsStreaming() {
+			initWebSocketData(ad, a, rd)
+		}
 
 		if a.MultipartRequest {
 			ad.MultipartRequestDecoder = &MultipartData{
@@ -858,6 +863,10 @@ func (d ServicesData) analyze(hs *expr.HTTPServiceExpr) *ServiceData {
 				MethodName:  ep.Name,
 				Payload:     ad.Payload,
 			}
+		}
+
+		if a.SkipRequestBodyEncodeDecode {
+			ad.BuildStreamPayload = scope.Unique("Build" + codegen.Goify(ep.Name, true) + "StreamPayload")
 		}
 
 		rd.Endpoints = append(rd.Endpoints, ad)
@@ -1738,10 +1747,8 @@ func buildErrorsData(e *expr.HTTPEndpointExpr, sd *ServiceData) []*ErrorGroupDat
 	return vals
 }
 
-func buildStreamData(ed *EndpointData, e *expr.HTTPEndpointExpr, sd *ServiceData) {
-	if !e.MethodExpr.IsStreaming() {
-		return
-	}
+// initWebSocketData initializes the WebSocket related data in ed.
+func initWebSocketData(ed *EndpointData, e *expr.HTTPEndpointExpr, sd *ServiceData) {
 	var (
 		svrSendTypeName string
 		svrSendTypeRef  string
@@ -1851,7 +1858,7 @@ func buildStreamData(ed *EndpointData, e *expr.HTTPEndpointExpr, sd *ServiceData
 			cliSendDesc = fmt.Sprintf("%s streams instances of %q to the %q endpoint websocket connection.", md.ClientStream.SendName, svrRecvTypeName, md.Name)
 		}
 	}
-	ed.ServerStream = &StreamData{
+	ed.ServerWebSocket = &WebSocketData{
 		VarName:      md.ServerStream.VarName,
 		Interface:    fmt.Sprintf("%s.%s", svc.PkgName, md.ServerStream.Interface),
 		Endpoint:     ed,
@@ -1870,7 +1877,7 @@ func buildStreamData(ed *EndpointData, e *expr.HTTPEndpointExpr, sd *ServiceData
 		RecvTypeRef:  svrRecvTypeRef,
 		MustClose:    md.ServerStream.MustClose,
 	}
-	ed.ClientStream = &StreamData{
+	ed.ClientWebSocket = &WebSocketData{
 		VarName:      md.ClientStream.VarName,
 		Interface:    fmt.Sprintf("%s.%s", svc.PkgName, md.ClientStream.Interface),
 		Endpoint:     ed,
@@ -2583,19 +2590,31 @@ const (
 	// requestInitT is the template used to render the code of HTTP
 	// request constructors.
 	requestInitT = `
-{{- if .Args }}
+{{- if or .Args .RequestStruct }}
 	var (
 	{{- range .Args }}
-	{{ .Name }} {{ .TypeRef }}
+		{{ .Name }} {{ .TypeRef }}
+	{{- end }}
+	{{- if .RequestStruct }}
+		body io.Reader
 	{{- end }}
 	)
 {{- end }}
 {{- if and .PayloadRef .Args }}
 	{
+	{{- if .RequestStruct }}
+		rd, ok := v.(*{{ .RequestStruct }})
+		if !ok {
+			return nil, goahttp.ErrInvalidType("{{ .ServiceName }}", "{{ .EndpointName }}", "{{ .RequestStruct }}", v)
+		}
+		p := rd.Payload
+		body = rd.Body
+	{{- else }}
 		p, ok := v.({{ .PayloadRef }})
 		if !ok {
 			return nil, goahttp.ErrInvalidType("{{ .ServiceName }}", "{{ .EndpointName }}", "{{ .PayloadRef }}", v)
 		}
+	{{- end }}
 	{{- range .Args }}
 		{{- if .Pointer }}
 		if p{{ if $.HasFields }}.{{ .FieldName }}{{ end }} != nil {
@@ -2606,6 +2625,12 @@ const (
 		{{- end }}
 	{{- end }}
 	}
+{{- else if .RequestStruct }}
+		rd, ok := v.(*{{ .RequestStruct }})
+		if !ok {
+			return nil, goahttp.ErrInvalidType("{{ .ServiceName }}", "{{ .EndpointName }}", "{{ .RequestStruct }}", v)
+		}
+		body = rd.Body
 {{- end }}
 	{{- if .IsStreaming }}
 		scheme := c.scheme
@@ -2617,7 +2642,7 @@ const (
 		}
 	{{- end }}
 	u := &url.URL{Scheme: {{ if .IsStreaming }}scheme{{ else }}c.scheme{{ end }}, Host: c.host, Path: {{ .PathInit.Name }}({{ range .Args }}{{ .Ref }}, {{ end }})}
-	req, err := http.NewRequest("{{ .Verb }}", u.String(), nil)
+	req, err := http.NewRequest("{{ .Verb }}", u.String(), {{ if .RequestStruct }}body{{ else }}nil{{ end }})
 	if err != nil {
 		return nil, goahttp.ErrInvalidURL("{{ .ServiceName }}", "{{ .EndpointName }}", u.String(), err)
 	}

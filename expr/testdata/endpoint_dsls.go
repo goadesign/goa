@@ -345,6 +345,71 @@ var EndpointHasParentAndOther = func() {
 
 }
 
+var EndpointHasSkipRequestEncodeAndPayloadStreaming = func() {
+	Service("Service", func() {
+		Method("Method", func() {
+			StreamingPayload(String)
+			HTTP(func() {
+				GET("/")
+				SkipRequestBodyEncodeDecode()
+			})
+		})
+	})
+}
+
+var EndpointHasSkipRequestEncodeAndResultStreaming = func() {
+	Service("Service", func() {
+		Method("Method", func() {
+			StreamingResult(String)
+			HTTP(func() {
+				GET("/")
+				SkipRequestBodyEncodeDecode()
+			})
+		})
+	})
+}
+
+var EndpointHasSkipResponseEncodeAndPayloadStreaming = func() {
+	Service("Service", func() {
+		Method("Method", func() {
+			StreamingPayload(String)
+			HTTP(func() {
+				GET("/")
+				SkipResponseBodyEncodeDecode()
+			})
+		})
+	})
+}
+
+var EndpointHasSkipResponseEncodeAndResultStreaming = func() {
+	Service("Service", func() {
+		Method("Method", func() {
+			StreamingResult(String)
+			HTTP(func() {
+				GET("/")
+				SkipResponseBodyEncodeDecode()
+			})
+		})
+	})
+}
+
+var EndpointHasSkipEncodeAndGRPC = func() {
+	Service("Service", func() {
+		Method("Method", func() {
+			Payload(func() {
+				Field(1, "param", Int)
+				Field(2, "query", String)
+			})
+			HTTP(func() {
+				GET("/{param}")
+				Param("query")
+				SkipRequestBodyEncodeDecode()
+			})
+			GRPC(func() {})
+		})
+	})
+}
+
 var FinalizeEndpointBodyAsExtendedTypeDSL = func() {
 	var EntityData = Type("EntityData", func() {
 		Attribute("name", String)

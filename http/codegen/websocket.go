@@ -1,28 +1,92 @@
 package codegen
 
 import (
+	"fmt"
+	"path/filepath"
+
 	"goa.design/goa/v3/codegen"
 	"goa.design/goa/v3/expr"
 )
+
+// websocketServerFile returns the file implementing the WebSocket server
+// streaming implementation if any.
+func websocketServerFile(genpkg string, svc *expr.HTTPServiceExpr) *codegen.File {
+	data := HTTPServices.Get(svc.Name())
+	if !hasWebSocket(data) {
+		return nil
+	}
+	svcName := codegen.SnakeCase(data.Service.VarName)
+	title := fmt.Sprintf("%s WebSocket server streaming", svc.Name())
+	sections := []*codegen.SectionTemplate{
+		codegen.Header(title, "server", []*codegen.ImportSpec{
+			{Path: "context"},
+			{Path: "io"},
+			{Path: "net/http"},
+			{Path: "sync"},
+			{Path: "time"},
+			{Path: "github.com/gorilla/websocket"},
+			codegen.GoaImport(""),
+			codegen.GoaNamedImport("http", "goahttp"),
+			{Path: genpkg + "/" + svcName, Name: data.Service.PkgName},
+		}),
+	}
+	sections = append(sections, serverStructWSSections(data)...)
+	sections = append(sections, serverWSSections(data)...)
+
+	return &codegen.File{
+		Path:             filepath.Join(codegen.Gendir, "http", svcName, "server", "websocket.go"),
+		SectionTemplates: sections,
+	}
+}
+
+// websocketClientFile returns the file implementing the WebSocket client
+// streaming implementation if any.
+func websocketClientFile(genpkg string, svc *expr.HTTPServiceExpr) *codegen.File {
+	data := HTTPServices.Get(svc.Name())
+	if !hasWebSocket(data) {
+		return nil
+	}
+	svcName := codegen.SnakeCase(data.Service.VarName)
+	title := fmt.Sprintf("%s WebSocket client streaming", svc.Name())
+	sections := []*codegen.SectionTemplate{
+		codegen.Header(title, "client", []*codegen.ImportSpec{
+			{Path: "context"},
+			{Path: "io"},
+			{Path: "net/http"},
+			{Path: "sync"},
+			{Path: "time"},
+			{Path: "github.com/gorilla/websocket"},
+			codegen.GoaImport(""),
+			codegen.GoaNamedImport("http", "goahttp"),
+			{Path: genpkg + "/" + svcName + "/" + "views", Name: data.Service.ViewsPkg},
+			{Path: genpkg + "/" + svcName, Name: data.Service.PkgName},
+		}),
+	}
+	sections = append(sections, clientStructWSSections(data)...)
+	sections = append(sections, clientWSSections(data)...)
+
+	return &codegen.File{
+		Path:             filepath.Join(codegen.Gendir, "http", svcName, "client", "websocket.go"),
+		SectionTemplates: sections,
+	}
+}
 
 // serverStructWSSections return section templates that generate WebSocket
 // related struct type definitions for the server.
 func serverStructWSSections(data *ServiceData) []*codegen.SectionTemplate {
 	var sections []*codegen.SectionTemplate
-	if hasWebSocket(data) {
-		sections = append(sections, &codegen.SectionTemplate{
-			Name:    "server-stream-conn-configurer-struct",
-			Source:  webSocketConnConfigurerStructT,
-			Data:    data,
-			FuncMap: map[string]interface{}{"isWebSocketEndpoint": isWebSocketEndpoint},
-		})
-	}
+	sections = append(sections, &codegen.SectionTemplate{
+		Name:    "server-websocket-conn-configurer-struct",
+		Source:  webSocketConnConfigurerStructT,
+		Data:    data,
+		FuncMap: map[string]interface{}{"isWebSocketEndpoint": isWebSocketEndpoint},
+	})
 	for _, e := range data.Endpoints {
-		if e.ServerStream != nil {
+		if e.ServerWebSocket != nil {
 			sections = append(sections, &codegen.SectionTemplate{
-				Name:   "server-stream-struct-type",
+				Name:   "server-websocket-struct-type",
 				Source: webSocketStructTypeT,
-				Data:   e.ServerStream,
+				Data:   e.ServerWebSocket,
 			})
 		}
 	}
@@ -34,49 +98,47 @@ func serverStructWSSections(data *ServiceData) []*codegen.SectionTemplate {
 // specific code for the given service.
 func serverWSSections(data *ServiceData) []*codegen.SectionTemplate {
 	var sections []*codegen.SectionTemplate
-	if hasWebSocket(data) {
-		sections = append(sections, &codegen.SectionTemplate{
-			Name:    "server-stream-conn-configurer-struct-init",
-			Source:  webSocketConnConfigurerStructInitT,
-			Data:    data,
-			FuncMap: map[string]interface{}{"isWebSocketEndpoint": isWebSocketEndpoint},
-		})
-	}
+	sections = append(sections, &codegen.SectionTemplate{
+		Name:    "server-websocket-conn-configurer-struct-init",
+		Source:  webSocketConnConfigurerStructInitT,
+		Data:    data,
+		FuncMap: map[string]interface{}{"isWebSocketEndpoint": isWebSocketEndpoint},
+	})
 	for _, e := range data.Endpoints {
-		if e.ServerStream != nil {
-			if e.ServerStream.SendTypeRef != "" {
+		if e.ServerWebSocket != nil {
+			if e.ServerWebSocket.SendTypeRef != "" {
 				sections = append(sections, &codegen.SectionTemplate{
-					Name:   "server-stream-send",
+					Name:   "server-websocket-send",
 					Source: webSocketSendT,
-					Data:   e.ServerStream,
+					Data:   e.ServerWebSocket,
 					FuncMap: map[string]interface{}{
 						"upgradeParams":    upgradeParams,
 						"viewedServerBody": viewedServerBody,
 					},
 				})
 			}
-			switch e.ServerStream.Kind {
+			switch e.ServerWebSocket.Kind {
 			case expr.ClientStreamKind, expr.BidirectionalStreamKind:
 				sections = append(sections, &codegen.SectionTemplate{
-					Name:    "server-stream-recv",
+					Name:    "server-websocket-recv",
 					Source:  webSocketRecvT,
-					Data:    e.ServerStream,
+					Data:    e.ServerWebSocket,
 					FuncMap: map[string]interface{}{"upgradeParams": upgradeParams},
 				})
 			}
-			if e.ServerStream.MustClose {
+			if e.ServerWebSocket.MustClose {
 				sections = append(sections, &codegen.SectionTemplate{
-					Name:    "server-stream-close",
+					Name:    "server-websocket-close",
 					Source:  webSocketCloseT,
-					Data:    e.ServerStream,
+					Data:    e.ServerWebSocket,
 					FuncMap: map[string]interface{}{"upgradeParams": upgradeParams},
 				})
 			}
 			if e.Method.ViewedResult != nil && e.Method.ViewedResult.ViewName == "" {
 				sections = append(sections, &codegen.SectionTemplate{
-					Name:   "server-stream-set-view",
+					Name:   "server-websocket-set-view",
 					Source: webSocketSetViewT,
-					Data:   e.ServerStream,
+					Data:   e.ServerWebSocket,
 				})
 			}
 		}
@@ -88,20 +150,18 @@ func serverWSSections(data *ServiceData) []*codegen.SectionTemplate {
 // related struct type definitions for the client.
 func clientStructWSSections(data *ServiceData) []*codegen.SectionTemplate {
 	var sections []*codegen.SectionTemplate
-	if hasWebSocket(data) {
-		sections = append(sections, &codegen.SectionTemplate{
-			Name:    "client-stream-conn-configurer-struct",
-			Source:  webSocketConnConfigurerStructT,
-			Data:    data,
-			FuncMap: map[string]interface{}{"isWebSocketEndpoint": isWebSocketEndpoint},
-		})
-	}
+	sections = append(sections, &codegen.SectionTemplate{
+		Name:    "client-websocket-conn-configurer-struct",
+		Source:  webSocketConnConfigurerStructT,
+		Data:    data,
+		FuncMap: map[string]interface{}{"isWebSocketEndpoint": isWebSocketEndpoint},
+	})
 	for _, e := range data.Endpoints {
-		if e.ClientStream != nil {
+		if e.ClientWebSocket != nil {
 			sections = append(sections, &codegen.SectionTemplate{
-				Name:   "client-stream-struct-type",
+				Name:   "client-websocket-struct-type",
 				Source: webSocketStructTypeT,
-				Data:   e.ClientStream,
+				Data:   e.ClientWebSocket,
 			})
 		}
 	}
@@ -112,49 +172,47 @@ func clientStructWSSections(data *ServiceData) []*codegen.SectionTemplate {
 // specific code for the given service.
 func clientWSSections(data *ServiceData) []*codegen.SectionTemplate {
 	var sections []*codegen.SectionTemplate
-	if hasWebSocket(data) {
-		sections = append(sections, &codegen.SectionTemplate{
-			Name:    "client-stream-conn-configurer-struct-init",
-			Source:  webSocketConnConfigurerStructInitT,
-			Data:    data,
-			FuncMap: map[string]interface{}{"isWebSocketEndpoint": isWebSocketEndpoint},
-		})
-	}
+	sections = append(sections, &codegen.SectionTemplate{
+		Name:    "client-websocket-conn-configurer-struct-init",
+		Source:  webSocketConnConfigurerStructInitT,
+		Data:    data,
+		FuncMap: map[string]interface{}{"isWebSocketEndpoint": isWebSocketEndpoint},
+	})
 	for _, e := range data.Endpoints {
-		if e.ClientStream != nil {
-			if e.ClientStream.RecvTypeRef != "" {
+		if e.ClientWebSocket != nil {
+			if e.ClientWebSocket.RecvTypeRef != "" {
 				sections = append(sections, &codegen.SectionTemplate{
-					Name:    "client-stream-recv",
+					Name:    "client-websocket-recv",
 					Source:  webSocketRecvT,
-					Data:    e.ClientStream,
+					Data:    e.ClientWebSocket,
 					FuncMap: map[string]interface{}{"upgradeParams": upgradeParams},
 				})
 			}
-			switch e.ClientStream.Kind {
+			switch e.ClientWebSocket.Kind {
 			case expr.ClientStreamKind, expr.BidirectionalStreamKind:
 				sections = append(sections, &codegen.SectionTemplate{
-					Name:   "client-stream-send",
+					Name:   "client-websocket-send",
 					Source: webSocketSendT,
-					Data:   e.ClientStream,
+					Data:   e.ClientWebSocket,
 					FuncMap: map[string]interface{}{
 						"upgradeParams":    upgradeParams,
 						"viewedServerBody": viewedServerBody,
 					},
 				})
 			}
-			if e.ClientStream.MustClose {
+			if e.ClientWebSocket.MustClose {
 				sections = append(sections, &codegen.SectionTemplate{
-					Name:    "client-stream-close",
+					Name:    "client-websocket-close",
 					Source:  webSocketCloseT,
-					Data:    e.ClientStream,
+					Data:    e.ClientWebSocket,
 					FuncMap: map[string]interface{}{"upgradeParams": upgradeParams},
 				})
 			}
 			if e.Method.ViewedResult != nil && e.Method.ViewedResult.ViewName == "" {
 				sections = append(sections, &codegen.SectionTemplate{
-					Name:   "client-stream-set-view",
+					Name:   "client-websocket-set-view",
 					Source: webSocketSetViewT,
-					Data:   e.ClientStream,
+					Data:   e.ClientWebSocket,
 				})
 			}
 		}
@@ -176,13 +234,13 @@ func hasWebSocket(sd *ServiceData) bool {
 // isWebSocketEndpoint returns true if the endpoint defines a streaming payload
 // or result.
 func isWebSocketEndpoint(ed *EndpointData) bool {
-	return ed.ServerStream != nil || ed.ClientStream != nil
+	return ed.ServerWebSocket != nil || ed.ClientWebSocket != nil
 }
 
 const (
 	// webSocketStructTypeT renders the server and client struct types that
 	// implements the client and server stream interfaces. The data to render
-	// input: StreamData
+	// input: WebSocketData
 	webSocketStructTypeT = `{{ printf "%s implements the %s interface." .VarName .Interface | comment }}
 type {{ .VarName }} struct {
 {{- if eq .Type "server" }}
@@ -240,7 +298,7 @@ func NewConnConfigurer(fn goahttp.ConnConfigureFunc) *ConnConfigurer {
 
 	// webSocketSendT renders the function implementing the Send method in
 	// stream interface.
-	// input: StreamData
+	// input: WebSocketData
 	webSocketSendT = `{{ comment .SendDesc }}
 func (s *{{ .VarName }}) {{ .SendName }}(v {{ .SendTypeRef }}) error {
 {{- if eq .Type "server" }}
@@ -299,7 +357,7 @@ func (s *{{ .VarName }}) {{ .SendName }}(v {{ .SendTypeRef }}) error {
 
 	// webSocketRecvT renders the function implementing the Recv method in
 	// stream interface.
-	// input: StreamData
+	// input: WebSocketData
 	webSocketRecvT = `{{ comment .RecvDesc }}
 func (s *{{ .VarName }}) {{ .RecvName }}() ({{ .RecvTypeRef }}, error) {
 	var (
@@ -414,7 +472,7 @@ func (s *{{ .VarName }}) {{ .RecvName }}() ({{ .RecvTypeRef }}, error) {
 
 	// webSocketCloseT renders the function implementing the Close method in
 	// stream interface.
-	// input: StreamData
+	// input: WebSocketData
 	webSocketCloseT = `{{ printf "Close closes the %q endpoint websocket connection." .Endpoint.Method.Name | comment }}
 func (s *{{ .VarName }}) Close() error {
 	var err error
@@ -441,7 +499,7 @@ func (s *{{ .VarName }}) Close() error {
 
 	// webSocketSetViewT renders the function implementing the SetView method in
 	// server stream interface.
-	// input: StreamData
+	// input: WebSocketData
 	webSocketSetViewT = `{{ printf "SetView sets the view to render the %s type before sending to the %q endpoint websocket connection." .SendTypeName .Endpoint.Method.Name | comment }}
 func (s *{{ .VarName }}) SetView(view string) {
 	s.view = view

@@ -11,16 +11,21 @@ import (
 	"goa.design/goa/v3/expr"
 )
 
-// ServerFiles returns all the server HTTP transport files.
+// ServerFiles returns the generated HTTP server files.
 func ServerFiles(genpkg string, root *expr.RootExpr) []*codegen.File {
-	fw := make([]*codegen.File, 2*len(root.API.HTTP.Services))
-	for i, svc := range root.API.HTTP.Services {
-		fw[i] = serverFile(genpkg, svc)
+	var files []*codegen.File
+	for _, svc := range root.API.HTTP.Services {
+		files = append(files, serverFile(genpkg, svc))
+		if f := websocketServerFile(genpkg, svc); f != nil {
+			files = append(files, f)
+		}
 	}
-	for i, r := range root.API.HTTP.Services {
-		fw[i+len(root.API.HTTP.Services)] = serverEncodeDecode(genpkg, r)
+	for _, svc := range root.API.HTTP.Services {
+		if f := serverEncodeDecodeFile(genpkg, svc); f != nil {
+			files = append(files, f)
+		}
 	}
-	return fw
+	return files
 }
 
 // server returns the file implementing the HTTP server.
@@ -30,9 +35,11 @@ func serverFile(genpkg string, svc *expr.HTTPServiceExpr) *codegen.File {
 	path := filepath.Join(codegen.Gendir, "http", svcName, "server", "server.go")
 	title := fmt.Sprintf("%s HTTP server", svc.Name())
 	funcs := map[string]interface{}{
-		"join":             func(ss []string, s string) string { return strings.Join(ss, s) },
-		"hasWebSocket":     hasWebSocket,
-		"viewedServerBody": viewedServerBody,
+		"join":                func(ss []string, s string) string { return strings.Join(ss, s) },
+		"hasWebSocket":        hasWebSocket,
+		"isWebSocketEndpoint": isWebSocketEndpoint,
+		"viewedServerBody":    viewedServerBody,
+		"mustDecodeRequest":   mustDecodeRequest,
 	}
 	sections := []*codegen.SectionTemplate{
 		codegen.Header(title, "server", []*codegen.ImportSpec{
@@ -43,8 +50,6 @@ func serverFile(genpkg string, svc *expr.HTTPServiceExpr) *codegen.File {
 			{Path: "net/http"},
 			{Path: "path"},
 			{Path: "strings"},
-			{Path: "sync"},
-			{Path: "time"},
 			{Path: "github.com/gorilla/websocket"},
 			codegen.GoaImport(""),
 			codegen.GoaNamedImport("http", "goahttp"),
@@ -66,8 +71,6 @@ func serverFile(genpkg string, svc *expr.HTTPServiceExpr) *codegen.File {
 		}
 	}
 
-	sections = append(sections, serverStructWSSections(data)...)
-
 	sections = append(sections, &codegen.SectionTemplate{Name: "server-init", Source: serverInitT, Data: data, FuncMap: funcs})
 	sections = append(sections, &codegen.SectionTemplate{Name: "server-service", Source: serverServiceT, Data: data})
 	sections = append(sections, &codegen.SectionTemplate{Name: "server-use", Source: serverUseT, Data: data})
@@ -75,20 +78,18 @@ func serverFile(genpkg string, svc *expr.HTTPServiceExpr) *codegen.File {
 
 	for _, e := range data.Endpoints {
 		sections = append(sections, &codegen.SectionTemplate{Name: "server-handler", Source: serverHandlerT, Data: e})
-		sections = append(sections, &codegen.SectionTemplate{Name: "server-handler-init", Source: serverHandlerInitT, Data: e})
+		sections = append(sections, &codegen.SectionTemplate{Name: "server-handler-init", Source: serverHandlerInitT, FuncMap: funcs, Data: e})
 	}
 	for _, s := range data.FileServers {
 		sections = append(sections, &codegen.SectionTemplate{Name: "server-files", Source: fileServerT, FuncMap: funcs, Data: s})
 	}
 
-	sections = append(sections, serverWSSections(data)...)
-
 	return &codegen.File{Path: path, SectionTemplates: sections}
 }
 
-// serverEncodeDecode returns the file defining the HTTP server encoding and
+// serverEncodeDecodeFile returns the file defining the HTTP server encoding and
 // decoding logic.
-func serverEncodeDecode(genpkg string, svc *expr.HTTPServiceExpr) *codegen.File {
+func serverEncodeDecodeFile(genpkg string, svc *expr.HTTPServiceExpr) *codegen.File {
 	data := HTTPServices.Get(svc.Name())
 	svcName := codegen.SnakeCase(data.Service.VarName)
 	path := filepath.Join(codegen.Gendir, "http", svcName, "server", "encode_decode.go")
@@ -112,7 +113,7 @@ func serverEncodeDecode(genpkg string, svc *expr.HTTPServiceExpr) *codegen.File 
 	}
 
 	for _, e := range data.Endpoints {
-		if e.ServerStream == nil {
+		if !isWebSocketEndpoint(e) {
 			sections = append(sections, &codegen.SectionTemplate{
 				Name:    "response-encoder",
 				FuncMap: transTmplFuncs(svc),
@@ -120,7 +121,7 @@ func serverEncodeDecode(genpkg string, svc *expr.HTTPServiceExpr) *codegen.File 
 				Data:    e,
 			})
 		}
-		if e.Payload.Ref != "" {
+		if mustDecodeRequest(e) {
 			fm := transTmplFuncs(svc)
 			fm["mapQueryDecodeData"] = mapQueryDecodeData
 			sections = append(sections, &codegen.SectionTemplate{
@@ -140,7 +141,6 @@ func serverEncodeDecode(genpkg string, svc *expr.HTTPServiceExpr) *codegen.File 
 				Data:    e.MultipartRequestDecoder,
 			})
 		}
-
 		if len(e.Errors) > 0 {
 			sections = append(sections, &codegen.SectionTemplate{
 				Name:    "error-encoder",
@@ -158,6 +158,12 @@ func serverEncodeDecode(genpkg string, svc *expr.HTTPServiceExpr) *codegen.File 
 		})
 	}
 
+	// If all endpoints use skip encoding and decoding of both payloads and
+	// results and define no error then this file is irrelevant.
+	if len(sections) == 1 {
+		return nil
+	}
+
 	return &codegen.File{Path: path, SectionTemplates: sections}
 }
 
@@ -171,6 +177,11 @@ func transTmplFuncs(s *expr.HTTPServiceExpr) map[string]interface{} {
 		"printValue":           printValue,
 		"viewedServerBody":     viewedServerBody,
 	}
+}
+
+// mustDecodeRequest returns true if the Payload type is not empty.
+func mustDecodeRequest(e *EndpointData) bool {
+	return e.Payload.Ref != ""
 }
 
 // conversionData creates a template context suitable for executing the
@@ -300,7 +311,7 @@ func {{ .ServerInit }}(
 			{{- end }}
 		},
 		{{- range .Endpoints }}
-		{{ .Method.VarName }}: {{ .HandlerInit }}(e.{{ .Method.VarName }}, mux, {{ if .MultipartRequestDecoder }}{{ .MultipartRequestDecoder.InitName }}(mux, {{ .MultipartRequestDecoder.VarName }}){{ else }}decoder{{ end }}, encoder, errhandler, formatter{{ if .ServerStream }}, upgrader, configurer.{{ .Method.VarName }}Fn{{ end }}),
+		{{ .Method.VarName }}: {{ .HandlerInit }}(e.{{ .Method.VarName }}, mux, {{ if .MultipartRequestDecoder }}{{ .MultipartRequestDecoder.InitName }}(mux, {{ .MultipartRequestDecoder.VarName }}){{ else }}decoder{{ end }}, encoder, errhandler, formatter{{ if isWebSocketEndpoint . }}, upgrader, configurer.{{ .Method.VarName }}Fn{{ end }}),
 		{{- end }}
 	}
 }
@@ -387,20 +398,16 @@ func {{ .HandlerInit }}(
 	encoder func(context.Context, http.ResponseWriter) goahttp.Encoder,
 	errhandler func(context.Context, http.ResponseWriter, error),
 	formatter func(err error) goahttp.Statuser,
-	{{- if .ServerStream }}
+	{{- if isWebSocketEndpoint . }}
 	upgrader goahttp.Upgrader,
 	configurer goahttp.ConnConfigureFunc,
 	{{- end }}
 ) http.Handler {
 	var (
-		{{- if .ServerStream }}
-			{{- if .Payload.Ref }}
+		{{- if mustDecodeRequest . }}
 		decodeRequest  = {{ .RequestDecoder }}(mux, decoder)
-			{{- end }}
-		{{- else }}
-			{{- if .Payload.Ref }}
-		decodeRequest  = {{ .RequestDecoder }}(mux, decoder)
-			{{- end }}
+		{{- end }}
+		{{- if not (isWebSocketEndpoint .) }}
 		encodeResponse = {{ .ResponseEncoder }}(encoder)
 		{{- end }}
 		encodeError    = {{ if .Errors }}{{ .ErrorEncoder }}{{ else }}goahttp.ErrorEncoder{{ end }}(encoder, formatter)
@@ -410,7 +417,7 @@ func {{ .HandlerInit }}(
 		ctx = context.WithValue(ctx, goa.MethodKey, {{ printf "%q" .Method.Name }})
 		ctx = context.WithValue(ctx, goa.ServiceKey, {{ printf "%q" .ServiceName }})
 
-	{{- if .Payload.Ref }}
+	{{- if mustDecodeRequest . }}
 		payload, err := decodeRequest(r)
 		if err != nil {
 			if err := encodeError(ctx, w, err); err != nil {
@@ -421,14 +428,11 @@ func {{ .HandlerInit }}(
 	{{- else }}
 		var err error
 	{{- end }}
-
-	{{ if .ServerStream }}
+	{{- if isWebSocketEndpoint . }}
 		var cancel context.CancelFunc
-		{
-			ctx, cancel = context.WithCancel(ctx)
-		}
+		ctx, cancel = context.WithCancel(ctx)
 		v := &{{ .ServicePkgName }}.{{ .Method.ServerStream.EndpointStruct }}{
-			Stream: &{{ .ServerStream.VarName }}{
+			Stream: &{{ .ServerWebSocket.VarName }}{
 				upgrader: upgrader,
 				configurer: configurer,
 				cancel: cancel,
@@ -440,12 +444,14 @@ func {{ .HandlerInit }}(
 		{{- end }}
 		}
 		_, err = endpoint(ctx, v)
+	{{- else if .Method.SkipRequestBodyEncodeDecode }}
+		data := &{{ .ServicePkgName }}.{{ .Method.RequestStruct }}{ {{ if .Payload.Ref }}Payload: payload.({{ .Payload.Ref }}), {{ end }}Body: r.Body }
+		res, err := endpoint(ctx, data)
 	{{- else }}
 		res, err := endpoint(ctx, {{ if .Payload.Ref }}payload{{ else }}nil{{ end }})
 	{{- end }}
-
 		if err != nil {
-			{{- if .ServerStream }}
+			{{- if isWebSocketEndpoint . }}
 			if _, ok := err.(websocket.HandshakeError); ok {
 				return
 			}
@@ -455,9 +461,23 @@ func {{ .HandlerInit }}(
 			}
 			return
 		}
-	{{- if not .ServerStream }}
-		if err := encodeResponse(ctx, w, res); err != nil {
+	{{- if .Method.SkipResponseBodyEncodeDecode }}
+		o := res.(*{{ .ServicePkgName }}.{{ .Method.ResponseStruct }})
+		defer o.Body.Close()
+	{{- end }}
+	{{- if not (isWebSocketEndpoint .) }}
+		if err := encodeResponse(ctx, w, {{ if .Method.SkipResponseBodyEncodeDecode }}o.Result{{ else }}res{{ end }}); err != nil {
 			errhandler(ctx, w, err)
+			{{- if .Method.SkipResponseBodyEncodeDecode }}
+			return
+			{{- end }}
+		}
+	{{- end }}
+	{{- if .Method.SkipResponseBodyEncodeDecode }}
+		if _, err := io.Copy(w, o.Body); err != nil {
+			if err := encodeError(ctx, w, err); err != nil {
+				errhandler(ctx, w, err)
+			}
 		}
 	{{- end }}
 	})
