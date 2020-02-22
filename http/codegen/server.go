@@ -466,7 +466,7 @@ func {{ .HandlerInit }}(
 		defer o.Body.Close()
 	{{- end }}
 	{{- if not (isWebSocketEndpoint .) }}
-		if err := encodeResponse(ctx, w, {{ if .Method.SkipResponseBodyEncodeDecode }}o.Result{{ else }}res{{ end }}); err != nil {
+		if err := encodeResponse(ctx, w, {{ if and .Method.SkipResponseBodyEncodeDecode .Result.Ref }}o.Result{{ else }}res{{ end }}); err != nil {
 			errhandler(ctx, w, err)
 			{{- if .Method.SkipResponseBodyEncodeDecode }}
 			return

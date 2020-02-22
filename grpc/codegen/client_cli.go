@@ -128,16 +128,10 @@ func payloadBuilders(genpkg string, svc *expr.GRPCServiceExpr, data *cli.Command
 }
 
 func buildFlags(svc *ServiceData, e *EndpointData) ([]*cli.FlagData, *cli.BuildFunctionData) {
-	var (
-		flags         []*cli.FlagData
-		buildFunction *cli.BuildFunctionData
-	)
-	{
-		if e.Request != nil {
-			flags, buildFunction = makeFlags(e, e.Request.CLIArgs)
-		}
+	if e.Request != nil {
+		return makeFlags(e, e.Request.CLIArgs)
 	}
-	return flags, buildFunction
+	return nil, nil
 }
 
 func makeFlags(e *EndpointData, args []*InitArgData) ([]*cli.FlagData, *cli.BuildFunctionData) {
