@@ -1276,9 +1276,6 @@ func getPrimitive(att *expr.AttributeExpr) *expr.AttributeExpr {
 		if _, ok := ut.Type.(expr.Primitive); ok {
 			return ut.AttributeExpr
 		}
-		if len(ut.Bases) > 0 {
-			return nil
-		}
 		return getPrimitive(ut.AttributeExpr)
 	}
 	return nil

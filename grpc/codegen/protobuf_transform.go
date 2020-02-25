@@ -452,7 +452,7 @@ func convertType(source, target *expr.AttributeExpr, sourceVar string, ta *trans
 		// return a function name for the conversion
 		sourcePrimitive, targetPrimitive := getPrimitive(source), getPrimitive(target)
 		if sourcePrimitive != nil && targetPrimitive != nil && sourcePrimitive.Type == targetPrimitive.Type {
-			if strings.HasSuffix(ta.TargetCtx.Pkg, "pb") {
+			if ta.proto {
 				return fmt.Sprintf("%s(%s)", targetPrimitive.Type.Name(), sourceVar)
 			}
 			return fmt.Sprintf("%s(%s)", ta.TargetCtx.Scope.Ref(target, ta.TargetCtx.Pkg), sourceVar)

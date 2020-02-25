@@ -2042,7 +2042,8 @@ func buildRequestBodyType(body, att *expr.AttributeExpr, e *expr.HTTPEndpointExp
 			}
 		} else {
 			varname = sd.Scope.GoTypeRef(body)
-			validateRef = codegen.RecursiveValidationCode(body, httpctx, true, "body")
+			ctx := codegen.NewAttributeContext(false, false, !svr, "", sd.Scope)
+			validateRef = codegen.RecursiveValidationCode(body, ctx, true, "body")
 			desc = body.Description
 		}
 	}

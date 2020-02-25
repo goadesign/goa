@@ -3776,10 +3776,8 @@ func DecodeMethodBodyPrimitiveStringValidateRequest(mux goahttp.Muxer, decoder f
 			}
 			return nil, goa.DecodePayloadError(err.Error())
 		}
-		if body != nil {
-			if !(*body == "val") {
-				err = goa.MergeErrors(err, goa.InvalidEnumValueError("body", *body, []interface{}{"val"}))
-			}
+		if !(body == "val") {
+			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body", body, []interface{}{"val"}))
 		}
 		if err != nil {
 			return nil, err
@@ -3807,10 +3805,8 @@ func DecodeMethodBodyPrimitiveBoolValidateRequest(mux goahttp.Muxer, decoder fun
 			}
 			return nil, goa.DecodePayloadError(err.Error())
 		}
-		if body != nil {
-			if !(*body == true) {
-				err = goa.MergeErrors(err, goa.InvalidEnumValueError("body", *body, []interface{}{true}))
-			}
+		if !(body == true) {
+			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body", body, []interface{}{true}))
 		}
 		if err != nil {
 			return nil, err
