@@ -74,6 +74,8 @@ type (
 		Required bool
 		// Example returns a JSON serialized example value.
 		Example string
+		// Default returns the default value if any.
+		Default interface{}
 	}
 
 	// BuildFunctionData contains the data needed to generate a constructor
@@ -304,7 +306,7 @@ func PayloadBuilderSection(buildFunction *BuildFunctionData) *codegen.SectionTem
 // required determines if the flag is required
 // example is an example value for the flag
 //
-func NewFlagData(svcn, en, name, typeName, description string, required bool, example interface{}) *FlagData {
+func NewFlagData(svcn, en, name, typeName, description string, required bool, example, def interface{}) *FlagData {
 	ex := jsonExample(example)
 	fn := goifyTerms(svcn, en, name)
 	return &FlagData{
@@ -315,6 +317,7 @@ func NewFlagData(svcn, en, name, typeName, description string, required bool, ex
 		Description: description,
 		Required:    required,
 		Example:     ex,
+		Default:     def,
 	}
 }
 
@@ -573,7 +576,7 @@ const parseFlagsT = `var (
 		{{ .FullName }}Flags = flag.NewFlagSet("{{ .Name }}", flag.ExitOnError)
 		{{- $sub := . }}
 		{{- range .Flags }}
-		{{ .FullName }}Flag = {{ $sub.FullName }}Flags.String("{{ .Name }}", "{{ if .Required }}REQUIRED{{ end }}", {{ printf "%q" .Description }})
+		{{ .FullName }}Flag = {{ $sub.FullName }}Flags.String("{{ .Name }}", "{{ if .Default }}{{ .Default }}{{ else if .Required }}REQUIRED{{ end }}", {{ printf "%q" .Description }})
 		{{- end }}
 		{{ end }}
 		{{- end }}

@@ -49,7 +49,7 @@ const (
 	StatusPreconditionFailed           = expr.StatusPreconditionFailed
 	StatusRequestEntityTooLarge        = expr.StatusRequestEntityTooLarge
 	StatusRequestURITooLong            = expr.StatusRequestURITooLong
-	StatusUnsupportedResultType        = expr.StatusUnsupportedResultType
+	StatusUnsupportedMediaType         = expr.StatusUnsupportedMediaType
 	StatusRequestedRangeNotSatisfiable = expr.StatusRequestedRangeNotSatisfiable
 	StatusExpectationFailed            = expr.StatusExpectationFailed
 	StatusTeapot                       = expr.StatusTeapot
@@ -555,6 +555,77 @@ func MultipartRequest() {
 	e.MultipartRequest = true
 }
 
+// SkipRequestBodyEncodeDecode prevents Goa from generating the request encoding
+// (client) and decoding (server) code. Instead the service method gets direct
+// access to the HTTP body reader. The client method provides a reader from
+// which to stream the request body. This makes it possible to stream requests
+// without requiring the entire content to be loaded in memory for
+// encoding/decoding. Note that the use of this function is incompatible with
+// gRPC and calling it on a method that defines a gRPC transport is an error.
+//
+// SkipRequestBodyEncodeDecode must appear in a HTTP endpoint expression.
+//
+// Example:
+//
+//    var _ = Service("upload", func() {
+//        Method("upload", func() {
+//            Payload(func() {
+//                Attribute("id", String)
+//                Attribute("length", Int)
+//            })
+//            HTTP(func() {
+//                POST("/{id}")
+//                Header("length:Content-Length")
+//                SkipRequestBodyEncodeDecode()
+//            })
+//        })
+//
+func SkipRequestBodyEncodeDecode() {
+	e, ok := eval.Current().(*expr.HTTPEndpointExpr)
+	if !ok {
+		eval.IncompatibleDSL()
+		return
+	}
+	e.SkipRequestBodyEncodeDecode = true
+}
+
+// SkipResponseBodyEncodeDecode prevents Goa from generating the response
+// encoding (server) and decoding (client) code. Instead the service method
+// returns a reader from which to stream the HTTP response body io. The client
+// also gets access to a reader to stream the incoming response body. This makes
+// it possible to stream responses without requiring the entire content to be
+// loaded in memory for encoding/decoding. Note that the use of this function is
+// incompatible with gRPC and calling it on a method that defines a gRPC
+// transport is an error.
+//
+// SkipResponseBodyEncodeDecode must appear in a HTTP endpoint expression.
+//
+// Example:
+//
+//    var _ = Service("download", func() {
+//        Method("download", func() {
+//            Payload(String)
+//            Result(func() {
+//                Attribute("length", Int)
+//            })
+//            HTTP(func() {
+//                POST("/{id}")
+//                SkipResponseBodyEncodeDecode()
+//                Response(StatusOK, func() {
+//                    Header("length:Content-Length")
+//                })
+//            })
+//        })
+//
+func SkipResponseBodyEncodeDecode() {
+	e, ok := eval.Current().(*expr.HTTPEndpointExpr)
+	if !ok {
+		eval.IncompatibleDSL()
+		return
+	}
+	e.SkipResponseBodyEncodeDecode = true
+}
+
 // Body describes a HTTP request or response body.
 //
 // Body must appear in a Method HTTP expression to define the request body or in
@@ -703,7 +774,7 @@ func Body(args ...interface{}) {
 // are automatically merged into the child method payload type if not already
 // defined.
 //
-// Parent must appear in a Service expression.
+// Parent must appear in the HTTP expresssion of a Service.
 //
 // Parent accepts one argument: the name of the parent service.
 func Parent(name string) {
@@ -784,7 +855,7 @@ func Tag(name, value string) {
 //
 //    var _ = Method("add", func() {
 //	  HTTP(func() {
-//            Response(OK, func() {
+//            Response(StatusOK, func() {
 //                ContentType("application/json")
 //            })
 //        })

@@ -44,11 +44,8 @@ func NewStreamingResultMethodHandler(
 			}
 			return
 		}
-
 		var cancel context.CancelFunc
-		{
-			ctx, cancel = context.WithCancel(ctx)
-		}
+		ctx, cancel = context.WithCancel(ctx)
 		v := &streamingresultservice.StreamingResultMethodEndpointInput{
 			Stream: &StreamingResultMethodServerStream{
 				upgrader:   upgrader,
@@ -60,7 +57,6 @@ func NewStreamingResultMethodHandler(
 			Payload: payload.(*streamingresultservice.Request),
 		}
 		_, err = endpoint(ctx, v)
-
 		if err != nil {
 			if _, ok := err.(websocket.HandshakeError); ok {
 				return
@@ -184,11 +180,8 @@ func NewStreamingResultNoPayloadMethodHandler(
 		ctx = context.WithValue(ctx, goa.MethodKey, "StreamingResultNoPayloadMethod")
 		ctx = context.WithValue(ctx, goa.ServiceKey, "StreamingResultNoPayloadService")
 		var err error
-
 		var cancel context.CancelFunc
-		{
-			ctx, cancel = context.WithCancel(ctx)
-		}
+		ctx, cancel = context.WithCancel(ctx)
 		v := &streamingresultnopayloadservice.StreamingResultNoPayloadMethodEndpointInput{
 			Stream: &StreamingResultNoPayloadMethodServerStream{
 				upgrader:   upgrader,
@@ -199,7 +192,6 @@ func NewStreamingResultNoPayloadMethodHandler(
 			},
 		}
 		_, err = endpoint(ctx, v)
-
 		if err != nil {
 			if _, ok := err.(websocket.HandshakeError); ok {
 				return
@@ -230,9 +222,7 @@ func (c *Client) StreamingResultMethod() goa.Endpoint {
 			return nil, err
 		}
 		var cancel context.CancelFunc
-		{
-			ctx, cancel = context.WithCancel(ctx)
-		}
+		ctx, cancel = context.WithCancel(ctx)
 		conn, resp, err := c.dialer.DialContext(ctx, req.URL.String(), req.Header)
 		if err != nil {
 			if resp != nil {
@@ -315,9 +305,7 @@ func (c *Client) StreamingResultWithViewsMethod() goa.Endpoint {
 			return nil, err
 		}
 		var cancel context.CancelFunc
-		{
-			ctx, cancel = context.WithCancel(ctx)
-		}
+		ctx, cancel = context.WithCancel(ctx)
 		conn, resp, err := c.dialer.DialContext(ctx, req.URL.String(), req.Header)
 		if err != nil {
 			if resp != nil {
@@ -395,9 +383,7 @@ func (c *Client) StreamingResultWithExplicitViewMethod() goa.Endpoint {
 			return nil, err
 		}
 		var cancel context.CancelFunc
-		{
-			ctx, cancel = context.WithCancel(ctx)
-		}
+		ctx, cancel = context.WithCancel(ctx)
 		conn, resp, err := c.dialer.DialContext(ctx, req.URL.String(), req.Header)
 		if err != nil {
 			if resp != nil {
@@ -603,9 +589,7 @@ func (c *Client) StreamingResultCollectionWithExplicitViewMethod() goa.Endpoint 
 			return nil, err
 		}
 		var cancel context.CancelFunc
-		{
-			ctx, cancel = context.WithCancel(ctx)
-		}
+		ctx, cancel = context.WithCancel(ctx)
 		conn, resp, err := c.dialer.DialContext(ctx, req.URL.String(), req.Header)
 		if err != nil {
 			if resp != nil {
@@ -907,9 +891,7 @@ func (c *Client) StreamingResultNoPayloadMethod() goa.Endpoint {
 			return nil, err
 		}
 		var cancel context.CancelFunc
-		{
-			ctx, cancel = context.WithCancel(ctx)
-		}
+		ctx, cancel = context.WithCancel(ctx)
 		conn, resp, err := c.dialer.DialContext(ctx, req.URL.String(), req.Header)
 		if err != nil {
 			if resp != nil {
@@ -963,11 +945,8 @@ func NewStreamingPayloadMethodHandler(
 			}
 			return
 		}
-
 		var cancel context.CancelFunc
-		{
-			ctx, cancel = context.WithCancel(ctx)
-		}
+		ctx, cancel = context.WithCancel(ctx)
 		v := &streamingpayloadservice.StreamingPayloadMethodEndpointInput{
 			Stream: &StreamingPayloadMethodServerStream{
 				upgrader:   upgrader,
@@ -979,7 +958,6 @@ func NewStreamingPayloadMethodHandler(
 			Payload: payload.(*streamingpayloadservice.Payload),
 		}
 		_, err = endpoint(ctx, v)
-
 		if err != nil {
 			if _, ok := err.(websocket.HandshakeError); ok {
 				return
@@ -1057,9 +1035,7 @@ func (c *Client) StreamingPayloadMethod() goa.Endpoint {
 			return nil, err
 		}
 		var cancel context.CancelFunc
-		{
-			ctx, cancel = context.WithCancel(ctx)
-		}
+		ctx, cancel = context.WithCancel(ctx)
 		conn, resp, err := c.dialer.DialContext(ctx, req.URL.String(), req.Header)
 		if err != nil {
 			if resp != nil {
@@ -1132,11 +1108,8 @@ func NewStreamingPayloadNoPayloadMethodHandler(
 		ctx = context.WithValue(ctx, goa.MethodKey, "StreamingPayloadNoPayloadMethod")
 		ctx = context.WithValue(ctx, goa.ServiceKey, "StreamingPayloadNoPayloadService")
 		var err error
-
 		var cancel context.CancelFunc
-		{
-			ctx, cancel = context.WithCancel(ctx)
-		}
+		ctx, cancel = context.WithCancel(ctx)
 		v := &streamingpayloadnopayloadservice.StreamingPayloadNoPayloadMethodEndpointInput{
 			Stream: &StreamingPayloadNoPayloadMethodServerStream{
 				upgrader:   upgrader,
@@ -1147,7 +1120,6 @@ func NewStreamingPayloadNoPayloadMethodHandler(
 			},
 		}
 		_, err = endpoint(ctx, v)
-
 		if err != nil {
 			if _, ok := err.(websocket.HandshakeError); ok {
 				return
@@ -1174,9 +1146,7 @@ func (c *Client) StreamingPayloadNoPayloadMethod() goa.Endpoint {
 			return nil, err
 		}
 		var cancel context.CancelFunc
-		{
-			ctx, cancel = context.WithCancel(ctx)
-		}
+		ctx, cancel = context.WithCancel(ctx)
 		conn, resp, err := c.dialer.DialContext(ctx, req.URL.String(), req.Header)
 		if err != nil {
 			if resp != nil {
@@ -2132,11 +2102,8 @@ func NewBidirectionalStreamingMethodHandler(
 			}
 			return
 		}
-
 		var cancel context.CancelFunc
-		{
-			ctx, cancel = context.WithCancel(ctx)
-		}
+		ctx, cancel = context.WithCancel(ctx)
 		v := &bidirectionalstreamingservice.BidirectionalStreamingMethodEndpointInput{
 			Stream: &BidirectionalStreamingMethodServerStream{
 				upgrader:   upgrader,
@@ -2148,7 +2115,6 @@ func NewBidirectionalStreamingMethodHandler(
 			Payload: payload.(*bidirectionalstreamingservice.Payload),
 		}
 		_, err = endpoint(ctx, v)
-
 		if err != nil {
 			if _, ok := err.(websocket.HandshakeError); ok {
 				return
@@ -2261,9 +2227,7 @@ func (c *Client) BidirectionalStreamingMethod() goa.Endpoint {
 			return nil, err
 		}
 		var cancel context.CancelFunc
-		{
-			ctx, cancel = context.WithCancel(ctx)
-		}
+		ctx, cancel = context.WithCancel(ctx)
 		conn, resp, err := c.dialer.DialContext(ctx, req.URL.String(), req.Header)
 		if err != nil {
 			if resp != nil {
@@ -2342,11 +2306,8 @@ func NewBidirectionalStreamingNoPayloadMethodHandler(
 		ctx = context.WithValue(ctx, goa.MethodKey, "BidirectionalStreamingNoPayloadMethod")
 		ctx = context.WithValue(ctx, goa.ServiceKey, "BidirectionalStreamingNoPayloadService")
 		var err error
-
 		var cancel context.CancelFunc
-		{
-			ctx, cancel = context.WithCancel(ctx)
-		}
+		ctx, cancel = context.WithCancel(ctx)
 		v := &bidirectionalstreamingnopayloadservice.BidirectionalStreamingNoPayloadMethodEndpointInput{
 			Stream: &BidirectionalStreamingNoPayloadMethodServerStream{
 				upgrader:   upgrader,
@@ -2357,7 +2318,6 @@ func NewBidirectionalStreamingNoPayloadMethodHandler(
 			},
 		}
 		_, err = endpoint(ctx, v)
-
 		if err != nil {
 			if _, ok := err.(websocket.HandshakeError); ok {
 				return
@@ -2402,9 +2362,7 @@ func (c *Client) BidirectionalStreamingNoPayloadMethod() goa.Endpoint {
 			return nil, err
 		}
 		var cancel context.CancelFunc
-		{
-			ctx, cancel = context.WithCancel(ctx)
-		}
+		ctx, cancel = context.WithCancel(ctx)
 		conn, resp, err := c.dialer.DialContext(ctx, req.URL.String(), req.Header)
 		if err != nil {
 			if resp != nil {

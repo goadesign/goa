@@ -1458,7 +1458,8 @@ func EncodeMethodHeaderStringRequest(encoder func(*http.Request) goahttp.Encoder
 			return goahttp.ErrInvalidType("ServiceHeaderString", "MethodHeaderString", "*serviceheaderstring.MethodHeaderStringPayload", v)
 		}
 		if p.H != nil {
-			req.Header.Set("h", *p.H)
+			head := *p.H
+			req.Header.Set("h", head)
 		}
 		return nil
 	}
@@ -1474,7 +1475,8 @@ func EncodeMethodHeaderStringValidateRequest(encoder func(*http.Request) goahttp
 			return goahttp.ErrInvalidType("ServiceHeaderStringValidate", "MethodHeaderStringValidate", "*serviceheaderstringvalidate.MethodHeaderStringValidatePayload", v)
 		}
 		if p.H != nil {
-			req.Header.Set("h", *p.H)
+			head := *p.H
+			req.Header.Set("h", head)
 		}
 		return nil
 	}
@@ -1489,8 +1491,11 @@ func EncodeMethodHeaderArrayStringRequest(encoder func(*http.Request) goahttp.En
 		if !ok {
 			return goahttp.ErrInvalidType("ServiceHeaderArrayString", "MethodHeaderArrayString", "*serviceheaderarraystring.MethodHeaderArrayStringPayload", v)
 		}
-		for _, value := range p.H {
-			req.Header.Add("h", value)
+		{
+			head := p.H
+			for _, val := range head {
+				req.Header.Add("h", val)
+			}
 		}
 		return nil
 	}
@@ -1506,8 +1511,88 @@ func EncodeMethodHeaderArrayStringValidateRequest(encoder func(*http.Request) go
 		if !ok {
 			return goahttp.ErrInvalidType("ServiceHeaderArrayStringValidate", "MethodHeaderArrayStringValidate", "*serviceheaderarraystringvalidate.MethodHeaderArrayStringValidatePayload", v)
 		}
-		for _, value := range p.H {
-			req.Header.Add("h", value)
+		{
+			head := p.H
+			for _, val := range head {
+				req.Header.Add("h", val)
+			}
+		}
+		return nil
+	}
+}
+`
+
+var PayloadHeaderIntEncodeCode = `// EncodeMethodHeaderIntRequest returns an encoder for requests sent to the
+// ServiceHeaderInt MethodHeaderInt server.
+func EncodeMethodHeaderIntRequest(encoder func(*http.Request) goahttp.Encoder) func(*http.Request, interface{}) error {
+	return func(req *http.Request, v interface{}) error {
+		p, ok := v.(*serviceheaderint.MethodHeaderIntPayload)
+		if !ok {
+			return goahttp.ErrInvalidType("ServiceHeaderInt", "MethodHeaderInt", "*serviceheaderint.MethodHeaderIntPayload", v)
+		}
+		if p.H != nil {
+			head := *p.H
+			headStr := strconv.Itoa(head)
+			req.Header.Set("h", headStr)
+		}
+		return nil
+	}
+}
+`
+
+var PayloadHeaderIntValidateEncodeCode = `// EncodeMethodHeaderIntValidateRequest returns an encoder for requests sent to
+// the ServiceHeaderIntValidate MethodHeaderIntValidate server.
+func EncodeMethodHeaderIntValidateRequest(encoder func(*http.Request) goahttp.Encoder) func(*http.Request, interface{}) error {
+	return func(req *http.Request, v interface{}) error {
+		p, ok := v.(*serviceheaderintvalidate.MethodHeaderIntValidatePayload)
+		if !ok {
+			return goahttp.ErrInvalidType("ServiceHeaderIntValidate", "MethodHeaderIntValidate", "*serviceheaderintvalidate.MethodHeaderIntValidatePayload", v)
+		}
+		if p.H != nil {
+			head := *p.H
+			headStr := strconv.Itoa(head)
+			req.Header.Set("h", headStr)
+		}
+		return nil
+	}
+}
+`
+
+var PayloadHeaderArrayIntEncodeCode = `// EncodeMethodHeaderArrayIntRequest returns an encoder for requests sent to
+// the ServiceHeaderArrayInt MethodHeaderArrayInt server.
+func EncodeMethodHeaderArrayIntRequest(encoder func(*http.Request) goahttp.Encoder) func(*http.Request, interface{}) error {
+	return func(req *http.Request, v interface{}) error {
+		p, ok := v.(*serviceheaderarrayint.MethodHeaderArrayIntPayload)
+		if !ok {
+			return goahttp.ErrInvalidType("ServiceHeaderArrayInt", "MethodHeaderArrayInt", "*serviceheaderarrayint.MethodHeaderArrayIntPayload", v)
+		}
+		{
+			head := p.H
+			for _, val := range head {
+				valStr := strconv.Itoa(val)
+				req.Header.Add("h", valStr)
+			}
+		}
+		return nil
+	}
+}
+`
+
+var PayloadHeaderArrayIntValidateEncodeCode = `// EncodeMethodHeaderArrayIntValidateRequest returns an encoder for requests
+// sent to the ServiceHeaderArrayIntValidate MethodHeaderArrayIntValidate
+// server.
+func EncodeMethodHeaderArrayIntValidateRequest(encoder func(*http.Request) goahttp.Encoder) func(*http.Request, interface{}) error {
+	return func(req *http.Request, v interface{}) error {
+		p, ok := v.(*serviceheaderarrayintvalidate.MethodHeaderArrayIntValidatePayload)
+		if !ok {
+			return goahttp.ErrInvalidType("ServiceHeaderArrayIntValidate", "MethodHeaderArrayIntValidate", "*serviceheaderarrayintvalidate.MethodHeaderArrayIntValidatePayload", v)
+		}
+		{
+			head := p.H
+			for _, val := range head {
+				valStr := strconv.Itoa(val)
+				req.Header.Add("h", valStr)
+			}
 		}
 		return nil
 	}
@@ -1578,7 +1663,10 @@ func EncodeMethodHeaderStringDefaultRequest(encoder func(*http.Request) goahttp.
 		if !ok {
 			return goahttp.ErrInvalidType("ServiceHeaderStringDefault", "MethodHeaderStringDefault", "*serviceheaderstringdefault.MethodHeaderStringDefaultPayload", v)
 		}
-		req.Header.Set("h", p.H)
+		{
+			head := p.H
+			req.Header.Set("h", head)
+		}
 		return nil
 	}
 }
@@ -1902,7 +1990,7 @@ func EncodeMethodBodyPrimitiveArrayUserRequest(encoder func(*http.Request) goaht
 		if !ok {
 			return goahttp.ErrInvalidType("ServiceBodyPrimitiveArrayUser", "MethodBodyPrimitiveArrayUser", "*servicebodyprimitivearrayuser.PayloadType", v)
 		}
-		body := p
+		body := p.A
 		if err := encoder(req).Encode(&body); err != nil {
 			return goahttp.ErrEncodingError("ServiceBodyPrimitiveArrayUser", "MethodBodyPrimitiveArrayUser", err)
 		}
@@ -1920,7 +2008,7 @@ func EncodeMethodBodyPrimitiveArrayUserValidateRequest(encoder func(*http.Reques
 		if !ok {
 			return goahttp.ErrInvalidType("ServiceBodyPrimitiveArrayUserValidate", "MethodBodyPrimitiveArrayUserValidate", "*servicebodyprimitivearrayuservalidate.PayloadType", v)
 		}
-		body := p
+		body := p.A
 		if err := encoder(req).Encode(&body); err != nil {
 			return goahttp.ErrEncodingError("ServiceBodyPrimitiveArrayUserValidate", "MethodBodyPrimitiveArrayUserValidate", err)
 		}

@@ -80,7 +80,9 @@ func TestStreaming(t *testing.T) {
 		}},
 		{"client-streaming-no-result", testdata.ClientStreamingNoResultDSL, []*sectionExpectation{
 			{"server-stream-send", nil},
+			{"server-stream-close", &testdata.ClientStreamingServerNoResultCloseCode},
 			{"client-stream-recv", nil},
+			{"client-stream-close", &testdata.ClientStreamingClientNoResultCloseCode},
 		}},
 
 		// bidirectional streaming

@@ -48,7 +48,7 @@ const (
 	StatusPreconditionFailed           = 412 // RFC 7232, 4.2
 	StatusRequestEntityTooLarge        = 413 // RFC 7231, 6.5.11
 	StatusRequestURITooLong            = 414 // RFC 7231, 6.5.12
-	StatusUnsupportedResultType        = 415 // RFC 7231, 6.5.13
+	StatusUnsupportedMediaType         = 415 // RFC 7231, 6.5.13
 	StatusRequestedRangeNotSatisfiable = 416 // RFC 7233, 4.4
 	StatusExpectationFailed            = 417 // RFC 7231, 6.5.14
 	StatusTeapot                       = 418 // RFC 7168, 2.3.3
@@ -123,25 +123,16 @@ func (r *HTTPResponseExpr) Validate(e *HTTPEndpointExpr) *eval.ValidationErrors 
 
 	if r.StatusCode == 0 {
 		verr.Add(r, "HTTP response status not defined")
-	} else if !bodyAllowedForStatus(r.StatusCode) && r.bodyExists() && !e.MethodExpr.IsStreaming() {
-		verr.Add(r, "Response body defined for status code %d which does not allow response body.", r.StatusCode)
-	}
-
-	if e.MethodExpr.Result.Type == Empty {
-		if !r.Headers.IsEmpty() {
-			verr.Add(r, "response defines headers but result is empty")
+	} else if !bodyAllowedForStatus(r.StatusCode) && !e.MethodExpr.IsStreaming() {
+		ep, ok := r.Parent.(*HTTPEndpointExpr)
+		if ok && httpResponseBody(ep, r).Type != Empty {
+			verr.Add(r, "Response body defined for status code %d which does not allow response body.", r.StatusCode)
 		}
-		return verr
 	}
 
-	rt, isrt := e.MethodExpr.Result.Type.(*ResultTypeExpr)
-	var inview string
-	if isrt {
-		inview = " all views in"
-	}
-
-	// text/html can only encode strings so make sure there isn't an explicit conflict with the content-type and response.
-	if r.ContentType == "text/html" || r.ContentType == "text/plain" {
+	// text/html and text/plain can only encode strings so make sure there isn't
+	// an explicit conflict with the content-type and response.
+	if (r.ContentType == "text/html" || r.ContentType == "text/plain") && !e.SkipRequestBodyEncodeDecode {
 		if e.MethodExpr.Result.Type != nil && e.MethodExpr.Result.Type != String && e.MethodExpr.Result.Type != Bytes && r.Body == nil {
 			verr.Add(r, fmt.Sprintf("Result type must be String or Bytes when ContentType is '%s'", r.ContentType))
 		}
@@ -150,23 +141,38 @@ func (r *HTTPResponseExpr) Validate(e *HTTPEndpointExpr) *eval.ValidationErrors 
 		}
 	}
 
-	hasAttribute := func(name string) bool {
+	rt, isrt := e.MethodExpr.Result.Type.(*ResultTypeExpr)
+	resultAttributeType := func(name string) DataType {
 		if !IsObject(e.MethodExpr.Result.Type) {
-			return false
+			return nil
 		}
-		if !isrt {
-			return e.MethodExpr.Result.Find(name) != nil
-		}
-		if v, ok := e.MethodExpr.Result.Meta["view"]; ok {
-			return rt.ViewHasAttribute(v[0], name)
-		}
-		for _, v := range rt.Views {
-			if !rt.ViewHasAttribute(v.Name, name) {
-				return false
+		if isrt {
+			if v, ok := e.MethodExpr.Result.Meta["view"]; ok {
+				v := rt.View(v[0])
+				if v == nil {
+					return nil
+				}
+				return v.AttributeExpr.Find(name).Type
+			}
+			for _, v := range rt.Views {
+				if !rt.ViewHasAttribute(v.Name, name) {
+					return nil
+				}
 			}
 		}
-		return true
+		att := e.MethodExpr.Result.Find(name)
+		if att == nil || att.Type == nil {
+			// nil != nil
+			return nil
+		}
+		return att.Type
 	}
+
+	var inview string
+	if isrt {
+		inview = " all views of"
+	}
+
 	if !r.Headers.IsEmpty() {
 		verr.Merge(r.Headers.Validate("HTTP response headers", r))
 		if e.MethodExpr.Result.Type == Empty {
@@ -174,26 +180,46 @@ func (r *HTTPResponseExpr) Validate(e *HTTPEndpointExpr) *eval.ValidationErrors 
 		} else if IsObject(e.MethodExpr.Result.Type) {
 			mobj := AsObject(r.Headers.Type)
 			for _, h := range *mobj {
-				if !hasAttribute(h.Name) {
+				t := resultAttributeType(h.Name)
+				if t == nil {
 					verr.Add(r, "header %q has no equivalent attribute in%s result type, use notation 'attribute_name:header_name' to identify corresponding result type attribute.", h.Name, inview)
+				}
+				if IsArray(t) {
+					if !IsPrimitive(AsArray(t).ElemType.Type) {
+						verr.Add(e, "attribute %q used in HTTP headers must be a primitive type or an array of primitive types.", h.Name)
+					}
+				} else if !IsPrimitive(t) {
+					verr.Add(e, "attribute %q used in HTTP headers must be a primitive type or an array of primitive types.", h.Name)
 				}
 			}
 		} else if len(*AsObject(r.Headers.Type)) > 1 {
 			verr.Add(r, "response defines more than one header but result type is not an object")
+		} else if IsArray(e.MethodExpr.Result.Type) {
+			if !IsPrimitive(AsArray(e.MethodExpr.Result.Type).ElemType.Type) {
+				verr.Add(e, "Array result is mapped to an HTTP header but is not an array of primitive types.")
+			}
 		}
 	}
 	if r.Body != nil {
 		verr.Merge(r.Body.Validate("HTTP response body", r))
+		if e.SkipResponseBodyEncodeDecode {
+			verr.Add(r, "Cannot define a response body when endpoint uses SkipResponseBodyEncodeDecode.")
+		}
 		if att, ok := r.Body.Meta["origin:attribute"]; ok {
-			if !hasAttribute(att[0]) {
+			if resultAttributeType(att[0]) == nil {
 				verr.Add(r, "body %q has no equivalent attribute in%s result type", att[0], inview)
 			}
 		} else if bobj := AsObject(r.Body.Type); bobj != nil {
 			for _, n := range *bobj {
-				if !hasAttribute(n.Name) {
+				if resultAttributeType(n.Name) == nil {
 					verr.Add(r, "body %q has no equivalent attribute in%s result type", n.Name, inview)
 				}
 			}
+		}
+	} else if e.SkipResponseBodyEncodeDecode {
+		body := httpResponseBody(e, r)
+		if body.Type != Empty {
+			verr.Add(e, "HTTP endpoint response body must be empty when using SkipResponseBodyEncodeDecode. Make sure to define Headers as needed.")
 		}
 	}
 	return verr
@@ -228,6 +254,11 @@ func (r *HTTPResponseExpr) Finalize(a *HTTPEndpointExpr, svcAtt *AttributeExpr) 
 					}
 					r.Body.Validation.AddRequired(n)
 				}
+			}
+			// Wrap object with user type to simplify response rendering code.
+			r.Body.Type = &UserTypeExpr{
+				AttributeExpr: DupAtt(r.Body),
+				TypeName:      fmt.Sprintf("%s%sResponseBody", a.Service.Name(), a.Name()),
 			}
 		}
 		if r.Body.Meta == nil {
@@ -272,11 +303,4 @@ func bodyAllowedForStatus(status int) bool {
 		return false
 	}
 	return true
-}
-
-// bodyExists returns true if a response body is defined in the
-// response expression via Body() or Result() in the method expression.
-func (r *HTTPResponseExpr) bodyExists() bool {
-	ep, ok := r.Parent.(*HTTPEndpointExpr)
-	return ok && httpResponseBody(ep, r).Type != Empty
 }

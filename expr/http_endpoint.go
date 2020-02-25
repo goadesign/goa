@@ -43,6 +43,14 @@ type (
 		// StreamingBody describes the body transferred through the websocket
 		// stream.
 		StreamingBody *AttributeExpr
+		// SkipRequestBodyEncodeDecode indicates that the service method accepts
+		// a reader and that the client provides a reader to stream the request
+		// body.
+		SkipRequestBodyEncodeDecode bool
+		// SkipResponseBodyEncodeDecode indicates that the service method
+		// returns a reader and that the client accepts a reader to stream the
+		// response body.
+		SkipResponseBodyEncodeDecode bool
 		// Responses is the list of all the possible success HTTP
 		// responses.
 		Responses []*HTTPResponseExpr
@@ -192,18 +200,23 @@ func (e *HTTPEndpointExpr) Prepare() {
 			c.Prepare()
 			if !e.HasAbsoluteRoutes() {
 				headers.Merge(c.Headers)
-				params.Merge(c.PathParams())
+				cpp := c.PathParams()
+				params.Merge(cpp)
 
 				// Inherit attributes for path params from parent service
-				WalkMappedAttr(c.PathParams(), func(name, _ string, _ *AttributeExpr) error {
+				WalkMappedAttr(cpp, func(name, _ string, _ *AttributeExpr) error {
 					if att := c.MethodExpr.Payload.Find(name); att != nil {
 						if e.MethodExpr.Payload.Type == Empty {
 							e.MethodExpr.Payload.Type = &Object{}
 						}
-						if o := AsObject(e.MethodExpr.Payload.Type); o != nil {
-							if o.Attribute(name) == nil {
-								o.Set(name, att)
+						if o := AsObject(e.MethodExpr.Payload.Type); o != nil && o.Attribute(name) == nil {
+							if c.MethodExpr.Payload.IsRequired(name) {
+								if e.MethodExpr.Payload.Validation == nil {
+									e.MethodExpr.Payload.Validation = &ValidationExpr{}
+								}
+								e.MethodExpr.Payload.Validation.AddRequired(name)
 							}
+							o.Set(name, att)
 						}
 					}
 					return nil
@@ -264,6 +277,41 @@ func (e *HTTPEndpointExpr) Validate() error {
 		verr.Add(e, "Endpoint name cannot be empty")
 	}
 
+	// SkipRequestBodyEncodeDecode is not compatible with gRPC or WebSocket
+	if e.SkipRequestBodyEncodeDecode {
+		if s := Root.API.GRPC.Service(e.Service.Name()); s != nil {
+			if s.Endpoint(e.Name()) != nil {
+				verr.Add(e, "Endpoint cannot use SkipRequestBodyEncodeDecode and define a gRPC transport.")
+			}
+		}
+		if e.MethodExpr.IsPayloadStreaming() {
+			verr.Add(e, "Endpoint cannot use SkipRequestBodyEncodeDecode when method defines a StreamingPayload.")
+		}
+		if e.MethodExpr.IsResultStreaming() {
+			verr.Add(e, "Endpoint cannot use SkipRequestBodyEncodeDecode when method defines a StreamingResult. Use SkipResponseBodyEncodeDecode instead.")
+		}
+	}
+
+	// SkipResponseBodyEncodeDecode is not compatible with gRPC or WebSocket.
+	if e.SkipResponseBodyEncodeDecode {
+		if s := Root.API.GRPC.Service(e.Service.Name()); s != nil {
+			if s.Endpoint(e.Name()) != nil {
+				verr.Add(e, "Endpoint response cannot use SkipResponseBodyEncodeDecode and define a gRPC transport.")
+			}
+		}
+		if e.MethodExpr.IsPayloadStreaming() {
+			verr.Add(e, "Endpoint cannot use SkipResponseBodyEncodeDecode when method defines a StreamingPayload. Use SkipRequestBodyEncodeDecode instead.")
+		}
+		if e.MethodExpr.IsResultStreaming() {
+			verr.Add(e, "Endpoint cannot use SkipResponseBodyEncodeDecode when method defines a StreamingResult.")
+		}
+		if rt, ok := e.MethodExpr.Result.Type.(*ResultTypeExpr); ok {
+			if len(rt.Views) > 1 {
+				verr.Add(e, "Endpoint cannot use SkipResponseBodyEncodeDecode when method result type defines multiple views.")
+			}
+		}
+	}
+
 	// Validate routes
 
 	// Routes cannot be empty
@@ -321,15 +369,16 @@ func (e *HTTPEndpointExpr) Validate() error {
 		} else {
 			hasTags = true
 		}
-		if r.StatusCode < 400 && e.MethodExpr.Stream == ServerStreamKind {
-			if successResp {
-				verr.Add(r, "Multiple success response defined for a streaming endpoint. At most one success response can be defined for a streaming endpoint.")
-			} else {
-				successResp = true
+		if r.StatusCode < 400 {
+			if successResp && e.MethodExpr.Stream == ServerStreamKind {
+				verr.Add(r, "At most one success response can be defined for a streaming endpoint.")
+				if r.Body != nil && r.Body.Type == Empty {
+					verr.Add(r, "Response body empty but endpoint defines streaming WebSocket response.")
+				}
+			} else if successResp && e.SkipResponseBodyEncodeDecode {
+				verr.Add(r, "At most one success response can be defined for a endpoint using SkipResponseBodyEncodeDecode.")
 			}
-			if r.Body != nil && r.Body.Type == Empty {
-				verr.Add(r, "Response body is empty but the endpoint uses streaming result. Response body cannot be empty for a success response if endpoint defines streaming result.")
-			}
+			successResp = true
 		}
 	}
 	if hasTags && allTagged {
@@ -346,6 +395,9 @@ func (e *HTTPEndpointExpr) Validate() error {
 	// Validate body attribute (required fields exist etc.)
 	if e.Body != nil {
 		verr.Merge(e.Body.Validate("HTTP endpoint payload", e))
+		if e.SkipRequestBodyEncodeDecode {
+			verr.Add(e, "Cannot define a request body when using SkipRequestBodyEncodeDecode.")
+		}
 	}
 
 	// Validate errors
@@ -354,6 +406,10 @@ func (e *HTTPEndpointExpr) Validate() error {
 	}
 
 	// Validate definitions of params, headers and bodies against definition of payload
+	var (
+		hasParams  = !e.Params.IsEmpty()
+		hasHeaders = !e.Headers.IsEmpty()
+	)
 	if isEmpty(e.MethodExpr.Payload) {
 		if e.MapQueryParams != nil {
 			verr.Add(e, "MapParams is set but Payload is not defined")
@@ -373,20 +429,18 @@ func (e *HTTPEndpointExpr) Validate() error {
 		if e.MapQueryParams != nil {
 			verr.Add(e, "MapParams is set but Payload type is array. Payload type must be map or an object with a map attribute")
 		}
-		var hasParams, hasHeaders bool
-		if !e.Params.IsEmpty() {
-			if e.MultipartRequest {
-				verr.Add(e, "Payload type is array but HTTP endpoint defines MultipartRequest and route/query string parameters. At most one of these must be defined.")
-			}
-			hasParams = true
+		if hasParams && e.MultipartRequest {
+			verr.Add(e, "Payload type is array but HTTP endpoint defines MultipartRequest and route/query string parameters. At most one of these must be defined.")
 		}
-		if !e.Headers.IsEmpty() {
+		if hasHeaders {
 			if e.MultipartRequest {
 				verr.Add(e, "Payload type is array but HTTP endpoint defines MultipartRequest and headers. At most one of these must be defined.")
 			}
-			hasHeaders = true
 			if hasParams {
 				verr.Add(e, "Payload type is array but HTTP endpoint defines both route or query string parameters and headers. At most one parameter or header must be defined and it must be of type array.")
+			}
+			if !IsPrimitive(AsArray(e.MethodExpr.Payload.Type).ElemType.Type) {
+				verr.Add(e, "Array payloads used in HTTP headers must be of arrays of primitive types.")
 			}
 		}
 		if e.Body != nil && e.Body.Type != Empty {
@@ -402,6 +456,9 @@ func (e *HTTPEndpointExpr) Validate() error {
 			if hasHeaders {
 				verr.Add(e, "Payload type is array but HTTP endpoint defines both a body and headers. At most one of these must be defined and it must be an array.")
 			}
+		}
+		if !hasParams && !hasHeaders && e.SkipRequestBodyEncodeDecode {
+			verr.Add(e, "Payload type is array but HTTP endpoint uses SkipRequestBodyEncodeDecode and does not define headers or params.")
 		}
 	}
 
@@ -423,12 +480,8 @@ func (e *HTTPEndpointExpr) Validate() error {
 				verr.Add(e, "MapParams is set and Payload type is map. But array elements in payload element type must be primitive")
 			}
 		}
-		var hasParams bool
-		if !e.Params.IsEmpty() {
-			if e.MultipartRequest {
-				verr.Add(e, "Payload type is map but HTTP endpoint defines MultipartRequest and route/query string parameters. At most one of these must be defined.")
-			}
-			hasParams = true
+		if hasParams && e.MultipartRequest {
+			verr.Add(e, "Payload type is map but HTTP endpoint defines MultipartRequest and route/query string parameters. At most one of these must be defined.")
 		}
 		if e.Body != nil && e.Body.Type != Empty {
 			if e.MultipartRequest {
@@ -440,6 +493,9 @@ func (e *HTTPEndpointExpr) Validate() error {
 			if hasParams {
 				verr.Add(e, "Payload type is map but HTTP endpoint defines both a body and route or query string parameters. At most one of these must be defined and it must be a map.")
 			}
+		}
+		if !hasParams && e.SkipRequestBodyEncodeDecode {
+			verr.Add(e, "Payload type is map but HTTP endpoint uses SkipRequestBodyEncodeDecode and does not define headers.")
 		}
 	}
 
@@ -470,6 +526,13 @@ func (e *HTTPEndpointExpr) Validate() error {
 					}
 				}
 			}
+		}
+	}
+
+	if e.SkipRequestBodyEncodeDecode {
+		body := httpRequestBody(e)
+		if body.Type != Empty {
+			verr.Add(e, "HTTP endpoint request body must be empty when using SkipRequestBodyEncodeDecode but not all method payload attributes are mapped to headers and params. Make sure to define Headers and Params as needed.")
 		}
 	}
 
@@ -752,9 +815,9 @@ func (r *RouteExpr) Validate() *eval.ValidationErrors {
 	}
 
 	// For streaming endpoints, websockets does not support verbs other than GET
-	if r.Endpoint.MethodExpr.IsStreaming() {
+	if r.Endpoint.MethodExpr.IsStreaming() && len(r.Endpoint.Responses) > 0 {
 		if r.Method != "GET" {
-			verr.Add(r, "Streaming endpoint supports only \"GET\" method. Got %q.", r.Method)
+			verr.Add(r, "WebSocket endpoint supports only \"GET\" method. Got %q.", r.Method)
 		}
 	}
 	return verr

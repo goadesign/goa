@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"go/build"
 	"go/parser"
 	"go/token"
 	"io/ioutil"
@@ -152,6 +153,9 @@ func (g *Generator) Run() ([]string, error) {
 	{
 		args := make([]string, len(os.Args)-1)
 		gopaths := filepath.SplitList(os.Getenv("GOPATH"))
+		if len(gopaths) == 0 {
+			gopaths = []string{build.Default.GOPATH}
+		}
 		for i, a := range os.Args[1:] {
 			for _, p := range gopaths {
 				if strings.Contains(a, p) {

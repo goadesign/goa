@@ -40,6 +40,10 @@ func handleGRPCServer(ctx context.Context, u *url.URL, serviceEndpoints *service
 		}
 	}
 
+	// Register the server reflection service on the server.
+	// See https://grpc.github.io/grpc/core/md_doc_server-reflection.html.
+	reflection.Register(srv)
+
 	(*wg).Add(1)
 	go func() {
 		defer (*wg).Done()
@@ -100,6 +104,10 @@ func handleGRPCServer(ctx context.Context, u *url.URL, serviceEndpoints *service
 			logger.Printf("serving gRPC method %s", svc+"/"+m.Name)
 		}
 	}
+
+	// Register the server reflection service on the server.
+	// See https://grpc.github.io/grpc/core/md_doc_server-reflection.html.
+	reflection.Register(srv)
 
 	(*wg).Add(1)
 	go func() {
@@ -165,6 +173,10 @@ func handleGRPCServer(ctx context.Context, u *url.URL, serviceEndpoints *service
 		}
 	}
 
+	// Register the server reflection service on the server.
+	// See https://grpc.github.io/grpc/core/md_doc_server-reflection.html.
+	reflection.Register(srv)
+
 	(*wg).Add(1)
 	go func() {
 		defer (*wg).Done()
@@ -229,7 +241,7 @@ const ExampleSingleHostPkgPathCLIImport = `import (
 const ExampleCLICode = `func doGRPC(scheme, host string, timeout int, debug bool) (goa.Endpoint, interface{}, error) {
 	conn, err := grpc.Dial(host, grpc.WithInsecure())
 	if err != nil {
-		fmt.Fprintln(os.Stderr, fmt.Sprintf("could not connect to gRPC server at %s: %v", host, err))
+		fmt.Fprintf(os.Stderr, "could not connect to gRPC server at %s: %v\n", host, err)
 	}
 	return cli.ParseEndpoint(conn)
 }

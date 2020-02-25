@@ -857,7 +857,7 @@ func buildRequestConvertData(request, payload *expr.AttributeExpr, md []*Metadat
 //
 // svr param indicates that the convert data is generated for server side.
 func buildResponseConvertData(response, result *expr.AttributeExpr, svcCtx *codegen.AttributeContext, hdrs, trlrs []*MetadataData, e *expr.GRPCEndpointExpr, sd *ServiceData, svr bool) *ConvertData {
-	if e.MethodExpr.IsStreaming() || (!svr && isEmpty(e.MethodExpr.Result.Type)) {
+	if !svr && (e.MethodExpr.IsStreaming() || isEmpty(e.MethodExpr.Result.Type)) {
 		return nil
 	}
 
@@ -1378,11 +1378,22 @@ func (s *{{ .VarName }}) {{ .RecvName }}() ({{ .RecvRef }}, error) {
 const streamCloseT = `
 func (s *{{ .VarName }}) Close() error {
 {{- if eq .Type "client" }}
+{{- if .Endpoint.Method.Result }}
 	{{ comment "Close the send direction of the stream" }}
 	return s.stream.CloseSend()
 {{- else }}
+	{{ comment "synchronize and report any server error" }}
+	_, err := s.stream.CloseAndRecv()
+	return err
+{{- end }}
+{{- else }}
+{{- if .Endpoint.Method.Result }}
 	{{ comment "nothing to do here" }}
 	return nil
+{{- else }}
+	{{ comment "synchronize stream" }}
+	return s.stream.SendAndClose(&{{ .Endpoint.Response.ServerConvert.TgtName }}{})
+{{- end }}
 {{- end }}
 }
 `

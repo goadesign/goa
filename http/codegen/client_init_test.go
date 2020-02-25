@@ -13,17 +13,18 @@ func TestClientInit(t *testing.T) {
 		Name       string
 		DSL        func()
 		Code       string
+		FileCount  int
 		SectionNum int
 	}{
-		{"multiple endpoints", testdata.ServerMultiEndpointsDSL, testdata.MultipleEndpointsClientInitCode, 2},
-		{"streaming", testdata.StreamingResultDSL, testdata.StreamingClientInitCode, 4},
+		{"multiple endpoints", testdata.ServerMultiEndpointsDSL, testdata.MultipleEndpointsClientInitCode, 2, 2},
+		{"streaming", testdata.StreamingResultDSL, testdata.StreamingClientInitCode, 3, 2},
 	}
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
 			RunHTTPDSL(t, c.DSL)
 			fs := ClientFiles("", expr.Root)
-			if len(fs) != 2 {
-				t.Fatalf("got %d files, expected two", len(fs))
+			if len(fs) != c.FileCount {
+				t.Fatalf("got %d files, expected %v", len(fs), c.FileCount)
 			}
 			sections := fs[0].SectionTemplates
 			if len(sections) < 3 {

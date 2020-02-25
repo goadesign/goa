@@ -208,6 +208,42 @@ var SingleServerMultipleHostsWithVariablesDSL = func() {
 	})
 }
 
+var ServiceForOnlyHTTPDSL = func() {
+	Service("Service", func() {
+		Method("Method", func() {
+			HTTP(func() {
+				GET("/")
+			})
+		})
+	})
+}
+
+var ServiceForOnlyGRPCDSL = func() {
+	Service("Service", func() {
+		Method("Method", func() {
+			GRPC(func() {})
+		})
+	})
+}
+
+var ServiceForHTTPAndPartOfGRPCDSL = func() {
+	Service("Service", func() {
+		Method("Method", func() {
+			HTTP(func() {
+				GET("/")
+			})
+			GRPC(func() {})
+		})
+	})
+	Service("AnotherService", func() {
+		Method("Method", func() {
+			HTTP(func() {
+				GET("/")
+			})
+		})
+	})
+}
+
 var ConflictWithAPINameAndServiceNamesIncludingMultipartDSL = func() {
 	var _ = API("aloha", func() {
 		Title("conflict with API name and service names including multipart")

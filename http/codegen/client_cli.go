@@ -21,10 +21,19 @@ type commandData struct {
 // commandData wraps the common SubcommandData and adds HTTP-specific fields.
 type subcommandData struct {
 	*cli.SubcommandData
-	// MultipartFuncName is the function name used to render a multipart request encoder.
+	// MultipartFuncName is the name of the function used to render a multipart
+	// request encoder.
 	MultipartFuncName string
-	// MultipartFuncName is the variable name used to render a multipart request encoder.
+	// MultipartFuncName is the name of the variabl used to render a multipart
+	// request encoder.
 	MultipartVarName string
+	// StreamFlag is the flag used to identify the file to be streamed when
+	// the endpoint uses SkipRequestBodyEncodeDecode.
+	StreamFlag *cli.FlagData
+	// BuildStreamPayload is the name of the generated function that builds the
+	// request data structure that wraps the payload and the file stream for
+	// endpoints that use SkipRequestBodyEncodeDecode.
+	BuildStreamPayload string
 }
 
 // ClientCLIFiles returns the client HTTP CLI support file.
@@ -41,7 +50,7 @@ func ClientCLIFiles(genpkg string, root *expr.RootExpr) []*codegen.File {
 		if len(sd.Endpoints) > 0 {
 			command := &commandData{
 				CommandData: cli.BuildCommandData(sd.Service),
-				NeedStream:  hasStreaming(sd),
+				NeedStream:  hasWebSocket(sd),
 			}
 
 			for _, e := range sd.Endpoints {
@@ -75,6 +84,10 @@ func buildSubcommandData(sd *ServiceData, e *EndpointData) *subcommandData {
 	if e.MultipartRequestEncoder != nil {
 		sub.MultipartVarName = e.MultipartRequestEncoder.VarName
 		sub.MultipartFuncName = e.MultipartRequestEncoder.FuncName
+	}
+	if e.Method.SkipRequestBodyEncodeDecode {
+		sub.StreamFlag = streamFlag(sd.Service.Name, e.Method.Name)
+		sub.BuildStreamPayload = e.BuildStreamPayload
 	}
 	return sub
 }
@@ -127,9 +140,7 @@ func endpointParser(genpkg string, root *expr.RootExpr, svr *expr.ServerExpr, da
 				cli.FlagsCode(cliData),
 				data,
 			},
-			FuncMap: map[string]interface{}{
-				"streamingCmdExists": streamingCmdExists,
-			},
+			FuncMap: map[string]interface{}{"streamingCmdExists": streamingCmdExists},
 		},
 	}
 	for _, cmd := range cliData {
@@ -181,8 +192,11 @@ func buildFlags(svc *ServiceData, e *EndpointData) ([]*cli.FlagData, *cli.BuildF
 			args = append(args, e.Payload.Request.PayloadInit.CLIArgs...)
 			flags, buildFunction = makeFlags(e, args)
 		} else if e.Payload.Ref != "" {
-			flags = append(flags, cli.NewFlagData(svcn, en, "p", e.Method.PayloadRef, e.Method.PayloadDesc, true, e.Method.PayloadEx))
+			flags = append(flags, cli.NewFlagData(svcn, en, "p", e.Method.PayloadRef, e.Method.PayloadDesc, true, e.Method.PayloadEx, e.Method.PayloadDefault))
 		}
+	}
+	if e.Method.SkipRequestBodyEncodeDecode {
+		flags = append(flags, streamFlag(svcn, en))
 	}
 
 	return flags, buildFunction
@@ -206,7 +220,7 @@ func makeFlags(e *EndpointData, args []*InitArgData) ([]*cli.FlagData, *cli.Buil
 			Type:         arg.Type,
 		}
 
-		f := cli.NewFlagData(e.ServiceName, e.Method.Name, arg.Name, arg.TypeName, arg.Description, arg.Required, arg.Example)
+		f := cli.NewFlagData(e.ServiceName, e.Method.Name, arg.Name, arg.TypeName, arg.Description, arg.Required, arg.Example, arg.DefaultValue)
 		flags[i] = f
 		params[i] = f.FullName
 		if arg.FieldName == "" && arg.Name != "body" {
@@ -249,6 +263,12 @@ func makeFlags(e *EndpointData, args []*InitArgData) ([]*cli.FlagData, *cli.Buil
 		PayloadInit:  &pInit,
 		CheckErr:     check,
 	}
+}
+
+// streamFlag returns the flag used to specify the upload file for endpoints
+// that use SkipRequestBodyEncodeDecode.
+func streamFlag(svcn, en string) *cli.FlagData {
+	return cli.NewFlagData(svcn, en, "stream", "string", "path to file containing the streamed request body", true, "goa.png", nil)
 }
 
 // streamingCmdExists returns true if at least one command in the list of commands
@@ -307,6 +327,15 @@ func ParseEndpoint(
 				{{ .Conversion }}
 			{{- else }}
 				data = nil
+			{{- end }}
+			{{- if .StreamFlag }}
+				{{- if .BuildFunction }}
+				if err == nil {
+				{{- end }}
+					data, err = {{ $pkgName }}.{{ .BuildStreamPayload }}({{ if or .BuildFunction .Conversion }}data, {{ end }}*{{ .StreamFlag.FullName }}Flag)
+				{{- if .BuildFunction }}
+				}
+				{{- end }}
 			{{- end }}
 		{{- end }}
 			}

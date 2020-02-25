@@ -195,7 +195,7 @@ func mapDepth(dt expr.DataType, depth int, seen ...map[string]struct{}) int {
 // IsPrimitivePointer returns true if the attribute with the given name is a
 // primitive pointer in the given parent attribute.
 func (a *AttributeContext) IsPrimitivePointer(name string, att *expr.AttributeExpr) bool {
-	if at := att.Find(name); at != nil && at.Type == expr.Any || at.Type == expr.Bytes {
+	if at := att.Find(name); at != nil && (at.Type == expr.Any || at.Type == expr.Bytes) {
 		return false
 	}
 	if a.Pointer {

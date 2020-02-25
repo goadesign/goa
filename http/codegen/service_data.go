@@ -138,9 +138,9 @@ type (
 		// MultipartRequestDecoder indicates the request decoder for
 		// multipart content type.
 		MultipartRequestDecoder *MultipartData
-		// ServerStream holds the data to render the server struct which
+		// ServerWebSocket holds the data to render the server struct which
 		// implements the server stream interface.
-		ServerStream *StreamData
+		ServerWebSocket *WebSocketData
 
 		// client
 
@@ -158,9 +158,12 @@ type (
 		// MultipartRequestEncoder indicates the request encoder for
 		// multipart content type.
 		MultipartRequestEncoder *MultipartData
-		// ClientStream holds the data to render the client struct which
+		// ClientWebSocket holds the data to render the client struct which
 		// implements the client stream interface.
-		ClientStream *StreamData
+		ClientWebSocket *WebSocketData
+		// BuildStreamPayload is the name of the function used to create the
+		// payload for endpoints that use SkipRequestBodyEncodeDecode.
+		BuildStreamPayload string
 	}
 
 	// FileServerData lists the data needed to generate file servers.
@@ -261,6 +264,10 @@ type (
 		// PayloadInit contains the data required to render the
 		// payload constructor used by server code if any.
 		PayloadInit *InitData
+		// PayloadAttr sets the request body from the specified payload type
+		// attribute. This field is set when the design uses Body("name") syntax
+		// to set the request body and the payload type is an object.
+		PayloadAttr string
 		// MustValidate is true if the request body or at least one
 		// parameter or header requires validation.
 		MustValidate bool
@@ -533,7 +540,7 @@ type (
 		ValidateRef string
 		// Example is an example value for the type.
 		Example interface{}
-		// View is the view using which the type is rendered.
+		// View is the view used to render the (result) type if any.
 		View string
 	}
 
@@ -555,9 +562,9 @@ type (
 		Payload *PayloadData
 	}
 
-	// StreamData contains the data needed to render struct type that
+	// WebSocketData contains the data needed to render struct type that
 	// implements the server and client stream interfaces.
-	StreamData struct {
+	WebSocketData struct {
 		// VarName is the name of the struct.
 		VarName string
 		// Type is type of the stream (server or client).
@@ -654,7 +661,9 @@ func (d ServicesData) analyze(hs *expr.HTTPServiceExpr) *ServiceData {
 		paths := make([]string, len(s.RequestPaths))
 		for i, p := range s.RequestPaths {
 			idx := strings.LastIndex(p, "/{")
-			if idx > 0 {
+			if idx == 0 {
+				paths[i] = "/"
+			} else if idx > 0 {
 				paths[i] = p[:idx]
 			} else {
 				paths[i] = p
@@ -818,19 +827,19 @@ func (d ServicesData) analyze(hs *expr.HTTPServiceExpr) *ServiceData {
 				"Verb":         routes[0].Verb,
 				"IsStreaming":  a.MethodExpr.IsStreaming(),
 			}
+			if a.SkipRequestBodyEncodeDecode {
+				data["RequestStruct"] = svc.PkgName + "." + ep.RequestStruct
+			}
 			var buf bytes.Buffer
 			if err := requestInitTmpl.Execute(&buf, data); err != nil {
 				panic(err) // bug
 			}
+			clientArgs := []*InitArgData{{Name: "v", Ref: "v", TypeRef: "interface{}"}}
 			requestInit = &InitData{
 				Name:        name,
 				Description: fmt.Sprintf("%s instantiates a HTTP request object with method and path set to call the %q service %q endpoint", name, svc.Name, ep.Name),
 				ClientCode:  buf.String(),
-				ClientArgs: []*InitArgData{{
-					Name:    "v",
-					Ref:     "v",
-					TypeRef: "interface{}",
-				}},
+				ClientArgs:  clientArgs,
 			}
 		}
 
@@ -858,7 +867,9 @@ func (d ServicesData) analyze(hs *expr.HTTPServiceExpr) *ServiceData {
 			RequestEncoder:  requestEncoder,
 			ResponseDecoder: fmt.Sprintf("Decode%sResponse", ep.VarName),
 		}
-		buildStreamData(ad, a, rd)
+		if a.MethodExpr.IsStreaming() {
+			initWebSocketData(ad, a, rd)
+		}
 
 		if a.MultipartRequest {
 			ad.MultipartRequestDecoder = &MultipartData{
@@ -877,6 +888,10 @@ func (d ServicesData) analyze(hs *expr.HTTPServiceExpr) *ServiceData {
 				MethodName:  ep.Name,
 				Payload:     ad.Payload,
 			}
+		}
+
+		if a.SkipRequestBodyEncodeDecode {
+			ad.BuildStreamPayload = scope.Unique("Build" + codegen.Goify(ep.Name, true) + "StreamPayload")
 		}
 
 		rd.Endpoints = append(rd.Endpoints, ad)
@@ -1001,6 +1016,7 @@ func buildPayloadData(e *expr.HTTPEndpointExpr, sd *ServiceData) *PayloadData {
 			paramsData     = extractPathParams(e.PathParams(), payload, sd.Scope)
 			queryData      = extractQueryParams(e.QueryParams(), payload, sd.Scope)
 			headersData    = extractHeaders(e.Headers, payload, svcctx, sd.Scope)
+			origin         string
 
 			mustValidate bool
 		)
@@ -1062,6 +1078,14 @@ func buildPayloadData(e *expr.HTTPEndpointExpr, sd *ServiceData) *PayloadData {
 					}
 				}
 			}
+			if e.Body.Type != expr.Empty {
+				// If design uses Body("name") syntax we need to use the
+				// corresponding attribute in the result type for body
+				// transformation.
+				if o, ok := e.Body.Meta["origin:attribute"]; ok {
+					origin = o[0]
+				}
+			}
 		}
 		request = &RequestData{
 			PathParams:   paramsData,
@@ -1069,6 +1093,7 @@ func buildPayloadData(e *expr.HTTPEndpointExpr, sd *ServiceData) *PayloadData {
 			Headers:      headersData,
 			ServerBody:   serverBodyData,
 			ClientBody:   clientBodyData,
+			PayloadAttr:  codegen.Goify(origin, true),
 			MustValidate: mustValidate,
 			Multipart:    e.MultipartRequest,
 		}
@@ -1677,7 +1702,7 @@ func buildErrorsData(e *expr.HTTPEndpointExpr, sd *ServiceData) []*ErrorGroupDat
 						Name:         h.VarName,
 						Ref:          h.VarName,
 						FieldName:    h.FieldName,
-						FieldPointer: h.FieldPointer,
+						FieldPointer: false,
 						FieldType:    h.FieldType,
 						TypeRef:      h.TypeRef,
 						Type:         h.Type,
@@ -1727,7 +1752,7 @@ func buildErrorsData(e *expr.HTTPEndpointExpr, sd *ServiceData) []*ErrorGroupDat
 				ClientArgs:          args,
 				ReturnTypeName:      svc.Scope.GoFullTypeName(v.ErrorExpr.AttributeExpr, svc.PkgName),
 				ReturnTypeRef:       svc.Scope.GoFullTypeRef(v.ErrorExpr.AttributeExpr, svc.PkgName),
-				ReturnIsStruct:      isObject,
+				ReturnIsStruct:      expr.IsObject(v.ErrorExpr.Type),
 				ReturnTypeAttribute: codegen.Goify(origin, true),
 				ReturnTypePkg:       svc.PkgName,
 				ClientCode:          code,
@@ -1815,10 +1840,8 @@ func buildErrorsData(e *expr.HTTPEndpointExpr, sd *ServiceData) []*ErrorGroupDat
 	return vals
 }
 
-func buildStreamData(ed *EndpointData, e *expr.HTTPEndpointExpr, sd *ServiceData) {
-	if !e.MethodExpr.IsStreaming() {
-		return
-	}
+// initWebSocketData initializes the WebSocket related data in ed.
+func initWebSocketData(ed *EndpointData, e *expr.HTTPEndpointExpr, sd *ServiceData) {
 	var (
 		svrSendTypeName string
 		svrSendTypeRef  string
@@ -1852,7 +1875,6 @@ func buildStreamData(ed *EndpointData, e *expr.HTTPEndpointExpr, sd *ServiceData
 				var (
 					name       string
 					desc       string
-					isObject   bool
 					serverArgs []*InitArgData
 					serverCode string
 					err        error
@@ -1868,7 +1890,6 @@ func buildStreamData(ed *EndpointData, e *expr.HTTPEndpointExpr, sd *ServiceData
 						name = fmt.Sprintf("New%s%s", n, p)
 					}
 					desc = fmt.Sprintf("%s builds a %s service %s endpoint payload.", name, svc.Name, e.MethodExpr.Name)
-					isObject = expr.IsObject(e.MethodExpr.StreamingPayload.Type)
 					if body != expr.Empty {
 						var (
 							ref    string
@@ -1915,7 +1936,7 @@ func buildStreamData(ed *EndpointData, e *expr.HTTPEndpointExpr, sd *ServiceData
 					ServerArgs:     serverArgs,
 					ReturnTypeName: svc.Scope.GoFullTypeName(e.MethodExpr.StreamingPayload, svc.PkgName),
 					ReturnTypeRef:  svc.Scope.GoFullTypeRef(e.MethodExpr.StreamingPayload, svc.PkgName),
-					ReturnIsStruct: isObject,
+					ReturnIsStruct: expr.IsObject(e.MethodExpr.StreamingPayload.Type),
 					ReturnTypePkg:  svc.PkgName,
 					ServerCode:     serverCode,
 				}
@@ -1933,7 +1954,7 @@ func buildStreamData(ed *EndpointData, e *expr.HTTPEndpointExpr, sd *ServiceData
 			cliSendDesc = fmt.Sprintf("%s streams instances of %q to the %q endpoint websocket connection.", md.ClientStream.SendName, svrRecvTypeName, md.Name)
 		}
 	}
-	ed.ServerStream = &StreamData{
+	ed.ServerWebSocket = &WebSocketData{
 		VarName:      md.ServerStream.VarName,
 		Interface:    fmt.Sprintf("%s.%s", svc.PkgName, md.ServerStream.Interface),
 		Endpoint:     ed,
@@ -1952,7 +1973,7 @@ func buildStreamData(ed *EndpointData, e *expr.HTTPEndpointExpr, sd *ServiceData
 		RecvTypeRef:  svrRecvTypeRef,
 		MustClose:    md.ServerStream.MustClose,
 	}
-	ed.ClientStream = &StreamData{
+	ed.ClientWebSocket = &WebSocketData{
 		VarName:      md.ClientStream.VarName,
 		Interface:    fmt.Sprintf("%s.%s", svc.PkgName, md.ClientStream.Interface),
 		Endpoint:     ed,
@@ -2642,28 +2663,11 @@ func upgradeParams(e *EndpointData, fn string) map[string]interface{} {
 // uses stream for sending payload/result.
 func needStream(data []*ServiceData) bool {
 	for _, svc := range data {
-		if hasStreaming(svc) {
+		if hasWebSocket(svc) {
 			return true
 		}
 	}
 	return false
-}
-
-// hasStreaming returns true if at least one of the endpoints in
-// the service defines a streaming payload or result.
-func hasStreaming(sd *ServiceData) bool {
-	for _, e := range sd.Endpoints {
-		if isStreamingEndpoint(e) {
-			return true
-		}
-	}
-	return false
-}
-
-// isStreamingEndpoint returns true if the endpoint defines a streaming payload
-// or result.
-func isStreamingEndpoint(ed *EndpointData) bool {
-	return ed.ServerStream != nil || ed.ClientStream != nil
 }
 
 const (
@@ -2680,7 +2684,7 @@ const (
 		{{- end }}
 	{{- end }}
 	return fmt.Sprintf("{{ .PathFormat }}", {{ range $i, $arg := .Args }}
-	{{- if eq (index $.PathParams $i).Attribute.Type.Name "array" }}strings.Join({{ .Name }}Slice, ", ")
+	{{- if eq (index $.PathParams $i).Attribute.Type.Name "array" }}strings.Join({{ .Name }}Slice, ",")
 	{{- else }}{{ .Name }}
 	{{- end }}, {{ end }})
 {{- else }}
@@ -2704,19 +2708,31 @@ const (
 	// requestInitT is the template used to render the code of HTTP
 	// request constructors.
 	requestInitT = `
-{{- if .Args }}
+{{- if or .Args .RequestStruct }}
 	var (
 	{{- range .Args }}
-	{{ .Name }} {{ .TypeRef }}
+		{{ .Name }} {{ .TypeRef }}
+	{{- end }}
+	{{- if .RequestStruct }}
+		body io.Reader
 	{{- end }}
 	)
 {{- end }}
 {{- if and .PayloadRef .Args }}
 	{
+	{{- if .RequestStruct }}
+		rd, ok := v.(*{{ .RequestStruct }})
+		if !ok {
+			return nil, goahttp.ErrInvalidType("{{ .ServiceName }}", "{{ .EndpointName }}", "{{ .RequestStruct }}", v)
+		}
+		p := rd.Payload
+		body = rd.Body
+	{{- else }}
 		p, ok := v.({{ .PayloadRef }})
 		if !ok {
 			return nil, goahttp.ErrInvalidType("{{ .ServiceName }}", "{{ .EndpointName }}", "{{ .PayloadRef }}", v)
 		}
+	{{- end }}
 	{{- range .Args }}
 		{{- if .Pointer }}
 		if p{{ if $.HasFields }}.{{ .FieldName }}{{ end }} != nil {
@@ -2731,6 +2747,12 @@ const (
 		{{- end }}
 	{{- end }}
 	}
+{{- else if .RequestStruct }}
+		rd, ok := v.(*{{ .RequestStruct }})
+		if !ok {
+			return nil, goahttp.ErrInvalidType("{{ .ServiceName }}", "{{ .EndpointName }}", "{{ .RequestStruct }}", v)
+		}
+		body = rd.Body
 {{- end }}
 	{{- if .IsStreaming }}
 		scheme := c.scheme
@@ -2742,7 +2764,7 @@ const (
 		}
 	{{- end }}
 	u := &url.URL{Scheme: {{ if .IsStreaming }}scheme{{ else }}c.scheme{{ end }}, Host: c.host, Path: {{ .PathInit.Name }}({{ range .Args }}{{ .Ref }}, {{ end }})}
-	req, err := http.NewRequest("{{ .Verb }}", u.String(), nil)
+	req, err := http.NewRequest("{{ .Verb }}", u.String(), {{ if .RequestStruct }}body{{ else }}nil{{ end }})
 	if err != nil {
 		return nil, goahttp.ErrInvalidURL("{{ .ServiceName }}", "{{ .EndpointName }}", u.String(), err)
 	}
@@ -2751,272 +2773,4 @@ const (
 	}
 
 	return req, nil`
-
-	// streamStructTypeT renders the server and client struct types that
-	// implements the client and server stream interfaces. The data to render
-	// input: StreamData
-	streamStructTypeT = `{{ printf "%s implements the %s interface." .VarName .Interface | comment }}
-type {{ .VarName }} struct {
-{{- if eq .Type "server" }}
-	once sync.Once
-	{{ comment "upgrader is the websocket connection upgrader." }}
-	upgrader goahttp.Upgrader
-	{{ comment "configurer is the websocket connection configurer." }}
-	configurer goahttp.ConnConfigureFunc
-	{{ comment "cancel is the context cancellation function which cancels the request context when invoked." }}
-	cancel context.CancelFunc
-	{{ comment "w is the HTTP response writer used in upgrading the connection." }}
-	w http.ResponseWriter
-	{{ comment "r is the HTTP request." }}
-	r *http.Request
-{{- end }}
-	{{ comment "conn is the underlying websocket connection." }}
-	conn *websocket.Conn
-	{{- if .Endpoint.Method.ViewedResult }}
-		{{- if not .Endpoint.Method.ViewedResult.ViewName }}
-	{{ printf "view is the view to render %s result type before sending to the websocket connection." .SendTypeName | comment }}
-	view string
-		{{- end }}
-	{{- end }}
-}
-`
-
-	// streamConnConfigurerStructT generates the struct type that holds the
-	// websocket connection configurers for all the streaming endpoints in the
-	// service.
-	// input: ServiceData
-	streamConnConfigurerStructT = `{{ printf "ConnConfigurer holds the websocket connection configurer functions for the streaming endpoints in %q service." .Service.Name | comment }}
-type ConnConfigurer struct {
-{{- range .Endpoints }}
-	{{- if isStreamingEndpoint . }}
-		{{ .Method.VarName }}Fn goahttp.ConnConfigureFunc
-	{{- end }}
-{{- end }}
-}
-`
-
-	// streamConnConfigurerStructInitT generates the constructor function to
-	// initialize the websocket connection configurer struct.
-	// input: ServiceData
-	streamConnConfigurerStructInitT = `{{ printf "NewConnConfigurer initializes the websocket connection configurer function with fn for all the streaming endpoints in %q service." .Service.Name | comment }}
-func NewConnConfigurer(fn goahttp.ConnConfigureFunc) *ConnConfigurer {
-	return &ConnConfigurer{
-{{- range .Endpoints }}
-	{{- if isStreamingEndpoint . }}
-		{{ .Method.VarName}}Fn: fn,
-	{{- end }}
-{{- end }}
-	}
-}
-`
-
-	// streamSendT renders the function implementing the Send method in
-	// stream interface.
-	// input: StreamData
-	streamSendT = `{{ comment .SendDesc }}
-func (s *{{ .VarName }}) {{ .SendName }}(v {{ .SendTypeRef }}) error {
-{{- if eq .Type "server" }}
-	{{- if eq .SendName "Send" }}
-		var err error
-		{{- template "websocket_upgrade" (upgradeParams .Endpoint .SendName) }}
-	{{- else }} {{/* SendAndClose */}}
-		defer s.conn.Close()
-	{{- end }}
-	{{- if .Endpoint.Method.ViewedResult }}
-		{{- if .Endpoint.Method.ViewedResult.ViewName }}
-			res := {{ .PkgName }}.{{ .Endpoint.Method.ViewedResult.Init.Name }}(v, {{ printf "%q" .Endpoint.Method.ViewedResult.ViewName }})
-		{{- else }}
-			res := {{ .PkgName }}.{{ .Endpoint.Method.ViewedResult.Init.Name }}(v, s.view)
-		{{- end }}
-	{{- else }}
-	res := v
-	{{- end }}
-	{{- $servBodyLen := len .Response.ServerBody }}
-	{{- if gt $servBodyLen 0 }}
-		{{- if (index .Response.ServerBody 0).Init }}
-			{{- if .Endpoint.Method.ViewedResult }}
-				{{- if .Endpoint.Method.ViewedResult.ViewName }}
-					{{- $vsb := (viewedServerBody $.Response.ServerBody .Endpoint.Method.ViewedResult.ViewName) }}
-					body := {{ $vsb.Init.Name }}({{ range $vsb.Init.ServerArgs }}{{ .Ref }}, {{ end }})
-				{{- else }}
-					var body interface{}
-					switch s.view {
-					{{- range .Endpoint.Method.ViewedResult.Views }}
-						case {{ printf "%q" .Name }}{{ if eq .Name "default" }}, ""{{ end }}:
-						{{- $vsb := (viewedServerBody $.Response.ServerBody .Name) }}
-							body = {{ $vsb.Init.Name }}({{ range $vsb.Init.ServerArgs }}{{ .Ref }}, {{ end }})
-						{{- end }}
-					}
-				{{- end }}
-			{{- else }}
-				body := {{ (index .Response.ServerBody 0).Init.Name }}({{ range (index .Response.ServerBody 0).Init.ServerArgs }}{{ .Ref }}, {{ end }})
-			{{- end }}
-			return s.conn.WriteJSON(body)
-		{{- else }}
-			return s.conn.WriteJSON(res)
-		{{- end }}
-	{{- else }}
-		return s.conn.WriteJSON(res)
-	{{- end }}
-{{- else }}
-	{{- if .Payload.Init }}
-		body := {{ .Payload.Init.Name }}(v)
-		return s.conn.WriteJSON(body)
-	{{- else }}
-		return s.conn.WriteJSON(v)
-	{{- end }}
-{{- end }}
-}
-` + upgradeT
-
-	// streamRecvT renders the function implementing the Recv method in
-	// stream interface.
-	// input: StreamData
-	streamRecvT = `{{ comment .RecvDesc }}
-func (s *{{ .VarName }}) {{ .RecvName }}() ({{ .RecvTypeRef }}, error) {
-	var (
-		rv {{ .RecvTypeRef }}
-	{{- if eq .Type "server" }}
-		msg *{{ .Payload.Ref }}
-	{{- else }}
-		body {{ .Response.ClientBody.VarName }}
-	{{- end }}
-		err error
-	)
-{{- if eq .Type "server" }}
-	{{- template "websocket_upgrade" (upgradeParams .Endpoint .RecvName) }}
-	if err = s.conn.ReadJSON(&msg); err != nil {
-		return rv, err
-	}
-	if msg == nil {
-		return rv, io.EOF
-	}
-	body := *msg
-	{{- if .Payload.ValidateRef }}
-		{{ .Payload.ValidateRef }}
-		if err != nil {
-			return rv, err
-		}
-	{{- end }}
-	{{- if .Payload.Init }}
-		return {{ .Payload.Init.Name }}(body), nil
-	{{- else }}
-		return body, nil
-	{{- end }}
-{{- else }} {{/* client side code */}}
-	{{- if eq .RecvName "CloseAndRecv" }}
-		defer s.conn.Close()
-		{{ comment "Send a nil payload to the server implying end of message" }}
-		if err = s.conn.WriteJSON(nil); err != nil {
-			return rv, err
-		}
-	{{- end }}
-	err = s.conn.ReadJSON(&body)
-	if websocket.IsCloseError(err, websocket.CloseNormalClosure) {
-		{{- if not .MustClose }}
-			s.conn.Close()
-		{{- end }}
-		return rv, io.EOF
-	}
-	if err != nil {
-		return rv, err
-	}
-	{{- if and .Response.ClientBody.ValidateRef (not .Endpoint.Method.ViewedResult) }}
-	{{ .Response.ClientBody.ValidateRef }}
-	if err != nil {
-		return rv, err
-	}
-	{{- end }}
-	{{- if .Response.ResultInit }}
-		res := {{ .Response.ResultInit.Name }}({{ range .Response.ResultInit.ClientArgs }}{{ .Ref }},{{ end }})
-		{{- if .Endpoint.Method.ViewedResult }}{{ with .Endpoint.Method.ViewedResult }}
-			vres := {{ if not .IsCollection }}&{{ end }}{{ .ViewsPkg }}.{{ .VarName }}{res, {{ if .ViewName }}{{ printf "%q" .ViewName }}{{ else }}s.view{{ end }} }
-			if err := {{ .ViewsPkg }}.Validate{{ $.Endpoint.Method.Result }}(vres); err != nil {
-				return rv, goahttp.ErrValidationError("{{ $.Endpoint.ServiceName }}", "{{ $.Endpoint.Method.Name }}", err)
-			}
-			return {{ $.PkgName }}.{{ .ResultInit.Name }}(vres){{ end }}, nil
-		{{- else }}
-			return res, nil
-		{{- end }}
-	{{- else }}
-		return body, nil
-	{{- end }}
-{{- end }}
-}
-` + upgradeT
-
-	// upgradeT renders the code to upgrade the HTTP connection to a gorilla
-	// websocket connection.
-	upgradeT = `{{- define "websocket_upgrade" }}
-	{{ printf "Upgrade the HTTP connection to a websocket connection only once. Connection upgrade is done here so that authorization logic in the endpoint is executed before calling the actual service method which may call %s()." .Function | comment }}
-	s.once.Do(func() {
-	{{- if and .ViewedResult (eq .Function "Send") }}
-		{{- if not .ViewedResult.ViewName }}
-			respHdr := make(http.Header)
-			respHdr.Add("goa-view", s.view)
-		{{- end }}
-	{{- end }}
-		var conn *websocket.Conn
-		{{- if eq .Function "Send" }}
-			{{- if .ViewedResult }}
-				{{- if not .ViewedResult.ViewName }}
-					conn, err = s.upgrader.Upgrade(s.w, s.r, respHdr)
-				{{- else }}
-					conn, err = s.upgrader.Upgrade(s.w, s.r, nil)
-				{{- end }}
-			{{- else }}
-				conn, err = s.upgrader.Upgrade(s.w, s.r, nil)
-			{{- end }}
-		{{- else }}
-			conn, err = s.upgrader.Upgrade(s.w, s.r, nil)
-		{{- end }}
-		if err != nil {
-			return
-		}
-		if s.configurer != nil {
-			conn = s.configurer(conn, s.cancel)
-		}
-		s.conn = conn
-	})
-	if err != nil {
-		return {{ if eq .Function "Recv" }}rv, {{ end }}err
-	}
-{{- end }}
-`
-
-	// streamCloseT renders the function implementing the Close method in
-	// stream interface.
-	// input: StreamData
-	streamCloseT = `{{ printf "Close closes the %q endpoint websocket connection." .Endpoint.Method.Name | comment }}
-func (s *{{ .VarName }}) Close() error {
-	var err error
-{{- if eq .Type "server" }}
-	if s.conn == nil {
-		return nil
-	}
-	if err = s.conn.WriteControl(
-		websocket.CloseMessage,
-		websocket.FormatCloseMessage(websocket.CloseNormalClosure, "server closing connection"),
-		time.Now().Add(time.Second),
-	); err != nil {
-		return err
-	}
-{{- else }} {{/* client side code */}}
-	{{ comment "Send a nil payload to the server implying client closing connection." }}
-  if err = s.conn.WriteJSON(nil); err != nil {
-    return err
-  }
-{{- end }}
-	return s.conn.Close()
-}
-` + upgradeT
-
-	// streamSetViewT renders the function implementing the SetView method in
-	// server stream interface.
-	// input: StreamData
-	streamSetViewT = `{{ printf "SetView sets the view to render the %s type before sending to the %q endpoint websocket connection." .SendTypeName .Endpoint.Method.Name | comment }}
-func (s *{{ .VarName }}) SetView(view string) {
-	s.view = view
-}
-`
 )

@@ -815,6 +815,68 @@ var ExplicitBodyUserResultMultipleViewsDSL = func() {
 	})
 }
 
+var ExplicitBodyUserResultObjectDSL = func() {
+	var UserType = Type("UserType", func() {
+		Attribute("x", String)
+		Attribute("y", Int)
+	})
+	var ResultType = ResultType("ResultType", func() {
+		Attribute("a", UserType)
+		Attribute("b", String)
+		Attribute("c", String)
+	})
+	Service("ServiceExplicitBodyUserResultObject", func() {
+		Method("MethodExplicitBodyUserResultObject", func() {
+			Result(ResultType)
+			HTTP(func() {
+				POST("/")
+				Response(StatusOK, func() {
+					Header("c:Location")
+					Header("b:Content-Type")
+					Body(func() {
+						Attribute("a")
+					})
+				})
+			})
+		})
+	})
+}
+
+var ExplicitBodyUserResultObjectMultipleViewDSL = func() {
+	var UserType = Type("UserType", func() {
+		Attribute("x", String)
+		Attribute("y", Int)
+	})
+	var ResultType = ResultType("ResultTypeMultipleViews", func() {
+		Attribute("a", UserType)
+		Attribute("b", String)
+		Attribute("c", String)
+		View("default", func() {
+			Attribute("a")
+			Attribute("b")
+			Attribute("c")
+		})
+		View("tiny", func() {
+			Attribute("a")
+			Attribute("c")
+		})
+	})
+	Service("ServiceExplicitBodyUserResultObjectMultipleView", func() {
+		Method("MethodExplicitBodyUserResultObjectMultipleView", func() {
+			Result(ResultType)
+			HTTP(func() {
+				POST("/")
+				Response(StatusOK, func() {
+					Header("c:Location")
+					Body(func() {
+						Attribute("a")
+					})
+				})
+			})
+		})
+	})
+}
+
 var ExplicitBodyResultCollectionDSL = func() {
 	var ResultType = ResultType("ResultType", func() {
 		Attributes(func() {
@@ -1109,6 +1171,20 @@ var EmptyServerResponseWithTagsDSL = func() {
 				Response(StatusNotModified, func() {
 					Tag("h", "true")
 					Body(Empty)
+				})
+			})
+		})
+	})
+}
+
+var ResultHeaderStringImplicitDSL = func() {
+	Service("ServiceHeaderStringImplicit", func() {
+		Method("MethodHeaderStringImplicit", func() {
+			Result(String)
+			HTTP(func() {
+				GET("/")
+				Response(StatusOK, func() {
+					Header("h")
 				})
 			})
 		})

@@ -100,7 +100,7 @@ func exampleServer(genpkg string, root *expr.RootExpr, svr *expr.ServerExpr) *co
 				"Services": svcdata,
 				"APIPkg":   apiPkg,
 			},
-			FuncMap: map[string]interface{}{"needStream": needStream, "hasStreaming": hasStreaming},
+			FuncMap: map[string]interface{}{"needStream": needStream, "hasWebSocket": hasWebSocket},
 		},
 		&codegen.SectionTemplate{Name: "server-http-middleware", Source: httpSvrMiddlewareT},
 		&codegen.SectionTemplate{
@@ -251,10 +251,20 @@ func handleHTTPServer(ctx context.Context, u *url.URL{{ range $.Services }}{{ if
 	{{- end }}
 	{{- range $svc := .Services }}
 		{{-  if .Endpoints }}
-		{{ .Service.VarName }}Server = {{ .Service.PkgName }}svr.New({{ .Service.VarName }}Endpoints, mux, dec, enc, eh, nil{{ if hasStreaming $svc }}, upgrader, nil{{ end }}{{ range .Endpoints }}{{ if .MultipartRequestDecoder }}, {{ $.APIPkg }}.{{ .MultipartRequestDecoder.FuncName }}{{ end }}{{ end }})
+		{{ .Service.VarName }}Server = {{ .Service.PkgName }}svr.New({{ .Service.VarName }}Endpoints, mux, dec, enc, eh, nil{{ if hasWebSocket $svc }}, upgrader, nil{{ end }}{{ range .Endpoints }}{{ if .MultipartRequestDecoder }}, {{ $.APIPkg }}.{{ .MultipartRequestDecoder.FuncName }}{{ end }}{{ end }})
 		{{-  else }}
 		{{ .Service.VarName }}Server = {{ .Service.PkgName }}svr.New(nil, mux, dec, enc, eh, nil)
 		{{-  end }}
+	{{- end }}
+	{{- if .Services }}
+		if debug {
+			servers := goahttp.Servers{
+				{{- range $svc := .Services }}
+				{{ .Service.VarName }}Server,
+				{{- end }}
+			}
+			servers.Use(httpmdlwr.Debug(mux, os.Stdout))
+		}
 	{{- end }}
 	}
 	// Configure the mux.
@@ -268,9 +278,6 @@ func handleHTTPServer(ctx context.Context, u *url.URL{{ range $.Services }}{{ if
 	// here apply to all the service endpoints.
 	var handler http.Handler = mux
 	{
-		if debug {
-			handler = httpmdlwr.Debug(mux, os.Stdout)(handler)
-		}
 		handler = httpmdlwr.Log(adapter)(handler)
 		handler = httpmdlwr.RequestID()(handler)
 	}

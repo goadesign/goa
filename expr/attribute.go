@@ -477,6 +477,11 @@ func (a *AttributeExpr) Find(name string) *AttributeExpr {
 			return att
 		}
 	}
+	for _, ref := range a.References {
+		if att := findAttrFn(ref); att != nil {
+			return att
+		}
+	}
 	return nil
 }
 
