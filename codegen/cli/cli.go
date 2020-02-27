@@ -324,17 +324,32 @@ func NewFlagData(svcn, en, name, typeName, description string, required bool, ex
 // FieldLoadCode returns the code used in the build payload function that
 // initializes one of the payload object fields. It returns the initialization
 // code and a boolean indicating whether the code requires an "err" variable.
-func FieldLoadCode(f *FlagData, argName, argTypeName, validate string, defaultValue interface{}) (string, bool) {
+func FieldLoadCode(f *FlagData, argName, argTypeName, validate string, defaultValue interface{}, payload expr.DataType) (string, bool) {
 	var (
 		code    string
 		check   bool
 		startIf string
 		endIf   string
+		rval    string
 	)
 	{
 		if !f.Required {
 			startIf = fmt.Sprintf("if %s != \"\" {\n", f.FullName)
 			endIf = "\n}"
+		}
+		if expr.IsPrimitive(payload) {
+			switch payload {
+			case expr.Boolean:
+				rval = "false"
+			case expr.String:
+				rval = "\"\""
+			case expr.Bytes, expr.Any:
+				rval = "nil"
+			default:
+				rval = "0"
+			}
+		} else {
+			rval = "nil"
 		}
 		if argTypeName == codegen.GoNativeTypeName(expr.String) {
 			ref := "&"
@@ -348,17 +363,17 @@ func FieldLoadCode(f *FlagData, argName, argTypeName, validate string, defaultVa
 			if check {
 				code += "\nif err != nil {\n"
 				if flagType(argTypeName) == "JSON" {
-					code += fmt.Sprintf(`return nil, fmt.Errorf("invalid JSON for %s, example of valid JSON:\n%%s", %q)`,
-						argName, ex)
+					code += fmt.Sprintf(`return %v, fmt.Errorf("invalid JSON for %s, example of valid JSON:\n%%s", %q)`,
+						rval, argName, ex)
 				} else {
-					code += fmt.Sprintf(`return nil, fmt.Errorf("invalid value for %s, must be %s")`,
-						argName, f.Type)
+					code += fmt.Sprintf(`return %v, fmt.Errorf("invalid value for %s, must be %s")`,
+						rval, argName, f.Type)
 				}
 				code += "\n}"
 			}
-			if validate != "" {
-				code += "\n" + validate + "\n" + "if err != nil {\n\treturn nil, err\n}"
-			}
+		}
+		if validate != "" {
+			code += "\n" + validate + "\n" + fmt.Sprintf("if err != nil {\n\treturn %v, err\n}", rval)
 		}
 	}
 	return fmt.Sprintf("%s%s%s", startIf, code, endIf), check

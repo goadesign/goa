@@ -190,7 +190,7 @@ func buildFlags(svc *ServiceData, e *EndpointData) ([]*cli.FlagData, *cli.BuildF
 		if e.Payload.Request.PayloadInit != nil {
 			args := e.Payload.Request.PayloadInit.ClientArgs
 			args = append(args, e.Payload.Request.PayloadInit.CLIArgs...)
-			flags, buildFunction = makeFlags(e, args)
+			flags, buildFunction = makeFlags(e, args, e.Payload.Request.PayloadType)
 		} else if e.Payload.Ref != "" {
 			flags = append(flags, cli.NewFlagData(svcn, en, "p", e.Method.PayloadRef, e.Method.PayloadDesc, true, e.Method.PayloadEx, e.Method.PayloadDefault))
 		}
@@ -202,7 +202,7 @@ func buildFlags(svc *ServiceData, e *EndpointData) ([]*cli.FlagData, *cli.BuildF
 	return flags, buildFunction
 }
 
-func makeFlags(e *EndpointData, args []*InitArgData) ([]*cli.FlagData, *cli.BuildFunctionData) {
+func makeFlags(e *EndpointData, args []*InitArgData, payload expr.DataType) ([]*cli.FlagData, *cli.BuildFunctionData) {
 	var (
 		fdata     []*cli.FieldData
 		flags     = make([]*cli.FlagData, len(args))
@@ -226,7 +226,7 @@ func makeFlags(e *EndpointData, args []*InitArgData) ([]*cli.FlagData, *cli.Buil
 		if arg.FieldName == "" && arg.Name != "body" {
 			continue
 		}
-		code, chek := cli.FieldLoadCode(f, arg.Name, arg.TypeName, arg.Validate, arg.DefaultValue)
+		code, chek := cli.FieldLoadCode(f, arg.Name, arg.TypeName, arg.Validate, arg.DefaultValue, payload)
 		check = check || chek
 		tn := arg.TypeRef
 		if f.Type == "JSON" {

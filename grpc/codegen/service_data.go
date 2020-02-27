@@ -71,6 +71,8 @@ type (
 		ServicePkgName string
 		// Method is the data for the underlying method expression.
 		Method *service.MethodData
+		// PayloadType is the type of the payload.
+		PayloadType expr.DataType
 		// PayloadRef is the fully qualified reference to the method payload.
 		PayloadRef string
 		// ResultRef is the fully qualified reference to the method result.
@@ -602,6 +604,7 @@ func (d ServicesData) analyze(gs *expr.GRPCServiceExpr) *ServiceData {
 			PkgName:         sd.PkgName,
 			ServicePkgName:  svc.PkgName,
 			Method:          md,
+			PayloadType:     e.MethodExpr.Payload.Type,
 			PayloadRef:      payloadRef,
 			ResultRef:       resultRef,
 			ViewedResultRef: viewedResultRef,

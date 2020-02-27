@@ -264,6 +264,8 @@ type (
 		// PayloadInit contains the data required to render the
 		// payload constructor used by server code if any.
 		PayloadInit *InitData
+		// PayloadType is the type of the payload.
+		PayloadType expr.DataType
 		// PayloadAttr sets the request body from the specified payload type
 		// attribute. This field is set when the design uses Body("name") syntax
 		// to set the request body and the payload type is an object.
@@ -1094,6 +1096,7 @@ func buildPayloadData(e *expr.HTTPEndpointExpr, sd *ServiceData) *PayloadData {
 			ServerBody:   serverBodyData,
 			ClientBody:   clientBodyData,
 			PayloadAttr:  codegen.Goify(origin, true),
+			PayloadType:  e.MethodExpr.Payload.Type,
 			MustValidate: mustValidate,
 			Multipart:    e.MultipartRequest,
 		}

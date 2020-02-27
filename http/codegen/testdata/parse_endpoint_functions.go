@@ -1089,6 +1089,10 @@ func BuildMethodMapQueryObjectPayload(serviceMapQueryObjectMethodMapQueryObjectB
 	var a string
 	{
 		a = serviceMapQueryObjectMethodMapQueryObjectA
+		err = goa.MergeErrors(err, goa.ValidatePattern("a", a, "patterna"))
+		if err != nil {
+			return nil, err
+		}
 	}
 	var c map[int][]string
 	{
@@ -1175,6 +1179,12 @@ func BuildMethodQueryStringValidatePayload(serviceQueryStringValidateMethodQuery
 	var q string
 	{
 		q = serviceQueryStringValidateMethodQueryStringValidateQ
+		if !(q == "val") {
+			err = goa.MergeErrors(err, goa.InvalidEnumValueError("q", q, []interface{}{"val"}))
+		}
+		if err != nil {
+			return nil, err
+		}
 	}
 	v := &servicequerystringvalidate.MethodQueryStringValidatePayload{}
 	v.Q = q
