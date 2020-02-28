@@ -176,7 +176,7 @@ func TestGoTransform(t *testing.T) {
 					if c.Target == nil {
 						t.Fatal("target type not found in testdata")
 					}
-					code, _, err := GoTransform(&expr.AttributeExpr{Type: c.Source}, &expr.AttributeExpr{Type: c.Target}, "source", "target", c.SourceCtx, c.TargetCtx, "")
+					code, _, err := GoTransform(&expr.AttributeExpr{Type: c.Source}, &expr.AttributeExpr{Type: c.Target}, "source", "target", c.SourceCtx, c.TargetCtx, "", true)
 					if err != nil {
 						t.Fatal(err)
 					}

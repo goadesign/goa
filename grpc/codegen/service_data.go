@@ -977,7 +977,7 @@ func buildInitData(source, target *expr.AttributeExpr, sourceVar, targetVar stri
 			srcCtx = svcCtx
 			tgtCtx = pbCtx
 		}
-		code, helpers, err = protoBufTransform(source, target, sourceVar, targetVar, srcCtx, tgtCtx, proto)
+		code, helpers, err = protoBufTransform(source, target, sourceVar, targetVar, srcCtx, tgtCtx, proto, true)
 		if err != nil {
 			fmt.Println(err.Error()) // TBD validate DSL so errors are not possible
 			return nil

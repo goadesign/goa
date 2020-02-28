@@ -44,7 +44,7 @@ func TestGoTransformHelpers(t *testing.T) {
 			if c.Type == nil {
 				t.Fatal("source type not found in testdata")
 			}
-			_, funcs, err := GoTransform(&expr.AttributeExpr{Type: c.Type}, &expr.AttributeExpr{Type: c.Type}, "source", "target", defaultCtx, defaultCtx, "")
+			_, funcs, err := GoTransform(&expr.AttributeExpr{Type: c.Type}, &expr.AttributeExpr{Type: c.Type}, "source", "target", defaultCtx, defaultCtx, "", true)
 			if err != nil {
 				t.Fatal(err)
 			}

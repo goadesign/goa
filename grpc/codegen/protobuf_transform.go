@@ -53,7 +53,11 @@ func init() {
 //
 // `proto` param if true indicates that the target is a protocol buffer type
 //
-func protoBufTransform(source, target *expr.AttributeExpr, sourceVar, targetVar string, sourceCtx, targetCtx *codegen.AttributeContext, proto bool) (string, []*codegen.TransformFunctionData, error) {
+// newVar if true initializes a target variable with the generated Go code
+// using `:=` operator. If false, it assigns Go code to the target variable
+// using `=`.
+//
+func protoBufTransform(source, target *expr.AttributeExpr, sourceVar, targetVar string, sourceCtx, targetCtx *codegen.AttributeContext, proto, newVar bool) (string, []*codegen.TransformFunctionData, error) {
 	source = unAlias(source)
 	target = unAlias(target)
 	var prefix string
@@ -72,7 +76,7 @@ func protoBufTransform(source, target *expr.AttributeExpr, sourceVar, targetVar 
 		proto: proto,
 	}
 
-	code, err := transformAttribute(source, target, sourceVar, targetVar, true, ta)
+	code, err := transformAttribute(source, target, sourceVar, targetVar, newVar, ta)
 	if err != nil {
 		return "", nil, err
 	}

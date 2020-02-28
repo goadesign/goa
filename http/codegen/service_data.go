@@ -2585,7 +2585,7 @@ func viewContext(pkg string, scope *codegen.NameScope) *codegen.AttributeContext
 // sourceCtx, targetCtx are the source and target attribute contexts
 //
 func unmarshal(source, target *expr.AttributeExpr, sourceVar, targetVar string, sourceCtx, targetCtx *codegen.AttributeContext) (string, []*codegen.TransformFunctionData, error) {
-	return codegen.GoTransform(source, target, sourceVar, targetVar, sourceCtx, targetCtx, "unmarshal")
+	return codegen.GoTransform(source, target, sourceVar, targetVar, sourceCtx, targetCtx, "unmarshal", true)
 }
 
 // marshal initializes a data structure defined by target type from a data
@@ -2600,7 +2600,7 @@ func unmarshal(source, target *expr.AttributeExpr, sourceVar, targetVar string, 
 // sourceCtx, targetCtx are the source and target attribute contexts
 //
 func marshal(source, target *expr.AttributeExpr, sourceVar, targetVar string, sourceCtx, targetCtx *codegen.AttributeContext) (string, []*codegen.TransformFunctionData, error) {
-	return codegen.GoTransform(source, target, sourceVar, targetVar, sourceCtx, targetCtx, "marshal")
+	return codegen.GoTransform(source, target, sourceVar, targetVar, sourceCtx, targetCtx, "marshal", true)
 }
 
 // needConversion returns true if the type needs to be converted from a string.

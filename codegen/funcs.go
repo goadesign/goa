@@ -288,7 +288,7 @@ func InitStructFields(args []*InitArgData, name, targetVar, sourcePkg, targetPkg
 		default:
 			srcctx := NewAttributeContext(arg.Pointer, false, true, sourcePkg, scope)
 			tgtctx := NewAttributeContext(arg.FieldPointer, false, true, targetPkg, scope)
-			c, h, err := GoTransformToVar(
+			c, h, err := GoTransform(
 				&expr.AttributeExpr{Type: arg.Type}, &expr.AttributeExpr{Type: arg.FieldType},
 				arg.Name, fmt.Sprintf("%s.%s", targetVar, arg.FieldName), srcctx, tgtctx, "", false)
 			if err != nil {
