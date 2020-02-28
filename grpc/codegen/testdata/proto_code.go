@@ -189,6 +189,18 @@ message MethodMessageUserTypeWithPrimitivesResponse {
 }
 `
 
+const MessageUserTypeWithAliasMessageCode = `
+message MethodMessageUserTypeWithAliasRequest {
+	sint32 int_alias_field = 1;
+	sint32 optional_int_alias_field = 2;
+}
+
+message MethodMessageUserTypeWithAliasResponse {
+	sint32 int_alias_field = 1;
+	sint32 optional_int_alias_field = 2;
+}
+`
+
 const MessageUserTypeWithNestedUserTypesCode = `
 message MethodMessageUserTypeWithNestedUserTypesRequest {
 	bool boolean_field = 1;

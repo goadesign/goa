@@ -102,6 +102,34 @@ func svcServicepayloadwithnestedtypesBParamsToServicePayloadWithNestedTypespbBPa
 }
 `
 
+const PayloadWithAliasTypeClientTypeCode = `// NewMethodMessageUserTypeWithAliasRequest builds the gRPC request type from
+// the payload of the "MethodMessageUserTypeWithAlias" endpoint of the
+// "ServiceMessageUserTypeWithAlias" service.
+func NewMethodMessageUserTypeWithAliasRequest(payload *servicemessageusertypewithalias.PayloadAliasT) *service_message_user_type_with_aliaspb.MethodMessageUserTypeWithAliasRequest {
+	message := &service_message_user_type_with_aliaspb.MethodMessageUserTypeWithAliasRequest{
+		IntAliasField: int(payload.IntAliasField),
+	}
+	if payload.OptionalIntAliasField != nil {
+		message.OptionalIntAliasField = int(*payload.OptionalIntAliasField)
+	}
+	return message
+}
+
+// NewMethodMessageUserTypeWithAliasResult builds the result type of the
+// "MethodMessageUserTypeWithAlias" endpoint of the
+// "ServiceMessageUserTypeWithAlias" service from the gRPC response type.
+func NewMethodMessageUserTypeWithAliasResult(message *service_message_user_type_with_aliaspb.MethodMessageUserTypeWithAliasResponse) *servicemessageusertypewithalias.PayloadAliasT {
+	result := &servicemessageusertypewithalias.PayloadAliasT{
+		IntAliasField: servicemessageusertypewithalias.IntAlias(message.IntAliasField),
+	}
+	if message.OptionalIntAliasField != nil {
+		optionalIntAliasFieldptr := servicemessageusertypewithalias.IntAlias(message.OptionalIntAliasField)
+		result.OptionalIntAliasField = &optionalIntAliasFieldptr
+	}
+	return result
+}
+`
+
 const ResultWithCollectionClientTypeCode = `// NewMethodResultWithCollectionRequest builds the gRPC request type from the
 // payload of the "MethodResultWithCollection" endpoint of the
 // "ServiceResultWithCollection" service.
