@@ -11,7 +11,7 @@ import (
 )
 
 type (
-	// InitArgData contains the data needed to render code to initlize struct
+	// InitArgData contains the data needed to render code to initialize struct
 	// fields with the given arguments.
 	InitArgData struct {
 		// Name is the argument name.
