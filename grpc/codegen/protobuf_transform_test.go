@@ -133,7 +133,7 @@ func TestProtoBufTransform(t *testing.T) {
 						source = makeProtoBufMessage(expr.DupAtt(source), source.Type.Name(), sd)
 						srcCtx = pbCtx
 					}
-					code, _, err := protoBufTransform(source, target, "source", "target", srcCtx, tgtCtx, c.ToProto)
+					code, _, err := protoBufTransform(source, target, "source", "target", srcCtx, tgtCtx, c.ToProto, true)
 					if err != nil {
 						t.Fatal(err)
 					}
