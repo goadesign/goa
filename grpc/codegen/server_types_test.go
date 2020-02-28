@@ -16,6 +16,7 @@ func TestServerTypeFiles(t *testing.T) {
 		Code string
 	}{
 		{"payload-with-nested-types", testdata.PayloadWithNestedTypesDSL, testdata.PayloadWithNestedTypesServerTypeCode},
+		{"payload-with-alias-type", testdata.PayloadWithAliasTypeDSL, testdata.PayloadWithAliasTypeServerTypeCode},
 		{"result-collection", testdata.ResultWithCollectionDSL, testdata.ResultWithCollectionServerTypeCode},
 		{"with-errors", testdata.UnaryRPCWithErrorsDSL, testdata.WithErrorsServerTypeCode},
 	}

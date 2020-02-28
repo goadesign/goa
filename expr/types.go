@@ -303,9 +303,15 @@ func equal(dt, dt2 DataType, seen ...map[string]*[]*bool) *[]*bool {
 		s[key] = pres
 		if IsObject(actual) {
 			*pres = *equal(AsObject(dt), AsObject(dt2), s)
-		} else {
-			// User types can also be arrays (CollectionOf)
+		} else if IsMap(actual) {
+			// Map aliased as UserType
+			*pres = *equal(AsMap(dt), AsMap(dt2), s)
+		} else if IsArray(actual) {
+			// Array aliased as UserType or CollectionOf
 			*pres = *equal(AsArray(dt), AsArray(dt2), s)
+		} else {
+			// Primitive type aliased as UserType
+			*pres = *equal(dt, dt2, s)
 		}
 		return pres
 	}
@@ -702,8 +708,12 @@ func toReflectType(dtype DataType) reflect.Type {
 		return reflect.TypeOf("")
 	case BytesKind:
 		return reflect.TypeOf([]byte{})
-	case ObjectKind, UserTypeKind, ResultTypeKind:
+	case ObjectKind:
 		return reflect.TypeOf(map[string]interface{}{})
+	case UserTypeKind:
+		return toReflectType(dtype.(*UserTypeExpr).Attribute().Type)
+	case ResultTypeKind:
+		return toReflectType(dtype.(*ResultTypeExpr).Attribute().Type)
 	case ArrayKind:
 		return reflect.SliceOf(toReflectType(dtype.(*Array).ElemType.Type))
 	case MapKind:
