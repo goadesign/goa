@@ -73,7 +73,7 @@ func transformPrimitive(source, target *expr.AttributeExpr, sourceVar, targetVar
 	if newVar {
 		assign = ":="
 	}
-	if !expr.Equal(source.Type, target.Type) {
+	if source.Type.Name() != target.Type.Name() {
 		cast := ta.TargetCtx.Scope.Ref(target, ta.TargetCtx.Pkg)
 		return fmt.Sprintf("%s %s %s(%s)\n", targetVar, assign, cast, sourceVar), nil
 	}

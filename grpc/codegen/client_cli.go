@@ -113,6 +113,7 @@ func payloadBuilders(genpkg string, svc *expr.GRPCServiceExpr, data *cli.Command
 		{Path: "encoding/json"},
 		{Path: "fmt"},
 		{Path: "strconv"},
+		{Path: "goa.design/goa", Name: "goa"},
 		{Path: path.Join(genpkg, svcName), Name: sd.Service.PkgName},
 		{Path: path.Join(genpkg, "grpc", svcName, pbPkgName), Name: sd.PkgName},
 	}
