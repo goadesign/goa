@@ -17,11 +17,11 @@ func File(genpkg string, service *expr.ServiceExpr) *codegen.File {
 		service.Name+" service",
 		svc.PkgName,
 		[]*codegen.ImportSpec{
-			codegen.SimpleImport("context"),
-			codegen.SimpleImport("io"),
-			codegen.GoaImport(""),
-			codegen.GoaImport("security"),
-			codegen.NewImport(svc.ViewsPkg, genpkg+"/"+svcName+"/views"),
+			{Path: "context"},
+			{Path: "io"},
+			{Path: "goa.design/goa"},
+			{Path: "goa.design/goa/security"},
+			{Path: genpkg + "/" + svcName + "/" + "views", Name: svc.ViewsPkg},
 		})
 	def := &codegen.SectionTemplate{
 		Name:    "service",

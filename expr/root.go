@@ -1,11 +1,9 @@
 package expr
 
 import (
-	"fmt"
 	"sort"
 
 	"goa.design/goa/eval"
-	goa "goa.design/goa/pkg"
 )
 
 // Root is the root object built by the DSL.

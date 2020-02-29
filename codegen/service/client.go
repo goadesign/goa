@@ -25,7 +25,7 @@ func ClientFile(service *expr.ServiceExpr) *codegen.File {
 			[]*codegen.ImportSpec{
 				{Path: "context"},
 				{Path: "io"},
-				codegen.GoaImport(""),
+				{Path: "goa.design/goa"},
 			})
 		def := &codegen.SectionTemplate{
 			Name:   "client-struct",
