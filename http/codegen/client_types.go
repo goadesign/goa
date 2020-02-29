@@ -185,12 +185,10 @@ func clientType(genpkg string, svc *expr.HTTPServiceExpr, seen map[string]struct
 		for _, resp := range adata.Result.Responses {
 			if init := resp.ResultInit; init != nil {
 				sections = append(sections, &codegen.SectionTemplate{
-					Name:   "client-result-init",
-					Source: clientTypeInitT,
-					Data:   init,
-					FuncMap: map[string]interface{}{
-						"fieldCode": fieldCode,
-					},
+					Name:    "client-result-init",
+					Source:  clientTypeInitT,
+					Data:    init,
+					FuncMap: map[string]interface{}{"fieldCode": fieldCode},
 				})
 			}
 		}
@@ -200,12 +198,10 @@ func clientType(genpkg string, svc *expr.HTTPServiceExpr, seen map[string]struct
 			for _, herr := range gerr.Errors {
 				if init := herr.Response.ResultInit; init != nil {
 					sections = append(sections, &codegen.SectionTemplate{
-						Name:   "client-error-result-init",
-						Source: clientTypeInitT,
-						Data:   init,
-						FuncMap: map[string]interface{}{
-							"fieldCode": fieldCode,
-						},
+						Name:    "client-error-result-init",
+						Source:  clientTypeInitT,
+						Data:    init,
+						FuncMap: map[string]interface{}{"fieldCode": fieldCode},
 					})
 				}
 			}

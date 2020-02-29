@@ -1176,6 +1176,7 @@ func BuildMethodQueryStringPayload(serviceQueryStringMethodQueryStringQ string) 
 var QueryStringRequiredBuildCode = `// BuildMethodQueryStringValidatePayload builds the payload for the
 // ServiceQueryStringValidate MethodQueryStringValidate endpoint from CLI flags.
 func BuildMethodQueryStringValidatePayload(serviceQueryStringValidateMethodQueryStringValidateQ string) (*servicequerystringvalidate.MethodQueryStringValidatePayload, error) {
+	var err error
 	var q string
 	{
 		q = serviceQueryStringValidateMethodQueryStringValidateQ
