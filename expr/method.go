@@ -310,12 +310,17 @@ func (m *MethodExpr) Finalize() {
 
 // IsStreaming determines whether the method streams payload or result.
 func (m *MethodExpr) IsStreaming() bool {
-	return m.Stream != 0 && m.Stream != NoStreamKind
+	return m.IsPayloadStreaming() || m.IsResultStreaming()
 }
 
 // IsPayloadStreaming determines whether the method streams payload.
 func (m *MethodExpr) IsPayloadStreaming() bool {
 	return m.Stream == ClientStreamKind || m.Stream == BidirectionalStreamKind
+}
+
+// IsResultStreaming determines whether the method streams payload.
+func (m *MethodExpr) IsResultStreaming() bool {
+	return m.Stream == ServerStreamKind || m.Stream == BidirectionalStreamKind
 }
 
 // helper function that duplicates just enough of a security expression so that
