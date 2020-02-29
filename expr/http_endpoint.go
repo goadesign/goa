@@ -249,7 +249,7 @@ func (e *HTTPEndpointExpr) Prepare() {
 	// Make sure there's a default response if none define explicitly
 	if len(e.Responses) == 0 {
 		status := StatusOK
-		if e.MethodExpr.Payload.Type == Empty {
+		if e.MethodExpr.Payload.Type == Empty && !e.SkipResponseBodyEncodeDecode {
 			status = StatusNoContent
 		}
 		e.Responses = []*HTTPResponseExpr{{StatusCode: status}}
