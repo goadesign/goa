@@ -73,6 +73,8 @@ func TestClientTypes(t *testing.T) {
 		{"mixed-payload-attrs", testdata.MixedPayloadInBodyDSL, MixedPayloadInBodyClientTypesFile},
 		{"multiple-methods", testdata.MultipleMethodsDSL, MultipleMethodsClientTypesFile},
 		{"payload-extend-validate", testdata.PayloadExtendedValidateDSL, PayloadExtendedValidateClientTypesFile},
+		{"result-type-validate", testdata.ResultTypeValidateDSL, ResultTypeValidateClientTypesFile},
+		{"with-result-collection", testdata.ResultWithResultCollectionDSL, WithResultCollectionClientTypesFile},
 	}
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
@@ -142,9 +144,7 @@ const BodyPrimitiveArrayUserValidateInitCode = `// NewPayloadTypeRequestBody bui
 func NewPayloadTypeRequestBody(p []*servicebodyprimitivearrayuservalidate.PayloadType) []*PayloadTypeRequestBody {
 	body := make([]*PayloadTypeRequestBody, len(p))
 	for i, val := range p {
-		body[i] = &PayloadTypeRequestBody{
-			A: val.A,
-		}
+		body[i] = marshalServicebodyprimitivearrayuservalidatePayloadTypeToPayloadTypeRequestBody(val)
 	}
 	return body
 }
@@ -180,6 +180,7 @@ func NewMethodBodyObjectHeaderResultOK(body *MethodBodyObjectHeaderResponseBody,
 		A: body.A,
 	}
 	v.B = b
+
 	return v
 }
 `
@@ -194,6 +195,7 @@ func NewMethodExplicitBodyPrimitiveResultMultipleViewResulttypemultipleviewsOK(b
 		A: &v,
 	}
 	res.C = c
+
 	return res
 }
 `
@@ -211,6 +213,7 @@ func NewMethodExplicitBodyUserResultMultipleViewResulttypemultipleviewsOK(body *
 		A: v,
 	}
 	res.C = c
+
 	return res
 }
 `
@@ -226,6 +229,7 @@ func NewMethodExplicitBodyUserResultObjectResulttypeOK(body *MethodExplicitBodyU
 	}
 	v.C = c
 	v.B = b
+
 	return v
 }
 `
@@ -240,6 +244,7 @@ func NewMethodExplicitBodyUserResultObjectMultipleViewResulttypemultipleviewsOK(
 		v.A = unmarshalUserTypeResponseBodyToServiceexplicitbodyuserresultobjectmultipleviewviewsUserTypeView(body.A)
 	}
 	v.C = c
+
 	return v
 }
 `
@@ -422,6 +427,7 @@ func NewListResultOK(body *ListResponseBody) *servicea.ListResult {
 		ID:   *body.ID,
 		Name: *body.Name,
 	}
+
 	return v
 }
 
@@ -436,6 +442,7 @@ func NewListSomethingWentWrong(body *ListSomethingWentWrongResponseBody) *goa.Se
 		Timeout:   *body.Timeout,
 		Fault:     *body.Fault,
 	}
+
 	return v
 }
 
@@ -536,6 +543,7 @@ func NewListResultOK(body *ListResponseBody) *serviceb.ListResult {
 		ID:   *body.ID,
 		Name: *body.Name,
 	}
+
 	return v
 }
 
@@ -550,6 +558,7 @@ func NewListSomethingWentWrong(body *ListSomethingWentWrongResponseBody) *goa.Se
 		Timeout:   *body.Timeout,
 		Fault:     *body.Fault,
 	}
+
 	return v
 }
 
@@ -589,3 +598,109 @@ func ValidateListSomethingWentWrongResponseBody(body *ListSomethingWentWrongResp
 }
 `,
 }
+
+const ResultTypeValidateClientTypesFile = `// MethodResultTypeValidateResponseBody is the type of the
+// "ServiceResultTypeValidate" service "MethodResultTypeValidate" endpoint HTTP
+// response body.
+type MethodResultTypeValidateResponseBody struct {
+	A *string ` + "`" + `form:"a,omitempty" json:"a,omitempty" xml:"a,omitempty"` + "`" + `
+}
+
+// NewMethodResultTypeValidateResultTypeNoContent builds a
+// "ServiceResultTypeValidate" service "MethodResultTypeValidate" endpoint
+// result from a HTTP "NoContent" response.
+func NewMethodResultTypeValidateResultTypeNoContent(body *MethodResultTypeValidateResponseBody) *serviceresulttypevalidate.ResultType {
+	v := &serviceresulttypevalidate.ResultType{
+		A: body.A,
+	}
+
+	return v
+}
+
+// ValidateMethodResultTypeValidateResponseBody runs the validations defined on
+// MethodResultTypeValidateResponseBody
+func ValidateMethodResultTypeValidateResponseBody(body *MethodResultTypeValidateResponseBody) (err error) {
+	if body.A != nil {
+		if utf8.RuneCountInString(*body.A) < 5 {
+			err = goa.MergeErrors(err, goa.InvalidLengthError("body.a", *body.A, utf8.RuneCountInString(*body.A), 5, true))
+		}
+	}
+	return
+}
+`
+
+const WithResultCollectionClientTypesFile = `// MethodResultWithResultCollectionResponseBody is the type of the
+// "ServiceResultWithResultCollection" service
+// "MethodResultWithResultCollection" endpoint HTTP response body.
+type MethodResultWithResultCollectionResponseBody struct {
+	A *ResulttypeResponseBody ` + "`" + `form:"a,omitempty" json:"a,omitempty" xml:"a,omitempty"` + "`" + `
+}
+
+// ResulttypeResponseBody is used to define fields on response body types.
+type ResulttypeResponseBody struct {
+	X RtCollectionResponseBody ` + "`" + `form:"x,omitempty" json:"x,omitempty" xml:"x,omitempty"` + "`" + `
+}
+
+// RtCollectionResponseBody is used to define fields on response body types.
+type RtCollectionResponseBody []*RtResponseBody
+
+// RtResponseBody is used to define fields on response body types.
+type RtResponseBody struct {
+	X *string ` + "`" + `form:"x,omitempty" json:"x,omitempty" xml:"x,omitempty"` + "`" + `
+}
+
+// NewMethodResultWithResultCollectionResultOK builds a
+// "ServiceResultWithResultCollection" service
+// "MethodResultWithResultCollection" endpoint result from a HTTP "OK" response.
+func NewMethodResultWithResultCollectionResultOK(body *MethodResultWithResultCollectionResponseBody) *serviceresultwithresultcollection.MethodResultWithResultCollectionResult {
+	v := &serviceresultwithresultcollection.MethodResultWithResultCollectionResult{}
+	if body.A != nil {
+		v.A = unmarshalResulttypeResponseBodyToServiceresultwithresultcollectionResulttype(body.A)
+	}
+
+	return v
+}
+
+// ValidateMethodResultWithResultCollectionResponseBody runs the validations
+// defined on MethodResultWithResultCollectionResponseBody
+func ValidateMethodResultWithResultCollectionResponseBody(body *MethodResultWithResultCollectionResponseBody) (err error) {
+	if body.A != nil {
+		if err2 := ValidateResulttypeResponseBody(body.A); err2 != nil {
+			err = goa.MergeErrors(err, err2)
+		}
+	}
+	return
+}
+
+// ValidateResulttypeResponseBody runs the validations defined on
+// ResulttypeResponseBody
+func ValidateResulttypeResponseBody(body *ResulttypeResponseBody) (err error) {
+	if err2 := ValidateRtCollectionResponseBody(body.X); err2 != nil {
+		err = goa.MergeErrors(err, err2)
+	}
+	return
+}
+
+// ValidateRtCollectionResponseBody runs the validations defined on
+// RtCollectionResponseBody
+func ValidateRtCollectionResponseBody(body RtCollectionResponseBody) (err error) {
+	for _, e := range body {
+		if e != nil {
+			if err2 := ValidateRtResponseBody(e); err2 != nil {
+				err = goa.MergeErrors(err, err2)
+			}
+		}
+	}
+	return
+}
+
+// ValidateRtResponseBody runs the validations defined on RtResponseBody
+func ValidateRtResponseBody(body *RtResponseBody) (err error) {
+	if body.X != nil {
+		if utf8.RuneCountInString(*body.X) < 5 {
+			err = goa.MergeErrors(err, goa.InvalidLengthError("body.x", *body.X, utf8.RuneCountInString(*body.X), 5, true))
+		}
+	}
+	return
+}
+`

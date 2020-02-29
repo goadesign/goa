@@ -145,20 +145,22 @@ func makeFlags(e *EndpointData, args []*InitArgData) ([]*cli.FlagData, *cli.Buil
 		fdata     []*cli.FieldData
 		flags     = make([]*cli.FlagData, len(args))
 		params    = make([]string, len(args))
-		pInitArgs = make([]*cli.PayloadInitArgData, len(args))
+		pInitArgs = make([]*codegen.InitArgData, len(args))
 		check     bool
 		pinit     *cli.PayloadInitData
 	)
 	for i, arg := range args {
-		pInitArgs[i] = &cli.PayloadInitArgData{
+		pInitArgs[i] = &codegen.InitArgData{
 			Name:      arg.Name,
 			FieldName: arg.FieldName,
+			FieldType: arg.FieldType,
+			Type:      arg.Type,
 		}
 
 		f := cli.NewFlagData(e.ServiceName, e.Method.Name, arg.Name, arg.TypeName, arg.Description, arg.Required, arg.Example)
 		flags[i] = f
 		params[i] = f.FullName
-		code, chek := cli.FieldLoadCode(f, arg.Name, arg.TypeName, arg.Validate, arg.DefaultValue)
+		code, chek := cli.FieldLoadCode(f, arg.Name, arg.TypeName, arg.Validate, arg.DefaultValue, e.PayloadType)
 		check = check || chek
 		tn := arg.TypeRef
 		if f.Type == "JSON" {
@@ -181,6 +183,7 @@ func makeFlags(e *EndpointData, args []*InitArgData) ([]*cli.FlagData, *cli.Buil
 		pinit = &cli.PayloadInitData{
 			Code:           e.Request.ServerConvert.Init.Code,
 			ReturnIsStruct: e.Request.ServerConvert.Init.ReturnIsStruct,
+			ReturnTypePkg:  e.Request.ServerConvert.Init.ReturnTypePkg,
 			Args:           pInitArgs,
 		}
 	}

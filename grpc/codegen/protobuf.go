@@ -239,6 +239,9 @@ func protoBufMessageDef(att *expr.AttributeExpr, sd *ServiceData) string {
 	case *expr.Map:
 		return fmt.Sprintf("map<%s, %s>", protoBufMessageDef(actual.KeyType, sd), protoBufMessageDef(actual.ElemType, sd))
 	case expr.UserType:
+		if prim := getPrimitive(att); prim != nil {
+			return protoBufMessageDef(prim, sd)
+		}
 		return protoBufMessageName(att, sd.Scope)
 	case *expr.Object:
 		var ss []string
@@ -253,7 +256,11 @@ func protoBufMessageDef(att *expr.AttributeExpr, sd *ServiceData) string {
 			{
 				fn = codegen.SnakeCase(protoBufify(nat.Name, false))
 				fnum = rpcTag(nat.Attribute)
-				typ = protoBufMessageDef(nat.Attribute, sd)
+				if prim := getPrimitive(nat.Attribute); prim != nil {
+					typ = protoBufMessageDef(prim, sd)
+				} else {
+					typ = protoBufMessageDef(nat.Attribute, sd)
+				}
 				if nat.Attribute.Description != "" {
 					desc = codegen.Comment(nat.Attribute.Description) + "\n\t"
 				}

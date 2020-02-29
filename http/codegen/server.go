@@ -166,6 +166,10 @@ func transTmplFuncs(s *expr.HTTPServiceExpr) map[string]interface{} {
 		"goTypeRef": func(dt expr.DataType) string {
 			return service.Services.Get(s.Name()).Scope.GoTypeRef(&expr.AttributeExpr{Type: dt})
 		},
+		"isAliased": func(dt expr.DataType) bool {
+			_, ok := dt.(expr.UserType)
+			return ok
+		},
 		"conversionData":       conversionData,
 		"headerConversionData": headerConversionData,
 		"printValue":           printValue,
@@ -849,11 +853,12 @@ const requestParamsHeadersT = `{{- define "request_params_headers" }}
 	{{- else if eq .Type.ElemType.Type.Name "map" }}
 		{{- template "map_conversion" (mapQueryDecodeData .Type.ElemType.Type (printf "%s[key%s]" .VarName .Loop) 1) }}
 	{{- else }}
-		var val {{ goTypeRef .Type.ElemType.Type }}
+		var val{{ .Loop }} {{ goTypeRef .Type.ElemType.Type }}
 		{
-			{{- template "type_conversion" (conversionData "val" (printf "%q" "query") .Type.ElemType.Type) }}
+			val{{ .Loop }}Raw := valRaw[0]
+			{{- template "type_conversion" (conversionData (printf "val%s" .Loop)  (printf "%q" "query") .Type.ElemType.Type) }}
 		}
-		{{ .VarName }}[key{{ .Loop }}] = val
+		{{ .VarName }}[key{{ .Loop }}] = val{{ .Loop }}
 	{{- end }}
 {{- end }}
 ` + typeConversionT
@@ -1134,8 +1139,13 @@ const responseT = `{{ define "response" -}}
 		{{- if eq .Type.Name "string" }}
 	w.Header().Set("{{ .CanonicalName }}", {{ if or .FieldPointer $.ViewedResult }}*{{ end }}res{{ if $.ViewedResult }}.Projected{{ end }}{{ if .FieldName }}.{{ .FieldName }}{{ end }})
 		{{- else }}
+			{{- if isAliased .FieldType }}
+	val := {{ goTypeRef .Type }}({{ if .FieldPointer }}*{{ end }}res{{ if $.ViewedResult }}.Projected{{ end }}{{ if .FieldName }}.{{ .FieldName }}{{ end }})
+	{{ template "header_conversion" (headerConversionData .Type (printf "%ss" .VarName) true "val") }}
+			{{- else }}
 	val := res{{ if $.ViewedResult }}.Projected{{ end }}{{ if .FieldName }}.{{ .FieldName }}{{ end }}
 	{{ template "header_conversion" (headerConversionData .Type (printf "%ss" .VarName) (not .FieldPointer) "val") }}
+			{{- end }}
 	w.Header().Set("{{ .CanonicalName }}", {{ .VarName }}s)
 		{{- end }}
 
