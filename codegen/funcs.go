@@ -7,7 +7,7 @@ import (
 	"strings"
 	"unicode"
 
-	"goa.design/goa/v3/expr"
+	"goa.design/goa/expr"
 )
 
 type (
