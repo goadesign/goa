@@ -376,7 +376,7 @@ func FieldLoadCode(f *FlagData, argName, argTypeName, validate string, defaultVa
 			code += "\n" + validate + "\n" + fmt.Sprintf("if err != nil {\n\treturn %v, err\n}", rval)
 		}
 	}
-	return fmt.Sprintf("%s%s%s", startIf, code, endIf), check
+	return fmt.Sprintf("%s%s%s", startIf, code, endIf), check || validate != ""
 }
 
 // flagType calculates the type of a flag
