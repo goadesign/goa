@@ -134,19 +134,33 @@ func TypeName(name string) {
 	}
 }
 
-// View adds a new view to a result type. A view has a name and lists attributes
-// that are rendered when the view is used to produce a response. The attribute
-// names must appear in the result type expression. If an attribute is itself a
-// result type then the view may specify which view to use when rendering the
-// attribute using the View function in the View DSL. If not specified then the
-// view named "default" is used.
+// View has two usages:
 //
-// View must appear in a ResultType expression.
+// - when used inside a ResultType DSL function it defines a view for the result
+// type. A view lists a subset of the result type attributes that are used when
+// marshalling responses.
 //
-// View accepts two arguments: the view name and its defining DSL.
+// - when used inside a Result DSL function it defines the view used to marshal
+// the result type returned by the method.
+//
+// Note that the view used to render a response can also be set dynamically by
+// the method code in which case the result function should not specify a view
+// in the design.  The attribute names listed in a view must be identical to
+// existing attributes in the result type on which the view is defined. If an
+// attribute is itself a result type then the view may specify which view to use
+// when marshaling the attribute using the View function recursively, see
+// example below. All result types must have a view called "default" which is
+// the view used to marshal results when no specific view is specified.
+//
+// View must appear in a ResultType or a Result expression.
+//
+// View accepts two arguments for the first usage: the view name and its
+// defining DSL.  View accepts a single argument for the second usage: the view
+// name used to render the result.
 //
 // Examples:
 //
+//    // MyResultType defines 2 views.
 //    var MyResultType = ResultType("application/vnd.goa.my", func() {
 //        Attributes(func() {
 //            Attribute("id", String)
@@ -170,12 +184,13 @@ func TypeName(name string) {
 //        })
 //    })
 //
-//    Result(MyResultType, func() {
-//        View("extended")
-//    })
-//
-//    Result(CollectionOf(MyResultType), func() {
-//        View("default")
+//    // MyMethod uses the extended view of MyResultType to marshal the
+//    // response.
+//    var _ = Service("MyService", func() {
+//        Method("MyMethod", func() {
+//            Result(MyResultType, func() { View("extended") })
+//            GRPC(func() {})
+//        })
 //    })
 //
 func View(name string, adsl ...func()) {

@@ -150,6 +150,10 @@ service "Service" HTTP endpoint "Method": HTTP endpoint response body must be em
 			DSL:   testdata.EndpointHasSkipEncodeAndGRPC,
 			Error: `service "Service" HTTP endpoint "Method": Endpoint cannot use SkipRequestBodyEncodeDecode and define a gRPC transport.`,
 		},
+		"endpoint-payload-missing-required": {
+			DSL:   testdata.EndpointPayloadMissingRequired,
+			Error: `service "Service" HTTP endpoint "Method": The following HTTP request body attribute is required but the corresponding method payload attribute is not: nonreq. Use 'Required' to make the attribute required in the method payload as well.`,
+		},
 	}
 	for name, c := range cases {
 		t.Run(name, func(t *testing.T) {

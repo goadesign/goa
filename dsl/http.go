@@ -735,6 +735,13 @@ func Body(args ...interface{}) {
 			// GeneratedTypes so that the type's DSLFunc is executed.
 			*expr.Root.GeneratedTypes = append(*expr.Root.GeneratedTypes, rt)
 		}
+		if len(args) > 1 {
+			var ok bool
+			fn, ok = args[1].(func())
+			if !ok {
+				eval.ReportError("second argument must be a function")
+			}
+		}
 	case expr.UserType:
 		attr = &expr.AttributeExpr{Type: a}
 		if len(args) > 1 {

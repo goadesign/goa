@@ -130,6 +130,9 @@ type (
 		// ReturnTypeAttribute if non-empty returns an attribute in the payload
 		// type that describes the shape of the method payload.
 		ReturnTypeAttribute string
+		// ReturnTypeAttributePointer is true if the return type attribute
+		// generated struct field holds a pointer
+		ReturnTypeAttributePointer bool
 		// ReturnIsStruct if true indicates that the method payload is an object.
 		ReturnIsStruct bool
 		// ReturnTypeName is the fully-qualified name of the payload.
@@ -712,7 +715,7 @@ func {{ .Name }}({{ range .FormalParams }}{{ . }} string, {{ end }}) ({{ .Result
 		{{ .Code }}
 		{{- if .ReturnTypeAttribute }}
 			res := &{{ .ReturnTypeName }}{
-				{{ .ReturnTypeAttribute }}: v,
+				{{ .ReturnTypeAttribute }}: {{ if .ReturnTypeAttributePointer }}&{{ end }}v,
 			}
 		{{- end }}
 	{{- end }}
