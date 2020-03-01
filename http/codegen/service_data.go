@@ -350,24 +350,6 @@ type (
 		// as the time of writing is only used for the basic auth
 		// username and password.
 		CLIArgs []*InitArgData
-		// ReturnTypeName is the qualified (including the package name)
-		// name of the payload, result or error type.
-		ReturnTypeName string
-		// ReturnTypeRef is the qualified (including the package name)
-		// reference to the payload, result or error type.
-		ReturnTypeRef string
-		// ReturnTypeAttribute is the name of the attribute initialized
-		// by this constructor when it only initializes one attribute
-		// (i.e. body was defined with Body("name") syntax).
-		ReturnTypeAttribute string
-		// ReturnIsStruct is true if the return type is a struct.
-		ReturnIsStruct bool
-		// ReturnIsPrimitivePointer indicates whether the return type is
-		// a primitive pointer.
-		ReturnIsPrimitivePointer bool
-		// ReturnTypePkg is the package where the return type is
-		// present.
-		ReturnTypePkg string
 		// ServerCode is the code that builds the payload from the
 		// request on the server when it contains user types.
 		ServerCode string
@@ -375,6 +357,23 @@ type (
 		// from the request or response state on the client when it
 		// contains user types.
 		ClientCode string
+		// ReturnTypePkg is the package where the return type is present.
+		ReturnTypePkg string
+		// ReturnTypeName is the qualified (including the package name)
+		// name of the payload, result or error type.
+		ReturnTypeName string
+		// ReturnTypeRef is the qualified (including the package name)
+		// reference to the payload, result or error type.
+		ReturnTypeRef string
+		// ReturnTypeAttribute is the name of the attribute initialized by this
+		// constructor when it only initializes one attribute (i.e. body was
+		// defined with Body("name") syntax).
+		ReturnTypeAttribute string
+		// ReturnIsStruct is true if the payload, result or error type is a struct.
+		ReturnIsStruct bool
+		// ReturnIsPrimitivePointer indicates whether the payload, result or error
+		// type is a primitive pointer.
+		ReturnIsPrimitivePointer bool
 	}
 
 	// InitArgData represents a single constructor argument.
@@ -1275,6 +1274,7 @@ func buildPayloadData(e *expr.HTTPEndpointExpr, sd *ServiceData) *PayloadData {
 			clientCode string
 			err        error
 			origin     string
+			pointer    bool
 
 			pAtt = payload
 		)
@@ -1284,6 +1284,7 @@ func buildPayloadData(e *expr.HTTPEndpointExpr, sd *ServiceData) *PayloadData {
 			if o, ok := e.Body.Meta["origin:attribute"]; ok {
 				origin = o[0]
 				pAtt = expr.AsObject(payload.Type).Attribute(origin)
+				pointer = !payload.IsRequired(o[0])
 			}
 
 			var (
@@ -1318,18 +1319,19 @@ func buildPayloadData(e *expr.HTTPEndpointExpr, sd *ServiceData) *PayloadData {
 			fmt.Println(err.Error()) // TBD validate DSL so errors are not possible
 		}
 		init = &InitData{
-			Name:                name,
-			Description:         desc,
-			ServerArgs:          serverArgs,
-			ClientArgs:          clientArgs,
-			CLIArgs:             cliArgs,
-			ReturnTypeName:      svc.Scope.GoFullTypeName(payload, svc.PkgName),
-			ReturnTypeRef:       svc.Scope.GoFullTypeRef(payload, svc.PkgName),
-			ReturnIsStruct:      isObject,
-			ReturnTypeAttribute: codegen.Goify(origin, true),
-			ReturnTypePkg:       svc.PkgName,
-			ServerCode:          serverCode,
-			ClientCode:          clientCode,
+			Name:                     name,
+			Description:              desc,
+			ServerArgs:               serverArgs,
+			ClientArgs:               clientArgs,
+			CLIArgs:                  cliArgs,
+			ReturnTypeName:           svc.Scope.GoFullTypeName(payload, svc.PkgName),
+			ReturnTypeRef:            svc.Scope.GoFullTypeRef(payload, svc.PkgName),
+			ReturnIsStruct:           isObject,
+			ReturnTypeAttribute:      codegen.Goify(origin, true),
+			ReturnTypePkg:            svc.PkgName,
+			ServerCode:               serverCode,
+			ClientCode:               clientCode,
+			ReturnIsPrimitivePointer: pointer,
 		}
 	}
 	request.PayloadInit = init
