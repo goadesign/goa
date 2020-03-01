@@ -244,12 +244,13 @@ func makeFlags(e *EndpointData, args []*InitArgData, payload expr.DataType) ([]*
 	}
 
 	pInit := cli.PayloadInitData{
-		Code:                e.Payload.Request.PayloadInit.ClientCode,
-		ReturnTypeAttribute: e.Payload.Request.PayloadInit.ReturnTypeAttribute,
-		ReturnIsStruct:      e.Payload.Request.PayloadInit.ReturnIsStruct,
-		ReturnTypeName:      e.Payload.Request.PayloadInit.ReturnTypeName,
-		ReturnTypePkg:       e.Payload.Request.PayloadInit.ReturnTypePkg,
-		Args:                pInitArgs,
+		Code:                       e.Payload.Request.PayloadInit.ClientCode,
+		ReturnTypeAttribute:        e.Payload.Request.PayloadInit.ReturnTypeAttribute,
+		ReturnTypeAttributePointer: e.Payload.Request.PayloadInit.ReturnIsPrimitivePointer,
+		ReturnIsStruct:             e.Payload.Request.PayloadInit.ReturnIsStruct,
+		ReturnTypeName:             e.Payload.Request.PayloadInit.ReturnTypeName,
+		ReturnTypePkg:              e.Payload.Request.PayloadInit.ReturnTypePkg,
+		Args:                       pInitArgs,
 	}
 
 	return flags, &cli.BuildFunctionData{

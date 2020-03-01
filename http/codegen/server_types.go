@@ -254,7 +254,7 @@ func {{ .Name }}({{- range .ServerArgs }}{{ .Name }} {{ .TypeRef }}, {{ end }}) 
 	{{ .ServerCode }}
 	{{- if .ReturnTypeAttribute }}
 		res := &{{ .ReturnTypeName }}{
-			{{ .ReturnTypeAttribute }}: v,
+			{{ .ReturnTypeAttribute }}: {{ if .ReturnIsPrimitivePointer }}&{{ end }}v,
 		}
 	{{- end }}
 {{- end }}
