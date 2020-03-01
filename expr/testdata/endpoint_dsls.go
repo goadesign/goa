@@ -410,6 +410,23 @@ var EndpointHasSkipEncodeAndGRPC = func() {
 	})
 }
 
+var EndpointPayloadMissingRequired = func() {
+	Service("Service", func() {
+		Method("Method", func() {
+			Payload(func() {
+				Attribute("nonreq")
+			})
+			HTTP(func() {
+				POST("/")
+				Body(func() {
+					Attribute("nonreq")
+					Required("nonreq")
+				})
+			})
+		})
+	})
+}
+
 var FinalizeEndpointBodyAsExtendedTypeDSL = func() {
 	var EntityData = Type("EntityData", func() {
 		Attribute("name", String)

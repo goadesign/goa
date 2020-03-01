@@ -394,9 +394,39 @@ func (e *HTTPEndpointExpr) Validate() error {
 
 	// Validate body attribute (required fields exist etc.)
 	if e.Body != nil {
-		verr.Merge(e.Body.Validate("HTTP endpoint payload", e))
+		verr.Merge(e.Body.Validate("HTTP body", e))
 		if e.SkipRequestBodyEncodeDecode {
 			verr.Add(e, "Cannot define a request body when using SkipRequestBodyEncodeDecode.")
+		}
+		// Make sure Body does not require attribute that are not required in
+		// payload.
+		if v := e.Body.Validation; v != nil {
+			var preqs, missing []string
+			if e.MethodExpr.Payload != nil && e.MethodExpr.Payload.Validation != nil {
+				preqs = e.MethodExpr.Payload.Validation.Required
+			}
+			for _, req := range v.Required {
+				found := false
+				for _, preq := range preqs {
+					if req == preq {
+						found = true
+						break
+					}
+				}
+				if !found {
+					missing = append(missing, req)
+				}
+			}
+			if len(missing) > 0 {
+				is := "is"
+				s := ""
+				if len(missing) > 1 {
+					is = "are"
+					s = "s"
+				}
+				verr.Add(e, "The following HTTP request body attribute%s %s required but the corresponding method payload attribute%s %s not: %s. Use 'Required' to make the attribute%s required in the method payload as well.",
+					s, is, s, is, strings.Join(missing, ", "), s)
+			}
 		}
 	}
 
