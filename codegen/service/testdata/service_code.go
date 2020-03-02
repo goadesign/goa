@@ -32,24 +32,14 @@ type ResultWithSpace struct {
 // NewResultWithSpace initializes result type ResultWithSpace from viewed
 // result type ResultWithSpace.
 func NewResultWithSpace(vres *servicewithspacesviews.ResultWithSpace) *ResultWithSpace {
-	var res *ResultWithSpace
-	switch vres.View {
-	case "default", "":
-		res = newResultWithSpace(vres.Projected)
-	}
-	return res
+	return newResultWithSpace(vres.Projected)
 }
 
 // NewViewedResultWithSpace initializes viewed result type ResultWithSpace from
 // result type ResultWithSpace using the given view.
 func NewViewedResultWithSpace(res *ResultWithSpace, view string) *servicewithspacesviews.ResultWithSpace {
-	var vres *servicewithspacesviews.ResultWithSpace
-	switch view {
-	case "default", "":
-		p := newResultWithSpaceView(res)
-		vres = &servicewithspacesviews.ResultWithSpace{Projected: p, View: "default"}
-	}
-	return vres
+	p := newResultWithSpaceView(res)
+	return &servicewithspacesviews.ResultWithSpace{Projected: p, View: "default"}
 }
 
 // newResultWithSpace converts projected type ResultWithSpace to service type
@@ -449,24 +439,14 @@ func NewViewedMultipleViews(res *MultipleViews, view string) *multiplemethodsres
 // NewSingleView initializes result type SingleView from viewed result type
 // SingleView.
 func NewSingleView(vres *multiplemethodsresultmultipleviewsviews.SingleView) *SingleView {
-	var res *SingleView
-	switch vres.View {
-	case "default", "":
-		res = newSingleView(vres.Projected)
-	}
-	return res
+	return newSingleView(vres.Projected)
 }
 
 // NewViewedSingleView initializes viewed result type SingleView from result
 // type SingleView using the given view.
 func NewViewedSingleView(res *SingleView, view string) *multiplemethodsresultmultipleviewsviews.SingleView {
-	var vres *multiplemethodsresultmultipleviewsviews.SingleView
-	switch view {
-	case "default", "":
-		p := newSingleViewView(res)
-		vres = &multiplemethodsresultmultipleviewsviews.SingleView{Projected: p, View: "default"}
-	}
-	return vres
+	p := newSingleViewView(res)
+	return &multiplemethodsresultmultipleviewsviews.SingleView{Projected: p, View: "default"}
 }
 
 // newMultipleViews converts projected type MultipleViews to service type
@@ -1298,8 +1278,8 @@ var MethodNames = [1]string{"StreamingResultWithExplicitViewMethod"}
 // StreamingResultWithExplicitViewMethodServerStream is the interface a
 // "StreamingResultWithExplicitViewMethod" endpoint server stream must satisfy.
 type StreamingResultWithExplicitViewMethodServerStream interface {
-	// Send streams instances of "MultipleViews".
-	Send(*MultipleViews) error
+	// Send streams instances of "MultipleViewsTiny".
+	Send(*MultipleViewsTiny) error
 	// Close closes the stream.
 	Close() error
 }
@@ -1307,82 +1287,15 @@ type StreamingResultWithExplicitViewMethodServerStream interface {
 // StreamingResultWithExplicitViewMethodClientStream is the interface a
 // "StreamingResultWithExplicitViewMethod" endpoint client stream must satisfy.
 type StreamingResultWithExplicitViewMethodClientStream interface {
-	// Recv reads instances of "MultipleViews" from the stream.
-	Recv() (*MultipleViews, error)
+	// Recv reads instances of "MultipleViewsTiny" from the stream.
+	Recv() (*MultipleViewsTiny, error)
 }
 
-// MultipleViews is the result type of the
+// MultipleViewsTiny is the result type of the
 // StreamingResultWithExplicitViewService service
 // StreamingResultWithExplicitViewMethod method.
-type MultipleViews struct {
+type MultipleViewsTiny struct {
 	A *string
-	B *string
-}
-
-// NewMultipleViews initializes result type MultipleViews from viewed result
-// type MultipleViews.
-func NewMultipleViews(vres *streamingresultwithexplicitviewserviceviews.MultipleViews) *MultipleViews {
-	var res *MultipleViews
-	switch vres.View {
-	case "default", "":
-		res = newMultipleViews(vres.Projected)
-	case "tiny":
-		res = newMultipleViewsTiny(vres.Projected)
-	}
-	return res
-}
-
-// NewViewedMultipleViews initializes viewed result type MultipleViews from
-// result type MultipleViews using the given view.
-func NewViewedMultipleViews(res *MultipleViews, view string) *streamingresultwithexplicitviewserviceviews.MultipleViews {
-	var vres *streamingresultwithexplicitviewserviceviews.MultipleViews
-	switch view {
-	case "default", "":
-		p := newMultipleViewsView(res)
-		vres = &streamingresultwithexplicitviewserviceviews.MultipleViews{Projected: p, View: "default"}
-	case "tiny":
-		p := newMultipleViewsViewTiny(res)
-		vres = &streamingresultwithexplicitviewserviceviews.MultipleViews{Projected: p, View: "tiny"}
-	}
-	return vres
-}
-
-// newMultipleViews converts projected type MultipleViews to service type
-// MultipleViews.
-func newMultipleViews(vres *streamingresultwithexplicitviewserviceviews.MultipleViewsView) *MultipleViews {
-	res := &MultipleViews{
-		A: vres.A,
-		B: vres.B,
-	}
-	return res
-}
-
-// newMultipleViewsTiny converts projected type MultipleViews to service type
-// MultipleViews.
-func newMultipleViewsTiny(vres *streamingresultwithexplicitviewserviceviews.MultipleViewsView) *MultipleViews {
-	res := &MultipleViews{
-		A: vres.A,
-	}
-	return res
-}
-
-// newMultipleViewsView projects result type MultipleViews to projected type
-// MultipleViewsView using the "default" view.
-func newMultipleViewsView(res *MultipleViews) *streamingresultwithexplicitviewserviceviews.MultipleViewsView {
-	vres := &streamingresultwithexplicitviewserviceviews.MultipleViewsView{
-		A: res.A,
-		B: res.B,
-	}
-	return vres
-}
-
-// newMultipleViewsViewTiny projects result type MultipleViews to projected
-// type MultipleViewsView using the "tiny" view.
-func newMultipleViewsViewTiny(res *MultipleViews) *streamingresultwithexplicitviewserviceviews.MultipleViewsView {
-	vres := &streamingresultwithexplicitviewserviceviews.MultipleViewsView{
-		A: res.A,
-	}
-	return vres
 }
 `
 
@@ -1731,8 +1644,8 @@ var MethodNames = [1]string{"StreamingPayloadResultWithExplicitViewMethod"}
 // "StreamingPayloadResultWithExplicitViewMethod" endpoint server stream must
 // satisfy.
 type StreamingPayloadResultWithExplicitViewMethodServerStream interface {
-	// SendAndClose streams instances of "MultipleViews" and closes the stream.
-	SendAndClose(*MultipleViews) error
+	// SendAndClose streams instances of "MultipleViewsTiny" and closes the stream.
+	SendAndClose(*MultipleViewsTiny) error
 	// Recv reads instances of "[]string" from the stream.
 	Recv() ([]string, error)
 }
@@ -1744,82 +1657,15 @@ type StreamingPayloadResultWithExplicitViewMethodClientStream interface {
 	// Send streams instances of "[]string".
 	Send([]string) error
 	// CloseAndRecv stops sending messages to the stream and reads instances of
-	// "MultipleViews" from the stream.
-	CloseAndRecv() (*MultipleViews, error)
+	// "MultipleViewsTiny" from the stream.
+	CloseAndRecv() (*MultipleViewsTiny, error)
 }
 
-// MultipleViews is the result type of the
+// MultipleViewsTiny is the result type of the
 // StreamingPayloadResultWithExplicitViewService service
 // StreamingPayloadResultWithExplicitViewMethod method.
-type MultipleViews struct {
+type MultipleViewsTiny struct {
 	A *string
-	B *string
-}
-
-// NewMultipleViews initializes result type MultipleViews from viewed result
-// type MultipleViews.
-func NewMultipleViews(vres *streamingpayloadresultwithexplicitviewserviceviews.MultipleViews) *MultipleViews {
-	var res *MultipleViews
-	switch vres.View {
-	case "default", "":
-		res = newMultipleViews(vres.Projected)
-	case "tiny":
-		res = newMultipleViewsTiny(vres.Projected)
-	}
-	return res
-}
-
-// NewViewedMultipleViews initializes viewed result type MultipleViews from
-// result type MultipleViews using the given view.
-func NewViewedMultipleViews(res *MultipleViews, view string) *streamingpayloadresultwithexplicitviewserviceviews.MultipleViews {
-	var vres *streamingpayloadresultwithexplicitviewserviceviews.MultipleViews
-	switch view {
-	case "default", "":
-		p := newMultipleViewsView(res)
-		vres = &streamingpayloadresultwithexplicitviewserviceviews.MultipleViews{Projected: p, View: "default"}
-	case "tiny":
-		p := newMultipleViewsViewTiny(res)
-		vres = &streamingpayloadresultwithexplicitviewserviceviews.MultipleViews{Projected: p, View: "tiny"}
-	}
-	return vres
-}
-
-// newMultipleViews converts projected type MultipleViews to service type
-// MultipleViews.
-func newMultipleViews(vres *streamingpayloadresultwithexplicitviewserviceviews.MultipleViewsView) *MultipleViews {
-	res := &MultipleViews{
-		A: vres.A,
-		B: vres.B,
-	}
-	return res
-}
-
-// newMultipleViewsTiny converts projected type MultipleViews to service type
-// MultipleViews.
-func newMultipleViewsTiny(vres *streamingpayloadresultwithexplicitviewserviceviews.MultipleViewsView) *MultipleViews {
-	res := &MultipleViews{
-		A: vres.A,
-	}
-	return res
-}
-
-// newMultipleViewsView projects result type MultipleViews to projected type
-// MultipleViewsView using the "default" view.
-func newMultipleViewsView(res *MultipleViews) *streamingpayloadresultwithexplicitviewserviceviews.MultipleViewsView {
-	vres := &streamingpayloadresultwithexplicitviewserviceviews.MultipleViewsView{
-		A: res.A,
-		B: res.B,
-	}
-	return vres
-}
-
-// newMultipleViewsViewTiny projects result type MultipleViews to projected
-// type MultipleViewsView using the "tiny" view.
-func newMultipleViewsViewTiny(res *MultipleViews) *streamingpayloadresultwithexplicitviewserviceviews.MultipleViewsView {
-	vres := &streamingpayloadresultwithexplicitviewserviceviews.MultipleViewsView{
-		A: res.A,
-	}
-	return vres
 }
 `
 
@@ -2127,71 +1973,5 @@ type BidirectionalStreamingResultWithExplicitViewMethodClientStream interface {
 type MultipleViews struct {
 	A *string
 	B *string
-}
-
-// NewMultipleViews initializes result type MultipleViews from viewed result
-// type MultipleViews.
-func NewMultipleViews(vres *bidirectionalstreamingresultwithexplicitviewserviceviews.MultipleViews) *MultipleViews {
-	var res *MultipleViews
-	switch vres.View {
-	case "default", "":
-		res = newMultipleViews(vres.Projected)
-	case "tiny":
-		res = newMultipleViewsTiny(vres.Projected)
-	}
-	return res
-}
-
-// NewViewedMultipleViews initializes viewed result type MultipleViews from
-// result type MultipleViews using the given view.
-func NewViewedMultipleViews(res *MultipleViews, view string) *bidirectionalstreamingresultwithexplicitviewserviceviews.MultipleViews {
-	var vres *bidirectionalstreamingresultwithexplicitviewserviceviews.MultipleViews
-	switch view {
-	case "default", "":
-		p := newMultipleViewsView(res)
-		vres = &bidirectionalstreamingresultwithexplicitviewserviceviews.MultipleViews{Projected: p, View: "default"}
-	case "tiny":
-		p := newMultipleViewsViewTiny(res)
-		vres = &bidirectionalstreamingresultwithexplicitviewserviceviews.MultipleViews{Projected: p, View: "tiny"}
-	}
-	return vres
-}
-
-// newMultipleViews converts projected type MultipleViews to service type
-// MultipleViews.
-func newMultipleViews(vres *bidirectionalstreamingresultwithexplicitviewserviceviews.MultipleViewsView) *MultipleViews {
-	res := &MultipleViews{
-		A: vres.A,
-		B: vres.B,
-	}
-	return res
-}
-
-// newMultipleViewsTiny converts projected type MultipleViews to service type
-// MultipleViews.
-func newMultipleViewsTiny(vres *bidirectionalstreamingresultwithexplicitviewserviceviews.MultipleViewsView) *MultipleViews {
-	res := &MultipleViews{
-		A: vres.A,
-	}
-	return res
-}
-
-// newMultipleViewsView projects result type MultipleViews to projected type
-// MultipleViewsView using the "default" view.
-func newMultipleViewsView(res *MultipleViews) *bidirectionalstreamingresultwithexplicitviewserviceviews.MultipleViewsView {
-	vres := &bidirectionalstreamingresultwithexplicitviewserviceviews.MultipleViewsView{
-		A: res.A,
-		B: res.B,
-	}
-	return vres
-}
-
-// newMultipleViewsViewTiny projects result type MultipleViews to projected
-// type MultipleViewsView using the "tiny" view.
-func newMultipleViewsViewTiny(res *MultipleViews) *bidirectionalstreamingresultwithexplicitviewserviceviews.MultipleViewsView {
-	vres := &bidirectionalstreamingresultwithexplicitviewserviceviews.MultipleViewsView{
-		A: res.A,
-	}
-	return vres
 }
 `
