@@ -280,6 +280,16 @@ func (m *MethodExpr) Finalize() {
 		m.Result.Finalize()
 		if rt, ok := m.Result.Type.(*ResultTypeExpr); ok {
 			rt.Finalize()
+			// If the method result uses a static view then project
+			// and use the underlying user type as the method result.
+			if v := m.Result.Meta["view"]; len(v) > 0 {
+				p, err := Project(rt, v[0])
+				if err != nil {
+					panic(err) // bug
+				}
+				m.Result.Type = p.UserTypeExpr
+				delete(m.Result.Meta, "view")
+			}
 		}
 	}
 	for _, e := range m.Errors {

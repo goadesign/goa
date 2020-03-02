@@ -122,8 +122,8 @@ func TestAttributeExprValidate(t *testing.T) {
 
 		errAttributeTypeNil      = fmt.Errorf("attribute type is nil")
 		errRequiredFieldNotExist = fmt.Errorf(`%srequired field %q does not exist in type %s`, normalizedCtx, "foo", fieldNotExistType.Name())
-		errViewButNotAResultType = fmt.Errorf("%sdefines a view %v but type %s is not a result type", normalizedCtx, metadata["view"], notAResultType.Name())
-		errTypeNotDefineView     = fmt.Errorf("%stype %s does not define view %q", normalizedCtx, viewNotDefinedTypeName, "foo")
+		errViewButNotAResultType = fmt.Errorf("%s uses view %q but %q is not a result type", normalizedCtx, metadata["view"][0], notAResultType.Name())
+		errTypeNotDefineView     = fmt.Errorf("%s: type %q does not define view %q", normalizedCtx, viewNotDefinedTypeName, "foo")
 	)
 	cases := map[string]struct {
 		typ        DataType
