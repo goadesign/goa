@@ -853,15 +853,11 @@ func Tag(name, value string) {
 
 // ContentType sets the value of the Content-Type response header.
 //
-// ContentType may appear in a ResultType or a Response expression.
+// ContentType must appear in a Response expression.
 // ContentType accepts one argument: the mime type as defined by RFC 6838.
 //
-//    var _ = ResultType("application/vnd.myapp.mytype", func() {
-//        ContentType("application/json")
-//    })
-//
 //    var _ = Method("add", func() {
-//	  HTTP(func() {
+//	      HTTP(func() {
 //            Response(StatusOK, func() {
 //                ContentType("application/json")
 //            })
@@ -871,7 +867,7 @@ func Tag(name, value string) {
 func ContentType(typ string) {
 	switch actual := eval.Current().(type) {
 	case *expr.ResultTypeExpr:
-		actual.ContentType = typ
+		actual.ContentType = typ // deprecated
 	case *expr.HTTPResponseExpr:
 		actual.ContentType = typ
 	default:

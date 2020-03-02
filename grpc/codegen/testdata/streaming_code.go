@@ -100,29 +100,26 @@ func (s *MethodServerStreamingUserTypeRPCClientStream) SetView(view string) {
 `
 
 var ServerStreamingResultCollectionWithExplicitViewServerSendCode = `// Send streams instances of
-// "service_server_streaming_result_type_collection_with_explicit_viewpb.ResultTypeCollection"
+// "service_server_streaming_result_type_collection_with_explicit_viewpb.ResultTypeTinyCollection"
 // to the "MethodServerStreamingResultTypeCollectionWithExplicitView" endpoint
 // gRPC stream.
-func (s *MethodServerStreamingResultTypeCollectionWithExplicitViewServerStream) Send(res serviceserverstreamingresulttypecollectionwithexplicitview.ResultTypeCollection) error {
-	vres := serviceserverstreamingresulttypecollectionwithexplicitview.NewViewedResultTypeCollection(res, "tiny")
-	v := NewResultTypeCollection(vres.Projected)
+func (s *MethodServerStreamingResultTypeCollectionWithExplicitViewServerStream) Send(res serviceserverstreamingresulttypecollectionwithexplicitview.ResultTypeTinyCollection) error {
+	v := NewResultTypeTinyCollection(res)
 	return s.stream.Send(v)
 }
 `
 
 var ServerStreamingResultCollectionWithExplicitViewClientRecvCode = `// Recv reads instances of
-// "service_server_streaming_result_type_collection_with_explicit_viewpb.ResultTypeCollection"
+// "service_server_streaming_result_type_collection_with_explicit_viewpb.ResultTypeTinyCollection"
 // from the "MethodServerStreamingResultTypeCollectionWithExplicitView"
 // endpoint gRPC stream.
-func (s *MethodServerStreamingResultTypeCollectionWithExplicitViewClientStream) Recv() (serviceserverstreamingresulttypecollectionwithexplicitview.ResultTypeCollection, error) {
-	var res serviceserverstreamingresulttypecollectionwithexplicitview.ResultTypeCollection
+func (s *MethodServerStreamingResultTypeCollectionWithExplicitViewClientStream) Recv() (serviceserverstreamingresulttypecollectionwithexplicitview.ResultTypeTinyCollection, error) {
+	var res serviceserverstreamingresulttypecollectionwithexplicitview.ResultTypeTinyCollection
 	v, err := s.stream.Recv()
 	if err != nil {
 		return res, err
 	}
-	proj := NewResultTypeCollection(v)
-	vres := serviceserverstreamingresulttypecollectionwithexplicitviewviews.ResultTypeCollection{Projected: proj, View: "tiny"}
-	return serviceserverstreamingresulttypecollectionwithexplicitview.NewResultTypeCollection(vres), nil
+	return NewResultTypeTinyCollection(v), nil
 }
 `
 
