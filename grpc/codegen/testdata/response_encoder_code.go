@@ -27,12 +27,10 @@ const ResultWithExplicitViewResponseEncoderCode = `// EncodeMethodMessageResultT
 // the "ServiceMessageResultTypeWithExplicitView" service
 // "MethodMessageResultTypeWithExplicitView" endpoint.
 func EncodeMethodMessageResultTypeWithExplicitViewResponse(ctx context.Context, v interface{}, hdr, trlr *metadata.MD) (interface{}, error) {
-	vres, ok := v.(*servicemessageresulttypewithexplicitviewviews.RT)
+	result, ok := v.(*servicemessageresulttypewithexplicitview.RTTiny)
 	if !ok {
-		return nil, goagrpc.ErrInvalidType("ServiceMessageResultTypeWithExplicitView", "MethodMessageResultTypeWithExplicitView", "*servicemessageresulttypewithexplicitviewviews.RT", v)
+		return nil, goagrpc.ErrInvalidType("ServiceMessageResultTypeWithExplicitView", "MethodMessageResultTypeWithExplicitView", "*servicemessageresulttypewithexplicitview.RTTiny", v)
 	}
-	result := vres.Projected
-	(*hdr).Append("goa-view", vres.View)
 	resp := NewMethodMessageResultTypeWithExplicitViewResponse(result)
 	return resp, nil
 }
