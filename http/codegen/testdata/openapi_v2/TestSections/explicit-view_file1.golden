@@ -35,12 +35,12 @@ paths:
         "204":
           description: No Content response.
           schema:
-            $ref: '#/definitions/TestServiceTestEndpointTinyResponseBody'
+            $ref: '#/definitions/TestServiceTestEndpointTinyResponseBodyTiny'
       schemes:
       - http
 definitions:
   TestServiceTestEndpointDefaultResponseBody:
-    title: TestServiceTestEndpointDefaultResponseBody
+    title: 'Mediatype identifier: application/json; view=default'
     type: object
     properties:
       int:
@@ -50,15 +50,17 @@ definitions:
       string:
         type: string
         example: ""
+    description: TestEndpointDefaultResponseBody result type (default view)
     example:
       int: 1
       string: ""
-  TestServiceTestEndpointTinyResponseBody:
-    title: TestServiceTestEndpointTinyResponseBody
+  TestServiceTestEndpointTinyResponseBodyTiny:
+    title: 'Mediatype identifier: application/json; view=tiny'
     type: object
     properties:
       string:
         type: string
         example: ""
+    description: TestEndpointTinyResponseBody result type (tiny view) (default view)
     example:
       string: ""
