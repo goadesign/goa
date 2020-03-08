@@ -629,7 +629,7 @@ func (d ServicesData) analyze(gs *expr.GRPCServiceExpr) *ServiceData {
 
 // collectMessages recurses through the attribute to gather all the messages.
 func collectMessages(at *expr.AttributeExpr, sd *ServiceData, seen map[string]struct{}) (data []*service.UserTypeData) {
-	if at == nil {
+	if at == nil || expr.IsPrimitive(at.Type) {
 		return
 	}
 	collect := func(at *expr.AttributeExpr) []*service.UserTypeData {
@@ -640,12 +640,9 @@ func collectMessages(at *expr.AttributeExpr, sd *ServiceData, seen map[string]st
 		if _, ok := seen[dt.Name()]; ok {
 			return nil
 		}
-		if prim := getPrimitive(at); prim != nil {
-			return
-		}
 		att := dt.Attribute()
 		if rt, ok := dt.(*expr.ResultTypeExpr); ok {
-			if a := unwrapAttr(expr.DupAtt(rt.Attribute())); expr.IsArray(a.Type) {
+			if a := unwrapAttr(expr.DupAtt(rt.Attribute())); expr.IsArray(a.Type) && expr.IsObject(rt) {
 				// result type collection
 				att = &expr.AttributeExpr{Type: expr.AsObject(rt)}
 			}

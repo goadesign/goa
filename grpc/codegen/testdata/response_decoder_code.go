@@ -26,12 +26,22 @@ const ResultWithExplicitViewResponseDecoderCode = `// DecodeMethodMessageResultT
 // the ServiceMessageResultTypeWithExplicitView
 // MethodMessageResultTypeWithExplicitView endpoint.
 func DecodeMethodMessageResultTypeWithExplicitViewResponse(ctx context.Context, v interface{}, hdr, trlr metadata.MD) (interface{}, error) {
+	var view string
+	{
+		if vals := hdr.Get("goa-view"); len(vals) > 0 {
+			view = vals[0]
+		}
+	}
 	message, ok := v.(*service_message_result_type_with_explicit_viewpb.MethodMessageResultTypeWithExplicitViewResponse)
 	if !ok {
 		return nil, goagrpc.ErrInvalidType("ServiceMessageResultTypeWithExplicitView", "MethodMessageResultTypeWithExplicitView", "*service_message_result_type_with_explicit_viewpb.MethodMessageResultTypeWithExplicitViewResponse", v)
 	}
 	res := NewMethodMessageResultTypeWithExplicitViewResult(message)
-	return res, nil
+	vres := &servicemessageresulttypewithexplicitviewviews.RT{Projected: res, View: view}
+	if err := servicemessageresulttypewithexplicitviewviews.ValidateRT(vres); err != nil {
+		return nil, err
+	}
+	return servicemessageresulttypewithexplicitview.NewRT(vres), nil
 }
 `
 
