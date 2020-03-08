@@ -192,121 +192,86 @@ func recurseValidationCode(att *expr.AttributeExpr, attCtx *AttributeContext, re
 		seen[ut.ID()] = buf
 	}
 
+	code := func(ctx *AttributeContext, att *expr.AttributeExpr, tgt, suf string) string {
+		if ut, ok := att.Type.(expr.UserType); ok {
+			if expr.IsPrimitive(ut.Attribute().Type) {
+				return recurseValidationCode(ut.Attribute(), ctx, true, tgt, context+suf, seen).String()
+			} else if hasValidations(attCtx, ut) {
+				var buf bytes.Buffer
+				data := map[string]interface{}{"name": Goify(attCtx.Scope.Name(att, ctx.Pkg), true), "target": tgt}
+				if err := userValT.Execute(&buf, data); err != nil {
+					panic(err) // bug
+				}
+				return fmt.Sprintf("if %s != nil {\n\t%s\n}", tgt, buf.String())
+			}
+		} else {
+			return recurseValidationCode(att, ctx, true, tgt, context+suf, seen).String()
+		}
+		return ""
+	}
+
+	newline := func() {
+		if !first {
+			buf.WriteByte('\n')
+		} else {
+			first = false
+		}
+	}
+
+	// Write validations on attribute if any.
 	validation := ValidationCode(att, attCtx, req, target, context)
 	if validation != "" {
 		buf.WriteString(validation)
 		first = false
 	}
 
-	runUserValT := func(name, target string) string {
-		var buf bytes.Buffer
-		data := map[string]interface{}{
-			"name":   Goify(name, true),
-			"target": target,
-		}
-		if err := userValT.Execute(&buf, data); err != nil {
-			panic(err) // bug
-		}
-		return fmt.Sprintf("if %s != nil {\n\t%s\n}", target, buf.String())
-	}
-
-	if o := expr.AsObject(att.Type); o != nil {
-		for _, nat := range *o {
+	// Recurse down depending on attribute type.
+	switch {
+	case expr.IsObject(att.Type):
+		for _, nat := range *(expr.AsObject(att.Type)) {
 			validation := recurseAttribute(att, attCtx, nat, target, context, seen)
 			if validation != "" {
-				if !first {
-					buf.WriteByte('\n')
-				} else {
-					first = false
-				}
+				newline()
 				buf.WriteString(validation)
 			}
 		}
-	} else if a := expr.AsArray(att.Type); a != nil {
+	case expr.IsArray(att.Type):
+		elem := expr.AsArray(att.Type).ElemType
 		ctx := attCtx
-		if ctx.Pointer && expr.IsPrimitive(a.ElemType.Type) {
+		if ctx.Pointer && expr.IsPrimitive(elem.Type) {
 			// Array elements of primtive type are never pointers
 			ctx = attCtx.Dup()
 			ctx.Pointer = false
 		}
-		var val string
-		{
-			if ut, ok := a.ElemType.Type.(expr.UserType); ok {
-				if expr.IsPrimitive(ut.Attribute().Type) {
-					val = recurseValidationCode(ut.Attribute(), ctx, true, "e", context+"[*]", seen).String()
-				} else if hasValidations(ut) {
-					// For user types, simply call the Validate<TypeName> method
-					val = runUserValT(attCtx.Scope.Name(a.ElemType, ctx.Pkg), "e")
-				}
-			} else {
-				val = recurseValidationCode(a.ElemType, ctx, true, "e", context+"[*]", seen).String()
-			}
-		}
+		val := code(ctx, elem, "e", "[*]")
 		if val != "" {
-			data := map[string]interface{}{
-				"target":     target,
-				"validation": val,
-			}
-			if !first {
-				buf.WriteByte('\n')
-			} else {
-				first = false
-			}
+			newline()
+			data := map[string]interface{}{"target": target, "validation": val}
 			if err := arrayValT.Execute(buf, data); err != nil {
 				panic(err) // bug
 			}
 		}
-	} else if m := expr.AsMap(att.Type); m != nil {
+	case expr.IsMap(att.Type):
+		m := expr.AsMap(att.Type)
 		ctx := attCtx.Dup()
 		ctx.Pointer = false
-		var keyVal string
-		{
-			if ut, ok := m.KeyType.Type.(expr.UserType); ok {
-				if expr.IsPrimitive(ut.Attribute().Type) {
-					keyVal = recurseValidationCode(ut.Attribute(), ctx, true, "k", context+".key", seen).String()
-				} else if hasValidations(ut) {
-					// For user types, simply call the Validate<TypeName> method
-					keyVal = runUserValT(ctx.Scope.Name(m.KeyType, ctx.Pkg), "k")
-				}
-			} else {
-				keyVal = recurseValidationCode(m.KeyType, ctx, true, "k", context+".key", seen).String()
-			}
-			if keyVal != "" {
-				keyVal = "\n" + keyVal
-			}
+		keyVal := code(ctx, m.KeyType, "k", ".key")
+		if keyVal != "" {
+			keyVal = "\n" + keyVal
 		}
-		var valueVal string
-		{
-			if ut, ok := m.ElemType.Type.(expr.UserType); ok {
-				if expr.IsPrimitive(ut.Attribute().Type) {
-					valueVal = recurseValidationCode(ut.Attribute(), ctx, true, "v", context+"[key]", seen).String()
-				} else if hasValidations(ut) {
-					// For user types, simply call the Validate<TypeName> method
-					valueVal = runUserValT(ctx.Scope.Name(m.ElemType, ctx.Pkg), "v")
-				}
-			} else {
-				valueVal = recurseValidationCode(m.ElemType, ctx, true, "v", context+"[key]", seen).String()
-			}
-			if valueVal != "" {
-				valueVal = "\n" + valueVal
-			}
+		valueVal := code(ctx, m.ElemType, "v", "[key]")
+		if valueVal != "" {
+			valueVal = "\n" + valueVal
 		}
 		if keyVal != "" || valueVal != "" {
-			data := map[string]interface{}{
-				"target":          target,
-				"keyValidation":   keyVal,
-				"valueValidation": valueVal,
-			}
-			if !first {
-				buf.WriteByte('\n')
-			} else {
-				first = false
-			}
+			newline()
+			data := map[string]interface{}{"target": target, "keyValidation": keyVal, "valueValidation": valueVal}
 			if err := mapValT.Execute(buf, data); err != nil {
 				panic(err) // bug
 			}
 		}
 	}
+
 	return buf
 }
 
@@ -380,20 +345,33 @@ func recurseAttribute(att *expr.AttributeExpr, attCtx *AttributeContext, nat *ex
 // hasValidations returns true if a UserType contains validations.
 // It recursively iterates through every attribute and returns true if any
 // attribute contains validations.
-func hasValidations(ut expr.UserType) bool {
-	if ut.Attribute().Validation != nil {
+func hasValidations(ctx *AttributeContext, ut expr.UserType) bool {
+	hasVal := func(val *expr.ValidationExpr) bool {
+		if val == nil {
+			return false
+		}
+		if ctx.Pointer {
+			return true
+		}
+		if ctx.UseDefault || ctx.IgnoreRequired {
+			return !val.HasRequiredOnly()
+		}
 		return true
 	}
-	vlds := false
+
+	if hasVal(ut.Attribute().Validation) {
+		return true
+	}
+	found := false
 	done := errors.New("done")
 	Walk(ut.Attribute(), func(a *expr.AttributeExpr) error {
-		if a.Validation != nil {
-			vlds = true
+		if hasVal(a.Validation) {
+			found = true
 			return done
 		}
 		return nil
 	})
-	return vlds
+	return found
 }
 
 // toSlice returns Go code that represents the given slice.
