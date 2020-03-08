@@ -173,23 +173,19 @@ func serverType(genpkg string, svc *expr.HTTPServiceExpr, seen map[string]struct
 		// request to method payload
 		if init := adata.Payload.Request.PayloadInit; init != nil {
 			sections = append(sections, &codegen.SectionTemplate{
-				Name:   "server-payload-init",
-				Source: serverTypeInitT,
-				Data:   init,
-				FuncMap: map[string]interface{}{
-					"fieldCode": fieldCode,
-				},
+				Name:    "server-payload-init",
+				Source:  serverTypeInitT,
+				Data:    init,
+				FuncMap: map[string]interface{}{"fieldCode": fieldCode},
 			})
 		}
 		if isWebSocketEndpoint(adata) && adata.ServerWebSocket.Payload != nil {
 			if init := adata.ServerWebSocket.Payload.Init; init != nil {
 				sections = append(sections, &codegen.SectionTemplate{
-					Name:   "server-payload-init",
-					Source: serverTypeInitT,
-					Data:   init,
-					FuncMap: map[string]interface{}{
-						"fieldCode": fieldCode,
-					},
+					Name:    "server-payload-init",
+					Source:  serverTypeInitT,
+					Data:    init,
+					FuncMap: map[string]interface{}{"fieldCode": fieldCode},
 				})
 			}
 		}

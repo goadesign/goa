@@ -1488,9 +1488,9 @@ func buildResponses(e *expr.HTTPEndpointExpr, result *expr.AttributeExpr, viewed
 						// If a method result uses views (i.e., a result type), we generate
 						// one response body type per view defined in the result type. The
 						// generated body type names are suffixed with the name of the view
-						// (except for "default" view). Constructors are also generated to
-						// create a view-specific body type from the method result. This
-						// makes it possible for the server side to return only the
+						// (except for the "default" view). Constructors are also generated
+						// to create a view-specific body type from the method result.
+						// This makes it possible for the server side to return only the
 						// attributes defined in the view in the response (NOTE: a required
 						// attribute in the result type may not be present in all its views)
 						for _, view := range md.ViewedResult.Views {
