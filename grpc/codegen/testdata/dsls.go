@@ -487,6 +487,34 @@ var ResultWithCollectionDSL = func() {
 	})
 }
 
+var PayloadWithMixedAttributesDSL = func() {
+	var APayload = Type("APayload", func() {
+		Field(1, "optional", Int)
+		Field(2, "required", Int)
+		Field(3, "default", Int, func() {
+			Default(100)
+		})
+		Field(5, "required_default", Int, func() {
+			Default(100000)
+		})
+		Required("required", "required_default")
+	})
+	Service("ServicePayloadWithMixedAttributes", func() {
+		Method("UnaryMethod", func() {
+			Payload(APayload)
+			GRPC(func() {
+				Response(CodeOK)
+			})
+		})
+		Method("StreamingMethod", func() {
+			StreamingPayload(APayload)
+			GRPC(func() {
+				Response(CodeOK)
+			})
+		})
+	})
+}
+
 var PayloadWithNestedTypesDSL = func() {
 	var AParams = Type("AParams", func() {
 		Field(1, "a", MapOf(String, ArrayOf(String)))

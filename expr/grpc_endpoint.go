@@ -319,6 +319,13 @@ func (e *GRPCEndpointExpr) Finalize() {
 	// Finalize streaming payload type if defined
 	if e.MethodExpr.StreamingPayload.Type != Empty {
 		initAttrFromDesign(e.StreamingRequest, e.MethodExpr.StreamingPayload)
+		if msgObj := AsObject(e.StreamingRequest.Type); msgObj != nil {
+			for _, nat := range *msgObj {
+				if e.MethodExpr.StreamingPayload.IsRequired(nat.Name) {
+					e.StreamingRequest.Validation.AddRequired(nat.Name)
+				}
+			}
+		}
 	}
 
 	// Finalize response
