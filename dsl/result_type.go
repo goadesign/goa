@@ -67,14 +67,13 @@ func ResultType(identifier string, fn func()) *expr.ResultTypeExpr {
 		return nil
 	}
 
+	identifier, typeName, err := mediaTypeToResultType(identifier)
 	// Validate Result Type
-	identifier, params, err := mime.ParseMediaType(identifier)
 	if err != nil {
 		eval.ReportError("invalid result type identifier %#v: %s",
 			identifier, err)
 		// We don't return so that other errors may be captured in this
 		// one run.
-		identifier = "text/plain"
 	}
 	canonicalID := expr.CanonicalIdentifier(identifier)
 	// Validate that result type identifier doesn't clash
@@ -86,9 +85,8 @@ func ResultType(identifier string, fn func()) *expr.ResultTypeExpr {
 			return nil
 		}
 	}
-	identifier = mime.FormatMediaType(identifier, params)
 	// Now save the type in the API result types map
-	mt := expr.NewResultTypeExpr(buildTypeName(identifier), identifier, fn)
+	mt := expr.NewResultTypeExpr(typeName, identifier, fn)
 	expr.Root.ResultTypes = append(expr.Root.ResultTypes, mt)
 
 	return mt
@@ -270,13 +268,11 @@ func CollectionOf(v interface{}, adsl ...func()) *expr.ResultTypeExpr {
 				}
 			} else {
 				// Check if a result type exists with the given identifier
-				id, params, err := mime.ParseMediaType(id)
+				id, typeName, err := mediaTypeToResultType(id)
 				if err != nil {
-					eval.ReportError("invalid result type identifier %#v: %s", id, err)
-					return nil
+					eval.ReportError("invalid result type identifier %#v in CollectionOf: %s", id, err)
 				}
-				id = mime.FormatMediaType(id, params)
-				if dt := expr.Root.UserType(buildTypeName(id)); dt != nil {
+				if dt := expr.Root.UserType(typeName); dt != nil {
 					if mt, ok := dt.(*expr.ResultTypeExpr); ok {
 						m = mt
 					}
@@ -442,9 +438,15 @@ func Attributes(fn func()) {
 	eval.Execute(fn, mt)
 }
 
-// buildTypeName builds the result type name from the formatted identifier and
-// returns it.
-func buildTypeName(identifier string) string {
+// mediaTypeToResultType returns the formatted identifier and the result type
+// name from the given identifier string. If the given identifier is invalid it
+// returns text/plain as the identifier and an error.
+func mediaTypeToResultType(identifier string) (string, string, error) {
+	identifier, params, err := mime.ParseMediaType(identifier)
+	if err != nil {
+		identifier = "text/plain"
+	}
+	identifier = mime.FormatMediaType(identifier, params)
 	lastPart := identifier
 	lastPartIndex := strings.LastIndex(identifier, "/")
 	if lastPartIndex > -1 {
@@ -464,7 +466,7 @@ func buildTypeName(identifier string) string {
 		resultTypeCount++
 		typeName = fmt.Sprintf("ResultType%d", resultTypeCount)
 	}
-	return typeName
+	return identifier, typeName, err
 }
 
 // buildView builds a view expression given an attribute and a corresponding
