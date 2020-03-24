@@ -194,6 +194,56 @@ func protobufServiceResultWithCollectionpbResultTToServiceresultwithcollectionRe
 }
 `
 
+const PayloadWithMixedAttributesServerTypeCode = `// NewUnaryMethodPayload builds the payload of the "UnaryMethod" endpoint of
+// the "ServicePayloadWithMixedAttributes" service from the gRPC request type.
+func NewUnaryMethodPayload(message *service_payload_with_mixed_attributespb.UnaryMethodRequest) *servicepayloadwithmixedattributes.APayload {
+	v := &servicepayloadwithmixedattributes.APayload{
+		Required:        int(message.Required),
+		Default:         int(message.Default),
+		RequiredDefault: int(message.RequiredDefault),
+	}
+	if message.Optional != 0 {
+		optionalptr := int(message.Optional)
+		v.Optional = &optionalptr
+	}
+	if message.Default == 0 {
+		v.Default = 100
+	}
+	return v
+}
+
+// NewUnaryMethodResponse builds the gRPC response type from the result of the
+// "UnaryMethod" endpoint of the "ServicePayloadWithMixedAttributes" service.
+func NewUnaryMethodResponse() *service_payload_with_mixed_attributespb.UnaryMethodResponse {
+	message := &service_payload_with_mixed_attributespb.UnaryMethodResponse{}
+	return message
+}
+
+// NewStreamingMethodResponse builds the gRPC response type from the result of
+// the "StreamingMethod" endpoint of the "ServicePayloadWithMixedAttributes"
+// service.
+func NewStreamingMethodResponse() *service_payload_with_mixed_attributespb.StreamingMethodResponse {
+	message := &service_payload_with_mixed_attributespb.StreamingMethodResponse{}
+	return message
+}
+
+func NewAPayload(v *service_payload_with_mixed_attributespb.APayload) *servicepayloadwithmixedattributes.APayload {
+	spayload := &servicepayloadwithmixedattributes.APayload{
+		Required:        int(v.Required),
+		Default:         int(v.Default),
+		RequiredDefault: int(v.RequiredDefault),
+	}
+	if v.Optional != 0 {
+		optionalptr := int(v.Optional)
+		spayload.Optional = &optionalptr
+	}
+	if v.Default == 0 {
+		spayload.Default = 100
+	}
+	return spayload
+}
+`
+
 const WithErrorsServerTypeCode = `// NewMethodUnaryRPCWithErrorsPayload builds the payload of the
 // "MethodUnaryRPCWithErrors" endpoint of the "ServiceUnaryRPCWithErrors"
 // service from the gRPC request type.
