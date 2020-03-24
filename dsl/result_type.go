@@ -269,13 +269,13 @@ func CollectionOf(v interface{}, adsl ...func()) *expr.ResultTypeExpr {
 			} else {
 				// Check if a result type exists with the given identifier
 				id, typeName, err := mediaTypeToResultType(id)
-				if err != nil {
-					eval.ReportError("invalid result type identifier %#v in CollectionOf: %s", id, err)
-				}
 				if dt := expr.Root.UserType(typeName); dt != nil {
 					if mt, ok := dt.(*expr.ResultTypeExpr); ok {
 						m = mt
 					}
+				}
+				if err != nil {
+					eval.ReportError("invalid result type identifier %#v in CollectionOf: %s", id, err)
 				}
 			}
 		}
