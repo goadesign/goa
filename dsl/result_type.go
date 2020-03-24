@@ -87,27 +87,8 @@ func ResultType(identifier string, fn func()) *expr.ResultTypeExpr {
 		}
 	}
 	identifier = mime.FormatMediaType(identifier, params)
-	lastPart := identifier
-	lastPartIndex := strings.LastIndex(identifier, "/")
-	if lastPartIndex > -1 {
-		lastPart = identifier[lastPartIndex+1:]
-	}
-	plusIndex := strings.Index(lastPart, "+")
-	if plusIndex > 0 {
-		lastPart = lastPart[:plusIndex]
-	}
-	lastPart = strings.TrimPrefix(lastPart, "vnd.")
-	elems := strings.Split(lastPart, ".")
-	for i, e := range elems {
-		elems[i] = strings.Title(e)
-	}
-	typeName := strings.Join(elems, "")
-	if typeName == "" {
-		resultTypeCount++
-		typeName = fmt.Sprintf("ResultType%d", resultTypeCount)
-	}
 	// Now save the type in the API result types map
-	mt := expr.NewResultTypeExpr(typeName, identifier, fn)
+	mt := expr.NewResultTypeExpr(buildTypeName(identifier), identifier, fn)
 	expr.Root.ResultTypes = append(expr.Root.ResultTypes, mt)
 
 	return mt
@@ -282,9 +263,23 @@ func CollectionOf(v interface{}, adsl ...func()) *expr.ResultTypeExpr {
 	m, ok = v.(*expr.ResultTypeExpr)
 	if !ok {
 		if id, ok := v.(string); ok {
-			if dt := expr.Root.UserType(expr.CanonicalIdentifier(id)); dt != nil {
+			// Check if a result type exists with the given type name
+			if dt := expr.Root.UserType(id); dt != nil {
 				if mt, ok := dt.(*expr.ResultTypeExpr); ok {
 					m = mt
+				}
+			} else {
+				// Check if a result type exists with the given identifier
+				id, params, err := mime.ParseMediaType(id)
+				if err != nil {
+					eval.ReportError("invalid result type identifier %#v: %s", id, err)
+					return nil
+				}
+				id = mime.FormatMediaType(id, params)
+				if dt := expr.Root.UserType(buildTypeName(id)); dt != nil {
+					if mt, ok := dt.(*expr.ResultTypeExpr); ok {
+						m = mt
+					}
 				}
 			}
 		}
@@ -445,6 +440,31 @@ func Attributes(fn func()) {
 		return
 	}
 	eval.Execute(fn, mt)
+}
+
+// buildTypeName builds the result type name from the formatted identifier and
+// returns it.
+func buildTypeName(identifier string) string {
+	lastPart := identifier
+	lastPartIndex := strings.LastIndex(identifier, "/")
+	if lastPartIndex > -1 {
+		lastPart = identifier[lastPartIndex+1:]
+	}
+	plusIndex := strings.Index(lastPart, "+")
+	if plusIndex > 0 {
+		lastPart = lastPart[:plusIndex]
+	}
+	lastPart = strings.TrimPrefix(lastPart, "vnd.")
+	elems := strings.Split(lastPart, ".")
+	for i, e := range elems {
+		elems[i] = strings.Title(e)
+	}
+	typeName := strings.Join(elems, "")
+	if typeName == "" {
+		resultTypeCount++
+		typeName = fmt.Sprintf("ResultType%d", resultTypeCount)
+	}
+	return typeName
 }
 
 // buildView builds a view expression given an attribute and a corresponding
