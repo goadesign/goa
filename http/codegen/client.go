@@ -160,7 +160,7 @@ func clientEncodeDecodeFile(genpkg string, svc *expr.HTTPServiceExpr) *codegen.F
 		}
 		if e.Method.SkipRequestBodyEncodeDecode {
 			sections = append(sections, &codegen.SectionTemplate{
-				Name:   "buid-stream-request",
+				Name:   "build-stream-request",
 				Source: buildStreamRequestT,
 				Data:   e,
 			})
