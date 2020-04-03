@@ -95,14 +95,12 @@ import (
 //
 func Response(val interface{}, args ...interface{}) {
 	name, ok := val.(string)
-	if !ok {
-		if len(args) > 0 {
-			name, ok = args[0].(string)
-			if ok {
-				arg := args[0]
-				args = append([]interface{}{val}, args[1:]...)
-				val = arg
-			}
+	if !ok && len(args) > 0 {
+		name, ok = args[0].(string)
+		if ok {
+			arg := args[0]
+			args = append([]interface{}{val}, args[1:]...)
+			val = arg
 		}
 	}
 	switch t := eval.Current().(type) {
