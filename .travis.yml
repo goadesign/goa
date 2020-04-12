@@ -2,6 +2,7 @@ language: go
 dist: xenial
 go:
 - 1.14.x
+if: branch = v2
 cache:
   directories:
     - $HOME/.cache/go-build
