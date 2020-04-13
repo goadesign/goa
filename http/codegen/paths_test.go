@@ -15,7 +15,9 @@ func TestPaths(t *testing.T) {
 		Code string
 	}{
 		{"single-path-no-param", testdata.PathNoParamDSL, testdata.PathNoParamCode},
+		{"single-path-no-param-trailing-slash", testdata.PathNoParamTrailingSlashDSL, testdata.PathNoParamTrailingSlashCode},
 		{"single-path-one-param", testdata.PathOneParamDSL, testdata.PathOneParamCode},
+		{"single-path-one-param-trailing-slash", testdata.PathOneParamTrailingSlashDSL, testdata.PathOneParamTrailingSlashCode},
 		{"single-path-multiple-params", testdata.PathMultipleParamsDSL, testdata.PathMultipleParamsCode},
 		{"alternative-paths", testdata.PathAlternativesDSL, testdata.PathAlternativesCode},
 		{"path-with-string-slice-param", testdata.PathStringSliceParamDSL, testdata.PathStringSliceParamCode},
