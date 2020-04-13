@@ -175,3 +175,23 @@ var ServerMultipleFilesWithPrefixPathDSL = func() {
 		Files("/{wildcard}", "/path/to/folder")
 	})
 }
+
+var ServerSimpleRoutingDSL = func() {
+	Service("ServiceSimpleRoutingServer", func() {
+		Method("server-simple-routing", func() {
+			HTTP(func() {
+				GET("/simple/routing")
+			})
+		})
+	})
+}
+
+var ServerTrailingSlashRoutingDSL = func() {
+	Service("ServiceTrailingSlashRoutingServer", func() {
+		Method("server-trailing-slash-routing", func() {
+			HTTP(func() {
+				GET("/trailing/slash/")
+			})
+		})
+	})
+}

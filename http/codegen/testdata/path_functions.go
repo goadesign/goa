@@ -6,9 +6,21 @@ func MethodPathNoParamServicePathNoParamPath() string {
 }
 `
 
+var PathNoParamTrailingSlashCode = `// MethodPathNoParamTrailingSlashServicePathNoParamTrailingSlashPath returns the URL path to the ServicePathNoParamTrailingSlash service MethodPathNoParamTrailingSlash HTTP endpoint.
+func MethodPathNoParamTrailingSlashServicePathNoParamTrailingSlashPath() string {
+	return "/one/two/"
+}
+`
+
 var PathOneParamCode = `// MethodPathOneParamServicePathOneParamPath returns the URL path to the ServicePathOneParam service MethodPathOneParam HTTP endpoint.
 func MethodPathOneParamServicePathOneParamPath(a string) string {
 	return fmt.Sprintf("/one/%v/two", a)
+}
+`
+
+var PathOneParamTrailingSlashCode = `// MethodPathOneParamTrailingSlashServicePathOneParamTrailingSlashPath returns the URL path to the ServicePathOneParamTrailingSlash service MethodPathOneParamTrailingSlash HTTP endpoint.
+func MethodPathOneParamTrailingSlashServicePathOneParamTrailingSlashPath(a string) string {
+	return fmt.Sprintf("/one/%v/", a)
 }
 `
 
