@@ -24,7 +24,7 @@ var PrimitiveErrorResponseDSL = func() {
 			HTTP(func() {
 				GET("/one/two")
 				Response("bad_request", StatusBadRequest)
-				Response("internal_error", StatusInternalServerError)
+				Response(StatusInternalServerError, "internal_error")
 			})
 		})
 	})
@@ -34,7 +34,7 @@ var ServiceErrorResponseDSL = func() {
 	Service("ServiceServiceErrorResponse", func() {
 		Error("bad_request")
 		HTTP(func() {
-			Response("bad_request", StatusBadRequest)
+			Response(StatusBadRequest, "bad_request")
 		})
 		Method("MethodServiceErrorResponse", func() {
 			Error("internal_error")

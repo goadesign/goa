@@ -78,8 +78,8 @@ var UnaryRPCWithErrorsDSL = func() {
 			GRPC(func() {
 				Response("timeout", CodeCanceled)
 				Response("internal", CodeUnknown)
-				Response("bad_request", CodeInvalidArgument)
-				Response("custom_error", CodeUnknown)
+				Response(CodeInvalidArgument, "bad_request")
+				Response(CodeUnknown, "custom_error")
 			})
 		})
 	})
@@ -89,7 +89,7 @@ var UnaryRPCWithOverridingErrorsDSL = func() {
 	Service("ServiceUnaryRPCWithOverridingErrors", func() {
 		Error("overridden")
 		GRPC(func() {
-			Response("overridden", CodeCanceled)
+			Response(CodeCanceled, "overridden")
 		})
 		Method("MethodUnaryRPCWithOverridingErrors", func() {
 			Payload(String)
@@ -97,7 +97,7 @@ var UnaryRPCWithOverridingErrorsDSL = func() {
 			Error("internal")
 			GRPC(func() {
 				Response("overridden", CodeUnknown)
-				Response("internal", CodeUnknown)
+				Response(CodeUnknown, "internal")
 			})
 		})
 	})
@@ -266,7 +266,7 @@ var BidirectionalStreamingRPCWithErrorsDSL = func() {
 			GRPC(func() {
 				Response("timeout", CodeCanceled)
 				Response("internal", CodeUnknown)
-				Response("bad_request", CodeInvalidArgument)
+				Response(CodeInvalidArgument, "bad_request")
 			})
 		})
 	})

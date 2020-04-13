@@ -36,13 +36,17 @@ import (
 //
 // * Response(status, func)
 //
-// Error responses additionally accept the name of the error as first argument.
+// Error responses additionally accept the name of the error as first or second argument.
 //
 // * Response(error_name, status)
 //
 // * Response(error_name, func)
 //
 // * Response(error_name, status, func)
+//
+// * Response(status, error_name)
+//
+// * Response(status, error_name, func)
 //
 // By default (i.e. if Response only defines a status code) then:
 //
@@ -91,6 +95,14 @@ import (
 //
 func Response(val interface{}, args ...interface{}) {
 	name, ok := val.(string)
+	if !ok && len(args) > 0 {
+		name, ok = args[0].(string)
+		if ok {
+			arg := args[0]
+			args = append([]interface{}{val}, args[1:]...)
+			val = arg
+		}
+	}
 	switch t := eval.Current().(type) {
 	case *expr.HTTPExpr:
 		if !ok {
