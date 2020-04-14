@@ -1,0 +1,39 @@
+package codegen
+
+import (
+	"testing"
+
+	"goa.design/goa/codegen"
+	"goa.design/goa/expr"
+	"goa.design/goa/http/codegen/testdata"
+)
+
+func TestServerHandler(t *testing.T) {
+	const genpkg = "gen"
+	cases := []struct {
+		Name       string
+		DSL        func()
+		Code       string
+		SectionNum int
+	}{
+		{"server simple routing", testdata.ServerSimpleRoutingDSL, testdata.ServerSimpleRoutingCode, 7},
+		{"server trailing slash routing", testdata.ServerTrailingSlashRoutingDSL, testdata.ServerTrailingSlashRoutingCode, 7},
+	}
+	for _, c := range cases {
+		t.Run(c.Name, func(t *testing.T) {
+			RunHTTPDSL(t, c.DSL)
+			fs := ServerFiles(genpkg, expr.Root)
+			if len(fs) != 2 {
+				t.Fatalf("got %d files, expected 1", len(fs))
+			}
+			sections := fs[0].SectionTemplates
+			if len(sections) < 8 {
+				t.Fatalf("got %d sections, expected at least 8", len(sections))
+			}
+			code := codegen.SectionCode(t, sections[c.SectionNum])
+			if code != c.Code {
+				t.Errorf("invalid code, got:\n%s\ngot vs. expected:\n%s", code, codegen.Diff(t, code, c.Code))
+			}
+		})
+	}
+}

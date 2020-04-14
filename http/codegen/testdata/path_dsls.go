@@ -14,12 +14,33 @@ var PathNoParamDSL = func() {
 	})
 }
 
+var PathNoParamTrailingSlashDSL = func() {
+	Service("ServicePathNoParamTrailingSlash", func() {
+		Method("MethodPathNoParamTrailingSlash", func() {
+			HTTP(func() {
+				GET("/one/two/")
+			})
+		})
+	})
+}
+
 var PathOneParamDSL = func() {
 	Service("ServicePathOneParam", func() {
 		Method("MethodPathOneParam", func() {
 			Payload(String)
 			HTTP(func() {
 				GET("one/{a}/two")
+			})
+		})
+	})
+}
+
+var PathOneParamTrailingSlashDSL = func() {
+	Service("ServicePathOneParamTrailingSlash", func() {
+		Method("MethodPathOneParamTrailingSlash", func() {
+			Payload(String)
+			HTTP(func() {
+				GET("one/{a}/")
 			})
 		})
 	})

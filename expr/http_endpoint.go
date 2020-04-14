@@ -887,6 +887,9 @@ func (r *RouteExpr) FullPaths() []string {
 	res := make([]string, len(bases))
 	for i, b := range bases {
 		res[i] = httppath.Clean(path.Join(b, r.Path))
+		if res[i] != "/" && strings.HasSuffix(r.Path, "/") {
+			res[i] += "/"
+		}
 	}
 	return res
 }
