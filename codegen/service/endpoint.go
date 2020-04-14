@@ -155,7 +155,7 @@ func endpointData(service *expr.ServiceExpr) *endpointsData {
 }
 
 func payloadVar(e *endpointMethodData) string {
-	if e.ServerStream != nil {
+	if e.ServerStream != nil || e.SkipRequestBodyEncodeDecode {
 		return "ep.Payload"
 	}
 	return "p"
