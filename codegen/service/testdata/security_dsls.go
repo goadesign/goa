@@ -180,24 +180,6 @@ var EndpointWithBasicAuthAndSkipRequestBodyEncodeDecodeDSL = func() {
 	})
 }
 
-var EndpointWithJWTAuthAndSkipRequestBodyEncodeDecodeDSL = func() {
-	Service("EndpointWithJWTAuthAndSkipRequestBodyEncodeDecode", func() {
-		Method("EndpointWithJWTAuthAndSkipRequestBodyEncodeDecode", func() {
-			Security(JWTAuth, func() {
-				Scope("api:read")
-				Scope("api:write")
-			})
-			Payload(func() {
-				Token("token", String)
-			})
-			HTTP(func() {
-				SkipRequestBodyEncodeDecode()
-				GET("/")
-			})
-		})
-	})
-}
-
 var SingleServiceDSL = func() {
 	Service("SingleService", func() {
 		Method("Method", func() {
