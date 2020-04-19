@@ -70,3 +70,30 @@ func TestSecureEndpoint(t *testing.T) {
 		})
 	}
 }
+
+func TestSecureWithSkipRequestBodyEncodeDecode(t *testing.T) {
+	cases := []struct {
+		Name string
+		DSL  func()
+		Code string
+	}{
+		{"with-basicauth", testdata.EndpointWithBasicAuthAndSkipRequestBodyEncodeDecodeDSL, testdata.EndpointWithBasicAuthAndSkipRequestBodyEncodeDecodeCode},
+	}
+	for _, c := range cases {
+		t.Run(c.Name, func(t *testing.T) {
+			codegen.RunDSL(t, c.DSL)
+			if len(expr.Root.Services) != 1 {
+				t.Fatalf("got %d services, expected 1", len(expr.Root.Services))
+			}
+			fs := EndpointFile("", expr.Root.Services[0])
+			if fs == nil {
+				t.Fatalf("got nil file, expected not nil")
+			}
+			sections := fs.SectionTemplates
+			code := codegen.SectionCode(t, sections[5])
+			if code != c.Code {
+				t.Errorf("invalid code, got:\n%s\ngot vs. expected:\n%s", code, codegen.Diff(t, code, c.Code))
+			}
+		})
+	}
+}
