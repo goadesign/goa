@@ -78,7 +78,6 @@ func TestSecureWithSkipRequestBodyEncodeDecode(t *testing.T) {
 		Code string
 	}{
 		{"with-basicauth", testdata.EndpointWithBasicAuthAndSkipRequestBodyEncodeDecodeDSL, testdata.EndpointWithBasicAuthAndSkipRequestBodyEncodeDecodeCode},
-		//{"with-jwtauth", testdata.EndpointWithJWTAuthAndSkipRequestBodyEncodeDecodeDSL, ""},
 	}
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
