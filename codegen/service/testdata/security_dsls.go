@@ -164,6 +164,22 @@ var EndpointWithOAuth2DSL = func() {
 	})
 }
 
+var EndpointWithBasicAuthAndSkipRequestBodyEncodeDecodeDSL = func() {
+	Service("EndpointWithSkipRequestBodyEncodeDecode", func() {
+		Method("EndpointWithSkipRequestBodyEncodeDecode", func() {
+			Security(BasicAuth)
+			Payload(func() {
+				Username("user", String)
+				Password("pass", String)
+			})
+			HTTP(func() {
+				SkipRequestBodyEncodeDecode()
+				GET("/")
+			})
+		})
+	})
+}
+
 var SingleServiceDSL = func() {
 	Service("SingleService", func() {
 		Method("Method", func() {

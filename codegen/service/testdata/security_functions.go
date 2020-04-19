@@ -152,3 +152,32 @@ func NewSecureWithOAuth2Endpoint(s Service, authOAuth2Fn security.AuthOAuth2Func
 	}
 }
 `
+
+var EndpointWithBasicAuthAndSkipRequestBodyEncodeDecodeCode = `// NewEndpointWithSkipRequestBodyEncodeDecodeEndpoint returns an endpoint
+// function that calls the method "EndpointWithSkipRequestBodyEncodeDecode" of
+// service "EndpointWithSkipRequestBodyEncodeDecode".
+func NewEndpointWithSkipRequestBodyEncodeDecodeEndpoint(s Service, authBasicFn security.AuthBasicFunc) goa.Endpoint {
+	return func(ctx context.Context, req interface{}) (interface{}, error) {
+		ep := req.(*EndpointWithSkipRequestBodyEncodeDecodeRequestData)
+		var err error
+		sc := security.BasicScheme{
+			Name:           "basic",
+			Scopes:         []string{"api:read", "api:write", "api:admin"},
+			RequiredScopes: []string{},
+		}
+		var user string
+		if ep.Payload.User != nil {
+			user = *ep.Payload.User
+		}
+		var pass string
+		if ep.Payload.Pass != nil {
+			pass = *ep.Payload.Pass
+		}
+		ctx, err = authBasicFn(ctx, user, pass, &sc)
+		if err != nil {
+			return nil, err
+		}
+		return nil, s.EndpointWithSkipRequestBodyEncodeDecode(ctx, ep.Payload, ep.Body)
+	}
+}
+`
