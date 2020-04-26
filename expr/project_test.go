@@ -32,7 +32,7 @@ var (
 
 func init() {
 	vobj := (*collectionLinkView)[0]
-	vobj.Attribute.Meta = map[string][]string{"view": []string{"link"}}
+	vobj.Attribute.Meta = map[string][]string{"view": {"link"}}
 }
 
 func TestProject(t *testing.T) {

@@ -476,6 +476,39 @@ var FinalizeEndpointBodyAsPropWithExtendedTypeDSL = func() {
 	})
 }
 
+var ExplicitAuthHeaderDSL = func() {
+	var OAuth2 = OAuth2Security("authCode")
+	Service("Service", func() {
+		Method("Method", func() {
+			Security(OAuth2)
+			Payload(func() {
+				AccessToken("token", String)
+				Attribute("payload", String)
+			})
+			HTTP(func() {
+				POST("/")
+				Header("token")
+			})
+		})
+	})
+}
+
+var ImplicitAuthHeaderDSL = func() {
+	var OAuth2 = OAuth2Security("authCode")
+	Service("Service", func() {
+		Method("Method", func() {
+			Security(OAuth2)
+			Payload(func() {
+				AccessToken("token", String)
+				Attribute("payload", String)
+			})
+			HTTP(func() {
+				POST("/")
+			})
+		})
+	})
+}
+
 var GRPCEndpointWithAnyType = func() {
 	var Recursive = Type("Recursive", func() {
 		Field(1, "invalid_map_key", MapOf(Any, "Recursive"))
