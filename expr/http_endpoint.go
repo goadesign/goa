@@ -575,22 +575,6 @@ func (e *HTTPEndpointExpr) Validate() error {
 // types so that the response encoding code can properly use the type to infer
 // the response that it needs to build.
 func (e *HTTPEndpointExpr) Finalize() {
-	// Initialize Authorization header implicitly defined via security DSL
-	// prior to computing headers and body.
-	for att, mapped := range defaultRequestHeaderAttributes(e) {
-		if !mapped {
-			continue
-		}
-		attr := e.MethodExpr.Payload.Find(att)
-		e.Headers.Type.(*Object).Set(att, attr)
-		if e.MethodExpr.Payload.IsRequired(att) {
-			if e.Headers.Validation == nil {
-				e.Headers.Validation = &ValidationExpr{}
-			}
-			e.Headers.Validation.AddRequired(att)
-		}
-	}
-
 	// Compute security scheme attribute name and corresponding HTTP location
 	if reqLen := len(e.MethodExpr.Requirements); reqLen > 0 {
 		e.Requirements = make([]*SecurityExpr, 0, reqLen)
@@ -614,8 +598,18 @@ func (e *HTTPEndpointExpr) Finalize() {
 				}
 				sch.Name, sch.In = findKey(e, field)
 				if sch.Name == "" {
+					// Initialize Authorization header implicitly defined via
+					// security DSL if mapping isn't explicit.
 					sch.Name = "Authorization"
-					e.Headers.Map("Authorization", field)
+					attr := e.MethodExpr.Payload.Find(field)
+					e.Headers.Type.(*Object).Set(field, attr)
+					e.Headers.Map(sch.Name, field)
+					if e.MethodExpr.Payload.IsRequired(field) {
+						if e.Headers.Validation == nil {
+							e.Headers.Validation = &ValidationExpr{}
+						}
+						e.Headers.Validation.AddRequired(field)
+					}
 				}
 			}
 			e.Requirements = append(e.Requirements, dupReq)
