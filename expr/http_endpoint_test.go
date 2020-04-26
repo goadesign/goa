@@ -222,20 +222,55 @@ func TestHTTPEndpointFinalization(t *testing.T) {
 
 			if tc.ExpectedBody != nil {
 				if e.Body == nil {
-					t.Errorf("%s: got endpoint without body, expected endpoint with body", name)
+					t.Errorf("got endpoint without body, expected endpoint with body")
 					return
 				}
 				bodyObj := *expr.AsObject(e.Body.Type)
 				expectedBodyObj := *expr.AsObject(tc.ExpectedBody)
 				if len(bodyObj) != len(expectedBodyObj) {
-					t.Errorf("%s: got %d, expected %d attribute(s) in endpoint body", name, len(bodyObj), len(expectedBodyObj))
+					t.Errorf("got %d, expected %d attribute(s) in endpoint body", len(bodyObj), len(expectedBodyObj))
 				} else {
 					for i := 0; i < len(expectedBodyObj); i++ {
 						if bodyObj[i].Name != expectedBodyObj[i].Name {
-							t.Errorf("%s: got %q, expected %q attribute in endpoint body", name, bodyObj[i].Name, expectedBodyObj[i].Name)
+							t.Errorf("got %q, expected %q attribute in endpoint body", bodyObj[i].Name, expectedBodyObj[i].Name)
 						}
 					}
 				}
+			}
+		})
+	}
+}
+
+func TestHTTPAuthorizationMapping(t *testing.T) {
+	cases := []struct {
+		Name           string
+		DSL            func()
+		ExpectedHeader string
+	}{{
+		Name:           "explicit",
+		DSL:            testdata.ExplicitAuthHeaderDSL,
+		ExpectedHeader: "token",
+	}, {
+		Name:           "implicit",
+		DSL:            testdata.ImplicitAuthHeaderDSL,
+		ExpectedHeader: "Authorization",
+	},
+	}
+	for _, tc := range cases {
+		t.Run(tc.Name, func(t *testing.T) {
+			root := expr.RunDSL(t, tc.DSL)
+			e := root.API.HTTP.Services[0].HTTPEndpoints[0]
+			if e.Headers == nil {
+				t.Errorf("got endpoint without header, expected endpoint with HTTP header")
+				return
+			}
+			if len(*expr.AsObject(e.Headers.Type)) != 1 {
+				t.Errorf("got %d, expected 1 attribute in endpoint headers", len(*expr.AsObject(e.Headers.Type)))
+				return
+			}
+			n := e.Headers.ElemName("token")
+			if n != tc.ExpectedHeader {
+				t.Errorf("got %q, expected %q attribute in endpoint headers", n, tc.ExpectedHeader)
 			}
 		})
 	}
