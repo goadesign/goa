@@ -346,26 +346,31 @@ func New{{ .VarName }}Endpoint(s {{ .ServiceVarName }}{{ range .Schemes }}, auth
 		return nil, err
 	}
 	return &{{ .ResponseStruct }}{ {{ if .ResultRef }}Result: res, {{ end }}Body: body }, nil
+	{{- else if .ViewedResult }}
+	res, {{ if not .ViewedResult.ViewName }}view, {{ end }}err := s.{{ .VarName }}(ctx, {{ if .PayloadRef }}ep.Payload, {{ end }}ep.Body)
+	if err != nil {
+		return nil, err
+	}
+	vres := {{ $.ViewedResult.Init.Name }}(res, {{ if .ViewedResult.ViewName }}{{ printf "%q" .ViewedResult.ViewName }}{{ else }}view{{ end }})
+	return vres, nil
 	{{- else }}
 	return {{ if not .ResultRef }}nil, {{ end }}s.{{ .VarName }}(ctx, {{ if .PayloadRef }}ep.Payload, {{ end }}ep.Body)
 	{{- end }}
 {{- else if .ViewedResult }}
-		res,{{ if not .ViewedResult.ViewName }} view,{{ end }} err := s.{{ .VarName }}(ctx{{ if .PayloadRef }}, {{ $payload }}{{ end }})
-		if err != nil {
-			return nil, err
-		}
-		vres := {{ $.ViewedResult.Init.Name }}(res, {{ if .ViewedResult.ViewName }}{{ printf "%q" .ViewedResult.ViewName }}{{ else }}view{{ end }})
-		return vres, nil
-{{- else }}
-	{{- if .SkipResponseBodyEncodeDecode }}
+	res, {{ if not .ViewedResult.ViewName }}view, {{ end }}err := s.{{ .VarName }}(ctx{{ if .PayloadRef }}, {{ $payload }}{{ end }})
+	if err != nil {
+		return nil, err
+	}
+	vres := {{ $.ViewedResult.Init.Name }}(res, {{ if .ViewedResult.ViewName }}{{ printf "%q" .ViewedResult.ViewName }}{{ else }}view{{ end }})
+	return vres, nil
+{{- else if .SkipResponseBodyEncodeDecode }}
 	{{ if .ResultRef }}res, {{ end }}body, err := s.{{ .VarName }}(ctx{{ if .PayloadRef }}, {{ $payload}}{{ end }})
 	if err != nil {
 		return nil, err
 	}
 	return &{{ .ResponseStruct }}{ {{ if .ResultRef }}Result: res, {{ end }}Body: body }, nil
-	{{- else }}
+{{- else }}
 	return {{ if not .ResultRef }}nil, {{ end }}s.{{ .VarName }}(ctx{{ if .PayloadRef }}, {{ $payload }}{{ end }})
-	{{- end }}
 {{- end }}
 	}
 }
