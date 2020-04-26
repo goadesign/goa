@@ -493,14 +493,14 @@ func conversionCode(from, to, typeName string, pointer bool) (string, bool) {
 		checkErr = true
 	case uint64N:
 		parse = fmt.Sprintf("%s, err %s= strconv.ParseUint(%s, 10, 64)", target, decl, from)
-		checkErr = true
+		checkErr = decl == ""
 	case float32N:
 		parse = fmt.Sprintf("var v float64\nv, err = strconv.ParseFloat(%s, 32)", from)
 		cast = fmt.Sprintf("%s %s= float32(v)", target, decl)
 		checkErr = true
 	case float64N:
 		parse = fmt.Sprintf("%s, err %s= strconv.ParseFloat(%s, 64)", target, decl, from)
-		checkErr = true
+		checkErr = decl == ""
 	case stringN:
 		parse = fmt.Sprintf("%s %s= %s", target, decl, from)
 	case bytesN:
