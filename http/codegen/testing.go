@@ -16,10 +16,10 @@ func RunHTTPDSL(t *testing.T, dsl func()) *expr.RootExpr {
 	return expr.RunDSL(t, dsl)
 }
 
-// makeGolden returns a file object used to write test expectations. If
-// makeGolden returns nil then the test should not generate test
+// MakeGolden returns a file object used to write test expectations. If
+// MakeGolden returns nil then the test should not generate test
 // expectations.
-func makeGolden(t *testing.T, p string) *os.File {
+func MakeGolden(t *testing.T, p string) *os.File {
 	t.Helper()
 	if os.Getenv("GOLDEN") == "" {
 		return nil

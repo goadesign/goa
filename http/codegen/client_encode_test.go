@@ -166,7 +166,7 @@ func TestClientEncode(t *testing.T) {
 		{"query-map-alias-validate", testdata.QueryMapAliasValidateDSL, testdata.QueryMapAliasValidateEncodeCode},
 		{"query-array-nested-alias-validate", testdata.QueryArrayNestedAliasValidateDSL, testdata.QueryArrayNestedAliasValidateEncodeCode},
 	}
-	golden := makeGolden(t, "testdata/payload_encode_functions.go")
+	golden := MakeGolden(t, "testdata/payload_encode_functions.go")
 	if golden != nil {
 		golden.WriteString("package testdata\n")
 		defer golden.Close()

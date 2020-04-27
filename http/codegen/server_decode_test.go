@@ -184,7 +184,7 @@ func TestDecode(t *testing.T) {
 		{"header-int-alias", testdata.HeaderIntAliasDSL, testdata.HeaderIntAliasDecodeCode},
 		{"path-int-alias", testdata.PathIntAliasDSL, testdata.PathIntAliasDecodeCode},
 	}
-	golden := makeGolden(t, "testdata/payload_decode_functions.go")
+	golden := MakeGolden(t, "testdata/payload_decode_functions.go")
 	if golden != nil {
 		golden.WriteString("package testdata\n")
 	}
