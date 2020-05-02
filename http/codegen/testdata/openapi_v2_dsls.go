@@ -441,3 +441,16 @@ var WithMapDSL = func() {
 		})
 	})
 }
+
+var PathWithWildcardDSL = func() {
+	Service("test service", func() {
+		Method("test endpoint", func() {
+			Payload(func() {
+				Attribute("int_map", Int)
+			})
+			HTTP(func() {
+				POST("/{*int_map}")
+			})
+		})
+	})
+}
