@@ -154,6 +154,12 @@ service "Service" HTTP endpoint "Method": HTTP endpoint response body must be em
 			DSL:   testdata.EndpointPayloadMissingRequired,
 			Error: `service "Service" HTTP endpoint "Method": The following HTTP request body attribute is required but the corresponding method payload attribute is not: nonreq. Use 'Required' to make the attribute required in the method payload as well.`,
 		},
+		"streaming-endpoint-has-request-body": {
+			DSL: testdata.StreamingEndpointRequestBody,
+			Error: `service "Service" HTTP endpoint "MethodA": HTTP endpoint request body must be empty when the endpoint uses streaming. Payload attributes must be mapped to headers and/or params.
+service "Service" HTTP endpoint "MethodB": HTTP endpoint request body must be empty when the endpoint uses streaming. Payload attributes must be mapped to headers and/or params.
+service "Service" HTTP endpoint "MethodC": HTTP endpoint request body must be empty when the endpoint uses streaming. Payload attributes must be mapped to headers and/or params.`,
+		},
 	}
 	for name, c := range cases {
 		t.Run(name, func(t *testing.T) {
