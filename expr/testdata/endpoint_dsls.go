@@ -457,6 +457,33 @@ var StreamingEndpointRequestBody = func() {
 				GET("/")
 			})
 		})
+		Method("MethodD", func() {
+			Payload(func() {
+				Attribute("bar", String)
+			})
+			StreamingResult(String)
+			HTTP(func() {
+				GET("/{bar}")
+			})
+		})
+		Method("MethodE", func() {
+			Payload(func() {
+				Extend(PT)
+			})
+			StreamingResult(String)
+			HTTP(func() {
+				GET("/")
+				Param("foo")
+			})
+		})
+		Method("MethodF", func() {
+			Payload(String)
+			StreamingResult(String)
+			HTTP(func() {
+				GET("/")
+				Header("foo")
+			})
+		})
 	})
 }
 
