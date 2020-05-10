@@ -119,24 +119,35 @@ func buildServers(ctx context.Context, servers []*expr.ServerExpr) (openapi3.Ser
 			var server *openapi3.Server
 			for _, host := range svr.Hosts {
 				var (
-					serverVariable   map[string]*openapi3.ServerVariable
+					serverVariable   = make(map[string]*openapi3.ServerVariable)
 					defaultValue     interface{}
 					validationValues []interface{}
 				)
 
+				// retrieve host URL
 				u, err := url.Parse(defaultURI(host))
 				if err != nil {
 					return nil, err
 				}
 
-				defaultValue, validationValues = paramsFromHostVariables(host.Variables)
-				if defaultValue != nil {
-					serverVariable = map[string]*openapi3.ServerVariable{
-						host.Name: {
+				// retrieve host variables
+				vars := expr.AsObject(host.Variables.Type)
+				for _, v := range *vars {
+					defaultValue = v.Attribute.DefaultValue
+
+					if v.Attribute.Validation != nil && len(v.Attribute.Validation.Values) > 0 {
+						validationValues = append(validationValues, v.Attribute.Validation.Values...)
+						if defaultValue == nil {
+							defaultValue = v.Attribute.Validation.Values[0]
+						}
+					}
+
+					if defaultValue != nil {
+						serverVariable[v.Name] = &openapi3.ServerVariable{
 							Enum:        validationValues,
 							Default:     defaultValue,
 							Description: host.Variables.Description,
-						},
+						}
 					}
 				}
 
@@ -166,25 +177,8 @@ func buildSecurityRequirements(ctx context.Context, servers []*expr.SecurityExpr
 	return reqs, nil
 }
 
-// paramsFromHostVariables returns
-// - defaultValue. If empty, it substitues first value from ValidatonValues
-// - validatonValues of the host if it exists
-func paramsFromHostVariables(hostVariables *expr.AttributeExpr) (defaultValue interface{}, validationValues []interface{}) {
-	vars := expr.AsObject(hostVariables.Type)
-	for _, v := range *vars {
-		defaultValue = v.Attribute.DefaultValue
-		if v.Attribute.Validation != nil && len(v.Attribute.Validation.Values) > 0 {
-			validationValues = append(validationValues, v.Attribute.Validation.Values...)
-
-			if defaultValue == nil {
-				defaultValue = v.Attribute.Validation.Values[0]
-			}
-		}
-	}
-
-	return
-}
-
+// defaultURI returns the first HTTP URI defined in the host. It substitutes any URI
+// parameters with their default values or the first item in their enum.
 func defaultURI(h *expr.HostExpr) (uri string) {
 	var uExpr expr.URIExpr
 
