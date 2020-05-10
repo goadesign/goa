@@ -260,6 +260,24 @@ func (e *HTTPEndpointExpr) Prepare() {
 		e.HTTPErrors = append(e.HTTPErrors, r.Dup())
 	}
 
+	// Lookup undefined HTTP errors in API.
+	for _, err := range e.MethodExpr.Errors {
+		found := false
+		for _, herr := range e.HTTPErrors {
+			if err.Name == herr.Name {
+				found = true
+				break
+			}
+		}
+		if !found {
+			for _, herr := range Root.API.HTTP.Errors {
+				if herr.Name == err.Name {
+					e.HTTPErrors = append(e.HTTPErrors, herr.Dup())
+				}
+			}
+		}
+	}
+
 	// Prepare responses
 	for _, r := range e.Responses {
 		r.Prepare()
@@ -642,24 +660,6 @@ func (e *HTTPEndpointExpr) Finalize() {
 		r.Finalize(e, e.MethodExpr.Result)
 		r.Body = httpResponseBody(e, r)
 		r.Body.Finalize()
-	}
-
-	// Lookup undefined HTTP errors in API.
-	for _, err := range e.MethodExpr.Errors {
-		found := false
-		for _, herr := range e.HTTPErrors {
-			if err.Name == herr.Name {
-				found = true
-				break
-			}
-		}
-		if !found {
-			for _, herr := range Root.API.HTTP.Errors {
-				if herr.Name == err.Name {
-					e.HTTPErrors = append(e.HTTPErrors, herr.Dup())
-				}
-			}
-		}
 	}
 
 	// Make sure all error types are user types and have a body.

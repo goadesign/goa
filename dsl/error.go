@@ -45,6 +45,8 @@ func Error(name string, args ...interface{}) {
 	}
 	erro := &expr.ErrorExpr{AttributeExpr: att, Name: name}
 	switch actual := eval.Current().(type) {
+	case *expr.APIExpr:
+		expr.Root.Errors = append(expr.Root.Errors, erro)
 	case *expr.ServiceExpr:
 		actual.Errors = append(actual.Errors, erro)
 	case *expr.MethodExpr:
