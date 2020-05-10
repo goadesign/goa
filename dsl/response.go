@@ -104,6 +104,14 @@ func Response(val interface{}, args ...interface{}) {
 		}
 	}
 	switch t := eval.Current().(type) {
+	case *expr.RootExpr:
+		if !ok {
+			eval.InvalidArgError("name of error", val)
+			return
+		}
+		if e := httpError(name, t, args...); e != nil {
+			t.API.HTTP.Errors = append(t.API.HTTP.Errors, e)
+		}
 	case *expr.HTTPExpr:
 		if !ok {
 			eval.InvalidArgError("name of error", val)

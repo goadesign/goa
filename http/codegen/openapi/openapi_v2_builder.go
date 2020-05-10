@@ -60,15 +60,6 @@ func NewV2(root *expr.RootExpr, h *expr.HostExpr) (*V2, error) {
 		SecurityDefinitions: securitySpecFromExpr(root),
 		ExternalDocs:        docsFromExpr(root.API.Docs),
 	}
-
-	for _, he := range root.API.HTTP.Errors {
-		res := responseSpecFromExpr(s, root, he.Response, "")
-		if s.Responses == nil {
-			s.Responses = make(map[string]*Response)
-		}
-		s.Responses[he.Name] = res
-	}
-
 	for _, res := range root.API.HTTP.Services {
 		if !mustGenerate(res.Meta) || !mustGenerate(res.ServiceExpr.Meta) {
 			continue
