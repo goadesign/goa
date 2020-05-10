@@ -286,7 +286,9 @@ func (r *HTTPResponseExpr) Dup() *HTTPResponseExpr {
 	if r.Body != nil {
 		res.Body = DupAtt(r.Body)
 	}
-	res.Headers = DupMappedAtt(r.Headers)
+	if r.Headers != nil {
+		res.Headers = DupMappedAtt(r.Headers)
+	}
 	return &res
 }
 
