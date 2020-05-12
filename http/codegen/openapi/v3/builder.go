@@ -1,180 +1,113 @@
 package openapiv3
 
 import (
-	"context"
 	"fmt"
 	"net/url"
 	"regexp"
 	"strings"
 
-	"github.com/getkin/kin-openapi/openapi3"
 	"goa.design/goa/v3/expr"
-)
-
-type (
-	// V3 represents an instance of OpenAPI v3 swagger object.
-	// See https://github.com/OAI/OpenAPI-Specification/blob/master/versions/3.0.3.md
-	V3 struct {
-		OpenAPI  string                        `json:"openapi" yaml:"openapi"`
-		Info     *openapi3.Info                `json:"info" yaml:"info"`
-		Servers  openapi3.Servers              `json:"servers,omitempty" yaml:"servers,omitempty"`
-		Paths    openapi3.Paths                `json:"paths" yaml:"paths"`
-		Security openapi3.SecurityRequirements `json:"security,omitempty" yaml:"security,omitempty"`
-	}
 )
 
 var uriRegex = regexp.MustCompile("^https?://")
 
 // New returns the OpenAPI v3 specification for the given API.
-func New(root *expr.RootExpr) (*V3, error) {
+func New(root *expr.RootExpr) *OpenAPI {
 	var (
-		err error
-
-		ctx = context.Background()
+		info     = buildInfo(root.API)
+		servers  = buildServers(root.API.Servers)
+		paths    = buildPaths(root.API.HTTP)
+		security = buildSecurityRequirements(root.API.Requirements)
 	)
 
-	var info *openapi3.Info
-	{
-		if info, err = buildInfo(ctx, root.API); err != nil {
-			return nil, err
-		}
-	}
-
-	var servers openapi3.Servers
-	{
-		if len(root.API.Servers) > 0 {
-			if servers, err = buildServers(ctx, root.API.Servers); err != nil {
-				return nil, err
-			}
-		}
-	}
-
-	var paths openapi3.Paths
-	{
-		if paths, err = buildPaths(ctx, root.API.HTTP); err != nil {
-			return nil, err
-		}
-	}
-
-	var security openapi3.SecurityRequirements
-	{
-		if security, err = buildSecurityRequirements(ctx, root.API.Requirements); err != nil {
-			return nil, err
-		}
-	}
-
-	return &V3{
+	return &OpenAPI{
 		OpenAPI:  "3.0.3", // TODO: This is a required string and hardcoded. Need to find some other way to set this.
 		Info:     info,
 		Paths:    paths,
 		Servers:  servers,
 		Security: security,
-	}, nil
+	}
 }
 
-func buildInfo(ctx context.Context, api *expr.APIExpr) (*openapi3.Info, error) {
-	var info *openapi3.Info
-	{
-		info = &openapi3.Info{
-			Title:          api.Title,
-			Description:    api.Description,
-			TermsOfService: api.TermsOfService,
-			Version:        api.Version,
+func buildInfo(api *expr.APIExpr) *Info {
+	info := &Info{
+		Title:          api.Title,
+		Description:    api.Description,
+		TermsOfService: api.TermsOfService,
+		Version:        api.Version,
+	}
+	if c := api.Contact; c != nil {
+		info.Contact = &Contact{
+			Name:  c.Name,
+			Email: c.Email,
+			URL:   c.URL,
 		}
-		if c := api.Contact; c != nil {
-			info.Contact = &openapi3.Contact{
-				Name:  c.Name,
-				Email: c.Email,
-				URL:   c.URL,
+	}
+	if l := api.License; l != nil {
+		info.License = &License{
+			Name: l.Name,
+			URL:  l.URL,
+		}
+	}
+	return info
+}
+
+func buildPaths(h *expr.HTTPExpr) map[string]*PathItem {
+	return nil
+}
+
+func buildServers(servers []*expr.ServerExpr) []*Server {
+	var svrs []*Server
+	for _, svr := range servers {
+		var server *Server
+		for _, host := range svr.Hosts {
+			var (
+				serverVariable   = make(map[string]*ServerVariable)
+				defaultValue     interface{}
+				validationValues []interface{}
+			)
+
+			// retrieve host URL
+			u, err := url.Parse(defaultURI(host))
+			if err != nil {
+				// bug: should be validated by DSL
+				panic("invalid host " + host.Name)
 			}
-		}
-		if l := api.License; l != nil {
-			info.License = &openapi3.License{
-				Name: l.Name,
-				URL:  l.URL,
-			}
-		}
-	}
-	if err := info.Validate(ctx); err != nil {
-		return nil, fmt.Errorf("failed to build Info: %s", err)
-	}
-	return info, nil
-}
 
-func buildPaths(ctx context.Context, h *expr.HTTPExpr) (openapi3.Paths, error) {
-	var paths openapi3.Paths
-	{
-		// TODO: Implement me
-	}
-	if err := paths.Validate(ctx); err != nil {
-		return nil, fmt.Errorf("failed to build Paths: %s", err)
-	}
-	return paths, nil
-}
+			// retrieve host variables
+			vars := expr.AsObject(host.Variables.Type)
+			for _, v := range *vars {
+				defaultValue = v.Attribute.DefaultValue
 
-func buildServers(ctx context.Context, servers []*expr.ServerExpr) (openapi3.Servers, error) {
-	var svrs openapi3.Servers
-	{
-		for _, svr := range servers {
-			var server *openapi3.Server
-			for _, host := range svr.Hosts {
-				var (
-					serverVariable   = make(map[string]*openapi3.ServerVariable)
-					defaultValue     interface{}
-					validationValues []interface{}
-				)
-
-				// retrieve host URL
-				u, err := url.Parse(defaultURI(host))
-				if err != nil {
-					return nil, err
-				}
-
-				// retrieve host variables
-				vars := expr.AsObject(host.Variables.Type)
-				for _, v := range *vars {
-					defaultValue = v.Attribute.DefaultValue
-
-					if v.Attribute.Validation != nil && len(v.Attribute.Validation.Values) > 0 {
-						validationValues = append(validationValues, v.Attribute.Validation.Values...)
-						if defaultValue == nil {
-							defaultValue = v.Attribute.Validation.Values[0]
-						}
-					}
-
-					if defaultValue != nil {
-						serverVariable[v.Name] = &openapi3.ServerVariable{
-							Enum:        validationValues,
-							Default:     defaultValue,
-							Description: host.Variables.Description,
-						}
+				if v.Attribute.Validation != nil && len(v.Attribute.Validation.Values) > 0 {
+					validationValues = append(validationValues, v.Attribute.Validation.Values...)
+					if defaultValue == nil {
+						defaultValue = v.Attribute.Validation.Values[0]
 					}
 				}
 
-				server = &openapi3.Server{
-					URL:         u.Host,
-					Description: svr.Description,
-					Variables:   serverVariable,
+				if defaultValue != nil {
+					serverVariable[v.Name] = &ServerVariable{
+						Enum:        validationValues,
+						Default:     defaultValue,
+						Description: host.Variables.Description,
+					}
 				}
-				svrs = append(svrs, server)
 			}
+
+			server = &Server{
+				URL:         u.Host,
+				Description: svr.Description,
+				Variables:   serverVariable,
+			}
+			svrs = append(svrs, server)
 		}
 	}
-	if err := svrs.Validate(ctx); err != nil {
-		return nil, fmt.Errorf("failed to build Servers: %s", err)
-	}
-	return svrs, nil
+	return svrs
 }
 
-func buildSecurityRequirements(ctx context.Context, servers []*expr.SecurityExpr) (openapi3.SecurityRequirements, error) {
-	var reqs openapi3.SecurityRequirements
-	{
-		// TODO: Implement me
-	}
-	if err := reqs.Validate(ctx); err != nil {
-		return nil, fmt.Errorf("failed to build SecurityRequirements: %s", err)
-	}
-	return reqs, nil
+func buildSecurityRequirements(servers []*expr.SecurityExpr) []map[string][]string {
+	return nil
 }
 
 // defaultURI returns the first HTTP URI defined in the host. It substitutes any URI
