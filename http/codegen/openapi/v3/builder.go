@@ -118,7 +118,7 @@ func defaultURI(h *expr.HostExpr) (uri string) {
 	// attempt to find the first HTTP/HTTPS URL
 	for _, uExpr = range h.URIs {
 		var urlStr = string(uExpr)
-		if uriRegex.Match([]byte(urlStr)) {
+		if uriRegex.MatchString(urlStr) {
 			uri = urlStr
 			break
 		}

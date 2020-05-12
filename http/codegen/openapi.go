@@ -53,10 +53,7 @@ func OpenAPIFiles(root *expr.RootExpr) ([]*codegen.File, error) {
 		}
 		// OpenAPI v3
 		{
-			spec, err := openapiv3.New(root)
-			if err != nil {
-				return nil, err
-			}
+			spec := openapiv3.New(root)
 			jsonSection := &codegen.SectionTemplate{
 				Name:    "openapi",
 				FuncMap: template.FuncMap{"toJSON": toJSON},
