@@ -45,7 +45,7 @@ func New(root *expr.RootExpr) *OpenAPI {
 		comps    = buildComponents(root)
 		servers  = buildServers(root.API.Servers)
 		paths    = buildPaths(root.API.HTTP)
-		security = buildSecurityRequirements(root)
+		security = buildSecurityRequirements(root.API.Requirements)
 	)
 
 	return &OpenAPI{
@@ -82,10 +82,21 @@ func buildInfo(api *expr.APIExpr) *Info {
 }
 
 func buildComponents(root *expr.RootExpr) *Components {
-	schemesRef := make(map[string]*SecuritySchemeRef, len(root.Schemes))
-	for _, se := range root.Schemes {
-		schemesRef[se.SchemeName] = &SecuritySchemeRef{
-			Value: buildSecurityScheme(se),
+	var schemesRef map[string]*SecuritySchemeRef
+	{
+		var schemes []*expr.SchemeExpr
+		for _, s := range root.API.HTTP.Services {
+			for _, e := range s.HTTPEndpoints {
+				for _, r := range e.Requirements {
+					schemes = append(schemes, r.Schemes...)
+				}
+			}
+		}
+		schemesRef = make(map[string]*SecuritySchemeRef, len(schemes))
+		for _, se := range schemes {
+			schemesRef[se.Hash()] = &SecuritySchemeRef{
+				Value: buildSecurityScheme(se),
+			}
 		}
 	}
 	return &Components{
@@ -94,7 +105,92 @@ func buildComponents(root *expr.RootExpr) *Components {
 }
 
 func buildPaths(h *expr.HTTPExpr) map[string]*PathItem {
-	return nil
+	var paths = make(map[string]*PathItem)
+	for _, svc := range h.Services {
+		for _, e := range svc.HTTPEndpoints {
+			for _, r := range e.Routes {
+				for _, key := range r.FullPaths() {
+					var (
+						path *PathItem
+
+						operation = buildOperation(key, r)
+					)
+					{
+						var ok bool
+						if path, ok = paths[key]; !ok {
+							path = new(PathItem)
+							paths[key] = path
+						}
+					}
+					switch r.Method {
+					case "GET":
+						path.Get = operation
+					case "PUT":
+						path.Put = operation
+					case "POST":
+						path.Post = operation
+					case "DELETE":
+						path.Delete = operation
+					case "OPTIONS":
+						path.Options = operation
+					case "HEAD":
+						path.Head = operation
+					case "PATCH":
+						path.Patch = operation
+					}
+					path.Extensions = openapi.ExtensionsFromExpr(r.Endpoint.Meta)
+				}
+			}
+		}
+	}
+	return paths
+}
+
+// buildOperation builds the OpenAPI Operation object for the given path.
+func buildOperation(key string, r *expr.RouteExpr) *Operation {
+	// operation ID
+	var opID string
+	{
+		opID = fmt.Sprintf("%s#%s", r.Endpoint.Service.Name(), r.Endpoint.Name())
+		// An endpoint can have multiple routes. If there are multiple routes for
+		// the endpoint suffix the operation ID with the route index.
+		index := 0
+		for i, rt := range r.Endpoint.Routes {
+			if rt == r {
+				index = i
+				break
+			}
+		}
+		if index > 0 {
+			opID = fmt.Sprintf("%s#%d", opID, index)
+		}
+	}
+
+	// swagger summary
+	var summary string
+	{
+		summary = fmt.Sprintf("%s %s", r.Endpoint.Name(), r.Endpoint.Service.Name())
+		for n, mdata := range r.Endpoint.Meta {
+			if n == "swagger:summary" && len(mdata) > 0 {
+				summary = mdata[0]
+			}
+		}
+		for n, mdata := range r.Endpoint.MethodExpr.Meta {
+			if n == "swagger:summary" && len(mdata) > 0 {
+				summary = mdata[0]
+			}
+		}
+	}
+
+	return &Operation{
+		Summary:      summary,
+		Description:  r.Endpoint.Description(),
+		OperationID:  opID,
+		Security:     buildSecurityRequirements(r.Endpoint.Requirements),
+		Deprecated:   false,
+		ExternalDocs: buildExternalDocs(r.Endpoint.MethodExpr.Docs, r.Endpoint.MethodExpr.Meta),
+		Extensions:   openapi.ExtensionsFromExpr(r.Endpoint.MethodExpr.Meta),
+	}
 }
 
 func buildServers(servers []*expr.ServerExpr) []*Server {
@@ -147,25 +243,31 @@ func buildServers(servers []*expr.ServerExpr) []*Server {
 	return svrs
 }
 
-func buildSecurityRequirements(root *expr.RootExpr) []map[string][]string {
-	var srs []map[string][]string
-	for _, sch := range root.Schemes {
-		sr := make(map[string][]string)
-		switch sch.Kind {
-		case expr.BasicAuthKind, expr.APIKeyKind:
-			sr[sch.SchemeName] = []string{}
-		case expr.OAuth2Kind, expr.JWTKind:
-			scopes := make([]string, len(sch.Scopes))
-			for i, scope := range sch.Scopes {
-				scopes[i] = scope.Name
+// buildSecurityRequirements builds the OpenAPI security requirements for the
+// given security expressions.
+func buildSecurityRequirements(reqs []*expr.SecurityExpr) []map[string][]string {
+	srs := make([]map[string][]string, len(reqs))
+	for i, req := range reqs {
+		sr := make(map[string][]string, len(req.Schemes))
+		for _, sch := range req.Schemes {
+			switch sch.Kind {
+			case expr.BasicAuthKind, expr.APIKeyKind:
+				sr[sch.Hash()] = []string{}
+			case expr.OAuth2Kind, expr.JWTKind:
+				scopes := make([]string, len(sch.Scopes))
+				for i, scope := range sch.Scopes {
+					scopes[i] = scope.Name
+				}
+				sr[sch.Hash()] = scopes
 			}
-			sr[sch.SchemeName] = scopes
 		}
-		srs = append(srs, sr)
+		srs[i] = sr
 	}
 	return srs
 }
 
+// buildSecurityScheme builds the OpenAPI SecurityScheme object from the
+// top-level security scheme definition.
 func buildSecurityScheme(se *expr.SchemeExpr) *SecurityScheme {
 	var scheme *SecurityScheme
 	switch se.Kind {
@@ -386,4 +488,15 @@ func schemafy(attr *expr.AttributeExpr, schemas map[string]*AnnotatedSchema) *An
 		s.Description += "\n" + as.Note
 	}
 	return as
+}
+
+func buildExternalDocs(docs *expr.DocsExpr, meta expr.MetaExpr) *ExternalDocs {
+	if docs == nil {
+		return nil
+	}
+	return &ExternalDocs{
+		Description: docs.Description,
+		URL:         docs.URL,
+		Extensions:  openapi.ExtensionsFromExpr(meta),
+	}
 }
