@@ -11,7 +11,7 @@ type (
 		Info         *Info                  `json:"info" yaml:"info"`       // Required
 		Servers      []*Server              `json:"servers,omitempty" yaml:"servers,omitempty"`
 		Paths        map[string]*PathItem   `json:"paths" yaml:"paths"` // Required
-		Components   Components             `json:"components,omitempty" yaml:"components,omitempty"`
+		Components   *Components            `json:"components,omitempty" yaml:"components,omitempty"`
 		Tags         []*Tag                 `json:"tags,omitempty" yaml:"tags,omitempty"`
 		Security     []map[string][]string  `json:"security,omitempty" yaml:"security,omitempty"`
 		ExternalDocs *ExternalDocs          `json:"externalDocs,omitempty" yaml:"externalDocs,omitempty"`
@@ -61,7 +61,7 @@ type (
 	// Components represents an OpenAPI Components object as defined in
 	// https://github.com/OAI/OpenAPI-Specification/blob/master/versions/3.0.3.md#componentsObject
 	Components struct {
-		Schemas         map[string]*SchemaRef         `json:"schemas,omitempty" yaml:"schemas,omitempty"`
+		Schemas         map[string]*openapi.Schema    `json:"schemas,omitempty" yaml:"schemas,omitempty"`
 		Parameters      map[string]*ParameterRef      `json:"parameters,omitempty" yaml:"parameters,omitempty"`
 		Headers         map[string]*HeaderRef         `json:"headers,omitempty" yaml:"headers,omitempty"`
 		RequestBodies   map[string]*RequestBodyRef    `json:"requestBodies,omitempty" yaml:"requestBodies,omitempty"`
@@ -144,7 +144,7 @@ type (
 		AllowReserved   bool                   `json:"allowReserved,omitempty" yaml:"allowReserved,omitempty"`
 		Deprecated      bool                   `json:"deprecated,omitempty" yaml:"deprecated,omitempty"`
 		Required        bool                   `json:"required,omitempty" yaml:"required,omitempty"`
-		Schema          *SchemaRef             `json:"schema,omitempty" yaml:"schema,omitempty"`
+		Schema          *openapi.Schema        `json:"schema,omitempty" yaml:"schema,omitempty"`
 		Example         interface{}            `json:"example,omitempty" yaml:"example,omitempty"`
 		Examples        map[string]*ExampleRef `json:"examples,omitempty" yaml:"examples,omitempty"`
 		Content         map[string]*MediaType  `json:"content,omitempty" yaml:"content,omitempty"`
@@ -164,7 +164,7 @@ type (
 	// MediaType represents an OpenAPI Media Type object as defined in
 	// https://github.com/OAI/OpenAPI-Specification/blob/master/versions/3.0.3.md#mediaTypeObject
 	MediaType struct {
-		Schema     *SchemaRef             `json:"schema,omitempty" yaml:"schema,omitempty"`
+		Schema     *openapi.Schema        `json:"schema,omitempty" yaml:"schema,omitempty"`
 		Example    interface{}            `json:"example,omitempty" yaml:"example,omitempty"`
 		Examples   map[string]*ExampleRef `json:"examples,omitempty" yaml:"examples,omitempty"`
 		Encoding   map[string]*Encoding   `json:"encoding,omitempty" yaml:"encoding,omitempty"`
@@ -188,7 +188,7 @@ type (
 		Description string                 `json:"description,omitempty" yaml:"description,omitempty"`
 		Deprecated  bool                   `json:"deprecated,omitempty" yaml:"deprecated,omitempty"`
 		Required    bool                   `json:"required,omitempty" yaml:"required,omitempty"`
-		Schema      *SchemaRef             `json:"schema,omitempty" yaml:"schema,omitempty"`
+		Schema      *openapi.Schema        `json:"schema,omitempty" yaml:"schema,omitempty"`
 		Example     interface{}            `json:"example,omitempty" yaml:"example,omitempty"`
 		Examples    map[string]*ExampleRef `json:"examples,omitempty" yaml:"examples,omitempty"`
 		Content     map[string]*MediaType  `json:"content,omitempty" yaml:"content,omitempty"`
@@ -257,71 +257,5 @@ type (
 		RefreshURL       string                 `json:"refreshUrl,omitempty" yaml:"refreshUrl,omitempty"`
 		Scopes           map[string]string      `json:"scopes" yaml:"scopes"`
 		Extensions       map[string]interface{} `json:"-" yaml:"-"`
-	}
-
-	// ParameterRef represents an OpenAPI reference to a Parameter object as defined in
-	// https://github.com/OAI/OpenAPI-Specification/blob/master/versions/3.0.2.md#referenceObject
-	ParameterRef struct {
-		Ref   string
-		Value *Parameter
-	}
-
-	// ResponseRef represents an OpenAPI reference to a Response object as defined in
-	// https://github.com/OAI/OpenAPI-Specification/blob/master/versions/3.0.2.md#referenceObject
-	ResponseRef struct {
-		Ref   string
-		Value *Response
-	}
-
-	// SchemaRef represents an OpenAPI reference to a Schema object as defined in
-	// https://github.com/OAI/OpenAPI-Specification/blob/master/versions/3.0.2.md#referenceObject
-	SchemaRef struct {
-		Ref   string
-		Value *openapi.Schema
-	}
-
-	// HeaderRef represents an OpenAPI reference to a Header object as defined in
-	// https://github.com/OAI/OpenAPI-Specification/blob/master/versions/3.0.2.md#referenceObject
-	HeaderRef struct {
-		Ref   string
-		Value *Header
-	}
-
-	// CallbackRef represents an OpenAPI reference to a Callback object as defined in
-	// https://github.com/OAI/OpenAPI-Specification/blob/master/versions/3.0.2.md#referenceObject
-	CallbackRef struct {
-		Ref   string
-		Value map[string]*PathItem
-	}
-
-	// ExampleRef represents an OpenAPI reference to a Example object as defined in
-	// https://github.com/OAI/OpenAPI-Specification/blob/master/versions/3.0.2.md#referenceObject
-	ExampleRef struct {
-		Ref   string
-		Value *Example
-
-		// LinkRef represents an OpenAPI reference to a Link object as defined in
-		// https://github.com/OAI/OpenAPI-Specification/blob/master/versions/3.0.2.md#referenceObject
-	}
-
-	// LinkRef represents an OpenAPI reference to a Link object as defined in
-	// https://github.com/OAI/OpenAPI-Specification/blob/master/versions/3.0.2.md#referenceObject
-	LinkRef struct {
-		Ref   string
-		Value *Link
-	}
-
-	// RequestBodyRef represents an OpenAPI reference to a RequestBody object as defined in
-	// https://github.com/OAI/OpenAPI-Specification/blob/master/versions/3.0.2.md#referenceObject
-	RequestBodyRef struct {
-		Ref   string
-		Value *RequestBody
-	}
-
-	// SecuritySchemeRef represents an OpenAPI reference to a SecurityScheme object as defined in
-	// https://github.com/OAI/OpenAPI-Specification/blob/master/versions/3.0.2.md#referenceObject
-	SecuritySchemeRef struct {
-		Ref   string
-		Value *SecurityScheme
 	}
 )

@@ -120,9 +120,8 @@ func NewSchema() *Schema {
 	return &js
 }
 
-// JSON serializes the schema into JSON.
-// It makes sure the "$schema" standard field is set if needed prior to
-// delegating to the standard // JSON marshaler.
+// JSON serializes the schema into JSON. It makes sure the "$schema" standard
+// field is set if needed prior to delegating to the standard JSON marshaler.
 func (s *Schema) JSON() ([]byte, error) {
 	if s.Ref == "" {
 		s.Schema = SchemaRef
