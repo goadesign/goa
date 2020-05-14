@@ -42,10 +42,10 @@ func New(root *expr.RootExpr) *OpenAPI {
 
 	var (
 		info     = buildInfo(root.API)
-		comps    = buildComponents(root.API)
+		comps    = buildComponents(root)
 		servers  = buildServers(root.API.Servers)
 		paths    = buildPaths(root.API.HTTP)
-		security = buildSecurityRequirements(root.API.Requirements)
+		security = buildSecurityRequirements(root)
 	)
 
 	return &OpenAPI{
@@ -81,11 +81,12 @@ func buildInfo(api *expr.APIExpr) *Info {
 	return info
 }
 
-func buildComponents(api *expr.APIExpr) *Components {
-	schemes := buildSecuritySchemes(api.Requirements)
-	schemesRef := make(map[string]*SecuritySchemeRef, len(schemes))
-	for _, s := range schemes {
-		schemesRef[s.Name] = &SecuritySchemeRef{Value: s}
+func buildComponents(root *expr.RootExpr) *Components {
+	schemesRef := make(map[string]*SecuritySchemeRef, len(root.Schemes))
+	for _, se := range root.Schemes {
+		schemesRef[se.SchemeName] = &SecuritySchemeRef{
+			Value: buildSecurityScheme(se),
+		}
 	}
 	return &Components{
 		SecuritySchemes: schemesRef,
@@ -146,83 +147,93 @@ func buildServers(servers []*expr.ServerExpr) []*Server {
 	return svrs
 }
 
-func buildSecurityRequirements(sec []*expr.SecurityExpr) []map[string][]string {
-	return nil
+func buildSecurityRequirements(root *expr.RootExpr) []map[string][]string {
+	var srs []map[string][]string
+	for _, sch := range root.Schemes {
+		sr := make(map[string][]string)
+		switch sch.Kind {
+		case expr.BasicAuthKind, expr.APIKeyKind:
+			sr[sch.SchemeName] = []string{}
+		case expr.OAuth2Kind, expr.JWTKind:
+			scopes := make([]string, len(sch.Scopes))
+			for i, scope := range sch.Scopes {
+				scopes[i] = scope.Name
+			}
+			sr[sch.SchemeName] = scopes
+		}
+		srs = append(srs, sr)
+	}
+	return srs
 }
 
-func buildSecuritySchemes(sec []*expr.SecurityExpr) []*SecurityScheme {
-	var schemes []*SecurityScheme
-	for _, s := range sec {
-		for _, se := range s.Schemes {
-			switch se.Kind {
-			case expr.BasicAuthKind:
-				schemes = append(schemes, &SecurityScheme{
-					Type:        "http",
-					Scheme:      "basic",
-					Description: se.Description,
-					Extensions:  openapi.ExtensionsFromExpr(se.Meta),
-				})
-			case expr.APIKeyKind:
-				schemes = append(schemes, &SecurityScheme{
-					Type:        "apiKey",
-					Description: se.Description,
-					In:          se.In,
-					Name:        se.Name,
-					Extensions:  openapi.ExtensionsFromExpr(se.Meta),
-				})
-			case expr.JWTKind:
-				schemes = append(schemes, &SecurityScheme{
-					Type:        "http",
-					Scheme:      "Bearer",
-					Description: se.Description,
-					Name:        se.Name,
-					Extensions:  openapi.ExtensionsFromExpr(se.Meta),
-				})
-			case expr.OAuth2Kind:
-				scopes := make(map[string]string, len(s.Scopes))
-				for _, scope := range se.Scopes {
-					scopes[scope.Name] = scope.Description
+func buildSecurityScheme(se *expr.SchemeExpr) *SecurityScheme {
+	var scheme *SecurityScheme
+	switch se.Kind {
+	case expr.BasicAuthKind:
+		scheme = &SecurityScheme{
+			Type:        "http",
+			Scheme:      "basic",
+			Description: se.Description,
+			Extensions:  openapi.ExtensionsFromExpr(se.Meta),
+		}
+	case expr.APIKeyKind:
+		scheme = &SecurityScheme{
+			Type:        "apiKey",
+			Description: se.Description,
+			In:          se.In,
+			Name:        se.Name,
+			Extensions:  openapi.ExtensionsFromExpr(se.Meta),
+		}
+	case expr.JWTKind:
+		scheme = &SecurityScheme{
+			Type:        "http",
+			Scheme:      "Bearer",
+			Description: se.Description,
+			Extensions:  openapi.ExtensionsFromExpr(se.Meta),
+		}
+	case expr.OAuth2Kind:
+		scopes := make(map[string]string, len(se.Scopes))
+		for _, scope := range se.Scopes {
+			scopes[scope.Name] = scope.Description
+		}
+		var flows OAuthFlows
+		for _, f := range se.Flows {
+			switch f.Kind {
+			case expr.AuthorizationCodeFlowKind:
+				flows.AuthorizationCode = &OAuthFlow{
+					AuthorizationURL: f.AuthorizationURL,
+					TokenURL:         f.TokenURL,
+					RefreshURL:       f.RefreshURL,
+					Scopes:           scopes,
 				}
-				var flows OAuthFlows
-				for _, f := range se.Flows {
-					switch f.Kind {
-					case expr.AuthorizationCodeFlowKind:
-						flows.AuthorizationCode = &OAuthFlow{
-							AuthorizationURL: f.AuthorizationURL,
-							TokenURL:         f.TokenURL,
-							RefreshURL:       f.RefreshURL,
-							Scopes:           scopes,
-						}
-					case expr.ClientCredentialsFlowKind:
-						flows.ClientCredentials = &OAuthFlow{
-							TokenURL:   f.TokenURL,
-							RefreshURL: f.RefreshURL,
-							Scopes:     scopes,
-						}
-					case expr.ImplicitFlowKind:
-						flows.Implicit = &OAuthFlow{
-							AuthorizationURL: f.AuthorizationURL,
-							RefreshURL:       f.RefreshURL,
-							Scopes:           scopes,
-						}
-					case expr.PasswordFlowKind:
-						flows.Password = &OAuthFlow{
-							TokenURL:   f.TokenURL,
-							RefreshURL: f.RefreshURL,
-							Scopes:     scopes,
-						}
-					}
+			case expr.ClientCredentialsFlowKind:
+				flows.ClientCredentials = &OAuthFlow{
+					TokenURL:   f.TokenURL,
+					RefreshURL: f.RefreshURL,
+					Scopes:     scopes,
 				}
-				schemes = append(schemes, &SecurityScheme{
-					Type:        "oauth2",
-					Description: se.Description,
-					Flows:       &flows,
-					Extensions:  openapi.ExtensionsFromExpr(se.Meta),
-				})
+			case expr.ImplicitFlowKind:
+				flows.Implicit = &OAuthFlow{
+					AuthorizationURL: f.AuthorizationURL,
+					RefreshURL:       f.RefreshURL,
+					Scopes:           scopes,
+				}
+			case expr.PasswordFlowKind:
+				flows.Password = &OAuthFlow{
+					TokenURL:   f.TokenURL,
+					RefreshURL: f.RefreshURL,
+					Scopes:     scopes,
+				}
 			}
 		}
+		scheme = &SecurityScheme{
+			Type:        "oauth2",
+			Description: se.Description,
+			Flows:       &flows,
+			Extensions:  openapi.ExtensionsFromExpr(se.Meta),
+		}
 	}
-	return schemes
+	return scheme
 }
 
 // defaultURI returns the first HTTP URI defined in the host. It substitutes any URI

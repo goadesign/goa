@@ -65,36 +65,72 @@ type (
 	}
 )
 
-func (r *ParameterRef) MarshalJSON() ([]byte, error)      { return marshalRef(r.Ref, r.Value) }
-func (r *ResponseRef) MarshalJSON() ([]byte, error)       { return marshalRef(r.Ref, r.Value) }
-func (r *HeaderRef) MarshalJSON() ([]byte, error)         { return marshalRef(r.Ref, r.Value) }
-func (r *CallbackRef) MarshalJSON() ([]byte, error)       { return marshalRef(r.Ref, r.Value) }
-func (r *ExampleRef) MarshalJSON() ([]byte, error)        { return marshalRef(r.Ref, r.Value) }
-func (r *LinkRef) MarshalJSON() ([]byte, error)           { return marshalRef(r.Ref, r.Value) }
-func (r *RequestBodyRef) MarshalJSON() ([]byte, error)    { return marshalRef(r.Ref, r.Value) }
-func (r *SecuritySchemeRef) MarshalJSON() ([]byte, error) { return marshalRef(r.Ref, r.Value) }
+func (r *ParameterRef) MarshalJSON() ([]byte, error)      { return marshalJSONRef(r.Ref, r.Value) }
+func (r *ResponseRef) MarshalJSON() ([]byte, error)       { return marshalJSONRef(r.Ref, r.Value) }
+func (r *HeaderRef) MarshalJSON() ([]byte, error)         { return marshalJSONRef(r.Ref, r.Value) }
+func (r *CallbackRef) MarshalJSON() ([]byte, error)       { return marshalJSONRef(r.Ref, r.Value) }
+func (r *ExampleRef) MarshalJSON() ([]byte, error)        { return marshalJSONRef(r.Ref, r.Value) }
+func (r *LinkRef) MarshalJSON() ([]byte, error)           { return marshalJSONRef(r.Ref, r.Value) }
+func (r *RequestBodyRef) MarshalJSON() ([]byte, error)    { return marshalJSONRef(r.Ref, r.Value) }
+func (r *SecuritySchemeRef) MarshalJSON() ([]byte, error) { return marshalJSONRef(r.Ref, r.Value) }
 
-func (r *ParameterRef) UnmarshalJSON(d []byte) error      { return unmarshalRef(d, &r.Ref, &r.Value) }
-func (r *ResponseRef) UnmarshalJSON(d []byte) error       { return unmarshalRef(d, &r.Ref, &r.Value) }
-func (r *HeaderRef) UnmarshalJSON(d []byte) error         { return unmarshalRef(d, &r.Ref, &r.Value) }
-func (r *CallbackRef) UnmarshalJSON(d []byte) error       { return unmarshalRef(d, &r.Ref, &r.Value) }
-func (r *ExampleRef) UnmarshalJSON(d []byte) error        { return unmarshalRef(d, &r.Ref, &r.Value) }
-func (r *LinkRef) UnmarshalJSON(d []byte) error           { return unmarshalRef(d, &r.Ref, &r.Value) }
-func (r *RequestBodyRef) UnmarshalJSON(d []byte) error    { return unmarshalRef(d, &r.Ref, &r.Value) }
-func (r *SecuritySchemeRef) UnmarshalJSON(d []byte) error { return unmarshalRef(d, &r.Ref, &r.Value) }
+func (r *ParameterRef) MarshalYAML() (interface{}, error)      { return marshalYAMLRef(r.Ref, r.Value) }
+func (r *ResponseRef) MarshalYAML() (interface{}, error)       { return marshalYAMLRef(r.Ref, r.Value) }
+func (r *HeaderRef) MarshalYAML() (interface{}, error)         { return marshalYAMLRef(r.Ref, r.Value) }
+func (r *CallbackRef) MarshalYAML() (interface{}, error)       { return marshalYAMLRef(r.Ref, r.Value) }
+func (r *ExampleRef) MarshalYAML() (interface{}, error)        { return marshalYAMLRef(r.Ref, r.Value) }
+func (r *LinkRef) MarshalYAML() (interface{}, error)           { return marshalYAMLRef(r.Ref, r.Value) }
+func (r *RequestBodyRef) MarshalYAML() (interface{}, error)    { return marshalYAMLRef(r.Ref, r.Value) }
+func (r *SecuritySchemeRef) MarshalYAML() (interface{}, error) { return marshalYAMLRef(r.Ref, r.Value) }
 
-type refs struct {
-	Ref string `json:"$ref,omitempty"`
+func (r *ParameterRef) UnmarshalJSON(d []byte) error   { return unmarshalJSONRef(d, &r.Ref, &r.Value) }
+func (r *ResponseRef) UnmarshalJSON(d []byte) error    { return unmarshalJSONRef(d, &r.Ref, &r.Value) }
+func (r *HeaderRef) UnmarshalJSON(d []byte) error      { return unmarshalJSONRef(d, &r.Ref, &r.Value) }
+func (r *CallbackRef) UnmarshalJSON(d []byte) error    { return unmarshalJSONRef(d, &r.Ref, &r.Value) }
+func (r *ExampleRef) UnmarshalJSON(d []byte) error     { return unmarshalJSONRef(d, &r.Ref, &r.Value) }
+func (r *LinkRef) UnmarshalJSON(d []byte) error        { return unmarshalJSONRef(d, &r.Ref, &r.Value) }
+func (r *RequestBodyRef) UnmarshalJSON(d []byte) error { return unmarshalJSONRef(d, &r.Ref, &r.Value) }
+func (r *SecuritySchemeRef) UnmarshalJSON(d []byte) error {
+	return unmarshalJSONRef(d, &r.Ref, &r.Value)
 }
 
-func marshalRef(ref string, v interface{}) ([]byte, error) {
+func (r *ParameterRef) UnmarshalYAML(u func(interface{}) error) error {
+	return unmarshalYAMLRef(u, &r.Ref, &r.Value)
+}
+func (r *ResponseRef) UnmarshalYAML(u func(interface{}) error) error {
+	return unmarshalYAMLRef(u, &r.Ref, &r.Value)
+}
+func (r *HeaderRef) UnmarshalYAML(u func(interface{}) error) error {
+	return unmarshalYAMLRef(u, &r.Ref, &r.Value)
+}
+func (r *CallbackRef) UnmarshalYAML(u func(interface{}) error) error {
+	return unmarshalYAMLRef(u, &r.Ref, &r.Value)
+}
+func (r *ExampleRef) UnmarshalYAML(u func(interface{}) error) error {
+	return unmarshalYAMLRef(u, &r.Ref, &r.Value)
+}
+func (r *LinkRef) UnmarshalYAML(u func(interface{}) error) error {
+	return unmarshalYAMLRef(u, &r.Ref, &r.Value)
+}
+func (r *RequestBodyRef) UnmarshalYAML(u func(interface{}) error) error {
+	return unmarshalYAMLRef(u, &r.Ref, &r.Value)
+}
+func (r *SecuritySchemeRef) UnmarshalYAML(u func(interface{}) error) error {
+	return unmarshalYAMLRef(u, &r.Ref, &r.Value)
+}
+
+type refs struct {
+	Ref string `json:"$ref,omitempty" yaml:"$ref,omitempty"`
+}
+
+func marshalJSONRef(ref string, v interface{}) ([]byte, error) {
 	if len(ref) > 0 {
 		return json.Marshal(&refs{ref})
 	}
 	return json.Marshal(v)
 }
 
-func unmarshalRef(data []byte, ref *string, v interface{}) error {
+func unmarshalJSONRef(data []byte, ref *string, v interface{}) error {
 	refs := &refs{}
 	if err := json.Unmarshal(data, refs); err == nil {
 		if len(refs.Ref) > 0 {
@@ -103,4 +139,22 @@ func unmarshalRef(data []byte, ref *string, v interface{}) error {
 		}
 	}
 	return json.Unmarshal(data, v)
+}
+
+func marshalYAMLRef(ref string, v interface{}) (interface{}, error) {
+	if len(ref) > 0 {
+		return &refs{ref}, nil
+	}
+	return v, nil
+}
+
+func unmarshalYAMLRef(u func(interface{}) error, ref *string, v interface{}) error {
+	refs := &refs{}
+	if err := u(refs); err == nil {
+		if len(refs.Ref) > 0 {
+			*ref = refs.Ref
+			return nil
+		}
+	}
+	return u(v)
 }
