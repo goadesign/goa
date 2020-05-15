@@ -3,7 +3,6 @@ package openapiv3
 import (
 	"fmt"
 	"net/url"
-	"regexp"
 	"strings"
 
 	"goa.design/goa/v3/expr"
@@ -29,8 +28,6 @@ type EndpointBodies struct {
 	RequestBody    *AnnotatedSchema
 	ResponseBodies map[int]*AnnotatedSchema
 }
-
-var uriRegex = regexp.MustCompile("^https?://")
 
 // New returns the OpenAPI v3 specification for the given API.
 // It returns nil if the design does not define HTTP endpoints.
