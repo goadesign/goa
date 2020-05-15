@@ -58,6 +58,7 @@ func New(root *expr.RootExpr) *OpenAPI {
 	}
 }
 
+// buildInfo builds the OpenAPI Info object.
 func buildInfo(api *expr.APIExpr) *Info {
 	info := &Info{
 		Title:          api.Title,
@@ -81,6 +82,7 @@ func buildInfo(api *expr.APIExpr) *Info {
 	return info
 }
 
+// buildComponents builds the OpenAPI Components object.
 func buildComponents(root *expr.RootExpr) *Components {
 	var schemesRef map[string]*SecuritySchemeRef
 	{
@@ -104,6 +106,8 @@ func buildComponents(root *expr.RootExpr) *Components {
 	}
 }
 
+// buildPaths builds the OpenAPI Paths map with key as the HTTP path string and
+// the value as the corresponding PathItem object.
 func buildPaths(h *expr.HTTPExpr) map[string]*PathItem {
 	var paths = make(map[string]*PathItem)
 	for _, svc := range h.Services {
@@ -193,6 +197,8 @@ func buildOperation(key string, r *expr.RouteExpr) *Operation {
 	}
 }
 
+// buildServers builds the OpenAPI Server objects from the given server
+// expressions.
 func buildServers(servers []*expr.ServerExpr) []*Server {
 	var svrs []*Server
 	for _, svr := range servers {
@@ -340,44 +346,24 @@ func buildSecurityScheme(se *expr.SchemeExpr) *SecurityScheme {
 
 // defaultURI returns the first HTTP URI defined in the host. It substitutes any URI
 // parameters with their default values or the first item in their enum.
-func defaultURI(h *expr.HostExpr) (uri string) {
-	var uExpr expr.URIExpr
-
+func defaultURI(h *expr.HostExpr) string {
+	// Get the first URL expression in the host by default.
+	// Host expression must have at least one URI (validations would have failed
+	// otherwise).
+	uExpr := h.URIs[0]
 	// attempt to find the first HTTP/HTTPS URL
-	for _, uExpr = range h.URIs {
-		var urlStr = string(uExpr)
-		if uriRegex.MatchString(urlStr) {
-			uri = urlStr
+	for _, ue := range h.URIs {
+		s := ue.Scheme()
+		if s == "http" || s == "https" {
+			uExpr = ue
 			break
 		}
 	}
-
-	// if uri is empty i.e there were no URLs
-	// starting with http/https, then pick the first URL
-	if uri == "" && len(h.URIs) > 0 {
-		uExpr = h.URIs[0]
-		uri = string(uExpr)
+	uri, err := h.URIString(uExpr)
+	if err != nil {
+		panic(err) // should never hit this!
 	}
-
-	vars := expr.AsObject(h.Variables.Type)
-	if len(*vars) == 0 {
-		return
-	}
-
-	// substitute any URI parameters with their
-	// default values or first item in their enum
-	for _, p := range uExpr.Params() {
-		for _, v := range *vars {
-			if p == v.Name {
-				def := v.Attribute.DefaultValue
-				if def == nil {
-					def = v.Attribute.Validation.Values[0]
-				}
-				uri = strings.Replace(uri, fmt.Sprintf("{%s}", p), fmt.Sprintf("%v", def), -1)
-			}
-		}
-	}
-	return
+	return uri
 }
 
 // buildBodyTypes traverses the design and builds the JSON schemas that

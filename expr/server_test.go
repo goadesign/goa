@@ -34,7 +34,7 @@ func TestServerExprValidate(t *testing.T) {
 		validURIs = []URIExpr{
 			validURI,
 		}
-		errNoURI            = fmt.Errorf("host must defined at least one URI")
+		errNoURI            = fmt.Errorf("host must define at least one URI")
 		errServiceUndefined = fmt.Errorf("service %q undefined", bar)
 	)
 
@@ -173,7 +173,7 @@ func TestHostExprValidate(t *testing.T) {
 				Type: d,
 			}
 		}
-		errNoURI                          = fmt.Errorf("host must defined at least one URI")
+		errNoURI                          = fmt.Errorf("host must define at least one URI")
 		errMalformedURI                   = fmt.Errorf("malformed URI %q", malformedURI)
 		errMissingSchemeURI               = fmt.Errorf("missing scheme for URI %q, scheme must be one of 'http', 'https', 'grpc' or 'grpcs'", missingSchemeURI)
 		errInvalidSchemeURI               = fmt.Errorf("invalid scheme for URI %q, scheme must be one of 'http', 'https', 'grpc' or 'grpcs'", invalidSchemeURI)

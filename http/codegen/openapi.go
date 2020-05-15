@@ -55,13 +55,13 @@ func OpenAPIFiles(root *expr.RootExpr) ([]*codegen.File, error) {
 		{
 			spec := openapiv3.New(root)
 			jsonSection := &codegen.SectionTemplate{
-				Name:    "openapi",
+				Name:    "openapi_v3",
 				FuncMap: template.FuncMap{"toJSON": toJSON},
 				Source:  "{{ toJSON .}}",
 				Data:    spec,
 			}
 			yamlSection := &codegen.SectionTemplate{
-				Name:    "openapi",
+				Name:    "openapi_v3",
 				FuncMap: template.FuncMap{"toYAML": toYAML},
 				Source:  "{{ toYAML .}}",
 				Data:    spec,

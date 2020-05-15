@@ -52,7 +52,7 @@ func TestOutputPath(t *testing.T) {
 	if err != nil {
 		t.Fatalf("OpenAPI failed with %s", err)
 	}
-	c := 2 // number of files we expect
+	c := 4 // number of files we expect
 	if len(o) != c {
 		t.Fatalf("unexpected number of OpenAPI files %d instead of %d", len(o), c)
 	}
@@ -61,6 +61,12 @@ func TestOutputPath(t *testing.T) {
 	}
 	if o[1].Path != filepath.Join("gen", "http", "openapi.yaml") {
 		t.Errorf("invalid output path %#v", o[1].Path)
+	}
+	if o[2].Path != filepath.Join("gen", "http", "openapi_v3.json") {
+		t.Errorf("invalid output path %#v", o[2].Path)
+	}
+	if o[3].Path != filepath.Join("gen", "http", "openapi_v3.yaml") {
+		t.Errorf("invalid output path %#v", o[3].Path)
 	}
 }
 
@@ -93,7 +99,7 @@ func TestSections(t *testing.T) {
 			if err != nil {
 				t.Fatalf("OpenAPI failed with %s", err)
 			}
-			for i, o := range oFiles {
+			for i, o := range v2Files(oFiles) {
 				tname := fmt.Sprintf("file%d", i)
 				s := o.SectionTemplates
 				t.Run(tname, func(t *testing.T) {
@@ -160,7 +166,7 @@ func TestValidations(t *testing.T) {
 			if len(oFiles) == 0 {
 				t.Fatalf("No swagger files")
 			}
-			for i, o := range oFiles {
+			for i, o := range v2Files(oFiles) {
 				tname := fmt.Sprintf("file%d", i)
 				s := o.SectionTemplates
 				t.Run(tname, func(t *testing.T) {
@@ -225,7 +231,7 @@ func TestExtensions(t *testing.T) {
 			if len(oFiles) == 0 {
 				t.Fatalf("No swagger files")
 			}
-			for i, o := range oFiles {
+			for i, o := range v2Files(oFiles) {
 				tname := fmt.Sprintf("file%d", i)
 				s := o.SectionTemplates
 				t.Run(tname, func(t *testing.T) {
@@ -278,4 +284,14 @@ func validateSwagger(b []byte) error {
 		return errors.New("nil swagger")
 	}
 	return nil
+}
+
+func v2Files(files []*codegen.File) []*codegen.File {
+	var v2 []*codegen.File
+	for _, f := range files {
+		if filepath.Base(f.Path) == "openapi.go" {
+			v2 = append(v2, f)
+		}
+	}
+	return v2
 }

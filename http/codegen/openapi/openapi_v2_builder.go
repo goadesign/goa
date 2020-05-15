@@ -135,27 +135,23 @@ func extensionsFromExprWithPrefix(mdata expr.MetaExpr, prefix string) map[string
 // defaultURI returns the first URI defined in the host. It substitutes any URI
 // parameters with their default values or the first item in their enum.
 func defaultURI(h *expr.HostExpr) string {
-	if len(h.URIs) == 0 {
-		return ""
-	}
-	u := h.URIs[0]
-	ustr := string(u)
-	vars := expr.AsObject(h.Variables.Type)
-	if len(*vars) == 0 {
-		return ustr
-	}
-	for _, p := range u.Params() {
-		for _, v := range *vars {
-			if p == v.Name {
-				def := v.Attribute.DefaultValue
-				if def == nil {
-					def = v.Attribute.Validation.Values[0]
-				}
-				ustr = strings.Replace(ustr, fmt.Sprintf("{%s}", p), fmt.Sprintf("%v", def), -1)
-			}
+	// Get the first URL expression in the host by default.
+	// Host expression must have at least one URI (validations would have failed
+	// otherwise).
+	uExpr := h.URIs[0]
+	// attempt to find the first HTTP/HTTPS URL
+	for _, ue := range h.URIs {
+		s := ue.Scheme()
+		if s == "http" || s == "https" {
+			uExpr = ue
+			break
 		}
 	}
-	return ustr
+	uri, err := h.URIString(uExpr)
+	if err != nil {
+		panic(err) // should never hit this!
+	}
+	return uri
 }
 
 // mustGenerate returns true if the meta indicates that a OpenAPI specification should be
