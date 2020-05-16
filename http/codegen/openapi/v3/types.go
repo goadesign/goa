@@ -263,10 +263,15 @@ func toString(val interface{}) string {
 	}
 }
 
-// hashType is helper function that computes a unique hash for the given object. The
-// algorithm returns the same value for two objects that are structurally
-// equivalent.
-func hashType(t expr.DataType, h hash.Hash64) uint64 {
+// hashAttribute is helper function that computes a unique hash for the given
+// attribute type. The algorithm returns the same value for two attributes whose
+// types are structurally equivalent unless they are result types with different
+// identifiers. Structurally identical means same primitive types, arrays with
+// structurally equivalent element types, maps with structurally equivalent key
+// and value types or object with identical attribute names and structurally
+// equivalent types and identical set of required attributes.
+func hashAttribute(att *expr.AttributeExpr, h hash.Hash64) uint64 {
+	t := att.Type
 	switch t.Kind() {
 
 	case expr.ObjectKind:
@@ -279,36 +284,41 @@ func hashType(t expr.DataType, h hash.Hash64) uint64 {
 		var res uint64
 		for _, k := range keys {
 			kh := hashString(k, h)
-			vh := hashType(o.Attribute(k).Type, h)
+			vh := hashAttribute(o.Attribute(k), h)
 			res = res ^ orderedHash(kh, vh, h)
+		}
+		// Objects with a different set of required attributes should produce
+		// different hashes.
+		for _, req := range att.Validation.Required {
+			rh := hashString(req, h)
+			res = res ^ rh
 		}
 		return res
 
 	case expr.ArrayKind:
 		kh := hashString("[]", h)
-		vh := hashType(expr.AsArray(t).ElemType.Type, h)
+		vh := hashAttribute(expr.AsArray(t).ElemType, h)
 		return orderedHash(kh, vh, h)
 
 	case expr.MapKind:
 		m := expr.AsMap(t)
-		kh := hashType(m.KeyType.Type, h)
-		vh := hashType(m.ElemType.Type, h)
+		kh := hashAttribute(m.KeyType, h)
+		vh := hashAttribute(m.ElemType, h)
 		return orderedHash(kh, vh, h)
 
 	case expr.UserTypeKind:
-		return hashType(t.(expr.UserType).Attribute().Type, h)
+		return hashAttribute(t.(expr.UserType).Attribute(), h)
 
 	case expr.ResultTypeKind:
+		// The identifier specified in the design for result types should drive
+		// the computation of the hash.
 		rt := t.(*expr.ResultTypeExpr)
-		if rt.Identifier != "" {
-			res := hashString(rt.Identifier, h)
-			view := rt.AttributeExpr.Meta["view"]
-			if len(view) > 0 {
-				return orderedHash(res, hashString(view[0], h), h)
-			}
-			return res
+		res := hashString(rt.Identifier, h)
+		view := rt.AttributeExpr.Meta["view"]
+		if len(view) > 0 {
+			return orderedHash(res, hashString(view[0], h), h)
 		}
-		return hashType(rt.AttributeExpr.Type, h)
+		return res
 
 	default: // Primitives or Any
 		return hashString(t.Name(), h)
