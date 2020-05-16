@@ -25,6 +25,7 @@ func TestHashType(t *testing.T) {
 		{"string", expr.String, 11035750783128163470},
 		{"bytes", expr.Bytes, 9376284137219620846},
 		{"any", expr.Any, 15626582615256966821},
+		{"array", &expr.Array{ElemType: &expr.AttributeExpr{Type: expr.String}}, 8211109112007081595},
 	}
 	h := fnv.New64()
 	for _, c := range cases {

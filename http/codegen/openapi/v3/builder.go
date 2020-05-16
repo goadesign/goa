@@ -3,7 +3,7 @@ package openapiv3
 import (
 	"fmt"
 	"net/url"
-	"strings"
+	"regexp"
 
 	"goa.design/goa/v3/expr"
 	"goa.design/goa/v3/http/codegen/openapi"
@@ -321,6 +321,17 @@ func buildSecurityScheme(se *expr.SchemeExpr) *SecurityScheme {
 		}
 	}
 	return scheme
+}
+
+func buildExternalDocs(docs *expr.DocsExpr, meta expr.MetaExpr) *ExternalDocs {
+	if docs == nil {
+		return nil
+	}
+	return &ExternalDocs{
+		Description: docs.Description,
+		URL:         docs.URL,
+		Extensions:  openapi.ExtensionsFromExpr(meta),
+	}
 }
 
 // defaultURI returns the first HTTP URI defined in the host. It substitutes any URI
