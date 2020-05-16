@@ -127,7 +127,11 @@ func (svc *HTTPServiceExpr) FullPaths() []string {
 			basePaths = []string{Root.API.HTTP.Path}
 		}
 		for _, base := range basePaths {
-			paths = append(paths, httppath.Clean(path.Join(base, p)))
+			v := httppath.Clean(path.Join(base, p)) // path has trailing slash
+			if strings.HasSuffix(p, "/") {
+				v += "/"
+			}
+			paths = append(paths, v)
 		}
 	}
 	return paths
