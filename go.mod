@@ -16,8 +16,8 @@ require (
 	github.com/sergi/go-diff v1.1.0
 	github.com/smartystreets/goconvey v1.6.4 // indirect
 	github.com/zach-klippenstein/goregen v0.0.0-20160303162051-795b5e3961ea
-	golang.org/x/sys v0.0.0-20190624142023-c5567b49c5d0 // indirect
-	golang.org/x/tools v0.0.0-20200507205054-480da3ebd79c
+	golang.org/x/lint v0.0.0-20200302205851-738671d3881b // indirect
+	golang.org/x/tools v0.0.0-20200509030707-2212a7e161a5
 	google.golang.org/grpc v1.28.0
 	gopkg.in/yaml.v2 v2.2.8
 )

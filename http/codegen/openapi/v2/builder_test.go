@@ -1,4 +1,4 @@
-package openapi
+package openapiv2
 
 import (
 	"testing"

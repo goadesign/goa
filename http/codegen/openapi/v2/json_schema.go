@@ -1,4 +1,4 @@
-package openapi
+package openapiv2
 
 import (
 	"encoding/json"
@@ -8,6 +8,7 @@ import (
 
 	"goa.design/goa/v3/codegen"
 	"goa.design/goa/v3/expr"
+	"goa.design/goa/v3/http/codegen/openapi"
 )
 
 type (
@@ -456,7 +457,7 @@ func buildAttributeSchema(api *expr.APIExpr, s *Schema, at *expr.AttributeExpr) 
 	s.DefaultValue = toStringMap(at.DefaultValue)
 	s.Description = at.Description
 	s.Example = at.Example(api.Random())
-	s.Extensions = ExtensionsFromExpr(at.Meta)
+	s.Extensions = openapi.ExtensionsFromExpr(at.Meta)
 	initAttributeValidation(s, at)
 
 	return s
@@ -505,27 +506,6 @@ func AttributeTypeSchemaWithPrefix(api *expr.APIExpr, at *expr.AttributeExpr, pr
 	s := TypeSchemaWithPrefix(api, at.Type, prefix)
 	initAttributeValidation(s, at)
 	return s
-}
-
-// toStringMap converts map[interface{}]interface{} to a map[string]interface{}
-// when possible.
-func toStringMap(val interface{}) interface{} {
-	switch actual := val.(type) {
-	case map[interface{}]interface{}:
-		m := make(map[string]interface{})
-		for k, v := range actual {
-			m[toString(k)] = toStringMap(v)
-		}
-		return m
-	case []interface{}:
-		mapSlice := make([]interface{}, len(actual))
-		for i, e := range actual {
-			mapSlice[i] = toStringMap(e)
-		}
-		return mapSlice
-	default:
-		return actual
-	}
 }
 
 // toString returns the string representation of the given type.

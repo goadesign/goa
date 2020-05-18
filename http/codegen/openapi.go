@@ -9,7 +9,7 @@ import (
 
 	"goa.design/goa/v3/codegen"
 	"goa.design/goa/v3/expr"
-	"goa.design/goa/v3/http/codegen/openapi"
+	openapiv2 "goa.design/goa/v3/http/codegen/openapi/v2"
 	openapiv3 "goa.design/goa/v3/http/codegen/openapi/v3"
 )
 
@@ -24,7 +24,7 @@ func OpenAPIFiles(root *expr.RootExpr) ([]*codegen.File, error) {
 	{
 		// OpenAPI v2
 		{
-			spec, err := openapi.NewV2(root, root.API.Servers[0].Hosts[0])
+			spec, err := openapiv2.NewV2(root, root.API.Servers[0].Hosts[0])
 			if err != nil {
 				return nil, err
 			}

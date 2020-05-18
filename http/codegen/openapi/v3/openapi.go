@@ -1,7 +1,5 @@
 package openapiv3
 
-import "goa.design/goa/v3/http/codegen/openapi"
-
 type (
 	// OpenAPI is a data structure that encodes the information needed to
 	// generate an OpenAPI specification as defined in
@@ -61,7 +59,7 @@ type (
 	// Components represents an OpenAPI Components object as defined in
 	// https://github.com/OAI/OpenAPI-Specification/blob/master/versions/3.0.3.md#componentsObject
 	Components struct {
-		Schemas         map[string]*openapi.Schema    `json:"schemas,omitempty" yaml:"schemas,omitempty"`
+		Schemas         map[string]*Schema            `json:"schemas,omitempty" yaml:"schemas,omitempty"`
 		Parameters      map[string]*ParameterRef      `json:"parameters,omitempty" yaml:"parameters,omitempty"`
 		Headers         map[string]*HeaderRef         `json:"headers,omitempty" yaml:"headers,omitempty"`
 		RequestBodies   map[string]*RequestBodyRef    `json:"requestBodies,omitempty" yaml:"requestBodies,omitempty"`
@@ -144,7 +142,7 @@ type (
 		AllowReserved   bool                   `json:"allowReserved,omitempty" yaml:"allowReserved,omitempty"`
 		Deprecated      bool                   `json:"deprecated,omitempty" yaml:"deprecated,omitempty"`
 		Required        bool                   `json:"required,omitempty" yaml:"required,omitempty"`
-		Schema          *openapi.Schema        `json:"schema,omitempty" yaml:"schema,omitempty"`
+		Schema          *Schema                `json:"schema,omitempty" yaml:"schema,omitempty"`
 		Example         interface{}            `json:"example,omitempty" yaml:"example,omitempty"`
 		Examples        map[string]*ExampleRef `json:"examples,omitempty" yaml:"examples,omitempty"`
 		Content         map[string]*MediaType  `json:"content,omitempty" yaml:"content,omitempty"`
@@ -164,7 +162,7 @@ type (
 	// MediaType represents an OpenAPI Media Type object as defined in
 	// https://github.com/OAI/OpenAPI-Specification/blob/master/versions/3.0.3.md#mediaTypeObject
 	MediaType struct {
-		Schema     *openapi.Schema        `json:"schema,omitempty" yaml:"schema,omitempty"`
+		Schema     *Schema                `json:"schema,omitempty" yaml:"schema,omitempty"`
 		Example    interface{}            `json:"example,omitempty" yaml:"example,omitempty"`
 		Examples   map[string]*ExampleRef `json:"examples,omitempty" yaml:"examples,omitempty"`
 		Encoding   map[string]*Encoding   `json:"encoding,omitempty" yaml:"encoding,omitempty"`
@@ -188,7 +186,7 @@ type (
 		Description string                 `json:"description,omitempty" yaml:"description,omitempty"`
 		Deprecated  bool                   `json:"deprecated,omitempty" yaml:"deprecated,omitempty"`
 		Required    bool                   `json:"required,omitempty" yaml:"required,omitempty"`
-		Schema      *openapi.Schema        `json:"schema,omitempty" yaml:"schema,omitempty"`
+		Schema      *Schema                `json:"schema,omitempty" yaml:"schema,omitempty"`
 		Example     interface{}            `json:"example,omitempty" yaml:"example,omitempty"`
 		Examples    map[string]*ExampleRef `json:"examples,omitempty" yaml:"examples,omitempty"`
 		Content     map[string]*MediaType  `json:"content,omitempty" yaml:"content,omitempty"`

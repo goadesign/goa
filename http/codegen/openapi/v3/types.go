@@ -17,7 +17,7 @@ type (
 	// OpenAPI code generator may provide additional information in descriptions.
 	// This is used for views and for streaming requests and responses.
 	AnnotatedSchema struct {
-		*openapi.Schema
+		*Schema
 		Note string
 	}
 
@@ -98,7 +98,7 @@ func buildBodyTypes(api *expr.APIExpr) (map[string]map[string]*EndpointBodies, m
 }
 
 func (sf *schemafier) schemafy(attr *expr.AttributeExpr) *AnnotatedSchema {
-	s := openapi.NewSchema()
+	s := NewSchema()
 	as := &AnnotatedSchema{Schema: s}
 	var note string
 
@@ -107,34 +107,34 @@ func (sf *schemafier) schemafy(attr *expr.AttributeExpr) *AnnotatedSchema {
 	case expr.Primitive:
 		switch t.Kind() {
 		case expr.UIntKind, expr.UInt64Kind, expr.UInt32Kind:
-			s.Type = openapi.Type("integer")
+			s.Type = Type("integer")
 		case expr.IntKind, expr.Int64Kind:
-			s.Type = openapi.Type("integer")
+			s.Type = Type("integer")
 			s.Format = "int64"
 		case expr.Int32Kind:
-			s.Type = openapi.Type("integer")
+			s.Type = Type("integer")
 			s.Format = "int32"
 		case expr.Float32Kind:
-			s.Type = openapi.Type("number")
+			s.Type = Type("number")
 			s.Format = "float"
 		case expr.Float64Kind:
-			s.Type = openapi.Type("number")
+			s.Type = Type("number")
 			s.Format = "double"
 		case expr.BytesKind, expr.AnyKind:
-			s.Type = openapi.Type("string")
+			s.Type = Type("string")
 			s.Format = "binary"
 		default:
-			s.Type = openapi.Type(t.Name())
+			s.Type = Type(t.Name())
 		}
 	case *expr.Array:
-		s.Type = openapi.Array
+		s.Type = Array
 		es := sf.schemafy(t.ElemType)
 		s.Items = es.Schema
 		if es.Note != "" {
 			note = "items: " + es.Note
 		}
 	case *expr.Object:
-		s.Type = openapi.Object
+		s.Type = Object
 		var itemNotes []string
 		for _, nat := range *t {
 			prop := sf.schemafy(nat.Attribute)
@@ -147,7 +147,7 @@ func (sf *schemafier) schemafy(attr *expr.AttributeExpr) *AnnotatedSchema {
 			note = strings.Join(itemNotes, "\n")
 		}
 	case *expr.Map:
-		s.Type = openapi.Object
+		s.Type = Object
 		s.AdditionalProperties = true
 	case *expr.UserTypeExpr:
 		t.Hash()

@@ -13,7 +13,7 @@ import (
 
 	"github.com/go-openapi/loads"
 	"goa.design/goa/v3/codegen"
-	"goa.design/goa/v3/http/codegen/openapi"
+	openapiv2 "goa.design/goa/v3/http/codegen/openapi/v2"
 	"goa.design/goa/v3/http/codegen/testdata"
 )
 
@@ -29,7 +29,7 @@ func TestOpenAPI(t *testing.T) {
 	}
 	for k, c := range cases {
 		// Reset global variables
-		openapi.Definitions = make(map[string]*openapi.Schema)
+		openapiv2.Definitions = make(map[string]*openapiv2.Schema)
 		root := RunHTTPDSL(t, c.DSL)
 		spec, err := OpenAPIFiles(root)
 		if err != nil {
@@ -46,7 +46,7 @@ func TestOpenAPI(t *testing.T) {
 
 func TestOutputPath(t *testing.T) {
 	// Reset global variables
-	openapi.Definitions = make(map[string]*openapi.Schema)
+	openapiv2.Definitions = make(map[string]*openapiv2.Schema)
 	root := RunHTTPDSL(t, testdata.SimpleDSL)
 	o, err := OpenAPIFiles(root)
 	if err != nil {
@@ -93,7 +93,7 @@ func TestSections(t *testing.T) {
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
 			// Reset global variables
-			openapi.Definitions = make(map[string]*openapi.Schema)
+			openapiv2.Definitions = make(map[string]*openapiv2.Schema)
 			root := RunHTTPDSL(t, c.DSL)
 			oFiles, err := OpenAPIFiles(root)
 			if err != nil {
@@ -157,7 +157,7 @@ func TestValidations(t *testing.T) {
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
 			// Reset global variables
-			openapi.Definitions = make(map[string]*openapi.Schema)
+			openapiv2.Definitions = make(map[string]*openapiv2.Schema)
 			root := RunHTTPDSL(t, c.DSL)
 			oFiles, err := OpenAPIFiles(root)
 			if err != nil {
@@ -222,7 +222,7 @@ func TestExtensions(t *testing.T) {
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
 			// Reset global variables
-			openapi.Definitions = make(map[string]*openapi.Schema)
+			openapiv2.Definitions = make(map[string]*openapiv2.Schema)
 			root := RunHTTPDSL(t, c.DSL)
 			oFiles, err := OpenAPIFiles(root)
 			if err != nil {

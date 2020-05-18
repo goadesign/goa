@@ -1,4 +1,4 @@
-package openapi
+package openapiv2
 
 import (
 	"encoding/json"
@@ -11,6 +11,7 @@ import (
 
 	"goa.design/goa/v3/codegen"
 	"goa.design/goa/v3/expr"
+	"goa.design/goa/v3/http/codegen/openapi"
 )
 
 // NewV2 returns the OpenAPI v2 specification for the given API.
@@ -48,7 +49,7 @@ func NewV2(root *expr.RootExpr, h *expr.HostExpr) (*V2, error) {
 			Contact:        root.API.Contact,
 			License:        root.API.License,
 			Version:        root.API.Version,
-			Extensions:     ExtensionsFromExpr(root.API.Meta),
+			Extensions:     openapi.ExtensionsFromExpr(root.API.Meta),
 		},
 		Host:                host,
 		BasePath:            basePath,
@@ -64,7 +65,7 @@ func NewV2(root *expr.RootExpr, h *expr.HostExpr) (*V2, error) {
 		if !mustGenerate(res.Meta) || !mustGenerate(res.ServiceExpr.Meta) {
 			continue
 		}
-		for k, v := range ExtensionsFromExpr(res.Meta) {
+		for k, v := range openapi.ExtensionsFromExpr(res.Meta) {
 			s.Paths[k] = v
 		}
 		for _, fs := range res.FileServers {
@@ -92,44 +93,6 @@ func NewV2(root *expr.RootExpr, h *expr.HostExpr) (*V2, error) {
 		}
 	}
 	return s, nil
-}
-
-// ExtensionsFromExpr generates swagger extensions from the given meta
-// expression.
-func ExtensionsFromExpr(mdata expr.MetaExpr) map[string]interface{} {
-	return extensionsFromExprWithPrefix(mdata, "swagger:extension:")
-}
-
-// extensionsFromExprWithPrefix generates swagger extensions from
-// the given meta expression with keys starting the given prefix.
-func extensionsFromExprWithPrefix(mdata expr.MetaExpr, prefix string) map[string]interface{} {
-	if !strings.HasSuffix(prefix, ":") {
-		prefix += ":"
-	}
-	extensions := make(map[string]interface{})
-	for key, value := range mdata {
-		if !strings.HasPrefix(key, prefix) {
-			continue
-		}
-		name := key[len(prefix):]
-		if strings.Contains(name, ":") {
-			continue
-		}
-		if !strings.HasPrefix(name, "x-") {
-			continue
-		}
-		val := value[0]
-		ival := interface{}(val)
-		if err := json.Unmarshal([]byte(val), &ival); err != nil {
-			extensions[name] = val
-			continue
-		}
-		extensions[name] = ival
-	}
-	if len(extensions) == 0 {
-		return nil
-	}
-	return extensions
 }
 
 // defaultURI returns the first URI defined in the host. It substitutes any URI
@@ -191,7 +154,7 @@ func securitySpecFromExpr(root *expr.RootExpr) map[string]*SecurityDefinition {
 				for _, s := range req.Schemes {
 					sd := SecurityDefinition{
 						Description: s.Description,
-						Extensions:  ExtensionsFromExpr(s.Meta),
+						Extensions:  openapi.ExtensionsFromExpr(s.Meta),
 					}
 
 					switch s.Kind {
@@ -460,7 +423,7 @@ func paramFor(at *expr.AttributeExpr, name, in string, required bool) *Parameter
 		p.Type = "string"
 		p.Format = "byte"
 	}
-	p.Extensions = ExtensionsFromExpr(at.Meta)
+	p.Extensions = openapi.ExtensionsFromExpr(at.Meta)
 	initValidations(at, p)
 	return p
 }
@@ -498,7 +461,7 @@ func responseSpecFromExpr(s *V2, root *expr.RootExpr, r *expr.HTTPResponseExpr, 
 		schema = AttributeTypeSchemaWithPrefix(root.API, r.Body, typeNamePrefix)
 	}
 	if schema != nil {
-		schema.Extensions = ExtensionsFromExpr(r.Meta)
+		schema.Extensions = openapi.ExtensionsFromExpr(r.Meta)
 	}
 	headers := headersFromExpr(r.Headers)
 	desc := r.Description
@@ -509,7 +472,7 @@ func responseSpecFromExpr(s *V2, root *expr.RootExpr, r *expr.HTTPResponseExpr, 
 		Description: desc,
 		Schema:      schema,
 		Headers:     headers,
-		Extensions:  ExtensionsFromExpr(r.Meta),
+		Extensions:  openapi.ExtensionsFromExpr(r.Meta),
 	}
 }
 
@@ -598,7 +561,7 @@ func buildPathFromFileServer(s *V2, root *expr.RootExpr, fs *expr.HTTPFileServer
 		}
 		p := path.(*Path)
 		p.Get = operation
-		p.Extensions = ExtensionsFromExpr(fs.Meta)
+		p.Extensions = openapi.ExtensionsFromExpr(fs.Meta)
 	}
 }
 
@@ -742,7 +705,7 @@ func buildPathFromExpr(s *V2, root *expr.RootExpr, h *expr.HostExpr, route *expr
 			Responses:    responses,
 			Schemes:      schemes,
 			Deprecated:   false,
-			Extensions:   ExtensionsFromExpr(endpoint.MethodExpr.Meta),
+			Extensions:   openapi.ExtensionsFromExpr(endpoint.MethodExpr.Meta),
 			Security:     requirements,
 		}
 
@@ -781,7 +744,7 @@ func buildPathFromExpr(s *V2, root *expr.RootExpr, h *expr.HostExpr, route *expr
 		case "PATCH":
 			p.Patch = operation
 		}
-		p.Extensions = ExtensionsFromExpr(route.Endpoint.Meta)
+		p.Extensions = openapi.ExtensionsFromExpr(route.Endpoint.Meta)
 	}
 }
 
@@ -906,4 +869,57 @@ func initValidations(attr *expr.AttributeExpr, def interface{}) {
 	if val.MaxLength != nil {
 		initMaxLengthValidation(def, expr.IsArray(attr.Type), val.MaxLength)
 	}
+}
+
+// toStringMap converts map[interface{}]interface{} to a map[string]interface{}
+// when possible.
+func toStringMap(val interface{}) interface{} {
+	switch actual := val.(type) {
+	case map[interface{}]interface{}:
+		m := make(map[string]interface{})
+		for k, v := range actual {
+			m[toString(k)] = toStringMap(v)
+		}
+		return m
+	case []interface{}:
+		mapSlice := make([]interface{}, len(actual))
+		for i, e := range actual {
+			mapSlice[i] = toStringMap(e)
+		}
+		return mapSlice
+	default:
+		return actual
+	}
+}
+
+// extensionsFromExprWithPrefix generates swagger extensions from
+// the given meta expression with keys starting the given prefix.
+func extensionsFromExprWithPrefix(mdata expr.MetaExpr, prefix string) map[string]interface{} {
+	if !strings.HasSuffix(prefix, ":") {
+		prefix += ":"
+	}
+	extensions := make(map[string]interface{})
+	for key, value := range mdata {
+		if !strings.HasPrefix(key, prefix) {
+			continue
+		}
+		name := key[len(prefix):]
+		if strings.Contains(name, ":") {
+			continue
+		}
+		if !strings.HasPrefix(name, "x-") {
+			continue
+		}
+		val := value[0]
+		ival := interface{}(val)
+		if err := json.Unmarshal([]byte(val), &ival); err != nil {
+			extensions[name] = val
+			continue
+		}
+		extensions[name] = ival
+	}
+	if len(extensions) == 0 {
+		return nil
+	}
+	return extensions
 }
