@@ -17,7 +17,7 @@ func New(
 	return &Server{
 		Mounts: []*MountPoint{
 			{"MethodMultiEndpoints1", "GET", "/server_multi_endpoints/{id}"},
-			{"MethodMultiEndpoints2", "POST", "/server_multi_endpoints/"},
+			{"MethodMultiEndpoints2", "POST", "/server_multi_endpoints"},
 		},
 		MethodMultiEndpoints1: NewMethodMultiEndpoints1Handler(e.MethodMultiEndpoints1, mux, decoder, encoder, errhandler, formatter),
 		MethodMultiEndpoints2: NewMethodMultiEndpoints2Handler(e.MethodMultiEndpoints2, mux, decoder, encoder, errhandler, formatter),
