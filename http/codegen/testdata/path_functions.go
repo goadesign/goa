@@ -6,21 +6,45 @@ func MethodPathNoParamServicePathNoParamPath() string {
 }
 `
 
-var PathNoParamTrailingSlashCode = `// MethodPathNoParamTrailingSlashServicePathNoParamTrailingSlashPath returns the URL path to the ServicePathNoParamTrailingSlash service MethodPathNoParamTrailingSlash HTTP endpoint.
-func MethodPathNoParamTrailingSlashServicePathNoParamTrailingSlashPath() string {
-	return "/one/two/"
+var BasePathNoTrailing_SlashWithBasePathNoTrailingCode = `// SlashWithBasePathNoTrailingBasePathNoTrailingPath returns the URL path to the BasePathNoTrailing service SlashWithBasePathNoTrailing HTTP endpoint.
+func SlashWithBasePathNoTrailingBasePathNoTrailingPath() string {
+	return "/foo"
+}
+`
+
+var BasePathNoTrailing_TrailingWithBasePathNoTrailingCode = `// TrailingWithBasePathNoTrailingBasePathNoTrailingPath returns the URL path to the BasePathNoTrailing service TrailingWithBasePathNoTrailing HTTP endpoint.
+func TrailingWithBasePathNoTrailingBasePathNoTrailingPath() string {
+	return "/foo/bar/"
+}
+`
+
+var BasePathWithTrailingSlash_WithBasePathWithTrailingCode = `// SlashWithBasePathWithTrailingBasePathWithTrailingPath returns the URL path to the BasePathWithTrailing service SlashWithBasePathWithTrailing HTTP endpoint.
+func SlashWithBasePathWithTrailingBasePathWithTrailingPath() string {
+	return "/foo/"
+}
+`
+
+var NoBasePath_SlashNoBasePathCode = `// SlashNoBasePathNoBasePathPath returns the URL path to the NoBasePath service SlashNoBasePath HTTP endpoint.
+func SlashNoBasePathNoBasePathPath() string {
+	return "/"
+}
+`
+
+var NoBasePath_TrailingNoBasePathCode = `// TrailingNoBasePathNoBasePathPath returns the URL path to the NoBasePath service TrailingNoBasePath HTTP endpoint.
+func TrailingNoBasePathNoBasePathPath() string {
+	return "/foo/"
+}
+`
+
+var BasePath_SpecialTrailingSlashCode = `// SpecialTrailingSlashBasePathPath returns the URL path to the BasePath service SpecialTrailingSlash HTTP endpoint.
+func SpecialTrailingSlashBasePathPath() string {
+	return "/foo/"
 }
 `
 
 var PathOneParamCode = `// MethodPathOneParamServicePathOneParamPath returns the URL path to the ServicePathOneParam service MethodPathOneParam HTTP endpoint.
 func MethodPathOneParamServicePathOneParamPath(a string) string {
 	return fmt.Sprintf("/one/%v/two", a)
-}
-`
-
-var PathOneParamTrailingSlashCode = `// MethodPathOneParamTrailingSlashServicePathOneParamTrailingSlashPath returns the URL path to the ServicePathOneParamTrailingSlash service MethodPathOneParamTrailingSlash HTTP endpoint.
-func MethodPathOneParamTrailingSlashServicePathOneParamTrailingSlashPath(a string) string {
-	return fmt.Sprintf("/one/%v/", a)
 }
 `
 
