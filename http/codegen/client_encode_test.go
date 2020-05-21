@@ -94,6 +94,7 @@ func TestClientEncode(t *testing.T) {
 
 		{"query-string-default", testdata.PayloadQueryStringDefaultDSL, testdata.PayloadQueryStringDefaultEncodeCode},
 		{"query-primitive-string-default", testdata.PayloadQueryPrimitiveStringDefaultDSL, testdata.PayloadQueryPrimitiveStringDefaultEncodeCode},
+		{"query-jwt-authorization", testdata.PayloadJWTAuthorizationQueryDSL, testdata.PayloadJWTAuthorizationQueryEncodeCode},
 
 		{"header-string", testdata.PayloadHeaderStringDSL, testdata.PayloadHeaderStringEncodeCode},
 		{"header-string-validate", testdata.PayloadHeaderStringValidateDSL, testdata.PayloadHeaderStringValidateEncodeCode},
@@ -111,6 +112,8 @@ func TestClientEncode(t *testing.T) {
 
 		{"header-string-default", testdata.PayloadHeaderStringDefaultDSL, testdata.PayloadHeaderStringDefaultEncodeCode},
 		{"header-primitive-string-default", testdata.PayloadHeaderPrimitiveStringDefaultDSL, testdata.PayloadHeaderPrimitiveStringDefaultEncodeCode},
+		{"header-jwt-authorization", testdata.PayloadJWTAuthorizationHeaderDSL, testdata.PayloadJWTAuthorizationHeaderEncodeCode},
+		{"header-jwt-custom-header", testdata.PayloadJWTAuthorizationCustomHeaderDSL, testdata.PayloadJWTAuthorizationCustomHeaderEncodeCode},
 
 		{"body-string", testdata.PayloadBodyStringDSL, testdata.PayloadBodyStringEncodeCode},
 		{"body-string-validate", testdata.PayloadBodyStringValidateDSL, testdata.PayloadBodyStringValidateEncodeCode},

@@ -1338,6 +1338,24 @@ var PayloadQueryPrimitiveStringDefaultDSL = func() {
 	})
 }
 
+var PayloadJWTAuthorizationQueryDSL = func() {
+	var JWT = JWTSecurity("jwt", func() {
+		Scope("api:read")
+	})
+	Service("ServiceHeaderPrimitiveStringDefault", func() {
+		Method("MethodHeaderPrimitiveStringDefault", func() {
+			Security(JWT)
+			Payload(func() {
+				Token("token", String)
+			})
+			HTTP(func() {
+				GET("")
+				Param("token")
+			})
+		})
+	})
+}
+
 var PayloadExtendedQueryStringDSL = func() {
 	var UT = Type("UserType", func() {
 		Attribute("q", String)
@@ -1731,6 +1749,42 @@ var PayloadHeaderPrimitiveStringDefaultDSL = func() {
 			HTTP(func() {
 				GET("")
 				Header("h")
+			})
+		})
+	})
+}
+
+var PayloadJWTAuthorizationHeaderDSL = func() {
+	var JWT = JWTSecurity("jwt", func() {
+		Scope("api:read")
+	})
+	Service("ServiceHeaderPrimitiveStringDefault", func() {
+		Method("MethodHeaderPrimitiveStringDefault", func() {
+			Security(JWT)
+			Payload(func() {
+				Token("token", String)
+			})
+			HTTP(func() {
+				GET("")
+			})
+		})
+	})
+}
+
+var PayloadJWTAuthorizationCustomHeaderDSL = func() {
+	var JWT = JWTSecurity("jwt", func() {
+		Scope("api:read")
+	})
+	Service("ServiceHeaderPrimitiveStringDefault", func() {
+		Method("MethodHeaderPrimitiveStringDefault", func() {
+			Security(JWT)
+			Payload(func() {
+				Token("token", String)
+				Required("token")
+			})
+			HTTP(func() {
+				GET("")
+				Header("token:X-Auth")
 			})
 		})
 	})
