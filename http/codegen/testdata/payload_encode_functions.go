@@ -1449,6 +1449,25 @@ func EncodeMethodQueryPrimitiveStringDefaultRequest(encoder func(*http.Request) 
 }
 `
 
+var PayloadJWTAuthorizationQueryEncodeCode = `// EncodeMethodHeaderPrimitiveStringDefaultRequest returns an encoder for
+// requests sent to the ServiceHeaderPrimitiveStringDefault
+// MethodHeaderPrimitiveStringDefault server.
+func EncodeMethodHeaderPrimitiveStringDefaultRequest(encoder func(*http.Request) goahttp.Encoder) func(*http.Request, interface{}) error {
+	return func(req *http.Request, v interface{}) error {
+		p, ok := v.(*serviceheaderprimitivestringdefault.MethodHeaderPrimitiveStringDefaultPayload)
+		if !ok {
+			return goahttp.ErrInvalidType("ServiceHeaderPrimitiveStringDefault", "MethodHeaderPrimitiveStringDefault", "*serviceheaderprimitivestringdefault.MethodHeaderPrimitiveStringDefaultPayload", v)
+		}
+		values := req.URL.Query()
+		if p.Token != nil {
+			values.Add("token", *p.Token)
+		}
+		req.URL.RawQuery = values.Encode()
+		return nil
+	}
+}
+`
+
 var PayloadHeaderStringEncodeCode = `// EncodeMethodHeaderStringRequest returns an encoder for requests sent to the
 // ServiceHeaderString MethodHeaderString server.
 func EncodeMethodHeaderStringRequest(encoder func(*http.Request) goahttp.Encoder) func(*http.Request, interface{}) error {
@@ -1680,6 +1699,46 @@ func EncodeMethodHeaderPrimitiveStringDefaultRequest(encoder func(*http.Request)
 		p, ok := v.(string)
 		if !ok {
 			return goahttp.ErrInvalidType("ServiceHeaderPrimitiveStringDefault", "MethodHeaderPrimitiveStringDefault", "string", v)
+		}
+		return nil
+	}
+}
+`
+
+var PayloadJWTAuthorizationHeaderEncodeCode = `// EncodeMethodHeaderPrimitiveStringDefaultRequest returns an encoder for
+// requests sent to the ServiceHeaderPrimitiveStringDefault
+// MethodHeaderPrimitiveStringDefault server.
+func EncodeMethodHeaderPrimitiveStringDefaultRequest(encoder func(*http.Request) goahttp.Encoder) func(*http.Request, interface{}) error {
+	return func(req *http.Request, v interface{}) error {
+		p, ok := v.(*serviceheaderprimitivestringdefault.MethodHeaderPrimitiveStringDefaultPayload)
+		if !ok {
+			return goahttp.ErrInvalidType("ServiceHeaderPrimitiveStringDefault", "MethodHeaderPrimitiveStringDefault", "*serviceheaderprimitivestringdefault.MethodHeaderPrimitiveStringDefaultPayload", v)
+		}
+		if p.Token != nil {
+			head := *p.Token
+			if !strings.Contains(head, " ") {
+				req.Header.Set("Authorization", "Bearer "+head)
+			} else {
+				req.Header.Set("Authorization", head)
+			}
+		}
+		return nil
+	}
+}
+`
+
+var PayloadJWTAuthorizationCustomHeaderEncodeCode = `// EncodeMethodHeaderPrimitiveStringDefaultRequest returns an encoder for
+// requests sent to the ServiceHeaderPrimitiveStringDefault
+// MethodHeaderPrimitiveStringDefault server.
+func EncodeMethodHeaderPrimitiveStringDefaultRequest(encoder func(*http.Request) goahttp.Encoder) func(*http.Request, interface{}) error {
+	return func(req *http.Request, v interface{}) error {
+		p, ok := v.(*serviceheaderprimitivestringdefault.MethodHeaderPrimitiveStringDefaultPayload)
+		if !ok {
+			return goahttp.ErrInvalidType("ServiceHeaderPrimitiveStringDefault", "MethodHeaderPrimitiveStringDefault", "*serviceheaderprimitivestringdefault.MethodHeaderPrimitiveStringDefaultPayload", v)
+		}
+		{
+			head := p.Token
+			req.Header.Set("X-Auth", head)
 		}
 		return nil
 	}

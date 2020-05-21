@@ -761,7 +761,7 @@ func buildMethodData(m *expr.MethodExpr, svcPkgName string, service *expr.Servic
 	for _, req := range m.Requirements {
 		var rs SchemesData
 		for _, s := range req.Schemes {
-			sch := buildSchemeData(s, m)
+			sch := BuildSchemeData(s, m)
 			rs = rs.Append(sch)
 			schemes = schemes.Append(sch)
 		}
@@ -876,8 +876,8 @@ func initStreamData(data *MethodData, m *expr.MethodExpr, vname, rname, resultRe
 	data.StreamingPayloadEx = spayloadEx
 }
 
-// buildSchemeData builds the scheme data for the given scheme and method expr.
-func buildSchemeData(s *expr.SchemeExpr, m *expr.MethodExpr) *SchemeData {
+// BuildSchemeData builds the scheme data for the given scheme and method expr.
+func BuildSchemeData(s *expr.SchemeExpr, m *expr.MethodExpr) *SchemeData {
 	if !expr.IsObject(m.Payload.Type) {
 		return nil
 	}
