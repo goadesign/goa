@@ -14,11 +14,73 @@ var PathNoParamDSL = func() {
 	})
 }
 
-var PathNoParamTrailingSlashDSL = func() {
-	Service("ServicePathNoParamTrailingSlash", func() {
-		Method("MethodPathNoParamTrailingSlash", func() {
+var BasePathNoTrailing_SlashWithBasePathNoTrailingDSL = func() {
+	Service("BasePathNoTrailing", func() {
+		HTTP(func() {
+			Path("foo")
+		})
+		Method("SlashWithBasePathNoTrailing", func() {
 			HTTP(func() {
-				GET("/one/two/")
+				GET("/")
+			})
+		})
+	})
+}
+
+var BasePathNoTrailing_TrailingWithBasePathNoTrailingDSL = func() {
+	Service("BasePathNoTrailing", func() {
+		HTTP(func() {
+			Path("foo")
+		})
+		Method("TrailingWithBasePathNoTrailing", func() {
+			HTTP(func() {
+				GET("/bar/")
+			})
+		})
+	})
+}
+
+var BasePathWithTrailingSlash_WithBasePathWithTrailingDSL = func() {
+	Service("BasePathWithTrailing", func() {
+		HTTP(func() {
+			Path("foo/")
+		})
+		Method("SlashWithBasePathWithTrailing", func() {
+			HTTP(func() {
+				GET("/")
+			})
+		})
+	})
+}
+
+var NoBasePath_SlashNoBasePathDSL = func() {
+	Service("NoBasePath", func() {
+		Method("SlashNoBasePath", func() {
+			HTTP(func() {
+				GET("/")
+			})
+		})
+	})
+}
+
+var NoBasePath_TrailingNoBasePathDSL = func() {
+	Service("NoBasePath", func() {
+		Method("TrailingNoBasePath", func() {
+			HTTP(func() {
+				GET("/foo/")
+			})
+		})
+	})
+}
+
+var BasePath_SpecialTrailingSlashDSL = func() {
+	Service("BasePath", func() {
+		HTTP(func() {
+			Path("/foo")
+		})
+		Method("SpecialTrailingSlash", func() {
+			HTTP(func() {
+				GET("/./")
 			})
 		})
 	})
@@ -30,17 +92,6 @@ var PathOneParamDSL = func() {
 			Payload(String)
 			HTTP(func() {
 				GET("one/{a}/two")
-			})
-		})
-	})
-}
-
-var PathOneParamTrailingSlashDSL = func() {
-	Service("ServicePathOneParamTrailingSlash", func() {
-		Method("MethodPathOneParamTrailingSlash", func() {
-			Payload(String)
-			HTTP(func() {
-				GET("one/{a}/")
 			})
 		})
 	})
