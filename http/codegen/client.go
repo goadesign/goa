@@ -395,12 +395,12 @@ func {{ .RequestEncoder }}(encoder func(*http.Request) goahttp.Encoder) func(*ht
 			{{- else }}
 			{
 			{{- end }}
+			head := {{ if .FieldPointer }}*{{ end }}p.{{ .FieldName }}
 			{{- if (and (eq .Name "Authorization") (isBearer $.HeaderSchemes)) }}
-		if !strings.Contains({{ if .FieldPointer }}*{{ end }}p.{{ .FieldName }}, " ") {
-			req.Header.Set({{ printf "%q" .Name }}, "Bearer "+{{ if .FieldPointer }}*{{ end }}p.{{ .FieldName }})
+		if !strings.Contains(head, " ") {
+			req.Header.Set({{ printf "%q" .Name }}, "Bearer "+head)
 		} else {
 			{{- end }}
-			head := {{ if .FieldPointer }}*{{ end }}p.{{ .FieldName }}
 			{{- if eq .Type.Name "array" }}
 			for _, val := range head {
 				{{- if eq .Type.ElemType.Type.Name "string" }}

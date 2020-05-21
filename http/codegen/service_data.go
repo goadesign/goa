@@ -121,6 +121,9 @@ type (
 		// apply to the method and are encoded in the request query
 		// string.
 		QuerySchemes service.SchemesData
+		// Requirements contains the security requirements for the
+		// method.
+		Requirements service.RequirementsData
 
 		// server
 
@@ -764,14 +767,19 @@ func (d ServicesData) analyze(hs *expr.HTTPServiceExpr) *ServiceData {
 		payload := buildPayloadData(a, rd)
 
 		var (
+			reqs  service.RequirementsData
 			hsch  service.SchemesData
 			bosch service.SchemesData
 			qsch  service.SchemesData
 			basch *service.SchemeData
 		)
 		{
-			for _, req := range ep.Requirements {
-				for _, s := range req.Schemes {
+
+			for _, req := range a.Requirements {
+				var rs service.SchemesData
+				for _, sch := range req.Schemes {
+					s := service.BuildSchemeData(sch, a.MethodExpr)
+					rs = rs.Append(s)
 					switch s.Type {
 					case "Basic":
 						basch = s
@@ -786,6 +794,7 @@ func (d ServicesData) analyze(hs *expr.HTTPServiceExpr) *ServiceData {
 						}
 					}
 				}
+				reqs = append(reqs, &service.RequirementData{Schemes: rs, Scopes: req.Scopes})
 			}
 		}
 
