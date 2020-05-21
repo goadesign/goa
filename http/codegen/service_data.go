@@ -876,6 +876,7 @@ func (d ServicesData) analyze(hs *expr.HTTPServiceExpr) *ServiceData {
 			RequestInit:     requestInit,
 			RequestEncoder:  requestEncoder,
 			ResponseDecoder: fmt.Sprintf("Decode%sResponse", ep.VarName),
+			Requirements:    reqs,
 		}
 		if a.MethodExpr.IsStreaming() {
 			initWebSocketData(ad, a, rd)
