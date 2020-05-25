@@ -58,23 +58,15 @@ func TestBuildPathFromExpr(t *testing.T) {
 		"multipart request": {
 			multipartRequest: true,
 			expected: Operation{
-				Consumes: []string{"multipart/form-data"},
-				Parameters: []*Parameter{
-					&Parameter{
-						In: "formData",
-					},
-				},
+				Consumes:   []string{"multipart/form-data"},
+				Parameters: []*Parameter{{In: "formData"}},
 			},
 		},
 		"non multipart request": {
 			multipartRequest: false,
 			expected: Operation{
-				Consumes: nil,
-				Parameters: []*Parameter{
-					&Parameter{
-						In: "body",
-					},
-				},
+				Consumes:   nil,
+				Parameters: []*Parameter{{In: "body"}},
 			},
 		},
 	}

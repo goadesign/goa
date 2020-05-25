@@ -1,14 +1,12 @@
-package openapiv2
+package openapi
 
 import (
 	"encoding/json"
 	"fmt"
-	"reflect"
 	"strconv"
 
 	"goa.design/goa/v3/codegen"
 	"goa.design/goa/v3/expr"
-	"goa.design/goa/v3/http/codegen/openapi"
 )
 
 type (
@@ -346,66 +344,64 @@ func TypeSchemaWithPrefix(api *expr.APIExpr, t expr.DataType, prefix string) *Sc
 	return s
 }
 
-type mergeItems []struct {
-	a, b   interface{}
-	needed bool
+// AttributeTypeSchema produces the JSON schema corresponding to the given attribute.
+func AttributeTypeSchema(api *expr.APIExpr, at *expr.AttributeExpr) *Schema {
+	return AttributeTypeSchemaWithPrefix(api, at, "")
 }
 
-func (s *Schema) createMergeItems(other *Schema) mergeItems {
-	minInt := func(a, b *int) bool { return (a == nil && b != nil) || (a != nil && b != nil && *a > *b) }
-	maxInt := func(a, b *int) bool { return (a == nil && b != nil) || (a != nil && b != nil && *a < *b) }
-	minFloat64 := func(a, b *float64) bool { return (a == nil && b != nil) || (a != nil && b != nil && *a > *b) }
-	maxFloat64 := func(a, b *float64) bool { return (a == nil && b != nil) || (a != nil && b != nil && *a < *b) }
+// AttributeTypeSchemaWithPrefix produces the JSON schema corresponding to the given attribute
+// and adds the provided prefix to the type name
+func AttributeTypeSchemaWithPrefix(api *expr.APIExpr, at *expr.AttributeExpr, prefix string) *Schema {
+	s := TypeSchemaWithPrefix(api, at.Type, prefix)
+	initAttributeValidation(s, at)
+	return s
+}
 
-	return mergeItems{
-		{&s.ID, other.ID, s.ID == ""},
-		{&s.Type, other.Type, s.Type == ""},
-		{&s.Ref, other.Ref, s.Ref == ""},
-		{&s.Items, other.Items, s.Items == nil},
-		{&s.DefaultValue, other.DefaultValue, s.DefaultValue == nil},
-		{&s.Title, other.Title, s.Title == ""},
-		{&s.Media, other.Media, s.Media == nil},
-		{&s.ReadOnly, other.ReadOnly, !s.ReadOnly},
-		{&s.PathStart, other.PathStart, s.PathStart == ""},
-		{&s.Enum, other.Enum, s.Enum == nil},
-		{&s.Format, other.Format, s.Format == ""},
-		{&s.Pattern, other.Pattern, s.Pattern == ""},
-		{&s.AdditionalProperties, other.AdditionalProperties, !s.AdditionalProperties},
-		{&s.Minimum, other.Minimum, minFloat64(s.Minimum, other.Minimum)},
-		{&s.Maximum, other.Maximum, maxFloat64(s.Maximum, other.Maximum)},
-		{&s.MinLength, other.MinLength, minInt(s.MinLength, other.MinLength)},
-		{&s.MaxLength, other.MaxLength, maxInt(s.MaxLength, other.MaxLength)},
-		{&s.MinItems, other.MinItems, minInt(s.MinItems, other.MinItems)},
-		{&s.MaxItems, other.MaxItems, maxInt(s.MaxItems, other.MaxItems)},
+// ToString returns the string representation of the given type.
+func ToString(val interface{}) string {
+	switch actual := val.(type) {
+	case string:
+		return actual
+	case int:
+		return strconv.Itoa(actual)
+	case float64:
+		return strconv.FormatFloat(actual, 'f', -1, 64)
+	case bool:
+		return strconv.FormatBool(actual)
+	default:
+		panic("unexpected key type")
 	}
 }
 
-// Merge does a two level deep merge of other into s.
-func (s *Schema) Merge(other *Schema) {
-	items := s.createMergeItems(other)
-	for _, v := range items {
-		if v.needed && v.b != nil {
-			reflect.Indirect(reflect.ValueOf(v.a)).Set(reflect.ValueOf(v.b))
+// ToStringMap converts map[interface{}]interface{} to a map[string]interface{}
+// when possible.
+func ToStringMap(val interface{}) interface{} {
+	switch actual := val.(type) {
+	case map[interface{}]interface{}:
+		m := make(map[string]interface{})
+		for k, v := range actual {
+			m[ToString(k)] = ToStringMap(v)
 		}
-	}
-
-	for n, p := range other.Properties {
-		if _, ok := s.Properties[n]; !ok {
-			if s.Properties == nil {
-				s.Properties = make(map[string]*Schema)
-			}
-			s.Properties[n] = p
+		return m
+	case []interface{}:
+		mapSlice := make([]interface{}, len(actual))
+		for i, e := range actual {
+			mapSlice[i] = ToStringMap(e)
 		}
+		return mapSlice
+	default:
+		return actual
 	}
+}
 
-	for n, d := range other.Definitions {
-		if _, ok := s.Definitions[n]; !ok {
-			s.Definitions[n] = d
-		}
-	}
+// MarshalJSON returns the JSON encoding of s.
+func (s *Schema) MarshalJSON() ([]byte, error) {
+	return MarshalJSON((*_Schema)(s), s.Extensions)
+}
 
-	s.Links = append(s.Links, other.Links...)
-	s.Required = append(s.Required, other.Required...)
+// MarshalYAML returns value which marshaled in place of the original value
+func (s *Schema) MarshalYAML() (interface{}, error) {
+	return MarshalYAML((*_Schema)(s), s.Extensions)
 }
 
 // Dup creates a shallow clone of the given schema.
@@ -454,10 +450,10 @@ func buildAttributeSchema(api *expr.APIExpr, s *Schema, at *expr.AttributeExpr) 
 		// Ref is exclusive with other fields
 		return s
 	}
-	s.DefaultValue = toStringMap(at.DefaultValue)
+	s.DefaultValue = ToStringMap(at.DefaultValue)
 	s.Description = at.Description
 	s.Example = at.Example(api.Random())
-	s.Extensions = openapi.ExtensionsFromExpr(at.Meta)
+	s.Extensions = ExtensionsFromExpr(at.Meta)
 	initAttributeValidation(s, at)
 
 	return s
@@ -493,35 +489,6 @@ func initAttributeValidation(s *Schema, at *expr.AttributeExpr) {
 		}
 	}
 	s.Required = val.Required
-}
-
-// AttributeTypeSchema produces the JSON schema corresponding to the given attribute.
-func AttributeTypeSchema(api *expr.APIExpr, at *expr.AttributeExpr) *Schema {
-	return AttributeTypeSchemaWithPrefix(api, at, "")
-}
-
-// AttributeTypeSchemaWithPrefix produces the JSON schema corresponding to the given attribute
-// and adds the provided prefix to the type name
-func AttributeTypeSchemaWithPrefix(api *expr.APIExpr, at *expr.AttributeExpr, prefix string) *Schema {
-	s := TypeSchemaWithPrefix(api, at.Type, prefix)
-	initAttributeValidation(s, at)
-	return s
-}
-
-// toString returns the string representation of the given type.
-func toString(val interface{}) string {
-	switch actual := val.(type) {
-	case string:
-		return actual
-	case int:
-		return strconv.Itoa(actual)
-	case float64:
-		return strconv.FormatFloat(actual, 'f', -1, 64)
-	case bool:
-		return strconv.FormatBool(actual)
-	default:
-		panic("unexpected key type")
-	}
 }
 
 // toSchemaHrefs produces hrefs that replace the path wildcards with JSON
@@ -565,14 +532,4 @@ func buildResultTypeSchema(api *expr.APIExpr, mt *expr.ResultTypeExpr, view stri
 		panic(fmt.Sprintf("failed to project media type %#v: %s", mt.Identifier, err)) // bug
 	}
 	buildAttributeSchema(api, s, projected.AttributeExpr)
-}
-
-// MarshalJSON returns the JSON encoding of s.
-func (s *Schema) MarshalJSON() ([]byte, error) {
-	return marshalJSON((*_Schema)(s), s.Extensions)
-}
-
-// MarshalYAML returns value which marshaled in place of the original value
-func (s *Schema) MarshalYAML() (interface{}, error) {
-	return marshalYAML((*_Schema)(s), s.Extensions)
 }

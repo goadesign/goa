@@ -83,9 +83,9 @@ func NewV2(root *expr.RootExpr, h *expr.HostExpr) (*V2, error) {
 			}
 		}
 	}
-	if len(Definitions) > 0 {
-		s.Definitions = make(map[string]*Schema)
-		for n, d := range Definitions {
+	if len(openapi.Definitions) > 0 {
+		s.Definitions = make(map[string]*openapi.Schema)
+		for n, d := range openapi.Definitions {
 			// sad but swagger doesn't support these
 			d.Media = nil
 			d.Links = nil
@@ -398,7 +398,7 @@ func paramFor(at *expr.AttributeExpr, name, in string, required bool) *Parameter
 	p := &Parameter{
 		In:          in,
 		Name:        name,
-		Default:     toStringMap(at.DefaultValue),
+		Default:     openapi.ToStringMap(at.DefaultValue),
 		Description: at.Description,
 		Required:    required,
 		Type:        at.Type.Name(),
@@ -449,16 +449,16 @@ func itemsFromExpr(at *expr.AttributeExpr) *Items {
 }
 
 func responseSpecFromExpr(s *V2, root *expr.RootExpr, r *expr.HTTPResponseExpr, typeNamePrefix string) *Response {
-	var schema *Schema
+	var schema *openapi.Schema
 	if mt, ok := r.Body.Type.(*expr.ResultTypeExpr); ok {
 		view := expr.DefaultView
 		if v, ok := r.Body.Meta["view"]; ok {
 			view = v[0]
 		}
-		schema = NewSchema()
-		schema.Ref = ResultTypeRefWithPrefix(root.API, mt, view, typeNamePrefix)
+		schema = openapi.NewSchema()
+		schema.Ref = openapi.ResultTypeRefWithPrefix(root.API, mt, view, typeNamePrefix)
 	} else if r.Body.Type != expr.Empty {
-		schema = AttributeTypeSchemaWithPrefix(root.API, r.Body, typeNamePrefix)
+		schema = openapi.AttributeTypeSchemaWithPrefix(root.API, r.Body, typeNamePrefix)
 	}
 	if schema != nil {
 		schema.Extensions = openapi.ExtensionsFromExpr(r.Meta)
@@ -514,11 +514,11 @@ func buildPathFromFileServer(s *V2, root *expr.RootExpr, fs *expr.HTTPFileServer
 		responses := map[string]*Response{
 			"200": {
 				Description: "File downloaded",
-				Schema:      &Schema{Type: File},
+				Schema:      &openapi.Schema{Type: openapi.File},
 			},
 		}
 		if len(wcs) > 0 {
-			schema := TypeSchema(root.API, expr.ErrorResult)
+			schema := openapi.TypeSchema(root.API, expr.ErrorResult)
 			responses["404"] = &Response{Description: "File not found", Schema: schema}
 		}
 
@@ -626,7 +626,7 @@ func buildPathFromExpr(s *V2, root *expr.RootExpr, h *expr.HostExpr, route *expr
 				In:          in,
 				Description: endpoint.Body.Description,
 				Required:    true,
-				Schema:      AttributeTypeSchemaWithPrefix(root.API, endpoint.Body, codegen.Goify(endpoint.Service.Name(), true)),
+				Schema:      openapi.AttributeTypeSchemaWithPrefix(root.API, endpoint.Body, codegen.Goify(endpoint.Service.Name(), true)),
 			}
 			params = append(params, pp)
 		}
@@ -868,27 +868,6 @@ func initValidations(attr *expr.AttributeExpr, def interface{}) {
 	}
 	if val.MaxLength != nil {
 		initMaxLengthValidation(def, expr.IsArray(attr.Type), val.MaxLength)
-	}
-}
-
-// toStringMap converts map[interface{}]interface{} to a map[string]interface{}
-// when possible.
-func toStringMap(val interface{}) interface{} {
-	switch actual := val.(type) {
-	case map[interface{}]interface{}:
-		m := make(map[string]interface{})
-		for k, v := range actual {
-			m[toString(k)] = toStringMap(v)
-		}
-		return m
-	case []interface{}:
-		mapSlice := make([]interface{}, len(actual))
-		for i, e := range actual {
-			mapSlice[i] = toStringMap(e)
-		}
-		return mapSlice
-	default:
-		return actual
 	}
 }
 

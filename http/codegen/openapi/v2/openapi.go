@@ -1,12 +1,10 @@
-// Package openapi produces OpenAPI Specification 2.0 (https://github.com/OAI/OpenAPI-Specification/blob/master/versions/2.0.md)
+// Package openapiv2 produces OpenAPI Specification 2.0 (https://github.com/OAI/OpenAPI-Specification/blob/master/versions/2.0.md)
 // for the HTTP endpoints.
 package openapiv2
 
 import (
-	"encoding/json"
-
 	"goa.design/goa/v3/expr"
-	yaml "gopkg.in/yaml.v2"
+	"goa.design/goa/v3/http/codegen/openapi"
 )
 
 type (
@@ -21,7 +19,7 @@ type (
 		Consumes            []string                       `json:"consumes,omitempty" yaml:"consumes,omitempty"`
 		Produces            []string                       `json:"produces,omitempty" yaml:"produces,omitempty"`
 		Paths               map[string]interface{}         `json:"paths" yaml:"paths"`
-		Definitions         map[string]*Schema             `json:"definitions,omitempty" yaml:"definitions,omitempty"`
+		Definitions         map[string]*openapi.Schema     `json:"definitions,omitempty" yaml:"definitions,omitempty"`
 		Parameters          map[string]*Parameter          `json:"parameters,omitempty" yaml:"parameters,omitempty"`
 		Responses           map[string]*Response           `json:"responses,omitempty" yaml:"responses,omitempty"`
 		SecurityDefinitions map[string]*SecurityDefinition `json:"securityDefinitions,omitempty" yaml:"securityDefinitions,omitempty"`
@@ -114,7 +112,7 @@ type (
 		// Required determines whether this parameter is mandatory.
 		Required bool `json:"required" yaml:"required"`
 		// Schema defining the type used for the body parameter, only if "in" is body
-		Schema *Schema `json:"schema,omitempty" yaml:"schema,omitempty"`
+		Schema *openapi.Schema `json:"schema,omitempty" yaml:"schema,omitempty"`
 
 		// properties below only apply if "in" is not body
 
@@ -160,7 +158,7 @@ type (
 		// an array or an object. If this field does not exist, it means no content is
 		// returned as part of the response. As an extension to the Schema Object, its root
 		// type value may also be "file".
-		Schema *Schema `json:"schema,omitempty" yaml:"schema,omitempty"`
+		Schema *openapi.Schema `json:"schema,omitempty" yaml:"schema,omitempty"`
 		// Headers is a list of headers that are sent with the response.
 		Headers map[string]*Header `json:"headers,omitempty" yaml:"headers,omitempty"`
 		// Ref references a global API response.
@@ -289,7 +287,7 @@ type (
 		Extensions map[string]interface{} `json:"-" yaml:"-"`
 	}
 
-	// These types are used in marshalJSON() to avoid recursive call of json.Marshal().
+	// These types are used in openapi.MarshalJSON() to avoid recursive call of json.Marshal().
 	_Info               Info
 	_Path               Path
 	_Operation          Operation
@@ -299,113 +297,72 @@ type (
 	_Tag                Tag
 )
 
-func marshalJSON(v interface{}, extensions map[string]interface{}) ([]byte, error) {
-	marshaled, err := json.Marshal(v)
-	if err != nil {
-		return nil, err
-	}
-	if len(extensions) == 0 {
-		return marshaled, nil
-	}
-	var unmarshaled interface{}
-	if err := json.Unmarshal(marshaled, &unmarshaled); err != nil {
-		return nil, err
-	}
-	asserted := unmarshaled.(map[string]interface{})
-	for k, v := range extensions {
-		asserted[k] = v
-	}
-	merged, err := json.Marshal(asserted)
-	if err != nil {
-		return nil, err
-	}
-	return merged, nil
-}
-
 // MarshalJSON returns the JSON encoding of i.
 func (i Info) MarshalJSON() ([]byte, error) {
-	return marshalJSON(_Info(i), i.Extensions)
+	return openapi.MarshalJSON(_Info(i), i.Extensions)
 }
 
 // MarshalJSON returns the JSON encoding of p.
 func (p Path) MarshalJSON() ([]byte, error) {
-	return marshalJSON(_Path(p), p.Extensions)
+	return openapi.MarshalJSON(_Path(p), p.Extensions)
 }
 
 // MarshalJSON returns the JSON encoding of o.
 func (o Operation) MarshalJSON() ([]byte, error) {
-	return marshalJSON(_Operation(o), o.Extensions)
+	return openapi.MarshalJSON(_Operation(o), o.Extensions)
 }
 
 // MarshalJSON returns the JSON encoding of p.
 func (p Parameter) MarshalJSON() ([]byte, error) {
-	return marshalJSON(_Parameter(p), p.Extensions)
+	return openapi.MarshalJSON(_Parameter(p), p.Extensions)
 }
 
 // MarshalJSON returns the JSON encoding of r.
 func (r Response) MarshalJSON() ([]byte, error) {
-	return marshalJSON(_Response(r), r.Extensions)
+	return openapi.MarshalJSON(_Response(r), r.Extensions)
 }
 
 // MarshalJSON returns the JSON encoding of s.
 func (s SecurityDefinition) MarshalJSON() ([]byte, error) {
-	return marshalJSON(_SecurityDefinition(s), s.Extensions)
+	return openapi.MarshalJSON(_SecurityDefinition(s), s.Extensions)
 }
 
 // MarshalJSON returns the JSON encoding of t.
 func (t Tag) MarshalJSON() ([]byte, error) {
-	return marshalJSON(_Tag(t), t.Extensions)
-}
-
-func marshalYAML(v interface{}, extensions map[string]interface{}) (interface{}, error) {
-	if len(extensions) == 0 {
-		return v, nil
-	}
-	marshaled, err := yaml.Marshal(v)
-	if err != nil {
-		return nil, err
-	}
-	var unmarshaled map[string]interface{}
-	if err := yaml.Unmarshal(marshaled, &unmarshaled); err != nil {
-		return nil, err
-	}
-	for k, v := range extensions {
-		unmarshaled[k] = v
-	}
-	return unmarshaled, nil
+	return openapi.MarshalJSON(_Tag(t), t.Extensions)
 }
 
 // MarshalYAML returns value which marshaled in place of the original value
 func (i Info) MarshalYAML() (interface{}, error) {
-	return marshalYAML(_Info(i), i.Extensions)
+	return openapi.MarshalYAML(_Info(i), i.Extensions)
 }
 
 // MarshalYAML returns value which marshaled in place of the original value
 func (p Path) MarshalYAML() (interface{}, error) {
-	return marshalYAML(_Path(p), p.Extensions)
+	return openapi.MarshalYAML(_Path(p), p.Extensions)
 }
 
 // MarshalYAML returns value which marshaled in place of the original value
 func (o Operation) MarshalYAML() (interface{}, error) {
-	return marshalYAML(_Operation(o), o.Extensions)
+	return openapi.MarshalYAML(_Operation(o), o.Extensions)
 }
 
 // MarshalYAML returns value which marshaled in place of the original value
 func (p Parameter) MarshalYAML() (interface{}, error) {
-	return marshalYAML(_Parameter(p), p.Extensions)
+	return openapi.MarshalYAML(_Parameter(p), p.Extensions)
 }
 
 // MarshalYAML returns value which marshaled in place of the original value
 func (r Response) MarshalYAML() (interface{}, error) {
-	return marshalYAML(_Response(r), r.Extensions)
+	return openapi.MarshalYAML(_Response(r), r.Extensions)
 }
 
 // MarshalYAML returns value which marshaled in place of the original value
 func (s SecurityDefinition) MarshalYAML() (interface{}, error) {
-	return marshalYAML(_SecurityDefinition(s), s.Extensions)
+	return openapi.MarshalYAML(_SecurityDefinition(s), s.Extensions)
 }
 
 // MarshalYAML returns value which marshaled in place of the original value
 func (t Tag) MarshalYAML() (interface{}, error) {
-	return marshalYAML(_Tag(t), t.Extensions)
+	return openapi.MarshalYAML(_Tag(t), t.Extensions)
 }
