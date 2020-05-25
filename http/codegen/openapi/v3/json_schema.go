@@ -75,12 +75,12 @@ const (
 	Object = "object"
 	// String represents a JSON string.
 	String = "string"
-	// File is an extension used by Swagger to represent a file download.
+	// File is an extension used by OpenAPI to represent a file download.
 	File = "file"
 )
 
 // SchemaRef is the JSON Hyper-schema standard href.
-const SchemaRef = "http://json-schema.org/draft-04/hyper-schema"
+const SchemaRef = "https://json-schema.org/draft/2019-09/hyper-schema#"
 
 var (
 	// Definitions contains the generated JSON schema definitions

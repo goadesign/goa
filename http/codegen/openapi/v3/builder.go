@@ -9,6 +9,9 @@ import (
 	"goa.design/goa/v3/http/codegen/openapi"
 )
 
+// OpenAPIVersion is the OpenAPI specification version targeted by this package.
+const OpenAPIVersion = "3.0.3"
+
 var uriRegex = regexp.MustCompile("^https?://")
 
 // New returns the OpenAPI v3 specification for the given API.
@@ -28,7 +31,7 @@ func New(root *expr.RootExpr) *OpenAPI {
 	)
 
 	return &OpenAPI{
-		OpenAPI:    "3.0.3", // TODO: This is a required string and hardcoded. Need to find some other way to set this.
+		OpenAPI:    OpenAPIVersion,
 		Info:       info,
 		Components: comps,
 		Paths:      paths,
