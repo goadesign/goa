@@ -12,9 +12,9 @@ type (
 		Servers      []*Server              `json:"servers,omitempty" yaml:"servers,omitempty"`
 		Paths        map[string]*PathItem   `json:"paths" yaml:"paths"` // Required
 		Components   *Components            `json:"components,omitempty" yaml:"components,omitempty"`
-		Tags         []*Tag                 `json:"tags,omitempty" yaml:"tags,omitempty"`
+		Tags         []*openapi.Tag         `json:"tags,omitempty" yaml:"tags,omitempty"`
 		Security     []map[string][]string  `json:"security,omitempty" yaml:"security,omitempty"`
-		ExternalDocs *ExternalDocs          `json:"externalDocs,omitempty" yaml:"externalDocs,omitempty"`
+		ExternalDocs *openapi.ExternalDocs  `json:"externalDocs,omitempty" yaml:"externalDocs,omitempty"`
 		Extensions   map[string]interface{} `json:"-" yaml:"-"`
 	}
 
@@ -73,22 +73,6 @@ type (
 		Extensions      map[string]interface{}        `json:"-" yaml:"-"`
 	}
 
-	// Tag represents an OpenAPI Tag object as defined in
-	// https://github.com/OAI/OpenAPI-Specification/blob/master/versions/3.0.3.md#tagObject
-	Tag struct {
-		Name         string        `json:"name,omitempty" yaml:"name,omitempty"`
-		Description  string        `json:"description,omitempty" yaml:"description,omitempty"`
-		ExternalDocs *ExternalDocs `json:"externalDocs,omitempty" yaml:"externalDocs,omitempty"`
-	}
-
-	// ExternalDocs represents an OpenAPI External Documentation object as defined in
-	// https://github.com/OAI/OpenAPI-Specification/blob/master/versions/3.0.3.md#externalDocumentationObject
-	ExternalDocs struct {
-		Description string                 `json:"description,omitempty"`
-		URL         string                 `json:"url,omitempty"`
-		Extensions  map[string]interface{} `json:"-" yaml:"-"`
-	}
-
 	// Contact represents an OpenAPI Contact object as defined in
 	// https://github.com/OAI/OpenAPI-Specification/blob/master/versions/3.0.3.md#contactObject
 	Contact struct {
@@ -128,7 +112,7 @@ type (
 		Deprecated   bool                    `json:"deprecated,omitempty" yaml:"deprecated,omitempty"`
 		Security     []map[string][]string   `json:"security,omitempty" yaml:"security,omitempty"`
 		Servers      []*Server               `json:"servers,omitempty" yaml:"servers,omitempty"`
-		ExternalDocs *ExternalDocs           `json:"externalDocs,omitempty" yaml:"externalDocs,omitempty"`
+		ExternalDocs *openapi.ExternalDocs   `json:"externalDocs,omitempty" yaml:"externalDocs,omitempty"`
 		Extensions   map[string]interface{}  `json:"-" yaml:"-"`
 	}
 

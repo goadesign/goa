@@ -69,9 +69,7 @@ func TestHashAttribute(t *testing.T) {
 
 func newObj(n string, t expr.DataType, req bool) *expr.AttributeExpr {
 	attr := &expr.AttributeExpr{
-		Type: &expr.Object{
-			&expr.NamedAttributeExpr{n, &expr.AttributeExpr{Type: t}},
-		},
+		Type:       &expr.Object{{n, &expr.AttributeExpr{Type: t}}},
 		Validation: &expr.ValidationExpr{},
 	}
 	if req {
@@ -83,8 +81,8 @@ func newObj(n string, t expr.DataType, req bool) *expr.AttributeExpr {
 func newObj2(n, o string, t, u expr.DataType, reqs ...string) *expr.AttributeExpr {
 	attr := &expr.AttributeExpr{
 		Type: &expr.Object{
-			&expr.NamedAttributeExpr{n, &expr.AttributeExpr{Type: t}},
-			&expr.NamedAttributeExpr{o, &expr.AttributeExpr{Type: u}},
+			{n, &expr.AttributeExpr{Type: t}},
+			{o, &expr.AttributeExpr{Type: u}},
 		},
 		Validation: &expr.ValidationExpr{},
 	}

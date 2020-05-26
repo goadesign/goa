@@ -4,23 +4,17 @@ import (
 	"encoding/binary"
 	"fmt"
 	"hash"
+	"hash/fnv"
 	"sort"
 	"strconv"
 	"strings"
 
+	"goa.design/goa/v3/codegen"
 	"goa.design/goa/v3/expr"
 	"goa.design/goa/v3/http/codegen/openapi"
 )
 
 type (
-	// AnnotatedSchema makes it possible to annotate a JSON schema so that the
-	// OpenAPI code generator may provide additional information in descriptions.
-	// This is used for views and for streaming requests and responses.
-	AnnotatedSchema struct {
-		*openapi.Schema
-		Note string
-	}
-
 	// EndpointBodies describes the request and response HTTP bodies of an endpoint
 	// using JSON schema. Each body may be described via a reference to a schema
 	// described in the "Components" section of the OpenAPI document or an actual
@@ -30,15 +24,18 @@ type (
 	// status, there may be more than one when the result type defined multiple
 	// views.
 	EndpointBodies struct {
-		RequestBody    *AnnotatedSchema
-		ResponseBodies map[int][]*AnnotatedSchema
+		RequestBody    *openapi.Schema
+		ResponseBodies map[int][]*openapi.Schema
 	}
 
 	// schemafier is an internal data structure used to keep the state required to
 	// create JSON schemas for all the request and response body types.
 	schemafier struct {
-		schemas map[string]*AnnotatedSchema
-		rand    *expr.Random
+		// type schemas indexed by ref
+		schemas map[string]*openapi.Schema
+		// type names indexed by hashes
+		hashes map[uint64]string
+		rand   *expr.Random
 	}
 )
 
@@ -52,11 +49,15 @@ type (
 // detail is in turn indexed by method name. The details contain JSON schema
 // references and the actual JSON schemas are returned in the second result
 // value indexed by reference name.
-func buildBodyTypes(api *expr.APIExpr) (map[string]map[string]*EndpointBodies, map[string]*AnnotatedSchema) {
+func buildBodyTypes(api *expr.APIExpr) (map[string]map[string]*EndpointBodies, map[string]*openapi.Schema) {
 	bodies := make(map[string]map[string]*EndpointBodies)
-	sf := &schemafier{make(map[string]*AnnotatedSchema), api.Random()}
+	sf := &schemafier{
+		schemas: make(map[string]*openapi.Schema),
+		hashes:  make(map[uint64]string),
+		rand:    api.Random(),
+	}
 	for _, s := range api.HTTP.Services {
-		errors := make(map[int]*AnnotatedSchema)
+		errors := make(map[int]*openapi.Schema)
 		for _, e := range s.HTTPErrors {
 			errors[e.Response.StatusCode] = sf.schemafy(e.Response.Body)
 		}
@@ -66,26 +67,42 @@ func buildBodyTypes(api *expr.APIExpr) (map[string]map[string]*EndpointBodies, m
 			if e.StreamingBody != nil {
 				sreq := sf.schemafy(e.StreamingBody)
 				var note string
-				if sreq.Schema.Ref != "" {
-					note = sreq.Schema.Ref
+				if sreq.Ref != "" {
+					note = sreq.Ref
 				} else {
-					note = string(sreq.Schema.Type)
+					note = string(sreq.Type)
 				}
-				req.Note = fmt.Sprintf("Streaming body: %s", note)
+				if req.Description != "" {
+					req.Description += "\n"
+				}
+				req.Description += fmt.Sprintf("Streaming body: %s", note)
 			}
-			res := make(map[int][]*AnnotatedSchema)
+			res := make(map[int][]*openapi.Schema)
 			for c, er := range errors {
-				res[c] = []*AnnotatedSchema{er}
+				res[c] = []*openapi.Schema{er}
 			}
 			for _, resp := range e.Responses {
-				js := sf.schemafy(resp.Body)
+				var view string
+				if vs, ok := resp.Body.Meta["view"]; ok {
+					view = vs[0]
+				}
+				body := resp.Body
+				if view != "" {
+					// Static view
+					rt, err := expr.Project(body.Type.(*expr.ResultTypeExpr), view)
+					if err != nil { // bug
+						panic(fmt.Sprintf("failed to project %q to view %q", body.Type.Name(), view))
+					}
+					body.Type = rt
+				}
+				js := sf.schemafy(body)
 				if rt, ok := resp.Body.Type.(*expr.ResultTypeExpr); ok {
-					if _, ok := resp.Body.Meta["view"]; !ok && rt.HasMultipleViews() {
+					if view == "" && rt.HasMultipleViews() {
 						// Dynamic views
-						if len(js.Note) > 0 {
-							js.Note += "\n"
+						if len(js.Description) > 0 {
+							js.Description += "\n"
 						}
-						js.Note += sf.viewsNote(rt)
+						js.Description += sf.viewsNote(rt)
 					}
 				}
 				res[resp.StatusCode] = append(res[resp.StatusCode], js)
@@ -97,9 +114,8 @@ func buildBodyTypes(api *expr.APIExpr) (map[string]map[string]*EndpointBodies, m
 	return bodies, sf.schemas
 }
 
-func (sf *schemafier) schemafy(attr *expr.AttributeExpr) *AnnotatedSchema {
+func (sf *schemafier) schemafy(attr *expr.AttributeExpr) *openapi.Schema {
 	s := openapi.NewSchema()
-	as := &AnnotatedSchema{Schema: s}
 	var note string
 
 	// Initialize type and format
@@ -128,20 +144,12 @@ func (sf *schemafier) schemafy(attr *expr.AttributeExpr) *AnnotatedSchema {
 		}
 	case *expr.Array:
 		s.Type = openapi.Array
-		es := sf.schemafy(t.ElemType)
-		s.Items = es.Schema
-		if es.Note != "" {
-			note = "items: " + es.Note
-		}
+		s.Items = sf.schemafy(t.ElemType)
 	case *expr.Object:
 		s.Type = openapi.Object
 		var itemNotes []string
 		for _, nat := range *t {
-			prop := sf.schemafy(nat.Attribute)
-			s.Properties[nat.Name] = prop.Schema
-			if prop.Note != "" {
-				itemNotes = append(itemNotes, nat.Name+": "+prop.Note)
-			}
+			s.Properties[nat.Name] = sf.schemafy(nat.Attribute)
 		}
 		if len(itemNotes) > 0 {
 			note = strings.Join(itemNotes, "\n")
@@ -149,18 +157,21 @@ func (sf *schemafier) schemafy(attr *expr.AttributeExpr) *AnnotatedSchema {
 	case *expr.Map:
 		s.Type = openapi.Object
 		s.AdditionalProperties = true
-	case *expr.UserTypeExpr:
-		t.Hash()
-		// s.Ref = TypeRefWithPrefix(api, t, prefix)
-	case *expr.ResultTypeExpr:
-		// Use "default" view by default
-		// s.Ref = ResultTypeRefWithPrefix(api, t, expr.DefaultView, prefix)
+	case expr.UserType:
+		h := hashAttribute(attr, fnv.New64())
+		if ref, ok := sf.hashes[h]; ok {
+			s.Ref = ref
+		} else {
+			s.Ref = sf.uniquify(fmt.Sprintf("#/components/schemas/%s", codegen.Goify(t.Name(), true)))
+			sf.hashes[h] = s.Ref
+			sf.schemas[s.Ref] = s
+		}
 	default:
 		panic(fmt.Sprintf("unknown type %T", t)) // bug
 	}
 	s.Description = attr.Description
 	if note != "" {
-		s.Description += "\n" + as.Note
+		s.Description += "\n" + note
 	}
 
 	// Default value, example, extensions
@@ -171,7 +182,7 @@ func (sf *schemafier) schemafy(attr *expr.AttributeExpr) *AnnotatedSchema {
 	// Validations
 	val := attr.Validation
 	if val == nil {
-		return as
+		return s
 	}
 	s.Enum = val.Values
 	s.Format = string(val.Format)
@@ -198,7 +209,23 @@ func (sf *schemafier) schemafy(attr *expr.AttributeExpr) *AnnotatedSchema {
 	}
 	s.Required = val.Required
 
-	return as
+	return s
+}
+
+// uniquify returns n if n is not a known type name. Otherwise uniquify appends
+// the smallest integer to n so the result is not a known type name.
+func (sf *schemafier) uniquify(n string) string {
+	exists := func(n string) bool {
+		_, ok := sf.schemas[n]
+		return ok
+	}
+	i := 1
+	for exists(n) {
+		n = strings.TrimRight(n, "0123456789")
+		i += 1
+		n += strconv.Itoa(i)
+	}
+	return n
 }
 
 // viewsNote returns a human friendly description of the different possible
@@ -289,9 +316,11 @@ func hashAttribute(att *expr.AttributeExpr, h hash.Hash64) uint64 {
 		}
 		// Objects with a different set of required attributes should produce
 		// different hashes.
-		for _, req := range att.Validation.Required {
-			rh := hashString(req, h)
-			res = res ^ rh
+		if att.Validation != nil {
+			for _, req := range att.Validation.Required {
+				rh := hashString(req, h)
+				res = res ^ rh
+			}
 		}
 		return res
 

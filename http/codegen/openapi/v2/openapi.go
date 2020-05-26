@@ -23,8 +23,8 @@ type (
 		Parameters          map[string]*Parameter          `json:"parameters,omitempty" yaml:"parameters,omitempty"`
 		Responses           map[string]*Response           `json:"responses,omitempty" yaml:"responses,omitempty"`
 		SecurityDefinitions map[string]*SecurityDefinition `json:"securityDefinitions,omitempty" yaml:"securityDefinitions,omitempty"`
-		Tags                []*Tag                         `json:"tags,omitempty" yaml:"tags,omitempty"`
-		ExternalDocs        *ExternalDocs                  `json:"externalDocs,omitempty" yaml:"externalDocs,omitempty"`
+		Tags                []*openapi.Tag                 `json:"tags,omitempty" yaml:"tags,omitempty"`
+		ExternalDocs        *openapi.ExternalDocs          `json:"externalDocs,omitempty" yaml:"externalDocs,omitempty"`
 	}
 
 	// Info provides metadata about the API. The metadata can be used by the clients if needed,
@@ -77,7 +77,7 @@ type (
 		// GFM syntax can be used for rich text representation.
 		Description string `json:"description,omitempty" yaml:"description,omitempty"`
 		// ExternalDocs points to additional external documentation for this operation.
-		ExternalDocs *ExternalDocs `json:"externalDocs,omitempty" yaml:"externalDocs,omitempty"`
+		ExternalDocs *openapi.ExternalDocs `json:"externalDocs,omitempty" yaml:"externalDocs,omitempty"`
 		// OperationID is a unique string used to identify the operation.
 		OperationID string `json:"operationId,omitempty" yaml:"operationId,omitempty"`
 		// Consumes is a list of MIME types the operation can consume.
@@ -233,16 +233,6 @@ type (
 		Description string `json:"description,omitempty" yaml:"description,omitempty"`
 	}
 
-	// ExternalDocs allows referencing an external document for extended
-	// documentation.
-	ExternalDocs struct {
-		// Description is a short description of the target documentation.
-		// GFM syntax can be used for rich text representation.
-		Description string `json:"description,omitempty" yaml:"description,omitempty"`
-		// URL for the target documentation.
-		URL string `json:"url" yaml:"url"`
-	}
-
 	// Items is a limited subset of JSON-Schema's items object. It is used by parameter
 	// definitions that are not located in "body".
 	Items struct {
@@ -273,20 +263,6 @@ type (
 		MultipleOf       float64       `json:"multipleOf,omitempty" yaml:"multipleOf,omitempty"`
 	}
 
-	// Tag allows adding meta data to a single tag that is used by the Operation Object. It is
-	// not mandatory to have a Tag Object per tag used there.
-	Tag struct {
-		// Name of the tag.
-		Name string `json:"name,omitempty" yaml:"name,omitempty"`
-		// Description is a short description of the tag.
-		// GFM syntax can be used for rich text representation.
-		Description string `json:"description,omitempty" yaml:"description,omitempty"`
-		// ExternalDocs is additional external documentation for this tag.
-		ExternalDocs *ExternalDocs `json:"externalDocs,omitempty" yaml:"externalDocs,omitempty"`
-		// Extensions defines the swagger extensions.
-		Extensions map[string]interface{} `json:"-" yaml:"-"`
-	}
-
 	// These types are used in openapi.MarshalJSON() to avoid recursive call of json.Marshal().
 	_Info               Info
 	_Path               Path
@@ -294,7 +270,6 @@ type (
 	_Parameter          Parameter
 	_Response           Response
 	_SecurityDefinition SecurityDefinition
-	_Tag                Tag
 )
 
 // MarshalJSON returns the JSON encoding of i.
@@ -327,11 +302,6 @@ func (s SecurityDefinition) MarshalJSON() ([]byte, error) {
 	return openapi.MarshalJSON(_SecurityDefinition(s), s.Extensions)
 }
 
-// MarshalJSON returns the JSON encoding of t.
-func (t Tag) MarshalJSON() ([]byte, error) {
-	return openapi.MarshalJSON(_Tag(t), t.Extensions)
-}
-
 // MarshalYAML returns value which marshaled in place of the original value
 func (i Info) MarshalYAML() (interface{}, error) {
 	return openapi.MarshalYAML(_Info(i), i.Extensions)
@@ -360,9 +330,4 @@ func (r Response) MarshalYAML() (interface{}, error) {
 // MarshalYAML returns value which marshaled in place of the original value
 func (s SecurityDefinition) MarshalYAML() (interface{}, error) {
 	return openapi.MarshalYAML(_SecurityDefinition(s), s.Extensions)
-}
-
-// MarshalYAML returns value which marshaled in place of the original value
-func (t Tag) MarshalYAML() (interface{}, error) {
-	return openapi.MarshalYAML(_Tag(t), t.Extensions)
 }

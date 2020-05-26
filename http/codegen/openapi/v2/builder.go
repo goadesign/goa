@@ -1,11 +1,9 @@
 package openapiv2
 
 import (
-	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/url"
-	"sort"
 	"strconv"
 	"strings"
 
@@ -19,7 +17,7 @@ func NewV2(root *expr.RootExpr, h *expr.HostExpr) (*V2, error) {
 	if root == nil {
 		return nil, nil
 	}
-	tags := tagsFromExpr(root.API.Meta)
+	tags := openapi.TagsFromExpr(root.API.Meta)
 	u, err := url.Parse(defaultURI(h))
 	if err != nil {
 		// This should never happen because server expression must have been
@@ -59,7 +57,7 @@ func NewV2(root *expr.RootExpr, h *expr.HostExpr) (*V2, error) {
 		Parameters:          paramMap,
 		Tags:                tags,
 		SecurityDefinitions: securitySpecFromExpr(root),
-		ExternalDocs:        docsFromExpr(root.API.Docs),
+		ExternalDocs:        openapi.DocsFromExpr(root.API.Docs, root.API.Meta),
 	}
 	for _, res := range root.API.HTTP.Services {
 		if !mustGenerate(res.Meta) || !mustGenerate(res.ServiceExpr.Meta) {
@@ -241,66 +239,6 @@ func hasAbsoluteRoutes(root *expr.RootExpr) bool {
 		}
 	}
 	return hasAbsoluteRoutes
-}
-
-func tagsFromExpr(mdata expr.MetaExpr) (tags []*Tag) {
-	var keys []string
-	for k := range mdata {
-		keys = append(keys, k)
-	}
-	sort.Strings(keys)
-	for _, key := range keys {
-		chunks := strings.Split(key, ":")
-		if len(chunks) != 3 {
-			continue
-		}
-		if chunks[0] != "swagger" || chunks[1] != "tag" {
-			continue
-		}
-
-		tag := &Tag{Name: chunks[2]}
-
-		mdata[key] = mdata[fmt.Sprintf("%s:desc", key)]
-		if len(mdata[key]) != 0 {
-			tag.Description = mdata[key][0]
-		}
-
-		hasDocs := false
-		docs := &ExternalDocs{}
-
-		mdata[key] = mdata[fmt.Sprintf("%s:url", key)]
-		if len(mdata[key]) != 0 {
-			docs.URL = mdata[key][0]
-			hasDocs = true
-		}
-
-		mdata[key] = mdata[fmt.Sprintf("%s:url:desc", key)]
-		if len(mdata[key]) != 0 {
-			docs.Description = mdata[key][0]
-			hasDocs = true
-		}
-
-		if hasDocs {
-			tag.ExternalDocs = docs
-		}
-
-		extensionsPrefix := fmt.Sprintf("%s:extension:", key)
-		tag.Extensions = extensionsFromExprWithPrefix(mdata, extensionsPrefix)
-
-		tags = append(tags, tag)
-	}
-
-	return
-}
-
-func tagNamesFromExpr(mdatas ...expr.MetaExpr) (tagNames []string) {
-	for _, mdata := range mdatas {
-		tags := tagsFromExpr(mdata)
-		for _, tag := range tags {
-			tagNames = append(tagNames, tag.Name)
-		}
-	}
-	return
 }
 
 func summaryFromExpr(name string, e *expr.HTTPEndpointExpr) string {
@@ -532,7 +470,7 @@ func buildPathFromFileServer(s *V2, root *expr.RootExpr, fs *expr.HTTPFileServer
 			}
 		}
 
-		tagNames := tagNamesFromExpr(fs.Service.Meta, fs.Meta)
+		tagNames := openapi.TagNamesFromExpr(fs.Service.Meta, fs.Meta)
 		if len(tagNames) == 0 {
 			// By default tag with service name
 			tagNames = []string{fs.Service.Name()}
@@ -541,7 +479,7 @@ func buildPathFromFileServer(s *V2, root *expr.RootExpr, fs *expr.HTTPFileServer
 		operation := &Operation{
 			Description:  fs.Description,
 			Summary:      summaryFromMeta(fmt.Sprintf("Download %s", fs.FilePath), fs.Meta),
-			ExternalDocs: docsFromExpr(fs.Docs),
+			ExternalDocs: openapi.DocsFromExpr(fs.Docs, fs.Meta),
 			OperationID:  operationID,
 			Parameters:   param,
 			Responses:    responses,
@@ -568,7 +506,7 @@ func buildPathFromFileServer(s *V2, root *expr.RootExpr, fs *expr.HTTPFileServer
 func buildPathFromExpr(s *V2, root *expr.RootExpr, h *expr.HostExpr, route *expr.RouteExpr, basePath string) {
 	endpoint := route.Endpoint
 
-	tagNames := tagNamesFromExpr(endpoint.Service.Meta, endpoint.Meta)
+	tagNames := openapi.TagNamesFromExpr(endpoint.Service.Meta, endpoint.Meta)
 	if len(tagNames) == 0 {
 		// By default tag with service name
 		tagNames = []string{route.Endpoint.Service.Name()}
@@ -697,7 +635,7 @@ func buildPathFromExpr(s *V2, root *expr.RootExpr, h *expr.HostExpr, route *expr
 			Tags:         tagNames,
 			Description:  description,
 			Summary:      summaryFromExpr(endpoint.Name()+" "+endpoint.Service.Name(), endpoint),
-			ExternalDocs: docsFromExpr(endpoint.MethodExpr.Docs),
+			ExternalDocs: openapi.DocsFromExpr(endpoint.MethodExpr.Docs, endpoint.MethodExpr.Meta),
 			OperationID:  operationID,
 			Parameters:   params,
 			Consumes:     consumes,
@@ -745,16 +683,6 @@ func buildPathFromExpr(s *V2, root *expr.RootExpr, h *expr.HostExpr, route *expr
 			p.Patch = operation
 		}
 		p.Extensions = openapi.ExtensionsFromExpr(route.Endpoint.Meta)
-	}
-}
-
-func docsFromExpr(docs *expr.DocsExpr) *ExternalDocs {
-	if docs == nil {
-		return nil
-	}
-	return &ExternalDocs{
-		Description: docs.Description,
-		URL:         docs.URL,
 	}
 }
 
@@ -869,36 +797,4 @@ func initValidations(attr *expr.AttributeExpr, def interface{}) {
 	if val.MaxLength != nil {
 		initMaxLengthValidation(def, expr.IsArray(attr.Type), val.MaxLength)
 	}
-}
-
-// extensionsFromExprWithPrefix generates swagger extensions from
-// the given meta expression with keys starting the given prefix.
-func extensionsFromExprWithPrefix(mdata expr.MetaExpr, prefix string) map[string]interface{} {
-	if !strings.HasSuffix(prefix, ":") {
-		prefix += ":"
-	}
-	extensions := make(map[string]interface{})
-	for key, value := range mdata {
-		if !strings.HasPrefix(key, prefix) {
-			continue
-		}
-		name := key[len(prefix):]
-		if strings.Contains(name, ":") {
-			continue
-		}
-		if !strings.HasPrefix(name, "x-") {
-			continue
-		}
-		val := value[0]
-		ival := interface{}(val)
-		if err := json.Unmarshal([]byte(val), &ival); err != nil {
-			extensions[name] = val
-			continue
-		}
-		extensions[name] = ival
-	}
-	if len(extensions) == 0 {
-		return nil
-	}
-	return extensions
 }

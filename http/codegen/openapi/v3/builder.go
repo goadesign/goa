@@ -23,11 +23,14 @@ func New(root *expr.RootExpr) *OpenAPI {
 	}
 
 	var (
+		bodies, types = buildBodyTypes(root.API)
+
 		info     = buildInfo(root.API)
-		comps    = buildComponents(root)
+		comps    = buildComponents(root, types)
 		servers  = buildServers(root.API.Servers)
-		paths    = buildPaths(root.API.HTTP)
+		paths    = buildPaths(root.API.HTTP, bodies)
 		security = buildSecurityRequirements(root.API.Requirements)
+		tags     = openapi.TagsFromExpr(root.API.Meta)
 	)
 
 	return &OpenAPI{
@@ -37,6 +40,7 @@ func New(root *expr.RootExpr) *OpenAPI {
 		Paths:      paths,
 		Servers:    servers,
 		Security:   security,
+		Tags:       tags,
 	}
 }
 
@@ -65,7 +69,7 @@ func buildInfo(api *expr.APIExpr) *Info {
 }
 
 // buildComponents builds the OpenAPI Components object.
-func buildComponents(root *expr.RootExpr) *Components {
+func buildComponents(root *expr.RootExpr, types map[string]*openapi.Schema) *Components {
 	var schemesRef map[string]*SecuritySchemeRef
 	{
 		var schemes []*expr.SchemeExpr
@@ -85,21 +89,23 @@ func buildComponents(root *expr.RootExpr) *Components {
 	}
 	return &Components{
 		SecuritySchemes: schemesRef,
+		Schemas:         types,
 	}
 }
 
 // buildPaths builds the OpenAPI Paths map with key as the HTTP path string and
 // the value as the corresponding PathItem object.
-func buildPaths(h *expr.HTTPExpr) map[string]*PathItem {
+func buildPaths(h *expr.HTTPExpr, bodies map[string]map[string]*EndpointBodies) map[string]*PathItem {
 	var paths = make(map[string]*PathItem)
 	for _, svc := range h.Services {
+		sbod := bodies[svc.Name()]
 		for _, e := range svc.HTTPEndpoints {
 			for _, r := range e.Routes {
 				for _, key := range r.FullPaths() {
 					var (
 						path *PathItem
 
-						operation = buildOperation(key, r)
+						operation = buildOperation(key, r, sbod[e.Name()])
 					)
 					{
 						var ok bool
@@ -133,11 +139,15 @@ func buildPaths(h *expr.HTTPExpr) map[string]*PathItem {
 }
 
 // buildOperation builds the OpenAPI Operation object for the given path.
-func buildOperation(key string, r *expr.RouteExpr) *Operation {
+func buildOperation(key string, r *expr.RouteExpr, bodies *EndpointBodies) *Operation {
+	e := r.Endpoint
+	m := e.MethodExpr
+	svc := e.Service
+
 	// operation ID
 	var opID string
 	{
-		opID = fmt.Sprintf("%s#%s", r.Endpoint.Service.Name(), r.Endpoint.Name())
+		opID = fmt.Sprintf("%s#%s", svc.Name(), e.Name())
 		// An endpoint can have multiple routes. If there are multiple routes for
 		// the endpoint suffix the operation ID with the route index.
 		index := 0
@@ -155,27 +165,48 @@ func buildOperation(key string, r *expr.RouteExpr) *Operation {
 	// swagger summary
 	var summary string
 	{
-		summary = fmt.Sprintf("%s %s", r.Endpoint.Name(), r.Endpoint.Service.Name())
+		summary = fmt.Sprintf("%s %s", e.Name(), svc.Name())
 		for n, mdata := range r.Endpoint.Meta {
 			if n == "swagger:summary" && len(mdata) > 0 {
 				summary = mdata[0]
 			}
 		}
-		for n, mdata := range r.Endpoint.MethodExpr.Meta {
+		for n, mdata := range m.Meta {
 			if n == "swagger:summary" && len(mdata) > 0 {
 				summary = mdata[0]
 			}
 		}
 	}
 
+	// body
+	var body RequestBody
+	{
+		hb := r.Endpoint.Body
+		body.Description = hb.Description
+		body.Required = hb.Type != expr.Empty
+		body.Extensions = openapi.ExtensionsFromExpr(hb.Meta)
+	}
+
+	// tag names
+	var tagNames []string
+	{
+		tagNames = openapi.TagNamesFromExpr(svc.Meta, e.Meta)
+		if len(tagNames) == 0 {
+			// By default tag with service name
+			tagNames = []string{r.Endpoint.Service.Name()}
+		}
+	}
+
 	return &Operation{
+		Tags:         tagNames,
 		Summary:      summary,
-		Description:  r.Endpoint.Description(),
+		Description:  e.Description(),
 		OperationID:  opID,
-		Security:     buildSecurityRequirements(r.Endpoint.Requirements),
+		RequestBody:  &RequestBodyRef{Value: &body},
+		Security:     buildSecurityRequirements(e.Requirements),
 		Deprecated:   false,
-		ExternalDocs: buildExternalDocs(r.Endpoint.MethodExpr.Docs, r.Endpoint.MethodExpr.Meta),
-		Extensions:   openapi.ExtensionsFromExpr(r.Endpoint.MethodExpr.Meta),
+		ExternalDocs: openapi.DocsFromExpr(m.Docs, m.Meta),
+		Extensions:   openapi.ExtensionsFromExpr(m.Meta),
 	}
 }
 
@@ -324,17 +355,6 @@ func buildSecurityScheme(se *expr.SchemeExpr) *SecurityScheme {
 		}
 	}
 	return scheme
-}
-
-func buildExternalDocs(docs *expr.DocsExpr, meta expr.MetaExpr) *ExternalDocs {
-	if docs == nil {
-		return nil
-	}
-	return &ExternalDocs{
-		Description: docs.Description,
-		URL:         docs.URL,
-		Extensions:  openapi.ExtensionsFromExpr(meta),
-	}
 }
 
 // defaultURI returns the first HTTP URI defined in the host. It substitutes any URI
