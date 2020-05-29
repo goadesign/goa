@@ -213,7 +213,8 @@ func (sf *schemafier) schemafy(attr *expr.AttributeExpr) *openapi.Schema {
 }
 
 // uniquify returns n if n is not a known type name. Otherwise uniquify appends
-// the smallest integer to n so the result is not a known type name.
+// the smallest integer greater than 1 to n so the result is not a known type
+// name.
 func (sf *schemafier) uniquify(n string) string {
 	exists := func(n string) bool {
 		_, ok := sf.schemas[n]
@@ -221,9 +222,8 @@ func (sf *schemafier) uniquify(n string) string {
 	}
 	i := 1
 	for exists(n) {
-		n = strings.TrimRight(n, "0123456789")
-		i += 1
-		n += strconv.Itoa(i)
+		i++
+		n = strings.TrimRight(n, "0123456789") + strconv.Itoa(i)
 	}
 	return n
 }

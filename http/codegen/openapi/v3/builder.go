@@ -102,18 +102,12 @@ func buildPaths(h *expr.HTTPExpr, bodies map[string]map[string]*EndpointBodies) 
 		for _, e := range svc.HTTPEndpoints {
 			for _, r := range e.Routes {
 				for _, key := range r.FullPaths() {
-					var (
-						path *PathItem
-
-						operation = buildOperation(key, r, sbod[e.Name()])
-					)
-					{
-						var ok bool
-						if path, ok = paths[key]; !ok {
+						operation := buildOperation(key, r, sbod[e.Name()])
+						path, ok := paths[key]
+						if !ok {
 							path = new(PathItem)
 							paths[key] = path
 						}
-					}
 					switch r.Method {
 					case "GET":
 						path.Get = operation
