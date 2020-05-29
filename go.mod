@@ -17,7 +17,7 @@ require (
 	github.com/stretchr/testify v1.5.1 // indirect
 	github.com/zach-klippenstein/goregen v0.0.0-20160303162051-795b5e3961ea
 	golang.org/x/sys v0.0.0-20190624142023-c5567b49c5d0 // indirect
-	golang.org/x/tools v0.0.0-20200509030707-2212a7e161a5
+	golang.org/x/tools v0.0.0-20200528185414-6be401e3f76e
 	google.golang.org/grpc v1.28.0
 	gopkg.in/yaml.v2 v2.2.8
 )
