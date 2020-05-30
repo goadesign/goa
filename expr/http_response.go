@@ -84,6 +84,8 @@ type (
 		Description string
 		// Headers describe the HTTP response headers.
 		Headers *MappedAttributeExpr
+		// Cookies describe the HTTP response cookies.
+		Cookies *MappedAttributeExpr
 		// Response body if any
 		Body *AttributeExpr
 		// Response Content-Type header value

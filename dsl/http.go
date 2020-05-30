@@ -2,6 +2,7 @@ package dsl
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
 
 	"goa.design/goa/v3/eval"
@@ -345,12 +346,13 @@ func route(method, path string) *expr.RouteExpr {
 // request or response type attribute with the same name by default.
 //
 // Header must appear in the API HTTP expression (to define request headers
-// common to all the API endpoints), a specific method HTTP expression (to
-// define request headers) or a Response expression (to define the response
-// headers). Header may also appear in a method GRPC expression (to define
-// headers sent in message metadata), or in a Response expression (to define
-// headers sent in result metadata). Finally Header may also appear in a Headers
-// expression.
+// common to all the API endpoints), a service HTTP expression (to define
+// request headers common to all the service endpoints) a specific method HTTP
+// expression (to define request headers) or a Response expression (to define
+// the response headers). Header may also appear in a method GRPC expression (to
+// define headers sent in message metadata), or in a Response expression (to
+// define headers sent in result metadata). Finally Header may also appear in a
+// Headers expression.
 //
 // Header accepts the same arguments as the Attribute function. The header name
 // may define a mapping between the attribute name and the HTTP header name when
@@ -385,6 +387,123 @@ func Header(name string, args ...interface{}) {
 	}
 	eval.Execute(func() { Attribute(name, args...) }, h.AttributeExpr)
 	h.Remap()
+}
+
+// Cookie describes a single HTTP cookie. When used within a Response the Cookie
+// DSL also makes it possible to define the max-age and path attributes of the
+// cookie.
+//
+// Cookie must appear in the API HTTP expression (to define request cookies
+// common to all the API endpoints), a service HTTP expression (to define
+// request cookies common to all the service endpoints) a specific method HTTP
+// expression (to define request cookies) or a Response expression (to define
+// the response cookies).
+//
+// Cookie accepts the same arguments as the Attribute function. The cookie name
+// may define a mapping between the attribute name and the HTTP cookie name when
+// they differ. The mapping syntax is "name of attribute:name of cookie".
+//
+// Example:
+//
+//    var _ = Service("account", func() {
+//        Method("create", func() {
+//            Payload(func() {
+//                Attribute("session", String, "ID of current session")
+//            })
+//            Result(Account)
+//            HTTP(func() {
+//                Cookie("session:SID", String, func() {
+//                    Format(FormatGUID)
+//                })
+//                Response(StatusCreated, func() {
+//                    Cookie("session:SID", String, func() {
+//                        MaxAge(3600)
+//                        CookiePath("/session")
+//                    })
+//                })
+//            })
+//        })
+//    })
+//
+func Cookie(name string, args ...interface{}) {
+	h := cookies(eval.Current())
+	if h == nil {
+		eval.IncompatibleDSL()
+		return
+	}
+	if name == "" {
+		eval.ReportError("header name cannot be empty")
+	}
+	eval.Execute(func() { Attribute(name, args...) }, h.AttributeExpr)
+	h.Remap()
+}
+
+// CookiePath defines the path attribute of a HTTP response cookie.
+//
+// CookiePath must appear in a Cookie expression.
+//
+// CookiePath accepts one argument which is the path value.
+//
+// Example:
+//
+//    var _ = Service("account", func() {
+//        Method("create", func() {
+//            Result(Account)
+//            HTTP(func() {
+//                Response(StatusCreated, func() {
+//                    Cookie("session:SID", String, func() {
+//                        CookiePath("/session")
+//                    })
+//                })
+//            })
+//        })
+//    })
+//
+func CookiePath(p string) {
+	c, ok := eval.Current().(*expr.MappedAttributeExpr)
+	if !ok {
+		eval.IncompatibleDSL()
+		return
+	}
+	if c.Meta == nil {
+		c.Meta = expr.MetaExpr{"cookie:path": []string{p}}
+	} else {
+		c.Meta["cookie:path"] = []string{p}
+	}
+}
+
+// MaxAge defines the max-age attribute of a HTTP response cookie.
+//
+// MaxAge must appear in a Cookie expression.
+//
+// MaxAge accepts one argument which is the max-age value.
+//
+// Example:
+//
+//    var _ = Service("account", func() {
+//        Method("create", func() {
+//            Result(Account)
+//            HTTP(func() {
+//                Response(StatusCreated, func() {
+//                    Cookie("session:SID", String, func() {
+//                        MaxAge(3600)
+//                    })
+//                })
+//            })
+//        })
+//    })
+//
+func MaxAge(n int) {
+	c, ok := eval.Current().(*expr.MappedAttributeExpr)
+	if !ok {
+		eval.IncompatibleDSL()
+		return
+	}
+	if c.Meta == nil {
+		c.Meta = expr.MetaExpr{"cookie:path": []string{strconv.Itoa(n)}}
+	} else {
+		c.Meta["cookie:path"] = []string{strconv.Itoa(n)}
+	}
 }
 
 // Params groups a set of Param expressions. It makes it possible to list
@@ -904,6 +1023,37 @@ func headers(exp eval.Expression) *expr.MappedAttributeExpr {
 			e.Headers = expr.NewEmptyMappedAttributeExpr()
 		}
 		return e.Headers
+	case *expr.MappedAttributeExpr:
+		return e
+	default:
+		return nil
+	}
+}
+
+// cookies returns the mapped attribute containing the cookies for the given
+// expression if it's either the root, a service or an endpoint - nil otherwise.
+func cookies(exp eval.Expression) *expr.MappedAttributeExpr {
+	switch e := exp.(type) {
+	case *expr.RootExpr:
+		if e.API.HTTP.Cookies == nil {
+			e.API.HTTP.Cookies = expr.NewEmptyMappedAttributeExpr()
+		}
+		return e.API.HTTP.Cookies
+	case *expr.HTTPServiceExpr:
+		if e.Cookies == nil {
+			e.Cookies = expr.NewEmptyMappedAttributeExpr()
+		}
+		return e.Cookies
+	case *expr.HTTPEndpointExpr:
+		if e.Cookies == nil {
+			e.Cookies = expr.NewEmptyMappedAttributeExpr()
+		}
+		return e.Cookies
+	case *expr.HTTPResponseExpr:
+		if e.Cookies == nil {
+			e.Cookies = expr.NewEmptyMappedAttributeExpr()
+		}
+		return e.Cookies
 	case *expr.MappedAttributeExpr:
 		return e
 	default:
