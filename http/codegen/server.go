@@ -1102,6 +1102,9 @@ func {{ .ErrorEncoder }}(encoder func(context.Context, http.ResponseWriter) goah
 		case {{ printf "%q" .Name }}:
 			res := v.({{ $err.Ref }})
 			{{- with .Response}}
+				{{- if .ContentType }}
+					ctx = context.WithValue(ctx, goahttp.ContentTypeKey, "{{ .ContentType }}")
+				{{- end }}
 				{{- template "response" . }}
 				{{- if .ServerBody }}
 				return enc.Encode(body)
