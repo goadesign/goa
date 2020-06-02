@@ -253,7 +253,7 @@ var MixedCaseDSL = func() {
 	var StringType = Type("StringType", func() {
 		CreateFrom(external.MixedCaseModel{})
 		Attribute("lowerCamelId", String)
-		Attribute("upperCamelID", String)
+		Attribute("UpperCamelID", String)
 		Attribute("snake_id", String)
 	})
 

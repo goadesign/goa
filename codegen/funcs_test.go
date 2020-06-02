@@ -36,10 +36,10 @@ func TestSnakeCase(t *testing.T) {
 
 func TestCamelCase(t *testing.T) {
 	cases := map[string]struct {
-		str         string
-		firstUpper  bool
-		useAcronyum bool
-		expected    string
+		str        string
+		firstUpper bool
+		useAcronym bool
+		expected   string
 	}{
 		"all lower":             {"aaa", false, true, "aaa"},
 		"all lower first upper": {"aaa", true, true, "Aaa"},
@@ -51,11 +51,19 @@ func TestCamelCase(t *testing.T) {
 		"multiple_uppers":       {"aa_aaa_aaa", false, true, "aaAaaAaa"},
 		"underscores":           {"aa_aaa_aaa", false, true, "aaAaaAaa"},
 		"acronym":               {"aa_id", false, true, "aaID"},
+		"upper camel case":      {"aaID", false, true, "aaID"},
+		"lower camel case":      {"aaId", false, true, "aaID"},
 		"disable acronym":       {"aa_id", false, false, "aaId"},
+
+		"disable acronym first upper":        {"aaID", true, false, "AaId"},
+		"upper camel case first upper":       {"aaID", true, true, "AaID"},
+		"disable acronym upper case acronym": {"aa_ID", false, false, "aaId"},
+		"disable acronym upper camel case":   {"aaID", false, false, "aaId"},
+		"disable acronym lower camel case":   {"aaId", false, false, "aaId"},
 	}
 	for k, tc := range cases {
 		t.Run(k, func(t *testing.T) {
-			actual := CamelCase(tc.str, tc.firstUpper, tc.useAcronyum)
+			actual := CamelCase(tc.str, tc.firstUpper, tc.useAcronym)
 			if actual != tc.expected {
 				t.Errorf("got %q, expected %q", actual, tc.expected)
 			}
