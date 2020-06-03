@@ -111,8 +111,8 @@ func help() {
 Learn more at https://goa.design.
 
 Usage:
-  goa gen PACKAGE [--out DIRECTORY] [--debug]
-  goa example PACKAGE [--out DIRECTORY] [--debug]
+  goa gen PACKAGE [--output DIRECTORY] [--debug]
+  goa example PACKAGE [--output DIRECTORY] [--debug]
   goa version
 
 Commands:
