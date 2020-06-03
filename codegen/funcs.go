@@ -145,10 +145,15 @@ func CamelCase(name string, firstUpper bool, acronym bool) string {
 		// [w,i] is a word.
 		word := string(runes[w:i])
 		// is it one of our initialisms?
-		if u := strings.ToUpper(word); acronym && commonInitialisms[u] {
-			if firstUpper {
-				u = strings.ToUpper(u)
-			} else if w == 0 {
+		if u := strings.ToUpper(word); commonInitialisms[u] {
+			switch {
+			case firstUpper && acronym:
+				// u is already in upper case. Nothing to do here.
+			case firstUpper && !acronym:
+				u = strings.Title(strings.ToLower(u))
+			case w > 0 && !acronym:
+				u = strings.Title(strings.ToLower(u))
+			case w == 0:
 				u = strings.ToLower(u)
 			}
 

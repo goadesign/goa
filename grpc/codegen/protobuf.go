@@ -107,12 +107,12 @@ func makeProtoBufMessageR(att *expr.AttributeExpr, tname *string, sd *ServiceDat
 		switch {
 		case expr.IsArray(att.Type):
 			wrapAttr(att, "ArrayOf"+tname+
-				protoBufify(protoBufMessageDef(expr.AsArray(att.Type).ElemType, sd), true), sd)
+				protoBufify(protoBufMessageDef(expr.AsArray(att.Type).ElemType, sd), true, true), sd)
 		case expr.IsMap(att.Type):
 			m := expr.AsMap(att.Type)
 			wrapAttr(att, tname+"MapOf"+
-				protoBufify(protoBufMessageDef(m.KeyType, sd), true)+
-				protoBufify(protoBufMessageDef(m.ElemType, sd), true), sd)
+				protoBufify(protoBufMessageDef(m.KeyType, sd), true, true)+
+				protoBufify(protoBufMessageDef(m.ElemType, sd), true, true), sd)
 		}
 	}
 
@@ -190,7 +190,7 @@ func protoBufMessageName(att *expr.AttributeExpr, s *codegen.NameScope) string {
 func protoBufFullMessageName(att *expr.AttributeExpr, pkg string, s *codegen.NameScope) string {
 	switch actual := att.Type.(type) {
 	case expr.UserType:
-		n := s.HashedUnique(actual, protoBufify(actual.Name(), true), "")
+		n := s.HashedUnique(actual, protoBufify(actual.Name(), true, true), "")
 		if pkg == "" {
 			return n
 		}
@@ -257,7 +257,7 @@ func protoBufMessageDef(att *expr.AttributeExpr, sd *ServiceData) string {
 				desc string
 			)
 			{
-				fn = codegen.SnakeCase(protoBufify(nat.Name, false))
+				fn = codegen.SnakeCase(protoBufify(nat.Name, false, false))
 				fnum = rpcTag(nat.Attribute)
 				if prim := getPrimitive(nat.Attribute); prim != nil {
 					typ = protoBufMessageDef(prim, sd)
@@ -295,7 +295,7 @@ func protoBufGoFullTypeRef(att *expr.AttributeExpr, pkg string, s *codegen.NameS
 //
 // If firstUpper is true the first character of the identifier is uppercase
 // otherwise it's lowercase.
-func protoBufify(str string, firstUpper bool) string {
+func protoBufify(str string, firstUpper, acronym bool) string {
 	// Optimize trivial case
 	if str == "" {
 		return ""
@@ -308,8 +308,7 @@ func protoBufify(str string, firstUpper bool) string {
 		str = str[:idx]
 	}
 
-	// We must disable acronyms to generate gRPC compatible names.
-	str = codegen.CamelCase(str, firstUpper, false)
+	str = codegen.CamelCase(str, firstUpper, acronym)
 	if str == "" {
 		// All characters are invalid. Produce a default value.
 		if firstUpper {
@@ -329,7 +328,7 @@ func protoBufifyAtt(att *expr.AttributeExpr, name string, upper bool) string {
 			name = tname[0]
 		}
 	}
-	return protoBufify(name, upper)
+	return protoBufify(name, upper, false)
 }
 
 // protoBufNativeMessageTypeName returns the protocol buffer built-in type

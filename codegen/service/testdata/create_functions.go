@@ -149,3 +149,25 @@ func (t *StringType) CreateFromConvertModel(v *aliasd.ConvertModel) {
 	*t = *temp
 }
 `
+
+var MixedCaseConvert = `// Service service type conversion functions
+//
+// Command:
+// $ goa
+
+package service
+
+import (
+	external "goa.design/goa/v3/codegen/service/testdata/external"
+)
+
+// CreateFromMixedCaseModel initializes t from the fields of v
+func (t *StringType) CreateFromMixedCaseModel(v *external.MixedCaseModel) {
+	temp := &StringType{
+		LowerCamelID: &v.LowerCamelID,
+		UpperCamelID: &v.UpperCamelID,
+		SnakeID:      &v.SnakeID,
+	}
+	*t = *temp
+}
+`
