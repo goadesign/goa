@@ -549,6 +549,13 @@ func attributeName(obj *expr.Object, name string) (string, string) {
 			return ln, name
 		}
 	}
+	// next look for a lower camel case without acronym
+	lcn := codegen.CamelCase(name, false, false)
+	for _, nat := range *obj {
+		if nat.Name == lcn {
+			return lcn, name
+		}
+	}
 	// finally look for a snake case representation
 	sn := codegen.SnakeCase(name)
 	for _, nat := range *obj {

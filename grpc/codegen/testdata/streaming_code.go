@@ -328,7 +328,7 @@ func (s *MethodBidirectionalStreamingRPCClientStream) Recv() (*servicebidirectio
 	if err != nil {
 		return res, err
 	}
-	proj := NewIdView(v)
+	proj := NewIDView(v)
 	vres := &servicebidirectionalstreamingrpcviews.ID{Projected: proj, View: "default"}
 	return servicebidirectionalstreamingrpc.NewID(vres), nil
 }
