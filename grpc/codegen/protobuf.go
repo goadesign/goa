@@ -46,46 +46,39 @@ func protoBufTypeContext(pkg string, scope *codegen.NameScope) *codegen.Attribut
 	return ctx
 }
 
-// makeProtoBufMessage recursively transforms the given attribute expression
-// to generate a valid protocol buffer message definition in the proto file.
-// A protocol buffer message is always a user type in goa v2.
-//
-// NOTE: Protocol buffer does not provide native support for nested
-// arrays/maps (See grpc/docs/FAQ.md)
-//
-// makeProtoBufMessage ensures the resulting attribute is a user type. If the
-// given attribute type is a primitive, array, or a map, it wraps the given
-// attribute under an attribute with name "field" and RPC tag number 1. For,
-// nested arrays/maps, the inner array/map is wrapped into a user type.
+// makeProtoBufMessage ensures the resulting attribute is an object user type so
+// that it can be directly mapped to a protobuf type (protobuf messages must
+// always be objects). If the given attribute type is a primitive, array, or a
+// map, it wraps the given attribute with an object with a single "field"
+// attribute. For nested arrays/maps, the inner array/map is wrapped into a
+// user type.
 func makeProtoBufMessage(att *expr.AttributeExpr, tname string, sd *ServiceData) *expr.AttributeExpr {
 	att = expr.DupAtt(att)
-	switch dt := att.Type.(type) {
-	case expr.Primitive:
+	ut, isut := att.Type.(expr.UserType)
+	switch {
+	case att.Type == expr.Empty:
+		att.Type = &expr.UserTypeExpr{
+			TypeName:      tname,
+			AttributeExpr: &expr.AttributeExpr{Type: &expr.Object{}},
+			UID:           sd.Name + "#" + tname,
+		}
+		return att
+	case expr.IsPrimitive(att.Type):
 		wrapAttr(att, tname, sd)
 		return att
-	case expr.UserType:
-		if dt == expr.Empty {
-			// Empty type must generate a message definition
-			att.Type = &expr.UserTypeExpr{
-				TypeName:      tname,
-				AttributeExpr: &expr.AttributeExpr{Type: &expr.Object{}},
-				UID:           sd.Name + "#" + tname,
-			}
-			return att
-		} else if rt, ok := dt.(*expr.ResultTypeExpr); ok && expr.IsArray(rt) {
-			// result type collection
+	case isut:
+		if expr.IsArray(ut) {
 			wrapAttr(att, tname, sd)
 		}
-	case *expr.Array, *expr.Map:
+	case expr.IsArray(att.Type) || expr.IsMap(att.Type):
 		wrapAttr(att, tname, sd)
-	case *expr.Object:
+	case expr.IsObject(att.Type):
 		att.Type = &expr.UserTypeExpr{
 			TypeName:      tname,
 			AttributeExpr: expr.DupAtt(att),
 			UID:           sd.Name + "#" + tname,
 		}
 	}
-	// wrap nested arrays/maps
 	n := ""
 	makeProtoBufMessageR(att, &n, sd)
 	return att
@@ -93,19 +86,10 @@ func makeProtoBufMessage(att *expr.AttributeExpr, tname string, sd *ServiceData)
 
 // makeProtoBufMessageR is the recursive implementation of makeProtoBufMessage.
 func makeProtoBufMessageR(att *expr.AttributeExpr, tname *string, sd *ServiceData, seen ...map[string]struct{}) {
-	wrap := func(att *expr.AttributeExpr, tname string) {
-		switch dt := att.Type.(type) {
-		case *expr.Array:
-			wrapAttr(att, "ArrayOf"+tname+
-				protoBufify(protoBufMessageDef(dt.ElemType, sd), true), sd)
-		case *expr.Map:
-			wrapAttr(att, tname+"MapOf"+
-				protoBufify(protoBufMessageDef(dt.KeyType, sd), true)+
-				protoBufify(protoBufMessageDef(dt.ElemType, sd), true), sd)
-		}
-	}
-	switch dt := att.Type.(type) {
-	case expr.UserType:
+	ut, isut := att.Type.(expr.UserType)
+
+	// handle infinite recursions
+	if isut {
 		var s map[string]struct{}
 		if len(seen) > 0 {
 			s = seen[0]
@@ -113,24 +97,43 @@ func makeProtoBufMessageR(att *expr.AttributeExpr, tname *string, sd *ServiceDat
 			s = make(map[string]struct{})
 			seen = append(seen, s)
 		}
-		if _, ok := s[dt.ID()]; ok {
+		if _, ok := s[ut.ID()]; ok {
 			return
 		}
-		s[dt.ID()] = struct{}{}
-		if rt, ok := dt.(*expr.ResultTypeExpr); ok && expr.IsArray(rt) {
-			wrapAttr(rt.Attribute(), rt.Name(), sd)
+		s[ut.ID()] = struct{}{}
+	}
+
+	wrap := func(att *expr.AttributeExpr, tname string) {
+		switch {
+		case expr.IsArray(att.Type):
+			wrapAttr(att, "ArrayOf"+tname+
+				protoBufify(protoBufMessageDef(expr.AsArray(att.Type).ElemType, sd), true, true), sd)
+		case expr.IsMap(att.Type):
+			m := expr.AsMap(att.Type)
+			wrapAttr(att, tname+"MapOf"+
+				protoBufify(protoBufMessageDef(m.KeyType, sd), true, true)+
+				protoBufify(protoBufMessageDef(m.ElemType, sd), true, true), sd)
 		}
-		makeProtoBufMessageR(dt.Attribute(), tname, sd, seen...)
-	case *expr.Array:
-		makeProtoBufMessageR(dt.ElemType, tname, sd, seen...)
-		wrap(dt.ElemType, *tname)
-	case *expr.Map:
-		// need not worry about map keys because protocol buffer supports
-		// only primitives as map keys.
-		makeProtoBufMessageR(dt.ElemType, tname, sd, seen...)
-		wrap(dt.ElemType, *tname)
-	case *expr.Object:
-		for _, nat := range *dt {
+	}
+
+	switch {
+	case expr.IsPrimitive(att.Type):
+		return
+	case isut:
+		if expr.IsArray(ut) {
+			wrapAttr(ut.Attribute(), ut.Name(), sd)
+		}
+		makeProtoBufMessageR(ut.Attribute(), tname, sd, seen...)
+	case expr.IsArray(att.Type):
+		ar := expr.AsArray(att.Type)
+		makeProtoBufMessageR(ar.ElemType, tname, sd, seen...)
+		wrap(ar.ElemType, *tname)
+	case expr.IsMap(att.Type):
+		m := expr.AsMap(att.Type)
+		makeProtoBufMessageR(m.ElemType, tname, sd, seen...)
+		wrap(m.ElemType, *tname)
+	case expr.IsObject(att.Type):
+		for _, nat := range *(expr.AsObject(att.Type)) {
 			makeProtoBufMessageR(nat.Attribute, tname, sd, seen...)
 		}
 	}
@@ -187,7 +190,7 @@ func protoBufMessageName(att *expr.AttributeExpr, s *codegen.NameScope) string {
 func protoBufFullMessageName(att *expr.AttributeExpr, pkg string, s *codegen.NameScope) string {
 	switch actual := att.Type.(type) {
 	case expr.UserType:
-		n := s.HashedUnique(actual, protoBufify(actual.Name(), true), "")
+		n := s.HashedUnique(actual, protoBufify(actual.Name(), true, true), "")
 		if pkg == "" {
 			return n
 		}
@@ -239,6 +242,9 @@ func protoBufMessageDef(att *expr.AttributeExpr, sd *ServiceData) string {
 	case *expr.Map:
 		return fmt.Sprintf("map<%s, %s>", protoBufMessageDef(actual.KeyType, sd), protoBufMessageDef(actual.ElemType, sd))
 	case expr.UserType:
+		if prim := getPrimitive(att); prim != nil {
+			return protoBufMessageDef(prim, sd)
+		}
 		return protoBufMessageName(att, sd.Scope)
 	case *expr.Object:
 		var ss []string
@@ -251,9 +257,13 @@ func protoBufMessageDef(att *expr.AttributeExpr, sd *ServiceData) string {
 				desc string
 			)
 			{
-				fn = codegen.SnakeCase(protoBufify(nat.Name, false))
+				fn = codegen.SnakeCase(protoBufify(nat.Name, false, false))
 				fnum = rpcTag(nat.Attribute)
-				typ = protoBufMessageDef(nat.Attribute, sd)
+				if prim := getPrimitive(nat.Attribute); prim != nil {
+					typ = protoBufMessageDef(prim, sd)
+				} else {
+					typ = protoBufMessageDef(nat.Attribute, sd)
+				}
 				if nat.Attribute.Description != "" {
 					desc = codegen.Comment(nat.Attribute.Description) + "\n\t"
 				}
@@ -285,7 +295,7 @@ func protoBufGoFullTypeRef(att *expr.AttributeExpr, pkg string, s *codegen.NameS
 //
 // If firstUpper is true the first character of the identifier is uppercase
 // otherwise it's lowercase.
-func protoBufify(str string, firstUpper bool) string {
+func protoBufify(str string, firstUpper, acronym bool) string {
 	// Optimize trivial case
 	if str == "" {
 		return ""
@@ -298,8 +308,7 @@ func protoBufify(str string, firstUpper bool) string {
 		str = str[:idx]
 	}
 
-	// We must disable acronyms to generate gRPC compatible names.
-	str = codegen.CamelCase(str, firstUpper, false)
+	str = codegen.CamelCase(str, firstUpper, acronym)
 	if str == "" {
 		// All characters are invalid. Produce a default value.
 		if firstUpper {
@@ -319,7 +328,7 @@ func protoBufifyAtt(att *expr.AttributeExpr, name string, upper bool) string {
 			name = tname[0]
 		}
 	}
-	return protoBufify(name, upper)
+	return protoBufify(name, upper, false)
 }
 
 // protoBufNativeMessageTypeName returns the protocol buffer built-in type

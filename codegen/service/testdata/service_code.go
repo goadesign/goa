@@ -32,24 +32,14 @@ type ResultWithSpace struct {
 // NewResultWithSpace initializes result type ResultWithSpace from viewed
 // result type ResultWithSpace.
 func NewResultWithSpace(vres *servicewithspacesviews.ResultWithSpace) *ResultWithSpace {
-	var res *ResultWithSpace
-	switch vres.View {
-	case "default", "":
-		res = newResultWithSpace(vres.Projected)
-	}
-	return res
+	return newResultWithSpace(vres.Projected)
 }
 
 // NewViewedResultWithSpace initializes viewed result type ResultWithSpace from
 // result type ResultWithSpace using the given view.
 func NewViewedResultWithSpace(res *ResultWithSpace, view string) *servicewithspacesviews.ResultWithSpace {
-	var vres *servicewithspacesviews.ResultWithSpace
-	switch view {
-	case "default", "":
-		p := newResultWithSpaceView(res)
-		vres = &servicewithspacesviews.ResultWithSpace{Projected: p, View: "default"}
-	}
-	return vres
+	p := newResultWithSpaceView(res)
+	return &servicewithspacesviews.ResultWithSpace{Projected: p, View: "default"}
 }
 
 // newResultWithSpace converts projected type ResultWithSpace to service type
@@ -449,24 +439,14 @@ func NewViewedMultipleViews(res *MultipleViews, view string) *multiplemethodsres
 // NewSingleView initializes result type SingleView from viewed result type
 // SingleView.
 func NewSingleView(vres *multiplemethodsresultmultipleviewsviews.SingleView) *SingleView {
-	var res *SingleView
-	switch vres.View {
-	case "default", "":
-		res = newSingleView(vres.Projected)
-	}
-	return res
+	return newSingleView(vres.Projected)
 }
 
 // NewViewedSingleView initializes viewed result type SingleView from result
 // type SingleView using the given view.
 func NewViewedSingleView(res *SingleView, view string) *multiplemethodsresultmultipleviewsviews.SingleView {
-	var vres *multiplemethodsresultmultipleviewsviews.SingleView
-	switch view {
-	case "default", "":
-		p := newSingleViewView(res)
-		vres = &multiplemethodsresultmultipleviewsviews.SingleView{Projected: p, View: "default"}
-	}
-	return vres
+	p := newSingleViewView(res)
+	return &multiplemethodsresultmultipleviewsviews.SingleView{Projected: p, View: "default"}
 }
 
 // newMultipleViews converts projected type MultipleViews to service type

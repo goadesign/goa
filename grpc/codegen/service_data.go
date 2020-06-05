@@ -71,6 +71,8 @@ type (
 		ServicePkgName string
 		// Method is the data for the underlying method expression.
 		Method *service.MethodData
+		// PayloadType is the type of the payload.
+		PayloadType expr.DataType
 		// PayloadRef is the fully qualified reference to the method payload.
 		PayloadRef string
 		// ResultRef is the fully qualified reference to the method result.
@@ -122,6 +124,8 @@ type (
 		// FieldName is the name of the struct field that holds the
 		// metadata value if any, empty string otherwise.
 		FieldName string
+		// FieldType is the type of the struct field.
+		FieldType expr.DataType
 		// VarName is the name of the Go variable used to read or
 		// convert the metadata value.
 		VarName string
@@ -265,6 +269,8 @@ type (
 		// ReturnTypeRef is the qualified (including the package name)
 		// reference to the return type.
 		ReturnTypeRef string
+		// ReturnTypePkg is the package where the return type is present.
+		ReturnTypePkg string
 		// ReturnIsStruct is true if the return type is a struct.
 		ReturnIsStruct bool
 		// Code is the transformation code.
@@ -282,10 +288,15 @@ type (
 		// FieldName is the name of the data structure field that should
 		// be initialized with the argument if any.
 		FieldName string
+		// FieldType is the type of the data structure field that should be
+		// initialized with the argument if any.
+		FieldType expr.DataType
 		// TypeName is the argument type name.
 		TypeName string
 		// TypeRef is the argument type reference.
 		TypeRef string
+		// Type is the argument type. It is never an aliased user type.
+		Type expr.DataType
 		// Pointer is true if a pointer to the arg should be used.
 		Pointer bool
 		// Required is true if the arg is required to build the payload.
@@ -440,16 +451,16 @@ func (d ServicesData) analyze(gs *expr.GRPCServiceExpr) *ServiceData {
 	}
 	for _, e := range gs.GRPCEndpoints {
 		// convert request and response types to protocol buffer message types
-		e.Request = makeProtoBufMessage(e.Request, protoBufify(e.Name()+"_request", true), sd)
+		e.Request = makeProtoBufMessage(e.Request, protoBufify(e.Name()+"_request", true, true), sd)
 		if e.MethodExpr.StreamingPayload.Type != expr.Empty {
-			e.StreamingRequest = makeProtoBufMessage(e.StreamingRequest, protoBufify(e.Name()+"_streaming_request", true), sd)
+			e.StreamingRequest = makeProtoBufMessage(e.StreamingRequest, protoBufify(e.Name()+"_streaming_request", true, true), sd)
 		}
-		e.Response.Message = makeProtoBufMessage(e.Response.Message, protoBufify(e.Name()+"_response", true), sd)
+		e.Response.Message = makeProtoBufMessage(e.Response.Message, protoBufify(e.Name()+"_response", true, true), sd)
 		for _, er := range e.GRPCErrors {
 			if er.ErrorExpr.Type == expr.ErrorResult || !expr.IsObject(er.ErrorExpr.Type) {
 				continue
 			}
-			er.Response.Message = makeProtoBufMessage(er.Response.Message, protoBufify(e.Name()+"_"+er.Name+"_error", true), sd)
+			er.Response.Message = makeProtoBufMessage(er.Response.Message, protoBufify(e.Name()+"_"+er.Name+"_error", true, true), sd)
 		}
 
 		// collect all the nested messages and return the top-level message
@@ -526,8 +537,10 @@ func (d ServicesData) analyze(gs *expr.GRPCServiceExpr) *ServiceData {
 					Name:      m.VarName,
 					Ref:       m.VarName,
 					FieldName: m.FieldName,
+					FieldType: m.FieldType,
 					TypeName:  m.TypeName,
 					TypeRef:   m.TypeRef,
+					Type:      m.Type,
 					Pointer:   m.Pointer,
 					Required:  m.Required,
 					Validate:  m.Validate,
@@ -591,6 +604,7 @@ func (d ServicesData) analyze(gs *expr.GRPCServiceExpr) *ServiceData {
 			PkgName:         sd.PkgName,
 			ServicePkgName:  svc.PkgName,
 			Method:          md,
+			PayloadType:     e.MethodExpr.Payload.Type,
 			PayloadRef:      payloadRef,
 			ResultRef:       resultRef,
 			ViewedResultRef: viewedResultRef,
@@ -615,7 +629,7 @@ func (d ServicesData) analyze(gs *expr.GRPCServiceExpr) *ServiceData {
 
 // collectMessages recurses through the attribute to gather all the messages.
 func collectMessages(at *expr.AttributeExpr, sd *ServiceData, seen map[string]struct{}) (data []*service.UserTypeData) {
-	if at == nil {
+	if at == nil || expr.IsPrimitive(at.Type) {
 		return
 	}
 	collect := func(at *expr.AttributeExpr) []*service.UserTypeData {
@@ -628,7 +642,7 @@ func collectMessages(at *expr.AttributeExpr, sd *ServiceData, seen map[string]st
 		}
 		att := dt.Attribute()
 		if rt, ok := dt.(*expr.ResultTypeExpr); ok {
-			if a := unwrapAttr(expr.DupAtt(rt.Attribute())); expr.IsArray(a.Type) {
+			if a := unwrapAttr(expr.DupAtt(rt.Attribute())); expr.IsArray(a.Type) && expr.IsObject(rt) {
 				// result type collection
 				att = &expr.AttributeExpr{Type: expr.AsObject(rt)}
 			}
@@ -795,8 +809,10 @@ func buildRequestConvertData(request, payload *expr.AttributeExpr, md []*Metadat
 					Name:      m.VarName,
 					Ref:       m.VarName,
 					FieldName: m.FieldName,
+					FieldType: m.FieldType,
 					TypeName:  m.TypeName,
 					TypeRef:   m.TypeRef,
+					Type:      m.Type,
 					Pointer:   m.Pointer,
 					Required:  m.Required,
 					Validate:  m.Validate,
@@ -879,8 +895,10 @@ func buildResponseConvertData(response, result *expr.AttributeExpr, svcCtx *code
 				Name:      m.VarName,
 				Ref:       m.VarName,
 				FieldName: m.FieldName,
+				FieldType: m.FieldType,
 				TypeName:  m.TypeName,
 				TypeRef:   m.TypeRef,
+				Type:      m.Type,
 				Pointer:   m.Pointer,
 				Required:  m.Required,
 				Validate:  m.Validate,
@@ -893,8 +911,10 @@ func buildResponseConvertData(response, result *expr.AttributeExpr, svcCtx *code
 				Name:      m.VarName,
 				Ref:       m.VarName,
 				FieldName: m.FieldName,
+				FieldType: m.FieldType,
 				TypeName:  m.TypeName,
 				TypeRef:   m.TypeRef,
+				Type:      m.Type,
 				Pointer:   m.Pointer,
 				Required:  m.Required,
 				Validate:  m.Validate,
@@ -954,7 +974,7 @@ func buildInitData(source, target *expr.AttributeExpr, sourceVar, targetVar stri
 			srcCtx = svcCtx
 			tgtCtx = pbCtx
 		}
-		code, helpers, err = protoBufTransform(source, target, sourceVar, targetVar, srcCtx, tgtCtx, proto)
+		code, helpers, err = protoBufTransform(source, target, sourceVar, targetVar, srcCtx, tgtCtx, proto, true)
 		if err != nil {
 			fmt.Println(err.Error()) // TBD validate DSL so errors are not possible
 			return nil
@@ -977,6 +997,7 @@ func buildInitData(source, target *expr.AttributeExpr, sourceVar, targetVar stri
 		ReturnVarName:  targetVar,
 		ReturnTypeRef:  tgtCtx.Scope.Ref(target, tgtCtx.Pkg),
 		ReturnIsStruct: isStruct,
+		ReturnTypePkg:  tgtCtx.Pkg,
 		Code:           code,
 		Args:           args,
 	}
@@ -1186,6 +1207,7 @@ func extractMetadata(a *expr.MappedAttributeExpr, service *expr.AttributeExpr, s
 			arr     = expr.AsArray(c.Type)
 			mp      = expr.AsMap(c.Type)
 			typeRef = scope.GoTypeRef(c)
+			ft      = service.Type
 		)
 		{
 			varn = scope.Name(codegen.Goify(name, false))
@@ -1194,6 +1216,7 @@ func extractMetadata(a *expr.MappedAttributeExpr, service *expr.AttributeExpr, s
 				fieldName = ""
 			} else {
 				pointer = service.IsPrimitivePointer(name, true)
+				ft = service.Find(name).Type
 			}
 			if pointer {
 				typeRef = "*" + typeRef
@@ -1204,6 +1227,7 @@ func extractMetadata(a *expr.MappedAttributeExpr, service *expr.AttributeExpr, s
 			AttributeName: name,
 			Description:   c.Description,
 			FieldName:     fieldName,
+			FieldType:     ft,
 			VarName:       varn,
 			Required:      required,
 			Type:          c.Type,
@@ -1244,6 +1268,17 @@ func resultContext(e *expr.GRPCEndpointExpr, sd *ServiceData) (*expr.AttributeEx
 		return vresAtt, codegen.NewAttributeContext(true, false, true, svc.ViewsPkg, svc.ViewScope)
 	}
 	return e.MethodExpr.Result, serviceTypeContext(svc.PkgName, svc.Scope)
+}
+
+// getPrimitive returns the primitive expression if the given expression is an alias to one
+func getPrimitive(att *expr.AttributeExpr) *expr.AttributeExpr {
+	if ut, ok := att.Type.(*expr.UserTypeExpr); ok {
+		if _, ok := ut.Type.(expr.Primitive); ok {
+			return ut.AttributeExpr
+		}
+		return getPrimitive(ut.AttributeExpr)
+	}
+	return nil
 }
 
 // isEmpty returns true if given type is empty.

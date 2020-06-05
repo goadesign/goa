@@ -74,6 +74,8 @@ type (
 		Required bool
 		// Example returns a JSON serialized example value.
 		Example string
+		// Default returns the default value if any.
+		Default interface{}
 	}
 
 	// BuildFunctionData contains the data needed to generate a constructor
@@ -128,27 +130,17 @@ type (
 		// ReturnTypeAttribute if non-empty returns an attribute in the payload
 		// type that describes the shape of the method payload.
 		ReturnTypeAttribute string
+		// ReturnTypeAttributePointer is true if the return type attribute
+		// generated struct field holds a pointer
+		ReturnTypeAttributePointer bool
 		// ReturnIsStruct if true indicates that the method payload is an object.
 		ReturnIsStruct bool
 		// ReturnTypeName is the fully-qualified name of the payload.
 		ReturnTypeName string
+		// ReturnTypePkg is the package name where the payload is present.
+		ReturnTypePkg string
 		// Args is the list of arguments for the constructor.
-		Args []*PayloadInitArgData
-	}
-
-	// PayloadInitArgData contains the data needed to render payload initlization
-	// arguments.
-	PayloadInitArgData struct {
-		// Name is the argument name.
-		Name string
-		// Pointer if true indicates that the argument is a pointer.
-		Pointer bool
-		// FieldName is the name of the field in the payload initialized by the
-		// argument.
-		FieldName string
-		// FieldPointer if true indicates that the field in the payload is a
-		// pointer.
-		FieldPointer bool
+		Args []*codegen.InitArgData
 	}
 )
 
@@ -301,6 +293,9 @@ func PayloadBuilderSection(buildFunction *BuildFunctionData) *codegen.SectionTem
 		Name:   "cli-build-payload",
 		Source: buildPayloadT,
 		Data:   buildFunction,
+		FuncMap: map[string]interface{}{
+			"fieldCode": fieldCode,
+		},
 	}
 }
 
@@ -314,7 +309,7 @@ func PayloadBuilderSection(buildFunction *BuildFunctionData) *codegen.SectionTem
 // required determines if the flag is required
 // example is an example value for the flag
 //
-func NewFlagData(svcn, en, name, typeName, description string, required bool, example interface{}) *FlagData {
+func NewFlagData(svcn, en, name, typeName, description string, required bool, example, def interface{}) *FlagData {
 	ex := jsonExample(example)
 	fn := goifyTerms(svcn, en, name)
 	return &FlagData{
@@ -325,23 +320,39 @@ func NewFlagData(svcn, en, name, typeName, description string, required bool, ex
 		Description: description,
 		Required:    required,
 		Example:     ex,
+		Default:     def,
 	}
 }
 
 // FieldLoadCode returns the code used in the build payload function that
 // initializes one of the payload object fields. It returns the initialization
 // code and a boolean indicating whether the code requires an "err" variable.
-func FieldLoadCode(f *FlagData, argName, argTypeName, validate string, defaultValue interface{}) (string, bool) {
+func FieldLoadCode(f *FlagData, argName, argTypeName, validate string, defaultValue interface{}, payload expr.DataType) (string, bool) {
 	var (
 		code    string
 		check   bool
 		startIf string
 		endIf   string
+		rval    string
 	)
 	{
 		if !f.Required {
 			startIf = fmt.Sprintf("if %s != \"\" {\n", f.FullName)
 			endIf = "\n}"
+		}
+		if expr.IsPrimitive(payload) {
+			switch payload {
+			case expr.Boolean:
+				rval = "false"
+			case expr.String:
+				rval = "\"\""
+			case expr.Bytes, expr.Any:
+				rval = "nil"
+			default:
+				rval = "0"
+			}
+		} else {
+			rval = "nil"
 		}
 		if argTypeName == codegen.GoNativeTypeName(expr.String) {
 			ref := "&"
@@ -355,20 +366,20 @@ func FieldLoadCode(f *FlagData, argName, argTypeName, validate string, defaultVa
 			if check {
 				code += "\nif err != nil {\n"
 				if flagType(argTypeName) == "JSON" {
-					code += fmt.Sprintf(`return nil, fmt.Errorf("invalid JSON for %s, example of valid JSON:\n%%s", %q)`,
-						argName, ex)
+					code += fmt.Sprintf(`return %v, fmt.Errorf("invalid JSON for %s, example of valid JSON:\n%%s", %q)`,
+						rval, argName, ex)
 				} else {
-					code += fmt.Sprintf(`return nil, fmt.Errorf("invalid value for %s, must be %s")`,
-						argName, f.Type)
+					code += fmt.Sprintf(`return %v, fmt.Errorf("invalid value for %s, must be %s")`,
+						rval, argName, f.Type)
 				}
 				code += "\n}"
 			}
-			if validate != "" {
-				code += "\n" + validate + "\n" + "if err != nil {\n\treturn nil, err\n}"
-			}
+		}
+		if validate != "" {
+			code += "\n" + validate + "\n" + fmt.Sprintf("if err != nil {\n\treturn %v, err\n}", rval)
 		}
 	}
-	return fmt.Sprintf("%s%s%s", startIf, code, endIf), check
+	return fmt.Sprintf("%s%s%s", startIf, code, endIf), check || validate != ""
 }
 
 // flagType calculates the type of a flag
@@ -482,14 +493,14 @@ func conversionCode(from, to, typeName string, pointer bool) (string, bool) {
 		checkErr = true
 	case uint64N:
 		parse = fmt.Sprintf("%s, err %s= strconv.ParseUint(%s, 10, 64)", target, decl, from)
-		checkErr = true
+		checkErr = decl == ""
 	case float32N:
 		parse = fmt.Sprintf("var v float64\nv, err = strconv.ParseFloat(%s, 32)", from)
 		cast = fmt.Sprintf("%s %s= float32(v)", target, decl)
 		checkErr = true
 	case float64N:
 		parse = fmt.Sprintf("%s, err %s= strconv.ParseFloat(%s, 64)", target, decl, from)
-		checkErr = true
+		checkErr = decl == ""
 	case stringN:
 		parse = fmt.Sprintf("%s %s= %s", target, decl, from)
 	case bytesN:
@@ -540,6 +551,22 @@ func generateExample(sub *SubcommandData, svc string) {
 	sub.Example = ex
 }
 
+// fieldCode generates code to initialize the data structures fields
+// from the given args. It is used only in templates.
+func fieldCode(init *PayloadInitData) string {
+	varn := "res"
+	if init.ReturnTypeAttribute == "" {
+		varn = "v"
+	}
+	// We can ignore the transform helpers as there won't be any generated
+	// because the args cannot be user types.
+	c, _, err := codegen.InitStructFields(init.Args, init.ReturnTypeName, varn, "", init.ReturnTypePkg, init.Code == "")
+	if err != nil {
+		panic(err) //bug
+	}
+	return c
+}
+
 // input: []string
 const usageT = `// UsageCommands returns the set of commands and sub-commands using the format
 //
@@ -567,7 +594,7 @@ const parseFlagsT = `var (
 		{{ .FullName }}Flags = flag.NewFlagSet("{{ .Name }}", flag.ExitOnError)
 		{{- $sub := . }}
 		{{- range .Flags }}
-		{{ .FullName }}Flag = {{ $sub.FullName }}Flags.String("{{ .Name }}", "{{ if .Required }}REQUIRED{{ end }}", {{ printf "%q" .Description }})
+		{{ .FullName }}Flag = {{ $sub.FullName }}Flags.String("{{ .Name }}", "{{ if .Default }}{{ .Default }}{{ else if .Required }}REQUIRED{{ end }}", {{ printf "%q" .Description }})
 		{{- end }}
 		{{ end }}
 		{{- end }}
@@ -672,49 +699,33 @@ Example:
 // input: buildFunctionData
 const buildPayloadT = `{{ printf "%s builds the payload for the %s %s endpoint from CLI flags." .Name .ServiceName .MethodName | comment }}
 func {{ .Name }}({{ range .FormalParams }}{{ . }} string, {{ end }}) ({{ .ResultType }}, error) {
-	{{- if .CheckErr }}
+{{- if .CheckErr }}
 	var err error
+{{- end }}
+{{- range .Fields }}
+	{{- if .VarName }}
+		var {{ .VarName }} {{ .TypeRef }}
+		{
+			{{ .Init }}
+		}
 	{{- end }}
-	{{- range .Fields }}
-		{{- if .VarName }}
-	var {{ .VarName }} {{ .TypeRef }}
-	{
-		{{ .Init }}
-	}
+{{- end }}
+{{- with .PayloadInit }}
+	{{- if .Code }}
+		{{ .Code }}
+		{{- if .ReturnTypeAttribute }}
+			res := &{{ .ReturnTypeName }}{
+				{{ .ReturnTypeAttribute }}: {{ if .ReturnTypeAttributePointer }}&{{ end }}v,
+			}
 		{{- end }}
 	{{- end }}
-	{{- with .PayloadInit }}
-
-		{{- if .Code }}
-	{{ .Code }}
-			{{- if .ReturnTypeAttribute }}
-	res := &{{ .ReturnTypeName }}{
-		{{ .ReturnTypeAttribute }}: v,
-	}
-			{{- end }}
-			{{- if .ReturnIsStruct }}
-				{{- range .Args }}
-					{{- if .FieldName }}
-	{{ if $.PayloadInit.ReturnTypeAttribute }}res{{ else }}v{{ end }}.{{ .FieldName }} = {{ if and (not .Pointer) .FieldPointer }}&{{ end }}{{ .Name }}
-				{{- end }}
-			{{- end }}
+	{{- if .ReturnIsStruct }}
+		{{- if not .Code }}
+		{{ if .ReturnTypeAttribute }}res{{ else }}v{{ end }} := &{{ .ReturnTypeName }}{}
 		{{- end }}
+		{{ fieldCode . }}
+	{{- end }}
 	return {{ if .ReturnTypeAttribute }}res{{ else }}v{{ end }}, nil
-
-		{{- else }}
-			{{- if .ReturnIsStruct }}
-	payload := &{{ .ReturnTypeName }}{
-				{{- range .Args }}
-					{{- if .FieldName }}
-		{{ .FieldName }}: {{ if and (not .Pointer) .FieldPointer }}&{{ end }}{{ .Name }},
-					{{- end }}
-				{{- end }}
-	}
-	return payload, nil
-			{{-  end }}
-
-		{{- end }}
-
-	{{- end }}
+{{- end }}
 }
 `

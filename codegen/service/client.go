@@ -24,6 +24,7 @@ func ClientFile(service *expr.ServiceExpr) *codegen.File {
 		header := codegen.Header(service.Name+" client", svc.PkgName,
 			[]*codegen.ImportSpec{
 				{Path: "context"},
+				{Path: "io"},
 				codegen.GoaImport(""),
 			})
 		def := &codegen.SectionTemplate{
@@ -83,18 +84,23 @@ const serviceClientMethodT = `
 {{- if .ClientStream }}
 	{{- $resultType = .ClientStream.Interface }}
 {{- end }}
-func (c *{{ .ClientVarName }}) {{ .VarName }}(ctx context.Context, {{ if .PayloadRef }}p {{ .PayloadRef }}{{ end }}) ({{ if $resultType }}res {{ $resultType }}, {{ end }}err error) {
-	{{- if $resultType }}
+func (c *{{ .ClientVarName }}) {{ .VarName }}(ctx context.Context, {{ if .PayloadRef }}p {{ .PayloadRef }}{{ end }}{{ if .MethodData.SkipRequestBodyEncodeDecode}}, req io.ReadCloser{{ end }}) ({{ if $resultType }}res {{ $resultType }}, {{ end }}{{ if .MethodData.SkipResponseBodyEncodeDecode }}resp io.ReadCloser, {{ end }}err error) {
+	{{- if or $resultType .MethodData.SkipResponseBodyEncodeDecode }}
 	var ires interface{}
 	{{- end }}
-	{{ if $resultType }}ires{{ else }}_{{ end }}, err = c.{{ .VarName}}Endpoint(ctx, {{ if .PayloadRef }}p{{ else }}nil{{ end }})
-	{{- if not $resultType }}
+	{{ if or $resultType .MethodData.SkipResponseBodyEncodeDecode }}ires{{ else }}_{{ end }}, err = c.{{ .VarName}}Endpoint(ctx, {{ if .MethodData.SkipRequestBodyEncodeDecode }}&{{ .RequestStruct }}{ {{ if .PayloadRef }}Payload: p, {{ end }}Body: req }{{ else if .PayloadRef }}p{{ else }}nil{{ end }})
+	{{- if not (or $resultType .MethodData.SkipResponseBodyEncodeDecode) }}
 	return
 	{{- else }}
 	if err != nil {
 		return
 	}
+		{{- if .MethodData.SkipResponseBodyEncodeDecode }}
+	o := ires.(*{{ .MethodData.ResponseStruct }})
+	return {{ if .ResultRef }}o.Result, {{ end }}o.Body, nil
+		{{- else }}
 	return ires.({{ $resultType }}), nil
+		{{- end }}
 	{{- end }}
 }
 `

@@ -547,3 +547,168 @@ func ValidateRTViewTiny(result *RTView) (err error) {
 	return
 }
 `
+
+const ResultWithRecursiveCollectionOfResultTypeCode = `// SomeRT is the viewed result type that is projected based on a view.
+type SomeRT struct {
+	// Type to project
+	Projected *SomeRTView
+	// View to render
+	View string
+}
+
+// AnotherResult is the viewed result type that is projected based on a view.
+type AnotherResult struct {
+	// Type to project
+	Projected *AnotherResultView
+	// View to render
+	View string
+}
+
+// SomeRTView is a type that runs validations on a projected type.
+type SomeRTView struct {
+	A SomeRTCollectionView
+}
+
+// SomeRTCollectionView is a type that runs validations on a projected type.
+type SomeRTCollectionView []*SomeRTView
+
+// AnotherResultView is a type that runs validations on a projected type.
+type AnotherResultView struct {
+	A AnotherResultCollectionView
+}
+
+// AnotherResultCollectionView is a type that runs validations on a projected
+// type.
+type AnotherResultCollectionView []*AnotherResultView
+
+var (
+	// SomeRTMap is a map of attribute names in result type SomeRT indexed by view
+	// name.
+	SomeRTMap = map[string][]string{
+		"default": []string{
+			"a",
+		},
+		"tiny": []string{
+			"a",
+		},
+	}
+	// AnotherResultMap is a map of attribute names in result type AnotherResult
+	// indexed by view name.
+	AnotherResultMap = map[string][]string{
+		"default": []string{
+			"a",
+		},
+	}
+	// SomeRTCollectionMap is a map of attribute names in result type
+	// SomeRTCollection indexed by view name.
+	SomeRTCollectionMap = map[string][]string{
+		"default": []string{
+			"a",
+		},
+		"tiny": []string{
+			"a",
+		},
+	}
+	// AnotherResultCollectionMap is a map of attribute names in result type
+	// AnotherResultCollection indexed by view name.
+	AnotherResultCollectionMap = map[string][]string{
+		"default": []string{
+			"a",
+		},
+	}
+)
+
+// ValidateSomeRT runs the validations defined on the viewed result type SomeRT.
+func ValidateSomeRT(result *SomeRT) (err error) {
+	switch result.View {
+	case "default", "":
+		err = ValidateSomeRTView(result.Projected)
+	case "tiny":
+		err = ValidateSomeRTViewTiny(result.Projected)
+	default:
+		err = goa.InvalidEnumValueError("view", result.View, []interface{}{"default", "tiny"})
+	}
+	return
+}
+
+// ValidateAnotherResult runs the validations defined on the viewed result type
+// AnotherResult.
+func ValidateAnotherResult(result *AnotherResult) (err error) {
+	switch result.View {
+	case "default", "":
+		err = ValidateAnotherResultView(result.Projected)
+	default:
+		err = goa.InvalidEnumValueError("view", result.View, []interface{}{"default"})
+	}
+	return
+}
+
+// ValidateSomeRTView runs the validations defined on SomeRTView using the
+// "default" view.
+func ValidateSomeRTView(result *SomeRTView) (err error) {
+
+	if result.A != nil {
+		if err2 := ValidateSomeRTCollectionViewTiny(result.A); err2 != nil {
+			err = goa.MergeErrors(err, err2)
+		}
+	}
+	return
+}
+
+// ValidateSomeRTViewTiny runs the validations defined on SomeRTView using the
+// "tiny" view.
+func ValidateSomeRTViewTiny(result *SomeRTView) (err error) {
+
+	if result.A != nil {
+		if err2 := ValidateSomeRTCollectionView(result.A); err2 != nil {
+			err = goa.MergeErrors(err, err2)
+		}
+	}
+	return
+}
+
+// ValidateSomeRTCollectionView runs the validations defined on
+// SomeRTCollectionView using the "default" view.
+func ValidateSomeRTCollectionView(result SomeRTCollectionView) (err error) {
+	for _, item := range result {
+		if err2 := ValidateSomeRTView(item); err2 != nil {
+			err = goa.MergeErrors(err, err2)
+		}
+	}
+	return
+}
+
+// ValidateSomeRTCollectionViewTiny runs the validations defined on
+// SomeRTCollectionView using the "tiny" view.
+func ValidateSomeRTCollectionViewTiny(result SomeRTCollectionView) (err error) {
+	for _, item := range result {
+		if err2 := ValidateSomeRTViewTiny(item); err2 != nil {
+			err = goa.MergeErrors(err, err2)
+		}
+	}
+	return
+}
+
+// ValidateAnotherResultView runs the validations defined on AnotherResultView
+// using the "default" view.
+func ValidateAnotherResultView(result *AnotherResultView) (err error) {
+
+	if result.A != nil {
+		if err2 := ValidateAnotherResultCollectionView(result.A); err2 != nil {
+			err = goa.MergeErrors(err, err2)
+		}
+	}
+	return
+}
+
+// ValidateAnotherResultCollectionView runs the validations defined on
+// AnotherResultCollectionView using the "default" view.
+func ValidateAnotherResultCollectionView(result AnotherResultCollectionView) (err error) {
+	for _, item := range result {
+		if err2 := ValidateAnotherResultView(item); err2 != nil {
+			err = goa.MergeErrors(err, err2)
+		}
+	}
+	return
+}
+`

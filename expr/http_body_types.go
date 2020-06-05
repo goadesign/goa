@@ -6,6 +6,54 @@ import (
 	"unicode"
 )
 
+// defaultRequestHeaderAttributes returns a map keyed by the names of the
+// payload attributes that should come from the request HTTP headers by default.
+// This includes mapping done for certain authorization schemes (basic auth,
+// JWT, OAuth). The corresponding boolean value indicates whether the value maps
+// directly to a payload attribute (true) or whether the value is used to
+// compute the payload attribute (false). The only case where the value is
+// computed by the generated code at this point is for basic authorization (the
+// single "Authorization" header is used to compute both the username and
+// password attributes).
+func defaultRequestHeaderAttributes(e *HTTPEndpointExpr) map[string]bool {
+	if len(e.MethodExpr.Requirements) == 0 {
+		return nil
+	}
+	headers := make(map[string]bool)
+	for _, req := range e.MethodExpr.Requirements {
+		for _, sch := range req.Schemes {
+			var field string
+			switch sch.Kind {
+			case NoKind:
+				continue
+			case BasicAuthKind:
+				user := TaggedAttribute(e.MethodExpr.Payload, "security:username")
+				if name, _ := findKey(e, user); name == "" {
+					// No explicit mapping, use HTTP header by default
+					headers[user] = false
+				}
+				pass := TaggedAttribute(e.MethodExpr.Payload, "security:password")
+				if name, _ := findKey(e, pass); name == "" {
+					// No explicit mapping, use HTTP header by default
+					headers[pass] = false
+				}
+				continue
+			case APIKeyKind:
+				field = TaggedAttribute(e.MethodExpr.Payload, "security:apikey:"+sch.SchemeName)
+			case JWTKind:
+				field = TaggedAttribute(e.MethodExpr.Payload, "security:token")
+			case OAuth2Kind:
+				field = TaggedAttribute(e.MethodExpr.Payload, "security:accesstoken")
+			}
+			if name, _ := findKey(e, field); name == "" {
+				// No explicit mapping, use HTTP header by default
+				headers[field] = true
+			}
+		}
+	}
+	return headers
+}
+
 // httpRequestBody returns an attribute describing the HTTP request body of the
 // given endpoint. If the DSL defines a body explicitly via the Body function
 // then the corresponding attribute is used. Otherwise the attribute is computed
@@ -23,30 +71,11 @@ func httpRequestBody(a *HTTPEndpointExpr) *AttributeExpr {
 	}
 
 	var (
-		payload   = a.MethodExpr.Payload
-		headers   = a.Headers
-		params    = a.Params
-		userField string
-		passField string
+		payload  = a.MethodExpr.Payload
+		headers  = a.Headers
+		params   = a.Params
+		bodyOnly = headers.IsEmpty() && params.IsEmpty() && a.MapQueryParams == nil
 	)
-	{
-		obj := AsObject(payload.Type)
-		if obj != nil {
-			for _, at := range *obj {
-				if _, ok := at.Attribute.Meta["security:username"]; ok {
-					userField = at.Name
-				}
-				if _, ok := at.Attribute.Meta["security:password"]; ok {
-					passField = at.Name
-				}
-				if userField != "" && passField != "" {
-					break
-				}
-			}
-		}
-	}
-
-	bodyOnly := headers.IsEmpty() && params.IsEmpty() && a.MapQueryParams == nil
 
 	// 1. If Payload is not an object then check whether there are params or
 	// headers defined and if so return empty type (payload encoded in
@@ -68,11 +97,8 @@ func httpRequestBody(a *HTTPEndpointExpr) *AttributeExpr {
 	if a.MapQueryParams != nil && *a.MapQueryParams != "" {
 		removeAttribute(body, *a.MapQueryParams)
 	}
-	if userField != "" {
-		removeAttribute(body, userField)
-	}
-	if passField != "" {
-		removeAttribute(body, passField)
+	for att := range defaultRequestHeaderAttributes(a) {
+		removeAttribute(body, att)
 	}
 
 	// 3. Return empty type if no attribute left
@@ -140,9 +166,9 @@ func httpResponseBody(a *HTTPEndpointExpr, resp *HTTPResponseExpr) *AttributeExp
 // the corresponding attribute is returned. Otherwise the attribute is computed
 // by removing the attributes of the error used to define headers and
 // parameters.
-func httpErrorResponseBody(a *HTTPEndpointExpr, v *HTTPErrorExpr) *AttributeExpr {
-	name := a.Name() + "_" + v.ErrorExpr.Name
-	return buildHTTPResponseBody(name, v.ErrorExpr.AttributeExpr, v.Response, a.Service)
+func httpErrorResponseBody(e *HTTPEndpointExpr, v *HTTPErrorExpr) *AttributeExpr {
+	name := e.Name() + "_" + v.ErrorExpr.Name
+	return buildHTTPResponseBody(name, v.ErrorExpr.AttributeExpr, v.Response, e.Service)
 }
 
 func buildHTTPResponseBody(name string, attr *AttributeExpr, resp *HTTPResponseExpr, svc *HTTPServiceExpr) *AttributeExpr {
@@ -345,5 +371,88 @@ func removeAttribute(attr *MappedAttributeExpr, name string) {
 		if m, ok := ex.Value.(map[string]interface{}); ok {
 			delete(m, name)
 		}
+	}
+}
+
+// extendedHTTPRequestBody returns an attribute describing the HTTP request body.
+// This is used only in the validation phase to figure out the request body when
+// method Payload extends or references other types.
+func extendedHTTPRequestBody(a *HTTPEndpointExpr) *AttributeExpr {
+	const suffix = "RequestBody"
+	var (
+		name = concat(a.Name(), "Request", "Body")
+	)
+	if a.Body != nil {
+		a.Body = DupAtt(a.Body)
+		renameType(a.Body, name, suffix)
+		return a.Body
+	}
+
+	var (
+		payload  = a.MethodExpr.Payload
+		headers  = a.Headers
+		params   = a.Params
+		bodyOnly = headers.IsEmpty() && params.IsEmpty() && a.MapQueryParams == nil
+	)
+
+	// 1. If Payload is not an object then check whether there are params or
+	// headers defined and if so return empty type (payload encoded in
+	// request params or headers) otherwise return payload type (payload
+	// encoded in request body).
+	if !IsObject(payload.Type) {
+		if bodyOnly {
+			payload = DupAtt(payload)
+			renameType(payload, name, suffix)
+			return payload
+		}
+		return &AttributeExpr{Type: Empty}
+	}
+
+	// Merge extended and referenced types
+	payload = DupAtt(payload)
+	for _, ref := range payload.References {
+		ru, ok := ref.(UserType)
+		if !ok {
+			continue
+		}
+		payload.Inherit(ru.Attribute())
+	}
+	for _, base := range payload.Bases {
+		ru, ok := base.(UserType)
+		if !ok {
+			continue
+		}
+		payload.Merge(ru.Attribute())
+	}
+
+	// 2. Remove header and param attributes
+	body := NewMappedAttributeExpr(payload)
+	removeAttributes(body, headers)
+	removeAttributes(body, params)
+	if a.MapQueryParams != nil && *a.MapQueryParams != "" {
+		removeAttribute(body, *a.MapQueryParams)
+	}
+	for att := range defaultRequestHeaderAttributes(a) {
+		removeAttribute(body, att)
+	}
+
+	// 3. Return empty type if no attribute left
+	if len(*AsObject(body.Type)) == 0 {
+		return &AttributeExpr{Type: Empty}
+	}
+
+	// 4. Build computed user type
+	att := body.Attribute()
+	ut := &UserTypeExpr{
+		AttributeExpr: att,
+		TypeName:      name,
+		UID:           a.Service.Name() + "#" + a.Name(),
+	}
+	appendSuffix(ut.Attribute().Type, suffix)
+
+	return &AttributeExpr{
+		Type:         ut,
+		Validation:   att.Validation,
+		UserExamples: att.UserExamples,
 	}
 }

@@ -1,9 +1,11 @@
 package expr
 
 import (
+	"fmt"
 	"sort"
 
 	"goa.design/goa/v3/eval"
+	goa "goa.design/goa/v3/pkg"
 )
 
 // Root is the root object built by the DSL.
@@ -143,6 +145,8 @@ func (r *RootExpr) Packages() []string {
 	return []string{
 		"goa.design/goa/v3/expr",
 		"goa.design/goa/v3/dsl",
+		fmt.Sprintf("goa.design/goa/v3@%s/expr", goa.Version()),
+		fmt.Sprintf("goa.design/goa/v3@%s/dsl", goa.Version()),
 	}
 }
 

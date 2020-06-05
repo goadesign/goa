@@ -240,7 +240,7 @@ func ConvertFile(root *expr.RootExpr, service *expr.ServiceExpr) (*codegen.File,
 		srcAtt := &expr.AttributeExpr{Type: c.User}
 		code, tf, err := codegen.GoTransform(
 			&expr.AttributeExpr{Type: c.User}, &expr.AttributeExpr{Type: dt},
-			"t", "v", srcCtx, tgtCtx, "transform")
+			"t", "v", srcCtx, tgtCtx, "transform", true)
 		if err != nil {
 			return nil, err
 		}
@@ -279,7 +279,7 @@ func ConvertFile(root *expr.RootExpr, service *expr.ServiceExpr) (*codegen.File,
 		tgtAtt := &expr.AttributeExpr{Type: c.User}
 		code, tf, err := codegen.GoTransform(
 			&expr.AttributeExpr{Type: dt}, tgtAtt,
-			"v", "temp", srcCtx, tgtCtx, "transform")
+			"v", "temp", srcCtx, tgtCtx, "transform", true)
 		if err != nil {
 			return nil, err
 		}
@@ -552,6 +552,13 @@ func attributeName(obj *expr.Object, name string) (string, string) {
 	for _, nat := range *obj {
 		if nat.Name == ln {
 			return ln, name
+		}
+	}
+	// next look for a lower camel case without acronym
+	lcn := codegen.CamelCase(name, false, false)
+	for _, nat := range *obj {
+		if nat.Name == lcn {
+			return lcn, name
 		}
 	}
 	// finally look for a snake case representation

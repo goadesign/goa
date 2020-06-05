@@ -319,6 +319,13 @@ func (e *GRPCEndpointExpr) Finalize() {
 	// Finalize streaming payload type if defined
 	if e.MethodExpr.StreamingPayload.Type != Empty {
 		initAttrFromDesign(e.StreamingRequest, e.MethodExpr.StreamingPayload)
+		if msgObj := AsObject(e.StreamingRequest.Type); msgObj != nil {
+			for _, nat := range *msgObj {
+				if e.MethodExpr.StreamingPayload.IsRequired(nat.Name) {
+					e.StreamingRequest.Validation.AddRequired(nat.Name)
+				}
+			}
+		}
 	}
 
 	// Finalize response
@@ -410,7 +417,7 @@ func validateRPCTags(fields *Object, e *GRPCEndpointExpr) *eval.ValidationErrors
 	foundRPC := make(map[string]string)
 	for _, nat := range *fields {
 		if tag, ok := nat.Attribute.FieldTag(); !ok {
-			verr.Add(e, "attribute %q does not have \"rpc:tag\" defined in the meta", nat.Name)
+			verr.Add(e, "attribute %q does not have \"rpc:tag\" defined in the meta, use \"Field\" to define the attribute of a type used in a gRPC method", nat.Name)
 		} else if a, ok := foundRPC[tag]; ok {
 			verr.Add(e, "field number %s in attribute %q already exists for attribute %q", tag, nat.Name, a)
 		} else {

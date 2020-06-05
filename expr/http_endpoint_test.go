@@ -96,17 +96,15 @@ func TestHTTPEndpointPrepare(t *testing.T) {
 
 func TestHTTPEndpointValidation(t *testing.T) {
 	cases := map[string]struct {
-		DSL    func()
-		Errors []string
+		DSL   func()
+		Error string
 	}{
 		"endpoint-body-as-payload-prop": {
 			DSL: testdata.EndpointBodyAsPayloadProp,
 		},
 		"endpoint-body-as-missed-payload-prop": {
-			DSL: testdata.EndpointBodyAsMissedPayloadProp,
-			Errors: []string{
-				"Request type does not have an attribute named \"name\" in service \"Service\" HTTP endpoint \"Method\"",
-			},
+			DSL:   testdata.EndpointBodyAsMissedPayloadProp,
+			Error: `Request type does not have an attribute named "name" in service "Service" HTTP endpoint "Method"`,
 		},
 		"endpoint-body-extend-payload": {
 			DSL: testdata.EndpointBodyExtendPayload,
@@ -115,16 +113,12 @@ func TestHTTPEndpointValidation(t *testing.T) {
 			DSL: testdata.EndpointBodyAsUserType,
 		},
 		"endpoint-missing-token": {
-			DSL: testdata.EndpointMissingToken,
-			Errors: []string{
-				"service \"Service\" method \"Method\": payload of method \"Method\" of service \"Service\" does not define a JWT attribute, use Token to define one",
-			},
+			DSL:   testdata.EndpointMissingToken,
+			Error: `service "Service" method "Method": payload of method "Method" of service "Service" does not define a JWT attribute, use Token to define one`,
 		},
 		"endpoint-missing-token-payload": {
-			DSL: testdata.EndpointMissingTokenPayload,
-			Errors: []string{
-				"service \"Service\" method \"Method\": payload of method \"Method\" of service \"Service\" does not define a JWT attribute, use Token to define one",
-			},
+			DSL:   testdata.EndpointMissingTokenPayload,
+			Error: `service "Service" method "Method": payload of method "Method" of service "Service" does not define a JWT attribute, use Token to define one`,
 		},
 		"endpoint-missing-token-extend": {
 			DSL: testdata.EndpointExtendToken,
@@ -135,14 +129,44 @@ func TestHTTPEndpointValidation(t *testing.T) {
 		"endpoint-has-parent-and-other": {
 			DSL: testdata.EndpointHasParentAndOther,
 		},
+		"endpoint-has-skip-request-encode-and-payload-streaming": {
+			DSL:   testdata.EndpointHasSkipRequestEncodeAndPayloadStreaming,
+			Error: `service "Service" HTTP endpoint "Method": Endpoint cannot use SkipRequestBodyEncodeDecode when method defines a StreamingPayload.`,
+		},
+		"endpoint-has-skip-request-encode-and-result-streaming": {
+			DSL:   testdata.EndpointHasSkipRequestEncodeAndResultStreaming,
+			Error: `service "Service" HTTP endpoint "Method": Endpoint cannot use SkipRequestBodyEncodeDecode when method defines a StreamingResult. Use SkipResponseBodyEncodeDecode instead.`,
+		},
+		"endpoint-has-skip-response-encode-and-payload-streaming": {
+			DSL:   testdata.EndpointHasSkipResponseEncodeAndPayloadStreaming,
+			Error: `service "Service" HTTP endpoint "Method": Endpoint cannot use SkipResponseBodyEncodeDecode when method defines a StreamingPayload. Use SkipRequestBodyEncodeDecode instead.`,
+		},
+		"endpoint-has-skip-response-encode-and-result-streaming": {
+			DSL: testdata.EndpointHasSkipResponseEncodeAndResultStreaming,
+			Error: `service "Service" HTTP endpoint "Method": Endpoint cannot use SkipResponseBodyEncodeDecode when method defines a StreamingResult.
+service "Service" HTTP endpoint "Method": HTTP endpoint response body must be empty when using SkipResponseBodyEncodeDecode. Make sure to define Headers as needed.`,
+		},
+		"endpoint-has-skip-encode-and-grpc": {
+			DSL:   testdata.EndpointHasSkipEncodeAndGRPC,
+			Error: `service "Service" HTTP endpoint "Method": Endpoint cannot use SkipRequestBodyEncodeDecode and define a gRPC transport.`,
+		},
+		"endpoint-payload-missing-required": {
+			DSL:   testdata.EndpointPayloadMissingRequired,
+			Error: `service "Service" HTTP endpoint "Method": The following HTTP request body attribute is required but the corresponding method payload attribute is not: nonreq. Use 'Required' to make the attribute required in the method payload as well.`,
+		},
+		"streaming-endpoint-has-request-body": {
+			DSL: testdata.StreamingEndpointRequestBody,
+			Error: `service "Service" HTTP endpoint "MethodA": HTTP endpoint request body must be empty when the endpoint uses streaming. Payload attributes must be mapped to headers and/or params.
+service "Service" HTTP endpoint "MethodB": HTTP endpoint request body must be empty when the endpoint uses streaming. Payload attributes must be mapped to headers and/or params.
+service "Service" HTTP endpoint "MethodC": HTTP endpoint request body must be empty when the endpoint uses streaming. Payload attributes must be mapped to headers and/or params.`,
+		},
 	}
 	for name, c := range cases {
 		t.Run(name, func(t *testing.T) {
-			if c.Errors == nil || len(c.Errors) == 0 {
+			if c.Error == "" {
 				expr.RunDSL(t, c.DSL)
 			} else {
 				var errors []error
-
 				err := expr.RunInvalidDSL(t, c.DSL)
 				if err != nil {
 					if merr, ok := err.(eval.MultiError); ok {
@@ -153,14 +177,11 @@ func TestHTTPEndpointValidation(t *testing.T) {
 						errors = append(errors, err)
 					}
 				}
-
-				if len(c.Errors) != len(errors) {
-					t.Errorf("got %d, expected the number of error values to match %d\nerrors:\n%s", len(errors), len(c.Errors), err.Error())
+				if len(errors) > 1 || len(errors) == 0 {
+					t.Errorf("got %d errors, expected 1", len(errors))
 				} else {
-					for i, err := range errors {
-						if err.Error() != c.Errors[i] {
-							t.Errorf("got \t\t%q,\nexpected\t%q at index %d", err.Error(), c.Errors[i], i)
-						}
+					if errors[0].Error() != c.Error {
+						t.Errorf("got `%s`, expected `%s`", err.Error(), c.Error)
 					}
 				}
 			}
@@ -207,20 +228,55 @@ func TestHTTPEndpointFinalization(t *testing.T) {
 
 			if tc.ExpectedBody != nil {
 				if e.Body == nil {
-					t.Errorf("%s: got endpoint without body, expected endpoint with body", name)
+					t.Errorf("got endpoint without body, expected endpoint with body")
 					return
 				}
 				bodyObj := *expr.AsObject(e.Body.Type)
 				expectedBodyObj := *expr.AsObject(tc.ExpectedBody)
 				if len(bodyObj) != len(expectedBodyObj) {
-					t.Errorf("%s: got %d, expected %d attribute(s) in endpoint body", name, len(bodyObj), len(expectedBodyObj))
+					t.Errorf("got %d, expected %d attribute(s) in endpoint body", len(bodyObj), len(expectedBodyObj))
 				} else {
 					for i := 0; i < len(expectedBodyObj); i++ {
 						if bodyObj[i].Name != expectedBodyObj[i].Name {
-							t.Errorf("%s: got %q, expected %q attribute in endpoint body", name, bodyObj[i].Name, expectedBodyObj[i].Name)
+							t.Errorf("got %q, expected %q attribute in endpoint body", bodyObj[i].Name, expectedBodyObj[i].Name)
 						}
 					}
 				}
+			}
+		})
+	}
+}
+
+func TestHTTPAuthorizationMapping(t *testing.T) {
+	cases := []struct {
+		Name           string
+		DSL            func()
+		ExpectedHeader string
+	}{{
+		Name:           "explicit",
+		DSL:            testdata.ExplicitAuthHeaderDSL,
+		ExpectedHeader: "token",
+	}, {
+		Name:           "implicit",
+		DSL:            testdata.ImplicitAuthHeaderDSL,
+		ExpectedHeader: "Authorization",
+	},
+	}
+	for _, tc := range cases {
+		t.Run(tc.Name, func(t *testing.T) {
+			root := expr.RunDSL(t, tc.DSL)
+			e := root.API.HTTP.Services[0].HTTPEndpoints[0]
+			if e.Headers == nil {
+				t.Errorf("got endpoint without header, expected endpoint with HTTP header")
+				return
+			}
+			if len(*expr.AsObject(e.Headers.Type)) != 1 {
+				t.Errorf("got %d, expected 1 attribute in endpoint headers", len(*expr.AsObject(e.Headers.Type)))
+				return
+			}
+			n := e.Headers.ElemName("token")
+			if n != tc.ExpectedHeader {
+				t.Errorf("got %q, expected %q attribute in endpoint headers", n, tc.ExpectedHeader)
 			}
 		})
 	}

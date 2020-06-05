@@ -46,3 +46,33 @@ func TestPaths(t *testing.T) {
 		})
 	}
 }
+
+func TestPathTrailingShash(t *testing.T) {
+	cases := []struct {
+		Name string
+		DSL  func()
+		Code string
+	}{
+		{"slash_with_base_path_no_trailing", testdata.BasePathNoTrailing_SlashWithBasePathNoTrailingDSL, testdata.BasePathNoTrailing_SlashWithBasePathNoTrailingCode},
+		{"trailing_with_base_path_no_trailing", testdata.BasePathNoTrailing_TrailingWithBasePathNoTrailingDSL, testdata.BasePathNoTrailing_TrailingWithBasePathNoTrailingCode},
+		{"slash_with_base_path_with_trailing", testdata.BasePathWithTrailingSlash_WithBasePathWithTrailingDSL, testdata.BasePathWithTrailingSlash_WithBasePathWithTrailingCode},
+		{"slash_no_base_path", testdata.NoBasePath_SlashNoBasePathDSL, testdata.NoBasePath_SlashNoBasePathCode},
+		{"path-trailing_no_base_path", testdata.NoBasePath_TrailingNoBasePathDSL, testdata.NoBasePath_TrailingNoBasePathCode},
+		{"add-trailing-slash-to-base-path", testdata.BasePath_SpecialTrailingSlashDSL, testdata.BasePath_SpecialTrailingSlashCode},
+	}
+
+	for _, c := range cases {
+		t.Run(c.Name, func(t *testing.T) {
+			RunHTTPDSL(t, c.DSL)
+			if len(expr.Root.API.HTTP.Services) != 1 {
+				t.Fatalf("got %d file(s), expected 1", len(expr.Root.API.HTTP.Services))
+			}
+			fs := serverPath(expr.Root.API.HTTP.Services[0])
+			sections := fs.SectionTemplates
+			code := codegen.SectionCode(t, sections[1])
+			if code != c.Code {
+				t.Errorf("invalid code, got:\n%s\ngot vs. expected:\n%s", code, codegen.Diff(t, code, c.Code))
+			}
+		})
+	}
+}

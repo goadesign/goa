@@ -27,6 +27,7 @@ func TestHTTPResponseValidation(t *testing.T) {
 		{"not string or []byte", intResultResponseWithTextContentTypeDSL, `HTTP response of service "StringResultResponseWithHeaders" HTTP endpoint "Method": Result type must be String or Bytes when ContentType is 'text/plain'`},
 		{"missing header result attribute", missingHeaderResultAttributeDSL, `HTTP response of service "MissingHeaderResultAttribute" HTTP endpoint "Method": header "bar" has no equivalent attribute in result type, use notation 'attribute_name:header_name' to identify corresponding result type attribute.
 service "MissingHeaderResultAttribute" HTTP endpoint "Method": attribute "bar" used in HTTP headers must be a primitive type or an array of primitive types.`},
+		{"skip encode and gRPC", skipEncodeAndGRPCDSL, `service "SkipEncodeAndGRPC" HTTP endpoint "Method": Endpoint response cannot use SkipResponseBodyEncodeDecode and define a gRPC transport.`},
 	}
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
@@ -225,6 +226,24 @@ var missingHeaderResultAttributeDSL = func() {
 					Header("bar")
 				})
 			})
+		})
+	})
+}
+
+var skipEncodeAndGRPCDSL = func() {
+	Service("SkipEncodeAndGRPC", func() {
+		Method("Method", func() {
+			Result(func() {
+				Field(1, "foo")
+			})
+			HTTP(func() {
+				POST("/")
+				SkipResponseBodyEncodeDecode()
+				Response(func() {
+					Header("foo")
+				})
+			})
+			GRPC(func() {})
 		})
 	})
 }

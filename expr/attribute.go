@@ -216,7 +216,7 @@ func (a *AttributeExpr) Validate(ctx string, parent eval.Expression) *eval.Valid
 	if views, ok := a.Meta["view"]; ok {
 		rt, ok := a.Type.(*ResultTypeExpr)
 		if !ok {
-			verr.Add(parent, "%sdefines a view %v but type %s is not a result type", ctx, views, a.Type.Name())
+			verr.Add(parent, "%s uses view %q but %q is not a result type", ctx, views[0], a.Type.Name())
 		}
 		if name := views[0]; name != "default" && rt != nil {
 			found := false
@@ -227,7 +227,7 @@ func (a *AttributeExpr) Validate(ctx string, parent eval.Expression) *eval.Valid
 				}
 			}
 			if !found {
-				verr.Add(parent, "%stype %s does not define view %q", ctx, a.Type.Name(), name)
+				verr.Add(parent, "%s: type %q does not define view %q", ctx, a.Type.Name(), name)
 			}
 		}
 	}
@@ -429,7 +429,13 @@ func (a *AttributeExpr) HasDefaultValue(attName string) bool {
 // exist or if the child attribute does not have a default value.
 func (a *AttributeExpr) GetDefault(attName string) interface{} {
 	if o := AsObject(a.Type); o != nil {
-		return o.Attribute(attName).DefaultValue
+		att := o.Attribute(attName)
+		if att.DefaultValue != nil {
+			return att.DefaultValue
+		}
+		if ut, ok := att.Type.(UserType); ok && !IsObject(ut) {
+			return ut.Attribute().DefaultValue
+		}
 	}
 	return nil
 }
