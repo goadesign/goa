@@ -67,14 +67,13 @@ func ResultType(identifier string, fn func()) *expr.ResultTypeExpr {
 		return nil
 	}
 
+	identifier, typeName, err := mediaTypeToResultType(identifier)
 	// Validate Result Type
-	identifier, params, err := mime.ParseMediaType(identifier)
 	if err != nil {
 		eval.ReportError("invalid result type identifier %#v: %s",
 			identifier, err)
 		// We don't return so that other errors may be captured in this
 		// one run.
-		identifier = "text/plain"
 	}
 	canonicalID := expr.CanonicalIdentifier(identifier)
 	// Validate that result type identifier doesn't clash
@@ -85,26 +84,6 @@ func ResultType(identifier string, fn func()) *expr.ResultTypeExpr {
 				identifier, canonicalID)
 			return nil
 		}
-	}
-	identifier = mime.FormatMediaType(identifier, params)
-	lastPart := identifier
-	lastPartIndex := strings.LastIndex(identifier, "/")
-	if lastPartIndex > -1 {
-		lastPart = identifier[lastPartIndex+1:]
-	}
-	plusIndex := strings.Index(lastPart, "+")
-	if plusIndex > 0 {
-		lastPart = lastPart[:plusIndex]
-	}
-	lastPart = strings.TrimPrefix(lastPart, "vnd.")
-	elems := strings.Split(lastPart, ".")
-	for i, e := range elems {
-		elems[i] = strings.Title(e)
-	}
-	typeName := strings.Join(elems, "")
-	if typeName == "" {
-		resultTypeCount++
-		typeName = fmt.Sprintf("ResultType%d", resultTypeCount)
 	}
 	// Now save the type in the API result types map
 	mt := expr.NewResultTypeExpr(typeName, identifier, fn)
@@ -134,19 +113,33 @@ func TypeName(name string) {
 	}
 }
 
-// View adds a new view to a result type. A view has a name and lists attributes
-// that are rendered when the view is used to produce a response. The attribute
-// names must appear in the result type expression. If an attribute is itself a
-// result type then the view may specify which view to use when rendering the
-// attribute using the View function in the View DSL. If not specified then the
-// view named "default" is used.
+// View has two usages:
 //
-// View must appear in a ResultType expression.
+// - when used inside a ResultType DSL function it defines a view for the result
+// type. A view lists a subset of the result type attributes that are used when
+// marshalling responses.
 //
-// View accepts two arguments: the view name and its defining DSL.
+// - when used inside a Result DSL function it defines the view used to marshal
+// the result type returned by the method.
+//
+// Note that the view used to render a response can also be set dynamically by
+// the method code in which case the result function should not specify a view
+// in the design.  The attribute names listed in a view must be identical to
+// existing attributes in the result type on which the view is defined. If an
+// attribute is itself a result type then the view may specify which view to use
+// when marshaling the attribute using the View function recursively, see
+// example below. All result types must have a view called "default" which is
+// the view used to marshal results when no specific view is specified.
+//
+// View must appear in a ResultType or a Result expression.
+//
+// View accepts two arguments for the first usage: the view name and its
+// defining DSL.  View accepts a single argument for the second usage: the view
+// name used to render the result.
 //
 // Examples:
 //
+//    // MyResultType defines 2 views.
 //    var MyResultType = ResultType("application/vnd.goa.my", func() {
 //        Attributes(func() {
 //            Attribute("id", String)
@@ -170,12 +163,13 @@ func TypeName(name string) {
 //        })
 //    })
 //
-//    Result(MyResultType, func() {
-//        View("extended")
-//    })
-//
-//    Result(CollectionOf(MyResultType), func() {
-//        View("default")
+//    // MyMethod uses the extended view of MyResultType to marshal the
+//    // response.
+//    var _ = Service("MyService", func() {
+//        Method("MyMethod", func() {
+//            Result(MyResultType, func() { View("extended") })
+//            GRPC(func() {})
+//        })
 //    })
 //
 func View(name string, adsl ...func()) {
@@ -267,9 +261,21 @@ func CollectionOf(v interface{}, adsl ...func()) *expr.ResultTypeExpr {
 	m, ok = v.(*expr.ResultTypeExpr)
 	if !ok {
 		if id, ok := v.(string); ok {
-			if dt := expr.Root.UserType(expr.CanonicalIdentifier(id)); dt != nil {
+			// Check if a result type exists with the given type name
+			if dt := expr.Root.UserType(id); dt != nil {
 				if mt, ok := dt.(*expr.ResultTypeExpr); ok {
 					m = mt
+				}
+			} else {
+				// Check if a result type exists with the given identifier
+				id, typeName, err := mediaTypeToResultType(id)
+				if dt := expr.Root.UserType(typeName); dt != nil {
+					if mt, ok := dt.(*expr.ResultTypeExpr); ok {
+						m = mt
+					}
+				}
+				if err != nil {
+					eval.ReportError("invalid result type identifier %#v in CollectionOf: %s", id, err)
 				}
 			}
 		}
@@ -430,6 +436,37 @@ func Attributes(fn func()) {
 		return
 	}
 	eval.Execute(fn, mt)
+}
+
+// mediaTypeToResultType returns the formatted identifier and the result type
+// name from the given identifier string. If the given identifier is invalid it
+// returns text/plain as the identifier and an error.
+func mediaTypeToResultType(identifier string) (string, string, error) {
+	identifier, params, err := mime.ParseMediaType(identifier)
+	if err != nil {
+		identifier = "text/plain"
+	}
+	identifier = mime.FormatMediaType(identifier, params)
+	lastPart := identifier
+	lastPartIndex := strings.LastIndex(identifier, "/")
+	if lastPartIndex > -1 {
+		lastPart = identifier[lastPartIndex+1:]
+	}
+	plusIndex := strings.Index(lastPart, "+")
+	if plusIndex > 0 {
+		lastPart = lastPart[:plusIndex]
+	}
+	lastPart = strings.TrimPrefix(lastPart, "vnd.")
+	elems := strings.Split(lastPart, ".")
+	for i, e := range elems {
+		elems[i] = strings.Title(e)
+	}
+	typeName := strings.Join(elems, "")
+	if typeName == "" {
+		resultTypeCount++
+		typeName = fmt.Sprintf("ResultType%d", resultTypeCount)
+	}
+	return identifier, typeName, err
 }
 
 // buildView builds a view expression given an attribute and a corresponding

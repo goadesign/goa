@@ -80,11 +80,11 @@ func serverType(genpkg string, svc *expr.HTTPServiceExpr, seen map[string]struct
 				validatedTypes = append(validatedTypes, data)
 			}
 		}
-		if adata.ServerStream != nil {
-			if data := adata.ServerStream.Payload; data != nil {
+		if adata.ServerWebSocket != nil {
+			if data := adata.ServerWebSocket.Payload; data != nil {
 				if data.Def != "" {
 					sections = append(sections, &codegen.SectionTemplate{
-						Name:   "request-body-type-decl",
+						Name:   "request-stream-payload-type-decl",
 						Source: typeDeclT,
 						Data:   data,
 					})
@@ -173,17 +173,19 @@ func serverType(genpkg string, svc *expr.HTTPServiceExpr, seen map[string]struct
 		// request to method payload
 		if init := adata.Payload.Request.PayloadInit; init != nil {
 			sections = append(sections, &codegen.SectionTemplate{
-				Name:   "server-payload-init",
-				Source: serverTypeInitT,
-				Data:   init,
+				Name:    "server-payload-init",
+				Source:  serverTypeInitT,
+				Data:    init,
+				FuncMap: map[string]interface{}{"fieldCode": fieldCode},
 			})
 		}
-		if adata.ServerStream != nil && adata.ServerStream.Payload != nil {
-			if init := adata.ServerStream.Payload.Init; init != nil {
+		if isWebSocketEndpoint(adata) && adata.ServerWebSocket.Payload != nil {
+			if init := adata.ServerWebSocket.Payload.Init; init != nil {
 				sections = append(sections, &codegen.SectionTemplate{
-					Name:   "server-payload-init",
-					Source: serverTypeInitT,
-					Data:   init,
+					Name:    "server-payload-init",
+					Source:  serverTypeInitT,
+					Data:    init,
+					FuncMap: map[string]interface{}{"fieldCode": fieldCode},
 				})
 			}
 		}
@@ -201,6 +203,41 @@ func serverType(genpkg string, svc *expr.HTTPServiceExpr, seen map[string]struct
 	return &codegen.File{Path: path, SectionTemplates: sections}
 }
 
+// fieldCode returns the code to initialize the return struct fields. It is
+// used only in templates.
+func fieldCode(init *InitData, typ string) string {
+	varn := "res"
+	if init.ReturnTypeAttribute == "" {
+		varn = "v"
+	}
+	args := init.ServerArgs
+	if typ == "client" {
+		args = init.ClientArgs
+	}
+	mustInit := false
+	if (typ == "server" && init.ServerCode == "") || (typ == "client" && init.ClientCode == "") {
+		mustInit = true
+	}
+	initArgs := make([]*codegen.InitArgData, len(args))
+	for i, arg := range args {
+		initArgs[i] = &codegen.InitArgData{
+			Name:         arg.Name,
+			Pointer:      arg.Pointer,
+			Type:         arg.Type,
+			FieldName:    arg.FieldName,
+			FieldPointer: arg.FieldPointer,
+			FieldType:    arg.FieldType,
+		}
+	}
+	// We can ignore the transform helpers as there won't be any generated
+	// because the headers and params cannot be user types.
+	c, _, err := codegen.InitStructFields(initArgs, init.ReturnTypeName, varn, "", init.ReturnTypePkg, mustInit)
+	if err != nil {
+		panic(err) //bug
+	}
+	return c
+}
+
 // input: TypeData
 const typeDeclT = `{{ comment .Description }}
 type {{ .VarName }} {{ .Def }}
@@ -209,32 +246,21 @@ type {{ .VarName }} {{ .Def }}
 // input: InitData
 const serverTypeInitT = `{{ comment .Description }}
 func {{ .Name }}({{- range .ServerArgs }}{{ .Name }} {{ .TypeRef }}, {{ end }}) {{ .ReturnTypeRef }} {
-	{{- if .ServerCode }}
-		{{ .ServerCode }}
-		{{- if .ReturnTypeAttribute }}
+{{- if .ServerCode }}
+	{{ .ServerCode }}
+	{{- if .ReturnTypeAttribute }}
 		res := &{{ .ReturnTypeName }}{
-			{{ .ReturnTypeAttribute }}: v,
+			{{ .ReturnTypeAttribute }}: {{ if .ReturnIsPrimitivePointer }}&{{ end }}v,
 		}
-		{{- end }}
-		{{- if .ReturnIsStruct }}
-			{{- range .ServerArgs }}
-				{{- if .FieldName }}
-			{{ if $.ReturnTypeAttribute }}res{{ else }}v{{ end }}.{{ .FieldName }} = {{ if and (not .Pointer) .FieldPointer }}&{{ end }}{{ .Name }}
-				{{- end }}
-			{{- end }}
-		{{- end }}
-		return {{ if .ReturnTypeAttribute }}res{{ else }}v{{ end }}
-	{{- else }}
-		{{- if .ReturnIsStruct }}
-			return &{{ .ReturnTypeName }}{
-			{{- range .ServerArgs }}
-				{{- if .FieldName }}
-				{{ .FieldName }}: {{ if and (not .Pointer) .FieldPointer }}&{{ end }}{{ .Name }},
-				{{- end }}
-			{{- end }}
-			}
-		{{- end }}
-	{{ end -}}
+	{{- end }}
+{{- end }}
+{{- if .ReturnIsStruct }}
+	{{- if not .ServerCode }}
+	{{ if .ReturnTypeAttribute }}res{{ else }}v{{ end }} := &{{ .ReturnTypeName }}{}
+	{{- end }}
+	{{ fieldCode . "server" }}
+{{- end }}
+	return {{ if .ReturnTypeAttribute }}res{{ else }}v{{ end }}
 }
 `
 

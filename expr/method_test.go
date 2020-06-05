@@ -20,9 +20,9 @@ func TestMethodExprValidate(t *testing.T) {
 service "InvalidSecuritySchemesService" method "SecureMethod": payload of method "SecureMethod" of service "InvalidSecuritySchemesService" does not define a password attribute, use Password to define one
 service "InvalidSecuritySchemesService" method "SecureMethod": payload of method "SecureMethod" of service "InvalidSecuritySchemesService" does not define a JWT attribute, use Token to define one
 service "InvalidSecuritySchemesService" method "SecureMethod": security scope "not:found" not found in any of the security schemes.
-flow authorization_code: invalid token URL "^example:/token<>": parse ^example:/token<>: first path segment in URL cannot contain colon
-flow authorization_code: invalid authorization URL "http://^authorization": parse http://^authorization: invalid character "^" in host name
-flow authorization_code: invalid refresh URL "http://refresh^": parse http://refresh^: invalid character "^" in host name
+flow authorization_code: invalid token URL "^example:/token<>": parse "^example:/token<>": first path segment in URL cannot contain colon
+flow authorization_code: invalid authorization URL "http://^authorization": parse "http://^authorization": invalid character "^" in host name
+flow authorization_code: invalid refresh URL "http://refresh^": parse "http://refresh^": invalid character "^" in host name
 service "InvalidSecuritySchemesService" method "InheritedSecureMethod": payload of method "InheritedSecureMethod" of service "InvalidSecuritySchemesService" does not define a OAuth2 access token attribute, use AccessToken to define one
 service "InvalidSecuritySchemesService" method "InheritedSecureMethod": payload of method "InheritedSecureMethod" of service "InvalidSecuritySchemesService" does not define an API key attribute, use APIKey to define one
 service "InvalidSecuritySchemesService" method "InheritedSecureMethod": security scope "not:found" not found in any of the security schemes.

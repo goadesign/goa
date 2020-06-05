@@ -60,15 +60,6 @@ func NewV2(root *expr.RootExpr, h *expr.HostExpr) (*V2, error) {
 		SecurityDefinitions: securitySpecFromExpr(root),
 		ExternalDocs:        docsFromExpr(root.API.Docs),
 	}
-
-	for _, he := range root.API.HTTP.Errors {
-		res := responseSpecFromExpr(s, root, he.Response, "")
-		if s.Responses == nil {
-			s.Responses = make(map[string]*Response)
-		}
-		s.Responses[he.Name] = res
-	}
-
 	for _, res := range root.API.HTTP.Services {
 		if !mustGenerate(res.Meta) || !mustGenerate(res.ServiceExpr.Meta) {
 			continue
@@ -624,6 +615,9 @@ func buildPathFromExpr(s *V2, root *expr.RootExpr, h *expr.HostExpr, route *expr
 		tagNames = []string{route.Endpoint.Service.Name()}
 	}
 	for _, key := range route.FullPaths() {
+		// Remove any wildcards that is defined in path as a workaround to
+		// https://github.com/OAI/OpenAPI-Specification/issues/291
+		key = expr.HTTPWildcardRegex.ReplaceAllString(key, "/{$1}")
 		params := paramsFromExpr(endpoint.Params, key)
 		params = append(params, paramsFromHeaders(endpoint)...)
 		produces := []string{}

@@ -113,6 +113,7 @@ func payloadBuilders(genpkg string, svc *expr.GRPCServiceExpr, data *cli.Command
 		{Path: "encoding/json"},
 		{Path: "fmt"},
 		{Path: "strconv"},
+		codegen.GoaImport(""),
 		{Path: path.Join(genpkg, svcName), Name: sd.Service.PkgName},
 		{Path: path.Join(genpkg, "grpc", svcName, pbPkgName), Name: sd.PkgName},
 	}
@@ -128,16 +129,10 @@ func payloadBuilders(genpkg string, svc *expr.GRPCServiceExpr, data *cli.Command
 }
 
 func buildFlags(svc *ServiceData, e *EndpointData) ([]*cli.FlagData, *cli.BuildFunctionData) {
-	var (
-		flags         []*cli.FlagData
-		buildFunction *cli.BuildFunctionData
-	)
-	{
-		if e.Request != nil {
-			flags, buildFunction = makeFlags(e, e.Request.CLIArgs)
-		}
+	if e.Request != nil {
+		return makeFlags(e, e.Request.CLIArgs)
 	}
-	return flags, buildFunction
+	return nil, nil
 }
 
 func makeFlags(e *EndpointData, args []*InitArgData) ([]*cli.FlagData, *cli.BuildFunctionData) {
@@ -145,20 +140,22 @@ func makeFlags(e *EndpointData, args []*InitArgData) ([]*cli.FlagData, *cli.Buil
 		fdata     []*cli.FieldData
 		flags     = make([]*cli.FlagData, len(args))
 		params    = make([]string, len(args))
-		pInitArgs = make([]*cli.PayloadInitArgData, len(args))
+		pInitArgs = make([]*codegen.InitArgData, len(args))
 		check     bool
 		pinit     *cli.PayloadInitData
 	)
 	for i, arg := range args {
-		pInitArgs[i] = &cli.PayloadInitArgData{
+		pInitArgs[i] = &codegen.InitArgData{
 			Name:      arg.Name,
 			FieldName: arg.FieldName,
+			FieldType: arg.FieldType,
+			Type:      arg.Type,
 		}
 
-		f := cli.NewFlagData(e.ServiceName, e.Method.Name, arg.Name, arg.TypeName, arg.Description, arg.Required, arg.Example)
+		f := cli.NewFlagData(e.ServiceName, e.Method.Name, arg.Name, arg.TypeName, arg.Description, arg.Required, arg.Example, arg.DefaultValue)
 		flags[i] = f
 		params[i] = f.FullName
-		code, chek := cli.FieldLoadCode(f, arg.Name, arg.TypeName, arg.Validate, arg.DefaultValue)
+		code, chek := cli.FieldLoadCode(f, arg.Name, arg.TypeName, arg.Validate, arg.DefaultValue, e.PayloadType)
 		check = check || chek
 		tn := arg.TypeRef
 		if f.Type == "JSON" {
@@ -181,6 +178,7 @@ func makeFlags(e *EndpointData, args []*InitArgData) ([]*cli.FlagData, *cli.Buil
 		pinit = &cli.PayloadInitData{
 			Code:           e.Request.ServerConvert.Init.Code,
 			ReturnIsStruct: e.Request.ServerConvert.Init.ReturnIsStruct,
+			ReturnTypePkg:  e.Request.ServerConvert.Init.ReturnTypePkg,
 			Args:           pInitArgs,
 		}
 	}

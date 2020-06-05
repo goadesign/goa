@@ -69,6 +69,7 @@ func EndpointFile(genpkg string, service *expr.ServiceExpr) *codegen.File {
 		header := codegen.Header(service.Name+" endpoints", svc.PkgName,
 			[]*codegen.ImportSpec{
 				{Path: "context"},
+				{Path: "io"},
 				{Path: "fmt"},
 				codegen.GoaImport(""),
 				codegen.GoaImport("security"),
@@ -84,7 +85,21 @@ func EndpointFile(genpkg string, service *expr.ServiceExpr) *codegen.File {
 			if m.ServerStream != nil {
 				sections = append(sections, &codegen.SectionTemplate{
 					Name:   "endpoint-input-struct",
-					Source: serviceEndpointInputStructT,
+					Source: serviceEndpointStreamStructT,
+					Data:   m,
+				})
+			}
+			if m.SkipRequestBodyEncodeDecode {
+				sections = append(sections, &codegen.SectionTemplate{
+					Name:   "request-body-struct",
+					Source: serviceRequestBodyStructT,
+					Data:   m,
+				})
+			}
+			if m.SkipResponseBodyEncodeDecode {
+				sections = append(sections, &codegen.SectionTemplate{
+					Name:   "response-body-struct",
+					Source: serviceResponseBodyStructT,
 					Data:   m,
 				})
 			}
@@ -101,12 +116,10 @@ func EndpointFile(genpkg string, service *expr.ServiceExpr) *codegen.File {
 		})
 		for _, m := range data.Methods {
 			sections = append(sections, &codegen.SectionTemplate{
-				Name:   "endpoint-method",
-				Source: serviceEndpointMethodT,
-				Data:   m,
-				FuncMap: map[string]interface{}{
-					"payloadVar": payloadVar,
-				},
+				Name:    "endpoint-method",
+				Source:  serviceEndpointMethodT,
+				Data:    m,
+				FuncMap: map[string]interface{}{"payloadVar": payloadVar},
 			})
 		}
 	}
@@ -142,7 +155,7 @@ func endpointData(service *expr.ServiceExpr) *endpointsData {
 }
 
 func payloadVar(e *endpointMethodData) string {
-	if e.ServerStream != nil {
+	if e.ServerStream != nil || e.SkipRequestBodyEncodeDecode {
 		return "ep.Payload"
 	}
 	return "p"
@@ -173,7 +186,7 @@ func New{{ .VarName }}(s {{ .ServiceVarName }}) *{{ .VarName }} {
 `
 
 // input: endpointMethodData
-const serviceEndpointInputStructT = `{{ printf "%s is the input type of %q endpoint that holds the method payload and the server stream." .ServerStream.EndpointStruct .Name | comment }}
+const serviceEndpointStreamStructT = `{{ printf "%s holds both the payload and the server stream of the %q method." .ServerStream.EndpointStruct .Name | comment }}
 type {{ .ServerStream.EndpointStruct }} struct {
 {{- if .PayloadRef }}
 	{{ comment "Payload is the method payload." }}
@@ -185,11 +198,37 @@ type {{ .ServerStream.EndpointStruct }} struct {
 `
 
 // input: endpointMethodData
+const serviceRequestBodyStructT = `{{ printf "%s holds both the payload and the HTTP request body reader of the %q method." .RequestStruct .Name | comment }}
+type {{ .RequestStruct }} struct {
+{{- if .PayloadRef }}
+	{{ comment "Payload is the method payload." }}
+	Payload {{ .PayloadRef }}
+{{- end }}
+	{{ comment "Body streams the HTTP request body." }}
+	Body io.ReadCloser
+}
+`
+
+// input: endpointMethodData
+const serviceResponseBodyStructT = `{{ printf "%s holds both the result and the HTTP response body reader of the %q method." .ResponseStruct .Name | comment }}
+type {{ .ResponseStruct }} struct {
+{{- if .ResultRef }}
+	{{ comment "Result is the method result." }}
+	Result {{ .ResultRef }}
+{{- end }}
+	{{ comment "Body streams the HTTP response body." }}
+	Body io.ReadCloser
+}
+`
+
+// input: endpointMethodData
 const serviceEndpointMethodT = `{{ printf "New%sEndpoint returns an endpoint function that calls the method %q of service %q." .VarName .Name .ServiceName | comment }}
 func New{{ .VarName }}Endpoint(s {{ .ServiceVarName }}{{ range .Schemes }}, auth{{ .Type }}Fn security.Auth{{ .Type }}Func{{ end }}) goa.Endpoint {
 	return func(ctx context.Context, req interface{}) (interface{}, error) {
-{{- if .ServerStream }}
+{{- if or .ServerStream }}
 		ep := req.(*{{ .ServerStream.EndpointStruct }})
+{{- else if .SkipRequestBodyEncodeDecode }}
+		ep := req.(*{{ .RequestStruct }})
 {{- else if .PayloadRef }}
 		p := req.({{ .PayloadRef }})
 {{- end }}
@@ -300,15 +339,36 @@ func New{{ .VarName }}Endpoint(s {{ .ServiceVarName }}{{ range .Schemes }}, auth
 {{- end }}
 {{- if .ServerStream }}
 	return nil, s.{{ .VarName }}(ctx, {{ if .PayloadRef }}{{ $payload }}, {{ end }}ep.Stream)
+{{- else if .SkipRequestBodyEncodeDecode }}
+	{{- if .SkipResponseBodyEncodeDecode }}
+	{{ if .ResultRef }}res, {{ end }}body, err := s.{{ .VarName }}(ctx, {{ if .PayloadRef }}ep.Payload, {{ end }}ep.Body)
+	if err != nil {
+		return nil, err
+	}
+	return &{{ .ResponseStruct }}{ {{ if .ResultRef }}Result: res, {{ end }}Body: body }, nil
+	{{- else if .ViewedResult }}
+	res, {{ if not .ViewedResult.ViewName }}view, {{ end }}err := s.{{ .VarName }}(ctx, {{ if .PayloadRef }}ep.Payload, {{ end }}ep.Body)
+	if err != nil {
+		return nil, err
+	}
+	vres := {{ $.ViewedResult.Init.Name }}(res, {{ if .ViewedResult.ViewName }}{{ printf "%q" .ViewedResult.ViewName }}{{ else }}view{{ end }})
+	return vres, nil
+	{{- else }}
+	return {{ if not .ResultRef }}nil, {{ end }}s.{{ .VarName }}(ctx, {{ if .PayloadRef }}ep.Payload, {{ end }}ep.Body)
+	{{- end }}
 {{- else if .ViewedResult }}
-		res,{{ if not .ViewedResult.ViewName }} view,{{ end }} err := s.{{ .VarName }}(ctx{{ if .PayloadRef }}, {{ $payload }}{{ end }})
-		if err != nil {
-			return nil, err
-		}
-		vres := {{ $.ViewedResult.Init.Name }}(res, {{ if .ViewedResult.ViewName }}{{ printf "%q" .ViewedResult.ViewName }}{{ else }}view{{ end }})
-		return vres, nil
-{{- else if .ResultRef }}
-		return s.{{ .VarName }}(ctx{{ if .PayloadRef }}, {{ $payload }}{{ end }})
+	res, {{ if not .ViewedResult.ViewName }}view, {{ end }}err := s.{{ .VarName }}(ctx{{ if .PayloadRef }}, {{ $payload }}{{ end }})
+	if err != nil {
+		return nil, err
+	}
+	vres := {{ $.ViewedResult.Init.Name }}(res, {{ if .ViewedResult.ViewName }}{{ printf "%q" .ViewedResult.ViewName }}{{ else }}view{{ end }})
+	return vres, nil
+{{- else if .SkipResponseBodyEncodeDecode }}
+	{{ if .ResultRef }}res, {{ end }}body, err := s.{{ .VarName }}(ctx{{ if .PayloadRef }}, {{ $payload}}{{ end }})
+	if err != nil {
+		return nil, err
+	}
+	return &{{ .ResponseStruct }}{ {{ if .ResultRef }}Result: res, {{ end }}Body: body }, nil
 {{- else }}
 	return {{ if not .ResultRef }}nil, {{ end }}s.{{ .VarName }}(ctx{{ if .PayloadRef }}, {{ $payload }}{{ end }})
 {{- end }}

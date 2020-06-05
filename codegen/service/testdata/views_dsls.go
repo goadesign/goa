@@ -169,6 +169,38 @@ var ResultWithRecursiveResultTypeDSL = func() {
 	})
 }
 
+var ResultWithRecursiveCollectionOfResultTypeDSL = func() {
+	var SomeRT = ResultType("application/vnd.some_result", func() {
+		TypeName("SomeRT")
+		Attributes(func() {
+			Attribute("a", CollectionOf("SomeRT"))
+			Required("a")
+		})
+		View("default", func() {
+			Attribute("a", func() {
+				View("tiny")
+			})
+		})
+		View("tiny", func() {
+			Attribute("a")
+		})
+	})
+	var AnotherRT = ResultType("application/vnd.another_result", func() {
+		Attributes(func() {
+			Attribute("a", CollectionOf("application/vnd.another_result"))
+			Required("a")
+		})
+	})
+	Service("ResultWithRecursiveCollectionOfResultType", func() {
+		Method("A", func() {
+			Result(SomeRT)
+		})
+		Method("B", func() {
+			Result(AnotherRT)
+		})
+	})
+}
+
 var ResultWithCustomFieldsDSL = func() {
 	var RT = ResultType("application/vnd.result", func() {
 		TypeName("RT")

@@ -43,6 +43,14 @@ type (
 		// StreamingBody describes the body transferred through the websocket
 		// stream.
 		StreamingBody *AttributeExpr
+		// SkipRequestBodyEncodeDecode indicates that the service method accepts
+		// a reader and that the client provides a reader to stream the request
+		// body.
+		SkipRequestBodyEncodeDecode bool
+		// SkipResponseBodyEncodeDecode indicates that the service method
+		// returns a reader and that the client accepts a reader to stream the
+		// response body.
+		SkipResponseBodyEncodeDecode bool
 		// Responses is the list of all the possible success HTTP
 		// responses.
 		Responses []*HTTPResponseExpr
@@ -241,7 +249,7 @@ func (e *HTTPEndpointExpr) Prepare() {
 	// Make sure there's a default response if none define explicitly
 	if len(e.Responses) == 0 {
 		status := StatusOK
-		if e.MethodExpr.Payload.Type == Empty {
+		if e.MethodExpr.Payload.Type == Empty && !e.SkipResponseBodyEncodeDecode {
 			status = StatusNoContent
 		}
 		e.Responses = []*HTTPResponseExpr{{StatusCode: status}}
@@ -250,6 +258,24 @@ func (e *HTTPEndpointExpr) Prepare() {
 	// Inherit HTTP errors from service
 	for _, r := range e.Service.HTTPErrors {
 		e.HTTPErrors = append(e.HTTPErrors, r.Dup())
+	}
+
+	// Lookup undefined HTTP errors in API.
+	for _, err := range e.MethodExpr.Errors {
+		found := false
+		for _, herr := range e.HTTPErrors {
+			if err.Name == herr.Name {
+				found = true
+				break
+			}
+		}
+		if !found {
+			for _, herr := range Root.API.HTTP.Errors {
+				if herr.Name == err.Name {
+					e.HTTPErrors = append(e.HTTPErrors, herr.Dup())
+				}
+			}
+		}
 	}
 
 	// Prepare responses
@@ -267,6 +293,41 @@ func (e *HTTPEndpointExpr) Validate() error {
 	// Name cannot be empty
 	if e.Name() == "" {
 		verr.Add(e, "Endpoint name cannot be empty")
+	}
+
+	// SkipRequestBodyEncodeDecode is not compatible with gRPC or WebSocket
+	if e.SkipRequestBodyEncodeDecode {
+		if s := Root.API.GRPC.Service(e.Service.Name()); s != nil {
+			if s.Endpoint(e.Name()) != nil {
+				verr.Add(e, "Endpoint cannot use SkipRequestBodyEncodeDecode and define a gRPC transport.")
+			}
+		}
+		if e.MethodExpr.IsPayloadStreaming() {
+			verr.Add(e, "Endpoint cannot use SkipRequestBodyEncodeDecode when method defines a StreamingPayload.")
+		}
+		if e.MethodExpr.IsResultStreaming() {
+			verr.Add(e, "Endpoint cannot use SkipRequestBodyEncodeDecode when method defines a StreamingResult. Use SkipResponseBodyEncodeDecode instead.")
+		}
+	}
+
+	// SkipResponseBodyEncodeDecode is not compatible with gRPC or WebSocket.
+	if e.SkipResponseBodyEncodeDecode {
+		if s := Root.API.GRPC.Service(e.Service.Name()); s != nil {
+			if s.Endpoint(e.Name()) != nil {
+				verr.Add(e, "Endpoint response cannot use SkipResponseBodyEncodeDecode and define a gRPC transport.")
+			}
+		}
+		if e.MethodExpr.IsPayloadStreaming() {
+			verr.Add(e, "Endpoint cannot use SkipResponseBodyEncodeDecode when method defines a StreamingPayload. Use SkipRequestBodyEncodeDecode instead.")
+		}
+		if e.MethodExpr.IsResultStreaming() {
+			verr.Add(e, "Endpoint cannot use SkipResponseBodyEncodeDecode when method defines a StreamingResult.")
+		}
+		if rt, ok := e.MethodExpr.Result.Type.(*ResultTypeExpr); ok {
+			if len(rt.Views) > 1 {
+				verr.Add(e, "Endpoint cannot use SkipResponseBodyEncodeDecode when method result type defines multiple views.")
+			}
+		}
 	}
 
 	// Validate routes
@@ -326,15 +387,16 @@ func (e *HTTPEndpointExpr) Validate() error {
 		} else {
 			hasTags = true
 		}
-		if r.StatusCode < 400 && e.MethodExpr.Stream == ServerStreamKind {
-			if successResp {
-				verr.Add(r, "Multiple success response defined for a streaming endpoint. At most one success response can be defined for a streaming endpoint.")
-			} else {
-				successResp = true
+		if r.StatusCode < 400 {
+			if successResp && e.MethodExpr.Stream == ServerStreamKind {
+				verr.Add(r, "At most one success response can be defined for a streaming endpoint.")
+				if r.Body != nil && r.Body.Type == Empty {
+					verr.Add(r, "Response body empty but endpoint defines streaming WebSocket response.")
+				}
+			} else if successResp && e.SkipResponseBodyEncodeDecode {
+				verr.Add(r, "At most one success response can be defined for a endpoint using SkipResponseBodyEncodeDecode.")
 			}
-			if r.Body != nil && r.Body.Type == Empty {
-				verr.Add(r, "Response body is empty but the endpoint uses streaming result. Response body cannot be empty for a success response if endpoint defines streaming result.")
-			}
+			successResp = true
 		}
 	}
 	if hasTags && allTagged {
@@ -350,7 +412,40 @@ func (e *HTTPEndpointExpr) Validate() error {
 
 	// Validate body attribute (required fields exist etc.)
 	if e.Body != nil {
-		verr.Merge(e.Body.Validate("HTTP endpoint payload", e))
+		verr.Merge(e.Body.Validate("HTTP body", e))
+		if e.SkipRequestBodyEncodeDecode {
+			verr.Add(e, "Cannot define a request body when using SkipRequestBodyEncodeDecode.")
+		}
+		// Make sure Body does not require attribute that are not required in
+		// payload.
+		if v := e.Body.Validation; v != nil {
+			var preqs, missing []string
+			if e.MethodExpr.Payload != nil && e.MethodExpr.Payload.Validation != nil {
+				preqs = e.MethodExpr.Payload.Validation.Required
+			}
+			for _, req := range v.Required {
+				found := false
+				for _, preq := range preqs {
+					if req == preq {
+						found = true
+						break
+					}
+				}
+				if !found {
+					missing = append(missing, req)
+				}
+			}
+			if len(missing) > 0 {
+				is := "is"
+				s := ""
+				if len(missing) > 1 {
+					is = "are"
+					s = "s"
+				}
+				verr.Add(e, "The following HTTP request body attribute%s %s required but the corresponding method payload attribute%s %s not: %s. Use 'Required' to make the attribute%s required in the method payload as well.",
+					s, is, s, is, strings.Join(missing, ", "), s)
+			}
+		}
 	}
 
 	// Validate errors
@@ -359,6 +454,10 @@ func (e *HTTPEndpointExpr) Validate() error {
 	}
 
 	// Validate definitions of params, headers and bodies against definition of payload
+	var (
+		hasParams  = !e.Params.IsEmpty()
+		hasHeaders = !e.Headers.IsEmpty()
+	)
 	if isEmpty(e.MethodExpr.Payload) {
 		if e.MapQueryParams != nil {
 			verr.Add(e, "MapParams is set but Payload is not defined")
@@ -378,18 +477,13 @@ func (e *HTTPEndpointExpr) Validate() error {
 		if e.MapQueryParams != nil {
 			verr.Add(e, "MapParams is set but Payload type is array. Payload type must be map or an object with a map attribute")
 		}
-		var hasParams, hasHeaders bool
-		if !e.Params.IsEmpty() {
-			if e.MultipartRequest {
-				verr.Add(e, "Payload type is array but HTTP endpoint defines MultipartRequest and route/query string parameters. At most one of these must be defined.")
-			}
-			hasParams = true
+		if hasParams && e.MultipartRequest {
+			verr.Add(e, "Payload type is array but HTTP endpoint defines MultipartRequest and route/query string parameters. At most one of these must be defined.")
 		}
-		if !e.Headers.IsEmpty() {
+		if hasHeaders {
 			if e.MultipartRequest {
 				verr.Add(e, "Payload type is array but HTTP endpoint defines MultipartRequest and headers. At most one of these must be defined.")
 			}
-			hasHeaders = true
 			if hasParams {
 				verr.Add(e, "Payload type is array but HTTP endpoint defines both route or query string parameters and headers. At most one parameter or header must be defined and it must be of type array.")
 			}
@@ -411,6 +505,9 @@ func (e *HTTPEndpointExpr) Validate() error {
 				verr.Add(e, "Payload type is array but HTTP endpoint defines both a body and headers. At most one of these must be defined and it must be an array.")
 			}
 		}
+		if !hasParams && !hasHeaders && e.SkipRequestBodyEncodeDecode {
+			verr.Add(e, "Payload type is array but HTTP endpoint uses SkipRequestBodyEncodeDecode and does not define headers or params.")
+		}
 	}
 
 	if pMap := AsMap(e.MethodExpr.Payload.Type); pMap != nil {
@@ -431,12 +528,8 @@ func (e *HTTPEndpointExpr) Validate() error {
 				verr.Add(e, "MapParams is set and Payload type is map. But array elements in payload element type must be primitive")
 			}
 		}
-		var hasParams bool
-		if !e.Params.IsEmpty() {
-			if e.MultipartRequest {
-				verr.Add(e, "Payload type is map but HTTP endpoint defines MultipartRequest and route/query string parameters. At most one of these must be defined.")
-			}
-			hasParams = true
+		if hasParams && e.MultipartRequest {
+			verr.Add(e, "Payload type is map but HTTP endpoint defines MultipartRequest and route/query string parameters. At most one of these must be defined.")
 		}
 		if e.Body != nil && e.Body.Type != Empty {
 			if e.MultipartRequest {
@@ -448,6 +541,9 @@ func (e *HTTPEndpointExpr) Validate() error {
 			if hasParams {
 				verr.Add(e, "Payload type is map but HTTP endpoint defines both a body and route or query string parameters. At most one of these must be defined and it must be a map.")
 			}
+		}
+		if !hasParams && e.SkipRequestBodyEncodeDecode {
+			verr.Add(e, "Payload type is map but HTTP endpoint uses SkipRequestBodyEncodeDecode and does not define headers.")
 		}
 	}
 
@@ -481,6 +577,16 @@ func (e *HTTPEndpointExpr) Validate() error {
 		}
 	}
 
+	body := extendedHTTPRequestBody(e)
+	if e.SkipRequestBodyEncodeDecode && body.Type != Empty {
+		verr.Add(e, "HTTP endpoint request body must be empty when using SkipRequestBodyEncodeDecode but not all method payload attributes are mapped to headers and params. Make sure to define Headers and Params as needed.")
+	}
+	if e.MethodExpr.IsStreaming() && body.Type != Empty {
+		// Refer Websocket protocol - https://tools.ietf.org/html/rfc6455
+		// Protocol does not allow HTTP request body to be passed.
+		verr.Add(e, "HTTP endpoint request body must be empty when the endpoint uses streaming. Payload attributes must be mapped to headers and/or params.")
+	}
+
 	return verr
 }
 
@@ -490,8 +596,7 @@ func (e *HTTPEndpointExpr) Validate() error {
 // types so that the response encoding code can properly use the type to infer
 // the response that it needs to build.
 func (e *HTTPEndpointExpr) Finalize() {
-	// Initialize Authorization header implicitly defined via security DSL
-	// prior to computing headers and body.
+	// Compute security scheme attribute name and corresponding HTTP location
 	if reqLen := len(e.MethodExpr.Requirements); reqLen > 0 {
 		e.Requirements = make([]*SecurityExpr, 0, reqLen)
 		for _, req := range e.MethodExpr.Requirements {
@@ -514,6 +619,8 @@ func (e *HTTPEndpointExpr) Finalize() {
 				}
 				sch.Name, sch.In = findKey(e, field)
 				if sch.Name == "" {
+					// Initialize Authorization header implicitly defined via
+					// security DSL if mapping isn't explicit.
 					sch.Name = "Authorization"
 					attr := e.MethodExpr.Payload.Find(field)
 					e.Headers.Type.(*Object).Set(field, attr)
@@ -556,24 +663,6 @@ func (e *HTTPEndpointExpr) Finalize() {
 		r.Finalize(e, e.MethodExpr.Result)
 		r.Body = httpResponseBody(e, r)
 		r.Body.Finalize()
-	}
-
-	// Lookup undefined HTTP errors in API.
-	for _, err := range e.MethodExpr.Errors {
-		found := false
-		for _, herr := range e.HTTPErrors {
-			if err.Name == herr.Name {
-				found = true
-				break
-			}
-		}
-		if !found {
-			for _, herr := range Root.API.HTTP.Errors {
-				if herr.Name == err.Name {
-					e.HTTPErrors = append(e.HTTPErrors, herr.Dup())
-				}
-			}
-		}
 	}
 
 	// Make sure all error types are user types and have a body.
@@ -760,9 +849,9 @@ func (r *RouteExpr) Validate() *eval.ValidationErrors {
 	}
 
 	// For streaming endpoints, websockets does not support verbs other than GET
-	if r.Endpoint.MethodExpr.IsStreaming() {
+	if r.Endpoint.MethodExpr.IsStreaming() && len(r.Endpoint.Responses) > 0 {
 		if r.Method != "GET" {
-			verr.Add(r, "Streaming endpoint supports only \"GET\" method. Got %q.", r.Method)
+			verr.Add(r, "WebSocket endpoint supports only \"GET\" method. Got %q.", r.Method)
 		}
 	}
 	return verr
@@ -802,6 +891,15 @@ func (r *RouteExpr) FullPaths() []string {
 	res := make([]string, len(bases))
 	for i, b := range bases {
 		res[i] = httppath.Clean(path.Join(b, r.Path))
+		if res[i] == "/" {
+			continue
+		}
+		// path has trailing slash
+		if r.Path == "/" && strings.HasSuffix(b, "/") {
+			res[i] += "/"
+		} else if r.Path != "/" && strings.HasSuffix(r.Path, "/") {
+			res[i] += "/"
+		}
 	}
 	return res
 }

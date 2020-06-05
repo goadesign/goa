@@ -1,0 +1,17 @@
+language: go
+dist: xenial
+go:
+- 1.14.x
+if: branch = v2
+install:
+- export PATH=${PATH}:${HOME}/gopath/bin
+script:
+- export PATH=${PATH}:${HOME}/bin
+- cd ../../.. && mkdir goa.design && cp -r github.com/goadesign/goa goa.design/goa
+- cd goa.design/goa
+# https://graysonkoonce.com/getting-the-current-branch-name-during-a-pull-request-in-travis-ci/
+- export GOA_BRANCH=$(if [ "$TRAVIS_PULL_REQUEST" == "false" ]; then echo $TRAVIS_BRANCH; else echo $TRAVIS_PULL_REQUEST_BRANCH; fi) && echo $GOA_BRANCH
+- make travis
+notifications:
+  slack:
+    secure: bMYXaoSEGoNdqR0t1VnMAv/4V9PSOhEWyekdJM7p9WmKjJi2yKy0k77uRmwf+5Mrz5GLs3CkZnDha/8cSFld3KEN9SC6QYmIBF/1Pd/5mKHFQOI81i7sTlhrdMv897+6sofEtbBNq1jffhVGVttbMrMWwCTNZu0NrCGBVsDmb44=

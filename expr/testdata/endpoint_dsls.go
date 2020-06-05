@@ -345,6 +345,148 @@ var EndpointHasParentAndOther = func() {
 
 }
 
+var EndpointHasSkipRequestEncodeAndPayloadStreaming = func() {
+	Service("Service", func() {
+		Method("Method", func() {
+			StreamingPayload(String)
+			HTTP(func() {
+				GET("/")
+				SkipRequestBodyEncodeDecode()
+			})
+		})
+	})
+}
+
+var EndpointHasSkipRequestEncodeAndResultStreaming = func() {
+	Service("Service", func() {
+		Method("Method", func() {
+			StreamingResult(String)
+			HTTP(func() {
+				GET("/")
+				SkipRequestBodyEncodeDecode()
+			})
+		})
+	})
+}
+
+var EndpointHasSkipResponseEncodeAndPayloadStreaming = func() {
+	Service("Service", func() {
+		Method("Method", func() {
+			StreamingPayload(String)
+			HTTP(func() {
+				GET("/")
+				SkipResponseBodyEncodeDecode()
+			})
+		})
+	})
+}
+
+var EndpointHasSkipResponseEncodeAndResultStreaming = func() {
+	Service("Service", func() {
+		Method("Method", func() {
+			StreamingResult(String)
+			HTTP(func() {
+				GET("/")
+				SkipResponseBodyEncodeDecode()
+			})
+		})
+	})
+}
+
+var EndpointHasSkipEncodeAndGRPC = func() {
+	Service("Service", func() {
+		Method("Method", func() {
+			Payload(func() {
+				Field(1, "param", Int)
+				Field(2, "query", String)
+			})
+			HTTP(func() {
+				GET("/{param}")
+				Param("query")
+				SkipRequestBodyEncodeDecode()
+			})
+			GRPC(func() {})
+		})
+	})
+}
+
+var EndpointPayloadMissingRequired = func() {
+	Service("Service", func() {
+		Method("Method", func() {
+			Payload(func() {
+				Attribute("nonreq")
+			})
+			HTTP(func() {
+				POST("/")
+				Body(func() {
+					Attribute("nonreq")
+					Required("nonreq")
+				})
+			})
+		})
+	})
+}
+
+var StreamingEndpointRequestBody = func() {
+	var PT = Type("Payload", func() {
+		Attribute("foo", String)
+	})
+	Service("Service", func() {
+		Method("MethodA", func() {
+			Payload(func() {
+				Attribute("bar", String)
+			})
+			StreamingResult(String)
+			HTTP(func() {
+				GET("/")
+			})
+		})
+		Method("MethodB", func() {
+			Payload(func() {
+				Extend(PT)
+			})
+			StreamingResult(String)
+			HTTP(func() {
+				GET("/")
+			})
+		})
+		Method("MethodC", func() {
+			Payload(String)
+			StreamingResult(String)
+			HTTP(func() {
+				GET("/")
+			})
+		})
+		Method("MethodD", func() {
+			Payload(func() {
+				Attribute("bar", String)
+			})
+			StreamingResult(String)
+			HTTP(func() {
+				GET("/{bar}")
+			})
+		})
+		Method("MethodE", func() {
+			Payload(func() {
+				Extend(PT)
+			})
+			StreamingResult(String)
+			HTTP(func() {
+				GET("/")
+				Param("foo")
+			})
+		})
+		Method("MethodF", func() {
+			Payload(String)
+			StreamingResult(String)
+			HTTP(func() {
+				GET("/")
+				Header("foo")
+			})
+		})
+	})
+}
+
 var FinalizeEndpointBodyAsExtendedTypeDSL = func() {
 	var EntityData = Type("EntityData", func() {
 		Attribute("name", String)
@@ -389,6 +531,39 @@ var FinalizeEndpointBodyAsPropWithExtendedTypeDSL = func() {
 			HTTP(func() {
 				POST("/")
 				Body("payload")
+			})
+		})
+	})
+}
+
+var ExplicitAuthHeaderDSL = func() {
+	var OAuth2 = OAuth2Security("authCode")
+	Service("Service", func() {
+		Method("Method", func() {
+			Security(OAuth2)
+			Payload(func() {
+				AccessToken("token", String)
+				Attribute("payload", String)
+			})
+			HTTP(func() {
+				POST("/")
+				Header("token")
+			})
+		})
+	})
+}
+
+var ImplicitAuthHeaderDSL = func() {
+	var OAuth2 = OAuth2Security("authCode")
+	Service("Service", func() {
+		Method("Method", func() {
+			Security(OAuth2)
+			Payload(func() {
+				AccessToken("token", String)
+				Attribute("payload", String)
+			})
+			HTTP(func() {
+				POST("/")
 			})
 		})
 	})

@@ -2,9 +2,33 @@ package codegen
 
 import (
 	"bytes"
+	"fmt"
 	"os"
 	"strings"
 	"unicode"
+
+	"goa.design/goa/v3/expr"
+)
+
+type (
+	// InitArgData contains the data needed to render code to initialize struct
+	// fields with the given arguments.
+	InitArgData struct {
+		// Name is the argument name.
+		Name string
+		// Pointer if true indicates that the argument is a pointer.
+		Pointer bool
+		// Type is the argument type.
+		Type expr.DataType
+		// FieldName is the name of the field in the struct initialized by the
+		// argument.
+		FieldName string
+		// FieldPointer if true indicates that the field in the struct is a
+		// pointer.
+		FieldPointer bool
+		// FieldType is the type of the field in the struct.
+		FieldType expr.DataType
+	}
 )
 
 // TemplateFuncs lists common template helper functions.
@@ -121,10 +145,15 @@ func CamelCase(name string, firstUpper bool, acronym bool) string {
 		// [w,i] is a word.
 		word := string(runes[w:i])
 		// is it one of our initialisms?
-		if u := strings.ToUpper(word); acronym && commonInitialisms[u] {
-			if firstUpper {
-				u = strings.ToUpper(u)
-			} else if w == 0 {
+		if u := strings.ToUpper(word); commonInitialisms[u] {
+			switch {
+			case firstUpper && acronym:
+				// u is already in upper case. Nothing to do here.
+			case firstUpper && !acronym:
+				u = strings.Title(strings.ToLower(u))
+			case w > 0 && !acronym:
+				u = strings.Title(strings.ToLower(u))
+			case w == 0:
 				u = strings.ToLower(u)
 			}
 
@@ -225,6 +254,56 @@ func WrapText(text string, maxChars int) string {
 		}
 	}
 	return res[:len(res)-1]
+}
+
+// InitStructFields produces Go code to initialize a struct and its fields from
+// the given init arguments.
+func InitStructFields(args []*InitArgData, name, targetVar, sourcePkg, targetPkg string, mustInit bool) (string, []*TransformFunctionData, error) {
+	scope := NewNameScope()
+	scope.Unique(targetVar)
+
+	var (
+		code    string
+		helpers []*TransformFunctionData
+	)
+	for _, arg := range args {
+		switch {
+		case arg.FieldName == "":
+			// do nothing
+		case expr.Equal(arg.Type, arg.FieldType):
+			// arg type and struct field type are the same. No need to call transform
+			// to initialize the field
+			deref := ""
+			if !arg.Pointer && arg.FieldPointer && expr.IsPrimitive(arg.FieldType) {
+				deref = "&"
+			}
+			code += fmt.Sprintf("%s.%s = %s%s\n", targetVar, arg.FieldName, deref, arg.Name)
+		case expr.IsPrimitive(arg.FieldType):
+			// aliased primitive type
+			t := scope.GoFullTypeRef(&expr.AttributeExpr{Type: arg.FieldType}, targetPkg)
+			cast := fmt.Sprintf("%s(%s)", t, arg.Name)
+			if arg.Pointer {
+				cast = fmt.Sprintf("%s(*%s)", t, arg.Name)
+			}
+			if arg.FieldPointer {
+				code += fmt.Sprintf("tmp%s := %s\n%s.%s = &tmp%s\n", arg.Name, cast, targetVar, arg.FieldName, arg.Name)
+			} else {
+				code += fmt.Sprintf("%s.%s = %s\n", targetVar, arg.FieldName, cast)
+			}
+		default:
+			srcctx := NewAttributeContext(arg.Pointer, false, true, sourcePkg, scope)
+			tgtctx := NewAttributeContext(arg.FieldPointer, false, true, targetPkg, scope)
+			c, h, err := GoTransform(
+				&expr.AttributeExpr{Type: arg.Type}, &expr.AttributeExpr{Type: arg.FieldType},
+				arg.Name, fmt.Sprintf("%s.%s", targetVar, arg.FieldName), srcctx, tgtctx, "", false)
+			if err != nil {
+				return "", helpers, err
+			}
+			code += c + "\n"
+			helpers = AppendHelpers(helpers, h)
+		}
+	}
+	return code, helpers, nil
 }
 
 func runeSpacePosRev(r []rune) int {

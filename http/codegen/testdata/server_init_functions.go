@@ -143,7 +143,7 @@ func New(
 	}
 	return &Server{
 		Mounts: []*MountPoint{
-			{"StreamingResultMethod", "GET", "/"},
+			{"StreamingResultMethod", "GET", "/{x}"},
 		},
 		StreamingResultMethod: NewStreamingResultMethodHandler(e.StreamingResultMethod, mux, decoder, encoder, errhandler, formatter, upgrader, configurer.StreamingResultMethodFn),
 	}
@@ -197,5 +197,32 @@ var ServerMultipleFilesWithPrefixPathMounterCode = `// MountPathToFolder configu
 func MountPathToFolder(mux goahttp.Muxer, h http.Handler) {
 	mux.Handle("GET", "/server_file_server/", h.ServeHTTP)
 	mux.Handle("GET", "/server_file_server/*wildcard", h.ServeHTTP)
+}
+`
+
+var ServerSimpleRoutingCode = `// MountServerSimpleRoutingHandler configures the mux to serve the
+// "ServiceSimpleRoutingServer" service "server-simple-routing" endpoint.
+func MountServerSimpleRoutingHandler(mux goahttp.Muxer, h http.Handler) {
+	f, ok := h.(http.HandlerFunc)
+	if !ok {
+		f = func(w http.ResponseWriter, r *http.Request) {
+			h.ServeHTTP(w, r)
+		}
+	}
+	mux.Handle("GET", "/simple/routing", f)
+}
+`
+
+var ServerTrailingSlashRoutingCode = `// MountServerTrailingSlashRoutingHandler configures the mux to serve the
+// "ServiceTrailingSlashRoutingServer" service "server-trailing-slash-routing"
+// endpoint.
+func MountServerTrailingSlashRoutingHandler(mux goahttp.Muxer, h http.Handler) {
+	f, ok := h.(http.HandlerFunc)
+	if !ok {
+		f = func(w http.ResponseWriter, r *http.Request) {
+			h.ServeHTTP(w, r)
+		}
+	}
+	mux.Handle("GET", "/trailing/slash/", f)
 }
 `

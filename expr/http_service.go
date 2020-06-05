@@ -127,7 +127,12 @@ func (svc *HTTPServiceExpr) FullPaths() []string {
 			basePaths = []string{Root.API.HTTP.Path}
 		}
 		for _, base := range basePaths {
-			paths = append(paths, httppath.Clean(path.Join(base, p)))
+			v := httppath.Clean(path.Join(base, p))
+			// path has trailing slash
+			if strings.HasSuffix(p, "/") {
+				v += "/"
+			}
+			paths = append(paths, v)
 		}
 	}
 	return paths
@@ -163,6 +168,23 @@ func (svc *HTTPServiceExpr) EvalName() string {
 
 // Prepare initializes the error responses.
 func (svc *HTTPServiceExpr) Prepare() {
+	// Lookup undefined HTTP errors in API.
+	for _, err := range svc.ServiceExpr.Errors {
+		found := false
+		for _, herr := range svc.HTTPErrors {
+			if err.Name == herr.Name {
+				found = true
+				break
+			}
+		}
+		if !found {
+			for _, herr := range Root.API.HTTP.Errors {
+				if herr.Name == err.Name {
+					svc.HTTPErrors = append(svc.HTTPErrors, herr.Dup())
+				}
+			}
+		}
+	}
 	for _, er := range svc.HTTPErrors {
 		er.Response.Prepare()
 	}

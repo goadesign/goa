@@ -63,7 +63,7 @@ func TestNewUnaryServer(t *testing.T) {
 		Success bool
 	}{
 		"ok":     {udplisten, true},
-		"not-ok": {"1002.0.0.0:62111", false},
+		"not-ok": {"foo:bar", false},
 	}
 	for k, c := range cases {
 		t.Run(k, func(t *testing.T) {
@@ -87,7 +87,7 @@ func TestNewStreamServer(t *testing.T) {
 		Success bool
 	}{
 		"ok":     {udplisten, true},
-		"not-ok": {"1002.0.0.0:62111", false},
+		"not-ok": {"foo:bar", false},
 	}
 	for k, c := range cases {
 		t.Run(k, func(t *testing.T) {

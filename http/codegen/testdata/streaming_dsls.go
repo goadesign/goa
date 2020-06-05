@@ -55,7 +55,7 @@ var StreamingResultDSL = func() {
 			Payload(Request)
 			StreamingResult(Result)
 			HTTP(func() {
-				GET("/")
+				GET("/{x}")
 				Response(StatusOK)
 			})
 		})
@@ -86,7 +86,7 @@ var StreamingResultWithViewsDSL = func() {
 			Payload(Request)
 			StreamingResult(Result)
 			HTTP(func() {
-				GET("/")
+				GET("/{x}")
 				Response(StatusOK)
 			})
 		})
@@ -119,7 +119,7 @@ var StreamingResultWithExplicitViewDSL = func() {
 				View("extended")
 			})
 			HTTP(func() {
-				GET("/")
+				GET("/{x}")
 				Response(StatusOK)
 			})
 		})
@@ -150,7 +150,7 @@ var StreamingResultCollectionWithViewsDSL = func() {
 			Payload(Request)
 			StreamingResult(CollectionOf(Result))
 			HTTP(func() {
-				GET("/")
+				GET("/{x}")
 				Response(StatusOK)
 			})
 		})
@@ -183,7 +183,7 @@ var StreamingResultCollectionWithExplicitViewDSL = func() {
 				View("tiny")
 			})
 			HTTP(func() {
-				GET("/")
+				GET("/{x}")
 				Response(StatusOK)
 			})
 		})
