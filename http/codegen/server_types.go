@@ -245,7 +245,7 @@ type {{ .VarName }} {{ .Def }}
 
 // input: InitData
 const serverTypeInitT = `{{ comment .Description }}
-func {{ .Name }}({{- range .ServerArgs }}{{ .Name }} {{ .TypeRef }}, {{ end }}) {{ .ReturnTypeRef }} {
+func {{ .Name }}({{- range .ServerArgs }}{{ .VarName }} {{ .TypeRef }}, {{ end }}) {{ .ReturnTypeRef }} {
 {{- if .ServerCode }}
 	{{ .ServerCode }}
 	{{- if .ReturnTypeAttribute }}
@@ -266,7 +266,7 @@ func {{ .Name }}({{- range .ServerArgs }}{{ .Name }} {{ .TypeRef }}, {{ end }}) 
 
 // input: InitData
 const serverBodyInitT = `{{ comment .Description }}
-func {{ .Name }}({{ range .ServerArgs }}{{ .Name }} {{.TypeRef }}, {{ end }}) {{ .ReturnTypeRef }} {
+func {{ .Name }}({{ range .ServerArgs }}{{ .VarName }} {{.TypeRef }}, {{ end }}) {{ .ReturnTypeRef }} {
 	{{ .ServerCode }}
 	return body
 }

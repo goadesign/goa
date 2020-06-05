@@ -1254,10 +1254,10 @@ const responseT = `{{ define "response" -}}
 		{{- else }}
 			{{- if isAliased .FieldType }}
 	{{ .VarName }}raw := {{ goTypeRef .Type }}({{ if .FieldPointer }}*{{ end }}res{{ if $.ViewedResult }}.Projected{{ end }}{{ if .FieldName }}.{{ .FieldName }}{{ end }})
-	{{ template "header_conversion" (headerConversionData .Type (printf "%sraw" {{ .VarName }}) true {{ .VarName }}) }}
+	{{ template "header_conversion" (headerConversionData .Type (printf "%sraw" .VarName) true .VarName) }}
 			{{- else }}
 	{{ .VarName }}raw := res{{ if $.ViewedResult }}.Projected{{ end }}{{ if .FieldName }}.{{ .FieldName }}{{ end }}
-	{{ template "header_conversion" (headerConversionData .Type (printf "%sraw" {{ .VarName }}) (not .FieldPointer) {{ .VarName }}) }}
+	{{ template "header_conversion" (headerConversionData .Type (printf "%sraw" .VarName) (not .FieldPointer) .VarName) }}
 			{{- end }}
 		{{- end }}
 
@@ -1365,7 +1365,7 @@ func {{ .InitName }}(mux goahttp.Muxer, {{ .VarName }} {{ .FuncName }}) func(r *
 			{{- if .Payload.Request.PayloadInit }}
 				{{- range .Payload.Request.PayloadInit.ServerArgs }}
 					{{- if .FieldName }}
-			(*p).{{ .FieldName }} = {{ if and (not .Pointer) .FieldPointer }}&{{ end }}{{ .Name }}
+			(*p).{{ .FieldName }} = {{ if and (not .Pointer) .FieldPointer }}&{{ end }}{{ .VarName }}
 					{{- end }}
 				{{- end }}
 			{{- end }}

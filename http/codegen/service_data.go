@@ -420,8 +420,6 @@ type (
 	// InitArgData represents a single constructor argument.
 	InitArgData struct {
 		*AttributeData
-		// Name is the name of
-		Name string
 		// Reference to the argument, e.g. "&body".
 		Ref string
 	}
@@ -637,9 +635,9 @@ func (d ServicesData) analyze(hs *expr.HTTPServiceExpr) *ServiceData {
 							vcode = codegen.RecursiveValidationCode(att, ctx, true, name)
 						}
 						initArgs[j] = &InitArgData{
-							Name: name,
-							Ref:  name,
+							Ref: name,
 							AttributeData: &AttributeData{
+								VarName:     name,
 								Description: att.Description,
 								FieldName:   codegen.Goify(arg, true),
 								FieldType:   patt.Type,
@@ -764,7 +762,7 @@ func (d ServicesData) analyze(hs *expr.HTTPServiceExpr) *ServiceData {
 			if err := requestInitTmpl.Execute(&buf, data); err != nil {
 				panic(err) // bug
 			}
-			clientArgs := []*InitArgData{{Name: "v", Ref: "v", AttributeData: &AttributeData{TypeRef: "interface{}"}}}
+			clientArgs := []*InitArgData{{Ref: "v", AttributeData: &AttributeData{VarName: "v", TypeRef: "interface{}"}}}
 			requestInit = &InitData{
 				Name:        name,
 				Description: fmt.Sprintf("%s instantiates a HTTP request object with method and path set to call the %q service %q endpoint", name, svc.Name, ep.Name),
@@ -1079,9 +1077,9 @@ func buildPayloadData(e *expr.HTTPEndpointExpr, sd *ServiceData) *PayloadData {
 				}
 			}
 			serverArgs = []*InitArgData{{
-				Name: "body",
-				Ref:  sd.Scope.GoVar("body", body),
+				Ref: sd.Scope.GoVar("body", body),
 				AttributeData: &AttributeData{
+					VarName:  "body",
 					TypeName: sd.Scope.GoTypeName(e.Body),
 					TypeRef:  sd.Scope.GoTypeRef(e.Body),
 					Type:     body,
@@ -1091,9 +1089,9 @@ func buildPayloadData(e *expr.HTTPEndpointExpr, sd *ServiceData) *PayloadData {
 				},
 			}}
 			clientArgs = []*InitArgData{{
-				Name: "body",
-				Ref:  sd.Scope.GoVar("body", body),
+				Ref: sd.Scope.GoVar("body", body),
 				AttributeData: &AttributeData{
+					VarName:  "body",
 					TypeName: sd.Scope.GoTypeName(e.Body),
 					TypeRef:  sd.Scope.GoTypeRef(e.Body),
 					Type:     body,
@@ -1106,9 +1104,9 @@ func buildPayloadData(e *expr.HTTPEndpointExpr, sd *ServiceData) *PayloadData {
 		var args []*InitArgData
 		for _, p := range request.PathParams {
 			args = append(args, &InitArgData{
-				Name: p.VarName,
-				Ref:  p.VarName,
+				Ref: p.VarName,
 				AttributeData: &AttributeData{
+					VarName:      p.VarName,
 					Description:  p.Description,
 					FieldName:    p.FieldName,
 					FieldPointer: p.FieldPointer,
@@ -1125,9 +1123,9 @@ func buildPayloadData(e *expr.HTTPEndpointExpr, sd *ServiceData) *PayloadData {
 		}
 		for _, p := range request.QueryParams {
 			args = append(args, &InitArgData{
-				Name: p.VarName,
-				Ref:  p.VarName,
+				Ref: p.VarName,
 				AttributeData: &AttributeData{
+					VarName:      p.VarName,
 					FieldName:    p.FieldName,
 					FieldPointer: p.FieldPointer,
 					FieldType:    p.FieldType,
@@ -1144,9 +1142,9 @@ func buildPayloadData(e *expr.HTTPEndpointExpr, sd *ServiceData) *PayloadData {
 		}
 		for _, h := range request.Headers {
 			args = append(args, &InitArgData{
-				Name: h.VarName,
-				Ref:  h.VarName,
+				Ref: h.VarName,
 				AttributeData: &AttributeData{
+					VarName:      h.VarName,
 					FieldName:    h.FieldName,
 					FieldPointer: h.FieldPointer,
 					FieldType:    h.FieldType,
@@ -1163,9 +1161,9 @@ func buildPayloadData(e *expr.HTTPEndpointExpr, sd *ServiceData) *PayloadData {
 		}
 		for _, c := range request.Cookies {
 			args = append(args, &InitArgData{
-				Name: c.VarName,
-				Ref:  c.VarName,
+				Ref: c.VarName,
 				AttributeData: &AttributeData{
+					VarName:      c.VarName,
 					FieldName:    c.FieldName,
 					FieldPointer: c.FieldPointer,
 					FieldType:    c.FieldType,
@@ -1196,9 +1194,9 @@ func buildPayloadData(e *expr.HTTPEndpointExpr, sd *ServiceData) *PayloadData {
 						uref = "*" + uref
 					}
 					uarg := &InitArgData{
-						Name: sc.UsernameAttr,
-						Ref:  sc.UsernameAttr,
+						Ref: sc.UsernameAttr,
 						AttributeData: &AttributeData{
+							VarName:      sc.UsernameAttr,
 							FieldName:    sc.UsernameField,
 							FieldPointer: sc.UsernamePointer,
 							FieldType:    uatt.Type,
@@ -1218,9 +1216,9 @@ func buildPayloadData(e *expr.HTTPEndpointExpr, sd *ServiceData) *PayloadData {
 						pref = "*" + pref
 					}
 					parg := &InitArgData{
-						Name: sc.PasswordAttr,
-						Ref:  sc.PasswordAttr,
+						Ref: sc.PasswordAttr,
 						AttributeData: &AttributeData{
+							VarName:      sc.PasswordAttr,
 							FieldName:    sc.PasswordField,
 							FieldPointer: sc.PasswordPointer,
 							FieldType:    patt.Type,
@@ -1548,9 +1546,9 @@ func buildResponses(e *expr.HTTPEndpointExpr, result *expr.AttributeExpr, viewed
 								}
 							}
 							clientArgs = []*InitArgData{{
-								Name: "body",
-								Ref:  ref,
+								Ref: ref,
 								AttributeData: &AttributeData{
+									VarName:  "body",
 									TypeRef:  sd.Scope.GoTypeRef(resp.Body),
 									Validate: vcode,
 								},
@@ -1581,9 +1579,9 @@ func buildResponses(e *expr.HTTPEndpointExpr, result *expr.AttributeExpr, viewed
 						}
 						for _, h := range headersData {
 							clientArgs = append(clientArgs, &InitArgData{
-								Name: h.VarName,
-								Ref:  h.VarName,
+								Ref: h.VarName,
 								AttributeData: &AttributeData{
+									VarName:      h.VarName,
 									FieldName:    h.FieldName,
 									FieldPointer: h.FieldPointer,
 									FieldType:    h.FieldType,
@@ -1598,9 +1596,9 @@ func buildResponses(e *expr.HTTPEndpointExpr, result *expr.AttributeExpr, viewed
 						}
 						for _, c := range cookiesData {
 							clientArgs = append(clientArgs, &InitArgData{
-								Name: c.VarName,
-								Ref:  c.VarName,
+								Ref: c.VarName,
 								AttributeData: &AttributeData{
+									VarName:      c.VarName,
 									FieldName:    c.FieldName,
 									FieldPointer: c.FieldPointer,
 									FieldType:    c.FieldType,
@@ -1702,16 +1700,15 @@ func buildErrorsData(e *expr.HTTPEndpointExpr, sd *ServiceData) []*ErrorGroupDat
 						ref = "&body"
 					}
 					args = []*InitArgData{{
-						Name:          "body",
 						Ref:           ref,
-						AttributeData: &AttributeData{TypeRef: sd.Scope.GoTypeRef(v.Response.Body)},
+						AttributeData: &AttributeData{VarName: "body", TypeRef: sd.Scope.GoTypeRef(v.Response.Body)},
 					}}
 				}
 				for _, h := range extractHeaders(v.Response.Headers, v.ErrorExpr.AttributeExpr, svcctx, sd.Scope) {
 					args = append(args, &InitArgData{
-						Name: h.VarName,
-						Ref:  h.VarName,
+						Ref: h.VarName,
 						AttributeData: &AttributeData{
+							VarName:      h.VarName,
 							FieldName:    h.FieldName,
 							FieldPointer: false,
 							FieldType:    h.FieldType,
@@ -1724,9 +1721,9 @@ func buildErrorsData(e *expr.HTTPEndpointExpr, sd *ServiceData) []*ErrorGroupDat
 				}
 				for _, c := range extractCookies(v.Response.Cookies, v.ErrorExpr.AttributeExpr, svcctx, sd.Scope) {
 					args = append(args, &InitArgData{
-						Name: c.VarName,
-						Ref:  c.VarName,
+						Ref: c.VarName,
 						AttributeData: &AttributeData{
+							VarName:      c.VarName,
 							FieldName:    c.FieldName,
 							FieldPointer: false,
 							FieldType:    c.FieldType,
@@ -1968,9 +1965,9 @@ func buildRequestBodyType(body, att *expr.AttributeExpr, e *expr.HTTPEndpointExp
 				sd.ClientTransformHelpers = codegen.AppendHelpers(sd.ClientTransformHelpers, helpers)
 			}
 			arg := InitArgData{
-				Name: sourceVar,
-				Ref:  sourceVar,
+				Ref: sourceVar,
 				AttributeData: &AttributeData{
+					VarName:  sourceVar,
 					TypeRef:  svc.Scope.GoFullTypeRef(att, svc.PkgName),
 					Type:     att.Type,
 					Validate: validateDef,
@@ -2158,9 +2155,9 @@ func buildResponseBodyType(body, att *expr.AttributeExpr, e *expr.HTTPEndpointEx
 				tref = svc.ViewScope.GoFullTypeRef(att, svc.ViewsPkg)
 			}
 			arg := InitArgData{
-				Name: sourceVar,
-				Ref:  ref,
+				Ref: ref,
 				AttributeData: &AttributeData{
+					VarName:  sourceVar,
 					TypeRef:  tref,
 					Type:     att.Type,
 					Validate: validateDef,
@@ -2652,15 +2649,15 @@ const (
 	{{- range $i, $arg := .Args }}
 		{{- $typ := (index $.PathParams $i).Attribute.Type }}
 		{{- if eq $typ.Name "array" }}
-	{{ .Name }}Slice := make([]string, len({{ .Name }}))
-	for i, v := range {{ .Name }} {
-		{{ .Name }}Slice[i] = {{ template "slice_conversion" $typ.ElemType.Type.Name }}
+	{{ .VarName }}Slice := make([]string, len({{ .VarName }}))
+	for i, v := range {{ .VarName }} {
+		{{ .VarName }}Slice[i] = {{ template "slice_conversion" $typ.ElemType.Type.Name }}
 	}
 		{{- end }}
 	{{- end }}
 	return fmt.Sprintf("{{ .PathFormat }}", {{ range $i, $arg := .Args }}
-	{{- if eq (index $.PathParams $i).Attribute.Type.Name "array" }}strings.Join({{ .Name }}Slice, ",")
-	{{- else }}{{ .Name }}
+	{{- if eq (index $.PathParams $i).Attribute.Type.Name "array" }}strings.Join({{ .VarName }}Slice, ",")
+	{{- else }}{{ .VarName }}
 	{{- end }}, {{ end }})
 {{- else }}
 	return "{{ .PathFormat }}"
@@ -2686,7 +2683,7 @@ const (
 {{- if or .Args .RequestStruct }}
 	var (
 	{{- range .Args }}
-		{{ .Name }} {{ .TypeRef }}
+		{{ .VarName }} {{ .TypeRef }}
 	{{- end }}
 	{{- if .RequestStruct }}
 		body io.Reader
@@ -2713,9 +2710,9 @@ const (
 		if p{{ if $.HasFields }}.{{ .FieldName }}{{ end }} != nil {
 		{{- end }}
 			{{- if (isAliased .FieldType) }}
-			{{ .Name }} = {{ goTypeRef .Type $.ServiceName }}({{ if .Pointer }}*{{ end }}p{{ if $.HasFields }}.{{ .FieldName }}{{ end }})
+			{{ .VarName }} = {{ goTypeRef .Type $.ServiceName }}({{ if .Pointer }}*{{ end }}p{{ if $.HasFields }}.{{ .FieldName }}{{ end }})
 			{{- else }}
-			{{ .Name }} = {{ if .Pointer }}*{{ end }}p{{ if $.HasFields }}.{{ .FieldName }}{{ end }}
+			{{ .VarName }} = {{ if .Pointer }}*{{ end }}p{{ if $.HasFields }}.{{ .FieldName }}{{ end }}
 			{{- end }}
 		{{- if .Pointer }}
 		}

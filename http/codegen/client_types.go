@@ -222,7 +222,7 @@ func clientType(genpkg string, svc *expr.HTTPServiceExpr, seen map[string]struct
 
 // input: InitData
 const clientBodyInitT = `{{ comment .Description }}
-func {{ .Name }}({{ range .ClientArgs }}{{ .Name }} {{.TypeRef }}, {{ end }}) {{ .ReturnTypeRef }} {
+func {{ .Name }}({{ range .ClientArgs }}{{ .VarName }} {{.TypeRef }}, {{ end }}) {{ .ReturnTypeRef }} {
 	{{ .ClientCode }}
 	return body
 }
@@ -230,7 +230,7 @@ func {{ .Name }}({{ range .ClientArgs }}{{ .Name }} {{.TypeRef }}, {{ end }}) {{
 
 // input: InitData
 const clientTypeInitT = `{{ comment .Description }}
-func {{ .Name }}({{- range .ClientArgs }}{{ .Name }} {{ .TypeRef }}, {{ end }}) {{ .ReturnTypeRef }} {
+func {{ .Name }}({{- range .ClientArgs }}{{ .VarName }} {{ .TypeRef }}, {{ end }}) {{ .ReturnTypeRef }} {
 {{- if .ClientCode }}
 	{{ .ClientCode }}
 	{{- if .ReturnTypeAttribute }}
