@@ -446,6 +446,11 @@ func buildDesignType(dt *expr.DataType, t reflect.Type, ref expr.DataType, recs 
 		var fields []reflect.StructField
 		for i := 0; i < t.NumField(); i++ {
 			f := t.FieldByIndex([]int{i})
+			ln := strings.ToLower(f.Name[0:1]) + f.Name[1:]
+			if f.Name == ln {
+				// field is not exported
+				continue
+			}
 			atn, _ := attributeName(oref, f.Name)
 			if oref != nil {
 				if at := oref.Attribute(atn); at != nil {
