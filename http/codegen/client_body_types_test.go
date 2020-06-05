@@ -116,7 +116,7 @@ func TestClientTypeFiles(t *testing.T) {
 				}
 				code := codegen.FormatTestCode(t, "package foo\n"+buf.String())
 				if code != c.Codes[i] {
-					t.Errorf("invalid code at inded %d, got:\n%s\ngot vs. expected:\n%s", i, code, codegen.Diff(t, code, c.Codes[i]))
+					t.Errorf("invalid code at index %d, got:\n%s\ngot vs. expected:\n%s", i, code, codegen.Diff(t, code, c.Codes[i]))
 				}
 			}
 		})
@@ -365,13 +365,7 @@ func NewMethodQueryStringExtendedValidatePayloadRequestBody(p *servicequerystrin
 `
 
 var MultipleServicesSamePayloadAndResultClientTypesFiles = []string{
-	`// ListRequestBody is the type of the "ServiceA" service "list" endpoint HTTP
-// request body.
-type ListRequestBody struct {
-	Name *string ` + "`" + `form:"name,omitempty" json:"name,omitempty" xml:"name,omitempty"` + "`" + `
-}
-
-// ListStreamingBody is the type of the "ServiceA" service "list" endpoint HTTP
+	`// ListStreamingBody is the type of the "ServiceA" service "list" endpoint HTTP
 // request body.
 type ListStreamingBody struct {
 	Name *string ` + "`" + `form:"name,omitempty" json:"name,omitempty" xml:"name,omitempty"` + "`" + `
@@ -400,15 +394,6 @@ type ListSomethingWentWrongResponseBody struct {
 	Timeout *bool ` + "`" + `form:"timeout,omitempty" json:"timeout,omitempty" xml:"timeout,omitempty"` + "`" + `
 	// Is the error a server-side fault?
 	Fault *bool ` + "`" + `form:"fault,omitempty" json:"fault,omitempty" xml:"fault,omitempty"` + "`" + `
-}
-
-// NewListRequestBody builds the HTTP request body from the payload of the
-// "list" endpoint of the "ServiceA" service.
-func NewListRequestBody(p *servicea.ListPayload) *ListRequestBody {
-	body := &ListRequestBody{
-		Name: p.Name,
-	}
-	return body
 }
 
 // NewListStreamingBody builds the HTTP request body from the payload of the
@@ -481,13 +466,7 @@ func ValidateListSomethingWentWrongResponseBody(body *ListSomethingWentWrongResp
 	return
 }
 `,
-	`// ListRequestBody is the type of the "ServiceB" service "list" endpoint HTTP
-// request body.
-type ListRequestBody struct {
-	Name *string ` + "`" + `form:"name,omitempty" json:"name,omitempty" xml:"name,omitempty"` + "`" + `
-}
-
-// ListStreamingBody is the type of the "ServiceB" service "list" endpoint HTTP
+	`// ListStreamingBody is the type of the "ServiceB" service "list" endpoint HTTP
 // request body.
 type ListStreamingBody struct {
 	Name *string ` + "`" + `form:"name,omitempty" json:"name,omitempty" xml:"name,omitempty"` + "`" + `
@@ -516,15 +495,6 @@ type ListSomethingWentWrongResponseBody struct {
 	Timeout *bool ` + "`" + `form:"timeout,omitempty" json:"timeout,omitempty" xml:"timeout,omitempty"` + "`" + `
 	// Is the error a server-side fault?
 	Fault *bool ` + "`" + `form:"fault,omitempty" json:"fault,omitempty" xml:"fault,omitempty"` + "`" + `
-}
-
-// NewListRequestBody builds the HTTP request body from the payload of the
-// "list" endpoint of the "ServiceB" service.
-func NewListRequestBody(p *serviceb.ListPayload) *ListRequestBody {
-	body := &ListRequestBody{
-		Name: p.Name,
-	}
-	return body
 }
 
 // NewListStreamingBody builds the HTTP request body from the payload of the

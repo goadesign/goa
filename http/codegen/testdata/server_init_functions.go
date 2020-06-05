@@ -143,7 +143,7 @@ func New(
 	}
 	return &Server{
 		Mounts: []*MountPoint{
-			{"StreamingResultMethod", "GET", "/"},
+			{"StreamingResultMethod", "GET", "/{x}"},
 		},
 		StreamingResultMethod: NewStreamingResultMethodHandler(e.StreamingResultMethod, mux, decoder, encoder, errhandler, formatter, upgrader, configurer.StreamingResultMethodFn),
 	}
