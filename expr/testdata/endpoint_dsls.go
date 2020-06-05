@@ -427,6 +427,66 @@ var EndpointPayloadMissingRequired = func() {
 	})
 }
 
+var StreamingEndpointRequestBody = func() {
+	var PT = Type("Payload", func() {
+		Attribute("foo", String)
+	})
+	Service("Service", func() {
+		Method("MethodA", func() {
+			Payload(func() {
+				Attribute("bar", String)
+			})
+			StreamingResult(String)
+			HTTP(func() {
+				GET("/")
+			})
+		})
+		Method("MethodB", func() {
+			Payload(func() {
+				Extend(PT)
+			})
+			StreamingResult(String)
+			HTTP(func() {
+				GET("/")
+			})
+		})
+		Method("MethodC", func() {
+			Payload(String)
+			StreamingResult(String)
+			HTTP(func() {
+				GET("/")
+			})
+		})
+		Method("MethodD", func() {
+			Payload(func() {
+				Attribute("bar", String)
+			})
+			StreamingResult(String)
+			HTTP(func() {
+				GET("/{bar}")
+			})
+		})
+		Method("MethodE", func() {
+			Payload(func() {
+				Extend(PT)
+			})
+			StreamingResult(String)
+			HTTP(func() {
+				GET("/")
+				Param("foo")
+			})
+		})
+		Method("MethodF", func() {
+			Payload(String)
+			StreamingResult(String)
+			HTTP(func() {
+				GET("/")
+				Header("foo")
+			})
+		})
+	})
+}
+
 var FinalizeEndpointBodyAsExtendedTypeDSL = func() {
 	var EntityData = Type("EntityData", func() {
 		Attribute("name", String)

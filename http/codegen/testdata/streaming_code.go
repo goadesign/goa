@@ -209,15 +209,10 @@ var StreamingResultClientEndpointCode = `// StreamingResultMethod returns an end
 // StreamingResultService service StreamingResultMethod server.
 func (c *Client) StreamingResultMethod() goa.Endpoint {
 	var (
-		encodeRequest  = EncodeStreamingResultMethodRequest(c.encoder)
 		decodeResponse = DecodeStreamingResultMethodResponse(c.decoder, c.RestoreResponseBody)
 	)
 	return func(ctx context.Context, v interface{}) (interface{}, error) {
 		req, err := c.BuildStreamingResultMethodRequest(ctx, v)
-		if err != nil {
-			return nil, err
-		}
-		err = encodeRequest(req, v)
 		if err != nil {
 			return nil, err
 		}
@@ -292,15 +287,10 @@ var StreamingResultWithViewsClientEndpointCode = `// StreamingResultWithViewsMet
 // StreamingResultWithViewsMethod server.
 func (c *Client) StreamingResultWithViewsMethod() goa.Endpoint {
 	var (
-		encodeRequest  = EncodeStreamingResultWithViewsMethodRequest(c.encoder)
 		decodeResponse = DecodeStreamingResultWithViewsMethodResponse(c.decoder, c.RestoreResponseBody)
 	)
 	return func(ctx context.Context, v interface{}) (interface{}, error) {
 		req, err := c.BuildStreamingResultWithViewsMethodRequest(ctx, v)
-		if err != nil {
-			return nil, err
-		}
-		err = encodeRequest(req, v)
 		if err != nil {
 			return nil, err
 		}
@@ -370,15 +360,10 @@ var StreamingResultWithExplicitViewClientEndpointCode = `// StreamingResultWithE
 // StreamingResultWithExplicitViewMethod server.
 func (c *Client) StreamingResultWithExplicitViewMethod() goa.Endpoint {
 	var (
-		encodeRequest  = EncodeStreamingResultWithExplicitViewMethodRequest(c.encoder)
 		decodeResponse = DecodeStreamingResultWithExplicitViewMethodResponse(c.decoder, c.RestoreResponseBody)
 	)
 	return func(ctx context.Context, v interface{}) (interface{}, error) {
 		req, err := c.BuildStreamingResultWithExplicitViewMethodRequest(ctx, v)
-		if err != nil {
-			return nil, err
-		}
-		err = encodeRequest(req, v)
 		if err != nil {
 			return nil, err
 		}
@@ -576,15 +561,10 @@ var StreamingResultCollectionWithExplicitViewClientEndpointCode = `// StreamingR
 // service StreamingResultCollectionWithExplicitViewMethod server.
 func (c *Client) StreamingResultCollectionWithExplicitViewMethod() goa.Endpoint {
 	var (
-		encodeRequest  = EncodeStreamingResultCollectionWithExplicitViewMethodRequest(c.encoder)
 		decodeResponse = DecodeStreamingResultCollectionWithExplicitViewMethodResponse(c.decoder, c.RestoreResponseBody)
 	)
 	return func(ctx context.Context, v interface{}) (interface{}, error) {
 		req, err := c.BuildStreamingResultCollectionWithExplicitViewMethodRequest(ctx, v)
-		if err != nil {
-			return nil, err
-		}
-		err = encodeRequest(req, v)
 		if err != nil {
 			return nil, err
 		}

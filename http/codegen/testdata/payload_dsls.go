@@ -2793,7 +2793,7 @@ var MultipleServicesSamePayloadAndResultDSL = func() {
 			})
 			Error("something_went_wrong")
 			HTTP(func() {
-				GET("/")
+				GET("/{name}")
 				Response(StatusOK)
 				Response("something_went_wrong", StatusInternalServerError)
 			})
@@ -2814,7 +2814,7 @@ var MultipleServicesSamePayloadAndResultDSL = func() {
 			})
 			Error("something_went_wrong")
 			HTTP(func() {
-				GET("/")
+				GET("/{name}")
 				Response(StatusOK)
 				Response(StatusInternalServerError, "something_went_wrong")
 			})

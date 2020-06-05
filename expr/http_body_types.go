@@ -373,3 +373,86 @@ func removeAttribute(attr *MappedAttributeExpr, name string) {
 		}
 	}
 }
+
+// extendedHTTPRequestBody returns an attribute describing the HTTP request body.
+// This is used only in the validation phase to figure out the request body when
+// method Payload extends or references other types.
+func extendedHTTPRequestBody(a *HTTPEndpointExpr) *AttributeExpr {
+	const suffix = "RequestBody"
+	var (
+		name = concat(a.Name(), "Request", "Body")
+	)
+	if a.Body != nil {
+		a.Body = DupAtt(a.Body)
+		renameType(a.Body, name, suffix)
+		return a.Body
+	}
+
+	var (
+		payload  = a.MethodExpr.Payload
+		headers  = a.Headers
+		params   = a.Params
+		bodyOnly = headers.IsEmpty() && params.IsEmpty() && a.MapQueryParams == nil
+	)
+
+	// 1. If Payload is not an object then check whether there are params or
+	// headers defined and if so return empty type (payload encoded in
+	// request params or headers) otherwise return payload type (payload
+	// encoded in request body).
+	if !IsObject(payload.Type) {
+		if bodyOnly {
+			payload = DupAtt(payload)
+			renameType(payload, name, suffix)
+			return payload
+		}
+		return &AttributeExpr{Type: Empty}
+	}
+
+	// Merge extended and referenced types
+	payload = DupAtt(payload)
+	for _, ref := range payload.References {
+		ru, ok := ref.(UserType)
+		if !ok {
+			continue
+		}
+		payload.Inherit(ru.Attribute())
+	}
+	for _, base := range payload.Bases {
+		ru, ok := base.(UserType)
+		if !ok {
+			continue
+		}
+		payload.Merge(ru.Attribute())
+	}
+
+	// 2. Remove header and param attributes
+	body := NewMappedAttributeExpr(payload)
+	removeAttributes(body, headers)
+	removeAttributes(body, params)
+	if a.MapQueryParams != nil && *a.MapQueryParams != "" {
+		removeAttribute(body, *a.MapQueryParams)
+	}
+	for att := range defaultRequestHeaderAttributes(a) {
+		removeAttribute(body, att)
+	}
+
+	// 3. Return empty type if no attribute left
+	if len(*AsObject(body.Type)) == 0 {
+		return &AttributeExpr{Type: Empty}
+	}
+
+	// 4. Build computed user type
+	att := body.Attribute()
+	ut := &UserTypeExpr{
+		AttributeExpr: att,
+		TypeName:      name,
+		UID:           a.Service.Name() + "#" + a.Name(),
+	}
+	appendSuffix(ut.Attribute().Type, suffix)
+
+	return &AttributeExpr{
+		Type:         ut,
+		Validation:   att.Validation,
+		UserExamples: att.UserExamples,
+	}
+}

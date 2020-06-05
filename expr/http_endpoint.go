@@ -577,11 +577,14 @@ func (e *HTTPEndpointExpr) Validate() error {
 		}
 	}
 
-	if e.SkipRequestBodyEncodeDecode {
-		body := httpRequestBody(e)
-		if body.Type != Empty {
-			verr.Add(e, "HTTP endpoint request body must be empty when using SkipRequestBodyEncodeDecode but not all method payload attributes are mapped to headers and params. Make sure to define Headers and Params as needed.")
-		}
+	body := extendedHTTPRequestBody(e)
+	if e.SkipRequestBodyEncodeDecode && body.Type != Empty {
+		verr.Add(e, "HTTP endpoint request body must be empty when using SkipRequestBodyEncodeDecode but not all method payload attributes are mapped to headers and params. Make sure to define Headers and Params as needed.")
+	}
+	if e.MethodExpr.IsStreaming() && body.Type != Empty {
+		// Refer Websocket protocol - https://tools.ietf.org/html/rfc6455
+		// Protocol does not allow HTTP request body to be passed.
+		verr.Add(e, "HTTP endpoint request body must be empty when the endpoint uses streaming. Payload attributes must be mapped to headers and/or params.")
 	}
 
 	return verr
