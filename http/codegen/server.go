@@ -525,7 +525,7 @@ func {{ .RequestDecoder }}(mux goahttp.Muxer, decoder func(*http.Request) goahtt
 		{{- end }}
 {{- end }}
 {{- if not .MultipartRequestDecoder }}
-	{{- template "request_params_headers" .Payload.Request }}
+	{{- template "request_elements" .Payload.Request }}
 	{{- if .Payload.Request.MustValidate }}
 		if err != nil {
 			return nil, err
@@ -566,11 +566,11 @@ func {{ .RequestDecoder }}(mux goahttp.Muxer, decoder func(*http.Request) goahtt
 	return payload, nil
 	}
 }
-` + requestParamsHeadersT
+` + requestElementsT
 
 // input: RequestData
-const requestParamsHeadersT = `{{- define "request_params_headers" }}
-{{- if or .PathParams .QueryParams .Headers }}
+const requestElementsT = `{{- define "request_elements" }}
+{{- if or .PathParams .QueryParams .Headers .Cookies }}
 {{- if .ServerBody }}{{/* we want a newline only if there was code before */}}
 {{ end }}
 		var (
@@ -583,8 +583,14 @@ const requestParamsHeadersT = `{{- define "request_params_headers" }}
 		{{- range .Headers }}
 			{{ .VarName }} {{ .TypeRef }}
 		{{- end }}
+		{{- range .Cookies }}
+			{{ .VarName }} {{ .TypeRef }}
+		{{- end }}
 		{{- if and .MustValidate (or (not .ServerBody) .Multipart) }}
 			err error
+		{{- end }}
+		{{- if .Cookies }}
+			c *http.Cookie
 		{{- end }}
 		{{- if .PathParams }}
 
@@ -804,6 +810,59 @@ const requestParamsHeadersT = `{{- define "request_params_headers" }}
 		{{- if .Required }}
 		if {{ .VarName }}Raw == "" {
 			err = goa.MergeErrors(err, goa.MissingFieldError("{{ .Name }}", "header"))
+		}
+		{{- else if .DefaultValue }}
+		if {{ .VarName }}Raw == "" {
+			{{ .VarName }} = {{ printf "%#v" .DefaultValue }}
+		}
+		{{- end }}
+
+		{{- if .DefaultValue }}else {
+		{{- else if not .Required }}
+		if {{ .VarName }}Raw != "" {
+		{{- end }}
+		{{- template "type_conversion" . }}
+		{{- if or .DefaultValue (not .Required) }}
+		}
+		{{- end }}
+	}
+	{{- end }}
+	{{- if .Validate }}
+		{{ .Validate }}
+	{{- end }}
+{{- end }}
+
+{{- range .Cookies }}
+	c, err = r.Cookie("{{ .Name }}")
+	{{- if and (or (eq .Type.Name "string") (eq .Type.Name "any")) .Required }}
+		if err == http.ErrNoCookie {
+			err = goa.MergeErrors(err, goa.MissingFieldError("{{ .Name }}", "cookie"))
+		} else {
+			{{ .VarName }} = c.Value
+		}
+
+	{{- else if (or (eq .Type.Name "string") (eq .Type.Name "any")) }}
+		var {{ .VarName }}Raw string
+		if c != nil {
+			{{ .VarName }}Raw = c.Value
+		}
+		if {{ .VarName }}Raw != "" {
+			{{ .VarName }} = {{ if and (eq .Type.Name "string") .Pointer }}&{{ end }}{{ .VarName }}Raw
+		}
+		{{- if .DefaultValue }} else {
+			{{ .VarName }} = {{ if eq .Type.Name "string" }}{{ printf "%q" .DefaultValue }}{{ else }}{{ printf "%#v" .DefaultValue }}{{ end }}
+		}
+		{{- end }}
+
+	{{- else }}{{/* not string and not any */}}
+	{
+		var {{ .VarName }}Raw string
+		if c != nil {
+			{{ .VarName }}Raw = c.Value
+		}
+		{{- if .Required }}
+		if {{ .VarName }}Raw == "" {
+			err = goa.MergeErrors(err, goa.MissingFieldError("{{ .Name }}", "cookie"))
 		}
 		{{- else if .DefaultValue }}
 		if {{ .VarName }}Raw == "" {
@@ -1183,6 +1242,54 @@ const responseT = `{{ define "response" -}}
 
 	{{- end }}
 
+	{{- range .Cookies }}
+		{{- $initDef := and (or .FieldPointer .Slice) .DefaultValue }}
+		{{- $checkNil := and (or .FieldPointer .Slice (eq .Type.Name "bytes") (eq .Type.Name "any") $initDef) }}
+		{{- if $checkNil }}
+	if res.{{ if $.ViewedResult }}Projected.{{ end }}{{ .FieldName }} != nil {
+		{{- end }}
+
+		{{- if eq .Type.Name "string" }}
+	{{ .VarName }} := {{ if or .FieldPointer $.ViewedResult }}*{{ end }}res{{ if $.ViewedResult }}.Projected{{ end }}{{ if .FieldName }}.{{ .FieldName }}{{ end }}
+		{{- else }}
+			{{- if isAliased .FieldType }}
+	{{ .VarName }}raw := {{ goTypeRef .Type }}({{ if .FieldPointer }}*{{ end }}res{{ if $.ViewedResult }}.Projected{{ end }}{{ if .FieldName }}.{{ .FieldName }}{{ end }})
+	{{ template "header_conversion" (headerConversionData .Type (printf "%sraw" {{ .VarName }}) true {{ .VarName }}) }}
+			{{- else }}
+	{{ .VarName }}raw := res{{ if $.ViewedResult }}.Projected{{ end }}{{ if .FieldName }}.{{ .FieldName }}{{ end }}
+	{{ template "header_conversion" (headerConversionData .Type (printf "%sraw" {{ .VarName }}) (not .FieldPointer) {{ .VarName }}) }}
+			{{- end }}
+		{{- end }}
+
+		{{- if $initDef }}
+	{{ if $checkNil }} } else { {{ else }}if res{{ if $.ViewedResult }}.Projected{{ end }}.{{ .FieldName }} == nil { {{ end }}
+		{{ .VarName }} := "{{ printValue .Type .DefaultValue }}"
+		{{- end }}
+		http.SetCookie(w, &http.Cookie{
+			Name: {{ .Name }},
+			Value: {{ .VarName }},
+			{{- if .MaxAge }}
+			MaxAge: {{ .MaxAge }},
+			{{- end }}
+			{{- if .Path }}
+			Path: {{ .Path }},
+			{{- end }}
+			{{- if .Domain }}
+			Domain: {{ .Domain }},
+			{{- end }}
+			{{- if .Secure }}
+			Secure: true,
+			{{- end }}
+			{{- if .HTTPOnly }}
+			HttpOnly: true,
+			{{- end }}
+		})
+		{{- if or $checkNil $initDef }}
+	}
+		{{- end }}
+
+	{{- end }}
+
 	{{- if .ErrorHeader }}
 	w.Header().Set("goa-error", {{ printf "%q" .ErrorHeader }})
 	{{- end }}
@@ -1249,7 +1356,7 @@ func {{ .InitName }}(mux goahttp.Muxer, {{ .VarName }} {{ .FuncName }}) func(r *
 			if err := {{ .VarName }}(mr, p); err != nil {
 				return err
 			}
-			{{- template "request_params_headers" .Payload.Request }}
+			{{- template "request_elements" .Payload.Request }}
 			{{- if .Payload.Request.MustValidate }}
 			if err != nil {
 				return err
@@ -1266,4 +1373,4 @@ func {{ .InitName }}(mux goahttp.Muxer, {{ .VarName }} {{ .FuncName }}) func(r *
 		})
 	}
 }
-` + requestParamsHeadersT
+` + requestElementsT

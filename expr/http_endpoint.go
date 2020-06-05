@@ -650,6 +650,7 @@ func (e *HTTPEndpointExpr) Finalize() {
 	// payload attributes.
 	initAttr(e.Params, e.MethodExpr.Payload)
 	initAttr(e.Headers, e.MethodExpr.Payload)
+	initAttr(e.Cookies, e.MethodExpr.Payload)
 
 	if e.Body != nil {
 		// rename type to add RequestBody suffix so that we don't end with

@@ -116,6 +116,9 @@ func (r *HTTPResponseExpr) Prepare() {
 	if r.Headers == nil {
 		r.Headers = NewEmptyMappedAttributeExpr()
 	}
+	if r.Cookies == nil {
+		r.Cookies = NewEmptyMappedAttributeExpr()
+	}
 }
 
 // Validate checks that the response definition is consistent: its status is set
@@ -195,11 +198,32 @@ func (r *HTTPResponseExpr) Validate(e *HTTPEndpointExpr) *eval.ValidationErrors 
 				}
 			}
 		} else if len(*AsObject(r.Headers.Type)) > 1 {
-			verr.Add(r, "response defines more than one header but result type is not an object")
+			verr.Add(r, "response defines more than one headers but result type is not an object")
 		} else if IsArray(e.MethodExpr.Result.Type) {
 			if !IsPrimitive(AsArray(e.MethodExpr.Result.Type).ElemType.Type) {
 				verr.Add(e, "Array result is mapped to an HTTP header but is not an array of primitive types.")
 			}
+		}
+	}
+	if !r.Cookies.IsEmpty() {
+		verr.Merge(r.Cookies.Validate("HTTP response cookies", r))
+		if e.MethodExpr.Result.Type == Empty {
+			verr.Add(r, "response defines cookies but result is empty")
+		} else if IsObject(e.MethodExpr.Result.Type) {
+			mobj := AsObject(r.Cookies.Type)
+			for _, c := range *mobj {
+				t := resultAttributeType(c.Name)
+				if t == nil {
+					verr.Add(r, "cookie %q has no equivalent attribute in%s result type, use notation 'attribute_name:cookie_name' to identify corresponding result type attribute.", c.Name, inview)
+				}
+				if !IsPrimitive(t) {
+					verr.Add(e, "attribute %q used in HTTP cookies must be a primitive type.", c.Name)
+				}
+			}
+		} else if len(*AsObject(r.Cookies.Type)) > 1 {
+			verr.Add(r, "response defines more than one cookies but result type is not an object")
+		} else if IsArray(e.MethodExpr.Result.Type) {
+			verr.Add(e, "Array result is mapped to an HTTP cookie.")
 		}
 	}
 	if r.Body != nil {
@@ -221,7 +245,7 @@ func (r *HTTPResponseExpr) Validate(e *HTTPEndpointExpr) *eval.ValidationErrors 
 	} else if e.SkipResponseBodyEncodeDecode {
 		body := httpResponseBody(e, r)
 		if body.Type != Empty {
-			verr.Add(e, "HTTP endpoint response body must be empty when using SkipResponseBodyEncodeDecode. Make sure to define Headers as needed.")
+			verr.Add(e, "HTTP endpoint response body must be empty when using SkipResponseBodyEncodeDecode. Make sure to define headers and cookies as needed.")
 		}
 	}
 	return verr

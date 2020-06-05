@@ -389,9 +389,8 @@ func Header(name string, args ...interface{}) {
 	h.Remap()
 }
 
-// Cookie describes a single HTTP cookie. When used within a Response the Cookie
-// DSL also makes it possible to define the max-age and path attributes of the
-// cookie.
+// Cookie identifies a HTTP cookie. When used within a Response the Cookie DSL
+// also makes it possible to define the cookie attributes.
 //
 // Cookie must appear in the API HTTP expression (to define request cookies
 // common to all the API endpoints), a service HTTP expression (to define
@@ -400,8 +399,8 @@ func Header(name string, args ...interface{}) {
 // the response cookies).
 //
 // Cookie accepts the same arguments as the Attribute function. The cookie name
-// may define a mapping between the attribute name and the HTTP cookie name when
-// they differ. The mapping syntax is "name of attribute:name of cookie".
+// may define a mapping between the attribute name and the cookie name. The
+// mapping syntax is "name of attribute:name of cookie".
 //
 // Example:
 //
@@ -412,13 +411,25 @@ func Header(name string, args ...interface{}) {
 //            })
 //            Result(Account)
 //            HTTP(func() {
+//                // Initialize payload's "session" attribute with the value of
+//                // the SID cookie after validating that's it's a valid GUID.
 //                Cookie("session:SID", String, func() {
 //                    Format(FormatGUID)
 //                })
 //                Response(StatusCreated, func() {
+//                    // Write the value of the result "session" attribute to
+//                    // the cookie named "SID" and initialize the cookie
+//                    // "max-age", "domain", "path", "secure" and "http-only"
+//                    // attributes. When reading the cookie value client
+//                    // side validate that's it is a GUID.
 //                    Cookie("session:SID", String, func() {
-//                        MaxAge(3600)
+//                        CookieMaxAge(3600)      // Cookie attributes
+//                        CookieDomain("goa.design")
 //                        CookiePath("/session")
+//                        CookieSecure()
+//                        CookieHTTPOnly()
+//
+//                        Format(FormatGUID)      // Cookie value validations
 //                    })
 //                })
 //            })
@@ -438,7 +449,53 @@ func Cookie(name string, args ...interface{}) {
 	h.Remap()
 }
 
-// CookiePath defines the path attribute of a HTTP response cookie.
+// CookieMaxAge defines the "max-age" attribute of a HTTP response cookie.
+//
+// CookieMaxAge must appear in a Cookie expression.
+//
+// CookieMaxAge accepts one argument which is the max-age value.
+//
+// Example:
+//
+//    var _ = Service("account", func() {
+//        Method("create", func() {
+//            Result(Account)
+//            HTTP(func() {
+//                Response(StatusCreated, func() {
+//                    Cookie("session:SID", String, func() {
+//                        CookieMaxAge(3600)
+//                    })
+//                })
+//            })
+//        })
+//    })
+//
+func CookieMaxAge(n int) { cookieAttribute("max-age", strconv.Itoa(n)) }
+
+// CookieDomain defines the "domain" attribute of a HTTP response cookie.
+//
+// CookieDomain must appear in a Cookie expression.
+//
+// CookieDomain accepts one argument which is the path value.
+//
+// Example:
+//
+//    var _ = Service("account", func() {
+//        Method("create", func() {
+//            Result(Account)
+//            HTTP(func() {
+//                Response(StatusCreated, func() {
+//                    Cookie("session:SID", String, func() {
+//                        CookieDomain("goa.design")
+//                    })
+//                })
+//            })
+//        })
+//    })
+//
+func CookieDomain(d string) { cookieAttribute("domain", d) }
+
+// CookiePath defines the "path" attribute of a HTTP response cookie.
 //
 // CookiePath must appear in a Cookie expression.
 //
@@ -459,24 +516,12 @@ func Cookie(name string, args ...interface{}) {
 //        })
 //    })
 //
-func CookiePath(p string) {
-	c, ok := eval.Current().(*expr.MappedAttributeExpr)
-	if !ok {
-		eval.IncompatibleDSL()
-		return
-	}
-	if c.Meta == nil {
-		c.Meta = expr.MetaExpr{"cookie:path": []string{p}}
-	} else {
-		c.Meta["cookie:path"] = []string{p}
-	}
-}
+func CookiePath(p string) { cookieAttribute("path", p) }
 
-// MaxAge defines the max-age attribute of a HTTP response cookie.
+// CookieSecure initializes the "secute" attribute of a HTTP response cookie
+// with "Secure".
 //
-// MaxAge must appear in a Cookie expression.
-//
-// MaxAge accepts one argument which is the max-age value.
+// CookieSecure must appear in a Cookie expression.
 //
 // Example:
 //
@@ -486,25 +531,36 @@ func CookiePath(p string) {
 //            HTTP(func() {
 //                Response(StatusCreated, func() {
 //                    Cookie("session:SID", String, func() {
-//                        MaxAge(3600)
+//                        CookieSecure()
 //                    })
 //                })
 //            })
 //        })
 //    })
 //
-func MaxAge(n int) {
-	c, ok := eval.Current().(*expr.MappedAttributeExpr)
-	if !ok {
-		eval.IncompatibleDSL()
-		return
-	}
-	if c.Meta == nil {
-		c.Meta = expr.MetaExpr{"cookie:path": []string{strconv.Itoa(n)}}
-	} else {
-		c.Meta["cookie:path"] = []string{strconv.Itoa(n)}
-	}
-}
+func CookieSecure() { cookieAttribute("secure", "Secure") }
+
+// CookieHTTPOnly initializes the "http-only" attribute of a HTTP response
+// cookie with "HttpOnly".
+//
+// CookieHTTPOnly must appear in a Cookie expression.
+//
+// Example:
+//
+//    var _ = Service("account", func() {
+//        Method("create", func() {
+//            Result(Account)
+//            HTTP(func() {
+//                Response(StatusCreated, func() {
+//                    Cookie("session:SID", String, func() {
+//                        CookieHTTPOnly()
+//                    })
+//                })
+//            })
+//        })
+//    })
+//
+func CookieHTTPOnly() { cookieAttribute("http-only", "HttpOnly") }
 
 // Params groups a set of Param expressions. It makes it possible to list
 // required parameters using the Required function.
@@ -1086,4 +1142,18 @@ func params(exp eval.Expression) *expr.MappedAttributeExpr {
 	default:
 		return nil
 	}
+}
+
+// cookieAttribute initialize the current attribute metadata with the details of
+// a HTTP cookie attribute for use by the HTTP code generator.
+func cookieAttribute(name, value string) {
+	c, ok := eval.Current().(*expr.MappedAttributeExpr)
+	if !ok {
+		eval.IncompatibleDSL()
+		return
+	}
+	if c.Meta == nil {
+		c.Meta = expr.MetaExpr{}
+	}
+	c.Meta["cookie:"+name] = []string{value}
 }

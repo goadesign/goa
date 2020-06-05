@@ -221,7 +221,7 @@ func fieldCode(init *InitData, typ string) string {
 	initArgs := make([]*codegen.InitArgData, len(args))
 	for i, arg := range args {
 		initArgs[i] = &codegen.InitArgData{
-			Name:         arg.Name,
+			Name:         arg.VarName,
 			Pointer:      arg.Pointer,
 			Type:         arg.Type,
 			FieldName:    arg.FieldName,

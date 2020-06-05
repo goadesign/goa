@@ -212,7 +212,7 @@ func makeFlags(e *EndpointData, args []*InitArgData, payload expr.DataType) ([]*
 	)
 	for i, arg := range args {
 		pInitArgs[i] = &codegen.InitArgData{
-			Name:         arg.Name,
+			Name:         arg.VarName,
 			Pointer:      arg.Pointer,
 			FieldName:    arg.FieldName,
 			FieldPointer: arg.FieldPointer,
@@ -220,13 +220,13 @@ func makeFlags(e *EndpointData, args []*InitArgData, payload expr.DataType) ([]*
 			Type:         arg.Type,
 		}
 
-		f := cli.NewFlagData(e.ServiceName, e.Method.Name, arg.Name, arg.TypeName, arg.Description, arg.Required, arg.Example, arg.DefaultValue)
+		f := cli.NewFlagData(e.ServiceName, e.Method.Name, arg.VarName, arg.TypeName, arg.Description, arg.Required, arg.Example, arg.DefaultValue)
 		flags[i] = f
 		params[i] = f.FullName
-		if arg.FieldName == "" && arg.Name != "body" {
+		if arg.FieldName == "" && arg.VarName != "body" {
 			continue
 		}
-		code, chek := cli.FieldLoadCode(f, arg.Name, arg.TypeName, arg.Validate, arg.DefaultValue, payload)
+		code, chek := cli.FieldLoadCode(f, arg.VarName, arg.TypeName, arg.Validate, arg.DefaultValue, payload)
 		check = check || chek
 		tn := arg.TypeRef
 		if f.Type == "JSON" {
@@ -236,8 +236,8 @@ func makeFlags(e *EndpointData, args []*InitArgData, payload expr.DataType) ([]*
 			tn = arg.TypeName
 		}
 		fdata = append(fdata, &cli.FieldData{
-			Name:    arg.Name,
-			VarName: arg.Name,
+			Name:    arg.VarName,
+			VarName: arg.VarName,
 			TypeRef: tn,
 			Init:    code,
 		})
