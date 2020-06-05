@@ -1806,9 +1806,14 @@ func buildErrorsData(e *expr.HTTPEndpointExpr, sd *ServiceData) []*ErrorGroupDat
 					}
 				}
 			}
+			var contentType string
+			if v.Response.ContentType != expr.ErrorResultIdentifier {
+				contentType = v.Response.ContentType
+			}
 			responseData = &ResponseData{
 				StatusCode:   statusCodeToHTTPConst(v.Response.StatusCode),
 				Headers:      headers,
+				ContentType:  contentType,
 				ErrorHeader:  v.Name,
 				ServerBody:   serverBodyData,
 				ClientBody:   clientBodyData,

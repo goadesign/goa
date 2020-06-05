@@ -16,10 +16,14 @@ func TestEncodeError(t *testing.T) {
 	}{
 		{"primitive-error-response", testdata.PrimitiveErrorResponseDSL, testdata.PrimitiveErrorResponseEncoderCode},
 		{"default-error-response", testdata.DefaultErrorResponseDSL, testdata.DefaultErrorResponseEncoderCode},
+		{"default-error-response-with-content-type", testdata.DefaultErrorResponseWithContentTypeDSL, testdata.DefaultErrorResponseWithContentTypeEncoderCode},
 		{"service-error-response", testdata.ServiceErrorResponseDSL, testdata.ServiceErrorResponseEncoderCode},
 		{"api-error-response", testdata.APIErrorResponseDSL, testdata.ServiceErrorResponseEncoderCode},
+		{"api-error-response-with-content-type", testdata.APIErrorResponseWithContentTypeDSL, testdata.ServiceErrorResponseWithContentTypeEncoderCode},
 		{"no-body-error-response", testdata.NoBodyErrorResponseDSL, testdata.NoBodyErrorResponseEncoderCode},
+		{"no-body-error-response-with-content-type", testdata.NoBodyErrorResponseWithContentTypeDSL, testdata.NoBodyErrorResponseWithContentTypeEncoderCode},
 		{"api-no-body-error-response", testdata.APINoBodyErrorResponseDSL, testdata.NoBodyErrorResponseEncoderCode},
+		{"api-no-body-error-response-with-content-type", testdata.APINoBodyErrorResponseWithContentTypeDSL, testdata.NoBodyErrorResponseWithContentTypeEncoderCode},
 	}
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
