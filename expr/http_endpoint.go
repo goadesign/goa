@@ -38,6 +38,8 @@ type (
 		Params *MappedAttributeExpr
 		// Headers defines the HTTP request headers.
 		Headers *MappedAttributeExpr
+		// Cookies defines the HTTP request cookies.
+		Cookies *MappedAttributeExpr
 		// Body describes the HTTP request body.
 		Body *AttributeExpr
 		// StreamingBody describes the body transferred through the websocket
@@ -182,14 +184,21 @@ func (e *HTTPEndpointExpr) Prepare() {
 	if e.Headers == nil {
 		e.Headers = NewEmptyMappedAttributeExpr()
 	}
+	if e.Cookies == nil {
+		e.Cookies = NewEmptyMappedAttributeExpr()
+	}
 	if e.Params == nil {
 		e.Params = NewEmptyMappedAttributeExpr()
 	}
 
-	// Inherit headers and params from parent service and API
+	// Inherit headers, cookies and params from parent service and API
 	headers := NewEmptyMappedAttributeExpr()
 	headers.Merge(Root.API.HTTP.Headers)
 	headers.Merge(e.Service.Headers)
+
+	cookies := NewEmptyMappedAttributeExpr()
+	cookies.Merge(Root.API.HTTP.Cookies)
+	cookies.Merge(e.Service.Cookies)
 
 	params := NewEmptyMappedAttributeExpr()
 	params.Merge(Root.API.HTTP.Params)
@@ -638,6 +647,7 @@ func (e *HTTPEndpointExpr) Finalize() {
 	// payload attributes.
 	initAttr(e.Params, e.MethodExpr.Payload)
 	initAttr(e.Headers, e.MethodExpr.Payload)
+	initAttr(e.Cookies, e.MethodExpr.Payload)
 
 	if e.Body != nil {
 		// rename type to add RequestBody suffix so that we don't end with

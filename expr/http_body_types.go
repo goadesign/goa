@@ -73,13 +73,14 @@ func httpRequestBody(a *HTTPEndpointExpr) *AttributeExpr {
 	var (
 		payload  = a.MethodExpr.Payload
 		headers  = a.Headers
+		cookies  = a.Cookies
 		params   = a.Params
-		bodyOnly = headers.IsEmpty() && params.IsEmpty() && a.MapQueryParams == nil
+		bodyOnly = headers.IsEmpty() && params.IsEmpty() && cookies.IsEmpty() && a.MapQueryParams == nil
 	)
 
-	// 1. If Payload is not an object then check whether there are params or
-	// headers defined and if so return empty type (payload encoded in
-	// request params or headers) otherwise return payload type (payload
+	// 1. If Payload is not an object then check whether there are params,
+	// cookies or headers defined and if so return empty type (payload encoded
+	// in request params or headers) otherwise return payload type (payload
 	// encoded in request body).
 	if !IsObject(payload.Type) {
 		if bodyOnly {
@@ -93,6 +94,7 @@ func httpRequestBody(a *HTTPEndpointExpr) *AttributeExpr {
 	// 2. Remove header and param attributes
 	body := NewMappedAttributeExpr(payload)
 	removeAttributes(body, headers)
+	removeAttributes(body, cookies)
 	removeAttributes(body, params)
 	if a.MapQueryParams != nil && *a.MapQueryParams != "" {
 		removeAttribute(body, *a.MapQueryParams)
@@ -151,7 +153,7 @@ func httpStreamingBody(e *HTTPEndpointExpr) *AttributeExpr {
 // the given endpoint and response. If the DSL defines a body explicitly via the
 // Body function then the corresponding attribute is used. Otherwise the
 // attribute is computed by removing the attributes of the method payload used
-// to define headers.
+// to define cookies and headers.
 func httpResponseBody(a *HTTPEndpointExpr, resp *HTTPResponseExpr) *AttributeExpr {
 	var name, suffix string
 	if len(a.Responses) > 1 {
@@ -164,7 +166,7 @@ func httpResponseBody(a *HTTPEndpointExpr, resp *HTTPResponseExpr) *AttributeExp
 // httpErrorResponseBody returns an attribute describing the response body of a
 // given error. If the DSL defines a body explicitly via the Body function then
 // the corresponding attribute is returned. Otherwise the attribute is computed
-// by removing the attributes of the error used to define headers and
+// by removing the attributes of the error used to define cookies, headers and
 // parameters.
 func httpErrorResponseBody(e *HTTPEndpointExpr, v *HTTPErrorExpr) *AttributeExpr {
 	name := e.Name() + "_" + v.ErrorExpr.Name
@@ -194,12 +196,12 @@ func buildHTTPResponseBody(name string, attr *AttributeExpr, resp *HTTPResponseE
 		return att
 	}
 
-	// 1. If attribute is not an object then check whether there are headers
-	// defined and if so return empty type (attr encoded in response
-	// headers) otherwise return renamed attr type (attr encoded in
+	// 1. If attribute is not an object then check whether there are headers or
+	// cookies defined and if so return empty type (attr encoded in response
+	// header or cookie) otherwise return renamed attr type (attr encoded in
 	// response body).
 	if !IsObject(attr.Type) {
-		if resp.Headers.IsEmpty() {
+		if resp.Headers.IsEmpty() && resp.Cookies.IsEmpty() {
 			attr = DupAtt(attr)
 			renameType(attr, name, "Response") // Do not use ResponseBody as it could clash with name of element
 			return attr
@@ -208,8 +210,9 @@ func buildHTTPResponseBody(name string, attr *AttributeExpr, resp *HTTPResponseE
 	}
 	body := NewMappedAttributeExpr(attr)
 
-	// 2. Remove header attributes
+	// 2. Remove header and cookie attributes
 	removeAttributes(body, resp.Headers)
+	removeAttributes(body, resp.Cookies)
 
 	// 3. Return empty type if no attribute left
 	if len(*AsObject(body.Type)) == 0 {
@@ -235,6 +238,7 @@ func buildHTTPResponseBody(name string, attr *AttributeExpr, resp *HTTPResponseE
 	for i, v := range rt.Views {
 		mv := NewMappedAttributeExpr(v.AttributeExpr)
 		removeAttributes(mv, resp.Headers)
+		removeAttributes(mv, resp.Cookies)
 		nv := &ViewExpr{
 			AttributeExpr: mv.Attribute(),
 			Name:          v.Name,

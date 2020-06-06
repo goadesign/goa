@@ -27,6 +27,9 @@ type (
 		// Headers defines the HTTP request headers common to all the
 		// service endpoints.
 		Headers *MappedAttributeExpr
+		// Cookies defines the HTTP request cookies common to all the
+		// service endpoints.
+		Cookies *MappedAttributeExpr
 		// Name of parent service if any
 		ParentName string
 		// Endpoint with canonical service path

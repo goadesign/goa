@@ -367,7 +367,7 @@ func (c *{{ .ClientStruct }}) {{ .EndpointInit }}({{ if .MultipartRequestEncoder
 
 // input: EndpointData
 const requestBuilderT = `{{ comment .RequestInit.Description }}
-func (c *{{ .ClientStruct }}) {{ .RequestInit.Name }}(ctx context.Context, {{ range .RequestInit.ClientArgs }}{{ .Name }} {{ .TypeRef }},{{ end }}) (*http.Request, error) {
+func (c *{{ .ClientStruct }}) {{ .RequestInit.Name }}(ctx context.Context, {{ range .RequestInit.ClientArgs }}{{ .VarName }} {{ .TypeRef }},{{ end }}) (*http.Request, error) {
 	{{- .RequestInit.ClientCode }}
 }
 `
@@ -419,6 +419,39 @@ func {{ .RequestEncoder }}(encoder func(*http.Request) goahttp.Encoder) func(*ht
 			{{- if (and (eq .Name "Authorization") (isBearer $.HeaderSchemes)) }}
 		}
 			{{- end }}
+		}
+		{{- end }}
+	{{- end }}
+	{{- range .Payload.Request.Cookies }}
+		{{- if .FieldName }}
+			{{- if .FieldPointer }}
+		if p.{{ .FieldName }} != nil {
+			{{- else }}
+			{
+			{{- end }}
+			v{{ if not (eq .Type.Name "string") }}raw{{ end }} := {{ if .FieldPointer }}*{{ end }}p.{{ .FieldName }}
+			{{- if not (eq .Type.Name "string" ) }}
+			{{ template "type_conversion" (typeConversionData .Type .FieldType "vraw" "v") }}
+			{{- end }}
+			req.AddCookie(&http.Cookie{
+				Name: {{ printf "%q" .Name }},
+				Value: v,
+				{{- if .MaxAge }}
+				MaxAge: {{ .MaxAge }},
+				{{- end }}
+				{{- if .Path }}
+				Path: {{ .Path }},
+				{{- end }}
+				{{- if .Domain }}
+				Domain: {{ .Domain }},
+				{{- end }}
+				{{- if .Secure }}
+				Secure: true,
+				{{- end }}
+				{{- if .HTTPOnly }}
+				HttpOnly: true,
+				{{- end }}
+			})
 		}
 		{{- end }}
 	{{- end }}
@@ -482,7 +515,7 @@ func {{ .RequestEncoder }}(encoder func(*http.Request) goahttp.Encoder) func(*ht
 		}
 	{{- else if .Payload.Request.ClientBody }}
 		{{- if .Payload.Request.ClientBody.Init }}
-		body := {{ .Payload.Request.ClientBody.Init.Name }}({{ range .Payload.Request.ClientBody.Init.ClientArgs }}{{ if .FieldPointer }}&{{ end }}{{ .Name }}, {{ end }})
+		body := {{ .Payload.Request.ClientBody.Init.Name }}({{ range .Payload.Request.ClientBody.Init.ClientArgs }}{{ if .FieldPointer }}&{{ end }}{{ .VarName }}, {{ end }})
 		{{- else }}
 		body := p{{ if .Payload.Request.PayloadAttr }}.{{ .Payload.Request.PayloadAttr }}{{ end }}
 		{{- end }}
@@ -632,6 +665,8 @@ func {{ .ResponseDecoder }}(decoder func(*http.Response) goahttp.Decoder, restor
 			return body, nil
 		{{- else if .Headers }}
 			return {{ (index .Headers 0).VarName }}, nil
+		{{- else if .Cookies }}
+			return {{ (index .Cookies 0).VarName }}, nil
 		{{- else }}
 			return nil, nil
 		{{- end }}
@@ -788,6 +823,74 @@ const singleResponseT = ` {{- if .ClientBody }}
 			{{ .Validate }}
 		{{- end }}
 		{{- end }}{{/* range .Headers */}}
+	{{- end }}
+
+	{{- if .Cookies }}
+			var (
+		{{- range .Cookies }}
+				{{ .VarName }}    {{ .TypeRef }}
+				{{ .VarName }}Raw string
+		{{- end }}
+
+				cookies = resp.Cookies()
+		{{- if not .ClientBody }}
+			{{- if .MustValidate }}
+				err error
+			{{- end }}
+		{{- end }}
+			)
+        for _, c := range cookies {
+			switch c.Name {
+		{{- range .Cookies }}
+			case {{ printf "%q" .Name }}:
+				{{ .VarName }}Raw = c.Value
+		{{- end }}
+			}
+		}
+		{{- range .Cookies }}
+
+		{{- if (or (eq .Type.Name "string") (eq .Type.Name "any")) }}
+			{{- if .Required }}
+				if {{ .VarName }}Raw == "" {
+					err = goa.MergeErrors(err, goa.MissingFieldError("{{ .Name }}", "cookie"))
+				}
+				{{ .VarName }} = {{ if and (eq .Type.Name "string") .Pointer }}&{{ end }}{{ .VarName }}Raw
+			{{- else }}
+				if {{ .VarName }}Raw != "" {
+					{{ .VarName }} = {{ if and (eq .Type.Name "string") .Pointer }}&{{ end }}{{ .VarName }}Raw
+				}
+				{{- if .DefaultValue }} else {
+					{{ .VarName }} = {{ if eq .Type.Name "string" }}{{ printf "%q" .DefaultValue }}{{ else }}{{ printf "%#v" .DefaultValue }}{{ end }}
+				}
+				{{- end }}
+			{{- end }}
+
+		{{- else }}{{/* not string and not any */}}
+		{
+			{{- if .Required }}
+			if {{ .VarName }}Raw == "" {
+				return nil, goahttp.ErrValidationError("{{ $.ServiceName }}", "{{ $.Method.Name }}", goa.MissingFieldError("{{ .Name }}", "cookie"))
+			}
+			{{- else if .DefaultValue }}
+			if {{ .VarName }}Raw == "" {
+				{{ .VarName }} = {{ printf "%#v" .DefaultValue }}
+			}
+			{{- end }}
+
+			{{- if .DefaultValue }}else {
+				{{- else if not .Required }}
+			if {{ .VarName }}Raw != "" {
+			{{- end }}
+				{{- template "type_conversion" . }}
+			{{- if or .DefaultValue (not .Required) }}
+			}
+			{{- end }}
+		}
+		{{- end }}
+		{{- if .Validate }}
+			{{ .Validate }}
+		{{- end }}
+		{{- end }}{{/* range .Cookies */}}
 	{{- end }}
 
 	{{- if .MustValidate }}
