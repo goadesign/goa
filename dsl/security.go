@@ -291,9 +291,7 @@ func Security(args ...interface{}) {
 // NoSecurity must appear in Method.
 func NoSecurity() {
 	security := &expr.SecurityExpr{
-		Schemes: []*expr.SchemeExpr{
-			&expr.SchemeExpr{Kind: expr.NoKind},
-		},
+		Schemes: []*expr.SchemeExpr{{Kind: expr.NoKind}},
 	}
 
 	current := eval.Current()

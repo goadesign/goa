@@ -70,8 +70,8 @@ func exampleCLI(genpkg string, root *expr.RootExpr, svr *expr.ServerExpr) *codeg
 	}
 	sections := []*codegen.SectionTemplate{
 		codegen.Header("", "main", specs),
-		&codegen.SectionTemplate{Name: "cli-http-start", Source: httpCLIStartT},
-		&codegen.SectionTemplate{
+		{Name: "cli-http-start", Source: httpCLIStartT},
+		{
 			Name:   "cli-http-streaming",
 			Source: httpCLIStreamingT,
 			Data: map[string]interface{}{
@@ -81,7 +81,7 @@ func exampleCLI(genpkg string, root *expr.RootExpr, svr *expr.ServerExpr) *codeg
 				"needStream": needStream,
 			},
 		},
-		&codegen.SectionTemplate{
+		{
 			Name:   "cli-http-end",
 			Source: httpCLIEndT,
 			Data: map[string]interface{}{
@@ -93,7 +93,7 @@ func exampleCLI(genpkg string, root *expr.RootExpr, svr *expr.ServerExpr) *codeg
 				"hasWebSocket": hasWebSocket,
 			},
 		},
-		&codegen.SectionTemplate{Name: "cli-http-usage", Source: httpCLIUsageT},
+		{Name: "cli-http-usage", Source: httpCLIUsageT},
 	}
 	return &codegen.File{
 		Path:             path,
