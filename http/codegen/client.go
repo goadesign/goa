@@ -842,7 +842,7 @@ const singleResponseT = ` {{- if .ClientBody }}
         for _, c := range cookies {
 			switch c.Name {
 		{{- range .Cookies }}
-			case "{{ printf "%q" .Name }}":
+			case {{ printf "%q" .Name }}:
 				{{ .VarName }}Raw = c.Value
 		{{- end }}
 			}

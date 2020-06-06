@@ -1011,6 +1011,8 @@ func buildPayloadData(e *expr.HTTPEndpointExpr, sd *ServiceData) *PayloadData {
 						break
 					}
 				}
+			}
+			if !mustValidate {
 				for _, c := range cookiesData {
 					if c.Validate != "" || c.Required || needConversion(c.Type) {
 						mustValidate = true

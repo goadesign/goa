@@ -298,6 +298,7 @@ func (r *HTTPResponseExpr) Finalize(a *HTTPEndpointExpr, svcAtt *AttributeExpr) 
 		}
 	}
 	initAttr(r.Headers, svcAtt)
+	initAttr(r.Cookies, svcAtt)
 }
 
 // Dup creates a copy of the response expression.
@@ -314,6 +315,9 @@ func (r *HTTPResponseExpr) Dup() *HTTPResponseExpr {
 	}
 	if r.Headers != nil {
 		res.Headers = DupMappedAtt(r.Headers)
+	}
+	if r.Cookies != nil {
+		res.Cookies = DupMappedAtt(r.Cookies)
 	}
 	return &res
 }

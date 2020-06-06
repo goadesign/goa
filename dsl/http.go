@@ -470,7 +470,14 @@ func Cookie(name string, args ...interface{}) {
 //        })
 //    })
 //
-func CookieMaxAge(n int) { cookieAttribute("max-age", strconv.Itoa(n)) }
+func CookieMaxAge(n int) {
+	_, ok := eval.Current().(*expr.HTTPResponseExpr)
+	if !ok {
+		eval.IncompatibleDSL()
+		return
+	}
+	cookieAttribute("max-age", strconv.Itoa(n))
+}
 
 // CookieDomain defines the "domain" attribute of a HTTP response cookie.
 //
@@ -493,7 +500,14 @@ func CookieMaxAge(n int) { cookieAttribute("max-age", strconv.Itoa(n)) }
 //        })
 //    })
 //
-func CookieDomain(d string) { cookieAttribute("domain", d) }
+func CookieDomain(d string) {
+	_, ok := eval.Current().(*expr.HTTPResponseExpr)
+	if !ok {
+		eval.IncompatibleDSL()
+		return
+	}
+	cookieAttribute("domain", d)
+}
 
 // CookiePath defines the "path" attribute of a HTTP response cookie.
 //
@@ -516,7 +530,14 @@ func CookieDomain(d string) { cookieAttribute("domain", d) }
 //        })
 //    })
 //
-func CookiePath(p string) { cookieAttribute("path", p) }
+func CookiePath(p string) {
+	_, ok := eval.Current().(*expr.HTTPResponseExpr)
+	if !ok {
+		eval.IncompatibleDSL()
+		return
+	}
+	cookieAttribute("path", p)
+}
 
 // CookieSecure initializes the "secute" attribute of a HTTP response cookie
 // with "Secure".
@@ -538,7 +559,14 @@ func CookiePath(p string) { cookieAttribute("path", p) }
 //        })
 //    })
 //
-func CookieSecure() { cookieAttribute("secure", "Secure") }
+func CookieSecure() {
+	_, ok := eval.Current().(*expr.HTTPResponseExpr)
+	if !ok {
+		eval.IncompatibleDSL()
+		return
+	}
+	cookieAttribute("secure", "Secure")
+}
 
 // CookieHTTPOnly initializes the "http-only" attribute of a HTTP response
 // cookie with "HttpOnly".
@@ -560,7 +588,14 @@ func CookieSecure() { cookieAttribute("secure", "Secure") }
 //        })
 //    })
 //
-func CookieHTTPOnly() { cookieAttribute("http-only", "HttpOnly") }
+func CookieHTTPOnly() {
+	_, ok := eval.Current().(*expr.MappedAttributeExpr)
+	if !ok {
+		eval.IncompatibleDSL()
+		return
+	}
+	cookieAttribute("http-only", "HttpOnly")
+}
 
 // Params groups a set of Param expressions. It makes it possible to list
 // required parameters using the Required function.
@@ -1147,11 +1182,7 @@ func params(exp eval.Expression) *expr.MappedAttributeExpr {
 // cookieAttribute initialize the current attribute metadata with the details of
 // a HTTP cookie attribute for use by the HTTP code generator.
 func cookieAttribute(name, value string) {
-	c, ok := eval.Current().(*expr.MappedAttributeExpr)
-	if !ok {
-		eval.IncompatibleDSL()
-		return
-	}
+	c := eval.Current().(*expr.HTTPResponseExpr).Cookies
 	if c.Meta == nil {
 		c.Meta = expr.MetaExpr{}
 	}

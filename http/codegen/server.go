@@ -1266,7 +1266,7 @@ const responseT = `{{ define "response" -}}
 		{{ .VarName }} := "{{ printValue .Type .DefaultValue }}"
 		{{- end }}
 		http.SetCookie(w, &http.Cookie{
-			Name: {{ .Name }},
+			Name: {{ printf "%q" .Name }},
 			Value: {{ .VarName }},
 			{{- if .MaxAge }}
 			MaxAge: {{ .MaxAge }},
