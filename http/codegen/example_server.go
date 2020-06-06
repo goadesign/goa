@@ -83,17 +83,17 @@ func exampleServer(genpkg string, root *expr.RootExpr, svr *expr.ServerExpr) *co
 
 	sections := []*codegen.SectionTemplate{
 		codegen.Header("", "main", specs),
-		&codegen.SectionTemplate{
+		{
 			Name:   "server-http-start",
 			Source: httpSvrStartT,
 			Data: map[string]interface{}{
 				"Services": svcdata,
 			},
 		},
-		&codegen.SectionTemplate{Name: "server-http-logger", Source: httpSvrLoggerT},
-		&codegen.SectionTemplate{Name: "server-http-encoding", Source: httpSvrEncodingT},
-		&codegen.SectionTemplate{Name: "server-http-mux", Source: httpSvrMuxT},
-		&codegen.SectionTemplate{
+		{Name: "server-http-logger", Source: httpSvrLoggerT},
+		{Name: "server-http-encoding", Source: httpSvrEncodingT},
+		{Name: "server-http-mux", Source: httpSvrMuxT},
+		{
 			Name:   "server-http-init",
 			Source: httpSvrInitT,
 			Data: map[string]interface{}{
@@ -102,15 +102,15 @@ func exampleServer(genpkg string, root *expr.RootExpr, svr *expr.ServerExpr) *co
 			},
 			FuncMap: map[string]interface{}{"needStream": needStream, "hasWebSocket": hasWebSocket},
 		},
-		&codegen.SectionTemplate{Name: "server-http-middleware", Source: httpSvrMiddlewareT},
-		&codegen.SectionTemplate{
+		{Name: "server-http-middleware", Source: httpSvrMiddlewareT},
+		{
 			Name:   "server-http-end",
 			Source: httpSvrEndT,
 			Data: map[string]interface{}{
 				"Services": svcdata,
 			},
 		},
-		&codegen.SectionTemplate{Name: "server-http-errorhandler", Source: httpSvrErrorHandlerT},
+		{Name: "server-http-errorhandler", Source: httpSvrErrorHandlerT},
 	}
 
 	return &codegen.File{Path: fpath, SectionTemplates: sections, SkipExist: true}

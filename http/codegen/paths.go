@@ -60,7 +60,7 @@ func pathSections(svc *expr.HTTPServiceExpr, pkg string) []*codegen.SectionTempl
 
 // input: EndpointData
 const pathT = `{{ range .Routes }}// {{ .PathInit.Description }}
-func {{ .PathInit.Name }}({{ range .PathInit.ServerArgs }}{{ .Name }} {{ .TypeRef }}, {{ end }}) {{ .PathInit.ReturnTypeRef }} {
+func {{ .PathInit.Name }}({{ range .PathInit.ServerArgs }}{{ .VarName }} {{ .TypeRef }}, {{ end }}) {{ .PathInit.ReturnTypeRef }} {
 {{- .PathInit.ServerCode }}
 }
 {{ end }}`

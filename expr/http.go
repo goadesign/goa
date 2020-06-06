@@ -16,6 +16,9 @@ type (
 		// Headers defines the HTTP request headers common to to all
 		// the API endpoints.
 		Headers *MappedAttributeExpr
+		// Cookies defines the HTTP request cookies common to to all
+		// the API endpoints.
+		Cookies *MappedAttributeExpr
 		// Consumes lists the mime types supported by the API
 		// controllers.
 		Consumes []string
