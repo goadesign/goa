@@ -144,7 +144,7 @@ func TestHTTPEndpointValidation(t *testing.T) {
 		"endpoint-has-skip-response-encode-and-result-streaming": {
 			DSL: testdata.EndpointHasSkipResponseEncodeAndResultStreaming,
 			Error: `service "Service" HTTP endpoint "Method": Endpoint cannot use SkipResponseBodyEncodeDecode when method defines a StreamingResult.
-service "Service" HTTP endpoint "Method": HTTP endpoint response body must be empty when using SkipResponseBodyEncodeDecode. Make sure to define Headers as needed.`,
+service "Service" HTTP endpoint "Method": HTTP endpoint response body must be empty when using SkipResponseBodyEncodeDecode. Make sure to define headers and cookies as needed.`,
 		},
 		"endpoint-has-skip-encode-and-grpc": {
 			DSL:   testdata.EndpointHasSkipEncodeAndGRPC,

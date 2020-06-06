@@ -11,36 +11,27 @@ func TestAPIExprSchemes(t *testing.T) {
 	}{
 		"default scheme": {
 			expr: APIExpr{
-				Servers: []*ServerExpr{&ServerExpr{}},
+				Servers: []*ServerExpr{{}},
 			},
 			expected: nil,
 		},
 		"single scheme": {
 			expr: APIExpr{
-				Servers: []*ServerExpr{
-					&ServerExpr{
-						Hosts: []*HostExpr{
-							{URIs: []URIExpr{"http://example.com"}},
-						},
-					},
+				Servers: []*ServerExpr{{
+					Hosts: []*HostExpr{
+						{URIs: []URIExpr{"http://example.com"}},
+					}},
 				},
 			},
 			expected: []string{"http"},
 		},
 		"multiple schemes": {
 			expr: APIExpr{
-				Servers: []*ServerExpr{
-					&ServerExpr{
-						Hosts: []*HostExpr{
-							{URIs: []URIExpr{"http://example.com"}},
-						},
-					},
-					&ServerExpr{
-						Hosts: []*HostExpr{
-							{URIs: []URIExpr{"https://example.net"}},
-						},
-					},
-				},
+				Servers: []*ServerExpr{{
+					Hosts: []*HostExpr{{URIs: []URIExpr{"http://example.com"}}},
+				}, {
+					Hosts: []*HostExpr{{URIs: []URIExpr{"https://example.net"}}},
+				}},
 			},
 			expected: []string{"http", "https"},
 		},

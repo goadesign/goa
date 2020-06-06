@@ -507,18 +507,16 @@ func (a *AttributeExpr) Delete(name string) {
 // Debug dumps the attribute to STDOUT in a goa developer friendly way.
 func (a *AttributeExpr) Debug(prefix string) { a.debug(prefix, make(map[*AttributeExpr]int), 0) }
 func (a *AttributeExpr) debug(prefix string, seen map[*AttributeExpr]int, indent int) {
-	for i := 0; i < indent; i++ {
-		prefix = "  " + prefix
-	}
+	prefix = strings.Repeat("  ", indent) + prefix
 	if c, ok := seen[a]; ok && c > 1 {
 		fmt.Printf("%s: ...\n", prefix)
 		return
 	}
 	seen[a]++
-	fmt.Printf("%s: %q\n", prefix, a.Type.Name())
+	fmt.Printf("%s: %s\n", prefix, a.Type.Name())
 	if o := AsObject(a.Type); o != nil {
 		for _, att := range *o {
-			att.Attribute.debug(" - "+att.Name, seen, indent+1)
+			att.Attribute.debug("- "+att.Name, seen, indent+1)
 		}
 	}
 	if a := AsArray(a.Type); a != nil {
@@ -527,6 +525,13 @@ func (a *AttributeExpr) debug(prefix string, seen map[*AttributeExpr]int, indent
 	if m := AsMap(a.Type); m != nil {
 		m.KeyType.debug(" Key", seen, indent+2)
 		m.ElemType.debug(" Elem", seen, indent+2)
+	}
+	if d := a.DefaultValue; d != nil {
+		fmt.Printf("%s: default value\n", prefix)
+		fmt.Printf("%s%#v", strings.Repeat("  ", indent+1), a.DefaultValue)
+	}
+	if v := a.Validation; v != nil {
+		v.Debug(indent + 1)
 	}
 }
 
@@ -694,6 +699,36 @@ func (v *ValidationExpr) Dup() *ValidationExpr {
 		MinLength: v.MinLength,
 		MaxLength: v.MaxLength,
 		Required:  req,
+	}
+}
+
+// Debug dumps the validation to STDOUT in a goa developer friendly way.
+func (v *ValidationExpr) Debug(indent int) {
+	prefix := strings.Repeat("  ", indent)
+	fmt.Printf("%svalidations\n", prefix)
+	if len(v.Values) > 0 {
+		fmt.Printf("%s- enum: %s\n", prefix, fmt.Sprintf("%v", v.Values))
+	}
+	if v.Format != "" {
+		fmt.Printf("%s- format: %s\n", prefix, v.Format)
+	}
+	if v.Pattern != "" {
+		fmt.Printf("%s- pattern: %s\n", prefix, v.Pattern)
+	}
+	if v.Minimum != nil {
+		fmt.Printf("%s- min: %v\n", prefix, *v.Minimum)
+	}
+	if v.Maximum != nil {
+		fmt.Printf("%s- max: %v\n", prefix, *v.Maximum)
+	}
+	if v.MinLength != nil {
+		fmt.Printf("%s- minLength: %v\n", prefix, *v.MinLength)
+	}
+	if v.MaxLength != nil {
+		fmt.Printf("%s- minLength: %v\n", prefix, *v.MaxLength)
+	}
+	if len(v.Required) > 0 {
+		fmt.Printf("%s- required: %v\n", prefix, v.Required)
 	}
 }
 
