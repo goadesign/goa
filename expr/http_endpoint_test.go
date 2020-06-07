@@ -36,6 +36,7 @@ func TestHTTPEndpointPrepare(t *testing.T) {
 		DSL     func()
 		Headers []string
 		Params  []string
+		Cookies []string
 		Error   string
 	}{
 		"valid": {
@@ -46,11 +47,13 @@ func TestHTTPEndpointPrepare(t *testing.T) {
 			DSL:     testdata.EndpointWithParentDSL,
 			Headers: []string{"pheader", "header"},
 			Params:  []string{"pparam", "param"},
+			Cookies: []string{"pcookie", "cookie"},
 		},
 		"with parent revert": {
 			DSL:     testdata.EndpointWithParentRevertDSL,
 			Headers: []string{"pheader", "header"},
 			Params:  []string{"pparam", "param"},
+			Cookies: []string{"pcookie", "cookie"},
 		},
 		"error": {
 			DSL:   testdata.EndpointRecursiveParentDSL,
@@ -70,6 +73,17 @@ func TestHTTPEndpointPrepare(t *testing.T) {
 					for _, n := range c.Headers {
 						if ht.Attribute(n) == nil {
 							t.Errorf("header %q is missing", n)
+						}
+					}
+				}
+
+				ct := expr.AsObject(e.Cookies.AttributeExpr.Type)
+				if len(*ct) != len(c.Cookies) {
+					t.Errorf("got %d cookies, expected %d", len(*ct), len(c.Cookies))
+				} else {
+					for _, n := range c.Cookies {
+						if ct.Attribute(n) == nil {
+							t.Errorf("cookie %q is missing", n)
 						}
 					}
 				}
