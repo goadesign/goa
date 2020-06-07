@@ -589,7 +589,7 @@ func CookieSecure() {
 //    })
 //
 func CookieHTTPOnly() {
-	_, ok := eval.Current().(*expr.MappedAttributeExpr)
+	_, ok := eval.Current().(*expr.HTTPResponseExpr)
 	if !ok {
 		eval.IncompatibleDSL()
 		return
