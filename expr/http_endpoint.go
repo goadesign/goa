@@ -209,6 +209,7 @@ func (e *HTTPEndpointExpr) Prepare() {
 			c.Prepare()
 			if !e.HasAbsoluteRoutes() {
 				headers.Merge(c.Headers)
+				cookies.Merge(c.Cookies)
 				cpp := c.PathParams()
 				params.Merge(cpp)
 
@@ -234,9 +235,11 @@ func (e *HTTPEndpointExpr) Prepare() {
 		}
 	}
 	headers.Merge(e.Headers)
+	cookies.Merge(e.Cookies)
 	params.Merge(e.Params)
 
 	e.Headers = headers
+	e.Cookies = cookies
 	e.Params = params
 
 	// Initialize path params that are not defined explicitly in

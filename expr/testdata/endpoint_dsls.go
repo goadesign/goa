@@ -43,10 +43,12 @@ var EndpointWithParentDSL = func() {
 			Payload(func() {
 				Attribute("pparam", String)
 				Attribute("pheader", String)
+				Attribute("pcookie", String)
 			})
 			HTTP(func() {
 				POST("/{pparam}")
 				Header("pheader")
+				Cookie("pcookie")
 			})
 		})
 	})
@@ -59,10 +61,13 @@ var EndpointWithParentDSL = func() {
 				Attribute("param", String)
 				Attribute("header", String)
 				Attribute("pheader", String)
+				Attribute("cookie", String)
+				Attribute("pcookie", String)
 			})
 			HTTP(func() {
 				POST("/{param}")
 				Header("header")
+				Cookie("cookie")
 			})
 		})
 	})
@@ -82,6 +87,7 @@ var EndpointWithParentRevertDSL = func() {
 			HTTP(func() {
 				POST("/{param}")
 				Header("header")
+				Cookie("cookie")
 			})
 		})
 	})
@@ -90,10 +96,12 @@ var EndpointWithParentRevertDSL = func() {
 			Payload(func() {
 				Attribute("pparam", String)
 				Attribute("pheader", String)
+				Attribute("pcookie", String)
 			})
 			HTTP(func() {
 				POST("/{pparam}")
 				Header("pheader")
+				Cookie("pcookie")
 			})
 		})
 	})
