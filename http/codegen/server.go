@@ -1272,10 +1272,10 @@ const responseT = `{{ define "response" -}}
 			MaxAge: {{ .MaxAge }},
 			{{- end }}
 			{{- if .Path }}
-			Path: {{ .Path }},
+			Path: {{ printf "%q" .Path }},
 			{{- end }}
 			{{- if .Domain }}
-			Domain: {{ .Domain }},
+			Domain: {{ printf "%q" .Domain }},
 			{{- end }}
 			{{- if .Secure }}
 			Secure: true,
