@@ -3,7 +3,7 @@ package openapiv3
 import (
 	"fmt"
 	"net/url"
-	"regexp"
+	"strconv"
 
 	"goa.design/goa/v3/expr"
 	"goa.design/goa/v3/http/codegen/openapi"
@@ -11,8 +11,6 @@ import (
 
 // OpenAPIVersion is the OpenAPI specification version targeted by this package.
 const OpenAPIVersion = "3.0.3"
-
-var uriRegex = regexp.MustCompile("^https?://")
 
 // New returns the OpenAPI v3 specification for the given API.
 // It returns nil if the design does not define HTTP endpoints.
@@ -28,7 +26,7 @@ func New(root *expr.RootExpr) *OpenAPI {
 		info     = buildInfo(root.API)
 		comps    = buildComponents(root, types)
 		servers  = buildServers(root.API.Servers)
-		paths    = buildPaths(root.API.HTTP, bodies)
+		paths    = buildPaths(root.API.HTTP, bodies, root.API.Random())
 		security = buildSecurityRequirements(root.API.Requirements)
 		tags     = openapi.TagsFromExpr(root.API.Meta)
 	)
@@ -95,19 +93,19 @@ func buildComponents(root *expr.RootExpr, types map[string]*openapi.Schema) *Com
 
 // buildPaths builds the OpenAPI Paths map with key as the HTTP path string and
 // the value as the corresponding PathItem object.
-func buildPaths(h *expr.HTTPExpr, bodies map[string]map[string]*EndpointBodies) map[string]*PathItem {
+func buildPaths(h *expr.HTTPExpr, bodies map[string]map[string]*EndpointBodies, rand *expr.Random) map[string]*PathItem {
 	var paths = make(map[string]*PathItem)
 	for _, svc := range h.Services {
 		sbod := bodies[svc.Name()]
 		for _, e := range svc.HTTPEndpoints {
 			for _, r := range e.Routes {
 				for _, key := range r.FullPaths() {
-						operation := buildOperation(key, r, sbod[e.Name()])
-						path, ok := paths[key]
-						if !ok {
-							path = new(PathItem)
-							paths[key] = path
-						}
+					operation := buildOperation(key, r, sbod[e.Name()], rand)
+					path, ok := paths[key]
+					if !ok {
+						path = new(PathItem)
+						paths[key] = path
+					}
 					switch r.Method {
 					case "GET":
 						path.Get = operation
@@ -133,7 +131,7 @@ func buildPaths(h *expr.HTTPExpr, bodies map[string]map[string]*EndpointBodies) 
 }
 
 // buildOperation builds the OpenAPI Operation object for the given path.
-func buildOperation(key string, r *expr.RouteExpr, bodies *EndpointBodies) *Operation {
+func buildOperation(key string, r *expr.RouteExpr, bodies *EndpointBodies, rand *expr.Random) *Operation {
 	e := r.Endpoint
 	m := e.MethodExpr
 	svc := e.Service
@@ -172,13 +170,57 @@ func buildOperation(key string, r *expr.RouteExpr, bodies *EndpointBodies) *Oper
 		}
 	}
 
-	// body
-	var body RequestBody
+	// request body
+	var requestBody *RequestBody
 	{
-		hb := r.Endpoint.Body
-		body.Description = hb.Description
-		body.Required = hb.Type != expr.Empty
-		body.Extensions = openapi.ExtensionsFromExpr(hb.Meta)
+		ct := "application/json" // TBD: need a way to specify method media type in design...
+		if e.MultipartRequest {
+			ct = "multipart/form-data"
+		}
+		mt := &MediaType{
+			Schema:  bodies.RequestBody,
+			Example: e.Body.Example(rand),
+		}
+		requestBody = &RequestBody{
+			Description: e.Body.Description,
+			Required:    e.Body.Type != expr.Empty,
+			Content:     map[string]*MediaType{ct: mt},
+			Extensions:  openapi.ExtensionsFromExpr(e.Body.Meta),
+		}
+	}
+
+	// parameters
+	var params []*ParameterRef
+	{
+		ps := paramsFromPath(e.Params, key, rand)
+		ps = append(ps, paramsFromHeadersAndCookies(e, rand)...)
+		params = make([]*ParameterRef, len(ps))
+		for i, p := range ps {
+			params[i] = &ParameterRef{Value: p}
+		}
+	}
+
+	// responses
+	var responses map[string]*ResponseRef
+	{
+		responses := make(map[string]*Response, len(e.Responses))
+		for _, r := range e.Responses {
+			if e.MethodExpr.IsStreaming() {
+				// A streaming endpoint allows at most one successful response
+				// definition. So it is okay to change the first successful
+				// response to a HTTP 101 response for openapi docs.
+				if _, ok := responses[strconv.Itoa(expr.StatusSwitchingProtocols)]; !ok {
+					r = r.Dup()
+					r.StatusCode = expr.StatusSwitchingProtocols
+				}
+			}
+			resp := responseFromExpr(r, bodies.ResponseBodies, rand)
+			responses[strconv.Itoa(r.StatusCode)] = resp
+		}
+		for _, er := range e.HTTPErrors {
+			resp := responseFromExpr(er.Response, bodies.ResponseBodies, rand)
+			responses[strconv.Itoa(er.Response.StatusCode)] = resp
+		}
 	}
 
 	// tag names
@@ -196,7 +238,9 @@ func buildOperation(key string, r *expr.RouteExpr, bodies *EndpointBodies) *Oper
 		Summary:      summary,
 		Description:  e.Description(),
 		OperationID:  opID,
-		RequestBody:  &RequestBodyRef{Value: &body},
+		Parameters:   params,
+		RequestBody:  &RequestBodyRef{Value: requestBody},
+		Responses:    responses,
 		Security:     buildSecurityRequirements(e.Requirements),
 		Deprecated:   false,
 		ExternalDocs: openapi.DocsFromExpr(m.Docs, m.Meta),

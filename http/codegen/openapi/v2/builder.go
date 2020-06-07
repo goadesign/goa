@@ -271,7 +271,6 @@ func paramsFromExpr(params *expr.MappedAttributeExpr, path string) []*Parameter 
 	var (
 		res       []*Parameter
 		wildcards = expr.ExtractHTTPWildcards(path)
-		i         = 0
 	)
 	codegen.WalkMappedAttr(params, func(n, pn string, required bool, at *expr.AttributeExpr) error {
 		in := "query"
@@ -284,7 +283,6 @@ func paramsFromExpr(params *expr.MappedAttributeExpr, path string) []*Parameter 
 		}
 		param := paramFor(at, pn, in, required)
 		res = append(res, param)
-		i++
 		return nil
 	})
 	return res

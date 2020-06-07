@@ -39,6 +39,15 @@ type (
 	}
 )
 
+// newSchemafier initializes a schemafier.
+func newSchemafier(rand *expr.Random) *schemafier {
+	return &schemafier{
+		schemas: make(map[string]*openapi.Schema),
+		hashes:  make(map[uint64]string),
+		rand:    rand,
+	}
+}
+
 // buildBodyTypes traverses the design and builds the JSON schemas that
 // represent the request and response bodies of each endpoint. The algorithm
 // also computes a good unique name for the different types making sure that two
@@ -51,11 +60,7 @@ type (
 // value indexed by reference name.
 func buildBodyTypes(api *expr.APIExpr) (map[string]map[string]*EndpointBodies, map[string]*openapi.Schema) {
 	bodies := make(map[string]map[string]*EndpointBodies)
-	sf := &schemafier{
-		schemas: make(map[string]*openapi.Schema),
-		hashes:  make(map[uint64]string),
-		rand:    api.Random(),
-	}
+	sf := newSchemafier(api.Random())
 	for _, s := range api.HTTP.Services {
 		errors := make(map[int]*openapi.Schema)
 		for _, e := range s.HTTPErrors {

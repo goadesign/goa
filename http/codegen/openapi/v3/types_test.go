@@ -86,9 +86,7 @@ func newObj2(n, o string, t, u expr.DataType, reqs ...string) *expr.AttributeExp
 		},
 		Validation: &expr.ValidationExpr{},
 	}
-	for _, req := range reqs {
-		attr.Validation.Required = append(attr.Validation.Required, req)
-	}
+	attr.Validation.Required = append(attr.Validation.Required, reqs...)
 	return attr
 }
 

@@ -169,14 +169,18 @@ type (
 	// Header represents an OpenAPI Header object as defined in
 	// https://github.com/OAI/OpenAPI-Specification/blob/master/versions/3.0.3.md#headerObject
 	Header struct {
-		Description string                 `json:"description,omitempty" yaml:"description,omitempty"`
-		Deprecated  bool                   `json:"deprecated,omitempty" yaml:"deprecated,omitempty"`
-		Required    bool                   `json:"required,omitempty" yaml:"required,omitempty"`
-		Schema      *openapi.Schema        `json:"schema,omitempty" yaml:"schema,omitempty"`
-		Example     interface{}            `json:"example,omitempty" yaml:"example,omitempty"`
-		Examples    map[string]*ExampleRef `json:"examples,omitempty" yaml:"examples,omitempty"`
-		Content     map[string]*MediaType  `json:"content,omitempty" yaml:"content,omitempty"`
-		Extensions  map[string]interface{} `json:"-" yaml:"-"`
+		Description     string                 `json:"description,omitempty" yaml:"description,omitempty"`
+		Style           string                 `json:"style,omitempty" yaml:"style,omitempty"`
+		Explode         *bool                  `json:"explode,omitempty" yaml:"explode,omitempty"`
+		AllowEmptyValue bool                   `json:"allowEmptyValue,omitempty" yaml:"allowEmptyValue,omitempty"`
+		AllowReserved   bool                   `json:"allowReserved,omitempty" yaml:"allowReserved,omitempty"`
+		Deprecated      bool                   `json:"deprecated,omitempty" yaml:"deprecated,omitempty"`
+		Required        bool                   `json:"required,omitempty" yaml:"required,omitempty"`
+		Schema          *openapi.Schema        `json:"schema,omitempty" yaml:"schema,omitempty"`
+		Example         interface{}            `json:"example,omitempty" yaml:"example,omitempty"`
+		Examples        map[string]*ExampleRef `json:"examples,omitempty" yaml:"examples,omitempty"`
+		Content         map[string]*MediaType  `json:"content,omitempty" yaml:"content,omitempty"`
+		Extensions      map[string]interface{} `json:"-" yaml:"-"`
 	}
 
 	// Link represents an OpenAPI Link object as defined in
