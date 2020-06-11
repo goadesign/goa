@@ -420,7 +420,7 @@ func (e *HTTPEndpointExpr) Validate() error {
 
 	// Make sure parameters and headers use compatible types
 	verr.Merge(e.validateParams())
-	verr.Merge(e.validateHeaders())
+	verr.Merge(e.validateHeadersAndCookies())
 
 	// Validate body attribute (required fields exist etc.)
 	if e.Body != nil {
@@ -469,6 +469,7 @@ func (e *HTTPEndpointExpr) Validate() error {
 	var (
 		hasParams  = !e.Params.IsEmpty()
 		hasHeaders = !e.Headers.IsEmpty()
+		hasCookies = !e.Cookies.IsEmpty()
 	)
 	if isEmpty(e.MethodExpr.Payload) {
 		if e.MapQueryParams != nil {
@@ -493,8 +494,8 @@ func (e *HTTPEndpointExpr) Validate() error {
 			verr.Add(e, "Payload type is array but HTTP endpoint defines MultipartRequest and route/query string parameters. At most one of these must be defined.")
 		}
 		if hasHeaders {
-			if e.MultipartRequest {
-				verr.Add(e, "Payload type is array but HTTP endpoint defines MultipartRequest and headers. At most one of these must be defined.")
+			if hasCookies || e.MultipartRequest {
+				verr.Add(e, "Payload type is array but HTTP endpoint defines headers and MultipartRequest or cookies. At most one of these must be defined.")
 			}
 			if hasParams {
 				verr.Add(e, "Payload type is array but HTTP endpoint defines both route or query string parameters and headers. At most one parameter or header must be defined and it must be of type array.")
@@ -760,17 +761,18 @@ func (e *HTTPEndpointExpr) validateParams() *eval.ValidationErrors {
 	return verr
 }
 
-// validateHeaders makes sure headers are of an allowed type and the method
-// payload contains the headers.
-func (e *HTTPEndpointExpr) validateHeaders() *eval.ValidationErrors {
+// validateHeadersAndCookies makes sure headers and cookies are of an allowed
+// type and the method payload defines the corresponding attributes.
+func (e *HTTPEndpointExpr) validateHeadersAndCookies() *eval.ValidationErrors {
 	verr := new(eval.ValidationErrors)
 
-	// We have to figure out the actual type for the headers because the actual
-	// type is initialized only during the finalize phase. In the validation
-	// phase, all param types are string type by default unless specified
-	// explicitly.
+	// We have to figure out the actual type because it is initialized during
+	// the finalize phase. In the validation phase, all param types are string
+	// type by default unless specified explicitly.
 	headers := DupMappedAtt(e.Headers)
+	cookies := DupMappedAtt(e.Cookies)
 	initAttr(headers, e.MethodExpr.Payload)
+	initAttr(cookies, e.MethodExpr.Payload)
 	WalkMappedAttr(headers, func(name, _ string, a *AttributeExpr) error {
 		switch {
 		case IsObject(a.Type):
@@ -782,6 +784,18 @@ func (e *HTTPEndpointExpr) validateHeaders() *eval.ValidationErrors {
 			}
 		default:
 			ctx := fmt.Sprintf("header %q", name)
+			verr.Merge(a.Validate(ctx, e))
+		}
+		return nil
+	})
+	WalkMappedAttr(cookies, func(name, _ string, a *AttributeExpr) error {
+		switch {
+		case IsObject(a.Type):
+			verr.Add(e, "cookie %q cannot be an object, cookie type must be primitive", name)
+		case IsArray(a.Type):
+			verr.Add(e, "cookie %q cannot be an array, cookie type must be primitive", name)
+		default:
+			ctx := fmt.Sprintf("cookie %q", name)
 			verr.Merge(a.Validate(ctx, e))
 		}
 		return nil
@@ -801,13 +815,19 @@ func (e *HTTPEndpointExpr) validateHeaders() *eval.ValidationErrors {
 			}
 			return nil
 		})
+		WalkMappedAttr(cookies, func(name, elem string, a *AttributeExpr) error {
+			if e.MethodExpr.Payload.Find(name) == nil {
+				verr.Add(e, "cookie %q not found in payload.", name)
+			}
+			return nil
+		})
 	case *Array:
 		if len(*AsObject(headers.Type)) > 1 {
 			verr.Add(e, "Payload type is array but HTTP endpoint defines multiple headers. At most one header must be defined and it must be an array.")
 		}
 	case *Map:
-		if len(*AsObject(headers.Type)) > 0 {
-			verr.Add(e, "Payload type is map but HTTP endpoint defines headers. Map payloads can only be decoded from HTTP request bodies or query strings.")
+		if len(*AsObject(headers.Type))+len(*AsObject(cookies.Type)) > 0 {
+			verr.Add(e, "Payload type is map but HTTP endpoint defines headers or cookies. Map payloads can only be decoded from HTTP request bodies or query strings.")
 		}
 	}
 	return verr
