@@ -83,6 +83,8 @@ var EndpointWithParentRevertDSL = func() {
 				Attribute("param", String)
 				Attribute("header", String)
 				Attribute("pheader", String)
+				Attribute("cookie", String)
+				Attribute("pcookie", String)
 			})
 			HTTP(func() {
 				POST("/{param}")
