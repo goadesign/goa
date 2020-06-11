@@ -3411,6 +3411,217 @@ func DecodeMethodHeaderPrimitiveStringDefaultRequest(mux goahttp.Muxer, decoder 
 }
 `
 
+var PayloadCookieStringDecodeCode = `// DecodeMethodCookieStringRequest returns a decoder for requests sent to the
+// ServiceCookieString MethodCookieString endpoint.
+func DecodeMethodCookieStringRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) (interface{}, error) {
+	return func(r *http.Request) (interface{}, error) {
+		var (
+			c2  *string
+			err error
+			c   *http.Cookie
+		)
+		c, err = r.Cookie("c")
+		var c2Raw string
+		if c != nil {
+			c2Raw = c.Value
+		}
+		if c2Raw != "" {
+			c2 = &c2Raw
+		}
+		if err != nil {
+			return nil, err
+		}
+		payload := NewMethodCookieStringPayload(c2)
+
+		return payload, nil
+	}
+}
+`
+
+var PayloadCookieStringValidateDecodeCode = `// DecodeMethodCookieStringValidateRequest returns a decoder for requests sent
+// to the ServiceCookieStringValidate MethodCookieStringValidate endpoint.
+func DecodeMethodCookieStringValidateRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) (interface{}, error) {
+	return func(r *http.Request) (interface{}, error) {
+		var (
+			c2  *string
+			err error
+			c   *http.Cookie
+		)
+		c, err = r.Cookie("c")
+		var c2Raw string
+		if c != nil {
+			c2Raw = c.Value
+		}
+		if c2Raw != "" {
+			c2 = &c2Raw
+		}
+		if c2 != nil {
+			err = goa.MergeErrors(err, goa.ValidatePattern("c2", *c2, "cookie"))
+		}
+		if err != nil {
+			return nil, err
+		}
+		payload := NewMethodCookieStringValidatePayload(c2)
+
+		return payload, nil
+	}
+}
+`
+
+var PayloadCookiePrimitiveStringValidateDecodeCode = `// DecodeMethodCookiePrimitiveStringValidateRequest returns a decoder for
+// requests sent to the ServiceCookiePrimitiveStringValidate
+// MethodCookiePrimitiveStringValidate endpoint.
+func DecodeMethodCookiePrimitiveStringValidateRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) (interface{}, error) {
+	return func(r *http.Request) (interface{}, error) {
+		var (
+			c2  string
+			err error
+			c   *http.Cookie
+		)
+		c, err = r.Cookie("c")
+		if err == http.ErrNoCookie {
+			err = goa.MergeErrors(err, goa.MissingFieldError("c", "cookie"))
+		} else {
+			c2 = c.Value
+		}
+		if !(c2 == "val") {
+			err = goa.MergeErrors(err, goa.InvalidEnumValueError("c2", c2, []interface{}{"val"}))
+		}
+		if err != nil {
+			return nil, err
+		}
+		payload := c
+
+		return payload, nil
+	}
+}
+`
+
+var PayloadCookiePrimitiveBoolValidateDecodeCode = `// DecodeMethodCookiePrimitiveBoolValidateRequest returns a decoder for
+// requests sent to the ServiceCookiePrimitiveBoolValidate
+// MethodCookiePrimitiveBoolValidate endpoint.
+func DecodeMethodCookiePrimitiveBoolValidateRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) (interface{}, error) {
+	return func(r *http.Request) (interface{}, error) {
+		var (
+			c2  bool
+			err error
+			c   *http.Cookie
+		)
+		c, err = r.Cookie("c")
+		{
+			var c2Raw string
+			if c != nil {
+				c2Raw = c.Value
+			}
+			if c2Raw == "" {
+				err = goa.MergeErrors(err, goa.MissingFieldError("c", "cookie"))
+			}
+			v, err2 := strconv.ParseBool(c2Raw)
+			if err2 != nil {
+				err = goa.MergeErrors(err, goa.InvalidFieldTypeError("c2", c2Raw, "boolean"))
+			}
+			c2 = v
+		}
+		if !(c2 == true) {
+			err = goa.MergeErrors(err, goa.InvalidEnumValueError("c2", c2, []interface{}{true}))
+		}
+		if err != nil {
+			return nil, err
+		}
+		payload := c
+
+		return payload, nil
+	}
+}
+`
+
+var PayloadCookieStringDefaultDecodeCode = `// DecodeMethodCookieStringDefaultRequest returns a decoder for requests sent
+// to the ServiceCookieStringDefault MethodCookieStringDefault endpoint.
+func DecodeMethodCookieStringDefaultRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) (interface{}, error) {
+	return func(r *http.Request) (interface{}, error) {
+		var (
+			c2  string
+			err error
+			c   *http.Cookie
+		)
+		c, err = r.Cookie("c")
+		var c2Raw string
+		if c != nil {
+			c2Raw = c.Value
+		}
+		if c2Raw != "" {
+			c2 = c2Raw
+		} else {
+			c2 = "def"
+		}
+		if err != nil {
+			return nil, err
+		}
+		payload := NewMethodCookieStringDefaultPayload(c2)
+
+		return payload, nil
+	}
+}
+`
+
+var PayloadCookieStringDefaultValidateDecodeCode = `// DecodeMethodCookieStringDefaultValidateRequest returns a decoder for
+// requests sent to the ServiceCookieStringDefaultValidate
+// MethodCookieStringDefaultValidate endpoint.
+func DecodeMethodCookieStringDefaultValidateRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) (interface{}, error) {
+	return func(r *http.Request) (interface{}, error) {
+		var (
+			c2  string
+			err error
+			c   *http.Cookie
+		)
+		c, err = r.Cookie("c")
+		var c2Raw string
+		if c != nil {
+			c2Raw = c.Value
+		}
+		if c2Raw != "" {
+			c2 = c2Raw
+		} else {
+			c2 = "def"
+		}
+		if !(c2 == "def") {
+			err = goa.MergeErrors(err, goa.InvalidEnumValueError("c2", c2, []interface{}{"def"}))
+		}
+		if err != nil {
+			return nil, err
+		}
+		payload := NewMethodCookieStringDefaultValidatePayload(c2)
+
+		return payload, nil
+	}
+}
+`
+var PayloadCookiePrimitiveStringDefaultDecodeCode = `// DecodeMethodCookiePrimitiveStringDefaultRequest returns a decoder for
+// requests sent to the ServiceCookiePrimitiveStringDefault
+// MethodCookiePrimitiveStringDefault endpoint.
+func DecodeMethodCookiePrimitiveStringDefaultRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) (interface{}, error) {
+	return func(r *http.Request) (interface{}, error) {
+		var (
+			c2  string
+			err error
+			c   *http.Cookie
+		)
+		c, err = r.Cookie("c")
+		if err == http.ErrNoCookie {
+			err = goa.MergeErrors(err, goa.MissingFieldError("c", "cookie"))
+		} else {
+			c2 = c.Value
+		}
+		if err != nil {
+			return nil, err
+		}
+		payload := c
+
+		return payload, nil
+	}
+}
+`
+
 var PayloadBodyStringDecodeCode = `// DecodeMethodBodyStringRequest returns a decoder for requests sent to the
 // ServiceBodyString MethodBodyString endpoint.
 func DecodeMethodBodyStringRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) (interface{}, error) {

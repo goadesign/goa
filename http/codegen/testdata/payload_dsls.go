@@ -1754,6 +1754,111 @@ var PayloadHeaderPrimitiveStringDefaultDSL = func() {
 	})
 }
 
+var PayloadCookieStringDSL = func() {
+	Service("ServiceCookieString", func() {
+		Method("MethodCookieString", func() {
+			Payload(func() {
+				Attribute("c", String)
+			})
+			HTTP(func() {
+				GET("/")
+				Cookie("c")
+			})
+		})
+	})
+}
+
+var PayloadCookieStringValidateDSL = func() {
+	Service("ServiceCookieStringValidate", func() {
+		Method("MethodCookieStringValidate", func() {
+			Payload(func() {
+				Attribute("c", String, func() {
+					Pattern("cookie")
+				})
+			})
+			HTTP(func() {
+				GET("/")
+				Cookie("c")
+			})
+		})
+	})
+}
+
+var PayloadCookiePrimitiveStringValidateDSL = func() {
+	Service("ServiceCookiePrimitiveStringValidate", func() {
+		Method("MethodCookiePrimitiveStringValidate", func() {
+			Payload(String, func() {
+				Enum("val")
+			})
+			HTTP(func() {
+				GET("/")
+				Cookie("c")
+			})
+		})
+	})
+}
+
+var PayloadCookiePrimitiveBoolValidateDSL = func() {
+	Service("ServiceCookiePrimitiveBoolValidate", func() {
+		Method("MethodCookiePrimitiveBoolValidate", func() {
+			Payload(Boolean, func() {
+				Enum(true)
+			})
+			HTTP(func() {
+				GET("/")
+				Cookie("c")
+			})
+		})
+	})
+}
+
+var PayloadCookieStringDefaultDSL = func() {
+	Service("ServiceCookieStringDefault", func() {
+		Method("MethodCookieStringDefault", func() {
+			Payload(func() {
+				Attribute("c", String, func() {
+					Default("def")
+				})
+			})
+			HTTP(func() {
+				GET("/")
+				Cookie("c")
+			})
+		})
+	})
+}
+
+var PayloadCookieStringDefaultValidateDSL = func() {
+	Service("ServiceCookieStringDefaultValidate", func() {
+		Method("MethodCookieStringDefaultValidate", func() {
+			Payload(func() {
+				Attribute("c", String, func() {
+					Default("def")
+					Enum("def")
+				})
+			})
+			HTTP(func() {
+				GET("/")
+				Cookie("c")
+			})
+		})
+	})
+}
+
+var PayloadCookiePrimitiveStringDefaultDSL = func() {
+	Service("ServiceCookiePrimitiveStringDefault", func() {
+		Method("MethodCookiePrimitiveStringDefault", func() {
+			Payload(String, func() {
+				Default("def")
+			})
+			HTTP(func() {
+				GET("")
+				Cookie("c")
+			})
+		})
+	})
+}
+
 var PayloadJWTAuthorizationHeaderDSL = func() {
 	var JWT = JWTSecurity("jwt", func() {
 		Scope("api:read")
