@@ -16,17 +16,23 @@ func TestHTTPResponseValidation(t *testing.T) {
 		{"empty", emptyResultEmptyResponseDSL, ""},
 		{"non empty result", nonEmptyResultEmptyResponseDSL, ""},
 		{"non empty response", emptyResultNonEmptyResponseDSL, ""},
-		{"string result", stringResultResponseWithHeadersDSL, ""},
-		{"string result", stringResultResponseWithTextContentTypeDSL, ""},
-		{"object result", objectResultResponseWithHeadersDSL, ""},
-		{"array result", arrayResultResponseWithHeadersDSL, ""},
-		{"map result", mapResultResponseWithHeadersDSL, `service "MapResultResponseWithHeaders" HTTP endpoint "Method": attribute "foo" used in HTTP headers must be a primitive type or an array of primitive types.`},
+		{"header string result", stringResultResponseWithHeadersDSL, ""},
+		{"cookie string result", stringResultResponseWithCookiesDSL, ""},
+		{"string result text encoding", stringResultResponseWithTextContentTypeDSL, ""},
+		{"header object result", objectResultResponseWithHeadersDSL, ""},
+		{"cookie object result", objectResultResponseWithCookiesDSL, ""},
+		{"header array result", arrayResultResponseWithHeadersDSL, ""},
+		{"cookie array result", arrayResultResponseWithCookiesDSL, `service "ArrayResultResponseWithCookies" HTTP endpoint "Method": attribute "foo" used in HTTP cookies must be a primitive type.`},
+		{"header map result", mapResultResponseWithHeadersDSL, `service "MapResultResponseWithHeaders" HTTP endpoint "Method": attribute "foo" used in HTTP headers must be a primitive type or an array of primitive types.`},
+		{"cookie map result", mapResultResponseWithCookiesDSL, `service "MapResultResponseWithCookies" HTTP endpoint "Method": attribute "foo" used in HTTP cookies must be a primitive type.`},
 		{"invalid", emptyResultResponseWithHeadersDSL, `HTTP response of service "EmptyResultResponseWithHeaders" HTTP endpoint "Method": response defines headers but result is empty`},
 		{"implicit object in header", implicitObjectResultResponseWithHeadersDSL, `service "ArrayObjectResultResponseWithHeaders" HTTP endpoint "Method": attribute "foo" used in HTTP headers must be a primitive type or an array of primitive types.`},
 		{"array of object in header", arrayObjectResultResponseWithHeadersDSL, `service "ArrayObjectResultResponseWithHeaders" HTTP endpoint "Method": Array result is mapped to an HTTP header but is not an array of primitive types.`},
 		{"not string or []byte", intResultResponseWithTextContentTypeDSL, `HTTP response of service "StringResultResponseWithHeaders" HTTP endpoint "Method": Result type must be String or Bytes when ContentType is 'text/plain'`},
 		{"missing header result attribute", missingHeaderResultAttributeDSL, `HTTP response of service "MissingHeaderResultAttribute" HTTP endpoint "Method": header "bar" has no equivalent attribute in result type, use notation 'attribute_name:header_name' to identify corresponding result type attribute.
 service "MissingHeaderResultAttribute" HTTP endpoint "Method": attribute "bar" used in HTTP headers must be a primitive type or an array of primitive types.`},
+		{"missing cookie result attribute", missingCookieResultAttributeDSL, `HTTP response of service "MissingCookieResultAttribute" HTTP endpoint "Method": cookie "bar" has no equivalent attribute in result type, use notation 'attribute_name:cookie_name' to identify corresponding result type attribute.
+service "MissingCookieResultAttribute" HTTP endpoint "Method": attribute "bar" used in HTTP cookies must be a primitive type.`},
 		{"skip encode and gRPC", skipEncodeAndGRPCDSL, `service "SkipEncodeAndGRPC" HTTP endpoint "Method": Endpoint response cannot use SkipResponseBodyEncodeDecode and define a gRPC transport.`},
 	}
 	for _, c := range cases {
@@ -89,6 +95,20 @@ var stringResultResponseWithHeadersDSL = func() {
 	})
 }
 
+var stringResultResponseWithCookiesDSL = func() {
+	Service("StringResultResponseWithCookies", func() {
+		Method("Method", func() {
+			Result(String)
+			HTTP(func() {
+				POST("/")
+				Response(func() {
+					Cookie("Location")
+				})
+			})
+		})
+	})
+}
+
 var stringResultResponseWithTextContentTypeDSL = func() {
 	Service("StringResultResponseWithHeaders", func() {
 		Method("Method", func() {
@@ -113,6 +133,22 @@ var objectResultResponseWithHeadersDSL = func() {
 				POST("/")
 				Response(func() {
 					Header("foo:Location")
+				})
+			})
+		})
+	})
+}
+
+var objectResultResponseWithCookiesDSL = func() {
+	Service("ObjectResultResponseWithCookies", func() {
+		Method("Method", func() {
+			Result(func() {
+				Attribute("foo", String)
+			})
+			HTTP(func() {
+				POST("/")
+				Response(func() {
+					Cookie("foo:Location")
 				})
 			})
 		})
@@ -171,6 +207,22 @@ var arrayResultResponseWithHeadersDSL = func() {
 	})
 }
 
+var arrayResultResponseWithCookiesDSL = func() {
+	Service("ArrayResultResponseWithCookies", func() {
+		Method("Method", func() {
+			Result(func() {
+				Attribute("foo", ArrayOf(String))
+			})
+			HTTP(func() {
+				POST("/")
+				Response(func() {
+					Cookie("foo:Location")
+				})
+			})
+		})
+	})
+}
+
 var mapResultResponseWithHeadersDSL = func() {
 	Service("MapResultResponseWithHeaders", func() {
 		Method("Method", func() {
@@ -181,6 +233,22 @@ var mapResultResponseWithHeadersDSL = func() {
 				POST("/")
 				Response(func() {
 					Header("foo:Location")
+				})
+			})
+		})
+	})
+}
+
+var mapResultResponseWithCookiesDSL = func() {
+	Service("MapResultResponseWithCookies", func() {
+		Method("Method", func() {
+			Result(func() {
+				Attribute("foo", MapOf(String, String))
+			})
+			HTTP(func() {
+				POST("/")
+				Response(func() {
+					Cookie("foo:Location")
 				})
 			})
 		})
@@ -224,6 +292,22 @@ var missingHeaderResultAttributeDSL = func() {
 				POST("/")
 				Response(func() {
 					Header("bar")
+				})
+			})
+		})
+	})
+}
+
+var missingCookieResultAttributeDSL = func() {
+	Service("MissingCookieResultAttribute", func() {
+		Method("Method", func() {
+			Result(func() {
+				Attribute("foo")
+			})
+			HTTP(func() {
+				POST("/")
+				Response(func() {
+					Cookie("bar")
 				})
 			})
 		})

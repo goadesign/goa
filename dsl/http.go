@@ -423,14 +423,13 @@ func Header(name string, args ...interface{}) {
 //                    // attributes. When reading the cookie value client
 //                    // side validate that's it is a GUID.
 //                    Cookie("session:SID", String, func() {
-//                        CookieMaxAge(3600)      // Cookie attributes
-//                        CookieDomain("goa.design")
-//                        CookiePath("/session")
-//                        CookieSecure()
-//                        CookieHTTPOnly()
-//
 //                        Format(FormatGUID)      // Cookie value validations
 //                    })
+//                    CookieMaxAge(3600)          // Cookie attributes
+//                    CookieDomain("goa.design")
+//                    CookiePath("/session")
+//                    CookieSecure()
+//                    CookieHTTPOnly()
 //                })
 //            })
 //        })
@@ -589,7 +588,7 @@ func CookieSecure() {
 //    })
 //
 func CookieHTTPOnly() {
-	_, ok := eval.Current().(*expr.MappedAttributeExpr)
+	_, ok := eval.Current().(*expr.HTTPResponseExpr)
 	if !ok {
 		eval.IncompatibleDSL()
 		return
