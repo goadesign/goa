@@ -461,9 +461,8 @@ func Cookie(name string, args ...interface{}) {
 //            Result(Account)
 //            HTTP(func() {
 //                Response(StatusCreated, func() {
-//                    Cookie("session:SID", String, func() {
-//                        CookieMaxAge(3600)
-//                    })
+//                    Cookie("session:SID", String)
+//                    CookieMaxAge(3600)
 //                })
 //            })
 //        })
@@ -491,9 +490,8 @@ func CookieMaxAge(n int) {
 //            Result(Account)
 //            HTTP(func() {
 //                Response(StatusCreated, func() {
-//                    Cookie("session:SID", String, func() {
-//                        CookieDomain("goa.design")
-//                    })
+//                    Cookie("session:SID", String)
+//                    CookieDomain("goa.design")
 //                })
 //            })
 //        })
@@ -521,9 +519,8 @@ func CookieDomain(d string) {
 //            Result(Account)
 //            HTTP(func() {
 //                Response(StatusCreated, func() {
-//                    Cookie("session:SID", String, func() {
-//                        CookiePath("/session")
-//                    })
+//                    Cookie("session:SID", String)
+//                    CookiePath("/session")
 //                })
 //            })
 //        })
@@ -550,9 +547,8 @@ func CookiePath(p string) {
 //            Result(Account)
 //            HTTP(func() {
 //                Response(StatusCreated, func() {
-//                    Cookie("session:SID", String, func() {
-//                        CookieSecure()
-//                    })
+//                    Cookie("session:SID", String)
+//                    CookieSecure()
 //                })
 //            })
 //        })
@@ -579,9 +575,8 @@ func CookieSecure() {
 //            Result(Account)
 //            HTTP(func() {
 //                Response(StatusCreated, func() {
-//                    Cookie("session:SID", String, func() {
-//                        CookieHTTPOnly()
-//                    })
+//                    Cookie("session:SID", String)
+//                    CookieHTTPOnly()
 //                })
 //            })
 //        })
