@@ -123,6 +123,16 @@ func TestDecode(t *testing.T) {
 		{"header-string-default-validate", testdata.PayloadHeaderStringDefaultValidateDSL, testdata.PayloadHeaderStringDefaultValidateDecodeCode},
 		{"header-primitive-string-default", testdata.PayloadHeaderPrimitiveStringDefaultDSL, testdata.PayloadHeaderPrimitiveStringDefaultDecodeCode},
 
+		{"cookie-string", testdata.PayloadCookieStringDSL, testdata.PayloadCookieStringDecodeCode},
+		{"cookie-string-validate", testdata.PayloadCookieStringValidateDSL, testdata.PayloadCookieStringValidateDecodeCode},
+
+		{"cookie-primitive-string-validate", testdata.PayloadCookiePrimitiveStringValidateDSL, testdata.PayloadCookiePrimitiveStringValidateDecodeCode},
+		{"cookie-primitive-bool-validate", testdata.PayloadCookiePrimitiveBoolValidateDSL, testdata.PayloadCookiePrimitiveBoolValidateDecodeCode},
+
+		{"cookie-string-default", testdata.PayloadCookieStringDefaultDSL, testdata.PayloadCookieStringDefaultDecodeCode},
+		{"cookie-string-default-validate", testdata.PayloadCookieStringDefaultValidateDSL, testdata.PayloadCookieStringDefaultValidateDecodeCode},
+		{"cookie-primitive-string-default", testdata.PayloadCookiePrimitiveStringDefaultDSL, testdata.PayloadCookiePrimitiveStringDefaultDecodeCode},
+
 		{"body-string", testdata.PayloadBodyStringDSL, testdata.PayloadBodyStringDecodeCode},
 		{"body-string-validate", testdata.PayloadBodyStringValidateDSL, testdata.PayloadBodyStringValidateDecodeCode},
 		{"body-user", testdata.PayloadBodyUserDSL, testdata.PayloadBodyUserDecodeCode},
