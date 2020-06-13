@@ -3416,20 +3416,16 @@ var PayloadCookieStringDecodeCode = `// DecodeMethodCookieStringRequest returns 
 func DecodeMethodCookieStringRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) (interface{}, error) {
 	return func(r *http.Request) (interface{}, error) {
 		var (
-			c2  *string
-			err error
-			c   *http.Cookie
+			c2 *string
+			c  *http.Cookie
 		)
-		c, err = r.Cookie("c")
+		c, _ = r.Cookie("c")
 		var c2Raw string
 		if c != nil {
 			c2Raw = c.Value
 		}
 		if c2Raw != "" {
 			c2 = &c2Raw
-		}
-		if err != nil {
-			return nil, err
 		}
 		payload := NewMethodCookieStringPayload(c2)
 
@@ -3447,7 +3443,7 @@ func DecodeMethodCookieStringValidateRequest(mux goahttp.Muxer, decoder func(*ht
 			err error
 			c   *http.Cookie
 		)
-		c, err = r.Cookie("c")
+		c, _ = r.Cookie("c")
 		var c2Raw string
 		if c != nil {
 			c2Raw = c.Value
@@ -3540,11 +3536,10 @@ var PayloadCookieStringDefaultDecodeCode = `// DecodeMethodCookieStringDefaultRe
 func DecodeMethodCookieStringDefaultRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) (interface{}, error) {
 	return func(r *http.Request) (interface{}, error) {
 		var (
-			c2  string
-			err error
-			c   *http.Cookie
+			c2 string
+			c  *http.Cookie
 		)
-		c, err = r.Cookie("c")
+		c, _ = r.Cookie("c")
 		var c2Raw string
 		if c != nil {
 			c2Raw = c.Value
@@ -3553,9 +3548,6 @@ func DecodeMethodCookieStringDefaultRequest(mux goahttp.Muxer, decoder func(*htt
 			c2 = c2Raw
 		} else {
 			c2 = "def"
-		}
-		if err != nil {
-			return nil, err
 		}
 		payload := NewMethodCookieStringDefaultPayload(c2)
 
@@ -3574,7 +3566,7 @@ func DecodeMethodCookieStringDefaultValidateRequest(mux goahttp.Muxer, decoder f
 			err error
 			c   *http.Cookie
 		)
-		c, err = r.Cookie("c")
+		c, _ = r.Cookie("c")
 		var c2Raw string
 		if c != nil {
 			c2Raw = c.Value
