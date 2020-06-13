@@ -833,7 +833,7 @@ const requestElementsT = `{{- define "request_elements" }}
 {{- end }}
 
 {{- range .Cookies }}
-	c, err = r.Cookie("{{ .Name }}")
+	c, {{ if not .Required }}_{{ else }}err{{ end }} = r.Cookie("{{ .Name }}")
 	{{- if and (or (eq .Type.Name "string") (eq .Type.Name "any")) .Required }}
 		if err == http.ErrNoCookie {
 			err = goa.MergeErrors(err, goa.MissingFieldError("{{ .Name }}", "cookie"))
