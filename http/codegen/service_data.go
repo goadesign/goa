@@ -990,7 +990,12 @@ func buildPayloadData(e *expr.HTTPEndpointExpr, sd *ServiceData) *PayloadData {
 				sd.ServerTypeNames[serverBodyData.Name] = false
 				sd.ClientTypeNames[serverBodyData.Name] = false
 			}
-			mustValidate = len(cookiesData) > 0
+			for _, p := range cookiesData {
+				if p.Required || p.Validate != "" || needConversion(p.Type) {
+					mustValidate = true
+					break
+				}
+			}
 			if !mustValidate {
 				for _, p := range paramsData {
 					if p.Validate != "" || needConversion(p.Type) {
