@@ -1556,9 +1556,10 @@ func buildResponses(e *expr.HTTPEndpointExpr, result *expr.AttributeExpr, viewed
 							//   validation logic can be applied.
 							// * user type - we unmarshal the client response body to the
 							//   corresponding type in the service package after validating the
-							//   response body. Here, the transformation code must rely that the
-							//   required attributes are set in the response body (otherwise
-							//   validation would fail).
+							//   response body. Here, the transformation code must
+							//   rely on the fact that the required attributes are
+							//   set in the response body (otherwise validation
+							//   would fail).
 							code, helpers, err = unmarshal(resp.Body, resAttr, "body", "v", httpclictx, svcctx)
 							if err == nil {
 								sd.ClientTransformHelpers = codegen.AppendHelpers(sd.ClientTransformHelpers, helpers)
@@ -1908,6 +1909,9 @@ func buildRequestBodyType(body, att *expr.AttributeExpr, e *expr.HTTPEndpointExp
 	{
 		name = body.Type.Name()
 		ref = sd.Scope.GoTypeRef(body)
+
+		AddMarshalTags(body, make(map[string]struct{}))
+
 		if ut, ok := body.Type.(expr.UserType); ok {
 			varname = codegen.Goify(ut.Name(), true)
 			def = goTypeDef(sd.Scope, ut.Attribute(), svr, !svr)
@@ -2046,6 +2050,8 @@ func buildResponseBodyType(body, att *expr.AttributeExpr, e *expr.HTTPEndpointEx
 		name = body.Type.Name()
 		ref = sd.Scope.GoTypeRef(body)
 		mustInit = att.Type != expr.Empty && needInit(body.Type)
+
+		AddMarshalTags(body, make(map[string]struct{}))
 
 		if ut, ok := body.Type.(expr.UserType); ok {
 			// response body is a user type.
@@ -2588,6 +2594,33 @@ func needConversion(dt expr.DataType) bool {
 			needConversion(actual.ElemType.Type)
 	default:
 		return true
+	}
+}
+
+// AddMarshalTags adds JSON, XML and Form tags to all inline object attributes recursively.
+func AddMarshalTags(att *expr.AttributeExpr, seen map[string]struct{}) {
+	if !expr.IsObject(att.Type) {
+		return
+	}
+	if ut, ok := att.Type.(expr.UserType); ok {
+		if _, ok := seen[ut.Hash()]; ok {
+			return // avoid infinite recursions
+		}
+		seen[ut.Hash()] = struct{}{}
+		for _, att := range *(expr.AsObject(att.Type)) {
+			AddMarshalTags(att.Attribute, seen)
+		}
+		return
+	}
+	// inline object
+	for _, natt := range *(expr.AsObject(att.Type)) {
+		if natt.Attribute.Meta == nil {
+			natt.Attribute.Meta = expr.MetaExpr{}
+		}
+		ns := []string{natt.Name}
+		natt.Attribute.Meta["struct:tag:form"] = ns
+		natt.Attribute.Meta["struct:tag:json"] = ns
+		natt.Attribute.Meta["struct:tag:xml"] = ns
 	}
 }
 

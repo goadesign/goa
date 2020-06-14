@@ -198,7 +198,8 @@ func recurseValidationCode(att *expr.AttributeExpr, attCtx *AttributeContext, re
 				return recurseValidationCode(ut.Attribute(), ctx, true, tgt, context+suf, seen).String()
 			} else if hasValidations(attCtx, ut) {
 				var buf bytes.Buffer
-				data := map[string]interface{}{"name": Goify(attCtx.Scope.Name(att, ctx.Pkg), true), "target": tgt}
+				name := attCtx.Scope.Name(att, ctx.Pkg, ctx.Pointer, ctx.UseDefault)
+				data := map[string]interface{}{"name": Goify(name, true), "target": tgt}
 				if err := userValT.Execute(&buf, data); err != nil {
 					panic(err) // bug
 				}
@@ -317,7 +318,8 @@ func recurseAttribute(att *expr.AttributeExpr, attCtx *AttributeContext, nat *ex
 			if expr.IsPrimitive(nat.Attribute.Type) {
 				buf.Write(recurseValidationCode(ut.Attribute(), attCtx, att.IsRequired(nat.Name), tgt, context, seen).Bytes())
 			} else {
-				if err := userValT.Execute(&buf, map[string]interface{}{"name": Goify(attCtx.Scope.Name(nat.Attribute, attCtx.Pkg), true), "target": tgt}); err != nil {
+				name := attCtx.Scope.Name(nat.Attribute, attCtx.Pkg, attCtx.Pointer, attCtx.UseDefault)
+				if err := userValT.Execute(&buf, map[string]interface{}{"name": Goify(name, true), "target": tgt}); err != nil {
 					panic(err) // bug
 				}
 			}
