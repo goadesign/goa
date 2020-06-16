@@ -149,6 +149,21 @@ var CustomErrorsDSL = func() {
 	})
 }
 
+var CustomErrorsCustomFieldDSL = func() {
+	var Result = ResultType("application/vnd.goa.error", func() {
+		Attribute("error", String, func() {
+			Meta("struct:error:name")
+			Meta("struct:field:name", "ErrorCode")
+		})
+		Required("error")
+	})
+	Service("CustomErrorsCustomFields", func() {
+		Method("A", func() {
+			Error("struct_error_name", Result, "struct error name description")
+		})
+	})
+}
+
 var MultipleMethodsResultMultipleViewsDSL = func() {
 	var RTWithViews = ResultType("application/vnd.result.multiple.views", func() {
 		TypeName("MultipleViews")
