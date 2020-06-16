@@ -173,7 +173,7 @@ func errorName(et *UserTypeData) string {
 	if obj != nil {
 		for _, att := range *obj {
 			if _, ok := att.Attribute.Meta["struct:error:name"]; ok {
-				return fmt.Sprintf("e.%s", codegen.Goify(att.Name, true))
+				return fmt.Sprintf("e.%s", codegen.GoifyAtt(att.Attribute, att.Name, true))
 			}
 		}
 	}
