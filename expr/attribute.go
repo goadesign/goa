@@ -533,6 +533,11 @@ func (a *AttributeExpr) debug(prefix string, seen map[*AttributeExpr]int, indent
 	if v := a.Validation; v != nil {
 		v.Debug(indent + 1)
 	}
+	if t, ok := a.Type.(UserType); ok {
+		if v := t.Attribute().Validation; v != nil {
+			v.Debug(indent + 1)
+		}
+	}
 }
 
 // validateEnumDefault makes sure that the attribute default value is one of the
