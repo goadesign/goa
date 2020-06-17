@@ -1039,6 +1039,22 @@ var ResultBodyPrimitiveArrayUserDSL = func() {
 	})
 }
 
+var ResultBodyInlineObjectDSL = func() {
+	var ResultType = Type("ResultType", func() {
+		Attribute("parent", func() {
+			Attribute("child")
+		})
+	})
+	Service("ServiceBodyInlineObject", func() {
+		Method("MethodBodyInlineObject", func() {
+			Result(ResultType)
+			HTTP(func() {
+				POST("/")
+			})
+		})
+	})
+}
+
 var ResultBodyHeaderObjectDSL = func() {
 	Service("ServiceBodyHeaderObject", func() {
 		Method("MethodBodyHeaderObject", func() {

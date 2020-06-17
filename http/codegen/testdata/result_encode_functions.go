@@ -866,6 +866,19 @@ func EncodeMethodBodyPrimitiveArrayUserResponse(encoder func(context.Context, ht
 }
 `
 
+var ResultBodyInlineObjectEncodeCode = `// EncodeMethodBodyInlineObjectResponse returns an encoder for responses
+// returned by the ServiceBodyInlineObject MethodBodyInlineObject endpoint.
+func EncodeMethodBodyInlineObjectResponse(encoder func(context.Context, http.ResponseWriter) goahttp.Encoder) func(context.Context, http.ResponseWriter, interface{}) error {
+	return func(ctx context.Context, w http.ResponseWriter, v interface{}) error {
+		res := v.(*servicebodyinlineobject.ResultType)
+		enc := encoder(ctx, w)
+		body := NewMethodBodyInlineObjectResponseBody(res)
+		w.WriteHeader(http.StatusNoContent)
+		return enc.Encode(body)
+	}
+}
+`
+
 var ResultBodyHeaderObjectEncodeCode = `// EncodeMethodBodyHeaderObjectResponse returns an encoder for responses
 // returned by the ServiceBodyHeaderObject MethodBodyHeaderObject endpoint.
 func EncodeMethodBodyHeaderObjectResponse(encoder func(context.Context, http.ResponseWriter) goahttp.Encoder) func(context.Context, http.ResponseWriter, interface{}) error {

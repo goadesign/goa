@@ -305,7 +305,6 @@ func (m *MethodExpr) Finalize() {
 	} else if len(m.Requirements) == 0 && len(m.Service.Requirements) > 0 {
 		m.Requirements = copyReqs(m.Service.Requirements)
 	}
-
 }
 
 // IsStreaming determines whether the method streams payload or result.
