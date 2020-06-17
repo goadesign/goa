@@ -45,6 +45,7 @@ func TestBodyTypeInit(t *testing.T) {
 		{"body-path-user-validate", testdata.PayloadBodyPathUserValidateDSL, 2, BodyPathUserValidateInitCode},
 		{"body-primitive-array-user-validate", testdata.PayloadBodyPrimitiveArrayUserValidateDSL, 2, BodyPrimitiveArrayUserValidateInitCode},
 		{"result-body-user", testdata.ResultBodyObjectHeaderDSL, 2, ResultBodyObjectHeaderInitCode},
+		{"result-body-inline-object", testdata.ResultBodyInlineObjectDSL, 2, ResultBodyInlineObjectInitCode},
 		{"result-explicit-body-primitive", testdata.ExplicitBodyPrimitiveResultMultipleViewsDSL, 1, ExplicitBodyPrimitiveResultMultipleViewsInitCode},
 		{"result-explicit-body-user-type", testdata.ExplicitBodyUserResultMultipleViewsDSL, 3, ExplicitBodyUserResultMultipleViewsInitCode},
 		{"result-explicit-body-object", testdata.ExplicitBodyUserResultObjectDSL, 3, ExplicitBodyObjectInitCode},
@@ -180,6 +181,23 @@ func NewMethodBodyObjectHeaderResultOK(body *MethodBodyObjectHeaderResponseBody,
 		A: body.A,
 	}
 	v.B = b
+
+	return v
+}
+`
+
+const ResultBodyInlineObjectInitCode = `// NewMethodBodyInlineObjectResultTypeNoContent builds a
+// "ServiceBodyInlineObject" service "MethodBodyInlineObject" endpoint result
+// from a HTTP "NoContent" response.
+func NewMethodBodyInlineObjectResultTypeNoContent(body *MethodBodyInlineObjectResponseBody) *servicebodyinlineobject.ResultType {
+	v := &servicebodyinlineobject.ResultType{}
+	if body.Parent != nil {
+		v.Parent = &struct {
+			Child *string
+		}{
+			Child: body.Parent.Child,
+		}
+	}
 
 	return v
 }

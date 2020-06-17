@@ -874,7 +874,7 @@ func buildResponseConvertData(response, result *expr.AttributeExpr, svcCtx *code
 			data.Description = fmt.Sprintf("%s builds the gRPC response type from the result of the %q endpoint of the %q service.", data.Name, e.Name(), svc.Name)
 		}
 		return &ConvertData{
-			SrcName: svcCtx.Scope.Name(result, svcCtx.Pkg),
+			SrcName: svcCtx.Scope.Name(result, svcCtx.Pkg, svcCtx.Pointer, svcCtx.UseDefault),
 			SrcRef:  svcCtx.Scope.Ref(result, svcCtx.Pkg),
 			TgtName: protoBufGoFullTypeName(response, sd.PkgName, sd.Scope),
 			TgtRef:  protoBufGoFullTypeRef(response, sd.PkgName, sd.Scope),
@@ -925,7 +925,7 @@ func buildResponseConvertData(response, result *expr.AttributeExpr, svcCtx *code
 	return &ConvertData{
 		SrcName:    protoBufGoFullTypeName(response, sd.PkgName, sd.Scope),
 		SrcRef:     protoBufGoFullTypeRef(response, sd.PkgName, sd.Scope),
-		TgtName:    svcCtx.Scope.Name(result, svcCtx.Pkg),
+		TgtName:    svcCtx.Scope.Name(result, svcCtx.Pkg, svcCtx.Pointer, svcCtx.UseDefault),
 		TgtRef:     svcCtx.Scope.Ref(result, svcCtx.Pkg),
 		Init:       data,
 		Validation: addValidation(response, sd, false),
@@ -985,7 +985,7 @@ func buildInitData(source, target *expr.AttributeExpr, sourceVar, targetVar stri
 				&InitArgData{
 					Name:     sourceVar,
 					Ref:      sourceVar,
-					TypeName: srcCtx.Scope.Name(source, srcCtx.Pkg),
+					TypeName: srcCtx.Scope.Name(source, srcCtx.Pkg, srcCtx.Pointer, srcCtx.UseDefault),
 					TypeRef:  srcCtx.Scope.Ref(source, srcCtx.Pkg),
 					Example:  source.Example(expr.Root.API.Random()),
 				},
@@ -1053,7 +1053,7 @@ func buildErrorConvertData(ge *expr.GRPCErrorExpr, e *expr.GRPCEndpointExpr, sd 
 			data.Description = fmt.Sprintf("%s builds the gRPC error response type from the error of the %q endpoint of the %q service.", data.Name, e.Name(), svc.Name)
 		}
 		return &ConvertData{
-			SrcName: svcCtx.Scope.Name(ge.ErrorExpr.AttributeExpr, svcCtx.Pkg),
+			SrcName: svcCtx.Scope.Name(ge.ErrorExpr.AttributeExpr, svcCtx.Pkg, svcCtx.Pointer, svcCtx.UseDefault),
 			SrcRef:  svcCtx.Scope.Ref(ge.ErrorExpr.AttributeExpr, svcCtx.Pkg),
 			TgtName: protoBufGoFullTypeName(ge.Response.Message, sd.PkgName, sd.Scope),
 			TgtRef:  protoBufGoFullTypeRef(ge.Response.Message, sd.PkgName, sd.Scope),
@@ -1072,7 +1072,7 @@ func buildErrorConvertData(ge *expr.GRPCErrorExpr, e *expr.GRPCEndpointExpr, sd 
 	return &ConvertData{
 		SrcName:    protoBufGoFullTypeName(ge.Response.Message, sd.PkgName, sd.Scope),
 		SrcRef:     protoBufGoFullTypeRef(ge.Response.Message, sd.PkgName, sd.Scope),
-		TgtName:    svcCtx.Scope.Name(ge.ErrorExpr.AttributeExpr, svcCtx.Pkg),
+		TgtName:    svcCtx.Scope.Name(ge.ErrorExpr.AttributeExpr, svcCtx.Pkg, svcCtx.Pointer, svcCtx.UseDefault),
 		TgtRef:     svcCtx.Scope.Ref(ge.ErrorExpr.AttributeExpr, svcCtx.Pkg),
 		Init:       data,
 		Validation: addValidation(ge.Response.Message, sd, false),
@@ -1118,7 +1118,7 @@ func buildStreamData(e *expr.GRPCEndpointExpr, sd *ServiceData, svr bool) *Strea
 				sendName = md.ServerStream.SendName
 				sendRef = ed.ResultRef
 				sendType = &ConvertData{
-					SrcName: resCtx.Scope.Name(result, resCtx.Pkg),
+					SrcName: resCtx.Scope.Name(result, resCtx.Pkg, resCtx.Pointer, resCtx.UseDefault),
 					SrcRef:  resCtx.Scope.Ref(result, resCtx.Pkg),
 					TgtName: protoBufGoFullTypeName(e.Response.Message, sd.PkgName, sd.Scope),
 					TgtRef:  protoBufGoFullTypeRef(e.Response.Message, sd.PkgName, sd.Scope),
@@ -1131,7 +1131,7 @@ func buildStreamData(e *expr.GRPCEndpointExpr, sd *ServiceData, svr bool) *Strea
 				recvType = &ConvertData{
 					SrcName:    protoBufGoFullTypeName(e.StreamingRequest, sd.PkgName, sd.Scope),
 					SrcRef:     protoBufGoFullTypeRef(e.StreamingRequest, sd.PkgName, sd.Scope),
-					TgtName:    svcCtx.Scope.Name(e.MethodExpr.StreamingPayload, svcCtx.Pkg),
+					TgtName:    svcCtx.Scope.Name(e.MethodExpr.StreamingPayload, svcCtx.Pkg, svcCtx.Pointer, svcCtx.UseDefault),
 					TgtRef:     recvRef,
 					Init:       buildInitData(e.StreamingRequest, e.MethodExpr.StreamingPayload, "v", "spayload", svcCtx, false, sd),
 					Validation: addValidation(e.StreamingRequest, sd, true),
@@ -1147,7 +1147,7 @@ func buildStreamData(e *expr.GRPCEndpointExpr, sd *ServiceData, svr bool) *Strea
 				sendName = md.ClientStream.SendName
 				sendRef = svcCtx.Scope.Ref(e.MethodExpr.StreamingPayload, svcCtx.Pkg)
 				sendType = &ConvertData{
-					SrcName: svcCtx.Scope.Name(e.MethodExpr.StreamingPayload, svcCtx.Pkg),
+					SrcName: svcCtx.Scope.Name(e.MethodExpr.StreamingPayload, svcCtx.Pkg, svcCtx.Pointer, svcCtx.UseDefault),
 					SrcRef:  sendRef,
 					TgtName: protoBufGoFullTypeName(e.StreamingRequest, sd.PkgName, sd.Scope),
 					TgtRef:  protoBufGoFullTypeRef(e.StreamingRequest, sd.PkgName, sd.Scope),
@@ -1160,7 +1160,7 @@ func buildStreamData(e *expr.GRPCEndpointExpr, sd *ServiceData, svr bool) *Strea
 				recvType = &ConvertData{
 					SrcName:    protoBufGoFullTypeName(e.Response.Message, sd.PkgName, sd.Scope),
 					SrcRef:     protoBufGoFullTypeRef(e.Response.Message, sd.PkgName, sd.Scope),
-					TgtName:    resCtx.Scope.Name(result, resCtx.Pkg),
+					TgtName:    resCtx.Scope.Name(result, resCtx.Pkg, resCtx.Pointer, resCtx.UseDefault),
 					TgtRef:     resCtx.Scope.Ref(result, resCtx.Pkg),
 					Init:       buildInitData(e.Response.Message, result, "v", resVar, resCtx, false, sd),
 					Validation: addValidation(e.Response.Message, sd, false),
