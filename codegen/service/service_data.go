@@ -1510,12 +1510,12 @@ func buildConstructorCode(src, tgt *expr.AttributeExpr, sourceVar, targetVar str
 		"ArgVar":       sourceVar,
 		"ReturnVar":    targetVar,
 		"IsCollection": arr != nil,
-		"TargetType":   targetCtx.Scope.Name(tgt, targetCtx.Pkg),
+		"TargetType":   targetCtx.Scope.Name(tgt, targetCtx.Pkg, targetCtx.Pointer, targetCtx.UseDefault),
 	}
 
 	if arr != nil {
 		// result type collection
-		init := "new" + targetCtx.Scope.Name(arr.ElemType, "")
+		init := "new" + targetCtx.Scope.Name(arr.ElemType, "", targetCtx.Pointer, targetCtx.UseDefault)
 		if view != "" && view != expr.DefaultView {
 			init += codegen.Goify(view, true)
 		}
@@ -1552,13 +1552,13 @@ func buildConstructorCode(src, tgt *expr.AttributeExpr, sourceVar, targetVar str
 	data["Code"] = code
 
 	if view != "" {
-		data["InitName"] = targetCtx.Scope.Name(src, "")
+		data["InitName"] = targetCtx.Scope.Name(src, "", targetCtx.Pointer, targetCtx.UseDefault)
 	}
 	fields := make([]map[string]interface{}, 0, len(*targetRTs))
 	// iterate through the result types found in the target and add the
 	// code to initialize them
 	for _, nat := range *targetRTs {
-		finit := "new" + targetCtx.Scope.Name(nat.Attribute, "")
+		finit := "new" + targetCtx.Scope.Name(nat.Attribute, "", targetCtx.Pointer, targetCtx.UseDefault)
 		if view != "" {
 			v := ""
 			if vatt := rt.View(view).AttributeExpr.Find(nat.Name); vatt != nil {

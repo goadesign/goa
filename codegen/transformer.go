@@ -11,13 +11,14 @@ type (
 	// generation.
 	Attributor interface {
 		Scoper
-		// Name generates a valid name for the given attribute type.
-		Name(att *expr.AttributeExpr, pkg string) string
+		// Name generates a valid name for the given attribute type. ptr and
+		// useDefault are used to generate inline struct type definitions.
+		Name(att *expr.AttributeExpr, pkg string, ptr, useDefault bool) string
 		// Ref generates a valid reference to the given attribute type.
 		Ref(att *expr.AttributeExpr, pkg string) string
 		// Field generates a valid data structure field identifier for the given
-		// attribute and field name. If firstUpper is true the field name's first
-		// letter is capitalized.
+		// attribute and field name. If firstUpper is true then the field name
+		// first letter is capitalized.
 		Field(att *expr.AttributeExpr, name string, firstUpper bool) string
 	}
 
@@ -229,7 +230,14 @@ func (a *AttributeContext) Dup() *AttributeContext {
 }
 
 // Name returns the type name for the given attribute.
-func (a *AttributeScope) Name(att *expr.AttributeExpr, pkg string) string {
+func (a *AttributeScope) Name(att *expr.AttributeExpr, pkg string, ptr, useDefault bool) string {
+	if _, ok := att.Type.(expr.UserType); !ok && expr.IsObject(att.Type) {
+		// In the special case of anonymous / inline struct types the "name" is
+		// in fact the struct typedef. In this case we need to force the
+		// generation of the fields as pointers if needed as the default
+		// GoTransform algorithm does not allow for an override.
+		return a.scope.GoTypeDef(att, ptr, useDefault)
+	}
 	return a.scope.GoFullTypeName(att, pkg)
 }
 

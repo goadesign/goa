@@ -18,7 +18,7 @@ type (
 )
 
 // Name returns the protocol buffer type name.
-func (p *protoBufScope) Name(att *expr.AttributeExpr, pkg string) string {
+func (p *protoBufScope) Name(att *expr.AttributeExpr, pkg string, ptr, useDefault bool) string {
 	return protoBufGoFullTypeName(att, pkg, p.scope)
 }
 
