@@ -26,7 +26,7 @@ func New(root *expr.RootExpr) *OpenAPI {
 		info     = buildInfo(root.API)
 		comps    = buildComponents(root, types)
 		servers  = buildServers(root.API.Servers)
-		paths    = buildPaths(root.API.HTTP, bodies, root.API.Random())
+		paths    = buildPaths(root.API.HTTP, bodies, root.API)
 		security = buildSecurityRequirements(root.API.Requirements)
 		tags     = openapi.TagsFromExpr(root.API.Meta)
 	)
@@ -93,14 +93,16 @@ func buildComponents(root *expr.RootExpr, types map[string]*openapi.Schema) *Com
 
 // buildPaths builds the OpenAPI Paths map with key as the HTTP path string and
 // the value as the corresponding PathItem object.
-func buildPaths(h *expr.HTTPExpr, bodies map[string]map[string]*EndpointBodies, rand *expr.Random) map[string]*PathItem {
+func buildPaths(h *expr.HTTPExpr, bodies map[string]map[string]*EndpointBodies, api *expr.APIExpr) map[string]*PathItem {
 	var paths = make(map[string]*PathItem)
 	for _, svc := range h.Services {
 		sbod := bodies[svc.Name()]
+
+		// endpoints
 		for _, e := range svc.HTTPEndpoints {
 			for _, r := range e.Routes {
 				for _, key := range r.FullPaths() {
-					operation := buildOperation(key, r, sbod[e.Name()], rand)
+					operation := buildOperation(key, r, sbod[e.Name()], api.Random())
 					path, ok := paths[key]
 					if !ok {
 						path = new(PathItem)
@@ -124,6 +126,19 @@ func buildPaths(h *expr.HTTPExpr, bodies map[string]map[string]*EndpointBodies, 
 					}
 					path.Extensions = openapi.ExtensionsFromExpr(r.Endpoint.Meta)
 				}
+			}
+		}
+
+		// file servers
+		for _, f := range svc.FileServers {
+			for _, key := range f.RequestPaths {
+				operation := buildFileServerOperation(key, f, api)
+				path, ok := paths[key]
+				if !ok {
+					path = new(PathItem)
+					paths[key] = path
+				}
+				path.Get = operation
 			}
 		}
 	}
@@ -203,7 +218,7 @@ func buildOperation(key string, r *expr.RouteExpr, bodies *EndpointBodies, rand 
 	// responses
 	var responses map[string]*ResponseRef
 	{
-		responses := make(map[string]*Response, len(e.Responses))
+		responses = make(map[string]*ResponseRef, len(e.Responses))
 		for _, r := range e.Responses {
 			if e.MethodExpr.IsStreaming() {
 				// A streaming endpoint allows at most one successful response
@@ -215,11 +230,11 @@ func buildOperation(key string, r *expr.RouteExpr, bodies *EndpointBodies, rand 
 				}
 			}
 			resp := responseFromExpr(r, bodies.ResponseBodies, rand)
-			responses[strconv.Itoa(r.StatusCode)] = resp
+			responses[strconv.Itoa(r.StatusCode)] = &ResponseRef{Value: resp}
 		}
 		for _, er := range e.HTTPErrors {
 			resp := responseFromExpr(er.Response, bodies.ResponseBodies, rand)
-			responses[strconv.Itoa(er.Response.StatusCode)] = resp
+			responses[strconv.Itoa(er.Response.StatusCode)] = &ResponseRef{Value: resp}
 		}
 	}
 
@@ -245,6 +260,84 @@ func buildOperation(key string, r *expr.RouteExpr, bodies *EndpointBodies, rand 
 		Deprecated:   false,
 		ExternalDocs: openapi.DocsFromExpr(m.Docs, m.Meta),
 		Extensions:   openapi.ExtensionsFromExpr(m.Meta),
+	}
+}
+
+// buildOperation builds the OpenAPI Operation object for the given file server.
+func buildFileServerOperation(key string, fs *expr.HTTPFileServerExpr, api *expr.APIExpr) *Operation {
+	wildcards := expr.ExtractHTTPWildcards(key)
+	svc := fs.Service
+
+	// parameters
+	var params []*ParameterRef
+	{
+		if len(wildcards) > 0 {
+			pref := ParameterRef{
+				Value: &Parameter{
+					Name:        wildcards[0],
+					Description: "Relative file path",
+					In:          "path",
+					Required:    true,
+				},
+			}
+			params = []*ParameterRef{&pref}
+		}
+	}
+
+	// responses
+	var responses map[string]*ResponseRef
+	{
+		desc := "File downloaded"
+		rref := ResponseRef{
+			Value: &Response{
+				Description: &desc,
+			},
+		}
+		responses = map[string]*ResponseRef{
+			"200": &rref,
+		}
+		if len(wildcards) > 0 {
+			desc = "File not found"
+			responses["404"] = &ResponseRef{
+				Value: &Response{
+					Description: &desc,
+				},
+			}
+		}
+	}
+
+	// swagger summary
+	var summary string
+	{
+		summary = fmt.Sprintf("Download %s", fs.FilePath)
+		for n, mdata := range fs.Meta {
+			if n == "swagger:summary" && len(mdata) > 0 {
+				summary = mdata[0]
+			}
+		}
+	}
+
+	// tag names
+	var tagNames []string
+	{
+		tagNames = openapi.TagNamesFromExpr(svc.Meta, fs.Meta)
+		if len(tagNames) == 0 {
+			// By default tag with service name
+			tagNames = []string{svc.Name()}
+		}
+	}
+
+	return &Operation{
+		OperationID:  fmt.Sprintf("%s#%s", svc.Name(), key),
+		Description:  fs.Description,
+		Summary:      summary,
+		Parameters:   params,
+		Responses:    responses,
+		Tags:         tagNames,
+		Security:     buildSecurityRequirements(api.Requirements),
+		Deprecated:   false,
+		ExternalDocs: openapi.DocsFromExpr(fs.Docs, fs.Meta),
+		Extensions:   openapi.ExtensionsFromExpr(fs.Meta),
 	}
 }
 
