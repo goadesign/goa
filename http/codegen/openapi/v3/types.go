@@ -167,9 +167,10 @@ func (sf *schemafier) schemafy(attr *expr.AttributeExpr) *openapi.Schema {
 		if ref, ok := sf.hashes[h]; ok {
 			s.Ref = ref
 		} else {
-			s.Ref = sf.uniquify(fmt.Sprintf("#/components/schemas/%s", codegen.Goify(t.Name(), true)))
+			typeName := codegen.Goify(t.Name(), true)
+			s.Ref = sf.uniquify(fmt.Sprintf("#/components/schemas/%s", typeName))
 			sf.hashes[h] = s.Ref
-			sf.schemas[s.Ref] = s
+			sf.schemas[typeName] = s
 		}
 	default:
 		panic(fmt.Sprintf("unknown type %T", t)) // bug

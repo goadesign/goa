@@ -1,0 +1,35 @@
+openapi: 3.0.3
+info:
+  title: ""
+  version: ""
+servers:
+- url: goa.design
+paths:
+  /:
+    post:
+      tags:
+      - testService
+      summary: testEndpoint testService
+      operationId: testService#testEndpoint
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: string
+              example: ""
+              minLength: 0
+              maxLength: 42
+            example: ""
+      responses:
+        "200":
+          description: ""
+          content:
+            "":
+              schema:
+                type: string
+                example: ""
+                minLength: 0
+                maxLength: 42
+              example: ""
+components: {}
