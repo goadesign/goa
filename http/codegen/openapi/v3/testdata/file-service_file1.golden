@@ -1,0 +1,27 @@
+openapi: 3.0.3
+info:
+  title: ""
+  version: ""
+servers:
+- url: localhost:80
+  description: Default server for test api
+paths:
+  /path1:
+    get:
+      tags:
+      - service-name
+      summary: Download filename
+      operationId: service-name#/path1
+      responses:
+        "200":
+          description: File downloaded
+  /path2:
+    get:
+      tags:
+      - user-tag
+      summary: Download filename
+      operationId: service-name#/path2
+      responses:
+        "200":
+          description: File downloaded
+components: {}

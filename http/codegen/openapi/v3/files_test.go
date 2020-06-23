@@ -28,19 +28,20 @@ func TestFiles(t *testing.T) {
 		Name string
 		DSL  func()
 	}{
-		// {"empty", testdata.EmptyDSL},
-		// {"file-service", testdata.FileServiceDSL},
-		//{"valid", testdata.SimpleDSL},
-		//{"multiple-services", testdata.MultipleServicesDSL},
-		//{"multiple-views", testdata.MultipleViewsDSL},
-		//{"explicit-view", testdata.ExplicitViewDSL},
-		//{"security", testdata.SecurityDSL},
-		//{"server-host-with-variables", testdata.ServerHostWithVariablesDSL},
-		//{"with-spaces", testdata.WithSpacesDSL},
-		//{"with-map", testdata.WithMapDSL},
-		//{"path-with-wildcards", testdata.PathWithWildcardDSL},
+		// TestSections
+		{"empty", testdata.EmptyDSL},
+		{"file-service", testdata.FileServiceDSL},
+		{"valid", testdata.SimpleDSL},
+		{"multiple-services", testdata.MultipleServicesDSL},
+		{"multiple-views", testdata.MultipleViewsDSL},
+		{"explicit-view", testdata.ExplicitViewDSL},
+		{"security", testdata.SecurityDSL},
+		{"server-host-with-variables", testdata.ServerHostWithVariablesDSL},
+		{"with-spaces", testdata.WithSpacesDSL},
+		{"with-map", testdata.WithMapDSL},
+		{"path-with-wildcards", testdata.PathWithWildcardDSL},
 		// TestEndpoints
-		//{"endpoint", testdata.ExtensionDSL},
+		{"endpoint", testdata.ExtensionDSL},
 		// TestValidations
 		{"string", testdata.StringValidationDSL},
 		{"integer", testdata.IntValidationDSL},

@@ -1,0 +1,40 @@
+openapi: 3.0.3
+info:
+  title: ""
+  version: ""
+servers:
+- url: goa.design
+paths:
+  /:
+    get:
+      tags:
+      - testService
+      summary: testEndpoint testService
+      operationId: testService#testEndpoint
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              example:
+                string: ""
+              $ref: '#/components/schemas/TestEndpointRequestBody'
+            example:
+              string: ""
+      responses:
+        "200":
+          description: ""
+          content:
+            "":
+              schema:
+                example:
+                  string: ""
+                $ref: '#/components/schemas/TestEndpointRequestBody'
+              example:
+                string: ""
+components:
+  schemas:
+    TestEndpointRequestBody:
+      example:
+        string: ""
+      $ref: '#/components/schemas/TestEndpointRequestBody'

@@ -1,0 +1,76 @@
+openapi: 3.0.3
+info:
+  title: ""
+  version: ""
+servers:
+- url: localhost:80
+  description: Default server for test api
+paths:
+  /:
+    post:
+      tags:
+      - test service
+      summary: test endpoint test service
+      operationId: test service#test endpoint
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              example:
+                string: ""
+              $ref: '#/components/schemas/TestEndpointRequestBody'
+            example:
+              string: ""
+      responses:
+        "200":
+          description: ""
+          content:
+            "":
+              schema:
+                example:
+                  bar:
+                  - string: ""
+                  - string: ""
+                  - string: ""
+                  - string: ""
+                  foo: ""
+                $ref: '#/components/schemas/TestEndpointOKResponseBody'
+              example:
+                bar:
+                - string: ""
+                - string: ""
+                - string: ""
+                - string: ""
+                foo: ""
+        "404":
+          description: ""
+          content:
+            "":
+              schema:
+                example:
+                  bar:
+                  - string: ""
+                  - string: ""
+                  foo: ""
+                $ref: '#/components/schemas/TestEndpointOKResponseBody'
+              example:
+                bar:
+                - string: ""
+                - string: ""
+                foo: ""
+components:
+  schemas:
+    TestEndpointOKResponseBody:
+      example:
+        bar:
+        - string: ""
+        - string: ""
+        - string: ""
+        - string: ""
+        foo: ""
+      $ref: '#/components/schemas/TestEndpointOKResponseBody'
+    TestEndpointRequestBody:
+      example:
+        string: ""
+      $ref: '#/components/schemas/TestEndpointRequestBody'

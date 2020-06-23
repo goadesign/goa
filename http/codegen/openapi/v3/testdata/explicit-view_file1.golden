@@ -1,0 +1,72 @@
+openapi: 3.0.3
+info:
+  title: ""
+  version: ""
+servers:
+- url: localhost:80
+  description: Default server for test api
+paths:
+  /:
+    get:
+      tags:
+      - testService
+      summary: testEndpointDefault testService
+      operationId: testService#testEndpointDefault
+      requestBody:
+        content:
+          application/json:
+            schema:
+              example: {}
+              $ref: '#/components/schemas/Empty'
+            example: {}
+      responses:
+        "204":
+          description: ""
+          content:
+            "":
+              schema:
+                example:
+                  int: 1
+                  string: ""
+                $ref: '#/components/schemas/TestEndpointDefaultResponseBody'
+              example:
+                int: 1
+                string: ""
+  /tiny:
+    get:
+      tags:
+      - testService
+      summary: testEndpointTiny testService
+      operationId: testService#testEndpointTiny
+      requestBody:
+        content:
+          application/json:
+            schema:
+              example: {}
+              $ref: '#/components/schemas/Empty'
+            example: {}
+      responses:
+        "204":
+          description: ""
+          content:
+            "":
+              schema:
+                example:
+                  string: ""
+                $ref: '#/components/schemas/TestEndpointTinyResponseBodyTiny'
+              example:
+                string: ""
+components:
+  schemas:
+    Empty:
+      example: {}
+      $ref: '#/components/schemas/Empty'
+    TestEndpointDefaultResponseBody:
+      example:
+        int: 1
+        string: ""
+      $ref: '#/components/schemas/TestEndpointDefaultResponseBody'
+    TestEndpointTinyResponseBodyTiny:
+      example:
+        string: ""
+      $ref: '#/components/schemas/TestEndpointTinyResponseBodyTiny'
