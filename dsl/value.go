@@ -5,6 +5,9 @@ import (
 	"goa.design/goa/expr"
 )
 
+// Val is an alias for expr.Val.
+type Val expr.Val
+
 // Value sets the example value.
 //
 // Value must appear in Example.
