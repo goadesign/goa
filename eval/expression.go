@@ -1,5 +1,7 @@
 package eval
 
+import "reflect"
+
 type (
 	// Expression built by the engine through the DSL functions.
 	Expression interface {
@@ -95,3 +97,21 @@ func (f DSLFunc) DSL() func() {
 
 // EvalName is the name is the qualified name of the expression.
 func (t TopExpr) EvalName() string { return string(t) }
+
+// ToExpressionSet is a convenience function that accepts a slice of expressions
+// and builds the corresponding ExpressionSet.
+func ToExpressionSet(slice interface{}) ExpressionSet {
+	if slice == nil {
+		return nil
+	}
+	s := reflect.ValueOf(slice)
+	if s.Kind() != reflect.Slice {
+		panic("ToExpressionSet() given a non-slice type") // bug
+	}
+	ret := make(ExpressionSet, s.Len())
+	for i := 0; i < s.Len(); i++ {
+		ret[i] = s.Index(i).Interface().(Expression)
+	}
+
+	return ret
+}
