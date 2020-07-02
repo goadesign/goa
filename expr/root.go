@@ -61,11 +61,7 @@ func (r *RootExpr) WalkSets(walk eval.SetWalker) {
 	walk(eval.ExpressionSet{r.API})
 
 	// Servers
-	servers := make(eval.ExpressionSet, len(r.API.Servers))
-	for i, s := range r.API.Servers {
-		servers[i] = s
-	}
-	walk(servers)
+	walk(eval.ToExpressionSet(r.API.Servers))
 
 	// User types
 	types := make(eval.ExpressionSet, len(r.Types))
@@ -82,14 +78,10 @@ func (r *RootExpr) WalkSets(walk eval.SetWalker) {
 	walk(mtypes)
 
 	// Services
-	services := make(eval.ExpressionSet, len(r.Services))
-	var methods eval.ExpressionSet
-	for i, s := range r.Services {
-		services[i] = s
-	}
-	walk(services)
+	walk(eval.ToExpressionSet(r.Services))
 
 	// Methods (must be done after services)
+	var methods eval.ExpressionSet
 	for _, s := range r.Services {
 		for _, m := range s.Methods {
 			methods = append(methods, m)
