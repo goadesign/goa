@@ -41,6 +41,7 @@ func exampleSvrMain(genpkg string, root *expr.RootExpr, svr *expr.ServerExpr) *c
 		{Path: "os/signal"},
 		{Path: "strings"},
 		{Path: "sync"},
+		{Path: "syscall"},
 		{Path: "time"},
 		codegen.GoaImport("middleware"),
 	}
@@ -225,7 +226,7 @@ func main() {
 	// that SIGINT and SIGTERM signals cause the services to stop gracefully.
 	go func() {
 		c := make(chan os.Signal, 1)
-		signal.Notify(c, os.Interrupt)
+		signal.Notify(c, syscall.SIGINT, syscall.SIGTERM)
 		errc <- fmt.Errorf("%s", <-c)
 	}()
 
