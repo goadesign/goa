@@ -74,9 +74,7 @@ func TestFiles(t *testing.T) {
 					if err := tmpl.Execute(&buf, s[0].Data); err != nil {
 						t.Fatalf("failed to render template: %s", err)
 					}
-					if err := validateSwagger(buf.Bytes()); err != nil {
-						t.Errorf("invalid swagger: %s", err)
-					}
+					validateSwagger(t, buf.Bytes())
 
 					golden := filepath.Join(goldenPath, fmt.Sprintf("%s_%s.golden", c.Name, tname))
 					if *update {
@@ -99,10 +97,12 @@ func TestFiles(t *testing.T) {
 	}
 }
 
-func validateSwagger(b []byte) error {
+func validateSwagger(t *testing.T, b []byte) {
 	swagger, err := openapi3.NewSwaggerLoader().LoadSwaggerFromData(b)
 	if err != nil {
 		err = swagger.Validate(context.Background())
 	}
-	return err
+	if err != nil {
+		t.Errorf("invalid spec: %s", err.Error())
+	}
 }

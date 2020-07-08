@@ -7,6 +7,25 @@ import (
 	"goa.design/goa/v3/expr"
 )
 
+func TestBuildBodyTypes(t *testing.T) {
+	cases := []struct {
+		Name          string
+		ServiceErrors []*expr.HTTPErrorExpr
+		Body          *expr.AttributeExpr
+		Responses     []*expr.HTTPResponseExpr
+		Errors        []*expr.HTTPErrorExpr
+		Streaming     bool
+	}{{
+		Name: "string body",
+		Body: &expr.AttributeExpr{Type: expr.String},
+	}}
+	for _, c := range cases {
+		t.Run(c.Name, func(t *testing.T) {
+
+		})
+	}
+}
+
 func TestHashAttribute(t *testing.T) {
 	var (
 		h1 = uint64(12943244719806607708)
