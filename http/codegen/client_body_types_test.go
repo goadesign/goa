@@ -594,10 +594,9 @@ type MethodResultTypeValidateResponseBody struct {
 	A *string ` + "`" + `form:"a,omitempty" json:"a,omitempty" xml:"a,omitempty"` + "`" + `
 }
 
-// NewMethodResultTypeValidateResultTypeNoContent builds a
-// "ServiceResultTypeValidate" service "MethodResultTypeValidate" endpoint
-// result from a HTTP "NoContent" response.
-func NewMethodResultTypeValidateResultTypeNoContent(body *MethodResultTypeValidateResponseBody) *serviceresulttypevalidate.ResultType {
+// NewMethodResultTypeValidateResultTypeOK builds a "ServiceResultTypeValidate"
+// service "MethodResultTypeValidate" endpoint result from a HTTP "OK" response.
+func NewMethodResultTypeValidateResultTypeOK(body *MethodResultTypeValidateResponseBody) *serviceresulttypevalidate.ResultType {
 	v := &serviceresulttypevalidate.ResultType{
 		A: body.A,
 	}

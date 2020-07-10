@@ -51,10 +51,10 @@ func TestOutputPath(t *testing.T) {
 	if o[1].Path != filepath.Join("gen", "http", "openapi.yaml") {
 		t.Errorf("invalid output path %#v", o[1].Path)
 	}
-	if o[2].Path != filepath.Join("gen", "http", "openapi_v3.json") {
+	if o[2].Path != filepath.Join("gen", "http", "openapi3.json") {
 		t.Errorf("invalid output path %#v", o[2].Path)
 	}
-	if o[3].Path != filepath.Join("gen", "http", "openapi_v3.yaml") {
+	if o[3].Path != filepath.Join("gen", "http", "openapi3.yaml") {
 		t.Errorf("invalid output path %#v", o[3].Path)
 	}
 }

@@ -1,7 +1,7 @@
 openapi: 3.0.3
 info:
-  title: ""
-  version: ""
+  title: Goa API
+  version: "1.0"
 servers:
 - url: localhost:80
   description: Default server for test api

@@ -58,14 +58,12 @@ func newSchemafier(rand *expr.Random) *schemafier {
 // detail is in turn indexed by method name. The details contain JSON schema
 // references and the actual JSON schemas are returned in the second result
 // value indexed by type name.
+//
+// NOTE: entries are nil when the corresponding type is Empty.
 func buildBodyTypes(api *expr.APIExpr) (map[string]map[string]*EndpointBodies, map[string]*openapi.Schema) {
 	bodies := make(map[string]map[string]*EndpointBodies)
 	sf := newSchemafier(api.Random())
 	for _, s := range api.HTTP.Services {
-		errors := make(map[int]*openapi.Schema)
-		for _, e := range s.HTTPErrors {
-			errors[e.Response.StatusCode] = sf.schemafy(e.Response.Body)
-		}
 		sbodies := make(map[string]*EndpointBodies, len(s.HTTPEndpoints))
 		for _, e := range s.HTTPEndpoints {
 			req := sf.schemafy(e.Body)
@@ -77,15 +75,20 @@ func buildBodyTypes(api *expr.APIExpr) (map[string]map[string]*EndpointBodies, m
 				} else {
 					note = string(sreq.Type)
 				}
-				if req.Description != "" {
-					req.Description += "\n"
+				if req == nil {
+					req = sreq
+					if req.Description != "" {
+						req.Description += "\n"
+					}
+					req.Description += "Streaming body."
+				} else {
+					if req.Description != "" {
+						req.Description += "\n"
+					}
+					req.Description += fmt.Sprintf("Streaming body: %s", note)
 				}
-				req.Description += fmt.Sprintf("Streaming body: %s", note)
 			}
 			res := make(map[int][]*openapi.Schema)
-			for s, er := range errors {
-				res[s] = append(res[s], er)
-			}
 			resps := e.Responses
 			for _, er := range e.HTTPErrors {
 				resps = append(resps, er.Response)
@@ -105,7 +108,7 @@ func buildBodyTypes(api *expr.APIExpr) (map[string]map[string]*EndpointBodies, m
 					body.Type = rt
 				}
 				js := sf.schemafy(body)
-				if rt, ok := resp.Body.Type.(*expr.ResultTypeExpr); ok {
+				if rt, ok := resp.Body.Type.(*expr.ResultTypeExpr); ok && js != nil {
 					if view == "" && rt.HasMultipleViews() {
 						// Dynamic views
 						if len(js.Description) > 0 {
@@ -124,6 +127,10 @@ func buildBodyTypes(api *expr.APIExpr) (map[string]map[string]*EndpointBodies, m
 }
 
 func (sf *schemafier) schemafy(attr *expr.AttributeExpr) *openapi.Schema {
+	if attr.Type == expr.Empty {
+		return nil
+	}
+
 	s := openapi.NewSchema()
 	var note string
 
@@ -171,11 +178,16 @@ func (sf *schemafier) schemafy(attr *expr.AttributeExpr) *openapi.Schema {
 		if ref, ok := sf.hashes[h]; ok {
 			s.Ref = ref
 		} else {
-			typeName := sf.uniquify(codegen.Goify(t.Name(), true))
+			name := t.Name()
+			if n, ok := t.Attribute().Meta["name:original"]; ok {
+				name = n[0]
+			}
+			typeName := sf.uniquify(codegen.Goify(name, true))
 			s.Ref = toRef(typeName)
 			sf.hashes[h] = s.Ref
 			sf.schemas[typeName] = sf.schemafy(t.Attribute())
 		}
+		return s // All other schema properties are set in the reference
 	default:
 		panic(fmt.Sprintf("unknown type %T", t)) // bug
 	}

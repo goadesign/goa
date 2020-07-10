@@ -85,12 +85,33 @@ func TestSections(t *testing.T) {
 						t.Fatalf("failed to read golden file: %s", err)
 					}
 					if !bytes.Equal(buf.Bytes(), want) {
-						t.Errorf("result does not match the golden file, diff:\n%s\nGot bytes:\n%x\nExpected bytes:\n%x\n", codegen.Diff(t, buf.String(), string(want)), buf.Bytes(), want)
+						var left, right string
+						if filepath.Ext(o.Path) == ".json" {
+							left = prettifyJSON(t, buf.Bytes())
+							right = prettifyJSON(t, want)
+						} else {
+							left = buf.String()
+							right = string(want)
+						}
+						diff := codegen.Diff(t, left, right)
+						t.Errorf("result does not match the golden file, diff:\n%s\n", diff)
 					}
 				})
 			}
 		})
 	}
+}
+
+func prettifyJSON(t *testing.T, b []byte) string {
+	var v interface{}
+	if err := json.Unmarshal(b, &v); err != nil {
+		t.Errorf("failed to unmarshal swagger JSON: %s", err)
+	}
+	p, err := json.MarshalIndent(v, "", "    ")
+	if err != nil {
+		t.Errorf("failed to marshal swagger JSON: %s", err)
+	}
+	return string(p)
 }
 
 func TestValidations(t *testing.T) {

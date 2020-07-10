@@ -36,8 +36,8 @@ paths:
       produces:
       - application/vnd.custom+json
       responses:
-        "204":
-          description: No Content response.
+        "200":
+          description: OK response.
           schema:
             $ref: '#/definitions/TestServiceTestEndpointTinyResponseBody'
       schemes:

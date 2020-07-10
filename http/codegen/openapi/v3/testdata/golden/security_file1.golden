@@ -1,7 +1,7 @@
 openapi: 3.0.3
 info:
-  title: ""
-  version: ""
+  title: Goa API
+  version: "1.0"
 servers:
 - url: localhost:80
   description: Default server for test api
@@ -44,21 +44,11 @@ paths:
         schema:
           type: string
         example: Basic Z29hOmRlc2lnbg==
-      requestBody:
-        content:
-          application/json:
-            schema:
-              example: {}
-              $ref: '#/components/schemas/Empty'
-            example: {}
       responses:
-        "200":
+        "204":
           description: ""
           content:
             "":
-              schema:
-                example: {}
-                $ref: '#/components/schemas/Empty'
               example: {}
       security:
       - api_key_query_k: []
@@ -91,21 +81,11 @@ paths:
           type: string
           example: Quia velit assumenda fuga est sint.
         example: Quo qui molestiae iure.
-      requestBody:
-        content:
-          application/json:
-            schema:
-              example: {}
-              $ref: '#/components/schemas/Empty'
-            example: {}
       responses:
-        "200":
+        "204":
           description: ""
           content:
             "":
-              schema:
-                example: {}
-                $ref: '#/components/schemas/Empty'
               example: {}
       security:
       - api_key_header_Authorization: []
@@ -113,10 +93,6 @@ paths:
         - api:read
         - api:write
 components:
-  schemas:
-    Empty:
-      example: {}
-      $ref: '#/components/schemas/Empty'
   securitySchemes:
     api_key_header_Authorization:
       type: apiKey
@@ -135,7 +111,7 @@ components:
     jwt_header_X-Authorization:
       type: http
       description: Secures endpoint by requiring a valid JWT token retrieved via the signin endpoint. Supports scopes "api:read" and "api:write".
-      scheme: Bearer
+      scheme: bearer
     oauth2_header_Token:
       type: oauth2
       description: Secures endpoint by requiring a valid OAuth2 token retrieved via the signin endpoint. Supports scopes "api:read" and "api:write".

@@ -1,7 +1,7 @@
 openapi: 3.0.3
 info:
-  title: ""
-  version: ""
+  title: Goa API
+  version: "1.0"
 servers:
 - url: localhost:80
   description: Default server for test api
@@ -21,24 +21,10 @@ paths:
           example: 9176544974339886224
           format: int64
         example: 1933576090881074823
-      requestBody:
-        content:
-          application/json:
-            schema:
-              example: {}
-              $ref: '#/components/schemas/Empty'
-            example: {}
       responses:
-        "200":
+        "204":
           description: ""
           content:
             "":
-              schema:
-                example: {}
-                $ref: '#/components/schemas/Empty'
               example: {}
-components:
-  schemas:
-    Empty:
-      example: {}
-      $ref: '#/components/schemas/Empty'
+components: {}

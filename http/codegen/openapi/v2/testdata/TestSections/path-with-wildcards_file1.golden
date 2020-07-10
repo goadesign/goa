@@ -24,7 +24,7 @@ paths:
         required: true
         type: integer
       responses:
-        "200":
-          description: OK response.
+        "204":
+          description: No Content response.
       schemes:
       - http

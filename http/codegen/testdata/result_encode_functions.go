@@ -585,7 +585,7 @@ func EncodeMethodBodyStringResponse(encoder func(context.Context, http.ResponseW
 		res := v.(*servicebodystring.MethodBodyStringResult)
 		enc := encoder(ctx, w)
 		body := NewMethodBodyStringResponseBody(res)
-		w.WriteHeader(http.StatusNoContent)
+		w.WriteHeader(http.StatusOK)
 		return enc.Encode(body)
 	}
 }
@@ -598,7 +598,7 @@ func EncodeMethodBodyObjectResponse(encoder func(context.Context, http.ResponseW
 		res := v.(*servicebodyobject.MethodBodyObjectResult)
 		enc := encoder(ctx, w)
 		body := NewMethodBodyObjectResponseBody(res)
-		w.WriteHeader(http.StatusNoContent)
+		w.WriteHeader(http.StatusOK)
 		return enc.Encode(body)
 	}
 }
@@ -611,7 +611,7 @@ func EncodeMethodBodyUserResponse(encoder func(context.Context, http.ResponseWri
 		res := v.(*servicebodyuser.ResultType)
 		enc := encoder(ctx, w)
 		body := NewMethodBodyUserResponseBody(res)
-		w.WriteHeader(http.StatusNoContent)
+		w.WriteHeader(http.StatusOK)
 		return enc.Encode(body)
 	}
 }
@@ -697,7 +697,7 @@ func EncodeMethodBodyArrayStringResponse(encoder func(context.Context, http.Resp
 		res := v.(*servicebodyarraystring.MethodBodyArrayStringResult)
 		enc := encoder(ctx, w)
 		body := NewMethodBodyArrayStringResponseBody(res)
-		w.WriteHeader(http.StatusNoContent)
+		w.WriteHeader(http.StatusOK)
 		return enc.Encode(body)
 	}
 }
@@ -710,7 +710,7 @@ func EncodeMethodBodyArrayUserResponse(encoder func(context.Context, http.Respon
 		res := v.(*servicebodyarrayuser.MethodBodyArrayUserResult)
 		enc := encoder(ctx, w)
 		body := NewMethodBodyArrayUserResponseBody(res)
-		w.WriteHeader(http.StatusNoContent)
+		w.WriteHeader(http.StatusOK)
 		return enc.Encode(body)
 	}
 }
@@ -776,7 +776,7 @@ func EncodeMethodExplicitContentTypeResultResponse(encoder func(context.Context,
 		ctx = context.WithValue(ctx, goahttp.ContentTypeKey, "application/custom+json")
 		enc := encoder(ctx, w)
 		body := NewMethodExplicitContentTypeResultResponseBody(res.Projected)
-		w.WriteHeader(http.StatusNoContent)
+		w.WriteHeader(http.StatusOK)
 		return enc.Encode(body)
 	}
 }
@@ -805,7 +805,7 @@ func EncodeMethodBodyPrimitiveStringResponse(encoder func(context.Context, http.
 		res := v.(string)
 		enc := encoder(ctx, w)
 		body := res
-		w.WriteHeader(http.StatusNoContent)
+		w.WriteHeader(http.StatusOK)
 		return enc.Encode(body)
 	}
 }
@@ -818,7 +818,7 @@ func EncodeMethodBodyPrimitiveBoolResponse(encoder func(context.Context, http.Re
 		res := v.(bool)
 		enc := encoder(ctx, w)
 		body := res
-		w.WriteHeader(http.StatusNoContent)
+		w.WriteHeader(http.StatusOK)
 		return enc.Encode(body)
 	}
 }
@@ -832,7 +832,7 @@ func EncodeMethodBodyPrimitiveArrayStringResponse(encoder func(context.Context, 
 		res := v.([]string)
 		enc := encoder(ctx, w)
 		body := res
-		w.WriteHeader(http.StatusNoContent)
+		w.WriteHeader(http.StatusOK)
 		return enc.Encode(body)
 	}
 }
@@ -846,7 +846,7 @@ func EncodeMethodBodyPrimitiveArrayBoolResponse(encoder func(context.Context, ht
 		res := v.([]bool)
 		enc := encoder(ctx, w)
 		body := res
-		w.WriteHeader(http.StatusNoContent)
+		w.WriteHeader(http.StatusOK)
 		return enc.Encode(body)
 	}
 }
@@ -860,7 +860,7 @@ func EncodeMethodBodyPrimitiveArrayUserResponse(encoder func(context.Context, ht
 		res := v.([]*servicebodyprimitivearrayuser.ResultType)
 		enc := encoder(ctx, w)
 		body := NewMethodBodyPrimitiveArrayUserResponseBody(res)
-		w.WriteHeader(http.StatusNoContent)
+		w.WriteHeader(http.StatusOK)
 		return enc.Encode(body)
 	}
 }

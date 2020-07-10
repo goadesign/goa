@@ -3,6 +3,7 @@ package openapiv3_test
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"flag"
 	"fmt"
 	"io/ioutil"
@@ -29,7 +30,6 @@ func TestFiles(t *testing.T) {
 		DSL  func()
 	}{
 		// TestSections
-		{"empty", testdata.EmptyDSL},
 		{"file-service", testdata.FileServiceDSL},
 		{"valid", testdata.SimpleDSL},
 		{"multiple-services", testdata.MultipleServicesDSL},
@@ -89,7 +89,16 @@ func TestFiles(t *testing.T) {
 						t.Fatalf("failed to read golden file: %s", err)
 					}
 					if !bytes.Equal(buf.Bytes(), want) {
-						t.Errorf("result does not match the golden file, diff:\n%s\n", codegen.Diff(t, buf.String(), string(want)))
+						var left, right string
+						if filepath.Ext(o.Path) == ".json" {
+							left = prettifyJSON(t, buf.Bytes())
+							right = prettifyJSON(t, want)
+						} else {
+							left = buf.String()
+							right = string(want)
+						}
+						diff := codegen.Diff(t, left, right)
+						t.Errorf("result does not match the golden file, got vs. expected:\n%s\n", diff)
 					}
 				})
 			}
@@ -97,9 +106,21 @@ func TestFiles(t *testing.T) {
 	}
 }
 
+func prettifyJSON(t *testing.T, b []byte) string {
+	var v interface{}
+	if err := json.Unmarshal(b, &v); err != nil {
+		t.Errorf("failed to unmarshal swagger JSON: %s", err)
+	}
+	p, err := json.MarshalIndent(v, "", "    ")
+	if err != nil {
+		t.Errorf("failed to marshal swagger JSON: %s", err)
+	}
+	return string(p)
+}
+
 func validateSwagger(t *testing.T, b []byte) {
 	swagger, err := openapi3.NewSwaggerLoader().LoadSwaggerFromData(b)
-	if err != nil {
+	if err == nil {
 		err = swagger.Validate(context.Background())
 	}
 	if err != nil {

@@ -1,7 +1,7 @@
 openapi: 3.0.3
 info:
-  title: ""
-  version: ""
+  title: Goa API
+  version: "1.0"
 servers:
 - url: localhost:80
   description: Default server for test api
@@ -12,13 +12,6 @@ paths:
       - testService
       summary: testEndpointDefault testService
       operationId: testService#testEndpointDefault
-      requestBody:
-        content:
-          application/json:
-            schema:
-              example: {}
-              $ref: '#/components/schemas/Empty'
-            example: {}
       responses:
         "200":
           description: ""
@@ -26,10 +19,7 @@ paths:
             application/custom+json:
               schema:
                 description: 'Response body may alternatively be #/components/schemas/TestEndpointDefaultResponseBodyTiny'
-                example:
-                  int: 1
-                  string: ""
-                $ref: '#/components/schemas/TestEndpointDefaultResponseBody'
+                $ref: '#/components/schemas/Result'
               example:
                 int: 1
                 string: ""
@@ -39,39 +29,38 @@ paths:
       - testService
       summary: testEndpointTiny testService
       operationId: testService#testEndpointTiny
-      requestBody:
-        content:
-          application/json:
-            schema:
-              example: {}
-              $ref: '#/components/schemas/Empty'
-            example: {}
       responses:
-        "204":
+        "200":
           description: ""
           content:
             application/vnd.custom+json:
               schema:
                 description: 'Response body may alternatively be #/components/schemas/TestEndpointDefaultResponseBodyTiny'
-                example:
-                  int: 1
-                  string: ""
-                $ref: '#/components/schemas/TestEndpointDefaultResponseBody'
+                $ref: '#/components/schemas/Result'
               example:
                 int: 1
                 string: ""
 components:
   schemas:
-    Empty:
-      example: {}
-      $ref: '#/components/schemas/Empty'
-    TestEndpointDefaultResponseBody:
-      description: 'Response body may alternatively be #/components/schemas/TestEndpointDefaultResponseBodyTiny'
+    Result:
+      type: object
+      properties:
+        int:
+          type: integer
+          example: 1
+          format: int64
+        string:
+          type: string
+          example: ""
       example:
         int: 1
         string: ""
-      $ref: '#/components/schemas/TestEndpointDefaultResponseBody'
     TestEndpointDefaultResponseBodyTiny:
+      type: object
+      properties:
+        string:
+          type: string
+          example: ""
+      description: TestEndpointDefaultResponseBody result type (tiny view)
       example:
         string: ""
-      $ref: '#/components/schemas/TestEndpointDefaultResponseBodyTiny'

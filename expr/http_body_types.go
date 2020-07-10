@@ -91,7 +91,7 @@ func httpRequestBody(a *HTTPEndpointExpr) *AttributeExpr {
 		return &AttributeExpr{Type: Empty}
 	}
 
-	// 2. Remove header and param attributes
+	// 2. Remove header, param and cookies attributes
 	body := NewMappedAttributeExpr(payload)
 	removeAttributes(body, headers)
 	removeAttributes(body, cookies)
@@ -225,6 +225,13 @@ func buildHTTPResponseBody(name string, attr *AttributeExpr, resp *HTTPResponseE
 		TypeName:      name,
 		UID:           concat(svc.Name(), "#", name),
 	}
+
+	// Remember original type name for example to generate friendly OpenAPI
+	// specs.
+	if t, ok := attr.Type.(UserType); ok {
+		userType.AttributeExpr.AddMeta("name:original", t.Name())
+	}
+
 	appendSuffix(userType.Attribute().Type, suffix)
 	rt, isrt := attr.Type.(*ResultTypeExpr)
 	if !isrt {

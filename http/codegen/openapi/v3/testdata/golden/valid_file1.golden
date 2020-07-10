@@ -1,7 +1,7 @@
 openapi: 3.0.3
 info:
-  title: ""
-  version: ""
+  title: Goa API
+  version: "1.0"
 servers:
 - url: goa.design
 paths:
@@ -16,8 +16,6 @@ paths:
         content:
           application/json:
             schema:
-              example:
-                string: ""
               $ref: '#/components/schemas/TestEndpointRequestBody'
             example:
               string: ""
@@ -27,14 +25,16 @@ paths:
           content:
             "":
               schema:
-                example:
-                  string: ""
                 $ref: '#/components/schemas/TestEndpointRequestBody'
               example:
                 string: ""
 components:
   schemas:
     TestEndpointRequestBody:
+      type: object
+      properties:
+        string:
+          type: string
+          example: ""
       example:
         string: ""
-      $ref: '#/components/schemas/TestEndpointRequestBody'

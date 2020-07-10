@@ -44,11 +44,19 @@ func New(root *expr.RootExpr) *OpenAPI {
 
 // buildInfo builds the OpenAPI Info object.
 func buildInfo(api *expr.APIExpr) *Info {
+	ver := api.Version
+	if ver == "" {
+		ver = "1.0" // cannot be empty as per OpenAPI spec
+	}
+	title := api.Title
+	if title == "" {
+		title = "Goa API" // cannot be empty as per OpenAPI spec
+	}
 	info := &Info{
-		Title:          api.Title,
+		Title:          title,
 		Description:    api.Description,
 		TermsOfService: api.TermsOfService,
-		Version:        api.Version,
+		Version:        ver,
 	}
 	if c := api.Contact; c != nil {
 		info.Contact = &Contact{
@@ -186,8 +194,8 @@ func buildOperation(key string, r *expr.RouteExpr, bodies *EndpointBodies, rand 
 	}
 
 	// request body
-	var requestBody *RequestBody
-	{
+	var requestBody *RequestBodyRef
+	if e.Body.Type != expr.Empty {
 		ct := "application/json" // TBD: need a way to specify method media type in design...
 		if e.MultipartRequest {
 			ct = "multipart/form-data"
@@ -196,12 +204,12 @@ func buildOperation(key string, r *expr.RouteExpr, bodies *EndpointBodies, rand 
 			Schema:  bodies.RequestBody,
 			Example: e.Body.Example(rand),
 		}
-		requestBody = &RequestBody{
+		requestBody = &RequestBodyRef{Value: &RequestBody{
 			Description: e.Body.Description,
 			Required:    e.Body.Type != expr.Empty,
 			Content:     map[string]*MediaType{ct: mt},
 			Extensions:  openapi.ExtensionsFromExpr(e.Body.Meta),
-		}
+		}}
 	}
 
 	// parameters
@@ -254,7 +262,7 @@ func buildOperation(key string, r *expr.RouteExpr, bodies *EndpointBodies, rand 
 		Description:  e.Description(),
 		OperationID:  opID,
 		Parameters:   params,
-		RequestBody:  &RequestBodyRef{Value: requestBody},
+		RequestBody:  requestBody,
 		Responses:    responses,
 		Security:     buildSecurityRequirements(e.Requirements),
 		Deprecated:   false,
@@ -439,7 +447,7 @@ func buildSecurityScheme(se *expr.SchemeExpr) *SecurityScheme {
 	case expr.JWTKind:
 		scheme = &SecurityScheme{
 			Type:        "http",
-			Scheme:      "Bearer",
+			Scheme:      "bearer",
 			Description: se.Description,
 			Extensions:  openapi.ExtensionsFromExpr(se.Meta),
 		}

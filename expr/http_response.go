@@ -281,6 +281,10 @@ func (r *HTTPResponseExpr) Finalize(a *HTTPEndpointExpr, svcAtt *AttributeExpr) 
 					r.Body.Validation.AddRequired(n)
 				}
 			}
+			// Remember original name for example to generate friendlier OpenAPI specs.
+			if t, ok := r.Body.Type.(UserType); ok {
+				t.Attribute().AddMeta("name:original", t.Name())
+			}
 			// Wrap object with user type to simplify response rendering code.
 			r.Body.Type = &UserTypeExpr{
 				AttributeExpr: DupAtt(r.Body),

@@ -48,25 +48,25 @@ func TestBuildBodyTypes(t *testing.T) {
 		Name: "string_response_body",
 		DSL:  dsls.StringResponseBodyDSL(svcName, "string_response_body"),
 
-		ExpectedType:          typ{"object", nil},
+		ExpectedType:          typ{"", nil},
 		ExpectedResponseTypes: rt{200: {"string", nil}},
 	}, {
 		Name: "object_response_body",
 		DSL:  dsls.ObjectResponseBodyDSL(svcName, "object_response_body"),
 
-		ExpectedType:          typ{"object", nil},
+		ExpectedType:          typ{"", nil},
 		ExpectedResponseTypes: rt{200: {"", nil}},
 	}, {
 		Name: "string_error_response",
 		DSL:  dsls.StringErrorResponseBodyDSL(svcName, "string_error_response"),
 
-		ExpectedType:          typ{"object", nil},
+		ExpectedType:          typ{"", nil},
 		ExpectedResponseTypes: rt{204: {"", nil}, 400: {"", nil}},
 	}, {
 		Name: "object_error_response",
 		DSL:  dsls.ObjectErrorResponseBodyDSL(svcName, "object_error_response"),
 
-		ExpectedType:          typ{"object", nil},
+		ExpectedType:          typ{"", nil},
 		ExpectedResponseTypes: rt{204: {"", nil}, 400: {"", nil}},
 	}}
 
@@ -87,20 +87,17 @@ func TestBuildBodyTypes(t *testing.T) {
 				return
 			}
 			requestBody := met.RequestBody
-			if requestBody.Ref != "" {
+			if requestBody != nil && requestBody.Ref != "" {
 				requestBody = schemas[nameFromRef(requestBody.Ref)]
 			}
-			var responseBodies []*openapi.Schema
 			for s, r := range met.ResponseBodies {
 				if len(r) != 1 {
 					t.Errorf("got %d response bodies for %d, expected 1", len(r), s)
 					return
 				}
-				rb := r[0]
-				if rb.Ref != "" {
-					rb = schemas[rb.Ref]
+				if r[0] != nil && r[0].Ref != "" {
+					r[0] = schemas[r[0].Ref]
 				}
-				responseBodies = append(responseBodies, rb)
 			}
 
 			matchesSchema(t, "request", requestBody, c.ExpectedType)
@@ -123,6 +120,12 @@ func matchesSchema(t *testing.T, ctx string, s *openapi.Schema, tt typ) {
 	matchesSchemaWithPrefix(t, ctx, s, tt, "")
 }
 func matchesSchemaWithPrefix(t *testing.T, ctx string, s *openapi.Schema, tt typ, prefix string) {
+	if s == nil {
+		if tt.Type != "" {
+			t.Errorf("%s: %sgot type Empty, expected %q", ctx, prefix, tt.Type)
+		}
+		return
+	}
 	if tt.Type != string(s.Type) {
 		t.Errorf("%s: %sgot type %q, expected %q", ctx, prefix, s.Type, tt.Type)
 	}

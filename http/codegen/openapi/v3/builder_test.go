@@ -40,10 +40,17 @@ func TestBuildInfo(t *testing.T) {
 		ContactURL:     contactURL,
 		LicenseName:    licenseName,
 		LicenseURL:     licenseURL,
+	}, {
+		Name:  "empty version",
+		Title: title,
+	}, {
+		Name:    "empty title",
+		Version: version,
 	}}
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
 			api := &expr.APIExpr{
+				Name:           c.Name,
 				Title:          c.Title,
 				Description:    c.Description,
 				TermsOfService: c.TermsOfService,
@@ -54,17 +61,28 @@ func TestBuildInfo(t *testing.T) {
 
 			info := buildInfo(api)
 
-			if info.Title != c.Title {
-				t.Errorf("go API title %q, expected %q", info.Title, c.Title)
+			expected := c.Title
+			if api.Title == "" {
+				expected = "Goa API"
 			}
+			if info.Title != expected {
+				t.Errorf("got API title %q, expected %q", info.Title, expected)
+			}
+
 			if info.Description != c.Description {
-				t.Errorf("go API description %q, expected %q", info.Description, c.Description)
+				t.Errorf("got API description %q, expected %q", info.Description, c.Description)
 			}
+
 			if info.TermsOfService != c.TermsOfService {
-				t.Errorf("go API terms of service %q, expected %q", info.TermsOfService, c.TermsOfService)
+				t.Errorf("got API terms of service %q, expected %q", info.TermsOfService, c.TermsOfService)
 			}
-			if info.Version != c.Version {
-				t.Errorf("go API version %q, expected %q", info.Version, c.Version)
+
+			expectedVer := c.Version
+			if api.Version == "" {
+				expectedVer = "1.0"
+			}
+			if info.Version != expectedVer {
+				t.Errorf("got API version %q, expected %q", info.Version, expectedVer)
 			}
 		})
 	}
