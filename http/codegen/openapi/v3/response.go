@@ -1,15 +1,11 @@
 package openapiv3
 
 import (
-	"fmt"
-
 	"goa.design/goa/v3/expr"
 	"goa.design/goa/v3/http/codegen/openapi"
 )
 
 func responseFromExpr(r *expr.HTTPResponseExpr, bodies map[int][]*openapi.Schema, rand *expr.Random) *Response {
-	fmt.Printf("%#v\n", bodies)
-	fmt.Printf("%#v\n", r)
 	ct := r.ContentType
 	rt, ok := r.Body.Type.(*expr.ResultTypeExpr)
 	if ok && ct == "" {

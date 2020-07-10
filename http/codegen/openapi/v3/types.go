@@ -57,7 +57,7 @@ func newSchemafier(rand *expr.Random) *schemafier {
 // The result is a map of method details indexed by service name. Each method
 // detail is in turn indexed by method name. The details contain JSON schema
 // references and the actual JSON schemas are returned in the second result
-// value indexed by reference name.
+// value indexed by type name.
 func buildBodyTypes(api *expr.APIExpr) (map[string]map[string]*EndpointBodies, map[string]*openapi.Schema) {
 	bodies := make(map[string]map[string]*EndpointBodies)
 	sf := newSchemafier(api.Random())
@@ -83,10 +83,14 @@ func buildBodyTypes(api *expr.APIExpr) (map[string]map[string]*EndpointBodies, m
 				req.Description += fmt.Sprintf("Streaming body: %s", note)
 			}
 			res := make(map[int][]*openapi.Schema)
-			for c, er := range errors {
-				res[c] = []*openapi.Schema{er}
+			for s, er := range errors {
+				res[s] = append(res[s], er)
 			}
-			for _, resp := range e.Responses {
+			resps := e.Responses
+			for _, er := range e.HTTPErrors {
+				resps = append(resps, er.Response)
+			}
+			for _, resp := range resps {
 				var view string
 				if vs, ok := resp.Body.Meta["view"]; ok {
 					view = vs[0]
@@ -167,10 +171,10 @@ func (sf *schemafier) schemafy(attr *expr.AttributeExpr) *openapi.Schema {
 		if ref, ok := sf.hashes[h]; ok {
 			s.Ref = ref
 		} else {
-			typeName := codegen.Goify(t.Name(), true)
-			s.Ref = sf.uniquify(fmt.Sprintf("#/components/schemas/%s", typeName))
+			typeName := sf.uniquify(codegen.Goify(t.Name(), true))
+			s.Ref = toRef(typeName)
 			sf.hashes[h] = s.Ref
-			sf.schemas[typeName] = s
+			sf.schemas[typeName] = sf.schemafy(t.Attribute())
 		}
 	default:
 		panic(fmt.Sprintf("unknown type %T", t)) // bug
@@ -257,6 +261,12 @@ func (sf *schemafier) viewsNote(rt *expr.ResultTypeExpr) string {
 		alts = alts[:len(alts)-1]
 	}
 	return "Response body may alternatively be " + oneof + strings.Join(alts, ", ") + last
+}
+
+// toRef creates a relative JSON Schema reference from a type name that points
+// to the corresponding definition in the OpenAPI "components" field.
+func toRef(n string) string {
+	return fmt.Sprintf("#/components/schemas/%s", n)
 }
 
 // toStringMap converts map[interface{}]interface{} to a map[string]interface{}

@@ -29,11 +29,11 @@ func Files(root *expr.RootExpr) ([]*codegen.File, error) {
 
 	return []*codegen.File{
 		{
-			Path:             filepath.Join(codegen.Gendir, "http", "openapi.json"),
+			Path:             filepath.Join(codegen.Gendir, "http", "openapi3.json"),
 			SectionTemplates: []*codegen.SectionTemplate{jsonSection},
 		},
 		{
-			Path:             filepath.Join(codegen.Gendir, "http", "openapi.yaml"),
+			Path:             filepath.Join(codegen.Gendir, "http", "openapi3.yaml"),
 			SectionTemplates: []*codegen.SectionTemplate{yamlSection},
 		},
 	}, nil

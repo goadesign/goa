@@ -22,7 +22,7 @@ var update = flag.Bool("update", false, "update .golden files")
 
 func TestFiles(t *testing.T) {
 	var (
-		goldenPath = filepath.Join("testdata")
+		goldenPath = filepath.Join("testdata", "golden")
 	)
 	cases := []struct {
 		Name string
@@ -89,7 +89,7 @@ func TestFiles(t *testing.T) {
 						t.Fatalf("failed to read golden file: %s", err)
 					}
 					if !bytes.Equal(buf.Bytes(), want) {
-						t.Errorf("result does not match the golden file, diff:\n%s\nGot bytes:\n%x\nExpected bytes:\n%x\n", codegen.Diff(t, buf.String(), string(want)), buf.Bytes(), want)
+						t.Errorf("result does not match the golden file, diff:\n%s\n", codegen.Diff(t, buf.String(), string(want)))
 					}
 				})
 			}

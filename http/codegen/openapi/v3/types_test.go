@@ -2,27 +2,134 @@ package openapiv3
 
 import (
 	"hash/fnv"
+	"strings"
 	"testing"
 
+	"goa.design/goa/v3/codegen"
 	"goa.design/goa/v3/expr"
+	"goa.design/goa/v3/http/codegen/openapi"
+	"goa.design/goa/v3/http/codegen/openapi/v3/testdata/dsls"
 )
 
+// describes a type for comparison in tests.
+type typ struct {
+	Type  string
+	Props mtyp
+}
+
+// convenience
+type mtyp map[string]typ
+
+// types mapped by response code.
+type rt map[int]typ
+
 func TestBuildBodyTypes(t *testing.T) {
+	const svcName = "test service"
+
 	cases := []struct {
-		Name          string
-		ServiceErrors []*expr.HTTPErrorExpr
-		Body          *expr.AttributeExpr
-		Responses     []*expr.HTTPResponseExpr
-		Errors        []*expr.HTTPErrorExpr
-		Streaming     bool
+		Name string
+		DSL  func()
+
+		ExpectedType          typ
+		ExpectedResponseTypes rt
 	}{{
-		Name: "string body",
-		Body: &expr.AttributeExpr{Type: expr.String},
+		Name: "string_body",
+		DSL:  dsls.StringBodyDSL(svcName, "string_body"),
+
+		ExpectedType:          typ{"string", nil},
+		ExpectedResponseTypes: rt{204: {"", nil}},
+	}, {
+		Name: "object_body",
+		DSL:  dsls.ObjectBodyDSL(svcName, "object_body"),
+
+		ExpectedType:          typ{"object", mtyp{"name": {"string", nil}, "age": {"integer", nil}}},
+		ExpectedResponseTypes: rt{204: {"", nil}},
+	}, {
+		Name: "string_response_body",
+		DSL:  dsls.StringResponseBodyDSL(svcName, "string_response_body"),
+
+		ExpectedType:          typ{"object", nil},
+		ExpectedResponseTypes: rt{200: {"string", nil}},
+	}, {
+		Name: "object_response_body",
+		DSL:  dsls.ObjectResponseBodyDSL(svcName, "object_response_body"),
+
+		ExpectedType:          typ{"object", nil},
+		ExpectedResponseTypes: rt{200: {"", nil}},
+	}, {
+		Name: "string_error_response",
+		DSL:  dsls.StringErrorResponseBodyDSL(svcName, "string_error_response"),
+
+		ExpectedType:          typ{"object", nil},
+		ExpectedResponseTypes: rt{204: {"", nil}, 400: {"", nil}},
+	}, {
+		Name: "object_error_response",
+		DSL:  dsls.ObjectErrorResponseBodyDSL(svcName, "object_error_response"),
+
+		ExpectedType:          typ{"object", nil},
+		ExpectedResponseTypes: rt{204: {"", nil}, 400: {"", nil}},
 	}}
+
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
+			api := codegen.RunDSL(t, c.DSL).API
 
+			bodies, schemas := buildBodyTypes(api)
+
+			svc, ok := bodies[svcName]
+			if !ok {
+				t.Errorf("bodies does not contain details for service %q", svcName)
+				return
+			}
+			met, ok := svc[c.Name]
+			if !ok {
+				t.Errorf("bodies does not contain details for method %q", c.Name)
+				return
+			}
+			requestBody := met.RequestBody
+			if requestBody.Ref != "" {
+				requestBody = schemas[nameFromRef(requestBody.Ref)]
+			}
+			var responseBodies []*openapi.Schema
+			for s, r := range met.ResponseBodies {
+				if len(r) != 1 {
+					t.Errorf("got %d response bodies for %d, expected 1", len(r), s)
+					return
+				}
+				rb := r[0]
+				if rb.Ref != "" {
+					rb = schemas[rb.Ref]
+				}
+				responseBodies = append(responseBodies, rb)
+			}
+
+			matchesSchema(t, "request", requestBody, c.ExpectedType)
+			if len(c.ExpectedResponseTypes) != len(met.ResponseBodies) {
+				t.Errorf("got %d response body(ies), expected %d", len(met.ResponseBodies), len(c.ExpectedResponseTypes))
+				return
+			}
+			for s, r := range c.ExpectedResponseTypes {
+				if len(met.ResponseBodies[s]) != 1 {
+					t.Errorf("got %d response bodies for code %d, expected 1", len(met.ResponseBodies[s]), s)
+					return
+				}
+				matchesSchema(t, "response", met.ResponseBodies[s][0], r)
+			}
 		})
+	}
+}
+
+func matchesSchema(t *testing.T, ctx string, s *openapi.Schema, tt typ) {
+	matchesSchemaWithPrefix(t, ctx, s, tt, "")
+}
+func matchesSchemaWithPrefix(t *testing.T, ctx string, s *openapi.Schema, tt typ, prefix string) {
+	if tt.Type != string(s.Type) {
+		t.Errorf("%s: %sgot type %q, expected %q", ctx, prefix, s.Type, tt.Type)
+	}
+	if tt.Type == "object" {
+		for n, v := range s.Properties {
+			matchesSchemaWithPrefix(t, ctx, v, tt.Props[n], n+": ")
+		}
 	}
 }
 
@@ -118,4 +225,11 @@ func newRT(id string, att *expr.AttributeExpr) *expr.AttributeExpr {
 			},
 		},
 	}
+}
+
+// nameFromRef does the reverse of toRef: it returns the type name from its
+// JSON Schema reference.
+func nameFromRef(ref string) string {
+	elems := strings.Split(ref, "/")
+	return elems[len(elems)-1]
 }
