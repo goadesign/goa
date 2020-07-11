@@ -1,9 +1,11 @@
 dsl[/\]http.go
 expr[/\]http_response.go
 codegen[/\]service[/\]testing[/\].*
+http[/\]codegen[/\]codegen[/\].openapi[/\]v3[/\]ref.go
 http[/\]codegen[/\]testing[/\].*
 http[/\]middleware[/\]trace.go
 http[/\]middleware[/\]xray[/\]middleware.go
 http[/\]middleware[/\]xray[/\]wrap_doer.go
 http[/\]middleware[/\]xray[/\]wrap_doer_test.go
 grpc[/\]pb[/\].*
+

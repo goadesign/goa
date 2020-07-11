@@ -40,7 +40,11 @@ func (u *UserTypeExpr) Name() string {
 }
 
 // Rename changes the type name to the given value.
-func (u *UserTypeExpr) Rename(n string) { u.TypeName = n }
+func (u *UserTypeExpr) Rename(n string) {
+	// Remember original name for example to generate friendly docs.
+	u.AttributeExpr.AddMeta("name:original", u.TypeName)
+	u.TypeName = n
+}
 
 // IsCompatible returns true if u describes the (Go) type of val.
 func (u *UserTypeExpr) IsCompatible(val interface{}) bool {

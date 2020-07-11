@@ -202,6 +202,11 @@ func (m *ResultTypeExpr) Finalize() {
 // The resulting result type defines a default view. The result type identifier is
 // computed by adding a parameter called "view" to the original identifier. The
 // value of the "view" parameter is the name of the view.
+//
+// Project returns an error if the view does not exist for the given result type
+// or any result type that makes up its attributes recursively. Note that
+// individual attributes may use a different view. In this case Project uses
+// that view and returns an error if it isn't defined on the attribute type.
 func Project(m *ResultTypeExpr, view string, seen ...map[string]*AttributeExpr) (*ResultTypeExpr, error) {
 	_, params, _ := mime.ParseMediaType(m.Identifier)
 	if params["view"] == view {
