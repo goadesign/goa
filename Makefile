@@ -50,7 +50,7 @@ UNZIP=unzip
 PROTOC=protoc-$(PROTOC_VERSION)-win32
 PROTOC_EXEC="$(PROTOC)\bin\protoc.exe"
 GOPATH:=$(subst \,/,$(GOPATH))
-UNZIP="tar -xf"
+UNZIP=unzip
 		endif
 	endif
 endif
