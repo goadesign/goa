@@ -60,6 +60,35 @@ func ObjectResponseBodyDSL(svcName, metName string) func() {
 	}
 }
 
+func StringStreamingResponseBodyDSL(svcName, metName string) func() {
+	return func() {
+		var _ = Service(svcName, func() {
+			Method(metName, func() {
+				StreamingResult(String)
+				HTTP(func() {
+					GET("/")
+				})
+			})
+		})
+	}
+}
+
+func ObjectStreamingResponseBodyDSL(svcName, metName string) func() {
+	return func() {
+		var _ = Service(svcName, func() {
+			Method(metName, func() {
+				StreamingResult(func() {
+					Attribute("name")
+					Attribute("age", Int)
+				})
+				HTTP(func() {
+					GET("/")
+				})
+			})
+		})
+	}
+}
+
 func StringErrorResponseBodyDSL(svcName, metName string) func() {
 	return func() {
 		var _ = Service(svcName, func() {

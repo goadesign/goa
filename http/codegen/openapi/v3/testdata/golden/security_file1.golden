@@ -48,7 +48,7 @@ paths:
         "204":
           description: ""
           content:
-            "":
+            application/json:
               example: {}
       security:
       - api_key_query_k: []
@@ -85,7 +85,7 @@ paths:
         "204":
           description: ""
           content:
-            "":
+            application/json:
               example: {}
       security:
       - api_key_header_Authorization: []

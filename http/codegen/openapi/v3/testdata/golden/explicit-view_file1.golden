@@ -16,7 +16,7 @@ paths:
         "200":
           description: ""
           content:
-            "":
+            application/json:
               schema:
                 $ref: '#/components/schemas/TestEndpointDefaultResponseBody'
               example:
@@ -32,7 +32,7 @@ paths:
         "200":
           description: ""
           content:
-            "":
+            application/json:
               schema:
                 $ref: '#/components/schemas/TestEndpointTinyResponseBodyTiny'
               example:

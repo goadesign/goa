@@ -24,7 +24,7 @@ paths:
         "200":
           description: ""
           content:
-            "":
+            application/json:
               schema:
                 $ref: '#/components/schemas/FooBar'
               example:
@@ -35,7 +35,7 @@ paths:
         "404":
           description: ""
           content:
-            "":
+            application/json:
               schema:
                 $ref: '#/components/schemas/FooBar'
               example:

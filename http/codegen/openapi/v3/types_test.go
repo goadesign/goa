@@ -45,6 +45,18 @@ func TestBuildBodyTypes(t *testing.T) {
 		ExpectedType:          typ{"object", mtyp{"name": {"string", nil}, "age": {"integer", nil}}},
 		ExpectedResponseTypes: rt{204: {"", nil}},
 	}, {
+		Name: "streaming_string_body",
+		DSL:  dsls.RequestStreamingStringBody(svcName, "streaming_string_body"),
+
+		ExpectedType:          typ{"string", nil},
+		ExpectedResponseTypes: rt{204: {"", nil}},
+	}, {
+		Name: "streaming_object_body",
+		DSL:  dsls.RequestStreamingObjectBody(svcName, "streaming_object_body"),
+
+		ExpectedType:          typ{"object", mtyp{"name": {"string", nil}, "age": {"integer", nil}}},
+		ExpectedResponseTypes: rt{204: {"", nil}},
+	}, {
 		Name: "string_response_body",
 		DSL:  dsls.StringResponseBodyDSL(svcName, "string_response_body"),
 
@@ -55,26 +67,38 @@ func TestBuildBodyTypes(t *testing.T) {
 		DSL:  dsls.ObjectResponseBodyDSL(svcName, "object_response_body"),
 
 		ExpectedType:          typ{"", nil},
-		ExpectedResponseTypes: rt{200: {"", nil}},
+		ExpectedResponseTypes: rt{200: {"object", mtyp{"name": typ{"string", nil}, "age": typ{"integer", nil}}}},
+	}, {
+		Name: "string_streaming_response_body",
+		DSL:  dsls.StringStreamingResponseBodyDSL(svcName, "string_streaming_response_body"),
+
+		ExpectedType:          typ{"", nil},
+		ExpectedResponseTypes: rt{200: {"string", nil}},
+	}, {
+		Name: "object_streaming_response_body",
+		DSL:  dsls.ObjectResponseBodyDSL(svcName, "object_streaming_response_body"),
+
+		ExpectedType:          typ{"", nil},
+		ExpectedResponseTypes: rt{200: {"object", mtyp{"name": typ{"string", nil}, "age": typ{"integer", nil}}}},
 	}, {
 		Name: "string_error_response",
 		DSL:  dsls.StringErrorResponseBodyDSL(svcName, "string_error_response"),
 
 		ExpectedType:          typ{"", nil},
-		ExpectedResponseTypes: rt{204: {"", nil}, 400: {"", nil}},
+		ExpectedResponseTypes: rt{204: {"", nil}, 400: {"string", nil}},
 	}, {
 		Name: "object_error_response",
 		DSL:  dsls.ObjectErrorResponseBodyDSL(svcName, "object_error_response"),
 
 		ExpectedType:          typ{"", nil},
-		ExpectedResponseTypes: rt{204: {"", nil}, 400: {"", nil}},
+		ExpectedResponseTypes: rt{204: {"", nil}, 400: {"object", mtyp{"name": typ{"string", nil}, "age": typ{"integer", nil}}}},
 	}}
 
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
 			api := codegen.RunDSL(t, c.DSL).API
 
-			bodies, schemas := buildBodyTypes(api)
+			bodies, types := buildBodyTypes(api)
 
 			svc, ok := bodies[svcName]
 			if !ok {
@@ -87,20 +111,14 @@ func TestBuildBodyTypes(t *testing.T) {
 				return
 			}
 			requestBody := met.RequestBody
-			if requestBody != nil && requestBody.Ref != "" {
-				requestBody = schemas[nameFromRef(requestBody.Ref)]
-			}
 			for s, r := range met.ResponseBodies {
 				if len(r) != 1 {
 					t.Errorf("got %d response bodies for %d, expected 1", len(r), s)
 					return
 				}
-				if r[0] != nil && r[0].Ref != "" {
-					r[0] = schemas[r[0].Ref]
-				}
 			}
 
-			matchesSchema(t, "request", requestBody, c.ExpectedType)
+			matchesSchema(t, "request", requestBody, types, c.ExpectedType)
 			if len(c.ExpectedResponseTypes) != len(met.ResponseBodies) {
 				t.Errorf("got %d response body(ies), expected %d", len(met.ResponseBodies), len(c.ExpectedResponseTypes))
 				return
@@ -110,28 +128,36 @@ func TestBuildBodyTypes(t *testing.T) {
 					t.Errorf("got %d response bodies for code %d, expected 1", len(met.ResponseBodies[s]), s)
 					return
 				}
-				matchesSchema(t, "response", met.ResponseBodies[s][0], r)
+				matchesSchema(t, "response", met.ResponseBodies[s][0], types, r)
 			}
 		})
 	}
 }
 
-func matchesSchema(t *testing.T, ctx string, s *openapi.Schema, tt typ) {
-	matchesSchemaWithPrefix(t, ctx, s, tt, "")
+func matchesSchema(t *testing.T, ctx string, s *openapi.Schema, types map[string]*openapi.Schema, tt typ) {
+	matchesSchemaWithPrefix(t, ctx, s, types, tt, "")
 }
-func matchesSchemaWithPrefix(t *testing.T, ctx string, s *openapi.Schema, tt typ, prefix string) {
+func matchesSchemaWithPrefix(t *testing.T, ctx string, s *openapi.Schema, types map[string]*openapi.Schema, tt typ, prefix string) {
 	if s == nil {
 		if tt.Type != "" {
 			t.Errorf("%s: %sgot type Empty, expected %q", ctx, prefix, tt.Type)
 		}
 		return
 	}
+	if s.Ref != "" {
+		var ok bool
+		s, ok = types[nameFromRef(s.Ref)]
+		if !ok {
+			t.Errorf("could not find type for ref %q", s.Ref)
+			return
+		}
+	}
 	if tt.Type != string(s.Type) {
 		t.Errorf("%s: %sgot type %q, expected %q", ctx, prefix, s.Type, tt.Type)
 	}
 	if tt.Type == "object" {
 		for n, v := range s.Properties {
-			matchesSchemaWithPrefix(t, ctx, v, tt.Props[n], n+": ")
+			matchesSchemaWithPrefix(t, ctx, v, types, tt.Props[n], n+": ")
 		}
 	}
 }

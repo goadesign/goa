@@ -11,6 +11,10 @@ func responseFromExpr(r *expr.HTTPResponseExpr, bodies map[int][]*openapi.Schema
 	if ok && ct == "" {
 		ct = rt.ContentType
 	}
+	if ct == "" {
+		// Default to application/json
+		ct = "application/json"
+	}
 	var headers map[string]*HeaderRef
 	o := expr.AsObject(r.Headers.Type)
 	if len(*o) > 0 {

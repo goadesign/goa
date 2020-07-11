@@ -30,7 +30,7 @@ paths:
         "200":
           description: ""
           content:
-            "":
+            application/json:
               schema:
                 $ref: '#/components/schemas/TestEndpointResponseBody'
               example:

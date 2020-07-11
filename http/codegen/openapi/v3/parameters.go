@@ -1,6 +1,8 @@
 package openapiv3
 
 import (
+	"strings"
+
 	"goa.design/goa/v3/codegen"
 	"goa.design/goa/v3/expr"
 	"goa.design/goa/v3/http/codegen/openapi"
@@ -33,6 +35,12 @@ func paramsFromPath(params *expr.MappedAttributeExpr, path string, rand *expr.Ra
 func paramsFromHeadersAndCookies(endpoint *expr.HTTPEndpointExpr, rand *expr.Random) []*Parameter {
 	params := []*Parameter{}
 	expr.WalkMappedAttr(endpoint.Headers, func(name, elem string, att *expr.AttributeExpr) error {
+		if strings.ToLower(elem) == "authorization" {
+			// Headers named "Authorization" are ignored by OpenAPI v3.
+			// Instead it uses the security and securitySchemes sections to
+			// define authorization.
+			return nil
+		}
 		required := endpoint.Headers.IsRequiredNoDefault(name)
 		params = append(params, paramFor(att, elem, "header", required, rand))
 		return nil
@@ -43,22 +51,6 @@ func paramsFromHeadersAndCookies(endpoint *expr.HTTPEndpointExpr, rand *expr.Ran
 		return nil
 	})
 
-	// Add basic auth to headers
-	if att := expr.TaggedAttribute(endpoint.MethodExpr.Payload, "security:username"); att != "" {
-		// Basic Auth is always encoded in the Authorization header
-		// https://golang.org/pkg/net/http/#Request.SetBasicAuth
-		s := openapi.NewSchema()
-		s.Type = openapi.Type("string")
-		params = append(params, &Parameter{
-			Name:            "Authorization",
-			In:              "header",
-			Description:     "Basic Auth security using Basic scheme (https://tools.ietf.org/html/rfc7617)",
-			AllowEmptyValue: false,
-			Required:        endpoint.MethodExpr.Payload.IsRequired(att),
-			Schema:          s,
-			Example:         "Basic Z29hOmRlc2lnbg==",
-		})
-	}
 	return params
 }
 

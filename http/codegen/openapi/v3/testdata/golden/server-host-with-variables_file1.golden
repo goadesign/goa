@@ -18,6 +18,6 @@ paths:
         "204":
           description: ""
           content:
-            "":
+            application/json:
               example: {}
 components: {}

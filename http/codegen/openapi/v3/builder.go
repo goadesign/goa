@@ -233,8 +233,11 @@ func buildOperation(key string, r *expr.RouteExpr, bodies *EndpointBodies, rand 
 				// definition. So it is okay to change the first successful
 				// response to a HTTP 101 response for openapi docs.
 				if _, ok := responses[strconv.Itoa(expr.StatusSwitchingProtocols)]; !ok {
+					b := bodies.ResponseBodies[r.StatusCode]
+					delete(bodies.ResponseBodies, r.StatusCode)
 					r = r.Dup()
 					r.StatusCode = expr.StatusSwitchingProtocols
+					bodies.ResponseBodies[r.StatusCode] = b
 				}
 			}
 			resp := responseFromExpr(r, bodies.ResponseBodies, rand)
