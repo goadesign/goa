@@ -28,7 +28,6 @@ DEPEND=\
 	github.com/golang/protobuf/protoc-gen-go \
 	github.com/golang/protobuf/proto \
 	honnef.co/go/tools/cmd/staticcheck \
-	github.com/hashicorp/go-getter/cmd/go-getter \
 	github.com/getkin/kin-openapi
 
 all: lint test
@@ -40,28 +39,34 @@ PROTOC_VERSION=3.12.3
 ifeq ($(GOOS),linux)
 PROTOC=protoc-$(PROTOC_VERSION)-linux-x86_64
 PROTOC_EXEC=$(PROTOC)/bin/protoc
+UNZIP=unzip
 else
 	ifeq ($(GOOS),darwin)
 PROTOC=protoc-$(PROTOC_VERSION)-osx-x86_64
 PROTOC_EXEC=$(PROTOC)/bin/protoc
+UNZIP=unzip
 	else
 		ifeq ($(GOOS),windows)
 PROTOC=protoc-$(PROTOC_VERSION)-win32
 PROTOC_EXEC="$(PROTOC)\bin\protoc.exe"
 GOPATH:=$(subst \,/,$(GOPATH))
+UNZIP=unzip
 		endif
 	endif
 endif
+
 depend:
-	@echo donwloading dependencies
+	@echo INSTALLING DEPENDENCIES...
 	@go mod download
-	@go get -v $(DEPEND) # Additional development dependencies
-	@echo installing protoc
-	go-getter https://github.com/google/protobuf/releases/download/v$(PROTOC_VERSION)/$(PROTOC).zip $(PROTOC)
+	@go get -v $(DEPEND)
+	@echo INSTALLING PROTOC...
+	@mkdir $(PROTOC)
+	@cd $(PROTOC); \
+	curl -O -L https://github.com/google/protobuf/releases/download/v$(PROTOC_VERSION)/$(PROTOC).zip; \
+	$(UNZIP) $(PROTOC).zip
 	@cp $(PROTOC_EXEC) $(GOPATH)/bin && \
 		rm -r $(PROTOC) && \
 		echo "`protoc --version`"
-	@echo done installing dependencies
 
 lint:
 ifneq ($(GOOS),windows)
