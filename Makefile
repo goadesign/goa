@@ -38,7 +38,7 @@ DEPEND=\
 	github.com/golang/protobuf/protoc-gen-go \
 	github.com/golang/protobuf/proto \
 	honnef.co/go/tools/cmd/staticcheck \
-	github.com/getkin/kin-openapi
+	github.com/getkin/kin-openapi/openapi3
 
 all: lint test
 
