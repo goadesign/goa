@@ -104,10 +104,7 @@ func TypeName(name string) {
 	case expr.UserType:
 		e.Rename(name)
 	case *expr.AttributeExpr:
-		if e.Meta == nil {
-			e.Meta = make(expr.MetaExpr)
-		}
-		e.Meta["struct:type:name"] = []string{name}
+		e.AddMeta("struct:type:name", name)
 	default:
 		eval.IncompatibleDSL()
 	}
@@ -209,10 +206,7 @@ func View(name string, adsl ...func()) {
 		}
 
 	case *expr.AttributeExpr:
-		if e.Meta == nil {
-			e.Meta = make(map[string][]string)
-		}
-		e.Meta["view"] = []string{name}
+		e.AddMeta("view", name)
 
 	default:
 		eval.IncompatibleDSL()
@@ -485,12 +479,7 @@ func buildView(name string, mt *expr.ResultTypeExpr, at *expr.AttributeExpr) (*e
 		cat := nat.Attribute
 		if existing := mt.Find(n); existing != nil {
 			dup := expr.DupAtt(existing)
-			if dup.Meta == nil {
-				dup.Meta = make(map[string][]string)
-			}
-			if len(cat.Meta["view"]) > 0 {
-				dup.Meta["view"] = cat.Meta["view"]
-			}
+			dup.AddMeta("view", cat.Meta["view"]...)
 			o.Set(n, dup)
 		} else if n != "links" {
 			return nil, fmt.Errorf("unknown attribute %#v", n)

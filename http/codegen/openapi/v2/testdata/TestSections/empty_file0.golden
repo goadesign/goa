@@ -1,0 +1,1 @@
+{"swagger":"2.0","info":{"title":"","version":""},"host":"goa.design","consumes":["application/json","application/xml","application/gob"],"produces":["application/json","application/xml","application/gob"],"paths":{}}

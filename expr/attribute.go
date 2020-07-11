@@ -171,13 +171,6 @@ func TaggedAttribute(a *AttributeExpr, tag string) string {
 	return ""
 }
 
-// Prepare initializes the Meta expression.
-func (a *AttributeExpr) Prepare() {
-	if a.Meta == nil {
-		a.Meta = MetaExpr{}
-	}
-}
-
 // Validate tests whether the attribute required fields exist.  Since attributes
 // are unaware of their context, additional context information can be provided
 // to be used in error messages.  The parent definition context is automatically
@@ -502,6 +495,14 @@ func (a *AttributeExpr) Delete(name string) {
 			}
 		}
 	}
+}
+
+// AddMeta adds values to the meta field of the attribute.
+func (a *AttributeExpr) AddMeta(name string, vals ...string) {
+	if a.Meta == nil {
+		a.Meta = make(MetaExpr)
+	}
+	a.Meta[name] = append(a.Meta[name], vals...)
 }
 
 // Debug dumps the attribute to STDOUT in a goa developer friendly way.

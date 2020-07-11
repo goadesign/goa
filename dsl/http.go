@@ -934,11 +934,7 @@ func Body(args ...interface{}) {
 			return
 		}
 		attr = expr.DupAtt(attr)
-		if attr.Meta == nil {
-			attr.Meta = expr.MetaExpr{"origin:attribute": []string{a}}
-		} else {
-			attr.Meta["origin:attribute"] = []string{a}
-		}
+		attr.AddMeta("origin:attribute", a)
 		if rt, ok := attr.Type.(*expr.ResultTypeExpr); ok {
 			// If the attribute type is a result type add the type to the
 			// GeneratedTypes so that the type's DSLFunc is executed.
@@ -976,10 +972,7 @@ func Body(args ...interface{}) {
 	if fn != nil {
 		eval.Execute(fn, attr)
 	}
-	if attr.Meta == nil {
-		attr.Meta = expr.MetaExpr{}
-	}
-	attr.Meta["http:body"] = []string{}
+	attr.AddMeta("http:body")
 	setter(attr)
 }
 
@@ -1177,8 +1170,5 @@ func params(exp eval.Expression) *expr.MappedAttributeExpr {
 // a HTTP cookie attribute for use by the HTTP code generator.
 func cookieAttribute(name, value string) {
 	c := eval.Current().(*expr.HTTPResponseExpr).Cookies
-	if c.Meta == nil {
-		c.Meta = expr.MetaExpr{}
-	}
-	c.Meta["cookie:"+name] = []string{value}
+	c.AddMeta("cookie:"+name, value)
 }
