@@ -873,7 +873,7 @@ func EncodeMethodBodyInlineObjectResponse(encoder func(context.Context, http.Res
 		res := v.(*servicebodyinlineobject.ResultType)
 		enc := encoder(ctx, w)
 		body := NewMethodBodyInlineObjectResponseBody(res)
-		w.WriteHeader(http.StatusNoContent)
+		w.WriteHeader(http.StatusOK)
 		return enc.Encode(body)
 	}
 }

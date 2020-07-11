@@ -186,10 +186,9 @@ func NewMethodBodyObjectHeaderResultOK(body *MethodBodyObjectHeaderResponseBody,
 }
 `
 
-const ResultBodyInlineObjectInitCode = `// NewMethodBodyInlineObjectResultTypeNoContent builds a
-// "ServiceBodyInlineObject" service "MethodBodyInlineObject" endpoint result
-// from a HTTP "NoContent" response.
-func NewMethodBodyInlineObjectResultTypeNoContent(body *MethodBodyInlineObjectResponseBody) *servicebodyinlineobject.ResultType {
+const ResultBodyInlineObjectInitCode = `// NewMethodBodyInlineObjectResultTypeOK builds a "ServiceBodyInlineObject"
+// service "MethodBodyInlineObject" endpoint result from a HTTP "OK" response.
+func NewMethodBodyInlineObjectResultTypeOK(body *MethodBodyInlineObjectResponseBody) *servicebodyinlineobject.ResultType {
 	v := &servicebodyinlineobject.ResultType{}
 	if body.Parent != nil {
 		v.Parent = &struct {

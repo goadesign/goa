@@ -37,13 +37,6 @@ paths:
           type: string
           example: Ullam aut.
         example: Iste perspiciatis.
-      - name: Authorization
-        in: header
-        description: Basic Auth security using Basic scheme (https://tools.ietf.org/html/rfc7617)
-        required: true
-        schema:
-          type: string
-        example: Basic Z29hOmRlc2lnbg==
       responses:
         "204":
           description: ""
@@ -73,14 +66,6 @@ paths:
           type: string
           example: Harum et.
         example: Neque nisi quibusdam nisi sint sunt.
-      - name: Authorization
-        in: header
-        allowEmptyValue: true
-        required: true
-        schema:
-          type: string
-          example: Quia velit assumenda fuga est sint.
-        example: Quo qui molestiae iure.
       responses:
         "204":
           description: ""
