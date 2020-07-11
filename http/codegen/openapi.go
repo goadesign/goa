@@ -1,15 +1,10 @@
 package codegen
 
 import (
-	"encoding/json"
-	"path/filepath"
-	"text/template"
-
-	"gopkg.in/yaml.v2"
-
 	"goa.design/goa/v3/codegen"
 	"goa.design/goa/v3/expr"
-	"goa.design/goa/v3/http/codegen/openapi"
+	openapiv2 "goa.design/goa/v3/http/codegen/openapi/v2"
+	openapiv3 "goa.design/goa/v3/http/codegen/openapi/v3"
 )
 
 // OpenAPIFiles returns the files for the OpenAPIFile spec of the given HTTP API.
@@ -19,55 +14,21 @@ func OpenAPIFiles(root *expr.RootExpr) ([]*codegen.File, error) {
 		return nil, nil
 	}
 
-	jsonPath := filepath.Join(codegen.Gendir, "http", "openapi.json")
-	yamlPath := filepath.Join(codegen.Gendir, "http", "openapi.yaml")
-	var (
-		jsonSection *codegen.SectionTemplate
-		yamlSection *codegen.SectionTemplate
-	)
+	var files []*codegen.File
 	{
-		spec, err := openapi.NewV2(root, root.API.Servers[0].Hosts[0])
+		// OpenAPI v2
+		fs, err := openapiv2.Files(root)
 		if err != nil {
 			return nil, err
 		}
-		jsonSection = &codegen.SectionTemplate{
-			Name:    "openapi",
-			FuncMap: template.FuncMap{"toJSON": toJSON},
-			Source:  "{{ toJSON .}}",
-			Data:    spec,
+		files = append(files, fs...)
+
+		// OpenAPI v3
+		fs, err = openapiv3.Files(root)
+		if err != nil {
+			return nil, err
 		}
-		yamlSection = &codegen.SectionTemplate{
-			Name:    "openapi",
-			FuncMap: template.FuncMap{"toYAML": toYAML},
-			Source:  "{{ toYAML .}}",
-			Data:    spec,
-		}
+		files = append(files, fs...)
 	}
-
-	return []*codegen.File{
-		{
-			Path:             jsonPath,
-			SectionTemplates: []*codegen.SectionTemplate{jsonSection},
-		},
-		{
-			Path:             yamlPath,
-			SectionTemplates: []*codegen.SectionTemplate{yamlSection},
-		},
-	}, nil
-}
-
-func toJSON(d interface{}) string {
-	b, err := json.Marshal(d)
-	if err != nil {
-		panic("openapi: " + err.Error()) // bug
-	}
-	return string(b)
-}
-
-func toYAML(d interface{}) string {
-	b, err := yaml.Marshal(d)
-	if err != nil {
-		panic("openapi: " + err.Error()) // bug
-	}
-	return string(b)
+	return files, nil
 }

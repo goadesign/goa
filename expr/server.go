@@ -126,7 +126,7 @@ var validSchemes = map[string]struct{}{"http": {}, "https": {}, "grpc": {}, "grp
 func (h *HostExpr) Validate() error {
 	verr := new(eval.ValidationErrors)
 	if len(h.URIs) == 0 {
-		verr.Add(h, "host must defined at least one URI")
+		verr.Add(h, "host must define at least one URI")
 	}
 	for _, u := range h.URIs {
 		vu := uriVariableRegex.ReplaceAllString(string(u), "/w")
@@ -184,21 +184,7 @@ func (h *HostExpr) Attribute() *AttributeExpr {
 func (h *HostExpr) Schemes() []string {
 	schemes := make(map[string]struct{})
 	for _, uri := range h.URIs {
-		ustr := string(uri)
-		// Did not use url package to find scheme because the url may
-		// contain params (i.e. http://{version}.example.com) which needs
-		// substition for url.Parse to succeed. Also URIs in host must have
-		// a scheme otherwise validations would have failed.
-		switch {
-		case strings.HasPrefix(ustr, "https"):
-			schemes["https"] = struct{}{}
-		case strings.HasPrefix(ustr, "http"):
-			schemes["http"] = struct{}{}
-		case strings.HasPrefix(ustr, "grpcs"):
-			schemes["grpcs"] = struct{}{}
-		case strings.HasPrefix(ustr, "grpc"):
-			schemes["grpc"] = struct{}{}
-		}
+		schemes[uri.Scheme()] = struct{}{}
 	}
 	ss := make([]string, len(schemes))
 	i := 0
@@ -236,6 +222,38 @@ func (h *HostExpr) HasGRPCScheme() bool {
 	return false
 }
 
+// URIString returns a valid URI string by substituting the parameters with
+// their default value if present or the first item in their enum. It returns
+// an error if the given URI expression is not found in the host URIs.
+func (h *HostExpr) URIString(u URIExpr) (string, error) {
+	found := false
+	for _, ue := range h.URIs {
+		if ue == u {
+			found = true
+			break
+		}
+	}
+	if !found {
+		return "", fmt.Errorf("uri %s not found in host", string(u))
+	}
+	uri := string(u)
+	// Substitute URI parameters with the corresponding variables defined in
+	// the host expression. Validations would have made sure that every
+	// URI parameter have a corresponding variable.
+	for _, p := range u.Params() {
+		for _, v := range *AsObject(h.Variables.Type) {
+			if p == v.Name {
+				def := v.Attribute.DefaultValue
+				if def == nil {
+					def = v.Attribute.Validation.Values[0]
+				}
+				uri = strings.Replace(uri, fmt.Sprintf("{%s}", p), fmt.Sprintf("%v", def), -1)
+			}
+		}
+	}
+	return uri, nil
+}
+
 // Params return the names of the parameters used in URI if any.
 func (u URIExpr) Params() []string {
 	r := regexp.MustCompile(`\{([^\{\}]+)\}`)
@@ -248,4 +266,26 @@ func (u URIExpr) Params() []string {
 		wcs[i] = m[1]
 	}
 	return wcs
+}
+
+// Scheme returns the URI scheme. Possible values are http, https, grpc, and
+// grpcs.
+func (u URIExpr) Scheme() string {
+	ustr := string(u)
+	// Did not use url package to find scheme because the url may
+	// contain params (i.e. http://{version}.example.com) which needs
+	// substition for url.Parse to succeed. Also URIs in host must have
+	// a scheme otherwise validations would have failed.
+	switch {
+	case strings.HasPrefix(ustr, "https"):
+		return "https"
+	case strings.HasPrefix(ustr, "grpcs"):
+		return "grpcs"
+	case strings.HasPrefix(ustr, "grpc"):
+		return "grpc"
+	default:
+		// No need to worry about other values because the URIExpr would have failed
+		// validation.
+		return "http"
+	}
 }

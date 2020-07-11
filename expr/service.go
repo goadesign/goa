@@ -137,11 +137,7 @@ func (e *ErrorExpr) Finalize() {
 			// This type does not have an attribute with "struct:error:name" meta.
 			// It means the type is used by at most one error (otherwise validations
 			// would have failed).
-			datt := dt.Attribute()
-			if datt.Meta == nil {
-				datt.Meta = MetaExpr{}
-			}
-			datt.Meta["struct:error:name"] = []string{e.Name}
+			dt.Attribute().AddMeta("struct:error:name", e.Name)
 		}
 	default:
 		ut := &UserTypeExpr{

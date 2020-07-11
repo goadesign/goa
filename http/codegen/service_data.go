@@ -1355,10 +1355,8 @@ func buildResultData(e *expr.HTTPEndpointExpr, sd *ServiceData) *ResultData {
 	)
 	{
 		view = "default"
-		if result.Meta != nil {
-			if v, ok := result.Meta["view"]; ok {
-				view = v[0]
-			}
+		if v, ok := result.Meta["view"]; ok {
+			view = v[0]
 		}
 		if result.Type != expr.Empty {
 			name = svc.Scope.GoFullTypeName(result, svc.PkgName)
