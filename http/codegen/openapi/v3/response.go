@@ -1,8 +1,8 @@
 package openapiv3
 
 import (
-	"goa.design/goa/v3/expr"
-	"goa.design/goa/v3/http/codegen/openapi"
+	"goa.design/goa/expr"
+	"goa.design/goa/http/codegen/openapi"
 )
 
 func responseFromExpr(r *expr.HTTPResponseExpr, bodies map[int][]*openapi.Schema, rand *expr.Random) *Response {

@@ -1,6 +1,6 @@
 package dsls
 
-import . "goa.design/goa/v3/dsl"
+import . "goa.design/goa/dsl"
 
 func StringBodyDSL(svcName, metName string) func() {
 	return func() {

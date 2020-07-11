@@ -1,6 +1,6 @@
 package openapi
 
-import "goa.design/goa/v3/expr"
+import "goa.design/goa/expr"
 
 // ExternalDocs represents an OpenAPI External Documentation object as defined in
 // https://github.com/OAI/OpenAPI-Specification/blob/master/versions/3.0.3.md#externalDocumentationObject

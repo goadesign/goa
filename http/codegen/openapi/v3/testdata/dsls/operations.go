@@ -1,6 +1,6 @@
 package dsls
 
-import . "goa.design/goa/v3/dsl"
+import . "goa.design/goa/dsl"
 
 var DescOnly = func(svc, met, desc string) func() {
 	return func() {

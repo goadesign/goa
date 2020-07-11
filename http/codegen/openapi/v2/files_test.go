@@ -12,11 +12,11 @@ import (
 	"text/template"
 
 	"github.com/go-openapi/loads"
-	"goa.design/goa/v3/codegen"
-	httpgen "goa.design/goa/v3/http/codegen"
-	openapi "goa.design/goa/v3/http/codegen/openapi"
-	openapiv2 "goa.design/goa/v3/http/codegen/openapi/v2"
-	"goa.design/goa/v3/http/codegen/testdata"
+	"goa.design/goa/codegen"
+	httpgen "goa.design/goa/http/codegen"
+	openapi "goa.design/goa/http/codegen/openapi"
+	openapiv2 "goa.design/goa/http/codegen/openapi/v2"
+	"goa.design/goa/http/codegen/testdata"
 )
 
 var update = flag.Bool("update", false, "update .golden files")

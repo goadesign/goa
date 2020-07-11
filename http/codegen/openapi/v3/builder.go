@@ -5,8 +5,8 @@ import (
 	"net/url"
 	"strconv"
 
-	"goa.design/goa/v3/expr"
-	"goa.design/goa/v3/http/codegen/openapi"
+	"goa.design/goa/expr"
+	"goa.design/goa/http/codegen/openapi"
 )
 
 // OpenAPIVersion is the OpenAPI specification version targeted by this package.

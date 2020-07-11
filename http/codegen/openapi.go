@@ -1,15 +1,11 @@
 package codegen
 
 import (
-	"encoding/json"
-	"path/filepath"
-	"text/template"
-
-	"gopkg.in/yaml.v2"
-
 	"goa.design/goa/codegen"
 	"goa.design/goa/expr"
-	"goa.design/goa/http/codegen/openapi"
+
+	openapiv2 "goa.design/goa/http/codegen/openapi/v2"
+	openapiv3 "goa.design/goa/http/codegen/openapi/v3"
 )
 
 // OpenAPIFiles returns the files for the OpenAPIFile spec of the given HTTP API.

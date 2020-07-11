@@ -1,6 +1,6 @@
 package openapiv3
 
-import "goa.design/goa/v3/http/codegen/openapi"
+import "goa.design/goa/http/codegen/openapi"
 
 type (
 	// OpenAPI is a data structure that encodes the information needed to

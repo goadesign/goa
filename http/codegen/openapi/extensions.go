@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"strings"
 
-	"goa.design/goa/v3/expr"
+	"goa.design/goa/expr"
 )
 
 // ExtensionsFromExpr generates swagger extensions from the given meta

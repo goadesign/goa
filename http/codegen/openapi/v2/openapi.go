@@ -3,10 +3,7 @@
 package openapiv2
 
 import (
-	"encoding/json"
-
 	"goa.design/goa/expr"
-	yaml "gopkg.in/yaml.v2"
 	"goa.design/goa/http/codegen/openapi"
 )
 

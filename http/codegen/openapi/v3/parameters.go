@@ -3,9 +3,9 @@ package openapiv3
 import (
 	"strings"
 
-	"goa.design/goa/v3/codegen"
-	"goa.design/goa/v3/expr"
-	"goa.design/goa/v3/http/codegen/openapi"
+	"goa.design/goa/codegen"
+	"goa.design/goa/expr"
+	"goa.design/goa/http/codegen/openapi"
 )
 
 // paramsFromPath computes the OpenAPI spec parameters for the given API,

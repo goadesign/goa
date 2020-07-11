@@ -4,8 +4,6 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/go-openapi/loads"
-	"goa.design/goa/codegen"
 	"goa.design/goa/http/codegen/openapi"
 	"goa.design/goa/http/codegen/testdata"
 )
