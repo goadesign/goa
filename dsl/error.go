@@ -76,10 +76,7 @@ func Temporary() {
 		eval.IncompatibleDSL()
 		return
 	}
-	if attr.Meta == nil {
-		attr.Meta = make(expr.MetaExpr)
-	}
-	attr.Meta["goa:error:temporary"] = nil
+	attr.AddMeta("goa:error:temporary")
 }
 
 // Timeout qualifies an error type as describing errors due to timeouts.
@@ -101,10 +98,7 @@ func Timeout() {
 		eval.IncompatibleDSL()
 		return
 	}
-	if attr.Meta == nil {
-		attr.Meta = make(expr.MetaExpr)
-	}
-	attr.Meta["goa:error:timeout"] = nil
+	attr.AddMeta("goa:error:timeout")
 }
 
 // Fault qualifies an error type as describing errors due to a server-side
@@ -127,8 +121,5 @@ func Fault() {
 		eval.IncompatibleDSL()
 		return
 	}
-	if attr.Meta == nil {
-		attr.Meta = make(expr.MetaExpr)
-	}
-	attr.Meta["goa:error:fault"] = nil
+	attr.AddMeta("goa:error:fault")
 }
