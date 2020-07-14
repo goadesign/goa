@@ -85,6 +85,11 @@ func (e *GRPCEndpointExpr) Prepare() {
 	}
 	e.Response.Prepare()
 
+	// Prepare error response
+	for _, er := range e.GRPCErrors {
+		er.Response.Prepare()
+	}
+
 	// Inherit error only if it doesn't already exist in the endpoint errors
 	inherit := func(r *GRPCErrorExpr) {
 		found := false
@@ -95,6 +100,7 @@ func (e *GRPCEndpointExpr) Prepare() {
 			}
 		}
 		if !found {
+			r.Response.Prepare()
 			e.GRPCErrors = append(e.GRPCErrors, r.Dup())
 		}
 	}
@@ -104,11 +110,6 @@ func (e *GRPCEndpointExpr) Prepare() {
 	}
 	for _, r := range Root.API.GRPC.Errors {
 		inherit(r)
-	}
-
-	// Prepare error response
-	for _, er := range e.GRPCErrors {
-		er.Response.Prepare()
 	}
 }
 

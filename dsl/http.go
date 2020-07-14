@@ -89,7 +89,7 @@ const (
 // header, parameter or body attributes inherit the properties of the attributes
 // with the same names that appear in the method payload or result types.
 //
-// HTTP must appear in API, a Service or an Method expression.
+// HTTP must appear in an API, a Service, or a Method expression.
 //
 // HTTP accepts an optional argument which is the defining DSL function.
 //
