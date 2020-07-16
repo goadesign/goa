@@ -6,7 +6,7 @@ servers:
 - url: localhost:80
   description: Default server for test api
 paths:
-  /{*int_map}:
+  /{int_map}:
     post:
       tags:
       - test service
