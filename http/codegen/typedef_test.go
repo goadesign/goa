@@ -1,9 +1,10 @@
 package codegen
 
 import (
+	"testing"
+
 	"goa.design/goa/v3/codegen"
 	"goa.design/goa/v3/expr"
-	"testing"
 )
 
 func TestGoTypeDef(t *testing.T) {
