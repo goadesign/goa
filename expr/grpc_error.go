@@ -51,7 +51,7 @@ func (e *GRPCErrorExpr) Finalize(a *GRPCEndpointExpr) {
 		ee = p.MethodExpr.Error(e.Name)
 	case *GRPCServiceExpr:
 		ee = p.Error(e.Name)
-	case *RootExpr:
+	case *GRPCExpr:
 		ee = Root.Error(e.Name)
 	}
 	e.ErrorExpr = ee
