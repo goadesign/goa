@@ -3,7 +3,7 @@ info:
   title: Goa API
   version: "1.0"
 servers:
-- url: goa.design
+- url: https://goa.design
 paths:
   /:
     post:
