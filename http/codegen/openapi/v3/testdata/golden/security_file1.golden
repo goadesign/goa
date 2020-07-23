@@ -3,7 +3,7 @@ info:
   title: Goa API
   version: "1.0"
 servers:
-- url: localhost:80
+- url: http://localhost:80
   description: Default server for test api
 paths:
   /:
