@@ -91,18 +91,15 @@ components:
       in: query
     basic_header_Authorization:
       type: http
-      description: Basic authentication used to authenticate security principal during
-        signin
+      description: Basic authentication used to authenticate security principal during signin
       scheme: basic
     jwt_header_X-Authorization:
       type: http
-      description: Secures endpoint by requiring a valid JWT token retrieved via the
-        signin endpoint. Supports scopes "api:read" and "api:write".
+      description: Secures endpoint by requiring a valid JWT token retrieved via the signin endpoint. Supports scopes "api:read" and "api:write".
       scheme: bearer
     oauth2_header_Token:
       type: oauth2
-      description: Secures endpoint by requiring a valid OAuth2 token retrieved via
-        the signin endpoint. Supports scopes "api:read" and "api:write".
+      description: Secures endpoint by requiring a valid OAuth2 token retrieved via the signin endpoint. Supports scopes "api:read" and "api:write".
       flows:
         authorizationCode:
           authorizationUrl: http://goa.design/authorization
@@ -113,8 +110,7 @@ components:
             api:write: Read and write access
     oauth2_query_auth:
       type: oauth2
-      description: Secures endpoint by requiring a valid OAuth2 token retrieved via
-        the signin endpoint. Supports scopes "api:read" and "api:write".
+      description: Secures endpoint by requiring a valid OAuth2 token retrieved via the signin endpoint. Supports scopes "api:read" and "api:write".
       flows:
         authorizationCode:
           authorizationUrl: http://goa.design/authorization
