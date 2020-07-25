@@ -354,7 +354,7 @@ func (c *{{ .ClientStruct }}) {{ .EndpointInit }}({{ if .MultipartRequestEncoder
 		{{ if .Result.Ref }}res{{ else }}_{{ end }}, err := decodeResponse(resp)
 		if err != nil {
 			resp.Body.Close()
-			return nil, goahttp.ErrDecodingError("{{ .ServiceName }}", "{{ .Method.Name }}", err)
+			return nil, err
 		}
 		return &{{ .ServicePkgName }}.{{ .Method.ResponseStruct }}{ {{ if .Result.Ref }}Result: res.({{ .Result.Ref }}), {{ end }}Body: resp.Body}, nil
 		{{- else }}
