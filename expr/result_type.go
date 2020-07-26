@@ -255,7 +255,7 @@ func projectSingle(m *ResultTypeExpr, view string, seen ...map[string]*Attribute
 	var ut *UserTypeExpr
 	if len(seen) > 0 {
 		s := seen[0]
-		if att, ok := s[m.Identifier]; ok {
+		if att, ok := s[m.Identifier+"::"+view]; ok {
 			if rt, ok2 := att.Type.(*ResultTypeExpr); ok2 {
 				ut = &UserTypeExpr{
 					AttributeExpr: DupAtt(rt.Attribute()),
@@ -342,14 +342,12 @@ func projectRecursive(at *AttributeExpr, vat *NamedAttributeExpr, view string, s
 	s := seen[0]
 	ut, isUT := at.Type.(UserType)
 	if isUT {
-		if att, ok := s[ut.ID()]; ok {
+		if att, ok := s[ut.ID()+"::"+view]; ok {
 			return att, nil
 		}
 	}
 	at = DupAtt(at)
-	if isUT {
-		s[ut.ID()] = at
-	}
+
 	if rt, ok := at.Type.(*ResultTypeExpr); ok {
 		vatt := vat.Attribute
 		var view string
@@ -362,6 +360,9 @@ func projectRecursive(at *AttributeExpr, vat *NamedAttributeExpr, view string, s
 		if view == "" {
 			view = DefaultView
 		}
+		if isUT {
+			s[ut.ID()+"::"+view] = at
+		}
 		pr, err := Project(rt, view, seen...)
 		if err != nil {
 			return nil, fmt.Errorf("view %#v on field %#v cannot be computed: %s", view, vat.Name, err)
@@ -369,6 +370,11 @@ func projectRecursive(at *AttributeExpr, vat *NamedAttributeExpr, view string, s
 		at.Type = pr
 		return at, nil
 	}
+
+	if isUT {
+		s[ut.ID()+"::"+view] = at
+	}
+
 	if obj := AsObject(at.Type); obj != nil {
 		vobj := AsObject(vat.Attribute.Type)
 		if vobj == nil {
@@ -393,6 +399,7 @@ func projectRecursive(at *AttributeExpr, vat *NamedAttributeExpr, view string, s
 		}
 		return at, nil
 	}
+
 	if ar := AsArray(at.Type); ar != nil {
 		pat, err := projectRecursive(ar.ElemType, vat, view, seen...)
 		if err != nil {
@@ -400,6 +407,7 @@ func projectRecursive(at *AttributeExpr, vat *NamedAttributeExpr, view string, s
 		}
 		ar.ElemType = pat
 	}
+
 	return at, nil
 }
 
