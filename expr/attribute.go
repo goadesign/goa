@@ -534,6 +534,12 @@ func (a *AttributeExpr) debug(prefix string, seen map[*AttributeExpr]int, indent
 	if v := a.Validation; v != nil {
 		v.Debug(indent + 1)
 	}
+	if len(a.Meta) > 0 {
+		fmt.Printf("%smeta\n", strings.Repeat(" ", indent+3))
+		for k, v := range a.Meta {
+			fmt.Printf("%s- %s: %s\n", strings.Repeat(" ", indent+4), k, strings.Join(v, ", "))
+		}
+	}
 	if t, ok := a.Type.(UserType); ok {
 		if v := t.Attribute().Validation; v != nil {
 			v.Debug(indent + 1)

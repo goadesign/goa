@@ -479,7 +479,9 @@ func buildView(name string, mt *expr.ResultTypeExpr, at *expr.AttributeExpr) (*e
 		cat := nat.Attribute
 		if existing := mt.Find(n); existing != nil {
 			dup := expr.DupAtt(existing)
-			dup.AddMeta("view", cat.Meta["view"]...)
+			if _, ok := cat.Meta["view"]; ok {
+				dup.AddMeta("view", cat.Meta["view"]...)
+			}
 			o.Set(n, dup)
 		} else if n != "links" {
 			return nil, fmt.Errorf("unknown attribute %#v", n)
