@@ -397,7 +397,7 @@ func buildServers(servers []*expr.ServerExpr) []*Server {
 			}
 
 			server = &Server{
-				URL:         u.Host,
+				URL:         u.String(),
 				Description: svr.Description,
 				Variables:   serverVariable,
 			}
