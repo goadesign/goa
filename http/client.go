@@ -63,7 +63,7 @@ func NewDebugDoer(d Doer) DebugDoer {
 func (dd *debugDoer) Do(req *http.Request) (*http.Response, error) {
 	var reqb []byte
 	if req.Body != nil {
-		reqb, _ := ioutil.ReadAll(req.Body)
+		reqb, _ = ioutil.ReadAll(req.Body)
 		req.Body = ioutil.NopCloser(bytes.NewBuffer(reqb))
 	}
 
