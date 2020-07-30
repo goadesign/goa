@@ -135,20 +135,35 @@ func TestBuildOperation(t *testing.T) {
 		Name: "request_string_body",
 		DSL:  dsls.RequestStringBody(svcName, "request_string_body"),
 
-		ExpectedRequestBody: &requestBody{"body", typ{Type: "string"}, true},
+		ExpectedRequestBody: &requestBody{"body", tstring, true},
 		ExpectedResponses:   responses{"200": {}},
 	}, {
 		Name: "request_object_body",
 		DSL:  dsls.RequestObjectBody(svcName, "request_object_body"),
 
-		ExpectedRequestBody: &requestBody{"", typ{Type: "object", Props: mtyp{"name": typ{Type: "string"}}}, true},
+		ExpectedRequestBody: &requestBody{"", tobj("name", tstring), true},
 		ExpectedResponses:   responses{"200": {}},
 	}, {
 		Name: "request_streaming_string_body",
 		DSL:  dsls.RequestObjectBody(svcName, "request_streaming_string_body"),
 
-		ExpectedRequestBody: &requestBody{"", typ{Type: "object", Props: mtyp{"name": typ{Type: "string"}}}, true},
+		ExpectedRequestBody: &requestBody{"", tobj("name", tstring), true},
 		ExpectedResponses:   responses{"200": {}},
+	}, {
+		Name: "response_array_of_string",
+		DSL:  dsls.ResponseArrayOfString(svcName, "response_array_of_string"),
+
+		ExpectedResponses: responses{"200": {"", tobj("result", tobj("children", tarray)), nil}},
+	}, {
+		Name: "response_recursive_user_type",
+		DSL:  dsls.ResponseRecursiveUserType(svcName, "response_recursive_user_type"),
+
+		ExpectedResponses: responses{"200": {"", tobj("recursive", tobj()), nil}},
+	}, {
+		Name: "response_recursive_array_user_type",
+		DSL:  dsls.ResponseRecursiveArrayUserType(svcName, "response_recursive_array_user_type"),
+
+		ExpectedResponses: responses{"200": {"", tobj("result", tobj("children", tarray)), nil}},
 	}}
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
