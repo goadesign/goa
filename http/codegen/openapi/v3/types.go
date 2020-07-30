@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"hash"
 	"hash/fnv"
-	"sort"
 	"strconv"
 	"strings"
 
@@ -174,7 +173,7 @@ func (sf *schemafier) schemafy(attr *expr.AttributeExpr) *openapi.Schema {
 		s.Type = openapi.Object
 		s.AdditionalProperties = true
 	case expr.UserType:
-		h := hashAttribute(attr, fnv.New64())
+		h := sf.hashAttribute(attr, fnv.New64())
 		if ref, ok := sf.hashes[h]; ok {
 			s.Ref = ref
 		} else {
@@ -325,61 +324,67 @@ func toString(val interface{}) string {
 // structurally equivalent element types, maps with structurally equivalent key
 // and value types or object with identical attribute names and structurally
 // equivalent types and identical set of required attributes.
-func hashAttribute(att *expr.AttributeExpr, h hash.Hash64) uint64 {
-	t := att.Type
-	switch t.Kind() {
+func (sf *schemafier) hashAttribute(att *expr.AttributeExpr, h hash.Hash64) uint64 {
+	return *hashAttribute(att, h, make(map[string]*uint64))
+}
 
+func hashAttribute(att *expr.AttributeExpr, h hash.Hash64, seen map[string]*uint64) *uint64 {
+	t := att.Type
+	if h, ok := seen[t.Hash()]; ok {
+		return h
+	}
+	var res *uint64
+	{
+		var tmp uint64
+		res = &tmp
+	}
+	seen[t.Hash()] = res
+
+	switch t.Kind() {
 	case expr.ObjectKind:
 		o := expr.AsObject(t)
-		keys := make([]string, len(*o))
-		for i, m := range *o {
-			keys[i] = m.Name
-		}
-		sort.Strings(keys)
-		var res uint64
-		for _, k := range keys {
-			kh := hashString(k, h)
-			vh := hashAttribute(o.Attribute(k), h)
-			res = res ^ orderedHash(kh, vh, h)
+		for _, m := range *o {
+			kh := hashString(m.Name, h)
+			vh := hashAttribute(m.Attribute, h, seen)
+			*res = *res ^ orderedHash(kh, *vh, h)
 		}
 		// Objects with a different set of required attributes should produce
 		// different hashes.
 		if att.Validation != nil {
 			for _, req := range att.Validation.Required {
 				rh := hashString(req, h)
-				res = res ^ rh
+				*res = *res ^ rh
 			}
 		}
-		return res
 
 	case expr.ArrayKind:
 		kh := hashString("[]", h)
-		vh := hashAttribute(expr.AsArray(t).ElemType, h)
-		return orderedHash(kh, vh, h)
+		vh := hashAttribute(expr.AsArray(t).ElemType, h, seen)
+		*res = orderedHash(kh, *vh, h)
 
 	case expr.MapKind:
 		m := expr.AsMap(t)
-		kh := hashAttribute(m.KeyType, h)
-		vh := hashAttribute(m.ElemType, h)
-		return orderedHash(kh, vh, h)
+		kh := hashAttribute(m.KeyType, h, seen)
+		vh := hashAttribute(m.ElemType, h, seen)
+		*res = orderedHash(*kh, *vh, h)
 
 	case expr.UserTypeKind:
-		return hashAttribute(t.(expr.UserType).Attribute(), h)
+		*res = *hashAttribute(t.(expr.UserType).Attribute(), h, seen)
 
 	case expr.ResultTypeKind:
 		// The identifier specified in the design for result types should drive
 		// the computation of the hash.
 		rt := t.(*expr.ResultTypeExpr)
-		res := hashString(rt.Identifier, h)
-		view := rt.AttributeExpr.Meta["view"]
-		if len(view) > 0 {
-			return orderedHash(res, hashString(view[0], h), h)
+		*res = hashString(rt.Identifier, h)
+		if view := rt.AttributeExpr.Meta["view"]; len(view) > 0 {
+			*res = orderedHash(*res, hashString(view[0], h), h)
 		}
-		return res
 
 	default: // Primitives or Any
-		return hashString(t.Name(), h)
+		*res = hashString(t.Name(), h)
 	}
+
+	return res
 }
 
 func hashString(s string, h hash.Hash64) uint64 {
