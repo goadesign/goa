@@ -13,15 +13,46 @@ import (
 
 // describes a type for comparison in tests.
 type typ struct {
-	Type  string
-	Props mtyp
+	Type      string
+	Props     []attr
+	SkipProps bool
 }
 
-// convenience
-type mtyp map[string]typ
+type attr struct {
+	Name string
+	Val  typ
+}
 
 // types mapped by response code.
 type rt map[int]typ
+
+// helpers
+var (
+	tempty  typ
+	tstring = typ{Type: "string"}
+	tint    = typ{Type: "integer"}
+	tarray  = typ{Type: "array"}
+)
+
+func tobj(attrs ...interface{}) typ {
+	res := typ{Type: "object"}
+	if len(attrs) == 0 {
+		res.SkipProps = true
+	}
+	for i := 0; i < len(attrs); i += 2 {
+		res.Props = append(res.Props, attr{Name: attrs[i].(string), Val: attrs[i+1].(typ)})
+	}
+	return res
+}
+
+func (tt typ) Prop(n string) (typ, bool) {
+	for _, att := range tt.Props {
+		if att.Name == n {
+			return att.Val, true
+		}
+	}
+	return tempty, false
+}
 
 func TestBuildBodyTypes(t *testing.T) {
 	const svcName = "test service"
@@ -36,62 +67,62 @@ func TestBuildBodyTypes(t *testing.T) {
 		Name: "string_body",
 		DSL:  dsls.StringBodyDSL(svcName, "string_body"),
 
-		ExpectedType:          typ{"string", nil},
-		ExpectedResponseTypes: rt{204: {"", nil}},
+		ExpectedType:          tstring,
+		ExpectedResponseTypes: rt{204: tempty},
 	}, {
 		Name: "object_body",
 		DSL:  dsls.ObjectBodyDSL(svcName, "object_body"),
 
-		ExpectedType:          typ{"object", mtyp{"name": {"string", nil}, "age": {"integer", nil}}},
-		ExpectedResponseTypes: rt{204: {"", nil}},
+		ExpectedType:          tobj("name", tstring, "age", tint),
+		ExpectedResponseTypes: rt{204: tempty},
 	}, {
 		Name: "streaming_string_body",
 		DSL:  dsls.RequestStreamingStringBody(svcName, "streaming_string_body"),
 
-		ExpectedType:          typ{"string", nil},
-		ExpectedResponseTypes: rt{204: {"", nil}},
+		ExpectedType:          tstring,
+		ExpectedResponseTypes: rt{204: tempty},
 	}, {
 		Name: "streaming_object_body",
 		DSL:  dsls.RequestStreamingObjectBody(svcName, "streaming_object_body"),
 
-		ExpectedType:          typ{"object", mtyp{"name": {"string", nil}, "age": {"integer", nil}}},
-		ExpectedResponseTypes: rt{204: {"", nil}},
+		ExpectedType:          tobj("name", tstring, "age", tint),
+		ExpectedResponseTypes: rt{204: tempty},
 	}, {
 		Name: "string_response_body",
 		DSL:  dsls.StringResponseBodyDSL(svcName, "string_response_body"),
 
-		ExpectedType:          typ{"", nil},
-		ExpectedResponseTypes: rt{200: {"string", nil}},
+		ExpectedType:          tempty,
+		ExpectedResponseTypes: rt{200: tstring},
 	}, {
 		Name: "object_response_body",
 		DSL:  dsls.ObjectResponseBodyDSL(svcName, "object_response_body"),
 
-		ExpectedType:          typ{"", nil},
-		ExpectedResponseTypes: rt{200: {"object", mtyp{"name": typ{"string", nil}, "age": typ{"integer", nil}}}},
+		ExpectedType:          tempty,
+		ExpectedResponseTypes: rt{200: tobj("name", tstring, "age", tint)},
 	}, {
 		Name: "string_streaming_response_body",
 		DSL:  dsls.StringStreamingResponseBodyDSL(svcName, "string_streaming_response_body"),
 
-		ExpectedType:          typ{"", nil},
-		ExpectedResponseTypes: rt{200: {"string", nil}},
+		ExpectedType:          tempty,
+		ExpectedResponseTypes: rt{200: tstring},
 	}, {
 		Name: "object_streaming_response_body",
 		DSL:  dsls.ObjectResponseBodyDSL(svcName, "object_streaming_response_body"),
 
-		ExpectedType:          typ{"", nil},
-		ExpectedResponseTypes: rt{200: {"object", mtyp{"name": typ{"string", nil}, "age": typ{"integer", nil}}}},
+		ExpectedType:          tempty,
+		ExpectedResponseTypes: rt{200: tobj("name", tstring, "age", tint)},
 	}, {
 		Name: "string_error_response",
 		DSL:  dsls.StringErrorResponseBodyDSL(svcName, "string_error_response"),
 
-		ExpectedType:          typ{"", nil},
-		ExpectedResponseTypes: rt{204: {"", nil}, 400: {"string", nil}},
+		ExpectedType:          tempty,
+		ExpectedResponseTypes: rt{204: tempty, 400: tstring},
 	}, {
 		Name: "object_error_response",
 		DSL:  dsls.ObjectErrorResponseBodyDSL(svcName, "object_error_response"),
 
-		ExpectedType:          typ{"", nil},
-		ExpectedResponseTypes: rt{204: {"", nil}, 400: {"object", mtyp{"name": typ{"string", nil}, "age": typ{"integer", nil}}}},
+		ExpectedType:          tempty,
+		ExpectedResponseTypes: rt{204: tempty, 400: tobj("name", tstring, "age", tint)},
 	}}
 
 	for _, c := range cases {
@@ -156,8 +187,16 @@ func matchesSchemaWithPrefix(t *testing.T, ctx string, s *openapi.Schema, types 
 		t.Errorf("%s: %sgot type %q, expected %q", ctx, prefix, s.Type, tt.Type)
 	}
 	if tt.Type == "object" {
+		if tt.SkipProps {
+			return
+		}
 		for n, v := range s.Properties {
-			matchesSchemaWithPrefix(t, ctx, v, types, tt.Props[n], n+": ")
+			p, ok := tt.Prop(n)
+			if !ok {
+				t.Errorf("%s: %sgot unexpected field %q", ctx, prefix, n)
+				continue
+			}
+			matchesSchemaWithPrefix(t, ctx, v, types, p, n+": ")
 		}
 	}
 }
@@ -212,9 +251,10 @@ func TestHashAttribute(t *testing.T) {
 		{"result-same", newRT("id", newObj("foo", expr.Int, true)), h5},
 	}
 	h := fnv.New64()
+	sf := newSchemafier(expr.NewRandom("test"))
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
-			got := hashAttribute(c.att, h)
+			got := sf.hashAttribute(c.att, h)
 			if got != c.h {
 				t.Errorf("got %v, expected %v", got, c.h)
 			}
