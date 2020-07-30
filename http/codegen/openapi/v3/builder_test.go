@@ -149,6 +149,16 @@ func TestBuildOperation(t *testing.T) {
 
 		ExpectedRequestBody: &requestBody{"", typ{Type: "object", Props: mtyp{"name": typ{Type: "string"}}}, true},
 		ExpectedResponses:   responses{"200": {}},
+	}, {
+		Name: "response_recursive_user_type",
+		DSL:  dsls.ResponseRecursiveUserType(svcName, "response_recursive_user_type"),
+
+		ExpectedResponses: responses{"200": {"", typ{Type: "object", Props: mtyp{"result": typ{Type: "object", Props: mtyp{"children": typ{Type: "array"}}}}}, nil}},
+	}, {
+		Name: "response_array_of_string",
+		DSL:  dsls.ResponseArrayOfString(svcName, "response_array_of_string"),
+
+		ExpectedResponses: responses{"200": {"", typ{Type: "object", Props: mtyp{"result": typ{Type: "object", Props: mtyp{"children": typ{Type: "array"}}}}}, nil}},
 	}}
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {

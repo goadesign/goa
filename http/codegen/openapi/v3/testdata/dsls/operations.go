@@ -99,3 +99,45 @@ var ResponseObjectBody = func(svc, met string) func() {
 		})
 	}
 }
+
+var ResponseRecursiveUserType = func(svc, met string) func() {
+	return func() {
+		var recursiveUserType = Type("recursiveUserType", func() {
+			Attribute("children", ArrayOf("recursiveUserType"))
+		})
+
+		var arrResultType = ResultType("recursiveArrayResultType", func() {
+			Attribute("result", recursiveUserType)
+		})
+
+		var _ = Service(svc, func() {
+			Method(met, func() {
+				Result(arrResultType)
+				HTTP(func() {
+					GET("/")
+				})
+			})
+		})
+	}
+}
+
+var ResponseArrayOfString = func(svc, met string) func() {
+	return func() {
+		var arrayOfType = Type("arrayOfString", func() {
+			Attribute("children", ArrayOf(String))
+		})
+
+		var arrResultType = ResultType("arrResultType", func() {
+			Attribute("result", arrayOfType)
+		})
+
+		var _ = Service(svc, func() {
+			Method(met, func() {
+				Result(arrResultType)
+				HTTP(func() {
+					GET("/")
+				})
+			})
+		})
+	}
+}

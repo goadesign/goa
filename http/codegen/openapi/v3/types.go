@@ -354,8 +354,13 @@ func hashAttribute(att *expr.AttributeExpr, h hash.Hash64) uint64 {
 
 	case expr.ArrayKind:
 		kh := hashString("[]", h)
-		vh := hashAttribute(expr.AsArray(t).ElemType, h)
-		return orderedHash(kh, vh, h)
+
+		art := expr.AsArray(t)
+		if _, ok := art.ElemType.Type.(expr.UserType); !ok {
+			vh := hashAttribute(art.ElemType, h)
+			return orderedHash(kh, vh, h)
+		}
+		return kh
 
 	case expr.MapKind:
 		m := expr.AsMap(t)
