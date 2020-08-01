@@ -932,6 +932,20 @@ func NewMethodBodyUserInnerDefaultPayloadType(body *MethodBodyUserInnerDefaultRe
 }
 `
 
+var PayloadBodyUserOriginConstructorCode = `// NewMethodBodyUserOriginDefaultPayload builds a ServiceBodyUserOriginDefault
+// service MethodBodyUserOriginDefault endpoint payload.
+func NewMethodBodyUserOriginDefaultPayload(body *MethodBodyUserOriginDefaultRequestBody) *servicebodyuserorigindefault.MethodBodyUserOriginDefaultPayload {
+	v := &servicebodyuserorigindefault.PayloadType{
+		A: *body.A,
+	}
+	res := &servicebodyuserorigindefault.MethodBodyUserOriginDefaultPayload{
+		Body: v,
+	}
+
+	return res
+}
+`
+
 var PayloadBodyInlineArrayUserConstructorCode = `// NewMethodBodyInlineArrayUserElemType builds a ServiceBodyInlineArrayUser
 // service MethodBodyInlineArrayUser endpoint payload.
 func NewMethodBodyInlineArrayUserElemType(body []*ElemTypeRequestBody) []*servicebodyinlinearrayuser.ElemType {
