@@ -2564,6 +2564,24 @@ var PayloadBodyUserInnerDefaultDSL = func() {
 	})
 }
 
+var PayloadBodyUserOriginDSL = func() {
+	var PayloadType = Type("PayloadType", func() {
+		Attribute("a")
+		Required("a")
+	})
+	Service("ServiceBodyUserOriginDefault", func() {
+		Method("MethodBodyUserOriginDefault", func() {
+			Payload(func() {
+				Attribute("body", PayloadType)
+			})
+			HTTP(func() {
+				POST("/")
+				Body("body")
+			})
+		})
+	})
+}
+
 var PayloadBodyInlineArrayUserDSL = func() {
 	var ElemType = Type("ElemType", func() {
 		Attribute("a", String, func() {
