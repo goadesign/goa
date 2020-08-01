@@ -1259,7 +1259,7 @@ func buildPayloadData(e *expr.HTTPEndpointExpr, sd *ServiceData) *PayloadData {
 			if o, ok := e.Body.Meta["origin:attribute"]; ok {
 				origin = o[0]
 				pAtt = expr.AsObject(payload.Type).Attribute(origin)
-				pointer = !payload.IsRequired(o[0])
+				pointer = !payload.IsRequired(o[0]) && expr.IsPrimitive(pAtt.Type)
 			}
 
 			var (
