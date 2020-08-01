@@ -159,10 +159,10 @@ service MyNameConflicts {
 }
 
 message MyNameConflictsMethodRequest {
-	MyNameConflicts1 conflict = 1;
+	MyNameConflicts2 conflict = 1;
 }
 
-message MyNameConflicts1 {
+message MyNameConflicts2 {
 	bool boolean_field = 1;
 }
 
