@@ -499,29 +499,7 @@ func (d ServicesData) analyze(service *expr.ServiceExpr) *Data {
 		seenProj = make(map[string]*ProjectedTypeData)
 		seenViewed = make(map[string]*ViewedResultTypeData)
 
-		// A function to convert raw object type to user type.
-		makeUserType := func(att *expr.AttributeExpr, name, id string) {
-			if _, ok := att.Type.(*expr.Object); ok {
-				att.Type = &expr.UserTypeExpr{
-					AttributeExpr: expr.DupAtt(att),
-					TypeName:      name,
-					UID:           id,
-				}
-			}
-			if ut, ok := att.Type.(expr.UserType); ok {
-				seen[ut.ID()] = struct{}{}
-			}
-		}
-
-		for _, e := range service.Methods {
-			name := codegen.Goify(e.Name, true)
-			// Create user type for raw object payloads
-			makeUserType(e.Payload, name+"Payload", service.Name+"#"+name+"Payload")
-			// Create user type for raw object streaming payloads
-			makeUserType(e.StreamingPayload, name+"StreamingPayload", service.Name+"#"+name+"StreamingPayload")
-			// Create user type for raw object results
-			makeUserType(e.Result, name+"Result", service.Name+"#"+name+"Result")
-		}
+		// A function to collect user types from an error expression
 		recordError := func(er *expr.ErrorExpr) {
 			errTypes = append(errTypes, collectTypes(er.AttributeExpr, scope, seen)...)
 			if er.Type == expr.ErrorResult {
@@ -556,6 +534,30 @@ func (d ServicesData) analyze(service *expr.ServiceExpr) *Data {
 			for _, er := range m.Errors {
 				recordError(er)
 			}
+		}
+
+		// A function to convert raw object type to user type.
+		makeUserType := func(att *expr.AttributeExpr, name, id string) {
+			if _, ok := att.Type.(*expr.Object); ok {
+				att.Type = &expr.UserTypeExpr{
+					AttributeExpr: expr.DupAtt(att),
+					TypeName:      scope.Name(name),
+					UID:           id,
+				}
+			}
+			if ut, ok := att.Type.(expr.UserType); ok {
+				seen[ut.ID()] = struct{}{}
+			}
+		}
+
+		for _, e := range service.Methods {
+			name := codegen.Goify(e.Name, true)
+			// Create user type for raw object payloads
+			makeUserType(e.Payload, name+"Payload", service.Name+"#"+name+"Payload")
+			// Create user type for raw object streaming payloads
+			makeUserType(e.StreamingPayload, name+"StreamingPayload", service.Name+"#"+name+"StreamingPayload")
+			// Create user type for raw object results
+			makeUserType(e.Result, name+"Result", service.Name+"#"+name+"Result")
 		}
 	}
 
