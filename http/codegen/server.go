@@ -512,17 +512,26 @@ func {{ .RequestDecoder }}(mux goahttp.Muxer, decoder func(*http.Request) goahtt
 		)
 		err = decoder(r).Decode(&body)
 		if err != nil {
+	{{- if .Payload.Request.MustHaveBody }}
 			if err == io.EOF {
 				return nil, goa.MissingPayloadError()
 			}
+	{{- else }}
+			if err == io.EOF {
+				err = nil
+			} else {
+	{{- end }}
 			return nil, goa.DecodePayloadError(err.Error())
+	{{- if not .Payload.Request.MustHaveBody }}
+			}
+	{{- end }}
 		}
-		{{- if .Payload.Request.ServerBody.ValidateRef }}
+	{{- if .Payload.Request.ServerBody.ValidateRef }}
 		{{ .Payload.Request.ServerBody.ValidateRef }}
 		if err != nil {
 			return nil, err
 		}
-		{{- end }}
+	{{- end }}
 {{- end }}
 {{- if not .MultipartRequestDecoder }}
 	{{- template "request_elements" .Payload.Request }}
