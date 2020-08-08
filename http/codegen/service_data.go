@@ -276,6 +276,8 @@ type (
 		// attribute. This field is set when the design uses Body("name") syntax
 		// to set the request body and the payload type is an object.
 		PayloadAttr string
+		// MustHaveBody is true if the request body cannot be empty.
+		MustHaveBody bool
 		// MustValidate is true if the request body or at least one
 		// parameter or header requires validation.
 		MustValidate bool
@@ -949,6 +951,7 @@ func buildPayloadData(e *expr.HTTPEndpointExpr, sd *ServiceData) *PayloadData {
 			origin         string
 
 			mustValidate bool
+			mustHaveBody = true
 		)
 		{
 			if e.MapQueryParams != nil {
@@ -1026,6 +1029,9 @@ func buildPayloadData(e *expr.HTTPEndpointExpr, sd *ServiceData) *PayloadData {
 				// transformation.
 				if o, ok := e.Body.Meta["origin:attribute"]; ok {
 					origin = o[0]
+					if !payload.IsRequired(o[0]) {
+						mustHaveBody = false
+					}
 				}
 			}
 		}
@@ -1038,6 +1044,7 @@ func buildPayloadData(e *expr.HTTPEndpointExpr, sd *ServiceData) *PayloadData {
 			ClientBody:   clientBodyData,
 			PayloadAttr:  codegen.Goify(origin, true),
 			PayloadType:  e.MethodExpr.Payload.Type,
+			MustHaveBody: mustHaveBody,
 			MustValidate: mustValidate,
 			Multipart:    e.MultipartRequest,
 		}
