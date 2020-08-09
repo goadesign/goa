@@ -17,7 +17,8 @@ var resultTypeCount int
 //
 // Result types have a unique identifier as described in RFC 6838. The
 // identifier defines the default value for the Content-Type header of HTTP
-// responses.
+// responses. Result types may also define a type name used to override the
+// default Go type name generated from the identifier.
 //
 // The result type expression includes a listing of all the response attributes.
 // Views specify which of the attributes are actually rendered so that the same
@@ -28,16 +29,19 @@ var resultTypeCount int
 // is not explicitly described in the DSL then one is created that lists all the
 // result type attributes.
 //
+// Note: it is not required to use a ResultType to describe the type of a method
+// result, Type can also be used and is preferred if there is no need to define
+// multiple views.
+//
 // ResultType is a top level DSL.
 //
-// ResultType accepts two arguments: the result type identifier and the defining
-// DSL.
+// ResultType accepts two or three arguments: the result type identifier, an
+// optional type name and the defining DSL.
 //
 // Example:
 //
-//    var BottleMT = ResultType("application/vnd.goa.example.bottle", func() {
+//    var BottleMT = ResultType("application/vnd.goa.example.bottle", "BottleResult", func() {
 //        Description("A bottle of wine")
-//        TypeName("BottleResult")         // Override generated type name
 //        ContentType("application/json") // Override Content-Type header
 //
 //        Attributes(func() {
@@ -61,19 +65,46 @@ var resultTypeCount int
 //        })
 //     })
 //
-func ResultType(identifier string, fn func()) *expr.ResultTypeExpr {
+func ResultType(identifier string, args ...interface{}) *expr.ResultTypeExpr {
 	if _, ok := eval.Current().(eval.TopExpr); !ok {
 		eval.IncompatibleDSL()
 		return nil
 	}
 
-	identifier, typeName, err := mediaTypeToResultType(identifier)
-	// Validate Result Type
-	if err != nil {
-		eval.ReportError("invalid result type identifier %#v: %s",
-			identifier, err)
-		// We don't return so that other errors may be captured in this
-		// one run.
+	var (
+		typeName string
+		fn       func()
+	)
+	{
+		var err error
+		identifier, typeName, err = mediaTypeToResultType(identifier)
+		if err != nil {
+			eval.ReportError("invalid result type identifier %#v: %s", identifier, err)
+			// We don't return so that other errors may be captured
+		}
+		if len(args) > 0 {
+			switch a := args[0].(type) {
+			case func():
+				fn = a
+			case string:
+				typeName = a
+			default:
+				eval.InvalidArgError("function or string", args[0])
+			}
+			if len(args) > 1 {
+				if fn != nil {
+					eval.ReportError("DSL function must be last argument")
+				}
+				if f, ok := args[1].(func()); ok {
+					fn = f
+				} else {
+					eval.InvalidArgError("function", args[1])
+				}
+				if len(args) > 2 {
+					eval.ReportError("too many arguments")
+				}
+			}
+		}
 	}
 	canonicalID := expr.CanonicalIdentifier(identifier)
 	// Validate that result type identifier doesn't clash
