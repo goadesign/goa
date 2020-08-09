@@ -242,9 +242,9 @@ func Build{{ .Method.VarName }}Func(grpccli {{ .PkgName }}.{{ .ClientInterface }
 			opts = append(opts, opt)
 		}
 		if reqpb != nil {
-			return grpccli.{{ .Method.VarName }}(ctx{{ if not .Method.StreamingPayload }}, reqpb.({{ .Request.ClientConvert.TgtRef }}){{ end }}, opts...)
+			return grpccli.{{ .ClientMethodName }}(ctx{{ if not .Method.StreamingPayload }}, reqpb.({{ .Request.ClientConvert.TgtRef }}){{ end }}, opts...)
 		}
-		return grpccli.{{ .Method.VarName }}(ctx{{ if not .Method.StreamingPayload }}, &{{ .Request.ClientConvert.TgtName }}{}{{ end }}, opts...)
+		return grpccli.{{ .ClientMethodName }}(ctx{{ if not .Method.StreamingPayload }}, &{{ .Request.ClientConvert.TgtName }}{}{{ end }}, opts...)
 	}
 }
 `
