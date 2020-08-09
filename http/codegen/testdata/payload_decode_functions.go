@@ -3721,9 +3721,10 @@ func DecodeMethodBodyUserRequest(mux goahttp.Muxer, decoder func(*http.Request) 
 		err = decoder(r).Decode(&body)
 		if err != nil {
 			if err == io.EOF {
-				return nil, goa.MissingPayloadError()
+				err = nil
+			} else {
+				return nil, goa.DecodePayloadError(err.Error())
 			}
-			return nil, goa.DecodePayloadError(err.Error())
 		}
 		err = ValidateMethodBodyUserRequestBody(&body)
 		if err != nil {
@@ -4137,9 +4138,10 @@ func DecodeMethodBodyPrimitiveArrayUserRequest(mux goahttp.Muxer, decoder func(*
 		err = decoder(r).Decode(&body)
 		if err != nil {
 			if err == io.EOF {
-				return nil, goa.MissingPayloadError()
+				err = nil
+			} else {
+				return nil, goa.DecodePayloadError(err.Error())
 			}
-			return nil, goa.DecodePayloadError(err.Error())
 		}
 		payload := NewMethodBodyPrimitiveArrayUserPayloadType(body)
 
@@ -4160,9 +4162,10 @@ func DecodeMethodBodyPrimitiveArrayUserRequest(mux goahttp.Muxer, decoder func(*
 		err = decoder(r).Decode(&body)
 		if err != nil {
 			if err == io.EOF {
-				return nil, goa.MissingPayloadError()
+				err = nil
+			} else {
+				return nil, goa.DecodePayloadError(err.Error())
 			}
-			return nil, goa.DecodePayloadError(err.Error())
 		}
 		payload := NewMethodBodyPrimitiveArrayUserPayloadType(body)
 
