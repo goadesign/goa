@@ -2,6 +2,7 @@ package codegen
 
 import (
 	"fmt"
+	"regexp"
 	"strconv"
 	"strings"
 
@@ -288,6 +289,8 @@ func protoBufGoFullTypeRef(att *expr.AttributeExpr, pkg string, s *codegen.NameS
 	return name
 }
 
+var digits = regexp.MustCompile("[0-9]+")
+
 // protoBufify makes a valid protocol buffer identifier out of any string.
 // It does that by removing any non letter and non digit character and by
 // making sure the first character is a letter or "_". protoBufify produces a
@@ -308,6 +311,17 @@ func protoBufify(str string, firstUpper, acronym bool) string {
 		str = str[:idx]
 	}
 
+	// The CamelCase implementation of protoc-gen-go considers digits as words
+	// but our CamelCase implementation considers them as lower case characters,
+	// compensate by adding an underscore after any series of digits.
+	// See https://github.com/golang/protobuf/blob/d04d7b157bb510b1e0c10132224b616ac0e26b17/protoc-gen-go/generator/generator.go#L2648-L2685
+	str = string(digits.ReplaceAllFunc([]byte(str), func(match []byte) []byte {
+		res := make([]byte, len(match)+1) // need to allocate new slice
+		copy(res, match)
+		res[len(res)-1] = '_'
+		return res
+	}))
+
 	str = codegen.CamelCase(str, firstUpper, acronym)
 	if str == "" {
 		// All characters are invalid. Produce a default value.
@@ -316,6 +330,7 @@ func protoBufify(str string, firstUpper, acronym bool) string {
 		}
 		return "val"
 	}
+
 	return fixReservedProtoBuf(str)
 }
 
@@ -421,36 +436,36 @@ var (
 	// reserved protocol buffer keywords and package names
 	reservedProtoBuf = map[string]struct{}{
 		// types
-		"bool":     struct{}{},
-		"bytes":    struct{}{},
-		"double":   struct{}{},
-		"fixed32":  struct{}{},
-		"fixed64":  struct{}{},
-		"float":    struct{}{},
-		"int32":    struct{}{},
-		"int64":    struct{}{},
-		"sfixed32": struct{}{},
-		"sfixed64": struct{}{},
-		"sint32":   struct{}{},
-		"sint64":   struct{}{},
-		"string":   struct{}{},
-		"uint32":   struct{}{},
-		"uint64":   struct{}{},
+		"bool":     {},
+		"bytes":    {},
+		"double":   {},
+		"fixed32":  {},
+		"fixed64":  {},
+		"float":    {},
+		"int32":    {},
+		"int64":    {},
+		"sfixed32": {},
+		"sfixed64": {},
+		"sint32":   {},
+		"sint64":   {},
+		"string":   {},
+		"uint32":   {},
+		"uint64":   {},
 
-		// reserved keywords
-		"enum":     struct{}{},
-		"import":   struct{}{},
-		"map":      struct{}{},
-		"message":  struct{}{},
-		"oneof":    struct{}{},
-		"option":   struct{}{},
-		"package":  struct{}{},
-		"public":   struct{}{},
-		"repeated": struct{}{},
-		"reserved": struct{}{},
-		"returns":  struct{}{},
-		"rpc":      struct{}{},
-		"service":  struct{}{},
-		"syntax":   struct{}{},
+		// reserved
+		"enum":     {},
+		"import":   {},
+		"map":      {},
+		"message":  {},
+		"oneof":    {},
+		"option":   {},
+		"package":  {},
+		"public":   {},
+		"repeated": {},
+		"reserved": {},
+		"returns":  {},
+		"rpc":      {},
+		"service":  {},
+		"syntax":   {},
 	}
 )
