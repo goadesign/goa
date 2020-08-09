@@ -63,8 +63,16 @@ func buildBodyTypes(api *expr.APIExpr) (map[string]map[string]*EndpointBodies, m
 	bodies := make(map[string]map[string]*EndpointBodies)
 	sf := newSchemafier(api.Random())
 	for _, s := range api.HTTP.Services {
+		if !mustGenerate(s.Meta) || !mustGenerate(s.ServiceExpr.Meta) {
+			continue
+		}
+
 		sbodies := make(map[string]*EndpointBodies, len(s.HTTPEndpoints))
 		for _, e := range s.HTTPEndpoints {
+			if !mustGenerate(e.Meta) || !mustGenerate(e.MethodExpr.Meta) {
+				continue
+			}
+
 			req := sf.schemafy(e.Body)
 			if e.StreamingBody != nil {
 				sreq := sf.schemafy(e.StreamingBody)
