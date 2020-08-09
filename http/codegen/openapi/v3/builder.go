@@ -104,10 +104,18 @@ func buildComponents(root *expr.RootExpr, types map[string]*openapi.Schema) *Com
 func buildPaths(h *expr.HTTPExpr, bodies map[string]map[string]*EndpointBodies, api *expr.APIExpr) map[string]*PathItem {
 	var paths = make(map[string]*PathItem)
 	for _, svc := range h.Services {
+		if !mustGenerate(svc.Meta) || !mustGenerate(svc.ServiceExpr.Meta) {
+			continue
+		}
+
 		sbod := bodies[svc.Name()]
 
 		// endpoints
 		for _, e := range svc.HTTPEndpoints {
+			if !mustGenerate(e.Meta) || !mustGenerate(e.MethodExpr.Meta) {
+				continue
+			}
+
 			for _, r := range e.Routes {
 				for _, key := range r.FullPaths() {
 					// Remove any wildcards that is defined in path as a workaround to
@@ -142,6 +150,10 @@ func buildPaths(h *expr.HTTPExpr, bodies map[string]map[string]*EndpointBodies, 
 
 		// file servers
 		for _, f := range svc.FileServers {
+			if !mustGenerate(f.Meta) || !mustGenerate(f.Service.Meta) {
+				continue
+			}
+
 			for _, key := range f.RequestPaths {
 				operation := buildFileServerOperation(key, f, api)
 				path, ok := paths[key]
@@ -522,4 +534,15 @@ func defaultURI(h *expr.HostExpr) string {
 		panic(err) // should never hit this!
 	}
 	return uri
+}
+
+// mustGenerate returns true if the meta indicates that a OpenAPI specification should be
+// generated, false otherwise.
+func mustGenerate(meta expr.MetaExpr) bool {
+	if m, ok := meta["swagger:generate"]; ok {
+		if len(m) > 0 && m[0] == "false" {
+			return false
+		}
+	}
+	return true
 }
