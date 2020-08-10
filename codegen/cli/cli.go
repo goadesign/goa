@@ -198,7 +198,7 @@ func BuildSubcommandData(svcName string, m *service.MethodData, buildFunction *B
 				conversion = "var err error\n" + conversion
 				conversion += "\nif err != nil {\n"
 				if flagType(m.Payload) == "JSON" {
-					conversion += fmt.Sprintf(`return nil, nil, fmt.Errorf("invalid JSON for %s, example of valid JSON:\n%%s", %q)`,
+					conversion += fmt.Sprintf(`return nil, nil, fmt.Errorf("invalid JSON for %s, \nerror: %%s, \nexample of valid JSON:\n%%s", err, %q)`,
 						flags[0].FullName+"Flag", flags[0].Example)
 				} else {
 					conversion += fmt.Sprintf(`return nil, nil, fmt.Errorf("invalid value for %s, must be %s")`,
@@ -366,7 +366,7 @@ func FieldLoadCode(f *FlagData, argName, argTypeName, validate string, defaultVa
 			if check {
 				code += "\nif err != nil {\n"
 				if flagType(argTypeName) == "JSON" {
-					code += fmt.Sprintf(`return %v, fmt.Errorf("invalid JSON for %s, example of valid JSON:\n%%s", %q)`,
+					code += fmt.Sprintf(`return %v, fmt.Errorf("invalid JSON for %s, \nerror: %%s, \nexample of valid JSON:\n%%s", err, %q)`,
 						rval, argName, ex)
 				} else {
 					code += fmt.Sprintf(`return %v, fmt.Errorf("invalid value for %s, must be %s")`,
