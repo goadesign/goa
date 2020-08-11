@@ -102,6 +102,23 @@ func (c *Client) MethodUnaryRPCWithErrors() goa.Endpoint {
 }
 `
 
+const UnaryRPCAcronymClientEndpointInitCode = `// MethodUnaryRPCAcronymJWT calls the "MethodUnaryRPCAcronymJWT" function in
+// service_unary_rpc_acronympb.ServiceUnaryRPCAcronymClient interface.
+func (c *Client) MethodUnaryRPCAcronymJWT() goa.Endpoint {
+	return func(ctx context.Context, v interface{}) (interface{}, error) {
+		inv := goagrpc.NewInvoker(
+			BuildMethodUnaryRPCAcronymJWTFunc(c.grpccli, c.opts...),
+			nil,
+			nil)
+		res, err := inv.Invoke(ctx, v)
+		if err != nil {
+			return nil, goa.Fault(err.Error())
+		}
+		return res, nil
+	}
+}
+`
+
 const ServerStreamingRPCClientEndpointInitCode = `// MethodServerStreamingRPC calls the "MethodServerStreamingRPC" function in
 // service_server_streaming_rpcpb.ServiceServerStreamingRPCClient interface.
 func (c *Client) MethodServerStreamingRPC() goa.Endpoint {

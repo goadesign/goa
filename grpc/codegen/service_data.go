@@ -617,7 +617,7 @@ func (d ServicesData) analyze(gs *expr.GRPCServiceExpr) *ServiceData {
 			Errors:           errors,
 			ServerStruct:     sd.ServerStruct,
 			ServerInterface:  sd.ServerInterface,
-			ClientMethodName: protoBufify(md.VarName, true, false),
+			ClientMethodName: protoBufify(md.VarName, true, true),
 			ClientStruct:     sd.ClientStruct,
 			ClientInterface:  sd.ClientInterface,
 		}
