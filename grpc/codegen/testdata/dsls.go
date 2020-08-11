@@ -85,6 +85,14 @@ var UnaryRPCWithErrorsDSL = func() {
 	})
 }
 
+var UnaryRPCAcronymDSL = func() {
+	Service("ServiceUnaryRPCAcronym", func() {
+		Method("MethodUnaryRPCAcronym_jwt", func() {
+			GRPC(func() {})
+		})
+	})
+}
+
 var UnaryRPCWithOverridingErrorsDSL = func() {
 	Service("ServiceUnaryRPCWithOverridingErrors", func() {
 		Error("overridden")
@@ -743,6 +751,14 @@ var MultipleMethodsSameResultCollectionDSL = func() {
 		})
 		Method("method_b", func() {
 			Result(CollectionOf(ResultT))
+			GRPC(func() {})
+		})
+	})
+}
+
+var MethodWithAcronymDSL = func() {
+	Service("MethodWithAcronym", func() {
+		Method("method_jwt", func() {
 			GRPC(func() {})
 		})
 	})
