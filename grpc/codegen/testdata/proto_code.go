@@ -403,3 +403,23 @@ message ResultT {
 message MethodBRequest {
 }
 `
+
+const MethodWithAcronymProtoCode = `
+syntax = "proto3";
+
+package method_with_acronym;
+
+option go_package = "method_with_acronympb";
+
+// Service is the MethodWithAcronym service interface.
+service MethodWithAcronym {
+	// MethodJWT implements method_jwt.
+	rpc MethodJWT (MethodJWTRequest) returns (MethodJWTResponse);
+}
+
+message MethodJWTRequest {
+}
+
+message MethodJWTResponse {
+}
+`
