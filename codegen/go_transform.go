@@ -265,7 +265,7 @@ func transformArray(source, target *expr.Array, sourceVar, targetVar string, new
 		"TargetVar":      targetVar,
 		"NewVar":         newVar,
 		"TransformAttrs": ta,
-		"LoopVar":        string(105 + strings.Count(targetVar, "[")),
+		"LoopVar":        string(rune(105 + strings.Count(targetVar, "["))),
 		"IsStruct":       expr.IsObject(target.ElemType.Type),
 	}
 	var buf bytes.Buffer
@@ -299,7 +299,7 @@ func transformMap(source, target *expr.Map, sourceVar, targetVar string, newVar 
 		"IsElemStruct":   expr.IsObject(target.ElemType.Type),
 	}
 	if depth := MapDepth(target); depth > 0 {
-		data["LoopVar"] = string(97 + depth)
+		data["LoopVar"] = string(rune(97 + depth))
 	}
 	var buf bytes.Buffer
 	if err := transformGoMapT.Execute(&buf, data); err != nil {

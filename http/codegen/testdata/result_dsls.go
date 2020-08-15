@@ -585,6 +585,26 @@ var ResultBodyObjectHeaderDSL = func() {
 	})
 }
 
+var ResultBodyUserRequiredDSL = func() {
+	var Bod = Type("body", func() {
+		Attribute("a")
+		Required("a")
+	})
+	Service("ServiceBodyUserRequired", func() {
+		Method("MethodBodyUserRequired", func() {
+			Result(func() {
+				Attribute("body", Bod)
+			})
+			HTTP(func() {
+				GET("/")
+				Response(StatusOK, func() {
+					Body("body")
+				})
+			})
+		})
+	})
+}
+
 var ResultBodyUserDSL = func() {
 	var ResultType = Type("ResultType", func() {
 		Attribute("a", String)

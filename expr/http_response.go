@@ -256,22 +256,24 @@ func (r *HTTPResponseExpr) Validate(e *HTTPEndpointExpr) *eval.ValidationErrors 
 func (r *HTTPResponseExpr) Finalize(a *HTTPEndpointExpr, svcAtt *AttributeExpr) {
 	r.Parent = a
 
-	// Initialize the body attributes (if an object) with the corresponding
-	// result attributes.
-	svcObj := AsObject(svcAtt.Type)
 	if r.Body != nil {
+		bodyAtt := svcAtt
+		if o, ok := r.Body.Meta["origin:attribute"]; ok {
+			bodyAtt = svcAtt.Find(o[0])
+		}
+		bodyObj := AsObject(bodyAtt.Type)
 		if body := AsObject(r.Body.Type); body != nil {
 			for _, nat := range *body {
 				n := nat.Name
 				n = strings.Split(n, ":")[0]
 				var att, patt *AttributeExpr
 				var required bool
-				if svcObj != nil {
-					att = svcObj.Attribute(n)
-					required = svcAtt.IsRequired(n)
+				if bodyObj != nil {
+					att = bodyObj.Attribute(n)
+					required = bodyAtt.IsRequired(n)
 				} else {
-					att = svcAtt
-					required = svcAtt.Type != Empty
+					att = bodyAtt
+					required = bodyAtt.Type != Empty
 				}
 				initAttrFromDesign(att, patt)
 				if required {
@@ -292,7 +294,7 @@ func (r *HTTPResponseExpr) Finalize(a *HTTPEndpointExpr, svcAtt *AttributeExpr) 
 			}
 		}
 		if r.Body.Meta == nil {
-			r.Body.Meta = svcAtt.Meta
+			r.Body.Meta = bodyAtt.Meta
 		}
 	}
 	// Set response content type if empty and if set in the result type
