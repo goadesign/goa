@@ -1079,6 +1079,72 @@ func newRT2ViewTiny(res *RT2) *resultwithresulttypecollectionviews.RT2View {
 }
 `
 
+const ResultWithDashedMimeTypeMethod = `
+// Service is the ResultWithDashedMimeType service interface.
+type Service interface {
+	// A implements A.
+	A(context.Context) (res *ApplicationDashedType, err error)
+	// List implements list.
+	List(context.Context) (res *ListResult, err error)
+}
+
+// ServiceName is the name of the service as defined in the design. This is the
+// same value that is set in the endpoint request contexts under the ServiceKey
+// key.
+const ServiceName = "ResultWithDashedMimeType"
+
+// MethodNames lists the service method names as defined in the design. These
+// are the same values that are set in the endpoint request contexts under the
+// MethodKey key.
+var MethodNames = [2]string{"A", "list"}
+
+// ApplicationDashedType is the result type of the ResultWithDashedMimeType
+// service A method.
+type ApplicationDashedType struct {
+	Name *string
+}
+
+// ListResult is the result type of the ResultWithDashedMimeType service list
+// method.
+type ListResult struct {
+	Items ApplicationDashedTypeCollection
+}
+
+type ApplicationDashedTypeCollection []*ApplicationDashedType
+
+// NewApplicationDashedType initializes result type ApplicationDashedType from
+// viewed result type ApplicationDashedType.
+func NewApplicationDashedType(vres *resultwithdashedmimetypeviews.ApplicationDashedType) *ApplicationDashedType {
+	return newApplicationDashedType(vres.Projected)
+}
+
+// NewViewedApplicationDashedType initializes viewed result type
+// ApplicationDashedType from result type ApplicationDashedType using the given
+// view.
+func NewViewedApplicationDashedType(res *ApplicationDashedType, view string) *resultwithdashedmimetypeviews.ApplicationDashedType {
+	p := newApplicationDashedTypeView(res)
+	return &resultwithdashedmimetypeviews.ApplicationDashedType{Projected: p, View: "default"}
+}
+
+// newApplicationDashedType converts projected type ApplicationDashedType to
+// service type ApplicationDashedType.
+func newApplicationDashedType(vres *resultwithdashedmimetypeviews.ApplicationDashedTypeView) *ApplicationDashedType {
+	res := &ApplicationDashedType{
+		Name: vres.Name,
+	}
+	return res
+}
+
+// newApplicationDashedTypeView projects result type ApplicationDashedType to
+// projected type ApplicationDashedTypeView using the "default" view.
+func newApplicationDashedTypeView(res *ApplicationDashedType) *resultwithdashedmimetypeviews.ApplicationDashedTypeView {
+	vres := &resultwithdashedmimetypeviews.ApplicationDashedTypeView{
+		Name: res.Name,
+	}
+	return vres
+}
+`
+
 const ForceGenerateType = `
 // Service is the ForceGenerateType service interface.
 type Service interface {
