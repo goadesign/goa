@@ -363,17 +363,15 @@ func FieldLoadCode(f *FlagData, argName, argTypeName, validate string, defaultVa
 		} else {
 			ex := f.Example
 			code, check = conversionCode(f.FullName, argName, argTypeName, !f.Required && defaultValue == nil)
-			if check {
-				code += "\nif err != nil {\n"
-				if flagType(argTypeName) == "JSON" {
-					code += fmt.Sprintf(`return %v, fmt.Errorf("invalid JSON for %s, \nerror: %%s, \nexample of valid JSON:\n%%s", err, %q)`,
-						rval, argName, ex)
-				} else {
-					code += fmt.Sprintf(`return %v, fmt.Errorf("invalid value for %s, must be %s")`,
-						rval, argName, f.Type)
-				}
-				code += "\n}"
+			code += "\nif err != nil {\n"
+			if flagType(argTypeName) == "JSON" {
+				code += fmt.Sprintf(`return %v, fmt.Errorf("invalid JSON for %s, \nerror: %%s, \nexample of valid JSON:\n%%s", err, %q)`,
+					rval, argName, ex)
+			} else {
+				code += fmt.Sprintf(`return %v, fmt.Errorf("invalid value for %s, must be %s")`,
+					rval, argName, f.Type)
 			}
+			code += "\n}"
 		}
 		if validate != "" {
 			code += "\n" + validate + "\n" + fmt.Sprintf("if err != nil {\n\treturn %v, err\n}", rval)
@@ -482,7 +480,7 @@ func conversionCode(from, to, typeName string, pointer bool) (string, bool) {
 		checkErr = true
 	case int64N:
 		parse = fmt.Sprintf("%s, err %s= strconv.ParseInt(%s, 10, 64)", target, decl, from)
-		checkErr = true
+		checkErr = decl == ""
 	case uintN:
 		parse = fmt.Sprintf("var v uint64\nv, err = strconv.ParseUint(%s, 10, 64)", from)
 		cast = fmt.Sprintf("%s %s= uint(v)", target, decl)
