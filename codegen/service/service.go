@@ -66,7 +66,7 @@ func File(genpkg string, service *expr.ServiceExpr) *codegen.File {
 		}
 	}
 	for _, ut := range svc.userTypes {
-		if _, ok := seen[ut.Name]; !ok {
+		if _, ok := seen[ut.VarName]; !ok {
 			sections = append(sections, &codegen.SectionTemplate{
 				Name:   "service-user-type",
 				Source: userTypeT,
