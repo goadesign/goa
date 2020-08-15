@@ -45,6 +45,7 @@ func TestBodyTypeInit(t *testing.T) {
 		{"body-path-user-validate", testdata.PayloadBodyPathUserValidateDSL, 2, BodyPathUserValidateInitCode},
 		{"body-primitive-array-user-validate", testdata.PayloadBodyPrimitiveArrayUserValidateDSL, 2, BodyPrimitiveArrayUserValidateInitCode},
 		{"result-body-user", testdata.ResultBodyObjectHeaderDSL, 2, ResultBodyObjectHeaderInitCode},
+		{"result-body-user-required", testdata.ResultBodyUserRequiredDSL, 3, ResultBodyUserRequiredInitCode},
 		{"result-body-inline-object", testdata.ResultBodyInlineObjectDSL, 2, ResultBodyInlineObjectInitCode},
 		{"result-explicit-body-primitive", testdata.ExplicitBodyPrimitiveResultMultipleViewsDSL, 1, ExplicitBodyPrimitiveResultMultipleViewsInitCode},
 		{"result-explicit-body-user-type", testdata.ExplicitBodyUserResultMultipleViewsDSL, 3, ExplicitBodyUserResultMultipleViewsInitCode},
@@ -183,6 +184,20 @@ func NewMethodBodyObjectHeaderResultOK(body *MethodBodyObjectHeaderResponseBody,
 	v.B = b
 
 	return v
+}
+`
+
+const ResultBodyUserRequiredInitCode = `// NewMethodBodyUserRequiredResultOK builds a "ServiceBodyUserRequired" service
+// "MethodBodyUserRequired" endpoint result from a HTTP "OK" response.
+func NewMethodBodyUserRequiredResultOK(body *MethodBodyUserRequiredResponseBody) *servicebodyuserrequired.MethodBodyUserRequiredResult {
+	v := &servicebodyuserrequired.Body{
+		A: *body.A,
+	}
+	res := &servicebodyuserrequired.MethodBodyUserRequiredResult{
+		Body: v,
+	}
+
+	return res
 }
 `
 
