@@ -187,7 +187,7 @@ func BuildSubcommandData(svcName string, m *service.MethodData, buildFunction *B
 				convPre = fmt.Sprintf("var val %s\n", m.Payload)
 				convSuff = "\ndata = val"
 			}
-			conv, check := conversionCode(
+			conv, _, check := conversionCode(
 				"*"+flags[0].FullName+"Flag",
 				target,
 				m.Payload,
@@ -330,7 +330,7 @@ func NewFlagData(svcn, en, name, typeName, description string, required bool, ex
 func FieldLoadCode(f *FlagData, argName, argTypeName, validate string, defaultValue interface{}, payload expr.DataType) (string, bool) {
 	var (
 		code    string
-		check   bool
+		declErr bool
 		startIf string
 		endIf   string
 		rval    string
@@ -361,23 +361,25 @@ func FieldLoadCode(f *FlagData, argName, argTypeName, validate string, defaultVa
 			}
 			code = argName + " = " + ref + f.FullName
 		} else {
-			ex := f.Example
-			code, check = conversionCode(f.FullName, argName, argTypeName, !f.Required && defaultValue == nil)
-			code += "\nif err != nil {\n"
-			if flagType(argTypeName) == "JSON" {
-				code += fmt.Sprintf(`return %v, fmt.Errorf("invalid JSON for %s, \nerror: %%s, \nexample of valid JSON:\n%%s", err, %q)`,
-					rval, argName, ex)
-			} else {
-				code += fmt.Sprintf(`return %v, fmt.Errorf("invalid value for %s, must be %s")`,
-					rval, argName, f.Type)
+			var checkErr bool
+			code, declErr, checkErr = conversionCode(f.FullName, argName, argTypeName, !f.Required && defaultValue == nil)
+			if checkErr {
+				code += "\nif err != nil {\n"
+				if flagType(argTypeName) == "JSON" {
+					code += fmt.Sprintf(`return %v, fmt.Errorf("invalid JSON for %s, \nerror: %%s, \nexample of valid JSON:\n%%s", err, %q)`,
+						rval, argName, f.Example)
+				} else {
+					code += fmt.Sprintf(`return %v, fmt.Errorf("invalid value for %s, must be %s")`,
+						rval, argName, f.Type)
+				}
+				code += "\n}"
 			}
-			code += "\n}"
 		}
 		if validate != "" {
 			code += "\n" + validate + "\n" + fmt.Sprintf("if err != nil {\n\treturn %v, err\n}", rval)
 		}
 	}
-	return fmt.Sprintf("%s%s%s", startIf, code, endIf), check || validate != ""
+	return fmt.Sprintf("%s%s%s", startIf, code, endIf), declErr || validate != ""
 }
 
 // flagType calculates the type of a flag
@@ -448,17 +450,23 @@ var (
 	bytesN   = codegen.GoNativeTypeName(expr.Bytes)
 )
 
-// conversionCode produces the code that converts the string stored in the
-// variable "from" to the value stored in the variable "to" of type typeName.
-func conversionCode(from, to, typeName string, pointer bool) (string, bool) {
+// conversionCode produces the code that converts the string contained in the
+// variable named from to the value stored in the variable "to" of type
+// typeName. The second return value indicates whether the "err" variable must
+// be declared prior to the conversion code being rendered. The last return
+// value indicates whether the generated code can produce errors (i.e.
+// initialize the err variable).
+func conversionCode(from, to, typeName string, pointer bool) (string, bool, bool) {
 	var (
-		parse    string
-		cast     string
-		checkErr bool
+		parse string
+		cast  string
+
+		target   = to
+		needCast = typeName != stringN && typeName != bytesN && flagType(typeName) != "JSON"
+		declErr  = true
+		checkErr = true
+		decl     = ""
 	)
-	target := to
-	needCast := typeName != stringN && typeName != bytesN && flagType(typeName) != "JSON"
-	decl := ""
 	if needCast && pointer {
 		target = "val"
 		decl = ":"
@@ -469,46 +477,43 @@ func conversionCode(from, to, typeName string, pointer bool) (string, bool) {
 			parse = fmt.Sprintf("var %s bool\n", target)
 		}
 		parse += fmt.Sprintf("%s, err = strconv.ParseBool(%s)", target, from)
-		checkErr = true
 	case intN:
 		parse = fmt.Sprintf("var v int64\nv, err = strconv.ParseInt(%s, 10, 64)", from)
 		cast = fmt.Sprintf("%s %s= int(v)", target, decl)
-		checkErr = true
 	case int32N:
 		parse = fmt.Sprintf("var v int64\nv, err = strconv.ParseInt(%s, 10, 32)", from)
 		cast = fmt.Sprintf("%s %s= int32(v)", target, decl)
-		checkErr = true
 	case int64N:
 		parse = fmt.Sprintf("%s, err %s= strconv.ParseInt(%s, 10, 64)", target, decl, from)
-		checkErr = decl == ""
+		declErr = decl == ""
 	case uintN:
 		parse = fmt.Sprintf("var v uint64\nv, err = strconv.ParseUint(%s, 10, 64)", from)
 		cast = fmt.Sprintf("%s %s= uint(v)", target, decl)
-		checkErr = true
 	case uint32N:
 		parse = fmt.Sprintf("var v uint64\nv, err = strconv.ParseUint(%s, 10, 32)", from)
 		cast = fmt.Sprintf("%s %s= uint32(v)", target, decl)
-		checkErr = true
 	case uint64N:
 		parse = fmt.Sprintf("%s, err %s= strconv.ParseUint(%s, 10, 64)", target, decl, from)
-		checkErr = decl == ""
+		declErr = decl == ""
 	case float32N:
 		parse = fmt.Sprintf("var v float64\nv, err = strconv.ParseFloat(%s, 32)", from)
 		cast = fmt.Sprintf("%s %s= float32(v)", target, decl)
-		checkErr = true
 	case float64N:
 		parse = fmt.Sprintf("%s, err %s= strconv.ParseFloat(%s, 64)", target, decl, from)
-		checkErr = decl == ""
+		declErr = decl == ""
 	case stringN:
 		parse = fmt.Sprintf("%s %s= %s", target, decl, from)
+		declErr = false
+		checkErr = false
 	case bytesN:
 		parse = fmt.Sprintf("%s %s= []byte(%s)", target, decl, from)
+		declErr = false
+		checkErr = false
 	default:
 		parse = fmt.Sprintf("err = json.Unmarshal([]byte(%s), &%s)", from, target)
-		checkErr = true
 	}
 	if !needCast {
-		return parse, checkErr
+		return parse, declErr, checkErr
 	}
 	if cast != "" {
 		parse = parse + "\n" + cast
@@ -520,7 +525,7 @@ func conversionCode(from, to, typeName string, pointer bool) (string, bool) {
 		}
 		parse = parse + fmt.Sprintf("\n%s = %s%s", to, ref, target)
 	}
-	return parse, checkErr
+	return parse, declErr, checkErr
 }
 
 // goifyTerms makes valid go identifiers out of the supplied terms
