@@ -242,7 +242,7 @@ func mapQueryDecodeData(dt expr.DataType, varName string, inc int) map[string]in
 	return map[string]interface{}{
 		"Type":      dt,
 		"VarName":   varName,
-		"Loop":      string(97 + inc),
+		"Loop":      string(rune(97 + inc)),
 		"Increment": inc + 1,
 		"Depth":     codegen.MapDepth(expr.AsMap(dt)),
 	}
