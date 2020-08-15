@@ -310,6 +310,24 @@ var ResultWithResultCollectionMethodDSL = func() {
 	})
 }
 
+var ResultWithDashedMimeTypeMethodDSL = func() {
+	var RT = ResultType("application/vnd.application.dashed-type", func() {
+		Attributes(func() {
+			Attribute("name")
+		})
+	})
+	var _ = Service("ResultWithDashedMimeType", func() {
+		Method("A", func() {
+			Result(RT)
+		})
+		Method("list", func() {
+			Result(func() {
+				Attribute("items", CollectionOf(RT))
+			})
+		})
+	})
+}
+
 var ForceGenerateTypeDSL = func() {
 	var _ = Type("ForcedType", func() {
 		Attribute("a", String)
