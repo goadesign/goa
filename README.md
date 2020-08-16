@@ -44,6 +44,25 @@ generated code takes care of validating the incoming request payload prior to
 invoking the service method on the server, and validating the response prior to
 invoking the client code.
 
+## Getting Started Guides
+
+A couple of Getting Started guides produced by the community.
+
+### Video
+
+Joseph Ocol from Pelmorex Corp. goes through a complete example writing a server
+and client service using both HTTP and gRPC transports.
+
+[![GOA Design Tutorial](https://tech.pelmorex.com/wp-content/uploads/2020/07/GOA-Design-Tutorial-Screencap-800x470.png)](https://vimeo.com/437928805)
+
+### Blog
+
+Gleidson Nascimento goes through how to create a complete service that using both
+[CORS](https://developer.mozilla.org/en-US/docs/Web/HTTP/CORS) and
+[JWT](https://jwt.io/) based authentication to secure access.
+
+[![API Development in Go Using Goa](https://bs-uploads.toptal.io/blackfish-uploads/uploaded_file/file/275966/image-1592349920607-734c25f64461bf3c482bac1d73c26432.png)](https://www.toptal.com/go/goa-api-development)
+
 ## Installation
 
 Assuming you have a working [Go](https://golang.org) setup, and are using Go
