@@ -6,7 +6,7 @@ design-first approach.
 ---
 [![Build Status](https://github.com/goadesign/goa/workflows/build/badge.svg?branch=v3&event=push)](https://github.com/goadesign/goa/actions?query=branch%3Av3+event%3Apush)
 [![Godoc Packages](https://img.shields.io/badge/godoc-packages-blue)](https://pkg.go.dev/mod/goa.design/goa/v3?tab=packages)
-[![Godoc DSL](https://img.shields.io/badge/godoc-DSL-blue)](https://pkg.go.dev/goa.design/goa/v3@v3.2.2/dsl?tab=doc)
+[![Godoc DSL](https://img.shields.io/badge/godoc-DSL-blue)](https://pkg.go.dev/goa.design/goa/v3@v3.2.3/dsl?tab=doc)
 [![Slack](https://img.shields.io/badge/slack-gophers-orange.svg?style=flat)](https://gophers.slack.com/messages/goa/)
 
 ## Overview
@@ -97,7 +97,7 @@ without having to make changes.
 Releases are tagged with the corresponding version number. There is also a
 branch for each major version (`v1`, `v2` and `v3`).
 
-Current Release: `v3.2.2`
+Current Release: `v3.2.3`
 
 ## Teaser
 
