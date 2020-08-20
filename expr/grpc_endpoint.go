@@ -365,12 +365,12 @@ func validateMessage(msgAtt, serviceAtt *AttributeExpr, e *GRPCEndpointExpr, req
 		msgKind = "Request"
 		serviceKind = "Payload"
 	}
-	if serviceAtt.Type == Empty {
+	if isEmpty(serviceAtt) {
 		verr.Add(e, "%s message is defined but %s is not defined in method", msgKind, serviceKind)
 		return verr
 	}
 
-	if srvcObj := AsObject(serviceAtt.Type); srvcObj == nil {
+	if !IsObject(serviceAtt.Type) {
 		// service type (payload or result) is a primitive, array, or map
 		// The message type must have at most one field and that field must be
 		// of the same type as the service type.
@@ -391,19 +391,12 @@ func validateMessage(msgAtt, serviceAtt *AttributeExpr, e *GRPCEndpointExpr, req
 		// same name as the message attributes so that we can validate the
 		// rpc:tag in the meta.
 		msgFields := &Object{}
-		var found bool
 		for _, nat := range *AsObject(msgAtt.Type) {
-			found = false
-			for _, snat := range *srvcObj {
-				if nat.Name == snat.Name {
-					msgFields.Set(snat.Name, snat.Attribute)
-					found = true
-					break
-				}
+			if a := serviceAtt.Find(nat.Name); a != nil {
+				msgFields.Set(nat.Name, a)
+				break
 			}
-			if !found {
-				verr.Add(e, "%s message attribute %q is not found in %s", msgKind, nat.Name, serviceKind)
-			}
+			verr.Add(e, "%s message attribute %q is not found in %s", msgKind, nat.Name, serviceKind)
 		}
 		// validate rpc:tag in meta for the message fields
 		verr.Merge(validateRPCTags(msgFields, e))
@@ -445,23 +438,15 @@ func validateMetadata(metAtt *MappedAttributeExpr, serviceAtt *AttributeExpr, e 
 		metKind = "Request"
 		serviceKind = "Payload"
 	}
-	if serviceAtt.Type == Empty {
+	if isEmpty(serviceAtt) {
 		verr.Add(e, "%s metadata is defined but %s is not defined in method", metKind, serviceKind)
 		return verr
 	}
-	if svcObj := AsObject(serviceAtt.Type); svcObj != nil {
+	if IsObject(serviceAtt.Type) {
 		// service type is an object type. Ensure the attributes defined in
 		// the metadata are found in the service type.
-		var found bool
 		for _, nat := range *AsObject(metAtt.Type) {
-			found = false
-			for _, tnat := range *svcObj {
-				if nat.Name == tnat.Name {
-					found = true
-					break
-				}
-			}
-			if !found {
+			if a := serviceAtt.Find(nat.Name); a == nil {
 				verr.Add(e, "%s metadata attribute %q is not found in %s", metKind, nat.Name, serviceKind)
 			}
 		}
