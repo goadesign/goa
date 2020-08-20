@@ -39,6 +39,10 @@ service "Service" gRPC endpoint "Method": field number 2 in attribute "key_dup_i
 			DSL:    testdata.GRPCEndpointWithReferenceTypes,
 			Errors: []string{},
 		},
+		"endpoint-with-extended-types": {
+			DSL:    testdata.GRPCEndpointWithExtendedTypes,
+			Errors: []string{},
+		},
 	}
 	for name, c := range cases {
 		t.Run(name, func(t *testing.T) {
