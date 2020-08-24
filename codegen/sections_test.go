@@ -63,7 +63,7 @@ import (
 // test title
 //
 // Command:
-// $ goa
+// goa
 
 package testpackage
 
