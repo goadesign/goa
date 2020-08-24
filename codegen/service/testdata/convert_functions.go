@@ -209,7 +209,7 @@ func transformObjectFieldToTestdataObjectFieldT(v *ObjectField) *testdata.Object
 var CreateExternalConvert = `// Service service type conversion functions
 //
 // Command:
-// $ goa
+// goa
 
 package service
 
