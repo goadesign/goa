@@ -41,7 +41,7 @@ func TemplateFuncs() map[string]interface{} {
 
 // CommandLine return the command used to run this process.
 func CommandLine() string {
-	cmdl := "$ goa"
+	cmdl := "goa"
 	for _, arg := range os.Args {
 		if strings.HasPrefix(arg, "--cmd=") {
 			cmdl = arg[6:]
