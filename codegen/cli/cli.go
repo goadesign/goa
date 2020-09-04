@@ -360,6 +360,7 @@ func FieldLoadCode(f *FlagData, argName, argTypeName, validate string, defaultVa
 				ref = ""
 			}
 			code = argName + " = " + ref + f.FullName
+			declErr = validate != ""
 		} else {
 			var checkErr bool
 			code, declErr, checkErr = conversionCode(f.FullName, argName, argTypeName, !f.Required && defaultValue == nil)
@@ -379,7 +380,7 @@ func FieldLoadCode(f *FlagData, argName, argTypeName, validate string, defaultVa
 			code += "\n" + validate + "\n" + fmt.Sprintf("if err != nil {\n\treturn %v, err\n}", rval)
 		}
 	}
-	return fmt.Sprintf("%s%s%s", startIf, code, endIf), declErr || validate != ""
+	return fmt.Sprintf("%s%s%s", startIf, code, endIf), declErr
 }
 
 // flagType calculates the type of a flag
