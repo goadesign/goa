@@ -31,6 +31,7 @@ func TestClientCLIFiles(t *testing.T) {
 		{"string-required-build", testdata.PayloadQueryStringValidateDSL, testdata.QueryStringRequiredBuildCode, 1, 1},
 		{"string-default-build", testdata.PayloadQueryStringDefaultDSL, testdata.QueryStringDefaultBuildCode, 1, 1},
 		{"body-query-path-object-build", testdata.PayloadBodyQueryPathObjectDSL, testdata.BodyQueryPathObjectBuildCode, 1, 1},
+		{"param-validation-build", testdata.ParamValidateDSL, testdata.ParamValidateBuildCode, 1, 1},
 		{"payload-primitive-type", testdata.PayloadBodyPrimitiveBoolValidateDSL, testdata.PayloadPrimitiveTypeParseCode, 0, 3},
 		{"payload-array-primitive-type", testdata.PayloadBodyPrimitiveArrayStringValidateDSL, testdata.PayloadArrayPrimitiveTypeParseCode, 0, 3},
 		{"payload-array-user-type", testdata.PayloadBodyInlineArrayUserDSL, testdata.PayloadArrayUserTypeBuildCode, 1, 1},

@@ -2452,6 +2452,22 @@ var PayloadBodyQueryPathObjectDSL = func() {
 	})
 }
 
+var ParamValidateDSL = func() {
+	Service("ServiceParamValidate", func() {
+		Method("MethodParamValidate", func() {
+			Payload(func() {
+				Attribute("a", Int, func() {
+					Minimum(1)
+				})
+			})
+			HTTP(func() {
+				POST("/")
+				Param("a")
+			})
+		})
+	})
+}
+
 var PayloadBodyQueryPathObjectValidateDSL = func() {
 	Service("ServiceBodyQueryPathObjectValidate", func() {
 		Method("MethodBodyQueryPathObjectValidate", func() {
