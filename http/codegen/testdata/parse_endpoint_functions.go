@@ -732,6 +732,37 @@ func BuildMethodBodyQueryPathObjectPayload(serviceBodyQueryPathObjectMethodBodyQ
 }
 `
 
+var ParamValidateBuildCode = `// BuildMethodParamValidatePayload builds the payload for the
+// ServiceParamValidate MethodParamValidate endpoint from CLI flags.
+func BuildMethodParamValidatePayload(serviceParamValidateMethodParamValidateA string) (*serviceparamvalidate.MethodParamValidatePayload, error) {
+	var err error
+	var a *int
+	{
+		if serviceParamValidateMethodParamValidateA != "" {
+			var v int64
+			v, err = strconv.ParseInt(serviceParamValidateMethodParamValidateA, 10, 64)
+			val := int(v)
+			a = &val
+			if err != nil {
+				return nil, fmt.Errorf("invalid value for a, must be INT")
+			}
+			if a != nil {
+				if *a < 1 {
+					err = goa.MergeErrors(err, goa.InvalidRangeError("a", *a, 1, true))
+				}
+			}
+			if err != nil {
+				return nil, err
+			}
+		}
+	}
+	v := &serviceparamvalidate.MethodParamValidatePayload{}
+	v.A = a
+
+	return v, nil
+}
+`
+
 var PayloadPrimitiveTypeParseCode = `// ParseEndpoint returns the endpoint and payload as specified on the command
 // line.
 func ParseEndpoint(
