@@ -81,27 +81,20 @@ func makeProtoBufMessage(att *expr.AttributeExpr, tname string, sd *ServiceData)
 		}
 	}
 	n := ""
-	makeProtoBufMessageR(att, &n, sd)
+	makeProtoBufMessageR(att, &n, sd, make(map[string]struct{}))
 	return att
 }
 
 // makeProtoBufMessageR is the recursive implementation of makeProtoBufMessage.
-func makeProtoBufMessageR(att *expr.AttributeExpr, tname *string, sd *ServiceData, seen ...map[string]struct{}) {
+func makeProtoBufMessageR(att *expr.AttributeExpr, tname *string, sd *ServiceData, seen map[string]struct{}) {
 	ut, isut := att.Type.(expr.UserType)
 
 	// handle infinite recursions
 	if isut {
-		var s map[string]struct{}
-		if len(seen) > 0 {
-			s = seen[0]
-		} else {
-			s = make(map[string]struct{})
-			seen = append(seen, s)
-		}
-		if _, ok := s[ut.ID()]; ok {
+		if _, ok := seen[ut.ID()]; ok {
 			return
 		}
-		s[ut.ID()] = struct{}{}
+		seen[ut.ID()] = struct{}{}
 	}
 
 	wrap := func(att *expr.AttributeExpr, tname string) {
@@ -124,18 +117,18 @@ func makeProtoBufMessageR(att *expr.AttributeExpr, tname *string, sd *ServiceDat
 		if expr.IsArray(ut) {
 			wrapAttr(ut.Attribute(), ut.Name(), sd)
 		}
-		makeProtoBufMessageR(ut.Attribute(), tname, sd, seen...)
+		makeProtoBufMessageR(ut.Attribute(), tname, sd, seen)
 	case expr.IsArray(att.Type):
 		ar := expr.AsArray(att.Type)
-		makeProtoBufMessageR(ar.ElemType, tname, sd, seen...)
+		makeProtoBufMessageR(ar.ElemType, tname, sd, seen)
 		wrap(ar.ElemType, *tname)
 	case expr.IsMap(att.Type):
 		m := expr.AsMap(att.Type)
-		makeProtoBufMessageR(m.ElemType, tname, sd, seen...)
+		makeProtoBufMessageR(m.ElemType, tname, sd, seen)
 		wrap(m.ElemType, *tname)
 	case expr.IsObject(att.Type):
 		for _, nat := range *(expr.AsObject(att.Type)) {
-			makeProtoBufMessageR(nat.Attribute, tname, sd, seen...)
+			makeProtoBufMessageR(nat.Attribute, tname, sd, seen)
 		}
 	}
 }
@@ -143,14 +136,15 @@ func makeProtoBufMessageR(att *expr.AttributeExpr, tname *string, sd *ServiceDat
 // wrapAttr makes the attribute type a user type by wrapping the given
 // attribute into an attribute named "field".
 func wrapAttr(att *expr.AttributeExpr, tname string, sd *ServiceData) {
-	wrap := func(att *expr.AttributeExpr) *expr.AttributeExpr {
+	wrap := func(attr *expr.AttributeExpr) *expr.AttributeExpr {
 		return &expr.AttributeExpr{
 			Type: &expr.Object{
 				&expr.NamedAttributeExpr{
 					Name: "field",
 					Attribute: &expr.AttributeExpr{
-						Type: att.Type,
-						Meta: expr.MetaExpr{"rpc:tag": []string{"1"}},
+						Type:       attr.Type,
+						Meta:       expr.MetaExpr{"rpc:tag": []string{"1"}},
+						Validation: attr.Validation,
 					},
 				},
 			},
@@ -169,6 +163,8 @@ func wrapAttr(att *expr.AttributeExpr, tname string, sd *ServiceData) {
 			UID:           sd.Name + "#" + tname,
 		}
 	}
+	// Validation is moved to wrapped attribute.
+	att.Validation = nil
 }
 
 // unwrapAttr returns the attribute under the attribute name "field".
