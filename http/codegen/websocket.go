@@ -48,6 +48,11 @@ type (
 		// RecvTypeRef is the fully qualified type ref received from the
 		// stream.
 		RecvTypeRef string
+		// RecvTypeIsPointer is true if the type received from the stream is a
+		// array or map. This is needed so that the code reading the stream can
+		// use a pointer reference when needed to check whether anything was
+		// read (check against the nil value) and in this case return EOF.
+		RecvTypeIsPointer bool
 		// MustClose indicates whether to generate the Close() function
 		// for the stream.
 		MustClose bool
@@ -176,23 +181,24 @@ func initWebSocketData(ed *EndpointData, e *expr.HTTPEndpointExpr, sd *ServiceDa
 		}
 	}
 	ed.ServerWebSocket = &WebSocketData{
-		VarName:      md.ServerStream.VarName,
-		Interface:    fmt.Sprintf("%s.%s", svc.PkgName, md.ServerStream.Interface),
-		Endpoint:     ed,
-		Payload:      svrPayload,
-		Response:     ed.Result.Responses[0],
-		PkgName:      svc.PkgName,
-		Type:         "server",
-		Kind:         md.ServerStream.Kind,
-		SendName:     md.ServerStream.SendName,
-		SendDesc:     svrSendDesc,
-		SendTypeName: svrSendTypeName,
-		SendTypeRef:  svrSendTypeRef,
-		RecvName:     md.ServerStream.RecvName,
-		RecvDesc:     svrRecvDesc,
-		RecvTypeName: svrRecvTypeName,
-		RecvTypeRef:  svrRecvTypeRef,
-		MustClose:    md.ServerStream.MustClose,
+		VarName:           md.ServerStream.VarName,
+		Interface:         fmt.Sprintf("%s.%s", svc.PkgName, md.ServerStream.Interface),
+		Endpoint:          ed,
+		Payload:           svrPayload,
+		Response:          ed.Result.Responses[0],
+		PkgName:           svc.PkgName,
+		Type:              "server",
+		Kind:              md.ServerStream.Kind,
+		SendName:          md.ServerStream.SendName,
+		SendDesc:          svrSendDesc,
+		SendTypeName:      svrSendTypeName,
+		SendTypeRef:       svrSendTypeRef,
+		RecvName:          md.ServerStream.RecvName,
+		RecvDesc:          svrRecvDesc,
+		RecvTypeName:      svrRecvTypeName,
+		RecvTypeRef:       svrRecvTypeRef,
+		RecvTypeIsPointer: expr.IsArray(e.MethodExpr.StreamingPayload.Type) || expr.IsMap(e.MethodExpr.StreamingPayload.Type),
+		MustClose:         md.ServerStream.MustClose,
 	}
 	ed.ClientWebSocket = &WebSocketData{
 		VarName:      md.ClientStream.VarName,
@@ -570,7 +576,11 @@ func (s *{{ .VarName }}) {{ .RecvName }}() ({{ .RecvTypeRef }}, error) {
 	var (
 		rv {{ .RecvTypeRef }}
 	{{- if eq .Type "server" }}
-		msg *{{ .Payload.Ref }}
+		{{- if .RecvTypeIsPointer }}
+		body {{ .Payload.VarName }}
+		{{- else }}
+		msg *{{ .Payload.VarName }}
+		{{- end }}
 	{{- else }}
 		body {{ .Response.ClientBody.VarName }}
 	{{- end }}
@@ -578,23 +588,33 @@ func (s *{{ .VarName }}) {{ .RecvName }}() ({{ .RecvTypeRef }}, error) {
 	)
 {{- if eq .Type "server" }}
 	{{- template "websocket_upgrade" (upgradeParams .Endpoint .RecvName) }}
+	{{- if .RecvTypeIsPointer }}
+	if err = s.conn.ReadJSON(&body); err != nil {
+	{{- else }}
 	if err = s.conn.ReadJSON(&msg); err != nil {
+	{{- end }}
 		return rv, err
 	}
+	{{- if .RecvTypeIsPointer }}
+	if body == nil {
+	{{- else }}
 	if msg == nil {
+	{{- end }}
 		return rv, io.EOF
 	}
-	body := *msg
 	{{- if .Payload.ValidateRef }}
+		{{- if not .RecvTypeIsPointer }}
+	body := *msg
+		{{- end }}
 		{{ .Payload.ValidateRef }}
 		if err != nil {
 			return rv, err
 		}
 	{{- end }}
 	{{- if .Payload.Init }}
-		return {{ .Payload.Init.Name }}(body), nil
+		return {{ .Payload.Init.Name }}({{ if .RecvTypeIsPointer }}body{{ else }}msg{{ end }}), nil
 	{{- else }}
-		return body, nil
+		return {{ if .RecvTypeIsPointer }}body{{ else }}*msg{{ end }}, nil
 	{{- end }}
 {{- else }} {{/* client side code */}}
 	{{- if eq .RecvName "CloseAndRecv" }}
