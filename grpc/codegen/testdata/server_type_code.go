@@ -298,3 +298,52 @@ func NewMethodUnaryRPCWithErrorsCustomErrorError(er *serviceunaryrpcwitherrors.E
 	return message
 }
 `
+
+const ElemValidationServerTypesFile = `// NewMethodElemValidationPayload builds the payload of the
+// "MethodElemValidation" endpoint of the "ServiceElemValidation" service from
+// the gRPC request type.
+func NewMethodElemValidationPayload(message *service_elem_validationpb.MethodElemValidationRequest) *serviceelemvalidation.ResultType {
+	v := &serviceelemvalidation.ResultType{}
+	if message.Foo != nil {
+		v.Foo = make(map[string][]string, len(message.Foo))
+		for key, val := range message.Foo {
+			tk := key
+			tv := make([]string, len(val.Field))
+			for i, val := range val.Field {
+				tv[i] = val
+			}
+			v.Foo[tk] = tv
+		}
+	}
+	return v
+}
+
+// NewMethodElemValidationResponse builds the gRPC response type from the
+// result of the "MethodElemValidation" endpoint of the "ServiceElemValidation"
+// service.
+func NewMethodElemValidationResponse() *service_elem_validationpb.MethodElemValidationResponse {
+	message := &service_elem_validationpb.MethodElemValidationResponse{}
+	return message
+}
+
+// ValidateMethodElemValidationRequest runs the validations defined on
+// MethodElemValidationRequest.
+func ValidateMethodElemValidationRequest(message *service_elem_validationpb.MethodElemValidationRequest) (err error) {
+	for _, v := range message.Foo {
+		if v != nil {
+			if err2 := ValidateArrayOfString(v); err2 != nil {
+				err = goa.MergeErrors(err, err2)
+			}
+		}
+	}
+	return
+}
+
+// ValidateArrayOfString runs the validations defined on ArrayOfString.
+func ValidateArrayOfString(message *service_elem_validationpb.ArrayOfString) (err error) {
+	if len(message.Field) < 1 {
+		err = goa.MergeErrors(err, goa.InvalidLengthError("message.field", message.Field, len(message.Field), 1, true))
+	}
+	return
+}
+`
