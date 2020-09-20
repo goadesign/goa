@@ -508,7 +508,8 @@ func (a *AttributeExpr) AddMeta(name string, vals ...string) {
 // Debug dumps the attribute to STDOUT in a goa developer friendly way.
 func (a *AttributeExpr) Debug(prefix string) { a.debug(prefix, make(map[*AttributeExpr]int), 0) }
 func (a *AttributeExpr) debug(prefix string, seen map[*AttributeExpr]int, indent int) {
-	prefix = strings.Repeat("  ", indent) + prefix
+	tab := strings.Repeat("  ", indent)
+	prefix = tab + prefix
 	if c, ok := seen[a]; ok && c > 1 {
 		fmt.Printf("%s: ...\n", prefix)
 		return
@@ -521,23 +522,23 @@ func (a *AttributeExpr) debug(prefix string, seen map[*AttributeExpr]int, indent
 		}
 	}
 	if a := AsArray(a.Type); a != nil {
-		a.ElemType.debug(" Elem", seen, indent+2)
+		a.ElemType.debug("elem", seen, indent+1)
 	}
 	if m := AsMap(a.Type); m != nil {
-		m.KeyType.debug(" Key", seen, indent+2)
-		m.ElemType.debug(" Elem", seen, indent+2)
+		m.KeyType.debug("key", seen, indent+1)
+		m.ElemType.debug("elem", seen, indent+1)
 	}
 	if d := a.DefaultValue; d != nil {
-		fmt.Printf("%s: default value\n", prefix)
-		fmt.Printf("%s%#v", strings.Repeat("  ", indent+1), a.DefaultValue)
+		fmt.Printf("%sdefault\n", tab)
+		fmt.Printf("%s%#v", tab+"  ", a.DefaultValue)
 	}
 	if v := a.Validation; v != nil {
 		v.Debug(indent + 1)
 	}
 	if len(a.Meta) > 0 {
-		fmt.Printf("%smeta\n", strings.Repeat(" ", indent+3))
+		fmt.Printf("%smeta\n", tab)
 		for k, v := range a.Meta {
-			fmt.Printf("%s- %s: %s\n", strings.Repeat(" ", indent+4), k, strings.Join(v, ", "))
+			fmt.Printf("%s- %s: %s\n", tab+"  ", k, strings.Join(v, ", "))
 		}
 	}
 	if t, ok := a.Type.(UserType); ok {

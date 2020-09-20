@@ -947,8 +947,6 @@ func buildResponseConvertData(response, result *expr.AttributeExpr, svcCtx *code
 //
 // proto if true indicates the target type is a protocol buffer type
 //
-// sd is the ServiceData
-//
 func buildInitData(source, target *expr.AttributeExpr, sourceVar, targetVar string, svcCtx *codegen.AttributeContext, proto bool, sd *ServiceData) *InitData {
 	var (
 		name     string
@@ -984,15 +982,13 @@ func buildInitData(source, target *expr.AttributeExpr, sourceVar, targetVar stri
 		}
 		sd.transformHelpers = codegen.AppendHelpers(sd.transformHelpers, helpers)
 		if (!proto && !isEmpty(source.Type)) || (proto && !isEmpty(target.Type)) {
-			args = []*InitArgData{
-				&InitArgData{
-					Name:     sourceVar,
-					Ref:      sourceVar,
-					TypeName: srcCtx.Scope.Name(source, srcCtx.Pkg, srcCtx.Pointer, srcCtx.UseDefault),
-					TypeRef:  srcCtx.Scope.Ref(source, srcCtx.Pkg),
-					Example:  source.Example(expr.Root.API.Random()),
-				},
-			}
+			args = []*InitArgData{{
+				Name:     sourceVar,
+				Ref:      sourceVar,
+				TypeName: srcCtx.Scope.Name(source, srcCtx.Pkg, srcCtx.Pointer, srcCtx.UseDefault),
+				TypeRef:  srcCtx.Scope.Ref(source, srcCtx.Pkg),
+				Example:  source.Example(expr.Root.API.Random()),
+			}}
 		}
 	}
 	return &InitData{
