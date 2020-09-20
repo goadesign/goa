@@ -20,6 +20,7 @@ func TestServerTypeFiles(t *testing.T) {
 		{"payload-with-mixed-attributes", testdata.PayloadWithMixedAttributesDSL, testdata.PayloadWithMixedAttributesServerTypeCode},
 		{"result-collection", testdata.ResultWithCollectionDSL, testdata.ResultWithCollectionServerTypeCode},
 		{"with-errors", testdata.UnaryRPCWithErrorsDSL, testdata.WithErrorsServerTypeCode},
+		{"elem-validation", testdata.ElemValidationDSL, testdata.ElemValidationServerTypesFile},
 	}
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {

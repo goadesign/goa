@@ -85,6 +85,20 @@ var UnaryRPCWithErrorsDSL = func() {
 	})
 }
 
+var ElemValidationDSL = func() {
+	var ResultType = Type("ResultType", func() {
+		Field(1, "foo", MapOf(String, ArrayOf(String)), func() {
+			Elem(func() { MinLength(1) })
+		})
+	})
+	Service("ServiceElemValidation", func() {
+		Method("MethodElemValidation", func() {
+			Payload(ResultType)
+			GRPC(func() {})
+		})
+	})
+}
+
 var UnaryRPCAcronymDSL = func() {
 	Service("ServiceUnaryRPCAcronym", func() {
 		Method("MethodUnaryRPCAcronym_jwt", func() {
