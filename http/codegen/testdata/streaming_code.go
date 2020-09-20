@@ -987,7 +987,7 @@ var StreamingPayloadServerStreamRecvCode = `// Recv reads instances of "streamin
 func (s *StreamingPayloadMethodServerStream) Recv() (*streamingpayloadservice.Request, error) {
 	var (
 		rv  *streamingpayloadservice.Request
-		msg **StreamingPayloadMethodStreamingBody
+		msg *StreamingPayloadMethodStreamingBody
 		err error
 	)
 	// Upgrade the HTTP connection to a websocket connection only once. Connection
@@ -1013,8 +1013,7 @@ func (s *StreamingPayloadMethodServerStream) Recv() (*streamingpayloadservice.Re
 	if msg == nil {
 		return rv, io.EOF
 	}
-	body := *msg
-	return NewStreamingPayloadMethodStreamingBody(body), nil
+	return NewStreamingPayloadMethodStreamingBody(msg), nil
 }
 `
 
@@ -1229,8 +1228,7 @@ func (s *StreamingPayloadNoResultMethodServerStream) Recv() (string, error) {
 	if msg == nil {
 		return rv, io.EOF
 	}
-	body := *msg
-	return body, nil
+	return *msg, nil
 }
 `
 
@@ -1322,8 +1320,7 @@ func (s *StreamingPayloadResultWithViewsMethodServerStream) Recv() (float32, err
 	if msg == nil {
 		return rv, io.EOF
 	}
-	body := *msg
-	return body, nil
+	return *msg, nil
 }
 `
 
@@ -1424,8 +1421,7 @@ func (s *StreamingPayloadResultWithExplicitViewMethodServerStream) Recv() (float
 	if msg == nil {
 		return rv, io.EOF
 	}
-	body := *msg
-	return body, nil
+	return *msg, nil
 }
 `
 
@@ -1520,8 +1516,7 @@ func (s *StreamingPayloadResultCollectionWithViewsMethodServerStream) Recv() (in
 	if msg == nil {
 		return rv, io.EOF
 	}
-	body := *msg
-	return body, nil
+	return *msg, nil
 }
 `
 
@@ -1627,8 +1622,7 @@ func (s *StreamingPayloadResultCollectionWithExplicitViewMethodServerStream) Rec
 	if msg == nil {
 		return rv, io.EOF
 	}
-	body := *msg
-	return body, nil
+	return *msg, nil
 }
 `
 
@@ -1714,8 +1708,7 @@ func (s *StreamingPayloadPrimitiveMethodServerStream) Recv() (string, error) {
 	if msg == nil {
 		return rv, io.EOF
 	}
-	body := *msg
-	return body, nil
+	return *msg, nil
 }
 `
 
@@ -1766,9 +1759,9 @@ var StreamingPayloadPrimitiveArrayServerStreamRecvCode = `// Recv reads instance
 // "StreamingPayloadPrimitiveArrayMethod" endpoint websocket connection.
 func (s *StreamingPayloadPrimitiveArrayMethodServerStream) Recv() ([]int32, error) {
 	var (
-		rv  []int32
-		msg *[]int32
-		err error
+		rv   []int32
+		body []int32
+		err  error
 	)
 	// Upgrade the HTTP connection to a websocket connection only once. Connection
 	// upgrade is done here so that authorization logic in the endpoint is executed
@@ -1787,13 +1780,12 @@ func (s *StreamingPayloadPrimitiveArrayMethodServerStream) Recv() ([]int32, erro
 	if err != nil {
 		return rv, err
 	}
-	if err = s.conn.ReadJSON(&msg); err != nil {
+	if err = s.conn.ReadJSON(&body); err != nil {
 		return rv, err
 	}
-	if msg == nil {
+	if body == nil {
 		return rv, io.EOF
 	}
-	body := *msg
 	return body, nil
 }
 `
@@ -1845,9 +1837,9 @@ var StreamingPayloadPrimitiveMapServerStreamRecvCode = `// Recv reads instances 
 // "StreamingPayloadPrimitiveMapMethod" endpoint websocket connection.
 func (s *StreamingPayloadPrimitiveMapMethodServerStream) Recv() (map[string]int32, error) {
 	var (
-		rv  map[string]int32
-		msg *map[string]int32
-		err error
+		rv   map[string]int32
+		body map[string]int32
+		err  error
 	)
 	// Upgrade the HTTP connection to a websocket connection only once. Connection
 	// upgrade is done here so that authorization logic in the endpoint is executed
@@ -1866,13 +1858,12 @@ func (s *StreamingPayloadPrimitiveMapMethodServerStream) Recv() (map[string]int3
 	if err != nil {
 		return rv, err
 	}
-	if err = s.conn.ReadJSON(&msg); err != nil {
+	if err = s.conn.ReadJSON(&body); err != nil {
 		return rv, err
 	}
-	if msg == nil {
+	if body == nil {
 		return rv, io.EOF
 	}
-	body := *msg
 	return body, nil
 }
 `
@@ -1925,9 +1916,9 @@ var StreamingPayloadUserTypeArrayServerStreamRecvCode = `// Recv reads instances
 // "StreamingPayloadUserTypeArrayMethod" endpoint websocket connection.
 func (s *StreamingPayloadUserTypeArrayMethodServerStream) Recv() ([]*streamingpayloadusertypearrayservice.RequestType, error) {
 	var (
-		rv  []*streamingpayloadusertypearrayservice.RequestType
-		msg *[]*RequestType
-		err error
+		rv   []*streamingpayloadusertypearrayservice.RequestType
+		body []*RequestType
+		err  error
 	)
 	// Upgrade the HTTP connection to a websocket connection only once. Connection
 	// upgrade is done here so that authorization logic in the endpoint is executed
@@ -1946,13 +1937,12 @@ func (s *StreamingPayloadUserTypeArrayMethodServerStream) Recv() ([]*streamingpa
 	if err != nil {
 		return rv, err
 	}
-	if err = s.conn.ReadJSON(&msg); err != nil {
+	if err = s.conn.ReadJSON(&body); err != nil {
 		return rv, err
 	}
-	if msg == nil {
+	if body == nil {
 		return rv, io.EOF
 	}
-	body := *msg
 	return NewStreamingPayloadUserTypeArrayMethodArray(body), nil
 }
 `
@@ -2007,9 +1997,9 @@ var StreamingPayloadUserTypeMapServerStreamRecvCode = `// Recv reads instances o
 // "StreamingPayloadUserTypeMapMethod" endpoint websocket connection.
 func (s *StreamingPayloadUserTypeMapMethodServerStream) Recv() (map[string]*streamingpayloadusertypemapservice.RequestType, error) {
 	var (
-		rv  map[string]*streamingpayloadusertypemapservice.RequestType
-		msg *map[string]*RequestType
-		err error
+		rv   map[string]*streamingpayloadusertypemapservice.RequestType
+		body map[string]*RequestType
+		err  error
 	)
 	// Upgrade the HTTP connection to a websocket connection only once. Connection
 	// upgrade is done here so that authorization logic in the endpoint is executed
@@ -2028,13 +2018,12 @@ func (s *StreamingPayloadUserTypeMapMethodServerStream) Recv() (map[string]*stre
 	if err != nil {
 		return rv, err
 	}
-	if err = s.conn.ReadJSON(&msg); err != nil {
+	if err = s.conn.ReadJSON(&body); err != nil {
 		return rv, err
 	}
-	if msg == nil {
+	if body == nil {
 		return rv, io.EOF
 	}
-	body := *msg
 	return NewStreamingPayloadUserTypeMapMethodMap(body), nil
 }
 `
@@ -2160,7 +2149,7 @@ var BidirectionalStreamingServerStreamRecvCode = `// Recv reads instances of "bi
 func (s *BidirectionalStreamingMethodServerStream) Recv() (*bidirectionalstreamingservice.Request, error) {
 	var (
 		rv  *bidirectionalstreamingservice.Request
-		msg **BidirectionalStreamingMethodStreamingBody
+		msg *BidirectionalStreamingMethodStreamingBody
 		err error
 	)
 	// Upgrade the HTTP connection to a websocket connection only once. Connection
@@ -2186,8 +2175,7 @@ func (s *BidirectionalStreamingMethodServerStream) Recv() (*bidirectionalstreami
 	if msg == nil {
 		return rv, io.EOF
 	}
-	body := *msg
-	return NewBidirectionalStreamingMethodStreamingBody(body), nil
+	return NewBidirectionalStreamingMethodStreamingBody(msg), nil
 }
 `
 
@@ -2489,8 +2477,7 @@ func (s *BidirectionalStreamingResultWithViewsMethodServerStream) Recv() (float3
 	if msg == nil {
 		return rv, io.EOF
 	}
-	body := *msg
-	return body, nil
+	return *msg, nil
 }
 `
 
@@ -2633,8 +2620,7 @@ func (s *BidirectionalStreamingResultWithExplicitViewMethodServerStream) Recv() 
 	if msg == nil {
 		return rv, io.EOF
 	}
-	body := *msg
-	return body, nil
+	return *msg, nil
 }
 `
 
@@ -2743,8 +2729,7 @@ func (s *BidirectionalStreamingResultCollectionWithViewsMethodServerStream) Recv
 	if msg == nil {
 		return rv, io.EOF
 	}
-	body := *msg
-	return body, nil
+	return *msg, nil
 }
 `
 
@@ -2861,8 +2846,7 @@ func (s *BidirectionalStreamingResultCollectionWithExplicitViewMethodServerStrea
 	if msg == nil {
 		return rv, io.EOF
 	}
-	body := *msg
-	return body, nil
+	return *msg, nil
 }
 `
 
@@ -2957,8 +2941,7 @@ func (s *BidirectionalStreamingPrimitiveMethodServerStream) Recv() (string, erro
 	if msg == nil {
 		return rv, io.EOF
 	}
-	body := *msg
-	return body, nil
+	return *msg, nil
 }
 `
 
@@ -3018,9 +3001,9 @@ var BidirectionalStreamingPrimitiveArrayServerStreamRecvCode = `// Recv reads in
 // "BidirectionalStreamingPrimitiveArrayMethod" endpoint websocket connection.
 func (s *BidirectionalStreamingPrimitiveArrayMethodServerStream) Recv() ([]int32, error) {
 	var (
-		rv  []int32
-		msg *[]int32
-		err error
+		rv   []int32
+		body []int32
+		err  error
 	)
 	// Upgrade the HTTP connection to a websocket connection only once. Connection
 	// upgrade is done here so that authorization logic in the endpoint is executed
@@ -3039,13 +3022,12 @@ func (s *BidirectionalStreamingPrimitiveArrayMethodServerStream) Recv() ([]int32
 	if err != nil {
 		return rv, err
 	}
-	if err = s.conn.ReadJSON(&msg); err != nil {
+	if err = s.conn.ReadJSON(&body); err != nil {
 		return rv, err
 	}
-	if msg == nil {
+	if body == nil {
 		return rv, io.EOF
 	}
-	body := *msg
 	return body, nil
 }
 `
@@ -3106,9 +3088,9 @@ var BidirectionalStreamingPrimitiveMapServerStreamRecvCode = `// Recv reads inst
 // "BidirectionalStreamingPrimitiveMapMethod" endpoint websocket connection.
 func (s *BidirectionalStreamingPrimitiveMapMethodServerStream) Recv() (map[string]int32, error) {
 	var (
-		rv  map[string]int32
-		msg *map[string]int32
-		err error
+		rv   map[string]int32
+		body map[string]int32
+		err  error
 	)
 	// Upgrade the HTTP connection to a websocket connection only once. Connection
 	// upgrade is done here so that authorization logic in the endpoint is executed
@@ -3127,13 +3109,12 @@ func (s *BidirectionalStreamingPrimitiveMapMethodServerStream) Recv() (map[strin
 	if err != nil {
 		return rv, err
 	}
-	if err = s.conn.ReadJSON(&msg); err != nil {
+	if err = s.conn.ReadJSON(&body); err != nil {
 		return rv, err
 	}
-	if msg == nil {
+	if body == nil {
 		return rv, io.EOF
 	}
-	body := *msg
 	return body, nil
 }
 `
@@ -3197,9 +3178,9 @@ var BidirectionalStreamingUserTypeArrayServerStreamRecvCode = `// Recv reads ins
 // "BidirectionalStreamingUserTypeArrayMethod" endpoint websocket connection.
 func (s *BidirectionalStreamingUserTypeArrayMethodServerStream) Recv() ([]*bidirectionalstreamingusertypearrayservice.RequestType, error) {
 	var (
-		rv  []*bidirectionalstreamingusertypearrayservice.RequestType
-		msg *[]*RequestType
-		err error
+		rv   []*bidirectionalstreamingusertypearrayservice.RequestType
+		body []*RequestType
+		err  error
 	)
 	// Upgrade the HTTP connection to a websocket connection only once. Connection
 	// upgrade is done here so that authorization logic in the endpoint is executed
@@ -3218,13 +3199,12 @@ func (s *BidirectionalStreamingUserTypeArrayMethodServerStream) Recv() ([]*bidir
 	if err != nil {
 		return rv, err
 	}
-	if err = s.conn.ReadJSON(&msg); err != nil {
+	if err = s.conn.ReadJSON(&body); err != nil {
 		return rv, err
 	}
-	if msg == nil {
+	if body == nil {
 		return rv, io.EOF
 	}
-	body := *msg
 	return NewBidirectionalStreamingUserTypeArrayMethodArray(body), nil
 }
 `
@@ -3292,9 +3272,9 @@ var BidirectionalStreamingUserTypeMapServerStreamRecvCode = `// Recv reads insta
 // "BidirectionalStreamingUserTypeMapMethod" endpoint websocket connection.
 func (s *BidirectionalStreamingUserTypeMapMethodServerStream) Recv() (map[string]*bidirectionalstreamingusertypemapservice.RequestType, error) {
 	var (
-		rv  map[string]*bidirectionalstreamingusertypemapservice.RequestType
-		msg *map[string]*RequestType
-		err error
+		rv   map[string]*bidirectionalstreamingusertypemapservice.RequestType
+		body map[string]*RequestType
+		err  error
 	)
 	// Upgrade the HTTP connection to a websocket connection only once. Connection
 	// upgrade is done here so that authorization logic in the endpoint is executed
@@ -3313,13 +3293,12 @@ func (s *BidirectionalStreamingUserTypeMapMethodServerStream) Recv() (map[string
 	if err != nil {
 		return rv, err
 	}
-	if err = s.conn.ReadJSON(&msg); err != nil {
+	if err = s.conn.ReadJSON(&body); err != nil {
 		return rv, err
 	}
-	if msg == nil {
+	if body == nil {
 		return rv, io.EOF
 	}
-	body := *msg
 	return NewBidirectionalStreamingUserTypeMapMethodMap(body), nil
 }
 `
