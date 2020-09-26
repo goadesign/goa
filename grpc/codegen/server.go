@@ -65,7 +65,7 @@ func serverFile(genpkg string, svc *expr.GRPCServiceExpr) *codegen.File {
 		})
 		for _, e := range data.Endpoints {
 			sections = append(sections, &codegen.SectionTemplate{
-				Name:   "handler-init",
+				Name:   "grpc-handler-init",
 				Source: handlerInitT,
 				Data:   e,
 			})

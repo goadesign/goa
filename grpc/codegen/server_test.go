@@ -67,7 +67,7 @@ func TestServerHandlerInit(t *testing.T) {
 			if len(fs) != 2 {
 				t.Fatalf("got %d files, expected two", len(fs))
 			}
-			sections := fs[0].Section("handler-init")
+			sections := fs[0].Section("grpc-handler-init")
 			if len(sections) == 0 {
 				t.Fatalf("got zero sections, expected at least one")
 			}
