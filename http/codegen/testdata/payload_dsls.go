@@ -1985,6 +1985,41 @@ var PayloadBodyUserValidateDSL = func() {
 			Payload(PayloadType)
 			HTTP(func() {
 				POST("/")
+				Body("a")
+			})
+		})
+	})
+}
+
+var PayloadBodyObjectDSL = func() {
+	Service("ServiceBodyObject", func() {
+		Method("MethodBodyObject", func() {
+			Payload(func() {
+				Attribute("b", String)
+			})
+			HTTP(func() {
+				POST("/")
+				Body(func() {
+					Attribute("b", String)
+				})
+			})
+		})
+	})
+}
+
+var PayloadBodyObjectValidateDSL = func() {
+	Service("ServiceBodyObjectValidate", func() {
+		Method("MethodBodyObjectValidate", func() {
+			Payload(func() {
+				Attribute("b", String)
+				Required("b")
+			})
+			HTTP(func() {
+				POST("/")
+				Body(func() {
+					Attribute("b", String)
+					Required("b")
+				})
 			})
 		})
 	})
