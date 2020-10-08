@@ -1935,6 +1935,13 @@ func buildRequestBodyType(body, att *expr.AttributeExpr, e *expr.HTTPEndpointExp
 				}
 			}
 		} else {
+			if svr && expr.IsObject(body.Type) {
+				// Body is an explicit object described in the design and in
+				// this case the GoTypeRef is an inline struct definition. We
+				// want to force all attributes to be pointers because we are
+				// generating the server body type pre-validation.
+				body.Validation = nil
+			}
 			varname = sd.Scope.GoTypeRef(body)
 			ctx := codegen.NewAttributeContext(false, false, !svr, "", sd.Scope)
 			validateRef = codegen.RecursiveValidationCode(body, ctx, true, "body")
