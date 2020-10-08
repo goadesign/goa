@@ -1804,7 +1804,7 @@ func EncodeMethodBodyUserValidateRequest(encoder func(*http.Request) goahttp.Enc
 		if !ok {
 			return goahttp.ErrInvalidType("ServiceBodyUserValidate", "MethodBodyUserValidate", "*servicebodyuservalidate.PayloadType", v)
 		}
-		body := NewMethodBodyUserValidateRequestBody(p)
+		body := p.A
 		if err := encoder(req).Encode(&body); err != nil {
 			return goahttp.ErrEncodingError("ServiceBodyUserValidate", "MethodBodyUserValidate", err)
 		}
