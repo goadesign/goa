@@ -3742,8 +3742,37 @@ var PayloadBodyUserValidateDecodeCode = `// DecodeMethodBodyUserValidateRequest 
 func DecodeMethodBodyUserValidateRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) (interface{}, error) {
 	return func(r *http.Request) (interface{}, error) {
 		var (
-			body MethodBodyUserValidateRequestBody
+			body string
 			err  error
+		)
+		err = decoder(r).Decode(&body)
+		if err != nil {
+			if err == io.EOF {
+				err = nil
+			} else {
+				return nil, goa.DecodePayloadError(err.Error())
+			}
+		}
+		err = goa.MergeErrors(err, goa.ValidatePattern("body", body, "apattern"))
+		if err != nil {
+			return nil, err
+		}
+		payload := NewMethodBodyUserValidatePayloadType(body)
+
+		return payload, nil
+	}
+}
+`
+
+var PayloadBodyObjectDecodeCode = `// DecodeMethodBodyObjectRequest returns a decoder for requests sent to the
+// ServiceBodyObject MethodBodyObject endpoint.
+func DecodeMethodBodyObjectRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) (interface{}, error) {
+	return func(r *http.Request) (interface{}, error) {
+		var (
+			body struct {
+				B *string ` + "`" + `form:"b" json:"b" xml:"b"` + "`" + `
+			}
+			err error
 		)
 		err = decoder(r).Decode(&body)
 		if err != nil {
@@ -3752,11 +3781,31 @@ func DecodeMethodBodyUserValidateRequest(mux goahttp.Muxer, decoder func(*http.R
 			}
 			return nil, goa.DecodePayloadError(err.Error())
 		}
-		err = ValidateMethodBodyUserValidateRequestBody(&body)
+		payload := NewMethodBodyObjectPayload(body)
+
+		return payload, nil
+	}
+}
+`
+
+var PayloadBodyObjectValidateDecodeCode = `// DecodeMethodBodyObjectValidateRequest returns a decoder for requests sent to
+// the ServiceBodyObjectValidate MethodBodyObjectValidate endpoint.
+func DecodeMethodBodyObjectValidateRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) (interface{}, error) {
+	return func(r *http.Request) (interface{}, error) {
+		var (
+			body struct {
+				B *string ` + "`" + `form:"b" json:"b" xml:"b"` + "`" + `
+			}
+			err error
+		)
+		err = decoder(r).Decode(&body)
 		if err != nil {
-			return nil, err
+			if err == io.EOF {
+				return nil, goa.MissingPayloadError()
+			}
+			return nil, goa.DecodePayloadError(err.Error())
 		}
-		payload := NewMethodBodyUserValidatePayloadType(&body)
+		payload := NewMethodBodyObjectValidatePayload(body)
 
 		return payload, nil
 	}

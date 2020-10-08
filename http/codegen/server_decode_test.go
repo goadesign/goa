@@ -139,6 +139,8 @@ func TestDecode(t *testing.T) {
 		{"body-user-required", testdata.PayloadBodyUserRequiredDSL, testdata.PayloadBodyUserRequiredDecodeCode},
 		{"body-user-nested", testdata.PayloadBodyNestedUserDSL, testdata.PayloadBodyNestedUserDecodeCode},
 		{"body-user-validate", testdata.PayloadBodyUserValidateDSL, testdata.PayloadBodyUserValidateDecodeCode},
+		{"body-object", testdata.PayloadBodyObjectDSL, testdata.PayloadBodyObjectDecodeCode},
+		{"body-object-validate", testdata.PayloadBodyObjectValidateDSL, testdata.PayloadBodyObjectValidateDecodeCode},
 		{"body-array-string", testdata.PayloadBodyArrayStringDSL, testdata.PayloadBodyArrayStringDecodeCode},
 		{"body-array-string-validate", testdata.PayloadBodyArrayStringValidateDSL, testdata.PayloadBodyArrayStringValidateDecodeCode},
 		{"body-array-user", testdata.PayloadBodyArrayUserDSL, testdata.PayloadBodyArrayUserDecodeCode},
