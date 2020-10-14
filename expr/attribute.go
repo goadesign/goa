@@ -738,7 +738,7 @@ func (v *ValidationExpr) Debug(indent int) {
 		fmt.Printf("%s- minLength: %v\n", prefix, *v.MinLength)
 	}
 	if v.MaxLength != nil {
-		fmt.Printf("%s- minLength: %v\n", prefix, *v.MaxLength)
+		fmt.Printf("%s- maxLength: %v\n", prefix, *v.MaxLength)
 	}
 	if len(v.Required) > 0 {
 		fmt.Printf("%s- required: %v\n", prefix, v.Required)
