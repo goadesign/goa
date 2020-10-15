@@ -16,9 +16,7 @@ func TestTransformHelperServer(t *testing.T) {
 		Offset int
 	}{
 		{"body-user-inner-default-1", testdata.PayloadBodyUserInnerDefaultDSL, testdata.PayloadBodyUserInnerDefaultTransformCode1, 1},
-		{"body-user-inner-default-2", testdata.PayloadBodyUserInnerDefaultDSL, testdata.PayloadBodyUserInnerDefaultTransformCode2, 1},
 		{"body-user-recursive-default-1", testdata.PayloadBodyInlineRecursiveUserDSL, testdata.PayloadBodyInlineRecursiveUserTransformCode1, 1},
-		{"body-user-recursive-default-2", testdata.PayloadBodyInlineRecursiveUserDSL, testdata.PayloadBodyInlineRecursiveUserTransformCode2, 1},
 	}
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
