@@ -157,6 +157,7 @@ func NewAEndpoint(s Service) goa.Endpoint {
 const WithResultMultipleViewsEndpoint = `// Endpoints wraps the "WithResultMultipleViews" service endpoints.
 type Endpoints struct {
 	A goa.Endpoint
+	B goa.Endpoint
 }
 
 // NewEndpoints wraps the methods of the "WithResultMultipleViews" service with
@@ -164,6 +165,7 @@ type Endpoints struct {
 func NewEndpoints(s Service) *Endpoints {
 	return &Endpoints{
 		A: NewAEndpoint(s),
+		B: NewBEndpoint(s),
 	}
 }
 
@@ -171,17 +173,31 @@ func NewEndpoints(s Service) *Endpoints {
 // service endpoints.
 func (e *Endpoints) Use(m func(goa.Endpoint) goa.Endpoint) {
 	e.A = m(e.A)
+	e.B = m(e.B)
 }
 
 // NewAEndpoint returns an endpoint function that calls the method "A" of
 // service "WithResultMultipleViews".
 func NewAEndpoint(s Service) goa.Endpoint {
 	return func(ctx context.Context, req interface{}) (interface{}, error) {
-		res, view, err := s.A(ctx)
+		res, err := s.A(ctx)
 		if err != nil {
 			return nil, err
 		}
-		vres := NewViewedViewtype(res, view)
+		vres := NewViewedViewtype(res, "tiny")
+		return vres, nil
+	}
+}
+
+// NewBEndpoint returns an endpoint function that calls the method "B" of
+// service "WithResultMultipleViews".
+func NewBEndpoint(s Service) goa.Endpoint {
+	return func(ctx context.Context, req interface{}) (interface{}, error) {
+		res, err := s.B(ctx)
+		if err != nil {
+			return nil, err
+		}
+		vres := NewViewedViewtype(res, "default")
 		return vres, nil
 	}
 }

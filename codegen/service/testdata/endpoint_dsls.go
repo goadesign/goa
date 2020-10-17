@@ -82,7 +82,14 @@ var WithResultMultipleViewsEndpointDSL = func() {
 	})
 	Service("WithResultMultipleViews", func() {
 		Method("A", func() {
-			Result(ViewType)
+			Result(ViewType, func() {
+				View("tiny")
+			})
+		})
+		Method("B", func() {
+			Result(ViewType, func() {
+				View("default")
+			})
 		})
 	})
 }

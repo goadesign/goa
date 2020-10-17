@@ -486,7 +486,6 @@ func (d ServicesData) analyze(service *expr.ServiceExpr) *Data {
 		seenErrors map[string]struct{}
 		seen       map[string]struct{}
 		seenProj   map[string]*ProjectedTypeData
-		seenViewed map[string]*ViewedResultTypeData
 	)
 	{
 		scope = codegen.NewNameScope()
@@ -497,7 +496,6 @@ func (d ServicesData) analyze(service *expr.ServiceExpr) *Data {
 		seen = make(map[string]struct{})
 		seenErrors = make(map[string]struct{})
 		seenProj = make(map[string]*ProjectedTypeData)
-		seenViewed = make(map[string]*ViewedResultTypeData)
 
 		// A function to collect user types from an error expression
 		recordError := func(er *expr.ErrorExpr) {
@@ -588,16 +586,11 @@ func (d ServicesData) analyze(service *expr.ServiceExpr) *Data {
 		for i, e := range service.Methods {
 			m := buildMethodData(e, pkgName, service, scope)
 			if rt, ok := e.Result.Type.(*expr.ResultTypeExpr); ok {
-				if vrt, ok := seenViewed[m.Result]; ok {
-					m.ViewedResult = vrt
-				} else {
-					projected := seenProj[rt.ID()]
-					projAtt := &expr.AttributeExpr{Type: projected.Type}
-					vrt := buildViewedResultType(e.Result, projAtt, viewspkg, scope, viewScope)
-					viewedRTs = append(viewedRTs, vrt)
-					seenViewed[vrt.Name] = vrt
-					m.ViewedResult = vrt
-				}
+				projected := seenProj[rt.ID()]
+				projAtt := &expr.AttributeExpr{Type: projected.Type}
+				vrt := buildViewedResultType(e.Result, projAtt, viewspkg, scope, viewScope)
+				viewedRTs = append(viewedRTs, vrt)
+				m.ViewedResult = vrt
 			}
 			methods[i] = m
 			for _, s := range m.Schemes {
