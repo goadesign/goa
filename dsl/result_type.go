@@ -460,7 +460,7 @@ func Attributes(fn func()) {
 		eval.IncompatibleDSL()
 		return
 	}
-	eval.Execute(fn, mt)
+	eval.Execute(fn, mt.AttributeExpr)
 }
 
 // mediaTypeToResultType returns the formatted identifier and the result type

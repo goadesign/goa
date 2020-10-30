@@ -505,6 +505,19 @@ func (a *AttributeExpr) AddMeta(name string, vals ...string) {
 	a.Meta[name] = append(a.Meta[name], vals...)
 }
 
+// ExtractUserExamples return the examples defined in the design directly on the
+// attribute or on its type.
+func (a *AttributeExpr) ExtractUserExamples() []*ExampleExpr {
+	if len(a.UserExamples) > 0 {
+		return a.UserExamples
+	}
+	ut, ok := a.Type.(UserType)
+	if !ok {
+		return nil
+	}
+	return ut.Attribute().ExtractUserExamples()
+}
+
 // Debug dumps the attribute to STDOUT in a goa developer friendly way.
 func (a *AttributeExpr) Debug(prefix string) { a.debug(prefix, make(map[*AttributeExpr]int), 0) }
 func (a *AttributeExpr) debug(prefix string, seen map[*AttributeExpr]int, indent int) {
@@ -534,6 +547,12 @@ func (a *AttributeExpr) debug(prefix string, seen map[*AttributeExpr]int, indent
 	}
 	if v := a.Validation; v != nil {
 		v.Debug(indent + 1)
+	}
+	if len(a.UserExamples) > 0 {
+		fmt.Printf("%sexamples\n", tab)
+		for _, ex := range a.UserExamples {
+			fmt.Printf("%s- %s: %#v\n", tab+"  ", ex.Summary, ex.Value)
+		}
 	}
 	if len(a.Meta) > 0 {
 		fmt.Printf("%smeta\n", tab)
