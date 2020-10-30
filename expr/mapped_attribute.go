@@ -83,6 +83,10 @@ func (ma *MappedAttributeExpr) Remap() {
 			ma.reverseMap[elems[1]] = elems[0]
 		}
 	}
+
+	// Conserve examples defined on user type
+	ma.AttributeExpr.UserExamples = ma.ExtractUserExamples()
+
 	ma.Type = n
 }
 
