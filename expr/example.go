@@ -18,11 +18,11 @@ const (
 // isn't such a value then Example computes a random value for the attribute
 // using the given random value producer.
 func (a *AttributeExpr) Example(r *Random) interface{} {
-	if l := len(a.UserExamples); l > 0 {
+	if ex := a.ExtractUserExamples(); len(ex) > 0 {
 		// Return the last item in the slice so that examples can be overridden
 		// in the DSL. Overridden examples are always appended to the UserExamples
 		// slice.
-		return a.UserExamples[l-1].Value
+		return ex[len(ex)-1].Value
 	}
 
 	if value, ok := a.Meta.Last("swagger:example"); ok && value == "false" {

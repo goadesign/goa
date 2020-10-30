@@ -278,6 +278,7 @@ func projectSingle(m *ResultTypeExpr, view string, seen ...map[string]*Attribute
 	ut.TypeName = typeName
 	ut.UID = id
 	ut.AttributeExpr.Type = Dup(v.Type)
+	ut.AttributeExpr.UserExamples = v.UserExamples
 	projected := &ResultTypeExpr{
 		Identifier:   id,
 		UserTypeExpr: ut,
@@ -289,7 +290,7 @@ func projectSingle(m *ResultTypeExpr, view string, seen ...map[string]*Attribute
 	}}
 
 	projectedObj := projected.Type.(*Object)
-	mtObj := m.Type.(*Object)
+	mtObj := AsObject(m.Type)
 	for _, nat := range *viewObj {
 		if at := mtObj.Attribute(nat.Name); at != nil {
 			pat, err := projectRecursive(at, nat, view, seen...)
