@@ -21,6 +21,7 @@ func TestServerTypes(t *testing.T) {
 		{"payload-extend-validate", testdata.PayloadExtendedValidateDSL, PayloadExtendedValidateServerTypesFile},
 		{"result-type-validate", testdata.ResultTypeValidateDSL, ResultTypeValidateServerTypesFile},
 		{"with-result-collection", testdata.ResultWithResultCollectionDSL, ResultWithResultCollectionServerTypesFile},
+		{"with-result-view", testdata.ResultWithResultViewDSL, ResultWithResultViewServerTypesFile},
 	}
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
@@ -269,6 +270,33 @@ func NewMethodResultWithResultCollectionResponseBody(res *serviceresultwithresul
 	body := &MethodResultWithResultCollectionResponseBody{}
 	if res.A != nil {
 		body.A = marshalServiceresultwithresultcollectionResulttypeToResulttypeResponseBody(res.A)
+	}
+	return body
+}
+`
+
+const ResultWithResultViewServerTypesFile = `// MethodResultWithResultViewResponseBodyFull is the type of the
+// "ServiceResultWithResultView" service "MethodResultWithResultView" endpoint
+// HTTP response body.
+type MethodResultWithResultViewResponseBodyFull struct {
+	Name *string         ` + "`" + `form:"name,omitempty" json:"name,omitempty" xml:"name,omitempty"` + "`" + `
+	Rt   *RtResponseBody ` + "`" + `form:"rt,omitempty" json:"rt,omitempty" xml:"rt,omitempty"` + "`" + `
+}
+
+// RtResponseBody is used to define fields on response body types.
+type RtResponseBody struct {
+	X *string ` + "`" + `form:"x,omitempty" json:"x,omitempty" xml:"x,omitempty"` + "`" + `
+}
+
+// NewMethodResultWithResultViewResponseBodyFull builds the HTTP response body
+// from the result of the "MethodResultWithResultView" endpoint of the
+// "ServiceResultWithResultView" service.
+func NewMethodResultWithResultViewResponseBodyFull(res *serviceresultwithresultviewviews.ResulttypeView) *MethodResultWithResultViewResponseBodyFull {
+	body := &MethodResultWithResultViewResponseBodyFull{
+		Name: res.Name,
+	}
+	if res.Rt != nil {
+		body.Rt = marshalServiceresultwithresultviewviewsRtViewToRtResponseBody(res.Rt)
 	}
 	return body
 }

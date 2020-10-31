@@ -541,6 +541,17 @@ func (a *AttributeExpr) debug(prefix string, seen map[*AttributeExpr]int, indent
 		m.KeyType.debug("key", seen, indent+1)
 		m.ElemType.debug("elem", seen, indent+1)
 	}
+	if rt, ok := a.Type.(*ResultTypeExpr); ok {
+		fmt.Printf("%sviews\n", tab)
+		for _, v := range rt.Views {
+			nats := *AsObject(v.AttributeExpr.Type)
+			keys := make([]string, len(nats))
+			for i, n := range nats {
+				keys[i] = n.Name
+			}
+			fmt.Printf("%s- %s: %v\n", tab+"  ", v.Name, keys)
+		}
+	}
 	if d := a.DefaultValue; d != nil {
 		fmt.Printf("%sdefault\n", tab)
 		fmt.Printf("%s%#v", tab+"  ", a.DefaultValue)
