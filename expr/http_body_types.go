@@ -268,18 +268,19 @@ func buildHTTPResponseBody(name string, attr *AttributeExpr, resp *HTTPResponseE
 	}
 }
 
-// buildBodyTypeName concatenates the given strings to generate the
-// endpoint's body type name.
-//
+// concat concatenates the given strings with "smart(?) casing".
 // The concatenation algorithm is:
+//
 // 1) If the first string contains underscores and starts with a lower case,
 // the rest of the strings are converted to lower case and concatenated with
 // underscores.
 // e.g. concat("my_endpoint", "Request", "BODY") => "my_endpoint_request_body"
+//
 // 2) If the first string contains underscores and starts with a upper case,
 // the rest of the strings are converted to title case and concatenated with
 // underscores.
 // e.g. concat("My_endpoint", "response", "body") => "My_endpoint_Response_Body"
+//
 // 3) If the first string is a single word or camelcased, the rest of the
 // strings are concatenated to form a valid upper camelcase.
 // e.g. concat("myEndpoint", "streaming", "Body") => "MyEndpointStreamingBody"

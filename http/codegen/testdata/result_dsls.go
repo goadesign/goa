@@ -744,6 +744,38 @@ var ResultWithResultCollectionDSL = func() {
 	})
 }
 
+var ResultWithResultViewDSL = func() {
+	var RT = ResultType("RT", func() {
+		Attributes(func() {
+			Attribute("x")
+		})
+	})
+	var ResultType = ResultType("ResultType", func() {
+		Attributes(func() {
+			Attribute("name")
+			Attribute("rt", RT)
+		})
+		View("full", func() {
+			Attribute("name")
+			Attribute("rt")
+		})
+		View("default", func() {
+			Attribute("name")
+		})
+	})
+	Service("ServiceResultWithResultView", func() {
+		Method("MethodResultWithResultView", func() {
+			Result(ResultType, func() {
+				View("full")
+			})
+			HTTP(func() {
+				POST("/")
+				Response(StatusOK)
+			})
+		})
+	})
+}
+
 var EmptyBodyResultMultipleViewsDSL = func() {
 	var ResultType = ResultType("ResultTypeMultipleViews", func() {
 		Attribute("a", String)
