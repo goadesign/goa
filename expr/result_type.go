@@ -182,6 +182,24 @@ func (m *ResultTypeExpr) ViewHasAttribute(view, attr string) bool {
 // the underlying UserTypeExpr.
 func (m *ResultTypeExpr) Finalize() {
 	if m.View("default") == nil {
+		m.ensureDefaultView()
+	}
+	m.UserTypeExpr.Finalize()
+	seen := make(map[string]struct{})
+	walkAttribute(m.AttributeExpr, func(_ string, att *AttributeExpr) error {
+		if rt, ok := att.Type.(*ResultTypeExpr); ok {
+			if _, ok := seen[rt.Identifier]; !ok {
+				seen[rt.Identifier] = struct{}{}
+				rt.ensureDefaultView()
+			}
+		}
+		return nil
+	})
+}
+
+// ensureDefaultView builds the default view if not explicitly defined.
+func (m *ResultTypeExpr) ensureDefaultView() {
+	if m.View("default") == nil {
 		att := DupAtt(m.AttributeExpr)
 		if arr := AsArray(att.Type); arr != nil {
 			att.Type = AsObject(arr.ElemType.Type)
@@ -193,7 +211,6 @@ func (m *ResultTypeExpr) Finalize() {
 		}
 		m.Views = append(m.Views, v)
 	}
-	m.UserTypeExpr.Finalize()
 }
 
 // Project creates a ResultTypeExpr containing the fields defined in the view
