@@ -486,6 +486,7 @@ func (d ServicesData) analyze(service *expr.ServiceExpr) *Data {
 		seenErrors map[string]struct{}
 		seen       map[string]struct{}
 		seenProj   map[string]*ProjectedTypeData
+		seenViewed map[string]*ViewedResultTypeData
 	)
 	{
 		scope = codegen.NewNameScope()
@@ -496,6 +497,7 @@ func (d ServicesData) analyze(service *expr.ServiceExpr) *Data {
 		seen = make(map[string]struct{})
 		seenErrors = make(map[string]struct{})
 		seenProj = make(map[string]*ProjectedTypeData)
+		seenViewed = make(map[string]*ViewedResultTypeData)
 
 		// A function to collect user types from an error expression
 		recordError := func(er *expr.ErrorExpr) {
@@ -586,11 +588,20 @@ func (d ServicesData) analyze(service *expr.ServiceExpr) *Data {
 		for i, e := range service.Methods {
 			m := buildMethodData(e, pkgName, service, scope)
 			if rt, ok := e.Result.Type.(*expr.ResultTypeExpr); ok {
-				projected := seenProj[rt.ID()]
-				projAtt := &expr.AttributeExpr{Type: projected.Type}
-				vrt := buildViewedResultType(e.Result, projAtt, viewspkg, scope, viewScope)
-				viewedRTs = append(viewedRTs, vrt)
-				m.ViewedResult = vrt
+				var view string
+				if v, ok := e.Result.Meta["view"]; ok {
+					view = v[0]
+				}
+				if vrt, ok := seenViewed[m.Result+"::"+view]; ok {
+					m.ViewedResult = vrt
+				} else {
+					projected := seenProj[rt.ID()]
+					projAtt := &expr.AttributeExpr{Type: projected.Type}
+					vrt := buildViewedResultType(e.Result, projAtt, viewspkg, scope, viewScope)
+					viewedRTs = append(viewedRTs, vrt)
+					m.ViewedResult = vrt
+					seenViewed[vrt.Name+"::"+view] = vrt
+				}
 			}
 			methods[i] = m
 			for _, s := range m.Schemes {
@@ -974,8 +985,11 @@ func BuildSchemeData(s *expr.SchemeExpr, m *expr.MethodExpr) *SchemeData {
 }
 
 // collectProjectedTypes builds a projected type for every user type found
-// when recursing through the attributes. It stores the projected types in
-// data.
+// when recursing through the attributes. The projected types live in the views
+// package and support the marshaling and unmarshalling of result types that
+// make use of views. We need to build projected types for all user types - not
+// just result types - because user types make contain result types and thus may
+// need to be marshalled in different ways depending on the view being used.
 func collectProjectedTypes(projected, att *expr.AttributeExpr, viewspkg string, scope, viewScope *codegen.NameScope, seen map[string]*ProjectedTypeData) (data []*ProjectedTypeData) {
 	collect := func(projected, att *expr.AttributeExpr) []*ProjectedTypeData {
 		return collectProjectedTypes(projected, att, viewspkg, scope, viewScope, seen)

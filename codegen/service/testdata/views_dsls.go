@@ -201,6 +201,23 @@ var ResultWithRecursiveCollectionOfResultTypeDSL = func() {
 	})
 }
 
+var ResultWithMultipleMethodsDSL = func() {
+	var RT = ResultType("application/vnd.some_result", func() {
+		TypeName("RT")
+		Attributes(func() {
+			Attribute("a")
+		})
+	})
+	Service("ResultWithMultipleMethods", func() {
+		Method("A", func() {
+			Result(RT)
+		})
+		Method("B", func() {
+			Result(RT)
+		})
+	})
+}
+
 var ResultWithCustomFieldsDSL = func() {
 	var RT = ResultType("application/vnd.result", func() {
 		TypeName("RT")
