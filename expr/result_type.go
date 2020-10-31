@@ -194,6 +194,12 @@ func (m *ResultTypeExpr) Finalize() {
 		m.Views = append(m.Views, v)
 	}
 	m.UserTypeExpr.Finalize()
+	walkAttribute(m.AttributeExpr, func(_ string, att *AttributeExpr) error {
+		if rt, ok := att.Type.(*ResultTypeExpr); ok {
+			rt.Finalize()
+		}
+		return nil
+	})
 }
 
 // Project creates a ResultTypeExpr containing the fields defined in the view
