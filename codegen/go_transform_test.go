@@ -161,6 +161,10 @@ func TestGoTransform(t *testing.T) {
 			// arrays
 			{"array-to-default-array", simpleArray, defaultArray, defaultCtx, pointerCtx, srcUseDefaultTgtAllPtrsArrayToDefaultArrayCode},
 
+			// alias
+			{"simple-alias-to-simple", simpleAlias, simple, defaultCtx, pointerCtx, srcUseDefaultTgtAllPtrsSimpleAliasToSimpleCode},
+			{"simple-to-simple-alias", simple, simpleAlias, defaultCtx, pointerCtx, srcUseDefaultTgtAllPtrsSimpleToSimpleAliasCode},
+
 			// others
 			{"recursive-to-recursive", recursive, recursive, defaultCtx, pointerCtx, srcUseDefaultTgtAllPtrsRecursiveToRecursiveCode},
 			{"composite-to-custom-field", composite, customField, defaultCtx, pointerCtx, srcUseDefaultTgtAllPtrsCompositeToCustomFieldCode},
@@ -197,6 +201,12 @@ const (
 		DefaultBool:    source.DefaultBool,
 		Integer:        source.Integer,
 	}
+	{
+		var zero bool
+		if target.DefaultBool == zero {
+			target.DefaultBool = true
+		}
+	}
 }
 `
 
@@ -207,6 +217,12 @@ const (
 	}
 	if source.Integer != nil {
 		target.Integer = *source.Integer
+	}
+	{
+		var zero bool
+		if target.DefaultBool == zero {
+			target.DefaultBool = true
+		}
 	}
 }
 `
@@ -226,6 +242,12 @@ const (
 		DefaultBool:    source.DefaultBool,
 		Integer:        source.Integer,
 	}
+	{
+		var zero bool
+		if target.DefaultBool == zero {
+			target.DefaultBool = true
+		}
+	}
 }
 `
 
@@ -234,6 +256,12 @@ const (
 		RequiredString: source.RequiredString,
 		DefaultBool:    source.DefaultBool,
 		Integer:        source.Integer,
+	}
+	{
+		var zero bool
+		if target.DefaultBool == zero {
+			target.DefaultBool = true
+		}
 	}
 }
 `
@@ -246,6 +274,12 @@ const (
 	if source.Integer != nil {
 		target.Integer = *source.Integer
 	}
+	{
+		var zero bool
+		if target.DefaultBool == zero {
+			target.DefaultBool = true
+		}
+	}
 	if source.Integer == nil {
 		target.Integer = 1
 	}
@@ -257,6 +291,12 @@ const (
 		RequiredString: source.RequiredString,
 		DefaultBool:    source.DefaultBool,
 		Integer:        &source.Integer,
+	}
+	{
+		var zero bool
+		if target.DefaultBool == zero {
+			target.DefaultBool = true
+		}
 	}
 }
 `
@@ -689,6 +729,12 @@ const (
 		integer := int(*source.Integer)
 		target.Integer = &integer
 	}
+	{
+		var zero bool
+		if target.DefaultBool == zero {
+			target.DefaultBool = true
+		}
+	}
 }
 `
 
@@ -700,6 +746,12 @@ const (
 	if source.Integer != nil {
 		integer := IntAlias(*source.Integer)
 		target.Integer = &integer
+	}
+	{
+		var zero BoolAlias
+		if target.DefaultBool == zero {
+			target.DefaultBool = true
+		}
 	}
 }
 `
@@ -1096,6 +1148,32 @@ const (
 		for i, val := range source.StringArray {
 			target.StringArray[i] = val
 		}
+	}
+}
+`
+
+	srcUseDefaultTgtAllPtrsSimpleAliasToSimpleCode = `func transform() {
+	target := &Simple{}
+	requiredString := string(source.RequiredString)
+	target.RequiredString = &requiredString
+	defaultBool := bool(source.DefaultBool)
+	target.DefaultBool = &defaultBool
+	if source.Integer != nil {
+		integer := int(*source.Integer)
+		target.Integer = &integer
+	}
+}
+`
+
+	srcUseDefaultTgtAllPtrsSimpleToSimpleAliasCode = `func transform() {
+	target := &SimpleAlias{}
+	requiredString := StringAlias(source.RequiredString)
+	target.RequiredString = &requiredString
+	defaultBool := BoolAlias(source.DefaultBool)
+	target.DefaultBool = &defaultBool
+	if source.Integer != nil {
+		integer := IntAlias(*source.Integer)
+		target.Integer = &integer
 	}
 }
 `
