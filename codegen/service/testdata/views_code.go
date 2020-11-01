@@ -712,3 +712,44 @@ func ValidateAnotherResultCollectionView(result AnotherResultCollectionView) (er
 	return
 }
 `
+
+const ResultWithMultipleMethodsCode = `// RT is the viewed result type that is projected based on a view.
+type RT struct {
+	// Type to project
+	Projected *RTView
+	// View to render
+	View string
+}
+
+// RTView is a type that runs validations on a projected type.
+type RTView struct {
+	A *string
+}
+
+var (
+	// RTMap is a map of attribute names in result type RT indexed by view name.
+	RTMap = map[string][]string{
+		"default": []string{
+			"a",
+		},
+	}
+)
+
+// ValidateRT runs the validations defined on the viewed result type RT.
+func ValidateRT(result *RT) (err error) {
+	switch result.View {
+	case "default", "":
+		err = ValidateRTView(result.Projected)
+	default:
+		err = goa.InvalidEnumValueError("view", result.View, []interface{}{"default"})
+	}
+	return
+}
+
+// ValidateRTView runs the validations defined on RTView using the "default"
+// view.
+func ValidateRTView(result *RTView) (err error) {
+
+	return
+}
+`
