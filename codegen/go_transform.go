@@ -147,6 +147,10 @@ func transformObject(source, target *expr.AttributeExpr, sourceVar, targetVar st
 						}
 						postInitCode += "}\n"
 						return
+					} else if tgtPtr {
+						tmp := Goify(tgtMatt.ElemName(n), false)
+						postInitCode += fmt.Sprintf("%s := %s\n%s.%s = &%s\n", tmp, exp, targetVar, tgtField, tmp)
+						return
 					}
 				case srcPtr && !tgtPtr:
 					exp = "*" + srcField
@@ -232,14 +236,28 @@ func transformObject(source, target *expr.AttributeExpr, sourceVar, targetVar st
 		// Default value handling. We need to handle default values if the target
 		// type uses default values (i.e. attributes with default values are
 		// non-pointers) and has a default value set.
-		if tdef := tgtMatt.GetDefault(n); tdef != nil && ta.TargetCtx.UseDefault {
-			if (ta.SourceCtx.IsPrimitivePointer(n, srcMatt.AttributeExpr) || !expr.IsPrimitive(srcc.Type)) && !srcMatt.IsRequired(n) {
+		if tdef := tgtMatt.GetDefault(n); tdef != nil && ta.TargetCtx.UseDefault && !srcMatt.IsRequired(n) {
+			switch {
+			case ta.SourceCtx.IsPrimitivePointer(n, srcMatt.AttributeExpr) || !expr.IsPrimitive(srcc.Type):
+				// source attribute is a primitive pointer or not a primitive
 				code += fmt.Sprintf("if %s == nil {\n\t", srcVar)
 				if ta.TargetCtx.IsPrimitivePointer(n, tgtMatt.AttributeExpr) && expr.IsPrimitive(tgtc.Type) {
 					code += fmt.Sprintf("var tmp %s = %#v\n\t%s = &tmp\n", GoNativeTypeName(tgtc.Type), tdef, tgtVar)
 				} else {
 					code += fmt.Sprintf("%s = %#v\n", tgtVar, tdef)
 				}
+				code += "}\n"
+			case expr.IsPrimitive(srcc.Type) && srcMatt.HasDefaultValue(n) && ta.SourceCtx.UseDefault:
+				// source attribute is a primitive with default value
+				// (the field is not a pointer in this case)
+				code += "{\n\t"
+				if _, ok := tgtc.Type.(expr.UserType); ok {
+					// aliased primitive
+					code += fmt.Sprintf("var zero %s\n\t", ta.TargetCtx.Scope.Ref(tgtc, ta.TargetCtx.Pkg))
+				} else {
+					code += fmt.Sprintf("var zero %s\n\t", GoNativeTypeName(tgtc.Type))
+				}
+				code += fmt.Sprintf("if %s == zero {\n\t%s = %#v\n}\n", tgtVar, tgtVar, tdef)
 				code += "}\n"
 			}
 		}

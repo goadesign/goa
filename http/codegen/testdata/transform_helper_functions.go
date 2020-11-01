@@ -46,6 +46,12 @@ func marshalInnerTypeRequestBodyToServicebodyuserinnerdefaultInnerType(v *InnerT
 		A: v.A,
 		B: v.B,
 	}
+	{
+		var zero string
+		if res.B == zero {
+			res.B = "defaultb"
+		}
+	}
 
 	return res
 }
@@ -61,6 +67,12 @@ func marshalServicebodyuserinnerdefaultInnerTypeToInnerTypeRequestBody(v *servic
 	res := &InnerTypeRequestBody{
 		A: v.A,
 		B: v.B,
+	}
+	{
+		var zero string
+		if res.B == zero {
+			res.B = "defaultb"
+		}
 	}
 
 	return res

@@ -898,6 +898,7 @@ func makeHTTPType(att *expr.AttributeExpr, seen ...map[string]struct{}) {
 					att.Validation.Merge(v)
 				}
 			}
+			att.DefaultValue = dt.Attribute().DefaultValue
 		}
 		var s map[string]struct{}
 		if len(seen) > 0 {
