@@ -50,9 +50,10 @@ func TestGoTransform(t *testing.T) {
 		stringT = expr.String
 
 		// attribute contexts used in test cases
-		defaultCtx    = NewAttributeContext(false, false, true, "", scope)
-		defaultCtxPkg = NewAttributeContext(false, false, true, "mypkg", scope)
-		pointerCtx    = NewAttributeContext(true, false, false, "", scope)
+		defaultCtx        = NewAttributeContext(false, false, true, "", scope)
+		defaultCtxPkg     = NewAttributeContext(false, false, true, "mypkg", scope)
+		pointerCtx        = NewAttributeContext(true, false, false, "", scope)
+		defaultPointerCtx = NewAttributeContext(true, false, true, "", scope)
 	)
 	tc := map[string][]struct {
 		Name      string
@@ -168,6 +169,11 @@ func TestGoTransform(t *testing.T) {
 			// others
 			{"recursive-to-recursive", recursive, recursive, defaultCtx, pointerCtx, srcUseDefaultTgtAllPtrsRecursiveToRecursiveCode},
 			{"composite-to-custom-field", composite, customField, defaultCtx, pointerCtx, srcUseDefaultTgtAllPtrsCompositeToCustomFieldCode},
+		},
+
+		// target type uses default and pointers for all fields
+		"target-type-uses-default-all-ptrs": {
+			{"simple-to-simple", simple, simple, defaultCtx, defaultPointerCtx, srcUseDefaultTgtAllPtrsSimpleToSimpleCode},
 		},
 	}
 	for name, cases := range tc {
