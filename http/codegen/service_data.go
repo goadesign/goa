@@ -1102,8 +1102,8 @@ func buildPayloadData(e *expr.HTTPEndpointExpr, sd *ServiceData) *PayloadData {
 				Ref: sd.Scope.GoVar("body", body),
 				AttributeData: &AttributeData{
 					VarName:  "body",
-					TypeName: sd.Scope.GoTypeName(e.Body),
-					TypeRef:  sd.Scope.GoTypeRef(e.Body),
+					TypeName: sd.Scope.GoTypeNameWithDefaults(e.Body),
+					TypeRef:  sd.Scope.GoTypeRefWithDefaults(e.Body),
 					Type:     body,
 					Required: true,
 					Example:  e.Body.Example(expr.Root.API.Random()),

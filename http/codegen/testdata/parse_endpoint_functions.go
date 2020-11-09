@@ -1000,6 +1000,54 @@ func BuildMethodBodyInlineMapUserPayload(serviceBodyInlineMapUserMethodBodyInlin
 }
 `
 
+var PayloadObjectBuildCode = `// BuildMethodBodyInlineObjectPayload builds the payload for the
+// ServiceBodyInlineObject MethodBodyInlineObject endpoint from CLI flags.
+func BuildMethodBodyInlineObjectPayload(serviceBodyInlineObjectMethodBodyInlineObjectBody string) (*servicebodyinlineobject.MethodBodyInlineObjectPayload, error) {
+	var err error
+	var body struct {
+		A *string ` + "`" + `form:"a" json:"a" xml:"a"` + "`" + `
+	}
+	{
+		err = json.Unmarshal([]byte(serviceBodyInlineObjectMethodBodyInlineObjectBody), &body)
+		if err != nil {
+			return nil, fmt.Errorf("invalid JSON for body, \nerror: %s, \nexample of valid JSON:\n%s", err, "'{\n      \"a\": \"Ullam aut.\"\n   }'")
+		}
+	}
+	v := &servicebodyinlineobject.MethodBodyInlineObjectPayload{
+		A: body.A,
+	}
+
+	return v, nil
+}
+`
+
+var PayloadObjectDefaultBuildCode = `// BuildMethodBodyInlineObjectPayload builds the payload for the
+// ServiceBodyInlineObject MethodBodyInlineObject endpoint from CLI flags.
+func BuildMethodBodyInlineObjectPayload(serviceBodyInlineObjectMethodBodyInlineObjectBody string) (*servicebodyinlineobject.MethodBodyInlineObjectPayload, error) {
+	var err error
+	var body struct {
+		A string ` + "`" + `form:"a" json:"a" xml:"a"` + "`" + `
+	}
+	{
+		err = json.Unmarshal([]byte(serviceBodyInlineObjectMethodBodyInlineObjectBody), &body)
+		if err != nil {
+			return nil, fmt.Errorf("invalid JSON for body, \nerror: %s, \nexample of valid JSON:\n%s", err, "'{\n      \"a\": \"Ullam aut.\"\n   }'")
+		}
+	}
+	v := &servicebodyinlineobject.MethodBodyInlineObjectPayload{
+		A: body.A,
+	}
+	{
+		var zero string
+		if v.A == zero {
+			v.A = "foo"
+		}
+	}
+
+	return v, nil
+}
+`
+
 var MapQueryParseCode = `// ParseEndpoint returns the endpoint and payload as specified on the command
 // line.
 func ParseEndpoint(

@@ -36,6 +36,8 @@ func TestClientCLIFiles(t *testing.T) {
 		{"payload-array-primitive-type", testdata.PayloadBodyPrimitiveArrayStringValidateDSL, testdata.PayloadArrayPrimitiveTypeParseCode, 0, 3},
 		{"payload-array-user-type", testdata.PayloadBodyInlineArrayUserDSL, testdata.PayloadArrayUserTypeBuildCode, 1, 1},
 		{"payload-map-user-type", testdata.PayloadBodyInlineMapUserDSL, testdata.PayloadMapUserTypeBuildCode, 1, 1},
+		{"payload-object-type", testdata.PayloadBodyInlineObjectDSL, testdata.PayloadObjectBuildCode, 1, 1},
+		{"payload-object-default-type", testdata.PayloadBodyInlineObjectDefaultDSL, testdata.PayloadObjectDefaultBuildCode, 1, 1},
 		{"map-query", testdata.PayloadMapQueryPrimitiveArrayDSL, testdata.MapQueryParseCode, 0, 3},
 		{"map-query-object", testdata.PayloadMapQueryObjectDSL, testdata.MapQueryObjectBuildCode, 1, 1},
 		{"empty-body-build", testdata.PayloadBodyPrimitiveFieldEmptyDSL, testdata.EmptyBodyBuildCode, 1, 1},
