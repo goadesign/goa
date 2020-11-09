@@ -554,10 +554,10 @@ func (a *AttributeExpr) debug(prefix string, seen map[*AttributeExpr]int, indent
 	}
 	if d := a.DefaultValue; d != nil {
 		fmt.Printf("%sdefault\n", tab)
-		fmt.Printf("%s%#v", tab+"  ", a.DefaultValue)
+		fmt.Printf("%s  %#v\n", tab, a.DefaultValue)
 	}
 	if v := a.Validation; v != nil {
-		v.Debug(indent + 1)
+		v.Debug(indent)
 	}
 	if len(a.UserExamples) > 0 {
 		fmt.Printf("%sexamples\n", tab)
@@ -747,8 +747,8 @@ func (v *ValidationExpr) Dup() *ValidationExpr {
 
 // Debug dumps the validation to STDOUT in a goa developer friendly way.
 func (v *ValidationExpr) Debug(indent int) {
-	prefix := strings.Repeat("  ", indent)
-	fmt.Printf("%svalidations\n", prefix)
+	prefix := strings.Repeat("  ", indent+1)
+	fmt.Printf("%svalidations\n", strings.Repeat("  ", indent))
 	if len(v.Values) > 0 {
 		fmt.Printf("%s- enum: %s\n", prefix, fmt.Sprintf("%v", v.Values))
 	}
