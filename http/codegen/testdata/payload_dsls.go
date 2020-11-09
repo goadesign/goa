@@ -2664,6 +2664,41 @@ var PayloadBodyInlineMapUserDSL = func() {
 	})
 }
 
+var PayloadBodyInlineObjectDSL = func() {
+	Service("ServiceBodyInlineObject", func() {
+		Method("MethodBodyInlineObject", func() {
+			Payload(func() {
+				Attribute("a", String)
+			})
+			HTTP(func() {
+				POST("/")
+				Body(func() {
+					Attribute("a")
+				})
+			})
+		})
+	})
+}
+
+var PayloadBodyInlineObjectDefaultDSL = func() {
+	Service("ServiceBodyInlineObject", func() {
+		Method("MethodBodyInlineObject", func() {
+			Payload(func() {
+				Attribute("a", String, func() {
+					Default("foo")
+				})
+			})
+			HTTP(func() {
+				POST("/")
+				Body(func() {
+					Attribute("a")
+				})
+			})
+		})
+	})
+
+}
+
 var PayloadBodyInlineRecursiveUserDSL = func() {
 	var PayloadType = Type("PayloadType", func() {
 		Attribute("a", String, func() {
