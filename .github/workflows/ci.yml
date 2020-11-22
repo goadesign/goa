@@ -21,7 +21,7 @@ jobs:
       id: extract_branch
 
     - name: Add $GOPATH/bin to PATH
-      run: echo "::add-path::$(go env GOPATH)/bin"
+      run: echo "$(go env GOPATH)/bin" >> $GITHUB_PATH
       id: setup_path
 
     - name: Build
@@ -50,7 +50,7 @@ jobs:
 
     - name: Add $GOPATH/bin to PATH
       shell: bash
-      run: echo "::add-path::$(go env GOPATH)/bin"
+      run: echo "$(go env GOPATH)/bin" >> $GITHUB_PATH
       id: setup_path
 
     - name: Build
