@@ -191,7 +191,7 @@ func Pattern(p string) {
 }
 
 // ExclusiveMinimum adds a "exclusiveMinimum" validation to the attribute.
-// See http://json-schema.org/draft/2019-09/json-schema-validation.html#rfc.section.6.2.3.
+// See http://json-schema.org/draft/2019-09/json-schema-validation.html#rfc.section.6.2.5.
 //
 // Example:
 //
@@ -274,13 +274,13 @@ func Minimum(val interface{}) {
 	}
 }
 
-// ExclusiveMinimum adds a "exclusiveMinimum" validation to the attribute.
+// ExclusiveMaximum adds a "exclusiveMaximum" validation to the attribute.
 // See http://json-schema.org/draft/2019-09/json-schema-validation.html#rfc.section.6.2.3.
 //
 // Example:
 //
 //    Attribute("float", float32, func() {
-//        ExclusiveMinimum(100)
+//        ExclusiveMaximum(100)
 //    })
 //
 func ExclusiveMaximum(val interface{}) {
