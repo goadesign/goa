@@ -190,6 +190,48 @@ func Pattern(p string) {
 	}
 }
 
+// ExclusiveMinimum adds a "exclusiveMinimum" validation to the attribute.
+// See http://json-schema.org/draft/2019-09/json-schema-validation.html#rfc.section.6.2.3.
+//
+// Example:
+//
+//    Attribute("float", float32, func() {
+//        ExclusiveMinimum(100)
+//    })
+//
+func ExclusiveMinimum(val interface{}) {
+	if a, ok := eval.Current().(*expr.AttributeExpr); ok {
+		if a.Type != nil &&
+			a.Type.Kind() != expr.IntKind && a.Type.Kind() != expr.UIntKind &&
+			a.Type.Kind() != expr.Int32Kind && a.Type.Kind() != expr.UInt32Kind &&
+			a.Type.Kind() != expr.Int64Kind && a.Type.Kind() != expr.UInt64Kind &&
+			a.Type.Kind() != expr.Float32Kind && a.Type.Kind() != expr.Float64Kind {
+
+			incompatibleAttributeType("exclusiveMinimum", a.Type.Name(), "a number")
+		} else {
+			var f float64
+			switch v := val.(type) {
+			case float32, float64, int, int8, int16, int32, int64, uint8, uint16, uint32, uint64:
+				f = reflect.ValueOf(v).Convert(reflect.TypeOf(float64(0.0))).Float()
+			case string:
+				var err error
+				f, err = strconv.ParseFloat(v, 64)
+				if err != nil {
+					eval.ReportError("invalid number value %#v", v)
+					return
+				}
+			default:
+				eval.ReportError("invalid number value %#v", v)
+				return
+			}
+			if a.Validation == nil {
+				a.Validation = &expr.ValidationExpr{}
+			}
+			a.Validation.ExclusiveMinimum = &f
+		}
+	}
+}
+
 // Minimum adds a "minimum" validation to the attribute.
 // See http://json-schema.org/latest/json-schema-validation.html#anchor21.
 //
@@ -207,7 +249,7 @@ func Minimum(val interface{}) {
 			a.Type.Kind() != expr.Int64Kind && a.Type.Kind() != expr.UInt64Kind &&
 			a.Type.Kind() != expr.Float32Kind && a.Type.Kind() != expr.Float64Kind {
 
-			incompatibleAttributeType("minimum", a.Type.Name(), "an integer or a number")
+			incompatibleAttributeType("minimum", a.Type.Name(), "a number")
 		} else {
 			var f float64
 			switch v := val.(type) {
@@ -228,6 +270,48 @@ func Minimum(val interface{}) {
 				a.Validation = &expr.ValidationExpr{}
 			}
 			a.Validation.Minimum = &f
+		}
+	}
+}
+
+// ExclusiveMinimum adds a "exclusiveMinimum" validation to the attribute.
+// See http://json-schema.org/draft/2019-09/json-schema-validation.html#rfc.section.6.2.3.
+//
+// Example:
+//
+//    Attribute("float", float32, func() {
+//        ExclusiveMinimum(100)
+//    })
+//
+func ExclusiveMaximum(val interface{}) {
+	if a, ok := eval.Current().(*expr.AttributeExpr); ok {
+		if a.Type != nil &&
+			a.Type.Kind() != expr.IntKind && a.Type.Kind() != expr.UIntKind &&
+			a.Type.Kind() != expr.Int32Kind && a.Type.Kind() != expr.UInt32Kind &&
+			a.Type.Kind() != expr.Int64Kind && a.Type.Kind() != expr.UInt64Kind &&
+			a.Type.Kind() != expr.Float32Kind && a.Type.Kind() != expr.Float64Kind {
+
+			incompatibleAttributeType("exclusiveMaximum", a.Type.Name(), "a number")
+		} else {
+			var f float64
+			switch v := val.(type) {
+			case float32, float64, int, int8, int16, int32, int64, uint8, uint16, uint32, uint64:
+				f = reflect.ValueOf(v).Convert(reflect.TypeOf(float64(0.0))).Float()
+			case string:
+				var err error
+				f, err = strconv.ParseFloat(v, 64)
+				if err != nil {
+					eval.ReportError("invalid number value %#v", v)
+					return
+				}
+			default:
+				eval.ReportError("invalid number value %#v", v)
+				return
+			}
+			if a.Validation == nil {
+				a.Validation = &expr.ValidationExpr{}
+			}
+			a.Validation.ExclusiveMaximum = &f
 		}
 	}
 }

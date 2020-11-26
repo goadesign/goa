@@ -216,8 +216,14 @@ func (sf *schemafier) schemafy(attr *expr.AttributeExpr) *openapi.Schema {
 	s.Enum = val.Values
 	s.Format = string(val.Format)
 	s.Pattern = val.Pattern
+	if val.ExclusiveMinimum != nil {
+		s.ExclusiveMinimum = val.ExclusiveMinimum
+	}
 	if val.Minimum != nil {
 		s.Minimum = val.Minimum
+	}
+	if val.ExclusiveMaximum != nil {
+		s.ExclusiveMaximum = val.ExclusiveMaximum
 	}
 	if val.Maximum != nil {
 		s.Maximum = val.Maximum

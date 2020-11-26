@@ -69,6 +69,10 @@ type (
 		// described at
 		// http://json-schema.org/latest/json-schema-validation.html#anchor33
 		Pattern string
+		// ExclusiveMinimum represents an exclusiveMinimum value validation as described
+		// at
+		// http://json-schema.org/draft/2019-09/json-schema-validation.html#rfc.section.6.2.5.
+		ExclusiveMinimum *float64
 		// Minimum represents an minimum value validation as described
 		// at
 		// http://json-schema.org/latest/json-schema-validation.html#anchor21.
@@ -76,6 +80,10 @@ type (
 		// Maximum represents a maximum value validation as described at
 		// http://json-schema.org/latest/json-schema-validation.html#anchor17.
 		Maximum *float64
+		// ExclusiveMaximum represents an exclusiveMaximum value validation as described
+		// at
+		// http://json-schema.org/draft/2019-09/json-schema-validation.html#rfc.section.6.2.3.
+		ExclusiveMaximum *float64
 		// MinLength represents an minimum length validation as
 		// described at
 		// http://json-schema.org/latest/json-schema-validation.html#anchor29.
@@ -670,8 +678,14 @@ func (v *ValidationExpr) Merge(other *ValidationExpr) {
 	if v.Pattern == "" {
 		v.Pattern = other.Pattern
 	}
+	if v.ExclusiveMinimum == nil || (other.ExclusiveMinimum != nil && *v.ExclusiveMinimum > *other.ExclusiveMinimum) {
+		v.ExclusiveMinimum = other.ExclusiveMinimum
+	}
 	if v.Minimum == nil || (other.Minimum != nil && *v.Minimum > *other.Minimum) {
 		v.Minimum = other.Minimum
+	}
+	if v.ExclusiveMaximum == nil || (other.ExclusiveMaximum != nil && *v.ExclusiveMaximum > *other.ExclusiveMaximum) {
+		v.ExclusiveMaximum = other.ExclusiveMaximum
 	}
 	if v.Maximum == nil || (other.Maximum != nil && *v.Maximum < *other.Maximum) {
 		v.Maximum = other.Maximum
@@ -720,7 +734,12 @@ func (v *ValidationExpr) HasRequiredOnly() bool {
 	if v.Format != "" || v.Pattern != "" {
 		return false
 	}
-	if (v.Minimum != nil) || (v.Maximum != nil) || (v.MinLength != nil) || (v.MaxLength != nil) {
+	if (v.ExclusiveMinimum != nil) ||
+		(v.Minimum != nil) ||
+		(v.ExclusiveMaximum != nil) ||
+		(v.Maximum != nil) ||
+		(v.MinLength != nil) ||
+		(v.MaxLength != nil) {
 		return false
 	}
 	return true
@@ -734,14 +753,16 @@ func (v *ValidationExpr) Dup() *ValidationExpr {
 		copy(req, v.Required)
 	}
 	return &ValidationExpr{
-		Values:    v.Values,
-		Format:    v.Format,
-		Pattern:   v.Pattern,
-		Minimum:   v.Minimum,
-		Maximum:   v.Maximum,
-		MinLength: v.MinLength,
-		MaxLength: v.MaxLength,
-		Required:  req,
+		Values:           v.Values,
+		Format:           v.Format,
+		Pattern:          v.Pattern,
+		ExclusiveMinimum: v.ExclusiveMinimum,
+		Minimum:          v.Minimum,
+		ExclusiveMaximum: v.ExclusiveMaximum,
+		Maximum:          v.Maximum,
+		MinLength:        v.MinLength,
+		MaxLength:        v.MaxLength,
+		Required:         req,
 	}
 }
 
@@ -758,8 +779,14 @@ func (v *ValidationExpr) Debug(indent int) {
 	if v.Pattern != "" {
 		fmt.Printf("%s- pattern: %s\n", prefix, v.Pattern)
 	}
+	if v.ExclusiveMinimum != nil {
+		fmt.Printf("%s- exclMin: %v\n", prefix, *v.ExclusiveMinimum)
+	}
 	if v.Minimum != nil {
 		fmt.Printf("%s- min: %v\n", prefix, *v.Minimum)
+	}
+	if v.ExclusiveMaximum != nil {
+		fmt.Printf("%s- exclMax: %v\n", prefix, *v.ExclusiveMaximum)
 	}
 	if v.Maximum != nil {
 		fmt.Printf("%s- max: %v\n", prefix, *v.Maximum)
