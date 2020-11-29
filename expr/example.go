@@ -241,14 +241,12 @@ func byMinMax(a *AttributeExpr, r *Random) interface{} {
 	)
 	if a.Validation.ExclusiveMaximum != nil {
 		max = *a.Validation.ExclusiveMaximum
-	}
-	if a.Validation.Maximum != nil {
+	} else if a.Validation.Maximum != nil {
 		max = *a.Validation.Maximum
 	}
 	if a.Validation.ExclusiveMinimum != nil {
 		min = *a.Validation.ExclusiveMinimum
-	}
-	if a.Validation.Minimum != nil {
+	} else if a.Validation.Minimum != nil {
 		min = *a.Validation.Minimum
 	} else {
 		sign = -1
