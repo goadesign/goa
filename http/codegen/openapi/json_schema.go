@@ -36,7 +36,9 @@ type (
 		Enum                 []interface{} `json:"enum,omitempty" yaml:"enum,omitempty"`
 		Format               string        `json:"format,omitempty" yaml:"format,omitempty"`
 		Pattern              string        `json:"pattern,omitempty" yaml:"pattern,omitempty"`
+		ExclusiveMinimum     *float64      `json:"exclusiveMinimum,omitempty" yaml:"exclusiveMinimum,omitempty"`
 		Minimum              *float64      `json:"minimum,omitempty" yaml:"minimum,omitempty"`
+		ExclusiveMaximum     *float64      `json:"exclusiveMaximum,omitempty" yaml:"exclusiveMaximum,omitempty"`
 		Maximum              *float64      `json:"maximum,omitempty" yaml:"maximum,omitempty"`
 		MinLength            *int          `json:"minLength,omitempty" yaml:"minLength,omitempty"`
 		MaxLength            *int          `json:"maxLength,omitempty" yaml:"maxLength,omitempty"`
@@ -468,8 +470,14 @@ func initAttributeValidation(s *Schema, at *expr.AttributeExpr) {
 	s.Enum = val.Values
 	s.Format = string(val.Format)
 	s.Pattern = val.Pattern
+	if val.ExclusiveMinimum != nil {
+		s.ExclusiveMinimum = val.ExclusiveMinimum
+	}
 	if val.Minimum != nil {
 		s.Minimum = val.Minimum
+	}
+	if val.ExclusiveMaximum != nil {
+		s.ExclusiveMaximum = val.ExclusiveMaximum
 	}
 	if val.Maximum != nil {
 		s.Maximum = val.Maximum
