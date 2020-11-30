@@ -11,15 +11,16 @@ import (
 )
 
 var (
-	enumValT     *template.Template
-	formatValT   *template.Template
-	patternValT  *template.Template
-	minMaxValT   *template.Template
-	lengthValT   *template.Template
-	requiredValT *template.Template
-	arrayValT    *template.Template
-	mapValT      *template.Template
-	userValT     *template.Template
+	enumValT       *template.Template
+	formatValT     *template.Template
+	patternValT    *template.Template
+	exclMinMaxValT *template.Template
+	minMaxValT     *template.Template
+	lengthValT     *template.Template
+	requiredValT   *template.Template
+	arrayValT      *template.Template
+	mapValT        *template.Template
+	userValT       *template.Template
 )
 
 func init() {
@@ -33,6 +34,7 @@ func init() {
 	enumValT = template.Must(template.New("enum").Funcs(fm).Parse(enumValTmpl))
 	formatValT = template.Must(template.New("format").Funcs(fm).Parse(formatValTmpl))
 	patternValT = template.Must(template.New("pattern").Funcs(fm).Parse(patternValTmpl))
+	exclMinMaxValT = template.Must(template.New("exclMinMax").Funcs(fm).Parse(exclMinMaxValTmpl))
 	minMaxValT = template.Must(template.New("minMax").Funcs(fm).Parse(minMaxValTmpl))
 	lengthValT = template.Must(template.New("length").Funcs(fm).Parse(lengthValTmpl))
 	requiredValT = template.Must(template.New("req").Funcs(fm).Parse(requiredValTmpl))
@@ -112,11 +114,27 @@ func ValidationCode(att *expr.AttributeExpr, attCtx *AttributeContext, req bool,
 			res = append(res, val)
 		}
 	}
+	if exclMin := validation.ExclusiveMinimum; exclMin != nil {
+		data["exclMin"] = *exclMin
+		data["isExclMin"] = true
+		delete(data, "exclMax")
+		if val := runTemplate(exclMinMaxValT, data); val != "" {
+			res = append(res, val)
+		}
+	}
 	if min := validation.Minimum; min != nil {
 		data["min"] = *min
 		data["isMin"] = true
 		delete(data, "max")
 		if val := runTemplate(minMaxValT, data); val != "" {
+			res = append(res, val)
+		}
+	}
+	if exclMax := validation.ExclusiveMaximum; exclMax != nil {
+		data["exclMax"] = *exclMax
+		data["isExclMax"] = true
+		delete(data, "exclMax")
+		if val := runTemplate(exclMinMaxValT, data); val != "" {
 			res = append(res, val)
 		}
 	}
@@ -475,6 +493,18 @@ if {{ .target }} != nil {
 {{ if or (isset .zeroVal) .isPointer -}}
 }
 {{- end }}`
+
+	exclMinMaxValTmpl = `{{ if isset .zeroVal -}}
+if {{ .target }} != {{ if and (not .zeroVal) .string }}""{{ else }}{{ .zeroVal }}{{ end }} {
+{{ else if .isPointer -}}
+if {{ .target }} != nil {
+{{ end -}}
+        if {{ .targetVal }} {{ if .isExclMin }}<{{ else }}>{{ end }} {{ if .isExclMin }}{{ .exclMin }}{{ else }}{{ .exclMax }}{{ end }} {
+        err = goa.MergeErrors(err, goa.InvalidRangeError({{ printf "%q" .context }}, {{ .targetVal }}, {{ if .isExclMin }}{{ .exclMin }}, true{{ else }}{{ .exclMax }}, false{{ end }}))
+{{ if or (isset .zeroVal) .isPointer -}}
+}
+{{ end -}}
+}`
 
 	minMaxValTmpl = `{{ if isset .zeroVal -}}
 if {{ .target }} != {{ if and (not .zeroVal) .string }}""{{ else }}{{ .zeroVal }}{{ end }} {
