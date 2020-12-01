@@ -33,6 +33,7 @@ var SingleServerSingleHostDSL = func() {
 				URI("http://example:8090")
 				URI("https://example:80")
 				URI("grpc://example:8080")
+				URI("http://[::1]:8080")
 			})
 		})
 	})
