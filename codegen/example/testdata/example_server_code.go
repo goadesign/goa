@@ -71,10 +71,14 @@ const (
 				u.Host = *domainF
 			}
 			if *httpPortF != "" {
-				h := strings.Split(u.Host, ":")[0]
-				u.Host = h + ":" + *httpPortF
+				h, _, err := net.SplitHostPort(u.Host)
+				if err != nil {
+					fmt.Fprintf(os.Stderr, "invalid URL %#v: %s\n", u.Host, err)
+					os.Exit(1)
+				}
+				u.Host = net.JoinHostPort(h, *httpPortF)
 			} else if u.Port() == "" {
-				u.Host += ":80"
+				u.Host = net.JoinHostPort(u.Host, ":80")
 			}
 			handleHTTPServer(ctx, u, serviceEndpoints, &wg, errc, logger, *dbgF)
 		}
@@ -93,10 +97,14 @@ const (
 				u.Host = *domainF
 			}
 			if *grpcPortF != "" {
-				h := strings.Split(u.Host, ":")[0]
-				u.Host = h + ":" + *grpcPortF
+				h, _, err := net.SplitHostPort(u.Host)
+				if err != nil {
+					fmt.Fprintf(os.Stderr, "invalid URL %#v: %s\n", u.Host, err)
+					os.Exit(1)
+				}
+				u.Host = net.JoinHostPort(h, *grpcPortF)
 			} else if u.Port() == "" {
-				u.Host += ":8080"
+				u.Host = net.JoinHostPort(u.Host, ":8080")
 			}
 			handleGRPCServer(ctx, u, serviceEndpoints, &wg, errc, logger, *dbgF)
 		}
@@ -186,10 +194,14 @@ const (
 				u.Host = *domainF
 			}
 			if *httpPortF != "" {
-				h := strings.Split(u.Host, ":")[0]
-				u.Host = h + ":" + *httpPortF
+				h, _, err := net.SplitHostPort(u.Host)
+				if err != nil {
+					fmt.Fprintf(os.Stderr, "invalid URL %#v: %s\n", u.Host, err)
+					os.Exit(1)
+				}
+				u.Host = net.JoinHostPort(h, *httpPortF)
 			} else if u.Port() == "" {
-				u.Host += ":80"
+				u.Host = net.JoinHostPort(u.Host, ":80")
 			}
 			handleHTTPServer(ctx, u, serviceEndpoints, &wg, errc, logger, *dbgF)
 		}
@@ -208,10 +220,14 @@ const (
 				u.Host = *domainF
 			}
 			if *grpcPortF != "" {
-				h := strings.Split(u.Host, ":")[0]
-				u.Host = h + ":" + *grpcPortF
+				h, _, err := net.SplitHostPort(u.Host)
+				if err != nil {
+					fmt.Fprintf(os.Stderr, "invalid URL %#v: %s\n", u.Host, err)
+					os.Exit(1)
+				}
+				u.Host = net.JoinHostPort(h, *grpcPortF)
 			} else if u.Port() == "" {
-				u.Host += ":8080"
+				u.Host = net.JoinHostPort(u.Host, ":8080")
 			}
 			handleGRPCServer(ctx, u, serviceEndpoints, &wg, errc, logger, *dbgF)
 		}
@@ -301,10 +317,14 @@ const (
 				u.Host = *domainF
 			}
 			if *httpPortF != "" {
-				h := strings.Split(u.Host, ":")[0]
-				u.Host = h + ":" + *httpPortF
+				h, _, err := net.SplitHostPort(u.Host)
+				if err != nil {
+					fmt.Fprintf(os.Stderr, "invalid URL %#v: %s\n", u.Host, err)
+					os.Exit(1)
+				}
+				u.Host = net.JoinHostPort(h, *httpPortF)
 			} else if u.Port() == "" {
-				u.Host += ":80"
+				u.Host = net.JoinHostPort(u.Host, ":80")
 			}
 			handleHTTPServer(ctx, u, serviceEndpoints, &wg, errc, logger, *dbgF)
 		}
@@ -323,10 +343,14 @@ const (
 				u.Host = *domainF
 			}
 			if *httpPortF != "" {
-				h := strings.Split(u.Host, ":")[0]
-				u.Host = h + ":" + *httpPortF
+				h, _, err := net.SplitHostPort(u.Host)
+				if err != nil {
+					fmt.Fprintf(os.Stderr, "invalid URL %#v: %s\n", u.Host, err)
+					os.Exit(1)
+				}
+				u.Host = net.JoinHostPort(h, *httpPortF)
 			} else if u.Port() == "" {
-				u.Host += ":443"
+				u.Host = net.JoinHostPort(u.Host, ":443")
 			}
 			handleHTTPServer(ctx, u, serviceEndpoints, &wg, errc, logger, *dbgF)
 		}
@@ -345,12 +369,42 @@ const (
 				u.Host = *domainF
 			}
 			if *grpcPortF != "" {
-				h := strings.Split(u.Host, ":")[0]
-				u.Host = h + ":" + *grpcPortF
+				h, _, err := net.SplitHostPort(u.Host)
+				if err != nil {
+					fmt.Fprintf(os.Stderr, "invalid URL %#v: %s\n", u.Host, err)
+					os.Exit(1)
+				}
+				u.Host = net.JoinHostPort(h, *grpcPortF)
 			} else if u.Port() == "" {
-				u.Host += ":8080"
+				u.Host = net.JoinHostPort(u.Host, ":8080")
 			}
 			handleGRPCServer(ctx, u, serviceEndpoints, &wg, errc, logger, *dbgF)
+		}
+
+		{
+			addr := "http://[::1]:8080"
+			u, err := url.Parse(addr)
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "invalid URL %#v: %s\n", addr, err)
+				os.Exit(1)
+			}
+			if *secureF {
+				u.Scheme = "https"
+			}
+			if *domainF != "" {
+				u.Host = *domainF
+			}
+			if *httpPortF != "" {
+				h, _, err := net.SplitHostPort(u.Host)
+				if err != nil {
+					fmt.Fprintf(os.Stderr, "invalid URL %#v: %s\n", u.Host, err)
+					os.Exit(1)
+				}
+				u.Host = net.JoinHostPort(h, *httpPortF)
+			} else if u.Port() == "" {
+				u.Host = net.JoinHostPort(u.Host, ":80")
+			}
+			handleHTTPServer(ctx, u, serviceEndpoints, &wg, errc, logger, *dbgF)
 		}
 
 	default:
@@ -455,10 +509,14 @@ const (
 				u.Host = *domainF
 			}
 			if *httpPortF != "" {
-				h := strings.Split(u.Host, ":")[0]
-				u.Host = h + ":" + *httpPortF
+				h, _, err := net.SplitHostPort(u.Host)
+				if err != nil {
+					fmt.Fprintf(os.Stderr, "invalid URL %#v: %s\n", u.Host, err)
+					os.Exit(1)
+				}
+				u.Host = net.JoinHostPort(h, *httpPortF)
 			} else if u.Port() == "" {
-				u.Host += ":80"
+				u.Host = net.JoinHostPort(u.Host, ":80")
 			}
 			handleHTTPServer(ctx, u, serviceEndpoints, &wg, errc, logger, *dbgF)
 		}
@@ -486,10 +544,14 @@ const (
 				u.Host = *domainF
 			}
 			if *httpPortF != "" {
-				h := strings.Split(u.Host, ":")[0]
-				u.Host = h + ":" + *httpPortF
+				h, _, err := net.SplitHostPort(u.Host)
+				if err != nil {
+					fmt.Fprintf(os.Stderr, "invalid URL %#v: %s\n", u.Host, err)
+					os.Exit(1)
+				}
+				u.Host = net.JoinHostPort(h, *httpPortF)
 			} else if u.Port() == "" {
-				u.Host += ":443"
+				u.Host = net.JoinHostPort(u.Host, ":443")
 			}
 			handleHTTPServer(ctx, u, serviceEndpoints, &wg, errc, logger, *dbgF)
 		}
@@ -561,10 +623,14 @@ const (
 				u.Host = *domainF
 			}
 			if *httpPortF != "" {
-				h := strings.Split(u.Host, ":")[0]
-				u.Host = h + ":" + *httpPortF
+				h, _, err := net.SplitHostPort(u.Host)
+				if err != nil {
+					fmt.Fprintf(os.Stderr, "invalid URL %#v: %s\n", u.Host, err)
+					os.Exit(1)
+				}
+				u.Host = net.JoinHostPort(h, *httpPortF)
 			} else if u.Port() == "" {
-				u.Host += ":80"
+				u.Host = net.JoinHostPort(u.Host, ":80")
 			}
 			handleHTTPServer(ctx, u, &wg, errc, logger, *dbgF)
 		}
@@ -654,10 +720,14 @@ const (
 				u.Host = *domainF
 			}
 			if *httpPortF != "" {
-				h := strings.Split(u.Host, ":")[0]
-				u.Host = h + ":" + *httpPortF
+				h, _, err := net.SplitHostPort(u.Host)
+				if err != nil {
+					fmt.Fprintf(os.Stderr, "invalid URL %#v: %s\n", u.Host, err)
+					os.Exit(1)
+				}
+				u.Host = net.JoinHostPort(h, *httpPortF)
 			} else if u.Port() == "" {
-				u.Host += ":80"
+				u.Host = net.JoinHostPort(u.Host, ":80")
 			}
 			handleHTTPServer(ctx, u, serviceEndpoints, &wg, errc, logger, *dbgF)
 		}
@@ -676,10 +746,14 @@ const (
 				u.Host = *domainF
 			}
 			if *grpcPortF != "" {
-				h := strings.Split(u.Host, ":")[0]
-				u.Host = h + ":" + *grpcPortF
+				h, _, err := net.SplitHostPort(u.Host)
+				if err != nil {
+					fmt.Fprintf(os.Stderr, "invalid URL %#v: %s\n", u.Host, err)
+					os.Exit(1)
+				}
+				u.Host = net.JoinHostPort(h, *grpcPortF)
 			} else if u.Port() == "" {
-				u.Host += ":8080"
+				u.Host = net.JoinHostPort(u.Host, ":8080")
 			}
 			handleGRPCServer(ctx, u, serviceEndpoints, &wg, errc, logger, *dbgF)
 		}
@@ -773,10 +847,14 @@ const (
 				u.Host = *domainF
 			}
 			if *httpPortF != "" {
-				h := strings.Split(u.Host, ":")[0]
-				u.Host = h + ":" + *httpPortF
+				h, _, err := net.SplitHostPort(u.Host)
+				if err != nil {
+					fmt.Fprintf(os.Stderr, "invalid URL %#v: %s\n", u.Host, err)
+					os.Exit(1)
+				}
+				u.Host = net.JoinHostPort(h, *httpPortF)
 			} else if u.Port() == "" {
-				u.Host += ":80"
+				u.Host = net.JoinHostPort(u.Host, ":80")
 			}
 			handleHTTPServer(ctx, u, serviceEndpoints, anotherServiceEndpoints, &wg, errc, logger, *dbgF)
 		}
@@ -795,10 +873,14 @@ const (
 				u.Host = *domainF
 			}
 			if *grpcPortF != "" {
-				h := strings.Split(u.Host, ":")[0]
-				u.Host = h + ":" + *grpcPortF
+				h, _, err := net.SplitHostPort(u.Host)
+				if err != nil {
+					fmt.Fprintf(os.Stderr, "invalid URL %#v: %s\n", u.Host, err)
+					os.Exit(1)
+				}
+				u.Host = net.JoinHostPort(h, *grpcPortF)
 			} else if u.Port() == "" {
-				u.Host += ":8080"
+				u.Host = net.JoinHostPort(u.Host, ":8080")
 			}
 			handleGRPCServer(ctx, u, serviceEndpoints, anotherServiceEndpoints, &wg, errc, logger, *dbgF)
 		}
@@ -887,10 +969,14 @@ const (
 				u.Host = *domainF
 			}
 			if *httpPortF != "" {
-				h := strings.Split(u.Host, ":")[0]
-				u.Host = h + ":" + *httpPortF
+				h, _, err := net.SplitHostPort(u.Host)
+				if err != nil {
+					fmt.Fprintf(os.Stderr, "invalid URL %#v: %s\n", u.Host, err)
+					os.Exit(1)
+				}
+				u.Host = net.JoinHostPort(h, *httpPortF)
 			} else if u.Port() == "" {
-				u.Host += ":80"
+				u.Host = net.JoinHostPort(u.Host, ":80")
 			}
 			handleHTTPServer(ctx, u, serviceEndpoints, &wg, errc, logger, *dbgF)
 		}
@@ -910,10 +996,14 @@ const (
 				u.Host = *domainF
 			}
 			if *httpPortF != "" {
-				h := strings.Split(u.Host, ":")[0]
-				u.Host = h + ":" + *httpPortF
+				h, _, err := net.SplitHostPort(u.Host)
+				if err != nil {
+					fmt.Fprintf(os.Stderr, "invalid URL %#v: %s\n", u.Host, err)
+					os.Exit(1)
+				}
+				u.Host = net.JoinHostPort(h, *httpPortF)
 			} else if u.Port() == "" {
-				u.Host += ":443"
+				u.Host = net.JoinHostPort(u.Host, ":443")
 			}
 			handleHTTPServer(ctx, u, serviceEndpoints, &wg, errc, logger, *dbgF)
 		}
@@ -1019,10 +1109,14 @@ const (
 				u.Host = *domainF
 			}
 			if *httpPortF != "" {
-				h := strings.Split(u.Host, ":")[0]
-				u.Host = h + ":" + *httpPortF
+				h, _, err := net.SplitHostPort(u.Host)
+				if err != nil {
+					fmt.Fprintf(os.Stderr, "invalid URL %#v: %s\n", u.Host, err)
+					os.Exit(1)
+				}
+				u.Host = net.JoinHostPort(h, *httpPortF)
 			} else if u.Port() == "" {
-				u.Host += ":80"
+				u.Host = net.JoinHostPort(u.Host, ":80")
 			}
 			handleHTTPServer(ctx, u, serviceEndpoints, &wg, errc, logger, *dbgF)
 		}
@@ -1044,10 +1138,14 @@ const (
 				u.Host = *domainF
 			}
 			if *httpPortF != "" {
-				h := strings.Split(u.Host, ":")[0]
-				u.Host = h + ":" + *httpPortF
+				h, _, err := net.SplitHostPort(u.Host)
+				if err != nil {
+					fmt.Fprintf(os.Stderr, "invalid URL %#v: %s\n", u.Host, err)
+					os.Exit(1)
+				}
+				u.Host = net.JoinHostPort(h, *httpPortF)
 			} else if u.Port() == "" {
-				u.Host += ":443"
+				u.Host = net.JoinHostPort(u.Host, ":443")
 			}
 			handleHTTPServer(ctx, u, serviceEndpoints, &wg, errc, logger, *dbgF)
 		}
@@ -1136,10 +1234,14 @@ const (
 				u.Host = *domainF
 			}
 			if *httpPortF != "" {
-				h := strings.Split(u.Host, ":")[0]
-				u.Host = h + ":" + *httpPortF
+				h, _, err := net.SplitHostPort(u.Host)
+				if err != nil {
+					fmt.Fprintf(os.Stderr, "invalid URL %#v: %s\n", u.Host, err)
+					os.Exit(1)
+				}
+				u.Host = net.JoinHostPort(h, *httpPortF)
 			} else if u.Port() == "" {
-				u.Host += ":80"
+				u.Host = net.JoinHostPort(u.Host, ":80")
 			}
 			handleHTTPServer(ctx, u, serviceWithSpacesEndpoints, &wg, errc, logger, *dbgF)
 		}
@@ -1158,10 +1260,14 @@ const (
 				u.Host = *domainF
 			}
 			if *grpcPortF != "" {
-				h := strings.Split(u.Host, ":")[0]
-				u.Host = h + ":" + *grpcPortF
+				h, _, err := net.SplitHostPort(u.Host)
+				if err != nil {
+					fmt.Fprintf(os.Stderr, "invalid URL %#v: %s\n", u.Host, err)
+					os.Exit(1)
+				}
+				u.Host = net.JoinHostPort(h, *grpcPortF)
 			} else if u.Port() == "" {
-				u.Host += ":8080"
+				u.Host = net.JoinHostPort(u.Host, ":8080")
 			}
 			handleGRPCServer(ctx, u, serviceWithSpacesEndpoints, &wg, errc, logger, *dbgF)
 		}
@@ -1250,10 +1356,14 @@ const (
 				u.Host = *domainF
 			}
 			if *httpPortF != "" {
-				h := strings.Split(u.Host, ":")[0]
-				u.Host = h + ":" + *httpPortF
+				h, _, err := net.SplitHostPort(u.Host)
+				if err != nil {
+					fmt.Fprintf(os.Stderr, "invalid URL %#v: %s\n", u.Host, err)
+					os.Exit(1)
+				}
+				u.Host = net.JoinHostPort(h, *httpPortF)
 			} else if u.Port() == "" {
-				u.Host += ":80"
+				u.Host = net.JoinHostPort(u.Host, ":80")
 			}
 			handleHTTPServer(ctx, u, serviceEndpoints, &wg, errc, logger, *dbgF)
 		}
@@ -1343,10 +1453,14 @@ const (
 				u.Host = *domainF
 			}
 			if *grpcPortF != "" {
-				h := strings.Split(u.Host, ":")[0]
-				u.Host = h + ":" + *grpcPortF
+				h, _, err := net.SplitHostPort(u.Host)
+				if err != nil {
+					fmt.Fprintf(os.Stderr, "invalid URL %#v: %s\n", u.Host, err)
+					os.Exit(1)
+				}
+				u.Host = net.JoinHostPort(h, *grpcPortF)
 			} else if u.Port() == "" {
-				u.Host += ":8080"
+				u.Host = net.JoinHostPort(u.Host, ":8080")
 			}
 			handleGRPCServer(ctx, u, serviceEndpoints, &wg, errc, logger, *dbgF)
 		}
@@ -1440,10 +1554,14 @@ const (
 				u.Host = *domainF
 			}
 			if *httpPortF != "" {
-				h := strings.Split(u.Host, ":")[0]
-				u.Host = h + ":" + *httpPortF
+				h, _, err := net.SplitHostPort(u.Host)
+				if err != nil {
+					fmt.Fprintf(os.Stderr, "invalid URL %#v: %s\n", u.Host, err)
+					os.Exit(1)
+				}
+				u.Host = net.JoinHostPort(h, *httpPortF)
 			} else if u.Port() == "" {
-				u.Host += ":80"
+				u.Host = net.JoinHostPort(u.Host, ":80")
 			}
 			handleHTTPServer(ctx, u, serviceEndpoints, anotherServiceEndpoints, &wg, errc, logger, *dbgF)
 		}
@@ -1462,10 +1580,14 @@ const (
 				u.Host = *domainF
 			}
 			if *grpcPortF != "" {
-				h := strings.Split(u.Host, ":")[0]
-				u.Host = h + ":" + *grpcPortF
+				h, _, err := net.SplitHostPort(u.Host)
+				if err != nil {
+					fmt.Fprintf(os.Stderr, "invalid URL %#v: %s\n", u.Host, err)
+					os.Exit(1)
+				}
+				u.Host = net.JoinHostPort(h, *grpcPortF)
 			} else if u.Port() == "" {
-				u.Host += ":8080"
+				u.Host = net.JoinHostPort(u.Host, ":8080")
 			}
 			handleGRPCServer(ctx, u, serviceEndpoints, &wg, errc, logger, *dbgF)
 		}
