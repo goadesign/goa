@@ -28,7 +28,7 @@ paths:
                 Repellat nobis veritatis neque dolorum.: 9403718691861453290
       responses:
         "200":
-          description: ""
+          description: OK response.
           content:
             application/json:
               schema:

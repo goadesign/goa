@@ -318,12 +318,14 @@ func matchesResponse(t *testing.T, r *ResponseRef, types map[string]*openapi.Sch
 		}
 		matchesHeader(t, h, types, exp)
 	}
-	ct, ok := v.Content["application/json"]
-	if !ok {
-		t.Error("missing response content, expected application/json")
-		return
+	if expected.Type.Type != "" {
+		ct, ok := v.Content["application/json"]
+		if !ok {
+			t.Error("missing response content, expected application/json")
+			return
+		}
+		matchesSchema(t, "response body", ct.Schema, types, expected.Type)
 	}
-	matchesSchema(t, "response body", ct.Schema, types, expected.Type)
 }
 
 func matchesHeader(t *testing.T, h *HeaderRef, types map[string]*openapi.Schema, expected param) {

@@ -22,7 +22,7 @@ paths:
               string: ""
       responses:
         "200":
-          description: ""
+          description: OK response.
           content:
             application/json:
               schema:
@@ -33,7 +33,7 @@ paths:
                 - string: ""
                 foo: ""
         "404":
-          description: ""
+          description: Not Found response.
           content:
             application/json:
               schema:
