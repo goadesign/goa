@@ -1,6 +1,9 @@
 package openapiv3
 
 import (
+	"fmt"
+	"net/http"
+
 	"goa.design/goa/v3/expr"
 	"goa.design/goa/v3/http/codegen/openapi"
 )
@@ -35,8 +38,12 @@ func responseFromExpr(r *expr.HTTPResponseExpr, bodies map[int][]*openapi.Schema
 		Example:    r.Body.Example(rand),
 		Extensions: openapi.ExtensionsFromExpr(r.Body.Meta),
 	}
+	desc := r.Description
+	if desc == "" {
+		desc = fmt.Sprintf("%s response.", http.StatusText(r.StatusCode))
+	}
 	return &Response{
-		Description: &r.Description,
+		Description: &desc,
 		Headers:     headers,
 		Content:     map[string]*MediaType{ct: mt},
 		Extensions:  openapi.ExtensionsFromExpr(r.Meta),
