@@ -132,7 +132,10 @@ func hasMinMaxValidation(a *AttributeExpr) bool {
 	if a.Validation == nil {
 		return false
 	}
-	return a.Validation.Minimum != nil || a.Validation.Maximum != nil
+	return a.Validation.ExclusiveMinimum != nil ||
+		a.Validation.Minimum != nil ||
+		a.Validation.ExclusiveMaximum != nil ||
+		a.Validation.Maximum != nil
 }
 
 // byLength generates a random size array of examples based on what's given.
@@ -236,10 +239,14 @@ func byMinMax(a *AttributeExpr, r *Random) interface{} {
 		max  = math.Inf(1)
 		sign = 1
 	)
-	if a.Validation.Maximum != nil {
+	if a.Validation.ExclusiveMaximum != nil {
+		max = *a.Validation.ExclusiveMaximum
+	} else if a.Validation.Maximum != nil {
 		max = *a.Validation.Maximum
 	}
-	if a.Validation.Minimum != nil {
+	if a.Validation.ExclusiveMinimum != nil {
+		min = *a.Validation.ExclusiveMinimum
+	} else if a.Validation.Minimum != nil {
 		min = *a.Validation.Minimum
 	} else {
 		sign = -1
@@ -327,14 +334,28 @@ func checkMinMaxValue(a *AttributeExpr, example interface{}) bool {
 	if !hasMinMaxValidation(a) {
 		return true
 	}
-	if min := a.Validation.Minimum; min != nil {
+	var min *float64
+	if a.Validation.ExclusiveMinimum != nil {
+		min = a.Validation.ExclusiveMinimum
+	}
+	if a.Validation.Minimum != nil {
+		min = a.Validation.Minimum
+	}
+	if min != nil {
 		if v, ok := example.(int); ok && float64(v) < *min {
 			return false
 		} else if v, ok := example.(float64); ok && v < *min {
 			return false
 		}
 	}
-	if max := a.Validation.Maximum; max != nil {
+	var max *float64
+	if a.Validation.ExclusiveMaximum != nil {
+		max = a.Validation.ExclusiveMaximum
+	}
+	if a.Validation.Maximum != nil {
+		max = a.Validation.Maximum
+	}
+	if max != nil {
 		if v, ok := example.(int); ok && float64(v) > *max {
 			return false
 		} else if v, ok := example.(float64); ok && v > *max {

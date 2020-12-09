@@ -36,6 +36,7 @@ func exampleSvrMain(genpkg string, root *expr.RootExpr, svr *expr.ServerExpr) *c
 		{Path: "flag"},
 		{Path: "fmt"},
 		{Path: "log"},
+		{Path: "net"},
 		{Path: "net/url"},
 		{Path: "os"},
 		{Path: "os/signal"},
@@ -274,10 +275,14 @@ func main() {
 				u.Host = *domainF
 			}
 			if *{{ $u.Transport.Type }}PortF != "" {
-				h := strings.Split(u.Host, ":")[0]
-				u.Host = h + ":" + *{{ $u.Transport.Type }}PortF
+				h, _, err := net.SplitHostPort(u.Host)
+				if err != nil {
+					fmt.Fprintf(os.Stderr, "invalid URL %#v: %s\n", u.Host, err)
+					os.Exit(1)
+				}
+				u.Host = net.JoinHostPort(h, *{{ $u.Transport.Type }}PortF)
 			} else if u.Port() == "" {
-				u.Host += ":{{ $u.Port }}"
+				u.Host = net.JoinHostPort(u.Host, ":{{ $u.Port }}")
 			}
 			handle{{ toUpper $u.Transport.Name }}Server(ctx, u, {{ range $t := $.Server.Transports }}{{ if eq $t.Type $u.Transport.Type }}{{ range $s := $t.Services }}{{ range $.Services }}{{ if eq $s .Name }}{{ if .Methods }}{{ .VarName }}Endpoints, {{ end }}{{ end }}{{ end }}{{ end }}{{ end }}{{ end }}&wg, errc, logger, *dbgF)
 		}

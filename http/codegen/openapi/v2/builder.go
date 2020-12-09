@@ -717,6 +717,20 @@ func initPatternValidation(def interface{}, pattern string) {
 	}
 }
 
+func initExclusiveMinimumValidation(def interface{}, exclMin *float64) {
+	switch actual := def.(type) {
+	case *Parameter:
+		actual.Minimum = exclMin
+		actual.ExclusiveMinimum = true
+	case *Header:
+		actual.Minimum = exclMin
+		actual.ExclusiveMinimum = true
+	case *Items:
+		actual.Minimum = exclMin
+		actual.ExclusiveMinimum = true
+	}
+}
+
 func initMinimumValidation(def interface{}, min *float64) {
 	switch actual := def.(type) {
 	case *Parameter:
@@ -728,6 +742,20 @@ func initMinimumValidation(def interface{}, min *float64) {
 	case *Items:
 		actual.Minimum = min
 		actual.ExclusiveMinimum = false
+	}
+}
+
+func initExclusiveMaximumValidation(def interface{}, exclMax *float64) {
+	switch actual := def.(type) {
+	case *Parameter:
+		actual.Maximum = exclMax
+		actual.ExclusiveMaximum = true
+	case *Header:
+		actual.Maximum = exclMax
+		actual.ExclusiveMaximum = true
+	case *Items:
+		actual.Maximum = exclMax
+		actual.ExclusiveMaximum = true
 	}
 }
 
@@ -783,8 +811,14 @@ func initValidations(attr *expr.AttributeExpr, def interface{}) {
 	initEnumValidation(def, val.Values)
 	initFormatValidation(def, string(val.Format))
 	initPatternValidation(def, val.Pattern)
+	if val.ExclusiveMinimum != nil {
+		initExclusiveMinimumValidation(def, val.ExclusiveMinimum)
+	}
 	if val.Minimum != nil {
 		initMinimumValidation(def, val.Minimum)
+	}
+	if val.ExclusiveMaximum != nil {
+		initExclusiveMaximumValidation(def, val.ExclusiveMaximum)
 	}
 	if val.Maximum != nil {
 		initMaximumValidation(def, val.Maximum)
