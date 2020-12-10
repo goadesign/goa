@@ -16,8 +16,5 @@ paths:
       operationId: testService#testEndpoint
       responses:
         "204":
-          description: ""
-          content:
-            application/json:
-              example: {}
+          description: No Content response.
 components: {}

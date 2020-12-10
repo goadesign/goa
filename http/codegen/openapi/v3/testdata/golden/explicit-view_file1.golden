@@ -14,7 +14,7 @@ paths:
       operationId: testService#testEndpointDefault
       responses:
         "200":
-          description: ""
+          description: OK response.
           content:
             application/json:
               schema:
@@ -30,7 +30,7 @@ paths:
       operationId: testService#testEndpointTiny
       responses:
         "200":
-          description: ""
+          description: OK response.
           content:
             application/json:
               schema:

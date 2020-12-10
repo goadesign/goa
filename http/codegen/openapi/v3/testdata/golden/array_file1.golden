@@ -44,7 +44,7 @@ paths:
               foo: []
       responses:
         "200":
-          description: ""
+          description: OK response.
           content:
             application/json:
               schema:

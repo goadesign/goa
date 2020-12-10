@@ -23,8 +23,5 @@ paths:
         example: 1933576090881074823
       responses:
         "204":
-          description: ""
-          content:
-            application/json:
-              example: {}
+          description: No Content response.
 components: {}
