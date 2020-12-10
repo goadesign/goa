@@ -125,6 +125,7 @@ func clientEncodeDecode(genpkg string, svc *expr.GRPCServiceExpr) *codegen.File 
 				{Path: "fmt"},
 				{Path: "context"},
 				{Path: "strconv"},
+				{Path: "unicode/utf8"},
 				{Path: "google.golang.org/grpc"},
 				{Path: "google.golang.org/grpc/metadata"},
 				codegen.GoaImport(""),
