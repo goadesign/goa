@@ -39,10 +39,7 @@ paths:
         example: Iste perspiciatis.
       responses:
         "204":
-          description: ""
-          content:
-            application/json:
-              example: {}
+          description: No Content response.
       security:
       - api_key_query_k: []
         basic_header_Authorization: []
@@ -68,10 +65,7 @@ paths:
         example: Neque nisi quibusdam nisi sint sunt.
       responses:
         "204":
-          description: ""
-          content:
-            application/json:
-              example: {}
+          description: No Content response.
       security:
       - api_key_header_Authorization: []
       - oauth2_query_auth:
