@@ -129,6 +129,7 @@ func serverEncodeDecode(genpkg string, svc *expr.GRPCServiceExpr) *codegen.File 
 				{Path: "context"},
 				{Path: "strings"},
 				{Path: "strconv"},
+				{Path: "unicode/utf8"},
 				{Path: "google.golang.org/grpc"},
 				{Path: "google.golang.org/grpc/metadata"},
 				{Path: "goa.design/goa", Name: "goa"},
