@@ -539,6 +539,106 @@ func newSingleViewView(res *SingleView) *multiplemethodsresultmultipleviewsviews
 }
 `
 
+const WithExplicitAndDefaultViews = `
+// Service is the WithExplicitAndDefaultViews service interface.
+type Service interface {
+	// A implements A.
+	// The "view" return value must have one of the following views
+	//	- "default"
+	//	- "tiny"
+	A(context.Context) (res *MultipleViews, view string, err error)
+	// A implements A.
+	AEndpoint(context.Context) (res *MultipleViews, err error)
+}
+
+// ServiceName is the name of the service as defined in the design. This is the
+// same value that is set in the endpoint request contexts under the ServiceKey
+// key.
+const ServiceName = "WithExplicitAndDefaultViews"
+
+// MethodNames lists the service method names as defined in the design. These
+// are the same values that are set in the endpoint request contexts under the
+// MethodKey key.
+var MethodNames = [2]string{"A", "A"}
+
+// MultipleViews is the result type of the WithExplicitAndDefaultViews service
+// A method.
+type MultipleViews struct {
+	A string
+	B int
+}
+
+// NewMultipleViews initializes result type MultipleViews from viewed result
+// type MultipleViews.
+func NewMultipleViews(vres *withexplicitanddefaultviewsviews.MultipleViews) *MultipleViews {
+	var res *MultipleViews
+	switch vres.View {
+	case "default", "":
+		res = newMultipleViews(vres.Projected)
+	case "tiny":
+		res = newMultipleViewsTiny(vres.Projected)
+	}
+	return res
+}
+
+// NewViewedMultipleViews initializes viewed result type MultipleViews from
+// result type MultipleViews using the given view.
+func NewViewedMultipleViews(res *MultipleViews, view string) *withexplicitanddefaultviewsviews.MultipleViews {
+	var vres *withexplicitanddefaultviewsviews.MultipleViews
+	switch view {
+	case "default", "":
+		p := newMultipleViewsView(res)
+		vres = &withexplicitanddefaultviewsviews.MultipleViews{Projected: p, View: "default"}
+	case "tiny":
+		p := newMultipleViewsViewTiny(res)
+		vres = &withexplicitanddefaultviewsviews.MultipleViews{Projected: p, View: "tiny"}
+	}
+	return vres
+}
+
+// newMultipleViews converts projected type MultipleViews to service type
+// MultipleViews.
+func newMultipleViews(vres *withexplicitanddefaultviewsviews.MultipleViewsView) *MultipleViews {
+	res := &MultipleViews{}
+	if vres.A != nil {
+		res.A = *vres.A
+	}
+	if vres.B != nil {
+		res.B = *vres.B
+	}
+	return res
+}
+
+// newMultipleViewsTiny converts projected type MultipleViews to service type
+// MultipleViews.
+func newMultipleViewsTiny(vres *withexplicitanddefaultviewsviews.MultipleViewsView) *MultipleViews {
+	res := &MultipleViews{}
+	if vres.A != nil {
+		res.A = *vres.A
+	}
+	return res
+}
+
+// newMultipleViewsView projects result type MultipleViews to projected type
+// MultipleViewsView using the "default" view.
+func newMultipleViewsView(res *MultipleViews) *withexplicitanddefaultviewsviews.MultipleViewsView {
+	vres := &withexplicitanddefaultviewsviews.MultipleViewsView{
+		A: &res.A,
+		B: &res.B,
+	}
+	return vres
+}
+
+// newMultipleViewsViewTiny projects result type MultipleViews to projected
+// type MultipleViewsView using the "tiny" view.
+func newMultipleViewsViewTiny(res *MultipleViews) *withexplicitanddefaultviewsviews.MultipleViewsView {
+	vres := &withexplicitanddefaultviewsviews.MultipleViewsView{
+		A: &res.A,
+	}
+	return vres
+}
+`
+
 const ResultCollectionMultipleViewsMethod = `
 // Service is the ResultCollectionMultipleViewsMethod service interface.
 type Service interface {
