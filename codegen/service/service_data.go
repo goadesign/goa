@@ -598,7 +598,16 @@ func (d ServicesData) analyze(service *expr.ServiceExpr) *Data {
 					projected := seenProj[rt.ID()]
 					projAtt := &expr.AttributeExpr{Type: projected.Type}
 					vrt := buildViewedResultType(e.Result, projAtt, viewspkg, scope, viewScope)
-					viewedRTs = append(viewedRTs, vrt)
+					found := false
+					for _, rt := range viewedRTs {
+						if rt.Type.ID() == vrt.Type.ID() {
+							found = true
+							break
+						}
+					}
+					if !found {
+						viewedRTs = append(viewedRTs, vrt)
+					}
 					m.ViewedResult = vrt
 					seenViewed[vrt.Name+"::"+view] = vrt
 				}
