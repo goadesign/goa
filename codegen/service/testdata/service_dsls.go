@@ -201,6 +201,34 @@ var MultipleMethodsResultMultipleViewsDSL = func() {
 	})
 }
 
+var WithExplicitAndDefaultViewsDSL = func() {
+	var RTWithViews = ResultType("application/vnd.result.multiple.views", func() {
+		TypeName("MultipleViews")
+		Attributes(func() {
+			Attribute("a", String)
+			Attribute("b", Int)
+			Required("a", "b")
+		})
+		View("default", func() {
+			Attribute("a")
+			Attribute("b")
+		})
+		View("tiny", func() {
+			Attribute("a")
+		})
+	})
+	Service("WithExplicitAndDefaultViews", func() {
+		Method("A", func() {
+			Result(RTWithViews)
+		})
+		Method("A", func() {
+			Result(RTWithViews, func() {
+				View("tiny")
+			})
+		})
+	})
+}
+
 var ResultCollectionMultipleViewsMethodDSL = func() {
 	var RTWithViews = ResultType("application/vnd.result.multiple.views", func() {
 		TypeName("MultipleViews")
