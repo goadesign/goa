@@ -536,17 +536,18 @@ func (d ServicesData) analyze(gs *expr.GRPCServiceExpr) *ServiceData {
 			// pass the metadata as arguments to client CLI args
 			for _, m := range reqMD {
 				request.CLIArgs = append(request.CLIArgs, &InitArgData{
-					Name:      m.VarName,
-					Ref:       m.VarName,
-					FieldName: m.FieldName,
-					FieldType: m.FieldType,
-					TypeName:  m.TypeName,
-					TypeRef:   m.TypeRef,
-					Type:      m.Type,
-					Pointer:   m.Pointer,
-					Required:  m.Required,
-					Validate:  m.Validate,
-					Example:   m.Example,
+					Name:         m.VarName,
+					Ref:          m.VarName,
+					FieldName:    m.FieldName,
+					FieldType:    m.FieldType,
+					TypeName:     m.TypeName,
+					TypeRef:      m.TypeRef,
+					Type:         m.Type,
+					Pointer:      m.Pointer,
+					Required:     m.Required,
+					Validate:     m.Validate,
+					Example:      m.Example,
+					DefaultValue: m.DefaultValue,
 				})
 			}
 			if e.StreamingRequest.Type != expr.Empty {
