@@ -227,7 +227,7 @@ func NewStreamingMethodResponse() *service_payload_with_mixed_attributespb.Strea
 	return message
 }
 
-func NewAPayload(v *service_payload_with_mixed_attributespb.APayload) *servicepayloadwithmixedattributes.APayload {
+func NewAPayload(v *service_payload_with_mixed_attributespb.StreamingMethodStreamingRequest) *servicepayloadwithmixedattributes.APayload {
 	spayload := &servicepayloadwithmixedattributes.APayload{
 		Required:        int(v.Required),
 		Default:         int(v.Default),

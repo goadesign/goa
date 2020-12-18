@@ -319,7 +319,14 @@ func (e *GRPCEndpointExpr) Finalize() {
 
 	// Finalize streaming payload type if defined
 	if e.MethodExpr.StreamingPayload.Type != Empty {
-		initAttrFromDesign(e.StreamingRequest, e.MethodExpr.StreamingPayload)
+		attr := e.MethodExpr.StreamingPayload
+		// If streaming payload is a user type, use the underlying attribute
+		// for the grpc streaming request type. This ensures we are consistent
+		// with how message types are finalized for code generation.
+		if ut, ok := attr.Type.(UserType); ok {
+			attr = ut.Attribute()
+		}
+		initAttrFromDesign(e.StreamingRequest, attr)
 		if msgObj := AsObject(e.StreamingRequest.Type); msgObj != nil {
 			for _, nat := range *msgObj {
 				if e.MethodExpr.StreamingPayload.IsRequired(nat.Name) {
