@@ -115,7 +115,10 @@ func (e *ErrorExpr) Validate() error {
 		}
 		return nil
 	})
-	return verr
+	if len(verr.Errors) > 0 {
+		return verr
+	}
+	return nil
 }
 
 // Finalize makes sure the error type is a user type since it has to generate a
