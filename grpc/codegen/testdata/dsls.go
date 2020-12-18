@@ -294,6 +294,20 @@ var BidirectionalStreamingRPCWithErrorsDSL = func() {
 	})
 }
 
+var BidirectionalStreamingRPCSameTypeDSL = func() {
+	var T = Type("UserType", func() {
+		Field(1, "a", Int)
+		Field(2, "b", String)
+	})
+	Service("ServiceBidirectionalStreamingRPCSameType", func() {
+		Method("MethodBidirectionalStreamingRPCSameType", func() {
+			StreamingPayload(T)
+			StreamingResult(T)
+			GRPC(func() {})
+		})
+	})
+}
+
 var MessageUserTypeWithPrimitivesDSL = func() {
 	var PayloadT = Type("PayloadT", func() {
 		Field(1, "BooleanField", Boolean)
