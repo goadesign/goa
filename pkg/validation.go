@@ -1,7 +1,6 @@
 package goa
 
 import (
-	"bytes"
 	"encoding/json"
 	"fmt"
 	"net"
@@ -10,6 +9,8 @@ import (
 	"regexp"
 	"sync"
 	"time"
+
+	googleuuid "github.com/google/uuid"
 )
 
 // Format defines a validation format.
@@ -60,10 +61,8 @@ const (
 )
 
 var (
-	hostnameRegex  = regexp.MustCompile(`^[[:alnum:]][[:alnum:]\-]{0,61}[[:alnum:]]|[[:alpha:]]$`)
-	ipv4Regex      = regexp.MustCompile(`^(?:[0-9]{1,3}\.){3}[0-9]{1,3}$`)
-	uuidURNPrefix  = []byte("urn:uuid:")
-	uuidByteGroups = []int{8, 4, 4, 4, 12}
+	hostnameRegex = regexp.MustCompile(`^[[:alnum:]][[:alnum:]\-]{0,61}[[:alnum:]]|[[:alpha:]]$`)
+	ipv4Regex     = regexp.MustCompile(`^(?:[0-9]{1,3}\.){3}[0-9]{1,3}$`)
 )
 
 // ValidateFormat validates val against f. It returns nil if the string conforms
@@ -166,35 +165,17 @@ func ValidatePattern(name, val, p string) error {
 
 // The following formats are supported:
 // "6ba7b810-9dad-11d1-80b4-00c04fd430c8",
+// "6ba7b8109dad11d180b400c04fd430c8",
 // "{6ba7b810-9dad-11d1-80b4-00c04fd430c8}",
 // "urn:uuid:6ba7b810-9dad-11d1-80b4-00c04fd430c8"
 func validateUUID(uuid string) error {
-	if len(uuid) < 32 {
-		return fmt.Errorf("uuid: UUID string too short: %s", uuid)
+	u, err := googleuuid.Parse(uuid)
+	if err != nil {
+		return fmt.Errorf("uuid: %s: %v", uuid, err)
 	}
-	t := []byte(uuid)
-	braced := false
-	if bytes.Equal(t[:9], uuidURNPrefix) {
-		t = t[9:]
-	} else if t[0] == '{' {
-		t = t[1:]
-		braced = true
-	}
-	for i, byteGroup := range uuidByteGroups {
-		if i > 0 {
-			if t[0] != '-' {
-				return fmt.Errorf("uuid: invalid string format")
-			}
-			t = t[1:]
-		}
-		if len(t) < byteGroup {
-			return fmt.Errorf("uuid: UUID string too short: %s", uuid)
-		}
-		if i == 4 && len(t) > byteGroup &&
-			((braced && t[byteGroup] != '}') || len(t[byteGroup:]) > 1 || !braced) {
-			return fmt.Errorf("uuid: UUID string too long: %s", uuid)
-		}
-		t = t[byteGroup:]
+
+	if u.Variant() != googleuuid.RFC4122 {
+		return fmt.Errorf("uuid: expected RFC4122 format, but got %s", u.Variant().String())
 	}
 
 	return nil
