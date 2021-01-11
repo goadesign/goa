@@ -9,7 +9,7 @@ require (
 	github.com/go-openapi/loads v0.19.7
 	github.com/golang/protobuf v1.4.3
 	github.com/google/gxui v0.0.0-20151028112939-f85e0a97b3a4 // indirect
-	github.com/google/uuid v1.1.3
+	github.com/google/uuid v1.1.4
 	github.com/gorilla/websocket v1.4.2
 	github.com/manveru/faker v0.0.0-20171103152722-9fbc68a78c4d
 	github.com/manveru/gobdd v0.0.0-20131210092515-f1a17fdd710b // indirect
