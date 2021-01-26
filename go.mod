@@ -5,7 +5,7 @@ go 1.14
 require (
 	github.com/dimfeld/httppath v0.0.0-20170720192232-ee938bf73598
 	github.com/dimfeld/httptreemux/v5 v5.2.2
-	github.com/getkin/kin-openapi v0.35.0
+	github.com/getkin/kin-openapi v0.36.0
 	github.com/go-openapi/loads v0.19.7
 	github.com/golang/protobuf v1.4.3
 	github.com/google/gxui v0.0.0-20151028112939-f85e0a97b3a4 // indirect
