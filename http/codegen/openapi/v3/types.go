@@ -133,7 +133,7 @@ func buildBodyTypes(api *expr.APIExpr) (map[string]map[string]*EndpointBodies, m
 	return bodies, sf.schemas
 }
 
-func (sf *schemafier) schemafy(attr *expr.AttributeExpr) *openapi.Schema {
+func (sf *schemafier) schemafy(attr *expr.AttributeExpr, noref ...bool) *openapi.Schema {
 	if attr.Type == expr.Empty {
 		return nil
 	}
@@ -182,7 +182,8 @@ func (sf *schemafier) schemafy(attr *expr.AttributeExpr) *openapi.Schema {
 		s.AdditionalProperties = true
 	case expr.UserType:
 		h := sf.hashAttribute(attr, fnv.New64())
-		if ref, ok := sf.hashes[h]; ok {
+		ref, ok := sf.hashes[h]
+		if len(noref) == 0 && ok {
 			s.Ref = ref
 		} else {
 			name := t.Name()
@@ -192,7 +193,7 @@ func (sf *schemafier) schemafy(attr *expr.AttributeExpr) *openapi.Schema {
 			typeName := sf.uniquify(codegen.Goify(name, true))
 			s.Ref = toRef(typeName)
 			sf.hashes[h] = s.Ref
-			sf.schemas[typeName] = sf.schemafy(t.Attribute())
+			sf.schemas[typeName] = sf.schemafy(t.Attribute(), true)
 		}
 		return s // All other schema properties are set in the reference
 	default:
