@@ -45,7 +45,7 @@ func serverFile(genpkg string, svc *expr.GRPCServiceExpr) *codegen.File {
 				{Path: "google.golang.org/grpc/codes"},
 				{Path: path.Join(genpkg, svcName), Name: data.Service.PkgName},
 				{Path: path.Join(genpkg, svcName, "views"), Name: data.Service.ViewsPkg},
-				{Path: path.Join(genpkg, "grpc", svcName, pbPkgName), Name: data.PkgName},
+				{Path: path.Join(genpkg, "grpc", svcName, pbPkgName, svcName + pbPkgName), Name: data.PkgName},
 			}),
 			&codegen.SectionTemplate{Name: "server-struct", Source: serverStructT, Data: data},
 		}
@@ -136,7 +136,7 @@ func serverEncodeDecode(genpkg string, svc *expr.GRPCServiceExpr) *codegen.File 
 				codegen.GoaNamedImport("grpc", "goagrpc"),
 				{Path: path.Join(genpkg, svcName), Name: data.Service.PkgName},
 				{Path: path.Join(genpkg, svcName, "views"), Name: data.Service.ViewsPkg},
-				{Path: path.Join(genpkg, "grpc", svcName, pbPkgName), Name: data.PkgName},
+				{Path: path.Join(genpkg, "grpc", svcName, pbPkgName, svcName + pbPkgName), Name: data.PkgName},
 			}),
 		}
 

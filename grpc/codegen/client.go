@@ -45,7 +45,7 @@ func client(genpkg string, svc *expr.GRPCServiceExpr) *codegen.File {
 				codegen.GoaNamedImport("grpc/pb", "goapb"),
 				{Path: path.Join(genpkg, svcName), Name: data.Service.PkgName},
 				{Path: path.Join(genpkg, svcName, "views"), Name: data.Service.ViewsPkg},
-				{Path: path.Join(genpkg, "grpc", svcName, pbPkgName), Name: data.PkgName},
+				{Path: path.Join(genpkg, "grpc", svcName, pbPkgName, svcName + pbPkgName), Name: data.PkgName},
 			}),
 		}
 		sections = append(sections, &codegen.SectionTemplate{
@@ -132,7 +132,7 @@ func clientEncodeDecode(genpkg string, svc *expr.GRPCServiceExpr) *codegen.File 
 				codegen.GoaNamedImport("grpc", "goagrpc"),
 				{Path: path.Join(genpkg, svcName), Name: data.Service.PkgName},
 				{Path: path.Join(genpkg, svcName, "views"), Name: data.Service.ViewsPkg},
-				{Path: path.Join(genpkg, "grpc", svcName, pbPkgName), Name: data.PkgName},
+				{Path: path.Join(genpkg, "grpc", svcName, pbPkgName, svcName + pbPkgName), Name: data.PkgName},
 			}),
 		}
 		fm := transTmplFuncs(svc)
