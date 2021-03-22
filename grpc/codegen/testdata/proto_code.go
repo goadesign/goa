@@ -5,7 +5,7 @@ syntax = "proto3";
 
 package service_unary_rp_cs;
 
-option go_package = "service_unary_rp_cspb";
+option go_package = "service_unary_rp_cspb/";
 
 // Service is the ServiceUnaryRPCs service interface.
 service ServiceUnaryRPCs {
@@ -41,7 +41,7 @@ syntax = "proto3";
 
 package service_unary_rpc_no_payload;
 
-option go_package = "service_unary_rpc_no_payloadpb";
+option go_package = "service_unary_rpc_no_payloadpb/";
 
 // Service is the ServiceUnaryRPCNoPayload service interface.
 service ServiceUnaryRPCNoPayload {
@@ -62,7 +62,7 @@ syntax = "proto3";
 
 package service_unary_rpc_no_result;
 
-option go_package = "service_unary_rpc_no_resultpb";
+option go_package = "service_unary_rpc_no_resultpb/";
 
 // Service is the ServiceUnaryRPCNoResult service interface.
 service ServiceUnaryRPCNoResult {
@@ -83,7 +83,7 @@ syntax = "proto3";
 
 package service_server_streaming_rpc;
 
-option go_package = "service_server_streaming_rpcpb";
+option go_package = "service_server_streaming_rpcpb/";
 
 // Service is the ServiceServerStreamingRPC service interface.
 service ServiceServerStreamingRPC {
@@ -105,7 +105,7 @@ syntax = "proto3";
 
 package service_client_streaming_rpc;
 
-option go_package = "service_client_streaming_rpcpb";
+option go_package = "service_client_streaming_rpcpb/";
 
 // Service is the ServiceClientStreamingRPC service interface.
 service ServiceClientStreamingRPC {
@@ -127,7 +127,7 @@ syntax = "proto3";
 
 package service_bidirectional_streaming_rpc;
 
-option go_package = "service_bidirectional_streaming_rpcpb";
+option go_package = "service_bidirectional_streaming_rpcpb/";
 
 // Service is the ServiceBidirectionalStreamingRPC service interface.
 service ServiceBidirectionalStreamingRPC {
@@ -150,7 +150,7 @@ syntax = "proto3";
 
 package my_name_conflicts;
 
-option go_package = "my_name_conflictspb";
+option go_package = "my_name_conflictspb/";
 
 // Service is the MyNameConflicts service interface.
 service MyNameConflicts {
@@ -359,7 +359,7 @@ syntax = "proto3";
 
 package method_with_reserved_name;
 
-option go_package = "method_with_reserved_namepb";
+option go_package = "method_with_reserved_namepb/";
 
 // Service is the MethodWithReservedName service interface.
 service MethodWithReservedName {
@@ -379,7 +379,7 @@ syntax = "proto3";
 
 package multiple_methods_same_result_collection;
 
-option go_package = "multiple_methods_same_result_collectionpb";
+option go_package = "multiple_methods_same_result_collectionpb/";
 
 // Service is the MultipleMethodsSameResultCollection service interface.
 service MultipleMethodsSameResultCollection {
@@ -409,7 +409,7 @@ syntax = "proto3";
 
 package method_with_acronym;
 
-option go_package = "method_with_acronympb";
+option go_package = "method_with_acronympb/";
 
 // Service is the MethodWithAcronym service interface.
 service MethodWithAcronym {
