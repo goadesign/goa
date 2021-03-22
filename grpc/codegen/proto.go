@@ -96,7 +96,7 @@ syntax = {{ printf "%q" .ProtoVersion }};
 
 package {{ .Pkg }};
 
-option go_package = "{{ .Pkg }}pb";
+option go_package = "{{ .Pkg }}pb/";
 `
 
 	// input: ServiceData
