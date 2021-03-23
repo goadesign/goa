@@ -68,7 +68,7 @@ func exampleServer(genpkg string, root *expr.RootExpr, svr *expr.ServerExpr) *co
 				Name: scope.Unique(sd.Service.PkgName),
 			})
 			specs = append(specs, &codegen.ImportSpec{
-				Path: path.Join(genpkg, "grpc", svcName, pbPkgName, svcName + pbPkgName),
+				Path: path.Join(genpkg, "grpc", svcName, pbPkgName, svcName+pbPkgName),
 				Name: scope.Unique(svcName + pbPkgName),
 			})
 		}

@@ -76,7 +76,7 @@ func endpointParser(genpkg string, root *expr.RootExpr, svr *expr.ServerExpr, da
 			Name: sd.Service.PkgName + "c",
 		})
 		specs = append(specs, &codegen.ImportSpec{
-			Path: path.Join(genpkg, "grpc", svcName, pbPkgName, svcName + pbPkgName),
+			Path: path.Join(genpkg, "grpc", svcName, pbPkgName, svcName+pbPkgName),
 			Name: svcName + pbPkgName,
 		})
 	}
@@ -117,7 +117,7 @@ func payloadBuilders(genpkg string, svc *expr.GRPCServiceExpr, data *cli.Command
 		{Path: "unicode/utf8"},
 		codegen.GoaImport(""),
 		{Path: path.Join(genpkg, svcName), Name: sd.Service.PkgName},
-		{Path: path.Join(genpkg, "grpc", svcName, pbPkgName, svcName + pbPkgName), Name: sd.PkgName},
+		{Path: path.Join(genpkg, "grpc", svcName, pbPkgName, svcName+pbPkgName), Name: sd.PkgName},
 	}
 	sections := []*codegen.SectionTemplate{
 		codegen.Header(title, "client", specs),
