@@ -69,7 +69,7 @@ func protoc(path string) error {
 	dir := filepath.Dir(path)
 	os.MkdirAll(dir, 0777)
 
-	args := []string{"--go_out=plugins=grpc:.", path, "--proto_path", dir}
+	args := []string{"--proto_path", dir, "--go_out", dir, "--go-grpc_out", dir, "--go_opt=paths=source_relative", "--go-grpc_opt=paths=source_relative", path}
 	cmd := exec.Command("protoc", args...)
 	cmd.Dir = filepath.Dir(path)
 
@@ -96,7 +96,7 @@ syntax = {{ printf "%q" .ProtoVersion }};
 
 package {{ .Pkg }};
 
-option go_package = "{{ .Pkg }}pb/";
+option go_package = "/{{ .Pkg }}pb";
 `
 
 	// input: ServiceData
