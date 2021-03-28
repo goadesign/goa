@@ -7,7 +7,7 @@ require (
 	github.com/dimfeld/httptreemux/v5 v5.2.2
 	github.com/getkin/kin-openapi v0.53.0
 	github.com/go-openapi/loads v0.19.7
-	github.com/golang/protobuf v1.5.1
+	github.com/golang/protobuf v1.4.3
 	github.com/google/gxui v0.0.0-20151028112939-f85e0a97b3a4 // indirect
 	github.com/google/uuid v1.2.0
 	github.com/gorilla/websocket v1.4.2
@@ -20,8 +20,9 @@ require (
 	golang.org/x/mod v0.4.2 // indirect
 	golang.org/x/net v0.0.0-20210326220855-61e056675ecf // indirect
 	golang.org/x/sys v0.0.0-20210326220804-49726bf1d181 // indirect
+	golang.org/x/text v0.3.5 // indirect
 	golang.org/x/tools v0.1.0
-	google.golang.org/genproto v0.0.0-20210325224202-eed09b1b5210 // indirect
-	google.golang.org/grpc v1.36.1
+	google.golang.org/grpc v1.35.0
+	google.golang.org/protobuf v1.26.0-rc.1 // indirect
 	gopkg.in/yaml.v2 v2.4.0
 )
