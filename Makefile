@@ -54,7 +54,7 @@ endif
 depend:
 	@echo INSTALLING DEPENDENCIES...
 	@go mod download
-	@go get -v $(DEPEND)
+	@go get -u -v $(DEPEND)
 	@echo INSTALLING PROTOC...
 	@mkdir $(PROTOC)
 	@cd $(PROTOC); \
