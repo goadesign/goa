@@ -199,8 +199,8 @@ const serverStructT = `{{ printf "%s implements the %s.%s interface." .ServerStr
 type {{ .ServerStruct }} struct {
 {{- range .Endpoints }}
 	{{ .Method.VarName }}H {{ if .ServerStream }}goagrpc.StreamHandler{{ else }}goagrpc.UnaryHandler{{ end }}
-	{{ .PkgName }}.Unimplemented{{ .ServerInterface }}
 {{- end }}
+	{{ .PkgName }}.Unimplemented{{ .ServerInterface }}
 }
 
 // ErrorNamer is an interface implemented by generated error structs that
