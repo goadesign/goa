@@ -1,13 +1,12 @@
 module goa.design/goa/v3
 
-go 1.14
+go 1.16
 
 require (
 	github.com/dimfeld/httppath v0.0.0-20170720192232-ee938bf73598
 	github.com/dimfeld/httptreemux/v5 v5.2.2
 	github.com/getkin/kin-openapi v0.53.0
 	github.com/go-openapi/loads v0.19.7
-	github.com/golang/protobuf v1.5.1
 	github.com/google/gxui v0.0.0-20151028112939-f85e0a97b3a4 // indirect
 	github.com/google/uuid v1.2.0
 	github.com/gorilla/websocket v1.4.2
@@ -22,5 +21,6 @@ require (
 	golang.org/x/tools v0.1.0
 	google.golang.org/genproto v0.0.0-20210323160006-e668133fea6a // indirect
 	google.golang.org/grpc v1.36.0
+	google.golang.org/protobuf v1.26.0
 	gopkg.in/yaml.v2 v2.4.0
 )

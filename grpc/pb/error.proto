@@ -1,11 +1,13 @@
 syntax = "proto3";
 
 // NOTE: If there are any changes to this file, run the protoc command as
-// below from the pb directory to compile and generte the error.pb.go file.
+// below from the pb directory to generate the error.pb.go file.
 //
-// $ protoc -I . error.proto --go_out=plugins=grpc:.
+// $  protoc --proto_path=. --go_out=. --go_opt=paths=source_relative  error.proto 
 
 package goapb;
+
+option go_package = "/goapb";
 
 // ErrorResponse message defines the error encoded in the gRPC response that
 // correspond to the errors created by the generated code. This is mainly

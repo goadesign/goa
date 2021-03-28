@@ -4,13 +4,13 @@ import (
 	"context"
 	"net"
 
-	"github.com/golang/protobuf/proto"
 	"goa.design/goa/v3/grpc/middleware"
 	"goa.design/goa/v3/middleware/xray"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/peer"
 	"google.golang.org/grpc/status"
+	"google.golang.org/protobuf/proto"
 )
 
 // GRPCSegment represents an AWS X-Ray segment document for gRPC services.
