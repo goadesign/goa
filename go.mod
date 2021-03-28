@@ -6,7 +6,7 @@ require (
 	github.com/dimfeld/httppath v0.0.0-20170720192232-ee938bf73598
 	github.com/dimfeld/httptreemux/v5 v5.2.2
 	github.com/getkin/kin-openapi v0.53.0
-	github.com/go-openapi/loads v0.19.7
+	github.com/go-openapi/loads v0.20.2
 	github.com/google/gxui v0.0.0-20151028112939-f85e0a97b3a4 // indirect
 	github.com/google/uuid v1.2.0
 	github.com/gorilla/websocket v1.4.2
