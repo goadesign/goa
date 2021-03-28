@@ -25,8 +25,8 @@ GOPATH=$(shell go env GOPATH)
 DEPEND=\
 	golang.org/x/lint/golint \
 	golang.org/x/tools/cmd/goimports \
-	github.com/golang/protobuf/protoc-gen-go \
-	github.com/golang/protobuf/proto \
+	google.golang.org/protobuf/cmd/protoc-gen-go \
+        google.golang.org/grpc/cmd/protoc-gen-go-grpc \
 	honnef.co/go/tools/cmd/staticcheck \
 	github.com/getkin/kin-openapi
 
@@ -66,9 +66,6 @@ depend:
 
 lint:
 ifneq ($(GOOS),windows)
-	@if [ "`goimports -l $(GO_FILES) | tee /dev/stderr`" ]; then \
-		echo "^ - Repo contains improperly formatted go files" && echo && exit 1; \
-	fi
 	@if [ "`golint ./... | grep -vf .golint_exclude | tee /dev/stderr`" ]; then \
 		echo "^ - Lint errors!" && echo && exit 1; \
 	fi

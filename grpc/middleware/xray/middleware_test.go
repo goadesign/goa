@@ -6,7 +6,6 @@ import (
 	"net"
 	"testing"
 
-	"github.com/golang/protobuf/ptypes/wrappers"
 	grpcm "goa.design/goa/v3/grpc/middleware"
 	"goa.design/goa/v3/middleware"
 	"goa.design/goa/v3/middleware/xray"
@@ -16,6 +15,7 @@ import (
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/peer"
 	"google.golang.org/grpc/status"
+	"google.golang.org/protobuf/types/known/wrapperspb"
 )
 
 type (
@@ -157,7 +157,7 @@ func TestUnaryServerMiddleware(t *testing.T) {
 				if c.Segment.Error {
 					return nil, c.Segment.Exception
 				}
-				return &wrappers.StringValue{Value: "response"}, nil
+				return &wrapperspb.StringValue{Value: "response"}, nil
 			}
 
 			ctx := context.Background()
@@ -176,7 +176,7 @@ func TestUnaryServerMiddleware(t *testing.T) {
 			}
 
 			messages := xraytest.ReadUDP(t, udplisten, expMsgs, func() {
-				m(ctx, &wrappers.StringValue{Value: "request"}, unary, handler)
+				m(ctx, &wrapperspb.StringValue{Value: "request"}, unary, handler)
 			})
 			if expMsgs == 0 {
 				return
@@ -398,8 +398,8 @@ func TestStreamServerMiddleware(t *testing.T) {
 
 func TestUnaryClient(t *testing.T) {
 	var (
-		req         = &wrappers.StringValue{Value: "request"}
-		resp        = &wrappers.StringValue{Value: "response"}
+		req         = &wrapperspb.StringValue{Value: "request"}
+		resp        = &wrapperspb.StringValue{Value: "response"}
 		segmentName = "segmentName1"
 		traceID     = "traceID1"
 		spanID      = "spanID1"
