@@ -3,11 +3,12 @@ package grpc
 import (
 	"fmt"
 
-	"github.com/golang/protobuf/proto"
 	goapb "goa.design/goa/v3/grpc/pb"
 	goa "goa.design/goa/v3/pkg"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+	"google.golang.org/protobuf/proto"
+	"google.golang.org/protobuf/runtime/protoiface"
 )
 
 type (
@@ -64,7 +65,7 @@ func NewServiceError(resp *goapb.ErrorResponse) *goa.ServiceError {
 
 // NewStatusError creates a gRPC status error with the error response
 // messages added to its details.
-func NewStatusError(code codes.Code, err error, details ...proto.Message) error {
+func NewStatusError(code codes.Code, err error, details ...protoiface.MessageV1) error {
 	st := status.New(code, err.Error())
 	if s, err := st.WithDetails(details...); err == nil {
 		return s.Err()

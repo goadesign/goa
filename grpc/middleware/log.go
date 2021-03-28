@@ -7,11 +7,11 @@ import (
 	"io"
 	"time"
 
-	"github.com/golang/protobuf/proto"
 	"goa.design/goa/v3/middleware"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
+	"google.golang.org/protobuf/proto"
 )
 
 // UnaryServerLog returns a middleware that logs incoming gRPC requests

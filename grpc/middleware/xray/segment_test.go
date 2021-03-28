@@ -6,12 +6,12 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/golang/protobuf/ptypes/wrappers"
 	"github.com/pkg/errors"
 	"goa.design/goa/v3/middleware/xray"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/peer"
+	"google.golang.org/protobuf/types/known/wrapperspb"
 )
 
 func TestRecordError(t *testing.T) {
@@ -61,7 +61,7 @@ func TestRecordResponse(t *testing.T) {
 			if r != nil {
 				s.HTTP = &xray.HTTP{Request: r}
 			}
-			s.RecordResponse(&wrappers.StringValue{Value: "response"})
+			s.RecordResponse(&wrapperspb.StringValue{Value: "response"})
 			if s.HTTP == nil {
 				t.Fatal("HTTP field is nil")
 			}
@@ -122,7 +122,7 @@ func TestRecordRequest(t *testing.T) {
 				ctx = peer.NewContext(ctx, &peer.Peer{Addr: &mockAddr{c.Request.RemoteAddr}})
 			}
 
-			s.RecordRequest(ctx, "Test.Test", &wrappers.StringValue{Value: "request"}, "remote")
+			s.RecordRequest(ctx, "Test.Test", &wrapperspb.StringValue{Value: "request"}, "remote")
 
 			if s.Namespace != "remote" {
 				t.Errorf("Namespace is invalid, expected \"remote\" got %q", s.Namespace)
@@ -158,8 +158,8 @@ func TestRecordRequest(t *testing.T) {
 func TestRace(t *testing.T) {
 	var (
 		rErr = errors.New("oh no")
-		req  = &wrappers.StringValue{Value: "request"}
-		resp = &wrappers.StringValue{Value: "response"}
+		req  = &wrapperspb.StringValue{Value: "request"}
+		resp = &wrapperspb.StringValue{Value: "response"}
 		ctx  = context.Background()
 	)
 	ctx = metadata.NewIncomingContext(ctx, metadata.MD{"user-agent": []string{"user agent"}})
