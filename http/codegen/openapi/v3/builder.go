@@ -2,7 +2,6 @@ package openapiv3
 
 import (
 	"fmt"
-	"net/url"
 	"strconv"
 
 	"goa.design/goa/v3/expr"
@@ -380,11 +379,17 @@ func buildServers(servers []*expr.ServerExpr) []*Server {
 				validationValues []interface{}
 			)
 
-			// retrieve host URL
-			u, err := url.Parse(defaultURI(host))
-			if err != nil {
-				// bug: should be validated by DSL
-				panic("invalid host " + host.Name)
+			// Get the first URL expression in the host by default.
+			// Host expression must have at least one URI (validations would have failed
+			// otherwise).
+			uExpr := host.URIs[0]
+			// attempt to find the first HTTP/HTTPS URL
+			for _, ue := range host.URIs {
+				s := ue.Scheme()
+				if s == "http" || s == "https" {
+					uExpr = ue
+					break
+				}
 			}
 
 			// retrieve host variables
@@ -409,7 +414,7 @@ func buildServers(servers []*expr.ServerExpr) []*Server {
 			}
 
 			server = &Server{
-				URL:         u.String(),
+				URL:         string(uExpr),
 				Description: svr.Description,
 				Variables:   serverVariable,
 			}
@@ -512,28 +517,6 @@ func buildSecurityScheme(se *expr.SchemeExpr) *SecurityScheme {
 		}
 	}
 	return scheme
-}
-
-// defaultURI returns the first HTTP URI defined in the host. It substitutes any URI
-// parameters with their default values or the first item in their enum.
-func defaultURI(h *expr.HostExpr) string {
-	// Get the first URL expression in the host by default.
-	// Host expression must have at least one URI (validations would have failed
-	// otherwise).
-	uExpr := h.URIs[0]
-	// attempt to find the first HTTP/HTTPS URL
-	for _, ue := range h.URIs {
-		s := ue.Scheme()
-		if s == "http" || s == "https" {
-			uExpr = ue
-			break
-		}
-	}
-	uri, err := h.URIString(uExpr)
-	if err != nil {
-		panic(err) // should never hit this!
-	}
-	return uri
 }
 
 // mustGenerate returns true if the meta indicates that a OpenAPI specification should be
