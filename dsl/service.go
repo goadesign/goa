@@ -26,7 +26,7 @@ import (
 // Example:
 //
 //    var _ = Service("divider", func() {
-//        Title("divider service") // optional
+//        Description("divider service") // optional
 //
 //        Error("Unauthorized") // error that apply to all the service methods
 //        HTTP(func() {         // HTTP mapping for error responses
