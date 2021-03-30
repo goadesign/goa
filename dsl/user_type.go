@@ -18,7 +18,7 @@ var (
 // to an existing type or may describe a completely new type using a list of
 // attributes (object fields). Attribute types may themselves be user type.
 // When a user type is defined as an alias to another type it may define
-// additional validations - for example it a user type which is an alias of
+// additional validations - for example if a user type which is an alias of
 // String may define a validation pattern that all instances of the type
 // must match.
 //
