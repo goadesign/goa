@@ -323,7 +323,7 @@ JSON format.
 
 The specification can easily be served from the service itself using a file
 server. The [Files](http://godoc.org/goa.design/goa/dsl/http.go#Files) DSL
-function makes it possible to server static file. Edit the file
+function makes it possible to serve a static file. Edit the file
 `design/design.go` and add:
 
 ```go
