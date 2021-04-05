@@ -13,7 +13,7 @@ require (
 	github.com/manveru/faker v0.0.0-20171103152722-9fbc68a78c4d
 	github.com/manveru/gobdd v0.0.0-20131210092515-f1a17fdd710b // indirect
 	github.com/pkg/errors v0.9.1
-	github.com/sergi/go-diff v1.1.0
+	github.com/sergi/go-diff v1.2.0
 	github.com/smartystreets/goconvey v1.6.4 // indirect
 	github.com/zach-klippenstein/goregen v0.0.0-20160303162051-795b5e3961ea
 	golang.org/x/mod v0.4.2 // indirect
