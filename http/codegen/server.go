@@ -503,9 +503,17 @@ func {{ .RequestDecoder }}(mux goahttp.Muxer, decoder func(*http.Request) goahtt
 {{- if .MultipartRequestDecoder }}
 		var payload {{ .Payload.Ref }}
 		if err := decoder(r).Decode(&payload); err != nil {
-			if _, ok := err.(*goa.ServiceError); !ok {
-				return nil, err
+			en, ok := err.(ErrorNamer)
+			if !ok {
+				return encodeError(ctx, w, v)
 			}
+			switch en.ErrorName() {
+		{{- range $gerr := .Errors }}
+		{{- range $err := .Errors }}
+			case {{ printf "%q" .Name }}:
+				return nil, err
+		{{- end }}
+		{{- end }}
 			return nil, goa.DecodePayloadError(err.Error())
 		}
 {{- else if .Payload.Request.ServerBody }}
@@ -524,9 +532,17 @@ func {{ .RequestDecoder }}(mux goahttp.Muxer, decoder func(*http.Request) goahtt
 				err = nil
 			} else {
 	{{- end }}
-			if _, ok := err.(*goa.ServiceError); !ok {
-				return nil, err
+			en, ok := err.(ErrorNamer)
+			if !ok {
+				return encodeError(ctx, w, v)
 			}
+			switch en.ErrorName() {
+		{{- range $gerr := .Errors }}
+		{{- range $err := .Errors }}
+			case {{ printf "%q" .Name }}:
+				return nil, err
+		{{- end }}
+		{{- end }}
 			return nil, goa.DecodePayloadError(err.Error())
 	{{- if not .Payload.Request.MustHaveBody }}
 			}
