@@ -517,6 +517,9 @@ func {{ .RequestDecoder }}(mux goahttp.Muxer, decoder func(*http.Request) goahtt
 {{- if .MultipartRequestDecoder }}
 		var payload {{ .Payload.Ref }}
 		if err := decoder(r).Decode(&payload); err != nil {
+			if _, ok := err.(*goa.ServiceError); !ok {
+				return nil, err
+			}
 			return nil, goa.DecodePayloadError(err.Error())
 		}
 {{- else if .Payload.Request.ServerBody }}
@@ -535,6 +538,9 @@ func {{ .RequestDecoder }}(mux goahttp.Muxer, decoder func(*http.Request) goahtt
 				err = nil
 			} else {
 	{{- end }}
+			if _, ok := err.(*goa.ServiceError); !ok {
+				return nil, err
+			}
 			return nil, goa.DecodePayloadError(err.Error())
 	{{- if not .Payload.Request.MustHaveBody }}
 			}
@@ -665,7 +671,7 @@ const requestElementsT = `{{- define "request_elements" }}
 			{{ .VarName }} = []string{
                 {{- range $i, $v := .DefaultValue }}
                     {{- if $i }}{{ print ", " }}{{ end }}
-                    {{- printf "%q" $v -}} 
+                    {{- printf "%q" $v -}}
                 {{- end -}} }
 		}
 		{{- end }}
