@@ -24,6 +24,24 @@ type (
 		Temporary bool
 		// Is the error a server-side fault?
 		Fault bool
+		// DetailedError gives more information about the error that has occurred
+		DetailedError *DetailedServiceError
+	}
+
+	// DetailedServiceError provides in-depth detailed and hierarchical information on the error
+	DetailedServiceError struct {
+		Code       string
+		Message    string
+		Target     *string
+		Details    []DetailedServiceError
+		InnerError *DetailedServiceInnerError
+	}
+
+	// DetailedServiceInnerError provide context specific errors
+	DetailedServiceInnerError struct {
+		Code              *string
+		InnerError        *DetailedServiceInnerError
+		DynamicProperties map[string]interface{}
 	}
 )
 
@@ -37,6 +55,12 @@ func Fault(format string, v ...interface{}) *ServiceError {
 // fmt.Printf.
 func PermanentError(name, format string, v ...interface{}) *ServiceError {
 	return newError(name, false, false, false, format, v...)
+}
+
+// PermanentErrorDetailed creates an error given a name and a format and values a la
+// fmt.Printf.
+func PermanentErrorDetailed(name, target, format string, v ...interface{}) *ServiceError {
+	return newErrorDetailed(name, target, false, false, false, format, v...)
 }
 
 // TemporaryError is an error class that indicates that the error is temporary
@@ -75,13 +99,13 @@ func DecodePayloadError(msg string) error {
 // InvalidFieldTypeError is the error produced by the generated code when the
 // type of a payload field does not match the type defined in the design.
 func InvalidFieldTypeError(name string, val interface{}, expected string) error {
-	return PermanentError("invalid_field_type", "invalid value %#v for %q, must be a %s", val, name, expected)
+	return PermanentErrorDetailed("invalid_field_type", name, "invalid value %#v for %q, must be a %s", val, name, expected)
 }
 
 // MissingFieldError is the error produced by the generated code when a payload
 // is missing a required field.
 func MissingFieldError(name, context string) error {
-	return PermanentError("missing_field", "%q is missing from %s", name, context)
+	return PermanentErrorDetailed("missing_field", name, "%q is missing from %s", name, context)
 }
 
 // InvalidEnumValueError is the error produced by the generated code when the
@@ -92,21 +116,21 @@ func InvalidEnumValueError(name string, val interface{}, allowed []interface{}) 
 	for i, a := range allowed {
 		elems[i] = fmt.Sprintf("%#v", a)
 	}
-	return PermanentError("invalid_enum_value", "value of %s must be one of %s but got value %#v", name, strings.Join(elems, ", "), val)
+	return PermanentErrorDetailed("invalid_enum_value", name, "value of %s must be one of %s but got value %#v", name, strings.Join(elems, ", "), val)
 }
 
 // InvalidFormatError is the error produced by the generated code when the value
 // of a payload field does not match the format validation defined in the
 // design.
 func InvalidFormatError(name, target string, format Format, formatError error) error {
-	return PermanentError("invalid_format", "%s must be formatted as a %s but got value %q, %s", name, format, target, formatError.Error())
+	return PermanentErrorDetailed("invalid_format", name, "%s must be formatted as a %s but got value %q, %s", name, format, target, formatError.Error())
 }
 
 // InvalidPatternError is the error produced by the generated code when the
 // value of a payload field does not match the pattern validation defined in the
 // design.
 func InvalidPatternError(name, target string, pattern string) error {
-	return PermanentError("invalid_pattern", "%s must match the regexp %q but got value %q", name, pattern, target)
+	return PermanentErrorDetailed("invalid_pattern", name, "%s must match the regexp %q but got value %q", name, pattern, target)
 }
 
 // InvalidRangeError is the error produced by the generated code when the value
@@ -117,7 +141,7 @@ func InvalidRangeError(name string, target interface{}, value interface{}, min b
 	if !min {
 		comp = "lesser or equal"
 	}
-	return PermanentError("invalid_range", "%s must be %s than %d but got value %#v", name, comp, value, target)
+	return PermanentErrorDetailed("invalid_range", name, "%s must be %s than %d but got value %#v", name, comp, value, target)
 }
 
 // InvalidLengthError is the error produced by the generated code when the value
@@ -128,7 +152,7 @@ func InvalidLengthError(name string, target interface{}, ln, value int, min bool
 	if !min {
 		comp = "lesser or equal"
 	}
-	return PermanentError("invalid_length", "length of %s must be %s than %d but got value %#v (len=%d)", name, comp, value, target, ln)
+	return PermanentErrorDetailed("invalid_length", name, "length of %s must be %s than %d but got value %#v (len=%d)", name, comp, value, target, ln)
 }
 
 // NewErrorID creates a unique 8 character ID that is well suited to use as an
@@ -173,9 +197,48 @@ func MergeErrors(err, other error) error {
 	e.Message = e.Message + "; " + o.Message
 	e.Timeout = e.Timeout && o.Timeout
 	e.Temporary = e.Temporary && o.Temporary
-	e.Fault = e.Fault && o.Fault
 
+	if e.Fault == o.Fault {
+		var errorCode string
+		var errorMessage string
+		if e.Fault {
+			errorCode = "server_error"
+		} else {
+			errorCode = "client_error"
+		}
+		e.DetailedError = mergeDetailedErrors(errorCode, errorMessage, e.DetailedError, o.DetailedError)
+	} else if !e.Fault {
+		//Fault errors takes precedence over non fault error types
+		e.DetailedError = o.DetailedError
+	}
+
+	e.Fault = e.Fault && o.Fault
 	return e
+}
+
+func mergeDetailedErrors(code string, message string, detailedErrors ...*DetailedServiceError) *DetailedServiceError {
+	var outputErrors []DetailedServiceError
+
+	for _, e := range detailedErrors {
+		if e == nil {
+			continue
+		}
+		outputErrors = append(outputErrors, *e)
+	}
+
+	if len(outputErrors) == 0 {
+		return nil
+	}
+
+	if len(outputErrors) == 1 {
+		return &outputErrors[0]
+	}
+
+	return &DetailedServiceError{
+		Code:    code,
+		Message: message,
+		Details: outputErrors,
+	}
 }
 
 // Error returns the error message.
@@ -192,6 +255,23 @@ func newError(name string, timeout, temporary, fault bool, format string, v ...i
 		Timeout:   timeout,
 		Temporary: temporary,
 		Fault:     fault,
+	}
+}
+
+func newErrorDetailed(name, target string, timeout, temporary, fault bool, format string, v ...interface{}) *ServiceError {
+	message := fmt.Sprintf(format, v...)
+	return &ServiceError{
+		Name:      name,
+		ID:        NewErrorID(),
+		Message:   message,
+		Timeout:   timeout,
+		Temporary: temporary,
+		Fault:     fault,
+		DetailedError: &DetailedServiceError{
+			Code:    name,
+			Message: message,
+			Target:  &target,
+		},
 	}
 }
 
