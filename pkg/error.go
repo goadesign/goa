@@ -217,6 +217,8 @@ func MergeErrors(err, other error) error {
 	e.Timeout = e.Timeout && o.Timeout
 	e.Temporary = e.Temporary && o.Temporary
 
+	// TODO: logic is too naive. Does not factor in cases where the errors are already composite errors. Need to flatten them
+
 	if e.Fault == o.Fault {
 		errorCode, errorMessage := getErrorCodeAndMessage(e.Fault)
 		e.DetailedError = mergeDetailedErrors(errorCode, errorMessage, e.DetailedError, o.DetailedError)
@@ -284,7 +286,12 @@ func mergeDetailedErrors(code string, message string, detailedErrors ...*Detaile
 		if e == nil {
 			continue
 		}
-		outputErrors = append(outputErrors, *e)
+
+		if e.Code == code && e.Target == nil { //composite error detected. Flattening
+			outputErrors = append(outputErrors, e.Details...)
+		} else {
+			outputErrors = append(outputErrors, *e)
+		}
 	}
 
 	if len(outputErrors) == 0 {
