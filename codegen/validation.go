@@ -217,6 +217,7 @@ func recurseValidationCode(att *expr.AttributeExpr, attCtx *AttributeContext, re
 			} else if hasValidations(attCtx, ut) {
 				var buf bytes.Buffer
 				name := attCtx.Scope.Name(att, ctx.Pkg, ctx.Pointer, ctx.UseDefault)
+				context := attCtx.Scope.Field(att, name, true)
 				data := map[string]interface{}{"name": Goify(name, true), "target": tgt, "context": context}
 				if err := userValT.Execute(&buf, data); err != nil {
 					panic(err) // bug
@@ -337,6 +338,7 @@ func recurseAttribute(att *expr.AttributeExpr, attCtx *AttributeContext, nat *ex
 				buf.Write(recurseValidationCode(ut.Attribute(), attCtx, att.IsRequired(nat.Name), tgt, context, seen).Bytes())
 			} else {
 				name := attCtx.Scope.Name(nat.Attribute, attCtx.Pkg, attCtx.Pointer, attCtx.UseDefault)
+				context := attCtx.Scope.Field(att, name, true)
 				if err := userValT.Execute(&buf, map[string]interface{}{"name": Goify(name, true), "target": tgt, "context": context}); err != nil {
 					panic(err) // bug
 				}
@@ -459,7 +461,7 @@ const (
 }`
 
 	userValTmpl = `if err2 := Validate{{ .name }}({{ .target }}); err2 != nil {
-        err = goa.MergeErrors(err, goa.WrapError(err2, {{ .context }}))
+        err = goa.MergeErrors(err, goa.WrapError(err2, {{ printf "%q" .context }}))
 }`
 
 	enumValTmpl = `{{ if isset .zeroVal -}}
