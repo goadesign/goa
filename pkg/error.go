@@ -33,9 +33,9 @@ type (
 	DetailedServiceError struct {
 		Code       string                     `json:"code"`
 		Message    string                     `json:"message"`
-		Target     *string                    `json:"target"`
-		Details    []DetailedServiceError     `json:"details"`
-		InnerError *DetailedServiceInnerError `json:"innererror"`
+		Target     *string                    `json:"target,omitempty"`
+		Details    []DetailedServiceError     `json:"details,omitempty"`
+		InnerError *DetailedServiceInnerError `json:"innererror,omitempty"`
 	}
 
 	// DetailedServiceInnerError provide context specific errors
@@ -218,13 +218,7 @@ func MergeErrors(err, other error) error {
 	e.Temporary = e.Temporary && o.Temporary
 
 	if e.Fault == o.Fault {
-		var errorCode string
-		var errorMessage string
-		if e.Fault {
-			errorCode = "server_error"
-		} else {
-			errorCode = "client_error"
-		}
+		errorCode, errorMessage := getErrorCodeAndMessage(e.Fault)
 		e.DetailedError = mergeDetailedErrors(errorCode, errorMessage, e.DetailedError, o.DetailedError)
 	} else if !e.Fault {
 		//Fault errors takes precedence over non fault error types
@@ -233,6 +227,54 @@ func MergeErrors(err, other error) error {
 
 	e.Fault = e.Fault && o.Fault
 	return e
+}
+
+func WrapError(err error, context string) error {
+	if err == nil {
+		return nil
+	}
+	e := asError(err)
+
+	if e.DetailedError == nil {
+		// No action to be taken if detailed error is nil
+		return err
+	}
+
+	errorCode, errorMessage := getErrorCodeAndMessage(e.Fault)
+
+	var serviceErrorDetails []DetailedServiceError
+
+	if e.DetailedError.Code == errorCode && e.DetailedError.Target == nil {
+		// Composite error detected. Flattening data
+		serviceErrorDetails = e.DetailedError.Details
+	} else {
+		serviceErrorDetails = []DetailedServiceError{*e.DetailedError}
+	}
+
+	detailedError := &DetailedServiceError{
+		Code:    errorCode,
+		Message: errorMessage,
+		Target:  &context,
+		Details: serviceErrorDetails,
+	}
+
+	// Test if it is already a composite/nested error
+	return &ServiceError{
+		Name:          e.Name,
+		ID:            e.ID,
+		Message:       e.Message,
+		Timeout:       e.Timeout,
+		Temporary:     e.Temporary,
+		Fault:         e.Fault,
+		DetailedError: detailedError,
+	}
+}
+
+func getErrorCodeAndMessage(isServerError bool) (errorCode, errorMessage string) {
+	if isServerError {
+		return "server_error", "server error"
+	}
+	return "client_error", "client error"
 }
 
 func mergeDetailedErrors(code string, message string, detailedErrors ...*DetailedServiceError) *DetailedServiceError {

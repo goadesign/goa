@@ -24,7 +24,7 @@ type (
 		// Fault indicates whether the error is a server-side fault.
 		Fault bool `json:"fault" xml:"fault" form:"fault"`
 
-		DetailedError *goa.DetailedServiceError
+		DetailedError *goa.DetailedServiceError `json:"detailedError"`
 	}
 
 	// Statuser is implemented by error response object to provide the response
