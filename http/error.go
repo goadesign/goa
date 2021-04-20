@@ -23,6 +23,8 @@ type (
 		Timeout bool `json:"timeout" xml:"timeout" form:"timeout"`
 		// Fault indicates whether the error is a server-side fault.
 		Fault bool `json:"fault" xml:"fault" form:"fault"`
+
+		DetailedError *goa.DetailedServiceError
 	}
 
 	// Statuser is implemented by error response object to provide the response
@@ -38,12 +40,13 @@ type (
 func NewErrorResponse(err error) Statuser {
 	if gerr, ok := err.(*goa.ServiceError); ok {
 		return &ErrorResponse{
-			Name:      gerr.Name,
-			ID:        gerr.ID,
-			Message:   gerr.Message,
-			Timeout:   gerr.Timeout,
-			Temporary: gerr.Temporary,
-			Fault:     gerr.Fault,
+			Name:          gerr.Name,
+			ID:            gerr.ID,
+			Message:       gerr.Message,
+			Timeout:       gerr.Timeout,
+			Temporary:     gerr.Temporary,
+			Fault:         gerr.Fault,
+			DetailedError: gerr.DetailedError,
 		}
 	}
 	return NewErrorResponse(goa.Fault(err.Error()))

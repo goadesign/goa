@@ -3,6 +3,7 @@ package goa
 import (
 	"crypto/rand"
 	"encoding/base64"
+	"encoding/json"
 	"fmt"
 	"io"
 	"strings"
@@ -30,11 +31,11 @@ type (
 
 	// DetailedServiceError provides in-depth detailed and hierarchical information on the error
 	DetailedServiceError struct {
-		Code       string
-		Message    string
-		Target     *string
-		Details    []DetailedServiceError
-		InnerError *DetailedServiceInnerError
+		Code       string                     `json:"code"`
+		Message    string                     `json:"message"`
+		Target     *string                    `json:"target"`
+		Details    []DetailedServiceError     `json:"details"`
+		InnerError *DetailedServiceInnerError `json:"innererror"`
 	}
 
 	// DetailedServiceInnerError provide context specific errors
@@ -44,6 +45,24 @@ type (
 		DynamicProperties map[string]interface{}
 	}
 )
+
+func (d DetailedServiceInnerError) MarshalJSON() ([]byte, error) {
+	propertyMap := make(map[string]interface{})
+
+	if d.Code != nil {
+		propertyMap["code"] = d.Code
+	}
+
+	if d.InnerError != nil {
+		propertyMap["innererror"] = d.InnerError
+	}
+
+	for k, v := range d.DynamicProperties {
+		propertyMap[k] = v
+	}
+
+	return json.Marshal(propertyMap)
+}
 
 // Fault creates an error given a format and values a la fmt.Printf. The error
 // has the Fault field set to true.
