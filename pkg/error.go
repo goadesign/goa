@@ -25,28 +25,28 @@ type (
 		Temporary bool
 		// Is the error a server-side fault?
 		Fault bool
-		// DetailedError gives more information about the error that has occurred
-		DetailedError *DetailedServiceError
+		// StructuredError gives more information about the error that has occurred
+		StructuredError *StructuredServiceError
 	}
 
-	// DetailedServiceError provides in-depth detailed and hierarchical information on the error
-	DetailedServiceError struct {
-		Code       string                     `json:"code"`
-		Message    string                     `json:"message"`
-		Target     *string                    `json:"target,omitempty"`
-		Details    []DetailedServiceError     `json:"details,omitempty"`
-		InnerError *DetailedServiceInnerError `json:"innererror,omitempty"`
+	// StructuredServiceError provides in-depth detailed and hierarchical information on the error
+	StructuredServiceError struct {
+		Code       string                       `json:"code"`
+		Message    string                       `json:"message"`
+		Target     *string                      `json:"target,omitempty"`
+		Details    []StructuredServiceError     `json:"details,omitempty"`
+		InnerError *StructuredServiceInnerError `json:"innererror,omitempty"`
 	}
 
-	// DetailedServiceInnerError provide context specific errors
-	DetailedServiceInnerError struct {
+	// StructuredServiceInnerError provide context specific errors
+	StructuredServiceInnerError struct {
 		Code              *string
-		InnerError        *DetailedServiceInnerError
+		InnerError        *StructuredServiceInnerError
 		DynamicProperties map[string]interface{}
 	}
 )
 
-func (d DetailedServiceInnerError) MarshalJSON() ([]byte, error) {
+func (d StructuredServiceInnerError) MarshalJSON() ([]byte, error) {
 	propertyMap := make(map[string]interface{})
 
 	if d.Code != nil {
@@ -221,10 +221,10 @@ func MergeErrors(err, other error) error {
 
 	if e.Fault == o.Fault {
 		errorCode, errorMessage := getErrorCodeAndMessage(e.Fault)
-		e.DetailedError = mergeDetailedErrors(errorCode, errorMessage, e.DetailedError, o.DetailedError)
+		e.StructuredError = mergeDetailedErrors(errorCode, errorMessage, e.StructuredError, o.StructuredError)
 	} else if !e.Fault {
 		//Fault errors takes precedence over non fault error types
-		e.DetailedError = o.DetailedError
+		e.StructuredError = o.StructuredError
 	}
 
 	e.Fault = e.Fault && o.Fault
@@ -237,23 +237,23 @@ func WrapError(err error, context string) error {
 	}
 	e := asError(err)
 
-	if e.DetailedError == nil {
+	if e.StructuredError == nil {
 		// No action to be taken if detailed error is nil
 		return err
 	}
 
 	errorCode, errorMessage := getErrorCodeAndMessage(e.Fault)
 
-	var serviceErrorDetails []DetailedServiceError
+	var serviceErrorDetails []StructuredServiceError
 
-	if e.DetailedError.Code == errorCode && e.DetailedError.Target == nil {
+	if e.StructuredError.Code == errorCode && e.StructuredError.Target == nil {
 		// Composite error detected. Flattening data
-		serviceErrorDetails = e.DetailedError.Details
+		serviceErrorDetails = e.StructuredError.Details
 	} else {
-		serviceErrorDetails = []DetailedServiceError{*e.DetailedError}
+		serviceErrorDetails = []StructuredServiceError{*e.StructuredError}
 	}
 
-	detailedError := &DetailedServiceError{
+	detailedError := &StructuredServiceError{
 		Code:    errorCode,
 		Message: errorMessage,
 		Target:  &context,
@@ -262,13 +262,13 @@ func WrapError(err error, context string) error {
 
 	// Test if it is already a composite/nested error
 	return &ServiceError{
-		Name:          e.Name,
-		ID:            e.ID,
-		Message:       e.Message,
-		Timeout:       e.Timeout,
-		Temporary:     e.Temporary,
-		Fault:         e.Fault,
-		DetailedError: detailedError,
+		Name:            e.Name,
+		ID:              e.ID,
+		Message:         e.Message,
+		Timeout:         e.Timeout,
+		Temporary:       e.Temporary,
+		Fault:           e.Fault,
+		StructuredError: detailedError,
 	}
 }
 
@@ -279,8 +279,8 @@ func getErrorCodeAndMessage(isServerError bool) (errorCode, errorMessage string)
 	return "client_error", "client error"
 }
 
-func mergeDetailedErrors(code string, message string, detailedErrors ...*DetailedServiceError) *DetailedServiceError {
-	var outputErrors []DetailedServiceError
+func mergeDetailedErrors(code string, message string, detailedErrors ...*StructuredServiceError) *StructuredServiceError {
+	var outputErrors []StructuredServiceError
 
 	for _, e := range detailedErrors {
 		if e == nil {
@@ -302,7 +302,7 @@ func mergeDetailedErrors(code string, message string, detailedErrors ...*Detaile
 		return &outputErrors[0]
 	}
 
-	return &DetailedServiceError{
+	return &StructuredServiceError{
 		Code:    code,
 		Message: message,
 		Details: outputErrors,
@@ -335,7 +335,7 @@ func newErrorDetailed(name, target string, timeout, temporary, fault bool, forma
 		Timeout:   timeout,
 		Temporary: temporary,
 		Fault:     fault,
-		DetailedError: &DetailedServiceError{
+		StructuredError: &StructuredServiceError{
 			Code:    name,
 			Message: message,
 			Target:  &target,

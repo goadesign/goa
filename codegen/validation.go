@@ -337,7 +337,7 @@ func recurseAttribute(att *expr.AttributeExpr, attCtx *AttributeContext, nat *ex
 				buf.Write(recurseValidationCode(ut.Attribute(), attCtx, att.IsRequired(nat.Name), tgt, context, seen).Bytes())
 			} else {
 				name := attCtx.Scope.Name(nat.Attribute, attCtx.Pkg, attCtx.Pointer, attCtx.UseDefault)
-				if err := userValT.Execute(&buf, map[string]interface{}{"name": Goify(name, true), "target": tgt, "context": attCtx.Scope.Field(nat.Attribute, nat.Name, false)}); err != nil {
+				if err := userValT.Execute(&buf, map[string]interface{}{"name": Goify(name, true), "target": tgt, "context": nat.Name}); err != nil {
 					panic(err) // bug
 				}
 			}
