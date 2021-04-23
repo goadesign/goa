@@ -474,5 +474,32 @@ var WithTagsDSL = func() {
 				POST("/{*int_map}")
 			})
 		})
+		Method("another test endpoint", func() {
+			Payload(func() {
+				Attribute("int_map", Int)
+			})
+			HTTP(func() {
+				Meta("swagger:generate", "false")
+				Meta("swagger:tag:AnotherEndpoint")
+				Meta("swagger:tag:AnotherEndpoint:desc", "Endpoint description")
+				Meta("swagger:tag:AnotherEndpoint:url", "Endpoint URL")
+				POST("/{*int_map}")
+			})
+		})
+	})
+	Service("another test service", func() {
+		Meta("swagger:generate", "false")
+		HTTP(func() {
+			Meta("swagger:tag:AnotherService")
+			Meta("swagger:tag:AnotherService:desc", "Another service description")
+		})
+		Method("another test endpoint", func() {
+			Payload(func() {
+				Attribute("int_map", Int)
+			})
+			HTTP(func() {
+				POST("/{*int_map}")
+			})
+		})
 	})
 }

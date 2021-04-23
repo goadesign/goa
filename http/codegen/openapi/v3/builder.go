@@ -527,14 +527,17 @@ func buildTags(api *expr.APIExpr) []*openapi.Tag {
 	// takes highest precedence followed by Service and API.
 
 	m := make(map[string]*openapi.Tag)
-	for _, t := range openapi.TagsFromExpr(api.Meta) {
-		m[t.Name] = t
-	}
 	for _, s := range api.HTTP.Services {
+		if !mustGenerate(s.Meta) || !mustGenerate(s.ServiceExpr.Meta) {
+			continue
+		}
 		for _, t := range openapi.TagsFromExpr(s.Meta) {
 			m[t.Name] = t
 		}
 		for _, e := range s.HTTPEndpoints {
+			if !mustGenerate(e.Meta) || !mustGenerate(e.MethodExpr.Meta) {
+				continue
+			}
 			for _, t := range openapi.TagsFromExpr(e.Meta) {
 				m[t.Name] = t
 			}
@@ -558,6 +561,9 @@ func buildTags(api *expr.APIExpr) []*openapi.Tag {
 			// add service name and description to the tags since we tag every
 			// operation with service name when no custom tag is defined
 			for _, s := range api.HTTP.Services {
+				if !mustGenerate(s.Meta) || !mustGenerate(s.ServiceExpr.Meta) {
+					continue
+				}
 				tags = append(tags, &openapi.Tag{Name: s.Name(), Description: s.Description()})
 			}
 		}
