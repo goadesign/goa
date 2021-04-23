@@ -92,3 +92,5 @@ components:
         foo:
         - Repudiandae sit.
         - Asperiores fuga qui rem qui earum eos.
+tags:
+- name: testService

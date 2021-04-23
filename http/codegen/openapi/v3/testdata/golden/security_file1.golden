@@ -117,3 +117,5 @@ components:
           scopes:
             api:read: Read-only access
             api:write: Read and write access
+tags:
+- name: testService

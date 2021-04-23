@@ -40,6 +40,7 @@ func TestFiles(t *testing.T) {
 		{"with-spaces", testdata.WithSpacesDSL},
 		{"with-map", testdata.WithMapDSL},
 		{"path-with-wildcards", testdata.PathWithWildcardDSL},
+		{"with-tags", testdata.WithTagsDSL},
 		// TestEndpoints
 		{"endpoint", testdata.ExtensionDSL},
 		// TestValidations

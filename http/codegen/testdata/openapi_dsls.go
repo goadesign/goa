@@ -454,3 +454,25 @@ var PathWithWildcardDSL = func() {
 		})
 	})
 }
+
+var WithTagsDSL = func() {
+	Service("test service", func() {
+		HTTP(func() {
+			Meta("swagger:tag:Service")
+			Meta("swagger:tag:Service:desc", "Service description")
+		})
+		Method("test endpoint", func() {
+			Payload(func() {
+				Attribute("int_map", Int)
+			})
+			HTTP(func() {
+				Meta("swagger:tag:Service")
+				Meta("swagger:tag:Service:desc", "Overwritten service description")
+				Meta("swagger:tag:Endpoint")
+				Meta("swagger:tag:Endpoint:desc", "Endpoint description")
+				Meta("swagger:tag:Endpoint:url", "Endpoint URL")
+				POST("/{*int_map}")
+			})
+		})
+	})
+}
