@@ -18,3 +18,5 @@ paths:
         "204":
           description: No Content response.
 components: {}
+tags:
+- name: testService

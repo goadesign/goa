@@ -75,3 +75,5 @@ components:
           example: ""
       example:
         string: ""
+tags:
+- name: test service

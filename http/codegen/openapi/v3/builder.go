@@ -2,6 +2,7 @@ package openapiv3
 
 import (
 	"fmt"
+	"sort"
 	"strconv"
 
 	"goa.design/goa/v3/expr"
@@ -27,7 +28,7 @@ func New(root *expr.RootExpr) *OpenAPI {
 		servers  = buildServers(root.API.Servers)
 		paths    = buildPaths(root.API.HTTP, bodies, root.API)
 		security = buildSecurityRequirements(root.API.Requirements)
-		tags     = openapi.TagsFromExpr(root.API.Meta)
+		tags     = buildTags(root.API)
 	)
 
 	return &OpenAPI{
@@ -517,6 +518,57 @@ func buildSecurityScheme(se *expr.SchemeExpr) *SecurityScheme {
 		}
 	}
 	return scheme
+}
+
+// buildTags builds the OpenAPI Tag object from the API expression.
+func buildTags(api *expr.APIExpr) []*openapi.Tag {
+	// if a tag with same name is defined in API, Service, and endpoint
+	// Meta expressions then the definition in endpoint Meta expression
+	// takes highest precedence followed by Service and API.
+
+	m := make(map[string]*openapi.Tag)
+	for _, s := range api.HTTP.Services {
+		if !mustGenerate(s.Meta) || !mustGenerate(s.ServiceExpr.Meta) {
+			continue
+		}
+		for _, t := range openapi.TagsFromExpr(s.Meta) {
+			m[t.Name] = t
+		}
+		for _, e := range s.HTTPEndpoints {
+			if !mustGenerate(e.Meta) || !mustGenerate(e.MethodExpr.Meta) {
+				continue
+			}
+			for _, t := range openapi.TagsFromExpr(e.Meta) {
+				m[t.Name] = t
+			}
+		}
+	}
+
+	// sort tag names alphabetically
+	var keys []string
+	for k := range m {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+
+	var tags []*openapi.Tag
+	{
+		for _, k := range keys {
+			tags = append(tags, m[k])
+		}
+
+		if len(tags) == 0 {
+			// add service name and description to the tags since we tag every
+			// operation with service name when no custom tag is defined
+			for _, s := range api.HTTP.Services {
+				if !mustGenerate(s.Meta) || !mustGenerate(s.ServiceExpr.Meta) {
+					continue
+				}
+				tags = append(tags, &openapi.Tag{Name: s.Name(), Description: s.Description()})
+			}
+		}
+	}
+	return tags
 }
 
 // mustGenerate returns true if the meta indicates that a OpenAPI specification should be
