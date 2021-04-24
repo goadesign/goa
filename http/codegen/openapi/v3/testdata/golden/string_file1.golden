@@ -33,3 +33,5 @@ paths:
                 maxLength: 42
               example: ""
 components: {}
+tags:
+- name: testService

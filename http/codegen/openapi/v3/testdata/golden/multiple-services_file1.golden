@@ -60,3 +60,6 @@ components:
           example: ""
       example:
         string: ""
+tags:
+- name: testService
+- name: anotherTestService

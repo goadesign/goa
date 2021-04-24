@@ -87,3 +87,5 @@ components:
           Excepturi totam.: 3295563366
         uint64_map:
           Consequuntur porro.: 1398884687684951323
+tags:
+- name: test service

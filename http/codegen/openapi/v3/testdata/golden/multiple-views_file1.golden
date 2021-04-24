@@ -64,3 +64,5 @@ components:
       description: TestEndpointDefaultResponseBody result type (tiny view)
       example:
         string: ""
+tags:
+- name: testService

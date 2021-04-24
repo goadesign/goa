@@ -25,3 +25,5 @@ paths:
         "200":
           description: File downloaded
 components: {}
+tags:
+- name: service-name

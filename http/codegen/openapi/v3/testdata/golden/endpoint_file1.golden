@@ -40,10 +40,4 @@ components:
       example:
         string: ""
 tags:
-- description: Description of Backend
-  externalDocs:
-    description: See more docs here
-    url: http://example.com
-  name: Backend
-  x-data:
-    foo: bar
+- name: testService
