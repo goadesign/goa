@@ -120,7 +120,7 @@ func prettifyJSON(t *testing.T, b []byte) string {
 }
 
 func validateSwagger(t *testing.T, b []byte) {
-	swagger, err := openapi3.NewSwaggerLoader().LoadSwaggerFromData(b)
+	swagger, err := openapi3.NewLoader().LoadFromData(b)
 	if err == nil {
 		err = swagger.Validate(context.Background())
 	}
