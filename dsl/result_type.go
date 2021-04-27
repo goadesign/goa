@@ -15,10 +15,9 @@ var resultTypeCount int
 
 // ResultType defines a result type used to describe a method response.
 //
-// Result types have a unique identifier as described in RFC 6838. The
-// identifier defines the default value for the Content-Type header of HTTP
-// responses. Result types may also define a type name used to override the
-// default Go type name generated from the identifier.
+// Result types have a unique identifier as described in RFC 6838. Result types
+// may also define a type name used to override the default Go type name
+// generated from the identifier.
 //
 // The result type expression includes a listing of all the response attributes.
 // Views specify which of the attributes are actually rendered so that the same
@@ -42,7 +41,6 @@ var resultTypeCount int
 //
 //    var BottleMT = ResultType("application/vnd.goa.example.bottle", "BottleResult", func() {
 //        Description("A bottle of wine")
-//        ContentType("application/json") // Override Content-Type header
 //
 //        Attributes(func() {
 //            Attribute("id", Int, "ID of bottle")
