@@ -134,15 +134,15 @@ func ResponseEncoder(ctx context.Context, w http.ResponseWriter) Encoder {
 			// from the content type context key.
 			if mt, _, err = mime.ParseMediaType(ct); err == nil {
 				switch {
-				case ct == "application/json" || strings.HasSuffix(ct, "+json"):
+				case mt == "application/json" || strings.HasSuffix(mt, "+json"):
 					enc = json.NewEncoder(w)
-				case ct == "application/xml" || strings.HasSuffix(ct, "+xml"):
+				case mt == "application/xml" || strings.HasSuffix(mt, "+xml"):
 					enc = xml.NewEncoder(w)
-				case ct == "application/gob" || strings.HasSuffix(ct, "+gob"):
+				case mt == "application/gob" || strings.HasSuffix(mt, "+gob"):
 					enc = gob.NewEncoder(w)
-				case ct == "text/html" || ct == "text/plain" ||
-					strings.HasSuffix(ct, "+html") || strings.HasSuffix(ct, "+txt"):
-					enc = newTextEncoder(w, ct)
+				case mt == "text/html" || mt == "text/plain" ||
+					strings.HasSuffix(mt, "+html") || strings.HasSuffix(mt, "+txt"):
+					enc = newTextEncoder(w, mt)
 				default:
 					enc = json.NewEncoder(w)
 				}
