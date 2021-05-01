@@ -14,17 +14,18 @@ func TestServerHandler(t *testing.T) {
 		Name       string
 		DSL        func()
 		Code       string
+		FileCount  int
 		SectionNum int
 	}{
-		{"server simple routing", testdata.ServerSimpleRoutingDSL, testdata.ServerSimpleRoutingCode, 7},
-		{"server trailing slash routing", testdata.ServerTrailingSlashRoutingDSL, testdata.ServerTrailingSlashRoutingCode, 7},
+		{"server simple routing", testdata.ServerSimpleRoutingDSL, testdata.ServerSimpleRoutingCode, 2, 7},
+		{"server trailing slash routing", testdata.ServerTrailingSlashRoutingDSL, testdata.ServerTrailingSlashRoutingCode, 2, 7},
 	}
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
 			RunHTTPDSL(t, c.DSL)
 			fs := ServerFiles(genpkg, expr.Root)
-			if len(fs) != 2 {
-				t.Fatalf("got %d files, expected 1", len(fs))
+			if len(fs) != c.FileCount {
+				t.Fatalf("got %d files, expected %d", len(fs), c.FileCount)
 			}
 			sections := fs[0].SectionTemplates
 			if len(sections) < 8 {
