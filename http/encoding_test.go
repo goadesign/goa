@@ -36,6 +36,21 @@ func TestResponseEncoder(t *testing.T) {
 		{"ct +html", "+html", "application/gob", "*http.textEncoder"},
 		{"ct plain", "text/plain", "application/gob", "*http.textEncoder"},
 		{"ct +txt", "+txt", "application/gob", "*http.textEncoder"},
+		{"no ct, at json with params", "", "application/json; charset=utf-8", "*json.Encoder"},
+		{"no ct, at xml with params", "", "application/xml; charset=utf-8", "*xml.Encoder"},
+		{"no ct, at gob with params", "", "application/gob; charset=utf-8", "*gob.Encoder"},
+		{"no ct, at html with params", "", "text/html; charset=utf-8", "*http.textEncoder"},
+		{"no ct, at plain with params", "", "text/plain; charset=utf-8", "*http.textEncoder"},
+		{"ct json with params", "application/json; charset=utf-8", "application/gob", "*json.Encoder"},
+		{"ct +json with params", "+json; charset=utf-8", "application/gob", "*json.Encoder"},
+		{"ct xml with params", "application/xml; charset=utf-8", "application/gob", "*xml.Encoder"},
+		{"ct +xml with params", "+xml; charset=utf-8", "application/gob", "*xml.Encoder"},
+		{"ct gob with params", "application/gob; charset=utf-8", "application/xml", "*gob.Encoder"},
+		{"ct +gob with params", "+gob; charset=utf-8", "application/xml", "*gob.Encoder"},
+		{"ct html with params", "text/html; charset=utf-8", "application/gob", "*http.textEncoder"},
+		{"ct +html with params", "+html; charset=utf-8", "application/gob", "*http.textEncoder"},
+		{"ct plain with params", "text/plain; charset=utf-8", "application/gob", "*http.textEncoder"},
+		{"ct +txt with params", "+txt; charset=utf-8", "application/gob", "*http.textEncoder"},
 	}
 
 	for _, c := range cases {
