@@ -17,6 +17,7 @@ func TestServerMount(t *testing.T) {
 		FileCount  int
 		SectionNum int
 	}{
+		{"simple routing constructor", testdata.ServerSimpleRoutingDSL, testdata.ServerSimpleRoutingConstructorCode, 2, 6},
 		{"multiple files constructor", testdata.ServerMultipleFilesDSL, testdata.ServerMultipleFilesConstructorCode, 1, 6},
 		{"multiple files mounter", testdata.ServerMultipleFilesDSL, testdata.ServerMultipleFilesMounterCode, 1, 9},
 		{"multiple files constructor /w prefix path", testdata.ServerMultipleFilesWithPrefixPathDSL, testdata.ServerMultipleFilesWithPrefixPathConstructorCode, 1, 6},

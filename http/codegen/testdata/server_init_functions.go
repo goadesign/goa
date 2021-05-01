@@ -185,6 +185,12 @@ func Mount(mux goahttp.Muxer) {
 }
 `
 
+var ServerSimpleRoutingConstructorCode = `// Mount configures the mux to serve the ServiceSimpleRoutingServer endpoints.
+func Mount(mux goahttp.Muxer, h *Server) {
+	MountServerSimpleRoutingHandler(mux, h.ServerSimpleRouting)
+}
+`
+
 var ServerMultipleFilesMounterCode = `// MountPathToFolder configures the mux to serve GET request made to "/".
 func MountPathToFolder(mux goahttp.Muxer, h http.Handler) {
 	mux.Handle("GET", "/", h.ServeHTTP)
