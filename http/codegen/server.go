@@ -1122,7 +1122,7 @@ func {{ .ResponseEncoder }}(encoder func(context.Context, http.ResponseWriter) g
 				w.Header().Set("goa-view", res.View)
 			{{- end }}
 		{{- else }}
-			res := v.({{ .Result.Ref }})
+			res, _ := v.({{ .Result.Ref }})
 		{{- end }}
 		{{- range .Result.Responses }}
 			{{- if .ContentType }}
