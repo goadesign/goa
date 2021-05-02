@@ -1043,6 +1043,17 @@ var ResultBodyPrimitiveBoolDSL = func() {
 	})
 }
 
+var ResultBodyPrimitiveAnyDSL = func() {
+	Service("ServiceBodyPrimitiveAny", func() {
+		Method("MethodBodyPrimitiveAny", func() {
+			Result(Any)
+			HTTP(func() {
+				POST("/")
+			})
+		})
+	})
+}
+
 var ResultBodyPrimitiveArrayStringDSL = func() {
 	Service("ServiceBodyPrimitiveArrayString", func() {
 		Method("MethodBodyPrimitiveArrayString", func() {
