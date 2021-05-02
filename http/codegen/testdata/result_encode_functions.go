@@ -823,6 +823,18 @@ func EncodeMethodBodyPrimitiveBoolResponse(encoder func(context.Context, http.Re
 	}
 }
 `
+var ResultBodyPrimitiveAnyEncodeCode = `// EncodeMethodBodyPrimitiveAnyResponse returns an encoder for responses
+// returned by the ServiceBodyPrimitiveAny MethodBodyPrimitiveAny endpoint.
+func EncodeMethodBodyPrimitiveAnyResponse(encoder func(context.Context, http.ResponseWriter) goahttp.Encoder) func(context.Context, http.ResponseWriter, interface{}) error {
+	return func(ctx context.Context, w http.ResponseWriter, v interface{}) error {
+		res, _ := v.(interface{})
+		enc := encoder(ctx, w)
+		body := res
+		w.WriteHeader(http.StatusOK)
+		return enc.Encode(body)
+	}
+}
+`
 
 var ResultBodyPrimitiveArrayStringEncodeCode = `// EncodeMethodBodyPrimitiveArrayStringResponse returns an encoder for
 // responses returned by the ServiceBodyPrimitiveArrayString
