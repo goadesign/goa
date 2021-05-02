@@ -5,8 +5,7 @@ design-first approach.
 
 ---
 [![Build Status](https://github.com/goadesign/goa/workflows/build/badge.svg?branch=v3&event=push)](https://github.com/goadesign/goa/actions?query=branch%3Av3+event%3Apush)
-[![Godoc Packages](https://img.shields.io/badge/godoc-packages-blue)](https://pkg.go.dev/mod/goa.design/goa/v3?tab=packages)
-[![Godoc DSL](https://img.shields.io/badge/godoc-DSL-blue)](https://pkg.go.dev/goa.design/goa/v3@v3.3.1/dsl?tab=doc)
+[![DSL GoDoc](https://img.shields.io/badge/godoc-DSL-blue)](https://pkg.go.dev/goa.design/goa/v3@v3.3.1/dsl?tab=doc)
 [![Slack](https://img.shields.io/badge/slack-gophers-orange.svg?style=flat)](https://gophers.slack.com/messages/goa/)
 
 ## Overview
@@ -44,83 +43,17 @@ generated code takes care of validating the incoming request payload prior to
 invoking the service method on the server, and validating the response prior to
 invoking the client code.
 
-## Getting Started Guides
-
-A couple of Getting Started guides produced by the community.
-
-### Video
-
-Joseph Ocol from Pelmorex Corp. goes through a complete example writing a server
-and client service using both HTTP and gRPC transports.
-
-[![GOA Design Tutorial](https://tech.pelmorex.com/wp-content/uploads/2020/07/GOA-Design-Tutorial-Screencap-800x470.png)](https://vimeo.com/437928805)
-
-### Blog
-
-Gleidson Nascimento goes through how to create a complete service that using both
-[CORS](https://developer.mozilla.org/en-US/docs/Web/HTTP/CORS) and
-[JWT](https://jwt.io/) based authentication to secure access.
-
-[![API Development in Go Using Goa](https://bs-uploads.toptal.io/blackfish-uploads/uploaded_file/file/275966/image-1592349920607-734c25f64461bf3c482bac1d73c26432.png)](https://www.toptal.com/go/goa-api-development)
-
 ## Installation
 
-Assuming you have a working [Go](https://golang.org) setup, and are using Go
-modules:
-
 ```bash
-env GO111MODULE=on go get -u goa.design/goa/v3/...@v3
+go get -u goa.design/goa/v3/...@v3
 ```
 
-Alternatively, when NOT using Go modules (this installs Goa v2, see below):
-
-```bash
-env GO111MODULE=off go get -u goa.design/goa/...
-```
-
-### Goa Versions and Go Module Support
-
-Goa v2 and Goa v3 are functionally identical. The only addition in Goa v3 is
-support for Go modules.  Goa v3 requires Go v1.11 or above, it also requires
-projects that use Goa to be within modules.
-
-Projects that use Goa v3 use `goa.design/goa/v3` as root package import path
-while projects that use v2 use `goa.design/goa` (projects that use v1 use
-`github.com/goadesign/goa`).
-
-Note that the Goa v3 tool is backwards compatible and can generate code for v2
-designs. This means that you don't need to swap the tool to generate code for
-designs using v2 or v3 (designs using v1 use a different tool altogether).
-
-#### Vendoring
-
-Since Goa generates and compiles code vendoring tools are not able to
-automatically identify all the dependencies. In particular the `generator`
-package is only used by the generated code. To alleviate this issue simply add
-`goa.design/goa/codegen/generator` as a required package to the vendor manifest.
-For example if you are using `dep` add the following line to `Gopkg.toml`:
-
-``` toml
-required = ["goa.design/goa/codegen/generator"]
-```
-
-This only applies to Goa v2 as vendoring is not used together with Go modules.
-
-### Stable Versions
-
-Goa follows [Semantic Versioning](http://semver.org/) which is a fancy way of
-saying it publishes releases with version numbers of the form `vX.Y.Z` and makes
-sure that your code can upgrade to new versions with the same `X` component
-without having to make changes.
-
-Releases are tagged with the corresponding version number. There is also a
-branch for each major version (`v1`, `v2` and `v3`).
+>Note: Goa requires the use of Go modules.
 
 Current Release: `v3.3.1`
 
 ## Teaser
-
-Note: the instructions below assume Goa v3.
 
 ### 1. Design
 
@@ -145,7 +78,7 @@ var _ = API("calc", func() {
         Title("Calculator Service")
         Description("HTTP service for adding numbers, a goa teaser")
         Server("calc", func() {
-		Host("localhost", func() { URI("http://localhost:8088") })
+                Host("localhost", func() { URI("http://localhost:8088") })
         })
 })
 
@@ -227,7 +160,7 @@ gen
 * `http` contains the HTTP transport layer. This layer maps the service
   endpoints to HTTP handlers server side and HTTP client methods client side.
   The `http` directory also contains a complete
-  [OpenAPI 2.0](https://github.com/OAI/OpenAPI-Specification/blob/master/versions/2.0.md)
+  [OpenAPI 3.0](https://github.com/OAI/OpenAPI-Specification/blob/master/versions/3.0.3.md)
   spec for the service.
 
 The `goa` tool can also generate example implementations for both the service
@@ -373,12 +306,27 @@ curl localhost:8088/swagger.json
 
 ## Resources
 
-Consult the following resources to learn more about Goa.
+### Getting Started Guides
+
+A couple of Getting Started guides produced by the community.
+
+Joseph Ocol from Pelmorex Corp. goes through a complete example writing a server
+and client service using both HTTP and gRPC transports.
+
+[![GOA Design Tutorial](https://tech.pelmorex.com/wp-content/uploads/2020/07/GOA-Design-Tutorial-Screencap-800x470.png)](https://vimeo.com/437928805)
+
+Gleidson Nascimento goes through how to create a complete service that using both
+[CORS](https://developer.mozilla.org/en-US/docs/Web/HTTP/CORS) and
+[JWT](https://jwt.io/) based authentication to secure access.
+
+[![API Development in Go Using Goa](https://bs-uploads.toptal.io/blackfish-uploads/uploaded_file/file/275966/image-1592349920607-734c25f64461bf3c482bac1d73c26432.png)](https://www.toptal.com/go/goa-api-development)
 
 ### Docs
 
-See the [goa.design](https://goa.design) website.
-
+The [goa.design](https://goa.design) website provides a high level overview of
+Goa and the DSL. 
+The [![DSL GoDoc](https://img.shields.io/badge/godoc-DSL-blue)](https://pkg.go.dev/goa.design/goa/v3@v3.3.1/dsl?tab=doc)
+contains a fully documented reference of all the DSL functions.
 ### Examples
 
 The [examples](https://github.com/goadesign/examples) directory
