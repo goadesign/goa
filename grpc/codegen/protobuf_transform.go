@@ -465,13 +465,24 @@ func convertType(source, target *expr.AttributeExpr, sourceVar string, ta *trans
 		return fmt.Sprintf("%s(%s)", transformHelperName(source, target, ta), sourceVar)
 	}
 
+	sourceType, _ := codegen.GetMetaType(source)
+	targetType, _ := codegen.GetMetaType(target)
 	if source.Type.Kind() != expr.IntKind && source.Type.Kind() != expr.UIntKind {
+		if sourceType != "" || targetType != "" {
+			if ta.proto || targetType == "" {
+				targetType = protoBufNativeGoTypeName(target.Type)
+			}
+			return fmt.Sprintf("%s(%s)", targetType, sourceVar)
+		}
 		return sourceVar
 	}
 	if ta.proto {
-		return fmt.Sprintf("%s(%s)", protoBufNativeGoTypeName(source.Type), sourceVar)
+		return fmt.Sprintf("%s(%s)", protoBufNativeGoTypeName(target.Type), sourceVar)
 	}
-	return fmt.Sprintf("%s(%s)", codegen.GoNativeTypeName(source.Type), sourceVar)
+	if targetType == "" {
+		targetType = codegen.GoNativeTypeName(target.Type)
+	}
+	return fmt.Sprintf("%s(%s)", targetType, sourceVar)
 }
 
 // zeroValure returns the zero value for the given primitive type.
@@ -569,9 +580,7 @@ func transformAttributeHelpers(source, target *expr.AttributeExpr, ta *transform
 // collectHelpers recursively traverses the given attributes and return the
 // transform helper functions required to generate the transform code.
 func collectHelpers(source, target *expr.AttributeExpr, req bool, ta *transformAttrs, seen ...map[string]*codegen.TransformFunctionData) ([]*codegen.TransformFunctionData, error) {
-	var (
-		data []*codegen.TransformFunctionData
-	)
+	var data []*codegen.TransformFunctionData
 	switch {
 	case expr.IsArray(source.Type):
 		helpers, err := transformAttributeHelpers(
