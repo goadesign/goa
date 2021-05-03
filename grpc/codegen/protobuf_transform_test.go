@@ -16,9 +16,10 @@ func TestProtoBufTransform(t *testing.T) {
 		// types to test
 		primitive = expr.Int
 
-		simple   = root.UserType("Simple")
-		required = root.UserType("Required")
-		defaultT = root.UserType("Default")
+		simple     = root.UserType("Simple")
+		required   = root.UserType("Required")
+		defaultT   = root.UserType("Default")
+		customtype = root.UserType("CustomTypes")
 
 		simpleMap  = root.UserType("SimpleMap")
 		nestedMap  = root.UserType("NestedMap")
@@ -63,6 +64,8 @@ func TestProtoBufTransform(t *testing.T) {
 			{"simple-to-default", simple, defaultT, true, svcCtx, simpleSvcToDefaultProtoCode},
 			{"default-to-simple", defaultT, simple, true, svcCtx, defaultSvcToSimpleProtoCode},
 			{"required-ptr-to-simple", required, simple, true, ptrCtx, requiredPtrSvcToSimpleProtoCode},
+			{"simple-to-customtype", customtype, simple, true, svcCtx, customSvcToSimpleProtoCode},
+			{"customtype-to-customtype", customtype, customtype, true, svcCtx, customSvcToCustomProtoCode},
 
 			// maps
 			{"map-to-map", simpleMap, simpleMap, true, svcCtx, simpleMapSvcToSimpleMapProtoCode},
@@ -95,6 +98,8 @@ func TestProtoBufTransform(t *testing.T) {
 			{"simple-to-default", simple, defaultT, false, svcCtx, simpleProtoToDefaultSvcCode},
 			{"default-to-simple", defaultT, simple, false, svcCtx, defaultProtoToSimpleSvcCode},
 			{"simple-to-required-ptr", simple, required, false, ptrCtx, simpleProtoToRequiredPtrSvcCode},
+			{"simple-to-customtype", simple, customtype, false, svcCtx, simpleProtoToCustomSvcCode},
+			{"customtype-to-customtype", customtype, customtype, false, svcCtx, customProtoToCustomSvcCode},
 
 			// maps
 			{"map-to-map", simpleMap, simpleMap, false, svcCtx, simpleMapProtoToSimpleMapSvcCode},
@@ -227,6 +232,42 @@ const (
 	}
 }
 `
+
+	customSvcToSimpleProtoCode = `func transform() {
+	target := &Simple{
+		RequiredString: string(source.RequiredString),
+		DefaultBool:    bool(source.DefaultBool),
+	}
+	if source.Integer != nil {
+		target.Integer = int32(*source.Integer)
+	}
+}
+`
+
+	simpleProtoToCustomSvcCode = `func transform() {
+	target := &CustomTypes{
+		RequiredString: tdtypes.CustomString(source.RequiredString),
+		DefaultBool:    tdtypes.CustomBool(source.DefaultBool),
+	}
+	if source.Integer != 0 {
+		integerptr := tdtypes.CustomInt(source.Integer)
+		target.Integer = &integerptr
+	}
+}
+`
+
+	customSvcToCustomProtoCode = `func transform() {
+	target := &CustomTypes{
+		RequiredString: string(source.RequiredString),
+		DefaultBool:    bool(source.DefaultBool),
+	}
+	if source.Integer != nil {
+		target.Integer = int32(*source.Integer)
+	}
+}
+`
+
+	customProtoToCustomSvcCode = simpleProtoToCustomSvcCode
 
 	simpleMapSvcToSimpleMapProtoCode = `func transform() {
 	target := &SimpleMap{}
