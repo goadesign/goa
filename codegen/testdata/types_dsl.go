@@ -13,6 +13,20 @@ var TestTypesDSL = func() {
 			Required("required_string")
 		})
 
+		_ = Type("CustomTypes", func() {
+			Attribute("required_string", String, func() {
+				Meta("struct:field:type", "tdtypes.CustomString", "goa.design/goa/v3/codegen/testdata/tdtypes")
+			})
+			Attribute("default_bool", Boolean, func() {
+				Meta("struct:field:type", "tdtypes.CustomBool", "goa.design/goa/v3/codegen/testdata/tdtypes")
+				Default(true)
+			})
+			Attribute("integer", Int, func() {
+				Meta("struct:field:type", "tdtypes.CustomInt", "goa.design/goa/v3/codegen/testdata/tdtypes")
+			})
+			Required("required_string")
+		})
+
 		_ = Type("Required", func() {
 			Extend(Simple)
 			Required("required_string", "default_bool", "integer")
