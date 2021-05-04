@@ -20,6 +20,8 @@ type (
 		FilePath string
 		// RequestPaths is the list of HTTP paths that serve the assets.
 		RequestPaths []string
+		// Redirect defines a redirect for the endpoint.
+		Redirect *HTTPRedirectExpr
 		// Meta is a list of key/value pairs
 		Meta MetaExpr
 	}

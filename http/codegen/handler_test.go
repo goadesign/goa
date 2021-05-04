@@ -17,7 +17,9 @@ func TestHandlerInit(t *testing.T) {
 		FileCount int
 	}{
 		{"no payload no result", testdata.ServerNoPayloadNoResultDSL, testdata.ServerNoPayloadNoResultHandlerConstructorCode, 2},
+		{"no payload no result with a redirect", testdata.ServerNoPayloadNoResultWithRedirectDSL, testdata.ServerNoPayloadNoResultWithRedirectHandlerConstructorCode, 1},
 		{"payload no result", testdata.ServerPayloadNoResultDSL, testdata.ServerPayloadNoResultHandlerConstructorCode, 2},
+		{"payload no result with a redirect", testdata.ServerPayloadNoResultWithRedirectDSL, testdata.ServerPayloadNoResultWithRedirectHandlerConstructorCode, 2},
 		{"no payload result", testdata.ServerNoPayloadResultDSL, testdata.ServerNoPayloadResultHandlerConstructorCode, 2},
 		{"payload result", testdata.ServerPayloadResultDSL, testdata.ServerPayloadResultHandlerConstructorCode, 2},
 		{"payload result error", testdata.ServerPayloadResultErrorDSL, testdata.ServerPayloadResultErrorHandlerConstructorCode, 2},

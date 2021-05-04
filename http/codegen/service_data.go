@@ -144,6 +144,8 @@ type (
 		// ServerWebSocket holds the data to render the server struct which
 		// implements the server stream interface.
 		ServerWebSocket *WebSocketData
+		// Redirect defines a redirect for the endpoint.
+		Redirect *RedirectData
 
 		// client
 
@@ -183,6 +185,16 @@ type (
 		// PathParam is the name of the parameter used to capture the
 		// path for file servers that serve files under a directory.
 		PathParam string
+		// Redirect defines a redirect for the endpoint.
+		Redirect *RedirectData
+	}
+
+	// RedirectData lists the data needed to generate a redirect.
+	RedirectData struct {
+		// URL is the URL that redirected to.
+		URL string
+		// StatusCode is the HTTP status code.
+		StatusCode string
 	}
 
 	// PayloadData contains the payload information required to generate the
@@ -595,12 +607,20 @@ func (d ServicesData) analyze(hs *expr.HTTPServiceExpr) *ServiceData {
 		if s.IsDir() {
 			pp = expr.ExtractHTTPWildcards(s.RequestPaths[0])[0]
 		}
+		var redirect *RedirectData
+		if s.Redirect != nil {
+			redirect = &RedirectData{
+				URL:        s.Redirect.URL,
+				StatusCode: statusCodeToHTTPConst(s.Redirect.StatusCode),
+			}
+		}
 		data := &FileServerData{
 			MountHandler: scope.Unique(fmt.Sprintf("Mount%s", codegen.Goify(s.FilePath, true))),
 			RequestPaths: paths,
 			FilePath:     s.FilePath,
 			IsDir:        s.IsDir(),
 			PathParam:    pp,
+			Redirect:     redirect,
 		}
 		rd.FileServers = append(rd.FileServers, data)
 	}
@@ -823,6 +843,13 @@ func (d ServicesData) analyze(hs *expr.HTTPServiceExpr) *ServiceData {
 
 		if a.SkipRequestBodyEncodeDecode {
 			ad.BuildStreamPayload = scope.Unique("Build" + codegen.Goify(ep.Name, true) + "StreamPayload")
+		}
+
+		if a.Redirect != nil {
+			ad.Redirect = &RedirectData{
+				URL:        a.Redirect.URL,
+				StatusCode: statusCodeToHTTPConst(a.Redirect.StatusCode),
+			}
 		}
 
 		rd.Endpoints = append(rd.Endpoints, ad)

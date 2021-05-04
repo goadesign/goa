@@ -34,6 +34,26 @@ func NewMethodNoPayloadNoResultHandler(
 }
 `
 
+var ServerNoPayloadNoResultWithRedirectHandlerConstructorCode = `// NewMethodNoPayloadNoResultHandler creates a HTTP handler which loads the
+// HTTP request and calls the "ServiceNoPayloadNoResult" service
+// "MethodNoPayloadNoResult" endpoint.
+func NewMethodNoPayloadNoResultHandler(
+	endpoint goa.Endpoint,
+	mux goahttp.Muxer,
+	decoder func(*http.Request) goahttp.Decoder,
+	encoder func(context.Context, http.ResponseWriter) goahttp.Encoder,
+	errhandler func(context.Context, http.ResponseWriter, error),
+	formatter func(err error) goahttp.Statuser,
+) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		ctx := context.WithValue(r.Context(), goahttp.AcceptTypeKey, r.Header.Get("Accept"))
+		ctx = context.WithValue(ctx, goa.MethodKey, "MethodNoPayloadNoResult")
+		ctx = context.WithValue(ctx, goa.ServiceKey, "ServiceNoPayloadNoResult")
+		http.Redirect(w, r, "/redirect/dest", http.StatusMovedPermanently)
+	})
+}
+`
+
 var ServerPayloadNoResultHandlerConstructorCode = `// NewMethodPayloadNoResultHandler creates a HTTP handler which loads the HTTP
 // request and calls the "ServicePayloadNoResult" service
 // "MethodPayloadNoResult" endpoint.
@@ -71,6 +91,37 @@ func NewMethodPayloadNoResultHandler(
 		if err := encodeResponse(ctx, w, res); err != nil {
 			errhandler(ctx, w, err)
 		}
+	})
+}
+`
+
+var ServerPayloadNoResultWithRedirectHandlerConstructorCode = `// NewMethodPayloadNoResultHandler creates a HTTP handler which loads the HTTP
+// request and calls the "ServicePayloadNoResult" service
+// "MethodPayloadNoResult" endpoint.
+func NewMethodPayloadNoResultHandler(
+	endpoint goa.Endpoint,
+	mux goahttp.Muxer,
+	decoder func(*http.Request) goahttp.Decoder,
+	encoder func(context.Context, http.ResponseWriter) goahttp.Encoder,
+	errhandler func(context.Context, http.ResponseWriter, error),
+	formatter func(err error) goahttp.Statuser,
+) http.Handler {
+	var (
+		decodeRequest = DecodeMethodPayloadNoResultRequest(mux, decoder)
+		encodeError   = goahttp.ErrorEncoder(encoder, formatter)
+	)
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		ctx := context.WithValue(r.Context(), goahttp.AcceptTypeKey, r.Header.Get("Accept"))
+		ctx = context.WithValue(ctx, goa.MethodKey, "MethodPayloadNoResult")
+		ctx = context.WithValue(ctx, goa.ServiceKey, "ServicePayloadNoResult")
+		_, err := decodeRequest(r)
+		if err != nil {
+			if err := encodeError(ctx, w, err); err != nil {
+				errhandler(ctx, w, err)
+			}
+			return
+		}
+		http.Redirect(w, r, "/redirect/dest", http.StatusMovedPermanently)
 	})
 }
 `

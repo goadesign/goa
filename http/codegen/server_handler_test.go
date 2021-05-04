@@ -19,6 +19,7 @@ func TestServerHandler(t *testing.T) {
 	}{
 		{"server simple routing", testdata.ServerSimpleRoutingDSL, testdata.ServerSimpleRoutingCode, 2, 7},
 		{"server trailing slash routing", testdata.ServerTrailingSlashRoutingDSL, testdata.ServerTrailingSlashRoutingCode, 2, 7},
+		{"server simple routing with a redirect", testdata.ServerSimpleRoutingWithRedirectDSL, testdata.ServerSimpleRoutingCode, 1, 7},
 	}
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
