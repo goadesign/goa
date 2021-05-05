@@ -278,6 +278,23 @@ func View(name string, adsl ...func()) {
 //         View("tiny")  // use "tiny" view to render the collection elements
 //     })
 //
+//     var MultiResultsExample = CollectionOf(DivisionResult, func() {
+//         Attributes(func() {
+//             Example("DivisionResult Collection Examples", func() {
+//                 Value([]Val{
+//                     {
+//                         "value":    4.167,
+//                         "reminder": 0,
+//                     },
+//                     {
+//                         "value":    3.0,
+//                         "reminder": 0,
+//                     },
+//                 })
+//             })
+//         })
+//     })
+//
 func CollectionOf(v interface{}, adsl ...func()) *expr.ResultTypeExpr {
 	var m *expr.ResultTypeExpr
 	var ok bool
