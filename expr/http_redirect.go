@@ -9,7 +9,7 @@ import (
 type (
 	// HTTPRedirectExpr defines an endpoint that replies to the request with a redirect.
 	HTTPRedirectExpr struct {
-		// URL is the URL that redirected to.
+		// URL is the URL that is being redirected to.
 		URL string
 		// StatusCode is the HTTP status code.
 		StatusCode int

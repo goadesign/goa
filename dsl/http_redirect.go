@@ -11,8 +11,8 @@ import (
 // Redirect must appear in a HTTP endpoint expression or a HTTP file server
 // expression.
 //
-// Redirect accepts 2 arguments. The first argument is the url that redirected
-// to. The second argument is the HTTP status code.
+// Redirect accepts 2 arguments. The first argument is the URL that is being
+// redirected to. The second argument is the HTTP status code.
 //
 // Example:
 //

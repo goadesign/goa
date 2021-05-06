@@ -191,7 +191,7 @@ type (
 
 	// RedirectData lists the data needed to generate a redirect.
 	RedirectData struct {
-		// URL is the URL that redirected to.
+		// URL is the URL that is being redirected to.
 		URL string
 		// StatusCode is the HTTP status code.
 		StatusCode string
