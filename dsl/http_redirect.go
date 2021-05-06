@@ -11,8 +11,8 @@ import (
 // Redirect must appear in a HTTP endpoint expression or a HTTP file server
 // expression.
 //
-// Redirect accepts 2 arguments and an optional DSL. The first argument is the
-// url that redirected to. The second argument is the HTTP status code.
+// Redirect accepts 2 arguments. The first argument is the url that redirected
+// to. The second argument is the HTTP status code.
 //
 // Example:
 //
@@ -31,17 +31,10 @@ import (
 //        })
 //    })
 //
-func Redirect(url string, code int, fns ...func()) {
-	if len(fns) > 1 {
-		eval.ReportError("too many arguments given to Redirect")
-		return
-	}
+func Redirect(url string, code int) {
 	redirect := &expr.HTTPRedirectExpr{
 		URL:        url,
 		StatusCode: code,
-	}
-	if len(fns) > 0 {
-		eval.Execute(fns[0], redirect)
 	}
 	switch actual := eval.Current().(type) {
 	case *expr.HTTPEndpointExpr:

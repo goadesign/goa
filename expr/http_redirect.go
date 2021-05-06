@@ -15,8 +15,6 @@ type (
 		StatusCode int
 		// Parent expression, one of HTTPEndpointExpr or HTTPFileServerExpr.
 		Parent eval.Expression
-		// Meta is a list of key/value pairs.
-		Meta MetaExpr
 	}
 )
 

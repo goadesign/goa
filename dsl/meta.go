@@ -169,8 +169,6 @@ func Meta(name string, value ...string) {
 		e.Meta = appendMeta(e.Meta, name, value...)
 	case *expr.HTTPFileServerExpr:
 		e.Meta = appendMeta(e.Meta, name, value...)
-	case *expr.HTTPRedirectExpr:
-		e.Meta = appendMeta(e.Meta, name, value...)
 	case *expr.HTTPResponseExpr:
 		e.Meta = appendMeta(e.Meta, name, value...)
 	case expr.CompositeExpr:
