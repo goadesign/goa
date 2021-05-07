@@ -89,11 +89,13 @@ func New(
 ) *Server {
 	return &Server{
 		Mounts: []*MountPoint{
-			{"MethodMixed", "GET", "/{id}"},
+			{"MethodMixed1", "GET", "/resources1/{id}"},
+			{"MethodMixed2", "GET", "/resources2/{id}"},
 			{"/path/to/file1.json", "GET", "/file1.json"},
 			{"/path/to/file2.json", "GET", "/file2.json"},
 		},
-		MethodMixed: NewMethodMixedHandler(e.MethodMixed, mux, decoder, encoder, errhandler, formatter),
+		MethodMixed1: NewMethodMixed1Handler(e.MethodMixed1, mux, decoder, encoder, errhandler, formatter),
+		MethodMixed2: NewMethodMixed2Handler(e.MethodMixed2, mux, decoder, encoder, errhandler, formatter),
 	}
 }
 `
@@ -182,6 +184,28 @@ func Mount(mux goahttp.Muxer) {
 		}
 		http.ServeFile(w, r, path.Join("/path/to/folder", rpath))
 	}))
+}
+`
+
+var ServerMultipleFilesWithRedirectConstructorCode = `// Mount configures the mux to serve the ServiceFileServer endpoints.
+func Mount(mux goahttp.Muxer) {
+	MountPathToFileJSON(mux, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		http.Redirect(w, r, "/redirect/dest", http.StatusMovedPermanently)
+	}))
+	MountPathToFileJSON2(mux, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		http.ServeFile(w, r, "/path/to/file.json")
+	}))
+	MountPathToFolder(mux, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		upath := path.Clean(r.URL.Path)
+		rpath := upath
+		http.ServeFile(w, r, path.Join("/path/to/folder", rpath))
+	}))
+}
+`
+
+var ServerSimpleRoutingConstructorCode = `// Mount configures the mux to serve the ServiceSimpleRoutingServer endpoints.
+func Mount(mux goahttp.Muxer, h *Server) {
+	MountServerSimpleRoutingHandler(mux, h.ServerSimpleRouting)
 }
 `
 

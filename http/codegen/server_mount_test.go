@@ -14,19 +14,24 @@ func TestServerMount(t *testing.T) {
 		Name       string
 		DSL        func()
 		Code       string
+		FileCount  int
 		SectionNum int
 	}{
-		{"multiple files constructor", testdata.ServerMultipleFilesDSL, testdata.ServerMultipleFilesConstructorCode, 6},
-		{"multiple files mounter", testdata.ServerMultipleFilesDSL, testdata.ServerMultipleFilesMounterCode, 9},
-		{"multiple files constructor /w prefix path", testdata.ServerMultipleFilesWithPrefixPathDSL, testdata.ServerMultipleFilesWithPrefixPathConstructorCode, 6},
-		{"multiple files mounter /w prefix path", testdata.ServerMultipleFilesWithPrefixPathDSL, testdata.ServerMultipleFilesWithPrefixPathMounterCode, 9},
+		{"simple routing constructor", testdata.ServerSimpleRoutingDSL, testdata.ServerSimpleRoutingConstructorCode, 2, 6},
+		{"simple routing with a redirect constructor", testdata.ServerSimpleRoutingWithRedirectDSL, testdata.ServerSimpleRoutingConstructorCode, 1, 6},
+		{"multiple files constructor", testdata.ServerMultipleFilesDSL, testdata.ServerMultipleFilesConstructorCode, 1, 6},
+		{"multiple files mounter", testdata.ServerMultipleFilesDSL, testdata.ServerMultipleFilesMounterCode, 1, 9},
+		{"multiple files constructor /w prefix path", testdata.ServerMultipleFilesWithPrefixPathDSL, testdata.ServerMultipleFilesWithPrefixPathConstructorCode, 1, 6},
+		{"multiple files mounter /w prefix path", testdata.ServerMultipleFilesWithPrefixPathDSL, testdata.ServerMultipleFilesWithPrefixPathMounterCode, 1, 9},
+		{"multiple files with a redirect constructor", testdata.ServerMultipleFilesWithRedirectDSL, testdata.ServerMultipleFilesWithRedirectConstructorCode, 1, 6},
+		{"multiple files with a redirect mounter", testdata.ServerMultipleFilesWithRedirectDSL, testdata.ServerMultipleFilesMounterCode, 1, 9},
 	}
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
 			RunHTTPDSL(t, c.DSL)
 			fs := ServerFiles(genpkg, expr.Root)
-			if len(fs) != 1 {
-				t.Fatalf("got %d files, expected 1", len(fs))
+			if len(fs) != c.FileCount {
+				t.Fatalf("got %d files, expected %d", len(fs), c.FileCount)
 			}
 			sections := fs[0].SectionTemplates
 			if len(sections) < 6 {
