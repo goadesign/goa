@@ -14,6 +14,17 @@ var ServerNoPayloadNoResultDSL = func() {
 	})
 }
 
+var ServerNoPayloadNoResultWithRedirectDSL = func() {
+	Service("ServiceNoPayloadNoResult", func() {
+		Method("MethodNoPayloadNoResult", func() {
+			HTTP(func() {
+				POST("/")
+				Redirect("/redirect/dest", StatusMovedPermanently)
+			})
+		})
+	})
+}
+
 var ServerPayloadNoResultDSL = func() {
 	Service("ServicePayloadNoResult", func() {
 		Method("MethodPayloadNoResult", func() {
@@ -22,6 +33,20 @@ var ServerPayloadNoResultDSL = func() {
 			})
 			HTTP(func() {
 				POST("/")
+			})
+		})
+	})
+}
+
+var ServerPayloadNoResultWithRedirectDSL = func() {
+	Service("ServicePayloadNoResult", func() {
+		Method("MethodPayloadNoResult", func() {
+			Payload(func() {
+				Attribute("a", Boolean)
+			})
+			HTTP(func() {
+				POST("/")
+				Redirect("/redirect/dest", StatusMovedPermanently)
 			})
 		})
 	})
@@ -130,18 +155,42 @@ var ServerFileServerDSL = func() {
 	})
 }
 
+var ServerFileServerWithRedirectDSL = func() {
+	Service("ServiceFileServer", func() {
+		HTTP(func() {
+			Path("/server_file_server")
+		})
+		Files("/file1.json", "/path/to/file1.json", func() {
+			Redirect("/redirect/dest", StatusMovedPermanently)
+		})
+		Files("/file2.json", "/path/to/file2.json")
+		Files("/file3.json", "/path/to/file3.json")
+	})
+}
+
 var ServerMixedDSL = func() {
 	Service("ServerMixed", func() {
-		Method("MethodMixed", func() {
+		Method("MethodMixed1", func() {
 			Payload(func() {
 				Attribute("id", String)
 			})
 			HTTP(func() {
-				GET("/{id}")
+				GET("/resources1/{id}")
+			})
+		})
+		Method("MethodMixed2", func() {
+			Payload(func() {
+				Attribute("id", String)
+			})
+			HTTP(func() {
+				GET("/resources2/{id}")
+				Redirect("/redirect/dest1", StatusMovedPermanently)
 			})
 		})
 		Files("/file1.json", "/path/to/file1.json")
-		Files("/file2.json", "/path/to/file2.json")
+		Files("/file2.json", "/path/to/file2.json", func() {
+			Redirect("/redirect/dest2", StatusMovedPermanently)
+		})
 	})
 }
 
@@ -176,6 +225,16 @@ var ServerMultipleFilesWithPrefixPathDSL = func() {
 	})
 }
 
+var ServerMultipleFilesWithRedirectDSL = func() {
+	Service("ServiceFileServer", func() {
+		Files("/file.json", "/path/to/file.json", func() {
+			Redirect("/redirect/dest", StatusMovedPermanently)
+		})
+		Files("/", "/path/to/file.json")
+		Files("/{wildcard}", "/path/to/folder")
+	})
+}
+
 var ServerSimpleRoutingDSL = func() {
 	Service("ServiceSimpleRoutingServer", func() {
 		Method("server-simple-routing", func() {
@@ -191,6 +250,17 @@ var ServerTrailingSlashRoutingDSL = func() {
 		Method("server-trailing-slash-routing", func() {
 			HTTP(func() {
 				GET("/trailing/slash/")
+			})
+		})
+	})
+}
+
+var ServerSimpleRoutingWithRedirectDSL = func() {
+	Service("ServiceSimpleRoutingServer", func() {
+		Method("server-simple-routing", func() {
+			HTTP(func() {
+				GET("/simple/routing")
+				Redirect("/redirect/dest", StatusMovedPermanently)
 			})
 		})
 	})
