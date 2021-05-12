@@ -64,6 +64,26 @@ func (s *ImportSpec) Code() string {
 	return fmt.Sprintf(`"%s"`, s.Path)
 }
 
+// GetMetaFileSystem retrieves the variable and package defined by the
+// file:system metadata if any.
+func GetMetaFileSystem(att *expr.HTTPFileServerExpr) (varName string, importS *ImportSpec) {
+	if att == nil {
+		return varName, importS
+	}
+	if args, ok := att.Meta["file:system"]; ok {
+		if len(args) > 0 {
+			varName = args[0]
+		}
+		if len(args) > 1 {
+			importS = &ImportSpec{Path: args[1]}
+		}
+		if len(args) > 2 {
+			importS.Name = args[2]
+		}
+	}
+	return varName, importS
+}
+
 // GetMetaType retrieves the type and package defined by the struct:field:type
 // metadata if any.
 func GetMetaType(att *expr.AttributeExpr) (typeName string, importS *ImportSpec) {

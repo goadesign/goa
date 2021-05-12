@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"path"
 	"strings"
+
+	"goa.design/goa/v3/eval"
 )
 
 type (
@@ -35,6 +37,17 @@ func (f *HTTPFileServerExpr) EvalName() string {
 		prefix = f.Service.EvalName() + " "
 	}
 	return prefix + suffix
+}
+
+// Validate validates the file server expression.
+func (f *HTTPFileServerExpr) Validate() error {
+	verr := new(eval.ValidationErrors)
+	if f.Redirect != nil {
+		if _, ok := f.Meta["file:system"]; ok {
+			verr.Add(f, "Cannot use 'file:system' when using Redirect.")
+		}
+	}
+	return nil
 }
 
 // Finalize normalizes the request path.

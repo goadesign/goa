@@ -141,6 +141,22 @@ import (
 //        Meta("swagger:extension:x-api", `{"foo":"bar"}`)
 //    })
 //
+// - "file:system" configures the file server to use the specified file system
+// variable. The variable must implement the standard fs package FS interface.
+// Applicable to file servers only. The import path of the variable should be
+// passed in as the second parameter. If the default imported package name
+// conflicts with another, you can override that as well with the third
+// parameter.
+//
+//    var _ = Service("service", func() {
+//        Files("/file.json", "/path/to/file.json", func() {
+//            Meta("file:system", "Content", "path/to/pkg")
+//        })
+//        Files("/openapi.json", "/gen/http/openapi.json", func() {
+//            Meta("file:system", "Content", "path/to/pkg", "pkgname")
+//        })
+//    })
+//
 func Meta(name string, value ...string) {
 	appendMeta := func(meta expr.MetaExpr, name string, value ...string) expr.MetaExpr {
 		if meta == nil {

@@ -21,6 +21,7 @@ func TestMetaData(t *testing.T) {
 		"attribute":  {&expr.AttributeExpr{}, "attribute_meta", []string{"attr meta", "more attr meta"}, attributeMeta, 2},
 		"method":     {&expr.MethodExpr{Name: "testmethod"}, "method", []string{"method meta"}, methodMeta, 2},
 		"resultType": {&expr.ResultTypeExpr{UserTypeExpr: &expr.UserTypeExpr{AttributeExpr: &expr.AttributeExpr{}}}, "resultTypeMeta", []string{"result type meta"}, resultTypeMeta, 2},
+		"fileServer": {&expr.HTTPFileServerExpr{}, "file:system", []string{"Content", "path/to/pkg", "pkgname"}, httpFileServerMeta, 3},
 	}
 
 	for k, tc := range cases {
@@ -58,8 +59,9 @@ func hasValue(vals []string, val string) bool {
 	}
 	return false
 }
-func apiExprMeta(e eval.Expression) expr.MetaExpr    { return e.(*expr.APIExpr).Meta }
-func userTypeMeta(e eval.Expression) expr.MetaExpr   { return e.(*expr.UserTypeExpr).Meta }
-func attributeMeta(e eval.Expression) expr.MetaExpr  { return e.(*expr.AttributeExpr).Meta }
-func methodMeta(e eval.Expression) expr.MetaExpr     { return e.(*expr.MethodExpr).Meta }
-func resultTypeMeta(e eval.Expression) expr.MetaExpr { return e.(*expr.ResultTypeExpr).Meta }
+func apiExprMeta(e eval.Expression) expr.MetaExpr        { return e.(*expr.APIExpr).Meta }
+func userTypeMeta(e eval.Expression) expr.MetaExpr       { return e.(*expr.UserTypeExpr).Meta }
+func attributeMeta(e eval.Expression) expr.MetaExpr      { return e.(*expr.AttributeExpr).Meta }
+func methodMeta(e eval.Expression) expr.MetaExpr         { return e.(*expr.MethodExpr).Meta }
+func resultTypeMeta(e eval.Expression) expr.MetaExpr     { return e.(*expr.ResultTypeExpr).Meta }
+func httpFileServerMeta(e eval.Expression) expr.MetaExpr { return e.(*expr.HTTPFileServerExpr).Meta }

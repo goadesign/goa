@@ -46,6 +46,8 @@ type (
 		Endpoints []*EndpointData
 		// FileServers lists the file servers for this service.
 		FileServers []*FileServerData
+		// FileSystems lists the file systems for this service.
+		FileSystems []*FileSystemData
 		// ServerStruct is the name of the HTTP server struct.
 		ServerStruct string
 		// MountPointStruct is the name of the mount point struct.
@@ -187,6 +189,8 @@ type (
 		PathParam string
 		// Redirect defines a redirect for the endpoint.
 		Redirect *RedirectData
+		// FileSystem defines a file system for the endpoint.
+		FileSystem *FileSystemData
 	}
 
 	// RedirectData lists the data needed to generate a redirect.
@@ -195,6 +199,14 @@ type (
 		URL string
 		// StatusCode is the HTTP status code.
 		StatusCode string
+	}
+
+	// FileSystemData lists the data needed to use a file system.
+	FileSystemData struct {
+		// VarName is the name of the variable that holds the file system.
+		VarName string
+		// PkgName is the name of the package containing the variable.
+		PkgName string
 	}
 
 	// PayloadData contains the payload information required to generate the
@@ -591,6 +603,7 @@ func (d ServicesData) analyze(hs *expr.HTTPServiceExpr) *ServiceData {
 		Scope:            scope,
 	}
 
+	var fsMap = make(map[FileSystemData]struct{})
 	for _, s := range hs.FileServers {
 		paths := make([]string, len(s.RequestPaths))
 		for i, p := range s.RequestPaths {
@@ -614,6 +627,21 @@ func (d ServicesData) analyze(hs *expr.HTTPServiceExpr) *ServiceData {
 				StatusCode: statusCodeToHTTPConst(s.Redirect.StatusCode),
 			}
 		}
+		var fs *FileSystemData
+		if v, im := codegen.GetMetaFileSystem(s); v != "" && im != nil {
+			var pkgName string
+			if im.Name == "" {
+				ss := strings.Split(im.Path, "/")
+				pkgName = ss[len(ss)-1]
+			} else {
+				pkgName = im.Name
+			}
+			fs = &FileSystemData{
+				VarName: v,
+				PkgName: pkgName,
+			}
+			fsMap[*fs] = struct{}{}
+		}
 		data := &FileServerData{
 			MountHandler: scope.Unique(fmt.Sprintf("Mount%s", codegen.Goify(s.FilePath, true))),
 			RequestPaths: paths,
@@ -621,9 +649,19 @@ func (d ServicesData) analyze(hs *expr.HTTPServiceExpr) *ServiceData {
 			IsDir:        s.IsDir(),
 			PathParam:    pp,
 			Redirect:     redirect,
+			FileSystem:   fs,
 		}
 		rd.FileServers = append(rd.FileServers, data)
 	}
+	var fileSystems []*FileSystemData
+	for fs := range fsMap {
+		fs := fs
+		fileSystems = append(fileSystems, &fs)
+	}
+	sort.Slice(fileSystems, func(i, j int) bool {
+		return fileSystems[i].VarName+fileSystems[i].PkgName < fileSystems[j].VarName+fileSystems[j].PkgName
+	})
+	rd.FileSystems = fileSystems
 
 	for _, a := range hs.HTTPEndpoints {
 		ep := svc.Method(a.MethodExpr.Name)

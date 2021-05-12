@@ -168,6 +168,36 @@ var ServerFileServerWithRedirectDSL = func() {
 	})
 }
 
+var ServerFileServerWithFileSystemDSL = func() {
+	Service("ServiceFileServer", func() {
+		HTTP(func() {
+			Path("/server_file_server")
+		})
+		Files("/file1.json", "/path/to/file1.json", func() {
+			Meta("file:system", "Content", "path/to/pkg")
+		})
+		Files("/file2.json", "/path/to/file2.json")
+		Files("/file3.json", "/path/to/file3.json")
+	})
+}
+
+var ServerFileServerWithMultipleFileSystemsDSL = func() {
+	Service("ServiceFileServer", func() {
+		HTTP(func() {
+			Path("/server_file_server")
+		})
+		Files("/file1.json", "/path/to/file1.json", func() {
+			Meta("file:system", "Content", "path/to/pkg")
+		})
+		Files("/file2.json", "/path/to/file2.json", func() {
+			Meta("file:system", "Content", "path/to/pkg")
+		})
+		Files("/file3.json", "/path/to/file3.json", func() {
+			Meta("file:system", "Embed", "path/to/embed")
+		})
+	})
+}
+
 var ServerMixedDSL = func() {
 	Service("ServerMixed", func() {
 		Method("MethodMixed1", func() {
@@ -232,6 +262,30 @@ var ServerMultipleFilesWithRedirectDSL = func() {
 		})
 		Files("/", "/path/to/file.json")
 		Files("/{wildcard}", "/path/to/folder")
+	})
+}
+
+var ServerMultipleFilesWithFileSystemDSL = func() {
+	Service("ServiceFileServer", func() {
+		Files("/file.json", "file.json", func() {
+			Meta("file:system", "Content", "path/to/pkg")
+		})
+		Files("/", "/path/to/file.json")
+		Files("/{wildcard}", "/path/to/folder")
+	})
+}
+
+var ServerMultipleFilesWithMultipleFileSystemsDSL = func() {
+	Service("ServiceFileServer", func() {
+		Files("/file.json", "file.json", func() {
+			Meta("file:system", "Content", "path/to/pkg")
+		})
+		Files("/", "/path/to/file.json", func() {
+			Meta("file:system", "Content", "path/to/pkg")
+		})
+		Files("/{wildcard}", "/path/to/folder", func() {
+			Meta("file:system", "Embed", "path/to/embed")
+		})
 	})
 }
 

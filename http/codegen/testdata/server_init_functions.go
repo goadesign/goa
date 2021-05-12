@@ -73,6 +73,57 @@ func New(
 }
 `
 
+var ServerFileServerWithFileSystemConstructorCode = `// New instantiates HTTP handlers for all the ServiceFileServer service
+// endpoints using the provided encoder and decoder. The handlers are mounted
+// on the given mux using the HTTP verb and path defined in the design.
+// errhandler is called whenever a response fails to be encoded. formatter is
+// used to format errors returned by the service methods prior to encoding.
+// Both errhandler and formatter are optional and can be nil.
+func New(
+	e *servicefileserver.Endpoints,
+	mux goahttp.Muxer,
+	decoder func(*http.Request) goahttp.Decoder,
+	encoder func(context.Context, http.ResponseWriter) goahttp.Encoder,
+	errhandler func(context.Context, http.ResponseWriter, error),
+	formatter func(err error) goahttp.Statuser,
+) *Server {
+	return &Server{
+		Mounts: []*MountPoint{
+			{"/path/to/file1.json", "GET", "/server_file_server/file1.json"},
+			{"/path/to/file2.json", "GET", "/server_file_server/file2.json"},
+			{"/path/to/file3.json", "GET", "/server_file_server/file3.json"},
+		},
+		Content: http.FileServer(http.FS(pkg.Content)),
+	}
+}
+`
+
+var ServerFileServerWithMultipleFileSystemsConstructorCode = `// New instantiates HTTP handlers for all the ServiceFileServer service
+// endpoints using the provided encoder and decoder. The handlers are mounted
+// on the given mux using the HTTP verb and path defined in the design.
+// errhandler is called whenever a response fails to be encoded. formatter is
+// used to format errors returned by the service methods prior to encoding.
+// Both errhandler and formatter are optional and can be nil.
+func New(
+	e *servicefileserver.Endpoints,
+	mux goahttp.Muxer,
+	decoder func(*http.Request) goahttp.Decoder,
+	encoder func(context.Context, http.ResponseWriter) goahttp.Encoder,
+	errhandler func(context.Context, http.ResponseWriter, error),
+	formatter func(err error) goahttp.Statuser,
+) *Server {
+	return &Server{
+		Mounts: []*MountPoint{
+			{"/path/to/file1.json", "GET", "/server_file_server/file1.json"},
+			{"/path/to/file2.json", "GET", "/server_file_server/file2.json"},
+			{"/path/to/file3.json", "GET", "/server_file_server/file3.json"},
+		},
+		Content: http.FileServer(http.FS(pkg.Content)),
+		Embed:   http.FileServer(http.FS(embed.Embed)),
+	}
+}
+`
+
 var ServerMixedConstructorCode = `// New instantiates HTTP handlers for all the ServerMixed service endpoints
 // using the provided encoder and decoder. The handlers are mounted on the
 // given mux using the HTTP verb and path defined in the design. errhandler is
@@ -200,6 +251,28 @@ func Mount(mux goahttp.Muxer) {
 		rpath := upath
 		http.ServeFile(w, r, path.Join("/path/to/folder", rpath))
 	}))
+}
+`
+
+var ServerMultipleFilesWithFileSystemConstructorCode = `// Mount configures the mux to serve the ServiceFileServer endpoints.
+func Mount(mux goahttp.Muxer, h *Server) {
+	MountFileJSON(mux, h.Content)
+	MountPathToFileJSON(mux, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		http.ServeFile(w, r, "/path/to/file.json")
+	}))
+	MountPathToFolder(mux, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		upath := path.Clean(r.URL.Path)
+		rpath := upath
+		http.ServeFile(w, r, path.Join("/path/to/folder", rpath))
+	}))
+}
+`
+
+var ServerMultipleFilesWithMultipleFileSystemConstructorCode = `// Mount configures the mux to serve the ServiceFileServer endpoints.
+func Mount(mux goahttp.Muxer, h *Server) {
+	MountFileJSON(mux, h.Content)
+	MountPathToFileJSON(mux, goahttp.ReplacePrefix("/", "/path/to/file.json", h.Content))
+	MountPathToFolder(mux, goahttp.ReplacePrefix("/", "/path/to/folder", h.Embed))
 }
 `
 

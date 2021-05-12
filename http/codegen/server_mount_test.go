@@ -25,6 +25,10 @@ func TestServerMount(t *testing.T) {
 		{"multiple files mounter /w prefix path", testdata.ServerMultipleFilesWithPrefixPathDSL, testdata.ServerMultipleFilesWithPrefixPathMounterCode, 1, 9},
 		{"multiple files with a redirect constructor", testdata.ServerMultipleFilesWithRedirectDSL, testdata.ServerMultipleFilesWithRedirectConstructorCode, 1, 6},
 		{"multiple files with a redirect mounter", testdata.ServerMultipleFilesWithRedirectDSL, testdata.ServerMultipleFilesMounterCode, 1, 9},
+		{"multiple files with a file system constructor", testdata.ServerMultipleFilesWithFileSystemDSL, testdata.ServerMultipleFilesWithFileSystemConstructorCode, 1, 6},
+		{"multiple files with a file system mounter", testdata.ServerMultipleFilesWithFileSystemDSL, testdata.ServerMultipleFilesMounterCode, 1, 9},
+		{"multiple files with multiple file systems constructor", testdata.ServerMultipleFilesWithMultipleFileSystemsDSL, testdata.ServerMultipleFilesWithMultipleFileSystemConstructorCode, 1, 6},
+		{"multiple files with multiple file systems mounter", testdata.ServerMultipleFilesWithMultipleFileSystemsDSL, testdata.ServerMultipleFilesMounterCode, 1, 9},
 	}
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {

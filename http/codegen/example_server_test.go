@@ -70,6 +70,7 @@ func TestExampleServerFiles(t *testing.T) {
 		}{
 			{"no-server", ctestdata.NoServerDSL, testdata.NoServerServerHandleCode},
 			{"server-hosting-service-with-file-server", ctestdata.ServerHostingServiceWithFileServerDSL, testdata.ServerHostingServiceWithFileServerHandlerCode},
+			{"server-hosting-service-with-file-server-with-file-system", ctestdata.ServerHostingServiceWithFileServerWithFileSystemDSL, testdata.ServerHostingServiceWithFileServerWithFileSystemHandlerCode},
 			{"server-hosting-service-subset", ctestdata.ServerHostingServiceSubsetDSL, testdata.ServerHostingServiceSubsetServerHandleCode},
 			{"server-hosting-multiple-services", ctestdata.ServerHostingMultipleServicesDSL, testdata.ServerHostingMultipleServicesServerHandleCode},
 			{"streaming", testdata.StreamingMultipleServicesDSL, testdata.StreamingServerHandleCode},

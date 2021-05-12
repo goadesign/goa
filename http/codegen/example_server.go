@@ -269,7 +269,7 @@ func handleHTTPServer(ctx context.Context, u *url.URL{{ range $.Services }}{{ if
 	}
 	// Configure the mux.
 	{{- range .Services }}
-		{{ .Service.PkgName }}svr.Mount(mux{{ if .Endpoints }}, {{ .Service.VarName }}Server{{ end }})
+		{{ .Service.PkgName }}svr.Mount(mux{{ if or .Endpoints .FileSystems }}, {{ .Service.VarName }}Server{{ end }})
 	{{- end }}
 `
 
