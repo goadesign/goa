@@ -55,6 +55,7 @@ depend:
 	@echo INSTALLING DEPENDENCIES...
 	@go mod download
 	@go get -u -v $(DEPEND)
+	@go mod tidy
 	@echo INSTALLING PROTOC...
 	@mkdir $(PROTOC)
 	@cd $(PROTOC); \
