@@ -154,42 +154,19 @@ func New(
 
 var ServerMultipleFilesConstructorCode = `// Mount configures the mux to serve the ServiceFileServer endpoints.
 func Mount(mux goahttp.Muxer) {
-	MountPathToFileJSON(mux, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		http.ServeFile(w, r, "/path/to/file.json")
-	}))
-	MountPathToFileJSON2(mux, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		http.ServeFile(w, r, "/path/to/file.json")
-	}))
-	MountFileJSON(mux, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		http.ServeFile(w, r, "file.json")
-	}))
-	MountPathToFolder(mux, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		upath := path.Clean(r.URL.Path)
-		rpath := upath
-		http.ServeFile(w, r, path.Join("/path/to/folder", rpath))
-	}))
+	MountPathToFileJSON(mux, goahttp.ReplacePrefix("/file.json", "/path/to/file.json", http.FileServer(http.Dir("."))))
+	MountPathToFileJSON2(mux, goahttp.ReplacePrefix("/", "/path/to/file.json", http.FileServer(http.Dir("."))))
+	MountFileJSON(mux, http.FileServer(http.Dir(".")))
+	MountPathToFolder(mux, goahttp.ReplacePrefix("/", "/path/to/folder", http.FileServer(http.Dir("."))))
 }
 `
 
 var ServerMultipleFilesWithPrefixPathConstructorCode = `// Mount configures the mux to serve the ServiceFileServer endpoints.
 func Mount(mux goahttp.Muxer) {
-	MountPathToFileJSON(mux, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		http.ServeFile(w, r, "/path/to/file.json")
-	}))
-	MountPathToFileJSON2(mux, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		http.ServeFile(w, r, "/path/to/file.json")
-	}))
-	MountFileJSON(mux, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		http.ServeFile(w, r, "file.json")
-	}))
-	MountPathToFolder(mux, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		upath := path.Clean(r.URL.Path)
-		rpath := upath
-		if strings.HasPrefix(upath, "/server_file_server") {
-			rpath = upath[19:]
-		}
-		http.ServeFile(w, r, path.Join("/path/to/folder", rpath))
-	}))
+	MountPathToFileJSON(mux, goahttp.ReplacePrefix("/server_file_server/file.json", "/path/to/file.json", http.FileServer(http.Dir("."))))
+	MountPathToFileJSON2(mux, goahttp.ReplacePrefix("/server_file_server", "/path/to/file.json", http.FileServer(http.Dir("."))))
+	MountFileJSON(mux, goahttp.ReplacePrefix("/server_file_server/file.json", "/file.json", http.FileServer(http.Dir("."))))
+	MountPathToFolder(mux, goahttp.ReplacePrefix("/server_file_server", "/path/to/folder", http.FileServer(http.Dir("."))))
 }
 `
 
@@ -198,17 +175,9 @@ func Mount(mux goahttp.Muxer) {
 	MountPathToFileJSON(mux, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, "/redirect/dest", http.StatusMovedPermanently)
 	}))
-	MountPathToFileJSON2(mux, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		http.ServeFile(w, r, "/path/to/file.json")
-	}))
-	MountFileJSON(mux, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		http.ServeFile(w, r, "file.json")
-	}))
-	MountPathToFolder(mux, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		upath := path.Clean(r.URL.Path)
-		rpath := upath
-		http.ServeFile(w, r, path.Join("/path/to/folder", rpath))
-	}))
+	MountPathToFileJSON2(mux, goahttp.ReplacePrefix("/", "/path/to/file.json", http.FileServer(http.Dir("."))))
+	MountFileJSON(mux, http.FileServer(http.Dir(".")))
+	MountPathToFolder(mux, goahttp.ReplacePrefix("/", "/path/to/folder", http.FileServer(http.Dir("."))))
 }
 `
 
