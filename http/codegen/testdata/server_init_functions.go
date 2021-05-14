@@ -160,6 +160,9 @@ func Mount(mux goahttp.Muxer) {
 	MountPathToFileJSON2(mux, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		http.ServeFile(w, r, "/path/to/file.json")
 	}))
+	MountFileJSON(mux, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		http.ServeFile(w, r, "file.json")
+	}))
 	MountPathToFolder(mux, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		upath := path.Clean(r.URL.Path)
 		rpath := upath
@@ -175,6 +178,9 @@ func Mount(mux goahttp.Muxer) {
 	}))
 	MountPathToFileJSON2(mux, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		http.ServeFile(w, r, "/path/to/file.json")
+	}))
+	MountFileJSON(mux, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		http.ServeFile(w, r, "file.json")
 	}))
 	MountPathToFolder(mux, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		upath := path.Clean(r.URL.Path)
@@ -194,6 +200,9 @@ func Mount(mux goahttp.Muxer) {
 	}))
 	MountPathToFileJSON2(mux, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		http.ServeFile(w, r, "/path/to/file.json")
+	}))
+	MountFileJSON(mux, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		http.ServeFile(w, r, "file.json")
 	}))
 	MountPathToFolder(mux, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		upath := path.Clean(r.URL.Path)
