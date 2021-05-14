@@ -187,6 +187,11 @@ type (
 		PathParam string
 		// Redirect defines a redirect for the endpoint.
 		Redirect *RedirectData
+		// VarName is the name of the variable that holds the file server.
+		VarName string
+		// ArgName is the name of the argument used to initialize the
+		// file server.
+		ArgName string
 	}
 
 	// RedirectData lists the data needed to generate a redirect.
@@ -621,6 +626,8 @@ func (d ServicesData) analyze(hs *expr.HTTPServiceExpr) *ServiceData {
 			IsDir:        s.IsDir(),
 			PathParam:    pp,
 			Redirect:     redirect,
+			VarName:      scope.Unique(codegen.Goify(s.FilePath, true)),
+			ArgName:      scope.Unique(fmt.Sprintf("fileSystem%s", codegen.Goify(s.FilePath, true))),
 		}
 		rd.FileServers = append(rd.FileServers, data)
 	}

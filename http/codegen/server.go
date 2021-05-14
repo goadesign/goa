@@ -263,6 +263,9 @@ type {{ .ServerStruct }} struct {
 	{{- range .Endpoints }}
 	{{ .Method.VarName }} http.Handler
 	{{- end }}
+	{{- range .FileServers }}
+	{{ .VarName }} http.Handler
+	{{- end }}
 }
 
 // ErrorNamer is an interface implemented by generated error structs that
@@ -302,12 +305,20 @@ func {{ .ServerInit }}(
 	{{ .MultipartRequestDecoder.VarName }} {{ .MultipartRequestDecoder.FuncName }},
 		{{- end }}
 	{{- end }}
+	{{- range .FileServers }}
+	{{ .ArgName }} http.FileSystem,
+	{{- end }}
 ) *{{ .ServerStruct }} {
 {{- if hasWebSocket . }}
 	if configurer == nil {
 		configurer = &ConnConfigurer{}
 	}
 {{- end }}
+	{{- range .FileServers }}
+	if {{ .ArgName }} == nil {
+		{{ .ArgName }} = http.Dir(".")
+	}
+	{{- end }}
 	return &{{ .ServerStruct }}{
 		Mounts: []*{{ .MountPointStruct }}{
 			{{- range $e := .Endpoints }}
@@ -324,6 +335,9 @@ func {{ .ServerInit }}(
 		},
 		{{- range .Endpoints }}
 		{{ .Method.VarName }}: {{ .HandlerInit }}(e.{{ .Method.VarName }}, mux, {{ if .MultipartRequestDecoder }}{{ .MultipartRequestDecoder.InitName }}(mux, {{ .MultipartRequestDecoder.VarName }}){{ else }}decoder{{ end }}, encoder, errhandler, formatter{{ if isWebSocketEndpoint . }}, upgrader, configurer.{{ .Method.VarName }}Fn{{ end }}),
+		{{- end }}
+		{{- range .FileServers }}
+		{{ .VarName }}: http.FileServer({{ .ArgName }}),
 		{{- end }}
 	}
 }
@@ -345,7 +359,7 @@ func (s *{{ .ServerStruct }}) Use(m func(http.Handler) http.Handler) {
 
 // input: ServiceData
 const serverMountT = `{{ printf "%s configures the mux to serve the %s endpoints." .MountServer .Service.Name | comment }}
-func {{ .MountServer }}(mux goahttp.Muxer{{ if .Endpoints }}, h *{{ .ServerStruct }}{{ end }}) {
+func {{ .MountServer }}(mux goahttp.Muxer, h *{{ .ServerStruct }}) {
 	{{- range .Endpoints }}
 	{{ .MountHandler }}(mux, h.{{ .Method.VarName }})
 	{{- end }}
@@ -356,7 +370,7 @@ func {{ .MountServer }}(mux goahttp.Muxer{{ if .Endpoints }}, h *{{ .ServerStruc
 		}))
 	 	{{- else }}
 			{{- $filepath := addLeadingSlash .FilePath }}
-	{{ .MountHandler }}(mux, {{ range .RequestPaths }}{{if ne . $filepath }}goahttp.ReplacePrefix("{{ . }}", "{{ $filepath }}", {{ end }}{{ end }}http.FileServer(http.Dir("."))){{ range .RequestPaths }}{{ if ne . $filepath }}){{ end}}{{ end }}
+	{{ .MountHandler }}(mux, {{ range .RequestPaths }}{{if ne . $filepath }}goahttp.ReplacePrefix("{{ . }}", "{{ $filepath }}", {{ end }}{{ end }}h.{{ .VarName }}){{ range .RequestPaths }}{{ if ne . $filepath }}){{ end}}{{ end }}
 		{{- end }}
 	{{- end }}
 }

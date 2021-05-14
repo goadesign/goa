@@ -134,7 +134,7 @@ func handleHTTPServer(ctx context.Context, u *url.URL, wg *sync.WaitGroup, errc 
 	)
 	{
 		eh := errorHandler(logger)
-		serviceServer = servicesvr.New(nil, mux, dec, enc, eh, nil)
+		serviceServer = servicesvr.New(nil, mux, dec, enc, eh, nil, nil)
 		if debug {
 			servers := goahttp.Servers{
 				serviceServer,
@@ -143,7 +143,7 @@ func handleHTTPServer(ctx context.Context, u *url.URL, wg *sync.WaitGroup, errc 
 		}
 	}
 	// Configure the mux.
-	servicesvr.Mount(mux)
+	servicesvr.Mount(mux, serviceServer)
 
 	// Wrap the multiplexer with additional middlewares. Middlewares mounted
 	// here apply to all the service endpoints.
