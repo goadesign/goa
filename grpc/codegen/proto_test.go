@@ -24,6 +24,7 @@ func TestProtoFiles(t *testing.T) {
 		{"method-with-reserved-proto-name", testdata.MethodWithReservedNameDSL, testdata.MethodWithReservedNameProtoCode},
 		{"multiple-methods-same-return-type", testdata.MultipleMethodsSameResultCollectionDSL, testdata.MultipleMethodsSameResultCollectionProtoCode},
 		{"method-with-acronym", testdata.MethodWithAcronymDSL, testdata.MethodWithAcronymProtoCode},
+		{"custom-package-name", testdata.ServiceWithPackageDSL, testdata.ServiceWithPackageCode},
 	}
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
