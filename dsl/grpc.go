@@ -106,6 +106,37 @@ func GRPC(fn func()) {
 	}
 }
 
+// Package defines the name of the protobuf package. It defaults to the name of
+// the service (in snake_case).
+//
+// Package must appear in a service GRPC expression.
+//
+// Package accepts one argument: the name of the protobuf package.
+//
+// Example:
+//
+//     var GRPCService = Service("my_grpc_service", func() {
+//         GRPC(func() {
+//             Package("svc")
+//         })
+//         Method("add", func() {
+//             Payload(func() {
+//                 Field(1, "a", Int)
+//                 Field(2, "b", Int)
+//             })
+//             Result(Int)
+//         })
+//         GRPC(func() {})
+//     })
+func Package(name string) {
+	switch actual := eval.Current().(type) {
+	case *expr.GRPCServiceExpr:
+		actual.ProtoPkg = name
+	default:
+		eval.IncompatibleDSL()
+	}
+}
+
 // Message describes a gRPC request or response message.
 //
 // Message must appear in a gRPC method expression to define the

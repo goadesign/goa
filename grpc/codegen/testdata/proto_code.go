@@ -423,3 +423,23 @@ message MethodJWTRequest {
 message MethodJWTResponse {
 }
 `
+
+const ServiceWithPackageCode = `
+syntax = "proto3";
+
+package custom;
+
+option go_package = "/custompb";
+
+// Service is the ServiceWithPackageName service interface.
+service ServiceWithPackageName {
+	// Method implements method.
+	rpc Method (MethodRequest) returns (MethodResponse);
+}
+
+message MethodRequest {
+}
+
+message MethodResponse {
+}
+`

@@ -12,6 +12,3 @@ cmd/goa/goa
 *~
 *.orig
 *.swp
-
-# Go module cruft
-go.sum

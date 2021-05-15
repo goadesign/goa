@@ -47,7 +47,7 @@ func serverFile(genpkg string, svc *expr.GRPCServiceExpr) *codegen.File {
 				{Path: path.Join(genpkg, svcName, "views"), Name: data.Service.ViewsPkg},
 				{Path: path.Join(genpkg, "grpc", svcName, pbPkgName), Name: data.PkgName},
 			}),
-			&codegen.SectionTemplate{Name: "server-struct", Source: serverStructT, Data: data},
+			{Name: "server-struct", Source: serverStructT, Data: data},
 		}
 		for _, e := range data.Endpoints {
 			if e.ServerStream != nil {

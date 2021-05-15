@@ -14,6 +14,8 @@ type (
 		ServiceExpr *ServiceExpr
 		// Name of parent service if any
 		ParentName string
+		// ProtoPkg is the name of the generated protobuf package.
+		ProtoPkg string
 		// GRPCEndpoints is the list of service endpoints.
 		GRPCEndpoints []*GRPCEndpointExpr
 		// GRPCErrors lists gRPC errors that apply to all endpoints.
