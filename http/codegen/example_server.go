@@ -253,7 +253,7 @@ func handleHTTPServer(ctx context.Context, u *url.URL{{ range $.Services }}{{ if
 		{{-  if .Endpoints }}
 		{{ .Service.VarName }}Server = {{ .Service.PkgName }}svr.New({{ .Service.VarName }}Endpoints, mux, dec, enc, eh, nil{{ if hasWebSocket $svc }}, upgrader, nil{{ end }}{{ range .Endpoints }}{{ if .MultipartRequestDecoder }}, {{ $.APIPkg }}.{{ .MultipartRequestDecoder.FuncName }}{{ end }}{{ end }})
 		{{-  else }}
-		{{ .Service.VarName }}Server = {{ .Service.PkgName }}svr.New(nil, mux, dec, enc, eh, nil)
+		{{ .Service.VarName }}Server = {{ .Service.PkgName }}svr.New(nil, mux, dec, enc, eh, nil{{ range .FileServers }}, nil{{ end }})
 		{{-  end }}
 	{{- end }}
 	{{- if .Services }}
@@ -269,7 +269,7 @@ func handleHTTPServer(ctx context.Context, u *url.URL{{ range $.Services }}{{ if
 	}
 	// Configure the mux.
 	{{- range .Services }}
-		{{ .Service.PkgName }}svr.Mount(mux{{ if .Endpoints }}, {{ .Service.VarName }}Server{{ end }})
+		{{ .Service.PkgName }}svr.Mount(mux, {{ .Service.VarName }}Server)
 	{{- end }}
 `
 

@@ -40,6 +40,7 @@ func serverFile(genpkg string, svc *expr.HTTPServiceExpr) *codegen.File {
 		"isWebSocketEndpoint": isWebSocketEndpoint,
 		"viewedServerBody":    viewedServerBody,
 		"mustDecodeRequest":   mustDecodeRequest,
+		"addLeadingSlash":     addLeadingSlash,
 	}
 	sections := []*codegen.SectionTemplate{
 		codegen.Header(title, "server", []*codegen.ImportSpec{
@@ -74,7 +75,7 @@ func serverFile(genpkg string, svc *expr.HTTPServiceExpr) *codegen.File {
 	sections = append(sections, &codegen.SectionTemplate{Name: "server-init", Source: serverInitT, Data: data, FuncMap: funcs})
 	sections = append(sections, &codegen.SectionTemplate{Name: "server-service", Source: serverServiceT, Data: data})
 	sections = append(sections, &codegen.SectionTemplate{Name: "server-use", Source: serverUseT, Data: data})
-	sections = append(sections, &codegen.SectionTemplate{Name: "server-mount", Source: serverMountT, Data: data})
+	sections = append(sections, &codegen.SectionTemplate{Name: "server-mount", Source: serverMountT, Data: data, FuncMap: funcs})
 
 	for _, e := range data.Endpoints {
 		sections = append(sections, &codegen.SectionTemplate{Name: "server-handler", Source: serverHandlerT, Data: e})
@@ -238,6 +239,13 @@ func viewedServerBody(sbd []*TypeData, view string) *TypeData {
 	panic("view not found in server body types: " + view)
 }
 
+func addLeadingSlash(s string) string {
+	if strings.HasPrefix(s, "/") {
+		return s
+	}
+	return "/" + s
+}
+
 func mapQueryDecodeData(dt expr.DataType, varName string, inc int) map[string]interface{} {
 	return map[string]interface{}{
 		"Type":      dt,
@@ -254,6 +262,9 @@ type {{ .ServerStruct }} struct {
 	Mounts []*{{ .MountPointStruct }}
 	{{- range .Endpoints }}
 	{{ .Method.VarName }} http.Handler
+	{{- end }}
+	{{- range .FileServers }}
+	{{ .VarName }} http.Handler
 	{{- end }}
 }
 
@@ -294,12 +305,20 @@ func {{ .ServerInit }}(
 	{{ .MultipartRequestDecoder.VarName }} {{ .MultipartRequestDecoder.FuncName }},
 		{{- end }}
 	{{- end }}
+	{{- range .FileServers }}
+	{{ .ArgName }} http.FileSystem,
+	{{- end }}
 ) *{{ .ServerStruct }} {
 {{- if hasWebSocket . }}
 	if configurer == nil {
 		configurer = &ConnConfigurer{}
 	}
 {{- end }}
+	{{- range .FileServers }}
+	if {{ .ArgName }} == nil {
+		{{ .ArgName }} = http.Dir(".")
+	}
+	{{- end }}
 	return &{{ .ServerStruct }}{
 		Mounts: []*{{ .MountPointStruct }}{
 			{{- range $e := .Endpoints }}
@@ -316,6 +335,9 @@ func {{ .ServerInit }}(
 		},
 		{{- range .Endpoints }}
 		{{ .Method.VarName }}: {{ .HandlerInit }}(e.{{ .Method.VarName }}, mux, {{ if .MultipartRequestDecoder }}{{ .MultipartRequestDecoder.InitName }}(mux, {{ .MultipartRequestDecoder.VarName }}){{ else }}decoder{{ end }}, encoder, errhandler, formatter{{ if isWebSocketEndpoint . }}, upgrader, configurer.{{ .Method.VarName }}Fn{{ end }}),
+		{{- end }}
+		{{- range .FileServers }}
+		{{ .VarName }}: http.FileServer({{ .ArgName }}),
 		{{- end }}
 	}
 }
@@ -337,7 +359,7 @@ func (s *{{ .ServerStruct }}) Use(m func(http.Handler) http.Handler) {
 
 // input: ServiceData
 const serverMountT = `{{ printf "%s configures the mux to serve the %s endpoints." .MountServer .Service.Name | comment }}
-func {{ .MountServer }}(mux goahttp.Muxer{{ if .Endpoints }}, h *{{ .ServerStruct }}{{ end }}) {
+func {{ .MountServer }}(mux goahttp.Muxer, h *{{ .ServerStruct }}) {
 	{{- range .Endpoints }}
 	{{ .MountHandler }}(mux, h.{{ .Method.VarName }})
 	{{- end }}
@@ -346,21 +368,9 @@ func {{ .MountServer }}(mux goahttp.Muxer{{ if .Endpoints }}, h *{{ .ServerStruc
 	{{ .MountHandler }}(mux, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			http.Redirect(w, r, "{{ .Redirect.URL }}", {{ .Redirect.StatusCode }})
 		}))
-		{{- else if .IsDir }}
-	{{ .MountHandler }}(mux, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			upath := path.Clean(r.URL.Path)
-			rpath := upath
-			{{- range .RequestPaths }}{{ if ne . "/" }}
-			if strings.HasPrefix(upath, "{{ . }}") {
-				rpath = upath[{{ len . }}:]
-			}
-			{{- end }}{{ end }}
-			http.ServeFile(w, r, path.Join({{ printf "%q" .FilePath }}, rpath))
-		}))
 	 	{{- else }}
-	{{ .MountHandler }}(mux, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			http.ServeFile(w, r, {{ printf "%q" .FilePath }})
-		}))
+			{{- $filepath := addLeadingSlash .FilePath }}
+	{{ .MountHandler }}(mux, {{ range .RequestPaths }}{{if ne . $filepath }}goahttp.ReplacePrefix("{{ . }}", "{{ $filepath }}", {{ end }}{{ end }}h.{{ .VarName }}){{ range .RequestPaths }}{{ if ne . $filepath }}){{ end}}{{ end }}
 		{{- end }}
 	{{- end }}
 }
