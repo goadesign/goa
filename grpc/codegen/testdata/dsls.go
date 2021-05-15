@@ -792,6 +792,17 @@ var MethodWithAcronymDSL = func() {
 	})
 }
 
+var ServiceWithPackageDSL = func() {
+	Service("ServiceWithPackageName", func() {
+		GRPC(func() {
+			Package("Custom")
+		})
+		Method("method", func() {
+			GRPC(func() {})
+		})
+	})
+}
+
 var PayloadWithValidationsDSL = func() {
 	Service("PayloadWithValidation", func() {
 		Method("method_a", func() {

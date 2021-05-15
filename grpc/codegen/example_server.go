@@ -101,22 +101,22 @@ func exampleServer(genpkg string, root *expr.RootExpr, svr *expr.ServerExpr) *co
 		}
 		sections = []*codegen.SectionTemplate{
 			codegen.Header("", "main", specs),
-			&codegen.SectionTemplate{
+			{
 				Name:   "server-grpc-start",
 				Source: grpcSvrStartT,
 				Data: map[string]interface{}{
 					"Services": svcdata,
 				},
-			},
-			&codegen.SectionTemplate{Name: "server-grpc-logger", Source: grpcSvrLoggerT},
-			&codegen.SectionTemplate{
+			}, {
+				Name:   "server-grpc-logger",
+				Source: grpcSvrLoggerT,
+			}, {
 				Name:   "server-grpc-init",
 				Source: grpcSvrInitT,
 				Data: map[string]interface{}{
 					"Services": svcdata,
 				},
-			},
-			&codegen.SectionTemplate{
+			}, {
 				Name:   "server-grpc-register",
 				Source: grpcRegisterSvrT,
 				Data: map[string]interface{}{
@@ -126,8 +126,7 @@ func exampleServer(genpkg string, root *expr.RootExpr, svr *expr.ServerExpr) *co
 					"goify":      codegen.Goify,
 					"needStream": needStream,
 				},
-			},
-			&codegen.SectionTemplate{
+			}, {
 				Name:   "server-grpc-end",
 				Source: grpcSvrEndT,
 				Data: map[string]interface{}{

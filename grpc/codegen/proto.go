@@ -32,7 +32,7 @@ func protoFile(genpkg string, svc *expr.GRPCServiceExpr) *codegen.File {
 
 	sections := []*codegen.SectionTemplate{
 		// header comments
-		&codegen.SectionTemplate{
+		{
 			Name:   "proto-header",
 			Source: protoHeaderT,
 			Data: map[string]interface{}{
@@ -41,16 +41,20 @@ func protoFile(genpkg string, svc *expr.GRPCServiceExpr) *codegen.File {
 			},
 		},
 		// proto syntax and package
-		&codegen.SectionTemplate{
+		{
 			Name:   "proto-start",
 			Source: protoStartT,
 			Data: map[string]interface{}{
 				"ProtoVersion": ProtoVersion,
-				"Pkg":          codegen.SnakeCase(codegen.Goify(svcName, false)),
+				"Pkg":          pkgName(svc, svcName),
 			},
 		},
 		// service definition
-		&codegen.SectionTemplate{Name: "grpc-service", Source: serviceT, Data: data},
+		{
+			Name:   "grpc-service",
+			Source: serviceT,
+			Data:   data,
+		},
 	}
 
 	// message definition
@@ -63,6 +67,13 @@ func protoFile(genpkg string, svc *expr.GRPCServiceExpr) *codegen.File {
 		SectionTemplates: sections,
 		FinalizeFunc:     protoc,
 	}
+}
+
+func pkgName(svc *expr.GRPCServiceExpr, svcName string) string {
+	if svc.ProtoPkg != "" {
+		svcName = svc.ProtoPkg
+	}
+	return codegen.SnakeCase(codegen.Goify(svcName, false))
 }
 
 func protoc(path string) error {
