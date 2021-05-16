@@ -4,7 +4,7 @@
 #
 # Targets:
 # - "depend" retrieves the Go packages needed to run the linter and tests
-# - "lint" runs the linter and checks the code format using goimports
+# - "lint" runs the linter
 # - "test" runs the tests
 # - "release" creates a new release commit, tags the commit and pushes the tag to GitHub.
 #   "release" also updates the examples and plugins repo and pushes the updates to GitHub.
@@ -24,11 +24,9 @@ GOPATH=$(shell go env GOPATH)
 # Standard dependencies are installed via go get
 DEPEND=\
 	golang.org/x/lint/golint \
-	golang.org/x/tools/cmd/goimports \
-	google.golang.org/protobuf/cmd/protoc-gen-go \
-        google.golang.org/grpc/cmd/protoc-gen-go-grpc \
-	honnef.co/go/tools/cmd/staticcheck \
-	github.com/getkin/kin-openapi
+	google.golang.org/protobuf/cmd/protoc-gen-go@v1.26.0 \
+        google.golang.org/grpc/cmd/protoc-gen-go-grpc@v1.1.0 \
+	honnef.co/go/tools/cmd/staticcheck
 
 all: lint test
 
