@@ -159,11 +159,7 @@ func (g *Generator) Run() ([]string, error) {
 		for i, a := range os.Args[1:] {
 			for _, p := range gopaths {
 				if strings.HasPrefix(a, p) {
-					suf := "$(GOPATH)"
-					if !strings.HasSuffix(p, string(filepath.Separator)) {
-						suf += string(filepath.Separator)
-					}
-					args[i] = strings.Replace(a, p, suf, 1)
+					args[i] = strings.Replace(a, p, "$(GOPATH)", 1)
 					break
 				}
 			}
