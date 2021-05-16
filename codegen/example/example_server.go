@@ -76,7 +76,7 @@ func exampleSvrMain(genpkg string, root *expr.RootExpr, svr *expr.ServerExpr) *c
 
 	sections := []*codegen.SectionTemplate{
 		codegen.Header("", "main", specs),
-		&codegen.SectionTemplate{
+		{
 			Name:   "server-main-start",
 			Source: mainStartT,
 			Data: map[string]interface{}{
@@ -85,15 +85,13 @@ func exampleSvrMain(genpkg string, root *expr.RootExpr, svr *expr.ServerExpr) *c
 			FuncMap: map[string]interface{}{
 				"join": strings.Join,
 			},
-		},
-		&codegen.SectionTemplate{
+		}, {
 			Name:   "server-main-logger",
 			Source: mainLoggerT,
 			Data: map[string]interface{}{
 				"APIPkg": apiPkg,
 			},
-		},
-		&codegen.SectionTemplate{
+		}, {
 			Name:   "server-main-services",
 			Source: mainSvcsT,
 			Data: map[string]interface{}{
@@ -103,8 +101,7 @@ func exampleSvrMain(genpkg string, root *expr.RootExpr, svr *expr.ServerExpr) *c
 			FuncMap: map[string]interface{}{
 				"mustInitServices": mustInitServices,
 			},
-		},
-		&codegen.SectionTemplate{
+		}, {
 			Name:   "server-main-endpoints",
 			Source: mainEndpointsT,
 			Data: map[string]interface{}{
@@ -113,9 +110,10 @@ func exampleSvrMain(genpkg string, root *expr.RootExpr, svr *expr.ServerExpr) *c
 			FuncMap: map[string]interface{}{
 				"mustInitServices": mustInitServices,
 			},
-		},
-		&codegen.SectionTemplate{Name: "server-main-interrupts", Source: mainInterruptsT},
-		&codegen.SectionTemplate{
+		}, {
+			Name:   "server-main-interrupts",
+			Source: mainInterruptsT,
+		}, {
 			Name:   "server-main-handler",
 			Source: mainServerHndlrT,
 			Data: map[string]interface{}{
@@ -128,7 +126,10 @@ func exampleSvrMain(genpkg string, root *expr.RootExpr, svr *expr.ServerExpr) *c
 				"toUpper": strings.ToUpper,
 			},
 		},
-		&codegen.SectionTemplate{Name: "server-main-end", Source: mainEndT},
+		{
+			Name:   "server-main-end",
+			Source: mainEndT,
+		},
 	}
 
 	return &codegen.File{Path: mainPath, SectionTemplates: sections, SkipExist: true}

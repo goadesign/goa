@@ -76,7 +76,9 @@ endif
 test:
 	env GO111MODULE=on go test ./...
 
-release:
+release: release-goa release-examples release-plugins
+
+release-goa:
 	# First make sure all is clean
 	git diff-index --quiet HEAD
 	cd $(GOPATH)/src/goa.design/examples && \
@@ -100,7 +102,8 @@ release:
 	cd cmd/goa && go install
 	git push origin v$(MAJOR)
 	git push origin v$(MAJOR).$(MINOR).$(BUILD)
-	# Update examples
+
+release-examples:
 	cd $(GOPATH)/src/goa.design/examples && \
 		sed 's/goa.design\/goa\/v.*/goa.design\/goa\/v$(MAJOR) v$(MAJOR).$(MINOR).$(BUILD)/' go.mod > _tmp && mv _tmp go.mod && \
 		make && \
@@ -109,7 +112,8 @@ release:
 		git tag v$(MAJOR).$(MINOR).$(BUILD) && \
 		git push origin master
 		git push origin v$(MAJOR).$(MINOR).$(BUILD)
-	# Update plugins
+
+release-plugins:
 	cd $(GOPATH)/src/goa.design/plugins && \
 		sed 's/goa.design\/goa\/v.*/goa.design\/goa\/v$(MAJOR) v$(MAJOR).$(MINOR).$(BUILD)/' go.mod > _tmp && mv _tmp go.mod && \
 		make && \
