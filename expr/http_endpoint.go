@@ -905,6 +905,21 @@ func (r *RouteExpr) Validate() *eval.ValidationErrors {
 			verr.Add(r, "WebSocket endpoint supports only \"GET\" method. Got %q.", r.Method)
 		}
 	}
+
+	// HEAD method must not return a response body as per RFC 2616 section 9.4
+	if r.Method == "HEAD" {
+		disallowBody := func(resp *HTTPResponseExpr) {
+			if httpResponseBody(r.Endpoint, resp).Type != Empty {
+				verr.Add(r, "HTTP status %d: Response body defined for HEAD method which does not allow response body.", resp.StatusCode)
+			}
+		}
+		for _, resp := range r.Endpoint.Responses {
+			disallowBody(resp)
+		}
+		for _, e := range r.Endpoint.HTTPErrors {
+			disallowBody(e.Response)
+		}
+	}
 	return verr
 }
 
