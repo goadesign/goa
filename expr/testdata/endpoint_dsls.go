@@ -37,6 +37,21 @@ var DuplicateWCRouteDSL = func() {
 	})
 }
 
+var DisallowResponseBodyHeadDSL = func() {
+	Service("DisallowResponseBody", func() {
+		Method("Method", func() {
+			Result(func() {
+				Attribute("id", String)
+			})
+			Error("not_found")
+			HTTP(func() {
+				HEAD("/")
+				Response("not_found", StatusNotFound)
+			})
+		})
+	})
+}
+
 var EndpointWithParentDSL = func() {
 	Service("Parent", func() {
 		Method("show", func() {
