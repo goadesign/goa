@@ -22,6 +22,7 @@ func TestServerTypes(t *testing.T) {
 		{"result-type-validate", testdata.ResultTypeValidateDSL, ResultTypeValidateServerTypesFile},
 		{"with-result-collection", testdata.ResultWithResultCollectionDSL, ResultWithResultCollectionServerTypesFile},
 		{"with-result-view", testdata.ResultWithResultViewDSL, ResultWithResultViewServerTypesFile},
+		{"empty-error-response-body", testdata.EmptyErrorResponseBodyDSL, ""},
 	}
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {

@@ -256,7 +256,7 @@ func (r *HTTPResponseExpr) Validate(e *HTTPEndpointExpr) *eval.ValidationErrors 
 func (r *HTTPResponseExpr) Finalize(a *HTTPEndpointExpr, svcAtt *AttributeExpr) {
 	r.Parent = a
 
-	if r.Body != nil {
+	if r.Body != nil && r.Body.Type != Empty {
 		bodyAtt := svcAtt
 		if o, ok := r.Body.Meta["origin:attribute"]; ok {
 			bodyAtt = svcAtt.Find(o[0])

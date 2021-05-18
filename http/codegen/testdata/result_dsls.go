@@ -744,6 +744,21 @@ var ResultWithResultCollectionDSL = func() {
 	})
 }
 
+var EmptyErrorResponseBodyDSL = func() {
+	Service("ServiceEmptyErrorResponseBody", func() {
+		Method("MethodEmptyErrorResponseBody", func() {
+			Error("internal_error")
+			HTTP(func() {
+				POST("/")
+				Response(StatusOK)
+				Response("internal_error", StatusInternalServerError, func() {
+					Body(Empty)
+				})
+			})
+		})
+	})
+}
+
 var ResultWithResultViewDSL = func() {
 	var RT = ResultType("RT", func() {
 		Attributes(func() {
