@@ -77,6 +77,7 @@ func TestClientTypes(t *testing.T) {
 		{"payload-extend-validate", testdata.PayloadExtendedValidateDSL, PayloadExtendedValidateClientTypesFile},
 		{"result-type-validate", testdata.ResultTypeValidateDSL, ResultTypeValidateClientTypesFile},
 		{"with-result-collection", testdata.ResultWithResultCollectionDSL, WithResultCollectionClientTypesFile},
+		{"empty-error-response-body", testdata.EmptyErrorResponseBodyDSL, EmptyErrorResponseBodyClientTypesFile},
 	}
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
@@ -703,5 +704,30 @@ func ValidateRtResponseBody(body *RtResponseBody) (err error) {
 		}
 	}
 	return
+}
+`
+
+const EmptyErrorResponseBodyClientTypesFile = `// NewMethodEmptyErrorResponseBodyInternalError builds a
+// ServiceEmptyErrorResponseBody service MethodEmptyErrorResponseBody endpoint
+// internal_error error.
+func NewMethodEmptyErrorResponseBodyInternalError(name string, id string, message string, fault bool, temporary bool, timeout bool) *goa.ServiceError {
+	v := &goa.ServiceError{}
+	v.Name = name
+	v.ID = id
+	v.Message = message
+	v.Fault = fault
+	v.Temporary = temporary
+	v.Timeout = timeout
+
+	return v
+}
+
+// NewMethodEmptyErrorResponseBodyNotFound builds a
+// ServiceEmptyErrorResponseBody service MethodEmptyErrorResponseBody endpoint
+// not_found error.
+func NewMethodEmptyErrorResponseBodyNotFound(inHeader string) serviceemptyerrorresponsebody.NotFound {
+	v := serviceemptyerrorresponsebody.NotFound(inHeader)
+
+	return v
 }
 `

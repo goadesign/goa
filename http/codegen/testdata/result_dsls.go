@@ -748,11 +748,22 @@ var EmptyErrorResponseBodyDSL = func() {
 	Service("ServiceEmptyErrorResponseBody", func() {
 		Method("MethodEmptyErrorResponseBody", func() {
 			Error("internal_error")
+			Error("not_found", String)
 			HTTP(func() {
 				POST("/")
 				Response(StatusOK)
 				Response("internal_error", StatusInternalServerError, func() {
 					Body(Empty)
+					Header("name:Error-Name")
+					Header("id:Error-ID")
+					Header("message:Error-message")
+					Header("fault:Error-Fault")
+					Header("temporary:Error-Temporary")
+					Header("timeout:Error-Timeout")
+				})
+				Response("not_found", StatusNotFound, func() {
+					Body(Empty)
+					Header("in-header")
 				})
 			})
 		})

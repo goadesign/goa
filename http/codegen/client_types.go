@@ -243,8 +243,8 @@ func {{ .Name }}({{- range .ClientArgs }}{{ .VarName }} {{ .TypeRef }}, {{ end }
 	{{- if not .ClientCode }}
 	{{ if .ReturnTypeAttribute }}res{{ else }}v{{ end }} := &{{ .ReturnTypeName }}{}
 	{{- end }}
-	{{ fieldCode . "client" }}
 {{- end }}
+	{{ fieldCode . "client" }}
 	return {{ if .ReturnTypeAttribute }}res{{ else }}v{{ end }}
 }
 `

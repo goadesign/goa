@@ -214,10 +214,6 @@ func fieldCode(init *InitData, typ string) string {
 	if typ == "client" {
 		args = init.ClientArgs
 	}
-	mustInit := false
-	if (typ == "server" && init.ServerCode == "") || (typ == "client" && init.ClientCode == "") {
-		mustInit = true
-	}
 	initArgs := make([]*codegen.InitArgData, len(args))
 	for i, arg := range args {
 		initArgs[i] = &codegen.InitArgData{
@@ -231,7 +227,7 @@ func fieldCode(init *InitData, typ string) string {
 	}
 	// We can ignore the transform helpers as there won't be any generated
 	// because the headers and params cannot be user types.
-	c, _, err := codegen.InitStructFields(initArgs, init.ReturnTypeName, varn, "", init.ReturnTypePkg, mustInit)
+	c, _, err := codegen.InitStructFields(initArgs, varn, "", init.ReturnTypePkg)
 	if err != nil {
 		panic(err) //bug
 	}
