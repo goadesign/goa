@@ -564,7 +564,7 @@ func fieldCode(init *PayloadInitData) string {
 	}
 	// We can ignore the transform helpers as there won't be any generated
 	// because the args cannot be user types.
-	c, _, err := codegen.InitStructFields(init.Args, init.ReturnTypeName, varn, "", init.ReturnTypePkg, init.Code == "")
+	c, _, err := codegen.InitStructFields(init.Args, varn, "", init.ReturnTypePkg)
 	if err != nil {
 		panic(err) //bug
 	}

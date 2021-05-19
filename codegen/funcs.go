@@ -258,7 +258,7 @@ func WrapText(text string, maxChars int) string {
 
 // InitStructFields produces Go code to initialize a struct and its fields from
 // the given init arguments.
-func InitStructFields(args []*InitArgData, name, targetVar, sourcePkg, targetPkg string, mustInit bool) (string, []*TransformFunctionData, error) {
+func InitStructFields(args []*InitArgData, targetVar, sourcePkg, targetPkg string) (string, []*TransformFunctionData, error) {
 	scope := NewNameScope()
 	scope.Unique(targetVar)
 
@@ -268,8 +268,8 @@ func InitStructFields(args []*InitArgData, name, targetVar, sourcePkg, targetPkg
 	)
 	for _, arg := range args {
 		switch {
-		case arg.FieldName == "":
-			// do nothing
+		case arg.FieldName == "" && arg.FieldType == nil:
+		// do nothing
 		case expr.Equal(arg.Type, arg.FieldType):
 			// arg type and struct field type are the same. No need to call transform
 			// to initialize the field
@@ -287,8 +287,10 @@ func InitStructFields(args []*InitArgData, name, targetVar, sourcePkg, targetPkg
 			}
 			if arg.FieldPointer {
 				code += fmt.Sprintf("tmp%s := %s\n%s.%s = &tmp%s\n", arg.Name, cast, targetVar, arg.FieldName, arg.Name)
-			} else {
+			} else if arg.FieldName != "" {
 				code += fmt.Sprintf("%s.%s = %s\n", targetVar, arg.FieldName, cast)
+			} else {
+				code += fmt.Sprintf("%s := %s\n", targetVar, cast)
 			}
 		default:
 			srcctx := NewAttributeContext(arg.Pointer, false, true, sourcePkg, scope)
