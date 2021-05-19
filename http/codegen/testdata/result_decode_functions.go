@@ -825,3 +825,112 @@ func DecodeMethodAResponse(decoder func(*http.Response) goahttp.Decoder, restore
 	}
 }
 `
+
+var EmptyErrorResponseBodyDecodeCode = `// DecodeMethodEmptyErrorResponseBodyResponse returns a decoder for responses
+// returned by the ServiceEmptyErrorResponseBody MethodEmptyErrorResponseBody
+// endpoint. restoreBody controls whether the response body should be restored
+// after having been read.
+// DecodeMethodEmptyErrorResponseBodyResponse may return the following errors:
+//	- "internal_error" (type *goa.ServiceError): http.StatusInternalServerError
+//	- "not_found" (type serviceemptyerrorresponsebody.NotFound): http.StatusNotFound
+//	- error: internal error
+func DecodeMethodEmptyErrorResponseBodyResponse(decoder func(*http.Response) goahttp.Decoder, restoreBody bool) func(*http.Response) (interface{}, error) {
+	return func(resp *http.Response) (interface{}, error) {
+		if restoreBody {
+			b, err := ioutil.ReadAll(resp.Body)
+			if err != nil {
+				return nil, err
+			}
+			resp.Body = ioutil.NopCloser(bytes.NewBuffer(b))
+			defer func() {
+				resp.Body = ioutil.NopCloser(bytes.NewBuffer(b))
+			}()
+		} else {
+			defer resp.Body.Close()
+		}
+		switch resp.StatusCode {
+		case http.StatusOK:
+			return nil, nil
+		case http.StatusInternalServerError:
+			var (
+				name      string
+				id        string
+				message   string
+				fault     bool
+				temporary bool
+				timeout   bool
+				err       error
+			)
+			nameRaw := resp.Header.Get("Error-Name")
+			if nameRaw == "" {
+				err = goa.MergeErrors(err, goa.MissingFieldError("Error-Name", "header"))
+			}
+			name = nameRaw
+			idRaw := resp.Header.Get("Error-Id")
+			if idRaw == "" {
+				err = goa.MergeErrors(err, goa.MissingFieldError("Error-ID", "header"))
+			}
+			id = idRaw
+			messageRaw := resp.Header.Get("Error-Message")
+			if messageRaw == "" {
+				err = goa.MergeErrors(err, goa.MissingFieldError("Error-message", "header"))
+			}
+			message = messageRaw
+			{
+				faultRaw := resp.Header.Get("Error-Fault")
+				if faultRaw == "" {
+					return nil, goahttp.ErrValidationError("ServiceEmptyErrorResponseBody", "MethodEmptyErrorResponseBody", goa.MissingFieldError("Error-Fault", "header"))
+				}
+				v, err2 := strconv.ParseBool(faultRaw)
+				if err2 != nil {
+					err = goa.MergeErrors(err, goa.InvalidFieldTypeError("fault", faultRaw, "boolean"))
+				}
+				fault = v
+			}
+			{
+				temporaryRaw := resp.Header.Get("Error-Temporary")
+				if temporaryRaw == "" {
+					return nil, goahttp.ErrValidationError("ServiceEmptyErrorResponseBody", "MethodEmptyErrorResponseBody", goa.MissingFieldError("Error-Temporary", "header"))
+				}
+				v, err2 := strconv.ParseBool(temporaryRaw)
+				if err2 != nil {
+					err = goa.MergeErrors(err, goa.InvalidFieldTypeError("temporary", temporaryRaw, "boolean"))
+				}
+				temporary = v
+			}
+			{
+				timeoutRaw := resp.Header.Get("Error-Timeout")
+				if timeoutRaw == "" {
+					return nil, goahttp.ErrValidationError("ServiceEmptyErrorResponseBody", "MethodEmptyErrorResponseBody", goa.MissingFieldError("Error-Timeout", "header"))
+				}
+				v, err2 := strconv.ParseBool(timeoutRaw)
+				if err2 != nil {
+					err = goa.MergeErrors(err, goa.InvalidFieldTypeError("timeout", timeoutRaw, "boolean"))
+				}
+				timeout = v
+			}
+			if err != nil {
+				return nil, goahttp.ErrValidationError("ServiceEmptyErrorResponseBody", "MethodEmptyErrorResponseBody", err)
+			}
+			return nil, NewMethodEmptyErrorResponseBodyInternalError(name, id, message, fault, temporary, timeout)
+		case http.StatusNotFound:
+			var (
+				inHeader string
+				err      error
+			)
+			inHeaderRaw := resp.Header.Get("In-Header")
+			if inHeaderRaw == "" {
+				err = goa.MergeErrors(err, goa.MissingFieldError("in-header", "header"))
+			}
+			inHeader = inHeaderRaw
+			if err != nil {
+				return nil, goahttp.ErrValidationError("ServiceEmptyErrorResponseBody", "MethodEmptyErrorResponseBody", err)
+			}
+			return nil, NewMethodEmptyErrorResponseBodyNotFound(inHeader)
+		default:
+			body, _ := ioutil.ReadAll(resp.Body)
+			return nil, goahttp.ErrInvalidResponse("ServiceEmptyErrorResponseBody", "MethodEmptyErrorResponseBody", resp.StatusCode, string(body))
+		}
+	}
+}
+`

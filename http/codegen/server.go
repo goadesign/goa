@@ -1251,7 +1251,7 @@ const responseT = `{{ define "response" -}}
 	if res.{{ if $.ViewedResult }}Projected.{{ end }}{{ .FieldName }} != nil {
 		{{- end }}
 
-		{{- if eq .Type.Name "string" }}
+		{{- if and (eq .Type.Name "string") (not (isAliased .FieldType)) }}
 	w.Header().Set("{{ .CanonicalName }}", {{ if or .FieldPointer $.ViewedResult }}*{{ end }}res{{ if $.ViewedResult }}.Projected{{ end }}{{ if .FieldName }}.{{ .FieldName }}{{ end }})
 		{{- else }}
 			{{- if isAliased .FieldType }}
@@ -1324,7 +1324,7 @@ const responseT = `{{ define "response" -}}
 	{{- end }}
 
 	{{- if .ErrorHeader }}
-	w.Header().Set("goa-error", {{ printf "%q" .ErrorHeader }})
+	w.Header().Set("goa-error", res.ErrorName())
 	{{- end }}
 	w.WriteHeader({{ .StatusCode }})
 {{- end }}

@@ -30,6 +30,7 @@ func TestClientDecode(t *testing.T) {
 		{"with-headers-dsl", testdata.WithHeadersBlockDSL, testdata.WithHeadersBlockResponseDecodeCode},
 		{"with-headers-dsl-viewed-result", testdata.WithHeadersBlockViewedResultDSL, testdata.WithHeadersBlockViewedResultResponseDecodeCode},
 		{"validate-error-response-type", testdata.ValidateErrorResponseTypeDSL, testdata.ValidateErrorResponseTypeDecodeCode},
+		{"empty-error-response-body", testdata.EmptyErrorResponseBodyDSL, testdata.EmptyErrorResponseBodyDecodeCode},
 	}
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
