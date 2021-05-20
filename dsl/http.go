@@ -907,7 +907,12 @@ func Body(args ...interface{}) {
 			kind += " " + e.Name
 		}
 	case *expr.HTTPResponseExpr:
-		ref = e.Parent.(*expr.HTTPEndpointExpr).MethodExpr.Result
+		p, ok := e.Parent.(*expr.HTTPEndpointExpr)
+		if !ok {
+			eval.IncompatibleDSL()
+			return
+		}
+		ref = p.MethodExpr.Result
 		setter = func(att *expr.AttributeExpr) {
 			e.Body = att
 		}
