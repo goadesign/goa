@@ -17,7 +17,6 @@ func TestHTTPErrorResponseValidation(t *testing.T) {
 		{"header object result", objectErrorResponseWithHeadersDSL, ""},
 		{"header array result", arrayErrorResponseWithHeadersDSL, ""},
 		{"header map result", mapErrorResponseWithHeadersDSL, `HTTP response of service "MapErrorResponseWithHeaders" HTTP endpoint "Method": attribute "foo" used in HTTP headers must be a primitive type or an array of primitive types.`},
-		{"invalid", emptyErrorResponseWithHeadersDSL, `HTTP response of service "EmptyErrorResponseWithHeaders" HTTP endpoint "Method": response defines headers but result is empty`},
 		{"implicit object in header", implicitObjectErrorResponseWithHeadersDSL, `HTTP response of service "ArrayObjectErrorResponseWithHeaders" HTTP endpoint "Method": attribute "foo" used in HTTP headers must be a primitive type or an array of primitive types.`},
 		{"array of object in header", arrayObjectErrorResponseWithHeadersDSL, `HTTP response of service "ArrayObjectErrorResponseWithHeaders" HTTP endpoint "Method": Array error type is mapped to an HTTP header but is not an array of primitive types.`},
 		{"map in header", mapErrorTypeResponseWithHeadersDSL, `HTTP response of service "MapErrorTypeResponseWithHeaders" HTTP endpoint "Method": error type must be a primitive type or an array of primitive types.`},
@@ -142,19 +141,6 @@ var mapErrorResponseWithHeadersDSL = func() {
 			HTTP(func() {
 				POST("/")
 				Response("error", func() {
-					Header("foo:Location")
-				})
-			})
-		})
-	})
-}
-
-var emptyErrorResponseWithHeadersDSL = func() {
-	Service("EmptyErrorResponseWithHeaders", func() {
-		Method("Method", func() {
-			HTTP(func() {
-				POST("/")
-				Response(func() {
 					Header("foo:Location")
 				})
 			})
