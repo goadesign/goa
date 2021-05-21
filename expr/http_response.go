@@ -188,8 +188,7 @@ func (r *HTTPResponseExpr) Validate(e *HTTPEndpointExpr) *eval.ValidationErrors 
 				t := resultAttributeType(h.Name)
 				if t == nil {
 					verr.Add(r, "header %q has no equivalent attribute in%s result type, use notation 'attribute_name:header_name' to identify corresponding result type attribute.", h.Name, inview)
-				}
-				if IsArray(t) {
+				} else if IsArray(t) {
 					if !IsPrimitive(AsArray(t).ElemType.Type) {
 						verr.Add(e, "attribute %q used in HTTP headers must be a primitive type or an array of primitive types.", h.Name)
 					}
