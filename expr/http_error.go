@@ -53,7 +53,7 @@ func (e *HTTPErrorExpr) Validate() *eval.ValidationErrors {
 	}
 
 	// validate headers
-	if !e.Response.Headers.IsEmpty() {
+	if e.Response.Headers != nil && !e.Response.Headers.IsEmpty() {
 		verr.Merge(e.Response.Headers.Validate("HTTP error response headers", e.Response))
 		switch {
 		case ee.Type == Empty:
