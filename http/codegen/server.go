@@ -1248,7 +1248,7 @@ const responseT = `{{ define "response" -}}
 		{{- $initDef := and (or .FieldPointer .Slice) .DefaultValue (not $.TagName) }}
 		{{- $checkNil := and (or .FieldPointer .Slice (eq .Type.Name "bytes") (eq .Type.Name "any") $initDef) (not $.TagName) }}
 		{{- if $checkNil }}
-	if res.{{ if $.ViewedResult }}Projected.{{ end }}{{ .FieldName }} != nil {
+	if res{{ if .FieldName }}.{{ end }}{{ if $.ViewedResult }}Projected.{{ end }}{{ if .FieldName }}{{ .FieldName }}{{ end }} != nil {
 		{{- end }}
 
 		{{- if and (eq .Type.Name "string") (not (isAliased .FieldType)) }}

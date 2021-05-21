@@ -296,10 +296,42 @@ func (r *HTTPResponseExpr) Finalize(a *HTTPEndpointExpr, svcAtt *AttributeExpr) 
 			r.Body.Meta = bodyAtt.Meta
 		}
 	}
+
 	// Set response content type if empty and if set in the result type
 	if r.ContentType == "" {
 		if rt, ok := svcAtt.Type.(*ResultTypeExpr); ok && rt.ContentType != "" {
 			r.ContentType = rt.ContentType
+		}
+	}
+
+	for _, route := range a.Routes {
+		// if the endpoint defines a HEAD method then goa maps all the attributes
+		// in the service attribute to special headers `Goa-Attribute-<Name>`. This
+		// is because the HEAD method does not allow a response body as per RFC
+		// 2616 section 9.4.  If the design explicitly maps any service attributes
+		// to the response headers, they will be honored.
+		// goa would have returned a validation error if the response body is not
+		// Empty. So at this point, we can safely assume that the response body is
+		// empty.
+		if route.Method == "HEAD" {
+			switch {
+			case IsObject(svcAtt.Type):
+				// map the attribute names in the service type to response headers if
+				// not mapped explicitly.
+				for _, nat := range *(AsObject(svcAtt.Type)) {
+					if _, found := r.Headers.FindKey(nat.Name); found {
+						// header defined explicitly in the design. nothing to do.
+						continue
+					}
+					r.Headers.Type.(*Object).Set(nat.Name, nat.Attribute)
+					r.Headers.Map("goa-attribute-"+nat.Name, nat.Name)
+				}
+			default:
+				if r.Headers.IsEmpty() {
+					r.Headers.Type.(*Object).Set("goa-attribute", svcAtt)
+				}
+			}
+			break
 		}
 	}
 	initAttr(r.Headers, svcAtt)

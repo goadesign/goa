@@ -287,22 +287,22 @@ func EncodeMethodEmptyErrorResponseBodyError(encoder func(context.Context, http.
 		case "internal_error":
 			res := v.(*goa.ServiceError)
 			w.Header().Set("Error-Name", res.Name)
-			w.Header().Set("Error-Id", res.ID)
-			w.Header().Set("Error-Message", res.Message)
-			{
-				val := res.Fault
-				faults := strconv.FormatBool(val)
-				w.Header().Set("Error-Fault", faults)
-			}
+			w.Header().Set("Goa-Attribute-Id", res.ID)
+			w.Header().Set("Goa-Attribute-Message", res.Message)
 			{
 				val := res.Temporary
 				temporarys := strconv.FormatBool(val)
-				w.Header().Set("Error-Temporary", temporarys)
+				w.Header().Set("Goa-Attribute-Temporary", temporarys)
 			}
 			{
 				val := res.Timeout
 				timeouts := strconv.FormatBool(val)
-				w.Header().Set("Error-Timeout", timeouts)
+				w.Header().Set("Goa-Attribute-Timeout", timeouts)
+			}
+			{
+				val := res.Fault
+				faults := strconv.FormatBool(val)
+				w.Header().Set("Goa-Attribute-Fault", faults)
 			}
 			w.Header().Set("goa-error", res.ErrorName())
 			w.WriteHeader(http.StatusInternalServerError)

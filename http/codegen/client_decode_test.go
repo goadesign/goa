@@ -31,6 +31,16 @@ func TestClientDecode(t *testing.T) {
 		{"with-headers-dsl-viewed-result", testdata.WithHeadersBlockViewedResultDSL, testdata.WithHeadersBlockViewedResultResponseDecodeCode},
 		{"validate-error-response-type", testdata.ValidateErrorResponseTypeDSL, testdata.ValidateErrorResponseTypeDecodeCode},
 		{"empty-error-response-body", testdata.EmptyErrorResponseBodyDSL, testdata.EmptyErrorResponseBodyDecodeCode},
+
+		{"head-endpoint-result-object", testdata.HeadEndpointResultObjectDSL, testdata.HeadEndpointResultObjectDecodeCode},
+		{"head-endpoint-result-object-validate", testdata.HeadEndpointResultObjectValidateDSL, testdata.HeadEndpointResultObjectValidateDecodeCode},
+		{"head-endpoint-result-object-with-headers", testdata.HeadEndpointResultObjectWithHeadersDSL, testdata.HeadEndpointResultObjectWithHeadersDecodeCode},
+		{"head-endpoint-result-primitive", testdata.HeadEndpointResultPrimitiveDSL, testdata.HeadEndpointResultPrimitiveDecodeCode},
+		{"head-endpoint-result-primitive-validate", testdata.HeadEndpointResultPrimitiveValidateDSL, testdata.HeadEndpointResultPrimitiveValidateDecodeCode},
+		{"head-endpoint-result-primitive-with-headers", testdata.HeadEndpointResultPrimitiveWithHeadersDSL, testdata.HeadEndpointResultPrimitiveWithHeadersDecodeCode},
+		{"head-endpoint-result-array", testdata.HeadEndpointResultArrayDSL, testdata.HeadEndpointResultArrayDecodeCode},
+		{"head-endpoint-result-array-validate", testdata.HeadEndpointResultArrayValidateDSL, testdata.HeadEndpointResultArrayValidateDecodeCode},
+		{"head-endpoint-result-array-with-headers", testdata.HeadEndpointResultArrayWithHeadersDSL, testdata.HeadEndpointResultArrayWithHeadersDecodeCode},
 	}
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {

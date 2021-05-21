@@ -80,6 +80,16 @@ func TestEncode(t *testing.T) {
 
 		{"empty-server-response", testdata.EmptyServerResponseDSL, testdata.EmptyServerResponseEncodeCode},
 		{"empty-server-response-with-tags", testdata.EmptyServerResponseWithTagsDSL, testdata.EmptyServerResponseWithTagsEncodeCode},
+
+		{"head-endpoint-result-object", testdata.HeadEndpointResultObjectDSL, testdata.HeadEndpointResultObjectEncodeCode},
+		{"head-endpoint-result-object-validate", testdata.HeadEndpointResultObjectValidateDSL, testdata.HeadEndpointResultObjectValidateEncodeCode},
+		{"head-endpoint-result-object-with-headers", testdata.HeadEndpointResultObjectWithHeadersDSL, testdata.HeadEndpointResultObjectWithHeadersEncodeCode},
+		{"head-endpoint-result-primitive", testdata.HeadEndpointResultPrimitiveDSL, testdata.HeadEndpointResultPrimitiveEncodeCode},
+		{"head-endpoint-result-primitive-validate", testdata.HeadEndpointResultPrimitiveValidateDSL, testdata.HeadEndpointResultPrimitiveValidateEncodeCode},
+		{"head-endpoint-result-primitive-with-headers", testdata.HeadEndpointResultPrimitiveWithHeadersDSL, testdata.HeadEndpointResultPrimitiveWithHeadersEncodeCode},
+		{"head-endpoint-result-array", testdata.HeadEndpointResultArrayDSL, testdata.HeadEndpointResultArrayEncodeCode},
+		{"head-endpoint-result-array-validate", testdata.HeadEndpointResultArrayValidateDSL, testdata.HeadEndpointResultArrayValidateEncodeCode},
+		{"head-endpoint-result-array-with-headers", testdata.HeadEndpointResultArrayWithHeadersDSL, testdata.HeadEndpointResultArrayWithHeadersEncodeCode},
 	}
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {

@@ -1022,3 +1022,176 @@ func EncodeMethodEmptyServerResponseWithTagsResponse(encoder func(context.Contex
 	}
 }
 `
+
+var HeadEndpointResultObjectEncodeCode = `// EncodeMethodHeadEndpointResultObjectResponse returns an encoder for
+// responses returned by the ServiceHeadEndpointResultObject
+// MethodHeadEndpointResultObject endpoint.
+func EncodeMethodHeadEndpointResultObjectResponse(encoder func(context.Context, http.ResponseWriter) goahttp.Encoder) func(context.Context, http.ResponseWriter, interface{}) error {
+	return func(ctx context.Context, w http.ResponseWriter, v interface{}) error {
+		res, _ := v.(*serviceheadendpointresultobject.MethodHeadEndpointResultObjectResult)
+		if res.Hstr != nil {
+			w.Header().Set("Goa-Attribute-Hstr", *res.Hstr)
+		}
+		if res.Hint32 != nil {
+			val := res.Hint32
+			hint32s := strconv.FormatInt(int64(*val), 10)
+			w.Header().Set("Goa-Attribute-Hint32", hint32s)
+		}
+		w.WriteHeader(http.StatusOK)
+		return nil
+	}
+}
+`
+
+var HeadEndpointResultObjectValidateEncodeCode = `// EncodeMethodHeadEndpointResultObjectValidateResponse returns an encoder for
+// responses returned by the ServiceHeadEndpointResultObjectValidate
+// MethodHeadEndpointResultObjectValidate endpoint.
+func EncodeMethodHeadEndpointResultObjectValidateResponse(encoder func(context.Context, http.ResponseWriter) goahttp.Encoder) func(context.Context, http.ResponseWriter, interface{}) error {
+	return func(ctx context.Context, w http.ResponseWriter, v interface{}) error {
+		res, _ := v.(*serviceheadendpointresultobjectvalidate.MethodHeadEndpointResultObjectValidateResult)
+		if res.Hstr != nil {
+			w.Header().Set("Goa-Attribute-Hstr", *res.Hstr)
+		}
+		if res.Hint32 != nil {
+			val := res.Hint32
+			hint32s := strconv.FormatInt(int64(*val), 10)
+			w.Header().Set("Goa-Attribute-Hint32", hint32s)
+		}
+		w.WriteHeader(http.StatusOK)
+		return nil
+	}
+}
+`
+
+var HeadEndpointResultObjectWithHeadersEncodeCode = `// EncodeMethodHeadEndpointResultObjectWithHeadersResponse returns an encoder
+// for responses returned by the ServiceHeadEndpointResultObjectWithHeaders
+// MethodHeadEndpointResultObjectWithHeaders endpoint.
+func EncodeMethodHeadEndpointResultObjectWithHeadersResponse(encoder func(context.Context, http.ResponseWriter) goahttp.Encoder) func(context.Context, http.ResponseWriter, interface{}) error {
+	return func(ctx context.Context, w http.ResponseWriter, v interface{}) error {
+		res, _ := v.(*serviceheadendpointresultobjectwithheaders.MethodHeadEndpointResultObjectWithHeadersResult)
+		if res.Hint32 != nil {
+			val := res.Hint32
+			hint32s := strconv.FormatInt(int64(*val), 10)
+			w.Header().Set("Location", hint32s)
+		}
+		if res.Hstr != nil {
+			w.Header().Set("Goa-Attribute-Hstr", *res.Hstr)
+		}
+		w.WriteHeader(http.StatusOK)
+		return nil
+	}
+}
+`
+
+var HeadEndpointResultPrimitiveEncodeCode = `// EncodeMethodHeadEndpointResultPrimitiveResponse returns an encoder for
+// responses returned by the ServiceHeadEndpointResultPrimitive
+// MethodHeadEndpointResultPrimitive endpoint.
+func EncodeMethodHeadEndpointResultPrimitiveResponse(encoder func(context.Context, http.ResponseWriter) goahttp.Encoder) func(context.Context, http.ResponseWriter, interface{}) error {
+	return func(ctx context.Context, w http.ResponseWriter, v interface{}) error {
+		res, _ := v.(float32)
+		{
+			val := res
+			goaAttributes := strconv.FormatFloat(float64(val), 'f', -1, 32)
+			w.Header().Set("Goa-Attribute", goaAttributes)
+		}
+		w.WriteHeader(http.StatusOK)
+		return nil
+	}
+}
+`
+
+var HeadEndpointResultPrimitiveValidateEncodeCode = `// EncodeMethodHeadEndpointResultPrimitiveValidateResponse returns an encoder
+// for responses returned by the ServiceHeadEndpointResultPrimitiveValidate
+// MethodHeadEndpointResultPrimitiveValidate endpoint.
+func EncodeMethodHeadEndpointResultPrimitiveValidateResponse(encoder func(context.Context, http.ResponseWriter) goahttp.Encoder) func(context.Context, http.ResponseWriter, interface{}) error {
+	return func(ctx context.Context, w http.ResponseWriter, v interface{}) error {
+		res, _ := v.(float32)
+		{
+			val := res
+			goaAttributes := strconv.FormatFloat(float64(val), 'f', -1, 32)
+			w.Header().Set("Goa-Attribute", goaAttributes)
+		}
+		w.WriteHeader(http.StatusOK)
+		return nil
+	}
+}
+`
+
+var HeadEndpointResultPrimitiveWithHeadersEncodeCode = `// EncodeMethodHeadEndpointResultPrimitiveWithHeadersResponse returns an
+// encoder for responses returned by the
+// ServiceHeadEndpointResultPrimitiveWithHeaders
+// MethodHeadEndpointResultPrimitiveWithHeaders endpoint.
+func EncodeMethodHeadEndpointResultPrimitiveWithHeadersResponse(encoder func(context.Context, http.ResponseWriter) goahttp.Encoder) func(context.Context, http.ResponseWriter, interface{}) error {
+	return func(ctx context.Context, w http.ResponseWriter, v interface{}) error {
+		res, _ := v.(interface{})
+		if res != nil {
+			val := res
+			locations := fmt.Sprintf("%v", val)
+			w.Header().Set("Location", locations)
+		}
+		w.WriteHeader(http.StatusOK)
+		return nil
+	}
+}
+`
+
+var HeadEndpointResultArrayEncodeCode = `// EncodeMethodHeadEndpointResultArrayResponse returns an encoder for responses
+// returned by the ServiceHeadEndpointResultArray MethodHeadEndpointResultArray
+// endpoint.
+func EncodeMethodHeadEndpointResultArrayResponse(encoder func(context.Context, http.ResponseWriter) goahttp.Encoder) func(context.Context, http.ResponseWriter, interface{}) error {
+	return func(ctx context.Context, w http.ResponseWriter, v interface{}) error {
+		res, _ := v.([]uint)
+		if res != nil {
+			val := res
+			goaAttributesSlice := make([]string, len(val))
+			for i, e := range val {
+				es := strconv.FormatUint(uint64(e), 10)
+				goaAttributesSlice[i] = es
+			}
+			goaAttributes := strings.Join(goaAttributesSlice, ", ")
+			w.Header().Set("Goa-Attribute", goaAttributes)
+		}
+		w.WriteHeader(http.StatusOK)
+		return nil
+	}
+}
+`
+
+var HeadEndpointResultArrayValidateEncodeCode = `// EncodeMethodHeadEndpointResultArrayValidateResponse returns an encoder for
+// responses returned by the ServiceHeadEndpointResultArrayValidate
+// MethodHeadEndpointResultArrayValidate endpoint.
+func EncodeMethodHeadEndpointResultArrayValidateResponse(encoder func(context.Context, http.ResponseWriter) goahttp.Encoder) func(context.Context, http.ResponseWriter, interface{}) error {
+	return func(ctx context.Context, w http.ResponseWriter, v interface{}) error {
+		res, _ := v.([]uint)
+		if res != nil {
+			val := res
+			goaAttributesSlice := make([]string, len(val))
+			for i, e := range val {
+				es := strconv.FormatUint(uint64(e), 10)
+				goaAttributesSlice[i] = es
+			}
+			goaAttributes := strings.Join(goaAttributesSlice, ", ")
+			w.Header().Set("Goa-Attribute", goaAttributes)
+		}
+		w.WriteHeader(http.StatusOK)
+		return nil
+	}
+}
+`
+
+var HeadEndpointResultArrayWithHeadersEncodeCode = `// EncodeMethodHeadEndpointResultArrayWithHeadersResponse returns an encoder
+// for responses returned by the ServiceHeadEndpointResultArrayWithHeaders
+// MethodHeadEndpointResultArrayWithHeaders endpoint.
+func EncodeMethodHeadEndpointResultArrayWithHeadersResponse(encoder func(context.Context, http.ResponseWriter) goahttp.Encoder) func(context.Context, http.ResponseWriter, interface{}) error {
+	return func(ctx context.Context, w http.ResponseWriter, v interface{}) error {
+		res, _ := v.([]string)
+		if res != nil {
+			val := res
+			locations := strings.Join(val, ", ")
+			w.Header().Set("Location", locations)
+		}
+		w.WriteHeader(http.StatusOK)
+		return nil
+	}
+}
+`

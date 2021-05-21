@@ -710,14 +710,14 @@ func ValidateRtResponseBody(body *RtResponseBody) (err error) {
 const EmptyErrorResponseBodyClientTypesFile = `// NewMethodEmptyErrorResponseBodyInternalError builds a
 // ServiceEmptyErrorResponseBody service MethodEmptyErrorResponseBody endpoint
 // internal_error error.
-func NewMethodEmptyErrorResponseBodyInternalError(name string, id string, message string, fault bool, temporary bool, timeout bool) *goa.ServiceError {
+func NewMethodEmptyErrorResponseBodyInternalError(name string, id string, message string, temporary bool, timeout bool, fault bool) *goa.ServiceError {
 	v := &goa.ServiceError{}
 	v.Name = name
 	v.ID = id
 	v.Message = message
-	v.Fault = fault
 	v.Temporary = temporary
 	v.Timeout = timeout
+	v.Fault = fault
 
 	return v
 }

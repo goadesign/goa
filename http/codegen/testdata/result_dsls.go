@@ -750,16 +750,11 @@ var EmptyErrorResponseBodyDSL = func() {
 			Error("internal_error")
 			Error("not_found", String)
 			HTTP(func() {
-				POST("/")
+				HEAD("/")
 				Response(StatusOK)
 				Response("internal_error", StatusInternalServerError, func() {
 					Body(Empty)
 					Header("name:Error-Name")
-					Header("id:Error-ID")
-					Header("message:Error-message")
-					Header("fault:Error-Fault")
-					Header("temporary:Error-Temporary")
-					Header("timeout:Error-Timeout")
 				})
 				Response("not_found", StatusNotFound, func() {
 					Body(Empty)
@@ -1276,6 +1271,152 @@ var EmptyServerResponseWithTagsDSL = func() {
 				Response(StatusNotModified, func() {
 					Tag("h", "true")
 					Body(Empty)
+				})
+			})
+		})
+	})
+}
+
+var HeadEndpointResultObjectDSL = func() {
+	Service("ServiceHeadEndpointResultObject", func() {
+		Method("MethodHeadEndpointResultObject", func() {
+			Result(func() {
+				Attribute("hstr", String)
+				Attribute("hint32", Int32)
+			})
+			HTTP(func() {
+				HEAD("/")
+				Response(StatusOK, func() {
+					Body(Empty)
+				})
+			})
+		})
+	})
+}
+
+var HeadEndpointResultObjectValidateDSL = func() {
+	Service("ServiceHeadEndpointResultObjectValidate", func() {
+		Method("MethodHeadEndpointResultObjectValidate", func() {
+			Result(func() {
+				Attribute("hstr", String, func() {
+					Format(FormatDateTime)
+				})
+				Attribute("hint32", Int32, func() {
+					Minimum(5)
+				})
+			})
+			HTTP(func() {
+				HEAD("/")
+				Response(StatusOK, func() {
+					Body(Empty)
+				})
+			})
+		})
+	})
+}
+
+var HeadEndpointResultObjectWithHeadersDSL = func() {
+	Service("ServiceHeadEndpointResultObjectWithHeaders", func() {
+		Method("MethodHeadEndpointResultObjectWithHeaders", func() {
+			Result(func() {
+				Attribute("hstr", String)
+				Attribute("hint32", Int32)
+			})
+			HTTP(func() {
+				HEAD("/")
+				Response(StatusOK, func() {
+					Body(Empty)
+					Header("hint32:Location")
+				})
+			})
+		})
+	})
+}
+
+var HeadEndpointResultPrimitiveDSL = func() {
+	Service("ServiceHeadEndpointResultPrimitive", func() {
+		Method("MethodHeadEndpointResultPrimitive", func() {
+			Result(Float32)
+			HTTP(func() {
+				HEAD("/")
+				Response(StatusOK, func() {
+					Body(Empty)
+				})
+			})
+		})
+	})
+}
+
+var HeadEndpointResultPrimitiveValidateDSL = func() {
+	Service("ServiceHeadEndpointResultPrimitiveValidate", func() {
+		Method("MethodHeadEndpointResultPrimitiveValidate", func() {
+			Result(Float32, func() {
+				Maximum(5.0)
+			})
+			HTTP(func() {
+				HEAD("/")
+				Response(StatusOK, func() {
+					Body(Empty)
+				})
+			})
+		})
+	})
+}
+
+var HeadEndpointResultPrimitiveWithHeadersDSL = func() {
+	Service("ServiceHeadEndpointResultPrimitiveWithHeaders", func() {
+		Method("MethodHeadEndpointResultPrimitiveWithHeaders", func() {
+			Result(Any)
+			HTTP(func() {
+				HEAD("/")
+				Response(StatusOK, func() {
+					Body(Empty)
+					Header("Location")
+				})
+			})
+		})
+	})
+}
+
+var HeadEndpointResultArrayDSL = func() {
+	Service("ServiceHeadEndpointResultArray", func() {
+		Method("MethodHeadEndpointResultArray", func() {
+			Result(ArrayOf(UInt))
+			HTTP(func() {
+				HEAD("/")
+				Response(StatusOK, func() {
+					Body(Empty)
+				})
+			})
+		})
+	})
+}
+
+var HeadEndpointResultArrayValidateDSL = func() {
+	Service("ServiceHeadEndpointResultArrayValidate", func() {
+		Method("MethodHeadEndpointResultArrayValidate", func() {
+			Result(ArrayOf(UInt), func() {
+				MinLength(10)
+			})
+			HTTP(func() {
+				HEAD("/")
+				Response(StatusOK, func() {
+					Body(Empty)
+				})
+			})
+		})
+	})
+}
+
+var HeadEndpointResultArrayWithHeadersDSL = func() {
+	Service("ServiceHeadEndpointResultArrayWithHeaders", func() {
+		Method("MethodHeadEndpointResultArrayWithHeaders", func() {
+			Result(ArrayOf(String))
+			HTTP(func() {
+				HEAD("/")
+				Response(StatusOK, func() {
+					Body(Empty)
+					Header("Location")
 				})
 			})
 		})
