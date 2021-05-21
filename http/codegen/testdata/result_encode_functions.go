@@ -442,9 +442,11 @@ var ResultHeaderBoolDefaultEncodeCode = `// EncodeMethodHeaderBoolDefaultRespons
 func EncodeMethodHeaderBoolDefaultResponse(encoder func(context.Context, http.ResponseWriter) goahttp.Encoder) func(context.Context, http.ResponseWriter, interface{}) error {
 	return func(ctx context.Context, w http.ResponseWriter, v interface{}) error {
 		res, _ := v.(*serviceheaderbooldefault.MethodHeaderBoolDefaultResult)
-		val := res.H
-		hs := strconv.FormatBool(val)
-		w.Header().Set("H", hs)
+		{
+			val := res.H
+			hs := strconv.FormatBool(val)
+			w.Header().Set("H", hs)
+		}
 		w.WriteHeader(http.StatusOK)
 		return nil
 	}
@@ -457,9 +459,11 @@ var ResultHeaderBoolRequiredDefaultEncodeCode = `// EncodeMethodHeaderBoolRequir
 func EncodeMethodHeaderBoolRequiredDefaultResponse(encoder func(context.Context, http.ResponseWriter) goahttp.Encoder) func(context.Context, http.ResponseWriter, interface{}) error {
 	return func(ctx context.Context, w http.ResponseWriter, v interface{}) error {
 		res, _ := v.(*serviceheaderboolrequireddefault.MethodHeaderBoolRequiredDefaultResult)
-		val := res.H
-		hs := strconv.FormatBool(val)
-		w.Header().Set("H", hs)
+		{
+			val := res.H
+			hs := strconv.FormatBool(val)
+			w.Header().Set("H", hs)
+		}
 		w.WriteHeader(http.StatusOK)
 		return nil
 	}
