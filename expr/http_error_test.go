@@ -148,20 +148,6 @@ var mapErrorResponseWithHeadersDSL = func() {
 	})
 }
 
-var intErrorResponseWithTextContentTypeDSL = func() {
-	Service("StringErrorResponseWithHeaders", func() {
-		Method("Method", func() {
-			Error("error", Int)
-			HTTP(func() {
-				POST("/")
-				Response("error", func() {
-					ContentType("text/plain")
-				})
-			})
-		})
-	})
-}
-
 var missingHeaderErrorAttributeDSL = func() {
 	Service("MissingHeaderErrorAttribute", func() {
 		Method("Method", func() {
