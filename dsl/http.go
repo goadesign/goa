@@ -535,7 +535,7 @@ func CookiePath(p string) {
 	cookieAttribute("path", p)
 }
 
-// CookieSecure initializes the "secute" attribute of a HTTP response cookie
+// CookieSecure initializes the "secure" attribute of a HTTP response cookie
 // with "Secure".
 //
 // CookieSecure must appear in a Cookie expression.

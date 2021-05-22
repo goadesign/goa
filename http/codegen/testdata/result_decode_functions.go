@@ -20,7 +20,19 @@ func DecodeMethodEmptyServerResponseResponse(decoder func(*http.Response) goahtt
 		}
 		switch resp.StatusCode {
 		case http.StatusOK:
-			res := NewMethodEmptyServerResponseResultOK()
+			var (
+				h   string
+				err error
+			)
+			hRaw := resp.Header.Get("Goa-Attribute-H")
+			if hRaw == "" {
+				err = goa.MergeErrors(err, goa.MissingFieldError("goa-attribute-h", "header"))
+			}
+			h = hRaw
+			if err != nil {
+				return nil, goahttp.ErrValidationError("ServiceEmptyServerResponse", "MethodEmptyServerResponse", err)
+			}
+			res := NewMethodEmptyServerResponseResultOK(h)
 			return res, nil
 		default:
 			body, _ := ioutil.ReadAll(resp.Body)
@@ -103,12 +115,22 @@ func DecodeMethodEmptyBodyResultMultipleViewResponse(decoder func(*http.Response
 		case http.StatusOK:
 			var (
 				c *string
+				a *string
+				b *string
 			)
 			cRaw := resp.Header.Get("Location")
 			if cRaw != "" {
 				c = &cRaw
 			}
-			p := NewMethodEmptyBodyResultMultipleViewResulttypemultipleviewsOK(c)
+			aRaw := resp.Header.Get("Goa-Attribute-A")
+			if aRaw != "" {
+				a = &aRaw
+			}
+			bRaw := resp.Header.Get("Goa-Attribute-B")
+			if bRaw != "" {
+				b = &bRaw
+			}
+			p := NewMethodEmptyBodyResultMultipleViewResulttypemultipleviewsOK(c, a, b)
 			view := resp.Header.Get("goa-view")
 			vres := &serviceemptybodyresultmultipleviewviews.Resulttypemultipleviews{Projected: p, View: view}
 			res := serviceemptybodyresultmultipleview.NewResulttypemultipleviews(vres)
@@ -158,12 +180,17 @@ func DecodeMethodExplicitBodyPrimitiveResultMultipleViewResponse(decoder func(*h
 			}
 			var (
 				c *string
+				b *string
 			)
 			cRaw := resp.Header.Get("Location")
 			if cRaw != "" {
 				c = &cRaw
 			}
-			p := NewMethodExplicitBodyPrimitiveResultMultipleViewResulttypemultipleviewsOK(body, c)
+			bRaw := resp.Header.Get("Goa-Attribute-B")
+			if bRaw != "" {
+				b = &bRaw
+			}
+			p := NewMethodExplicitBodyPrimitiveResultMultipleViewResulttypemultipleviewsOK(body, c, b)
 			view := resp.Header.Get("goa-view")
 			vres := &serviceexplicitbodyprimitiveresultmultipleviewviews.Resulttypemultipleviews{Projected: p, View: view}
 			if err = serviceexplicitbodyprimitiveresultmultipleviewviews.ValidateResulttypemultipleviews(vres); err != nil {
@@ -209,12 +236,17 @@ func DecodeMethodExplicitBodyUserResultMultipleViewResponse(decoder func(*http.R
 			}
 			var (
 				c *string
+				b *string
 			)
 			cRaw := resp.Header.Get("Location")
 			if cRaw != "" {
 				c = &cRaw
 			}
-			p := NewMethodExplicitBodyUserResultMultipleViewResulttypemultipleviewsOK(&body, c)
+			bRaw := resp.Header.Get("Goa-Attribute-B")
+			if bRaw != "" {
+				b = &bRaw
+			}
+			p := NewMethodExplicitBodyUserResultMultipleViewResulttypemultipleviewsOK(&body, c, b)
 			view := resp.Header.Get("goa-view")
 			vres := &serviceexplicitbodyuserresultmultipleviewviews.Resulttypemultipleviews{Projected: p, View: view}
 			if err = serviceexplicitbodyuserresultmultipleviewviews.ValidateResulttypemultipleviews(vres); err != nil {
@@ -366,7 +398,19 @@ func DecodeMethodEmptyServerResponseWithTagsResponse(decoder func(*http.Response
 			res.H = "true"
 			return res, nil
 		case http.StatusNoContent:
-			res := NewMethodEmptyServerResponseWithTagsResultNoContent()
+			var (
+				h   string
+				err error
+			)
+			hRaw := resp.Header.Get("Goa-Attribute-H")
+			if hRaw == "" {
+				err = goa.MergeErrors(err, goa.MissingFieldError("goa-attribute-h", "header"))
+			}
+			h = hRaw
+			if err != nil {
+				return nil, goahttp.ErrValidationError("ServiceEmptyServerResponseWithTags", "MethodEmptyServerResponseWithTags", err)
+			}
+			res := NewMethodEmptyServerResponseWithTagsResultNoContent(h)
 			return res, nil
 		default:
 			body, _ := ioutil.ReadAll(resp.Body)
@@ -935,11 +979,11 @@ func DecodeMethodEmptyErrorResponseBodyResponse(decoder func(*http.Response) goa
 }
 `
 
-var HeadEndpointResultObjectDecodeCode = `// DecodeMethodHeadEndpointResultObjectResponse returns a decoder for responses
-// returned by the ServiceHeadEndpointResultObject
-// MethodHeadEndpointResultObject endpoint. restoreBody controls whether the
-// response body should be restored after having been read.
-func DecodeMethodHeadEndpointResultObjectResponse(decoder func(*http.Response) goahttp.Decoder, restoreBody bool) func(*http.Response) (interface{}, error) {
+var UnmappedResultObjectDecodeCode = `// DecodeMethodUnmappedResultObjectResponse returns a decoder for responses
+// returned by the ServiceUnmappedResultObject MethodUnmappedResultObject
+// endpoint. restoreBody controls whether the response body should be restored
+// after having been read.
+func DecodeMethodUnmappedResultObjectResponse(decoder func(*http.Response) goahttp.Decoder, restoreBody bool) func(*http.Response) (interface{}, error) {
 	return func(resp *http.Response) (interface{}, error) {
 		if restoreBody {
 			b, err := ioutil.ReadAll(resp.Body)
@@ -976,23 +1020,23 @@ func DecodeMethodHeadEndpointResultObjectResponse(decoder func(*http.Response) g
 				}
 			}
 			if err != nil {
-				return nil, goahttp.ErrValidationError("ServiceHeadEndpointResultObject", "MethodHeadEndpointResultObject", err)
+				return nil, goahttp.ErrValidationError("ServiceUnmappedResultObject", "MethodUnmappedResultObject", err)
 			}
-			res := NewMethodHeadEndpointResultObjectResultOK(hstr, hint32)
+			res := NewMethodUnmappedResultObjectResultOK(hstr, hint32)
 			return res, nil
 		default:
 			body, _ := ioutil.ReadAll(resp.Body)
-			return nil, goahttp.ErrInvalidResponse("ServiceHeadEndpointResultObject", "MethodHeadEndpointResultObject", resp.StatusCode, string(body))
+			return nil, goahttp.ErrInvalidResponse("ServiceUnmappedResultObject", "MethodUnmappedResultObject", resp.StatusCode, string(body))
 		}
 	}
 }
 `
 
-var HeadEndpointResultObjectValidateDecodeCode = `// DecodeMethodHeadEndpointResultObjectValidateResponse returns a decoder for
-// responses returned by the ServiceHeadEndpointResultObjectValidate
-// MethodHeadEndpointResultObjectValidate endpoint. restoreBody controls
-// whether the response body should be restored after having been read.
-func DecodeMethodHeadEndpointResultObjectValidateResponse(decoder func(*http.Response) goahttp.Decoder, restoreBody bool) func(*http.Response) (interface{}, error) {
+var UnmappedResultObjectValidateDecodeCode = `// DecodeMethodUnmappedResultObjectValidateResponse returns a decoder for
+// responses returned by the ServiceUnmappedResultObjectValidate
+// MethodUnmappedResultObjectValidate endpoint. restoreBody controls whether
+// the response body should be restored after having been read.
+func DecodeMethodUnmappedResultObjectValidateResponse(decoder func(*http.Response) goahttp.Decoder, restoreBody bool) func(*http.Response) (interface{}, error) {
 	return func(resp *http.Response) (interface{}, error) {
 		if restoreBody {
 			b, err := ioutil.ReadAll(resp.Body)
@@ -1037,23 +1081,23 @@ func DecodeMethodHeadEndpointResultObjectValidateResponse(decoder func(*http.Res
 				}
 			}
 			if err != nil {
-				return nil, goahttp.ErrValidationError("ServiceHeadEndpointResultObjectValidate", "MethodHeadEndpointResultObjectValidate", err)
+				return nil, goahttp.ErrValidationError("ServiceUnmappedResultObjectValidate", "MethodUnmappedResultObjectValidate", err)
 			}
-			res := NewMethodHeadEndpointResultObjectValidateResultOK(hstr, hint32)
+			res := NewMethodUnmappedResultObjectValidateResultOK(hstr, hint32)
 			return res, nil
 		default:
 			body, _ := ioutil.ReadAll(resp.Body)
-			return nil, goahttp.ErrInvalidResponse("ServiceHeadEndpointResultObjectValidate", "MethodHeadEndpointResultObjectValidate", resp.StatusCode, string(body))
+			return nil, goahttp.ErrInvalidResponse("ServiceUnmappedResultObjectValidate", "MethodUnmappedResultObjectValidate", resp.StatusCode, string(body))
 		}
 	}
 }
 `
 
-var HeadEndpointResultObjectWithHeadersDecodeCode = `// DecodeMethodHeadEndpointResultObjectWithHeadersResponse returns a decoder
-// for responses returned by the ServiceHeadEndpointResultObjectWithHeaders
-// MethodHeadEndpointResultObjectWithHeaders endpoint. restoreBody controls
-// whether the response body should be restored after having been read.
-func DecodeMethodHeadEndpointResultObjectWithHeadersResponse(decoder func(*http.Response) goahttp.Decoder, restoreBody bool) func(*http.Response) (interface{}, error) {
+var UnmappedResultObjectWithHeadersDecodeCode = `// DecodeMethodUnmappedResultObjectWithHeadersResponse returns a decoder for
+// responses returned by the ServiceUnmappedResultObjectWithHeaders
+// MethodUnmappedResultObjectWithHeaders endpoint. restoreBody controls whether
+// the response body should be restored after having been read.
+func DecodeMethodUnmappedResultObjectWithHeadersResponse(decoder func(*http.Response) goahttp.Decoder, restoreBody bool) func(*http.Response) (interface{}, error) {
 	return func(resp *http.Response) (interface{}, error) {
 		if restoreBody {
 			b, err := ioutil.ReadAll(resp.Body)
@@ -1090,23 +1134,23 @@ func DecodeMethodHeadEndpointResultObjectWithHeadersResponse(decoder func(*http.
 				hstr = &hstrRaw
 			}
 			if err != nil {
-				return nil, goahttp.ErrValidationError("ServiceHeadEndpointResultObjectWithHeaders", "MethodHeadEndpointResultObjectWithHeaders", err)
+				return nil, goahttp.ErrValidationError("ServiceUnmappedResultObjectWithHeaders", "MethodUnmappedResultObjectWithHeaders", err)
 			}
-			res := NewMethodHeadEndpointResultObjectWithHeadersResultOK(hint32, hstr)
+			res := NewMethodUnmappedResultObjectWithHeadersResultOK(hint32, hstr)
 			return res, nil
 		default:
 			body, _ := ioutil.ReadAll(resp.Body)
-			return nil, goahttp.ErrInvalidResponse("ServiceHeadEndpointResultObjectWithHeaders", "MethodHeadEndpointResultObjectWithHeaders", resp.StatusCode, string(body))
+			return nil, goahttp.ErrInvalidResponse("ServiceUnmappedResultObjectWithHeaders", "MethodUnmappedResultObjectWithHeaders", resp.StatusCode, string(body))
 		}
 	}
 }
 `
 
-var HeadEndpointResultPrimitiveDecodeCode = `// DecodeMethodHeadEndpointResultPrimitiveResponse returns a decoder for
-// responses returned by the ServiceHeadEndpointResultPrimitive
-// MethodHeadEndpointResultPrimitive endpoint. restoreBody controls whether the
-// response body should be restored after having been read.
-func DecodeMethodHeadEndpointResultPrimitiveResponse(decoder func(*http.Response) goahttp.Decoder, restoreBody bool) func(*http.Response) (interface{}, error) {
+var UnmappedResultPrimitiveDecodeCode = `// DecodeMethodUnmappedResultPrimitiveResponse returns a decoder for responses
+// returned by the ServiceUnmappedResultPrimitive MethodUnmappedResultPrimitive
+// endpoint. restoreBody controls whether the response body should be restored
+// after having been read.
+func DecodeMethodUnmappedResultPrimitiveResponse(decoder func(*http.Response) goahttp.Decoder, restoreBody bool) func(*http.Response) (interface{}, error) {
 	return func(resp *http.Response) (interface{}, error) {
 		if restoreBody {
 			b, err := ioutil.ReadAll(resp.Body)
@@ -1123,37 +1167,37 @@ func DecodeMethodHeadEndpointResultPrimitiveResponse(decoder func(*http.Response
 		switch resp.StatusCode {
 		case http.StatusOK:
 			var (
-				goaAttribute float32
+				goaAttribute *float32
 				err          error
 			)
 			{
 				goaAttributeRaw := resp.Header.Get("Goa-Attribute")
-				if goaAttributeRaw == "" {
-					return nil, goahttp.ErrValidationError("ServiceHeadEndpointResultPrimitive", "MethodHeadEndpointResultPrimitive", goa.MissingFieldError("goa-attribute", "header"))
+				if goaAttributeRaw != "" {
+					v, err2 := strconv.ParseFloat(goaAttributeRaw, 32)
+					if err2 != nil {
+						err = goa.MergeErrors(err, goa.InvalidFieldTypeError("goaAttribute", goaAttributeRaw, "float"))
+					}
+					pv := float32(v)
+					goaAttribute = &pv
 				}
-				v, err2 := strconv.ParseFloat(goaAttributeRaw, 32)
-				if err2 != nil {
-					err = goa.MergeErrors(err, goa.InvalidFieldTypeError("goaAttribute", goaAttributeRaw, "float"))
-				}
-				goaAttribute = float32(v)
 			}
 			if err != nil {
-				return nil, goahttp.ErrValidationError("ServiceHeadEndpointResultPrimitive", "MethodHeadEndpointResultPrimitive", err)
+				return nil, goahttp.ErrValidationError("ServiceUnmappedResultPrimitive", "MethodUnmappedResultPrimitive", err)
 			}
 			return goaAttribute, nil
 		default:
 			body, _ := ioutil.ReadAll(resp.Body)
-			return nil, goahttp.ErrInvalidResponse("ServiceHeadEndpointResultPrimitive", "MethodHeadEndpointResultPrimitive", resp.StatusCode, string(body))
+			return nil, goahttp.ErrInvalidResponse("ServiceUnmappedResultPrimitive", "MethodUnmappedResultPrimitive", resp.StatusCode, string(body))
 		}
 	}
 }
 `
 
-var HeadEndpointResultPrimitiveValidateDecodeCode = `// DecodeMethodHeadEndpointResultPrimitiveValidateResponse returns a decoder
-// for responses returned by the ServiceHeadEndpointResultPrimitiveValidate
-// MethodHeadEndpointResultPrimitiveValidate endpoint. restoreBody controls
-// whether the response body should be restored after having been read.
-func DecodeMethodHeadEndpointResultPrimitiveValidateResponse(decoder func(*http.Response) goahttp.Decoder, restoreBody bool) func(*http.Response) (interface{}, error) {
+var UnmappedResultPrimitiveValidateDecodeCode = `// DecodeMethodUnmappedResultPrimitiveValidateResponse returns a decoder for
+// responses returned by the ServiceUnmappedResultPrimitiveValidate
+// MethodUnmappedResultPrimitiveValidate endpoint. restoreBody controls whether
+// the response body should be restored after having been read.
+func DecodeMethodUnmappedResultPrimitiveValidateResponse(decoder func(*http.Response) goahttp.Decoder, restoreBody bool) func(*http.Response) (interface{}, error) {
 	return func(resp *http.Response) (interface{}, error) {
 		if restoreBody {
 			b, err := ioutil.ReadAll(resp.Body)
@@ -1170,40 +1214,42 @@ func DecodeMethodHeadEndpointResultPrimitiveValidateResponse(decoder func(*http.
 		switch resp.StatusCode {
 		case http.StatusOK:
 			var (
-				goaAttribute float32
+				goaAttribute *float32
 				err          error
 			)
 			{
 				goaAttributeRaw := resp.Header.Get("Goa-Attribute")
-				if goaAttributeRaw == "" {
-					return nil, goahttp.ErrValidationError("ServiceHeadEndpointResultPrimitiveValidate", "MethodHeadEndpointResultPrimitiveValidate", goa.MissingFieldError("goa-attribute", "header"))
+				if goaAttributeRaw != "" {
+					v, err2 := strconv.ParseFloat(goaAttributeRaw, 32)
+					if err2 != nil {
+						err = goa.MergeErrors(err, goa.InvalidFieldTypeError("goaAttribute", goaAttributeRaw, "float"))
+					}
+					pv := float32(v)
+					goaAttribute = &pv
 				}
-				v, err2 := strconv.ParseFloat(goaAttributeRaw, 32)
-				if err2 != nil {
-					err = goa.MergeErrors(err, goa.InvalidFieldTypeError("goaAttribute", goaAttributeRaw, "float"))
-				}
-				goaAttribute = float32(v)
 			}
-			if goaAttribute > 5 {
-				err = goa.MergeErrors(err, goa.InvalidRangeError("goaAttribute", goaAttribute, 5, false))
+			if goaAttribute != nil {
+				if *goaAttribute > 5 {
+					err = goa.MergeErrors(err, goa.InvalidRangeError("goaAttribute", *goaAttribute, 5, false))
+				}
 			}
 			if err != nil {
-				return nil, goahttp.ErrValidationError("ServiceHeadEndpointResultPrimitiveValidate", "MethodHeadEndpointResultPrimitiveValidate", err)
+				return nil, goahttp.ErrValidationError("ServiceUnmappedResultPrimitiveValidate", "MethodUnmappedResultPrimitiveValidate", err)
 			}
 			return goaAttribute, nil
 		default:
 			body, _ := ioutil.ReadAll(resp.Body)
-			return nil, goahttp.ErrInvalidResponse("ServiceHeadEndpointResultPrimitiveValidate", "MethodHeadEndpointResultPrimitiveValidate", resp.StatusCode, string(body))
+			return nil, goahttp.ErrInvalidResponse("ServiceUnmappedResultPrimitiveValidate", "MethodUnmappedResultPrimitiveValidate", resp.StatusCode, string(body))
 		}
 	}
 }
 `
 
-var HeadEndpointResultPrimitiveWithHeadersDecodeCode = `// DecodeMethodHeadEndpointResultPrimitiveWithHeadersResponse returns a decoder
-// for responses returned by the ServiceHeadEndpointResultPrimitiveWithHeaders
-// MethodHeadEndpointResultPrimitiveWithHeaders endpoint. restoreBody controls
+var UnmappedResultPrimitiveWithHeadersDecodeCode = `// DecodeMethodUnmappedResultPrimitiveWithHeadersResponse returns a decoder
+// for responses returned by the ServiceUnmappedResultPrimitiveWithHeaders
+// MethodUnmappedResultPrimitiveWithHeaders endpoint. restoreBody controls
 // whether the response body should be restored after having been read.
-func DecodeMethodHeadEndpointResultPrimitiveWithHeadersResponse(decoder func(*http.Response) goahttp.Decoder, restoreBody bool) func(*http.Response) (interface{}, error) {
+func DecodeMethodUnmappedResultPrimitiveWithHeadersResponse(decoder func(*http.Response) goahttp.Decoder, restoreBody bool) func(*http.Response) (interface{}, error) {
 	return func(resp *http.Response) (interface{}, error) {
 		if restoreBody {
 			b, err := ioutil.ReadAll(resp.Body)
@@ -1229,22 +1275,22 @@ func DecodeMethodHeadEndpointResultPrimitiveWithHeadersResponse(decoder func(*ht
 			}
 			location = locationRaw
 			if err != nil {
-				return nil, goahttp.ErrValidationError("ServiceHeadEndpointResultPrimitiveWithHeaders", "MethodHeadEndpointResultPrimitiveWithHeaders", err)
+				return nil, goahttp.ErrValidationError("ServiceUnmappedResultPrimitiveWithHeaders", "MethodUnmappedResultPrimitiveWithHeaders", err)
 			}
 			return location, nil
 		default:
 			body, _ := ioutil.ReadAll(resp.Body)
-			return nil, goahttp.ErrInvalidResponse("ServiceHeadEndpointResultPrimitiveWithHeaders", "MethodHeadEndpointResultPrimitiveWithHeaders", resp.StatusCode, string(body))
+			return nil, goahttp.ErrInvalidResponse("ServiceUnmappedResultPrimitiveWithHeaders", "MethodUnmappedResultPrimitiveWithHeaders", resp.StatusCode, string(body))
 		}
 	}
 }
 `
 
-var HeadEndpointResultArrayDecodeCode = `// DecodeMethodHeadEndpointResultArrayResponse returns a decoder for responses
-// returned by the ServiceHeadEndpointResultArray MethodHeadEndpointResultArray
+var UnmappedResultArrayDecodeCode = `// DecodeMethodUnmappedResultArrayResponse returns a decoder for responses
+// returned by the ServiceUnmappedResultArray MethodUnmappedResultArray
 // endpoint. restoreBody controls whether the response body should be restored
 // after having been read.
-func DecodeMethodHeadEndpointResultArrayResponse(decoder func(*http.Response) goahttp.Decoder, restoreBody bool) func(*http.Response) (interface{}, error) {
+func DecodeMethodUnmappedResultArrayResponse(decoder func(*http.Response) goahttp.Decoder, restoreBody bool) func(*http.Response) (interface{}, error) {
 	return func(resp *http.Response) (interface{}, error) {
 		if restoreBody {
 			b, err := ioutil.ReadAll(resp.Body)
@@ -1266,35 +1312,35 @@ func DecodeMethodHeadEndpointResultArrayResponse(decoder func(*http.Response) go
 			)
 			{
 				goaAttributeRaw := resp.Header["Goa-Attribute"]
-				if goaAttributeRaw == nil {
-					return nil, goahttp.ErrValidationError("ServiceHeadEndpointResultArray", "MethodHeadEndpointResultArray", goa.MissingFieldError("goa-attribute", "header"))
-				}
-				goaAttribute = make([]uint, len(goaAttributeRaw))
-				for i, rv := range goaAttributeRaw {
-					v, err2 := strconv.ParseUint(rv, 10, strconv.IntSize)
-					if err2 != nil {
-						err = goa.MergeErrors(err, goa.InvalidFieldTypeError("goaAttribute", goaAttributeRaw, "array of unsigned integers"))
+
+				if goaAttributeRaw != nil {
+					goaAttribute = make([]uint, len(goaAttributeRaw))
+					for i, rv := range goaAttributeRaw {
+						v, err2 := strconv.ParseUint(rv, 10, strconv.IntSize)
+						if err2 != nil {
+							err = goa.MergeErrors(err, goa.InvalidFieldTypeError("goaAttribute", goaAttributeRaw, "array of unsigned integers"))
+						}
+						goaAttribute[i] = uint(v)
 					}
-					goaAttribute[i] = uint(v)
 				}
 			}
 			if err != nil {
-				return nil, goahttp.ErrValidationError("ServiceHeadEndpointResultArray", "MethodHeadEndpointResultArray", err)
+				return nil, goahttp.ErrValidationError("ServiceUnmappedResultArray", "MethodUnmappedResultArray", err)
 			}
 			return goaAttribute, nil
 		default:
 			body, _ := ioutil.ReadAll(resp.Body)
-			return nil, goahttp.ErrInvalidResponse("ServiceHeadEndpointResultArray", "MethodHeadEndpointResultArray", resp.StatusCode, string(body))
+			return nil, goahttp.ErrInvalidResponse("ServiceUnmappedResultArray", "MethodUnmappedResultArray", resp.StatusCode, string(body))
 		}
 	}
 }
 `
 
-var HeadEndpointResultArrayValidateDecodeCode = `// DecodeMethodHeadEndpointResultArrayValidateResponse returns a decoder for
-// responses returned by the ServiceHeadEndpointResultArrayValidate
-// MethodHeadEndpointResultArrayValidate endpoint. restoreBody controls whether
-// the response body should be restored after having been read.
-func DecodeMethodHeadEndpointResultArrayValidateResponse(decoder func(*http.Response) goahttp.Decoder, restoreBody bool) func(*http.Response) (interface{}, error) {
+var UnmappedResultArrayValidateDecodeCode = `// DecodeMethodUnmappedResultArrayValidateResponse returns a decoder for
+// responses returned by the ServiceUnmappedResultArrayValidate
+// MethodUnmappedResultArrayValidate endpoint. restoreBody controls whether the
+// response body should be restored after having been read.
+func DecodeMethodUnmappedResultArrayValidateResponse(decoder func(*http.Response) goahttp.Decoder, restoreBody bool) func(*http.Response) (interface{}, error) {
 	return func(resp *http.Response) (interface{}, error) {
 		if restoreBody {
 			b, err := ioutil.ReadAll(resp.Body)
@@ -1316,37 +1362,38 @@ func DecodeMethodHeadEndpointResultArrayValidateResponse(decoder func(*http.Resp
 			)
 			{
 				goaAttributeRaw := resp.Header["Goa-Attribute"]
-				if goaAttributeRaw == nil {
-					return nil, goahttp.ErrValidationError("ServiceHeadEndpointResultArrayValidate", "MethodHeadEndpointResultArrayValidate", goa.MissingFieldError("goa-attribute", "header"))
-				}
-				goaAttribute = make([]uint, len(goaAttributeRaw))
-				for i, rv := range goaAttributeRaw {
-					v, err2 := strconv.ParseUint(rv, 10, strconv.IntSize)
-					if err2 != nil {
-						err = goa.MergeErrors(err, goa.InvalidFieldTypeError("goaAttribute", goaAttributeRaw, "array of unsigned integers"))
+
+				if goaAttributeRaw != nil {
+					goaAttribute = make([]uint, len(goaAttributeRaw))
+					for i, rv := range goaAttributeRaw {
+						v, err2 := strconv.ParseUint(rv, 10, strconv.IntSize)
+						if err2 != nil {
+							err = goa.MergeErrors(err, goa.InvalidFieldTypeError("goaAttribute", goaAttributeRaw, "array of unsigned integers"))
+						}
+						goaAttribute[i] = uint(v)
 					}
-					goaAttribute[i] = uint(v)
 				}
 			}
 			if len(goaAttribute) < 10 {
 				err = goa.MergeErrors(err, goa.InvalidLengthError("goaAttribute", goaAttribute, len(goaAttribute), 10, true))
 			}
 			if err != nil {
-				return nil, goahttp.ErrValidationError("ServiceHeadEndpointResultArrayValidate", "MethodHeadEndpointResultArrayValidate", err)
+				return nil, goahttp.ErrValidationError("ServiceUnmappedResultArrayValidate", "MethodUnmappedResultArrayValidate", err)
 			}
 			return goaAttribute, nil
 		default:
 			body, _ := ioutil.ReadAll(resp.Body)
-			return nil, goahttp.ErrInvalidResponse("ServiceHeadEndpointResultArrayValidate", "MethodHeadEndpointResultArrayValidate", resp.StatusCode, string(body))
+			return nil, goahttp.ErrInvalidResponse("ServiceUnmappedResultArrayValidate", "MethodUnmappedResultArrayValidate", resp.StatusCode, string(body))
 		}
 	}
 }
 `
-var HeadEndpointResultArrayWithHeadersDecodeCode = `// DecodeMethodHeadEndpointResultArrayWithHeadersResponse returns a decoder for
-// responses returned by the ServiceHeadEndpointResultArrayWithHeaders
-// MethodHeadEndpointResultArrayWithHeaders endpoint. restoreBody controls
+
+var UnmappedResultArrayWithHeadersDecodeCode = `// DecodeMethodUnmappedResultArrayWithHeadersResponse returns a decoder for
+// responses returned by the ServiceUnmappedResultArrayWithHeaders
+// MethodUnmappedResultArrayWithHeaders endpoint. restoreBody controls
 // whether the response body should be restored after having been read.
-func DecodeMethodHeadEndpointResultArrayWithHeadersResponse(decoder func(*http.Response) goahttp.Decoder, restoreBody bool) func(*http.Response) (interface{}, error) {
+func DecodeMethodUnmappedResultArrayWithHeadersResponse(decoder func(*http.Response) goahttp.Decoder, restoreBody bool) func(*http.Response) (interface{}, error) {
 	return func(resp *http.Response) (interface{}, error) {
 		if restoreBody {
 			b, err := ioutil.ReadAll(resp.Body)
@@ -1372,12 +1419,12 @@ func DecodeMethodHeadEndpointResultArrayWithHeadersResponse(decoder func(*http.R
 				err = goa.MergeErrors(err, goa.MissingFieldError("Location", "header"))
 			}
 			if err != nil {
-				return nil, goahttp.ErrValidationError("ServiceHeadEndpointResultArrayWithHeaders", "MethodHeadEndpointResultArrayWithHeaders", err)
+				return nil, goahttp.ErrValidationError("ServiceUnmappedResultArrayWithHeaders", "MethodUnmappedResultArrayWithHeaders", err)
 			}
 			return location, nil
 		default:
 			body, _ := ioutil.ReadAll(resp.Body)
-			return nil, goahttp.ErrInvalidResponse("ServiceHeadEndpointResultArrayWithHeaders", "MethodHeadEndpointResultArrayWithHeaders", resp.StatusCode, string(body))
+			return nil, goahttp.ErrInvalidResponse("ServiceUnmappedResultArrayWithHeaders", "MethodUnmappedResultArrayWithHeaders", resp.StatusCode, string(body))
 		}
 	}
 }

@@ -222,12 +222,13 @@ const ExplicitBodyPrimitiveResultMultipleViewsInitCode = `// NewMethodExplicitBo
 // builds a "ServiceExplicitBodyPrimitiveResultMultipleView" service
 // "MethodExplicitBodyPrimitiveResultMultipleView" endpoint result from a HTTP
 // "OK" response.
-func NewMethodExplicitBodyPrimitiveResultMultipleViewResulttypemultipleviewsOK(body string, c *string) *serviceexplicitbodyprimitiveresultmultipleviewviews.ResulttypemultipleviewsView {
+func NewMethodExplicitBodyPrimitiveResultMultipleViewResulttypemultipleviewsOK(body string, c *string, b *string) *serviceexplicitbodyprimitiveresultmultipleviewviews.ResulttypemultipleviewsView {
 	v := body
 	res := &serviceexplicitbodyprimitiveresultmultipleviewviews.ResulttypemultipleviewsView{
 		A: &v,
 	}
 	res.C = c
+	res.B = b
 
 	return res
 }
@@ -237,7 +238,7 @@ const ExplicitBodyUserResultMultipleViewsInitCode = `// NewMethodExplicitBodyUse
 // a "ServiceExplicitBodyUserResultMultipleView" service
 // "MethodExplicitBodyUserResultMultipleView" endpoint result from a HTTP "OK"
 // response.
-func NewMethodExplicitBodyUserResultMultipleViewResulttypemultipleviewsOK(body *MethodExplicitBodyUserResultMultipleViewResponseBody, c *string) *serviceexplicitbodyuserresultmultipleviewviews.ResulttypemultipleviewsView {
+func NewMethodExplicitBodyUserResultMultipleViewResulttypemultipleviewsOK(body *MethodExplicitBodyUserResultMultipleViewResponseBody, c *string, b *string) *serviceexplicitbodyuserresultmultipleviewviews.ResulttypemultipleviewsView {
 	v := &serviceexplicitbodyuserresultmultipleviewviews.UserTypeView{
 		X: body.X,
 		Y: body.Y,
@@ -246,6 +247,7 @@ func NewMethodExplicitBodyUserResultMultipleViewResulttypemultipleviewsOK(body *
 		A: v,
 	}
 	res.C = c
+	res.B = b
 
 	return res
 }

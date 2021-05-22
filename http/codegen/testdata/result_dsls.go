@@ -1277,15 +1277,15 @@ var EmptyServerResponseWithTagsDSL = func() {
 	})
 }
 
-var HeadEndpointResultObjectDSL = func() {
-	Service("ServiceHeadEndpointResultObject", func() {
-		Method("MethodHeadEndpointResultObject", func() {
+var UnmappedResultObjectDSL = func() {
+	Service("ServiceUnmappedResultObject", func() {
+		Method("MethodUnmappedResultObject", func() {
 			Result(func() {
 				Attribute("hstr", String)
 				Attribute("hint32", Int32)
 			})
 			HTTP(func() {
-				HEAD("/")
+				POST("/")
 				Response(StatusOK, func() {
 					Body(Empty)
 				})
@@ -1294,9 +1294,26 @@ var HeadEndpointResultObjectDSL = func() {
 	})
 }
 
-var HeadEndpointResultObjectValidateDSL = func() {
-	Service("ServiceHeadEndpointResultObjectValidate", func() {
-		Method("MethodHeadEndpointResultObjectValidate", func() {
+var UnmappedResultObjectWithBodyDSL = func() {
+	Service("ServiceUnmappedResultObjectWithBody", func() {
+		Method("MethodUnmappedResultObjectWithBody", func() {
+			Result(func() {
+				Attribute("hstr", String)
+				Attribute("hint32", Int32)
+			})
+			HTTP(func() {
+				POST("/")
+				Response(StatusOK, func() {
+					Body("hstr")
+				})
+			})
+		})
+	})
+}
+
+var UnmappedResultObjectValidateDSL = func() {
+	Service("ServiceUnmappedResultObjectValidate", func() {
+		Method("MethodUnmappedResultObjectValidate", func() {
 			Result(func() {
 				Attribute("hstr", String, func() {
 					Format(FormatDateTime)
@@ -1306,7 +1323,7 @@ var HeadEndpointResultObjectValidateDSL = func() {
 				})
 			})
 			HTTP(func() {
-				HEAD("/")
+				DELETE("/")
 				Response(StatusOK, func() {
 					Body(Empty)
 				})
@@ -1315,9 +1332,9 @@ var HeadEndpointResultObjectValidateDSL = func() {
 	})
 }
 
-var HeadEndpointResultObjectWithHeadersDSL = func() {
-	Service("ServiceHeadEndpointResultObjectWithHeaders", func() {
-		Method("MethodHeadEndpointResultObjectWithHeaders", func() {
+var UnmappedResultObjectWithHeadersDSL = func() {
+	Service("ServiceUnmappedResultObjectWithHeaders", func() {
+		Method("MethodUnmappedResultObjectWithHeaders", func() {
 			Result(func() {
 				Attribute("hstr", String)
 				Attribute("hint32", Int32)
@@ -1333,9 +1350,9 @@ var HeadEndpointResultObjectWithHeadersDSL = func() {
 	})
 }
 
-var HeadEndpointResultPrimitiveDSL = func() {
-	Service("ServiceHeadEndpointResultPrimitive", func() {
-		Method("MethodHeadEndpointResultPrimitive", func() {
+var UnmappedResultPrimitiveDSL = func() {
+	Service("ServiceUnmappedResultPrimitive", func() {
+		Method("MethodUnmappedResultPrimitive", func() {
 			Result(Float32)
 			HTTP(func() {
 				HEAD("/")
@@ -1347,14 +1364,14 @@ var HeadEndpointResultPrimitiveDSL = func() {
 	})
 }
 
-var HeadEndpointResultPrimitiveValidateDSL = func() {
-	Service("ServiceHeadEndpointResultPrimitiveValidate", func() {
-		Method("MethodHeadEndpointResultPrimitiveValidate", func() {
+var UnmappedResultPrimitiveValidateDSL = func() {
+	Service("ServiceUnmappedResultPrimitiveValidate", func() {
+		Method("MethodUnmappedResultPrimitiveValidate", func() {
 			Result(Float32, func() {
 				Maximum(5.0)
 			})
 			HTTP(func() {
-				HEAD("/")
+				GET("/")
 				Response(StatusOK, func() {
 					Body(Empty)
 				})
@@ -1363,27 +1380,12 @@ var HeadEndpointResultPrimitiveValidateDSL = func() {
 	})
 }
 
-var HeadEndpointResultPrimitiveWithHeadersDSL = func() {
-	Service("ServiceHeadEndpointResultPrimitiveWithHeaders", func() {
-		Method("MethodHeadEndpointResultPrimitiveWithHeaders", func() {
-			Result(Any)
-			HTTP(func() {
-				HEAD("/")
-				Response(StatusOK, func() {
-					Body(Empty)
-					Header("Location")
-				})
-			})
-		})
-	})
-}
-
-var HeadEndpointResultArrayDSL = func() {
-	Service("ServiceHeadEndpointResultArray", func() {
-		Method("MethodHeadEndpointResultArray", func() {
+var UnmappedResultArrayDSL = func() {
+	Service("ServiceUnmappedResultArray", func() {
+		Method("MethodUnmappedResultArray", func() {
 			Result(ArrayOf(UInt))
 			HTTP(func() {
-				HEAD("/")
+				POST("/")
 				Response(StatusOK, func() {
 					Body(Empty)
 				})
@@ -1392,31 +1394,16 @@ var HeadEndpointResultArrayDSL = func() {
 	})
 }
 
-var HeadEndpointResultArrayValidateDSL = func() {
-	Service("ServiceHeadEndpointResultArrayValidate", func() {
-		Method("MethodHeadEndpointResultArrayValidate", func() {
+var UnmappedResultArrayValidateDSL = func() {
+	Service("ServiceUnmappedResultArrayValidate", func() {
+		Method("MethodUnmappedResultArrayValidate", func() {
 			Result(ArrayOf(UInt), func() {
 				MinLength(10)
 			})
 			HTTP(func() {
-				HEAD("/")
+				OPTIONS("/")
 				Response(StatusOK, func() {
 					Body(Empty)
-				})
-			})
-		})
-	})
-}
-
-var HeadEndpointResultArrayWithHeadersDSL = func() {
-	Service("ServiceHeadEndpointResultArrayWithHeaders", func() {
-		Method("MethodHeadEndpointResultArrayWithHeaders", func() {
-			Result(ArrayOf(String))
-			HTTP(func() {
-				HEAD("/")
-				Response(StatusOK, func() {
-					Body(Empty)
-					Header("Location")
 				})
 			})
 		})

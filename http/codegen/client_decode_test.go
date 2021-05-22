@@ -32,15 +32,13 @@ func TestClientDecode(t *testing.T) {
 		{"validate-error-response-type", testdata.ValidateErrorResponseTypeDSL, testdata.ValidateErrorResponseTypeDecodeCode},
 		{"empty-error-response-body", testdata.EmptyErrorResponseBodyDSL, testdata.EmptyErrorResponseBodyDecodeCode},
 
-		{"head-endpoint-result-object", testdata.HeadEndpointResultObjectDSL, testdata.HeadEndpointResultObjectDecodeCode},
-		{"head-endpoint-result-object-validate", testdata.HeadEndpointResultObjectValidateDSL, testdata.HeadEndpointResultObjectValidateDecodeCode},
-		{"head-endpoint-result-object-with-headers", testdata.HeadEndpointResultObjectWithHeadersDSL, testdata.HeadEndpointResultObjectWithHeadersDecodeCode},
-		{"head-endpoint-result-primitive", testdata.HeadEndpointResultPrimitiveDSL, testdata.HeadEndpointResultPrimitiveDecodeCode},
-		{"head-endpoint-result-primitive-validate", testdata.HeadEndpointResultPrimitiveValidateDSL, testdata.HeadEndpointResultPrimitiveValidateDecodeCode},
-		{"head-endpoint-result-primitive-with-headers", testdata.HeadEndpointResultPrimitiveWithHeadersDSL, testdata.HeadEndpointResultPrimitiveWithHeadersDecodeCode},
-		{"head-endpoint-result-array", testdata.HeadEndpointResultArrayDSL, testdata.HeadEndpointResultArrayDecodeCode},
-		{"head-endpoint-result-array-validate", testdata.HeadEndpointResultArrayValidateDSL, testdata.HeadEndpointResultArrayValidateDecodeCode},
-		{"head-endpoint-result-array-with-headers", testdata.HeadEndpointResultArrayWithHeadersDSL, testdata.HeadEndpointResultArrayWithHeadersDecodeCode},
+		{"unmapped-result-object", testdata.UnmappedResultObjectDSL, testdata.UnmappedResultObjectDecodeCode},
+		{"unmapped-result-object-validate", testdata.UnmappedResultObjectValidateDSL, testdata.UnmappedResultObjectValidateDecodeCode},
+		{"unmapped-result-object-with-headers", testdata.UnmappedResultObjectWithHeadersDSL, testdata.UnmappedResultObjectWithHeadersDecodeCode},
+		{"unmapped-result-primitive", testdata.UnmappedResultPrimitiveDSL, testdata.UnmappedResultPrimitiveDecodeCode},
+		{"unmapped-result-primitive-validate", testdata.UnmappedResultPrimitiveValidateDSL, testdata.UnmappedResultPrimitiveValidateDecodeCode},
+		{"unmapped-result-array", testdata.UnmappedResultArrayDSL, testdata.UnmappedResultArrayDecodeCode},
+		{"unmapped-result-array-validate", testdata.UnmappedResultArrayValidateDSL, testdata.UnmappedResultArrayValidateDecodeCode},
 	}
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {

@@ -688,6 +688,12 @@ func EncodeMethodEmptyBodyResultMultipleViewResponse(encoder func(context.Contex
 		if res.Projected.C != nil {
 			w.Header().Set("Location", *res.Projected.C)
 		}
+		if res.Projected.A != nil {
+			w.Header().Set("Goa-Attribute-A", *res.Projected.A)
+		}
+		if res.Projected.B != nil {
+			w.Header().Set("Goa-Attribute-B", *res.Projected.B)
+		}
 		w.WriteHeader(http.StatusOK)
 		return nil
 	}
@@ -733,6 +739,9 @@ func EncodeMethodExplicitBodyPrimitiveResultMultipleViewResponse(encoder func(co
 		if res.Projected.C != nil {
 			w.Header().Set("Location", *res.Projected.C)
 		}
+		if res.Projected.B != nil {
+			w.Header().Set("Goa-Attribute-B", *res.Projected.B)
+		}
 		w.WriteHeader(http.StatusOK)
 		return enc.Encode(body)
 	}
@@ -750,6 +759,9 @@ func EncodeMethodExplicitBodyUserResultMultipleViewResponse(encoder func(context
 		body := NewMethodExplicitBodyUserResultMultipleViewResponseBody(res.Projected)
 		if res.Projected.C != nil {
 			w.Header().Set("Location", *res.Projected.C)
+		}
+		if res.Projected.B != nil {
+			w.Header().Set("Goa-Attribute-B", *res.Projected.B)
 		}
 		w.WriteHeader(http.StatusOK)
 		return enc.Encode(body)
@@ -1001,6 +1013,8 @@ var EmptyServerResponseEncodeCode = `// EncodeMethodEmptyServerResponseResponse 
 // endpoint.
 func EncodeMethodEmptyServerResponseResponse(encoder func(context.Context, http.ResponseWriter) goahttp.Encoder) func(context.Context, http.ResponseWriter, interface{}) error {
 	return func(ctx context.Context, w http.ResponseWriter, v interface{}) error {
+		res, _ := v.(*serviceemptyserverresponse.MethodEmptyServerResponseResult)
+		w.Header().Set("Goa-Attribute-H", res.H)
 		w.WriteHeader(http.StatusOK)
 		return nil
 	}
@@ -1017,18 +1031,19 @@ func EncodeMethodEmptyServerResponseWithTagsResponse(encoder func(context.Contex
 			w.WriteHeader(http.StatusNotModified)
 			return nil
 		}
+		w.Header().Set("Goa-Attribute-H", res.H)
 		w.WriteHeader(http.StatusNoContent)
 		return nil
 	}
 }
 `
 
-var HeadEndpointResultObjectEncodeCode = `// EncodeMethodHeadEndpointResultObjectResponse returns an encoder for
-// responses returned by the ServiceHeadEndpointResultObject
-// MethodHeadEndpointResultObject endpoint.
-func EncodeMethodHeadEndpointResultObjectResponse(encoder func(context.Context, http.ResponseWriter) goahttp.Encoder) func(context.Context, http.ResponseWriter, interface{}) error {
+var UnmappedResultObjectEncodeCode = `// EncodeMethodUnmappedResultObjectResponse returns an encoder for responses
+// returned by the ServiceUnmappedResultObject MethodUnmappedResultObject
+// endpoint.
+func EncodeMethodUnmappedResultObjectResponse(encoder func(context.Context, http.ResponseWriter) goahttp.Encoder) func(context.Context, http.ResponseWriter, interface{}) error {
 	return func(ctx context.Context, w http.ResponseWriter, v interface{}) error {
-		res, _ := v.(*serviceheadendpointresultobject.MethodHeadEndpointResultObjectResult)
+		res, _ := v.(*serviceunmappedresultobject.MethodUnmappedResultObjectResult)
 		if res.Hstr != nil {
 			w.Header().Set("Goa-Attribute-Hstr", *res.Hstr)
 		}
@@ -1043,12 +1058,31 @@ func EncodeMethodHeadEndpointResultObjectResponse(encoder func(context.Context, 
 }
 `
 
-var HeadEndpointResultObjectValidateEncodeCode = `// EncodeMethodHeadEndpointResultObjectValidateResponse returns an encoder for
-// responses returned by the ServiceHeadEndpointResultObjectValidate
-// MethodHeadEndpointResultObjectValidate endpoint.
-func EncodeMethodHeadEndpointResultObjectValidateResponse(encoder func(context.Context, http.ResponseWriter) goahttp.Encoder) func(context.Context, http.ResponseWriter, interface{}) error {
+var UnmappedResultObjectWithBodyEncodeCode = `// EncodeMethodUnmappedResultObjectWithBodyResponse returns an encoder for
+// responses returned by the ServiceUnmappedResultObjectWithBody
+// MethodUnmappedResultObjectWithBody endpoint.
+func EncodeMethodUnmappedResultObjectWithBodyResponse(encoder func(context.Context, http.ResponseWriter) goahttp.Encoder) func(context.Context, http.ResponseWriter, interface{}) error {
 	return func(ctx context.Context, w http.ResponseWriter, v interface{}) error {
-		res, _ := v.(*serviceheadendpointresultobjectvalidate.MethodHeadEndpointResultObjectValidateResult)
+		res, _ := v.(*serviceunmappedresultobjectwithbody.MethodUnmappedResultObjectWithBodyResult)
+		enc := encoder(ctx, w)
+		body := res.Hstr
+		if res.Hint32 != nil {
+			val := res.Hint32
+			hint32s := strconv.FormatInt(int64(*val), 10)
+			w.Header().Set("Goa-Attribute-Hint32", hint32s)
+		}
+		w.WriteHeader(http.StatusOK)
+		return enc.Encode(body)
+	}
+}
+`
+
+var UnmappedResultObjectValidateEncodeCode = `// EncodeMethodUnmappedResultObjectValidateResponse returns an encoder for
+// responses returned by the ServiceUnmappedResultObjectValidate
+// MethodUnmappedResultObjectValidate endpoint.
+func EncodeMethodUnmappedResultObjectValidateResponse(encoder func(context.Context, http.ResponseWriter) goahttp.Encoder) func(context.Context, http.ResponseWriter, interface{}) error {
+	return func(ctx context.Context, w http.ResponseWriter, v interface{}) error {
+		res, _ := v.(*serviceunmappedresultobjectvalidate.MethodUnmappedResultObjectValidateResult)
 		if res.Hstr != nil {
 			w.Header().Set("Goa-Attribute-Hstr", *res.Hstr)
 		}
@@ -1063,12 +1097,12 @@ func EncodeMethodHeadEndpointResultObjectValidateResponse(encoder func(context.C
 }
 `
 
-var HeadEndpointResultObjectWithHeadersEncodeCode = `// EncodeMethodHeadEndpointResultObjectWithHeadersResponse returns an encoder
-// for responses returned by the ServiceHeadEndpointResultObjectWithHeaders
-// MethodHeadEndpointResultObjectWithHeaders endpoint.
-func EncodeMethodHeadEndpointResultObjectWithHeadersResponse(encoder func(context.Context, http.ResponseWriter) goahttp.Encoder) func(context.Context, http.ResponseWriter, interface{}) error {
+var UnmappedResultObjectWithHeadersEncodeCode = `// EncodeMethodUnmappedResultObjectWithHeadersResponse returns an encoder for
+// responses returned by the ServiceUnmappedResultObjectWithHeaders
+// MethodUnmappedResultObjectWithHeaders endpoint.
+func EncodeMethodUnmappedResultObjectWithHeadersResponse(encoder func(context.Context, http.ResponseWriter) goahttp.Encoder) func(context.Context, http.ResponseWriter, interface{}) error {
 	return func(ctx context.Context, w http.ResponseWriter, v interface{}) error {
-		res, _ := v.(*serviceheadendpointresultobjectwithheaders.MethodHeadEndpointResultObjectWithHeadersResult)
+		res, _ := v.(*serviceunmappedresultobjectwithheaders.MethodUnmappedResultObjectWithHeadersResult)
 		if res.Hint32 != nil {
 			val := res.Hint32
 			hint32s := strconv.FormatInt(int64(*val), 10)
@@ -1083,10 +1117,10 @@ func EncodeMethodHeadEndpointResultObjectWithHeadersResponse(encoder func(contex
 }
 `
 
-var HeadEndpointResultPrimitiveEncodeCode = `// EncodeMethodHeadEndpointResultPrimitiveResponse returns an encoder for
-// responses returned by the ServiceHeadEndpointResultPrimitive
-// MethodHeadEndpointResultPrimitive endpoint.
-func EncodeMethodHeadEndpointResultPrimitiveResponse(encoder func(context.Context, http.ResponseWriter) goahttp.Encoder) func(context.Context, http.ResponseWriter, interface{}) error {
+var UnmappedResultPrimitiveEncodeCode = `// EncodeMethodUnmappedResultPrimitiveResponse returns an encoder for responses
+// returned by the ServiceUnmappedResultPrimitive MethodUnmappedResultPrimitive
+// endpoint.
+func EncodeMethodUnmappedResultPrimitiveResponse(encoder func(context.Context, http.ResponseWriter) goahttp.Encoder) func(context.Context, http.ResponseWriter, interface{}) error {
 	return func(ctx context.Context, w http.ResponseWriter, v interface{}) error {
 		res, _ := v.(float32)
 		{
@@ -1100,10 +1134,10 @@ func EncodeMethodHeadEndpointResultPrimitiveResponse(encoder func(context.Contex
 }
 `
 
-var HeadEndpointResultPrimitiveValidateEncodeCode = `// EncodeMethodHeadEndpointResultPrimitiveValidateResponse returns an encoder
-// for responses returned by the ServiceHeadEndpointResultPrimitiveValidate
-// MethodHeadEndpointResultPrimitiveValidate endpoint.
-func EncodeMethodHeadEndpointResultPrimitiveValidateResponse(encoder func(context.Context, http.ResponseWriter) goahttp.Encoder) func(context.Context, http.ResponseWriter, interface{}) error {
+var UnmappedResultPrimitiveValidateEncodeCode = `// EncodeMethodUnmappedResultPrimitiveValidateResponse returns an encoder for
+// responses returned by the ServiceUnmappedResultPrimitiveValidate
+// MethodUnmappedResultPrimitiveValidate endpoint.
+func EncodeMethodUnmappedResultPrimitiveValidateResponse(encoder func(context.Context, http.ResponseWriter) goahttp.Encoder) func(context.Context, http.ResponseWriter, interface{}) error {
 	return func(ctx context.Context, w http.ResponseWriter, v interface{}) error {
 		res, _ := v.(float32)
 		{
@@ -1117,11 +1151,11 @@ func EncodeMethodHeadEndpointResultPrimitiveValidateResponse(encoder func(contex
 }
 `
 
-var HeadEndpointResultPrimitiveWithHeadersEncodeCode = `// EncodeMethodHeadEndpointResultPrimitiveWithHeadersResponse returns an
+var UnmappedResultPrimitiveWithHeadersEncodeCode = `// EncodeMethodUnmappedResultPrimitiveWithHeadersResponse returns an
 // encoder for responses returned by the
-// ServiceHeadEndpointResultPrimitiveWithHeaders
-// MethodHeadEndpointResultPrimitiveWithHeaders endpoint.
-func EncodeMethodHeadEndpointResultPrimitiveWithHeadersResponse(encoder func(context.Context, http.ResponseWriter) goahttp.Encoder) func(context.Context, http.ResponseWriter, interface{}) error {
+// ServiceUnmappedResultPrimitiveWithHeaders
+// MethodUnmappedResultPrimitiveWithHeaders endpoint.
+func EncodeMethodUnmappedResultPrimitiveWithHeadersResponse(encoder func(context.Context, http.ResponseWriter) goahttp.Encoder) func(context.Context, http.ResponseWriter, interface{}) error {
 	return func(ctx context.Context, w http.ResponseWriter, v interface{}) error {
 		res, _ := v.(interface{})
 		if res != nil {
@@ -1135,10 +1169,10 @@ func EncodeMethodHeadEndpointResultPrimitiveWithHeadersResponse(encoder func(con
 }
 `
 
-var HeadEndpointResultArrayEncodeCode = `// EncodeMethodHeadEndpointResultArrayResponse returns an encoder for responses
-// returned by the ServiceHeadEndpointResultArray MethodHeadEndpointResultArray
+var UnmappedResultArrayEncodeCode = `// EncodeMethodUnmappedResultArrayResponse returns an encoder for responses
+// returned by the ServiceUnmappedResultArray MethodUnmappedResultArray
 // endpoint.
-func EncodeMethodHeadEndpointResultArrayResponse(encoder func(context.Context, http.ResponseWriter) goahttp.Encoder) func(context.Context, http.ResponseWriter, interface{}) error {
+func EncodeMethodUnmappedResultArrayResponse(encoder func(context.Context, http.ResponseWriter) goahttp.Encoder) func(context.Context, http.ResponseWriter, interface{}) error {
 	return func(ctx context.Context, w http.ResponseWriter, v interface{}) error {
 		res, _ := v.([]uint)
 		if res != nil {
@@ -1157,10 +1191,10 @@ func EncodeMethodHeadEndpointResultArrayResponse(encoder func(context.Context, h
 }
 `
 
-var HeadEndpointResultArrayValidateEncodeCode = `// EncodeMethodHeadEndpointResultArrayValidateResponse returns an encoder for
-// responses returned by the ServiceHeadEndpointResultArrayValidate
-// MethodHeadEndpointResultArrayValidate endpoint.
-func EncodeMethodHeadEndpointResultArrayValidateResponse(encoder func(context.Context, http.ResponseWriter) goahttp.Encoder) func(context.Context, http.ResponseWriter, interface{}) error {
+var UnmappedResultArrayValidateEncodeCode = `// EncodeMethodUnmappedResultArrayValidateResponse returns an encoder for
+// responses returned by the ServiceUnmappedResultArrayValidate
+// MethodUnmappedResultArrayValidate endpoint.
+func EncodeMethodUnmappedResultArrayValidateResponse(encoder func(context.Context, http.ResponseWriter) goahttp.Encoder) func(context.Context, http.ResponseWriter, interface{}) error {
 	return func(ctx context.Context, w http.ResponseWriter, v interface{}) error {
 		res, _ := v.([]uint)
 		if res != nil {
@@ -1179,10 +1213,10 @@ func EncodeMethodHeadEndpointResultArrayValidateResponse(encoder func(context.Co
 }
 `
 
-var HeadEndpointResultArrayWithHeadersEncodeCode = `// EncodeMethodHeadEndpointResultArrayWithHeadersResponse returns an encoder
-// for responses returned by the ServiceHeadEndpointResultArrayWithHeaders
-// MethodHeadEndpointResultArrayWithHeaders endpoint.
-func EncodeMethodHeadEndpointResultArrayWithHeadersResponse(encoder func(context.Context, http.ResponseWriter) goahttp.Encoder) func(context.Context, http.ResponseWriter, interface{}) error {
+var UnmappedResultArrayWithHeadersEncodeCode = `// EncodeMethodUnmappedResultArrayWithHeadersResponse returns an encoder
+// for responses returned by the ServiceUnmappedResultArrayWithHeaders
+// MethodUnmappedResultArrayWithHeaders endpoint.
+func EncodeMethodUnmappedResultArrayWithHeadersResponse(encoder func(context.Context, http.ResponseWriter) goahttp.Encoder) func(context.Context, http.ResponseWriter, interface{}) error {
 	return func(ctx context.Context, w http.ResponseWriter, v interface{}) error {
 		res, _ := v.([]string)
 		if res != nil {

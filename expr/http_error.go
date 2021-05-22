@@ -100,6 +100,7 @@ func (e *HTTPErrorExpr) Finalize(a *HTTPEndpointExpr) {
 	if e.Response.Body == nil {
 		e.Response.Body = httpErrorResponseBody(a, e)
 	}
+	e.Response.mapUnmappedAttrs(e.AttributeExpr)
 
 	// Initialize response content type if result is media type.
 	if e.Response.Body.Type == Empty {
