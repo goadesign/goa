@@ -31,6 +31,14 @@ func TestClientDecode(t *testing.T) {
 		{"with-headers-dsl-viewed-result", testdata.WithHeadersBlockViewedResultDSL, testdata.WithHeadersBlockViewedResultResponseDecodeCode},
 		{"validate-error-response-type", testdata.ValidateErrorResponseTypeDSL, testdata.ValidateErrorResponseTypeDecodeCode},
 		{"empty-error-response-body", testdata.EmptyErrorResponseBodyDSL, testdata.EmptyErrorResponseBodyDecodeCode},
+
+		{"unmapped-result-object", testdata.UnmappedResultObjectDSL, testdata.UnmappedResultObjectDecodeCode},
+		{"unmapped-result-object-validate", testdata.UnmappedResultObjectValidateDSL, testdata.UnmappedResultObjectValidateDecodeCode},
+		{"unmapped-result-object-with-headers", testdata.UnmappedResultObjectWithHeadersDSL, testdata.UnmappedResultObjectWithHeadersDecodeCode},
+		{"unmapped-result-primitive", testdata.UnmappedResultPrimitiveDSL, testdata.UnmappedResultPrimitiveDecodeCode},
+		{"unmapped-result-primitive-validate", testdata.UnmappedResultPrimitiveValidateDSL, testdata.UnmappedResultPrimitiveValidateDecodeCode},
+		{"unmapped-result-array", testdata.UnmappedResultArrayDSL, testdata.UnmappedResultArrayDecodeCode},
+		{"unmapped-result-array-validate", testdata.UnmappedResultArrayValidateDSL, testdata.UnmappedResultArrayValidateDecodeCode},
 	}
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {

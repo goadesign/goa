@@ -55,17 +55,21 @@ func EncodeMethodPrimitiveErrorInResponseHeaderError(encoder func(context.Contex
 		switch en.ErrorName() {
 		case "bad_request":
 			res := v.(serviceprimitiveerrorinresponseheader.BadRequest)
-			val := string(res)
-			string_s := val
-			w.Header().Set("String", string_s)
+			{
+				val := string(res)
+				string_s := val
+				w.Header().Set("String", string_s)
+			}
 			w.Header().Set("goa-error", res.ErrorName())
 			w.WriteHeader(http.StatusBadRequest)
 			return nil
 		case "internal_error":
 			res := v.(serviceprimitiveerrorinresponseheader.InternalError)
-			val := int(res)
-			int_s := strconv.Itoa(val)
-			w.Header().Set("Int", int_s)
+			{
+				val := int(res)
+				int_s := strconv.Itoa(val)
+				w.Header().Set("Int", int_s)
+			}
 			w.Header().Set("goa-error", res.ErrorName())
 			w.WriteHeader(http.StatusInternalServerError)
 			return nil
@@ -283,25 +287,33 @@ func EncodeMethodEmptyErrorResponseBodyError(encoder func(context.Context, http.
 		case "internal_error":
 			res := v.(*goa.ServiceError)
 			w.Header().Set("Error-Name", res.Name)
-			w.Header().Set("Error-Id", res.ID)
-			w.Header().Set("Error-Message", res.Message)
-			val := res.Fault
-			faults := strconv.FormatBool(val)
-			w.Header().Set("Error-Fault", faults)
-			val := res.Temporary
-			temporarys := strconv.FormatBool(val)
-			w.Header().Set("Error-Temporary", temporarys)
-			val := res.Timeout
-			timeouts := strconv.FormatBool(val)
-			w.Header().Set("Error-Timeout", timeouts)
+			w.Header().Set("Goa-Attribute-Id", res.ID)
+			w.Header().Set("Goa-Attribute-Message", res.Message)
+			{
+				val := res.Temporary
+				temporarys := strconv.FormatBool(val)
+				w.Header().Set("Goa-Attribute-Temporary", temporarys)
+			}
+			{
+				val := res.Timeout
+				timeouts := strconv.FormatBool(val)
+				w.Header().Set("Goa-Attribute-Timeout", timeouts)
+			}
+			{
+				val := res.Fault
+				faults := strconv.FormatBool(val)
+				w.Header().Set("Goa-Attribute-Fault", faults)
+			}
 			w.Header().Set("goa-error", res.ErrorName())
 			w.WriteHeader(http.StatusInternalServerError)
 			return nil
 		case "not_found":
 			res := v.(serviceemptyerrorresponsebody.NotFound)
-			val := string(res)
-			inHeaders := val
-			w.Header().Set("In-Header", inHeaders)
+			{
+				val := string(res)
+				inHeaders := val
+				w.Header().Set("In-Header", inHeaders)
+			}
 			w.Header().Set("goa-error", res.ErrorName())
 			w.WriteHeader(http.StatusNotFound)
 			return nil

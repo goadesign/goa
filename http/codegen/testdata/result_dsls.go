@@ -750,16 +750,11 @@ var EmptyErrorResponseBodyDSL = func() {
 			Error("internal_error")
 			Error("not_found", String)
 			HTTP(func() {
-				POST("/")
+				HEAD("/")
 				Response(StatusOK)
 				Response("internal_error", StatusInternalServerError, func() {
 					Body(Empty)
 					Header("name:Error-Name")
-					Header("id:Error-ID")
-					Header("message:Error-message")
-					Header("fault:Error-Fault")
-					Header("temporary:Error-Temporary")
-					Header("timeout:Error-Timeout")
 				})
 				Response("not_found", StatusNotFound, func() {
 					Body(Empty)
@@ -1275,6 +1270,139 @@ var EmptyServerResponseWithTagsDSL = func() {
 				})
 				Response(StatusNotModified, func() {
 					Tag("h", "true")
+					Body(Empty)
+				})
+			})
+		})
+	})
+}
+
+var UnmappedResultObjectDSL = func() {
+	Service("ServiceUnmappedResultObject", func() {
+		Method("MethodUnmappedResultObject", func() {
+			Result(func() {
+				Attribute("hstr", String)
+				Attribute("hint32", Int32)
+			})
+			HTTP(func() {
+				POST("/")
+				Response(StatusOK, func() {
+					Body(Empty)
+				})
+			})
+		})
+	})
+}
+
+var UnmappedResultObjectWithBodyDSL = func() {
+	Service("ServiceUnmappedResultObjectWithBody", func() {
+		Method("MethodUnmappedResultObjectWithBody", func() {
+			Result(func() {
+				Attribute("hstr", String)
+				Attribute("hint32", Int32)
+			})
+			HTTP(func() {
+				POST("/")
+				Response(StatusOK, func() {
+					Body("hstr")
+				})
+			})
+		})
+	})
+}
+
+var UnmappedResultObjectValidateDSL = func() {
+	Service("ServiceUnmappedResultObjectValidate", func() {
+		Method("MethodUnmappedResultObjectValidate", func() {
+			Result(func() {
+				Attribute("hstr", String, func() {
+					Format(FormatDateTime)
+				})
+				Attribute("hint32", Int32, func() {
+					Minimum(5)
+				})
+			})
+			HTTP(func() {
+				DELETE("/")
+				Response(StatusOK, func() {
+					Body(Empty)
+				})
+			})
+		})
+	})
+}
+
+var UnmappedResultObjectWithHeadersDSL = func() {
+	Service("ServiceUnmappedResultObjectWithHeaders", func() {
+		Method("MethodUnmappedResultObjectWithHeaders", func() {
+			Result(func() {
+				Attribute("hstr", String)
+				Attribute("hint32", Int32)
+			})
+			HTTP(func() {
+				HEAD("/")
+				Response(StatusOK, func() {
+					Body(Empty)
+					Header("hint32:Location")
+				})
+			})
+		})
+	})
+}
+
+var UnmappedResultPrimitiveDSL = func() {
+	Service("ServiceUnmappedResultPrimitive", func() {
+		Method("MethodUnmappedResultPrimitive", func() {
+			Result(Float32)
+			HTTP(func() {
+				HEAD("/")
+				Response(StatusOK, func() {
+					Body(Empty)
+				})
+			})
+		})
+	})
+}
+
+var UnmappedResultPrimitiveValidateDSL = func() {
+	Service("ServiceUnmappedResultPrimitiveValidate", func() {
+		Method("MethodUnmappedResultPrimitiveValidate", func() {
+			Result(Float32, func() {
+				Maximum(5.0)
+			})
+			HTTP(func() {
+				GET("/")
+				Response(StatusOK, func() {
+					Body(Empty)
+				})
+			})
+		})
+	})
+}
+
+var UnmappedResultArrayDSL = func() {
+	Service("ServiceUnmappedResultArray", func() {
+		Method("MethodUnmappedResultArray", func() {
+			Result(ArrayOf(UInt))
+			HTTP(func() {
+				POST("/")
+				Response(StatusOK, func() {
+					Body(Empty)
+				})
+			})
+		})
+	})
+}
+
+var UnmappedResultArrayValidateDSL = func() {
+	Service("ServiceUnmappedResultArrayValidate", func() {
+		Method("MethodUnmappedResultArrayValidate", func() {
+			Result(ArrayOf(UInt), func() {
+				MinLength(10)
+			})
+			HTTP(func() {
+				OPTIONS("/")
+				Response(StatusOK, func() {
 					Body(Empty)
 				})
 			})

@@ -188,8 +188,7 @@ func (r *HTTPResponseExpr) Validate(e *HTTPEndpointExpr) *eval.ValidationErrors 
 				t := resultAttributeType(h.Name)
 				if t == nil {
 					verr.Add(r, "header %q has no equivalent attribute in%s result type, use notation 'attribute_name:header_name' to identify corresponding result type attribute.", h.Name, inview)
-				}
-				if IsArray(t) {
+				} else if IsArray(t) {
 					if !IsPrimitive(AsArray(t).ElemType.Type) {
 						verr.Add(e, "attribute %q used in HTTP headers must be a primitive type or an array of primitive types.", h.Name)
 					}
@@ -256,53 +255,57 @@ func (r *HTTPResponseExpr) Validate(e *HTTPEndpointExpr) *eval.ValidationErrors 
 func (r *HTTPResponseExpr) Finalize(a *HTTPEndpointExpr, svcAtt *AttributeExpr) {
 	r.Parent = a
 
-	if r.Body != nil && r.Body.Type != Empty {
-		bodyAtt := svcAtt
-		if o, ok := r.Body.Meta["origin:attribute"]; ok {
-			bodyAtt = svcAtt.Find(o[0])
-		}
-		bodyObj := AsObject(bodyAtt.Type)
-		if body := AsObject(r.Body.Type); body != nil {
-			for _, nat := range *body {
-				n := nat.Name
-				n = strings.Split(n, ":")[0]
-				var att, patt *AttributeExpr
-				var required bool
-				if bodyObj != nil {
-					att = bodyObj.Attribute(n)
-					required = bodyAtt.IsRequired(n)
-				} else {
-					att = bodyAtt
-					required = bodyAtt.Type != Empty
-				}
-				initAttrFromDesign(att, patt)
-				if required {
-					if r.Body.Validation == nil {
-						r.Body.Validation = &ValidationExpr{}
+	if r.Body != nil {
+		if r.Body.Type != Empty {
+			bodyAtt := svcAtt
+			if o, ok := r.Body.Meta["origin:attribute"]; ok {
+				bodyAtt = svcAtt.Find(o[0])
+			}
+			bodyObj := AsObject(bodyAtt.Type)
+			if body := AsObject(r.Body.Type); body != nil {
+				for _, nat := range *body {
+					n := nat.Name
+					n = strings.Split(n, ":")[0]
+					var att, patt *AttributeExpr
+					var required bool
+					if bodyObj != nil {
+						att = bodyObj.Attribute(n)
+						required = bodyAtt.IsRequired(n)
+					} else {
+						att = bodyAtt
+						required = bodyAtt.Type != Empty
 					}
-					r.Body.Validation.AddRequired(n)
+					initAttrFromDesign(att, patt)
+					if required {
+						if r.Body.Validation == nil {
+							r.Body.Validation = &ValidationExpr{}
+						}
+						r.Body.Validation.AddRequired(n)
+					}
+				}
+				// Remember original name for example to generate friendlier OpenAPI specs.
+				if t, ok := r.Body.Type.(UserType); ok {
+					t.Attribute().AddMeta("name:original", t.Name())
+				}
+				// Wrap object with user type to simplify response rendering code.
+				r.Body.Type = &UserTypeExpr{
+					AttributeExpr: DupAtt(r.Body),
+					TypeName:      fmt.Sprintf("%s%sResponseBody", a.Service.Name(), a.Name()),
 				}
 			}
-			// Remember original name for example to generate friendlier OpenAPI specs.
-			if t, ok := r.Body.Type.(UserType); ok {
-				t.Attribute().AddMeta("name:original", t.Name())
+			if r.Body.Meta == nil {
+				r.Body.Meta = bodyAtt.Meta
 			}
-			// Wrap object with user type to simplify response rendering code.
-			r.Body.Type = &UserTypeExpr{
-				AttributeExpr: DupAtt(r.Body),
-				TypeName:      fmt.Sprintf("%s%sResponseBody", a.Service.Name(), a.Name()),
-			}
-		}
-		if r.Body.Meta == nil {
-			r.Body.Meta = bodyAtt.Meta
 		}
 	}
+
 	// Set response content type if empty and if set in the result type
 	if r.ContentType == "" {
 		if rt, ok := svcAtt.Type.(*ResultTypeExpr); ok && rt.ContentType != "" {
 			r.ContentType = rt.ContentType
 		}
 	}
+
 	initAttr(r.Headers, svcAtt)
 	initAttr(r.Cookies, svcAtt)
 }
@@ -326,6 +329,63 @@ func (r *HTTPResponseExpr) Dup() *HTTPResponseExpr {
 		res.Cookies = DupMappedAtt(r.Cookies)
 	}
 	return &res
+}
+
+// mapUnmappedAttrs maps any unmapped attributes to the response headers.
+// Unmapped attributes refer to the attributes in the given service type
+// (Result or Error) that are not mapped to response body, headers, cookies, or
+// tags. Such unmapped attributes are mapped to special goa headers in the form
+// of "Goa-Attribute(-<Attribute Name>)".
+func (r *HTTPResponseExpr) mapUnmappedAttrs(svcAtt *AttributeExpr) {
+	if svcAtt.Type == Empty {
+		return
+	}
+
+	// map attributes to headers that are not explicitly mapped
+	switch {
+	case IsObject(svcAtt.Type):
+		// map the attribute names in the service type to response headers if
+		// not mapped explicitly.
+
+		var originAttr string
+		{
+			if r.Body != nil {
+				if o, ok := r.Body.Meta["origin:attribute"]; ok {
+					originAttr = o[0]
+				}
+			}
+		}
+		// if response body was mapped explicitly using Body(<attribute name>) then
+		// we must make sure we map all the other unmapped attributes to headers.
+		if r.Body == nil || r.Body.Type == Empty || originAttr != "" {
+			for _, nat := range *(AsObject(svcAtt.Type)) {
+				if originAttr == nat.Name {
+					continue
+				}
+				if _, ok := r.Headers.FindKey(nat.Name); ok {
+					continue
+				}
+				if _, ok := r.Cookies.FindKey(nat.Name); ok {
+					continue
+				}
+				if r.Tag[0] == nat.Name {
+					continue
+				}
+				r.Headers.Type.(*Object).Set(nat.Name, nat.Attribute)
+				r.Headers.Map("goa-attribute-"+nat.Name, nat.Name)
+				if svcAtt.IsRequired(nat.Name) {
+					if r.Headers.Validation == nil {
+						r.Headers.Validation = &ValidationExpr{}
+					}
+					r.Headers.Validation.AddRequired(nat.Name)
+				}
+			}
+		}
+	default:
+		if r.Headers.IsEmpty() && r.Cookies.IsEmpty() && (r.Body == nil || r.Body.Type == Empty) {
+			r.Headers.Type.(*Object).Set("goa-attribute", svcAtt)
+		}
+	}
 }
 
 // bodyAllowedForStatus reports whether a given response status code
