@@ -180,7 +180,7 @@ func (r *HTTPResponseExpr) Validate(e *HTTPEndpointExpr) *eval.ValidationErrors 
 
 	if !r.Headers.IsEmpty() {
 		verr.Merge(r.Headers.Validate("HTTP response headers", r))
-		if e.MethodExpr.Result.Type == Empty {
+		if isEmpty(e.MethodExpr.Result) {
 			verr.Add(r, "response defines headers but result is empty")
 		} else if IsObject(e.MethodExpr.Result.Type) {
 			mobj := AsObject(r.Headers.Type)
@@ -206,7 +206,7 @@ func (r *HTTPResponseExpr) Validate(e *HTTPEndpointExpr) *eval.ValidationErrors 
 	}
 	if !r.Cookies.IsEmpty() {
 		verr.Merge(r.Cookies.Validate("HTTP response cookies", r))
-		if e.MethodExpr.Result.Type == Empty {
+		if isEmpty(e.MethodExpr.Result) {
 			verr.Add(r, "response defines cookies but result is empty")
 		} else if IsObject(e.MethodExpr.Result.Type) {
 			mobj := AsObject(r.Cookies.Type)

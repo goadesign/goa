@@ -98,6 +98,7 @@ func (e *HTTPErrorExpr) Finalize(a *HTTPEndpointExpr) {
 	e.ErrorExpr = ee
 	e.Response.Finalize(a, e.AttributeExpr)
 	if e.Response.Body == nil {
+		// finalize error response body
 		e.Response.Body = httpErrorResponseBody(a, e)
 	}
 	e.Response.mapUnmappedAttrs(e.AttributeExpr)

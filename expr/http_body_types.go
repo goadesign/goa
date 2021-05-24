@@ -54,11 +54,11 @@ func defaultRequestHeaderAttributes(e *HTTPEndpointExpr) map[string]bool {
 	return headers
 }
 
-// httpRequestBody returns an attribute describing the HTTP request body of the
-// given endpoint. If the DSL defines a body explicitly via the Body function
-// then the corresponding attribute is used. Otherwise the attribute is computed
-// by removing the attributes of the method payload used to define headers and
-// parameters.
+// httpRequestBody returns an attribute describing the finalized HTTP request
+// body of the given endpoint. If the DSL defines a body explicitly via the
+// Body function then the corresponding attribute is used. Otherwise the
+// attribute is computed by removing the attributes of the method payload
+// used to define headers and parameters.
 func httpRequestBody(a *HTTPEndpointExpr) *AttributeExpr {
 	const suffix = "RequestBody"
 	var (
@@ -67,6 +67,7 @@ func httpRequestBody(a *HTTPEndpointExpr) *AttributeExpr {
 	if a.Body != nil {
 		a.Body = DupAtt(a.Body)
 		renameType(a.Body, name, suffix)
+		a.Body.Finalize()
 		return a.Body
 	}
 
@@ -84,15 +85,20 @@ func httpRequestBody(a *HTTPEndpointExpr) *AttributeExpr {
 	// encoded in request body).
 	if !IsObject(payload.Type) {
 		if bodyOnly {
-			payload = DupAtt(payload)
-			renameType(payload, name, suffix)
-			return payload
+			att := DupAtt(payload)
+			renameType(att, name, suffix)
+			att.Finalize()
+			return att
 		}
 		return &AttributeExpr{Type: Empty}
 	}
 
 	// 2. Remove header, param and cookies attributes
 	body := NewMappedAttributeExpr(payload)
+	// finalize the body so that any bases and references defined in the
+	// attribute type are processed before we remove any params, headers,
+	// or cookies that are mapped explicitly.
+	body.Finalize()
 	removeAttributes(body, headers)
 	removeAttributes(body, cookies)
 	removeAttributes(body, params)
@@ -124,15 +130,17 @@ func httpRequestBody(a *HTTPEndpointExpr) *AttributeExpr {
 	}
 }
 
-// httpStreamingBody returns an attribute representing the structs being
-// streamed via websocket.
+// httpStreamingBody returns the finalized attribute representing the structs
+// being streamed via websocket.
 func httpStreamingBody(e *HTTPEndpointExpr) *AttributeExpr {
 	if !e.MethodExpr.IsStreaming() || e.MethodExpr.Stream == ServerStreamKind {
 		return nil
 	}
 	att := e.MethodExpr.StreamingPayload
-	if !IsObject(att.Type) {
-		return DupAtt(att)
+	if !IsObject(att.Type) || att.Type == Empty {
+		att = DupAtt(att)
+		att.Finalize()
+		return att
 	}
 	const suffix = "StreamingBody"
 	ut := &UserTypeExpr{
@@ -149,11 +157,11 @@ func httpStreamingBody(e *HTTPEndpointExpr) *AttributeExpr {
 	}
 }
 
-// httpResponseBody returns an attribute representing the HTTP response body for
-// the given endpoint and response. If the DSL defines a body explicitly via the
-// Body function then the corresponding attribute is used. Otherwise the
-// attribute is computed by removing the attributes of the method payload used
-// to define cookies and headers.
+// httpResponseBody returns the finalized attribute representing the HTTP
+// response body for the given endpoint and response. If the DSL defines a body
+// explicitly via the Body function then the corresponding attribute is used.
+// Otherwise the attribute is computed by removing the attributes of the method
+// result used to define cookies and headers.
 func httpResponseBody(a *HTTPEndpointExpr, resp *HTTPResponseExpr) *AttributeExpr {
 	var name, suffix string
 	if len(a.Responses) > 1 {
@@ -180,7 +188,7 @@ func buildHTTPResponseBody(name string, attr *AttributeExpr, resp *HTTPResponseE
 		return &AttributeExpr{Type: Empty}
 	}
 
-	// 0. Handle the case where the body is set explicitely in the design.
+	// 0. Handle the case where the body is set explicitly in the design.
 	// We need to create a type with an endpoint specific response body type
 	// name to handle the case where the same type is used by multiple
 	// methods with potentially different result types.
@@ -193,6 +201,7 @@ func buildHTTPResponseBody(name string, attr *AttributeExpr, resp *HTTPResponseE
 		}
 		att := DupAtt(resp.Body)
 		renameType(att, name, suffix)
+		att.Finalize()
 		return att
 	}
 
@@ -204,11 +213,16 @@ func buildHTTPResponseBody(name string, attr *AttributeExpr, resp *HTTPResponseE
 		if resp.Headers.IsEmpty() && resp.Cookies.IsEmpty() {
 			attr = DupAtt(attr)
 			renameType(attr, name, "Response") // Do not use ResponseBody as it could clash with name of element
+			attr.Finalize()
 			return attr
 		}
 		return &AttributeExpr{Type: Empty}
 	}
 	body := NewMappedAttributeExpr(attr)
+	// finalize the body so that any bases and references defined in the
+	// attribute type are processed before we remove any headers or
+	// cookies that are mapped explicitly.
+	body.Finalize()
 
 	// 2. Remove header and cookie attributes
 	removeAttributes(body, resp.Headers)
