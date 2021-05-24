@@ -1248,12 +1248,15 @@ const responseT = `{{ define "response" -}}
 		{{- $initDef := and (or .FieldPointer .Slice) .DefaultValue (not $.TagName) }}
 		{{- $checkNil := and (or .FieldPointer .Slice (eq .Type.Name "bytes") (eq .Type.Name "any") $initDef) (not $.TagName) }}
 		{{- if $checkNil }}
-	if res.{{ if $.ViewedResult }}Projected.{{ end }}{{ .FieldName }} != nil {
+	if res{{ if .FieldName }}.{{ end }}{{ if $.ViewedResult }}Projected.{{ end }}{{ if .FieldName }}{{ .FieldName }}{{ end }} != nil {
 		{{- end }}
 
 		{{- if and (eq .Type.Name "string") (not (isAliased .FieldType)) }}
 	w.Header().Set("{{ .CanonicalName }}", {{ if or .FieldPointer $.ViewedResult }}*{{ end }}res{{ if $.ViewedResult }}.Projected{{ end }}{{ if .FieldName }}.{{ .FieldName }}{{ end }})
 		{{- else }}
+{{- if not $checkNil }}
+{
+{{- end }}
 			{{- if isAliased .FieldType }}
 	val := {{ goTypeRef .Type }}({{ if .FieldPointer }}*{{ end }}res{{ if $.ViewedResult }}.Projected{{ end }}{{ if .FieldName }}.{{ .FieldName }}{{ end }})
 	{{ template "header_conversion" (headerConversionData .Type (printf "%ss" .VarName) true "val") }}
@@ -1262,6 +1265,9 @@ const responseT = `{{ define "response" -}}
 	{{ template "header_conversion" (headerConversionData .Type (printf "%ss" .VarName) (not .FieldPointer) "val") }}
 			{{- end }}
 	w.Header().Set("{{ .CanonicalName }}", {{ .VarName }}s)
+{{- if not $checkNil }}
+}
+{{- end }}
 		{{- end }}
 
 		{{- if $initDef }}

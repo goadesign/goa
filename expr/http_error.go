@@ -41,6 +41,46 @@ func (e *HTTPErrorExpr) Validate() *eval.ValidationErrors {
 			verr.Add(e, "Error %#v does not match an error defined in the API", e.Name)
 		}
 	}
+
+	var ee *ErrorExpr
+	switch p := e.Response.Parent.(type) {
+	case *HTTPEndpointExpr:
+		ee = p.MethodExpr.Error(e.Name)
+	case *HTTPServiceExpr:
+		ee = p.Error(e.Name)
+	case *RootExpr:
+		ee = Root.Error(e.Name)
+	}
+
+	// validate headers
+	if e.Response.Headers != nil && !e.Response.Headers.IsEmpty() {
+		verr.Merge(e.Response.Headers.Validate("HTTP error response headers", e.Response))
+		switch {
+		case ee.Type == Empty:
+			verr.Add(e.Response, "response defines headers but error type is empty")
+		case IsObject(ee.Type):
+			for _, h := range *AsObject(e.Response.Headers.Type) {
+				att := ee.Find(h.Name)
+				if att == nil {
+					verr.Add(e.Response, "header %q has no equivalent attribute in error type, use notation 'attribute_name:header_name' to identify corresponding error type attribute.", h.Name)
+				} else if IsArray(att.Type) {
+					if !IsPrimitive(AsArray(att.Type).ElemType.Type) {
+						verr.Add(e.Response, "attribute %q used in HTTP headers must be a primitive type or an array of primitive types.", h.Name)
+					}
+				} else if !IsPrimitive(att.Type) {
+					verr.Add(e.Response, "attribute %q used in HTTP headers must be a primitive type or an array of primitive types.", h.Name)
+				}
+			}
+		case len(*AsObject(e.Response.Headers.Type)) > 1:
+			verr.Add(e.Response, "response defines more than one headers but error type is not an object")
+		case IsArray(ee.Type):
+			if !IsPrimitive(AsArray(ee.Type).ElemType.Type) {
+				verr.Add(e.Response, "Array error type is mapped to an HTTP header but is not an array of primitive types.")
+			}
+		case IsMap(ee.Type):
+			verr.Add(e.Response, "error type must be a primitive type or an array of primitive types.")
+		}
+	}
 	return verr
 }
 
@@ -60,6 +100,7 @@ func (e *HTTPErrorExpr) Finalize(a *HTTPEndpointExpr) {
 	if e.Response.Body == nil {
 		e.Response.Body = httpErrorResponseBody(a, e)
 	}
+	e.Response.mapUnmappedAttrs(e.AttributeExpr)
 
 	// Initialize response content type if result is media type.
 	if e.Response.Body.Type == Empty {
