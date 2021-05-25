@@ -685,7 +685,6 @@ func (e *HTTPEndpointExpr) Finalize() {
 		r.Finalize(e, e.MethodExpr.Result)
 		// finalize success response body
 		r.Body = httpResponseBody(e, r)
-		r.mapUnmappedAttrs(e.MethodExpr.Result)
 	}
 
 	// Make sure all error types are user types and have a body.
