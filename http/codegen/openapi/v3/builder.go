@@ -236,9 +236,9 @@ func buildOperation(key string, r *expr.RouteExpr, bodies *EndpointBodies, rand 
 					Example: ex[0],
 				}
 				requestBody = &RequestBodyRef{Value: &RequestBody{
-					Description: e.Body.Description,
+					Description: e.Description(),
 					Content:     map[string]*MediaType{ct: mt},
-					Extensions:  openapi.ExtensionsFromExpr(e.Body.Meta),
+					Extensions:  openapi.ExtensionsFromExpr(e.Meta),
 				}}
 			}
 		}
