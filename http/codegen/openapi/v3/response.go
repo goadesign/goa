@@ -43,6 +43,17 @@ func responseFromExpr(r *expr.HTTPResponseExpr, bodies map[int][]*openapi.Schema
 				Example:    r.Body.Example(rand),
 				Extensions: openapi.ExtensionsFromExpr(r.Body.Meta),
 			}
+		} else {
+			e := r.Parent.(*expr.HTTPEndpointExpr)
+			ex, ok := r.Meta["swagger:example"]
+			if e.SkipResponseBodyEncodeDecode && ok {
+				content = make(map[string]*MediaType)
+				content[ct] = &MediaType{
+					Schema:     &openapi.Schema{Type: "string", Example: ex[0]},
+					Example:    ex[0],
+					Extensions: openapi.ExtensionsFromExpr(r.Meta),
+				}
+			}
 		}
 	}
 	desc := r.Description

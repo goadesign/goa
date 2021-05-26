@@ -314,6 +314,22 @@ var ExtensionDSL = func() {
 	})
 }
 
+var SkipBodyEncodeDecodeDSL = func() {
+	Service("testService", func() {
+		Method("testEndpoint", func() {
+			HTTP(func() {
+				POST("/")
+				SkipRequestBodyEncodeDecode()
+				SkipResponseBodyEncodeDecode()
+				Meta("swagger:example", `{"foo":"bar"}`)
+				Response(StatusOK, func() {
+					Meta("swagger:example", `{"foo":"bar"}`)
+				})
+			})
+		})
+	})
+}
+
 var SecurityDSL = func() {
 	var JWTAuth = JWTSecurity("jwt", func() {
 		Description(`Secures endpoint by requiring a valid JWT token retrieved via the signin endpoint. Supports scopes "api:read" and "api:write".`)

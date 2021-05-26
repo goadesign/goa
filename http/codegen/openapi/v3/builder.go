@@ -210,21 +210,38 @@ func buildOperation(key string, r *expr.RouteExpr, bodies *EndpointBodies, rand 
 
 	// request body
 	var requestBody *RequestBodyRef
-	if e.Body.Type != expr.Empty {
+	{
 		ct := "application/json" // TBD: need a way to specify method media type in design...
-		if e.MultipartRequest {
-			ct = "multipart/form-data"
+		if e.Body.Type != expr.Empty {
+			if e.MultipartRequest {
+				ct = "multipart/form-data"
+			}
+			mt := &MediaType{
+				Schema:  bodies.RequestBody,
+				Example: e.Body.Example(rand),
+			}
+			requestBody = &RequestBodyRef{Value: &RequestBody{
+				Description: e.Body.Description,
+				Required:    e.Body.Type != expr.Empty,
+				Content:     map[string]*MediaType{ct: mt},
+				Extensions:  openapi.ExtensionsFromExpr(e.Body.Meta),
+			}}
+		} else {
+			ex, ok := e.Meta["swagger:example"]
+			if e.SkipRequestBodyEncodeDecode && ok {
+				mt := &MediaType{
+					// Have to add schema explicitly due to swagger UI bug
+					// https://github.com/swagger-api/swagger-ui/issues/6268
+					Schema:  &openapi.Schema{Type: "string", Example: ex[0]},
+					Example: ex[0],
+				}
+				requestBody = &RequestBodyRef{Value: &RequestBody{
+					Description: e.Body.Description,
+					Content:     map[string]*MediaType{ct: mt},
+					Extensions:  openapi.ExtensionsFromExpr(e.Body.Meta),
+				}}
+			}
 		}
-		mt := &MediaType{
-			Schema:  bodies.RequestBody,
-			Example: e.Body.Example(rand),
-		}
-		requestBody = &RequestBodyRef{Value: &RequestBody{
-			Description: e.Body.Description,
-			Required:    e.Body.Type != expr.Empty,
-			Content:     map[string]*MediaType{ct: mt},
-			Extensions:  openapi.ExtensionsFromExpr(e.Body.Meta),
-		}}
 	}
 
 	// parameters
