@@ -2273,11 +2273,7 @@ var PayloadBodyPrimitiveFieldArrayUserDSL = func() {
 }
 
 var PayloadExtendBodyPrimitiveFieldArrayUserDSL = func() {
-	var Ext = Type("Ext", func() {
-		Attribute("b", String)
-	})
 	var PayloadType = Type("PayloadType", func() {
-		Extend(Ext)
 		Attribute("a", ArrayOf(String))
 	})
 	Service("ServiceBodyPrimitiveArrayUser", func() {
@@ -2297,7 +2293,6 @@ var PayloadExtendBodyPrimitiveFieldStringDSL = func() {
 	})
 	var PayloadType = Type("PayloadType", func() {
 		Extend(Ext)
-		Attribute("a", ArrayOf(String))
 	})
 	Service("ServiceBodyPrimitiveArrayUser", func() {
 		Method("MethodBodyPrimitiveArrayUser", func() {

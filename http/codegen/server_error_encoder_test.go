@@ -26,6 +26,7 @@ func TestEncodeError(t *testing.T) {
 		{"api-no-body-error-response", testdata.APINoBodyErrorResponseDSL, testdata.NoBodyErrorResponseEncoderCode},
 		{"api-no-body-error-response-with-content-type", testdata.APINoBodyErrorResponseWithContentTypeDSL, testdata.NoBodyErrorResponseWithContentTypeEncoderCode},
 		{"empty-error-response-body", testdata.EmptyErrorResponseBodyDSL, testdata.EmptyErrorResponseBodyEncoderCode},
+		{"empty-custom-error-response-body", testdata.EmptyCustomErrorResponseBodyDSL, testdata.EmptyCustomErrorResponseBodyEncoderCode},
 	}
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
