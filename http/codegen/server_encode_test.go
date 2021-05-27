@@ -80,15 +80,6 @@ func TestEncode(t *testing.T) {
 
 		{"empty-server-response", testdata.EmptyServerResponseDSL, testdata.EmptyServerResponseEncodeCode},
 		{"empty-server-response-with-tags", testdata.EmptyServerResponseWithTagsDSL, testdata.EmptyServerResponseWithTagsEncodeCode},
-
-		{"unmapped-result-object", testdata.UnmappedResultObjectDSL, testdata.UnmappedResultObjectEncodeCode},
-		{"unmapped-result-object-with-body", testdata.UnmappedResultObjectWithBodyDSL, testdata.UnmappedResultObjectWithBodyEncodeCode},
-		{"unmapped-result-object-validate", testdata.UnmappedResultObjectValidateDSL, testdata.UnmappedResultObjectValidateEncodeCode},
-		{"unmapped-result-object-with-headers", testdata.UnmappedResultObjectWithHeadersDSL, testdata.UnmappedResultObjectWithHeadersEncodeCode},
-		{"unmapped-result-primitive", testdata.UnmappedResultPrimitiveDSL, testdata.UnmappedResultPrimitiveEncodeCode},
-		{"unmapped-result-primitive-validate", testdata.UnmappedResultPrimitiveValidateDSL, testdata.UnmappedResultPrimitiveValidateEncodeCode},
-		{"unmapped-result-array", testdata.UnmappedResultArrayDSL, testdata.UnmappedResultArrayEncodeCode},
-		{"unmapped-result-array-validate", testdata.UnmappedResultArrayValidateDSL, testdata.UnmappedResultArrayValidateEncodeCode},
 	}
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {

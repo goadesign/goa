@@ -180,7 +180,7 @@ func (r *HTTPResponseExpr) Validate(e *HTTPEndpointExpr) *eval.ValidationErrors 
 
 	if !r.Headers.IsEmpty() {
 		verr.Merge(r.Headers.Validate("HTTP response headers", r))
-		if e.MethodExpr.Result.Type == Empty {
+		if isEmpty(e.MethodExpr.Result) {
 			verr.Add(r, "response defines headers but result is empty")
 		} else if IsObject(e.MethodExpr.Result.Type) {
 			mobj := AsObject(r.Headers.Type)
@@ -206,7 +206,7 @@ func (r *HTTPResponseExpr) Validate(e *HTTPEndpointExpr) *eval.ValidationErrors 
 	}
 	if !r.Cookies.IsEmpty() {
 		verr.Merge(r.Cookies.Validate("HTTP response cookies", r))
-		if e.MethodExpr.Result.Type == Empty {
+		if isEmpty(e.MethodExpr.Result) {
 			verr.Add(r, "response defines cookies but result is empty")
 		} else if IsObject(e.MethodExpr.Result.Type) {
 			mobj := AsObject(r.Cookies.Type)
@@ -255,47 +255,45 @@ func (r *HTTPResponseExpr) Validate(e *HTTPEndpointExpr) *eval.ValidationErrors 
 func (r *HTTPResponseExpr) Finalize(a *HTTPEndpointExpr, svcAtt *AttributeExpr) {
 	r.Parent = a
 
-	if r.Body != nil {
-		if r.Body.Type != Empty {
-			bodyAtt := svcAtt
-			if o, ok := r.Body.Meta["origin:attribute"]; ok {
-				bodyAtt = svcAtt.Find(o[0])
-			}
-			bodyObj := AsObject(bodyAtt.Type)
-			if body := AsObject(r.Body.Type); body != nil {
-				for _, nat := range *body {
-					n := nat.Name
-					n = strings.Split(n, ":")[0]
-					var att, patt *AttributeExpr
-					var required bool
-					if bodyObj != nil {
-						att = bodyObj.Attribute(n)
-						required = bodyAtt.IsRequired(n)
-					} else {
-						att = bodyAtt
-						required = bodyAtt.Type != Empty
+	if r.Body != nil && r.Body.Type != Empty {
+		bodyAtt := svcAtt
+		if o, ok := r.Body.Meta["origin:attribute"]; ok {
+			bodyAtt = svcAtt.Find(o[0])
+		}
+		bodyObj := AsObject(bodyAtt.Type)
+		if body := AsObject(r.Body.Type); body != nil {
+			for _, nat := range *body {
+				n := nat.Name
+				n = strings.Split(n, ":")[0]
+				var att, patt *AttributeExpr
+				var required bool
+				if bodyObj != nil {
+					att = bodyObj.Attribute(n)
+					required = bodyAtt.IsRequired(n)
+				} else {
+					att = bodyAtt
+					required = bodyAtt.Type != Empty
+				}
+				initAttrFromDesign(att, patt)
+				if required {
+					if r.Body.Validation == nil {
+						r.Body.Validation = &ValidationExpr{}
 					}
-					initAttrFromDesign(att, patt)
-					if required {
-						if r.Body.Validation == nil {
-							r.Body.Validation = &ValidationExpr{}
-						}
-						r.Body.Validation.AddRequired(n)
-					}
-				}
-				// Remember original name for example to generate friendlier OpenAPI specs.
-				if t, ok := r.Body.Type.(UserType); ok {
-					t.Attribute().AddMeta("name:original", t.Name())
-				}
-				// Wrap object with user type to simplify response rendering code.
-				r.Body.Type = &UserTypeExpr{
-					AttributeExpr: DupAtt(r.Body),
-					TypeName:      fmt.Sprintf("%s%sResponseBody", a.Service.Name(), a.Name()),
+					r.Body.Validation.AddRequired(n)
 				}
 			}
-			if r.Body.Meta == nil {
-				r.Body.Meta = bodyAtt.Meta
+			// Remember original name for example to generate friendlier OpenAPI specs.
+			if t, ok := r.Body.Type.(UserType); ok {
+				t.Attribute().AddMeta("name:original", t.Name())
 			}
+			// Wrap object with user type to simplify response rendering code.
+			r.Body.Type = &UserTypeExpr{
+				AttributeExpr: DupAtt(r.Body),
+				TypeName:      fmt.Sprintf("%s%sResponseBody", a.Service.Name(), a.Name()),
+			}
+		}
+		if r.Body.Meta == nil {
+			r.Body.Meta = bodyAtt.Meta
 		}
 	}
 
@@ -331,13 +329,13 @@ func (r *HTTPResponseExpr) Dup() *HTTPResponseExpr {
 	return &res
 }
 
-// mapUnmappedAttrs maps any unmapped attributes to the response headers.
-// Unmapped attributes refer to the attributes in the given service type
-// (Result or Error) that are not mapped to response body, headers, cookies, or
-// tags. Such unmapped attributes are mapped to special goa headers in the form
-// of "Goa-Attribute(-<Attribute Name>)".
+// mapUnmappedAttrs maps any unmapped attributes in ErrorResult type to the
+// response headers. Unmapped attributes refer to the attributes in ErrorResult
+// type that are not mapped to response body or headers. Such unmapped
+// attributes are mapped to special goa headers in the form of
+// "Goa-Attribute(-<Attribute Name>)".
 func (r *HTTPResponseExpr) mapUnmappedAttrs(svcAtt *AttributeExpr) {
-	if svcAtt.Type == Empty {
+	if svcAtt.Type != ErrorResult {
 		return
 	}
 
@@ -365,12 +363,6 @@ func (r *HTTPResponseExpr) mapUnmappedAttrs(svcAtt *AttributeExpr) {
 				if _, ok := r.Headers.FindKey(nat.Name); ok {
 					continue
 				}
-				if _, ok := r.Cookies.FindKey(nat.Name); ok {
-					continue
-				}
-				if r.Tag[0] == nat.Name {
-					continue
-				}
 				r.Headers.Type.(*Object).Set(nat.Name, nat.Attribute)
 				r.Headers.Map("goa-attribute-"+nat.Name, nat.Name)
 				if svcAtt.IsRequired(nat.Name) {
@@ -382,7 +374,7 @@ func (r *HTTPResponseExpr) mapUnmappedAttrs(svcAtt *AttributeExpr) {
 			}
 		}
 	default:
-		if r.Headers.IsEmpty() && r.Cookies.IsEmpty() && (r.Body == nil || r.Body.Type == Empty) {
+		if r.Headers.IsEmpty() && (r.Body == nil || r.Body.Type == Empty) {
 			r.Headers.Type.(*Object).Set("goa-attribute", svcAtt)
 		}
 	}

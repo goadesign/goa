@@ -99,7 +99,9 @@ func (e *HTTPErrorExpr) Finalize(a *HTTPEndpointExpr) {
 	e.Response.Finalize(a, e.AttributeExpr)
 	if e.Response.Body == nil {
 		e.Response.Body = httpErrorResponseBody(a, e)
+		e.Response.Body.Finalize()
 	}
+	// map any unmapped attributes in ErrorResult type to response headers
 	e.Response.mapUnmappedAttrs(e.AttributeExpr)
 
 	// Initialize response content type if result is media type.
