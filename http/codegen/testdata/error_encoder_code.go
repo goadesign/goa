@@ -323,3 +323,26 @@ func EncodeMethodEmptyErrorResponseBodyError(encoder func(context.Context, http.
 	}
 }
 `
+
+var EmptyCustomErrorResponseBodyEncoderCode = `// EncodeMethodEmptyCustomErrorResponseBodyError returns an encoder for errors
+// returned by the MethodEmptyCustomErrorResponseBody
+// ServiceEmptyCustomErrorResponseBody endpoint.
+func EncodeMethodEmptyCustomErrorResponseBodyError(encoder func(context.Context, http.ResponseWriter) goahttp.Encoder, formatter func(err error) goahttp.Statuser) func(context.Context, http.ResponseWriter, error) error {
+	encodeError := goahttp.ErrorEncoder(encoder, formatter)
+	return func(ctx context.Context, w http.ResponseWriter, v error) error {
+		en, ok := v.(ErrorNamer)
+		if !ok {
+			return encodeError(ctx, w, v)
+		}
+		switch en.ErrorName() {
+		case "internal_error":
+			res := v.(*serviceemptycustomerrorresponsebody.Error)
+			w.Header().Set("goa-error", res.ErrorName())
+			w.WriteHeader(http.StatusInternalServerError)
+			return nil
+		default:
+			return encodeError(ctx, w, v)
+		}
+	}
+}
+`
