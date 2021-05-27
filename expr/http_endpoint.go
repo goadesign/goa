@@ -608,7 +608,7 @@ func (e *HTTPEndpointExpr) Validate() error {
 		}
 	}
 
-	body := extendedHTTPRequestBody(e)
+	body := httpRequestBody(e)
 	if e.SkipRequestBodyEncodeDecode && body.Type != Empty {
 		verr.Add(e, "HTTP endpoint request body must be empty when using SkipRequestBodyEncodeDecode but not all method payload attributes are mapped to headers and params. Make sure to define Headers and Params as needed.")
 	}
@@ -674,17 +674,19 @@ func (e *HTTPEndpointExpr) Finalize() {
 	initAttr(e.Headers, e.MethodExpr.Payload)
 	initAttr(e.Cookies, e.MethodExpr.Payload)
 
-	// finalize request body
 	e.Body = httpRequestBody(e)
+	e.Body.Finalize()
 
-	// finalize streaming request body
 	e.StreamingBody = httpStreamingBody(e)
+	if e.StreamingBody != nil {
+		e.StreamingBody.Finalize()
+	}
 
 	// Initialize responses parent, headers and body
 	for _, r := range e.Responses {
 		r.Finalize(e, e.MethodExpr.Result)
-		// finalize success response body
 		r.Body = httpResponseBody(e, r)
+		r.Body.Finalize()
 	}
 
 	// Make sure all error types are user types and have a body.
