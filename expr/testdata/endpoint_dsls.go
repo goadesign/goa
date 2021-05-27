@@ -370,6 +370,30 @@ var EndpointHasParentAndOther = func() {
 
 }
 
+var EndpointHasSkipRequestEncodeAndPayload = func() {
+	Service("Service", func() {
+		Method("Method", func() {
+			Payload(String)
+			HTTP(func() {
+				GET("/")
+				SkipRequestBodyEncodeDecode()
+			})
+		})
+	})
+}
+
+var EndpointHasSkipResponseEncodeAndResult = func() {
+	Service("Service", func() {
+		Method("Method", func() {
+			Result(String)
+			HTTP(func() {
+				GET("/")
+				SkipResponseBodyEncodeDecode()
+			})
+		})
+	})
+}
+
 var EndpointHasSkipRequestEncodeAndPayloadStreaming = func() {
 	Service("Service", func() {
 		Method("Method", func() {

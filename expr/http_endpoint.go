@@ -609,9 +609,6 @@ func (e *HTTPEndpointExpr) Validate() error {
 	}
 
 	body := httpRequestBody(e)
-	if e.SkipRequestBodyEncodeDecode && body.Type != Empty {
-		verr.Add(e, "HTTP endpoint request body must be empty when using SkipRequestBodyEncodeDecode but not all method payload attributes are mapped to headers and params. Make sure to define Headers and Params as needed.")
-	}
 	if e.MethodExpr.IsStreaming() && body.Type != Empty {
 		// Refer Websocket protocol - https://tools.ietf.org/html/rfc6455
 		// Protocol does not allow HTTP request body to be passed.
@@ -674,8 +671,16 @@ func (e *HTTPEndpointExpr) Finalize() {
 	initAttr(e.Headers, e.MethodExpr.Payload)
 	initAttr(e.Cookies, e.MethodExpr.Payload)
 
-	e.Body = httpRequestBody(e)
-	e.Body.Finalize()
+	if e.SkipRequestBodyEncodeDecode {
+		// if the body is not empty and design specifies to skip encode/decode body
+		// then we ignore the body type and set to Empty. It is possible for the
+		// design to specify method Payload and SkipXXX to provide examples for the
+		// payload.
+		e.Body = &AttributeExpr{Type: Empty}
+	} else {
+		e.Body = httpRequestBody(e)
+		e.Body.Finalize()
+	}
 
 	e.StreamingBody = httpStreamingBody(e)
 	if e.StreamingBody != nil {
@@ -685,8 +690,16 @@ func (e *HTTPEndpointExpr) Finalize() {
 	// Initialize responses parent, headers and body
 	for _, r := range e.Responses {
 		r.Finalize(e, e.MethodExpr.Result)
-		r.Body = httpResponseBody(e, r)
-		r.Body.Finalize()
+		if e.SkipResponseBodyEncodeDecode {
+			// if the body is not empty and design specifies to skip encode/decode body
+			// then we ignore the body type and set to Empty. It is possible for the
+			// design to specify method Result and SkipXXX to provide examples for the
+			// response.
+			r.Body = &AttributeExpr{Type: Empty}
+		} else {
+			r.Body = httpResponseBody(e, r)
+			r.Body.Finalize()
+		}
 	}
 
 	// Make sure all error types are user types and have a body.

@@ -226,21 +226,20 @@ func buildOperation(key string, r *expr.RouteExpr, bodies *EndpointBodies, rand 
 				Content:     map[string]*MediaType{ct: mt},
 				Extensions:  openapi.ExtensionsFromExpr(e.Body.Meta),
 			}}
-		} else {
-			ex, ok := e.Meta["swagger:example"]
-			if e.SkipRequestBodyEncodeDecode && ok {
-				mt := &MediaType{
-					// Have to add schema explicitly due to swagger UI bug
-					// https://github.com/swagger-api/swagger-ui/issues/6268
-					Schema:  &openapi.Schema{Type: "string", Example: ex[0]},
-					Example: ex[0],
-				}
-				requestBody = &RequestBodyRef{Value: &RequestBody{
-					Description: e.Description(),
-					Content:     map[string]*MediaType{ct: mt},
-					Extensions:  openapi.ExtensionsFromExpr(e.Meta),
-				}}
+		} else if e.SkipRequestBodyEncodeDecode {
+			// it is possible for design to have request Body as Empty and set
+			// SkipRequestBodyEncodeDecode. In this case, we set the request body
+			// example from the Payload.
+			mt := &MediaType{
+				Schema:  bodies.RequestBody,
+				Example: e.MethodExpr.Payload.Example(rand),
 			}
+			requestBody = &RequestBodyRef{Value: &RequestBody{
+				Description: e.MethodExpr.Payload.Description,
+				Required:    e.MethodExpr.Payload.Type != expr.Empty,
+				Content:     map[string]*MediaType{ct: mt},
+				Extensions:  openapi.ExtensionsFromExpr(e.MethodExpr.Payload.Meta),
+			}}
 		}
 	}
 

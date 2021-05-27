@@ -317,14 +317,16 @@ var ExtensionDSL = func() {
 var SkipBodyEncodeDecodeDSL = func() {
 	Service("testService", func() {
 		Method("testEndpoint", func() {
+			Payload(Any, func() {
+				Example(`{"foo":"bar"}`)
+			})
+			Result(Any, func() {
+				Example(`{"foo":"bar"}`)
+			})
 			HTTP(func() {
 				POST("/")
 				SkipRequestBodyEncodeDecode()
 				SkipResponseBodyEncodeDecode()
-				Meta("swagger:example", `{"foo":"bar"}`)
-				Response(StatusOK, func() {
-					Meta("swagger:example", `{"foo":"bar"}`)
-				})
 			})
 		})
 	})

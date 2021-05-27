@@ -146,6 +146,12 @@ func TestHTTPEndpointValidation(t *testing.T) {
 		"endpoint-has-parent-and-other": {
 			DSL: testdata.EndpointHasParentAndOther,
 		},
+		"endpoint-has-skip-request-encode-and-payload": {
+			DSL: testdata.EndpointHasSkipRequestEncodeAndPayload,
+		},
+		"endpoint-has-skip-response-encode-and-result": {
+			DSL: testdata.EndpointHasSkipResponseEncodeAndResult,
+		},
 		"endpoint-has-skip-request-encode-and-payload-streaming": {
 			DSL:   testdata.EndpointHasSkipRequestEncodeAndPayloadStreaming,
 			Error: `service "Service" HTTP endpoint "Method": Endpoint cannot use SkipRequestBodyEncodeDecode when method defines a StreamingPayload.`,
@@ -159,9 +165,8 @@ func TestHTTPEndpointValidation(t *testing.T) {
 			Error: `service "Service" HTTP endpoint "Method": Endpoint cannot use SkipResponseBodyEncodeDecode when method defines a StreamingPayload. Use SkipRequestBodyEncodeDecode instead.`,
 		},
 		"endpoint-has-skip-response-encode-and-result-streaming": {
-			DSL: testdata.EndpointHasSkipResponseEncodeAndResultStreaming,
-			Error: `service "Service" HTTP endpoint "Method": Endpoint cannot use SkipResponseBodyEncodeDecode when method defines a StreamingResult.
-service "Service" HTTP endpoint "Method": HTTP endpoint response body must be empty when using SkipResponseBodyEncodeDecode. Make sure to define headers and cookies as needed.`,
+			DSL:   testdata.EndpointHasSkipResponseEncodeAndResultStreaming,
+			Error: `service "Service" HTTP endpoint "Method": Endpoint cannot use SkipResponseBodyEncodeDecode when method defines a StreamingResult.`,
 		},
 		"endpoint-has-skip-encode-and-grpc": {
 			DSL:   testdata.EndpointHasSkipEncodeAndGRPC,

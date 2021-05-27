@@ -241,11 +241,6 @@ func (r *HTTPResponseExpr) Validate(e *HTTPEndpointExpr) *eval.ValidationErrors 
 				}
 			}
 		}
-	} else if e.SkipResponseBodyEncodeDecode {
-		body := httpResponseBody(e, r)
-		if body.Type != Empty {
-			verr.Add(e, "HTTP endpoint response body must be empty when using SkipResponseBodyEncodeDecode. Make sure to define headers and cookies as needed.")
-		}
 	}
 	return verr
 }

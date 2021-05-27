@@ -74,6 +74,12 @@ func buildBodyTypes(api *expr.APIExpr) (map[string]map[string]*EndpointBodies, m
 			}
 
 			req := sf.schemafy(e.Body)
+			if e.SkipRequestBodyEncodeDecode {
+				// it is possible for design to have request Body as Empty and set
+				// SkipRequestBodyEncodeDecode. In this case, we set the request body
+				// example from the Payload.
+				req = sf.schemafy(e.MethodExpr.Payload)
+			}
 			if e.StreamingBody != nil {
 				sreq := sf.schemafy(e.StreamingBody)
 				var note string
@@ -115,6 +121,12 @@ func buildBodyTypes(api *expr.APIExpr) (map[string]map[string]*EndpointBodies, m
 					body.Type = rt
 				}
 				js := sf.schemafy(body)
+				if e.SkipResponseBodyEncodeDecode {
+					// it is possible for design to have request Body as Empty and set
+					// SkipRequestBodyEncodeDecode. In this case, we set the request body
+					// example from the Payload.
+					js = sf.schemafy(e.MethodExpr.Result)
+				}
 				if rt, ok := resp.Body.Type.(*expr.ResultTypeExpr); ok && js != nil {
 					if view == "" && rt.HasMultipleViews() {
 						// Dynamic views
