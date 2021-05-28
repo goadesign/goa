@@ -89,6 +89,9 @@ func (s *MethodServerStreamingUserTypeRPCClientStream) Recv() (*serviceserverstr
 	}
 	proj := NewResultTypeView(v)
 	vres := &serviceserverstreamingusertyperpcviews.ResultType{Projected: proj, View: s.view}
+	if err := serviceserverstreamingusertyperpcviews.ValidateResultType(vres); err != nil {
+		return nil, err
+	}
 	return serviceserverstreamingusertyperpc.NewResultType(vres), nil
 }
 `
@@ -122,6 +125,9 @@ func (s *MethodServerStreamingResultTypeCollectionWithExplicitViewClientStream) 
 	}
 	proj := NewResultTypeCollection(v)
 	vres := serviceserverstreamingresulttypecollectionwithexplicitviewviews.ResultTypeCollection{Projected: proj, View: "tiny"}
+	if err := serviceserverstreamingresulttypecollectionwithexplicitviewviews.ValidateResultTypeCollection(vres); err != nil {
+		return nil, err
+	}
 	return serviceserverstreamingresulttypecollectionwithexplicitview.NewResultTypeCollection(vres), nil
 }
 `
@@ -330,6 +336,9 @@ func (s *MethodBidirectionalStreamingRPCClientStream) Recv() (*servicebidirectio
 	}
 	proj := NewIDView(v)
 	vres := &servicebidirectionalstreamingrpcviews.ID{Projected: proj, View: "default"}
+	if err := servicebidirectionalstreamingrpcviews.ValidateID(vres); err != nil {
+		return nil, err
+	}
 	return servicebidirectionalstreamingrpc.NewID(vres), nil
 }
 `
