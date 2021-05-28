@@ -106,10 +106,10 @@ func basicEndpointSection(m *expr.MethodExpr, svcData *Data) *codegen.SectionTem
 		MethodData:     md,
 		ServiceVarName: svcData.VarName,
 	}
-	if m.Payload.Type != expr.Empty {
+	if md.Payload != "" {
 		ed.PayloadFullRef = svcData.Scope.GoFullTypeRef(m.Payload, svcData.PkgName)
 	}
-	if m.Result.Type != expr.Empty {
+	if md.Result != "" {
 		ed.ResultFullName = svcData.Scope.GoFullTypeName(m.Result, svcData.PkgName)
 		ed.ResultFullRef = svcData.Scope.GoFullTypeRef(m.Result, svcData.PkgName)
 		ed.ResultIsStruct = expr.IsObject(m.Result.Type)

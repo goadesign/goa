@@ -785,6 +785,25 @@ func buildMethodData(m *expr.MethodExpr, svcPkgName string, service *expr.Servic
 	var httpMet *expr.HTTPEndpointExpr
 	if httpSvc := expr.Root.HTTPService(m.Service.Name); httpSvc != nil {
 		httpMet = httpSvc.Endpoint(m.Name)
+		if httpMet.SkipRequestBodyEncodeDecode && httpMet.BodyOnly() {
+			// if endpoint defines SkipXX and only a body then we ignore the payload
+			// and use it only to generate examples.
+			payloadName = ""
+			payloadRef = ""
+		}
+		bodyOnly := true
+		for _, r := range httpMet.Responses {
+			if !r.BodyOnly() {
+				// one of the response defines header/cookie.
+				bodyOnly = false
+			}
+		}
+		if httpMet.SkipResponseBodyEncodeDecode && bodyOnly {
+			// if endpoint defines SkipXX and all the response define only a body
+			// then we ignore the result and use it only to generate examples.
+			rname = ""
+			resultRef = ""
+		}
 	}
 	data := &MethodData{
 		Name:                         m.Name,

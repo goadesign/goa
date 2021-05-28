@@ -324,6 +324,11 @@ func (r *HTTPResponseExpr) Dup() *HTTPResponseExpr {
 	return &res
 }
 
+// BodyOnly returns true if there is no response headers and cookies defined.
+func (r *HTTPResponseExpr) BodyOnly() bool {
+	return r.Headers.IsEmpty() && r.Cookies.IsEmpty()
+}
+
 // mapUnmappedAttrs maps any unmapped attributes in ErrorResult type to the
 // response headers. Unmapped attributes refer to the attributes in ErrorResult
 // type that are not mapped to response body or headers. Such unmapped

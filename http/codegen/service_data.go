@@ -1359,7 +1359,7 @@ func buildPayloadData(e *expr.HTTPEndpointExpr, sd *ServiceData) *PayloadData {
 		ref         string
 	)
 	{
-		if payload.Type != expr.Empty {
+		if payload.Type != expr.Empty && !(e.SkipRequestBodyEncodeDecode && e.BodyOnly()) {
 			name = svc.Scope.GoFullTypeName(payload, svc.PkgName)
 			ref = svc.Scope.GoFullTypeRef(payload, svc.PkgName)
 		}
@@ -1400,7 +1400,14 @@ func buildResultData(e *expr.HTTPEndpointExpr, sd *ServiceData) *ResultData {
 		if v, ok := result.Meta["view"]; ok {
 			view = v[0]
 		}
-		if result.Type != expr.Empty {
+		bodyOnly := true
+		for _, r := range e.Responses {
+			if !r.BodyOnly() {
+				// one of the the response defines header/cookie
+				bodyOnly = false
+			}
+		}
+		if result.Type != expr.Empty && !(e.SkipResponseBodyEncodeDecode && bodyOnly) {
 			name = svc.Scope.GoFullTypeName(result, svc.PkgName)
 			ref = svc.Scope.GoFullTypeRef(result, svc.PkgName)
 		}

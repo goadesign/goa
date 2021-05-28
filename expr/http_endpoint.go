@@ -708,6 +708,13 @@ func (e *HTTPEndpointExpr) Finalize() {
 	}
 }
 
+// BodyOnly return true if the endpoint request has no headers, params, or
+// cookies.
+func (e *HTTPEndpointExpr) BodyOnly() bool {
+	defHdrs := defaultRequestHeaderAttributes(e)
+	return e.Headers.IsEmpty() && len(defHdrs) == 0 && e.Params.IsEmpty() && e.Cookies.IsEmpty() && e.MapQueryParams == nil
+}
+
 // validateParams checks the endpoint parameters are of an allowed type and the
 // method payload contains the parameters.
 func (e *HTTPEndpointExpr) validateParams() *eval.ValidationErrors {
