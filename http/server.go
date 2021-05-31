@@ -24,14 +24,21 @@ func (s Servers) Use(m func(http.Handler) http.Handler) {
 	}
 }
 
-// ReplacePrefix returns a handler that serves HTTP requests by replacing the
-// prefix from the request URL's Path (and RawPath if set) and invoking the
-// handler h. The logic is the same as the standard http package StripPrefix
-// function.
-func ReplacePrefix(old, nw string, h http.Handler) http.Handler {
+// Replace returns a handler that serves HTTP requests by replacing the
+// request URL's Path (and RawPath if set) and invoking the handler h.
+// The logic is the same as the standard http package StripPrefix function.
+func Replace(old, nw string, h http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		p := strings.Replace(r.URL.Path, old, nw, 1)
-		rp := strings.Replace(r.URL.RawPath, old, nw, 1)
+		var p, rp string
+		if old != "" {
+			p = strings.Replace(r.URL.Path, old, nw, 1)
+			rp = strings.Replace(r.URL.RawPath, old, nw, 1)
+		} else {
+			p = nw
+			if r.URL.RawPath != "" {
+				rp = nw
+			}
+		}
 		if p != r.URL.Path && (r.URL.RawPath == "" || rp != r.URL.RawPath) {
 			r2 := new(http.Request)
 			*r2 = *r
