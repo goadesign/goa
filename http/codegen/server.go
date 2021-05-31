@@ -35,12 +35,13 @@ func serverFile(genpkg string, svc *expr.HTTPServiceExpr) *codegen.File {
 	path := filepath.Join(codegen.Gendir, "http", svcName, "server", "server.go")
 	title := fmt.Sprintf("%s HTTP server", svc.Name())
 	funcs := map[string]interface{}{
-		"join":                func(ss []string, s string) string { return strings.Join(ss, s) },
-		"hasWebSocket":        hasWebSocket,
-		"isWebSocketEndpoint": isWebSocketEndpoint,
-		"viewedServerBody":    viewedServerBody,
-		"mustDecodeRequest":   mustDecodeRequest,
-		"addLeadingSlash":     addLeadingSlash,
+		"join":                    func(ss []string, s string) string { return strings.Join(ss, s) },
+		"hasWebSocket":            hasWebSocket,
+		"isWebSocketEndpoint":     isWebSocketEndpoint,
+		"viewedServerBody":        viewedServerBody,
+		"mustDecodeRequest":       mustDecodeRequest,
+		"addLeadingSlash":         addLeadingSlash,
+		"removeTrailingIndexHTML": removeTrailingIndexHTML,
 	}
 	sections := []*codegen.SectionTemplate{
 		codegen.Header(title, "server", []*codegen.ImportSpec{
@@ -246,6 +247,13 @@ func addLeadingSlash(s string) string {
 	return "/" + s
 }
 
+func removeTrailingIndexHTML(s string) string {
+	if strings.HasSuffix(s, "/index.html") {
+		return strings.TrimSuffix(s, "index.html")
+	}
+	return s
+}
+
 func mapQueryDecodeData(dt expr.DataType, varName string, inc int) map[string]interface{} {
 	return map[string]interface{}{
 		"Type":      dt,
@@ -369,10 +377,10 @@ func {{ .MountServer }}(mux goahttp.Muxer, h *{{ .ServerStruct }}) {
 			http.Redirect(w, r, "{{ .Redirect.URL }}", {{ .Redirect.StatusCode }})
 		}))
 	 	{{- else if .IsDir }}
-			{{- $filepath := addLeadingSlash .FilePath }}
+			{{- $filepath := addLeadingSlash (removeTrailingIndexHTML .FilePath) }}
 	{{ .MountHandler }}(mux, {{ range .RequestPaths }}{{if ne . $filepath }}goahttp.Replace("{{ . }}", "{{ $filepath }}", {{ end }}{{ end }}h.{{ .VarName }}){{ range .RequestPaths }}{{ if ne . $filepath }}){{ end}}{{ end }}
 		{{- else }}
-			{{- $filepath := addLeadingSlash .FilePath }}
+			{{- $filepath := addLeadingSlash (removeTrailingIndexHTML .FilePath) }}
 	{{ .MountHandler }}(mux, {{ range .RequestPaths }}{{if ne . $filepath }}goahttp.Replace("", "{{ $filepath }}", {{ end }}{{ end }}h.{{ .VarName }}){{ range .RequestPaths }}{{ if ne . $filepath }}){{ end}}{{ end }}
 		{{- end }}
 	{{- end }}
