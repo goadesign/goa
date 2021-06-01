@@ -82,6 +82,16 @@ func TestResponseDecoder(t *testing.T) {
 		{"+html", "*http.textDecoder"},
 		{"text/plain", "*http.textDecoder"},
 		{"+txt", "*http.textDecoder"},
+		{"application/json; charset=utf-8", "*json.Decoder"},
+		{"+json; charset=utf-8", "*json.Decoder"},
+		{"application/xml; charset=utf-8", "*xml.Decoder"},
+		{"+xml; charset=utf-8", "*xml.Decoder"},
+		{"application/gob; charset=utf-8", "*gob.Decoder"},
+		{"+gob; charset=utf-8", "*gob.Decoder"},
+		{"text/html; charset=utf-8", "*http.textDecoder"},
+		{"+html; charset=utf-8", "*http.textDecoder"},
+		{"text/plain; charset=utf-8", "*http.textDecoder"},
+		{"+txt; charset=utf-8", "*http.textDecoder"},
 	}
 
 	for _, c := range cases {
