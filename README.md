@@ -5,7 +5,7 @@ design-first approach.
 
 ---
 [![Build Status](https://github.com/goadesign/goa/workflows/build/badge.svg?branch=v3&event=push)](https://github.com/goadesign/goa/actions?query=branch%3Av3+event%3Apush)
-[![DSL GoDoc](https://img.shields.io/badge/godoc-DSL-blue)](https://pkg.go.dev/goa.design/goa/v3@v3.4.2/dsl?tab=doc)
+[![DSL GoDoc](https://img.shields.io/badge/godoc-DSL-blue)](https://pkg.go.dev/goa.design/goa/v3@v3.4.3/dsl?tab=doc)
 [![Slack](https://img.shields.io/badge/slack-gophers-orange.svg?style=flat)](https://gophers.slack.com/messages/goa/)
 
 ## Overview
@@ -51,7 +51,7 @@ go get -u goa.design/goa/v3/...@v3
 
 >Note: Goa requires the use of Go modules.
 
-Current Release: `v3.4.2`
+Current Release: `v3.4.3`
 
 ## Teaser
 
@@ -325,7 +325,7 @@ Gleidson Nascimento goes through how to create a complete service that using bot
 
 The [goa.design](https://goa.design) website provides a high level overview of
 Goa and the DSL. 
-The [![DSL GoDoc](https://img.shields.io/badge/godoc-DSL-blue)](https://pkg.go.dev/goa.design/goa/v3@v3.4.2/dsl?tab=doc)
+The [![DSL GoDoc](https://img.shields.io/badge/godoc-DSL-blue)](https://pkg.go.dev/goa.design/goa/v3@v3.4.3/dsl?tab=doc)
 contains a fully documented reference of all the DSL functions.
 ### Examples
 
