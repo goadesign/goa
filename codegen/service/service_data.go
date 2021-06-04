@@ -741,7 +741,7 @@ func buildMethodData(m *expr.MethodExpr, svcPkgName string, service *expr.Servic
 	if desc == "" {
 		desc = codegen.Goify(m.Name, true) + " implements " + m.Name + "."
 	}
-	if m.Payload.Type != expr.Empty {
+	if mustInitPayload(m) {
 		payloadName = scope.GoTypeName(m.Payload)
 		payloadRef = scope.GoTypeRef(m.Payload)
 		if dt, ok := m.Payload.Type.(expr.UserType); ok {
@@ -754,7 +754,7 @@ func buildMethodData(m *expr.MethodExpr, svcPkgName string, service *expr.Servic
 		}
 		payloadEx = m.Payload.Example(expr.Root.API.Random())
 	}
-	if m.Result.Type != expr.Empty {
+	if mustInitResult(m) {
 		rname = scope.GoTypeName(m.Result)
 		resultRef = scope.GoTypeRef(m.Result)
 		if dt, ok := m.Result.Type.(expr.UserType); ok {
@@ -785,25 +785,6 @@ func buildMethodData(m *expr.MethodExpr, svcPkgName string, service *expr.Servic
 	var httpMet *expr.HTTPEndpointExpr
 	if httpSvc := expr.Root.HTTPService(m.Service.Name); httpSvc != nil {
 		httpMet = httpSvc.Endpoint(m.Name)
-		if httpMet.SkipRequestBodyEncodeDecode && httpMet.BodyOnly() {
-			// if endpoint defines SkipXX and only a body then we ignore the payload
-			// and use it only to generate examples.
-			payloadName = ""
-			payloadRef = ""
-		}
-		bodyOnly := true
-		for _, r := range httpMet.Responses {
-			if !r.BodyOnly() {
-				// one of the response defines header/cookie.
-				bodyOnly = false
-			}
-		}
-		if httpMet.SkipResponseBodyEncodeDecode && bodyOnly {
-			// if endpoint defines SkipXX and all the response define only a body
-			// then we ignore the result and use it only to generate examples.
-			rname = ""
-			resultRef = ""
-		}
 	}
 	data := &MethodData{
 		Name:                         m.Name,
@@ -833,6 +814,40 @@ func buildMethodData(m *expr.MethodExpr, svcPkgName string, service *expr.Servic
 		initStreamData(data, m, vname, rname, resultRef, scope)
 	}
 	return data
+}
+
+// mustInitPayload returns true if method Payload must be initialized.
+func mustInitPayload(m *expr.MethodExpr) bool {
+	if m.Payload.Type == expr.Empty {
+		return false
+	}
+
+	var httpMet *expr.HTTPEndpointExpr
+	if httpSvc := expr.Root.HTTPService(m.Service.Name); httpSvc != nil {
+		httpMet = httpSvc.Endpoint(m.Name)
+		if httpMet.SkipRequestBodyEncodeDecode && httpMet.HasBodyOnly() {
+			return false
+		}
+	}
+	return true
+}
+
+// mustInitResult returns true if method Result must be initialized.
+func mustInitResult(m *expr.MethodExpr) bool {
+	if m.Result.Type == expr.Empty {
+		return false
+	}
+
+	var httpMet *expr.HTTPEndpointExpr
+	if httpSvc := expr.Root.HTTPService(m.Service.Name); httpSvc != nil {
+		httpMet = httpSvc.Endpoint(m.Name)
+		for _, r := range httpMet.Responses {
+			if httpMet.SkipResponseBodyEncodeDecode && r.HasBodyOnly() {
+				return false
+			}
+		}
+	}
+	return true
 }
 
 // initStreamData initializes the streaming payload data structures and methods.

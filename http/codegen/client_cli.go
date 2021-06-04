@@ -70,7 +70,9 @@ func ClientCLIFiles(genpkg string, root *expr.RootExpr) []*codegen.File {
 		files = append(files, endpointParser(genpkg, root, svr, data))
 	}
 	for i, svc := range svcs {
-		files = append(files, payloadBuilders(genpkg, svc, data[i].CommandData))
+		if f := payloadBuilders(genpkg, svc, data[i].CommandData); f != nil {
+			files = append(files, f)
+		}
 	}
 	return files
 }
@@ -169,10 +171,16 @@ func payloadBuilders(genpkg string, svc *expr.HTTPServiceExpr, data *cli.Command
 	sections := []*codegen.SectionTemplate{
 		codegen.Header(title, "client", specs),
 	}
+	mustGenerate := false
 	for _, sub := range data.Subcommands {
 		if sub.BuildFunction != nil {
+			mustGenerate = true
 			sections = append(sections, cli.PayloadBuilderSection(sub.BuildFunction))
 		}
+	}
+
+	if !mustGenerate {
+		return nil
 	}
 
 	return &codegen.File{Path: path, SectionTemplates: sections}

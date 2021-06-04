@@ -43,19 +43,6 @@ func responseFromExpr(r *expr.HTTPResponseExpr, bodies map[int][]*openapi.Schema
 				Example:    r.Body.Example(rand),
 				Extensions: openapi.ExtensionsFromExpr(r.Body.Meta),
 			}
-		} else {
-			e := r.Parent.(*expr.HTTPEndpointExpr)
-			if e.SkipResponseBodyEncodeDecode {
-				// it is possible for design to have response Body as Empty and set
-				// SkipResponseBodyEncodeDecode. In this case, we set the response body
-				// example from the Result.
-				content = make(map[string]*MediaType)
-				content[ct] = &MediaType{
-					Schema:     bodies[r.StatusCode][0],
-					Example:    e.MethodExpr.Result.Example(rand),
-					Extensions: openapi.ExtensionsFromExpr(e.MethodExpr.Result.Meta),
-				}
-			}
 		}
 	}
 	desc := r.Description

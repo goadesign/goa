@@ -227,9 +227,6 @@ func (r *HTTPResponseExpr) Validate(e *HTTPEndpointExpr) *eval.ValidationErrors 
 	}
 	if r.Body != nil {
 		verr.Merge(r.Body.Validate("HTTP response body", r))
-		if e.SkipResponseBodyEncodeDecode {
-			verr.Add(r, "Cannot define a response body when endpoint uses SkipResponseBodyEncodeDecode.")
-		}
 		if att, ok := r.Body.Meta["origin:attribute"]; ok {
 			if resultAttributeType(att[0]) == nil {
 				verr.Add(r, "body %q has no equivalent attribute in%s result type", att[0], inview)
@@ -324,9 +321,11 @@ func (r *HTTPResponseExpr) Dup() *HTTPResponseExpr {
 	return &res
 }
 
-// BodyOnly returns true if there is no response headers and cookies defined.
-func (r *HTTPResponseExpr) BodyOnly() bool {
-	return r.Headers.IsEmpty() && r.Cookies.IsEmpty()
+// HasBodyOnly returns true if the response defines a body only.
+func (r *HTTPResponseExpr) HasBodyOnly() bool {
+	return r.Body != nil && r.Body.Type != Empty &&
+		r.Headers.IsEmpty() &&
+		r.Cookies.IsEmpty()
 }
 
 // mapUnmappedAttrs maps any unmapped attributes in ErrorResult type to the

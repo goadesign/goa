@@ -332,6 +332,34 @@ var SkipBodyEncodeDecodeDSL = func() {
 	})
 }
 
+var SkipBodyEncodeDecodeWithHeadersParamsDSL = func() {
+	var PayloadT = Type("Payload", func() {
+		Attribute("path", String, func() {
+			Example("foo")
+		})
+		Attribute("header", String, func() {
+			Example("bar")
+		})
+	})
+	Service("testService", func() {
+		Method("testEndpoint", func() {
+			Payload(PayloadT)
+			Result(Any, func() {
+				Example(`{"body":"bar"}`)
+			})
+			HTTP(func() {
+				POST("/{path}")
+				Header("header")
+				SkipRequestBodyEncodeDecode()
+				SkipResponseBodyEncodeDecode()
+				Response(StatusOK, func() {
+					Header("header:Location")
+				})
+			})
+		})
+	})
+}
+
 var SecurityDSL = func() {
 	var JWTAuth = JWTSecurity("jwt", func() {
 		Description(`Secures endpoint by requiring a valid JWT token retrieved via the signin endpoint. Supports scopes "api:read" and "api:write".`)

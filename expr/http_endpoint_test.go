@@ -182,6 +182,14 @@ func TestHTTPEndpointValidation(t *testing.T) {
 service "Service" HTTP endpoint "MethodB": HTTP endpoint request body must be empty when the endpoint uses streaming. Payload attributes must be mapped to headers and/or params.
 service "Service" HTTP endpoint "MethodC": HTTP endpoint request body must be empty when the endpoint uses streaming. Payload attributes must be mapped to headers and/or params.`,
 		},
+		"endpoint-has-skip-encode-with-implicit-body": {
+			DSL: testdata.EndpointHasSkipEncodeWithImplicitBody,
+		},
+		"endpoint-has-skip-encode-with-explicit-body": {
+			DSL: testdata.EndpointHasSkipEncodeWithExplicitBody,
+			Error: `service "Service" HTTP endpoint "Method": Cannot define a request body when using SkipRequestBodyEncodeDecode.
+HTTP response of service "Service" HTTP endpoint "Method": Cannot define a response body when endpoint uses SkipResponseBodyEncodeDecode.`,
+		},
 	}
 	for name, c := range cases {
 		t.Run(name, func(t *testing.T) {

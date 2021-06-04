@@ -42,6 +42,7 @@ func TestFiles(t *testing.T) {
 		{"path-with-wildcards", testdata.PathWithWildcardDSL},
 		{"with-tags", testdata.WithTagsDSL},
 		{"skip-body-encode-decode", testdata.SkipBodyEncodeDecodeDSL},
+		{"skip-body-encode-decode-with-headers-params", testdata.SkipBodyEncodeDecodeWithHeadersParamsDSL},
 		// TestEndpoints
 		{"endpoint", testdata.ExtensionDSL},
 		// TestValidations

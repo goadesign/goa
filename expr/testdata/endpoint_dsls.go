@@ -459,6 +459,46 @@ var EndpointHasSkipEncodeAndGRPC = func() {
 	})
 }
 
+var EndpointHasSkipEncodeWithImplicitBody = func() {
+	Service("Service", func() {
+		Method("Method", func() {
+			Payload(func() {
+				Attribute("body", String)
+			})
+			Result(func() {
+				Attribute("body", String)
+			})
+			HTTP(func() {
+				GET("/")
+				SkipRequestBodyEncodeDecode()
+				SkipResponseBodyEncodeDecode()
+			})
+		})
+	})
+}
+
+var EndpointHasSkipEncodeWithExplicitBody = func() {
+	Service("Service", func() {
+		Method("Method", func() {
+			Payload(func() {
+				Attribute("body", String)
+			})
+			Result(func() {
+				Attribute("body", String)
+			})
+			HTTP(func() {
+				GET("/")
+				SkipRequestBodyEncodeDecode()
+				Body("body")
+				SkipResponseBodyEncodeDecode()
+				Response(StatusOK, func() {
+					Body(Empty)
+				})
+			})
+		})
+	})
+}
+
 var EndpointPayloadMissingRequired = func() {
 	Service("Service", func() {
 		Method("Method", func() {

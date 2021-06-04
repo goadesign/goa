@@ -711,8 +711,6 @@ func (d ServicesData) analyze(hs *expr.HTTPServiceExpr) *ServiceData {
 			}
 		}
 
-		payload := buildPayloadData(a, rd)
-
 		var (
 			reqs  service.RequirementsData
 			hsch  service.SchemesData
@@ -744,6 +742,8 @@ func (d ServicesData) analyze(hs *expr.HTTPServiceExpr) *ServiceData {
 				reqs = append(reqs, &service.RequirementData{Schemes: rs, Scopes: req.Scopes})
 			}
 		}
+
+		payload := buildPayloadData(a, rd)
 
 		var requestEncoder string
 		{
@@ -1086,7 +1086,7 @@ func buildPayloadData(e *expr.HTTPEndpointExpr, sd *ServiceData) *PayloadData {
 	}
 
 	var init *InitData
-	if needInit(payload.Type) {
+	if needInit(payload.Type) && !(e.SkipRequestBodyEncodeDecode && e.HasBodyOnly()) {
 		// generate constructor function to transform request body,
 		// params, headers and cookies into the method payload type
 		var (
@@ -1359,19 +1359,19 @@ func buildPayloadData(e *expr.HTTPEndpointExpr, sd *ServiceData) *PayloadData {
 		ref         string
 	)
 	{
-		if payload.Type != expr.Empty && !(e.SkipRequestBodyEncodeDecode && e.BodyOnly()) {
+		if payload.Type != expr.Empty && !(e.SkipRequestBodyEncodeDecode && e.HasBodyOnly()) {
 			name = svc.Scope.GoFullTypeName(payload, svc.PkgName)
 			ref = svc.Scope.GoFullTypeRef(payload, svc.PkgName)
-		}
-		if init == nil {
-			if o := expr.AsObject(e.Params.Type); o != nil && len(*o) > 0 {
-				returnValue = codegen.Goify((*o)[0].Name, false)
-			} else if o := expr.AsObject(e.Headers.Type); o != nil && len(*o) > 0 {
-				returnValue = codegen.Goify((*o)[0].Name, false)
-			} else if o := expr.AsObject(e.Cookies.Type); o != nil && len(*o) > 0 {
-				returnValue = codegen.Goify((*o)[0].Name, false)
-			} else if e.MapQueryParams != nil && *e.MapQueryParams == "" {
-				returnValue = mapQueryParam.VarName
+			if init == nil {
+				if o := expr.AsObject(e.Params.Type); o != nil && len(*o) > 0 {
+					returnValue = codegen.Goify((*o)[0].Name, false)
+				} else if o := expr.AsObject(e.Headers.Type); o != nil && len(*o) > 0 {
+					returnValue = codegen.Goify((*o)[0].Name, false)
+				} else if o := expr.AsObject(e.Cookies.Type); o != nil && len(*o) > 0 {
+					returnValue = codegen.Goify((*o)[0].Name, false)
+				} else if e.MapQueryParams != nil && *e.MapQueryParams == "" {
+					returnValue = mapQueryParam.VarName
+				}
 			}
 		}
 	}
@@ -1400,14 +1400,16 @@ func buildResultData(e *expr.HTTPEndpointExpr, sd *ServiceData) *ResultData {
 		if v, ok := result.Meta["view"]; ok {
 			view = v[0]
 		}
-		bodyOnly := true
-		for _, r := range e.Responses {
-			if !r.BodyOnly() {
-				// one of the the response defines header/cookie
-				bodyOnly = false
+		hasResult := result.Type != expr.Empty
+		if hasResult {
+			for _, r := range e.Responses {
+				if e.SkipResponseBodyEncodeDecode && r.HasBodyOnly() {
+					hasResult = false
+					break
+				}
 			}
 		}
-		if result.Type != expr.Empty && !(e.SkipResponseBodyEncodeDecode && bodyOnly) {
+		if hasResult {
 			name = svc.Scope.GoFullTypeName(result, svc.PkgName)
 			ref = svc.Scope.GoFullTypeRef(result, svc.PkgName)
 		}
@@ -1546,7 +1548,7 @@ func buildResponses(e *expr.HTTPEndpointExpr, result *expr.AttributeExpr, viewed
 						break
 					}
 				}
-				if needInit(result.Type) {
+				if needInit(result.Type) && !(e.SkipResponseBodyEncodeDecode && resp.HasBodyOnly()) {
 					// generate constructor function to transform response body,
 					// headers and cookies into the method result type
 					var (
@@ -1942,7 +1944,7 @@ func buildErrorsData(e *expr.HTTPEndpointExpr, sd *ServiceData) []*ErrorGroupDat
 // sd is the service data
 //
 func buildRequestBodyType(body, att *expr.AttributeExpr, e *expr.HTTPEndpointExpr, svr bool, sd *ServiceData) *TypeData {
-	if body.Type == expr.Empty {
+	if body.Type == expr.Empty || e.SkipRequestBodyEncodeDecode {
 		return nil
 	}
 	var (
@@ -2070,7 +2072,7 @@ func buildRequestBodyType(body, att *expr.AttributeExpr, e *expr.HTTPEndpointExp
 // view is the view name to add as a suffix to the type name.
 //
 func buildResponseBodyType(body, att *expr.AttributeExpr, e *expr.HTTPEndpointExpr, svr bool, view *string, sd *ServiceData) *TypeData {
-	if body.Type == expr.Empty {
+	if body.Type == expr.Empty || e.SkipResponseBodyEncodeDecode {
 		return nil
 	}
 	var (

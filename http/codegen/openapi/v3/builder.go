@@ -226,20 +226,6 @@ func buildOperation(key string, r *expr.RouteExpr, bodies *EndpointBodies, rand 
 				Content:     map[string]*MediaType{ct: mt},
 				Extensions:  openapi.ExtensionsFromExpr(e.Body.Meta),
 			}}
-		} else if e.SkipRequestBodyEncodeDecode {
-			// it is possible for design to have request Body as Empty and set
-			// SkipRequestBodyEncodeDecode. In this case, we set the request body
-			// example from the Payload.
-			mt := &MediaType{
-				Schema:  bodies.RequestBody,
-				Example: e.MethodExpr.Payload.Example(rand),
-			}
-			requestBody = &RequestBodyRef{Value: &RequestBody{
-				Description: e.MethodExpr.Payload.Description,
-				Required:    e.MethodExpr.Payload.Type != expr.Empty,
-				Content:     map[string]*MediaType{ct: mt},
-				Extensions:  openapi.ExtensionsFromExpr(e.MethodExpr.Payload.Meta),
-			}}
 		}
 	}
 

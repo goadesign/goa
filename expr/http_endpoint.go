@@ -311,40 +311,8 @@ func (e *HTTPEndpointExpr) Validate() error {
 		verr.Add(e, "Endpoint name cannot be empty")
 	}
 
-	// SkipRequestBodyEncodeDecode is not compatible with gRPC or WebSocket
-	if e.SkipRequestBodyEncodeDecode {
-		if s := Root.API.GRPC.Service(e.Service.Name()); s != nil {
-			if s.Endpoint(e.Name()) != nil {
-				verr.Add(e, "Endpoint cannot use SkipRequestBodyEncodeDecode and define a gRPC transport.")
-			}
-		}
-		if e.MethodExpr.IsPayloadStreaming() {
-			verr.Add(e, "Endpoint cannot use SkipRequestBodyEncodeDecode when method defines a StreamingPayload.")
-		}
-		if e.MethodExpr.IsResultStreaming() {
-			verr.Add(e, "Endpoint cannot use SkipRequestBodyEncodeDecode when method defines a StreamingResult. Use SkipResponseBodyEncodeDecode instead.")
-		}
-	}
-
-	// SkipResponseBodyEncodeDecode is not compatible with gRPC or WebSocket.
-	if e.SkipResponseBodyEncodeDecode {
-		if s := Root.API.GRPC.Service(e.Service.Name()); s != nil {
-			if s.Endpoint(e.Name()) != nil {
-				verr.Add(e, "Endpoint response cannot use SkipResponseBodyEncodeDecode and define a gRPC transport.")
-			}
-		}
-		if e.MethodExpr.IsPayloadStreaming() {
-			verr.Add(e, "Endpoint cannot use SkipResponseBodyEncodeDecode when method defines a StreamingPayload. Use SkipRequestBodyEncodeDecode instead.")
-		}
-		if e.MethodExpr.IsResultStreaming() {
-			verr.Add(e, "Endpoint cannot use SkipResponseBodyEncodeDecode when method defines a StreamingResult.")
-		}
-		if rt, ok := e.MethodExpr.Result.Type.(*ResultTypeExpr); ok {
-			if len(rt.Views) > 1 {
-				verr.Add(e, "Endpoint cannot use SkipResponseBodyEncodeDecode when method result type defines multiple views.")
-			}
-		}
-	}
+	verr.Merge(e.validateSkipRequestBodyEncodeDecode())
+	verr.Merge(e.validateSkipResponseBodyEncodeDecode())
 
 	// Redirect is not compatible with Response.
 	if e.Redirect != nil {
@@ -423,8 +391,6 @@ func (e *HTTPEndpointExpr) Validate() error {
 				if r.Body != nil && r.Body.Type == Empty {
 					verr.Add(r, "Response body empty but endpoint defines streaming WebSocket response.")
 				}
-			} else if successResp && e.SkipResponseBodyEncodeDecode {
-				verr.Add(r, "At most one success response can be defined for a endpoint using SkipResponseBodyEncodeDecode.")
 			}
 			successResp = true
 		}
@@ -443,9 +409,6 @@ func (e *HTTPEndpointExpr) Validate() error {
 	// Validate body attribute (required fields exist etc.)
 	if e.Body != nil {
 		verr.Merge(e.Body.Validate("HTTP body", e))
-		if e.SkipRequestBodyEncodeDecode {
-			verr.Add(e, "Cannot define a request body when using SkipRequestBodyEncodeDecode.")
-		}
 		// Make sure Body does not require attribute that are not required in
 		// payload.
 		if v := e.Body.Validation; v != nil {
@@ -536,9 +499,6 @@ func (e *HTTPEndpointExpr) Validate() error {
 				verr.Add(e, "Payload type is array but HTTP endpoint defines both a body and headers. At most one of these must be defined and it must be an array.")
 			}
 		}
-		if !hasParams && !hasHeaders && e.SkipRequestBodyEncodeDecode {
-			verr.Add(e, "Payload type is array but HTTP endpoint uses SkipRequestBodyEncodeDecode and does not define headers or params.")
-		}
 	}
 
 	if pMap := AsMap(e.MethodExpr.Payload.Type); pMap != nil {
@@ -572,9 +532,6 @@ func (e *HTTPEndpointExpr) Validate() error {
 			if hasParams {
 				verr.Add(e, "Payload type is map but HTTP endpoint defines both a body and route or query string parameters. At most one of these must be defined and it must be a map.")
 			}
-		}
-		if !hasParams && e.SkipRequestBodyEncodeDecode {
-			verr.Add(e, "Payload type is map but HTTP endpoint uses SkipRequestBodyEncodeDecode and does not define headers.")
 		}
 	}
 
@@ -671,16 +628,8 @@ func (e *HTTPEndpointExpr) Finalize() {
 	initAttr(e.Headers, e.MethodExpr.Payload)
 	initAttr(e.Cookies, e.MethodExpr.Payload)
 
-	if e.SkipRequestBodyEncodeDecode {
-		// if the body is not empty and design specifies to skip encode/decode body
-		// then we ignore the body type and set to Empty. It is possible for the
-		// design to specify method Payload and SkipXXX to provide examples for the
-		// payload.
-		e.Body = &AttributeExpr{Type: Empty}
-	} else {
-		e.Body = httpRequestBody(e)
-		e.Body.Finalize()
-	}
+	e.Body = httpRequestBody(e)
+	e.Body.Finalize()
 
 	e.StreamingBody = httpStreamingBody(e)
 	if e.StreamingBody != nil {
@@ -690,16 +639,8 @@ func (e *HTTPEndpointExpr) Finalize() {
 	// Initialize responses parent, headers and body
 	for _, r := range e.Responses {
 		r.Finalize(e, e.MethodExpr.Result)
-		if e.SkipResponseBodyEncodeDecode {
-			// if the body is not empty and design specifies to skip encode/decode body
-			// then we ignore the body type and set to Empty. It is possible for the
-			// design to specify method Result and SkipXXX to provide examples for the
-			// response.
-			r.Body = &AttributeExpr{Type: Empty}
-		} else {
-			r.Body = httpResponseBody(e, r)
-			r.Body.Finalize()
-		}
+		r.Body = httpResponseBody(e, r)
+		r.Body.Finalize()
 	}
 
 	// Make sure all error types are user types and have a body.
@@ -708,11 +649,14 @@ func (e *HTTPEndpointExpr) Finalize() {
 	}
 }
 
-// BodyOnly return true if the endpoint request has no headers, params, or
-// cookies.
-func (e *HTTPEndpointExpr) BodyOnly() bool {
+// HasBodyOnly returns true if the endpoint request has only a body defined.
+func (e *HTTPEndpointExpr) HasBodyOnly() bool {
 	defHdrs := defaultRequestHeaderAttributes(e)
-	return e.Headers.IsEmpty() && len(defHdrs) == 0 && e.Params.IsEmpty() && e.Cookies.IsEmpty() && e.MapQueryParams == nil
+	return (e.Body != nil && e.Body.Type != Empty) &&
+		e.Headers.IsEmpty() && len(defHdrs) == 0 &&
+		e.Params.IsEmpty() &&
+		e.Cookies.IsEmpty() &&
+		e.MapQueryParams == nil
 }
 
 // validateParams checks the endpoint parameters are of an allowed type and the
@@ -863,6 +807,72 @@ func (e *HTTPEndpointExpr) validateHeadersAndCookies() *eval.ValidationErrors {
 			verr.Add(e, "Payload type is map but HTTP endpoint defines headers or cookies. Map payloads can only be decoded from HTTP request bodies or query strings.")
 		}
 	}
+	return verr
+}
+
+func (e *HTTPEndpointExpr) validateSkipRequestBodyEncodeDecode() *eval.ValidationErrors {
+	verr := new(eval.ValidationErrors)
+	if !e.SkipRequestBodyEncodeDecode {
+		return verr
+	}
+	// SkipRequestBodyEncodeDecode is not compatible with gRPC or WebSocket
+	if s := Root.API.GRPC.Service(e.Service.Name()); s != nil {
+		if s.Endpoint(e.Name()) != nil {
+			verr.Add(e, "Endpoint cannot use SkipRequestBodyEncodeDecode and define a gRPC transport.")
+		}
+	}
+	if e.MethodExpr.IsPayloadStreaming() {
+		verr.Add(e, "Endpoint cannot use SkipRequestBodyEncodeDecode when method defines a StreamingPayload.")
+	}
+	if e.MethodExpr.IsResultStreaming() {
+		verr.Add(e, "Endpoint cannot use SkipRequestBodyEncodeDecode when method defines a StreamingResult. Use SkipResponseBodyEncodeDecode instead.")
+	}
+
+	// cannot define Body explicitly
+	if e.Body != nil {
+		verr.Add(e, "Cannot define a request body when using SkipRequestBodyEncodeDecode.")
+	}
+	return verr
+}
+
+func (e *HTTPEndpointExpr) validateSkipResponseBodyEncodeDecode() *eval.ValidationErrors {
+	verr := new(eval.ValidationErrors)
+	if !e.SkipResponseBodyEncodeDecode {
+		return verr
+	}
+	// SkipResponseBodyEncodeDecode is not compatible with gRPC or WebSocket.
+	if s := Root.API.GRPC.Service(e.Service.Name()); s != nil {
+		if s.Endpoint(e.Name()) != nil {
+			verr.Add(e, "Endpoint response cannot use SkipResponseBodyEncodeDecode and define a gRPC transport.")
+		}
+	}
+	if e.MethodExpr.IsPayloadStreaming() {
+		verr.Add(e, "Endpoint cannot use SkipResponseBodyEncodeDecode when method defines a StreamingPayload. Use SkipRequestBodyEncodeDecode instead.")
+	}
+	if e.MethodExpr.IsResultStreaming() {
+		verr.Add(e, "Endpoint cannot use SkipResponseBodyEncodeDecode when method defines a StreamingResult.")
+	}
+	if rt, ok := e.MethodExpr.Result.Type.(*ResultTypeExpr); ok {
+		if len(rt.Views) > 1 {
+			verr.Add(e, "Endpoint cannot use SkipResponseBodyEncodeDecode when method result type defines multiple views.")
+		}
+	}
+
+	successResp := false
+	for _, r := range e.Responses {
+		if r.Body != nil {
+			verr.Add(r, "Cannot define a response body when endpoint uses SkipResponseBodyEncodeDecode.")
+		}
+		// with SkipResponseBodyEncodeDecode at most one success response can be defined
+		if r.StatusCode < 400 {
+			if successResp && e.SkipResponseBodyEncodeDecode {
+				verr.Add(r, "At most one success response can be defined for a endpoint using SkipResponseBodyEncodeDecode.")
+				break
+			}
+			successResp = true
+		}
+	}
+
 	return verr
 }
 
