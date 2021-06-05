@@ -13,16 +13,13 @@ var ValidErrorsDSL = func() {
 			Required("b")
 		})
 	})
-	var AType = Type("AType", func() {
-		Attribute("a", String)
-	})
 	Service("ValidErrors", func() {
 		Error("default_service_level")
 		Error("custom_errors", String, "String error")
 		Method("Method", func() {
 			Error("error1", Result)
 			Error("error2", Result)
-			Error("custom_errors", AType) // override service error
+			Error("custom_errors", String) // service error has priority (method error does not override service error)
 		})
 	})
 }
