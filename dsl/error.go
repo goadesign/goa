@@ -50,6 +50,11 @@ func Error(name string, args ...interface{}) {
 	case *expr.ServiceExpr:
 		actual.Errors = append(actual.Errors, erro)
 	case *expr.MethodExpr:
+		for _, v := range actual.Service.Errors {
+			if v.Name == erro.Name && v.Type != erro.Type {
+				eval.ReportError("inconsistent definition in service and method: %s", v.Name)
+			}
+		}
 		actual.Errors = append(actual.Errors, erro)
 	default:
 		eval.IncompatibleDSL()
