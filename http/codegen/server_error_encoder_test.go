@@ -23,8 +23,6 @@ func TestEncodeError(t *testing.T) {
 		{"api-error-response-with-content-type", testdata.APIErrorResponseWithContentTypeDSL, testdata.ServiceErrorResponseWithContentTypeEncoderCode},
 		{"no-body-error-response", testdata.NoBodyErrorResponseDSL, testdata.NoBodyErrorResponseEncoderCode},
 		{"no-body-error-response-with-content-type", testdata.NoBodyErrorResponseWithContentTypeDSL, testdata.NoBodyErrorResponseWithContentTypeEncoderCode},
-		{"api-no-body-error-response", testdata.APINoBodyErrorResponseDSL, testdata.NoBodyErrorResponseEncoderCode},
-		{"api-no-body-error-response-with-content-type", testdata.APINoBodyErrorResponseWithContentTypeDSL, testdata.NoBodyErrorResponseWithContentTypeEncoderCode},
 		{"empty-error-response-body", testdata.EmptyErrorResponseBodyDSL, testdata.EmptyErrorResponseBodyEncoderCode},
 		{"empty-custom-error-response-body", testdata.EmptyCustomErrorResponseBodyDSL, testdata.EmptyCustomErrorResponseBodyEncoderCode},
 	}

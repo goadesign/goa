@@ -118,49 +118,6 @@ var APIErrorResponseWithContentTypeDSL = func() {
 	})
 }
 
-var APINoBodyErrorResponseDSL = func() {
-	var StringError = Type("StringError", func() { Attribute("header") })
-	var _ = API("test", func() {
-		Error("bad_request", StringError)
-		HTTP(func() {
-			Response("bad_request", StatusBadRequest, func() {
-				Header("header")
-			})
-		})
-	})
-	Service("ServiceNoBodyErrorResponse", func() {
-		Error("bad_request")
-		Method("MethodServiceErrorResponse", func() {
-			HTTP(func() {
-				GET("/one/two")
-			})
-		})
-	})
-}
-
-var APINoBodyErrorResponseWithContentTypeDSL = func() {
-	var StringError = ResultType("application/vnd.string.error", func() {
-		ContentType("application/xml")
-		Attribute("header")
-	})
-	var _ = API("test", func() {
-		Error("bad_request", StringError)
-		HTTP(func() {
-			Response("bad_request", StatusBadRequest, func() {
-				Header("header")
-			})
-		})
-	})
-	Service("ServiceNoBodyErrorResponse", func() {
-		Error("bad_request")
-		Method("MethodServiceErrorResponse", func() {
-			HTTP(func() {
-				GET("/one/two")
-			})
-		})
-	})
-}
-
 var NoBodyErrorResponseDSL = func() {
 	var StringError = Type("StringError", func() { Attribute("header") })
 	Service("ServiceNoBodyErrorResponse", func() {
