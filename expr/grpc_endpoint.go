@@ -85,31 +85,60 @@ func (e *GRPCEndpointExpr) Prepare() {
 	}
 	e.Response.Prepare()
 
-	// Prepare error response
-	for _, er := range e.GRPCErrors {
-		er.Response.Prepare()
+	// Error -> ResponseError
+	methodErrors := map[string]struct{}{}
+	for _, v := range e.GRPCErrors {
+		methodErrors[v.Name] = struct{}{}
 	}
-
-	// Inherit error only if it doesn't already exist in the endpoint errors
-	inherit := func(r *GRPCErrorExpr) {
-		found := false
-		for _, er := range e.GRPCErrors {
-			if er.Name == r.Name {
+	for _, me := range e.MethodExpr.Errors {
+		if _, ok := methodErrors[me.Name]; ok {
+			continue
+		}
+		methodErrors[me.Name] = struct{}{}
+		var found bool
+		for _, v := range e.Service.GRPCErrors {
+			if me.Name == v.Name {
+				e.GRPCErrors = append(e.GRPCErrors, v.Dup())
 				found = true
 				break
 			}
 		}
-		if !found {
-			r.Response.Prepare()
-			e.GRPCErrors = append(e.GRPCErrors, r.Dup())
+		if found {
+			continue
+		}
+		// Lookup undefined GRPC errors in API.
+		for _, v := range Root.API.GRPC.Errors {
+			if me.Name == v.Name {
+				e.GRPCErrors = append(e.GRPCErrors, v.Dup())
+			}
 		}
 	}
-	// Inherit gRPC errors from service and root
-	for _, r := range e.Service.GRPCErrors {
-		inherit(r)
+	// Inherit GRPC errors from service if the error has not added.
+	for _, se := range e.Service.ServiceExpr.Errors {
+		if _, ok := methodErrors[se.Name]; ok {
+			continue
+		}
+		var found bool
+		for _, resp := range e.Service.GRPCErrors {
+			if se.Name == resp.Name {
+				found = true
+				e.GRPCErrors = append(e.GRPCErrors, resp.Dup())
+				break
+			}
+		}
+		if !found {
+			for _, ae := range Root.API.GRPC.Errors {
+				if se.Name == ae.Name {
+					e.GRPCErrors = append(e.GRPCErrors, ae.Dup())
+					break
+				}
+			}
+		}
 	}
-	for _, r := range Root.API.GRPC.Errors {
-		inherit(r)
+
+	// Prepare responses
+	for _, er := range e.GRPCErrors {
+		er.Response.Prepare()
 	}
 }
 
