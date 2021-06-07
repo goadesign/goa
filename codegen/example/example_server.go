@@ -283,7 +283,7 @@ func main() {
 				}
 				u.Host = net.JoinHostPort(h, *{{ $u.Transport.Type }}PortF)
 			} else if u.Port() == "" {
-				u.Host = net.JoinHostPort(u.Host, ":{{ $u.Port }}")
+				u.Host = net.JoinHostPort(u.Host, "{{ $u.Port }}")
 			}
 			handle{{ toUpper $u.Transport.Name }}Server(ctx, u, {{ range $t := $.Server.Transports }}{{ if eq $t.Type $u.Transport.Type }}{{ range $s := $t.Services }}{{ range $.Services }}{{ if eq $s .Name }}{{ if .Methods }}{{ .VarName }}Endpoints, {{ end }}{{ end }}{{ end }}{{ end }}{{ end }}{{ end }}&wg, errc, logger, *dbgF)
 		}

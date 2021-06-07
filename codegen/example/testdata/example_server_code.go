@@ -78,7 +78,7 @@ const (
 				}
 				u.Host = net.JoinHostPort(h, *httpPortF)
 			} else if u.Port() == "" {
-				u.Host = net.JoinHostPort(u.Host, ":80")
+				u.Host = net.JoinHostPort(u.Host, "80")
 			}
 			handleHTTPServer(ctx, u, serviceEndpoints, &wg, errc, logger, *dbgF)
 		}
@@ -104,7 +104,7 @@ const (
 				}
 				u.Host = net.JoinHostPort(h, *grpcPortF)
 			} else if u.Port() == "" {
-				u.Host = net.JoinHostPort(u.Host, ":8080")
+				u.Host = net.JoinHostPort(u.Host, "8080")
 			}
 			handleGRPCServer(ctx, u, serviceEndpoints, &wg, errc, logger, *dbgF)
 		}
@@ -201,7 +201,7 @@ const (
 				}
 				u.Host = net.JoinHostPort(h, *httpPortF)
 			} else if u.Port() == "" {
-				u.Host = net.JoinHostPort(u.Host, ":80")
+				u.Host = net.JoinHostPort(u.Host, "80")
 			}
 			handleHTTPServer(ctx, u, serviceEndpoints, &wg, errc, logger, *dbgF)
 		}
@@ -227,7 +227,7 @@ const (
 				}
 				u.Host = net.JoinHostPort(h, *grpcPortF)
 			} else if u.Port() == "" {
-				u.Host = net.JoinHostPort(u.Host, ":8080")
+				u.Host = net.JoinHostPort(u.Host, "8080")
 			}
 			handleGRPCServer(ctx, u, serviceEndpoints, &wg, errc, logger, *dbgF)
 		}
@@ -324,7 +324,7 @@ const (
 				}
 				u.Host = net.JoinHostPort(h, *httpPortF)
 			} else if u.Port() == "" {
-				u.Host = net.JoinHostPort(u.Host, ":80")
+				u.Host = net.JoinHostPort(u.Host, "80")
 			}
 			handleHTTPServer(ctx, u, serviceEndpoints, &wg, errc, logger, *dbgF)
 		}
@@ -350,7 +350,7 @@ const (
 				}
 				u.Host = net.JoinHostPort(h, *httpPortF)
 			} else if u.Port() == "" {
-				u.Host = net.JoinHostPort(u.Host, ":443")
+				u.Host = net.JoinHostPort(u.Host, "443")
 			}
 			handleHTTPServer(ctx, u, serviceEndpoints, &wg, errc, logger, *dbgF)
 		}
@@ -376,7 +376,7 @@ const (
 				}
 				u.Host = net.JoinHostPort(h, *grpcPortF)
 			} else if u.Port() == "" {
-				u.Host = net.JoinHostPort(u.Host, ":8080")
+				u.Host = net.JoinHostPort(u.Host, "8080")
 			}
 			handleGRPCServer(ctx, u, serviceEndpoints, &wg, errc, logger, *dbgF)
 		}
@@ -402,7 +402,7 @@ const (
 				}
 				u.Host = net.JoinHostPort(h, *httpPortF)
 			} else if u.Port() == "" {
-				u.Host = net.JoinHostPort(u.Host, ":80")
+				u.Host = net.JoinHostPort(u.Host, "80")
 			}
 			handleHTTPServer(ctx, u, serviceEndpoints, &wg, errc, logger, *dbgF)
 		}
@@ -516,7 +516,7 @@ const (
 				}
 				u.Host = net.JoinHostPort(h, *httpPortF)
 			} else if u.Port() == "" {
-				u.Host = net.JoinHostPort(u.Host, ":80")
+				u.Host = net.JoinHostPort(u.Host, "80")
 			}
 			handleHTTPServer(ctx, u, serviceEndpoints, &wg, errc, logger, *dbgF)
 		}
@@ -551,7 +551,7 @@ const (
 				}
 				u.Host = net.JoinHostPort(h, *httpPortF)
 			} else if u.Port() == "" {
-				u.Host = net.JoinHostPort(u.Host, ":443")
+				u.Host = net.JoinHostPort(u.Host, "443")
 			}
 			handleHTTPServer(ctx, u, serviceEndpoints, &wg, errc, logger, *dbgF)
 		}
@@ -630,7 +630,7 @@ const (
 				}
 				u.Host = net.JoinHostPort(h, *httpPortF)
 			} else if u.Port() == "" {
-				u.Host = net.JoinHostPort(u.Host, ":80")
+				u.Host = net.JoinHostPort(u.Host, "80")
 			}
 			handleHTTPServer(ctx, u, &wg, errc, logger, *dbgF)
 		}
@@ -727,7 +727,7 @@ const (
 				}
 				u.Host = net.JoinHostPort(h, *httpPortF)
 			} else if u.Port() == "" {
-				u.Host = net.JoinHostPort(u.Host, ":80")
+				u.Host = net.JoinHostPort(u.Host, "80")
 			}
 			handleHTTPServer(ctx, u, serviceEndpoints, &wg, errc, logger, *dbgF)
 		}
@@ -753,7 +753,7 @@ const (
 				}
 				u.Host = net.JoinHostPort(h, *grpcPortF)
 			} else if u.Port() == "" {
-				u.Host = net.JoinHostPort(u.Host, ":8080")
+				u.Host = net.JoinHostPort(u.Host, "8080")
 			}
 			handleGRPCServer(ctx, u, serviceEndpoints, &wg, errc, logger, *dbgF)
 		}
@@ -854,7 +854,7 @@ const (
 				}
 				u.Host = net.JoinHostPort(h, *httpPortF)
 			} else if u.Port() == "" {
-				u.Host = net.JoinHostPort(u.Host, ":80")
+				u.Host = net.JoinHostPort(u.Host, "80")
 			}
 			handleHTTPServer(ctx, u, serviceEndpoints, anotherServiceEndpoints, &wg, errc, logger, *dbgF)
 		}
@@ -880,7 +880,7 @@ const (
 				}
 				u.Host = net.JoinHostPort(h, *grpcPortF)
 			} else if u.Port() == "" {
-				u.Host = net.JoinHostPort(u.Host, ":8080")
+				u.Host = net.JoinHostPort(u.Host, "8080")
 			}
 			handleGRPCServer(ctx, u, serviceEndpoints, anotherServiceEndpoints, &wg, errc, logger, *dbgF)
 		}
@@ -976,7 +976,7 @@ const (
 				}
 				u.Host = net.JoinHostPort(h, *httpPortF)
 			} else if u.Port() == "" {
-				u.Host = net.JoinHostPort(u.Host, ":80")
+				u.Host = net.JoinHostPort(u.Host, "80")
 			}
 			handleHTTPServer(ctx, u, serviceEndpoints, &wg, errc, logger, *dbgF)
 		}
@@ -1003,7 +1003,7 @@ const (
 				}
 				u.Host = net.JoinHostPort(h, *httpPortF)
 			} else if u.Port() == "" {
-				u.Host = net.JoinHostPort(u.Host, ":443")
+				u.Host = net.JoinHostPort(u.Host, "443")
 			}
 			handleHTTPServer(ctx, u, serviceEndpoints, &wg, errc, logger, *dbgF)
 		}
@@ -1116,7 +1116,7 @@ const (
 				}
 				u.Host = net.JoinHostPort(h, *httpPortF)
 			} else if u.Port() == "" {
-				u.Host = net.JoinHostPort(u.Host, ":80")
+				u.Host = net.JoinHostPort(u.Host, "80")
 			}
 			handleHTTPServer(ctx, u, serviceEndpoints, &wg, errc, logger, *dbgF)
 		}
@@ -1145,7 +1145,7 @@ const (
 				}
 				u.Host = net.JoinHostPort(h, *httpPortF)
 			} else if u.Port() == "" {
-				u.Host = net.JoinHostPort(u.Host, ":443")
+				u.Host = net.JoinHostPort(u.Host, "443")
 			}
 			handleHTTPServer(ctx, u, serviceEndpoints, &wg, errc, logger, *dbgF)
 		}
@@ -1241,7 +1241,7 @@ const (
 				}
 				u.Host = net.JoinHostPort(h, *httpPortF)
 			} else if u.Port() == "" {
-				u.Host = net.JoinHostPort(u.Host, ":80")
+				u.Host = net.JoinHostPort(u.Host, "80")
 			}
 			handleHTTPServer(ctx, u, serviceWithSpacesEndpoints, &wg, errc, logger, *dbgF)
 		}
@@ -1267,7 +1267,7 @@ const (
 				}
 				u.Host = net.JoinHostPort(h, *grpcPortF)
 			} else if u.Port() == "" {
-				u.Host = net.JoinHostPort(u.Host, ":8080")
+				u.Host = net.JoinHostPort(u.Host, "8080")
 			}
 			handleGRPCServer(ctx, u, serviceWithSpacesEndpoints, &wg, errc, logger, *dbgF)
 		}
@@ -1363,7 +1363,7 @@ const (
 				}
 				u.Host = net.JoinHostPort(h, *httpPortF)
 			} else if u.Port() == "" {
-				u.Host = net.JoinHostPort(u.Host, ":80")
+				u.Host = net.JoinHostPort(u.Host, "80")
 			}
 			handleHTTPServer(ctx, u, serviceEndpoints, &wg, errc, logger, *dbgF)
 		}
@@ -1460,7 +1460,7 @@ const (
 				}
 				u.Host = net.JoinHostPort(h, *grpcPortF)
 			} else if u.Port() == "" {
-				u.Host = net.JoinHostPort(u.Host, ":8080")
+				u.Host = net.JoinHostPort(u.Host, "8080")
 			}
 			handleGRPCServer(ctx, u, serviceEndpoints, &wg, errc, logger, *dbgF)
 		}
@@ -1561,7 +1561,7 @@ const (
 				}
 				u.Host = net.JoinHostPort(h, *httpPortF)
 			} else if u.Port() == "" {
-				u.Host = net.JoinHostPort(u.Host, ":80")
+				u.Host = net.JoinHostPort(u.Host, "80")
 			}
 			handleHTTPServer(ctx, u, serviceEndpoints, anotherServiceEndpoints, &wg, errc, logger, *dbgF)
 		}
@@ -1587,7 +1587,7 @@ const (
 				}
 				u.Host = net.JoinHostPort(h, *grpcPortF)
 			} else if u.Port() == "" {
-				u.Host = net.JoinHostPort(u.Host, ":8080")
+				u.Host = net.JoinHostPort(u.Host, "8080")
 			}
 			handleGRPCServer(ctx, u, serviceEndpoints, &wg, errc, logger, *dbgF)
 		}
