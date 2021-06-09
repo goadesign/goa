@@ -271,24 +271,52 @@ func (e *HTTPEndpointExpr) Prepare() {
 		e.Responses = []*HTTPResponseExpr{{StatusCode: status}}
 	}
 
-	// Inherit HTTP errors from service
-	for _, r := range e.Service.HTTPErrors {
-		e.HTTPErrors = append(e.HTTPErrors, r.Dup())
+	// Error -> ResponseError
+	methodErrors := map[string]struct{}{}
+	for _, v := range e.HTTPErrors {
+		methodErrors[v.Name] = struct{}{}
 	}
-
-	// Lookup undefined HTTP errors in API.
-	for _, err := range e.MethodExpr.Errors {
-		found := false
-		for _, herr := range e.HTTPErrors {
-			if err.Name == herr.Name {
+	for _, me := range e.MethodExpr.Errors {
+		if _, ok := methodErrors[me.Name]; ok {
+			continue
+		}
+		methodErrors[me.Name] = struct{}{}
+		var found bool
+		for _, v := range e.Service.HTTPErrors {
+			if me.Name == v.Name {
+				e.HTTPErrors = append(e.HTTPErrors, v.Dup())
 				found = true
 				break
 			}
 		}
+		if found {
+			continue
+		}
+		// Lookup undefined HTTP errors in API.
+		for _, v := range Root.API.HTTP.Errors {
+			if me.Name == v.Name {
+				e.HTTPErrors = append(e.HTTPErrors, v.Dup())
+			}
+		}
+	}
+	// Inherit HTTP errors from service if the error has not added.
+	for _, se := range e.Service.ServiceExpr.Errors {
+		if _, ok := methodErrors[se.Name]; ok {
+			continue
+		}
+		var found bool
+		for _, resp := range e.Service.HTTPErrors {
+			if se.Name == resp.Name {
+				found = true
+				e.HTTPErrors = append(e.HTTPErrors, resp.Dup())
+				break
+			}
+		}
 		if !found {
-			for _, herr := range Root.API.HTTP.Errors {
-				if herr.Name == err.Name {
-					e.HTTPErrors = append(e.HTTPErrors, herr.Dup())
+			for _, ae := range Root.API.HTTP.Errors {
+				if se.Name == ae.Name {
+					e.HTTPErrors = append(e.HTTPErrors, ae.Dup())
+					break
 				}
 			}
 		}
