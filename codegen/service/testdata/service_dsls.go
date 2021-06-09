@@ -131,6 +131,63 @@ var ServiceErrorDSL = func() {
 	})
 }
 
+var ServiceErrorWithAPIErrorDSL = func() {
+	API("APIError", func() {
+		Error("api_error")
+	})
+	Service("ServiceErrorWithAPIError", func() {
+		Error("service_error")
+		Method("A", func() {})
+	})
+}
+
+var ServiceErrorWithMethodErrorDSL = func() {
+	Service("ServiceErrorWithMethodError", func() {
+		Error("service_error")
+		Method("A", func() {
+			Error("method_error")
+		})
+	})
+}
+
+var ServiceErrorWithCustomAPIErrorDSL = func() {
+	API("APIError", func() {
+		Error("api_error", String)
+	})
+	Service("ServiceErrorWithCustomAPIError", func() {
+		Error("service_error")
+		Method("A", func() {})
+	})
+}
+
+var ServiceErrorWithCustomMethodErrorDSL = func() {
+	Service("ServiceErrorWithCustomMethodError", func() {
+		Error("service_error")
+		Method("A", func() {
+			Error("method_error", String)
+		})
+	})
+}
+
+var ServiceErrorWithAPIErrorDuplicateDSL = func() {
+	API("APIError", func() {
+		Error("error", String)
+	})
+	Service("ServiceErrorWithAPIErrorDuplicate", func() {
+		Error("error", Int)
+		Method("A", func() {})
+	})
+}
+
+var ServiceErrorWithMethodErrorDuplicateDSL = func() {
+	Service("ServiceErrorWithMethodErrorDuplicate", func() {
+		Error("error", Int)
+		Method("A", func() {
+			Error("error", String)
+		})
+	})
+}
+
 var CustomErrorsDSL = func() {
 	var Result = ResultType("application/vnd.goa.error", func() {
 		TypeName("Result")

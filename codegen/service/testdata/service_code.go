@@ -298,6 +298,216 @@ func MakeError(err error) *goa.ServiceError {
 }
 `
 
+const ServiceErrorWithAPIError = `
+// Service is the ServiceErrorWithAPIError service interface.
+type Service interface {
+	// A implements A.
+	A(context.Context) (err error)
+}
+
+// ServiceName is the name of the service as defined in the design. This is the
+// same value that is set in the endpoint request contexts under the ServiceKey
+// key.
+const ServiceName = "ServiceErrorWithAPIError"
+
+// MethodNames lists the service method names as defined in the design. These
+// are the same values that are set in the endpoint request contexts under the
+// MethodKey key.
+var MethodNames = [1]string{"A"}
+
+// MakeServiceError builds a goa.ServiceError from an error.
+func MakeServiceError(err error) *goa.ServiceError {
+	return &goa.ServiceError{
+		Name:    "service_error",
+		ID:      goa.NewErrorID(),
+		Message: err.Error(),
+	}
+}
+
+// MakeAPIError builds a goa.ServiceError from an error.
+func MakeAPIError(err error) *goa.ServiceError {
+	return &goa.ServiceError{
+		Name:    "api_error",
+		ID:      goa.NewErrorID(),
+		Message: err.Error(),
+	}
+}
+`
+
+const ServiceErrorWithMethodError = `
+// Service is the ServiceErrorWithMethodError service interface.
+type Service interface {
+	// A implements A.
+	A(context.Context) (err error)
+}
+
+// ServiceName is the name of the service as defined in the design. This is the
+// same value that is set in the endpoint request contexts under the ServiceKey
+// key.
+const ServiceName = "ServiceErrorWithMethodError"
+
+// MethodNames lists the service method names as defined in the design. These
+// are the same values that are set in the endpoint request contexts under the
+// MethodKey key.
+var MethodNames = [1]string{"A"}
+
+// MakeMethodError builds a goa.ServiceError from an error.
+func MakeMethodError(err error) *goa.ServiceError {
+	return &goa.ServiceError{
+		Name:    "method_error",
+		ID:      goa.NewErrorID(),
+		Message: err.Error(),
+	}
+}
+
+// MakeServiceError builds a goa.ServiceError from an error.
+func MakeServiceError(err error) *goa.ServiceError {
+	return &goa.ServiceError{
+		Name:    "service_error",
+		ID:      goa.NewErrorID(),
+		Message: err.Error(),
+	}
+}
+`
+
+const ServiceErrorWithCustomAPIError = `
+// Service is the ServiceErrorWithCustomAPIError service interface.
+type Service interface {
+	// A implements A.
+	A(context.Context) (err error)
+}
+
+// ServiceName is the name of the service as defined in the design. This is the
+// same value that is set in the endpoint request contexts under the ServiceKey
+// key.
+const ServiceName = "ServiceErrorWithCustomAPIError"
+
+// MethodNames lists the service method names as defined in the design. These
+// are the same values that are set in the endpoint request contexts under the
+// MethodKey key.
+var MethodNames = [1]string{"A"}
+
+type APIError string
+
+// Error returns an error description.
+func (e APIError) Error() string {
+	return ""
+}
+
+// ErrorName returns "api_error".
+func (e APIError) ErrorName() string {
+	return "api_error"
+}
+
+// MakeServiceError builds a goa.ServiceError from an error.
+func MakeServiceError(err error) *goa.ServiceError {
+	return &goa.ServiceError{
+		Name:    "service_error",
+		ID:      goa.NewErrorID(),
+		Message: err.Error(),
+	}
+}
+`
+
+const ServiceErrorWithCustomMethodError = `
+// Service is the ServiceErrorWithCustomMethodError service interface.
+type Service interface {
+	// A implements A.
+	A(context.Context) (err error)
+}
+
+// ServiceName is the name of the service as defined in the design. This is the
+// same value that is set in the endpoint request contexts under the ServiceKey
+// key.
+const ServiceName = "ServiceErrorWithCustomMethodError"
+
+// MethodNames lists the service method names as defined in the design. These
+// are the same values that are set in the endpoint request contexts under the
+// MethodKey key.
+var MethodNames = [1]string{"A"}
+
+type MethodError string
+
+// Error returns an error description.
+func (e MethodError) Error() string {
+	return ""
+}
+
+// ErrorName returns "method_error".
+func (e MethodError) ErrorName() string {
+	return "method_error"
+}
+
+// MakeServiceError builds a goa.ServiceError from an error.
+func MakeServiceError(err error) *goa.ServiceError {
+	return &goa.ServiceError{
+		Name:    "service_error",
+		ID:      goa.NewErrorID(),
+		Message: err.Error(),
+	}
+}
+`
+
+const ServiceErrorWithAPIErrorDuplicate = `
+// Service is the ServiceErrorWithAPIErrorDuplicate service interface.
+type Service interface {
+	// A implements A.
+	A(context.Context) (err error)
+}
+
+// ServiceName is the name of the service as defined in the design. This is the
+// same value that is set in the endpoint request contexts under the ServiceKey
+// key.
+const ServiceName = "ServiceErrorWithAPIErrorDuplicate"
+
+// MethodNames lists the service method names as defined in the design. These
+// are the same values that are set in the endpoint request contexts under the
+// MethodKey key.
+var MethodNames = [1]string{"A"}
+
+type Error int
+
+// Error returns an error description.
+func (e Error) Error() string {
+	return ""
+}
+
+// ErrorName returns "error".
+func (e Error) ErrorName() string {
+	return "error"
+}
+`
+
+const ServiceErrorWithMethodErrorDuplicate = `
+// Service is the ServiceErrorWithMethodErrorDuplicate service interface.
+type Service interface {
+	// A implements A.
+	A(context.Context) (err error)
+}
+
+// ServiceName is the name of the service as defined in the design. This is the
+// same value that is set in the endpoint request contexts under the ServiceKey
+// key.
+const ServiceName = "ServiceErrorWithMethodErrorDuplicate"
+
+// MethodNames lists the service method names as defined in the design. These
+// are the same values that are set in the endpoint request contexts under the
+// MethodKey key.
+var MethodNames = [1]string{"A"}
+
+type Error string
+
+// Error returns an error description.
+func (e Error) Error() string {
+	return ""
+}
+
+// ErrorName returns "error".
+func (e Error) ErrorName() string {
+	return "error"
+}
+`
+
 const CustomErrors = `
 // Service is the CustomErrors service interface.
 type Service interface {
