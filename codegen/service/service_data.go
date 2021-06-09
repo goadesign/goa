@@ -510,9 +510,6 @@ func (d ServicesData) analyze(service *expr.ServiceExpr) *Data {
 				errorInits = append(errorInits, buildErrorInitData(er, scope))
 			}
 		}
-		for _, er := range service.Errors {
-			recordError(er)
-		}
 
 		// A function to collect inner user types from an attribute expression
 		collectUserTypes := func(att *expr.AttributeExpr) {
@@ -531,9 +528,21 @@ func (d ServicesData) analyze(service *expr.ServiceExpr) *Data {
 				projected := expr.DupAtt(m.Result)
 				projTypes = append(projTypes, collectProjectedTypes(projected, m.Result, viewspkg, scope, viewScope, seenProj)...)
 			}
+
+			// First collect method level errors.
 			for _, er := range m.Errors {
 				recordError(er)
 			}
+		}
+
+		// Second collect service level errors.
+		for _, er := range service.Errors {
+			recordError(er)
+		}
+
+		// Finally collect API level errors.
+		for _, er := range expr.Root.Errors {
+			recordError(er)
 		}
 
 		// A function to convert raw object type to user type.
