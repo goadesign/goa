@@ -110,6 +110,16 @@ func (e *GRPCEndpointExpr) Prepare() {
 		for _, v := range Root.API.GRPC.Errors {
 			if me.Name == v.Name {
 				e.GRPCErrors = append(e.GRPCErrors, v.Dup())
+				found = true
+				break
+			}
+		}
+		if found {
+			for _, v := range Root.Errors {
+				if me.Name == v.Name {
+					e.Service.ServiceExpr.Errors = append(e.Service.ServiceExpr.Errors, v)
+					break
+				}
 			}
 		}
 	}

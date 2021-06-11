@@ -295,7 +295,17 @@ func (e *HTTPEndpointExpr) Prepare() {
 		// Lookup undefined HTTP errors in API.
 		for _, v := range Root.API.HTTP.Errors {
 			if me.Name == v.Name {
+				found = true
 				e.HTTPErrors = append(e.HTTPErrors, v.Dup())
+				break
+			}
+		}
+		if found {
+			for _, v := range Root.Errors {
+				if me.Name == v.Name {
+					e.Service.ServiceExpr.Errors = append(e.Service.ServiceExpr.Errors, v)
+					break
+				}
 			}
 		}
 	}
