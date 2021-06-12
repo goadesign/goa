@@ -16,6 +16,7 @@ func TestEncodeError(t *testing.T) {
 	}{
 		{"primitive-error-response", testdata.PrimitiveErrorResponseDSL, testdata.PrimitiveErrorResponseEncoderCode},
 		{"primitive-error-in-response-header", testdata.PrimitiveErrorInResponseHeaderDSL, testdata.PrimitiveErrorInResponseHeaderEncoderCode},
+		{"api-primitive-error-response", testdata.APIPrimitiveErrorResponseDSL, testdata.APIPrimitiveErrorResponseEncoderCode},
 		{"default-error-response", testdata.DefaultErrorResponseDSL, testdata.DefaultErrorResponseEncoderCode},
 		{"default-error-response-with-content-type", testdata.DefaultErrorResponseWithContentTypeDSL, testdata.DefaultErrorResponseWithContentTypeEncoderCode},
 		{"service-error-response", testdata.ServiceErrorResponseDSL, testdata.ServiceErrorResponseEncoderCode},
