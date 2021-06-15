@@ -62,6 +62,25 @@ var PrimitiveErrorInResponseHeaderDSL = func() {
 	})
 }
 
+var APIPrimitiveErrorResponseDSL = func() {
+	var _ = API("test", func() {
+		Error("bad_request", String)
+		HTTP(func() {
+			Response(StatusBadRequest, "bad_request")
+		})
+	})
+	Service("ServiceAPIPrimitiveErrorResponse", func() {
+		Method("MethodAPIPrimitiveErrorResponse", func() {
+			Error("bad_request", String)
+			Error("internal_error")
+			HTTP(func() {
+				GET("/one/two")
+				Response("internal_error", StatusInternalServerError)
+			})
+		})
+	})
+}
+
 var ServiceErrorResponseDSL = func() {
 	Service("ServiceServiceErrorResponse", func() {
 		Error("bad_request")
