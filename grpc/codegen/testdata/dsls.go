@@ -795,7 +795,7 @@ var MethodWithAcronymDSL = func() {
 var ServiceWithPackageDSL = func() {
 	Service("ServiceWithPackageName", func() {
 		GRPC(func() {
-			Package("Custom")
+			Package("custom")
 		})
 		Method("method", func() {
 			GRPC(func() {})
