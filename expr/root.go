@@ -234,6 +234,9 @@ func (r *RootExpr) Finalize() {
 	if len(r.API.Servers) == 0 {
 		r.API.Servers = []*ServerExpr{r.API.DefaultServer()}
 	}
+	for _, e := range r.Errors {
+		e.Finalize()
+	}
 	for _, s := range r.API.Servers {
 		s.Finalize()
 	}
