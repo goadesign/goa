@@ -672,7 +672,7 @@ const commandUsageT = `{{ printf "%sUsage displays the usage of the %s command a
 func {{ .VarName }}Usage() {
 	fmt.Fprintf(os.Stderr, ` + "`" + `{{ printDescription .Description }}
 Usage:
-    %s [globalflags] {{ .Name }} COMMAND [flags]
+    %[1]s [globalflags] {{ .Name }} COMMAND [flags]
 
 COMMAND:
     {{- range .Subcommands }}
@@ -680,13 +680,13 @@ COMMAND:
     {{- end }}
 
 Additional help:
-    %s {{ .Name }} COMMAND --help
-` + "`" + `, os.Args[0], os.Args[0])
+    %[1]s {{ .Name }} COMMAND --help
+` + "`" + `, os.Args[0])
 }
 
 {{- range .Subcommands }}
 func {{ .FullName }}Usage() {
-	fmt.Fprintf(os.Stderr, ` + "`" + `%s [flags] {{ $.Name }} {{ .Name }}{{range .Flags }} -{{ .Name }} {{ .Type }}{{ end }}
+	fmt.Fprintf(os.Stderr, ` + "`" + `%[1]s [flags] {{ $.Name }} {{ .Name }}{{range .Flags }} -{{ .Name }} {{ .Type }}{{ end }}
 
 {{ printDescription .Description}}
 	{{- range .Flags }}
@@ -694,7 +694,7 @@ func {{ .FullName }}Usage() {
 	{{- end }}
 
 Example:
-    ` + "`+os.Args[0]+" + "`" + ` {{ .Example }}
+    %[1]s {{ .Example }}
 ` + "`" + `, os.Args[0])
 }
 {{ end }}
