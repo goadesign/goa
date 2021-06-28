@@ -21,6 +21,6 @@ require (
 	golang.org/x/tools v0.1.3
 	google.golang.org/genproto v0.0.0-20210513213006-bf773b8c8384 // indirect
 	google.golang.org/grpc v1.38.0
-	google.golang.org/protobuf v1.26.0
+	google.golang.org/protobuf v1.27.0
 	gopkg.in/yaml.v2 v2.4.0
 )
