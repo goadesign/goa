@@ -145,14 +145,12 @@ func (sf *schemafier) schemafy(attr *expr.AttributeExpr, noref ...bool) *openapi
 	switch t := attr.Type.(type) {
 	case expr.Primitive:
 		switch t.Kind() {
-		case expr.UIntKind, expr.UInt64Kind, expr.UInt32Kind:
-			s.Type = openapi.Type("integer")
-		case expr.IntKind, expr.Int64Kind:
-			s.Type = openapi.Type("integer")
-			s.Format = "int64"
-		case expr.Int32Kind:
+		case expr.Int32Kind, expr.IntKind,expr.UIntKind, expr.UInt32Kind:
 			s.Type = openapi.Type("integer")
 			s.Format = "int32"
+		case expr.UInt64Kind, expr.Int64Kind:
+			s.Type = openapi.Type("integer")
+			s.Format = "int64"
 		case expr.Float32Kind:
 			s.Type = openapi.Type("number")
 			s.Format = "float"
