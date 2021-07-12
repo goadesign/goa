@@ -67,7 +67,15 @@ func ClientCLIFiles(genpkg string, root *expr.RootExpr) []*codegen.File {
 	}
 	var files []*codegen.File
 	for _, svr := range root.API.Servers {
-		files = append(files, endpointParser(genpkg, root, svr, data))
+		var svrData []*commandData
+		for _, name := range svr.Services {
+			for i, svc := range svcs {
+				if svc.Name() == name {
+					svrData = append(svrData, data[i])
+				}
+			}
+		}
+		files = append(files, endpointParser(genpkg, root, svr, svrData))
 	}
 	for i, svc := range svcs {
 		files = append(files, payloadBuilders(genpkg, svc, data[i].CommandData))
