@@ -57,6 +57,7 @@ func buildInfo(api *expr.APIExpr) *Info {
 		Description:    api.Description,
 		TermsOfService: api.TermsOfService,
 		Version:        ver,
+		Extensions:     openapi.ExtensionsFromExpr(api.Meta),
 	}
 	if c := api.Contact; c != nil {
 		info.Contact = &Contact{
@@ -108,6 +109,7 @@ func buildPaths(h *expr.HTTPExpr, bodies map[string]map[string]*EndpointBodies, 
 			continue
 		}
 
+		exts := openapi.ExtensionsFromExpr(svc.Meta)
 		sbod := bodies[svc.Name()]
 
 		// endpoints
@@ -144,6 +146,12 @@ func buildPaths(h *expr.HTTPExpr, bodies map[string]map[string]*EndpointBodies, 
 						path.Patch = operation
 					}
 					path.Extensions = openapi.ExtensionsFromExpr(r.Endpoint.Meta)
+					if len(exts) > 0 {
+						path.Extensions = make(map[string]interface{})
+						for k, v := range exts {
+							path.Extensions[k] = v
+						}
+					}
 				}
 			}
 		}
