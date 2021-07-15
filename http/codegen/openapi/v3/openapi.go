@@ -246,4 +246,72 @@ type (
 		Scopes           map[string]string      `json:"scopes" yaml:"scopes"`
 		Extensions       map[string]interface{} `json:"-" yaml:"-"`
 	}
+
+	// These types are used in openapi.MarshalJSON() to avoid recursive call of json.Marshal().
+	_Info           Info
+	_PathItem       PathItem
+	_Operation      Operation
+	_Parameter      Parameter
+	_Response       Response
+	_SecurityScheme SecurityScheme
 )
+
+// MarshalJSON returns the JSON encoding of i.
+func (i Info) MarshalJSON() ([]byte, error) {
+	return openapi.MarshalJSON(_Info(i), i.Extensions)
+}
+
+// MarshalJSON returns the JSON encoding of p.
+func (p PathItem) MarshalJSON() ([]byte, error) {
+	return openapi.MarshalJSON(_PathItem(p), p.Extensions)
+}
+
+// MarshalJSON returns the JSON encoding of o.
+func (o Operation) MarshalJSON() ([]byte, error) {
+	return openapi.MarshalJSON(_Operation(o), o.Extensions)
+}
+
+// MarshalJSON returns the JSON encoding of p.
+func (p Parameter) MarshalJSON() ([]byte, error) {
+	return openapi.MarshalJSON(_Parameter(p), p.Extensions)
+}
+
+// MarshalJSON returns the JSON encoding of r.
+func (r Response) MarshalJSON() ([]byte, error) {
+	return openapi.MarshalJSON(_Response(r), r.Extensions)
+}
+
+// MarshalJSON returns the JSON encoding of s.
+func (s SecurityScheme) MarshalJSON() ([]byte, error) {
+	return openapi.MarshalJSON(_SecurityScheme(s), s.Extensions)
+}
+
+// MarshalYAML returns value which marshaled in place of the original value
+func (i Info) MarshalYAML() (interface{}, error) {
+	return openapi.MarshalYAML(_Info(i), i.Extensions)
+}
+
+// MarshalYAML returns value which marshaled in place of the original value
+func (p PathItem) MarshalYAML() (interface{}, error) {
+	return openapi.MarshalYAML(_PathItem(p), p.Extensions)
+}
+
+// MarshalYAML returns value which marshaled in place of the original value
+func (o Operation) MarshalYAML() (interface{}, error) {
+	return openapi.MarshalYAML(_Operation(o), o.Extensions)
+}
+
+// MarshalYAML returns value which marshaled in place of the original value
+func (p Parameter) MarshalYAML() (interface{}, error) {
+	return openapi.MarshalYAML(_Parameter(p), p.Extensions)
+}
+
+// MarshalYAML returns value which marshaled in place of the original value
+func (r Response) MarshalYAML() (interface{}, error) {
+	return openapi.MarshalYAML(_Response(r), r.Extensions)
+}
+
+// MarshalYAML returns value which marshaled in place of the original value
+func (s SecurityScheme) MarshalYAML() (interface{}, error) {
+	return openapi.MarshalYAML(_SecurityScheme(s), s.Extensions)
+}
