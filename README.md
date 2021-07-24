@@ -282,7 +282,7 @@ and mount the handler by adding the following line in the same file and after
 the mux creation (e.g. one the line after the `// Configure the mux.` comment):
 
 ```go
-openapisvr.Mount(mux)
+openapisvr.Mount(mux, openapiServer)
 ```
 
 That's it! we now have a self-documenting service. Stop the running service
