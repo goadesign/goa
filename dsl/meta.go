@@ -27,7 +27,7 @@ import (
 //
 //    var Unused = Type("Unused", func() {
 //        Attribute("name", String)
-//        Meta("type:generate:force", service1, service2)
+//        Meta("type:generate:force", "service1", "service2")
 //    })
 //
 // - "struct:error:name" identifies the attribute of a result type used to
