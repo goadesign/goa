@@ -53,3 +53,13 @@ The general structure of the DSL is shown below (partial list):
                         └── Files
 */
 package dsl
+
+import (
+	// The imports below add dependencies needed by the generated temporary
+	// code generation tool. Go cannot detect these dependencies so we must
+	// add them explicitly.
+	_ "golang.org/x/tools/go/ast/astutil"
+	_ "golang.org/x/tools/go/packages"
+	_ "golang.org/x/tools/imports"
+	_ "gopkg.in/yaml.v2"
+)
