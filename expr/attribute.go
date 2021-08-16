@@ -33,6 +33,9 @@ type (
 		ZeroValue interface{}
 		// UserExample set in DSL or computed in Finalize
 		UserExamples []*ExampleExpr
+		// finalized is true if the attribute has been finalized - only
+		// applies if attribute type is an object
+		finalized bool
 	}
 
 	// ExampleExpr represents an example.
@@ -256,6 +259,14 @@ func (a *AttributeExpr) Finalize() {
 				continue
 			}
 			a.Merge(ru.Attribute())
+		}
+		if a.finalized {
+			// Avoid infinite recursion.
+			return
+		}
+		a.finalized = true
+		for _, nat := range *AsObject(a.Type) {
+			nat.Attribute.Finalize()
 		}
 	}
 }
