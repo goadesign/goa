@@ -34,7 +34,7 @@ type (
 		// UserExample set in DSL or computed in Finalize
 		UserExamples []*ExampleExpr
 		// finalized is true if the attribute has been finalized - only
-		// applies if attribute type is and object
+		// applies if attribute type is an object
 		finalized bool
 	}
 
