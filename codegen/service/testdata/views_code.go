@@ -753,3 +753,60 @@ func ValidateRTView(result *RTView) (err error) {
 	return
 }
 `
+
+const ResultWithEnumType = `// Result is the viewed result type that is projected based on a view.
+type Result struct {
+	// Type to project
+	Projected *ResultView
+	// View to render
+	View string
+}
+
+// ResultView is a type that runs validations on a projected type.
+type ResultView struct {
+	T []UserTypeView
+}
+
+// UserTypeView is a type that runs validations on a projected type.
+type UserTypeView string
+
+var (
+	// ResultMap is a map of attribute names in result type Result indexed by view
+	// name.
+	ResultMap = map[string][]string{
+		"default": []string{
+			"t",
+		},
+	}
+)
+
+// ValidateResult runs the validations defined on the viewed result type Result.
+func ValidateResult(result *Result) (err error) {
+	switch result.View {
+	case "default", "":
+		err = ValidateResultView(result.Projected)
+	default:
+		err = goa.InvalidEnumValueError("view", result.View, []interface{}{"default"})
+	}
+	return
+}
+
+// ValidateResultView runs the validations defined on ResultView using the
+// "default" view.
+func ValidateResultView(result *ResultView) (err error) {
+	for _, e := range result.T {
+		if !(e == "a" || e == "b") {
+			err = goa.MergeErrors(err, goa.InvalidEnumValueError("result.t[*]", e, []interface{}{"a", "b"}))
+		}
+	}
+	return
+}
+
+// ValidateUserTypeView runs the validations defined on UserTypeView.
+func ValidateUserTypeView(result UserTypeView) (err error) {
+	if !(result == "a" || result == "b") {
+		err = goa.MergeErrors(err, goa.InvalidEnumValueError("result", result, []interface{}{"a", "b"}))
+	}
+	return
+}
+`
