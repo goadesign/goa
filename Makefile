@@ -23,17 +23,17 @@ GOPATH=$(shell go env GOPATH)
 # Only list test and build dependencies
 # Standard dependencies are installed via go get
 DEPEND=\
-	golang.org/x/lint/golint \
-	google.golang.org/protobuf/cmd/protoc-gen-go@v1.26.0 \
+	golang.org/x/lint/golint@v0.0.0-20210508222113-6edffad5e616  \
+	google.golang.org/protobuf/cmd/protoc-gen-go@v1.27.1 \
         google.golang.org/grpc/cmd/protoc-gen-go-grpc@v1.1.0 \
-	honnef.co/go/tools/cmd/staticcheck
+	honnef.co/go/tools/cmd/staticcheck@v0.2.1
 
 all: lint test
 
 travis: depend all #test-examples test-plugins
 
 # Install protoc
-PROTOC_VERSION=3.14.0
+PROTOC_VERSION=3.17.3
 UNZIP=unzip
 ifeq ($(GOOS),linux)
 	PROTOC=protoc-$(PROTOC_VERSION)-linux-x86_64
@@ -52,7 +52,7 @@ endif
 depend:
 	@echo INSTALLING DEPENDENCIES...
 	@go mod download
-	@go get -u -v $(DEPEND)
+	@for package in $(DEPEND); do go install $$package; done
 	@go mod tidy
 	@echo INSTALLING PROTOC...
 	@mkdir $(PROTOC)
