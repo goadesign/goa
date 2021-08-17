@@ -660,8 +660,8 @@ func typeContext(pkg string, scope *codegen.NameScope) *codegen.AttributeContext
 // projectedTypeContext returns a contextual attribute for a projected type.
 // Projected types are Go types that uses pointers for all attributes (even the
 // required ones).
-func projectedTypeContext(pkg string, scope *codegen.NameScope) *codegen.AttributeContext {
-	return codegen.NewAttributeContext(true, false, true, pkg, scope)
+func projectedTypeContext(pkg string, ptr bool, scope *codegen.NameScope) *codegen.AttributeContext {
+	return codegen.NewAttributeContext(ptr, false, true, pkg, scope)
 }
 
 // collectTypes recurses through the attribute to gather all user types and
@@ -1309,7 +1309,7 @@ func buildTypeInits(projected, att *expr.AttributeExpr, viewspkg string, scope, 
 				code    string
 				helpers []*codegen.TransformFunctionData
 
-				srcCtx = projectedTypeContext(viewspkg, viewScope)
+				srcCtx = projectedTypeContext(viewspkg, true, viewScope)
 				tgtCtx = typeContext("", scope)
 				resvar = scope.GoTypeName(att)
 			)
@@ -1389,7 +1389,7 @@ func buildProjections(projected, att *expr.AttributeExpr, viewspkg string, scope
 			helpers []*codegen.TransformFunctionData
 
 			srcCtx = typeContext("", scope)
-			tgtCtx = projectedTypeContext(viewspkg, viewScope)
+			tgtCtx = projectedTypeContext(viewspkg, true, viewScope)
 			tname  = scope.GoTypeName(projected)
 		)
 		{
@@ -1473,7 +1473,7 @@ func buildValidations(projected *expr.AttributeExpr, scope *codegen.NameScope) [
 							o.Set(name, attr)
 						}
 					})
-					ctx = projectedTypeContext("", scope)
+					ctx = projectedTypeContext("", !expr.IsPrimitive(projected.Type), scope)
 				}
 				data["Validate"] = codegen.RecursiveValidationCode(&expr.AttributeExpr{Type: o, Validation: rt.Validation}, ctx, true, "result")
 				data["Fields"] = fields
@@ -1495,7 +1495,7 @@ func buildValidations(projected *expr.AttributeExpr, scope *codegen.NameScope) [
 		// for a user type or a result type with single view, we generate only one validation
 		// function containing the validation logic
 		name := "Validate" + tname
-		ctx := projectedTypeContext("", scope)
+		ctx := projectedTypeContext("", !expr.IsPrimitive(projected.Type), scope)
 		validations = append(validations, &ValidateData{
 			Name:        name,
 			Description: fmt.Sprintf("%s runs the validations defined on %s.", name, tname),
