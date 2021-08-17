@@ -619,9 +619,7 @@ func (d ServicesData) analyze(service *expr.ServiceExpr) *Data {
 		}
 	}
 
-	var (
-		desc string
-	)
+	var desc string
 	{
 		desc = service.Description
 		if desc == "" {
@@ -1491,8 +1489,19 @@ func buildValidations(projected *expr.AttributeExpr, scope *codegen.NameScope) [
 				Validate:    buf.String(),
 			})
 		}
+	} else if _, isut := ut.(*expr.UserTypeExpr); isut {
+		// for a user type with single view, we generate only one validation
+		// function containing the validation logic
+		name := "Validate" + tname
+		ctx := typeContext("", scope)
+		validations = append(validations, &ValidateData{
+			Name:        name,
+			Description: fmt.Sprintf("%s runs the validations defined on %s.", name, tname),
+			Ref:         scope.GoTypeRef(projected),
+			Validate:    codegen.RecursiveValidationCode(ut.Attribute(), ctx, true, "result"),
+		})
 	} else {
-		// for a user type or a result type with single view, we generate only one validation
+		// for a result type with single view, we generate only one validation
 		// function containing the validation logic
 		name := "Validate" + tname
 		ctx := projectedTypeContext("", scope)
