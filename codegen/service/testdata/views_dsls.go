@@ -218,6 +218,22 @@ var ResultWithMultipleMethodsDSL = func() {
 	})
 }
 
+var ResultWithEnumTypeDSL = func() {
+	var T = Type("UserType", String, func()  {
+		Enum("a", "b")
+	})
+	var RT = ResultType("application/vnd.result", func() {
+		Attributes(func() {
+			Attribute("t", ArrayOf(T))
+		})
+	})
+	Service("ResultWithEnumType", func() {
+		Method("A", func() {
+			Result(RT)
+		})
+	})
+}
+
 var ResultWithCustomFieldsDSL = func() {
 	var RT = ResultType("application/vnd.result", func() {
 		TypeName("RT")
