@@ -144,6 +144,18 @@ func (g *Generator) Write(debug bool) error {
 
 // Compile compiles the generator.
 func (g *Generator) Compile() error {
+	// We first need to go get the generated package to make sure that all
+	// dependencies are added to go.sum prior to compiling.
+	pkgs, err := packages.Load(&packages.Config{Mode: packages.NeedName}, g.tmpDir)
+	if err != nil {
+		return err
+	}
+	if len(pkgs) != 1 {
+		return fmt.Errorf("expected to find one package in %s", g.tmpDir)
+	}
+	if err := g.runGoCmd("get", pkgs[0].PkgPath); err != nil {
+		return err
+	}
 	return g.runGoCmd("build", "-o", g.bin)
 }
 
