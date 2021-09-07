@@ -540,8 +540,9 @@ func (a *AttributeExpr) ExtractUserExamples() []*ExampleExpr {
 // Debug dumps the attribute to STDOUT in a goa developer friendly way.
 func (a *AttributeExpr) Debug(prefix string) { a.debug(prefix, make(map[*AttributeExpr]int), 0) }
 func (a *AttributeExpr) debug(prefix string, seen map[*AttributeExpr]int, indent int) {
-	tab := strings.Repeat("  ", indent)
-	prefix = tab + prefix
+	tab := "    "
+	tabs := strings.Repeat(tab, indent)
+	prefix = tabs + prefix
 	if c, ok := seen[a]; ok && c > 1 {
 		fmt.Printf("%s: ...\n", prefix)
 		return
@@ -561,38 +562,50 @@ func (a *AttributeExpr) debug(prefix string, seen map[*AttributeExpr]int, indent
 		m.ElemType.debug("elem", seen, indent+1)
 	}
 	if rt, ok := a.Type.(*ResultTypeExpr); ok {
-		fmt.Printf("%sviews\n", tab)
+		fmt.Printf("%s%sviews\n", tabs, tab)
 		for _, v := range rt.Views {
 			nats := *AsObject(v.AttributeExpr.Type)
 			keys := make([]string, len(nats))
 			for i, n := range nats {
 				keys[i] = n.Name
 			}
-			fmt.Printf("%s- %s: %v\n", tab+"  ", v.Name, keys)
+			fmt.Printf("%s%s- %s: %v\n", tabs+tab, tab, v.Name, keys)
 		}
 	}
 	if d := a.DefaultValue; d != nil {
-		fmt.Printf("%sdefault\n", tab)
-		fmt.Printf("%s  %#v\n", tab, a.DefaultValue)
-	}
-	if v := a.Validation; v != nil {
-		v.Debug(indent)
+		fmt.Printf("%s%sdefault\n", tabs, tab)
+		fmt.Printf("%s%s%#v\n", tabs+tab, tab, a.DefaultValue)
 	}
 	if len(a.UserExamples) > 0 {
-		fmt.Printf("%sexamples\n", tab)
+		fmt.Printf("%s%sexamples\n", tabs, tab)
 		for _, ex := range a.UserExamples {
-			fmt.Printf("%s- %s: %#v\n", tab+"  ", ex.Summary, ex.Value)
+			fmt.Printf("%s%s- %s: %#v\n", tabs+tab, tab, ex.Summary, ex.Value)
 		}
 	}
 	if len(a.Meta) > 0 {
-		fmt.Printf("%smeta\n", tab)
+		fmt.Printf("%s%smeta\n", tabs, tab)
 		for k, v := range a.Meta {
-			fmt.Printf("%s- %s: %s\n", tab+"  ", k, strings.Join(v, ", "))
+			fmt.Printf("%s%s- %s: %s\n", tabs+tab, tab, k, strings.Join(v, ", "))
 		}
+	}
+	if v := a.Validation; v != nil {
+		v.Debug("", tabs+tab, tab)
 	}
 	if t, ok := a.Type.(UserType); ok {
 		if v := t.Attribute().Validation; v != nil {
-			v.Debug(indent + 1)
+			v.Debug("user type ", tabs+tab, tab)
+		}
+	}
+	if len(a.Bases) > 0 {
+		fmt.Printf("%s%sbases\n", tabs, tab)
+		for _, b := range a.Bases {
+			fmt.Printf("%s%s- %s\n", tabs+tab, tab, b.Name())
+		}
+	}
+	if len(a.References) > 0 {
+		fmt.Printf("%s%sreferences\n", tabs, tab)
+		for _, r := range a.References {
+			fmt.Printf("%s%s- %s\n", tabs+tab, tab, r.Name())
 		}
 	}
 }
@@ -778,38 +791,40 @@ func (v *ValidationExpr) Dup() *ValidationExpr {
 }
 
 // Debug dumps the validation to STDOUT in a goa developer friendly way.
-func (v *ValidationExpr) Debug(indent int) {
-	prefix := strings.Repeat("  ", indent+1)
-	fmt.Printf("%svalidations\n", strings.Repeat("  ", indent))
+func (v *ValidationExpr) Debug(title, prefix, indent string) {
+	if v.HasRequiredOnly() && len(v.Required) == 0 {
+		return
+	}
+	fmt.Printf("%s%svalidations\n", prefix, title)
 	if len(v.Values) > 0 {
-		fmt.Printf("%s- enum: %s\n", prefix, fmt.Sprintf("%v", v.Values))
+		fmt.Printf("%s%s- enum: %s\n", prefix, indent, fmt.Sprintf("%v", v.Values))
 	}
 	if v.Format != "" {
-		fmt.Printf("%s- format: %s\n", prefix, v.Format)
+		fmt.Printf("%s%s- format: %s\n", prefix, indent, v.Format)
 	}
 	if v.Pattern != "" {
-		fmt.Printf("%s- pattern: %s\n", prefix, v.Pattern)
+		fmt.Printf("%s%s- pattern: %s\n", prefix, indent, v.Pattern)
 	}
 	if v.ExclusiveMinimum != nil {
-		fmt.Printf("%s- exclMin: %v\n", prefix, *v.ExclusiveMinimum)
+		fmt.Printf("%s%s- exclMin: %v\n", prefix, indent, *v.ExclusiveMinimum)
 	}
 	if v.Minimum != nil {
-		fmt.Printf("%s- min: %v\n", prefix, *v.Minimum)
+		fmt.Printf("%s%s- min: %v\n", prefix, indent, *v.Minimum)
 	}
 	if v.ExclusiveMaximum != nil {
-		fmt.Printf("%s- exclMax: %v\n", prefix, *v.ExclusiveMaximum)
+		fmt.Printf("%s%s- exclMax: %v\n", prefix, indent, *v.ExclusiveMaximum)
 	}
 	if v.Maximum != nil {
-		fmt.Printf("%s- max: %v\n", prefix, *v.Maximum)
+		fmt.Printf("%s%s- max: %v\n", prefix, indent, *v.Maximum)
 	}
 	if v.MinLength != nil {
-		fmt.Printf("%s- minLength: %v\n", prefix, *v.MinLength)
+		fmt.Printf("%s%s- minLength: %v\n", prefix, indent, *v.MinLength)
 	}
 	if v.MaxLength != nil {
-		fmt.Printf("%s- maxLength: %v\n", prefix, *v.MaxLength)
+		fmt.Printf("%s%s- maxLength: %v\n", prefix, indent, *v.MaxLength)
 	}
 	if len(v.Required) > 0 {
-		fmt.Printf("%s- required: %v\n", prefix, v.Required)
+		fmt.Printf("%s%s- required: %v\n", prefix, indent, v.Required)
 	}
 }
 

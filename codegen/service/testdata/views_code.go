@@ -15,14 +15,14 @@ type ResultTypeView struct {
 }
 
 var (
-	// ResultTypeMap is a map of attribute names in result type ResultType indexed
-	// by view name.
+	// ResultTypeMap is a map indexing the attribute names of ResultType by view
+	// name.
 	ResultTypeMap = map[string][]string{
-		"default": []string{
+		"default": {
 			"a",
 			"b",
 		},
-		"tiny": []string{
+		"tiny": {
 			"a",
 		},
 	}
@@ -83,25 +83,25 @@ type ResultTypeView struct {
 }
 
 var (
-	// ResultTypeCollectionMap is a map of attribute names in result type
-	// ResultTypeCollection indexed by view name.
+	// ResultTypeCollectionMap is a map indexing the attribute names of
+	// ResultTypeCollection by view name.
 	ResultTypeCollectionMap = map[string][]string{
-		"default": []string{
+		"default": {
 			"a",
 			"b",
 		},
-		"tiny": []string{
+		"tiny": {
 			"a",
 		},
 	}
-	// ResultTypeMap is a map of attribute names in result type ResultType indexed
-	// by view name.
+	// ResultTypeMap is a map indexing the attribute names of ResultType by view
+	// name.
 	ResultTypeMap = map[string][]string{
-		"default": []string{
+		"default": {
 			"a",
 			"b",
 		},
-		"tiny": []string{
+		"tiny": {
 			"a",
 		},
 	}
@@ -185,14 +185,14 @@ type UserTypeView struct {
 }
 
 var (
-	// ResultTypeMap is a map of attribute names in result type ResultType indexed
-	// by view name.
+	// ResultTypeMap is a map indexing the attribute names of ResultType by view
+	// name.
 	ResultTypeMap = map[string][]string{
-		"default": []string{
+		"default": {
 			"a",
 			"b",
 		},
-		"tiny": []string{
+		"tiny": {
 			"a",
 		},
 	}
@@ -272,40 +272,40 @@ type RT3View struct {
 }
 
 var (
-	// RTMap is a map of attribute names in result type RT indexed by view name.
+	// RTMap is a map indexing the attribute names of RT by view name.
 	RTMap = map[string][]string{
-		"default": []string{
+		"default": {
 			"a",
 			"b",
 			"c",
 		},
-		"tiny": []string{
+		"tiny": {
 			"b",
 			"c",
 		},
 	}
-	// RT2Map is a map of attribute names in result type RT2 indexed by view name.
+	// RT2Map is a map indexing the attribute names of RT2 by view name.
 	RT2Map = map[string][]string{
-		"default": []string{
+		"default": {
 			"c",
 			"d",
 		},
-		"extended": []string{
+		"extended": {
 			"c",
 			"d",
 			"e",
 		},
-		"tiny": []string{
+		"tiny": {
 			"d",
 		},
 	}
-	// RT3Map is a map of attribute names in result type RT3 indexed by view name.
+	// RT3Map is a map indexing the attribute names of RT3 by view name.
 	RT3Map = map[string][]string{
-		"default": []string{
+		"default": {
 			"x",
 			"y",
 		},
-		"tiny": []string{
+		"tiny": {
 			"x",
 		},
 	}
@@ -433,12 +433,12 @@ type RTView struct {
 }
 
 var (
-	// RTMap is a map of attribute names in result type RT indexed by view name.
+	// RTMap is a map indexing the attribute names of RT by view name.
 	RTMap = map[string][]string{
-		"default": []string{
+		"default": {
 			"a",
 		},
-		"tiny": []string{
+		"tiny": {
 			"a",
 		},
 	}
@@ -501,13 +501,13 @@ type RTView struct {
 }
 
 var (
-	// RTMap is a map of attribute names in result type RT indexed by view name.
+	// RTMap is a map indexing the attribute names of RT by view name.
 	RTMap = map[string][]string{
-		"default": []string{
+		"default": {
 			"a",
 			"b",
 		},
-		"tiny": []string{
+		"tiny": {
 			"a",
 		},
 	}
@@ -582,37 +582,36 @@ type AnotherResultView struct {
 type AnotherResultCollectionView []*AnotherResultView
 
 var (
-	// SomeRTMap is a map of attribute names in result type SomeRT indexed by view
-	// name.
+	// SomeRTMap is a map indexing the attribute names of SomeRT by view name.
 	SomeRTMap = map[string][]string{
-		"default": []string{
+		"default": {
 			"a",
 		},
-		"tiny": []string{
+		"tiny": {
 			"a",
 		},
 	}
-	// AnotherResultMap is a map of attribute names in result type AnotherResult
-	// indexed by view name.
+	// AnotherResultMap is a map indexing the attribute names of AnotherResult by
+	// view name.
 	AnotherResultMap = map[string][]string{
-		"default": []string{
+		"default": {
 			"a",
 		},
 	}
-	// SomeRTCollectionMap is a map of attribute names in result type
-	// SomeRTCollection indexed by view name.
+	// SomeRTCollectionMap is a map indexing the attribute names of
+	// SomeRTCollection by view name.
 	SomeRTCollectionMap = map[string][]string{
-		"default": []string{
+		"default": {
 			"a",
 		},
-		"tiny": []string{
+		"tiny": {
 			"a",
 		},
 	}
-	// AnotherResultCollectionMap is a map of attribute names in result type
-	// AnotherResultCollection indexed by view name.
+	// AnotherResultCollectionMap is a map indexing the attribute names of
+	// AnotherResultCollection by view name.
 	AnotherResultCollectionMap = map[string][]string{
-		"default": []string{
+		"default": {
 			"a",
 		},
 	}
@@ -727,9 +726,9 @@ type RTView struct {
 }
 
 var (
-	// RTMap is a map of attribute names in result type RT indexed by view name.
+	// RTMap is a map indexing the attribute names of RT by view name.
 	RTMap = map[string][]string{
-		"default": []string{
+		"default": {
 			"a",
 		},
 	}
@@ -771,10 +770,9 @@ type ResultView struct {
 type UserTypeView string
 
 var (
-	// ResultMap is a map of attribute names in result type Result indexed by view
-	// name.
+	// ResultMap is a map indexing the attribute names of Result by view name.
 	ResultMap = map[string][]string{
-		"default": []string{
+		"default": {
 			"t",
 		},
 	}
