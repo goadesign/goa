@@ -156,8 +156,6 @@ func Attribute(name string, args ...interface{}) {
 				Description: description,
 			}
 		}
-		attr.References = parent.References
-		attr.Bases = parent.Bases
 		if fn != nil {
 			eval.Execute(fn, attr)
 		}

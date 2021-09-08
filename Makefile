@@ -25,7 +25,7 @@ GOPATH=$(shell go env GOPATH)
 DEPEND=\
 	golang.org/x/lint/golint@v0.0.0-20210508222113-6edffad5e616  \
 	google.golang.org/protobuf/cmd/protoc-gen-go@v1.27.1 \
-        google.golang.org/grpc/cmd/protoc-gen-go-grpc@v1.1.0 \
+	google.golang.org/grpc/cmd/protoc-gen-go-grpc@v1.1 \
 	honnef.co/go/tools/cmd/staticcheck@v0.2.1
 
 all: lint test
