@@ -11,7 +11,7 @@ import (
 	"testing"
 	"text/template"
 
-	"github.com/go-openapi/loads"
+	"github.com/getkin/kin-openapi/openapi2"
 	"goa.design/goa/v3/codegen"
 	httpgen "goa.design/goa/v3/http/codegen"
 	openapi "goa.design/goa/v3/http/codegen/openapi"
@@ -51,6 +51,9 @@ func TestSections(t *testing.T) {
 				t.Fatalf("OpenAPI failed with %s", err)
 			}
 			for i, o := range oFiles {
+				if filepath.Ext(o.Path) != ".json" {
+					continue
+				}
 				tname := fmt.Sprintf("file%d", i)
 				s := o.SectionTemplates
 				t.Run(tname, func(t *testing.T) {
@@ -139,6 +142,9 @@ func TestValidations(t *testing.T) {
 				t.Fatalf("No swagger files")
 			}
 			for i, o := range oFiles {
+				if filepath.Ext(o.Path) != ".json" {
+					continue
+				}
 				tname := fmt.Sprintf("file%d", i)
 				s := o.SectionTemplates
 				t.Run(tname, func(t *testing.T) {
@@ -204,6 +210,9 @@ func TestExtensions(t *testing.T) {
 				t.Fatalf("No swagger files")
 			}
 			for i, o := range oFiles {
+				if filepath.Ext(o.Path) != ".json" {
+					continue
+				}
 				tname := fmt.Sprintf("file%d", i)
 				s := o.SectionTemplates
 				t.Run(tname, func(t *testing.T) {
@@ -248,8 +257,8 @@ func TestExtensions(t *testing.T) {
 
 // validateSwagger asserts that the given bytes contain a valid Swagger spec.
 func validateSwagger(b []byte) error {
-	doc, err := loads.Analyzed(json.RawMessage(b), "")
-	if err != nil {
+	doc := &openapi2.T{}
+	if err := doc.UnmarshalJSON(b); err != nil {
 		return err
 	}
 	if doc == nil {
