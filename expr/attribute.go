@@ -663,8 +663,10 @@ func (a *AttributeExpr) inheritRecursive(parent *AttributeExpr, seen map[*Attrib
 				for _, nat := range *AsObject(att.Type) {
 					child := nat.Attribute
 					parent := AsObject(patt.Type).Attribute(nat.Name)
-					child.inheritValidations(parent)
-					child.inheritRecursive(parent, seen)
+					if parent != nil {
+						child.inheritValidations(parent)
+						child.inheritRecursive(parent, seen)
+					}
 				}
 			}
 		}
