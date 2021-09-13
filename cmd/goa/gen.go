@@ -146,7 +146,7 @@ func (g *Generator) Write(debug bool) error {
 func (g *Generator) Compile() error {
 	// We first need to go get the generated package to make sure that all
 	// dependencies are added to go.sum prior to compiling.
-	pkgs, err := packages.Load(&packages.Config{Mode: packages.NeedName}, g.tmpDir)
+	pkgs, err := packages.Load(&packages.Config{Mode: packages.NeedName}, fmt.Sprintf(".%c%s", filepath.Separator, g.tmpDir))
 	if err != nil {
 		return err
 	}
