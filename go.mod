@@ -16,9 +16,9 @@ require (
 	github.com/smartystreets/goconvey v1.6.4 // indirect
 	github.com/zach-klippenstein/goregen v0.0.0-20160303162051-795b5e3961ea
 	golang.org/x/mod v0.5.0 // indirect
-	golang.org/x/net v0.0.0-20210510120150-4163338589ed // indirect
+	golang.org/x/net v0.0.0-20210805182204-aaa1db679c0d // indirect
 	golang.org/x/sys v0.0.0-20210816183151-1e6c022a8912 // indirect
-	golang.org/x/tools v0.1.5
+	golang.org/x/tools v0.1.6
 	google.golang.org/genproto v0.0.0-20210903162649-d08c68adba83 // indirect
 	google.golang.org/grpc v1.40.0
 	google.golang.org/protobuf v1.27.1
