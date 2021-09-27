@@ -251,8 +251,8 @@ incoming requests so that your code only has to deal with the business logic.
 
 ### 4. Document
 
-The `http` directory contains the OpenAPI 2.0 specification in both YAML and
-JSON format.
+The `http` directory contains OpenAPI 2.0 and 3.0 specifications in both YAML
+and JSON format.
 
 The specification can easily be served from the service itself using a file
 server. The [Files](http://godoc.org/goa.design/goa/dsl/http.go#Files) DSL
@@ -261,9 +261,9 @@ function makes it possible to serve a static file. Edit the file
 
 ```go
 var _ = Service("openapi", func() {
-        // Serve the file with relative path ../../gen/http/openapi.json for
-        // requests sent to /swagger.json.
-        Files("/swagger.json", "../../gen/http/openapi.json")
+	// Serve the file gen/http/openapi3.json for requests sent to
+	// /openapi.json. The HTTP file system is created below.
+	Files("/openapi.json", "openapi3.json")
 })
 ```
 
@@ -282,12 +282,13 @@ and mount the handler by adding the following line in the same file and after
 the mux creation (e.g. one the line after the `// Configure the mux.` comment):
 
 ```go
-openapisvr.Mount(mux, openapiServer)
+svr := openapisvr.New(nil, mux, dec, enc, nil, nil, http.Dir("../../gen/http"))
+openapisvr.Mount(mux, svr)
 ```
 
 That's it! we now have a self-documenting service. Stop the running service
 with CTRL-C. Rebuild and re-run it then make requests to the newly added
-`/swagger.json` endpoint:
+`/openapi.json` endpoint:
 
 ``` bash
 ^C[calcapi] 16:17:37 exiting (interrupt)
@@ -300,8 +301,8 @@ go build
 In a different console:
 
 ``` bash
-curl localhost:8088/swagger.json
-{"swagger":"2.0","info":{"title":"Calculator Service","description":...
+curl localhost:8088/openapi.json
+{"openapi":"3.0.3","info":{"title":"Calculator Service","description":...
 ```
 
 ## Resources
