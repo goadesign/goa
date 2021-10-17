@@ -51,9 +51,6 @@ func TestSections(t *testing.T) {
 				t.Fatalf("OpenAPI failed with %s", err)
 			}
 			for i, o := range oFiles {
-				if filepath.Ext(o.Path) != ".json" {
-					continue
-				}
 				tname := fmt.Sprintf("file%d", i)
 				s := o.SectionTemplates
 				t.Run(tname, func(t *testing.T) {
@@ -71,8 +68,10 @@ func TestSections(t *testing.T) {
 					if err := tmpl.Execute(&buf, s[0].Data); err != nil {
 						t.Fatalf("failed to render template: %s", err)
 					}
-					if err := validateSwagger(buf.Bytes()); err != nil {
-						t.Errorf("invalid swagger: %s", err)
+					if filepath.Ext(o.Path) == ".json" {
+						if err := validateSwagger(buf.Bytes()); err != nil {
+							t.Errorf("invalid swagger: %s", err)
+						}
 					}
 
 					golden := filepath.Join(goldenPath, fmt.Sprintf("%s_%s.golden", c.Name, tname))
@@ -142,9 +141,6 @@ func TestValidations(t *testing.T) {
 				t.Fatalf("No swagger files")
 			}
 			for i, o := range oFiles {
-				if filepath.Ext(o.Path) != ".json" {
-					continue
-				}
 				tname := fmt.Sprintf("file%d", i)
 				s := o.SectionTemplates
 				t.Run(tname, func(t *testing.T) {
@@ -162,8 +158,10 @@ func TestValidations(t *testing.T) {
 					if err := tmpl.Execute(&buf, s[0].Data); err != nil {
 						t.Fatalf("failed to render template: %s", err)
 					}
-					if err := validateSwagger(buf.Bytes()); err != nil {
-						t.Fatalf("invalid swagger: %s", err)
+					if filepath.Ext(o.Path) == ".json" {
+						if err := validateSwagger(buf.Bytes()); err != nil {
+							t.Fatalf("invalid swagger: %s", err)
+						}
 					}
 
 					golden := filepath.Join(goldenPath, fmt.Sprintf("%s_%s.golden", c.Name, tname))
@@ -210,9 +208,6 @@ func TestExtensions(t *testing.T) {
 				t.Fatalf("No swagger files")
 			}
 			for i, o := range oFiles {
-				if filepath.Ext(o.Path) != ".json" {
-					continue
-				}
 				tname := fmt.Sprintf("file%d", i)
 				s := o.SectionTemplates
 				t.Run(tname, func(t *testing.T) {
@@ -230,8 +225,10 @@ func TestExtensions(t *testing.T) {
 					if err := tmpl.Execute(&buf, s[0].Data); err != nil {
 						t.Fatalf("failed to render template: %s", err)
 					}
-					if err := validateSwagger(buf.Bytes()); err != nil {
-						t.Fatalf("invalid swagger: %s", err)
+					if filepath.Ext(o.Path) == ".json" {
+						if err := validateSwagger(buf.Bytes()); err != nil {
+							t.Fatalf("invalid swagger: %s", err)
+						}
 					}
 
 					golden := filepath.Join(goldenPath, fmt.Sprintf("%s_%s.golden", c.Name, tname))
