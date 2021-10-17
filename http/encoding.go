@@ -55,6 +55,7 @@ type (
 //     * application/json using package encoding/json
 //     * application/xml using package encoding/xml
 //     * application/gob using package encoding/gob
+//     * text/html and text/plain for strings
 //
 // RequestDecoder defaults to the JSON decoder if the request "Content-Type"
 // header does not match any of the supported mime type or is missing
