@@ -428,12 +428,24 @@ var WithMapDSL = func() {
 	Service("test service", func() {
 		Method("test endpoint", func() {
 			Payload(func() {
-				Attribute("int_map", MapOf(String, Int))
-				Attribute("uint_map", MapOf(String, UInt))
+				Attribute("int_map", MapOf(String, Int, func() {
+					Key(func() { Example("") })
+					Elem(func() { Example(1) })
+				}))
+				Attribute("uint_map", MapOf(String, UInt, func() {
+					Key(func() { Example("") })
+					Elem(func() { Example(uint(1)) })
+				}))
 			})
 			Result(func() {
-				Attribute("uint32_map", MapOf(String, UInt32))
-				Attribute("uint64_map", MapOf(String, UInt64))
+				Attribute("uint32_map", MapOf(String, UInt32, func() {
+					Key(func() { Example("") })
+					Elem(func() { Example(uint32(1)) })
+				}))
+				Attribute("uint64_map", MapOf(String, UInt64, func() {
+					Key(func() { Example("") })
+					Elem(func() { Example(uint64(1)) })
+				}))
 			})
 			HTTP(func() {
 				POST("/")
