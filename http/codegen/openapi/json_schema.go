@@ -45,7 +45,7 @@ type (
 		MinItems             *int          `json:"minItems,omitempty" yaml:"minItems,omitempty"`
 		MaxItems             *int          `json:"maxItems,omitempty" yaml:"maxItems,omitempty"`
 		Required             []string      `json:"required,omitempty" yaml:"required,omitempty"`
-		AdditionalProperties bool          `json:"additionalProperties,omitempty" yaml:"additionalProperties,omitempty"`
+		AdditionalProperties interface{}   `json:"additionalProperties,omitempty" yaml:"additionalProperties,omitempty"`
 
 		// Union
 		AnyOf []*Schema `json:"anyOf,omitempty" yaml:"anyOf,omitempty"`

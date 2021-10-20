@@ -55,7 +55,7 @@ func (s *Schema) createMergeItems(other *Schema) mergeItems {
 		{&s.Enum, other.Enum, s.Enum == nil},
 		{&s.Format, other.Format, s.Format == ""},
 		{&s.Pattern, other.Pattern, s.Pattern == ""},
-		{&s.AdditionalProperties, other.AdditionalProperties, !s.AdditionalProperties},
+		{&s.AdditionalProperties, other.AdditionalProperties, s.AdditionalProperties == nil},
 		{&s.Minimum, other.Minimum, minFloat64(s.Minimum, other.Minimum)},
 		{&s.Maximum, other.Maximum, maxFloat64(s.Maximum, other.Maximum)},
 		{&s.MinLength, other.MinLength, minInt(s.MinLength, other.MinLength)},
