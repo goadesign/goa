@@ -44,12 +44,17 @@ components:
           type: object
           example:
             "": 1
-          additionalProperties: true
+          additionalProperties:
+            type: integer
+            example: 1
+            format: int64
         uint_map:
           type: object
           example:
             "": 1
-          additionalProperties: true
+          additionalProperties:
+            type: integer
+            example: 1
       example:
         int_map:
           "": 1
@@ -62,12 +67,16 @@ components:
           type: object
           example:
             "": 1
-          additionalProperties: true
+          additionalProperties:
+            type: integer
+            example: 1
         uint64_map:
           type: object
           example:
             "": 1
-          additionalProperties: true
+          additionalProperties:
+            type: integer
+            example: 1
       example:
         uint32_map:
           "": 1
