@@ -336,7 +336,12 @@ func TypeSchemaWithPrefix(api *expr.APIExpr, t expr.DataType, prefix string) *Sc
 		}
 	case *expr.Map:
 		s.Type = Object
-		s.AdditionalProperties = true
+		if actual.KeyType.Type == expr.String {
+			additionalProperties := NewSchema()
+			s.AdditionalProperties = buildAttributeSchema(api, additionalProperties, actual.ElemType)
+		} else {
+			s.AdditionalProperties = true
+		}
 	case *expr.UserTypeExpr:
 		s.Ref = TypeRefWithPrefix(api, actual, prefix)
 	case *expr.ResultTypeExpr:
