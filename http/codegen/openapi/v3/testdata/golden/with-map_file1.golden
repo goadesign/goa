@@ -21,6 +21,9 @@ paths:
             example:
               int_map:
                 "": 1
+              type_map:
+                "":
+                  string: ""
               uint_map:
                 "": 1
       responses:
@@ -31,12 +34,50 @@ paths:
               schema:
                 $ref: '#/components/schemas/TestEndpointResponseBody'
               example:
+                resulttype_map:
+                  "":
+                    bar:
+                    - string: ""
+                    - string: ""
+                    - string: ""
+                    - string: ""
+                    foo: ""
                 uint32_map:
                   "": 1
                 uint64_map:
                   "": 1
 components:
   schemas:
+    Bar:
+      type: object
+      properties:
+        string:
+          type: string
+          example: ""
+      example:
+        string: ""
+    GoaFoobar:
+      type: object
+      properties:
+        bar:
+          type: array
+          items:
+            $ref: '#/components/schemas/Bar'
+          example:
+          - string: ""
+          - string: ""
+          - string: ""
+          - string: ""
+        foo:
+          type: string
+          example: ""
+      example:
+        bar:
+        - string: ""
+        - string: ""
+        - string: ""
+        - string: ""
+        foo: ""
     TestEndpointRequestBody:
       type: object
       properties:
@@ -48,6 +89,13 @@ components:
             type: integer
             example: 1
             format: int64
+        type_map:
+          type: object
+          example:
+            "":
+              string: ""
+          additionalProperties:
+            $ref: '#/components/schemas/Bar'
         uint_map:
           type: object
           example:
@@ -58,11 +106,26 @@ components:
       example:
         int_map:
           "": 1
+        type_map:
+          "":
+            string: ""
         uint_map:
           "": 1
     TestEndpointResponseBody:
       type: object
       properties:
+        resulttype_map:
+          type: object
+          example:
+            "":
+              bar:
+              - string: ""
+              - string: ""
+              - string: ""
+              - string: ""
+              foo: ""
+          additionalProperties:
+            $ref: '#/components/schemas/GoaFoobar'
         uint32_map:
           type: object
           example:
@@ -78,6 +141,14 @@ components:
             type: integer
             example: 1
       example:
+        resulttype_map:
+          "":
+            bar:
+            - string: ""
+            - string: ""
+            - string: ""
+            - string: ""
+            foo: ""
         uint32_map:
           "": 1
         uint64_map:
