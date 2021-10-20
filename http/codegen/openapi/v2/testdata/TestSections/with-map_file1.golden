@@ -39,23 +39,18 @@ definitions:
       int_map:
         type: object
         example:
-          Aperiam qui aut dicta.: 2850694428022055785
-          Aspernatur quo error explicabo pariatur.: 8867148869158856261
-          Voluptatem et distinctio aliquam nihil.: 7535444955450081856
+          "": 1
         additionalProperties: true
       uint_map:
         type: object
         example:
-          Debitis sit maiores aperiam autem non ea.: 18165917116313765509
-          Et nihil excepturi deserunt quasi.: 15860418637713321633
+          "": 1
         additionalProperties: true
     example:
       int_map:
-        Aut facilis vel ipsam recusandae.: 5070413611701753215
-        Aut non sunt.: 1185229585408538196
-        Excepturi totam.: 7077168439692073874
+        "": 1
       uint_map:
-        Consequuntur porro.: 1398884687684951323
+        "": 1
   TestServiceTestEndpointResponseBody:
     title: TestServiceTestEndpointResponseBody
     type: object
@@ -63,19 +58,15 @@ definitions:
       uint32_map:
         type: object
         example:
-          Molestias recusandae doloribus qui quia.: 4291331764
-          Quia ullam aut iste iste perspiciatis repellendus.: 264220191
-          Tempora et quae sunt itaque.: 7133380
+          "": 1
         additionalProperties: true
       uint64_map:
         type: object
         example:
-          Neque nisi quibusdam nisi sint sunt.: 2929115566830881500
-          Velit assumenda fuga est sint maxime.: 18114062167337720474
+          "": 1
         additionalProperties: true
     example:
       uint32_map:
-        Iure sit consequuntur sint voluptate rem perspiciatis.: 3050782599
+        "": 1
       uint64_map:
-        Aut ipsam provident aliquam tempora beatae.: 12150526241546636429
-        Facilis minus explicabo nemo eos vel repellat.: 12727810370856747157
+        "": 1
