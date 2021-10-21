@@ -32,6 +32,28 @@ paths:
       schemes:
       - http
 definitions:
+  FooBarResponseBody:
+    title: 'Mediatype identifier: application/vnd.goa.foobar; view=default'
+    type: object
+    properties:
+      bar:
+        type: array
+        items:
+          $ref: '#/definitions/barResponseBody'
+        example:
+        - string: ""
+        - string: ""
+      foo:
+        type: string
+        example: ""
+    description: Foo BarResponseBody result type (default view)
+    example:
+      bar:
+      - string: ""
+      - string: ""
+      - string: ""
+      - string: ""
+      foo: ""
   TestServiceTestEndpointRequestBody:
     title: TestServiceTestEndpointRequestBody
     type: object
@@ -40,33 +62,89 @@ definitions:
         type: object
         example:
           "": 1
-        additionalProperties: true
+        additionalProperties:
+          type: integer
+          example: 1
+          format: int64
+      type_map:
+        type: object
+        example:
+          "":
+            string: ""
+        additionalProperties:
+          $ref: '#/definitions/barRequestBody'
       uint_map:
         type: object
         example:
           "": 1
-        additionalProperties: true
+        additionalProperties:
+          type: integer
+          example: 1
+          format: int64
     example:
       int_map:
         "": 1
+      type_map:
+        "":
+          string: ""
       uint_map:
         "": 1
   TestServiceTestEndpointResponseBody:
     title: TestServiceTestEndpointResponseBody
     type: object
     properties:
+      resulttype_map:
+        type: object
+        example:
+          "":
+            bar:
+            - string: ""
+            - string: ""
+            foo: ""
+        additionalProperties:
+          $ref: '#/definitions/FooBarResponseBody'
       uint32_map:
         type: object
         example:
           "": 1
-        additionalProperties: true
+        additionalProperties:
+          type: integer
+          example: 1
+          format: int32
       uint64_map:
         type: object
         example:
           "": 1
-        additionalProperties: true
+        additionalProperties:
+          type: integer
+          example: 1
+          format: int64
     example:
+      resulttype_map:
+        "":
+          bar:
+          - string: ""
+          - string: ""
+          foo: ""
       uint32_map:
         "": 1
       uint64_map:
         "": 1
+  barRequestBody:
+    title: barRequestBody
+    type: object
+    properties:
+      string:
+        type: string
+        example: ""
+    example:
+      string: ""
+  barResponseBody:
+    title: barResponseBody
+    type: object
+    properties:
+      string:
+        type: string
+        example: ""
+    example:
+      string: ""

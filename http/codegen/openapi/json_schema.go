@@ -45,7 +45,7 @@ type (
 		MinItems             *int          `json:"minItems,omitempty" yaml:"minItems,omitempty"`
 		MaxItems             *int          `json:"maxItems,omitempty" yaml:"maxItems,omitempty"`
 		Required             []string      `json:"required,omitempty" yaml:"required,omitempty"`
-		AdditionalProperties bool          `json:"additionalProperties,omitempty" yaml:"additionalProperties,omitempty"`
+		AdditionalProperties interface{}   `json:"additionalProperties,omitempty" yaml:"additionalProperties,omitempty"`
 
 		// Union
 		AnyOf []*Schema `json:"anyOf,omitempty" yaml:"anyOf,omitempty"`
@@ -336,7 +336,12 @@ func TypeSchemaWithPrefix(api *expr.APIExpr, t expr.DataType, prefix string) *Sc
 		}
 	case *expr.Map:
 		s.Type = Object
-		s.AdditionalProperties = true
+		if actual.KeyType.Type == expr.String {
+			additionalProperties := NewSchema()
+			s.AdditionalProperties = buildAttributeSchema(api, additionalProperties, actual.ElemType)
+		} else {
+			s.AdditionalProperties = true
+		}
 	case *expr.UserTypeExpr:
 		s.Ref = TypeRefWithPrefix(api, actual, prefix)
 	case *expr.ResultTypeExpr:

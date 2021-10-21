@@ -179,7 +179,13 @@ func (sf *schemafier) schemafy(attr *expr.AttributeExpr, noref ...bool) *openapi
 		}
 	case *expr.Map:
 		s.Type = openapi.Object
-		s.AdditionalProperties = true
+		// OpenAPI lets you define dictionaries where the keys are strings.
+		// See https://swagger.io/docs/specification/data-models/dictionaries/.
+		if t.KeyType.Type == expr.String {
+			s.AdditionalProperties = sf.schemafy(t.ElemType)
+		} else {
+			s.AdditionalProperties = true
+		}
 	case expr.UserType:
 		h := sf.hashAttribute(attr, fnv.New64())
 		ref, ok := sf.hashes[h]
