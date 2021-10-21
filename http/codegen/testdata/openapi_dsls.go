@@ -425,6 +425,18 @@ var WithSpacesDSL = func() {
 }
 
 var WithMapDSL = func() {
+	var Bar = Type("bar", func() {
+		Attribute("string", String, func() {
+			Example("")
+		})
+	})
+	var FooBar = ResultType("application/vnd.goa.foobar", func() {
+		TypeName("Foo Bar")
+		Attribute("foo", String, func() {
+			Example("")
+		})
+		Attribute("bar", ArrayOf(Bar))
+	})
 	Service("test service", func() {
 		Method("test endpoint", func() {
 			Payload(func() {
@@ -436,6 +448,9 @@ var WithMapDSL = func() {
 					Key(func() { Example("") })
 					Elem(func() { Example(uint(1)) })
 				}))
+				Attribute("type_map", MapOf(String, Bar), func() {
+					Key(func() { Example("") })
+				})
 			})
 			Result(func() {
 				Attribute("uint32_map", MapOf(String, UInt32, func() {
@@ -445,6 +460,9 @@ var WithMapDSL = func() {
 				Attribute("uint64_map", MapOf(String, UInt64, func() {
 					Key(func() { Example("") })
 					Elem(func() { Example(uint64(1)) })
+				}))
+				Attribute("resulttype_map", MapOf(String, FooBar, func() {
+					Key(func() { Example("") })
 				}))
 			})
 			HTTP(func() {
