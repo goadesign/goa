@@ -233,10 +233,16 @@ func Project(m *ResultTypeExpr, view string, seen ...map[string]*AttributeExpr) 
 	if _, ok := m.Type.(*Array); ok {
 		return projectCollection(m, view, seen...)
 	}
-	return projectSingle(m, view, seen...)
+	var s map[string]*AttributeExpr
+	if len(seen) > 0 {
+		s = seen[0]
+	} else {
+		s = make(map[string]*AttributeExpr)
+	}
+	return projectSingle(m, view, s)
 }
 
-func projectSingle(m *ResultTypeExpr, view string, seen ...map[string]*AttributeExpr) (*ResultTypeExpr, error) {
+func projectSingle(m *ResultTypeExpr, view string, seen map[string]*AttributeExpr) (*ResultTypeExpr, error) {
 	v := m.View(view)
 	if v == nil {
 		return nil, fmt.Errorf("unknown view %#v", view)
@@ -270,18 +276,13 @@ func projectSingle(m *ResultTypeExpr, view string, seen ...map[string]*Attribute
 	}
 
 	var ut *UserTypeExpr
-	if len(seen) > 0 {
-		s := seen[0]
-		if att, ok := s[m.Identifier+"::"+view]; ok {
-			if rt, ok2 := att.Type.(*ResultTypeExpr); ok2 {
-				ut = &UserTypeExpr{
-					AttributeExpr: DupAtt(rt.Attribute()),
-					TypeName:      rt.TypeName,
-				}
+	if att, ok := seen[hash(m.Attribute(), view)]; ok {
+		if rt, ok2 := att.Type.(*ResultTypeExpr); ok2 {
+			ut = &UserTypeExpr{
+				AttributeExpr: DupAtt(rt.Attribute()),
+				TypeName:      rt.TypeName,
 			}
 		}
-	} else {
-		seen = append(seen, make(map[string]*AttributeExpr))
 	}
 	id := m.projectIdentifier(view)
 	if ut == nil {
@@ -310,7 +311,7 @@ func projectSingle(m *ResultTypeExpr, view string, seen ...map[string]*Attribute
 	mtObj := AsObject(m.Type)
 	for _, nat := range *viewObj {
 		if at := mtObj.Attribute(nat.Name); at != nil {
-			pat, err := projectRecursive(at, nat, view, seen...)
+			pat, err := projectRecursive(at, nat, view, seen)
 			if err != nil {
 				return nil, err
 			}
@@ -356,13 +357,9 @@ func projectCollection(m *ResultTypeExpr, view string, seen ...map[string]*Attri
 	return proj, nil
 }
 
-func projectRecursive(at *AttributeExpr, vat *NamedAttributeExpr, view string, seen ...map[string]*AttributeExpr) (*AttributeExpr, error) {
-	s := seen[0]
-	ut, isUT := at.Type.(UserType)
-	if isUT {
-		if att, ok := s[ut.ID()+"::"+view]; ok {
-			return att, nil
-		}
+func projectRecursive(at *AttributeExpr, vat *NamedAttributeExpr, view string, seen map[string]*AttributeExpr) (*AttributeExpr, error) {
+	if att, ok := seen[hash(at, view)]; ok {
+		return att, nil
 	}
 	at = DupAtt(at)
 
@@ -378,10 +375,8 @@ func projectRecursive(at *AttributeExpr, vat *NamedAttributeExpr, view string, s
 		if view == "" {
 			view = DefaultView
 		}
-		if isUT {
-			s[ut.ID()+"::"+view] = at
-		}
-		pr, err := Project(rt, view, seen...)
+		seen[hash(at, view)] = at
+		pr, err := Project(rt, view, seen)
 		if err != nil {
 			return nil, fmt.Errorf("view %#v on field %#v cannot be computed: %s", view, vat.Name, err)
 		}
@@ -389,9 +384,7 @@ func projectRecursive(at *AttributeExpr, vat *NamedAttributeExpr, view string, s
 		return at, nil
 	}
 
-	if isUT {
-		s[ut.ID()+"::"+view] = at
-	}
+	seen[hash(at, view)] = at
 
 	if obj := AsObject(at.Type); obj != nil {
 		vobj := AsObject(vat.Attribute.Type)
@@ -409,7 +402,7 @@ func projectRecursive(at *AttributeExpr, vat *NamedAttributeExpr, view string, s
 			if cvnat == nil {
 				continue
 			}
-			pat, err := projectRecursive(cnat.Attribute, cvnat, view, seen...)
+			pat, err := projectRecursive(cnat.Attribute, cvnat, view, seen)
 			if err != nil {
 				return nil, err
 			}
@@ -419,7 +412,7 @@ func projectRecursive(at *AttributeExpr, vat *NamedAttributeExpr, view string, s
 	}
 
 	if ar := AsArray(at.Type); ar != nil {
-		pat, err := projectRecursive(ar.ElemType, vat, view, seen...)
+		pat, err := projectRecursive(ar.ElemType, vat, view, seen)
 		if err != nil {
 			return nil, err
 		}
@@ -457,4 +450,46 @@ func (v *ViewExpr) EvalName() string {
 		suffix = fmt.Sprintf(" of %s", v.Parent.EvalName())
 	}
 	return prefix + suffix
+}
+
+// hash computes a hash for an attribute and a view that returns the same value
+// for two attributes and views that produce the same projected type.
+func hash(att *AttributeExpr, view string) string {
+	sep := "!"
+	ut, ok := att.Type.(UserType)
+	if !ok {
+		return att.Type.Name() + sep + view
+	}
+	// elems contain the elements that affect how types are projected:
+	// - the type identifier
+	// - the view
+	// - the type attribute tags (if any)
+	elems := []string{ut.ID(), view}
+
+	add := func(att *AttributeExpr) {
+		for k, v := range att.Meta {
+			elems = append(elems, k)
+			elems = append(elems, v...)
+		}
+	}
+
+	add(att)
+	if obj := AsObject(ut); obj != nil {
+		for _, nat := range *obj {
+			add(nat.Attribute)
+		}
+	}
+	n := len(sep) * (len(elems) - 1)
+	for i := 0; i < len(elems); i++ {
+		n += len(elems[i])
+	}
+
+	var b strings.Builder
+	b.Grow(n)
+	b.WriteString(elems[0])
+	for _, s := range elems[1:] {
+		b.WriteString(sep)
+		b.WriteString(s)
+	}
+	return b.String()
 }
