@@ -79,6 +79,9 @@ func (h *unaryHandler) Handle(ctx context.Context, reqpb interface{}) (interface
 			// Decode gRPC request message and incoming metadata
 			md, _ := metadata.FromIncomingContext(ctx)
 			if req, err = h.decoder(ctx, reqpb, md); err != nil {
+				if _, ok := err.(*goa.ServiceError); ok {
+					return nil, err
+				}
 				return nil, status.Error(codes.InvalidArgument, err.Error())
 			}
 		}
@@ -104,6 +107,9 @@ func (h *unaryHandler) Handle(ctx context.Context, reqpb interface{}) (interface
 		if h.encoder != nil {
 			// Encode gRPC response
 			if respb, err = h.encoder(ctx, resp, &hdr, &trlr); err != nil {
+				if _, ok := err.(*goa.ServiceError); ok {
+					return nil, err
+				}
 				return nil, status.Error(codes.Unknown, err.Error())
 			}
 		}
@@ -136,6 +142,9 @@ func (h *streamHandler) Decode(ctx context.Context, reqpb interface{}) (interfac
 		if h.decoder != nil {
 			md, _ := metadata.FromIncomingContext(ctx)
 			if req, err = h.decoder(ctx, reqpb, md); err != nil {
+				if _, ok := err.(*goa.ServiceError); ok {
+					return nil, err
+				}
 				return nil, status.Error(codes.InvalidArgument, err.Error())
 			}
 		}
