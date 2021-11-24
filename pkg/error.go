@@ -32,6 +32,23 @@ type (
 	}
 )
 
+const (
+	// InvalidFieldType is the error name for invalid field type errors.
+	InvalidFieldType = "invalid_field_type"
+	// MissingField is the error name for missing field errors.
+	MissingField = "missing_field"
+	// InvalidEnumValue is the error name for invalid enum value errors.
+	InvalidEnumValue = "invalid_enum_value"
+	// InvalidFormat is the error name for invalid format errors.
+	InvalidFormat = "invalid_format"
+	// InvalidPattern is the error name for invalid pattern errors.
+	InvalidPattern = "invalid_pattern"
+	// InvalidRange is the error name for invalid range errors.
+	InvalidRange = "invalid_range"
+	// InvalidLength is the error name for invalid length errors.
+	InvalidLength = "invalid_length"
+)
+
 // Fault creates an error given a format and values a la fmt.Printf. The error
 // has the Fault field set to true.
 func Fault(format string, v ...interface{}) *ServiceError {
@@ -81,14 +98,14 @@ func DecodePayloadError(msg string) error {
 // type of a payload field does not match the type defined in the design.
 func InvalidFieldTypeError(name string, val interface{}, expected string) error {
 	return withField(name, PermanentError(
-		"invalid_field_type", "invalid value %#v for %q, must be a %s", val, name, expected))
+		InvalidFieldType, "invalid value %#v for %q, must be a %s", val, name, expected))
 }
 
 // MissingFieldError is the error produced by the generated code when a payload
 // is missing a required field.
 func MissingFieldError(name, context string) error {
 	return withField(name, PermanentError(
-		"missing_field", "%q is missing from %s", name, context))
+		MissingField, "%q is missing from %s", name, context))
 }
 
 // InvalidEnumValueError is the error produced by the generated code when the
@@ -100,7 +117,7 @@ func InvalidEnumValueError(name string, val interface{}, allowed []interface{}) 
 		elems[i] = fmt.Sprintf("%#v", a)
 	}
 	return withField(name, PermanentError(
-		"invalid_enum_value", "value of %s must be one of %s but got value %#v", name, strings.Join(elems, ", "), val))
+		InvalidEnumValue, "value of %s must be one of %s but got value %#v", name, strings.Join(elems, ", "), val))
 }
 
 // InvalidFormatError is the error produced by the generated code when the value
@@ -108,7 +125,7 @@ func InvalidEnumValueError(name string, val interface{}, allowed []interface{}) 
 // design.
 func InvalidFormatError(name, target string, format Format, formatError error) error {
 	return withField(name, PermanentError(
-		"invalid_format", "%s must be formatted as a %s but got value %q, %s", name, format, target, formatError.Error()))
+		InvalidFormat, "%s must be formatted as a %s but got value %q, %s", name, format, target, formatError.Error()))
 }
 
 // InvalidPatternError is the error produced by the generated code when the
@@ -116,7 +133,7 @@ func InvalidFormatError(name, target string, format Format, formatError error) e
 // design.
 func InvalidPatternError(name, target string, pattern string) error {
 	return withField(name, PermanentError(
-		"invalid_pattern", "%s must match the regexp %q but got value %q", name, pattern, target))
+		InvalidPattern, "%s must match the regexp %q but got value %q", name, pattern, target))
 }
 
 // InvalidRangeError is the error produced by the generated code when the value
@@ -128,7 +145,7 @@ func InvalidRangeError(name string, target interface{}, value interface{}, min b
 		comp = "lesser or equal"
 	}
 	return withField(name, PermanentError(
-		"invalid_range", "%s must be %s than %d but got value %#v", name, comp, value, target))
+		InvalidRange, "%s must be %s than %d but got value %#v", name, comp, value, target))
 }
 
 // InvalidLengthError is the error produced by the generated code when the value
@@ -140,7 +157,7 @@ func InvalidLengthError(name string, target interface{}, ln, value int, min bool
 		comp = "lesser or equal"
 	}
 	return withField(name, PermanentError(
-		"invalid_length", "length of %s must be %s than %d but got value %#v (len=%d)", name, comp, value, target, ln))
+		InvalidLength, "length of %s must be %s than %d but got value %#v (len=%d)", name, comp, value, target, ln))
 }
 
 // NewErrorID creates a unique 8 character ID that is well suited to use as an
