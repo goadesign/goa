@@ -5,7 +5,7 @@ import (
 	"goa.design/goa/v3/expr"
 )
 
-// Payload defines the data type of an method input. Payload also makes the
+// Payload defines the data type of a method input. Payload also makes the
 // input required.
 //
 // Payload must appear in a Method expression.
@@ -30,22 +30,22 @@ import (
 //
 // Examples:
 //
-//    Method("upper"), func() {
+//    Method("upper", func() {
 //        // Use primitive type.
 //        Payload(String)
-//    }
+//    })
 //
-//    Method("upper"), func() {
+//    Method("upper", func() {
 //        // Use primitive type.and description
 //        Payload(String, "string to convert to uppercase")
-//    }
+//    })
 //
-//    Method("upper"), func() {
+//    Method("upper", func() {
 //        // Use primitive type, description and validations
 //        Payload(String, "string to convert to uppercase", func() {
 //            Pattern("^[a-z]")
 //        })
-//    }
+//    })
 //
 //    Method("add", func() {
 //        // Define payload data structure inline
