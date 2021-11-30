@@ -3,6 +3,53 @@ package dsl
 import (
 	"goa.design/goa/v3/eval"
 	"goa.design/goa/v3/expr"
+	pkg "goa.design/goa/v3/pkg"
+)
+
+const (
+	// The constants below make it possible for the service specific code to
+	// return error names that are consistent with the names used by the
+	// generated request and response payload validation code.
+	//
+	// Usage:
+	//
+	// var _ = Service("divider", func() {
+	//     Error(MissingField)
+	//     Error(InvalidRange)
+	//
+	//     Payload(func() {
+	//        Attribute("numerator", Int)
+	//        Attribute("denominator", Int, func() {
+	//            Minimum(1)
+	//        })
+	//        Required("numerator", "denominator")
+	//     })
+	//
+	//     HTTP(func() {
+	//        Response(MissingField, StatusBadRequest)
+	//        Response(InvalidRange, StatusBadRequest)
+	//     })
+	//
+	//     GRPC(func() {
+	//         Response(MissingField, CodeInvalidArgument)
+	//         Response(InvalidRange, CodeInvalidArgument)
+	//     })
+	// })
+
+	// InvalidFieldType is the error name for invalid field type errors.
+	InvalidFieldType = pkg.InvalidFieldType
+	// MissingField is the error name for missing field errors.
+	MissingField = pkg.MissingField
+	// InvalidEnumValue is the error name for invalid enum value errors.
+	InvalidEnumValue = pkg.InvalidEnumValue
+	// InvalidFormat is the error name for invalid format errors.
+	InvalidFormat = pkg.InvalidFormat
+	// InvalidPattern is the error name for invalid pattern errors.
+	InvalidPattern = pkg.InvalidPattern
+	// InvalidRange is the error name for invalid range errors.
+	InvalidRange = pkg.InvalidRange
+	// InvalidLength is the error name for invalid length errors.
+	InvalidLength = pkg.InvalidLength
 )
 
 // Error describes a method error return value. The description includes a
