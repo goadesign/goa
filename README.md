@@ -46,7 +46,7 @@ invoking the client code.
 ## Installation
 
 ```bash
-go get -u goa.design/goa/v3/...@v3
+go install goa.design/goa/v3/cmd/goa
 ```
 
 >Note: Goa requires the use of Go modules.
