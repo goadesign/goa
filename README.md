@@ -307,6 +307,19 @@ curl localhost:8088/openapi.json
 
 ## Resources
 
+### Docs
+
+The [goa.design](https://goa.design) website provides a high level overview of
+Goa and the DSL. 
+
+In particular the page
+[Implementing a Goa Service](https://goa.design/implement/implementing/)
+explains how to leverage the generated code to implement an HTTP or gRPC
+service.
+
+The [![DSL GoDoc](https://img.shields.io/badge/godoc-DSL-blue)](https://pkg.go.dev/goa.design/goa/v3@v3.5.2/dsl?tab=doc)
+contains a fully documented reference of all the DSL functions.
+
 ### Getting Started Guides
 
 A couple of Getting Started guides produced by the community.
@@ -322,12 +335,6 @@ Gleidson Nascimento goes through how to create a complete service that using bot
 
 [![API Development in Go Using Goa](https://bs-uploads.toptal.io/blackfish-uploads/uploaded_file/file/275966/image-1592349920607-734c25f64461bf3c482bac1d73c26432.png)](https://www.toptal.com/go/goa-api-development)
 
-### Docs
-
-The [goa.design](https://goa.design) website provides a high level overview of
-Goa and the DSL. 
-The [![DSL GoDoc](https://img.shields.io/badge/godoc-DSL-blue)](https://pkg.go.dev/goa.design/goa/v3@v3.5.2/dsl?tab=doc)
-contains a fully documented reference of all the DSL functions.
 ### Examples
 
 The [examples](https://github.com/goadesign/examples) directory
