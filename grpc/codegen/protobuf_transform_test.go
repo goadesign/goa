@@ -431,29 +431,29 @@ const (
 	compositeSvcToCustomFieldProtoCode = `func transform() {
 	target := &CompositeWithCustomField{}
 	if source.RequiredString != nil {
-		target.MyString = *source.RequiredString
+		target.RequiredString = *source.RequiredString
 	}
 	if source.DefaultInt != nil {
-		target.MyInt = int32(*source.DefaultInt)
+		target.DefaultInt = int32(*source.DefaultInt)
 	}
 	if source.DefaultInt == nil {
-		target.MyInt = 100
+		target.DefaultInt = 100
 	}
 	if source.Type != nil {
-		target.MyType = svcSimpleToSimple(source.Type)
+		target.Type = svcSimpleToSimple(source.Type)
 	}
 	if source.Map != nil {
-		target.MyMap = make(map[int32]string, len(source.Map))
+		target.Map_ = make(map[int32]string, len(source.Map))
 		for key, val := range source.Map {
 			tk := int32(key)
 			tv := val
-			target.MyMap[tk] = tv
+			target.Map_[tk] = tv
 		}
 	}
 	if source.Array != nil {
-		target.MyArray = make([]string, len(source.Array))
+		target.Array = make([]string, len(source.Array))
 		for i, val := range source.Array {
-			target.MyArray[i] = val
+			target.Array[i] = val
 		}
 	}
 }
@@ -861,26 +861,26 @@ const (
 
 	customFieldProtoToCompositeSvcCode = `func transform() {
 	target := &Composite{
-		RequiredString: &source.MyString,
+		RequiredString: &source.RequiredString,
 	}
-	if source.MyInt != 0 {
-		defaultIntptr := int(source.MyInt)
+	if source.DefaultInt != 0 {
+		defaultIntptr := int(source.DefaultInt)
 		target.DefaultInt = &defaultIntptr
 	}
-	if source.MyType != nil {
-		target.Type = protobufSimpleToSimple(source.MyType)
+	if source.Type != nil {
+		target.Type = protobufSimpleToSimple(source.Type)
 	}
-	if source.MyMap != nil {
-		target.Map = make(map[int]string, len(source.MyMap))
-		for key, val := range source.MyMap {
+	if source.Map_ != nil {
+		target.Map = make(map[int]string, len(source.Map_))
+		for key, val := range source.Map_ {
 			tk := int(key)
 			tv := val
 			target.Map[tk] = tv
 		}
 	}
-	if source.MyArray != nil {
-		target.Array = make([]string, len(source.MyArray))
-		for i, val := range source.MyArray {
+	if source.Array != nil {
+		target.Array = make([]string, len(source.Array))
+		for i, val := range source.Array {
 			target.Array[i] = val
 		}
 	}

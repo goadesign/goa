@@ -76,6 +76,14 @@ func protoBufTransform(source, target *expr.AttributeExpr, sourceVar, targetVar 
 		proto: proto,
 	}
 
+	if proto {
+		target = expr.DupAtt(target)
+		removeMeta(target)
+	} else {
+		source = expr.DupAtt(source)
+		removeMeta(source)
+	}
+
 	code, err := transformAttribute(source, target, sourceVar, targetVar, newVar, ta)
 	if err != nil {
 		return "", nil, err
@@ -87,6 +95,16 @@ func protoBufTransform(source, target *expr.AttributeExpr, sourceVar, targetVar 
 	}
 
 	return strings.TrimRight(code, "\n"), funcs, nil
+}
+
+// removeMeta removes the meta attributes from the given attribute. This is
+// needed to make sure that any field name overridding is removed when
+// generating protobuf types (as protogen itself won't honor these overrides).
+func removeMeta(att *expr.AttributeExpr) {
+	codegen.Walk(att, func(a *expr.AttributeExpr) error {
+		a.Meta = nil
+		return nil
+	})
 }
 
 // transformAttribute returns the code to initialize a target data structure
