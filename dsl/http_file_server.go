@@ -7,7 +7,7 @@ import (
 	"goa.design/goa/v3/expr"
 )
 
-// Files defines a endpoint that serves static assets via HTTP. The logic for
+// Files defines an endpoint that serves static assets via HTTP. The logic for
 // what to do when the filename points to a file vs. a directory is the same as
 // the standard http package ServeFile function. The path may end with a
 // wildcard that matches the rest of the URL (e.g. {*filepath}). If it does the
@@ -21,7 +21,9 @@ import (
 //    Files("/assets/{*filepath}", "/www/data/assets")
 //
 // returns the content of the file "/www/data/assets/x/y/z" when requests are
-// sent to "/assets/x/y/z".
+// sent to "/assets/x/y/z". If you do not explicitly map index.html under a wildcard
+// path, the underlying http.ServeFile() call will return a redirect to ./
+// instead of the index.html file.
 //
 // Files must appear in Service.
 //
