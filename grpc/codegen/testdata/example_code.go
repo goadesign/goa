@@ -239,7 +239,7 @@ const ExampleSingleHostPkgPathCLIImport = `import (
 `
 
 const ExampleCLICode = `func doGRPC(scheme, host string, timeout int, debug bool) (goa.Endpoint, interface{}, error) {
-	conn, err := grpc.Dial(host, grpc.WithInsecure())
+	conn, err := grpc.Dial(host, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "could not connect to gRPC server at %s: %v\n", host, err)
 	}
