@@ -1,6 +1,7 @@
 package expr
 
 import (
+	"fmt"
 	"strings"
 	"testing"
 )
@@ -62,6 +63,19 @@ func TestProject(t *testing.T) {
 				k.Expected.AttributeExpr.Debug("expected")
 				t.Errorf("got: %s, expected: %s\n", Hash(projected, false, true, true), Hash(k.Expected, false, true, true))
 			}
+			if IsObject(projected.AttributeExpr.Type) {
+				matt := NewMappedAttributeExpr(projected.AttributeExpr)
+				WalkMappedAttr(matt, func(name, _ string, att *AttributeExpr) error {
+					att2 := k.Expected.AttributeExpr.Find(name)
+					if att2 == nil {
+						return nil // already caught by Equal check above
+					}
+					if att.Description != att2.Description {
+						t.Errorf("description mismatch for %s: got: %s, expected: %s\n", name, att.Description, att2.Description)
+					}
+					return nil
+				})
+			}
 		})
 	}
 }
@@ -111,9 +125,11 @@ func resultType(params ...interface{}) *ResultTypeExpr {
 		switch pt := p.(type) {
 		case string:
 			obj = append(obj, &NamedAttributeExpr{
-				Name:      params[i].(string),
-				Attribute: &AttributeExpr{Type: params[i+1].(DataType)},
-			})
+				Name: params[i].(string),
+				Attribute: &AttributeExpr{
+					Type:        params[i+1].(DataType),
+					Description: fmt.Sprintf("desc %s", params[i]),
+				}})
 		case *ViewExpr:
 			views = append(views, pt)
 		}

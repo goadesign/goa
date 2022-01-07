@@ -455,5 +455,5 @@ func (v *ViewExpr) EvalName() string {
 // hashAttrAndView computes a hash for an attribute and a view that returns the
 // same value for two attributes and views that produce the same projected type.
 func hashAttrAndView(att *AttributeExpr, view string) string {
-	return Hash(att.Type, false, false, false) + "::" + view
+	return Hash(att.Type, false, false, false) + "::" + view + "::" + att.Description
 }

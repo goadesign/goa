@@ -551,7 +551,12 @@ func (a *AttributeExpr) debug(prefix string, seen map[*AttributeExpr]int, indent
 		}
 		seen[a]++
 	}
-	fmt.Printf("%s: %s\n", prefix, a.Type.Name())
+	n := a.Type.Name()
+	if desc := a.Description; desc != "" {
+		fmt.Printf("%s: %s (%s)\n", prefix, n, desc)
+	} else {
+		fmt.Printf("%s: %s\n", prefix, n)
+	}
 	if o := AsObject(a.Type); o != nil {
 		for _, att := range *o {
 			att.Attribute.debug("- "+att.Name, seen, indent+1)
