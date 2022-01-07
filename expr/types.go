@@ -245,80 +245,11 @@ func IsPrimitive(dt DataType) bool {
 //    - map types have keys and elements whose types are equal
 //    - objects have the same attribute names and the attribute types are equal
 //
-// Note: calling Equal is not equivalent to evaluation dt.Hash() == dt2.Hash()
+// Note: calling Equal is not equivalent to evaluating dt.Hash() == dt2.Hash()
 // as the former may return true for two user types with different names and
 // thus with different hash values.
 func Equal(dt, dt2 DataType) bool {
-	bs := *equal(dt, dt2)
-	for _, b := range bs {
-		if !*b {
-			return false
-		}
-	}
-	return true
-}
-
-// Support recursive types by doing lazy evaluation.
-func equal(dt, dt2 DataType, seen ...map[string]*[]*bool) *[]*bool {
-	f := false
-	fs := []*bool{&f}
-	if dt.Kind() != dt2.Kind() {
-		return &fs
-	}
-	var s map[string]*[]*bool
-	if len(seen) > 0 {
-		s = seen[0]
-	} else {
-		s = make(map[string]*[]*bool)
-	}
-	switch actual := dt.(type) {
-	case *Array:
-		return equal(actual.ElemType.Type, AsArray(dt2).ElemType.Type, s)
-	case *Map:
-		s1 := equal(actual.ElemType.Type, AsMap(dt2).ElemType.Type, s)
-		s2 := equal(actual.KeyType.Type, AsMap(dt2).KeyType.Type, s)
-		s3 := append(*s1, *s2...)
-		return &s3
-	case *Object:
-		if len(*actual) != len(*AsObject(dt2)) {
-			return &fs
-		}
-		var bs []*bool
-		for _, nat := range *actual {
-			obj := AsObject(dt2)
-			at := obj.Attribute(nat.Name)
-			if at == nil {
-				return &fs
-			}
-			bs = append(bs, *equal(nat.Attribute.Type, at.Type, s)...)
-		}
-		return &bs
-	case UserType:
-		key := actual.Name() + "=" + dt2.Name()
-		if v, ok := s[key]; ok {
-			return v
-		}
-		var res []*bool
-		pres := &res
-		s[key] = pres
-		if IsObject(actual) {
-			*pres = *equal(AsObject(dt), AsObject(dt2), s)
-		} else if IsMap(actual) {
-			// Map aliased as UserType
-			*pres = *equal(AsMap(dt), AsMap(dt2), s)
-		} else if IsArray(actual) {
-			// Array aliased as UserType or CollectionOf
-			*pres = *equal(AsArray(dt), AsArray(dt2), s)
-		} else {
-			// Primitive type aliased as UserType
-			*pres = *equal(dt, dt2, s)
-		}
-		return pres
-	}
-
-	t := true
-	ts := []*bool{&t}
-	return &ts
+	return Hash(dt, false, true, true) == Hash(dt2, false, true, true)
 }
 
 // DataType implementation
@@ -428,7 +359,7 @@ func (a *Array) Name() string {
 
 // Hash returns a unique hash value for a.
 func (a *Array) Hash() string {
-	return "_array_+" + a.ElemType.Type.Hash()
+	return Hash(a, true, false, true)
 }
 
 // IsCompatible returns true if val is compatible with p.
@@ -547,11 +478,7 @@ func (o *Object) Name() string { return "object" }
 
 // Hash returns a unique hash value for o.
 func (o *Object) Hash() string {
-	h := "_object_"
-	for _, nat := range *o {
-		h += "+" + nat.Name + "/" + nat.Attribute.Type.Hash()
-	}
-	return h
+	return Hash(o, true, false, true)
 }
 
 // Merge creates a new object consisting of the named attributes of o appended
@@ -590,7 +517,7 @@ func (m *Map) Name() string { return "map" }
 
 // Hash returns a unique hash value for m.
 func (m *Map) Hash() string {
-	return "_map_+" + m.KeyType.Type.Hash() + ":" + m.ElemType.Type.Hash()
+	return Hash(m, true, false, true)
 }
 
 // IsCompatible returns true if o describes the (Go) type of val.

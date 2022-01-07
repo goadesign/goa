@@ -1,7 +1,6 @@
 package expr
 
 import (
-	"encoding/json"
 	"strings"
 	"testing"
 )
@@ -27,7 +26,8 @@ var (
 	compositeResultDefault = resultType("a", object(collectionResultDefault), "b", String)
 	compositeResultLink    = resultType("a", object(collectionResultLink))
 
-	recursiveResult = resultRecursive("a", String, "r", simpleResult, view("default", "a", String, "r", AsObject(simpleResult)))
+	recursiveResult         = resultRecursive("a", String, view("default", "a", object(String)))
+	embeddedRecursiveResult = resultType("a", String, "rec", recursiveResult)
 )
 
 func init() {
@@ -49,7 +49,7 @@ func TestProject(t *testing.T) {
 		{"collection-link", collectionResult, "link", collectionResultLink},
 		{"composite-default", compositeResult, "default", compositeResultDefault},
 		{"composite-link", compositeResult, "link", compositeResultLink},
-		{"recursive", recursiveResult, "default", recursiveResult},
+		{"recursive", recursiveResult, "default", embeddedRecursiveResult},
 	}
 	for _, k := range cases {
 		t.Run(k.Name, func(t *testing.T) {
@@ -58,15 +58,9 @@ func TestProject(t *testing.T) {
 				t.Fatal(err)
 			}
 			if !Equal(projected, k.Expected) {
-				pj, err := json.MarshalIndent(projected.Example(testrand), "  ", "  ")
-				if err != nil {
-					t.Fatal(err)
-				}
-				ej, err := json.MarshalIndent(k.Expected.Example(testrand), "  ", "  ")
-				if err != nil {
-					t.Fatal(err)
-				}
-				t.Errorf("projected type\n%s\ndoes not match expectation\n%s", string(pj), string(ej))
+				projected.AttributeExpr.Debug("got")
+				k.Expected.AttributeExpr.Debug("expected")
+				t.Errorf("got: %s, expected: %s\n", Hash(projected, false, true, true), Hash(k.Expected, false, true, true))
 			}
 		})
 	}

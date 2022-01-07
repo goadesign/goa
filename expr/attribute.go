@@ -543,11 +543,14 @@ func (a *AttributeExpr) debug(prefix string, seen map[*AttributeExpr]int, indent
 	tab := "    "
 	tabs := strings.Repeat(tab, indent)
 	prefix = tabs + prefix
-	if c, ok := seen[a]; ok && c > 1 {
-		fmt.Printf("%s: ...\n", prefix)
-		return
+	if IsObject(a.Type) {
+		// avoid infinite recursion
+		if c, ok := seen[a]; ok && c > 1 {
+			fmt.Printf("%s: ...\n", prefix)
+			return
+		}
+		seen[a]++
 	}
-	seen[a]++
 	fmt.Printf("%s: %s\n", prefix, a.Type.Name())
 	if o := AsObject(a.Type); o != nil {
 		for _, att := range *o {

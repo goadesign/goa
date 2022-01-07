@@ -74,7 +74,7 @@ ifneq ($(GOOS),windows)
 endif
 
 test:
-	env GO111MODULE=on go test ./...
+	go test ./...
 
 release: release-goa release-examples release-plugins
 

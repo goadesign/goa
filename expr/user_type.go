@@ -76,7 +76,7 @@ func (u *UserTypeExpr) Dup(att *AttributeExpr) UserType {
 
 // Hash returns a unique hash value for u.
 func (u *UserTypeExpr) Hash() string {
-	return "_type_+" + u.TypeName
+	return Hash(u, true, false, true)
 }
 
 // Example produces an example for the user type which is JSON serialization
