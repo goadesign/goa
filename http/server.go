@@ -14,7 +14,7 @@ type (
 	}
 
 	// Mounter is the interface for servers that allow mounting their endpoints
-	// into a mutex.
+	// into a muxer.
 	Mounter interface {
 		Mount(Muxer)
 	}
