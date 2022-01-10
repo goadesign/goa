@@ -224,22 +224,20 @@ func (m *ResultTypeExpr) ensureDefaultView() {
 // or any result type that makes up its attributes recursively. Note that
 // individual attributes may use a different view. In this case Project uses
 // that view and returns an error if it isn't defined on the attribute type.
-func Project(m *ResultTypeExpr, view string, seen ...map[string]*AttributeExpr) (*ResultTypeExpr, error) {
+func Project(m *ResultTypeExpr, view string) (*ResultTypeExpr, error) {
+	return project(m, view, make(map[string]*AttributeExpr))
+}
+
+func project(m *ResultTypeExpr, view string, seen map[string]*AttributeExpr) (*ResultTypeExpr, error) {
 	_, params, _ := mime.ParseMediaType(m.Identifier)
 	if params["view"] == view {
 		// nothing to do
 		return m, nil
 	}
 	if _, ok := m.Type.(*Array); ok {
-		return projectCollection(m, view, seen...)
+		return projectCollection(m, view, seen)
 	}
-	var s map[string]*AttributeExpr
-	if len(seen) > 0 {
-		s = seen[0]
-	} else {
-		s = make(map[string]*AttributeExpr)
-	}
-	return projectSingle(m, view, s)
+	return projectSingle(m, view, seen)
 }
 
 func projectSingle(m *ResultTypeExpr, view string, seen map[string]*AttributeExpr) (*ResultTypeExpr, error) {
@@ -321,10 +319,10 @@ func projectSingle(m *ResultTypeExpr, view string, seen map[string]*AttributeExp
 	return projected, nil
 }
 
-func projectCollection(m *ResultTypeExpr, view string, seen ...map[string]*AttributeExpr) (*ResultTypeExpr, error) {
+func projectCollection(m *ResultTypeExpr, view string, seen map[string]*AttributeExpr) (*ResultTypeExpr, error) {
 	// Project the collection element result type
 	e := m.Type.(*Array).ElemType.Type.(*ResultTypeExpr) // validation checked this cast would work
-	pe, err2 := Project(e, view, seen...)
+	pe, err2 := project(e, view, seen)
 	if err2 != nil {
 		return nil, fmt.Errorf("collection element: %s", err2)
 	}
@@ -376,7 +374,7 @@ func projectRecursive(at *AttributeExpr, vat *NamedAttributeExpr, view string, s
 			view = DefaultView
 		}
 		seen[hashAttrAndView(at, view)] = at
-		pr, err := Project(rt, view, seen)
+		pr, err := project(rt, view, seen)
 		if err != nil {
 			return nil, fmt.Errorf("view %#v on field %#v cannot be computed: %s", view, vat.Name, err)
 		}
@@ -384,7 +382,9 @@ func projectRecursive(at *AttributeExpr, vat *NamedAttributeExpr, view string, s
 		return at, nil
 	}
 
-	seen[hashAttrAndView(at, view)] = at
+	if _, ok := at.Type.(*UserTypeExpr); ok {
+		seen[hashAttrAndView(at, view)] = at
+	}
 
 	if obj := AsObject(at.Type); obj != nil {
 		vobj := AsObject(vat.Attribute.Type)
@@ -455,5 +455,5 @@ func (v *ViewExpr) EvalName() string {
 // hashAttrAndView computes a hash for an attribute and a view that returns the
 // same value for two attributes and views that produce the same projected type.
 func hashAttrAndView(att *AttributeExpr, view string) string {
-	return Hash(att.Type, false, false, false) + "::" + view + "::" + att.Description
+	return Hash(att.Type, false, false, false) + "::" + view
 }

@@ -63,18 +63,16 @@ func TestProject(t *testing.T) {
 				k.Expected.AttributeExpr.Debug("expected")
 				t.Errorf("got: %s, expected: %s\n", Hash(projected, false, true, true), Hash(k.Expected, false, true, true))
 			}
-			if IsObject(projected.AttributeExpr.Type) {
-				matt := NewMappedAttributeExpr(projected.AttributeExpr)
-				WalkMappedAttr(matt, func(name, _ string, att *AttributeExpr) error {
-					att2 := k.Expected.AttributeExpr.Find(name)
+			if pobj := AsObject(projected.AttributeExpr.Type); pobj != nil {
+				for _, att := range *pobj {
+					att2 := k.Expected.AttributeExpr.Find(att.Name)
 					if att2 == nil {
-						return nil // already caught by Equal check above
+						continue
 					}
-					if att.Description != att2.Description {
-						t.Errorf("description mismatch for %s: got: %s, expected: %s\n", name, att.Description, att2.Description)
+					if att.Attribute.Description != att2.Description {
+						t.Errorf("got description %q, expected %q", att.Attribute.Description, att2.Description)
 					}
-					return nil
-				})
+				}
 			}
 		})
 	}
@@ -161,7 +159,7 @@ func collection(elemType *ResultTypeExpr) *ResultTypeExpr {
 
 func resultRecursive(params ...interface{}) *ResultTypeExpr {
 	rt := resultType(params...)
-	recAtt := &NamedAttributeExpr{Name: "rec", Attribute: &AttributeExpr{Type: rt}}
+	recAtt := &NamedAttributeExpr{Name: "rec", Attribute: &AttributeExpr{Type: rt, Description: "desc rec"}}
 	obj := AsObject(rt)
 	*obj = append(*obj, recAtt)
 	for _, v := range rt.Views {
