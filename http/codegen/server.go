@@ -385,6 +385,11 @@ func {{ .MountServer }}(mux goahttp.Muxer, h *{{ .ServerStruct }}) {
 		{{- end }}
 	{{- end }}
 }
+
+{{ printf "%s configures the mux to serve the %s endpoints." .MountServer .Service.Name | comment }}
+func (s *{{ .ServerStruct }}) {{ .MountServer }}(mux goahttp.Muxer) {
+	{{ .MountServer }}(mux, s)
+}
 `
 
 // input: EndpointData

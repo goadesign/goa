@@ -184,6 +184,11 @@ func Mount(mux goahttp.Muxer, h *Server) {
 	MountFileJSON(mux, h.FileJSON)
 	MountPathToFolder(mux, goahttp.Replace("/", "/path/to/folder", h.PathToFolder))
 }
+
+// Mount configures the mux to serve the ServiceFileServer endpoints.
+func (s *Server) Mount(mux goahttp.Muxer) {
+	Mount(mux, s)
+}
 `
 
 var ServerMultipleFilesWithPrefixPathConstructorCode = `// Mount configures the mux to serve the ServiceFileServer endpoints.
@@ -192,6 +197,11 @@ func Mount(mux goahttp.Muxer, h *Server) {
 	MountPathToFileJSON2(mux, goahttp.Replace("", "/path/to/file.json", h.PathToFileJSON2))
 	MountFileJSON(mux, goahttp.Replace("", "/file.json", h.FileJSON))
 	MountPathToFolder(mux, goahttp.Replace("/server_file_server", "/path/to/folder", h.PathToFolder))
+}
+
+// Mount configures the mux to serve the ServiceFileServer endpoints.
+func (s *Server) Mount(mux goahttp.Muxer) {
+	Mount(mux, s)
 }
 `
 
@@ -204,11 +214,21 @@ func Mount(mux goahttp.Muxer, h *Server) {
 	MountFileJSON(mux, h.FileJSON)
 	MountPathToFolder(mux, goahttp.Replace("/", "/path/to/folder", h.PathToFolder))
 }
+
+// Mount configures the mux to serve the ServiceFileServer endpoints.
+func (s *Server) Mount(mux goahttp.Muxer) {
+	Mount(mux, s)
+}
 `
 
 var ServerSimpleRoutingConstructorCode = `// Mount configures the mux to serve the ServiceSimpleRoutingServer endpoints.
 func Mount(mux goahttp.Muxer, h *Server) {
 	MountServerSimpleRoutingHandler(mux, h.ServerSimpleRouting)
+}
+
+// Mount configures the mux to serve the ServiceSimpleRoutingServer endpoints.
+func (s *Server) Mount(mux goahttp.Muxer) {
+	Mount(mux, s)
 }
 `
 
