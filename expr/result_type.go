@@ -224,22 +224,20 @@ func (m *ResultTypeExpr) ensureDefaultView() {
 // or any result type that makes up its attributes recursively. Note that
 // individual attributes may use a different view. In this case Project uses
 // that view and returns an error if it isn't defined on the attribute type.
-func Project(m *ResultTypeExpr, view string, seen ...map[string]*AttributeExpr) (*ResultTypeExpr, error) {
+func Project(m *ResultTypeExpr, view string) (*ResultTypeExpr, error) {
+	return project(m, view, make(map[string]*AttributeExpr))
+}
+
+func project(m *ResultTypeExpr, view string, seen map[string]*AttributeExpr) (*ResultTypeExpr, error) {
 	_, params, _ := mime.ParseMediaType(m.Identifier)
 	if params["view"] == view {
 		// nothing to do
 		return m, nil
 	}
 	if _, ok := m.Type.(*Array); ok {
-		return projectCollection(m, view, seen...)
+		return projectCollection(m, view, seen)
 	}
-	var s map[string]*AttributeExpr
-	if len(seen) > 0 {
-		s = seen[0]
-	} else {
-		s = make(map[string]*AttributeExpr)
-	}
-	return projectSingle(m, view, s)
+	return projectSingle(m, view, seen)
 }
 
 func projectSingle(m *ResultTypeExpr, view string, seen map[string]*AttributeExpr) (*ResultTypeExpr, error) {
@@ -276,7 +274,7 @@ func projectSingle(m *ResultTypeExpr, view string, seen map[string]*AttributeExp
 	}
 
 	var ut *UserTypeExpr
-	if att, ok := seen[hash(m.Attribute(), view)]; ok {
+	if att, ok := seen[hashAttrAndView(m.Attribute(), view)]; ok {
 		if rt, ok2 := att.Type.(*ResultTypeExpr); ok2 {
 			ut = &UserTypeExpr{
 				AttributeExpr: DupAtt(rt.Attribute()),
@@ -321,10 +319,10 @@ func projectSingle(m *ResultTypeExpr, view string, seen map[string]*AttributeExp
 	return projected, nil
 }
 
-func projectCollection(m *ResultTypeExpr, view string, seen ...map[string]*AttributeExpr) (*ResultTypeExpr, error) {
+func projectCollection(m *ResultTypeExpr, view string, seen map[string]*AttributeExpr) (*ResultTypeExpr, error) {
 	// Project the collection element result type
 	e := m.Type.(*Array).ElemType.Type.(*ResultTypeExpr) // validation checked this cast would work
-	pe, err2 := Project(e, view, seen...)
+	pe, err2 := project(e, view, seen)
 	if err2 != nil {
 		return nil, fmt.Errorf("collection element: %s", err2)
 	}
@@ -358,7 +356,7 @@ func projectCollection(m *ResultTypeExpr, view string, seen ...map[string]*Attri
 }
 
 func projectRecursive(at *AttributeExpr, vat *NamedAttributeExpr, view string, seen map[string]*AttributeExpr) (*AttributeExpr, error) {
-	if att, ok := seen[hash(at, view)]; ok {
+	if att, ok := seen[hashAttrAndView(at, view)]; ok {
 		return att, nil
 	}
 	at = DupAtt(at)
@@ -375,8 +373,8 @@ func projectRecursive(at *AttributeExpr, vat *NamedAttributeExpr, view string, s
 		if view == "" {
 			view = DefaultView
 		}
-		seen[hash(at, view)] = at
-		pr, err := Project(rt, view, seen)
+		seen[hashAttrAndView(at, view)] = at
+		pr, err := project(rt, view, seen)
 		if err != nil {
 			return nil, fmt.Errorf("view %#v on field %#v cannot be computed: %s", view, vat.Name, err)
 		}
@@ -384,7 +382,9 @@ func projectRecursive(at *AttributeExpr, vat *NamedAttributeExpr, view string, s
 		return at, nil
 	}
 
-	seen[hash(at, view)] = at
+	if _, ok := at.Type.(*UserTypeExpr); ok {
+		seen[hashAttrAndView(at, view)] = at
+	}
 
 	if obj := AsObject(at.Type); obj != nil {
 		vobj := AsObject(vat.Attribute.Type)
@@ -452,44 +452,8 @@ func (v *ViewExpr) EvalName() string {
 	return prefix + suffix
 }
 
-// hash computes a hash for an attribute and a view that returns the same value
-// for two attributes and views that produce the same projected type.
-func hash(att *AttributeExpr, view string) string {
-	sep := "!"
-	ut, ok := att.Type.(UserType)
-	if !ok {
-		return att.Type.Name() + sep + view
-	}
-	// elems contain the elements that affect how types are projected:
-	// - the type identifier
-	// - the view
-	// - the type attribute tags (if any)
-	elems := []string{ut.ID(), view}
-
-	add := func(att *AttributeExpr) {
-		for k, v := range att.Meta {
-			elems = append(elems, k)
-			elems = append(elems, v...)
-		}
-	}
-
-	add(att)
-	if obj := AsObject(ut); obj != nil {
-		for _, nat := range *obj {
-			add(nat.Attribute)
-		}
-	}
-	n := len(sep) * (len(elems) - 1)
-	for i := 0; i < len(elems); i++ {
-		n += len(elems[i])
-	}
-
-	var b strings.Builder
-	b.Grow(n)
-	b.WriteString(elems[0])
-	for _, s := range elems[1:] {
-		b.WriteString(sep)
-		b.WriteString(s)
-	}
-	return b.String()
+// hashAttrAndView computes a hash for an attribute and a view that returns the
+// same value for two attributes and views that produce the same projected type.
+func hashAttrAndView(att *AttributeExpr, view string) string {
+	return Hash(att.Type, false, false, false) + "::" + view
 }
