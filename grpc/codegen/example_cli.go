@@ -63,6 +63,7 @@ func exampleCLI(genpkg string, root *expr.RootExpr, svr *expr.ServerExpr) *codeg
 			{Path: "flag"},
 			{Path: "fmt"},
 			{Path: "google.golang.org/grpc"},
+			{Path: "google.golang.org/grpc/credentials/insecure"},
 			{Path: "os"},
 			{Path: "time"},
 			codegen.GoaImport(""),

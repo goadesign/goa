@@ -205,6 +205,7 @@ const ExampleCLIImport = `import (
 
 	goa "goa.design/goa/v3/pkg"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 )
 `
 
@@ -215,6 +216,7 @@ const ExampleSingleHostCLIImport = `import (
 
 	goa "goa.design/goa/v3/pkg"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 )
 `
 
@@ -225,6 +227,7 @@ const ExamplePkgPathCLIImport = `import (
 
 	goa "goa.design/goa/v3/pkg"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 )
 `
 
@@ -235,6 +238,7 @@ const ExampleSingleHostPkgPathCLIImport = `import (
 
 	goa "goa.design/goa/v3/pkg"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 )
 `
 
