@@ -2,6 +2,7 @@ package middleware
 
 import (
 	"bufio"
+	"errors"
 	"fmt"
 	"net"
 	"net/http"
@@ -31,6 +32,24 @@ func (w *ResponseCapture) Write(b []byte) (int, error) {
 	n, err := w.ResponseWriter.Write(b)
 	w.ContentLength += n
 	return n, err
+}
+
+// Flush implements the http.Flusher interface if the underlying response
+// writer supports it.
+func (w *ResponseCapture) Flush() {
+	if f, ok := w.ResponseWriter.(http.Flusher); ok {
+		f.Flush()
+	}
+}
+
+// Push implements the http.Pusher interface if the underlying response
+// writer supports it.
+func (w *ResponseCapture) Push(target string, opts *http.PushOptions) error {
+	if p, ok := w.ResponseWriter.(http.Pusher); ok {
+		return p.Push(target, opts)
+	}
+
+	return errors.New("push not supported")
 }
 
 // Hijack supports the http.Hijacker interface.
