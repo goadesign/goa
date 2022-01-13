@@ -53,7 +53,7 @@ depend:
 	@echo INSTALLING DEPENDENCIES...
 	@go mod download
 	@for package in $(DEPEND); do go install $$package; done
-	@go mod tidy
+	@go mod tidy -compat=1.17
 	@echo INSTALLING PROTOC...
 	@mkdir $(PROTOC)
 	@cd $(PROTOC); \
@@ -89,7 +89,7 @@ release-goa:
 		git checkout v$(MAJOR) && \
 		git pull origin v$(MAJOR) && \
 		git diff-index --quiet HEAD
-	go mod tidy
+	go mod tidy -compat=1.17
 	# Bump version number, commit and push
 	sed 's/Major = .*/Major = $(MAJOR)/' pkg/version.go > _tmp && mv _tmp pkg/version.go
 	sed 's/Minor = .*/Minor = $(MINOR)/' pkg/version.go > _tmp && mv _tmp pkg/version.go
