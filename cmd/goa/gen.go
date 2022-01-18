@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"go/build"
 	"go/parser"
@@ -166,7 +167,17 @@ func (g *Generator) Compile() error {
 			return err
 		}
 	}
-	return g.runGoCmd("build", "-o", g.bin)
+
+	err = g.runGoCmd("build", "-o", g.bin)
+
+	// If we're in vendor context we check the error string to see if it's an issue of unsatisfied dependencies
+	if err != nil && g.hasVendorDirectory {
+		if strings.Contains(err.Error(), "cannot find package") && strings.Contains(err.Error(), "/goa.design/goa/v3/codegen/generator") {
+			return errors.New("generated code expected `goa.design/goa/v3/codegen/generator` to be present in the vendor directory, see documentation for more details")
+		}
+	}
+
+	return err
 }
 
 // Run runs the compiled binary and return the output lines.
