@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"go/build"
 	"go/parser"
@@ -38,6 +39,9 @@ type Generator struct {
 
 	// tmpDir is the temporary directory used to compile the generator.
 	tmpDir string
+
+	// hasVendorDirectory is a flag to indicate whether the project uses vendoring
+	hasVendorDirectory bool
 }
 
 // NewGenerator creates a Generator.
@@ -48,13 +52,17 @@ func NewGenerator(cmd string, path, output string) *Generator {
 	}
 
 	var version int
+	var hasVendorDirectory bool
 	{
 		version = 2
 		matched := false
-		pkgs, _ := packages.Load(&packages.Config{Mode: packages.NeedFiles}, path)
+		pkgs, _ := packages.Load(&packages.Config{Mode: packages.NeedFiles | packages.NeedModule}, path)
 		fset := token.NewFileSet()
 		p := regexp.MustCompile(`goa.design/goa/v(\d+)/dsl`)
 		for _, pkg := range pkgs {
+			if _, err := os.Stat(filepath.Join(pkg.Module.Dir, "vendor")); !os.IsNotExist(err) {
+				hasVendorDirectory = true
+			}
 			for _, gof := range pkg.GoFiles {
 				if bs, err := ioutil.ReadFile(gof); err == nil {
 					if f, err := parser.ParseFile(fset, "", string(bs), parser.ImportsOnly); err == nil {
@@ -78,11 +86,12 @@ func NewGenerator(cmd string, path, output string) *Generator {
 	}
 
 	return &Generator{
-		Command:       cmd,
-		DesignPath:    path,
-		Output:        output,
-		DesignVersion: version,
-		bin:           bin,
+		Command:            cmd,
+		DesignPath:         path,
+		Output:             output,
+		DesignVersion:      version,
+		hasVendorDirectory: hasVendorDirectory,
+		bin:                bin,
 	}
 }
 
@@ -153,10 +162,22 @@ func (g *Generator) Compile() error {
 	if len(pkgs) != 1 {
 		return fmt.Errorf("expected to find one package in %s", g.tmpDir)
 	}
-	if err := g.runGoCmd("get", pkgs[0].PkgPath); err != nil {
-		return err
+	if !g.hasVendorDirectory {
+		if err := g.runGoCmd("get", pkgs[0].PkgPath); err != nil {
+			return err
+		}
 	}
-	return g.runGoCmd("build", "-o", g.bin)
+
+	err = g.runGoCmd("build", "-o", g.bin)
+
+	// If we're in vendor context we check the error string to see if it's an issue of unsatisfied dependencies
+	if err != nil && g.hasVendorDirectory {
+		if strings.Contains(err.Error(), "cannot find package") && strings.Contains(err.Error(), "/goa.design/goa/v3/codegen/generator") {
+			return errors.New("generated code expected `goa.design/goa/v3/codegen/generator` to be present in the vendor directory, see documentation for more details")
+		}
+	}
+
+	return err
 }
 
 // Run runs the compiled binary and return the output lines.
