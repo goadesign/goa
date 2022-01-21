@@ -310,7 +310,7 @@ curl localhost:8088/openapi.json
 ### Docs
 
 The [goa.design](https://goa.design) website provides a high level overview of
-Goa and the DSL. 
+Goa and the DSL.
 
 In particular the page
 [Implementing a Goa Service](https://goa.design/implement/implementing/)
@@ -339,6 +339,23 @@ Gleidson Nascimento goes through how to create a complete service that using bot
 
 The [examples](https://github.com/goadesign/examples) directory
 contains simple examples illustrating basic concepts.
+
+### Troubleshooting
+
+Q: I'm seeing an error that says:
+
+> generated code expected `goa.design/goa/v3/codegen/generator` to be present in the vendor directory, see documentation for more details
+
+How do I fix this?
+
+A: If you are vendoring your dependencies Goa will not attempt to satisfy its
+dependencies by retrieving them with `go get`. If you see the above error message, it
+means that the `goa.design/goa/v3/codegen/generator` package is not included in your
+vendor directory.
+
+To fix, ensure that `goa.design/goa/v3/codegen/generator` is being imported somewhere in your project. This can be as a bare import (e.g. `import _ "goa.design/goa/v3/codegen/generator"`)
+in any file or you can use a dedicated `tools.go` file (see [Manage Go tools via Go modules](https://marcofranssen.nl/manage-go-tools-via-go-modules) and [golang/go/issues/25922](https://github.com/golang/go/issues/25922) for more details.) Finally, run `go mod vendor` to ensure
+the imported packages are properly vendored.
 
 ## Contributing
 
