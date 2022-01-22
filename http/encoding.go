@@ -170,6 +170,10 @@ func ResponseEncoder(ctx context.Context, w http.ResponseWriter) Encoder {
 // RequestEncoder returns a HTTP request encoder.
 // The encoder uses package encoding/json.
 func RequestEncoder(r *http.Request) Encoder {
+	const k = "Content-Type"
+	if h := r.Header.Get(k); h == "" {
+		r.Header.Set(k, "application/json")
+	}
 	var buf bytes.Buffer
 	r.Body = ioutil.NopCloser(&buf)
 	return json.NewEncoder(&buf)
