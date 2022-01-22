@@ -13,6 +13,43 @@ var (
 	testString = "test string"
 )
 
+func TestRequestEncoder(t *testing.T) {
+	const (
+		ct      = "Content-Type"
+		ctJSON  = "application/json"
+		ctOther = "<other>"
+		wantT   = "*json.Encoder"
+	)
+	cases := []struct {
+		name      string
+		requestCT string
+		wantCT    string
+	}{
+		{"no ct", "", ctJSON},
+		{"json ct", ctJSON, ctJSON},
+		{"other ct", ctOther, ctOther},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			r := &http.Request{
+				Header: http.Header{},
+			}
+			if c.requestCT != "" {
+				r.Header.Set(ct, c.requestCT)
+			}
+
+			encoder := RequestEncoder(r)
+
+			if gotT := fmt.Sprintf("%T", encoder); gotT != wantT {
+				t.Errorf("got encoder type %s, want %s", gotT, wantT)
+			}
+			if gotCT := r.Header.Get(ct); gotCT != c.wantCT {
+				t.Errorf("got Content-Type %q, want %q", gotCT, c.wantCT)
+			}
+		})
+	}
+}
+
 func TestResponseEncoder(t *testing.T) {
 	cases := []struct {
 		name        string
