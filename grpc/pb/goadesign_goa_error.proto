@@ -1,9 +1,9 @@
 syntax = "proto3";
 
 // NOTE: If there are any changes to this file, run the protoc command as
-// below from the pb directory to generate the error.pb.go file.
+// below from the pb directory to generate the goadesign_goa_error.pb.go file.
 //
-// $  protoc --proto_path=. --go_out=. --go_opt=paths=source_relative  error.proto 
+// $  protoc --proto_path=. --go_out=. --go_opt=paths=source_relative  goadesign_goa_error.proto 
 
 package goapb;
 
