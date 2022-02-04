@@ -11,7 +11,7 @@ import (
 // File returns the service file for the given service.
 func File(genpkg string, service *expr.ServiceExpr) *codegen.File {
 	svc := Services.Get(service.Name)
-	svcName := codegen.SnakeCase(svc.VarName)
+	svcName := svc.PathName
 	path := filepath.Join(codegen.Gendir, svcName, "service.go")
 	header := codegen.Header(
 		service.Name+" service",

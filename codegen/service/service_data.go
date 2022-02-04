@@ -44,6 +44,8 @@ type (
 		StructName string
 		// VarName is the service variable name (first letter in lowercase).
 		VarName string
+		// PathName is the service name as used in file and import paths.
+		PathName string
 		// PkgName is the name of the package containing the generated service
 		// code.
 		PkgName string
@@ -629,10 +631,12 @@ func (d ServicesData) analyze(service *expr.ServiceExpr) *Data {
 		}
 	}
 
+	varName := codegen.Goify(service.Name, false)
 	data := &Data{
 		Name:              service.Name,
 		Description:       desc,
-		VarName:           codegen.Goify(service.Name, false),
+		VarName:           varName,
+		PathName:          codegen.SnakeCase(varName),
 		StructName:        codegen.Goify(service.Name, true),
 		PkgName:           pkgName,
 		ViewsPkg:          viewspkg,
