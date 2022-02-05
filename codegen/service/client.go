@@ -16,7 +16,7 @@ const (
 func ClientFile(service *expr.ServiceExpr) *codegen.File {
 	svc := Services.Get(service.Name)
 	data := endpointData(service)
-	path := filepath.Join(codegen.Gendir, codegen.SnakeCase(svc.VarName), "client.go")
+	path := filepath.Join(codegen.Gendir, svc.PathName, "client.go")
 	var (
 		sections []*codegen.SectionTemplate
 	)

@@ -58,7 +58,7 @@ func exampleServer(genpkg string, root *expr.RootExpr, svr *expr.ServerExpr) *co
 		}
 		for _, svc := range root.API.GRPC.Services {
 			sd := GRPCServices.Get(svc.Name())
-			svcName := codegen.SnakeCase(sd.Service.VarName)
+			svcName := sd.Service.PathName
 			specs = append(specs, &codegen.ImportSpec{
 				Path: path.Join(genpkg, "grpc", svcName, "server"),
 				Name: scope.Unique(sd.Service.PkgName + "svr"),

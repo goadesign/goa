@@ -48,7 +48,7 @@ func exampleServer(genpkg string, root *expr.RootExpr, svr *expr.ServerExpr) *co
 	scope := codegen.NewNameScope()
 	for _, svc := range root.API.HTTP.Services {
 		sd := HTTPServices.Get(svc.Name())
-		svcName := codegen.SnakeCase(sd.Service.VarName)
+		svcName := sd.Service.PathName
 		specs = append(specs, &codegen.ImportSpec{
 			Path: path.Join(genpkg, "http", svcName, "server"),
 			Name: scope.Unique(sd.Service.PkgName + "svr"),
@@ -146,7 +146,7 @@ func dummyMultipartFile(genpkg string, root *expr.RootExpr, svc *expr.HTTPServic
 		}
 		data := HTTPServices.Get(svc.Name())
 		specs = append(specs, &codegen.ImportSpec{
-			Path: path.Join(genpkg, codegen.SnakeCase(data.Service.VarName)),
+			Path: path.Join(genpkg, data.Service.PathName),
 			Name: scope.Unique(data.Service.PkgName, "svc"),
 		})
 

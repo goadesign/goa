@@ -27,7 +27,7 @@ func ProtoFiles(genpkg string, root *expr.RootExpr) []*codegen.File {
 
 func protoFile(genpkg string, svc *expr.GRPCServiceExpr) *codegen.File {
 	data := GRPCServices.Get(svc.Name())
-	svcName := codegen.SnakeCase(data.Service.VarName)
+	svcName := data.Service.PathName
 	path := filepath.Join(codegen.Gendir, "grpc", svcName, pbPkgName, "goadesign_goagen_"+svcName+".proto")
 
 	sections := []*codegen.SectionTemplate{
