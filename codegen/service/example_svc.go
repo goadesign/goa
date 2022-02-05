@@ -60,7 +60,7 @@ func ExampleServiceFiles(genpkg string, root *expr.RootExpr) []*codegen.File {
 // exampleServiceFile returns a basic implementation of the given service.
 func exampleServiceFile(genpkg string, root *expr.RootExpr, svc *expr.ServiceExpr, apipkg string) *codegen.File {
 	data := Services.Get(svc.Name)
-	svcName := codegen.SnakeCase(data.VarName)
+	svcName := data.PathName
 	fpath := svcName + ".go"
 	if _, err := os.Stat(fpath); !os.IsNotExist(err) {
 		return nil // file already exists, skip it.
@@ -72,7 +72,7 @@ func exampleServiceFile(genpkg string, root *expr.RootExpr, svc *expr.ServiceExp
 		{Path: "log"},
 		{Path: "fmt"},
 		{Path: "strings"},
-		{Path: path.Join(genpkg, codegen.SnakeCase(svcName)), Name: data.PkgName},
+		{Path: path.Join(genpkg, svcName), Name: data.PkgName},
 		{Path: "goa.design/goa/v3/security"},
 	}
 	sections := []*codegen.SectionTemplate{

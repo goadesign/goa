@@ -70,7 +70,7 @@ func endpointParser(genpkg string, root *expr.RootExpr, svr *expr.ServerExpr, da
 		if sd == nil {
 			continue
 		}
-		svcName := codegen.SnakeCase(sd.Service.VarName)
+		svcName := sd.Service.PathName
 		specs = append(specs, &codegen.ImportSpec{
 			Path: path.Join(genpkg, "grpc", svcName, "client"),
 			Name: sd.Service.PkgName + "c",
@@ -107,7 +107,7 @@ func endpointParser(genpkg string, root *expr.RootExpr, svr *expr.ServerExpr, da
 // use flag values as arguments.
 func payloadBuilders(genpkg string, svc *expr.GRPCServiceExpr, data *cli.CommandData) *codegen.File {
 	sd := GRPCServices.Get(svc.Name())
-	svcName := codegen.SnakeCase(sd.Service.VarName)
+	svcName := sd.Service.PathName
 	fpath := filepath.Join(codegen.Gendir, "grpc", svcName, "client", "cli.go")
 	title := svc.Name() + " gRPC client CLI support package"
 	specs := []*codegen.ImportSpec{

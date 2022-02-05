@@ -59,7 +59,7 @@ const (
 // EndpointFile returns the endpoint file for the given service.
 func EndpointFile(genpkg string, service *expr.ServiceExpr) *codegen.File {
 	svc := Services.Get(service.Name)
-	svcName := codegen.SnakeCase(svc.VarName)
+	svcName := svc.PathName
 	path := filepath.Join(codegen.Gendir, svcName, "endpoints.go")
 	data := endpointData(service)
 	var (

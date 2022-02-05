@@ -21,7 +21,7 @@ func ViewsFile(genpkg string, service *expr.ServiceExpr) *codegen.File {
 	if len(svc.projectedTypes) == 0 {
 		return nil
 	}
-	path := filepath.Join(codegen.Gendir, codegen.SnakeCase(svc.VarName), "views", "view.go")
+	path := filepath.Join(codegen.Gendir, svc.PathName, "views", "view.go")
 	var (
 		sections []*codegen.SectionTemplate
 	)

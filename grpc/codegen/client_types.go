@@ -69,7 +69,7 @@ func clientType(genpkg string, svc *expr.GRPCServiceExpr, seen map[string]struct
 		sections []*codegen.SectionTemplate
 	)
 	{
-		svcName := codegen.SnakeCase(sd.Service.VarName)
+		svcName := sd.Service.PathName
 		fpath = filepath.Join(codegen.Gendir, "grpc", svcName, "client", "types.go")
 		sections = []*codegen.SectionTemplate{
 			codegen.Header(svc.Name()+" gRPC client types", "client",

@@ -46,7 +46,7 @@ func serverType(genpkg string, svc *expr.HTTPServiceExpr, seen map[string]struct
 	var (
 		path    string
 		data    = HTTPServices.Get(svc.Name())
-		svcName = codegen.SnakeCase(data.Service.VarName)
+		svcName = data.Service.PathName
 	)
 	path = filepath.Join(codegen.Gendir, "http", svcName, "server", "types.go")
 	header := codegen.Header(svc.Name()+" HTTP server types", "server",
