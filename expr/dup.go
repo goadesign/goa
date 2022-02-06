@@ -4,13 +4,7 @@ import "fmt"
 
 // Dup creates a copy the given data type.
 func Dup(d DataType) DataType {
-	res := newDupper().DupType(d)
-	if rt, ok := d.(*ResultTypeExpr); ok {
-		if Root.GeneratedResultType(rt.Identifier) != nil {
-			*Root.GeneratedTypes = append(*Root.GeneratedTypes, res.(*ResultTypeExpr))
-		}
-	}
-	return res
+	return newDupper().DupType(d)
 }
 
 // DupAtt creates a copy of the given attribute.
@@ -91,6 +85,16 @@ func (d *dupper) DupType(t DataType) DataType {
 		d.uts[actual.ID()] = dp
 		dupAtt := d.DupAttribute(actual.Attribute())
 		dp.SetAttribute(dupAtt)
+
+		// Make sure that if we are dupping a generated type we also put
+		// the dup in the generated type list so that it gets properly
+		// eval'd.
+		if rt, ok := dp.(*ResultTypeExpr); ok {
+			if Root.GeneratedResultType(rt.Identifier) != nil {
+				*Root.GeneratedTypes = append(*Root.GeneratedTypes, dp.(*ResultTypeExpr))
+			}
+		}
+
 		return dp
 	}
 	panic("unknown type " + fmt.Sprintf("%T", t))
