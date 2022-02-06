@@ -331,6 +331,10 @@ func paramsFromHeaders(endpoint *expr.HTTPEndpointExpr) []*Parameter {
 }
 
 func paramFor(at *expr.AttributeExpr, name, in string, required bool) *Parameter {
+	alias := at
+	if expr.IsAlias(at.Type) {
+		at = at.Type.(expr.UserType).Attribute()
+	}
 	p := &Parameter{
 		In:          in,
 		Name:        name,
@@ -360,7 +364,7 @@ func paramFor(at *expr.AttributeExpr, name, in string, required bool) *Parameter
 		p.Format = "byte"
 	}
 	p.Extensions = openapi.ExtensionsFromExpr(at.Meta)
-	initValidations(at, p)
+	initValidations(alias, p)
 	return p
 }
 
