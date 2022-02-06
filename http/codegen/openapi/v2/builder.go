@@ -331,6 +331,9 @@ func paramsFromHeaders(endpoint *expr.HTTPEndpointExpr) []*Parameter {
 }
 
 func paramFor(at *expr.AttributeExpr, name, in string, required bool) *Parameter {
+	if expr.IsAlias(at.Type) {
+		at = at.Type.(expr.UserType).Attribute()
+	}
 	p := &Parameter{
 		In:          in,
 		Name:        name,

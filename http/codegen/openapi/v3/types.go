@@ -141,6 +141,10 @@ func (sf *schemafier) schemafy(attr *expr.AttributeExpr, noref ...bool) *openapi
 	s := openapi.NewSchema()
 	var note string
 
+	if expr.IsAlias(attr.Type) {
+		attr = attr.Type.(expr.UserType).Attribute()
+	}
+
 	// Initialize type and format
 	switch t := attr.Type.(type) {
 	case expr.Primitive:
