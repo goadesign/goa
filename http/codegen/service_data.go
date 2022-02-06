@@ -661,7 +661,7 @@ func (d ServicesData) analyze(hs *expr.HTTPServiceExpr) *ServiceData {
 						var vcode string
 						if att.Validation != nil {
 							ctx := httpContext("", rd.Scope, true, false)
-							vcode = codegen.RecursiveValidationCode(att, ctx, true, name)
+							vcode = codegen.RecursiveValidationCode(att, ctx, true, expr.IsAlias(att.Type), name)
 						}
 						initArgs[j] = &InitArgData{
 							Ref: name,
@@ -1016,7 +1016,7 @@ func buildPayloadData(e *expr.HTTPEndpointExpr, sd *ServiceData) *PayloadData {
 							Type:         pAtt.Type,
 							TypeName:     sd.Scope.GoTypeName(pAtt),
 							TypeRef:      sd.Scope.GoTypeRef(pAtt),
-							Validate:     codegen.RecursiveValidationCode(pAtt, httpsvrctx, required, varn),
+							Validate:     codegen.RecursiveValidationCode(pAtt, httpsvrctx, required, expr.IsAlias(pAtt.Type), varn),
 							DefaultValue: pAtt.DefaultValue,
 							Example:      pAtt.Example(expr.Root.API.Random()),
 						},
@@ -1116,8 +1116,8 @@ func buildPayloadData(e *expr.HTTPEndpointExpr, sd *ServiceData) *PayloadData {
 			)
 			if ut, ok := body.(expr.UserType); ok {
 				if val := ut.Attribute().Validation; val != nil {
-					svcode = codegen.RecursiveValidationCode(ut.Attribute(), httpsvrctx, true, "body")
-					cvcode = codegen.RecursiveValidationCode(ut.Attribute(), httpclictx, true, "body")
+					svcode = codegen.RecursiveValidationCode(ut.Attribute(), httpsvrctx, true, expr.IsAlias(ut), "body")
+					cvcode = codegen.RecursiveValidationCode(ut.Attribute(), httpclictx, true, expr.IsAlias(ut), "body")
 				}
 			}
 			serverArgs = []*InitArgData{{
@@ -1250,7 +1250,7 @@ func buildPayloadData(e *expr.HTTPEndpointExpr, sd *ServiceData) *PayloadData {
 							TypeRef:      uref,
 							Type:         uatt.Type,
 							Pointer:      sc.UsernamePointer,
-							Validate:     codegen.RecursiveValidationCode(uatt, httpsvrctx, sc.UsernameRequired, sc.UsernameAttr),
+							Validate:     codegen.RecursiveValidationCode(uatt, httpsvrctx, sc.UsernameRequired, expr.IsAlias(uatt.Type), sc.UsernameAttr),
 							Example:      uatt.Example(expr.Root.API.Random()),
 						},
 					}
@@ -1272,7 +1272,7 @@ func buildPayloadData(e *expr.HTTPEndpointExpr, sd *ServiceData) *PayloadData {
 							TypeRef:      pref,
 							Type:         patt.Type,
 							Pointer:      sc.PasswordPointer,
-							Validate:     codegen.RecursiveValidationCode(patt, httpsvrctx, sc.PasswordRequired, sc.PasswordAttr),
+							Validate:     codegen.RecursiveValidationCode(patt, httpsvrctx, sc.PasswordRequired, expr.IsAlias(patt.Type), sc.PasswordAttr),
 							Example:      patt.Example(expr.Root.API.Random()),
 						},
 					}
@@ -1584,7 +1584,7 @@ func buildResponses(e *expr.HTTPEndpointExpr, result *expr.AttributeExpr, viewed
 							var vcode string
 							if ut, ok := resp.Body.Type.(expr.UserType); ok {
 								if val := ut.Attribute().Validation; val != nil {
-									vcode = codegen.RecursiveValidationCode(ut.Attribute(), httpclictx, true, "body")
+									vcode = codegen.RecursiveValidationCode(ut.Attribute(), httpclictx, true, expr.IsAlias(ut), "body")
 								}
 							}
 							clientArgs = []*InitArgData{{
@@ -1964,7 +1964,7 @@ func buildRequestBodyType(body, att *expr.AttributeExpr, e *expr.HTTPEndpointExp
 				varname, svc.Name, e.Name())
 			if svr {
 				// generate validation code for unmarshaled type (server-side).
-				validateDef = codegen.RecursiveValidationCode(ut.Attribute(), httpctx, true, "body")
+				validateDef = codegen.RecursiveValidationCode(ut.Attribute(), httpctx, true, expr.IsAlias(ut), "body")
 				if validateDef != "" {
 					validateRef = fmt.Sprintf("err = Validate%s(&body)", varname)
 				}
@@ -1979,7 +1979,7 @@ func buildRequestBodyType(body, att *expr.AttributeExpr, e *expr.HTTPEndpointExp
 			}
 			varname = sd.Scope.GoTypeRef(body)
 			ctx := codegen.NewAttributeContext(false, false, !svr, "", sd.Scope)
-			validateRef = codegen.RecursiveValidationCode(body, ctx, true, "body")
+			validateRef = codegen.RecursiveValidationCode(body, ctx, true, expr.IsAlias(body.Type), "body")
 			desc = body.Description
 		}
 	}
@@ -2113,7 +2113,7 @@ func buildResponseBodyType(body, att *expr.AttributeExpr, e *expr.HTTPEndpointEx
 				varname, svc.Name, e.Name())
 			if !svr && view == nil {
 				// generate validation code for unmarshaled type (client-side).
-				validateDef = codegen.RecursiveValidationCode(body, httpctx, true, "body")
+				validateDef = codegen.RecursiveValidationCode(body, httpctx, true, expr.IsAlias(body.Type), "body")
 				if validateDef != "" {
 					target := "&body"
 					if expr.IsArray(ut) {
@@ -2130,12 +2130,12 @@ func buildResponseBodyType(body, att *expr.AttributeExpr, e *expr.HTTPEndpointEx
 			desc = fmt.Sprintf("%s is the type of the %q service %q endpoint HTTP response body.",
 				varname, svc.Name, e.Name())
 			def = goTypeDef(sd.Scope, body, !svr, svr)
-			validateRef = codegen.RecursiveValidationCode(body, httpctx, true, "body")
+			validateRef = codegen.RecursiveValidationCode(body, httpctx, true, expr.IsAlias(body.Type), "body")
 		} else {
 			// response body is a primitive type. They are used as non-pointers when
 			// encoding/decoding responses.
 			httpctx = httpContext("", sd.Scope, false, true)
-			validateRef = codegen.RecursiveValidationCode(body, httpctx, true, "body")
+			validateRef = codegen.RecursiveValidationCode(body, httpctx, true, expr.IsAlias(body.Type), "body")
 			varname = sd.Scope.GoTypeRef(body)
 			desc = body.Description
 		}
@@ -2281,7 +2281,7 @@ func extractPathParams(a *expr.MappedAttributeExpr, service *expr.AttributeExpr,
 					TypeName:     scope.GoTypeName(c),
 					TypeRef:      scope.GoTypeRef(c),
 					Pointer:      false,
-					Validate:     codegen.RecursiveValidationCode(c, ctx, true, varn),
+					Validate:     codegen.RecursiveValidationCode(c, ctx, true, expr.IsAlias(c.Type), varn),
 					DefaultValue: c.DefaultValue,
 					Example:      c.Example(expr.Root.API.Random()),
 				},
@@ -2340,7 +2340,7 @@ func extractQueryParams(a *expr.MappedAttributeExpr, service *expr.AttributeExpr
 					TypeName:     scope.GoTypeName(c),
 					TypeRef:      typeRef,
 					Pointer:      pointer,
-					Validate:     codegen.RecursiveValidationCode(c, ctx, required, varn),
+					Validate:     codegen.RecursiveValidationCode(c, ctx, required, expr.IsAlias(c.Type), varn),
 					DefaultValue: c.DefaultValue,
 					Example:      c.Example(expr.Root.API.Random()),
 				},
@@ -2402,7 +2402,7 @@ func extractHeaders(a *expr.MappedAttributeExpr, svcAtt *expr.AttributeExpr, svc
 					Required:     required,
 					Pointer:      pointer,
 					Type:         hattr.Type,
-					Validate:     codegen.RecursiveValidationCode(hattr, svcCtx, required, varn),
+					Validate:     codegen.RecursiveValidationCode(hattr, svcCtx, required, expr.IsAlias(hattr.Type), varn),
 					DefaultValue: hattr.DefaultValue,
 					Example:      hattr.Example(expr.Root.API.Random()),
 				},
@@ -2459,7 +2459,7 @@ func extractCookies(a *expr.MappedAttributeExpr, svcAtt *expr.AttributeExpr, svc
 					Required:     required,
 					Pointer:      pointer,
 					Type:         hattr.Type,
-					Validate:     codegen.RecursiveValidationCode(hattr, svcCtx, required, varn),
+					Validate:     codegen.RecursiveValidationCode(hattr, svcCtx, required, expr.IsAlias(hattr.Type), varn),
 					DefaultValue: hattr.DefaultValue,
 					Example:      hattr.Example(expr.Root.API.Random()),
 				},
@@ -2549,7 +2549,7 @@ func attributeTypeData(ut expr.UserType, req, ptr, server bool, rd *ServiceData)
 		if req || !req && !server {
 			// generate validations for responses client-side and for
 			// requests server-side and CLI
-			validate = codegen.RecursiveValidationCode(ut.Attribute(), hctx, true, "body")
+			validate = codegen.RecursiveValidationCode(ut.Attribute(), hctx, true, expr.IsAlias(ut), "body")
 		}
 		if validate != "" {
 			validateRef = fmt.Sprintf("err = Validate%s(v)", name)

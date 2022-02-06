@@ -53,16 +53,17 @@ func init() {
 //
 // req indicates whether the attribute is required (true) or optional (false)
 //
+// alias indicates whether the attribute is an alias user type attribute.
+//
 // target is the variable name against which the validation code is generated
 //
 // context is used to produce helpful messages in case of error.
 //
-func ValidationCode(att *expr.AttributeExpr, attCtx *AttributeContext, req bool, target, context string) string {
+func ValidationCode(att *expr.AttributeExpr, attCtx *AttributeContext, req, alias bool, target, context string) string {
 	validation := att.Validation
-	if validation == nil {
-		if ut, ok := att.Type.(expr.UserType); ok {
-			validation = ut.Attribute().Validation
-		}
+	ut, isut := att.Type.(expr.UserType)
+	if isut && validation == nil {
+		validation = ut.Attribute().Validation
 	}
 	if validation == nil {
 		return ""
@@ -75,6 +76,9 @@ func ValidationCode(att *expr.AttributeExpr, attCtx *AttributeContext, req bool,
 	)
 	if isPointer && expr.IsPrimitive(att.Type) && !isNativePointer {
 		tval = "*" + tval
+	}
+	if alias {
+		tval = fmt.Sprintf("%s(%s)", att.Type.Name(), tval)
 	}
 	data := map[string]interface{}{
 		"attribute": att,
@@ -191,12 +195,12 @@ func ValidationCode(att *expr.AttributeExpr, attCtx *AttributeContext, req bool,
 // attCtx is the Attributor for the given attribute which is used to generate
 // attribute name and reference in the validation code.
 //
-func RecursiveValidationCode(att *expr.AttributeExpr, attCtx *AttributeContext, req bool, target string) string {
+func RecursiveValidationCode(att *expr.AttributeExpr, attCtx *AttributeContext, req, alias bool, target string) string {
 	seen := make(map[string]*bytes.Buffer)
-	return recurseValidationCode(att, attCtx, req, target, target, seen).String()
+	return recurseValidationCode(att, attCtx, req, alias, target, target, seen).String()
 }
 
-func recurseValidationCode(att *expr.AttributeExpr, attCtx *AttributeContext, req bool, target, context string, seen map[string]*bytes.Buffer) *bytes.Buffer {
+func recurseValidationCode(att *expr.AttributeExpr, attCtx *AttributeContext, req, alias bool, target, context string, seen map[string]*bytes.Buffer) *bytes.Buffer {
 	var (
 		buf   = new(bytes.Buffer)
 		first = true
@@ -211,22 +215,23 @@ func recurseValidationCode(att *expr.AttributeExpr, attCtx *AttributeContext, re
 	}
 
 	code := func(ctx *AttributeContext, att *expr.AttributeExpr, tgt, suf string) string {
-		if ut, ok := att.Type.(expr.UserType); ok {
-			if expr.IsPrimitive(ut.Attribute().Type) {
-				return recurseValidationCode(ut.Attribute(), ctx, true, tgt, context+suf, seen).String()
-			} else if hasValidations(attCtx, ut) {
-				var buf bytes.Buffer
-				name := attCtx.Scope.Name(att, ctx.Pkg, ctx.Pointer, ctx.UseDefault)
-				data := map[string]interface{}{"name": Goify(name, true), "target": tgt}
-				if err := userValT.Execute(&buf, data); err != nil {
-					panic(err) // bug
-				}
-				return fmt.Sprintf("if %s != nil {\n\t%s\n}", tgt, buf.String())
-			}
-		} else {
-			return recurseValidationCode(att, ctx, true, tgt, context+suf, seen).String()
+		ut, ok := att.Type.(expr.UserType)
+		if !ok {
+			return recurseValidationCode(att, ctx, true, false, tgt, context+suf, seen).String()
 		}
-		return ""
+		if expr.IsAlias(ut) {
+			return recurseValidationCode(ut.Attribute(), ctx, true, true, tgt, context+suf, seen).String()
+		}
+		if !hasValidations(attCtx, ut) {
+			return ""
+		}
+		var buf bytes.Buffer
+		name := attCtx.Scope.Name(att, ctx.Pkg, ctx.Pointer, ctx.UseDefault)
+		data := map[string]interface{}{"name": Goify(name, true), "target": tgt}
+		if err := userValT.Execute(&buf, data); err != nil {
+			panic(err) // bug
+		}
+		return fmt.Sprintf("if %s != nil {\n\t%s\n}", tgt, buf.String())
 	}
 
 	newline := func() {
@@ -238,7 +243,7 @@ func recurseValidationCode(att *expr.AttributeExpr, attCtx *AttributeContext, re
 	}
 
 	// Write validations on attribute if any.
-	validation := ValidationCode(att, attCtx, req, target, context)
+	validation := ValidationCode(att, attCtx, req, alias, target, context)
 	if validation != "" {
 		buf.WriteString(validation)
 		first = false
@@ -296,7 +301,13 @@ func recurseValidationCode(att *expr.AttributeExpr, attCtx *AttributeContext, re
 
 func recurseAttribute(att *expr.AttributeExpr, attCtx *AttributeContext, nat *expr.NamedAttributeExpr, target, context string, seen map[string]*bytes.Buffer) string {
 	var validation string
-	if ut, ok := nat.Attribute.Type.(expr.UserType); ok {
+	ut, isut := nat.Attribute.Type.(expr.UserType)
+	if !isut {
+		target := fmt.Sprintf("%s.%s", target, attCtx.Scope.Field(nat.Attribute, nat.Name, true))
+		context := fmt.Sprintf("%s.%s", context, nat.Name)
+		code := recurseValidationCode(nat.Attribute, attCtx, att.IsRequired(nat.Name), false, target, context, seen)
+		validation = code.String()
+	} else {
 		// We need to check empirically whether there are validations to be
 		// generated, we can't just generate and check whether something was
 		// generated to avoid infinite recursions.
@@ -334,7 +345,7 @@ func recurseAttribute(att *expr.AttributeExpr, attCtx *AttributeContext, nat *ex
 			var buf bytes.Buffer
 			tgt := fmt.Sprintf("%s.%s", target, attCtx.Scope.Field(nat.Attribute, nat.Name, true))
 			if expr.IsPrimitive(nat.Attribute.Type) {
-				buf.Write(recurseValidationCode(ut.Attribute(), attCtx, att.IsRequired(nat.Name), tgt, context, seen).Bytes())
+				buf.Write(recurseValidationCode(ut.Attribute(), attCtx, att.IsRequired(nat.Name), true, tgt, context, seen).Bytes())
 			} else {
 				name := attCtx.Scope.Name(nat.Attribute, attCtx.Pkg, attCtx.Pointer, attCtx.UseDefault)
 				if err := userValT.Execute(&buf, map[string]interface{}{"name": Goify(name, true), "target": tgt}); err != nil {
@@ -343,15 +354,6 @@ func recurseAttribute(att *expr.AttributeExpr, attCtx *AttributeContext, nat *ex
 			}
 			validation = buf.String()
 		}
-	} else {
-		validation += recurseValidationCode(
-			nat.Attribute,
-			attCtx,
-			att.IsRequired(nat.Name),
-			fmt.Sprintf("%s.%s", target, attCtx.Scope.Field(nat.Attribute, nat.Name, true)),
-			fmt.Sprintf("%s.%s", context, nat.Name),
-			seen,
-		).String()
 	}
 	if validation != "" {
 		if expr.IsObject(nat.Attribute.Type) {

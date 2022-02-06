@@ -237,6 +237,13 @@ func IsPrimitive(dt DataType) bool {
 	}
 }
 
+// IsAlias returns true if the data type is a user type backed by a primitive
+// type (so call aliased type).
+func IsAlias(dt DataType) bool {
+	_, isut := dt.(UserType)
+	return isut && IsPrimitive(dt)
+}
+
 // Equal compares the types recursively and returns true if they are equal. Two
 // types are equal if:
 //
