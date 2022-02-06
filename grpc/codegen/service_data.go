@@ -709,7 +709,7 @@ func addValidation(att *expr.AttributeExpr, sd *ServiceData, req bool) *Validati
 		}
 	}
 	ctx := protoBufTypeContext("", sd.Scope)
-	if def := codegen.RecursiveValidationCode(att, ctx, true, "message"); def != "" {
+	if def := codegen.RecursiveValidationCode(att, ctx, true, expr.IsAlias(att.Type), "message"); def != "" {
 		v := &ValidationData{
 			Name:    "Validate" + name,
 			Def:     def,
@@ -749,7 +749,7 @@ func collectValidations(att *expr.AttributeExpr, ctx *codegen.AttributeContext, 
 		}
 		sd.validations = append(sd.validations, &ValidationData{
 			Name:    "Validate" + name,
-			Def:     codegen.RecursiveValidationCode(att, ctx, true, "message"),
+			Def:     codegen.RecursiveValidationCode(att, ctx, true, expr.IsAlias(att.Type), "message"),
 			ArgName: "message",
 			SrcName: name,
 			SrcRef:  protoBufGoFullTypeRef(att, sd.PkgName, sd.Scope),
@@ -1241,7 +1241,7 @@ func extractMetadata(a *expr.MappedAttributeExpr, service *expr.AttributeExpr, s
 				mp.KeyType.Type.Kind() == expr.StringKind &&
 				mp.ElemType.Type.Kind() == expr.ArrayKind &&
 				expr.AsArray(mp.ElemType.Type).ElemType.Type.Kind() == expr.StringKind,
-			Validate:     codegen.RecursiveValidationCode(c, ctx, required, varn),
+			Validate:     codegen.RecursiveValidationCode(c, ctx, required, expr.IsAlias(c.Type), varn),
 			DefaultValue: c.DefaultValue,
 			Example:      c.Example(expr.Root.API.Random()),
 		})

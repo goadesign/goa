@@ -793,8 +793,8 @@ func ValidateResult(result *Result) (err error) {
 // "default" view.
 func ValidateResultView(result *ResultView) (err error) {
 	for _, e := range result.T {
-		if !(e == "a" || e == "b") {
-			err = goa.MergeErrors(err, goa.InvalidEnumValueError("result.t[*]", e, []interface{}{"a", "b"}))
+		if !(string(e) == "a" || string(e) == "b") {
+			err = goa.MergeErrors(err, goa.InvalidEnumValueError("result.t[*]", string(e), []interface{}{"a", "b"}))
 		}
 	}
 	return
@@ -802,8 +802,8 @@ func ValidateResultView(result *ResultView) (err error) {
 
 // ValidateUserTypeView runs the validations defined on UserTypeView.
 func ValidateUserTypeView(result UserTypeView) (err error) {
-	if !(result == "a" || result == "b") {
-		err = goa.MergeErrors(err, goa.InvalidEnumValueError("result", result, []interface{}{"a", "b"}))
+	if !(string(result) == "a" || string(result) == "b") {
+		err = goa.MergeErrors(err, goa.InvalidEnumValueError("result", string(result), []interface{}{"a", "b"}))
 	}
 	return
 }

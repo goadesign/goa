@@ -15,6 +15,7 @@ func TestRecursiveValidationCode(t *testing.T) {
 		integerT = root.UserType("Integer")
 		stringT  = root.UserType("String")
 		floatT   = root.UserType("Float")
+		aliasT   = root.UserType("AliasType")
 		userT    = root.UserType("UserType")
 		arrayUT  = root.UserType("ArrayUserType")
 		arrayT   = root.UserType("Array")
@@ -40,6 +41,7 @@ func TestRecursiveValidationCode(t *testing.T) {
 		{"string-required", stringT, true, false, false, testdata.StringRequiredValidationCode},
 		{"string-pointer", stringT, false, true, false, testdata.StringPointerValidationCode},
 		{"string-use-default", stringT, false, false, true, testdata.StringUseDefaultValidationCode},
+		{"alias-type", aliasT, true, false, false, testdata.AliasTypeValidationCode},
 		{"user-type-required", userT, true, false, false, testdata.UserTypeRequiredValidationCode},
 		{"user-type-pointer", userT, false, true, false, testdata.UserTypePointerValidationCode},
 		{"user-type-default", userT, false, false, true, testdata.UserTypeUseDefaultValidationCode},
@@ -58,7 +60,7 @@ func TestRecursiveValidationCode(t *testing.T) {
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
 			ctx := NewAttributeContext(c.Pointer, false, c.UseDefault, "", scope)
-			code := RecursiveValidationCode(&expr.AttributeExpr{Type: c.Type}, ctx, c.Required, "target")
+			code := RecursiveValidationCode(&expr.AttributeExpr{Type: c.Type}, ctx, c.Required, expr.IsAlias(c.Type), "target")
 			code = FormatTestCode(t, "package foo\nfunc Validate() (err error){\n"+code+"}")
 			if code != c.Code {
 				t.Errorf("invalid code, got:\n%s\ngot vs. expected:\n%s", code, Diff(t, code, c.Code))

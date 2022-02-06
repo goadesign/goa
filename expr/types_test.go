@@ -500,6 +500,53 @@ func TestIsPrimitive(t *testing.T) {
 	}
 }
 
+func TestIsAlias(t *testing.T) {
+	var (
+		aliasUserType = &UserTypeExpr{
+			AttributeExpr: &AttributeExpr{
+				Type: String,
+			},
+		}
+		notAliasUserType = &UserTypeExpr{
+			AttributeExpr: &AttributeExpr{
+				Type: &Object{},
+			},
+		}
+		aliasResultType = &ResultTypeExpr{
+			UserTypeExpr: aliasUserType,
+		}
+		notAliasResultType = &ResultTypeExpr{
+			UserTypeExpr: notAliasUserType,
+		}
+	)
+	cases := map[string]struct {
+		dt       DataType
+		expected bool
+	}{
+		"alias user type": {
+			dt:       aliasUserType,
+			expected: true,
+		},
+		"not alias user type": {
+			dt:       notAliasUserType,
+			expected: false,
+		},
+		"alias result type": {
+			dt:       aliasResultType,
+			expected: true,
+		},
+		"not alias result type": {
+			dt:       notAliasResultType,
+			expected: false,
+		},
+	}
+	for k, tc := range cases {
+		if actual := IsAlias(tc.dt); tc.expected != actual {
+			t.Errorf("%s: got %#v, expected %#v", k, actual, tc.expected)
+		}
+	}
+}
+
 func TestPrimitiveIsCompatible(t *testing.T) {
 	var (
 		b    = bool(true)
