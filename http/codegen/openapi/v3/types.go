@@ -141,8 +141,13 @@ func (sf *schemafier) schemafy(attr *expr.AttributeExpr, noref ...bool) *openapi
 	s := openapi.NewSchema()
 	var note string
 
+	unaliased := attr
+	if expr.IsAlias(attr.Type) {
+		unaliased = attr.Type.(expr.UserType).Attribute()
+	}
+
 	// Initialize type and format
-	switch t := attr.Type.(type) {
+	switch t := unaliased.Type.(type) {
 	case expr.Primitive:
 		switch t.Kind() {
 		case expr.UIntKind, expr.UInt64Kind, expr.UInt32Kind:
