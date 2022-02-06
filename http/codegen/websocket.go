@@ -127,7 +127,7 @@ func initWebSocketData(ed *EndpointData, e *expr.HTTPEndpointExpr, sd *ServiceDa
 							if ut, ok := body.(expr.UserType); ok {
 								if val := ut.Attribute().Validation; val != nil {
 									httpctx := httpContext("", sd.Scope, true, true)
-									svcode = codegen.RecursiveValidationCode(ut.Attribute(), httpctx, true, "body")
+									svcode = codegen.RecursiveValidationCode(ut.Attribute(), httpctx, true, expr.IsAlias(ut), "body")
 								}
 							}
 						}
