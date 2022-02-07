@@ -114,7 +114,7 @@ var _ = Service("calc", func() {
 
 This file contains the design for a `calc` service which accepts HTTP GET
 requests to `/multiply/{a}/{b}` where `{a}` and `{b}` are placeholders for integer
-values. The API returns result of `a` multiplied by `b` in the HTTP response body.
+values. The API returns the product of `a` multiplied by `b` in the HTTP response body.
 
 ### 2. Implement
 
