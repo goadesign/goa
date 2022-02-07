@@ -5,7 +5,7 @@ design-first approach.
 
 ---
 [![Build Status](https://github.com/goadesign/goa/workflows/build/badge.svg?branch=v3&event=push)](https://github.com/goadesign/goa/actions?query=branch%3Av3+event%3Apush)
-[![DSL GoDoc](https://img.shields.io/badge/godoc-DSL-blue)](https://pkg.go.dev/goa.design/goa/v3@v3.5.4/dsl?tab=doc)
+[![DSL GoDoc](https://img.shields.io/badge/godoc-DSL-blue)](https://pkg.go.dev/goa.design/goa/v3@v3.5.5/dsl?tab=doc)
 [![Slack](https://img.shields.io/badge/slack-gophers-orange.svg?style=flat)](https://gophers.slack.com/messages/goa/)
 
 ## Overview
@@ -51,7 +51,7 @@ go install goa.design/goa/v3/cmd/goa@v3
 
 >Note: Goa requires the use of Go modules.
 
-Current Release: `v3.5.4`
+Current Release: `v3.5.5`
 
 ## Teaser
 
@@ -317,7 +317,7 @@ In particular the page
 explains how to leverage the generated code to implement an HTTP or gRPC
 service.
 
-The [![DSL GoDoc](https://img.shields.io/badge/godoc-DSL-blue)](https://pkg.go.dev/goa.design/goa/v3@v3.5.4/dsl?tab=doc)
+The [![DSL GoDoc](https://img.shields.io/badge/godoc-DSL-blue)](https://pkg.go.dev/goa.design/goa/v3@v3.5.5/dsl?tab=doc)
 contains a fully documented reference of all the DSL functions.
 
 ### Getting Started Guides
