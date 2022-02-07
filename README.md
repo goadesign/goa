@@ -192,7 +192,7 @@ request so all we have to do is to perform the actual multiplication. Edit the f
 ```go
 // Multiply returns the multiplied value of attributes a and b of p.
 func (s *calcsrvc) Multiply(ctx context.Context, p *calc.MultiplyPayload) (res int, err error) {
-        return p.A + p.B, nil
+        return p.A * p.B, nil
 }
 ```
 
