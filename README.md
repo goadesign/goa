@@ -76,7 +76,7 @@ import . "goa.design/goa/v3/dsl"
 // API describes the global properties of the API server.
 var _ = API("calc", func() {
         Title("Calculator Service")
-        Description("HTTP service for adding numbers, a goa teaser")
+        Description("HTTP service for multiplying numbers, a goa teaser")
         Server("calc", func() {
                 Host("localhost", func() { URI("http://localhost:8088") })
         })
@@ -86,14 +86,14 @@ var _ = API("calc", func() {
 var _ = Service("calc", func() {
         Description("The calc service performs operations on numbers")
         // Method describes a service method (endpoint)
-        Method("add", func() {
+        Method("multiply", func() {
                 // Payload describes the method payload
                 // Here the payload is an object that consists of two fields
                 Payload(func() {
                         // Attribute describes an object field
                         Attribute("a", Int, "Left operand")
                         Attribute("b", Int, "Right operand")
-                        // Both attributes must be provided when invoking "add"
+                        // Both attributes must be provided when invoking "multiply"
                         Required("a", "b")
                 })
                 // Result describes the method result
@@ -103,7 +103,7 @@ var _ = Service("calc", func() {
                 HTTP(func() {
                         // Requests to the service consist of HTTP GET requests
                         // The payload fields are encoded as path parameters
-                        GET("/add/{a}/{b}")
+                        GET("/multiply/{a}/{b}")
                         // Responses use a "200 OK" HTTP status
                         // The result is encoded in the response body
                         Response(StatusOK)
@@ -113,8 +113,8 @@ var _ = Service("calc", func() {
 ```
 
 This file contains the design for a `calc` service which accepts HTTP GET
-requests to `/add/{a}/{b}` where `{a}` and `{b}` are placeholders for integer
-values. The API returns the sum of `a` and `b` in the HTTP response body.
+requests to `/multiply/{a}/{b}` where `{a}` and `{b}` are placeholders for integer
+values. The API returns the product of `a` multiplied by `b` in the HTTP response body.
 
 ### 2. Implement
 
@@ -183,16 +183,16 @@ is intended to generate just that: an *example*, in particular it is not
 intended to be re-run each time the design changes (as opposed to the `gen`
 command which should be re-run each time the design changes).
 
-Let's implement our service by providing a proper implementation for the `add`
-method. Goa generated a payload struct for the `add` method that contains both
+Let's implement our service by providing a proper implementation for the `multiply`
+method. Goa generated a payload struct for the `multiply` method that contains both
 fields. Goa also generated the transport layer that takes care of decoding the
-request so all we have to do is to perform the actual sum. Edit the file
-`calc.go` and change the code of the `add` function as follows:
+request so all we have to do is to perform the actual multiplication. Edit the file
+`calc.go` and change the code of the `multiply` function as follows:
 
 ```go
-// Add returns the sum of attributes a and b of p.
-func (s *calcsrvc) Add(ctx context.Context, p *calc.AddPayload) (res int, err error) {
-        return p.A + p.B, nil
+// Multiply returns the multiplied value of attributes a and b of p.
+func (s *calcsrvc) Multiply(ctx context.Context, p *calc.MultiplyPayload) (res int, err error) {
+        return p.A * p.B, nil
 }
 ```
 
@@ -207,7 +207,7 @@ Now let's compile and run the service:
 cd cmd/calc
 go build
 ./calc
-[calcapi] 16:10:47 HTTP "Add" mounted on GET /add/{a}/{b}
+[calcapi] 16:10:47 HTTP "Multiply" mounted on GET /multiply/{a}/{b}
 [calcapi] 16:10:47 HTTP server listening on "localhost:8088"
 ```
 
@@ -221,7 +221,7 @@ go build
 and run it:
 
 ```bash
-./calc-cli calc add -a 1 -b 2
+./calc-cli calc multiply -a 1 -b 2
 3
 ```
 
@@ -234,13 +234,13 @@ The tool includes contextual help:
 Help is also available on each command:
 
 ``` bash
-./calc-cli calc add --help
+./calc-cli calc multiply --help
 ```
 
 Now let's see how robust our code is and try to use non integer values:
 
 ``` bash
-./calc-cli calc add -a 1 -b foo
+./calc-cli calc multiply -a 1 -b foo
 invalid value for b, must be INT
 run './calccli --help' for detailed usage.
 ```
