@@ -23,6 +23,7 @@ func TestSnakeCase(t *testing.T) {
 		"underscores":           {"aa_Aaa_Aaa", "aa_aaa_aaa"},
 		"underscores 2":         {"aa_AAaaAA_Aaa", "aa_a_aaa_aa_aaa"},
 		"numbers":               {"aa1", "aa1"},
+		"blank spaces":          {"aa AA aa", "aa_a_aaa"},
 	}
 	for k, tc := range cases {
 		t.Run(k, func(t *testing.T) {

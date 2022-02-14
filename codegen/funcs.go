@@ -186,6 +186,9 @@ func SnakeCase(name string) string {
 		name = strings.Replace(name, u, l, -1)
 	}
 
+	// Remove any blank spaces
+	name = strings.Replace(name, " ", "", -1)
+
 	// Special handling for dashes to convert them into underscores
 	name = strings.Replace(name, "-", "_", -1)
 
