@@ -14,6 +14,7 @@ import (
 // describes a type for comparison in tests.
 type typ struct {
 	Type      string
+	Format    string
 	Props     []attr
 	SkipProps bool
 }
@@ -30,6 +31,7 @@ type rt map[int]typ
 var (
 	tempty  typ
 	tstring = typ{Type: "string"}
+	tuuid   = typ{Type: "string", Format: "uuid"}
 	tint    = typ{Type: "integer"}
 	tarray  = typ{Type: "array"}
 )
@@ -62,12 +64,19 @@ func TestBuildBodyTypes(t *testing.T) {
 		DSL  func()
 
 		ExpectedType          typ
+		ExpectedFormat        string
 		ExpectedResponseTypes rt
 	}{{
 		Name: "string_body",
 		DSL:  dsls.StringBodyDSL(svcName, "string_body"),
 
 		ExpectedType:          tstring,
+		ExpectedResponseTypes: rt{204: tempty},
+	}, {
+		Name: "alias_string_body",
+		DSL:  dsls.AliasStringBodyDSL(svcName, "alias_string_body"),
+
+		ExpectedType:          tuuid,
 		ExpectedResponseTypes: rt{204: tempty},
 	}, {
 		Name: "object_body",
@@ -185,6 +194,11 @@ func matchesSchemaWithPrefix(t *testing.T, ctx string, s *openapi.Schema, types 
 	}
 	if tt.Type != string(s.Type) {
 		t.Errorf("%s: %sgot type %q, expected %q", ctx, prefix, s.Type, tt.Type)
+	}
+	if tt.Format != "" {
+		if s.Format != tt.Format {
+			t.Errorf("%s: %sgot format %q, expected %q", ctx, prefix, s.Format, tt.Format)
+		}
 	}
 	if tt.Type == "object" {
 		if tt.SkipProps {
