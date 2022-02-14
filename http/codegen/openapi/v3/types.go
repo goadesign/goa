@@ -141,13 +141,8 @@ func (sf *schemafier) schemafy(attr *expr.AttributeExpr, noref ...bool) *openapi
 	s := openapi.NewSchema()
 	var note string
 
-	unaliased := attr
-	if expr.IsAlias(attr.Type) {
-		unaliased = attr.Type.(expr.UserType).Attribute()
-	}
-
 	// Initialize type and format
-	switch t := unaliased.Type.(type) {
+	switch t := attr.Type.(type) {
 	case expr.Primitive:
 		switch t.Kind() {
 		case expr.UIntKind, expr.UInt64Kind, expr.UInt32Kind:
@@ -192,21 +187,25 @@ func (sf *schemafier) schemafy(attr *expr.AttributeExpr, noref ...bool) *openapi
 			s.AdditionalProperties = true
 		}
 	case expr.UserType:
-		h := sf.hashAttribute(attr, fnv.New64())
-		ref, ok := sf.hashes[h]
-		if len(noref) == 0 && ok {
-			s.Ref = ref
-		} else {
-			name := t.Name()
-			if n, ok := t.Attribute().Meta["name:original"]; ok {
-				name = n[0]
+		if !expr.IsAlias(t) {
+			h := sf.hashAttribute(attr, fnv.New64())
+			ref, ok := sf.hashes[h]
+			if len(noref) == 0 && ok {
+				s.Ref = ref
+			} else {
+				name := t.Name()
+				if n, ok := t.Attribute().Meta["name:original"]; ok {
+					name = n[0]
+				}
+				typeName := sf.uniquify(codegen.Goify(name, true))
+				s.Ref = toRef(typeName)
+				sf.hashes[h] = s.Ref
+				sf.schemas[typeName] = sf.schemafy(t.Attribute(), true)
 			}
-			typeName := sf.uniquify(codegen.Goify(name, true))
-			s.Ref = toRef(typeName)
-			sf.hashes[h] = s.Ref
-			sf.schemas[typeName] = sf.schemafy(t.Attribute(), true)
+			return s // All other schema properties are set in the reference
 		}
-		return s // All other schema properties are set in the reference
+		// Alias primitive type
+		s = sf.schemafy(t.Attribute())
 	default:
 		panic(fmt.Sprintf("unknown type %T", t)) // bug
 	}
