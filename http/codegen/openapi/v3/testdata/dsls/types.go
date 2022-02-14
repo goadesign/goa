@@ -15,6 +15,22 @@ func StringBodyDSL(svcName, metName string) func() {
 	}
 }
 
+func AliasStringBodyDSL(svcName, metName string) func() {
+	return func() {
+		var UUID = Type("UUID", String, func() {
+			Format(FormatUUID)
+		})
+		var _ = Service(svcName, func() {
+			Method(metName, func() {
+				Payload(UUID)
+				HTTP(func() {
+					POST("/")
+				})
+			})
+		})
+	}
+}
+
 func ObjectBodyDSL(svcName, metName string) func() {
 	return func() {
 		var _ = Service(svcName, func() {
