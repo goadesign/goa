@@ -186,6 +186,10 @@ func SnakeCase(name string) string {
 		name = strings.Replace(name, u, l, -1)
 	}
 
+	// Remove leading and trailing blank spaces and replace any blank spaces in
+	// between with a single underscore
+	name = strings.Join(strings.Fields(name), "_")
+
 	// Special handling for dashes to convert them into underscores
 	name = strings.Replace(name, "-", "_", -1)
 
