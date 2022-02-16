@@ -58,7 +58,9 @@ func NewStreamingResultMethodHandler(
 		}
 		_, err = endpoint(ctx, v)
 		if err != nil {
-			if _, ok := err.(websocket.HandshakeError); ok {
+			if _, werr := w.Write(nil); werr == http.ErrHijacked {
+				// Response writer has been hijacked, do not encode the error
+				errhandler(ctx, w, err)
 				return
 			}
 			if err := encodeError(ctx, w, err); err != nil {
@@ -193,7 +195,9 @@ func NewStreamingResultNoPayloadMethodHandler(
 		}
 		_, err = endpoint(ctx, v)
 		if err != nil {
-			if _, ok := err.(websocket.HandshakeError); ok {
+			if _, werr := w.Write(nil); werr == http.ErrHijacked {
+				// Response writer has been hijacked, do not encode the error
+				errhandler(ctx, w, err)
 				return
 			}
 			if err := encodeError(ctx, w, err); err != nil {
@@ -939,7 +943,9 @@ func NewStreamingPayloadMethodHandler(
 		}
 		_, err = endpoint(ctx, v)
 		if err != nil {
-			if _, ok := err.(websocket.HandshakeError); ok {
+			if _, werr := w.Write(nil); werr == http.ErrHijacked {
+				// Response writer has been hijacked, do not encode the error
+				errhandler(ctx, w, err)
 				return
 			}
 			if err := encodeError(ctx, w, err); err != nil {
@@ -1100,7 +1106,9 @@ func NewStreamingPayloadNoPayloadMethodHandler(
 		}
 		_, err = endpoint(ctx, v)
 		if err != nil {
-			if _, ok := err.(websocket.HandshakeError); ok {
+			if _, werr := w.Write(nil); werr == http.ErrHijacked {
+				// Response writer has been hijacked, do not encode the error
+				errhandler(ctx, w, err)
 				return
 			}
 			if err := encodeError(ctx, w, err); err != nil {
@@ -2085,7 +2093,9 @@ func NewBidirectionalStreamingMethodHandler(
 		}
 		_, err = endpoint(ctx, v)
 		if err != nil {
-			if _, ok := err.(websocket.HandshakeError); ok {
+			if _, werr := w.Write(nil); werr == http.ErrHijacked {
+				// Response writer has been hijacked, do not encode the error
+				errhandler(ctx, w, err)
 				return
 			}
 			if err := encodeError(ctx, w, err); err != nil {
@@ -2287,7 +2297,9 @@ func NewBidirectionalStreamingNoPayloadMethodHandler(
 		}
 		_, err = endpoint(ctx, v)
 		if err != nil {
-			if _, ok := err.(websocket.HandshakeError); ok {
+			if _, werr := w.Write(nil); werr == http.ErrHijacked {
+				// Response writer has been hijacked, do not encode the error
+				errhandler(ctx, w, err)
 				return
 			}
 			if err := encodeError(ctx, w, err); err != nil {
