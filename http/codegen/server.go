@@ -495,7 +495,9 @@ func {{ .HandlerInit }}(
 	{{- if not .Redirect }}
 		if err != nil {
 			{{- if isWebSocketEndpoint . }}
-			if _, ok := err.(websocket.HandshakeError); ok {
+			if _, werr := w.Write(nil); werr == http.ErrHijacked {
+				// Response writer has been hijacked, do not encode the error
+				errhandler(ctx, w, err)
 				return
 			}
 			{{- end }}
