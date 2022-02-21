@@ -8,7 +8,7 @@ require (
 	github.com/getkin/kin-openapi v0.89.0
 	github.com/google/gxui v0.0.0-20151028112939-f85e0a97b3a4 // indirect
 	github.com/google/uuid v1.3.0
-	github.com/gorilla/websocket v1.4.2
+	github.com/gorilla/websocket v1.5.0
 	github.com/manveru/faker v0.0.0-20171103152722-9fbc68a78c4d
 	github.com/manveru/gobdd v0.0.0-20131210092515-f1a17fdd710b // indirect
 	github.com/pkg/errors v0.9.1
