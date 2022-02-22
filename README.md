@@ -320,6 +320,19 @@ service.
 The [![DSL GoDoc](https://img.shields.io/badge/godoc-DSL-blue)](https://pkg.go.dev/goa.design/goa/v3@v3.5.5/dsl?tab=doc)
 contains a fully documented reference of all the DSL functions.
 
+### Instrumentation and System Example
+
+The [clue](https://github.com/goadesign/clue) project provides observability
+packages that work in tandem with Goa. The packages cover
+[logging](https://github.com/goadesign/clue/tree/main/log),
+[tracing](https://github.com/goadesign/clue/tree/main/trace),
+[metrics](https://github.com/goadesign/clue/tree/main/metrics),
+[health checks](https://github.com/goadesign/clue/tree/main/health)
+and service client
+[mocking](https://github.com/goadesign/clue/tree/main/mock). clue also includes a fully featured
+[example](https://github.com/goadesign/clue/tree/main/example/weather)
+consisting of three instrumented Goa microservices that communicate with each other.
+
 ### Getting Started Guides
 
 A couple of Getting Started guides produced by the community.
