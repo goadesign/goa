@@ -40,6 +40,7 @@ func serverFile(genpkg string, svc *expr.GRPCServiceExpr) *codegen.File {
 		sections = []*codegen.SectionTemplate{
 			codegen.Header(svc.Name()+" gRPC server", "server", []*codegen.ImportSpec{
 				{Path: "context"},
+				{Path: "errors"},
 				codegen.GoaImport(""),
 				codegen.GoaNamedImport("grpc", "goagrpc"),
 				{Path: "google.golang.org/grpc/codes"},
@@ -263,7 +264,8 @@ func (s *{{ .ServerStruct }}) {{ .Method.VarName }}(
 {{- define "handle_error" }}
 	if err != nil {
 	{{- if .Errors }}
-		if en, ok := err.(ErrorNamer); ok {
+		var en ErrorNamer
+		if errors.As(err, &en) {
 			switch en.ErrorName() {
 		{{- range .Errors }}
 			case {{ printf "%q" .Name }}:

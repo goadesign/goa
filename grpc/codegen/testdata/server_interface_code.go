@@ -58,7 +58,8 @@ func (s *Server) MethodUnaryRPCWithErrors(ctx context.Context, message *service_
 	ctx = context.WithValue(ctx, goa.ServiceKey, "ServiceUnaryRPCWithErrors")
 	resp, err := s.MethodUnaryRPCWithErrorsH.Handle(ctx, message)
 	if err != nil {
-		if en, ok := err.(ErrorNamer); ok {
+		var en ErrorNamer
+		if errors.As(err, &en) {
 			switch en.ErrorName() {
 			case "timeout":
 				return nil, goagrpc.NewStatusError(codes.Canceled, err, goagrpc.NewErrorResponse(err))
@@ -88,7 +89,8 @@ func (s *Server) MethodUnaryRPCWithOverridingErrors(ctx context.Context, message
 	ctx = context.WithValue(ctx, goa.ServiceKey, "ServiceUnaryRPCWithOverridingErrors")
 	resp, err := s.MethodUnaryRPCWithOverridingErrorsH.Handle(ctx, message)
 	if err != nil {
-		if en, ok := err.(ErrorNamer); ok {
+		var en ErrorNamer
+		if errors.As(err, &en) {
 			switch en.ErrorName() {
 			case "overridden":
 				return nil, goagrpc.NewStatusError(codes.Unknown, err, goagrpc.NewErrorResponse(err))
@@ -226,7 +228,8 @@ func (s *Server) MethodBidirectionalStreamingRPCWithErrors(stream service_bidire
 	ctx = context.WithValue(ctx, goa.ServiceKey, "ServiceBidirectionalStreamingRPCWithErrors")
 	_, err := s.MethodBidirectionalStreamingRPCWithErrorsH.Decode(ctx, nil)
 	if err != nil {
-		if en, ok := err.(ErrorNamer); ok {
+		var en ErrorNamer
+		if errors.As(err, &en) {
 			switch en.ErrorName() {
 			case "timeout":
 				return goagrpc.NewStatusError(codes.Canceled, err, goagrpc.NewErrorResponse(err))
@@ -243,7 +246,8 @@ func (s *Server) MethodBidirectionalStreamingRPCWithErrors(stream service_bidire
 	}
 	err = s.MethodBidirectionalStreamingRPCWithErrorsH.Handle(ctx, ep)
 	if err != nil {
-		if en, ok := err.(ErrorNamer); ok {
+		var en ErrorNamer
+		if errors.As(err, &en) {
 			switch en.ErrorName() {
 			case "timeout":
 				return goagrpc.NewStatusError(codes.Canceled, err, goagrpc.NewErrorResponse(err))
