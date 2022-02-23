@@ -6,8 +6,8 @@ var PrimitiveErrorResponseEncoderCode = `// EncodeMethodPrimitiveErrorResponseEr
 func EncodeMethodPrimitiveErrorResponseError(encoder func(context.Context, http.ResponseWriter) goahttp.Encoder, formatter func(err error) goahttp.Statuser) func(context.Context, http.ResponseWriter, error) error {
 	encodeError := goahttp.ErrorEncoder(encoder, formatter)
 	return func(ctx context.Context, w http.ResponseWriter, v error) error {
-		en, ok := v.(ErrorNamer)
-		if !ok {
+		var en ErrorNamer
+		if !errors.As(v, &en) {
 			return encodeError(ctx, w, v)
 		}
 		switch en.ErrorName() {
@@ -48,8 +48,8 @@ var PrimitiveErrorInResponseHeaderEncoderCode = `// EncodeMethodPrimitiveErrorIn
 func EncodeMethodPrimitiveErrorInResponseHeaderError(encoder func(context.Context, http.ResponseWriter) goahttp.Encoder, formatter func(err error) goahttp.Statuser) func(context.Context, http.ResponseWriter, error) error {
 	encodeError := goahttp.ErrorEncoder(encoder, formatter)
 	return func(ctx context.Context, w http.ResponseWriter, v error) error {
-		en, ok := v.(ErrorNamer)
-		if !ok {
+		var en ErrorNamer
+		if !errors.As(v, &en) {
 			return encodeError(ctx, w, v)
 		}
 		switch en.ErrorName() {
@@ -86,8 +86,8 @@ var APIPrimitiveErrorResponseEncoderCode = `// EncodeMethodAPIPrimitiveErrorResp
 func EncodeMethodAPIPrimitiveErrorResponseError(encoder func(context.Context, http.ResponseWriter) goahttp.Encoder, formatter func(err error) goahttp.Statuser) func(context.Context, http.ResponseWriter, error) error {
 	encodeError := goahttp.ErrorEncoder(encoder, formatter)
 	return func(ctx context.Context, w http.ResponseWriter, v error) error {
-		en, ok := v.(ErrorNamer)
-		if !ok {
+		var en ErrorNamer
+		if !errors.As(v, &en) {
 			return encodeError(ctx, w, v)
 		}
 		switch en.ErrorName() {
@@ -127,8 +127,8 @@ var DefaultErrorResponseEncoderCode = `// EncodeMethodDefaultErrorResponseError 
 func EncodeMethodDefaultErrorResponseError(encoder func(context.Context, http.ResponseWriter) goahttp.Encoder, formatter func(err error) goahttp.Statuser) func(context.Context, http.ResponseWriter, error) error {
 	encodeError := goahttp.ErrorEncoder(encoder, formatter)
 	return func(ctx context.Context, w http.ResponseWriter, v error) error {
-		en, ok := v.(ErrorNamer)
-		if !ok {
+		var en ErrorNamer
+		if !errors.As(v, &en) {
 			return encodeError(ctx, w, v)
 		}
 		switch en.ErrorName() {
@@ -156,8 +156,8 @@ var DefaultErrorResponseWithContentTypeEncoderCode = `// EncodeMethodDefaultErro
 func EncodeMethodDefaultErrorResponseError(encoder func(context.Context, http.ResponseWriter) goahttp.Encoder, formatter func(err error) goahttp.Statuser) func(context.Context, http.ResponseWriter, error) error {
 	encodeError := goahttp.ErrorEncoder(encoder, formatter)
 	return func(ctx context.Context, w http.ResponseWriter, v error) error {
-		en, ok := v.(ErrorNamer)
-		if !ok {
+		var en ErrorNamer
+		if !errors.As(v, &en) {
 			return encodeError(ctx, w, v)
 		}
 		switch en.ErrorName() {
@@ -186,8 +186,8 @@ var ServiceErrorResponseEncoderCode = `// EncodeMethodServiceErrorResponseError 
 func EncodeMethodServiceErrorResponseError(encoder func(context.Context, http.ResponseWriter) goahttp.Encoder, formatter func(err error) goahttp.Statuser) func(context.Context, http.ResponseWriter, error) error {
 	encodeError := goahttp.ErrorEncoder(encoder, formatter)
 	return func(ctx context.Context, w http.ResponseWriter, v error) error {
-		en, ok := v.(ErrorNamer)
-		if !ok {
+		var en ErrorNamer
+		if !errors.As(v, &en) {
 			return encodeError(ctx, w, v)
 		}
 		switch en.ErrorName() {
@@ -227,8 +227,8 @@ var ServiceErrorResponseWithContentTypeEncoderCode = `// EncodeMethodServiceErro
 func EncodeMethodServiceErrorResponseError(encoder func(context.Context, http.ResponseWriter) goahttp.Encoder, formatter func(err error) goahttp.Statuser) func(context.Context, http.ResponseWriter, error) error {
 	encodeError := goahttp.ErrorEncoder(encoder, formatter)
 	return func(ctx context.Context, w http.ResponseWriter, v error) error {
-		en, ok := v.(ErrorNamer)
-		if !ok {
+		var en ErrorNamer
+		if !errors.As(v, &en) {
 			return encodeError(ctx, w, v)
 		}
 		switch en.ErrorName() {
@@ -269,8 +269,8 @@ var NoBodyErrorResponseEncoderCode = `// EncodeMethodServiceErrorResponseError r
 func EncodeMethodServiceErrorResponseError(encoder func(context.Context, http.ResponseWriter) goahttp.Encoder, formatter func(err error) goahttp.Statuser) func(context.Context, http.ResponseWriter, error) error {
 	encodeError := goahttp.ErrorEncoder(encoder, formatter)
 	return func(ctx context.Context, w http.ResponseWriter, v error) error {
-		en, ok := v.(ErrorNamer)
-		if !ok {
+		var en ErrorNamer
+		if !errors.As(v, &en) {
 			return encodeError(ctx, w, v)
 		}
 		switch en.ErrorName() {
@@ -294,8 +294,8 @@ var NoBodyErrorResponseWithContentTypeEncoderCode = `// EncodeMethodServiceError
 func EncodeMethodServiceErrorResponseError(encoder func(context.Context, http.ResponseWriter) goahttp.Encoder, formatter func(err error) goahttp.Statuser) func(context.Context, http.ResponseWriter, error) error {
 	encodeError := goahttp.ErrorEncoder(encoder, formatter)
 	return func(ctx context.Context, w http.ResponseWriter, v error) error {
-		en, ok := v.(ErrorNamer)
-		if !ok {
+		var en ErrorNamer
+		if !errors.As(v, &en) {
 			return encodeError(ctx, w, v)
 		}
 		switch en.ErrorName() {
@@ -321,8 +321,8 @@ var EmptyErrorResponseBodyEncoderCode = `// EncodeMethodEmptyErrorResponseBodyEr
 func EncodeMethodEmptyErrorResponseBodyError(encoder func(context.Context, http.ResponseWriter) goahttp.Encoder, formatter func(err error) goahttp.Statuser) func(context.Context, http.ResponseWriter, error) error {
 	encodeError := goahttp.ErrorEncoder(encoder, formatter)
 	return func(ctx context.Context, w http.ResponseWriter, v error) error {
-		en, ok := v.(ErrorNamer)
-		if !ok {
+		var en ErrorNamer
+		if !errors.As(v, &en) {
 			return encodeError(ctx, w, v)
 		}
 		switch en.ErrorName() {
@@ -372,8 +372,8 @@ var EmptyCustomErrorResponseBodyEncoderCode = `// EncodeMethodEmptyCustomErrorRe
 func EncodeMethodEmptyCustomErrorResponseBodyError(encoder func(context.Context, http.ResponseWriter) goahttp.Encoder, formatter func(err error) goahttp.Statuser) func(context.Context, http.ResponseWriter, error) error {
 	encodeError := goahttp.ErrorEncoder(encoder, formatter)
 	return func(ctx context.Context, w http.ResponseWriter, v error) error {
-		en, ok := v.(ErrorNamer)
-		if !ok {
+		var en ErrorNamer
+		if !errors.As(v, &en) {
 			return encodeError(ctx, w, v)
 		}
 		switch en.ErrorName() {

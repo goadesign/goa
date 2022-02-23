@@ -99,6 +99,7 @@ func serverEncodeDecodeFile(genpkg string, svc *expr.HTTPServiceExpr) *codegen.F
 	sections := []*codegen.SectionTemplate{
 		codegen.Header(title, "server", []*codegen.ImportSpec{
 			{Path: "context"},
+			{Path: "errors"},
 			{Path: "fmt"},
 			{Path: "io"},
 			{Path: "net/http"},
@@ -1202,8 +1203,8 @@ const errorEncoderT = `{{ printf "%s returns an encoder for errors returned by t
 func {{ .ErrorEncoder }}(encoder func(context.Context, http.ResponseWriter) goahttp.Encoder, formatter func(err error) goahttp.Statuser) func(context.Context, http.ResponseWriter, error) error {
 	encodeError := goahttp.ErrorEncoder(encoder, formatter)
 	return func(ctx context.Context, w http.ResponseWriter, v error) error {
-		en, ok := v.(ErrorNamer)
-		if !ok {
+		var en ErrorNamer
+		if !errors.As(v, &en) {
 			return encodeError(ctx, w, v)
 		}
 		switch en.ErrorName() {
