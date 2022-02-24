@@ -113,7 +113,7 @@ func Error(name string, args ...interface{}) {
 //
 // ErrorName must appear in a Type or ResultType expression.
 //
-// ErrorName takes the same arguments as Attribute or Fields.
+// ErrorName takes the same arguments as Attribute or Field.
 //
 // Example design:
 //
@@ -155,8 +155,8 @@ func Error(name string, args ...interface{}) {
 //        // ...
 //        if err != nil {
 //             return &myservice.CustomError{
-//                 Name: "internal_error", // HTTP response status is 500.
-//                 Message: "Something went wrong",
+//                 Name:       "internal_error", // HTTP response status is 500.
+//                 Message:    "Something went wrong",
 //                 OccurredAt: time.Now().Format(time.RFC3339),
 //             }
 //        }
