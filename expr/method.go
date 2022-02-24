@@ -207,7 +207,7 @@ func (m *MethodExpr) Validate() error {
 					return nil
 				})
 				if !found {
-					verr.Add(e, "type %q is used to define multiple errors and must identify the attribute containing error name. Use Meta with the key 'struct:error:name' on the error name attribute", e.AttributeExpr.Type.Name())
+					verr.Add(e, "type %q is used to define multiple errors and must identify the attribute containing the error name with ErrorName", e.AttributeExpr.Type.Name())
 					break
 				}
 			}

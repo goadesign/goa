@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"path/filepath"
+	"strings"
 	"testing"
 	"text/template"
 
@@ -31,6 +32,7 @@ func TestFiles(t *testing.T) {
 	}{
 		// TestSections
 		{"file-service", testdata.FileServiceDSL},
+		{"file-service-swagger", testdata.FileServiceSwaggerDSL},
 		{"valid", testdata.SimpleDSL},
 		{"multiple-services", testdata.MultipleServicesDSL},
 		{"multiple-views", testdata.MultipleViewsDSL},
@@ -41,8 +43,10 @@ func TestFiles(t *testing.T) {
 		{"with-map", testdata.WithMapDSL},
 		{"path-with-wildcards", testdata.PathWithWildcardDSL},
 		{"with-tags", testdata.WithTagsDSL},
+		{"with-tags-swagger", testdata.WithTagsSwaggerDSL},
 		// TestEndpoints
 		{"endpoint", testdata.ExtensionDSL},
+		{"endpoint-swagger", testdata.ExtensionSwaggerDSL},
 		// TestValidations
 		{"string", testdata.StringValidationDSL},
 		{"integer", testdata.IntValidationDSL},
@@ -77,7 +81,7 @@ func TestFiles(t *testing.T) {
 					}
 					validateSwagger(t, buf.Bytes())
 
-					golden := filepath.Join(goldenPath, fmt.Sprintf("%s_%s.golden", c.Name, tname))
+					golden := filepath.Join(goldenPath, fmt.Sprintf("%s_%s.golden", strings.TrimSuffix(c.Name, "-swagger"), tname))
 					if *update {
 						if err := ioutil.WriteFile(golden, buf.Bytes(), 0644); err != nil {
 							t.Fatalf("failed to update golden file: %s", err)

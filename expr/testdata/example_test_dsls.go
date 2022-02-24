@@ -100,7 +100,7 @@ var HidingExampleDSL = func() {
 	Service("HidingExample", func() {
 		Method("Method", func() {
 			Payload(String, func() {
-				Meta("swagger:example", "false")
+				Meta("openapi:example", "false")
 			})
 		})
 	})
@@ -108,7 +108,7 @@ var HidingExampleDSL = func() {
 
 var OverridingHiddenExamplesDSL = func() {
 	Service("OverridingHiddenExamples", func() {
-		Meta("swagger:example", "false")
+		Meta("openapi:example", "false")
 		Method("Method", func() {
 			Payload(String, func() {
 				Example("example")

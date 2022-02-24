@@ -93,7 +93,7 @@ func TestServiceExprValidate(t *testing.T) {
 		DSL   func()
 		Error string
 	}{
-		{"service errors", testdata.ServiceErrorDSL, `attribute: attribute "a" with 'struct:error:name' in the meta must be required in "ServiceError" type`},
+		{"service errors", testdata.ServiceErrorDSL, `attribute: error name "a" must be required in type "ServiceError"`},
 	}
 
 	for _, tc := range cases {
@@ -114,12 +114,12 @@ func TestErrorExprValidate(t *testing.T) {
 	}{
 		{"no error", testdata.ValidErrorsDSL, ""},
 		{"invalid-struct-error-name-meta", testdata.InvalidStructErrorNameDSL,
-			`attribute: attribute "a" with 'struct:error:name' in the meta must be required in "ServiceError" type
-attribute: attribute "a" has 'struct:error:name' meta which is already set for attribute "b" in "Error" type
-attribute: attribute "a" with 'struct:error:name' in the meta must be a string in "Error" type
-attribute: attribute "a" with 'struct:error:name' in the meta must be required in "Error" type
-attribute: type "ErrorType" is used to define multiple errors and must identify the attribute containing error name. Use Meta with the key 'struct:error:name' on the error name attribute
-attribute: type "ErrorType" is used to define multiple errors and must identify the attribute containing error name. Use Meta with the key 'struct:error:name' on the error name attribute`,
+			`attribute: error name "a" must be required in type "ServiceError"
+attribute: duplicate error names in type "Error"
+attribute: error name "a" must be a string in type "Error"
+attribute: error name "a" must be required in type "Error"
+attribute: type "ErrorType" is used to define multiple errors and must identify the attribute containing the error name with ErrorName
+attribute: type "ErrorType" is used to define multiple errors and must identify the attribute containing the error name with ErrorName`,
 		},
 	}
 	for _, tc := range cases {
