@@ -868,6 +868,25 @@ func EncodeMethodQueryArrayAnyValidateRequest(encoder func(*http.Request) goahtt
 }
 `
 
+var PayloadQueryArrayAliasEncodeCode = `// EncodeMethodQueryArrayAliasRequest returns an encoder for requests sent to
+// the ServiceQueryArrayAlias MethodQueryArrayAlias server.
+func EncodeMethodQueryArrayAliasRequest(encoder func(*http.Request) goahttp.Encoder) func(*http.Request, interface{}) error {
+	return func(req *http.Request, v interface{}) error {
+		p, ok := v.(*servicequeryarrayalias.MethodQueryArrayAliasPayload)
+		if !ok {
+			return goahttp.ErrInvalidType("ServiceQueryArrayAlias", "MethodQueryArrayAlias", "*servicequeryarrayalias.MethodQueryArrayAliasPayload", v)
+		}
+		values := req.URL.Query()
+		for _, value := range p.Q {
+			valueStr := string(value)
+			values.Add("q", valueStr)
+		}
+		req.URL.RawQuery = values.Encode()
+		return nil
+	}
+}
+`
+
 var PayloadQueryMapStringStringEncodeCode = `// EncodeMethodQueryMapStringStringRequest returns an encoder for requests sent
 // to the ServiceQueryMapStringString MethodQueryMapStringString server.
 func EncodeMethodQueryMapStringStringRequest(encoder func(*http.Request) goahttp.Encoder) func(*http.Request, interface{}) error {
