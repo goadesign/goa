@@ -50,7 +50,7 @@ type (
 		// Union
 		AnyOf []*Schema `json:"anyOf,omitempty" yaml:"anyOf,omitempty"`
 
-		// Extensions defines the swagger extensions.
+		// Extensions defines the OpenAPI extensions.
 		Extensions map[string]interface{} `json:"-" yaml:"-"`
 	}
 
@@ -95,7 +95,7 @@ const (
 	Object = "object"
 	// String represents a JSON string.
 	String = "string"
-	// File is an extension used by Swagger to represent a file download.
+	// File is an extension used by OpenAPI to represent a file download.
 	File = "file"
 )
 

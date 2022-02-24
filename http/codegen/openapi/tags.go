@@ -18,11 +18,11 @@ type Tag struct {
 	Description string `json:"description,omitempty" yaml:"description,omitempty"`
 	// ExternalDocs is additional external documentation for this tag.
 	ExternalDocs *ExternalDocs `json:"externalDocs,omitempty" yaml:"externalDocs,omitempty"`
-	// Extensions defines the swagger extensions.
+	// Extensions defines the OpenAPI extensions.
 	Extensions map[string]interface{} `json:"-" yaml:"-"`
 }
 
-// TagsFromExpr extracts the swagger related metadata from the given expression.
+// TagsFromExpr extracts the OpenAPI related metadata from the given expression.
 func TagsFromExpr(mdata expr.MetaExpr) (tags []*Tag) {
 	var keys []string
 	for k := range mdata {
@@ -34,7 +34,7 @@ func TagsFromExpr(mdata expr.MetaExpr) (tags []*Tag) {
 		if len(chunks) != 3 {
 			continue
 		}
-		if chunks[0] != "swagger" || chunks[1] != "tag" {
+		if (chunks[0] != "swagger" && chunks[0] != "openapi") || chunks[1] != "tag" {
 			continue
 		}
 
@@ -73,7 +73,7 @@ func TagsFromExpr(mdata expr.MetaExpr) (tags []*Tag) {
 	return
 }
 
-// TagNamesFromExpr computes the names of the swagger tags specified in the
+// TagNamesFromExpr computes the names of the OpenAPI tags specified in the
 // given metadata expressions.
 func TagNamesFromExpr(mdatas ...expr.MetaExpr) (tagNames []string) {
 	for _, mdata := range mdatas {

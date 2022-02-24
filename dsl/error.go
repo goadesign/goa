@@ -103,6 +103,102 @@ func Error(name string, args ...interface{}) {
 	}
 }
 
+// ErrorName identifies the attribute of a custom error type used to select the
+// returned error response when multiple errors of that type are defined on the
+// same method. The value of the field identifies the error name as defined in
+// the design. This makes it possible to define distinct transport mappings for
+// the various errors (for example to return different HTTP status codes). There
+// must be one and exactly one attribute defined with ErrorName on types used to
+// define errors.
+//
+// ErrorName must appear in a Type or ResultType expression.
+//
+// ErrorName takes the same arguments as Attribute or Fields.
+//
+// Example design:
+//
+//    // All the methods exposed by service MyService can return the errors
+//    // "internal_error" and "bad_request". Both errors have the same type
+//    // CustomErrorType. "internal_error" is mapped to HTTP status 500 and
+//    // "bad_request" is mapped to HTTP status 400.
+//    var _ = Service("MyService", func() {
+//        Error("internal_error", CustomErrorType)
+//        Error("bad_request", CustomErrorType)
+//        HTTP(func() {
+//            Response("internal_error", StatusInternalServerError)
+//            Response("bad_request", StatusBadRequest)
+//        })
+//
+//        Method("Method", func() {
+//	      Payload(String)
+//            HTTP(func() {
+//                GET("/")
+//            })
+//        })
+//    })
+//
+//    var CustomErrorType = Type("CustomError", func() {
+//        // The "name" attribute is used to select the error response.
+//        // name should be set to either "internal_error" or "bad_request" by
+//        // the service method returning the error.
+//        ErrorName("name", String, "Name of error.")
+//        Attribute("message", String, "Message of error.")
+//        Attribute("occurred_at", String, "Time error occurred.", func() {
+//            Format(FormatDateTime)
+//        })
+//        Required("name", "message", "occurred_at")
+//    })
+//
+// Example usage:
+//
+//    func (s *svc) Method(ctx context.Context, p string) error {
+//        // ...
+//        if err != nil {
+//             return &myservice.CustomError{
+//                 Name: "internal_error", // HTTP response status is 500.
+//                 Message: "Something went wrong",
+//                 OccurredAt: time.Now().Format(time.RFC3339),
+//             }
+//        }
+//        // ...
+//        return nil
+//    }
+//
+func ErrorName(args ...interface{}) {
+	if len(args) == 0 {
+		eval.IncompatibleDSL()
+		return
+	}
+	dsl, ok := args[len(args)-1].(func())
+	if ok {
+		args[len(args)-1] = func() {
+			dsl()
+			Meta("struct:error:name")
+		}
+	} else {
+		args = append(args, func() {
+			Meta("struct:error:name")
+		})
+	}
+	switch actual := args[0].(type) {
+	case string:
+		Attribute(actual, args[1:]...)
+	case int:
+		if len(args) == 1 {
+			eval.IncompatibleDSL()
+			return
+		}
+		name, ok := args[1].(string)
+		if !ok {
+			eval.InvalidArgError("name", args[1])
+			return
+		}
+		Field(actual, name, args[2:]...)
+	default:
+		eval.InvalidArgError("name or position", args[0])
+	}
+}
+
 // Temporary qualifies an error type as describing temporary (i.e. retryable)
 // errors.
 //

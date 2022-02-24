@@ -7,13 +7,24 @@ import (
 	"goa.design/goa/v3/expr"
 )
 
-// ExtensionsFromExpr generates swagger extensions from the given meta
+// ExtensionsFromExpr generates openapi extensions from the given meta
 // expression.
 func ExtensionsFromExpr(mdata expr.MetaExpr) map[string]interface{} {
-	return extensionsFromExprWithPrefix(mdata, "swagger:extension:")
+	swag := extensionsFromExprWithPrefix(mdata, "swagger:extension:")
+	open := extensionsFromExprWithPrefix(mdata, "openapi:extension:")
+	if swag == nil {
+		return open
+	}
+	if open == nil {
+		return swag
+	}
+	for k, v := range open {
+		swag[k] = v
+	}
+	return swag
 }
 
-// extensionsFromExprWithPrefix generates swagger extensions from
+// extensionsFromExprWithPrefix generates openapi extensions from
 // the given meta expression with keys starting the given prefix.
 func extensionsFromExprWithPrefix(mdata expr.MetaExpr, prefix string) map[string]interface{} {
 	if !strings.HasSuffix(prefix, ":") {

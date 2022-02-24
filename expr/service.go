@@ -103,14 +103,14 @@ func (e *ErrorExpr) Validate() error {
 	walkAttribute(e.AttributeExpr, func(name string, att *AttributeExpr) error {
 		if _, ok := att.Meta["struct:error:name"]; ok {
 			if errField != "" {
-				verr.Add(e, "attribute %q has 'struct:error:name' meta which is already set for attribute %q in %q type", name, errField, e.AttributeExpr.Type.Name())
+				verr.Add(e, "duplicate error names in type %q", e.AttributeExpr.Type.Name())
 			}
 			errField = name
 			if att.Type != String {
-				verr.Add(e, "attribute %q with 'struct:error:name' in the meta must be a string in %q type", name, e.AttributeExpr.Type.Name())
+				verr.Add(e, "error name %q must be a string in type %q", name, e.AttributeExpr.Type.Name())
 			}
 			if !e.AttributeExpr.IsRequired(name) {
-				verr.Add(e, "attribute %q with 'struct:error:name' in the meta must be required in %q type", name, e.AttributeExpr.Type.Name())
+				verr.Add(e, "error name %q must be required in type %q", name, e.AttributeExpr.Type.Name())
 			}
 		}
 		return nil

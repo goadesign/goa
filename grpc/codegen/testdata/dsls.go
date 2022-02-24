@@ -59,8 +59,7 @@ var UnaryRPCWithErrorsDSL = func() {
 	var AnotherError = ResultType("application/vnd.goa.another_error", func() {
 		TypeName("AnotherError")
 		Attributes(func() {
-			Attribute("name", String, func() {
-				Meta("struct:error:name")
+			ErrorName("name", String, func() {
 				Enum("this", "that")
 			})
 			Attribute("description", String)
