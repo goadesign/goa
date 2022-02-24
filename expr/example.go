@@ -25,7 +25,11 @@ func (a *AttributeExpr) Example(r *Random) interface{} {
 		return ex[len(ex)-1].Value
 	}
 
-	if value, ok := a.Meta.Last("swagger:example"); ok && value == "false" {
+	value, ok := a.Meta.Last("openapi:example")
+	if !ok {
+		value, ok = a.Meta.Last("swagger:example")
+	}
+	if ok && value == "false" {
 		return nil
 	}
 

@@ -118,10 +118,12 @@ func defaultURI(h *expr.HostExpr) string {
 // mustGenerate returns true if the meta indicates that a OpenAPI specification should be
 // generated, false otherwise.
 func mustGenerate(meta expr.MetaExpr) bool {
-	if m, ok := meta["swagger:generate"]; ok {
-		if len(m) > 0 && m[0] == "false" {
-			return false
-		}
+	m, ok := meta.Last("openapi:generate")
+	if !ok {
+		m, ok = meta.Last("swagger:generate")
+	}
+	if ok && m == "false" {
+		return false
 	}
 	return true
 }
@@ -243,12 +245,12 @@ func hasAbsoluteRoutes(root *expr.RootExpr) bool {
 
 func summaryFromExpr(name string, e *expr.HTTPEndpointExpr) string {
 	for n, mdata := range e.Meta {
-		if n == "swagger:summary" && len(mdata) > 0 {
+		if (n == "openapi:summary" || n == "swagger:summary") && len(mdata) > 0 {
 			return mdata[0]
 		}
 	}
 	for n, mdata := range e.MethodExpr.Meta {
-		if n == "swagger:summary" && len(mdata) > 0 {
+		if (n == "openapi:summary" || n == "swagger:summary") && len(mdata) > 0 {
 			return mdata[0]
 		}
 	}
@@ -257,7 +259,7 @@ func summaryFromExpr(name string, e *expr.HTTPEndpointExpr) string {
 
 func summaryFromMeta(name string, meta expr.MetaExpr) string {
 	for n, mdata := range meta {
-		if n == "swagger:summary" && len(mdata) > 0 {
+		if (n == "openapi:summary" || n == "swagger:summary") && len(mdata) > 0 {
 			return mdata[0]
 		}
 	}

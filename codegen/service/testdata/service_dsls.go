@@ -135,9 +135,7 @@ var CustomErrorsDSL = func() {
 	var Result = ResultType("application/vnd.goa.error", func() {
 		TypeName("Result")
 		Attribute("a", String)
-		Attribute("b", String, func() {
-			Meta("struct:error:name")
-		})
+		ErrorName("b", String)
 		Required("b")
 	})
 	Service("CustomErrors", func() {
@@ -151,8 +149,7 @@ var CustomErrorsDSL = func() {
 
 var CustomErrorsCustomFieldDSL = func() {
 	var Result = ResultType("application/vnd.goa.error", func() {
-		Attribute("error", String, func() {
-			Meta("struct:error:name")
+		ErrorName("error", String, func() {
 			Meta("struct:field:name", "ErrorCode")
 		})
 		Required("error")

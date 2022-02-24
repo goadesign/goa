@@ -7,9 +7,7 @@ var ValidErrorsDSL = func() {
 		TypeName("Result")
 		Attributes(func() {
 			Attribute("a", String)
-			Attribute("b", String, func() {
-				Meta("struct:error:name")
-			})
+			ErrorName("b")
 			Required("b")
 		})
 	})
@@ -29,26 +27,20 @@ var ValidErrorsDSL = func() {
 
 var InvalidStructErrorNameDSL = func() {
 	var Common = Type("Common", func() {
-		Attribute("a", Int, func() { // invalid type for struct:error:name
-			Meta("struct:error:name")
-		})
+		ErrorName("a", Int) // invalid type for error name
 		Required("a")
 	})
 	var Result = ResultType("application/vnd.goa.error", func() {
 		TypeName("Error")
 		Attributes(func() {
 			Extend(Common)
-			Attribute("b", String, func() {
-				Meta("struct:error:name") // invalid duplication of struct:error:name
-			})
+			ErrorName("b") // invalid duplication of error name
 			Required("b")
 		})
 	})
 	var ServiceError = Type("ServiceError", func() {
-		Attribute("a", String, func() {
-			Meta("struct:error:name")
-		})
-		// invalid: attribute "a" with struct:error:name must be required
+		ErrorName("a")
+		// invalid: error name "a" must be required
 	})
 	var ErrorType = Type("ErrorType", func() {
 		Attribute("a", String)
@@ -65,10 +57,8 @@ var InvalidStructErrorNameDSL = func() {
 
 var ServiceErrorDSL = func() {
 	var ServiceError = Type("ServiceError", func() {
-		Attribute("a", String, func() {
-			Meta("struct:error:name")
-		})
-		// invalid: attribute "a" with struct:error:name must be required
+		ErrorName("a")
+		// invalid: error name "a" must be required
 	})
 	Service("InvalidStructErrorName", func() {
 		Error("service_error", ServiceError)

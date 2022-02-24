@@ -200,17 +200,17 @@ func buildOperation(key string, r *expr.RouteExpr, bodies *EndpointBodies, rand 
 		}
 	}
 
-	// swagger summary
+	// OpenAPI summary
 	var summary string
 	{
 		summary = fmt.Sprintf("%s %s", e.Name(), svc.Name())
 		for n, mdata := range r.Endpoint.Meta {
-			if n == "swagger:summary" && len(mdata) > 0 {
+			if (n == "openapi:summary" || n == "swagger:summary") && len(mdata) > 0 {
 				summary = mdata[0]
 			}
 		}
 		for n, mdata := range m.Meta {
-			if n == "swagger:summary" && len(mdata) > 0 {
+			if (n == "openapi:summary" || n == "swagger:summary") && len(mdata) > 0 {
 				summary = mdata[0]
 			}
 		}
@@ -340,12 +340,12 @@ func buildFileServerOperation(key string, fs *expr.HTTPFileServerExpr, api *expr
 		}
 	}
 
-	// swagger summary
+	// OpenAPI summary
 	var summary string
 	{
 		summary = fmt.Sprintf("Download %s", fs.FilePath)
 		for n, mdata := range fs.Meta {
-			if n == "swagger:summary" && len(mdata) > 0 {
+			if (n == "openapi:summary" || n == "swagger:summary") && len(mdata) > 0 {
 				summary = mdata[0]
 			}
 		}
@@ -582,10 +582,12 @@ func buildTags(api *expr.APIExpr) []*openapi.Tag {
 // mustGenerate returns true if the meta indicates that a OpenAPI specification should be
 // generated, false otherwise.
 func mustGenerate(meta expr.MetaExpr) bool {
-	if m, ok := meta["swagger:generate"]; ok {
-		if len(m) > 0 && m[0] == "false" {
-			return false
-		}
+	m, ok := meta.Last("openapi:generate")
+	if !ok {
+		m, ok = meta.Last("swagger:generate")
+	}
+	if ok && m == "false" {
+		return false
 	}
 	return true
 }
