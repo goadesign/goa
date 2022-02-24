@@ -806,6 +806,21 @@ var PayloadQueryArrayAnyValidateDSL = func() {
 	})
 }
 
+var PayloadQueryArrayAliasDSL = func() {
+	var Alias = Type("Alias", String)
+	Service("ServiceQueryArrayAlias", func() {
+		Method("MethodQueryArrayAlias", func() {
+			Payload(func() {
+				Attribute("q", ArrayOf(Alias))
+			})
+			HTTP(func() {
+				GET("/")
+				Param("q")
+			})
+		})
+	})
+}
+
 var PayloadQueryMapStringStringDSL = func() {
 	Service("ServiceQueryMapStringString", func() {
 		Method("MethodQueryMapStringString", func() {

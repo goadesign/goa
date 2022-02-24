@@ -2246,6 +2246,12 @@ func buildResponseBodyType(body, att *expr.AttributeExpr, e *expr.HTTPEndpointEx
 func extractPathParams(a *expr.MappedAttributeExpr, service *expr.AttributeExpr, scope *codegen.NameScope) []*ParamData {
 	var params []*ParamData
 	codegen.WalkMappedAttr(a, func(name, elem string, _ bool, c *expr.AttributeExpr) error {
+		// The StringSlice field of ParamData must be false for aliased primitive types
+		var stringSlice bool
+		if arr := expr.AsArray(c.Type); arr != nil {
+			stringSlice = arr.ElemType.Type.Kind() == expr.StringKind
+		}
+
 		makeHTTPType(c)
 		var (
 			varn = scope.Name(codegen.Goify(name, false))
@@ -2269,7 +2275,7 @@ func extractPathParams(a *expr.MappedAttributeExpr, service *expr.AttributeExpr,
 				Name:          elem,
 				AttributeName: name,
 				Slice:         arr != nil,
-				StringSlice:   arr != nil && arr.ElemType.Type.Kind() == expr.StringKind,
+				StringSlice:   stringSlice,
 				AttributeData: &AttributeData{
 					Description:  c.Description,
 					FieldName:    fieldName,
@@ -2296,6 +2302,12 @@ func extractPathParams(a *expr.MappedAttributeExpr, service *expr.AttributeExpr,
 func extractQueryParams(a *expr.MappedAttributeExpr, service *expr.AttributeExpr, scope *codegen.NameScope) []*ParamData {
 	var params []*ParamData
 	codegen.WalkMappedAttr(a, func(name, elem string, required bool, c *expr.AttributeExpr) error {
+		// The StringSlice field of ParamData must be false for aliased primitive types
+		var stringSlice bool
+		if arr := expr.AsArray(c.Type); arr != nil {
+			stringSlice = arr.ElemType.Type.Kind() == expr.StringKind
+		}
+
 		makeHTTPType(c)
 		var (
 			varn    = scope.Name(codegen.Goify(name, false))
@@ -2326,7 +2338,7 @@ func extractQueryParams(a *expr.MappedAttributeExpr, service *expr.AttributeExpr
 				expr.AsArray(mp.ElemType.Type).ElemType.Type.Kind() == expr.StringKind,
 			Element: &Element{
 				Slice:         arr != nil,
-				StringSlice:   arr != nil && arr.ElemType.Type.Kind() == expr.StringKind,
+				StringSlice:   stringSlice,
 				Name:          elem,
 				AttributeName: name,
 				AttributeData: &AttributeData{
@@ -2356,11 +2368,18 @@ func extractHeaders(a *expr.MappedAttributeExpr, svcAtt *expr.AttributeExpr, svc
 	var headers []*HeaderData
 	codegen.WalkMappedAttr(a, func(name, elem string, required bool, _ *expr.AttributeExpr) error {
 		var hattr *expr.AttributeExpr
+		var stringSlice bool
 		{
 			if hattr = svcAtt.Find(name); hattr == nil {
 				hattr = svcAtt
 			}
 			hattr = expr.DupAtt(hattr)
+
+			// The StringSlice field of ParamData must be false for aliased primitive types
+			if arr := expr.AsArray(hattr.Type); arr != nil {
+				stringSlice = arr.ElemType.Type.Kind() == expr.StringKind
+			}
+
 			makeHTTPType(hattr)
 		}
 		var (
@@ -2389,7 +2408,7 @@ func extractHeaders(a *expr.MappedAttributeExpr, svcAtt *expr.AttributeExpr, svc
 			Element: &Element{
 				Name:          elem,
 				Slice:         arr != nil,
-				StringSlice:   arr != nil && arr.ElemType.Type.Kind() == expr.StringKind,
+				StringSlice:   stringSlice,
 				AttributeName: name,
 				AttributeData: &AttributeData{
 					Description:  hattr.Description,
