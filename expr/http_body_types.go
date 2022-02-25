@@ -181,7 +181,7 @@ func buildHTTPResponseBody(name string, attr *AttributeExpr, resp *HTTPResponseE
 		return &AttributeExpr{Type: Empty}
 	}
 
-	// 0. Handle the case where the body is set explicitely in the design.
+	// 0. Handle the case where the body is set explicitly in the design.
 	// We need to create a type with an endpoint specific response body type
 	// name to handle the case where the same type is used by multiple
 	// methods with potentially different result types.
