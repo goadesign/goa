@@ -6,7 +6,7 @@ final output.
 
 The data types defined in the expr package are primitive types corresponding
 to scalar values (bool, string, integers, and numbers), array types which
-repressent a collection of items, map types which represent maps of key/value
+represent a collection of items, map types which represent maps of key/value
 pairs, and object types describing data structures with fields. The package
 also defines user types which can also be a result types. A result type is a
 user type used to describe response messages rendered using a view.
