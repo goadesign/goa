@@ -176,6 +176,9 @@ func transformObject(source, target *expr.AttributeExpr, sourceVar, targetVar st
 				srcPtr   = ta.SourceCtx.IsPrimitivePointer(n, srcMatt.AttributeExpr)
 				tgtPtr   = ta.TargetCtx.IsPrimitivePointer(n, tgtMatt.AttributeExpr)
 			)
+			if srcField == "source.TimeSlice" {
+				fmt.Println(srcField)
+			}
 			srcFieldConv := convertType(srcc, tgtc, srcField, ta)
 			switch {
 			case srcPtr && !tgtPtr:
