@@ -1,6 +1,10 @@
 package testdata
 
-import . "goa.design/goa/v3/dsl"
+import (
+	"time"
+
+	. "goa.design/goa/v3/dsl"
+)
 
 var TestTypesDSL = func() {
 	var (
@@ -190,6 +194,10 @@ var TestTypesDSL = func() {
 		_ = Type("WithDefaults", func() {
 			Attribute("int", Int, func() {
 				Default(100)
+			})
+			Attribute("time_slice", func() {
+				Meta("struct:field:type", "[]time.Time", "time")
+				Default([]time.Time{})
 			})
 			Attribute("required_int", Int, func() {
 				Default(99)

@@ -37,6 +37,7 @@ func TestGoTransform(t *testing.T) {
 		recursiveMap   = root.UserType("RecursiveMap")
 		composite      = root.UserType("Composite")
 		customField    = root.UserType("CompositeWithCustomField")
+		defaults       = root.UserType("WithDefaults")
 
 		resultType = root.UserType("ResultType")
 		rtCol      = root.UserType("ResultTypeCollection")
@@ -106,6 +107,7 @@ func TestGoTransform(t *testing.T) {
 			{"composite-to-custom-field-pkg", composite, customField, defaultCtx, defaultCtxPkg, srcTgtUseDefaultCompositeToCustomFieldPkgCode},
 			{"result-type-to-result-type", resultType, resultType, defaultCtx, defaultCtx, srcTgtUseDefaultResultTypeToResultTypeCode},
 			{"result-type-collection-to-result-type-collection", rtCol, rtCol, defaultCtx, defaultCtx, srcTgtUseDefaultRTColToRTColCode},
+			{"defaults-to-defaults-types", defaults, defaults, defaultCtx, defaultCtx, srcTgtUseDefaultSimpleToSimpleCode},
 
 			// alias
 			{"simple-alias-to-simple", simpleAlias, simple, defaultCtx, defaultCtx, srcTgtUseDefaultSimpleAliasToSimpleCode},
