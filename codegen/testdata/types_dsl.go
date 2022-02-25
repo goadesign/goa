@@ -197,7 +197,7 @@ var TestTypesDSL = func() {
 			})
 			Attribute("time_slice", func() {
 				Meta("struct:field:type", "[]time.Time", "time")
-				Default([]time.Time{})
+				Default([]time.Time{time.Date(2022, time.February, 24, 13, 1, 0, 0, time.UTC)})
 			})
 			Attribute("required_int", Int, func() {
 				Default(99)

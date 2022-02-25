@@ -969,6 +969,7 @@ const (
 	defaultsProtoToDefaultsSvcCode = `func transform() {
 	target := &WithDefaults{
 		Int:            int(source.Int),
+		TimeSlice:      []time.Time(source.TimeSlice),
 		RequiredInt:    int(source.RequiredInt),
 		String:         source.String_,
 		RequiredString: source.RequiredString,
@@ -979,6 +980,10 @@ const (
 	}
 	if source.Int == 0 {
 		target.Int = 100
+	}
+	var zero []time.Time
+	if source.TimeSlice == zero {
+		target.TimeSlice = []time.Time{time.Date(2022, time.February, 24, 13, 1, 0, 0, time.UTC)}
 	}
 	if source.String_ == "" {
 		target.String = "foo"

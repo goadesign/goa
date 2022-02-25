@@ -107,7 +107,7 @@ func TestGoTransform(t *testing.T) {
 			{"composite-to-custom-field-pkg", composite, customField, defaultCtx, defaultCtxPkg, srcTgtUseDefaultCompositeToCustomFieldPkgCode},
 			{"result-type-to-result-type", resultType, resultType, defaultCtx, defaultCtx, srcTgtUseDefaultResultTypeToResultTypeCode},
 			{"result-type-collection-to-result-type-collection", rtCol, rtCol, defaultCtx, defaultCtx, srcTgtUseDefaultRTColToRTColCode},
-			{"defaults-to-defaults-types", defaults, defaults, defaultCtx, defaultCtx, srcTgtUseDefaultSimpleToSimpleCode},
+			{"defaults-to-defaults-types", defaults, defaults, defaultCtx, defaultCtx, srcTgtDefaultsToDefaultsCode},
 
 			// alias
 			{"simple-alias-to-simple", simpleAlias, simple, defaultCtx, defaultCtx, srcTgtUseDefaultSimpleAliasToSimpleCode},
@@ -723,6 +723,85 @@ const (
 		target.Collection = make([]*ResultType, len(source.Collection))
 		for i, val := range source.Collection {
 			target.Collection[i] = transformResultTypeToResultType(val)
+		}
+	}
+}
+`
+
+	srcTgtDefaultsToDefaultsCode = `func transform() {
+	target := &WithDefaults{
+		Int:            source.Int,
+		TimeSlice:      source.TimeSlice,
+		RequiredInt:    source.RequiredInt,
+		String:         source.String,
+		RequiredString: source.RequiredString,
+		Bytes:          source.Bytes,
+		RequiredBytes:  source.RequiredBytes,
+		Any:            source.Any,
+		RequiredAny:    source.RequiredAny,
+	}
+	{
+		var zero int
+		if target.Int == zero {
+			target.Int = 100
+		}
+	}
+	{
+		var zero []time.Time
+		if target.TimeSlice == zero {
+			target.TimeSlice = []time.Time{time.Date(2022, time.February, 24, 13, 1, 0, 0, time.UTC)}
+		}
+	}
+	{
+		var zero string
+		if target.String == zero {
+			target.String = "foo"
+		}
+	}
+	{
+		var zero []byte
+		if target.Bytes == zero {
+			target.Bytes = []byte{0x66, 0x6f, 0x6f, 0x62, 0x61, 0x72}
+		}
+	}
+	{
+		var zero interface{}
+		if target.Any == zero {
+			target.Any = "something"
+		}
+	}
+	if source.Array != nil {
+		target.Array = make([]string, len(source.Array))
+		for i, val := range source.Array {
+			target.Array[i] = val
+		}
+	}
+	if source.Array == nil {
+		target.Array = []string{"foo", "bar"}
+	}
+	if source.RequiredArray != nil {
+		target.RequiredArray = make([]string, len(source.RequiredArray))
+		for i, val := range source.RequiredArray {
+			target.RequiredArray[i] = val
+		}
+	}
+	if source.Map != nil {
+		target.Map = make(map[int]string, len(source.Map))
+		for key, val := range source.Map {
+			tk := key
+			tv := val
+			target.Map[tk] = tv
+		}
+	}
+	if source.Map == nil {
+		target.Map = map[int]string{1: "foo"}
+	}
+	if source.RequiredMap != nil {
+		target.RequiredMap = make(map[int]string, len(source.RequiredMap))
+		for key, val := range source.RequiredMap {
+			tk := key
+			tv := val
+			target.RequiredMap[tk] = tv
 		}
 	}
 }
