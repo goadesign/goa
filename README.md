@@ -3,8 +3,10 @@
 ## Overview
 
 [![Build Status](https://github.com/goadesign/goa/workflows/build/badge.svg?branch=v3&event=push)](https://github.com/goadesign/goa/actions?query=branch%3Av3+event%3Apush)
-[![DSL GoDoc](https://img.shields.io/badge/godoc-DSL-blue)](https://pkg.go.dev/goa.design/goa/v3@v3.5.5/dsl?tab=doc)
-[![Slack](https://img.shields.io/badge/slack-gophers-orange.svg?style=flat)](https://gophers.slack.com/messages/goa/)
+[![GoDev](https://img.shields.io/badge/go.dev-reference-007d9c?logo=go&logoColor=white&style=flat-square)](https://pkg.go.dev/goa.design/goa/v3@latest/dsl?tab=doc)
+[![Go Report Card](https://goreportcard.com/badge/goadesign/goa)](https://goreportcard.com/report/goadesign/goa)
+[![Slack](https://img.shields.io/badge/join-us%20on%20slack-gray.svg?longCache=true&logo=slack&colorB=red)](https://gophers.slack.com/messages/goa)
+[![Twitter](https://img.shields.io/twitter/url/https/twitter.com/goadesign.svg?style=social&label=Follow%20%40goadesign)](https://twitter.com/goadesign)
 
 Goa takes a different approach to building services by making it possible to
 describe the *design* of the service API using a simple Go DSL. Goa uses the
