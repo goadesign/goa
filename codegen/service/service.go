@@ -3,41 +3,29 @@ package service
 import (
 	"fmt"
 	"path/filepath"
+	"sort"
 
 	"goa.design/goa/v3/codegen"
 	"goa.design/goa/v3/expr"
 )
 
-// File returns the service file for the given service.
-func File(genpkg string, service *expr.ServiceExpr) *codegen.File {
+// Files returns the service and user type files for the given service.
+func Files(genpkg string, service *expr.ServiceExpr) []*codegen.File {
 	svc := Services.Get(service.Name)
 	svcName := svc.PathName
-	path := filepath.Join(codegen.Gendir, svcName, "service.go")
-	header := codegen.Header(
-		service.Name+" service",
-		svc.PkgName,
-		[]*codegen.ImportSpec{
-			codegen.SimpleImport("context"),
-			codegen.SimpleImport("io"),
-			codegen.GoaImport(""),
-			codegen.GoaImport("security"),
-			codegen.NewImport(svc.ViewsPkg, genpkg+"/"+svcName+"/views"),
-		})
-	def := &codegen.SectionTemplate{
-		Name:    "service",
-		Source:  serviceT,
-		Data:    svc,
-		FuncMap: map[string]interface{}{"streamInterfaceFor": streamInterfaceFor},
-	}
+	svcPath := filepath.Join(codegen.Gendir, svcName, "service.go")
 
-	sections := []*codegen.SectionTemplate{header, def}
 	seen := make(map[string]struct{})
+	sectionsByPath := make(map[string][]*codegen.SectionTemplate)
+	sectionsByPath[svcPath] = []*codegen.SectionTemplate{}
 
 	for _, m := range svc.Methods {
+		payloadPath := withDefault(m.PayloadPath, svcPath)
+		resultPath := withDefault(m.ResultPath, svcPath)
 		if m.PayloadDef != "" {
 			if _, ok := seen[m.Payload]; !ok {
 				seen[m.Payload] = struct{}{}
-				sections = append(sections, &codegen.SectionTemplate{
+				sectionsByPath[payloadPath] = append(sectionsByPath[payloadPath], &codegen.SectionTemplate{
 					Name:   "service-payload",
 					Source: payloadT,
 					Data:   m,
@@ -47,7 +35,7 @@ func File(genpkg string, service *expr.ServiceExpr) *codegen.File {
 		if m.StreamingPayloadDef != "" {
 			if _, ok := seen[m.StreamingPayload]; !ok {
 				seen[m.StreamingPayload] = struct{}{}
-				sections = append(sections, &codegen.SectionTemplate{
+				sectionsByPath[payloadPath] = append(sectionsByPath[payloadPath], &codegen.SectionTemplate{
 					Name:   "service-streamig-payload",
 					Source: streamingPayloadT,
 					Data:   m,
@@ -57,7 +45,7 @@ func File(genpkg string, service *expr.ServiceExpr) *codegen.File {
 		if m.ResultDef != "" {
 			if _, ok := seen[m.Result]; !ok {
 				seen[m.Result] = struct{}{}
-				sections = append(sections, &codegen.SectionTemplate{
+				sectionsByPath[resultPath] = append(sectionsByPath[resultPath], &codegen.SectionTemplate{
 					Name:   "service-result",
 					Source: resultT,
 					Data:   m,
@@ -67,7 +55,8 @@ func File(genpkg string, service *expr.ServiceExpr) *codegen.File {
 	}
 	for _, ut := range svc.userTypes {
 		if _, ok := seen[ut.VarName]; !ok {
-			sections = append(sections, &codegen.SectionTemplate{
+			p := withDefault(ut.Path, svcPath)
+			sectionsByPath[p] = append(sectionsByPath[p], &codegen.SectionTemplate{
 				Name:   "service-user-type",
 				Source: userTypeT,
 				Data:   ut,
@@ -81,7 +70,8 @@ func File(genpkg string, service *expr.ServiceExpr) *codegen.File {
 			continue
 		}
 		if _, ok := seen[et.Name]; !ok {
-			sections = append(sections, &codegen.SectionTemplate{
+			p := withDefault(et.Path, svcPath)
+			sectionsByPath[p] = append(sectionsByPath[p], &codegen.SectionTemplate{
 				Name:   "error-user-type",
 				Source: userTypeT,
 				Data:   et,
@@ -91,7 +81,8 @@ func File(genpkg string, service *expr.ServiceExpr) *codegen.File {
 	}
 
 	for _, et := range errorTypes {
-		sections = append(sections, &codegen.SectionTemplate{
+		p := withDefault(et.Path, svcPath)
+		sectionsByPath[p] = append(sectionsByPath[p], &codegen.SectionTemplate{
 			Name:    "service-error",
 			Source:  errorT,
 			FuncMap: map[string]interface{}{"errorName": errorName},
@@ -99,7 +90,7 @@ func File(genpkg string, service *expr.ServiceExpr) *codegen.File {
 		})
 	}
 	for _, er := range svc.errorInits {
-		sections = append(sections, &codegen.SectionTemplate{
+		sectionsByPath[svcPath] = append(sectionsByPath[svcPath], &codegen.SectionTemplate{
 			Name:   "error-init-func",
 			Source: errorInitT,
 			Data:   er,
@@ -108,12 +99,12 @@ func File(genpkg string, service *expr.ServiceExpr) *codegen.File {
 
 	// transform result type functions
 	for _, t := range svc.viewedResultTypes {
-		sections = append(sections, &codegen.SectionTemplate{
+		sectionsByPath[svcPath] = append(sectionsByPath[svcPath], &codegen.SectionTemplate{
 			Name:   "viewed-result-type-to-service-result-type",
 			Source: typeInitT,
 			Data:   t.ResultInit,
 		})
-		sections = append(sections, &codegen.SectionTemplate{
+		sectionsByPath[svcPath] = append(sectionsByPath[svcPath], &codegen.SectionTemplate{
 			Name:   "service-result-type-to-viewed-result-type",
 			Source: typeInitT,
 			Data:   t.Init,
@@ -123,7 +114,7 @@ func File(genpkg string, service *expr.ServiceExpr) *codegen.File {
 	for _, t := range svc.projectedTypes {
 		for _, i := range t.TypeInits {
 			projh = codegen.AppendHelpers(projh, i.Helpers)
-			sections = append(sections, &codegen.SectionTemplate{
+			sectionsByPath[svcPath] = append(sectionsByPath[svcPath], &codegen.SectionTemplate{
 				Name:   "projected-type-to-service-type",
 				Source: typeInitT,
 				Data:   i,
@@ -131,7 +122,7 @@ func File(genpkg string, service *expr.ServiceExpr) *codegen.File {
 		}
 		for _, i := range t.Projections {
 			projh = codegen.AppendHelpers(projh, i.Helpers)
-			sections = append(sections, &codegen.SectionTemplate{
+			sectionsByPath[svcPath] = append(sectionsByPath[svcPath], &codegen.SectionTemplate{
 				Name:   "service-type-to-projected-type",
 				Source: typeInitT,
 				Data:   i,
@@ -140,14 +131,47 @@ func File(genpkg string, service *expr.ServiceExpr) *codegen.File {
 	}
 
 	for _, h := range projh {
-		sections = append(sections, &codegen.SectionTemplate{
+		sectionsByPath[svcPath] = append(sectionsByPath[svcPath], &codegen.SectionTemplate{
 			Name:   "transform-helpers",
 			Source: transformHelperT,
 			Data:   h,
 		})
 	}
 
-	return &codegen.File{Path: path, SectionTemplates: sections}
+	var files []*codegen.File
+	paths := make([]string, len(sectionsByPath))
+	i := 0
+	for p := range sectionsByPath {
+		paths[i] = p
+		i++
+	}
+	sort.Strings(paths)
+	for _, p := range paths {
+		if p == svcPath {
+			continue
+		}
+		h := codegen.Header("User types", packageFromPath(p), nil)
+		sections := append([]*codegen.SectionTemplate{h}, sectionsByPath[p]...)
+		files = append(files, &codegen.File{Path: filepath.Join(codegen.Gendir, p), SectionTemplates: sections})
+	}
+	imports := []*codegen.ImportSpec{
+		codegen.SimpleImport("context"),
+		codegen.SimpleImport("io"),
+		codegen.GoaImport(""),
+		codegen.GoaImport("security"),
+		codegen.NewImport(svc.ViewsPkg, genpkg+"/"+svcName+"/views"),
+	}
+	imports = append(imports, userTypeImports(genpkg, svc)...)
+	header := codegen.Header(service.Name+" service", svc.PkgName, imports)
+	def := &codegen.SectionTemplate{
+		Name:    "service",
+		Source:  serviceT,
+		Data:    svc,
+		FuncMap: map[string]interface{}{"streamInterfaceFor": streamInterfaceFor},
+	}
+	sections := append([]*codegen.SectionTemplate{header, def}, sectionsByPath[svcPath]...)
+	files = append(files, &codegen.File{Path: svcPath, SectionTemplates: sections})
+	return files
 }
 
 // AddServiceDataMetaTypeImports Adds all imports defined by struct:field:type from the service expr and the service data
@@ -198,6 +222,13 @@ func streamInterfaceFor(typ string, m *MethodData, stream *StreamData) map[strin
 		// of iterating through the list of views defined in the result type.
 		"IsViewedResult": m.ViewedResult != nil && m.ViewedResult.ViewName == "",
 	}
+}
+
+func withDefault(val, def string) string {
+	if val == "" {
+		return def
+	}
+	return val
 }
 
 // serviceT is the template used to write an service definition.

@@ -66,15 +66,16 @@ func EndpointFile(genpkg string, service *expr.ServiceExpr) *codegen.File {
 		sections []*codegen.SectionTemplate
 	)
 	{
-		header := codegen.Header(service.Name+" endpoints", svc.PkgName,
-			[]*codegen.ImportSpec{
-				{Path: "context"},
-				{Path: "io"},
-				{Path: "fmt"},
-				codegen.GoaImport(""),
-				codegen.GoaImport("security"),
-				{Path: genpkg + "/" + svcName + "/" + "views", Name: svc.ViewsPkg},
-			})
+		imports := []*codegen.ImportSpec{
+			{Path: "context"},
+			{Path: "io"},
+			{Path: "fmt"},
+			codegen.GoaImport(""),
+			codegen.GoaImport("security"),
+			{Path: genpkg + "/" + svcName + "/" + "views", Name: svc.ViewsPkg},
+		}
+		imports = append(imports, userTypeImports(genpkg, svc)...)
+		header := codegen.Header(service.Name+" endpoints", svc.PkgName, imports)
 		def := &codegen.SectionTemplate{
 			Name:   "endpoints-struct",
 			Source: serviceEndpointsT,

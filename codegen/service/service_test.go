@@ -57,10 +57,11 @@ func TestService(t *testing.T) {
 			if len(expr.Root.Services) != 1 {
 				t.Fatalf("got %d services, expected 1", len(expr.Root.Services))
 			}
-			fs := File("goa.design/goa/example", expr.Root.Services[0])
-			if fs == nil {
-				t.Fatalf("got nil file, expected not nil")
+			files := Files("goa.design/goa/example", expr.Root.Services[0])
+			if len(files) == 0 {
+				t.Fatalf("got no file, expected one")
 			}
+			fs := files[0]
 			buf := new(bytes.Buffer)
 			for _, s := range fs.SectionTemplates[1:] {
 				if err := s.Write(buf); err != nil {
