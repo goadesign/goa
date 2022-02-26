@@ -731,7 +731,7 @@ const (
 	srcTgtDefaultsToDefaultsCode = `func transform() {
 	target := &WithDefaults{
 		Int:            source.Int,
-		TimeSlice:      source.TimeSlice,
+		RawJSON:        source.RawJSON,
 		RequiredInt:    source.RequiredInt,
 		String:         source.String,
 		RequiredString: source.RequiredString,
@@ -747,9 +747,9 @@ const (
 		}
 	}
 	{
-		var zero []time.Time
-		if target.TimeSlice == zero {
-			target.TimeSlice = []time.Time{time.Date(2022, time.February, 24, 13, 1, 0, 0, time.UTC)}
+		var zero json.RawMessage
+		if target.RawJSON == zero {
+			target.RawJSON = json.RawMessage{0x66, 0x6f, 0x6f}
 		}
 	}
 	{

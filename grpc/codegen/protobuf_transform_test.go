@@ -563,7 +563,7 @@ const (
 	defaultsSvcToDefaultsProtoCode = `func transform() {
 	target := &WithDefaults{
 		Int:            int32(source.Int),
-		TimeSlice:      []time.Time(source.TimeSlice),
+		RawJson:        json.RawMessage(source.RawJSON),
 		RequiredInt:    int32(source.RequiredInt),
 		String_:        source.String,
 		RequiredString: source.RequiredString,
@@ -970,7 +970,7 @@ const (
 	defaultsProtoToDefaultsSvcCode = `func transform() {
 	target := &WithDefaults{
 		Int:            int(source.Int),
-		TimeSlice:      []time.Time(source.TimeSlice),
+		RawJSON:        json.RawMessage(source.RawJson),
 		RequiredInt:    int(source.RequiredInt),
 		String:         source.String_,
 		RequiredString: source.RequiredString,
@@ -982,9 +982,9 @@ const (
 	if source.Int == 0 {
 		target.Int = 100
 	}
-	var zero []time.Time
-	if source.TimeSlice == zero {
-		target.TimeSlice = []time.Time{time.Date(2022, time.February, 24, 13, 1, 0, 0, time.UTC)}
+	var zero json.RawMessage
+	if source.RawJson == zero {
+		target.RawJSON = json.RawMessage{0x66, 0x6f, 0x6f}
 	}
 	if source.String_ == "" {
 		target.String = "foo"

@@ -1,7 +1,7 @@
 package testdata
 
 import (
-	"time"
+	"encoding/json"
 
 	. "goa.design/goa/v3/dsl"
 )
@@ -195,9 +195,9 @@ var TestTypesDSL = func() {
 			Attribute("int", Int, func() {
 				Default(100)
 			})
-			Attribute("time_slice", func() {
-				Meta("struct:field:type", "[]time.Time", "time")
-				Default([]time.Time{time.Date(2022, time.February, 24, 13, 1, 0, 0, time.UTC)})
+			Attribute("raw_json", func() {
+				Meta("struct:field:type", "json.RawMessage", "json")
+				Default(json.RawMessage("foo"))
 			})
 			Attribute("required_int", Int, func() {
 				Default(99)
