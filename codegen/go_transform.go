@@ -237,7 +237,6 @@ func transformObject(source, target *expr.AttributeExpr, sourceVar, targetVar st
 		// type uses default values (i.e. attributes with default values are
 		// non-pointers) and has a default value set.
 		if tdef := tgtMatt.GetDefault(n); tdef != nil && ta.TargetCtx.UseDefault && !ta.TargetCtx.Pointer && !srcMatt.IsRequired(n) {
-
 			switch {
 			case ta.SourceCtx.IsPrimitivePointer(n, srcMatt.AttributeExpr) || !expr.IsPrimitive(srcc.Type):
 				// source attribute is a primitive pointer or not a primitive
@@ -252,8 +251,8 @@ func transformObject(source, target *expr.AttributeExpr, sourceVar, targetVar st
 				// source attribute is a primitive with default value
 				// (the field is not a pointer in this case)
 				code += "{\n\t"
-				if metaType, found := tgtc.Meta["struct:field:type"]; found && len(metaType) == 2 {
-					code += fmt.Sprintf("var zero %s\n\t", metaType[0])
+				if typeName, _ := GetMetaType(tgtc); typeName != "" {
+					code += fmt.Sprintf("var zero %s\n\t", typeName)
 				} else if _, ok := tgtc.Type.(expr.UserType); ok {
 					// aliased primitive
 					code += fmt.Sprintf("var zero %s\n\t", ta.TargetCtx.Scope.Ref(tgtc, ta.TargetCtx.Pkg))

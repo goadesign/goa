@@ -177,9 +177,6 @@ func transformObject(source, target *expr.AttributeExpr, sourceVar, targetVar st
 				srcPtr   = ta.SourceCtx.IsPrimitivePointer(n, srcMatt.AttributeExpr)
 				tgtPtr   = ta.TargetCtx.IsPrimitivePointer(n, tgtMatt.AttributeExpr)
 			)
-			if srcField == "source.TimeSlice" {
-				fmt.Println(srcField)
-			}
 			srcFieldConv := convertType(srcc, tgtc, srcField, ta)
 			switch {
 			case srcPtr && !tgtPtr:
@@ -312,13 +309,12 @@ func transformObject(source, target *expr.AttributeExpr, sourceVar, targetVar st
 				// buffer sets boolean fields as false. Changing them to the default
 				// value is counter-intuitive.
 				if !srcMatt.IsRequired(n) && srcc.Type != expr.Boolean {
-					if metaType, found := tgtc.Meta["struct:field:type"]; found && len(metaType) == 2 {
-						code += fmt.Sprintf("var zero %s\n\t", metaType[0])
+					if typeName, _ := codegen.GetMetaType(tgtc); typeName != "" {
+						code += fmt.Sprintf("var zero %s\n\t", typeName)
 						code += fmt.Sprintf("if %s == zero {\n\t", srcVar)
 					} else {
 						code += fmt.Sprintf("if %s {\n\t", checkZeroValue(srcc.Type, srcVar, false))
 					}
-
 					if ta.TargetCtx.IsPrimitivePointer(n, tgtMatt.AttributeExpr) && expr.IsPrimitive(tgtc.Type) {
 						code += fmt.Sprintf("var tmp %s = %#v\n\t%s = &tmp\n", codegen.GoNativeTypeName(tgtc.Type), tdef, tgtVar)
 					} else {
