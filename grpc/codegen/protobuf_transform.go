@@ -101,8 +101,9 @@ func protoBufTransform(source, target *expr.AttributeExpr, sourceVar, targetVar 
 // needed to make sure that any field name overridding is removed when
 // generating protobuf types (as protogen itself won't honor these overrides).
 func removeMeta(att *expr.AttributeExpr) {
-	codegen.Walk(att, func(a *expr.AttributeExpr) error {
-		a.Meta = nil
+	_ = codegen.Walk(att, func(a *expr.AttributeExpr) error {
+		delete(a.Meta, "struct:field:name")
+		delete(a.Meta, "struct:field:external")
 		return nil
 	})
 }
@@ -493,14 +494,14 @@ func convertType(source, target *expr.AttributeExpr, sourceVar string, ta *trans
 	if source.Type.Kind() != expr.IntKind && source.Type.Kind() != expr.UIntKind {
 		if sourceType != "" || targetType != "" {
 			if ta.proto || targetType == "" {
-				targetType = protoBufNativeGoTypeName(target.Type)
+				targetType = protoBufNativeGoTypeName(target)
 			}
 			return fmt.Sprintf("%s(%s)", targetType, sourceVar)
 		}
 		return sourceVar
 	}
 	if ta.proto {
-		return fmt.Sprintf("%s(%s)", protoBufNativeGoTypeName(target.Type), sourceVar)
+		return fmt.Sprintf("%s(%s)", protoBufNativeGoTypeName(target), sourceVar)
 	}
 	if targetType == "" {
 		targetType = codegen.GoNativeTypeName(target.Type)

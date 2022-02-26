@@ -258,11 +258,11 @@ const (
 
 	customSvcToCustomProtoCode = `func transform() {
 	target := &CustomTypes{
-		RequiredString: string(source.RequiredString),
-		DefaultBool:    bool(source.DefaultBool),
+		RequiredString: tdtypes.CustomString(source.RequiredString),
+		DefaultBool:    tdtypes.CustomBool(source.DefaultBool),
 	}
 	if source.Integer != nil {
-		target.Integer = int32(*source.Integer)
+		target.Integer = tdtypes.CustomInt(*source.Integer)
 	}
 }
 `
@@ -563,6 +563,7 @@ const (
 	defaultsSvcToDefaultsProtoCode = `func transform() {
 	target := &WithDefaults{
 		Int:            int32(source.Int),
+		TimeSlice:      []time.Time(source.TimeSlice),
 		RequiredInt:    int32(source.RequiredInt),
 		String_:        source.String,
 		RequiredString: source.RequiredString,
