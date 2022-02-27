@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"net/http"
+	"path"
 	"sort"
 	"strconv"
 	"strings"
@@ -758,6 +759,7 @@ func (d ServicesData) analyze(hs *expr.HTTPServiceExpr) *ServiceData {
 				name       string
 				args       []*InitArgData
 				payloadRef string
+				pkg        string
 			)
 			{
 				name = fmt.Sprintf("Build%sRequest", ep.VarName)
@@ -770,8 +772,9 @@ func (d ServicesData) analyze(hs *expr.HTTPServiceExpr) *ServiceData {
 						args = append(args, ca)
 					}
 				}
+				pkg = pkgWithDefault(ep.PayloadLoc, svc.PkgName)
 				if len(routes[0].PathInit.ClientArgs) > 0 && a.MethodExpr.Payload.Type != expr.Empty {
-					payloadRef = svc.Scope.GoFullTypeRef(a.MethodExpr.Payload, svc.PkgName)
+					payloadRef = svc.Scope.GoFullTypeRef(a.MethodExpr.Payload, pkg)
 				}
 			}
 			data := map[string]interface{}{
@@ -785,7 +788,7 @@ func (d ServicesData) analyze(hs *expr.HTTPServiceExpr) *ServiceData {
 				"IsStreaming":  a.MethodExpr.IsStreaming(),
 			}
 			if a.SkipRequestBodyEncodeDecode {
-				data["RequestStruct"] = svc.PkgName + "." + ep.RequestStruct
+				data["RequestStruct"] = pkg + "." + ep.RequestStruct
 			}
 			var buf bytes.Buffer
 			if err := requestInitTmpl.Execute(&buf, data); err != nil {
@@ -970,7 +973,8 @@ func buildPayloadData(e *expr.HTTPEndpointExpr, sd *ServiceData) *PayloadData {
 		ep         = svc.Method(e.MethodExpr.Name)
 		httpsvrctx = httpContext("", sd.Scope, true, true)
 		httpclictx = httpContext("", sd.Scope, true, false)
-		svcctx     = serviceContext(sd.Service.PkgName, sd.Service.Scope)
+		pkg        = pkgWithDefault(ep.PayloadLoc, svc.PkgName)
+		svcctx     = serviceContext(pkg, sd.Service.Scope)
 
 		request       *RequestData
 		mapQueryParam *ParamData
@@ -1341,11 +1345,11 @@ func buildPayloadData(e *expr.HTTPEndpointExpr, sd *ServiceData) *PayloadData {
 			ServerArgs:               serverArgs,
 			ClientArgs:               clientArgs,
 			CLIArgs:                  cliArgs,
-			ReturnTypeName:           svc.Scope.GoFullTypeName(payload, svc.PkgName),
-			ReturnTypeRef:            svc.Scope.GoFullTypeRef(payload, svc.PkgName),
+			ReturnTypeName:           svc.Scope.GoFullTypeName(payload, pkg),
+			ReturnTypeRef:            svc.Scope.GoFullTypeRef(payload, pkg),
 			ReturnIsStruct:           isObject,
 			ReturnTypeAttribute:      codegen.Goify(origin, true),
-			ReturnTypePkg:            svc.PkgName,
+			ReturnTypePkg:            pkg,
 			ServerCode:               serverCode,
 			ClientCode:               clientCode,
 			ReturnIsPrimitivePointer: pointer,
@@ -1360,8 +1364,8 @@ func buildPayloadData(e *expr.HTTPEndpointExpr, sd *ServiceData) *PayloadData {
 	)
 	{
 		if payload.Type != expr.Empty {
-			name = svc.Scope.GoFullTypeName(payload, svc.PkgName)
-			ref = svc.Scope.GoFullTypeRef(payload, svc.PkgName)
+			name = svc.Scope.GoFullTypeName(payload, pkg)
+			ref = svc.Scope.GoFullTypeRef(payload, pkg)
 		}
 		if init == nil {
 			if o := expr.AsObject(e.Params.Type); o != nil && len(*o) > 0 {
@@ -1389,6 +1393,7 @@ func buildResultData(e *expr.HTTPEndpointExpr, sd *ServiceData) *ResultData {
 	var (
 		svc    = sd.Service
 		ep     = svc.Method(e.MethodExpr.Name)
+		pkg    = pkgWithDefault(ep.ResultLoc, svc.PkgName)
 		result = e.MethodExpr.Result
 
 		name string
@@ -1401,8 +1406,8 @@ func buildResultData(e *expr.HTTPEndpointExpr, sd *ServiceData) *ResultData {
 			view = v[0]
 		}
 		if result.Type != expr.Empty {
-			name = svc.Scope.GoFullTypeName(result, svc.PkgName)
-			ref = svc.Scope.GoFullTypeRef(result, svc.PkgName)
+			name = svc.Scope.GoFullTypeName(result, pkg)
+			ref = svc.Scope.GoFullTypeRef(result, pkg)
 		}
 	}
 
@@ -1446,8 +1451,9 @@ func buildResponses(e *expr.HTTPEndpointExpr, result *expr.AttributeExpr, viewed
 
 		svc        = sd.Service
 		md         = svc.Method(e.Name())
+		pkg        = pkgWithDefault(md.ResultLoc, svc.PkgName)
 		httpclictx = httpContext("", sd.Scope, false, false)
-		svcctx     = serviceContext(sd.Service.PkgName, sd.Service.Scope)
+		svcctx     = serviceContext(pkg, sd.Service.Scope)
 	)
 	{
 		scope = svc.Scope
@@ -1554,8 +1560,8 @@ func buildResponses(e *expr.HTTPEndpointExpr, result *expr.AttributeExpr, viewed
 						helpers    []*codegen.TransformFunctionData
 					)
 					{
-						tname = svc.Scope.GoFullTypeName(result, svc.PkgName)
-						tref = svc.Scope.GoFullTypeRef(result, svc.PkgName)
+						tname = svc.Scope.GoFullTypeName(result, pkg)
+						tref = svc.Scope.GoFullTypeRef(result, pkg)
 						if viewed {
 							tname = svc.ViewScope.GoFullTypeName(result, svc.ViewsPkg)
 							tref = svc.ViewScope.GoFullTypeRef(result, svc.ViewsPkg)
@@ -1663,7 +1669,7 @@ func buildResponses(e *expr.HTTPEndpointExpr, result *expr.AttributeExpr, viewed
 						ReturnTypeRef:            tref,
 						ReturnIsStruct:           expr.IsObject(result.Type),
 						ReturnTypeAttribute:      codegen.Goify(origin, true),
-						ReturnTypePkg:            svc.PkgName,
+						ReturnTypePkg:            pkg,
 						ReturnIsPrimitivePointer: pointer,
 						ClientCode:               code,
 					}
@@ -1715,15 +1721,24 @@ func buildErrorsData(e *expr.HTTPEndpointExpr, sd *ServiceData) []*ErrorGroupDat
 	var (
 		svc        = sd.Service
 		httpclictx = httpContext("", sd.Scope, false, false)
-		svcctx     = serviceContext(sd.Service.PkgName, sd.Service.Scope)
 	)
 
 	data := make(map[string][]*ErrorData)
 	for _, v := range e.HTTPErrors {
+		makeHTTPType(v.Response.Body)
 		var (
 			init *InitData
 			body = v.Response.Body.Type
 		)
+
+		pkg := sd.Service.PkgName
+		if ut, ok := v.ErrorExpr.Type.(expr.UserType); ok {
+			if p, ok := ut.Attribute().Meta.Last("struct:pkg:path"); ok {
+				pkg = codegen.Goify(path.Base(p), false)
+			}
+		}
+		errctx := serviceContext(pkg, sd.Service.Scope)
+
 		if needInit(v.ErrorExpr.Type) {
 			var (
 				name     string
@@ -1747,7 +1762,7 @@ func buildErrorsData(e *expr.HTTPEndpointExpr, sd *ServiceData) []*ErrorGroupDat
 						AttributeData: &AttributeData{VarName: "body", TypeRef: sd.Scope.GoTypeRef(v.Response.Body)},
 					}}
 				}
-				for _, h := range extractHeaders(v.Response.Headers, v.ErrorExpr.AttributeExpr, svcctx, sd.Scope) {
+				for _, h := range extractHeaders(v.Response.Headers, v.ErrorExpr.AttributeExpr, errctx, sd.Scope) {
 					args = append(args, &InitArgData{
 						Ref: h.VarName,
 						AttributeData: &AttributeData{
@@ -1762,7 +1777,7 @@ func buildErrorsData(e *expr.HTTPEndpointExpr, sd *ServiceData) []*ErrorGroupDat
 						},
 					})
 				}
-				for _, c := range extractCookies(v.Response.Cookies, v.ErrorExpr.AttributeExpr, svcctx, sd.Scope) {
+				for _, c := range extractCookies(v.Response.Cookies, v.ErrorExpr.AttributeExpr, errctx, sd.Scope) {
 					args = append(args, &InitArgData{
 						Ref: c.VarName,
 						AttributeData: &AttributeData{
@@ -1795,14 +1810,14 @@ func buildErrorsData(e *expr.HTTPEndpointExpr, sd *ServiceData) []*ErrorGroupDat
 					}
 
 					var helpers []*codegen.TransformFunctionData
-					code, helpers, err = unmarshal(v.Response.Body, eAtt, "body", "v", httpclictx, svcctx)
+					code, helpers, err = unmarshal(v.Response.Body, eAtt, "body", "v", httpclictx, errctx)
 					if err == nil {
 						sd.ClientTransformHelpers = codegen.AppendHelpers(sd.ClientTransformHelpers, helpers)
 					}
 				} else if expr.IsArray(v.ErrorExpr.Type) || expr.IsMap(v.ErrorExpr.Type) {
 					if params := expr.AsObject(e.QueryParams().Type); len(*params) > 0 {
 						var helpers []*codegen.TransformFunctionData
-						code, helpers, err = unmarshal((*params)[0].Attribute, v.ErrorExpr.AttributeExpr, codegen.Goify((*params)[0].Name, false), "v", httpclictx, svcctx)
+						code, helpers, err = unmarshal((*params)[0].Attribute, v.ErrorExpr.AttributeExpr, codegen.Goify((*params)[0].Name, false), "v", httpclictx, errctx)
 						if err == nil {
 							sd.ClientTransformHelpers = codegen.AppendHelpers(sd.ClientTransformHelpers, helpers)
 						}
@@ -1817,11 +1832,11 @@ func buildErrorsData(e *expr.HTTPEndpointExpr, sd *ServiceData) []*ErrorGroupDat
 				Name:                name,
 				Description:         desc,
 				ClientArgs:          args,
-				ReturnTypeName:      svc.Scope.GoFullTypeName(v.ErrorExpr.AttributeExpr, svc.PkgName),
-				ReturnTypeRef:       svc.Scope.GoFullTypeRef(v.ErrorExpr.AttributeExpr, svc.PkgName),
+				ReturnTypeName:      svc.Scope.GoFullTypeName(v.ErrorExpr.AttributeExpr, pkg),
+				ReturnTypeRef:       svc.Scope.GoFullTypeRef(v.ErrorExpr.AttributeExpr, pkg),
 				ReturnIsStruct:      expr.IsObject(v.ErrorExpr.Type),
 				ReturnTypeAttribute: codegen.Goify(origin, true),
-				ReturnTypePkg:       svc.PkgName,
+				ReturnTypePkg:       pkg,
 				ClientCode:          code,
 			}
 		}
@@ -1848,8 +1863,8 @@ func buildErrorsData(e *expr.HTTPEndpointExpr, sd *ServiceData) []*ErrorGroupDat
 				}
 			}
 
-			headers := extractHeaders(v.Response.Headers, v.ErrorExpr.AttributeExpr, svcctx, sd.Scope)
-			cookies := extractCookies(v.Response.Cookies, v.ErrorExpr.AttributeExpr, svcctx, sd.Scope)
+			headers := extractHeaders(v.Response.Headers, v.ErrorExpr.AttributeExpr, errctx, sd.Scope)
+			cookies := extractCookies(v.Response.Cookies, v.ErrorExpr.AttributeExpr, errctx, sd.Scope)
 			var mustValidate bool
 			{
 				for _, h := range headers {
@@ -1882,7 +1897,7 @@ func buildErrorsData(e *expr.HTTPEndpointExpr, sd *ServiceData) []*ErrorGroupDat
 			}
 		}
 
-		ref := svc.Scope.GoFullTypeRef(v.ErrorExpr.AttributeExpr, svc.PkgName)
+		ref := svc.Scope.GoFullTypeRef(v.ErrorExpr.AttributeExpr, pkg)
 		data[ref] = append(data[ref], &ErrorData{
 			Name:     v.Name,
 			Response: responseData,
@@ -1949,7 +1964,9 @@ func buildRequestBodyType(body, att *expr.AttributeExpr, e *expr.HTTPEndpointExp
 
 		svc     = sd.Service
 		httpctx = httpContext("", sd.Scope, true, svr)
-		svcctx  = serviceContext(sd.Service.PkgName, sd.Service.Scope)
+		ep      = sd.Service.Method(e.Name())
+		pkg     = pkgWithDefault(ep.PayloadLoc, sd.Service.PkgName)
+		svcctx  = serviceContext(pkg, sd.Service.Scope)
 	)
 	{
 		name = body.Type.Name()
@@ -2021,7 +2038,7 @@ func buildRequestBodyType(body, att *expr.AttributeExpr, e *expr.HTTPEndpointExp
 				Ref: sourceVar,
 				AttributeData: &AttributeData{
 					VarName:  sourceVar,
-					TypeRef:  svc.Scope.GoFullTypeRef(att, svc.PkgName),
+					TypeRef:  svc.Scope.GoFullTypeRef(att, pkg),
 					Type:     att.Type,
 					Validate: validateDef,
 					Example:  att.Example(expr.Root.API.Random()),
@@ -2079,7 +2096,9 @@ func buildResponseBodyType(body, att *expr.AttributeExpr, e *expr.HTTPEndpointEx
 
 		svc     = sd.Service
 		httpctx = httpContext("", sd.Scope, false, svr)
-		svcctx  = serviceContext(sd.Service.PkgName, sd.Service.Scope)
+		ep      = sd.Service.Method(e.Name())
+		pkg     = pkgWithDefault(ep.PayloadLoc, sd.Service.PkgName)
+		svcctx  = serviceContext(pkg, sd.Service.Scope)
 	)
 	{
 		// For server code, we project the response body type if the type is a result
@@ -2205,7 +2224,7 @@ func buildResponseBodyType(body, att *expr.AttributeExpr, e *expr.HTTPEndpointEx
 			if view != nil {
 				ref += ".Projected"
 			}
-			tref := svc.Scope.GoFullTypeRef(att, svc.PkgName)
+			tref := svc.Scope.GoFullTypeRef(att, pkg)
 			if view != nil {
 				tref = svc.ViewScope.GoFullTypeRef(att, svc.ViewsPkg)
 			}
@@ -2611,6 +2630,14 @@ func serviceContext(pkg string, scope *codegen.NameScope) *codegen.AttributeCont
 // viewContext returns an attribute context for projected types.
 func viewContext(pkg string, scope *codegen.NameScope) *codegen.AttributeContext {
 	return codegen.NewAttributeContext(true, false, true, pkg, scope)
+}
+
+// pkgWithDefault returns the package name of the given location if not nil, def otherwise.
+func pkgWithDefault(loc *codegen.Location, def string) string {
+	if loc == nil {
+		return def
+	}
+	return codegen.Goify(path.Base(loc.ImportPath), false)
 }
 
 // unmarshal initializes a data structure defined by target type from a data

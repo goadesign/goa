@@ -72,16 +72,15 @@ func serverType(genpkg string, svc *expr.GRPCServiceExpr, seen map[string]struct
 	{
 		svcName := sd.Service.PathName
 		fpath = filepath.Join(codegen.Gendir, "grpc", svcName, "server", "types.go")
-		sections = []*codegen.SectionTemplate{
-			codegen.Header(svc.Name()+" gRPC server types", "server",
-				[]*codegen.ImportSpec{
-					{Path: "unicode/utf8"},
-					codegen.GoaImport(""),
-					{Path: path.Join(genpkg, svcName), Name: sd.Service.PkgName},
-					{Path: path.Join(genpkg, svcName, "views"), Name: sd.Service.ViewsPkg},
-					{Path: path.Join(genpkg, "grpc", svcName, pbPkgName), Name: sd.PkgName},
-				}),
+		imports := []*codegen.ImportSpec{
+			{Path: "unicode/utf8"},
+			codegen.GoaImport(""),
+			{Path: path.Join(genpkg, svcName), Name: sd.Service.PkgName},
+			{Path: path.Join(genpkg, svcName, "views"), Name: sd.Service.ViewsPkg},
+			{Path: path.Join(genpkg, "grpc", svcName, pbPkgName), Name: sd.PkgName},
 		}
+		imports = append(imports, sd.Service.UserTypeImports...)
+		sections = []*codegen.SectionTemplate{codegen.Header(svc.Name()+" gRPC server types", "server", imports)}
 		for _, init := range initData {
 			if _, ok := foundInits[init.Name]; ok {
 				continue

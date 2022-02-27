@@ -74,7 +74,7 @@ func EndpointFile(genpkg string, service *expr.ServiceExpr) *codegen.File {
 			codegen.GoaImport("security"),
 			{Path: genpkg + "/" + svcName + "/" + "views", Name: svc.ViewsPkg},
 		}
-		imports = append(imports, userTypeImports(genpkg, svc)...)
+		imports = append(imports, svc.UserTypeImports...)
 		header := codegen.Header(service.Name+" endpoints", svc.PkgName, imports)
 		def := &codegen.SectionTemplate{
 			Name:   "endpoints-struct",

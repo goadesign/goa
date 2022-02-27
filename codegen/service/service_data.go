@@ -61,6 +61,9 @@ type (
 		Scope *codegen.NameScope
 		// ViewScope initialized with all the viewed types.
 		ViewScope *codegen.NameScope
+		// UserTypeImports lists the import specifications for the user
+		// types used by the service.
+		UserTypeImports []*codegen.ImportSpec
 
 		// userTypes lists the type definitions that the service depends on.
 		userTypes []*UserTypeData
@@ -107,9 +110,9 @@ type (
 		VarName string
 		// Payload is the name of the payload type if any,
 		Payload string
-		// PayloadPath is the path to the file where the payload Go
-		// struct should be generated if set via Meta.
-		PayloadPath string
+		// PayloadLoc defines the file and Go package of the payload type
+		// if overridden via Meta.
+		PayloadLoc *codegen.Location
 		// PayloadDef is the payload type definition if any.
 		PayloadDef string
 		// PayloadRef is a reference to the payload type if any,
@@ -132,9 +135,9 @@ type (
 		StreamingPayloadEx interface{}
 		// Result is the name of the result type if any.
 		Result string
-		// ResultPath is the path to the file where the result Go
-		// struct should be generated if set via Meta.
-		ResultPath string
+		// ResultLoc defines the file and Go package of the result type
+		// if overridden via Meta.
+		ResultLoc *codegen.Location
 		// ResultDef is the result type definition if any.
 		ResultDef string
 		// ResultRef is the reference to the result type if any.
@@ -236,8 +239,9 @@ type (
 		Def string
 		// Ref is the reference to the type.
 		Ref string
-		// Path is the generated Go file path if set via Meta.
-		Path string
+		// Loc defines the file and Go package of the type if overridden
+		// via Meta.
+		Loc *codegen.Location
 		// Type is the underlying type.
 		Type expr.UserType
 	}
@@ -421,13 +425,53 @@ func (d ServicesData) Get(name string) *Data {
 
 // Method returns the service method data for the method with the given name,
 // nil if there isn't one.
-func (s *Data) Method(name string) *MethodData {
-	for _, m := range s.Methods {
+func (d *Data) Method(name string) *MethodData {
+	for _, m := range d.Methods {
 		if m.Name == name {
 			return m
 		}
 	}
 	return nil
+}
+
+// initUserTypeImports sets the import paths for the user types defined in the
+// service.  User types may be declared in multiple packages when defined with
+// the Meta key "struct:pkg:path".
+func (d *Data) initUserTypeImports(genpkg string) {
+	importsByPath := make(map[string]*codegen.ImportSpec)
+
+	initLoc := func(loc *codegen.Location) {
+		if loc == nil {
+			return
+		}
+		dir := filepath.Dir(loc.FilePath)
+		loc.ImportPath = genpkg + "/" + dir
+		base := filepath.Base(dir)
+		var pkg string
+		if p := codegen.Goify(base, false); p != base {
+			pkg = p
+		}
+		importsByPath[loc.FilePath] = &codegen.ImportSpec{Name: pkg, Path: loc.ImportPath}
+	}
+
+	for _, m := range d.Methods {
+		initLoc(m.PayloadLoc)
+		initLoc(m.ResultLoc)
+		for _, ut := range d.userTypes {
+			initLoc(ut.Loc)
+		}
+		for _, et := range d.errorTypes {
+			initLoc(et.Loc)
+		}
+	}
+
+	imports := make([]*codegen.ImportSpec, len(importsByPath))
+	i := 0
+	for _, imp := range importsByPath { // Order does not matter, imports are sorted during formatting.
+		imports[i] = imp
+		i++
+	}
+	d.UserTypeImports = imports
 }
 
 // Scheme returns the scheme data with the given scheme name.
@@ -689,13 +733,17 @@ func collectTypes(at *expr.AttributeExpr, scope *codegen.NameScope, seen map[str
 		if _, ok := seen[dt.ID()]; ok {
 			return nil
 		}
+		var loc *codegen.Location
+		if p := genPath(dt); p != "" {
+			loc = &codegen.Location{FilePath: p}
+		}
 		data = append(data, &UserTypeData{
 			Name:        dt.Name(),
 			VarName:     scope.GoTypeName(at),
 			Description: dt.Attribute().Description,
 			Def:         scope.GoTypeDef(dt.Attribute(), false, true),
 			Ref:         scope.GoTypeRef(at),
-			Path:        genPath(dt),
+			Loc:         loc,
 			Type:        dt,
 		})
 		seen[dt.ID()] = struct{}{}
@@ -808,19 +856,26 @@ func buildMethodData(m *expr.MethodExpr, svcPkgName string, service *expr.Servic
 	if httpSvc := expr.Root.HTTPService(m.Service.Name); httpSvc != nil {
 		httpMet = httpSvc.Endpoint(m.Name)
 	}
+	var payloadLoc, resultLoc *codegen.Location
+	if payloadPath != "" {
+		payloadLoc = &codegen.Location{FilePath: payloadPath}
+	}
+	if resultPath != "" {
+		resultLoc = &codegen.Location{FilePath: resultPath}
+	}
 	data := &MethodData{
 		Name:                         m.Name,
 		VarName:                      vname,
 		Description:                  desc,
 		Payload:                      payloadName,
-		PayloadPath:                  payloadPath,
+		PayloadLoc:                   payloadLoc,
 		PayloadDef:                   payloadDef,
 		PayloadRef:                   payloadRef,
 		PayloadDesc:                  payloadDesc,
 		PayloadEx:                    payloadEx,
 		PayloadDefault:               m.Payload.DefaultValue,
 		Result:                       rname,
-		ResultPath:                   resultPath,
+		ResultLoc:                    resultLoc,
 		ResultDef:                    resultDef,
 		ResultRef:                    resultRef,
 		ResultDesc:                   resultDesc,
@@ -1639,46 +1694,6 @@ func packageFromPath(path string) string {
 		return ""
 	}
 	return codegen.Goify(filepath.Base(filepath.Dir(path)), false)
-}
-
-// userTypeImports returns the packages that need to be imported to use the user
-// types used by the given service. User types may be declared in multiple
-// packages when defined with the Meta key "struct:pkg:path".
-func userTypeImports(genpkg string, svc *Data) []*codegen.ImportSpec {
-	pkgname := func(path string) string {
-		dir := filepath.Base(filepath.Dir(path))
-		var pkg string
-		if p := codegen.Goify(dir, false); p != dir {
-			pkg = p
-		}
-		return pkg
-	}
-	paths := make(map[string]string)
-	for _, m := range svc.Methods {
-		if m.PayloadPath != "" {
-			paths[m.PayloadPath] = pkgname(m.PayloadPath)
-		}
-		if m.ResultPath != "" {
-			paths[m.ResultPath] = pkgname(m.ResultPath)
-		}
-		for _, ut := range svc.userTypes {
-			if ut.Path != "" {
-				paths[m.ResultPath] = pkgname(ut.Path)
-			}
-		}
-		for _, et := range svc.errorTypes {
-			if et.Path != "" {
-				paths[m.ResultPath] = pkgname(et.Path)
-			}
-		}
-	}
-	imports := make([]*codegen.ImportSpec, len(paths))
-	i := 0
-	for p, n := range paths {
-		imports[i] = &codegen.ImportSpec{Path: genpkg + "/" + filepath.Dir(p), Name: n}
-		i++
-	}
-	return imports
 }
 
 // walkViewAttrs iterates through the attributes in att that are found in the

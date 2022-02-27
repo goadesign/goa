@@ -14,24 +14,14 @@ func EncodeMethodPrimitiveErrorResponseError(encoder func(context.Context, http.
 		case "bad_request":
 			res := v.(serviceprimitiveerrorresponse.BadRequest)
 			enc := encoder(ctx, w)
-			var body interface{}
-			if formatter != nil {
-				body = formatter(res)
-			} else {
-				body = NewMethodPrimitiveErrorResponseBadRequestResponseBody(res)
-			}
+			body := res
 			w.Header().Set("goa-error", res.ErrorName())
 			w.WriteHeader(http.StatusBadRequest)
 			return enc.Encode(body)
 		case "internal_error":
 			res := v.(serviceprimitiveerrorresponse.InternalError)
 			enc := encoder(ctx, w)
-			var body interface{}
-			if formatter != nil {
-				body = formatter(res)
-			} else {
-				body = NewMethodPrimitiveErrorResponseInternalErrorResponseBody(res)
-			}
+			body := res
 			w.Header().Set("goa-error", res.ErrorName())
 			w.WriteHeader(http.StatusInternalServerError)
 			return enc.Encode(body)
@@ -106,12 +96,7 @@ func EncodeMethodAPIPrimitiveErrorResponseError(encoder func(context.Context, ht
 		case "bad_request":
 			res := v.(serviceapiprimitiveerrorresponse.BadRequest)
 			enc := encoder(ctx, w)
-			var body interface{}
-			if formatter != nil {
-				body = formatter(res)
-			} else {
-				body = NewMethodAPIPrimitiveErrorResponseBadRequestResponseBody(res)
-			}
+			body := res
 			w.Header().Set("goa-error", res.ErrorName())
 			w.WriteHeader(http.StatusBadRequest)
 			return enc.Encode(body)

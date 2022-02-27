@@ -71,16 +71,15 @@ func clientType(genpkg string, svc *expr.GRPCServiceExpr, seen map[string]struct
 	{
 		svcName := sd.Service.PathName
 		fpath = filepath.Join(codegen.Gendir, "grpc", svcName, "client", "types.go")
-		sections = []*codegen.SectionTemplate{
-			codegen.Header(svc.Name()+" gRPC client types", "client",
-				[]*codegen.ImportSpec{
-					{Path: "unicode/utf8"},
-					codegen.GoaImport(""),
-					{Path: path.Join(genpkg, svcName), Name: sd.Service.PkgName},
-					{Path: path.Join(genpkg, svcName, "views"), Name: sd.Service.ViewsPkg},
-					{Path: path.Join(genpkg, "grpc", svcName, pbPkgName), Name: sd.PkgName},
-				}),
+		imports := []*codegen.ImportSpec{
+			{Path: "unicode/utf8"},
+			codegen.GoaImport(""),
+			{Path: path.Join(genpkg, svcName), Name: sd.Service.PkgName},
+			{Path: path.Join(genpkg, svcName, "views"), Name: sd.Service.ViewsPkg},
+			{Path: path.Join(genpkg, "grpc", svcName, pbPkgName), Name: sd.PkgName},
 		}
+		imports = append(imports, sd.Service.UserTypeImports...)
+		sections = []*codegen.SectionTemplate{codegen.Header(svc.Name()+" gRPC client types", "client", imports)}
 		for _, init := range initData {
 			sections = append(sections, &codegen.SectionTemplate{
 				Name:   "client-type-init",

@@ -2,6 +2,7 @@ package codegen
 
 import (
 	"fmt"
+	"path"
 
 	"goa.design/goa/v3/codegen"
 	"goa.design/goa/v3/codegen/service"
@@ -493,10 +494,12 @@ func (d ServicesData) analyze(gs *expr.GRPCServiceExpr) *ServiceData {
 		)
 		{
 			if e.MethodExpr.Payload.Type != expr.Empty {
-				payloadRef = svc.Scope.GoFullTypeRef(e.MethodExpr.Payload, svc.PkgName)
+				payloadRef = svc.Scope.GoFullTypeRef(e.MethodExpr.Payload,
+					pkgWithDefault(md.PayloadLoc, svc.PkgName))
 			}
 			if e.MethodExpr.Result.Type != expr.Empty {
-				resultRef = svc.Scope.GoFullTypeRef(e.MethodExpr.Result, svc.PkgName)
+				resultRef = svc.Scope.GoFullTypeRef(e.MethodExpr.Result,
+					pkgWithDefault(md.ResultLoc, svc.PkgName))
 			}
 			if md.ViewedResult != nil {
 				viewedResultRef = md.ViewedResult.FullRef
@@ -778,10 +781,10 @@ func collectValidations(att *expr.AttributeExpr, ctx *codegen.AttributeContext, 
 
 // buildRequestConvertData builds the convert data for the server and client
 // requests.
-//	* server side - converts generated gRPC request type in *.pb.go and the
-//									gRPC metadata to method payload type.
-//	* client side - converts method payload type to generated gRPC request
-//									type in *.pb.go.
+//    * server side - converts generated gRPC request type in *.pb.go and the
+//      gRPC  metadata to method payload type.
+//    * client side - converts method payload type to generated gRPC request
+//      type in *.pb.go.
 //
 // svr param indicates that the convert data is generated for server side.
 func buildRequestConvertData(request, payload *expr.AttributeExpr, md []*MetadataData, e *expr.GRPCEndpointExpr, sd *ServiceData, svr bool) *ConvertData {
@@ -797,7 +800,8 @@ func buildRequestConvertData(request, payload *expr.AttributeExpr, md []*Metadat
 
 	var (
 		svc    = sd.Service
-		svcCtx = serviceTypeContext(svc.PkgName, svc.Scope)
+		pkg    = pkgWithDefault(svc.Method(e.MethodExpr.Name).PayloadLoc, svc.PkgName)
+		svcCtx = serviceTypeContext(pkg, svc.Scope)
 	)
 
 	if svr {
@@ -844,8 +848,8 @@ func buildRequestConvertData(request, payload *expr.AttributeExpr, md []*Metadat
 		data.Description = fmt.Sprintf("%s builds the gRPC request type from the payload of the %q endpoint of the %q service.", data.Name, e.Name(), svc.Name)
 	}
 	return &ConvertData{
-		SrcName: svc.Scope.GoFullTypeName(payload, svc.PkgName),
-		SrcRef:  svc.Scope.GoFullTypeRef(payload, svc.PkgName),
+		SrcName: svc.Scope.GoFullTypeName(payload, pkg),
+		SrcRef:  svc.Scope.GoFullTypeRef(payload, pkg),
 		TgtName: protoBufGoFullTypeName(request, sd.PkgName, sd.Scope),
 		TgtRef:  protoBufGoFullTypeRef(request, sd.PkgName, sd.Scope),
 		Init:    data,
@@ -854,10 +858,10 @@ func buildRequestConvertData(request, payload *expr.AttributeExpr, md []*Metadat
 
 // buildResponseConvertData builds the convert data for the server and client
 // responses.
-//	* server side - converts method result type to generated gRPC response type
-//									in *.pb.go
-//	* client side - converts generated gRPC response type in *.pb.go and
-//									response metadata to method result type.
+//     * server side - converts method result type to generated gRPC response
+//       type in *.pb.go
+//     * client side - converts generated gRPC response type in *.pb.go and
+//       response metadata to method result type.
 //
 // svr param indicates that the convert data is generated for server side.
 func buildResponseConvertData(response, result *expr.AttributeExpr, svcCtx *codegen.AttributeContext, hdrs, trlrs []*MetadataData, e *expr.GRPCEndpointExpr, sd *ServiceData, svr bool) *ConvertData {
@@ -1267,7 +1271,16 @@ func resultContext(e *expr.GRPCEndpointExpr, sd *ServiceData) (*expr.AttributeEx
 		// return projected type context
 		return vresAtt, codegen.NewAttributeContext(true, false, true, svc.ViewsPkg, svc.ViewScope)
 	}
-	return e.MethodExpr.Result, serviceTypeContext(svc.PkgName, svc.Scope)
+	pkg := pkgWithDefault(md.ResultLoc, svc.PkgName)
+	return e.MethodExpr.Result, serviceTypeContext(pkg, svc.Scope)
+}
+
+// pkgWithDefault returns the package name of the given location if not nil, def otherwise.
+func pkgWithDefault(loc *codegen.Location, def string) string {
+	if loc == nil {
+		return def
+	}
+	return codegen.Goify(path.Base(loc.ImportPath), false)
 }
 
 // getPrimitive returns the primitive expression if the given expression is an alias to one

@@ -26,7 +26,7 @@ func ClientFile(genpkg string, service *expr.ServiceExpr) *codegen.File {
 			{Path: "io"},
 			codegen.GoaImport(""),
 		}
-		imports = append(imports, userTypeImports(genpkg, svc)...)
+		imports = append(imports, svc.UserTypeImports...)
 		header := codegen.Header(service.Name+" client", svc.PkgName, imports)
 		def := &codegen.SectionTemplate{
 			Name:   "client-struct",

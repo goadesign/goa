@@ -12,6 +12,7 @@ import (
 // Files returns the service and user type files for the given service.
 func Files(genpkg string, service *expr.ServiceExpr) []*codegen.File {
 	svc := Services.Get(service.Name)
+	svc.initUserTypeImports(genpkg)
 	svcName := svc.PathName
 	svcPath := filepath.Join(codegen.Gendir, svcName, "service.go")
 
@@ -20,8 +21,8 @@ func Files(genpkg string, service *expr.ServiceExpr) []*codegen.File {
 	sectionsByPath[svcPath] = []*codegen.SectionTemplate{}
 
 	for _, m := range svc.Methods {
-		payloadPath := withDefault(m.PayloadPath, svcPath)
-		resultPath := withDefault(m.ResultPath, svcPath)
+		payloadPath := pathWithDefault(m.PayloadLoc, svcPath)
+		resultPath := pathWithDefault(m.ResultLoc, svcPath)
 		if m.PayloadDef != "" {
 			if _, ok := seen[m.Payload]; !ok {
 				seen[m.Payload] = struct{}{}
@@ -55,7 +56,7 @@ func Files(genpkg string, service *expr.ServiceExpr) []*codegen.File {
 	}
 	for _, ut := range svc.userTypes {
 		if _, ok := seen[ut.VarName]; !ok {
-			p := withDefault(ut.Path, svcPath)
+			p := pathWithDefault(ut.Loc, svcPath)
 			sectionsByPath[p] = append(sectionsByPath[p], &codegen.SectionTemplate{
 				Name:   "service-user-type",
 				Source: userTypeT,
@@ -65,23 +66,28 @@ func Files(genpkg string, service *expr.ServiceExpr) []*codegen.File {
 	}
 
 	var errorTypes []*UserTypeData
+	seenErrs := make(map[string]struct{})
 	for _, et := range svc.errorTypes {
 		if et.Type == expr.ErrorResult {
 			continue
 		}
-		if _, ok := seen[et.Name]; !ok {
-			p := withDefault(et.Path, svcPath)
-			sectionsByPath[p] = append(sectionsByPath[p], &codegen.SectionTemplate{
-				Name:   "error-user-type",
-				Source: userTypeT,
-				Data:   et,
-			})
+		if _, ok := seenErrs[et.Name]; !ok {
+			seenErrs[et.Name] = struct{}{}
+			if _, ok := seen[et.Name]; !ok {
+				seen[et.Name] = struct{}{}
+				p := pathWithDefault(et.Loc, svcPath)
+				sectionsByPath[p] = append(sectionsByPath[p], &codegen.SectionTemplate{
+					Name:   "error-user-type",
+					Source: userTypeT,
+					Data:   et,
+				})
+			}
 			errorTypes = append(errorTypes, et)
 		}
 	}
 
 	for _, et := range errorTypes {
-		p := withDefault(et.Path, svcPath)
+		p := pathWithDefault(et.Loc, svcPath)
 		sectionsByPath[p] = append(sectionsByPath[p], &codegen.SectionTemplate{
 			Name:    "service-error",
 			Source:  errorT,
@@ -161,7 +167,7 @@ func Files(genpkg string, service *expr.ServiceExpr) []*codegen.File {
 		codegen.GoaImport("security"),
 		codegen.NewImport(svc.ViewsPkg, genpkg+"/"+svcName+"/views"),
 	}
-	imports = append(imports, userTypeImports(genpkg, svc)...)
+	imports = append(imports, svc.UserTypeImports...)
 	header := codegen.Header(service.Name+" service", svc.PkgName, imports)
 	def := &codegen.SectionTemplate{
 		Name:    "service",
@@ -224,11 +230,11 @@ func streamInterfaceFor(typ string, m *MethodData, stream *StreamData) map[strin
 	}
 }
 
-func withDefault(val, def string) string {
-	if val == "" {
+func pathWithDefault(loc *codegen.Location, def string) string {
+	if loc == nil {
 		return def
 	}
-	return val
+	return loc.FilePath
 }
 
 // serviceT is the template used to write an service definition.
