@@ -2,6 +2,7 @@ package codegen
 
 import (
 	"fmt"
+	"path"
 	"path/filepath"
 
 	"goa.design/goa/v3/codegen"
@@ -75,10 +76,13 @@ func clientFile(genpkg string, svc *expr.HTTPServiceExpr) *codegen.File {
 
 	for _, e := range data.Endpoints {
 		sections = append(sections, &codegen.SectionTemplate{
-			Name:    "client-endpoint-init",
-			Source:  endpointInitT,
-			Data:    e,
-			FuncMap: map[string]interface{}{"isWebSocketEndpoint": isWebSocketEndpoint},
+			Name:   "client-endpoint-init",
+			Source: endpointInitT,
+			Data:   e,
+			FuncMap: map[string]interface{}{
+				"isWebSocketEndpoint": isWebSocketEndpoint,
+				"responseStructPkg":   responseStructPkg,
+			},
 		})
 	}
 
@@ -92,26 +96,26 @@ func clientEncodeDecodeFile(genpkg string, svc *expr.HTTPServiceExpr) *codegen.F
 	svcName := data.Service.PathName
 	path := filepath.Join(codegen.Gendir, "http", svcName, "client", "encode_decode.go")
 	title := fmt.Sprintf("%s HTTP client encoders and decoders", svc.Name())
-	sections := []*codegen.SectionTemplate{
-		codegen.Header(title, "client", []*codegen.ImportSpec{
-			{Path: "bytes"},
-			{Path: "context"},
-			{Path: "fmt"},
-			{Path: "io"},
-			{Path: "io/ioutil"},
-			{Path: "mime/multipart"},
-			{Path: "net/http"},
-			{Path: "net/url"},
-			{Path: "os"},
-			{Path: "strconv"},
-			{Path: "strings"},
-			{Path: "unicode/utf8"},
-			codegen.GoaImport(""),
-			codegen.GoaNamedImport("http", "goahttp"),
-			{Path: genpkg + "/" + svcName, Name: data.Service.PkgName},
-			{Path: genpkg + "/" + svcName + "/" + "views", Name: data.Service.ViewsPkg},
-		}),
+	imports := []*codegen.ImportSpec{
+		{Path: "bytes"},
+		{Path: "context"},
+		{Path: "fmt"},
+		{Path: "io"},
+		{Path: "io/ioutil"},
+		{Path: "mime/multipart"},
+		{Path: "net/http"},
+		{Path: "net/url"},
+		{Path: "os"},
+		{Path: "strconv"},
+		{Path: "strings"},
+		{Path: "unicode/utf8"},
+		codegen.GoaImport(""),
+		codegen.GoaNamedImport("http", "goahttp"),
+		{Path: genpkg + "/" + svcName, Name: data.Service.PkgName},
+		{Path: genpkg + "/" + svcName + "/" + "views", Name: data.Service.ViewsPkg},
 	}
+	imports = append(imports, data.Service.UserTypeImports...)
+	sections := []*codegen.SectionTemplate{codegen.Header(title, "client", imports)}
 
 	for _, e := range data.Endpoints {
 		sections = append(sections, &codegen.SectionTemplate{
@@ -135,6 +139,7 @@ func clientEncodeDecodeFile(genpkg string, svc *expr.HTTPServiceExpr) *codegen.F
 						_, ok := dt.(expr.UserType)
 						return ok
 					},
+					"requestStructPkg": requestStructPkg,
 				},
 				Data: e,
 			})
@@ -163,6 +168,9 @@ func clientEncodeDecodeFile(genpkg string, svc *expr.HTTPServiceExpr) *codegen.F
 				Name:   "build-stream-request",
 				Source: buildStreamRequestT,
 				Data:   e,
+				FuncMap: map[string]interface{}{
+					"requestStructPkg": requestStructPkg,
+				},
 			})
 		}
 	}
@@ -228,6 +236,20 @@ func isBearer(schemes []*service.SchemeData) bool {
 		}
 	}
 	return false
+}
+
+func requestStructPkg(m *service.MethodData, def string) string {
+	if m.PayloadLoc != nil {
+		return codegen.Goify(path.Base(m.PayloadLoc.ImportPath), false)
+	}
+	return def
+}
+
+func responseStructPkg(m *service.MethodData, def string) string {
+	if m.ResultLoc != nil {
+		return codegen.Goify(path.Base(m.ResultLoc.ImportPath), false)
+	}
+	return def
 }
 
 // input: ServiceData
@@ -356,7 +378,7 @@ func (c *{{ .ClientStruct }}) {{ .EndpointInit }}({{ if .MultipartRequestEncoder
 			resp.Body.Close()
 			return nil, err
 		}
-		return &{{ .ServicePkgName }}.{{ .Method.ResponseStruct }}{ {{ if .Result.Ref }}Result: res.({{ .Result.Ref }}), {{ end }}Body: resp.Body}, nil
+		return &{{ responseStructPkg .Method .ServicePkgName }}.{{ .Method.ResponseStruct }}{ {{ if .Result.Ref }}Result: res.({{ .Result.Ref }}), {{ end }}Body: resp.Body}, nil
 		{{- else }}
 		return decodeResponse(resp)
 		{{- end }}
@@ -377,9 +399,9 @@ const requestEncoderT = `{{ printf "%s returns an encoder for requests sent to t
 func {{ .RequestEncoder }}(encoder func(*http.Request) goahttp.Encoder) func(*http.Request, interface{}) error {
 	return func(req *http.Request, v interface{}) error {
 		{{- if .Method.SkipRequestBodyEncodeDecode }}
-		data, ok := v.(*{{ .ServicePkgName }}.{{ .Method.RequestStruct }})
+		data, ok := v.(*{{ requestStructPkg .Method .ServicePkgName }}.{{ .Method.RequestStruct }})
 		if !ok {
-			return goahttp.ErrInvalidType("{{ .ServiceName }}", "{{ .Method.Name }}", "*{{ .ServicePkgName}}.{{ .Method.RequestStruct }}", v)
+			return goahttp.ErrInvalidType("{{ .ServiceName }}", "{{ .Method.Name }}", "*{{ requestStructPkg .Method .ServicePkgName }}.{{ .Method.RequestStruct }}", v)
 		}
 		p := data.Payload
 		{{- else }}
@@ -926,12 +948,12 @@ func {{ .InitName }}(encoderFn {{ .FuncName }}) func(r *http.Request) goahttp.En
 
 // input: streamRequestData
 const buildStreamRequestT = `// {{ printf "%s creates a streaming endpoint request payload from the method payload and the path to the file to be streamed" .BuildStreamPayload | comment }}
-func {{ .BuildStreamPayload }}({{ if .Payload.Ref }}payload interface{}, {{ end }}fpath string) (*{{ .ServicePkgName }}.{{ .Method.RequestStruct }}, error) {
+func {{ .BuildStreamPayload }}({{ if .Payload.Ref }}payload interface{}, {{ end }}fpath string) (*{{ requestStructPkg .Method .ServicePkgName }}.{{ .Method.RequestStruct }}, error) {
 	f, err := os.Open(fpath)
 	if err != nil {
 		return nil, err
 	}
-	return &{{ .ServicePkgName }}.{{ .Method.RequestStruct }}{
+	return &{{ requestStructPkg .Method .ServicePkgName }}.{{ .Method.RequestStruct }}{
 		{{- if .Payload.Ref }}
 		Payload: payload.({{ .Payload.Ref }}),
 		{{- end }}

@@ -125,21 +125,21 @@ func serverEncodeDecode(genpkg string, svc *expr.GRPCServiceExpr) *codegen.File 
 		svcName := data.Service.PathName
 		fpath = filepath.Join(codegen.Gendir, "grpc", svcName, "server", "encode_decode.go")
 		title := fmt.Sprintf("%s gRPC server encoders and decoders", svc.Name())
-		sections = []*codegen.SectionTemplate{
-			codegen.Header(title, "server", []*codegen.ImportSpec{
-				{Path: "context"},
-				{Path: "strings"},
-				{Path: "strconv"},
-				{Path: "unicode/utf8"},
-				{Path: "google.golang.org/grpc"},
-				{Path: "google.golang.org/grpc/metadata"},
-				codegen.GoaImport(""),
-				codegen.GoaNamedImport("grpc", "goagrpc"),
-				{Path: path.Join(genpkg, svcName), Name: data.Service.PkgName},
-				{Path: path.Join(genpkg, svcName, "views"), Name: data.Service.ViewsPkg},
-				{Path: path.Join(genpkg, "grpc", svcName, pbPkgName), Name: data.PkgName},
-			}),
+		imports := []*codegen.ImportSpec{
+			{Path: "context"},
+			{Path: "strings"},
+			{Path: "strconv"},
+			{Path: "unicode/utf8"},
+			{Path: "google.golang.org/grpc"},
+			{Path: "google.golang.org/grpc/metadata"},
+			codegen.GoaImport(""),
+			codegen.GoaNamedImport("grpc", "goagrpc"),
+			{Path: path.Join(genpkg, svcName), Name: data.Service.PkgName},
+			{Path: path.Join(genpkg, svcName, "views"), Name: data.Service.ViewsPkg},
+			{Path: path.Join(genpkg, "grpc", svcName, pbPkgName), Name: data.PkgName},
 		}
+		imports = append(imports, data.Service.UserTypeImports...)
+		sections = []*codegen.SectionTemplate{codegen.Header(title, "server", imports)}
 
 		for _, e := range data.Endpoints {
 			if e.Response.ServerConvert != nil {
