@@ -131,9 +131,11 @@ func (e *ErrorExpr) Finalize() {
 		if dt != ErrorResult {
 			// If this type contains an attribute with "struct:error:name" meta
 			// then no need to do anything.
-			for _, nat := range *AsObject(dt) {
-				if _, ok := nat.Attribute.Meta["struct:error:name"]; ok {
-					return
+			if IsObject(dt) {
+				for _, nat := range *AsObject(dt) {
+					if _, ok := nat.Attribute.Meta["struct:error:name"]; ok {
+						return
+					}
 				}
 			}
 

@@ -3,6 +3,7 @@ package service
 import (
 	"bytes"
 	"fmt"
+	"path/filepath"
 	"strings"
 	"text/template"
 
@@ -60,6 +61,9 @@ type (
 		Scope *codegen.NameScope
 		// ViewScope initialized with all the viewed types.
 		ViewScope *codegen.NameScope
+		// UserTypeImports lists the import specifications for the user
+		// types used by the service.
+		UserTypeImports []*codegen.ImportSpec
 
 		// userTypes lists the type definitions that the service depends on.
 		userTypes []*UserTypeData
@@ -106,6 +110,9 @@ type (
 		VarName string
 		// Payload is the name of the payload type if any,
 		Payload string
+		// PayloadLoc defines the file and Go package of the payload type
+		// if overridden via Meta.
+		PayloadLoc *codegen.Location
 		// PayloadDef is the payload type definition if any.
 		PayloadDef string
 		// PayloadRef is a reference to the payload type if any,
@@ -128,6 +135,9 @@ type (
 		StreamingPayloadEx interface{}
 		// Result is the name of the result type if any.
 		Result string
+		// ResultLoc defines the file and Go package of the result type
+		// if overridden via Meta.
+		ResultLoc *codegen.Location
 		// ResultDef is the result type definition if any.
 		ResultDef string
 		// ResultRef is the reference to the result type if any.
@@ -229,6 +239,9 @@ type (
 		Def string
 		// Ref is the reference to the type.
 		Ref string
+		// Loc defines the file and Go package of the type if overridden
+		// via Meta.
+		Loc *codegen.Location
 		// Type is the underlying type.
 		Type expr.UserType
 	}
@@ -412,13 +425,53 @@ func (d ServicesData) Get(name string) *Data {
 
 // Method returns the service method data for the method with the given name,
 // nil if there isn't one.
-func (s *Data) Method(name string) *MethodData {
-	for _, m := range s.Methods {
+func (d *Data) Method(name string) *MethodData {
+	for _, m := range d.Methods {
 		if m.Name == name {
 			return m
 		}
 	}
 	return nil
+}
+
+// initUserTypeImports sets the import paths for the user types defined in the
+// service.  User types may be declared in multiple packages when defined with
+// the Meta key "struct:pkg:path".
+func (d *Data) initUserTypeImports(genpkg string) {
+	importsByPath := make(map[string]*codegen.ImportSpec)
+
+	initLoc := func(loc *codegen.Location) {
+		if loc == nil {
+			return
+		}
+		dir := filepath.Dir(loc.FilePath)
+		loc.ImportPath = genpkg + "/" + dir
+		base := filepath.Base(dir)
+		var pkg string
+		if p := codegen.Goify(base, false); p != base {
+			pkg = p
+		}
+		importsByPath[loc.FilePath] = &codegen.ImportSpec{Name: pkg, Path: loc.ImportPath}
+	}
+
+	for _, m := range d.Methods {
+		initLoc(m.PayloadLoc)
+		initLoc(m.ResultLoc)
+		for _, ut := range d.userTypes {
+			initLoc(ut.Loc)
+		}
+		for _, et := range d.errorTypes {
+			initLoc(et.Loc)
+		}
+	}
+
+	imports := make([]*codegen.ImportSpec, len(importsByPath))
+	i := 0
+	for _, imp := range importsByPath { // Order does not matter, imports are sorted during formatting.
+		imports[i] = imp
+		i++
+	}
+	d.UserTypeImports = imports
 }
 
 // Scheme returns the scheme data with the given scheme name.
@@ -680,12 +733,17 @@ func collectTypes(at *expr.AttributeExpr, scope *codegen.NameScope, seen map[str
 		if _, ok := seen[dt.ID()]; ok {
 			return nil
 		}
+		var loc *codegen.Location
+		if p := genPath(dt); p != "" {
+			loc = &codegen.Location{FilePath: p}
+		}
 		data = append(data, &UserTypeData{
 			Name:        dt.Name(),
 			VarName:     scope.GoTypeName(at),
 			Description: dt.Attribute().Description,
 			Def:         scope.GoTypeDef(dt.Attribute(), false, true),
 			Ref:         scope.GoTypeRef(at),
+			Loc:         loc,
 			Type:        dt,
 		})
 		seen[dt.ID()] = struct{}{}
@@ -708,12 +766,16 @@ func buildErrorInitData(er *expr.ErrorExpr, scope *codegen.NameScope) *ErrorInit
 	_, temporary := er.AttributeExpr.Meta["goa:error:temporary"]
 	_, timeout := er.AttributeExpr.Meta["goa:error:timeout"]
 	_, fault := er.AttributeExpr.Meta["goa:error:fault"]
+	var pkg string
+	if ut, ok := er.AttributeExpr.Type.(expr.UserType); ok {
+		pkg = packageFromPath(genPath(ut))
+	}
 	return &ErrorInitData{
 		Name:        fmt.Sprintf("Make%s", codegen.Goify(er.Name, true)),
 		Description: er.Description,
 		ErrName:     er.Name,
 		TypeName:    scope.GoTypeName(er.AttributeExpr),
-		TypeRef:     scope.GoTypeRef(er.AttributeExpr),
+		TypeRef:     scope.GoFullTypeRef(er.AttributeExpr, pkg),
 		Temporary:   temporary,
 		Timeout:     timeout,
 		Fault:       fault,
@@ -727,11 +789,13 @@ func buildMethodData(m *expr.MethodExpr, svcPkgName string, service *expr.Servic
 		vname       string
 		desc        string
 		payloadName string
+		payloadPath string
 		payloadDef  string
 		payloadRef  string
 		payloadDesc string
 		payloadEx   interface{}
 		rname       string
+		resultPath  string
 		resultDef   string
 		resultRef   string
 		resultDesc  string
@@ -747,10 +811,11 @@ func buildMethodData(m *expr.MethodExpr, svcPkgName string, service *expr.Servic
 	}
 	if m.Payload.Type != expr.Empty {
 		payloadName = scope.GoTypeName(m.Payload)
-		payloadRef = scope.GoTypeRef(m.Payload)
 		if dt, ok := m.Payload.Type.(expr.UserType); ok {
 			payloadDef = scope.GoTypeDef(dt.Attribute(), false, true)
+			payloadPath = genPath(dt)
 		}
+		payloadRef = scope.GoFullTypeRef(m.Payload, packageFromPath(payloadPath))
 		payloadDesc = m.Payload.Description
 		if payloadDesc == "" {
 			payloadDesc = fmt.Sprintf("%s is the payload type of the %s service %s method.",
@@ -760,10 +825,11 @@ func buildMethodData(m *expr.MethodExpr, svcPkgName string, service *expr.Servic
 	}
 	if m.Result.Type != expr.Empty {
 		rname = scope.GoTypeName(m.Result)
-		resultRef = scope.GoTypeRef(m.Result)
 		if dt, ok := m.Result.Type.(expr.UserType); ok {
 			resultDef = scope.GoTypeDef(dt.Attribute(), false, true)
+			resultPath = genPath(dt)
 		}
+		resultRef = scope.GoFullTypeRef(m.Result, packageFromPath(resultPath))
 		resultDesc = m.Result.Description
 		if resultDesc == "" {
 			resultDesc = fmt.Sprintf("%s is the result type of the %s service %s method.",
@@ -790,17 +856,26 @@ func buildMethodData(m *expr.MethodExpr, svcPkgName string, service *expr.Servic
 	if httpSvc := expr.Root.HTTPService(m.Service.Name); httpSvc != nil {
 		httpMet = httpSvc.Endpoint(m.Name)
 	}
+	var payloadLoc, resultLoc *codegen.Location
+	if payloadPath != "" {
+		payloadLoc = &codegen.Location{FilePath: payloadPath}
+	}
+	if resultPath != "" {
+		resultLoc = &codegen.Location{FilePath: resultPath}
+	}
 	data := &MethodData{
 		Name:                         m.Name,
 		VarName:                      vname,
 		Description:                  desc,
 		Payload:                      payloadName,
+		PayloadLoc:                   payloadLoc,
 		PayloadDef:                   payloadDef,
 		PayloadRef:                   payloadRef,
 		PayloadDesc:                  payloadDesc,
 		PayloadEx:                    payloadEx,
 		PayloadDefault:               m.Payload.DefaultValue,
 		Result:                       rname,
+		ResultLoc:                    resultLoc,
 		ResultDef:                    resultDef,
 		ResultRef:                    resultRef,
 		ResultDesc:                   resultDesc,
@@ -1602,6 +1677,23 @@ func buildConstructorCode(src, tgt *expr.AttributeExpr, sourceVar, targetVar str
 		panic(err) // bug
 	}
 	return buf.String(), helpers
+}
+
+// genPath returns the path to the generated file that declares the Go struct
+// corresponding to the given user type if set via Meta, empty string otherwise.
+func genPath(ut expr.UserType) string {
+	if p, ok := ut.Attribute().Meta.Last("struct:pkg:path"); ok && p != "" {
+		return filepath.Join(filepath.FromSlash(p), codegen.SnakeCase(ut.Name())+".go")
+	}
+	return ""
+}
+
+// packageFromPath returns the package name for the given path.
+func packageFromPath(path string) string {
+	if path == "" {
+		return ""
+	}
+	return codegen.Goify(filepath.Base(filepath.Dir(path)), false)
 }
 
 // walkViewAttrs iterates through the attributes in att that are found in the

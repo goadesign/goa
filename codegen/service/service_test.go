@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"go/format"
+	"path/filepath"
 	"testing"
 
 	"goa.design/goa/v3/codegen"
@@ -57,25 +58,68 @@ func TestService(t *testing.T) {
 			if len(expr.Root.Services) != 1 {
 				t.Fatalf("got %d services, expected 1", len(expr.Root.Services))
 			}
-			fs := File("goa.design/goa/example", expr.Root.Services[0])
-			if fs == nil {
-				t.Fatalf("got nil file, expected not nil")
+			files := Files("goa.design/goa/example", expr.Root.Services[0])
+			if len(files) == 0 {
+				t.Fatalf("got no file, expected one")
 			}
-			buf := new(bytes.Buffer)
-			for _, s := range fs.SectionTemplates[1:] {
-				if err := s.Write(buf); err != nil {
-					t.Fatal(err)
-				}
+			validateFile(t, files[0], files[0].Path, c.Code)
+		})
+	}
+}
+
+func TestStructPkgPath(t *testing.T) {
+	fooPath := filepath.Join("gen", "foo", "foo.go")
+	barPath := filepath.Join("gen", "bar", "bar.go")
+	bazPath := filepath.Join("gen", "baz", "baz.go")
+	cases := []struct {
+		Name      string
+		DSL       func()
+		Code      string
+		TypeFiles []string
+		TypeCodes []string
+	}{
+		{"none", testdata.SingleMethodDSL, testdata.SingleMethod, nil, nil},
+		{"single", testdata.PkgPathDSL, testdata.PkgPath, []string{fooPath}, []string{testdata.PkgPathFoo}},
+		{"multiple", testdata.MultiplePkgPathDSL, testdata.PkgPathMultiple, []string{barPath, bazPath}, []string{testdata.PkgPathBar, testdata.PkgPathBaz}},
+		{"nopkg", testdata.PkgPathNoDirDSL, testdata.PkgPathNoDir, nil, nil},
+	}
+	for _, c := range cases {
+		t.Run(c.Name, func(t *testing.T) {
+			codegen.RunDSLWithFunc(t, c.DSL, func() {
+				expr.Root.Types = []expr.UserType{testdata.APayload, testdata.AResult, testdata.Foo, testdata.Bar, testdata.Baz, testdata.NoDir}
+			})
+			if len(expr.Root.Services) != 1 {
+				t.Fatalf("got %d services, expected 1", len(expr.Root.Services))
 			}
-			bs, err := format.Source(buf.Bytes())
-			if err != nil {
-				fmt.Println(buf.String())
-				t.Fatal(err)
+			files := Files("goa.design/goa/example", expr.Root.Services[0])
+			if len(files) != len(c.TypeFiles)+1 {
+				t.Fatalf("got %d files, expected %d", len(files), len(c.TypeFiles)+1)
 			}
-			code := string(bs)
-			if code != c.Code {
-				t.Errorf("%s: got\n%s\ngot vs. expected:\n%s", c.Name, code, codegen.Diff(t, code, c.Code))
+			validateFile(t, files[0], files[0].Path, c.Code)
+			for i, f := range c.TypeFiles {
+				validateFile(t, files[i+1], f, c.TypeCodes[i])
 			}
 		})
+	}
+}
+
+func validateFile(t *testing.T, f *codegen.File, path, code string) {
+	if f.Path != path {
+		t.Errorf("got %q, expected %q", f.Path, path)
+	}
+	buf := new(bytes.Buffer)
+	for _, s := range f.SectionTemplates[1:] {
+		if err := s.Write(buf); err != nil {
+			t.Fatal(err)
+		}
+	}
+	bs, err := format.Source(buf.Bytes())
+	if err != nil {
+		fmt.Println(buf.String())
+		t.Fatal(err)
+	}
+	actual := string(bs)
+	if actual != code {
+		t.Errorf("got\n%s\ngot vs. expected:\n%s", actual, codegen.Diff(t, actual, code))
 	}
 }

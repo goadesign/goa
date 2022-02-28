@@ -49,14 +49,14 @@ func serverType(genpkg string, svc *expr.HTTPServiceExpr, seen map[string]struct
 		svcName = data.Service.PathName
 	)
 	path = filepath.Join(codegen.Gendir, "http", svcName, "server", "types.go")
-	header := codegen.Header(svc.Name()+" HTTP server types", "server",
-		[]*codegen.ImportSpec{
-			{Path: "unicode/utf8"},
-			{Path: genpkg + "/" + svcName, Name: data.Service.PkgName},
-			codegen.GoaImport(""),
-			{Path: genpkg + "/" + svcName + "/" + "views", Name: data.Service.ViewsPkg},
-		},
-	)
+	imports := []*codegen.ImportSpec{
+		{Path: "unicode/utf8"},
+		{Path: genpkg + "/" + svcName, Name: data.Service.PkgName},
+		codegen.GoaImport(""),
+		{Path: genpkg + "/" + svcName + "/" + "views", Name: data.Service.ViewsPkg},
+	}
+	imports = append(imports, data.Service.UserTypeImports...)
+	header := codegen.Header(svc.Name()+" HTTP server types", "server", imports)
 
 	var (
 		initData       []*InitData
@@ -272,6 +272,6 @@ func {{ .Name }}({{ range .ServerArgs }}{{ .VarName }} {{.TypeRef }}, {{ end }})
 const validateT = `{{ printf "Validate%s runs the validations defined on %s" .VarName .Name | comment }}
 func Validate{{ .VarName }}(body {{ .Ref }}) (err error) {
 	{{ .ValidateDef }}
-	return
+	return 
 }
 `
