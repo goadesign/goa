@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"go/format"
+	"path/filepath"
 	"testing"
 
 	"goa.design/goa/v3/codegen"
@@ -67,6 +68,9 @@ func TestService(t *testing.T) {
 }
 
 func TestStructPkgPath(t *testing.T) {
+	fooPath := filepath.Join("gen", "foo", "foo.go")
+	barPath := filepath.Join("gen", "bar", "bar.go")
+	bazPath := filepath.Join("gen", "baz", "baz.go")
 	cases := []struct {
 		Name      string
 		DSL       func()
@@ -75,8 +79,8 @@ func TestStructPkgPath(t *testing.T) {
 		TypeCodes []string
 	}{
 		{"none", testdata.SingleMethodDSL, testdata.SingleMethod, nil, nil},
-		{"single", testdata.PkgPathDSL, testdata.PkgPath, []string{"gen/foo/foo.go"}, []string{testdata.PkgPathFoo}},
-		{"multiple", testdata.MultiplePkgPathDSL, testdata.PkgPathMultiple, []string{"gen/bar/bar.go", "gen/baz/baz.go"}, []string{testdata.PkgPathBar, testdata.PkgPathBaz}},
+		{"single", testdata.PkgPathDSL, testdata.PkgPath, []string{fooPath}, []string{testdata.PkgPathFoo}},
+		{"multiple", testdata.MultiplePkgPathDSL, testdata.PkgPathMultiple, []string{barPath, bazPath}, []string{testdata.PkgPathBar, testdata.PkgPathBaz}},
 		{"nopkg", testdata.PkgPathNoDirDSL, testdata.PkgPathNoDir, nil, nil},
 	}
 	for _, c := range cases {
