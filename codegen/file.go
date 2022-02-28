@@ -89,7 +89,7 @@ func (f *File) Render(dir string) (string, error) {
 
 	file, err := os.OpenFile(
 		path,
-		os.O_CREATE|os.O_APPEND|os.O_WRONLY,
+		os.O_CREATE|os.O_WRONLY,
 		0644,
 	)
 	if err != nil {
