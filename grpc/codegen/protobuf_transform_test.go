@@ -258,11 +258,11 @@ const (
 
 	customSvcToCustomProtoCode = `func transform() {
 	target := &CustomTypes{
-		RequiredString: string(source.RequiredString),
-		DefaultBool:    bool(source.DefaultBool),
+		RequiredString: tdtypes.CustomString(source.RequiredString),
+		DefaultBool:    tdtypes.CustomBool(source.DefaultBool),
 	}
 	if source.Integer != nil {
-		target.Integer = int32(*source.Integer)
+		target.Integer = tdtypes.CustomInt(*source.Integer)
 	}
 }
 `
@@ -563,6 +563,7 @@ const (
 	defaultsSvcToDefaultsProtoCode = `func transform() {
 	target := &WithDefaults{
 		Int:            int32(source.Int),
+		RawJson:        json.RawMessage(source.RawJSON),
 		RequiredInt:    int32(source.RequiredInt),
 		String_:        source.String,
 		RequiredString: source.RequiredString,
@@ -969,6 +970,7 @@ const (
 	defaultsProtoToDefaultsSvcCode = `func transform() {
 	target := &WithDefaults{
 		Int:            int(source.Int),
+		RawJSON:        json.RawMessage(source.RawJson),
 		RequiredInt:    int(source.RequiredInt),
 		String:         source.String_,
 		RequiredString: source.RequiredString,
@@ -979,6 +981,10 @@ const (
 	}
 	if source.Int == 0 {
 		target.Int = 100
+	}
+	var zero json.RawMessage
+	if source.RawJson == zero {
+		target.RawJSON = json.RawMessage{0x66, 0x6f, 0x6f}
 	}
 	if source.String_ == "" {
 		target.String = "foo"

@@ -99,8 +99,9 @@ func protoBufTransform(source, target *expr.AttributeExpr, sourceVar, targetVar 
 // needed to make sure that any field name overridding is removed when
 // generating protobuf types (as protogen itself won't honor these overrides).
 func removeMeta(att *expr.AttributeExpr) {
-	codegen.Walk(att, func(a *expr.AttributeExpr) error {
-		a.Meta = nil
+	_ = codegen.Walk(att, func(a *expr.AttributeExpr) error {
+		delete(a.Meta, "struct:field:name")
+		delete(a.Meta, "struct:field:external")
 		return nil
 	})
 }
@@ -307,7 +308,12 @@ func transformObject(source, target *expr.AttributeExpr, sourceVar, targetVar st
 				// buffer sets boolean fields as false. Changing them to the default
 				// value is counter-intuitive.
 				if !srcMatt.IsRequired(n) && srcc.Type != expr.Boolean {
-					code += fmt.Sprintf("if %s {\n\t", checkZeroValue(srcc.Type, srcVar, false))
+					if typeName, _ := codegen.GetMetaType(tgtc); typeName != "" {
+						code += fmt.Sprintf("var zero %s\n\t", typeName)
+						code += fmt.Sprintf("if %s == zero {\n\t", srcVar)
+					} else {
+						code += fmt.Sprintf("if %s {\n\t", checkZeroValue(srcc.Type, srcVar, false))
+					}
 					if ta.TargetCtx.IsPrimitivePointer(n, tgtMatt.AttributeExpr) && expr.IsPrimitive(tgtc.Type) {
 						code += fmt.Sprintf("var tmp %s = %#v\n\t%s = &tmp\n", codegen.GoNativeTypeName(tgtc.Type), tdef, tgtVar)
 					} else {
@@ -489,7 +495,7 @@ func convertType(src, tgt *expr.AttributeExpr, srcVar string, ta *transformAttrs
 	if src.Type != expr.Int && src.Type != expr.UInt {
 		if srcType != "" || tgtType != "" {
 			if ta.proto || tgtType == "" {
-				tgtType = protoBufNativeGoTypeName(tgt.Type)
+				tgtType = protoBufNativeGoTypeName(tgt)
 			}
 			return fmt.Sprintf("%s(%s)", tgtType, srcVar)
 		}
@@ -497,7 +503,7 @@ func convertType(src, tgt *expr.AttributeExpr, srcVar string, ta *transformAttrs
 	}
 
 	if ta.proto {
-		return fmt.Sprintf("%s(%s)", protoBufNativeGoTypeName(tgt.Type), srcVar)
+		return fmt.Sprintf("%s(%s)", protoBufNativeGoTypeName(tgt), srcVar)
 	}
 	if tgtType == "" {
 		tgtType = codegen.GoNativeTypeName(tgt.Type)

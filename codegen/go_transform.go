@@ -251,7 +251,9 @@ func transformObject(source, target *expr.AttributeExpr, sourceVar, targetVar st
 				// source attribute is a primitive with default value
 				// (the field is not a pointer in this case)
 				code += "{\n\t"
-				if _, ok := tgtc.Type.(expr.UserType); ok {
+				if typeName, _ := GetMetaType(tgtc); typeName != "" {
+					code += fmt.Sprintf("var zero %s\n\t", typeName)
+				} else if _, ok := tgtc.Type.(expr.UserType); ok {
 					// aliased primitive
 					code += fmt.Sprintf("var zero %s\n\t", ta.TargetCtx.Scope.Ref(tgtc, ta.TargetCtx.Pkg))
 				} else {
