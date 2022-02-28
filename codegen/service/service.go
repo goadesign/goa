@@ -144,22 +144,6 @@ func Files(genpkg string, service *expr.ServiceExpr) []*codegen.File {
 		})
 	}
 
-	var files []*codegen.File
-	paths := make([]string, len(sectionsByPath))
-	i := 0
-	for p := range sectionsByPath {
-		paths[i] = p
-		i++
-	}
-	sort.Strings(paths)
-	for _, p := range paths {
-		if p == svcPath {
-			continue
-		}
-		h := codegen.Header("User types", packageFromPath(p), nil)
-		sections := append([]*codegen.SectionTemplate{h}, sectionsByPath[p]...)
-		files = append(files, &codegen.File{Path: filepath.Join(codegen.Gendir, p), SectionTemplates: sections})
-	}
 	imports := []*codegen.ImportSpec{
 		codegen.SimpleImport("context"),
 		codegen.SimpleImport("io"),
@@ -176,7 +160,22 @@ func Files(genpkg string, service *expr.ServiceExpr) []*codegen.File {
 		FuncMap: map[string]interface{}{"streamInterfaceFor": streamInterfaceFor},
 	}
 	sections := append([]*codegen.SectionTemplate{header, def}, sectionsByPath[svcPath]...)
-	files = append(files, &codegen.File{Path: svcPath, SectionTemplates: sections})
+	files := []*codegen.File{{Path: svcPath, SectionTemplates: sections}}
+	paths := make([]string, len(sectionsByPath))
+	i := 0
+	for p := range sectionsByPath {
+		paths[i] = p
+		i++
+	}
+	sort.Strings(paths)
+	for _, p := range paths {
+		if p == svcPath {
+			continue
+		}
+		h := codegen.Header("User types", packageFromPath(p), nil)
+		sections := append([]*codegen.SectionTemplate{h}, sectionsByPath[p]...)
+		files = append(files, &codegen.File{Path: filepath.Join(codegen.Gendir, p), SectionTemplates: sections})
+	}
 	return files
 }
 

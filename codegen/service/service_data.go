@@ -1682,7 +1682,7 @@ func buildConstructorCode(src, tgt *expr.AttributeExpr, sourceVar, targetVar str
 // genPath returns the path to the generated file that declares the Go struct
 // corresponding to the given user type if set via Meta, empty string otherwise.
 func genPath(ut expr.UserType) string {
-	if p, ok := ut.Attribute().Meta.Last("struct:pkg:path"); ok {
+	if p, ok := ut.Attribute().Meta.Last("struct:pkg:path"); ok && p != "" {
 		return filepath.Join(filepath.FromSlash(p), codegen.SnakeCase(ut.Name())+".go")
 	}
 	return ""

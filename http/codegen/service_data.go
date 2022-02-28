@@ -1733,7 +1733,7 @@ func buildErrorsData(e *expr.HTTPEndpointExpr, sd *ServiceData) []*ErrorGroupDat
 
 		pkg := sd.Service.PkgName
 		if ut, ok := v.ErrorExpr.Type.(expr.UserType); ok {
-			if p, ok := ut.Attribute().Meta.Last("struct:pkg:path"); ok {
+			if p, ok := ut.Attribute().Meta.Last("struct:pkg:path"); ok && p != "" {
 				pkg = codegen.Goify(path.Base(p), false)
 			}
 		}
