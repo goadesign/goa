@@ -485,7 +485,7 @@ func convertType(src, tgt *expr.AttributeExpr, srcVar string, ta *transformAttrs
 		}
 		return fmt.Sprintf("%s(%s)", transformHelperName(src, tgt, ta), srcVar)
 	}
-  
+
 	if _, ok := src.Type.(expr.UserType); ok {
 		return fmt.Sprintf("%s(%s)", transformHelperName(src, tgt, ta), srcVar)
 	}
@@ -495,7 +495,7 @@ func convertType(src, tgt *expr.AttributeExpr, srcVar string, ta *transformAttrs
 	if src.Type != expr.Int && src.Type != expr.UInt {
 		if srcType != "" || tgtType != "" {
 			if ta.proto || tgtType == "" {
-				tgtType = protoBufNativeGoTypeName(tgt.Type)
+				tgtType = protoBufNativeGoTypeName(tgt)
 			}
 			return fmt.Sprintf("%s(%s)", tgtType, srcVar)
 		}
