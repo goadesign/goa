@@ -14,13 +14,14 @@ import (
 // a goa design.
 func Service(genpkg string, roots []eval.Root) ([]*codegen.File, error) {
 	var files []*codegen.File
+	var userTypePkgs = make(map[string][]string)
 	for _, root := range roots {
 		switch r := root.(type) {
 		case *expr.RootExpr:
 			for _, s := range r.Services {
 				// Make sure service is first so name scope is
 				// properly initialized.
-				files = append(files, service.Files(genpkg, s)...)
+				files = append(files, service.Files(genpkg, s, userTypePkgs)...)
 				files = append(files, service.EndpointFile(genpkg, s))
 				files = append(files, service.ClientFile(genpkg, s))
 				if f := service.ViewsFile(genpkg, s); f != nil {

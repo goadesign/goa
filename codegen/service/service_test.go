@@ -58,7 +58,7 @@ func TestService(t *testing.T) {
 			if len(expr.Root.Services) != 1 {
 				t.Fatalf("got %d services, expected 1", len(expr.Root.Services))
 			}
-			files := Files("goa.design/goa/example", expr.Root.Services[0])
+			files := Files("goa.design/goa/example", expr.Root.Services[0], make(map[string][]string))
 			if len(files) == 0 {
 				t.Fatalf("got no file, expected one")
 			}
@@ -74,30 +74,39 @@ func TestStructPkgPath(t *testing.T) {
 	cases := []struct {
 		Name      string
 		DSL       func()
-		Code      string
+		SvcCodes  []string
 		TypeFiles []string
 		TypeCodes []string
 	}{
-		{"none", testdata.SingleMethodDSL, testdata.SingleMethod, nil, nil},
-		{"single", testdata.PkgPathDSL, testdata.PkgPath, []string{fooPath}, []string{testdata.PkgPathFoo}},
-		{"multiple", testdata.MultiplePkgPathDSL, testdata.PkgPathMultiple, []string{barPath, bazPath}, []string{testdata.PkgPathBar, testdata.PkgPathBaz}},
-		{"nopkg", testdata.PkgPathNoDirDSL, testdata.PkgPathNoDir, nil, nil},
+		{"none", testdata.SingleMethodDSL, []string{testdata.SingleMethod}, nil, nil},
+		{"single", testdata.PkgPathDSL, []string{testdata.PkgPath}, []string{fooPath}, []string{testdata.PkgPathFoo}},
+		{"multiple", testdata.PkgPathMultipleDSL, []string{testdata.PkgPathMultiple}, []string{barPath, bazPath}, []string{testdata.PkgPathBar, testdata.PkgPathBaz}},
+		{"nopkg", testdata.PkgPathNoDirDSL, []string{testdata.PkgPathNoDir}, nil, nil},
+		{"dupes", testdata.PkgPathDupeDSL, []string{testdata.PkgPathDupe1, testdata.PkgPathDupe2}, []string{fooPath}, []string{testdata.PkgPathFooDupe}},
 	}
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
+			userTypePkgs := make(map[string][]string)
 			codegen.RunDSLWithFunc(t, c.DSL, func() {
 				expr.Root.Types = []expr.UserType{testdata.APayload, testdata.AResult, testdata.Foo, testdata.Bar, testdata.Baz, testdata.NoDir}
 			})
-			if len(expr.Root.Services) != 1 {
-				t.Fatalf("got %d services, expected 1", len(expr.Root.Services))
+			if len(expr.Root.Services) != len(c.SvcCodes) {
+				t.Fatalf("got %d services, expected %d", len(expr.Root.Services), len(c.SvcCodes))
 			}
-			files := Files("goa.design/goa/example", expr.Root.Services[0])
+			files := Files("goa.design/goa/example", expr.Root.Services[0], userTypePkgs)
 			if len(files) != len(c.TypeFiles)+1 {
 				t.Fatalf("got %d files, expected %d", len(files), len(c.TypeFiles)+1)
 			}
-			validateFile(t, files[0], files[0].Path, c.Code)
+			validateFile(t, files[0], files[0].Path, c.SvcCodes[0])
 			for i, f := range c.TypeFiles {
 				validateFile(t, files[i+1], f, c.TypeCodes[i])
+			}
+			if len(c.SvcCodes) > 1 {
+				files = Files("goa.design/goa/example", expr.Root.Services[1], userTypePkgs)
+				if len(files) != 1 {
+					t.Fatalf("got %d files, expected 1", len(files))
+				}
+				validateFile(t, files[0], files[0].Path, c.SvcCodes[1])
 			}
 		})
 	}
