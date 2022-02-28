@@ -606,3 +606,55 @@ var NamesWithSpacesDSL = func() {
 		})
 	})
 }
+
+var Foo = Type("Foo", func() {
+	Attribute("IntField", Int)
+	Meta("struct:pkg:path", "foo")
+})
+
+var Bar = Type("Bar", func() {
+	Attribute("IntField", Int)
+	Meta("struct:pkg:path", "bar")
+})
+
+var Baz = Type("Baz", func() {
+	Attribute("IntField", Int)
+	Meta("struct:pkg:path", "baz")
+})
+
+var NoDir = Type("NoDir", func() {
+	Attribute("IntField", Int)
+	Meta("struct:pkg:path", "")
+})
+
+var PkgPathDSL = func() {
+	Service("PkgPathMethod", func() {
+		Method("A", func() {
+			Payload(Foo)
+			Result(Foo)
+		})
+	})
+}
+
+var MultiplePkgPathDSL = func() {
+	Service("MultiplePkgPathMethod", func() {
+		Method("A", func() {
+			Payload(Bar)
+			Result(Bar)
+		})
+
+		Method("B", func() {
+			Payload(Baz)
+			Result(Baz)
+		})
+	})
+}
+
+var PkgPathNoDirDSL = func() {
+	Service("NoDirMethod", func() {
+		Method("A", func() {
+			Payload(NoDir)
+			Result(NoDir)
+		})
+	})
+}

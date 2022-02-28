@@ -36,7 +36,7 @@ func TestClient(t *testing.T) {
 			if len(expr.Root.Services) != 1 {
 				t.Fatalf("got %d services, expected 1", len(expr.Root.Services))
 			}
-			fs := ClientFile(expr.Root.Services[0])
+			fs := ClientFile("test/gen", expr.Root.Services[0])
 			if fs == nil {
 				t.Fatalf("got nil file, expected not nil")
 			}

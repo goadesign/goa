@@ -48,14 +48,14 @@ func clientType(genpkg string, svc *expr.HTTPServiceExpr, seen map[string]struct
 		svcName = data.Service.PathName
 	)
 	path = filepath.Join(codegen.Gendir, "http", svcName, "client", "types.go")
-	header := codegen.Header(svc.Name()+" HTTP client types", "client",
-		[]*codegen.ImportSpec{
-			{Path: "unicode/utf8"},
-			{Path: genpkg + "/" + svcName, Name: data.Service.PkgName},
-			{Path: genpkg + "/" + svcName + "/" + "views", Name: data.Service.ViewsPkg},
-			codegen.GoaImport(""),
-		},
-	)
+	imports := []*codegen.ImportSpec{
+		{Path: "unicode/utf8"},
+		{Path: genpkg + "/" + svcName, Name: data.Service.PkgName},
+		{Path: genpkg + "/" + svcName + "/" + "views", Name: data.Service.ViewsPkg},
+		codegen.GoaImport(""),
+	}
+	imports = append(imports, data.Service.UserTypeImports...)
+	header := codegen.Header(svc.Name()+" HTTP client types", "client", imports)
 
 	var (
 		initData       []*InitData

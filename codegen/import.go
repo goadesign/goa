@@ -22,6 +22,14 @@ type (
 		// Go import path of package.
 		Path string
 	}
+
+	// Location defines a file location and import details.
+	Location struct {
+		// FilePath is the path to the file.
+		FilePath string
+		// ImportPath is the Go import path.
+		ImportPath string
+	}
 )
 
 // NewImport creates an import spec.
@@ -68,7 +76,7 @@ func (s *ImportSpec) Code() string {
 // metadata if any.
 func GetMetaType(att *expr.AttributeExpr) (typeName string, importS *ImportSpec) {
 	if att == nil {
-		return typeName, importS
+		return
 	}
 	if args, ok := att.Meta["struct:field:type"]; ok {
 		if len(args) > 0 {
@@ -81,7 +89,7 @@ func GetMetaType(att *expr.AttributeExpr) (typeName string, importS *ImportSpec)
 			importS.Name = args[2]
 		}
 	}
-	return typeName, importS
+	return
 }
 
 // GetMetaTypeImports parses the attribute for all user defined imports

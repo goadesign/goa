@@ -58,8 +58,6 @@ func init() {
 // using `=`.
 //
 func protoBufTransform(source, target *expr.AttributeExpr, sourceVar, targetVar string, sourceCtx, targetCtx *codegen.AttributeContext, proto, newVar bool) (string, []*codegen.TransformFunctionData, error) {
-	source = unAlias(source)
-	target = unAlias(target)
 	var prefix string
 	{
 		prefix = "protobuf"
@@ -476,37 +474,41 @@ func transformMap(source, target *expr.Map, sourceVar, targetVar string, newVar 
 // held by sourceVar.
 // NOTE: For Int and UInt kinds, protocol buffer Go compiler generates
 // int32 and uint32 respectively whereas goa v2 generates int and uint.
-func convertType(source, target *expr.AttributeExpr, sourceVar string, ta *transformAttrs) string {
-	if _, ok := source.Type.(expr.UserType); ok {
-		// return a function name for the conversion
-		sourcePrimitive, targetPrimitive := getPrimitive(source), getPrimitive(target)
-		if sourcePrimitive != nil && targetPrimitive != nil && sourcePrimitive.Type == targetPrimitive.Type {
+func convertType(src, tgt *expr.AttributeExpr, srcVar string, ta *transformAttrs) string {
+	if expr.IsAlias(src.Type) || expr.IsAlias(tgt.Type) {
+		srcp, tgtp := unAlias(src), unAlias(tgt)
+		if srcp.Type == tgtp.Type {
 			if ta.proto {
-				return fmt.Sprintf("%s(%s)", targetPrimitive.Type.Name(), sourceVar)
+				return fmt.Sprintf("%s(%s)", tgtp.Type.Name(), srcVar)
 			}
-			return fmt.Sprintf("%s(%s)", ta.TargetCtx.Scope.Ref(target, ta.TargetCtx.Pkg), sourceVar)
+			return fmt.Sprintf("%s(%s)", ta.TargetCtx.Scope.Ref(tgt, ta.TargetCtx.Pkg), srcVar)
 		}
-		return fmt.Sprintf("%s(%s)", transformHelperName(source, target, ta), sourceVar)
+		return fmt.Sprintf("%s(%s)", transformHelperName(src, tgt, ta), srcVar)
+	}
+  
+	if _, ok := src.Type.(expr.UserType); ok {
+		return fmt.Sprintf("%s(%s)", transformHelperName(src, tgt, ta), srcVar)
 	}
 
-	sourceType, _ := codegen.GetMetaType(source)
-	targetType, _ := codegen.GetMetaType(target)
-	if source.Type.Kind() != expr.IntKind && source.Type.Kind() != expr.UIntKind {
-		if sourceType != "" || targetType != "" {
-			if ta.proto || targetType == "" {
-				targetType = protoBufNativeGoTypeName(target)
+	srcType, _ := codegen.GetMetaType(src)
+	tgtType, _ := codegen.GetMetaType(tgt)
+	if src.Type != expr.Int && src.Type != expr.UInt {
+		if srcType != "" || tgtType != "" {
+			if ta.proto || tgtType == "" {
+				tgtType = protoBufNativeGoTypeName(tgt.Type)
 			}
-			return fmt.Sprintf("%s(%s)", targetType, sourceVar)
+			return fmt.Sprintf("%s(%s)", tgtType, srcVar)
 		}
-		return sourceVar
+		return srcVar
 	}
+
 	if ta.proto {
-		return fmt.Sprintf("%s(%s)", protoBufNativeGoTypeName(target), sourceVar)
+		return fmt.Sprintf("%s(%s)", protoBufNativeGoTypeName(tgt), srcVar)
 	}
-	if targetType == "" {
-		targetType = codegen.GoNativeTypeName(target.Type)
+	if tgtType == "" {
+		tgtType = codegen.GoNativeTypeName(tgt.Type)
 	}
-	return fmt.Sprintf("%s(%s)", targetType, sourceVar)
+	return fmt.Sprintf("%s(%s)", tgtType, srcVar)
 }
 
 // zeroValure returns the zero value for the given primitive type.
