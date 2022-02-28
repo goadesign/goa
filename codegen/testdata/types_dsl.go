@@ -1,6 +1,10 @@
 package testdata
 
-import . "goa.design/goa/v3/dsl"
+import (
+	"encoding/json"
+
+	. "goa.design/goa/v3/dsl"
+)
 
 var TestTypesDSL = func() {
 	var (
@@ -190,6 +194,10 @@ var TestTypesDSL = func() {
 		_ = Type("WithDefaults", func() {
 			Attribute("int", Int, func() {
 				Default(100)
+			})
+			Attribute("raw_json", func() {
+				Meta("struct:field:type", "json.RawMessage", "json")
+				Default(json.RawMessage("foo"))
 			})
 			Attribute("required_int", Int, func() {
 				Default(99)
