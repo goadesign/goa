@@ -156,12 +156,12 @@ type BResult struct {
 	UserTypeField *Parent
 }
 
-type Parent struct {
-	C *Child
-}
-
 type Child struct {
 	P *Parent
+}
+
+type Parent struct {
+	C *Child
 }
 `
 
@@ -315,9 +315,6 @@ const ServiceName = "CustomErrors"
 // MethodKey key.
 var MethodNames = [1]string{"A"}
 
-// primitive error description
-type Primitive string
-
 type APayload struct {
 	IntField      int
 	StringField   string
@@ -331,15 +328,8 @@ type Result struct {
 	B string
 }
 
-// Error returns an error description.
-func (e Primitive) Error() string {
-	return "primitive error description"
-}
-
-// ErrorName returns "primitive".
-func (e Primitive) ErrorName() string {
-	return "primitive"
-}
+// primitive error description
+type Primitive string
 
 // Error returns an error description.
 func (e *APayload) Error() string {
@@ -359,6 +349,16 @@ func (e *Result) Error() string {
 // ErrorName returns "Result".
 func (e *Result) ErrorName() string {
 	return e.B
+}
+
+// Error returns an error description.
+func (e Primitive) Error() string {
+	return "primitive error description"
+}
+
+// ErrorName returns "primitive".
+func (e Primitive) ErrorName() string {
+	return "primitive"
 }
 `
 
@@ -659,14 +659,14 @@ const ServiceName = "ResultCollectionMultipleViewsMethod"
 // MethodKey key.
 var MethodNames = [1]string{"A"}
 
-// MultipleViewsCollection is the result type of the
-// ResultCollectionMultipleViewsMethod service A method.
-type MultipleViewsCollection []*MultipleViews
-
 type MultipleViews struct {
 	A string
 	B int
 }
+
+// MultipleViewsCollection is the result type of the
+// ResultCollectionMultipleViewsMethod service A method.
+type MultipleViewsCollection []*MultipleViews
 
 // NewMultipleViewsCollection initializes result type MultipleViewsCollection
 // from viewed result type MultipleViewsCollection.
@@ -956,13 +956,13 @@ type RT struct {
 	A RT2Collection
 }
 
-type RT2Collection []*RT2
-
 type RT2 struct {
 	C string
 	D int
 	E *string
 }
+
+type RT2Collection []*RT2
 
 // NewRT initializes result type RT from viewed result type RT.
 func NewRT(vres *resultwithresulttypecollectionviews.RT) *RT {
@@ -1204,13 +1204,13 @@ type ApplicationDashedType struct {
 	Name *string
 }
 
+type ApplicationDashedTypeCollection []*ApplicationDashedType
+
 // ListResult is the result type of the ResultWithDashedMimeType service list
 // method.
 type ListResult struct {
 	Items ApplicationDashedTypeCollection
 }
-
-type ApplicationDashedTypeCollection []*ApplicationDashedType
 
 // NewApplicationDashedType initializes result type ApplicationDashedType from
 // viewed result type ApplicationDashedType.
@@ -1644,18 +1644,6 @@ type StreamingPayloadMethodClientStream interface {
 	CloseAndRecv() (*AResult, error)
 }
 
-// BPayload is the payload type of the StreamingPayloadService service
-// StreamingPayloadMethod method.
-type BPayload struct {
-	ArrayField  []bool
-	MapField    map[int]string
-	ObjectField *struct {
-		IntField    *int
-		StringField *string
-	}
-	UserTypeField *Parent
-}
-
 // APayload is the streaming payload type of the StreamingPayloadService
 // service StreamingPayloadMethod method.
 type APayload struct {
@@ -1676,12 +1664,24 @@ type AResult struct {
 	OptionalField *string
 }
 
-type Parent struct {
-	C *Child
+// BPayload is the payload type of the StreamingPayloadService service
+// StreamingPayloadMethod method.
+type BPayload struct {
+	ArrayField  []bool
+	MapField    map[int]string
+	ObjectField *struct {
+		IntField    *int
+		StringField *string
+	}
+	UserTypeField *Parent
 }
 
 type Child struct {
 	P *Parent
+}
+
+type Parent struct {
+	C *Child
 }
 `
 
@@ -2040,18 +2040,6 @@ type BidirectionalStreamingMethodClientStream interface {
 	Close() error
 }
 
-// BPayload is the payload type of the BidirectionalStreamingService service
-// BidirectionalStreamingMethod method.
-type BPayload struct {
-	ArrayField  []bool
-	MapField    map[int]string
-	ObjectField *struct {
-		IntField    *int
-		StringField *string
-	}
-	UserTypeField *Parent
-}
-
 // APayload is the streaming payload type of the BidirectionalStreamingService
 // service BidirectionalStreamingMethod method.
 type APayload struct {
@@ -2072,12 +2060,24 @@ type AResult struct {
 	OptionalField *string
 }
 
-type Parent struct {
-	C *Child
+// BPayload is the payload type of the BidirectionalStreamingService service
+// BidirectionalStreamingMethod method.
+type BPayload struct {
+	ArrayField  []bool
+	MapField    map[int]string
+	ObjectField *struct {
+		IntField    *int
+		StringField *string
+	}
+	UserTypeField *Parent
 }
 
 type Child struct {
 	P *Parent
+}
+
+type Parent struct {
+	C *Child
 }
 `
 
@@ -2451,4 +2451,50 @@ var MethodNames = [1]string{"A"}
 type NoDir struct {
 	IntField *int
 }
+`
+
+const PkgPathDupe1 = `
+// Service is the PkgPathDupeMethod service interface.
+type Service interface {
+	// A implements A.
+	A(context.Context, *foo.Foo) (res *foo.Foo, err error)
+	// B implements B.
+	B(context.Context, *foo.Foo) (res *foo.Foo, err error)
+}
+
+// ServiceName is the name of the service as defined in the design. This is the
+// same value that is set in the endpoint request contexts under the ServiceKey
+// key.
+const ServiceName = "PkgPathDupeMethod"
+
+// MethodNames lists the service method names as defined in the design. These
+// are the same values that are set in the endpoint request contexts under the
+// MethodKey key.
+var MethodNames = [2]string{"A", "B"}
+`
+
+const PkgPathFooDupe = `// Foo is the payload type of the PkgPathDupeMethod service A method.
+type Foo struct {
+	IntField *int
+}
+`
+
+const PkgPathDupe2 = `
+// Service is the PkgPathDupeMethod2 service interface.
+type Service interface {
+	// A implements A.
+	A(context.Context, *foo.Foo) (res *foo.Foo, err error)
+	// B implements B.
+	B(context.Context, *foo.Foo) (res *foo.Foo, err error)
+}
+
+// ServiceName is the name of the service as defined in the design. This is the
+// same value that is set in the endpoint request contexts under the ServiceKey
+// key.
+const ServiceName = "PkgPathDupeMethod2"
+
+// MethodNames lists the service method names as defined in the design. These
+// are the same values that are set in the endpoint request contexts under the
+// MethodKey key.
+var MethodNames = [2]string{"A", "B"}
 `

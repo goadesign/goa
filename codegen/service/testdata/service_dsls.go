@@ -636,7 +636,7 @@ var PkgPathDSL = func() {
 	})
 }
 
-var MultiplePkgPathDSL = func() {
+var PkgPathMultipleDSL = func() {
 	Service("MultiplePkgPathMethod", func() {
 		Method("A", func() {
 			Payload(Bar)
@@ -655,6 +655,29 @@ var PkgPathNoDirDSL = func() {
 		Method("A", func() {
 			Payload(NoDir)
 			Result(NoDir)
+		})
+	})
+}
+
+var PkgPathDupeDSL = func() {
+	Service("PkgPathDupeMethod", func() {
+		Method("A", func() {
+			Payload(Foo)
+			Result(Foo)
+		})
+		Method("B", func() {
+			Payload(Foo)
+			Result(Foo)
+		})
+	})
+	Service("PkgPathDupeMethod2", func() {
+		Method("A", func() {
+			Payload(Foo)
+			Result(Foo)
+		})
+		Method("B", func() {
+			Payload(Foo)
+			Result(Foo)
 		})
 	})
 }
