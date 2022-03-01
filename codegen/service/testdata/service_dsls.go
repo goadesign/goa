@@ -612,6 +612,10 @@ var Foo = Type("Foo", func() {
 	Meta("struct:pkg:path", "foo")
 })
 
+var ContainedFoo = Type("ContainedFoo", func() {
+	Attribute("Foo", Foo)
+})
+
 var Bar = Type("Bar", func() {
 	Attribute("IntField", Int)
 	Meta("struct:pkg:path", "bar")
@@ -646,6 +650,15 @@ var PkgPathMultipleDSL = func() {
 		Method("B", func() {
 			Payload(Baz)
 			Result(Baz)
+		})
+
+		Method("EnvelopedB", func() {
+			Payload(func() {
+				Attribute("Baz", Baz)
+			})
+			Result(func() {
+				Attribute("Baz", Baz)
+			})
 		})
 	})
 }

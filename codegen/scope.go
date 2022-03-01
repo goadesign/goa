@@ -149,7 +149,16 @@ func (s *NameScope) GoTypeDef(att *expr.AttributeExpr, ptr, useDefault bool) str
 		ss = append(ss, "}")
 		return strings.Join(ss, "\n")
 	case expr.UserType:
-		return s.GoTypeName(att)
+		pkg := ""
+
+		// For user types, it is possible to override the package those types are generated
+		// into. We must respect that override here, or risk dropping the package from the
+		// type (ie, foo.Bar => Bar).
+		if pkgOverride, ok := actual.Attribute().Meta.Last("struct:pkg:path"); ok {
+			pkg = pkgOverride
+		}
+
+		return s.GoFullTypeName(att, pkg)
 	default:
 		panic(fmt.Sprintf("unknown data type %T", actual)) // bug
 	}
