@@ -149,16 +149,7 @@ func (s *NameScope) GoTypeDef(att *expr.AttributeExpr, ptr, useDefault bool) str
 		ss = append(ss, "}")
 		return strings.Join(ss, "\n")
 	case expr.UserType:
-		pkg := ""
-
-		// For user types, it is possible to override the package those types are generated
-		// into. We must respect that override here, or risk dropping the package from the
-		// type (ie, foo.Bar => Bar).
-		if pkgOverride, ok := actual.Attribute().Meta.Last("struct:pkg:path"); ok {
-			pkg = pkgOverride
-		}
-
-		return s.GoFullTypeName(att, pkg)
+		return s.GoFullTypeName(att, "")
 	default:
 		panic(fmt.Sprintf("unknown data type %T", actual)) // bug
 	}
@@ -200,7 +191,17 @@ func (s *NameScope) GoFullTypeRef(att *expr.AttributeExpr, pkg string) string {
 
 // GoTypeName returns the Go type name of the given attribute type.
 func (s *NameScope) GoTypeName(att *expr.AttributeExpr) string {
-	return s.GoFullTypeName(att, "")
+	fullName := s.GoFullTypeName(att, "")
+	if fullName == "goa.ServiceError" {
+		return fullName
+	}
+
+	components := strings.SplitN(fullName, ".", 2)
+	if len(components) == 1 {
+		return components[0]
+	} else {
+		return components[1]
+	}
 }
 
 // GoTypeNameWithDefaults returns the Go type name of the given attribute type.
@@ -237,6 +238,18 @@ func (s *NameScope) GoFullTypeName(att *expr.AttributeExpr, pkg string) string {
 			return "goa.ServiceError"
 		}
 		n := s.HashedUnique(actual, Goify(actual.Name(), true), "")
+
+		// When we create a transport type, we'll add a name:original meta tag. These types
+		// will exist within the transport package, and we shouldn't respect the original
+		// struct:pkg:path meta field we'll inherit from the original type.
+		if _, isAliased := actual.Attribute().Meta.Last("name:original"); !isAliased {
+			// For user types, it is possible to override the package those types are generated
+			// into. We must respect that override here, or risk dropping the package from the
+			// type (ie, foo.Bar => Bar).
+			if pkgOverride, ok := actual.Attribute().Meta.Last("struct:pkg:path"); ok {
+				pkg = pkgOverride
+			}
+		}
 		if pkg == "" {
 			return n
 		}
