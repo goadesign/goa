@@ -149,7 +149,12 @@ func (s *NameScope) GoTypeDef(att *expr.AttributeExpr, ptr, useDefault bool) str
 		ss = append(ss, "}")
 		return strings.Join(ss, "\n")
 	case expr.UserType:
-		return s.GoTypeName(att)
+		loc := UserTypeLocation(actual)
+		var prefix string
+		if loc != nil {
+			prefix = loc.PackageName() + "."
+		}
+		return prefix + s.GoTypeName(att)
 	default:
 		panic(fmt.Sprintf("unknown data type %T", actual)) // bug
 	}

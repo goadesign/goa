@@ -2,7 +2,6 @@ package codegen
 
 import (
 	"fmt"
-	"path"
 	"path/filepath"
 	"strconv"
 
@@ -81,12 +80,13 @@ func (s *ImportSpec) Code() string {
 // attr:pkg:path metadata, nil otherwise..
 func UserTypeLocation(ut expr.UserType) *Location {
 	p, ok := ut.Attribute().Meta.Last("struct:pkg:path")
-	if !ok {
+	if !ok || p == "" {
 		return nil
 	}
-	pkg := path.Join(Gendir, p)
-	fpath := filepath.Join(filepath.FromSlash(pkg), SnakeCase(ut.Name())+".go")
-	return &Location{FilePath: fpath, RelImportPath: pkg}
+	return &Location{
+		FilePath:      filepath.Join(filepath.FromSlash(p), SnakeCase(ut.Name())+".go"),
+		RelImportPath: p,
+	}
 }
 
 // PackageName returns the package name of the given location.

@@ -80,6 +80,9 @@ func TestEncode(t *testing.T) {
 
 		{"empty-server-response", testdata.EmptyServerResponseDSL, testdata.EmptyServerResponseEncodeCode},
 		{"empty-server-response-with-tags", testdata.EmptyServerResponseWithTagsDSL, testdata.EmptyServerResponseWithTagsEncodeCode},
+
+		{"result-with-custom-pkg-type", testdata.ResultWithCustomPkgTypeDSL, testdata.ResultWithCustomPkgTypeEncodeCode},
+		{"result-with-embedded-custom-pkg-type", testdata.ResultWithEmbeddedCustomPkgTypeDSL, testdata.ResultWithEmbeddedCustomPkgTypeEncodeCode},
 	}
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {

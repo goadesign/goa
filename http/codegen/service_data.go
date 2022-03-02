@@ -2637,7 +2637,7 @@ func pkgWithDefault(loc *codegen.Location, def string) string {
 	if loc == nil {
 		return def
 	}
-	return codegen.Goify(path.Base(loc.ImportPath), false)
+	return loc.PackageName()
 }
 
 // unmarshal initializes a data structure defined by target type from a data
