@@ -1,8 +1,6 @@
 package generator
 
 import (
-	"fmt"
-
 	"goa.design/goa/v3/codegen"
 	"goa.design/goa/v3/codegen/service"
 	"goa.design/goa/v3/eval"
@@ -41,9 +39,6 @@ func Service(genpkg string, roots []eval.Root) ([]*codegen.File, error) {
 				}
 			}
 		}
-	}
-	if len(files) == 0 {
-		return nil, fmt.Errorf("design must define at least one service")
 	}
 	return files, nil
 }
