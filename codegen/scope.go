@@ -149,9 +149,8 @@ func (s *NameScope) GoTypeDef(att *expr.AttributeExpr, ptr, useDefault bool) str
 		ss = append(ss, "}")
 		return strings.Join(ss, "\n")
 	case expr.UserType:
-		loc := UserTypeLocation(actual)
 		var prefix string
-		if loc != nil {
+		if loc := UserTypeLocation(actual); loc != nil {
 			prefix = loc.PackageName() + "."
 		}
 		return prefix + s.GoTypeName(att)
