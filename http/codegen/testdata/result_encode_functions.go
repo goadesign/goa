@@ -1022,3 +1022,31 @@ func EncodeMethodEmptyServerResponseWithTagsResponse(encoder func(context.Contex
 	}
 }
 `
+
+var ResultWithCustomPkgTypeEncodeCode = `// EncodeMethodResultWithCustomPkgTypeDSLResponse returns an encoder for
+// responses returned by the ServiceResultWithCustomPkgTypeDSL
+// MethodResultWithCustomPkgTypeDSL endpoint.
+func EncodeMethodResultWithCustomPkgTypeDSLResponse(encoder func(context.Context, http.ResponseWriter) goahttp.Encoder) func(context.Context, http.ResponseWriter, interface{}) error {
+	return func(ctx context.Context, w http.ResponseWriter, v interface{}) error {
+		res, _ := v.(*foo.Foo)
+		enc := encoder(ctx, w)
+		body := NewMethodResultWithCustomPkgTypeDSLResponseBody(res)
+		w.WriteHeader(http.StatusOK)
+		return enc.Encode(body)
+	}
+}
+`
+
+var ResultWithEmbeddedCustomPkgTypeEncodeCode = `// EncodeMethodResultWithEmbeddedCustomPkgTypeDSLResponse returns an encoder
+// for responses returned by the ServiceResultWithEmbeddedCustomPkgTypeDSL
+// MethodResultWithEmbeddedCustomPkgTypeDSL endpoint.
+func EncodeMethodResultWithEmbeddedCustomPkgTypeDSLResponse(encoder func(context.Context, http.ResponseWriter) goahttp.Encoder) func(context.Context, http.ResponseWriter, interface{}) error {
+	return func(ctx context.Context, w http.ResponseWriter, v interface{}) error {
+		res, _ := v.(*serviceresultwithembeddedcustompkgtypedsl.ContainedFoo)
+		enc := encoder(ctx, w)
+		body := NewMethodResultWithEmbeddedCustomPkgTypeDSLResponseBody(res)
+		w.WriteHeader(http.StatusOK)
+		return enc.Encode(body)
+	}
+}
+`
