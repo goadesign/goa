@@ -443,8 +443,7 @@ func (d *Data) initUserTypeImports(genpkg string) {
 		if loc == nil {
 			return
 		}
-		loc.ImportPath = genpkg + "/" + loc.RelImportPath
-		importsByPath[loc.FilePath] = &codegen.ImportSpec{Name: loc.PackageName(), Path: loc.ImportPath}
+		importsByPath[loc.FilePath] = &codegen.ImportSpec{Name: loc.PackageName(), Path: genpkg + "/" + loc.RelImportPath}
 	}
 
 	for _, m := range d.Methods {

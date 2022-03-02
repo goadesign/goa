@@ -31,8 +31,6 @@ type (
 		// RelImportPath is the Go import path starting after the gen
 		// folder.
 		RelImportPath string
-		// ImportPath is the full Go import path.
-		ImportPath string
 	}
 )
 
