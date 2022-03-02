@@ -404,9 +404,16 @@ func transformMap(source, target *expr.Map, sourceVar, targetVar string, newVar 
 	if err := codegen.IsCompatible(source.KeyType.Type, target.KeyType.Type, sourceVar+"[key]", targetVar+"[key]"); err != nil {
 		return "", err
 	}
-
-	targetKeyRef := ta.TargetCtx.Scope.Ref(target.KeyType, ta.TargetCtx.Pkg)
-	targetElemRef := ta.TargetCtx.Scope.Ref(target.ElemType, ta.TargetCtx.Pkg)
+	kt := target.KeyType
+	if ta.proto {
+		kt = unAlias(kt)
+	}
+	et := target.ElemType
+	if ta.proto {
+		et = unAlias(et)
+	}
+	targetKeyRef := ta.TargetCtx.Scope.Ref(kt, ta.TargetCtx.Pkg)
+	targetElemRef := ta.TargetCtx.Scope.Ref(et, ta.TargetCtx.Pkg)
 
 	var (
 		code string

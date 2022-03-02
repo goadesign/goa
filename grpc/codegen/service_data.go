@@ -751,10 +751,10 @@ func collectValidations(att *expr.AttributeExpr, ctx *codegen.AttributeContext, 
 		}
 		sd.validations = append(sd.validations, &ValidationData{
 			Name:    "Validate" + name,
-			Def:     codegen.RecursiveValidationCode(att, ctx, true, expr.IsAlias(att.Type), "message"),
+			Def:     codegen.RecursiveValidationCode(unAlias(att), ctx, true, false, "message"),
 			ArgName: "message",
 			SrcName: name,
-			SrcRef:  protoBufGoFullTypeRef(att, sd.PkgName, sd.Scope),
+			SrcRef:  protoBufGoFullTypeRef(unAlias(att), sd.PkgName, sd.Scope),
 			Kind:    kind,
 		})
 	collect:
