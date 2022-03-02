@@ -1,8 +1,6 @@
 package generator
 
 import (
-	"fmt"
-
 	"goa.design/goa/v3/codegen"
 	"goa.design/goa/v3/codegen/service"
 	"goa.design/goa/v3/eval"
@@ -45,9 +43,6 @@ func Transport(genpkg string, roots []eval.Root) ([]*codegen.File, error) {
 				}
 			}
 		}
-	}
-	if len(files) == 0 {
-		return nil, fmt.Errorf("transport: no HTTP/gRPC design found")
 	}
 	return files, nil
 }
