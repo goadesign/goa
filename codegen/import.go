@@ -2,6 +2,7 @@ package codegen
 
 import (
 	"fmt"
+	"path/filepath"
 	"strconv"
 
 	"goa.design/goa/v3/expr"
@@ -27,8 +28,9 @@ type (
 	Location struct {
 		// FilePath is the path to the file.
 		FilePath string
-		// ImportPath is the Go import path.
-		ImportPath string
+		// RelImportPath is the Go import path starting after the gen
+		// folder.
+		RelImportPath string
 	}
 )
 
@@ -70,6 +72,27 @@ func (s *ImportSpec) Code() string {
 		return fmt.Sprintf(`%s "%s"`, s.Name, s.Path)
 	}
 	return fmt.Sprintf(`"%s"`, s.Path)
+}
+
+// UserTypeLocation returns the location of the user type if set via the
+// attr:pkg:path metadata, nil otherwise..
+func UserTypeLocation(ut expr.UserType) *Location {
+	p, ok := ut.Attribute().Meta.Last("struct:pkg:path")
+	if !ok || p == "" {
+		return nil
+	}
+	return &Location{
+		FilePath:      filepath.Join(filepath.FromSlash(p), SnakeCase(ut.Name())+".go"),
+		RelImportPath: p,
+	}
+}
+
+// PackageName returns the package name of the given location.
+func (loc *Location) PackageName() string {
+	if loc == nil {
+		return ""
+	}
+	return Goify(filepath.Base(loc.RelImportPath), false)
 }
 
 // GetMetaType retrieves the type and package defined by the struct:field:type

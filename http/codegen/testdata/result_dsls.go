@@ -744,6 +744,46 @@ var ResultWithResultCollectionDSL = func() {
 	})
 }
 
+var ResultWithCustomPkgTypeDSL = func() {
+	var Foo = Type("Foo", func() {
+		Meta("struct:pkg:path", "foo")
+		Attribute("bar", String)
+	})
+
+	Service("ServiceResultWithCustomPkgTypeDSL", func() {
+		Method("MethodResultWithCustomPkgTypeDSL", func() {
+			Payload(Foo)
+			Result(Foo)
+
+			HTTP(func() {
+				GET("/")
+			})
+		})
+	})
+}
+
+var ResultWithEmbeddedCustomPkgTypeDSL = func() {
+	var Foo = Type("Foo", func() {
+		Meta("struct:pkg:path", "foo")
+		Attribute("bar", String)
+	})
+
+	var ContainedFoo = Type("ContainedFoo", func() {
+		Attribute("Foo", Foo)
+	})
+
+	Service("ServiceResultWithEmbeddedCustomPkgTypeDSL", func() {
+		Method("MethodResultWithEmbeddedCustomPkgTypeDSL", func() {
+			Payload(ContainedFoo)
+			Result(ContainedFoo)
+
+			HTTP(func() {
+				GET("/")
+			})
+		})
+	})
+}
+
 var EmptyErrorResponseBodyDSL = func() {
 	Service("ServiceEmptyErrorResponseBody", func() {
 		Method("MethodEmptyErrorResponseBody", func() {

@@ -2,7 +2,6 @@ package codegen
 
 import (
 	"fmt"
-	"path"
 
 	"goa.design/goa/v3/codegen"
 	"goa.design/goa/v3/codegen/service"
@@ -1280,7 +1279,7 @@ func pkgWithDefault(loc *codegen.Location, def string) string {
 	if loc == nil {
 		return def
 	}
-	return codegen.Goify(path.Base(loc.ImportPath), false)
+	return loc.PackageName()
 }
 
 // getPrimitive returns the primitive expression if the given expression is an alias to one

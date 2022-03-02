@@ -2,7 +2,6 @@ package codegen
 
 import (
 	"fmt"
-	"path"
 	"path/filepath"
 
 	"goa.design/goa/v3/codegen"
@@ -240,14 +239,14 @@ func isBearer(schemes []*service.SchemeData) bool {
 
 func requestStructPkg(m *service.MethodData, def string) string {
 	if m.PayloadLoc != nil {
-		return codegen.Goify(path.Base(m.PayloadLoc.ImportPath), false)
+		return m.PayloadLoc.PackageName()
 	}
 	return def
 }
 
 func responseStructPkg(m *service.MethodData, def string) string {
 	if m.ResultLoc != nil {
-		return codegen.Goify(path.Base(m.ResultLoc.ImportPath), false)
+		return m.ResultLoc.PackageName()
 	}
 	return def
 }

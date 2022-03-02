@@ -647,6 +647,15 @@ var PkgPathMultipleDSL = func() {
 			Payload(Baz)
 			Result(Baz)
 		})
+
+		Method("EnvelopedB", func() {
+			Payload(func() {
+				Attribute("Baz", Baz)
+			})
+			Result(func() {
+				Attribute("Baz", Baz)
+			})
+		})
 	})
 }
 
