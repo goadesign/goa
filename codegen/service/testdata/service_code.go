@@ -2378,7 +2378,7 @@ const PkgPath = `
 // Service is the PkgPathMethod service interface.
 type Service interface {
 	// A implements A.
-	A(context.Context, *foo.Foo) (res *foo.Foo, err error)
+	A(context.Context, *foo.Foo) (res *foo.RecursiveFoo, err error)
 }
 
 // ServiceName is the name of the service as defined in the design. This is the
@@ -2429,6 +2429,12 @@ type EnvelopedBResult struct {
 const PkgPathFoo = `// Foo is the payload type of the PkgPathMethod service A method.
 type Foo struct {
 	IntField *int
+}
+`
+
+const PkgPathRecursiveFoo = `// RecursiveFoo is the result type of the PkgPathMethod service A method.
+type RecursiveFoo struct {
+	Foo *Foo
 }
 `
 
