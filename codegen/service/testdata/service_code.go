@@ -2378,13 +2378,31 @@ const PkgPath = `
 // Service is the PkgPathMethod service interface.
 type Service interface {
 	// A implements A.
-	A(context.Context, *foo.Foo) (res *foo.RecursiveFoo, err error)
+	A(context.Context, *foo.Foo) (res *foo.Foo, err error)
 }
 
 // ServiceName is the name of the service as defined in the design. This is the
 // same value that is set in the endpoint request contexts under the ServiceKey
 // key.
 const ServiceName = "PkgPathMethod"
+
+// MethodNames lists the service method names as defined in the design. These
+// are the same values that are set in the endpoint request contexts under the
+// MethodKey key.
+var MethodNames = [1]string{"A"}
+`
+
+const PkgPathRecursive = `
+// Service is the PkgPathRecursiveMethod service interface.
+type Service interface {
+	// A implements A.
+	A(context.Context, *foo.RecursiveFoo) (res *foo.RecursiveFoo, err error)
+}
+
+// ServiceName is the name of the service as defined in the design. This is the
+// same value that is set in the endpoint request contexts under the ServiceKey
+// key.
+const ServiceName = "PkgPathRecursiveMethod"
 
 // MethodNames lists the service method names as defined in the design. These
 // are the same values that are set in the endpoint request contexts under the
@@ -2416,13 +2434,13 @@ var MethodNames = [3]string{"A", "B", "EnvelopedB"}
 // EnvelopedBPayload is the payload type of the MultiplePkgPathMethod service
 // EnvelopedB method.
 type EnvelopedBPayload struct {
-	Baz *baz.Baz
+	Baz *Baz
 }
 
 // EnvelopedBResult is the result type of the MultiplePkgPathMethod service
 // EnvelopedB method.
 type EnvelopedBResult struct {
-	Baz *baz.Baz
+	Baz *Baz
 }
 `
 
@@ -2432,7 +2450,14 @@ type Foo struct {
 }
 `
 
-const PkgPathRecursiveFoo = `// RecursiveFoo is the result type of the PkgPathMethod service A method.
+const PkgPathRecursiveFooFoo = `
+type Foo struct {
+	IntField *int
+}
+`
+
+const PkgPathRecursiveFoo = `// RecursiveFoo is the payload type of the PkgPathRecursiveMethod service A
+// method.
 type RecursiveFoo struct {
 	Foo *Foo
 }

@@ -81,7 +81,7 @@ func TestStructPkgPath(t *testing.T) {
 	}{
 		{"none", testdata.SingleMethodDSL, []string{testdata.SingleMethod}, nil, nil},
 		{"single", testdata.PkgPathDSL, []string{testdata.PkgPath}, []string{fooPath}, []string{testdata.PkgPathFoo}},
-		{"recursive", testdata.PkgPathDSL, []string{testdata.PkgPath}, []string{fooPath, recursiveFooPath}, []string{testdata.PkgPathFoo, testdata.PkgPathRecursiveFoo}},
+		{"recursive", testdata.PkgPathRecursiveDSL, []string{testdata.PkgPathRecursive}, []string{fooPath, recursiveFooPath}, []string{testdata.PkgPathRecursiveFooFoo, testdata.PkgPathRecursiveFoo}},
 		{"multiple", testdata.PkgPathMultipleDSL, []string{testdata.PkgPathMultiple}, []string{barPath, bazPath}, []string{testdata.PkgPathBar, testdata.PkgPathBaz}},
 		{"nopkg", testdata.PkgPathNoDirDSL, []string{testdata.PkgPathNoDir}, nil, nil},
 		{"dupes", testdata.PkgPathDupeDSL, []string{testdata.PkgPathDupe1, testdata.PkgPathDupe2}, []string{fooPath}, []string{testdata.PkgPathFooDupe}},

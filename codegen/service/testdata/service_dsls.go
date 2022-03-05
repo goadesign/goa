@@ -636,6 +636,15 @@ var PkgPathDSL = func() {
 	Service("PkgPathMethod", func() {
 		Method("A", func() {
 			Payload(Foo)
+			Result(Foo)
+		})
+	})
+}
+
+var PkgPathRecursiveDSL = func() {
+	Service("PkgPathRecursiveMethod", func() {
+		Method("A", func() {
+			Payload(RecursiveFoo)
 			Result(RecursiveFoo)
 		})
 	})
