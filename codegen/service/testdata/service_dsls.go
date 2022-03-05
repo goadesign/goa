@@ -612,6 +612,11 @@ var Foo = Type("Foo", func() {
 	Meta("struct:pkg:path", "foo")
 })
 
+var RecursiveFoo = Type("RecursiveFoo", func() {
+	Attribute("Foo", Foo)
+	Meta("struct:pkg:path", "foo")
+})
+
 var Bar = Type("Bar", func() {
 	Attribute("IntField", Int)
 	Meta("struct:pkg:path", "bar")
@@ -632,6 +637,15 @@ var PkgPathDSL = func() {
 		Method("A", func() {
 			Payload(Foo)
 			Result(Foo)
+		})
+	})
+}
+
+var PkgPathRecursiveDSL = func() {
+	Service("PkgPathRecursiveMethod", func() {
+		Method("A", func() {
+			Payload(RecursiveFoo)
+			Result(RecursiveFoo)
 		})
 	})
 }

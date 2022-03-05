@@ -69,6 +69,7 @@ func TestService(t *testing.T) {
 
 func TestStructPkgPath(t *testing.T) {
 	fooPath := filepath.Join("gen", "foo", "foo.go")
+	recursiveFooPath := filepath.Join("gen", "foo", "recursive_foo.go")
 	barPath := filepath.Join("gen", "bar", "bar.go")
 	bazPath := filepath.Join("gen", "baz", "baz.go")
 	cases := []struct {
@@ -80,6 +81,7 @@ func TestStructPkgPath(t *testing.T) {
 	}{
 		{"none", testdata.SingleMethodDSL, []string{testdata.SingleMethod}, nil, nil},
 		{"single", testdata.PkgPathDSL, []string{testdata.PkgPath}, []string{fooPath}, []string{testdata.PkgPathFoo}},
+		{"recursive", testdata.PkgPathRecursiveDSL, []string{testdata.PkgPathRecursive}, []string{fooPath, recursiveFooPath}, []string{testdata.PkgPathRecursiveFooFoo, testdata.PkgPathRecursiveFoo}},
 		{"multiple", testdata.PkgPathMultipleDSL, []string{testdata.PkgPathMultiple}, []string{barPath, bazPath}, []string{testdata.PkgPathBar, testdata.PkgPathBaz}},
 		{"nopkg", testdata.PkgPathNoDirDSL, []string{testdata.PkgPathNoDir}, nil, nil},
 		{"dupes", testdata.PkgPathDupeDSL, []string{testdata.PkgPathDupe1, testdata.PkgPathDupe2}, []string{fooPath}, []string{testdata.PkgPathFooDupe}},
@@ -88,7 +90,7 @@ func TestStructPkgPath(t *testing.T) {
 		t.Run(c.Name, func(t *testing.T) {
 			userTypePkgs := make(map[string][]string)
 			codegen.RunDSLWithFunc(t, c.DSL, func() {
-				expr.Root.Types = []expr.UserType{testdata.APayload, testdata.AResult, testdata.Foo, testdata.Bar, testdata.Baz, testdata.NoDir}
+				expr.Root.Types = []expr.UserType{testdata.APayload, testdata.AResult, testdata.RecursiveFoo, testdata.Foo, testdata.Bar, testdata.Baz, testdata.NoDir}
 			})
 			if len(expr.Root.Services) != len(c.SvcCodes) {
 				t.Fatalf("got %d services, expected %d", len(expr.Root.Services), len(c.SvcCodes))
