@@ -13,8 +13,8 @@
 # - "all" is the default target, it runs "lint" and "test"
 #
 MAJOR=3
-MINOR=5
-BUILD=5
+MINOR=6
+BUILD=0
 
 GOOS=$(shell go env GOOS)
 GO_FILES=$(shell find . -type f -name '*.go')
@@ -23,17 +23,16 @@ GOPATH=$(shell go env GOPATH)
 # Only list test and build dependencies
 # Standard dependencies are installed via go get
 DEPEND=\
-	golang.org/x/lint/golint@v0.0.0-20210508222113-6edffad5e616  \
 	google.golang.org/protobuf/cmd/protoc-gen-go@v1.27.1 \
 	google.golang.org/grpc/cmd/protoc-gen-go-grpc@v1.1 \
-	honnef.co/go/tools/cmd/staticcheck@v0.2.1
+	honnef.co/go/tools/cmd/staticcheck@v0.2.2
 
 all: lint test
 
 travis: depend all #test-examples test-plugins
 
 # Install protoc
-PROTOC_VERSION=3.17.3
+PROTOC_VERSION=3.19.4
 UNZIP=unzip
 ifeq ($(GOOS),linux)
 	PROTOC=protoc-$(PROTOC_VERSION)-linux-x86_64
@@ -65,10 +64,7 @@ depend:
 
 lint:
 ifneq ($(GOOS),windows)
-	@if [ "`golint ./... | grep -vf .golint_exclude | tee /dev/stderr`" ]; then \
-		echo "^ - Lint errors!" && echo && exit 1; \
-	fi
-	@if [ "`staticcheck -checks all ./... | grep -v ".pb.go" | grep -v "SA1019" | tee /dev/stderr`" ]; then \
+	@if [ "`staticcheck -checks all ./... | grep -v ".pb.go" | tee /dev/stderr`" ]; then \
 		echo "^ - staticcheck errors!" && echo && exit 1; \
 	fi
 endif
