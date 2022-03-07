@@ -64,13 +64,16 @@ func (s *Server) MethodUnaryRPCWithErrors(ctx context.Context, message *service_
 			case "timeout":
 				return nil, goagrpc.NewStatusError(codes.Canceled, err, goagrpc.NewErrorResponse(err))
 			case "internal":
-				er := err.(*serviceunaryrpcwitherrors.AnotherError)
+				var er *serviceunaryrpcwitherrors.AnotherError
+				errors.As(err, &er)
 				return nil, goagrpc.NewStatusError(codes.Unknown, err, NewMethodUnaryRPCWithErrorsInternalError(er))
 			case "bad_request":
-				er := err.(*serviceunaryrpcwitherrors.AnotherError)
+				var er *serviceunaryrpcwitherrors.AnotherError
+				errors.As(err, &er)
 				return nil, goagrpc.NewStatusError(codes.InvalidArgument, err, NewMethodUnaryRPCWithErrorsBadRequestError(er))
 			case "custom_error":
-				er := err.(*serviceunaryrpcwitherrors.ErrorType)
+				var er *serviceunaryrpcwitherrors.ErrorType
+				errors.As(err, &er)
 				return nil, goagrpc.NewStatusError(codes.Unknown, err, NewMethodUnaryRPCWithErrorsCustomErrorError(er))
 			}
 		}
