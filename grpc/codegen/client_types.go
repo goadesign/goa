@@ -35,10 +35,16 @@ func clientType(genpkg string, svc *expr.GRPCServiceExpr, seen map[string]struct
 		sd = GRPCServices.Get(svc.Name())
 	)
 	{
+		seen := make(map[string]struct{})
 		collect := func(c *ConvertData) {
-			if c.Init != nil {
-				initData = append(initData, c.Init)
+			if c.Init == nil {
+				return
 			}
+			if _, ok := seen[c.Init.Name]; ok {
+				return
+			}
+			seen[c.Init.Name] = struct{}{}
+			initData = append(initData, c.Init)
 		}
 		for _, a := range svc.GRPCEndpoints {
 			ed := sd.Endpoint(a.Name())

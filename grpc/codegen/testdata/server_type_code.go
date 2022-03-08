@@ -110,6 +110,39 @@ func svcServicepayloadwithnestedtypesBParamsToServicePayloadWithNestedTypespbBPa
 }
 `
 
+const PayloadWithMultipleUseTypesServerTypeCode = `// NewMethodPayloadDuplicateAPayload builds the payload of the
+// "MethodPayloadDuplicateA" endpoint of the "ServicePayloadWithNestedTypes"
+// service from the gRPC request type.
+func NewMethodPayloadDuplicateAPayload(message *service_payload_with_nested_typespb.DupePayload) servicepayloadwithnestedtypes.DupePayload {
+	v := servicepayloadwithnestedtypes.DupePayload(message.Field)
+	return v
+}
+
+// NewMethodPayloadDuplicateAResponse builds the gRPC response type from the
+// result of the "MethodPayloadDuplicateA" endpoint of the
+// "ServicePayloadWithNestedTypes" service.
+func NewMethodPayloadDuplicateAResponse() *service_payload_with_nested_typespb.MethodPayloadDuplicateAResponse {
+	message := &service_payload_with_nested_typespb.MethodPayloadDuplicateAResponse{}
+	return message
+}
+
+// NewMethodPayloadDuplicateBPayload builds the payload of the
+// "MethodPayloadDuplicateB" endpoint of the "ServicePayloadWithNestedTypes"
+// service from the gRPC request type.
+func NewMethodPayloadDuplicateBPayload(message *service_payload_with_nested_typespb.DupePayload) servicepayloadwithnestedtypes.DupePayload {
+	v := servicepayloadwithnestedtypes.DupePayload(message.Field)
+	return v
+}
+
+// NewMethodPayloadDuplicateBResponse builds the gRPC response type from the
+// result of the "MethodPayloadDuplicateB" endpoint of the
+// "ServicePayloadWithNestedTypes" service.
+func NewMethodPayloadDuplicateBResponse() *service_payload_with_nested_typespb.MethodPayloadDuplicateBResponse {
+	message := &service_payload_with_nested_typespb.MethodPayloadDuplicateBResponse{}
+	return message
+}
+`
+
 const PayloadWithAliasTypeServerTypeCode = `// NewMethodMessageUserTypeWithAliasPayload builds the payload of the
 // "MethodMessageUserTypeWithAlias" endpoint of the
 // "ServiceMessageUserTypeWithAlias" service from the gRPC request type.
