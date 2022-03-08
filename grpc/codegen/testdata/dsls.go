@@ -573,6 +573,20 @@ var PayloadWithNestedTypesDSL = func() {
 	})
 }
 
+var PayloadWithMultipleUseTypesDSL = func() {
+	var DupePayload = Type("DupePayload", String)
+	Service("ServicePayloadWithNestedTypes", func() {
+		Method("MethodPayloadDuplicateA", func() {
+			Payload(DupePayload)
+			GRPC(func() {})
+		})
+		Method("MethodPayloadDuplicateB", func() {
+			Payload(DupePayload)
+			GRPC(func() {})
+		})
+	})
+}
+
 var PayloadWithAliasTypeDSL = func() {
 	var IntAlias = Type("IntAlias", Int)
 	var PayloadAliasT = Type("PayloadAliasT", func() {
