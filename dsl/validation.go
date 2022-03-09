@@ -458,6 +458,12 @@ func Required(names ...string) {
 			at.Validation = &expr.ValidationExpr{}
 		}
 		at.Validation.AddRequired(names...)
+		if ut, ok := at.Type.(expr.UserType); ok {
+			if ut.Attribute().Validation == nil {
+				ut.Attribute().Validation = &expr.ValidationExpr{}
+			}
+			ut.Attribute().Validation.AddRequired(names...)
+		}
 	}
 }
 
