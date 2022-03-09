@@ -609,21 +609,23 @@ func (d ServicesData) analyze(service *expr.ServiceExpr) *Data {
 	}
 
 	for _, t := range expr.Root.Types {
-		if svcs, ok := t.Attribute().Meta["type:generate:force"]; ok {
-			att := &expr.AttributeExpr{Type: t}
-			if len(svcs) > 0 {
-				// Force generate type only in the specified services
-				for _, svc := range svcs {
-					if svc == service.Name {
-						types = append(types, collectTypes(att, scope, seen)...)
-						break
-					}
-				}
-			} else {
-				// Force generate type in all the services
-				types = append(types, collectTypes(att, scope, seen)...)
-			}
+		svcs, ok := t.Attribute().Meta["type:generate:force"]
+		if !ok {
+			continue
 		}
+		att := &expr.AttributeExpr{Type: t}
+		if len(svcs) > 0 {
+			// Force generate type only in the specified services
+			for _, svc := range svcs {
+				if svc == service.Name {
+					types = append(types, collectTypes(att, scope, seen)...)
+					break
+				}
+			}
+			continue
+		}
+		// Force generate type in all the services
+		types = append(types, collectTypes(att, scope, seen)...)
 	}
 
 	var (
@@ -634,35 +636,37 @@ func (d ServicesData) analyze(service *expr.ServiceExpr) *Data {
 		methods = make([]*MethodData, len(service.Methods))
 		for i, e := range service.Methods {
 			m := buildMethodData(e, pkgName, service, scope)
-			if rt, ok := e.Result.Type.(*expr.ResultTypeExpr); ok {
-				var view string
-				if v, ok := e.Result.Meta["view"]; ok {
-					view = v[0]
-				}
-				if vrt, ok := seenViewed[m.Result+"::"+view]; ok {
-					m.ViewedResult = vrt
-				} else {
-					projected := seenProj[rt.ID()]
-					projAtt := &expr.AttributeExpr{Type: projected.Type}
-					vrt := buildViewedResultType(e.Result, projAtt, viewspkg, scope, viewScope)
-					found := false
-					for _, rt := range viewedRTs {
-						if rt.Type.ID() == vrt.Type.ID() {
-							found = true
-							break
-						}
-					}
-					if !found {
-						viewedRTs = append(viewedRTs, vrt)
-					}
-					m.ViewedResult = vrt
-					seenViewed[vrt.Name+"::"+view] = vrt
-				}
-			}
 			methods[i] = m
 			for _, s := range m.Schemes {
 				schemes = schemes.Append(s)
 			}
+			rt, ok := e.Result.Type.(*expr.ResultTypeExpr)
+			if !ok {
+				continue
+			}
+			var view string
+			if v, ok := e.Result.Meta["view"]; ok {
+				view = v[0]
+			}
+			if vrt, ok := seenViewed[m.Result+"::"+view]; ok {
+				m.ViewedResult = vrt
+				continue
+			}
+			projected := seenProj[rt.ID()]
+			projAtt := &expr.AttributeExpr{Type: projected.Type}
+			vrt := buildViewedResultType(e.Result, projAtt, viewspkg, scope, viewScope)
+			found := false
+			for _, rt := range viewedRTs {
+				if rt.Type.ID() == vrt.Type.ID() {
+					found = true
+					break
+				}
+			}
+			if !found {
+				viewedRTs = append(viewedRTs, vrt)
+			}
+			m.ViewedResult = vrt
+			seenViewed[vrt.Name+"::"+view] = vrt
 		}
 	}
 
