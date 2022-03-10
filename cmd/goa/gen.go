@@ -60,8 +60,11 @@ func NewGenerator(cmd string, path, output string) *Generator {
 		fset := token.NewFileSet()
 		p := regexp.MustCompile(`goa.design/goa/v(\d+)/dsl`)
 		for _, pkg := range pkgs {
-			if _, err := os.Stat(filepath.Join(pkg.Module.Dir, "vendor")); !os.IsNotExist(err) {
-				hasVendorDirectory = true
+			// Nil check in case packages.Load can't get module info
+			if pkg.Module != nil {
+				if _, err := os.Stat(filepath.Join(pkg.Module.Dir, "vendor")); !os.IsNotExist(err) {
+					hasVendorDirectory = true
+				}
 			}
 			for _, gof := range pkg.GoFiles {
 				if bs, err := ioutil.ReadFile(gof); err == nil {
