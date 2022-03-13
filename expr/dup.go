@@ -77,6 +77,12 @@ func (d *dupper) DupType(t DataType) DataType {
 			KeyType:  d.DupAttribute(actual.KeyType),
 			ElemType: d.DupAttribute(actual.ElemType),
 		}
+	case Union:
+		dp := make(Union, len(actual))
+		for i, att := range actual {
+			dp[i] = d.DupAttribute(att)
+		}
+		return dp
 	case UserType:
 		if u, ok := d.uts[actual.ID()]; ok {
 			return u

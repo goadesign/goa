@@ -46,6 +46,12 @@ func GoifyAtt(att *expr.AttributeExpr, name string, upper bool) string {
 	return Goify(name, upper)
 }
 
+// UnionValTypeName returns the Go type name of the interface and method used to
+// type the union.
+func UnionValTypeName(unionName string) string {
+	return Goify(unionName+"Val", false)
+}
+
 // fixReservedGo appends an underscore on to Go reserved keywords.
 func fixReservedGo(w string) string {
 	if reservedGo[w] {

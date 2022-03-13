@@ -1,0 +1,8 @@
+func transform() {
+	var target *UnionMapUserType
+	switch source.Type {
+	case "UnionMapUserTypeMap0":
+		val := source.Value.(UnionMapUserTypeMap0)
+		target = &UnionMapUserType{Value: val}
+	}
+}

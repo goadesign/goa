@@ -3,6 +3,7 @@ package service
 import (
 	"bytes"
 	"fmt"
+	"sort"
 	"strings"
 	"text/template"
 
@@ -76,6 +77,19 @@ type (
 		projectedTypes []*ProjectedTypeData
 		// viewedResultTypes lists all the viewed method result types.
 		viewedResultTypes []*ViewedResultTypeData
+		// unionValueMethods lists the methods used to define union types.
+		unionValueMethods []*UnionValueMethodData
+	}
+
+	// UnionValueMethodData describes a method used on a union value type.
+	UnionValueMethodData struct {
+		// Name is the name of the function.
+		Name string
+		// TypeRef is a reference on the target union value type.
+		TypeRef string
+		// Loc defines the file and Go package of the method if
+		// overridden in corresponding union type via Meta.
+		Loc *codegen.Location
 	}
 
 	// ErrorInitData describes an error returned by a service method of type
@@ -608,6 +622,7 @@ func (d ServicesData) analyze(service *expr.ServiceExpr) *Data {
 		}
 	}
 
+	// Add forced types
 	for _, t := range expr.Root.Types {
 		svcs, ok := t.Attribute().Meta["type:generate:force"]
 		if !ok {
@@ -626,6 +641,13 @@ func (d ServicesData) analyze(service *expr.ServiceExpr) *Data {
 		}
 		// Force generate type in all the services
 		types = append(types, collectTypes(att, scope, seen)...)
+	}
+
+	// Add union value types
+	for _, ut := range expr.Root.Types {
+		if len(ut.Attribute().Meta["type:union:is"]) > 0 {
+			types = append(types, collectTypes(&expr.AttributeExpr{Type: ut}, scope, seen)...)
+		}
 	}
 
 	var (
@@ -671,6 +693,54 @@ func (d ServicesData) analyze(service *expr.ServiceExpr) *Data {
 	}
 
 	var (
+		unionMethods []*UnionValueMethodData
+	)
+	{
+		seen := make(map[string]struct{})
+		collectUnionMethods := func(attrs ...*expr.AttributeExpr) {
+			for _, att := range attrs {
+				if att == nil {
+					continue
+				}
+				ut, ok := att.Type.(*expr.UserTypeExpr)
+				if !ok {
+					continue
+				}
+				if _, ok := seen[ut.ID()]; ok {
+					continue
+				}
+				seen[ut.ID()] = struct{}{}
+				unions := ut.Attribute().Meta["type:union:is"]
+				if len(unions) == 0 {
+					continue
+				}
+				for _, u := range unions {
+					unionMethods = append(unionMethods, &UnionValueMethodData{
+						Name:    codegen.UnionValTypeName(u),
+						TypeRef: scope.GoTypeRef(&expr.AttributeExpr{Type: ut}),
+						Loc:     codegen.UserTypeLocation(ut),
+					})
+				}
+			}
+		}
+		for _, t := range types {
+			collectUnionMethods(&expr.AttributeExpr{Type: t.Type})
+		}
+		for _, t := range errTypes {
+			collectUnionMethods(&expr.AttributeExpr{Type: t.Type})
+		}
+		for _, m := range service.Methods {
+			collectUnionMethods(m.Payload, m.StreamingPayload, m.Result)
+			for _, e := range m.Errors {
+				collectUnionMethods(e.AttributeExpr)
+			}
+		}
+		sort.Slice(unionMethods, func(i, j int) bool {
+			return unionMethods[i].Name < unionMethods[j].Name
+		})
+	}
+
+	var (
 		desc string
 	)
 	{
@@ -698,6 +768,7 @@ func (d ServicesData) analyze(service *expr.ServiceExpr) *Data {
 		userTypes:         types,
 		projectedTypes:    projTypes,
 		viewedResultTypes: viewedRTs,
+		unionValueMethods: unionMethods,
 	}
 	d[service.Name] = data
 

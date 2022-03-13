@@ -51,6 +51,7 @@ func TestEncode(t *testing.T) {
 		{"body-string", testdata.ResultBodyStringDSL, testdata.ResultBodyStringEncodeCode},
 		{"body-object", testdata.ResultBodyObjectDSL, testdata.ResultBodyObjectEncodeCode},
 		{"body-user", testdata.ResultBodyUserDSL, testdata.ResultBodyUserEncodeCode},
+		{"body-union", testdata.ResultBodyUnionDSL, testdata.ResultBodyUnionEncodeCode},
 		{"body-result-multiple-views", testdata.ResultBodyMultipleViewsDSL, testdata.ResultBodyMultipleViewsEncodeCode},
 		{"body-result-collection-multiple-views", testdata.ResultBodyCollectionDSL, testdata.ResultBodyCollectionMultipleViewsEncodeCode},
 		{"body-result-collection-explicit-view", testdata.ResultBodyCollectionExplicitViewDSL, testdata.ResultBodyCollectionExplicitViewEncodeCode},

@@ -1,0 +1,12 @@
+func transform() {
+	var target *UnionUserType
+	var name string
+	switch source.Value.(type) {
+	case *SomeType:
+		name = "SomeType"
+	}
+	target = &UnionUserType{
+		Type:  name,
+		Value: source.Value,
+	}
+}

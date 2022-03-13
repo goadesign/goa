@@ -621,6 +621,19 @@ func EncodeMethodBodyUserResponse(encoder func(context.Context, http.ResponseWri
 }
 `
 
+var ResultBodyUnionEncodeCode = `// EncodeMethodBodyUnionResponse returns an encoder for responses returned by
+// the ServiceBodyUnion MethodBodyUnion endpoint.
+func EncodeMethodBodyUnionResponse(encoder func(context.Context, http.ResponseWriter) goahttp.Encoder) func(context.Context, http.ResponseWriter, interface{}) error {
+	return func(ctx context.Context, w http.ResponseWriter, v interface{}) error {
+		res, _ := v.(*servicebodyunion.Union)
+		enc := encoder(ctx, w)
+		body := NewMethodBodyUnionResponseBody(res)
+		w.WriteHeader(http.StatusOK)
+		return enc.Encode(body)
+	}
+}
+`
+
 var ResultBodyMultipleViewsEncodeCode = `// EncodeMethodBodyMultipleViewResponse returns an encoder for responses
 // returned by the ServiceBodyMultipleView MethodBodyMultipleView endpoint.
 func EncodeMethodBodyMultipleViewResponse(encoder func(context.Context, http.ResponseWriter) goahttp.Encoder) func(context.Context, http.ResponseWriter, interface{}) error {

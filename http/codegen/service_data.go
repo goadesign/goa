@@ -914,9 +914,10 @@ func (d ServicesData) analyze(hs *expr.HTTPServiceExpr) *ServiceData {
 	return rd
 }
 
-// makeHTTPType traverses the attribute recursively and performs these actions
+// makeHTTPType traverses the attribute recursively and performs these actions:
 //
-// * removes aliased user type by replacing them with the underlying type
+// * removes aliased user type by replacing them with the underlying type.
+// * changes unions into structs with Type and Value fields.
 //
 func makeHTTPType(att *expr.AttributeExpr, seen ...map[string]struct{}) {
 	if att == nil {
@@ -924,7 +925,30 @@ func makeHTTPType(att *expr.AttributeExpr, seen ...map[string]struct{}) {
 	}
 	switch dt := att.Type.(type) {
 	case expr.UserType:
-		if _, ok := dt.(*expr.ResultTypeExpr); !ok && !expr.IsObject(dt) {
+		if expr.IsUnion(dt) {
+			union := expr.AsUnion(dt)
+			names := make([]interface{}, len(union))
+			vals := make([]string, len(union))
+			for i, at := range union {
+				names[i] = at.Type.Name()
+				vals[i] = fmt.Sprintf("- %q", at.Type.Name())
+			}
+			obj := expr.Object([]*expr.NamedAttributeExpr{
+				{Name: "Type", Attribute: &expr.AttributeExpr{
+					Type:        expr.String,
+					Description: "Union type name, one of:\n" + strings.Join(vals, "\n"),
+					Validation:  &expr.ValidationExpr{Values: names},
+				}},
+				{Name: "Value", Attribute: &expr.AttributeExpr{
+					Type:        expr.Any,
+					Description: "Union value, type must be one of service package types listed above",
+				}},
+			})
+			dt.SetAttribute(&expr.AttributeExpr{
+				Type:       &obj,
+				Validation: &expr.ValidationExpr{Required: []string{"Type", "Value"}},
+			})
+		} else if _, ok := dt.(*expr.ResultTypeExpr); !ok && !expr.IsObject(dt) {
 			// Aliased user type. Use the underlying aliased type instead of
 			// generating new types in the client and server packages
 			att.Type = dt.Attribute().Type

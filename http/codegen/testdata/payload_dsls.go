@@ -2040,6 +2040,70 @@ var PayloadBodyObjectValidateDSL = func() {
 	})
 }
 
+var PayloadBodyUnionDSL = func() {
+	Service("ServiceBodyUnion", func() {
+		Method("MethodBodyUnion", func() {
+			Payload(OneOf("Union", String, Int))
+			HTTP(func() {
+				POST("/")
+			})
+		})
+	})
+}
+
+var PayloadBodyUnionValidateDSL = func() {
+	Service("ServiceBodyUnionValidate", func() {
+		Method("MethodBodyUnionValidate", func() {
+			Payload(func() {
+				Attribute("a", OneOf("UnionValidate", String, Int))
+				Required("a")
+			})
+			HTTP(func() {
+				POST("/")
+			})
+		})
+	})
+}
+
+var PayloadBodyUnionUserDSL = func() {
+	var SomeType = Type("SomeType", func() {
+		Attribute("a", String)
+	})
+	var SomeOtherType = Type("SomeOtherType", func() {
+		Attribute("b", String)
+	})
+	Service("ServiceBodyUnionUser", func() {
+		Method("MethodBodyUnionUser", func() {
+			Payload(OneOf("UnionUser", SomeType, SomeOtherType))
+			HTTP(func() {
+				POST("/")
+			})
+		})
+	})
+}
+
+var PayloadBodyUnionUserValidateDSL = func() {
+	var SomeType = Type("SomeType", func() {
+		Attribute("a", String)
+		Required("a")
+	})
+	var SomeOtherType = Type("SomeOtherType", func() {
+		Attribute("b", String)
+		Required("b")
+	})
+	Service("ServiceBodyUnionUserValidate", func() {
+		Method("MethodBodyUnionUserValidate", func() {
+			Payload(func() {
+				Attribute("a", OneOf("UnionUserValidate", SomeType, SomeOtherType))
+				Required("a")
+			})
+			HTTP(func() {
+				POST("/")
+			})
+		})
+	})
+}
+
 var PayloadBodyArrayStringDSL = func() {
 	Service("ServiceBodyArrayString", func() {
 		Method("MethodBodyArrayString", func() {
@@ -2404,6 +2468,41 @@ var PayloadBodyQueryUserValidateDSL = func() {
 	})
 	Service("ServiceBodyQueryUserValidate", func() {
 		Method("MethodBodyQueryUserValidate", func() {
+			Payload(PayloadType)
+			HTTP(func() {
+				POST("/")
+				Param("b")
+			})
+		})
+	})
+}
+
+var PayloadBodyQueryUserUnionDSL = func() {
+	var PayloadType = Type("PayloadType", func() {
+		Attribute("a", OneOf("Union", String, Int))
+		Attribute("b", String)
+	})
+	Service("ServiceBodyQueryUserUnion", func() {
+		Method("MethodBodyQueryUserUnion", func() {
+			Payload(PayloadType)
+			HTTP(func() {
+				POST("/")
+				Param("b")
+			})
+		})
+	})
+}
+
+var PayloadBodyQueryUserUnionValidateDSL = func() {
+	var PayloadType = Type("PayloadType", func() {
+		Attribute("a", OneOf("Union", String, Int))
+		Attribute("b", String, func() {
+			Pattern("patternb")
+		})
+		Required("a", "b")
+	})
+	Service("ServiceBodyQueryUserUnionValidate", func() {
+		Method("MethodBodyQueryUserUnionValidate", func() {
 			Payload(PayloadType)
 			HTTP(func() {
 				POST("/")

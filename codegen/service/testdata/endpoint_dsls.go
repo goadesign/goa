@@ -123,6 +123,14 @@ var StreamingPayloadEndpointDSL = func() {
 	var BType = Type("BType", func() {
 		Attribute("x", String)
 	})
+	var AResult = Type("AResult", func() {
+		Attribute("IntField", Int)
+		Attribute("StringField", String)
+		Attribute("BooleanField", Boolean)
+		Attribute("BytesField", Bytes)
+		Attribute("OptionalField", String)
+		Required("IntField", "StringField", "BooleanField", "BytesField")
+	})
 	Service("StreamingPayloadEndpoint", func() {
 		Method("StreamingPayloadMethod", func() {
 			Payload(BType)
@@ -156,6 +164,14 @@ var BidirectionalStreamingEndpointDSL = func() {
 	})
 	var BType = Type("BType", func() {
 		Attribute("x", String)
+	})
+	var AResult = Type("AResult", func() {
+		Attribute("IntField", Int)
+		Attribute("StringField", String)
+		Attribute("BooleanField", Boolean)
+		Attribute("BytesField", Bytes)
+		Attribute("OptionalField", String)
+		Required("IntField", "StringField", "BooleanField", "BytesField")
 	})
 	Service("BidirectionalStreamingEndpoint", func() {
 		Method("BidirectionalStreamingMethod", func() {

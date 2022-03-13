@@ -569,6 +569,11 @@ func (a *AttributeExpr) debug(prefix string, seen map[*AttributeExpr]int, indent
 		m.KeyType.debug("key", seen, indent+1)
 		m.ElemType.debug("elem", seen, indent+1)
 	}
+	if u := AsUnion(a.Type); u != nil {
+		for _, ut := range u {
+			ut.debug("- ", seen, indent+1)
+		}
+	}
 	if rt, ok := a.Type.(*ResultTypeExpr); ok {
 		fmt.Printf("%s%sviews\n", tabs, tab)
 		for _, v := range rt.Views {
