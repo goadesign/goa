@@ -25,10 +25,6 @@ func TestGoTransformUnion(t *testing.T) {
 		unionString2   = root.UserType("Container").Attribute().Find("UnionString2")
 		unionStringInt = root.UserType("Container").Attribute().Find("UnionStringInt")
 		unionSomeType  = root.UserType("Container").Attribute().Find("UnionSomeType")
-		unionArray     = root.UserType("Container").Attribute().Find("UnionArray")
-		unionArrayUser = root.UserType("Container").Attribute().Find("UnionArrayUserType")
-		unionMap       = root.UserType("Container").Attribute().Find("UnionMap")
-		unionMapUser   = root.UserType("Container").Attribute().Find("UnionMapUserType")
 		userType       = &expr.AttributeExpr{Type: root.UserType("UnionUserType")}
 		defaultCtx     = NewAttributeContext(false, false, true, "", scope)
 	)
@@ -43,18 +39,10 @@ func TestGoTransformUnion(t *testing.T) {
 		{"UnionString to User Type", unionString, userType, ""},
 		{"UnionStringInt to User Type", unionStringInt, userType, ""},
 		{"UnionSomeType to User Type", unionSomeType, userType, ""},
-		{"UnionArray to User Type", unionArray, userType, ""},
-		{"UnionArrayUserType to User Type", unionArrayUser, userType, ""},
-		{"UnionMap to User Type", unionMap, userType, ""},
-		{"UnionMapUserType to User Type", unionMapUser, userType, ""},
 
 		{"User Type to UnionString", userType, unionString, ""},
 		{"User Type to UnionStringInt", userType, unionStringInt, ""},
 		{"User Type to UnionSomeType", userType, unionSomeType, ""},
-		{"User Type to UnionArray", userType, unionArray, ""},
-		{"User Type to UnionArrayUserType", userType, unionArrayUser, ""},
-		{"User Type to UnionMap", userType, unionMap, ""},
-		{"User Type to UnionMapUserType", userType, unionMapUser, ""},
 	}
 	for _, c := range tc {
 		t.Run(c.Name, func(t *testing.T) {

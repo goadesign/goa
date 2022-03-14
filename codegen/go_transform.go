@@ -373,8 +373,8 @@ func transformUnion(source, target *expr.AttributeExpr, sourceVar, targetVar str
 	}
 	data := map[string]interface{}{
 		"SourceTypeRefs": sourceTypeRefs,
-		"SourceTypes":    srcUnion,
-		"TargetTypes":    tgtUnion,
+		"SourceTypes":    srcUnion.Values,
+		"TargetTypes":    tgtUnion.Values,
 		"SourceVar":      sourceVar,
 		"TargetVar":      targetVar,
 		"NewVar":         newVar,
@@ -660,7 +660,7 @@ for key, val := range {{ .SourceVar }} {
 {{ end }}switch actual := {{ .SourceVar }}.Value.(type) {
 	{{- range $i, $ref := .SourceTypeRefs }}
 	case {{ $ref }}:
-		{{ transformAttribute (index $.SourceTypes $i) (index $.TargetTypes $i) "actual" "val" true $.TransformAttrs -}}
+		{{ transformAttribute (index $.SourceTypes $i).Attribute (index $.TargetTypes $i).Attribute "actual" "val" true $.TransformAttrs -}}
 		{{ $.TargetVar }} = {{ $.TargetTypeName }}{ Value: val }
 	{{- end }}
 }

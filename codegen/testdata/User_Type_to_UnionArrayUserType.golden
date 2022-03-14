@@ -1,8 +1,0 @@
-func transform() {
-	var target *UnionArrayUserType
-	switch source.Type {
-	case "UnionArrayUserTypeArray0":
-		val := source.Value.(UnionArrayUserTypeArray0)
-		target = &UnionArrayUserType{Value: val}
-	}
-}

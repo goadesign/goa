@@ -79,7 +79,7 @@ func TestObjectHash(t *testing.T) {
 				namedAttributeUnion,
 				namedAttributeUserType,
 			},
-			expected: "_o_-bar/_a_string-baz/_m_int:string-foo/int-quux/_t_ut-qux/_u_int_u_string",
+			expected: "_o_-bar/_a_string-baz/_m_int:string-foo/int-quux/_t_ut-qux/_u_quuuux_*_foo_|_int",
 		},
 	}
 
