@@ -26,19 +26,38 @@ type transformAttrs struct {
 	wrapped bool
 }
 
+// unionData is used by both transformUnion methods.
+type unionData struct {
+	Source              *expr.Union
+	Target              *expr.Union
+	SourceValues        []*expr.NamedAttributeExpr
+	TargetValues        []*expr.NamedAttributeExpr
+	SourceField         string
+	TargetField         string
+	SourceValueTypeRefs []string
+}
+
 var (
 	// transformGoArrayT is the template to generate Go array transformation
 	// code.
 	transformGoArrayT *template.Template
 	// transformGoMapT is the template to generate Go map transformation code.
 	transformGoMapT *template.Template
+	// transformGoUnionT is the template to generate Go union transformation
+	// code to protobuf.
+	transformGoUnionToProtoT *template.Template
+	// transformGoUnionT is the template to generate Go union transformation
+	// code from protobuf.
+	transformGoUnionFromProtoT *template.Template
 )
 
 // NOTE: can't initialize inline because https://github.com/golang/go/issues/1817
 func init() {
-	fm := template.FuncMap{"transformAttribute": transformAttribute}
+	fm := template.FuncMap{"transformAttribute": transformAttribute, "convertType": convertType}
 	transformGoArrayT = template.Must(template.New("transformGoArray").Funcs(fm).Parse(transformGoArrayTmpl))
 	transformGoMapT = template.Must(template.New("transformGoMap").Funcs(fm).Parse(transformGoMapTmpl))
+	transformGoUnionToProtoT = template.Must(template.New("transformGoUnionToProto").Funcs(fm).Parse(transformGoUnionToProtoTmpl))
+	transformGoUnionFromProtoT = template.Must(template.New("transformGoUnionFromProto").Funcs(fm).Parse(transformGoUnionFromProtoTmpl))
 }
 
 // protoBufTransform produces Go code to initialize a data structure defined
@@ -87,7 +106,7 @@ func protoBufTransform(source, target *expr.AttributeExpr, sourceVar, targetVar 
 		return "", nil, err
 	}
 
-	funcs, err := transformAttributeHelpers(source, target, ta)
+	funcs, err := transformAttributeHelpers(source, target, ta, make(map[string]*codegen.TransformFunctionData))
 	if err != nil {
 		return "", nil, err
 	}
@@ -141,6 +160,12 @@ func transformAttribute(source, target *expr.AttributeExpr, sourceVar, targetVar
 			code, err = transformMap(expr.AsMap(source.Type), expr.AsMap(target.Type), sourceVar, targetVar, newVar, ta)
 		case expr.IsObject(source.Type):
 			code, err = transformObject(source, target, sourceVar, targetVar, newVar, ta)
+		case expr.IsUnion(source.Type):
+			if ta.proto {
+				code, err = transformUnionToProto(source, target, sourceVar, targetVar, newVar, ta)
+			} else {
+				code, err = transformUnionFromProto(source, target, sourceVar, targetVar, newVar, ta)
+			}
 		default:
 			assign := "="
 			if newVar {
@@ -477,6 +502,75 @@ func transformMap(source, target *expr.Map, sourceVar, targetVar string, newVar 
 	return code + buf.String(), nil
 }
 
+// transformUnionToProto returns the code to transform an attribute of type
+// union from Goa to protobuf. It returns an error if source and target are not
+// compatible for transformation.
+func transformUnionToProto(source, target *expr.AttributeExpr, sourceVar, targetVar string, newVar bool, ta *transformAttrs) (string, error) {
+	if err := codegen.IsCompatible(source.Type, target.Type, sourceVar, targetVar); err != nil {
+		return "", err
+	}
+	tdata := transformUnionData(source, target, sourceVar, targetVar, ta)
+	targetValueTypeNames := make([]string, len(tdata.TargetValues))
+	targetFieldNames := make([]string, len(tdata.TargetValues))
+	for i, v := range tdata.TargetValues {
+		fieldName := ta.TargetCtx.Scope.Field(v.Attribute, v.Name, true)
+		targetFieldNames[i] = fieldName
+		targetValueTypeNames[i] = ta.TargetCtx.Scope.Name(target, ta.TargetCtx.Pkg, ta.TargetCtx.Pointer, ta.TargetCtx.UseDefault) + "_" + fieldName
+	}
+
+	data := map[string]interface{}{
+		"TargetVar":            targetVar,
+		"NewVar":               newVar,
+		"TargetTypeName":       ta.TargetCtx.Scope.Name(target, ta.TargetCtx.Pkg, ta.TargetCtx.Pointer, ta.TargetCtx.UseDefault),
+		"SourceField":          tdata.SourceField,
+		"SourceValueTypeRefs":  tdata.SourceValueTypeRefs,
+		"SourceValues":         tdata.SourceValues,
+		"TargetValues":         tdata.TargetValues,
+		"TransformAttrs":       ta,
+		"TargetValueTypeNames": targetValueTypeNames,
+		"TargetFieldNames":     targetFieldNames,
+		"TargetField":          tdata.TargetField,
+	}
+	var buf bytes.Buffer
+	if err := transformGoUnionToProtoT.Execute(&buf, data); err != nil {
+		return "", err
+	}
+	return buf.String(), nil
+}
+
+// transformUnionFromProto returns the code to transform an attribute of type
+// union from Goa to protobuf. It returns an error if source and target are not
+// compatible for transformation.
+func transformUnionFromProto(source, target *expr.AttributeExpr, sourceVar, targetVar string, newVar bool, ta *transformAttrs) (string, error) {
+	if err := codegen.IsCompatible(source.Type, target.Type, sourceVar, targetVar); err != nil {
+		return "", err
+	}
+	tdata := transformUnionData(source, target, sourceVar, targetVar, ta)
+	sourceFieldNames := make([]string, len(tdata.SourceValues))
+	for i, v := range tdata.SourceValues {
+		fieldName := ta.SourceCtx.Scope.Field(v.Attribute, v.Name, true)
+		sourceFieldNames[i] = fieldName
+	}
+
+	data := map[string]interface{}{
+		"TargetVar":           targetVar,
+		"NewVar":              newVar,
+		"TargetTypeName":      ta.TargetCtx.Scope.Name(target, ta.TargetCtx.Pkg, ta.TargetCtx.Pointer, ta.TargetCtx.UseDefault),
+		"SourceField":         tdata.SourceField,
+		"SourceValueTypeRefs": tdata.SourceValueTypeRefs,
+		"SourceFieldNames":    sourceFieldNames,
+		"SourceValues":        tdata.SourceValues,
+		"TargetValues":        tdata.TargetValues,
+		"TransformAttrs":      ta,
+		"TargetField":         tdata.TargetField,
+	}
+	var buf bytes.Buffer
+	if err := transformGoUnionFromProtoT.Execute(&buf, data); err != nil {
+		return "", err
+	}
+	return buf.String(), nil
+}
+
 // convertType produces code to initialize a target type from a source type
 // held by sourceVar.
 // NOTE: For Int and UInt kinds, protocol buffer Go compiler generates
@@ -486,7 +580,7 @@ func convertType(src, tgt *expr.AttributeExpr, srcVar string, ta *transformAttrs
 		srcp, tgtp := unAlias(src), unAlias(tgt)
 		if srcp.Type == tgtp.Type {
 			if ta.proto {
-				return fmt.Sprintf("%s(%s)", tgtp.Type.Name(), srcVar)
+				return fmt.Sprintf("%s(%s)", protoBufNativeGoTypeName(tgtp), srcVar)
 			}
 			return fmt.Sprintf("%s(%s)", ta.TargetCtx.Scope.Ref(tgt, ta.TargetCtx.Pkg), srcVar)
 		}
@@ -539,6 +633,48 @@ func checkZeroValue(dt expr.DataType, target string, negate bool) string {
 	}
 }
 
+// transformUnionData returns data needed by both transformUnion functions.
+func transformUnionData(source, target *expr.AttributeExpr, sourceVar, targetVar string, ta *transformAttrs) *unionData {
+	src := expr.AsUnion(source.Type)
+	tgt := expr.AsUnion(target.Type)
+	srcValues := make([]*expr.NamedAttributeExpr, len(src.Values))
+	for i, v := range src.Values {
+		srcValues[i] = v
+	}
+	tgtValues := make([]*expr.NamedAttributeExpr, len(tgt.Values))
+	for i, v := range tgt.Values {
+		tgtValues[i] = v
+	}
+
+	var srcField, tgtField string
+	if ta.proto {
+		srcField = sourceVar + ".Value"
+		tgtField = targetVar + "." + ta.TargetCtx.Scope.Field(target, tgt.TypeName, true)
+	} else {
+		srcField = sourceVar + "." + ta.SourceCtx.Scope.Field(source, src.TypeName, true)
+		tgtField = targetVar + ".Value"
+	}
+
+	sourceValueTypeRefs := make([]string, len(src.Values))
+	for i, v := range src.Values {
+		if ta.proto {
+			sourceValueTypeRefs[i] = ta.SourceCtx.Scope.Ref(v.Attribute, ta.SourceCtx.Pkg)
+		} else {
+			fieldName := ta.SourceCtx.Scope.Field(v.Attribute, v.Name, true)
+			sourceValueTypeRefs[i] = ta.SourceCtx.Scope.Ref(source, ta.SourceCtx.Pkg) + "_" + fieldName
+		}
+	}
+	return &unionData{
+		Source:              src,
+		Target:              tgt,
+		SourceValues:        srcValues,
+		TargetValues:        tgtValues,
+		SourceField:         srcField,
+		TargetField:         tgtField,
+		SourceValueTypeRefs: sourceValueTypeRefs,
+	}
+}
+
 // transformAttributeHelpers returns the Go transform functions and their definitions
 // that may be used in code produced by Transform. It returns an error if source and
 // target are incompatible (different types, fields of different type etc).
@@ -549,7 +685,7 @@ func checkZeroValue(dt expr.DataType, target string, negate bool) string {
 //
 // seen keeps track of generated transform functions to avoid recursion
 //
-func transformAttributeHelpers(source, target *expr.AttributeExpr, ta *transformAttrs, seen ...map[string]*codegen.TransformFunctionData) ([]*codegen.TransformFunctionData, error) {
+func transformAttributeHelpers(source, target *expr.AttributeExpr, ta *transformAttrs, seen map[string]*codegen.TransformFunctionData) ([]*codegen.TransformFunctionData, error) {
 	var (
 		helpers []*codegen.TransformFunctionData
 		err     error
@@ -570,15 +706,32 @@ func transformAttributeHelpers(source, target *expr.AttributeExpr, ta *transform
 		case expr.IsArray(source.Type):
 			source = expr.AsArray(source.Type).ElemType
 			target = expr.AsArray(target.Type).ElemType
-			helpers, err = transformAttributeHelpers(source, target, ta, seen...)
+			helpers, err = transformAttributeHelpers(source, target, ta, seen)
 		case expr.IsMap(source.Type):
 			sm := expr.AsMap(source.Type)
 			tm := expr.AsMap(target.Type)
-			helpers, err = transformAttributeHelpers(sm.ElemType, tm.ElemType, ta, seen...)
+			helpers, err = transformAttributeHelpers(sm.ElemType, tm.ElemType, ta, seen)
 			if err == nil {
 				var other []*codegen.TransformFunctionData
-				other, err = transformAttributeHelpers(sm.KeyType, tm.KeyType, ta, seen...)
+				other, err = transformAttributeHelpers(sm.KeyType, tm.KeyType, ta, seen)
 				helpers = append(helpers, other...)
+			}
+		case expr.IsUnion(source.Type):
+			if !expr.IsUnion(target.Type) {
+				return nil, nil
+			}
+			srcAttrs := expr.AsUnion(source.Type)
+			tgtAttrs := expr.AsUnion(target.Type)
+			if len(srcAttrs.Values) != len(tgtAttrs.Values) {
+				return nil, fmt.Errorf("cannot transform union attribute %s with %d types to union attribute %s with %d types",
+					source.Type.Name(), len(srcAttrs.Values), target.Type.Name(), len(tgtAttrs.Values))
+			}
+			for i, srcAtt := range srcAttrs.Values {
+				tgtAtt := tgtAttrs.Values[i]
+				h, err := collectHelpers(srcAtt.Attribute, tgtAtt.Attribute, true, ta, seen)
+				if err == nil {
+					helpers = append(helpers, h...)
+				}
 			}
 		case expr.IsObject(source.Type):
 			walkMatches(source, target, func(srcMatt, tgtMatt *expr.MappedAttributeExpr, srcc, tgtc *expr.AttributeExpr, n string) {
@@ -595,7 +748,7 @@ func transformAttributeHelpers(source, target *expr.AttributeExpr, ta *transform
 						return
 					}
 				}
-				h, err2 := collectHelpers(srcc, tgtc, srcMatt.IsRequired(n), ta, seen...)
+				h, err2 := collectHelpers(srcc, tgtc, srcMatt.IsRequired(n), ta, seen)
 				if err2 != nil {
 					err = err2
 					return
@@ -612,14 +765,14 @@ func transformAttributeHelpers(source, target *expr.AttributeExpr, ta *transform
 
 // collectHelpers recursively traverses the given attributes and return the
 // transform helper functions required to generate the transform code.
-func collectHelpers(source, target *expr.AttributeExpr, req bool, ta *transformAttrs, seen ...map[string]*codegen.TransformFunctionData) ([]*codegen.TransformFunctionData, error) {
+func collectHelpers(source, target *expr.AttributeExpr, req bool, ta *transformAttrs, seen map[string]*codegen.TransformFunctionData) ([]*codegen.TransformFunctionData, error) {
 	var data []*codegen.TransformFunctionData
 	switch {
 	case expr.IsArray(source.Type):
 		helpers, err := transformAttributeHelpers(
 			expr.AsArray(source.Type).ElemType,
 			expr.AsArray(target.Type).ElemType,
-			ta, seen...)
+			ta, seen)
 		if err != nil {
 			return nil, err
 		}
@@ -628,7 +781,7 @@ func collectHelpers(source, target *expr.AttributeExpr, req bool, ta *transformA
 		helpers, err := transformAttributeHelpers(
 			expr.AsMap(source.Type).KeyType,
 			expr.AsMap(target.Type).KeyType,
-			ta, seen...)
+			ta, seen)
 		if err != nil {
 			return nil, err
 		}
@@ -636,22 +789,52 @@ func collectHelpers(source, target *expr.AttributeExpr, req bool, ta *transformA
 		helpers, err = transformAttributeHelpers(
 			expr.AsMap(source.Type).ElemType,
 			expr.AsMap(target.Type).ElemType,
-			ta, seen...)
+			ta, seen)
 		if err != nil {
 			return nil, err
 		}
 		data = append(data, helpers...)
+	case expr.IsUnion(source.Type):
+		if !expr.IsUnion(target.Type) {
+			return nil, nil
+		}
+		srcAttrs := expr.AsUnion(source.Type)
+		tgtAttrs := expr.AsUnion(target.Type)
+		if len(srcAttrs.Values) != len(tgtAttrs.Values) {
+			return nil, fmt.Errorf("cannot transform union attribute %s with %d types to union attribute %s with %d types",
+				source.Type.Name(), len(srcAttrs.Values), target.Type.Name(), len(tgtAttrs.Values))
+		}
+		name := transformHelperName(source, target, ta)
+		if _, ok := seen[name]; ok {
+			return nil, nil
+		}
+		code, err := transformAttribute(source, target, "v", "res", true, ta)
+		if err != nil {
+			return nil, err
+		}
+		if !req {
+			code = "if v == nil {\n\treturn nil\n}\n" + code
+		}
+		tfd := &codegen.TransformFunctionData{
+			Name:          name,
+			ParamTypeRef:  ta.SourceCtx.Scope.Ref(source, ta.SourceCtx.Pkg),
+			ResultTypeRef: ta.TargetCtx.Scope.Ref(target, ta.TargetCtx.Pkg),
+			Code:          code,
+		}
+		seen[name] = tfd
+		data = append(data, tfd)
+		for i, srcAtt := range srcAttrs.Values {
+			tgtAtt := tgtAttrs.Values[i].Attribute
+			helpers, err := transformAttributeHelpers(srcAtt.Attribute, tgtAtt, ta, seen)
+			if err != nil {
+				return nil, err
+			}
+			data = append(data, helpers...)
+		}
 	case expr.IsObject(source.Type):
 		if ut, ok := source.Type.(expr.UserType); ok {
 			name := transformHelperName(source, target, ta)
-			var s map[string]*codegen.TransformFunctionData
-			if len(seen) > 0 {
-				s = seen[0]
-			} else {
-				s = make(map[string]*codegen.TransformFunctionData)
-				seen = append(seen, s)
-			}
-			if _, ok := s[name]; ok {
+			if _, ok := seen[name]; ok {
 				return nil, nil
 			}
 			code, err := transformAttribute(ut.Attribute(), target, "v", "res", true, ta)
@@ -667,7 +850,7 @@ func collectHelpers(source, target *expr.AttributeExpr, req bool, ta *transformA
 				ResultTypeRef: ta.TargetCtx.Scope.Ref(target, ta.TargetCtx.Pkg),
 				Code:          code,
 			}
-			s[name] = tfd
+			seen[name] = tfd
 			data = append(data, tfd)
 		}
 
@@ -686,7 +869,7 @@ func collectHelpers(source, target *expr.AttributeExpr, req bool, ta *transformA
 					}
 				}
 				var helpers []*codegen.TransformFunctionData
-				helpers, err = collectHelpers(srcc, tgtc, srcMatt.IsRequired(n), ta, seen...)
+				helpers, err = collectHelpers(srcc, tgtc, srcMatt.IsRequired(n), ta, seen)
 				if err != nil {
 					return
 				}
@@ -752,4 +935,24 @@ for key, val := range {{ .SourceVar }} {
   {{ .TargetVar }}[tk] = {{ printf "tv%s" .LoopVar }}
 }
 `
+
+	transformGoUnionToProtoTmpl = `{{ .TargetVar }} {{ if .NewVar }}:={{ else }}={{ end }} &{{ .TargetTypeName }}{}
+	switch {{ .SourceField }}.(type) {
+{{- range $i, $ref := .SourceValueTypeRefs }}
+case {{ . }}:
+		src := {{ $.SourceField }}.({{ $ref }})
+		val := {{ convertType (index $.SourceValues $i).Attribute (index $.TargetValues $i).Attribute "src" $.TransformAttrs }}
+		field := {{ index $.TargetValueTypeNames $i }}{ {{ (index $.TargetFieldNames $i) }}: val }
+		{{ $.TargetField }} = &field
+{{- end }}
+}`
+
+	transformGoUnionFromProtoTmpl = `{{ .TargetVar }} {{ if .NewVar }}:={{ else }}={{ end }} &{{ .TargetTypeName }}{}
+	switch {{ .SourceField }}.(type) {
+{{- range $i, $ref := .SourceValueTypeRefs }}
+case {{ . }}:
+	field := {{ $.SourceField }}.({{ index $.SourceValueTypeRefs $i }}).{{ (index $.SourceFieldNames $i) }}
+	{{ $.TargetField }} = {{ convertType (index $.SourceValues $i).Attribute (index $.TargetValues $i).Attribute "field" $.TransformAttrs }}
+{{- end }}
+}`
 )

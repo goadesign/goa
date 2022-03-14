@@ -302,7 +302,7 @@ func protoBufMessageDef(att *expr.AttributeExpr, sd *ServiceData) string {
 // (in *.pb.go) for the given attribute.
 func protoBufGoFullTypeRef(att *expr.AttributeExpr, pkg string, s *codegen.NameScope) string {
 	name := protoBufGoFullTypeName(att, pkg, s)
-	if expr.IsObject(att.Type) {
+	if expr.IsObject(att.Type) || expr.IsUnion(att.Type) {
 		return "*" + name
 	}
 	return name

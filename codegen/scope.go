@@ -146,6 +146,7 @@ func (s *NameScope) goTypeDef(att *expr.AttributeExpr, ptr, useDefault bool, pkg
 				}
 				tdef = s.goTypeDef(at, ptr, useDefault, parentPkg)
 				if expr.IsObject(at.Type) ||
+					expr.IsUnion(at.Type) ||
 					att.IsPrimitivePointer(name, useDefault) ||
 					(ptr && expr.IsPrimitive(at.Type) && at.Type.Kind() != expr.AnyKind && at.Type.Kind() != expr.BytesKind) {
 					tdef = "*" + tdef
