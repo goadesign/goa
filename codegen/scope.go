@@ -122,12 +122,8 @@ func (s *NameScope) goTypeDef(att *expr.AttributeExpr, ptr, useDefault bool, pkg
 			elemDef = "*" + elemDef
 		}
 		return fmt.Sprintf("map[%s]%s", keyDef, elemDef)
-	case expr.Union:
-		name, ok := att.Meta.Last("type:union:name")
-		if !ok {
-			panic("missing type:union:name meta") //bug
-		}
-		return fmt.Sprintf("struct {\n\tValue interface{\n\t\t%s()\n\t}\n}", UnionValTypeName(name))
+	case *expr.Union:
+		return fmt.Sprintf("struct {\n\tValue interface{\n\t\t%s()\n\t}\n}", UnionValTypeName(actual.TypeName))
 	case *expr.Object:
 		ss := []string{"struct {"}
 		for _, nat := range *actual {
@@ -240,7 +236,7 @@ func (s *NameScope) GoFullTypeName(att *expr.AttributeExpr, pkg string) string {
 		return fmt.Sprintf("map[%s]%s",
 			s.GoFullTypeRef(actual.KeyType, pkg),
 			s.GoFullTypeRef(actual.ElemType, pkg))
-	case expr.Union, *expr.Object:
+	case *expr.Union, *expr.Object:
 		return s.GoTypeDef(att, false, false)
 	case expr.UserType:
 		if actual == expr.ErrorResult {

@@ -210,10 +210,17 @@ func (a *AttributeExpr) Validate(ctx string, parent eval.Expression) *eval.Valid
 			ctx = fmt.Sprintf("field %s", nat.Name)
 			verr.Merge(nat.Attribute.Validate(ctx, parent))
 		}
-	} else {
-		if ar := AsArray(a.Type); ar != nil {
-			elemType := ar.ElemType
-			verr.Merge(elemType.Validate(ctx, a))
+	} else if ar := AsArray(a.Type); ar != nil {
+		elemType := ar.ElemType
+		verr.Merge(elemType.Validate(ctx, a))
+	} else if u := AsUnion(a.Type); u != nil {
+		for _, ut := range u.Values {
+			verr.Merge(ut.Attribute.Validate(ctx, parent))
+			if IsArray(ut.Attribute.Type) {
+				verr.Add(parent, "union type %s has array elements, not supported by gRPC", u.Name())
+			} else if IsMap(ut.Attribute.Type) {
+				verr.Add(parent, "union type %s has map elements, not supported by gRPC", u.Name())
+			}
 		}
 	}
 
@@ -558,8 +565,8 @@ func (a *AttributeExpr) debug(prefix string, seen map[*AttributeExpr]int, indent
 		fmt.Printf("%s: %s\n", prefix, n)
 	}
 	if o := AsObject(a.Type); o != nil {
-		for _, att := range *o {
-			att.Attribute.debug("- "+att.Name, seen, indent+1)
+		for _, nat := range *o {
+			nat.Attribute.debug("- "+nat.Name, seen, indent+1)
 		}
 	}
 	if a := AsArray(a.Type); a != nil {
@@ -570,8 +577,8 @@ func (a *AttributeExpr) debug(prefix string, seen map[*AttributeExpr]int, indent
 		m.ElemType.debug("elem", seen, indent+1)
 	}
 	if u := AsUnion(a.Type); u != nil {
-		for _, ut := range u {
-			ut.debug("- ", seen, indent+1)
+		for _, nat := range u.Values {
+			nat.Attribute.debug("* "+nat.Name, seen, indent+1)
 		}
 	}
 	if rt, ok := a.Type.(*ResultTypeExpr); ok {

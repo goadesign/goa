@@ -643,13 +643,6 @@ func (d ServicesData) analyze(service *expr.ServiceExpr) *Data {
 		types = append(types, collectTypes(att, scope, seen)...)
 	}
 
-	// Add union value types
-	for _, ut := range expr.Root.Types {
-		if len(ut.Attribute().Meta["type:union:is"]) > 0 {
-			types = append(types, collectTypes(&expr.AttributeExpr{Type: ut}, scope, seen)...)
-		}
-	}
-
 	var (
 		methods []*MethodData
 		schemes SchemesData
@@ -702,7 +695,11 @@ func (d ServicesData) analyze(service *expr.ServiceExpr) *Data {
 				if att == nil {
 					continue
 				}
-				ut, ok := att.Type.(*expr.UserTypeExpr)
+				ut, ok := att.Type.(expr.UserType)
+				if !ok {
+					continue
+				}
+				union, ok := ut.Attribute().Type.(*expr.Union)
 				if !ok {
 					continue
 				}
@@ -710,14 +707,10 @@ func (d ServicesData) analyze(service *expr.ServiceExpr) *Data {
 					continue
 				}
 				seen[ut.ID()] = struct{}{}
-				unions := ut.Attribute().Meta["type:union:is"]
-				if len(unions) == 0 {
-					continue
-				}
-				for _, u := range unions {
+				for _, u := range union.Values {
 					unionMethods = append(unionMethods, &UnionValueMethodData{
-						Name:    codegen.UnionValTypeName(u),
-						TypeRef: scope.GoTypeRef(&expr.AttributeExpr{Type: ut}),
+						Name:    codegen.UnionValTypeName(ut.Name()),
+						TypeRef: scope.GoTypeRef(u.Attribute),
 						Loc:     codegen.UserTypeLocation(ut),
 					})
 				}
@@ -820,6 +813,10 @@ func collectTypes(at *expr.AttributeExpr, scope *codegen.NameScope, seen map[str
 	case *expr.Map:
 		data = append(data, collect(dt.KeyType)...)
 		data = append(data, collect(dt.ElemType)...)
+	case *expr.Union:
+		for _, nat := range dt.Values {
+			data = append(data, collect(nat.Attribute)...)
+		}
 	}
 	return
 }

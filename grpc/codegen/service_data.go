@@ -525,7 +525,7 @@ func (d ServicesData) analyze(gs *expr.GRPCServiceExpr) *ServiceData {
 				ServerConvert: buildRequestConvertData(e.Request, e.MethodExpr.Payload, reqMD, e, sd, true),
 				ClientConvert: buildRequestConvertData(e.Request, e.MethodExpr.Payload, reqMD, e, sd, false),
 			}
-			if obj := expr.AsObject(e.Request.Type); len(*obj) > 0 {
+			if obj := expr.AsObject(e.Request.Type); obj != nil && len(*obj) > 0 {
 				// add the request message as the first argument to the CLI
 				request.CLIArgs = append(request.CLIArgs, &InitArgData{
 					Name:     "message",
@@ -672,6 +672,10 @@ func collectMessages(at *expr.AttributeExpr, sd *ServiceData, seen map[string]st
 	case *expr.Map:
 		data = append(data, collect(dt.KeyType)...)
 		data = append(data, collect(dt.ElemType)...)
+	case *expr.Union:
+		for _, nat := range dt.Values {
+			data = append(data, collect(nat.Attribute)...)
+		}
 	}
 	return
 }

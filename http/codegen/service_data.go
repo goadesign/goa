@@ -926,12 +926,12 @@ func makeHTTPType(att *expr.AttributeExpr, seen ...map[string]struct{}) {
 	switch dt := att.Type.(type) {
 	case expr.UserType:
 		if expr.IsUnion(dt) {
-			union := expr.AsUnion(dt)
-			names := make([]interface{}, len(union))
-			vals := make([]string, len(union))
-			for i, at := range union {
-				names[i] = at.Type.Name()
-				vals[i] = fmt.Sprintf("- %q", at.Type.Name())
+			values := expr.AsUnion(dt).Values
+			names := make([]interface{}, len(values))
+			vals := make([]string, len(values))
+			for i, nat := range values {
+				names[i] = nat.Attribute.Type.Name()
+				vals[i] = fmt.Sprintf("- %q", nat.Attribute.Type.Name())
 			}
 			obj := expr.Object([]*expr.NamedAttributeExpr{
 				{Name: "Type", Attribute: &expr.AttributeExpr{

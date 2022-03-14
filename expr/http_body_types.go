@@ -290,12 +290,12 @@ func buildHTTPResponseBody(name string, attr *AttributeExpr, resp *HTTPResponseE
 
 // unionToObject returns an object adequate to serialize the given union type.
 func unionToObject(att *AttributeExpr, name, suffix, svcName string) *AttributeExpr {
-	union := AsUnion(att.Type)
-	names := make([]interface{}, len(union))
-	vals := make([]string, len(union))
-	for i, at := range union {
-		names[i] = at.Type.Name()
-		vals[i] = fmt.Sprintf("- %q", at.Type.Name())
+	values := AsUnion(att.Type).Values
+	names := make([]interface{}, len(values))
+	vals := make([]string, len(values))
+	for i, nat := range values {
+		names[i] = nat.Attribute.Type.Name()
+		vals[i] = fmt.Sprintf("- %q", nat.Attribute.Type.Name())
 	}
 	obj := Object([]*NamedAttributeExpr{
 		{"Type", &AttributeExpr{

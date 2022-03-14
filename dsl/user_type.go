@@ -1,9 +1,6 @@
 package dsl
 
 import (
-	"strconv"
-	"strings"
-
 	"goa.design/goa/v3/eval"
 	"goa.design/goa/v3/expr"
 )
@@ -231,73 +228,29 @@ func MapOf(k, v interface{}, fn ...func()) *expr.Map {
 // OneOf takes a name as first argument and a list of types either by name of by
 // reference.
 //
-// Examples:
+// Example:
 //
-//    var Pet = OneOf("Pet", Dog, Cat, Fish, func() {
-//        Description("Pet is a type that can be a dog, a cat or a fish")
-//    })
+//   var Pet = OneOf("Pet", func() {
+//        Description("Pet is a type that can be a cat or a dog")
+//        Attribute("Cat", Cat, "Cats are cool")
+//        Attribute("Dog", Dog, "Dogs are cool too")
+//   })
 //
 //    var PetOwner = Type("PetOwner", func() {
-//        Attribute("pet", OneOf("Pet", Dog, Cat, Fish), "Pet of the owner")
+//        Attribute("pet", Pet)
 //    })
 //
-func OneOf(name string, v ...interface{}) expr.UserType {
-	if len(v) == 0 {
-		eval.ReportError("OneOf: missing type arguments")
+func OneOf(name string, fn func()) expr.UserType {
+	if t := expr.Root.UserType(name); t != nil {
+		eval.ReportError("OneOf: type %s already defined", name)
 		return nil
 	}
-	var fn func()
-	if f, ok := v[len(v)-1].(func()); ok {
-		fn = f
-		v = v[:len(v)-1]
+	if _, ok := eval.Current().(eval.TopExpr); !ok {
+		eval.IncompatibleDSL()
+		return nil
 	}
-	var attrs []*expr.AttributeExpr
-	for i, v := range v {
-		t, ok := v.(expr.DataType)
-		if !ok {
-			if name, ok := v.(string); ok {
-				t = expr.Root.UserType(name)
-			}
-		}
-		if t == nil {
-			eval.ReportError("invalid OneOf argument: not a type and not a known user type name")
-			return nil
-		}
-		att := &expr.AttributeExpr{Type: t}
-		switch actual := t.(type) {
-		case expr.UserType:
-			// Piggy back on generated structs: add private method to
-			// allow them to be used in union.
-			actual.Attribute().AddMeta("type:union:is", name)
-		default:
-			// Wrap primitive, array, map and object types in a
-			// struct so they can be used in union.
-			tname := name + strings.Title(t.Name())
-			if !expr.IsPrimitive(t) {
-				tname = tname + strconv.Itoa(i)
-			}
-			att.AddMeta("type:union:is", name)
-			wrapper := &expr.UserTypeExpr{
-				TypeName:      tname,
-				AttributeExpr: att,
-			}
-			att = &expr.AttributeExpr{Type: wrapper}
-			expr.Root.Types = append(expr.Root.Types, wrapper)
-		}
-		attrs = append(attrs, att)
-	}
-	if len(attrs) > 1 {
-		for i, att := range attrs {
-			for _, att2 := range attrs[i+1:] {
-				if att.Type == att2.Type {
-					eval.ReportError("OneOf: duplicate type %s", att.Type.Name())
-					return nil
-				}
-			}
-		}
-	}
-	att := &expr.AttributeExpr{Type: expr.Union(attrs), DSLFunc: fn}
-	att.AddMeta("type:union:name", name)
+	union := expr.Union{TypeName: name}
+	att := &expr.AttributeExpr{Type: &union, DSLFunc: fn}
 	t := &expr.UserTypeExpr{
 		TypeName:      name,
 		AttributeExpr: att,

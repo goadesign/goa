@@ -131,8 +131,10 @@ func Attribute(name string, args ...interface{}) {
 			parent.Type = &expr.Object{}
 		}
 		if _, ok := parent.Type.(*expr.Object); !ok {
-			eval.ReportError("can't define child attribute %#v on attribute of type %s", name, parent.Type.Name())
-			return
+			if _, ok := parent.Type.(*expr.Union); !ok {
+				eval.ReportError("can't define child attribute %#v on attribute of type %s", name, parent.Type.Name())
+				return
+			}
 		}
 	}
 
@@ -165,13 +167,23 @@ func Attribute(name string, args ...interface{}) {
 		}
 	}
 
-	parent.Type.(*expr.Object).Set(name, attr)
+	if obj, ok := parent.Type.(*expr.Object); ok {
+		obj.Set(name, attr)
+		return
+	}
+	union := parent.Type.(*expr.Union)
+	if _, ok := attr.Type.(expr.UserType); !ok {
+		att := expr.DupAtt(attr)
+		attr.Type = &expr.UserTypeExpr{AttributeExpr: att, TypeName: union.TypeName + name}
+	}
+	union.Values = append(union.Values, &expr.NamedAttributeExpr{Name: name, Attribute: attr})
 }
 
-// Field is syntactic sugar to define an attribute with the "rpc:tag" meta
-// set with the value of the first argument.
+// Field is syntactic sugar to define an attribute that defines a tag, e.g. for
+// protobuf.  The result is the same as calling Attribute with the "rpc:tag"
+// meta set with the value of the first argument.
 //
-// Field must appear wherever Attribute can.
+// Field can appear wherever Attribute can.
 //
 // Field takes the same arguments as Attribute with the addition of the tag
 // value as first argument.

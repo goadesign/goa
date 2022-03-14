@@ -73,7 +73,7 @@ func makeProtoBufMessage(att *expr.AttributeExpr, tname string, sd *ServiceData)
 		}
 	case expr.IsArray(att.Type) || expr.IsMap(att.Type):
 		wrapAttr(att, tname, sd)
-	case expr.IsObject(att.Type):
+	case expr.IsObject(att.Type) || expr.IsUnion(att.Type):
 		att.Type = &expr.UserTypeExpr{
 			TypeName:      tname,
 			AttributeExpr: expr.DupAtt(att),
@@ -126,6 +126,10 @@ func makeProtoBufMessageR(att *expr.AttributeExpr, tname *string, sd *ServiceDat
 		m := expr.AsMap(att.Type)
 		makeProtoBufMessageR(m.ElemType, tname, sd, seen)
 		wrap(m.ElemType, *tname)
+	case expr.IsUnion(att.Type):
+		for _, nat := range expr.AsUnion(att.Type).Values {
+			makeProtoBufMessageR(nat.Attribute, tname, sd, seen)
+		}
 	case expr.IsObject(att.Type):
 		for _, nat := range *(expr.AsObject(att.Type)) {
 			makeProtoBufMessageR(nat.Attribute, tname, sd, seen)
@@ -220,7 +224,7 @@ func protoBufGoFullTypeName(att *expr.AttributeExpr, pkg string, s *codegen.Name
 		return fmt.Sprintf("map[%s]%s",
 			protoBufGoFullTypeRef(actual.KeyType, pkg, s),
 			protoBufGoFullTypeRef(actual.ElemType, pkg, s))
-	case *expr.Object:
+	case *expr.Object, *expr.Union:
 		return s.GoTypeDef(att, false, false)
 	default:
 		panic(fmt.Sprintf("unknown data type %T", actual)) // bug
@@ -238,6 +242,25 @@ func protoBufMessageDef(att *expr.AttributeExpr, sd *ServiceData) string {
 		return "repeated " + protoBufMessageDef(actual.ElemType, sd)
 	case *expr.Map:
 		return fmt.Sprintf("map<%s, %s>", protoBufMessageDef(actual.KeyType, sd), protoBufMessageDef(actual.ElemType, sd))
+	case *expr.Union:
+		def := " {\n\toneof " + codegen.SnakeCase(protoBufify(actual.Name(), false, false)) + " {"
+		for _, nat := range actual.Values {
+			fn := codegen.SnakeCase(protoBufify(nat.Name, false, false))
+			fnum := rpcTag(nat.Attribute)
+			var typ string
+			if prim := getPrimitive(nat.Attribute); prim != nil {
+				typ = protoBufMessageDef(prim, sd)
+			} else {
+				typ = protoBufMessageDef(nat.Attribute, sd)
+			}
+			var desc string
+			if d := nat.Attribute.Description; d != "" {
+				desc = codegen.Comment(d) + "\n\t"
+			}
+			def += fmt.Sprintf("\n\t\t%s%s %s = %d;", desc, typ, fn, fnum)
+		}
+		def += "\n\t}\n}"
+		return def
 	case expr.UserType:
 		if prim := getPrimitive(att); prim != nil {
 			return protoBufMessageDef(prim, sd)

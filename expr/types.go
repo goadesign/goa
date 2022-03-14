@@ -40,9 +40,6 @@ type (
 		ElemType *AttributeExpr
 	}
 
-	// Union is the type used to describe unions.
-	Union []*AttributeExpr
-
 	// NamedAttributeExpr describes object attributes together with their
 	// names.
 	NamedAttributeExpr struct {
@@ -55,6 +52,12 @@ type (
 	// Object is the type used to describe composite data structures.
 	// Note: not a map because order matters.
 	Object []*NamedAttributeExpr
+
+	// Union is the type used to describe unions.
+	Union struct {
+		TypeName string
+		Values   []*NamedAttributeExpr
+	}
 
 	// UserType is the interface implemented by all user type
 	// implementations. Plugins may leverage this interface to introduce
@@ -219,13 +222,13 @@ func AsMap(dt DataType) *Map {
 }
 
 // AsUnion returns the type underlying union if any, nil otherwise.
-func AsUnion(dt DataType) Union {
+func AsUnion(dt DataType) *Union {
 	switch t := dt.(type) {
 	case *UserTypeExpr:
 		return AsUnion(t.Type)
 	case *ResultTypeExpr:
 		return AsUnion(t.Type)
-	case Union:
+	case *Union:
 		return t
 	default:
 		return nil
@@ -611,20 +614,20 @@ func (m MapVal) ToMap() map[interface{}]interface{} {
 }
 
 // Kind implements DataKind.
-func (u Union) Kind() Kind { return UnionKind }
+func (u *Union) Kind() Kind { return UnionKind }
 
 // Name returns the type name.
-func (u Union) Name() string { return "union" }
+func (u *Union) Name() string { return u.TypeName }
 
 // Hash returns a unique hash value for m.
-func (u Union) Hash() string {
+func (u *Union) Hash() string {
 	return Hash(u, true, false, true)
 }
 
 // IsCompatible returns true if u describes the (Go) type of val.
-func (u Union) IsCompatible(val interface{}) bool {
-	for _, t := range u {
-		if t.Type.IsCompatible(val) {
+func (u *Union) IsCompatible(val interface{}) bool {
+	for _, nat := range u.Values {
+		if nat.Attribute.Type.IsCompatible(val) {
 			return true
 		}
 	}
@@ -632,11 +635,11 @@ func (u Union) IsCompatible(val interface{}) bool {
 }
 
 // Example returns a random example value.
-func (u Union) Example(r *Random) interface{} {
-	if len(u) == 0 {
+func (u *Union) Example(r *Random) interface{} {
+	if len(u.Values) == 0 {
 		return nil
 	}
-	return (u)[r.Int()%len(u)].Type.Example(r)
+	return u.Values[r.Int()%len(u.Values)].Attribute.Example(r)
 }
 
 // QualifiedTypeName returns the qualified type name for the given data type.

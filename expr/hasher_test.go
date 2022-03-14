@@ -51,13 +51,13 @@ func TestObjectHash(t *testing.T) {
 		attributeString         = &AttributeExpr{Type: String}
 		attributeArray          = &AttributeExpr{Type: &Array{ElemType: attributeString}}
 		attributeMap            = &AttributeExpr{Type: &Map{KeyType: attributeInt, ElemType: attributeString}}
-		attributeUnion          = &AttributeExpr{Type: Union{attributeInt, attributeString}}
 		userType                = &UserTypeExpr{AttributeExpr: attributeString, TypeName: "ut"}
 		namedAttributePrimitive = &NamedAttributeExpr{Name: "foo", Attribute: attributeInt}
 		namedAttributeArray     = &NamedAttributeExpr{Name: "bar", Attribute: attributeArray}
 		namedAttributeMap       = &NamedAttributeExpr{Name: "baz", Attribute: attributeMap}
-		namedAttributeUnion     = &NamedAttributeExpr{Name: "qux", Attribute: attributeUnion}
 		namedAttributeUserType  = &NamedAttributeExpr{Name: "quux", Attribute: &AttributeExpr{Type: userType}}
+		attributeUnion          = &AttributeExpr{Type: &Union{TypeName: "quuuux", Values: []*NamedAttributeExpr{namedAttributePrimitive}}}
+		namedAttributeUnion     = &NamedAttributeExpr{Name: "qux", Attribute: attributeUnion}
 	)
 	cases := map[string]struct {
 		object   Object

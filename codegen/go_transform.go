@@ -353,23 +353,23 @@ func transformUnion(source, target *expr.AttributeExpr, sourceVar, targetVar str
 		return transformUnionToObject(source, target, sourceVar, targetVar, newVar, ta)
 	}
 	srcUnion, tgtUnion := expr.AsUnion(source.Type), expr.AsUnion(target.Type)
-	if len(srcUnion) != len(tgtUnion) {
+	if len(srcUnion.Values) != len(tgtUnion.Values) {
 		return "", fmt.Errorf("cannot transform union: number of union types differ (%s has %d, %s has %d)",
-			source.Type.Name(), len(srcUnion), target.Type.Name(), len(tgtUnion))
+			source.Type.Name(), len(srcUnion.Values), target.Type.Name(), len(tgtUnion.Values))
 	}
-	for i, st := range srcUnion {
-		if err := IsCompatible(st.Type, tgtUnion[i].Type, sourceVar, targetVar); err != nil {
+	for i, st := range srcUnion.Values {
+		if err := IsCompatible(st.Attribute.Type, tgtUnion.Values[i].Attribute.Type, sourceVar, targetVar); err != nil {
 			return "", fmt.Errorf("cannot transform union %s to %s: type at index %d: %w",
 				source.Type.Name(), target.Type.Name(), i, err)
 		}
 	}
-	sourceTypeRefs := make([]string, len(srcUnion))
-	for i, st := range srcUnion {
-		sourceTypeRefs[i] = ta.TargetCtx.Scope.Ref(st, ta.TargetCtx.Pkg)
+	sourceTypeRefs := make([]string, len(srcUnion.Values))
+	for i, st := range srcUnion.Values {
+		sourceTypeRefs[i] = ta.TargetCtx.Scope.Ref(st.Attribute, ta.TargetCtx.Pkg)
 	}
-	targetTypeNames := make([]string, len(tgtUnion))
-	for i, tt := range tgtUnion {
-		targetTypeNames[i] = ta.TargetCtx.Scope.Name(tt, ta.TargetCtx.Pkg, ta.TargetCtx.Pointer, ta.TargetCtx.Pointer)
+	targetTypeNames := make([]string, len(tgtUnion.Values))
+	for i, tt := range tgtUnion.Values {
+		targetTypeNames[i] = ta.TargetCtx.Scope.Name(tt.Attribute, ta.TargetCtx.Pkg, ta.TargetCtx.Pointer, ta.TargetCtx.Pointer)
 	}
 	data := map[string]interface{}{
 		"SourceTypeRefs": sourceTypeRefs,
@@ -398,11 +398,11 @@ func transformUnionToObject(source, target *expr.AttributeExpr, sourceVar, targe
 		return "", fmt.Errorf("union to object transform requires second field to be any")
 	}
 	srcUnion := expr.AsUnion(source.Type)
-	sourceTypeRefs := make([]string, len(srcUnion))
-	sourceTypeNames := make([]string, len(srcUnion))
-	for i, st := range srcUnion {
-		sourceTypeRefs[i] = ta.SourceCtx.Scope.Ref(st, ta.SourceCtx.Pkg)
-		sourceTypeNames[i] = ta.SourceCtx.Scope.Name(st, "", false, false)
+	sourceTypeRefs := make([]string, len(srcUnion.Values))
+	sourceTypeNames := make([]string, len(srcUnion.Values))
+	for i, st := range srcUnion.Values {
+		sourceTypeRefs[i] = ta.SourceCtx.Scope.Ref(st.Attribute, ta.SourceCtx.Pkg)
+		sourceTypeNames[i] = ta.SourceCtx.Scope.Name(st.Attribute, "", false, false)
 	}
 	data := map[string]interface{}{
 		"NewVar":          newVar,
@@ -434,11 +434,11 @@ func transformObjectToUnion(source, target *expr.AttributeExpr, sourceVar, targe
 		sourceVarDeref = "*" + sourceVar
 	}
 	tgtUnion := expr.AsUnion(target.Type)
-	targetTypeNames := make([]string, len(tgtUnion))
-	targetTypeRefs := make([]string, len(tgtUnion))
-	for i, tt := range tgtUnion {
-		targetTypeNames[i] = ta.TargetCtx.Scope.Name(tt, ta.TargetCtx.Pkg, ta.TargetCtx.Pointer, ta.TargetCtx.Pointer)
-		targetTypeRefs[i] = ta.TargetCtx.Scope.Ref(tt, ta.TargetCtx.Pkg)
+	targetTypeNames := make([]string, len(tgtUnion.Values))
+	targetTypeRefs := make([]string, len(tgtUnion.Values))
+	for i, tt := range tgtUnion.Values {
+		targetTypeNames[i] = ta.TargetCtx.Scope.Name(tt.Attribute, ta.TargetCtx.Pkg, ta.TargetCtx.Pointer, ta.TargetCtx.Pointer)
+		targetTypeRefs[i] = ta.TargetCtx.Scope.Ref(tt.Attribute, ta.TargetCtx.Pkg)
 	}
 	data := map[string]interface{}{
 		"NewVar":          newVar,
@@ -491,8 +491,8 @@ func transformAttributeHelpers(source, target *expr.AttributeExpr, ta *Transform
 		if tt == nil {
 			return
 		}
-		for i, st := range expr.AsUnion(source.Type) {
-			if other, err = collectHelpers(st, tt[i], true, ta, seen); err == nil {
+		for i, st := range expr.AsUnion(source.Type).Values {
+			if other, err = collectHelpers(st.Attribute, tt.Values[i].Attribute, true, ta, seen); err == nil {
 				helpers = append(helpers, other...)
 			}
 		}
@@ -547,8 +547,8 @@ func collectHelpers(source, target *expr.AttributeExpr, req bool, ta *TransformA
 		if tt == nil {
 			return
 		}
-		for i, st := range expr.AsUnion(source.Type) {
-			if other, err = collectHelpers(st, tt[i], req, ta, seen); err == nil {
+		for i, st := range expr.AsUnion(source.Type).Values {
+			if other, err = collectHelpers(st.Attribute, tt.Values[i].Attribute, req, ta, seen); err == nil {
 				helpers = append(helpers, other...)
 			}
 		}
