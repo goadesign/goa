@@ -2,7 +2,6 @@ func transform() {
 	var target *UnionSomeType
 	switch source.Type {
 	case "SomeType":
-		val := source.Value.(*SomeType)
-		target = &UnionSomeType{Value: val}
+		target = source.Value.(*SomeType)
 	}
 }

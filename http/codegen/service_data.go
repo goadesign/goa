@@ -925,30 +925,7 @@ func makeHTTPType(att *expr.AttributeExpr, seen ...map[string]struct{}) {
 	}
 	switch dt := att.Type.(type) {
 	case expr.UserType:
-		if expr.IsUnion(dt) {
-			values := expr.AsUnion(dt).Values
-			names := make([]interface{}, len(values))
-			vals := make([]string, len(values))
-			for i, nat := range values {
-				names[i] = nat.Attribute.Type.Name()
-				vals[i] = fmt.Sprintf("- %q", nat.Attribute.Type.Name())
-			}
-			obj := expr.Object([]*expr.NamedAttributeExpr{
-				{Name: "Type", Attribute: &expr.AttributeExpr{
-					Type:        expr.String,
-					Description: "Union type name, one of:\n" + strings.Join(vals, "\n"),
-					Validation:  &expr.ValidationExpr{Values: names},
-				}},
-				{Name: "Value", Attribute: &expr.AttributeExpr{
-					Type:        expr.Any,
-					Description: "Union value, type must be one of service package types listed above",
-				}},
-			})
-			dt.SetAttribute(&expr.AttributeExpr{
-				Type:       &obj,
-				Validation: &expr.ValidationExpr{Required: []string{"Type", "Value"}},
-			})
-		} else if _, ok := dt.(*expr.ResultTypeExpr); !ok && !expr.IsObject(dt) {
+		if _, ok := dt.(*expr.ResultTypeExpr); !ok && !expr.IsObject(dt) {
 			// Aliased user type. Use the underlying aliased type instead of
 			// generating new types in the client and server packages
 			att.Type = dt.Attribute().Type
@@ -982,6 +959,27 @@ func makeHTTPType(att *expr.AttributeExpr, seen ...map[string]struct{}) {
 		for _, nat := range *dt {
 			makeHTTPType(nat.Attribute, seen...)
 		}
+	case *expr.Union:
+		values := expr.AsUnion(dt).Values
+		names := make([]interface{}, len(values))
+		vals := make([]string, len(values))
+		for i, nat := range values {
+			names[i] = nat.Attribute.Type.Name()
+			vals[i] = fmt.Sprintf("- %q", nat.Attribute.Type.Name())
+		}
+		obj := expr.Object([]*expr.NamedAttributeExpr{
+			{Name: "Type", Attribute: &expr.AttributeExpr{
+				Type:        expr.String,
+				Description: "Union type name, one of:\n" + strings.Join(vals, "\n"),
+				Validation:  &expr.ValidationExpr{Values: names},
+			}},
+			{Name: "Value", Attribute: &expr.AttributeExpr{
+				Type:        expr.Any,
+				Description: "Union value, type must be one of service package types listed above",
+			}},
+		})
+		att.Type = &obj
+		att.Validation = &expr.ValidationExpr{Required: []string{"Type", "Value"}}
 	}
 }
 

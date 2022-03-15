@@ -806,15 +806,16 @@ func NewMethodBodyQueryUserValidatePayloadType(body *MethodBodyQueryUserValidate
 var PayloadBodyUnionConstructorCode = `// NewMethodBodyUnionUnion builds a ServiceBodyUnion service MethodBodyUnion
 // endpoint payload.
 func NewMethodBodyUnionUnion(body *MethodBodyUnionRequestBody) *servicebodyunion.Union {
-	var v *servicebodyunion.Union
-	switch *body.Type {
-	case "servicebodyunion.UnionString":
-		val := body.Value.(servicebodyunion.UnionString)
-		v = &servicebodyunion.Union{Value: val}
-	case "servicebodyunion.UnionInt":
-		val := body.Value.(servicebodyunion.UnionInt)
-		v = &servicebodyunion.Union{Value: val}
+	v := &servicebodyunion.Union{}
+	if body.Values != nil {
+		switch *body.Values.Type {
+		case "servicebodyunion.ValuesString":
+			v.Values = body.Values.Value.(servicebodyunion.ValuesString)
+		case "servicebodyunion.ValuesInt":
+			v.Values = body.Values.Value.(servicebodyunion.ValuesInt)
+		}
 	}
+
 	return v
 }
 `

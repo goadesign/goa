@@ -657,7 +657,7 @@ for key, val := range {{ .SourceVar }} {
 `
 
 	transformGoUnionTmpl = `{{ if .NewVar }}var {{ .TargetVar }} {{ .TypeRef }}
-{{ end }}switch actual := {{ .SourceVar }}.Value.(type) {
+{{ end }}switch actual := {{ .SourceVar }}.(type) {
 	{{- range $i, $ref := .SourceTypeRefs }}
 	case {{ $ref }}:
 		{{ transformAttribute (index $.SourceTypes $i).Attribute (index $.TargetTypes $i).Attribute "actual" "val" true $.TransformAttrs -}}
@@ -668,7 +668,7 @@ for key, val := range {{ .SourceVar }} {
 
 	transformGoUnionToObjectTmpl = `{{ if .NewVar }}var {{ .TargetVar }} {{ .TypeRef }}
 {{ end }}var name string
-switch {{ .SourceVar }}.Value.(type) {
+switch {{ .SourceVar }}.(type) {
 	{{- range $i, $ref := .SourceTypeRefs }}
 	case {{ $ref }}:
 		name = {{ printf "%q" (index $.SourceTypeNames $i) }}
@@ -676,7 +676,7 @@ switch {{ .SourceVar }}.Value.(type) {
 }
 {{ .TargetVar }} = &{{ .TargetTypeName }}{
 	Type: name,
-	Value: {{ .SourceVar }}.Value,
+	Value: {{ .SourceVar }},
 }
 `
 
@@ -684,8 +684,7 @@ switch {{ .SourceVar }}.Value.(type) {
 {{ end }}switch {{ .SourceVarDeref }}.Type {
 	{{- range $i, $name := .TargetTypeNames }}
 	case {{ printf "%q" $name }}:
-		val := {{ $.SourceVar }}.Value.({{ index $.TargetTypeRefs $i }})
-		{{ $.TargetVar }} = &{{ $.TargetTypeName }}{ Value: val }
+		{{ $.TargetVar }} = {{ $.SourceVar }}.Value.({{ index $.TargetTypeRefs $i }})
 	{{- end }}
 }
 `

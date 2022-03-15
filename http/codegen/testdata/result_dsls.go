@@ -620,9 +620,11 @@ var ResultBodyUserDSL = func() {
 }
 
 var ResultBodyUnionDSL = func() {
-	var Union = OneOf("Union", func() {
-		Attribute("String", String)
-		Attribute("Int", Int)
+	var Union = Type("Union", func() {
+		OneOf("Vals", func() {
+			Attribute("String", String)
+			Attribute("Int", Int)
+		})
 	})
 	Service("ServiceBodyUnion", func() {
 		Method("MethodBodyUnion", func() {

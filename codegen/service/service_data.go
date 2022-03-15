@@ -686,50 +686,26 @@ func (d ServicesData) analyze(service *expr.ServiceExpr) *Data {
 	}
 
 	var (
-		unionMethods []*UnionValueMethodData
+		ms []*UnionValueMethodData
 	)
 	{
 		seen := make(map[string]struct{})
-		collectUnionMethods := func(attrs ...*expr.AttributeExpr) {
-			for _, att := range attrs {
-				if att == nil {
-					continue
-				}
-				ut, ok := att.Type.(expr.UserType)
-				if !ok {
-					continue
-				}
-				union, ok := ut.Attribute().Type.(*expr.Union)
-				if !ok {
-					continue
-				}
-				if _, ok := seen[ut.ID()]; ok {
-					continue
-				}
-				seen[ut.ID()] = struct{}{}
-				for _, u := range union.Values {
-					unionMethods = append(unionMethods, &UnionValueMethodData{
-						Name:    codegen.UnionValTypeName(ut.Name()),
-						TypeRef: scope.GoTypeRef(u.Attribute),
-						Loc:     codegen.UserTypeLocation(ut),
-					})
-				}
-			}
-		}
 		for _, t := range types {
-			collectUnionMethods(&expr.AttributeExpr{Type: t.Type})
+			ms = append(ms, collectUnionMethods(&expr.AttributeExpr{Type: t.Type}, scope, t.Loc, seen)...)
 		}
 		for _, t := range errTypes {
-			collectUnionMethods(&expr.AttributeExpr{Type: t.Type})
+			ms = append(ms, collectUnionMethods(&expr.AttributeExpr{Type: t.Type}, scope, t.Loc, seen)...)
 		}
 		for _, m := range service.Methods {
-			collectUnionMethods(m.Payload, m.StreamingPayload, m.Result)
+			ms = append(ms, collectUnionMethods(m.Payload, scope, codegen.UserTypeLocation(m.Payload.Type), seen)...)
+			ms = append(ms, collectUnionMethods(m.StreamingPayload, scope, codegen.UserTypeLocation(m.StreamingPayload.Type), seen)...)
+			ms = append(ms, collectUnionMethods(m.Result, scope, codegen.UserTypeLocation(m.Result.Type), seen)...)
 			for _, e := range m.Errors {
-				collectUnionMethods(e.AttributeExpr)
+				ms = append(ms, collectUnionMethods(e.AttributeExpr, scope, codegen.UserTypeLocation(e.Type), seen)...)
 			}
 		}
-		sort.Slice(unionMethods, func(i, j int) bool {
-			return unionMethods[i].Name < unionMethods[j].Name
+		sort.Slice(ms, func(i, j int) bool {
+			return ms[i].Name < ms[j].Name
 		})
 	}
 
@@ -761,7 +737,7 @@ func (d ServicesData) analyze(service *expr.ServiceExpr) *Data {
 		userTypes:         types,
 		projectedTypes:    projTypes,
 		viewedResultTypes: viewedRTs,
-		unionValueMethods: unionMethods,
+		unionValueMethods: ms,
 	}
 	d[service.Name] = data
 
@@ -816,6 +792,45 @@ func collectTypes(at *expr.AttributeExpr, scope *codegen.NameScope, seen map[str
 	case *expr.Union:
 		for _, nat := range dt.Values {
 			data = append(data, collect(nat.Attribute)...)
+		}
+	}
+	return
+}
+
+// collectUnionMethods traverses the attribute to gather all union value methods.
+func collectUnionMethods(att *expr.AttributeExpr, scope *codegen.NameScope, loc *codegen.Location, seen map[string]struct{}) (data []*UnionValueMethodData) {
+	if att == nil || att.Type == expr.Empty {
+		return
+	}
+	collect := func(at *expr.AttributeExpr, loc *codegen.Location) []*UnionValueMethodData {
+		return collectUnionMethods(at, scope, loc, seen)
+	}
+	switch dt := att.Type.(type) {
+	case expr.UserType:
+		if _, ok := seen[dt.ID()]; ok {
+			return nil
+		}
+		seen[dt.ID()] = struct{}{}
+		data = append(data, collect(dt.Attribute(), codegen.UserTypeLocation(dt))...)
+	case *expr.Object:
+		for _, nat := range *dt {
+			data = append(data, collect(nat.Attribute, loc)...)
+		}
+	case *expr.Array:
+		data = append(data, collect(dt.ElemType, loc)...)
+	case *expr.Map:
+		data = append(data, collect(dt.KeyType, loc)...)
+		data = append(data, collect(dt.ElemType, loc)...)
+	case *expr.Union:
+		for _, nat := range dt.Values {
+			data = append(data, &UnionValueMethodData{
+				Name:    codegen.UnionValTypeName(dt.Name()),
+				TypeRef: scope.GoTypeRef(nat.Attribute),
+				Loc:     loc,
+			})
+		}
+		for _, nat := range dt.Values {
+			data = append(data, collect(nat.Attribute, loc)...)
 		}
 	}
 	return

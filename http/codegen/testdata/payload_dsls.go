@@ -2041,9 +2041,11 @@ var PayloadBodyObjectValidateDSL = func() {
 }
 
 var PayloadBodyUnionDSL = func() {
-	var Union = OneOf("Union", func() {
-		Attribute("String", String)
-		Attribute("Int", Int)
+	var Union = Type("Union", func() {
+		OneOf("Values", func() {
+			Attribute("String", String)
+			Attribute("Int", Int)
+		})
 	})
 	Service("ServiceBodyUnion", func() {
 		Method("MethodBodyUnion", func() {
@@ -2056,9 +2058,11 @@ var PayloadBodyUnionDSL = func() {
 }
 
 var PayloadBodyUnionValidateDSL = func() {
-	var UnionValidate = OneOf("UnionValidate", func() {
-		Attribute("String", String)
-		Attribute("Int", Int)
+	var UnionValidate = Type("UnionValidate", func() {
+		OneOf("Values", func() {
+			Attribute("String", String)
+			Attribute("Int", Int)
+		})
 	})
 	Service("ServiceBodyUnionValidate", func() {
 		Method("MethodBodyUnionValidate", func() {
@@ -2080,9 +2084,11 @@ var PayloadBodyUnionUserDSL = func() {
 	var SomeOtherType = Type("SomeOtherType", func() {
 		Attribute("b", String)
 	})
-	var Union = OneOf("UnionUser", func() {
-		Attribute("SomeType", SomeType)
-		Attribute("SomeOtherType", SomeOtherType)
+	var Union = Type("UnionUser", func() {
+		OneOf("Values", func() {
+			Attribute("SomeType", SomeType)
+			Attribute("SomeOtherType", SomeOtherType)
+		})
 	})
 	Service("ServiceBodyUnionUser", func() {
 		Method("MethodBodyUnionUser", func() {
@@ -2103,9 +2109,11 @@ var PayloadBodyUnionUserValidateDSL = func() {
 		Attribute("b", String)
 		Required("b")
 	})
-	var Union = OneOf("UnionUserValidate", func() {
-		Attribute("SomeType", SomeType)
-		Attribute("SomeOtherType", SomeOtherType)
+	var Union = Type("UnionUserValidate", func() {
+		OneOf("Values", func() {
+			Attribute("SomeType", SomeType)
+			Attribute("SomeOtherType", SomeOtherType)
+		})
 	})
 	Service("ServiceBodyUnionUserValidate", func() {
 		Method("MethodBodyUnionUserValidate", func() {
@@ -2494,9 +2502,11 @@ var PayloadBodyQueryUserValidateDSL = func() {
 }
 
 var PayloadBodyQueryUserUnionDSL = func() {
-	var Union = OneOf("Union", func() {
-		Attribute("String", String)
-		Attribute("Int", Int)
+	var Union = Type("Union", func() {
+		OneOf("Values", func() {
+			Attribute("String", String)
+			Attribute("Int", Int)
+		})
 	})
 	var PayloadType = Type("PayloadType", func() {
 		Attribute("a", Union)
@@ -2514,9 +2524,11 @@ var PayloadBodyQueryUserUnionDSL = func() {
 }
 
 var PayloadBodyQueryUserUnionValidateDSL = func() {
-	var Union = OneOf("Union", func() {
-		Attribute("String", String)
-		Attribute("Int", Int)
+	var Union = Type("Union", func() {
+		OneOf("Values", func() {
+			Attribute("String", String)
+			Attribute("Int", Int)
+		})
 	})
 	var PayloadType = Type("PayloadType", func() {
 		Attribute("a", Union)

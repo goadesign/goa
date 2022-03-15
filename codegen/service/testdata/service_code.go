@@ -184,23 +184,23 @@ var MethodNames = [1]string{"A"}
 
 // AUnion is the payload type of the UnionService service A method.
 type AUnion struct {
-	Value interface {
-		aUnionVal()
+	Values interface {
+		valuesVal()
 	}
 }
 
-type AUnionBoolean bool
+type ValuesBoolean bool
 
-type AUnionBytes []byte
+type ValuesBytes []byte
 
-type AUnionInt int
+type ValuesInt int
 
-type AUnionString string
+type ValuesString string
 
-func (AUnionBoolean) aUnionVal() {}
-func (AUnionBytes) aUnionVal()   {}
-func (AUnionInt) aUnionVal()     {}
-func (AUnionString) aUnionVal()  {}
+func (ValuesBoolean) valuesVal() {}
+func (ValuesBytes) valuesVal()   {}
+func (ValuesInt) valuesVal()     {}
+func (ValuesString) valuesVal()  {}
 `
 
 const MultiUnionMethod = `
@@ -230,13 +230,13 @@ type TypeB struct {
 
 // Union is the payload type of the MultiUnionService service MultiUnion method.
 type Union struct {
-	Value interface {
-		unionVal()
+	Values interface {
+		valuesVal()
 	}
 }
 
-func (*TypeA) unionVal() {}
-func (*TypeB) unionVal() {}
+func (*TypeA) valuesVal() {}
+func (*TypeB) valuesVal() {}
 `
 
 const WithDefault = `

@@ -21,10 +21,10 @@ func TestGoTransformUnion(t *testing.T) {
 		scope = NewNameScope()
 
 		// types to test
-		unionString    = root.UserType("Container").Attribute().Find("UnionString")
-		unionString2   = root.UserType("Container").Attribute().Find("UnionString2")
-		unionStringInt = root.UserType("Container").Attribute().Find("UnionStringInt")
-		unionSomeType  = root.UserType("Container").Attribute().Find("UnionSomeType")
+		unionString    = root.UserType("Container").Attribute().Find("UnionString").Find("UnionString")
+		unionString2   = root.UserType("Container").Attribute().Find("UnionString2").Find("UnionString2")
+		unionStringInt = root.UserType("Container").Attribute().Find("UnionStringInt").Find("UnionStringInt")
+		unionSomeType  = root.UserType("Container").Attribute().Find("UnionSomeType").Find("UnionSomeType")
 		userType       = &expr.AttributeExpr{Type: root.UserType("UnionUserType")}
 		defaultCtx     = NewAttributeContext(false, false, true, "", scope)
 	)
@@ -77,9 +77,9 @@ func TestGoTransformUnionError(t *testing.T) {
 		scope = NewNameScope()
 
 		// types to test
-		unionString    = root.UserType("Container").Attribute().Find("UnionString")
-		unionStringInt = root.UserType("Container").Attribute().Find("UnionStringInt")
-		unionSomeType  = root.UserType("Container").Attribute().Find("UnionSomeType")
+		unionString    = root.UserType("Container").Attribute().Find("UnionString").Find("UnionString")
+		unionStringInt = root.UserType("Container").Attribute().Find("UnionStringInt").Find("UnionStringInt")
+		unionSomeType  = root.UserType("Container").Attribute().Find("UnionSomeType").Find("UnionSomeType")
 		defaultCtx     = NewAttributeContext(false, false, true, "", scope)
 	)
 	tc := []struct {

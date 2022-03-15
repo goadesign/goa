@@ -222,43 +222,6 @@ func MapOf(k, v interface{}, fn ...func()) *expr.Map {
 	return m
 }
 
-// OneOf creates a union type from a name and a list of types.
-//
-// OneOf may be used wherever types can.
-// OneOf takes a name as first argument and a list of types either by name of by
-// reference.
-//
-// Example:
-//
-//   var Pet = OneOf("Pet", func() {
-//        Description("Pet is a type that can be a cat or a dog")
-//        Attribute("Cat", Cat, "Cats are cool")
-//        Attribute("Dog", Dog, "Dogs are cool too")
-//   })
-//
-//    var PetOwner = Type("PetOwner", func() {
-//        Attribute("pet", Pet)
-//    })
-//
-func OneOf(name string, fn func()) expr.UserType {
-	if t := expr.Root.UserType(name); t != nil {
-		eval.ReportError("OneOf: type %s already defined", name)
-		return nil
-	}
-	if _, ok := eval.Current().(eval.TopExpr); !ok {
-		eval.IncompatibleDSL()
-		return nil
-	}
-	union := expr.Union{TypeName: name}
-	att := &expr.AttributeExpr{Type: &union, DSLFunc: fn}
-	t := &expr.UserTypeExpr{
-		TypeName:      name,
-		AttributeExpr: att,
-	}
-	expr.Root.Types = append(expr.Root.Types, t)
-	return t
-}
-
 // Key makes it possible to specify validations for map keys.
 //
 // Example:

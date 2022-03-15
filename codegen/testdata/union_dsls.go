@@ -10,10 +10,27 @@ var TestUnionDSL = func() {
 			Attribute("someField", String)
 		})
 
-		UnionString    = OneOf("UnionString", func() { Attribute("String", String) })
-		UnionString2   = OneOf("UnionString2", func() { Attribute("String", String) })
-		UnionStringInt = OneOf("UnionStringInt", func() { Attribute("String", String); Attribute("Int", Int) })
-		UnionSomeType  = OneOf("UnionSomeType", func() { Attribute("SomeType", SomeType) })
+		UnionString = Type("UnionString", func() {
+			OneOf("UnionString", func() {
+				Attribute("String", String)
+			})
+		})
+		UnionString2 = Type("UnionString2", func() {
+			OneOf("UnionString2", func() {
+				Attribute("String", String)
+			})
+		})
+		UnionStringInt = Type("UnionStringInt", func() {
+			OneOf("UnionStringInt", func() {
+				Attribute("String", String)
+				Attribute("Int", Int)
+			})
+		})
+		UnionSomeType = Type("UnionSomeType", func() {
+			OneOf("UnionSomeType", func() {
+				Attribute("SomeType", SomeType)
+			})
+		})
 
 		_ = Type("Container", func() {
 			Attribute("UnionString", UnionString)

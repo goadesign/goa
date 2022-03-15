@@ -186,6 +186,8 @@ func (sf *schemafier) schemafy(attr *expr.AttributeExpr, noref ...bool) *openapi
 		} else {
 			s.AdditionalProperties = true
 		}
+	case *expr.Union:
+		s.Type = openapi.String // TBD: IMPLEMENT
 	case expr.UserType:
 		if !expr.IsAlias(t) {
 			h := sf.hashAttribute(attr, fnv.New64())

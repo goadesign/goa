@@ -89,7 +89,7 @@ func goTypeDef(scope *codegen.NameScope, att *expr.AttributeExpr, ptr, useDefaul
 		})
 		ss = append(ss, "}")
 		return strings.Join(ss, "\n")
-	case expr.UserType:
+	case expr.UserType, *expr.Union:
 		return scope.GoTypeName(att)
 	default:
 		panic(fmt.Sprintf("unknown data type %T", actual)) // bug

@@ -2,10 +2,8 @@ func transform() {
 	var target *UnionStringInt
 	switch source.Type {
 	case "UnionStringIntString":
-		val := source.Value.(UnionStringIntString)
-		target = &UnionStringInt{Value: val}
+		target = source.Value.(UnionStringIntString)
 	case "UnionStringIntInt":
-		val := source.Value.(UnionStringIntInt)
-		target = &UnionStringInt{Value: val}
+		target = source.Value.(UnionStringIntInt)
 	}
 }

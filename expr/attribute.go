@@ -560,9 +560,9 @@ func (a *AttributeExpr) debug(prefix string, seen map[*AttributeExpr]int, indent
 	}
 	n := a.Type.Name()
 	if desc := a.Description; desc != "" {
-		fmt.Printf("%s: %s (%s)\n", prefix, n, desc)
+		fmt.Printf("%s: %s (%s) <%T>\n", prefix, n, desc, a.Type)
 	} else {
-		fmt.Printf("%s: %s\n", prefix, n)
+		fmt.Printf("%s: %s <%T>\n", prefix, n, a.Type)
 	}
 	if o := AsObject(a.Type); o != nil {
 		for _, nat := range *o {

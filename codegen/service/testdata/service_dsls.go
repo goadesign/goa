@@ -83,11 +83,13 @@ var MultipleMethodsDSL = func() {
 }
 
 var UnionMethodDSL = func() {
-	var AUnion = OneOf("AUnion", func() {
-		Attribute("Int", Int)
-		Attribute("String", String)
-		Attribute("Boolean", Boolean)
-		Attribute("Bytes", Bytes)
+	var AUnion = Type("AUnion", func() {
+		OneOf("Values", func() {
+			Attribute("Int", Int)
+			Attribute("String", String)
+			Attribute("Boolean", Boolean)
+			Attribute("Bytes", Bytes)
+		})
 	})
 	Service("UnionService", func() {
 		Method("A", func() {
@@ -104,9 +106,11 @@ var MultiUnionMethodDSL = func() {
 	var TypeB = Type("TypeB", func() {
 		Attribute("b", String)
 	})
-	var Union = OneOf("Union", func() {
-		Attribute("a", TypeA)
-		Attribute("b", TypeB)
+	var Union = Type("Union", func() {
+		OneOf("Values", func() {
+			Attribute("a", TypeA)
+			Attribute("b", TypeB)
+		})
 	})
 	Service("MultiUnionService", func() {
 		Method("MultiUnion", func() {

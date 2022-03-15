@@ -123,7 +123,7 @@ func (s *NameScope) goTypeDef(att *expr.AttributeExpr, ptr, useDefault bool, pkg
 		}
 		return fmt.Sprintf("map[%s]%s", keyDef, elemDef)
 	case *expr.Union:
-		return fmt.Sprintf("struct {\n\tValue interface{\n\t\t%s()\n\t}\n}", UnionValTypeName(actual.TypeName))
+		return fmt.Sprintf("interface{\n\t%s()\n}", UnionValTypeName(actual.TypeName))
 	case *expr.Object:
 		ss := []string{"struct {"}
 		for _, nat := range *actual {
@@ -146,7 +146,6 @@ func (s *NameScope) goTypeDef(att *expr.AttributeExpr, ptr, useDefault bool, pkg
 				}
 				tdef = s.goTypeDef(at, ptr, useDefault, parentPkg)
 				if expr.IsObject(at.Type) ||
-					expr.IsUnion(at.Type) ||
 					att.IsPrimitivePointer(name, useDefault) ||
 					(ptr && expr.IsPrimitive(at.Type) && at.Type.Kind() != expr.AnyKind && at.Type.Kind() != expr.BytesKind) {
 					tdef = "*" + tdef
@@ -237,9 +236,9 @@ func (s *NameScope) GoFullTypeName(att *expr.AttributeExpr, pkg string) string {
 		return fmt.Sprintf("map[%s]%s",
 			s.GoFullTypeRef(actual.KeyType, pkg),
 			s.GoFullTypeRef(actual.ElemType, pkg))
-	case *expr.Union, *expr.Object:
+	case *expr.Object:
 		return s.GoTypeDef(att, false, false)
-	case expr.UserType:
+	case expr.UserType, *expr.Union:
 		if actual == expr.ErrorResult {
 			return "goa.ServiceError"
 		}
