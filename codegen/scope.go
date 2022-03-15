@@ -160,6 +160,9 @@ func (s *NameScope) goTypeDef(att *expr.AttributeExpr, ptr, useDefault bool, pkg
 		ss = append(ss, "}")
 		return strings.Join(ss, "\n")
 	case expr.UserType:
+		if actual == expr.Empty {
+			return "struct {}"
+		}
 		var prefix string
 		if loc := UserTypeLocation(actual); loc != nil && loc.PackageName() != pkg {
 			prefix = loc.PackageName() + "."

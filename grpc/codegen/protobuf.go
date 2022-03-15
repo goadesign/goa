@@ -262,6 +262,9 @@ func protoBufMessageDef(att *expr.AttributeExpr, sd *ServiceData) string {
 		def += "\n\t}"
 		return def
 	case expr.UserType:
+		if actual == expr.Empty {
+			return " {}"
+		}
 		if prim := getPrimitive(att); prim != nil {
 			return protoBufMessageDef(prim, sd)
 		}
