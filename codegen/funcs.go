@@ -287,6 +287,7 @@ func InitStructFields(args []*InitArgData, targetVar, sourcePkg, targetPkg strin
 			t := scope.GoFullTypeRef(&expr.AttributeExpr{Type: arg.FieldType}, targetPkg)
 			cast := fmt.Sprintf("%s(%s)", t, arg.Name)
 			if arg.Pointer {
+				code += "if " + arg.Name + " != nil {\n"
 				cast = fmt.Sprintf("%s(*%s)", t, arg.Name)
 			}
 			if arg.FieldPointer {
@@ -295,6 +296,9 @@ func InitStructFields(args []*InitArgData, targetVar, sourcePkg, targetPkg strin
 				code += fmt.Sprintf("%s.%s = %s\n", targetVar, arg.FieldName, cast)
 			} else {
 				code += fmt.Sprintf("%s := %s\n", targetVar, cast)
+			}
+			if arg.Pointer {
+				code += "}\n"
 			}
 		default:
 			srcctx := NewAttributeContext(arg.Pointer, false, true, sourcePkg, scope)
