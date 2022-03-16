@@ -5,7 +5,7 @@ go 1.17
 require (
 	github.com/dimfeld/httppath v0.0.0-20170720192232-ee938bf73598
 	github.com/dimfeld/httptreemux/v5 v5.4.0
-	github.com/getkin/kin-openapi v0.91.0
+	github.com/getkin/kin-openapi v0.92.0
 	github.com/google/gxui v0.0.0-20151028112939-f85e0a97b3a4 // indirect
 	github.com/google/uuid v1.3.0
 	github.com/gorilla/websocket v1.5.0
@@ -20,7 +20,7 @@ require (
 	golang.org/x/sys v0.0.0-20220227234510-4e6760a101f9 // indirect
 	golang.org/x/tools v0.1.9
 	google.golang.org/genproto v0.0.0-20220304144024-325a89244dc8 // indirect
-	google.golang.org/grpc v1.44.0
+	google.golang.org/grpc v1.45.0
 	google.golang.org/protobuf v1.27.1
 	gopkg.in/yaml.v2 v2.4.0
 )
