@@ -525,7 +525,7 @@ func (d ServicesData) analyze(gs *expr.GRPCServiceExpr) *ServiceData {
 				ServerConvert: buildRequestConvertData(e.Request, e.MethodExpr.Payload, reqMD, e, sd, true),
 				ClientConvert: buildRequestConvertData(e.Request, e.MethodExpr.Payload, reqMD, e, sd, false),
 			}
-			if obj := expr.AsObject(e.Request.Type); len(*obj) > 0 {
+			if obj := expr.AsObject(e.Request.Type); (obj != nil && len(*obj) > 0) || expr.IsUnion(e.Request.Type) {
 				// add the request message as the first argument to the CLI
 				request.CLIArgs = append(request.CLIArgs, &InitArgData{
 					Name:     "message",
@@ -672,6 +672,10 @@ func collectMessages(at *expr.AttributeExpr, sd *ServiceData, seen map[string]st
 	case *expr.Map:
 		data = append(data, collect(dt.KeyType)...)
 		data = append(data, collect(dt.ElemType)...)
+	case *expr.Union:
+		for _, nat := range dt.Values {
+			data = append(data, collect(nat.Attribute)...)
+		}
 	}
 	return
 }
@@ -965,20 +969,22 @@ func buildInitData(source, target *expr.AttributeExpr, sourceVar, targetVar stri
 		pbCtx = protoBufTypeContext(sd.PkgName, sd.Scope)
 	)
 	{
-		isStruct = expr.IsObject(target.Type)
+		name = "New"
+		srcCtx = pbCtx
+		tgtCtx = svcCtx
+		if proto {
+			srcCtx = svcCtx
+			tgtCtx = pbCtx
+			name += "Proto"
+		}
+		isStruct = expr.IsObject(target.Type) || expr.IsUnion(target.Type)
 		n := protoBufGoTypeName(target, sd.Scope)
 		if !isStruct {
 			// If target is array, map, or primitive the name will be suffixed with
 			// the definition (e.g int, []string, map[int]string) which is incorrect.
 			n = protoBufGoTypeName(source, sd.Scope)
 		}
-		name = "New" + n
-		srcCtx = pbCtx
-		tgtCtx = svcCtx
-		if proto {
-			srcCtx = svcCtx
-			tgtCtx = pbCtx
-		}
+		name += n
 		code, helpers, err = protoBufTransform(source, target, sourceVar, targetVar, srcCtx, tgtCtx, proto, true)
 		if err != nil {
 			fmt.Println(err.Error()) // TBD validate DSL so errors are not possible

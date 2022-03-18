@@ -1,9 +1,9 @@
 package testdata
 
-const PayloadWithNestedTypesClientTypeCode = `// NewMethodPayloadWithNestedTypesRequest builds the gRPC request type from the
-// payload of the "MethodPayloadWithNestedTypes" endpoint of the
+const PayloadWithNestedTypesClientTypeCode = `// NewProtoMethodPayloadWithNestedTypesRequest builds the gRPC request type
+// from the payload of the "MethodPayloadWithNestedTypes" endpoint of the
 // "ServicePayloadWithNestedTypes" service.
-func NewMethodPayloadWithNestedTypesRequest(payload *servicepayloadwithnestedtypes.MethodPayloadWithNestedTypesPayload) *service_payload_with_nested_typespb.MethodPayloadWithNestedTypesRequest {
+func NewProtoMethodPayloadWithNestedTypesRequest(payload *servicepayloadwithnestedtypes.MethodPayloadWithNestedTypesPayload) *service_payload_with_nested_typespb.MethodPayloadWithNestedTypesRequest {
 	message := &service_payload_with_nested_typespb.MethodPayloadWithNestedTypesRequest{}
 	if payload.AParams != nil {
 		message.AParams = svcServicepayloadwithnestedtypesAParamsToServicePayloadWithNestedTypespbAParams(payload.AParams)
@@ -102,25 +102,25 @@ func svcServicepayloadwithnestedtypesBParamsToServicePayloadWithNestedTypespbBPa
 }
 `
 
-const PayloadWithMultipleUseTypesClientTypeCode = `// NewDupePayload builds the gRPC request type from the payload of the
+const PayloadWithMultipleUseTypesClientTypeCode = `// NewProtoDupePayload builds the gRPC request type from the payload of the
 // "MethodPayloadDuplicateA" endpoint of the "ServicePayloadWithNestedTypes"
 // service.
-func NewDupePayload(payload servicepayloadwithnestedtypes.DupePayload) *service_payload_with_nested_typespb.DupePayload {
+func NewProtoDupePayload(payload servicepayloadwithnestedtypes.DupePayload) *service_payload_with_nested_typespb.DupePayload {
 	message := &service_payload_with_nested_typespb.DupePayload{}
 	message.Field = string(payload)
 	return message
 }
 `
 
-const PayloadWithAliasTypeClientTypeCode = `// NewMethodMessageUserTypeWithAliasRequest builds the gRPC request type from
-// the payload of the "MethodMessageUserTypeWithAlias" endpoint of the
+const PayloadWithAliasTypeClientTypeCode = `// NewProtoMethodMessageUserTypeWithAliasRequest builds the gRPC request type
+// from the payload of the "MethodMessageUserTypeWithAlias" endpoint of the
 // "ServiceMessageUserTypeWithAlias" service.
-func NewMethodMessageUserTypeWithAliasRequest(payload *servicemessageusertypewithalias.PayloadAliasT) *service_message_user_type_with_aliaspb.MethodMessageUserTypeWithAliasRequest {
+func NewProtoMethodMessageUserTypeWithAliasRequest(payload *servicemessageusertypewithalias.PayloadAliasT) *service_message_user_type_with_aliaspb.MethodMessageUserTypeWithAliasRequest {
 	message := &service_message_user_type_with_aliaspb.MethodMessageUserTypeWithAliasRequest{
-		IntAliasField: int(payload.IntAliasField),
+		IntAliasField: int32(payload.IntAliasField),
 	}
 	if payload.OptionalIntAliasField != nil {
-		message.OptionalIntAliasField = int(*payload.OptionalIntAliasField)
+		message.OptionalIntAliasField = int32(*payload.OptionalIntAliasField)
 	}
 	return message
 }
@@ -140,10 +140,10 @@ func NewMethodMessageUserTypeWithAliasResult(message *service_message_user_type_
 }
 `
 
-const ResultWithCollectionClientTypeCode = `// NewMethodResultWithCollectionRequest builds the gRPC request type from the
-// payload of the "MethodResultWithCollection" endpoint of the
+const ResultWithCollectionClientTypeCode = `// NewProtoMethodResultWithCollectionRequest builds the gRPC request type from
+// the payload of the "MethodResultWithCollection" endpoint of the
 // "ServiceResultWithCollection" service.
-func NewMethodResultWithCollectionRequest() *service_result_with_collectionpb.MethodResultWithCollectionRequest {
+func NewProtoMethodResultWithCollectionRequest() *service_result_with_collectionpb.MethodResultWithCollectionRequest {
 	message := &service_result_with_collectionpb.MethodResultWithCollectionRequest{}
 	return message
 }
@@ -204,10 +204,10 @@ func protobufServiceResultWithCollectionpbResultTToServiceresultwithcollectionRe
 }
 `
 
-const WithErrorsClientTypeCode = `// NewMethodUnaryRPCWithErrorsRequest builds the gRPC request type from the
-// payload of the "MethodUnaryRPCWithErrors" endpoint of the
+const WithErrorsClientTypeCode = `// NewProtoMethodUnaryRPCWithErrorsRequest builds the gRPC request type from
+// the payload of the "MethodUnaryRPCWithErrors" endpoint of the
 // "ServiceUnaryRPCWithErrors" service.
-func NewMethodUnaryRPCWithErrorsRequest(payload string) *service_unary_rpc_with_errorspb.MethodUnaryRPCWithErrorsRequest {
+func NewProtoMethodUnaryRPCWithErrorsRequest(payload string) *service_unary_rpc_with_errorspb.MethodUnaryRPCWithErrorsRequest {
 	message := &service_unary_rpc_with_errorspb.MethodUnaryRPCWithErrorsRequest{}
 	message.Field = payload
 	return message
@@ -289,7 +289,7 @@ const BidirectionalStreamingRPCSameTypeClientTypeCode = `func NewUserType(v *ser
 	return result
 }
 
-func NewMethodBidirectionalStreamingRPCSameTypeStreamingRequest(spayload *servicebidirectionalstreamingrpcsametype.UserType) *service_bidirectional_streaming_rpc_same_typepb.MethodBidirectionalStreamingRPCSameTypeStreamingRequest {
+func NewProtoMethodBidirectionalStreamingRPCSameTypeStreamingRequest(spayload *servicebidirectionalstreamingrpcsametype.UserType) *service_bidirectional_streaming_rpc_same_typepb.MethodBidirectionalStreamingRPCSameTypeStreamingRequest {
 	v := &service_bidirectional_streaming_rpc_same_typepb.MethodBidirectionalStreamingRPCSameTypeStreamingRequest{}
 	if spayload.A != nil {
 		v.A = int32(*spayload.A)

@@ -100,12 +100,12 @@ func NewAttributeScope(scope *NameScope) *AttributeScope {
 }
 
 // IsCompatible returns an error if a and b are not both objects, both arrays,
-// both maps or both the same primitive type. actx and bctx are used to build
-// the error message if any.
+// both maps, both unions or one union and one object.  actx and bctx are used
+// to build the error message if any.
 func IsCompatible(a, b expr.DataType, actx, bctx string) error {
 	switch {
 	case expr.IsObject(a):
-		if !expr.IsObject(b) {
+		if !expr.IsObject(b) && !expr.IsUnion(b) {
 			return fmt.Errorf("%s is an object but %s type is %s", actx, bctx, b.Name())
 		}
 	case expr.IsArray(a):
@@ -115,6 +115,10 @@ func IsCompatible(a, b expr.DataType, actx, bctx string) error {
 	case expr.IsMap(a):
 		if !expr.IsMap(b) {
 			return fmt.Errorf("%s is a hash but %s type is %s", actx, bctx, b.Name())
+		}
+	case expr.IsUnion(a):
+		if !expr.IsUnion(b) && !expr.IsObject(b) {
+			return fmt.Errorf("%s is a union but %s type is %s", actx, bctx, b.Name())
 		}
 	default:
 		aUT, isAUT := a.(expr.UserType)

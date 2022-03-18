@@ -446,6 +446,9 @@ func validateRPCTags(fields *Object, e *GRPCEndpointExpr) *eval.ValidationErrors
 	verr := new(eval.ValidationErrors)
 	foundRPC := make(map[string]string)
 	for _, nat := range *fields {
+		if IsUnion(nat.Attribute.Type) {
+			continue
+		}
 		if tag, ok := nat.Attribute.FieldTag(); !ok {
 			verr.Add(e, "attribute %q does not have \"rpc:tag\" defined in the meta, use \"Field\" to define the attribute of a type used in a gRPC method", nat.Name)
 		} else if a, ok := foundRPC[tag]; ok {

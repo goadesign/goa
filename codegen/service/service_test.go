@@ -21,6 +21,8 @@ func TestService(t *testing.T) {
 		{"service-name-with-spaces", testdata.NamesWithSpacesDSL, testdata.NamesWithSpaces},
 		{"single", testdata.SingleMethodDSL, testdata.SingleMethod},
 		{"multiple", testdata.MultipleMethodsDSL, testdata.MultipleMethods},
+		{"union", testdata.UnionMethodDSL, testdata.UnionMethod},
+		{"multi-union", testdata.MultiUnionMethodDSL, testdata.MultiUnionMethod},
 		{"no-payload-no-result", testdata.EmptyMethodDSL, testdata.EmptyMethod},
 		{"payload-no-result", testdata.EmptyResultMethodDSL, testdata.EmptyResultMethod},
 		{"no-payload-result", testdata.EmptyPayloadMethodDSL, testdata.EmptyPayloadMethod},
@@ -52,9 +54,7 @@ func TestService(t *testing.T) {
 	}
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
-			codegen.RunDSLWithFunc(t, c.DSL, func() {
-				expr.Root.Types = []expr.UserType{testdata.APayload, testdata.BPayload, testdata.AResult, testdata.BResult, testdata.ParentType, testdata.ChildType}
-			})
+			codegen.RunDSL(t, c.DSL)
 			if len(expr.Root.Services) != 1 {
 				t.Fatalf("got %d services, expected 1", len(expr.Root.Services))
 			}
@@ -89,9 +89,7 @@ func TestStructPkgPath(t *testing.T) {
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
 			userTypePkgs := make(map[string][]string)
-			codegen.RunDSLWithFunc(t, c.DSL, func() {
-				expr.Root.Types = []expr.UserType{testdata.APayload, testdata.AResult, testdata.RecursiveFoo, testdata.Foo, testdata.Bar, testdata.Baz, testdata.NoDir}
-			})
+			codegen.RunDSL(t, c.DSL)
 			if len(expr.Root.Services) != len(c.SvcCodes) {
 				t.Fatalf("got %d services, expected %d", len(expr.Root.Services), len(c.SvcCodes))
 			}

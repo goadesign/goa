@@ -1,6 +1,7 @@
 package expr
 
 import (
+	"fmt"
 	"net/http"
 	"strings"
 	"unicode"
@@ -78,10 +79,16 @@ func httpRequestBody(a *HTTPEndpointExpr) *AttributeExpr {
 		bodyOnly = headers.IsEmpty() && params.IsEmpty() && cookies.IsEmpty() && a.MapQueryParams == nil
 	)
 
-	// 1. If Payload is not an object then check whether there are params,
-	// cookies or headers defined and if so return empty type (payload encoded
-	// in request params or headers) otherwise return payload type (payload
-	// encoded in request body).
+	// 1. If Payload is a union type, then the request body is a struct with
+	// two fields: the union type and its value.
+	if IsUnion(payload.Type) {
+		return unionToObject(payload, name, suffix, a.Service.Name())
+	}
+
+	// 2. If Payload is not an objectthen check whether there are
+	// params, cookies or headers defined and if so return empty type
+	// (payload encoded in request params or headers) otherwise return
+	// payload type (payload encoded in request body).
 	if !IsObject(payload.Type) {
 		if bodyOnly {
 			payload = DupAtt(payload)
@@ -91,7 +98,7 @@ func httpRequestBody(a *HTTPEndpointExpr) *AttributeExpr {
 		return &AttributeExpr{Type: Empty}
 	}
 
-	// 2. Remove header, param and cookies attributes
+	// 3. Remove header, param and cookies attributes
 	body := NewMappedAttributeExpr(payload)
 	extendBodyAttribute(body)
 	removeAttributes(body, headers)
@@ -104,12 +111,12 @@ func httpRequestBody(a *HTTPEndpointExpr) *AttributeExpr {
 		removeAttribute(body, att)
 	}
 
-	// 3. Return empty type if no attribute left
+	// 4. Return empty type if no attribute left
 	if len(*AsObject(body.Type)) == 0 {
 		return &AttributeExpr{Type: Empty}
 	}
 
-	// 4. Build computed user type
+	// 5. Build computed user type
 	att := body.Attribute()
 	ut := &UserTypeExpr{
 		AttributeExpr: att,
@@ -132,6 +139,9 @@ func httpStreamingBody(e *HTTPEndpointExpr) *AttributeExpr {
 		return nil
 	}
 	att := e.MethodExpr.StreamingPayload
+	if IsUnion(att.Type) {
+		return unionToObject(att, e.Name(), "StreamingBody", e.Service.Name())
+	}
 	if !IsObject(att.Type) {
 		return DupAtt(att)
 	}
@@ -181,11 +191,14 @@ func buildHTTPResponseBody(name string, attr *AttributeExpr, resp *HTTPResponseE
 		return &AttributeExpr{Type: Empty}
 	}
 
-	// 0. Handle the case where the body is set explicitly in the design.
+	// 1. Handle the case where the body is set explicitly in the design.
 	// We need to create a type with an endpoint specific response body type
 	// name to handle the case where the same type is used by multiple
 	// methods with potentially different result types.
 	if resp.Body != nil {
+		if IsUnion(resp.Body.Type) {
+			return unionToObject(resp.Body, name, suffix, svc.Name())
+		}
 		if !IsObject(resp.Body.Type) {
 			return resp.Body
 		}
@@ -197,7 +210,12 @@ func buildHTTPResponseBody(name string, attr *AttributeExpr, resp *HTTPResponseE
 		return att
 	}
 
-	// 1. If attribute is not an object then check whether there are headers or
+	// 2. Map unions to objects.
+	if IsUnion(attr.Type) {
+		return unionToObject(attr, name, suffix, svc.Name())
+	}
+
+	// 3. If attribute is not an object then check whether there are headers or
 	// cookies defined and if so return empty type (attr encoded in response
 	// header or cookie) otherwise return renamed attr type (attr encoded in
 	// response body).
@@ -212,16 +230,16 @@ func buildHTTPResponseBody(name string, attr *AttributeExpr, resp *HTTPResponseE
 	body := NewMappedAttributeExpr(attr)
 	extendBodyAttribute(body)
 
-	// 2. Remove header and cookie attributes
+	// 4. Remove header and cookie attributes
 	removeAttributes(body, resp.Headers)
 	removeAttributes(body, resp.Cookies)
 
-	// 3. Return empty type if no attribute left
+	// 5. Return empty type if no attribute left
 	if len(*AsObject(body.Type)) == 0 {
 		return &AttributeExpr{Type: Empty}
 	}
 
-	// 4. Build computed user type
+	// 6. Build computed user type
 	userType := &UserTypeExpr{
 		AttributeExpr: body.Attribute(),
 		TypeName:      name,
@@ -268,6 +286,40 @@ func buildHTTPResponseBody(name string, attr *AttributeExpr, resp *HTTPResponseE
 		Validation: userType.Validation,
 		Meta:       attr.Meta,
 	}
+}
+
+// unionToObject returns an object adequate to serialize the given union type.
+func unionToObject(att *AttributeExpr, name, suffix, svcName string) *AttributeExpr {
+	values := AsUnion(att.Type).Values
+	names := make([]interface{}, len(values))
+	vals := make([]string, len(values))
+	for i, nat := range values {
+		names[i] = nat.Attribute.Type.Name()
+		vals[i] = fmt.Sprintf("- %q", nat.Attribute.Type.Name())
+	}
+	obj := Object([]*NamedAttributeExpr{
+		{"Type", &AttributeExpr{
+			Type:        String,
+			Description: "Union type name, one of:\n" + strings.Join(vals, "\n"),
+			Validation:  &ValidationExpr{Values: names},
+		}},
+		{"Value", &AttributeExpr{
+			Type:        Any,
+			Description: "Union value, type must be one of service package types listed above",
+		}},
+	})
+	uatt := &AttributeExpr{
+		Type:       &obj,
+		Validation: &ValidationExpr{Required: []string{"Type", "Value"}},
+	}
+	ut := &UserTypeExpr{
+		AttributeExpr: uatt,
+		TypeName:      name,
+		UID:           concat(svcName, "#", name),
+	}
+	wrapper := &AttributeExpr{Type: ut, Description: att.Description}
+	renameType(wrapper, name, suffix)
+	return wrapper
 }
 
 // concat concatenates the given strings with "smart(?) casing".

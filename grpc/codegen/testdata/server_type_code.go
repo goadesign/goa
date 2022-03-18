@@ -14,10 +14,10 @@ func NewMethodPayloadWithNestedTypesPayload(message *service_payload_with_nested
 	return v
 }
 
-// NewMethodPayloadWithNestedTypesResponse builds the gRPC response type from
-// the result of the "MethodPayloadWithNestedTypes" endpoint of the
+// NewProtoMethodPayloadWithNestedTypesResponse builds the gRPC response type
+// from the result of the "MethodPayloadWithNestedTypes" endpoint of the
 // "ServicePayloadWithNestedTypes" service.
-func NewMethodPayloadWithNestedTypesResponse() *service_payload_with_nested_typespb.MethodPayloadWithNestedTypesResponse {
+func NewProtoMethodPayloadWithNestedTypesResponse() *service_payload_with_nested_typespb.MethodPayloadWithNestedTypesResponse {
 	message := &service_payload_with_nested_typespb.MethodPayloadWithNestedTypesResponse{}
 	return message
 }
@@ -118,10 +118,10 @@ func NewMethodPayloadDuplicateAPayload(message *service_payload_with_nested_type
 	return v
 }
 
-// NewMethodPayloadDuplicateAResponse builds the gRPC response type from the
-// result of the "MethodPayloadDuplicateA" endpoint of the
+// NewProtoMethodPayloadDuplicateAResponse builds the gRPC response type from
+// the result of the "MethodPayloadDuplicateA" endpoint of the
 // "ServicePayloadWithNestedTypes" service.
-func NewMethodPayloadDuplicateAResponse() *service_payload_with_nested_typespb.MethodPayloadDuplicateAResponse {
+func NewProtoMethodPayloadDuplicateAResponse() *service_payload_with_nested_typespb.MethodPayloadDuplicateAResponse {
 	message := &service_payload_with_nested_typespb.MethodPayloadDuplicateAResponse{}
 	return message
 }
@@ -134,10 +134,10 @@ func NewMethodPayloadDuplicateBPayload(message *service_payload_with_nested_type
 	return v
 }
 
-// NewMethodPayloadDuplicateBResponse builds the gRPC response type from the
-// result of the "MethodPayloadDuplicateB" endpoint of the
+// NewProtoMethodPayloadDuplicateBResponse builds the gRPC response type from
+// the result of the "MethodPayloadDuplicateB" endpoint of the
 // "ServicePayloadWithNestedTypes" service.
-func NewMethodPayloadDuplicateBResponse() *service_payload_with_nested_typespb.MethodPayloadDuplicateBResponse {
+func NewProtoMethodPayloadDuplicateBResponse() *service_payload_with_nested_typespb.MethodPayloadDuplicateBResponse {
 	message := &service_payload_with_nested_typespb.MethodPayloadDuplicateBResponse{}
 	return message
 }
@@ -157,24 +157,24 @@ func NewMethodMessageUserTypeWithAliasPayload(message *service_message_user_type
 	return v
 }
 
-// NewMethodMessageUserTypeWithAliasResponse builds the gRPC response type from
-// the result of the "MethodMessageUserTypeWithAlias" endpoint of the
+// NewProtoMethodMessageUserTypeWithAliasResponse builds the gRPC response type
+// from the result of the "MethodMessageUserTypeWithAlias" endpoint of the
 // "ServiceMessageUserTypeWithAlias" service.
-func NewMethodMessageUserTypeWithAliasResponse(result *servicemessageusertypewithalias.PayloadAliasT) *service_message_user_type_with_aliaspb.MethodMessageUserTypeWithAliasResponse {
+func NewProtoMethodMessageUserTypeWithAliasResponse(result *servicemessageusertypewithalias.PayloadAliasT) *service_message_user_type_with_aliaspb.MethodMessageUserTypeWithAliasResponse {
 	message := &service_message_user_type_with_aliaspb.MethodMessageUserTypeWithAliasResponse{
-		IntAliasField: int(result.IntAliasField),
+		IntAliasField: int32(result.IntAliasField),
 	}
 	if result.OptionalIntAliasField != nil {
-		message.OptionalIntAliasField = int(*result.OptionalIntAliasField)
+		message.OptionalIntAliasField = int32(*result.OptionalIntAliasField)
 	}
 	return message
 }
 `
 
-const ResultWithCollectionServerTypeCode = `// NewMethodResultWithCollectionResponse builds the gRPC response type from the
-// result of the "MethodResultWithCollection" endpoint of the
+const ResultWithCollectionServerTypeCode = `// NewProtoMethodResultWithCollectionResponse builds the gRPC response type
+// from the result of the "MethodResultWithCollection" endpoint of the
 // "ServiceResultWithCollection" service.
-func NewMethodResultWithCollectionResponse(result *serviceresultwithcollection.MethodResultWithCollectionResult) *service_result_with_collectionpb.MethodResultWithCollectionResponse {
+func NewProtoMethodResultWithCollectionResponse(result *serviceresultwithcollection.MethodResultWithCollectionResult) *service_result_with_collectionpb.MethodResultWithCollectionResponse {
 	message := &service_result_with_collectionpb.MethodResultWithCollectionResponse{}
 	if result.Result != nil {
 		message.Result = svcServiceresultwithcollectionResultTToServiceResultWithCollectionpbResultT(result.Result)
@@ -245,17 +245,18 @@ func NewUnaryMethodPayload(message *service_payload_with_mixed_attributespb.Unar
 	return v
 }
 
-// NewUnaryMethodResponse builds the gRPC response type from the result of the
-// "UnaryMethod" endpoint of the "ServicePayloadWithMixedAttributes" service.
-func NewUnaryMethodResponse() *service_payload_with_mixed_attributespb.UnaryMethodResponse {
+// NewProtoUnaryMethodResponse builds the gRPC response type from the result of
+// the "UnaryMethod" endpoint of the "ServicePayloadWithMixedAttributes"
+// service.
+func NewProtoUnaryMethodResponse() *service_payload_with_mixed_attributespb.UnaryMethodResponse {
 	message := &service_payload_with_mixed_attributespb.UnaryMethodResponse{}
 	return message
 }
 
-// NewStreamingMethodResponse builds the gRPC response type from the result of
-// the "StreamingMethod" endpoint of the "ServicePayloadWithMixedAttributes"
-// service.
-func NewStreamingMethodResponse() *service_payload_with_mixed_attributespb.StreamingMethodResponse {
+// NewProtoStreamingMethodResponse builds the gRPC response type from the
+// result of the "StreamingMethod" endpoint of the
+// "ServicePayloadWithMixedAttributes" service.
+func NewProtoStreamingMethodResponse() *service_payload_with_mixed_attributespb.StreamingMethodResponse {
 	message := &service_payload_with_mixed_attributespb.StreamingMethodResponse{}
 	return message
 }
@@ -285,10 +286,10 @@ func NewMethodUnaryRPCWithErrorsPayload(message *service_unary_rpc_with_errorspb
 	return v
 }
 
-// NewMethodUnaryRPCWithErrorsResponse builds the gRPC response type from the
-// result of the "MethodUnaryRPCWithErrors" endpoint of the
+// NewProtoMethodUnaryRPCWithErrorsResponse builds the gRPC response type from
+// the result of the "MethodUnaryRPCWithErrors" endpoint of the
 // "ServiceUnaryRPCWithErrors" service.
-func NewMethodUnaryRPCWithErrorsResponse(result string) *service_unary_rpc_with_errorspb.MethodUnaryRPCWithErrorsResponse {
+func NewProtoMethodUnaryRPCWithErrorsResponse(result string) *service_unary_rpc_with_errorspb.MethodUnaryRPCWithErrorsResponse {
 	message := &service_unary_rpc_with_errorspb.MethodUnaryRPCWithErrorsResponse{}
 	message.Field = result
 	return message
@@ -351,10 +352,10 @@ func NewMethodElemValidationPayload(message *service_elem_validationpb.MethodEle
 	return v
 }
 
-// NewMethodElemValidationResponse builds the gRPC response type from the
+// NewProtoMethodElemValidationResponse builds the gRPC response type from the
 // result of the "MethodElemValidation" endpoint of the "ServiceElemValidation"
 // service.
-func NewMethodElemValidationResponse() *service_elem_validationpb.MethodElemValidationResponse {
+func NewProtoMethodElemValidationResponse() *service_elem_validationpb.MethodElemValidationResponse {
 	message := &service_elem_validationpb.MethodElemValidationResponse{}
 	return message
 }

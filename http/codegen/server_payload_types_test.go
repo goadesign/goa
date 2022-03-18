@@ -95,6 +95,9 @@ func TestPayloadConstructor(t *testing.T) {
 		{"body-query-object-validate", testdata.PayloadBodyQueryObjectValidateDSL, testdata.PayloadBodyQueryObjectValidateConstructorCode},
 		{"body-query-user", testdata.PayloadBodyQueryUserDSL, testdata.PayloadBodyQueryUserConstructorCode},
 		{"body-query-user-validate", testdata.PayloadBodyQueryUserValidateDSL, testdata.PayloadBodyQueryUserValidateConstructorCode},
+		{"body-union", testdata.PayloadBodyUnionDSL, testdata.PayloadBodyUnionConstructorCode},
+		{"body-query-user-union", testdata.PayloadBodyQueryUserUnionDSL, testdata.PayloadBodyQueryUserUnionConstructorCode},
+		{"body-query-user-union-validate", testdata.PayloadBodyQueryUserUnionValidateDSL, testdata.PayloadBodyQueryUserUnionValidateConstructorCode},
 
 		{"body-path-object", testdata.PayloadBodyPathObjectDSL, testdata.PayloadBodyPathObjectConstructorCode},
 		{"body-path-object-validate", testdata.PayloadBodyPathObjectValidateDSL, testdata.PayloadBodyPathObjectValidateConstructorCode},

@@ -803,6 +803,48 @@ func NewMethodBodyQueryUserValidatePayloadType(body *MethodBodyQueryUserValidate
 }
 `
 
+var PayloadBodyUnionConstructorCode = `// NewMethodBodyUnionUnion builds a ServiceBodyUnion service MethodBodyUnion
+// endpoint payload.
+func NewMethodBodyUnionUnion(body *MethodBodyUnionRequestBody) *servicebodyunion.Union {
+	v := &servicebodyunion.Union{}
+	if body.Values != nil {
+		switch *body.Values.Type {
+		case "servicebodyunion.ValuesString":
+			v.Values = body.Values.Value.(servicebodyunion.ValuesString)
+		case "servicebodyunion.ValuesInt":
+			v.Values = body.Values.Value.(servicebodyunion.ValuesInt)
+		}
+	}
+
+	return v
+}
+`
+
+var PayloadBodyQueryUserUnionConstructorCode = `// NewMethodBodyQueryUserUnionPayloadType builds a ServiceBodyQueryUserUnion
+// service MethodBodyQueryUserUnion endpoint payload.
+func NewMethodBodyQueryUserUnionPayloadType(body *MethodBodyQueryUserUnionRequestBody, b *string) *servicebodyqueryuserunion.PayloadType {
+	v := &servicebodyqueryuserunion.PayloadType{}
+	if body.A != nil {
+		v.A = unmarshalUnionRequestBodyToServicebodyqueryuserunionUnion(body.A)
+	}
+	v.B = b
+
+	return v
+}
+`
+
+var PayloadBodyQueryUserUnionValidateConstructorCode = `// NewMethodBodyQueryUserUnionValidatePayloadType builds a
+// ServiceBodyQueryUserUnionValidate service MethodBodyQueryUserUnionValidate
+// endpoint payload.
+func NewMethodBodyQueryUserUnionValidatePayloadType(body *MethodBodyQueryUserUnionValidateRequestBody, b string) *servicebodyqueryuserunionvalidate.PayloadType {
+	v := &servicebodyqueryuserunionvalidate.PayloadType{}
+	v.A = unmarshalUnionRequestBodyToServicebodyqueryuserunionvalidateUnion(body.A)
+	v.B = b
+
+	return v
+}
+`
+
 var PayloadBodyPathObjectConstructorCode = `// NewMethodBodyPathObjectPayload builds a ServiceBodyPathObject service
 // MethodBodyPathObject endpoint payload.
 func NewMethodBodyPathObjectPayload(body *MethodBodyPathObjectRequestBody, b string) *servicebodypathobject.MethodBodyPathObjectPayload {

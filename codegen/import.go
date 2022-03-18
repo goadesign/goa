@@ -76,7 +76,11 @@ func (s *ImportSpec) Code() string {
 
 // UserTypeLocation returns the location of the user type if set via the
 // attr:pkg:path metadata, nil otherwise..
-func UserTypeLocation(ut expr.UserType) *Location {
+func UserTypeLocation(dt expr.DataType) *Location {
+	ut, ok := dt.(expr.UserType)
+	if !ok {
+		return nil
+	}
 	p, ok := ut.Attribute().Meta.Last("struct:pkg:path")
 	if !ok || p == "" {
 		return nil

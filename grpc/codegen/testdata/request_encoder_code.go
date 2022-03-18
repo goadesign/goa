@@ -8,7 +8,7 @@ func EncodeMethodMessageUserTypeWithNestedUserTypesRequest(ctx context.Context, 
 	if !ok {
 		return nil, goagrpc.ErrInvalidType("ServiceMessageUserTypeWithNestedUserTypes", "MethodMessageUserTypeWithNestedUserTypes", "*servicemessageusertypewithnestedusertypes.UT", v)
 	}
-	return NewMethodMessageUserTypeWithNestedUserTypesRequest(payload), nil
+	return NewProtoMethodMessageUserTypeWithNestedUserTypesRequest(payload), nil
 }
 `
 
@@ -19,7 +19,7 @@ func EncodeMethodUnaryRPCNoResultRequest(ctx context.Context, v interface{}, md 
 	if !ok {
 		return nil, goagrpc.ErrInvalidType("ServiceUnaryRPCNoResult", "MethodUnaryRPCNoResult", "[]string", v)
 	}
-	return NewMethodUnaryRPCNoResultRequest(payload), nil
+	return NewProtoMethodUnaryRPCNoResultRequest(payload), nil
 }
 `
 
@@ -30,7 +30,7 @@ func EncodeMethodMessageMapRequest(ctx context.Context, v interface{}, md *metad
 	if !ok {
 		return nil, goagrpc.ErrInvalidType("ServiceMessageMap", "MethodMessageMap", "map[int]*servicemessagemap.UT", v)
 	}
-	return NewMethodMessageMapRequest(payload), nil
+	return NewProtoMethodMessageMapRequest(payload), nil
 }
 `
 
@@ -41,7 +41,7 @@ func EncodeMethodServerStreamingRPCRequest(ctx context.Context, v interface{}, m
 	if !ok {
 		return nil, goagrpc.ErrInvalidType("ServiceServerStreamingRPC", "MethodServerStreamingRPC", "int", v)
 	}
-	return NewMethodServerStreamingRPCRequest(payload), nil
+	return NewProtoMethodServerStreamingRPCRequest(payload), nil
 }
 `
 
@@ -86,7 +86,7 @@ func EncodeMethodMessageWithMetadataRequest(ctx context.Context, v interface{}, 
 	if payload.InMetadata != nil {
 		(*md).Append("Authorization", fmt.Sprintf("%v", *payload.InMetadata))
 	}
-	return NewMethodMessageWithMetadataRequest(payload), nil
+	return NewProtoMethodMessageWithMetadataRequest(payload), nil
 }
 `
 
@@ -100,7 +100,7 @@ func EncodeMethodMessageWithValidateRequest(ctx context.Context, v interface{}, 
 	if payload.InMetadata != nil {
 		(*md).Append("Authorization", fmt.Sprintf("%v", *payload.InMetadata))
 	}
-	return NewMethodMessageWithValidateRequest(payload), nil
+	return NewProtoMethodMessageWithValidateRequest(payload), nil
 }
 `
 
@@ -123,6 +123,6 @@ func EncodeMethodMessageWithSecurityRequest(ctx context.Context, v interface{}, 
 	if payload.Password != nil {
 		(*md).Append("password", *payload.Password)
 	}
-	return NewMethodMessageWithSecurityRequest(payload), nil
+	return NewProtoMethodMessageWithSecurityRequest(payload), nil
 }
 `

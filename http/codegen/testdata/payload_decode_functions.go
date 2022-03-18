@@ -3812,6 +3812,110 @@ func DecodeMethodBodyObjectValidateRequest(mux goahttp.Muxer, decoder func(*http
 }
 `
 
+var PayloadBodyUnionDecodeCode = `// DecodeMethodBodyUnionRequest returns a decoder for requests sent to the
+// ServiceBodyUnion MethodBodyUnion endpoint.
+func DecodeMethodBodyUnionRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) (interface{}, error) {
+	return func(r *http.Request) (interface{}, error) {
+		var (
+			body MethodBodyUnionRequestBody
+			err  error
+		)
+		err = decoder(r).Decode(&body)
+		if err != nil {
+			if err == io.EOF {
+				return nil, goa.MissingPayloadError()
+			}
+			return nil, goa.DecodePayloadError(err.Error())
+		}
+		err = ValidateMethodBodyUnionRequestBody(&body)
+		if err != nil {
+			return nil, err
+		}
+		payload := NewMethodBodyUnionUnion(&body)
+
+		return payload, nil
+	}
+}
+`
+
+var PayloadBodyUnionValidateDecodeCode = `// DecodeMethodBodyUnionValidateRequest returns a decoder for requests sent to
+// the ServiceBodyUnionValidate MethodBodyUnionValidate endpoint.
+func DecodeMethodBodyUnionValidateRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) (interface{}, error) {
+	return func(r *http.Request) (interface{}, error) {
+		var (
+			body MethodBodyUnionValidateRequestBody
+			err  error
+		)
+		err = decoder(r).Decode(&body)
+		if err != nil {
+			if err == io.EOF {
+				return nil, goa.MissingPayloadError()
+			}
+			return nil, goa.DecodePayloadError(err.Error())
+		}
+		err = ValidateMethodBodyUnionValidateRequestBody(&body)
+		if err != nil {
+			return nil, err
+		}
+		payload := NewMethodBodyUnionValidatePayload(&body)
+
+		return payload, nil
+	}
+}
+`
+
+var PayloadBodyUnionUserDecodeCode = `// DecodeMethodBodyUnionUserRequest returns a decoder for requests sent to the
+// ServiceBodyUnionUser MethodBodyUnionUser endpoint.
+func DecodeMethodBodyUnionUserRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) (interface{}, error) {
+	return func(r *http.Request) (interface{}, error) {
+		var (
+			body MethodBodyUnionUserRequestBody
+			err  error
+		)
+		err = decoder(r).Decode(&body)
+		if err != nil {
+			if err == io.EOF {
+				return nil, goa.MissingPayloadError()
+			}
+			return nil, goa.DecodePayloadError(err.Error())
+		}
+		err = ValidateMethodBodyUnionUserRequestBody(&body)
+		if err != nil {
+			return nil, err
+		}
+		payload := NewMethodBodyUnionUserUnionUser(&body)
+
+		return payload, nil
+	}
+}
+`
+
+var PayloadBodyUnionUserValidateDecodeCode = `// DecodeMethodBodyUnionUserValidateRequest returns a decoder for requests sent
+// to the ServiceBodyUnionUserValidate MethodBodyUnionUserValidate endpoint.
+func DecodeMethodBodyUnionUserValidateRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) (interface{}, error) {
+	return func(r *http.Request) (interface{}, error) {
+		var (
+			body MethodBodyUnionUserValidateRequestBody
+			err  error
+		)
+		err = decoder(r).Decode(&body)
+		if err != nil {
+			if err == io.EOF {
+				return nil, goa.MissingPayloadError()
+			}
+			return nil, goa.DecodePayloadError(err.Error())
+		}
+		err = ValidateMethodBodyUnionUserValidateRequestBody(&body)
+		if err != nil {
+			return nil, err
+		}
+		payload := NewMethodBodyUnionUserValidatePayload(&body)
+
+		return payload, nil
+	}
+}
+`
+
 var PayloadBodyArrayStringDecodeCode = `// DecodeMethodBodyArrayStringRequest returns a decoder for requests sent to
 // the ServiceBodyArrayString MethodBodyArrayString endpoint.
 func DecodeMethodBodyArrayStringRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) (interface{}, error) {

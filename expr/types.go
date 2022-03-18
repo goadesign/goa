@@ -53,6 +53,12 @@ type (
 	// Note: not a map because order matters.
 	Object []*NamedAttributeExpr
 
+	// Union is the type used to describe unions.
+	Union struct {
+		TypeName string
+		Values   []*NamedAttributeExpr
+	}
+
 	// UserType is the interface implemented by all user type
 	// implementations. Plugins may leverage this interface to introduce
 	// their own types.
@@ -102,20 +108,21 @@ const (
 	Float32Kind
 	// Float64Kind represents a 64-bit floating number.
 	Float64Kind
-	// StringKind represents a JSON string.
+	// StringKind represents a string.
 	StringKind
 	// BytesKind represent a series of bytes (binary data).
 	BytesKind
-	// ArrayKind represents a JSON array.
+	// ArrayKind represents an array of types.
 	ArrayKind
-	// ObjectKind represents a JSON object.
+	// ObjectKind represents an object.
 	ObjectKind
-	// MapKind represents a JSON object where the keys are not known in
-	// advance.
+	// MapKind represents a dictionary.
 	MapKind
-	// UserTypeKind represents a user type.
+	// UnionKind represents a union type.
+	UnionKind
+	// UserTypeKind represents a user defined type.
 	UserTypeKind
-	// ResultTypeKind represents a result type.
+	// ResultTypeKind represents a user defined result type.
 	ResultTypeKind
 	// AnyKind represents an unknown type.
 	AnyKind
@@ -214,6 +221,20 @@ func AsMap(dt DataType) *Map {
 	}
 }
 
+// AsUnion returns the type underlying union if any, nil otherwise.
+func AsUnion(dt DataType) *Union {
+	switch t := dt.(type) {
+	case *UserTypeExpr:
+		return AsUnion(t.Type)
+	case *ResultTypeExpr:
+		return AsUnion(t.Type)
+	case *Union:
+		return t
+	default:
+		return nil
+	}
+}
+
 // IsObject returns true if the data type is an object.
 func IsObject(dt DataType) bool { return AsObject(dt) != nil }
 
@@ -222,6 +243,9 @@ func IsArray(dt DataType) bool { return AsArray(dt) != nil }
 
 // IsMap returns true if the data type is a map.
 func IsMap(dt DataType) bool { return AsMap(dt) != nil }
+
+// IsUnion returns true if the data type is a map.
+func IsUnion(dt DataType) bool { return AsUnion(dt) != nil }
 
 // IsPrimitive returns true if the data type is a primitive type.
 func IsPrimitive(dt DataType) bool {
@@ -544,7 +568,7 @@ func (m *Map) IsCompatible(val interface{}) bool {
 	return true
 }
 
-// Example returns a random hash value.
+// Example returns a random example value.
 func (m *Map) Example(r *Random) interface{} {
 	if IsObject(m.KeyType.Type) || IsArray(m.KeyType.Type) || IsMap(m.KeyType.Type) {
 		// not much we can do for non hashable Go types
@@ -587,6 +611,35 @@ func (m MapVal) ToMap() map[interface{}]interface{} {
 		}
 	}
 	return mp
+}
+
+// Kind implements DataKind.
+func (u *Union) Kind() Kind { return UnionKind }
+
+// Name returns the type name.
+func (u *Union) Name() string { return u.TypeName }
+
+// Hash returns a unique hash value for m.
+func (u *Union) Hash() string {
+	return Hash(u, true, false, true)
+}
+
+// IsCompatible returns true if u describes the (Go) type of val.
+func (u *Union) IsCompatible(val interface{}) bool {
+	for _, nat := range u.Values {
+		if nat.Attribute.Type.IsCompatible(val) {
+			return true
+		}
+	}
+	return false
+}
+
+// Example returns a random example value.
+func (u *Union) Example(r *Random) interface{} {
+	if len(u.Values) == 0 {
+		return nil
+	}
+	return u.Values[r.Int()%len(u.Values)].Attribute.Example(r)
 }
 
 // QualifiedTypeName returns the qualified type name for the given data type.

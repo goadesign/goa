@@ -741,13 +741,14 @@ func (e *HTTPEndpointExpr) validateParams() *eval.ValidationErrors {
 	initAttr(pparams, e.MethodExpr.Payload)
 	initAttr(qparams, e.MethodExpr.Payload)
 
+	invalidTypeErr := func(verr *eval.ValidationErrors, e *HTTPEndpointExpr, name string) {
+		verr.Add(e, "path parameter %s cannot be an object, path parameter types must be primitive, array or map (query string only)", name)
+	}
 	verr := new(eval.ValidationErrors)
 	WalkMappedAttr(pparams, func(name, _ string, a *AttributeExpr) error {
 		switch {
-		case IsObject(a.Type):
-			verr.Add(e, "path parameter %s cannot be an object, path parameter types must be primitive, array or map (query string only)", name)
-		case IsMap(a.Type):
-			verr.Add(e, "path parameter %s cannot be a map, path parameter types must be primitive or array", name)
+		case IsObject(a.Type), IsMap(a.Type), IsUnion(a.Type):
+			invalidTypeErr(verr, e, name)
 		case IsArray(a.Type):
 			arr := AsArray(a.Type)
 			if !IsPrimitive(arr.ElemType.Type) {
@@ -761,8 +762,8 @@ func (e *HTTPEndpointExpr) validateParams() *eval.ValidationErrors {
 	})
 	WalkMappedAttr(qparams, func(name, _ string, a *AttributeExpr) error {
 		switch {
-		case IsObject(a.Type):
-			verr.Add(e, "query parameter %s cannot be an object, query parameter types must be primitive, array or map (query string only)", name)
+		case IsObject(a.Type), IsUnion(a.Type):
+			invalidTypeErr(verr, e, name)
 		case IsArray(a.Type):
 			arr := AsArray(a.Type)
 			if !IsPrimitive(arr.ElemType.Type) {
@@ -816,8 +817,8 @@ func (e *HTTPEndpointExpr) validateHeadersAndCookies() *eval.ValidationErrors {
 	initAttr(cookies, e.MethodExpr.Payload)
 	WalkMappedAttr(headers, func(name, _ string, a *AttributeExpr) error {
 		switch {
-		case IsObject(a.Type):
-			verr.Add(e, "header %q cannot be an object, header type must be primitive or array", name)
+		case IsObject(a.Type), IsUnion(a.Type):
+			verr.Add(e, "header %q must be primitive or array", name)
 		case IsArray(a.Type):
 			arr := AsArray(a.Type)
 			if !IsPrimitive(arr.ElemType.Type) {
@@ -831,10 +832,8 @@ func (e *HTTPEndpointExpr) validateHeadersAndCookies() *eval.ValidationErrors {
 	})
 	WalkMappedAttr(cookies, func(name, _ string, a *AttributeExpr) error {
 		switch {
-		case IsObject(a.Type):
-			verr.Add(e, "cookie %q cannot be an object, cookie type must be primitive", name)
-		case IsArray(a.Type):
-			verr.Add(e, "cookie %q cannot be an array, cookie type must be primitive", name)
+		case IsObject(a.Type), IsUnion(a.Type), IsArray(a.Type):
+			verr.Add(e, "cookie %q must be primitive", name)
 		default:
 			ctx := fmt.Sprintf("cookie %q", name)
 			verr.Merge(a.Validate(ctx, e))
