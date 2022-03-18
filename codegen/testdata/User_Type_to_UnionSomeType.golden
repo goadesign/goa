@@ -1,7 +1,0 @@
-func transform() {
-	var target *UnionSomeType
-	switch source.Type {
-	case "SomeType":
-		target = source.Value.(*SomeType)
-	}
-}

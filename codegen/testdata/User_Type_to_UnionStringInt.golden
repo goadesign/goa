@@ -1,9 +1,0 @@
-func transform() {
-	var target *UnionStringInt
-	switch source.Type {
-	case "UnionStringIntString":
-		target = source.Value.(UnionStringIntString)
-	case "UnionStringIntInt":
-		target = source.Value.(UnionStringIntInt)
-	}
-}
