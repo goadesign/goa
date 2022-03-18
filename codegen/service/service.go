@@ -92,11 +92,19 @@ func Files(genpkg string, service *expr.ServiceExpr, userTypePkgs map[string][]s
 		}
 	}
 
+	for _, m := range svc.unionValueMethods {
+		addTypeDefSection(pathWithDefault(m.Loc, svcPath), "~"+m.TypeRef+"."+m.Name, &codegen.SectionTemplate{
+			Name:   "service-union-value-method",
+			Source: unionValueMethodT,
+			Data:   m,
+		})
+	}
+
 	for _, et := range errorTypes {
 		// Don't override the section created for the error type
 		// declaration, make sure the key does not clash with existing
 		// type names, make it generated last.
-		key := "zz*" + et.Name
+		key := "|" + et.Name
 		addTypeDefSection(pathWithDefault(et.Loc, svcPath), key, &codegen.SectionTemplate{
 			Name:    "service-error",
 			Source:  errorT,
@@ -383,6 +391,9 @@ func (e {{ .Ref }}) Error() string {
 func (e {{ .Ref }}) ErrorName() string {
 	return {{ errorName . }}
 }
+`
+
+const unionValueMethodT = `func ({{ .TypeRef }}) {{ .Name }}() {}
 `
 
 // input: map[string]{"Type": TypeData, "Error": ErrorData}

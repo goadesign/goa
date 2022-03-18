@@ -122,9 +122,10 @@ func (s *NameScope) goTypeDef(att *expr.AttributeExpr, ptr, useDefault bool, pkg
 			elemDef = "*" + elemDef
 		}
 		return fmt.Sprintf("map[%s]%s", keyDef, elemDef)
+	case *expr.Union:
+		return fmt.Sprintf("interface{\n\t%s()\n}", UnionValTypeName(actual.TypeName))
 	case *expr.Object:
-		var ss []string
-		ss = append(ss, "struct {")
+		ss := []string{"struct {"}
 		for _, nat := range *actual {
 			var (
 				fn   string
@@ -159,6 +160,9 @@ func (s *NameScope) goTypeDef(att *expr.AttributeExpr, ptr, useDefault bool, pkg
 		ss = append(ss, "}")
 		return strings.Join(ss, "\n")
 	case expr.UserType:
+		if actual == expr.Empty {
+			return "struct {}"
+		}
 		var prefix string
 		if loc := UserTypeLocation(actual); loc != nil && loc.PackageName() != pkg {
 			prefix = loc.PackageName() + "."
@@ -237,7 +241,7 @@ func (s *NameScope) GoFullTypeName(att *expr.AttributeExpr, pkg string) string {
 			s.GoFullTypeRef(actual.ElemType, pkg))
 	case *expr.Object:
 		return s.GoTypeDef(att, false, false)
-	case expr.UserType:
+	case expr.UserType, *expr.Union:
 		if actual == expr.ErrorResult {
 			return "goa.ServiceError"
 		}
@@ -266,6 +270,9 @@ func isRawStruct(dt expr.DataType) bool {
 		return true
 	}
 	if expr.IsObject(dt) {
+		return false
+	}
+	if expr.IsUnion(dt) {
 		return false
 	}
 	return true

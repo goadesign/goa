@@ -56,6 +56,12 @@ func walk(at *expr.AttributeExpr, walker func(*expr.AttributeExpr) error, seen m
 			return err
 		}
 		return walk(actual.ElemType, walker, seen)
+	case *expr.Union:
+		for _, nat := range actual.Values {
+			if err := walk(nat.Attribute, walker, seen); err != nil {
+				return err
+			}
+		}
 	case *expr.Object:
 		for _, cat := range *actual {
 			if err := walk(cat.Attribute, walker, seen); err != nil {

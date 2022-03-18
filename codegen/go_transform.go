@@ -9,13 +9,16 @@ import (
 	"goa.design/goa/v3/expr"
 )
 
-var transformGoArrayT, transformGoMapT *template.Template
+var transformGoArrayT, transformGoMapT, transformGoUnionT, transformGoUnionToObjectT, transformGoObjectToUnionT *template.Template
 
 // NOTE: can't initialize inline because https://github.com/golang/go/issues/1817
 func init() {
 	fm := template.FuncMap{"transformAttribute": transformAttribute, "transformHelperName": transformHelperName}
 	transformGoArrayT = template.Must(template.New("transformGoArray").Funcs(fm).Parse(transformGoArrayTmpl))
 	transformGoMapT = template.Must(template.New("transformGoMap").Funcs(fm).Parse(transformGoMapTmpl))
+	transformGoUnionT = template.Must(template.New("transformGoUnion").Funcs(fm).Parse(transformGoUnionTmpl))
+	transformGoUnionToObjectT = template.Must(template.New("transformGoUnionToObject").Funcs(fm).Parse(transformGoUnionToObjectTmpl))
+	transformGoObjectToUnionT = template.Must(template.New("transformGoObjectToUnion").Funcs(fm).Parse(transformGoObjectToUnionTmpl))
 }
 
 // GoTransform produces Go code that initializes the data structure defined
@@ -25,9 +28,17 @@ func init() {
 // don't have a match in source. The matching and generated code leverage
 // mapped attributes so that attribute names may use the "name:elem"
 // syntax to define the name of the design attribute and the name of the
-// corresponding generated Go struct field. The function returns an error
-// if target is not compatible with source (different type, fields of
-// different type etc).
+// corresponding generated Go struct field. The object field may also differ
+// in that they may be pointers in one case and not the other. The function
+// returns an error if target is not compatible with source (different type,
+// fields of different type etc).
+//
+// As a special case GoTransform can map union types from and to object types
+// with two attributes, one called "Value" which stores the value and one called
+// "Type" which is of type string and contains the value type name (union types
+// are otherwise implemented as a struct containing a single field: the current
+// value - however having the kind explicitly stored is required to serialize to
+// JSON for example).
 //
 // source and target are the attributes used in the transformation
 //
@@ -92,6 +103,8 @@ func transformAttribute(source, target *expr.AttributeExpr, sourceVar, targetVar
 		code, err = transformArray(expr.AsArray(source.Type), expr.AsArray(target.Type), sourceVar, targetVar, newVar, ta)
 	case expr.IsMap(source.Type):
 		code, err = transformMap(expr.AsMap(source.Type), expr.AsMap(target.Type), sourceVar, targetVar, newVar, ta)
+	case expr.IsUnion(source.Type):
+		code, err = transformUnion(source, target, sourceVar, targetVar, newVar, ta)
 	case expr.IsObject(source.Type):
 		code, err = transformObject(source, target, sourceVar, targetVar, newVar, ta)
 	default:
@@ -109,6 +122,10 @@ func transformObject(source, target *expr.AttributeExpr, sourceVar, targetVar st
 		err          error
 	)
 	{
+		if expr.IsUnion(target.Type) {
+			return transformObjectToUnion(source, target, sourceVar, targetVar, newVar, ta)
+		}
+
 		// walk through primitives first to initialize the struct
 		walkMatches(source, target, func(srcMatt, tgtMatt *expr.MappedAttributeExpr, srcc, tgtc *expr.AttributeExpr, n string) {
 			if !expr.IsPrimitive(srcc.Type) {
@@ -204,6 +221,8 @@ func transformObject(source, target *expr.AttributeExpr, sourceVar, targetVar st
 				code, err = transformArray(expr.AsArray(srcc.Type), expr.AsArray(tgtc.Type), srcVar, tgtVar, false, ta)
 			case expr.IsMap(srcc.Type):
 				code, err = transformMap(expr.AsMap(srcc.Type), expr.AsMap(tgtc.Type), srcVar, tgtVar, false, ta)
+			case expr.IsUnion(srcc.Type):
+				code, err = transformUnion(srcc, tgtc, srcVar, tgtVar, false, ta)
 			case ok:
 				if !expr.IsPrimitive(srcc.Type) {
 					code = fmt.Sprintf("%s = %s(%s)\n", tgtVar, transformHelperName(srcc, tgtc, ta), srcVar)
@@ -328,6 +347,116 @@ func transformMap(source, target *expr.Map, sourceVar, targetVar string, newVar 
 	return buf.String(), nil
 }
 
+// transformUnion generates Go code to transform source union to target union.
+func transformUnion(source, target *expr.AttributeExpr, sourceVar, targetVar string, newVar bool, ta *TransformAttrs) (string, error) {
+	if expr.IsObject(target.Type) {
+		return transformUnionToObject(source, target, sourceVar, targetVar, newVar, ta)
+	}
+	srcUnion, tgtUnion := expr.AsUnion(source.Type), expr.AsUnion(target.Type)
+	if len(srcUnion.Values) != len(tgtUnion.Values) {
+		return "", fmt.Errorf("cannot transform union: number of union types differ (%s has %d, %s has %d)",
+			source.Type.Name(), len(srcUnion.Values), target.Type.Name(), len(tgtUnion.Values))
+	}
+	for i, st := range srcUnion.Values {
+		if err := IsCompatible(st.Attribute.Type, tgtUnion.Values[i].Attribute.Type, sourceVar, targetVar); err != nil {
+			return "", fmt.Errorf("cannot transform union %s to %s: type at index %d: %w",
+				source.Type.Name(), target.Type.Name(), i, err)
+		}
+	}
+	sourceTypeRefs := make([]string, len(srcUnion.Values))
+	for i, st := range srcUnion.Values {
+		sourceTypeRefs[i] = ta.TargetCtx.Scope.Ref(st.Attribute, ta.TargetCtx.Pkg)
+	}
+	targetTypeNames := make([]string, len(tgtUnion.Values))
+	for i, tt := range tgtUnion.Values {
+		targetTypeNames[i] = ta.TargetCtx.Scope.Name(tt.Attribute, ta.TargetCtx.Pkg, ta.TargetCtx.Pointer, ta.TargetCtx.Pointer)
+	}
+	data := map[string]interface{}{
+		"SourceTypeRefs": sourceTypeRefs,
+		"SourceTypes":    srcUnion.Values,
+		"TargetTypes":    tgtUnion.Values,
+		"SourceVar":      sourceVar,
+		"TargetVar":      targetVar,
+		"NewVar":         newVar,
+		"TypeRef":        ta.TargetCtx.Scope.Ref(target, ta.TargetCtx.Pkg),
+		"TargetTypeName": ta.TargetCtx.Scope.Name(target, ta.TargetCtx.Pkg, ta.TargetCtx.Pointer, ta.TargetCtx.UseDefault),
+		"TransformAttrs": ta,
+	}
+	var buf bytes.Buffer
+	if err := transformGoUnionT.Execute(&buf, data); err != nil {
+		return "", err
+	}
+	return buf.String(), nil
+}
+
+func transformUnionToObject(source, target *expr.AttributeExpr, sourceVar, targetVar string, newVar bool, ta *TransformAttrs) (string, error) {
+	obj := expr.AsObject(target.Type)
+	if (*obj)[0].Attribute.Type != expr.String {
+		return "", fmt.Errorf("union to object transform requires first field to be string")
+	}
+	if (*obj)[1].Attribute.Type != expr.Any {
+		return "", fmt.Errorf("union to object transform requires second field to be any")
+	}
+	srcUnion := expr.AsUnion(source.Type)
+	sourceTypeRefs := make([]string, len(srcUnion.Values))
+	sourceTypeNames := make([]string, len(srcUnion.Values))
+	for i, st := range srcUnion.Values {
+		sourceTypeRefs[i] = ta.SourceCtx.Scope.Ref(st.Attribute, ta.SourceCtx.Pkg)
+		sourceTypeNames[i] = ta.SourceCtx.Scope.Name(st.Attribute, "", false, false)
+	}
+	data := map[string]interface{}{
+		"NewVar":          newVar,
+		"TargetVar":       targetVar,
+		"TypeRef":         ta.TargetCtx.Scope.Ref(target, ta.TargetCtx.Pkg),
+		"SourceVar":       sourceVar,
+		"SourceTypeRefs":  sourceTypeRefs,
+		"SourceTypeNames": sourceTypeNames,
+		"TargetTypeName":  ta.TargetCtx.Scope.Name(target, ta.TargetCtx.Pkg, ta.TargetCtx.Pointer, ta.TargetCtx.UseDefault),
+	}
+	var buf bytes.Buffer
+	if err := transformGoUnionToObjectT.Execute(&buf, data); err != nil {
+		return "", err
+	}
+	return buf.String(), nil
+}
+
+func transformObjectToUnion(source, target *expr.AttributeExpr, sourceVar, targetVar string, newVar bool, ta *TransformAttrs) (string, error) {
+	obj := expr.AsObject(source.Type)
+	if (*obj)[0].Attribute.Type != expr.String {
+		return "", fmt.Errorf("union to object transform requires first field to be string")
+	}
+	if (*obj)[1].Attribute.Type != expr.Any {
+		return "", fmt.Errorf("union to object transform requires second field to be any")
+	}
+
+	sourceVarDeref := sourceVar
+	if ta.SourceCtx.Pointer {
+		sourceVarDeref = "*" + sourceVar
+	}
+	tgtUnion := expr.AsUnion(target.Type)
+	targetTypeNames := make([]string, len(tgtUnion.Values))
+	targetTypeRefs := make([]string, len(tgtUnion.Values))
+	for i, tt := range tgtUnion.Values {
+		targetTypeNames[i] = ta.TargetCtx.Scope.Name(tt.Attribute, ta.TargetCtx.Pkg, ta.TargetCtx.Pointer, ta.TargetCtx.Pointer)
+		targetTypeRefs[i] = ta.TargetCtx.Scope.Ref(tt.Attribute, ta.TargetCtx.Pkg)
+	}
+	data := map[string]interface{}{
+		"NewVar":          newVar,
+		"TargetVar":       targetVar,
+		"TypeRef":         ta.TargetCtx.Scope.Ref(target, ta.TargetCtx.Pkg),
+		"SourceVar":       sourceVar,
+		"SourceVarDeref":  sourceVarDeref,
+		"TargetTypeNames": targetTypeNames,
+		"TargetTypeRefs":  targetTypeRefs,
+		"TargetTypeName":  ta.TargetCtx.Scope.Name(target, ta.TargetCtx.Pkg, ta.TargetCtx.Pointer, ta.TargetCtx.UseDefault),
+	}
+	var buf bytes.Buffer
+	if err := transformGoObjectToUnionT.Execute(&buf, data); err != nil {
+		return "", err
+	}
+	return buf.String(), nil
+}
+
 // transformAttributeHelpers returns the Go transform functions and their definitions
 // that may be used in code produced by Transform. It returns an error if source and
 // target are incompatible (different types, fields of different type etc).
@@ -357,7 +486,20 @@ func transformAttributeHelpers(source, target *expr.AttributeExpr, ta *Transform
 				helpers = append(helpers, other...)
 			}
 		}
+	case expr.IsUnion(source.Type):
+		tt := expr.AsUnion(target.Type)
+		if tt == nil {
+			return
+		}
+		for i, st := range expr.AsUnion(source.Type).Values {
+			if other, err = collectHelpers(st.Attribute, tt.Values[i].Attribute, true, ta, seen); err == nil {
+				helpers = append(helpers, other...)
+			}
+		}
 	case expr.IsObject(source.Type):
+		if expr.IsUnion(target.Type) {
+			return
+		}
 		walkMatches(source, target, func(srcMatt, _ *expr.MappedAttributeExpr, srcc, tgtc *expr.AttributeExpr, n string) {
 			if err != nil {
 				return
@@ -400,7 +542,20 @@ func collectHelpers(source, target *expr.AttributeExpr, req bool, ta *TransformA
 				helpers = append(helpers, other...)
 			}
 		}
+	case expr.IsUnion(source.Type):
+		tt := expr.AsUnion(target.Type)
+		if tt == nil {
+			return
+		}
+		for i, st := range expr.AsUnion(source.Type).Values {
+			if other, err = collectHelpers(st.Attribute, tt.Values[i].Attribute, req, ta, seen); err == nil {
+				helpers = append(helpers, other...)
+			}
+		}
 	case expr.IsObject(source.Type):
+		if expr.IsUnion(target.Type) {
+			return
+		}
 		walkMatches(source, target, func(srcMatt, _ *expr.MappedAttributeExpr, srcc, tgtc *expr.AttributeExpr, n string) {
 			if err != nil {
 				return
@@ -498,6 +653,39 @@ for key, val := range {{ .SourceVar }} {
 	{{ transformAttribute .SourceElem .TargetElem "val" (printf "tv%s" .LoopVar) true .TransformAttrs -}}
 	{{ .TargetVar }}[tk] = {{ printf "tv%s" .LoopVar -}}
 {{ end -}}
+}
+`
+
+	transformGoUnionTmpl = `{{ if .NewVar }}var {{ .TargetVar }} {{ .TypeRef }}
+{{ end }}switch actual := {{ .SourceVar }}.(type) {
+	{{- range $i, $ref := .SourceTypeRefs }}
+	case {{ $ref }}:
+		{{ transformAttribute (index $.SourceTypes $i).Attribute (index $.TargetTypes $i).Attribute "actual" "val" true $.TransformAttrs -}}
+		{{ $.TargetVar }} = {{ $.TargetTypeName }}{ Value: val }
+	{{- end }}
+}
+`
+
+	transformGoUnionToObjectTmpl = `{{ if .NewVar }}var {{ .TargetVar }} {{ .TypeRef }}
+{{ end }}var name string
+switch {{ .SourceVar }}.(type) {
+	{{- range $i, $ref := .SourceTypeRefs }}
+	case {{ $ref }}:
+		name = {{ printf "%q" (index $.SourceTypeNames $i) }}
+	{{- end }}
+}
+{{ .TargetVar }} = &{{ .TargetTypeName }}{
+	Type: name,
+	Value: {{ .SourceVar }},
+}
+`
+
+	transformGoObjectToUnionTmpl = `{{ if .NewVar }}var {{ .TargetVar }} {{ .TypeRef }}
+{{ end }}switch {{ .SourceVarDeref }}.Type {
+	{{- range $i, $name := .TargetTypeNames }}
+	case {{ printf "%q" $name }}:
+		{{ $.TargetVar }} = {{ $.SourceVar }}.Value.({{ index $.TargetTypeRefs $i }})
+	{{- end }}
 }
 `
 )

@@ -165,6 +165,80 @@ type Parent struct {
 }
 `
 
+const UnionMethod = `
+// Service is the UnionService service interface.
+type Service interface {
+	// A implements A.
+	A(context.Context, *AUnion) (res *AUnion, err error)
+}
+
+// ServiceName is the name of the service as defined in the design. This is the
+// same value that is set in the endpoint request contexts under the ServiceKey
+// key.
+const ServiceName = "UnionService"
+
+// MethodNames lists the service method names as defined in the design. These
+// are the same values that are set in the endpoint request contexts under the
+// MethodKey key.
+var MethodNames = [1]string{"A"}
+
+// AUnion is the payload type of the UnionService service A method.
+type AUnion struct {
+	Values interface {
+		valuesVal()
+	}
+}
+
+type ValuesBoolean bool
+
+type ValuesBytes []byte
+
+type ValuesInt int
+
+type ValuesString string
+
+func (ValuesBoolean) valuesVal() {}
+func (ValuesBytes) valuesVal()   {}
+func (ValuesInt) valuesVal()     {}
+func (ValuesString) valuesVal()  {}
+`
+
+const MultiUnionMethod = `
+// Service is the MultiUnionService service interface.
+type Service interface {
+	// MultiUnion implements MultiUnion.
+	MultiUnion(context.Context, *Union) (res *Union, err error)
+}
+
+// ServiceName is the name of the service as defined in the design. This is the
+// same value that is set in the endpoint request contexts under the ServiceKey
+// key.
+const ServiceName = "MultiUnionService"
+
+// MethodNames lists the service method names as defined in the design. These
+// are the same values that are set in the endpoint request contexts under the
+// MethodKey key.
+var MethodNames = [1]string{"MultiUnion"}
+
+type TypeA struct {
+	A *int
+}
+
+type TypeB struct {
+	B *string
+}
+
+// Union is the payload type of the MultiUnionService service MultiUnion method.
+type Union struct {
+	Values interface {
+		valuesVal()
+	}
+}
+
+func (*TypeA) valuesVal() {}
+func (*TypeB) valuesVal() {}
+`
+
 const WithDefault = `
 // Service is the WithDefault service interface.
 type Service interface {

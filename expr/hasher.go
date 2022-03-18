@@ -7,15 +7,18 @@ import (
 )
 
 var (
-	arrayPrefix         = "_a_"
-	attributePrefix     = "-"
-	attributeTypePrefix = "/"
-	mapElemPrefix       = ":"
-	mapPrefix           = "_m_"
-	objectPrefix        = "_o_"
-	tagPrefix           = "+"
-	userTypeHashPrefix  = "!"
-	userTypePrefix      = "_u_"
+	arrayPrefix              = "_a_"
+	attributePrefix          = "-"
+	attributeTypePrefix      = "/"
+	mapElemPrefix            = ":"
+	mapPrefix                = "_m_"
+	unionTypePrefix          = "_u_"
+	unionAttributePrefix     = "_*_"
+	unionAttributeTypePrefix = "_|_"
+	objectPrefix             = "_o_"
+	tagPrefix                = "+"
+	userTypeHashPrefix       = "!"
+	userTypePrefix           = "_t_"
 )
 
 // Hash returns a hash value for the given data type. Two types have the same
@@ -43,6 +46,8 @@ func hash(dt DataType, ignoreFields, ignoreNames, ignoreTags bool, seen map[*Obj
 		return hashArray(dt.(*Array), ignoreFields, ignoreNames, ignoreTags, seen)
 	case MapKind:
 		return hashMap(dt.(*Map), ignoreFields, ignoreNames, ignoreTags, seen)
+	case UnionKind:
+		return hashUnion(dt.(*Union), ignoreFields, ignoreNames, ignoreTags, seen)
 	case UserTypeKind, ResultTypeKind:
 		return hashUserType(dt.(UserType), ignoreFields, ignoreNames, ignoreTags, seen)
 	case ObjectKind:
@@ -60,6 +65,17 @@ func hashArray(a *Array, ignoreFields, ignoreNames, ignoreTags bool, seen map[*O
 func hashMap(m *Map, ignoreFields, ignoreNames, ignoreTags bool, seen map[*Object]*string) *string {
 	h := mapPrefix + *hash(m.KeyType.Type, ignoreFields, ignoreNames, ignoreTags, seen) +
 		mapElemPrefix + *hash(m.ElemType.Type, ignoreFields, ignoreNames, ignoreTags, seen)
+	return &h
+}
+
+func hashUnion(u *Union, ignoreFields, ignoreNames, ignoreTags bool, seen map[*Object]*string) *string {
+	sort.Slice(u.Values, func(i, j int) bool {
+		return u.Values[i].Name < u.Values[j].Name
+	})
+	h := unionTypePrefix + u.TypeName
+	for _, nat := range u.Values {
+		h += unionAttributePrefix + nat.Name + unionAttributeTypePrefix + *hash(nat.Attribute.Type, ignoreFields, ignoreNames, ignoreTags, seen)
+	}
 	return &h
 }
 

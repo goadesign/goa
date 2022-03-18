@@ -73,7 +73,7 @@ func makeProtoBufMessage(att *expr.AttributeExpr, tname string, sd *ServiceData)
 		}
 	case expr.IsArray(att.Type) || expr.IsMap(att.Type):
 		wrapAttr(att, tname, sd)
-	case expr.IsObject(att.Type):
+	case expr.IsObject(att.Type) || expr.IsUnion(att.Type):
 		att.Type = &expr.UserTypeExpr{
 			TypeName:      tname,
 			AttributeExpr: expr.DupAtt(att),
@@ -126,6 +126,10 @@ func makeProtoBufMessageR(att *expr.AttributeExpr, tname *string, sd *ServiceDat
 		m := expr.AsMap(att.Type)
 		makeProtoBufMessageR(m.ElemType, tname, sd, seen)
 		wrap(m.ElemType, *tname)
+	case expr.IsUnion(att.Type):
+		for _, nat := range expr.AsUnion(att.Type).Values {
+			makeProtoBufMessageR(nat.Attribute, tname, sd, seen)
+		}
 	case expr.IsObject(att.Type):
 		for _, nat := range *(expr.AsObject(att.Type)) {
 			makeProtoBufMessageR(nat.Attribute, tname, sd, seen)
@@ -186,7 +190,7 @@ func protoBufMessageName(att *expr.AttributeExpr, s *codegen.NameScope) string {
 // given user type qualified with the given package name if applicable.
 func protoBufFullMessageName(att *expr.AttributeExpr, pkg string, s *codegen.NameScope) string {
 	switch actual := att.Type.(type) {
-	case expr.UserType:
+	case expr.UserType, *expr.Union:
 		n := s.HashedUnique(actual, protoBufify(actual.Name(), true, true), "")
 		if pkg == "" {
 			return n
@@ -195,7 +199,7 @@ func protoBufFullMessageName(att *expr.AttributeExpr, pkg string, s *codegen.Nam
 	case expr.CompositeExpr:
 		return protoBufFullMessageName(actual.Attribute(), pkg, s)
 	default:
-		panic(fmt.Sprintf("data type is not a user type: received type %T", actual)) // bug
+		panic(fmt.Sprintf("data type is not a user type or union: received type %T", actual)) // bug
 	}
 }
 
@@ -210,7 +214,7 @@ func protoBufGoTypeName(att *expr.AttributeExpr, s *codegen.NameScope) string {
 // the proto file (in *.pb.go).
 func protoBufGoFullTypeName(att *expr.AttributeExpr, pkg string, s *codegen.NameScope) string {
 	switch actual := att.Type.(type) {
-	case expr.UserType, expr.CompositeExpr:
+	case expr.UserType, expr.CompositeExpr, *expr.Union:
 		return protoBufFullMessageName(att, pkg, s)
 	case expr.Primitive:
 		return protoBufNativeGoTypeName(att)
@@ -238,7 +242,29 @@ func protoBufMessageDef(att *expr.AttributeExpr, sd *ServiceData) string {
 		return "repeated " + protoBufMessageDef(actual.ElemType, sd)
 	case *expr.Map:
 		return fmt.Sprintf("map<%s, %s>", protoBufMessageDef(actual.KeyType, sd), protoBufMessageDef(actual.ElemType, sd))
+	case *expr.Union:
+		def := "\toneof " + codegen.SnakeCase(protoBufify(actual.Name(), false, false)) + " {"
+		for _, nat := range actual.Values {
+			fn := codegen.SnakeCase(protoBufify(nat.Name, false, false))
+			fnum := rpcTag(nat.Attribute)
+			var typ string
+			if prim := getPrimitive(nat.Attribute); prim != nil {
+				typ = protoBufMessageDef(prim, sd)
+			} else {
+				typ = protoBufMessageDef(nat.Attribute, sd)
+			}
+			var desc string
+			if d := nat.Attribute.Description; d != "" {
+				desc = codegen.Comment(d) + "\n\t"
+			}
+			def += fmt.Sprintf("\n\t\t%s%s %s = %d;", desc, typ, fn, fnum)
+		}
+		def += "\n\t}"
+		return def
 	case expr.UserType:
+		if actual == expr.Empty {
+			return " {}"
+		}
 		if prim := getPrimitive(att); prim != nil {
 			return protoBufMessageDef(prim, sd)
 		}
@@ -247,6 +273,10 @@ func protoBufMessageDef(att *expr.AttributeExpr, sd *ServiceData) string {
 		var ss []string
 		ss = append(ss, " {")
 		for _, nat := range *actual {
+			if expr.IsUnion(nat.Attribute.Type) {
+				ss = append(ss, protoBufMessageDef(nat.Attribute, sd))
+				continue
+			}
 			var (
 				fn   string
 				fnum uint64
@@ -279,7 +309,7 @@ func protoBufMessageDef(att *expr.AttributeExpr, sd *ServiceData) string {
 // (in *.pb.go) for the given attribute.
 func protoBufGoFullTypeRef(att *expr.AttributeExpr, pkg string, s *codegen.NameScope) string {
 	name := protoBufGoFullTypeName(att, pkg, s)
-	if expr.IsObject(att.Type) {
+	if expr.IsObject(att.Type) || expr.IsUnion(att.Type) {
 		return "*" + name
 	}
 	return name

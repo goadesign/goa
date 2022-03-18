@@ -51,11 +51,13 @@ func TestObjectHash(t *testing.T) {
 		attributeString         = &AttributeExpr{Type: String}
 		attributeArray          = &AttributeExpr{Type: &Array{ElemType: attributeString}}
 		attributeMap            = &AttributeExpr{Type: &Map{KeyType: attributeInt, ElemType: attributeString}}
-		userType                = &UserTypeExpr{AttributeExpr: attributeString, TypeName: "quux"}
+		userType                = &UserTypeExpr{AttributeExpr: attributeString, TypeName: "ut"}
 		namedAttributePrimitive = &NamedAttributeExpr{Name: "foo", Attribute: attributeInt}
 		namedAttributeArray     = &NamedAttributeExpr{Name: "bar", Attribute: attributeArray}
 		namedAttributeMap       = &NamedAttributeExpr{Name: "baz", Attribute: attributeMap}
-		namedAttributeUserType  = &NamedAttributeExpr{Name: "qux", Attribute: &AttributeExpr{Type: userType}}
+		namedAttributeUserType  = &NamedAttributeExpr{Name: "quux", Attribute: &AttributeExpr{Type: userType}}
+		attributeUnion          = &AttributeExpr{Type: &Union{TypeName: "quuuux", Values: []*NamedAttributeExpr{namedAttributePrimitive}}}
+		namedAttributeUnion     = &NamedAttributeExpr{Name: "qux", Attribute: attributeUnion}
 	)
 	cases := map[string]struct {
 		object   Object
@@ -74,9 +76,10 @@ func TestObjectHash(t *testing.T) {
 				namedAttributePrimitive,
 				namedAttributeArray,
 				namedAttributeMap,
+				namedAttributeUnion,
 				namedAttributeUserType,
 			},
-			expected: "_o_-bar/_a_string-baz/_m_int:string-foo/int-qux/_u_quux",
+			expected: "_o_-bar/_a_string-baz/_m_int:string-foo/int-quux/_t_ut-qux/_u_quuuux_*_foo_|_int",
 		},
 	}
 

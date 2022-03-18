@@ -619,6 +619,23 @@ var ResultBodyUserDSL = func() {
 	})
 }
 
+var ResultBodyUnionDSL = func() {
+	var Union = Type("Union", func() {
+		OneOf("Vals", func() {
+			Attribute("String", String)
+			Attribute("Int", Int)
+		})
+	})
+	Service("ServiceBodyUnion", func() {
+		Method("MethodBodyUnion", func() {
+			Result(Union)
+			HTTP(func() {
+				POST("/")
+			})
+		})
+	})
+}
+
 var ResultTypeValidateDSL = func() {
 	var ResultType = Type("ResultType", func() {
 		Attribute("a", String, func() {

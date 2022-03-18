@@ -3,7 +3,7 @@ package testdata
 const EmptyResultResponseEncoderCode = `// EncodeMethodUnaryRPCNoResultResponse encodes responses from the
 // "ServiceUnaryRPCNoResult" service "MethodUnaryRPCNoResult" endpoint.
 func EncodeMethodUnaryRPCNoResultResponse(ctx context.Context, v interface{}, hdr, trlr *metadata.MD) (interface{}, error) {
-	resp := NewMethodUnaryRPCNoResultResponse()
+	resp := NewProtoMethodUnaryRPCNoResultResponse()
 	return resp, nil
 }
 `
@@ -18,7 +18,7 @@ func EncodeMethodMessageResultTypeWithViewsResponse(ctx context.Context, v inter
 	}
 	result := vres.Projected
 	(*hdr).Append("goa-view", vres.View)
-	resp := NewMethodMessageResultTypeWithViewsResponse(result)
+	resp := NewProtoMethodMessageResultTypeWithViewsResponse(result)
 	return resp, nil
 }
 `
@@ -33,7 +33,7 @@ func EncodeMethodMessageResultTypeWithExplicitViewResponse(ctx context.Context, 
 	}
 	result := vres.Projected
 	(*hdr).Append("goa-view", vres.View)
-	resp := NewMethodMessageResultTypeWithExplicitViewResponse(result)
+	resp := NewProtoMethodMessageResultTypeWithExplicitViewResponse(result)
 	return resp, nil
 }
 `
@@ -45,7 +45,7 @@ func EncodeMethodMessageArrayResponse(ctx context.Context, v interface{}, hdr, t
 	if !ok {
 		return nil, goagrpc.ErrInvalidType("ServiceMessageArray", "MethodMessageArray", "[]*servicemessagearray.UT", v)
 	}
-	resp := NewMethodMessageArrayResponse(result)
+	resp := NewProtoMethodMessageArrayResponse(result)
 	return resp, nil
 }
 `
@@ -57,7 +57,7 @@ func EncodeMethodUnaryRPCNoPayloadResponse(ctx context.Context, v interface{}, h
 	if !ok {
 		return nil, goagrpc.ErrInvalidType("ServiceUnaryRPCNoPayload", "MethodUnaryRPCNoPayload", "string", v)
 	}
-	resp := NewMethodUnaryRPCNoPayloadResponse(result)
+	resp := NewProtoMethodUnaryRPCNoPayloadResponse(result)
 	return resp, nil
 }
 `
@@ -69,7 +69,7 @@ func EncodeMethodMessageWithMetadataResponse(ctx context.Context, v interface{},
 	if !ok {
 		return nil, goagrpc.ErrInvalidType("ServiceMessageWithMetadata", "MethodMessageWithMetadata", "*servicemessagewithmetadata.ResponseUT", v)
 	}
-	resp := NewMethodMessageWithMetadataResponse(result)
+	resp := NewProtoMethodMessageWithMetadataResponse(result)
 
 	if res.InHeader != nil {
 		(*hdr).Append("Location", fmt.Sprintf("%v", *p.InHeader))
@@ -89,7 +89,7 @@ func EncodeMethodMessageWithValidateResponse(ctx context.Context, v interface{},
 	if !ok {
 		return nil, goagrpc.ErrInvalidType("ServiceMessageWithValidate", "MethodMessageWithValidate", "*servicemessagewithvalidate.ResponseUT", v)
 	}
-	resp := NewMethodMessageWithValidateResponse(result)
+	resp := NewProtoMethodMessageWithValidateResponse(result)
 
 	if res.InHeader != nil {
 		(*hdr).Append("Location", fmt.Sprintf("%v", *p.InHeader))
@@ -112,7 +112,7 @@ func EncodeMethodMessageUserTypeWithNestedUserTypesResponse(ctx context.Context,
 	}
 	result := vres.Projected
 	(*hdr).Append("goa-view", vres.View)
-	resp := NewRTCollection(result)
+	resp := NewProtoRTCollection(result)
 	return resp, nil
 }
 `
