@@ -302,10 +302,11 @@ func TypeSchemaWithPrefix(api *expr.APIExpr, t expr.DataType, prefix string) *Sc
 	s := NewSchema()
 	switch actual := t.(type) {
 	case expr.Primitive:
-		if name := actual.Name(); name != "any" {
-			s.Type = Type(actual.Name())
-		}
+		s.Type = Type(actual.Name())
 		switch actual.Kind() {
+		case expr.AnyKind:
+			s.Type = Type("string")
+			s.Format = "binary"
 		case expr.IntKind, expr.Int64Kind,
 			expr.UIntKind, expr.UInt64Kind:
 			s.Type = Type("integer")

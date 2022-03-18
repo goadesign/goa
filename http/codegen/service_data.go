@@ -963,9 +963,12 @@ func makeHTTPType(att *expr.AttributeExpr, seen ...map[string]struct{}) {
 		values := expr.AsUnion(dt).Values
 		names := make([]interface{}, len(values))
 		vals := make([]string, len(values))
+		bases := make([]expr.DataType, len(values))
 		for i, nat := range values {
-			names[i] = nat.Attribute.Type.Name()
-			vals[i] = fmt.Sprintf("- %q", nat.Attribute.Type.Name())
+			n := nat.Attribute.Type.Name()
+			names[i] = n
+			vals[i] = fmt.Sprintf("- %q", n)
+			bases[i] = nat.Attribute.Type
 		}
 		obj := expr.Object([]*expr.NamedAttributeExpr{
 			{Name: "Type", Attribute: &expr.AttributeExpr{
@@ -976,6 +979,7 @@ func makeHTTPType(att *expr.AttributeExpr, seen ...map[string]struct{}) {
 			{Name: "Value", Attribute: &expr.AttributeExpr{
 				Type:        expr.Any,
 				Description: "Union value, type must be one of service package types listed above",
+				Bases:       bases, // For OpenAPI generation
 			}},
 		})
 		att.Type = &obj
