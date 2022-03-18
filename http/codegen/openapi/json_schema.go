@@ -342,6 +342,10 @@ func TypeSchemaWithPrefix(api *expr.APIExpr, t expr.DataType, prefix string) *Sc
 		} else {
 			s.AdditionalProperties = true
 		}
+	case *expr.Union:
+		for _, val := range actual.Values {
+			s.AnyOf = append(s.AnyOf, AttributeTypeSchemaWithPrefix(api, val.Attribute, prefix))
+		}
 	case *expr.UserTypeExpr:
 		s.Ref = TypeRefWithPrefix(api, actual, prefix)
 	case *expr.ResultTypeExpr:
