@@ -267,7 +267,18 @@ func buildOperation(key string, r *expr.RouteExpr, bodies *EndpointBodies, rand 
 			responses[strconv.Itoa(r.StatusCode)] = &ResponseRef{Value: resp}
 		}
 		for _, er := range e.HTTPErrors {
+			if er.Description != "" && er.Response.Description == "" {
+				er.Response.Description = er.Description
+			}
 			resp := responseFromExpr(er.Response, bodies.ResponseBodies, rand)
+			desc := er.Name
+			if resp.Description != nil {
+				desc += ": " + *resp.Description
+			}
+			resp.Description = &desc
+			for _, content := range resp.Content {
+				content.Example = nil
+			}
 			responses[strconv.Itoa(er.Response.StatusCode)] = &ResponseRef{Value: resp}
 		}
 	}
