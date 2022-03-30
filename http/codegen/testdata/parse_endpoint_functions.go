@@ -740,7 +740,7 @@ func BuildMethodParamValidatePayload(serviceParamValidateMethodParamValidateA st
 	{
 		if serviceParamValidateMethodParamValidateA != "" {
 			var v int64
-			v, err = strconv.ParseInt(serviceParamValidateMethodParamValidateA, 10, 64)
+			v, err = strconv.ParseInt(serviceParamValidateMethodParamValidateA, 10, strconv.IntSize)
 			val := int(v)
 			a = &val
 			if err != nil {
@@ -1221,7 +1221,7 @@ func BuildMethodQueryUIntPayload(serviceQueryUIntMethodQueryUIntQ string) (*serv
 	{
 		if serviceQueryUIntMethodQueryUIntQ != "" {
 			var v uint64
-			v, err = strconv.ParseUint(serviceQueryUIntMethodQueryUIntQ, 10, 64)
+			v, err = strconv.ParseUint(serviceQueryUIntMethodQueryUIntQ, 10, strconv.IntSize)
 			val := uint(v)
 			q = &val
 			if err != nil {
@@ -1324,7 +1324,7 @@ func BuildMethodAPayload(serviceWithParamsAndHeadersBlockMethodABody string, ser
 	var path uint
 	{
 		var v uint64
-		v, err = strconv.ParseUint(serviceWithParamsAndHeadersBlockMethodAPath, 10, 64)
+		v, err = strconv.ParseUint(serviceWithParamsAndHeadersBlockMethodAPath, 10, strconv.IntSize)
 		path = uint(v)
 		if err != nil {
 			return nil, fmt.Errorf("invalid value for path, must be UINT")
@@ -1334,7 +1334,7 @@ func BuildMethodAPayload(serviceWithParamsAndHeadersBlockMethodABody string, ser
 	{
 		if serviceWithParamsAndHeadersBlockMethodAOptional != "" {
 			var v int64
-			v, err = strconv.ParseInt(serviceWithParamsAndHeadersBlockMethodAOptional, 10, 64)
+			v, err = strconv.ParseInt(serviceWithParamsAndHeadersBlockMethodAOptional, 10, strconv.IntSize)
 			val := int(v)
 			optional = &val
 			if err != nil {

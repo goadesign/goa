@@ -24,7 +24,7 @@ func BuildMethodAPayload(payloadWithValidationMethodAMetadataInt string, payload
 	{
 		if payloadWithValidationMethodAMetadataInt != "" {
 			var v int64
-			v, err = strconv.ParseInt(payloadWithValidationMethodAMetadataInt, 10, 64)
+			v, err = strconv.ParseInt(payloadWithValidationMethodAMetadataInt, 10, strconv.IntSize)
 			val := int(v)
 			metadataInt = &val
 			if err != nil {

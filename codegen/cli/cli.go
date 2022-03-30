@@ -475,7 +475,7 @@ func conversionCode(from, to, typeName string, pointer bool) (string, bool, bool
 		}
 		parse += fmt.Sprintf("%s, err = strconv.ParseBool(%s)", target, from)
 	case intN:
-		parse = fmt.Sprintf("var v int64\nv, err = strconv.ParseInt(%s, 10, 64)", from)
+		parse = fmt.Sprintf("var v int64\nv, err = strconv.ParseInt(%s, 10, strconv.IntSize)", from)
 		cast = fmt.Sprintf("%s %s= int(v)", target, decl)
 	case int32N:
 		parse = fmt.Sprintf("var v int64\nv, err = strconv.ParseInt(%s, 10, 32)", from)
@@ -484,7 +484,7 @@ func conversionCode(from, to, typeName string, pointer bool) (string, bool, bool
 		parse = fmt.Sprintf("%s, err %s= strconv.ParseInt(%s, 10, 64)", target, decl, from)
 		declErr = decl == ""
 	case uintN:
-		parse = fmt.Sprintf("var v uint64\nv, err = strconv.ParseUint(%s, 10, 64)", from)
+		parse = fmt.Sprintf("var v uint64\nv, err = strconv.ParseUint(%s, 10, strconv.IntSize)", from)
 		cast = fmt.Sprintf("%s %s= uint(v)", target, decl)
 	case uint32N:
 		parse = fmt.Sprintf("var v uint64\nv, err = strconv.ParseUint(%s, 10, 32)", from)
