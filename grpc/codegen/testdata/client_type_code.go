@@ -132,7 +132,7 @@ func NewMethodMessageUserTypeWithAliasResult(message *service_message_user_type_
 	result := &servicemessageusertypewithalias.PayloadAliasT{
 		IntAliasField: servicemessageusertypewithalias.IntAlias(message.IntAliasField),
 	}
-	if message.OptionalIntAliasField != nil {
+	if message.OptionalIntAliasField != 0 {
 		optionalIntAliasFieldptr := servicemessageusertypewithalias.IntAlias(message.OptionalIntAliasField)
 		result.OptionalIntAliasField = &optionalIntAliasFieldptr
 	}
