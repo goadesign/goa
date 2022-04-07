@@ -336,14 +336,16 @@ func transformObject(source, target *expr.AttributeExpr, sourceVar, targetVar st
 				// their default values if the corresponding source fields have zero
 				// values.
 				// We don't set default values for booleans since by default, protocol
-				// buffer sets boolean fields as false. Changing them to the default
-				// value is counter-intuitive.
+				// buffer sets boolean fields as false.
 				if !srcMatt.IsRequired(n) && srcc.Type != expr.Boolean {
 					if typeName, _ := codegen.GetMetaType(tgtc); typeName != "" {
 						code += fmt.Sprintf("var zero %s\n\t", typeName)
 						code += fmt.Sprintf("if %s == zero {\n\t", srcVar)
 					} else {
-						code += fmt.Sprintf("if %s {\n\t", checkZeroValue(srcc.Type, srcVar, false))
+						check := checkZeroValue(srcc.Type, srcVar, false)
+						if check != "" {
+							code += fmt.Sprintf("if %s {\n\t", check)
+						}
 					}
 					if ta.TargetCtx.IsPrimitivePointer(n, tgtMatt.AttributeExpr) && expr.IsPrimitive(tgtc.Type) {
 						code += fmt.Sprintf("var tmp %s = %#v\n\t%s = &tmp\n", codegen.GoNativeTypeName(tgtc.Type), tdef, tgtVar)
@@ -614,12 +616,16 @@ func convertType(src, tgt *expr.AttributeExpr, srcVar string, ta *transformAttrs
 
 // zeroValure returns the zero value for the given primitive type.
 func checkZeroValue(dt expr.DataType, target string, negate bool) string {
+	kind := dt.Kind()
+	if p := getPrimitive(&expr.AttributeExpr{Type: dt}); p != nil {
+		kind = p.Type.Kind()
+	}
 	eq := "=="
 	if negate {
 		eq = "!="
 	}
-	switch dt.Kind() {
 	// don't check for BooleanKind since by default boolean is set to false
+	switch kind {
 	case expr.IntKind, expr.Int32Kind, expr.Int64Kind,
 		expr.UIntKind, expr.UInt32Kind, expr.UInt64Kind,
 		expr.Float32Kind, expr.Float64Kind:
