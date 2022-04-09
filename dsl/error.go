@@ -59,14 +59,23 @@ const (
 // Attribute DSL.
 //
 // Error must appear in the Service (to define error responses that apply to all
-// the service methods) or Method expressions.
+// the service methods) or Method expressions. Error may also appear under the API
+// expression to create reusable error definitions.
 //
 // See Attribute for details on the Error arguments.
 //
 // Example:
 //
+//    var _ = API("calc", func() {
+//        Error("invalid_argument") // Uses type ErrorResult
+//        HTTP(func() {
+//            Response("invalid_argument", StatusBadRequest)
+//        })
+//    })
+//
 //    var _ = Service("divider", func() {
-//        Error("invalid_arguments") // Uses type ErrorResult
+//        Error("invalid_arguments") // Refers to error defined above.
+//                                   // No need to define HTTP mapping again.
 //
 //        // Method which uses the default type for its response.
 //        Method("divide", func() {

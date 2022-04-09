@@ -179,8 +179,8 @@ func JWTSecurity(name string, fn ...func()) *expr.SchemeExpr {
 	return e
 }
 
-// Security defines authentication requirements to access a service or a service
-// method.
+// Security defines authentication requirements to access an entire API, service
+// or individual service method.
 //
 // The requirement refers to one or more OAuth2Security, BasicAuthSecurity,
 // APIKeySecurity or JWTSecurity security scheme. If the schemes include a
@@ -190,7 +190,7 @@ func JWTSecurity(name string, fn ...func()) *expr.SchemeExpr {
 // in the same scope in which case the client may validate any one of the
 // requirements for the request to be authorized.
 //
-// Security must appear in a Service or Method expression.
+// Security must appear in a API, Service or Method expression.
 //
 // Security accepts an arbitrary number of security schemes as argument
 // specified by name or by reference and an optional DSL function as last
