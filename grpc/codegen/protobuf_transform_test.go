@@ -41,6 +41,10 @@ func TestProtoBufTransform(t *testing.T) {
 		resultType = root.UserType("ResultType")
 		rtCol      = root.UserType("ResultTypeCollection")
 
+		simpleOneOf    = root.UserType("SimpleOneOf")
+		embeddedOneOf  = root.UserType("EmbeddedOneOf")
+		recursiveOneOf = root.UserType("RecursiveOneOf")
+
 		// attribute contexts used in test cases
 		svcCtx = serviceTypeContext("", sd.Scope)
 		ptrCtx = pointerContext("", sd.Scope)
@@ -87,6 +91,11 @@ func TestProtoBufTransform(t *testing.T) {
 			{"result-type-collection-to-result-type-collection", rtCol, rtCol, true, svcCtx, rtColSvcToRTColProtoCode},
 			{"optional-to-optional", optional, optional, true, svcCtx, optionalSvcToOptionalProtoCode},
 			{"defaults-to-defaults", defaults, defaults, true, svcCtx, defaultsSvcToDefaultsProtoCode},
+
+			// oneofs
+			{"oneof-to-oneof", simpleOneOf, simpleOneOf, true, svcCtx, oneOfSvcToOneOfProtoCode},
+			{"embedded-oneof-to-embedded-oneof", embeddedOneOf, embeddedOneOf, true, svcCtx, embeddedOneOfSvcToEmbeddedOneOfProtoCode},
+			{"recursive-oneof-to-recursive-oneof", recursiveOneOf, recursiveOneOf, true, svcCtx, recursiveOneOfSvcToRecursiveOneOfProtoCode},
 		},
 
 		// test cases to transform protocol buffer type to service type
@@ -121,6 +130,11 @@ func TestProtoBufTransform(t *testing.T) {
 			{"result-type-collection-to-result-type-collection", rtCol, rtCol, false, svcCtx, rtColProtoToRTColSvcCode},
 			{"optional-to-optional", optional, optional, false, svcCtx, optionalProtoToOptionalSvcCode},
 			{"defaults-to-defaults", defaults, defaults, false, svcCtx, defaultsProtoToDefaultsSvcCode},
+
+			// oneofs
+			{"oneof-to-oneof", simpleOneOf, simpleOneOf, false, svcCtx, oneOfProtoToOneOfSvcCode},
+			{"embedded-oneof-to-embedded-oneof", embeddedOneOf, embeddedOneOf, false, svcCtx, embeddedOneOfProtoToEmbeddedOneOfSvcCode},
+			{"recursive-oneof-to-recursive-oneof", recursiveOneOf, recursiveOneOf, false, svcCtx, recursiveOneOfProtoToRecursiveOneOfSvcCode},
 		},
 	}
 	for name, cases := range tc {
@@ -609,6 +623,61 @@ const (
 }
 `
 
+	oneOfSvcToOneOfProtoCode = `func transform() {
+	target := &SimpleOneOf{}
+	if source.SimpleOneOf != nil {
+		switch src := source.SimpleOneOf.(type) {
+		case SimpleOneOfString:
+			target.SimpleOneOf = &SimpleOneOf_String_{String_: string(src)}
+		case SimpleOneOfInteger:
+			target.SimpleOneOf = &SimpleOneOf_Integer{Integer: int32(src)}
+		}
+	}
+}
+`
+
+	embeddedOneOfSvcToEmbeddedOneOfProtoCode = `func transform() {
+	target := &EmbeddedOneOf{}
+	if source.String != nil {
+		target.String_ = *source.String
+	}
+	if source.EmbeddedOneOf != nil {
+		switch src := source.EmbeddedOneOf.(type) {
+		case EmbeddedOneOfString:
+			target.EmbeddedOneOf = &EmbeddedOneOf_String_{String_: string(src)}
+		case EmbeddedOneOfInteger:
+			target.EmbeddedOneOf = &EmbeddedOneOf_Integer{Integer: int32(src)}
+		case EmbeddedOneOfBoolean:
+			target.EmbeddedOneOf = &EmbeddedOneOf_Boolean{Boolean: bool(src)}
+		case EmbeddedOneOfNumber:
+			target.EmbeddedOneOf = &EmbeddedOneOf_Number{Number: int32(src)}
+		case EmbeddedOneOfArray:
+			target.EmbeddedOneOf = &EmbeddedOneOf_Array{Array: svcEmbeddedOneOfArrayToEmbeddedOneOfArray(src)}
+		case EmbeddedOneOfMap:
+			target.EmbeddedOneOf = &EmbeddedOneOf_Map_{Map_: svcEmbeddedOneOfMapToEmbeddedOneOfMap(src)}
+		case *SimpleOneOf:
+			target.EmbeddedOneOf = &EmbeddedOneOf_UserType{UserType: svcSimpleOneOfToSimpleOneOf(src)}
+		}
+	}
+}
+`
+
+	recursiveOneOfSvcToRecursiveOneOfProtoCode = `func transform() {
+	target := &RecursiveOneOf{}
+	if source.String != nil {
+		target.String_ = *source.String
+	}
+	if source.RecursiveOneOf != nil {
+		switch src := source.RecursiveOneOf.(type) {
+		case RecursiveOneOfInteger:
+			target.RecursiveOneOf = &RecursiveOneOf_Integer{Integer: int32(src)}
+		case *RecursiveOneOf:
+			target.RecursiveOneOf = &RecursiveOneOf_Recurse{Recurse: svcRecursiveOneOfToRecursiveOneOf(src)}
+		}
+	}
+}
+`
+
 	primitiveProtoToPrimitiveSvcCode = `func transform() {
 	target := int(source.Field)
 }
@@ -1027,6 +1096,61 @@ const (
 			tk := int(key)
 			tv := val
 			target.RequiredMap[tk] = tv
+		}
+	}
+}
+`
+
+	oneOfProtoToOneOfSvcCode = `func transform() {
+	target := &SimpleOneOf{}
+	if source.SimpleOneOf != nil {
+		switch val := source.SimpleOneOf.(type) {
+		case *SimpleOneOf_String_:
+			target.SimpleOneOf = SimpleOneOfString(val.String_)
+		case *SimpleOneOf_Integer:
+			target.SimpleOneOf = SimpleOneOfInteger(val.Integer)
+		}
+	}
+}
+`
+
+	embeddedOneOfProtoToEmbeddedOneOfSvcCode = `func transform() {
+	target := &EmbeddedOneOf{}
+	if source.String_ != "" {
+		target.String = &source.String_
+	}
+	if source.EmbeddedOneOf != nil {
+		switch val := source.EmbeddedOneOf.(type) {
+		case *EmbeddedOneOf_String_:
+			target.EmbeddedOneOf = EmbeddedOneOfString(val.String_)
+		case *EmbeddedOneOf_Integer:
+			target.EmbeddedOneOf = EmbeddedOneOfInteger(val.Integer)
+		case *EmbeddedOneOf_Boolean:
+			target.EmbeddedOneOf = EmbeddedOneOfBoolean(val.Boolean)
+		case *EmbeddedOneOf_Number:
+			target.EmbeddedOneOf = EmbeddedOneOfNumber(val.Number)
+		case *EmbeddedOneOf_Array:
+			target.EmbeddedOneOf = protobufEmbeddedOneOfArrayToEmbeddedOneOfArray(val.Array)
+		case *EmbeddedOneOf_Map_:
+			target.EmbeddedOneOf = protobufEmbeddedOneOfMapToEmbeddedOneOfMap(val.Map_)
+		case *EmbeddedOneOf_UserType:
+			target.EmbeddedOneOf = protobufSimpleOneOfToSimpleOneOf(val.UserType)
+		}
+	}
+}
+`
+
+	recursiveOneOfProtoToRecursiveOneOfSvcCode = `func transform() {
+	target := &RecursiveOneOf{}
+	if source.String_ != "" {
+		target.String = &source.String_
+	}
+	if source.RecursiveOneOf != nil {
+		switch val := source.RecursiveOneOf.(type) {
+		case *RecursiveOneOf_Integer:
+			target.RecursiveOneOf = RecursiveOneOfInteger(val.Integer)
+		case *RecursiveOneOf_Recurse:
+			target.RecursiveOneOf = protobufRecursiveOneOfToRecursiveOneOf(val.Recurse)
 		}
 	}
 }
