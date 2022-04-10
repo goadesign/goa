@@ -644,13 +644,9 @@ func transformUnionData(source, target *expr.AttributeExpr, sourceVar, targetVar
 	src := expr.AsUnion(source.Type)
 	tgt := expr.AsUnion(target.Type)
 	srcValues := make([]*expr.NamedAttributeExpr, len(src.Values))
-	for i, v := range src.Values {
-		srcValues[i] = v
-	}
+	copy(srcValues, src.Values)
 	tgtValues := make([]*expr.NamedAttributeExpr, len(tgt.Values))
-	for i, v := range tgt.Values {
-		tgtValues[i] = v
-	}
+	copy(tgtValues, tgt.Values)
 
 	sourceValueTypeRefs := make([]string, len(src.Values))
 	for i, v := range src.Values {

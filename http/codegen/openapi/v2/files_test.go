@@ -258,7 +258,7 @@ func validateSwagger(b []byte) error {
 	if err := doc.UnmarshalJSON(b); err != nil {
 		return err
 	}
-	if doc == nil {
+	if doc.Swagger == "" {
 		return errors.New("nil swagger")
 	}
 	return nil

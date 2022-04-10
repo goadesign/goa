@@ -127,9 +127,7 @@ func sorted(o *Object) Object {
 		return nil
 	}
 	s := make([]*NamedAttributeExpr, len(*o))
-	for i, a := range *o {
-		s[i] = a
-	}
+	copy(s, *o)
 	sort.Slice(s, func(i, j int) bool { return s[i].Name < s[j].Name })
 	return Object(s)
 }
