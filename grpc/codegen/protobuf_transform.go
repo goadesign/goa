@@ -789,9 +789,15 @@ func collectHelpers(source, target *expr.AttributeExpr, req bool, ta *transformA
 			return nil, fmt.Errorf("cannot transform union attribute %s with %d types to union attribute %s with %d types",
 				source.Type.Name(), len(srcAttrs.Values), target.Type.Name(), len(tgtAttrs.Values))
 		}
-		for i, srcAtt := range srcAttrs.Values {
-			tgtAtt := tgtAttrs.Values[i].Attribute
-			helpers, err := collectHelpers(srcAtt.Attribute, tgtAtt, true, ta, seen)
+		for i, srcVal := range srcAttrs.Values {
+			src := srcVal.Attribute
+			tgt := tgtAttrs.Values[i].Attribute
+			if ta.proto {
+				tgt = unwrapAttr(tgt)
+			} else {
+				src = unwrapAttr(src)
+			}
+			helpers, err := collectHelpers(src, tgt, true, ta, seen)
 			if err != nil {
 				return nil, err
 			}

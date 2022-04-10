@@ -260,5 +260,33 @@ var TestTypesDSL = func() {
 		_ = Type("ArrayMapAlias", func() {
 			Attribute("array_map", ArrayMapAlias)
 		})
+
+		SimpleOneOf = Type("SimpleOneOf", func() {
+			OneOf("SimpleOneOf", func() {
+				Attribute("string", String)
+				Attribute("integer", Int)
+			})
+		})
+
+		_ = Type("EmbeddedOneOf", func() {
+			Attribute("string", String)
+			OneOf("EmbeddedOneOf", func() {
+				Attribute("string", String)
+				Attribute("integer", Int)
+				Attribute("boolean", Boolean)
+				Attribute("number", Int)
+				Attribute("array", ArrayOf(String))
+				Attribute("map", MapOf(String, String))
+				Attribute("user_type", SimpleOneOf)
+			})
+		})
+
+		_ = Type("RecursiveOneOf", func() {
+			Attribute("string", String)
+			OneOf("RecursiveOneOf", func() {
+				Attribute("integer", Int)
+				Attribute("recurse", "RecursiveOneOf")
+			})
+		})
 	)
 }
