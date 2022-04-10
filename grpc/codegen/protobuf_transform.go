@@ -147,10 +147,12 @@ func transformAttribute(source, target *expr.AttributeExpr, sourceVar, targetVar
 
 	if ta.proto {
 		if isUnionMessage(target) {
+			ta = dupTransformAttrs(ta)
 			ta.message = ta.TargetCtx.Scope.Name(target, ta.TargetCtx.Pkg, false, false)
 		}
 	} else {
 		if isUnionMessage(source) {
+			ta = dupTransformAttrs(ta)
 			ta.message = ta.SourceCtx.Scope.Ref(source, ta.SourceCtx.Pkg)
 		}
 	}
@@ -807,10 +809,12 @@ func collectHelpers(source, target *expr.AttributeExpr, req bool, ta *transformA
 		if ut, ok := source.Type.(expr.UserType); ok {
 			if ta.proto {
 				if isUnionMessage(target) {
+					ta = dupTransformAttrs(ta)
 					ta.message = ta.TargetCtx.Scope.Name(target, ta.TargetCtx.Pkg, false, false)
 				}
 			} else {
 				if isUnionMessage(source) {
+					ta = dupTransformAttrs(ta)
 					ta.message = ta.SourceCtx.Scope.Ref(source, ta.SourceCtx.Pkg)
 				}
 			}
@@ -918,6 +922,17 @@ func isUnionMessage(at *expr.AttributeExpr) bool {
 		}
 	}
 	return false
+}
+
+// dupTransformAttrs returns a shallow copy of the given transformAttrs.
+func dupTransformAttrs(ta *transformAttrs) *transformAttrs {
+	return &transformAttrs{
+		TransformAttrs: ta.TransformAttrs,
+		proto:          ta.proto,
+		targetInit:     ta.targetInit,
+		wrapped:        ta.wrapped,
+		message:        ta.message,
+	}
 }
 
 const (
