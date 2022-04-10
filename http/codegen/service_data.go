@@ -975,11 +975,21 @@ func makeHTTPType(att *expr.AttributeExpr, seen ...map[string]struct{}) {
 				Type:        expr.String,
 				Description: "Union type name, one of:\n" + strings.Join(vals, "\n"),
 				Validation:  &expr.ValidationExpr{Values: names},
+				Meta: expr.MetaExpr{
+					"struct:tag:form": {"Type"},
+					"struct:tag:json": {"Type"},
+					"struct:tag:xml":  {"Type"},
+				},
 			}},
 			{Name: "Value", Attribute: &expr.AttributeExpr{
 				Type:        expr.Any,
 				Description: "Union value, type must be one of service package types listed above",
 				Bases:       bases, // For OpenAPI generation
+				Meta: expr.MetaExpr{
+					"struct:tag:form": {"Value"},
+					"struct:tag:json": {"Value"},
+					"struct:tag:xml":  {"Value"},
+				},
 			}},
 		})
 		att.Type = &obj
