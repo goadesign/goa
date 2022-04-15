@@ -43,6 +43,7 @@ func (u *UserTypeExpr) Name() string {
 func (u *UserTypeExpr) Rename(n string) {
 	// Remember original name for example to generate friendly docs.
 	u.AttributeExpr.AddMeta("name:original", u.TypeName)
+	delete(u.AttributeExpr.Meta, "struct:type:name")
 	u.TypeName = n
 }
 
