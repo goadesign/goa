@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	"context"
 	"net"
 	"net/http"
 	"time"
@@ -21,25 +22,46 @@ import (
 func Log(l middleware.Logger) func(h http.Handler) http.Handler {
 	return func(h http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			reqID := r.Context().Value(middleware.RequestIDKey)
-			if reqID == nil {
-				reqID = shortID()
-			}
-			started := time.Now()
-
-			l.Log("id", reqID,
-				"req", r.Method+" "+r.URL.String(),
-				"from", from(r))
-
-			rw := CaptureResponse(w)
-			h.ServeHTTP(rw, r)
-
-			l.Log("id", reqID,
-				"status", rw.StatusCode,
-				"bytes", rw.ContentLength,
-				"time", time.Since(started).String())
+			log(l, r, w, h)
 		})
 	}
+}
+
+// LogContext returns a middleware that logs the incoming requests similarly to
+// Log. LogContext calls the given function with the request context to extract
+// the logger.
+func LogContext(logFromCtx func(context.Context) middleware.Logger) func(http.Handler) http.Handler {
+	return func(h http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			l := logFromCtx(r.Context())
+			if l == nil {
+				h.ServeHTTP(w, r)
+				return
+			}
+			log(l, r, w, h)
+		})
+	}
+}
+
+// log does the actual logging given the logger.
+func log(l middleware.Logger, r *http.Request, w http.ResponseWriter, next http.Handler) {
+	reqID := r.Context().Value(middleware.RequestIDKey)
+	if reqID == nil {
+		reqID = shortID()
+	}
+	started := time.Now()
+
+	l.Log("id", reqID,
+		"req", r.Method+" "+r.URL.String(),
+		"from", from(r))
+
+	rw := CaptureResponse(w)
+	next.ServeHTTP(rw, r)
+
+	l.Log("id", reqID,
+		"status", rw.StatusCode,
+		"bytes", rw.ContentLength,
+		"time", time.Since(started).String())
 }
 
 // from makes a best effort to compute the request client IP.
