@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"io"
 	"strings"
+
+	"github.com/ikawaha/errors/chainer"
 )
 
 type (
@@ -207,6 +209,7 @@ func MergeErrors(err, other error) error {
 	//
 	// Do this before we modify ourselves, as History() may include us!
 	e.history = append(e.History(), o.History()...)
+	e.err = chainer.Append(e.err, o.err)
 
 	e.Message = e.Message + "; " + o.Message
 	e.Timeout = e.Timeout && o.Timeout
