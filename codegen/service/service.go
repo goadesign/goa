@@ -399,7 +399,11 @@ const unionValueMethodT = `func ({{ .TypeRef }}) {{ .Name }}() {}
 // input: map[string]{"Type": TypeData, "Error": ErrorData}
 const errorInitT = `{{ printf "%s builds a %s from an error." .Name .TypeName |  comment }}
 func {{ .Name }}(err error) {{ .TypeRef }} {
-	return &{{ .TypeName }}{
+	return {{if (eq "goa.ServiceError" .TypeName) -}}
+               goa.NewServiceErrorWrapped(err, &goa.ServiceErrorElement{ 
+           {{- else -}}
+               &{{ .TypeName }}{
+           {{- end }}
 		Name: {{ printf "%q" .ErrName }},
 		ID: goa.NewErrorID(),
 		Message: err.Error(),
@@ -412,7 +416,7 @@ func {{ .Name }}(err error) {{ .TypeRef }} {
 	{{- if .Fault }}
 		Fault: true,
 	{{- end }}
-	}
+	}{{ if (eq "goa.ServiceError" .TypeName) -}} ) {{- end }}
 }
 `
 
