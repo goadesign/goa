@@ -29,6 +29,8 @@ type (
 		// History tracks all the individual errors that were built into this error, should
 		// this error have been merged.
 		history []ServiceError
+		// Err is a wrapped error, if exists.
+		err error
 	}
 )
 
@@ -225,6 +227,9 @@ func (e ServiceError) History() []ServiceError {
 
 // Error returns the error message.
 func (e *ServiceError) Error() string { return e.Message }
+
+// Unwrap returns the error, if ServiceError contains a wrapped error.
+func (e ServiceError) Unwrap() error { return e.err }
 
 // ErrorName returns the error name.
 func (e *ServiceError) ErrorName() string { return e.Name }
