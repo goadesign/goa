@@ -364,11 +364,11 @@ var MethodNames = [1]string{"A"}
 
 // MakeError builds a goa.ServiceError from an error.
 func MakeError(err error) *goa.ServiceError {
-	return &goa.ServiceError{
+	return goa.NewServiceErrorWrapped(err, &goa.ServiceErrorElement{
 		Name:    "error",
 		ID:      goa.NewErrorID(),
 		Message: err.Error(),
-	}
+	})
 }
 `
 
