@@ -225,6 +225,39 @@ func (e ServiceError) History() []ServiceError {
 	return []ServiceError{e}
 }
 
+// ServiceErrorElement is an argument type of NewServiceErrorWrapped
+// and has the same fields as the public fields of ServiceError.
+type ServiceErrorElement struct {
+	// Name is a name for that class of errors.
+	Name string
+	// ID is a unique value for each occurrence of the error.
+	ID string
+	// Pointer to the field that caused this error, if appropriate
+	Field *string
+	// Message contains the specific error details.
+	Message string
+	// Is the error a timeout?
+	Timeout bool
+	// Is the error temporary?
+	Temporary bool
+	// Is the error a server-side fault?
+	Fault bool
+}
+
+// NewServiceErrorWrapped returns a service error that wrapped the error.
+func NewServiceErrorWrapped(err error, elem ServiceErrorElement) *ServiceError {
+	return &ServiceError{
+		Name:      elem.Name,
+		ID:        elem.ID,
+		Field:     elem.Field,
+		Message:   elem.Message,
+		Timeout:   elem.Timeout,
+		Temporary: elem.Temporary,
+		Fault:     elem.Fault,
+		err:       err,
+	}
+}
+
 // Error returns the error message.
 func (e *ServiceError) Error() string { return e.Message }
 
