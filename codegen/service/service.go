@@ -414,6 +414,24 @@ func {{ .Name }}(err error) {{ .TypeRef }} {
 	{{- end }}
 	}
 }
+
+{{ printf "%sWrapped builds an %s that wrapped err." .Name .TypeName |  comment }}
+func {{ .Name }}Wrapped(err error) error {
+	return goa.Append(&{{ .TypeName }}{
+		Name: {{ printf "%q" .ErrName }},
+		ID: goa.NewErrorID(),
+		Message: err.Error(),
+	{{- if .Temporary }}
+		Temporary: true,
+	{{- end }}
+	{{- if .Timeout }}
+		Timeout: true,
+	{{- end }}
+	{{- if .Fault }}
+		Fault: true,
+	{{- end }}
+	}, err)
+}
 `
 
 // input: InitData

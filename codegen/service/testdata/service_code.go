@@ -370,6 +370,15 @@ func MakeError(err error) *goa.ServiceError {
 		Message: err.Error(),
 	}
 }
+
+// MakeErrorWrapped builds an goa.ServiceError that wrapped err.
+func MakeErrorWrapped(err error) error {
+	return goa.Append(&goa.ServiceError{
+		Name:    "error",
+		ID:      goa.NewErrorID(),
+		Message: err.Error(),
+	}, err)
+}
 `
 
 const CustomErrors = `
