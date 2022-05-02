@@ -219,8 +219,8 @@ go build
 and run it:
 
 ```bash
-./calc-cli calc multiply -a 1 -b 2
-3
+./calc-cli calc multiply -a 2 -b 3
+6
 ```
 
 The tool includes contextual help:
