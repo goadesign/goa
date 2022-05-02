@@ -53,6 +53,19 @@ const (
 	InvalidLength = "invalid_length"
 )
 
+// NewServiceError creates an error.
+func NewServiceError(err error, name string, timeout, temporary, fault bool) *ServiceError {
+	return &ServiceError{
+		Name:      name,
+		ID:        NewErrorID(),
+		Message:   err.Error(),
+		Timeout:   timeout,
+		Temporary: temporary,
+		Fault:     fault,
+		err:       err,
+	}
+}
+
 // Fault creates an error given a format and values a la fmt.Printf. The error
 // has the Fault field set to true.
 func Fault(format string, v ...interface{}) *ServiceError {
