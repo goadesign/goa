@@ -3,6 +3,7 @@ package goa
 import (
 	"crypto/rand"
 	"encoding/base64"
+	"errors"
 	"fmt"
 	"io"
 	"strings"
@@ -248,6 +249,28 @@ func (e *ServiceError) Error() string { return e.Message }
 func (e *ServiceError) ErrorName() string { return e.Name }
 
 func (e *ServiceError) Unwrap() error { return e.err }
+
+func (e *ServiceError) As(target interface{}) bool {
+	if e.err != nil {
+		return errors.As(e.err, target)
+	}
+	se, ok := target.(*ServiceError)
+	if !ok {
+		return false
+	}
+	return e.Name == se.Name
+}
+
+func (e *ServiceError) Is(target error) bool {
+	if e.err != nil {
+		return errors.Is(e.err, target)
+	}
+	se, ok := target.(*ServiceError)
+	if !ok {
+		return false
+	}
+	return e.Name == se.Name
+}
 
 func withField(field string, err *ServiceError) *ServiceError {
 	err.Field = &field
