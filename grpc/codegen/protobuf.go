@@ -380,11 +380,11 @@ func protoBufNativeMessageTypeName(t expr.DataType) string {
 	case expr.BooleanKind:
 		return "bool"
 	case expr.IntKind:
-		return "sint32"
+		return "int32"
 	case expr.Int32Kind:
-		return "sint32"
+		return "int32"
 	case expr.Int64Kind:
-		return "sint64"
+		return "int64"
 	case expr.UIntKind:
 		return "uint32"
 	case expr.UInt32Kind:
