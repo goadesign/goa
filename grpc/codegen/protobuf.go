@@ -231,17 +231,25 @@ func protoBufGoFullTypeName(att *expr.AttributeExpr, pkg string, s *codegen.Name
 	}
 }
 
+// protoType returns the protocol buffer type name for the given attribute.
+func protoType(att *expr.AttributeExpr, sd *ServiceData) string {
+	if protos := att.Meta["struct:field:proto"]; len(protos) > 0 {
+		return protos[0]
+	}
+	return protoBufMessageDef(att, sd)
+}
+
 // protoBufMessageDef returns the protocol buffer code that defines a message
 // which matches the data structure definition (the part that comes after
 // `message foo`). The message is defined using the proto3 syntax.
 func protoBufMessageDef(att *expr.AttributeExpr, sd *ServiceData) string {
 	switch actual := att.Type.(type) {
 	case expr.Primitive:
-		return protoBufNativeMessageTypeName(att.Type)
+		return protoNativeType(att.Type)
 	case *expr.Array:
-		return "repeated " + protoBufMessageDef(actual.ElemType, sd)
+		return "repeated " + protoType(actual.ElemType, sd)
 	case *expr.Map:
-		return fmt.Sprintf("map<%s, %s>", protoBufMessageDef(actual.KeyType, sd), protoBufMessageDef(actual.ElemType, sd))
+		return fmt.Sprintf("map<%s, %s>", protoType(actual.KeyType, sd), protoType(actual.ElemType, sd))
 	case *expr.Union:
 		def := "\toneof " + codegen.SnakeCase(protoBufify(actual.Name(), false, false)) + " {"
 		for _, nat := range actual.Values {
@@ -249,9 +257,9 @@ func protoBufMessageDef(att *expr.AttributeExpr, sd *ServiceData) string {
 			fnum := rpcTag(nat.Attribute)
 			var typ string
 			if prim := getPrimitive(nat.Attribute); prim != nil {
-				typ = protoBufMessageDef(prim, sd)
+				typ = protoType(prim, sd)
 			} else {
-				typ = protoBufMessageDef(nat.Attribute, sd)
+				typ = protoType(nat.Attribute, sd)
 			}
 			var desc string
 			if d := nat.Attribute.Description; d != "" {
@@ -287,9 +295,9 @@ func protoBufMessageDef(att *expr.AttributeExpr, sd *ServiceData) string {
 				fn = codegen.SnakeCase(protoBufify(nat.Name, false, false))
 				fnum = rpcTag(nat.Attribute)
 				if prim := getPrimitive(nat.Attribute); prim != nil {
-					typ = protoBufMessageDef(prim, sd)
+					typ = protoType(prim, sd)
 				} else {
-					typ = protoBufMessageDef(nat.Attribute, sd)
+					typ = protoType(nat.Attribute, sd)
 				}
 				if nat.Attribute.Description != "" {
 					desc = codegen.Comment(nat.Attribute.Description) + "\n\t"
@@ -372,10 +380,10 @@ func protoBufifyAtt(att *expr.AttributeExpr, name string, upper bool) string {
 	return protoBufify(name, upper, false)
 }
 
-// protoBufNativeMessageTypeName returns the protocol buffer built-in type
+// protoNativeType returns the protocol buffer built-in type
 // corresponding to the given primitive type. It panics if t is not a
 // primitive type.
-func protoBufNativeMessageTypeName(t expr.DataType) string {
+func protoNativeType(t expr.DataType) string {
 	switch t.Kind() {
 	case expr.BooleanKind:
 		return "bool"
