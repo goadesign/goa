@@ -746,10 +746,8 @@ func BuildMethodParamValidatePayload(serviceParamValidateMethodParamValidateA st
 			if err != nil {
 				return nil, fmt.Errorf("invalid value for a, must be INT")
 			}
-			if a != nil {
-				if *a < 1 {
-					err = goa.MergeErrors(err, goa.InvalidRangeError("a", *a, 1, true))
-				}
+			if *a < 1 {
+				err = goa.MergeErrors(err, goa.InvalidRangeError("a", *a, 1, true))
 			}
 			if err != nil {
 				return nil, err
