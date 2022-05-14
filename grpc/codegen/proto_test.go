@@ -42,7 +42,7 @@ func TestProtoFiles(t *testing.T) {
 				t.Errorf("%s: got\n%s\ngot vs. expected:\n%s", c.Name, code, codegen.Diff(t, code, c.Code))
 			}
 			fpath := codegen.CreateTempFile(t, code)
-			if err := protoc(fpath); err != nil {
+			if err := protoc(fpath, nil); err != nil {
 				t.Fatalf("error occurred when compiling proto file %q: %s", fpath, err)
 			}
 		})
@@ -83,7 +83,7 @@ func TestMessageDefSection(t *testing.T) {
 				t.Errorf("%s: got\n%s\ngot vs. expected:\n%s", c.Name, msgCode, codegen.Diff(t, msgCode, c.Code))
 			}
 			fpath := codegen.CreateTempFile(t, code+msgCode)
-			if err := protoc(fpath); err != nil {
+			if err := protoc(fpath, nil); err != nil {
 				t.Fatalf("error occurred when compiling proto file %q: %s", fpath, err)
 			}
 		})

@@ -47,6 +47,7 @@ func protoFile(genpkg string, svc *expr.GRPCServiceExpr) *codegen.File {
 			Data: map[string]interface{}{
 				"ProtoVersion": ProtoVersion,
 				"Pkg":          pkgName(svc, svcName),
+				"Imports":      data.Imports,
 			},
 		},
 		// service definition
@@ -62,10 +63,16 @@ func protoFile(genpkg string, svc *expr.GRPCServiceExpr) *codegen.File {
 		sections = append(sections, &codegen.SectionTemplate{Name: "grpc-message", Source: messageT, Data: m})
 	}
 
+	runProtoc := func(path string) error {
+		includes := svc.ServiceExpr.Meta["protoc:include"]
+		includes = append(includes, expr.Root.API.Meta["protoc:include"]...)
+		return protoc(path, includes)
+	}
+
 	return &codegen.File{
 		Path:             path,
 		SectionTemplates: sections,
-		FinalizeFunc:     protoc,
+		FinalizeFunc:     runProtoc,
 	}
 }
 
@@ -76,11 +83,21 @@ func pkgName(svc *expr.GRPCServiceExpr, svcName string) string {
 	return codegen.SnakeCase(svcName)
 }
 
-func protoc(path string) error {
+func protoc(path string, includes []string) error {
 	dir := filepath.Dir(path)
 	os.MkdirAll(dir, 0777)
 
-	args := []string{"--proto_path", dir, "--go_out", dir, "--go-grpc_out", dir, "--go_opt=paths=source_relative", "--go-grpc_opt=paths=source_relative", path}
+	args := []string{
+		path,
+		"--proto_path", dir,
+		"--go_out", dir,
+		"--go-grpc_out", dir,
+		"--go_opt=paths=source_relative",
+		"--go-grpc_opt=paths=source_relative",
+	}
+	for _, include := range includes {
+		args = append(args, "-I", include)
+	}
 	cmd := exec.Command("protoc", args...)
 	cmd.Dir = filepath.Dir(path)
 
@@ -108,6 +125,9 @@ syntax = {{ printf "%q" .ProtoVersion }};
 package {{ .Pkg }};
 
 option go_package = "/{{ .Pkg }}pb";
+{{- range .Imports }}
+import "{{ . }}";
+{{- end }}
 `
 
 	// input: ServiceData
