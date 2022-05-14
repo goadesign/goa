@@ -388,11 +388,11 @@ func protoNativeType(t expr.DataType) string {
 	case expr.BooleanKind:
 		return "bool"
 	case expr.IntKind:
-		return "int32"
+		return "sint32"
 	case expr.Int32Kind:
-		return "int32"
+		return "sint32"
 	case expr.Int64Kind:
-		return "int64"
+		return "sint64"
 	case expr.UIntKind:
 		return "uint32"
 	case expr.UInt32Kind:
