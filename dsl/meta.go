@@ -76,9 +76,9 @@ import (
 //         })
 //    })
 //
-// - "struct:field:proto" overrides the generated protobuf field type. The second
-// argument is optional and if present indicates an import path for the proto file
-// defining the type.
+// - "struct:field:proto" overrides the generated protobuf field type. If the
+// type is defined in a separate proto file, the last three elements define the
+// proto file import path, Go type name and Go import path respectively.
 //
 //    var Timestamp = Type("Timestamp", func() {
 //        Description("Google timestamp compatible design")
@@ -92,7 +92,7 @@ import (
 //
 //    var MyType = Type("MyType", func() {
 //        Field(1, "created_at", Timestamp, func() {
-//            Meta("struct:field:proto", "google.protobuf.Timestamp", "google/protobuf/timestamp.proto")
+//            Meta("struct:field:proto", "google.protobuf.Timestamp", "google/protobuf/timestamp.proto", "Timestamp", "google.golang.org/protobuf/types/known/timestamppb")
 //        })
 //    })
 //

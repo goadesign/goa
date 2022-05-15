@@ -213,6 +213,14 @@ func protoBufGoTypeName(att *expr.AttributeExpr, s *codegen.NameScope) string {
 // the given package name for the given attribute generated after compiling
 // the proto file (in *.pb.go).
 func protoBufGoFullTypeName(att *expr.AttributeExpr, pkg string, s *codegen.NameScope) string {
+	if proto := att.Meta["struct:field:proto"]; len(proto) > 2 {
+		typ := proto[2]
+		if len(att.Meta["struct:field:proto"]) > 3 {
+			elems := strings.Split(att.Meta["struct:field:proto"][3], "/")
+			typ = elems[len(elems)-1] + "." + typ
+		}
+		return typ
+	}
 	switch actual := att.Type.(type) {
 	case expr.UserType, expr.CompositeExpr, *expr.Union:
 		return protoBufFullMessageName(att, pkg, s)

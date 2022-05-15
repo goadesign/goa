@@ -2,6 +2,7 @@ package codegen
 
 import (
 	"fmt"
+	"strings"
 
 	"goa.design/goa/v3/codegen"
 	"goa.design/goa/v3/codegen/service"
@@ -24,8 +25,8 @@ type (
 		Service *service.Data
 		// PkgName is the name of the generated package in *.pb.go.
 		PkgName string
-		// Imports is the list of proto package imports.
-		Imports []string
+		// ProtoImports is the list of proto package imports.
+		ProtoImports []string
 		// Name is the service name.
 		Name string
 		// Description is the service description.
@@ -427,9 +428,9 @@ func (sd *ServiceData) HasStreamingEndpoint() bool {
 // analyze creates the data necessary to render the code of the given service.
 func (d ServicesData) analyze(gs *expr.GRPCServiceExpr) *ServiceData {
 	var (
-		sd      *ServiceData
-		seen    map[string]struct{}
-		svcVarN string
+		sd             *ServiceData
+		seen, imported map[string]struct{}
+		svcVarN        string
 
 		svc   = service.Services.Get(gs.Name())
 		scope = codegen.NewNameScope()
@@ -451,7 +452,7 @@ func (d ServicesData) analyze(gs *expr.GRPCServiceExpr) *ServiceData {
 			ClientInterfaceInit: fmt.Sprintf("%s.New%sClient", pkg, svcVarN),
 			Scope:               scope,
 		}
-		seen = make(map[string]struct{})
+		seen, imported = make(map[string]struct{}), make(map[string]struct{})
 	}
 	for _, e := range gs.GRPCEndpoints {
 		// convert request and response types to protocol buffer message types
@@ -472,13 +473,12 @@ func (d ServicesData) analyze(gs *expr.GRPCServiceExpr) *ServiceData {
 		collect := func(att *expr.AttributeExpr) *service.UserTypeData {
 			msgs, imports := collectMessages(att, sd, seen)
 			if len(imports) > 0 {
-				imported := make(map[string]struct{})
 				for _, imp := range imports {
 					if _, ok := imported[imp]; ok {
 						continue
 					}
 					imported[imp] = struct{}{}
-					sd.Imports = append(sd.Imports, imp)
+					sd.ProtoImports = append(sd.ProtoImports, imp)
 				}
 			}
 			if len(msgs) > 0 {
@@ -652,7 +652,23 @@ func collectMessages(at *expr.AttributeExpr, sd *ServiceData, seen map[string]st
 		return
 	}
 	if proto := at.Meta["struct:field:proto"]; len(proto) > 1 {
-		imports = append(imports, proto[1])
+		if len(proto) > 1 {
+			imp := proto[1]
+			found := false
+			for _, i := range sd.Service.ProtoImports {
+				if i.Path == imp {
+					found = true
+					break
+				}
+			}
+			if !found {
+				imports = append(imports, imp)
+				if len(proto) > 3 {
+					elems := strings.Split(proto[3], "/")
+					sd.Service.ProtoImports = append(sd.Service.ProtoImports, &codegen.ImportSpec{Path: proto[3], Name: elems[len(elems)-1]})
+				}
+			}
+		}
 	}
 	if expr.IsPrimitive(at.Type) {
 		return
