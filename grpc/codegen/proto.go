@@ -47,7 +47,7 @@ func protoFile(genpkg string, svc *expr.GRPCServiceExpr) *codegen.File {
 			Data: map[string]interface{}{
 				"ProtoVersion": ProtoVersion,
 				"Pkg":          pkgName(svc, svcName),
-				"Imports":      data.Imports,
+				"Imports":      data.ProtoImports,
 			},
 		},
 		// service definition
