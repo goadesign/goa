@@ -202,18 +202,22 @@ func buildOperation(key string, r *expr.RouteExpr, bodies *EndpointBodies, rand 
 
 	// OpenAPI summary
 	var summary string
+	setSummary := func(meta expr.MetaExpr) {
+		for n, mdata := range meta {
+			if (n == "openapi:summary" || n == "swagger:summary") && len(mdata) > 0 {
+				if mdata[0] == "{path}" {
+					summary = r.Path
+				} else {
+					summary = mdata[0]
+				}
+			}
+		}
+	}
 	{
 		summary = fmt.Sprintf("%s %s", e.Name(), svc.Name())
-		for n, mdata := range r.Endpoint.Meta {
-			if (n == "openapi:summary" || n == "swagger:summary") && len(mdata) > 0 {
-				summary = mdata[0]
-			}
-		}
-		for n, mdata := range m.Meta {
-			if (n == "openapi:summary" || n == "swagger:summary") && len(mdata) > 0 {
-				summary = mdata[0]
-			}
-		}
+		setSummary(expr.Root.API.Meta)
+		setSummary(r.Endpoint.Meta)
+		setSummary(m.Meta)
 	}
 
 	// request body
