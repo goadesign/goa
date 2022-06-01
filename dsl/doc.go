@@ -61,5 +61,5 @@ import (
 	_ "golang.org/x/tools/go/ast/astutil"
 	_ "golang.org/x/tools/go/packages"
 	_ "golang.org/x/tools/imports"
-	_ "gopkg.in/yaml.v2"
+	_ "gopkg.in/yaml.v3"
 )

@@ -1,22 +1,22 @@
 openapi: 3.0.3
 info:
-  title: Goa API
-  version: "1.0"
+    title: Goa API
+    version: "1.0"
 servers:
-- url: https://{version}.goa.design
-  variables:
-    version:
-      default: v1
+    - url: https://{version}.goa.design
+      variables:
+        version:
+            default: v1
 paths:
-  /:
-    post:
-      tags:
-      - testService
-      summary: testEndpoint testService
-      operationId: testService#testEndpoint
-      responses:
-        "204":
-          description: No Content response.
+    /:
+        post:
+            tags:
+                - testService
+            summary: testEndpoint testService
+            operationId: testService#testEndpoint
+            responses:
+                "204":
+                    description: No Content response.
 components: {}
 tags:
-- name: testService
+    - name: testService
