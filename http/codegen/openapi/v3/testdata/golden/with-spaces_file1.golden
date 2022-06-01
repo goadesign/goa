@@ -1,79 +1,79 @@
 openapi: 3.0.3
 info:
-  title: Goa API
-  version: "1.0"
+    title: Goa API
+    version: "1.0"
 servers:
-- url: http://localhost:80
-  description: Default server for test api
+    - url: http://localhost:80
+      description: Default server for test api
 paths:
-  /:
-    post:
-      tags:
-      - test service
-      summary: test endpoint test service
-      operationId: test service#test endpoint
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/TestEndpointRequestBody'
-            example:
-              string: ""
-      responses:
-        "200":
-          description: OK response.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/FooBar'
-              example:
-                bar:
-                - string: ""
-                - string: ""
-                foo: ""
-        "404":
-          description: Not Found response.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/FooBar'
-              example:
-                bar:
-                - string: ""
-                - string: ""
-                - string: ""
-                - string: ""
-                foo: ""
+    /:
+        post:
+            tags:
+                - test service
+            summary: test endpoint test service
+            operationId: test service#test endpoint
+            requestBody:
+                required: true
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/TestEndpointRequestBody'
+                        example:
+                            string: ""
+            responses:
+                "200":
+                    description: OK response.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/FooBar'
+                            example:
+                                bar:
+                                    - string: ""
+                                    - string: ""
+                                foo: ""
+                "404":
+                    description: Not Found response.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/FooBar'
+                            example:
+                                bar:
+                                    - string: ""
+                                    - string: ""
+                                    - string: ""
+                                    - string: ""
+                                foo: ""
 components:
-  schemas:
-    FooBar:
-      type: object
-      properties:
-        bar:
-          type: array
-          items:
-            $ref: '#/components/schemas/TestEndpointRequestBody'
-          example:
-          - string: ""
-          - string: ""
-          - string: ""
-          - string: ""
-        foo:
-          type: string
-          example: ""
-      example:
-        bar:
-        - string: ""
-        - string: ""
-        foo: ""
-    TestEndpointRequestBody:
-      type: object
-      properties:
-        string:
-          type: string
-          example: ""
-      example:
-        string: ""
+    schemas:
+        FooBar:
+            type: object
+            properties:
+                bar:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/TestEndpointRequestBody'
+                    example:
+                        - string: ""
+                        - string: ""
+                        - string: ""
+                        - string: ""
+                foo:
+                    type: string
+                    example: ""
+            example:
+                bar:
+                    - string: ""
+                    - string: ""
+                foo: ""
+        TestEndpointRequestBody:
+            type: object
+            properties:
+                string:
+                    type: string
+                    example: ""
+            example:
+                string: ""
 tags:
-- name: test service
+    - name: test service
