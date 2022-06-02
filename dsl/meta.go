@@ -132,8 +132,9 @@ import (
 //
 // - "swagger:summary" DEPRECATED, use "openapi:summary" instead
 //
-// - "openapi:summary" sets the OpenAPI operation summary field. Applicable to
-// methods.
+// - "openapi:summary" sets the OpenAPI operation summary field. The special
+// value "{path}" is replaced with the method HTTP path. Applicable to methods
+// or to API .
 //
 //    var _ = Service("MyService", func() {
 //        Method("MyMethod", func() {
