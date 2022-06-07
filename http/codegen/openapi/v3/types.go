@@ -206,11 +206,8 @@ func (sf *schemafier) schemafy(attr *expr.AttributeExpr, noref ...bool) *openapi
 			if len(noref) == 0 && ok {
 				s.Ref = ref
 			} else {
-				name := t.Name()
-				if n, ok := t.Attribute().Meta["name:original"]; ok {
-					name = n[0]
-				}
-				typeName := sf.uniquify(codegen.Goify(name, true))
+				name := userTypeName(t)
+				typeName := sf.uniquify(name)
 				s.Ref = toRef(typeName)
 				sf.hashes[h] = s.Ref
 				sf.schemas[typeName] = sf.schemafy(t.Attribute(), true)
@@ -407,7 +404,10 @@ func hashAttribute(att *expr.AttributeExpr, h hash.Hash64, seen map[string]*uint
 		*res = orderedHash(*kh, *vh, h)
 
 	case expr.UserTypeKind:
-		*res = *hashAttribute(t.(expr.UserType).Attribute(), h, seen)
+		ut := t.(expr.UserType)
+		kh := *hashAttribute(ut.Attribute(), h, seen)
+		vh := hashString(userTypeName(ut), h)
+		*res = orderedHash(kh, vh, h)
 
 	case expr.ResultTypeKind:
 		// The identifier specified in the design for result types should drive
@@ -442,4 +442,12 @@ func orderedHash(a, b uint64, h hash.Hash64) uint64 {
 		panic(err) // should not fail
 	}
 	return h.Sum64()
+}
+
+func userTypeName(t expr.UserType) string {
+	name := t.Name()
+	if n, ok := t.Attribute().Meta["name:original"]; ok {
+		name = n[0]
+	}
+	return codegen.Goify(name, true)
 }
