@@ -81,7 +81,10 @@ func handleHTTPServer(ctx context.Context, u *url.URL, serviceEndpoints *service
 		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 		defer cancel()
 
-		_ = srv.Shutdown(ctx)
+		err := srv.Shutdown(ctx)
+		if err != nil {
+			logger.Printf("failed to shutdown: %v", err)
+		}
 	}()
 }
 
@@ -177,7 +180,10 @@ func handleHTTPServer(ctx context.Context, u *url.URL, wg *sync.WaitGroup, errc 
 		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 		defer cancel()
 
-		_ = srv.Shutdown(ctx)
+		err := srv.Shutdown(ctx)
+		if err != nil {
+			logger.Printf("failed to shutdown: %v", err)
+		}
 	}()
 }
 
@@ -273,7 +279,10 @@ func handleHTTPServer(ctx context.Context, u *url.URL, serviceEndpoints *service
 		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 		defer cancel()
 
-		_ = srv.Shutdown(ctx)
+		err := srv.Shutdown(ctx)
+		if err != nil {
+			logger.Printf("failed to shutdown: %v", err)
+		}
 	}()
 }
 
@@ -376,7 +385,10 @@ func handleHTTPServer(ctx context.Context, u *url.URL, serviceEndpoints *service
 		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 		defer cancel()
 
-		_ = srv.Shutdown(ctx)
+		err := srv.Shutdown(ctx)
+		if err != nil {
+			logger.Printf("failed to shutdown: %v", err)
+		}
 	}()
 }
 
@@ -480,7 +492,10 @@ func handleHTTPServer(ctx context.Context, u *url.URL, streamingServiceAEndpoint
 		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 		defer cancel()
 
-		_ = srv.Shutdown(ctx)
+		err := srv.Shutdown(ctx)
+		if err != nil {
+			logger.Printf("failed to shutdown: %v", err)
+		}
 	}()
 }
 
