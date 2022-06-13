@@ -809,10 +809,14 @@ func NewMethodBodyUnionUnion(body *MethodBodyUnionRequestBody) *servicebodyunion
 	v := &servicebodyunion.Union{}
 	if body.Values != nil {
 		switch *body.Values.Type {
-		case "servicebodyunion.ValuesString":
-			v.Values = body.Values.Value.(servicebodyunion.ValuesString)
-		case "servicebodyunion.ValuesInt":
-			v.Values = body.Values.Value.(servicebodyunion.ValuesInt)
+		case "String":
+			var val servicebodyunion.ValuesString
+			json.Unmarshal([]byte(*body.Values.Value), &val)
+			v.Values = val
+		case "Int":
+			var val servicebodyunion.ValuesInt
+			json.Unmarshal([]byte(*body.Values.Value), &val)
+			v.Values = val
 		}
 	}
 

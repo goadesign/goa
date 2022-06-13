@@ -297,15 +297,16 @@ func unionToObject(att *AttributeExpr, name, suffix, svcName string) *AttributeE
 		names[i] = nat.Attribute.Type.Name()
 		vals[i] = fmt.Sprintf("- %q", nat.Attribute.Type.Name())
 	}
-	obj := Object([]*NamedAttributeExpr{
-		{"Type", &AttributeExpr{
+	obj := Object([]*NamedAttributeExpr{{
+		"Type", &AttributeExpr{
 			Type:        String,
 			Description: "Union type name, one of:\n" + strings.Join(vals, "\n"),
 			Validation:  &ValidationExpr{Values: names},
-		}},
-		{"Value", &AttributeExpr{
-			Type:        Any,
-			Description: "Union value, type must be one of service package types listed above",
+		}}, {
+		"Value", &AttributeExpr{
+			Type:         String,
+			Description:  "JSON formatted union value",
+			UserExamples: []*ExampleExpr{{Value: `"JSON"`}},
 		}},
 	})
 	uatt := &AttributeExpr{

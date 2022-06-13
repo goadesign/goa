@@ -394,15 +394,15 @@ func transformUnionToObject(source, target *expr.AttributeExpr, sourceVar, targe
 	if (*obj)[0].Attribute.Type != expr.String {
 		return "", fmt.Errorf("union to object transform requires first field to be string")
 	}
-	if (*obj)[1].Attribute.Type != expr.Any {
-		return "", fmt.Errorf("union to object transform requires second field to be any")
+	if (*obj)[1].Attribute.Type != expr.String {
+		return "", fmt.Errorf("union to object transform requires second field to be string")
 	}
 	srcUnion := expr.AsUnion(source.Type)
 	sourceTypeRefs := make([]string, len(srcUnion.Values))
 	sourceTypeNames := make([]string, len(srcUnion.Values))
 	for i, st := range srcUnion.Values {
 		sourceTypeRefs[i] = ta.SourceCtx.Scope.Ref(st.Attribute, ta.SourceCtx.Pkg)
-		sourceTypeNames[i] = ta.SourceCtx.Scope.Name(st.Attribute, "", false, false)
+		sourceTypeNames[i] = st.Name
 	}
 	data := map[string]interface{}{
 		"NewVar":          newVar,
@@ -425,8 +425,8 @@ func transformObjectToUnion(source, target *expr.AttributeExpr, sourceVar, targe
 	if (*obj)[0].Attribute.Type != expr.String {
 		return "", fmt.Errorf("union to object transform requires first field to be string")
 	}
-	if (*obj)[1].Attribute.Type != expr.Any {
-		return "", fmt.Errorf("union to object transform requires second field to be any")
+	if (*obj)[1].Attribute.Type != expr.String {
+		return "", fmt.Errorf("union to object transform requires second field to be string")
 	}
 
 	sourceVarDeref := sourceVar
@@ -434,21 +434,22 @@ func transformObjectToUnion(source, target *expr.AttributeExpr, sourceVar, targe
 		sourceVarDeref = "*" + sourceVar
 	}
 	tgtUnion := expr.AsUnion(target.Type)
-	targetTypeNames := make([]string, len(tgtUnion.Values))
+	unionTypes := make([]string, len(tgtUnion.Values))
 	targetTypeRefs := make([]string, len(tgtUnion.Values))
 	for i, tt := range tgtUnion.Values {
-		targetTypeNames[i] = ta.TargetCtx.Scope.Name(tt.Attribute, ta.TargetCtx.Pkg, ta.TargetCtx.Pointer, ta.TargetCtx.Pointer)
+		unionTypes[i] = tt.Name
 		targetTypeRefs[i] = ta.TargetCtx.Scope.Ref(tt.Attribute, ta.TargetCtx.Pkg)
 	}
 	data := map[string]interface{}{
-		"NewVar":          newVar,
-		"TargetVar":       targetVar,
-		"TypeRef":         ta.TargetCtx.Scope.Ref(target, ta.TargetCtx.Pkg),
-		"SourceVar":       sourceVar,
-		"SourceVarDeref":  sourceVarDeref,
-		"TargetTypeNames": targetTypeNames,
-		"TargetTypeRefs":  targetTypeRefs,
-		"TargetTypeName":  ta.TargetCtx.Scope.Name(target, ta.TargetCtx.Pkg, ta.TargetCtx.Pointer, ta.TargetCtx.UseDefault),
+		"NewVar":         newVar,
+		"TargetVar":      targetVar,
+		"TypeRef":        ta.TargetCtx.Scope.Ref(target, ta.TargetCtx.Pkg),
+		"SourceVar":      sourceVar,
+		"SourceVarDeref": sourceVarDeref,
+		"UnionTypes":     unionTypes,
+		"TargetTypeRefs": targetTypeRefs,
+		"TargetTypeName": ta.TargetCtx.Scope.Name(target, ta.TargetCtx.Pkg, ta.TargetCtx.Pointer, ta.TargetCtx.UseDefault),
+		"Pointer":        ta.SourceCtx.Pointer,
 	}
 	var buf bytes.Buffer
 	if err := transformGoObjectToUnionT.Execute(&buf, data); err != nil {
@@ -667,7 +668,8 @@ for key, val := range {{ .SourceVar }} {
 `
 
 	transformGoUnionToObjectTmpl = `{{ if .NewVar }}var {{ .TargetVar }} {{ .TypeRef }}
-{{ end }}var name string
+{{ end }}js, _ := json.Marshal({{ .SourceVar }})
+var name string
 switch {{ .SourceVar }}.(type) {
 	{{- range $i, $ref := .SourceTypeRefs }}
 	case {{ $ref }}:
@@ -676,15 +678,17 @@ switch {{ .SourceVar }}.(type) {
 }
 {{ .TargetVar }} = &{{ .TargetTypeName }}{
 	Type: name,
-	Value: {{ .SourceVar }},
+	Value: string(js),
 }
 `
 
 	transformGoObjectToUnionTmpl = `{{ if .NewVar }}var {{ .TargetVar }} {{ .TypeRef }}
 {{ end }}switch {{ .SourceVarDeref }}.Type {
-	{{- range $i, $name := .TargetTypeNames }}
+	{{- range $i, $name := .UnionTypes }}
 	case {{ printf "%q" $name }}:
-		{{ $.TargetVar }} = {{ $.SourceVar }}.Value.({{ index $.TargetTypeRefs $i }})
+		var val {{ index $.TargetTypeRefs $i }}
+		json.Unmarshal([]byte({{ if $.Pointer }}*{{ end }}{{ $.SourceVar }}.Value), &val)
+		{{ $.TargetVar }} = val
 	{{- end }}
 }
 `
