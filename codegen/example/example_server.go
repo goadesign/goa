@@ -291,7 +291,7 @@ func main() {
 	{{ end }}
 {{- end }}
 	default:
-		fmt.Fprintf(os.Stderr, "invalid host argument: %q (valid hosts: {{ join .Server.AvailableHosts "|" }})\n", *hostF)
+		logger.Fatalf("invalid host argument: %q (valid hosts: {{ join .Server.AvailableHosts "|" }})\n", *hostF)
 	}
 `
 

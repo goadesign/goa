@@ -110,7 +110,7 @@ const (
 		}
 
 	default:
-		fmt.Fprintf(os.Stderr, "invalid host argument: %q (valid hosts: localhost)\n", *hostF)
+		logger.Fatalf("invalid host argument: %q (valid hosts: localhost)\n", *hostF)
 	}
 
 	// Wait for signal.
@@ -233,7 +233,7 @@ const (
 		}
 
 	default:
-		fmt.Fprintf(os.Stderr, "invalid host argument: %q (valid hosts: localhost)\n", *hostF)
+		logger.Fatalf("invalid host argument: %q (valid hosts: localhost)\n", *hostF)
 	}
 
 	// Wait for signal.
@@ -408,7 +408,7 @@ const (
 		}
 
 	default:
-		fmt.Fprintf(os.Stderr, "invalid host argument: %q (valid hosts: dev)\n", *hostF)
+		logger.Fatalf("invalid host argument: %q (valid hosts: dev)\n", *hostF)
 	}
 
 	// Wait for signal.
@@ -557,7 +557,7 @@ const (
 		}
 
 	default:
-		fmt.Fprintf(os.Stderr, "invalid host argument: %q (valid hosts: dev)\n", *hostF)
+		logger.Fatalf("invalid host argument: %q (valid hosts: dev)\n", *hostF)
 	}
 
 	// Wait for signal.
@@ -636,7 +636,7 @@ const (
 		}
 
 	default:
-		fmt.Fprintf(os.Stderr, "invalid host argument: %q (valid hosts: svc)\n", *hostF)
+		logger.Fatalf("invalid host argument: %q (valid hosts: svc)\n", *hostF)
 	}
 
 	// Wait for signal.
@@ -759,7 +759,7 @@ const (
 		}
 
 	default:
-		fmt.Fprintf(os.Stderr, "invalid host argument: %q (valid hosts: dev)\n", *hostF)
+		logger.Fatalf("invalid host argument: %q (valid hosts: dev)\n", *hostF)
 	}
 
 	// Wait for signal.
@@ -886,7 +886,7 @@ const (
 		}
 
 	default:
-		fmt.Fprintf(os.Stderr, "invalid host argument: %q (valid hosts: dev)\n", *hostF)
+		logger.Fatalf("invalid host argument: %q (valid hosts: dev)\n", *hostF)
 	}
 
 	// Wait for signal.
@@ -1009,7 +1009,7 @@ const (
 		}
 
 	default:
-		fmt.Fprintf(os.Stderr, "invalid host argument: %q (valid hosts: dev|stage)\n", *hostF)
+		logger.Fatalf("invalid host argument: %q (valid hosts: dev|stage)\n", *hostF)
 	}
 
 	// Wait for signal.
@@ -1151,7 +1151,7 @@ const (
 		}
 
 	default:
-		fmt.Fprintf(os.Stderr, "invalid host argument: %q (valid hosts: dev|stage)\n", *hostF)
+		logger.Fatalf("invalid host argument: %q (valid hosts: dev|stage)\n", *hostF)
 	}
 
 	// Wait for signal.
@@ -1273,7 +1273,7 @@ const (
 		}
 
 	default:
-		fmt.Fprintf(os.Stderr, "invalid host argument: %q (valid hosts: svc)\n", *hostF)
+		logger.Fatalf("invalid host argument: %q (valid hosts: svc)\n", *hostF)
 	}
 
 	// Wait for signal.
@@ -1369,7 +1369,7 @@ const (
 		}
 
 	default:
-		fmt.Fprintf(os.Stderr, "invalid host argument: %q (valid hosts: localhost)\n", *hostF)
+		logger.Fatalf("invalid host argument: %q (valid hosts: localhost)\n", *hostF)
 	}
 
 	// Wait for signal.
@@ -1466,7 +1466,7 @@ const (
 		}
 
 	default:
-		fmt.Fprintf(os.Stderr, "invalid host argument: %q (valid hosts: localhost)\n", *hostF)
+		logger.Fatalf("invalid host argument: %q (valid hosts: localhost)\n", *hostF)
 	}
 
 	// Wait for signal.
@@ -1593,7 +1593,7 @@ const (
 		}
 
 	default:
-		fmt.Fprintf(os.Stderr, "invalid host argument: %q (valid hosts: localhost)\n", *hostF)
+		logger.Fatalf("invalid host argument: %q (valid hosts: localhost)\n", *hostF)
 	}
 
 	// Wait for signal.
