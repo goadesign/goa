@@ -85,7 +85,7 @@ func httpRequestBody(a *HTTPEndpointExpr) *AttributeExpr {
 		return unionToObject(payload, name, suffix, a.Service.Name())
 	}
 
-	// 2. If Payload is not an objectthen check whether there are
+	// 2. If Payload is not an object then check whether there are
 	// params, cookies or headers defined and if so return empty type
 	// (payload encoded in request params or headers) otherwise return
 	// payload type (payload encoded in request body).
