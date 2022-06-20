@@ -61,8 +61,7 @@ const (
 			addr := "http://localhost:80"
 			u, err := url.Parse(addr)
 			if err != nil {
-				fmt.Fprintf(os.Stderr, "invalid URL %#v: %s\n", addr, err)
-				os.Exit(1)
+				logger.Fatalf("invalid URL %#v: %s\n", addr, err)
 			}
 			if *secureF {
 				u.Scheme = "https"
@@ -73,8 +72,7 @@ const (
 			if *httpPortF != "" {
 				h, _, err := net.SplitHostPort(u.Host)
 				if err != nil {
-					fmt.Fprintf(os.Stderr, "invalid URL %#v: %s\n", u.Host, err)
-					os.Exit(1)
+					logger.Fatalf("invalid URL %#v: %s\n", u.Host, err)
 				}
 				u.Host = net.JoinHostPort(h, *httpPortF)
 			} else if u.Port() == "" {
@@ -87,8 +85,7 @@ const (
 			addr := "grpc://localhost:8080"
 			u, err := url.Parse(addr)
 			if err != nil {
-				fmt.Fprintf(os.Stderr, "invalid URL %#v: %s\n", addr, err)
-				os.Exit(1)
+				logger.Fatalf("invalid URL %#v: %s\n", addr, err)
 			}
 			if *secureF {
 				u.Scheme = "grpcs"
@@ -99,8 +96,7 @@ const (
 			if *grpcPortF != "" {
 				h, _, err := net.SplitHostPort(u.Host)
 				if err != nil {
-					fmt.Fprintf(os.Stderr, "invalid URL %#v: %s\n", u.Host, err)
-					os.Exit(1)
+					logger.Fatalf("invalid URL %#v: %s\n", u.Host, err)
 				}
 				u.Host = net.JoinHostPort(h, *grpcPortF)
 			} else if u.Port() == "" {
@@ -110,7 +106,7 @@ const (
 		}
 
 	default:
-		fmt.Fprintf(os.Stderr, "invalid host argument: %q (valid hosts: localhost)\n", *hostF)
+		logger.Fatalf("invalid host argument: %q (valid hosts: localhost)\n", *hostF)
 	}
 
 	// Wait for signal.
@@ -184,8 +180,7 @@ const (
 			addr := "http://localhost:80"
 			u, err := url.Parse(addr)
 			if err != nil {
-				fmt.Fprintf(os.Stderr, "invalid URL %#v: %s\n", addr, err)
-				os.Exit(1)
+				logger.Fatalf("invalid URL %#v: %s\n", addr, err)
 			}
 			if *secureF {
 				u.Scheme = "https"
@@ -196,8 +191,7 @@ const (
 			if *httpPortF != "" {
 				h, _, err := net.SplitHostPort(u.Host)
 				if err != nil {
-					fmt.Fprintf(os.Stderr, "invalid URL %#v: %s\n", u.Host, err)
-					os.Exit(1)
+					logger.Fatalf("invalid URL %#v: %s\n", u.Host, err)
 				}
 				u.Host = net.JoinHostPort(h, *httpPortF)
 			} else if u.Port() == "" {
@@ -210,8 +204,7 @@ const (
 			addr := "grpc://localhost:8080"
 			u, err := url.Parse(addr)
 			if err != nil {
-				fmt.Fprintf(os.Stderr, "invalid URL %#v: %s\n", addr, err)
-				os.Exit(1)
+				logger.Fatalf("invalid URL %#v: %s\n", addr, err)
 			}
 			if *secureF {
 				u.Scheme = "grpcs"
@@ -222,8 +215,7 @@ const (
 			if *grpcPortF != "" {
 				h, _, err := net.SplitHostPort(u.Host)
 				if err != nil {
-					fmt.Fprintf(os.Stderr, "invalid URL %#v: %s\n", u.Host, err)
-					os.Exit(1)
+					logger.Fatalf("invalid URL %#v: %s\n", u.Host, err)
 				}
 				u.Host = net.JoinHostPort(h, *grpcPortF)
 			} else if u.Port() == "" {
@@ -233,7 +225,7 @@ const (
 		}
 
 	default:
-		fmt.Fprintf(os.Stderr, "invalid host argument: %q (valid hosts: localhost)\n", *hostF)
+		logger.Fatalf("invalid host argument: %q (valid hosts: localhost)\n", *hostF)
 	}
 
 	// Wait for signal.
@@ -307,8 +299,7 @@ const (
 			addr := "http://example:8090"
 			u, err := url.Parse(addr)
 			if err != nil {
-				fmt.Fprintf(os.Stderr, "invalid URL %#v: %s\n", addr, err)
-				os.Exit(1)
+				logger.Fatalf("invalid URL %#v: %s\n", addr, err)
 			}
 			if *secureF {
 				u.Scheme = "https"
@@ -319,8 +310,7 @@ const (
 			if *httpPortF != "" {
 				h, _, err := net.SplitHostPort(u.Host)
 				if err != nil {
-					fmt.Fprintf(os.Stderr, "invalid URL %#v: %s\n", u.Host, err)
-					os.Exit(1)
+					logger.Fatalf("invalid URL %#v: %s\n", u.Host, err)
 				}
 				u.Host = net.JoinHostPort(h, *httpPortF)
 			} else if u.Port() == "" {
@@ -333,8 +323,7 @@ const (
 			addr := "https://example:80"
 			u, err := url.Parse(addr)
 			if err != nil {
-				fmt.Fprintf(os.Stderr, "invalid URL %#v: %s\n", addr, err)
-				os.Exit(1)
+				logger.Fatalf("invalid URL %#v: %s\n", addr, err)
 			}
 			if *secureF {
 				u.Scheme = "https"
@@ -345,8 +334,7 @@ const (
 			if *httpPortF != "" {
 				h, _, err := net.SplitHostPort(u.Host)
 				if err != nil {
-					fmt.Fprintf(os.Stderr, "invalid URL %#v: %s\n", u.Host, err)
-					os.Exit(1)
+					logger.Fatalf("invalid URL %#v: %s\n", u.Host, err)
 				}
 				u.Host = net.JoinHostPort(h, *httpPortF)
 			} else if u.Port() == "" {
@@ -359,8 +347,7 @@ const (
 			addr := "grpc://example:8080"
 			u, err := url.Parse(addr)
 			if err != nil {
-				fmt.Fprintf(os.Stderr, "invalid URL %#v: %s\n", addr, err)
-				os.Exit(1)
+				logger.Fatalf("invalid URL %#v: %s\n", addr, err)
 			}
 			if *secureF {
 				u.Scheme = "grpcs"
@@ -371,8 +358,7 @@ const (
 			if *grpcPortF != "" {
 				h, _, err := net.SplitHostPort(u.Host)
 				if err != nil {
-					fmt.Fprintf(os.Stderr, "invalid URL %#v: %s\n", u.Host, err)
-					os.Exit(1)
+					logger.Fatalf("invalid URL %#v: %s\n", u.Host, err)
 				}
 				u.Host = net.JoinHostPort(h, *grpcPortF)
 			} else if u.Port() == "" {
@@ -385,8 +371,7 @@ const (
 			addr := "http://[::1]:8080"
 			u, err := url.Parse(addr)
 			if err != nil {
-				fmt.Fprintf(os.Stderr, "invalid URL %#v: %s\n", addr, err)
-				os.Exit(1)
+				logger.Fatalf("invalid URL %#v: %s\n", addr, err)
 			}
 			if *secureF {
 				u.Scheme = "https"
@@ -397,8 +382,7 @@ const (
 			if *httpPortF != "" {
 				h, _, err := net.SplitHostPort(u.Host)
 				if err != nil {
-					fmt.Fprintf(os.Stderr, "invalid URL %#v: %s\n", u.Host, err)
-					os.Exit(1)
+					logger.Fatalf("invalid URL %#v: %s\n", u.Host, err)
 				}
 				u.Host = net.JoinHostPort(h, *httpPortF)
 			} else if u.Port() == "" {
@@ -408,7 +392,7 @@ const (
 		}
 
 	default:
-		fmt.Fprintf(os.Stderr, "invalid host argument: %q (valid hosts: dev)\n", *hostF)
+		logger.Fatalf("invalid host argument: %q (valid hosts: dev)\n", *hostF)
 	}
 
 	// Wait for signal.
@@ -499,8 +483,7 @@ const (
 			addr = strings.Replace(addr, "{bool}", *bool_F, -1)
 			u, err := url.Parse(addr)
 			if err != nil {
-				fmt.Fprintf(os.Stderr, "invalid URL %#v: %s\n", addr, err)
-				os.Exit(1)
+				logger.Fatalf("invalid URL %#v: %s\n", addr, err)
 			}
 			if *secureF {
 				u.Scheme = "https"
@@ -511,8 +494,7 @@ const (
 			if *httpPortF != "" {
 				h, _, err := net.SplitHostPort(u.Host)
 				if err != nil {
-					fmt.Fprintf(os.Stderr, "invalid URL %#v: %s\n", u.Host, err)
-					os.Exit(1)
+					logger.Fatalf("invalid URL %#v: %s\n", u.Host, err)
 				}
 				u.Host = net.JoinHostPort(h, *httpPortF)
 			} else if u.Port() == "" {
@@ -534,8 +516,7 @@ const (
 			addr = strings.Replace(addr, "{bool}", *bool_F, -1)
 			u, err := url.Parse(addr)
 			if err != nil {
-				fmt.Fprintf(os.Stderr, "invalid URL %#v: %s\n", addr, err)
-				os.Exit(1)
+				logger.Fatalf("invalid URL %#v: %s\n", addr, err)
 			}
 			if *secureF {
 				u.Scheme = "https"
@@ -546,8 +527,7 @@ const (
 			if *httpPortF != "" {
 				h, _, err := net.SplitHostPort(u.Host)
 				if err != nil {
-					fmt.Fprintf(os.Stderr, "invalid URL %#v: %s\n", u.Host, err)
-					os.Exit(1)
+					logger.Fatalf("invalid URL %#v: %s\n", u.Host, err)
 				}
 				u.Host = net.JoinHostPort(h, *httpPortF)
 			} else if u.Port() == "" {
@@ -557,7 +537,7 @@ const (
 		}
 
 	default:
-		fmt.Fprintf(os.Stderr, "invalid host argument: %q (valid hosts: dev)\n", *hostF)
+		logger.Fatalf("invalid host argument: %q (valid hosts: dev)\n", *hostF)
 	}
 
 	// Wait for signal.
@@ -613,8 +593,7 @@ const (
 			addr := "http://localhost:80"
 			u, err := url.Parse(addr)
 			if err != nil {
-				fmt.Fprintf(os.Stderr, "invalid URL %#v: %s\n", addr, err)
-				os.Exit(1)
+				logger.Fatalf("invalid URL %#v: %s\n", addr, err)
 			}
 			if *secureF {
 				u.Scheme = "https"
@@ -625,8 +604,7 @@ const (
 			if *httpPortF != "" {
 				h, _, err := net.SplitHostPort(u.Host)
 				if err != nil {
-					fmt.Fprintf(os.Stderr, "invalid URL %#v: %s\n", u.Host, err)
-					os.Exit(1)
+					logger.Fatalf("invalid URL %#v: %s\n", u.Host, err)
 				}
 				u.Host = net.JoinHostPort(h, *httpPortF)
 			} else if u.Port() == "" {
@@ -636,7 +614,7 @@ const (
 		}
 
 	default:
-		fmt.Fprintf(os.Stderr, "invalid host argument: %q (valid hosts: svc)\n", *hostF)
+		logger.Fatalf("invalid host argument: %q (valid hosts: svc)\n", *hostF)
 	}
 
 	// Wait for signal.
@@ -710,8 +688,7 @@ const (
 			addr := "http://example:8090"
 			u, err := url.Parse(addr)
 			if err != nil {
-				fmt.Fprintf(os.Stderr, "invalid URL %#v: %s\n", addr, err)
-				os.Exit(1)
+				logger.Fatalf("invalid URL %#v: %s\n", addr, err)
 			}
 			if *secureF {
 				u.Scheme = "https"
@@ -722,8 +699,7 @@ const (
 			if *httpPortF != "" {
 				h, _, err := net.SplitHostPort(u.Host)
 				if err != nil {
-					fmt.Fprintf(os.Stderr, "invalid URL %#v: %s\n", u.Host, err)
-					os.Exit(1)
+					logger.Fatalf("invalid URL %#v: %s\n", u.Host, err)
 				}
 				u.Host = net.JoinHostPort(h, *httpPortF)
 			} else if u.Port() == "" {
@@ -736,8 +712,7 @@ const (
 			addr := "grpc://localhost:8080"
 			u, err := url.Parse(addr)
 			if err != nil {
-				fmt.Fprintf(os.Stderr, "invalid URL %#v: %s\n", addr, err)
-				os.Exit(1)
+				logger.Fatalf("invalid URL %#v: %s\n", addr, err)
 			}
 			if *secureF {
 				u.Scheme = "grpcs"
@@ -748,8 +723,7 @@ const (
 			if *grpcPortF != "" {
 				h, _, err := net.SplitHostPort(u.Host)
 				if err != nil {
-					fmt.Fprintf(os.Stderr, "invalid URL %#v: %s\n", u.Host, err)
-					os.Exit(1)
+					logger.Fatalf("invalid URL %#v: %s\n", u.Host, err)
 				}
 				u.Host = net.JoinHostPort(h, *grpcPortF)
 			} else if u.Port() == "" {
@@ -759,7 +733,7 @@ const (
 		}
 
 	default:
-		fmt.Fprintf(os.Stderr, "invalid host argument: %q (valid hosts: dev)\n", *hostF)
+		logger.Fatalf("invalid host argument: %q (valid hosts: dev)\n", *hostF)
 	}
 
 	// Wait for signal.
@@ -837,8 +811,7 @@ const (
 			addr := "http://example:8090"
 			u, err := url.Parse(addr)
 			if err != nil {
-				fmt.Fprintf(os.Stderr, "invalid URL %#v: %s\n", addr, err)
-				os.Exit(1)
+				logger.Fatalf("invalid URL %#v: %s\n", addr, err)
 			}
 			if *secureF {
 				u.Scheme = "https"
@@ -849,8 +822,7 @@ const (
 			if *httpPortF != "" {
 				h, _, err := net.SplitHostPort(u.Host)
 				if err != nil {
-					fmt.Fprintf(os.Stderr, "invalid URL %#v: %s\n", u.Host, err)
-					os.Exit(1)
+					logger.Fatalf("invalid URL %#v: %s\n", u.Host, err)
 				}
 				u.Host = net.JoinHostPort(h, *httpPortF)
 			} else if u.Port() == "" {
@@ -863,8 +835,7 @@ const (
 			addr := "grpc://localhost:8080"
 			u, err := url.Parse(addr)
 			if err != nil {
-				fmt.Fprintf(os.Stderr, "invalid URL %#v: %s\n", addr, err)
-				os.Exit(1)
+				logger.Fatalf("invalid URL %#v: %s\n", addr, err)
 			}
 			if *secureF {
 				u.Scheme = "grpcs"
@@ -875,8 +846,7 @@ const (
 			if *grpcPortF != "" {
 				h, _, err := net.SplitHostPort(u.Host)
 				if err != nil {
-					fmt.Fprintf(os.Stderr, "invalid URL %#v: %s\n", u.Host, err)
-					os.Exit(1)
+					logger.Fatalf("invalid URL %#v: %s\n", u.Host, err)
 				}
 				u.Host = net.JoinHostPort(h, *grpcPortF)
 			} else if u.Port() == "" {
@@ -886,7 +856,7 @@ const (
 		}
 
 	default:
-		fmt.Fprintf(os.Stderr, "invalid host argument: %q (valid hosts: dev)\n", *hostF)
+		logger.Fatalf("invalid host argument: %q (valid hosts: dev)\n", *hostF)
 	}
 
 	// Wait for signal.
@@ -959,8 +929,7 @@ const (
 			addr := "http://example:8090"
 			u, err := url.Parse(addr)
 			if err != nil {
-				fmt.Fprintf(os.Stderr, "invalid URL %#v: %s\n", addr, err)
-				os.Exit(1)
+				logger.Fatalf("invalid URL %#v: %s\n", addr, err)
 			}
 			if *secureF {
 				u.Scheme = "https"
@@ -971,8 +940,7 @@ const (
 			if *httpPortF != "" {
 				h, _, err := net.SplitHostPort(u.Host)
 				if err != nil {
-					fmt.Fprintf(os.Stderr, "invalid URL %#v: %s\n", u.Host, err)
-					os.Exit(1)
+					logger.Fatalf("invalid URL %#v: %s\n", u.Host, err)
 				}
 				u.Host = net.JoinHostPort(h, *httpPortF)
 			} else if u.Port() == "" {
@@ -986,8 +954,7 @@ const (
 			addr := "https://example"
 			u, err := url.Parse(addr)
 			if err != nil {
-				fmt.Fprintf(os.Stderr, "invalid URL %#v: %s\n", addr, err)
-				os.Exit(1)
+				logger.Fatalf("invalid URL %#v: %s\n", addr, err)
 			}
 			if *secureF {
 				u.Scheme = "https"
@@ -998,8 +965,7 @@ const (
 			if *httpPortF != "" {
 				h, _, err := net.SplitHostPort(u.Host)
 				if err != nil {
-					fmt.Fprintf(os.Stderr, "invalid URL %#v: %s\n", u.Host, err)
-					os.Exit(1)
+					logger.Fatalf("invalid URL %#v: %s\n", u.Host, err)
 				}
 				u.Host = net.JoinHostPort(h, *httpPortF)
 			} else if u.Port() == "" {
@@ -1009,7 +975,7 @@ const (
 		}
 
 	default:
-		fmt.Fprintf(os.Stderr, "invalid host argument: %q (valid hosts: dev|stage)\n", *hostF)
+		logger.Fatalf("invalid host argument: %q (valid hosts: dev|stage)\n", *hostF)
 	}
 
 	// Wait for signal.
@@ -1093,14 +1059,12 @@ const (
 				}
 			}
 			if !versionSeen {
-				fmt.Fprintf(os.Stderr, "invalid value for URL 'version' variable: %q (valid values: v1,v2)\n", *versionF)
-				os.Exit(1)
+				logger.Fatalf("invalid value for URL 'version' variable: %q (valid values: v1,v2)\n", *versionF)
 			}
 			addr = strings.Replace(addr, "{version}", *versionF, -1)
 			u, err := url.Parse(addr)
 			if err != nil {
-				fmt.Fprintf(os.Stderr, "invalid URL %#v: %s\n", addr, err)
-				os.Exit(1)
+				logger.Fatalf("invalid URL %#v: %s\n", addr, err)
 			}
 			if *secureF {
 				u.Scheme = "https"
@@ -1111,8 +1075,7 @@ const (
 			if *httpPortF != "" {
 				h, _, err := net.SplitHostPort(u.Host)
 				if err != nil {
-					fmt.Fprintf(os.Stderr, "invalid URL %#v: %s\n", u.Host, err)
-					os.Exit(1)
+					logger.Fatalf("invalid URL %#v: %s\n", u.Host, err)
 				}
 				u.Host = net.JoinHostPort(h, *httpPortF)
 			} else if u.Port() == "" {
@@ -1128,8 +1091,7 @@ const (
 			addr = strings.Replace(addr, "{port}", *portF, -1)
 			u, err := url.Parse(addr)
 			if err != nil {
-				fmt.Fprintf(os.Stderr, "invalid URL %#v: %s\n", addr, err)
-				os.Exit(1)
+				logger.Fatalf("invalid URL %#v: %s\n", addr, err)
 			}
 			if *secureF {
 				u.Scheme = "https"
@@ -1140,8 +1102,7 @@ const (
 			if *httpPortF != "" {
 				h, _, err := net.SplitHostPort(u.Host)
 				if err != nil {
-					fmt.Fprintf(os.Stderr, "invalid URL %#v: %s\n", u.Host, err)
-					os.Exit(1)
+					logger.Fatalf("invalid URL %#v: %s\n", u.Host, err)
 				}
 				u.Host = net.JoinHostPort(h, *httpPortF)
 			} else if u.Port() == "" {
@@ -1151,7 +1112,7 @@ const (
 		}
 
 	default:
-		fmt.Fprintf(os.Stderr, "invalid host argument: %q (valid hosts: dev|stage)\n", *hostF)
+		logger.Fatalf("invalid host argument: %q (valid hosts: dev|stage)\n", *hostF)
 	}
 
 	// Wait for signal.
@@ -1224,8 +1185,7 @@ const (
 			addr := "http://localhost:80"
 			u, err := url.Parse(addr)
 			if err != nil {
-				fmt.Fprintf(os.Stderr, "invalid URL %#v: %s\n", addr, err)
-				os.Exit(1)
+				logger.Fatalf("invalid URL %#v: %s\n", addr, err)
 			}
 			if *secureF {
 				u.Scheme = "https"
@@ -1236,8 +1196,7 @@ const (
 			if *httpPortF != "" {
 				h, _, err := net.SplitHostPort(u.Host)
 				if err != nil {
-					fmt.Fprintf(os.Stderr, "invalid URL %#v: %s\n", u.Host, err)
-					os.Exit(1)
+					logger.Fatalf("invalid URL %#v: %s\n", u.Host, err)
 				}
 				u.Host = net.JoinHostPort(h, *httpPortF)
 			} else if u.Port() == "" {
@@ -1250,8 +1209,7 @@ const (
 			addr := "grpc://localhost:8080"
 			u, err := url.Parse(addr)
 			if err != nil {
-				fmt.Fprintf(os.Stderr, "invalid URL %#v: %s\n", addr, err)
-				os.Exit(1)
+				logger.Fatalf("invalid URL %#v: %s\n", addr, err)
 			}
 			if *secureF {
 				u.Scheme = "grpcs"
@@ -1262,8 +1220,7 @@ const (
 			if *grpcPortF != "" {
 				h, _, err := net.SplitHostPort(u.Host)
 				if err != nil {
-					fmt.Fprintf(os.Stderr, "invalid URL %#v: %s\n", u.Host, err)
-					os.Exit(1)
+					logger.Fatalf("invalid URL %#v: %s\n", u.Host, err)
 				}
 				u.Host = net.JoinHostPort(h, *grpcPortF)
 			} else if u.Port() == "" {
@@ -1273,7 +1230,7 @@ const (
 		}
 
 	default:
-		fmt.Fprintf(os.Stderr, "invalid host argument: %q (valid hosts: svc)\n", *hostF)
+		logger.Fatalf("invalid host argument: %q (valid hosts: svc)\n", *hostF)
 	}
 
 	// Wait for signal.
@@ -1346,8 +1303,7 @@ const (
 			addr := "http://localhost:80"
 			u, err := url.Parse(addr)
 			if err != nil {
-				fmt.Fprintf(os.Stderr, "invalid URL %#v: %s\n", addr, err)
-				os.Exit(1)
+				logger.Fatalf("invalid URL %#v: %s\n", addr, err)
 			}
 			if *secureF {
 				u.Scheme = "https"
@@ -1358,8 +1314,7 @@ const (
 			if *httpPortF != "" {
 				h, _, err := net.SplitHostPort(u.Host)
 				if err != nil {
-					fmt.Fprintf(os.Stderr, "invalid URL %#v: %s\n", u.Host, err)
-					os.Exit(1)
+					logger.Fatalf("invalid URL %#v: %s\n", u.Host, err)
 				}
 				u.Host = net.JoinHostPort(h, *httpPortF)
 			} else if u.Port() == "" {
@@ -1369,7 +1324,7 @@ const (
 		}
 
 	default:
-		fmt.Fprintf(os.Stderr, "invalid host argument: %q (valid hosts: localhost)\n", *hostF)
+		logger.Fatalf("invalid host argument: %q (valid hosts: localhost)\n", *hostF)
 	}
 
 	// Wait for signal.
@@ -1443,8 +1398,7 @@ const (
 			addr := "grpc://localhost:8080"
 			u, err := url.Parse(addr)
 			if err != nil {
-				fmt.Fprintf(os.Stderr, "invalid URL %#v: %s\n", addr, err)
-				os.Exit(1)
+				logger.Fatalf("invalid URL %#v: %s\n", addr, err)
 			}
 			if *secureF {
 				u.Scheme = "grpcs"
@@ -1455,8 +1409,7 @@ const (
 			if *grpcPortF != "" {
 				h, _, err := net.SplitHostPort(u.Host)
 				if err != nil {
-					fmt.Fprintf(os.Stderr, "invalid URL %#v: %s\n", u.Host, err)
-					os.Exit(1)
+					logger.Fatalf("invalid URL %#v: %s\n", u.Host, err)
 				}
 				u.Host = net.JoinHostPort(h, *grpcPortF)
 			} else if u.Port() == "" {
@@ -1466,7 +1419,7 @@ const (
 		}
 
 	default:
-		fmt.Fprintf(os.Stderr, "invalid host argument: %q (valid hosts: localhost)\n", *hostF)
+		logger.Fatalf("invalid host argument: %q (valid hosts: localhost)\n", *hostF)
 	}
 
 	// Wait for signal.
@@ -1544,8 +1497,7 @@ const (
 			addr := "http://localhost:80"
 			u, err := url.Parse(addr)
 			if err != nil {
-				fmt.Fprintf(os.Stderr, "invalid URL %#v: %s\n", addr, err)
-				os.Exit(1)
+				logger.Fatalf("invalid URL %#v: %s\n", addr, err)
 			}
 			if *secureF {
 				u.Scheme = "https"
@@ -1556,8 +1508,7 @@ const (
 			if *httpPortF != "" {
 				h, _, err := net.SplitHostPort(u.Host)
 				if err != nil {
-					fmt.Fprintf(os.Stderr, "invalid URL %#v: %s\n", u.Host, err)
-					os.Exit(1)
+					logger.Fatalf("invalid URL %#v: %s\n", u.Host, err)
 				}
 				u.Host = net.JoinHostPort(h, *httpPortF)
 			} else if u.Port() == "" {
@@ -1570,8 +1521,7 @@ const (
 			addr := "grpc://localhost:8080"
 			u, err := url.Parse(addr)
 			if err != nil {
-				fmt.Fprintf(os.Stderr, "invalid URL %#v: %s\n", addr, err)
-				os.Exit(1)
+				logger.Fatalf("invalid URL %#v: %s\n", addr, err)
 			}
 			if *secureF {
 				u.Scheme = "grpcs"
@@ -1582,8 +1532,7 @@ const (
 			if *grpcPortF != "" {
 				h, _, err := net.SplitHostPort(u.Host)
 				if err != nil {
-					fmt.Fprintf(os.Stderr, "invalid URL %#v: %s\n", u.Host, err)
-					os.Exit(1)
+					logger.Fatalf("invalid URL %#v: %s\n", u.Host, err)
 				}
 				u.Host = net.JoinHostPort(h, *grpcPortF)
 			} else if u.Port() == "" {
@@ -1593,7 +1542,7 @@ const (
 		}
 
 	default:
-		fmt.Fprintf(os.Stderr, "invalid host argument: %q (valid hosts: localhost)\n", *hostF)
+		logger.Fatalf("invalid host argument: %q (valid hosts: localhost)\n", *hostF)
 	}
 
 	// Wait for signal.
