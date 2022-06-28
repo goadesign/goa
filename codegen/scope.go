@@ -145,10 +145,6 @@ func (s *NameScope) goTypeDef(att *expr.AttributeExpr, ptr, useDefault bool, pkg
 			{
 				fn = GoifyAtt(at, name, true)
 				tdef = s.goTypeDef(at, ptr, useDefault, pkg)
-				// if name == "Foo" {
-				// 	tdef += "XXX"
-				// 	// panic(at)
-				// }
 				if expr.IsObject(at.Type) ||
 					att.IsPrimitivePointer(name, useDefault) ||
 					(ptr && expr.IsPrimitive(at.Type) && at.Type.Kind() != expr.AnyKind && at.Type.Kind() != expr.BytesKind) {
