@@ -33,7 +33,10 @@ func TestGoTypeDef(t *testing.T) {
 		stringMetaType         = expr.MetaExpr{"struct:field:type": []string{"string"}}
 		jsonWithImportMetaType = expr.MetaExpr{"struct:field:type": []string{"json.RawMessage", "encoding/json"}}
 		jsonWithRenameMetaType = expr.MetaExpr{"struct:field:type": []string{"jason.RawMessage", "encoding/json", "jason"}}
-		mixedObj               = &expr.AttributeExpr{
+		structPkgPathMetaType  = expr.MetaExpr{"struct:pkg:path": []string{"types"}}
+		utPkgPathMeta          = &expr.UserTypeExpr{AttributeExpr: &expr.AttributeExpr{Type: expr.Boolean, Meta: structPkgPathMetaType}, TypeName: "UserType"}
+
+		mixedObj = &expr.AttributeExpr{
 			Type: &expr.Object{
 				{"IntField", &expr.AttributeExpr{Type: expr.Int}},
 				{"ArrayField", simpleArray},
@@ -41,6 +44,7 @@ func TestGoTypeDef(t *testing.T) {
 				{"UserTypeField", userType},
 				{"MetaTypeField", &expr.AttributeExpr{Type: expr.Int, Meta: jsonWithImportMetaType}},
 				{"QualifiedMetaTypeField", &expr.AttributeExpr{Type: expr.Int, Meta: jsonWithRenameMetaType}},
+				{"StructPkgPath", &expr.AttributeExpr{Type: utPkgPathMeta}},
 			},
 			Validation: &expr.ValidationExpr{Required: []string{"IntField", "ArrayField", "MapField", "UserTypeField", "MetaTypeField", "QualifiedMetaTypeField"}}}
 	)
@@ -71,8 +75,8 @@ func TestGoTypeDef(t *testing.T) {
 		"Object":          {requiredObj, false, true, "struct {\n\tIntField int\n\tStringField string\n}"},
 		"ObjDefault":      {defaultObj, false, true, "struct {\n\tIntField int\n\tStringField string\n}"},
 		"ObjDefaultNoDef": {defaultObj, false, false, "struct {\n\tIntField *int\n\tStringField *string\n}"},
-		"ObjMixed":        {mixedObj, false, true, "struct {\n\tIntField int\n\tArrayField []bool\n\tMapField map[int]string\n\tUserTypeField UserType\n\tMetaTypeField json.RawMessage\n\tQualifiedMetaTypeField jason.RawMessage\n}"},
-		"ObjMixedPointer": {mixedObj, true, true, "struct {\n\tIntField *int\n\tArrayField []bool\n\tMapField map[int]string\n\tUserTypeField *UserType\n\tMetaTypeField *json.RawMessage\n\tQualifiedMetaTypeField *jason.RawMessage\n}"},
+		"ObjMixed":        {mixedObj, false, true, "struct {\n\tIntField int\n\tArrayField []bool\n\tMapField map[int]string\n\tUserTypeField UserType\n\tMetaTypeField json.RawMessage\n\tQualifiedMetaTypeField jason.RawMessage\n\tStructPkgPath *types.UserType\n}"},
+		"ObjMixedPointer": {mixedObj, true, true, "struct {\n\tIntField *int\n\tArrayField []bool\n\tMapField map[int]string\n\tUserTypeField *UserType\n\tMetaTypeField *json.RawMessage\n\tQualifiedMetaTypeField *jason.RawMessage\n\tStructPkgPath *types.UserType\n}"},
 
 		"MetaTypeSameAsDesign":                      {&expr.AttributeExpr{Type: expr.String, Meta: stringMetaType}, false, true, "string"},
 		"MetaTypeOverrideDesign":                    {&expr.AttributeExpr{Type: expr.String, Meta: jsonWithImportMetaType}, false, true, "json.RawMessage"},
