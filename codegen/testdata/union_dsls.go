@@ -41,7 +41,7 @@ var TestUnionDSL = func() {
 
 		_ = Type("UnionUserType", func() {
 			Attribute("Type", String)
-			Attribute("Value", Any)
+			Attribute("Value", String)
 			Required("Type", "Value")
 		})
 	)

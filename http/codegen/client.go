@@ -98,6 +98,7 @@ func clientEncodeDecodeFile(genpkg string, svc *expr.HTTPServiceExpr) *codegen.F
 	imports := []*codegen.ImportSpec{
 		{Path: "bytes"},
 		{Path: "context"},
+		{Path: "encoding/json"},
 		{Path: "fmt"},
 		{Path: "io"},
 		{Path: "io/ioutil"},

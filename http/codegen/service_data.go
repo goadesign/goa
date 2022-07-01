@@ -982,9 +982,10 @@ func makeHTTPType(att *expr.AttributeExpr, seen ...map[string]struct{}) {
 				},
 			}},
 			{Name: "Value", Attribute: &expr.AttributeExpr{
-				Type:        expr.Any,
-				Description: "Union value, type must be one of service package types listed above",
-				Bases:       bases, // For OpenAPI generation
+				Type:         expr.String,
+				Description:  "JSON formatted union value",
+				UserExamples: []*expr.ExampleExpr{{Value: `"JSON"`}},
+				Bases:        bases, // For OpenAPI generation
 				Meta: expr.MetaExpr{
 					"struct:tag:form": {"Value"},
 					"struct:tag:json": {"Value"},
