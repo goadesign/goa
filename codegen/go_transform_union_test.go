@@ -97,36 +97,39 @@ const unionToUnionCode = `func transform() {
 
 const unionStringToUserTypeCode = `func transform() {
 	var target *UnionUserType
+	js, _ := json.Marshal(source)
 	var name string
 	switch source.(type) {
 	case UnionStringString:
-		name = "UnionStringString"
+		name = "String"
 	}
 	target = &UnionUserType{
 		Type:  name,
-		Value: source,
+		Value: string(js),
 	}
 }
 `
 
 const unionStringIntToUserTypeCode = `func transform() {
 	var target *UnionUserType
+	js, _ := json.Marshal(source)
 	var name string
 	switch source.(type) {
 	case UnionStringIntString:
-		name = "UnionStringIntString"
+		name = "String"
 	case UnionStringIntInt:
-		name = "UnionStringIntInt"
+		name = "Int"
 	}
 	target = &UnionUserType{
 		Type:  name,
-		Value: source,
+		Value: string(js),
 	}
 }
 `
 
 const unionSomeTypeToUserTypeCode = `func transform() {
 	var target *UnionUserType
+	js, _ := json.Marshal(source)
 	var name string
 	switch source.(type) {
 	case *SomeType:
@@ -134,7 +137,7 @@ const unionSomeTypeToUserTypeCode = `func transform() {
 	}
 	target = &UnionUserType{
 		Type:  name,
-		Value: source,
+		Value: string(js),
 	}
 }
 `
@@ -142,8 +145,10 @@ const unionSomeTypeToUserTypeCode = `func transform() {
 const userTypeToUnionStringCode = `func transform() {
 	var target *UnionString
 	switch source.Type {
-	case "UnionStringString":
-		target = source.Value.(UnionStringString)
+	case "String":
+		var val UnionStringString
+		json.Unmarshal([]byte(source.Value), &val)
+		target = val
 	}
 }
 `
@@ -151,10 +156,14 @@ const userTypeToUnionStringCode = `func transform() {
 const userTypeToUnionStringIntCode = `func transform() {
 	var target *UnionStringInt
 	switch source.Type {
-	case "UnionStringIntString":
-		target = source.Value.(UnionStringIntString)
-	case "UnionStringIntInt":
-		target = source.Value.(UnionStringIntInt)
+	case "String":
+		var val UnionStringIntString
+		json.Unmarshal([]byte(source.Value), &val)
+		target = val
+	case "Int":
+		var val UnionStringIntInt
+		json.Unmarshal([]byte(source.Value), &val)
+		target = val
 	}
 }
 `
@@ -163,7 +172,9 @@ const userTypeToUnionSomeTypeCode = `func transform() {
 	var target *UnionSomeType
 	switch source.Type {
 	case "SomeType":
-		target = source.Value.(*SomeType)
+		var val *SomeType
+		json.Unmarshal([]byte(source.Value), &val)
+		target = val
 	}
 }
 `
