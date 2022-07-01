@@ -147,23 +147,25 @@ func safelyGetMetaTypeImports(att *expr.AttributeExpr, seen map[string]struct{})
 			}
 		}
 	case *expr.Array:
-		_, im := GetMetaType(t.ElemType)
-		if im != nil {
-			uniqueImports[*im] = struct{}{}
+		for _, im := range safelyGetMetaTypeImports(t.ElemType, seen) {
+			if im != nil {
+				uniqueImports[*im] = struct{}{}
+			}
 		}
 	case *expr.Map:
-		_, im := GetMetaType(t.ElemType)
-		if im != nil {
-			uniqueImports[*im] = struct{}{}
+		for _, im := range safelyGetMetaTypeImports(t.ElemType, seen) {
+			if im != nil {
+				uniqueImports[*im] = struct{}{}
+			}
 		}
-		_, im = GetMetaType(t.KeyType)
-		if im != nil {
-			uniqueImports[*im] = struct{}{}
+		for _, im := range safelyGetMetaTypeImports(t.KeyType, seen) {
+			if im != nil {
+				uniqueImports[*im] = struct{}{}
+			}
 		}
 	case *expr.Object:
-		for _, key := range *t {
-			if key != nil {
-				_, im := GetMetaType(key.Attribute)
+		for _, na := range *t {
+			for _, im := range safelyGetMetaTypeImports(na.Attribute, seen) {
 				if im != nil {
 					uniqueImports[*im] = struct{}{}
 				}
@@ -175,7 +177,7 @@ func safelyGetMetaTypeImports(att *expr.AttributeExpr, seen map[string]struct{})
 		uniqueImports[*im] = struct{}{}
 	}
 	for imp := range uniqueImports {
-		// Copy loop variable into body so next iteration doesnt overwrite its address https://stackoverflow.com/questions/27610039/golang-appending-leaves-only-last-element
+		// Copy loop variable into body so next iteration doesn't overwrite its address https://stackoverflow.com/questions/27610039/golang-appending-leaves-only-last-element
 		copy := imp
 		imports = append(imports, &copy)
 	}

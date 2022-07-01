@@ -312,7 +312,10 @@ func handleHTTPServer(ctx context.Context, u *url.URL{{ range $.Services }}{{ if
 		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 		defer cancel()
 
-		_ = srv.Shutdown(ctx)
+		err := srv.Shutdown(ctx)
+		if err != nil {
+			logger.Printf("failed to shutdown: %v", err)
+		}
 	}()
 }
 `
