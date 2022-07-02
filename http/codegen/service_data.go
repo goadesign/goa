@@ -965,9 +965,8 @@ func makeHTTPType(att *expr.AttributeExpr, seen ...map[string]struct{}) {
 		vals := make([]string, len(values))
 		bases := make([]expr.DataType, len(values))
 		for i, nat := range values {
-			n := nat.Attribute.Type.Name()
-			names[i] = n
-			vals[i] = fmt.Sprintf("- %q", n)
+			names[i] = nat.Name
+			vals[i] = fmt.Sprintf("- %q", nat.Name)
 			bases[i] = nat.Attribute.Type
 		}
 		obj := expr.Object([]*expr.NamedAttributeExpr{
