@@ -58,7 +58,7 @@ depend:
 	@cd $(PROTOC); \
 	curl -O -L https://github.com/protocolbuffers/protobuf/releases/download/v$(PROTOC_VERSION)/$(PROTOC).zip; \
 	$(UNZIP) $(PROTOC).zip
-	@sudo cp $(PROTOC_EXEC) $(GOPATH)/bin && \
+	@cp $(PROTOC_EXEC) $(GOPATH)/bin && \
 		rm -rf $(PROTOC) && \
 		echo "`protoc --version`"
 
