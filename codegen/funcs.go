@@ -150,9 +150,9 @@ func CamelCase(name string, firstUpper bool, acronym bool) string {
 			case firstUpper && acronym:
 				// u is already in upper case. Nothing to do here.
 			case firstUpper && !acronym:
-				u = strings.Title(strings.ToLower(u))
+				u = expr.Title(strings.ToLower(u))
 			case w > 0 && !acronym:
-				u = strings.Title(strings.ToLower(u))
+				u = expr.Title(strings.ToLower(u))
 			case w == 0:
 				u = strings.ToLower(u)
 			}

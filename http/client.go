@@ -212,7 +212,6 @@ func ErrRequestError(svc, m string, err error) error {
 	temporary := false
 	timeout := false
 	if nerr, ok := err.(net.Error); ok {
-		temporary = nerr.Temporary()
 		timeout = nerr.Timeout()
 	}
 	return &ClientError{Name: "request_error", Message: err.Error(), Service: svc, Method: m,
