@@ -368,12 +368,12 @@ func concat(strs ...string) string {
 		}
 	case !isLower(name) && hasUnderscore(name):
 		for i := 1; i < len(strs); i++ {
-			name += "_" + strings.Title(strs[i])
+			name += "_" + Title(strs[i])
 		}
 	default:
-		name = strings.Title(name)
+		name = Title(name)
 		for i := 1; i < len(strs); i++ {
-			name += strings.Title(strs[i])
+			name += Title(strs[i])
 		}
 	}
 	return name
