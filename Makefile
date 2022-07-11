@@ -23,16 +23,16 @@ GOPATH=$(shell go env GOPATH)
 # Only list test and build dependencies
 # Standard dependencies are installed via go get
 DEPEND=\
-	google.golang.org/protobuf/cmd/protoc-gen-go@v1.27.1 \
-	google.golang.org/grpc/cmd/protoc-gen-go-grpc@v1.1 \
-	honnef.co/go/tools/cmd/staticcheck@v0.2.2
+	google.golang.org/protobuf/cmd/protoc-gen-go@v1.28.0 \
+	google.golang.org/grpc/cmd/protoc-gen-go-grpc@v1.2.0 \
+	honnef.co/go/tools/cmd/staticcheck@v0.3.2
 
 all: lint test
 
 travis: depend all #test-examples test-plugins
 
 # Install protoc
-PROTOC_VERSION=3.19.4
+PROTOC_VERSION=21.2
 UNZIP=unzip
 ifeq ($(GOOS),linux)
 	PROTOC=protoc-$(PROTOC_VERSION)-linux-x86_64
@@ -56,10 +56,10 @@ depend:
 	@echo INSTALLING PROTOC...
 	@mkdir $(PROTOC)
 	@cd $(PROTOC); \
-	curl -O -L https://github.com/google/protobuf/releases/download/v$(PROTOC_VERSION)/$(PROTOC).zip; \
+	curl -O -L https://github.com/protocolbuffers/protobuf/releases/download/v$(PROTOC_VERSION)/$(PROTOC).zip; \
 	$(UNZIP) $(PROTOC).zip
 	@cp $(PROTOC_EXEC) $(GOPATH)/bin && \
-		rm -r $(PROTOC) && \
+		rm -rf $(PROTOC) && \
 		echo "`protoc --version`"
 
 lint:

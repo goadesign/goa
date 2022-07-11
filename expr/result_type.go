@@ -270,7 +270,7 @@ func projectSingle(m *ResultTypeExpr, view string, seen map[string]*AttributeExp
 	// Compute type name
 	typeName := m.TypeName
 	if view != "default" {
-		typeName += strings.Title(view)
+		typeName += Title(view)
 	}
 
 	var ut *UserTypeExpr
