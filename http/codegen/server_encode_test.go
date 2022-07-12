@@ -103,3 +103,34 @@ func TestEncode(t *testing.T) {
 		})
 	}
 }
+
+func TestEncodeMarshallingAndUnmarshalling(t *testing.T) {
+	cases := []struct {
+		Name string
+		DSL  func()
+		Code []string
+	}{
+		{"result-with-embedded-custom-pkg-type", testdata.ResultWithEmbeddedCustomPkgTypeDSL, []string{testdata.ResultWithEmbeddedCustomPkgTypeUnmarshalCode, testdata.ResultWithEmbeddedCustomPkgTypeMarshalCode}},
+	}
+	const totalSectionsOffset = 3
+	for _, c := range cases {
+		t.Run(c.Name, func(t *testing.T) {
+			RunHTTPDSL(t, c.DSL)
+			fs := ServerFiles("", expr.Root)
+			if len(fs) != 2 {
+				t.Fatalf("got %d files, expected two", len(fs))
+			}
+			sections := fs[1].SectionTemplates
+			totalSectionsExpected := totalSectionsOffset + len(c.Code)
+			if len(sections) != totalSectionsExpected {
+				t.Fatalf("got %d sections, expected %d", len(sections), totalSectionsExpected)
+			}
+			for i := 0; i < len(c.Code); i++ {
+				code := codegen.SectionCode(t, sections[totalSectionsOffset+i])
+				if code != c.Code[i] {
+					t.Errorf("%s %d invalid code, got:\n%s\ngot vs. expected:\n%s", sections[totalSectionsOffset+i].Name, i, code, codegen.Diff(t, code, c.Code[i]))
+				}
+			}
+		})
+	}
+}

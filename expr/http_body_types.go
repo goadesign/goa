@@ -100,6 +100,7 @@ func httpRequestBody(a *HTTPEndpointExpr) *AttributeExpr {
 
 	// 3. Remove header, param and cookies attributes
 	body := NewMappedAttributeExpr(payload)
+	removePkgPath(body.Type)
 	extendBodyAttribute(body)
 	removeAttributes(body, headers)
 	removeAttributes(body, cookies)
@@ -228,6 +229,7 @@ func buildHTTPResponseBody(name string, attr *AttributeExpr, resp *HTTPResponseE
 		return &AttributeExpr{Type: Empty}
 	}
 	body := NewMappedAttributeExpr(attr)
+	removePkgPath(body.Type)
 	extendBodyAttribute(body)
 
 	// 4. Remove header and cookie attributes
@@ -394,32 +396,20 @@ func renameType(att *AttributeExpr, name, suffix string) {
 	}
 }
 
-func appendSuffix(dt DataType, suffix string, seen ...map[string]struct{}) {
-	var s map[string]struct{}
-	if len(seen) > 0 {
-		s = seen[0]
-	} else {
-		s = make(map[string]struct{})
-		seen = append(seen, s)
-	}
-	switch actual := dt.(type) {
-	case UserType:
-		if _, ok := s[actual.ID()]; ok {
-			return
-		}
-		actual.Rename(actual.Name() + suffix)
-		s[actual.ID()] = struct{}{}
-		appendSuffix(actual.Attribute().Type, suffix, seen...)
-	case *Object:
-		for _, nat := range *actual {
-			appendSuffix(nat.Attribute.Type, suffix, seen...)
-		}
-	case *Array:
-		appendSuffix(actual.ElemType.Type, suffix, seen...)
-	case *Map:
-		appendSuffix(actual.KeyType.Type, suffix, seen...)
-		appendSuffix(actual.ElemType.Type, suffix, seen...)
-	}
+// removePkgPath traverses the given data type and removes the "struct:pkg:path"
+// metadata from all the user type attributes.
+func removePkgPath(dt DataType) {
+	walk(dt, func(ut UserType) {
+		delete(ut.Attribute().Meta, "struct:pkg:path")
+	})
+}
+
+// appendSuffix recursively traverses the given data type and appends the given
+// suffix to all the user type names.
+func appendSuffix(dt DataType, suffix string) {
+	walk(dt, func(ut UserType) {
+		ut.Rename(ut.Name() + suffix)
+	})
 }
 
 func removeAttributes(attr, sub *MappedAttributeExpr) {
@@ -470,4 +460,31 @@ func extendBodyAttribute(body *MappedAttributeExpr) {
 	// unset bases so that they don't get added back to the body type during
 	// finalize
 	att.Bases = nil
+}
+
+// walk traverses the given data type and invokes the given function for each
+// user type it finds including dt itself.
+func walk(dt DataType, do func(UserType)) {
+	walkrec(dt, do, make(map[string]struct{}))
+}
+
+func walkrec(dt DataType, do func(UserType), seen map[string]struct{}) {
+	switch dt := dt.(type) {
+	case UserType:
+		if _, ok := seen[dt.ID()]; ok {
+			return
+		}
+		do(dt)
+		seen[dt.ID()] = struct{}{}
+		walkrec(dt.Attribute().Type, do, seen)
+	case *Object:
+		for _, nat := range *dt {
+			walkrec(nat.Attribute.Type, do, seen)
+		}
+	case *Array:
+		walkrec(dt.ElemType.Type, do, seen)
+	case *Map:
+		walkrec(dt.KeyType.Type, do, seen)
+		walkrec(dt.ElemType.Type, do, seen)
+	}
 }

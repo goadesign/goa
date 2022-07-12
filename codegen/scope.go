@@ -96,7 +96,13 @@ func (s *NameScope) Name(name string) string {
 // useDefault if true indicates that the attribute must not be a pointer
 // if it has a default value.
 func (s *NameScope) GoTypeDef(att *expr.AttributeExpr, ptr, useDefault bool) string {
-	return s.goTypeDef(att, ptr, useDefault, "")
+	pkg := ""
+	if loc := UserTypeLocation(att.Type); loc != nil {
+		pkg = loc.PackageName()
+	} else if p, ok := att.Meta.Last("struct:pkg:path"); ok && p != "" {
+		pkg = p
+	}
+	return s.goTypeDef(att, ptr, useDefault, pkg)
 }
 
 func (s *NameScope) goTypeDef(att *expr.AttributeExpr, ptr, useDefault bool, pkg string) string {
@@ -138,13 +144,7 @@ func (s *NameScope) goTypeDef(att *expr.AttributeExpr, ptr, useDefault bool, pkg
 			)
 			{
 				fn = GoifyAtt(at, name, true)
-				var parentPkg string
-				if ut, ok := at.Type.(expr.UserType); ok {
-					if UserTypeLocation(ut) != nil {
-						parentPkg = UserTypeLocation(ut).PackageName()
-					}
-				}
-				tdef = s.goTypeDef(at, ptr, useDefault, parentPkg)
+				tdef = s.goTypeDef(at, ptr, useDefault, pkg)
 				if expr.IsObject(at.Type) ||
 					att.IsPrimitivePointer(name, useDefault) ||
 					(ptr && expr.IsPrimitive(at.Type) && at.Type.Kind() != expr.AnyKind && at.Type.Kind() != expr.BytesKind) {
