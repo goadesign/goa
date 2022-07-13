@@ -92,6 +92,7 @@ func httpRequestBody(a *HTTPEndpointExpr) *AttributeExpr {
 	if !IsObject(payload.Type) {
 		if bodyOnly {
 			payload = DupAtt(payload)
+			removePkgPath(payload.Type)
 			renameType(payload, name, suffix)
 			return payload
 		}
@@ -223,6 +224,7 @@ func buildHTTPResponseBody(name string, attr *AttributeExpr, resp *HTTPResponseE
 	if !IsObject(attr.Type) {
 		if resp.Headers.IsEmpty() && resp.Cookies.IsEmpty() {
 			attr = DupAtt(attr)
+			removePkgPath(attr.Type)
 			renameType(attr, name, "Response") // Do not use ResponseBody as it could clash with name of element
 			return attr
 		}
