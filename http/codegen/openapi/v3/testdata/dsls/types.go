@@ -47,6 +47,21 @@ func ObjectBodyDSL(svcName, metName string) func() {
 	}
 }
 
+func MapBodyDSL(svcName, metName string) func() {
+	return func() {
+		var _ = Service(svcName, func() {
+			Method(metName, func() {
+				Payload(func() {
+					Attribute("map", MapOf(String, Any))
+				})
+				HTTP(func() {
+					POST("/")
+				})
+			})
+		})
+	}
+}
+
 func StringResponseBodyDSL(svcName, metName string) func() {
 	return func() {
 		var _ = Service(svcName, func() {
