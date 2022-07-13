@@ -47,6 +47,10 @@ func tobj(attrs ...interface{}) typ {
 	return res
 }
 
+func tmap() typ {
+	return typ{Type: "object", Props: []attr{{Name: "map", Val: typ{Type: "object"}}}}
+}
+
 func (tt typ) Prop(n string) (typ, bool) {
 	for _, att := range tt.Props {
 		if att.Name == n {
@@ -83,6 +87,12 @@ func TestBuildBodyTypes(t *testing.T) {
 		DSL:  dsls.ObjectBodyDSL(svcName, "object_body"),
 
 		ExpectedType:          tobj("name", tstring, "age", tint),
+		ExpectedResponseTypes: rt{204: tempty},
+	}, {
+		Name: "map_body",
+		DSL:  dsls.MapBodyDSL(svcName, "map_body"),
+
+		ExpectedType:          tmap(),
 		ExpectedResponseTypes: rt{204: tempty},
 	}, {
 		Name: "streaming_string_body",
