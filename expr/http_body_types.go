@@ -92,7 +92,7 @@ func httpRequestBody(a *HTTPEndpointExpr) *AttributeExpr {
 	if !IsObject(payload.Type) {
 		if bodyOnly {
 			payload = DupAtt(payload)
-			removePkgPath(payload.Type)
+			removePkgPath(payload)
 			renameType(payload, name, suffix)
 			return payload
 		}
@@ -101,7 +101,7 @@ func httpRequestBody(a *HTTPEndpointExpr) *AttributeExpr {
 
 	// 3. Remove header, param and cookies attributes
 	body := NewMappedAttributeExpr(payload)
-	removePkgPath(body.Type)
+	removePkgPath(body.AttributeExpr)
 	extendBodyAttribute(body)
 	removeAttributes(body, headers)
 	removeAttributes(body, cookies)
@@ -224,14 +224,14 @@ func buildHTTPResponseBody(name string, attr *AttributeExpr, resp *HTTPResponseE
 	if !IsObject(attr.Type) {
 		if resp.Headers.IsEmpty() && resp.Cookies.IsEmpty() {
 			attr = DupAtt(attr)
-			removePkgPath(attr.Type)
+			removePkgPath(attr)
 			renameType(attr, name, "Response") // Do not use ResponseBody as it could clash with name of element
 			return attr
 		}
 		return &AttributeExpr{Type: Empty}
 	}
 	body := NewMappedAttributeExpr(attr)
-	removePkgPath(body.Type)
+	removePkgPath(body.AttributeExpr)
 	extendBodyAttribute(body)
 
 	// 4. Remove header and cookie attributes
@@ -400,10 +400,15 @@ func renameType(att *AttributeExpr, name, suffix string) {
 
 // removePkgPath traverses the given data type and removes the "struct:pkg:path"
 // metadata from all the user type attributes.
-func removePkgPath(dt DataType) {
-	walk(dt, func(ut UserType) {
+func removePkgPath(attr *AttributeExpr) {
+	walk(attr.Type, func(ut UserType) {
 		delete(ut.Attribute().Meta, "struct:pkg:path")
 	})
+	for _, pt := range attr.Bases {
+		if dt, ok := pt.(UserType); ok {
+			removePkgPath(dt.Attribute())
+		}
+	}
 }
 
 // appendSuffix recursively traverses the given data type and appends the given
@@ -488,5 +493,9 @@ func walkrec(dt DataType, do func(UserType), seen map[string]struct{}) {
 	case *Map:
 		walkrec(dt.KeyType.Type, do, seen)
 		walkrec(dt.ElemType.Type, do, seen)
+	case *Union:
+		for _, nat := range dt.Values {
+			walkrec(nat.Attribute.Type, do, seen)
+		}
 	}
 }
