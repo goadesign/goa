@@ -48,20 +48,12 @@ func NewMappedAttributeExpr(att *AttributeExpr) *MappedAttributeExpr {
 			validation = val.Dup()
 		}
 	}
+	attr := DupAtt(att)
+	attr.Validation = validation
 	ma := &MappedAttributeExpr{
-		AttributeExpr: &AttributeExpr{
-			Type:         Dup(att.Type),
-			References:   att.References,
-			Bases:        att.Bases,
-			Description:  att.Description,
-			Docs:         att.Docs,
-			Meta:         att.Meta,
-			DefaultValue: att.DefaultValue,
-			UserExamples: att.UserExamples,
-			Validation:   validation,
-		},
-		nameMap:    nameMap,
-		reverseMap: reverseMap,
+		AttributeExpr: attr,
+		nameMap:       nameMap,
+		reverseMap:    reverseMap,
 	}
 	ma.Remap()
 	return ma
