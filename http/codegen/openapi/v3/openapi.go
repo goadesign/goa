@@ -256,6 +256,18 @@ type (
 	_SecurityScheme SecurityScheme
 )
 
+// MediaType implements exampler
+func (m *MediaType) setExample(val interface{})             { m.Example = val }
+func (m *MediaType) setExamples(val map[string]*ExampleRef) { m.Examples = val }
+
+// Header implements exampler
+func (h *Header) setExample(val interface{})             { h.Example = val }
+func (h *Header) setExamples(val map[string]*ExampleRef) { h.Examples = val }
+
+// Parameter implements exampler
+func (p *Parameter) setExample(val interface{})             { p.Example = val }
+func (p *Parameter) setExamples(val map[string]*ExampleRef) { p.Examples = val }
+
 // MarshalJSON returns the JSON encoding of i.
 func (i Info) MarshalJSON() ([]byte, error) {
 	return openapi.MarshalJSON(_Info(i), i.Extensions)
