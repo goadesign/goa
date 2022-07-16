@@ -76,6 +76,25 @@ import (
 //         })
 //    })
 //
+// - "struct:field:proto" overrides the generated protobuf field type. If the
+// type is defined in a separate proto file, the last three elements define the
+// proto file import path, Go type name and Go import path respectively.
+//
+//    var Timestamp = Type("Timestamp", func() {
+//        Description("Google timestamp compatible design")
+//        Field(1, "seconds", Int64, "Unix timestamp in seconds", func() {
+//            Meta("struct:field:proto", "int64") // Goa generates sint64 by default
+//        })
+//        Field(2, "nanos", Int32, "Unix timestamp in nanoseconds", func() {
+//            Meta("struct:field:proto", "int32") // Goa generates sint32 by default
+//        })
+//    })
+//
+//    var MyType = Type("MyType", func() {
+//        Field(1, "created_at", Timestamp, func() {
+//            Meta("struct:field:proto", "google.protobuf.Timestamp", "google/protobuf/timestamp.proto", "Timestamp", "google.golang.org/protobuf/types/known/timestamppb")
+//        })
+//    })
 //
 // - "struct:tag:xxx" sets a generated Go struct field tag and overrides tags
 // that Goa would otherwise set. If the metadata value is a slice then the
@@ -87,6 +106,18 @@ import (
 //            Meta("struct:tag:json", "SSN,omitempty")
 //            Meta("struct:tag:xml", "SSN,omitempty")
 //        })
+//    })
+//
+// - "protoc:include" provides the list of import paths used to invoke protoc.
+// Applicable to API and service definitions only. If used on an API definition
+// the include paths are used for all services.
+//
+//    var _ = API("myapi", func() {
+//        Meta("protoc:include", "/usr/include", "/usr/local/include")
+//    })
+//
+//    var _ = Service("service1", func() {
+//        Meta("protoc:include", "/usr/local/include/google/protobuf")
 //    })
 //
 // - "swagger:generate" DEPRECATED, use "openapi:generate" instead.
@@ -101,8 +132,9 @@ import (
 //
 // - "swagger:summary" DEPRECATED, use "openapi:summary" instead
 //
-// - "openapi:summary" sets the OpenAPI operation summary field. Applicable to
-// methods.
+// - "openapi:summary" sets the OpenAPI operation summary field. The special
+// value "{path}" is replaced with the method HTTP path. Applicable to methods
+// or to API .
 //
 //    var _ = Service("MyService", func() {
 //        Method("MyMethod", func() {

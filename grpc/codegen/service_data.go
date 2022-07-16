@@ -2,6 +2,7 @@ package codegen
 
 import (
 	"fmt"
+	"strings"
 
 	"goa.design/goa/v3/codegen"
 	"goa.design/goa/v3/codegen/service"
@@ -24,6 +25,8 @@ type (
 		Service *service.Data
 		// PkgName is the name of the generated package in *.pb.go.
 		PkgName string
+		// ProtoImports is the list of proto package imports.
+		ProtoImports []string
 		// Name is the service name.
 		Name string
 		// Description is the service description.
@@ -425,9 +428,9 @@ func (sd *ServiceData) HasStreamingEndpoint() bool {
 // analyze creates the data necessary to render the code of the given service.
 func (d ServicesData) analyze(gs *expr.GRPCServiceExpr) *ServiceData {
 	var (
-		sd      *ServiceData
-		seen    map[string]struct{}
-		svcVarN string
+		sd             *ServiceData
+		seen, imported map[string]struct{}
+		svcVarN        string
 
 		svc   = service.Services.Get(gs.Name())
 		scope = codegen.NewNameScope()
@@ -449,7 +452,7 @@ func (d ServicesData) analyze(gs *expr.GRPCServiceExpr) *ServiceData {
 			ClientInterfaceInit: fmt.Sprintf("%s.New%sClient", pkg, svcVarN),
 			Scope:               scope,
 		}
-		seen = make(map[string]struct{})
+		seen, imported = make(map[string]struct{}), make(map[string]struct{})
 	}
 	for _, e := range gs.GRPCEndpoints {
 		// convert request and response types to protocol buffer message types
@@ -466,8 +469,18 @@ func (d ServicesData) analyze(gs *expr.GRPCServiceExpr) *ServiceData {
 		}
 
 		// collect all the nested messages and return the top-level message
+		// Also collect all proto imports specified via Meta.
 		collect := func(att *expr.AttributeExpr) *service.UserTypeData {
-			msgs := collectMessages(att, sd, seen)
+			msgs, imports := collectMessages(att, sd, seen)
+			if len(imports) > 0 {
+				for _, imp := range imports {
+					if _, ok := imported[imp]; ok {
+						continue
+					}
+					imported[imp] = struct{}{}
+					sd.ProtoImports = append(sd.ProtoImports, imp)
+				}
+			}
 			if len(msgs) > 0 {
 				sd.Messages = append(sd.Messages, msgs...)
 				return msgs[0]
@@ -634,17 +647,39 @@ func (d ServicesData) analyze(gs *expr.GRPCServiceExpr) *ServiceData {
 }
 
 // collectMessages recurses through the attribute to gather all the messages.
-func collectMessages(at *expr.AttributeExpr, sd *ServiceData, seen map[string]struct{}) (data []*service.UserTypeData) {
-	if at == nil || expr.IsPrimitive(at.Type) {
+func collectMessages(at *expr.AttributeExpr, sd *ServiceData, seen map[string]struct{}) (data []*service.UserTypeData, imports []string) {
+	if at == nil {
 		return
 	}
-	collect := func(at *expr.AttributeExpr) []*service.UserTypeData {
+	if proto := at.Meta["struct:field:proto"]; len(proto) > 1 {
+		if len(proto) > 1 {
+			imp := proto[1]
+			found := false
+			for _, i := range sd.Service.ProtoImports {
+				if i.Path == imp {
+					found = true
+					break
+				}
+			}
+			if !found {
+				imports = append(imports, imp)
+				if len(proto) > 3 {
+					elems := strings.Split(proto[3], "/")
+					sd.Service.ProtoImports = append(sd.Service.ProtoImports, &codegen.ImportSpec{Path: proto[3], Name: elems[len(elems)-1]})
+				}
+			}
+		}
+	}
+	if expr.IsPrimitive(at.Type) {
+		return
+	}
+	collect := func(at *expr.AttributeExpr) ([]*service.UserTypeData, []string) {
 		return collectMessages(at, sd, seen)
 	}
 	switch dt := at.Type.(type) {
 	case expr.UserType:
 		if _, ok := seen[dt.Name()]; ok {
-			return nil
+			return
 		}
 		att := dt.Attribute()
 		if rt, ok := dt.(*expr.ResultTypeExpr); ok {
@@ -662,19 +697,25 @@ func collectMessages(at *expr.AttributeExpr, sd *ServiceData, seen map[string]st
 			Type:        dt,
 		})
 		seen[dt.Name()] = struct{}{}
-		data = append(data, collect(att)...)
+		d, i := collect(att)
+		data, imports = append(data, d...), append(imports, i...)
 	case *expr.Object:
 		for _, nat := range *dt {
-			data = append(data, collect(nat.Attribute)...)
+			d, i := collect(nat.Attribute)
+			data, imports = append(data, d...), append(imports, i...)
 		}
 	case *expr.Array:
-		data = append(data, collect(dt.ElemType)...)
+		d, i := collect(dt.ElemType)
+		data, imports = append(data, d...), append(imports, i...)
 	case *expr.Map:
-		data = append(data, collect(dt.KeyType)...)
-		data = append(data, collect(dt.ElemType)...)
+		dk, ik := collect(dt.KeyType)
+		data, imports = append(data, dk...), append(imports, ik...)
+		de, ie := collect(dt.ElemType)
+		data, imports = append(data, de...), append(imports, ie...)
 	case *expr.Union:
 		for _, nat := range dt.Values {
-			data = append(data, collect(nat.Attribute)...)
+			d, i := collect(nat.Attribute)
+			data, imports = append(data, d...), append(imports, i...)
 		}
 	}
 	return

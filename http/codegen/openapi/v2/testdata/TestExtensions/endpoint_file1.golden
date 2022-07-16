@@ -1,65 +1,65 @@
 swagger: "2.0"
 info:
-  title: ""
-  version: ""
-  x-test-api: API
+    title: ""
+    version: ""
+    x-test-api: API
 host: goa.design
 consumes:
-- application/json
-- application/xml
-- application/gob
+    - application/json
+    - application/xml
+    - application/gob
 produces:
-- application/json
-- application/xml
-- application/gob
+    - application/json
+    - application/xml
+    - application/gob
 paths:
-  /:
-    post:
-      operationId: testService#testEndpoint
-      parameters:
-      - in: body
-        name: TestEndpointRequestBody
-        required: true
-        schema:
-          $ref: '#/definitions/TestServiceTestEndpointRequestBody'
-      responses:
-        "200":
-          description: OK response.
-          schema:
-            $ref: '#/definitions/TestServiceTestEndpointResponseBody'
-      schemes:
-      - https
-      summary: testEndpoint testService
-      tags:
-      - testService
-      x-test-operation: Operation
-    x-test-foo: bar
+    /:
+        post:
+            operationId: testService#testEndpoint
+            parameters:
+                - in: body
+                  name: TestEndpointRequestBody
+                  required: true
+                  schema:
+                    $ref: '#/definitions/TestServiceTestEndpointRequestBody'
+            responses:
+                "200":
+                    description: OK response.
+                    schema:
+                        $ref: '#/definitions/TestServiceTestEndpointResponseBody'
+            schemes:
+                - https
+            summary: testEndpoint testService
+            tags:
+                - testService
+            x-test-operation: Operation
+        x-test-foo: bar
 definitions:
-  TestServiceTestEndpointRequestBody:
-    title: TestServiceTestEndpointRequestBody
-    type: object
-    properties:
-      string:
-        example: ""
-        type: string
-        x-test-schema: Payload
-    example:
-      string: ""
-  TestServiceTestEndpointResponseBody:
-    title: TestServiceTestEndpointResponseBody
-    type: object
-    properties:
-      string:
-        example: ""
-        type: string
-        x-test-schema: Result
-    example:
-      string: ""
+    TestServiceTestEndpointRequestBody:
+        title: TestServiceTestEndpointRequestBody
+        type: object
+        properties:
+            string:
+                example: ""
+                type: string
+                x-test-schema: Payload
+        example:
+            string: ""
+    TestServiceTestEndpointResponseBody:
+        title: TestServiceTestEndpointResponseBody
+        type: object
+        properties:
+            string:
+                example: ""
+                type: string
+                x-test-schema: Result
+        example:
+            string: ""
 tags:
-- description: Description of Backend
-  externalDocs:
-    description: See more docs here
-    url: http://example.com
-  name: Backend
-  x-data:
-    foo: bar
+    - description: Description of Backend
+      externalDocs:
+        description: See more docs here
+        url: http://example.com
+      name: Backend
+      x-data:
+        foo: bar

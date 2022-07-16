@@ -367,6 +367,25 @@ func FieldLoadCode(f *FlagData, argName, argTypeName, validate string, defaultVa
 			}
 		}
 		if validate != "" {
+			nilCheck := "if " + argName + " != nil {"
+			if strings.HasPrefix(validate, nilCheck) {
+				// hackety hack... the validation code is generated for the client and needs to
+				// account for the fact that the field could be nil in this case. We are reusing
+				// that code to validate a CLI flag which can never be nil.  Lint tools complain
+				// about that so remove the if statements. Ideally we'd have a better way to do
+				// this but that requires a lot of changes and the added complexity might not be
+				// worth it.
+				var lines []string
+				ls := strings.Split(validate, "\n")
+				for i := 1; i < len(ls)-1; i++ {
+					if ls[i+1] == nilCheck {
+						i++ // skip both closing brace on previous line and check
+						continue
+					}
+					lines = append(lines, ls[i])
+				}
+				validate = strings.Join(lines, "\n")
+			}
 			code += "\n" + validate + "\n"
 			nilVal := "nil"
 			if expr.IsPrimitive(payload) {
