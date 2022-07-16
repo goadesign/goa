@@ -50,6 +50,15 @@ type (
 		Vars(*http.Request) map[string]string
 	}
 
+	// MiddlewareMuxer makes it possible to mount middlewares downstream of the
+	// Muxer.
+	MiddlewareMuxer interface {
+		Muxer
+		// Use appends a middleware to the list of middlewares to be applied
+		// to the Muxer.
+		Use(func(http.Handler) http.Handler)
+	}
+
 	// mux is the default Muxer implementation. It leverages the
 	// httptreemux router and simply substitutes the syntax used to define
 	// wildcards from ":wildcard" and "*wildcard" to "{wildcard}" and
@@ -60,7 +69,7 @@ type (
 )
 
 // NewMuxer returns a Muxer implementation based on the httptreemux router.
-func NewMuxer() Muxer {
+func NewMuxer() MiddlewareMuxer {
 	r := httptreemux.NewContextMux()
 	r.EscapeAddedRoutes = true
 	r.NotFoundHandler = func(w http.ResponseWriter, req *http.Request) {
@@ -80,6 +89,12 @@ func (m *mux) Handle(method, pattern string, handler http.HandlerFunc) {
 // Vars extracts the path variables from the request context.
 func (m *mux) Vars(r *http.Request) map[string]string {
 	return httptreemux.ContextParams(r.Context())
+}
+
+// Use appends a middleware to the list of middlewares to be applied
+// downstream the Muxer.
+func (m *mux) Use(f func(http.Handler) http.Handler) {
+	m.ContextMux.UseHandler(f)
 }
 
 var wildSeg = regexp.MustCompile(`/{([a-zA-Z0-9_]+)}`)
