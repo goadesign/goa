@@ -1,6 +1,11 @@
 package http
 
-import "testing"
+import (
+	"fmt"
+	"net/http"
+	"net/http/httptest"
+	"testing"
+)
 
 func TestMuxRegexp(t *testing.T) {
 	cases := []struct{ Name, Pattern, Expected string }{
@@ -21,6 +26,45 @@ func TestMuxRegexp(t *testing.T) {
 		actual := treemuxify(c.Pattern)
 		if actual != c.Expected {
 			t.Errorf("%s: expected %#v, got %#v", c.Name, c.Expected, actual)
+		}
+	}
+}
+
+func TestMiddlewares(t *testing.T) {
+	m1 := func(h http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.Write([]byte("m1"))
+			h.ServeHTTP(w, r)
+		})
+	}
+	m2 := func(h http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.Write([]byte("m2"))
+			h.ServeHTTP(w, r)
+		})
+	}
+	cases := []struct {
+		Name        string
+		Middlewares []func(http.Handler) http.Handler
+		BodyPrefix  string
+	}{
+		{"empty", nil, ""},
+		{"one", []func(http.Handler) http.Handler{m1}, "m1"},
+		{"two", []func(http.Handler) http.Handler{m1, m2}, "m1m2"},
+	}
+	for _, c := range cases {
+		m := NewMuxer()
+		for _, mw := range c.Middlewares {
+			m.Use(mw)
+		}
+		m.Handle("GET", "/", func(w http.ResponseWriter, r *http.Request) {
+			w.Write([]byte("hello"))
+		})
+		r, _ := http.NewRequest("GET", "/", nil)
+		w := httptest.NewRecorder()
+		m.ServeHTTP(w, r)
+		if w.Body.String() != fmt.Sprintf("%shello", c.BodyPrefix) {
+			t.Errorf("%s: got %s, expected %s", c.Name, w.Body.String(), fmt.Sprintf("%shello", c.BodyPrefix))
 		}
 	}
 }
