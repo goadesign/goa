@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"io"
 	"strings"
+
+	"github.com/hashicorp/go-multierror"
 )
 
 type (
@@ -29,6 +31,8 @@ type (
 		// History tracks all the individual errors that were built into this error, should
 		// this error have been merged.
 		history []ServiceError
+		// err holds the original error if exists.
+		err error
 	}
 )
 
@@ -48,6 +52,19 @@ const (
 	// InvalidLength is the error name for invalid length errors.
 	InvalidLength = "invalid_length"
 )
+
+// NewServiceError creates an error.
+func NewServiceError(err error, name string, timeout, temporary, fault bool) *ServiceError {
+	return &ServiceError{
+		Name:      name,
+		ID:        NewErrorID(),
+		Message:   err.Error(),
+		Timeout:   timeout,
+		Temporary: temporary,
+		Fault:     fault,
+		err:       err,
+	}
+}
 
 // Fault creates an error given a format and values a la fmt.Printf. The error
 // has the Fault field set to true.
@@ -205,6 +222,7 @@ func MergeErrors(err, other error) error {
 	//
 	// Do this before we modify ourselves, as History() may include us!
 	e.history = append(e.History(), o.History()...)
+	e.err = multierror.Append(e.err, o.err)
 
 	e.Message = e.Message + "; " + o.Message
 	e.Timeout = e.Timeout && o.Timeout
@@ -228,6 +246,8 @@ func (e *ServiceError) Error() string { return e.Message }
 
 // ErrorName returns the error name.
 func (e *ServiceError) ErrorName() string { return e.Name }
+
+func (e *ServiceError) Unwrap() error { return e.err }
 
 func withField(field string, err *ServiceError) *ServiceError {
 	err.Field = &field
@@ -253,6 +273,7 @@ func asError(err error) *ServiceError {
 			ID:      NewErrorID(),
 			Message: err.Error(),
 			Fault:   true, // Default to fault for unexpected errors
+			err:     err,
 		}
 	}
 	return e
