@@ -85,13 +85,14 @@ func httpRequestBody(a *HTTPEndpointExpr) *AttributeExpr {
 		return unionToObject(payload, name, suffix, a.Service.Name())
 	}
 
-	// 2. If Payload is not an objectthen check whether there are
+	// 2. If Payload is not an object then check whether there are
 	// params, cookies or headers defined and if so return empty type
 	// (payload encoded in request params or headers) otherwise return
 	// payload type (payload encoded in request body).
 	if !IsObject(payload.Type) {
 		if bodyOnly {
 			payload = DupAtt(payload)
+			removePkgPath(payload)
 			renameType(payload, name, suffix)
 			return payload
 		}
@@ -100,6 +101,7 @@ func httpRequestBody(a *HTTPEndpointExpr) *AttributeExpr {
 
 	// 3. Remove header, param and cookies attributes
 	body := NewMappedAttributeExpr(payload)
+	removePkgPath(body.AttributeExpr)
 	extendBodyAttribute(body)
 	removeAttributes(body, headers)
 	removeAttributes(body, cookies)
@@ -222,12 +224,14 @@ func buildHTTPResponseBody(name string, attr *AttributeExpr, resp *HTTPResponseE
 	if !IsObject(attr.Type) {
 		if resp.Headers.IsEmpty() && resp.Cookies.IsEmpty() {
 			attr = DupAtt(attr)
+			removePkgPath(attr)
 			renameType(attr, name, "Response") // Do not use ResponseBody as it could clash with name of element
 			return attr
 		}
 		return &AttributeExpr{Type: Empty}
 	}
 	body := NewMappedAttributeExpr(attr)
+	removePkgPath(body.AttributeExpr)
 	extendBodyAttribute(body)
 
 	// 4. Remove header and cookie attributes
@@ -297,15 +301,16 @@ func unionToObject(att *AttributeExpr, name, suffix, svcName string) *AttributeE
 		names[i] = nat.Attribute.Type.Name()
 		vals[i] = fmt.Sprintf("- %q", nat.Attribute.Type.Name())
 	}
-	obj := Object([]*NamedAttributeExpr{
-		{"Type", &AttributeExpr{
+	obj := Object([]*NamedAttributeExpr{{
+		"Type", &AttributeExpr{
 			Type:        String,
 			Description: "Union type name, one of:\n" + strings.Join(vals, "\n"),
 			Validation:  &ValidationExpr{Values: names},
-		}},
-		{"Value", &AttributeExpr{
-			Type:        Any,
-			Description: "Union value, type must be one of service package types listed above",
+		}}, {
+		"Value", &AttributeExpr{
+			Type:         String,
+			Description:  "JSON formatted union value",
+			UserExamples: []*ExampleExpr{{Value: `"JSON"`}},
 		}},
 	})
 	uatt := &AttributeExpr{
@@ -367,12 +372,12 @@ func concat(strs ...string) string {
 		}
 	case !isLower(name) && hasUnderscore(name):
 		for i := 1; i < len(strs); i++ {
-			name += "_" + strings.Title(strs[i])
+			name += "_" + Title(strs[i])
 		}
 	default:
-		name = strings.Title(name)
+		name = Title(name)
 		for i := 1; i < len(strs); i++ {
-			name += strings.Title(strs[i])
+			name += Title(strs[i])
 		}
 	}
 	return name
@@ -393,32 +398,25 @@ func renameType(att *AttributeExpr, name, suffix string) {
 	}
 }
 
-func appendSuffix(dt DataType, suffix string, seen ...map[string]struct{}) {
-	var s map[string]struct{}
-	if len(seen) > 0 {
-		s = seen[0]
-	} else {
-		s = make(map[string]struct{})
-		seen = append(seen, s)
-	}
-	switch actual := dt.(type) {
-	case UserType:
-		if _, ok := s[actual.ID()]; ok {
-			return
+// removePkgPath traverses the given data type and removes the "struct:pkg:path"
+// metadata from all the user type attributes.
+func removePkgPath(attr *AttributeExpr) {
+	walk(attr.Type, func(ut UserType) {
+		delete(ut.Attribute().Meta, "struct:pkg:path")
+	})
+	for _, pt := range attr.Bases {
+		if dt, ok := pt.(UserType); ok {
+			removePkgPath(dt.Attribute())
 		}
-		actual.Rename(actual.Name() + suffix)
-		s[actual.ID()] = struct{}{}
-		appendSuffix(actual.Attribute().Type, suffix, seen...)
-	case *Object:
-		for _, nat := range *actual {
-			appendSuffix(nat.Attribute.Type, suffix, seen...)
-		}
-	case *Array:
-		appendSuffix(actual.ElemType.Type, suffix, seen...)
-	case *Map:
-		appendSuffix(actual.KeyType.Type, suffix, seen...)
-		appendSuffix(actual.ElemType.Type, suffix, seen...)
 	}
+}
+
+// appendSuffix recursively traverses the given data type and appends the given
+// suffix to all the user type names.
+func appendSuffix(dt DataType, suffix string) {
+	walk(dt, func(ut UserType) {
+		ut.Rename(ut.Name() + suffix)
+	})
 }
 
 func removeAttributes(attr, sub *MappedAttributeExpr) {
@@ -469,4 +467,35 @@ func extendBodyAttribute(body *MappedAttributeExpr) {
 	// unset bases so that they don't get added back to the body type during
 	// finalize
 	att.Bases = nil
+}
+
+// walk traverses the given data type and invokes the given function for each
+// user type it finds including dt itself.
+func walk(dt DataType, do func(UserType)) {
+	walkrec(dt, do, make(map[string]struct{}))
+}
+
+func walkrec(dt DataType, do func(UserType), seen map[string]struct{}) {
+	switch dt := dt.(type) {
+	case UserType:
+		if _, ok := seen[dt.ID()]; ok {
+			return
+		}
+		do(dt)
+		seen[dt.ID()] = struct{}{}
+		walkrec(dt.Attribute().Type, do, seen)
+	case *Object:
+		for _, nat := range *dt {
+			walkrec(nat.Attribute.Type, do, seen)
+		}
+	case *Array:
+		walkrec(dt.ElemType.Type, do, seen)
+	case *Map:
+		walkrec(dt.KeyType.Type, do, seen)
+		walkrec(dt.ElemType.Type, do, seen)
+	case *Union:
+		for _, nat := range dt.Values {
+			walkrec(nat.Attribute.Type, do, seen)
+		}
+	}
 }

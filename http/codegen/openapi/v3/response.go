@@ -23,13 +23,15 @@ func responseFromExpr(r *expr.HTTPResponseExpr, bodies map[int][]*openapi.Schema
 	if len(*o) > 0 {
 		headers = make(map[string]*HeaderRef, len(*o))
 		expr.WalkMappedAttr(r.Headers, func(name, elem string, attr *expr.AttributeExpr) error {
-			headers[elem] = &HeaderRef{Value: &Header{
+			header := &Header{
 				Description: attr.Description,
 				Required:    r.Headers.IsRequiredNoDefault(name),
 				Schema:      newSchemafier(rand).schemafy(attr),
 				Example:     attr.Example(rand),
 				Extensions:  openapi.ExtensionsFromExpr(attr.Meta),
-			}}
+			}
+			initExamples(header, attr, rand)
+			headers[elem] = &HeaderRef{Value: header}
 			return nil
 		})
 	}
@@ -40,9 +42,9 @@ func responseFromExpr(r *expr.HTTPResponseExpr, bodies map[int][]*openapi.Schema
 			content = make(map[string]*MediaType)
 			content[ct] = &MediaType{
 				Schema:     bodies[r.StatusCode][0],
-				Example:    r.Body.Example(rand),
 				Extensions: openapi.ExtensionsFromExpr(r.Body.Meta),
 			}
+			initExamples(content[ct], r.Body, rand)
 		}
 	}
 	desc := r.Description

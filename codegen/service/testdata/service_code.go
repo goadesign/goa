@@ -2504,13 +2504,13 @@ var MethodNames = [3]string{"A", "B", "EnvelopedB"}
 // EnvelopedBPayload is the payload type of the MultiplePkgPathMethod service
 // EnvelopedB method.
 type EnvelopedBPayload struct {
-	Baz *Baz
+	Baz *baz.Baz
 }
 
 // EnvelopedBResult is the result type of the MultiplePkgPathMethod service
 // EnvelopedB method.
 type EnvelopedBResult struct {
-	Baz *Baz
+	Baz *baz.Baz
 }
 `
 
@@ -2612,4 +2612,33 @@ const ServiceName = "PkgPathDupeMethod2"
 // are the same values that are set in the endpoint request contexts under the
 // MethodKey key.
 var MethodNames = [2]string{"A", "B"}
+`
+
+const PkgPathPayloadAttribute = `
+// Service is the PkgPathPayloadAttributeDSL service interface.
+type Service interface {
+	// Foo implements Foo.
+	FooEndpoint(context.Context, *Bar) (res *Bar, err error)
+}
+
+// ServiceName is the name of the service as defined in the design. This is the
+// same value that is set in the endpoint request contexts under the ServiceKey
+// key.
+const ServiceName = "PkgPathPayloadAttributeDSL"
+
+// MethodNames lists the service method names as defined in the design. These
+// are the same values that are set in the endpoint request contexts under the
+// MethodKey key.
+var MethodNames = [1]string{"Foo"}
+
+// Bar is the payload type of the PkgPathPayloadAttributeDSL service Foo method.
+type Bar struct {
+	Foo *foo.Foo
+}
+`
+
+const PkgPathPayloadAttributeFoo = `
+type Foo struct {
+	IntField *int
+}
 `

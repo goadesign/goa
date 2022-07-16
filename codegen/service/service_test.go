@@ -85,6 +85,7 @@ func TestStructPkgPath(t *testing.T) {
 		{"multiple", testdata.PkgPathMultipleDSL, []string{testdata.PkgPathMultiple}, []string{barPath, bazPath}, []string{testdata.PkgPathBar, testdata.PkgPathBaz}},
 		{"nopkg", testdata.PkgPathNoDirDSL, []string{testdata.PkgPathNoDir}, nil, nil},
 		{"dupes", testdata.PkgPathDupeDSL, []string{testdata.PkgPathDupe1, testdata.PkgPathDupe2}, []string{fooPath}, []string{testdata.PkgPathFooDupe}},
+		{"payload_attribute", testdata.PkgPathPayloadAttributeDSL, []string{testdata.PkgPathPayloadAttribute}, []string{fooPath}, []string{testdata.PkgPathPayloadAttributeFoo}},
 	}
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {

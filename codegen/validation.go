@@ -226,7 +226,7 @@ func recurseValidationCode(att *expr.AttributeExpr, attCtx *AttributeContext, re
 			return ""
 		}
 		var buf bytes.Buffer
-		name := attCtx.Scope.Name(att, ctx.Pkg, ctx.Pointer, ctx.UseDefault)
+		name := attCtx.Scope.Name(att, ctx.Pkg(att), ctx.Pointer, ctx.UseDefault)
 		data := map[string]interface{}{"name": Goify(name, true), "target": tgt}
 		if err := userValT.Execute(&buf, data); err != nil {
 			panic(err) // bug
@@ -307,53 +307,18 @@ func recurseAttribute(att *expr.AttributeExpr, attCtx *AttributeContext, nat *ex
 		context := fmt.Sprintf("%s.%s", context, nat.Name)
 		code := recurseValidationCode(nat.Attribute, attCtx, att.IsRequired(nat.Name), false, target, context, seen)
 		validation = code.String()
-	} else {
-		// We need to check empirically whether there are validations to be
-		// generated, we can't just generate and check whether something was
-		// generated to avoid infinite recursions.
-		hasValidations := attCtx.Pointer && ut.Attribute().Validation != nil
-		if !hasValidations {
-			done := errors.New("done")
-			Walk(ut.Attribute(), func(a *expr.AttributeExpr) error {
-				if a.Validation != nil {
-					if attCtx.Pointer {
-						hasValidations = true
-						return done
-					}
-					// For public data structures there is a case
-					// where there is validation but no actual
-					// validation code: if the validation is a
-					// required validation that applies to
-					// attributes that cannot be nil i.e. primitive
-					// types.
-					if !a.Validation.HasRequiredOnly() {
-						hasValidations = true
-						return done
-					}
-					obj := expr.AsObject(a.Type)
-					for _, name := range a.Validation.Required {
-						if att := obj.Attribute(name); att != nil && !expr.IsPrimitive(att.Type) {
-							hasValidations = true
-							return done
-						}
-					}
-				}
-				return nil
-			})
-		}
-		if hasValidations {
-			var buf bytes.Buffer
-			tgt := fmt.Sprintf("%s.%s", target, attCtx.Scope.Field(nat.Attribute, nat.Name, true))
-			if expr.IsPrimitive(nat.Attribute.Type) {
-				buf.Write(recurseValidationCode(ut.Attribute(), attCtx, att.IsRequired(nat.Name), true, tgt, context, seen).Bytes())
-			} else {
-				name := attCtx.Scope.Name(nat.Attribute, attCtx.Pkg, attCtx.Pointer, attCtx.UseDefault)
-				if err := userValT.Execute(&buf, map[string]interface{}{"name": Goify(name, true), "target": tgt}); err != nil {
-					panic(err) // bug
-				}
+	} else if hasValidations(attCtx, ut) {
+		var buf bytes.Buffer
+		tgt := fmt.Sprintf("%s.%s", target, attCtx.Scope.Field(nat.Attribute, nat.Name, true))
+		if expr.IsPrimitive(nat.Attribute.Type) {
+			buf.Write(recurseValidationCode(ut.Attribute(), attCtx, att.IsRequired(nat.Name), true, tgt, context, seen).Bytes())
+		} else {
+			name := attCtx.Scope.Name(nat.Attribute, attCtx.Pkg(nat.Attribute), attCtx.Pointer, attCtx.UseDefault)
+			if err := userValT.Execute(&buf, map[string]interface{}{"name": Goify(name, true), "target": tgt}); err != nil {
+				panic(err) // bug
 			}
-			validation = buf.String()
 		}
+		validation = buf.String()
 	}
 	if validation != "" {
 		if expr.IsObject(nat.Attribute.Type) {
@@ -365,35 +330,36 @@ func recurseAttribute(att *expr.AttributeExpr, attCtx *AttributeContext, nat *ex
 }
 
 // hasValidations returns true if a UserType contains validations.
-// It recursively iterates through every attribute and returns true if any
-// attribute contains validations.
-func hasValidations(ctx *AttributeContext, ut expr.UserType) bool {
-	hasVal := func(val *expr.ValidationExpr) bool {
-		if val == nil {
-			return false
-		}
-		if ctx.Pointer {
-			return true
-		}
-		if ctx.UseDefault || ctx.IgnoreRequired {
-			return !val.HasRequiredOnly()
-		}
-		return true
-	}
-
-	if hasVal(ut.Attribute().Validation) {
-		return true
-	}
-	found := false
+func hasValidations(attCtx *AttributeContext, ut expr.UserType) bool {
+	// We need to check empirically whether there are validations to be
+	// generated, we can't just generate and check whether something was
+	// generated to avoid infinite recursions.
+	res := false
 	done := errors.New("done")
 	Walk(ut.Attribute(), func(a *expr.AttributeExpr) error {
-		if hasVal(a.Validation) {
-			found = true
+		if a.Validation == nil {
+			return nil
+		}
+		if attCtx.Pointer && !attCtx.IgnoreRequired || !a.Validation.HasRequiredOnly() {
+			res = true
 			return done
+		}
+		// For public data structures there is a case where there is
+		// validation but no actual validation code: if the validation
+		// is a required validation that applies to attributes that
+		// cannot be nil i.e. primitive types.
+		obj := expr.AsObject(a.Type)
+		for _, name := range a.Validation.Required {
+			if att := obj.Attribute(name); att != nil && !expr.IsPrimitive(att.Type) {
+				res = !attCtx.UseDefault || att.DefaultValue == nil
+				if res {
+					return done
+				}
+			}
 		}
 		return nil
 	})
-	return found
+	return res
 }
 
 // toSlice returns Go code that represents the given slice.

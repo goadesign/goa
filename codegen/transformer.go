@@ -37,10 +37,11 @@ type (
 		// primitive types are non-pointers if they are required, otherwise they
 		// are pointers.
 		UseDefault bool
-		// Pkg is the package name where the attribute type is found.
-		Pkg string
 		// Scope is the attribute scope.
 		Scope Attributor
+		// defaultPkg is the default package name where the attribute
+		// type is found. it can be overridden via struct:pkg:path meta.
+		defaultPkg string
 	}
 
 	// AttributeScope contains the scope of an attribute. It implements the
@@ -89,8 +90,8 @@ func NewAttributeContext(pointer, reqIgnore, useDefault bool, pkg string, scope 
 		Pointer:        pointer,
 		IgnoreRequired: reqIgnore,
 		UseDefault:     useDefault,
-		Pkg:            pkg,
 		Scope:          NewAttributeScope(scope),
+		defaultPkg:     pkg,
 	}
 }
 
@@ -222,14 +223,22 @@ func (a *AttributeContext) IsRequired(name string, att *expr.AttributeExpr) bool
 	return att.IsRequired(name)
 }
 
+// Pkg returns the package name of the given type.
+func (a *AttributeContext) Pkg(att *expr.AttributeExpr) string {
+	if loc := UserTypeLocation(att.Type); loc != nil {
+		return loc.PackageName()
+	}
+	return a.defaultPkg
+}
+
 // Dup creates a shallow copy of the AttributeContext.
 func (a *AttributeContext) Dup() *AttributeContext {
 	return &AttributeContext{
 		Pointer:        a.Pointer,
 		IgnoreRequired: a.IgnoreRequired,
 		UseDefault:     a.UseDefault,
-		Pkg:            a.Pkg,
 		Scope:          a.Scope,
+		defaultPkg:     a.defaultPkg,
 	}
 }
 

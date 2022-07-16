@@ -499,7 +499,7 @@ func mediaTypeToResultType(identifier string) (string, string, error) {
 	lastPart = strings.TrimPrefix(lastPart, "vnd.")
 	elems := strings.Split(lastPart, ".")
 	for i, e := range elems {
-		elems[i] = strings.Title(e)
+		elems[i] = expr.Title(e)
 	}
 	typeName := strings.Join(elems, "")
 	if typeName == "" {
