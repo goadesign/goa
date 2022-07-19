@@ -1256,7 +1256,7 @@ func extractMetadata(a *expr.MappedAttributeExpr, service *expr.AttributeExpr, s
 
 			arr     = expr.AsArray(c.Type)
 			mp      = expr.AsMap(c.Type)
-			typeRef = scope.GoTypeRef(c)
+			typeRef = scope.GoFullTypeRef(c, codegen.UserTypeLocation(c.Type).PackageName())
 			ft      = service.Type
 		)
 		{

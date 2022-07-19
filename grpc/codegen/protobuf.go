@@ -55,6 +55,7 @@ func protoBufTypeContext(pkg string, scope *codegen.NameScope) *codegen.Attribut
 // user type.
 func makeProtoBufMessage(att *expr.AttributeExpr, tname string, sd *ServiceData) *expr.AttributeExpr {
 	att = expr.DupAtt(att)
+	expr.RemovePkgPath(att)
 	ut, isut := att.Type.(expr.UserType)
 	switch {
 	case att.Type == expr.Empty:
