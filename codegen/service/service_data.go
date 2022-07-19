@@ -653,7 +653,7 @@ func (d ServicesData) analyze(service *expr.ServiceExpr) *Data {
 	{
 		methods = make([]*MethodData, len(service.Methods))
 		for i, e := range service.Methods {
-			m := buildMethodData(e, pkgName, service, scope)
+			m := buildMethodData(e, scope)
 			methods[i] = m
 			for _, s := range m.Schemes {
 				schemes = schemes.Append(s)
@@ -862,7 +862,7 @@ func buildErrorInitData(er *expr.ErrorExpr, scope *codegen.NameScope) *ErrorInit
 
 // buildMethodData creates the data needed to render the given endpoint. It
 // records the user types needed by the service definition in userTypes.
-func buildMethodData(m *expr.MethodExpr, svcPkgName string, service *expr.ServiceExpr, scope *codegen.NameScope) *MethodData {
+func buildMethodData(m *expr.MethodExpr, scope *codegen.NameScope) *MethodData {
 	var (
 		vname       string
 		desc        string

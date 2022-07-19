@@ -2462,6 +2462,24 @@ const ServiceName = "PkgPathMethod"
 var MethodNames = [1]string{"A"}
 `
 
+const PkgPathArray = `
+// Service is the PkgPathArrayMethod service interface.
+type Service interface {
+	// A implements A.
+	A(context.Context, []*foo.Foo) (res []*foo.Foo, err error)
+}
+
+// ServiceName is the name of the service as defined in the design. This is the
+// same value that is set in the endpoint request contexts under the ServiceKey
+// key.
+const ServiceName = "PkgPathArrayMethod"
+
+// MethodNames lists the service method names as defined in the design. These
+// are the same values that are set in the endpoint request contexts under the
+// MethodKey key.
+var MethodNames = [1]string{"A"}
+`
+
 const PkgPathRecursive = `
 // Service is the PkgPathRecursiveMethod service interface.
 type Service interface {
@@ -2515,6 +2533,12 @@ type EnvelopedBResult struct {
 `
 
 const PkgPathFoo = `// Foo is the payload type of the PkgPathMethod service A method.
+type Foo struct {
+	IntField *int
+}
+`
+
+const PkgPathArrayFoo = `
 type Foo struct {
 	IntField *int
 }
