@@ -295,7 +295,7 @@ func Decode{{ .Method.VarName }}Request(ctx context.Context, v interface{}, md m
 	)
 	{
 	{{- range .Request.Metadata }}
-		{{- if or (eq .Type.Name "string") (eq .Type.Name "any") }}
+		{{- if or (eq .TypeName "string") (eq .Type.Name "any") }}
 			{{- if .Required }}
 				if vals := md.Get({{ printf "%q" .Name }}); len(vals) == 0 {
 					err = goa.MergeErrors(err, goa.MissingFieldError({{ printf "%q" .Name }}, "metadata"))
@@ -436,10 +436,10 @@ func Encode{{ .Method.VarName }}Response(ctx context.Context, v interface{}, hdr
 		{{- end }}
 		{{ .VarName }}.Append({{ printf "%q" .Metadata.Name }},
 			{{- if eq .Metadata.Type.Name "bytes" }} string(
-			{{- else if not (eq .Metadata.Type.Name "string") }} fmt.Sprintf("%v",
+			{{- else if not (eq .Metadata.TypeName "string") }} fmt.Sprintf("%v",
 			{{- end }}
 			{{- if .Metadata.Pointer }}*{{ end }}p.{{ .Metadata.FieldName }}
-			{{- if or (eq .Metadata.Type.Name "bytes") (not (eq .Metadata.Type.Name "string")) }})
+			{{- if or (eq .Metadata.Type.Name "bytes") (not (eq .Metadata.TypeName "string")) }})
 			{{- end }})
 		{{- if .Metadata.Pointer }}
 			}
