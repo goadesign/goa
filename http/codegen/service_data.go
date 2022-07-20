@@ -2422,13 +2422,14 @@ func extractQueryParams(a *expr.MappedAttributeExpr, service *expr.AttributeExpr
 func extractHeaders(a *expr.MappedAttributeExpr, svcAtt *expr.AttributeExpr, svcCtx *codegen.AttributeContext, scope *codegen.NameScope) []*HeaderData {
 	var headers []*HeaderData
 	codegen.WalkMappedAttr(a, func(name, elem string, required bool, _ *expr.AttributeExpr) error {
+		var attr *expr.AttributeExpr
+		if attr = svcAtt.Find(name); attr == nil {
+			attr = svcAtt
+		}
 		var hattr *expr.AttributeExpr
 		var stringSlice bool
 		{
-			if hattr = svcAtt.Find(name); hattr == nil {
-				hattr = svcAtt
-			}
-			hattr = expr.DupAtt(hattr)
+			hattr = expr.DupAtt(attr)
 
 			// The StringSlice field of ParamData must be false for aliased primitive types
 			if arr := expr.AsArray(hattr.Type); arr != nil {
@@ -2441,7 +2442,7 @@ func extractHeaders(a *expr.MappedAttributeExpr, svcAtt *expr.AttributeExpr, svc
 			varn    = scope.Name(codegen.Goify(name, false))
 			arr     = expr.AsArray(hattr.Type)
 			typeRef = scope.GoTypeRef(hattr)
-			ft      = svcAtt.Type
+			ft      = attr.Type
 
 			fieldName string
 			pointer   bool
@@ -2452,7 +2453,6 @@ func extractHeaders(a *expr.MappedAttributeExpr, svcAtt *expr.AttributeExpr, svc
 			if expr.IsObject(svcAtt.Type) {
 				fieldName = codegen.Goify(name, true)
 				fptr = svcCtx.IsPrimitivePointer(name, svcAtt)
-				ft = svcAtt.Find(name).Type
 			}
 			if pointer {
 				typeRef = "*" + typeRef

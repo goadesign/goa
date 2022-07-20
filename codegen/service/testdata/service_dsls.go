@@ -808,6 +808,19 @@ var PkgPathDSL = func() {
 	})
 }
 
+var PkgPathArrayDSL = func() {
+	var Foo = Type("Foo", func() {
+		Attribute("IntField", Int)
+		Meta("struct:pkg:path", "foo")
+	})
+	Service("PkgPathArrayMethod", func() {
+		Method("A", func() {
+			Payload(ArrayOf(Foo))
+			Result(ArrayOf(Foo))
+		})
+	})
+}
+
 var PkgPathRecursiveDSL = func() {
 	var Foo = Type("Foo", func() {
 		Attribute("IntField", Int)

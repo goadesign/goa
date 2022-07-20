@@ -168,9 +168,9 @@ func transformAttribute(source, target *expr.AttributeExpr, sourceVar, targetVar
 			code, err = transformObject(source, target, sourceVar, targetVar, newVar, ta)
 		case expr.IsUnion(source.Type):
 			if ta.proto {
-				code, err = transformUnionToProto(source, target, sourceVar, targetVar, newVar, ta)
+				code, err = transformUnionToProto(source, target, sourceVar, targetVar, ta)
 			} else {
-				code, err = transformUnionFromProto(source, target, sourceVar, targetVar, newVar, ta)
+				code, err = transformUnionFromProto(source, target, sourceVar, targetVar, ta)
 			}
 		default:
 			assign := "="
@@ -515,11 +515,11 @@ func transformMap(source, target *expr.Map, sourceVar, targetVar string, newVar 
 // transformUnionToProto returns the code to transform an attribute of type
 // union from Goa to protobuf. It returns an error if source and target are not
 // compatible for transformation.
-func transformUnionToProto(source, target *expr.AttributeExpr, sourceVar, targetVar string, newVar bool, ta *transformAttrs) (string, error) {
+func transformUnionToProto(source, target *expr.AttributeExpr, sourceVar, targetVar string, ta *transformAttrs) (string, error) {
 	if err := codegen.IsCompatible(source.Type, target.Type, sourceVar, targetVar); err != nil {
 		return "", err
 	}
-	tdata := transformUnionData(source, target, sourceVar, targetVar, ta)
+	tdata := transformUnionData(source, target, ta)
 	targetValueTypeNames := make([]string, len(tdata.TargetValues))
 	targetFieldNames := make([]string, len(tdata.TargetValues))
 	for i, v := range tdata.TargetValues {
@@ -548,11 +548,11 @@ func transformUnionToProto(source, target *expr.AttributeExpr, sourceVar, target
 // transformUnionFromProto returns the code to transform an attribute of type
 // union from Goa to protobuf. It returns an error if source and target are not
 // compatible for transformation.
-func transformUnionFromProto(source, target *expr.AttributeExpr, sourceVar, targetVar string, newVar bool, ta *transformAttrs) (string, error) {
+func transformUnionFromProto(source, target *expr.AttributeExpr, sourceVar, targetVar string, ta *transformAttrs) (string, error) {
 	if err := codegen.IsCompatible(source.Type, target.Type, sourceVar, targetVar); err != nil {
 		return "", err
 	}
-	tdata := transformUnionData(source, target, sourceVar, targetVar, ta)
+	tdata := transformUnionData(source, target, ta)
 	sourceFieldNames := make([]string, len(tdata.SourceValues))
 	for i, v := range tdata.SourceValues {
 		fieldName := ta.SourceCtx.Scope.Field(v.Attribute, v.Name, true)
@@ -642,7 +642,7 @@ func checkZeroValue(dt expr.DataType, target string, negate bool) string {
 }
 
 // transformUnionData returns data needed by both transformUnion functions.
-func transformUnionData(source, target *expr.AttributeExpr, sourceVar, targetVar string, ta *transformAttrs) *unionData {
+func transformUnionData(source, target *expr.AttributeExpr, ta *transformAttrs) *unionData {
 	src := expr.AsUnion(source.Type)
 	tgt := expr.AsUnion(target.Type)
 	srcValues := make([]*expr.NamedAttributeExpr, len(src.Values))
@@ -724,7 +724,7 @@ func transformAttributeHelpers(source, target *expr.AttributeExpr, ta *transform
 				}
 			}
 		case expr.IsObject(source.Type):
-			walkMatches(source, target, func(srcMatt, tgtMatt *expr.MappedAttributeExpr, srcc, tgtc *expr.AttributeExpr, n string) {
+			walkMatches(source, target, func(srcMatt, _ *expr.MappedAttributeExpr, srcc, tgtc *expr.AttributeExpr, n string) {
 				if err != nil {
 					return
 				}

@@ -249,10 +249,15 @@ func (a *AttributeExpr) Validate(ctx string, parent eval.Expression) *eval.Valid
 // Finalize merges base and reference type attributes and finalizes the Type
 // attribute.
 func (a *AttributeExpr) Finalize() {
+	if a.finalized {
+		return // Avoid infinite recursion.
+	}
+	a.finalized = true
 	if ut, ok := a.Type.(UserType); ok {
 		ut.Finalize()
 	}
-	if IsObject(a.Type) {
+	switch {
+	case IsObject(a.Type):
 		for _, ref := range a.References {
 			ru, ok := ref.(UserType)
 			if !ok {
@@ -267,14 +272,39 @@ func (a *AttributeExpr) Finalize() {
 			}
 			a.Merge(ru.Attribute())
 		}
-		if a.finalized {
-			// Avoid infinite recursion.
-			return
+		var pkgPath string
+		if ut, ok := a.Type.(UserType); ok {
+			if meta, ok := ut.Attribute().Meta["struct:pkg:path"]; ok {
+				pkgPath = meta[0]
+			}
 		}
-		a.finalized = true
 		for _, nat := range *AsObject(a.Type) {
+			if pkgPath != "" {
+				if u := AsUnion(nat.Attribute.Type); u != nil {
+					for _, nat := range u.Values {
+						// Union types are generated using a private interface
+						// to ensure that only types that are part of the enum
+						// can be assigned to the attribute. This means that the
+						// union values must be declared in the same package as
+						// the parent attribute.
+						if ut, ok := nat.Attribute.Type.(UserType); ok {
+							ut.Attribute().Meta["struct:pkg:path"] = []string{pkgPath}
+						}
+					}
+				}
+			}
 			nat.Attribute.Finalize()
 		}
+	case IsUnion(a.Type):
+		for _, nat := range AsUnion(a.Type).Values {
+			nat.Attribute.Finalize()
+		}
+	case IsArray(a.Type):
+		AsArray(a.Type).ElemType.Finalize()
+	case IsMap(a.Type):
+		m := AsMap(a.Type)
+		m.ElemType.Finalize()
+		m.KeyType.Finalize()
 	}
 }
 
