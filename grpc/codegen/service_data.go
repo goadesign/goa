@@ -1256,7 +1256,7 @@ func extractMetadata(a *expr.MappedAttributeExpr, service *expr.AttributeExpr, s
 
 			arr     = expr.AsArray(c.Type)
 			mp      = expr.AsMap(c.Type)
-			typeRef = scope.GoTypeRef(c)
+			typeRef = scope.GoTypeRef(unalias(c))
 			ft      = service.Type
 		)
 		{
@@ -1281,7 +1281,7 @@ func extractMetadata(a *expr.MappedAttributeExpr, service *expr.AttributeExpr, s
 			VarName:       varn,
 			Required:      required,
 			Type:          c.Type,
-			TypeName:      scope.GoTypeName(c),
+			TypeName:      scope.GoTypeName(unalias(c)),
 			TypeRef:       typeRef,
 			Pointer:       pointer,
 			Slice:         arr != nil,
@@ -1291,13 +1291,23 @@ func extractMetadata(a *expr.MappedAttributeExpr, service *expr.AttributeExpr, s
 				mp.KeyType.Type.Kind() == expr.StringKind &&
 				mp.ElemType.Type.Kind() == expr.ArrayKind &&
 				expr.AsArray(mp.ElemType.Type).ElemType.Type.Kind() == expr.StringKind,
-			Validate:     codegen.RecursiveValidationCode(c, ctx, required, expr.IsAlias(c.Type), varn),
+			Validate:     codegen.RecursiveValidationCode(c, ctx, required, false, varn),
 			DefaultValue: c.DefaultValue,
 			Example:      c.Example(expr.Root.API.Random()),
 		})
 		return nil
 	})
 	return metadata
+}
+
+func unalias(att *expr.AttributeExpr) *expr.AttributeExpr {
+	if ut, ok := att.Type.(expr.UserType); ok {
+		if _, ok := ut.Attribute().Type.(expr.Primitive); ok {
+			return ut.Attribute()
+		}
+		return unalias(ut.Attribute())
+	}
+	return att
 }
 
 // serviceTypeContext returns a contextual attribute for service types. Service
@@ -1358,7 +1368,7 @@ func {{ .Name }}({{ range .Args }}{{ .Name }} {{ .TypeRef }}, {{ end }}) {{ .Ret
 {{- if .ReturnIsStruct }}
 	{{- range .Args }}
 		{{- if .FieldName }}
-			{{ $.ReturnVarName }}.{{ .FieldName }} = {{ .Name }}
+			{{ $.ReturnVarName }}.{{ .FieldName }} = {{ if isAlias .FieldType }}{{ fullName .FieldType }}({{ end }}{{ .Name }}{{ if isAlias .FieldType }}){{ end }}
 		{{- end }}
 	{{- end }}
 {{- end }}

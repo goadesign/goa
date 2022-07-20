@@ -274,7 +274,7 @@ func InitStructFields(args []*InitArgData, targetVar, sourcePkg, targetPkg strin
 		switch {
 		case arg.FieldName == "" && arg.FieldType == nil:
 		// do nothing
-		case expr.Equal(arg.Type, arg.FieldType):
+		case expr.Equal(unalias(arg.Type), arg.FieldType):
 			// arg type and struct field type are the same. No need to call transform
 			// to initialize the field
 			deref := ""
@@ -284,7 +284,11 @@ func InitStructFields(args []*InitArgData, targetVar, sourcePkg, targetPkg strin
 			code += fmt.Sprintf("%s.%s = %s%s\n", targetVar, arg.FieldName, deref, arg.Name)
 		case expr.IsPrimitive(arg.FieldType):
 			// aliased primitive type
-			t := scope.GoFullTypeRef(&expr.AttributeExpr{Type: arg.FieldType}, targetPkg)
+			pkg := targetPkg
+			if loc := UserTypeLocation(arg.FieldType); loc != nil {
+				pkg = loc.PackageName()
+			}
+			t := scope.GoFullTypeRef(&expr.AttributeExpr{Type: arg.FieldType}, pkg)
 			cast := fmt.Sprintf("%s(%s)", t, arg.Name)
 			if arg.Pointer {
 				code += "if " + arg.Name + " != nil {\n"
@@ -314,6 +318,18 @@ func InitStructFields(args []*InitArgData, targetVar, sourcePkg, targetPkg strin
 		}
 	}
 	return code, helpers, nil
+}
+
+// Get the underlying primitive type of a aliased type or return the type itself
+// if not aliased.
+func unalias(dt expr.DataType) expr.DataType {
+	if ut, ok := dt.(expr.UserType); ok {
+		if _, ok := ut.Attribute().Type.(expr.Primitive); ok {
+			return ut.Attribute().Type
+		}
+		return unalias(ut.Attribute().Type)
+	}
+	return dt
 }
 
 func runeSpacePosRev(r []rune) int {

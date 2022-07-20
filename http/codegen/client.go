@@ -440,10 +440,10 @@ func {{ .RequestEncoder }}(encoder func(*http.Request) goahttp.Encoder) func(*ht
 				req.Header.Add({{ printf "%q" .Name }}, valStr)
 				{{- end }}
 			}
+			{{- else if (and (isAlias .FieldType) (eq (underlyingType .FieldType).Name "string")) }}
+			req.Header.Set({{ printf "%q" .Name }}, string(head))
 			{{- else if eq .Type.Name "string" }}
 			req.Header.Set({{ printf "%q" .Name }}, head)
-			{{- else if (and (isAlias .Type) (eq (underlyingType .Type).Name "string")) }}
-			req.Header.Set({{ printf "%q" .Name }}, string(head))
 			{{- else }}
 			{{ template "type_conversion" (typeConversionData .Type .FieldType "headStr" "head") }}
 			req.Header.Set({{ printf "%q" .Name }}, headStr)

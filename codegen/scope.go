@@ -234,11 +234,11 @@ func (s *NameScope) GoFullTypeName(att *expr.AttributeExpr, pkg string) string {
 		}
 		return GoNativeTypeName(actual)
 	case *expr.Array:
-		return "[]" + s.GoFullTypeRef(actual.ElemType, pkg)
+		return "[]" + s.GoFullTypeRef(actual.ElemType, pkgWithDefault(actual.ElemType.Type, pkg))
 	case *expr.Map:
 		return fmt.Sprintf("map[%s]%s",
-			s.GoFullTypeRef(actual.KeyType, pkg),
-			s.GoFullTypeRef(actual.ElemType, pkg))
+			s.GoFullTypeRef(actual.KeyType, pkgWithDefault(actual.KeyType.Type, pkg)),
+			s.GoFullTypeRef(actual.ElemType, pkgWithDefault(actual.ElemType.Type, pkg)))
 	case *expr.Object:
 		return s.GoTypeDef(att, false, false)
 	case expr.UserType, *expr.Union:
@@ -251,10 +251,20 @@ func (s *NameScope) GoFullTypeName(att *expr.AttributeExpr, pkg string) string {
 		}
 		return pkg + "." + n
 	case expr.CompositeExpr:
-		return s.GoFullTypeName(actual.Attribute(), pkg)
+		return s.GoFullTypeName(actual.Attribute(), pkgWithDefault(actual.Attribute().Type, pkg))
 	default:
 		panic(fmt.Sprintf("unknown data type %T", actual)) // bug
 	}
+}
+
+// pkgWithDefault returns the package defining the given type. If the types is a
+// user type with "struct:pkg:path" metadata then it returns the corresponding
+// value, otherwise it returns pkg.
+func pkgWithDefault(dt expr.DataType, pkg string) string {
+	if loc := UserTypeLocation(dt); loc != nil {
+		return loc.PackageName()
+	}
+	return pkg
 }
 
 func goTypeRef(name string, dt expr.DataType) string {

@@ -90,6 +90,15 @@ func serverType(genpkg string, svc *expr.GRPCServiceExpr, seen map[string]struct
 				Name:   "server-type-init",
 				Source: typeInitT,
 				Data:   init,
+				FuncMap: map[string]interface{}{
+					"isAlias": expr.IsAlias,
+					"fullName": func(dt expr.DataType) string {
+						if loc := codegen.UserTypeLocation(dt); loc != nil {
+							return loc.PackageName() + "." + dt.Name()
+						}
+						return dt.Name()
+					},
+				},
 			})
 			foundInits[init.Name] = struct{}{}
 		}
