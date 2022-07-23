@@ -14,7 +14,7 @@
 #
 MAJOR=3
 MINOR=7
-BUILD=12
+BUILD=13
 
 GOOS=$(shell go env GOOS)
 GO_FILES=$(shell find . -type f -name '*.go')
