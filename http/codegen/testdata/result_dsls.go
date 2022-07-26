@@ -779,7 +779,7 @@ var ResultWithCustomPkgTypeDSL = func() {
 	})
 }
 
-var ResultWithEmbeddedCustomPkgTypeDSL = func() {
+var EmbeddedCustomPkgTypeDSL = func() {
 	var Foo = Type("Foo", func() {
 		Meta("struct:pkg:path", "foo")
 		Attribute("bar", String)
@@ -799,6 +799,29 @@ var ResultWithEmbeddedCustomPkgTypeDSL = func() {
 			})
 		})
 	})
+}
+
+var ArrayAliasExtendedDSL = func() {
+	var Foo = Type("Foo", String)
+
+	var Extension = Type("Extension", func() {
+		Attribute("Foo", Foo)
+	})
+
+	var ResultType = Type("ResultType", func() {
+		Extend(Extension)
+	})
+
+	var _ = Service("FooService", func() {
+		Method("FooMethod", func() {
+			Payload(ArrayOf(ResultType))
+			Result(ArrayOf(ResultType))
+			HTTP(func() {
+				GET("/")
+			})
+		})
+	})
+
 }
 
 var EmptyErrorResponseBodyDSL = func() {
