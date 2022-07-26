@@ -83,7 +83,7 @@ func TestEncode(t *testing.T) {
 		{"empty-server-response-with-tags", testdata.EmptyServerResponseWithTagsDSL, testdata.EmptyServerResponseWithTagsEncodeCode},
 
 		{"result-with-custom-pkg-type", testdata.ResultWithCustomPkgTypeDSL, testdata.ResultWithCustomPkgTypeEncodeCode},
-		{"result-with-embedded-custom-pkg-type", testdata.ResultWithEmbeddedCustomPkgTypeDSL, testdata.ResultWithEmbeddedCustomPkgTypeEncodeCode},
+		{"result-with-embedded-custom-pkg-type", testdata.EmbeddedCustomPkgTypeDSL, testdata.ResultWithEmbeddedCustomPkgTypeEncodeCode},
 	}
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
@@ -110,7 +110,8 @@ func TestEncodeMarshallingAndUnmarshalling(t *testing.T) {
 		DSL  func()
 		Code []string
 	}{
-		{"result-with-embedded-custom-pkg-type", testdata.ResultWithEmbeddedCustomPkgTypeDSL, []string{testdata.ResultWithEmbeddedCustomPkgTypeUnmarshalCode, testdata.ResultWithEmbeddedCustomPkgTypeMarshalCode}},
+		{"result-with-embedded-custom-pkg-type", testdata.EmbeddedCustomPkgTypeDSL, []string{testdata.EmbeddedCustomPkgTypeUnmarshalCode, testdata.EmbeddedCustomPkgTypeMarshalCode}},
+		{"result-with-array-alias-extended", testdata.ArrayAliasExtendedDSL, []string{testdata.ArrayAliasExtendedUnmarshalCode, testdata.ArrayAliasExtendedMarshalCode}},
 	}
 	const totalSectionsOffset = 3
 	for _, c := range cases {

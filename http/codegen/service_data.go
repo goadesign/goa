@@ -655,8 +655,7 @@ func (d ServicesData) analyze(hs *expr.HTTPServiceExpr) *ServiceData {
 					name := fmt.Sprintf("%s%sPath%s", ep.VarName, svc.StructName, suffix)
 					for j, arg := range params {
 						patt := pathParamsObj.Attribute(arg)
-						att := expr.DupAtt(patt)
-						makeHTTPType(att)
+						att := makeHTTPType(patt)
 						pointer := a.Params.IsPrimitivePointer(arg, true)
 						name := rd.Scope.Name(codegen.Goify(arg, false))
 						var vcode string
@@ -919,10 +918,15 @@ func (d ServicesData) analyze(hs *expr.HTTPServiceExpr) *ServiceData {
 // * removes aliased user type by replacing them with the underlying type.
 // * changes unions into structs with Type and Value fields.
 //
-func makeHTTPType(att *expr.AttributeExpr, seen ...map[string]struct{}) {
+func makeHTTPType(att *expr.AttributeExpr) *expr.AttributeExpr {
 	if att == nil {
-		return
+		return nil
 	}
+	att = expr.DupAtt(att)
+	return makeHTTPTypeRecursive(att, make(map[string]struct{}))
+}
+
+func makeHTTPTypeRecursive(att *expr.AttributeExpr, seen map[string]struct{}) *expr.AttributeExpr {
 	switch dt := att.Type.(type) {
 	case expr.UserType:
 		if _, ok := dt.(*expr.ResultTypeExpr); !ok && !expr.IsObject(dt) {
@@ -938,27 +942,22 @@ func makeHTTPType(att *expr.AttributeExpr, seen ...map[string]struct{}) {
 			}
 			att.DefaultValue = dt.Attribute().DefaultValue
 		}
-		var s map[string]struct{}
-		if len(seen) > 0 {
-			s = seen[0]
-		} else {
-			s = make(map[string]struct{})
-			seen = append(seen, s)
+		if _, ok := seen[dt.ID()]; ok {
+			return att
 		}
-		if _, ok := s[dt.ID()]; ok {
-			return
-		}
-		s[dt.ID()] = struct{}{}
-		makeHTTPType(dt.Attribute(), seen...)
+		seen[dt.ID()] = struct{}{}
+		dt.SetAttribute(makeHTTPTypeRecursive(dt.Attribute(), seen))
 	case *expr.Array:
-		makeHTTPType(dt.ElemType, seen...)
+		dt.ElemType = makeHTTPTypeRecursive(dt.ElemType, seen)
 	case *expr.Map:
-		makeHTTPType(dt.KeyType, seen...)
-		makeHTTPType(dt.ElemType, seen...)
+		dt.KeyType = makeHTTPTypeRecursive(dt.KeyType, seen)
+		dt.ElemType = makeHTTPTypeRecursive(dt.ElemType, seen)
 	case *expr.Object:
-		for _, nat := range *dt {
-			makeHTTPType(nat.Attribute, seen...)
+		obj := make(expr.Object, len(*dt))
+		for i, nat := range *dt {
+			obj[i] = &expr.NamedAttributeExpr{Name: nat.Name, Attribute: makeHTTPTypeRecursive(nat.Attribute, seen)}
 		}
+		att.Type = &obj
 	case *expr.Union:
 		values := expr.AsUnion(dt).Values
 		names := make([]interface{}, len(values))
@@ -995,13 +994,14 @@ func makeHTTPType(att *expr.AttributeExpr, seen ...map[string]struct{}) {
 		att.Type = &obj
 		att.Validation = &expr.ValidationExpr{Required: []string{"Type", "Value"}}
 	}
+	return att
 }
 
 // buildPayloadData returns the data structure used to describe the endpoint
 // payload including the HTTP request details. It also returns the user types
 // used by the request body type recursively if any.
 func buildPayloadData(e *expr.HTTPEndpointExpr, sd *ServiceData) *PayloadData {
-	makeHTTPType(e.Body)
+	e.Body = makeHTTPType(e.Body)
 	var (
 		payload    = e.MethodExpr.Payload
 		svc        = sd.Service
@@ -1499,7 +1499,8 @@ func buildResponses(e *expr.HTTPEndpointExpr, result *expr.AttributeExpr, viewed
 		}
 		notag := -1
 		for i, resp := range e.Responses {
-			makeHTTPType(resp.Body)
+			resp.Body = expr.DupAtt(resp.Body)
+			resp.Body = makeHTTPType(resp.Body)
 			if resp.Tag[0] == "" {
 				if notag > -1 {
 					continue // we don't want more than one response with no tag
@@ -1761,7 +1762,7 @@ func buildErrorsData(e *expr.HTTPEndpointExpr, sd *ServiceData) []*ErrorGroupDat
 
 	data := make(map[string][]*ErrorData)
 	for _, v := range e.HTTPErrors {
-		makeHTTPType(v.Response.Body)
+		v.Response.Body = makeHTTPType(v.Response.Body)
 		var (
 			init *InitData
 			body = v.Response.Body.Type
@@ -2307,7 +2308,7 @@ func extractPathParams(a *expr.MappedAttributeExpr, service *expr.AttributeExpr,
 			stringSlice = arr.ElemType.Type.Kind() == expr.StringKind
 		}
 
-		makeHTTPType(c)
+		c = makeHTTPType(c)
 		var (
 			varn = scope.Name(codegen.Goify(name, false))
 			arr  = expr.AsArray(c.Type)
@@ -2363,7 +2364,7 @@ func extractQueryParams(a *expr.MappedAttributeExpr, service *expr.AttributeExpr
 			stringSlice = arr.ElemType.Type.Kind() == expr.StringKind
 		}
 
-		makeHTTPType(c)
+		c = makeHTTPType(c)
 		var (
 			varn    = scope.Name(codegen.Goify(name, false))
 			arr     = expr.AsArray(c.Type)
@@ -2429,14 +2430,12 @@ func extractHeaders(a *expr.MappedAttributeExpr, svcAtt *expr.AttributeExpr, svc
 		var hattr *expr.AttributeExpr
 		var stringSlice bool
 		{
-			hattr = expr.DupAtt(attr)
-
 			// The StringSlice field of ParamData must be false for aliased primitive types
-			if arr := expr.AsArray(hattr.Type); arr != nil {
+			if arr := expr.AsArray(attr.Type); arr != nil {
 				stringSlice = arr.ElemType.Type.Kind() == expr.StringKind
 			}
 
-			makeHTTPType(hattr)
+			hattr = makeHTTPType(attr)
 		}
 		var (
 			varn    = scope.Name(codegen.Goify(name, false))
@@ -2495,8 +2494,7 @@ func extractCookies(a *expr.MappedAttributeExpr, svcAtt *expr.AttributeExpr, svc
 			if hattr = svcAtt.Find(name); hattr == nil {
 				hattr = svcAtt
 			}
-			hattr = expr.DupAtt(hattr)
-			makeHTTPType(hattr)
+			hattr = makeHTTPType(hattr)
 		}
 		var (
 			varn    = scope.Name(codegen.Goify(name, false))
