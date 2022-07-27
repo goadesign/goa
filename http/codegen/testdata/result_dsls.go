@@ -824,6 +824,35 @@ var ArrayAliasExtendedDSL = func() {
 
 }
 
+var ExtensionWithAliasDSL = func() {
+	var Bar = Type("Bar", func() {
+		Attribute("Bar", UInt)
+		Required("Bar")
+	})
+
+	var TypeWithAlias = Type("TypeWithAlias", func() {
+		Attribute("Bar", Bar)
+	})
+
+	var Extension = Type("Extension", func() {
+		Extend(TypeWithAlias)
+	})
+
+	var ResultType = Type("ResultType", func() {
+		Attribute("Extension", Extension)
+	})
+
+	var _ = Service("FooService", func() {
+		Method("FooMethod", func() {
+			Payload(ArrayOf(ResultType))
+			Result(ArrayOf(ResultType))
+			HTTP(func() {
+				GET("/")
+			})
+		})
+	})
+}
+
 var EmptyErrorResponseBodyDSL = func() {
 	Service("ServiceEmptyErrorResponseBody", func() {
 		Method("MethodEmptyErrorResponseBody", func() {
