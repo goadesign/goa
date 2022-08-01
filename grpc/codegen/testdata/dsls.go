@@ -98,6 +98,18 @@ var ElemValidationDSL = func() {
 	})
 }
 
+var AliasValidationDSL = func() {
+	var UUID = Type("UUID", String, func() {
+		Format(FormatUUID)
+	})
+	Service("ServiceElemValidation", func() {
+		Method("MethodElemValidation", func() {
+			Payload(UUID)
+			GRPC(func() {})
+		})
+	})
+}
+
 var UnaryRPCAcronymDSL = func() {
 	Service("ServiceUnaryRPCAcronym", func() {
 		Method("MethodUnaryRPCAcronym_jwt", func() {
@@ -517,6 +529,19 @@ var ResultWithCollectionDSL = func() {
 			Result(func() {
 				Field(1, "result", ResultT)
 			})
+			GRPC(func() {})
+		})
+	})
+}
+
+var ResultWithAliasValidation = func() {
+	var UUID = Type("UUID", String, func() {
+		Format(FormatUUID)
+	})
+
+	Service("ServiceResultWithAliasValidation", func() {
+		Method("MethodResultWithAliasValidation", func() {
+			Result(UUID)
 			GRPC(func() {})
 		})
 	})
