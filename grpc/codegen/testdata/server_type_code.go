@@ -381,3 +381,27 @@ func ValidateArrayOfString(message *service_elem_validationpb.ArrayOfString) (er
 	return
 }
 `
+
+const AliasValidationServerTypesFile = `// NewMethodElemValidationPayload builds the payload of the
+// "MethodElemValidation" endpoint of the "ServiceElemValidation" service from
+// the gRPC request type.
+func NewMethodElemValidationPayload(message *service_elem_validationpb.UUID) serviceelemvalidation.UUID {
+	v := serviceelemvalidation.UUID(message.Field)
+	return v
+}
+
+// NewProtoMethodElemValidationResponse builds the gRPC response type from the
+// result of the "MethodElemValidation" endpoint of the "ServiceElemValidation"
+// service.
+func NewProtoMethodElemValidationResponse() *service_elem_validationpb.MethodElemValidationResponse {
+	message := &service_elem_validationpb.MethodElemValidationResponse{}
+	return message
+}
+
+// ValidateUUID runs the validations defined on UUID.
+func ValidateUUID(message *service_elem_validationpb.UUID) (err error) {
+	err = goa.MergeErrors(err, goa.ValidateFormat("message.field", message.Field, goa.FormatUUID))
+
+	return
+}
+`

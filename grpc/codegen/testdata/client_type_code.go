@@ -140,6 +140,30 @@ func NewMethodMessageUserTypeWithAliasResult(message *service_message_user_type_
 }
 `
 
+const ResultWithAliasValidationClientTypeCode = `// NewProtoMethodResultWithAliasValidationRequest builds the gRPC request type
+// from the payload of the "MethodResultWithAliasValidation" endpoint of the
+// "ServiceResultWithAliasValidation" service.
+func NewProtoMethodResultWithAliasValidationRequest() *service_result_with_alias_validationpb.MethodResultWithAliasValidationRequest {
+	message := &service_result_with_alias_validationpb.MethodResultWithAliasValidationRequest{}
+	return message
+}
+
+// NewMethodResultWithAliasValidationResult builds the result type of the
+// "MethodResultWithAliasValidation" endpoint of the
+// "ServiceResultWithAliasValidation" service from the gRPC response type.
+func NewMethodResultWithAliasValidationResult(message *service_result_with_alias_validationpb.UUID) serviceresultwithaliasvalidation.UUID {
+	result := serviceresultwithaliasvalidation.UUID(message.Field)
+	return result
+}
+
+// ValidateUUID runs the validations defined on UUID.
+func ValidateUUID(message *service_result_with_alias_validationpb.UUID) (err error) {
+	err = goa.MergeErrors(err, goa.ValidateFormat("message.field", message.Field, goa.FormatUUID))
+
+	return
+}
+`
+
 const ResultWithCollectionClientTypeCode = `// NewProtoMethodResultWithCollectionRequest builds the gRPC request type from
 // the payload of the "MethodResultWithCollection" endpoint of the
 // "ServiceResultWithCollection" service.
