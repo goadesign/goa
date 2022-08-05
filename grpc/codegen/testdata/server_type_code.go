@@ -417,13 +417,13 @@ func NewMethodPayload(message *using_meta_typespb.MethodRequest) *usingmetatypes
 		dptr := flag.ErrorHandling(message.D)
 		v.D = &dptr
 	}
-	var azero flag.ErrorHandling
-	if message.A == 0 {
-		v.A = azero
+	var zeroMessageA int64
+	if message.A == zeroMessageA {
+		v.A = 0
 	}
-	var bzero flag.ErrorHandling
-	if message.B == 0 {
-		v.B = bzero
+	var zeroMessageB int64
+	if message.B == zeroMessageB {
+		v.B = 0
 	}
 	if message.C != nil {
 		v.C = make([]time.Duration, len(message.C))

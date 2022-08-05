@@ -1051,8 +1051,8 @@ const (
 	if source.Int == 0 {
 		target.Int = 100
 	}
-	var zero json.RawMessage
-	if source.RawJson == zero {
+	var zeroSourceRawJSON string
+	if source.RawJson == zeroSourceRawJSON {
 		target.RawJSON = json.RawMessage{0x66, 0x6f, 0x6f}
 	}
 	if source.String_ == "" {

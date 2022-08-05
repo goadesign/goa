@@ -264,6 +264,7 @@ func transformObject(source, target *expr.AttributeExpr, sourceVar, targetVar st
 	// iterate through attributes to initialize rest of the struct fields and
 	// handle default values
 	var err error
+	scope := codegen.NewNameScope()
 	walkMatches(source, target, func(srcMatt, tgtMatt *expr.MappedAttributeExpr, srcc, tgtc *expr.AttributeExpr, n string) {
 		srcc = unAlias(srcc)
 		tgtc = unAlias(tgtc)
@@ -341,8 +342,9 @@ func transformObject(source, target *expr.AttributeExpr, sourceVar, targetVar st
 				// buffer sets boolean fields as false.
 				if !srcMatt.IsRequired(n) && srcc.Type != expr.Boolean {
 					if typeName, _ := codegen.GetMetaType(tgtc); typeName != "" {
-						code += fmt.Sprintf("var zero %s\n\t", typeName)
-						code += fmt.Sprintf("if %s == zero {\n\t", srcVar)
+						zero := scope.Unique("zero" + codegen.Goify(srcVar, true))
+						code += fmt.Sprintf("var %s %s\n\t", zero, protoBufNativeGoTypeName(tgtc.Type))
+						code += fmt.Sprintf("if %s == %s {\n\t", srcVar, zero)
 					} else {
 						check := checkZeroValue(srcc.Type, srcVar, false)
 						if check != "" {

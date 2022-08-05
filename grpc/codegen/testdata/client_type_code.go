@@ -325,7 +325,7 @@ func NewProtoMethodBidirectionalStreamingRPCSameTypeStreamingRequest(spayload *s
 }
 `
 
-const StructMetaTypeTypeCode = `// NewProtoMethodRequest buidls the gRPC request type from the payload of the
+const StructMetaTypeTypeCode = `// NewProtoMethodRequest builds the gRPC request type from the payload of the
 // "Method" endpoint of the "UsingMetaTypes" service.
 func NewProtoMethodRequest(payload *usingmetatypes.MethodPayload) *using_meta_typespb.MethodRequest {
 	message := &using_meta_typespb.MethodRequest{
@@ -355,13 +355,13 @@ func NewMethodResult(message *using_meta_typespb.MethodResponse) *usingmetatypes
 		dptr := flag.ErrorHandling(message.D)
 		result.D = &dptr
 	}
-	var azero flag.ErrorHandling
-	if message.A == 0 {
-		result.A = azero
+	var zeroMessageA int64
+	if message.A == zeroMessageA {
+		result.A = 0
 	}
-	var bzero flag.ErrorHandling
-	if message.B == 0 {
-		result.B = bzero
+	var zeroMessageB int64
+	if message.B == zeroMessageB {
+		result.B = 0
 	}
 	if message.C != nil {
 		result.C = make([]time.Duration, len(message.C))
