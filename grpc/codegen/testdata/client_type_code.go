@@ -324,3 +324,51 @@ func NewProtoMethodBidirectionalStreamingRPCSameTypeStreamingRequest(spayload *s
 	return v
 }
 `
+
+const StructMetaTypeTypeCode = `// NewProtoMethodRequest buidls the gRPC request type from the payload of the
+// "Method" endpoint of the "UsingMetaTypes" service.
+func NewProtoMethodRequest(payload *usingmetatypes.MethodPayload) *using_meta_typespb.MethodRequest {
+	message := &using_meta_typespb.MethodRequest{
+		A: int64(payload.A),
+		B: int64(payload.B),
+	}
+	if payload.D != nil {
+		message.D = int64(*payload.D)
+	}
+	if payload.C != nil {
+		message.C = make([]int64, len(payload.C))
+		for i, val := range payload.C {
+			message.C[i] = int64(val)
+		}
+	}
+	return message
+}
+
+// NewMethodResult builds the result type of the "Method" endpoint of the
+// "UsingMetaTypes" service from the gRPC response type.
+func NewMethodResult(message *using_meta_typespb.MethodResponse) *usingmetatypes.MethodResult {
+	result := &usingmetatypes.MethodResult{
+		A: flag.ErrorHandling(message.A),
+		B: flag.ErrorHandling(message.B),
+	}
+	if message.D != 0 {
+		dptr := flag.ErrorHandling(message.D)
+		result.D = &dptr
+	}
+	var azero flag.ErrorHandling
+	if message.A == 0 {
+		result.A = azero
+	}
+	var bzero flag.ErrorHandling
+	if message.B == 0 {
+		result.B = bzero
+	}
+	if message.C != nil {
+		result.C = make([]time.Duration, len(message.C))
+		for i, val := range message.C {
+			result.C[i] = time.Duration(val)
+		}
+	}
+	return result
+}
+`

@@ -405,3 +405,51 @@ func ValidateUUID(message *service_elem_validationpb.UUID) (err error) {
 	return
 }
 `
+
+const StructMetaTypeServerTypeCode = `// NewMethodPayload builds the payload of the "Method" endpoint of the
+// "UsingMetaTypes" service from the gRPC request type.
+func NewMethodPayload(message *using_meta_typespb.MethodRequest) *usingmetatypes.MethodPayload {
+	v := &usingmetatypes.MethodPayload{
+		A: flag.ErrorHandling(message.A),
+		B: flag.ErrorHandling(message.B),
+	}
+	if message.D != 0 {
+		dptr := flag.ErrorHandling(message.D)
+		v.D = &dptr
+	}
+	var azero flag.ErrorHandling
+	if message.A == 0 {
+		v.A = azero
+	}
+	var bzero flag.ErrorHandling
+	if message.B == 0 {
+		v.B = bzero
+	}
+	if message.C != nil {
+		v.C = make([]time.Duration, len(message.C))
+		for i, val := range message.C {
+			v.C[i] = time.Duration(val)
+		}
+	}
+	return v
+}
+
+// NewProtoMethodResponse builds the gRPC response type from the result of the
+// "Method" endpoint of the "UsingMetaTypes" service.
+func NewProtoMethodResponse(result *usingmetatypes.MethodResult) *using_meta_typespb.MethodResponse {
+	message := &using_meta_typespb.MethodResponse{
+		A: int64(result.A),
+		B: int64(result.B),
+	}
+	if result.D != nil {
+		message.D = int64(*result.D)
+	}
+	if result.C != nil {
+		message.C = make([]int64, len(result.C))
+		for i, val := range result.C {
+			message.C[i] = int64(val)
+		}
+	}
+	return message
+}
+`
