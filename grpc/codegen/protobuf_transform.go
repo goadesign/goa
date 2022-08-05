@@ -584,7 +584,7 @@ func convertType(src, tgt *expr.AttributeExpr, srcVar string, ta *transformAttrs
 		srcp, tgtp := unAlias(src), unAlias(tgt)
 		if srcp.Type == tgtp.Type {
 			if ta.proto {
-				return fmt.Sprintf("%s(%s)", protoBufNativeGoTypeName(tgtp), srcVar)
+				return fmt.Sprintf("%s(%s)", protoBufNativeGoTypeName(tgtp.Type), srcVar)
 			}
 			return fmt.Sprintf("%s(%s)", ta.TargetCtx.Scope.Ref(tgt, ta.TargetCtx.Pkg(tgt)), srcVar)
 		}
@@ -600,7 +600,7 @@ func convertType(src, tgt *expr.AttributeExpr, srcVar string, ta *transformAttrs
 	if src.Type != expr.Int && src.Type != expr.UInt {
 		if srcType != "" || tgtType != "" {
 			if ta.proto || tgtType == "" {
-				tgtType = protoBufNativeGoTypeName(tgt)
+				tgtType = protoBufNativeGoTypeName(tgt.Type)
 			}
 			return fmt.Sprintf("%s(%s)", tgtType, srcVar)
 		}
@@ -608,7 +608,7 @@ func convertType(src, tgt *expr.AttributeExpr, srcVar string, ta *transformAttrs
 	}
 
 	if ta.proto {
-		return fmt.Sprintf("%s(%s)", protoBufNativeGoTypeName(tgt), srcVar)
+		return fmt.Sprintf("%s(%s)", protoBufNativeGoTypeName(tgt.Type), srcVar)
 	}
 	if tgtType == "" {
 		tgtType = codegen.GoNativeTypeName(tgt.Type)
