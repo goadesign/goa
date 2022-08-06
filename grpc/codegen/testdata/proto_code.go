@@ -443,3 +443,31 @@ message MethodRequest {
 message MethodResponse {
 }
 `
+
+const StructMetaTypePackageCode = `
+syntax = "proto3";
+
+package using_meta_types;
+
+option go_package = "/using_meta_typespb";
+
+// Service is the UsingMetaTypes service interface.
+service UsingMetaTypes {
+	// Method implements Method.
+	rpc Method (MethodRequest) returns (MethodResponse);
+}
+
+message MethodRequest {
+	sint64 a = 1;
+	sint64 b = 2;
+	repeated sint64 c = 3;
+	sint64 d = 4;
+}
+
+message MethodResponse {
+	sint64 a = 1;
+	sint64 b = 2;
+	repeated sint64 c = 3;
+	sint64 d = 4;
+}
+`
