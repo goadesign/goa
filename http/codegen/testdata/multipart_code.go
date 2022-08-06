@@ -263,7 +263,7 @@ func NewServiceMultipartPrimitiveMethodMultipartPrimitiveEncoder(encoderFn Servi
 			if err := encoderFn(mw, p); err != nil {
 				return err
 			}
-			r.Body = ioutil.NopCloser(body)
+			r.Body = io.NopCloser(body)
 			r.Header.Set("Content-Type", mw.FormDataContentType())
 			return mw.Close()
 		})
@@ -283,7 +283,7 @@ func NewServiceMultipartUserTypeMethodMultipartUserTypeEncoder(encoderFn Service
 			if err := encoderFn(mw, p); err != nil {
 				return err
 			}
-			r.Body = ioutil.NopCloser(body)
+			r.Body = io.NopCloser(body)
 			r.Header.Set("Content-Type", mw.FormDataContentType())
 			return mw.Close()
 		})
@@ -302,7 +302,7 @@ func NewServiceMultipartArrayTypeMethodMultipartArrayTypeEncoder(encoderFn Servi
 			if err := encoderFn(mw, p); err != nil {
 				return err
 			}
-			r.Body = ioutil.NopCloser(body)
+			r.Body = io.NopCloser(body)
 			r.Header.Set("Content-Type", mw.FormDataContentType())
 			return mw.Close()
 		})
@@ -322,7 +322,7 @@ func NewServiceMultipartMapTypeMethodMultipartMapTypeEncoder(encoderFn ServiceMu
 			if err := encoderFn(mw, p); err != nil {
 				return err
 			}
-			r.Body = ioutil.NopCloser(body)
+			r.Body = io.NopCloser(body)
 			r.Header.Set("Content-Type", mw.FormDataContentType())
 			return mw.Close()
 		})
@@ -342,7 +342,7 @@ func NewServiceMultipartWithParamMethodMultipartWithParamEncoder(encoderFn Servi
 			if err := encoderFn(mw, p); err != nil {
 				return err
 			}
-			r.Body = ioutil.NopCloser(body)
+			r.Body = io.NopCloser(body)
 			r.Header.Set("Content-Type", mw.FormDataContentType())
 			return mw.Close()
 		})
@@ -363,7 +363,7 @@ func NewServiceMultipartWithParamsAndHeadersMethodMultipartWithParamsAndHeadersE
 			if err := encoderFn(mw, p); err != nil {
 				return err
 			}
-			r.Body = ioutil.NopCloser(body)
+			r.Body = io.NopCloser(body)
 			r.Header.Set("Content-Type", mw.FormDataContentType())
 			return mw.Close()
 		})
