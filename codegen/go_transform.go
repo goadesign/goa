@@ -348,6 +348,10 @@ func transformMap(source, target *expr.Map, sourceVar, targetVar string, newVar 
 }
 
 // transformUnion generates Go code to transform source union to target union.
+//
+// Note: transport to/from service transforms are always object to union or
+// union to object. The only case a transform is union to union is when
+// converting a projected type from/to a service type.
 func transformUnion(source, target *expr.AttributeExpr, sourceVar, targetVar string, newVar bool, ta *TransformAttrs) (string, error) {
 	if expr.IsObject(target.Type) {
 		return transformUnionToObject(source, target, sourceVar, targetVar, newVar, ta)
@@ -365,7 +369,7 @@ func transformUnion(source, target *expr.AttributeExpr, sourceVar, targetVar str
 	}
 	sourceTypeRefs := make([]string, len(srcUnion.Values))
 	for i, st := range srcUnion.Values {
-		sourceTypeRefs[i] = ta.TargetCtx.Scope.Ref(st.Attribute, ta.TargetCtx.Pkg(st.Attribute))
+		sourceTypeRefs[i] = ta.TargetCtx.Scope.Ref(st.Attribute, ta.SourceCtx.Pkg(st.Attribute))
 	}
 	targetTypeNames := make([]string, len(tgtUnion.Values))
 	for i, tt := range tgtUnion.Values {
@@ -661,8 +665,7 @@ for key, val := range {{ .SourceVar }} {
 {{ end }}switch actual := {{ .SourceVar }}.(type) {
 	{{- range $i, $ref := .SourceTypeRefs }}
 	case {{ $ref }}:
-		{{ transformAttribute (index $.SourceTypes $i).Attribute (index $.TargetTypes $i).Attribute "actual" "val" true $.TransformAttrs -}}
-		{{ $.TargetVar }} = {{ $.TargetTypeName }}{ Value: val }
+		{{- transformAttribute (index $.SourceTypes $i).Attribute (index $.TargetTypes $i).Attribute "actual" $.TargetVar false $.TransformAttrs -}}
 	{{- end }}
 }
 `

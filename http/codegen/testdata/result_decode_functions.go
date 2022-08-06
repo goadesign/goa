@@ -746,8 +746,8 @@ var ValidateErrorResponseTypeDecodeCode = `// DecodeMethodAResponse returns a de
 // ValidateErrorResponseType MethodA endpoint. restoreBody controls whether the
 // response body should be restored after having been read.
 // DecodeMethodAResponse may return the following errors:
-//	- "some_error" (type *validateerrorresponsetype.AError): http.StatusBadRequest
-//	- error: internal error
+//   - "some_error" (type *validateerrorresponsetype.AError): http.StatusBadRequest
+//   - error: internal error
 func DecodeMethodAResponse(decoder func(*http.Response) goahttp.Decoder, restoreBody bool) func(*http.Response) (interface{}, error) {
 	return func(resp *http.Response) (interface{}, error) {
 		if restoreBody {
@@ -831,9 +831,9 @@ var EmptyErrorResponseBodyDecodeCode = `// DecodeMethodEmptyErrorResponseBodyRes
 // endpoint. restoreBody controls whether the response body should be restored
 // after having been read.
 // DecodeMethodEmptyErrorResponseBodyResponse may return the following errors:
-//	- "internal_error" (type *goa.ServiceError): http.StatusInternalServerError
-//	- "not_found" (type serviceemptyerrorresponsebody.NotFound): http.StatusNotFound
-//	- error: internal error
+//   - "internal_error" (type *goa.ServiceError): http.StatusInternalServerError
+//   - "not_found" (type serviceemptyerrorresponsebody.NotFound): http.StatusNotFound
+//   - error: internal error
 func DecodeMethodEmptyErrorResponseBodyResponse(decoder func(*http.Response) goahttp.Decoder, restoreBody bool) func(*http.Response) (interface{}, error) {
 	return func(resp *http.Response) (interface{}, error) {
 		if restoreBody {

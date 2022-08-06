@@ -8,7 +8,6 @@ import (
 	"encoding/xml"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"mime"
 	"net/http"
 	"strings"
@@ -175,7 +174,7 @@ func RequestEncoder(r *http.Request) Encoder {
 		r.Header.Set(k, "application/json")
 	}
 	var buf bytes.Buffer
-	r.Body = ioutil.NopCloser(&buf)
+	r.Body = io.NopCloser(&buf)
 	return json.NewEncoder(&buf)
 }
 
@@ -294,7 +293,7 @@ type textDecoder struct {
 }
 
 func (e *textDecoder) Decode(v interface{}) error {
-	b, err := ioutil.ReadAll(e.r)
+	b, err := io.ReadAll(e.r)
 	if err != nil {
 		return err
 	}

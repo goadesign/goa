@@ -26,6 +26,12 @@ var TestUnionDSL = func() {
 				Attribute("Int", Int)
 			})
 		})
+		UnionStringInt2 = Type("UnionStringInt2", func() {
+			OneOf("UnionStringInt2", func() {
+				Attribute("String", String)
+				Attribute("Int", Int)
+			})
+		})
 		UnionSomeType = Type("UnionSomeType", func() {
 			OneOf("UnionSomeType", func() {
 				Attribute("SomeType", SomeType)
@@ -36,6 +42,7 @@ var TestUnionDSL = func() {
 			Attribute("UnionString", UnionString)
 			Attribute("UnionString2", UnionString2)
 			Attribute("UnionStringInt", UnionStringInt)
+			Attribute("UnionStringInt2", UnionStringInt2)
 			Attribute("UnionSomeType", UnionSomeType)
 		})
 

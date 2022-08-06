@@ -13,12 +13,13 @@ func TestGoTransformUnion(t *testing.T) {
 		scope = NewNameScope()
 
 		// types to test
-		unionString    = root.UserType("Container").Attribute().Find("UnionString").Find("UnionString")
-		unionString2   = root.UserType("Container").Attribute().Find("UnionString2").Find("UnionString2")
-		unionStringInt = root.UserType("Container").Attribute().Find("UnionStringInt").Find("UnionStringInt")
-		unionSomeType  = root.UserType("Container").Attribute().Find("UnionSomeType").Find("UnionSomeType")
-		userType       = &expr.AttributeExpr{Type: root.UserType("UnionUserType")}
-		defaultCtx     = NewAttributeContext(false, false, true, "", scope)
+		unionString     = root.UserType("Container").Attribute().Find("UnionString").Find("UnionString")
+		unionString2    = root.UserType("Container").Attribute().Find("UnionString2").Find("UnionString2")
+		unionStringInt  = root.UserType("Container").Attribute().Find("UnionStringInt").Find("UnionStringInt")
+		unionStringInt2 = root.UserType("Container").Attribute().Find("UnionStringInt2").Find("UnionStringInt2")
+		unionSomeType   = root.UserType("Container").Attribute().Find("UnionSomeType").Find("UnionSomeType")
+		userType        = &expr.AttributeExpr{Type: root.UserType("UnionUserType")}
+		defaultCtx      = NewAttributeContext(false, false, true, "", scope)
 	)
 	tc := []struct {
 		Name     string
@@ -27,6 +28,7 @@ func TestGoTransformUnion(t *testing.T) {
 		Expected string
 	}{
 		{"UnionString to UnionString2", unionString, unionString2, unionToUnionCode},
+		{"UnionStringInt to UnionStringInt2", unionStringInt, unionStringInt2, unionMultiToUnionMultiCode},
 
 		{"UnionString to User Type", unionString, userType, unionStringToUserTypeCode},
 		{"UnionStringInt to User Type", unionStringInt, userType, unionStringIntToUserTypeCode},
@@ -89,8 +91,21 @@ const unionToUnionCode = `func transform() {
 	var target *UnionString2
 	switch actual := source.(type) {
 	case UnionStringString:
-		val := UnionString2String(actual)
-		target = UnionString2{Value: val}
+		target = UnionString2String(actual)
+
+	}
+}
+`
+
+const unionMultiToUnionMultiCode = `func transform() {
+	var target *UnionStringInt2
+	switch actual := source.(type) {
+	case UnionStringIntString:
+		target = UnionStringInt2String(actual)
+
+	case UnionStringIntInt:
+		target = UnionStringInt2Int(actual)
+
 	}
 }
 `
