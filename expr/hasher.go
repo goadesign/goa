@@ -69,11 +69,13 @@ func hashMap(m *Map, ignoreFields, ignoreNames, ignoreTags bool, seen map[*Objec
 }
 
 func hashUnion(u *Union, ignoreFields, ignoreNames, ignoreTags bool, seen map[*Object]*string) *string {
-	sort.Slice(u.Values, func(i, j int) bool {
+	sorted := make([]*NamedAttributeExpr, len(u.Values))
+	copy(sorted, u.Values)
+	sort.Slice(sorted, func(i, j int) bool {
 		return u.Values[i].Name < u.Values[j].Name
 	})
 	h := unionTypePrefix + u.TypeName
-	for _, nat := range u.Values {
+	for _, nat := range sorted {
 		h += unionAttributePrefix + nat.Name + unionAttributeTypePrefix + *hash(nat.Attribute.Type, ignoreFields, ignoreNames, ignoreTags, seen)
 	}
 	return &h

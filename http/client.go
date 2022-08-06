@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net"
 	"net/http"
 	"os"
@@ -63,8 +62,8 @@ func NewDebugDoer(d Doer) DebugDoer {
 func (dd *debugDoer) Do(req *http.Request) (*http.Response, error) {
 	var reqb []byte
 	if req.Body != nil {
-		reqb, _ = ioutil.ReadAll(req.Body)
-		req.Body = ioutil.NopCloser(bytes.NewBuffer(reqb))
+		reqb, _ = io.ReadAll(req.Body)
+		req.Body = io.NopCloser(bytes.NewBuffer(reqb))
 	}
 
 	resp, err := dd.Doer.Do(req)
@@ -73,15 +72,15 @@ func (dd *debugDoer) Do(req *http.Request) (*http.Response, error) {
 		return nil, err
 	}
 
-	respb, err := ioutil.ReadAll(resp.Body)
+	respb, err := io.ReadAll(resp.Body)
 	if err != nil {
 		respb = []byte(fmt.Sprintf("!!failed to read response: %s", err))
 	}
-	resp.Body = ioutil.NopCloser(bytes.NewBuffer(respb))
+	resp.Body = io.NopCloser(bytes.NewBuffer(respb))
 
 	dd.Response = resp
 
-	req.Body = ioutil.NopCloser(bytes.NewBuffer(reqb))
+	req.Body = io.NopCloser(bytes.NewBuffer(reqb))
 	dd.Request = req
 
 	dd.Fprint(os.Stderr)
@@ -108,9 +107,9 @@ func (dd *debugDoer) Fprint(w io.Writer) {
 		buf.WriteString(fmt.Sprintf("\n> %s: %s", k, strings.Join(dd.Request.Header[k], ", ")))
 	}
 
-	b, _ := ioutil.ReadAll(dd.Request.Body)
+	b, _ := io.ReadAll(dd.Request.Body)
 	if len(b) > 0 {
-		dd.Request.Body = ioutil.NopCloser(bytes.NewBuffer(b)) // reset the request body
+		dd.Request.Body = io.NopCloser(bytes.NewBuffer(b)) // reset the request body
 		buf.WriteByte('\n')
 		buf.Write(b)
 	}
@@ -132,9 +131,9 @@ func (dd *debugDoer) Fprint(w io.Writer) {
 		buf.WriteString(fmt.Sprintf("\n< %s: %s", k, strings.Join(dd.Response.Header[k], ", ")))
 	}
 
-	rb, _ := ioutil.ReadAll(dd.Response.Body) // this is reading from a memory buffer so safe to ignore errors
+	rb, _ := io.ReadAll(dd.Response.Body) // this is reading from a memory buffer so safe to ignore errors
 	if len(rb) > 0 {
-		dd.Response.Body = ioutil.NopCloser(bytes.NewBuffer(rb)) // reset the response body
+		dd.Response.Body = io.NopCloser(bytes.NewBuffer(rb)) // reset the response body
 		buf.WriteByte('\n')
 		buf.Write(rb)
 	}
