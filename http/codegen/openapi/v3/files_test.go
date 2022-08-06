@@ -6,7 +6,7 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
-	"io/ioutil"
+	"os"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -83,12 +83,12 @@ func TestFiles(t *testing.T) {
 
 					golden := filepath.Join(goldenPath, fmt.Sprintf("%s_%s.golden", strings.TrimSuffix(c.Name, "-swagger"), tname))
 					if *update {
-						if err := ioutil.WriteFile(golden, buf.Bytes(), 0644); err != nil {
+						if err := os.WriteFile(golden, buf.Bytes(), 0644); err != nil {
 							t.Fatalf("failed to update golden file: %s", err)
 						}
 					}
 
-					want, err := ioutil.ReadFile(golden)
+					want, err := os.ReadFile(golden)
 					want = bytes.Replace(want, []byte{'\r', '\n'}, []byte{'\n'}, -1)
 					if err != nil {
 						t.Fatalf("failed to read golden file: %s", err)

@@ -78,6 +78,8 @@ type (
 		// projectedTypes lists the types which uses pointers for all fields to
 		// define view specific validation logic.
 		projectedTypes []*ProjectedTypeData
+		// union methods that need to be defined in views package.
+		viewedUnionMethods []*UnionValueMethodData
 		// viewedResultTypes lists all the viewed method result types.
 		viewedResultTypes []*ViewedResultTypeData
 		// unionValueMethods lists the methods used to define union types.
@@ -538,19 +540,20 @@ func (s SchemesData) Append(d *SchemeData) SchemesData {
 // It records the user types needed by the service definition in userTypes.
 func (d ServicesData) analyze(service *expr.ServiceExpr) *Data {
 	var (
-		scope      *codegen.NameScope
-		viewScope  *codegen.NameScope
-		pkgName    string
-		viewspkg   string
-		types      []*UserTypeData
-		errTypes   []*UserTypeData
-		errorInits []*ErrorInitData
-		projTypes  []*ProjectedTypeData
-		viewedRTs  []*ViewedResultTypeData
-		seenErrors map[string]struct{}
-		seen       map[string]struct{}
-		seenProj   map[string]*ProjectedTypeData
-		seenViewed map[string]*ViewedResultTypeData
+		scope            *codegen.NameScope
+		viewScope        *codegen.NameScope
+		pkgName          string
+		viewspkg         string
+		types            []*UserTypeData
+		errTypes         []*UserTypeData
+		errorInits       []*ErrorInitData
+		projTypes        []*ProjectedTypeData
+		viewedUnionMeths []*UnionValueMethodData
+		viewedRTs        []*ViewedResultTypeData
+		seenErrors       map[string]struct{}
+		seen             map[string]struct{}
+		seenProj         map[string]*ProjectedTypeData
+		seenViewed       map[string]*ViewedResultTypeData
 	)
 	{
 		scope = codegen.NewNameScope()
@@ -593,7 +596,9 @@ func (d ServicesData) analyze(service *expr.ServiceExpr) *Data {
 			if _, ok := m.Result.Type.(*expr.ResultTypeExpr); ok {
 				// collect projected types for the corresponding result type
 				projected := expr.DupAtt(m.Result)
-				projTypes = append(projTypes, collectProjectedTypes(projected, m.Result, viewspkg, scope, viewScope, seenProj)...)
+				types, umeths := collectProjectedTypes(projected, m.Result, viewspkg, scope, viewScope, seenProj)
+				projTypes = append(projTypes, types...)
+				viewedUnionMeths = append(viewedUnionMeths, umeths...)
 			}
 			for _, er := range m.Errors {
 				recordError(er)
@@ -724,23 +729,24 @@ func (d ServicesData) analyze(service *expr.ServiceExpr) *Data {
 
 	varName := codegen.Goify(service.Name, false)
 	data := &Data{
-		Name:              service.Name,
-		Description:       desc,
-		VarName:           varName,
-		PathName:          codegen.SnakeCase(varName),
-		StructName:        codegen.Goify(service.Name, true),
-		PkgName:           pkgName,
-		ViewsPkg:          viewspkg,
-		Methods:           methods,
-		Schemes:           schemes,
-		Scope:             scope,
-		ViewScope:         viewScope,
-		errorTypes:        errTypes,
-		errorInits:        errorInits,
-		userTypes:         types,
-		projectedTypes:    projTypes,
-		viewedResultTypes: viewedRTs,
-		unionValueMethods: ms,
+		Name:               service.Name,
+		Description:        desc,
+		VarName:            varName,
+		PathName:           codegen.SnakeCase(varName),
+		StructName:         codegen.Goify(service.Name, true),
+		PkgName:            pkgName,
+		ViewsPkg:           viewspkg,
+		Methods:            methods,
+		Schemes:            schemes,
+		Scope:              scope,
+		ViewScope:          viewScope,
+		errorTypes:         errTypes,
+		errorInits:         errorInits,
+		userTypes:          types,
+		projectedTypes:     projTypes,
+		viewedUnionMethods: viewedUnionMeths,
+		viewedResultTypes:  viewedRTs,
+		unionValueMethods:  ms,
 	}
 	d[service.Name] = data
 
@@ -1149,8 +1155,8 @@ func BuildSchemeData(s *expr.SchemeExpr, m *expr.MethodExpr) *SchemeData {
 // make use of views. We need to build projected types for all user types - not
 // just result types - because user types make contain result types and thus may
 // need to be marshalled in different ways depending on the view being used.
-func collectProjectedTypes(projected, att *expr.AttributeExpr, viewspkg string, scope, viewScope *codegen.NameScope, seen map[string]*ProjectedTypeData) (data []*ProjectedTypeData) {
-	collect := func(projected, att *expr.AttributeExpr) []*ProjectedTypeData {
+func collectProjectedTypes(projected, att *expr.AttributeExpr, viewspkg string, scope, viewScope *codegen.NameScope, seen map[string]*ProjectedTypeData) (data []*ProjectedTypeData, umeths []*UnionValueMethodData) {
+	collect := func(projected, att *expr.AttributeExpr) ([]*ProjectedTypeData, []*UnionValueMethodData) {
 		return collectProjectedTypes(projected, att, viewspkg, scope, viewScope, seen)
 	}
 	switch pt := projected.Type.(type) {
@@ -1171,22 +1177,44 @@ func collectProjectedTypes(projected, att *expr.AttributeExpr, viewspkg string, 
 		pt.Rename(pt.Name() + "View")
 		// We recurse before building the projected type so that user types within
 		// a projected type is also converted to their respective projected types.
-		types := collect(pt.Attribute(), dt.Attribute())
+		types, ms := collect(pt.Attribute(), dt.Attribute())
 		pd := buildProjectedType(projected, att, viewspkg, scope, viewScope)
 		seen[dt.ID()] = pd
 		data = append(data, pd)
 		data = append(data, types...)
+		umeths = append(umeths, ms...)
 	case *expr.Array:
 		dt := att.Type.(*expr.Array)
-		data = append(data, collect(pt.ElemType, dt.ElemType)...)
+		types, ms := collect(pt.ElemType, dt.ElemType)
+		data = append(data, types...)
+		umeths = append(umeths, ms...)
 	case *expr.Map:
 		dt := att.Type.(*expr.Map)
-		data = append(data, collect(pt.KeyType, dt.KeyType)...)
-		data = append(data, collect(pt.ElemType, dt.ElemType)...)
+		types, ms := collect(pt.KeyType, dt.KeyType)
+		data = append(data, types...)
+		umeths = append(umeths, ms...)
+		types, ms = collect(pt.ElemType, dt.ElemType)
+		data = append(data, types...)
+		umeths = append(umeths, ms...)
 	case *expr.Object:
 		dt := att.Type.(*expr.Object)
 		for _, n := range *pt {
-			data = append(data, collect(n.Attribute, dt.Attribute(n.Name))...)
+			types, ms := collect(n.Attribute, dt.Attribute(n.Name))
+			data = append(data, types...)
+			umeths = append(umeths, ms...)
+		}
+	case *expr.Union:
+		dt := att.Type.(*expr.Union)
+		for i, n := range pt.Values {
+			types, ms := collect(n.Attribute, dt.Values[i].Attribute)
+			data = append(data, types...)
+			umeths = append(umeths, ms...)
+		}
+		for _, nat := range pt.Values {
+			umeths = append(umeths, &UnionValueMethodData{
+				Name:    codegen.UnionValTypeName(pt.Name()),
+				TypeRef: scope.GoTypeRef(nat.Attribute),
+			})
 		}
 	}
 	return

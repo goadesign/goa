@@ -3,7 +3,6 @@ package codegen
 import (
 	"bytes"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"os/exec"
 	"strings"
@@ -83,7 +82,7 @@ func FormatTestCode(t *testing.T, code string) string {
 	if err := finalizeGoSource(tmp); err != nil {
 		t.Fatal(err)
 	}
-	content, err := ioutil.ReadFile(tmp)
+	content, err := os.ReadFile(tmp)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -113,7 +112,7 @@ func Diff(t *testing.T, s1, s2 string) string {
 // It is used only for testing.
 func CreateTempFile(t *testing.T, content string) string {
 	t.Helper()
-	f, err := ioutil.TempFile("", "")
+	f, err := os.CreateTemp("", "")
 	if err != nil {
 		t.Fatal(err)
 	}

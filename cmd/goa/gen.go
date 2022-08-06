@@ -6,7 +6,6 @@ import (
 	"go/build"
 	"go/parser"
 	"go/token"
-	"io/ioutil"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -67,7 +66,7 @@ func NewGenerator(cmd string, path, output string) *Generator {
 				}
 			}
 			for _, gof := range pkg.GoFiles {
-				if bs, err := ioutil.ReadFile(gof); err == nil {
+				if bs, err := os.ReadFile(gof); err == nil {
 					if f, err := parser.ParseFile(fset, "", string(bs), parser.ImportsOnly); err == nil {
 						for _, s := range f.Imports {
 							matches := p.FindStringSubmatch(s.Path.Value)
@@ -106,7 +105,7 @@ func (g *Generator) Write(debug bool) error {
 		if cwd, err := os.Getwd(); err != nil {
 			wd = cwd
 		}
-		tmp, err := ioutil.TempDir(wd, "goa")
+		tmp, err := os.MkdirTemp(wd, "goa")
 		if err != nil {
 			return err
 		}

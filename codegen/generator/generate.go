@@ -1,7 +1,6 @@
 package generator
 
 import (
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"sort"
@@ -36,7 +35,7 @@ func Generate(dir, cmd string) (outputs []string, err1 error) {
 		}
 
 		// We create a temporary Go file to make sure the directory is a valid Go package
-		dummy, err := ioutil.TempFile(path, "temp.*.go")
+		dummy, err := os.CreateTemp(path, "temp.*.go")
 		if err != nil {
 			return nil, err
 		}
