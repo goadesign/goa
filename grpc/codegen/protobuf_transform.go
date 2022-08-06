@@ -264,6 +264,7 @@ func transformObject(source, target *expr.AttributeExpr, sourceVar, targetVar st
 	// iterate through attributes to initialize rest of the struct fields and
 	// handle default values
 	var err error
+	scope := codegen.NewNameScope()
 	walkMatches(source, target, func(srcMatt, tgtMatt *expr.MappedAttributeExpr, srcc, tgtc *expr.AttributeExpr, n string) {
 		srcc = unAlias(srcc)
 		tgtc = unAlias(tgtc)
@@ -341,8 +342,9 @@ func transformObject(source, target *expr.AttributeExpr, sourceVar, targetVar st
 				// buffer sets boolean fields as false.
 				if !srcMatt.IsRequired(n) && srcc.Type != expr.Boolean {
 					if typeName, _ := codegen.GetMetaType(tgtc); typeName != "" {
-						code += fmt.Sprintf("var zero %s\n\t", typeName)
-						code += fmt.Sprintf("if %s == zero {\n\t", srcVar)
+						zero := scope.Unique("zero" + codegen.Goify(srcVar, true))
+						code += fmt.Sprintf("var %s %s\n\t", zero, protoBufNativeGoTypeName(tgtc.Type))
+						code += fmt.Sprintf("if %s == %s {\n\t", srcVar, zero)
 					} else {
 						check := checkZeroValue(srcc.Type, srcVar, false)
 						if check != "" {
@@ -584,7 +586,7 @@ func convertType(src, tgt *expr.AttributeExpr, srcVar string, ta *transformAttrs
 		srcp, tgtp := unAlias(src), unAlias(tgt)
 		if srcp.Type == tgtp.Type {
 			if ta.proto {
-				return fmt.Sprintf("%s(%s)", protoBufNativeGoTypeName(tgtp), srcVar)
+				return fmt.Sprintf("%s(%s)", protoBufNativeGoTypeName(tgtp.Type), srcVar)
 			}
 			return fmt.Sprintf("%s(%s)", ta.TargetCtx.Scope.Ref(tgt, ta.TargetCtx.Pkg(tgt)), srcVar)
 		}
@@ -600,7 +602,7 @@ func convertType(src, tgt *expr.AttributeExpr, srcVar string, ta *transformAttrs
 	if src.Type != expr.Int && src.Type != expr.UInt {
 		if srcType != "" || tgtType != "" {
 			if ta.proto || tgtType == "" {
-				tgtType = protoBufNativeGoTypeName(tgt)
+				tgtType = protoBufNativeGoTypeName(tgt.Type)
 			}
 			return fmt.Sprintf("%s(%s)", tgtType, srcVar)
 		}
@@ -608,7 +610,7 @@ func convertType(src, tgt *expr.AttributeExpr, srcVar string, ta *transformAttrs
 	}
 
 	if ta.proto {
-		return fmt.Sprintf("%s(%s)", protoBufNativeGoTypeName(tgt), srcVar)
+		return fmt.Sprintf("%s(%s)", protoBufNativeGoTypeName(tgt.Type), srcVar)
 	}
 	if tgtType == "" {
 		tgtType = codegen.GoNativeTypeName(tgt.Type)
