@@ -272,11 +272,11 @@ const (
 
 	customSvcToCustomProtoCode = `func transform() {
 	target := &CustomTypes{
-		RequiredString: tdtypes.CustomString(source.RequiredString),
-		DefaultBool:    tdtypes.CustomBool(source.DefaultBool),
+		RequiredString: string(source.RequiredString),
+		DefaultBool:    bool(source.DefaultBool),
 	}
 	if source.Integer != nil {
-		target.Integer = tdtypes.CustomInt(*source.Integer)
+		target.Integer = int32(*source.Integer)
 	}
 }
 `
@@ -577,7 +577,7 @@ const (
 	defaultsSvcToDefaultsProtoCode = `func transform() {
 	target := &WithDefaults{
 		Int:            int32(source.Int),
-		RawJson:        json.RawMessage(source.RawJSON),
+		RawJson:        string(source.RawJSON),
 		RequiredInt:    int32(source.RequiredInt),
 		String_:        source.String,
 		RequiredString: source.RequiredString,
@@ -1051,8 +1051,8 @@ const (
 	if source.Int == 0 {
 		target.Int = 100
 	}
-	var zero json.RawMessage
-	if source.RawJson == zero {
+	var zeroSourceRawJSON string
+	if source.RawJson == zeroSourceRawJSON {
 		target.RawJSON = json.RawMessage{0x66, 0x6f, 0x6f}
 	}
 	if source.String_ == "" {
