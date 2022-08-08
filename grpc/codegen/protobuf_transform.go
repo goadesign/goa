@@ -323,7 +323,7 @@ func transformObject(source, target *expr.AttributeExpr, sourceVar, targetVar st
 		// Default value handling. We need to handle default values if the target
 		// type uses default values (i.e. attributes with default values are
 		// non-pointers) and has a default value set.
-		if tdef := tgtc.DefaultValue; tdef != nil && ta.TargetCtx.UseDefault {
+		if tdef := tgtc.DefaultValue; tdef != nil && ta.TargetCtx.UseDefault && isNonZero(tdef) {
 			if ta.proto {
 				// We set default values in protocol buffer type only if the source type
 				// uses pointers to hold default values.
@@ -367,6 +367,20 @@ func transformObject(source, target *expr.AttributeExpr, sourceVar, targetVar st
 	}
 
 	return buffer.String(), nil
+}
+
+func isNonZero(v any) bool {
+	switch v := v.(type) {
+	case nil:
+		return false
+	case int, uint, int8, uint8, int16, uint16, int32, uint32, int64, uint64:
+		return v != 0
+	case float32, float64:
+		return v != 0.0
+	case string:
+		return v != ""
+	}
+	return true
 }
 
 // transformArray returns the code to transform source attribute of array
@@ -963,7 +977,7 @@ case {{ . }}:
 	transformGoUnionFromProtoTmpl = `switch val := {{ .SourceVar }}.(type) {
 {{- range $i, $ref := .SourceValueTypeRefs }}
 case {{ . }}:
-	{{- $field := (print "val." (index $.SourceFieldNames $i)) }} 
+	{{- $field := (print "val." (index $.SourceFieldNames $i)) }}
 	{{ $.TargetVar }} = {{ convertType (index $.SourceValues $i).Attribute (index $.TargetValues $i).Attribute $field $.TransformAttrs }}
 {{- end }}
 }`

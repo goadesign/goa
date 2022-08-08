@@ -419,11 +419,11 @@ func NewMethodPayload(message *using_meta_typespb.MethodRequest) *usingmetatypes
 	}
 	var zeroMessageA int64
 	if message.A == zeroMessageA {
-		v.A = 0
+		v.A = 1
 	}
 	var zeroMessageB int64
 	if message.B == zeroMessageB {
-		v.B = 0
+		v.B = 2
 	}
 	if message.C != nil {
 		v.C = make([]time.Duration, len(message.C))
@@ -450,6 +450,53 @@ func NewProtoMethodResponse(result *usingmetatypes.MethodResult) *using_meta_typ
 			message.C[i] = int64(val)
 		}
 	}
+	return message
+}
+`
+
+const DefaultFieldsServerTypeCode = `// NewMethodPayload builds the payload of the "Method" endpoint of the
+// "DefaultFields" service from the gRPC request type.
+func NewMethodPayload(message *default_fieldspb.MethodRequest) *defaultfields.MethodPayload {
+	v := &defaultfields.MethodPayload{
+		Req:  message.Req,
+		Def0: message.Def0,
+		Def1: message.Def1,
+		Def2: message.Def2,
+		Reqs: message.Reqs,
+		Defs: message.Defs,
+		Defe: message.Defe,
+		Rat:  message.Rat,
+		Flt0: message.Flt0,
+		Flt1: message.Flt1,
+	}
+	if message.Opt != 0 {
+		v.Opt = &message.Opt
+	}
+	if message.Opts != "" {
+		v.Opts = &message.Opts
+	}
+	if message.Flt != 0 {
+		v.Flt = &message.Flt
+	}
+	if message.Def1 == 0 {
+		v.Def1 = 1
+	}
+	if message.Def2 == 0 {
+		v.Def2 = 2
+	}
+	if message.Defs == "" {
+		v.Defs = "!"
+	}
+	if message.Flt1 == 0 {
+		v.Flt1 = 1
+	}
+	return v
+}
+
+// NewProtoMethodResponse builds the gRPC response type from the result of the
+// "Method" endpoint of the "DefaultFields" service.
+func NewProtoMethodResponse() *default_fieldspb.MethodResponse {
+	message := &default_fieldspb.MethodResponse{}
 	return message
 }
 `

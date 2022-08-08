@@ -357,11 +357,11 @@ func NewMethodResult(message *using_meta_typespb.MethodResponse) *usingmetatypes
 	}
 	var zeroMessageA int64
 	if message.A == zeroMessageA {
-		result.A = 0
+		result.A = 1
 	}
 	var zeroMessageB int64
 	if message.B == zeroMessageB {
-		result.B = 0
+		result.B = 2
 	}
 	if message.C != nil {
 		result.C = make([]time.Duration, len(message.C))
@@ -370,5 +370,33 @@ func NewMethodResult(message *using_meta_typespb.MethodResponse) *usingmetatypes
 		}
 	}
 	return result
+}
+`
+
+const DefaultFieldsTypeCode = `// NewProtoMethodRequest builds the gRPC request type from the payload of the
+// "Method" endpoint of the "DefaultFields" service.
+func NewProtoMethodRequest(payload *defaultfields.MethodPayload) *default_fieldspb.MethodRequest {
+	message := &default_fieldspb.MethodRequest{
+		Req:  payload.Req,
+		Def0: payload.Def0,
+		Def1: payload.Def1,
+		Def2: payload.Def2,
+		Reqs: payload.Reqs,
+		Defs: payload.Defs,
+		Defe: payload.Defe,
+		Rat:  payload.Rat,
+		Flt0: payload.Flt0,
+		Flt1: payload.Flt1,
+	}
+	if payload.Opt != nil {
+		message.Opt = *payload.Opt
+	}
+	if payload.Opts != nil {
+		message.Opts = *payload.Opts
+	}
+	if payload.Flt != nil {
+		message.Flt = *payload.Flt
+	}
+	return message
 }
 `
