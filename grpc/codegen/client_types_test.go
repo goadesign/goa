@@ -23,6 +23,7 @@ func TestClientTypeFiles(t *testing.T) {
 		{"with-errors", testdata.UnaryRPCWithErrorsDSL, testdata.WithErrorsClientTypeCode},
 		{"bidirectional-streaming-same-type", testdata.BidirectionalStreamingRPCSameTypeDSL, testdata.BidirectionalStreamingRPCSameTypeClientTypeCode},
 		{"struct-meta-type", testdata.StructMetaTypeDSL, testdata.StructMetaTypeTypeCode},
+		{"default-fields", testdata.DefaultFieldsDSL, testdata.DefaultFieldsTypeCode},
 	}
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {

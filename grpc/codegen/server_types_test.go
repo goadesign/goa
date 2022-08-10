@@ -24,6 +24,7 @@ func TestServerTypeFiles(t *testing.T) {
 		{"elem-validation", testdata.ElemValidationDSL, testdata.ElemValidationServerTypesFile},
 		{"alias-validation", testdata.AliasValidationDSL, testdata.AliasValidationServerTypesFile},
 		{"struct-meta-type", testdata.StructMetaTypeDSL, testdata.StructMetaTypeServerTypeCode},
+		{"default-fields", testdata.DefaultFieldsDSL, testdata.DefaultFieldsServerTypeCode},
 	}
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {

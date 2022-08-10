@@ -471,3 +471,36 @@ message MethodResponse {
 	sint64 d = 4;
 }
 `
+
+const DefaultFieldsPackageCode = `
+syntax = "proto3";
+
+package default_fields;
+
+option go_package = "/default_fieldspb";
+
+// Service is the DefaultFields service interface.
+service DefaultFields {
+	// Method implements Method.
+	rpc Method (MethodRequest) returns (MethodResponse);
+}
+
+message MethodRequest {
+	sint64 req = 1;
+	sint64 opt = 2;
+	sint64 def0 = 3;
+	sint64 def1 = 4;
+	sint64 def2 = 5;
+	string reqs = 6;
+	string opts = 7;
+	string defs = 8;
+	string defe = 9;
+	double rat = 10;
+	double flt = 11;
+	double flt0 = 12;
+	double flt1 = 13;
+}
+
+message MethodResponse {
+}
+`
