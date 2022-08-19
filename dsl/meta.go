@@ -154,7 +154,7 @@ import (
 //    when only one route exists. The # character may be swapped for any content you
 //    wish to use as a spacer between the preceding content and the route index.
 //
-// If you wish to specify a static operationId, omitting any of the above spacial values
+// If you wish to specify a static operationId, omitting any of the above special values
 // will render the operationId as a literal.
 //
 // Defaults to "{service}#{method}(#{routeIndex})". Applicable to methods, services, or
