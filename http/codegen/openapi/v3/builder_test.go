@@ -260,6 +260,14 @@ func TestBuildOperationID(t *testing.T) {
 			DSL:                  dsls.OperationIDMultipleRoutes(svcName, "multiple_routes_custom_separator_without_routeIndex", "{service}.{method}"),
 			ExpectedOperationIDs: []string{"test service.multiple_routes_custom_separator_without_routeIndex", "test service.multiple_routes_custom_separator_without_routeIndex#1"},
 		}, {
+			Name:                 "multiple_routes_no_routeIndex_separator",
+			DSL:                  dsls.OperationIDMultipleRoutes(svcName, "multiple_routes_no_routeIndex_separator", "{service}.{method}({routeIndex})"),
+			ExpectedOperationIDs: []string{"test service.multiple_routes_no_routeIndex_separator", "test service.multiple_routes_no_routeIndex_separator1"},
+		}, {
+			Name:                 "multiple_routes_long_separator",
+			DSL:                  dsls.OperationIDMultipleRoutes(svcName, "multiple_routes_long_separator", "{service}.{method}(someWordsHere and maybe some spaces{routeIndex})"),
+			ExpectedOperationIDs: []string{"test service.multiple_routes_long_separator", "test service.multiple_routes_long_separatorsomeWordsHere and maybe some spaces1"},
+		}, {
 			Name:                 "custom_static_operation_id",
 			DSL:                  dsls.OperationIDMethod(svcName, "custom_static_operation_id", "listThings"),
 			ExpectedOperationIDs: []string{"listThings"},
