@@ -194,9 +194,7 @@ func buildOperation(key string, r *expr.RouteExpr, bodies *EndpointBodies, rand 
 
 	// OpenAPI summary
 	var summary string
-	var operationIDFormat string
-
-	setTemplates := func(meta expr.MetaExpr) {
+	setSummary := func(meta expr.MetaExpr) {
 		for n, mdata := range meta {
 			if (n == "openapi:summary" || n == "swagger:summary") && len(mdata) > 0 {
 				if mdata[0] == "{path}" {
@@ -205,7 +203,20 @@ func buildOperation(key string, r *expr.RouteExpr, bodies *EndpointBodies, rand 
 					summary = mdata[0]
 				}
 			}
+		}
+	}
 
+	{
+		summary = fmt.Sprintf("%s %s", e.Name(), svc.Name())
+		setSummary(expr.Root.API.Meta)
+		setSummary(r.Endpoint.Meta)
+		setSummary(m.Meta)
+	}
+
+	// OpenAPI operationIdn
+	var operationIDFormat string
+	setOperationID := func(meta expr.MetaExpr) {
+		for n, mdata := range meta {
 			if (n == "openapi:operationId") && len(mdata) > 0 {
 				operationIDFormat = mdata[0]
 			}
@@ -213,11 +224,11 @@ func buildOperation(key string, r *expr.RouteExpr, bodies *EndpointBodies, rand 
 	}
 
 	{
-		summary = fmt.Sprintf("%s %s", e.Name(), svc.Name())
 		operationIDFormat = defaultOperationIDFormat
-		setTemplates(expr.Root.API.Meta)
-		setTemplates(r.Endpoint.Meta)
-		setTemplates(m.Meta)
+		setOperationID(expr.Root.API.Meta)
+		setOperationID(m.Service.Meta)
+		setOperationID(r.Endpoint.Meta)
+		setOperationID(m.Meta)
 	}
 
 	// request body

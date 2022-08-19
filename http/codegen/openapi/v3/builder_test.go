@@ -237,12 +237,12 @@ func TestBuildOperationID(t *testing.T) {
 	}{
 		{
 			Name:                 "template_in_method",
-			DSL:                  dsls.OperationIDMethod(svcName, "template_in_method", defaultOperationIDFormat),
-			ExpectedOperationIDs: []string{"test service#template_in_method"},
+			DSL:                  dsls.OperationIDMethod(svcName, "template_in_method", "{method}"),
+			ExpectedOperationIDs: []string{"template_in_method"},
 		}, {
 			Name:                 "template_in_service",
-			DSL:                  dsls.OperationIDService(svcName, "template_in_service", defaultOperationIDFormat),
-			ExpectedOperationIDs: []string{"test service#template_in_service"},
+			DSL:                  dsls.OperationIDService(svcName, "template_in_service", "{service}"),
+			ExpectedOperationIDs: []string{"test service"},
 		}, {
 			Name:                 "template_in_api",
 			DSL:                  dsls.OperationIDAPI(svcName, "template_in_api", defaultOperationIDFormat),
