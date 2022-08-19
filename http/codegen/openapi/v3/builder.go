@@ -2,8 +2,10 @@ package openapiv3
 
 import (
 	"fmt"
+	"regexp"
 	"sort"
 	"strconv"
+	"strings"
 
 	"goa.design/goa/v3/expr"
 	"goa.design/goa/v3/http/codegen/openapi"
@@ -11,6 +13,14 @@ import (
 
 // OpenAPIVersion is the OpenAPI specification version targeted by this package.
 const OpenAPIVersion = "3.0.3"
+
+var (
+	routeIndexReplacementRegExp = regexp.MustCompile(`\((.*){routeIndex}\)`)
+)
+
+const (
+	defaultOperationIDFormat = "{service}#{method}(#{routeIndex})"
+)
 
 // New returns the OpenAPI v3 specification for the given API.
 // It returns nil if the design does not define HTTP endpoints.
@@ -182,27 +192,11 @@ func buildOperation(key string, r *expr.RouteExpr, bodies *EndpointBodies, rand 
 	m := e.MethodExpr
 	svc := e.Service
 
-	// operation ID
-	var opID string
-	{
-		opID = fmt.Sprintf("%s#%s", svc.Name(), e.Name())
-		// An endpoint can have multiple routes. If there are multiple routes for
-		// the endpoint suffix the operation ID with the route index.
-		index := 0
-		for i, rt := range r.Endpoint.Routes {
-			if rt == r {
-				index = i
-				break
-			}
-		}
-		if index > 0 {
-			opID = fmt.Sprintf("%s#%d", opID, index)
-		}
-	}
-
 	// OpenAPI summary
 	var summary string
-	setSummary := func(meta expr.MetaExpr) {
+	var operationIDFormat string
+
+	setTemplates := func(meta expr.MetaExpr) {
 		for n, mdata := range meta {
 			if (n == "openapi:summary" || n == "swagger:summary") && len(mdata) > 0 {
 				if mdata[0] == "{path}" {
@@ -211,13 +205,19 @@ func buildOperation(key string, r *expr.RouteExpr, bodies *EndpointBodies, rand 
 					summary = mdata[0]
 				}
 			}
+
+			if (n == "openapi:operationId") && len(mdata) > 0 {
+				operationIDFormat = mdata[0]
+			}
 		}
 	}
+
 	{
 		summary = fmt.Sprintf("%s %s", e.Name(), svc.Name())
-		setSummary(expr.Root.API.Meta)
-		setSummary(r.Endpoint.Meta)
-		setSummary(m.Meta)
+		operationIDFormat = defaultOperationIDFormat
+		setTemplates(expr.Root.API.Meta)
+		setTemplates(r.Endpoint.Meta)
+		setTemplates(m.Meta)
 	}
 
 	// request body
@@ -295,11 +295,21 @@ func buildOperation(key string, r *expr.RouteExpr, bodies *EndpointBodies, rand 
 		}
 	}
 
+	// An endpoint can have multiple routes, so we need to be able to build a unique
+	// operationId for each route.
+	var routeIndex int
+	for i, rt := range e.Routes {
+		if rt == r {
+			routeIndex = i
+			break
+		}
+	}
+
 	return &Operation{
 		Tags:         tagNames,
 		Summary:      summary,
 		Description:  e.Description(),
-		OperationID:  opID,
+		OperationID:  parseOperationIDTemplate(operationIDFormat, svc.Name(), e.Name(), routeIndex),
 		Parameters:   params,
 		RequestBody:  requestBody,
 		Responses:    responses,
@@ -364,6 +374,23 @@ func buildFileServerOperation(key string, fs *expr.HTTPFileServerExpr, api *expr
 		}
 	}
 
+	// OpenAPI operationId
+	var operationIDFormat string
+	setOperationIDFormat := func(meta expr.MetaExpr) {
+		for n, mdata := range meta {
+			if n == "openapi:operationId" && len(mdata) > 0 {
+				operationIDFormat = mdata[0]
+			}
+		}
+	}
+
+	{
+		operationIDFormat = defaultOperationIDFormat
+		setOperationIDFormat(api.Meta)
+		setOperationIDFormat(svc.Meta)
+		setOperationIDFormat(fs.Meta)
+	}
+
 	// tag names
 	var tagNames []string
 	{
@@ -375,7 +402,7 @@ func buildFileServerOperation(key string, fs *expr.HTTPFileServerExpr, api *expr
 	}
 
 	return &Operation{
-		OperationID:  fmt.Sprintf("%s#%s", svc.Name(), key),
+		OperationID:  parseOperationIDTemplate(operationIDFormat, svc.Name(), key, 0),
 		Description:  fs.Description,
 		Summary:      summary,
 		Parameters:   params,
@@ -386,6 +413,28 @@ func buildFileServerOperation(key string, fs *expr.HTTPFileServerExpr, api *expr
 		ExternalDocs: openapi.DocsFromExpr(fs.Docs, fs.Meta),
 		Extensions:   openapi.ExtensionsFromExpr(fs.Meta),
 	}
+}
+
+func parseOperationIDTemplate(template, service, method string, routeIndex int) string {
+	// The template replacer
+	repl := strings.NewReplacer(
+		"{service}", service,
+		"{method}", method,
+	)
+
+	operationId := repl.Replace(template)
+
+	if routeIndex == 0 {
+		return routeIndexReplacementRegExp.ReplaceAllString(operationId, "")
+	}
+
+	// If the routeIndex is greater than 0, we need to add the routeIndex to the operationId.
+	if sep := routeIndexReplacementRegExp.FindStringSubmatch(template); sep != nil {
+		return routeIndexReplacementRegExp.ReplaceAllString(operationId, fmt.Sprintf("%s%d", sep[1], routeIndex))
+	}
+
+	// Fallback in the event that the operationId doesn't contain the routeIndex placeholder.
+	return fmt.Sprintf("%s#%d", operationId, routeIndex)
 }
 
 // buildServers builds the OpenAPI Server objects from the given server
