@@ -142,6 +142,31 @@ import (
 //        })
 //    })
 //
+// - "openapi:operationId" sets the OpenAPI operationId field format. The following
+// special values will be replaced with operation-specific information:
+//  
+//   "{service}" is replaced with the name of the service
+//
+//   "{method}" is replaced with the name of the method
+//
+//   "(#{routeIndex})" is replaced with the index of the path in cases where a
+//    method has more than one route associated with it. The index will never be added
+//    when only one route exists. The # character may be swapped for any content you
+//    wish to use as a spacer between the preceding content and the route index.
+//
+// If you wish to specify a static operationId, omitting any of the above special values
+// will render the operationId as a literal.
+//
+// Defaults to "{service}#{method}(#{routeIndex})". Applicable to methods, services, or
+// to API.
+//
+//    var _ = Service("MyService", func() {
+//        Method("MyMethod", func() {
+//               // Generates MyService.MyMethod
+//               Meta("openapi:operationId", "{service}.{method}(.{routeIndex})")
+//        })
+//    })
+//
 // - "swagger:example" DEPRECATED, use "openapi:example" instead
 //
 // - "openapi:example" specifies whether to generate random example. Defaults to
