@@ -213,7 +213,7 @@ func buildOperation(key string, r *expr.RouteExpr, bodies *EndpointBodies, rand 
 		setSummary(m.Meta)
 	}
 
-	// OpenAPI operationIdn
+	// OpenAPI operationId
 	var operationIDFormat string
 	setOperationID := func(meta expr.MetaExpr) {
 		for n, mdata := range meta {
