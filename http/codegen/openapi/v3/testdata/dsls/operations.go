@@ -158,3 +158,76 @@ var ResponseRecursiveArrayUserType = func(svc, met string) func() {
 		})
 	}
 }
+
+var OperationIDStatic = func(svc, met string) func() {
+	return func() {
+		var _ = Service(svc, func() {
+			Method(met, func() {
+				Meta("openapi:operationId", "staticOperationId")
+
+				HTTP(func() {
+					GET("/")
+				})
+			})
+		})
+	}
+}
+
+var OperationIDMethod = func(svc, met, tmpl string) func() {
+	return func() {
+		var _ = Service(svc, func() {
+			Method(met, func() {
+				Meta("openapi:operationId", tmpl)
+
+				HTTP(func() {
+					GET("/")
+				})
+			})
+		})
+	}
+}
+
+var OperationIDService = func(svc, met, tmpl string) func() {
+	return func() {
+		var _ = Service(svc, func() {
+			Meta("openapi:operationId", tmpl)
+
+			Method(met, func() {
+				HTTP(func() {
+					GET("/")
+				})
+			})
+		})
+	}
+}
+
+var OperationIDAPI = func(svc, met, tmpl string) func() {
+	return func() {
+		var _ = API("test api", func() {
+			Meta("openapi:operationId", tmpl)
+		})
+
+		var _ = Service(svc, func() {
+			Method(met, func() {
+				HTTP(func() {
+					GET("/")
+				})
+			})
+		})
+	}
+}
+
+var OperationIDMultipleRoutes = func(svc, met, tmpl string) func() {
+	return func() {
+		var _ = Service(svc, func() {
+			Method(met, func() {
+				Meta("openapi:operationId", tmpl)
+
+				HTTP(func() {
+					GET("/")
+					POST("/another")
+				})
+			})
+		})
+	}
+}
