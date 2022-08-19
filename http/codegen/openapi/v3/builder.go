@@ -215,7 +215,7 @@ func buildOperation(key string, r *expr.RouteExpr, bodies *EndpointBodies, rand 
 
 	// OpenAPI operationId
 	var operationIDFormat string
-	setOperationID := func(meta expr.MetaExpr) {
+	setOperationIDFormat := func(meta expr.MetaExpr) {
 		for n, mdata := range meta {
 			if (n == "openapi:operationId") && len(mdata) > 0 {
 				operationIDFormat = mdata[0]
@@ -225,10 +225,10 @@ func buildOperation(key string, r *expr.RouteExpr, bodies *EndpointBodies, rand 
 
 	{
 		operationIDFormat = defaultOperationIDFormat
-		setOperationID(expr.Root.API.Meta)
-		setOperationID(m.Service.Meta)
-		setOperationID(r.Endpoint.Meta)
-		setOperationID(m.Meta)
+		setOperationIDFormat(expr.Root.API.Meta)
+		setOperationIDFormat(m.Service.Meta)
+		setOperationIDFormat(r.Endpoint.Meta)
+		setOperationIDFormat(m.Meta)
 	}
 
 	// request body
