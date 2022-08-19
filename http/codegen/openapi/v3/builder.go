@@ -416,6 +416,11 @@ func buildFileServerOperation(key string, fs *expr.HTTPFileServerExpr, api *expr
 }
 
 func parseOperationIDTemplate(template, service, method string, routeIndex int) string {
+	// Early return if no replacement is needed for the template.
+	if !strings.Contains(template, "{") && routeIndex == 0 {
+		return template
+	}
+
 	// The template replacer
 	repl := strings.NewReplacer(
 		"{service}", service,
