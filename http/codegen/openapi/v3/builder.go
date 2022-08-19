@@ -438,19 +438,19 @@ func parseOperationIDTemplate(template, service, method string, routeIndex int) 
 		"{method}", method,
 	)
 
-	operationId := repl.Replace(template)
+	operationID := repl.Replace(template)
 
 	if routeIndex == 0 {
-		return routeIndexReplacementRegExp.ReplaceAllString(operationId, "")
+		return routeIndexReplacementRegExp.ReplaceAllString(operationID, "")
 	}
 
 	// If the routeIndex is greater than 0, we need to add the routeIndex to the operationId.
 	if sep := routeIndexReplacementRegExp.FindStringSubmatch(template); sep != nil {
-		return routeIndexReplacementRegExp.ReplaceAllString(operationId, fmt.Sprintf("%s%d", sep[1], routeIndex))
+		return routeIndexReplacementRegExp.ReplaceAllString(operationID, fmt.Sprintf("%s%d", sep[1], routeIndex))
 	}
 
 	// Fallback in the event that the operationId doesn't contain the routeIndex placeholder.
-	return fmt.Sprintf("%s#%d", operationId, routeIndex)
+	return fmt.Sprintf("%s#%d", operationID, routeIndex)
 }
 
 // buildServers builds the OpenAPI Server objects from the given server
