@@ -159,11 +159,6 @@ func TestBuildOperation(t *testing.T) {
 		DSL:  dsls.ResponseRecursiveUserType(svcName, "response_recursive_user_type"),
 
 		ExpectedResponses: responses{"200": {"OK response.", tobj("recursive", tobj()), nil}},
-	}, {
-		Name: "response_recursive_array_user_type",
-		DSL:  dsls.ResponseRecursiveArrayUserType(svcName, "response_recursive_array_user_type"),
-
-		ExpectedResponses: responses{"200": {"OK response.", tobj("result", tobj("children", tarray)), nil}},
 	}}
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
@@ -226,6 +221,77 @@ func TestBuildOperation(t *testing.T) {
 			}
 			for s, r := range op.Responses {
 				matchesResponse(t, r, types, c.ExpectedResponses[s])
+			}
+		})
+	}
+}
+
+func TestBuildOperationID(t *testing.T) {
+	const svcName = "test service"
+
+	cases := []struct {
+		Name string
+		DSL  func()
+
+		ExpectedOperationIDs []string
+	}{
+		{
+			Name:                 "template_in_method",
+			DSL:                  dsls.OperationIDMethod(svcName, "template_in_method", defaultOperationIDFormat),
+			ExpectedOperationIDs: []string{"test service#template_in_method"},
+		}, {
+			Name:                 "template_in_service",
+			DSL:                  dsls.OperationIDService(svcName, "template_in_service", defaultOperationIDFormat),
+			ExpectedOperationIDs: []string{"test service#template_in_service"},
+		}, {
+			Name:                 "template_in_api",
+			DSL:                  dsls.OperationIDAPI(svcName, "template_in_api", defaultOperationIDFormat),
+			ExpectedOperationIDs: []string{"test service#template_in_api"},
+		}, {
+			Name:                 "multiple_routes",
+			DSL:                  dsls.OperationIDMultipleRoutes(svcName, "multiple_routes", defaultOperationIDFormat),
+			ExpectedOperationIDs: []string{"test service#multiple_routes", "test service#multiple_routes#1"},
+		}, {
+			Name:                 "multiple_routes_custom_separator",
+			DSL:                  dsls.OperationIDMultipleRoutes(svcName, "multiple_routes_custom_separator", "{service}.{method}(.{routeIndex})"),
+			ExpectedOperationIDs: []string{"test service.multiple_routes_custom_separator", "test service.multiple_routes_custom_separator.1"},
+		}, {
+			Name:                 "multiple_routes_custom_separator_without_routeIndex",
+			DSL:                  dsls.OperationIDMultipleRoutes(svcName, "multiple_routes_custom_separator_without_routeIndex", "{service}.{method}"),
+			ExpectedOperationIDs: []string{"test service.multiple_routes_custom_separator_without_routeIndex", "test service.multiple_routes_custom_separator_without_routeIndex#1"},
+		}, {
+			Name:                 "custom_static_operation_id",
+			DSL:                  dsls.OperationIDMethod(svcName, "custom_static_operation_id", "listThings"),
+			ExpectedOperationIDs: []string{"listThings"},
+		},
+	}
+
+	for _, c := range cases {
+		t.Run(c.Name, func(t *testing.T) {
+			api := codegen.RunDSL(t, c.DSL).API
+
+			if len(api.HTTP.Services) == 0 {
+				t.Error("no HTTP service created from DSL")
+			}
+
+			for _, s := range api.HTTP.Services {
+				if s.Name() == svcName {
+					for _, e := range s.HTTPEndpoints {
+						for i, r := range e.Routes {
+							op := buildOperation(c.Name, r, &EndpointBodies{}, expr.NewRandom(c.Name))
+
+							if len(c.ExpectedOperationIDs) == 0 {
+								t.Error("no expected operation IDs")
+								return
+							}
+
+							if op.OperationID != c.ExpectedOperationIDs[i] {
+								t.Errorf("got operation ID %q, expected %q", op.OperationID, c.ExpectedOperationIDs[i])
+								return
+							}
+						}
+					}
+				}
 			}
 		})
 	}
