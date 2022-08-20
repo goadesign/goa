@@ -52,7 +52,6 @@ func init() {
 // newVar if true initializes a target variable with the generated Go code
 // using `:=` operator. If false, it assigns Go code to the target variable
 // using `=`.
-//
 func GoTransform(source, target *expr.AttributeExpr, sourceVar, targetVar string, sourceCtx, targetCtx *AttributeContext, prefix string, newVar bool) (string, []*TransformFunctionData, error) {
 	ta := &TransformAttrs{
 		SourceCtx: sourceCtx,
@@ -224,6 +223,10 @@ func transformObject(source, target *expr.AttributeExpr, sourceVar, targetVar st
 			case expr.IsUnion(srcc.Type):
 				code, err = transformUnion(srcc, tgtc, srcVar, tgtVar, false, ta)
 			case ok:
+				if ta.TargetCtx.isInterface {
+					ref := ta.TargetCtx.Scope.Ref(target, ta.TargetCtx.Pkg(target))
+					tgtVar = targetVar + ".(" + ref + ")." + GoifyAtt(tgtc, tgtMatt.ElemName(n), true)
+				}
 				if !expr.IsPrimitive(srcc.Type) {
 					code = fmt.Sprintf("%s = %s(%s)\n", tgtVar, transformHelperName(srcc, tgtc, ta), srcVar)
 				}
@@ -375,6 +378,10 @@ func transformUnion(source, target *expr.AttributeExpr, sourceVar, targetVar str
 	for i, tt := range tgtUnion.Values {
 		targetTypeNames[i] = ta.TargetCtx.Scope.Name(tt.Attribute, ta.TargetCtx.Pkg(tt.Attribute), ta.TargetCtx.Pointer, ta.TargetCtx.Pointer)
 	}
+
+	// Need to type assert targetVar before assigning field values.
+	ta.TargetCtx.isInterface = true
+
 	data := map[string]interface{}{
 		"SourceTypeRefs": sourceTypeRefs,
 		"SourceTypes":    srcUnion.Values,
@@ -474,7 +481,6 @@ func transformObjectToUnion(source, target *expr.AttributeExpr, sourceVar, targe
 // ta holds the transform attributes
 //
 // seen keeps track of generated transform functions to avoid infinite recursion.
-//
 func transformAttributeHelpers(source, target *expr.AttributeExpr, ta *TransformAttrs, seen map[string]*TransformFunctionData) (helpers []*TransformFunctionData, err error) {
 	// Do not generate a transform function for the top most user type.
 	var other []*TransformFunctionData
@@ -582,6 +588,11 @@ func generateHelper(source, target *expr.AttributeExpr, req bool, ta *TransformA
 	if _, ok := seen[name]; ok {
 		return nil, nil
 	}
+
+	// Reset need for type assertion for union types because we are
+	// generating the code to transform the concrete type.
+	ta.TargetCtx.isInterface = false
+
 	code, err := transformAttribute(source.Type.(expr.UserType).Attribute(), target, "v", "res", true, ta)
 	if err != nil {
 		return nil, err

@@ -435,6 +435,25 @@ var ResultWithDashedMimeTypeMethodDSL = func() {
 	})
 }
 
+var ResultWithOneOfTypeMethodDSL = func() {
+	var Item = Type("Item", func() { Attribute("a") })
+	var T = Type("T", func() { Attribute("message") })
+	var U = Type("U", func() { Attribute("item", Item) })
+	var RT = ResultType("application/vnd.result.oneof", func() {
+		Attributes(func() {
+			OneOf("result", func() {
+				Attribute("t", T)
+				Attribute("u", U)
+			})
+		})
+	})
+	Service("ResultWithOneOfType", func() {
+		Method("A", func() {
+			Result(RT)
+		})
+	})
+}
+
 var ForceGenerateTypeDSL = func() {
 	var _ = Type("ForcedType", func() {
 		Attribute("a", String)

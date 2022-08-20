@@ -1315,6 +1315,183 @@ func newApplicationDashedTypeView(res *ApplicationDashedType) *resultwithdashedm
 }
 `
 
+const ResultWithOneOfTypeMethod = `
+// Service is the ResultWithOneOfType service interface.
+type Service interface {
+	// A implements A.
+	A(context.Context) (res *ResultOneof, err error)
+}
+
+// ServiceName is the name of the service as defined in the design. This is the
+// same value that is set in the endpoint request contexts under the ServiceKey
+// key.
+const ServiceName = "ResultWithOneOfType"
+
+// MethodNames lists the service method names as defined in the design. These
+// are the same values that are set in the endpoint request contexts under the
+// MethodKey key.
+var MethodNames = [1]string{"A"}
+
+type Item struct {
+	A *string
+}
+
+// ResultOneof is the result type of the ResultWithOneOfType service A method.
+type ResultOneof struct {
+	Result interface {
+		resultVal()
+	}
+}
+
+type T struct {
+	Message *string
+}
+
+type U struct {
+	Item *Item
+}
+
+func (*T) resultVal() {}
+func (*U) resultVal() {}
+
+// NewResultOneof initializes result type ResultOneof from viewed result type
+// ResultOneof.
+func NewResultOneof(vres *resultwithoneoftypeviews.ResultOneof) *ResultOneof {
+	return newResultOneof(vres.Projected)
+}
+
+// NewViewedResultOneof initializes viewed result type ResultOneof from result
+// type ResultOneof using the given view.
+func NewViewedResultOneof(res *ResultOneof, view string) *resultwithoneoftypeviews.ResultOneof {
+	p := newResultOneofView(res)
+	return &resultwithoneoftypeviews.ResultOneof{Projected: p, View: "default"}
+}
+
+// newResultOneof converts projected type ResultOneof to service type
+// ResultOneof.
+func newResultOneof(vres *resultwithoneoftypeviews.ResultOneofView) *ResultOneof {
+	res := &ResultOneof{}
+	if vres.Result != nil {
+		switch actual := vres.Result.(type) {
+		case *resultwithoneoftypeviews.TView:
+			res.Result = &T{
+				Message: actual.Message,
+			}
+
+		case *resultwithoneoftypeviews.UView:
+			res.Result = &U{}
+			if actual.Item != nil {
+				res.Result.(*U).Item = transformResultwithoneoftypeviewsItemViewToItem(actual.Item)
+			}
+
+		}
+	}
+	return res
+}
+
+// newResultOneofView projects result type ResultOneof to projected type
+// ResultOneofView using the "default" view.
+func newResultOneofView(res *ResultOneof) *resultwithoneoftypeviews.ResultOneofView {
+	vres := &resultwithoneoftypeviews.ResultOneofView{}
+	if res.Result != nil {
+		switch actual := res.Result.(type) {
+		case *T:
+			vres.Result = &resultwithoneoftypeviews.TView{
+				Message: actual.Message,
+			}
+
+		case *U:
+			vres.Result = &resultwithoneoftypeviews.UView{}
+			if actual.Item != nil {
+				vres.Result.(*resultwithoneoftypeviews.UView).Item = transformItemToResultwithoneoftypeviewsItemView(actual.Item)
+			}
+
+		}
+	}
+	return vres
+}
+
+// transformResultwithoneoftypeviewsTViewToT builds a value of type *T from a
+// value of type *resultwithoneoftypeviews.TView.
+func transformResultwithoneoftypeviewsTViewToT(v *resultwithoneoftypeviews.TView) *T {
+	if v == nil {
+		return nil
+	}
+	res := &T{
+		Message: v.Message,
+	}
+
+	return res
+}
+
+// transformResultwithoneoftypeviewsUViewToU builds a value of type *U from a
+// value of type *resultwithoneoftypeviews.UView.
+func transformResultwithoneoftypeviewsUViewToU(v *resultwithoneoftypeviews.UView) *U {
+	if v == nil {
+		return nil
+	}
+	res := &U{}
+	if v.Item != nil {
+		res.Item = transformResultwithoneoftypeviewsItemViewToItem(v.Item)
+	}
+
+	return res
+}
+
+// transformResultwithoneoftypeviewsItemViewToItem builds a value of type *Item
+// from a value of type *resultwithoneoftypeviews.ItemView.
+func transformResultwithoneoftypeviewsItemViewToItem(v *resultwithoneoftypeviews.ItemView) *Item {
+	if v == nil {
+		return nil
+	}
+	res := &Item{
+		A: v.A,
+	}
+
+	return res
+}
+
+// transformTToResultwithoneoftypeviewsTView builds a value of type
+// *resultwithoneoftypeviews.TView from a value of type *T.
+func transformTToResultwithoneoftypeviewsTView(v *T) *resultwithoneoftypeviews.TView {
+	if v == nil {
+		return nil
+	}
+	res := &resultwithoneoftypeviews.TView{
+		Message: v.Message,
+	}
+
+	return res
+}
+
+// transformUToResultwithoneoftypeviewsUView builds a value of type
+// *resultwithoneoftypeviews.UView from a value of type *U.
+func transformUToResultwithoneoftypeviewsUView(v *U) *resultwithoneoftypeviews.UView {
+	if v == nil {
+		return nil
+	}
+	res := &resultwithoneoftypeviews.UView{}
+	if v.Item != nil {
+		res.Item = transformItemToResultwithoneoftypeviewsItemView(v.Item)
+	}
+
+	return res
+}
+
+// transformItemToResultwithoneoftypeviewsItemView builds a value of type
+// *resultwithoneoftypeviews.ItemView from a value of type *Item.
+func transformItemToResultwithoneoftypeviewsItemView(v *Item) *resultwithoneoftypeviews.ItemView {
+	if v == nil {
+		return nil
+	}
+	res := &resultwithoneoftypeviews.ItemView{
+		A: v.A,
+	}
+
+	return res
+}
+`
+
 const ForceGenerateType = `
 // Service is the ForceGenerateType service interface.
 type Service interface {
