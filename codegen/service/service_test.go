@@ -33,6 +33,7 @@ func TestService(t *testing.T) {
 		{"result-with-other-result", testdata.ResultWithOtherResultMethodDSL, testdata.ResultWithOtherResultMethod},
 		{"result-with-result-collection", testdata.ResultWithResultCollectionMethodDSL, testdata.ResultWithResultCollectionMethod},
 		{"result-with-dashed-mime-type", testdata.ResultWithDashedMimeTypeMethodDSL, testdata.ResultWithDashedMimeTypeMethod},
+		{"result-with-one-of-type", testdata.ResultWithOneOfTypeMethodDSL, testdata.ResultWithOneOfTypeMethod},
 		{"service-level-error", testdata.ServiceErrorDSL, testdata.ServiceError},
 		{"custom-errors", testdata.CustomErrorsDSL, testdata.CustomErrors},
 		{"custom-errors-custom-field", testdata.CustomErrorsCustomFieldDSL, testdata.CustomErrorsCustomField},

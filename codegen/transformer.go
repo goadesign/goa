@@ -42,6 +42,9 @@ type (
 		// defaultPkg is the default package name where the attribute
 		// type is found. it can be overridden via struct:pkg:path meta.
 		defaultPkg string
+		// isInterface is true if the attribute is an interface (union type).
+		// In this case assigning child attributes requires a type assertion.
+		isInterface bool
 	}
 
 	// AttributeScope contains the scope of an attribute. It implements the

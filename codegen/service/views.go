@@ -52,7 +52,6 @@ func ViewsFile(genpkg string, service *expr.ServiceExpr) *codegen.File {
 		// Union methods
 		for _, m := range svc.viewedUnionMethods {
 			sections = append(sections, &codegen.SectionTemplate{
-				// addTypeDefSection(pathWithDefault(m.Loc, svcPath), "~"+m.TypeRef+"."+m.Name, &codegen.SectionTemplate{
 				Name:   "viewed-union-value-method",
 				Source: unionValueMethodT,
 				Data:   m,
