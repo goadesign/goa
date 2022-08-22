@@ -23,6 +23,7 @@ func TestServerTypes(t *testing.T) {
 		{"with-result-collection", testdata.ResultWithResultCollectionDSL, ResultWithResultCollectionServerTypesFile},
 		{"with-result-view", testdata.ResultWithResultViewDSL, ResultWithResultViewServerTypesFile},
 		{"empty-error-response-body", testdata.EmptyErrorResponseBodyDSL, ""},
+		{"with-error-custom-pkg", testdata.WithErrorCustomPkgDSL, WithErrorCustomPkgServerTypesFile},
 	}
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
@@ -298,6 +299,24 @@ func NewMethodResultWithResultViewResponseBodyFull(res *serviceresultwithresultv
 	}
 	if res.Rt != nil {
 		body.Rt = marshalServiceresultwithresultviewviewsRtViewToRtResponseBody(res.Rt)
+	}
+	return body
+}
+`
+
+const WithErrorCustomPkgServerTypesFile = `// MethodWithErrorCustomPkgErrorNameResponseBody is the type of the
+// "ServiceWithErrorCustomPkg" service "MethodWithErrorCustomPkg" endpoint HTTP
+// response body for the "error_name" error.
+type MethodWithErrorCustomPkgErrorNameResponseBody struct {
+	Name string ` + "`" + `form:"name" json:"name" xml:"name"` + "`" + `
+}
+
+// NewMethodWithErrorCustomPkgErrorNameResponseBody builds the HTTP response
+// body from the result of the "MethodWithErrorCustomPkg" endpoint of the
+// "ServiceWithErrorCustomPkg" service.
+func NewMethodWithErrorCustomPkgErrorNameResponseBody(res *custom.CustomError) *MethodWithErrorCustomPkgErrorNameResponseBody {
+	body := &MethodWithErrorCustomPkgErrorNameResponseBody{
+		Name: res.Name,
 	}
 	return body
 }

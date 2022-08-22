@@ -284,6 +284,18 @@ func (m *MethodExpr) Finalize() {
 			rt.Finalize()
 		}
 	}
+	for _, e := range m.Service.Errors {
+		found := false
+		for _, f := range m.Errors {
+			if e.Name == f.Name {
+				found = true
+				break
+			}
+		}
+		if !found {
+			m.Errors = append(m.Errors, e)
+		}
+	}
 	for _, e := range m.Errors {
 		e.Finalize()
 	}

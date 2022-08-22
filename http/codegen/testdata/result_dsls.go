@@ -874,6 +874,23 @@ var EmptyErrorResponseBodyDSL = func() {
 	})
 }
 
+var WithErrorCustomPkgDSL = func() {
+	var CustomError = Type("CustomError", func() {
+		Meta("struct:pkg:path", "custom")
+		ErrorName("name")
+		Required("name")
+	})
+	Service("ServiceWithErrorCustomPkg", func() {
+		Method("MethodWithErrorCustomPkg", func() {
+			Error("error_name", CustomError)
+			HTTP(func() {
+				GET("/")
+				Response("error_name", StatusBadRequest)
+			})
+		})
+	})
+}
+
 var EmptyCustomErrorResponseBodyDSL = func() {
 	var ErrorType = Type("Error", func() {
 		Attribute("err", String)
