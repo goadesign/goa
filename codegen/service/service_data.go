@@ -166,6 +166,9 @@ type (
 		ResultEx interface{}
 		// Errors list the possible errors defined in the design if any.
 		Errors []*ErrorInitData
+		// ErrorLocs lists the file and Go package of the error type
+		// if overridden via Meta indexed by error name.
+		ErrorLocs map[string]*codegen.Location
 		// Requirements contains the security requirements for the
 		// method.
 		Requirements RequirementsData
@@ -468,6 +471,9 @@ func (d *Data) initUserTypeImports(genpkg string) {
 	for _, m := range d.Methods {
 		initLoc(m.PayloadLoc)
 		initLoc(m.ResultLoc)
+		for _, l := range m.ErrorLocs {
+			initLoc(l)
+		}
 		for _, ut := range d.userTypes {
 			initLoc(ut.Loc)
 		}
@@ -885,6 +891,7 @@ func buildMethodData(m *expr.MethodExpr, scope *codegen.NameScope) *MethodData {
 		resultDesc  string
 		resultEx    interface{}
 		errors      []*ErrorInitData
+		errorLocs   map[string]*codegen.Location
 		reqs        RequirementsData
 		schemes     SchemesData
 	)
@@ -923,8 +930,10 @@ func buildMethodData(m *expr.MethodExpr, scope *codegen.NameScope) *MethodData {
 	}
 	if len(m.Errors) > 0 {
 		errors = make([]*ErrorInitData, len(m.Errors))
+		errorLocs = make(map[string]*codegen.Location, len(m.Errors))
 		for i, er := range m.Errors {
 			errors[i] = buildErrorInitData(er, scope)
+			errorLocs[er.Name] = codegen.UserTypeLocation(er.AttributeExpr.Type)
 		}
 	}
 	for _, req := range m.Requirements {
@@ -958,6 +967,7 @@ func buildMethodData(m *expr.MethodExpr, scope *codegen.NameScope) *MethodData {
 		ResultDesc:                   resultDesc,
 		ResultEx:                     resultEx,
 		Errors:                       errors,
+		ErrorLocs:                    errorLocs,
 		Requirements:                 reqs,
 		Schemes:                      schemes,
 		StreamKind:                   m.Stream,
@@ -1223,7 +1233,6 @@ func collectProjectedTypes(projected, att *expr.AttributeExpr, viewspkg string, 
 // buildProjectedType builds projected type for the given user type.
 //
 // viewspkg is the name of the views package
-//
 func buildProjectedType(projected, att *expr.AttributeExpr, viewspkg string, scope, viewScope *codegen.NameScope) *ProjectedTypeData {
 	var (
 		projections []*InitData
@@ -1693,7 +1702,6 @@ func buildValidations(projected *expr.AttributeExpr, scope *codegen.NameScope) [
 // target data structures in the transformation code.
 //
 // view is used to generate the constructor function name.
-//
 func buildConstructorCode(src, tgt *expr.AttributeExpr, sourceVar, targetVar string, sourceCtx, targetCtx *codegen.AttributeContext, view string) (string, []*codegen.TransformFunctionData) {
 	var (
 		helpers []*codegen.TransformFunctionData

@@ -829,10 +829,10 @@ func collectValidations(att *expr.AttributeExpr, ctx *codegen.AttributeContext, 
 
 // buildRequestConvertData builds the convert data for the server and client
 // requests.
-//    * server side - converts generated gRPC request type in *.pb.go and the
-//      gRPC  metadata to method payload type.
-//    * client side - converts method payload type to generated gRPC request
-//      type in *.pb.go.
+//   - server side - converts generated gRPC request type in *.pb.go and the
+//     gRPC  metadata to method payload type.
+//   - client side - converts method payload type to generated gRPC request
+//     type in *.pb.go.
 //
 // svr param indicates that the convert data is generated for server side.
 func buildRequestConvertData(request, payload *expr.AttributeExpr, md []*MetadataData, e *expr.GRPCEndpointExpr, sd *ServiceData, svr bool) *ConvertData {
@@ -906,10 +906,10 @@ func buildRequestConvertData(request, payload *expr.AttributeExpr, md []*Metadat
 
 // buildResponseConvertData builds the convert data for the server and client
 // responses.
-//     * server side - converts method result type to generated gRPC response
-//       type in *.pb.go
-//     * client side - converts generated gRPC response type in *.pb.go and
-//       response metadata to method result type.
+//   - server side - converts method result type to generated gRPC response
+//     type in *.pb.go
+//   - client side - converts generated gRPC response type in *.pb.go and
+//     response metadata to method result type.
 //
 // svr param indicates that the convert data is generated for server side.
 func buildResponseConvertData(response, result *expr.AttributeExpr, svcCtx *codegen.AttributeContext, hdrs, trlrs []*MetadataData, e *expr.GRPCEndpointExpr, sd *ServiceData, svr bool) *ConvertData {
@@ -999,7 +999,6 @@ func buildResponseConvertData(response, result *expr.AttributeExpr, svcCtx *code
 // svcCtx is the attribute context for service type
 //
 // proto if true indicates the target type is a protocol buffer type
-//
 func buildInitData(source, target *expr.AttributeExpr, sourceVar, targetVar string, svcCtx *codegen.AttributeContext, proto bool, sd *ServiceData) *InitData {
 	var (
 		name     string
@@ -1077,9 +1076,10 @@ func buildErrorsData(e *expr.GRPCEndpointExpr, sd *ServiceData) []*ErrorData {
 				ClientConvert: buildErrorConvertData(v, e, sd, false),
 			}
 		}
+		errorLoc := svc.Method(e.MethodExpr.Name).ErrorLocs[v.Name]
 		errors = append(errors, &ErrorData{
 			Name:     v.Name,
-			Ref:      svc.Scope.GoFullTypeRef(v.ErrorExpr.AttributeExpr, svc.PkgName),
+			Ref:      svc.Scope.GoFullTypeRef(v.ErrorExpr.AttributeExpr, pkgWithDefault(errorLoc, svc.PkgName)),
 			Response: responseData,
 		})
 	}
