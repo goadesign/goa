@@ -727,7 +727,7 @@ func collectMessages(at *expr.AttributeExpr, sd *ServiceData, seen map[string]st
 //
 // req if true indicates that the validation is generated for validating
 // request (server-side) messages.
-func addValidation(att *expr.AttributeExpr, sd *ServiceData, req bool) *ValidationData {
+func addValidation(att *expr.AttributeExpr, attName string, sd *ServiceData, req bool) *ValidationData {
 	ut, ok := att.Type.(expr.UserType)
 	if !ok {
 		return nil
@@ -750,23 +750,23 @@ func addValidation(att *expr.AttributeExpr, sd *ServiceData, req bool) *Validati
 			if n.Kind != kind {
 				n.Kind = validateBoth
 				ctx := protoBufTypeContext("", sd.Scope)
-				collectValidations(att, ctx, req, sd)
+				collectValidations(att, attName, ctx, req, sd)
 			}
 			return n
 		}
 	}
 	ctx := protoBufTypeContext("", sd.Scope)
-	if def := codegen.RecursiveValidationCode(att, ctx, true, expr.IsAlias(att.Type), "message"); def != "" {
+	if def := codegen.RecursiveValidationCode(att, ctx, true, expr.IsAlias(att.Type), attName); def != "" {
 		v := &ValidationData{
 			Name:    "Validate" + name,
 			Def:     def,
-			ArgName: "message",
+			ArgName: attName,
 			SrcName: name,
 			SrcRef:  ref,
 			Kind:    kind,
 		}
 		sd.validations = append(sd.validations, v)
-		collectValidations(att, ctx, req, sd)
+		collectValidations(att, attName, ctx, req, sd)
 		return v
 	}
 	return nil
@@ -777,7 +777,8 @@ func addValidation(att *expr.AttributeExpr, sd *ServiceData, req bool) *Validati
 //
 // req if true indicates that the validations are generated for validating
 // request messages.
-func collectValidations(att *expr.AttributeExpr, ctx *codegen.AttributeContext, req bool, sd *ServiceData) {
+func collectValidations(att *expr.AttributeExpr, attName string, ctx *codegen.AttributeContext, req bool, sd *ServiceData) {
+	attName = codegen.Goify(attName, false)
 	switch dt := att.Type.(type) {
 	case expr.UserType:
 		if expr.IsPrimitive(dt) {
@@ -800,8 +801,8 @@ func collectValidations(att *expr.AttributeExpr, ctx *codegen.AttributeContext, 
 		}
 		sd.validations = append(sd.validations, &ValidationData{
 			Name:    "Validate" + name,
-			Def:     codegen.RecursiveValidationCode(att, ctx, true, false, "message"),
-			ArgName: "message",
+			Def:     codegen.RecursiveValidationCode(att, ctx, true, false, attName),
+			ArgName: attName,
 			SrcName: name,
 			SrcRef:  protoBufGoFullTypeRef(att, sd.PkgName, sd.Scope),
 			Kind:    kind,
@@ -814,16 +815,16 @@ func collectValidations(att *expr.AttributeExpr, ctx *codegen.AttributeContext, 
 				att = &expr.AttributeExpr{Type: expr.AsObject(rt)}
 			}
 		}
-		collectValidations(att, ctx, req, sd)
+		collectValidations(att, attName, ctx, req, sd)
 	case *expr.Object:
 		for _, nat := range *dt {
-			collectValidations(nat.Attribute, ctx, req, sd)
+			collectValidations(nat.Attribute, nat.Name, ctx, req, sd)
 		}
 	case *expr.Array:
-		collectValidations(dt.ElemType, ctx, req, sd)
+		collectValidations(dt.ElemType, "elem", ctx, req, sd)
 	case *expr.Map:
-		collectValidations(dt.KeyType, ctx, req, sd)
-		collectValidations(dt.ElemType, ctx, req, sd)
+		collectValidations(dt.KeyType, "key", ctx, req, sd)
+		collectValidations(dt.ElemType, "val", ctx, req, sd)
 	}
 }
 
@@ -882,7 +883,7 @@ func buildRequestConvertData(request, payload *expr.AttributeExpr, md []*Metadat
 			TgtName:    svc.Scope.GoFullTypeName(payload, svcCtx.Pkg(payload)),
 			TgtRef:     svc.Scope.GoFullTypeRef(payload, svcCtx.Pkg(payload)),
 			Init:       data,
-			Validation: addValidation(request, sd, true),
+			Validation: addValidation(request, "message", sd, true),
 		}
 	}
 
@@ -984,7 +985,7 @@ func buildResponseConvertData(response, result *expr.AttributeExpr, svcCtx *code
 		TgtName:    svcCtx.Scope.Name(result, svcCtx.Pkg(result), svcCtx.Pointer, svcCtx.UseDefault),
 		TgtRef:     svcCtx.Scope.Ref(result, svcCtx.Pkg(result)),
 		Init:       data,
-		Validation: addValidation(response, sd, false),
+		Validation: addValidation(response, "message", sd, false),
 	}
 }
 
@@ -1129,7 +1130,7 @@ func buildErrorConvertData(ge *expr.GRPCErrorExpr, e *expr.GRPCEndpointExpr, sd 
 		TgtName:    svcCtx.Scope.Name(ge.ErrorExpr.AttributeExpr, svcCtx.Pkg(ge.ErrorExpr.AttributeExpr), svcCtx.Pointer, svcCtx.UseDefault),
 		TgtRef:     svcCtx.Scope.Ref(ge.ErrorExpr.AttributeExpr, svcCtx.Pkg(ge.ErrorExpr.AttributeExpr)),
 		Init:       data,
-		Validation: addValidation(ge.Response.Message, sd, false),
+		Validation: addValidation(ge.Response.Message, "errmsg", sd, false),
 	}
 }
 
@@ -1188,7 +1189,7 @@ func buildStreamData(e *expr.GRPCEndpointExpr, sd *ServiceData, svr bool) *Strea
 					TgtName:    svcCtx.Scope.Name(e.MethodExpr.StreamingPayload, svcCtx.Pkg(e.MethodExpr.StreamingPayload), svcCtx.Pointer, svcCtx.UseDefault),
 					TgtRef:     recvRef,
 					Init:       buildInitData(e.StreamingRequest, e.MethodExpr.StreamingPayload, "v", "spayload", svcCtx, false, sd),
-					Validation: addValidation(e.StreamingRequest, sd, true),
+					Validation: addValidation(e.StreamingRequest, "stream", sd, true),
 				}
 			}
 			mustClose = md.ServerStream.MustClose
@@ -1217,7 +1218,7 @@ func buildStreamData(e *expr.GRPCEndpointExpr, sd *ServiceData, svr bool) *Strea
 					TgtName:    resCtx.Scope.Name(result, resCtx.Pkg(result), resCtx.Pointer, resCtx.UseDefault),
 					TgtRef:     resCtx.Scope.Ref(result, resCtx.Pkg(result)),
 					Init:       buildInitData(e.Response.Message, result, "v", resVar, resCtx, false, sd),
-					Validation: addValidation(e.Response.Message, sd, false),
+					Validation: addValidation(e.Response.Message, "stream", sd, false),
 				}
 			}
 			mustClose = md.ClientStream.MustClose

@@ -374,9 +374,9 @@ func ValidateMethodElemValidationRequest(message *service_elem_validationpb.Meth
 }
 
 // ValidateArrayOfString runs the validations defined on ArrayOfString.
-func ValidateArrayOfString(message *service_elem_validationpb.ArrayOfString) (err error) {
-	if len(message.Field) < 1 {
-		err = goa.MergeErrors(err, goa.InvalidLengthError("message.field", message.Field, len(message.Field), 1, true))
+func ValidateArrayOfString(val *service_elem_validationpb.ArrayOfString) (err error) {
+	if len(val.Field) < 1 {
+		err = goa.MergeErrors(err, goa.InvalidLengthError("val.field", val.Field, len(val.Field), 1, true))
 	}
 	return
 }
