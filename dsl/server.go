@@ -133,6 +133,7 @@ func Host(name string, fn func()) {
 
 // URI defines a server host URI. A single host may define multiple URIs. The
 // supported schemes are 'http', 'https', 'grpc' and 'grpcs' where 'grpcs'
+// each scheme supports only one scheme.
 // indicates gRPC using client-side SSL/TLS. gRPC URIs may only define the
 // authority component (in particular no path). URIs may be parameterized using
 // the {param} notation. Note that the variables appearing in a URI must be
