@@ -284,18 +284,18 @@ func NewMethodUnaryRPCWithErrorsCustomErrorError(message *service_unary_rpc_with
 
 // ValidateMethodUnaryRPCWithErrorsInternalError runs the validations defined
 // on MethodUnaryRPCWithErrorsInternalError.
-func ValidateMethodUnaryRPCWithErrorsInternalError(message *service_unary_rpc_with_errorspb.MethodUnaryRPCWithErrorsInternalError) (err error) {
-	if !(message.Name == "this" || message.Name == "that") {
-		err = goa.MergeErrors(err, goa.InvalidEnumValueError("message.name", message.Name, []interface{}{"this", "that"}))
+func ValidateMethodUnaryRPCWithErrorsInternalError(errmsg *service_unary_rpc_with_errorspb.MethodUnaryRPCWithErrorsInternalError) (err error) {
+	if !(errmsg.Name == "this" || errmsg.Name == "that") {
+		err = goa.MergeErrors(err, goa.InvalidEnumValueError("errmsg.name", errmsg.Name, []interface{}{"this", "that"}))
 	}
 	return
 }
 
 // ValidateMethodUnaryRPCWithErrorsBadRequestError runs the validations defined
 // on MethodUnaryRPCWithErrorsBadRequestError.
-func ValidateMethodUnaryRPCWithErrorsBadRequestError(message *service_unary_rpc_with_errorspb.MethodUnaryRPCWithErrorsBadRequestError) (err error) {
-	if !(message.Name == "this" || message.Name == "that") {
-		err = goa.MergeErrors(err, goa.InvalidEnumValueError("message.name", message.Name, []interface{}{"this", "that"}))
+func ValidateMethodUnaryRPCWithErrorsBadRequestError(errmsg *service_unary_rpc_with_errorspb.MethodUnaryRPCWithErrorsBadRequestError) (err error) {
+	if !(errmsg.Name == "this" || errmsg.Name == "that") {
+		err = goa.MergeErrors(err, goa.InvalidEnumValueError("errmsg.name", errmsg.Name, []interface{}{"this", "that"}))
 	}
 	return
 }
