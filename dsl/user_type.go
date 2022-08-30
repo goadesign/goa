@@ -167,17 +167,13 @@ func ArrayOf(v interface{}, fn ...func()) *expr.Array {
 //
 // Example:
 //
-//    var ReviewByID = MapOf(Int64, String, func() {
-//        Key(func() {
-//            Minimum(1)           // Validates keys of the map
-//        })
-//        Elem(func() {
-//            Pattern("[a-zA-Z]+") // Validates values of the map
-//        })
-//    })
-//
 //    var Review = Type("Review", func() {
-//        Attribute("ratings", MapOf(Bottle, Int32), "Bottle ratings")
+//        Attribute("ratings", MapOf(Bottle, Int32), "Bottle ratings", func() {
+//            Elem(func() {
+//                Minimum(1)
+//                Maximum(5)
+//            })
+//        })
 //    })
 //
 func MapOf(k, v interface{}, fn ...func()) *expr.Map {
