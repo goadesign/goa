@@ -76,7 +76,7 @@ func NewMuxer() MiddlewareMuxer {
 		ctx := context.WithValue(req.Context(), AcceptTypeKey, req.Header.Get("Accept"))
 		enc := ResponseEncoder(ctx, w)
 		w.WriteHeader(http.StatusNotFound)
-		enc.Encode(NewErrorResponse(fmt.Errorf("404 page not found")))
+		enc.Encode(NewErrorResponse(ctx, fmt.Errorf("404 page not found")))
 	}
 	return &mux{r}
 }

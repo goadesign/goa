@@ -25,7 +25,7 @@ func NewStreamingResultMethodHandler(
 	decoder func(*http.Request) goahttp.Decoder,
 	encoder func(context.Context, http.ResponseWriter) goahttp.Encoder,
 	errhandler func(context.Context, http.ResponseWriter, error),
-	formatter func(err error) goahttp.Statuser,
+	formatter func(ctx context.Context, err error) goahttp.Statuser,
 	upgrader goahttp.Upgrader,
 	configurer goahttp.ConnConfigureFunc,
 ) http.Handler {
@@ -170,7 +170,7 @@ func NewStreamingResultNoPayloadMethodHandler(
 	decoder func(*http.Request) goahttp.Decoder,
 	encoder func(context.Context, http.ResponseWriter) goahttp.Encoder,
 	errhandler func(context.Context, http.ResponseWriter, error),
-	formatter func(err error) goahttp.Statuser,
+	formatter func(ctx context.Context, err error) goahttp.Statuser,
 	upgrader goahttp.Upgrader,
 	configurer goahttp.ConnConfigureFunc,
 ) http.Handler {
@@ -910,7 +910,7 @@ func NewStreamingPayloadMethodHandler(
 	decoder func(*http.Request) goahttp.Decoder,
 	encoder func(context.Context, http.ResponseWriter) goahttp.Encoder,
 	errhandler func(context.Context, http.ResponseWriter, error),
-	formatter func(err error) goahttp.Statuser,
+	formatter func(ctx context.Context, err error) goahttp.Statuser,
 	upgrader goahttp.Upgrader,
 	configurer goahttp.ConnConfigureFunc,
 ) http.Handler {
@@ -1081,7 +1081,7 @@ func NewStreamingPayloadNoPayloadMethodHandler(
 	decoder func(*http.Request) goahttp.Decoder,
 	encoder func(context.Context, http.ResponseWriter) goahttp.Encoder,
 	errhandler func(context.Context, http.ResponseWriter, error),
-	formatter func(err error) goahttp.Statuser,
+	formatter func(ctx context.Context, err error) goahttp.Statuser,
 	upgrader goahttp.Upgrader,
 	configurer goahttp.ConnConfigureFunc,
 ) http.Handler {
@@ -2060,7 +2060,7 @@ func NewBidirectionalStreamingMethodHandler(
 	decoder func(*http.Request) goahttp.Decoder,
 	encoder func(context.Context, http.ResponseWriter) goahttp.Encoder,
 	errhandler func(context.Context, http.ResponseWriter, error),
-	formatter func(err error) goahttp.Statuser,
+	formatter func(ctx context.Context, err error) goahttp.Statuser,
 	upgrader goahttp.Upgrader,
 	configurer goahttp.ConnConfigureFunc,
 ) http.Handler {
@@ -2272,7 +2272,7 @@ func NewBidirectionalStreamingNoPayloadMethodHandler(
 	decoder func(*http.Request) goahttp.Decoder,
 	encoder func(context.Context, http.ResponseWriter) goahttp.Encoder,
 	errhandler func(context.Context, http.ResponseWriter, error),
-	formatter func(err error) goahttp.Statuser,
+	formatter func(ctx context.Context, err error) goahttp.Statuser,
 	upgrader goahttp.Upgrader,
 	configurer goahttp.ConnConfigureFunc,
 ) http.Handler {

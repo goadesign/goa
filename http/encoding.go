@@ -51,10 +51,10 @@ type (
 // RequestDecoder returns a HTTP request body decoder suitable for the given
 // request. The decoder handles the following mime types:
 //
-//     * application/json using package encoding/json
-//     * application/xml using package encoding/xml
-//     * application/gob using package encoding/gob
-//     * text/html and text/plain for strings
+//   - application/json using package encoding/json
+//   - application/xml using package encoding/xml
+//   - application/gob using package encoding/gob
+//   - text/html and text/plain for strings
 //
 // RequestDecoder defaults to the JSON decoder if the request "Content-Type"
 // header does not match any of the supported mime type or is missing
@@ -88,10 +88,10 @@ func RequestDecoder(r *http.Request) Decoder {
 // set in the context under the AcceptTypeKey or the ContentTypeKey if any.
 // The encoder supports the following mime types:
 //
-//     * application/json using package encoding/json
-//     * application/xml using package encoding/xml
-//     * application/gob using package encoding/gob
-//     * text/html and text/plain for strings
+//   - application/json using package encoding/json
+//   - application/xml using package encoding/xml
+//   - application/gob using package encoding/gob
+//   - text/html and text/plain for strings
 //
 // ResponseEncoder defaults to the JSON encoder if the context AcceptTypeKey or
 // ContentTypeKey value does not match any of the supported mime types or is
@@ -181,11 +181,10 @@ func RequestEncoder(r *http.Request) Encoder {
 // ResponseDecoder returns a HTTP response decoder.
 // The decoder handles the following content types:
 //
-//   * application/json using package encoding/json (default)
-//   * application/xml using package encoding/xml
-//   * application/gob using package encoding/gob
-//   * text/html and text/plain for strings
-//
+//   - application/json using package encoding/json (default)
+//   - application/xml using package encoding/xml
+//   - application/gob using package encoding/gob
+//   - text/html and text/plain for strings
 func ResponseDecoder(resp *http.Response) Decoder {
 	ct := resp.Header.Get("Content-Type")
 	if ct == "" {
@@ -216,13 +215,13 @@ func ResponseDecoder(resp *http.Response) Decoder {
 // provided encoder. If the error is not a goa ServiceError struct then it is
 // encoded as a permanent internal server error. This behavior as well as the
 // shape of the response can be overridden by providing a non-nil formatter.
-func ErrorEncoder(encoder func(context.Context, http.ResponseWriter) Encoder, formatter func(err error) Statuser) func(context.Context, http.ResponseWriter, error) error {
+func ErrorEncoder(encoder func(context.Context, http.ResponseWriter) Encoder, formatter func(ctx context.Context, err error) Statuser) func(context.Context, http.ResponseWriter, error) error {
 	return func(ctx context.Context, w http.ResponseWriter, err error) error {
 		enc := encoder(ctx, w)
 		if formatter == nil {
 			formatter = NewErrorResponse
 		}
-		resp := formatter(err)
+		resp := formatter(ctx, err)
 		w.WriteHeader(resp.StatusCode())
 		return enc.Encode(resp)
 	}
