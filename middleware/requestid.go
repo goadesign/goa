@@ -13,10 +13,13 @@ type (
 
 	// RequestIDOptions is the struct storing all the options.
 	RequestIDOptions struct {
-		// useRequestID if true indicates the middleware to use the RequestIDKey
-		// context key to infer the request ID instead of always generating
-		// unique IDs. Defaults to always-generate.
+		// useRequestID if true causes the middleware to look up the
+		// incoming request header to infer the request ID instead of
+		// always generating unique IDs. Defaults to always-generate.
 		useRequestID bool
+		// requestIDHeader is the name of the header used to capture the incoming
+		// request ID. Defaults to X-Request-Id.
+		requestIDHeader string
 		// requestIDLimit if positive truncates the request ID at the specified
 		// length. Defaults to no limit.
 		requestIDLimit int
@@ -57,7 +60,18 @@ func GenerateRequestID(ctx context.Context, o *RequestIDOptions) context.Context
 // the unique request ID.
 func UseRequestIDOption(f bool) RequestIDOption {
 	return func(o *RequestIDOptions) *RequestIDOptions {
+		o.requestIDHeader = "X-Request-Id"
 		o.useRequestID = f
+		return o
+	}
+}
+
+// RequestIDHeaderOption sets the name of the header used to capture the incoming
+// request ID. This option also automatically enabled the use of that header.
+func RequestIDHeaderOption(name string) RequestIDOption {
+	return func(o *RequestIDOptions) *RequestIDOptions {
+		o.requestIDHeader = name
+		o.useRequestID = true
 		return o
 	}
 }
@@ -74,6 +88,11 @@ func RequestIDLimitOption(limit int) RequestIDOption {
 // IsUseRequestID returns the request ID option.
 func (o *RequestIDOptions) IsUseRequestID() bool {
 	return o.useRequestID
+}
+
+// RequestIDHeader returns the request ID header option.
+func (o *RequestIDOptions) RequestIDHeader() string {
+	return o.requestIDHeader
 }
 
 // shortID produces a " unique" 6 bytes long string.
