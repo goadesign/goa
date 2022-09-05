@@ -20,57 +20,56 @@ import (
 //
 // The valid syntax for Result is thus:
 //
-//    Result(Type)
+//	Result(Type)
 //
-//    Result(func())
+//	Result(func())
 //
-//    Result(Type, "description")
+//	Result(Type, "description")
 //
-//    Result(Type, func())
+//	Result(Type, func())
 //
-//    Result(Type, "description", func())
+//	Result(Type, "description", func())
 //
 // Examples:
 //
-//    // Define result using primitive type
-//    Method("add", func() {
-//        Result(Int32)
-//    })
+//	// Define result using primitive type
+//	Method("add", func() {
+//	    Result(Int32)
+//	})
 //
-//    // Define result using primitive type and description
-//    Method("add", func() {
-//        Result(Int32, "Resulting sum")
-//    })
+//	// Define result using primitive type and description
+//	Method("add", func() {
+//	    Result(Int32, "Resulting sum")
+//	})
 //
-//    // Define result using primitive type, description and validations.
-//    Method("add", func() {
-//        Result(Int32, "Resulting sum", func() {
-//            Minimum(0)
-//        })
-//    })
+//	// Define result using primitive type, description and validations.
+//	Method("add", func() {
+//	    Result(Int32, "Resulting sum", func() {
+//	        Minimum(0)
+//	    })
+//	})
 //
-//    // Define result using object defined inline
-//    Method("add", func() {
-//        Result(func() {
-//            Description("Result defines a single field which is the sum.")
-//            Attribute("value", Int32, "Resulting sum")
-//            Required("value")
-//        })
-//    })
+//	// Define result using object defined inline
+//	Method("add", func() {
+//	    Result(func() {
+//	        Description("Result defines a single field which is the sum.")
+//	        Attribute("value", Int32, "Resulting sum")
+//	        Required("value")
+//	    })
+//	})
 //
-//    // Define result type using user type
-//    Method("add", func() {
-//        Result(Sum)
-//    })
+//	// Define result type using user type
+//	Method("add", func() {
+//	    Result(Sum)
+//	})
 //
-//    // Specify view and required attributes on result type
-//    Method("add", func() {
-//        Result(Sum, func() {
-//            View("default")
-//            Required("value")
-//        })
-//    })
-//
+//	// Specify view and required attributes on result type
+//	Method("add", func() {
+//	    Result(Sum, func() {
+//	        View("default")
+//	        Required("value")
+//	    })
+//	})
 func Result(val interface{}, args ...interface{}) {
 	if len(args) > 2 {
 		eval.ReportError("too many arguments")
@@ -81,7 +80,7 @@ func Result(val interface{}, args ...interface{}) {
 		eval.IncompatibleDSL()
 		return
 	}
-	e.Result = methodDSL("Result", val, args...)
+	e.Result = methodDSL(e, "Result", val, args...)
 }
 
 // StreamingResult defines a method that streams instances of the given type.
@@ -92,44 +91,43 @@ func Result(val interface{}, args ...interface{}) {
 //
 // Examples:
 //
-//    // Method result is a stream of integers
-//    Method("add", func() {
-//        StreamingResult(Int32)
-//    })
+//	// Method result is a stream of integers
+//	Method("add", func() {
+//	    StreamingResult(Int32)
+//	})
 //
-//    Method("add", func() {
-//        StreamingResult(Int32, "Resulting sum")
-//    })
+//	Method("add", func() {
+//	    StreamingResult(Int32, "Resulting sum")
+//	})
 //
-//    // Method result is a stream of integers with validation set on each
-//    Method("add", func() {
-//        StreamingResult(Int32, "Resulting sum", func() {
-//            Minimum(0)
-//        })
-//    })
+//	// Method result is a stream of integers with validation set on each
+//	Method("add", func() {
+//	    StreamingResult(Int32, "Resulting sum", func() {
+//	        Minimum(0)
+//	    })
+//	})
 //
-//    // Method result is a stream of objects defined inline
-//    Method("add", func() {
-//        StreamingResult(func() {
-//            Description("Result defines a single field which is the sum.")
-//            Attribute("value", Int32, "Resulting sum")
-//            Required("value")
-//        })
-//    })
+//	// Method result is a stream of objects defined inline
+//	Method("add", func() {
+//	    StreamingResult(func() {
+//	        Description("Result defines a single field which is the sum.")
+//	        Attribute("value", Int32, "Resulting sum")
+//	        Required("value")
+//	    })
+//	})
 //
-//    // Method result is a stream of user type
-//    Method("add", func() {
-//        StreamingResult(Sum)
-//    })
+//	// Method result is a stream of user type
+//	Method("add", func() {
+//	    StreamingResult(Sum)
+//	})
 //
-//    // Method result is a stream of result type with a view
-//    Method("add", func() {
-//        StreamingResult(Sum, func() {
-//            View("default")
-//            Required("value")
-//        })
-//    })
-//
+//	// Method result is a stream of result type with a view
+//	Method("add", func() {
+//	    StreamingResult(Sum, func() {
+//	        View("default")
+//	        Required("value")
+//	    })
+//	})
 func StreamingResult(val interface{}, args ...interface{}) {
 	if len(args) > 2 {
 		eval.ReportError("too many arguments")
@@ -140,7 +138,7 @@ func StreamingResult(val interface{}, args ...interface{}) {
 		eval.IncompatibleDSL()
 		return
 	}
-	e.Result = methodDSL("Result", val, args...)
+	e.Result = methodDSL(e, "Result", val, args...)
 	if e.Stream == expr.ClientStreamKind {
 		e.Stream = expr.BidirectionalStreamKind
 	} else {

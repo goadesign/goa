@@ -454,6 +454,25 @@ var ResultWithOneOfTypeMethodDSL = func() {
 	})
 }
 
+var ResultWithInlineValidationDSL = func() {
+	var RT = ResultType("application/vnd.result.inline.validation", func() {
+		Attributes(func() {
+			Attribute("a", String)
+			Attribute("b", Int)
+		})
+	})
+	Service("ResultWithInlineValidation", func() {
+		Method("A", func() {
+			Result(RT)
+		})
+		Method("B", func() {
+			Result(RT, func() {
+				Required("a")
+			})
+		})
+	})
+}
+
 var ForceGenerateTypeDSL = func() {
 	var _ = Type("ForcedType", func() {
 		Attribute("a", String)

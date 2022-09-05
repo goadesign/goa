@@ -1492,6 +1492,74 @@ func transformItemToResultwithoneoftypeviewsItemView(v *Item) *resultwithoneofty
 }
 `
 
+const ResultWithInlineValidation = `
+// Service is the ResultWithInlineValidation service interface.
+type Service interface {
+	// A implements A.
+	A(context.Context) (res *ResultInlineValidation, err error)
+	// B implements B.
+	B(context.Context) (res *ResultInlineValidationBResult, err error)
+}
+
+// ServiceName is the name of the service as defined in the design. This is the
+// same value that is set in the endpoint request contexts under the ServiceKey
+// key.
+const ServiceName = "ResultWithInlineValidation"
+
+// MethodNames lists the service method names as defined in the design. These
+// are the same values that are set in the endpoint request contexts under the
+// MethodKey key.
+var MethodNames = [2]string{"A", "B"}
+
+// ResultInlineValidation is the result type of the ResultWithInlineValidation
+// service A method.
+type ResultInlineValidation struct {
+	A *string
+	B *int
+}
+
+// ResultInlineValidationBResult is the result type of the
+// ResultWithInlineValidation service B method.
+type ResultInlineValidationBResult struct {
+	A string
+	B *int
+}
+
+// NewResultInlineValidation initializes result type ResultInlineValidation
+// from viewed result type ResultInlineValidation.
+func NewResultInlineValidation(vres *resultwithinlinevalidationviews.ResultInlineValidation) *ResultInlineValidation {
+	return newResultInlineValidation(vres.Projected)
+}
+
+// NewViewedResultInlineValidation initializes viewed result type
+// ResultInlineValidation from result type ResultInlineValidation using the
+// given view.
+func NewViewedResultInlineValidation(res *ResultInlineValidation, view string) *resultwithinlinevalidationviews.ResultInlineValidation {
+	p := newResultInlineValidationView(res)
+	return &resultwithinlinevalidationviews.ResultInlineValidation{Projected: p, View: "default"}
+}
+
+// newResultInlineValidation converts projected type ResultInlineValidation to
+// service type ResultInlineValidation.
+func newResultInlineValidation(vres *resultwithinlinevalidationviews.ResultInlineValidationView) *ResultInlineValidation {
+	res := &ResultInlineValidation{
+		A: vres.A,
+		B: vres.B,
+	}
+	return res
+}
+
+// newResultInlineValidationView projects result type ResultInlineValidation to
+// projected type ResultInlineValidationView using the "default" view.
+func newResultInlineValidationView(res *ResultInlineValidation) *resultwithinlinevalidationviews.ResultInlineValidationView {
+	vres := &resultwithinlinevalidationviews.ResultInlineValidationView{
+		A: res.A,
+		B: res.B,
+	}
+	return vres
+}
+`
+
 const ForceGenerateType = `
 // Service is the ForceGenerateType service interface.
 type Service interface {
