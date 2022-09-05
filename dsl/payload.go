@@ -156,8 +156,12 @@ func methodDSL(m *expr.MethodExpr, suffix string, p interface{}, args ...interfa
 		dupped := expr.Dup(actual)
 		att = &expr.AttributeExpr{Type: dupped}
 		if f, ok := args[len(args)-1].(func()); ok {
+			numreqs := 0
+			if att.Validation != nil {
+				numreqs = len(att.Validation.Required)
+			}
 			eval.Execute(f, att)
-			if att.Validation != nil && len(att.Validation.Required) > 0 {
+			if att.Validation != nil && len(att.Validation.Required) != numreqs {
 				// If the DSL modifies the type attributes "requiredness"
 				// then rename the type to avoid collisions.
 				if renamer, ok := dupped.(interface {
