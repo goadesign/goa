@@ -70,6 +70,7 @@ func TestBuildBodyTypes(t *testing.T) {
 		ExpectedType          typ
 		ExpectedFormat        string
 		ExpectedResponseTypes rt
+		ExpectedExtraTypes    map[string]typ
 	}{{
 		Name: "string_body",
 		DSL:  dsls.StringBodyDSL(svcName, "string_body"),
@@ -142,6 +143,13 @@ func TestBuildBodyTypes(t *testing.T) {
 
 		ExpectedType:          tempty,
 		ExpectedResponseTypes: rt{204: tempty, 400: tobj("name", tstring, "age", tint)},
+	}, {
+		Name: "forced_type",
+		DSL:  dsls.ForcedTypeDSL(svcName, "forced_type"),
+
+		ExpectedType:          tempty,
+		ExpectedResponseTypes: rt{204: tempty},
+		ExpectedExtraTypes:    map[string]typ{"Forced": tobj("foo", tstring)},
 	}}
 
 	for _, c := range cases {
@@ -179,6 +187,14 @@ func TestBuildBodyTypes(t *testing.T) {
 					return
 				}
 				matchesSchema(t, "response", met.ResponseBodies[s][0], types, r)
+			}
+			for name, forced := range c.ExpectedExtraTypes {
+				got, ok := types[name]
+				if !ok {
+					t.Errorf("missing forced type %q", name)
+					continue
+				}
+				matchesSchema(t, "extra type", got, types, forced)
 			}
 		})
 	}

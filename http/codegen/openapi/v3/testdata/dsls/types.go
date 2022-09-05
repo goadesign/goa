@@ -150,3 +150,19 @@ func ObjectErrorResponseBodyDSL(svcName, metName string) func() {
 		})
 	}
 }
+
+func ForcedTypeDSL(svcName, metName string) func() {
+	return func() {
+		var _ = Type("Forced", func() {
+			Attribute("foo")
+			Meta("type:generate:force")
+		})
+		var _ = Service(svcName, func() {
+			Method(metName, func() {
+				HTTP(func() {
+					POST("/")
+				})
+			})
+		})
+	}
+}
