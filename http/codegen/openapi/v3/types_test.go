@@ -150,6 +150,13 @@ func TestBuildBodyTypes(t *testing.T) {
 		ExpectedType:          tempty,
 		ExpectedResponseTypes: rt{204: tempty},
 		ExpectedExtraTypes:    map[string]typ{"Forced": tobj("foo", tstring)},
+	}, {
+		Name: "forced_result_type",
+		DSL:  dsls.ForcedResultTypeDSL(svcName, "forced_result_type"),
+
+		ExpectedType:          tempty,
+		ExpectedResponseTypes: rt{204: tempty},
+		ExpectedExtraTypes:    map[string]typ{"Forced": tobj("foo", tstring)},
 	}}
 
 	for _, c := range cases {
