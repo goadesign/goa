@@ -369,7 +369,7 @@ func transformObject(source, target *expr.AttributeExpr, sourceVar, targetVar st
 	return buffer.String(), nil
 }
 
-func isNonZero(v any) bool {
+func isNonZero(v interface{}) bool {
 	switch v := v.(type) {
 	case nil:
 		return false
