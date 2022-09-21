@@ -1,6 +1,7 @@
 package http
 
 import (
+	"context"
 	"net/http"
 
 	goa "goa.design/goa/v3/pkg"
@@ -35,7 +36,7 @@ type (
 )
 
 // NewErrorResponse creates a HTTP response from the given error.
-func NewErrorResponse(err error) Statuser {
+func NewErrorResponse(ctx context.Context, err error) Statuser {
 	if gerr, ok := err.(*goa.ServiceError); ok {
 		return &ErrorResponse{
 			Name:      gerr.Name,
@@ -46,7 +47,7 @@ func NewErrorResponse(err error) Statuser {
 			Fault:     gerr.Fault,
 		}
 	}
-	return NewErrorResponse(goa.Fault(err.Error()))
+	return NewErrorResponse(ctx, goa.Fault(err.Error()))
 }
 
 // StatusCode implements a heuristic that computes a HTTP response status code

@@ -9,7 +9,7 @@ func NewMethodNoPayloadNoResultHandler(
 	decoder func(*http.Request) goahttp.Decoder,
 	encoder func(context.Context, http.ResponseWriter) goahttp.Encoder,
 	errhandler func(context.Context, http.ResponseWriter, error),
-	formatter func(err error) goahttp.Statuser,
+	formatter func(ctx context.Context, err error) goahttp.Statuser,
 ) http.Handler {
 	var (
 		encodeResponse = EncodeMethodNoPayloadNoResultResponse(encoder)
@@ -43,7 +43,7 @@ func NewMethodNoPayloadNoResultHandler(
 	decoder func(*http.Request) goahttp.Decoder,
 	encoder func(context.Context, http.ResponseWriter) goahttp.Encoder,
 	errhandler func(context.Context, http.ResponseWriter, error),
-	formatter func(err error) goahttp.Statuser,
+	formatter func(ctx context.Context, err error) goahttp.Statuser,
 ) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ctx := context.WithValue(r.Context(), goahttp.AcceptTypeKey, r.Header.Get("Accept"))
@@ -63,7 +63,7 @@ func NewMethodPayloadNoResultHandler(
 	decoder func(*http.Request) goahttp.Decoder,
 	encoder func(context.Context, http.ResponseWriter) goahttp.Encoder,
 	errhandler func(context.Context, http.ResponseWriter, error),
-	formatter func(err error) goahttp.Statuser,
+	formatter func(ctx context.Context, err error) goahttp.Statuser,
 ) http.Handler {
 	var (
 		decodeRequest  = DecodeMethodPayloadNoResultRequest(mux, decoder)
@@ -104,7 +104,7 @@ func NewMethodPayloadNoResultHandler(
 	decoder func(*http.Request) goahttp.Decoder,
 	encoder func(context.Context, http.ResponseWriter) goahttp.Encoder,
 	errhandler func(context.Context, http.ResponseWriter, error),
-	formatter func(err error) goahttp.Statuser,
+	formatter func(ctx context.Context, err error) goahttp.Statuser,
 ) http.Handler {
 	var (
 		decodeRequest = DecodeMethodPayloadNoResultRequest(mux, decoder)
@@ -135,7 +135,7 @@ func NewMethodNoPayloadResultHandler(
 	decoder func(*http.Request) goahttp.Decoder,
 	encoder func(context.Context, http.ResponseWriter) goahttp.Encoder,
 	errhandler func(context.Context, http.ResponseWriter, error),
-	formatter func(err error) goahttp.Statuser,
+	formatter func(ctx context.Context, err error) goahttp.Statuser,
 ) http.Handler {
 	var (
 		encodeResponse = EncodeMethodNoPayloadResultResponse(encoder)
@@ -169,7 +169,7 @@ func NewMethodPayloadResultHandler(
 	decoder func(*http.Request) goahttp.Decoder,
 	encoder func(context.Context, http.ResponseWriter) goahttp.Encoder,
 	errhandler func(context.Context, http.ResponseWriter, error),
-	formatter func(err error) goahttp.Statuser,
+	formatter func(ctx context.Context, err error) goahttp.Statuser,
 ) http.Handler {
 	var (
 		decodeRequest  = DecodeMethodPayloadResultRequest(mux, decoder)
@@ -210,7 +210,7 @@ func NewMethodPayloadResultErrorHandler(
 	decoder func(*http.Request) goahttp.Decoder,
 	encoder func(context.Context, http.ResponseWriter) goahttp.Encoder,
 	errhandler func(context.Context, http.ResponseWriter, error),
-	formatter func(err error) goahttp.Statuser,
+	formatter func(ctx context.Context, err error) goahttp.Statuser,
 ) http.Handler {
 	var (
 		decodeRequest  = DecodeMethodPayloadResultErrorRequest(mux, decoder)

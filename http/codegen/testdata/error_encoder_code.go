@@ -3,7 +3,7 @@ package testdata
 var PrimitiveErrorResponseEncoderCode = `// EncodeMethodPrimitiveErrorResponseError returns an encoder for errors
 // returned by the MethodPrimitiveErrorResponse ServicePrimitiveErrorResponse
 // endpoint.
-func EncodeMethodPrimitiveErrorResponseError(encoder func(context.Context, http.ResponseWriter) goahttp.Encoder, formatter func(err error) goahttp.Statuser) func(context.Context, http.ResponseWriter, error) error {
+func EncodeMethodPrimitiveErrorResponseError(encoder func(context.Context, http.ResponseWriter) goahttp.Encoder, formatter func(ctx context.Context, err error) goahttp.Statuser) func(context.Context, http.ResponseWriter, error) error {
 	encodeError := goahttp.ErrorEncoder(encoder, formatter)
 	return func(ctx context.Context, w http.ResponseWriter, v error) error {
 		var en ErrorNamer
@@ -37,7 +37,7 @@ func EncodeMethodPrimitiveErrorResponseError(encoder func(context.Context, http.
 var PrimitiveErrorInResponseHeaderEncoderCode = `// EncodeMethodPrimitiveErrorInResponseHeaderError returns an encoder for
 // errors returned by the MethodPrimitiveErrorInResponseHeader
 // ServicePrimitiveErrorInResponseHeader endpoint.
-func EncodeMethodPrimitiveErrorInResponseHeaderError(encoder func(context.Context, http.ResponseWriter) goahttp.Encoder, formatter func(err error) goahttp.Statuser) func(context.Context, http.ResponseWriter, error) error {
+func EncodeMethodPrimitiveErrorInResponseHeaderError(encoder func(context.Context, http.ResponseWriter) goahttp.Encoder, formatter func(ctx context.Context, err error) goahttp.Statuser) func(context.Context, http.ResponseWriter, error) error {
 	encodeError := goahttp.ErrorEncoder(encoder, formatter)
 	return func(ctx context.Context, w http.ResponseWriter, v error) error {
 		var en ErrorNamer
@@ -77,7 +77,7 @@ func EncodeMethodPrimitiveErrorInResponseHeaderError(encoder func(context.Contex
 var APIPrimitiveErrorResponseEncoderCode = `// EncodeMethodAPIPrimitiveErrorResponseError returns an encoder for errors
 // returned by the MethodAPIPrimitiveErrorResponse
 // ServiceAPIPrimitiveErrorResponse endpoint.
-func EncodeMethodAPIPrimitiveErrorResponseError(encoder func(context.Context, http.ResponseWriter) goahttp.Encoder, formatter func(err error) goahttp.Statuser) func(context.Context, http.ResponseWriter, error) error {
+func EncodeMethodAPIPrimitiveErrorResponseError(encoder func(context.Context, http.ResponseWriter) goahttp.Encoder, formatter func(ctx context.Context, err error) goahttp.Statuser) func(context.Context, http.ResponseWriter, error) error {
 	encodeError := goahttp.ErrorEncoder(encoder, formatter)
 	return func(ctx context.Context, w http.ResponseWriter, v error) error {
 		var en ErrorNamer
@@ -91,7 +91,7 @@ func EncodeMethodAPIPrimitiveErrorResponseError(encoder func(context.Context, ht
 			enc := encoder(ctx, w)
 			var body interface{}
 			if formatter != nil {
-				body = formatter(res)
+				body = formatter(ctx, res)
 			} else {
 				body = NewMethodAPIPrimitiveErrorResponseInternalErrorResponseBody(res)
 			}
@@ -115,7 +115,7 @@ func EncodeMethodAPIPrimitiveErrorResponseError(encoder func(context.Context, ht
 
 var DefaultErrorResponseEncoderCode = `// EncodeMethodDefaultErrorResponseError returns an encoder for errors returned
 // by the MethodDefaultErrorResponse ServiceDefaultErrorResponse endpoint.
-func EncodeMethodDefaultErrorResponseError(encoder func(context.Context, http.ResponseWriter) goahttp.Encoder, formatter func(err error) goahttp.Statuser) func(context.Context, http.ResponseWriter, error) error {
+func EncodeMethodDefaultErrorResponseError(encoder func(context.Context, http.ResponseWriter) goahttp.Encoder, formatter func(ctx context.Context, err error) goahttp.Statuser) func(context.Context, http.ResponseWriter, error) error {
 	encodeError := goahttp.ErrorEncoder(encoder, formatter)
 	return func(ctx context.Context, w http.ResponseWriter, v error) error {
 		var en ErrorNamer
@@ -129,7 +129,7 @@ func EncodeMethodDefaultErrorResponseError(encoder func(context.Context, http.Re
 			enc := encoder(ctx, w)
 			var body interface{}
 			if formatter != nil {
-				body = formatter(res)
+				body = formatter(ctx, res)
 			} else {
 				body = NewMethodDefaultErrorResponseBadRequestResponseBody(res)
 			}
@@ -145,7 +145,7 @@ func EncodeMethodDefaultErrorResponseError(encoder func(context.Context, http.Re
 
 var DefaultErrorResponseWithContentTypeEncoderCode = `// EncodeMethodDefaultErrorResponseError returns an encoder for errors returned
 // by the MethodDefaultErrorResponse ServiceDefaultErrorResponse endpoint.
-func EncodeMethodDefaultErrorResponseError(encoder func(context.Context, http.ResponseWriter) goahttp.Encoder, formatter func(err error) goahttp.Statuser) func(context.Context, http.ResponseWriter, error) error {
+func EncodeMethodDefaultErrorResponseError(encoder func(context.Context, http.ResponseWriter) goahttp.Encoder, formatter func(ctx context.Context, err error) goahttp.Statuser) func(context.Context, http.ResponseWriter, error) error {
 	encodeError := goahttp.ErrorEncoder(encoder, formatter)
 	return func(ctx context.Context, w http.ResponseWriter, v error) error {
 		var en ErrorNamer
@@ -160,7 +160,7 @@ func EncodeMethodDefaultErrorResponseError(encoder func(context.Context, http.Re
 			enc := encoder(ctx, w)
 			var body interface{}
 			if formatter != nil {
-				body = formatter(res)
+				body = formatter(ctx, res)
 			} else {
 				body = NewMethodDefaultErrorResponseBadRequestResponseBody(res)
 			}
@@ -176,7 +176,7 @@ func EncodeMethodDefaultErrorResponseError(encoder func(context.Context, http.Re
 
 var ServiceErrorResponseEncoderCode = `// EncodeMethodServiceErrorResponseError returns an encoder for errors returned
 // by the MethodServiceErrorResponse ServiceServiceErrorResponse endpoint.
-func EncodeMethodServiceErrorResponseError(encoder func(context.Context, http.ResponseWriter) goahttp.Encoder, formatter func(err error) goahttp.Statuser) func(context.Context, http.ResponseWriter, error) error {
+func EncodeMethodServiceErrorResponseError(encoder func(context.Context, http.ResponseWriter) goahttp.Encoder, formatter func(ctx context.Context, err error) goahttp.Statuser) func(context.Context, http.ResponseWriter, error) error {
 	encodeError := goahttp.ErrorEncoder(encoder, formatter)
 	return func(ctx context.Context, w http.ResponseWriter, v error) error {
 		var en ErrorNamer
@@ -190,7 +190,7 @@ func EncodeMethodServiceErrorResponseError(encoder func(context.Context, http.Re
 			enc := encoder(ctx, w)
 			var body interface{}
 			if formatter != nil {
-				body = formatter(res)
+				body = formatter(ctx, res)
 			} else {
 				body = NewMethodServiceErrorResponseInternalErrorResponseBody(res)
 			}
@@ -203,7 +203,7 @@ func EncodeMethodServiceErrorResponseError(encoder func(context.Context, http.Re
 			enc := encoder(ctx, w)
 			var body interface{}
 			if formatter != nil {
-				body = formatter(res)
+				body = formatter(ctx, res)
 			} else {
 				body = NewMethodServiceErrorResponseBadRequestResponseBody(res)
 			}
@@ -219,7 +219,7 @@ func EncodeMethodServiceErrorResponseError(encoder func(context.Context, http.Re
 
 var ServiceErrorResponseWithContentTypeEncoderCode = `// EncodeMethodServiceErrorResponseError returns an encoder for errors returned
 // by the MethodServiceErrorResponse ServiceServiceErrorResponse endpoint.
-func EncodeMethodServiceErrorResponseError(encoder func(context.Context, http.ResponseWriter) goahttp.Encoder, formatter func(err error) goahttp.Statuser) func(context.Context, http.ResponseWriter, error) error {
+func EncodeMethodServiceErrorResponseError(encoder func(context.Context, http.ResponseWriter) goahttp.Encoder, formatter func(ctx context.Context, err error) goahttp.Statuser) func(context.Context, http.ResponseWriter, error) error {
 	encodeError := goahttp.ErrorEncoder(encoder, formatter)
 	return func(ctx context.Context, w http.ResponseWriter, v error) error {
 		var en ErrorNamer
@@ -233,7 +233,7 @@ func EncodeMethodServiceErrorResponseError(encoder func(context.Context, http.Re
 			enc := encoder(ctx, w)
 			var body interface{}
 			if formatter != nil {
-				body = formatter(res)
+				body = formatter(ctx, res)
 			} else {
 				body = NewMethodServiceErrorResponseInternalErrorResponseBody(res)
 			}
@@ -247,7 +247,7 @@ func EncodeMethodServiceErrorResponseError(encoder func(context.Context, http.Re
 			enc := encoder(ctx, w)
 			var body interface{}
 			if formatter != nil {
-				body = formatter(res)
+				body = formatter(ctx, res)
 			} else {
 				body = NewMethodServiceErrorResponseBadRequestResponseBody(res)
 			}
@@ -263,7 +263,7 @@ func EncodeMethodServiceErrorResponseError(encoder func(context.Context, http.Re
 
 var NoBodyErrorResponseEncoderCode = `// EncodeMethodServiceErrorResponseError returns an encoder for errors returned
 // by the MethodServiceErrorResponse ServiceNoBodyErrorResponse endpoint.
-func EncodeMethodServiceErrorResponseError(encoder func(context.Context, http.ResponseWriter) goahttp.Encoder, formatter func(err error) goahttp.Statuser) func(context.Context, http.ResponseWriter, error) error {
+func EncodeMethodServiceErrorResponseError(encoder func(context.Context, http.ResponseWriter) goahttp.Encoder, formatter func(ctx context.Context, err error) goahttp.Statuser) func(context.Context, http.ResponseWriter, error) error {
 	encodeError := goahttp.ErrorEncoder(encoder, formatter)
 	return func(ctx context.Context, w http.ResponseWriter, v error) error {
 		var en ErrorNamer
@@ -289,7 +289,7 @@ func EncodeMethodServiceErrorResponseError(encoder func(context.Context, http.Re
 
 var NoBodyErrorResponseWithContentTypeEncoderCode = `// EncodeMethodServiceErrorResponseError returns an encoder for errors returned
 // by the MethodServiceErrorResponse ServiceNoBodyErrorResponse endpoint.
-func EncodeMethodServiceErrorResponseError(encoder func(context.Context, http.ResponseWriter) goahttp.Encoder, formatter func(err error) goahttp.Statuser) func(context.Context, http.ResponseWriter, error) error {
+func EncodeMethodServiceErrorResponseError(encoder func(context.Context, http.ResponseWriter) goahttp.Encoder, formatter func(ctx context.Context, err error) goahttp.Statuser) func(context.Context, http.ResponseWriter, error) error {
 	encodeError := goahttp.ErrorEncoder(encoder, formatter)
 	return func(ctx context.Context, w http.ResponseWriter, v error) error {
 		var en ErrorNamer
@@ -317,7 +317,7 @@ func EncodeMethodServiceErrorResponseError(encoder func(context.Context, http.Re
 var EmptyErrorResponseBodyEncoderCode = `// EncodeMethodEmptyErrorResponseBodyError returns an encoder for errors
 // returned by the MethodEmptyErrorResponseBody ServiceEmptyErrorResponseBody
 // endpoint.
-func EncodeMethodEmptyErrorResponseBodyError(encoder func(context.Context, http.ResponseWriter) goahttp.Encoder, formatter func(err error) goahttp.Statuser) func(context.Context, http.ResponseWriter, error) error {
+func EncodeMethodEmptyErrorResponseBodyError(encoder func(context.Context, http.ResponseWriter) goahttp.Encoder, formatter func(ctx context.Context, err error) goahttp.Statuser) func(context.Context, http.ResponseWriter, error) error {
 	encodeError := goahttp.ErrorEncoder(encoder, formatter)
 	return func(ctx context.Context, w http.ResponseWriter, v error) error {
 		var en ErrorNamer
@@ -370,7 +370,7 @@ func EncodeMethodEmptyErrorResponseBodyError(encoder func(context.Context, http.
 var EmptyCustomErrorResponseBodyEncoderCode = `// EncodeMethodEmptyCustomErrorResponseBodyError returns an encoder for errors
 // returned by the MethodEmptyCustomErrorResponseBody
 // ServiceEmptyCustomErrorResponseBody endpoint.
-func EncodeMethodEmptyCustomErrorResponseBodyError(encoder func(context.Context, http.ResponseWriter) goahttp.Encoder, formatter func(err error) goahttp.Statuser) func(context.Context, http.ResponseWriter, error) error {
+func EncodeMethodEmptyCustomErrorResponseBodyError(encoder func(context.Context, http.ResponseWriter) goahttp.Encoder, formatter func(ctx context.Context, err error) goahttp.Statuser) func(context.Context, http.ResponseWriter, error) error {
 	encodeError := goahttp.ErrorEncoder(encoder, formatter)
 	return func(ctx context.Context, w http.ResponseWriter, v error) error {
 		var en ErrorNamer
