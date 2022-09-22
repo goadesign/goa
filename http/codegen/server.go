@@ -86,6 +86,8 @@ func serverFile(genpkg string, svc *expr.HTTPServiceExpr) *codegen.File {
 		sections = append(sections, &codegen.SectionTemplate{Name: "server-files", Source: fileServerT, FuncMap: funcs, Data: s})
 	}
 
+	sections = append(sections, &codegen.SectionTemplate{Name: "server-method-names", Source: serverMethodNamesT, Data: data})
+
 	return &codegen.File{Path: path, SectionTemplates: sections}
 }
 
@@ -369,6 +371,11 @@ func {{ .ServerInit }}(
 // input: ServiceData
 const serverServiceT = `{{ printf "%s returns the name of the service served." .ServerService | comment }}
 func (s *{{ .ServerStruct }}) {{ .ServerService }}() string { return "{{ .Service.Name }}" }
+`
+
+// input: ServiceData
+const serverMethodNamesT = `{{ printf "MethodNames returns the methods served." | comment }}
+func (s *{{ .ServerStruct }}) MethodNames() []string { return {{ .Service.PkgName }}.MethodNames[:] }
 `
 
 // input: ServiceData
