@@ -279,8 +279,22 @@ type {{ .ServerStruct }} struct {
 
 // ErrorNamer is an interface implemented by generated error structs that
 // exposes the name of the error as defined in the design.
+//
+// Deprecated: Use GoaErrorName - https://github.com/goadesign/goa/issues/3105
 type ErrorNamer interface {
 	ErrorName() string
+}
+
+// GoaErrorNamer is an interface implemented by generated error structs that
+// exposes the name of the error as defined in the design.
+type GoaErrorNamer interface {
+	GoaErrorName() string
+}
+
+type adaptErrorNamer ErrorName
+
+func (err adaptErrorNamer) GoaErrorName() string {
+	return err.ErrorName()
 }
 `
 
@@ -694,7 +708,7 @@ const requestElementsT = `{{- define "request_elements" }}
 			{{ .VarName }} = []string{
                 {{- range $i, $v := .DefaultValue }}
                     {{- if $i }}{{ print ", " }}{{ end }}
-                    {{- printf "%q" $v -}} 
+                    {{- printf "%q" $v -}}
                 {{- end -}} }
 		}
 		{{- end }}
@@ -1203,11 +1217,15 @@ const errorEncoderT = `{{ printf "%s returns an encoder for errors returned by t
 func {{ .ErrorEncoder }}(encoder func(context.Context, http.ResponseWriter) goahttp.Encoder, formatter func(ctx context.Context, err error) goahttp.Statuser) func(context.Context, http.ResponseWriter, error) error {
 	encodeError := goahttp.ErrorEncoder(encoder, formatter)
 	return func(ctx context.Context, w http.ResponseWriter, v error) error {
-		var en ErrorNamer
+		var deprecatedErrorNamer ErrorNamer
+		if errors.As(v, &deprecatedErrorNamer) {
+			v = adaptErrorNamer(deprecatedErrorNamer)
+		}
+		var en GoaErrorNamer
 		if !errors.As(v, &en) {
 			return encodeError(ctx, w, v)
 		}
-		switch en.ErrorName() {
+		switch en.GoaErrorName() {
 	{{- range $gerr := .Errors }}
 	{{- range $err := .Errors }}
 		case {{ printf "%q" .Name }}:
@@ -1350,7 +1368,7 @@ const responseT = `{{ define "response" -}}
 	{{- end }}
 
 	{{- if .ErrorHeader }}
-	w.Header().Set("goa-error", res.ErrorName())
+	w.Header().Set("goa-error", res.GoaErrorName())
 	{{- end }}
 	w.WriteHeader({{ .StatusCode }})
 {{- end }}

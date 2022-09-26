@@ -245,7 +245,12 @@ func (e ServiceError) History() []ServiceError {
 func (e *ServiceError) Error() string { return e.Message }
 
 // ErrorName returns the error name.
+//
+// Deprecated: Use GoaErrorName - https://github.com/goadesign/goa/issues/3105
 func (e *ServiceError) ErrorName() string { return e.Name }
+
+// GoaErrorName returns the error name.
+func (e *ServiceError) GoaErrorName() string { return e.ErrorName() }
 
 func (e *ServiceError) Unwrap() error { return e.err }
 

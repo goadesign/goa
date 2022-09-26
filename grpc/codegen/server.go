@@ -208,8 +208,22 @@ type {{ .ServerStruct }} struct {
 
 // ErrorNamer is an interface implemented by generated error structs that
 // exposes the name of the error as defined in the expr.
+//
+// Deprecated: Use GoaErrorName - https://github.com/goadesign/goa/issues/3105
 type ErrorNamer interface {
   ErrorName() string
+}
+
+// GoaErrorNamer is an interface implemented by generated error structs that
+// exposes the name of the error as defined in the design.
+type GoaErrorNamer interface {
+	GoaErrorName() string
+}
+
+type adaptErrorNamer ErrorName
+
+func (err adaptErrorNamer) GoaErrorName() string {
+	return err.ErrorName()
 }
 `
 
@@ -266,9 +280,13 @@ func (s *{{ .ServerStruct }}) {{ .Method.VarName }}(
 {{- define "handle_error" }}
 	if err != nil {
 	{{- if .Errors }}
-		var en ErrorNamer
+		var deprecatedErrorNamer ErrorNamer
+		if errors.As(v, &deprecatedErrorNamer) {
+			v = adaptErrorNamer(deprecatedErrorNamer)
+		}
+		var en GoaErrorNamer
 		if errors.As(err, &en) {
-			switch en.ErrorName() {
+			switch en.GoaErrorName() {
 		{{- range .Errors }}
 			case {{ printf "%q" .Name }}:
 				{{- if .Response.ServerConvert }}

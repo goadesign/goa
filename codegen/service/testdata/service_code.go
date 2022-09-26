@@ -407,7 +407,14 @@ func (e *APayload) Error() string {
 }
 
 // ErrorName returns "APayload".
+//
+// Deprecated: Use GoaErrorName - https://github.com/goadesign/goa/issues/3105
 func (e *APayload) ErrorName() string {
+	return e.GoaErrorName()
+}
+
+// GoaErrorName returns "APayload".
+func (e *APayload) GoaErrorName() string {
 	return "user_type"
 }
 
@@ -417,7 +424,14 @@ func (e *Result) Error() string {
 }
 
 // ErrorName returns "Result".
+//
+// Deprecated: Use GoaErrorName - https://github.com/goadesign/goa/issues/3105
 func (e *Result) ErrorName() string {
+	return e.GoaErrorName()
+}
+
+// GoaErrorName returns "Result".
+func (e *Result) GoaErrorName() string {
 	return e.B
 }
 
@@ -427,7 +441,14 @@ func (e Primitive) Error() string {
 }
 
 // ErrorName returns "primitive".
+//
+// Deprecated: Use GoaErrorName - https://github.com/goadesign/goa/issues/3105
 func (e Primitive) ErrorName() string {
+	return e.GoaErrorName()
+}
+
+// GoaErrorName returns "primitive".
+func (e Primitive) GoaErrorName() string {
 	return "primitive"
 }
 `
@@ -459,7 +480,14 @@ func (e *GoaError) Error() string {
 }
 
 // ErrorName returns "GoaError".
+//
+// Deprecated: Use GoaErrorName - https://github.com/goadesign/goa/issues/3105
 func (e *GoaError) ErrorName() string {
+	return e.GoaErrorName()
+}
+
+// GoaErrorName returns "GoaError".
+func (e *GoaError) GoaErrorName() string {
 	return e.ErrorCode
 }
 `
