@@ -1,9 +1,11 @@
 package codegen
 
 import (
+	"path/filepath"
 	"testing"
 
 	"goa.design/goa/v3/codegen"
+	"goa.design/goa/v3/codegen/codegentest"
 	"goa.design/goa/v3/expr"
 	"goa.design/goa/v3/http/codegen/testdata"
 )
@@ -14,28 +16,26 @@ func TestServerMount(t *testing.T) {
 		Name       string
 		DSL        func()
 		Code       string
-		FileCount  int
 		SectionNum int
+
+		SectionName string
 	}{
-		{"simple routing constructor", testdata.ServerSimpleRoutingDSL, testdata.ServerSimpleRoutingConstructorCode, 2, 6},
-		{"simple routing with a redirect constructor", testdata.ServerSimpleRoutingWithRedirectDSL, testdata.ServerSimpleRoutingConstructorCode, 1, 6},
-		{"multiple files constructor", testdata.ServerMultipleFilesDSL, testdata.ServerMultipleFilesConstructorCode, 1, 6},
-		{"multiple files mounter", testdata.ServerMultipleFilesDSL, testdata.ServerMultipleFilesMounterCode, 1, 10},
-		{"multiple files constructor /w prefix path", testdata.ServerMultipleFilesWithPrefixPathDSL, testdata.ServerMultipleFilesWithPrefixPathConstructorCode, 1, 6},
-		{"multiple files mounter /w prefix path", testdata.ServerMultipleFilesWithPrefixPathDSL, testdata.ServerMultipleFilesWithPrefixPathMounterCode, 1, 10},
-		{"multiple files with a redirect constructor", testdata.ServerMultipleFilesWithRedirectDSL, testdata.ServerMultipleFilesWithRedirectConstructorCode, 1, 6},
-		{"multiple files with a redirect mounter", testdata.ServerMultipleFilesWithRedirectDSL, testdata.ServerMultipleFilesMounterCode, 1, 10},
+		{"simple routing constructor", testdata.ServerSimpleRoutingDSL, testdata.ServerSimpleRoutingConstructorCode, 0, "server-mount"},
+		{"simple routing with a redirect constructor", testdata.ServerSimpleRoutingWithRedirectDSL, testdata.ServerSimpleRoutingConstructorCode, 0, "server-mount"},
+		{"multiple files constructor", testdata.ServerMultipleFilesDSL, testdata.ServerMultipleFilesConstructorCode, 0, "server-mount"},
+		{"multiple files mounter", testdata.ServerMultipleFilesDSL, testdata.ServerMultipleFilesMounterCode, 3, "server-files"},
+		{"multiple files constructor /w prefix path", testdata.ServerMultipleFilesWithPrefixPathDSL, testdata.ServerMultipleFilesWithPrefixPathConstructorCode, 0, "server-mount"},
+		{"multiple files mounter /w prefix path", testdata.ServerMultipleFilesWithPrefixPathDSL, testdata.ServerMultipleFilesWithPrefixPathMounterCode, 3, "server-files"},
+		{"multiple files with a redirect constructor", testdata.ServerMultipleFilesWithRedirectDSL, testdata.ServerMultipleFilesWithRedirectConstructorCode, 0, "server-mount"},
+		{"multiple files with a redirect mounter", testdata.ServerMultipleFilesWithRedirectDSL, testdata.ServerMultipleFilesMounterCode, 3, "server-files"},
 	}
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
 			RunHTTPDSL(t, c.DSL)
 			fs := ServerFiles(genpkg, expr.Root)
-			if len(fs) != c.FileCount {
-				t.Fatalf("got %d files, expected %d", len(fs), c.FileCount)
-			}
-			sections := fs[0].SectionTemplates
-			if len(sections) < 6 {
-				t.Fatalf("got %d sections, expected at least 6", len(sections))
+			sections := codegentest.Sections(fs, filepath.Join("", "server.go"), c.SectionName)
+			if c.SectionNum >= len(sections) {
+				t.Fatalf("section %#v missing from /server.go", c.SectionName)
 			}
 			code := codegen.SectionCode(t, sections[c.SectionNum])
 			if code != c.Code {

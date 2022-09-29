@@ -1,9 +1,11 @@
 package codegen
 
 import (
+	"path/filepath"
 	"testing"
 
 	"goa.design/goa/v3/codegen"
+	"goa.design/goa/v3/codegen/codegentest"
 	"goa.design/goa/v3/expr"
 	"goa.design/goa/v3/http/codegen/testdata"
 )
@@ -11,28 +13,23 @@ import (
 func TestServerHandler(t *testing.T) {
 	const genpkg = "gen"
 	cases := []struct {
-		Name       string
-		DSL        func()
-		Code       string
-		FileCount  int
-		SectionNum int
+		Name string
+		DSL  func()
+		Code string
 	}{
-		{"server simple routing", testdata.ServerSimpleRoutingDSL, testdata.ServerSimpleRoutingCode, 2, 7},
-		{"server trailing slash routing", testdata.ServerTrailingSlashRoutingDSL, testdata.ServerTrailingSlashRoutingCode, 2, 7},
-		{"server simple routing with a redirect", testdata.ServerSimpleRoutingWithRedirectDSL, testdata.ServerSimpleRoutingCode, 1, 7},
+		{"server simple routing", testdata.ServerSimpleRoutingDSL, testdata.ServerSimpleRoutingCode},
+		{"server trailing slash routing", testdata.ServerTrailingSlashRoutingDSL, testdata.ServerTrailingSlashRoutingCode},
+		{"server simple routing with a redirect", testdata.ServerSimpleRoutingWithRedirectDSL, testdata.ServerSimpleRoutingCode},
 	}
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
 			RunHTTPDSL(t, c.DSL)
 			fs := ServerFiles(genpkg, expr.Root)
-			if len(fs) != c.FileCount {
-				t.Fatalf("got %d files, expected %d", len(fs), c.FileCount)
+			sections := codegentest.Sections(fs, filepath.Join("", "server.go"), "server-handler")
+			if len(sections) == 0 {
+				t.Fatal("section not found")
 			}
-			sections := fs[0].SectionTemplates
-			if len(sections) < 8 {
-				t.Fatalf("got %d sections, expected at least 8", len(sections))
-			}
-			code := codegen.SectionCode(t, sections[c.SectionNum])
+			code := codegen.SectionCode(t, sections[0])
 			if code != c.Code {
 				t.Errorf("invalid code, got:\n%s\ngot vs. expected:\n%s", code, codegen.Diff(t, code, c.Code))
 			}

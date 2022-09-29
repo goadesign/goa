@@ -76,6 +76,7 @@ func serverFile(genpkg string, svc *expr.HTTPServiceExpr) *codegen.File {
 	sections = append(sections, &codegen.SectionTemplate{Name: "server-init", Source: serverInitT, Data: data, FuncMap: funcs})
 	sections = append(sections, &codegen.SectionTemplate{Name: "server-service", Source: serverServiceT, Data: data})
 	sections = append(sections, &codegen.SectionTemplate{Name: "server-use", Source: serverUseT, Data: data})
+	sections = append(sections, &codegen.SectionTemplate{Name: "server-method-names", Source: serverMethodNamesT, Data: data})
 	sections = append(sections, &codegen.SectionTemplate{Name: "server-mount", Source: serverMountT, Data: data, FuncMap: funcs})
 
 	for _, e := range data.Endpoints {
@@ -85,8 +86,6 @@ func serverFile(genpkg string, svc *expr.HTTPServiceExpr) *codegen.File {
 	for _, s := range data.FileServers {
 		sections = append(sections, &codegen.SectionTemplate{Name: "server-files", Source: fileServerT, FuncMap: funcs, Data: s})
 	}
-
-	sections = append(sections, &codegen.SectionTemplate{Name: "server-method-names", Source: serverMethodNamesT, Data: data})
 
 	return &codegen.File{Path: path, SectionTemplates: sections}
 }
