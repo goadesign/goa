@@ -291,10 +291,16 @@ type GoaErrorNamer interface {
 	GoaErrorName() string
 }
 
-type adaptErrorNamer ErrorName
+type adaptErrorNamer struct {
+	ErrorNamer
+}
 
 func (err adaptErrorNamer) GoaErrorName() string {
 	return err.ErrorName()
+}
+
+func (err adaptErrorNamer) Error() string {
+	return err.ErrorNamer.(error).Error()
 }
 `
 
@@ -1219,7 +1225,7 @@ func {{ .ErrorEncoder }}(encoder func(context.Context, http.ResponseWriter) goah
 	return func(ctx context.Context, w http.ResponseWriter, v error) error {
 		var deprecatedErrorNamer ErrorNamer
 		if errors.As(v, &deprecatedErrorNamer) {
-			v = adaptErrorNamer(deprecatedErrorNamer)
+			v = adaptErrorNamer{deprecatedErrorNamer}
 		}
 		var en GoaErrorNamer
 		if !errors.As(v, &en) {

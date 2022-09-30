@@ -220,10 +220,16 @@ type GoaErrorNamer interface {
 	GoaErrorName() string
 }
 
-type adaptErrorNamer ErrorName
+type adaptErrorNamer struct {
+	ErrorNamer
+}
 
 func (err adaptErrorNamer) GoaErrorName() string {
 	return err.ErrorName()
+}
+
+func (err adaptErrorNamer) Error() string {
+	return err.ErrorNamer.(error).Error()
 }
 `
 
@@ -281,8 +287,8 @@ func (s *{{ .ServerStruct }}) {{ .Method.VarName }}(
 	if err != nil {
 	{{- if .Errors }}
 		var deprecatedErrorNamer ErrorNamer
-		if errors.As(v, &deprecatedErrorNamer) {
-			v = adaptErrorNamer(deprecatedErrorNamer)
+		if errors.As(err, &deprecatedErrorNamer) {
+			err = adaptErrorNamer{deprecatedErrorNamer}
 		}
 		var en GoaErrorNamer
 		if errors.As(err, &en) {
