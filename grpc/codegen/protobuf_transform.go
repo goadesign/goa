@@ -77,7 +77,6 @@ func init() {
 // newVar if true initializes a target variable with the generated Go code
 // using `:=` operator. If false, it assigns Go code to the target variable
 // using `=`.
-//
 func protoBufTransform(source, target *expr.AttributeExpr, sourceVar, targetVar string, sourceCtx, targetCtx *codegen.AttributeContext, proto, newVar bool) (string, []*codegen.TransformFunctionData, error) {
 	ta := &transformAttrs{TransformAttrs: &codegen.TransformAttrs{
 		SourceCtx: sourceCtx,
@@ -387,7 +386,11 @@ func isNonZero(v interface{}) bool {
 // type to target attribute of array type. It returns an error if source
 // and target are not compatible for transformation.
 func transformArray(source, target *expr.Array, sourceVar, targetVar string, newVar bool, ta *transformAttrs) (string, error) {
-	targetRef := ta.TargetCtx.Scope.Ref(target.ElemType, ta.TargetCtx.Pkg(target.ElemType))
+	elem := target.ElemType
+	if ta.proto {
+		elem = unAlias(elem)
+	}
+	targetRef := ta.TargetCtx.Scope.Ref(elem, ta.TargetCtx.Pkg(elem))
 
 	var (
 		code string
@@ -415,7 +418,7 @@ func transformArray(source, target *expr.Array, sourceVar, targetVar string, new
 	}
 
 	src := source.ElemType
-	tgt := target.ElemType
+	tgt := elem
 	if err = codegen.IsCompatible(src.Type, tgt.Type, "[0]", "[0]"); err != nil {
 		if ta.proto {
 			ta.targetInit = ta.TargetCtx.Scope.Name(tgt, ta.TargetCtx.Pkg(tgt), ta.TargetCtx.Pointer, ta.TargetCtx.UseDefault)
@@ -693,7 +696,6 @@ func transformUnionData(source, target *expr.AttributeExpr, ta *transformAttrs) 
 // ta is the transform attributes
 //
 // seen keeps track of generated transform functions to avoid recursion
-//
 func transformAttributeHelpers(source, target *expr.AttributeExpr, ta *transformAttrs, seen map[string]*codegen.TransformFunctionData) ([]*codegen.TransformFunctionData, error) {
 	var (
 		helpers []*codegen.TransformFunctionData
@@ -952,7 +954,7 @@ func dupTransformAttrs(ta *transformAttrs) *transformAttrs {
 }
 
 const (
-	transformGoArrayTmpl = `{{ .TargetVar }} {{ if .NewVar }}:={{ else }}={{ end }} make([]{{ .ElemTypeRef }}, len({{ .SourceVar }}))
+	transformGoArrayTmpl = `{{ .TargetVar }} {{ if .NewVar }}:={{ else }}={{ end }} make([]{{ .ElemTypeRef }}, len({{ .SourceVar }})) 
 for {{ .LoopVar }}, val := range {{ .SourceVar }} {
   {{ transformAttribute .SourceElem .TargetElem "val" (printf "%s[%s]" .TargetVar .LoopVar) false .TransformAttrs -}}
 }
