@@ -98,7 +98,7 @@ func (s *Server) MethodUnaryRPCWithOverridingErrors(ctx context.Context, message
 	if err != nil {
 		var deprecatedErrorNamer ErrorNamer
 		if errors.As(err, &deprecatedErrorNamer) {
-			err = adaptErrorNamer(deprecatedErrorNamer)
+			err = adaptErrorNamer{deprecatedErrorNamer}
 		}
 		var en GoaErrorNamer
 		if errors.As(err, &en) {
@@ -241,7 +241,7 @@ func (s *Server) MethodBidirectionalStreamingRPCWithErrors(stream service_bidire
 	if err != nil {
 		var deprecatedErrorNamer ErrorNamer
 		if errors.As(err, &deprecatedErrorNamer) {
-			err = adaptErrorNamer(deprecatedErrorNamer)
+			err = adaptErrorNamer{deprecatedErrorNamer}
 		}
 		var en GoaErrorNamer
 		if errors.As(err, &en) {
@@ -263,7 +263,7 @@ func (s *Server) MethodBidirectionalStreamingRPCWithErrors(stream service_bidire
 	if err != nil {
 		var deprecatedErrorNamer ErrorNamer
 		if errors.As(err, &deprecatedErrorNamer) {
-			err = adaptErrorNamer(deprecatedErrorNamer)
+			err = adaptErrorNamer{deprecatedErrorNamer}
 		}
 		var en GoaErrorNamer
 		if errors.As(err, &en) {

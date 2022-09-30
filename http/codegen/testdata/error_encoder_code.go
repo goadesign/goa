@@ -8,7 +8,7 @@ func EncodeMethodPrimitiveErrorResponseError(encoder func(context.Context, http.
 	return func(ctx context.Context, w http.ResponseWriter, v error) error {
 		var deprecatedErrorNamer ErrorNamer
 		if errors.As(v, &deprecatedErrorNamer) {
-			v = adaptErrorNamer(deprecatedErrorNamer)
+			v = adaptErrorNamer{deprecatedErrorNamer}
 		}
 		var en GoaErrorNamer
 		if !errors.As(v, &en) {
@@ -46,7 +46,7 @@ func EncodeMethodPrimitiveErrorInResponseHeaderError(encoder func(context.Contex
 	return func(ctx context.Context, w http.ResponseWriter, v error) error {
 		var deprecatedErrorNamer ErrorNamer
 		if errors.As(v, &deprecatedErrorNamer) {
-			v = adaptErrorNamer(deprecatedErrorNamer)
+			v = adaptErrorNamer{deprecatedErrorNamer}
 		}
 		var en GoaErrorNamer
 		if !errors.As(v, &en) {
@@ -90,7 +90,7 @@ func EncodeMethodAPIPrimitiveErrorResponseError(encoder func(context.Context, ht
 	return func(ctx context.Context, w http.ResponseWriter, v error) error {
 		var deprecatedErrorNamer ErrorNamer
 		if errors.As(v, &deprecatedErrorNamer) {
-			v = adaptErrorNamer(deprecatedErrorNamer)
+			v = adaptErrorNamer{deprecatedErrorNamer}
 		}
 		var en GoaErrorNamer
 		if !errors.As(v, &en) {
@@ -132,7 +132,7 @@ func EncodeMethodDefaultErrorResponseError(encoder func(context.Context, http.Re
 	return func(ctx context.Context, w http.ResponseWriter, v error) error {
 		var deprecatedErrorNamer ErrorNamer
 		if errors.As(v, &deprecatedErrorNamer) {
-			v = adaptErrorNamer(deprecatedErrorNamer)
+			v = adaptErrorNamer{deprecatedErrorNamer}
 		}
 		var en GoaErrorNamer
 		if !errors.As(v, &en) {
@@ -166,7 +166,7 @@ func EncodeMethodDefaultErrorResponseError(encoder func(context.Context, http.Re
 	return func(ctx context.Context, w http.ResponseWriter, v error) error {
 		var deprecatedErrorNamer ErrorNamer
 		if errors.As(v, &deprecatedErrorNamer) {
-			v = adaptErrorNamer(deprecatedErrorNamer)
+			v = adaptErrorNamer{deprecatedErrorNamer}
 		}
 		var en GoaErrorNamer
 		if !errors.As(v, &en) {
@@ -201,7 +201,7 @@ func EncodeMethodServiceErrorResponseError(encoder func(context.Context, http.Re
 	return func(ctx context.Context, w http.ResponseWriter, v error) error {
 		var deprecatedErrorNamer ErrorNamer
 		if errors.As(v, &deprecatedErrorNamer) {
-			v = adaptErrorNamer(deprecatedErrorNamer)
+			v = adaptErrorNamer{deprecatedErrorNamer}
 		}
 		var en GoaErrorNamer
 		if !errors.As(v, &en) {
@@ -248,7 +248,7 @@ func EncodeMethodServiceErrorResponseError(encoder func(context.Context, http.Re
 	return func(ctx context.Context, w http.ResponseWriter, v error) error {
 		var deprecatedErrorNamer ErrorNamer
 		if errors.As(v, &deprecatedErrorNamer) {
-			v = adaptErrorNamer(deprecatedErrorNamer)
+			v = adaptErrorNamer{deprecatedErrorNamer}
 		}
 		var en GoaErrorNamer
 		if !errors.As(v, &en) {
@@ -296,7 +296,7 @@ func EncodeMethodServiceErrorResponseError(encoder func(context.Context, http.Re
 	return func(ctx context.Context, w http.ResponseWriter, v error) error {
 		var deprecatedErrorNamer ErrorNamer
 		if errors.As(v, &deprecatedErrorNamer) {
-			v = adaptErrorNamer(deprecatedErrorNamer)
+			v = adaptErrorNamer{deprecatedErrorNamer}
 		}
 		var en GoaErrorNamer
 		if !errors.As(v, &en) {
@@ -326,7 +326,7 @@ func EncodeMethodServiceErrorResponseError(encoder func(context.Context, http.Re
 	return func(ctx context.Context, w http.ResponseWriter, v error) error {
 		var deprecatedErrorNamer ErrorNamer
 		if errors.As(v, &deprecatedErrorNamer) {
-			v = adaptErrorNamer(deprecatedErrorNamer)
+			v = adaptErrorNamer{deprecatedErrorNamer}
 		}
 		var en GoaErrorNamer
 		if !errors.As(v, &en) {
@@ -358,7 +358,7 @@ func EncodeMethodEmptyErrorResponseBodyError(encoder func(context.Context, http.
 	return func(ctx context.Context, w http.ResponseWriter, v error) error {
 		var deprecatedErrorNamer ErrorNamer
 		if errors.As(v, &deprecatedErrorNamer) {
-			v = adaptErrorNamer(deprecatedErrorNamer)
+			v = adaptErrorNamer{deprecatedErrorNamer}
 		}
 		var en GoaErrorNamer
 		if !errors.As(v, &en) {
@@ -415,7 +415,7 @@ func EncodeMethodEmptyCustomErrorResponseBodyError(encoder func(context.Context,
 	return func(ctx context.Context, w http.ResponseWriter, v error) error {
 		var deprecatedErrorNamer ErrorNamer
 		if errors.As(v, &deprecatedErrorNamer) {
-			v = adaptErrorNamer(deprecatedErrorNamer)
+			v = adaptErrorNamer{deprecatedErrorNamer}
 		}
 		var en GoaErrorNamer
 		if !errors.As(v, &en) {
