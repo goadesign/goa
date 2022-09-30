@@ -59,8 +59,8 @@ func (s *Server) MethodUnaryRPCWithErrors(ctx context.Context, message *service_
 	resp, err := s.MethodUnaryRPCWithErrorsH.Handle(ctx, message)
 	if err != nil {
 		var deprecatedErrorNamer ErrorNamer
-		if errors.As(v, &deprecatedErrorNamer) {
-			v = adaptErrorNamer(deprecatedErrorNamer)
+		if errors.As(err, &deprecatedErrorNamer) {
+			err = adaptErrorNamer{deprecatedErrorNamer}
 		}
 		var en GoaErrorNamer
 		if errors.As(err, &en) {
@@ -97,8 +97,8 @@ func (s *Server) MethodUnaryRPCWithOverridingErrors(ctx context.Context, message
 	resp, err := s.MethodUnaryRPCWithOverridingErrorsH.Handle(ctx, message)
 	if err != nil {
 		var deprecatedErrorNamer ErrorNamer
-		if errors.As(v, &deprecatedErrorNamer) {
-			v = adaptErrorNamer(deprecatedErrorNamer)
+		if errors.As(err, &deprecatedErrorNamer) {
+			err = adaptErrorNamer{deprecatedErrorNamer}
 		}
 		var en GoaErrorNamer
 		if errors.As(err, &en) {
@@ -240,8 +240,8 @@ func (s *Server) MethodBidirectionalStreamingRPCWithErrors(stream service_bidire
 	_, err := s.MethodBidirectionalStreamingRPCWithErrorsH.Decode(ctx, nil)
 	if err != nil {
 		var deprecatedErrorNamer ErrorNamer
-		if errors.As(v, &deprecatedErrorNamer) {
-			v = adaptErrorNamer(deprecatedErrorNamer)
+		if errors.As(err, &deprecatedErrorNamer) {
+			err = adaptErrorNamer{deprecatedErrorNamer}
 		}
 		var en GoaErrorNamer
 		if errors.As(err, &en) {
@@ -262,8 +262,8 @@ func (s *Server) MethodBidirectionalStreamingRPCWithErrors(stream service_bidire
 	err = s.MethodBidirectionalStreamingRPCWithErrorsH.Handle(ctx, ep)
 	if err != nil {
 		var deprecatedErrorNamer ErrorNamer
-		if errors.As(v, &deprecatedErrorNamer) {
-			v = adaptErrorNamer(deprecatedErrorNamer)
+		if errors.As(err, &deprecatedErrorNamer) {
+			err = adaptErrorNamer{deprecatedErrorNamer}
 		}
 		var en GoaErrorNamer
 		if errors.As(err, &en) {
