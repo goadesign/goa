@@ -6,11 +6,11 @@ var PrimitiveErrorResponseEncoderCode = `// EncodeMethodPrimitiveErrorResponseEr
 func EncodeMethodPrimitiveErrorResponseError(encoder func(context.Context, http.ResponseWriter) goahttp.Encoder, formatter func(ctx context.Context, err error) goahttp.Statuser) func(context.Context, http.ResponseWriter, error) error {
 	encodeError := goahttp.ErrorEncoder(encoder, formatter)
 	return func(ctx context.Context, w http.ResponseWriter, v error) error {
-		var deprecatedErrorNamer ErrorNamer
-		if errors.As(v, &deprecatedErrorNamer) {
-			v = adaptErrorNamer{deprecatedErrorNamer}
+		var deprecated goa.ErrorNamer
+		if errors.As(v, &deprecated) {
+			v = goa.AdaptErrorNamer{deprecated}
 		}
-		var en GoaErrorNamer
+		var en goa.GoaErrorNamer
 		if !errors.As(v, &en) {
 			return encodeError(ctx, w, v)
 		}
@@ -44,11 +44,11 @@ var PrimitiveErrorInResponseHeaderEncoderCode = `// EncodeMethodPrimitiveErrorIn
 func EncodeMethodPrimitiveErrorInResponseHeaderError(encoder func(context.Context, http.ResponseWriter) goahttp.Encoder, formatter func(ctx context.Context, err error) goahttp.Statuser) func(context.Context, http.ResponseWriter, error) error {
 	encodeError := goahttp.ErrorEncoder(encoder, formatter)
 	return func(ctx context.Context, w http.ResponseWriter, v error) error {
-		var deprecatedErrorNamer ErrorNamer
-		if errors.As(v, &deprecatedErrorNamer) {
-			v = adaptErrorNamer{deprecatedErrorNamer}
+		var deprecated goa.ErrorNamer
+		if errors.As(v, &deprecated) {
+			v = goa.AdaptErrorNamer{deprecated}
 		}
-		var en GoaErrorNamer
+		var en goa.GoaErrorNamer
 		if !errors.As(v, &en) {
 			return encodeError(ctx, w, v)
 		}
@@ -88,11 +88,11 @@ var APIPrimitiveErrorResponseEncoderCode = `// EncodeMethodAPIPrimitiveErrorResp
 func EncodeMethodAPIPrimitiveErrorResponseError(encoder func(context.Context, http.ResponseWriter) goahttp.Encoder, formatter func(ctx context.Context, err error) goahttp.Statuser) func(context.Context, http.ResponseWriter, error) error {
 	encodeError := goahttp.ErrorEncoder(encoder, formatter)
 	return func(ctx context.Context, w http.ResponseWriter, v error) error {
-		var deprecatedErrorNamer ErrorNamer
-		if errors.As(v, &deprecatedErrorNamer) {
-			v = adaptErrorNamer{deprecatedErrorNamer}
+		var deprecated goa.ErrorNamer
+		if errors.As(v, &deprecated) {
+			v = goa.AdaptErrorNamer{deprecated}
 		}
-		var en GoaErrorNamer
+		var en goa.GoaErrorNamer
 		if !errors.As(v, &en) {
 			return encodeError(ctx, w, v)
 		}
@@ -130,11 +130,11 @@ var DefaultErrorResponseEncoderCode = `// EncodeMethodDefaultErrorResponseError 
 func EncodeMethodDefaultErrorResponseError(encoder func(context.Context, http.ResponseWriter) goahttp.Encoder, formatter func(ctx context.Context, err error) goahttp.Statuser) func(context.Context, http.ResponseWriter, error) error {
 	encodeError := goahttp.ErrorEncoder(encoder, formatter)
 	return func(ctx context.Context, w http.ResponseWriter, v error) error {
-		var deprecatedErrorNamer ErrorNamer
-		if errors.As(v, &deprecatedErrorNamer) {
-			v = adaptErrorNamer{deprecatedErrorNamer}
+		var deprecated goa.ErrorNamer
+		if errors.As(v, &deprecated) {
+			v = goa.AdaptErrorNamer{deprecated}
 		}
-		var en GoaErrorNamer
+		var en goa.GoaErrorNamer
 		if !errors.As(v, &en) {
 			return encodeError(ctx, w, v)
 		}
@@ -164,11 +164,11 @@ var DefaultErrorResponseWithContentTypeEncoderCode = `// EncodeMethodDefaultErro
 func EncodeMethodDefaultErrorResponseError(encoder func(context.Context, http.ResponseWriter) goahttp.Encoder, formatter func(ctx context.Context, err error) goahttp.Statuser) func(context.Context, http.ResponseWriter, error) error {
 	encodeError := goahttp.ErrorEncoder(encoder, formatter)
 	return func(ctx context.Context, w http.ResponseWriter, v error) error {
-		var deprecatedErrorNamer ErrorNamer
-		if errors.As(v, &deprecatedErrorNamer) {
-			v = adaptErrorNamer{deprecatedErrorNamer}
+		var deprecated goa.ErrorNamer
+		if errors.As(v, &deprecated) {
+			v = goa.AdaptErrorNamer{deprecated}
 		}
-		var en GoaErrorNamer
+		var en goa.GoaErrorNamer
 		if !errors.As(v, &en) {
 			return encodeError(ctx, w, v)
 		}
@@ -199,11 +199,11 @@ var ServiceErrorResponseEncoderCode = `// EncodeMethodServiceErrorResponseError 
 func EncodeMethodServiceErrorResponseError(encoder func(context.Context, http.ResponseWriter) goahttp.Encoder, formatter func(ctx context.Context, err error) goahttp.Statuser) func(context.Context, http.ResponseWriter, error) error {
 	encodeError := goahttp.ErrorEncoder(encoder, formatter)
 	return func(ctx context.Context, w http.ResponseWriter, v error) error {
-		var deprecatedErrorNamer ErrorNamer
-		if errors.As(v, &deprecatedErrorNamer) {
-			v = adaptErrorNamer{deprecatedErrorNamer}
+		var deprecated goa.ErrorNamer
+		if errors.As(v, &deprecated) {
+			v = goa.AdaptErrorNamer{deprecated}
 		}
-		var en GoaErrorNamer
+		var en goa.GoaErrorNamer
 		if !errors.As(v, &en) {
 			return encodeError(ctx, w, v)
 		}
@@ -246,11 +246,11 @@ var ServiceErrorResponseWithContentTypeEncoderCode = `// EncodeMethodServiceErro
 func EncodeMethodServiceErrorResponseError(encoder func(context.Context, http.ResponseWriter) goahttp.Encoder, formatter func(ctx context.Context, err error) goahttp.Statuser) func(context.Context, http.ResponseWriter, error) error {
 	encodeError := goahttp.ErrorEncoder(encoder, formatter)
 	return func(ctx context.Context, w http.ResponseWriter, v error) error {
-		var deprecatedErrorNamer ErrorNamer
-		if errors.As(v, &deprecatedErrorNamer) {
-			v = adaptErrorNamer{deprecatedErrorNamer}
+		var deprecated goa.ErrorNamer
+		if errors.As(v, &deprecated) {
+			v = goa.AdaptErrorNamer{deprecated}
 		}
-		var en GoaErrorNamer
+		var en goa.GoaErrorNamer
 		if !errors.As(v, &en) {
 			return encodeError(ctx, w, v)
 		}
@@ -294,11 +294,11 @@ var NoBodyErrorResponseEncoderCode = `// EncodeMethodServiceErrorResponseError r
 func EncodeMethodServiceErrorResponseError(encoder func(context.Context, http.ResponseWriter) goahttp.Encoder, formatter func(ctx context.Context, err error) goahttp.Statuser) func(context.Context, http.ResponseWriter, error) error {
 	encodeError := goahttp.ErrorEncoder(encoder, formatter)
 	return func(ctx context.Context, w http.ResponseWriter, v error) error {
-		var deprecatedErrorNamer ErrorNamer
-		if errors.As(v, &deprecatedErrorNamer) {
-			v = adaptErrorNamer{deprecatedErrorNamer}
+		var deprecated goa.ErrorNamer
+		if errors.As(v, &deprecated) {
+			v = goa.AdaptErrorNamer{deprecated}
 		}
-		var en GoaErrorNamer
+		var en goa.GoaErrorNamer
 		if !errors.As(v, &en) {
 			return encodeError(ctx, w, v)
 		}
@@ -324,11 +324,11 @@ var NoBodyErrorResponseWithContentTypeEncoderCode = `// EncodeMethodServiceError
 func EncodeMethodServiceErrorResponseError(encoder func(context.Context, http.ResponseWriter) goahttp.Encoder, formatter func(ctx context.Context, err error) goahttp.Statuser) func(context.Context, http.ResponseWriter, error) error {
 	encodeError := goahttp.ErrorEncoder(encoder, formatter)
 	return func(ctx context.Context, w http.ResponseWriter, v error) error {
-		var deprecatedErrorNamer ErrorNamer
-		if errors.As(v, &deprecatedErrorNamer) {
-			v = adaptErrorNamer{deprecatedErrorNamer}
+		var deprecated goa.ErrorNamer
+		if errors.As(v, &deprecated) {
+			v = goa.AdaptErrorNamer{deprecated}
 		}
-		var en GoaErrorNamer
+		var en goa.GoaErrorNamer
 		if !errors.As(v, &en) {
 			return encodeError(ctx, w, v)
 		}
@@ -356,11 +356,11 @@ var EmptyErrorResponseBodyEncoderCode = `// EncodeMethodEmptyErrorResponseBodyEr
 func EncodeMethodEmptyErrorResponseBodyError(encoder func(context.Context, http.ResponseWriter) goahttp.Encoder, formatter func(ctx context.Context, err error) goahttp.Statuser) func(context.Context, http.ResponseWriter, error) error {
 	encodeError := goahttp.ErrorEncoder(encoder, formatter)
 	return func(ctx context.Context, w http.ResponseWriter, v error) error {
-		var deprecatedErrorNamer ErrorNamer
-		if errors.As(v, &deprecatedErrorNamer) {
-			v = adaptErrorNamer{deprecatedErrorNamer}
+		var deprecated goa.ErrorNamer
+		if errors.As(v, &deprecated) {
+			v = goa.AdaptErrorNamer{deprecated}
 		}
-		var en GoaErrorNamer
+		var en goa.GoaErrorNamer
 		if !errors.As(v, &en) {
 			return encodeError(ctx, w, v)
 		}
@@ -413,11 +413,11 @@ var EmptyCustomErrorResponseBodyEncoderCode = `// EncodeMethodEmptyCustomErrorRe
 func EncodeMethodEmptyCustomErrorResponseBodyError(encoder func(context.Context, http.ResponseWriter) goahttp.Encoder, formatter func(ctx context.Context, err error) goahttp.Statuser) func(context.Context, http.ResponseWriter, error) error {
 	encodeError := goahttp.ErrorEncoder(encoder, formatter)
 	return func(ctx context.Context, w http.ResponseWriter, v error) error {
-		var deprecatedErrorNamer ErrorNamer
-		if errors.As(v, &deprecatedErrorNamer) {
-			v = adaptErrorNamer{deprecatedErrorNamer}
+		var deprecated goa.ErrorNamer
+		if errors.As(v, &deprecated) {
+			v = goa.AdaptErrorNamer{deprecated}
 		}
-		var en GoaErrorNamer
+		var en goa.GoaErrorNamer
 		if !errors.As(v, &en) {
 			return encodeError(ctx, w, v)
 		}
