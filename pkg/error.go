@@ -34,6 +34,26 @@ type (
 		// err holds the original error if exists.
 		err error
 	}
+
+	// ErrorNamer is an interface implemented by generated error structs that
+	// exposes the name of the error as defined in the expr.
+	//
+	// Deprecated: Use GoaErrorName - https://github.com/goadesign/goa/issues/3105
+	ErrorNamer interface {
+		ErrorName() string
+	}
+
+	// GoaErrorNamer is an interface implemented by generated error structs that
+	// exposes the name of the error as defined in the design.
+	GoaErrorNamer interface {
+		GoaErrorName() string
+	}
+
+	// AdaptErrorNamer makes deprecated ErrorNamer interface compatible with
+	// GoaErrorNamer.
+	AdaptErrorNamer struct {
+		ErrorNamer
+	}
 )
 
 const (
@@ -253,6 +273,16 @@ func (e *ServiceError) ErrorName() string { return e.Name }
 func (e *ServiceError) GoaErrorName() string { return e.ErrorName() }
 
 func (e *ServiceError) Unwrap() error { return e.err }
+
+// GoaErrorName returns the error name as defined in the design.
+func (err AdaptErrorNamer) GoaErrorName() string {
+	return err.ErrorName()
+}
+
+// Error is the error message.
+func (err AdaptErrorNamer) Error() string {
+	return err.ErrorNamer.(error).Error()
+}
 
 func withField(field string, err *ServiceError) *ServiceError {
 	err.Field = &field
