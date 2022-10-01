@@ -277,32 +277,6 @@ type {{ .ServerStruct }} struct {
 	{{ .VarName }} http.Handler
 	{{- end }}
 }
-
-// ErrorNamer is an interface implemented by generated error structs that
-// exposes the name of the error as defined in the design.
-//
-// Deprecated: Use GoaErrorName - https://github.com/goadesign/goa/issues/3105
-type ErrorNamer interface {
-	ErrorName() string
-}
-
-// GoaErrorNamer is an interface implemented by generated error structs that
-// exposes the name of the error as defined in the design.
-type GoaErrorNamer interface {
-	GoaErrorName() string
-}
-
-type adaptErrorNamer struct {
-	ErrorNamer
-}
-
-func (err adaptErrorNamer) GoaErrorName() string {
-	return err.ErrorName()
-}
-
-func (err adaptErrorNamer) Error() string {
-	return err.ErrorNamer.(error).Error()
-}
 `
 
 // input: ServiceData
@@ -1229,11 +1203,11 @@ const errorEncoderT = `{{ printf "%s returns an encoder for errors returned by t
 func {{ .ErrorEncoder }}(encoder func(context.Context, http.ResponseWriter) goahttp.Encoder, formatter func(ctx context.Context, err error) goahttp.Statuser) func(context.Context, http.ResponseWriter, error) error {
 	encodeError := goahttp.ErrorEncoder(encoder, formatter)
 	return func(ctx context.Context, w http.ResponseWriter, v error) error {
-		var deprecatedErrorNamer ErrorNamer
-		if errors.As(v, &deprecatedErrorNamer) {
-			v = adaptErrorNamer{deprecatedErrorNamer}
+		var deprecated goa.ErrorNamer
+		if errors.As(v, &deprecated) {
+			v = goa.AdaptErrorNamer{deprecated}
 		}
-		var en GoaErrorNamer
+		var en goa.GoaErrorNamer
 		if !errors.As(v, &en) {
 			return encodeError(ctx, w, v)
 		}

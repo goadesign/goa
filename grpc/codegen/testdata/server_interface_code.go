@@ -58,11 +58,11 @@ func (s *Server) MethodUnaryRPCWithErrors(ctx context.Context, message *service_
 	ctx = context.WithValue(ctx, goa.ServiceKey, "ServiceUnaryRPCWithErrors")
 	resp, err := s.MethodUnaryRPCWithErrorsH.Handle(ctx, message)
 	if err != nil {
-		var deprecatedErrorNamer ErrorNamer
-		if errors.As(err, &deprecatedErrorNamer) {
-			err = adaptErrorNamer{deprecatedErrorNamer}
+		var deprecated goa.ErrorNamer
+		if errors.As(err, &deprecated) {
+			err = goa.AdaptErrorNamer{deprecated}
 		}
-		var en GoaErrorNamer
+		var en goa.GoaErrorNamer
 		if errors.As(err, &en) {
 			switch en.GoaErrorName() {
 			case "timeout":
@@ -96,11 +96,11 @@ func (s *Server) MethodUnaryRPCWithOverridingErrors(ctx context.Context, message
 	ctx = context.WithValue(ctx, goa.ServiceKey, "ServiceUnaryRPCWithOverridingErrors")
 	resp, err := s.MethodUnaryRPCWithOverridingErrorsH.Handle(ctx, message)
 	if err != nil {
-		var deprecatedErrorNamer ErrorNamer
-		if errors.As(err, &deprecatedErrorNamer) {
-			err = adaptErrorNamer{deprecatedErrorNamer}
+		var deprecated goa.ErrorNamer
+		if errors.As(err, &deprecated) {
+			err = goa.AdaptErrorNamer{deprecated}
 		}
-		var en GoaErrorNamer
+		var en goa.GoaErrorNamer
 		if errors.As(err, &en) {
 			switch en.GoaErrorName() {
 			case "overridden":
@@ -239,11 +239,11 @@ func (s *Server) MethodBidirectionalStreamingRPCWithErrors(stream service_bidire
 	ctx = context.WithValue(ctx, goa.ServiceKey, "ServiceBidirectionalStreamingRPCWithErrors")
 	_, err := s.MethodBidirectionalStreamingRPCWithErrorsH.Decode(ctx, nil)
 	if err != nil {
-		var deprecatedErrorNamer ErrorNamer
-		if errors.As(err, &deprecatedErrorNamer) {
-			err = adaptErrorNamer{deprecatedErrorNamer}
+		var deprecated goa.ErrorNamer
+		if errors.As(err, &deprecated) {
+			err = goa.AdaptErrorNamer{deprecated}
 		}
-		var en GoaErrorNamer
+		var en goa.GoaErrorNamer
 		if errors.As(err, &en) {
 			switch en.GoaErrorName() {
 			case "timeout":
@@ -261,11 +261,11 @@ func (s *Server) MethodBidirectionalStreamingRPCWithErrors(stream service_bidire
 	}
 	err = s.MethodBidirectionalStreamingRPCWithErrorsH.Handle(ctx, ep)
 	if err != nil {
-		var deprecatedErrorNamer ErrorNamer
-		if errors.As(err, &deprecatedErrorNamer) {
-			err = adaptErrorNamer{deprecatedErrorNamer}
+		var deprecated goa.ErrorNamer
+		if errors.As(err, &deprecated) {
+			err = goa.AdaptErrorNamer{deprecated}
 		}
-		var en GoaErrorNamer
+		var en goa.GoaErrorNamer
 		if errors.As(err, &en) {
 			switch en.GoaErrorName() {
 			case "timeout":
