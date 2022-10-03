@@ -1203,10 +1203,6 @@ const errorEncoderT = `{{ printf "%s returns an encoder for errors returned by t
 func {{ .ErrorEncoder }}(encoder func(context.Context, http.ResponseWriter) goahttp.Encoder, formatter func(ctx context.Context, err error) goahttp.Statuser) func(context.Context, http.ResponseWriter, error) error {
 	encodeError := goahttp.ErrorEncoder(encoder, formatter)
 	return func(ctx context.Context, w http.ResponseWriter, v error) error {
-		var deprecated goa.ErrorNamer
-		if errors.As(v, &deprecated) {
-			v = goa.AdaptErrorNamer{deprecated}
-		}
 		var en goa.GoaErrorNamer
 		if !errors.As(v, &en) {
 			return encodeError(ctx, w, v)
