@@ -272,6 +272,7 @@ func (e *ServiceError) ErrorName() string { return e.Name }
 // GoaErrorName returns the error name.
 func (e *ServiceError) GoaErrorName() string { return e.ErrorName() }
 
+// Unwrap implements Wrapper interface.
 func (e *ServiceError) Unwrap() error { return e.err }
 
 // GoaErrorName returns the error name as defined in the design.
@@ -282,6 +283,11 @@ func (err AdaptErrorNamer) GoaErrorName() string {
 // Error is the error message.
 func (err AdaptErrorNamer) Error() string {
 	return err.ErrorNamer.(error).Error()
+}
+
+// Unwrap implements Wrapper interface.
+func (err AdaptErrorNamer) Unwrap() error {
+	return err.ErrorNamer.(error)
 }
 
 func withField(field string, err *ServiceError) *ServiceError {
