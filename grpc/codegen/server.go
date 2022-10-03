@@ -260,10 +260,6 @@ func (s *{{ .ServerStruct }}) {{ .Method.VarName }}(
 {{- define "handle_error" }}
 	if err != nil {
 	{{- if .Errors }}
-		var deprecated goa.ErrorNamer
-		if errors.As(err, &deprecated) {
-			err = goa.AdaptErrorNamer{deprecated}
-		}
 		var en goa.GoaErrorNamer
 		if errors.As(err, &en) {
 			switch en.GoaErrorName() {
