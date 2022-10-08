@@ -20,7 +20,7 @@ type (
 		// Name is the name of the service reported to X-Ray.
 		Name string `json:"name"`
 		// Namespace identifies the source that created the segment.
-		Namespace string `json:"namespace"`
+		Namespace string `json:"namespace,omitempty"`
 		// Type is either the empty string or "subsegment".
 		Type string `json:"type,omitempty"`
 		// ID is a unique ID for the segment.
