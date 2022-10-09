@@ -308,7 +308,6 @@ func transformObject(source, target *expr.AttributeExpr, sourceVar, targetVar st
 				if !expr.IsPrimitive(srcc.Type) {
 					code = fmt.Sprintf("%s = %s(%s)\n", tgtVar, transformHelperName(srcc, tgtc, ta), srcVar)
 				}
-				// code = fmt.Sprintf("%s = %s\n", tgtVar, convertType(srcc, tgtc, false, false, srcVar, ta))
 			case expr.IsObject(srcc.Type):
 				code, err = transformAttribute(srcc, tgtc, srcVar, tgtVar, false, ta)
 			case expr.IsUnion(srcc.Type):
