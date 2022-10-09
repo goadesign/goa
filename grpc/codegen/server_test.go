@@ -85,15 +85,15 @@ func TestRequestDecoder(t *testing.T) {
 		DSL  func()
 		Code string
 	}{
-		{"payload-user-type", testdata.MessageUserTypeWithNestedUserTypesDSL, testdata.PayloadUserTypeRequestDecoderCode},
-		{"payload-array", testdata.UnaryRPCNoResultDSL, testdata.PayloadArrayRequestDecoderCode},
-		{"payload-map", testdata.MessageMapDSL, testdata.PayloadMapRequestDecoderCode},
-		{"payload-primitive", testdata.ServerStreamingRPCDSL, testdata.PayloadPrimitiveRequestDecoderCode},
-		{"payload-primitive-with-streaming-payload", testdata.ClientStreamingRPCWithPayloadDSL, testdata.PayloadPrimitiveWithStreamingPayloadRequestDecoderCode},
-		{"payload-user-type-with-streaming-payload", testdata.BidirectionalStreamingRPCWithPayloadDSL, testdata.PayloadUserTypeWithStreamingPayloadRequestDecoderCode},
-		{"payload-with-metadata", testdata.MessageWithMetadataDSL, testdata.PayloadWithMetadataRequestDecoderCode},
-		{"payload-with-validate", testdata.MessageWithValidateDSL, testdata.PayloadWithValidateRequestDecoderCode},
-		{"payload-with-security-attributes", testdata.MessageWithSecurityAttrsDSL, testdata.PayloadWithSecurityAttrsRequestDecoderCode},
+		{"request-decoder-payload-user-type", testdata.MessageUserTypeWithNestedUserTypesDSL, testdata.PayloadUserTypeRequestDecoderCode},
+		{"request-decoder-payload-array", testdata.UnaryRPCNoResultDSL, testdata.PayloadArrayRequestDecoderCode},
+		{"request-decoder-payload-map", testdata.MessageMapDSL, testdata.PayloadMapRequestDecoderCode},
+		{"request-decoder-payload-primitive", testdata.ServerStreamingRPCDSL, testdata.PayloadPrimitiveRequestDecoderCode},
+		{"request-decoder-payload-primitive-with-streaming-payload", testdata.ClientStreamingRPCWithPayloadDSL, testdata.PayloadPrimitiveWithStreamingPayloadRequestDecoderCode},
+		{"request-decoder-payload-user-type-with-streaming-payload", testdata.BidirectionalStreamingRPCWithPayloadDSL, testdata.PayloadUserTypeWithStreamingPayloadRequestDecoderCode},
+		{"request-decoder-payload-with-metadata", testdata.MessageWithMetadataDSL, testdata.PayloadWithMetadataRequestDecoderCode},
+		{"request-decoder-payload-with-validate", testdata.MessageWithValidateDSL, testdata.PayloadWithValidateRequestDecoderCode},
+		{"request-decoder-payload-with-security-attributes", testdata.MessageWithSecurityAttrsDSL, testdata.PayloadWithSecurityAttrsRequestDecoderCode},
 	}
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
@@ -120,14 +120,14 @@ func TestResponseEncoder(t *testing.T) {
 		DSL  func()
 		Code string
 	}{
-		{"empty-result", testdata.UnaryRPCNoResultDSL, testdata.EmptyResultResponseEncoderCode},
-		{"result-with-views", testdata.MessageResultTypeWithViewsDSL, testdata.ResultWithViewsResponseEncoderCode},
-		{"result-with-explicit-view", testdata.MessageResultTypeWithExplicitViewDSL, testdata.ResultWithExplicitViewResponseEncoderCode},
-		{"result-array", testdata.MessageArrayDSL, testdata.ResultArrayResponseEncoderCode},
-		{"result-primitive", testdata.UnaryRPCNoPayloadDSL, testdata.ResultPrimitiveResponseEncoderCode},
-		{"result-with-metadata", testdata.MessageWithMetadataDSL, testdata.ResultWithMetadataResponseEncoderCode},
-		{"result-with-validate", testdata.MessageWithValidateDSL, testdata.ResultWithValidateResponseEncoderCode},
-		{"result-collection", testdata.MessageResultTypeCollectionDSL, testdata.ResultCollectionResponseEncoderCode},
+		{"response-encoder-empty-result", testdata.UnaryRPCNoResultDSL, testdata.EmptyResultResponseEncoderCode},
+		{"response-encoder-result-with-views", testdata.MessageResultTypeWithViewsDSL, testdata.ResultWithViewsResponseEncoderCode},
+		{"response-encoder-result-with-explicit-view", testdata.MessageResultTypeWithExplicitViewDSL, testdata.ResultWithExplicitViewResponseEncoderCode},
+		{"response-encoder-result-array", testdata.MessageArrayDSL, testdata.ResultArrayResponseEncoderCode},
+		{"response-encoder-result-primitive", testdata.UnaryRPCNoPayloadDSL, testdata.ResultPrimitiveResponseEncoderCode},
+		{"response-encoder-result-with-metadata", testdata.MessageWithMetadataDSL, testdata.ResultWithMetadataResponseEncoderCode},
+		{"response-encoder-result-with-validate", testdata.MessageWithValidateDSL, testdata.ResultWithValidateResponseEncoderCode},
+		{"response-encoder-result-collection", testdata.MessageResultTypeCollectionDSL, testdata.ResultCollectionResponseEncoderCode},
 	}
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {

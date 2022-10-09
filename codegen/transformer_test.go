@@ -58,7 +58,7 @@ func TestIsPrimitivePointer(t *testing.T) {
 			Context:  &AttributeContext{IgnoreRequired: true},
 			Attr:     newObj("foo", expr.String, false),
 			Name:     "foo",
-			Expected: false,
+			Expected: true,
 		},
 		{
 			Test:     "ignore required context with non pointer attribute",

@@ -681,13 +681,7 @@ func collectMessages(at *expr.AttributeExpr, sd *ServiceData, seen map[string]st
 		if _, ok := seen[dt.Name()]; ok {
 			return
 		}
-		att := dt.Attribute()
-		if rt, ok := dt.(*expr.ResultTypeExpr); ok {
-			if a := unwrapAttr(expr.DupAtt(rt.Attribute())); expr.IsArray(a.Type) && expr.IsObject(rt) {
-				// result type collection
-				att = &expr.AttributeExpr{Type: expr.AsObject(rt)}
-			}
-		}
+		att := userTypeAttribute(dt)
 		data = append(data, &service.UserTypeData{
 			Name:        dt.Name(),
 			VarName:     protoBufMessageName(at, sd.Scope),
@@ -738,25 +732,18 @@ func addValidation(att *expr.AttributeExpr, attName string, sd *ServiceData, req
 	if req {
 		kind = validateServer
 	}
-	att = ut.Attribute()
-	if rt, ok := ut.(*expr.ResultTypeExpr); ok {
-		if a := unwrapAttr(expr.DupAtt(rt.Attribute())); expr.IsArray(a.Type) {
-			// result type collection
-			att = &expr.AttributeExpr{Type: expr.AsObject(rt)}
-		}
-	}
+	att = userTypeAttribute(ut)
+	ctx := protoBufTypeContext("", sd.Scope, !req)
 	for _, n := range sd.validations {
 		if n.SrcName == name {
 			if n.Kind != kind {
 				n.Kind = validateBoth
-				ctx := protoBufTypeContext("", sd.Scope)
 				collectValidations(att, attName, ctx, req, sd)
 			}
 			return n
 		}
 	}
-	ctx := protoBufTypeContext("", sd.Scope)
-	if def := codegen.RecursiveValidationCode(att, ctx, true, expr.IsAlias(att.Type), attName); def != "" {
+	if def := codegen.ValidationCode(att, ctx, true, expr.IsAlias(att.Type), attName); def != "" {
 		v := &ValidationData{
 			Name:    "Validate" + name,
 			Def:     def,
@@ -785,6 +772,7 @@ func collectValidations(att *expr.AttributeExpr, attName string, ctx *codegen.At
 			// Alias type - validation is generatd inline in parent type validation code.
 			return
 		}
+		def := codegen.ValidationCode(att, ctx, true, false, attName)
 		name := protoBufMessageName(att, sd.Scope)
 		kind := validateClient
 		if req {
@@ -799,22 +787,18 @@ func collectValidations(att *expr.AttributeExpr, attName string, ctx *codegen.At
 				return
 			}
 		}
-		sd.validations = append(sd.validations, &ValidationData{
-			Name:    "Validate" + name,
-			Def:     codegen.RecursiveValidationCode(att, ctx, true, false, attName),
-			ArgName: attName,
-			SrcName: name,
-			SrcRef:  protoBufGoFullTypeRef(att, sd.PkgName, sd.Scope),
-			Kind:    kind,
-		})
-	collect:
-		att := dt.Attribute()
-		if rt, ok := dt.(*expr.ResultTypeExpr); ok {
-			if a := unwrapAttr(expr.DupAtt(rt.Attribute())); expr.IsArray(a.Type) {
-				// result type collection
-				att = &expr.AttributeExpr{Type: expr.AsObject(rt)}
-			}
+		if def != "" {
+			sd.validations = append(sd.validations, &ValidationData{
+				Name:    "Validate" + name,
+				Def:     def,
+				ArgName: attName,
+				SrcName: name,
+				SrcRef:  protoBufGoFullTypeRef(att, sd.PkgName, sd.Scope),
+				Kind:    kind,
+			})
 		}
+	collect:
+		att := userTypeAttribute(dt)
 		collectValidations(att, attName, ctx, req, sd)
 	case *expr.Object:
 		for _, nat := range *dt {
@@ -826,6 +810,18 @@ func collectValidations(att *expr.AttributeExpr, attName string, ctx *codegen.At
 		collectValidations(dt.KeyType, "key", ctx, req, sd)
 		collectValidations(dt.ElemType, "val", ctx, req, sd)
 	}
+}
+
+// userTypeAttribute returns the attribute of the given user type.
+func userTypeAttribute(ut expr.UserType) *expr.AttributeExpr {
+	att := ut.Attribute()
+	if rt, ok := ut.(*expr.ResultTypeExpr); ok {
+		if a := unwrapAttr(expr.DupAtt(rt.Attribute())); expr.IsArray(a.Type) {
+			// result type collection
+			att = &expr.AttributeExpr{Type: expr.AsObject(rt)}
+		}
+	}
+	return att
 }
 
 // buildRequestConvertData builds the convert data for the server and client
@@ -857,7 +853,7 @@ func buildRequestConvertData(request, payload *expr.AttributeExpr, md []*Metadat
 		// server side
 		var data *InitData
 		{
-			data = buildInitData(request, payload, "message", "v", svcCtx, false, sd)
+			data = buildInitData(request, payload, "message", "v", svcCtx, false, svr, sd)
 			data.Name = fmt.Sprintf("New%sPayload", codegen.Goify(e.Name(), true))
 			data.Description = fmt.Sprintf("%s builds the payload of the %q endpoint of the %q service from the gRPC request type.", data.Name, e.Name(), svc.Name)
 			for _, m := range md {
@@ -893,7 +889,7 @@ func buildRequestConvertData(request, payload *expr.AttributeExpr, md []*Metadat
 		data *InitData
 	)
 	{
-		data = buildInitData(payload, request, "payload", "message", svcCtx, true, sd)
+		data = buildInitData(payload, request, "payload", "message", svcCtx, true, svr, sd)
 		data.Description = fmt.Sprintf("%s builds the gRPC request type from the payload of the %q endpoint of the %q service.", data.Name, e.Name(), svc.Name)
 	}
 	return &ConvertData{
@@ -927,7 +923,7 @@ func buildResponseConvertData(response, result *expr.AttributeExpr, svcCtx *code
 
 		var data *InitData
 		{
-			data = buildInitData(result, response, "result", "message", svcCtx, true, sd)
+			data = buildInitData(result, response, "result", "message", svcCtx, true, svr, sd)
 			data.Description = fmt.Sprintf("%s builds the gRPC response type from the result of the %q endpoint of the %q service.", data.Name, e.Name(), svc.Name)
 		}
 		return &ConvertData{
@@ -943,7 +939,7 @@ func buildResponseConvertData(response, result *expr.AttributeExpr, svcCtx *code
 
 	var data *InitData
 	{
-		data = buildInitData(response, result, "message", "result", svcCtx, false, sd)
+		data = buildInitData(response, result, "message", "result", svcCtx, false, svr, sd)
 		data.Name = fmt.Sprintf("New%sResult", codegen.Goify(e.Name(), true))
 		data.Description = fmt.Sprintf("%s builds the result type of the %q endpoint of the %q service from the gRPC response type.", data.Name, e.Name(), svc.Name)
 		for _, m := range hdrs {
@@ -993,14 +989,12 @@ func buildResponseConvertData(response, result *expr.AttributeExpr, svcCtx *code
 //
 // source, target are the source and target attributes used in the
 // transformation
-//
 // sourceVar, targetVar are the source and target variable names used in the
 // transformation
-//
 // svcCtx is the attribute context for service type
-//
 // proto if true indicates the target type is a protocol buffer type
-func buildInitData(source, target *expr.AttributeExpr, sourceVar, targetVar string, svcCtx *codegen.AttributeContext, proto bool, sd *ServiceData) *InitData {
+// svr if true indicates the code is generated for conversion server side
+func buildInitData(source, target *expr.AttributeExpr, sourceVar, targetVar string, svcCtx *codegen.AttributeContext, proto, svr bool, sd *ServiceData) *InitData {
 	var (
 		name     string
 		isStruct bool
@@ -1011,7 +1005,8 @@ func buildInitData(source, target *expr.AttributeExpr, sourceVar, targetVar stri
 		srcCtx   *codegen.AttributeContext
 		tgtCtx   *codegen.AttributeContext
 
-		pbCtx = protoBufTypeContext(sd.PkgName, sd.Scope)
+		// pbCtx = protoBufTypeContext(sd.PkgName, sd.Scope, proto && svr || !proto && !svr)
+		pbCtx = protoBufTypeContext(sd.PkgName, sd.Scope, false)
 	)
 	{
 		name = "New"
@@ -1032,8 +1027,7 @@ func buildInitData(source, target *expr.AttributeExpr, sourceVar, targetVar stri
 		name += n
 		code, helpers, err = protoBufTransform(source, target, sourceVar, targetVar, srcCtx, tgtCtx, proto, true)
 		if err != nil {
-			fmt.Println(err.Error()) // TBD validate DSL so errors are not possible
-			return nil
+			panic(err) // bug
 		}
 		sd.transformHelpers = codegen.AppendHelpers(sd.transformHelpers, helpers)
 		if (!proto && !isEmpty(source.Type)) || (proto && !isEmpty(target.Type)) {
@@ -1103,7 +1097,7 @@ func buildErrorConvertData(ge *expr.GRPCErrorExpr, e *expr.GRPCEndpointExpr, sd 
 
 		var data *InitData
 		{
-			data = buildInitData(ge.ErrorExpr.AttributeExpr, ge.Response.Message, "er", "message", svcCtx, true, sd)
+			data = buildInitData(ge.ErrorExpr.AttributeExpr, ge.Response.Message, "er", "message", svcCtx, true, svr, sd)
 			data.Name = fmt.Sprintf("New%s%sError", codegen.Goify(e.Name(), true), codegen.Goify(ge.Name, true))
 			data.Description = fmt.Sprintf("%s builds the gRPC error response type from the error of the %q endpoint of the %q service.", data.Name, e.Name(), svc.Name)
 		}
@@ -1120,7 +1114,7 @@ func buildErrorConvertData(ge *expr.GRPCErrorExpr, e *expr.GRPCEndpointExpr, sd 
 
 	var data *InitData
 	{
-		data = buildInitData(ge.Response.Message, ge.ErrorExpr.AttributeExpr, "message", "er", svcCtx, false, sd)
+		data = buildInitData(ge.Response.Message, ge.ErrorExpr.AttributeExpr, "message", "er", svcCtx, false, svr, sd)
 		data.Name = fmt.Sprintf("New%s%sError", codegen.Goify(e.Name(), true), codegen.Goify(ge.Name, true))
 		data.Description = fmt.Sprintf("%s builds the error type of the %q endpoint of the %q service from the gRPC error response type.", data.Name, e.Name(), svc.Name)
 	}
@@ -1177,7 +1171,7 @@ func buildStreamData(e *expr.GRPCEndpointExpr, sd *ServiceData, svr bool) *Strea
 					SrcRef:  resCtx.Scope.Ref(result, resCtx.Pkg(result)),
 					TgtName: protoBufGoFullTypeName(e.Response.Message, sd.PkgName, sd.Scope),
 					TgtRef:  protoBufGoFullTypeRef(e.Response.Message, sd.PkgName, sd.Scope),
-					Init:    buildInitData(result, e.Response.Message, resVar, "v", resCtx, true, sd),
+					Init:    buildInitData(result, e.Response.Message, resVar, "v", resCtx, true, svr, sd),
 				}
 			}
 			if e.MethodExpr.StreamingPayload.Type != expr.Empty {
@@ -1188,7 +1182,7 @@ func buildStreamData(e *expr.GRPCEndpointExpr, sd *ServiceData, svr bool) *Strea
 					SrcRef:     protoBufGoFullTypeRef(e.StreamingRequest, sd.PkgName, sd.Scope),
 					TgtName:    svcCtx.Scope.Name(e.MethodExpr.StreamingPayload, svcCtx.Pkg(e.MethodExpr.StreamingPayload), svcCtx.Pointer, svcCtx.UseDefault),
 					TgtRef:     recvRef,
-					Init:       buildInitData(e.StreamingRequest, e.MethodExpr.StreamingPayload, "v", "spayload", svcCtx, false, sd),
+					Init:       buildInitData(e.StreamingRequest, e.MethodExpr.StreamingPayload, "v", "spayload", svcCtx, false, svr, sd),
 					Validation: addValidation(e.StreamingRequest, "stream", sd, true),
 				}
 			}
@@ -1206,7 +1200,7 @@ func buildStreamData(e *expr.GRPCEndpointExpr, sd *ServiceData, svr bool) *Strea
 					SrcRef:  sendRef,
 					TgtName: protoBufGoFullTypeName(e.StreamingRequest, sd.PkgName, sd.Scope),
 					TgtRef:  protoBufGoFullTypeRef(e.StreamingRequest, sd.PkgName, sd.Scope),
-					Init:    buildInitData(e.MethodExpr.StreamingPayload, e.StreamingRequest, "spayload", "v", svcCtx, true, sd),
+					Init:    buildInitData(e.MethodExpr.StreamingPayload, e.StreamingRequest, "spayload", "v", svcCtx, true, svr, sd),
 				}
 			}
 			if e.MethodExpr.Result.Type != expr.Empty {
@@ -1217,7 +1211,7 @@ func buildStreamData(e *expr.GRPCEndpointExpr, sd *ServiceData, svr bool) *Strea
 					SrcRef:     protoBufGoFullTypeRef(e.Response.Message, sd.PkgName, sd.Scope),
 					TgtName:    resCtx.Scope.Name(result, resCtx.Pkg(result), resCtx.Pointer, resCtx.UseDefault),
 					TgtRef:     resCtx.Scope.Ref(result, resCtx.Pkg(result)),
-					Init:       buildInitData(e.Response.Message, result, "v", resVar, resCtx, false, sd),
+					Init:       buildInitData(e.Response.Message, result, "v", resVar, resCtx, false, svr, sd),
 					Validation: addValidation(e.Response.Message, "stream", sd, false),
 				}
 			}
@@ -1296,7 +1290,7 @@ func extractMetadata(a *expr.MappedAttributeExpr, service *expr.AttributeExpr, s
 				mp.KeyType.Type.Kind() == expr.StringKind &&
 				mp.ElemType.Type.Kind() == expr.ArrayKind &&
 				expr.AsArray(mp.ElemType.Type).ElemType.Type.Kind() == expr.StringKind,
-			Validate:     codegen.RecursiveValidationCode(c, ctx, required, false, varn),
+			Validate:     codegen.ValidationCode(c, ctx, required, false, varn),
 			DefaultValue: c.DefaultValue,
 			Example:      c.Example(expr.Root.API.Random()),
 		})

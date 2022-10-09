@@ -16,14 +16,14 @@ func TestServerTypes(t *testing.T) {
 		DSL  func()
 		Code string
 	}{
-		{"mixed-payload-attrs", testdata.MixedPayloadInBodyDSL, MixedPayloadInBodyServerTypesFile},
-		{"multiple-methods", testdata.MultipleMethodsDSL, MultipleMethodsServerTypesFile},
-		{"payload-extend-validate", testdata.PayloadExtendedValidateDSL, PayloadExtendedValidateServerTypesFile},
-		{"result-type-validate", testdata.ResultTypeValidateDSL, ResultTypeValidateServerTypesFile},
-		{"with-result-collection", testdata.ResultWithResultCollectionDSL, ResultWithResultCollectionServerTypesFile},
-		{"with-result-view", testdata.ResultWithResultViewDSL, ResultWithResultViewServerTypesFile},
-		{"empty-error-response-body", testdata.EmptyErrorResponseBodyDSL, ""},
-		{"with-error-custom-pkg", testdata.WithErrorCustomPkgDSL, WithErrorCustomPkgServerTypesFile},
+		{"server-mixed-payload-attrs", testdata.MixedPayloadInBodyDSL, MixedPayloadInBodyServerTypesFile},
+		{"server-multiple-methods", testdata.MultipleMethodsDSL, MultipleMethodsServerTypesFile},
+		{"server-payload-extend-validate", testdata.PayloadExtendedValidateDSL, PayloadExtendedValidateServerTypesFile},
+		{"server-result-type-validate", testdata.ResultTypeValidateDSL, ResultTypeValidateServerTypesFile},
+		{"server-with-result-collection", testdata.ResultWithResultCollectionDSL, ResultWithResultCollectionServerTypesFile},
+		{"server-with-result-view", testdata.ResultWithResultViewDSL, ResultWithResultViewServerTypesFile},
+		{"server-empty-error-response-body", testdata.EmptyErrorResponseBodyDSL, ""},
+		{"server-with-error-custom-pkg", testdata.WithErrorCustomPkgDSL, WithErrorCustomPkgServerTypesFile},
 	}
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {

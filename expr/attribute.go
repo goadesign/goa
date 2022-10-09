@@ -29,8 +29,6 @@ type (
 		Meta MetaExpr
 		// Optional member default value
 		DefaultValue interface{}
-		// ZeroValue sets the zero value for the attribute type
-		ZeroValue interface{}
 		// UserExample set in DSL or computed in Finalize
 		UserExamples []*ExampleExpr
 		// finalized is true if the attribute has been finalized - only
@@ -399,12 +397,11 @@ func (a *AttributeExpr) IsRequiredNoDefault(attName string) bool {
 // between request types where attributes with default values should not be
 // generated using a pointer value and response types where they should.
 //
-//    DefaultValue UseDefault Pointer (assuming all other conditions are true)
-//    Yes          True       False
-//    Yes          False      True
-//    No           True       True
-//    No           False      True
-//
+//	DefaultValue UseDefault Pointer (assuming all other conditions are true)
+//	Yes          True       False
+//	Yes          False      True
+//	No           True       True
+//	No           False      True
 func (a *AttributeExpr) IsPrimitivePointer(attName string, useDefault bool) bool {
 	o := AsObject(a.Type)
 	if o == nil {
@@ -594,20 +591,23 @@ func (a *AttributeExpr) debug(prefix string, seen map[*AttributeExpr]int, indent
 	} else {
 		fmt.Printf("%s: %s <%T>\n", prefix, n, a.Type)
 	}
-	if o := AsObject(a.Type); o != nil {
-		for _, nat := range *o {
+	ut, isUT := a.Type.(UserType)
+	switch {
+	case isUT:
+		ut.Attribute().debug("att", seen, indent+1)
+		tabs = strings.Repeat(tab, indent+1)
+	case IsObject(a.Type):
+		for _, nat := range *AsObject(a.Type) {
 			nat.Attribute.debug("- "+nat.Name, seen, indent+1)
 		}
-	}
-	if a := AsArray(a.Type); a != nil {
-		a.ElemType.debug("elem", seen, indent+1)
-	}
-	if m := AsMap(a.Type); m != nil {
+	case IsArray(a.Type):
+		AsArray(a.Type).ElemType.debug("elem", seen, indent+1)
+	case IsMap(a.Type):
+		m := AsMap(a.Type)
 		m.KeyType.debug("key", seen, indent+1)
 		m.ElemType.debug("elem", seen, indent+1)
-	}
-	if u := AsUnion(a.Type); u != nil {
-		for _, nat := range u.Values {
+	case IsUnion(a.Type):
+		for _, nat := range AsUnion(a.Type).Values {
 			nat.Attribute.debug("* "+nat.Name, seen, indent+1)
 		}
 	}
@@ -640,11 +640,6 @@ func (a *AttributeExpr) debug(prefix string, seen map[*AttributeExpr]int, indent
 	}
 	if v := a.Validation; v != nil {
 		v.Debug("", tabs+tab, tab)
-	}
-	if t, ok := a.Type.(UserType); ok {
-		if v := t.Attribute().Validation; v != nil {
-			v.Debug("user type ", tabs+tab, tab)
-		}
 	}
 	if len(a.Bases) > 0 {
 		fmt.Printf("%s%sbases\n", tabs, tab)

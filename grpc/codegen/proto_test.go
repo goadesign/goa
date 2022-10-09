@@ -14,19 +14,19 @@ func TestProtoFiles(t *testing.T) {
 		DSL  func()
 		Code string
 	}{
-		{"unary-rpcs", testdata.UnaryRPCsDSL, testdata.UnaryRPCsProtoCode},
-		{"unary-rpc-no-payload", testdata.UnaryRPCNoPayloadDSL, testdata.UnaryRPCNoPayloadProtoCode},
-		{"unary-rpc-no-result", testdata.UnaryRPCNoResultDSL, testdata.UnaryRPCNoResultProtoCode},
-		{"server-streaming-rpc", testdata.ServerStreamingRPCDSL, testdata.ServerStreamingRPCProtoCode},
-		{"client-streaming-rpc", testdata.ClientStreamingRPCDSL, testdata.ClientStreamingRPCProtoCode},
-		{"bidirectional-streaming-rpc", testdata.BidirectionalStreamingRPCDSL, testdata.BidirectionalStreamingRPCProtoCode},
-		{"same-service-and-message-name", testdata.MessageWithServiceNameDSL, testdata.MessageWithServiceNameProtoCode},
-		{"method-with-reserved-proto-name", testdata.MethodWithReservedNameDSL, testdata.MethodWithReservedNameProtoCode},
-		{"multiple-methods-same-return-type", testdata.MultipleMethodsSameResultCollectionDSL, testdata.MultipleMethodsSameResultCollectionProtoCode},
-		{"method-with-acronym", testdata.MethodWithAcronymDSL, testdata.MethodWithAcronymProtoCode},
-		{"custom-package-name", testdata.ServiceWithPackageDSL, testdata.ServiceWithPackageCode},
-		{"struct-meta-type", testdata.StructMetaTypeDSL, testdata.StructMetaTypePackageCode},
-		{"default-fields", testdata.DefaultFieldsDSL, testdata.DefaultFieldsPackageCode},
+		{"protofiles-unary-rpcs", testdata.UnaryRPCsDSL, testdata.UnaryRPCsProtoCode},
+		{"protofiles-unary-rpc-no-payload", testdata.UnaryRPCNoPayloadDSL, testdata.UnaryRPCNoPayloadProtoCode},
+		{"protofiles-unary-rpc-no-result", testdata.UnaryRPCNoResultDSL, testdata.UnaryRPCNoResultProtoCode},
+		{"protofiles-server-streaming-rpc", testdata.ServerStreamingRPCDSL, testdata.ServerStreamingRPCProtoCode},
+		{"protofiles-client-streaming-rpc", testdata.ClientStreamingRPCDSL, testdata.ClientStreamingRPCProtoCode},
+		{"protofiles-bidirectional-streaming-rpc", testdata.BidirectionalStreamingRPCDSL, testdata.BidirectionalStreamingRPCProtoCode},
+		{"protofiles-same-service-and-message-name", testdata.MessageWithServiceNameDSL, testdata.MessageWithServiceNameProtoCode},
+		{"protofiles-method-with-reserved-proto-name", testdata.MethodWithReservedNameDSL, testdata.MethodWithReservedNameProtoCode},
+		{"protofiles-multiple-methods-same-return-type", testdata.MultipleMethodsSameResultCollectionDSL, testdata.MultipleMethodsSameResultCollectionProtoCode},
+		{"protofiles-method-with-acronym", testdata.MethodWithAcronymDSL, testdata.MethodWithAcronymProtoCode},
+		{"protofiles-custom-package-name", testdata.ServiceWithPackageDSL, testdata.ServiceWithPackageCode},
+		{"protofiles-struct-meta-type", testdata.StructMetaTypeDSL, testdata.StructMetaTypePackageCode},
+		{"protofiles-default-fields", testdata.DefaultFieldsDSL, testdata.DefaultFieldsPackageCode},
 	}
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
@@ -58,7 +58,7 @@ func TestMessageDefSection(t *testing.T) {
 		Code string
 	}{
 		{"user-type-with-primitives", testdata.MessageUserTypeWithPrimitivesDSL, testdata.MessageUserTypeWithPrimitivesMessageCode},
-		{"use-type-with-alias", testdata.MessageUserTypeWithAliasMessageDSL, testdata.MessageUserTypeWithAliasMessageCode},
+		{"user-type-with-alias", testdata.MessageUserTypeWithAliasMessageDSL, testdata.MessageUserTypeWithAliasMessageCode},
 		{"user-type-with-nested-user-types", testdata.MessageUserTypeWithNestedUserTypesDSL, testdata.MessageUserTypeWithNestedUserTypesCode},
 		{"result-type-collection", testdata.MessageResultTypeCollectionDSL, testdata.MessageResultTypeCollectionCode},
 		{"user-type-with-collection", testdata.MessageUserTypeWithCollectionDSL, testdata.MessageUserTypeWithCollectionCode},

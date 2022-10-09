@@ -29,8 +29,9 @@ type (
 		// primitive types even if they are required or has a default value.
 		// It ignores UseDefault and IgnoreRequired properties.
 		Pointer bool
-		// IgnoreRequired if true indicates that the attribute uses non-pointers
-		// to hold optional attributes (i.e. attributes that are not required).
+		// IgnoreRequired if true indicates that the transport object
+		// (proto) uses non-pointers to hold required attributes and
+		// therefore do not need to be validated.
 		IgnoreRequired bool
 		// UseDefault if true indicates that the attribute uses non-pointers for
 		// primitive types if they have default value. If false, the attribute with
@@ -39,12 +40,12 @@ type (
 		UseDefault bool
 		// Scope is the attribute scope.
 		Scope Attributor
-		// defaultPkg is the default package name where the attribute
+		// DefaultPkg is the default package name where the attribute
 		// type is found. it can be overridden via struct:pkg:path meta.
-		defaultPkg string
-		// isInterface is true if the attribute is an interface (union type).
+		DefaultPkg string
+		// IsInterface is true if the attribute is an interface (union type).
 		// In this case assigning child attributes requires a type assertion.
-		isInterface bool
+		IsInterface bool
 	}
 
 	// AttributeScope contains the scope of an attribute. It implements the
@@ -94,7 +95,7 @@ func NewAttributeContext(pointer, reqIgnore, useDefault bool, pkg string, scope 
 		IgnoreRequired: reqIgnore,
 		UseDefault:     useDefault,
 		Scope:          NewAttributeScope(scope),
-		defaultPkg:     pkg,
+		DefaultPkg:     pkg,
 	}
 }
 
@@ -210,20 +211,7 @@ func (a *AttributeContext) IsPrimitivePointer(name string, att *expr.AttributeEx
 	if a.Pointer {
 		return true
 	}
-	if a.IgnoreRequired {
-		return false
-	}
 	return att.IsPrimitivePointer(name, a.UseDefault)
-}
-
-// IsRequired returns true if the attribute with given name is a required
-// attribute in the parent. If IgnoreRequired is set to true, IsRequired always
-// returns false.
-func (a *AttributeContext) IsRequired(name string, att *expr.AttributeExpr) bool {
-	if a.IgnoreRequired {
-		return false
-	}
-	return att.IsRequired(name)
 }
 
 // Pkg returns the package name of the given type.
@@ -231,7 +219,7 @@ func (a *AttributeContext) Pkg(att *expr.AttributeExpr) string {
 	if loc := UserTypeLocation(att.Type); loc != nil {
 		return loc.PackageName()
 	}
-	return a.defaultPkg
+	return a.DefaultPkg
 }
 
 // Dup creates a shallow copy of the AttributeContext.
@@ -241,7 +229,7 @@ func (a *AttributeContext) Dup() *AttributeContext {
 		IgnoreRequired: a.IgnoreRequired,
 		UseDefault:     a.UseDefault,
 		Scope:          a.Scope,
-		defaultPkg:     a.defaultPkg,
+		DefaultPkg:     a.DefaultPkg,
 	}
 }
 

@@ -16,8 +16,8 @@ service ServiceUnaryRPCs {
 }
 
 message MethodUnaryRPCARequest {
-	sint32 int = 1;
-	string string_ = 2;
+	optional sint32 int = 1;
+	optional string string_ = 2;
 }
 
 message MethodUnaryRPCAResponse {
@@ -26,8 +26,8 @@ message MethodUnaryRPCAResponse {
 }
 
 message MethodUnaryRPCBRequest {
-	uint32 u_int = 1;
-	float float32 = 2;
+	optional uint32 u_int = 1;
+	optional float float32 = 2;
 }
 
 message MethodUnaryRPCBResponse {
@@ -140,8 +140,8 @@ message MethodBidirectionalStreamingRPCStreamingRequest {
 }
 
 message MethodBidirectionalStreamingRPCResponse {
-	sint32 a = 1;
-	string b = 2;
+	optional sint32 a = 1;
+	optional string b = 2;
 }
 `
 
@@ -163,7 +163,7 @@ message MyNameConflictsMethodRequest {
 }
 
 message MyNameConflicts2 {
-	bool boolean_field = 1;
+	optional bool boolean_field = 1;
 }
 
 message MyNameConflictsMethodResponse {
@@ -172,50 +172,50 @@ message MyNameConflictsMethodResponse {
 
 const MessageUserTypeWithPrimitivesMessageCode = `
 message MethodMessageUserTypeWithPrimitivesRequest {
-	bool boolean_field = 1;
-	sint32 int_field = 2;
-	sint32 int32_field = 3;
-	sint64 int64_field = 4;
-	uint32 u_int_field = 5;
-	uint32 u_int32_field = 6;
-	uint64 u_int64_field = 7;
+	optional bool boolean_field = 1;
+	optional sint32 int_field = 2;
+	optional sint32 int32_field = 3;
+	optional sint64 int64_field = 4;
+	optional uint32 u_int_field = 5;
+	optional uint32 u_int32_field = 6;
+	optional uint64 u_int64_field = 7;
 }
 
 message MethodMessageUserTypeWithPrimitivesResponse {
-	float float32_field = 1;
-	double float64_field = 2;
-	string string_field = 3;
-	bytes bytes_field = 4;
+	optional float float32_field = 1;
+	optional double float64_field = 2;
+	optional string string_field = 3;
+	optional bytes bytes_field = 4;
 }
 `
 
 const MessageUserTypeWithAliasMessageCode = `
 message MethodMessageUserTypeWithAliasRequest {
 	sint32 int_alias_field = 1;
-	sint32 optional_int_alias_field = 2;
+	optional sint32 optional_int_alias_field = 2;
 }
 
 message MethodMessageUserTypeWithAliasResponse {
-	sint32 int_alias_field = 1;
-	sint32 optional_int_alias_field = 2;
+	optional sint32 int_alias_field = 1;
+	optional sint32 optional_int_alias_field = 2;
 }
 `
 
 const MessageUserTypeWithNestedUserTypesCode = `
 message MethodMessageUserTypeWithNestedUserTypesRequest {
-	bool boolean_field = 1;
-	sint32 int_field = 2;
+	optional bool boolean_field = 1;
+	optional sint32 int_field = 2;
 	UTLevel1 ut_level1 = 3;
 }
 
 message UTLevel1 {
-	sint32 int32_field = 1;
-	sint64 int64_field = 2;
+	optional sint32 int32_field = 1;
+	optional sint64 int64_field = 2;
 	UTLevel2 ut_level2 = 3;
 }
 
 message UTLevel2 {
-	sint64 int64_field = 2;
+	optional sint64 int64_field = 2;
 }
 
 message MethodMessageUserTypeWithNestedUserTypesResponse {
@@ -236,8 +236,8 @@ message RTCollection {
 }
 
 message RT {
-	sint32 int_field = 1;
-	string string_field = 2;
+	optional sint32 int_field = 1;
+	optional string string_field = 2;
 }
 `
 
@@ -254,7 +254,7 @@ message RTCollection {
 }
 
 message RT {
-	sint32 int_field = 1;
+	optional sint32 int_field = 1;
 }
 `
 
@@ -330,13 +330,13 @@ message MethodMessagePrimitiveResponse {
 
 const MessageWithMetadataCode = `
 message MethodMessageWithMetadataRequest {
-	bool boolean_field = 1;
+	optional bool boolean_field = 1;
 	UTLevel1 ut_level1 = 3;
 }
 
 message UTLevel1 {
-	sint32 int32_field = 1;
-	sint64 int64_field = 2;
+	optional sint32 int32_field = 1;
+	optional sint64 int64_field = 2;
 }
 
 message MethodMessageWithMetadataResponse {
@@ -346,8 +346,8 @@ message MethodMessageWithMetadataResponse {
 
 const MessageWithSecurityAttrsCode = `
 message MethodMessageWithSecurityRequest {
-	string oauth_token = 3;
-	bool boolean_field = 1;
+	optional string oauth_token = 3;
+	optional bool boolean_field = 1;
 }
 
 message MethodMessageWithSecurityResponse {
@@ -397,7 +397,7 @@ message ResultTCollection {
 }
 
 message ResultT {
-	bool boolean_field = 1;
+	optional bool boolean_field = 1;
 }
 
 message MethodBRequest {
@@ -458,17 +458,17 @@ service UsingMetaTypes {
 }
 
 message MethodRequest {
-	sint64 a = 1;
-	sint64 b = 2;
+	optional sint64 a = 1;
+	optional sint64 b = 2;
 	repeated sint64 c = 3;
-	sint64 d = 4;
+	optional sint64 d = 4;
 }
 
 message MethodResponse {
-	sint64 a = 1;
-	sint64 b = 2;
+	optional sint64 a = 1;
+	optional sint64 b = 2;
 	repeated sint64 c = 3;
-	sint64 d = 4;
+	optional sint64 d = 4;
 }
 `
 
@@ -487,18 +487,18 @@ service DefaultFields {
 
 message MethodRequest {
 	sint64 req = 1;
-	sint64 opt = 2;
-	sint64 def0 = 3;
-	sint64 def1 = 4;
-	sint64 def2 = 5;
+	optional sint64 opt = 2;
+	optional sint64 def0 = 3;
+	optional sint64 def1 = 4;
+	optional sint64 def2 = 5;
 	string reqs = 6;
-	string opts = 7;
-	string defs = 8;
-	string defe = 9;
+	optional string opts = 7;
+	optional string defs = 8;
+	optional string defe = 9;
 	double rat = 10;
-	double flt = 11;
-	double flt0 = 12;
-	double flt1 = 13;
+	optional double flt = 11;
+	optional double flt0 = 12;
+	optional double flt1 = 13;
 }
 
 message MethodResponse {

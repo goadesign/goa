@@ -15,15 +15,15 @@ func TestClientTypeFiles(t *testing.T) {
 		DSL  func()
 		Code string
 	}{
-		{"payload-with-nested-types", testdata.PayloadWithNestedTypesDSL, testdata.PayloadWithNestedTypesClientTypeCode},
-		{"payload-with-duplicate-use", testdata.PayloadWithMultipleUseTypesDSL, testdata.PayloadWithMultipleUseTypesClientTypeCode},
-		{"payload-with-alias-type", testdata.PayloadWithAliasTypeDSL, testdata.PayloadWithAliasTypeClientTypeCode},
-		{"result-collection", testdata.ResultWithCollectionDSL, testdata.ResultWithCollectionClientTypeCode},
-		{"alias-validation", testdata.ResultWithAliasValidation, testdata.ResultWithAliasValidationClientTypeCode},
-		{"with-errors", testdata.UnaryRPCWithErrorsDSL, testdata.WithErrorsClientTypeCode},
-		{"bidirectional-streaming-same-type", testdata.BidirectionalStreamingRPCSameTypeDSL, testdata.BidirectionalStreamingRPCSameTypeClientTypeCode},
-		{"struct-meta-type", testdata.StructMetaTypeDSL, testdata.StructMetaTypeTypeCode},
-		{"default-fields", testdata.DefaultFieldsDSL, testdata.DefaultFieldsTypeCode},
+		{"client-payload-with-nested-types", testdata.PayloadWithNestedTypesDSL, testdata.PayloadWithNestedTypesClientTypeCode},
+		{"client-payload-with-duplicate-use", testdata.PayloadWithMultipleUseTypesDSL, testdata.PayloadWithMultipleUseTypesClientTypeCode},
+		{"client-payload-with-alias-type", testdata.PayloadWithAliasTypeDSL, testdata.PayloadWithAliasTypeClientTypeCode},
+		{"client-result-collection", testdata.ResultWithCollectionDSL, testdata.ResultWithCollectionClientTypeCode},
+		{"client-alias-validation", testdata.ResultWithAliasValidation, testdata.ResultWithAliasValidationClientTypeCode},
+		{"client-with-errors", testdata.UnaryRPCWithErrorsDSL, testdata.WithErrorsClientTypeCode},
+		{"client-bidirectional-streaming-same-type", testdata.BidirectionalStreamingRPCSameTypeDSL, testdata.BidirectionalStreamingRPCSameTypeClientTypeCode},
+		{"client-struct-meta-type", testdata.StructMetaTypeDSL, testdata.StructMetaTypeTypeCode},
+		{"client-default-fields", testdata.DefaultFieldsDSL, testdata.DefaultFieldsTypeCode},
 	}
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {

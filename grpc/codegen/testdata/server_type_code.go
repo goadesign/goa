@@ -22,6 +22,37 @@ func NewProtoMethodPayloadWithNestedTypesResponse() *service_payload_with_nested
 	return message
 }
 
+// ValidateMethodPayloadWithNestedTypesRequest runs the validations defined on
+// MethodPayloadWithNestedTypesRequest.
+func ValidateMethodPayloadWithNestedTypesRequest(message *service_payload_with_nested_typespb.MethodPayloadWithNestedTypesRequest) (err error) {
+	if message.AParams != nil {
+		if err2 := ValidateAParams(message.AParams); err2 != nil {
+			err = goa.MergeErrors(err, err2)
+		}
+	}
+	return
+}
+
+// ValidateAParams runs the validations defined on AParams.
+func ValidateAParams(aParams *service_payload_with_nested_typespb.AParams) (err error) {
+	for _, v := range aParams.A {
+		if v != nil {
+			if err2 := ValidateArrayOfString(v); err2 != nil {
+				err = goa.MergeErrors(err, err2)
+			}
+		}
+	}
+	return
+}
+
+// ValidateArrayOfString runs the validations defined on ArrayOfString.
+func ValidateArrayOfString(val *service_payload_with_nested_typespb.ArrayOfString) (err error) {
+	if val.Field == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("field", "val"))
+	}
+	return
+}
+
 // protobufServicePayloadWithNestedTypespbAParamsToServicepayloadwithnestedtypesAParams
 // builds a value of type *servicepayloadwithnestedtypes.AParams from a value
 // of type *service_payload_with_nested_typespb.AParams.
@@ -150,9 +181,9 @@ func NewMethodMessageUserTypeWithAliasPayload(message *service_message_user_type
 	v := &servicemessageusertypewithalias.PayloadAliasT{
 		IntAliasField: servicemessageusertypewithalias.IntAlias(message.IntAliasField),
 	}
-	if message.OptionalIntAliasField != 0 {
-		optionalIntAliasFieldptr := servicemessageusertypewithalias.IntAlias(message.OptionalIntAliasField)
-		v.OptionalIntAliasField = &optionalIntAliasFieldptr
+	if message.OptionalIntAliasField != nil {
+		optionalIntAliasField := servicemessageusertypewithalias.IntAlias(*message.OptionalIntAliasField)
+		v.OptionalIntAliasField = &optionalIntAliasField
 	}
 	return v
 }
@@ -165,7 +196,8 @@ func NewProtoMethodMessageUserTypeWithAliasResponse(result *servicemessageuserty
 		IntAliasField: int32(result.IntAliasField),
 	}
 	if result.OptionalIntAliasField != nil {
-		message.OptionalIntAliasField = int32(*result.OptionalIntAliasField)
+		optionalIntAliasField := int32(*result.OptionalIntAliasField)
+		message.OptionalIntAliasField = &optionalIntAliasField
 	}
 	return message
 }
@@ -196,7 +228,8 @@ func svcServiceresultwithcollectionResultTToServiceResultWithCollectionpbResultT
 		for i, val := range v.CollectionField {
 			res.CollectionField.Field[i] = &service_result_with_collectionpb.RT{}
 			if val.IntField != nil {
-				res.CollectionField.Field[i].IntField = int32(*val.IntField)
+				intField := int32(*val.IntField)
+				res.CollectionField.Field[i].IntField = &intField
 			}
 		}
 	}
@@ -216,9 +249,9 @@ func protobufServiceResultWithCollectionpbResultTToServiceresultwithcollectionRe
 		res.CollectionField = make([]*serviceresultwithcollection.RT, len(v.CollectionField.Field))
 		for i, val := range v.CollectionField.Field {
 			res.CollectionField[i] = &serviceresultwithcollection.RT{}
-			if val.IntField != 0 {
-				intFieldptr := int(val.IntField)
-				res.CollectionField[i].IntField = &intFieldptr
+			if val.IntField != nil {
+				intField := int(*val.IntField)
+				res.CollectionField[i].IntField = &intField
 			}
 		}
 	}
@@ -232,14 +265,16 @@ const PayloadWithMixedAttributesServerTypeCode = `// NewUnaryMethodPayload build
 func NewUnaryMethodPayload(message *service_payload_with_mixed_attributespb.UnaryMethodRequest) *servicepayloadwithmixedattributes.APayload {
 	v := &servicepayloadwithmixedattributes.APayload{
 		Required:        int(message.Required),
-		Default:         int(message.Default),
 		RequiredDefault: int(message.RequiredDefault),
 	}
-	if message.Optional != 0 {
-		optionalptr := int(message.Optional)
-		v.Optional = &optionalptr
+	if message.Optional != nil {
+		optional := int(*message.Optional)
+		v.Optional = &optional
 	}
-	if message.Default == 0 {
+	if message.Default != nil {
+		v.Default = int(*message.Default)
+	}
+	if message.Default == nil {
 		v.Default = 100
 	}
 	return v
@@ -264,14 +299,16 @@ func NewProtoStreamingMethodResponse() *service_payload_with_mixed_attributespb.
 func NewAPayload(v *service_payload_with_mixed_attributespb.StreamingMethodStreamingRequest) *servicepayloadwithmixedattributes.APayload {
 	spayload := &servicepayloadwithmixedattributes.APayload{
 		Required:        int(v.Required),
-		Default:         int(v.Default),
 		RequiredDefault: int(v.RequiredDefault),
 	}
-	if v.Optional != 0 {
-		optionalptr := int(v.Optional)
-		spayload.Optional = &optionalptr
+	if v.Optional != nil {
+		optional := int(*v.Optional)
+		spayload.Optional = &optional
 	}
-	if v.Default == 0 {
+	if v.Default != nil {
+		spayload.Default = int(*v.Default)
+	}
+	if v.Default == nil {
 		spayload.Default = 100
 	}
 	return spayload
@@ -300,10 +337,8 @@ func NewProtoMethodUnaryRPCWithErrorsResponse(result string) *service_unary_rpc_
 // "ServiceUnaryRPCWithErrors" service.
 func NewMethodUnaryRPCWithErrorsInternalError(er *serviceunaryrpcwitherrors.AnotherError) *service_unary_rpc_with_errorspb.MethodUnaryRPCWithErrorsInternalError {
 	message := &service_unary_rpc_with_errorspb.MethodUnaryRPCWithErrorsInternalError{
-		Name: er.Name,
-	}
-	if er.Description != nil {
-		message.Description = *er.Description
+		Name:        er.Name,
+		Description: er.Description,
 	}
 	return message
 }
@@ -313,10 +348,8 @@ func NewMethodUnaryRPCWithErrorsInternalError(er *serviceunaryrpcwitherrors.Anot
 // "ServiceUnaryRPCWithErrors" service.
 func NewMethodUnaryRPCWithErrorsBadRequestError(er *serviceunaryrpcwitherrors.AnotherError) *service_unary_rpc_with_errorspb.MethodUnaryRPCWithErrorsBadRequestError {
 	message := &service_unary_rpc_with_errorspb.MethodUnaryRPCWithErrorsBadRequestError{
-		Name: er.Name,
-	}
-	if er.Description != nil {
-		message.Description = *er.Description
+		Name:        er.Name,
+		Description: er.Description,
 	}
 	return message
 }
@@ -325,9 +358,8 @@ func NewMethodUnaryRPCWithErrorsBadRequestError(er *serviceunaryrpcwitherrors.An
 // type from the error of the "MethodUnaryRPCWithErrors" endpoint of the
 // "ServiceUnaryRPCWithErrors" service.
 func NewMethodUnaryRPCWithErrorsCustomErrorError(er *serviceunaryrpcwitherrors.ErrorType) *service_unary_rpc_with_errorspb.MethodUnaryRPCWithErrorsCustomErrorError {
-	message := &service_unary_rpc_with_errorspb.MethodUnaryRPCWithErrorsCustomErrorError{}
-	if er.A != nil {
-		message.A = *er.A
+	message := &service_unary_rpc_with_errorspb.MethodUnaryRPCWithErrorsCustomErrorError{
+		A: er.A,
 	}
 	return message
 }
@@ -336,8 +368,8 @@ func NewMethodUnaryRPCWithErrorsCustomErrorError(er *serviceunaryrpcwitherrors.E
 const ElemValidationServerTypesFile = `// NewMethodElemValidationPayload builds the payload of the
 // "MethodElemValidation" endpoint of the "ServiceElemValidation" service from
 // the gRPC request type.
-func NewMethodElemValidationPayload(message *service_elem_validationpb.MethodElemValidationRequest) *serviceelemvalidation.ResultType {
-	v := &serviceelemvalidation.ResultType{}
+func NewMethodElemValidationPayload(message *service_elem_validationpb.MethodElemValidationRequest) *serviceelemvalidation.PayloadType {
+	v := &serviceelemvalidation.PayloadType{}
 	if message.Foo != nil {
 		v.Foo = make(map[string][]string, len(message.Foo))
 		for key, val := range message.Foo {
@@ -375,6 +407,9 @@ func ValidateMethodElemValidationRequest(message *service_elem_validationpb.Meth
 
 // ValidateArrayOfString runs the validations defined on ArrayOfString.
 func ValidateArrayOfString(val *service_elem_validationpb.ArrayOfString) (err error) {
+	if val.Field == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("field", "val"))
+	}
 	if len(val.Field) < 1 {
 		err = goa.MergeErrors(err, goa.InvalidLengthError("val.field", val.Field, len(val.Field), 1, true))
 	}
@@ -401,7 +436,6 @@ func NewProtoMethodElemValidationResponse() *service_elem_validationpb.MethodEle
 // ValidateUUID runs the validations defined on UUID.
 func ValidateUUID(message *service_elem_validationpb.UUID) (err error) {
 	err = goa.MergeErrors(err, goa.ValidateFormat("message.field", message.Field, goa.FormatUUID))
-
 	return
 }
 `
@@ -409,20 +443,21 @@ func ValidateUUID(message *service_elem_validationpb.UUID) (err error) {
 const StructMetaTypeServerTypeCode = `// NewMethodPayload builds the payload of the "Method" endpoint of the
 // "UsingMetaTypes" service from the gRPC request type.
 func NewMethodPayload(message *using_meta_typespb.MethodRequest) *usingmetatypes.MethodPayload {
-	v := &usingmetatypes.MethodPayload{
-		A: flag.ErrorHandling(message.A),
-		B: flag.ErrorHandling(message.B),
+	v := &usingmetatypes.MethodPayload{}
+	if message.A != nil {
+		v.A = flag.ErrorHandling(*message.A)
 	}
-	if message.D != 0 {
-		dptr := flag.ErrorHandling(message.D)
-		v.D = &dptr
+	if message.B != nil {
+		v.B = flag.ErrorHandling(*message.B)
 	}
-	var zeroMessageA int64
-	if message.A == zeroMessageA {
+	if message.D != nil {
+		d := flag.ErrorHandling(*message.D)
+		v.D = &d
+	}
+	if message.A == nil {
 		v.A = 1
 	}
-	var zeroMessageB int64
-	if message.B == zeroMessageB {
+	if message.B == nil {
 		v.B = 2
 	}
 	if message.C != nil {
@@ -437,12 +472,14 @@ func NewMethodPayload(message *using_meta_typespb.MethodRequest) *usingmetatypes
 // NewProtoMethodResponse builds the gRPC response type from the result of the
 // "Method" endpoint of the "UsingMetaTypes" service.
 func NewProtoMethodResponse(result *usingmetatypes.MethodResult) *using_meta_typespb.MethodResponse {
-	message := &using_meta_typespb.MethodResponse{
-		A: int64(result.A),
-		B: int64(result.B),
-	}
+	message := &using_meta_typespb.MethodResponse{}
+	a := int64(result.A)
+	message.A = &a
+	b := int64(result.B)
+	message.B = &b
 	if result.D != nil {
-		message.D = int64(*result.D)
+		d := int64(*result.D)
+		message.D = &d
 	}
 	if result.C != nil {
 		message.C = make([]int64, len(result.C))
@@ -459,35 +496,52 @@ const DefaultFieldsServerTypeCode = `// NewMethodPayload builds the payload of t
 func NewMethodPayload(message *default_fieldspb.MethodRequest) *defaultfields.MethodPayload {
 	v := &defaultfields.MethodPayload{
 		Req:  message.Req,
-		Def0: message.Def0,
-		Def1: message.Def1,
-		Def2: message.Def2,
+		Opt:  message.Opt,
 		Reqs: message.Reqs,
-		Defs: message.Defs,
-		Defe: message.Defe,
+		Opts: message.Opts,
 		Rat:  message.Rat,
-		Flt0: message.Flt0,
-		Flt1: message.Flt1,
+		Flt:  message.Flt,
 	}
-	if message.Opt != 0 {
-		v.Opt = &message.Opt
+	if message.Def0 != nil {
+		v.Def0 = *message.Def0
 	}
-	if message.Opts != "" {
-		v.Opts = &message.Opts
+	if message.Def1 != nil {
+		v.Def1 = *message.Def1
 	}
-	if message.Flt != 0 {
-		v.Flt = &message.Flt
+	if message.Def2 != nil {
+		v.Def2 = *message.Def2
 	}
-	if message.Def1 == 0 {
+	if message.Defs != nil {
+		v.Defs = *message.Defs
+	}
+	if message.Defe != nil {
+		v.Defe = *message.Defe
+	}
+	if message.Flt0 != nil {
+		v.Flt0 = *message.Flt0
+	}
+	if message.Flt1 != nil {
+		v.Flt1 = *message.Flt1
+	}
+	if message.Def0 == nil {
+		v.Def0 = 0
+	}
+	if message.Def1 == nil {
 		v.Def1 = 1
 	}
-	if message.Def2 == 0 {
+	if message.Def2 == nil {
 		v.Def2 = 2
 	}
-	if message.Defs == "" {
+	if message.Defs == nil {
 		v.Defs = "!"
 	}
-	if message.Flt1 == 0 {
+	if message.Defe == nil {
+		v.Defe = ""
+	}
+	if message.Flt0 == nil {
+		v.Flt0 = 0
+	}
+	if message.Flt1 == nil {
 		v.Flt1 = 1
 	}
 	return v

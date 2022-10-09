@@ -48,8 +48,19 @@ func TestProtoBufTransform(t *testing.T) {
 		// attribute contexts used in test cases
 		svcCtx = serviceTypeContext("", sd.Scope)
 		ptrCtx = pointerContext("", sd.Scope)
-		pbCtx  = protoBufTypeContext("", sd.Scope)
+		pbCtx  = protoBufTypeContext("", sd.Scope, true)
 	)
+
+	// gRPC does not support any
+	obj := expr.AsObject(defaults)
+	for _, nat := range *obj {
+		if nat.Name == "any" {
+			nat.Attribute.Type = expr.String
+		}
+		if nat.Name == "required_any" {
+			nat.Attribute.Type = expr.String
+		}
+	}
 
 	tc := map[string][]struct {
 		Name    string
@@ -183,7 +194,14 @@ const (
 		DefaultBool:    source.DefaultBool,
 	}
 	if source.Integer != nil {
-		target.Integer = int32(*source.Integer)
+		integer := int32(*source.Integer)
+		target.Integer = &integer
+	}
+	{
+		var zero bool
+		if target.DefaultBool == zero {
+			target.DefaultBool = true
+		}
 	}
 }
 `
@@ -196,14 +214,21 @@ const (
 	if source.Integer != nil {
 		target.Integer = int32(*source.Integer)
 	}
+	{
+		var zero bool
+		if target.DefaultBool == zero {
+			target.DefaultBool = true
+		}
+	}
 }
 `
 	requiredSvcToSimpleProtoCode = `func transform() {
 	target := &Simple{
 		RequiredString: source.RequiredString,
 		DefaultBool:    source.DefaultBool,
-		Integer:        int32(source.Integer),
 	}
+	integer := int32(source.Integer)
+	target.Integer = &integer
 }
 `
 
@@ -215,6 +240,12 @@ const (
 	if source.Integer != nil {
 		target.Integer = int32(*source.Integer)
 	}
+	{
+		var zero bool
+		if target.DefaultBool == zero {
+			target.DefaultBool = true
+		}
+	}
 	if source.Integer == nil {
 		target.Integer = 1
 	}
@@ -225,25 +256,25 @@ const (
 	target := &Simple{
 		RequiredString: source.RequiredString,
 		DefaultBool:    source.DefaultBool,
-		Integer:        int32(source.Integer),
+	}
+	integer := int32(source.Integer)
+	target.Integer = &integer
+	{
+		var zero bool
+		if target.DefaultBool == zero {
+			target.DefaultBool = true
+		}
 	}
 }
 `
 
 	requiredPtrSvcToSimpleProtoCode = `func transform() {
-	target := &Simple{}
-	if source.RequiredString != nil {
-		target.RequiredString = *source.RequiredString
+	target := &Simple{
+		RequiredString: *source.RequiredString,
+		DefaultBool:    *source.DefaultBool,
 	}
-	if source.DefaultBool != nil {
-		target.DefaultBool = *source.DefaultBool
-	}
-	if source.Integer != nil {
-		target.Integer = int32(*source.Integer)
-	}
-	if source.DefaultBool == nil {
-		target.DefaultBool = true
-	}
+	integer := int32(*source.Integer)
+	target.Integer = &integer
 }
 `
 
@@ -253,7 +284,14 @@ const (
 		DefaultBool:    bool(source.DefaultBool),
 	}
 	if source.Integer != nil {
-		target.Integer = int32(*source.Integer)
+		integer := int32(*source.Integer)
+		target.Integer = &integer
+	}
+	{
+		var zero bool
+		if target.DefaultBool == zero {
+			target.DefaultBool = true
+		}
 	}
 }
 `
@@ -263,9 +301,15 @@ const (
 		RequiredString: tdtypes.CustomString(source.RequiredString),
 		DefaultBool:    tdtypes.CustomBool(source.DefaultBool),
 	}
-	if source.Integer != 0 {
-		integerptr := tdtypes.CustomInt(source.Integer)
-		target.Integer = &integerptr
+	if source.Integer != nil {
+		integer := tdtypes.CustomInt(*source.Integer)
+		target.Integer = &integer
+	}
+	{
+		var zero tdtypes.CustomBool
+		if target.DefaultBool == zero {
+			target.DefaultBool = true
+		}
 	}
 }
 `
@@ -276,12 +320,35 @@ const (
 		DefaultBool:    bool(source.DefaultBool),
 	}
 	if source.Integer != nil {
-		target.Integer = int32(*source.Integer)
+		integer := int32(*source.Integer)
+		target.Integer = &integer
+	}
+	{
+		var zero bool
+		if target.DefaultBool == zero {
+			target.DefaultBool = true
+		}
 	}
 }
 `
 
-	customProtoToCustomSvcCode = simpleProtoToCustomSvcCode
+	customProtoToCustomSvcCode = `func transform() {
+	target := &CustomTypes{
+		RequiredString: tdtypes.CustomString(source.RequiredString),
+		DefaultBool:    tdtypes.CustomBool(source.DefaultBool),
+	}
+	if source.Integer != nil {
+		integer := tdtypes.CustomInt(*source.Integer)
+		target.Integer = &integer
+	}
+	{
+		var zero tdtypes.CustomBool
+		if target.DefaultBool == zero {
+			target.DefaultBool = true
+		}
+	}
+}
+`
 
 	simpleMapSvcToSimpleMapProtoCode = `func transform() {
 	target := &SimpleMap{}
@@ -348,7 +415,7 @@ const (
 			target.Simple[tk] = tv
 		}
 	}
-	if len(source.Simple) == 0 {
+	if source.Simple == nil {
 		target.Simple = map[string]int{"foo": 1}
 	}
 }
@@ -426,7 +493,7 @@ const (
 			target.StringArray[i] = val
 		}
 	}
-	if len(source.StringArray) == 0 {
+	if source.StringArray == nil {
 		target.StringArray = []string{"foo", "bar"}
 	}
 }
@@ -475,9 +542,10 @@ const (
 
 	customFieldSvcToCompositeProtoCode = `func transform() {
 	target := &Composite{
-		RequiredString: source.MyString,
-		DefaultInt:     int32(source.MyInt),
+		RequiredString: &source.MyString,
 	}
+	defaultInt := int32(source.MyInt)
+	target.DefaultInt = &defaultInt
 	if source.MyType != nil {
 		target.Type = svcSimpleToSimple(source.MyType)
 	}
@@ -501,7 +569,8 @@ const (
 	resultTypeSvcToResultTypeProtoCode = `func transform() {
 	target := &ResultType{}
 	if source.Int != nil {
-		target.Int = int32(*source.Int)
+		int_ := int32(*source.Int)
+		target.Int = &int_
 	}
 	if source.Map != nil {
 		target.Map_ = make(map[int32]string, len(source.Map))
@@ -522,7 +591,8 @@ const (
 		for i, val := range source.Collection {
 			target.Collection.Field[i] = &ResultType{}
 			if val.Int != nil {
-				target.Collection.Field[i].Int = int32(*val.Int)
+				int_ := int32(*val.Int)
+				target.Collection.Field[i].Int = &int_
 			}
 			if val.Map != nil {
 				target.Collection.Field[i].Map_ = make(map[int32]string, len(val.Map))
@@ -539,20 +609,18 @@ const (
 
 	optionalSvcToOptionalProtoCode = `func transform() {
 	target := &Optional{
-		Bytes_: source.Bytes,
-		Any:    source.Any,
+		Float_:  source.Float,
+		String_: source.String,
+		Bytes_:  source.Bytes,
+		Any:     source.Any,
 	}
 	if source.Int != nil {
-		target.Int = int32(*source.Int)
+		int_ := int32(*source.Int)
+		target.Int = &int_
 	}
 	if source.Uint != nil {
-		target.Uint = uint32(*source.Uint)
-	}
-	if source.Float != nil {
-		target.Float_ = *source.Float
-	}
-	if source.String != nil {
-		target.String_ = *source.String
+		uint_ := uint32(*source.Uint)
+		target.Uint = &uint_
 	}
 	if source.Array != nil {
 		target.Array = make([]string, len(source.Array))
@@ -586,13 +654,43 @@ const (
 		Any:            source.Any,
 		RequiredAny:    source.RequiredAny,
 	}
+	{
+		var zero int32
+		if target.Int == zero {
+			target.Int = 100
+		}
+	}
+	{
+		var zero string
+		if target.RawJson == zero {
+			target.RawJson = json.RawMessage{0x66, 0x6f, 0x6f}
+		}
+	}
+	{
+		var zero string
+		if target.String_ == zero {
+			target.String_ = "foo"
+		}
+	}
+	{
+		var zero []byte
+		if target.Bytes_ == zero {
+			target.Bytes_ = []byte{0x66, 0x6f, 0x6f, 0x62, 0x61, 0x72}
+		}
+	}
+	{
+		var zero string
+		if target.Any == zero {
+			target.Any = "something"
+		}
+	}
 	if source.Array != nil {
 		target.Array = make([]string, len(source.Array))
 		for i, val := range source.Array {
 			target.Array[i] = val
 		}
 	}
-	if len(source.Array) == 0 {
+	if source.Array == nil {
 		target.Array = []string{"foo", "bar"}
 	}
 	if source.RequiredArray != nil {
@@ -609,7 +707,7 @@ const (
 			target.Map_[tk] = tv
 		}
 	}
-	if len(source.Map) == 0 {
+	if source.Map == nil {
 		target.Map_ = map[int]string{1: "foo"}
 	}
 	if source.RequiredMap != nil {
@@ -637,9 +735,8 @@ const (
 `
 
 	embeddedOneOfSvcToEmbeddedOneOfProtoCode = `func transform() {
-	target := &EmbeddedOneOf{}
-	if source.String != nil {
-		target.String_ = *source.String
+	target := &EmbeddedOneOf{
+		String_: source.String,
 	}
 	if source.EmbeddedOneOf != nil {
 		switch src := source.EmbeddedOneOf.(type) {
@@ -663,9 +760,8 @@ const (
 `
 
 	recursiveOneOfSvcToRecursiveOneOfProtoCode = `func transform() {
-	target := &RecursiveOneOf{}
-	if source.String != nil {
-		target.String_ = *source.String
+	target := &RecursiveOneOf{
+		String_: source.String,
 	}
 	if source.RecursiveOneOf != nil {
 		switch src := source.RecursiveOneOf.(type) {
@@ -688,9 +784,15 @@ const (
 		RequiredString: source.RequiredString,
 		DefaultBool:    source.DefaultBool,
 	}
-	if source.Integer != 0 {
-		integerptr := int(source.Integer)
-		target.Integer = &integerptr
+	if source.Integer != nil {
+		integer := int(*source.Integer)
+		target.Integer = &integer
+	}
+	{
+		var zero bool
+		if target.DefaultBool == zero {
+			target.DefaultBool = true
+		}
 	}
 }
 `
@@ -699,7 +801,15 @@ const (
 	target := &Required{
 		RequiredString: source.RequiredString,
 		DefaultBool:    source.DefaultBool,
-		Integer:        int(source.Integer),
+	}
+	if source.Integer != nil {
+		target.Integer = int(*source.Integer)
+	}
+	{
+		var zero bool
+		if target.DefaultBool == zero {
+			target.DefaultBool = true
+		}
 	}
 }
 `
@@ -709,8 +819,8 @@ const (
 		RequiredString: source.RequiredString,
 		DefaultBool:    source.DefaultBool,
 	}
-	integerptr := int(source.Integer)
-	target.Integer = &integerptr
+	integer := int(source.Integer)
+	target.Integer = &integer
 }
 `
 
@@ -718,9 +828,17 @@ const (
 	target := &Default{
 		RequiredString: source.RequiredString,
 		DefaultBool:    source.DefaultBool,
-		Integer:        int(source.Integer),
 	}
-	if source.Integer == 0 {
+	if source.Integer != nil {
+		target.Integer = int(*source.Integer)
+	}
+	{
+		var zero bool
+		if target.DefaultBool == zero {
+			target.DefaultBool = true
+		}
+	}
+	if source.Integer == nil {
 		target.Integer = 1
 	}
 }
@@ -731,8 +849,14 @@ const (
 		RequiredString: source.RequiredString,
 		DefaultBool:    source.DefaultBool,
 	}
-	integerptr := int(source.Integer)
-	target.Integer = &integerptr
+	integer := int(source.Integer)
+	target.Integer = &integer
+	{
+		var zero bool
+		if target.DefaultBool == zero {
+			target.DefaultBool = true
+		}
+	}
 }
 `
 
@@ -741,9 +865,9 @@ const (
 		RequiredString: &source.RequiredString,
 		DefaultBool:    &source.DefaultBool,
 	}
-	if source.Integer != 0 {
-		integerptr := int(source.Integer)
-		target.Integer = &integerptr
+	if source.Integer != nil {
+		integer := int(*source.Integer)
+		target.Integer = &integer
 	}
 }
 `
@@ -810,7 +934,7 @@ const (
 			target.Simple[tk] = tv
 		}
 	}
-	if len(source.Simple) == 0 {
+	if source.Simple == nil {
 		target.Simple = map[string]int{"foo": 1}
 	}
 }
@@ -885,7 +1009,7 @@ const (
 			target.StringArray[i] = val
 		}
 	}
-	if len(source.StringArray) == 0 {
+	if source.StringArray == nil {
 		target.StringArray = []string{"foo", "bar"}
 	}
 }
@@ -902,11 +1026,14 @@ const (
 `
 
 	compositeProtoToCustomFieldSvcCode = `func transform() {
-	target := &CompositeWithCustomField{
-		MyString: source.RequiredString,
-		MyInt:    int(source.DefaultInt),
+	target := &CompositeWithCustomField{}
+	if source.RequiredString != nil {
+		target.MyString = *source.RequiredString
 	}
-	if source.DefaultInt == 0 {
+	if source.DefaultInt != nil {
+		target.MyInt = int(*source.DefaultInt)
+	}
+	if source.DefaultInt == nil {
 		target.MyInt = 100
 	}
 	if source.Type != nil {
@@ -933,10 +1060,8 @@ const (
 	target := &Composite{
 		RequiredString: &source.RequiredString,
 	}
-	if source.DefaultInt != 0 {
-		defaultIntptr := int(source.DefaultInt)
-		target.DefaultInt = &defaultIntptr
-	}
+	defaultInt := int(source.DefaultInt)
+	target.DefaultInt = &defaultInt
 	if source.Type != nil {
 		target.Type = protobufSimpleToSimple(source.Type)
 	}
@@ -959,9 +1084,9 @@ const (
 
 	resultTypeProtoToResultTypeSvcCode = `func transform() {
 	target := &ResultType{}
-	if source.Int != 0 {
-		int_ptr := int(source.Int)
-		target.Int = &int_ptr
+	if source.Int != nil {
+		int_ := int(*source.Int)
+		target.Int = &int_
 	}
 	if source.Map_ != nil {
 		target.Map = make(map[int]string, len(source.Map_))
@@ -980,9 +1105,9 @@ const (
 		target.Collection = make([]*ResultType, len(source.Collection.Field))
 		for i, val := range source.Collection.Field {
 			target.Collection[i] = &ResultType{}
-			if val.Int != 0 {
-				int_ptr := int(val.Int)
-				target.Collection[i].Int = &int_ptr
+			if val.Int != nil {
+				int_ := int(*val.Int)
+				target.Collection[i].Int = &int_
 			}
 			if val.Map_ != nil {
 				target.Collection[i].Map = make(map[int]string, len(val.Map_))
@@ -999,22 +1124,18 @@ const (
 
 	optionalProtoToOptionalSvcCode = `func transform() {
 	target := &Optional{
-		Bytes: source.Bytes_,
-		Any:   source.Any,
+		Float:  source.Float_,
+		String: source.String_,
+		Bytes:  source.Bytes_,
+		Any:    source.Any,
 	}
-	if source.Int != 0 {
-		int_ptr := int(source.Int)
-		target.Int = &int_ptr
+	if source.Int != nil {
+		int_ := int(*source.Int)
+		target.Int = &int_
 	}
-	if source.Uint != 0 {
-		uint_ptr := uint(source.Uint)
-		target.Uint = &uint_ptr
-	}
-	if source.Float_ != 0 {
-		target.Float = &source.Float_
-	}
-	if source.String_ != "" {
-		target.String = &source.String_
+	if source.Uint != nil {
+		uint_ := uint(*source.Uint)
+		target.Uint = &uint_
 	}
 	if source.Array != nil {
 		target.Array = make([]string, len(source.Array))
@@ -1048,21 +1169,35 @@ const (
 		Any:            source.Any,
 		RequiredAny:    source.RequiredAny,
 	}
-	if source.Int == 0 {
-		target.Int = 100
+	{
+		var zero int
+		if target.Int == zero {
+			target.Int = 100
+		}
 	}
-	var zeroSourceRawJSON string
-	if source.RawJson == zeroSourceRawJSON {
-		target.RawJSON = json.RawMessage{0x66, 0x6f, 0x6f}
+	{
+		var zero json.RawMessage
+		if target.RawJSON == zero {
+			target.RawJSON = json.RawMessage{0x66, 0x6f, 0x6f}
+		}
 	}
-	if source.String_ == "" {
-		target.String = "foo"
+	{
+		var zero string
+		if target.String == zero {
+			target.String = "foo"
+		}
 	}
-	if len(source.Bytes_) == 0 {
-		target.Bytes = []byte{0x66, 0x6f, 0x6f, 0x62, 0x61, 0x72}
+	{
+		var zero []byte
+		if target.Bytes == zero {
+			target.Bytes = []byte{0x66, 0x6f, 0x6f, 0x62, 0x61, 0x72}
+		}
 	}
-	if source.Any == nil {
-		target.Any = "something"
+	{
+		var zero string
+		if target.Any == zero {
+			target.Any = "something"
+		}
 	}
 	if source.Array != nil {
 		target.Array = make([]string, len(source.Array))
@@ -1070,7 +1205,7 @@ const (
 			target.Array[i] = val
 		}
 	}
-	if len(source.Array) == 0 {
+	if source.Array == nil {
 		target.Array = []string{"foo", "bar"}
 	}
 	if source.RequiredArray != nil {
@@ -1087,7 +1222,7 @@ const (
 			target.Map[tk] = tv
 		}
 	}
-	if len(source.Map_) == 0 {
+	if source.Map_ == nil {
 		target.Map = map[int]string{1: "foo"}
 	}
 	if source.RequiredMap != nil {
@@ -1115,9 +1250,8 @@ const (
 `
 
 	embeddedOneOfProtoToEmbeddedOneOfSvcCode = `func transform() {
-	target := &EmbeddedOneOf{}
-	if source.String_ != "" {
-		target.String = &source.String_
+	target := &EmbeddedOneOf{
+		String: source.String_,
 	}
 	if source.EmbeddedOneOf != nil {
 		switch val := source.EmbeddedOneOf.(type) {
@@ -1141,9 +1275,8 @@ const (
 `
 
 	recursiveOneOfProtoToRecursiveOneOfSvcCode = `func transform() {
-	target := &RecursiveOneOf{}
-	if source.String_ != "" {
-		target.String = &source.String_
+	target := &RecursiveOneOf{
+		String: source.String_,
 	}
 	if source.RecursiveOneOf != nil {
 		switch val := source.RecursiveOneOf.(type) {

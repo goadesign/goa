@@ -223,7 +223,7 @@ func transformObject(source, target *expr.AttributeExpr, sourceVar, targetVar st
 			case expr.IsUnion(srcc.Type):
 				code, err = transformUnion(srcc, tgtc, srcVar, tgtVar, false, ta)
 			case ok:
-				if ta.TargetCtx.isInterface {
+				if ta.TargetCtx.IsInterface {
 					ref := ta.TargetCtx.Scope.Ref(target, ta.TargetCtx.Pkg(target))
 					tgtVar = targetVar + ".(" + ref + ")." + GoifyAtt(tgtc, tgtMatt.ElemName(n), true)
 				}
@@ -380,7 +380,7 @@ func transformUnion(source, target *expr.AttributeExpr, sourceVar, targetVar str
 	}
 
 	// Need to type assert targetVar before assigning field values.
-	ta.TargetCtx.isInterface = true
+	ta.TargetCtx.IsInterface = true
 
 	data := map[string]interface{}{
 		"SourceTypeRefs": sourceTypeRefs,
@@ -591,7 +591,7 @@ func generateHelper(source, target *expr.AttributeExpr, req bool, ta *TransformA
 
 	// Reset need for type assertion for union types because we are
 	// generating the code to transform the concrete type.
-	ta.TargetCtx.isInterface = false
+	ta.TargetCtx.IsInterface = false
 
 	code, err := transformAttribute(source.Type.(expr.UserType).Attribute(), target, "v", "res", true, ta)
 	if err != nil {
