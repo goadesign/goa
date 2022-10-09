@@ -54,7 +54,6 @@ func (d *dupper) DupAttribute(att *AttributeExpr) *AttributeExpr {
 		Validation:   valDup,
 		Meta:         metaDup,
 		DefaultValue: att.DefaultValue,
-		ZeroValue:    att.ZeroValue,
 		DSLFunc:      att.DSLFunc,
 		UserExamples: att.UserExamples,
 		finalized:    att.finalized,

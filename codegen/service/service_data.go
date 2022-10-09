@@ -1662,7 +1662,7 @@ func buildValidations(projected *expr.AttributeExpr, scope *codegen.NameScope) [
 					})
 					ctx = projectedTypeContext("", !expr.IsPrimitive(projected.Type), scope)
 				}
-				data["Validate"] = codegen.RecursiveValidationCode(&expr.AttributeExpr{Type: o, Validation: rt.Validation}, ctx, true, false, "result")
+				data["Validate"] = codegen.ValidationCode(&expr.AttributeExpr{Type: o, Validation: rt.Validation}, ctx, true, false, "result")
 				data["Fields"] = fields
 			}
 
@@ -1687,7 +1687,7 @@ func buildValidations(projected *expr.AttributeExpr, scope *codegen.NameScope) [
 			Name:        name,
 			Description: fmt.Sprintf("%s runs the validations defined on %s.", name, tname),
 			Ref:         scope.GoTypeRef(projected),
-			Validate:    codegen.RecursiveValidationCode(ut.Attribute(), ctx, true, expr.IsAlias(ut), "result"),
+			Validate:    codegen.ValidationCode(ut.Attribute(), ctx, true, expr.IsAlias(ut), "result"),
 		})
 	}
 	return validations

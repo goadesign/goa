@@ -85,14 +85,14 @@ var UnaryRPCWithErrorsDSL = func() {
 }
 
 var ElemValidationDSL = func() {
-	var ResultType = Type("ResultType", func() {
+	var PayloadType = Type("PayloadType", func() {
 		Field(1, "foo", MapOf(String, ArrayOf(String)), func() {
 			Elem(func() { MinLength(1) })
 		})
 	})
 	Service("ServiceElemValidation", func() {
 		Method("MethodElemValidation", func() {
-			Payload(ResultType)
+			Payload(PayloadType)
 			GRPC(func() {})
 		})
 	})

@@ -72,12 +72,12 @@ func TestClientTypes(t *testing.T) {
 		DSL  func()
 		Code string
 	}{
-		{"mixed-payload-attrs", testdata.MixedPayloadInBodyDSL, MixedPayloadInBodyClientTypesFile},
-		{"multiple-methods", testdata.MultipleMethodsDSL, MultipleMethodsClientTypesFile},
-		{"payload-extend-validate", testdata.PayloadExtendedValidateDSL, PayloadExtendedValidateClientTypesFile},
-		{"result-type-validate", testdata.ResultTypeValidateDSL, ResultTypeValidateClientTypesFile},
-		{"with-result-collection", testdata.ResultWithResultCollectionDSL, WithResultCollectionClientTypesFile},
-		{"empty-error-response-body", testdata.EmptyErrorResponseBodyDSL, EmptyErrorResponseBodyClientTypesFile},
+		{"client-mixed-payload-attrs", testdata.MixedPayloadInBodyDSL, MixedPayloadInBodyClientTypesFile},
+		{"client-multiple-methods", testdata.MultipleMethodsDSL, MultipleMethodsClientTypesFile},
+		{"client-payload-extend-validate", testdata.PayloadExtendedValidateDSL, PayloadExtendedValidateClientTypesFile},
+		{"client-result-type-validate", testdata.ResultTypeValidateDSL, ResultTypeValidateClientTypesFile},
+		{"client-with-result-collection", testdata.ResultWithResultCollectionDSL, WithResultCollectionClientTypesFile},
+		{"client-empty-error-response-body", testdata.EmptyErrorResponseBodyDSL, EmptyErrorResponseBodyClientTypesFile},
 	}
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {

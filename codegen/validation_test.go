@@ -60,7 +60,7 @@ func TestRecursiveValidationCode(t *testing.T) {
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
 			ctx := NewAttributeContext(c.Pointer, false, c.UseDefault, "", scope)
-			code := RecursiveValidationCode(&expr.AttributeExpr{Type: c.Type}, ctx, c.Required, expr.IsAlias(c.Type), "target")
+			code := ValidationCode(&expr.AttributeExpr{Type: c.Type}, ctx, c.Required, expr.IsAlias(c.Type), "target")
 			code = FormatTestCode(t, "package foo\nfunc Validate() (err error){\n"+code+"}")
 			if code != c.Code {
 				t.Errorf("invalid code, got:\n%s\ngot vs. expected:\n%s", code, Diff(t, code, c.Code))

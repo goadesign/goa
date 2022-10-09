@@ -41,8 +41,8 @@ func (p *protoBufScope) Scope() *codegen.NameScope {
 }
 
 // protoBufTypeContext returns a contextual attribute for the protocol buffer type.
-func protoBufTypeContext(pkg string, scope *codegen.NameScope) *codegen.AttributeContext {
-	ctx := codegen.NewAttributeContext(false, true, true, pkg, scope)
+func protoBufTypeContext(pkg string, scope *codegen.NameScope, useDefault bool) *codegen.AttributeContext {
+	ctx := codegen.NewAttributeContext(false, true, useDefault, pkg, scope)
 	ctx.Scope = &protoBufScope{scope: scope}
 	return ctx
 }
@@ -152,6 +152,9 @@ func wrapAttr(att *expr.AttributeExpr, tname string, sd *ServiceData) {
 						Validation: attr.Validation,
 					},
 				},
+			},
+			Validation: &expr.ValidationExpr{
+				Required: []string{"field"},
 			},
 		}
 	}
@@ -298,6 +301,7 @@ func protoBufMessageDef(att *expr.AttributeExpr, sd *ServiceData) string {
 				fn   string
 				fnum uint64
 				typ  string
+				opt  string
 				desc string
 			)
 			{
@@ -308,11 +312,14 @@ func protoBufMessageDef(att *expr.AttributeExpr, sd *ServiceData) string {
 				} else {
 					typ = protoType(nat.Attribute, sd)
 				}
+				if !att.IsRequired(nat.Name) && expr.IsPrimitive(nat.Attribute.Type) {
+					opt = "optional "
+				}
 				if nat.Attribute.Description != "" {
 					desc = codegen.Comment(nat.Attribute.Description) + "\n\t"
 				}
 			}
-			ss = append(ss, fmt.Sprintf("\t%s%s %s = %d;", desc, typ, fn, fnum))
+			ss = append(ss, fmt.Sprintf("\t%s%s%s %s = %d;", desc, opt, typ, fn, fnum))
 		}
 		ss = append(ss, "}")
 		return strings.Join(ss, "\n")
@@ -449,7 +456,7 @@ func protoBufNativeGoTypeName(t expr.DataType) string {
 	case expr.BytesKind:
 		return "[]byte"
 	default:
-		panic(fmt.Sprintf("cannot compute native protocol buffer type for %T", t)) // bug
+		panic(fmt.Sprintf("cannot compute native protocol buffer type for %T %v", t, t)) // bug
 	}
 }
 

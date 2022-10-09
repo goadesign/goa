@@ -52,6 +52,9 @@ func DecodeMethodMessageArrayResponse(ctx context.Context, v interface{}, hdr, t
 	if !ok {
 		return nil, goagrpc.ErrInvalidType("ServiceMessageArray", "MethodMessageArray", "*service_message_arraypb.MethodMessageArrayResponse", v)
 	}
+	if err := ValidateMethodMessageArrayResponse(message); err != nil {
+		return nil, err
+	}
 	res := NewMethodMessageArrayResult(message)
 	return res, nil
 }

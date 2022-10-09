@@ -1042,9 +1042,6 @@ func initAttrFromDesign(att, patt *AttributeExpr) {
 	if att.UserExamples == nil {
 		att.UserExamples = patt.UserExamples
 	}
-	if att.ZeroValue == nil {
-		att.ZeroValue = patt.ZeroValue
-	}
 	if att.Meta == nil {
 		att.Meta = patt.Meta
 	}

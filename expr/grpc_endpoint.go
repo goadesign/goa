@@ -372,15 +372,6 @@ func (e *GRPCEndpointExpr) Finalize() {
 	for _, gerr := range e.GRPCErrors {
 		gerr.Finalize(e)
 	}
-
-	// Set zero value for optional attributes in messages and metadata if not set
-	// already
-	if IsObject(e.Request.Type) {
-		setZero(e.Request)
-	}
-	if IsObject(e.StreamingRequest.Type) {
-		setZero(e.StreamingRequest)
-	}
 }
 
 // validateMessage validates the gRPC message. It compares the given message
@@ -583,52 +574,4 @@ func (e *GRPCEndpointExpr) hasAnyType(a *AttributeExpr, typ string, seen ...map[
 		}
 	}
 	return verr
-}
-
-func setZero(att *AttributeExpr, seen ...map[string]struct{}) {
-	if att.Type == Empty {
-		return
-	}
-	switch dt := att.Type.(type) {
-	case UserType:
-		var s map[string]struct{}
-		if len(seen) > 0 {
-			s = seen[0]
-		} else {
-			s = make(map[string]struct{})
-			seen = append(seen, s)
-		}
-		if _, ok := s[dt.ID()]; ok {
-			return
-		}
-		s[dt.ID()] = struct{}{}
-		setZero(dt.Attribute(), seen...)
-	case *Array:
-		setZero(dt.ElemType, seen...)
-	case *Map:
-		setZero(dt.KeyType, seen...)
-		setZero(dt.ElemType, seen...)
-	case *Object:
-		for _, nat := range *dt {
-			if !att.IsRequired(nat.Name) && nat.Attribute.ZeroValue == nil {
-				nat.Attribute.ZeroValue = zeroValue(nat.Attribute.Type)
-			}
-			setZero(nat.Attribute, seen...)
-		}
-	}
-}
-
-func zeroValue(dt DataType) interface{} {
-	switch dt.Kind() {
-	case BooleanKind:
-		return false
-	case IntKind, Int32Kind, Int64Kind,
-		UIntKind, UInt32Kind, UInt64Kind,
-		Float32Kind, Float64Kind:
-		return 0
-	case StringKind:
-		return ""
-	default:
-		return nil
-	}
 }
