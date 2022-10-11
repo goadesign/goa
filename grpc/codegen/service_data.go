@@ -743,7 +743,8 @@ func addValidation(att *expr.AttributeExpr, attName string, sd *ServiceData, req
 			return n
 		}
 	}
-	if def := codegen.ValidationCode(att, ctx, true, expr.IsAlias(att.Type), attName); def != "" {
+	vtx := protoBufTypeContext(sd.PkgName, sd.Scope, req)
+	if def := codegen.ValidationCode(att, ut, vtx, true, expr.IsAlias(att.Type), attName); def != "" {
 		v := &ValidationData{
 			Name:    "Validate" + name,
 			Def:     def,
@@ -772,7 +773,8 @@ func collectValidations(att *expr.AttributeExpr, attName string, ctx *codegen.At
 			// Alias type - validation is generatd inline in parent type validation code.
 			return
 		}
-		def := codegen.ValidationCode(att, ctx, true, false, attName)
+		vtx := protoBufTypeContext(sd.PkgName, sd.Scope, req)
+		def := codegen.ValidationCode(att, dt, vtx, true, false, attName)
 		name := protoBufMessageName(att, sd.Scope)
 		kind := validateClient
 		if req {
@@ -809,6 +811,10 @@ func collectValidations(att *expr.AttributeExpr, attName string, ctx *codegen.At
 	case *expr.Map:
 		collectValidations(dt.KeyType, "key", ctx, req, sd)
 		collectValidations(dt.ElemType, "val", ctx, req, sd)
+	case *expr.Union:
+		for _, nat := range dt.Values {
+			collectValidations(nat.Attribute, nat.Name, ctx, req, sd)
+		}
 	}
 }
 
@@ -1290,7 +1296,7 @@ func extractMetadata(a *expr.MappedAttributeExpr, service *expr.AttributeExpr, s
 				mp.KeyType.Type.Kind() == expr.StringKind &&
 				mp.ElemType.Type.Kind() == expr.ArrayKind &&
 				expr.AsArray(mp.ElemType.Type).ElemType.Type.Kind() == expr.StringKind,
-			Validate:     codegen.ValidationCode(c, ctx, required, false, varn),
+			Validate:     codegen.ValidationCode(c, nil, ctx, required, false, varn),
 			DefaultValue: c.DefaultValue,
 			Example:      c.Example(expr.Root.API.Random()),
 		})

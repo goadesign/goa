@@ -660,7 +660,7 @@ func (d ServicesData) analyze(hs *expr.HTTPServiceExpr) *ServiceData {
 						var vcode string
 						if att.Validation != nil {
 							ctx := httpContext("", rd.Scope, true, false)
-							vcode = codegen.ValidationCode(att, ctx, true, expr.IsAlias(att.Type), name)
+							vcode = codegen.ValidationCode(att, nil, ctx, true, expr.IsAlias(att.Type), name)
 						}
 						initArgs[j] = &InitArgData{
 							Ref: name,
@@ -1054,7 +1054,7 @@ func buildPayloadData(e *expr.HTTPEndpointExpr, sd *ServiceData) *PayloadData {
 							Type:         pAtt.Type,
 							TypeName:     sd.Scope.GoTypeName(pAtt),
 							TypeRef:      sd.Scope.GoTypeRef(pAtt),
-							Validate:     codegen.ValidationCode(pAtt, httpsvrctx, required, expr.IsAlias(pAtt.Type), varn),
+							Validate:     codegen.ValidationCode(pAtt, nil, httpsvrctx, required, expr.IsAlias(pAtt.Type), varn),
 							DefaultValue: pAtt.DefaultValue,
 							Example:      pAtt.Example(expr.Root.API.Random()),
 						},
@@ -1154,8 +1154,8 @@ func buildPayloadData(e *expr.HTTPEndpointExpr, sd *ServiceData) *PayloadData {
 			)
 			if ut, ok := body.(expr.UserType); ok {
 				if val := ut.Attribute().Validation; val != nil {
-					svcode = codegen.ValidationCode(ut.Attribute(), httpsvrctx, true, expr.IsAlias(ut), "body")
-					cvcode = codegen.ValidationCode(ut.Attribute(), httpclictx, true, expr.IsAlias(ut), "body")
+					svcode = codegen.ValidationCode(ut.Attribute(), ut, httpsvrctx, true, expr.IsAlias(ut), "body")
+					cvcode = codegen.ValidationCode(ut.Attribute(), ut, httpclictx, true, expr.IsAlias(ut), "body")
 				}
 			}
 			serverArgs = []*InitArgData{{
@@ -1288,7 +1288,7 @@ func buildPayloadData(e *expr.HTTPEndpointExpr, sd *ServiceData) *PayloadData {
 							TypeRef:      uref,
 							Type:         uatt.Type,
 							Pointer:      sc.UsernamePointer,
-							Validate:     codegen.ValidationCode(uatt, httpsvrctx, sc.UsernameRequired, expr.IsAlias(uatt.Type), sc.UsernameAttr),
+							Validate:     codegen.ValidationCode(uatt, nil, httpsvrctx, sc.UsernameRequired, expr.IsAlias(uatt.Type), sc.UsernameAttr),
 							Example:      uatt.Example(expr.Root.API.Random()),
 						},
 					}
@@ -1310,7 +1310,7 @@ func buildPayloadData(e *expr.HTTPEndpointExpr, sd *ServiceData) *PayloadData {
 							TypeRef:      pref,
 							Type:         patt.Type,
 							Pointer:      sc.PasswordPointer,
-							Validate:     codegen.ValidationCode(patt, httpsvrctx, sc.PasswordRequired, expr.IsAlias(patt.Type), sc.PasswordAttr),
+							Validate:     codegen.ValidationCode(patt, nil, httpsvrctx, sc.PasswordRequired, expr.IsAlias(patt.Type), sc.PasswordAttr),
 							Example:      patt.Example(expr.Root.API.Random()),
 						},
 					}
@@ -1624,7 +1624,7 @@ func buildResponses(e *expr.HTTPEndpointExpr, result *expr.AttributeExpr, viewed
 							var vcode string
 							if ut, ok := resp.Body.Type.(expr.UserType); ok {
 								if val := ut.Attribute().Validation; val != nil {
-									vcode = codegen.ValidationCode(ut.Attribute(), httpclictx, true, expr.IsAlias(ut), "body")
+									vcode = codegen.ValidationCode(ut.Attribute(), ut, httpclictx, true, expr.IsAlias(ut), "body")
 								}
 							}
 							clientArgs = []*InitArgData{{
@@ -2010,7 +2010,7 @@ func buildRequestBodyType(body, att *expr.AttributeExpr, e *expr.HTTPEndpointExp
 				varname, svc.Name, e.Name())
 			if svr {
 				// generate validation code for unmarshaled type (server-side).
-				validateDef = codegen.ValidationCode(ut.Attribute(), httpctx, true, expr.IsAlias(ut), "body")
+				validateDef = codegen.ValidationCode(ut.Attribute(), ut, httpctx, true, expr.IsAlias(ut), "body")
 				if validateDef != "" {
 					validateRef = fmt.Sprintf("err = Validate%s(&body)", varname)
 				}
@@ -2025,7 +2025,7 @@ func buildRequestBodyType(body, att *expr.AttributeExpr, e *expr.HTTPEndpointExp
 			}
 			varname = sd.Scope.GoTypeRef(body)
 			ctx := codegen.NewAttributeContext(false, false, !svr, "", sd.Scope)
-			validateRef = codegen.ValidationCode(body, ctx, true, expr.IsAlias(body.Type), "body")
+			validateRef = codegen.ValidationCode(body, nil, ctx, true, expr.IsAlias(body.Type), "body")
 			desc = body.Description
 		}
 	}
@@ -2159,7 +2159,7 @@ func buildResponseBodyType(body, att *expr.AttributeExpr, loc *codegen.Location,
 				varname, svc.Name, e.Name())
 			if !svr && view == nil {
 				// generate validation code for unmarshaled type (client-side).
-				validateDef = codegen.ValidationCode(body, httpctx, true, expr.IsAlias(body.Type), "body")
+				validateDef = codegen.ValidationCode(body, ut, httpctx, true, expr.IsAlias(body.Type), "body")
 				if validateDef != "" {
 					target := "&body"
 					if expr.IsArray(ut) {
@@ -2176,12 +2176,12 @@ func buildResponseBodyType(body, att *expr.AttributeExpr, loc *codegen.Location,
 			desc = fmt.Sprintf("%s is the type of the %q service %q endpoint HTTP response body.",
 				varname, svc.Name, e.Name())
 			def = goTypeDef(sd.Scope, body, !svr, svr)
-			validateRef = codegen.ValidationCode(body, httpctx, true, expr.IsAlias(body.Type), "body")
+			validateRef = codegen.ValidationCode(body, nil, httpctx, true, expr.IsAlias(body.Type), "body")
 		} else {
 			// response body is a primitive type. They are used as non-pointers when
 			// encoding/decoding responses.
 			httpctx = httpContext("", sd.Scope, false, true)
-			validateRef = codegen.ValidationCode(body, httpctx, true, expr.IsAlias(body.Type), "body")
+			validateRef = codegen.ValidationCode(body, nil, httpctx, true, expr.IsAlias(body.Type), "body")
 			varname = sd.Scope.GoTypeRef(body)
 			desc = body.Description
 		}
@@ -2333,7 +2333,7 @@ func extractPathParams(a *expr.MappedAttributeExpr, service *expr.AttributeExpr,
 					TypeName:     scope.GoTypeName(c),
 					TypeRef:      scope.GoTypeRef(c),
 					Pointer:      false,
-					Validate:     codegen.ValidationCode(c, ctx, true, expr.IsAlias(c.Type), varn),
+					Validate:     codegen.ValidationCode(c, nil, ctx, true, expr.IsAlias(c.Type), varn),
 					DefaultValue: c.DefaultValue,
 					Example:      c.Example(expr.Root.API.Random()),
 				},
@@ -2398,7 +2398,7 @@ func extractQueryParams(a *expr.MappedAttributeExpr, service *expr.AttributeExpr
 					TypeName:     scope.GoTypeName(c),
 					TypeRef:      typeRef,
 					Pointer:      pointer,
-					Validate:     codegen.ValidationCode(c, ctx, required, expr.IsAlias(c.Type), varn),
+					Validate:     codegen.ValidationCode(c, nil, ctx, required, expr.IsAlias(c.Type), varn),
 					DefaultValue: c.DefaultValue,
 					Example:      c.Example(expr.Root.API.Random()),
 				},
@@ -2465,7 +2465,7 @@ func extractHeaders(a *expr.MappedAttributeExpr, svcAtt *expr.AttributeExpr, svc
 					Required:     required,
 					Pointer:      pointer,
 					Type:         hattr.Type,
-					Validate:     codegen.ValidationCode(hattr, svcCtx, required, expr.IsAlias(hattr.Type), varn),
+					Validate:     codegen.ValidationCode(hattr, nil, svcCtx, required, expr.IsAlias(hattr.Type), varn),
 					DefaultValue: hattr.DefaultValue,
 					Example:      hattr.Example(expr.Root.API.Random()),
 				},
@@ -2521,7 +2521,7 @@ func extractCookies(a *expr.MappedAttributeExpr, svcAtt *expr.AttributeExpr, svc
 					Required:     required,
 					Pointer:      pointer,
 					Type:         hattr.Type,
-					Validate:     codegen.ValidationCode(hattr, svcCtx, required, expr.IsAlias(hattr.Type), varn),
+					Validate:     codegen.ValidationCode(hattr, nil, svcCtx, required, expr.IsAlias(hattr.Type), varn),
 					DefaultValue: hattr.DefaultValue,
 					Example:      hattr.Example(expr.Root.API.Random()),
 				},
@@ -2611,7 +2611,7 @@ func attributeTypeData(ut expr.UserType, req, ptr, server bool, rd *ServiceData)
 		if req || !req && !server {
 			// generate validations for responses client-side and for
 			// requests server-side and CLI
-			validate = codegen.ValidationCode(ut.Attribute(), hctx, true, expr.IsAlias(ut), "body")
+			validate = codegen.ValidationCode(ut.Attribute(), ut, hctx, true, expr.IsAlias(ut), "body")
 		}
 		if validate != "" {
 			validateRef = fmt.Sprintf("err = Validate%s(v)", name)

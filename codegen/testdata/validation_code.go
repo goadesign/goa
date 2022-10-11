@@ -235,29 +235,29 @@ const (
 
 	AliasTypeValidationCode = `func Validate() (err error) {
 	if target.RequiredAlias != nil {
-		err = goa.MergeErrors(err, goa.ValidatePattern("target", string(*target.RequiredAlias), "^[A-z].*[a-z]$"))
+		err = goa.MergeErrors(err, goa.ValidatePattern("target.required_alias", string(*target.RequiredAlias), "^[A-z].*[a-z]$"))
 	}
 	if target.RequiredAlias != nil {
 		if utf8.RuneCountInString(string(*target.RequiredAlias)) < 1 {
-			err = goa.MergeErrors(err, goa.InvalidLengthError("target", string(*target.RequiredAlias), utf8.RuneCountInString(string(*target.RequiredAlias)), 1, true))
+			err = goa.MergeErrors(err, goa.InvalidLengthError("target.required_alias", string(*target.RequiredAlias), utf8.RuneCountInString(string(*target.RequiredAlias)), 1, true))
 		}
 	}
 	if target.RequiredAlias != nil {
 		if utf8.RuneCountInString(string(*target.RequiredAlias)) > 10 {
-			err = goa.MergeErrors(err, goa.InvalidLengthError("target", string(*target.RequiredAlias), utf8.RuneCountInString(string(*target.RequiredAlias)), 10, false))
+			err = goa.MergeErrors(err, goa.InvalidLengthError("target.required_alias", string(*target.RequiredAlias), utf8.RuneCountInString(string(*target.RequiredAlias)), 10, false))
 		}
 	}
 	if target.Alias != nil {
-		err = goa.MergeErrors(err, goa.ValidatePattern("target", string(*target.Alias), "^[A-z].*[a-z]$"))
+		err = goa.MergeErrors(err, goa.ValidatePattern("target.alias", string(*target.Alias), "^[A-z].*[a-z]$"))
 	}
 	if target.Alias != nil {
 		if utf8.RuneCountInString(string(*target.Alias)) < 1 {
-			err = goa.MergeErrors(err, goa.InvalidLengthError("target", string(*target.Alias), utf8.RuneCountInString(string(*target.Alias)), 1, true))
+			err = goa.MergeErrors(err, goa.InvalidLengthError("target.alias", string(*target.Alias), utf8.RuneCountInString(string(*target.Alias)), 1, true))
 		}
 	}
 	if target.Alias != nil {
 		if utf8.RuneCountInString(string(*target.Alias)) > 10 {
-			err = goa.MergeErrors(err, goa.InvalidLengthError("target", string(*target.Alias), utf8.RuneCountInString(string(*target.Alias)), 10, false))
+			err = goa.MergeErrors(err, goa.InvalidLengthError("target.alias", string(*target.Alias), utf8.RuneCountInString(string(*target.Alias)), 10, false))
 		}
 	}
 }
@@ -449,6 +449,56 @@ const (
 	}
 }
 `
+	UnionValidationCode = `func Validate() (err error) {
+	if target.RequiredUnion == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("required_union", "target"))
+	}
+	switch v := target.RequiredUnion.(type) {
+	case *Union_Int:
+		if v.Int != nil {
+			if err2 := ValidateInteger(v.Int); err2 != nil {
+				err = goa.MergeErrors(err, err2)
+			}
+		}
+
+	case *Union_Float:
+		if v.Float != nil {
+			if err2 := ValidateFloat(v.Float); err2 != nil {
+				err = goa.MergeErrors(err, err2)
+			}
+		}
+
+	case *Union_String:
+		if v.String != nil {
+			if err2 := ValidateString(v.String); err2 != nil {
+				err = goa.MergeErrors(err, err2)
+			}
+		}
+	}
+	switch v := target.Union.(type) {
+	case *Union_Int:
+		if v.Int != nil {
+			if err2 := ValidateInteger(v.Int); err2 != nil {
+				err = goa.MergeErrors(err, err2)
+			}
+		}
+
+	case *Union_Float:
+		if v.Float != nil {
+			if err2 := ValidateFloat(v.Float); err2 != nil {
+				err = goa.MergeErrors(err, err2)
+			}
+		}
+
+	case *Union_String:
+		if v.String != nil {
+			if err2 := ValidateString(v.String); err2 != nil {
+				err = goa.MergeErrors(err, err2)
+			}
+		}
+	}
+}
+`
 
 	ResultTypePointerValidationCode = `func Validate() (err error) {
 	if target.Required != nil {
@@ -471,8 +521,10 @@ const (
 `
 
 	TypeWithCollectionPointerValidationCode = `func Validate() (err error) {
-	if err2 := ValidateResultCollection(target.Collection); err2 != nil {
-		err = goa.MergeErrors(err, err2)
+	if target.Collection != nil {
+		if err2 := ValidateResultCollection(target.Collection); err2 != nil {
+			err = goa.MergeErrors(err, err2)
+		}
 	}
 }
 `
