@@ -23,13 +23,12 @@ var (
 
 // Hash returns a hash value for the given data type. Two types have the same
 // hash if:
-//    - both types have the same kind
-//    - array types have elements whose types have the same hash
-//    - map types have keys and elements whose types have the same hash
-//    - user types have the same name if ignoreNames is false or ignoreFields is true
-//    - user types have the same attribute names and the attribute types have the same hash if ignoreFields is false
-//    - object attributes have the same "struct:field:xxx" tags if ignoreTags is false
-//
+//   - both types have the same kind
+//   - array types have elements whose types have the same hash
+//   - map types have keys and elements whose types have the same hash
+//   - user types have the same name if ignoreNames is false or ignoreFields is true
+//   - user types have the same attribute names and the attribute types have the same hash if ignoreFields is false
+//   - object attributes have the same "struct:field:xxx" tags if ignoreTags is false
 func Hash(dt DataType, ignoreFields, ignoreNames, ignoreTags bool) string {
 	return *hash(dt, ignoreFields, ignoreNames, ignoreTags, make(map[*Object]*string))
 }

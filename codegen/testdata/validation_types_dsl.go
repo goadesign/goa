@@ -116,6 +116,20 @@ var ValidationTypesDSL = func() {
 			Required("required_map")
 		})
 
+		_ = Type("Union", func() {
+			OneOf("required_union", func() {
+				Attribute("int", IntegerT)
+				Attribute("float", FloatT)
+				Attribute("string", StringT)
+			})
+			OneOf("union", func() {
+				Attribute("int", IntegerT)
+				Attribute("float", FloatT)
+				Attribute("string", StringT)
+			})
+			Required("required_union")
+		})
+
 		Result = ResultType("application/vnd.goa.result", func() {
 			TypeName("Result")
 			Attributes(func() {

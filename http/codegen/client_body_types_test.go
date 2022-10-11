@@ -677,8 +677,10 @@ func ValidateMethodResultWithResultCollectionResponseBody(body *MethodResultWith
 // ValidateResulttypeResponseBody runs the validations defined on
 // ResulttypeResponseBody
 func ValidateResulttypeResponseBody(body *ResulttypeResponseBody) (err error) {
-	if err2 := ValidateRtCollectionResponseBody(body.X); err2 != nil {
-		err = goa.MergeErrors(err, err2)
+	if body.X != nil {
+		if err2 := ValidateRtCollectionResponseBody(body.X); err2 != nil {
+			err = goa.MergeErrors(err, err2)
+		}
 	}
 	return
 }

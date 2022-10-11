@@ -20,6 +20,7 @@ func TestRecursiveValidationCode(t *testing.T) {
 		arrayUT  = root.UserType("ArrayUserType")
 		arrayT   = root.UserType("Array")
 		mapT     = root.UserType("Map")
+		unionT   = root.UserType("Union")
 		rtT      = root.UserType("Result")
 		rtcolT   = root.UserType("Collection")
 		colT     = root.UserType("TypeWithCollection")
@@ -52,6 +53,7 @@ func TestRecursiveValidationCode(t *testing.T) {
 		{"map-required", mapT, true, false, false, testdata.MapRequiredValidationCode},
 		{"map-pointer", mapT, false, true, false, testdata.MapPointerValidationCode},
 		{"map-use-default", mapT, false, false, true, testdata.MapUseDefaultValidationCode},
+		{"union", unionT, true, false, false, testdata.UnionValidationCode},
 		{"result-type-pointer", rtT, false, true, false, testdata.ResultTypePointerValidationCode},
 		{"collection-required", rtcolT, true, false, false, testdata.ResultCollectionPointerValidationCode},
 		{"collection-pointer", rtcolT, false, true, false, testdata.ResultCollectionPointerValidationCode},
@@ -60,7 +62,7 @@ func TestRecursiveValidationCode(t *testing.T) {
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
 			ctx := NewAttributeContext(c.Pointer, false, c.UseDefault, "", scope)
-			code := ValidationCode(&expr.AttributeExpr{Type: c.Type}, ctx, c.Required, expr.IsAlias(c.Type), "target")
+			code := ValidationCode(&expr.AttributeExpr{Type: c.Type}, nil, ctx, c.Required, expr.IsAlias(c.Type), "target")
 			code = FormatTestCode(t, "package foo\nfunc Validate() (err error){\n"+code+"}")
 			if code != c.Code {
 				t.Errorf("invalid code, got:\n%s\ngot vs. expected:\n%s", code, Diff(t, code, c.Code))
