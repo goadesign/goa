@@ -66,14 +66,14 @@ func makeProtoBufMessage(att *expr.AttributeExpr, tname string, sd *ServiceData)
 		}
 		return att
 	case expr.IsPrimitive(att.Type):
-		wrapAttr(att, tname, sd)
+		wrapAttr(att, tname, true, sd)
 		return att
 	case isut:
 		if expr.IsArray(ut) {
-			wrapAttr(att, tname, sd)
+			wrapAttr(att, tname, false, sd)
 		}
 	case expr.IsArray(att.Type) || expr.IsMap(att.Type):
-		wrapAttr(att, tname, sd)
+		wrapAttr(att, tname, false, sd)
 	case expr.IsObject(att.Type) || expr.IsUnion(att.Type):
 		att.Type = &expr.UserTypeExpr{
 			TypeName:      tname,
@@ -102,12 +102,12 @@ func makeProtoBufMessageR(att *expr.AttributeExpr, tname *string, sd *ServiceDat
 		switch {
 		case expr.IsArray(att.Type):
 			wrapAttr(att, "ArrayOf"+tname+
-				protoBufify(protoBufMessageDef(expr.AsArray(att.Type).ElemType, sd), true, true), sd)
+				protoBufify(protoBufMessageDef(expr.AsArray(att.Type).ElemType, sd), true, true), true, sd)
 		case expr.IsMap(att.Type):
 			m := expr.AsMap(att.Type)
 			wrapAttr(att, tname+"MapOf"+
 				protoBufify(protoBufMessageDef(m.KeyType, sd), true, true)+
-				protoBufify(protoBufMessageDef(m.ElemType, sd), true, true), sd)
+				protoBufify(protoBufMessageDef(m.ElemType, sd), true, true), true, sd)
 		}
 	}
 
@@ -116,7 +116,7 @@ func makeProtoBufMessageR(att *expr.AttributeExpr, tname *string, sd *ServiceDat
 		return
 	case isut:
 		if expr.IsArray(ut) {
-			wrapAttr(ut.Attribute(), ut.Name(), sd)
+			wrapAttr(ut.Attribute(), ut.Name(), false, sd)
 		}
 		makeProtoBufMessageR(ut.Attribute(), tname, sd, seen)
 	case expr.IsArray(att.Type):
@@ -140,9 +140,9 @@ func makeProtoBufMessageR(att *expr.AttributeExpr, tname *string, sd *ServiceDat
 
 // wrapAttr makes the attribute type a user type by wrapping the given
 // attribute into an attribute named "field".
-func wrapAttr(att *expr.AttributeExpr, tname string, sd *ServiceData) {
+func wrapAttr(att *expr.AttributeExpr, tname string, req bool, sd *ServiceData) {
 	wrap := func(attr *expr.AttributeExpr) *expr.AttributeExpr {
-		return &expr.AttributeExpr{
+		res := &expr.AttributeExpr{
 			Type: &expr.Object{
 				&expr.NamedAttributeExpr{
 					Name: "field",
@@ -153,10 +153,13 @@ func wrapAttr(att *expr.AttributeExpr, tname string, sd *ServiceData) {
 					},
 				},
 			},
-			Validation: &expr.ValidationExpr{
-				Required: []string{"field"},
-			},
 		}
+		if req {
+			res.Validation = &expr.ValidationExpr{
+				Required: []string{"field"},
+			}
+		}
+		return res
 	}
 	switch dt := att.Type.(type) {
 	case expr.UserType:
