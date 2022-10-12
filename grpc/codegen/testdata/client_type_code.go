@@ -183,35 +183,6 @@ func NewMethodResultWithCollectionResult(message *service_result_with_collection
 	return result
 }
 
-// ValidateMethodResultWithCollectionResponse runs the validations defined on
-// MethodResultWithCollectionResponse.
-func ValidateMethodResultWithCollectionResponse(message *service_result_with_collectionpb.MethodResultWithCollectionResponse) (err error) {
-	if message.Result != nil {
-		if err2 := ValidateResultT(message.Result); err2 != nil {
-			err = goa.MergeErrors(err, err2)
-		}
-	}
-	return
-}
-
-// ValidateResultT runs the validations defined on ResultT.
-func ValidateResultT(result *service_result_with_collectionpb.ResultT) (err error) {
-	if result.CollectionField != nil {
-		if err2 := ValidateRTCollection(result.CollectionField); err2 != nil {
-			err = goa.MergeErrors(err, err2)
-		}
-	}
-	return
-}
-
-// ValidateRTCollection runs the validations defined on RTCollection.
-func ValidateRTCollection(collectionField *service_result_with_collectionpb.RTCollection) (err error) {
-	if collectionField.Field == nil {
-		err = goa.MergeErrors(err, goa.MissingFieldError("field", "collectionField"))
-	}
-	return
-}
-
 // svcServiceresultwithcollectionResultTToServiceResultWithCollectionpbResultT
 // builds a value of type *service_result_with_collectionpb.ResultT from a
 // value of type *serviceresultwithcollection.ResultT.
