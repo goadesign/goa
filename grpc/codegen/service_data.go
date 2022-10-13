@@ -743,7 +743,7 @@ func addValidation(att *expr.AttributeExpr, attName string, sd *ServiceData, req
 			return n
 		}
 	}
-	vtx := protoBufTypeContext(sd.PkgName, sd.Scope, req)
+	vtx := protoBufTypeContext(sd.PkgName, sd.Scope, false)
 	if def := codegen.ValidationCode(att, ut, vtx, true, expr.IsAlias(att.Type), attName); def != "" {
 		v := &ValidationData{
 			Name:    "Validate" + name,
@@ -773,7 +773,7 @@ func collectValidations(att *expr.AttributeExpr, attName string, ctx *codegen.At
 			// Alias type - validation is generatd inline in parent type validation code.
 			return
 		}
-		vtx := protoBufTypeContext(sd.PkgName, sd.Scope, req)
+		vtx := protoBufTypeContext(sd.PkgName, sd.Scope, false)
 		def := codegen.ValidationCode(att, dt, vtx, true, false, attName)
 		name := protoBufMessageName(att, sd.Scope)
 		kind := validateClient
