@@ -82,3 +82,32 @@ func (c *Client) BuildMethodPathStringDefaultRequest(ctx context.Context, v inte
 	return req, nil
 }
 `
+
+const PathObjectRequestBuildCode = `// BuildMethodPathObjectRequest instantiates a HTTP request object with method
+// and path set to call the "ServicePathObject" service "MethodPathObject"
+// endpoint
+func (c *Client) BuildMethodPathObjectRequest(ctx context.Context, v interface{}) (*http.Request, error) {
+	var (
+		id string
+	)
+	{
+		p, ok := v.(*servicepathobject.MethodPathObjectPayload)
+		if !ok {
+			return nil, goahttp.ErrInvalidType("ServicePathObject", "MethodPathObject", "*servicepathobject.MethodPathObjectPayload", v)
+		}
+		if p.ID != nil {
+			id = *p.ID
+		}
+	}
+	u := &url.URL{Scheme: c.scheme, Host: c.host, Path: MethodPathObjectServicePathObjectPath(id)}
+	req, err := http.NewRequest("PUT", u.String(), nil)
+	if err != nil {
+		return nil, goahttp.ErrInvalidURL("ServicePathObject", "MethodPathObject", u.String(), err)
+	}
+	if ctx != nil {
+		req = req.WithContext(ctx)
+	}
+
+	return req, nil
+}
+`

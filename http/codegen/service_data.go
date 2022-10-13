@@ -656,6 +656,10 @@ func (d ServicesData) analyze(hs *expr.HTTPServiceExpr) *ServiceData {
 						patt := pathParamsObj.Attribute(arg)
 						att := makeHTTPType(patt)
 						pointer := a.Params.IsPrimitivePointer(arg, true)
+						if expr.IsObject(a.MethodExpr.Payload.Type) {
+							// Path params may override requiredness, need to check payload.
+							pointer = a.MethodExpr.Payload.IsPrimitivePointer(arg, true)
+						}
 						name := rd.Scope.Name(codegen.Goify(arg, false))
 						var vcode string
 						if att.Validation != nil {

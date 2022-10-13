@@ -1454,6 +1454,23 @@ var PayloadPathStringDefaultDSL = func() {
 	})
 }
 
+var PayloadPathObjectDSL = func() {
+	Service("ServicePathObject", func() {
+		Method("MethodPathObject", func() {
+			Payload(func() {
+				Attribute("id")
+			})
+			HTTP(func() {
+				PUT("/{id}")
+				Params(func() {
+					Param("id")
+					Required("id")
+				})
+			})
+		})
+	})
+}
+
 var PayloadPathArrayStringDSL = func() {
 	Service("ServicePathArrayString", func() {
 		Method("MethodPathArrayString", func() {

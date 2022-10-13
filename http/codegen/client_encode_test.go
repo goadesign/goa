@@ -209,6 +209,7 @@ func TestClientBuildRequest(t *testing.T) {
 		{"path-string", testdata.PayloadPathStringDSL, testdata.PathStringRequestBuildCode},
 		{"path-string-required", testdata.PayloadPathStringValidateDSL, testdata.PathStringRequiredRequestBuildCode},
 		{"path-string-default", testdata.PayloadPathStringDefaultDSL, testdata.PathStringDefaultRequestBuildCode},
+		{"path-object", testdata.PayloadPathObjectDSL, testdata.PathObjectRequestBuildCode},
 	}
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
