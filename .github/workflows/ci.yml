@@ -43,7 +43,7 @@ jobs:
         test_format: TEXT
         test_framework: GOLANG
         coverage_format: GOLANG
-        coverage_path: coverage.out
+        coverage_path: ./coverage.out
 
   Windows:
     name: Windows
