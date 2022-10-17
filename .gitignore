@@ -1,6 +1,7 @@
 # Golang tools artifacts
 **/*.test
 coverage.out
+test-report.json
 
 # Executables and test outputs
 cmd/goa/goa

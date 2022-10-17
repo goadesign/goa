@@ -28,7 +28,10 @@ jobs:
       run: make ci
       env:
         GOA_BRANCH: ${{ steps.extract_branch.outputs.branch }}
-    
+
+    - name: Compute code coverage
+      run: go test -v -json ./... > ./test-report.json || true 
+
     - name: Collect Workflow Telemetry
       uses: runforesight/foresight-workflow-kit-action@v1
       if: success() || failure()
@@ -40,10 +43,9 @@ jobs:
       if: success() || failure()
       with:
         api_key: ${{ secrets.FORESIGHT_API_KEY }}
-        test_format: TEXT
+        test_format: JSON
         test_framework: GOLANG
-        coverage_format: GOLANG
-        coverage_path: coverage.out
+        test_path: "./test-report.json"
 
   Windows:
     name: Windows
