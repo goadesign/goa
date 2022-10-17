@@ -25,7 +25,7 @@ jobs:
       id: setup_path
 
     - name: Build
-      run: make travis
+      run: make ci
       env:
         GOA_BRANCH: ${{ steps.extract_branch.outputs.branch }}
     
@@ -43,6 +43,7 @@ jobs:
         test_format: TEXT
         test_framework: GOLANG
         coverage_format: GOLANG
+        coverage_path: coverage.out
 
   Windows:
     name: Windows
@@ -69,6 +70,6 @@ jobs:
       id: setup_path
 
     - name: Build
-      run: make travis
+      run: make ci
       env:
         GOA_BRANCH: ${{ steps.extract_branch.outputs.branch }}

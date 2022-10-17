@@ -23,13 +23,13 @@ GOPATH=$(shell go env GOPATH)
 # Only list test and build dependencies
 # Standard dependencies are installed via go get
 DEPEND=\
-	google.golang.org/protobuf/cmd/protoc-gen-go@v1.28.0 \
-	google.golang.org/grpc/cmd/protoc-gen-go-grpc@v1.2.0 \
-	honnef.co/go/tools/cmd/staticcheck@v0.3.2
+	google.golang.org/protobuf/cmd/protoc-gen-go@latest \
+	google.golang.org/grpc/cmd/protoc-gen-go-grpc@latest \
+	honnef.co/go/tools/cmd/staticcheck@latest
 
 all: lint test
 
-travis: depend all #test-examples test-plugins
+ci: depend all
 
 # Install protoc
 PROTOC_VERSION=21.2
@@ -70,7 +70,7 @@ ifneq ($(GOOS),windows)
 endif
 
 test:
-	go test ./...
+	go test ./... -coverprofile coverage.out
 
 release: release-goa release-examples release-plugins
 

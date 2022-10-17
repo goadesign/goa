@@ -1,6 +1,6 @@
 # Golang tools artifacts
-**/*.coverprofile
 **/*.test
+coverage.out
 
 # Executables and test outputs
 cmd/goa/goa
