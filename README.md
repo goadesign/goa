@@ -2,11 +2,11 @@
 
 ## Overview
 
-[![Build Status](https://github.com/goadesign/goa/workflows/build/badge.svg?branch=v3&event=push)](https://github.com/goadesign/goa/actions?query=branch%3Av3+event%3Apush)
-[![GoDev](https://img.shields.io/badge/go.dev-reference-007d9c?logo=go&logoColor=white&style=flat-square)](https://pkg.go.dev/goa.design/goa/v3@v3.10.1/dsl?tab=doc)
+[![Foresight](https://api-public.service.runforesight.com/api/v1/badge/test?repoId=67defc2e-b3f8-4043-bac7-a4e215518ed3)](https://docs.runforesight.com/)
 [![Go Report Card](https://goreportcard.com/badge/goadesign/goa)](https://goreportcard.com/report/goadesign/goa)
-[![Slack](https://img.shields.io/badge/join-us%20on%20slack-gray.svg?longCache=true&logo=slack&colorB=red)](https://gophers.slack.com/messages/goa)
-[![Twitter](https://img.shields.io/twitter/url/https/twitter.com/goadesign.svg?style=social&label=Follow%20%40goadesign)](https://twitter.com/goadesign)
+[![GoDev](https://img.shields.io/badge/go-reference-007d9c?logo=go&logoColor=white&style=flat-square)](https://pkg.go.dev/goa.design/goa/v3@v3.10.1/dsl?tab=doc)
+[![Slack](https://img.shields.io/badge/slack-gray.svg?longCache=true&logo=slack&colorB=red)](https://gophers.slack.com/messages/goa)
+[![Twitter](https://img.shields.io/twitter/url/https/twitter.com/goadesign.svg?style=social&label=)](https://twitter.com/goadesign)
 
 Goa takes a different approach to building services by making it possible to
 describe the *design* of the service API using a simple Go DSL. Goa uses the
@@ -46,8 +46,6 @@ invoking the client code.
 ```bash
 go install goa.design/goa/v3/cmd/goa@v3
 ```
-
->Note: Goa requires the use of Go modules.
 
 Current Release: `v3.10.1`
 
