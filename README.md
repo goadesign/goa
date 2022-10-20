@@ -2,11 +2,11 @@
 
 ## Overview
 
-[![Foresight](https://api-public.service.runforesight.com/api/v1/badge/test?repoId=67defc2e-b3f8-4043-bac7-a4e215518ed3)](https://docs.runforesight.com/)
-[![Go Report Card](https://goreportcard.com/badge/goadesign/goa)](https://goreportcard.com/report/goadesign/goa)
 [![GoDev](https://img.shields.io/badge/go-reference-007d9c?logo=go&logoColor=white&style=flat-square)](https://pkg.go.dev/goa.design/goa/v3@v3.10.1/dsl?tab=doc)
-[![Slack](https://img.shields.io/badge/slack-gray.svg?longCache=true&logo=slack&colorB=red)](https://gophers.slack.com/messages/goa)
-[![Twitter](https://img.shields.io/twitter/url/https/twitter.com/goadesign.svg?style=social&label=)](https://twitter.com/goadesign)
+[![Foresight](https://api-public.service.runforesight.com/api/v1/badge/test?repoId=67defc2e-b3f8-4043-bac7-a4e215518ed3)](http://goa.app.runforesight.com/)
+[![Go Report Card](https://goreportcard.com/badge/goadesign/goa)](https://goreportcard.com/report/goadesign/goa)
+[![Slack](https://img.shields.io/badge/Slack-gray.svg?longCache=true&logo=slack&colorB=red)](https://gophers.slack.com/messages/goa)
+[![Twitter](https://img.shields.io/twitter/url/https/twitter.com/goadesign.svg?style=social)](https://twitter.com/goadesign)
 
 Goa takes a different approach to building services by making it possible to
 describe the *design* of the service API using a simple Go DSL. Goa uses the
@@ -29,6 +29,31 @@ The Goa DSL consists of Go functions so that it may be extended easily to avoid
 repetition and promote standards. The design code itself can easily be shared
 across multiple services by simply importing the corresponding Go package again
 promoting reuse and standardization across services.
+
+## Sponsors
+
+<table width="100%">
+<tr>
+<td>
+  <img width="1000" height="0">
+  <a href="https://www.runforesight.com/?utm_source=mathjs&utm_medium=sponsorship">
+  <img src="https://www.thundra.io/hubfs/RunForesight/GitHub%20Sponsorship%20banners/power-up-github.png"
+alt="Foresight" width="260" align="right">
+  </a>
+
+<h3>Foresight: Increase CI/CD Health & Test Performance</h3>
+
+  <p>
+Foresight provides full visibility and deep insights into the health
+and performance of your tests and CI pipelines. Assess the risk of
+changes, resolve bottlenecks, reduce build times, and deliver
+high-quality software at speed with Foresight.
+  </p>
+
+[Sign up now!](https://runforesight.com/?utm_source=mathjs&utm_medium=sponsorship)
+</td>
+</tr>
+</table>
 
 ## Code Generation
 
