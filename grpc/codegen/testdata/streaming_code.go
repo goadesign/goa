@@ -12,7 +12,7 @@ var ServerStreamingServerSendCode = `// Send streams instances of
 // "service_server_streaming_user_type_rpcpb.MethodServerStreamingUserTypeRPCResponse"
 // to the "MethodServerStreamingUserTypeRPC" endpoint gRPC stream.
 func (s *MethodServerStreamingUserTypeRPCServerStream) Send(res *serviceserverstreamingusertyperpc.UserType) error {
-	v := NewProtoMethodServerStreamingUserTypeRPCResponse(res)
+	v := NewProtoUserTypeMethodServerStreamingUserTypeRPCResponse(res)
 	return s.stream.Send(v)
 }
 `
@@ -40,7 +40,7 @@ func (s *MethodServerStreamingUserTypeRPCClientStream) Recv() (*serviceserverstr
 	if err != nil {
 		return res, err
 	}
-	return NewUserType(v), nil
+	return NewMethodServerStreamingUserTypeRPCResponseUserType(v), nil
 }
 `
 
@@ -58,7 +58,7 @@ var ServerStreamingResultWithViewsServerSendCode = `// Send streams instances of
 // to the "MethodServerStreamingUserTypeRPC" endpoint gRPC stream.
 func (s *MethodServerStreamingUserTypeRPCServerStream) Send(res *serviceserverstreamingusertyperpc.ResultType) error {
 	vres := serviceserverstreamingusertyperpc.NewViewedResultType(res, s.view)
-	v := NewProtoMethodServerStreamingUserTypeRPCResponse(vres.Projected)
+	v := NewProtoResultTypeViewMethodServerStreamingUserTypeRPCResponse(vres.Projected)
 	return s.stream.Send(v)
 }
 `
@@ -87,7 +87,7 @@ func (s *MethodServerStreamingUserTypeRPCClientStream) Recv() (*serviceserverstr
 	if err != nil {
 		return res, err
 	}
-	proj := NewResultTypeView(v)
+	proj := NewMethodServerStreamingUserTypeRPCResponseResultTypeView(v)
 	vres := &serviceserverstreamingusertyperpcviews.ResultType{Projected: proj, View: s.view}
 	if err := serviceserverstreamingusertyperpcviews.ValidateResultType(vres); err != nil {
 		return nil, err
@@ -108,7 +108,7 @@ var ServerStreamingResultCollectionWithExplicitViewServerSendCode = `// Send str
 // gRPC stream.
 func (s *MethodServerStreamingResultTypeCollectionWithExplicitViewServerStream) Send(res serviceserverstreamingresulttypecollectionwithexplicitview.ResultTypeCollection) error {
 	vres := serviceserverstreamingresulttypecollectionwithexplicitview.NewViewedResultTypeCollection(res, "tiny")
-	v := NewProtoResultTypeCollection(vres.Projected)
+	v := NewProtoResultTypeCollectionViewResultTypeCollection(vres.Projected)
 	return s.stream.Send(v)
 }
 `
@@ -123,7 +123,7 @@ func (s *MethodServerStreamingResultTypeCollectionWithExplicitViewClientStream) 
 	if err != nil {
 		return res, err
 	}
-	proj := NewResultTypeCollection(v)
+	proj := NewResultTypeCollectionResultTypeCollection(v)
 	vres := serviceserverstreamingresulttypecollectionwithexplicitviewviews.ResultTypeCollection{Projected: proj, View: "tiny"}
 	if err := serviceserverstreamingresulttypecollectionwithexplicitviewviews.ValidateResultTypeCollection(vres); err != nil {
 		return nil, err
@@ -150,7 +150,7 @@ func (s *MethodServerStreamingRPCClientStream) Recv() (string, error) {
 	if err != nil {
 		return res, err
 	}
-	return NewMethodServerStreamingRPCResponse(v), nil
+	return NewMethodServerStreamingRPCResponseMethodServerStreamingRPCResponse(v), nil
 }
 `
 
@@ -172,7 +172,7 @@ func (s *MethodServerStreamingArrayClientStream) Recv() ([]int, error) {
 	if err != nil {
 		return res, err
 	}
-	return NewMethodServerStreamingArrayResponse(v), nil
+	return NewMethodServerStreamingArrayResponseMethodServerStreamingArrayResponse(v), nil
 }
 `
 
@@ -194,7 +194,32 @@ func (s *MethodServerStreamingMapClientStream) Recv() (map[string]*serviceserver
 	if err != nil {
 		return res, err
 	}
-	return NewMethodServerStreamingMapResponse(v), nil
+	return NewMethodServerStreamingMapResponseMethodServerStreamingMapResponse(v), nil
+}
+`
+
+var ServerStreamingServerRPCSharedResultRecvCode = `// Recv reads instances of
+// "service_server_streaming_rpcpb.MethodServerStreamingRPCResponse" from the
+// "MethodServerStreamingRPC" endpoint gRPC stream.
+func (s *MethodServerStreamingRPCClientStream) Recv() (*serviceserverstreamingrpc.UserType, error) {
+	var res *serviceserverstreamingrpc.UserType
+	v, err := s.stream.Recv()
+	if err != nil {
+		return res, err
+	}
+	return NewMethodServerStreamingRPCResponseUserType(v), nil
+}
+
+// Recv reads instances of
+// "service_server_streaming_rpcpb.OtherMethodServerStreamingRPCResponse" from
+// the "OtherMethodServerStreamingRPC" endpoint gRPC stream.
+func (s *OtherMethodServerStreamingRPCClientStream) Recv() (*serviceserverstreamingrpc.UserType, error) {
+	var res *serviceserverstreamingrpc.UserType
+	v, err := s.stream.Recv()
+	if err != nil {
+		return res, err
+	}
+	return NewOtherMethodServerStreamingRPCResponseUserType(v), nil
 }
 `
 
@@ -223,7 +248,7 @@ func (s *MethodClientStreamingRPCServerStream) Recv() (int, error) {
 	if err != nil {
 		return res, err
 	}
-	return NewMethodClientStreamingRPCStreamingRequest(v), nil
+	return NewMethodClientStreamingRPCStreamingRequestMethodClientStreamingRPCStreamingRequest(v), nil
 }
 `
 
@@ -252,7 +277,7 @@ func (s *MethodClientStreamingRPCClientStream) CloseAndRecv() (string, error) {
 	if err != nil {
 		return res, err
 	}
-	return NewMethodClientStreamingRPCResponse(v), nil
+	return NewMethodClientStreamingRPCResponseMethodClientStreamingRPCResponse(v), nil
 }
 `
 
@@ -283,7 +308,7 @@ var BidirectionalStreamingServerSendCode = `// Send streams instances of
 // to the "MethodBidirectionalStreamingRPC" endpoint gRPC stream.
 func (s *MethodBidirectionalStreamingRPCServerStream) Send(res *servicebidirectionalstreamingrpc.ID) error {
 	vres := servicebidirectionalstreamingrpc.NewViewedID(res, "default")
-	v := NewProtoMethodBidirectionalStreamingRPCResponse(vres.Projected)
+	v := NewProtoIDViewMethodBidirectionalStreamingRPCResponse(vres.Projected)
 	return s.stream.Send(v)
 }
 `
@@ -297,7 +322,7 @@ func (s *MethodBidirectionalStreamingRPCServerStream) Recv() (int, error) {
 	if err != nil {
 		return res, err
 	}
-	return NewMethodBidirectionalStreamingRPCStreamingRequest(v), nil
+	return NewMethodBidirectionalStreamingRPCStreamingRequestMethodBidirectionalStreamingRPCStreamingRequest(v), nil
 }
 `
 
@@ -334,7 +359,7 @@ func (s *MethodBidirectionalStreamingRPCClientStream) Recv() (*servicebidirectio
 	if err != nil {
 		return res, err
 	}
-	proj := NewIDView(v)
+	proj := NewMethodBidirectionalStreamingRPCResponseIDView(v)
 	vres := &servicebidirectionalstreamingrpcviews.ID{Projected: proj, View: "default"}
 	if err := servicebidirectionalstreamingrpcviews.ValidateID(vres); err != nil {
 		return nil, err

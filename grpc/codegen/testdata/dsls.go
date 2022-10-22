@@ -179,6 +179,22 @@ var ServerStreamingMapDSL = func() {
 	})
 }
 
+var ServerStreamingSharedResultRPCDSL = func() {
+	var UT = Type("UserType", func() {
+		Field(1, "IntField", Int)
+	})
+	Service("ServiceServerStreamingRPC", func() {
+		Method("MethodServerStreamingRPC", func() {
+			StreamingResult(UT)
+			GRPC(func() {})
+		})
+		Method("OtherMethodServerStreamingRPC", func() {
+			StreamingResult(UT)
+			GRPC(func() {})
+		})
+	})
+}
+
 var ServerStreamingResultWithViewsDSL = func() {
 	var RT = ResultType("application/vnd.result", func() {
 		TypeName("ResultType")

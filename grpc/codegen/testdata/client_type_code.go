@@ -297,7 +297,7 @@ func ValidateMethodUnaryRPCWithErrorsBadRequestError(errmsg *service_unary_rpc_w
 }
 `
 
-const BidirectionalStreamingRPCSameTypeClientTypeCode = `func NewUserType(v *service_bidirectional_streaming_rpc_same_typepb.MethodBidirectionalStreamingRPCSameTypeResponse) *servicebidirectionalstreamingrpcsametype.UserType {
+const BidirectionalStreamingRPCSameTypeClientTypeCode = `func NewMethodBidirectionalStreamingRPCSameTypeResponseUserType(v *service_bidirectional_streaming_rpc_same_typepb.MethodBidirectionalStreamingRPCSameTypeResponse) *servicebidirectionalstreamingrpcsametype.UserType {
 	result := &servicebidirectionalstreamingrpcsametype.UserType{
 		B: v.B,
 	}
@@ -308,7 +308,7 @@ const BidirectionalStreamingRPCSameTypeClientTypeCode = `func NewUserType(v *ser
 	return result
 }
 
-func NewProtoMethodBidirectionalStreamingRPCSameTypeStreamingRequest(spayload *servicebidirectionalstreamingrpcsametype.UserType) *service_bidirectional_streaming_rpc_same_typepb.MethodBidirectionalStreamingRPCSameTypeStreamingRequest {
+func NewProtoUserTypeMethodBidirectionalStreamingRPCSameTypeStreamingRequest(spayload *servicebidirectionalstreamingrpcsametype.UserType) *service_bidirectional_streaming_rpc_same_typepb.MethodBidirectionalStreamingRPCSameTypeStreamingRequest {
 	v := &service_bidirectional_streaming_rpc_same_typepb.MethodBidirectionalStreamingRPCSameTypeStreamingRequest{
 		B: spayload.B,
 	}
