@@ -67,6 +67,9 @@ func TestStreaming(t *testing.T) {
 			{"server-stream-send", &testdata.ServerStreamingMapServerSendCode},
 			{"client-stream-recv", &testdata.ServerStreamingMapClientRecvCode},
 		}},
+		{"server-streaming-shared-result", testdata.ServerStreamingSharedResultRPCDSL, []*sectionExpectation{
+			{"client-stream-recv", &testdata.ServerStreamingServerRPCSharedResultRecvCode},
+		}},
 
 		// streaming payload
 
@@ -112,7 +115,6 @@ func TestStreaming(t *testing.T) {
 			}
 			for _, s := range c.Sections {
 				var (
-					code     string
 					path     string
 					sections []*codegen.SectionTemplate
 				)
@@ -124,8 +126,9 @@ func TestStreaming(t *testing.T) {
 					path = clientfs[0].Path
 				}
 				seclen := len(sections)
-				if seclen > 0 {
-					code = codegen.SectionCode(t, sections[0])
+				var code []string
+				for _, section := range sections {
+					code = append(code, codegen.SectionCode(t, section))
 				}
 				switch {
 				case seclen == 0 && s.Code == nil:
@@ -137,8 +140,9 @@ func TestStreaming(t *testing.T) {
 					// Test failed: section exists in file, but no code expected.
 					t.Errorf("invalid code for %s: got %d %s sections, expected 0.\n%s", path, seclen, s.Name, code)
 				default:
-					if code != *s.Code {
-						t.Errorf("invalid code for %s %s section, got:\n%s\ngot vs. expected:\n%s", path, s.Name, code, codegen.Diff(t, code, *s.Code))
+					gen := strings.Join(code, "\n")
+					if gen != *s.Code {
+						t.Errorf("invalid code for %s %s section, got:\n%s\ngot vs. expected:\n%s", path, s.Name, gen, codegen.Diff(t, gen, *s.Code))
 					}
 				}
 			}

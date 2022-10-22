@@ -308,7 +308,6 @@ func PayloadBuilderSection(buildFunction *BuildFunctionData) *codegen.SectionTem
 // description is the flag description
 // required determines if the flag is required
 // example is an example value for the flag
-//
 func NewFlagData(svcn, en, name, typeName, description string, required bool, example, def interface{}) *FlagData {
 	ex := jsonExample(example)
 	fn := goifyTerms(svcn, en, name)
