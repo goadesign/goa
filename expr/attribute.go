@@ -198,6 +198,9 @@ func (a *AttributeExpr) Validate(ctx string, parent eval.Expression) *eval.Valid
 		ctx += " - "
 	}
 	verr.Merge(a.validateEnumDefault(ctx, parent))
+	if v := a.Validation; v != nil {
+		verr.Merge(v.Validate(ctx, parent))
+	}
 	if o := AsObject(a.Type); o != nil {
 		for _, n := range a.AllRequired() {
 			if a.Find(n) == nil {
@@ -736,6 +739,35 @@ func (a *AttributeExpr) shouldInherit(parent *AttributeExpr) bool {
 // EvalName returns the name used by the DSL evaluation.
 func (a *ExampleExpr) EvalName() string {
 	return `example "` + a.Summary + `"`
+}
+
+// Validate validates the validation expression.
+func (v *ValidationExpr) Validate(ctx string, parent eval.Expression) *eval.ValidationErrors {
+	verr := new(eval.ValidationErrors)
+	hasMin, hasMax := v.Minimum != nil, v.Maximum != nil
+	hasExclusiveMin, hasExclusiveMax := v.ExclusiveMinimum != nil, v.ExclusiveMaximum != nil
+	if hasMin && hasExclusiveMin {
+		verr.Add(parent, "%sboth minimum and exclusive minimum are defined", ctx)
+	}
+	if hasMax && hasExclusiveMax {
+		verr.Add(parent, "%sboth maximum and exclusive maximum are defined", ctx)
+	}
+	if hasMin && hasMax && *v.Minimum > *v.Maximum {
+		verr.Add(parent, "%sminimum is greater than maximum", ctx)
+	}
+	if hasMin && hasExclusiveMax && *v.Minimum >= *v.ExclusiveMaximum {
+		verr.Add(parent, "%sminimum is greater than or equal to exclusive maximum", ctx)
+	}
+	if hasExclusiveMin && hasExclusiveMax && *v.ExclusiveMinimum > *v.ExclusiveMaximum {
+		verr.Add(parent, "%sexclusive minimum is greater than exclusive maximum", ctx)
+	}
+	if hasExclusiveMin && hasMax && *v.ExclusiveMinimum >= *v.Maximum {
+		verr.Add(parent, "%sexclusive minimum is greater than or equal to maximum", ctx)
+	}
+	if v.MinLength != nil && v.MaxLength != nil && *v.MinLength > *v.MaxLength {
+		verr.Add(parent, "%smin length is greater than max length", ctx)
+	}
+	return verr
 }
 
 // Merge merges other into v.
