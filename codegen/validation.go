@@ -287,7 +287,6 @@ func validationCode(att *expr.AttributeExpr, attCtx *AttributeContext, req, alia
 	if exclMin := validation.ExclusiveMinimum; exclMin != nil {
 		data["exclMin"] = *exclMin
 		data["isExclMin"] = true
-		delete(data, "exclMax")
 		if val := runTemplate(exclMinMaxValT, data); val != "" {
 			res = append(res, val)
 		}
@@ -295,7 +294,6 @@ func validationCode(att *expr.AttributeExpr, attCtx *AttributeContext, req, alia
 	if min := validation.Minimum; min != nil {
 		data["min"] = *min
 		data["isMin"] = true
-		delete(data, "max")
 		if val := runTemplate(minMaxValT, data); val != "" {
 			res = append(res, val)
 		}
@@ -303,7 +301,6 @@ func validationCode(att *expr.AttributeExpr, attCtx *AttributeContext, req, alia
 	if exclMax := validation.ExclusiveMaximum; exclMax != nil {
 		data["exclMax"] = *exclMax
 		data["isExclMax"] = true
-		delete(data, "exclMax")
 		if val := runTemplate(exclMinMaxValT, data); val != "" {
 			res = append(res, val)
 		}
@@ -311,7 +308,6 @@ func validationCode(att *expr.AttributeExpr, attCtx *AttributeContext, req, alia
 	if max := validation.Maximum; max != nil {
 		data["max"] = *max
 		data["isMin"] = false
-		delete(data, "min")
 		if val := runTemplate(minMaxValT, data); val != "" {
 			res = append(res, val)
 		}
@@ -530,7 +526,7 @@ if !({{ oneof .targetVal .values }}) {
 
 	exclMinMaxValTmpl = `{{ if .isPointer }}if {{ .target }} != nil {
 {{ end -}}
-        if {{ .targetVal }} {{ if .isExclMin }}<{{ else }}>{{ end }} {{ if .isExclMin }}{{ .exclMin }}{{ else }}{{ .exclMax }}{{ end }} {
+        if {{ .targetVal }} {{ if .isExclMin }}<={{ else }}>={{ end }} {{ if .isExclMin }}{{ .exclMin }}{{ else }}{{ .exclMax }}{{ end }} {
         err = goa.MergeErrors(err, goa.InvalidRangeError({{ printf "%q" .context }}, {{ .targetVal }}, {{ if .isExclMin }}{{ .exclMin }}, true{{ else }}{{ .exclMax }}, false{{ end }}))
 {{ if .isPointer -}}
 }

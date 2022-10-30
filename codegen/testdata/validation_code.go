@@ -16,12 +16,12 @@ const (
 		}
 	}
 	if target.ExclusiveInteger != nil {
-		if *target.ExclusiveInteger < 1 {
+		if *target.ExclusiveInteger <= 1 {
 			err = goa.MergeErrors(err, goa.InvalidRangeError("target.exclusive_integer", *target.ExclusiveInteger, 1, true))
 		}
 	}
 	if target.ExclusiveInteger != nil {
-		if *target.ExclusiveInteger < 1 {
+		if *target.ExclusiveInteger <= 1 {
 			err = goa.MergeErrors(err, goa.InvalidRangeError("target.exclusive_integer", *target.ExclusiveInteger, 1, true))
 		}
 	}
@@ -48,12 +48,12 @@ const (
 		}
 	}
 	if target.ExclusiveInteger != nil {
-		if *target.ExclusiveInteger < 1 {
+		if *target.ExclusiveInteger <= 1 {
 			err = goa.MergeErrors(err, goa.InvalidRangeError("target.exclusive_integer", *target.ExclusiveInteger, 1, true))
 		}
 	}
 	if target.ExclusiveInteger != nil {
-		if *target.ExclusiveInteger < 1 {
+		if *target.ExclusiveInteger <= 1 {
 			err = goa.MergeErrors(err, goa.InvalidRangeError("target.exclusive_integer", *target.ExclusiveInteger, 1, true))
 		}
 	}
@@ -73,12 +73,12 @@ const (
 		}
 	}
 	if target.ExclusiveInteger != nil {
-		if *target.ExclusiveInteger < 1 {
+		if *target.ExclusiveInteger <= 1 {
 			err = goa.MergeErrors(err, goa.InvalidRangeError("target.exclusive_integer", *target.ExclusiveInteger, 1, true))
 		}
 	}
 	if target.ExclusiveInteger != nil {
-		if *target.ExclusiveInteger < 1 {
+		if *target.ExclusiveInteger <= 1 {
 			err = goa.MergeErrors(err, goa.InvalidRangeError("target.exclusive_integer", *target.ExclusiveInteger, 1, true))
 		}
 	}
@@ -100,12 +100,12 @@ const (
 		}
 	}
 	if target.ExclusiveFloat64 != nil {
-		if *target.ExclusiveFloat64 < 1 {
+		if *target.ExclusiveFloat64 <= 1 {
 			err = goa.MergeErrors(err, goa.InvalidRangeError("target.exclusive_float64", *target.ExclusiveFloat64, 1, true))
 		}
 	}
 	if target.ExclusiveFloat64 != nil {
-		if *target.ExclusiveFloat64 < 1 {
+		if *target.ExclusiveFloat64 <= 1 {
 			err = goa.MergeErrors(err, goa.InvalidRangeError("target.exclusive_float64", *target.ExclusiveFloat64, 1, true))
 		}
 	}
@@ -132,12 +132,12 @@ const (
 		}
 	}
 	if target.ExclusiveFloat64 != nil {
-		if *target.ExclusiveFloat64 < 1 {
+		if *target.ExclusiveFloat64 <= 1 {
 			err = goa.MergeErrors(err, goa.InvalidRangeError("target.exclusive_float64", *target.ExclusiveFloat64, 1, true))
 		}
 	}
 	if target.ExclusiveFloat64 != nil {
-		if *target.ExclusiveFloat64 < 1 {
+		if *target.ExclusiveFloat64 <= 1 {
 			err = goa.MergeErrors(err, goa.InvalidRangeError("target.exclusive_float64", *target.ExclusiveFloat64, 1, true))
 		}
 	}
@@ -157,12 +157,12 @@ const (
 		}
 	}
 	if target.ExclusiveFloat64 != nil {
-		if *target.ExclusiveFloat64 < 1 {
+		if *target.ExclusiveFloat64 <= 1 {
 			err = goa.MergeErrors(err, goa.InvalidRangeError("target.exclusive_float64", *target.ExclusiveFloat64, 1, true))
 		}
 	}
 	if target.ExclusiveFloat64 != nil {
-		if *target.ExclusiveFloat64 < 1 {
+		if *target.ExclusiveFloat64 <= 1 {
 			err = goa.MergeErrors(err, goa.InvalidRangeError("target.exclusive_float64", *target.ExclusiveFloat64, 1, true))
 		}
 	}
