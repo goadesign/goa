@@ -34,7 +34,7 @@ jobs:
         GOA_BRANCH: ${{ steps.extract_branch.outputs.branch }}
 
     - name: Compute code coverage
-      run: go test -v -json -coverprofile=coverage.out ./... > .\test-report.json || true 
+      run: go test -v -json -coverprofile=coverage.out ./... > ./test-report.json || true 
 
     - name: Analyze Test and/or Coverage Results
       uses: runforesight/foresight-test-kit-action@v1
