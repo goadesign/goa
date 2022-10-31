@@ -4,7 +4,7 @@ go 1.19
 
 require (
 	github.com/dimfeld/httppath v0.0.0-20170720192232-ee938bf73598
-	github.com/dimfeld/httptreemux/v5 v5.4.0
+	github.com/dimfeld/httptreemux/v5 v5.5.0
 	github.com/getkin/kin-openapi v0.107.0
 	github.com/google/uuid v1.3.0
 	github.com/gorilla/websocket v1.5.0
