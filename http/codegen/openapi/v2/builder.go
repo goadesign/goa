@@ -474,7 +474,7 @@ func buildPathFromFileServer(s *V2, root *expr.RootExpr, fs *expr.HTTPFileServer
 			}
 		}
 
-		tagNames := openapi.TagNamesFromExpr(fs.Service.Meta, fs.Meta)
+		tagNames := openapi.TagNamesFromExpr(fs.Meta)
 		if len(tagNames) == 0 {
 			// By default tag with service name
 			tagNames = []string{fs.Service.Name()}
@@ -510,7 +510,7 @@ func buildPathFromFileServer(s *V2, root *expr.RootExpr, fs *expr.HTTPFileServer
 func buildPathFromExpr(s *V2, root *expr.RootExpr, h *expr.HostExpr, route *expr.RouteExpr, basePath string) {
 	endpoint := route.Endpoint
 
-	tagNames := openapi.TagNamesFromExpr(endpoint.Service.Meta, endpoint.Meta)
+	tagNames := openapi.TagNamesFromExpr(endpoint.Meta)
 	if len(tagNames) == 0 {
 		// By default tag with service name
 		tagNames = []string{route.Endpoint.Service.Name()}

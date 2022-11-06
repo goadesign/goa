@@ -43,4 +43,10 @@ components:
             example:
                 string: ""
 tags:
-    - name: testService
+    - description: Description of Backend
+      externalDocs:
+        description: See more docs here
+        url: http://example.com
+      name: Backend
+      x-data:
+        foo: bar
