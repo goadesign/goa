@@ -9,9 +9,7 @@ paths:
     /{int_map}:
         post:
             tags:
-                - Service
-                - Endpoint
-                - Service
+                - SomeTag
             summary: test endpoint test service
             operationId: test service#test endpoint
             parameters:
@@ -28,10 +26,13 @@ paths:
                     description: No Content response.
 components: {}
 tags:
-    - name: Endpoint
+    - name: AnotherTag
       description: Endpoint description
       externalDocs:
         description: ""
         url: Endpoint URL
-    - name: Service
-      description: Overwritten service description
+    - name: SomeTag
+      description: Endpoint description
+      externalDocs:
+        description: ""
+        url: Endpoint URL

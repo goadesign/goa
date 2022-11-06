@@ -536,19 +536,17 @@ var PathWithWildcardDSL = func() {
 var WithTagsDSL = func() {
 	Service("test service", func() {
 		HTTP(func() {
-			Meta("openapi:tag:Service")
-			Meta("openapi:tag:Service:desc", "Service description")
+			Meta("openapi:tag:SomeTag:desc", "Endpoint description")
+			Meta("openapi:tag:SomeTag:url", "Endpoint URL")
+			Meta("openapi:tag:AnotherTag:desc", "Endpoint description")
+			Meta("openapi:tag:AnotherTag:url", "Endpoint URL")
 		})
 		Method("test endpoint", func() {
 			Payload(func() {
 				Attribute("int_map", Int)
 			})
 			HTTP(func() {
-				Meta("openapi:tag:Service")
-				Meta("openapi:tag:Service:desc", "Overwritten service description")
-				Meta("openapi:tag:Endpoint")
-				Meta("openapi:tag:Endpoint:desc", "Endpoint description")
-				Meta("openapi:tag:Endpoint:url", "Endpoint URL")
+				Meta("openapi:tag:SomeTag")
 				POST("/{*int_map}")
 			})
 		})
@@ -558,9 +556,7 @@ var WithTagsDSL = func() {
 			})
 			HTTP(func() {
 				Meta("openapi:generate", "false")
-				Meta("openapi:tag:AnotherEndpoint")
-				Meta("openapi:tag:AnotherEndpoint:desc", "Endpoint description")
-				Meta("openapi:tag:AnotherEndpoint:url", "Endpoint URL")
+				Meta("openapi:tag:AnotherTag")
 				POST("/{*int_map}")
 			})
 		})
@@ -568,7 +564,6 @@ var WithTagsDSL = func() {
 	Service("another test service", func() {
 		Meta("openapi:generate", "false")
 		HTTP(func() {
-			Meta("openapi:tag:AnotherService")
 			Meta("openapi:tag:AnotherService:desc", "Another service description")
 		})
 		Method("another test endpoint", func() {
@@ -576,6 +571,7 @@ var WithTagsDSL = func() {
 				Attribute("int_map", Int)
 			})
 			HTTP(func() {
+				Meta("openapi:tag:AnotherService")
 				POST("/{*int_map}")
 			})
 		})
@@ -585,19 +581,17 @@ var WithTagsDSL = func() {
 var WithTagsSwaggerDSL = func() {
 	Service("test service", func() {
 		HTTP(func() {
-			Meta("swagger:tag:Service")
-			Meta("swagger:tag:Service:desc", "Service description")
+			Meta("swagger:tag:SomeTag:desc", "Endpoint description")
+			Meta("swagger:tag:SomeTag:url", "Endpoint URL")
+			Meta("swagger:tag:AnotherTag:desc", "Endpoint description")
+			Meta("swagger:tag:AnotherTag:url", "Endpoint URL")
 		})
 		Method("test endpoint", func() {
 			Payload(func() {
 				Attribute("int_map", Int)
 			})
 			HTTP(func() {
-				Meta("swagger:tag:Service")
-				Meta("swagger:tag:Service:desc", "Overwritten service description")
-				Meta("swagger:tag:Endpoint")
-				Meta("swagger:tag:Endpoint:desc", "Endpoint description")
-				Meta("swagger:tag:Endpoint:url", "Endpoint URL")
+				Meta("swagger:tag:SomeTag")
 				POST("/{*int_map}")
 			})
 		})
@@ -607,9 +601,7 @@ var WithTagsSwaggerDSL = func() {
 			})
 			HTTP(func() {
 				Meta("swagger:generate", "false")
-				Meta("swagger:tag:AnotherEndpoint")
-				Meta("swagger:tag:AnotherEndpoint:desc", "Endpoint description")
-				Meta("swagger:tag:AnotherEndpoint:url", "Endpoint URL")
+				Meta("swagger:tag:AnotherTag")
 				POST("/{*int_map}")
 			})
 		})
@@ -617,7 +609,6 @@ var WithTagsSwaggerDSL = func() {
 	Service("another test service", func() {
 		Meta("swagger:generate", "false")
 		HTTP(func() {
-			Meta("swagger:tag:AnotherService")
 			Meta("swagger:tag:AnotherService:desc", "Another service description")
 		})
 		Method("another test endpoint", func() {
@@ -625,6 +616,7 @@ var WithTagsSwaggerDSL = func() {
 				Attribute("int_map", Int)
 			})
 			HTTP(func() {
+				Meta("swagger:tag:AnotherService")
 				POST("/{*int_map}")
 			})
 		})
