@@ -139,7 +139,7 @@ func initWebSocketData(ed *EndpointData, e *expr.HTTPEndpointExpr, sd *ServiceDa
 								TypeRef:  sd.Scope.GoTypeRef(e.StreamingBody),
 								Type:     e.StreamingBody.Type,
 								Required: true,
-								Example:  e.Body.Example(expr.Root.API.Random()),
+								Example:  e.Body.Example(expr.Root.API.ExampleGenerator),
 								Validate: svcode,
 							},
 						}}

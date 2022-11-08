@@ -298,7 +298,7 @@ func TestHashAttribute(t *testing.T) {
 		{"result-same", newRT("id", newObj("foo", expr.Int, true)), h5},
 	}
 	h := fnv.New64()
-	sf := newSchemafier(expr.NewRandom("test"))
+	sf := newSchemafier(expr.NewRandomExampleGenerator("test"))
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
 			got := sf.hashAttribute(c.att, h)

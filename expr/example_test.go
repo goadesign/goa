@@ -21,7 +21,7 @@ func TestByPattern(t *testing.T) {
 		{"max-len", "foo.*", 9},
 		{"max-len-2", "^/api/example/[0-9]+$", 19},
 	}
-	r := expr.NewRandom("test")
+	r := expr.NewRandomExampleGenerator("test")
 	for _, k := range cases {
 		t.Run(k.Name, func(t *testing.T) {
 			val := &expr.ValidationExpr{Pattern: k.Pattern}
@@ -42,7 +42,7 @@ func TestByPattern(t *testing.T) {
 func TestByFormatUUID(t *testing.T) {
 	val := &expr.ValidationExpr{Format: expr.FormatUUID}
 	att := expr.AttributeExpr{Validation: val}
-	r := expr.NewRandom("test")
+	r := expr.NewRandomExampleGenerator("test")
 	example := att.Example(r).(string)
 	if !regexp.MustCompile(`[0-9A-F]{8}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{12}`).MatchString(example) {
 		t.Errorf("got %s, expected a match with `[0-9A-F]{8}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{12}`", example)
@@ -67,7 +67,7 @@ func TestExample(t *testing.T) {
 		{"hiding-example", testdata.HidingExampleDSL, nil, ""},
 		{"overriding-hidden-examples", testdata.OverridingHiddenExamplesDSL, "example", ""},
 	}
-	r := expr.NewRandom("test")
+	r := expr.NewRandomExampleGenerator("test")
 	for _, k := range cases {
 		t.Run(k.Name, func(t *testing.T) {
 			if k.Error == "" {

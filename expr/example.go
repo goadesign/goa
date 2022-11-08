@@ -17,7 +17,7 @@ const (
 // Example returns the example set on the attribute at design time. If there
 // isn't such a value then Example computes a random value for the attribute
 // using the given random value producer.
-func (a *AttributeExpr) Example(r *Random) interface{} {
+func (a *AttributeExpr) Example(r *ExampleGenerator) interface{} {
 	if ex := a.ExtractUserExamples(); len(ex) > 0 {
 		// Return the last item in the slice so that examples can be overridden
 		// in the DSL. Overridden examples are always appended to the UserExamples
@@ -80,7 +80,7 @@ func (a *AttributeExpr) Example(r *Random) interface{} {
 
 // NewLength returns an int that validates the generator attribute length
 // validations if any.
-func NewLength(a *AttributeExpr, r *Random) int {
+func NewLength(a *AttributeExpr, r *ExampleGenerator) int {
 	if hasLengthValidation(a) {
 		minlength, maxlength := math.Inf(1), math.Inf(-1)
 		if a.Validation.MinLength != nil {
@@ -91,15 +91,15 @@ func NewLength(a *AttributeExpr, r *Random) int {
 		}
 		count := 0
 		if math.IsInf(minlength, 1) {
-			count = int(maxlength) - (r.Int() % 3)
+			count = int(maxlength) - r.ArrayLength()
 		} else if math.IsInf(maxlength, -1) {
-			count = int(minlength) + (r.Int() % 3)
+			count = int(minlength) + r.ArrayLength()
 		} else if minlength < maxlength {
 			diff := int(maxlength - minlength)
 			if diff > maxLength {
 				diff = maxLength
 			}
-			count = int(minlength) + (r.Int() % diff)
+			count = int(minlength) + (r.ArrayLength() % diff)
 		} else if minlength == maxlength {
 			count = int(minlength)
 		} else {
@@ -110,7 +110,7 @@ func NewLength(a *AttributeExpr, r *Random) int {
 		}
 		return count
 	}
-	return r.Int()%3 + 2
+	return r.ArrayLength()
 }
 
 func hasLengthValidation(a *AttributeExpr) bool {
@@ -143,13 +143,13 @@ func hasMinMaxValidation(a *AttributeExpr) bool {
 }
 
 // byLength generates a random size array of examples based on what's given.
-func byLength(a *AttributeExpr, r *Random) interface{} {
+func byLength(a *AttributeExpr, r *ExampleGenerator) interface{} {
 	count := NewLength(a, r)
 	switch a.Type.Kind() {
 	case StringKind:
-		return r.faker.Characters(count)
+		return r.Characters(count)
 	case BytesKind:
-		return []byte(r.faker.Characters(count))
+		return []byte(r.Characters(count))
 	case MapKind:
 		raw := make(map[interface{}]interface{})
 		m := a.Type.(*Map)
@@ -170,7 +170,7 @@ func byLength(a *AttributeExpr, r *Random) interface{} {
 }
 
 // byEnum returns a random selected enum value.
-func byEnum(a *AttributeExpr, r *Random) interface{} {
+func byEnum(a *AttributeExpr, r *ExampleGenerator) interface{} {
 	if !hasEnumValidation(a) {
 		return nil
 	}
@@ -181,20 +181,20 @@ func byEnum(a *AttributeExpr, r *Random) interface{} {
 }
 
 // byFormat returns a random example based on the format the user asks.
-func byFormat(a *AttributeExpr, r *Random) interface{} {
+func byFormat(a *AttributeExpr, r *ExampleGenerator) interface{} {
 	if !hasFormatValidation(a) {
 		return nil
 	}
 	format := a.Validation.Format
 	if res, ok := map[ValidationFormat]interface{}{
-		FormatEmail:    r.faker.Email(),
-		FormatHostname: r.faker.DomainName() + "." + r.faker.DomainSuffix(),
+		FormatEmail:    r.Email(),
+		FormatHostname: r.Hostname(),
 		FormatDate:     time.Unix(int64(r.Int())%1454957045, 0).UTC().Format("2006-01-02"), // to obtain a "fixed" rand
 		FormatDateTime: time.Unix(int64(r.Int())%1454957045, 0).UTC().Format(time.RFC3339), // to obtain a "fixed" rand
-		FormatIPv4:     r.faker.IPv4Address().String(),
-		FormatIPv6:     r.faker.IPv6Address().String(),
-		FormatIP:       r.faker.IPv4Address().String(),
-		FormatURI:      r.faker.URL(),
+		FormatIPv4:     r.IPv4Address().String(),
+		FormatIPv6:     r.IPv6Address().String(),
+		FormatIP:       r.IPv4Address().String(),
+		FormatURI:      r.URL(),
 		FormatMAC: func() string {
 			res, err := regen.Generate(`([0-9A-F]{2}-){5}[0-9A-F]{2}`)
 			if err != nil {
@@ -203,7 +203,7 @@ func byFormat(a *AttributeExpr, r *Random) interface{} {
 			return res
 		}(),
 		FormatCIDR:    "192.168.100.14/24",
-		FormatRegexp:  r.faker.Characters(3) + ".*",
+		FormatRegexp:  r.Characters(3) + ".*",
 		FormatRFC1123: time.Unix(int64(r.Int())%1454957045, 0).UTC().Format(time.RFC1123), // to obtain a "fixed" rand
 		FormatUUID: func() string {
 			res, err := regen.Generate(`[0-9A-F]{8}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{12}`)
@@ -222,19 +222,19 @@ func byFormat(a *AttributeExpr, r *Random) interface{} {
 // byPattern generates a random value that satisfies the pattern.
 //
 // Note: if multiple patterns are given, only one of them is used.
-func byPattern(a *AttributeExpr, r *Random) interface{} {
+func byPattern(a *AttributeExpr, r *ExampleGenerator) interface{} {
 	if !hasPatternValidation(a) {
 		return false
 	}
 	pattern := a.Validation.Pattern
 	gen, err := regen.NewGenerator(pattern, &regen.GeneratorArgs{MaxUnboundedRepeatCount: 6})
 	if err != nil {
-		return r.faker.Name()
+		return r.Name()
 	}
 	return gen.Generate()
 }
 
-func byMinMax(a *AttributeExpr, r *Random) interface{} {
+func byMinMax(a *AttributeExpr, r *ExampleGenerator) interface{} {
 	if !hasMinMaxValidation(a) {
 		return nil
 	}

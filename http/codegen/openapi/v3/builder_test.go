@@ -207,7 +207,7 @@ func TestBuildOperation(t *testing.T) {
 				}
 			}
 
-			op := buildOperation(c.Name, route, bodies, expr.NewRandom(c.Name))
+			op := buildOperation(c.Name, route, bodies, expr.NewRandomExampleGenerator(c.Name))
 
 			if op.Description != c.ExpectedDescription {
 				t.Errorf("got description %q for method %q, expected %q", op.Description, c.Name, c.ExpectedDescription)
@@ -291,7 +291,7 @@ func TestBuildOperationID(t *testing.T) {
 				if s.Name() == svcName {
 					for _, e := range s.HTTPEndpoints {
 						for i, r := range e.Routes {
-							op := buildOperation(c.Name, r, &EndpointBodies{}, expr.NewRandom(c.Name))
+							op := buildOperation(c.Name, r, &EndpointBodies{}, expr.NewRandomExampleGenerator(c.Name))
 
 							if len(c.ExpectedOperationIDs) == 0 {
 								t.Error("no expected operation IDs")

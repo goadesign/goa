@@ -912,7 +912,7 @@ func buildMethodData(m *expr.MethodExpr, scope *codegen.NameScope) *MethodData {
 			payloadDesc = fmt.Sprintf("%s is the payload type of the %s service %s method.",
 				payloadName, m.Service.Name, m.Name)
 		}
-		payloadEx = m.Payload.Example(expr.Root.API.Random())
+		payloadEx = m.Payload.Example(expr.Root.API.ExampleGenerator)
 	}
 	if m.Result.Type != expr.Empty {
 		rname = scope.GoTypeName(m.Result)
@@ -926,7 +926,7 @@ func buildMethodData(m *expr.MethodExpr, scope *codegen.NameScope) *MethodData {
 			resultDesc = fmt.Sprintf("%s is the result type of the %s service %s method.",
 				rname, m.Service.Name, m.Name)
 		}
-		resultEx = m.Result.Example(expr.Root.API.Random())
+		resultEx = m.Result.Example(expr.Root.API.ExampleGenerator)
 	}
 	if len(m.Errors) > 0 {
 		errors = make([]*ErrorInitData, len(m.Errors))
@@ -1002,7 +1002,7 @@ func initStreamData(data *MethodData, m *expr.MethodExpr, vname, rname, resultRe
 			spayloadDesc = fmt.Sprintf("%s is the streaming payload type of the %s service %s method.",
 				spayloadName, m.Service.Name, m.Name)
 		}
-		spayloadEx = m.StreamingPayload.Example(expr.Root.API.Random())
+		spayloadEx = m.StreamingPayload.Example(expr.Root.API.ExampleGenerator)
 	}
 	svrStream := &StreamData{
 		Interface:      vname + "ServerStream",

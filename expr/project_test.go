@@ -7,7 +7,7 @@ import (
 )
 
 var (
-	testrand = NewRandom("test")
+	testrand = NewRandomExampleGenerator("test")
 
 	simpleResult        = resultType("a", String, "b", Int, view("default", "a", String, "b", Int), view("link", "a", String))
 	simpleResultDefault = resultType("a", String, "b", Int)
