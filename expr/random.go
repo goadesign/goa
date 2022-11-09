@@ -54,7 +54,7 @@ type Randomizer interface {
 
 // NewRandom creates a randomizer that uses faker to generate fake but
 // reasonable values.
-func NewRandom(seed string) Randomizer {
+func NewFakerRandomizer(seed string) Randomizer {
 	hasher := md5.New()
 	hasher.Write([]byte(seed))
 	sint := int64(binary.BigEndian.Uint64(hasher.Sum(nil)))
@@ -73,10 +73,10 @@ func NewRandom(seed string) Randomizer {
 	}
 }
 
-// NewRandomExampleGenerator returns a random value generator seeded from the given string value.
-func NewRandomExampleGenerator(seed string) *ExampleGenerator {
+// NewRandom returns a random value generator seeded from the given string value.
+func NewRandom(seed string) *ExampleGenerator {
 	return &ExampleGenerator{
-		Randomizer: NewRandom(seed),
+		Randomizer: NewFakerRandomizer(seed),
 	}
 }
 

@@ -79,7 +79,7 @@ func NewAPIExpr(name string, dsl func()) *APIExpr {
 		HTTP:             new(HTTPExpr),
 		GRPC:             new(GRPCExpr),
 		DSLFunc:          dsl,
-		ExampleGenerator: NewRandomExampleGenerator(name),
+		ExampleGenerator: NewRandom(name),
 	}
 }
 
