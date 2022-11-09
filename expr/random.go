@@ -52,28 +52,8 @@ type Randomizer interface {
 	Characters(n int) string
 }
 
-// NewRandom creates a randomizer that uses faker to generate fake but
-// reasonable values.
-func NewFakerRandomizer(seed string) Randomizer {
-	hasher := md5.New()
-	hasher.Write([]byte(seed))
-	sint := int64(binary.BigEndian.Uint64(hasher.Sum(nil)))
-	source := rand.NewSource(sint)
-	ran := rand.New(source)
-	faker := &faker.Faker{
-		Language: "end",
-		Dict:     faker.Dict["en"],
-		Rand:     ran,
-	}
-
-	return &FakerRandom{
-		Seed:  seed,
-		faker: faker,
-		rand:  ran,
-	}
-}
-
-// NewRandom returns a random value generator seeded from the given string value.
+// NewRandom returns a random value generator seeded from the given string
+// value, using the faker library to generate random but realistic values.
 func NewRandom(seed string) *ExampleGenerator {
 	return &ExampleGenerator{
 		Randomizer: NewFakerRandomizer(seed),
@@ -103,6 +83,27 @@ func (r *ExampleGenerator) HaveSeen(typeID string, val *interface{}) {
 	r.seen[typeID] = val
 }
 
+// NewFakerRandomizer creates a randomizer that uses the faker library to
+// generate fake but reasonable values.
+func NewFakerRandomizer(seed string) Randomizer {
+	hasher := md5.New()
+	hasher.Write([]byte(seed))
+	sint := int64(binary.BigEndian.Uint64(hasher.Sum(nil)))
+	source := rand.NewSource(sint)
+	ran := rand.New(source)
+	faker := &faker.Faker{
+		Language: "end",
+		Dict:     faker.Dict["en"],
+		Rand:     ran,
+	}
+
+	return &FakerRandom{
+		Seed:  seed,
+		faker: faker,
+		rand:  ran,
+	}
+}
+
 // FakerRandom implements the Random interface, using the Faker library.
 type FakerRandom struct {
 	Seed  string
@@ -113,66 +114,42 @@ type FakerRandom struct {
 func (r *FakerRandom) ArrayLength() int {
 	return r.Int()%3 + 2
 }
-
-// Int produces a random integer.
 func (r *FakerRandom) Int() int {
 	return r.rand.Int()
 }
-
-// Int32 produces a random 32-bit integer.
 func (r *FakerRandom) Int32() int32 {
 	return r.rand.Int31()
 }
-
-// Int64 produces a random 64-bit integer.
 func (r *FakerRandom) Int64() int64 {
 	return r.rand.Int63()
 }
-
-// String produces a random string.
 func (r *FakerRandom) String() string {
 	return r.faker.Sentence(2, false)
-
 }
-
-// Bool produces a random boolean.
 func (r *FakerRandom) Bool() bool {
 	return r.rand.Int()%2 == 0
 }
-
-// Float32 produces a random float32 value.
 func (r *FakerRandom) Float32() float32 {
 	return r.rand.Float32()
 }
-
-// Float64 produces a random float64 value.
 func (r *FakerRandom) Float64() float64 {
 	return r.rand.Float64()
 }
-
-// UInt produces a random uint value.
 func (r *FakerRandom) UInt() uint {
 	return uint(r.UInt64())
 }
-
-// UInt32 produces a random uint32 value.
 func (r *FakerRandom) UInt32() uint32 {
 	return r.rand.Uint32()
 }
-
-// UInt64 produces a random uint64 value.
 func (r *FakerRandom) UInt64() uint64 {
 	return r.rand.Uint64()
 }
-
 func (r *FakerRandom) Email() string {
 	return r.faker.Email()
 }
-
 func (r *FakerRandom) Hostname() string {
 	return r.faker.DomainName() + "." + r.faker.DomainSuffix()
 }
-
 func (r *FakerRandom) IPv4Address() net.IP {
 	return r.faker.IPv4Address()
 }
@@ -185,7 +162,7 @@ func (r *FakerRandom) URL() string {
 func (r *FakerRandom) Characters(n int) string {
 	return r.faker.Characters(n)
 }
-
 func (r *FakerRandom) Name() string {
 	return r.faker.Name()
 }
+
