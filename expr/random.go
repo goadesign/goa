@@ -5,6 +5,7 @@ import (
 	"encoding/binary"
 	"math/rand"
 	"net"
+	"strings"
 
 	"github.com/manveru/faker"
 )
@@ -165,3 +166,32 @@ func (r *FakerRandomizer) Characters(n int) string {
 func (r *FakerRandomizer) Name() string {
 	return r.faker.Name()
 }
+
+// NewDeterministicRandomizer builds a Randomizer that will return hard-coded
+// values, removing all randomness from example generation.
+func NewDeterministicRandomizer() Randomizer {
+	return &DeterministicRandomizer{}
+}
+
+// DeterministicRandomizer returns hard-coded values, removing all randomness
+// from example generation
+type DeterministicRandomizer struct{}
+
+func (DeterministicRandomizer) ArrayLength() int        { return 1 }
+func (DeterministicRandomizer) Int() int                { return 1 }
+func (DeterministicRandomizer) Int32() int32            { return 1 }
+func (DeterministicRandomizer) Int64() int64            { return 1 }
+func (DeterministicRandomizer) String() string          { return "abc123" }
+func (DeterministicRandomizer) Bool() bool              { return false }
+func (DeterministicRandomizer) Float32() float32        { return 1 }
+func (DeterministicRandomizer) Float64() float64        { return 1 }
+func (DeterministicRandomizer) UInt() uint              { return 1 }
+func (DeterministicRandomizer) UInt32() uint32          { return 1 }
+func (DeterministicRandomizer) UInt64() uint64          { return 1 }
+func (DeterministicRandomizer) Name() string            { return "Alice" }
+func (DeterministicRandomizer) Email() string           { return "alice@example.com" }
+func (DeterministicRandomizer) Hostname() string        { return "example.com" }
+func (DeterministicRandomizer) IPv4Address() net.IP     { return net.IPv4zero }
+func (DeterministicRandomizer) IPv6Address() net.IP     { return net.IPv6zero }
+func (DeterministicRandomizer) URL() string             { return "https://example.com/foo" }
+func (DeterministicRandomizer) Characters(n int) string { return strings.Repeat("a", n) }
