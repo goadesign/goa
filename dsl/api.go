@@ -150,14 +150,14 @@ func License(fn func()) {
 	eval.IncompatibleDSL()
 }
 
-// Randomiser sets the API example randomiser.
+// Randomizer sets the API example randomizer.
 //
-// Randomiser must appear in a API expression.
+// Randomizer must appear in a API expression.
 //
-// Randomiser takes a single argument which is an implementation of
-// expr.Randomiser.
+// Randomizer takes a single argument which is an implementation of
+// expr.Randomizer.
 //
-// The default randomiser uses the API name as the seed, to get consistent
+// The default randomizer uses the API name as the seed, to get consistent
 // random examples.
 //
 // Example:
@@ -166,9 +166,9 @@ func License(fn func()) {
 //        Random(expr.NewRandom("different seed"))
 //    })
 //
-func Randomiser(randomiser expr.Randomiser) {
+func Randomizer(randomizer expr.Randomizer) {
 	if s, ok := eval.Current().(*expr.APIExpr); ok {
-		s.ExampleGenerator = &expr.ExampleGenerator{Randomiser: randomiser}
+		s.ExampleGenerator = &expr.ExampleGenerator{Randomizer: randomizer}
 		return
 	}
 	eval.IncompatibleDSL()

@@ -9,11 +9,11 @@ import (
 	"github.com/manveru/faker"
 )
 
-// Randomiser generates consistent random values of different types given a seed.
+// Randomizer generates consistent random values of different types given a seed.
 //
 // The random values should be consistent in that given the same seed the same
 // random values get generated.
-type Randomiser interface {
+type Randomizer interface {
 	// ArrayLength decides how long an example array will be
 	ArrayLength() int
 	// Int generates an integer example
@@ -52,9 +52,9 @@ type Randomiser interface {
 	Characters(n int) string
 }
 
-// NewRandom creates a randomiser that uses faker to generate fake but
+// NewRandom creates a randomizer that uses faker to generate fake but
 // reasonable values.
-func NewRandom(seed string) Randomiser {
+func NewRandom(seed string) Randomizer {
 	hasher := md5.New()
 	hasher.Write([]byte(seed))
 	sint := int64(binary.BigEndian.Uint64(hasher.Sum(nil)))
@@ -76,12 +76,12 @@ func NewRandom(seed string) Randomiser {
 // NewRandomExampleGenerator returns a random value generator seeded from the given string value.
 func NewRandomExampleGenerator(seed string) *ExampleGenerator {
 	return &ExampleGenerator{
-		Randomiser: NewRandom(seed),
+		Randomizer: NewRandom(seed),
 	}
 }
 
 type ExampleGenerator struct {
-	Randomiser
+	Randomizer
 	seen map[string]*interface{}
 }
 
@@ -94,7 +94,7 @@ func (r *ExampleGenerator) PreviouslySeen(typeID string) (*interface{}, bool) {
 	return val, haveSeen
 }
 
-// HaveSeen stores the seen value in the randomiser, for reuse later
+// HaveSeen stores the seen value in the randomizer, for reuse later
 func (r *ExampleGenerator) HaveSeen(typeID string, val *interface{}) {
 	if r.seen == nil {
 		r.seen = make(map[string]*interface{})

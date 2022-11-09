@@ -3,6 +3,7 @@ module goa.design/goa/v3
 go 1.19
 
 require (
+	github.com/davecgh/go-spew v1.1.1
 	github.com/dimfeld/httppath v0.0.0-20170720192232-ee938bf73598
 	github.com/dimfeld/httptreemux/v5 v5.5.0
 	github.com/getkin/kin-openapi v0.107.0
