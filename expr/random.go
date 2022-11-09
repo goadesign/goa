@@ -97,72 +97,71 @@ func NewFakerRandomizer(seed string) Randomizer {
 		Rand:     ran,
 	}
 
-	return &FakerRandom{
+	return &FakerRandomizer{
 		Seed:  seed,
 		faker: faker,
 		rand:  ran,
 	}
 }
 
-// FakerRandom implements the Random interface, using the Faker library.
-type FakerRandom struct {
+// FakerRandomizer implements the Random interface, using the Faker library.
+type FakerRandomizer struct {
 	Seed  string
 	faker *faker.Faker
 	rand  *rand.Rand
 }
 
-func (r *FakerRandom) ArrayLength() int {
+func (r *FakerRandomizer) ArrayLength() int {
 	return r.Int()%3 + 2
 }
-func (r *FakerRandom) Int() int {
+func (r *FakerRandomizer) Int() int {
 	return r.rand.Int()
 }
-func (r *FakerRandom) Int32() int32 {
+func (r *FakerRandomizer) Int32() int32 {
 	return r.rand.Int31()
 }
-func (r *FakerRandom) Int64() int64 {
+func (r *FakerRandomizer) Int64() int64 {
 	return r.rand.Int63()
 }
-func (r *FakerRandom) String() string {
+func (r *FakerRandomizer) String() string {
 	return r.faker.Sentence(2, false)
 }
-func (r *FakerRandom) Bool() bool {
+func (r *FakerRandomizer) Bool() bool {
 	return r.rand.Int()%2 == 0
 }
-func (r *FakerRandom) Float32() float32 {
+func (r *FakerRandomizer) Float32() float32 {
 	return r.rand.Float32()
 }
-func (r *FakerRandom) Float64() float64 {
+func (r *FakerRandomizer) Float64() float64 {
 	return r.rand.Float64()
 }
-func (r *FakerRandom) UInt() uint {
+func (r *FakerRandomizer) UInt() uint {
 	return uint(r.UInt64())
 }
-func (r *FakerRandom) UInt32() uint32 {
+func (r *FakerRandomizer) UInt32() uint32 {
 	return r.rand.Uint32()
 }
-func (r *FakerRandom) UInt64() uint64 {
+func (r *FakerRandomizer) UInt64() uint64 {
 	return r.rand.Uint64()
 }
-func (r *FakerRandom) Email() string {
+func (r *FakerRandomizer) Email() string {
 	return r.faker.Email()
 }
-func (r *FakerRandom) Hostname() string {
+func (r *FakerRandomizer) Hostname() string {
 	return r.faker.DomainName() + "." + r.faker.DomainSuffix()
 }
-func (r *FakerRandom) IPv4Address() net.IP {
+func (r *FakerRandomizer) IPv4Address() net.IP {
 	return r.faker.IPv4Address()
 }
-func (r *FakerRandom) IPv6Address() net.IP {
+func (r *FakerRandomizer) IPv6Address() net.IP {
 	return r.faker.IPv6Address()
 }
-func (r *FakerRandom) URL() string {
+func (r *FakerRandomizer) URL() string {
 	return r.faker.URL()
 }
-func (r *FakerRandom) Characters(n int) string {
+func (r *FakerRandomizer) Characters(n int) string {
 	return r.faker.Characters(n)
 }
-func (r *FakerRandom) Name() string {
+func (r *FakerRandomizer) Name() string {
 	return r.faker.Name()
 }
-
