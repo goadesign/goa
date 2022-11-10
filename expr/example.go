@@ -91,15 +91,15 @@ func NewLength(a *AttributeExpr, r *ExampleGenerator) int {
 		}
 		count := 0
 		if math.IsInf(minlength, 1) {
-			count = int(maxlength) - r.ArrayLength()
+			count = int(maxlength) - (r.Int() % 3)
 		} else if math.IsInf(maxlength, -1) {
-			count = int(minlength) + r.ArrayLength()
+			count = int(minlength) + (r.Int() % 3)
 		} else if minlength < maxlength {
 			diff := int(maxlength - minlength)
 			if diff > maxLength {
 				diff = maxLength
 			}
-			count = int(minlength) + (r.ArrayLength() % diff)
+			count = int(minlength) + (r.Int() % diff)
 		} else if minlength == maxlength {
 			count = int(minlength)
 		} else {
@@ -110,7 +110,7 @@ func NewLength(a *AttributeExpr, r *ExampleGenerator) int {
 		}
 		return count
 	}
-	return r.ArrayLength()
+	return r.Int()%3 + 2
 }
 
 func hasLengthValidation(a *AttributeExpr) bool {

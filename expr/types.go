@@ -412,7 +412,7 @@ func (a *Array) IsCompatible(val interface{}) bool {
 // Example generates a pseudo-random array value using the given random
 // generator.
 func (a *Array) Example(r *ExampleGenerator) interface{} {
-	count := r.ArrayLength()
+	count := NewLength(a.ElemType, r)
 	res := make([]interface{}, count)
 	for i := 0; i < count; i++ {
 		res[i] = a.ElemType.Example(r)
