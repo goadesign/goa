@@ -163,9 +163,17 @@ func License(fn func()) {
 // Example:
 //
 //    var _ = API("divider", func() {
-//        Random(expr.NewRandom("different seed"))
+//        Randomizer(expr.NewFakerRandomizer("different seed"))
 //    })
 //
+// There's also a deterministic randomizer which will only generate one example
+// for each type, so all strings are "abc123", all ints are 1, etc.
+//
+// Example:
+//
+//    var _ = API("divider", func() {
+//        Randomizer(expr.NewDeterministicRandomizer())
+//    })
 func Randomizer(randomizer expr.Randomizer) {
 	if s, ok := eval.Current().(*expr.APIExpr); ok {
 		s.ExampleGenerator = &expr.ExampleGenerator{Randomizer: randomizer}
