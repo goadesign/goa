@@ -82,23 +82,20 @@ func (u *UserTypeExpr) Hash() string {
 
 // Example produces an example for the user type which is JSON serialization
 // compatible.
-func (u *UserTypeExpr) Example(r *Random) interface{} {
+func (u *UserTypeExpr) Example(r *ExampleGenerator) interface{} {
 	if ex := u.recExample(r); ex != nil {
 		return *ex
 	}
 	return nil
 }
 
-func (u *UserTypeExpr) recExample(r *Random) *interface{} {
-	if ex, ok := r.Seen[u.ID()]; ok {
+func (u *UserTypeExpr) recExample(r *ExampleGenerator) *interface{} {
+	if ex, ok := r.PreviouslySeen(u.ID()); ok {
 		return ex
-	}
-	if r.Seen == nil {
-		r.Seen = make(map[string]*interface{})
 	}
 	var ex interface{}
 	pex := &ex
-	r.Seen[u.ID()] = pex
+	r.HaveSeen(u.ID(), pex)
 	actual := u.Type.Example(r)
 	*pex = actual
 	return pex

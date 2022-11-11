@@ -30,7 +30,9 @@ func TestBuildPathFromFileServer(t *testing.T) {
 				Paths: make(map[string]interface{}),
 			}
 			root := &expr.RootExpr{
-				API: &expr.APIExpr{},
+				API: &expr.APIExpr{
+					ExampleGenerator: expr.NewRandom("test"),
+				},
 			}
 			fs := &expr.HTTPFileServerExpr{
 				Service: &expr.HTTPServiceExpr{

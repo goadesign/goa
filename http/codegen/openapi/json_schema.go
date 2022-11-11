@@ -465,7 +465,7 @@ func buildAttributeSchema(api *expr.APIExpr, s *Schema, at *expr.AttributeExpr) 
 	}
 	s.DefaultValue = ToStringMap(at.DefaultValue)
 	s.Description = at.Description
-	s.Example = at.Example(api.Random())
+	s.Example = at.Example(api.ExampleGenerator)
 	s.Extensions = ExtensionsFromExpr(at.Meta)
 	initAttributeValidation(s, at)
 

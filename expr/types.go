@@ -21,7 +21,7 @@ type (
 		// type.
 		IsCompatible(interface{}) bool
 		// Example generates a pseudo-random value using the given random generator.
-		Example(*Random) interface{}
+		Example(*ExampleGenerator) interface{}
 		// Hash returns a unique hash value for the instance of the type.
 		Hash() string
 	}
@@ -346,7 +346,7 @@ func (p Primitive) IsCompatible(val interface{}) bool {
 
 // Example generates a pseudo-random primitive value using the given random
 // generator.
-func (p Primitive) Example(r *Random) interface{} {
+func (p Primitive) Example(r *ExampleGenerator) interface{} {
 	switch p {
 	case Boolean:
 		return r.Bool()
@@ -411,8 +411,8 @@ func (a *Array) IsCompatible(val interface{}) bool {
 
 // Example generates a pseudo-random array value using the given random
 // generator.
-func (a *Array) Example(r *Random) interface{} {
-	count := r.Int()%3 + 2
+func (a *Array) Example(r *ExampleGenerator) interface{} {
+	count := NewLength(a.ElemType, r)
 	res := make([]interface{}, count)
 	for i := 0; i < count; i++ {
 		res[i] = a.ElemType.Example(r)
@@ -530,7 +530,7 @@ func (o *Object) IsCompatible(val interface{}) bool {
 }
 
 // Example returns a random value of the object.
-func (o *Object) Example(r *Random) interface{} {
+func (o *Object) Example(r *ExampleGenerator) interface{} {
 	res := make(map[string]interface{})
 	for _, nat := range *o {
 		if v := nat.Attribute.Example(r); v != nil {
@@ -569,7 +569,7 @@ func (m *Map) IsCompatible(val interface{}) bool {
 }
 
 // Example returns a random example value.
-func (m *Map) Example(r *Random) interface{} {
+func (m *Map) Example(r *ExampleGenerator) interface{} {
 	if IsObject(m.KeyType.Type) || IsArray(m.KeyType.Type) || IsMap(m.KeyType.Type) {
 		// not much we can do for non hashable Go types
 		return nil
@@ -635,7 +635,7 @@ func (u *Union) IsCompatible(val interface{}) bool {
 }
 
 // Example returns a random example value.
-func (u *Union) Example(r *Random) interface{} {
+func (u *Union) Example(r *ExampleGenerator) interface{} {
 	if len(u.Values) == 0 {
 		return nil
 	}

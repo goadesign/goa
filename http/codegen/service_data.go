@@ -678,7 +678,7 @@ func (d ServicesData) analyze(hs *expr.HTTPServiceExpr) *ServiceData {
 								Type:        att.Type,
 								Pointer:     pointer,
 								Required:    true,
-								Example:     att.Example(expr.Root.API.Random()),
+								Example:     att.Example(expr.Root.API.ExampleGenerator),
 								Validate:    vcode,
 							},
 						}
@@ -1060,7 +1060,7 @@ func buildPayloadData(e *expr.HTTPEndpointExpr, sd *ServiceData) *PayloadData {
 							TypeRef:      sd.Scope.GoTypeRef(pAtt),
 							Validate:     codegen.ValidationCode(pAtt, nil, httpsvrctx, required, expr.IsAlias(pAtt.Type), varn),
 							DefaultValue: pAtt.DefaultValue,
-							Example:      pAtt.Example(expr.Root.API.Random()),
+							Example:      pAtt.Example(expr.Root.API.ExampleGenerator),
 						},
 					},
 				}
@@ -1170,7 +1170,7 @@ func buildPayloadData(e *expr.HTTPEndpointExpr, sd *ServiceData) *PayloadData {
 					TypeRef:  sd.Scope.GoTypeRef(e.Body),
 					Type:     body,
 					Required: true,
-					Example:  e.Body.Example(expr.Root.API.Random()),
+					Example:  e.Body.Example(expr.Root.API.ExampleGenerator),
 					Validate: svcode,
 				},
 			}}
@@ -1182,7 +1182,7 @@ func buildPayloadData(e *expr.HTTPEndpointExpr, sd *ServiceData) *PayloadData {
 					TypeRef:  sd.Scope.GoTypeRefWithDefaults(e.Body),
 					Type:     body,
 					Required: true,
-					Example:  e.Body.Example(expr.Root.API.Random()),
+					Example:  e.Body.Example(expr.Root.API.ExampleGenerator),
 					Validate: cvcode,
 				},
 			}}
@@ -1293,7 +1293,7 @@ func buildPayloadData(e *expr.HTTPEndpointExpr, sd *ServiceData) *PayloadData {
 							Type:         uatt.Type,
 							Pointer:      sc.UsernamePointer,
 							Validate:     codegen.ValidationCode(uatt, nil, httpsvrctx, sc.UsernameRequired, expr.IsAlias(uatt.Type), sc.UsernameAttr),
-							Example:      uatt.Example(expr.Root.API.Random()),
+							Example:      uatt.Example(expr.Root.API.ExampleGenerator),
 						},
 					}
 					patt := e.MethodExpr.Payload.Find(sc.PasswordAttr)
@@ -1315,7 +1315,7 @@ func buildPayloadData(e *expr.HTTPEndpointExpr, sd *ServiceData) *PayloadData {
 							Type:         patt.Type,
 							Pointer:      sc.PasswordPointer,
 							Validate:     codegen.ValidationCode(patt, nil, httpsvrctx, sc.PasswordRequired, expr.IsAlias(patt.Type), sc.PasswordAttr),
-							Example:      patt.Example(expr.Root.API.Random()),
+							Example:      patt.Example(expr.Root.API.ExampleGenerator),
 						},
 					}
 					cliArgs = []*InitArgData{uarg, parg}
@@ -2074,7 +2074,7 @@ func buildRequestBodyType(body, att *expr.AttributeExpr, e *expr.HTTPEndpointExp
 					TypeRef:  svc.Scope.GoFullTypeRef(att, pkg),
 					Type:     att.Type,
 					Validate: validateDef,
-					Example:  att.Example(expr.Root.API.Random()),
+					Example:  att.Example(expr.Root.API.ExampleGenerator),
 				},
 			}
 			init = &InitData{
@@ -2096,7 +2096,7 @@ func buildRequestBodyType(body, att *expr.AttributeExpr, e *expr.HTTPEndpointExp
 		Init:        init,
 		ValidateDef: validateDef,
 		ValidateRef: validateRef,
-		Example:     body.Example(expr.Root.API.Random()),
+		Example:     body.Example(expr.Root.API.ExampleGenerator),
 	}
 }
 
@@ -2266,7 +2266,7 @@ func buildResponseBodyType(body, att *expr.AttributeExpr, loc *codegen.Location,
 					TypeRef:  tref,
 					Type:     att.Type,
 					Validate: validateDef,
-					Example:  att.Example(expr.Root.API.Random()),
+					Example:  att.Example(expr.Root.API.ExampleGenerator),
 				},
 			}
 			init = &InitData{
@@ -2288,7 +2288,7 @@ func buildResponseBodyType(body, att *expr.AttributeExpr, loc *codegen.Location,
 		Init:        init,
 		ValidateDef: validateDef,
 		ValidateRef: validateRef,
-		Example:     body.Example(expr.Root.API.Random()),
+		Example:     body.Example(expr.Root.API.ExampleGenerator),
 		View:        viewName,
 	}
 }
@@ -2339,7 +2339,7 @@ func extractPathParams(a *expr.MappedAttributeExpr, service *expr.AttributeExpr,
 					Pointer:      false,
 					Validate:     codegen.ValidationCode(c, nil, ctx, true, expr.IsAlias(c.Type), varn),
 					DefaultValue: c.DefaultValue,
-					Example:      c.Example(expr.Root.API.Random()),
+					Example:      c.Example(expr.Root.API.ExampleGenerator),
 				},
 			},
 		})
@@ -2404,7 +2404,7 @@ func extractQueryParams(a *expr.MappedAttributeExpr, service *expr.AttributeExpr
 					Pointer:      pointer,
 					Validate:     codegen.ValidationCode(c, nil, ctx, required, expr.IsAlias(c.Type), varn),
 					DefaultValue: c.DefaultValue,
-					Example:      c.Example(expr.Root.API.Random()),
+					Example:      c.Example(expr.Root.API.ExampleGenerator),
 				},
 			},
 		})
@@ -2471,7 +2471,7 @@ func extractHeaders(a *expr.MappedAttributeExpr, svcAtt *expr.AttributeExpr, svc
 					Type:         hattr.Type,
 					Validate:     codegen.ValidationCode(hattr, nil, svcCtx, required, expr.IsAlias(hattr.Type), varn),
 					DefaultValue: hattr.DefaultValue,
-					Example:      hattr.Example(expr.Root.API.Random()),
+					Example:      hattr.Example(expr.Root.API.ExampleGenerator),
 				},
 			},
 		})
@@ -2527,7 +2527,7 @@ func extractCookies(a *expr.MappedAttributeExpr, svcAtt *expr.AttributeExpr, svc
 					Type:         hattr.Type,
 					Validate:     codegen.ValidationCode(hattr, nil, svcCtx, required, expr.IsAlias(hattr.Type), varn),
 					DefaultValue: hattr.DefaultValue,
-					Example:      hattr.Example(expr.Root.API.Random()),
+					Example:      hattr.Example(expr.Root.API.ExampleGenerator),
 				},
 			},
 		}
@@ -2629,7 +2629,7 @@ func attributeTypeData(ut expr.UserType, req, ptr, server bool, rd *ServiceData)
 		Ref:         rd.Scope.GoTypeRef(att),
 		ValidateDef: validate,
 		ValidateRef: validateRef,
-		Example:     att.Example(expr.Root.API.Random()),
+		Example:     att.Example(expr.Root.API.ExampleGenerator),
 	}
 }
 

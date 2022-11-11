@@ -545,7 +545,7 @@ func (d ServicesData) analyze(gs *expr.GRPCServiceExpr) *ServiceData {
 					Ref:      "message",
 					TypeName: protoBufGoFullTypeName(e.Request, sd.PkgName, sd.Scope),
 					TypeRef:  protoBufGoFullTypeRef(e.Request, sd.PkgName, sd.Scope),
-					Example:  e.Request.Example(expr.Root.API.Random()),
+					Example:  e.Request.Example(expr.Root.API.ExampleGenerator),
 				})
 			}
 			// pass the metadata as arguments to client CLI args
@@ -1045,7 +1045,7 @@ func buildInitData(source, target *expr.AttributeExpr, sourceVar, targetVar stri
 				Ref:      sourceVar,
 				TypeName: srcCtx.Scope.Name(source, srcCtx.Pkg(source), srcCtx.Pointer, srcCtx.UseDefault),
 				TypeRef:  srcCtx.Scope.Ref(source, srcCtx.Pkg(source)),
-				Example:  source.Example(expr.Root.API.Random()),
+				Example:  source.Example(expr.Root.API.ExampleGenerator),
 			}}
 		}
 	}
@@ -1301,7 +1301,7 @@ func extractMetadata(a *expr.MappedAttributeExpr, service *expr.AttributeExpr, s
 				expr.AsArray(mp.ElemType.Type).ElemType.Type.Kind() == expr.StringKind,
 			Validate:     codegen.ValidationCode(c, nil, ctx, required, false, varn),
 			DefaultValue: c.DefaultValue,
-			Example:      c.Example(expr.Root.API.Random()),
+			Example:      c.Example(expr.Root.API.ExampleGenerator),
 		})
 		return nil
 	})

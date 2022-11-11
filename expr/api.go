@@ -42,7 +42,7 @@ type (
 		GRPC *GRPCExpr
 
 		// random generator used to build examples for the API types.
-		random *Random
+		ExampleGenerator *ExampleGenerator
 	}
 
 	// ContactExpr contains the API contact information.
@@ -75,10 +75,11 @@ type (
 // NewAPIExpr initializes an API expression.
 func NewAPIExpr(name string, dsl func()) *APIExpr {
 	return &APIExpr{
-		Name:    name,
-		HTTP:    new(HTTPExpr),
-		GRPC:    new(GRPCExpr),
-		DSLFunc: dsl,
+		Name:             name,
+		HTTP:             new(HTTPExpr),
+		GRPC:             new(GRPCExpr),
+		DSLFunc:          dsl,
+		ExampleGenerator: NewRandom(name),
 	}
 }
 
@@ -100,15 +101,6 @@ func (a *APIExpr) Schemes() []string {
 	}
 	sort.Strings(ss)
 	return ss
-}
-
-// Random returns the random generator associated with a. APIs with identical
-// names return generators that return the same sequence of pseudo random values.
-func (a *APIExpr) Random() *Random {
-	if a.random == nil {
-		a.random = NewRandom(a.Name)
-	}
-	return a.random
 }
 
 // DefaultServer returns a server expression that describes a server which

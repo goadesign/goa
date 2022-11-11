@@ -10,7 +10,7 @@ import (
 
 // paramsFromPath computes the OpenAPI spec parameters for the given API,
 // service or endpoint HTTP path and query parameters.
-func paramsFromPath(params *expr.MappedAttributeExpr, path string, rand *expr.Random) []*Parameter {
+func paramsFromPath(params *expr.MappedAttributeExpr, path string, rand *expr.ExampleGenerator) []*Parameter {
 	var (
 		res       []*Parameter
 		wildcards = expr.ExtractHTTPWildcards(path)
@@ -32,7 +32,7 @@ func paramsFromPath(params *expr.MappedAttributeExpr, path string, rand *expr.Ra
 
 // paramsFromHeadersAndCookies computes the OpenAPI spec parameters for the
 // given endpoint HTTP headers and cookies.
-func paramsFromHeadersAndCookies(endpoint *expr.HTTPEndpointExpr, rand *expr.Random) []*Parameter {
+func paramsFromHeadersAndCookies(endpoint *expr.HTTPEndpointExpr, rand *expr.ExampleGenerator) []*Parameter {
 	params := []*Parameter{}
 	expr.WalkMappedAttr(endpoint.Headers, func(name, elem string, att *expr.AttributeExpr) error {
 		if strings.ToLower(elem) == "authorization" {
@@ -55,7 +55,7 @@ func paramsFromHeadersAndCookies(endpoint *expr.HTTPEndpointExpr, rand *expr.Ran
 }
 
 // paramFor converts the given attribute into a OpenAPI spec parameter.
-func paramFor(att *expr.AttributeExpr, name, in string, required bool, rand *expr.Random) *Parameter {
+func paramFor(att *expr.AttributeExpr, name, in string, required bool, rand *expr.ExampleGenerator) *Parameter {
 	param := &Parameter{
 		Name:            name,
 		In:              in,

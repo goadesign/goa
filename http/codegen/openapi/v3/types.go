@@ -34,12 +34,12 @@ type (
 		schemas map[string]*openapi.Schema
 		// type names indexed by hashes
 		hashes map[uint64]string
-		rand   *expr.Random
+		rand   *expr.ExampleGenerator
 	}
 )
 
 // newSchemafier initializes a schemafier.
-func newSchemafier(rand *expr.Random) *schemafier {
+func newSchemafier(rand *expr.ExampleGenerator) *schemafier {
 	return &schemafier{
 		schemas: make(map[string]*openapi.Schema),
 		hashes:  make(map[uint64]string),
@@ -61,7 +61,7 @@ func newSchemafier(rand *expr.Random) *schemafier {
 // NOTE: entries are nil when the corresponding type is Empty.
 func buildBodyTypes(api *expr.APIExpr) (map[string]map[string]*EndpointBodies, map[string]*openapi.Schema) {
 	bodies := make(map[string]map[string]*EndpointBodies)
-	sf := newSchemafier(api.Random())
+	sf := newSchemafier(api.ExampleGenerator)
 	for _, s := range api.HTTP.Services {
 		if !mustGenerate(s.Meta) || !mustGenerate(s.ServiceExpr.Meta) {
 			continue

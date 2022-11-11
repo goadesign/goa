@@ -8,7 +8,7 @@ import (
 	"goa.design/goa/v3/http/codegen/openapi"
 )
 
-func responseFromExpr(r *expr.HTTPResponseExpr, bodies map[int][]*openapi.Schema, rand *expr.Random) *Response {
+func responseFromExpr(r *expr.HTTPResponseExpr, bodies map[int][]*openapi.Schema, rand *expr.ExampleGenerator) *Response {
 	ct := r.ContentType
 	rt, ok := r.Body.Type.(*expr.ResultTypeExpr)
 	if ok && ct == "" {

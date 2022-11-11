@@ -150,6 +150,38 @@ func License(fn func()) {
 	eval.IncompatibleDSL()
 }
 
+// Randomizer sets the API example randomizer.
+//
+// Randomizer must appear in a API expression.
+//
+// Randomizer takes a single argument which is an implementation of
+// expr.Randomizer.
+//
+// The default randomizer uses the API name as the seed, to get consistent
+// random examples.
+//
+// Example:
+//
+//    var _ = API("divider", func() {
+//        Randomizer(expr.NewFakerRandomizer("different seed"))
+//    })
+//
+// There's also a deterministic randomizer which will only generate one example
+// for each type, so all strings are "abc123", all ints are 1, etc.
+//
+// Example:
+//
+//    var _ = API("divider", func() {
+//        Randomizer(expr.NewDeterministicRandomizer())
+//    })
+func Randomizer(randomizer expr.Randomizer) {
+	if s, ok := eval.Current().(*expr.APIExpr); ok {
+		s.ExampleGenerator = &expr.ExampleGenerator{Randomizer: randomizer}
+		return
+	}
+	eval.IncompatibleDSL()
+}
+
 // Docs provides external documentation URLs. It is used by the generated
 // OpenAPI specification.
 //

@@ -12,7 +12,7 @@ type (
 )
 
 // initExample sets the example or examples of the given object.
-func initExamples(obj exampler, attr *expr.AttributeExpr, r *expr.Random) {
+func initExamples(obj exampler, attr *expr.AttributeExpr, r *expr.ExampleGenerator) {
 	examples := attr.ExtractUserExamples()
 	switch {
 	case len(examples) > 1:
