@@ -110,7 +110,7 @@ func NewLength(a *AttributeExpr, r *ExampleGenerator) int {
 		}
 		return count
 	}
-	return r.Int()%3 + 2
+	return r.ArrayLength()
 }
 
 func hasLengthValidation(a *AttributeExpr) bool {
