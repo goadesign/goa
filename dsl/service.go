@@ -23,6 +23,12 @@ import (
 // Service accepts two arguments: the name of the service - which must be unique
 // in the design package - and its defining DSL.
 //
+// If the name of the service is not unique, then it will be merged will all
+// service definitions with matching names. Note that this allows you to
+// spread the definition of a single service across multiple files by simply
+// calling Service multiple times with the same name.
+//
+//
 // Example:
 //
 //    var _ = Service("divider", func() {
