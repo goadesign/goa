@@ -33,26 +33,40 @@ promoting reuse and standardization across services.
 ## Sponsors
 
 <table width="100%">
-<tr>
-<td>
-  <img width="1000" height="0">
-  <a href="https://www.runforesight.com/?utm_source=mathjs&utm_medium=sponsorship">
-  <img src="https://www.thundra.io/hubfs/RunForesight/GitHub%20Sponsorship%20banners/power-up-github.png"
-alt="Foresight" width="260" align="right">
-  </a>
+    <tr>
+        <td>
+            <img width="1000" height="0" />
+            <a href="https://www.runforesight.com/?utm_source=goa&utm_medium=sponsorship">
+                <img src="https://www.thundra.io/hubfs/RunForesight/GitHub%20Sponsorship%20banners/power-up-github.png" alt="Foresight" width="260" align="right" />
+            </a>
+            <h3>Foresight: Increase CI/CD Health & Test Performance</h3>
+            <p>
+                Foresight provides full visibility and deep insights into the health
+                and performance of your tests and CI pipelines. Assess the risk of
+                changes, resolve bottlenecks, reduce build times, and deliver
+                high-quality software at speed with Foresight.
+            </p>
 
-<h3>Foresight: Increase CI/CD Health & Test Performance</h3>
+[Sign up now!](https://runforesight.com/?utm_source=goa&utm_medium=sponsorship)
+        </td>
+    </tr>
+</table>
+<table width="100%">
+    <tr>
+        <td>
+            <img width="1000" height="0" />
+            <a href="https://www.incident.io">
+                <img src="https://incident.io/static/5446bb1376cd3180ade3fefe74859e4b/288ca/logo-social-dark.png" alt="incident.io" width="260" align="right" />
+            </a>
+            <h3>incident.io: Bounce back stronger after every incident</h3>
+            <p>
+                Use our platform to empower your team to run incidents end-to-end. Rapidly fix and
+                learn from incidents, so you can build more resilient products.
+            </p>
 
-  <p>
-Foresight provides full visibility and deep insights into the health
-and performance of your tests and CI pipelines. Assess the risk of
-changes, resolve bottlenecks, reduce build times, and deliver
-high-quality software at speed with Foresight.
-  </p>
-
-[Sign up now!](https://runforesight.com/?utm_source=mathjs&utm_medium=sponsorship)
-</td>
-</tr>
+[Learn more](https://incident.io/)
+        </td>
+    </tr>
 </table>
 
 ## Code Generation
