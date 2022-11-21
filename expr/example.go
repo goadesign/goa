@@ -6,6 +6,7 @@ import (
 	"regexp"
 	"time"
 
+	googleuuid "github.com/google/uuid"
 	regen "github.com/zach-klippenstein/goregen"
 )
 
@@ -206,11 +207,11 @@ func byFormat(a *AttributeExpr, r *ExampleGenerator) interface{} {
 		FormatRegexp:  r.Characters(3) + ".*",
 		FormatRFC1123: time.Unix(int64(r.Int())%1454957045, 0).UTC().Format(time.RFC1123), // to obtain a "fixed" rand
 		FormatUUID: func() string {
-			res, err := regen.Generate(`[0-9A-F]{8}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{12}`)
+			uuid, err := googleuuid.NewUUID()
 			if err != nil {
-				return "12345678-1234-1234-12324-123456789ABC"
+				return "12345678-1234-1234-9232-123456789ABC"
 			}
-			return res
+			return uuid.String()
 		}(),
 		FormatJSON: `{"name":"example","email":"mail@example.com"}`,
 	}[format]; ok {

@@ -44,7 +44,7 @@ func TestByFormatUUID(t *testing.T) {
 	att := expr.AttributeExpr{Validation: val}
 	r := expr.NewRandom("test")
 	example := att.Example(r).(string)
-	if !regexp.MustCompile(`[0-9A-F]{8}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{12}`).MatchString(example) {
+	if !regexp.MustCompile(`[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}`).MatchString(example) {
 		t.Errorf("got %s, expected a match with `[0-9A-F]{8}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{12}`", example)
 	}
 }
