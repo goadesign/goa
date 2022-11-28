@@ -1,0 +1,128 @@
+openapi: 3.0.3
+info:
+    title: Goa API
+    version: "1.0"
+servers:
+    - url: https://goa.design
+paths:
+    /bar:
+        post:
+            tags:
+                - testService
+            summary: bar testService
+            operationId: testService#bar
+            requestBody:
+                required: true
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/BarPayload'
+                        example:
+                            value: ""
+            responses:
+                "200":
+                    description: OK response.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/BarResult'
+                            example:
+                                value: ""
+    /baz:
+        post:
+            tags:
+                - testService
+            summary: baz testService
+            operationId: testService#baz
+            requestBody:
+                required: true
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/BazPayload'
+                        example:
+                            value: ""
+            responses:
+                "200":
+                    description: OK response.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/BazResult'
+                            example:
+                                value: ""
+    /foo:
+        post:
+            tags:
+                - testService
+            summary: foo testService
+            operationId: testService#foo
+            requestBody:
+                required: true
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/FooPayload'
+                        example:
+                            value: ""
+            responses:
+                "200":
+                    description: OK response.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/FooResult'
+                            example:
+                                value: ""
+components:
+    schemas:
+        BarPayload:
+            type: object
+            properties:
+                value:
+                    type: string
+                    example: ""
+            example:
+                value: ""
+        BarResult:
+            type: object
+            properties:
+                value:
+                    type: string
+                    example: ""
+            example:
+                value: ""
+        BazPayload:
+            type: object
+            properties:
+                value:
+                    type: string
+                    example: ""
+            example:
+                value: ""
+        BazResult:
+            type: object
+            properties:
+                value:
+                    type: string
+                    example: ""
+            example:
+                value: ""
+        FooPayload:
+            type: object
+            properties:
+                value:
+                    type: string
+                    example: ""
+            example:
+                value: ""
+        FooResult:
+            type: object
+            properties:
+                value:
+                    type: string
+                    example: ""
+            example:
+                value: ""
+tags:
+    - name: testService

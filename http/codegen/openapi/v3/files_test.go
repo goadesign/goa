@@ -44,6 +44,7 @@ func TestFiles(t *testing.T) {
 		{"path-with-wildcards", testdata.PathWithWildcardDSL},
 		{"with-tags", testdata.WithTagsDSL},
 		{"with-tags-swagger", testdata.WithTagsSwaggerDSL},
+		{"typename", testdata.TypenameDSL},
 		// TestEndpoints
 		{"endpoint", testdata.ExtensionDSL},
 		{"endpoint-swagger", testdata.ExtensionSwaggerDSL},

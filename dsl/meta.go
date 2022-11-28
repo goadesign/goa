@@ -207,6 +207,14 @@ import (
 //	var _ = API("MyAPI", func() {
 //	    Meta("openapi:extension:x-api", `{"foo":"bar"}`)
 //	})
+//
+// - "openapi:typename" overrides the name of the type generated in the OpenAPI specification.
+// Applicable to types (including embedded Payload and Result definitions).
+//
+//	var Foo = Type("Foo", func() {
+//	    Attribute("name", String)
+//	    Meta("openapi:typename", "Bar")
+//	})
 func Meta(name string, value ...string) {
 	appendMeta := func(meta expr.MetaExpr, name string, value ...string) expr.MetaExpr {
 		if meta == nil {

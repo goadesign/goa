@@ -622,3 +622,66 @@ var WithTagsSwaggerDSL = func() {
 		})
 	})
 }
+
+var TypenameDSL = func() {
+	var _ = API("test", func() {
+		Server("test", func() {
+			Host("localhost", func() {
+				URI("https://goa.design")
+			})
+		})
+	})
+
+	var Foo = Type("Foo", func() {
+		Meta("openapi:typename", "FooPayload")
+		Attribute("value", String, func() {
+			Example("")
+		})
+	})
+
+	var Bar = ResultType("application/vnd.goa.example.bar", func() {
+		TypeName("Bar")
+		Meta("openapi:typename", "BarResult")
+		Attribute("value", String, func() {
+			Example("")
+		})
+	})
+
+	var _ = Service("testService", func() {
+		Method("foo", func() {
+			Payload(Foo)
+			Result(Bar, func() {
+				Meta("openapi:typename", "FooResult")
+			})
+			HTTP(func() {
+				POST("/foo")
+			})
+		})
+		Method("bar", func() {
+			Payload(Foo, func() {
+				Meta("openapi:typename", "BarPayload")
+			})
+			Result(Bar)
+			HTTP(func() {
+				POST("/bar")
+			})
+		})
+		Method("baz", func() {
+			Payload(func() {
+				Meta("openapi:typename", "BazPayload")
+				Attribute("value", String, func() {
+					Example("")
+				})
+			})
+			Result(func() {
+				Meta("openapi:typename", "BazResult")
+				Attribute("value", String, func() {
+					Example("")
+				})
+			})
+			HTTP(func() {
+				POST("/baz")
+			})
+		})
+	})
+}
