@@ -33,7 +33,7 @@ type (
 		// type schemas indexed by ref
 		schemas map[string]*openapi.Schema
 		// type names indexed by hashes
-		hashes map[uint64]string
+		hashes map[uint64][]string
 		rand   *expr.ExampleGenerator
 	}
 )
@@ -42,7 +42,7 @@ type (
 func newSchemafier(rand *expr.ExampleGenerator) *schemafier {
 	return &schemafier{
 		schemas: make(map[string]*openapi.Schema),
-		hashes:  make(map[uint64]string),
+		hashes:  make(map[uint64][]string),
 		rand:    rand,
 	}
 }
@@ -62,6 +62,21 @@ func newSchemafier(rand *expr.ExampleGenerator) *schemafier {
 func buildBodyTypes(api *expr.APIExpr) (map[string]map[string]*EndpointBodies, map[string]*openapi.Schema) {
 	bodies := make(map[string]map[string]*EndpointBodies)
 	sf := newSchemafier(api.ExampleGenerator)
+
+	// Generates the types referenced from the endpoints.
+	for _, t := range expr.Root.Types {
+		if !mustGenerateType(t.Attribute().Meta) {
+			continue
+		}
+		sf.schemafy(&expr.AttributeExpr{Type: t})
+	}
+	for _, t := range expr.Root.ResultTypes {
+		if !mustGenerateType(t.Attribute().Meta) {
+			continue
+		}
+		sf.schemafy(&expr.AttributeExpr{Type: t})
+	}
+
 	for _, s := range api.HTTP.Services {
 		if !mustGenerate(s.Meta) || !mustGenerate(s.ServiceExpr.Meta) {
 			continue
@@ -129,20 +144,6 @@ func buildBodyTypes(api *expr.APIExpr) (map[string]map[string]*EndpointBodies, m
 			sbodies[e.Name()] = &EndpointBodies{req, res}
 		}
 		bodies[s.Name()] = sbodies
-	}
-	for _, t := range expr.Root.Types {
-		_, ok := t.Attribute().Meta["type:generate:force"]
-		if !ok {
-			continue
-		}
-		sf.schemafy(&expr.AttributeExpr{Type: t})
-	}
-	for _, t := range expr.Root.ResultTypes {
-		_, ok := t.Attribute().Meta["type:generate:force"]
-		if !ok {
-			continue
-		}
-		sf.schemafy(&expr.AttributeExpr{Type: t})
 	}
 	return bodies, sf.schemas
 }
@@ -216,19 +217,36 @@ func (sf *schemafier) schemafy(attr *expr.AttributeExpr, noref ...bool) *openapi
 	case expr.UserType:
 		if !expr.IsAlias(t) {
 			h := sf.hashAttribute(attr, fnv.New64())
-			ref, ok := sf.hashes[h]
-			if len(noref) == 0 && ok {
-				s.Ref = ref
-			} else {
-				name := t.Name()
-				if n, ok := t.Attribute().Meta["name:original"]; ok {
-					name = n[0]
-				}
-				typeName := sf.uniquify(codegen.Goify(name, true))
-				s.Ref = toRef(typeName)
-				sf.hashes[h] = s.Ref
-				sf.schemas[typeName] = sf.schemafy(t.Attribute(), true)
+
+			var metaName string
+			if n, ok := t.Attribute().Meta["openapi:typename"]; ok {
+				metaName = codegen.Goify(n[0], true)
 			}
+			metaRef := toRef(metaName)
+
+			// If it is named, it refers to the same structure and name.
+			// If it is not named, it refers to the same structure.
+			refs, ok := sf.hashes[h]
+			if len(noref) == 0 && ok {
+				for _, ref := range refs {
+					if ref == metaRef || metaName == "" {
+						s.Ref = ref
+						return s
+					}
+				}
+			}
+
+			// There is no type to refer to, generate a new one.
+			name := t.Name()
+			if metaName != "" {
+				name = metaName
+			} else if n, ok := t.Attribute().Meta["name:original"]; ok {
+				name = n[0]
+			}
+			typeName := sf.uniquify(codegen.Goify(name, true))
+			s.Ref = toRef(typeName)
+			sf.hashes[h] = append(sf.hashes[h], s.Ref)
+			sf.schemas[typeName] = sf.schemafy(t.Attribute(), true)
 			return s // All other schema properties are set in the reference
 		}
 		// Alias primitive type
@@ -456,4 +474,16 @@ func orderedHash(a, b uint64, h hash.Hash64) uint64 {
 		panic(err) // should not fail
 	}
 	return h.Sum64()
+}
+
+func mustGenerateType(meta expr.MetaExpr) bool {
+	if _, ok := meta["type:generate:force"]; ok {
+		return true
+	}
+	if n, ok := meta.Last("openapi:typename"); ok {
+		if n != "" {
+			return true
+		}
+	}
+	return false
 }
