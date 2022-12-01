@@ -280,13 +280,10 @@ func (a *AttributeExpr) Finalize() {
 			}
 		}
 		for _, nat := range *AsObject(a.Type) {
-			if ut, ok := nat.Attribute.Type.(UserType); ok {
-				if ut.Attribute().Meta == nil {
-					ut.Attribute().Meta = make(map[string][]string)
-				}
-				ut.Attribute().Meta["struct:pkg:path"] = []string{pkgPath}
-			}
 			if pkgPath != "" {
+				if ut, ok := nat.Attribute.Type.(UserType); ok {
+					ut.Attribute().AddMeta("struct:pkg:path", pkgPath)
+				}
 				if u := AsUnion(nat.Attribute.Type); u != nil {
 					for _, nat := range u.Values {
 						// Union types are generated using a private interface
@@ -295,7 +292,7 @@ func (a *AttributeExpr) Finalize() {
 						// union values must be declared in the same package as
 						// the parent attribute.
 						if ut, ok := nat.Attribute.Type.(UserType); ok {
-							ut.Attribute().Meta["struct:pkg:path"] = []string{pkgPath}
+							ut.Attribute().AddMeta("struct:pkg:path", pkgPath)
 						}
 					}
 				}
