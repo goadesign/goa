@@ -280,6 +280,12 @@ func (a *AttributeExpr) Finalize() {
 			}
 		}
 		for _, nat := range *AsObject(a.Type) {
+			if ut, ok := nat.Attribute.Type.(UserType); ok {
+				if ut.Attribute().Meta == nil {
+					ut.Attribute().Meta = make(map[string][]string)
+				}
+				ut.Attribute().Meta["struct:pkg:path"] = []string{pkgPath}
+			}
 			if pkgPath != "" {
 				if u := AsUnion(nat.Attribute.Type); u != nil {
 					for _, nat := range u.Values {
