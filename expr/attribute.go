@@ -282,6 +282,14 @@ func (a *AttributeExpr) Finalize() {
 		for _, nat := range *AsObject(a.Type) {
 			if pkgPath != "" {
 				if ut, ok := nat.Attribute.Type.(UserType); ok {
+					if ut.Attribute().Meta != nil &&
+						ut.Attribute().Meta["struct:pkg:path"] != nil &&
+						ut.Attribute().Meta["struct:pkg:path"][0] != pkgPath {
+						// Can't set a different custom package on sub-type
+						// Throw error
+						panic(fmt.Sprintf("Type \"%s\" has conflicting packages %s and %s", ut.Name(), ut.Attribute().Meta["struct:pkg:path"][0], pkgPath))
+					}
+
 					ut.Attribute().AddMeta("struct:pkg:path", pkgPath)
 				}
 				if u := AsUnion(nat.Attribute.Type); u != nil {
