@@ -207,7 +207,24 @@ func (a *AttributeExpr) Validate(ctx string, parent eval.Expression) *eval.Valid
 				verr.Add(parent, `%srequired field %q does not exist in type %s`, ctx, n, a.Type.Name())
 			}
 		}
+		var pkgPath string
+		if ut, ok := a.Type.(UserType); ok {
+			if meta, ok := ut.Attribute().Meta["struct:pkg:path"]; ok {
+				pkgPath = meta[0]
+			}
+		}
 		for _, nat := range *o {
+			if ut, ok := nat.Attribute.Type.(UserType); pkgPath != "" && ok {
+				// This check ensures we error if a sub-type has a different custom package type set
+				// or if two user types have different custom packages but share a sub-type (field that's a user type)
+				if ut.Attribute().Meta != nil &&
+					ut.Attribute().Meta["struct:pkg:path"] != nil &&
+					ut.Attribute().Meta["struct:pkg:path"][0] != pkgPath {
+					verr.Add(a, "Type \"%s\" has conflicting packages %s and %s", ut.Name(), ut.Attribute().Meta["struct:pkg:path"][0], pkgPath)
+				}
+
+				ut.Attribute().AddMeta("struct:pkg:path", pkgPath)
+			}
 			ctx = fmt.Sprintf("field %s", nat.Name)
 			verr.Merge(nat.Attribute.Validate(ctx, parent))
 		}
@@ -281,17 +298,6 @@ func (a *AttributeExpr) Finalize() {
 		}
 		for _, nat := range *AsObject(a.Type) {
 			if pkgPath != "" {
-				if ut, ok := nat.Attribute.Type.(UserType); ok {
-					if ut.Attribute().Meta != nil &&
-						ut.Attribute().Meta["struct:pkg:path"] != nil &&
-						ut.Attribute().Meta["struct:pkg:path"][0] != pkgPath {
-						// Can't set a different custom package on sub-type
-						// Throw error
-						panic(fmt.Sprintf("Type \"%s\" has conflicting packages %s and %s", ut.Name(), ut.Attribute().Meta["struct:pkg:path"][0], pkgPath))
-					}
-
-					ut.Attribute().AddMeta("struct:pkg:path", pkgPath)
-				}
 				if u := AsUnion(nat.Attribute.Type); u != nil {
 					for _, nat := range u.Values {
 						// Union types are generated using a private interface
