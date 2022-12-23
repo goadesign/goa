@@ -2247,7 +2247,7 @@ func buildResponseBodyType(body, att *expr.AttributeExpr, loc *codegen.Location,
 				}
 				code, helpers, err = marshal(srcAtt, body, src, "body", svcctx, httpctx)
 				if err != nil {
-					fmt.Println(err.Error()) // TBD validate DSL so errors are not possible
+					panic(err) // bug
 				}
 				sd.ServerTransformHelpers = codegen.AppendHelpers(sd.ServerTransformHelpers, helpers)
 			}
