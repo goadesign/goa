@@ -868,7 +868,9 @@ const singleResponseT = ` {{- if .ClientBody }}
 				cookies = resp.Cookies()
 		{{- if not .ClientBody }}
 			{{- if .MustValidate }}
-				err error
+				{{- if not .Headers}}
+					err error
+				{{- end }}
 			{{- end }}
 		{{- end }}
 			)
