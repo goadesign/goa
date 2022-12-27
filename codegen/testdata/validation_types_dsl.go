@@ -65,7 +65,7 @@ var ValidationTypesDSL = func() {
 		_ = Type("AliasType", func() {
 			Attribute("required_alias", Alias)
 			Attribute("alias", Alias)
-			Required("required_string")
+			Required("required_alias")
 		})
 
 		_ = Type("UserType", func() {
@@ -145,6 +145,12 @@ var ValidationTypesDSL = func() {
 			TypeName("TypeWithCollection")
 			Attributes(func() {
 				Attribute("collection", CollectionOf(Result))
+			})
+		})
+
+		_ = Type("Deep", func() {
+			Attribute("deep", func() {
+				Attribute("integer", IntegerT)
 			})
 		})
 	)
