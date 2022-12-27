@@ -24,6 +24,7 @@ func TestRecursiveValidationCode(t *testing.T) {
 		rtT      = root.UserType("Result")
 		rtcolT   = root.UserType("Collection")
 		colT     = root.UserType("TypeWithCollection")
+		deepT    = root.UserType("Deep")
 	)
 	cases := []struct {
 		Name       string
@@ -58,6 +59,7 @@ func TestRecursiveValidationCode(t *testing.T) {
 		{"collection-required", rtcolT, true, false, false, testdata.ResultCollectionPointerValidationCode},
 		{"collection-pointer", rtcolT, false, true, false, testdata.ResultCollectionPointerValidationCode},
 		{"type-with-collection-pointer", colT, false, true, false, testdata.TypeWithCollectionPointerValidationCode},
+		{"type-with-embedded-type", deepT, false, true, false, testdata.TypeWithEmbeddedTypeValidationCode},
 	}
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {

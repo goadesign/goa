@@ -234,18 +234,12 @@ const (
 `
 
 	AliasTypeValidationCode = `func Validate() (err error) {
-	if target.RequiredAlias != nil {
-		err = goa.MergeErrors(err, goa.ValidatePattern("target.required_alias", string(*target.RequiredAlias), "^[A-z].*[a-z]$"))
+	err = goa.MergeErrors(err, goa.ValidatePattern("target.required_alias", string(target.RequiredAlias), "^[A-z].*[a-z]$"))
+	if utf8.RuneCountInString(string(target.RequiredAlias)) < 1 {
+		err = goa.MergeErrors(err, goa.InvalidLengthError("target.required_alias", string(target.RequiredAlias), utf8.RuneCountInString(string(target.RequiredAlias)), 1, true))
 	}
-	if target.RequiredAlias != nil {
-		if utf8.RuneCountInString(string(*target.RequiredAlias)) < 1 {
-			err = goa.MergeErrors(err, goa.InvalidLengthError("target.required_alias", string(*target.RequiredAlias), utf8.RuneCountInString(string(*target.RequiredAlias)), 1, true))
-		}
-	}
-	if target.RequiredAlias != nil {
-		if utf8.RuneCountInString(string(*target.RequiredAlias)) > 10 {
-			err = goa.MergeErrors(err, goa.InvalidLengthError("target.required_alias", string(*target.RequiredAlias), utf8.RuneCountInString(string(*target.RequiredAlias)), 10, false))
-		}
+	if utf8.RuneCountInString(string(target.RequiredAlias)) > 10 {
+		err = goa.MergeErrors(err, goa.InvalidLengthError("target.required_alias", string(target.RequiredAlias), utf8.RuneCountInString(string(target.RequiredAlias)), 10, false))
 	}
 	if target.Alias != nil {
 		err = goa.MergeErrors(err, goa.ValidatePattern("target.alias", string(*target.Alias), "^[A-z].*[a-z]$"))
@@ -524,6 +518,17 @@ const (
 	if target.Collection != nil {
 		if err2 := ValidateResultCollection(target.Collection); err2 != nil {
 			err = goa.MergeErrors(err, err2)
+		}
+	}
+}
+`
+
+	TypeWithEmbeddedTypeValidationCode = `func Validate() (err error) {
+	if target.Deep != nil {
+		if target.Deep.Integer != nil {
+			if err2 := ValidateInteger(target.Deep.Integer); err2 != nil {
+				err = goa.MergeErrors(err, err2)
+			}
 		}
 	}
 }
