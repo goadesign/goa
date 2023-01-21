@@ -25,6 +25,9 @@ import (
 //    })
 //
 func Method(name string, fn func()) {
+	if name == "" {
+		eval.ReportError("method name cannot be empty")
+	}
 	s, ok := eval.Current().(*expr.ServiceExpr)
 	if !ok {
 		eval.IncompatibleDSL()
