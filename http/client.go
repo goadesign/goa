@@ -49,8 +49,14 @@ type (
 		Timeout bool
 		// Is the error a server-side fault?
 		Fault bool
+		// The original error if any
+		Err error
 	}
 )
+
+func (c ClientError) Unwrap() error {
+	return c.Err
+}
 
 // NewDebugDoer wraps the given doer and captures the request and response so
 // they can be printed.
@@ -157,28 +163,28 @@ func ErrInvalidType(svc, m, expected string, actual interface{}) error {
 // request body.
 func ErrEncodingError(svc, m string, err error) error {
 	msg := fmt.Sprintf("failed to encode request body: %s", err)
-	return &ClientError{Name: "encoding_error", Message: msg, Service: svc, Method: m}
+	return &ClientError{Name: "encoding_error", Message: msg, Service: svc, Method: m, Err: err}
 }
 
 // ErrInvalidURL is the error returned when the URL computed for an method is
 // invalid.
 func ErrInvalidURL(svc, m, u string, err error) error {
 	msg := fmt.Sprintf("invalid URL %s: %s", u, err)
-	return &ClientError{Name: "invalid_url", Message: msg, Service: svc, Method: m}
+	return &ClientError{Name: "invalid_url", Message: msg, Service: svc, Method: m, Err: err}
 }
 
 // ErrDecodingError is the error returned when the decoder fails to decode the
 // response body.
 func ErrDecodingError(svc, m string, err error) error {
 	msg := fmt.Sprintf("failed to decode response body: %s", err)
-	return &ClientError{Name: "decoding_error", Message: msg, Service: svc, Method: m}
+	return &ClientError{Name: "decoding_error", Message: msg, Service: svc, Method: m, Err: err}
 }
 
 // ErrValidationError is the error returned when the response body is properly
 // received and decoded but fails validation.
 func ErrValidationError(svc, m string, err error) error {
 	msg := fmt.Sprintf("invalid response: %s", err)
-	return &ClientError{Name: "validation_error", Message: msg, Service: svc, Method: m}
+	return &ClientError{Name: "validation_error", Message: msg, Service: svc, Method: m, Err: err}
 }
 
 // ErrInvalidResponse is the error returned when the service responded with an
@@ -214,5 +220,5 @@ func ErrRequestError(svc, m string, err error) error {
 		timeout = nerr.Timeout()
 	}
 	return &ClientError{Name: "request_error", Message: err.Error(), Service: svc, Method: m,
-		Temporary: temporary, Timeout: timeout}
+		Temporary: temporary, Timeout: timeout, Err: err}
 }
