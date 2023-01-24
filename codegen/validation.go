@@ -152,11 +152,7 @@ func recurseValidationCode(att *expr.AttributeExpr, put expr.UserType, attCtx *A
 		// validating a proto-generated type since the HTTP
 		// serialization transforms unions into objects.
 		u := expr.AsUnion(att.Type)
-		tref := Goify(put.Name(), true)
-		if attCtx.DefaultPkg != "" {
-			tref = attCtx.DefaultPkg + "." + tref
-		}
-		tref = "*" + tref
+		tref := attCtx.Scope.Ref(&expr.AttributeExpr{Type: put}, attCtx.DefaultPkg)
 		var vals []string
 		var types []string
 		for _, v := range u.Values {
