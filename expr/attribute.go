@@ -220,7 +220,7 @@ func (a *AttributeExpr) Validate(ctx string, parent eval.Expression) *eval.Valid
 				if ut.Attribute().Meta != nil &&
 					ut.Attribute().Meta["struct:pkg:path"] != nil &&
 					ut.Attribute().Meta["struct:pkg:path"][0] != pkgPath {
-					verr.Add(a, "Type \"%s\" has conflicting packages %s and %s", ut.Name(), ut.Attribute().Meta["struct:pkg:path"][0], pkgPath)
+					verr.Add(a, "type \"%s\" has conflicting packages %s and %s", ut.Name(), ut.Attribute().Meta["struct:pkg:path"][0], pkgPath)
 				}
 
 				ut.Attribute().AddMeta("struct:pkg:path", pkgPath)

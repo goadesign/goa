@@ -124,6 +124,7 @@ func TestAttributeExprValidate(t *testing.T) {
 		errRequiredFieldNotExist = fmt.Errorf(`%srequired field %q does not exist in type %s`, normalizedCtx, "foo", fieldNotExistType.Name())
 		errViewButNotAResultType = fmt.Errorf("%s uses view %q but %q is not a result type", normalizedCtx, metadata["view"][0], notAResultType.Name())
 		errTypeNotDefineView     = fmt.Errorf("%s: type %q does not define view %q", normalizedCtx, viewNotDefinedTypeName, "foo")
+		errConflictingTypes      = fmt.Errorf("type \"%s\" has conflicting packages %s and %s", "SecondType", "types2", "types")
 	)
 	cases := map[string]struct {
 		typ        DataType
@@ -283,6 +284,124 @@ func TestAttributeExprValidate(t *testing.T) {
 			},
 			metadata: metadata,
 			expected: &eval.ValidationErrors{Errors: []error{errTypeNotDefineView}},
+		},
+		"custom package in parent type": {
+			typ: &UserTypeExpr{
+				TypeName: "FirstType",
+				AttributeExpr: &AttributeExpr{
+					Meta: MetaExpr{"struct:pkg:path": []string{"types"}},
+					Type: &Object{
+						&NamedAttributeExpr{
+							Name: "thing",
+							Attribute: &AttributeExpr{
+								Type: &UserTypeExpr{
+									AttributeExpr: &AttributeExpr{
+										Type: &Object{
+											&NamedAttributeExpr{
+												Name: "Description",
+												Attribute: &AttributeExpr{
+													Type: String,
+												},
+											},
+										},
+									},
+									TypeName: "SecondType",
+								},
+							},
+						},
+					},
+				},
+			},
+			expected: &eval.ValidationErrors{Errors: []error{}},
+		},
+		"custom packages in child type": {
+			typ: &UserTypeExpr{
+				TypeName: "FirstType",
+				AttributeExpr: &AttributeExpr{
+					Type: &Object{
+						&NamedAttributeExpr{
+							Name: "thing",
+							Attribute: &AttributeExpr{
+								Type: &UserTypeExpr{
+									AttributeExpr: &AttributeExpr{
+										Meta: MetaExpr{"struct:pkg:path": []string{"types"}},
+										Type: &Object{
+											&NamedAttributeExpr{
+												Name: "Description",
+												Attribute: &AttributeExpr{
+													Type: String,
+												},
+											},
+										},
+									},
+									TypeName: "SecondType",
+								},
+							},
+						},
+					},
+				},
+			},
+			expected: &eval.ValidationErrors{Errors: []error{}},
+		},
+		"matching custom packages between sub-type and parent": {
+			typ: &UserTypeExpr{
+				TypeName: "FirstType",
+				AttributeExpr: &AttributeExpr{
+					Meta: MetaExpr{"struct:pkg:path": []string{"types"}},
+					Type: &Object{
+						&NamedAttributeExpr{
+							Name: "thing",
+							Attribute: &AttributeExpr{
+								Type: &UserTypeExpr{
+									AttributeExpr: &AttributeExpr{
+										Meta: MetaExpr{"struct:pkg:path": []string{"types"}},
+										Type: &Object{
+											&NamedAttributeExpr{
+												Name: "Description",
+												Attribute: &AttributeExpr{
+													Type: String,
+												},
+											},
+										},
+									},
+									TypeName: "SecondType",
+								},
+							},
+						},
+					},
+				},
+			},
+			expected: &eval.ValidationErrors{Errors: []error{}},
+		},
+		"conflicting custom packages between sub-type and parent": {
+			typ: &UserTypeExpr{
+				TypeName: "FirstType",
+				AttributeExpr: &AttributeExpr{
+					Meta: MetaExpr{"struct:pkg:path": []string{"types"}},
+					Type: &Object{
+						&NamedAttributeExpr{
+							Name: "thing",
+							Attribute: &AttributeExpr{
+								Type: &UserTypeExpr{
+									AttributeExpr: &AttributeExpr{
+										Meta: MetaExpr{"struct:pkg:path": []string{"types2"}},
+										Type: &Object{
+											&NamedAttributeExpr{
+												Name: "Description",
+												Attribute: &AttributeExpr{
+													Type: String,
+												},
+											},
+										},
+									},
+									TypeName: "SecondType",
+								},
+							},
+						},
+					},
+				},
+			},
+			expected: &eval.ValidationErrors{Errors: []error{errConflictingTypes}},
 		},
 	}
 
