@@ -13,7 +13,7 @@ type (
 	Logger interface {
 		// Log creates a log entry using a sequence of alternating keys
 		// and values.
-		Log(keyvals ...interface{}) error
+		Log(keyvals ...interface{})
 	}
 
 	// adapter is a thin wrapper around the stdlib logger that adapts it to
@@ -42,5 +42,4 @@ func (a *adapter) Log(keyvals ...interface{}) error {
 		fm.WriteString(fmt.Sprintf(" %s=%%+v", k))
 	}
 	a.Logger.Printf(strings.TrimSpace(fm.String()), vals...)
-	return nil
 }
