@@ -11,7 +11,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/goadesign/goa/dslengine"
+	"github.com/kyokomi/goa-v1/dslengine"
 )
 
 type routeInfo struct {
@@ -468,7 +468,7 @@ func (a *AttributeDefinition) Validate(ctx string, parent dslengine.Definition) 
 	}
 	// If both Default and Enum are given, make sure the Default value is one of Enum values.
 	// TODO: We only do the default value and enum check just for primitive types.
-	// Issue 388 (https://github.com/goadesign/goa/issues/388) will address this for other types.
+	// Issue 388 (https://github.com/kyokomi/goa-v1/issues/388) will address this for other types.
 	if a.Type.IsPrimitive() && a.DefaultValue != nil && a.Validation != nil && a.Validation.Values != nil {
 		var found bool
 		for _, e := range a.Validation.Values {

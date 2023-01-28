@@ -3,10 +3,10 @@ package goa_test
 import (
 	"time"
 
-	"github.com/goadesign/goa"
-
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+
+	"github.com/kyokomi/goa-v1"
 
 	metrics "github.com/armon/go-metrics"
 )

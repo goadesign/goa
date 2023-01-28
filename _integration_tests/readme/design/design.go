@@ -1,8 +1,8 @@
 package design
 
 import (
-	. "github.com/goadesign/goa/design"
-	. "github.com/goadesign/goa/design/apidsl"
+	. "github.com/kyokomi/goa-v1/design"
+	. "github.com/kyokomi/goa-v1/design/apidsl"
 )
 
 var _ = API("adder", func() {

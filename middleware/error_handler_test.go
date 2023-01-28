@@ -8,14 +8,15 @@ import (
 	"regexp"
 	"strings"
 
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
+
 	pErrors "github.com/pkg/errors"
 
 	"context"
 
-	"github.com/goadesign/goa"
-	"github.com/goadesign/goa/middleware"
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
+	"github.com/kyokomi/goa-v1"
+	"github.com/kyokomi/goa-v1/middleware"
 )
 
 // errorResponse contains the details of a error response. It implements ServiceError.

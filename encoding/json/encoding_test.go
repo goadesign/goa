@@ -5,9 +5,10 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/goadesign/goa/uuid"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+
+	"github.com/kyokomi/goa-v1/uuid"
 )
 
 var _ = Describe("JsonEncoding", func() {

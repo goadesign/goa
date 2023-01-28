@@ -1,12 +1,13 @@
 package genschema_test
 
 import (
-	"github.com/goadesign/goa/design"
-	. "github.com/goadesign/goa/design/apidsl"
-	"github.com/goadesign/goa/dslengine"
-	genschema "github.com/goadesign/goa/goagen/gen_schema"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+
+	"github.com/kyokomi/goa-v1/design"
+	"github.com/kyokomi/goa-v1/design/apidsl"
+	"github.com/kyokomi/goa-v1/dslengine"
+	genschema "github.com/kyokomi/goa-v1/goagen/gen_schema"
 )
 
 var _ = Describe("TypeSchema", func() {
@@ -27,12 +28,12 @@ var _ = Describe("TypeSchema", func() {
 
 	Context("with a media type", func() {
 		BeforeEach(func() {
-			MediaType("application/foo.bar", func() {
-				Attributes(func() {
-					Attribute("bar", func() { ReadOnly() })
+			apidsl.MediaType("application/foo.bar", func() {
+				apidsl.Attributes(func() {
+					apidsl.Attribute("bar", func() { apidsl.ReadOnly() })
 				})
-				View("default", func() {
-					Attribute("bar")
+				apidsl.View("default", func() {
+					apidsl.Attribute("bar")
 				})
 			})
 
@@ -48,22 +49,22 @@ var _ = Describe("TypeSchema", func() {
 
 	Context("with a media type with self-referencing attributes", func() {
 		BeforeEach(func() {
-			MediaType("application/vnd.menu+json", func() {
-				Attributes(func() {
-					Attribute("name", design.String, "The name of an application")
-					Attribute("children", CollectionOf("application/vnd.menu+json"), func() {
-						View("nameonly")
+			apidsl.MediaType("application/vnd.menu+json", func() {
+				apidsl.Attributes(func() {
+					apidsl.Attribute("name", design.String, "The name of an application")
+					apidsl.Attribute("children", apidsl.CollectionOf("application/vnd.menu+json"), func() {
+						apidsl.View("nameonly")
 					})
 
 				})
-				View("default", func() {
-					Attribute("name")
-					Attribute("children", func() {
-						View("nameonly")
+				apidsl.View("default", func() {
+					apidsl.Attribute("name")
+					apidsl.Attribute("children", func() {
+						apidsl.View("nameonly")
 					})
 				})
-				View("nameonly", func() {
-					Attribute("name")
+				apidsl.View("nameonly", func() {
+					apidsl.Attribute("name")
 				})
 			})
 

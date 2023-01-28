@@ -1,11 +1,12 @@
 package apidsl_test
 
 import (
-	. "github.com/goadesign/goa/design"
-	. "github.com/goadesign/goa/design/apidsl"
-	"github.com/goadesign/goa/dslengine"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+
+	. "github.com/kyokomi/goa-v1/design"
+	"github.com/kyokomi/goa-v1/design/apidsl"
+	"github.com/kyokomi/goa-v1/dslengine"
 )
 
 var _ = Describe("Resource", func() {
@@ -21,7 +22,7 @@ var _ = Describe("Resource", func() {
 	})
 
 	JustBeforeEach(func() {
-		res = Resource(name, dsl)
+		res = apidsl.Resource(name, dsl)
 		dslengine.Run()
 	})
 
@@ -50,7 +51,7 @@ var _ = Describe("Resource", func() {
 		BeforeEach(func() {
 			name = "foo"
 			dsl = func() {
-				Description(description)
+				apidsl.Description(description)
 			}
 		})
 
@@ -67,7 +68,7 @@ var _ = Describe("Resource", func() {
 		BeforeEach(func() {
 			name = "foo"
 			dsl = func() {
-				Parent(parent)
+				apidsl.Parent(parent)
 			}
 		})
 
@@ -84,7 +85,7 @@ var _ = Describe("Resource", func() {
 		BeforeEach(func() {
 			name = "foo"
 			dsl = func() {
-				Action(actionName, func() { Routing(PUT(":/id")) })
+				apidsl.Action(actionName, func() { apidsl.Routing(apidsl.PUT(":/id")) })
 			}
 		})
 
@@ -102,8 +103,8 @@ var _ = Describe("Resource", func() {
 		BeforeEach(func() {
 			name = "foo"
 			dsl = func() {
-				Metadata("swagger:generate", "false")
-				Action(actionName, func() { Routing(PUT(":/id")) })
+				apidsl.Metadata("swagger:generate", "false")
+				apidsl.Action(actionName, func() { apidsl.Routing(apidsl.PUT(":/id")) })
 			}
 		})
 
@@ -120,8 +121,8 @@ var _ = Describe("Resource", func() {
 		BeforeEach(func() {
 			name = "foo"
 			dsl = func() {
-				Metadata("swagger:generate", "false")
-				Files("path", "filename")
+				apidsl.Metadata("swagger:generate", "false")
+				apidsl.Files("path", "filename")
 			}
 		})
 
@@ -139,7 +140,7 @@ var _ = Describe("Resource", func() {
 		BeforeEach(func() {
 			name = "foo"
 			dsl = func() {
-				CanonicalActionName(can)
+				apidsl.CanonicalActionName(can)
 			}
 		})
 
@@ -156,8 +157,8 @@ var _ = Describe("Resource", func() {
 		BeforeEach(func() {
 			name = "foo"
 			dsl = func() {
-				Action(can, func() { Routing(PUT(":/id")) })
-				CanonicalActionName(can)
+				apidsl.Action(can, func() { apidsl.Routing(apidsl.PUT(":/id")) })
+				apidsl.CanonicalActionName(can)
 			}
 		})
 
@@ -174,7 +175,7 @@ var _ = Describe("Resource", func() {
 		BeforeEach(func() {
 			name = "foo"
 			dsl = func() {
-				BasePath(basePath)
+				apidsl.BasePath(basePath)
 			}
 		})
 
@@ -191,9 +192,9 @@ var _ = Describe("Resource", func() {
 		BeforeEach(func() {
 			name = "foo"
 			dsl = func() {
-				BasePath(basePath)
-				Params(func() {
-					Param("paramID")
+				apidsl.BasePath(basePath)
+				apidsl.Params(func() {
+					apidsl.Param("paramID")
 				})
 			}
 		})
@@ -214,7 +215,7 @@ var _ = Describe("Resource", func() {
 		BeforeEach(func() {
 			name = "foo"
 			dsl = func() {
-				DefaultMedia(mediaType)
+				apidsl.DefaultMedia(mediaType)
 			}
 		})
 
@@ -231,7 +232,7 @@ var _ = Describe("Resource", func() {
 		BeforeEach(func() {
 			name = "foo"
 			dsl = func() {
-				DefaultMedia(mediaType, "compact")
+				apidsl.DefaultMedia(mediaType, "compact")
 			}
 		})
 
@@ -249,7 +250,7 @@ var _ = Describe("Resource", func() {
 		BeforeEach(func() {
 			name = "foo"
 			dsl = func() {
-				DefaultMedia(mediaType)
+				apidsl.DefaultMedia(mediaType)
 			}
 		})
 
@@ -272,7 +273,7 @@ var _ = Describe("Resource", func() {
 		BeforeEach(func() {
 			name = "foo"
 			dsl = func() {
-				DefaultMedia(mediaType)
+				apidsl.DefaultMedia(mediaType)
 			}
 		})
 
@@ -297,7 +298,7 @@ var _ = Describe("Resource", func() {
 		BeforeEach(func() {
 			name = "foo"
 			dsl = func() {
-				DefaultMedia(mediaType)
+				apidsl.DefaultMedia(mediaType)
 			}
 		})
 
@@ -311,7 +312,7 @@ var _ = Describe("Resource", func() {
 	Context("with a trait that does not exist", func() {
 		BeforeEach(func() {
 			name = "foo"
-			dsl = func() { UseTrait("Authenticated") }
+			dsl = func() { apidsl.UseTrait("Authenticated") }
 		})
 
 		It("returns an error", func() {
@@ -325,10 +326,10 @@ var _ = Describe("Resource", func() {
 
 		BeforeEach(func() {
 			name = "foo"
-			dsl = func() { UseTrait(traitName) }
-			API("test", func() {
-				Trait(traitName, func() {
-					Description(description)
+			dsl = func() { apidsl.UseTrait(traitName) }
+			apidsl.API("test", func() {
+				apidsl.Trait(traitName, func() {
+					apidsl.Description(description)
 				})
 			})
 		})

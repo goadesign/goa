@@ -6,12 +6,13 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/goadesign/goa/design"
-	"github.com/goadesign/goa/goagen/codegen"
-	gencontroller "github.com/goadesign/goa/goagen/gen_controller"
-	"github.com/goadesign/goa/version"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+
+	"github.com/kyokomi/goa-v1/design"
+	"github.com/kyokomi/goa-v1/goagen/codegen"
+	gencontroller "github.com/kyokomi/goa-v1/goagen/gen_controller"
+	"github.com/kyokomi/goa-v1/version"
 )
 
 var _ = Describe("Generate", func() {

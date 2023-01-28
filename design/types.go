@@ -17,8 +17,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/goadesign/goa/dslengine"
 	"github.com/gofrs/uuid"
+	"github.com/kyokomi/goa-v1/dslengine"
 )
 
 // DefaultView is the name of the default view.

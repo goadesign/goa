@@ -1,10 +1,11 @@
 package design_test
 
 import (
-	"github.com/goadesign/goa/design"
-	"github.com/goadesign/goa/dslengine"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	
+	"github.com/kyokomi/goa-v1/design"
+	"github.com/kyokomi/goa-v1/dslengine"
 )
 
 var _ = Describe("CanonicalIdentifier", func() {

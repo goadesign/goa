@@ -3,11 +3,12 @@ package goakit_test
 import (
 	"bytes"
 
-	"github.com/go-kit/kit/log"
-	"github.com/goadesign/goa"
-	goakit "github.com/goadesign/goa/logging/kit"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+
+	"github.com/go-kit/kit/log"
+	"github.com/kyokomi/goa-v1"
+	goakit "github.com/kyokomi/goa-v1/logging/kit"
 )
 
 var _ = Describe("New", func() {

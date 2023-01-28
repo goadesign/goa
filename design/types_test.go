@@ -5,11 +5,12 @@ import (
 	"mime"
 	"sync"
 
-	. "github.com/goadesign/goa/design"
-	. "github.com/goadesign/goa/design/apidsl"
-	"github.com/goadesign/goa/dslengine"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+
+	. "github.com/kyokomi/goa-v1/design"
+	"github.com/kyokomi/goa-v1/design/apidsl"
+	"github.com/kyokomi/goa-v1/dslengine"
 )
 
 var _ = Describe("IsObject", func() {
@@ -193,7 +194,7 @@ var _ = Describe("Project", func() {
 
 			Context("on a collection", func() {
 				BeforeEach(func() {
-					mt = CollectionOf(Dup(mt))
+					mt = apidsl.CollectionOf(Dup(mt))
 					dslengine.Execute(mt.DSL(), mt)
 					mt.GenerateExample(NewRandomGenerator(""), nil)
 				})
@@ -260,41 +261,41 @@ var _ = Describe("Project", func() {
 
 		BeforeEach(func() {
 			dslengine.Reset()
-			API("test", func() {})
-			mt = MediaType(id, func() {
-				TypeName(typeName)
-				Attributes(func() {
-					Attribute("att", "vnd.application/MT2", func() {
-						Metadata("foo", "bar")
+			apidsl.API("test", func() {})
+			mt = apidsl.MediaType(id, func() {
+				apidsl.TypeName(typeName)
+				apidsl.Attributes(func() {
+					apidsl.Attribute("att", "vnd.application/MT2", func() {
+						apidsl.Metadata("foo", "bar")
 					})
 				})
-				Links(func() {
-					Link("att", "default")
+				apidsl.Links(func() {
+					apidsl.Link("att", "default")
 				})
-				View("default", func() {
-					Attribute("att")
-					Attribute("links")
+				apidsl.View("default", func() {
+					apidsl.Attribute("att")
+					apidsl.Attribute("links")
 				})
-				View("tiny", func() {
-					Attribute("att", func() {
-						View("tiny")
+				apidsl.View("tiny", func() {
+					apidsl.Attribute("att", func() {
+						apidsl.View("tiny")
 					})
 				})
 			})
-			MediaType("vnd.application/MT2", func() {
-				TypeName("Mt2")
-				Attributes(func() {
-					Attribute("att2", mt)
+			apidsl.MediaType("vnd.application/MT2", func() {
+				apidsl.TypeName("Mt2")
+				apidsl.Attributes(func() {
+					apidsl.Attribute("att2", mt)
 				})
-				Links(func() {
-					Link("att2", "default")
+				apidsl.Links(func() {
+					apidsl.Link("att2", "default")
 				})
-				View("default", func() {
-					Attribute("att2")
-					Attribute("links")
+				apidsl.View("default", func() {
+					apidsl.Attribute("att2")
+					apidsl.Attribute("links")
 				})
-				View("tiny", func() {
-					Attribute("links")
+				apidsl.View("tiny", func() {
+					apidsl.Attribute("links")
 				})
 			})
 			err := dslengine.Run()
@@ -551,14 +552,14 @@ var _ = Describe("Walk", func() {
 var _ = Describe("Finalize", func() {
 	BeforeEach(func() {
 		dslengine.Reset()
-		MediaType("application/vnd.menu+json", func() {
-			Attributes(func() {
-				Attribute("name", String, "The name of an application")
-				Attribute("child", CollectionOf("application/vnd.menu"))
+		apidsl.MediaType("application/vnd.menu+json", func() {
+			apidsl.Attributes(func() {
+				apidsl.Attribute("name", String, "The name of an application")
+				apidsl.Attribute("child", apidsl.CollectionOf("application/vnd.menu"))
 			})
 
-			View("default", func() {
-				Attribute("name")
+			apidsl.View("default", func() {
+				apidsl.Attribute("name")
 			})
 		})
 	})

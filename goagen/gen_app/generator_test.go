@@ -8,13 +8,14 @@ import (
 	"strings"
 	"text/template"
 
-	"github.com/goadesign/goa/design"
-	"github.com/goadesign/goa/dslengine"
-	"github.com/goadesign/goa/goagen/codegen"
-	genapp "github.com/goadesign/goa/goagen/gen_app"
-	"github.com/goadesign/goa/version"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+
+	"github.com/kyokomi/goa-v1/design"
+	"github.com/kyokomi/goa-v1/dslengine"
+	"github.com/kyokomi/goa-v1/goagen/codegen"
+	genapp "github.com/kyokomi/goa-v1/goagen/gen_app"
+	"github.com/kyokomi/goa-v1/version"
 )
 
 var _ = Describe("Generate", func() {
@@ -326,7 +327,7 @@ package app
 
 import (
 	"context"
-	"github.com/goadesign/goa"
+	"github.com/kyokomi/goa-v1"
 	"net/http"
 )
 
@@ -378,7 +379,7 @@ package app
 
 import (
 	"context"
-	"github.com/goadesign/goa"
+	"github.com/kyokomi/goa-v1"
 	"net/http"
 )
 

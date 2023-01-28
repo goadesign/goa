@@ -7,10 +7,11 @@ import (
 
 	"context"
 
-	"github.com/goadesign/goa"
-	"github.com/goadesign/goa/middleware"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+
+	"github.com/kyokomi/goa-v1"
+	"github.com/kyokomi/goa-v1/middleware"
 )
 
 var _ = Describe("LogRequest", func() {

@@ -4,7 +4,7 @@ import (
 	"regexp"
 	"testing"
 
-	"github.com/goadesign/goa/cors"
+	"github.com/kyokomi/goa-v1/cors"
 )
 
 func TestMatchOrigin(t *testing.T) {

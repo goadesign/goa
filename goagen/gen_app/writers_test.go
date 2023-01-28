@@ -4,13 +4,14 @@ import (
 	"io/ioutil"
 	"os"
 
-	"github.com/goadesign/goa/design"
-	"github.com/goadesign/goa/design/apidsl"
-	"github.com/goadesign/goa/dslengine"
-	"github.com/goadesign/goa/goagen/codegen"
-	genapp "github.com/goadesign/goa/goagen/gen_app"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+
+	"github.com/kyokomi/goa-v1/design"
+	"github.com/kyokomi/goa-v1/design/apidsl"
+	"github.com/kyokomi/goa-v1/dslengine"
+	"github.com/kyokomi/goa-v1/goagen/codegen"
+	genapp "github.com/kyokomi/goa-v1/goagen/gen_app"
 )
 
 var _ = Describe("ContextsWriter", func() {

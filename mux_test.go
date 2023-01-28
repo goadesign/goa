@@ -6,9 +6,10 @@ import (
 	"net/http"
 	"net/url"
 
-	"github.com/goadesign/goa"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+
+	"github.com/kyokomi/goa-v1"
 )
 
 var _ = Describe("Mux", func() {

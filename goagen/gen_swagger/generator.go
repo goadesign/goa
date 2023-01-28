@@ -10,9 +10,9 @@ import (
 
 	yaml "gopkg.in/yaml.v2"
 
-	"github.com/goadesign/goa/design"
-	"github.com/goadesign/goa/goagen/codegen"
-	"github.com/goadesign/goa/goagen/utils"
+	"github.com/kyokomi/goa-v1/design"
+	"github.com/kyokomi/goa-v1/goagen/codegen"
+	"github.com/kyokomi/goa-v1/goagen/utils"
 )
 
 //NewGenerator returns an initialized instance of a JavaScript Client Generator

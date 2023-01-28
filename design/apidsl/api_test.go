@@ -1,11 +1,12 @@
 package apidsl_test
 
 import (
-	. "github.com/goadesign/goa/design"
-	. "github.com/goadesign/goa/design/apidsl"
-	"github.com/goadesign/goa/dslengine"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+
+	. "github.com/kyokomi/goa-v1/design"
+	"github.com/kyokomi/goa-v1/design/apidsl"
+	"github.com/kyokomi/goa-v1/dslengine"
 )
 
 var _ = Describe("API", func() {
@@ -19,7 +20,7 @@ var _ = Describe("API", func() {
 	})
 
 	JustBeforeEach(func() {
-		API(name, dsl)
+		apidsl.API(name, dsl)
 		dslengine.Run()
 	})
 
@@ -40,7 +41,7 @@ var _ = Describe("API", func() {
 		})
 
 		It("produces an error", func() {
-			API(name, dsl)
+			apidsl.API(name, dsl)
 			Ω(dslengine.Errors).Should(HaveOccurred())
 		})
 	})
@@ -51,7 +52,7 @@ var _ = Describe("API", func() {
 		})
 
 		It("returns an error", func() {
-			API("news", dsl)
+			apidsl.API("news", dsl)
 			Ω(dslengine.Errors).Should(HaveOccurred())
 		})
 	})
@@ -67,7 +68,7 @@ var _ = Describe("API", func() {
 
 			BeforeEach(func() {
 				dsl = func() {
-					Description(description)
+					apidsl.Description(description)
 				}
 			})
 
@@ -81,7 +82,7 @@ var _ = Describe("API", func() {
 
 			BeforeEach(func() {
 				dsl = func() {
-					Title(title)
+					apidsl.Title(title)
 				}
 			})
 
@@ -95,7 +96,7 @@ var _ = Describe("API", func() {
 
 			BeforeEach(func() {
 				dsl = func() {
-					Version(version)
+					apidsl.Version(version)
 				}
 			})
 
@@ -109,7 +110,7 @@ var _ = Describe("API", func() {
 
 			BeforeEach(func() {
 				dsl = func() {
-					TermsOfService(terms)
+					apidsl.TermsOfService(terms)
 				}
 			})
 
@@ -125,10 +126,10 @@ var _ = Describe("API", func() {
 
 			BeforeEach(func() {
 				dsl = func() {
-					Contact(func() {
-						Name(contactName)
-						Email(contactEmail)
-						URL(contactURL)
+					apidsl.Contact(func() {
+						apidsl.Name(contactName)
+						apidsl.Email(contactEmail)
+						apidsl.URL(contactURL)
 					})
 				}
 			})
@@ -148,9 +149,9 @@ var _ = Describe("API", func() {
 
 			BeforeEach(func() {
 				dsl = func() {
-					License(func() {
-						Name(licenseName)
-						URL(licenseURL)
+					apidsl.License(func() {
+						apidsl.Name(licenseName)
+						apidsl.URL(licenseURL)
 					})
 				}
 			})
@@ -168,7 +169,7 @@ var _ = Describe("API", func() {
 
 			BeforeEach(func() {
 				dsl = func() {
-					Consumes("application/json")
+					apidsl.Consumes("application/json")
 				}
 			})
 
@@ -179,14 +180,14 @@ var _ = Describe("API", func() {
 			})
 
 			Context("using a custom encoding package", func() {
-				const pkgPath = "github.com/goadesign/goa/encoding/json"
+				const pkgPath = "github.com/kyokomi/goa-v1/encoding/json"
 				const fn = "NewFoo"
 
 				BeforeEach(func() {
 					dsl = func() {
-						Consumes("application/json", func() {
-							Package(pkgPath)
-							Function(fn)
+						apidsl.Consumes("application/json", func() {
+							apidsl.Package(pkgPath)
+							apidsl.Function(fn)
 						})
 					}
 				})
@@ -205,7 +206,7 @@ var _ = Describe("API", func() {
 
 			BeforeEach(func() {
 				dsl = func() {
-					BasePath(basePath)
+					apidsl.BasePath(basePath)
 				}
 			})
 
@@ -224,9 +225,9 @@ var _ = Describe("API", func() {
 
 			BeforeEach(func() {
 				dsl = func() {
-					Params(func() {
-						Param(param1Name, param1Type, param1Desc)
-						Param(param2Name, param2Type, param2Desc)
+					apidsl.Params(func() {
+						apidsl.Param(param1Name, param1Type, param1Desc)
+						apidsl.Param(param2Name, param2Type, param2Desc)
 					})
 				}
 			})
@@ -249,7 +250,7 @@ var _ = Describe("API", func() {
 				BeforeEach(func() {
 					prevDSL := dsl
 					dsl = func() {
-						BasePath(basePath)
+						apidsl.BasePath(basePath)
 						prevDSL()
 					}
 				})
@@ -269,8 +270,8 @@ var _ = Describe("API", func() {
 
 				Context("with conflicting resource and API base params", func() {
 					JustBeforeEach(func() {
-						Resource("foo", func() {
-							BasePath("/:accountID")
+						apidsl.Resource("foo", func() {
+							apidsl.BasePath("/:accountID")
 						})
 						dslengine.Run()
 					})
@@ -282,11 +283,11 @@ var _ = Describe("API", func() {
 
 				Context("with an absolute resource base path", func() {
 					JustBeforeEach(func() {
-						Resource("foo", func() {
-							Params(func() {
-								Param(param1Name, param1Type, param1Desc)
+						apidsl.Resource("foo", func() {
+							apidsl.Params(func() {
+								apidsl.Param(param1Name, param1Type, param1Desc)
 							})
-							BasePath("//:accountID")
+							apidsl.BasePath("//:accountID")
 						})
 						dslengine.Run()
 					})
@@ -309,15 +310,15 @@ var _ = Describe("API", func() {
 
 			BeforeEach(func() {
 				dsl = func() {
-					ResponseTemplate(respName, func() {
-						Description(respDesc)
-						Status(respStatus)
-						Media(respMediaType)
+					apidsl.ResponseTemplate(respName, func() {
+						apidsl.Description(respDesc)
+						apidsl.Status(respStatus)
+						apidsl.Media(respMediaType)
 					})
-					ResponseTemplate(respTName, func(mt string) {
-						Description(respTDesc)
-						Status(respTStatus)
-						Media(mt)
+					apidsl.ResponseTemplate(respTName, func(mt string) {
+						apidsl.Description(respTDesc)
+						apidsl.Status(respTStatus)
+						apidsl.Media(mt)
 					})
 				}
 			})
@@ -345,10 +346,10 @@ var _ = Describe("API", func() {
 
 			BeforeEach(func() {
 				dsl = func() {
-					Trait(traitName, func() {
-						Headers(func() {
-							Header("Auth-Token")
-							Required("Auth-Token")
+					apidsl.Trait(traitName, func() {
+						apidsl.Headers(func() {
+							apidsl.Header("Auth-Token")
+							apidsl.Required("Auth-Token")
 						})
 					})
 				}
@@ -365,24 +366,24 @@ var _ = Describe("API", func() {
 
 			BeforeEach(func() {
 				dsl = func() {
-					Trait(traitName, func() {
-						Attributes(func() {
-							Attribute("foo")
+					apidsl.Trait(traitName, func() {
+						apidsl.Attributes(func() {
+							apidsl.Attribute("foo")
 						})
 					})
 				}
 			})
 
 			JustBeforeEach(func() {
-				API(name, dsl)
-				MediaType("application/vnd.foo", func() {
-					UseTrait(traitName)
-					Attributes(func() {
-						Attribute("bar")
+				apidsl.API(name, dsl)
+				apidsl.MediaType("application/vnd.foo", func() {
+					apidsl.UseTrait(traitName)
+					apidsl.Attributes(func() {
+						apidsl.Attribute("bar")
 					})
-					View("default", func() {
-						Attribute("bar")
-						Attribute("foo")
+					apidsl.View("default", func() {
+						apidsl.Attribute("bar")
+						apidsl.Attribute("foo")
 					})
 				})
 				dslengine.Run()
@@ -406,30 +407,30 @@ var _ = Describe("API", func() {
 
 			BeforeEach(func() {
 				dsl = func() {
-					Trait(traitName1, func() {
-						Attributes(func() {
-							Attribute("foo")
+					apidsl.Trait(traitName1, func() {
+						apidsl.Attributes(func() {
+							apidsl.Attribute("foo")
 						})
 					})
-					Trait(traitName2, func() {
-						Attributes(func() {
-							Attribute("baz")
+					apidsl.Trait(traitName2, func() {
+						apidsl.Attributes(func() {
+							apidsl.Attribute("baz")
 						})
 					})
 				}
 			})
 
 			JustBeforeEach(func() {
-				API(name, dsl)
-				MediaType("application/vnd.foo", func() {
-					UseTrait(traitName1, traitName2)
-					Attributes(func() {
-						Attribute("bar")
+				apidsl.API(name, dsl)
+				apidsl.MediaType("application/vnd.foo", func() {
+					apidsl.UseTrait(traitName1, traitName2)
+					apidsl.Attributes(func() {
+						apidsl.Attribute("bar")
 					})
-					View("default", func() {
-						Attribute("bar")
-						Attribute("foo")
-						Attribute("baz")
+					apidsl.View("default", func() {
+						apidsl.Attribute("bar")
+						apidsl.Attribute("foo")
+						apidsl.Attribute("baz")
 					})
 				})
 				dslengine.Run()

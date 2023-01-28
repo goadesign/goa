@@ -1,8 +1,8 @@
 package apidsl
 
 import (
-	"github.com/goadesign/goa/design"
-	"github.com/goadesign/goa/dslengine"
+	"github.com/kyokomi/goa-v1/design"
+	"github.com/kyokomi/goa-v1/dslengine"
 )
 
 // Response implements the response definition DSL. Response takes the name of the response as

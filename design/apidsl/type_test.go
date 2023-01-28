@@ -1,11 +1,12 @@
 package apidsl_test
 
 import (
-	. "github.com/goadesign/goa/design"
-	. "github.com/goadesign/goa/design/apidsl"
-	"github.com/goadesign/goa/dslengine"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+
+	. "github.com/kyokomi/goa-v1/design"
+	"github.com/kyokomi/goa-v1/design/apidsl"
+	"github.com/kyokomi/goa-v1/dslengine"
 )
 
 var _ = Describe("Type", func() {
@@ -21,7 +22,7 @@ var _ = Describe("Type", func() {
 	})
 
 	JustBeforeEach(func() {
-		Type(name, dsl)
+		apidsl.Type(name, dsl)
 		dslengine.Run()
 		ut, _ = Design.Types[name]
 	})
@@ -50,7 +51,7 @@ var _ = Describe("Type", func() {
 		BeforeEach(func() {
 			name = "foo"
 			dsl = func() {
-				Attribute(attName)
+				apidsl.Attribute(attName)
 			}
 		})
 
@@ -70,7 +71,7 @@ var _ = Describe("Type", func() {
 		BeforeEach(func() {
 			name = "foo"
 			dsl = func() {
-				Attribute(attName, UUID)
+				apidsl.Attribute(attName, UUID)
 			}
 		})
 
@@ -91,7 +92,7 @@ var _ = Describe("Type", func() {
 		BeforeEach(func() {
 			name = "foo"
 			dsl = func() {
-				Attribute(attName, DateTime)
+				apidsl.Attribute(attName, DateTime)
 			}
 		})
 
@@ -116,10 +117,10 @@ var _ = Describe("ArrayOf", func() {
 		)
 		BeforeEach(func() {
 			dslengine.Reset()
-			ut = Type("example", func() {
-				Attribute("id")
+			ut = apidsl.Type("example", func() {
+				apidsl.Attribute("id")
 			})
-			ar = ArrayOf(ut)
+			ar = apidsl.ArrayOf(ut)
 			Ω(dslengine.Errors).ShouldNot(HaveOccurred())
 		})
 
@@ -143,8 +144,8 @@ var _ = Describe("ArrayOf", func() {
 
 		BeforeEach(func() {
 			dslengine.Reset()
-			ar = ArrayOf(String, func() {
-				Pattern(pattern)
+			ar = apidsl.ArrayOf(String, func() {
+				apidsl.Pattern(pattern)
 			})
 			Ω(dslengine.Errors).ShouldNot(HaveOccurred())
 		})
@@ -162,11 +163,11 @@ var _ = Describe("ArrayOf", func() {
 		var ar *UserTypeDefinition
 		BeforeEach(func() {
 			dslengine.Reset()
-			Type("name", func() {
-				Attribute("id")
+			apidsl.Type("name", func() {
+				apidsl.Attribute("id")
 			})
-			ar = Type("names", func() {
-				Attribute("ut", ArrayOf("name"))
+			ar = apidsl.Type("names", func() {
+				apidsl.Attribute("ut", apidsl.ArrayOf("name"))
 			})
 		})
 
@@ -195,12 +196,12 @@ var _ = Describe("ArrayOf", func() {
 		var mt *MediaTypeDefinition
 		BeforeEach(func() {
 			dslengine.Reset()
-			mt = MediaType("application/vnd.test", func() {
-				Attributes(func() {
-					Attribute("ut", ArrayOf("application/vnd.test"))
+			mt = apidsl.MediaType("application/vnd.test", func() {
+				apidsl.Attributes(func() {
+					apidsl.Attribute("ut", apidsl.ArrayOf("application/vnd.test"))
 				})
-				View("default", func() {
-					Attribute("ut")
+				apidsl.View("default", func() {
+					apidsl.Attribute("ut")
 				})
 			})
 		})
@@ -236,13 +237,13 @@ var _ = Describe("HashOf", func() {
 		)
 		BeforeEach(func() {
 			dslengine.Reset()
-			kt = Type("key", func() {
-				Attribute("id")
+			kt = apidsl.Type("key", func() {
+				apidsl.Attribute("id")
 			})
-			vt = Type("val", func() {
-				Attribute("id")
+			vt = apidsl.Type("val", func() {
+				apidsl.Attribute("id")
 			})
-			ha = HashOf(kt, vt)
+			ha = apidsl.HashOf(kt, vt)
 			Ω(dslengine.Errors).ShouldNot(HaveOccurred())
 		})
 
@@ -268,7 +269,7 @@ var _ = Describe("HashOf", func() {
 
 		BeforeEach(func() {
 			dslengine.Reset()
-			ha = HashOf(String, String, func() { Pattern(kp) }, func() { Pattern(vp) })
+			ha = apidsl.HashOf(String, String, func() { apidsl.Pattern(kp) }, func() { apidsl.Pattern(vp) })
 			Ω(dslengine.Errors).ShouldNot(HaveOccurred())
 		})
 

@@ -1,7 +1,7 @@
 package genclient
 
 import (
-	"github.com/goadesign/goa/design"
+	"github.com/kyokomi/goa-v1/design"
 )
 
 //Option a generator option definition

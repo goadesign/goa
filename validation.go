@@ -9,7 +9,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/goadesign/goa/uuid"
+	"github.com/kyokomi/goa-v1/uuid"
 )
 
 // Format defines a validation format.

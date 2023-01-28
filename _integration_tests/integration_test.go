@@ -14,7 +14,7 @@ import (
 func TestBootstrapReadme(t *testing.T) {
 	defer os.RemoveAll("./readme/main.go")
 	defer os.RemoveAll("./readme/tool")
-	if err := goagen("./readme", "bootstrap", "-d", "github.com/goadesign/goa/_integration_tests/readme/design"); err != nil {
+	if err := goagen("./readme", "bootstrap", "-d", "github.com/kyokomi/goa-v1/_integration_tests/readme/design"); err != nil {
 		t.Error(err.Error())
 	}
 	if err := gobuild("./readme"); err != nil {
@@ -25,7 +25,7 @@ func TestBootstrapReadme(t *testing.T) {
 func TestDefaultMedia(t *testing.T) {
 	defer os.RemoveAll("./media/main.go")
 	defer os.RemoveAll("./media/tool")
-	if err := goagen("./media", "bootstrap", "-d", "github.com/goadesign/goa/_integration_tests/media/design"); err != nil {
+	if err := goagen("./media", "bootstrap", "-d", "github.com/kyokomi/goa-v1/_integration_tests/media/design"); err != nil {
 		t.Error(err.Error())
 	}
 	if err := gobuild("./media"); err != nil {
@@ -53,7 +53,7 @@ func TestCellar(t *testing.T) {
 		t.Error(err.Error())
 	}
 	defer os.RemoveAll("./goa-cellar")
-	if err := goagen("./goa-cellar", "bootstrap", "-d", "github.com/goadesign/goa-cellar/design"); err != nil {
+	if err := goagen("./goa-cellar", "bootstrap", "-d", "github.com/kyokomi/goa-v1-cellar/design"); err != nil {
 		t.Error(err.Error())
 	}
 	if err := gobuild("./goa-cellar"); err != nil {
@@ -65,7 +65,7 @@ func TestCellar(t *testing.T) {
 }
 
 func goagen(dir, command string, args ...string) error {
-	pkg, err := build.Import("github.com/goadesign/goa/goagen", "", 0)
+	pkg, err := build.Import("github.com/kyokomi/goa-v1/goagen", "", 0)
 	if err != nil {
 		return err
 	}

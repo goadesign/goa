@@ -1,10 +1,11 @@
 package genapp_test
 
 import (
-	"github.com/goadesign/goa/design"
-	genapp "github.com/goadesign/goa/goagen/gen_app"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+
+	"github.com/kyokomi/goa-v1/design"
+	genapp "github.com/kyokomi/goa-v1/goagen/gen_app"
 )
 
 var _ = Describe("BuildEncoders", func() {
@@ -38,7 +39,7 @@ var _ = Describe("BuildEncoders", func() {
 			Ω(data).Should(HaveLen(1))
 			jd := data[0]
 			Ω(jd).ShouldNot(BeNil())
-			Ω(jd.PackagePath).Should(Equal("github.com/goadesign/goa"))
+			Ω(jd.PackagePath).Should(Equal("github.com/kyokomi/goa-v1"))
 			Ω(jd.PackageName).Should(Equal("goa"))
 			Ω(jd.Function).Should(Equal("NewJSONEncoder"))
 			Ω(jd.MIMETypes).Should(HaveLen(1))
@@ -60,7 +61,7 @@ var _ = Describe("BuildEncoders", func() {
 			Ω(data).Should(HaveLen(1))
 			jd := data[0]
 			Ω(jd).ShouldNot(BeNil())
-			Ω(jd.PackagePath).Should(Equal("github.com/goadesign/goa"))
+			Ω(jd.PackagePath).Should(Equal("github.com/kyokomi/goa-v1"))
 			Ω(jd.PackageName).Should(Equal("goa"))
 			Ω(jd.Function).Should(Equal("NewJSONDecoder"))
 			Ω(jd.MIMETypes).Should(HaveLen(1))
@@ -69,7 +70,7 @@ var _ = Describe("BuildEncoders", func() {
 	})
 
 	Context("with a definition using a custom decoding package", func() {
-		const packagePath = "github.com/goadesign/goa/design" // Just to pick something always available
+		const packagePath = "github.com/kyokomi/goa-v1/design" // Just to pick something always available
 		var mimeTypes = []string{"application/vnd.custom", "application/vnd.custom2"}
 
 		BeforeEach(func() {
@@ -94,7 +95,7 @@ var _ = Describe("BuildEncoders", func() {
 	})
 
 	Context("with a definition using a custom decoding package for a known encoding", func() {
-		const packagePath = "github.com/goadesign/goa/design" // Just to pick something always available
+		const packagePath = "github.com/kyokomi/goa-v1/design" // Just to pick something always available
 		var mimeTypes = []string{"application/json"}
 
 		BeforeEach(func() {
@@ -118,7 +119,7 @@ var _ = Describe("BuildEncoders", func() {
 	})
 
 	Context("with a definition using a custom decoding package from goadesign", func() {
-		const packagePath = "github.com/goadesign/goa/encoding/gogoprotobuf"
+		const packagePath = "github.com/kyokomi/goa-v1/encoding/gogoprotobuf"
 		var mimeTypes = []string{"application/x-protobuf"}
 
 		BeforeEach(func() {

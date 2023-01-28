@@ -1,10 +1,11 @@
 package genswagger_test
 
 import (
-	"github.com/goadesign/goa/design"
-	genswagger "github.com/goadesign/goa/goagen/gen_swagger"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+
+	"github.com/kyokomi/goa-v1/design"
+	genswagger "github.com/kyokomi/goa-v1/goagen/gen_swagger"
 )
 
 var _ = Describe("NewGenerator", func() {

@@ -10,8 +10,8 @@ import (
 	"strings"
 	"text/template"
 
-	"github.com/goadesign/goa/design"
-	"github.com/goadesign/goa/goagen/codegen"
+	"github.com/kyokomi/goa-v1/design"
+	"github.com/kyokomi/goa-v1/goagen/codegen"
 )
 
 func makeTestDir(g *Generator, apiName string) (outDir string, err error) {
@@ -93,8 +93,8 @@ func (g *Generator) generateResourceTest() error {
 		codegen.SimpleImport("strings"),
 		codegen.SimpleImport("time"),
 		codegen.SimpleImport(appPkg),
-		codegen.SimpleImport("github.com/goadesign/goa"),
-		codegen.SimpleImport("github.com/goadesign/goa/goatest"),
+		codegen.SimpleImport("github.com/kyokomi/goa-v1"),
+		codegen.SimpleImport("github.com/kyokomi/goa-v1/goatest"),
 		codegen.SimpleImport("context"),
 		codegen.NewImport("uuid", "github.com/gofrs/uuid"),
 	}

@@ -4,12 +4,13 @@ import (
 	"fmt"
 	"strings"
 
-	. "github.com/goadesign/goa/design"
-	. "github.com/goadesign/goa/design/apidsl"
-	"github.com/goadesign/goa/dslengine"
-	"github.com/goadesign/goa/goagen/codegen"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+
+	. "github.com/kyokomi/goa-v1/design"
+	"github.com/kyokomi/goa-v1/design/apidsl"
+	"github.com/kyokomi/goa-v1/dslengine"
+	"github.com/kyokomi/goa-v1/goagen/codegen"
 )
 
 var _ = Describe("code generation", func() {
@@ -580,11 +581,11 @@ var _ = Describe("GoTypeTransform", func() {
 	Context("transforming simple objects", func() {
 		const attName = "att"
 		BeforeEach(func() {
-			source = Type("Source", func() {
-				Attribute(attName)
+			source = apidsl.Type("Source", func() {
+				apidsl.Attribute(attName)
 			})
-			target = Type("Target", func() {
-				Attribute(attName)
+			target = apidsl.Type("Target", func() {
+				apidsl.Attribute(attName)
 			})
 			funcName = "Transform"
 		})
@@ -602,14 +603,14 @@ var _ = Describe("GoTypeTransform", func() {
 	Context("transforming objects with attributes with map key metadata", func() {
 		const mapKey = "key"
 		BeforeEach(func() {
-			source = Type("Source", func() {
-				Attribute("foo", func() {
-					Metadata(codegen.TransformMapKey, mapKey)
+			source = apidsl.Type("Source", func() {
+				apidsl.Attribute("foo", func() {
+					apidsl.Metadata(codegen.TransformMapKey, mapKey)
 				})
 			})
-			target = Type("Target", func() {
-				Attribute("bar", func() {
-					Metadata(codegen.TransformMapKey, mapKey)
+			target = apidsl.Type("Target", func() {
+				apidsl.Attribute("bar", func() {
+					apidsl.Metadata(codegen.TransformMapKey, mapKey)
 				})
 			})
 			funcName = "Transform"
@@ -628,11 +629,11 @@ var _ = Describe("GoTypeTransform", func() {
 	Context("transforming objects with array attributes", func() {
 		const attName = "att"
 		BeforeEach(func() {
-			source = Type("Source", func() {
-				Attribute(attName, ArrayOf(Integer))
+			source = apidsl.Type("Source", func() {
+				apidsl.Attribute(attName, apidsl.ArrayOf(Integer))
 			})
-			target = Type("Target", func() {
-				Attribute(attName, ArrayOf(Integer))
+			target = apidsl.Type("Target", func() {
+				apidsl.Attribute(attName, apidsl.ArrayOf(Integer))
 			})
 			funcName = "Transform"
 		})
@@ -653,15 +654,15 @@ var _ = Describe("GoTypeTransform", func() {
 	Context("transforming objects with hash attributes", func() {
 		const attName = "att"
 		BeforeEach(func() {
-			elem := Type("elem", func() {
-				Attribute("foo", Integer)
-				Attribute("bar")
+			elem := apidsl.Type("elem", func() {
+				apidsl.Attribute("foo", Integer)
+				apidsl.Attribute("bar")
 			})
-			source = Type("Source", func() {
-				Attribute(attName, HashOf(String, elem))
+			source = apidsl.Type("Source", func() {
+				apidsl.Attribute(attName, apidsl.HashOf(String, elem))
 			})
-			target = Type("Target", func() {
-				Attribute(attName, HashOf(String, elem))
+			target = apidsl.Type("Target", func() {
+				apidsl.Attribute(attName, apidsl.HashOf(String, elem))
 			})
 			funcName = "Transform"
 		})
@@ -688,27 +689,27 @@ var _ = Describe("GoTypeTransform", func() {
 	Context("transforming objects with recursive attributes", func() {
 		const attName = "att"
 		BeforeEach(func() {
-			inner := Type("inner", func() {
-				Attribute("foo", Integer)
+			inner := apidsl.Type("inner", func() {
+				apidsl.Attribute("foo", Integer)
 			})
-			outer := Type("outer", func() {
-				Attribute("in", inner)
+			outer := apidsl.Type("outer", func() {
+				apidsl.Attribute("in", inner)
 			})
-			array := Type("array", func() {
-				Attribute("elem", ArrayOf(outer))
+			array := apidsl.Type("array", func() {
+				apidsl.Attribute("elem", apidsl.ArrayOf(outer))
 			})
-			hash := Type("hash", func() {
-				Attribute("elem", HashOf(Integer, outer))
+			hash := apidsl.Type("hash", func() {
+				apidsl.Attribute("elem", apidsl.HashOf(Integer, outer))
 			})
-			source = Type("Source", func() {
-				Attribute("outer", outer)
-				Attribute("array", array)
-				Attribute("hash", hash)
+			source = apidsl.Type("Source", func() {
+				apidsl.Attribute("outer", outer)
+				apidsl.Attribute("array", array)
+				apidsl.Attribute("hash", hash)
 			})
-			target = Type("Target", func() {
-				Attribute("outer", outer)
-				Attribute("array", array)
-				Attribute("hash", hash)
+			target = apidsl.Type("Target", func() {
+				apidsl.Attribute("outer", outer)
+				apidsl.Attribute("array", array)
+				apidsl.Attribute("hash", hash)
 			})
 			funcName = "Transform"
 		})

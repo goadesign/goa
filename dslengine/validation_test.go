@@ -1,11 +1,12 @@
 package dslengine_test
 
 import (
-	. "github.com/goadesign/goa/design"
-	. "github.com/goadesign/goa/design/apidsl"
-	"github.com/goadesign/goa/dslengine"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+
+	. "github.com/kyokomi/goa-v1/design"
+	"github.com/kyokomi/goa-v1/design/apidsl"
+	"github.com/kyokomi/goa-v1/dslengine"
 )
 
 var _ = Describe("Validation", func() {
@@ -17,7 +18,7 @@ var _ = Describe("Validation", func() {
 
 		JustBeforeEach(func() {
 			dslengine.Reset()
-			Type("bar", func() {
+			apidsl.Type("bar", func() {
 				dsl()
 			})
 			dslengine.Run()
@@ -35,8 +36,8 @@ var _ = Describe("Validation", func() {
 		Context("with a valid enum validation", func() {
 			BeforeEach(func() {
 				dsl = func() {
-					Attribute(attName, String, func() {
-						Enum("red", "blue")
+					apidsl.Attribute(attName, String, func() {
+						apidsl.Enum("red", "blue")
 					})
 				}
 			})
@@ -51,8 +52,8 @@ var _ = Describe("Validation", func() {
 		Context("with an incompatible enum validation type", func() {
 			BeforeEach(func() {
 				dsl = func() {
-					Attribute(attName, Integer, func() {
-						Enum(1, "blue")
+					apidsl.Attribute(attName, Integer, func() {
+						apidsl.Enum(1, "blue")
 					})
 				}
 			})
@@ -65,8 +66,8 @@ var _ = Describe("Validation", func() {
 		Context("with a valid format validation", func() {
 			BeforeEach(func() {
 				dsl = func() {
-					Attribute(attName, String, func() {
-						Format("email")
+					apidsl.Attribute(attName, String, func() {
+						apidsl.Format("email")
 					})
 				}
 			})
@@ -81,8 +82,8 @@ var _ = Describe("Validation", func() {
 		Context("with an invalid format validation", func() {
 			BeforeEach(func() {
 				dsl = func() {
-					Attribute(attName, String, func() {
-						Format("emailz")
+					apidsl.Attribute(attName, String, func() {
+						apidsl.Format("emailz")
 					})
 				}
 			})
@@ -95,8 +96,8 @@ var _ = Describe("Validation", func() {
 		Context("with a valid pattern validation", func() {
 			BeforeEach(func() {
 				dsl = func() {
-					Attribute(attName, String, func() {
-						Pattern("^foo$")
+					apidsl.Attribute(attName, String, func() {
+						apidsl.Pattern("^foo$")
 					})
 				}
 			})
@@ -111,8 +112,8 @@ var _ = Describe("Validation", func() {
 		Context("with an invalid pattern validation", func() {
 			BeforeEach(func() {
 				dsl = func() {
-					Attribute(attName, String, func() {
-						Pattern("[invalid")
+					apidsl.Attribute(attName, String, func() {
+						apidsl.Pattern("[invalid")
 					})
 				}
 			})
@@ -125,8 +126,8 @@ var _ = Describe("Validation", func() {
 		Context("with an invalid format validation type", func() {
 			BeforeEach(func() {
 				dsl = func() {
-					Attribute(attName, Integer, func() {
-						Format("email")
+					apidsl.Attribute(attName, Integer, func() {
+						apidsl.Format("email")
 					})
 				}
 			})
@@ -139,8 +140,8 @@ var _ = Describe("Validation", func() {
 		Context("with a valid min value validation", func() {
 			BeforeEach(func() {
 				dsl = func() {
-					Attribute(attName, Integer, func() {
-						Minimum(2)
+					apidsl.Attribute(attName, Integer, func() {
+						apidsl.Minimum(2)
 					})
 				}
 			})
@@ -156,8 +157,8 @@ var _ = Describe("Validation", func() {
 		Context("with an invalid min value validation", func() {
 			BeforeEach(func() {
 				dsl = func() {
-					Attribute(attName, String, func() {
-						Minimum(2)
+					apidsl.Attribute(attName, String, func() {
+						apidsl.Minimum(2)
 					})
 				}
 			})
@@ -170,8 +171,8 @@ var _ = Describe("Validation", func() {
 		Context("with a valid max value validation", func() {
 			BeforeEach(func() {
 				dsl = func() {
-					Attribute(attName, Integer, func() {
-						Maximum(2)
+					apidsl.Attribute(attName, Integer, func() {
+						apidsl.Maximum(2)
 					})
 				}
 			})
@@ -187,8 +188,8 @@ var _ = Describe("Validation", func() {
 		Context("with an invalid max value validation", func() {
 			BeforeEach(func() {
 				dsl = func() {
-					Attribute(attName, String, func() {
-						Maximum(2)
+					apidsl.Attribute(attName, String, func() {
+						apidsl.Maximum(2)
 					})
 				}
 			})
@@ -201,8 +202,8 @@ var _ = Describe("Validation", func() {
 		Context("with a valid min length validation", func() {
 			BeforeEach(func() {
 				dsl = func() {
-					Attribute(attName, ArrayOf(Integer), func() {
-						MinLength(2)
+					apidsl.Attribute(attName, apidsl.ArrayOf(Integer), func() {
+						apidsl.MinLength(2)
 					})
 				}
 			})
@@ -218,8 +219,8 @@ var _ = Describe("Validation", func() {
 		Context("with an invalid min length validation", func() {
 			BeforeEach(func() {
 				dsl = func() {
-					Attribute(attName, Integer, func() {
-						MinLength(2)
+					apidsl.Attribute(attName, Integer, func() {
+						apidsl.MinLength(2)
 					})
 				}
 			})
@@ -232,8 +233,8 @@ var _ = Describe("Validation", func() {
 		Context("with a valid max length validation", func() {
 			BeforeEach(func() {
 				dsl = func() {
-					Attribute(attName, String, func() {
-						MaxLength(2)
+					apidsl.Attribute(attName, String, func() {
+						apidsl.MaxLength(2)
 					})
 				}
 			})
@@ -248,8 +249,8 @@ var _ = Describe("Validation", func() {
 		Context("with an invalid max length validation", func() {
 			BeforeEach(func() {
 				dsl = func() {
-					Attribute(attName, Integer, func() {
-						MaxLength(2)
+					apidsl.Attribute(attName, Integer, func() {
+						apidsl.MaxLength(2)
 					})
 				}
 			})
@@ -262,8 +263,8 @@ var _ = Describe("Validation", func() {
 		Context("with a required field validation", func() {
 			BeforeEach(func() {
 				dsl = func() {
-					Attribute(attName, String)
-					Required(attName)
+					apidsl.Attribute(attName, String)
+					apidsl.Required(attName)
 				}
 			})
 

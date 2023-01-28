@@ -9,10 +9,11 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/goadesign/goa"
-	gzm "github.com/goadesign/goa/middleware/gzip"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+
+	"github.com/kyokomi/goa-v1"
+	gzm "github.com/kyokomi/goa-v1/middleware/gzip"
 )
 
 type TestResponseWriter struct {

@@ -1,11 +1,12 @@
 package apidsl_test
 
 import (
-	. "github.com/goadesign/goa/design"
-	. "github.com/goadesign/goa/design/apidsl"
-	"github.com/goadesign/goa/dslengine"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+
+	. "github.com/kyokomi/goa-v1/design"
+	"github.com/kyokomi/goa-v1/design/apidsl"
+	"github.com/kyokomi/goa-v1/dslengine"
 )
 
 var _ = Describe("Metadata", func() {
@@ -21,33 +22,33 @@ var _ = Describe("Metadata", func() {
 
 	Context("with Metadata declaration", func() {
 		JustBeforeEach(func() {
-			api = API("Example API", func() {
-				Metadata(metadataKey, metadataValue)
-				BasicAuthSecurity("password")
+			api = apidsl.API("Example API", func() {
+				apidsl.Metadata(metadataKey, metadataValue)
+				apidsl.BasicAuthSecurity("password")
 			})
 
-			rd = Resource("Example Resource", func() {
-				Metadata(metadataKey, metadataValue)
-				Action("Example Action", func() {
-					Metadata(metadataKey, metadataValue)
-					Routing(
-						GET("/", func() {
-							Metadata(metadataKey, metadataValue)
+			rd = apidsl.Resource("Example Resource", func() {
+				apidsl.Metadata(metadataKey, metadataValue)
+				apidsl.Action("Example Action", func() {
+					apidsl.Metadata(metadataKey, metadataValue)
+					apidsl.Routing(
+						apidsl.GET("/", func() {
+							apidsl.Metadata(metadataKey, metadataValue)
 						}),
 					)
-					Security("password", func() {
-						Metadata(metadataKey, metadataValue)
+					apidsl.Security("password", func() {
+						apidsl.Metadata(metadataKey, metadataValue)
 					})
 				})
-				Response("Example Response", func() {
-					Metadata(metadataKey, metadataValue)
+				apidsl.Response("Example Response", func() {
+					apidsl.Metadata(metadataKey, metadataValue)
 				})
 			})
 
-			mtd = MediaType("Example MediaType", func() {
-				Metadata(metadataKey, metadataValue)
-				Attribute("Example Attribute", func() {
-					Metadata(metadataKey, metadataValue)
+			mtd = apidsl.MediaType("Example MediaType", func() {
+				apidsl.Metadata(metadataKey, metadataValue)
+				apidsl.Attribute("Example Attribute", func() {
+					apidsl.Metadata(metadataKey, metadataValue)
 				})
 			})
 
@@ -122,17 +123,17 @@ var _ = Describe("Metadata", func() {
 
 	Context("with no Metadata declaration", func() {
 		JustBeforeEach(func() {
-			api = API("Example API", func() {})
+			api = apidsl.API("Example API", func() {})
 
-			rd = Resource("Example Resource", func() {
-				Action("Example Action", func() {
+			rd = apidsl.Resource("Example Resource", func() {
+				apidsl.Action("Example Action", func() {
 				})
-				Response("Example Response", func() {
+				apidsl.Response("Example Response", func() {
 				})
 			})
 
-			mtd = MediaType("Example MediaType", func() {
-				Attribute("Example Attribute", func() {
+			mtd = apidsl.MediaType("Example MediaType", func() {
+				apidsl.Attribute("Example Attribute", func() {
 				})
 			})
 

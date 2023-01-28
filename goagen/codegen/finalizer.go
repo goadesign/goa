@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"text/template"
 
-	"github.com/goadesign/goa/design"
+	"github.com/kyokomi/goa-v1/design"
 )
 
 // Finalizer is the code generator for the 'Finalize' type methods.

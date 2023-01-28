@@ -1,6 +1,6 @@
 package genswagger
 
-import "github.com/goadesign/goa/design"
+import "github.com/kyokomi/goa-v1/design"
 
 //Option a generator option definition
 type Option func(*Generator)

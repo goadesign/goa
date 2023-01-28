@@ -1,8 +1,8 @@
 package apidsl
 
 import (
-	"github.com/goadesign/goa/design"
-	"github.com/goadesign/goa/dslengine"
+	"github.com/kyokomi/goa-v1/design"
+	"github.com/kyokomi/goa-v1/dslengine"
 )
 
 // Resource implements the resource definition dsl. There is one resource definition per resource

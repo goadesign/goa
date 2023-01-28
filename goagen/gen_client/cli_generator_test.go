@@ -8,18 +8,19 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/goadesign/goa/design"
-	"github.com/goadesign/goa/dslengine"
-	"github.com/goadesign/goa/goagen/codegen"
-	genclient "github.com/goadesign/goa/goagen/gen_client"
-	"github.com/goadesign/goa/version"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+
+	"github.com/kyokomi/goa-v1/design"
+	"github.com/kyokomi/goa-v1/dslengine"
+	"github.com/kyokomi/goa-v1/goagen/codegen"
+	genclient "github.com/kyokomi/goa-v1/goagen/gen_client"
+	"github.com/kyokomi/goa-v1/version"
 	"github.com/onsi/gomega/gexec"
 )
 
 var _ = Describe("Generate", func() {
-	var testgenPackagePath = filepath.FromSlash("github.com/goadesign/goa/goagen/gen_client/test_")
+	var testgenPackagePath = filepath.FromSlash("github.com/kyokomi/goa-v1/goagen/gen_client/test_")
 
 	var outDir string
 	var files []string

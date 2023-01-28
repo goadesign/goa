@@ -7,9 +7,9 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/goadesign/goa/design"
-	"github.com/goadesign/goa/dslengine"
-	genschema "github.com/goadesign/goa/goagen/gen_schema"
+	"github.com/kyokomi/goa-v1/design"
+	"github.com/kyokomi/goa-v1/dslengine"
+	genschema "github.com/kyokomi/goa-v1/goagen/gen_schema"
 )
 
 type (

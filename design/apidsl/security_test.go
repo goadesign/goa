@@ -1,11 +1,12 @@
 package apidsl_test
 
 import (
-	. "github.com/goadesign/goa/design"
-	. "github.com/goadesign/goa/design/apidsl"
-	"github.com/goadesign/goa/dslengine"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+
+	. "github.com/kyokomi/goa-v1/design"
+	"github.com/kyokomi/goa-v1/design/apidsl"
+	"github.com/kyokomi/goa-v1/dslengine"
 )
 
 var _ = Describe("Security", func() {
@@ -14,38 +15,38 @@ var _ = Describe("Security", func() {
 	})
 
 	It("should have no security DSL when none are defined", func() {
-		API("secure", nil)
+		apidsl.API("secure", nil)
 		dslengine.Run()
 		Ω(Design.SecuritySchemes).Should(BeNil())
 		Ω(dslengine.Errors).ShouldNot(HaveOccurred())
 	})
 
 	It("should be the fully valid and well defined, live on the happy path", func() {
-		API("secure", func() {
-			Host("example.com")
-			Scheme("http")
+		apidsl.API("secure", func() {
+			apidsl.Host("example.com")
+			apidsl.Scheme("http")
 
-			BasicAuthSecurity("basic_authz", func() {
-				Description("desc")
+			apidsl.BasicAuthSecurity("basic_authz", func() {
+				apidsl.Description("desc")
 			})
 
-			OAuth2Security("googAuthz", func() {
-				Description("desc")
-				AccessCodeFlow("/auth", "/token")
-				Scope("user:read", "Read users")
+			apidsl.OAuth2Security("googAuthz", func() {
+				apidsl.Description("desc")
+				apidsl.AccessCodeFlow("/auth", "/token")
+				apidsl.Scope("user:read", "Read users")
 			})
 
-			APIKeySecurity("a_key", func() {
-				Description("desc")
-				Query("access_token")
+			apidsl.APIKeySecurity("a_key", func() {
+				apidsl.Description("desc")
+				apidsl.Query("access_token")
 			})
 
-			JWTSecurity("jwt", func() {
-				Description("desc")
-				Header("Authorization")
-				TokenURL("/token")
-				Scope("user:read", "Read users")
-				Scope("user:write", "Write users")
+			apidsl.JWTSecurity("jwt", func() {
+				apidsl.Description("desc")
+				apidsl.Header("Authorization")
+				apidsl.TokenURL("/token")
+				apidsl.Scope("user:read", "Read users")
+				apidsl.Scope("user:write", "Write users")
 			})
 		})
 
@@ -73,11 +74,11 @@ var _ = Describe("Security", func() {
 
 	Context("with basic security", func() {
 		It("should fail because of duplicate In declaration", func() {
-			API("", func() {
-				BasicAuthSecurity("broken_basic_authz", func() {
-					Description("desc")
-					Header("Authorization")
-					Query("access_token")
+			apidsl.API("", func() {
+				apidsl.BasicAuthSecurity("broken_basic_authz", func() {
+					apidsl.Description("desc")
+					apidsl.Header("Authorization")
+					apidsl.Query("access_token")
 				})
 			})
 			dslengine.Run()
@@ -85,10 +86,10 @@ var _ = Describe("Security", func() {
 		})
 
 		It("should fail because of invalid declaration of OAuth2Flow", func() {
-			API("", func() {
-				BasicAuthSecurity("broken_basic_authz", func() {
-					Description("desc")
-					ImplicitFlow("invalid")
+			apidsl.API("", func() {
+				apidsl.BasicAuthSecurity("broken_basic_authz", func() {
+					apidsl.Description("desc")
+					apidsl.ImplicitFlow("invalid")
 				})
 			})
 			dslengine.Run()
@@ -96,10 +97,10 @@ var _ = Describe("Security", func() {
 		})
 
 		It("should fail because of invalid declaration of TokenURL", func() {
-			API("", func() {
-				BasicAuthSecurity("broken_basic_authz", func() {
-					Description("desc")
-					TokenURL("/token")
+			apidsl.API("", func() {
+				apidsl.BasicAuthSecurity("broken_basic_authz", func() {
+					apidsl.Description("desc")
+					apidsl.TokenURL("/token")
 				})
 			})
 			dslengine.Run()
@@ -107,10 +108,10 @@ var _ = Describe("Security", func() {
 		})
 
 		It("should fail because of invalid declaration of TokenURL", func() {
-			API("", func() {
-				BasicAuthSecurity("broken_basic_authz", func() {
-					Description("desc")
-					TokenURL("in valid")
+			apidsl.API("", func() {
+				apidsl.BasicAuthSecurity("broken_basic_authz", func() {
+					apidsl.Description("desc")
+					apidsl.TokenURL("in valid")
 				})
 			})
 			dslengine.Run()
@@ -118,10 +119,10 @@ var _ = Describe("Security", func() {
 		})
 
 		It("should fail because of invalid declaration of Header", func() {
-			API("", func() {
-				BasicAuthSecurity("broken_basic_authz", func() {
-					Description("desc")
-					Header("invalid")
+			apidsl.API("", func() {
+				apidsl.BasicAuthSecurity("broken_basic_authz", func() {
+					apidsl.Description("desc")
+					apidsl.Header("invalid")
 				})
 			})
 			dslengine.Run()
@@ -131,21 +132,21 @@ var _ = Describe("Security", func() {
 
 	Context("with oauth2 security", func() {
 		It("should pass with valid values when well defined", func() {
-			API("", func() {
-				Host("example.com")
-				Scheme("http")
-				OAuth2Security("googAuthz", func() {
-					Description("Use Goog's Auth")
-					AccessCodeFlow("/auth", "/token")
-					Scope("scope:1", "Desc 1")
-					Scope("scope:2", "Desc 2")
+			apidsl.API("", func() {
+				apidsl.Host("example.com")
+				apidsl.Scheme("http")
+				apidsl.OAuth2Security("googAuthz", func() {
+					apidsl.Description("Use Goog's Auth")
+					apidsl.AccessCodeFlow("/auth", "/token")
+					apidsl.Scope("scope:1", "Desc 1")
+					apidsl.Scope("scope:2", "Desc 2")
 				})
 			})
-			Resource("one", func() {
-				Action("first", func() {
-					Routing(GET("/first"))
-					Security("googAuthz", func() {
-						Scope("scope:1")
+			apidsl.Resource("one", func() {
+				apidsl.Action("first", func() {
+					apidsl.Routing(apidsl.GET("/first"))
+					apidsl.Security("googAuthz", func() {
+						apidsl.Scope("scope:1")
 					})
 				})
 			})
@@ -164,9 +165,9 @@ var _ = Describe("Security", func() {
 		})
 
 		It("should fail because of invalid declaration of Header", func() {
-			API("", func() {
-				OAuth2Security("googAuthz", func() {
-					Header("invalid")
+			apidsl.API("", func() {
+				apidsl.OAuth2Security("googAuthz", func() {
+					apidsl.Header("invalid")
 				})
 			})
 			dslengine.Run()
@@ -177,50 +178,50 @@ var _ = Describe("Security", func() {
 
 	Context("with resources and actions", func() {
 		It("should fallback properly to lower-level security", func() {
-			API("", func() {
-				JWTSecurity("jwt", func() {
-					TokenURL("/token")
-					Scope("read", "Read")
-					Scope("write", "Write")
+			apidsl.API("", func() {
+				apidsl.JWTSecurity("jwt", func() {
+					apidsl.TokenURL("/token")
+					apidsl.Scope("read", "Read")
+					apidsl.Scope("write", "Write")
 				})
-				BasicAuthSecurity("password")
+				apidsl.BasicAuthSecurity("password")
 
-				Security("jwt")
+				apidsl.Security("jwt")
 			})
-			Resource("one", func() {
-				Action("first", func() {
-					Routing(GET("/first"))
-					NoSecurity()
+			apidsl.Resource("one", func() {
+				apidsl.Action("first", func() {
+					apidsl.Routing(apidsl.GET("/first"))
+					apidsl.NoSecurity()
 				})
-				Action("second", func() {
-					Routing(GET("/second"))
+				apidsl.Action("second", func() {
+					apidsl.Routing(apidsl.GET("/second"))
 				})
 			})
-			Resource("two", func() {
-				Security("password")
+			apidsl.Resource("two", func() {
+				apidsl.Security("password")
 
-				Action("third", func() {
-					Routing(GET("/third"))
+				apidsl.Action("third", func() {
+					apidsl.Routing(apidsl.GET("/third"))
 				})
-				Action("fourth", func() {
-					Routing(GET("/fourth"))
-					Security("jwt")
-				})
-			})
-			Resource("three", func() {
-				Action("fifth", func() {
-					Routing(GET("/fifth"))
+				apidsl.Action("fourth", func() {
+					apidsl.Routing(apidsl.GET("/fourth"))
+					apidsl.Security("jwt")
 				})
 			})
-			Resource("auth", func() {
-				NoSecurity()
+			apidsl.Resource("three", func() {
+				apidsl.Action("fifth", func() {
+					apidsl.Routing(apidsl.GET("/fifth"))
+				})
+			})
+			apidsl.Resource("auth", func() {
+				apidsl.NoSecurity()
 
-				Action("auth", func() {
-					Routing(GET("/auth"))
+				apidsl.Action("auth", func() {
+					apidsl.Routing(apidsl.GET("/auth"))
 				})
-				Action("refresh", func() {
-					Routing(GET("/refresh"))
-					Security("jwt")
+				apidsl.Action("refresh", func() {
+					apidsl.Routing(apidsl.GET("/refresh"))
+					apidsl.Security("jwt")
 				})
 			})
 

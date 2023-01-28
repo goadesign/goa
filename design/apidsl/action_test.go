@@ -3,11 +3,12 @@ package apidsl_test
 import (
 	"strconv"
 
-	. "github.com/goadesign/goa/design"
-	. "github.com/goadesign/goa/design/apidsl"
-	"github.com/goadesign/goa/dslengine"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+
+	. "github.com/kyokomi/goa-v1/design"
+	"github.com/kyokomi/goa-v1/design/apidsl"
+	"github.com/kyokomi/goa-v1/dslengine"
 )
 
 var _ = Describe("Action", func() {
@@ -22,8 +23,8 @@ var _ = Describe("Action", func() {
 	})
 
 	JustBeforeEach(func() {
-		Resource("res", func() {
-			Action(name, dsl)
+		apidsl.Resource("res", func() {
+			apidsl.Action(name, dsl)
 		})
 		dslengine.Run()
 		if r, ok := Design.Resources["res"]; ok {
@@ -42,11 +43,11 @@ var _ = Describe("Action", func() {
 	})
 
 	Context("with a name and DSL defining a route", func() {
-		var route = GET("/:id")
+		var route = apidsl.GET("/:id")
 
 		BeforeEach(func() {
 			name = "foo"
-			dsl = func() { Routing(route) }
+			dsl = func() { apidsl.Routing(route) }
 		})
 
 		It("produces a valid action definition with the route and default status of 200 set", func() {
@@ -62,7 +63,7 @@ var _ = Describe("Action", func() {
 		Context("with an empty params DSL", func() {
 			BeforeEach(func() {
 				olddsl := dsl
-				dsl = func() { olddsl(); Params(func() {}) }
+				dsl = func() { olddsl(); apidsl.Params(func() {}) }
 				name = "foo"
 			})
 
@@ -73,8 +74,8 @@ var _ = Describe("Action", func() {
 
 		Context("with a metadata", func() {
 			BeforeEach(func() {
-				metadatadsl := func() { Metadata("swagger:extension:x-get", `{"foo":"bar"}`) }
-				route = GET("/:id", metadatadsl)
+				metadatadsl := func() { apidsl.Metadata("swagger:extension:x-get", `{"foo":"bar"}`) }
+				route = apidsl.GET("/:id", metadatadsl)
 				name = "foo"
 			})
 
@@ -98,8 +99,8 @@ var _ = Describe("Action", func() {
 		BeforeEach(func() {
 			name = "foo"
 			dsl = func() {
-				Routing(GET("/:id"))
-				Payload(String)
+				apidsl.Routing(apidsl.GET("/:id"))
+				apidsl.Payload(String)
 			}
 		})
 
@@ -118,16 +119,16 @@ var _ = Describe("Action", func() {
 		const headerName = "Foo"
 
 		BeforeEach(func() {
-			Type(typeName, func() {
-				Attribute("name")
+			apidsl.Type(typeName, func() {
+				apidsl.Attribute("name")
 			})
 			name = "foo"
 			dsl = func() {
-				Description(description)
-				Routing(GET("/:id"))
-				Headers(func() { Header(headerName) })
-				Payload(typeName)
-				Response(NoContent)
+				apidsl.Description(description)
+				apidsl.Routing(apidsl.GET("/:id"))
+				apidsl.Headers(func() { apidsl.Header(headerName) })
+				apidsl.Payload(typeName)
+				apidsl.Response(NoContent)
 			}
 		})
 
@@ -154,19 +155,19 @@ var _ = Describe("Action", func() {
 		const headerName2 = "Foo2"
 
 		BeforeEach(func() {
-			Type(typeName, func() {
-				Attribute("name")
+			apidsl.Type(typeName, func() {
+				apidsl.Attribute("name")
 			})
 			name = "foo"
 			dsl = func() {
-				Routing(GET("/:id"))
-				Headers(func() {
-					Header(headerName)
-					Required(headerName)
+				apidsl.Routing(apidsl.GET("/:id"))
+				apidsl.Headers(func() {
+					apidsl.Header(headerName)
+					apidsl.Required(headerName)
 				})
-				Headers(func() {
-					Header(headerName2)
-					Required(headerName2)
+				apidsl.Headers(func() {
+					apidsl.Header(headerName2)
+					apidsl.Required(headerName2)
 				})
 			}
 		})
@@ -191,14 +192,14 @@ var _ = Describe("Action", func() {
 		const mtID = "application/vnd.app.foo+json"
 
 		BeforeEach(func() {
-			MediaType(mtID, func() {
-				Attributes(func() { Attribute("foo") })
-				View("default", func() { Attribute("foo") })
+			apidsl.MediaType(mtID, func() {
+				apidsl.Attributes(func() { apidsl.Attribute("foo") })
+				apidsl.View("default", func() { apidsl.Attribute("foo") })
 			})
 			name = "foo"
 			dsl = func() {
-				Routing(GET("/:id"))
-				Response(OK, mtID)
+				apidsl.Routing(apidsl.GET("/:id"))
+				apidsl.Response(OK, mtID)
 			}
 		})
 
@@ -222,14 +223,14 @@ var _ = Describe("Action", func() {
 
 		BeforeEach(func() {
 			name = "foo"
-			API("test", func() {
-				ResponseTemplate(tmplName, func(status, name string) {
+			apidsl.API("test", func() {
+				apidsl.ResponseTemplate(tmplName, func(status, name string) {
 					st, err := strconv.Atoi(status)
 					if err != nil {
 						dslengine.ReportError(err.Error())
 						return
 					}
-					Status(st)
+					apidsl.Status(st)
 				})
 			})
 		})
@@ -237,9 +238,9 @@ var _ = Describe("Action", func() {
 		Context("called correctly", func() {
 			BeforeEach(func() {
 				dsl = func() {
-					Routing(GET("/:id"))
-					Response(tmplName, strconv.Itoa(respStatus), respName, func() {
-						Media(respMediaType)
+					apidsl.Routing(apidsl.GET("/:id"))
+					apidsl.Response(tmplName, strconv.Itoa(respStatus), respName, func() {
+						apidsl.Media(respMediaType)
 					})
 				}
 			})
@@ -260,9 +261,9 @@ var _ = Describe("Action", func() {
 		Context("called incorrectly", func() {
 			BeforeEach(func() {
 				dsl = func() {
-					Routing(GET("/id"))
-					Response(tmplName, "not an integer", respName, func() {
-						Media(respMediaType)
+					apidsl.Routing(apidsl.GET("/id"))
+					apidsl.Response(tmplName, "not an integer", respName, func() {
+						apidsl.Media(respMediaType)
 					})
 				}
 			})
@@ -279,12 +280,12 @@ var _ = Describe("Payload", func() {
 		BeforeEach(func() {
 			dslengine.Reset()
 
-			Resource("foo", func() {
-				Action("bar", func() {
-					Routing(GET(""))
-					Payload(func() {
-						Member("name")
-						Required("name")
+			apidsl.Resource("foo", func() {
+				apidsl.Action("bar", func() {
+					apidsl.Routing(apidsl.GET(""))
+					apidsl.Payload(func() {
+						apidsl.Member("name")
+						apidsl.Required("name")
 					})
 				})
 			})
@@ -307,10 +308,10 @@ var _ = Describe("Payload", func() {
 		BeforeEach(func() {
 			dslengine.Reset()
 
-			Resource("foo", func() {
-				Action("bar", func() {
-					Routing(GET(""))
-					Payload(ArrayOf(Integer))
+			apidsl.Resource("foo", func() {
+				apidsl.Action("bar", func() {
+					apidsl.Routing(apidsl.GET(""))
+					apidsl.Payload(apidsl.ArrayOf(Integer))
 				})
 			})
 		})
@@ -336,10 +337,10 @@ var _ = Describe("Payload", func() {
 		BeforeEach(func() {
 			dslengine.Reset()
 
-			Resource("foo", func() {
-				Action("bar", func() {
-					Routing(GET(""))
-					Payload(HashOf(String, Integer))
+			apidsl.Resource("foo", func() {
+				apidsl.Action("bar", func() {
+					apidsl.Routing(apidsl.GET(""))
+					apidsl.Payload(apidsl.HashOf(String, Integer))
 				})
 			})
 		})

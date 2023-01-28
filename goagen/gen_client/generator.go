@@ -10,11 +10,11 @@ import (
 	"strings"
 	"text/template"
 
-	"github.com/goadesign/goa/design"
-	"github.com/goadesign/goa/dslengine"
-	"github.com/goadesign/goa/goagen/codegen"
-	genapp "github.com/goadesign/goa/goagen/gen_app"
-	"github.com/goadesign/goa/goagen/utils"
+	"github.com/kyokomi/goa-v1/design"
+	"github.com/kyokomi/goa-v1/dslengine"
+	"github.com/kyokomi/goa-v1/goagen/codegen"
+	genapp "github.com/kyokomi/goa-v1/goagen/gen_app"
+	"github.com/kyokomi/goa-v1/goagen/utils"
 )
 
 // Filename used to generate all data types (without the ".go" extension)
@@ -258,7 +258,7 @@ func (g *Generator) generateClient(clientFile string, clientPkg string, funcs te
 	}
 	var packagePaths []string
 	for packagePath := range im {
-		if packagePath != "github.com/goadesign/goa" {
+		if packagePath != "github.com/kyokomi/goa-v1" {
 			packagePaths = append(packagePaths, packagePath)
 		}
 	}
@@ -267,9 +267,9 @@ func (g *Generator) generateClient(clientFile string, clientPkg string, funcs te
 	// Setup codegen
 	imports := []*codegen.ImportSpec{
 		codegen.SimpleImport("net/http"),
-		codegen.SimpleImport("github.com/goadesign/goa"),
-		codegen.NewImport("goaclient", "github.com/goadesign/goa/client"),
-		codegen.NewImport("uuid", "github.com/goadesign/goa/uuid"),
+		codegen.SimpleImport("github.com/kyokomi/goa-v1"),
+		codegen.NewImport("goaclient", "github.com/kyokomi/goa-v1/client"),
+		codegen.NewImport("uuid", "github.com/kyokomi/goa-v1/uuid"),
 	}
 	for _, packagePath := range packagePaths {
 		imports = append(imports, codegen.SimpleImport(packagePath))
@@ -347,7 +347,7 @@ func (g *Generator) generateResourceClient(pkgDir string, res *design.ResourceDe
 		codegen.SimpleImport("time"),
 		codegen.SimpleImport("context"),
 		codegen.SimpleImport("golang.org/x/net/websocket"),
-		codegen.NewImport("uuid", "github.com/goadesign/goa/uuid"),
+		codegen.NewImport("uuid", "github.com/kyokomi/goa-v1/uuid"),
 	}
 	title := fmt.Sprintf("%s: %s Resource Client", g.API.Context(), res.Name)
 	if err = file.WriteHeader(title, g.Target, imports); err != nil {
@@ -590,12 +590,12 @@ func (g *Generator) generateMediaTypes(pkgDir string, funcs template.FuncMap) (e
 	}()
 	title := fmt.Sprintf("%s: Application Media Types", g.API.Context())
 	imports := []*codegen.ImportSpec{
-		codegen.SimpleImport("github.com/goadesign/goa"),
+		codegen.SimpleImport("github.com/kyokomi/goa-v1"),
 		codegen.SimpleImport("fmt"),
 		codegen.SimpleImport("net/http"),
 		codegen.SimpleImport("time"),
 		codegen.SimpleImport("unicode/utf8"),
-		codegen.NewImport("uuid", "github.com/goadesign/goa/uuid"),
+		codegen.NewImport("uuid", "github.com/kyokomi/goa-v1/uuid"),
 	}
 	for _, v := range g.API.MediaTypes {
 		imports = codegen.AttributeImports(v.AttributeDefinition, imports, nil)
@@ -644,11 +644,11 @@ func (g *Generator) generateUserTypes(pkgDir string) (err error) {
 	}()
 	title := fmt.Sprintf("%s: Application User Types", g.API.Context())
 	imports := []*codegen.ImportSpec{
-		codegen.SimpleImport("github.com/goadesign/goa"),
+		codegen.SimpleImport("github.com/kyokomi/goa-v1"),
 		codegen.SimpleImport("fmt"),
 		codegen.SimpleImport("time"),
 		codegen.SimpleImport("unicode/utf8"),
-		codegen.NewImport("uuid", "github.com/goadesign/goa/uuid"),
+		codegen.NewImport("uuid", "github.com/kyokomi/goa-v1/uuid"),
 	}
 	for _, v := range g.API.Types {
 		imports = codegen.AttributeImports(v.AttributeDefinition, imports, nil)

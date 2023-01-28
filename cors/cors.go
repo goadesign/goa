@@ -11,7 +11,7 @@ import (
 
 	"context"
 
-	"github.com/goadesign/goa"
+	"github.com/kyokomi/goa-v1"
 )
 
 // key is the private type used to key context values.

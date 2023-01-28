@@ -11,7 +11,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/goadesign/goa"
+	"github.com/kyokomi/goa-v1"
 	"github.com/pkg/errors"
 )
 

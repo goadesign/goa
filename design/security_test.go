@@ -3,9 +3,10 @@ package design_test
 import (
 	"fmt"
 
-	. "github.com/goadesign/goa/design"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+
+	. "github.com/kyokomi/goa-v1/design"
 )
 
 var _ = Describe("SecuritySchemeDefinition", func() {

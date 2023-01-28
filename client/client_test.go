@@ -3,10 +3,10 @@ package client_test
 import (
 	"context"
 
-	"github.com/goadesign/goa/client"
-
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+
+	"github.com/kyokomi/goa-v1/client"
 )
 
 var _ = Describe("client", func() {

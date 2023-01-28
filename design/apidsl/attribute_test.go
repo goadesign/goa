@@ -1,11 +1,12 @@
 package apidsl_test
 
 import (
-	. "github.com/goadesign/goa/design"
-	. "github.com/goadesign/goa/design/apidsl"
-	"github.com/goadesign/goa/dslengine"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+
+	. "github.com/kyokomi/goa-v1/design"
+	"github.com/kyokomi/goa-v1/design/apidsl"
+	"github.com/kyokomi/goa-v1/dslengine"
 )
 
 // TestCD is a test container definition.
@@ -21,7 +22,7 @@ func (t *TestCD) Attribute() *AttributeDefinition {
 // DSL implements Source
 func (t *TestCD) DSL() func() {
 	return func() {
-		Attribute("foo")
+		apidsl.Attribute("foo")
 	}
 }
 
@@ -85,21 +86,21 @@ var _ = Describe("Attribute", func() {
 	})
 
 	JustBeforeEach(func() {
-		Type("type", func() {
+		apidsl.Type("type", func() {
 			if dsl == nil {
 				if dataType == nil {
-					Attribute(name)
+					apidsl.Attribute(name)
 				} else if description == "" {
-					Attribute(name, dataType)
+					apidsl.Attribute(name, dataType)
 				} else {
-					Attribute(name, dataType, description)
+					apidsl.Attribute(name, dataType, description)
 				}
 			} else if dataType == nil {
-				Attribute(name, dsl)
+				apidsl.Attribute(name, dsl)
 			} else if description == "" {
-				Attribute(name, dataType, dsl)
+				apidsl.Attribute(name, dataType, dsl)
 			} else {
-				Attribute(name, dataType, description, dsl)
+				apidsl.Attribute(name, dataType, description, dsl)
 			}
 		})
 		dslengine.Run()
@@ -197,7 +198,7 @@ var _ = Describe("Attribute", func() {
 	Context("with a name and a DSL defining a 'readOnly' attribute", func() {
 		BeforeEach(func() {
 			name = "foo"
-			dsl = func() { ReadOnly() }
+			dsl = func() { apidsl.ReadOnly() }
 		})
 
 		It("produces an attribute of type string set to readOnly", func() {
@@ -215,7 +216,7 @@ var _ = Describe("Attribute", func() {
 	Context("with a name and a DSL defining an enum validation", func() {
 		BeforeEach(func() {
 			name = "foo"
-			dsl = func() { Enum("one", "two") }
+			dsl = func() { apidsl.Enum("one", "two") }
 		})
 
 		It("produces an attribute of type string with a validation", func() {
@@ -235,7 +236,7 @@ var _ = Describe("Attribute", func() {
 		BeforeEach(func() {
 			name = "foo"
 			dataType = DateTime
-			dsl = func() { Default("1978-06-30T10:00:00+09:00") }
+			dsl = func() { apidsl.Default("1978-06-30T10:00:00+09:00") }
 		})
 
 		It("produces an attribute of type string with a default value", func() {
@@ -255,7 +256,7 @@ var _ = Describe("Attribute", func() {
 		BeforeEach(func() {
 			name = "foo"
 			dataType = Integer
-			dsl = func() { Enum(1, 2) }
+			dsl = func() { apidsl.Enum(1, 2) }
 		})
 
 		It("produces an attribute of type integer with a validation", func() {
@@ -276,7 +277,7 @@ var _ = Describe("Attribute", func() {
 			name = "foo"
 			dataType = String
 			description = "bar"
-			dsl = func() { Enum("one", "two") }
+			dsl = func() { apidsl.Enum("one", "two") }
 		})
 
 		It("produces an attribute of type integer with a validation and the description", func() {
@@ -332,8 +333,8 @@ var _ = Describe("Attribute", func() {
 		BeforeEach(func() {
 			name = "fooatt"
 			dataType = "foo"
-			Foo = Type("foo", func() {
-				Attribute("bar")
+			Foo = apidsl.Type("foo", func() {
+				apidsl.Attribute("bar")
 			})
 		})
 
@@ -353,7 +354,7 @@ var _ = Describe("Attribute", func() {
 
 		BeforeEach(func() {
 			name = "foo"
-			dsl = func() { Attribute(childAtt) }
+			dsl = func() { apidsl.Attribute(childAtt) }
 		})
 
 		Context("on an attribute that is not an object", func() {

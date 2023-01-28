@@ -8,11 +8,12 @@ import (
 
 	"context"
 
-	jwtpkg "github.com/dgrijalva/jwt-go"
-	"github.com/goadesign/goa"
-	"github.com/goadesign/goa/middleware/security/jwt"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+
+	jwtpkg "github.com/golang-jwt/jwt/v4"
+	"github.com/kyokomi/goa-v1"
+	"github.com/kyokomi/goa-v1/middleware/security/jwt"
 )
 
 var _ = Describe("Middleware", func() {

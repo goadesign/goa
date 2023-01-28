@@ -6,7 +6,7 @@ import (
 
 	"context"
 
-	"github.com/goadesign/goa"
+	"github.com/kyokomi/goa-v1"
 )
 
 // ErrorHandler turns a Go error into an HTTP response. It should be placed in the middleware chain

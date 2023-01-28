@@ -1,11 +1,12 @@
 package apidsl_test
 
 import (
-	. "github.com/goadesign/goa/design"
-	. "github.com/goadesign/goa/design/apidsl"
-	"github.com/goadesign/goa/dslengine"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+
+	. "github.com/kyokomi/goa-v1/design"
+	"github.com/kyokomi/goa-v1/design/apidsl"
+	"github.com/kyokomi/goa-v1/dslengine"
 )
 
 var _ = Describe("Response", func() {
@@ -23,12 +24,12 @@ var _ = Describe("Response", func() {
 	})
 
 	JustBeforeEach(func() {
-		Resource("res", func() {
-			Action("action", func() {
+		apidsl.Resource("res", func() {
+			apidsl.Action("action", func() {
 				if dt != nil {
-					Response(name, dt, dsl)
+					apidsl.Response(name, dt, dsl)
 				} else {
-					Response(name, dsl)
+					apidsl.Response(name, dsl)
 				}
 			})
 		})
@@ -64,7 +65,7 @@ var _ = Describe("Response", func() {
 		BeforeEach(func() {
 			name = "foo"
 			dsl = func() {
-				Status(status)
+				apidsl.Status(status)
 			}
 		})
 
@@ -82,9 +83,9 @@ var _ = Describe("Response", func() {
 		BeforeEach(func() {
 			name = "foo"
 			dsl = func() {
-				Status(status)
+				apidsl.Status(status)
 			}
-			dt = HashOf(String, Any)
+			dt = apidsl.HashOf(String, Any)
 		})
 
 		It("produces a response definition with the given type", func() {
@@ -101,8 +102,8 @@ var _ = Describe("Response", func() {
 		BeforeEach(func() {
 			name = "foo"
 			dsl = func() {
-				Status(status)
-				Description(description)
+				apidsl.Status(status)
+				apidsl.Description(description)
 			}
 		})
 
@@ -120,7 +121,7 @@ var _ = Describe("Response", func() {
 		BeforeEach(func() {
 			name = "foo"
 			dsl = func() {
-				Status(status)
+				apidsl.Status(status)
 			}
 		})
 
@@ -138,8 +139,8 @@ var _ = Describe("Response", func() {
 		BeforeEach(func() {
 			name = "foo"
 			dsl = func() {
-				Status(status)
-				Media(mediaType)
+				apidsl.Status(status)
+				apidsl.Media(mediaType)
 			}
 		})
 
@@ -158,9 +159,9 @@ var _ = Describe("Response", func() {
 		BeforeEach(func() {
 			name = "foo"
 			dsl = func() {
-				Status(status)
-				Headers(func() {
-					Header(headerName)
+				apidsl.Status(status)
+				apidsl.Headers(func() {
+					apidsl.Header(headerName)
 				})
 			}
 		})

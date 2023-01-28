@@ -1,11 +1,12 @@
 package dslengine_test
 
 import (
-	. "github.com/goadesign/goa/design"
-	. "github.com/goadesign/goa/design/apidsl"
-	"github.com/goadesign/goa/dslengine"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+
+	. "github.com/kyokomi/goa-v1/design"
+	"github.com/kyokomi/goa-v1/design/apidsl"
+	"github.com/kyokomi/goa-v1/dslengine"
 )
 
 var _ = Describe("DSL execution", func() {
@@ -18,15 +19,15 @@ var _ = Describe("DSL execution", func() {
 		BeforeEach(func() {
 			dslengine.Reset()
 
-			API("foo", func() {})
+			apidsl.API("foo", func() {})
 
 			var type1, type2 *UserTypeDefinition
 
-			type1 = Type(type1Name, func() {
-				Attribute(att1Name, type2)
+			type1 = apidsl.Type(type1Name, func() {
+				apidsl.Attribute(att1Name, type2)
 			})
-			type2 = Type(type2Name, func() {
-				Attribute(att2Name, type1)
+			type2 = apidsl.Type(type2Name, func() {
+				apidsl.Attribute(att2Name, type1)
 			})
 		})
 
@@ -105,10 +106,10 @@ var _ = Describe("DSL errors", func() {
 		const lineNumber = 111
 
 		BeforeEach(func() {
-			API("foo", func() {
+			apidsl.API("foo", func() {
 				// NOTE: moving the line below requires updating the
 				// constant above to match its number.
-				Attributes(func() {})
+				apidsl.Attributes(func() {})
 			})
 			dslengine.Run()
 		})
@@ -127,10 +128,10 @@ var _ = Describe("DSL errors", func() {
 		const lineNumber = 133
 
 		BeforeEach(func() {
-			Type("bar", func() {
+			apidsl.Type("bar", func() {
 				// NOTE: moving the line below requires updating the
 				// constant above to match its number.
-				Attribute("baz", 42)
+				apidsl.Attribute("baz", 42)
 			})
 			dslengine.Run()
 		})
@@ -146,16 +147,16 @@ var _ = Describe("DSL errors", func() {
 
 	Context("with DSL using an empty type", func() {
 		BeforeEach(func() {
-			API("foo", func() {})
-			Resource("bar", func() {
-				Action("baz", func() {
-					Payload("use-empty")
+			apidsl.API("foo", func() {})
+			apidsl.Resource("bar", func() {
+				apidsl.Action("baz", func() {
+					apidsl.Payload("use-empty")
 				})
 			})
-			Type("use-empty", func() {
-				Attribute("e", "empty")
+			apidsl.Type("use-empty", func() {
+				apidsl.Attribute("e", "empty")
 			})
-			Type("empty", func() {
+			apidsl.Type("empty", func() {
 			})
 			dslengine.Run()
 		})

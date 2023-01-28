@@ -8,17 +8,18 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/goadesign/goa/design"
-	"github.com/goadesign/goa/dslengine"
-	"github.com/goadesign/goa/goagen/codegen"
-	genclient "github.com/goadesign/goa/goagen/gen_client"
-	"github.com/goadesign/goa/version"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+
+	"github.com/kyokomi/goa-v1/design"
+	"github.com/kyokomi/goa-v1/dslengine"
+	"github.com/kyokomi/goa-v1/goagen/codegen"
+	genclient "github.com/kyokomi/goa-v1/goagen/gen_client"
+	"github.com/kyokomi/goa-v1/version"
 )
 
 var _ = Describe("Generate", func() {
-	const testgenPackagePath = "github.com/goadesign/goa/goagen/gen_client/test_"
+	const testgenPackagePath = "github.com/kyokomi/goa-v1/goagen/gen_client/test_"
 
 	var workspace *codegen.Workspace
 	var outDir string
@@ -562,7 +563,7 @@ var _ = Describe("Generate", func() {
 			Ω(files).Should(HaveLen(9))
 			content, err := ioutil.ReadFile(filepath.Join(outDir, "client", "user_types.go"))
 			Ω(err).ShouldNot(HaveOccurred())
-			Ω(content).Should(ContainSubstring("uuid \"github.com/goadesign/goa/uuid\""))
+			Ω(content).Should(ContainSubstring("uuid \"github.com/kyokomi/goa-v1/uuid\""))
 		})
 	})
 

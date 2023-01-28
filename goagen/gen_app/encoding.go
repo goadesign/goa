@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"sort"
 
-	"github.com/goadesign/goa/design"
-	"github.com/goadesign/goa/goagen/codegen"
+	"github.com/kyokomi/goa-v1/design"
+	"github.com/kyokomi/goa-v1/goagen/codegen"
 )
 
 // BuildEncoders builds the template data needed to render the given encoding definitions.

@@ -16,8 +16,8 @@ package goalog15
 import (
 	"context"
 
-	"github.com/goadesign/goa"
 	"github.com/inconshreveable/log15"
+	"github.com/kyokomi/goa-v1"
 )
 
 // adapter is the log15 goa adapter logger.

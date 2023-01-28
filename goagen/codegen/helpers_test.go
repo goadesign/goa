@@ -7,10 +7,10 @@ import (
 	"path/filepath"
 	"runtime"
 
-	"github.com/goadesign/goa/goagen/codegen"
-
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+
+	"github.com/kyokomi/goa-v1/goagen/codegen"
 )
 
 var _ = Describe("Helpers", func() {
