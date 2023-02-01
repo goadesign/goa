@@ -281,12 +281,12 @@ func View(name string, adsl ...func()) {
 //	        Example("DivisionResult Collection Examples", func() {
 //	            Value([]Val{
 //	                {
-//	                    "value":    4.167,
-//	                    "reminder": 0,
+//	                    "value":     4.167,
+//	                    "remainder": 0,
 //	                },
 //	                {
-//	                    "value":    3.0,
-//	                    "reminder": 0,
+//	                    "value":     3.0,
+//	                    "remainder": 0,
 //	                },
 //	            })
 //	        })
