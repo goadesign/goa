@@ -1251,6 +1251,7 @@ func buildProjectedType(projected, att *expr.AttributeExpr, viewspkg string, sco
 		}
 		validations = buildValidations(projected, viewScope)
 	}
+	removeMeta(projected)
 	return &ProjectedTypeData{
 		UserTypeData: &UserTypeData{
 			Name:        varname,
@@ -1794,6 +1795,16 @@ func walkViewAttrs(obj *expr.Object, view *expr.ViewExpr, walker func(name strin
 			walker(nat.Name, attr, nat.Attribute)
 		}
 	}
+}
+
+// removeMeta removes the meta attributes from the given attribute. This is
+// needed to make sure that any field name overridding is removed when
+// generating protobuf types (as protogen itself won't honor these overrides).
+func removeMeta(att *expr.AttributeExpr) {
+	_ = codegen.Walk(att, func(a *expr.AttributeExpr) error {
+		delete(a.Meta, "struct:pkg:path")
+		return nil
+	})
 }
 
 const (

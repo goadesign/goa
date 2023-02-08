@@ -219,7 +219,7 @@ var ResultWithMultipleMethodsDSL = func() {
 }
 
 var ResultWithEnumTypeDSL = func() {
-	var T = Type("UserType", String, func()  {
+	var T = Type("UserType", String, func() {
 		Enum("a", "b")
 	})
 	var RT = ResultType("application/vnd.result", func() {
@@ -228,6 +228,24 @@ var ResultWithEnumTypeDSL = func() {
 		})
 	})
 	Service("ResultWithEnumType", func() {
+		Method("A", func() {
+			Result(RT)
+		})
+	})
+}
+
+var ResultWithPkgPathDSL = func() {
+	var T = Type("UserType", func() {
+		Attribute("a", String)
+		Meta("struct:pkg:path", "types")
+	})
+	var RT = ResultType("application/vnd.result", func() {
+		TypeName("RT")
+		Attributes(func() {
+			Attribute("a", T)
+		})
+	})
+	Service("ResultWithPkgPath", func() {
 		Method("A", func() {
 			Result(RT)
 		})
