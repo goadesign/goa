@@ -1,6 +1,6 @@
 module goa.design/goa/v3
 
-go 1.19
+go 1.20
 
 require (
 	github.com/dimfeld/httppath v0.0.0-20170720192232-ee938bf73598
