@@ -11,10 +11,10 @@ jobs:
       uses: runforesight/foresight-workflow-kit-action@v1
       if: success() || failure()
 
-    - name: Set up Go 1.19
+    - name: Set up Go 1.20
       uses: actions/setup-go@v3.5.0
       with:
-        go-version: 1.19
+        go-version: '1.20'
       id: go
 
     - name: Check out code into the Go module directory
@@ -55,10 +55,10 @@ jobs:
       uses: runforesight/foresight-workflow-kit-action@v1
       if: success() || failure()
 
-    - name: Set up Go 1.19
+    - name: Set up Go 1.20
       uses: actions/setup-go@v3.5.0
       with:
-        go-version: 1.19
+        go-version: '1.20'
       id: go
 
     - name: Check out code into the Go module directory

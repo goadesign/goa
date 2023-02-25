@@ -3,11 +3,10 @@ package goa
 import (
 	"crypto/rand"
 	"encoding/base64"
+	"errors"
 	"fmt"
 	"io"
 	"strings"
-
-	"github.com/hashicorp/go-multierror"
 )
 
 type (
@@ -228,7 +227,7 @@ func MergeErrors(err, other error) error {
 	//
 	// Do this before we modify ourselves, as History() may include us!
 	e.history = append(e.History(), o.History()...)
-	e.err = multierror.Append(e.err, o.err)
+	e.err = errors.Join(e.err, o.err)
 
 	e.Message = e.Message + "; " + o.Message
 	e.Timeout = e.Timeout && o.Timeout
