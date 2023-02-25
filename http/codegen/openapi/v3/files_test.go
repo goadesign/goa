@@ -130,6 +130,6 @@ func validateSwagger(t *testing.T, b []byte) {
 		err = swagger.Validate(context.Background())
 	}
 	if err != nil {
-		t.Errorf("invalid spec: %s", err.Error())
+		t.Errorf("invalid spec: %s\nspec:\n%s", err.Error(), string(b))
 	}
 }
