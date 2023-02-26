@@ -122,23 +122,15 @@ func buildBodyTypes(api *expr.APIExpr) (map[string]map[string]*EndpointBodies, m
 				}
 				body := resp.Body
 				if view != "" {
-					// Static view
-					rt, err := expr.Project(body.Type.(*expr.ResultTypeExpr), view)
-					if err != nil { // bug
+					// Static view, dup and project
+					rt := expr.Dup(body.Type).(*expr.ResultTypeExpr)
+					rt, err := expr.Project(rt, view)
+					if err != nil {
 						panic(fmt.Sprintf("failed to project %q to view %q", body.Type.Name(), view))
 					}
 					body.Type = rt
 				}
 				js := sf.schemafy(body)
-				if rt, ok := resp.Body.Type.(*expr.ResultTypeExpr); ok && js != nil {
-					if view == "" && rt.HasMultipleViews() {
-						// Dynamic views
-						if len(js.Description) > 0 {
-							js.Description += "\n"
-						}
-						js.Description += sf.viewsNote(rt)
-					}
-				}
 				res[resp.StatusCode] = append(res[resp.StatusCode], js)
 			}
 			sbodies[e.Name()] = &EndpointBodies{req, res}
@@ -243,10 +235,23 @@ func (sf *schemafier) schemafy(attr *expr.AttributeExpr, noref ...bool) *openapi
 			} else if n, ok := t.Attribute().Meta["name:original"]; ok {
 				name = n[0]
 			}
-			typeName := sf.uniquify(codegen.Goify(name, true))
-			s.Ref = toRef(typeName)
-			sf.hashes[h] = append(sf.hashes[h], s.Ref)
-			sf.schemas[typeName] = sf.schemafy(t.Attribute(), true)
+			if rt, ok := t.(*expr.ResultTypeExpr); ok && rt.HasMultipleViews() {
+				// For result types with multiple views, we generate
+				// a AnyOf schema with a schema for each view.
+				s.AnyOf = make([]*openapi.Schema, len(rt.Views))
+				for i, v := range rt.Views {
+					pr, err := expr.Project(rt, v.Name)
+					if err != nil {
+						panic(fmt.Sprintf("failed to project %q with view %q", rt.Name(), v.Name)) // bug, DSL should have performed validations
+					}
+					s.AnyOf[i] = sf.schemafy(&expr.AttributeExpr{Type: pr})
+				}
+			} else {
+				typeName := sf.uniquify(codegen.Goify(name, true))
+				s.Ref = toRef(typeName)
+				sf.hashes[h] = append(sf.hashes[h], s.Ref)
+				sf.schemas[typeName] = sf.schemafy(t.Attribute(), true)
+			}
 			return s // All other schema properties are set in the reference
 		}
 		// Alias primitive type
@@ -317,31 +322,6 @@ func (sf *schemafier) uniquify(n string) string {
 		n = strings.TrimRight(n, "0123456789") + strconv.Itoa(i)
 	}
 	return n
-}
-
-// viewsNote returns a human friendly description of the different possible
-// response body shapes for the different views supported by the attribute type
-// which must be a ResultType.
-func (sf *schemafier) viewsNote(rt *expr.ResultTypeExpr) string {
-	var alts []string
-	for _, v := range rt.Views {
-		if v.Name != expr.DefaultView {
-			pr, err := expr.Project(rt, v.Name)
-			if err != nil {
-				panic(fmt.Sprintf("failed to project %q with view %q", rt.Name(), v.Name)) // bug, DSL should have performed validations
-			}
-			js := sf.schemafy(&expr.AttributeExpr{Type: pr})
-			alts = append(alts, js.Ref)
-		}
-	}
-	oneof := ""
-	last := ""
-	if len(alts) > 1 {
-		oneof = "one of "
-		last = " or " + alts[len(alts)-1]
-		alts = alts[:len(alts)-1]
-	}
-	return "Response body may alternatively be " + oneof + strings.Join(alts, ", ") + last
 }
 
 // toRef creates a relative JSON Schema reference from a type name that points

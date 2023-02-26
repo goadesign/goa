@@ -18,8 +18,9 @@ paths:
                     content:
                         application/custom+json:
                             schema:
-                                description: 'Response body may alternatively be #/components/schemas/TestEndpointDefaultResponseBodyTiny'
-                                $ref: '#/components/schemas/Result'
+                                anyOf:
+                                    - $ref: '#/components/schemas/TestEndpointDefaultResponseBody'
+                                    - $ref: '#/components/schemas/TestEndpointDefaultResponseBodyTiny'
                             example:
                                 int: 1
                                 string: ""
@@ -33,16 +34,14 @@ paths:
                 "200":
                     description: OK response.
                     content:
-                        application/vnd.custom+json:
+                        application/json:
                             schema:
-                                description: 'Response body may alternatively be #/components/schemas/TestEndpointDefaultResponseBodyTiny'
-                                $ref: '#/components/schemas/Result'
+                                $ref: '#/components/schemas/TestEndpointDefaultResponseBodyTiny'
                             example:
-                                int: 1
                                 string: ""
 components:
     schemas:
-        Result:
+        TestEndpointDefaultResponseBody:
             type: object
             properties:
                 int:
@@ -52,6 +51,7 @@ components:
                 string:
                     type: string
                     example: ""
+            description: TestEndpointDefaultResponseBody result type (default view)
             example:
                 int: 1
                 string: ""

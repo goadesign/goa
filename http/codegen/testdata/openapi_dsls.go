@@ -101,7 +101,9 @@ var MultipleViewsDSL = func() {
 			})
 		})
 		Method("testEndpointTiny", func() {
-			Result(ResultT)
+			Result(ResultT, func() {
+				View("tiny")
+			})
 			HTTP(func() {
 				GET("/tiny")
 			})

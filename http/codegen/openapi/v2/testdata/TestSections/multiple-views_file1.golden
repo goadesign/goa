@@ -33,13 +33,11 @@ paths:
                 - testService
             summary: testEndpointTiny testService
             operationId: testService#testEndpointTiny
-            produces:
-                - application/vnd.custom+json
             responses:
                 "200":
                     description: OK response.
                     schema:
-                        $ref: '#/definitions/TestServiceTestEndpointTinyResponseBody'
+                        $ref: '#/definitions/TestServiceTestEndpointTinyResponseBodyTiny'
             schemes:
                 - http
 definitions:
@@ -58,18 +56,13 @@ definitions:
         example:
             int: 1
             string: ""
-    TestServiceTestEndpointTinyResponseBody:
-        title: 'Mediatype identifier: application/json; view=default'
+    TestServiceTestEndpointTinyResponseBodyTiny:
+        title: 'Mediatype identifier: application/json; view=tiny'
         type: object
         properties:
-            int:
-                type: integer
-                example: 1
-                format: int64
             string:
                 type: string
                 example: ""
-        description: TestEndpointTinyResponseBody result type (default view)
+        description: TestEndpointTinyResponseBody result type (tiny view) (default view)
         example:
-            int: 1
             string: ""
