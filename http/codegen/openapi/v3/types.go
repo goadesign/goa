@@ -122,9 +122,10 @@ func buildBodyTypes(api *expr.APIExpr) (map[string]map[string]*EndpointBodies, m
 				}
 				body := resp.Body
 				if view != "" {
-					// Static view
-					rt, err := expr.Project(body.Type.(*expr.ResultTypeExpr), view)
-					if err != nil { // bug
+					// Static view, dup and project
+					rt := expr.Dup(body.Type).(*expr.ResultTypeExpr)
+					rt, err := expr.Project(rt, view)
+					if err != nil {
 						panic(fmt.Sprintf("failed to project %q to view %q", body.Type.Name(), view))
 					}
 					body.Type = rt
