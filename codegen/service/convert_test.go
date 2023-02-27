@@ -325,7 +325,7 @@ var objMapped = &expr.UserTypeExpr{
 		Type: &expr.Object{
 			{"Foo", &expr.AttributeExpr{Type: expr.String}},
 			{"Bar", &expr.AttributeExpr{Type: expr.Int}},
-			{"mapped", &expr.AttributeExpr{Type: expr.Boolean, Meta: expr.MetaExpr{"struct.field.external": []string{"Baz"}}}},
+			{"mapped", &expr.AttributeExpr{Type: expr.Boolean, Meta: expr.MetaExpr{"struct:field:external": []string{"Baz"}}}},
 		},
 	},
 	TypeName: "objT",
@@ -336,7 +336,7 @@ var objIgnored = &expr.UserTypeExpr{
 		Type: &expr.Object{
 			{"Foo", &expr.AttributeExpr{Type: expr.String}},
 			{"Bar", &expr.AttributeExpr{Type: expr.Int}},
-			{"ignored", &expr.AttributeExpr{Type: expr.Boolean, Meta: expr.MetaExpr{"struct.field.external": []string{"-"}}}},
+			{"ignored", &expr.AttributeExpr{Type: expr.Boolean, Meta: expr.MetaExpr{"struct:field:external": []string{"-"}}}},
 		},
 	},
 	TypeName: "objT",
