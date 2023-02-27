@@ -310,11 +310,11 @@ func runDSL(t *testing.T, dsl func()) *expr.RootExpr {
 var obj = &expr.UserTypeExpr{
 	AttributeExpr: &expr.AttributeExpr{
 		Type: &expr.Object{
-			{"Foo", &expr.AttributeExpr{Type: expr.String}},
-			{"Bar", &expr.AttributeExpr{Type: expr.Int}},
-			{"Baz", &expr.AttributeExpr{Type: expr.Boolean}},
-			{"Goo", &expr.AttributeExpr{Type: expr.Float32}},
-			{"Goo2", &expr.AttributeExpr{Type: expr.UInt}},
+			{Name: "Foo", Attribute: &expr.AttributeExpr{Type: expr.String}},
+			{Name: "Bar", Attribute: &expr.AttributeExpr{Type: expr.Int}},
+			{Name: "Baz", Attribute: &expr.AttributeExpr{Type: expr.Boolean}},
+			{Name: "Goo", Attribute: &expr.AttributeExpr{Type: expr.Float32}},
+			{Name: "Goo2", Attribute: &expr.AttributeExpr{Type: expr.UInt}},
 		},
 	},
 	TypeName: "objT",
@@ -323,9 +323,9 @@ var obj = &expr.UserTypeExpr{
 var objMapped = &expr.UserTypeExpr{
 	AttributeExpr: &expr.AttributeExpr{
 		Type: &expr.Object{
-			{"Foo", &expr.AttributeExpr{Type: expr.String}},
-			{"Bar", &expr.AttributeExpr{Type: expr.Int}},
-			{"mapped", &expr.AttributeExpr{Type: expr.Boolean, Meta: expr.MetaExpr{"struct:field:external": []string{"Baz"}}}},
+			{Name: "Foo", Attribute: &expr.AttributeExpr{Type: expr.String}},
+			{Name: "Bar", Attribute: &expr.AttributeExpr{Type: expr.Int}},
+			{Name: "mapped", Attribute: &expr.AttributeExpr{Type: expr.Boolean, Meta: expr.MetaExpr{"struct:field:external": []string{"Baz"}}}},
 		},
 	},
 	TypeName: "objT",
@@ -334,9 +334,9 @@ var objMapped = &expr.UserTypeExpr{
 var objIgnored = &expr.UserTypeExpr{
 	AttributeExpr: &expr.AttributeExpr{
 		Type: &expr.Object{
-			{"Foo", &expr.AttributeExpr{Type: expr.String}},
-			{"Bar", &expr.AttributeExpr{Type: expr.Int}},
-			{"ignored", &expr.AttributeExpr{Type: expr.Boolean, Meta: expr.MetaExpr{"struct:field:external": []string{"-"}}}},
+			{Name: "Foo", Attribute: &expr.AttributeExpr{Type: expr.String}},
+			{Name: "Bar", Attribute: &expr.AttributeExpr{Type: expr.Int}},
+			{Name: "ignored", Attribute: &expr.AttributeExpr{Type: expr.Boolean, Meta: expr.MetaExpr{"struct:field:external": []string{"-"}}}},
 		},
 	},
 	TypeName: "objT",
@@ -346,8 +346,8 @@ func objRecursive() *expr.UserTypeExpr {
 	res := &expr.UserTypeExpr{
 		AttributeExpr: &expr.AttributeExpr{
 			Type: &expr.Object{
-				{"Foo", &expr.AttributeExpr{Type: expr.String}},
-				{"Bar", &expr.AttributeExpr{Type: expr.Int}},
+				{Name: "Foo", Attribute: &expr.AttributeExpr{Type: expr.String}},
+				{Name: "Bar", Attribute: &expr.AttributeExpr{Type: expr.Int}},
 			},
 		},
 		TypeName: "objRecursiveT",
