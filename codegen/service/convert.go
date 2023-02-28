@@ -454,6 +454,11 @@ func buildDesignType(dt *expr.DataType, t reflect.Type, ref expr.DataType, recs 
 							continue
 						}
 					}
+					if m := at.Meta["struct.field.external"]; len(m) > 0 { // Deprecated syntax. Only present for backward compatibility.
+						if m[0] == "-" {
+							continue
+						}
+					}
 				}
 			}
 			fields = append(fields, f)
@@ -536,6 +541,13 @@ func attributeName(obj *expr.Object, name string) (string, string) {
 	// first look for a "struct:field:external" meta
 	for _, nat := range *obj {
 		if m := nat.Attribute.Meta["struct:field:external"]; len(m) > 0 {
+			if m[0] == name {
+				return nat.Name, name
+			}
+		}
+	}
+	for _, nat := range *obj { // Deprecated syntax. Only present for backward compatibility.
+		if m := nat.Attribute.Meta["struct.field.external"]; len(m) > 0 {
 			if m[0] == name {
 				return nat.Name, name
 			}
@@ -686,6 +698,12 @@ func compatible(from expr.DataType, to reflect.Type, recs ...compRec) error {
 			)
 			{
 				if ef, k := nat.Attribute.Meta["struct:field:external"]; k {
+					fname = ef[0]
+					if fname == "-" {
+						continue
+					}
+					field, ok = to.FieldByName(ef[0])
+				} else if ef, k := nat.Attribute.Meta["struct.field.external"]; k { // Deprecated syntax. Only present for backward compatibility.
 					fname = ef[0]
 					if fname == "-" {
 						continue
