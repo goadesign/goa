@@ -10,7 +10,7 @@ func TestIsPrimitivePointer(t *testing.T) {
 	newObj := func(fieldName string, fieldType expr.DataType, req bool) *expr.AttributeExpr {
 		attr := &expr.AttributeExpr{
 			Type: &expr.Object{
-				&expr.NamedAttributeExpr{fieldName, &expr.AttributeExpr{Type: fieldType}},
+				&expr.NamedAttributeExpr{Name: fieldName, Attribute: &expr.AttributeExpr{Type: fieldType}},
 			},
 		}
 		if req {

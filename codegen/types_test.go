@@ -17,14 +17,14 @@ func TestGoTypeDef(t *testing.T) {
 			}}
 		requiredObj = &expr.AttributeExpr{
 			Type: &expr.Object{
-				{"IntField", &expr.AttributeExpr{Type: expr.Int}},
-				{"StringField", &expr.AttributeExpr{Type: expr.String}},
+				{Name: "IntField", Attribute: &expr.AttributeExpr{Type: expr.Int}},
+				{Name: "StringField", Attribute: &expr.AttributeExpr{Type: expr.String}},
 			},
 			Validation: &expr.ValidationExpr{Required: []string{"IntField", "StringField"}}}
 		defaultObj = &expr.AttributeExpr{
 			Type: &expr.Object{
-				{"IntField", &expr.AttributeExpr{Type: expr.Int, DefaultValue: 1}},
-				{"StringField", &expr.AttributeExpr{Type: expr.String, DefaultValue: "foo"}},
+				{Name: "IntField", Attribute: &expr.AttributeExpr{Type: expr.Int, DefaultValue: 1}},
+				{Name: "StringField", Attribute: &expr.AttributeExpr{Type: expr.String, DefaultValue: "foo"}},
 			}}
 		ut                     = &expr.UserTypeExpr{AttributeExpr: &expr.AttributeExpr{Type: expr.Boolean}, TypeName: "UserType"}
 		rt                     = &expr.ResultTypeExpr{UserTypeExpr: &expr.UserTypeExpr{AttributeExpr: &expr.AttributeExpr{Type: expr.Boolean}, TypeName: "ResultType"}, Identifier: "application/vnd.goa.example", Views: nil}
@@ -38,13 +38,13 @@ func TestGoTypeDef(t *testing.T) {
 
 		mixedObj = &expr.AttributeExpr{
 			Type: &expr.Object{
-				{"IntField", &expr.AttributeExpr{Type: expr.Int}},
-				{"ArrayField", simpleArray},
-				{"MapField", simpleMap},
-				{"UserTypeField", userType},
-				{"MetaTypeField", &expr.AttributeExpr{Type: expr.Int, Meta: jsonWithImportMetaType}},
-				{"QualifiedMetaTypeField", &expr.AttributeExpr{Type: expr.Int, Meta: jsonWithRenameMetaType}},
-				{"StructPkgPath", &expr.AttributeExpr{Type: utPkgPathMeta}},
+				{Name: "IntField", Attribute: &expr.AttributeExpr{Type: expr.Int}},
+				{Name: "ArrayField", Attribute: simpleArray},
+				{Name: "MapField", Attribute: simpleMap},
+				{Name: "UserTypeField", Attribute: userType},
+				{Name: "MetaTypeField", Attribute: &expr.AttributeExpr{Type: expr.Int, Meta: jsonWithImportMetaType}},
+				{Name: "QualifiedMetaTypeField", Attribute: &expr.AttributeExpr{Type: expr.Int, Meta: jsonWithRenameMetaType}},
+				{Name: "StructPkgPath", Attribute: &expr.AttributeExpr{Type: utPkgPathMeta}},
 			},
 			Validation: &expr.ValidationExpr{Required: []string{"IntField", "ArrayField", "MapField", "UserTypeField", "MetaTypeField", "QualifiedMetaTypeField"}}}
 	)

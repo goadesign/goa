@@ -114,6 +114,7 @@ func removeMeta(att *expr.AttributeExpr) {
 	_ = codegen.Walk(att, func(a *expr.AttributeExpr) error {
 		delete(a.Meta, "struct:field:name")
 		delete(a.Meta, "struct:field:external")
+		delete(a.Meta, "struct.field.external") // Deprecated syntax. Only present for backward compatibility.
 		return nil
 	})
 }

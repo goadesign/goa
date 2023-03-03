@@ -50,8 +50,8 @@ func TestRequired(t *testing.T) {
 		Type: &expr.UserTypeExpr{
 			AttributeExpr: &expr.AttributeExpr{
 				Type: &expr.Object{
-					{"foo", &expr.AttributeExpr{Type: String}},
-					{"bar", &expr.AttributeExpr{Type: String}},
+					{Name: "foo", Attribute: &expr.AttributeExpr{Type: String}},
+					{Name: "bar", Attribute: &expr.AttributeExpr{Type: String}},
 				},
 			},
 			TypeName: "Foo",
