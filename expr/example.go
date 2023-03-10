@@ -190,8 +190,8 @@ func byFormat(a *AttributeExpr, r *ExampleGenerator) interface{} {
 	if res, ok := map[ValidationFormat]interface{}{
 		FormatEmail:    r.Email(),
 		FormatHostname: r.Hostname(),
-		FormatDate:     time.Unix(int64(r.Int())%1454957045, 0).UTC().Format("2006-01-02"), // to obtain a "fixed" rand
-		FormatDateTime: time.Unix(int64(r.Int())%1454957045, 0).UTC().Format(time.RFC3339), // to obtain a "fixed" rand
+		FormatDate:     time.Unix(int64(r.Int())%1454957045, 0).UTC().Format(time.DateOnly), // to obtain a "fixed" rand
+		FormatDateTime: time.Unix(int64(r.Int())%1454957045, 0).UTC().Format(time.RFC3339),  // to obtain a "fixed" rand
 		FormatIPv4:     r.IPv4Address().String(),
 		FormatIPv6:     r.IPv6Address().String(),
 		FormatIP:       r.IPv4Address().String(),
