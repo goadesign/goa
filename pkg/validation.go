@@ -72,21 +72,21 @@ var (
 // see http://json-schema.org/latest/json-schema-validation.html#anchor105
 // Supported formats are:
 //
-//     - "date": RFC3339 date value
-//     - "date-time": RFC3339 date time value
-//     - "email": RFC5322 email address
-//     - "hostname": RFC1035 Internet host name
-//     - "ipv4", "ipv6", "ip": RFC2673 and RFC2373 IP address values
-//     - "uri": RFC3986 URI value
-//     - "mac": IEEE 802 MAC-48, EUI-48 or EUI-64 MAC address value
-//     - "cidr": RFC4632 and RFC4291 CIDR notation IP address value
-//     - "regexp": Regular expression syntax accepted by RE2
-//     - "rfc1123": RFC1123 date time value
+//   - "date": RFC3339 date value
+//   - "date-time": RFC3339 date time value
+//   - "email": RFC5322 email address
+//   - "hostname": RFC1035 Internet host name
+//   - "ipv4", "ipv6", "ip": RFC2673 and RFC2373 IP address values
+//   - "uri": RFC3986 URI value
+//   - "mac": IEEE 802 MAC-48, EUI-48 or EUI-64 MAC address value
+//   - "cidr": RFC4632 and RFC4291 CIDR notation IP address value
+//   - "regexp": Regular expression syntax accepted by RE2
+//   - "rfc1123": RFC1123 date time value
 func ValidateFormat(name string, val string, f Format) error {
 	var err error
 	switch f {
 	case FormatDate:
-		_, err = time.Parse("2006-01-02", val)
+		_, err = time.Parse(time.DateOnly, val)
 	case FormatDateTime:
 		_, err = time.Parse(time.RFC3339, val)
 	case FormatUUID:
