@@ -199,23 +199,23 @@ func TypeName(name string) {
 func View(name string, adsl ...func()) {
 	switch e := eval.Current().(type) {
 	case *expr.ResultTypeExpr:
-		mt := e
-		if mt.View(name) != nil {
-			eval.ReportError("multiple expressions for view %#v in result type %#v", name, mt.TypeName)
+		if e.View(name) != nil {
+			eval.ReportError("multiple expressions for view %#v in result type %#v", name, e.TypeName)
 			return
 		}
 		at := &expr.AttributeExpr{}
 		ok := false
+		var a *expr.Array
 		if len(adsl) > 0 {
 			ok = eval.Execute(adsl[0], at)
-		} else if a, ok := mt.Type.(*expr.Array); ok {
+		} else if a, ok = e.Type.(*expr.Array); ok {
 			// inherit view from collection element if present
-			elem := a.ElemType
-			if elem != nil {
+			if elem := a.ElemType; elem != nil {
 				if pa, ok2 := elem.Type.(*expr.ResultTypeExpr); ok2 {
+					print(pa)
+					print(pa.Views)
 					if v := pa.View(name); v != nil {
 						at = v.AttributeExpr
-						ok = true
 					} else {
 						eval.ReportError("unknown view %#v", name)
 						return
@@ -224,12 +224,12 @@ func View(name string, adsl ...func()) {
 			}
 		}
 		if ok {
-			view, err := buildView(name, mt, at)
+			view, err := buildView(name, e, at)
 			if err != nil {
 				eval.ReportError(err.Error())
 				return
 			}
-			mt.Views = append(mt.Views, view)
+			e.Views = append(e.Views, view)
 		}
 
 	case *expr.AttributeExpr:
