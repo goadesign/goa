@@ -432,6 +432,12 @@ func transformArray(source, target *expr.Array, sourceVar, targetVar string, new
 			return "", err
 		}
 	}
+	valVar := "val"
+	if obj := expr.AsObject(src.Type); obj != nil {
+		if len(*obj) == 0 {
+			valVar = ""
+		}
+	}
 
 	data := map[string]interface{}{
 		"ElemTypeRef":    targetRef,
@@ -442,6 +448,7 @@ func transformArray(source, target *expr.Array, sourceVar, targetVar string, new
 		"NewVar":         newVar,
 		"TransformAttrs": ta,
 		"LoopVar":        string(rune(105 + strings.Count(targetVar, "["))),
+		"ValVar":         valVar,
 	}
 	var buf bytes.Buffer
 	if err := transformGoArrayT.Execute(&buf, data); err != nil {
@@ -944,7 +951,7 @@ func dupTransformAttrs(ta *transformAttrs) *transformAttrs {
 
 const (
 	transformGoArrayTmpl = `{{ .TargetVar }} {{ if .NewVar }}:={{ else }}={{ end }} make([]{{ .ElemTypeRef }}, len({{ .SourceVar }})) 
-for {{ .LoopVar }}, val := range {{ .SourceVar }} {
+for {{ .LoopVar }}{{ if .ValVar }}, {{ .ValVar }}{{ end }} := range {{ .SourceVar }} {
   {{ transformAttribute .SourceElem .TargetElem "val" (printf "%s[%s]" .TargetVar .LoopVar) false .TransformAttrs -}}
 }
 `
