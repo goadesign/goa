@@ -32,6 +32,7 @@ var (
 	tempty  typ
 	tstring = typ{Type: "string"}
 	tuuid   = typ{Type: "string", Format: "uuid"}
+	tbinary = typ{Type: "string", Format: "binary"}
 	tint    = typ{Type: "integer"}
 	tarray  = typ{Type: "array"}
 )

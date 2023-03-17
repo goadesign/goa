@@ -164,6 +164,11 @@ func TestBuildOperation(t *testing.T) {
 		DSL:  dsls.ResponseRecursiveArrayUserType(svcName, "response_recursive_array_user_type"),
 
 		ExpectedResponses: responses{"200": {"OK response.", tobj("result", tobj("children", tarray)), nil}},
+	}, {
+		Name: "response_skip_response_body_encode_decode",
+		DSL:  dsls.ResponseSkipResponseBodyEncodeDecode(svcName, "response_skip_response_body_encode_decode"),
+
+		ExpectedResponses: responses{"200": {"OK response.", tbinary, nil}},
 	}}
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {

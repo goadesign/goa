@@ -45,6 +45,17 @@ func responseFromExpr(r *expr.HTTPResponseExpr, bodies map[int][]*openapi.Schema
 				Extensions: openapi.ExtensionsFromExpr(r.Body.Meta),
 			}
 			initExamples(content[ct], r.Body, rand)
+		} else if r.StatusCode != expr.StatusNoContent {
+			// When SkipResponseBodyEncodeDecode is declared, the response type
+			// is Empty, but the response code is not 204 and has content.
+			content = make(map[string]*MediaType)
+			content[ct] = &MediaType{
+				Schema: &openapi.Schema{
+					Type:   "string",
+					Format: "binary",
+				},
+				Extensions: openapi.ExtensionsFromExpr(r.Body.Meta),
+			}
 		}
 	}
 	desc := r.Description
