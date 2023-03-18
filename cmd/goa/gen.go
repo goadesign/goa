@@ -115,7 +115,7 @@ func (g *Generator) Write(debug bool) error {
 
 	var sections []*codegen.SectionTemplate
 	{
-		data := map[string]interface{}{
+		data := map[string]any{
 			"Command":       g.Command,
 			"CleanupDirs":   cleanupDirs(g.Command, g.Output),
 			"DesignVersion": g.DesignVersion,
@@ -330,7 +330,7 @@ const mainT = `func main() {
 	fmt.Println(strings.Join(outputs, "\n"))
 }
 
-func fail(msg string, vals ...interface{}) {
+func fail(msg string, vals ...any) {
 	fmt.Fprintf(os.Stderr, msg, vals...)
 	os.Exit(1)
 }
