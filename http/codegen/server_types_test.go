@@ -46,9 +46,9 @@ func TestServerTypes(t *testing.T) {
 const MixedPayloadInBodyServerTypesFile = `// MethodARequestBody is the type of the "ServiceMixedPayloadInBody" service
 // "MethodA" endpoint HTTP request body.
 type MethodARequestBody struct {
-	Any    any          ` + "`" + `form:"any,omitempty" json:"any,omitempty" xml:"any,omitempty"` + "`" + `
+	Any    any                  ` + "`" + `form:"any,omitempty" json:"any,omitempty" xml:"any,omitempty"` + "`" + `
 	Array  []float32            ` + "`" + `form:"array,omitempty" json:"array,omitempty" xml:"array,omitempty"` + "`" + `
-	Map    map[uint]any ` + "`" + `form:"map,omitempty" json:"map,omitempty" xml:"map,omitempty"` + "`" + `
+	Map    map[uint]any         ` + "`" + `form:"map,omitempty" json:"map,omitempty" xml:"map,omitempty"` + "`" + `
 	Object *BPayloadRequestBody ` + "`" + `form:"object,omitempty" json:"object,omitempty" xml:"object,omitempty"` + "`" + `
 	DupObj *BPayloadRequestBody ` + "`" + `form:"dup_obj,omitempty" json:"dup_obj,omitempty" xml:"dup_obj,omitempty"` + "`" + `
 }
