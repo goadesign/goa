@@ -170,12 +170,12 @@ func WrapLogger(l Logger, traceID string) Logger {
 }
 
 // Log logs the trace ID when present then the values passed as argument.
-func (l *tracedLogger) Log(keyvals ...interface{}) error {
+func (l *tracedLogger) Log(keyvals ...any) error {
 	if l.traceID == "" {
 		l.logger.Log(keyvals...)
 		return nil
 	}
-	keyvals = append([]interface{}{"trace", l.traceID}, keyvals...)
+	keyvals = append([]any{"trace", l.traceID}, keyvals...)
 	l.logger.Log(keyvals)
 	return nil
 }
