@@ -123,7 +123,7 @@ func recurseValidationCode(att *expr.AttributeExpr, put expr.UserType, attCtx *A
 		val := validateAttribute(ctx, elem, put, "e", context+"[*]", true)
 		if val != "" {
 			newline()
-			data := map[string]interface{}{"target": target, "validation": val}
+			data := map[string]any{"target": target, "validation": val}
 			if err := arrayValT.Execute(buf, data); err != nil {
 				panic(err) // bug
 			}
@@ -142,7 +142,7 @@ func recurseValidationCode(att *expr.AttributeExpr, put expr.UserType, attCtx *A
 		}
 		if keyVal != "" || valueVal != "" {
 			newline()
-			data := map[string]interface{}{"target": target, "keyValidation": keyVal, "valueValidation": valueVal}
+			data := map[string]any{"target": target, "keyValidation": keyVal, "valueValidation": valueVal}
 			if err := mapValT.Execute(buf, data); err != nil {
 				panic(err) // bug
 			}
@@ -166,7 +166,7 @@ func recurseValidationCode(att *expr.AttributeExpr, put expr.UserType, attCtx *A
 		}
 		if len(vals) > 0 {
 			newline()
-			data := map[string]interface{}{
+			data := map[string]any{
 				"target": target,
 				"types":  types,
 				"values": vals,
@@ -207,7 +207,7 @@ func validateAttribute(ctx *AttributeContext, att *expr.AttributeExpr, put expr.
 	}
 	var buf bytes.Buffer
 	name := ctx.Scope.Name(att, "", ctx.Pointer, ctx.UseDefault)
-	data := map[string]interface{}{"name": Goify(name, true), "target": target}
+	data := map[string]any{"name": Goify(name, true), "target": target}
 	if err := userValT.Execute(&buf, data); err != nil {
 		panic(err) // bug
 	}
@@ -257,7 +257,7 @@ func validationCode(att *expr.AttributeExpr, attCtx *AttributeContext, req, alia
 	if alias {
 		tval = fmt.Sprintf("%s(%s)", att.Type.Name(), tval)
 	}
-	data := map[string]interface{}{
+	data := map[string]any{
 		"attribute": att,
 		"attCtx":    attCtx,
 		"isPointer": isPointer,
@@ -268,7 +268,7 @@ func validationCode(att *expr.AttributeExpr, attCtx *AttributeContext, req, alia
 		"array":     expr.IsArray(att.Type),
 		"map":       expr.IsMap(att.Type),
 	}
-	runTemplate := func(tmpl *template.Template, data interface{}) string {
+	runTemplate := func(tmpl *template.Template, data any) string {
 		var buf bytes.Buffer
 		if err := tmpl.Execute(&buf, data); err != nil {
 			panic(err) // bug
@@ -437,17 +437,17 @@ func flattenValidations(att *expr.AttributeExpr, seen map[string]struct{}) {
 }
 
 // toSlice returns Go code that represents the given slice.
-func toSlice(val []interface{}) string {
+func toSlice(val []any) string {
 	elems := make([]string, len(val))
 	for i, v := range val {
 		elems[i] = fmt.Sprintf("%#v", v)
 	}
-	return fmt.Sprintf("[]interface{}{%s}", strings.Join(elems, ", "))
+	return fmt.Sprintf("[]any{%s}", strings.Join(elems, ", "))
 }
 
 // oneof produces code that compares target with each element of vals and ORs
 // the result, e.g. "target == 1 || target == 2".
-func oneof(target string, vals []interface{}) string {
+func oneof(target string, vals []any) string {
 	elems := make([]string, len(vals))
 	for i, v := range vals {
 		elems[i] = fmt.Sprintf("%s == %#v", target, v)

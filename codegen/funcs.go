@@ -32,8 +32,8 @@ type (
 )
 
 // TemplateFuncs lists common template helper functions.
-func TemplateFuncs() map[string]interface{} {
-	return map[string]interface{}{
+func TemplateFuncs() map[string]any {
+	return map[string]any{
 		"commandLine": CommandLine,
 		"comment":     Comment,
 	}

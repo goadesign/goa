@@ -333,7 +333,7 @@ func buildHostData(host *expr.HostExpr) *HostData {
 }
 
 // convertToString converts primitive type to a string.
-func convertToString(vals ...interface{}) []string {
+func convertToString(vals ...any) []string {
 	str := make([]string, len(vals))
 	for i, v := range vals {
 		switch t := v.(type) {

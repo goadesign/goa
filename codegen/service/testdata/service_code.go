@@ -2050,15 +2050,15 @@ var MethodNames = [1]string{"StreamingPayloadNoPayloadMethod"}
 type StreamingPayloadNoPayloadMethodServerStream interface {
 	// SendAndClose streams instances of "string" and closes the stream.
 	SendAndClose(string) error
-	// Recv reads instances of "interface{}" from the stream.
-	Recv() (interface{}, error)
+	// Recv reads instances of "any" from the stream.
+	Recv() (any, error)
 }
 
 // StreamingPayloadNoPayloadMethodClientStream is the interface a
 // "StreamingPayloadNoPayloadMethod" endpoint client stream must satisfy.
 type StreamingPayloadNoPayloadMethodClientStream interface {
-	// Send streams instances of "interface{}".
-	Send(interface{}) error
+	// Send streams instances of "any".
+	Send(any) error
 	// CloseAndRecv stops sending messages to the stream and reads instances of
 	// "string" from the stream.
 	CloseAndRecv() (string, error)

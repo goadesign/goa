@@ -65,7 +65,7 @@ func TestGoTypeDef(t *testing.T) {
 		"Float64Kind": {&expr.AttributeExpr{Type: expr.Float64}, false, true, "float64"},
 		"StringKind":  {&expr.AttributeExpr{Type: expr.String}, false, true, "string"},
 		"BytesKind":   {&expr.AttributeExpr{Type: expr.Bytes}, false, true, "[]byte"},
-		"AnyKind":     {&expr.AttributeExpr{Type: expr.Any}, false, true, "interface{}"},
+		"AnyKind":     {&expr.AttributeExpr{Type: expr.Any}, false, true, "any"},
 
 		"Array":          {simpleArray, false, true, "[]bool"},
 		"Map":            {simpleMap, false, true, "map[int]string"},
@@ -108,7 +108,7 @@ func TestGoNativeTypeName(t *testing.T) {
 		"Float64Kind": {expr.Float64, "float64"},
 		"StringKind":  {expr.String, "string"},
 		"BytesKind":   {expr.Bytes, "[]byte"},
-		"AnyKind":     {expr.Any, "interface{}"},
+		"AnyKind":     {expr.Any, "any"},
 	}
 
 	for k, tc := range cases {

@@ -119,7 +119,7 @@ func getPkgImport(pkg, cwd string) string {
 	return pkg
 }
 
-func getExternalTypeInfo(external interface{}) (string, string, error) {
+func getExternalTypeInfo(external any) (string, string, error) {
 	cwd, err := os.Getwd()
 	if err != nil {
 		return "", "", err

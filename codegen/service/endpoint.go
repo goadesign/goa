@@ -120,7 +120,7 @@ func EndpointFile(genpkg string, service *expr.ServiceExpr) *codegen.File {
 				Name:    "endpoint-method",
 				Source:  serviceEndpointMethodT,
 				Data:    m,
-				FuncMap: map[string]interface{}{"payloadVar": payloadVar},
+				FuncMap: map[string]any{"payloadVar": payloadVar},
 			})
 		}
 	}
@@ -225,7 +225,7 @@ type {{ .ResponseStruct }} struct {
 // input: endpointMethodData
 const serviceEndpointMethodT = `{{ printf "New%sEndpoint returns an endpoint function that calls the method %q of service %q." .VarName .Name .ServiceName | comment }}
 func New{{ .VarName }}Endpoint(s {{ .ServiceVarName }}{{ range .Schemes }}, auth{{ .Type }}Fn security.Auth{{ .Type }}Func{{ end }}) goa.Endpoint {
-	return func(ctx context.Context, req interface{}) (interface{}, error) {
+	return func(ctx context.Context, req any) (any, error) {
 {{- if or .ServerStream }}
 		ep := req.(*{{ .ServerStream.EndpointStruct }})
 {{- else if .SkipRequestBodyEncodeDecode }}

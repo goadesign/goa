@@ -299,7 +299,7 @@ func transformArray(source, target *expr.Array, sourceVar, targetVar string, new
 	if err := IsCompatible(source.ElemType.Type, target.ElemType.Type, sourceVar+"[0]", targetVar+"[0]"); err != nil {
 		return "", err
 	}
-	data := map[string]interface{}{
+	data := map[string]any{
 		"ElemTypeRef":    ta.TargetCtx.Scope.Ref(target.ElemType, ta.TargetCtx.Pkg(target.ElemType)),
 		"SourceElem":     source.ElemType,
 		"TargetElem":     target.ElemType,
@@ -325,7 +325,7 @@ func transformMap(source, target *expr.Map, sourceVar, targetVar string, newVar 
 	if err := IsCompatible(source.ElemType.Type, target.ElemType.Type, sourceVar+"[*]", targetVar+"[*]"); err != nil {
 		return "", err
 	}
-	data := map[string]interface{}{
+	data := map[string]any{
 		"KeyTypeRef":     ta.TargetCtx.Scope.Ref(target.KeyType, ta.TargetCtx.Pkg(target.KeyType)),
 		"ElemTypeRef":    ta.TargetCtx.Scope.Ref(target.ElemType, ta.TargetCtx.Pkg(target.ElemType)),
 		"SourceKey":      source.KeyType,
@@ -382,7 +382,7 @@ func transformUnion(source, target *expr.AttributeExpr, sourceVar, targetVar str
 	// Need to type assert targetVar before assigning field values.
 	ta.TargetCtx.IsInterface = true
 
-	data := map[string]interface{}{
+	data := map[string]any{
 		"SourceTypeRefs": sourceTypeRefs,
 		"SourceTypes":    srcUnion.Values,
 		"TargetTypes":    tgtUnion.Values,
@@ -415,7 +415,7 @@ func transformUnionToObject(source, target *expr.AttributeExpr, sourceVar, targe
 		sourceTypeRefs[i] = ta.SourceCtx.Scope.Ref(st.Attribute, ta.SourceCtx.Pkg(st.Attribute))
 		sourceTypeNames[i] = st.Name
 	}
-	data := map[string]interface{}{
+	data := map[string]any{
 		"NewVar":          newVar,
 		"TargetVar":       targetVar,
 		"TypeRef":         ta.TargetCtx.Scope.Ref(target, ta.TargetCtx.Pkg(target)),
@@ -451,7 +451,7 @@ func transformObjectToUnion(source, target *expr.AttributeExpr, sourceVar, targe
 		unionTypes[i] = tt.Name
 		targetTypeRefs[i] = ta.TargetCtx.Scope.Ref(tt.Attribute, ta.TargetCtx.Pkg(tt.Attribute))
 	}
-	data := map[string]interface{}{
+	data := map[string]any{
 		"NewVar":         newVar,
 		"TargetVar":      targetVar,
 		"TypeRef":        ta.TargetCtx.Scope.Ref(target, ta.TargetCtx.Pkg(target)),

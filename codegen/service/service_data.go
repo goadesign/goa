@@ -138,9 +138,9 @@ type (
 		// PayloadDesc is the payload type description if any.
 		PayloadDesc string
 		// PayloadEx is an example of a valid payload value.
-		PayloadEx interface{}
+		PayloadEx any
 		// PayloadDefault is the default value of the payload if any.
-		PayloadDefault interface{}
+		PayloadDefault any
 		// StreamingPayload is the name of the streaming payload type if any.
 		StreamingPayload string
 		// StreamingPayloadDef is the streaming payload type definition if any.
@@ -150,7 +150,7 @@ type (
 		// StreamingPayloadDesc is the streaming payload type description if any.
 		StreamingPayloadDesc string
 		// StreamingPayloadEx is an example of a valid streaming payload value.
-		StreamingPayloadEx interface{}
+		StreamingPayloadEx any
 		// Result is the name of the result type if any.
 		Result string
 		// ResultLoc defines the file and Go package of the result type
@@ -163,7 +163,7 @@ type (
 		// ResultDesc is the result type description if any.
 		ResultDesc string
 		// ResultEx is an example of a valid result value.
-		ResultEx interface{}
+		ResultEx any
 		// Errors list the possible errors defined in the design if any.
 		Errors []*ErrorInitData
 		// ErrorLocs lists the file and Go package of the error type
@@ -883,13 +883,13 @@ func buildMethodData(m *expr.MethodExpr, scope *codegen.NameScope) *MethodData {
 		payloadDef  string
 		payloadRef  string
 		payloadDesc string
-		payloadEx   interface{}
+		payloadEx   any
 		rname       string
 		resultLoc   *codegen.Location
 		resultDef   string
 		resultRef   string
 		resultDesc  string
-		resultEx    interface{}
+		resultEx    any
 		errors      []*ErrorInitData
 		errorLocs   map[string]*codegen.Location
 		reqs        RequirementsData
@@ -989,7 +989,7 @@ func initStreamData(data *MethodData, m *expr.MethodExpr, vname, rname, resultRe
 		spayloadRef  string
 		spayloadDef  string
 		spayloadDesc string
-		spayloadEx   interface{}
+		spayloadEx   any
 	)
 	if m.StreamingPayload.Type != expr.Empty {
 		spayloadName = scope.GoTypeName(m.StreamingPayload)
@@ -1317,7 +1317,7 @@ func buildViewedResultType(att, projected *expr.AttributeExpr, viewspkg string, 
 		resref = scope.GoTypeRef(att)
 	)
 	{
-		data := map[string]interface{}{
+		data := map[string]any{
 			"Projected": scope.GoTypeName(projected),
 			"ArgVar":    "result",
 			"Source":    "result",
@@ -1344,7 +1344,7 @@ func buildViewedResultType(att, projected *expr.AttributeExpr, viewspkg string, 
 		vresref = viewScope.GoFullTypeRef(att, viewspkg)
 	)
 	{
-		data := map[string]interface{}{
+		data := map[string]any{
 			"ToViewed":      true,
 			"ArgVar":        "res",
 			"ReturnVar":     "vres",
@@ -1374,7 +1374,7 @@ func buildViewedResultType(att, projected *expr.AttributeExpr, viewspkg string, 
 	// build constructor to initialize result type from viewed result type
 	var resinit *InitData
 	{
-		data := map[string]interface{}{
+		data := map[string]any{
 			"ToResult":      true,
 			"ArgVar":        "vres",
 			"ReturnVar":     "res",
@@ -1614,7 +1614,7 @@ func buildValidations(projected *expr.AttributeExpr, scope *codegen.NameScope) [
 		// specific validation logic for each view
 		arr := expr.AsArray(projected.Type)
 		for _, view := range rt.Views {
-			data := map[string]interface{}{
+			data := map[string]any{
 				"Projected":    tname,
 				"ArgVar":       "result",
 				"Source":       "result",
@@ -1639,7 +1639,7 @@ func buildValidations(projected *expr.AttributeExpr, scope *codegen.NameScope) [
 			} else {
 				var (
 					ctx    *codegen.AttributeContext
-					fields []map[string]interface{}
+					fields []map[string]any
 
 					o = &expr.Object{}
 				)
@@ -1652,7 +1652,7 @@ func buildValidations(projected *expr.AttributeExpr, scope *codegen.NameScope) [
 							if v, ok := vatt.Meta["view"]; ok && len(v) > 0 && v[0] != expr.DefaultView {
 								vw = v[0]
 							}
-							fields = append(fields, map[string]interface{}{
+							fields = append(fields, map[string]any{
 								"Name":        name,
 								"ValidateVar": "Validate" + scope.GoTypeName(attr) + codegen.Goify(vw, true),
 								"IsRequired":  rt.Attribute().IsRequired(name),
@@ -1711,7 +1711,7 @@ func buildConstructorCode(src, tgt *expr.AttributeExpr, sourceVar, targetVar str
 	rt := src.Type.(*expr.ResultTypeExpr)
 	arr := expr.AsArray(tgt.Type)
 
-	data := map[string]interface{}{
+	data := map[string]any{
 		"ArgVar":       sourceVar,
 		"ReturnVar":    targetVar,
 		"IsCollection": arr != nil,
@@ -1759,7 +1759,7 @@ func buildConstructorCode(src, tgt *expr.AttributeExpr, sourceVar, targetVar str
 	if view != "" {
 		data["InitName"] = targetCtx.Scope.Name(src, "", targetCtx.Pointer, targetCtx.UseDefault)
 	}
-	fields := make([]map[string]interface{}, 0, len(*targetRTs))
+	fields := make([]map[string]any, 0, len(*targetRTs))
 	// iterate through the result types found in the target and add the
 	// code to initialize them
 	for _, nat := range *targetRTs {
@@ -1774,7 +1774,7 @@ func buildConstructorCode(src, tgt *expr.AttributeExpr, sourceVar, targetVar str
 			}
 			finit += codegen.Goify(v, true)
 		}
-		fields = append(fields, map[string]interface{}{
+		fields = append(fields, map[string]any{
 			"VarName":   codegen.Goify(nat.Name, true),
 			"FieldInit": finit,
 		})
@@ -1856,7 +1856,7 @@ case {{ printf "%q" .Name }}{{ if eq .Name "default" }}, ""{{ end }}:
 	err = Validate{{ $.Projected }}{{ if ne .Name "default" }}{{ goify .Name true }}{{ end }}({{ $.ArgVar }}.Projected)
 	{{- end }}
 default:
-	err = goa.InvalidEnumValueError("view", {{ .Source }}.View, []interface{}{ {{ range .Views }}{{ printf "%q" .Name }}, {{ end }} })
+	err = goa.InvalidEnumValueError("view", {{ .Source }}.View, []any{ {{ range .Views }}{{ printf "%q" .Name }}, {{ end }} })
 }
 {{- else -}}
 	{{- if .IsCollection -}}
