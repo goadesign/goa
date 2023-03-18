@@ -34,7 +34,7 @@ func serverFile(genpkg string, svc *expr.HTTPServiceExpr) *codegen.File {
 	svcName := data.Service.PathName
 	path := filepath.Join(codegen.Gendir, "http", svcName, "server", "server.go")
 	title := fmt.Sprintf("%s HTTP server", svc.Name())
-	funcs := map[string]interface{}{
+	funcs := map[string]any{
 		"join":                    func(ss []string, s string) string { return strings.Join(ss, s) },
 		"hasWebSocket":            hasWebSocket,
 		"isWebSocketEndpoint":     isWebSocketEndpoint,
@@ -171,8 +171,8 @@ func serverEncodeDecodeFile(genpkg string, svc *expr.HTTPServiceExpr) *codegen.F
 	return &codegen.File{Path: path, SectionTemplates: sections}
 }
 
-func transTmplFuncs(s *expr.HTTPServiceExpr) map[string]interface{} {
-	return map[string]interface{}{
+func transTmplFuncs(s *expr.HTTPServiceExpr) map[string]any {
+	return map[string]any{
 		"goTypeRef": func(dt expr.DataType) string {
 			return service.Services.Get(s.Name()).Scope.GoTypeRef(&expr.AttributeExpr{Type: dt})
 		},
@@ -194,8 +194,8 @@ func mustDecodeRequest(e *EndpointData) bool {
 
 // conversionData creates a template context suitable for executing the
 // "type_conversion" template.
-func conversionData(varName, name string, dt expr.DataType) map[string]interface{} {
-	return map[string]interface{}{
+func conversionData(varName, name string, dt expr.DataType) map[string]any {
+	return map[string]any{
 		"VarName": varName,
 		"Name":    name,
 		"Type":    dt,
@@ -204,8 +204,8 @@ func conversionData(varName, name string, dt expr.DataType) map[string]interface
 
 // headerConversionData produces the template data suitable for executing the
 // "header_conversion" template.
-func headerConversionData(dt expr.DataType, varName string, required bool, target string) map[string]interface{} {
-	return map[string]interface{}{
+func headerConversionData(dt expr.DataType, varName string, required bool, target string) map[string]any {
+	return map[string]any{
 		"Type":     dt,
 		"VarName":  varName,
 		"Required": required,
@@ -215,7 +215,7 @@ func headerConversionData(dt expr.DataType, varName string, required bool, targe
 
 // printValue generates the Go code for a literal string containing the given
 // value. printValue panics if the data type is not a primitive or an array.
-func printValue(dt expr.DataType, v interface{}) string {
+func printValue(dt expr.DataType, v any) string {
 	switch actual := dt.(type) {
 	case *expr.Array:
 		val := reflect.ValueOf(v)
@@ -256,8 +256,8 @@ func removeTrailingIndexHTML(s string) string {
 	return s
 }
 
-func mapQueryDecodeData(dt expr.DataType, varName string, inc int) map[string]interface{} {
-	return map[string]interface{}{
+func mapQueryDecodeData(dt expr.DataType, varName string, inc int) map[string]any {
+	return map[string]any{
 		"Type":      dt,
 		"VarName":   varName,
 		"Loop":      string(rune(97 + inc)),
@@ -541,8 +541,8 @@ func {{ .Name }}(v {{ .ParamTypeRef }}) {{ .ResultTypeRef }} {
 
 // input: EndpointData
 const requestDecoderT = `{{ printf "%s returns a decoder for requests sent to the %s %s endpoint." .RequestDecoder .ServiceName .Method.Name | comment }}
-func {{ .RequestDecoder }}(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) (interface{}, error) {
-	return func(r *http.Request) (interface{}, error) {
+func {{ .RequestDecoder }}(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) (any, error) {
+	return func(r *http.Request) (any, error) {
 {{- if .MultipartRequestDecoder }}
 		var payload {{ .Payload.Ref }}
 		if err := decoder(r).Decode(&payload); err != nil {
@@ -1156,8 +1156,8 @@ const typeConversionT = `{{- define "slice_conversion" }}
 
 // input: EndpointData
 const responseEncoderT = `{{ printf "%s returns an encoder for responses returned by the %s %s endpoint." .ResponseEncoder .ServiceName .Method.Name | comment }}
-func {{ .ResponseEncoder }}(encoder func(context.Context, http.ResponseWriter) goahttp.Encoder) func(context.Context, http.ResponseWriter, interface{}) error {
-	return func(ctx context.Context, w http.ResponseWriter, v interface{}) error {
+func {{ .ResponseEncoder }}(encoder func(context.Context, http.ResponseWriter) goahttp.Encoder) func(context.Context, http.ResponseWriter, any) error {
+	return func(ctx context.Context, w http.ResponseWriter, v any) error {
 	{{- if .Result.MustInit }}
 		{{- if .Method.ViewedResult }}
 			res := v.({{ .Method.ViewedResult.FullRef }})
@@ -1241,7 +1241,7 @@ const responseT = `{{ define "response" -}}
 	{{- end }}
 	{{- if gt $servBodyLen 0 }}
 		{{- if and (gt $servBodyLen 1) $.ViewedResult }}
-	var body interface{}
+	var body any
 	switch res.View	{
 			{{- range $.ViewedResult.Views }}
 	case {{ printf "%q" .Name }}{{ if eq .Name "default" }}, ""{{ end }}:
@@ -1251,7 +1251,7 @@ const responseT = `{{ define "response" -}}
 	}
 		{{- else if (index .ServerBody 0).Init }}
 			{{- if .ErrorHeader }}
-	var body interface{}
+	var body any
 	if formatter != nil {
 		body = formatter(ctx, {{ (index (index .ServerBody 0).Init.ServerArgs 0).Ref }})
 	} else {
@@ -1406,7 +1406,7 @@ type {{ .FuncName }} func(*multipart.Reader, *{{ .Payload.Ref }}) error
 const multipartRequestDecoderT = `{{ printf "%s returns a decoder to decode the multipart request for the %q service %q endpoint." .InitName .ServiceName .MethodName | comment }}
 func {{ .InitName }}(mux goahttp.Muxer, {{ .VarName }} {{ .FuncName }}) func(r *http.Request) goahttp.Decoder {
 	return func(r *http.Request) goahttp.Decoder {
-		return goahttp.EncodingFunc(func(v interface{}) error {
+		return goahttp.EncodingFunc(func(v any) error {
 			mr, merr := r.MultipartReader()
 			if merr != nil {
 				return merr

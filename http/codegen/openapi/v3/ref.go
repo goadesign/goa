@@ -74,14 +74,14 @@ func (r *LinkRef) MarshalJSON() ([]byte, error)           { return marshalJSONRe
 func (r *RequestBodyRef) MarshalJSON() ([]byte, error)    { return marshalJSONRef(r.Ref, r.Value) }
 func (r *SecuritySchemeRef) MarshalJSON() ([]byte, error) { return marshalJSONRef(r.Ref, r.Value) }
 
-func (r *ParameterRef) MarshalYAML() (interface{}, error)      { return marshalYAMLRef(r.Ref, r.Value) }
-func (r *ResponseRef) MarshalYAML() (interface{}, error)       { return marshalYAMLRef(r.Ref, r.Value) }
-func (r *HeaderRef) MarshalYAML() (interface{}, error)         { return marshalYAMLRef(r.Ref, r.Value) }
-func (r *CallbackRef) MarshalYAML() (interface{}, error)       { return marshalYAMLRef(r.Ref, r.Value) }
-func (r *ExampleRef) MarshalYAML() (interface{}, error)        { return marshalYAMLRef(r.Ref, r.Value) }
-func (r *LinkRef) MarshalYAML() (interface{}, error)           { return marshalYAMLRef(r.Ref, r.Value) }
-func (r *RequestBodyRef) MarshalYAML() (interface{}, error)    { return marshalYAMLRef(r.Ref, r.Value) }
-func (r *SecuritySchemeRef) MarshalYAML() (interface{}, error) { return marshalYAMLRef(r.Ref, r.Value) }
+func (r *ParameterRef) MarshalYAML() (any, error)      { return marshalYAMLRef(r.Ref, r.Value) }
+func (r *ResponseRef) MarshalYAML() (any, error)       { return marshalYAMLRef(r.Ref, r.Value) }
+func (r *HeaderRef) MarshalYAML() (any, error)         { return marshalYAMLRef(r.Ref, r.Value) }
+func (r *CallbackRef) MarshalYAML() (any, error)       { return marshalYAMLRef(r.Ref, r.Value) }
+func (r *ExampleRef) MarshalYAML() (any, error)        { return marshalYAMLRef(r.Ref, r.Value) }
+func (r *LinkRef) MarshalYAML() (any, error)           { return marshalYAMLRef(r.Ref, r.Value) }
+func (r *RequestBodyRef) MarshalYAML() (any, error)    { return marshalYAMLRef(r.Ref, r.Value) }
+func (r *SecuritySchemeRef) MarshalYAML() (any, error) { return marshalYAMLRef(r.Ref, r.Value) }
 
 func (r *ParameterRef) UnmarshalJSON(d []byte) error   { return unmarshalJSONRef(d, &r.Ref, &r.Value) }
 func (r *ResponseRef) UnmarshalJSON(d []byte) error    { return unmarshalJSONRef(d, &r.Ref, &r.Value) }
@@ -94,28 +94,28 @@ func (r *SecuritySchemeRef) UnmarshalJSON(d []byte) error {
 	return unmarshalJSONRef(d, &r.Ref, &r.Value)
 }
 
-func (r *ParameterRef) UnmarshalYAML(u func(interface{}) error) error {
+func (r *ParameterRef) UnmarshalYAML(u func(any) error) error {
 	return unmarshalYAMLRef(u, &r.Ref, &r.Value)
 }
-func (r *ResponseRef) UnmarshalYAML(u func(interface{}) error) error {
+func (r *ResponseRef) UnmarshalYAML(u func(any) error) error {
 	return unmarshalYAMLRef(u, &r.Ref, &r.Value)
 }
-func (r *HeaderRef) UnmarshalYAML(u func(interface{}) error) error {
+func (r *HeaderRef) UnmarshalYAML(u func(any) error) error {
 	return unmarshalYAMLRef(u, &r.Ref, &r.Value)
 }
-func (r *CallbackRef) UnmarshalYAML(u func(interface{}) error) error {
+func (r *CallbackRef) UnmarshalYAML(u func(any) error) error {
 	return unmarshalYAMLRef(u, &r.Ref, &r.Value)
 }
-func (r *ExampleRef) UnmarshalYAML(u func(interface{}) error) error {
+func (r *ExampleRef) UnmarshalYAML(u func(any) error) error {
 	return unmarshalYAMLRef(u, &r.Ref, &r.Value)
 }
-func (r *LinkRef) UnmarshalYAML(u func(interface{}) error) error {
+func (r *LinkRef) UnmarshalYAML(u func(any) error) error {
 	return unmarshalYAMLRef(u, &r.Ref, &r.Value)
 }
-func (r *RequestBodyRef) UnmarshalYAML(u func(interface{}) error) error {
+func (r *RequestBodyRef) UnmarshalYAML(u func(any) error) error {
 	return unmarshalYAMLRef(u, &r.Ref, &r.Value)
 }
-func (r *SecuritySchemeRef) UnmarshalYAML(u func(interface{}) error) error {
+func (r *SecuritySchemeRef) UnmarshalYAML(u func(any) error) error {
 	return unmarshalYAMLRef(u, &r.Ref, &r.Value)
 }
 
@@ -123,14 +123,14 @@ type refs struct {
 	Ref string `json:"$ref,omitempty" yaml:"$ref,omitempty"`
 }
 
-func marshalJSONRef(ref string, v interface{}) ([]byte, error) {
+func marshalJSONRef(ref string, v any) ([]byte, error) {
 	if len(ref) > 0 {
 		return json.Marshal(&refs{ref})
 	}
 	return json.Marshal(v)
 }
 
-func unmarshalJSONRef(data []byte, ref *string, v interface{}) error {
+func unmarshalJSONRef(data []byte, ref *string, v any) error {
 	refs := &refs{}
 	if err := json.Unmarshal(data, refs); err == nil {
 		if len(refs.Ref) > 0 {
@@ -141,14 +141,14 @@ func unmarshalJSONRef(data []byte, ref *string, v interface{}) error {
 	return json.Unmarshal(data, v)
 }
 
-func marshalYAMLRef(ref string, v interface{}) (interface{}, error) {
+func marshalYAMLRef(ref string, v any) (any, error) {
 	if len(ref) > 0 {
 		return &refs{ref}, nil
 	}
 	return v, nil
 }
 
-func unmarshalYAMLRef(u func(interface{}) error, ref *string, v interface{}) error {
+func unmarshalYAMLRef(u func(any) error, ref *string, v any) error {
 	refs := &refs{}
 	if err := u(refs); err == nil {
 		if len(refs.Ref) > 0 {

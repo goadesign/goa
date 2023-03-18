@@ -157,7 +157,7 @@ func buildPaths(h *expr.HTTPExpr, bodies map[string]map[string]*EndpointBodies, 
 					}
 					path.Extensions = openapi.ExtensionsFromExpr(r.Endpoint.Meta)
 					if len(exts) > 0 {
-						path.Extensions = make(map[string]interface{})
+						path.Extensions = make(map[string]any)
 						for k, v := range exts {
 							path.Extensions[k] = v
 						}
@@ -462,8 +462,8 @@ func buildServers(servers []*expr.ServerExpr) []*Server {
 		for _, host := range svr.Hosts {
 			var (
 				serverVariable   = make(map[string]*ServerVariable)
-				defaultValue     interface{}
-				validationValues []interface{}
+				defaultValue     any
+				validationValues []any
 			)
 
 			// Get the first URL expression in the host by default.

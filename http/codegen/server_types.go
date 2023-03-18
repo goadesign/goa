@@ -177,7 +177,7 @@ func serverType(genpkg string, svc *expr.HTTPServiceExpr, seen map[string]struct
 				Name:    "server-payload-init",
 				Source:  serverTypeInitT,
 				Data:    init,
-				FuncMap: map[string]interface{}{"fieldCode": fieldCode},
+				FuncMap: map[string]any{"fieldCode": fieldCode},
 			})
 		}
 		if isWebSocketEndpoint(adata) && adata.ServerWebSocket.Payload != nil {
@@ -186,7 +186,7 @@ func serverType(genpkg string, svc *expr.HTTPServiceExpr, seen map[string]struct
 					Name:    "server-payload-init",
 					Source:  serverTypeInitT,
 					Data:    init,
-					FuncMap: map[string]interface{}{"fieldCode": fieldCode},
+					FuncMap: map[string]any{"fieldCode": fieldCode},
 				})
 			}
 		}

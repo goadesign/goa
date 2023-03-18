@@ -6,7 +6,7 @@ type (
 	// exampler is the interface used to initialize the example of an
 	// OpenAPI object.
 	exampler interface {
-		setExample(interface{})
+		setExample(any)
 		setExamples(map[string]*ExampleRef)
 	}
 )

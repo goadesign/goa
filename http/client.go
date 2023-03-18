@@ -154,7 +154,7 @@ func (c *ClientError) Error() string {
 
 // ErrInvalidType is the error returned when the wrong type is given to a
 // method function.
-func ErrInvalidType(svc, m, expected string, actual interface{}) error {
+func ErrInvalidType(svc, m, expected string, actual any) error {
 	msg := fmt.Sprintf("invalid value expected %s, got %v", expected, actual)
 	return &ClientError{Name: "invalid_type", Message: msg, Service: svc, Method: m}
 }

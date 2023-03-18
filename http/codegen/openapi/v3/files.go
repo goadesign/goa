@@ -39,7 +39,7 @@ func Files(root *expr.RootExpr) ([]*codegen.File, error) {
 	}, nil
 }
 
-func toJSON(d interface{}) string {
+func toJSON(d any) string {
 	b, err := json.Marshal(d)
 	if err != nil {
 		panic("openapi: " + err.Error()) // bug
@@ -47,7 +47,7 @@ func toJSON(d interface{}) string {
 	return string(b)
 }
 
-func toYAML(d interface{}) string {
+func toYAML(d any) string {
 	b, err := yaml.Marshal(d)
 	if err != nil {
 		panic("openapi: " + err.Error()) // bug

@@ -18,7 +18,7 @@ type (
 		Schemes             []string                       `json:"schemes,omitempty" yaml:"schemes,omitempty"`
 		Consumes            []string                       `json:"consumes,omitempty" yaml:"consumes,omitempty"`
 		Produces            []string                       `json:"produces,omitempty" yaml:"produces,omitempty"`
-		Paths               map[string]interface{}         `json:"paths" yaml:"paths"`
+		Paths               map[string]any                 `json:"paths" yaml:"paths"`
 		Definitions         map[string]*openapi.Schema     `json:"definitions,omitempty" yaml:"definitions,omitempty"`
 		Parameters          map[string]*Parameter          `json:"parameters,omitempty" yaml:"parameters,omitempty"`
 		Responses           map[string]*Response           `json:"responses,omitempty" yaml:"responses,omitempty"`
@@ -30,13 +30,13 @@ type (
 	// Info provides metadata about the API. The metadata can be used by the clients if needed,
 	// and can be presented in the OpenAPI UI for convenience.
 	Info struct {
-		Title          string                 `json:"title" yaml:"title"`
-		Description    string                 `json:"description,omitempty" yaml:"description,omitempty"`
-		TermsOfService string                 `json:"termsOfService,omitempty" yaml:"termsOfService,omitempty"`
-		Contact        *expr.ContactExpr      `json:"contact,omitempty" yaml:"contact,omitempty"`
-		License        *expr.LicenseExpr      `json:"license,omitempty" yaml:"license,omitempty"`
-		Version        string                 `json:"version" yaml:"version"`
-		Extensions     map[string]interface{} `json:"-" yaml:"-"`
+		Title          string            `json:"title" yaml:"title"`
+		Description    string            `json:"description,omitempty" yaml:"description,omitempty"`
+		TermsOfService string            `json:"termsOfService,omitempty" yaml:"termsOfService,omitempty"`
+		Contact        *expr.ContactExpr `json:"contact,omitempty" yaml:"contact,omitempty"`
+		License        *expr.LicenseExpr `json:"license,omitempty" yaml:"license,omitempty"`
+		Version        string            `json:"version" yaml:"version"`
+		Extensions     map[string]any    `json:"-" yaml:"-"`
 	}
 
 	// Path holds the relative paths to the individual endpoints.
@@ -61,7 +61,7 @@ type (
 		// described under this path.
 		Parameters []*Parameter `json:"parameters,omitempty" yaml:"parameters,omitempty"`
 		// Extensions defines the swagger extensions.
-		Extensions map[string]interface{} `json:"-" yaml:"-"`
+		Extensions map[string]any `json:"-" yaml:"-"`
 	}
 
 	// Operation describes a single API operation on a path.
@@ -96,7 +96,7 @@ type (
 		// Security is a declaration of which security schemes are applied for this operation.
 		Security []map[string][]string `json:"security,omitempty" yaml:"security,omitempty"`
 		// Extensions defines the swagger extensions.
-		Extensions map[string]interface{} `json:"-" yaml:"-"`
+		Extensions map[string]any `json:"-" yaml:"-"`
 	}
 
 	// Parameter describes a single operation parameter.
@@ -133,21 +133,21 @@ type (
 		// Default declares the value of the parameter that the server will use if none is
 		// provided, for example a "count" to control the number of results per page might
 		// default to 100 if not supplied by the client in the request.
-		Default          interface{}   `json:"default,omitempty" yaml:"default,omitempty"`
-		Maximum          *float64      `json:"maximum,omitempty" yaml:"maximum,omitempty"`
-		ExclusiveMaximum bool          `json:"exclusiveMaximum,omitempty" yaml:"exclusiveMaximum,omitempty"`
-		Minimum          *float64      `json:"minimum,omitempty" yaml:"minimum,omitempty"`
-		ExclusiveMinimum bool          `json:"exclusiveMinimum,omitempty" yaml:"exclusiveMinimum,omitempty"`
-		MaxLength        *int          `json:"maxLength,omitempty" yaml:"maxLength,omitempty"`
-		MinLength        *int          `json:"minLength,omitempty" yaml:"minLength,omitempty"`
-		Pattern          string        `json:"pattern,omitempty" yaml:"pattern,omitempty"`
-		MaxItems         *int          `json:"maxItems,omitempty" yaml:"maxItems,omitempty"`
-		MinItems         *int          `json:"minItems,omitempty" yaml:"minItems,omitempty"`
-		UniqueItems      bool          `json:"uniqueItems,omitempty" yaml:"uniqueItems,omitempty"`
-		Enum             []interface{} `json:"enum,omitempty" yaml:"enum,omitempty"`
-		MultipleOf       float64       `json:"multipleOf,omitempty" yaml:"multipleOf,omitempty"`
+		Default          any      `json:"default,omitempty" yaml:"default,omitempty"`
+		Maximum          *float64 `json:"maximum,omitempty" yaml:"maximum,omitempty"`
+		ExclusiveMaximum bool     `json:"exclusiveMaximum,omitempty" yaml:"exclusiveMaximum,omitempty"`
+		Minimum          *float64 `json:"minimum,omitempty" yaml:"minimum,omitempty"`
+		ExclusiveMinimum bool     `json:"exclusiveMinimum,omitempty" yaml:"exclusiveMinimum,omitempty"`
+		MaxLength        *int     `json:"maxLength,omitempty" yaml:"maxLength,omitempty"`
+		MinLength        *int     `json:"minLength,omitempty" yaml:"minLength,omitempty"`
+		Pattern          string   `json:"pattern,omitempty" yaml:"pattern,omitempty"`
+		MaxItems         *int     `json:"maxItems,omitempty" yaml:"maxItems,omitempty"`
+		MinItems         *int     `json:"minItems,omitempty" yaml:"minItems,omitempty"`
+		UniqueItems      bool     `json:"uniqueItems,omitempty" yaml:"uniqueItems,omitempty"`
+		Enum             []any    `json:"enum,omitempty" yaml:"enum,omitempty"`
+		MultipleOf       float64  `json:"multipleOf,omitempty" yaml:"multipleOf,omitempty"`
 		// Extensions defines the swagger extensions.
-		Extensions map[string]interface{} `json:"-" yaml:"-"`
+		Extensions map[string]any `json:"-" yaml:"-"`
 	}
 
 	// Response describes an operation response.
@@ -165,7 +165,7 @@ type (
 		// This field is exclusive with the other fields of Response.
 		Ref string `json:"$ref,omitempty" yaml:"$ref,omitempty"`
 		// Extensions defines the swagger extensions.
-		Extensions map[string]interface{} `json:"-" yaml:"-"`
+		Extensions map[string]any `json:"-" yaml:"-"`
 	}
 
 	// Header represents a header parameter.
@@ -185,19 +185,19 @@ type (
 		// Default declares the value of the parameter that the server will use if none is
 		// provided, for example a "count" to control the number of results per page might
 		// default to 100 if not supplied by the client in the request.
-		Default          interface{}   `json:"default,omitempty" yaml:"default,omitempty"`
-		Maximum          *float64      `json:"maximum,omitempty" yaml:"maximum,omitempty"`
-		ExclusiveMaximum bool          `json:"exclusiveMaximum,omitempty" yaml:"exclusiveMaximum,omitempty"`
-		Minimum          *float64      `json:"minimum,omitempty" yaml:"minimum,omitempty"`
-		ExclusiveMinimum bool          `json:"exclusiveMinimum,omitempty" yaml:"exclusiveMinimum,omitempty"`
-		MaxLength        *int          `json:"maxLength,omitempty" yaml:"maxLength,omitempty"`
-		MinLength        *int          `json:"minLength,omitempty" yaml:"minLength,omitempty"`
-		Pattern          string        `json:"pattern,omitempty" yaml:"pattern,omitempty"`
-		MaxItems         *int          `json:"maxItems,omitempty" yaml:"maxItems,omitempty"`
-		MinItems         *int          `json:"minItems,omitempty" yaml:"minItems,omitempty"`
-		UniqueItems      bool          `json:"uniqueItems,omitempty" yaml:"uniqueItems,omitempty"`
-		Enum             []interface{} `json:"enum,omitempty" yaml:"enum,omitempty"`
-		MultipleOf       float64       `json:"multipleOf,omitempty" yaml:"multipleOf,omitempty"`
+		Default          any      `json:"default,omitempty" yaml:"default,omitempty"`
+		Maximum          *float64 `json:"maximum,omitempty" yaml:"maximum,omitempty"`
+		ExclusiveMaximum bool     `json:"exclusiveMaximum,omitempty" yaml:"exclusiveMaximum,omitempty"`
+		Minimum          *float64 `json:"minimum,omitempty" yaml:"minimum,omitempty"`
+		ExclusiveMinimum bool     `json:"exclusiveMinimum,omitempty" yaml:"exclusiveMinimum,omitempty"`
+		MaxLength        *int     `json:"maxLength,omitempty" yaml:"maxLength,omitempty"`
+		MinLength        *int     `json:"minLength,omitempty" yaml:"minLength,omitempty"`
+		Pattern          string   `json:"pattern,omitempty" yaml:"pattern,omitempty"`
+		MaxItems         *int     `json:"maxItems,omitempty" yaml:"maxItems,omitempty"`
+		MinItems         *int     `json:"minItems,omitempty" yaml:"minItems,omitempty"`
+		UniqueItems      bool     `json:"uniqueItems,omitempty" yaml:"uniqueItems,omitempty"`
+		Enum             []any    `json:"enum,omitempty" yaml:"enum,omitempty"`
+		MultipleOf       float64  `json:"multipleOf,omitempty" yaml:"multipleOf,omitempty"`
 	}
 
 	// SecurityDefinition allows the definition of a security scheme that can be used by the
@@ -224,7 +224,7 @@ type (
 		// Scopes list the  available scopes for the OAuth2 security scheme.
 		Scopes map[string]string `json:"scopes,omitempty" yaml:"scopes,omitempty"`
 		// Extensions defines the swagger extensions.
-		Extensions map[string]interface{} `json:"-" yaml:"-"`
+		Extensions map[string]any `json:"-" yaml:"-"`
 	}
 
 	// Scope corresponds to an available scope for an OAuth2 security scheme.
@@ -248,19 +248,19 @@ type (
 		// Default declares the value of the parameter that the server will use if none is
 		// provided, for example a "count" to control the number of results per page might
 		// default to 100 if not supplied by the client in the request.
-		Default          interface{}   `json:"default,omitempty" yaml:"default,omitempty"`
-		Maximum          *float64      `json:"maximum,omitempty" yaml:"maximum,omitempty"`
-		ExclusiveMaximum bool          `json:"exclusiveMaximum,omitempty" yaml:"exclusiveMaximum,omitempty"`
-		Minimum          *float64      `json:"minimum,omitempty" yaml:"minimum,omitempty"`
-		ExclusiveMinimum bool          `json:"exclusiveMinimum,omitempty" yaml:"exclusiveMinimum,omitempty"`
-		MaxLength        *int          `json:"maxLength,omitempty" yaml:"maxLength,omitempty"`
-		MinLength        *int          `json:"minLength,omitempty" yaml:"minLength,omitempty"`
-		Pattern          string        `json:"pattern,omitempty" yaml:"pattern,omitempty"`
-		MaxItems         *int          `json:"maxItems,omitempty" yaml:"maxItems,omitempty"`
-		MinItems         *int          `json:"minItems,omitempty" yaml:"minItems,omitempty"`
-		UniqueItems      bool          `json:"uniqueItems,omitempty" yaml:"uniqueItems,omitempty"`
-		Enum             []interface{} `json:"enum,omitempty" yaml:"enum,omitempty"`
-		MultipleOf       float64       `json:"multipleOf,omitempty" yaml:"multipleOf,omitempty"`
+		Default          any      `json:"default,omitempty" yaml:"default,omitempty"`
+		Maximum          *float64 `json:"maximum,omitempty" yaml:"maximum,omitempty"`
+		ExclusiveMaximum bool     `json:"exclusiveMaximum,omitempty" yaml:"exclusiveMaximum,omitempty"`
+		Minimum          *float64 `json:"minimum,omitempty" yaml:"minimum,omitempty"`
+		ExclusiveMinimum bool     `json:"exclusiveMinimum,omitempty" yaml:"exclusiveMinimum,omitempty"`
+		MaxLength        *int     `json:"maxLength,omitempty" yaml:"maxLength,omitempty"`
+		MinLength        *int     `json:"minLength,omitempty" yaml:"minLength,omitempty"`
+		Pattern          string   `json:"pattern,omitempty" yaml:"pattern,omitempty"`
+		MaxItems         *int     `json:"maxItems,omitempty" yaml:"maxItems,omitempty"`
+		MinItems         *int     `json:"minItems,omitempty" yaml:"minItems,omitempty"`
+		UniqueItems      bool     `json:"uniqueItems,omitempty" yaml:"uniqueItems,omitempty"`
+		Enum             []any    `json:"enum,omitempty" yaml:"enum,omitempty"`
+		MultipleOf       float64  `json:"multipleOf,omitempty" yaml:"multipleOf,omitempty"`
 	}
 
 	// These types are used in openapi.MarshalJSON() to avoid recursive call of json.Marshal().
@@ -303,31 +303,31 @@ func (s SecurityDefinition) MarshalJSON() ([]byte, error) {
 }
 
 // MarshalYAML returns value which marshaled in place of the original value
-func (i Info) MarshalYAML() (interface{}, error) {
+func (i Info) MarshalYAML() (any, error) {
 	return openapi.MarshalYAML(_Info(i), i.Extensions)
 }
 
 // MarshalYAML returns value which marshaled in place of the original value
-func (p Path) MarshalYAML() (interface{}, error) {
+func (p Path) MarshalYAML() (any, error) {
 	return openapi.MarshalYAML(_Path(p), p.Extensions)
 }
 
 // MarshalYAML returns value which marshaled in place of the original value
-func (o Operation) MarshalYAML() (interface{}, error) {
+func (o Operation) MarshalYAML() (any, error) {
 	return openapi.MarshalYAML(_Operation(o), o.Extensions)
 }
 
 // MarshalYAML returns value which marshaled in place of the original value
-func (p Parameter) MarshalYAML() (interface{}, error) {
+func (p Parameter) MarshalYAML() (any, error) {
 	return openapi.MarshalYAML(_Parameter(p), p.Extensions)
 }
 
 // MarshalYAML returns value which marshaled in place of the original value
-func (r Response) MarshalYAML() (interface{}, error) {
+func (r Response) MarshalYAML() (any, error) {
 	return openapi.MarshalYAML(_Response(r), r.Extensions)
 }
 
 // MarshalYAML returns value which marshaled in place of the original value
-func (s SecurityDefinition) MarshalYAML() (interface{}, error) {
+func (s SecurityDefinition) MarshalYAML() (any, error) {
 	return openapi.MarshalYAML(_SecurityDefinition(s), s.Extensions)
 }

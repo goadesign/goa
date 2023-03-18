@@ -222,7 +222,7 @@ func NewMethodQueryBytesValidatePayload(q []byte) *servicequerybytesvalidate.Met
 
 var PayloadQueryAnyConstructorCode = `// NewMethodQueryAnyPayload builds a ServiceQueryAny service MethodQueryAny
 // endpoint payload.
-func NewMethodQueryAnyPayload(q interface{}) *servicequeryany.MethodQueryAnyPayload {
+func NewMethodQueryAnyPayload(q any) *servicequeryany.MethodQueryAnyPayload {
 	v := &servicequeryany.MethodQueryAnyPayload{}
 	v.Q = q
 
@@ -232,7 +232,7 @@ func NewMethodQueryAnyPayload(q interface{}) *servicequeryany.MethodQueryAnyPayl
 
 var PayloadQueryAnyValidateConstructorCode = `// NewMethodQueryAnyValidatePayload builds a ServiceQueryAnyValidate service
 // MethodQueryAnyValidate endpoint payload.
-func NewMethodQueryAnyValidatePayload(q interface{}) *servicequeryanyvalidate.MethodQueryAnyValidatePayload {
+func NewMethodQueryAnyValidatePayload(q any) *servicequeryanyvalidate.MethodQueryAnyValidatePayload {
 	v := &servicequeryanyvalidate.MethodQueryAnyValidatePayload{}
 	v.Q = q
 
@@ -472,7 +472,7 @@ func NewMethodQueryArrayBytesValidatePayload(q [][]byte) *servicequeryarraybytes
 
 var PayloadQueryArrayAnyConstructorCode = `// NewMethodQueryArrayAnyPayload builds a ServiceQueryArrayAny service
 // MethodQueryArrayAny endpoint payload.
-func NewMethodQueryArrayAnyPayload(q []interface{}) *servicequeryarrayany.MethodQueryArrayAnyPayload {
+func NewMethodQueryArrayAnyPayload(q []any) *servicequeryarrayany.MethodQueryArrayAnyPayload {
 	v := &servicequeryarrayany.MethodQueryArrayAnyPayload{}
 	v.Q = q
 
@@ -482,7 +482,7 @@ func NewMethodQueryArrayAnyPayload(q []interface{}) *servicequeryarrayany.Method
 
 var PayloadQueryArrayAnyValidateConstructorCode = `// NewMethodQueryArrayAnyValidatePayload builds a ServiceQueryArrayAnyValidate
 // service MethodQueryArrayAnyValidate endpoint payload.
-func NewMethodQueryArrayAnyValidatePayload(q []interface{}) *servicequeryarrayanyvalidate.MethodQueryArrayAnyValidatePayload {
+func NewMethodQueryArrayAnyValidatePayload(q []any) *servicequeryarrayanyvalidate.MethodQueryArrayAnyValidatePayload {
 	v := &servicequeryarrayanyvalidate.MethodQueryArrayAnyValidatePayload{}
 	v.Q = q
 

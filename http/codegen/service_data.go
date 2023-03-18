@@ -429,11 +429,11 @@ type (
 		// pointer.
 		FieldPointer bool
 		// DefaultValue is the default value of the attribute if any.
-		DefaultValue interface{}
+		DefaultValue any
 		// Validate contains the validation code for the attribute value if any.
 		Validate string
 		// Example is an example attribute value
-		Example interface{}
+		Example any
 	}
 
 	// InitArgData represents a single constructor argument.
@@ -526,7 +526,7 @@ type (
 		// ValidateRef contains the call to the validation code.
 		ValidateRef string
 		// Example is an example value for the type.
-		Example interface{}
+		Example any
 		// View is the view used to render the (result) type if any.
 		View string
 	}
@@ -686,7 +686,7 @@ func (d ServicesData) analyze(hs *expr.HTTPServiceExpr) *ServiceData {
 
 					var buffer bytes.Buffer
 					pf := expr.HTTPWildcardRegex.ReplaceAllString(rpath, "/%v")
-					err := pathInitTmpl.Execute(&buffer, map[string]interface{}{
+					err := pathInitTmpl.Execute(&buffer, map[string]any{
 						"Args":       initArgs,
 						"PathParams": pathParamsObj,
 						"PathFormat": pf,
@@ -779,7 +779,7 @@ func (d ServicesData) analyze(hs *expr.HTTPServiceExpr) *ServiceData {
 					payloadRef = svc.Scope.GoFullTypeRef(a.MethodExpr.Payload, pkg)
 				}
 			}
-			data := map[string]interface{}{
+			data := map[string]any{
 				"PayloadRef":   payloadRef,
 				"HasFields":    expr.IsObject(a.MethodExpr.Payload.Type),
 				"ServiceName":  svc.Name,
@@ -796,7 +796,7 @@ func (d ServicesData) analyze(hs *expr.HTTPServiceExpr) *ServiceData {
 			if err := requestInitTmpl.Execute(&buf, data); err != nil {
 				panic(err) // bug
 			}
-			clientArgs := []*InitArgData{{Ref: "v", AttributeData: &AttributeData{VarName: "v", TypeRef: "interface{}"}}}
+			clientArgs := []*InitArgData{{Ref: "v", AttributeData: &AttributeData{VarName: "v", TypeRef: "any"}}}
 			requestInit = &InitData{
 				Name:        name,
 				Description: fmt.Sprintf("%s instantiates a HTTP request object with method and path set to call the %q service %q endpoint", name, svc.Name, ep.Name),
@@ -962,7 +962,7 @@ func makeHTTPTypeRecursive(att *expr.AttributeExpr, seen map[string]struct{}) *e
 		att.Type = &obj
 	case *expr.Union:
 		values := expr.AsUnion(dt).Values
-		names := make([]interface{}, len(values))
+		names := make([]any, len(values))
 		vals := make([]string, len(values))
 		bases := make([]expr.DataType, len(values))
 		for i, nat := range values {
@@ -2777,8 +2777,8 @@ func needInit(dt expr.DataType) bool {
 
 // upgradeParams returns the data required to render the websocket_upgrade
 // template.
-func upgradeParams(e *EndpointData, fn string) map[string]interface{} {
-	return map[string]interface{}{
+func upgradeParams(e *EndpointData, fn string) map[string]any {
+	return map[string]any{
 		"ViewedResult": e.Method.ViewedResult,
 		"Function":     fn,
 	}

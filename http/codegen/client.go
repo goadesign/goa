@@ -53,7 +53,7 @@ func clientFile(genpkg string, svc *expr.HTTPServiceExpr) *codegen.File {
 		Name:    "client-struct",
 		Source:  clientStructT,
 		Data:    data,
-		FuncMap: map[string]interface{}{"hasWebSocket": hasWebSocket},
+		FuncMap: map[string]any{"hasWebSocket": hasWebSocket},
 	})
 
 	for _, e := range data.Endpoints {
@@ -70,7 +70,7 @@ func clientFile(genpkg string, svc *expr.HTTPServiceExpr) *codegen.File {
 		Name:    "client-init",
 		Source:  clientInitT,
 		Data:    data,
-		FuncMap: map[string]interface{}{"hasWebSocket": hasWebSocket},
+		FuncMap: map[string]any{"hasWebSocket": hasWebSocket},
 	})
 
 	for _, e := range data.Endpoints {
@@ -78,7 +78,7 @@ func clientFile(genpkg string, svc *expr.HTTPServiceExpr) *codegen.File {
 			Name:   "client-endpoint-init",
 			Source: endpointInitT,
 			Data:   e,
-			FuncMap: map[string]interface{}{
+			FuncMap: map[string]any{
 				"isWebSocketEndpoint": isWebSocketEndpoint,
 				"responseStructPkg":   responseStructPkg,
 			},
@@ -126,7 +126,7 @@ func clientEncodeDecodeFile(genpkg string, svc *expr.HTTPServiceExpr) *codegen.F
 			sections = append(sections, &codegen.SectionTemplate{
 				Name:   "request-encoder",
 				Source: requestEncoderT,
-				FuncMap: map[string]interface{}{
+				FuncMap: map[string]any{
 					"typeConversionData": typeConversionData,
 					"mapConversionData":  mapConversionData,
 					"goTypeRef": func(dt expr.DataType) string {
@@ -161,7 +161,7 @@ func clientEncodeDecodeFile(genpkg string, svc *expr.HTTPServiceExpr) *codegen.F
 				Name:   "response-decoder",
 				Source: responseDecoderT,
 				Data:   e,
-				FuncMap: map[string]interface{}{
+				FuncMap: map[string]any{
 					"goTypeRef": func(dt expr.DataType) string {
 						return service.Services.Get(svc.Name()).Scope.GoTypeRef(&expr.AttributeExpr{Type: dt})
 					},
@@ -173,7 +173,7 @@ func clientEncodeDecodeFile(genpkg string, svc *expr.HTTPServiceExpr) *codegen.F
 				Name:   "build-stream-request",
 				Source: buildStreamRequestT,
 				Data:   e,
-				FuncMap: map[string]interface{}{
+				FuncMap: map[string]any{
 					"requestStructPkg": requestStructPkg,
 				},
 			})
@@ -192,12 +192,12 @@ func clientEncodeDecodeFile(genpkg string, svc *expr.HTTPServiceExpr) *codegen.F
 
 // typeConversionData produces the template data suitable for executing the
 // "header_conversion" template.
-func typeConversionData(dt, ft expr.DataType, varName string, target string) map[string]interface{} {
+func typeConversionData(dt, ft expr.DataType, varName string, target string) map[string]any {
 	ut, isut := ft.(expr.UserType)
 	if isut {
 		ft = ut.Attribute().Type
 	}
-	return map[string]interface{}{
+	return map[string]any{
 		"Type":      dt,
 		"FieldType": ft,
 		"VarName":   varName,
@@ -206,12 +206,12 @@ func typeConversionData(dt, ft expr.DataType, varName string, target string) map
 	}
 }
 
-func mapConversionData(dt, ft expr.DataType, varName, sourceVar, sourceField string, newVar bool) map[string]interface{} {
+func mapConversionData(dt, ft expr.DataType, varName, sourceVar, sourceField string, newVar bool) map[string]any {
 	ut, isut := ft.(expr.UserType)
 	if isut {
 		ft = ut.Attribute().Type
 	}
-	return map[string]interface{}{
+	return map[string]any{
 		"Type":        dt,
 		"FieldType":   ft,
 		"VarName":     varName,
@@ -328,7 +328,7 @@ func (c *{{ .ClientStruct }}) {{ .EndpointInit }}({{ if .MultipartRequestEncoder
 		{{- end }}
 		decodeResponse = {{ .ResponseDecoder }}(c.decoder, c.RestoreResponseBody)
 	)
-	return func(ctx context.Context, v interface{}) (interface{}, error) {
+	return func(ctx context.Context, v any) (any, error) {
 		req, err := c.{{ .RequestInit.Name }}(ctx, {{ range .RequestInit.ClientArgs }}{{ .Ref }}, {{ end }})
 		if err != nil {
 			return nil, err
@@ -401,8 +401,8 @@ func (c *{{ .ClientStruct }}) {{ .RequestInit.Name }}(ctx context.Context, {{ ra
 
 // input: EndpointData
 const requestEncoderT = `{{ printf "%s returns an encoder for requests sent to the %s %s server." .RequestEncoder .ServiceName .Method.Name | comment }}
-func {{ .RequestEncoder }}(encoder func(*http.Request) goahttp.Encoder) func(*http.Request, interface{}) error {
-	return func(req *http.Request, v interface{}) error {
+func {{ .RequestEncoder }}(encoder func(*http.Request) goahttp.Encoder) func(*http.Request, any) error {
+	return func(req *http.Request, v any) error {
 		{{- if .Method.SkipRequestBodyEncodeDecode }}
 		data, ok := v.(*{{ requestStructPkg .Method .ServicePkgName }}.{{ .Method.RequestStruct }})
 		if !ok {
@@ -643,8 +643,8 @@ const responseDecoderT = `{{ printf "%s returns a decoder for responses returned
 	{{- end }}
 //	- error: internal error
 {{- end }}
-func {{ .ResponseDecoder }}(decoder func(*http.Response) goahttp.Decoder, restoreBody bool) func(*http.Response) (interface{}, error) {
-	return func(resp *http.Response) (interface{}, error) {
+func {{ .ResponseDecoder }}(decoder func(*http.Response) goahttp.Decoder, restoreBody bool) func(*http.Response) (any, error) {
+	return func(resp *http.Response) (any, error) {
 		if restoreBody {
 			b, err := io.ReadAll(resp.Body)
 			if err != nil {
@@ -946,7 +946,7 @@ func {{ .InitName }}(encoderFn {{ .FuncName }}) func(r *http.Request) goahttp.En
 	return func(r *http.Request) goahttp.Encoder {
 		body := &bytes.Buffer{}
 		mw := multipart.NewWriter(body)
-		return goahttp.EncodingFunc(func(v interface{}) error {
+		return goahttp.EncodingFunc(func(v any) error {
 			p := v.({{ .Payload.Ref }})
 			if err := encoderFn(mw, p); err != nil {
 				return err
@@ -961,7 +961,7 @@ func {{ .InitName }}(encoderFn {{ .FuncName }}) func(r *http.Request) goahttp.En
 
 // input: streamRequestData
 const buildStreamRequestT = `// {{ printf "%s creates a streaming endpoint request payload from the method payload and the path to the file to be streamed" .BuildStreamPayload | comment }}
-func {{ .BuildStreamPayload }}({{ if .Payload.Ref }}payload interface{}, {{ end }}fpath string) (*{{ requestStructPkg .Method .ServicePkgName }}.{{ .Method.RequestStruct }}, error) {
+func {{ .BuildStreamPayload }}({{ if .Payload.Ref }}payload any, {{ end }}fpath string) (*{{ requestStructPkg .Method .ServicePkgName }}.{{ .Method.RequestStruct }}, error) {
 	f, err := os.Open(fpath)
 	if err != nil {
 		return nil, err

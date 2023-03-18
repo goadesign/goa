@@ -4,8 +4,8 @@ var EmptyServerResponseDecodeCode = `// DecodeMethodEmptyServerResponseResponse 
 // returned by the ServiceEmptyServerResponse MethodEmptyServerResponse
 // endpoint. restoreBody controls whether the response body should be restored
 // after having been read.
-func DecodeMethodEmptyServerResponseResponse(decoder func(*http.Response) goahttp.Decoder, restoreBody bool) func(*http.Response) (interface{}, error) {
-	return func(resp *http.Response) (interface{}, error) {
+func DecodeMethodEmptyServerResponseResponse(decoder func(*http.Response) goahttp.Decoder, restoreBody bool) func(*http.Response) (any, error) {
+	return func(resp *http.Response) (any, error) {
 		if restoreBody {
 			b, err := io.ReadAll(resp.Body)
 			if err != nil {
@@ -34,8 +34,8 @@ var ResultBodyMultipleViewsDecodeCode = `// DecodeMethodBodyMultipleViewResponse
 // returned by the ServiceBodyMultipleView MethodBodyMultipleView endpoint.
 // restoreBody controls whether the response body should be restored after
 // having been read.
-func DecodeMethodBodyMultipleViewResponse(decoder func(*http.Response) goahttp.Decoder, restoreBody bool) func(*http.Response) (interface{}, error) {
-	return func(resp *http.Response) (interface{}, error) {
+func DecodeMethodBodyMultipleViewResponse(decoder func(*http.Response) goahttp.Decoder, restoreBody bool) func(*http.Response) (any, error) {
+	return func(resp *http.Response) (any, error) {
 		if restoreBody {
 			b, err := io.ReadAll(resp.Body)
 			if err != nil {
@@ -85,8 +85,8 @@ var EmptyBodyResultMultipleViewsDecodeCode = `// DecodeMethodEmptyBodyResultMult
 // responses returned by the ServiceEmptyBodyResultMultipleView
 // MethodEmptyBodyResultMultipleView endpoint. restoreBody controls whether the
 // response body should be restored after having been read.
-func DecodeMethodEmptyBodyResultMultipleViewResponse(decoder func(*http.Response) goahttp.Decoder, restoreBody bool) func(*http.Response) (interface{}, error) {
-	return func(resp *http.Response) (interface{}, error) {
+func DecodeMethodEmptyBodyResultMultipleViewResponse(decoder func(*http.Response) goahttp.Decoder, restoreBody bool) func(*http.Response) (any, error) {
+	return func(resp *http.Response) (any, error) {
 		if restoreBody {
 			b, err := io.ReadAll(resp.Body)
 			if err != nil {
@@ -126,8 +126,8 @@ var ExplicitBodyPrimitiveResultDecodeCode = `// DecodeMethodExplicitBodyPrimitiv
 // ServiceExplicitBodyPrimitiveResultMultipleView
 // MethodExplicitBodyPrimitiveResultMultipleView endpoint. restoreBody controls
 // whether the response body should be restored after having been read.
-func DecodeMethodExplicitBodyPrimitiveResultMultipleViewResponse(decoder func(*http.Response) goahttp.Decoder, restoreBody bool) func(*http.Response) (interface{}, error) {
-	return func(resp *http.Response) (interface{}, error) {
+func DecodeMethodExplicitBodyPrimitiveResultMultipleViewResponse(decoder func(*http.Response) goahttp.Decoder, restoreBody bool) func(*http.Response) (any, error) {
+	return func(resp *http.Response) (any, error) {
 		if restoreBody {
 			b, err := io.ReadAll(resp.Body)
 			if err != nil {
@@ -183,8 +183,8 @@ var ExplicitBodyUserResultMultipleViewsDecodeCode = `// DecodeMethodExplicitBody
 // responses returned by the ServiceExplicitBodyUserResultMultipleView
 // MethodExplicitBodyUserResultMultipleView endpoint. restoreBody controls
 // whether the response body should be restored after having been read.
-func DecodeMethodExplicitBodyUserResultMultipleViewResponse(decoder func(*http.Response) goahttp.Decoder, restoreBody bool) func(*http.Response) (interface{}, error) {
-	return func(resp *http.Response) (interface{}, error) {
+func DecodeMethodExplicitBodyUserResultMultipleViewResponse(decoder func(*http.Response) goahttp.Decoder, restoreBody bool) func(*http.Response) (any, error) {
+	return func(resp *http.Response) (any, error) {
 		if restoreBody {
 			b, err := io.ReadAll(resp.Body)
 			if err != nil {
@@ -234,8 +234,8 @@ var ExplicitBodyResultCollectionDecodeCode = `// DecodeMethodExplicitBodyResultC
 // responses returned by the ServiceExplicitBodyResultCollection
 // MethodExplicitBodyResultCollection endpoint. restoreBody controls whether
 // the response body should be restored after having been read.
-func DecodeMethodExplicitBodyResultCollectionResponse(decoder func(*http.Response) goahttp.Decoder, restoreBody bool) func(*http.Response) (interface{}, error) {
-	return func(resp *http.Response) (interface{}, error) {
+func DecodeMethodExplicitBodyResultCollectionResponse(decoder func(*http.Response) goahttp.Decoder, restoreBody bool) func(*http.Response) (any, error) {
+	return func(resp *http.Response) (any, error) {
 		if restoreBody {
 			b, err := io.ReadAll(resp.Body)
 			if err != nil {
@@ -276,8 +276,8 @@ var ResultMultipleViewsTagDecodeCode = `// DecodeMethodTagMultipleViewsResponse 
 // returned by the ServiceTagMultipleViews MethodTagMultipleViews endpoint.
 // restoreBody controls whether the response body should be restored after
 // having been read.
-func DecodeMethodTagMultipleViewsResponse(decoder func(*http.Response) goahttp.Decoder, restoreBody bool) func(*http.Response) (interface{}, error) {
-	return func(resp *http.Response) (interface{}, error) {
+func DecodeMethodTagMultipleViewsResponse(decoder func(*http.Response) goahttp.Decoder, restoreBody bool) func(*http.Response) (any, error) {
+	return func(resp *http.Response) (any, error) {
 		if restoreBody {
 			b, err := io.ReadAll(resp.Body)
 			if err != nil {
@@ -346,8 +346,8 @@ var EmptyServerResponseWithTagsDecodeCode = `// DecodeMethodEmptyServerResponseW
 // responses returned by the ServiceEmptyServerResponseWithTags
 // MethodEmptyServerResponseWithTags endpoint. restoreBody controls whether the
 // response body should be restored after having been read.
-func DecodeMethodEmptyServerResponseWithTagsResponse(decoder func(*http.Response) goahttp.Decoder, restoreBody bool) func(*http.Response) (interface{}, error) {
-	return func(resp *http.Response) (interface{}, error) {
+func DecodeMethodEmptyServerResponseWithTagsResponse(decoder func(*http.Response) goahttp.Decoder, restoreBody bool) func(*http.Response) (any, error) {
+	return func(resp *http.Response) (any, error) {
 		if restoreBody {
 			b, err := io.ReadAll(resp.Body)
 			if err != nil {
@@ -380,8 +380,8 @@ var ResultHeaderStringImplicitResponseDecodeCode = `// DecodeMethodHeaderStringI
 // returned by the ServiceHeaderStringImplicit MethodHeaderStringImplicit
 // endpoint. restoreBody controls whether the response body should be restored
 // after having been read.
-func DecodeMethodHeaderStringImplicitResponse(decoder func(*http.Response) goahttp.Decoder, restoreBody bool) func(*http.Response) (interface{}, error) {
-	return func(resp *http.Response) (interface{}, error) {
+func DecodeMethodHeaderStringImplicitResponse(decoder func(*http.Response) goahttp.Decoder, restoreBody bool) func(*http.Response) (any, error) {
+	return func(resp *http.Response) (any, error) {
 		if restoreBody {
 			b, err := io.ReadAll(resp.Body)
 			if err != nil {
@@ -420,8 +420,8 @@ func DecodeMethodHeaderStringImplicitResponse(decoder func(*http.Response) goaht
 var ResultHeaderStringArrayResponseDecodeCode = `// DecodeMethodAResponse returns a decoder for responses returned by the
 // ServiceHeaderStringArrayResponse MethodA endpoint. restoreBody controls
 // whether the response body should be restored after having been read.
-func DecodeMethodAResponse(decoder func(*http.Response) goahttp.Decoder, restoreBody bool) func(*http.Response) (interface{}, error) {
-	return func(resp *http.Response) (interface{}, error) {
+func DecodeMethodAResponse(decoder func(*http.Response) goahttp.Decoder, restoreBody bool) func(*http.Response) (any, error) {
+	return func(resp *http.Response) (any, error) {
 		if restoreBody {
 			b, err := io.ReadAll(resp.Body)
 			if err != nil {
@@ -454,8 +454,8 @@ func DecodeMethodAResponse(decoder func(*http.Response) goahttp.Decoder, restore
 var ResultHeaderStringArrayValidateResponseDecodeCode = `// DecodeMethodAResponse returns a decoder for responses returned by the
 // ServiceHeaderStringArrayValidateResponse MethodA endpoint. restoreBody
 // controls whether the response body should be restored after having been read.
-func DecodeMethodAResponse(decoder func(*http.Response) goahttp.Decoder, restoreBody bool) func(*http.Response) (interface{}, error) {
-	return func(resp *http.Response) (interface{}, error) {
+func DecodeMethodAResponse(decoder func(*http.Response) goahttp.Decoder, restoreBody bool) func(*http.Response) (any, error) {
+	return func(resp *http.Response) (any, error) {
 		if restoreBody {
 			b, err := io.ReadAll(resp.Body)
 			if err != nil {
@@ -495,8 +495,8 @@ func DecodeMethodAResponse(decoder func(*http.Response) goahttp.Decoder, restore
 var ResultHeaderArrayResponseDecodeCode = `// DecodeMethodAResponse returns a decoder for responses returned by the
 // ServiceHeaderArrayResponse MethodA endpoint. restoreBody controls whether
 // the response body should be restored after having been read.
-func DecodeMethodAResponse(decoder func(*http.Response) goahttp.Decoder, restoreBody bool) func(*http.Response) (interface{}, error) {
-	return func(resp *http.Response) (interface{}, error) {
+func DecodeMethodAResponse(decoder func(*http.Response) goahttp.Decoder, restoreBody bool) func(*http.Response) (any, error) {
+	return func(resp *http.Response) (any, error) {
 		if restoreBody {
 			b, err := io.ReadAll(resp.Body)
 			if err != nil {
@@ -545,8 +545,8 @@ func DecodeMethodAResponse(decoder func(*http.Response) goahttp.Decoder, restore
 var ResultHeaderArrayValidateResponseDecodeCode = `// DecodeMethodAResponse returns a decoder for responses returned by the
 // ServiceHeaderArrayValidateResponse MethodA endpoint. restoreBody controls
 // whether the response body should be restored after having been read.
-func DecodeMethodAResponse(decoder func(*http.Response) goahttp.Decoder, restoreBody bool) func(*http.Response) (interface{}, error) {
-	return func(resp *http.Response) (interface{}, error) {
+func DecodeMethodAResponse(decoder func(*http.Response) goahttp.Decoder, restoreBody bool) func(*http.Response) (any, error) {
+	return func(resp *http.Response) (any, error) {
 		if restoreBody {
 			b, err := io.ReadAll(resp.Body)
 			if err != nil {
@@ -600,8 +600,8 @@ func DecodeMethodAResponse(decoder func(*http.Response) goahttp.Decoder, restore
 var WithHeadersBlockResponseDecodeCode = `// DecodeMethodAResponse returns a decoder for responses returned by the
 // ServiceWithHeadersBlock MethodA endpoint. restoreBody controls whether the
 // response body should be restored after having been read.
-func DecodeMethodAResponse(decoder func(*http.Response) goahttp.Decoder, restoreBody bool) func(*http.Response) (interface{}, error) {
-	return func(resp *http.Response) (interface{}, error) {
+func DecodeMethodAResponse(decoder func(*http.Response) goahttp.Decoder, restoreBody bool) func(*http.Response) (any, error) {
+	return func(resp *http.Response) (any, error) {
 		if restoreBody {
 			b, err := io.ReadAll(resp.Body)
 			if err != nil {
@@ -671,8 +671,8 @@ func DecodeMethodAResponse(decoder func(*http.Response) goahttp.Decoder, restore
 var WithHeadersBlockViewedResultResponseDecodeCode = `// DecodeMethodAResponse returns a decoder for responses returned by the
 // ServiceWithHeadersBlockViewedResult MethodA endpoint. restoreBody controls
 // whether the response body should be restored after having been read.
-func DecodeMethodAResponse(decoder func(*http.Response) goahttp.Decoder, restoreBody bool) func(*http.Response) (interface{}, error) {
-	return func(resp *http.Response) (interface{}, error) {
+func DecodeMethodAResponse(decoder func(*http.Response) goahttp.Decoder, restoreBody bool) func(*http.Response) (any, error) {
+	return func(resp *http.Response) (any, error) {
 		if restoreBody {
 			b, err := io.ReadAll(resp.Body)
 			if err != nil {
@@ -748,8 +748,8 @@ var ValidateErrorResponseTypeDecodeCode = `// DecodeMethodAResponse returns a de
 // DecodeMethodAResponse may return the following errors:
 //   - "some_error" (type *validateerrorresponsetype.AError): http.StatusBadRequest
 //   - error: internal error
-func DecodeMethodAResponse(decoder func(*http.Response) goahttp.Decoder, restoreBody bool) func(*http.Response) (interface{}, error) {
-	return func(resp *http.Response) (interface{}, error) {
+func DecodeMethodAResponse(decoder func(*http.Response) goahttp.Decoder, restoreBody bool) func(*http.Response) (any, error) {
+	return func(resp *http.Response) (any, error) {
 		if restoreBody {
 			b, err := io.ReadAll(resp.Body)
 			if err != nil {
@@ -834,8 +834,8 @@ var EmptyErrorResponseBodyDecodeCode = `// DecodeMethodEmptyErrorResponseBodyRes
 //   - "internal_error" (type *goa.ServiceError): http.StatusInternalServerError
 //   - "not_found" (type serviceemptyerrorresponsebody.NotFound): http.StatusNotFound
 //   - error: internal error
-func DecodeMethodEmptyErrorResponseBodyResponse(decoder func(*http.Response) goahttp.Decoder, restoreBody bool) func(*http.Response) (interface{}, error) {
-	return func(resp *http.Response) (interface{}, error) {
+func DecodeMethodEmptyErrorResponseBodyResponse(decoder func(*http.Response) goahttp.Decoder, restoreBody bool) func(*http.Response) (any, error) {
+	return func(resp *http.Response) (any, error) {
 		if restoreBody {
 			b, err := io.ReadAll(resp.Body)
 			if err != nil {
