@@ -33,7 +33,7 @@ func TestUnaryRequestID(t *testing.T) {
 		{
 			name: "default",
 			ctx:  context.Background(),
-			handler: func(ctx context.Context, req interface{}) (interface{}, error) {
+			handler: func(ctx context.Context, req any) (any, error) {
 				md, ok := metadata.FromIncomingContext(ctx)
 				if !ok {
 					return nil, fmt.Errorf("incoming request metadata not found")
@@ -47,7 +47,7 @@ func TestUnaryRequestID(t *testing.T) {
 		{
 			name: "ignore-request-id-metadata",
 			ctx:  populateRequestID(id),
-			handler: func(ctx context.Context, req interface{}) (interface{}, error) {
+			handler: func(ctx context.Context, req any) (any, error) {
 				md, ok := metadata.FromIncomingContext(ctx)
 				if !ok {
 					return nil, fmt.Errorf("incoming request metadata not found")
@@ -64,7 +64,7 @@ func TestUnaryRequestID(t *testing.T) {
 				grpcm.UseXRequestIDMetadataOption(true),
 			},
 			ctx: populateRequestID(id),
-			handler: func(ctx context.Context, req interface{}) (interface{}, error) {
+			handler: func(ctx context.Context, req any) (any, error) {
 				md, ok := metadata.FromIncomingContext(ctx)
 				if !ok {
 					return nil, fmt.Errorf("incoming request metadata not found")
@@ -82,7 +82,7 @@ func TestUnaryRequestID(t *testing.T) {
 				grpcm.XRequestMetadataLimitOption(2),
 			},
 			ctx: populateRequestID(id),
-			handler: func(ctx context.Context, req interface{}) (interface{}, error) {
+			handler: func(ctx context.Context, req any) (any, error) {
 				md, ok := metadata.FromIncomingContext(ctx)
 				if !ok {
 					return nil, fmt.Errorf("incoming request metadata not found")
@@ -121,7 +121,7 @@ func TestStreamRequestID(t *testing.T) {
 		{
 			name:   "default",
 			stream: grpcm.NewWrappedServerStream(context.Background(), &testServerStream{}),
-			handler: func(srv interface{}, stream grpc.ServerStream) error {
+			handler: func(srv any, stream grpc.ServerStream) error {
 				md, ok := metadata.FromIncomingContext(stream.Context())
 				if !ok {
 					return fmt.Errorf("incoming request metadata not found")
@@ -135,7 +135,7 @@ func TestStreamRequestID(t *testing.T) {
 		{
 			name:   "ignore-request-id-metadata",
 			stream: grpcm.NewWrappedServerStream(populateRequestID(id), &testServerStream{}),
-			handler: func(srv interface{}, stream grpc.ServerStream) error {
+			handler: func(srv any, stream grpc.ServerStream) error {
 				md, ok := metadata.FromIncomingContext(stream.Context())
 				if !ok {
 					return fmt.Errorf("incoming request metadata not found")
@@ -152,7 +152,7 @@ func TestStreamRequestID(t *testing.T) {
 				grpcm.UseXRequestIDMetadataOption(true),
 			},
 			stream: grpcm.NewWrappedServerStream(populateRequestID(id), &testServerStream{}),
-			handler: func(srv interface{}, stream grpc.ServerStream) error {
+			handler: func(srv any, stream grpc.ServerStream) error {
 				md, ok := metadata.FromIncomingContext(stream.Context())
 				if !ok {
 					return fmt.Errorf("incoming request metadata not found")
@@ -170,7 +170,7 @@ func TestStreamRequestID(t *testing.T) {
 				grpcm.XRequestMetadataLimitOption(2),
 			},
 			stream: grpcm.NewWrappedServerStream(populateRequestID(id), &testServerStream{}),
-			handler: func(srv interface{}, stream grpc.ServerStream) error {
+			handler: func(srv any, stream grpc.ServerStream) error {
 				md, ok := metadata.FromIncomingContext(stream.Context())
 				if !ok {
 					return fmt.Errorf("incoming request metadata not found")

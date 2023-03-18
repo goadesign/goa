@@ -21,7 +21,7 @@ type GRPCSegment struct {
 // RecordRequest traces a request.
 //
 // It sets Http.Request & Namespace (ex: "remote")
-func (s *GRPCSegment) RecordRequest(ctx context.Context, method string, req interface{}, namespace string) {
+func (s *GRPCSegment) RecordRequest(ctx context.Context, method string, req any, namespace string) {
 	s.Lock()
 	defer s.Unlock()
 
@@ -34,7 +34,7 @@ func (s *GRPCSegment) RecordRequest(ctx context.Context, method string, req inte
 }
 
 // RecordResponse traces a response.
-func (s *GRPCSegment) RecordResponse(resp interface{}) {
+func (s *GRPCSegment) RecordResponse(resp any) {
 	s.Lock()
 	defer s.Unlock()
 
@@ -88,7 +88,7 @@ func (s *GRPCSegment) RecordError(err error) {
 }
 
 // requestData creates a Request from a http.Request.
-func requestData(ctx context.Context, method string, req interface{}) *xray.Request {
+func requestData(ctx context.Context, method string, req any) *xray.Request {
 	var agent string
 	{
 		md, ok := metadata.FromIncomingContext(ctx)
@@ -112,7 +112,7 @@ func requestData(ctx context.Context, method string, req interface{}) *xray.Requ
 	}
 }
 
-func messageLength(msg interface{}) int64 {
+func messageLength(msg any) int64 {
 	var length int64
 	{
 		if m, ok := msg.(proto.Message); ok {

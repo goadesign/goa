@@ -282,7 +282,7 @@ func NewMethodUnaryRPCWithErrorsCustomErrorError(message *service_unary_rpc_with
 // on MethodUnaryRPCWithErrorsInternalError.
 func ValidateMethodUnaryRPCWithErrorsInternalError(errmsg *service_unary_rpc_with_errorspb.MethodUnaryRPCWithErrorsInternalError) (err error) {
 	if !(errmsg.Name == "this" || errmsg.Name == "that") {
-		err = goa.MergeErrors(err, goa.InvalidEnumValueError("errmsg.name", errmsg.Name, []interface{}{"this", "that"}))
+		err = goa.MergeErrors(err, goa.InvalidEnumValueError("errmsg.name", errmsg.Name, []any{"this", "that"}))
 	}
 	return
 }
@@ -291,7 +291,7 @@ func ValidateMethodUnaryRPCWithErrorsInternalError(errmsg *service_unary_rpc_wit
 // on MethodUnaryRPCWithErrorsBadRequestError.
 func ValidateMethodUnaryRPCWithErrorsBadRequestError(errmsg *service_unary_rpc_with_errorspb.MethodUnaryRPCWithErrorsBadRequestError) (err error) {
 	if !(errmsg.Name == "this" || errmsg.Name == "that") {
-		err = goa.MergeErrors(err, goa.InvalidEnumValueError("errmsg.name", errmsg.Name, []interface{}{"this", "that"}))
+		err = goa.MergeErrors(err, goa.InvalidEnumValueError("errmsg.name", errmsg.Name, []any{"this", "that"}))
 	}
 	return
 }

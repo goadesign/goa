@@ -28,7 +28,7 @@ func TestStreamCanceler(t *testing.T) {
 		{
 			name:   "handler canceled",
 			stream: grpcm.NewWrappedServerStream(context.Background(), &testCancelerStream{}),
-			handler: func(srv interface{}, stream grpc.ServerStream) error {
+			handler: func(srv any, stream grpc.ServerStream) error {
 				<-stream.Context().Done() // block until canceled
 				return nil
 			},
@@ -36,7 +36,7 @@ func TestStreamCanceler(t *testing.T) {
 		{
 			name:   "handler not canceled",
 			stream: grpcm.NewWrappedServerStream(context.Background(), &testCancelerStream{}),
-			handler: func(srv interface{}, stream grpc.ServerStream) error {
+			handler: func(srv any, stream grpc.ServerStream) error {
 				// don't block, finish before being canceled
 				return nil
 			},

@@ -11,11 +11,11 @@ type (
 	// Invoker invokes a gRPC method. The request and response types
 	// are goa types.
 	Invoker interface {
-		Invoke(ctx context.Context, req interface{}) (res interface{}, err error)
+		Invoke(ctx context.Context, req any) (res any, err error)
 	}
 
 	// RemoteFunc invokes a RPC method.
-	RemoteFunc func(ctx context.Context, reqpb interface{}, opts ...grpc.CallOption) (respb interface{}, err error)
+	RemoteFunc func(ctx context.Context, reqpb any, opts ...grpc.CallOption) (respb any, err error)
 
 	cliInvoker struct {
 		encoder RequestEncoder
@@ -34,14 +34,14 @@ func NewInvoker(fn RemoteFunc, enc RequestEncoder, dec ResponseDecoder) Invoker 
 }
 
 // Invoke invokes the given remote gRPC client method.
-func (d *cliInvoker) Invoke(ctx context.Context, req interface{}) (interface{}, error) {
+func (d *cliInvoker) Invoke(ctx context.Context, req any) (any, error) {
 	md, ok := metadata.FromOutgoingContext(ctx)
 	if !ok {
 		md = metadata.MD{}
 	}
 
 	var (
-		reqpb interface{}
+		reqpb any
 		err   error
 	)
 	{
@@ -56,7 +56,7 @@ func (d *cliInvoker) Invoke(ctx context.Context, req interface{}) (interface{}, 
 	ctx = metadata.NewOutgoingContext(ctx, md)
 
 	var (
-		respb interface{}
+		respb any
 
 		hdr  = metadata.MD{}
 		trlr = metadata.MD{}
@@ -69,7 +69,7 @@ func (d *cliInvoker) Invoke(ctx context.Context, req interface{}) (interface{}, 
 	}
 
 	var (
-		res interface{}
+		res any
 	)
 	{
 		if d.decoder != nil {

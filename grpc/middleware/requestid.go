@@ -29,7 +29,7 @@ const (
 //    middleware.XRequestMetadataLimitOption(128))))
 func UnaryRequestID(options ...middleware.RequestIDOption) grpc.UnaryServerInterceptor {
 	o := middleware.NewRequestIDOptions(options...)
-	return grpc.UnaryServerInterceptor(func(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (resp interface{}, err error) {
+	return grpc.UnaryServerInterceptor(func(ctx context.Context, req any, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (resp any, err error) {
 		ctx = generateRequestID(ctx, o)
 		return handler(ctx, req)
 	})
@@ -50,7 +50,7 @@ func UnaryRequestID(options ...middleware.RequestIDOption) grpc.UnaryServerInter
 //    middleware.XRequestMetadataLimitOption(128))))
 func StreamRequestID(options ...middleware.RequestIDOption) grpc.StreamServerInterceptor {
 	o := middleware.NewRequestIDOptions(options...)
-	return grpc.StreamServerInterceptor(func(srv interface{}, ss grpc.ServerStream, info *grpc.StreamServerInfo, handler grpc.StreamHandler) error {
+	return grpc.StreamServerInterceptor(func(srv any, ss grpc.ServerStream, info *grpc.StreamServerInfo, handler grpc.StreamHandler) error {
 		ctx := generateRequestID(ss.Context(), o)
 		wss := NewWrappedServerStream(ctx, ss)
 		return handler(srv, wss)

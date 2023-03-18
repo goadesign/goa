@@ -149,7 +149,7 @@ func serverEncodeDecode(genpkg string, svc *expr.GRPCServiceExpr) *codegen.File 
 					Name:   "response-encoder",
 					Source: responseEncoderT,
 					Data:   e,
-					FuncMap: map[string]interface{}{
+					FuncMap: map[string]any{
 						"typeConversionData":       typeConversionData,
 						"metadataEncodeDecodeData": metadataEncodeDecodeData,
 					},
@@ -170,8 +170,8 @@ func serverEncodeDecode(genpkg string, svc *expr.GRPCServiceExpr) *codegen.File 
 	return &codegen.File{Path: fpath, SectionTemplates: sections}
 }
 
-func transTmplFuncs(s *expr.GRPCServiceExpr) map[string]interface{} {
-	return map[string]interface{}{
+func transTmplFuncs(s *expr.GRPCServiceExpr) map[string]any {
+	return map[string]any{
 		"goTypeRef": func(dt expr.DataType) string {
 			return service.Services.Get(s.Name()).Scope.GoTypeRef(&expr.AttributeExpr{Type: dt})
 		},
@@ -180,8 +180,8 @@ func transTmplFuncs(s *expr.GRPCServiceExpr) map[string]interface{} {
 
 // typeConversionData produces the template data suitable for executing the
 // "type_conversion" template.
-func typeConversionData(dt expr.DataType, varName string, target string) map[string]interface{} {
-	return map[string]interface{}{
+func typeConversionData(dt expr.DataType, varName string, target string) map[string]any {
+	return map[string]any{
 		"Type":    dt,
 		"VarName": varName,
 		"Target":  target,
@@ -190,8 +190,8 @@ func typeConversionData(dt expr.DataType, varName string, target string) map[str
 
 // metadataEncodeDecodeData produces the template data suitable for executing the
 // "metadata_decoder" and "metadata_encoder" template.
-func metadataEncodeDecodeData(md *MetadataData, vname string) map[string]interface{} {
-	return map[string]interface{}{
+func metadataEncodeDecodeData(md *MetadataData, vname string) map[string]any {
+	return map[string]any{
 		"Metadata": md,
 		"VarName":  vname,
 	}
@@ -281,7 +281,7 @@ func (s *{{ .ServerStruct }}) {{ .Method.VarName }}(
 
 // input: EndpointData
 const requestDecoderT = `{{ printf "Decode%sRequest decodes requests sent to %q service %q endpoint." .Method.VarName .ServiceName .Method.Name | comment }}
-func Decode{{ .Method.VarName }}Request(ctx context.Context, v interface{}, md metadata.MD) (interface{}, error) {
+func Decode{{ .Method.VarName }}Request(ctx context.Context, v any, md metadata.MD) (any, error) {
 {{- if .Request.Metadata }}
 	var (
 	{{- range .Request.Metadata }}
@@ -394,7 +394,7 @@ func Decode{{ .Method.VarName }}Request(ctx context.Context, v interface{}, md m
 
 // input: EndpointData
 const responseEncoderT = `{{ printf "Encode%sResponse encodes responses from the %q service %q endpoint." .Method.VarName .ServiceName .Method.Name | comment }}
-func Encode{{ .Method.VarName }}Response(ctx context.Context, v interface{}, hdr, trlr *metadata.MD) (interface{}, error) {
+func Encode{{ .Method.VarName }}Response(ctx context.Context, v any, hdr, trlr *metadata.MD) (any, error) {
 {{- if .ViewedResultRef }}
 	vres, ok := v.({{ .ViewedResultRef }})
 	if !ok {

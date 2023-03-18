@@ -202,7 +202,7 @@ func New{{ .ClientStruct }}(cc *grpc.ClientConn, opts ...grpc.CallOption) *{{ .C
 // input: EndpointData
 const clientEndpointInitT = `{{ printf "%s calls the %q function in %s.%s interface." .Method.VarName .Method.VarName .PkgName .ClientInterface | comment }}
 func (c *{{ .ClientStruct }}) {{ .Method.VarName }}() goa.Endpoint {
-	return func(ctx context.Context, v interface{}) (interface{}, error) {
+	return func(ctx context.Context, v any) (any, error) {
 		inv := goagrpc.NewInvoker(
 			Build{{ .Method.VarName }}Func(c.grpccli, c.opts...),
 			{{ if .PayloadRef }}Encode{{ .Method.VarName }}Request{{ else }}nil{{ end }},
@@ -240,7 +240,7 @@ func (c *{{ .ClientStruct }}) {{ .Method.VarName }}() goa.Endpoint {
 // input: EndpointData
 const remoteMethodBuilderT = `{{ printf "Build%sFunc builds the remote method to invoke for %q service %q endpoint." .Method.VarName .ServiceName .Method.Name | comment }}
 func Build{{ .Method.VarName }}Func(grpccli {{ .PkgName }}.{{ .ClientInterface }}, cliopts ...grpc.CallOption) goagrpc.RemoteFunc {
-	return func(ctx context.Context, reqpb interface{}, opts ...grpc.CallOption) (interface{}, error) {
+	return func(ctx context.Context, reqpb any, opts ...grpc.CallOption) (any, error) {
 		for _, opt := range cliopts {
 			opts = append(opts, opt)
 		}
@@ -254,7 +254,7 @@ func Build{{ .Method.VarName }}Func(grpccli {{ .PkgName }}.{{ .ClientInterface }
 
 // input: EndpointData
 const responseDecoderT = `{{ printf "Decode%sResponse decodes responses from the %s %s endpoint." .Method.VarName .ServiceName .Method.Name | comment }}
-func Decode{{ .Method.VarName }}Response(ctx context.Context, v interface{}, hdr, trlr metadata.MD) (interface{}, error) {
+func Decode{{ .Method.VarName }}Response(ctx context.Context, v any, hdr, trlr metadata.MD) (any, error) {
 {{- if or .Response.Headers .Response.Trailers }}
 	var (
 	{{- range .Response.Headers }}
@@ -376,7 +376,7 @@ func Decode{{ .Method.VarName }}Response(ctx context.Context, v interface{}, hdr
 
 // input: EndpointData
 const requestEncoderT = `{{ printf "Encode%sRequest encodes requests sent to %s %s endpoint." .Method.VarName .ServiceName .Method.Name | comment }}
-func Encode{{ .Method.VarName }}Request(ctx context.Context, v interface{}, md *metadata.MD) (interface{}, error) {
+func Encode{{ .Method.VarName }}Request(ctx context.Context, v any, md *metadata.MD) (any, error) {
 	payload, ok := v.({{ .PayloadRef }})
 	if !ok {
 		return nil, goagrpc.ErrInvalidType("{{ .ServiceName }}", "{{ .Method.Name }}", "{{ .PayloadRef }}", v)

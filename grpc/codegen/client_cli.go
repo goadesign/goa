@@ -202,10 +202,10 @@ func makeFlags(e *EndpointData, args []*InitArgData) ([]*cli.FlagData, *cli.Buil
 
 const parseEndpointT = `// ParseEndpoint returns the endpoint and payload as specified on the command
 // line.
-func ParseEndpoint(cc *grpc.ClientConn, opts ...grpc.CallOption) (goa.Endpoint, interface{}, error) {
+func ParseEndpoint(cc *grpc.ClientConn, opts ...grpc.CallOption) (goa.Endpoint, any, error) {
 	{{ .FlagsCode }}
 	var (
-		data     interface{}
+		data     any
 		endpoint goa.Endpoint
 		err      error
 	)

@@ -439,7 +439,7 @@ func transformArray(source, target *expr.Array, sourceVar, targetVar string, new
 		}
 	}
 
-	data := map[string]interface{}{
+	data := map[string]any{
 		"ElemTypeRef":    targetRef,
 		"SourceElem":     src,
 		"TargetElem":     tgt,
@@ -516,7 +516,7 @@ func transformMap(source, target *expr.Map, sourceVar, targetVar string, newVar 
 			return "", err
 		}
 	}
-	data := map[string]interface{}{
+	data := map[string]any{
 		"KeyTypeRef":     targetKeyRef,
 		"ElemTypeRef":    targetElemRef,
 		"SourceKey":      source.KeyType,
@@ -555,7 +555,7 @@ func transformUnionToProto(source, target *expr.AttributeExpr, sourceVar, target
 		targetValueTypeNames[i] = ta.message + "_" + fieldName
 	}
 
-	data := map[string]interface{}{
+	data := map[string]any{
 		"SourceVar":            sourceVar,
 		"TargetVar":            targetVar,
 		"SourceValueTypeRefs":  tdata.SourceValueTypeRefs,
@@ -586,7 +586,7 @@ func transformUnionFromProto(source, target *expr.AttributeExpr, sourceVar, targ
 		sourceFieldNames[i] = fieldName
 	}
 
-	data := map[string]interface{}{
+	data := map[string]any{
 		"SourceVar":           sourceVar,
 		"TargetVar":           targetVar,
 		"SourceValueTypeRefs": tdata.SourceValueTypeRefs,

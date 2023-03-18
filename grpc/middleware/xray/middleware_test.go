@@ -153,7 +153,7 @@ func TestUnaryServerMiddleware(t *testing.T) {
 			if err != nil {
 				t.Fatalf("failed to create middleware: %s", err)
 			}
-			handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+			handler := func(ctx context.Context, req any) (any, error) {
 				if c.Segment.Error {
 					return nil, c.Segment.Exception
 				}
@@ -298,7 +298,7 @@ func TestStreamServerMiddleware(t *testing.T) {
 			if err != nil {
 				t.Fatalf("failed to create middleware: %s", err)
 			}
-			handler := func(srv interface{}, stream grpc.ServerStream) error {
+			handler := func(srv any, stream grpc.ServerStream) error {
 				if c.Segment.Error {
 					return c.Segment.Exception
 				}
@@ -418,7 +418,7 @@ func TestUnaryClient(t *testing.T) {
 	}
 	for _, tc := range cases {
 		t.Run(tc.Name, func(t *testing.T) {
-			invoker := func(ctx context.Context, method string, req, reply interface{}, cc *grpc.ClientConn, opts ...grpc.CallOption) error {
+			invoker := func(ctx context.Context, method string, req, reply any, cc *grpc.ClientConn, opts ...grpc.CallOption) error {
 				if tc.Error {
 					return status.Error(tc.StatusCode, "error")
 				}
@@ -493,7 +493,7 @@ func (cs *mockClientStream) Header() (metadata.MD, error) {
 	return nil, cs.err
 }
 
-func (cs *mockClientStream) SendMsg(m interface{}) error {
+func (cs *mockClientStream) SendMsg(m any) error {
 	return cs.err
 }
 
@@ -501,7 +501,7 @@ func (cs *mockClientStream) CloseSend() error {
 	return cs.err
 }
 
-func (cs *mockClientStream) RecvMsg(m interface{}) error {
+func (cs *mockClientStream) RecvMsg(m any) error {
 	return cs.err
 }
 
@@ -564,7 +564,7 @@ func TestStreamClient(t *testing.T) {
 					t.Errorf("expected request error to be %v, got %v", tc.RequestError, errored)
 				}
 				if err == nil {
-					var msg interface{}
+					var msg any
 					err2 := cs.RecvMsg(msg)
 					closed := err2 == io.EOF
 					if tc.StreamClosed != closed {

@@ -54,7 +54,7 @@ func StreamCanceler(ctx context.Context) grpc.StreamServerInterceptor {
 			(*cancel)()
 		}
 	}()
-	return grpc.StreamServerInterceptor(func(srv interface{}, ss grpc.ServerStream, info *grpc.StreamServerInfo, handler grpc.StreamHandler) error {
+	return grpc.StreamServerInterceptor(func(srv any, ss grpc.ServerStream, info *grpc.StreamServerInfo, handler grpc.StreamHandler) error {
 		if atomic.LoadUint32(&canceling) == 1 {
 			return status.Error(codes.Unavailable, "server is stopping")
 		}

@@ -2,7 +2,7 @@ package testdata
 
 const EmptyResultResponseEncoderCode = `// EncodeMethodUnaryRPCNoResultResponse encodes responses from the
 // "ServiceUnaryRPCNoResult" service "MethodUnaryRPCNoResult" endpoint.
-func EncodeMethodUnaryRPCNoResultResponse(ctx context.Context, v interface{}, hdr, trlr *metadata.MD) (interface{}, error) {
+func EncodeMethodUnaryRPCNoResultResponse(ctx context.Context, v any, hdr, trlr *metadata.MD) (any, error) {
 	resp := NewProtoMethodUnaryRPCNoResultResponse()
 	return resp, nil
 }
@@ -11,7 +11,7 @@ func EncodeMethodUnaryRPCNoResultResponse(ctx context.Context, v interface{}, hd
 const ResultWithViewsResponseEncoderCode = `// EncodeMethodMessageResultTypeWithViewsResponse encodes responses from the
 // "ServiceMessageResultTypeWithViews" service
 // "MethodMessageResultTypeWithViews" endpoint.
-func EncodeMethodMessageResultTypeWithViewsResponse(ctx context.Context, v interface{}, hdr, trlr *metadata.MD) (interface{}, error) {
+func EncodeMethodMessageResultTypeWithViewsResponse(ctx context.Context, v any, hdr, trlr *metadata.MD) (any, error) {
 	vres, ok := v.(*servicemessageresulttypewithviewsviews.RT)
 	if !ok {
 		return nil, goagrpc.ErrInvalidType("ServiceMessageResultTypeWithViews", "MethodMessageResultTypeWithViews", "*servicemessageresulttypewithviewsviews.RT", v)
@@ -26,7 +26,7 @@ func EncodeMethodMessageResultTypeWithViewsResponse(ctx context.Context, v inter
 const ResultWithExplicitViewResponseEncoderCode = `// EncodeMethodMessageResultTypeWithExplicitViewResponse encodes responses from
 // the "ServiceMessageResultTypeWithExplicitView" service
 // "MethodMessageResultTypeWithExplicitView" endpoint.
-func EncodeMethodMessageResultTypeWithExplicitViewResponse(ctx context.Context, v interface{}, hdr, trlr *metadata.MD) (interface{}, error) {
+func EncodeMethodMessageResultTypeWithExplicitViewResponse(ctx context.Context, v any, hdr, trlr *metadata.MD) (any, error) {
 	vres, ok := v.(*servicemessageresulttypewithexplicitviewviews.RT)
 	if !ok {
 		return nil, goagrpc.ErrInvalidType("ServiceMessageResultTypeWithExplicitView", "MethodMessageResultTypeWithExplicitView", "*servicemessageresulttypewithexplicitviewviews.RT", v)
@@ -40,7 +40,7 @@ func EncodeMethodMessageResultTypeWithExplicitViewResponse(ctx context.Context, 
 
 const ResultArrayResponseEncoderCode = `// EncodeMethodMessageArrayResponse encodes responses from the
 // "ServiceMessageArray" service "MethodMessageArray" endpoint.
-func EncodeMethodMessageArrayResponse(ctx context.Context, v interface{}, hdr, trlr *metadata.MD) (interface{}, error) {
+func EncodeMethodMessageArrayResponse(ctx context.Context, v any, hdr, trlr *metadata.MD) (any, error) {
 	result, ok := v.([]*servicemessagearray.UT)
 	if !ok {
 		return nil, goagrpc.ErrInvalidType("ServiceMessageArray", "MethodMessageArray", "[]*servicemessagearray.UT", v)
@@ -52,7 +52,7 @@ func EncodeMethodMessageArrayResponse(ctx context.Context, v interface{}, hdr, t
 
 const ResultPrimitiveResponseEncoderCode = `// EncodeMethodUnaryRPCNoPayloadResponse encodes responses from the
 // "ServiceUnaryRPCNoPayload" service "MethodUnaryRPCNoPayload" endpoint.
-func EncodeMethodUnaryRPCNoPayloadResponse(ctx context.Context, v interface{}, hdr, trlr *metadata.MD) (interface{}, error) {
+func EncodeMethodUnaryRPCNoPayloadResponse(ctx context.Context, v any, hdr, trlr *metadata.MD) (any, error) {
 	result, ok := v.(string)
 	if !ok {
 		return nil, goagrpc.ErrInvalidType("ServiceUnaryRPCNoPayload", "MethodUnaryRPCNoPayload", "string", v)
@@ -64,7 +64,7 @@ func EncodeMethodUnaryRPCNoPayloadResponse(ctx context.Context, v interface{}, h
 
 const ResultWithMetadataResponseEncoderCode = `// EncodeMethodMessageWithMetadataResponse encodes responses from the
 // "ServiceMessageWithMetadata" service "MethodMessageWithMetadata" endpoint.
-func EncodeMethodMessageWithMetadataResponse(ctx context.Context, v interface{}, hdr, trlr *metadata.MD) (interface{}, error) {
+func EncodeMethodMessageWithMetadataResponse(ctx context.Context, v any, hdr, trlr *metadata.MD) (any, error) {
 	result, ok := v.(*servicemessagewithmetadata.ResponseUT)
 	if !ok {
 		return nil, goagrpc.ErrInvalidType("ServiceMessageWithMetadata", "MethodMessageWithMetadata", "*servicemessagewithmetadata.ResponseUT", v)
@@ -84,7 +84,7 @@ func EncodeMethodMessageWithMetadataResponse(ctx context.Context, v interface{},
 
 const ResultWithValidateResponseEncoderCode = `// EncodeMethodMessageWithValidateResponse encodes responses from the
 // "ServiceMessageWithValidate" service "MethodMessageWithValidate" endpoint.
-func EncodeMethodMessageWithValidateResponse(ctx context.Context, v interface{}, hdr, trlr *metadata.MD) (interface{}, error) {
+func EncodeMethodMessageWithValidateResponse(ctx context.Context, v any, hdr, trlr *metadata.MD) (any, error) {
 	result, ok := v.(*servicemessagewithvalidate.ResponseUT)
 	if !ok {
 		return nil, goagrpc.ErrInvalidType("ServiceMessageWithValidate", "MethodMessageWithValidate", "*servicemessagewithvalidate.ResponseUT", v)
@@ -105,7 +105,7 @@ func EncodeMethodMessageWithValidateResponse(ctx context.Context, v interface{},
 const ResultCollectionResponseEncoderCode = `// EncodeMethodMessageUserTypeWithNestedUserTypesResponse encodes responses
 // from the "ServiceMessageUserTypeWithNestedUserTypes" service
 // "MethodMessageUserTypeWithNestedUserTypes" endpoint.
-func EncodeMethodMessageUserTypeWithNestedUserTypesResponse(ctx context.Context, v interface{}, hdr, trlr *metadata.MD) (interface{}, error) {
+func EncodeMethodMessageUserTypeWithNestedUserTypesResponse(ctx context.Context, v any, hdr, trlr *metadata.MD) (any, error) {
 	vres, ok := v.(servicemessageusertypewithnestedusertypesviews.RTCollection)
 	if !ok {
 		return nil, goagrpc.ErrInvalidType("ServiceMessageUserTypeWithNestedUserTypes", "MethodMessageUserTypeWithNestedUserTypes", "servicemessageusertypewithnestedusertypesviews.RTCollection", v)

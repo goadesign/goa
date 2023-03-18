@@ -3,7 +3,7 @@ package testdata
 const PayloadUserTypeRequestDecoderCode = `// DecodeMethodMessageUserTypeWithNestedUserTypesRequest decodes requests sent
 // to "ServiceMessageUserTypeWithNestedUserTypes" service
 // "MethodMessageUserTypeWithNestedUserTypes" endpoint.
-func DecodeMethodMessageUserTypeWithNestedUserTypesRequest(ctx context.Context, v interface{}, md metadata.MD) (interface{}, error) {
+func DecodeMethodMessageUserTypeWithNestedUserTypesRequest(ctx context.Context, v any, md metadata.MD) (any, error) {
 	var (
 		message *service_message_user_type_with_nested_user_typespb.MethodMessageUserTypeWithNestedUserTypesRequest
 		ok      bool
@@ -23,7 +23,7 @@ func DecodeMethodMessageUserTypeWithNestedUserTypesRequest(ctx context.Context, 
 
 const PayloadArrayRequestDecoderCode = `// DecodeMethodUnaryRPCNoResultRequest decodes requests sent to
 // "ServiceUnaryRPCNoResult" service "MethodUnaryRPCNoResult" endpoint.
-func DecodeMethodUnaryRPCNoResultRequest(ctx context.Context, v interface{}, md metadata.MD) (interface{}, error) {
+func DecodeMethodUnaryRPCNoResultRequest(ctx context.Context, v any, md metadata.MD) (any, error) {
 	var (
 		message *service_unary_rpc_no_resultpb.MethodUnaryRPCNoResultRequest
 		ok      bool
@@ -43,7 +43,7 @@ func DecodeMethodUnaryRPCNoResultRequest(ctx context.Context, v interface{}, md 
 
 const PayloadMapRequestDecoderCode = `// DecodeMethodMessageMapRequest decodes requests sent to "ServiceMessageMap"
 // service "MethodMessageMap" endpoint.
-func DecodeMethodMessageMapRequest(ctx context.Context, v interface{}, md metadata.MD) (interface{}, error) {
+func DecodeMethodMessageMapRequest(ctx context.Context, v any, md metadata.MD) (any, error) {
 	var (
 		message *service_message_mappb.MethodMessageMapRequest
 		ok      bool
@@ -66,7 +66,7 @@ func DecodeMethodMessageMapRequest(ctx context.Context, v interface{}, md metada
 
 const PayloadPrimitiveRequestDecoderCode = `// DecodeMethodServerStreamingRPCRequest decodes requests sent to
 // "ServiceServerStreamingRPC" service "MethodServerStreamingRPC" endpoint.
-func DecodeMethodServerStreamingRPCRequest(ctx context.Context, v interface{}, md metadata.MD) (interface{}, error) {
+func DecodeMethodServerStreamingRPCRequest(ctx context.Context, v any, md metadata.MD) (any, error) {
 	var (
 		message *service_server_streaming_rpcpb.MethodServerStreamingRPCRequest
 		ok      bool
@@ -87,7 +87,7 @@ func DecodeMethodServerStreamingRPCRequest(ctx context.Context, v interface{}, m
 const PayloadPrimitiveWithStreamingPayloadRequestDecoderCode = `// DecodeMethodClientStreamingRPCWithPayloadRequest decodes requests sent to
 // "ServiceClientStreamingRPCWithPayload" service
 // "MethodClientStreamingRPCWithPayload" endpoint.
-func DecodeMethodClientStreamingRPCWithPayloadRequest(ctx context.Context, v interface{}, md metadata.MD) (interface{}, error) {
+func DecodeMethodClientStreamingRPCWithPayloadRequest(ctx context.Context, v any, md metadata.MD) (any, error) {
 	var (
 		goaPayload int
 		err        error
@@ -119,7 +119,7 @@ func DecodeMethodClientStreamingRPCWithPayloadRequest(ctx context.Context, v int
 const PayloadUserTypeWithStreamingPayloadRequestDecoderCode = `// DecodeMethodBidirectionalStreamingRPCWithPayloadRequest decodes requests
 // sent to "ServiceBidirectionalStreamingRPCWithPayload" service
 // "MethodBidirectionalStreamingRPCWithPayload" endpoint.
-func DecodeMethodBidirectionalStreamingRPCWithPayloadRequest(ctx context.Context, v interface{}, md metadata.MD) (interface{}, error) {
+func DecodeMethodBidirectionalStreamingRPCWithPayloadRequest(ctx context.Context, v any, md metadata.MD) (any, error) {
 	var (
 		a   *int
 		b   *string
@@ -153,7 +153,7 @@ func DecodeMethodBidirectionalStreamingRPCWithPayloadRequest(ctx context.Context
 
 const PayloadWithMetadataRequestDecoderCode = `// DecodeMethodMessageWithMetadataRequest decodes requests sent to
 // "ServiceMessageWithMetadata" service "MethodMessageWithMetadata" endpoint.
-func DecodeMethodMessageWithMetadataRequest(ctx context.Context, v interface{}, md metadata.MD) (interface{}, error) {
+func DecodeMethodMessageWithMetadataRequest(ctx context.Context, v any, md metadata.MD) (any, error) {
 	var (
 		inMetadata *int
 		err        error
@@ -192,7 +192,7 @@ func DecodeMethodMessageWithMetadataRequest(ctx context.Context, v interface{}, 
 
 const PayloadWithValidateRequestDecoderCode = `// DecodeMethodMessageWithValidateRequest decodes requests sent to
 // "ServiceMessageWithValidate" service "MethodMessageWithValidate" endpoint.
-func DecodeMethodMessageWithValidateRequest(ctx context.Context, v interface{}, md metadata.MD) (interface{}, error) {
+func DecodeMethodMessageWithValidateRequest(ctx context.Context, v any, md metadata.MD) (any, error) {
 	var (
 		inMetadata *int
 		err        error
@@ -239,7 +239,7 @@ func DecodeMethodMessageWithValidateRequest(ctx context.Context, v interface{}, 
 
 const PayloadWithSecurityAttrsRequestDecoderCode = `// DecodeMethodMessageWithSecurityRequest decodes requests sent to
 // "ServiceMessageWithSecurity" service "MethodMessageWithSecurity" endpoint.
-func DecodeMethodMessageWithSecurityRequest(ctx context.Context, v interface{}, md metadata.MD) (interface{}, error) {
+func DecodeMethodMessageWithSecurityRequest(ctx context.Context, v any, md metadata.MD) (any, error) {
 	var (
 		token    *string
 		key      *string
