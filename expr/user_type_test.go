@@ -58,22 +58,22 @@ func TestUserTypeExprIsCompatible(t *testing.T) {
 	)
 	cases := map[string]struct {
 		typ      DataType
-		values   []interface{}
+		values   []any
 		expected bool
 	}{
 		"compatible": {
 			typ:      Int,
-			values:   []interface{}{i},
+			values:   []any{i},
 			expected: true,
 		},
 		"not compatible": {
 			typ:      Int,
-			values:   []interface{}{b},
+			values:   []any{b},
 			expected: false,
 		},
 		"type is nil": {
 			typ:      nil,
-			values:   []interface{}{b, i},
+			values:   []any{b, i},
 			expected: true,
 		},
 	}

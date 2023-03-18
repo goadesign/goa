@@ -63,11 +63,11 @@ func NewRandom(seed string) *ExampleGenerator {
 
 type ExampleGenerator struct {
 	Randomizer
-	seen map[string]*interface{}
+	seen map[string]*any
 }
 
 // PreviouslySeen returns the previously seen value for a given ID
-func (r *ExampleGenerator) PreviouslySeen(typeID string) (*interface{}, bool) {
+func (r *ExampleGenerator) PreviouslySeen(typeID string) (*any, bool) {
 	if r.seen == nil {
 		return nil, false
 	}
@@ -76,9 +76,9 @@ func (r *ExampleGenerator) PreviouslySeen(typeID string) (*interface{}, bool) {
 }
 
 // HaveSeen stores the seen value in the randomizer, for reuse later
-func (r *ExampleGenerator) HaveSeen(typeID string, val *interface{}) {
+func (r *ExampleGenerator) HaveSeen(typeID string, val *any) {
 	if r.seen == nil {
-		r.seen = make(map[string]*interface{})
+		r.seen = make(map[string]*any)
 	}
 
 	r.seen[typeID] = val

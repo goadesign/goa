@@ -145,7 +145,7 @@ func TestHostExprValidate(t *testing.T) {
 		invalidSchemeURIs = []URIExpr{
 			invalidSchemeURI,
 		}
-		objectPrimitive = func(d interface{}, v *ValidationExpr) *Object {
+		objectPrimitive = func(d any, v *ValidationExpr) *Object {
 			return &Object{
 				{
 					Name: foo,
@@ -157,7 +157,7 @@ func TestHostExprValidate(t *testing.T) {
 				},
 			}
 		}
-		objectNonPrimitive = func(d interface{}) *Object {
+		objectNonPrimitive = func(d any) *Object {
 			return &Object{
 				{
 					Name: bar,
@@ -247,7 +247,7 @@ func TestHostExprValidate(t *testing.T) {
 		"uri variable has no default value and no enum varidation values": {
 			uris: validURIs,
 			variables: attribute(objectPrimitive(nil, &ValidationExpr{
-				Values: []interface{}{},
+				Values: []any{},
 			})),
 			expected: &eval.ValidationErrors{
 				Errors: []error{

@@ -18,7 +18,7 @@ const (
 // Example returns the example set on the attribute at design time. If there
 // isn't such a value then Example computes a random value for the attribute
 // using the given random value producer.
-func (a *AttributeExpr) Example(r *ExampleGenerator) interface{} {
+func (a *AttributeExpr) Example(r *ExampleGenerator) any {
 	if ex := a.ExtractUserExamples(); len(ex) > 0 {
 		// Return the last item in the slice so that examples can be overridden
 		// in the DSL. Overridden examples are always appended to the UserExamples
@@ -51,7 +51,7 @@ func (a *AttributeExpr) Example(r *ExampleGenerator) interface{} {
 	)
 	for attempts < maxAttempts {
 		attempts++
-		var example interface{}
+		var example any
 		// Format comes first, since it initiates the example
 		if hasFormat {
 			example = byFormat(a, r)
@@ -144,7 +144,7 @@ func hasMinMaxValidation(a *AttributeExpr) bool {
 }
 
 // byLength generates a random size array of examples based on what's given.
-func byLength(a *AttributeExpr, r *ExampleGenerator) interface{} {
+func byLength(a *AttributeExpr, r *ExampleGenerator) any {
 	count := NewLength(a, r)
 	switch a.Type.Kind() {
 	case StringKind:
@@ -152,14 +152,14 @@ func byLength(a *AttributeExpr, r *ExampleGenerator) interface{} {
 	case BytesKind:
 		return []byte(r.Characters(count))
 	case MapKind:
-		raw := make(map[interface{}]interface{})
+		raw := make(map[any]any)
 		m := a.Type.(*Map)
 		for i := 0; i < count; i++ {
 			raw[m.KeyType.Example(r)] = m.ElemType.Example(r)
 		}
 		return m.MakeMap(raw)
 	case ArrayKind:
-		raw := make([]interface{}, count)
+		raw := make([]any, count)
 		ar := a.Type.(*Array)
 		for i := 0; i < count; i++ {
 			raw[i] = ar.ElemType.Example(r)
@@ -171,7 +171,7 @@ func byLength(a *AttributeExpr, r *ExampleGenerator) interface{} {
 }
 
 // byEnum returns a random selected enum value.
-func byEnum(a *AttributeExpr, r *ExampleGenerator) interface{} {
+func byEnum(a *AttributeExpr, r *ExampleGenerator) any {
 	if !hasEnumValidation(a) {
 		return nil
 	}
@@ -182,12 +182,12 @@ func byEnum(a *AttributeExpr, r *ExampleGenerator) interface{} {
 }
 
 // byFormat returns a random example based on the format the user asks.
-func byFormat(a *AttributeExpr, r *ExampleGenerator) interface{} {
+func byFormat(a *AttributeExpr, r *ExampleGenerator) any {
 	if !hasFormatValidation(a) {
 		return nil
 	}
 	format := a.Validation.Format
-	if res, ok := map[ValidationFormat]interface{}{
+	if res, ok := map[ValidationFormat]any{
 		FormatEmail:    r.Email(),
 		FormatHostname: r.Hostname(),
 		FormatDate:     time.Unix(int64(r.Int())%1454957045, 0).UTC().Format(time.DateOnly), // to obtain a "fixed" rand
@@ -223,7 +223,7 @@ func byFormat(a *AttributeExpr, r *ExampleGenerator) interface{} {
 // byPattern generates a random value that satisfies the pattern.
 //
 // Note: if multiple patterns are given, only one of them is used.
-func byPattern(a *AttributeExpr, r *ExampleGenerator) interface{} {
+func byPattern(a *AttributeExpr, r *ExampleGenerator) any {
 	if !hasPatternValidation(a) {
 		return false
 	}
@@ -235,7 +235,7 @@ func byPattern(a *AttributeExpr, r *ExampleGenerator) interface{} {
 	return gen.Generate()
 }
 
-func byMinMax(a *AttributeExpr, r *ExampleGenerator) interface{} {
+func byMinMax(a *AttributeExpr, r *ExampleGenerator) any {
 	if !hasMinMaxValidation(a) {
 		return nil
 	}
@@ -320,7 +320,7 @@ func byMinMax(a *AttributeExpr, r *ExampleGenerator) interface{} {
 	}
 }
 
-func checkPattern(a *AttributeExpr, example interface{}) bool {
+func checkPattern(a *AttributeExpr, example any) bool {
 	if !hasPatternValidation(a) {
 		return true
 	}
@@ -335,7 +335,7 @@ func checkPattern(a *AttributeExpr, example interface{}) bool {
 	return true
 }
 
-func checkMinMaxValue(a *AttributeExpr, example interface{}) bool {
+func checkMinMaxValue(a *AttributeExpr, example any) bool {
 	if !hasMinMaxValidation(a) {
 		return true
 	}

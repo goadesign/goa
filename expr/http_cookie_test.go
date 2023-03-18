@@ -9,7 +9,7 @@ import (
 )
 
 func TestHTTPResponseCookie(t *testing.T) {
-	type Props map[string]interface{}
+	type Props map[string]any
 
 	cases := []struct {
 		Name  string
