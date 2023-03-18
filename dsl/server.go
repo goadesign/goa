@@ -192,7 +192,7 @@ func URI(uri string) {
 //        })
 //    })
 //
-func Variable(name string, args ...interface{}) {
+func Variable(name string, args ...any) {
 	if _, ok := eval.Current().(*expr.HostExpr); !ok {
 		eval.IncompatibleDSL()
 		return

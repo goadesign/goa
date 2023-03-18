@@ -58,7 +58,7 @@ import (
 //         })
 //     })
 //
-func Headers(args interface{}) {
+func Headers(args any) {
 	fn, ok := args.(func())
 	if !ok {
 		eval.InvalidArgError("function", args)

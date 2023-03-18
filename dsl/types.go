@@ -36,7 +36,7 @@ const (
 	// Bytes is the type for binary data.
 	Bytes = expr.Bytes
 
-	// Any is the type for an arbitrary JSON value (interface{} in Go).
+	// Any is the type for an arbitrary JSON value (any in Go).
 	Any = expr.Any
 )
 

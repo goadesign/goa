@@ -70,7 +70,7 @@ import (
 //	        Required("value")
 //	    })
 //	})
-func Result(val interface{}, args ...interface{}) {
+func Result(val any, args ...any) {
 	if len(args) > 2 {
 		eval.ReportError("too many arguments")
 		return
@@ -128,7 +128,7 @@ func Result(val interface{}, args ...interface{}) {
 //	        Required("value")
 //	    })
 //	})
-func StreamingResult(val interface{}, args ...interface{}) {
+func StreamingResult(val any, args ...any) {
 	if len(args) > 2 {
 		eval.ReportError("too many arguments")
 		return

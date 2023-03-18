@@ -66,7 +66,7 @@ import (
 //	    // Additional fields are OK
 //	    Description string
 //	}
-func ConvertTo(obj interface{}) {
+func ConvertTo(obj any) {
 	var ut expr.UserType
 	switch actual := eval.Current().(type) {
 	case *expr.AttributeExpr:
@@ -146,7 +146,7 @@ func ConvertTo(obj interface{}) {
 //	    // Additional fields are OK
 //	    Description string
 //	}
-func CreateFrom(obj interface{}) {
+func CreateFrom(obj any) {
 	var ut expr.UserType
 	switch actual := eval.Current().(type) {
 	case *expr.AttributeExpr:

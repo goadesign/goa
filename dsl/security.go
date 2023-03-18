@@ -231,7 +231,7 @@ func JWTSecurity(name string, fn ...func()) *expr.SchemeExpr {
 //        })
 //    })
 //
-func Security(args ...interface{}) {
+func Security(args ...any) {
 	var dsl func()
 	{
 		if d, ok := args[len(args)-1].(func()); ok {
@@ -327,7 +327,7 @@ func NoSecurity() {
 //        })
 //    })
 //
-func Username(name string, args ...interface{}) {
+func Username(name string, args ...any) {
 	args = useDSL(args, func() { Meta("security:username") })
 	Attribute(name, args...)
 }
@@ -338,7 +338,7 @@ func Username(name string, args ...interface{}) {
 // UsernameField takes the same arguments as Username with the addition of the
 // tag value as the first argument.
 //
-func UsernameField(tag interface{}, name string, args ...interface{}) {
+func UsernameField(tag any, name string, args ...any) {
 	args = useDSL(args, func() { Meta("security:username") })
 	Field(tag, name, args...)
 }
@@ -366,7 +366,7 @@ func UsernameField(tag interface{}, name string, args ...interface{}) {
 //        })
 //    })
 //
-func Password(name string, args ...interface{}) {
+func Password(name string, args ...any) {
 	args = useDSL(args, func() { Meta("security:password") })
 	Attribute(name, args...)
 }
@@ -377,7 +377,7 @@ func Password(name string, args ...interface{}) {
 // PasswordField takes the same arguments as Password with the addition of the
 // tag value as the first argument.
 //
-func PasswordField(tag interface{}, name string, args ...interface{}) {
+func PasswordField(tag any, name string, args ...any) {
 	args = useDSL(args, func() { Meta("security:password") })
 	Field(tag, name, args...)
 }
@@ -420,7 +420,7 @@ func PasswordField(tag interface{}, name string, args ...interface{}) {
 //        })
 //    })
 //
-func APIKey(scheme, name string, args ...interface{}) {
+func APIKey(scheme, name string, args ...any) {
 	args = useDSL(args, func() { Meta("security:apikey:"+scheme, scheme) })
 	Attribute(name, args...)
 }
@@ -431,7 +431,7 @@ func APIKey(scheme, name string, args ...interface{}) {
 // APIKeyField takes the same arguments as APIKey with the addition of the
 // tag value as the first argument.
 //
-func APIKeyField(tag interface{}, scheme, name string, args ...interface{}) {
+func APIKeyField(tag any, scheme, name string, args ...any) {
 	args = useDSL(args, func() { Meta("security:apikey:"+scheme, scheme) })
 	Field(tag, name, args...)
 }
@@ -460,7 +460,7 @@ func APIKeyField(tag interface{}, scheme, name string, args ...interface{}) {
 //        })
 //    })
 //
-func AccessToken(name string, args ...interface{}) {
+func AccessToken(name string, args ...any) {
 	args = useDSL(args, func() { Meta("security:accesstoken") })
 	Attribute(name, args...)
 }
@@ -471,7 +471,7 @@ func AccessToken(name string, args ...interface{}) {
 // AccessTokenField takes the same arguments as AccessToken with the addition of the
 // tag value as the first argument.
 //
-func AccessTokenField(tag interface{}, name string, args ...interface{}) {
+func AccessTokenField(tag any, name string, args ...any) {
 	args = useDSL(args, func() { Meta("security:accesstoken") })
 	Field(tag, name, args...)
 }
@@ -498,7 +498,7 @@ func AccessTokenField(tag interface{}, name string, args ...interface{}) {
 //        })
 //    })
 //
-func Token(name string, args ...interface{}) {
+func Token(name string, args ...any) {
 	args = useDSL(args, func() { Meta("security:token") })
 	Attribute(name, args...)
 }
@@ -509,7 +509,7 @@ func Token(name string, args ...interface{}) {
 // TokenField takes the same arguments as Token with the addition of the
 // tag value as the first argument.
 //
-func TokenField(tag interface{}, name string, args ...interface{}) {
+func TokenField(tag any, name string, args ...any) {
 	args = useDSL(args, func() { Meta("security:token") })
 	Field(tag, name, args...)
 }
@@ -666,9 +666,9 @@ func securitySchemeRedefined(name string) bool {
 
 // useDSL modifies the Attribute function to use the given function as DSL,
 // merging it with any pre-existing DSL.
-func useDSL(args []interface{}, d func()) []interface{} {
+func useDSL(args []any, d func()) []any {
 	if len(args) == 0 {
-		return []interface{}{d}
+		return []any{d}
 	}
 	ds, ok := args[len(args)-1].(func())
 	if ok {
